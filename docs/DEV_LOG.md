@@ -97,14 +97,12 @@
 
 ---
 
-## 📌 9. 현재 작업 위치
-
-👉 모집글 리스트 기능 구현 직전
-
-다음 작업:
-- local_recruitment_list_data_source.dart 작성
-- mock 모집글 데이터 생성
-- recruitment_list repository 구현
+## 📌 9. 당시 작업 기준 상태
+- 당시 기준으로 모집글 리스트 기능 구현 직전 상태였음
+- 다음 작업 후보로 아래 항목들을 계획했음:
+  - local_recruitment_list_data_source.dart 작성
+  - mock 모집글 데이터 생성
+  - recruitment_list repository 구현
 
 ---
 
@@ -143,3 +141,7 @@
 - flutter analyze 이후 테스트 정상 인식 확인
 - 개별 테스트 실행 통과
 - 전체 테스트 실행 시 기존 기본 widget_test.dart 영향 여부 별도 확인 필요
+
+## 📌 12. 레이드 데이터 로컬 작업
+- 자료 입력
+- 각 레이드 데이터가 실제 인게임 데이터와 동일하게 입력되었는지 확인 완료.
