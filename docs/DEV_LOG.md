@@ -145,3 +145,40 @@
 ## 📌 12. 레이드 데이터 로컬 작업
 - 자료 입력
 - 각 레이드 데이터가 실제 인게임 데이터와 동일하게 입력되었는지 확인 완료.
+
+---
+
+## Task-002. Recruitment List Presentation Layer 구현
+
+### 완료 파일
+- features/recruitment_list/presentation/viewmodels/recruitment_list_view_model.dart
+- features/recruitment_list/presentation/pages/recruitment_list_page.dart
+- features/recruitment_list/presentation/widgets/recruitment_card.dart
+- lib/main.dart
+- test/widget_test.dart
+
+### 구현 내용
+- RecruitmentListViewModel 구현 완료
+  - MVVM 구조 유지
+  - Repository를 통해 mock 모집글 데이터 조회
+  - loading / error / recruitments 상태 관리
+- RecruitmentListPage 구현 완료
+  - ViewModel을 통해 데이터 조회
+  - 모집글 목록 화면 구성
+  - mock 모집글 6개 표시
+- RecruitmentCard 구현 완료
+  - 모집글 제목
+  - 레이드 ID 및 관문 범위
+  - 리더 정보
+  - 현재 인원 / 최대 인원
+  - 딜러 / 서포터 모집 상태
+  - 최소 전투력 / 숙련도 / 플레이 시간 표시
+- main.dart 연결 완료
+  - 앱 시작 화면을 RecruitmentListPage로 변경
+- widget_test 수정 완료
+  - counter 테스트를 모집글 목록 표시 테스트로 변경
+
+### 검증 결과
+- flutter analyze 통과
+- flutter test 통과
+- 전체 테스트 12개 통과

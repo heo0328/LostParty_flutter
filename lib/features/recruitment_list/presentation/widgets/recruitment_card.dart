@@ -1,0 +1,168 @@
+import 'package:flutter/material.dart';
+
+import '../../domain/entities/party_recruitment.dart';
+
+class RecruitmentCard extends StatelessWidget {
+  final PartyRecruitment recruitment;
+
+  const RecruitmentCard({
+    super.key,
+    required this.recruitment,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      key: ValueKey(recruitment.id),
+      margin: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 8,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    recruitment.title,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _StatusBadge(status: recruitment.recruitmentStatus.status),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '${recruitment.raid.raidId} '
+              '${recruitment.raid.gateProgress.startGate}-'
+              '${recruitment.raid.gateProgress.endGate} gates',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Leader: ${recruitment.leader.characterName} '
+              '(${recruitment.leader.className})',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Members '
+                    '${recruitment.memberSummary.currentCount}/'
+                    '${recruitment.memberSummary.maxCount}',
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    'Dealer '
+                    '${recruitment.recruitmentStatus.roles.dealer.currentCount}/'
+                    '${recruitment.recruitmentStatus.roles.dealer.targetCount}',
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    'Support '
+                    '${recruitment.recruitmentStatus.roles.support.currentCount}/'
+                    '${recruitment.recruitmentStatus.roles.support.targetCount}',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Min combat power ${recruitment.requirements.minCombatPower} '
+              '/ ${_experienceLabel(recruitment.requirements.experienceLevel)} '
+              '/ ${_playTimeLabel(recruitment.schedule.maxPlayHours)}',
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _experienceLabel(ExperienceLevel level) {
+    return switch (level) {
+      ExperienceLevel.tryLevel => 'Try',
+      ExperienceLevel.clearExp => 'Clear',
+      ExperienceLevel.multiClearExp => 'Multi clear',
+      ExperienceLevel.semiExperienced => 'Semi exp',
+      ExperienceLevel.experienced => 'Experienced',
+    };
+  }
+
+  String _playTimeLabel(int? maxPlayHours) {
+    if (maxPlayHours == null) {
+      return 'Free';
+    }
+
+    return '${maxPlayHours}h max';
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final RecruitmentStatusType status;
+
+  const _StatusBadge({
+    required this.status,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: _backgroundColor(colorScheme),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 8,
+          vertical: 4,
+        ),
+        child: Text(
+          _label,
+          style: TextStyle(
+            color: _foregroundColor(colorScheme),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String get _label {
+    return switch (status) {
+      RecruitmentStatusType.recruiting => 'Recruiting',
+      RecruitmentStatusType.closed => 'Closed',
+      RecruitmentStatusType.completed => 'Completed',
+    };
+  }
+
+  Color _backgroundColor(ColorScheme colorScheme) {
+    return switch (status) {
+      RecruitmentStatusType.recruiting => colorScheme.primaryContainer,
+      RecruitmentStatusType.closed => colorScheme.surfaceContainerHighest,
+      RecruitmentStatusType.completed => colorScheme.secondaryContainer,
+    };
+  }
+
+  Color _foregroundColor(ColorScheme colorScheme) {
+    return switch (status) {
+      RecruitmentStatusType.recruiting => colorScheme.onPrimaryContainer,
+      RecruitmentStatusType.closed => colorScheme.onSurfaceVariant,
+      RecruitmentStatusType.completed => colorScheme.onSecondaryContainer,
+    };
+  }
+}

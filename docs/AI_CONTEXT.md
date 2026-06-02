@@ -17,6 +17,7 @@
 
 ## 현재 브랜치
 - feature/raid-master-data
+- feature/recruitment-list-ui
 
 ---
 
@@ -44,10 +45,20 @@
 - recruitment_list_repository_impl.dart 구현 완료
 - mock 모집글 데이터 6개 작성 완료
 
+### recruitment_list presentation layer
+- recruitment_list_view_model.dart 구현 완료
+- recruitment_list_page.dart 구현 완료
+- recruitment_card.dart 구현 완료
+- main.dart에서 RecruitmentListPage 연결 완료
+- mock 모집글 6개 화면 표시 완료
+
 ### 테스트
 - local_recruitment_list_data_source_test.dart 작성 및 통과
 - recruitment_list_repository_impl_test.dart 작성 및 통과
 - flutter analyze 이후 테스트 정상 동작 확인
+- widget_test.dart를 모집글 목록 표시 테스트로 수정 완료
+- flutter analyze 통과
+- flutter test 12개 통과
 
 ---
 
