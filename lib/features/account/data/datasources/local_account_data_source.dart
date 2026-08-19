@@ -1,9 +1,13 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
+import '../../domain/entities/character_build_snapshot.dart';
 import '../../domain/entities/character_profile.dart';
 import '../../domain/entities/character_summary.dart';
 import '../../domain/entities/local_game_account.dart';
 import '../local/account_database.dart';
+import '../mappers/character_build_analysis_mapper.dart';
 
 class LocalAccountDataSource {
   LocalAccountDataSource({required AccountDatabase database})
@@ -94,6 +98,47 @@ class LocalAccountDataSource {
           )
           .toList(growable: false),
     );
+  }
+
+  Future<void> saveCharacterBuildSnapshot({
+    required int characterId,
+    required CharacterBuildRole role,
+    required String rawJson,
+    required double? itemLevel,
+    required double? combatPower,
+    required DateTime capturedAt,
+  }) {
+    return _database.saveCharacterBuildSnapshot(
+      characterId: characterId,
+      role: role.name,
+      rawJson: rawJson,
+      itemLevel: itemLevel,
+      combatPower: combatPower,
+      capturedAt: capturedAt,
+    );
+  }
+
+  Future<List<CharacterBuildSnapshot>> loadCharacterBuildSnapshots(
+    int characterId,
+  ) async {
+    final rows = await _database.loadCharacterBuildSnapshots(characterId);
+    return rows
+        .map(
+          (row) => CharacterBuildSnapshot(
+            id: row.id,
+            characterId: row.characterId,
+            role: CharacterBuildRole.values.byName(row.role),
+            rawJson: row.rawJson,
+            itemLevel: row.itemLevel,
+            combatPower: row.combatPower,
+            capturedAt: row.capturedAt,
+            dataVersion: row.dataVersion,
+            analysis: const CharacterBuildAnalysisMapper().fromJson(
+              Map<String, dynamic>.from(jsonDecode(row.rawJson) as Map),
+            ),
+          ),
+        )
+        .toList(growable: false);
   }
 
   Future<void> setRepresentativeCharacter({

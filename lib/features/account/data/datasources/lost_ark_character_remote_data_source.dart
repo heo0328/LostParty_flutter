@@ -37,10 +37,7 @@ class LostArkCharacterRemoteDataSource {
   Future<CharacterProfileDto> fetchCharacterProfile(
     String characterName,
   ) async {
-    final encodedName = _normalizeAndEncodeName(characterName);
-    final response = await _apiClient.get<Map<String, dynamic>>(
-      '/armories/characters/$encodedName',
-    );
+    final response = await fetchCharacterArmory(characterName);
 
     try {
       final profile = response['ArmoryProfile'];
@@ -56,6 +53,15 @@ class LostArkCharacterRemoteDataSource {
         type: LostArkApiErrorType.invalidResponse,
       );
     }
+  }
+
+  Future<Map<String, dynamic>> fetchCharacterArmory(
+    String characterName,
+  ) async {
+    final encodedName = _normalizeAndEncodeName(characterName);
+    return _apiClient.get<Map<String, dynamic>>(
+      '/armories/characters/$encodedName',
+    );
   }
 
   String _normalizeAndEncodeName(String characterName) {

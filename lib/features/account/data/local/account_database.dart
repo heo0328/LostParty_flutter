@@ -69,13 +69,122 @@ class AccountCharacters extends Table {
   ];
 }
 
-@DriftDatabase(tables: [GameAccounts, AccountCharacters])
+@DataClassName('CharacterBuildSnapshotRow')
+class CharacterBuildSnapshots extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  IntColumn get characterId => integer().references(
+    AccountCharacters,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
+
+  TextColumn get role => text()();
+
+  TextColumn get rawJson => text()();
+
+  RealColumn get itemLevel => real().nullable()();
+
+  RealColumn get combatPower => real().nullable()();
+
+  DateTimeColumn get capturedAt => dateTime()();
+
+  IntColumn get dataVersion => integer().withDefault(const Constant(1))();
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+    {characterId, role},
+  ];
+}
+
+@DriftDatabase(
+  tables: [GameAccounts, AccountCharacters, CharacterBuildSnapshots],
+)
 class AccountDatabase extends _$AccountDatabase {
   AccountDatabase([QueryExecutor? executor])
     : super(executor ?? driftDatabase(name: 'lost_party'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (migrator) => migrator.createAll(),
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) {
+        await migrator.createTable(characterBuildSnapshots);
+      }
+    },
+  );
+
+  Future<void> saveCharacterBuildSnapshot({
+    required int characterId,
+    required String role,
+    required String rawJson,
+    required double? itemLevel,
+    required double? combatPower,
+    required DateTime capturedAt,
+    int dataVersion = 1,
+  }) {
+    return transaction(() async {
+      if (role != 'dealer' && role != 'support') {
+        throw ArgumentError.value(role, 'role', 'Unsupported build role.');
+      }
+      final character = await (select(
+        accountCharacters,
+      )..where((table) => table.id.equals(characterId))).getSingleOrNull();
+      if (character == null) {
+        throw ArgumentError.value(
+          characterId,
+          'characterId',
+          'Character not found.',
+        );
+      }
+
+      final existing =
+          await (select(characterBuildSnapshots)..where(
+                (table) =>
+                    table.characterId.equals(characterId) &
+                    table.role.equals(role),
+              ))
+              .getSingleOrNull();
+      if (existing == null) {
+        await into(characterBuildSnapshots).insert(
+          CharacterBuildSnapshotsCompanion.insert(
+            characterId: characterId,
+            role: role,
+            rawJson: rawJson,
+            itemLevel: Value(itemLevel),
+            combatPower: Value(combatPower),
+            capturedAt: capturedAt,
+            dataVersion: Value(dataVersion),
+          ),
+        );
+        return;
+      }
+
+      await (update(
+        characterBuildSnapshots,
+      )..where((table) => table.id.equals(existing.id))).write(
+        CharacterBuildSnapshotsCompanion(
+          rawJson: Value(rawJson),
+          itemLevel: Value(itemLevel),
+          combatPower: Value(combatPower),
+          capturedAt: Value(capturedAt),
+          dataVersion: Value(dataVersion),
+        ),
+      );
+    });
+  }
+
+  Future<List<CharacterBuildSnapshotRow>> loadCharacterBuildSnapshots(
+    int characterId,
+  ) {
+    return (select(characterBuildSnapshots)
+          ..where((table) => table.characterId.equals(characterId))
+          ..orderBy([(table) => OrderingTerm.asc(table.role)]))
+        .get();
+  }
 
   Future<int> createAccount({
     required String label,
@@ -258,33 +367,56 @@ class AccountDatabase extends _$AccountDatabase {
             updatedAt: Value(timestamp),
           ),
         );
-        await (delete(
-          accountCharacters,
-        )..where((table) => table.accountId.equals(accountId))).go();
       }
 
       final insertedCharacters = <int, String>{};
+      final incomingCharacterKeys = <String>{};
       for (final character in characters) {
-        final existingCharacter =
-            existingCharactersByKey[_characterKey(
-              character.serverName,
-              character.characterName,
-            )];
-        final characterId = await into(accountCharacters).insert(
-          AccountCharactersCompanion.insert(
-            accountId: accountId,
-            serverName: character.serverName,
-            characterName: character.characterName,
-            characterLevel: character.characterLevel,
-            characterClassName: character.characterClassName,
-            itemLevel: Value(character.itemLevel),
-            combatPower: Value(existingCharacter?.combatPower),
-            isVisible: Value(existingCharacter?.isVisible ?? true),
-            displayOrder: Value(existingCharacter?.displayOrder),
-            lastSummaryFetchedAt: character.fetchedAt,
-          ),
+        final key = _characterKey(
+          character.serverName,
+          character.characterName,
         );
+        incomingCharacterKeys.add(key);
+        final existingCharacter = existingCharactersByKey[key];
+        final int characterId;
+        if (existingCharacter == null) {
+          characterId = await into(accountCharacters).insert(
+            AccountCharactersCompanion.insert(
+              accountId: accountId,
+              serverName: character.serverName,
+              characterName: character.characterName,
+              characterLevel: character.characterLevel,
+              characterClassName: character.characterClassName,
+              itemLevel: Value(character.itemLevel),
+              lastSummaryFetchedAt: character.fetchedAt,
+            ),
+          );
+        } else {
+          characterId = existingCharacter.id;
+          await (update(
+            accountCharacters,
+          )..where((table) => table.id.equals(existingCharacter.id))).write(
+            AccountCharactersCompanion(
+              characterLevel: Value(character.characterLevel),
+              characterClassName: Value(character.characterClassName),
+              itemLevel: Value(character.itemLevel),
+              lastSummaryFetchedAt: Value(character.fetchedAt),
+            ),
+          );
+        }
         insertedCharacters[characterId] = character.characterName;
+      }
+
+      for (final existingCharacter in existingCharacters) {
+        final key = _characterKey(
+          existingCharacter.serverName,
+          existingCharacter.characterName,
+        );
+        if (!incomingCharacterKeys.contains(key)) {
+          await (delete(
+            accountCharacters,
+          )..where((table) => table.id.equals(existingCharacter.id))).go();
+        }
       }
 
       final representativeName =

@@ -1232,12 +1232,545 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
   }
 }
 
+class $CharacterBuildSnapshotsTable extends CharacterBuildSnapshots
+    with TableInfo<$CharacterBuildSnapshotsTable, CharacterBuildSnapshotRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CharacterBuildSnapshotsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES account_characters (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+    'role',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _rawJsonMeta = const VerificationMeta(
+    'rawJson',
+  );
+  @override
+  late final GeneratedColumn<String> rawJson = GeneratedColumn<String>(
+    'raw_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _itemLevelMeta = const VerificationMeta(
+    'itemLevel',
+  );
+  @override
+  late final GeneratedColumn<double> itemLevel = GeneratedColumn<double>(
+    'item_level',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _combatPowerMeta = const VerificationMeta(
+    'combatPower',
+  );
+  @override
+  late final GeneratedColumn<double> combatPower = GeneratedColumn<double>(
+    'combat_power',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _capturedAtMeta = const VerificationMeta(
+    'capturedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> capturedAt = GeneratedColumn<DateTime>(
+    'captured_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dataVersionMeta = const VerificationMeta(
+    'dataVersion',
+  );
+  @override
+  late final GeneratedColumn<int> dataVersion = GeneratedColumn<int>(
+    'data_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    characterId,
+    role,
+    rawJson,
+    itemLevel,
+    combatPower,
+    capturedAt,
+    dataVersion,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'character_build_snapshots';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CharacterBuildSnapshotRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('role')) {
+      context.handle(
+        _roleMeta,
+        role.isAcceptableOrUnknown(data['role']!, _roleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_roleMeta);
+    }
+    if (data.containsKey('raw_json')) {
+      context.handle(
+        _rawJsonMeta,
+        rawJson.isAcceptableOrUnknown(data['raw_json']!, _rawJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_rawJsonMeta);
+    }
+    if (data.containsKey('item_level')) {
+      context.handle(
+        _itemLevelMeta,
+        itemLevel.isAcceptableOrUnknown(data['item_level']!, _itemLevelMeta),
+      );
+    }
+    if (data.containsKey('combat_power')) {
+      context.handle(
+        _combatPowerMeta,
+        combatPower.isAcceptableOrUnknown(
+          data['combat_power']!,
+          _combatPowerMeta,
+        ),
+      );
+    }
+    if (data.containsKey('captured_at')) {
+      context.handle(
+        _capturedAtMeta,
+        capturedAt.isAcceptableOrUnknown(data['captured_at']!, _capturedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_capturedAtMeta);
+    }
+    if (data.containsKey('data_version')) {
+      context.handle(
+        _dataVersionMeta,
+        dataVersion.isAcceptableOrUnknown(
+          data['data_version']!,
+          _dataVersionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {characterId, role},
+  ];
+  @override
+  CharacterBuildSnapshotRow map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CharacterBuildSnapshotRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      )!,
+      role: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role'],
+      )!,
+      rawJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}raw_json'],
+      )!,
+      itemLevel: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}item_level'],
+      ),
+      combatPower: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}combat_power'],
+      ),
+      capturedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}captured_at'],
+      )!,
+      dataVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}data_version'],
+      )!,
+    );
+  }
+
+  @override
+  $CharacterBuildSnapshotsTable createAlias(String alias) {
+    return $CharacterBuildSnapshotsTable(attachedDatabase, alias);
+  }
+}
+
+class CharacterBuildSnapshotRow extends DataClass
+    implements Insertable<CharacterBuildSnapshotRow> {
+  final int id;
+  final int characterId;
+  final String role;
+  final String rawJson;
+  final double? itemLevel;
+  final double? combatPower;
+  final DateTime capturedAt;
+  final int dataVersion;
+  const CharacterBuildSnapshotRow({
+    required this.id,
+    required this.characterId,
+    required this.role,
+    required this.rawJson,
+    this.itemLevel,
+    this.combatPower,
+    required this.capturedAt,
+    required this.dataVersion,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['character_id'] = Variable<int>(characterId);
+    map['role'] = Variable<String>(role);
+    map['raw_json'] = Variable<String>(rawJson);
+    if (!nullToAbsent || itemLevel != null) {
+      map['item_level'] = Variable<double>(itemLevel);
+    }
+    if (!nullToAbsent || combatPower != null) {
+      map['combat_power'] = Variable<double>(combatPower);
+    }
+    map['captured_at'] = Variable<DateTime>(capturedAt);
+    map['data_version'] = Variable<int>(dataVersion);
+    return map;
+  }
+
+  CharacterBuildSnapshotsCompanion toCompanion(bool nullToAbsent) {
+    return CharacterBuildSnapshotsCompanion(
+      id: Value(id),
+      characterId: Value(characterId),
+      role: Value(role),
+      rawJson: Value(rawJson),
+      itemLevel: itemLevel == null && nullToAbsent
+          ? const Value.absent()
+          : Value(itemLevel),
+      combatPower: combatPower == null && nullToAbsent
+          ? const Value.absent()
+          : Value(combatPower),
+      capturedAt: Value(capturedAt),
+      dataVersion: Value(dataVersion),
+    );
+  }
+
+  factory CharacterBuildSnapshotRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CharacterBuildSnapshotRow(
+      id: serializer.fromJson<int>(json['id']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      role: serializer.fromJson<String>(json['role']),
+      rawJson: serializer.fromJson<String>(json['rawJson']),
+      itemLevel: serializer.fromJson<double?>(json['itemLevel']),
+      combatPower: serializer.fromJson<double?>(json['combatPower']),
+      capturedAt: serializer.fromJson<DateTime>(json['capturedAt']),
+      dataVersion: serializer.fromJson<int>(json['dataVersion']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'characterId': serializer.toJson<int>(characterId),
+      'role': serializer.toJson<String>(role),
+      'rawJson': serializer.toJson<String>(rawJson),
+      'itemLevel': serializer.toJson<double?>(itemLevel),
+      'combatPower': serializer.toJson<double?>(combatPower),
+      'capturedAt': serializer.toJson<DateTime>(capturedAt),
+      'dataVersion': serializer.toJson<int>(dataVersion),
+    };
+  }
+
+  CharacterBuildSnapshotRow copyWith({
+    int? id,
+    int? characterId,
+    String? role,
+    String? rawJson,
+    Value<double?> itemLevel = const Value.absent(),
+    Value<double?> combatPower = const Value.absent(),
+    DateTime? capturedAt,
+    int? dataVersion,
+  }) => CharacterBuildSnapshotRow(
+    id: id ?? this.id,
+    characterId: characterId ?? this.characterId,
+    role: role ?? this.role,
+    rawJson: rawJson ?? this.rawJson,
+    itemLevel: itemLevel.present ? itemLevel.value : this.itemLevel,
+    combatPower: combatPower.present ? combatPower.value : this.combatPower,
+    capturedAt: capturedAt ?? this.capturedAt,
+    dataVersion: dataVersion ?? this.dataVersion,
+  );
+  CharacterBuildSnapshotRow copyWithCompanion(
+    CharacterBuildSnapshotsCompanion data,
+  ) {
+    return CharacterBuildSnapshotRow(
+      id: data.id.present ? data.id.value : this.id,
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      role: data.role.present ? data.role.value : this.role,
+      rawJson: data.rawJson.present ? data.rawJson.value : this.rawJson,
+      itemLevel: data.itemLevel.present ? data.itemLevel.value : this.itemLevel,
+      combatPower: data.combatPower.present
+          ? data.combatPower.value
+          : this.combatPower,
+      capturedAt: data.capturedAt.present
+          ? data.capturedAt.value
+          : this.capturedAt,
+      dataVersion: data.dataVersion.present
+          ? data.dataVersion.value
+          : this.dataVersion,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CharacterBuildSnapshotRow(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('role: $role, ')
+          ..write('rawJson: $rawJson, ')
+          ..write('itemLevel: $itemLevel, ')
+          ..write('combatPower: $combatPower, ')
+          ..write('capturedAt: $capturedAt, ')
+          ..write('dataVersion: $dataVersion')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    characterId,
+    role,
+    rawJson,
+    itemLevel,
+    combatPower,
+    capturedAt,
+    dataVersion,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CharacterBuildSnapshotRow &&
+          other.id == this.id &&
+          other.characterId == this.characterId &&
+          other.role == this.role &&
+          other.rawJson == this.rawJson &&
+          other.itemLevel == this.itemLevel &&
+          other.combatPower == this.combatPower &&
+          other.capturedAt == this.capturedAt &&
+          other.dataVersion == this.dataVersion);
+}
+
+class CharacterBuildSnapshotsCompanion
+    extends UpdateCompanion<CharacterBuildSnapshotRow> {
+  final Value<int> id;
+  final Value<int> characterId;
+  final Value<String> role;
+  final Value<String> rawJson;
+  final Value<double?> itemLevel;
+  final Value<double?> combatPower;
+  final Value<DateTime> capturedAt;
+  final Value<int> dataVersion;
+  const CharacterBuildSnapshotsCompanion({
+    this.id = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.role = const Value.absent(),
+    this.rawJson = const Value.absent(),
+    this.itemLevel = const Value.absent(),
+    this.combatPower = const Value.absent(),
+    this.capturedAt = const Value.absent(),
+    this.dataVersion = const Value.absent(),
+  });
+  CharacterBuildSnapshotsCompanion.insert({
+    this.id = const Value.absent(),
+    required int characterId,
+    required String role,
+    required String rawJson,
+    this.itemLevel = const Value.absent(),
+    this.combatPower = const Value.absent(),
+    required DateTime capturedAt,
+    this.dataVersion = const Value.absent(),
+  }) : characterId = Value(characterId),
+       role = Value(role),
+       rawJson = Value(rawJson),
+       capturedAt = Value(capturedAt);
+  static Insertable<CharacterBuildSnapshotRow> custom({
+    Expression<int>? id,
+    Expression<int>? characterId,
+    Expression<String>? role,
+    Expression<String>? rawJson,
+    Expression<double>? itemLevel,
+    Expression<double>? combatPower,
+    Expression<DateTime>? capturedAt,
+    Expression<int>? dataVersion,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (characterId != null) 'character_id': characterId,
+      if (role != null) 'role': role,
+      if (rawJson != null) 'raw_json': rawJson,
+      if (itemLevel != null) 'item_level': itemLevel,
+      if (combatPower != null) 'combat_power': combatPower,
+      if (capturedAt != null) 'captured_at': capturedAt,
+      if (dataVersion != null) 'data_version': dataVersion,
+    });
+  }
+
+  CharacterBuildSnapshotsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? characterId,
+    Value<String>? role,
+    Value<String>? rawJson,
+    Value<double?>? itemLevel,
+    Value<double?>? combatPower,
+    Value<DateTime>? capturedAt,
+    Value<int>? dataVersion,
+  }) {
+    return CharacterBuildSnapshotsCompanion(
+      id: id ?? this.id,
+      characterId: characterId ?? this.characterId,
+      role: role ?? this.role,
+      rawJson: rawJson ?? this.rawJson,
+      itemLevel: itemLevel ?? this.itemLevel,
+      combatPower: combatPower ?? this.combatPower,
+      capturedAt: capturedAt ?? this.capturedAt,
+      dataVersion: dataVersion ?? this.dataVersion,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (rawJson.present) {
+      map['raw_json'] = Variable<String>(rawJson.value);
+    }
+    if (itemLevel.present) {
+      map['item_level'] = Variable<double>(itemLevel.value);
+    }
+    if (combatPower.present) {
+      map['combat_power'] = Variable<double>(combatPower.value);
+    }
+    if (capturedAt.present) {
+      map['captured_at'] = Variable<DateTime>(capturedAt.value);
+    }
+    if (dataVersion.present) {
+      map['data_version'] = Variable<int>(dataVersion.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CharacterBuildSnapshotsCompanion(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('role: $role, ')
+          ..write('rawJson: $rawJson, ')
+          ..write('itemLevel: $itemLevel, ')
+          ..write('combatPower: $combatPower, ')
+          ..write('capturedAt: $capturedAt, ')
+          ..write('dataVersion: $dataVersion')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AccountDatabase extends GeneratedDatabase {
   _$AccountDatabase(QueryExecutor e) : super(e);
   $AccountDatabaseManager get managers => $AccountDatabaseManager(this);
   late final $GameAccountsTable gameAccounts = $GameAccountsTable(this);
   late final $AccountCharactersTable accountCharacters =
       $AccountCharactersTable(this);
+  late final $CharacterBuildSnapshotsTable characterBuildSnapshots =
+      $CharacterBuildSnapshotsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1245,6 +1778,7 @@ abstract class _$AccountDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     gameAccounts,
     accountCharacters,
+    characterBuildSnapshots,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -1254,6 +1788,15 @@ abstract class _$AccountDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('account_characters', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'account_characters',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [
+        TableUpdate('character_build_snapshots', kind: UpdateKind.delete),
+      ],
     ),
   ]);
 }
@@ -1683,6 +2226,32 @@ final class $$AccountCharactersTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static MultiTypedResultKey<
+    $CharacterBuildSnapshotsTable,
+    List<CharacterBuildSnapshotRow>
+  >
+  _characterBuildSnapshotsRefsTable(_$AccountDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.characterBuildSnapshots,
+        aliasName:
+            'account_characters__id__character_build_snapshots__character_id',
+      );
+
+  $$CharacterBuildSnapshotsTableProcessedTableManager
+  get characterBuildSnapshotsRefs {
+    final manager = $$CharacterBuildSnapshotsTableTableManager(
+      $_db,
+      $_db.characterBuildSnapshots,
+    ).filter((f) => f.characterId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _characterBuildSnapshotsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$AccountCharactersTableFilterComposer
@@ -1765,6 +2334,32 @@ class $$AccountCharactersTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> characterBuildSnapshotsRefs(
+    Expression<bool> Function($$CharacterBuildSnapshotsTableFilterComposer f) f,
+  ) {
+    final $$CharacterBuildSnapshotsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.characterBuildSnapshots,
+          getReferencedColumn: (t) => t.characterId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CharacterBuildSnapshotsTableFilterComposer(
+                $db: $db,
+                $table: $db.characterBuildSnapshots,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
   }
 }
 
@@ -1926,6 +2521,33 @@ class $$AccountCharactersTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> characterBuildSnapshotsRefs<T extends Object>(
+    Expression<T> Function($$CharacterBuildSnapshotsTableAnnotationComposer a)
+    f,
+  ) {
+    final $$CharacterBuildSnapshotsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.characterBuildSnapshots,
+          getReferencedColumn: (t) => t.characterId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CharacterBuildSnapshotsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.characterBuildSnapshots,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$AccountCharactersTableTableManager
@@ -1941,7 +2563,10 @@ class $$AccountCharactersTableTableManager
           $$AccountCharactersTableUpdateCompanionBuilder,
           (AccountCharacter, $$AccountCharactersTableReferences),
           AccountCharacter,
-          PrefetchHooks Function({bool accountId})
+          PrefetchHooks Function({
+            bool accountId,
+            bool characterBuildSnapshotsRefs,
+          })
         > {
   $$AccountCharactersTableTableManager(
     _$AccountDatabase db,
@@ -2019,7 +2644,431 @@ class $$AccountCharactersTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({accountId = false}) {
+          prefetchHooksCallback:
+              ({accountId = false, characterBuildSnapshotsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (characterBuildSnapshotsRefs) db.characterBuildSnapshots,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (accountId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.accountId,
+                                    referencedTable:
+                                        $$AccountCharactersTableReferences
+                                            ._accountIdTable(db),
+                                    referencedColumn:
+                                        $$AccountCharactersTableReferences
+                                            ._accountIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (characterBuildSnapshotsRefs)
+                        await $_getPrefetchedData<
+                          AccountCharacter,
+                          $AccountCharactersTable,
+                          CharacterBuildSnapshotRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AccountCharactersTableReferences
+                              ._characterBuildSnapshotsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AccountCharactersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).characterBuildSnapshotsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$AccountCharactersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AccountDatabase,
+      $AccountCharactersTable,
+      AccountCharacter,
+      $$AccountCharactersTableFilterComposer,
+      $$AccountCharactersTableOrderingComposer,
+      $$AccountCharactersTableAnnotationComposer,
+      $$AccountCharactersTableCreateCompanionBuilder,
+      $$AccountCharactersTableUpdateCompanionBuilder,
+      (AccountCharacter, $$AccountCharactersTableReferences),
+      AccountCharacter,
+      PrefetchHooks Function({bool accountId, bool characterBuildSnapshotsRefs})
+    >;
+typedef $$CharacterBuildSnapshotsTableCreateCompanionBuilder =
+    CharacterBuildSnapshotsCompanion Function({
+      Value<int> id,
+      required int characterId,
+      required String role,
+      required String rawJson,
+      Value<double?> itemLevel,
+      Value<double?> combatPower,
+      required DateTime capturedAt,
+      Value<int> dataVersion,
+    });
+typedef $$CharacterBuildSnapshotsTableUpdateCompanionBuilder =
+    CharacterBuildSnapshotsCompanion Function({
+      Value<int> id,
+      Value<int> characterId,
+      Value<String> role,
+      Value<String> rawJson,
+      Value<double?> itemLevel,
+      Value<double?> combatPower,
+      Value<DateTime> capturedAt,
+      Value<int> dataVersion,
+    });
+
+final class $$CharacterBuildSnapshotsTableReferences
+    extends
+        BaseReferences<
+          _$AccountDatabase,
+          $CharacterBuildSnapshotsTable,
+          CharacterBuildSnapshotRow
+        > {
+  $$CharacterBuildSnapshotsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $AccountCharactersTable _characterIdTable(_$AccountDatabase db) =>
+      db.accountCharacters.createAlias(
+        'character_build_snapshots__character_id__account_characters__id',
+      );
+
+  $$AccountCharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
+    final manager = $$AccountCharactersTableTableManager(
+      $_db,
+      $_db.accountCharacters,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CharacterBuildSnapshotsTableFilterComposer
+    extends Composer<_$AccountDatabase, $CharacterBuildSnapshotsTable> {
+  $$CharacterBuildSnapshotsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rawJson => $composableBuilder(
+    column: $table.rawJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get itemLevel => $composableBuilder(
+    column: $table.itemLevel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get combatPower => $composableBuilder(
+    column: $table.combatPower,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get capturedAt => $composableBuilder(
+    column: $table.capturedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dataVersion => $composableBuilder(
+    column: $table.dataVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$AccountCharactersTableFilterComposer get characterId {
+    final $$AccountCharactersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.characterId,
+      referencedTable: $db.accountCharacters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountCharactersTableFilterComposer(
+            $db: $db,
+            $table: $db.accountCharacters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CharacterBuildSnapshotsTableOrderingComposer
+    extends Composer<_$AccountDatabase, $CharacterBuildSnapshotsTable> {
+  $$CharacterBuildSnapshotsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rawJson => $composableBuilder(
+    column: $table.rawJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get itemLevel => $composableBuilder(
+    column: $table.itemLevel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get combatPower => $composableBuilder(
+    column: $table.combatPower,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get capturedAt => $composableBuilder(
+    column: $table.capturedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dataVersion => $composableBuilder(
+    column: $table.dataVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$AccountCharactersTableOrderingComposer get characterId {
+    final $$AccountCharactersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.characterId,
+      referencedTable: $db.accountCharacters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountCharactersTableOrderingComposer(
+            $db: $db,
+            $table: $db.accountCharacters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CharacterBuildSnapshotsTableAnnotationComposer
+    extends Composer<_$AccountDatabase, $CharacterBuildSnapshotsTable> {
+  $$CharacterBuildSnapshotsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<String> get rawJson =>
+      $composableBuilder(column: $table.rawJson, builder: (column) => column);
+
+  GeneratedColumn<double> get itemLevel =>
+      $composableBuilder(column: $table.itemLevel, builder: (column) => column);
+
+  GeneratedColumn<double> get combatPower => $composableBuilder(
+    column: $table.combatPower,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get capturedAt => $composableBuilder(
+    column: $table.capturedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get dataVersion => $composableBuilder(
+    column: $table.dataVersion,
+    builder: (column) => column,
+  );
+
+  $$AccountCharactersTableAnnotationComposer get characterId {
+    final $$AccountCharactersTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.characterId,
+          referencedTable: $db.accountCharacters,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$AccountCharactersTableAnnotationComposer(
+                $db: $db,
+                $table: $db.accountCharacters,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$CharacterBuildSnapshotsTableTableManager
+    extends
+        RootTableManager<
+          _$AccountDatabase,
+          $CharacterBuildSnapshotsTable,
+          CharacterBuildSnapshotRow,
+          $$CharacterBuildSnapshotsTableFilterComposer,
+          $$CharacterBuildSnapshotsTableOrderingComposer,
+          $$CharacterBuildSnapshotsTableAnnotationComposer,
+          $$CharacterBuildSnapshotsTableCreateCompanionBuilder,
+          $$CharacterBuildSnapshotsTableUpdateCompanionBuilder,
+          (CharacterBuildSnapshotRow, $$CharacterBuildSnapshotsTableReferences),
+          CharacterBuildSnapshotRow,
+          PrefetchHooks Function({bool characterId})
+        > {
+  $$CharacterBuildSnapshotsTableTableManager(
+    _$AccountDatabase db,
+    $CharacterBuildSnapshotsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CharacterBuildSnapshotsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CharacterBuildSnapshotsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CharacterBuildSnapshotsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> characterId = const Value.absent(),
+                Value<String> role = const Value.absent(),
+                Value<String> rawJson = const Value.absent(),
+                Value<double?> itemLevel = const Value.absent(),
+                Value<double?> combatPower = const Value.absent(),
+                Value<DateTime> capturedAt = const Value.absent(),
+                Value<int> dataVersion = const Value.absent(),
+              }) => CharacterBuildSnapshotsCompanion(
+                id: id,
+                characterId: characterId,
+                role: role,
+                rawJson: rawJson,
+                itemLevel: itemLevel,
+                combatPower: combatPower,
+                capturedAt: capturedAt,
+                dataVersion: dataVersion,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int characterId,
+                required String role,
+                required String rawJson,
+                Value<double?> itemLevel = const Value.absent(),
+                Value<double?> combatPower = const Value.absent(),
+                required DateTime capturedAt,
+                Value<int> dataVersion = const Value.absent(),
+              }) => CharacterBuildSnapshotsCompanion.insert(
+                id: id,
+                characterId: characterId,
+                role: role,
+                rawJson: rawJson,
+                itemLevel: itemLevel,
+                combatPower: combatPower,
+                capturedAt: capturedAt,
+                dataVersion: dataVersion,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$CharacterBuildSnapshotsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({characterId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -2039,17 +3088,17 @@ class $$AccountCharactersTableTableManager
                       dynamic
                     >
                   >(state) {
-                    if (accountId) {
+                    if (characterId) {
                       state =
                           state.withJoin(
                                 currentTable: table,
-                                currentColumn: table.accountId,
+                                currentColumn: table.characterId,
                                 referencedTable:
-                                    $$AccountCharactersTableReferences
-                                        ._accountIdTable(db),
+                                    $$CharacterBuildSnapshotsTableReferences
+                                        ._characterIdTable(db),
                                 referencedColumn:
-                                    $$AccountCharactersTableReferences
-                                        ._accountIdTable(db)
+                                    $$CharacterBuildSnapshotsTableReferences
+                                        ._characterIdTable(db)
                                         .id,
                               )
                               as T;
@@ -2066,19 +3115,19 @@ class $$AccountCharactersTableTableManager
       );
 }
 
-typedef $$AccountCharactersTableProcessedTableManager =
+typedef $$CharacterBuildSnapshotsTableProcessedTableManager =
     ProcessedTableManager<
       _$AccountDatabase,
-      $AccountCharactersTable,
-      AccountCharacter,
-      $$AccountCharactersTableFilterComposer,
-      $$AccountCharactersTableOrderingComposer,
-      $$AccountCharactersTableAnnotationComposer,
-      $$AccountCharactersTableCreateCompanionBuilder,
-      $$AccountCharactersTableUpdateCompanionBuilder,
-      (AccountCharacter, $$AccountCharactersTableReferences),
-      AccountCharacter,
-      PrefetchHooks Function({bool accountId})
+      $CharacterBuildSnapshotsTable,
+      CharacterBuildSnapshotRow,
+      $$CharacterBuildSnapshotsTableFilterComposer,
+      $$CharacterBuildSnapshotsTableOrderingComposer,
+      $$CharacterBuildSnapshotsTableAnnotationComposer,
+      $$CharacterBuildSnapshotsTableCreateCompanionBuilder,
+      $$CharacterBuildSnapshotsTableUpdateCompanionBuilder,
+      (CharacterBuildSnapshotRow, $$CharacterBuildSnapshotsTableReferences),
+      CharacterBuildSnapshotRow,
+      PrefetchHooks Function({bool characterId})
     >;
 
 class $AccountDatabaseManager {
@@ -2088,4 +3137,9 @@ class $AccountDatabaseManager {
       $$GameAccountsTableTableManager(_db, _db.gameAccounts);
   $$AccountCharactersTableTableManager get accountCharacters =>
       $$AccountCharactersTableTableManager(_db, _db.accountCharacters);
+  $$CharacterBuildSnapshotsTableTableManager get characterBuildSnapshots =>
+      $$CharacterBuildSnapshotsTableTableManager(
+        _db,
+        _db.characterBuildSnapshots,
+      );
 }
