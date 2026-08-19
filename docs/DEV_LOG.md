@@ -224,3 +224,57 @@
 - 로컬 DB 사용을 위한 의존성만 추가
 - DB 테이블, DAO, DataSource 및 Repository 연동은 아직 구현하지 않음
 - 실제 저장 구조는 Lost Ark API DTO 범위가 확정된 뒤 구현 예정
+
+---
+
+## Task-005. 앱 셸 및 공통 내비게이션 기반
+
+### 구현 내용
+- StatefulShellRoute 기반 하단 탭 구조 적용
+- 첫 번째 탭을 내 계정, 두 번째 탭을 파티 모집으로 구성
+- PageView 스와이프와 하단 탭 선택 상태 동기화
+- 탭별 Navigator 스택과 공통 뒤로가기 기반 구성
+- 기존 RecruitmentListPage를 두 번째 탭에 유지
+
+---
+
+## Task-006. Lost Ark API 인증 및 통신 기반
+
+### 인증
+- 사용자가 앱에서 Lost Ark JWT를 직접 등록, 변경, 삭제할 수 있는 화면 구현
+- flutter_secure_storage로 JWT 보관
+- 저장된 JWT 원문을 입력창, 상태 화면 및 로그에 다시 노출하지 않음
+- 토큰이 없으면 요청을 시작하지 않고 안내 다이얼로그 표시
+- 안내를 닫은 뒤에도 앱의 다른 화면을 계속 탐색할 수 있도록 구성
+
+### 공통 API 클라이언트
+- Dio 기반 Lost Ark API 공통 클라이언트 구현
+- API base URL과 connect/send/receive timeout 설정
+- 요청 직전에 토큰을 읽어 Authorization 헤더 적용
+- 401, 404, 429, 5xx, timeout, network, invalid response 오류 분류
+- 진단 로그에는 HTTP method와 status만 남기고 URL, header, JWT 제외
+
+### 원정대 캐릭터 조회
+- `GET /characters/{characterName}/siblings` endpoint 연동
+- DTO와 json_serializable 생성 코드 구성
+- API DTO에서 Domain Entity로 변환하는 mapper 구현
+- remote data source와 AccountRepository 구현체 연결
+- 내 계정 ViewModel에서 조회, 로딩, 결과 및 오류 상태 관리
+- 내 계정 화면에서 대표 캐릭터명 입력 후 원정대 캐릭터 목록 표시
+
+### 플랫폼 설정
+- Android 인터넷 권한 및 secure storage를 위한 최소 SDK/백업 설정 반영
+- iOS Keychain 사용을 위한 entitlements 연결
+- flutter_secure_storage 플러그인 등록 파일 반영
+
+### 검증
+- Galaxy Z Fold6(SM_F956N) 실기기 빌드 및 설치 성공
+- 사용자가 앱에 JWT를 직접 입력한 뒤 저장 동작 확인
+- 실제 캐릭터명 검색과 Lost Ark API 응답 표시 확인
+- 저장소 민감정보 검사 결과 실제 JWT 없음
+- flutter analyze: issue 0개
+- flutter test: 전체 46개 통과
+
+### 현재 범위
+- siblings 응답은 화면에 표시하지만 Drift 로컬 DB에는 아직 저장하지 않음
+- 추가 캐릭터 상세 endpoint 및 계정 상세 화면은 다음 작업 범위
