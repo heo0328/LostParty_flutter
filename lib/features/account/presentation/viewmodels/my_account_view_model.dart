@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 
 import '../../../../shared/lost_ark_api/auth/api_token_store.dart';
 import '../../../../shared/lost_ark_api/client/lost_ark_api_exception.dart';
+import '../../domain/entities/character_profile.dart';
 import '../../domain/entities/character_summary.dart';
+import '../../domain/entities/local_game_account.dart';
 import '../../domain/repositories/account_repository.dart';
 
 class MyAccountViewModel extends ChangeNotifier {
@@ -20,6 +22,8 @@ class MyAccountViewModel extends ChangeNotifier {
   bool _hasApiToken = false;
   bool _hasFetchedCharacters = false;
   List<CharacterSummary> _characters = const [];
+  CharacterProfile? _lookupProfile;
+  LocalGameAccount? _mainAccount;
   LostArkApiErrorType? _errorType;
 
   bool get isLoadingTokenStatus => _isLoadingTokenStatus;
@@ -27,6 +31,8 @@ class MyAccountViewModel extends ChangeNotifier {
   bool get hasApiToken => _hasApiToken;
   bool get hasFetchedCharacters => _hasFetchedCharacters;
   List<CharacterSummary> get characters => _characters;
+  CharacterProfile? get lookupProfile => _lookupProfile;
+  LocalGameAccount? get mainAccount => _mainAccount;
   LostArkApiErrorType? get errorType => _errorType;
 
   Future<void> loadTokenStatus() async {
@@ -38,6 +44,16 @@ class MyAccountViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> initialize() async {
+    await loadTokenStatus();
+    await loadStoredAccount();
+  }
+
+  Future<void> loadStoredAccount() async {
+    _mainAccount = await _accountRepository.loadMainAccount();
+    notifyListeners();
+  }
+
   Future<void> fetchCharacters(String characterName) async {
     _isFetchingCharacters = true;
     _errorType = null;
@@ -45,6 +61,10 @@ class MyAccountViewModel extends ChangeNotifier {
 
     try {
       _characters = await _accountRepository.fetchCharacters(characterName);
+      _lookupProfile = await _accountRepository.fetchCharacterProfile(
+        characterName,
+      );
+      _mainAccount = await _accountRepository.loadMainAccount();
       _hasFetchedCharacters = true;
     } on LostArkApiException catch (error) {
       _errorType = error.type;

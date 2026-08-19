@@ -11,6 +11,8 @@ void main() {
   const characterName = '이슈아이';
   final requestPath =
       '/characters/${Uri.encodeComponent(characterName)}/siblings';
+  final profileRequestPath =
+      '/armories/characters/${Uri.encodeComponent(characterName)}';
 
   late Dio dio;
   late DioAdapter dioAdapter;
@@ -58,6 +60,50 @@ void main() {
     final result = await dataSource.fetchSiblings(characterName);
 
     expect(result, isEmpty);
+  });
+
+  test('fetches and decodes a character profile', () async {
+    dioAdapter.onGet(
+      profileRequestPath,
+      (server) => server.reply(200, {
+        'ArmoryProfile': {
+          'ServerName': '루페온',
+          'CharacterName': characterName,
+          'CharacterLevel': 70,
+          'CharacterClassName': '바드',
+          'ItemAvgLevel': '1,766.66',
+          'CombatPower': '338,229.42',
+        },
+        'ArmoryEquipment': [],
+      }),
+    );
+
+    final result = await dataSource.fetchCharacterProfile('  $characterName  ');
+
+    expect(result.serverName, '루페온');
+    expect(result.characterName, characterName);
+    expect(result.characterLevel, 70);
+    expect(result.characterClassName, '바드');
+    expect(result.itemAvgLevel, '1,766.66');
+    expect(result.combatPower, '338,229.42');
+  });
+
+  test('maps a missing armory profile to an invalid response error', () async {
+    dioAdapter.onGet(
+      profileRequestPath,
+      (server) => server.reply(200, {'ArmoryProfile': null}),
+    );
+
+    await expectLater(
+      dataSource.fetchCharacterProfile(characterName),
+      throwsA(
+        isA<LostArkApiException>().having(
+          (error) => error.type,
+          'type',
+          LostArkApiErrorType.invalidResponse,
+        ),
+      ),
+    );
   });
 
   test('rejects an empty character name before requesting', () async {

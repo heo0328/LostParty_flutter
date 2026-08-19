@@ -3,8 +3,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../shared/lost_ark_api/auth/api_token_store.dart';
 import '../../../../shared/lost_ark_api/client/lost_ark_api_exception.dart';
+import '../../domain/entities/local_game_account.dart';
 import '../../domain/repositories/account_repository.dart';
 import '../viewmodels/my_account_view_model.dart';
+import '../widgets/account_character_card.dart';
 
 class MyAccountPage extends StatefulWidget {
   const MyAccountPage({
@@ -34,7 +36,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
       accountRepository: widget.accountRepository,
     );
     _viewModel.addListener(_onViewModelChanged);
-    _viewModel.loadTokenStatus();
+    _viewModel.initialize();
   }
 
   @override
@@ -65,7 +67,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
     final characterName = _characterNameController.text.trim();
     if (characterName.isEmpty) {
       setState(() {
-        _characterNameError = '대표 캐릭터명을 입력해 주세요.';
+        _characterNameError = '조회할 캐릭터명을 입력해 주세요.';
       });
       return;
     }
@@ -147,29 +149,22 @@ class _MyAccountPageState extends State<MyAccountPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('내 계정'),
-        actions: [
-          IconButton(
-            tooltip: 'API 토큰 설정',
-            onPressed: _openTokenSettings,
-            icon: const Icon(Icons.key_outlined),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('내 계정')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             if (_viewModel.isLoadingTokenStatus)
               const LinearProgressIndicator(),
+            _buildTokenStatusPanel(context),
+            const SizedBox(height: 16),
             TextField(
               key: const ValueKey('representativeCharacterNameField'),
               controller: _characterNameController,
               enabled: !_viewModel.isFetchingCharacters,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                labelText: '대표 캐릭터명',
+                labelText: '조회 캐릭터명',
                 errorText: _characterNameError,
                 border: const OutlineInputBorder(),
               ),
@@ -195,26 +190,135 @@ class _MyAccountPageState extends State<MyAccountPage> {
             ),
             if (_viewModel.hasFetchedCharacters) ...[
               const SizedBox(height: 24),
-              Text(
-                '캐릭터 ${_viewModel.characters.length}개',
-                style: Theme.of(context).textTheme.titleMedium,
+              if (_viewModel.lookupProfile case final profile?) ...[
+                Text('조회 캐릭터', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Card(
+                  key: const ValueKey('lookupCharacterProfileCard'),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          profile.characterName,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${profile.serverName} · ${profile.characterClassName} · 전투 Lv. ${profile.characterLevel}',
+                        ),
+                        const SizedBox(height: 12),
+                        Text('아이템 레벨 ${_formatNumber(profile.itemLevel)}'),
+                        Text('전투력 ${_formatNumber(profile.combatPower)}'),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ],
+            if (_viewModel.mainAccount case final account?) ...[
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      account.label,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  Text(
+                    '${account.visibleCharacters.length}/${account.characters.length}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
-              for (final character in _viewModel.characters)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(character.characterName),
-                  subtitle: Text(
-                    '${character.serverName} · ${character.characterClassName}',
-                  ),
-                  trailing: character.itemLevel == null
-                      ? null
-                      : Text(character.itemLevel!.toStringAsFixed(2)),
-                ),
+              _buildCharacterGrid(account),
             ],
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildTokenStatusPanel(BuildContext context) {
+    return Material(
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(
+              _viewModel.hasApiToken
+                  ? Icons.verified_user_outlined
+                  : Icons.key_off_outlined,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Lost Ark API 토큰',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  Text(_viewModel.hasApiToken ? '등록됨' : '등록 필요'),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: 'API 토큰 설정',
+              onPressed: _openTokenSettings,
+              icon: const Icon(Icons.settings_outlined),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCharacterGrid(LocalGameAccount account) {
+    final characters = account.visibleCharacters;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = switch (constraints.maxWidth) {
+          < 600 => 2,
+          < 900 => 3,
+          _ => 4,
+        };
+
+        return GridView.builder(
+          key: const ValueKey('mainAccountCharacterGrid'),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: characters.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            mainAxisExtent: 132,
+          ),
+          itemBuilder: (context, index) {
+            final character = characters[index];
+            return AccountCharacterCard(
+              character: character,
+              isRepresentative:
+                  account.representativeCharacterId == character.id,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _formatNumber(double? value) {
+    if (value == null) {
+      return '-';
+    }
+
+    return value.toStringAsFixed(2);
   }
 }

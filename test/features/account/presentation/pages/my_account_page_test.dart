@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lost_party/features/account/domain/entities/character_profile.dart';
 import 'package:lost_party/features/account/domain/entities/character_summary.dart';
+import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/account/presentation/pages/my_account_page.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token.dart';
@@ -30,16 +32,20 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('loadAccountDataButton')));
     await tester.pumpAndSettle();
 
-    expect(find.text('캐릭터 1개'), findsOneWidget);
+    expect(find.text('메인 계정'), findsOneWidget);
     expect(
       find.descendant(
-        of: find.byType(ListTile),
+        of: find.byKey(const ValueKey('mainAccountCharacterGrid')),
         matching: find.text('이슈아이'),
       ),
       findsOneWidget,
     );
-    expect(find.text('루페온 · 바드'), findsOneWidget);
-    expect(find.text('1766.66'), findsOneWidget);
+    expect(find.text('아이템 Lv. 1766.66'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('lookupCharacterProfileCard')),
+      findsOneWidget,
+    );
+    expect(find.text('전투력 338229.42'), findsNWidgets(2));
   });
 
   testWidgets('validates a missing character name after token registration', (
@@ -61,7 +67,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('loadAccountDataButton')));
     await tester.pumpAndSettle();
 
-    expect(find.text('대표 캐릭터명을 입력해 주세요.'), findsOneWidget);
+    expect(find.text('조회할 캐릭터명을 입력해 주세요.'), findsOneWidget);
   });
 }
 
@@ -77,6 +83,43 @@ class _FakeAccountRepository implements AccountRepository {
         itemLevel: 1766.66,
       ),
     ];
+  }
+
+  @override
+  Future<CharacterProfile> fetchCharacterProfile(String characterName) async {
+    return CharacterProfile(
+      serverName: '루페온',
+      characterName: characterName,
+      characterLevel: 70,
+      characterClassName: '바드',
+      itemLevel: 1766.66,
+      combatPower: 338229.42,
+    );
+  }
+
+  @override
+  Future<LocalGameAccount?> loadMainAccount() async {
+    return const LocalGameAccount(
+      id: 1,
+      label: '메인 계정',
+      isMain: true,
+      lookupCharacterName: '이슈아이',
+      representativeCharacterId: 1,
+      displayLimit: 6,
+      characters: [
+        LocalAccountCharacter(
+          id: 1,
+          serverName: '루페온',
+          characterName: '이슈아이',
+          characterLevel: 70,
+          characterClassName: '바드',
+          itemLevel: 1766.66,
+          combatPower: 338229.42,
+          isVisible: true,
+          displayOrder: 0,
+        ),
+      ],
+    );
   }
 }
 

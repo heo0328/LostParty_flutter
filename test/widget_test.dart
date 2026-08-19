@@ -1,7 +1,9 @@
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:lost_party/features/account/data/local/account_database.dart';
 import 'package:lost_party/main.dart';
 
 void main() {
@@ -10,7 +12,7 @@ void main() {
   });
 
   testWidgets('My account is the initial tab', (WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+    await _pumpApp(tester);
     await tester.pumpAndSettle();
 
     expect(find.text('내 계정'), findsNWidgets(2));
@@ -21,7 +23,7 @@ void main() {
   testWidgets('Navigation bar opens the recruitment tab', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await _pumpApp(tester);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('파티 모집'));
@@ -34,7 +36,7 @@ void main() {
   testWidgets('Horizontal swipe changes the selected tab', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await _pumpApp(tester);
     await tester.pumpAndSettle();
 
     await tester.fling(find.byType(PageView), const Offset(-500, 0), 1000);
@@ -51,7 +53,7 @@ void main() {
   testWidgets(
     'Missing token dialog can be dismissed without blocking the app',
     (WidgetTester tester) async {
-      await tester.pumpWidget(const MyApp());
+      await _pumpApp(tester);
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const ValueKey('loadAccountDataButton')));
@@ -74,7 +76,7 @@ void main() {
   testWidgets('Token can be registered without exposing it again', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await _pumpApp(tester);
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('loadAccountDataButton')));
@@ -98,4 +100,10 @@ void main() {
     expect(find.text('토큰 등록됨'), findsOneWidget);
     expect(find.text('secret-jwt-value'), findsNothing);
   });
+}
+
+Future<void> _pumpApp(WidgetTester tester) async {
+  final database = AccountDatabase(NativeDatabase.memory());
+  addTearDown(database.close);
+  await tester.pumpWidget(MyApp(accountDatabase: database));
 }

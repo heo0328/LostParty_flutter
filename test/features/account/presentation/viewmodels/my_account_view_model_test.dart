@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lost_party/features/account/domain/entities/character_profile.dart';
 import 'package:lost_party/features/account/domain/entities/character_summary.dart';
+import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/account/presentation/viewmodels/my_account_view_model.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token.dart';
@@ -36,6 +38,8 @@ void main() {
     await viewModel.fetchCharacters('이슈아이');
 
     expect(viewModel.characters, characters);
+    expect(viewModel.lookupProfile?.combatPower, 338229.42);
+    expect(viewModel.mainAccount?.visibleCharacters, hasLength(1));
     expect(viewModel.hasFetchedCharacters, isTrue);
     expect(viewModel.errorType, isNull);
     expect(viewModel.isFetchingCharacters, isFalse);
@@ -83,6 +87,50 @@ class _FakeAccountRepository implements AccountRepository {
       throw error;
     }
     return characters;
+  }
+
+  @override
+  Future<CharacterProfile> fetchCharacterProfile(String characterName) async {
+    final error = this.error;
+    if (error != null) {
+      throw error;
+    }
+    return CharacterProfile(
+      serverName: '루페온',
+      characterName: characterName,
+      characterLevel: 70,
+      characterClassName: '바드',
+      itemLevel: 1766.66,
+      combatPower: 338229.42,
+    );
+  }
+
+  @override
+  Future<LocalGameAccount?> loadMainAccount() async {
+    final character = characters.isEmpty
+        ? _createCharacterSummary()
+        : characters.first;
+    return LocalGameAccount(
+      id: 1,
+      label: '메인 계정',
+      isMain: true,
+      lookupCharacterName: character.characterName,
+      representativeCharacterId: 1,
+      displayLimit: 6,
+      characters: [
+        LocalAccountCharacter(
+          id: 1,
+          serverName: character.serverName,
+          characterName: character.characterName,
+          characterLevel: character.characterLevel,
+          characterClassName: character.characterClassName,
+          itemLevel: character.itemLevel,
+          combatPower: 338229.42,
+          isVisible: true,
+          displayOrder: 0,
+        ),
+      ],
+    );
   }
 }
 
