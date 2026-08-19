@@ -1,0 +1,335 @@
+import 'dart:convert';
+
+import '../../domain/entities/character_build_analysis.dart';
+
+class CharacterBuildAnalysisMapper {
+  const CharacterBuildAnalysisMapper();
+
+  CharacterBuildAnalysis fromJson(Map<String, dynamic> json) {
+    final skills = _mapList(json['ArmorySkills']);
+    final skillNames = skills
+        .map((skill) => skill['Name'])
+        .whereType<String>()
+        .toSet();
+    final runeCount = skills.where((skill) => skill['Rune'] is Map).length;
+    final notices = <BuildNotice>[];
+
+    if (runeCount != CharacterBuildAnalysis.expectedRuneCount) {
+      notices.add(
+        BuildNotice(
+          code: 'rune_count',
+          level: BuildNoticeLevel.warning,
+          message: '장착된 룬이 $runeCount개입니다. 일반 스킬 8개의 룬 설정을 확인해 주세요.',
+        ),
+      );
+    }
+
+    final gemEffects = _parseGemEffects(
+      json['ArmoryGem'],
+      skillNames: skillNames,
+      notices: notices,
+    );
+    final activePassiveNames = _parseActivePassiveNames(json['ArkPassive']);
+    final arkGridConditions = _parseArkGridConditions(
+      json['ArkGrid'],
+      activePassiveNames: activePassiveNames,
+      notices: notices,
+    );
+    final arkGridCorePoints = _parseRequiredArkGridCorePoints(
+      json['ArkGrid'],
+      notices: notices,
+    );
+
+    return CharacterBuildAnalysis(
+      runeCount: runeCount,
+      gemEffects: gemEffects,
+      arkGridConditions: arkGridConditions,
+      arkGridCorePoints: arkGridCorePoints,
+      notices: notices,
+    );
+  }
+
+  List<ArkGridCorePointCheck> _parseRequiredArkGridCorePoints(
+    Object? arkGrid, {
+    required List<BuildNotice> notices,
+  }) {
+    final gridMap = _map(arkGrid);
+    final checks = <ArkGridCorePointCheck>[];
+    for (final slot in _mapList(gridMap?['Slots'])) {
+      final coreName = slot['Name'];
+      final grade = slot['Grade'];
+      final point = slot['Point'];
+      if (coreName is! String || grade is! String || point is! int) {
+        continue;
+      }
+      if (!coreName.startsWith('질서의 해') && !coreName.startsWith('질서의 달')) {
+        continue;
+      }
+
+      const minimumPoint = 14;
+      final recommendedPoint = _isRelicOrHigher(grade) ? 17 : minimumPoint;
+      final check = ArkGridCorePointCheck(
+        coreName: coreName,
+        grade: grade,
+        point: point,
+        minimumPoint: minimumPoint,
+        recommendedPoint: recommendedPoint,
+      );
+      checks.add(check);
+
+      if (!check.meetsMinimum) {
+        notices.add(
+          BuildNotice(
+            code: 'ark_grid_required_point',
+            level: BuildNoticeLevel.warning,
+            message: '$coreName이 ${point}P입니다. 필수 14P 효과가 활성화되지 않았습니다.',
+          ),
+        );
+      } else if (!check.meetsRecommendation) {
+        notices.add(
+          BuildNotice(
+            code: 'ark_grid_relic_point',
+            level: BuildNoticeLevel.warning,
+            message: '$coreName이 ${point}P입니다. 유물 이상 코어의 17P 효과가 활성화되지 않았습니다.',
+          ),
+        );
+      }
+    }
+    return checks;
+  }
+
+  bool _isRelicOrHigher(String grade) {
+    return grade == '유물' || grade == '고대';
+  }
+
+  List<GemSkillEffect> _parseGemEffects(
+    Object? armoryGem, {
+    required Set<String> skillNames,
+    required List<BuildNotice> notices,
+  }) {
+    final gemMap = _map(armoryGem);
+    final levelsBySlot = <int, int>{};
+    for (final gem in _mapList(gemMap?['Gems'])) {
+      final slot = gem['Slot'];
+      final level = gem['Level'];
+      if (slot is int && level is int) {
+        levelsBySlot[slot] = level;
+      }
+    }
+
+    final effectsMap = _map(gemMap?['Effects']);
+    final effects = <GemSkillEffect>[];
+    final mappedSlots = <int>{};
+    for (final skill in _mapList(effectsMap?['Skills'])) {
+      final slot = skill['GemSlot'];
+      final name = skill['Name'];
+      if (slot is! int || name is! String) {
+        continue;
+      }
+      mappedSlots.add(slot);
+      final icon = skill['Icon'];
+      final category = skillNames.contains(name)
+          ? GemSkillCategory.normal
+          : icon is String && icon.contains('ark_passive')
+          ? GemSkillCategory.passiveOrIdentity
+          : GemSkillCategory.unknown;
+      final descriptions = _stringList(skill['Description']);
+      effects.add(
+        GemSkillEffect(
+          gemSlot: slot,
+          gemLevel: levelsBySlot[slot] ?? 0,
+          skillName: name,
+          descriptions: descriptions,
+          category: category,
+        ),
+      );
+
+      if (category == GemSkillCategory.unknown) {
+        notices.add(
+          BuildNotice(
+            code: 'unknown_gem_skill_$slot',
+            level: BuildNoticeLevel.warning,
+            message: '$name 보석의 대상 스킬을 확인할 수 없습니다.',
+          ),
+        );
+      }
+    }
+
+    for (final slot in levelsBySlot.keys.where(
+      (slot) => !mappedSlots.contains(slot),
+    )) {
+      notices.add(
+        BuildNotice(
+          code: 'unmapped_gem_$slot',
+          level: BuildNoticeLevel.warning,
+          message: '$slot번 보석의 적용 효과를 확인할 수 없습니다.',
+        ),
+      );
+    }
+
+    effects.sort((left, right) => left.gemSlot.compareTo(right.gemSlot));
+    return effects;
+  }
+
+  Set<String> _parseActivePassiveNames(Object? arkPassive) {
+    final passiveMap = _map(arkPassive);
+    final names = <String>{};
+    for (final effect in _mapList(passiveMap?['Effects'])) {
+      final description = effect['Description'];
+      if (description is! String) {
+        continue;
+      }
+      final cleanDescription = _stripMarkup(description);
+      final match = RegExp(
+        r'\d+티어\s+(.+?)\s+Lv\.\d+',
+      ).firstMatch(cleanDescription);
+      final name = match?.group(1)?.trim();
+      if (name != null && name.isNotEmpty) {
+        names.add(name);
+      }
+    }
+    return names;
+  }
+
+  List<ArkGridConditionCheck> _parseArkGridConditions(
+    Object? arkGrid, {
+    required Set<String> activePassiveNames,
+    required List<BuildNotice> notices,
+  }) {
+    final gridMap = _map(arkGrid);
+    final checks = <ArkGridConditionCheck>[];
+    for (final slot in _mapList(gridMap?['Slots'])) {
+      final coreName = slot['Name'];
+      final tooltip = slot['Tooltip'];
+      if (coreName is! String || tooltip is! String) {
+        continue;
+      }
+      final condition = _extractArkGridCondition(tooltip);
+      if (condition == null) {
+        continue;
+      }
+      final requiredNames = _extractRequiredPassiveNames(condition);
+      final missingNames = requiredNames
+          .where((name) => !activePassiveNames.contains(name))
+          .toList(growable: false);
+      checks.add(
+        ArkGridConditionCheck(
+          coreName: coreName,
+          conditionText: condition,
+          requiredPassiveNames: requiredNames,
+          missingPassiveNames: missingNames,
+        ),
+      );
+
+      if (requiredNames.isEmpty) {
+        notices.add(
+          BuildNotice(
+            code: 'unreadable_ark_grid_condition',
+            level: BuildNoticeLevel.info,
+            message: '$coreName의 발동 조건을 자동으로 판독하지 못했습니다.',
+          ),
+        );
+      } else if (missingNames.isNotEmpty) {
+        notices.add(
+          BuildNotice(
+            code: 'inactive_ark_grid_condition',
+            level: BuildNoticeLevel.warning,
+            message:
+                '$coreName에 필요한 아크패시브가 활성화되지 않았습니다: ${missingNames.join(', ')}',
+          ),
+        );
+      }
+    }
+    return checks;
+  }
+
+  String? _extractArkGridCondition(String tooltip) {
+    final decoded = jsonDecode(tooltip);
+    if (decoded is! Map) {
+      return null;
+    }
+    for (final element in decoded.values) {
+      final elementMap = _map(element);
+      if (elementMap?['type'] != 'ItemPartBox') {
+        continue;
+      }
+      final strings = _flattenStrings(elementMap?['value'])
+          .map(_stripMarkup)
+          .where((value) => value.isNotEmpty)
+          .toList(growable: false);
+      final headerIndex = strings.indexWhere(
+        (value) => value.contains('코어 옵션 발동 조건'),
+      );
+      if (headerIndex >= 0 && headerIndex + 1 < strings.length) {
+        return strings.skip(headerIndex + 1).join(' ').trim();
+      }
+    }
+    return null;
+  }
+
+  List<String> _extractRequiredPassiveNames(String condition) {
+    final names = <String>[];
+    final exclusiveMatch = RegExp(r'^(.+?)\s*전용').firstMatch(condition);
+    final exclusiveName = exclusiveMatch?.group(1)?.trim();
+    if (exclusiveName != null && exclusiveName.isNotEmpty) {
+      names.add(exclusiveName);
+    }
+    final activationMatches = RegExp(
+      r'(?:아크 패시브\s*)?\d+티어\s+(.+?)\s+활성화 필요',
+    ).allMatches(condition);
+    for (final match in activationMatches) {
+      final name = match.group(1)?.trim();
+      if (name != null && name.isNotEmpty && !names.contains(name)) {
+        names.add(name);
+      }
+    }
+    return names;
+  }
+
+  String _stripMarkup(String value) {
+    return value
+        .replaceAll(RegExp('<[^>]+>', caseSensitive: false), '')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('|', ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  Iterable<String> _flattenStrings(Object? value) sync* {
+    if (value is String) {
+      yield value;
+    } else if (value is List) {
+      for (final item in value) {
+        yield* _flattenStrings(item);
+      }
+    } else if (value is Map) {
+      for (final item in value.values) {
+        yield* _flattenStrings(item);
+      }
+    }
+  }
+
+  Map<String, dynamic>? _map(Object? value) {
+    if (value is! Map) {
+      return null;
+    }
+    return Map<String, dynamic>.from(value);
+  }
+
+  List<Map<String, dynamic>> _mapList(Object? value) {
+    if (value is! List) {
+      return const [];
+    }
+    return value
+        .whereType<Map>()
+        .map(Map<String, dynamic>.from)
+        .toList(growable: false);
+  }
+
+  List<String> _stringList(Object? value) {
+    if (value is! List) {
+      return const [];
+    }
+    return value.whereType<String>().toList(growable: false);
+  }
+}

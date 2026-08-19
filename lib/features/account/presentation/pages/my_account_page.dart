@@ -63,6 +63,11 @@ class _MyAccountPageState extends State<MyAccountPage> {
     await _viewModel.loadStoredAccount();
   }
 
+  Future<void> _openCharacterDetail(LocalAccountCharacter character) async {
+    await context.push('/account/characters/${character.id}', extra: character);
+    await _viewModel.loadStoredAccount();
+  }
+
   Future<void> _requestAccountData() async {
     if (!_viewModel.hasApiToken) {
       await _showMissingTokenDialog();
@@ -317,6 +322,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
               character: character,
               isRepresentative:
                   account.representativeCharacterId == character.id,
+              onTap: () => _openCharacterDetail(character),
             );
           },
         );

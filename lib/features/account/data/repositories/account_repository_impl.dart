@@ -1,10 +1,14 @@
+import 'dart:convert';
+
 import '../../../../shared/lost_ark_api/client/lost_ark_api_exception.dart';
+import '../../domain/entities/character_build_snapshot.dart';
 import '../../domain/entities/character_profile.dart';
 import '../../domain/entities/character_summary.dart';
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/repositories/account_repository.dart';
 import '../datasources/local_account_data_source.dart';
 import '../datasources/lost_ark_character_remote_data_source.dart';
+import '../dtos/character_profile_dto.dart';
 import '../mappers/character_profile_mapper.dart';
 import '../mappers/sibling_character_mapper.dart';
 
@@ -67,6 +71,71 @@ class AccountRepositoryImpl implements AccountRepository {
   @override
   Future<LocalGameAccount?> loadMainAccount() {
     return _localDataSource.loadMainAccount();
+  }
+
+  @override
+  Future<void> saveCharacterBuildSnapshot({
+    required int characterId,
+    required CharacterBuildRole role,
+    required String rawJson,
+    required double? itemLevel,
+    required double? combatPower,
+    required DateTime capturedAt,
+  }) {
+    return _localDataSource.saveCharacterBuildSnapshot(
+      characterId: characterId,
+      role: role,
+      rawJson: rawJson,
+      itemLevel: itemLevel,
+      combatPower: combatPower,
+      capturedAt: capturedAt,
+    );
+  }
+
+  @override
+  Future<List<CharacterBuildSnapshot>> loadCharacterBuildSnapshots(
+    int characterId,
+  ) {
+    return _localDataSource.loadCharacterBuildSnapshots(characterId);
+  }
+
+  @override
+  Future<CharacterBuildSnapshot> refreshCharacterBuildSnapshot({
+    required int characterId,
+    required String characterName,
+    required CharacterBuildRole role,
+  }) async {
+    final response = await _remoteDataSource.fetchCharacterArmory(
+      characterName,
+    );
+    try {
+      final profileJson = response['ArmoryProfile'];
+      final profile = CharacterProfileDto.fromJson(
+        Map<String, dynamic>.from(profileJson as Map),
+      ).toDomain();
+      final capturedAt = DateTime.now();
+      await _localDataSource.saveCharacterBuildSnapshot(
+        characterId: characterId,
+        role: role,
+        rawJson: jsonEncode(response),
+        itemLevel: profile.itemLevel,
+        combatPower: profile.combatPower,
+        capturedAt: capturedAt,
+      );
+      await _localDataSource.saveCharacterProfile(profile);
+      final snapshots = await _localDataSource.loadCharacterBuildSnapshots(
+        characterId,
+      );
+      return snapshots.singleWhere((snapshot) => snapshot.role == role);
+    } on TypeError {
+      throw const LostArkApiException(
+        type: LostArkApiErrorType.invalidResponse,
+      );
+    } on FormatException {
+      throw const LostArkApiException(
+        type: LostArkApiErrorType.invalidResponse,
+      );
+    }
   }
 
   @override

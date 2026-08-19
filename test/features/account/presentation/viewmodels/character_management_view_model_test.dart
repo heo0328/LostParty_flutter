@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
 import 'package:lost_party/features/account/domain/entities/character_profile.dart';
 import 'package:lost_party/features/account/domain/entities/character_summary.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
@@ -59,6 +60,28 @@ class _FakeAccountRepository implements AccountRepository {
   List<int> savedOrder = [1, 2];
   final List<(int, bool)> visibilityUpdates = [];
   final Map<int, bool> _visibility = {1: true, 2: false};
+
+  @override
+  Future<CharacterBuildSnapshot> refreshCharacterBuildSnapshot({
+    required int characterId,
+    required String characterName,
+    required CharacterBuildRole role,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> saveCharacterBuildSnapshot({
+    required int characterId,
+    required CharacterBuildRole role,
+    required String rawJson,
+    required double? itemLevel,
+    required double? combatPower,
+    required DateTime capturedAt,
+  }) async {}
+
+  @override
+  Future<List<CharacterBuildSnapshot>> loadCharacterBuildSnapshots(
+    int characterId,
+  ) async => const [];
 
   @override
   Future<LocalGameAccount?> loadMainAccount() async {

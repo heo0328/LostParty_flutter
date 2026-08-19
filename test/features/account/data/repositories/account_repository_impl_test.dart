@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +9,7 @@ import 'package:lost_party/features/account/data/datasources/local_account_data_
 import 'package:lost_party/features/account/data/datasources/lost_ark_character_remote_data_source.dart';
 import 'package:lost_party/features/account/data/local/account_database.dart';
 import 'package:lost_party/features/account/data/repositories/account_repository_impl.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token_store.dart';
 import 'package:lost_party/shared/lost_ark_api/client/lost_ark_api_client.dart';
@@ -73,6 +77,44 @@ void main() {
     expect(account.displayLimit, 6);
     expect(storedCharacters, hasLength(2));
     expect(representative.characterName, lookupCharacterName);
+  });
+
+  test('fetches and stores the full armory response for a selected role', () async {
+    dioAdapter.onGet(
+      requestPath,
+      (server) => server.reply(200, [
+        {
+          'ServerName': '루페온',
+          'CharacterName': lookupCharacterName,
+          'CharacterLevel': 70,
+          'CharacterClassName': '바드',
+          'ItemAvgLevel': '1,766.66',
+        },
+      ]),
+    );
+    await repository.fetchCharacters(lookupCharacterName);
+    final character = await database.select(database.accountCharacters).getSingle();
+    final fixture = jsonDecode(
+      File('test/fixtures/lost_ark/character_armory_full.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
+    (fixture['ArmoryProfile'] as Map<String, dynamic>)['CharacterName'] =
+        lookupCharacterName;
+    dioAdapter.onGet(
+      '/armories/characters/${Uri.encodeComponent(lookupCharacterName)}',
+      (server) => server.reply(200, fixture),
+    );
+
+    final snapshot = await repository.refreshCharacterBuildSnapshot(
+      characterId: character.id,
+      characterName: lookupCharacterName,
+      role: CharacterBuildRole.dealer,
+    );
+
+    expect(snapshot.role, CharacterBuildRole.dealer);
+    expect(snapshot.analysis.runeCount, 8);
+    expect(snapshot.analysis.gemEffects, hasLength(11));
+    expect(jsonDecode(snapshot.rawJson), isA<Map<String, dynamic>>());
+    expect(await database.loadCharacterBuildSnapshots(character.id), hasLength(1));
   });
 }
 

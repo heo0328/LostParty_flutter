@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -227,6 +229,144 @@ void main() {
       expect(character.combatPower, 338229.42);
       expect(character.isVisible, isFalse);
       expect(character.displayOrder, 3);
+    },
+  );
+
+  test('stores dealer and support snapshots for one character', () async {
+    final fetchedAt = DateTime.utc(2026, 8, 20);
+    await database.saveMainAccountSnapshot(
+      lookupCharacterName: '조회캐릭터',
+      characters: [_snapshot('조회캐릭터', fetchedAt)],
+    );
+    final character = await database
+        .select(database.accountCharacters)
+        .getSingle();
+
+    await database.saveCharacterBuildSnapshot(
+      characterId: character.id,
+      role: 'dealer',
+      rawJson: '{"role":"dealer"}',
+      itemLevel: 1766.67,
+      combatPower: 3404.53,
+      capturedAt: fetchedAt,
+    );
+    await database.saveCharacterBuildSnapshot(
+      characterId: character.id,
+      role: 'support',
+      rawJson: '{"role":"support"}',
+      itemLevel: 1766.67,
+      combatPower: 3300,
+      capturedAt: fetchedAt.add(const Duration(minutes: 1)),
+    );
+
+    final snapshots = await database.loadCharacterBuildSnapshots(character.id);
+    expect(snapshots.map((snapshot) => snapshot.role), ['dealer', 'support']);
+  });
+
+  test('replaces only the snapshot for the same role', () async {
+    final fetchedAt = DateTime.utc(2026, 8, 20);
+    await database.saveMainAccountSnapshot(
+      lookupCharacterName: '조회캐릭터',
+      characters: [_snapshot('조회캐릭터', fetchedAt)],
+    );
+    final character = await database
+        .select(database.accountCharacters)
+        .getSingle();
+
+    for (final role in ['dealer', 'support']) {
+      await database.saveCharacterBuildSnapshot(
+        characterId: character.id,
+        role: role,
+        rawJson: '{"version":1}',
+        itemLevel: 1766.67,
+        combatPower: 3300,
+        capturedAt: fetchedAt,
+      );
+    }
+    await database.saveCharacterBuildSnapshot(
+      characterId: character.id,
+      role: 'dealer',
+      rawJson: '{"version":2}',
+      itemLevel: 1766.67,
+      combatPower: 3404.53,
+      capturedAt: fetchedAt.add(const Duration(minutes: 1)),
+    );
+
+    final snapshots = await database.loadCharacterBuildSnapshots(character.id);
+    expect(snapshots, hasLength(2));
+    expect(
+      snapshots.singleWhere((snapshot) => snapshot.role == 'dealer').rawJson,
+      '{"version":2}',
+    );
+    expect(
+      snapshots.singleWhere((snapshot) => snapshot.role == 'support').rawJson,
+      '{"version":1}',
+    );
+  });
+
+  test('keeps role snapshots when refreshing the account', () async {
+    final fetchedAt = DateTime.utc(2026, 8, 20);
+    await database.saveMainAccountSnapshot(
+      lookupCharacterName: '조회캐릭터',
+      characters: [_snapshot('조회캐릭터', fetchedAt)],
+    );
+    final originalCharacter = await database
+        .select(database.accountCharacters)
+        .getSingle();
+    await database.saveCharacterBuildSnapshot(
+      characterId: originalCharacter.id,
+      role: 'dealer',
+      rawJson: '{"saved":true}',
+      itemLevel: 1766.67,
+      combatPower: 3404.53,
+      capturedAt: fetchedAt,
+    );
+
+    await database.saveMainAccountSnapshot(
+      lookupCharacterName: '조회캐릭터',
+      characters: [_snapshot('조회캐릭터', fetchedAt.add(const Duration(hours: 1)))],
+    );
+
+    final refreshedCharacter = await database
+        .select(database.accountCharacters)
+        .getSingle();
+    final snapshots = await database.loadCharacterBuildSnapshots(
+      refreshedCharacter.id,
+    );
+    expect(refreshedCharacter.id, originalCharacter.id);
+    expect(snapshots.single.rawJson, '{"saved":true}');
+  });
+
+  test(
+    'stores and restores the full armory fixture as a dealer build',
+    () async {
+      final rawJson = await File(
+        'test/fixtures/lost_ark/character_armory_full.json',
+      ).readAsString();
+      final fetchedAt = DateTime.utc(2026, 8, 20);
+      await database.saveMainAccountSnapshot(
+        lookupCharacterName: 'MockCharacter',
+        characters: [_snapshot('MockCharacter', fetchedAt)],
+      );
+      final character = await database
+          .select(database.accountCharacters)
+          .getSingle();
+
+      await database.saveCharacterBuildSnapshot(
+        characterId: character.id,
+        role: 'dealer',
+        rawJson: rawJson,
+        itemLevel: 1766.67,
+        combatPower: 3404.53,
+        capturedAt: fetchedAt,
+      );
+
+      final snapshot = (await database.loadCharacterBuildSnapshots(
+        character.id,
+      )).single;
+      expect(snapshot.role, 'dealer');
+      expect(snapshot.rawJson, rawJson);
+      expect(snapshot.dataVersion, 1);
     },
   );
 }
