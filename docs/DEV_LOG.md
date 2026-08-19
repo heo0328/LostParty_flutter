@@ -128,7 +128,7 @@
 다음 테스트 파일 작성 완료:
 
 - test/local_recruitment_list_data_source_test.dart
-- test/recruitment_list_repository_impl_test.dart
+- test/recruitment_list_repository_test.dart
 
 ### 테스트 내용
 - LocalRecruitmentListDataSource fetchRecruitments() 결과 검증
@@ -182,3 +182,25 @@
 - flutter analyze 통과
 - flutter test 통과
 - 전체 테스트 12개 통과
+
+---
+
+## Task-003. 문서 최신화
+
+### 수정 파일
+- docs/AI_CONTEXT.md
+- docs/DEV_LOG.md
+
+### 반영 내용
+- 현재 브랜치를 feature/recruitment-list-ui 기준으로 정리
+- Recruitment List Presentation Layer 완료 상태 반영
+- main.dart에서 RecruitmentListPage 실행 상태 반영
+- widget_test가 모집글 목록 표시 테스트로 변경된 상태 반영
+- flutter analyze 통과 상태 반영
+- flutter test 12개 통과 상태 반영
+- 다음 작업 후보를 현재 구현 이후 단계로 갱신
+
+### 현재 기준
+- 코드 변경 없음
+- MVP.md 변경 없음
+- ai_rules.md 변경 없음

@@ -16,7 +16,6 @@
 ---
 
 ## 현재 브랜치
-- feature/raid-master-data
 - feature/recruitment-list-ui
 
 ---
@@ -74,7 +73,7 @@
 ### RaidVariation
 - raidId
 - raidBaseId
-- difficultyType
+- difficultyOrder
 - difficultyLabel
 - minItemLevel
 - rewardGold
@@ -131,20 +130,26 @@
 
 ## 현재 상태 요약
 
-- Data Layer 완성
-  - DataSource → Repository → Test 검증 완료
-- mock 데이터 기반으로 UI 연결 가능한 상태
-- UI작업 진행하지 않았음. 현재는 기본 플러터 프로젝트에 데이터들만 작성중임 ui존재하지않음
-- 빌드는 아직 하지 않았으며 작업 순서대로 수동으로로 데이터 정리중
+- recruitment_list 기준 Domain / Data / Presentation Layer 1차 구현 완료
+- main.dart에서 RecruitmentListPage 실행
+- mock 모집글 6개가 RecruitmentCard 목록으로 표시됨
+- UI는 ViewModel을 통해 데이터 조회
+- ViewModel은 Repository를 통해 mock 데이터 조회
+- Firebase 연동은 아직 없음
+- flutter analyze 통과
+- flutter test 12개 통과
+
 ---
 
 ## 다음 작업
 
-👉 RecruitmentListViewModel 작성  
-👉 repository 연결  
-👉 모집글 리스트 데이터 바인딩  
-👉 리스트 페이지 기본 UI 구성  
-👉 카드 형태 UI 구현  
+1. AI_CONTEXT.md / DEV_LOG.md 기준으로 작업 상태 유지
+2. 모집글 mock 데이터와 raid master 데이터의 raidId 정합성 확인
+3. RecruitmentCard 표시 문구와 도메인 용어 정리
+4. MVP 범위 내 다음 화면 결정
+   - 모집글 상세
+   - 모집글 작성
+   - 모집글 지원
 
 ---
 
