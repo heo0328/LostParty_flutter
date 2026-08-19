@@ -42,6 +42,8 @@ dependencies:
   logger:
   go_router:
   json_annotation:
+  drift: ^2.34.3
+  drift_flutter: ^0.3.1
 
 dev_dependencies:
   flutter_test:
@@ -56,6 +58,7 @@ dev_dependencies:
   #라이브러리 추가
   build_runner:
   json_serializable:
+  drift_dev: ^2.34.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
