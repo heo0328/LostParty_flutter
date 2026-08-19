@@ -21,6 +21,12 @@ class LocalGameAccount {
     final visible =
         characters.where((character) => character.isVisible).toList()
           ..sort((left, right) {
+            final leftIsRepresentative = left.id == representativeCharacterId;
+            final rightIsRepresentative = right.id == representativeCharacterId;
+            if (leftIsRepresentative != rightIsRepresentative) {
+              return leftIsRepresentative ? -1 : 1;
+            }
+
             final leftOrder = left.displayOrder;
             final rightOrder = right.displayOrder;
             if (leftOrder != null || rightOrder != null) {

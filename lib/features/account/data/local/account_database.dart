@@ -159,6 +159,56 @@ class AccountDatabase extends _$AccountDatabase {
     }
   }
 
+  Future<void> updateCharacterVisibility({
+    required int accountId,
+    required int characterId,
+    required bool isVisible,
+  }) async {
+    final updatedRows =
+        await (update(accountCharacters)..where(
+              (table) =>
+                  table.id.equals(characterId) &
+                  table.accountId.equals(accountId),
+            ))
+            .write(AccountCharactersCompanion(isVisible: Value(isVisible)));
+
+    if (updatedRows != 1) {
+      throw ArgumentError.value(
+        characterId,
+        'characterId',
+        'Character not found in the account.',
+      );
+    }
+  }
+
+  Future<void> updateCharacterDisplayOrder({
+    required int accountId,
+    required List<int> characterIds,
+  }) {
+    return transaction(() async {
+      final storedCharacters = await (select(
+        accountCharacters,
+      )..where((table) => table.accountId.equals(accountId))).get();
+      final storedIds = storedCharacters
+          .map((character) => character.id)
+          .toSet();
+      if (characterIds.length != storedIds.length ||
+          !storedIds.containsAll(characterIds)) {
+        throw ArgumentError.value(
+          characterIds,
+          'characterIds',
+          'Display order must contain every character in the account once.',
+        );
+      }
+
+      for (var index = 0; index < characterIds.length; index++) {
+        await (update(accountCharacters)
+              ..where((table) => table.id.equals(characterIds[index])))
+            .write(AccountCharactersCompanion(displayOrder: Value(index)));
+      }
+    });
+  }
+
   Future<int> saveMainAccountSnapshot({
     required String lookupCharacterName,
     required List<AccountCharacterSnapshot> characters,

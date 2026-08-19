@@ -95,4 +95,46 @@ class LocalAccountDataSource {
           .toList(growable: false),
     );
   }
+
+  Future<void> setRepresentativeCharacter({
+    required int accountId,
+    required int characterId,
+  }) {
+    return _database.setRepresentativeCharacter(
+      accountId: accountId,
+      characterId: characterId,
+    );
+  }
+
+  Future<void> updateDisplayLimit({
+    required int accountId,
+    required int displayLimit,
+  }) {
+    return _database.updateDisplayLimit(
+      accountId: accountId,
+      displayLimit: displayLimit,
+    );
+  }
+
+  Future<void> updateCharacterVisibility({
+    required int accountId,
+    required int characterId,
+    required bool isVisible,
+  }) {
+    return _database.updateCharacterVisibility(
+      accountId: accountId,
+      characterId: characterId,
+      isVisible: isVisible,
+    );
+  }
+
+  Future<void> updateCharacterDisplayOrder({
+    required int accountId,
+    required List<int> characterIds,
+  }) {
+    return _database.updateCharacterDisplayOrder(
+      accountId: accountId,
+      characterIds: characterIds,
+    );
+  }
 }

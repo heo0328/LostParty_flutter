@@ -73,6 +73,31 @@ void main() {
 
 class _FakeAccountRepository implements AccountRepository {
   @override
+  Future<void> setRepresentativeCharacter({
+    required int accountId,
+    required int characterId,
+  }) async {}
+
+  @override
+  Future<void> updateDisplayLimit({
+    required int accountId,
+    required int displayLimit,
+  }) async {}
+
+  @override
+  Future<void> updateCharacterVisibility({
+    required int accountId,
+    required int characterId,
+    required bool isVisible,
+  }) async {}
+
+  @override
+  Future<void> updateCharacterDisplayOrder({
+    required int accountId,
+    required List<int> characterIds,
+  }) async {}
+
+  @override
   Future<List<CharacterSummary>> fetchCharacters(String characterName) async {
     return [
       CharacterSummary(

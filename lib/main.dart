@@ -41,10 +41,19 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = ColorScheme.fromSeed(seedColor: Colors.deepPurple);
     return MaterialApp.router(
       title: 'LOSTPARTY',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: colorScheme,
+        scaffoldBackgroundColor: colorScheme.surface,
+        appBarTheme: AppBarTheme(
+          backgroundColor: colorScheme.surface,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+        ),
       ),
       routerConfig: _router,
     );

@@ -110,6 +110,55 @@ void main() {
     expect(account.displayLimit, 8);
   });
 
+  test('updates character visibility for the selected account', () async {
+    final accountId = await database.saveMainAccountSnapshot(
+      lookupCharacterName: '조회캐릭터',
+      characters: [_snapshot('조회캐릭터', DateTime.utc(2026, 8, 20))],
+    );
+    final character = await database
+        .select(database.accountCharacters)
+        .getSingle();
+
+    await database.updateCharacterVisibility(
+      accountId: accountId,
+      characterId: character.id,
+      isVisible: false,
+    );
+
+    final updated = await database
+        .select(database.accountCharacters)
+        .getSingle();
+    expect(updated.isVisible, isFalse);
+  });
+
+  test('stores character display order for every account character', () async {
+    final fetchedAt = DateTime.utc(2026, 8, 20);
+    final accountId = await database.saveMainAccountSnapshot(
+      lookupCharacterName: '첫번째',
+      characters: [
+        _snapshot('첫번째', fetchedAt),
+        _snapshot('두번째', fetchedAt),
+        _snapshot('세번째', fetchedAt),
+      ],
+    );
+    final characters = await (database.select(
+      database.accountCharacters,
+    )..orderBy([(table) => OrderingTerm.asc(table.id)])).get();
+    final reversedIds = characters.reversed
+        .map((character) => character.id)
+        .toList();
+
+    await database.updateCharacterDisplayOrder(
+      accountId: accountId,
+      characterIds: reversedIds,
+    );
+
+    final ordered = await (database.select(
+      database.accountCharacters,
+    )..orderBy([(table) => OrderingTerm.asc(table.displayOrder)])).get();
+    expect(ordered.map((character) => character.id), reversedIds);
+  });
+
   test('keeps a changed representative when refreshing the snapshot', () async {
     final firstFetchedAt = DateTime.utc(2026, 8, 20);
     final accountId = await database.saveMainAccountSnapshot(

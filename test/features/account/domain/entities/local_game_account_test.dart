@@ -21,7 +21,7 @@ void main() {
       _character(5, '레벨5', 1400),
       _character(6, '레벨6', 1300),
       _character(7, '레벨7', 1200),
-    ]);
+    ], representativeCharacterId: 2);
 
     expect(account.visibleCharacters.map((character) => character.itemLevel), [
       1800,
@@ -37,22 +37,37 @@ void main() {
     final account = _account([
       _character(1, '고레벨', 1800, displayOrder: 1),
       _character(2, '저레벨', 1500, displayOrder: 0),
-    ]);
+    ], representativeCharacterId: 2);
 
     expect(
       account.visibleCharacters.map((character) => character.characterName),
       ['저레벨', '고레벨'],
     );
   });
+
+  test('always places the representative character first', () {
+    final account = _account([
+      _character(1, '일반', 1800, displayOrder: 0),
+      _character(2, '대표', 1500, displayOrder: 1),
+    ], representativeCharacterId: 2);
+
+    expect(
+      account.visibleCharacters.map((character) => character.characterName),
+      ['대표', '일반'],
+    );
+  });
 }
 
-LocalGameAccount _account(List<LocalAccountCharacter> characters) {
+LocalGameAccount _account(
+  List<LocalAccountCharacter> characters, {
+  int? representativeCharacterId,
+}) {
   return LocalGameAccount(
     id: 1,
     label: '메인 계정',
     isMain: true,
     lookupCharacterName: characters.first.characterName,
-    representativeCharacterId: characters.first.id,
+    representativeCharacterId: representativeCharacterId ?? characters.first.id,
     displayLimit: 6,
     characters: characters,
   );

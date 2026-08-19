@@ -68,4 +68,50 @@ class AccountRepositoryImpl implements AccountRepository {
   Future<LocalGameAccount?> loadMainAccount() {
     return _localDataSource.loadMainAccount();
   }
+
+  @override
+  Future<void> setRepresentativeCharacter({
+    required int accountId,
+    required int characterId,
+  }) {
+    return _localDataSource.setRepresentativeCharacter(
+      accountId: accountId,
+      characterId: characterId,
+    );
+  }
+
+  @override
+  Future<void> updateDisplayLimit({
+    required int accountId,
+    required int displayLimit,
+  }) {
+    return _localDataSource.updateDisplayLimit(
+      accountId: accountId,
+      displayLimit: displayLimit,
+    );
+  }
+
+  @override
+  Future<void> updateCharacterVisibility({
+    required int accountId,
+    required int characterId,
+    required bool isVisible,
+  }) {
+    return _localDataSource.updateCharacterVisibility(
+      accountId: accountId,
+      characterId: characterId,
+      isVisible: isVisible,
+    );
+  }
+
+  @override
+  Future<void> updateCharacterDisplayOrder({
+    required int accountId,
+    required List<int> characterIds,
+  }) {
+    return _localDataSource.updateCharacterDisplayOrder(
+      accountId: accountId,
+      characterIds: characterIds,
+    );
+  }
 }

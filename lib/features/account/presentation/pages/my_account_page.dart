@@ -58,6 +58,11 @@ class _MyAccountPageState extends State<MyAccountPage> {
     await _viewModel.loadTokenStatus();
   }
 
+  Future<void> _openCharacterManagement() async {
+    await context.push('/account/characters/manage');
+    await _viewModel.loadStoredAccount();
+  }
+
   Future<void> _requestAccountData() async {
     if (!_viewModel.hasApiToken) {
       await _showMissingTokenDialog();
@@ -231,6 +236,11 @@ class _MyAccountPageState extends State<MyAccountPage> {
                   Text(
                     '${account.visibleCharacters.length}/${account.characters.length}',
                     style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  IconButton(
+                    tooltip: '캐릭터 관리',
+                    onPressed: _openCharacterManagement,
+                    icon: const Icon(Icons.tune),
                   ),
                 ],
               ),

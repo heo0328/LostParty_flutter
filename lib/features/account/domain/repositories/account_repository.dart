@@ -8,4 +8,25 @@ abstract interface class AccountRepository {
   Future<CharacterProfile> fetchCharacterProfile(String characterName);
 
   Future<LocalGameAccount?> loadMainAccount();
+
+  Future<void> setRepresentativeCharacter({
+    required int accountId,
+    required int characterId,
+  });
+
+  Future<void> updateDisplayLimit({
+    required int accountId,
+    required int displayLimit,
+  });
+
+  Future<void> updateCharacterVisibility({
+    required int accountId,
+    required int characterId,
+    required bool isVisible,
+  });
+
+  Future<void> updateCharacterDisplayOrder({
+    required int accountId,
+    required List<int> characterIds,
+  });
 }
