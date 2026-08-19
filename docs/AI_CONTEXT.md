@@ -68,6 +68,16 @@
 - 내 계정 화면에서 대표 캐릭터명으로 원정대 캐릭터 조회 및 최소 목록 표시
 - Galaxy Z Fold6 실기기에서 JWT 저장, 캐릭터 검색, 실제 API 응답 확인 완료
 
+### 캐릭터 역할별 세팅 저장 설계
+- 캐릭터 기본 정보와 역할별 상세 세팅 스냅샷을 분리하여 저장
+- 동일 캐릭터를 역할마다 중복 저장하지 않고 하나의 캐릭터에 여러 스냅샷 연결
+- 역할은 직업이나 각인으로 자동 확정하지 않고 스냅샷 저장 시 사용자가 선택
+- 서포터형 직업은 바드, 발키리, 도화가, 홀리나이트의 4개 직업
+- 서포터형 직업은 `support`와 `dealer` 스냅샷을 각각 저장 가능
+- 그 외 모든 직업은 딜러군으로 분류하고 `dealer` 스냅샷만 저장
+- 파티 지원 시 저장된 역할별 스냅샷을 기준으로 지원 가능한 역할 결정
+- 역할 판정을 위한 자동 분석은 경고 또는 추천 용도로만 사용하고 사용자 선택을 우선
+
 ### 테스트
 - local_recruitment_list_data_source_test.dart 작성 및 통과
 - recruitment_list_repository_impl_test.dart 작성 및 통과
@@ -166,11 +176,12 @@
 
 ## 다음 작업
 
-1. 실제 siblings 응답을 기준으로 계정 및 캐릭터 로컬 DB 스키마 설계
-2. Drift table / DAO / local data source 구현
-3. API 조회 결과와 마지막 갱신 시각 저장 정책 정의 및 구현
-4. 계정 화면 상세 UI에 필요한 추가 Lost Ark API endpoint와 DTO 범위 결정
-5. 이후 모집글 mock 데이터와 raid master 데이터의 raidId 정합성 확인
+1. 역할별 스냅샷에 포함할 Lost Ark API endpoint와 필드 확정
+2. 계정, 캐릭터, 역할별 스냅샷 Drift 스키마 설계
+3. 구조화 컬럼과 원본 JSON 저장 범위 확정
+4. Drift table / DAO / local data source 구현
+5. API 조회 결과, 마지막 갱신 시각 및 429 처리 정책 구현
+6. 이후 모집글 지원과 역할별 스냅샷 연결 방식 구현
 
 ---
 
@@ -181,3 +192,5 @@
 - 실제 토큰은 flutter_secure_storage를 통해서만 저장
 - API DTO와 Domain Entity를 mapper로 분리
 - Drift 저장 계층은 아직 구현하지 않음
+- 서포터형 직업 목록 변경 가능성을 고려해 한 곳에서 관리
+- API 호출 간격을 코드에 고정하지 않고 설정값 또는 서버 응답 기준으로 관리
