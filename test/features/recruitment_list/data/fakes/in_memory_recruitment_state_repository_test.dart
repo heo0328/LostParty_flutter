@@ -99,6 +99,7 @@ const _metadata = RecruitmentMetadata(
   difficultyName: '노말',
   difficultyAlias: '노르카',
   gateCount: 2,
+  minItemLevel: 1710,
   minCombatPower: 200000,
   experienceLevel: ExperienceLevel.clearExp,
   maxPlayHours: 3,

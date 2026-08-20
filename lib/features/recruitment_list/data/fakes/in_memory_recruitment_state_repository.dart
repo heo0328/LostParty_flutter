@@ -8,6 +8,10 @@ class InMemoryRecruitmentStateRepository extends ChangeNotifier
     implements RecruitmentStateRepository {
   final Map<String, RecruitmentAggregate> _store = {};
 
+  void seed(RecruitmentAggregate aggregate) {
+    _store[aggregate.id] = aggregate;
+  }
+
   @override
   Future<bool> create(RecruitmentAggregate aggregate) async {
     if (_store.containsKey(aggregate.id)) return false;

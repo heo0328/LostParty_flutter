@@ -36,11 +36,11 @@ class LocalRecruitmentCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                '멤버 ${recruitment.memberCount}/${recruitment.maxMemberCount} · 최소 전투력 ${DisplayNumberFormatter.integer(metadata.minCombatPower)}',
+                '멤버 ${recruitment.memberCount}/${recruitment.maxMemberCount} · ${metadata.minCombatPower == null ? '전투력 제한 없음' : '최소 전투력 ${DisplayNumberFormatter.integer(metadata.minCombatPower!)}'}',
               ),
               const SizedBox(height: 4),
               Text(
-                '숙련도 ${_experience(metadata.experienceLevel)} · 최대 시간 ${metadata.maxPlayHours == null ? '클리어 시까지' : '${metadata.maxPlayHours}시간'}',
+                '${metadata.experienceLevel == null ? '클리어 경험 제한 없음' : '숙련도 ${_experience(metadata.experienceLevel!)}'} · 최대 시간 ${metadata.maxPlayHours == null ? '클리어 시까지' : '${metadata.maxPlayHours}시간'}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],

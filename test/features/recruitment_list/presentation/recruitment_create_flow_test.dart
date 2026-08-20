@@ -2,10 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/fake_recruitment_runtime.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
+import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
+import 'package:lost_party/features/recruitment_list/domain/services/recruitment_application_candidate_service.dart';
 import 'package:lost_party/features/recruitment_list/domain/services/recruitment_command_service.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_aggregate.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_application.dart';
+import 'package:lost_party/features/recruitment_list/domain/policies/approval_policy.dart';
+import 'package:lost_party/features/recruitment_list/domain/policies/party_composition_policy.dart';
+import 'package:lost_party/features/recruitment_list/domain/state/recruitment_state_machine.dart';
 import 'package:lost_party/features/recruitment_list/presentation/pages/recruitment_create_page.dart';
 import 'package:lost_party/features/recruitment_list/presentation/pages/recruitment_detail_page.dart';
 import 'package:lost_party/shared/raid_catalog/domain/entities/raid_catalog.dart';
@@ -19,11 +29,22 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final repository = InMemoryRecruitmentStateRepository();
+    final weeklyRepository = InMemoryWeeklyRaidClearRepository();
+    final session = FakeUserSession('local-user');
+    final clock = FakeRecruitmentClock(DateTime.utc(2026, 8, 20));
+    final accountRepository = _AccountRepository();
     final service = RecruitmentCommandService(
-      session: FakeUserSession('local-user'),
-      clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 20)),
+      session: session,
+      clock: clock,
       idGenerator: SequentialRecruitmentIdGenerator(),
       repository: repository,
+      weeklyClearRepository: weeklyRepository,
+    );
+    final candidateService = RecruitmentApplicationCandidateService(
+      accountRepository: accountRepository,
+      weeklyClearRepository: weeklyRepository,
+      session: session,
+      clock: clock,
     );
     late final GoRouter router;
     router = GoRouter(
@@ -32,7 +53,7 @@ void main() {
         GoRoute(
           path: '/create',
           builder: (context, state) => RecruitmentCreatePage(
-            accountRepository: _AccountRepository(),
+            accountRepository: accountRepository,
             catalogRepository: _CatalogRepository(),
             commandService: service,
           ),
@@ -42,6 +63,8 @@ void main() {
           builder: (context, state) => RecruitmentDetailPage(
             recruitmentId: state.pathParameters['id']!,
             repository: repository,
+            commandService: service,
+            candidateService: candidateService,
           ),
         ),
       ],
@@ -56,7 +79,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('saveRecruitmentButton')));
     await tester.pump();
     expect(find.text('모집 제목을 입력해주세요.'), findsOneWidget);
-    expect(find.text('1 이상의 전투력을 입력해주세요.'), findsOneWidget);
+    expect(find.text('1 이상의 전투력을 입력해주세요.'), findsNothing);
 
     await tester.enterText(
       find.byKey(const ValueKey('recruitmentTitleField')),
@@ -78,6 +101,49 @@ void main() {
     expect(find.text('1파티'), findsOneWidget);
     expect(find.text('대표바드'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('조건에 맞는 캐릭터로 신청하고 pending 신청을 철회한다', (tester) async {
+    final repository = InMemoryRecruitmentStateRepository();
+    await repository.create(_otherUserRecruitment);
+    final weeklyRepository = InMemoryWeeklyRaidClearRepository();
+    final session = FakeUserSession('local-user');
+    final clock = FakeRecruitmentClock(DateTime.utc(2026, 8, 20));
+    final accountRepository = _AccountRepository();
+    final service = RecruitmentCommandService(
+      session: session,
+      clock: clock,
+      idGenerator: SequentialRecruitmentIdGenerator(),
+      repository: repository,
+      weeklyClearRepository: weeklyRepository,
+    );
+    final candidateService = RecruitmentApplicationCandidateService(
+      accountRepository: accountRepository,
+      weeklyClearRepository: weeklyRepository,
+      session: session,
+      clock: clock,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RecruitmentDetailPage(
+          recruitmentId: _otherUserRecruitment.id,
+          repository: repository,
+          commandService: service,
+          candidateService: candidateService,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('openApplicationButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('candidate-대표바드-support')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('가입 승인 대기 중입니다.'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('withdrawApplicationButton')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('openApplicationButton')), findsOneWidget);
   });
 }
 
@@ -141,5 +207,70 @@ class _AccountRepository implements AccountRepository {
   );
 
   @override
+  Future<List<CharacterBuildSnapshot>> loadCharacterBuildSnapshots(
+    int characterId,
+  ) async => [
+    CharacterBuildSnapshot(
+      id: 1,
+      characterId: characterId,
+      role: CharacterBuildRole.support,
+      rawJson: '{}',
+      itemLevel: 1750,
+      combatPower: 250000,
+      capturedAt: DateTime.utc(2026, 8, 20),
+      dataVersion: 1,
+      analysis: const CharacterBuildAnalysis(
+        runeCount: 8,
+        gemEffects: [],
+        arkGridConditions: [],
+        arkGridCorePoints: [],
+        notices: [],
+      ),
+    ),
+  ];
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
+
+final _otherUserRecruitment = RecruitmentAggregate(
+  id: 'other-recruitment',
+  title: '세르카 지원 테스트',
+  metadata: const RecruitmentMetadata(
+    catalogVersion: 'test',
+    raidId: 'serca',
+    difficultyId: 'normal',
+    raidName: '세르카',
+    difficultyName: '노말',
+    difficultyAlias: '노르카',
+    gateCount: 2,
+    minItemLevel: 1710,
+    minCombatPower: null,
+    experienceLevel: null,
+    maxPlayHours: null,
+  ),
+  state: RecruitmentState(
+    leaderUserId: 'other-user',
+    approvalPolicy: const ApprovalPolicy.leaderOnly(),
+    compositionPolicy: const PartyCompositionPolicy(
+      RecruitmentPartyRules(
+        partyCount: 1,
+        membersPerParty: 4,
+        supportsPerParty: 1,
+        maxDealersPerClassPerParty: 1,
+      ),
+    ),
+    members: const [
+      RecruitmentPartyMember(
+        userId: 'other-user',
+        characterId: '다른리더',
+        className: '블레이드',
+        role: PartyRole.dealer,
+        partyIndex: 0,
+      ),
+    ],
+  ),
+  revision: 0,
+  createdAt: DateTime.utc(2026, 8, 20),
+  updatedAt: DateTime.utc(2026, 8, 20),
+);
