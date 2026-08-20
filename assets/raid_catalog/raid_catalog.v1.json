@@ -1,31 +1,49 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "catalogVersion": "2026.08.20",
   "updatedAt": "2026-08-20T00:00:00Z",
   "raids": [
     {
-      "raidId": "sample_raid",
-      "name": "샘플 레이드",
-      "partySize": 8,
-      "gateCount": 2,
-      "isActive": true,
+      "raidId": "kazeros_act4", "officialName": "카제로스 레이드 4막 : 파멸의 성채", "displayName": "4막", "aliases": ["4막"],
+      "partySize": 8, "partyCount": 2, "requiredSupportCount": 2, "maxDealerCountPerClass": 2, "gateCount": 2, "isActive": true,
       "difficulties": [
-        {
-          "difficultyId": "normal",
-          "name": "노말",
-          "displayOrder": 1,
-          "minItemLevel": 1700,
-          "rewardGold": 30000,
-          "isActive": true
-        },
-        {
-          "difficultyId": "hard",
-          "name": "하드",
-          "displayOrder": 2,
-          "minItemLevel": 1720,
-          "rewardGold": 40000,
-          "isActive": false
-        }
+        {"difficultyId":"normal","name":"노말","displayAlias":"4막노말","displayOrder":1,"minItemLevel":1700,"clearGold":13500,"boundGold":13500,"isActive":true},
+        {"difficultyId":"hard","name":"하드","displayAlias":"4막하드","displayOrder":2,"minItemLevel":1720,"clearGold":38000,"boundGold":0,"isActive":true}
+      ]
+    },
+    {
+      "raidId": "kazeros_finale", "officialName": "카제로스 레이드 종막 : 최후의 날", "displayName": "종막", "aliases": ["종막"],
+      "partySize": 8, "partyCount": 2, "requiredSupportCount": 2, "maxDealerCountPerClass": 2, "gateCount": 2, "isActive": true,
+      "difficulties": [
+        {"difficultyId":"normal","name":"노말","displayAlias":"카제노말","displayOrder":1,"minItemLevel":1710,"clearGold":16000,"boundGold":16000,"isActive":true},
+        {"difficultyId":"hard","name":"하드","displayAlias":"카제하드","displayOrder":2,"minItemLevel":1730,"clearGold":48000,"boundGold":0,"isActive":true}
+      ]
+    },
+    {
+      "raidId": "serca", "officialName": "고통의 마녀, 세르카", "displayName": "세르카", "aliases": ["세르카"],
+      "partySize": 4, "partyCount": 1, "requiredSupportCount": 1, "maxDealerCountPerClass": 1, "gateCount": 2, "isActive": true,
+      "difficulties": [
+        {"difficultyId":"normal","name":"노말","displayAlias":"노르카","displayOrder":1,"minItemLevel":1710,"clearGold":16000,"boundGold":16000,"isActive":true},
+        {"difficultyId":"hard","name":"하드","displayAlias":"하르카","displayOrder":2,"minItemLevel":1730,"clearGold":44000,"boundGold":0,"isActive":true},
+        {"difficultyId":"nightmare","name":"나이트메어","displayAlias":"나르카","displayOrder":3,"minItemLevel":1740,"clearGold":54000,"boundGold":0,"isActive":true}
+      ]
+    },
+    {
+      "raidId": "horizon_cathedral", "officialName": "어비스던전: 지평의 성당", "displayName": "지평의 성당", "aliases": ["성당"],
+      "partySize": 4, "partyCount": 1, "requiredSupportCount": 1, "maxDealerCountPerClass": 1, "gateCount": 2, "isActive": true,
+      "difficulties": [
+        {"difficultyId":"stage1","name":"1단계","displayAlias":"지평1단","displayOrder":1,"minItemLevel":1700,"clearGold":0,"boundGold":30000,"isActive":true},
+        {"difficultyId":"stage2","name":"2단계","displayAlias":"지평2단","displayOrder":2,"minItemLevel":1720,"clearGold":0,"boundGold":40000,"isActive":true},
+        {"difficultyId":"stage3","name":"3단계","displayAlias":"지평3단","displayOrder":3,"minItemLevel":1750,"clearGold":0,"boundGold":50000,"isActive":true}
+      ]
+    },
+    {
+      "raidId": "belgardin", "officialName": "죽음의 계율자, 벨가르딘", "displayName": "벨가르딘", "aliases": ["벨가"],
+      "partySize": 8, "partyCount": 2, "requiredSupportCount": 2, "maxDealerCountPerClass": 2, "gateCount": 2, "isActive": true,
+      "difficulties": [
+        {"difficultyId":"normal","name":"노말","displayAlias":"노르딘","displayOrder":1,"minItemLevel":1750,"clearGold":50000,"boundGold":0,"isActive":true},
+        {"difficultyId":"hard","name":"하드","displayAlias":"하르딘","displayOrder":2,"minItemLevel":1770,"clearGold":62000,"boundGold":0,"isActive":true},
+        {"difficultyId":"nightmare","name":"나이트메어","displayAlias":"나르딘","displayOrder":3,"minItemLevel":1780,"clearGold":75000,"boundGold":0,"isActive":true}
       ]
     }
   ]

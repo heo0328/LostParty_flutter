@@ -34,7 +34,9 @@ class RaidCatalogValidator {
       final raid = catalog.raids[raidIndex];
       final raidPath = 'raids[$raidIndex]';
       _requireText(issues, raid.raidId, '$raidPath.raidId');
-      _requireText(issues, raid.name, '$raidPath.name');
+      _requireText(issues, raid.officialName, '$raidPath.officialName');
+      _requireText(issues, raid.displayName, '$raidPath.displayName');
+      _checkTextList(issues, raid.aliases, '$raidPath.aliases');
       if (raid.partySize < 1) {
         _add(
           issues,
@@ -49,6 +51,30 @@ class RaidCatalogValidator {
           'invalid_gate_count',
           '$raidPath.gateCount',
           '1 이상이어야 합니다.',
+        );
+      }
+      if (raid.partyCount < 1 || raid.partySize != raid.partyCount * 4) {
+        _add(
+          issues,
+          'invalid_party_composition',
+          '$raidPath.partyCount',
+          '전체 인원은 4인 파티 구성 수와 일치해야 합니다.',
+        );
+      }
+      if (raid.requiredSupportCount != raid.partyCount) {
+        _add(
+          issues,
+          'invalid_support_count',
+          '$raidPath.requiredSupportCount',
+          '4인 파티마다 서포터 한 명이 필요합니다.',
+        );
+      }
+      if (raid.maxDealerCountPerClass != raid.partyCount) {
+        _add(
+          issues,
+          'invalid_dealer_class_limit',
+          '$raidPath.maxDealerCountPerClass',
+          '동일 딜러 직업은 파티별 한 명까지만 허용합니다.',
         );
       }
       if (raid.difficulties.isEmpty) {
@@ -85,6 +111,11 @@ class RaidCatalogValidator {
           '$difficultyPath.difficultyId',
         );
         _requireText(issues, difficulty.name, '$difficultyPath.name');
+        _requireText(
+          issues,
+          difficulty.displayAlias,
+          '$difficultyPath.displayAlias',
+        );
         if (difficulty.displayOrder < 1) {
           _add(
             issues,
@@ -101,11 +132,19 @@ class RaidCatalogValidator {
             '1 이상이어야 합니다.',
           );
         }
-        if (difficulty.rewardGold < 0) {
+        if (difficulty.clearGold < 0) {
           _add(
             issues,
-            'invalid_reward_gold',
-            '$difficultyPath.rewardGold',
+            'invalid_clear_gold',
+            '$difficultyPath.clearGold',
+            '0 이상이어야 합니다.',
+          );
+        }
+        if (difficulty.boundGold < 0) {
+          _add(
+            issues,
+            'invalid_bound_gold',
+            '$difficultyPath.boundGold',
             '0 이상이어야 합니다.',
           );
         }
@@ -205,6 +244,17 @@ class RaidCatalogValidator {
   ) {
     if (value.trim().isEmpty) {
       _add(issues, 'blank_value', path, '빈 문자열을 사용할 수 없습니다.');
+    }
+  }
+
+  void _checkTextList(
+    List<RaidCatalogValidationIssue> issues,
+    List<String> values,
+    String path,
+  ) {
+    _checkUnique(issues, values: values, path: path);
+    for (var index = 0; index < values.length; index++) {
+      _requireText(issues, values[index], '$path[$index]');
     }
   }
 

@@ -37,34 +37,26 @@ class _RecruitmentListPageState extends State<RecruitmentListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Recruitments'),
-      ),
+      appBar: AppBar(title: const Text('Recruitments')),
       body: _buildBody(),
     );
   }
 
   Widget _buildBody() {
     if (_viewModel.isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     final errorMessage = _viewModel.errorMessage;
     if (errorMessage != null) {
-      return Center(
-        child: Text(errorMessage),
-      );
+      return Center(child: Text(errorMessage));
     }
 
     return SingleChildScrollView(
       child: Column(
         children: [
           for (final recruitment in _viewModel.recruitments)
-            RecruitmentCard(
-              recruitment: recruitment,
-            ),
+            RecruitmentCard(recruitment: recruitment),
         ],
       ),
     );

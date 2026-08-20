@@ -1,13 +1,6 @@
-enum PartyRole {
-  dealer,
-  support,
-}
+enum PartyRole { dealer, support }
 
-enum RecruitmentStatusType {
-  recruiting,
-  closed,
-  completed,
-}
+enum RecruitmentStatusType { recruiting, closed, completed }
 
 enum ExperienceLevel {
   tryLevel,
@@ -40,11 +33,21 @@ class PartyRecruitment {
 }
 
 class PartyRaid {
+  final String catalogVersion;
   final String raidId;
+  final String difficultyId;
+  final String raidName;
+  final String difficultyName;
+  final String difficultyAlias;
   final GateProgress gateProgress;
 
   const PartyRaid({
+    required this.catalogVersion,
     required this.raidId,
+    required this.difficultyId,
+    required this.raidName,
+    required this.difficultyName,
+    required this.difficultyAlias,
     required this.gateProgress,
   });
 }
@@ -53,10 +56,7 @@ class GateProgress {
   final int startGate;
   final int endGate;
 
-  const GateProgress({
-    required this.startGate,
-    required this.endGate,
-  });
+  const GateProgress({required this.startGate, required this.endGate});
 }
 
 class PartyLeader {
@@ -75,30 +75,21 @@ class MemberSummary {
   final int currentCount;
   final int maxCount;
 
-  const MemberSummary({
-    required this.currentCount,
-    required this.maxCount,
-  });
+  const MemberSummary({required this.currentCount, required this.maxCount});
 }
 
 class RecruitmentStatus {
   final RecruitmentStatusType status;
   final RecruitmentRoleSummary roles;
 
-  const RecruitmentStatus({
-    required this.status,
-    required this.roles,
-  });
+  const RecruitmentStatus({required this.status, required this.roles});
 }
 
 class RecruitmentRoleSummary {
   final RoleSlotStatus dealer;
   final RoleSlotStatus support;
 
-  const RecruitmentRoleSummary({
-    required this.dealer,
-    required this.support,
-  });
+  const RecruitmentRoleSummary({required this.dealer, required this.support});
 }
 
 class RoleSlotStatus {

@@ -13,9 +13,11 @@ void main() {
     const invalidDifficulty = RaidDifficultyDefinition(
       difficultyId: 'normal',
       name: '노말',
+      displayAlias: '노말',
       displayOrder: 0,
       minItemLevel: 0,
-      rewardGold: -1,
+      clearGold: -1,
+      boundGold: -1,
       isActive: true,
     );
     final raid = _validRaid(
@@ -38,7 +40,8 @@ void main() {
         'invalid_gate_count',
         'invalid_display_order',
         'invalid_min_item_level',
-        'invalid_reward_gold',
+        'invalid_clear_gold',
+        'invalid_bound_gold',
       }),
     );
   });
@@ -77,9 +80,11 @@ void main() {
             RaidDifficultyDefinition(
               difficultyId: 'normal',
               name: '노말',
+              displayAlias: '노말',
               displayOrder: 1,
               minItemLevel: 1700,
-              rewardGold: 30000,
+              clearGold: 30000,
+              boundGold: 0,
               isActive: false,
             ),
           ],
@@ -114,9 +119,11 @@ void main() {
             RaidDifficultyDefinition(
               difficultyId: 'other_hard',
               name: '하드',
+              displayAlias: '하드',
               displayOrder: 1,
               minItemLevel: 1720,
-              rewardGold: 40000,
+              clearGold: 40000,
+              boundGold: 0,
               isActive: true,
             ),
           ],
@@ -156,17 +163,24 @@ RaidDefinition _validRaid({
     RaidDifficultyDefinition(
       difficultyId: 'normal',
       name: '노말',
+      displayAlias: '노말',
       displayOrder: 1,
       minItemLevel: 1700,
-      rewardGold: 30000,
+      clearGold: 30000,
+      boundGold: 0,
       isActive: true,
     ),
   ],
 }) {
   return RaidDefinition(
     raidId: raidId,
-    name: '샘플 레이드',
+    officialName: '샘플 레이드',
+    displayName: '샘플',
+    aliases: const [],
     partySize: partySize,
+    partyCount: 2,
+    requiredSupportCount: 2,
+    maxDealerCountPerClass: 2,
     gateCount: gateCount,
     isActive: isActive,
     difficulties: difficulties,

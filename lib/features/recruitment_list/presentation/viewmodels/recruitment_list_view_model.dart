@@ -8,9 +8,8 @@ import '../../domain/repositories/recruitment_list_repository.dart';
 class RecruitmentListViewModel extends ChangeNotifier {
   final RecruitmentListRepository _repository;
 
-  RecruitmentListViewModel({
-    required RecruitmentListRepository repository,
-  }) : _repository = repository;
+  RecruitmentListViewModel({required RecruitmentListRepository repository})
+    : _repository = repository;
 
   factory RecruitmentListViewModel.local() {
     return RecruitmentListViewModel(
