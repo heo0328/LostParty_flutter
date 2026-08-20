@@ -135,7 +135,7 @@
 - difficultyOrder
 - difficultyLabel
 - minItemLevel
-- rewardGold
+- clearGold / boundGold (모든 관문 완료 기준, 서로 별도 지급)
 
 ### PartyRecruitment
 - id
@@ -245,15 +245,14 @@
 
 ## 다음 작업
 
-1. 실제 레이드 카탈로그 데이터 입력
-2. 모집 조건과 가입 승인 정책 Domain 모델 정의
-3. 신청·투표·가입 상태 머신과 로컬 다중 사용자 Fake 환경 구현
-4. 모집 목록·생성·신청·승인/투표·파티 구성 UI 검증
-5. 사용자 ID 검색, 그룹 초대/수락 및 그룹 전용 모집의 Domain·Fake·UI 검증
-6. 공개/그룹 전용 모집 로컬 통합 시나리오와 실기기 검증
-7. Firebase Auth 및 Firestore 읽기 모델 도입
-8. Callable Functions와 Transaction 기반 명령 처리
-9. Security Rules, Emulator 및 Firebase 다중 계정 실기기 테스트
+1. 모집 조건과 가입 승인 정책 Domain 모델 정의
+2. 신청·투표·가입 상태 머신과 로컬 다중 사용자 Fake 환경 구현
+3. 모집 목록·생성·신청·승인/투표·파티 구성 UI 검증
+4. 사용자 ID 검색, 그룹 초대/수락 및 그룹 전용 모집의 Domain·Fake·UI 검증
+5. 공개/그룹 전용 모집 로컬 통합 시나리오와 실기기 검증
+6. Firebase Auth 및 Firestore 읽기 모델 도입
+7. Callable Functions와 Transaction 기반 명령 처리
+8. Security Rules, Emulator 및 Firebase 다중 계정 실기기 테스트
 
 ---
 
@@ -316,7 +315,7 @@
 - 바드 카탈로그 기반 계열 및 역할 감지 구현 완료
 - 다음 채팅은 `docs/NEXT_WORK.md`를 먼저 확인하고 병합된 최신 `main`에서 새 작업 브랜치를 생성해 시작
 - 제품 방향을 레이드 정적 카탈로그와 서버 기반 파티 모집/그룹 흐름으로 전환
-- 다음 첫 단위는 API가 제공하지 않는 실제 레이드 기준정보의 JSON 카탈로그 구조와 검증 규칙
+- 다음 첫 단위는 카탈로그 파티 기준을 사용하는 모집 조건과 가입 승인 정책 Domain
 - Firebase 연결 전에 모집/승인/그룹 Domain, 로컬 Fake 흐름과 관련 UI 통합 시나리오를 모두 검증
 
 ### 레이드 정적 카탈로그 기반 구현 상태
@@ -325,7 +324,14 @@
 - 난이도 ID/이름/표시 순서/최소 아이템 레벨/보상 골드/활성 상태 정의
 - 모집 참조는 `catalogVersion`, `raidId`, `difficultyId`, `selectedGates`로 검증
 - 중복 ID, 빈 목록/문자열, 숫자 범위, 버전 불일치, 비활성 항목, 잘못된 난이도 참조 및 관문 범위 검증 완료
-- 번들 JSON은 구조 확인용 샘플만 포함하며 실제 레이드 데이터 입력과 기존 `raid_master` 교체는 다음 작업
+
+### 실제 레이드 카탈로그 입력 상태
+- 사용자 인게임 확인 기준 주력 레이드 5개와 난이도 13개 입력 완료
+- 4막, 종막, 세르카, 지평의 성당, 벨가르딘을 상위 필터 단위로 사용
+- 일반/귀속 골드 분리, 정식 이름/표시명/별칭 및 난이도 표시 별칭 지원
+- 4인 파티당 서포터 1명과 동일 딜러 직업 1명 제한을 카탈로그 수용 한도로 정의
+- 기존 `raid_master` 정적 Dart 목록 제거 후 검증된 JSON Repository 기반 호환 매핑으로 전환
+- 목 모집글은 `catalogVersion + raidId + difficultyId`를 참조하고 카드에 사용자 표시명을 출력
 
 ---
 

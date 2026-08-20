@@ -6,23 +6,28 @@ import 'package:lost_party/shared/raid_catalog/data/repositories/raid_catalog_re
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('loads and validates the bundled raid catalog sample', () async {
+  test('loads and validates the bundled raid catalog data', () async {
     final repository = RaidCatalogRepositoryImpl(
       dataSource: AssetRaidCatalogDataSource(),
     );
 
     final catalog = await repository.loadCatalog();
-    final raid = catalog.raids.single;
+    final raid = catalog.raids.first;
 
     expect(catalog.catalogVersion, '2026.08.20');
-    expect(raid.raidId, 'sample_raid');
+    expect(catalog.schemaVersion, 2);
+    expect(catalog.raids, hasLength(5));
+    expect(raid.raidId, 'kazeros_act4');
     expect(raid.partySize, 8);
     expect(raid.gateCount, 2);
     expect(raid.difficulties.map((value) => value.difficultyId), [
       'normal',
       'hard',
     ]);
-    expect(raid.difficulties.last.isActive, isFalse);
+    expect(raid.requiredSupportCount, 2);
+    expect(raid.maxDealerCountPerClass, 2);
+    expect(raid.difficulties.first.clearGold, 13500);
+    expect(raid.difficulties.first.boundGold, 13500);
   });
 
   test('rejects a catalog that fails domain validation', () async {
@@ -78,16 +83,23 @@ const _validCatalogJson = '''
   "updatedAt": "2026-08-20T00:00:00Z",
   "raids": [{
     "raidId": "sample_raid",
-    "name": "샘플 레이드",
+    "officialName": "샘플 레이드",
+    "displayName": "샘플",
+    "aliases": [],
     "partySize": 8,
+    "partyCount": 2,
+    "requiredSupportCount": 2,
+    "maxDealerCountPerClass": 2,
     "gateCount": 2,
     "isActive": true,
     "difficulties": [{
       "difficultyId": "normal",
       "name": "노말",
+      "displayAlias": "노말",
       "displayOrder": 1,
       "minItemLevel": 1700,
-      "rewardGold": 30000,
+      "clearGold": 30000,
+      "boundGold": 0,
       "isActive": true
     }]
   }]

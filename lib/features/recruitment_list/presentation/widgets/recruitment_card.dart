@@ -5,10 +5,7 @@ import '../../domain/entities/party_recruitment.dart';
 class RecruitmentCard extends StatelessWidget {
   final PartyRecruitment recruitment;
 
-  const RecruitmentCard({
-    super.key,
-    required this.recruitment,
-  });
+  const RecruitmentCard({super.key, required this.recruitment});
 
   @override
   Widget build(BuildContext context) {
@@ -16,10 +13,7 @@ class RecruitmentCard extends StatelessWidget {
 
     return Card(
       key: ValueKey(recruitment.id),
-      margin: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 8,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -40,9 +34,11 @@ class RecruitmentCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              '${recruitment.raid.raidId} '
+              '${recruitment.raid.raidName} - '
+              '${recruitment.raid.difficultyName} '
+              '(${recruitment.raid.difficultyAlias}) · '
               '${recruitment.raid.gateProgress.startGate}-'
-              '${recruitment.raid.gateProgress.endGate} gates',
+              '${recruitment.raid.gateProgress.endGate}관문',
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 8),
@@ -112,9 +108,7 @@ class RecruitmentCard extends StatelessWidget {
 class _StatusBadge extends StatelessWidget {
   final RecruitmentStatusType status;
 
-  const _StatusBadge({
-    required this.status,
-  });
+  const _StatusBadge({required this.status});
 
   @override
   Widget build(BuildContext context) {
@@ -126,10 +120,7 @@ class _StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 8,
-          vertical: 4,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Text(
           _label,
           style: TextStyle(

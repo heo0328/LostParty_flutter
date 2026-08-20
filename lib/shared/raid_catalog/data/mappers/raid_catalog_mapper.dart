@@ -15,8 +15,13 @@ class RaidCatalogMapper {
   RaidDefinition _raidFromJson(Map<String, dynamic> json) {
     return RaidDefinition(
       raidId: _string(json, 'raidId'),
-      name: _string(json, 'name'),
+      officialName: _string(json, 'officialName'),
+      displayName: _string(json, 'displayName'),
+      aliases: _stringList(json, 'aliases'),
       partySize: _integer(json, 'partySize'),
+      partyCount: _integer(json, 'partyCount'),
+      requiredSupportCount: _integer(json, 'requiredSupportCount'),
+      maxDealerCountPerClass: _integer(json, 'maxDealerCountPerClass'),
       gateCount: _integer(json, 'gateCount'),
       isActive: _boolean(json, 'isActive'),
       difficulties: _mapList(json, 'difficulties', _difficultyFromJson),
@@ -27,9 +32,11 @@ class RaidCatalogMapper {
     return RaidDifficultyDefinition(
       difficultyId: _string(json, 'difficultyId'),
       name: _string(json, 'name'),
+      displayAlias: _string(json, 'displayAlias'),
       displayOrder: _integer(json, 'displayOrder'),
       minItemLevel: _integer(json, 'minItemLevel'),
-      rewardGold: _integer(json, 'rewardGold'),
+      clearGold: _integer(json, 'clearGold'),
+      boundGold: _integer(json, 'boundGold'),
       isActive: _boolean(json, 'isActive'),
     );
   }
@@ -50,6 +57,14 @@ class RaidCatalogMapper {
     final value = json[key];
     if (value is! String) throw FormatException('$key must be a string.');
     return value;
+  }
+
+  List<String> _stringList(Map<String, dynamic> json, String key) {
+    final value = json[key];
+    if (value is! List || value.any((item) => item is! String)) {
+      throw FormatException('$key must be a string list.');
+    }
+    return value.cast<String>();
   }
 
   List<T> _mapList<T>(
