@@ -4,6 +4,8 @@ import '../entities/recruitment_application.dart';
 import '../policies/approval_policy.dart';
 import '../policies/party_composition_policy.dart';
 import '../repositories/recruitment_state_repository.dart';
+import '../repositories/weekly_raid_clear_repository.dart';
+import '../policies/weekly_raid_reset_policy.dart';
 import '../state/recruitment_state_machine.dart';
 import 'recruitment_runtime.dart';
 
@@ -54,14 +56,20 @@ class RecruitmentCommandService {
     required this.clock,
     required this.idGenerator,
     required this.repository,
+    this.weeklyClearRepository,
     this.stateMachine = const RecruitmentStateMachine(),
+    this.resetPolicy = const WeeklyRaidResetPolicy(),
   });
 
   final UserSession session;
   final RecruitmentClock clock;
   final RecruitmentIdGenerator idGenerator;
   final RecruitmentStateRepository repository;
+  final WeeklyRaidClearRepository? weeklyClearRepository;
   final RecruitmentStateMachine stateMachine;
+  final WeeklyRaidResetPolicy resetPolicy;
+
+  String? get currentUserId => session.currentUserId;
 
   Future<LocalRecruitmentResult> createRecruitment({
     required String title,
@@ -115,17 +123,45 @@ class RecruitmentCommandService {
     required String characterId,
     required String className,
     required PartyRole role,
-  }) => _change(recruitmentId, (aggregate, userId) {
-    return stateMachine.apply(
-      state: aggregate.state,
-      application: RecruitmentApplication(
-        applicantUserId: userId,
-        characterId: characterId,
-        className: className,
-        requestedRole: role,
-      ),
-    );
-  });
+  }) async {
+    final userId = session.currentUserId;
+    if (userId == null) {
+      return const LocalRecruitmentResult.failure(
+        LocalRecruitmentFailure.unauthenticated,
+      );
+    }
+    final current = await repository.getById(recruitmentId);
+    if (current == null) {
+      return const LocalRecruitmentResult.failure(
+        LocalRecruitmentFailure.notFound,
+      );
+    }
+    final clearRepository = weeklyClearRepository;
+    if (clearRepository != null &&
+        await clearRepository.hasClear(
+          userId: userId,
+          characterId: characterId,
+          raidId: current.metadata.raidId,
+          resetWeekKey: resetPolicy.weekFor(clock.now()).key,
+        )) {
+      return LocalRecruitmentResult.failure(
+        LocalRecruitmentFailure.domainRejected,
+        aggregate: current,
+        domainFailure: RecruitmentCommandFailure.weeklyRaidAlreadyCleared,
+      );
+    }
+    return _change(recruitmentId, (aggregate, currentUserId) {
+      return stateMachine.apply(
+        state: aggregate.state,
+        application: RecruitmentApplication(
+          applicantUserId: currentUserId,
+          characterId: characterId,
+          className: className,
+          requestedRole: role,
+        ),
+      );
+    });
+  }
 
   Future<LocalRecruitmentResult> withdraw(String recruitmentId) =>
       _change(recruitmentId, (aggregate, userId) {

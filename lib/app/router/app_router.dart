@@ -15,7 +15,10 @@ import '../../features/recruitment_list/presentation/pages/recruitment_create_pa
 import '../../features/recruitment_list/presentation/pages/recruitment_detail_page.dart';
 import '../../features/recruitment_list/data/fakes/fake_recruitment_runtime.dart';
 import '../../features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
+import '../../features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
+import '../../features/recruitment_list/data/fakes/local_recruitment_demo_seed.dart';
 import '../../features/recruitment_list/domain/services/recruitment_command_service.dart';
+import '../../features/recruitment_list/domain/services/recruitment_application_candidate_service.dart';
 import '../../shared/game_catalog/data/datasources/asset_game_catalog_data_source.dart';
 import '../../shared/game_catalog/data/repositories/game_catalog_repository_impl.dart';
 import '../../shared/raid_catalog/data/datasources/asset_raid_catalog_data_source.dart';
@@ -45,11 +48,20 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
     dataSource: AssetRaidCatalogDataSource(),
   );
   final recruitmentRepository = InMemoryRecruitmentStateRepository();
+  recruitmentRepository.seed(createLocalRecruitmentDemoSeed(DateTime.now()));
+  final weeklyRaidClearRepository = InMemoryWeeklyRaidClearRepository();
   final recruitmentCommandService = RecruitmentCommandService(
     session: FakeUserSession('local-user'),
     clock: FakeRecruitmentClock(DateTime.now()),
     idGenerator: SequentialRecruitmentIdGenerator(),
     repository: recruitmentRepository,
+    weeklyClearRepository: weeklyRaidClearRepository,
+  );
+  final recruitmentCandidateService = RecruitmentApplicationCandidateService(
+    accountRepository: accountRepository,
+    weeklyClearRepository: weeklyRaidClearRepository,
+    session: recruitmentCommandService.session,
+    clock: recruitmentCommandService.clock,
   );
 
   return GoRouter(
@@ -128,6 +140,8 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
                     builder: (context, state) => RecruitmentDetailPage(
                       recruitmentId: state.pathParameters['recruitmentId']!,
                       repository: recruitmentRepository,
+                      commandService: recruitmentCommandService,
+                      candidateService: recruitmentCandidateService,
                     ),
                   ),
                 ],

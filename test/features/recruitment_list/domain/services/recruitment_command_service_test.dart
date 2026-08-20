@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/fake_recruitment_runtime.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
+import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/weekly_raid_clear.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_aggregate.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_application.dart';
@@ -14,17 +16,20 @@ void main() {
   late FakeUserSession session;
   late FakeRecruitmentClock clock;
   late InMemoryRecruitmentStateRepository repository;
+  late InMemoryWeeklyRaidClearRepository weeklyClearRepository;
   late RecruitmentCommandService service;
 
   setUp(() {
     session = FakeUserSession('user-a');
     clock = FakeRecruitmentClock(DateTime.utc(2026, 8, 20));
     repository = InMemoryRecruitmentStateRepository();
+    weeklyClearRepository = InMemoryWeeklyRaidClearRepository();
     service = RecruitmentCommandService(
       session: session,
       clock: clock,
       idGenerator: SequentialRecruitmentIdGenerator(),
       repository: repository,
+      weeklyClearRepository: weeklyClearRepository,
     );
   });
 
@@ -164,6 +169,37 @@ void main() {
     expect(result.aggregate!.revision, 0);
     expect((await repository.getById(created.aggregate!.id))!.revision, 1);
   });
+
+  test('같은 주차에 동일 레이드를 완료한 캐릭터의 신청을 거절한다', () async {
+    final created = await _create(service);
+    session.signIn('user-b');
+    await weeklyClearRepository.saveAll([
+      WeeklyRaidClear(
+        userId: 'user-b',
+        characterId: 'b-character',
+        raidId: 'serca',
+        difficultyId: 'nightmare',
+        resetWeekKey: '2026-08-19',
+        completedAt: clock.now(),
+        recruitmentId: 'old-recruitment',
+        completedByUserId: 'user-c',
+      ),
+    ]);
+
+    final result = await service.apply(
+      recruitmentId: created.aggregate!.id,
+      characterId: 'b-character',
+      className: '발키리',
+      role: PartyRole.dealer,
+    );
+
+    expect(result.failure, LocalRecruitmentFailure.domainRejected);
+    expect(
+      result.domainFailure,
+      RecruitmentCommandFailure.weeklyRaidAlreadyCleared,
+    );
+    expect(result.aggregate!.revision, 0);
+  });
 }
 
 Future<LocalRecruitmentResult> _create(RecruitmentCommandService service) =>
@@ -194,6 +230,7 @@ const _metadata = RecruitmentMetadata(
   difficultyName: '노말',
   difficultyAlias: '노르카',
   gateCount: 2,
+  minItemLevel: 1710,
   minCombatPower: 200000,
   experienceLevel: ExperienceLevel.clearExp,
   maxPlayHours: 3,

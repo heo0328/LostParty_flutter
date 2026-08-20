@@ -14,6 +14,7 @@ enum RecruitmentCommandFailure {
   unauthorized,
   duplicateVote,
   compositionRejected,
+  weeklyRaidAlreadyCleared,
 }
 
 class RecruitmentCommandResult {

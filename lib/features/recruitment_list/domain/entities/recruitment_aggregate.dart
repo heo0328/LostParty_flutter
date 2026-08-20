@@ -10,6 +10,7 @@ class RecruitmentMetadata {
     required this.difficultyName,
     required this.difficultyAlias,
     required this.gateCount,
+    required this.minItemLevel,
     required this.minCombatPower,
     required this.experienceLevel,
     required this.maxPlayHours,
@@ -22,8 +23,9 @@ class RecruitmentMetadata {
   final String difficultyName;
   final String difficultyAlias;
   final int gateCount;
-  final int minCombatPower;
-  final ExperienceLevel experienceLevel;
+  final int minItemLevel;
+  final int? minCombatPower;
+  final ExperienceLevel? experienceLevel;
   final int? maxPlayHours;
 }
 

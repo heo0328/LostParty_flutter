@@ -36,7 +36,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
   RaidDefinition? _raid;
   RaidDifficultyDefinition? _difficulty;
   PartyRole _role = PartyRole.dealer;
-  ExperienceLevel _experience = ExperienceLevel.clearExp;
+  ExperienceLevel? _experience;
   ApprovalMode _approval = ApprovalMode.leaderOnly;
   bool _loading = true;
   bool _saving = false;
@@ -194,13 +194,14 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
                   validator: _positiveInteger,
                 ),
                 const SizedBox(height: 16),
-                DropdownButtonFormField<ExperienceLevel>(
+                DropdownButtonFormField<ExperienceLevel?>(
                   initialValue: _experience,
                   decoration: const InputDecoration(
                     labelText: '숙련도',
                     border: OutlineInputBorder(),
                   ),
                   items: const [
+                    DropdownMenuItem(value: null, child: Text('제한 없음')),
                     DropdownMenuItem(
                       value: ExperienceLevel.tryLevel,
                       child: Text('트라이'),
@@ -222,7 +223,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
                       child: Text('숙련'),
                     ),
                   ],
-                  onChanged: (value) => setState(() => _experience = value!),
+                  onChanged: (value) => setState(() => _experience = value),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -286,8 +287,11 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
             ),
           ),
   );
-  String? _positiveInteger(String? value) =>
-      (int.tryParse(value ?? '') ?? 0) > 0 ? null : '1 이상의 전투력을 입력해주세요.';
+  String? _positiveInteger(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    return (int.tryParse(value) ?? 0) > 0 ? null : '1 이상의 전투력을 입력해주세요.';
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
@@ -310,7 +314,10 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
         difficultyName: difficulty.name,
         difficultyAlias: difficulty.displayAlias,
         gateCount: raid.gateCount,
-        minCombatPower: int.parse(_combatPower.text),
+        minItemLevel: difficulty.minItemLevel,
+        minCombatPower: _combatPower.text.isEmpty
+            ? null
+            : int.parse(_combatPower.text),
         experienceLevel: _experience,
         maxPlayHours: _hours.text.isEmpty ? null : int.parse(_hours.text),
       ),
