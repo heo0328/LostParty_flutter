@@ -3,7 +3,7 @@
 ## 기준 상태
 
 - 기준 브랜치: `main`
-- 선행 문서 브랜치: `codex/backend-party-group-architecture`
+- 선행 작업 브랜치: `codex/raid-catalog-foundation`
 - 제품 방향: 정적 레이드 카탈로그를 기반으로 서버 검증형 파티 모집과 계정 그룹 구현
 - 백엔드 기준: `BACKEND_PARTY_ARCHITECTURE.md`
 - 새 작업 시작 전 문서 브랜치의 `main` 병합과 로컬/원격 `main` 일치를 확인한다.
@@ -12,28 +12,23 @@
 
 ## 이번 작업 그룹의 목표
 
-Lost Ark API에서 제공하지 않는 레이드 기준정보를 수기 관리할 정적 JSON 카탈로그의 Domain 구조와 검증 규칙을 확정한다.
-
-실제 전체 레이드 데이터를 한 번에 입력하지 않고, 기존 `RaidBase`/`RaidVariation` 구조와 모집 조건에 필요한 필드를 검토해 최소 샘플 한 개로 구조를 검증한다.
+신뢰 가능한 기준으로 현재 서비스 대상 레이드의 실제 정보를 확인해 정적 JSON 카탈로그에 입력하고 기존 로컬 레이드/목 모집 데이터를 새 카탈로그 참조로 전환한다.
 
 ---
 
 ## 포함 범위
 
-- 레이드 카탈로그 버전과 갱신 시각
-- 레이드 ID, 표시명, 파티 정원 및 관문 수
-- 난이도 ID, 표시 순서, 최소 아이템 레벨 및 보상 골드
-- 활성/비활성 상태
-- 관문 선택 범위 검증
-- 중복 ID, 잘못된 참조, 정원/관문/레벨/보상 범위 검증
-- 모집글이 참조할 `raidId`, `difficultyId`, `catalogVersion` 경계
-- 최소 레이드 샘플과 Domain/Mapper/Validator 테스트
+- 실제 서비스 대상 레이드 목록과 난이도별 기준정보 조사
+- 출처와 확인 시점을 문서에 기록
+- `assets/raid_catalog/raid_catalog.v1.json`의 샘플을 실제 데이터로 교체
+- 기존 `raid_master` 조회 계약을 새 카탈로그 Repository 기반으로 전환
+- 목 모집글의 레이드·난이도 참조를 실제 카탈로그 ID와 일치시킴
+- 전체 asset 무결성과 기존 목록/Repository 회귀 테스트
 
 ---
 
 ## 제외 범위
 
-- 전체 레이드 수기 입력
 - Firebase 프로젝트 생성 및 SDK 추가
 - 모집글 작성 UI 변경
 - 파티 신청과 승인 정책 구현
@@ -48,30 +43,31 @@ Lost Ark API에서 제공하지 않는 레이드 기준정보를 수기 관리�
 - UI와 서버는 임의 입력값이 아니라 같은 카탈로그 ID를 참조한다.
 - Firebase 연결 전에 Domain과 검증 규칙을 로컬 테스트로 확정한다.
 - 기존 Repository 경계를 유지하며 UI가 asset 데이터 소스를 직접 읽지 않는다.
-- 실제 레이드 데이터는 구조가 확정된 후 별도 작업 단위로 입력한다.
+- 확인되지 않은 보상이나 레벨을 추정해 입력하지 않는다.
+- 변경 가능성이 큰 값은 출처와 확인 날짜를 남기고 카탈로그 버전을 갱신한다.
 
 ---
 
 ## 작업 순서
 
-1. 기존 Raid Domain, local data source와 모집글 참조 구조 확인
-2. 코드 수정 없이 신규 카탈로그 작업안 제시
-3. 새 기능 브랜치 생성
-4. 레이드 카탈로그 Domain/Mapper/Validator 구현
-5. 최소 JSON 샘플과 관련 테스트
+1. 서비스 대상 범위와 신뢰 가능한 데이터 출처 확정
+2. 실제 레이드·난이도·정원·관문·레벨·보상 데이터 조사
+3. 새 기능 브랜치 생성 및 JSON 카탈로그 입력
+4. 기존 `raid_master`와 목 모집 데이터의 카탈로그 참조 전환
+5. 카탈로그 무결성 및 Repository/목데이터 테스트
 6. 전체 analyze/test 실행
-7. 필요 시 화면 영향 실기기 검증
+7. 모집 목록 화면 실기기 검증
 8. 문서화, 기능 브랜치 푸시 및 `main` 병합·푸시
 
-권장 브랜치명: `codex/raid-catalog-foundation`
+권장 브랜치명: `codex/raid-catalog-data`
 
 ---
 
 ## 완료 조건
 
-- 레이드 기준정보의 소유와 버전 경계가 명확하다.
-- 잘못된 카탈로그가 앱 또는 서버 기준정보로 사용되기 전에 거부된다.
-- 모집글이 임의 정원/레벨 대신 검증된 카탈로그 ID를 참조할 수 있다.
+- 서비스 대상 레이드와 난이도가 실제 카탈로그에 포함된다.
+- 기존 레이드 목록과 목 모집글이 같은 카탈로그 ID를 사용한다.
+- 입력 데이터의 출처와 확인 시점이 추적 가능하다.
 - 관련 테스트와 전체 검증이 통과한다.
 - 로컬과 원격 `main`이 같은 최종 커밋을 가리킨다.
 
@@ -79,17 +75,16 @@ Lost Ark API에서 제공하지 않는 레이드 기준정보를 수기 관리�
 
 ## 후속 작업 순서
 
-1. 실제 레이드 카탈로그 데이터 입력
-2. 모집 조건 및 승인 정책 Domain
-3. 신청·투표·가입 상태 머신
-4. FakeUserSession, Fake Repository, Fake Clock/ID 기반 다중 사용자 환경
-5. 모집 목록·상세 및 모집 생성 UI
-6. 신청 및 승인·투표·파티 구성 UI
-7. 계정 그룹 Domain/Fake와 초대·수락·그룹 전용 모집 UI
-8. 공개/그룹 전용 모집 로컬 통합 시나리오 테스트와 실기기 검증
-9. Firebase Auth 및 Firestore 읽기 모델
-10. Callable Functions와 Transaction
-11. Security Rules와 Emulator 다중 사용자 테스트
-12. Firebase 연결 후 다중 계정 실기기 테스트와 App Check
+1. 모집 조건 및 승인 정책 Domain
+2. 신청·투표·가입 상태 머신
+3. FakeUserSession, Fake Repository, Fake Clock/ID 기반 다중 사용자 환경
+4. 모집 목록·상세 및 모집 생성 UI
+5. 신청 및 승인·투표·파티 구성 UI
+6. 계정 그룹 Domain/Fake와 초대·수락·그룹 전용 모집 UI
+7. 공개/그룹 전용 모집 로컬 통합 시나리오 테스트와 실기기 검증
+8. Firebase Auth 및 Firestore 읽기 모델
+9. Callable Functions와 Transaction
+10. Security Rules와 Emulator 다중 사용자 테스트
+11. Firebase 연결 후 다중 계정 실기기 테스트와 App Check
 
-Firebase 구현은 8번까지의 로컬 흐름이 완료되어 모집·신청·승인·그룹 동작과 UI를 목데이터로 재현할 수 있을 때 시작한다.
+Firebase 구현은 7번까지의 로컬 흐름이 완료되어 모집·신청·승인·그룹 동작과 UI를 목데이터로 재현할 수 있을 때 시작한다.

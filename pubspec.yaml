@@ -75,6 +75,7 @@ flutter:
 
   assets:
     - assets/game_catalog/game_catalog.v1.json
+    - assets/raid_catalog/raid_catalog.v1.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:

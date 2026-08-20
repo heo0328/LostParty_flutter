@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "2026.08.20",
+  "updatedAt": "2026-08-20T00:00:00Z",
+  "raids": [
+    {
+      "raidId": "sample_raid",
+      "name": "샘플 레이드",
+      "partySize": 8,
+      "gateCount": 2,
+      "isActive": true,
+      "difficulties": [
+        {
+          "difficultyId": "normal",
+          "name": "노말",
+          "displayOrder": 1,
+          "minItemLevel": 1700,
+          "rewardGold": 30000,
+          "isActive": true
+        },
+        {
+          "difficultyId": "hard",
+          "name": "하드",
+          "displayOrder": 2,
+          "minItemLevel": 1720,
+          "rewardGold": 40000,
+          "isActive": false
+        }
+      ]
+    }
+  ]
+}
