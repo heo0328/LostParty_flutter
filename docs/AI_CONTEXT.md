@@ -245,12 +245,11 @@
 
 ## 다음 작업
 
-1. 신청·투표·가입 상태 머신 구현
-2. 로컬 다중 사용자 Fake 환경 구현
-3. 모집 목록·생성·신청·승인/투표·파티 구성 UI 검증
-4. 사용자 ID 검색, 그룹 초대/수락 및 그룹 전용 모집의 Domain·Fake·UI 검증
-5. 공개/그룹 전용 모집 로컬 통합 시나리오와 실기기 검증
-6. Firebase Auth 및 Firestore 읽기 모델 도입
+1. 로컬 다중 사용자 Fake 환경 구현
+2. 모집 목록·생성·신청·승인/투표·파티 구성 UI 검증
+3. 사용자 ID 검색, 그룹 초대/수락 및 그룹 전용 모집의 Domain·Fake·UI 검증
+4. 공개/그룹 전용 모집 로컬 통합 시나리오와 실기기 검증
+5. Firebase Auth 및 Firestore 읽기 모델 도입
 7. Callable Functions와 Transaction 기반 명령 처리
 8. Security Rules, Emulator 및 Firebase 다중 계정 실기기 테스트
 
@@ -316,7 +315,8 @@
 - 다음 채팅은 `docs/NEXT_WORK.md`를 먼저 확인하고 병합된 최신 `main`에서 새 작업 브랜치를 생성해 시작
 - 제품 방향을 레이드 정적 카탈로그와 서버 기반 파티 모집/그룹 흐름으로 전환
 - 카탈로그 파티 기준을 사용하는 모집 조건과 가입 승인 정책 Domain 구현 완료
-- 다음 첫 단위는 신청·투표·가입 상태 머신
+- 신청·투표·가입 상태 머신 구현 완료
+- 다음 첫 단위는 FakeUserSession, Fake Repository, Fake Clock/ID 기반 로컬 다중 사용자 환경
 - Firebase 연결 전에 모집/승인/그룹 Domain, 로컬 Fake 흐름과 관련 UI 통합 시나리오를 모두 검증
 
 ### 레이드 정적 카탈로그 기반 구현 상태
