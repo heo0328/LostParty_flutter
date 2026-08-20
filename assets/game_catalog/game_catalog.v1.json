@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "2026.08.20",
+  "updatedAt": "2026-08-20T00:00:00Z",
+  "classes": [
+    {
+      "classId": "bard",
+      "apiClassName": "바드",
+      "aliases": ["BARD"],
+      "supportedRoles": ["dealer", "support"],
+      "defaultRole": "support",
+      "enlightenmentBranches": [
+        {
+          "branchId": "perfect_harmony",
+          "tier1NodeName": "완벽한 화음",
+          "displayName": "바드",
+          "aliases": [],
+          "inferredRole": "support",
+          "relatedPassiveNodes": ["세레나데 코드"]
+        },
+        {
+          "branchId": "true_courage",
+          "tier1NodeName": "진실된 용맹",
+          "displayName": "딜바드",
+          "aliases": [],
+          "inferredRole": "dealer",
+          "relatedPassiveNodes": ["템페스트 필드"]
+        }
+      ],
+      "specialSkills": [
+        {
+          "skillId": "serenade_of_courage",
+          "name": "용맹의 세레나데",
+          "aliases": ["용맹"],
+          "category": "identity",
+          "relatedBranchIds": ["perfect_harmony", "true_courage"]
+        },
+        {
+          "skillId": "serenade_of_salvation",
+          "name": "구원의 세레나데",
+          "aliases": ["절구"],
+          "category": "identity",
+          "relatedBranchIds": ["perfect_harmony", "true_courage"]
+        }
+      ],
+      "arkGridPresets": []
+    }
+  ]
+}
