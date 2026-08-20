@@ -4,6 +4,8 @@ import 'package:drift/drift.dart';
 
 import '../../../../shared/game_catalog/domain/entities/game_catalog.dart';
 import '../../../../shared/game_catalog/domain/repositories/game_catalog_repository.dart';
+import '../../domain/entities/character_build_analysis.dart';
+import '../../domain/entities/character_build_draft.dart';
 import '../../domain/entities/character_build_snapshot.dart';
 import '../../domain/entities/character_profile.dart';
 import '../../domain/entities/character_summary.dart';
@@ -70,6 +72,16 @@ class LocalAccountDataSource {
         );
   }
 
+  Future<CharacterBuildAnalysis> analyzeCharacterBuild(
+    Map<String, dynamic> rawJson,
+  ) async {
+    final catalog = await (_catalog ??= _gameCatalogRepository.loadCatalog());
+    return const CharacterBuildAnalysisMapper().fromJson(
+      rawJson,
+      catalog: catalog,
+    );
+  }
+
   Future<LocalGameAccount?> loadMainAccount() async {
     final account = await (_database.select(
       _database.gameAccounts,
@@ -122,6 +134,25 @@ class LocalAccountDataSource {
       itemLevel: itemLevel,
       combatPower: combatPower,
       capturedAt: capturedAt,
+    );
+  }
+
+  Future<void> commitCharacterBuildDraft({
+    required CharacterBuildDraft draft,
+    required CharacterBuildRole role,
+  }) {
+    final profile = draft.profile;
+    return _database.commitCharacterBuildSnapshot(
+      characterId: draft.characterId,
+      characterName: profile.characterName,
+      serverName: profile.serverName,
+      characterLevel: profile.characterLevel,
+      characterClassName: profile.characterClassName,
+      role: role.name,
+      rawJson: draft.rawJson,
+      itemLevel: profile.itemLevel,
+      combatPower: profile.combatPower,
+      capturedAt: draft.fetchedAt,
     );
   }
 

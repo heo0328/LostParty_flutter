@@ -694,3 +694,35 @@
 - `flutter analyze` 통과
 - `flutter test` 94개 통과
 - UI 변경이 없어 별도 실기기 검증 불필요
+
+---
+
+## Task-016. 캐릭터 세팅 Draft/Commit 저장 경계
+
+### Domain 및 Repository
+- API 조회 결과를 저장 전 상태로 표현하는 `CharacterBuildDraft` 추가
+- draft에 대상 캐릭터 ID, 원본 JSON, 프로필, 카탈로그 분석 결과 및 조회 시각 포함
+- `createCharacterBuildDraft`는 원격 조회와 분석만 수행하고 로컬 DB를 변경하지 않음
+- `commitCharacterBuildDraft`는 draft와 사용자 선택 역할을 받아 저장된 스냅샷을 반환
+- 감지 역할과 선택 역할이 달라도 선택 역할로 commit 허용
+- 기존 상세 화면 호출부는 draft 생성 직후 commit하는 호환 메서드로 유지
+
+### 저장 안전성
+- 선택 역할 스냅샷과 최신 캐릭터 프로필을 Drift 단일 트랜잭션으로 저장
+- draft의 캐릭터명과 로컬 캐릭터가 일치하는지 commit 시 검증
+- 선택하지 않은 반대 역할 스냅샷 유지
+- 저장된 스냅샷 로딩 시 현재 번들 카탈로그로 재분석하는 기존 동작 유지
+
+### 범위 제외
+- 저장 전 미리보기 UI 및 ViewModel 상태 변경
+- 역할 불일치 안내 화면
+- draft 장기 보관, 사용자 메모, 카드 변경 및 다른 직업 데이터 입력
+
+### 검증
+- draft 생성 후 스냅샷과 프로필이 변경되지 않는 Repository 테스트 추가
+- 원본 JSON, 프로필, 분석 결과 및 조회 시각 포함 검증
+- 역할 불일치 commit, 선택 역할 저장, 반대 역할 보존 및 프로필 갱신 검증
+- 관련 Repository 및 DB 테스트 15개 통과
+- `flutter analyze` 통과
+- `flutter test` 95개 통과
+- UI 변경이 없어 별도 실기기 검증 불필요

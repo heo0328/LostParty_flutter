@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_draft.dart';
 import 'package:lost_party/features/account/domain/entities/character_profile.dart';
 import 'package:lost_party/features/account/domain/entities/character_summary.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
@@ -73,6 +74,18 @@ void main() {
 }
 
 class _FakeAccountRepository implements AccountRepository {
+  @override
+  Future<CharacterBuildDraft> createCharacterBuildDraft({
+    required int characterId,
+    required String characterName,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<CharacterBuildSnapshot> commitCharacterBuildDraft({
+    required CharacterBuildDraft draft,
+    required CharacterBuildRole role,
+  }) => throw UnimplementedError();
+
   @override
   Future<CharacterBuildSnapshot> refreshCharacterBuildSnapshot({
     required int characterId,

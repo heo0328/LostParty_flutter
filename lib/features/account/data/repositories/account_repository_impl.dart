@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../../../shared/lost_ark_api/client/lost_ark_api_exception.dart';
+import '../../domain/entities/character_build_draft.dart';
 import '../../domain/entities/character_build_snapshot.dart';
 import '../../domain/entities/character_profile.dart';
 import '../../domain/entities/character_summary.dart';
@@ -100,10 +101,9 @@ class AccountRepositoryImpl implements AccountRepository {
   }
 
   @override
-  Future<CharacterBuildSnapshot> refreshCharacterBuildSnapshot({
+  Future<CharacterBuildDraft> createCharacterBuildDraft({
     required int characterId,
     required String characterName,
-    required CharacterBuildRole role,
   }) async {
     final response = await _remoteDataSource.fetchCharacterArmory(
       characterName,
@@ -113,20 +113,14 @@ class AccountRepositoryImpl implements AccountRepository {
       final profile = CharacterProfileDto.fromJson(
         Map<String, dynamic>.from(profileJson as Map),
       ).toDomain();
-      final capturedAt = DateTime.now();
-      await _localDataSource.saveCharacterBuildSnapshot(
+      final analysis = await _localDataSource.analyzeCharacterBuild(response);
+      return CharacterBuildDraft(
         characterId: characterId,
-        role: role,
         rawJson: jsonEncode(response),
-        itemLevel: profile.itemLevel,
-        combatPower: profile.combatPower,
-        capturedAt: capturedAt,
+        profile: profile,
+        analysis: analysis,
+        fetchedAt: DateTime.now(),
       );
-      await _localDataSource.saveCharacterProfile(profile);
-      final snapshots = await _localDataSource.loadCharacterBuildSnapshots(
-        characterId,
-      );
-      return snapshots.singleWhere((snapshot) => snapshot.role == role);
     } on TypeError {
       throw const LostArkApiException(
         type: LostArkApiErrorType.invalidResponse,
@@ -136,6 +130,31 @@ class AccountRepositoryImpl implements AccountRepository {
         type: LostArkApiErrorType.invalidResponse,
       );
     }
+  }
+
+  @override
+  Future<CharacterBuildSnapshot> commitCharacterBuildDraft({
+    required CharacterBuildDraft draft,
+    required CharacterBuildRole role,
+  }) async {
+    await _localDataSource.commitCharacterBuildDraft(draft: draft, role: role);
+    final snapshots = await _localDataSource.loadCharacterBuildSnapshots(
+      draft.characterId,
+    );
+    return snapshots.singleWhere((snapshot) => snapshot.role == role);
+  }
+
+  @override
+  Future<CharacterBuildSnapshot> refreshCharacterBuildSnapshot({
+    required int characterId,
+    required String characterName,
+    required CharacterBuildRole role,
+  }) async {
+    final draft = await createCharacterBuildDraft(
+      characterId: characterId,
+      characterName: characterName,
+    );
+    return commitCharacterBuildDraft(draft: draft, role: role);
   }
 
   @override

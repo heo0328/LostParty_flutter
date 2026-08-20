@@ -126,55 +126,120 @@ class AccountDatabase extends _$AccountDatabase {
     required DateTime capturedAt,
     int dataVersion = 1,
   }) {
+    return transaction(
+      () => _saveCharacterBuildSnapshot(
+        characterId: characterId,
+        role: role,
+        rawJson: rawJson,
+        itemLevel: itemLevel,
+        combatPower: combatPower,
+        capturedAt: capturedAt,
+        dataVersion: dataVersion,
+      ),
+    );
+  }
+
+  Future<void> commitCharacterBuildSnapshot({
+    required int characterId,
+    required String characterName,
+    required String serverName,
+    required int characterLevel,
+    required String characterClassName,
+    required String role,
+    required String rawJson,
+    required double? itemLevel,
+    required double? combatPower,
+    required DateTime capturedAt,
+    int dataVersion = 1,
+  }) {
     return transaction(() async {
-      if (role != 'dealer' && role != 'support') {
-        throw ArgumentError.value(role, 'role', 'Unsupported build role.');
-      }
       final character = await (select(
         accountCharacters,
       )..where((table) => table.id.equals(characterId))).getSingleOrNull();
-      if (character == null) {
+      if (character == null || character.characterName != characterName) {
         throw ArgumentError.value(
           characterId,
           'characterId',
-          'Character not found.',
+          'Draft character does not match the stored character.',
         );
       }
-
-      final existing =
-          await (select(characterBuildSnapshots)..where(
-                (table) =>
-                    table.characterId.equals(characterId) &
-                    table.role.equals(role),
-              ))
-              .getSingleOrNull();
-      if (existing == null) {
-        await into(characterBuildSnapshots).insert(
-          CharacterBuildSnapshotsCompanion.insert(
-            characterId: characterId,
-            role: role,
-            rawJson: rawJson,
-            itemLevel: Value(itemLevel),
-            combatPower: Value(combatPower),
-            capturedAt: capturedAt,
-            dataVersion: Value(dataVersion),
-          ),
-        );
-        return;
-      }
-
+      await _saveCharacterBuildSnapshot(
+        characterId: characterId,
+        role: role,
+        rawJson: rawJson,
+        itemLevel: itemLevel,
+        combatPower: combatPower,
+        capturedAt: capturedAt,
+        dataVersion: dataVersion,
+      );
       await (update(
-        characterBuildSnapshots,
-      )..where((table) => table.id.equals(existing.id))).write(
-        CharacterBuildSnapshotsCompanion(
-          rawJson: Value(rawJson),
+        accountCharacters,
+      )..where((table) => table.id.equals(characterId))).write(
+        AccountCharactersCompanion(
+          serverName: Value(serverName),
+          characterLevel: Value(characterLevel),
+          characterClassName: Value(characterClassName),
           itemLevel: Value(itemLevel),
           combatPower: Value(combatPower),
-          capturedAt: Value(capturedAt),
-          dataVersion: Value(dataVersion),
         ),
       );
     });
+  }
+
+  Future<void> _saveCharacterBuildSnapshot({
+    required int characterId,
+    required String role,
+    required String rawJson,
+    required double? itemLevel,
+    required double? combatPower,
+    required DateTime capturedAt,
+    required int dataVersion,
+  }) async {
+    if (role != 'dealer' && role != 'support') {
+      throw ArgumentError.value(role, 'role', 'Unsupported build role.');
+    }
+    final character = await (select(
+      accountCharacters,
+    )..where((table) => table.id.equals(characterId))).getSingleOrNull();
+    if (character == null) {
+      throw ArgumentError.value(
+        characterId,
+        'characterId',
+        'Character not found.',
+      );
+    }
+    final existing =
+        await (select(characterBuildSnapshots)..where(
+              (table) =>
+                  table.characterId.equals(characterId) &
+                  table.role.equals(role),
+            ))
+            .getSingleOrNull();
+    if (existing == null) {
+      await into(characterBuildSnapshots).insert(
+        CharacterBuildSnapshotsCompanion.insert(
+          characterId: characterId,
+          role: role,
+          rawJson: rawJson,
+          itemLevel: Value(itemLevel),
+          combatPower: Value(combatPower),
+          capturedAt: capturedAt,
+          dataVersion: Value(dataVersion),
+        ),
+      );
+      return;
+    }
+    await (update(
+      characterBuildSnapshots,
+    )..where((table) => table.id.equals(existing.id))).write(
+      CharacterBuildSnapshotsCompanion(
+        rawJson: Value(rawJson),
+        itemLevel: Value(itemLevel),
+        combatPower: Value(combatPower),
+        capturedAt: Value(capturedAt),
+        dataVersion: Value(dataVersion),
+      ),
+    );
   }
 
   Future<List<CharacterBuildSnapshotRow>> loadCharacterBuildSnapshots(
