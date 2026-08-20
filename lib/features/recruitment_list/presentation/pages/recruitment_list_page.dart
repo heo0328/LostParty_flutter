@@ -37,7 +37,7 @@ class _RecruitmentListPageState extends State<RecruitmentListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Recruitments')),
+      appBar: AppBar(title: const Text('파티 모집')),
       body: _buildBody(),
     );
   }

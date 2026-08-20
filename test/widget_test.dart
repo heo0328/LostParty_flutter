@@ -29,7 +29,7 @@ void main() {
     await tester.tap(find.text('파티 모집'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Recruitments'), findsOneWidget);
+    expect(find.text('파티 모집'), findsNWidgets(2));
     expect(find.byType(Card), findsNWidgets(6));
   });
 
@@ -42,7 +42,7 @@ void main() {
     await tester.fling(find.byType(PageView), const Offset(-500, 0), 1000);
     await tester.pumpAndSettle();
 
-    expect(find.text('Recruitments'), findsOneWidget);
+    expect(find.text('파티 모집'), findsNWidgets(2));
 
     final navigationBar = tester.widget<NavigationBar>(
       find.byType(NavigationBar),
@@ -69,7 +69,7 @@ void main() {
       await tester.tap(find.text('파티 모집'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Recruitments'), findsOneWidget);
+      expect(find.text('파티 모집'), findsNWidgets(2));
     },
   );
 

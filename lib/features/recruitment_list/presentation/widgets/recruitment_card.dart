@@ -43,7 +43,7 @@ class RecruitmentCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Leader: ${recruitment.leader.characterName} '
+              '리더: ${recruitment.leader.characterName} '
               '(${recruitment.leader.className})',
               style: theme.textTheme.bodyMedium,
             ),
@@ -52,21 +52,21 @@ class RecruitmentCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Members '
+                    '멤버 '
                     '${recruitment.memberSummary.currentCount}/'
                     '${recruitment.memberSummary.maxCount}',
                   ),
                 ),
                 Expanded(
                   child: Text(
-                    'Dealer '
+                    '딜러 '
                     '${recruitment.recruitmentStatus.roles.dealer.currentCount}/'
                     '${recruitment.recruitmentStatus.roles.dealer.targetCount}',
                   ),
                 ),
                 Expanded(
                   child: Text(
-                    'Support '
+                    '서포터 '
                     '${recruitment.recruitmentStatus.roles.support.currentCount}/'
                     '${recruitment.recruitmentStatus.roles.support.targetCount}',
                   ),
@@ -75,9 +75,9 @@ class RecruitmentCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Min combat power ${recruitment.requirements.minCombatPower} '
-              '/ ${_experienceLabel(recruitment.requirements.experienceLevel)} '
-              '/ ${_playTimeLabel(recruitment.schedule.maxPlayHours)}',
+              '최소 전투력 ${recruitment.requirements.minCombatPower} '
+              '/ 숙련도 ${_experienceLabel(recruitment.requirements.experienceLevel)} '
+              '/ 최대 시간 ${_playTimeLabel(recruitment.schedule.maxPlayHours)}',
               style: theme.textTheme.bodySmall,
             ),
           ],
@@ -88,20 +88,20 @@ class RecruitmentCard extends StatelessWidget {
 
   String _experienceLabel(ExperienceLevel level) {
     return switch (level) {
-      ExperienceLevel.tryLevel => 'Try',
-      ExperienceLevel.clearExp => 'Clear',
-      ExperienceLevel.multiClearExp => 'Multi clear',
-      ExperienceLevel.semiExperienced => 'Semi exp',
-      ExperienceLevel.experienced => 'Experienced',
+      ExperienceLevel.tryLevel => '트라이',
+      ExperienceLevel.clearExp => '클경',
+      ExperienceLevel.multiClearExp => '다클경',
+      ExperienceLevel.semiExperienced => '반숙',
+      ExperienceLevel.experienced => '숙련',
     };
   }
 
   String _playTimeLabel(int? maxPlayHours) {
     if (maxPlayHours == null) {
-      return 'Free';
+      return '클리어 시까지';
     }
 
-    return '${maxPlayHours}h max';
+    return '$maxPlayHours시간';
   }
 }
 
@@ -135,9 +135,9 @@ class _StatusBadge extends StatelessWidget {
 
   String get _label {
     return switch (status) {
-      RecruitmentStatusType.recruiting => 'Recruiting',
-      RecruitmentStatusType.closed => 'Closed',
-      RecruitmentStatusType.completed => 'Completed',
+      RecruitmentStatusType.recruiting => '모집 중',
+      RecruitmentStatusType.closed => '모집 마감',
+      RecruitmentStatusType.completed => '완료',
     };
   }
 
