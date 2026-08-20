@@ -81,8 +81,15 @@ Lost Ark API에서 제공하지 않는 레이드 기준정보를 수기 관리�
 
 1. 실제 레이드 카탈로그 데이터 입력
 2. 모집 조건 및 승인 정책 Domain
-3. 신청·투표·가입 상태 머신과 Fake Repository
-4. Firebase Auth 및 Firestore 읽기 모델
-5. Callable Functions와 Transaction
-6. 계정 그룹 초대/수락 및 그룹 전용 모집글
-7. Security Rules와 Emulator 다중 사용자 테스트
+3. 신청·투표·가입 상태 머신
+4. FakeUserSession, Fake Repository, Fake Clock/ID 기반 다중 사용자 환경
+5. 모집 목록·상세 및 모집 생성 UI
+6. 신청 및 승인·투표·파티 구성 UI
+7. 계정 그룹 Domain/Fake와 초대·수락·그룹 전용 모집 UI
+8. 공개/그룹 전용 모집 로컬 통합 시나리오 테스트와 실기기 검증
+9. Firebase Auth 및 Firestore 읽기 모델
+10. Callable Functions와 Transaction
+11. Security Rules와 Emulator 다중 사용자 테스트
+12. Firebase 연결 후 다중 계정 실기기 테스트와 App Check
+
+Firebase 구현은 8번까지의 로컬 흐름이 완료되어 모집·신청·승인·그룹 동작과 UI를 목데이터로 재현할 수 있을 때 시작한다.

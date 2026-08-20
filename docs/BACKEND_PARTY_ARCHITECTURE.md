@@ -310,19 +310,27 @@ startAt >= now
 ## 13. 구현 단계
 
 ```text
-1. 레이드 정적 카탈로그와 검증
-2. 모집/조건/승인 정책 Domain 모델
-3. 신청·투표·가입 상태 머신
-4. 로컬 Fake Repository 기반 파티 구성 테스트
-5. Firebase 프로젝트와 Authentication
-6. Firestore 읽기 모델
-7. Callable Functions 명령과 Transaction
-8. 계정 그룹과 초대 흐름
-9. Security Rules 및 Emulator 테스트
-10. 다중 계정 실기기 테스트
-11. App Check
-12. 후속 알림
+1. 레이드 정적 카탈로그 구조와 검증 규칙
+2. 실제 레이드 카탈로그 데이터 입력
+3. 모집 조건과 가입 승인 정책 Domain 모델
+4. 신청·투표·가입 상태 머신
+5. FakeUserSession, Fake Repository, Fake Clock/ID 기반 다중 사용자 환경
+6. 로컬 모집 목록과 상세 UI
+7. 로컬 모집 생성 UI
+8. 로컬 신청 UI
+9. 로컬 승인·투표·파티 구성 UI
+10. 계정 그룹 Domain, Fake Repository 및 그룹 UI
+11. 공개/그룹 전용 모집을 포함한 로컬 통합 시나리오 테스트와 실기기 검증
+12. Firebase 프로젝트와 Authentication
+13. Firestore 읽기 모델
+14. Callable Functions 명령과 Transaction
+15. Security Rules 및 Emulator 다중 사용자 테스트
+16. Firebase 연결 후 다중 계정 실기기 테스트
+17. App Check
+18. 후속 알림
 ```
 
-레이드 카탈로그와 Domain 상태 머신을 먼저 확정하고 Firebase 연결은 그 다음 작업 그룹에서 시작한다.
+Firebase 연결은 로컬 목데이터만으로 모집 생성 → 목록 노출 → 신청 → 승인/투표 → 파티 구성과 그룹 초대/수락 → 그룹 전용 모집 노출까지 검증한 뒤 시작한다. 로컬 단계와 Firebase 단계는 같은 Domain 및 Repository 계약을 사용하고 구현체만 교체한다.
+
+각 단계는 독립 작업 그룹으로 나눌 수 있지만, 서로 강하게 연결된 Domain·상태 머신·UI는 같은 채팅에서 이어서 작업해 문서 재탐색 비용을 줄인다. 각 작업 그룹은 기능 브랜치 테스트, 실기기 확인이 필요한 경우의 기기 검증, 기능 브랜치 푸시, `main` 병합·푸시 및 로컬/원격 `main` 일치 확인까지 완료한다.
 

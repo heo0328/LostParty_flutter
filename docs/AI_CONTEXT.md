@@ -246,12 +246,15 @@
 ## 다음 작업
 
 1. 실제 레이드 정적 카탈로그 구조와 검증 규칙 확정
-2. 모집 조건과 가입 승인 정책 Domain 모델 정의
-3. 신청·투표·가입 상태 머신과 로컬 Fake Repository 검증
-4. Firebase Auth 및 Firestore 읽기 모델 도입
-5. Callable Functions와 Transaction 기반 명령 처리
-6. 사용자 ID 검색, 그룹 초대/수락 및 그룹 전용 모집글
-7. Security Rules 및 Emulator 다중 사용자 테스트
+2. 실제 레이드 카탈로그 데이터 입력
+3. 모집 조건과 가입 승인 정책 Domain 모델 정의
+4. 신청·투표·가입 상태 머신과 로컬 다중 사용자 Fake 환경 구현
+5. 모집 목록·생성·신청·승인/투표·파티 구성 UI 검증
+6. 사용자 ID 검색, 그룹 초대/수락 및 그룹 전용 모집의 Domain·Fake·UI 검증
+7. 공개/그룹 전용 모집 로컬 통합 시나리오와 실기기 검증
+8. Firebase Auth 및 Firestore 읽기 모델 도입
+9. Callable Functions와 Transaction 기반 명령 처리
+10. Security Rules, Emulator 및 Firebase 다중 계정 실기기 테스트
 
 ---
 
@@ -315,7 +318,7 @@
 - 다음 채팅은 `docs/NEXT_WORK.md`를 먼저 확인하고 병합된 최신 `main`에서 새 작업 브랜치를 생성해 시작
 - 제품 방향을 레이드 정적 카탈로그와 서버 기반 파티 모집/그룹 흐름으로 전환
 - 다음 첫 단위는 API가 제공하지 않는 실제 레이드 기준정보의 JSON 카탈로그 구조와 검증 규칙
-- Firebase 연결 전에 모집/승인/그룹 Domain과 로컬 Fake 흐름을 작은 작업 단위로 확정
+- Firebase 연결 전에 모집/승인/그룹 Domain, 로컬 Fake 흐름과 관련 UI 통합 시나리오를 모두 검증
 
 ---
 
