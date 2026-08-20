@@ -154,7 +154,102 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('openApplicationButton')), findsOneWidget);
   });
+
+  testWidgets('파티장이 pending 신청을 승인하면 파티 구성과 신청자 상태가 갱신된다', (tester) async {
+    final repository = InMemoryRecruitmentStateRepository();
+    await repository.create(_pendingRecruitment);
+    final session = FakeUserSession('other-user');
+    final service = _service(repository, session);
+
+    await tester.pumpWidget(MaterialApp(home: _detail(repository, service)));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('pendingApplication-local-user')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('지원바드'), findsOneWidget);
+    expect(find.text('파티장 승인 대기'), findsOneWidget);
+    final approveButton = find.byKey(
+      const ValueKey('approveApplication-local-user'),
+    );
+    await tester.ensureVisible(approveButton);
+    await tester.tap(approveButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('가입 신청을 승인했습니다.'), findsOneWidget);
+    expect(find.text('대기 중인 가입 신청이 없습니다.'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('partyMember-local-user')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('지원바드'), findsOneWidget);
+
+    session.signIn('local-user');
+    await tester.pumpWidget(MaterialApp(home: _detail(repository, service)));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('approvedApplicationStatus')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('가입이 승인되었습니다. 현재 파티원입니다.'), findsOneWidget);
+  });
+
+  testWidgets('파티장이 pending 신청을 거절하면 신청자에게 거절 상태를 표시한다', (tester) async {
+    final repository = InMemoryRecruitmentStateRepository();
+    await repository.create(_pendingRecruitment);
+    final session = FakeUserSession('other-user');
+    final service = _service(repository, session);
+
+    await tester.pumpWidget(MaterialApp(home: _detail(repository, service)));
+    await tester.pumpAndSettle();
+    final rejectButton = find.byKey(
+      const ValueKey('rejectApplication-local-user'),
+    );
+    await tester.ensureVisible(rejectButton);
+    await tester.tap(rejectButton);
+    await tester.pumpAndSettle();
+    expect(find.text('가입 신청을 거절했습니다.'), findsOneWidget);
+
+    session.signIn('local-user');
+    await tester.pumpWidget(MaterialApp(home: _detail(repository, service)));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('rejectedApplicationStatus')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('가입 신청이 거절되었습니다.'), findsOneWidget);
+  });
 }
+
+RecruitmentCommandService _service(
+  InMemoryRecruitmentStateRepository repository,
+  FakeUserSession session,
+) => RecruitmentCommandService(
+  session: session,
+  clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 20)),
+  idGenerator: SequentialRecruitmentIdGenerator(),
+  repository: repository,
+);
+
+RecruitmentDetailPage _detail(
+  InMemoryRecruitmentStateRepository repository,
+  RecruitmentCommandService service,
+) => RecruitmentDetailPage(
+  recruitmentId: _pendingRecruitment.id,
+  repository: repository,
+  commandService: service,
+  candidateService: RecruitmentApplicationCandidateService(
+    accountRepository: _AccountRepository(),
+    weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+    session: service.session,
+    clock: service.clock,
+  ),
+);
 
 class _CatalogRepository implements RaidCatalogRepository {
   @override
@@ -282,4 +377,17 @@ final _otherUserRecruitment = RecruitmentAggregate(
   revision: 0,
   createdAt: DateTime.utc(2026, 8, 20),
   updatedAt: DateTime.utc(2026, 8, 20),
+);
+
+final _pendingRecruitment = _otherUserRecruitment.copyWith(
+  state: _otherUserRecruitment.state.copyWith(
+    applications: const {
+      'local-user': RecruitmentApplication(
+        applicantUserId: 'local-user',
+        characterId: '지원바드',
+        className: '바드',
+        requestedRole: PartyRole.support,
+      ),
+    },
+  ),
 );

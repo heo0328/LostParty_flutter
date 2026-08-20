@@ -8,6 +8,7 @@ import '../../domain/policies/approval_policy.dart';
 import '../../domain/repositories/recruitment_state_repository.dart';
 import '../../domain/services/recruitment_application_candidate_service.dart';
 import '../../domain/services/recruitment_command_service.dart';
+import '../../domain/state/recruitment_state_machine.dart';
 
 class RecruitmentDetailPage extends StatefulWidget {
   const RecruitmentDetailPage({
@@ -84,6 +85,9 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
             ),
             Text('가입 승인 ${_approval(state.approvalPolicy)}'),
             const Divider(height: 32),
+            _pendingApplicationsSection(aggregate),
+            if (_shouldShowPendingApplications(aggregate))
+              const Divider(height: 32),
             _applicationSection(aggregate),
             const Divider(height: 32),
             Text('파티 구성', style: Theme.of(context).textTheme.titleMedium),
@@ -101,6 +105,7 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
                 (member) => member.partyIndex == party,
               ))
                 ListTile(
+                  key: ValueKey('partyMember-${member.userId}'),
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(
                     member.role == PartyRole.support
@@ -122,10 +127,16 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
   Widget _applicationSection(RecruitmentAggregate aggregate) {
     final userId = widget.commandService.currentUserId;
     if (userId == null) return const Text('로그인 후 신청할 수 있습니다.');
+    final application = aggregate.state.applications[userId];
+    if (application?.status == RecruitmentApplicationStatus.approved) {
+      return const Text(
+        '가입이 승인되었습니다. 현재 파티원입니다.',
+        key: ValueKey('approvedApplicationStatus'),
+      );
+    }
     if (aggregate.state.members.any((member) => member.userId == userId)) {
       return const Text('현재 파티원입니다.');
     }
-    final application = aggregate.state.applications[userId];
     if (application?.status == RecruitmentApplicationStatus.pending) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -140,12 +151,139 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
         ],
       );
     }
+    if (application?.status == RecruitmentApplicationStatus.rejected) {
+      return const Text(
+        '가입 신청이 거절되었습니다.',
+        key: ValueKey('rejectedApplicationStatus'),
+      );
+    }
     if (!aggregate.state.isRecruiting) return const Text('모집이 마감되었습니다.');
     return FilledButton(
       key: const ValueKey('openApplicationButton'),
       onPressed: _submitting ? null : () => _showCandidates(aggregate),
       child: const Text('지원하기'),
     );
+  }
+
+  bool _shouldShowPendingApplications(RecruitmentAggregate aggregate) {
+    final userId = widget.commandService.currentUserId;
+    return userId != null &&
+        aggregate.state.members.any((member) => member.userId == userId);
+  }
+
+  Widget _pendingApplicationsSection(RecruitmentAggregate aggregate) {
+    if (!_shouldShowPendingApplications(aggregate)) {
+      return const SizedBox.shrink();
+    }
+    final pending = aggregate.state.applications.values
+        .where(
+          (application) =>
+              application.status == RecruitmentApplicationStatus.pending,
+        )
+        .toList(growable: false);
+    final canVote = _canCurrentUserVote(aggregate);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('가입 신청 관리', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        if (pending.isEmpty)
+          const Text('대기 중인 가입 신청이 없습니다.')
+        else
+          for (final application in pending)
+            Card(
+              key: ValueKey(
+                'pendingApplication-${application.applicantUserId}',
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      application.characterId,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${application.className} · ${_role(application.requestedRole)}',
+                    ),
+                    Text(_voteStatus(aggregate, application)),
+                    if (canVote) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              key: ValueKey(
+                                'rejectApplication-${application.applicantUserId}',
+                              ),
+                              onPressed: _submitting
+                                  ? null
+                                  : () => _vote(
+                                      application.applicantUserId,
+                                      ApplicationVoteDecision.reject,
+                                    ),
+                              child: const Text('거절'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: FilledButton(
+                              key: ValueKey(
+                                'approveApplication-${application.applicantUserId}',
+                              ),
+                              onPressed: _submitting
+                                  ? null
+                                  : () => _vote(
+                                      application.applicantUserId,
+                                      ApplicationVoteDecision.approve,
+                                    ),
+                              child: const Text('승인'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: Text('현재 승인 정책에서는 투표 권한이 없습니다.'),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+      ],
+    );
+  }
+
+  bool _canCurrentUserVote(RecruitmentAggregate aggregate) {
+    final userId = widget.commandService.currentUserId;
+    if (userId == null) return false;
+    final isMember = aggregate.state.members.any(
+      (member) => member.userId == userId,
+    );
+    if (!isMember) return false;
+    return switch (aggregate.state.approvalPolicy.mode) {
+      ApprovalMode.leaderOnly => userId == aggregate.state.leaderUserId,
+      ApprovalMode.directJoin => false,
+      ApprovalMode.anyMember || ApprovalMode.quorum => true,
+    };
+  }
+
+  String _voteStatus(
+    RecruitmentAggregate aggregate,
+    RecruitmentApplication application,
+  ) {
+    final policy = aggregate.state.approvalPolicy;
+    return switch (policy.mode) {
+      ApprovalMode.leaderOnly => '파티장 승인 대기',
+      ApprovalMode.directJoin => '승인 없이 바로 가입',
+      ApprovalMode.anyMember =>
+        '현재 투표 승인 ${application.approvalCount} · 거절 ${application.rejectionCount}',
+      ApprovalMode.quorum =>
+        '현재 승인 ${application.approvalCount}/${policy.requiredApprovals} · 거절 ${application.rejectionCount}',
+    };
   }
 
   Future<void> _showCandidates(RecruitmentAggregate aggregate) async {
@@ -224,6 +362,50 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
     setState(() => _submitting = false);
     _message(result.isSuccess ? '신청을 철회했습니다.' : '신청을 철회하지 못했습니다.');
     _reload();
+  }
+
+  Future<void> _vote(
+    String applicantUserId,
+    ApplicationVoteDecision decision,
+  ) async {
+    setState(() => _submitting = true);
+    final result = await widget.commandService.vote(
+      recruitmentId: widget.recruitmentId,
+      applicantUserId: applicantUserId,
+      decision: decision,
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    _message(
+      result.isSuccess
+          ? decision == ApplicationVoteDecision.approve
+                ? result
+                              .aggregate!
+                              .state
+                              .applications[applicantUserId]!
+                              .status ==
+                          RecruitmentApplicationStatus.approved
+                      ? '가입 신청을 승인했습니다.'
+                      : '승인 투표를 반영했습니다.'
+                : '가입 신청을 거절했습니다.'
+          : _voteFailureMessage(result),
+    );
+    _reload();
+  }
+
+  String _voteFailureMessage(LocalRecruitmentResult result) {
+    if (result.failure == LocalRecruitmentFailure.revisionConflict) {
+      return '다른 변경이 먼저 반영되었습니다. 최신 상태를 다시 확인해주세요.';
+    }
+    return switch (result.domainFailure) {
+      RecruitmentCommandFailure.unauthorized => '승인 또는 거절 권한이 없습니다.',
+      RecruitmentCommandFailure.duplicateVote => '이미 이 신청에 투표했습니다.',
+      RecruitmentCommandFailure.applicationNotFound => '가입 신청을 찾을 수 없습니다.',
+      RecruitmentCommandFailure.applicationNotPending => '이미 처리된 가입 신청입니다.',
+      RecruitmentCommandFailure.compositionRejected =>
+        '현재 파티 구성 조건으로는 승인할 수 없습니다.',
+      _ => '가입 신청을 처리하지 못했습니다. 다시 확인해주세요.',
+    };
   }
 
   void _message(String message) => ScaffoldMessenger.of(
