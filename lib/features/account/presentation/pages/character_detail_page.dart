@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/character_build_analysis.dart';
+import '../../domain/entities/character_build_draft.dart';
 import '../../domain/entities/character_build_snapshot.dart';
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/repositories/account_repository.dart';
@@ -70,10 +71,10 @@ class _CharacterDetailPageState extends State<CharacterDetailPage> {
         FilledButton.icon(
           key: const ValueKey('saveCharacterBuildButton'),
           onPressed:
-              _viewModel.selectedRole == null || _viewModel.isRefreshing
+              _viewModel.selectedRole == null || _viewModel.isFetchingDraft
               ? null
-              : _viewModel.refreshSelectedRole,
-          icon: _viewModel.isRefreshing
+              : _requestBuildDraft,
+          icon: _viewModel.isFetchingDraft
               ? const SizedBox.square(
                   dimension: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
@@ -101,6 +102,180 @@ class _CharacterDetailPageState extends State<CharacterDetailPage> {
       ],
     );
   }
+
+  Future<void> _requestBuildDraft() async {
+    await _viewModel.requestBuildDraft();
+    if (!mounted || _viewModel.draft == null) {
+      return;
+    }
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AnimatedBuilder(
+        animation: _viewModel,
+        builder: (context, _) => _buildDraftPreviewDialog(context),
+      ),
+    );
+    if (_viewModel.draft != null) {
+      _viewModel.cancelDraft();
+    }
+  }
+
+  Widget _buildDraftPreviewDialog(BuildContext dialogContext) {
+    final draft = _viewModel.draft;
+    if (draft == null) {
+      return const SizedBox.shrink();
+    }
+    final detection = draft.analysis.catalogDetection;
+    final detectedRole = detection?.detectedRole;
+    final selectedRole = _viewModel.draftRole;
+    final isMismatch = detectedRole != null && selectedRole != detectedRole;
+    return AlertDialog(
+      key: const ValueKey('characterBuildDraftPreview'),
+      title: const Text('세팅 저장 미리보기'),
+      content: SizedBox(
+        width: 560,
+        child: SingleChildScrollView(
+          key: const ValueKey('characterBuildDraftPreviewScroll'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDraftProfile(draft),
+              const SizedBox(height: 16),
+              Text('분석 결과', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text('계열: ${detection?.branchDisplayName ?? '확인되지 않음'}'),
+              Text('감지 역할: ${_roleLabel(detectedRole)}'),
+              Text('룬: ${draft.analysis.runeCount}/8'),
+              const SizedBox(height: 16),
+              _buildDraftRoleControl(),
+              if (isMismatch) ...[
+                const SizedBox(height: 12),
+                Text(
+                  '분석 결과는 ${_roleLabel(detectedRole)} 세팅입니다. '
+                  '${_roleLabel(selectedRole)} 위치에 저장하며, 특수 세팅이라면 그대로 저장할 수 있습니다.',
+                  key: const ValueKey('characterBuildRoleMismatchNotice'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ] else if (detectedRole == null) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  '세팅 계열을 자동으로 확인하지 못했습니다. 저장 역할을 확인해 주세요.',
+                  key: ValueKey('characterBuildUndetectedNotice'),
+                ),
+              ],
+              const SizedBox(height: 16),
+              Text('확인 사항', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              if (draft.analysis.notices.isEmpty)
+                const Text('확인된 경고 없음')
+              else
+                for (final notice in draft.analysis.notices)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text('• ${notice.message}'),
+                  ),
+              if (_viewModel.errorMessage case final message?) ...[
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  key: const ValueKey('characterBuildDraftError'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _viewModel.isCommittingDraft
+              ? null
+              : () {
+                  _viewModel.cancelDraft();
+                  Navigator.of(dialogContext).pop();
+                },
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          key: const ValueKey('commitCharacterBuildDraftButton'),
+          onPressed: selectedRole == null || _viewModel.isCommittingDraft
+              ? null
+              : () async {
+                  final committed = await _viewModel.commitDraft();
+                  if (committed && dialogContext.mounted) {
+                    Navigator.of(dialogContext).pop();
+                  }
+                },
+          child: _viewModel.isCommittingDraft
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('저장'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDraftProfile(CharacterBuildDraft draft) {
+    final profile = draft.profile;
+    final fetchedAt = draft.fetchedAt.toLocal();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          profile.characterName,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        Text('${profile.serverName} · ${profile.characterClassName}'),
+        Text('아이템 Lv. ${_formatNumber(profile.itemLevel)}'),
+        Text('전투력 ${_formatNumber(profile.combatPower)}'),
+        Text(
+          '조회 ${fetchedAt.year}.${_two(fetchedAt.month)}.${_two(fetchedAt.day)} '
+          '${_two(fetchedAt.hour)}:${_two(fetchedAt.minute)}',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDraftRoleControl() {
+    if (!_viewModel.supportsMultipleRoles) {
+      return const Text('저장 역할: 딜러');
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('저장 역할'),
+        const SizedBox(height: 8),
+        SegmentedButton<CharacterBuildRole>(
+          key: const ValueKey('characterBuildDraftRoleControl'),
+          segments: const [
+            ButtonSegment(value: CharacterBuildRole.dealer, label: Text('딜러')),
+            ButtonSegment(
+              value: CharacterBuildRole.support,
+              label: Text('서포터'),
+            ),
+          ],
+          selected: {?_viewModel.draftRole},
+          onSelectionChanged: _viewModel.isCommittingDraft
+              ? null
+              : (selection) {
+                  if (selection.isNotEmpty) {
+                    _viewModel.selectDraftRole(selection.first);
+                  }
+                },
+        ),
+      ],
+    );
+  }
+
+  String _roleLabel(CharacterBuildRole? role) => switch (role) {
+    CharacterBuildRole.dealer => '딜러',
+    CharacterBuildRole.support => '서포터',
+    null => '확인되지 않음',
+  };
 
   Widget _buildProfileHeader() {
     final character = widget.character;

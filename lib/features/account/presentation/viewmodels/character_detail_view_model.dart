@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../../shared/lost_ark_api/client/lost_ark_api_exception.dart';
+import '../../domain/entities/character_build_draft.dart';
 import '../../domain/entities/character_build_snapshot.dart';
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/repositories/account_repository.dart';
@@ -20,16 +21,22 @@ class CharacterDetailViewModel extends ChangeNotifier {
   final AccountRepository _accountRepository;
 
   bool _isLoading = false;
-  bool _isRefreshing = false;
+  bool _isFetchingDraft = false;
+  bool _isCommittingDraft = false;
   CharacterBuildRole? _selectedRole;
+  CharacterBuildDraft? _draft;
+  CharacterBuildRole? _draftRole;
   List<CharacterBuildSnapshot> _snapshots = const [];
   String? _errorMessage;
 
   bool get isLoading => _isLoading;
-  bool get isRefreshing => _isRefreshing;
+  bool get isFetchingDraft => _isFetchingDraft;
+  bool get isCommittingDraft => _isCommittingDraft;
   bool get supportsMultipleRoles =>
       _supportClasses.contains(character.characterClassName);
   CharacterBuildRole? get selectedRole => _selectedRole;
+  CharacterBuildDraft? get draft => _draft;
+  CharacterBuildRole? get draftRole => _draftRole;
   List<CharacterBuildSnapshot> get snapshots => _snapshots;
   String? get errorMessage => _errorMessage;
 
@@ -68,29 +75,81 @@ class CharacterDetailViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> refreshSelectedRole() async {
+  Future<void> requestBuildDraft() async {
     final role = _selectedRole;
-    if (role == null || _isRefreshing) {
+    if (role == null || _isFetchingDraft || _isCommittingDraft) {
       return;
     }
-    _isRefreshing = true;
+    _isFetchingDraft = true;
     _errorMessage = null;
     notifyListeners();
     try {
-      await _accountRepository.refreshCharacterBuildSnapshot(
+      _draft = await _accountRepository.createCharacterBuildDraft(
         characterId: character.id,
         characterName: character.characterName,
+      );
+      _draftRole = role;
+    } on LostArkApiException catch (error) {
+      _errorMessage = _messageFor(error.type);
+    } catch (_) {
+      _errorMessage = '세팅 데이터를 조회하지 못했습니다.';
+    } finally {
+      _isFetchingDraft = false;
+      notifyListeners();
+    }
+  }
+
+  void selectDraftRole(CharacterBuildRole role) {
+    if (_draft == null || _isCommittingDraft) {
+      return;
+    }
+    if (!supportsMultipleRoles && role != CharacterBuildRole.dealer) {
+      return;
+    }
+    _draftRole = role;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void cancelDraft() {
+    if (_isCommittingDraft) {
+      return;
+    }
+    _draft = null;
+    _draftRole = null;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  Future<bool> commitDraft() async {
+    final currentDraft = _draft;
+    final role = _draftRole;
+    if (currentDraft == null || role == null || _isCommittingDraft) {
+      return false;
+    }
+    _isCommittingDraft = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      await _accountRepository.commitCharacterBuildDraft(
+        draft: currentDraft,
         role: role,
       );
       _snapshots = await _accountRepository.loadCharacterBuildSnapshots(
         character.id,
       );
+      _selectedRole = role;
+      _draft = null;
+      _draftRole = null;
+      return true;
     } on LostArkApiException catch (error) {
       _errorMessage = _messageFor(error.type);
+      return false;
     } catch (_) {
       _errorMessage = '세팅 데이터를 저장하지 못했습니다.';
+      return false;
     } finally {
-      _isRefreshing = false;
+      _isCommittingDraft = false;
       notifyListeners();
     }
   }
