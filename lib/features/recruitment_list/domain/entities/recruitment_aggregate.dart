@@ -1,9 +1,37 @@
 import '../state/recruitment_state_machine.dart';
+import 'party_recruitment.dart';
+
+class RecruitmentMetadata {
+  const RecruitmentMetadata({
+    required this.catalogVersion,
+    required this.raidId,
+    required this.difficultyId,
+    required this.raidName,
+    required this.difficultyName,
+    required this.difficultyAlias,
+    required this.gateCount,
+    required this.minCombatPower,
+    required this.experienceLevel,
+    required this.maxPlayHours,
+  });
+
+  final String catalogVersion;
+  final String raidId;
+  final String difficultyId;
+  final String raidName;
+  final String difficultyName;
+  final String difficultyAlias;
+  final int gateCount;
+  final int minCombatPower;
+  final ExperienceLevel experienceLevel;
+  final int? maxPlayHours;
+}
 
 class RecruitmentAggregate {
   const RecruitmentAggregate({
     required this.id,
     required this.title,
+    required this.metadata,
     required this.state,
     required this.revision,
     required this.createdAt,
@@ -12,6 +40,7 @@ class RecruitmentAggregate {
 
   final String id;
   final String title;
+  final RecruitmentMetadata metadata;
   final RecruitmentState state;
   final int revision;
   final DateTime createdAt;
@@ -24,6 +53,7 @@ class RecruitmentAggregate {
   }) => RecruitmentAggregate(
     id: id,
     title: title,
+    metadata: metadata,
     state: state ?? this.state,
     revision: revision ?? this.revision,
     createdAt: createdAt,
@@ -36,6 +66,7 @@ class PublicRecruitmentSummary {
     required this.id,
     required this.title,
     required this.leaderUserId,
+    required this.metadata,
     required this.memberCount,
     required this.maxMemberCount,
     required this.isRecruiting,
@@ -48,6 +79,7 @@ class PublicRecruitmentSummary {
   ) => PublicRecruitmentSummary(
     id: aggregate.id,
     title: aggregate.title,
+    metadata: aggregate.metadata,
     leaderUserId: aggregate.state.leaderUserId,
     memberCount: aggregate.state.members.length,
     maxMemberCount: aggregate.state.compositionPolicy.rules.totalMembers,
@@ -59,6 +91,7 @@ class PublicRecruitmentSummary {
   final String id;
   final String title;
   final String leaderUserId;
+  final RecruitmentMetadata metadata;
   final int memberCount;
   final int maxMemberCount;
   final bool isRecruiting;

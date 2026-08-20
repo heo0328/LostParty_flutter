@@ -30,7 +30,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('파티 모집'), findsNWidgets(2));
-    expect(find.byType(Card), findsNWidgets(6));
+    expect(find.text('현재 모집 중인 파티가 없습니다.'), findsOneWidget);
+    expect(find.text('모집 만들기'), findsOneWidget);
   });
 
   testWidgets('Horizontal swipe changes the selected tab', (

@@ -11,8 +11,15 @@ import '../../features/account/presentation/pages/character_detail_page.dart';
 import '../../features/account/presentation/pages/my_account_page.dart';
 import '../../features/account/domain/entities/local_game_account.dart';
 import '../../features/recruitment_list/presentation/pages/recruitment_list_page.dart';
+import '../../features/recruitment_list/presentation/pages/recruitment_create_page.dart';
+import '../../features/recruitment_list/presentation/pages/recruitment_detail_page.dart';
+import '../../features/recruitment_list/data/fakes/fake_recruitment_runtime.dart';
+import '../../features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
+import '../../features/recruitment_list/domain/services/recruitment_command_service.dart';
 import '../../shared/game_catalog/data/datasources/asset_game_catalog_data_source.dart';
 import '../../shared/game_catalog/data/repositories/game_catalog_repository_impl.dart';
+import '../../shared/raid_catalog/data/datasources/asset_raid_catalog_data_source.dart';
+import '../../shared/raid_catalog/data/repositories/raid_catalog_repository_impl.dart';
 import '../../shared/lost_ark_api/auth/secure_api_token_store.dart';
 import '../../shared/lost_ark_api/client/lost_ark_api_client.dart';
 import '../shell/app_shell.dart';
@@ -33,6 +40,16 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
       database: accountDatabase,
       gameCatalogRepository: gameCatalogRepository,
     ),
+  );
+  final raidCatalogRepository = RaidCatalogRepositoryImpl(
+    dataSource: AssetRaidCatalogDataSource(),
+  );
+  final recruitmentRepository = InMemoryRecruitmentStateRepository();
+  final recruitmentCommandService = RecruitmentCommandService(
+    session: FakeUserSession('local-user'),
+    clock: FakeRecruitmentClock(DateTime.now()),
+    idGenerator: SequentialRecruitmentIdGenerator(),
+    repository: recruitmentRepository,
   );
 
   return GoRouter(
@@ -95,7 +112,25 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
             routes: [
               GoRoute(
                 path: '/recruitments',
-                builder: (context, state) => const RecruitmentListPage(),
+                builder: (context, state) =>
+                    RecruitmentListPage(repository: recruitmentRepository),
+                routes: [
+                  GoRoute(
+                    path: 'create',
+                    builder: (context, state) => RecruitmentCreatePage(
+                      accountRepository: accountRepository,
+                      catalogRepository: raidCatalogRepository,
+                      commandService: recruitmentCommandService,
+                    ),
+                  ),
+                  GoRoute(
+                    path: ':recruitmentId',
+                    builder: (context, state) => RecruitmentDetailPage(
+                      recruitmentId: state.pathParameters['recruitmentId']!,
+                      repository: recruitmentRepository,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

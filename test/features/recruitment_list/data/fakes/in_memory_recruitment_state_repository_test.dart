@@ -60,6 +60,7 @@ RecruitmentAggregate _aggregate({
   return RecruitmentAggregate(
     id: id,
     title: '테스트 모집',
+    metadata: _metadata,
     state: RecruitmentState(
       leaderUserId: 'leader',
       approvalPolicy: const ApprovalPolicy.anyMember(),
@@ -88,4 +89,17 @@ const _compositionPolicy = PartyCompositionPolicy(
     supportsPerParty: 1,
     maxDealersPerClassPerParty: 1,
   ),
+);
+
+const _metadata = RecruitmentMetadata(
+  catalogVersion: 'test',
+  raidId: 'serca',
+  difficultyId: 'normal',
+  raidName: '세르카',
+  difficultyName: '노말',
+  difficultyAlias: '노르카',
+  gateCount: 2,
+  minCombatPower: 200000,
+  experienceLevel: ExperienceLevel.clearExp,
+  maxPlayHours: 3,
 );
