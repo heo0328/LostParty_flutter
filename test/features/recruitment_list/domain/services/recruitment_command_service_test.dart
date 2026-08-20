@@ -169,6 +169,7 @@ void main() {
 Future<LocalRecruitmentResult> _create(RecruitmentCommandService service) =>
     service.createRecruitment(
       title: '세르카 모집',
+      metadata: _metadata,
       leaderCharacterId: 'a-character',
       leaderClassName: '바드',
       leaderRole: PartyRole.support,
@@ -183,6 +184,19 @@ const _compositionPolicy = PartyCompositionPolicy(
     supportsPerParty: 1,
     maxDealersPerClassPerParty: 1,
   ),
+);
+
+const _metadata = RecruitmentMetadata(
+  catalogVersion: 'test',
+  raidId: 'serca',
+  difficultyId: 'normal',
+  raidName: '세르카',
+  difficultyName: '노말',
+  difficultyAlias: '노르카',
+  gateCount: 2,
+  minCombatPower: 200000,
+  experienceLevel: ExperienceLevel.clearExp,
+  maxPlayHours: 3,
 );
 
 class _ConflictingRepository implements RecruitmentStateRepository {

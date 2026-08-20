@@ -65,6 +65,7 @@ class RecruitmentCommandService {
 
   Future<LocalRecruitmentResult> createRecruitment({
     required String title,
+    required RecruitmentMetadata metadata,
     required String leaderCharacterId,
     required String leaderClassName,
     required PartyRole leaderRole,
@@ -82,6 +83,7 @@ class RecruitmentCommandService {
     final aggregate = RecruitmentAggregate(
       id: id,
       title: title,
+      metadata: metadata,
       state: RecruitmentState(
         leaderUserId: userId,
         approvalPolicy: approvalPolicy,

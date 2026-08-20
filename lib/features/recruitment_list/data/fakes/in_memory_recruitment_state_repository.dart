@@ -1,14 +1,18 @@
+import 'package:flutter/foundation.dart';
+
 import '../../domain/entities/recruitment_aggregate.dart';
 import '../../domain/repositories/recruitment_state_repository.dart';
 import '../../domain/state/recruitment_state_machine.dart';
 
-class InMemoryRecruitmentStateRepository implements RecruitmentStateRepository {
+class InMemoryRecruitmentStateRepository extends ChangeNotifier
+    implements RecruitmentStateRepository {
   final Map<String, RecruitmentAggregate> _store = {};
 
   @override
   Future<bool> create(RecruitmentAggregate aggregate) async {
     if (_store.containsKey(aggregate.id)) return false;
     _store[aggregate.id] = aggregate;
+    notifyListeners();
     return true;
   }
 
@@ -42,6 +46,7 @@ class InMemoryRecruitmentStateRepository implements RecruitmentStateRepository {
       updatedAt: updatedAt,
     );
     _store[recruitmentId] = updated;
+    notifyListeners();
     return updated;
   }
 }
