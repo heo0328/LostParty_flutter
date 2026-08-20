@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../../shared/formatters/display_number_formatter.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../shared/lost_ark_api/auth/api_token_store.dart';
@@ -335,6 +337,6 @@ class _MyAccountPageState extends State<MyAccountPage> {
       return '-';
     }
 
-    return value.toStringAsFixed(2);
+    return DisplayNumberFormatter.fixed(value);
   }
 }

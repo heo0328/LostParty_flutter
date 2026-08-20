@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/formatters/display_number_formatter.dart';
+
 import '../../domain/entities/local_game_account.dart';
 
 class AccountCharacterCard extends StatelessWidget {
@@ -49,8 +51,16 @@ class AccountCharacterCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const Spacer(),
-              Text('아이템 Lv. ${_formatNumber(character.itemLevel)}'),
-              Text('전투력 ${_formatNumber(character.combatPower)}'),
+              Text(
+                '아이템 Lv. ${_formatNumber(character.itemLevel)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                '전투력 ${_formatNumber(character.combatPower)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),
@@ -62,6 +72,6 @@ class AccountCharacterCard extends StatelessWidget {
     if (value == null) {
       return '-';
     }
-    return value.toStringAsFixed(2);
+    return DisplayNumberFormatter.fixed(value);
   }
 }

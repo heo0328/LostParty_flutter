@@ -21,7 +21,7 @@ void main() {
     expect(find.text('멤버 6/8'), findsOneWidget);
     expect(find.text('딜러 4/6'), findsOneWidget);
     expect(find.text('서포터 2/2'), findsOneWidget);
-    expect(find.text('최소 전투력 250000 / 숙련도 클경 / 최대 시간 3시간'), findsOneWidget);
+    expect(find.text('최소 전투력 250,000 / 숙련도 클경 / 최대 시간 3시간'), findsOneWidget);
   });
 
   testWidgets('shows the unlimited play time as until clear', (tester) async {
