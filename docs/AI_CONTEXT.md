@@ -16,7 +16,7 @@
 ---
 
 ## 현재 기준 브랜치
-- codex/character-build-draft
+- main
 
 ---
 
