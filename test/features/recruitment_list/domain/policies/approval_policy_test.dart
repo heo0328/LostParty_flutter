@@ -18,6 +18,14 @@ void main() {
     expect(policy.leaderVoteRequired, isFalse);
   });
 
+  test('즉시 가입은 승인 인원을 요구하지 않는다', () {
+    const policy = ApprovalPolicy.directJoin();
+
+    expect(policy.mode, ApprovalMode.directJoin);
+    expect(policy.requiredApprovals, 0);
+    expect(policy.leaderVoteRequired, isFalse);
+  });
+
   test('정족수 승인은 지정한 서로 다른 인원수를 표현한다', () {
     final policy = ApprovalPolicy.quorum(
       requiredApprovals: 3,

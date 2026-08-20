@@ -25,6 +25,23 @@ void main() {
     expect(identical(duplicate.state, first.state), isTrue);
   });
 
+  test('승인 없는 정책은 신청과 동시에 파티원으로 가입시킨다', () {
+    final result = machine.apply(
+      state: _state(approvalPolicy: const ApprovalPolicy.directJoin()),
+      application: _application(),
+    );
+
+    expect(result.isSuccess, isTrue);
+    expect(
+      result.state.applications['applicant']!.status,
+      RecruitmentApplicationStatus.approved,
+    );
+    expect(
+      result.state.members.map((member) => member.userId),
+      contains('applicant'),
+    );
+  });
+
   test('현재 파티원과 모집 마감 상태의 신청을 거절한다', () {
     final memberApplication = _application(applicantUserId: 'leader');
     final memberResult = machine.apply(
