@@ -15,8 +15,8 @@
 
 ---
 
-## 현재 브랜치
-- codex/game-catalog-foundation
+## 현재 기준 브랜치
+- main
 
 ---
 
@@ -285,8 +285,8 @@
 - 정적 코어 기준정보, 실제 장착 코어에서 계산한 일치 결과 및 사용자 메모를 서로 분리
 
 ### 다음 채팅 인계
-- 이 브랜치는 정적 게임 카탈로그 기반과 바드 최소 데이터를 완성하는 범위
-- 다음 채팅은 이 브랜치의 병합 상태를 확인한 뒤 `main`에서 새 작업 브랜치를 생성해 시작
+- 정적 게임 카탈로그 기반과 바드 최소 데이터가 `main`에 반영됨
+- 다음 채팅은 `docs/NEXT_WORK.md`를 먼저 확인하고 최신 `main`에서 새 작업 브랜치를 생성해 시작
 - 다음 작업의 첫 단위는 `CharacterBuildAnalysisMapper`가 `GameCatalogRepository`의 바드 기준정보를 이용해 깨달음 계열과 역할을 감지하는 Domain 결과 구조 설계
 - 기존 `CharacterBuildRole`과 `GameCatalogRole`은 자동으로 합치지 않고 분석 연결 경계에서 명시적으로 변환
 - 첫 연결 검증은 기존 바드 전체 fixture의 `진실된 용맹`과 `템페스트 필드`를 사용
