@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "catalogVersion": "2026.08.20",
   "updatedAt": "2026-08-20T00:00:00Z",
   "classes": [
@@ -41,6 +41,17 @@
           "aliases": ["절구"],
           "category": "identity",
           "relatedBranchIds": ["perfect_harmony", "true_courage"]
+        }
+      ],
+      "gemSkillTargets": [
+        {
+          "targetId": "serenade_support_effect",
+          "name": "세레나데 스킬",
+          "aliases": [],
+          "relatedSpecialSkillIds": [
+            "serenade_of_courage",
+            "serenade_of_salvation"
+          ]
         }
       ],
       "arkGridPresets": []

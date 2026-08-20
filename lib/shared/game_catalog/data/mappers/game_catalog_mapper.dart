@@ -28,7 +28,21 @@ class GameCatalogMapper {
         _branchFromJson,
       ),
       specialSkills: _mapList(json, 'specialSkills', _skillFromJson),
+      gemSkillTargets: _mapList(
+        json,
+        'gemSkillTargets',
+        _gemSkillTargetFromJson,
+      ),
       arkGridPresets: _mapList(json, 'arkGridPresets', _presetFromJson),
+    );
+  }
+
+  ClassGemSkillTarget _gemSkillTargetFromJson(Map<String, dynamic> json) {
+    return ClassGemSkillTarget(
+      targetId: _string(json, 'targetId'),
+      name: _string(json, 'name'),
+      aliases: _stringList(json, 'aliases'),
+      relatedSpecialSkillIds: _stringList(json, 'relatedSpecialSkillIds'),
     );
   }
 

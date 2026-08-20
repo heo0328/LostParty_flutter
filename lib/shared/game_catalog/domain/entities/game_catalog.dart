@@ -25,6 +25,7 @@ class GameClassDefinition {
     required this.defaultRole,
     required this.enlightenmentBranches,
     required this.specialSkills,
+    required this.gemSkillTargets,
     required this.arkGridPresets,
   });
 
@@ -35,7 +36,22 @@ class GameClassDefinition {
   final GameCatalogRole defaultRole;
   final List<EnlightenmentBranch> enlightenmentBranches;
   final List<ClassSpecialSkill> specialSkills;
+  final List<ClassGemSkillTarget> gemSkillTargets;
   final List<ArkGridPreset> arkGridPresets;
+}
+
+class ClassGemSkillTarget {
+  const ClassGemSkillTarget({
+    required this.targetId,
+    required this.name,
+    required this.aliases,
+    required this.relatedSpecialSkillIds,
+  });
+
+  final String targetId;
+  final String name;
+  final List<String> aliases;
+  final List<String> relatedSpecialSkillIds;
 }
 
 class EnlightenmentBranch {

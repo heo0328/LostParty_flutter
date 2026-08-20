@@ -119,6 +119,51 @@ class GameCatalogValidator {
       );
     }
 
+    final specialSkillIds = definition.specialSkills
+        .map((value) => value.skillId)
+        .toSet();
+    _checkUnique(
+      issues,
+      values: definition.gemSkillTargets.map((value) => value.targetId),
+      path: '$path.gemSkillTargets.targetId',
+    );
+    for (var index = 0; index < definition.gemSkillTargets.length; index++) {
+      final target = definition.gemSkillTargets[index];
+      final targetPath = '$path.gemSkillTargets[$index]';
+      _requireText(issues, target.targetId, '$targetPath.targetId');
+      _requireText(issues, target.name, '$targetPath.name');
+      _checkTextList(issues, target.aliases, '$targetPath.aliases');
+      _checkTextList(
+        issues,
+        target.relatedSpecialSkillIds,
+        '$targetPath.relatedSpecialSkillIds',
+      );
+      if (target.relatedSpecialSkillIds.isEmpty) {
+        _add(
+          issues,
+          'empty_gem_target_skills',
+          '$targetPath.relatedSpecialSkillIds',
+          '관련 특수 스킬이 하나 이상 필요합니다.',
+        );
+      }
+      for (
+        var skillIndex = 0;
+        skillIndex < target.relatedSpecialSkillIds.length;
+        skillIndex++
+      ) {
+        if (!specialSkillIds.contains(
+          target.relatedSpecialSkillIds[skillIndex],
+        )) {
+          _add(
+            issues,
+            'unknown_special_skill_reference',
+            '$targetPath.relatedSpecialSkillIds[$skillIndex]',
+            '같은 직업에 정의된 특수 스킬 ID를 참조해야 합니다.',
+          );
+        }
+      }
+    }
+
     _checkUnique(
       issues,
       values: definition.arkGridPresets.map((value) => value.presetId),

@@ -78,6 +78,17 @@ void main() {
       contains('invalid_recommended_point'),
     );
   });
+
+  test('rejects an unknown gem target special skill reference', () {
+    final definition = _validClass(gemSkillIds: const ['unknown_skill']);
+
+    final issues = validator.validate(_validCatalog(classes: [definition]));
+
+    expect(
+      issues.map((issue) => issue.code),
+      contains('unknown_special_skill_reference'),
+    );
+  });
 }
 
 GameCatalog _validCatalog({List<GameClassDefinition>? classes}) {
@@ -99,6 +110,7 @@ GameClassDefinition _validClass({
   GameCatalogRole presetRole = GameCatalogRole.support,
   List<String> skillBranchIds = const ['sample_support'],
   List<String> presetBranchIds = const ['sample_support'],
+  List<String> gemSkillIds = const ['sample_identity'],
   List<ArkGridCoreRequirement> requiredCores = const [
     ArkGridCoreRequirement(
       coreName: '질서의 해',
@@ -130,6 +142,14 @@ GameClassDefinition _validClass({
         aliases: const [],
         category: ClassSpecialSkillCategory.identity,
         relatedBranchIds: skillBranchIds,
+      ),
+    ],
+    gemSkillTargets: [
+      ClassGemSkillTarget(
+        targetId: 'sample_gem_target',
+        name: '샘플 복합 대상',
+        aliases: const [],
+        relatedSpecialSkillIds: gemSkillIds,
       ),
     ],
     arkGridPresets: [

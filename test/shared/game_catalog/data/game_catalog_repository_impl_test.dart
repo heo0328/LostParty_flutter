@@ -32,6 +32,11 @@ void main() {
       ),
       isTrue,
     );
+    expect(bard.gemSkillTargets.single.name, '세레나데 스킬');
+    expect(bard.gemSkillTargets.single.relatedSpecialSkillIds, [
+      'serenade_of_courage',
+      'serenade_of_salvation',
+    ]);
     expect(bard.arkGridPresets, isEmpty);
   });
 
@@ -131,6 +136,17 @@ const _validCatalogJson = '''
         "aliases": ["절구"],
         "category": "identity",
         "relatedBranchIds": ["perfect_harmony", "true_courage"]
+      }
+    ],
+    "gemSkillTargets": [
+      {
+        "targetId": "serenade_support_effect",
+        "name": "세레나데 스킬",
+        "aliases": [],
+        "relatedSpecialSkillIds": [
+          "serenade_of_courage",
+          "serenade_of_salvation"
+        ]
       }
     ],
     "arkGridPresets": []
