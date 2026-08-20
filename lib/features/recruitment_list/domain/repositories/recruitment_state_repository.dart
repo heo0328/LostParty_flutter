@@ -1,0 +1,17 @@
+import '../entities/recruitment_aggregate.dart';
+import '../state/recruitment_state_machine.dart';
+
+abstract class RecruitmentStateRepository {
+  Future<bool> create(RecruitmentAggregate aggregate);
+
+  Future<RecruitmentAggregate?> getById(String recruitmentId);
+
+  Future<List<PublicRecruitmentSummary>> getPublicRecruitments();
+
+  Future<RecruitmentAggregate?> updateIfRevision({
+    required String recruitmentId,
+    required int expectedRevision,
+    required RecruitmentState nextState,
+    required DateTime updatedAt,
+  });
+}
