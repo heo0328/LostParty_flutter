@@ -10,6 +10,10 @@ import 'package:lost_party/features/account/data/datasources/lost_ark_character_
 import 'package:lost_party/features/account/data/local/account_database.dart';
 import 'package:lost_party/features/account/data/repositories/account_repository_impl.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_catalog_detection.dart';
+import 'package:lost_party/shared/game_catalog/data/mappers/game_catalog_mapper.dart';
+import 'package:lost_party/shared/game_catalog/domain/entities/game_catalog.dart';
+import 'package:lost_party/shared/game_catalog/domain/repositories/game_catalog_repository.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token_store.dart';
 import 'package:lost_party/shared/lost_ark_api/client/lost_ark_api_client.dart';
@@ -23,6 +27,20 @@ void main() {
   late Dio dio;
   late DioAdapter dioAdapter;
   late AccountRepositoryImpl repository;
+  late GameCatalog catalog;
+
+  setUpAll(() async {
+    catalog = const GameCatalogMapper().fromJson(
+      Map<String, dynamic>.from(
+        jsonDecode(
+              await File(
+                'assets/game_catalog/game_catalog.v1.json',
+              ).readAsString(),
+            )
+            as Map,
+      ),
+    );
+  });
 
   setUp(() async {
     database = AccountDatabase(NativeDatabase.memory());
@@ -34,7 +52,10 @@ void main() {
       remoteDataSource: LostArkCharacterRemoteDataSource(
         apiClient: LostArkApiClient(apiTokenStore: tokenStore, dio: dio),
       ),
-      localDataSource: LocalAccountDataSource(database: database),
+      localDataSource: LocalAccountDataSource(
+        database: database,
+        gameCatalogRepository: _FakeGameCatalogRepository(catalog),
+      ),
     );
   });
 
@@ -79,7 +100,7 @@ void main() {
     expect(representative.characterName, lookupCharacterName);
   });
 
-  test('fetches and stores the full armory response for a selected role', () async {
+  test('creates an analyzed draft without changing local data', () async {
     dioAdapter.onGet(
       requestPath,
       (server) => server.reply(200, [
@@ -93,10 +114,16 @@ void main() {
       ]),
     );
     await repository.fetchCharacters(lookupCharacterName);
-    final character = await database.select(database.accountCharacters).getSingle();
-    final fixture = jsonDecode(
-      File('test/fixtures/lost_ark/character_armory_full.json').readAsStringSync(),
-    ) as Map<String, dynamic>;
+    final character = await database
+        .select(database.accountCharacters)
+        .getSingle();
+    final fixture =
+        jsonDecode(
+              File(
+                'test/fixtures/lost_ark/character_armory_full.json',
+              ).readAsStringSync(),
+            )
+            as Map<String, dynamic>;
     (fixture['ArmoryProfile'] as Map<String, dynamic>)['CharacterName'] =
         lookupCharacterName;
     dioAdapter.onGet(
@@ -104,18 +131,137 @@ void main() {
       (server) => server.reply(200, fixture),
     );
 
-    final snapshot = await repository.refreshCharacterBuildSnapshot(
+    final accountBefore = await repository.loadMainAccount();
+    final draft = await repository.createCharacterBuildDraft(
       characterId: character.id,
       characterName: lookupCharacterName,
-      role: CharacterBuildRole.dealer,
     );
 
-    expect(snapshot.role, CharacterBuildRole.dealer);
-    expect(snapshot.analysis.runeCount, 8);
-    expect(snapshot.analysis.gemEffects, hasLength(11));
-    expect(jsonDecode(snapshot.rawJson), isA<Map<String, dynamic>>());
-    expect(await database.loadCharacterBuildSnapshots(character.id), hasLength(1));
+    expect(draft.characterId, character.id);
+    expect(draft.profile.characterName, lookupCharacterName);
+    expect(draft.analysis.runeCount, 8);
+    expect(draft.analysis.gemEffects, hasLength(11));
+    expect(
+      draft.analysis.catalogDetection!.status,
+      CharacterBuildDetectionStatus.detected,
+    );
+    expect(draft.analysis.catalogDetection!.branchDisplayName, '딜바드');
+    expect(
+      draft.analysis.catalogDetection!.detectedRole,
+      CharacterBuildRole.dealer,
+    );
+    expect(jsonDecode(draft.rawJson), isA<Map<String, dynamic>>());
+    expect(draft.fetchedAt, isNotNull);
+    expect(await database.loadCharacterBuildSnapshots(character.id), isEmpty);
+    expect(
+      (await repository.loadMainAccount())!.characters.single.combatPower,
+      accountBefore!.characters.single.combatPower,
+    );
   });
+
+  test('commits only the selected role and updates the profile', () async {
+    final character = await _prepareCharacterAndArmory(
+      repository: repository,
+      database: database,
+      dioAdapter: dioAdapter,
+      lookupCharacterName: lookupCharacterName,
+      requestPath: requestPath,
+    );
+    await database.saveCharacterBuildSnapshot(
+      characterId: character.id,
+      role: CharacterBuildRole.dealer.name,
+      rawJson: '{}',
+      itemLevel: 1600,
+      combatPower: 80000,
+      capturedAt: DateTime(2025),
+    );
+
+    final draft = await repository.createCharacterBuildDraft(
+      characterId: character.id,
+      characterName: lookupCharacterName,
+    );
+    final snapshot = await repository.commitCharacterBuildDraft(
+      draft: draft,
+      role: CharacterBuildRole.support,
+    );
+
+    expect(snapshot.role, CharacterBuildRole.support);
+    expect(snapshot.rawJson, draft.rawJson);
+    expect(
+      draft.fetchedAt.difference(snapshot.capturedAt).inSeconds.abs(),
+      lessThan(1),
+    );
+    expect(
+      snapshot.analysis.catalogDetection!.detectedRole,
+      CharacterBuildRole.dealer,
+    );
+    final stored = await database.loadCharacterBuildSnapshots(character.id);
+    expect(stored, hasLength(2));
+    expect(
+      stored
+          .singleWhere((row) => row.role == CharacterBuildRole.dealer.name)
+          .rawJson,
+      '{}',
+    );
+    expect(
+      stored
+          .singleWhere((row) => row.role == CharacterBuildRole.support.name)
+          .rawJson,
+      draft.rawJson,
+    );
+    expect(
+      (await repository.loadMainAccount())!.characters.single.combatPower,
+      draft.profile.combatPower,
+    );
+  });
+}
+
+Future<AccountCharacter> _prepareCharacterAndArmory({
+  required AccountRepositoryImpl repository,
+  required AccountDatabase database,
+  required DioAdapter dioAdapter,
+  required String lookupCharacterName,
+  required String requestPath,
+}) async {
+  dioAdapter.onGet(
+    requestPath,
+    (server) => server.reply(200, [
+      {
+        'ServerName': '루페온',
+        'CharacterName': lookupCharacterName,
+        'CharacterLevel': 70,
+        'CharacterClassName': '바드',
+        'ItemAvgLevel': '1,766.66',
+      },
+    ]),
+  );
+  await repository.fetchCharacters(lookupCharacterName);
+  final character = await database
+      .select(database.accountCharacters)
+      .getSingle();
+  final fixture =
+      jsonDecode(
+            File(
+              'test/fixtures/lost_ark/character_armory_full.json',
+            ).readAsStringSync(),
+          )
+          as Map<String, dynamic>;
+  (fixture['ArmoryProfile'] as Map<String, dynamic>)['CharacterName'] =
+      lookupCharacterName;
+  dioAdapter.onGet(
+    '/armories/characters/${Uri.encodeComponent(lookupCharacterName)}',
+    (server) => server.reply(200, fixture),
+  );
+  return character;
+}
+
+class _FakeGameCatalogRepository implements GameCatalogRepository {
+  const _FakeGameCatalogRepository(this.catalog);
+
+  final GameCatalog catalog;
+
+  @override
+  Future<GameCatalog> loadCatalog() async => catalog;
 }
 
 class _InMemoryApiTokenStore implements ApiTokenStore {

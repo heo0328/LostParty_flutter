@@ -1,3 +1,4 @@
+import '../entities/character_build_draft.dart';
 import '../entities/character_build_snapshot.dart';
 import '../entities/character_profile.dart';
 import '../entities/character_summary.dart';
@@ -22,6 +23,16 @@ abstract interface class AccountRepository {
   Future<List<CharacterBuildSnapshot>> loadCharacterBuildSnapshots(
     int characterId,
   );
+
+  Future<CharacterBuildDraft> createCharacterBuildDraft({
+    required int characterId,
+    required String characterName,
+  });
+
+  Future<CharacterBuildSnapshot> commitCharacterBuildDraft({
+    required CharacterBuildDraft draft,
+    required CharacterBuildRole role,
+  });
 
   Future<CharacterBuildSnapshot> refreshCharacterBuildSnapshot({
     required int characterId,

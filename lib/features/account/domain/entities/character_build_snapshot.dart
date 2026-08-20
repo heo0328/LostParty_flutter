@@ -1,6 +1,7 @@
 import 'character_build_analysis.dart';
+import 'character_build_role.dart';
 
-enum CharacterBuildRole { dealer, support }
+export 'character_build_role.dart';
 
 class CharacterBuildSnapshot {
   const CharacterBuildSnapshot({

@@ -4,9 +4,14 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/data/mappers/character_build_analysis_mapper.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_catalog_detection.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
+import 'package:lost_party/shared/game_catalog/data/mappers/game_catalog_mapper.dart';
+import 'package:lost_party/shared/game_catalog/domain/entities/game_catalog.dart';
 
 void main() {
   late Map<String, dynamic> fixture;
+  late GameCatalog catalog;
 
   setUpAll(() async {
     fixture = Map<String, dynamic>.from(
@@ -17,6 +22,107 @@ void main() {
           )
           as Map,
     );
+    catalog = const GameCatalogMapper().fromJson(
+      Map<String, dynamic>.from(
+        jsonDecode(
+              await File(
+                'assets/game_catalog/game_catalog.v1.json',
+              ).readAsString(),
+            )
+            as Map,
+      ),
+    );
+  });
+
+  test('detects the Bard dealer branch from the full fixture', () {
+    final result = const CharacterBuildAnalysisMapper().fromJson(
+      fixture,
+      catalog: catalog,
+    );
+
+    final detection = result.catalogDetection!;
+    expect(detection.catalogVersion, catalog.catalogVersion);
+    expect(detection.status, CharacterBuildDetectionStatus.detected);
+    expect(detection.classId, 'bard');
+    expect(detection.branchId, 'true_courage');
+    expect(detection.branchDisplayName, '딜바드');
+    expect(detection.detectedRole, CharacterBuildRole.dealer);
+    expect(detection.matchedTier1Node, '진실된 용맹');
+    expect(detection.matchedRelatedNodes, ['템페스트 필드']);
+  });
+
+  test('detects the Bard support branch', () {
+    final modified = _deepCopy(fixture);
+    final effects = (modified['ArkPassive'] as Map<String, dynamic>)['Effects']
+        as List<dynamic>;
+    for (final effect in effects.cast<Map<String, dynamic>>()) {
+      final description = effect['Description'].toString();
+      effect['Description'] = description
+          .replaceAll('진실된 용맹', '완벽한 화음')
+          .replaceAll('템페스트 필드', '세레나데 코드');
+    }
+
+    final detection = const CharacterBuildAnalysisMapper()
+        .fromJson(modified, catalog: catalog)
+        .catalogDetection!;
+
+    expect(detection.status, CharacterBuildDetectionStatus.detected);
+    expect(detection.branchId, 'perfect_harmony');
+    expect(detection.branchDisplayName, '바드');
+    expect(detection.detectedRole, CharacterBuildRole.support);
+    expect(detection.matchedRelatedNodes, ['세레나데 코드']);
+  });
+
+  test('returns unsupported class and branch not found states', () {
+    final unsupported = _deepCopy(fixture);
+    (unsupported['ArmoryProfile'] as Map<String, dynamic>)[
+      'CharacterClassName'
+    ] = '슬레이어';
+    final unsupportedDetection = const CharacterBuildAnalysisMapper()
+        .fromJson(unsupported, catalog: catalog)
+        .catalogDetection!;
+
+    final noBranch = _deepCopy(fixture);
+    (noBranch['ArkPassive'] as Map<String, dynamic>)['Effects'] = <dynamic>[];
+    final noBranchDetection = const CharacterBuildAnalysisMapper()
+        .fromJson(noBranch, catalog: catalog)
+        .catalogDetection!;
+
+    expect(
+      unsupportedDetection.status,
+      CharacterBuildDetectionStatus.unsupportedClass,
+    );
+    expect(
+      noBranchDetection.status,
+      CharacterBuildDetectionStatus.branchNotFound,
+    );
+    expect(noBranchDetection.classId, 'bard');
+  });
+
+  test('returns ambiguous when multiple tier one branches are active', () {
+    final modified = _deepCopy(fixture);
+    final arkPassive = modified['ArkPassive'] as Map<String, dynamic>;
+    final effects = arkPassive['Effects'] as List<dynamic>;
+    effects.add({
+      'Description':
+          "<FONT color='#83E9FF'>깨달음</FONT> 1티어 "
+          "<FONT color='#83E9FF'>완벽한 화음 Lv.1</FONT>",
+    });
+
+    final detection = const CharacterBuildAnalysisMapper()
+        .fromJson(modified, catalog: catalog)
+        .catalogDetection!;
+
+    expect(detection.status, CharacterBuildDetectionStatus.ambiguous);
+    expect(detection.classId, 'bard');
+    expect(detection.branchId, isNull);
+    expect(detection.detectedRole, isNull);
+  });
+
+  test('keeps catalog detection optional for existing analysis callers', () {
+    final result = const CharacterBuildAnalysisMapper().fromJson(fixture);
+
+    expect(result.catalogDetection, isNull);
   });
 
   test('maps gem effects and passive skills from the full fixture', () {
