@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../../../../shared/game_catalog/domain/entities/game_catalog.dart';
+import '../../../../shared/game_catalog/domain/repositories/game_catalog_repository.dart';
 import '../../domain/entities/character_build_snapshot.dart';
 import '../../domain/entities/character_profile.dart';
 import '../../domain/entities/character_summary.dart';
@@ -10,10 +12,15 @@ import '../local/account_database.dart';
 import '../mappers/character_build_analysis_mapper.dart';
 
 class LocalAccountDataSource {
-  LocalAccountDataSource({required AccountDatabase database})
-    : _database = database;
+  LocalAccountDataSource({
+    required AccountDatabase database,
+    required GameCatalogRepository gameCatalogRepository,
+  }) : _database = database,
+       _gameCatalogRepository = gameCatalogRepository;
 
   final AccountDatabase _database;
+  final GameCatalogRepository _gameCatalogRepository;
+  Future<GameCatalog>? _catalog;
 
   Future<int> saveMainAccount({
     required String lookupCharacterName,
@@ -122,6 +129,10 @@ class LocalAccountDataSource {
     int characterId,
   ) async {
     final rows = await _database.loadCharacterBuildSnapshots(characterId);
+    if (rows.isEmpty) {
+      return const [];
+    }
+    final catalog = await (_catalog ??= _gameCatalogRepository.loadCatalog());
     return rows
         .map(
           (row) => CharacterBuildSnapshot(
@@ -135,6 +146,7 @@ class LocalAccountDataSource {
             dataVersion: row.dataVersion,
             analysis: const CharacterBuildAnalysisMapper().fromJson(
               Map<String, dynamic>.from(jsonDecode(row.rawJson) as Map),
+              catalog: catalog,
             ),
           ),
         )

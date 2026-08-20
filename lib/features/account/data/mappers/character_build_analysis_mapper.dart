@@ -1,11 +1,16 @@
 import 'dart:convert';
 
+import '../../../../shared/game_catalog/domain/entities/game_catalog.dart';
 import '../../domain/entities/character_build_analysis.dart';
+import '../../domain/entities/character_build_catalog_detection.dart';
 
 class CharacterBuildAnalysisMapper {
   const CharacterBuildAnalysisMapper();
 
-  CharacterBuildAnalysis fromJson(Map<String, dynamic> json) {
+  CharacterBuildAnalysis fromJson(
+    Map<String, dynamic> json, {
+    GameCatalog? catalog,
+  }) {
     final skills = _mapList(json['ArmorySkills']);
     final skillNames = skills
         .map((skill) => skill['Name'])
@@ -30,6 +35,13 @@ class CharacterBuildAnalysisMapper {
       notices: notices,
     );
     final activePassiveNames = _parseActivePassiveNames(json['ArkPassive']);
+    final catalogDetection = catalog == null
+        ? null
+        : _detectCatalogBuild(
+            json,
+            catalog: catalog,
+            activePassiveNames: activePassiveNames,
+          );
     final arkGridConditions = _parseArkGridConditions(
       json['ArkGrid'],
       activePassiveNames: activePassiveNames,
@@ -46,7 +58,95 @@ class CharacterBuildAnalysisMapper {
       arkGridConditions: arkGridConditions,
       arkGridCorePoints: arkGridCorePoints,
       notices: notices,
+      catalogDetection: catalogDetection,
     );
+  }
+
+  CharacterBuildCatalogDetection _detectCatalogBuild(
+    Map<String, dynamic> json, {
+    required GameCatalog catalog,
+    required Set<String> activePassiveNames,
+  }) {
+    final profile = _map(json['ArmoryProfile']);
+    final apiClassName = profile?['CharacterClassName'];
+    final classDefinition = apiClassName is String
+        ? _findClass(catalog.classes, apiClassName)
+        : null;
+    if (classDefinition == null) {
+      return CharacterBuildCatalogDetection(
+        catalogVersion: catalog.catalogVersion,
+        status: CharacterBuildDetectionStatus.unsupportedClass,
+        classId: null,
+        branchId: null,
+        branchDisplayName: null,
+        detectedRole: null,
+        matchedTier1Node: null,
+        matchedRelatedNodes: const [],
+      );
+    }
+
+    final matchingBranches = classDefinition.enlightenmentBranches
+        .where(
+          (branch) => activePassiveNames.contains(branch.tier1NodeName),
+        )
+        .toList(growable: false);
+    if (matchingBranches.isEmpty) {
+      return CharacterBuildCatalogDetection(
+        catalogVersion: catalog.catalogVersion,
+        status: CharacterBuildDetectionStatus.branchNotFound,
+        classId: classDefinition.classId,
+        branchId: null,
+        branchDisplayName: null,
+        detectedRole: null,
+        matchedTier1Node: null,
+        matchedRelatedNodes: const [],
+      );
+    }
+    if (matchingBranches.length > 1) {
+      final relatedNodes = matchingBranches
+          .expand((branch) => branch.relatedPassiveNodes)
+          .where(activePassiveNames.contains)
+          .toSet()
+          .toList(growable: false);
+      return CharacterBuildCatalogDetection(
+        catalogVersion: catalog.catalogVersion,
+        status: CharacterBuildDetectionStatus.ambiguous,
+        classId: classDefinition.classId,
+        branchId: null,
+        branchDisplayName: null,
+        detectedRole: null,
+        matchedTier1Node: null,
+        matchedRelatedNodes: relatedNodes,
+      );
+    }
+
+    final branch = matchingBranches.single;
+    return CharacterBuildCatalogDetection(
+      catalogVersion: catalog.catalogVersion,
+      status: CharacterBuildDetectionStatus.detected,
+      classId: classDefinition.classId,
+      branchId: branch.branchId,
+      branchDisplayName: branch.displayName,
+      detectedRole: characterBuildRoleFromCatalogRole(branch.inferredRole),
+      matchedTier1Node: branch.tier1NodeName,
+      matchedRelatedNodes: branch.relatedPassiveNodes
+          .where(activePassiveNames.contains)
+          .toList(growable: false),
+    );
+  }
+
+  GameClassDefinition? _findClass(
+    List<GameClassDefinition> classes,
+    String apiClassName,
+  ) {
+    final normalizedName = apiClassName.trim().toLowerCase();
+    for (final definition in classes) {
+      final names = [definition.apiClassName, ...definition.aliases];
+      if (names.any((name) => name.trim().toLowerCase() == normalizedName)) {
+        return definition;
+      }
+    }
+    return null;
   }
 
   List<ArkGridCorePointCheck> _parseRequiredArkGridCorePoints(

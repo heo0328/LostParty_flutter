@@ -1,3 +1,5 @@
+import 'character_build_catalog_detection.dart';
+
 enum BuildNoticeLevel { info, warning }
 
 enum GemSkillCategory { normal, passiveOrIdentity, unknown }
@@ -72,6 +74,7 @@ class CharacterBuildAnalysis {
     required this.arkGridConditions,
     required this.arkGridCorePoints,
     required this.notices,
+    this.catalogDetection,
   });
 
   static const expectedRuneCount = 8;
@@ -81,4 +84,5 @@ class CharacterBuildAnalysis {
   final List<ArkGridConditionCheck> arkGridConditions;
   final List<ArkGridCorePointCheck> arkGridCorePoints;
   final List<BuildNotice> notices;
+  final CharacterBuildCatalogDetection? catalogDetection;
 }

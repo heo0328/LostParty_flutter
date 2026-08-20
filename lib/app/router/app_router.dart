@@ -11,6 +11,8 @@ import '../../features/account/presentation/pages/character_detail_page.dart';
 import '../../features/account/presentation/pages/my_account_page.dart';
 import '../../features/account/domain/entities/local_game_account.dart';
 import '../../features/recruitment_list/presentation/pages/recruitment_list_page.dart';
+import '../../shared/game_catalog/data/datasources/asset_game_catalog_data_source.dart';
+import '../../shared/game_catalog/data/repositories/game_catalog_repository_impl.dart';
 import '../../shared/lost_ark_api/auth/secure_api_token_store.dart';
 import '../../shared/lost_ark_api/client/lost_ark_api_client.dart';
 import '../shell/app_shell.dart';
@@ -22,9 +24,15 @@ final _recruitmentNavigatorKey = GlobalKey<NavigatorState>();
 GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
   final apiTokenStore = SecureApiTokenStore();
   final apiClient = LostArkApiClient(apiTokenStore: apiTokenStore);
+  final gameCatalogRepository = GameCatalogRepositoryImpl(
+    dataSource: AssetGameCatalogDataSource(),
+  );
   final accountRepository = AccountRepositoryImpl(
     remoteDataSource: LostArkCharacterRemoteDataSource(apiClient: apiClient),
-    localDataSource: LocalAccountDataSource(database: accountDatabase),
+    localDataSource: LocalAccountDataSource(
+      database: accountDatabase,
+      gameCatalogRepository: gameCatalogRepository,
+    ),
   );
 
   return GoRouter(

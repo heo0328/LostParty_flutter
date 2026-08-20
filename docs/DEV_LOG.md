@@ -664,3 +664,33 @@
 ### 변경 범위
 - 협업 및 인계 문서만 변경
 - 애플리케이션 코드, 테스트 코드 및 의존성 변경 없음
+
+---
+
+## Task-015. 게임 카탈로그 기반 캐릭터 계열 및 역할 감지
+
+### Domain 및 분석
+- 카탈로그 감지 결과와 감지 상태 Domain 모델 추가
+- 감지 성공, 미지원 직업, 계열 미감지 및 복수 계열 감지를 구분
+- 카탈로그 버전, 직업/계열 ID, 표시 이름, 감지 역할 및 일치 노드를 결과로 제공
+- `GameCatalogRole`에서 `CharacterBuildRole`로 명시적으로 변환
+- 역할 enum을 독립 Domain 파일로 분리하고 기존 snapshot import 호환 유지
+
+### 바드 연결
+- 전체 armory fixture의 `진실된 용맹`으로 `딜바드`와 dealer 역할 감지
+- `템페스트 필드`를 관련 패시브 근거로 기록
+- `완벽한 화음`으로 `바드`와 support 역할 감지
+- 감지 역할은 사용자 선택 스냅샷 역할을 변경하지 않음
+
+### 저장 및 앱 연결
+- `LocalAccountDataSource`에 `GameCatalogRepository` 주입
+- 번들 카탈로그를 한 번 로드해 저장된 armory 원본 JSON 분석에 사용
+- 별도 Drift 마이그레이션 없이 기존 스냅샷도 현재 카탈로그 결과를 재생성
+- 앱 라우터 조립부에 asset 카탈로그 Repository 연결
+
+### 검증
+- 감지 성공, support 계열, 미지원 직업, 미감지, 모호함 및 기존 호출 호환 테스트 추가
+- Repository 저장 역할 유지와 카탈로그 분석 결과 로딩 검증
+- `flutter analyze` 통과
+- `flutter test` 94개 통과
+- UI 변경이 없어 별도 실기기 검증 불필요

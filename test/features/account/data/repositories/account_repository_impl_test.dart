@@ -10,6 +10,10 @@ import 'package:lost_party/features/account/data/datasources/lost_ark_character_
 import 'package:lost_party/features/account/data/local/account_database.dart';
 import 'package:lost_party/features/account/data/repositories/account_repository_impl.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_catalog_detection.dart';
+import 'package:lost_party/shared/game_catalog/data/mappers/game_catalog_mapper.dart';
+import 'package:lost_party/shared/game_catalog/domain/entities/game_catalog.dart';
+import 'package:lost_party/shared/game_catalog/domain/repositories/game_catalog_repository.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token_store.dart';
 import 'package:lost_party/shared/lost_ark_api/client/lost_ark_api_client.dart';
@@ -23,6 +27,20 @@ void main() {
   late Dio dio;
   late DioAdapter dioAdapter;
   late AccountRepositoryImpl repository;
+  late GameCatalog catalog;
+
+  setUpAll(() async {
+    catalog = const GameCatalogMapper().fromJson(
+      Map<String, dynamic>.from(
+        jsonDecode(
+              await File(
+                'assets/game_catalog/game_catalog.v1.json',
+              ).readAsString(),
+            )
+            as Map,
+      ),
+    );
+  });
 
   setUp(() async {
     database = AccountDatabase(NativeDatabase.memory());
@@ -34,7 +52,10 @@ void main() {
       remoteDataSource: LostArkCharacterRemoteDataSource(
         apiClient: LostArkApiClient(apiTokenStore: tokenStore, dio: dio),
       ),
-      localDataSource: LocalAccountDataSource(database: database),
+      localDataSource: LocalAccountDataSource(
+        database: database,
+        gameCatalogRepository: _FakeGameCatalogRepository(catalog),
+      ),
     );
   });
 
@@ -113,9 +134,24 @@ void main() {
     expect(snapshot.role, CharacterBuildRole.dealer);
     expect(snapshot.analysis.runeCount, 8);
     expect(snapshot.analysis.gemEffects, hasLength(11));
+    expect(
+      snapshot.analysis.catalogDetection!.status,
+      CharacterBuildDetectionStatus.detected,
+    );
+    expect(snapshot.analysis.catalogDetection!.branchDisplayName, '딜바드');
+    expect(snapshot.analysis.catalogDetection!.detectedRole, CharacterBuildRole.dealer);
     expect(jsonDecode(snapshot.rawJson), isA<Map<String, dynamic>>());
     expect(await database.loadCharacterBuildSnapshots(character.id), hasLength(1));
   });
+}
+
+class _FakeGameCatalogRepository implements GameCatalogRepository {
+  const _FakeGameCatalogRepository(this.catalog);
+
+  final GameCatalog catalog;
+
+  @override
+  Future<GameCatalog> loadCatalog() async => catalog;
 }
 
 class _InMemoryApiTokenStore implements ApiTokenStore {
