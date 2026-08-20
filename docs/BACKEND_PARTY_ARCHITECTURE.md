@@ -319,18 +319,21 @@ startAt >= now
 7. 로컬 모집 생성 UI
 8. 로컬 신청 UI
 9. 로컬 승인·투표·파티 구성 UI
-10. 계정 그룹 Domain, Fake Repository 및 그룹 UI
-11. 공개/그룹 전용 모집을 포함한 로컬 통합 시나리오 테스트와 실기기 검증
-12. Firebase 프로젝트와 Authentication
-13. Firestore 읽기 모델
-14. Callable Functions 명령과 Transaction
-15. Security Rules 및 Emulator 다중 사용자 테스트
-16. Firebase 연결 후 다중 계정 실기기 테스트
-17. App Check
-18. 후속 알림
+10. 하단 `내 파티` 탭과 창설·가입·신청 중 파티 조회 UI
+11. 계정 그룹 Domain, Fake Repository 및 그룹 UI
+12. 공개/그룹 전용 모집과 `내 파티`를 포함한 로컬 통합 시나리오 테스트 및 실기기 검증
+13. Firebase 프로젝트와 Authentication
+14. Firestore 읽기 모델
+15. Callable Functions 명령과 Transaction
+16. Security Rules 및 Emulator 다중 사용자 테스트
+17. Firebase 연결 후 다중 계정 실기기 테스트
+18. App Check
+19. 후속 알림
 ```
 
 Firebase 연결은 로컬 목데이터만으로 모집 생성 → 목록 노출 → 신청 → 승인/투표 → 파티 구성과 그룹 초대/수락 → 그룹 전용 모집 노출까지 검증한 뒤 시작한다. 로컬 단계와 Firebase 단계는 같은 Domain 및 Repository 계약을 사용하고 구현체만 교체한다.
+
+`내 파티`는 별도 서버 상태를 복제하지 않고 현재 사용자의 모집 소유권, 승인된 멤버십 및 pending 신청을 조합한 읽기 모델이다. 화면에서는 `참여 중 / 내가 만든 파티 / 신청 중`을 구분하며, pending 신청은 승인된 멤버십으로 취급하지 않는다. 이 조회 계약도 로컬 Fake에서 먼저 확정한 뒤 Firestore 읽기 모델로 교체한다.
 
 각 단계는 독립 작업 그룹으로 나눌 수 있지만, 서로 강하게 연결된 Domain·상태 머신·UI는 같은 채팅에서 이어서 작업해 문서 재탐색 비용을 줄인다. 각 작업 그룹은 기능 브랜치 테스트, 실기기 확인이 필요한 경우의 기기 검증, 기능 브랜치 푸시, `main` 병합·푸시 및 로컬/원격 `main` 일치 확인까지 완료한다.
 
