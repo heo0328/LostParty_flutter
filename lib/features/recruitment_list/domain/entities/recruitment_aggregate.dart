@@ -14,6 +14,7 @@ class RecruitmentMetadata {
     required this.minCombatPower,
     required this.experienceLevel,
     required this.maxPlayHours,
+    this.raidStartAt,
   });
 
   final String catalogVersion;
@@ -27,6 +28,7 @@ class RecruitmentMetadata {
   final int? minCombatPower;
   final ExperienceLevel? experienceLevel;
   final int? maxPlayHours;
+  final DateTime? raidStartAt;
 }
 
 class RecruitmentAggregate {

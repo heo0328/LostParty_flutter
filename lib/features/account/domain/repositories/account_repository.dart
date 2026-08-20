@@ -11,6 +11,8 @@ abstract interface class AccountRepository {
 
   Future<LocalGameAccount?> loadMainAccount();
 
+  Future<List<LocalGameAccount>> loadAccounts();
+
   Future<void> saveCharacterBuildSnapshot({
     required int characterId,
     required CharacterBuildRole role,

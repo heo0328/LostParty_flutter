@@ -2,7 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/fake_recruitment_runtime.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
+import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_active_raid_assignment_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/weekly_raid_clear.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/active_raid_assignment.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_aggregate.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_application.dart';
@@ -17,6 +19,7 @@ void main() {
   late FakeRecruitmentClock clock;
   late InMemoryRecruitmentStateRepository repository;
   late InMemoryWeeklyRaidClearRepository weeklyClearRepository;
+  late InMemoryActiveRaidAssignmentRepository assignmentRepository;
   late RecruitmentCommandService service;
 
   setUp(() {
@@ -24,12 +27,14 @@ void main() {
     clock = FakeRecruitmentClock(DateTime.utc(2026, 8, 20));
     repository = InMemoryRecruitmentStateRepository();
     weeklyClearRepository = InMemoryWeeklyRaidClearRepository();
+    assignmentRepository = InMemoryActiveRaidAssignmentRepository();
     service = RecruitmentCommandService(
       session: session,
       clock: clock,
       idGenerator: SequentialRecruitmentIdGenerator(),
       repository: repository,
       weeklyClearRepository: weeklyClearRepository,
+      assignmentRepository: assignmentRepository,
     );
   });
 
@@ -200,7 +205,246 @@ void main() {
     );
     expect(result.aggregate!.revision, 0);
   });
+
+  test('같은 캐릭터로 동일 레이드 모집을 다시 생성하지 못한다', () async {
+    final first = await _create(service);
+
+    final second = await _create(service);
+
+    expect(first.isSuccess, isTrue);
+    expect(second.failure, LocalRecruitmentFailure.domainRejected);
+    expect(
+      second.domainFailure,
+      RecruitmentCommandFailure.participationConflict,
+    );
+    expect(await repository.getPublicRecruitments(), hasLength(1));
+  });
+
+  test('즉시 가입 확정 시 같은 캐릭터와 레이드의 다른 pending 신청을 종료한다', () async {
+    final approval = await _create(service);
+    final direct = await service.createRecruitment(
+      title: '즉시 가입 모집',
+      metadata: RecruitmentMetadata(
+        catalogVersion: 'test',
+        raidId: 'serca',
+        difficultyId: 'hard',
+        raidName: '세르카',
+        difficultyName: '하드',
+        difficultyAlias: '하르카',
+        gateCount: 2,
+        minItemLevel: 1710,
+        minCombatPower: null,
+        experienceLevel: null,
+        maxPlayHours: 3,
+        raidStartAt: _laterStart,
+      ),
+      leaderCharacterId: 'other-leader',
+      leaderClassName: '블레이드',
+      leaderRole: PartyRole.dealer,
+      approvalPolicy: const ApprovalPolicy.directJoin(),
+      compositionPolicy: _compositionPolicy,
+    );
+    session.signIn('user-b');
+    await service.apply(
+      recruitmentId: approval.aggregate!.id,
+      characterId: 'b-character',
+      className: '발키리',
+      role: PartyRole.dealer,
+    );
+
+    final joined = await service.apply(
+      recruitmentId: direct.aggregate!.id,
+      characterId: 'b-character',
+      className: '발키리',
+      role: PartyRole.dealer,
+    );
+
+    expect(joined.isSuccess, isTrue);
+    expect(
+      (await repository.getById(
+        approval.aggregate!.id,
+      ))!.state.applications['user-b']!.status,
+      RecruitmentApplicationStatus.superseded,
+    );
+  });
+
+  test('승인 경쟁에서는 최초 승인만 확정되고 다른 pending은 자동 종료한다', () async {
+    final first = await _create(service);
+    session.signIn('user-c');
+    final second = await _createWith(
+      service,
+      title: '두 번째 승인 모집',
+      leaderCharacterId: 'c-character',
+      difficultyId: 'hard',
+      raidStartAt: _laterStart,
+    );
+    session.signIn('user-b');
+    for (final id in [first.aggregate!.id, second.aggregate!.id]) {
+      await service.apply(
+        recruitmentId: id,
+        characterId: 'b-character',
+        className: '발키리',
+        role: PartyRole.dealer,
+      );
+    }
+
+    session.signIn('user-a');
+    final approved = await service.vote(
+      recruitmentId: first.aggregate!.id,
+      applicantUserId: 'user-b',
+      decision: ApplicationVoteDecision.approve,
+    );
+
+    expect(approved.isSuccess, isTrue);
+    expect(
+      (await repository.getById(
+        second.aggregate!.id,
+      ))!.state.applications['user-b']!.status,
+      RecruitmentApplicationStatus.superseded,
+    );
+  });
+
+  test('자동 종료 전 승인 경쟁도 확정 점유가 두 번째 가입을 차단한다', () async {
+    final created = await _create(service);
+    session.signIn('user-b');
+    await service.apply(
+      recruitmentId: created.aggregate!.id,
+      characterId: 'b-character',
+      className: '발키리',
+      role: PartyRole.dealer,
+    );
+    await assignmentRepository.acquire(
+      ActiveRaidAssignment(
+        userId: 'user-b',
+        characterId: 'b-character',
+        raidId: 'serca',
+        difficultyId: 'hard',
+        recruitmentId: 'already-confirmed-party',
+        schedule: RaidParticipationSchedule(
+          startAt: _laterStart,
+          expectedEndAt: _laterStart.add(const Duration(hours: 3)),
+        ),
+      ),
+    );
+
+    session.signIn('user-a');
+    final rejected = await service.vote(
+      recruitmentId: created.aggregate!.id,
+      applicantUserId: 'user-b',
+      decision: ApplicationVoteDecision.approve,
+    );
+
+    expect(rejected.failure, LocalRecruitmentFailure.domainRejected);
+    expect(
+      rejected.domainFailure,
+      RecruitmentCommandFailure.participationConflict,
+    );
+    final unchanged = await repository.getById(created.aggregate!.id);
+    expect(
+      unchanged!.state.applications['user-b']!.status,
+      RecruitmentApplicationStatus.pending,
+    );
+    expect(unchanged.state.applications['user-b']!.votes, isEmpty);
+  });
+
+  test('파티 내 캐릭터 변경은 역할을 유지하고 확정 점유를 교체한다', () async {
+    final created = await _create(service);
+    repository.seed(
+      RecruitmentAggregate(
+        id: 'pending-other',
+        title: '다른 모집',
+        metadata: _metadata,
+        state: RecruitmentState(
+          leaderUserId: 'user-z',
+          approvalPolicy: const ApprovalPolicy.leaderOnly(),
+          compositionPolicy: _compositionPolicy,
+          members: const [
+            RecruitmentPartyMember(
+              userId: 'user-z',
+              characterId: 'z-character',
+              className: '블레이드',
+              role: PartyRole.dealer,
+              partyIndex: 0,
+            ),
+          ],
+          applications: const {
+            'user-a': RecruitmentApplication(
+              applicantUserId: 'user-a',
+              characterId: 'replacement-bard',
+              className: '바드',
+              requestedRole: PartyRole.support,
+            ),
+          },
+        ),
+        revision: 0,
+        createdAt: clock.now(),
+        updatedAt: clock.now(),
+      ),
+    );
+
+    final requiresConfirmation = await service.changeCharacter(
+      recruitmentId: created.aggregate!.id,
+      characterId: 'replacement-bard',
+      className: '바드',
+    );
+    expect(
+      requiresConfirmation.domainFailure,
+      RecruitmentCommandFailure.pendingApplicationsRequireConfirmation,
+    );
+
+    final changed = await service.changeCharacter(
+      recruitmentId: created.aggregate!.id,
+      characterId: 'replacement-bard',
+      className: '바드',
+      cancelPendingApplications: true,
+    );
+
+    expect(changed.isSuccess, isTrue);
+    final member = changed.aggregate!.state.members.single;
+    expect(member.characterId, 'replacement-bard');
+    expect(member.role, PartyRole.support);
+    final assignments = await assignmentRepository.getByUser('user-a');
+    expect(assignments, hasLength(1));
+    expect(assignments.single.characterId, 'replacement-bard');
+    expect(
+      (await repository.getById(
+        'pending-other',
+      ))!.state.applications['user-a']!.status,
+      RecruitmentApplicationStatus.superseded,
+    );
+  });
 }
+
+final _laterStart = DateTime.utc(2026, 8, 20, 10);
+
+Future<LocalRecruitmentResult> _createWith(
+  RecruitmentCommandService service, {
+  required String title,
+  required String leaderCharacterId,
+  required String difficultyId,
+  required DateTime raidStartAt,
+}) => service.createRecruitment(
+  title: title,
+  metadata: RecruitmentMetadata(
+    catalogVersion: 'test',
+    raidId: 'serca',
+    difficultyId: difficultyId,
+    raidName: '세르카',
+    difficultyName: difficultyId,
+    difficultyAlias: difficultyId,
+    gateCount: 2,
+    minItemLevel: 1710,
+    minCombatPower: null,
+    experienceLevel: null,
+    maxPlayHours: 3,
+    raidStartAt: raidStartAt,
+  ),
+  leaderCharacterId: leaderCharacterId,
+  leaderClassName: '블레이드',
+  leaderRole: PartyRole.dealer,
+  approvalPolicy: const ApprovalPolicy.anyMember(),
+  compositionPolicy: _compositionPolicy,
+);
 
 Future<LocalRecruitmentResult> _create(RecruitmentCommandService service) =>
     service.createRecruitment(
@@ -222,7 +466,7 @@ const _compositionPolicy = PartyCompositionPolicy(
   ),
 );
 
-const _metadata = RecruitmentMetadata(
+final _metadata = RecruitmentMetadata(
   catalogVersion: 'test',
   raidId: 'serca',
   difficultyId: 'normal',
@@ -234,6 +478,7 @@ const _metadata = RecruitmentMetadata(
   minCombatPower: 200000,
   experienceLevel: ExperienceLevel.clearExp,
   maxPlayHours: 3,
+  raidStartAt: DateTime.utc(2026, 8, 20),
 );
 
 class _ConflictingRepository implements RecruitmentStateRepository {
@@ -274,4 +519,30 @@ class _ConflictingRepository implements RecruitmentStateRepository {
       updatedAt: updatedAt,
     );
   }
+
+  @override
+  Future<int> supersedePendingApplications({
+    required String applicantUserId,
+    required String characterId,
+    required String raidId,
+    required String excludingRecruitmentId,
+    required DateTime updatedAt,
+  }) => delegate.supersedePendingApplications(
+    applicantUserId: applicantUserId,
+    characterId: characterId,
+    raidId: raidId,
+    excludingRecruitmentId: excludingRecruitmentId,
+    updatedAt: updatedAt,
+  );
+
+  @override
+  Future<int> countPendingApplications({
+    required String applicantUserId,
+    required String characterId,
+    required String raidId,
+  }) => delegate.countPendingApplications(
+    applicantUserId: applicantUserId,
+    characterId: characterId,
+    raidId: raidId,
+  );
 }

@@ -49,12 +49,68 @@ void main() {
     expect(summaries.first.memberCount, 1);
     expect(summaries.first.maxMemberCount, 4);
   });
+
+  test('같은 캐릭터와 레이드의 다른 pending 신청만 자동 종료한다', () async {
+    final repository = InMemoryRecruitmentStateRepository();
+    repository.seed(
+      _aggregate(
+        id: 'target',
+        updatedAt: DateTime.utc(2026, 8, 20),
+        applications: const {
+          'user-a': RecruitmentApplication(
+            applicantUserId: 'user-a',
+            characterId: '이슈아이',
+            className: '바드',
+            requestedRole: PartyRole.support,
+          ),
+        },
+      ),
+    );
+    repository.seed(
+      _aggregate(
+        id: 'excluded',
+        updatedAt: DateTime.utc(2026, 8, 20),
+        applications: const {
+          'user-a': RecruitmentApplication(
+            applicantUserId: 'user-a',
+            characterId: '이슈아이',
+            className: '바드',
+            requestedRole: PartyRole.support,
+          ),
+        },
+      ),
+    );
+
+    final count = await repository.supersedePendingApplications(
+      applicantUserId: 'user-a',
+      characterId: '이슈아이',
+      raidId: 'serca',
+      excludingRecruitmentId: 'excluded',
+      updatedAt: DateTime.utc(2026, 8, 20, 1),
+    );
+
+    expect(count, 1);
+    expect(
+      (await repository.getById(
+        'target',
+      ))!.state.applications['user-a']!.status,
+      RecruitmentApplicationStatus.superseded,
+    );
+    expect((await repository.getById('target'))!.revision, 1);
+    expect(
+      (await repository.getById(
+        'excluded',
+      ))!.state.applications['user-a']!.status,
+      RecruitmentApplicationStatus.pending,
+    );
+  });
 }
 
 RecruitmentAggregate _aggregate({
   String id = 'recruitment',
   DateTime? updatedAt,
   bool isRecruiting = true,
+  Map<String, RecruitmentApplication> applications = const {},
 }) {
   final timestamp = updatedAt ?? DateTime.utc(2026, 8, 20);
   return RecruitmentAggregate(
@@ -74,6 +130,7 @@ RecruitmentAggregate _aggregate({
           partyIndex: 0,
         ),
       ],
+      applications: applications,
       isRecruiting: isRecruiting,
     ),
     revision: 0,

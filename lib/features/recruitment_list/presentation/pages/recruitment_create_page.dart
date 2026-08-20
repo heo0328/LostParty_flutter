@@ -10,6 +10,7 @@ import '../../domain/entities/recruitment_aggregate.dart';
 import '../../domain/policies/approval_policy.dart';
 import '../../domain/policies/party_composition_policy.dart';
 import '../../domain/services/recruitment_command_service.dart';
+import '../../domain/state/recruitment_state_machine.dart';
 
 class RecruitmentCreatePage extends StatefulWidget {
   const RecruitmentCreatePage({
@@ -274,9 +275,39 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _saving = true);
     final raid = _raid!;
     final difficulty = _difficulty!;
+    final pendingCount = await widget.commandService.countPendingApplications(
+      characterId: _leader!.characterName,
+      raidId: raid.raidId,
+    );
+    if (!mounted) return;
+    if (pendingCount > 0) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('기존 신청을 취소할까요?'),
+          content: Text(
+            '${_leader!.characterName} 캐릭터의 동일 레이드 신청 $pendingCount건이 있습니다. '
+            '모집을 만들면 기존 신청이 모두 종료됩니다.',
+          ),
+          actions: [
+            TextButton(
+              key: const ValueKey('keepPendingAndCancelCreationButton'),
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('돌아가기'),
+            ),
+            FilledButton(
+              key: const ValueKey('cancelPendingAndCreateButton'),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('신청 취소하고 생성'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+    setState(() => _saving = true);
     final approval = switch (_approval) {
       ApprovalMode.leaderOnly => const ApprovalPolicy.leaderOnly(),
       ApprovalMode.directJoin => const ApprovalPolicy.directJoin(),
@@ -313,9 +344,14 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     if (result.isSuccess) {
       context.pushReplacement('/recruitments/${result.aggregate!.id}');
     } else {
+      final message =
+          result.domainFailure ==
+              RecruitmentCommandFailure.participationConflict
+          ? '이미 확정된 참가 또는 겹치는 일정이 있어 모집을 만들 수 없습니다.'
+          : '모집을 생성하지 못했습니다.';
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('모집을 생성하지 못했습니다.')));
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 }

@@ -15,6 +15,8 @@ enum RecruitmentCommandFailure {
   duplicateVote,
   compositionRejected,
   weeklyRaidAlreadyCleared,
+  participationConflict,
+  pendingApplicationsRequireConfirmation,
 }
 
 class RecruitmentCommandResult {
@@ -175,6 +177,65 @@ class RecruitmentStateMachine {
       _replaceApplication(
         state,
         application!.copyWith(status: RecruitmentApplicationStatus.withdrawn),
+      ),
+    );
+  }
+
+  RecruitmentCommandResult changeCharacter({
+    required RecruitmentState state,
+    required String actorUserId,
+    required String characterId,
+    required String className,
+  }) {
+    final memberIndex = state.members.indexWhere(
+      (member) => member.userId == actorUserId,
+    );
+    if (memberIndex < 0) {
+      return RecruitmentCommandResult.failure(
+        state,
+        RecruitmentCommandFailure.unauthorized,
+      );
+    }
+    final current = state.members[memberIndex];
+    if (current.characterId == characterId) {
+      return RecruitmentCommandResult.failure(
+        state,
+        RecruitmentCommandFailure.invalidApplication,
+      );
+    }
+    final proposedMembers = [
+      for (final member in state.members)
+        member.userId == actorUserId
+            ? member.copyWith(characterId: characterId, className: className)
+            : member,
+    ];
+    final composition = state.compositionPolicy.arrange(
+      proposedMembers
+          .map(
+            (member) => PartyCompositionMember(
+              id: member.userId,
+              className: member.className,
+              role: member.role,
+            ),
+          )
+          .toList(growable: false),
+    );
+    if (!composition.canJoin) {
+      return RecruitmentCommandResult.failure(
+        state,
+        RecruitmentCommandFailure.compositionRejected,
+        compositionFailure: composition.failure,
+      );
+    }
+    return RecruitmentCommandResult.success(
+      state.copyWith(
+        members: proposedMembers
+            .map(
+              (member) => member.copyWith(
+                partyIndex: composition.assignments[member.userId],
+              ),
+            )
+            .toList(growable: false),
       ),
     );
   }

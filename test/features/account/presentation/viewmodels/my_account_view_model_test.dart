@@ -78,6 +78,12 @@ CharacterSummary _createCharacterSummary() {
 
 class _FakeAccountRepository implements AccountRepository {
   @override
+  Future<List<LocalGameAccount>> loadAccounts() async {
+    final account = await loadMainAccount();
+    return account == null ? const [] : [account];
+  }
+
+  @override
   Future<CharacterBuildDraft> createCharacterBuildDraft({
     required int characterId,
     required String characterName,

@@ -90,10 +90,26 @@ class LocalAccountDataSource {
       return null;
     }
 
+    return _loadAccount(account);
+  }
+
+  Future<List<LocalGameAccount>> loadAccounts() async {
+    final accounts = await _database.select(_database.gameAccounts).get();
+    accounts.sort((left, right) {
+      if (left.isMain != right.isMain) return left.isMain ? -1 : 1;
+      return left.id.compareTo(right.id);
+    });
+    final result = <LocalGameAccount>[];
+    for (final account in accounts) {
+      result.add(await _loadAccount(account));
+    }
+    return List.unmodifiable(result);
+  }
+
+  Future<LocalGameAccount> _loadAccount(GameAccount account) async {
     final characters = await (_database.select(
       _database.accountCharacters,
     )..where((table) => table.accountId.equals(account.id))).get();
-
     return LocalGameAccount(
       id: account.id,
       label: account.label,

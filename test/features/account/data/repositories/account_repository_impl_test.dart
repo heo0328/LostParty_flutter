@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
@@ -99,6 +100,46 @@ void main() {
     expect(storedCharacters, hasLength(2));
     expect(representative.characterName, lookupCharacterName);
   });
+
+  test(
+    'loads the main account and subaccounts with their own characters',
+    () async {
+      final now = DateTime.utc(2026, 8, 20);
+      final mainId = await database.createAccount(
+        label: '메인 계정',
+        isMain: true,
+        lookupCharacterName: '메인바드',
+        now: now,
+      );
+      final subId = await database.createAccount(
+        label: '부계정',
+        isMain: false,
+        lookupCharacterName: '부계정소서',
+        now: now,
+      );
+      for (final entry in [(mainId, '메인바드'), (subId, '부계정소서')]) {
+        await database
+            .into(database.accountCharacters)
+            .insert(
+              AccountCharactersCompanion.insert(
+                accountId: entry.$1,
+                serverName: '루페온',
+                characterName: entry.$2,
+                characterLevel: 70,
+                characterClassName: '바드',
+                itemLevel: const Value(1750),
+                lastSummaryFetchedAt: now,
+              ),
+            );
+      }
+
+      final accounts = await repository.loadAccounts();
+
+      expect(accounts.map((account) => account.label), ['메인 계정', '부계정']);
+      expect(accounts.first.characters.single.characterName, '메인바드');
+      expect(accounts.last.characters.single.characterName, '부계정소서');
+    },
+  );
 
   test('creates an analyzed draft without changing local data', () async {
     dioAdapter.onGet(

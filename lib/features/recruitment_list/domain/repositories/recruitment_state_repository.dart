@@ -14,4 +14,18 @@ abstract class RecruitmentStateRepository {
     required RecruitmentState nextState,
     required DateTime updatedAt,
   });
+
+  Future<int> supersedePendingApplications({
+    required String applicantUserId,
+    required String characterId,
+    required String raidId,
+    required String excludingRecruitmentId,
+    required DateTime updatedAt,
+  });
+
+  Future<int> countPendingApplications({
+    required String applicantUserId,
+    required String characterId,
+    required String raidId,
+  });
 }

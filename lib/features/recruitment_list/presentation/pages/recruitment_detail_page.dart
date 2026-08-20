@@ -114,6 +114,19 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
                   ),
                   title: Text(member.characterId),
                   subtitle: Text('${member.className} · ${_role(member.role)}'),
+                  trailing:
+                      member.userId == widget.commandService.currentUserId
+                      ? TextButton(
+                          key: const ValueKey('openCharacterChangeButton'),
+                          onPressed: _submitting
+                              ? null
+                              : () => _showCandidates(
+                                  aggregate,
+                                  characterChange: true,
+                                ),
+                          child: const Text('캐릭터 변경'),
+                        )
+                      : null,
                 ),
               if (!state.members.any((member) => member.partyIndex == party))
                 const Text('아직 파티원이 없습니다.'),
@@ -155,6 +168,12 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
       return const Text(
         '가입 신청이 거절되었습니다.',
         key: ValueKey('rejectedApplicationStatus'),
+      );
+    }
+    if (application?.status == RecruitmentApplicationStatus.superseded) {
+      return const Text(
+        '같은 캐릭터의 다른 파티 참가가 확정되어 신청이 종료되었습니다.',
+        key: ValueKey('supersededApplicationStatus'),
       );
     }
     if (!aggregate.state.isRecruiting) return const Text('모집이 마감되었습니다.');
@@ -286,8 +305,13 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
     };
   }
 
-  Future<void> _showCandidates(RecruitmentAggregate aggregate) async {
-    final candidates = await widget.candidateService.load(aggregate);
+  Future<void> _showCandidates(
+    RecruitmentAggregate aggregate, {
+    bool characterChange = false,
+  }) async {
+    final candidates = characterChange
+        ? await widget.candidateService.loadForCharacterChange(aggregate)
+        : await widget.candidateService.load(aggregate);
     if (!mounted) return;
     await showModalBottomSheet<void>(
       context: context,
@@ -297,9 +321,11 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
           height: MediaQuery.sizeOf(sheetContext).height * 0.75,
           child: Column(
             children: [
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Text('신청 캐릭터와 역할 선택'),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  characterChange ? '변경할 캐릭터 선택' : '신청 캐릭터와 역할 선택',
+                ),
               ),
               if (aggregate.metadata.experienceLevel != null)
                 const Padding(
@@ -319,15 +345,69 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
                             ),
                             enabled: candidate.canApply,
                             title: Text(candidate.characterId),
-                            subtitle: Text(
-                              '${candidate.className} · ${_role(candidate.role)}\n'
-                              '${candidate.canApply ? '신청 가능' : candidate.rejectionReasons.join(' · ')}',
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${candidate.accountLabel} · ${candidate.className} · ${_role(candidate.role)}',
+                                ),
+                                if (candidate.participationStatuses.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 6),
+                                    child: Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: [
+                                        for (final status
+                                            in candidate.participationStatuses)
+                                          _participationStatusChip(status),
+                                      ],
+                                    ),
+                                  ),
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    candidate.canApply
+                                        ? '신청 가능'
+                                        : candidate.rejectionReasons.join(
+                                            ' · ',
+                                          ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            isThreeLine: true,
                             onTap: candidate.canApply
-                                ? () {
+                                ? () async {
                                     Navigator.pop(sheetContext);
-                                    _apply(candidate);
+                                    final hasPending = candidate
+                                        .participationStatuses
+                                        .any(
+                                          (status) =>
+                                              status.type ==
+                                                  CandidateParticipationStatusType
+                                                      .pendingSameRaid,
+                                        );
+                                    if (hasPending &&
+                                        (characterChange ||
+                                            aggregate
+                                                    .state
+                                                    .approvalPolicy
+                                                    .mode ==
+                                                ApprovalMode.directJoin)) {
+                                      final confirmed = await _confirmPendingCancellation(
+                                        candidate,
+                                        characterChange: characterChange,
+                                      );
+                                      if (!confirmed) return;
+                                    }
+                                    if (characterChange) {
+                                      await _changeCharacter(
+                                        candidate,
+                                        cancelPendingApplications: hasPending,
+                                      );
+                                    } else {
+                                      await _apply(candidate, aggregate);
+                                    }
                                   }
                                 : null,
                           );
@@ -341,7 +421,96 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
     );
   }
 
-  Future<void> _apply(RecruitmentApplicationCandidate candidate) async {
+  Widget _participationStatusChip(CandidateParticipationStatus status) {
+    final color = status.isBlocking
+        ? Theme.of(context).colorScheme.error
+        : Theme.of(context).colorScheme.tertiary;
+    final label = switch (status.type) {
+      CandidateParticipationStatusType.pendingSameRaid =>
+        '동일 레이드 신청 중 ${status.count}개',
+      CandidateParticipationStatusType.activeSameRaid => '동일 레이드 참가 중',
+      CandidateParticipationStatusType.overlappingSchedule => '동시간대 다른 파티 참가 중',
+      CandidateParticipationStatusType.uncertainSchedule => '참가 일정 확인 필요',
+      CandidateParticipationStatusType.weeklyRaidClear => '이번 주 동일 레이드 완료',
+    };
+    return Chip(
+      avatar: Icon(
+        status.isBlocking ? Icons.block : Icons.info_outline,
+        size: 16,
+        color: color,
+      ),
+      label: Text(label),
+      side: BorderSide(color: color),
+      labelStyle: TextStyle(color: color),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+
+  Future<bool> _confirmPendingCancellation(
+    RecruitmentApplicationCandidate candidate,
+    {bool characterChange = false,}
+  ) async {
+    final count = candidate.participationStatuses
+        .where(
+          (status) =>
+              status.type == CandidateParticipationStatusType.pendingSameRaid,
+        )
+        .fold(0, (sum, status) => sum + status.count);
+    return await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('기존 신청을 취소할까요?'),
+            content: Text(
+              '${candidate.characterId} 캐릭터의 동일 레이드 신청 $count건이 있습니다. '
+              '${characterChange ? '캐릭터를 변경하면' : '바로 참가하면'} 기존 신청이 모두 종료됩니다.',
+            ),
+            actions: [
+              TextButton(
+                key: const ValueKey('keepPendingApplicationsButton'),
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('돌아가기'),
+              ),
+              FilledButton(
+                key: const ValueKey('cancelPendingAndJoinButton'),
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: Text(
+                  characterChange ? '신청 취소하고 변경' : '신청 취소하고 참가',
+                ),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  Future<void> _changeCharacter(
+    RecruitmentApplicationCandidate candidate,
+    {required bool cancelPendingApplications,}
+  ) async {
+    setState(() => _submitting = true);
+    final result = await widget.commandService.changeCharacter(
+      recruitmentId: widget.recruitmentId,
+      characterId: candidate.characterId,
+      className: candidate.className,
+      cancelPendingApplications: cancelPendingApplications,
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    _message(
+      result.isSuccess
+          ? '파티 캐릭터를 변경했습니다.'
+          : result.domainFailure ==
+                RecruitmentCommandFailure.participationConflict
+          ? '다른 확정 참가 또는 겹치는 일정이 있어 변경할 수 없습니다.'
+          : '캐릭터 변경 조건을 다시 확인해주세요.',
+    );
+    _reload();
+  }
+
+  Future<void> _apply(
+    RecruitmentApplicationCandidate candidate,
+    RecruitmentAggregate aggregate,
+  ) async {
     setState(() => _submitting = true);
     final result = await widget.commandService.apply(
       recruitmentId: widget.recruitmentId,
@@ -351,7 +520,16 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
     );
     if (!mounted) return;
     setState(() => _submitting = false);
-    _message(result.isSuccess ? '가입을 신청했습니다.' : '신청 조건을 다시 확인해주세요.');
+    _message(
+      result.isSuccess
+          ? aggregate.state.approvalPolicy.mode == ApprovalMode.directJoin
+                ? '파티에 참가했습니다.'
+                : '가입을 신청했습니다.'
+          : result.domainFailure ==
+                RecruitmentCommandFailure.participationConflict
+          ? '이미 확정된 참가 또는 겹치는 일정이 있어 가입할 수 없습니다.'
+          : '신청 조건을 다시 확인해주세요.',
+    );
     _reload();
   }
 
@@ -404,6 +582,8 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
       RecruitmentCommandFailure.applicationNotPending => '이미 처리된 가입 신청입니다.',
       RecruitmentCommandFailure.compositionRejected =>
         '현재 파티 구성 조건으로는 승인할 수 없습니다.',
+      RecruitmentCommandFailure.participationConflict =>
+        '이미 다른 파티 참가가 확정되었거나 일정이 겹치는 캐릭터입니다.',
       _ => '가입 신청을 처리하지 못했습니다. 다시 확인해주세요.',
     };
   }

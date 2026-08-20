@@ -16,6 +16,7 @@ import '../../features/recruitment_list/presentation/pages/recruitment_detail_pa
 import '../../features/recruitment_list/data/fakes/fake_recruitment_runtime.dart';
 import '../../features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
 import '../../features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
+import '../../features/recruitment_list/data/fakes/in_memory_active_raid_assignment_repository.dart';
 import '../../features/recruitment_list/data/fakes/local_recruitment_demo_seed.dart';
 import '../../features/recruitment_list/domain/services/recruitment_command_service.dart';
 import '../../features/recruitment_list/domain/services/recruitment_application_candidate_service.dart';
@@ -50,18 +51,23 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
   final recruitmentRepository = InMemoryRecruitmentStateRepository();
   recruitmentRepository.seed(createLocalRecruitmentDemoSeed(DateTime.now()));
   final weeklyRaidClearRepository = InMemoryWeeklyRaidClearRepository();
+  final activeRaidAssignmentRepository =
+      InMemoryActiveRaidAssignmentRepository();
   final recruitmentCommandService = RecruitmentCommandService(
     session: FakeUserSession('local-user'),
     clock: FakeRecruitmentClock(DateTime.now()),
     idGenerator: SequentialRecruitmentIdGenerator(),
     repository: recruitmentRepository,
     weeklyClearRepository: weeklyRaidClearRepository,
+    assignmentRepository: activeRaidAssignmentRepository,
   );
   final recruitmentCandidateService = RecruitmentApplicationCandidateService(
     accountRepository: accountRepository,
     weeklyClearRepository: weeklyRaidClearRepository,
     session: recruitmentCommandService.session,
     clock: recruitmentCommandService.clock,
+    assignmentRepository: activeRaidAssignmentRepository,
+    recruitmentRepository: recruitmentRepository,
   );
 
   return GoRouter(

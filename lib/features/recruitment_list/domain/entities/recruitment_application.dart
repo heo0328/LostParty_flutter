@@ -1,6 +1,12 @@
 import 'party_recruitment.dart';
 
-enum RecruitmentApplicationStatus { pending, approved, rejected, withdrawn }
+enum RecruitmentApplicationStatus {
+  pending,
+  approved,
+  rejected,
+  withdrawn,
+  superseded,
+}
 
 enum ApplicationVoteDecision { approve, reject }
 
@@ -64,10 +70,14 @@ class RecruitmentPartyMember {
   final PartyRole role;
   final int partyIndex;
 
-  RecruitmentPartyMember copyWith({int? partyIndex}) => RecruitmentPartyMember(
+  RecruitmentPartyMember copyWith({
+    String? characterId,
+    String? className,
+    int? partyIndex,
+  }) => RecruitmentPartyMember(
     userId: userId,
-    characterId: characterId,
-    className: className,
+    characterId: characterId ?? this.characterId,
+    className: className ?? this.className,
     role: role,
     partyIndex: partyIndex ?? this.partyIndex,
   );

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/recruitment_aggregate.dart';
+import '../../domain/entities/recruitment_application.dart';
 import '../../domain/repositories/recruitment_state_repository.dart';
 import '../../domain/state/recruitment_state_machine.dart';
 
@@ -53,4 +54,55 @@ class InMemoryRecruitmentStateRepository extends ChangeNotifier
     notifyListeners();
     return updated;
   }
+
+  @override
+  Future<int> supersedePendingApplications({
+    required String applicantUserId,
+    required String characterId,
+    required String raidId,
+    required String excludingRecruitmentId,
+    required DateTime updatedAt,
+  }) async {
+    var changedCount = 0;
+    for (final entry in _store.entries.toList(growable: false)) {
+      final aggregate = entry.value;
+      if (aggregate.id == excludingRecruitmentId ||
+          aggregate.metadata.raidId != raidId) {
+        continue;
+      }
+      final application = aggregate.state.applications[applicantUserId];
+      if (application == null ||
+          application.characterId != characterId ||
+          application.status != RecruitmentApplicationStatus.pending) {
+        continue;
+      }
+      _store[entry.key] = aggregate.copyWith(
+        state: aggregate.state.copyWith(
+          applications: {
+            ...aggregate.state.applications,
+            applicantUserId: application.copyWith(
+              status: RecruitmentApplicationStatus.superseded,
+            ),
+          },
+        ),
+        revision: aggregate.revision + 1,
+        updatedAt: updatedAt,
+      );
+      changedCount++;
+    }
+    if (changedCount > 0) notifyListeners();
+    return changedCount;
+  }
+
+  @override
+  Future<int> countPendingApplications({
+    required String applicantUserId,
+    required String characterId,
+    required String raidId,
+  }) async => _store.values.where((aggregate) {
+    if (aggregate.metadata.raidId != raidId) return false;
+    final application = aggregate.state.applications[applicantUserId];
+    return application?.characterId == characterId &&
+        application?.status == RecruitmentApplicationStatus.pending;
+  }).length;
 }

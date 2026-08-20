@@ -29,6 +29,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final repository = InMemoryRecruitmentStateRepository();
+    await repository.create(_representativePendingRecruitment);
     final weeklyRepository = InMemoryWeeklyRaidClearRepository();
     final session = FakeUserSession('local-user');
     final clock = FakeRecruitmentClock(DateTime.utc(2026, 8, 20));
@@ -104,6 +105,11 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('saveRecruitmentButton')));
     await tester.pumpAndSettle();
 
+    expect(find.text('기존 신청을 취소할까요?'), findsOneWidget);
+    expect(find.textContaining('동일 레이드 신청 1건'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('cancelPendingAndCreateButton')));
+    await tester.pumpAndSettle();
+
     expect(find.text('세르카 클경 모집'), findsOneWidget);
     expect(find.text('세르카 - 노말 (노르카)'), findsOneWidget);
     expect(find.text('최소 전투력 250,000'), findsOneWidget);
@@ -153,6 +159,157 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('withdrawApplicationButton')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('openApplicationButton')), findsOneWidget);
+  });
+
+  testWidgets('즉시 가입 전 동일 레이드 pending 종료를 명시적으로 확인한다', (
+    tester,
+  ) async {
+    final repository = InMemoryRecruitmentStateRepository();
+    final existingPending = _otherUserRecruitment.copyWith(
+      state: _otherUserRecruitment.state.copyWith(
+        applications: const {
+          'local-user': RecruitmentApplication(
+            applicantUserId: 'local-user',
+            characterId: '대표바드',
+            className: '바드',
+            requestedRole: PartyRole.support,
+          ),
+        },
+      ),
+    );
+    await repository.create(existingPending);
+    await repository.create(_directJoinRecruitment);
+    final weeklyRepository = InMemoryWeeklyRaidClearRepository();
+    final session = FakeUserSession('local-user');
+    final clock = FakeRecruitmentClock(DateTime.utc(2026, 8, 20));
+    final accountRepository = _AccountRepository();
+    final service = RecruitmentCommandService(
+      session: session,
+      clock: clock,
+      idGenerator: SequentialRecruitmentIdGenerator(),
+      repository: repository,
+      weeklyClearRepository: weeklyRepository,
+    );
+    final candidateService = RecruitmentApplicationCandidateService(
+      accountRepository: accountRepository,
+      weeklyClearRepository: weeklyRepository,
+      session: session,
+      clock: clock,
+      recruitmentRepository: repository,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RecruitmentDetailPage(
+          recruitmentId: _directJoinRecruitment.id,
+          repository: repository,
+          commandService: service,
+          candidateService: candidateService,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('openApplicationButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('candidate-대표바드-support')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('기존 신청을 취소할까요?'), findsOneWidget);
+    expect(find.textContaining('동일 레이드 신청 1건'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('keepPendingApplicationsButton')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      (await repository.getById(existingPending.id))!
+          .state
+          .applications['local-user']!
+          .status,
+      RecruitmentApplicationStatus.pending,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('openApplicationButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('candidate-대표바드-support')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('cancelPendingAndJoinButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('파티에 참가했습니다.'), findsOneWidget);
+    expect(
+      (await repository.getById(existingPending.id))!
+          .state
+          .applications['local-user']!
+          .status,
+      RecruitmentApplicationStatus.superseded,
+    );
+  });
+
+  testWidgets('현재 파티원이 같은 역할의 소유 캐릭터로 변경한다', (tester) async {
+    final repository = InMemoryRecruitmentStateRepository();
+    await repository.create(_memberRecruitment);
+    await repository.create(_representativePendingRecruitment);
+    final weeklyRepository = InMemoryWeeklyRaidClearRepository();
+    final session = FakeUserSession('local-user');
+    final clock = FakeRecruitmentClock(DateTime.utc(2026, 8, 20));
+    final accountRepository = _AccountRepository();
+    final service = RecruitmentCommandService(
+      session: session,
+      clock: clock,
+      idGenerator: SequentialRecruitmentIdGenerator(),
+      repository: repository,
+      weeklyClearRepository: weeklyRepository,
+    );
+    final candidateService = RecruitmentApplicationCandidateService(
+      accountRepository: accountRepository,
+      weeklyClearRepository: weeklyRepository,
+      session: session,
+      clock: clock,
+      recruitmentRepository: repository,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RecruitmentDetailPage(
+          recruitmentId: _memberRecruitment.id,
+          repository: repository,
+          commandService: service,
+          candidateService: candidateService,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('openCharacterChangeButton')),
+      200,
+    );
+    await tester.tap(find.byKey(const ValueKey('openCharacterChangeButton')));
+    await tester.pumpAndSettle();
+    expect(find.text('변경할 캐릭터 선택'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('candidate-대표바드-support')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('기존 신청을 취소할까요?'), findsOneWidget);
+    expect(find.text('신청 취소하고 변경'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('cancelPendingAndJoinButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('파티 캐릭터를 변경했습니다.'), findsOneWidget);
+    expect(
+      (await repository.getById(_memberRecruitment.id))!
+          .state
+          .members
+          .singleWhere((member) => member.userId == 'local-user')
+          .characterId,
+      '대표바드',
+    );
+    expect(
+      (await repository.getById(_representativePendingRecruitment.id))!
+          .state
+          .applications['local-user']!
+          .status,
+      RecruitmentApplicationStatus.superseded,
+    );
   });
 
   testWidgets('파티장이 pending 신청을 승인하면 파티 구성과 신청자 상태가 갱신된다', (tester) async {
@@ -288,6 +445,11 @@ class _CatalogRepository implements RaidCatalogRepository {
 
 class _AccountRepository implements AccountRepository {
   @override
+  Future<List<LocalGameAccount>> loadAccounts() async => [
+    (await loadMainAccount())!,
+  ];
+
+  @override
   Future<LocalGameAccount?> loadMainAccount() async => const LocalGameAccount(
     id: 1,
     label: '계정',
@@ -390,4 +552,70 @@ final _pendingRecruitment = _otherUserRecruitment.copyWith(
       ),
     },
   ),
+);
+
+final _representativePendingRecruitment = _otherUserRecruitment.copyWith(
+  state: _otherUserRecruitment.state.copyWith(
+    applications: const {
+      'local-user': RecruitmentApplication(
+        applicantUserId: 'local-user',
+        characterId: '대표바드',
+        className: '바드',
+        requestedRole: PartyRole.support,
+      ),
+    },
+  ),
+);
+
+final _directJoinRecruitment = RecruitmentAggregate(
+  id: 'direct-join-recruitment',
+  title: '세르카 바로 참가',
+  metadata: _otherUserRecruitment.metadata,
+  state: RecruitmentState(
+    leaderUserId: 'direct-leader',
+    approvalPolicy: const ApprovalPolicy.directJoin(),
+    compositionPolicy: _otherUserRecruitment.state.compositionPolicy,
+    members: const [
+      RecruitmentPartyMember(
+        userId: 'direct-leader',
+        characterId: '즉시리더',
+        className: '블레이드',
+        role: PartyRole.dealer,
+        partyIndex: 0,
+      ),
+    ],
+  ),
+  revision: 0,
+  createdAt: DateTime.utc(2026, 8, 20),
+  updatedAt: DateTime.utc(2026, 8, 20),
+);
+
+final _memberRecruitment = RecruitmentAggregate(
+  id: 'member-recruitment',
+  title: '캐릭터 변경 테스트',
+  metadata: _otherUserRecruitment.metadata,
+  state: RecruitmentState(
+    leaderUserId: 'other-user',
+    approvalPolicy: const ApprovalPolicy.leaderOnly(),
+    compositionPolicy: _otherUserRecruitment.state.compositionPolicy,
+    members: const [
+      RecruitmentPartyMember(
+        userId: 'other-user',
+        characterId: '다른리더',
+        className: '블레이드',
+        role: PartyRole.dealer,
+        partyIndex: 0,
+      ),
+      RecruitmentPartyMember(
+        userId: 'local-user',
+        characterId: '기존바드',
+        className: '바드',
+        role: PartyRole.support,
+        partyIndex: 0,
+      ),
+    ],
+  ),
+  revision: 0,
+  createdAt: DateTime.utc(2026, 8, 20),
+  updatedAt: DateTime.utc(2026, 8, 20),
 );

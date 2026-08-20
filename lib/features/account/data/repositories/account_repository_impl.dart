@@ -75,6 +75,11 @@ class AccountRepositoryImpl implements AccountRepository {
   }
 
   @override
+  Future<List<LocalGameAccount>> loadAccounts() {
+    return _localDataSource.loadAccounts();
+  }
+
+  @override
   Future<void> saveCharacterBuildSnapshot({
     required int characterId,
     required CharacterBuildRole role,
