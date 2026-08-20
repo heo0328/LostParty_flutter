@@ -53,8 +53,9 @@ void main() {
 
   test('detects the Bard support branch', () {
     final modified = _deepCopy(fixture);
-    final effects = (modified['ArkPassive'] as Map<String, dynamic>)['Effects']
-        as List<dynamic>;
+    final effects =
+        (modified['ArkPassive'] as Map<String, dynamic>)['Effects']
+            as List<dynamic>;
     for (final effect in effects.cast<Map<String, dynamic>>()) {
       final description = effect['Description'].toString();
       effect['Description'] = description
@@ -75,9 +76,9 @@ void main() {
 
   test('returns unsupported class and branch not found states', () {
     final unsupported = _deepCopy(fixture);
-    (unsupported['ArmoryProfile'] as Map<String, dynamic>)[
-      'CharacterClassName'
-    ] = '슬레이어';
+    (unsupported['ArmoryProfile']
+            as Map<String, dynamic>)['CharacterClassName'] =
+        '슬레이어';
     final unsupportedDetection = const CharacterBuildAnalysisMapper()
         .fromJson(unsupported, catalog: catalog)
         .catalogDetection!;
@@ -156,6 +157,75 @@ void main() {
       (effect) => effect.skillName == '수호의 연주',
     );
     expect(levelOneSkillGem.category, GemSkillCategory.normal);
+  });
+
+  test('classifies a catalog special skill without relying on its icon', () {
+    final modified = _withGemTarget(
+      fixture,
+      name: '용맹의 세레나데',
+      icon: 'https://example.com/identity.png',
+    );
+
+    final result = const CharacterBuildAnalysisMapper().fromJson(
+      modified,
+      catalog: catalog,
+    );
+
+    expect(
+      result.gemEffects.singleWhere((effect) => effect.gemSlot == 4).category,
+      GemSkillCategory.passiveOrIdentity,
+    );
+    expect(
+      result.notices.where((notice) => notice.code == 'unknown_gem_skill_4'),
+      isEmpty,
+    );
+  });
+
+  test(
+    'classifies the Bard composite Serenade gem target from catalog data',
+    () {
+      final modified = _withGemTarget(
+        fixture,
+        name: '세레나데 스킬',
+        icon: 'https://example.com/serenade.png',
+      );
+
+      final result = const CharacterBuildAnalysisMapper().fromJson(
+        modified,
+        catalog: catalog,
+      );
+
+      expect(
+        result.gemEffects.singleWhere((effect) => effect.gemSlot == 4).category,
+        GemSkillCategory.passiveOrIdentity,
+      );
+      expect(
+        result.notices.where((notice) => notice.code == 'unknown_gem_skill_4'),
+        isEmpty,
+      );
+    },
+  );
+
+  test('keeps an unknown gem warning without catalog or icon evidence', () {
+    final modified = _withGemTarget(
+      fixture,
+      name: '알 수 없는 스킬',
+      icon: 'https://example.com/unknown.png',
+    );
+
+    final result = const CharacterBuildAnalysisMapper().fromJson(
+      modified,
+      catalog: catalog,
+    );
+
+    expect(
+      result.gemEffects.singleWhere((effect) => effect.gemSlot == 4).category,
+      GemSkillCategory.unknown,
+    );
+    expect(
+      result.notices.where((notice) => notice.code == 'unknown_gem_skill_4'),
+      hasLength(1),
+    );
   });
 
   test('warns when fewer than eight runes are equipped', () {
@@ -268,4 +338,21 @@ void main() {
 
 Map<String, dynamic> _deepCopy(Map<String, dynamic> value) {
   return Map<String, dynamic>.from(jsonDecode(jsonEncode(value)) as Map);
+}
+
+Map<String, dynamic> _withGemTarget(
+  Map<String, dynamic> value, {
+  required String name,
+  required String icon,
+}) {
+  final modified = _deepCopy(value);
+  final armoryGem = modified['ArmoryGem'] as Map<String, dynamic>;
+  final effects = armoryGem['Effects'] as Map<String, dynamic>;
+  final skills = effects['Skills'] as List<dynamic>;
+  final target = skills.cast<Map<String, dynamic>>().singleWhere(
+    (skill) => skill['GemSlot'] == 4,
+  );
+  target['Name'] = name;
+  target['Icon'] = icon;
+  return modified;
 }

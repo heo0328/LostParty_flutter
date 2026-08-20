@@ -18,6 +18,9 @@ class CharacterBuildAnalysisMapper {
         .toSet();
     final runeCount = skills.where((skill) => skill['Rune'] is Map).length;
     final notices = <BuildNotice>[];
+    final classDefinition = catalog == null
+        ? null
+        : _findClassForBuild(json, catalog);
 
     if (runeCount != CharacterBuildAnalysis.expectedRuneCount) {
       notices.add(
@@ -32,6 +35,7 @@ class CharacterBuildAnalysisMapper {
     final gemEffects = _parseGemEffects(
       json['ArmoryGem'],
       skillNames: skillNames,
+      catalogSkillNames: _catalogGemSkillNames(classDefinition),
       notices: notices,
     );
     final activePassiveNames = _parseActivePassiveNames(json['ArkPassive']);
@@ -62,6 +66,29 @@ class CharacterBuildAnalysisMapper {
     );
   }
 
+  GameClassDefinition? _findClassForBuild(
+    Map<String, dynamic> json,
+    GameCatalog catalog,
+  ) {
+    final profile = _map(json['ArmoryProfile']);
+    final apiClassName = profile?['CharacterClassName'];
+    return apiClassName is String
+        ? _findClass(catalog.classes, apiClassName)
+        : null;
+  }
+
+  Set<String> _catalogGemSkillNames(GameClassDefinition? definition) {
+    if (definition == null) {
+      return const {};
+    }
+    return {
+      for (final skill in definition.specialSkills) skill.name,
+      for (final skill in definition.specialSkills) ...skill.aliases,
+      for (final target in definition.gemSkillTargets) target.name,
+      for (final target in definition.gemSkillTargets) ...target.aliases,
+    };
+  }
+
   CharacterBuildCatalogDetection _detectCatalogBuild(
     Map<String, dynamic> json, {
     required GameCatalog catalog,
@@ -86,9 +113,7 @@ class CharacterBuildAnalysisMapper {
     }
 
     final matchingBranches = classDefinition.enlightenmentBranches
-        .where(
-          (branch) => activePassiveNames.contains(branch.tier1NodeName),
-        )
+        .where((branch) => activePassiveNames.contains(branch.tier1NodeName))
         .toList(growable: false);
     if (matchingBranches.isEmpty) {
       return CharacterBuildCatalogDetection(
@@ -205,6 +230,7 @@ class CharacterBuildAnalysisMapper {
   List<GemSkillEffect> _parseGemEffects(
     Object? armoryGem, {
     required Set<String> skillNames,
+    required Set<String> catalogSkillNames,
     required List<BuildNotice> notices,
   }) {
     final gemMap = _map(armoryGem);
@@ -230,7 +256,8 @@ class CharacterBuildAnalysisMapper {
       final icon = skill['Icon'];
       final category = skillNames.contains(name)
           ? GemSkillCategory.normal
-          : icon is String && icon.contains('ark_passive')
+          : catalogSkillNames.contains(name) ||
+                icon is String && icon.contains('ark_passive')
           ? GemSkillCategory.passiveOrIdentity
           : GemSkillCategory.unknown;
       final descriptions = _stringList(skill['Description']);
