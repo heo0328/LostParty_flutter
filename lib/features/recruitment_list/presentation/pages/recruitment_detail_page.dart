@@ -239,6 +239,7 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
   };
   String _approval(ApprovalPolicy policy) => switch (policy.mode) {
     ApprovalMode.leaderOnly => '파티장 승인',
+    ApprovalMode.directJoin => '승인 없이 바로 가입',
     ApprovalMode.anyMember => '파티원 승인',
     ApprovalMode.quorum => '${policy.requiredApprovals}명 이상 동의',
   };

@@ -73,6 +73,15 @@ void main() {
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
     await tester.pumpAndSettle();
 
+    expect(find.text('파티원 승인'), findsNothing);
+    expect(find.text('정족수 승인'), findsNothing);
+    await tester.ensureVisible(find.text('파티장 승인'));
+    await tester.tap(find.text('파티장 승인'));
+    await tester.pumpAndSettle();
+    expect(find.text('승인 없이 바로 가입'), findsOneWidget);
+    await tester.tap(find.text('파티장 승인').last);
+    await tester.pumpAndSettle();
+
     await tester.ensureVisible(
       find.byKey(const ValueKey('saveRecruitmentButton')),
     );

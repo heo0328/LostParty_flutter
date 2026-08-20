@@ -1,4 +1,4 @@
-enum ApprovalMode { leaderOnly, anyMember, quorum }
+enum ApprovalMode { leaderOnly, directJoin, anyMember, quorum }
 
 enum ApprovalRejectionMode { anyAuthorizedMember }
 
@@ -15,6 +15,14 @@ class ApprovalPolicy {
         mode: ApprovalMode.leaderOnly,
         requiredApprovals: 1,
         leaderVoteRequired: true,
+        rejectionMode: ApprovalRejectionMode.anyAuthorizedMember,
+      );
+
+  const ApprovalPolicy.directJoin()
+    : this._(
+        mode: ApprovalMode.directJoin,
+        requiredApprovals: 0,
+        leaderVoteRequired: false,
         rejectionMode: ApprovalRejectionMode.anyAuthorizedMember,
       );
 

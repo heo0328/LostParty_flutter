@@ -137,6 +137,13 @@ class RecruitmentStateMachine {
       );
     }
 
+    if (state.approvalPolicy.mode == ApprovalMode.directJoin) {
+      return _approveApplication(
+        state,
+        application.copyWith(status: RecruitmentApplicationStatus.approved),
+      );
+    }
+
     return RecruitmentCommandResult.success(
       state.copyWith(
         applications: {
@@ -221,7 +228,14 @@ class RecruitmentStateMachine {
       );
     }
 
-    final composition = _arrangeWithApplicant(state, votedApplication);
+    return _approveApplication(state, votedApplication);
+  }
+
+  RecruitmentCommandResult _approveApplication(
+    RecruitmentState state,
+    RecruitmentApplication application,
+  ) {
+    final composition = _arrangeWithApplicant(state, application);
     if (!composition.canJoin) {
       return RecruitmentCommandResult.failure(
         state,
@@ -234,12 +248,12 @@ class RecruitmentStateMachine {
         [
               ...state.members,
               RecruitmentPartyMember(
-                userId: votedApplication.applicantUserId,
-                characterId: votedApplication.characterId,
-                className: votedApplication.className,
-                role: votedApplication.requestedRole,
+                userId: application.applicantUserId,
+                characterId: application.characterId,
+                className: application.className,
+                role: application.requestedRole,
                 partyIndex:
-                    composition.assignments[votedApplication.applicantUserId]!,
+                    composition.assignments[application.applicantUserId]!,
               ),
             ]
             .map(
@@ -248,7 +262,7 @@ class RecruitmentStateMachine {
               ),
             )
             .toList(growable: false);
-    final approvedApplication = votedApplication.copyWith(
+    final approvedApplication = application.copyWith(
       status: RecruitmentApplicationStatus.approved,
     );
     final nextState = _replaceApplication(
@@ -279,8 +293,11 @@ class RecruitmentStateMachine {
       (member) => member.userId == voterUserId,
     );
     if (!isMember) return false;
-    return state.approvalPolicy.mode != ApprovalMode.leaderOnly ||
-        voterUserId == state.leaderUserId;
+    return switch (state.approvalPolicy.mode) {
+      ApprovalMode.leaderOnly => voterUserId == state.leaderUserId,
+      ApprovalMode.directJoin => false,
+      ApprovalMode.anyMember || ApprovalMode.quorum => true,
+    };
   }
 
   bool _hasRequiredApprovals(

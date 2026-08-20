@@ -257,6 +257,7 @@ pending
 ```text
 ApprovalMode
   leaderOnly
+  directJoin
   anyMember
   quorum
 
@@ -268,9 +269,12 @@ ApprovalPolicy
 ```
 
 - `leaderOnly`: 파티장만 승인/거절
+- `directJoin`: 신청 조건을 만족하면 별도 승인 없이 같은 명령에서 즉시 가입
 - `anyMember`: 현재 파티원 한 명의 승인으로 가입
 - `quorum`: 서로 다른 현재 파티원 N명의 승인으로 가입
 - 비율 기반 동의는 파티원 수 변경에 따라 의미가 달라지므로 초기 범위에서 제외
+
+초기 제품의 신규 모집 생성 화면은 `leaderOnly`와 `directJoin`만 제공한다. `anyMember`와 `quorum`은 기존 Domain/저장 데이터 호환을 위해 유지하지만 신규 선택지는 노출하지 않는다.
 
 승인 Function은 인증, 승인 권한, 신청 상태, 중복 투표, 전체 정원, 역할별 자리, 가입 조건 및 승인 수를 한 트랜잭션에서 검증한다.
 

@@ -30,7 +30,6 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
   final _title = TextEditingController();
   final _combatPower = TextEditingController();
   final _hours = TextEditingController();
-  final _quorum = TextEditingController(text: '2');
   RaidCatalog? _catalog;
   LocalAccountCharacter? _leader;
   RaidDefinition? _raid;
@@ -52,7 +51,6 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     _title.dispose();
     _combatPower.dispose();
     _hours.dispose();
-    _quorum.dispose();
     super.dispose();
   }
 
@@ -253,30 +251,12 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
                       child: Text('파티장 승인'),
                     ),
                     DropdownMenuItem(
-                      value: ApprovalMode.anyMember,
-                      child: Text('파티원 승인'),
-                    ),
-                    DropdownMenuItem(
-                      value: ApprovalMode.quorum,
-                      child: Text('정족수 승인'),
+                      value: ApprovalMode.directJoin,
+                      child: Text('승인 없이 바로 가입'),
                     ),
                   ],
                   onChanged: (value) => setState(() => _approval = value!),
                 ),
-                if (_approval == ApprovalMode.quorum) ...[
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _quorum,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: '필요 동의 인원',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) => (int.tryParse(value ?? '') ?? 0) >= 2
-                        ? null
-                        : '2명 이상을 입력해주세요.',
-                  ),
-                ],
                 const SizedBox(height: 24),
                 FilledButton(
                   key: const ValueKey('saveRecruitmentButton'),
@@ -299,10 +279,9 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     final difficulty = _difficulty!;
     final approval = switch (_approval) {
       ApprovalMode.leaderOnly => const ApprovalPolicy.leaderOnly(),
-      ApprovalMode.anyMember => const ApprovalPolicy.anyMember(),
-      ApprovalMode.quorum => ApprovalPolicy.quorum(
-        requiredApprovals: int.parse(_quorum.text),
-      ),
+      ApprovalMode.directJoin => const ApprovalPolicy.directJoin(),
+      ApprovalMode.anyMember ||
+      ApprovalMode.quorum => throw StateError('현재 생성 화면에서 지원하지 않는 승인 방식입니다.'),
     };
     final result = await widget.commandService.createRecruitment(
       title: _title.text.trim(),
