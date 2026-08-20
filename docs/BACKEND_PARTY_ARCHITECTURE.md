@@ -89,6 +89,8 @@ recruitments/{recruitmentId}
   revision
   createdAt
   updatedAt
+  completedAt
+  completedByUid
 
 recruitments/{recruitmentId}/members/{uid}
   uid
@@ -97,6 +99,7 @@ recruitments/{recruitmentId}/members/{uid}
   joinedAt
   joinedBy
   submittedBuildSnapshotId
+  characterChangedAt
 
 recruitments/{recruitmentId}/applications/{uid}
   applicantUid
@@ -116,6 +119,25 @@ recruitments/{recruitmentId}/applications/{uid}/votes/{voterUid}
 ```
 
 신청 문서와 투표 문서는 UID를 문서 ID로 사용해 같은 사용자의 중복 신청과 중복 투표를 구조적으로 방지한다.
+
+추가 모집 조건인 최소 전투력, 클리어 경험 및 최대 진행 시간은 nullable 값으로 저장한다. 값이 없으면 제한 없음이며, 카탈로그 입장 레벨과 파티 역할·직업 구성은 값과 관계없이 항상 검증한다.
+
+### 주간 레이드 완료 기록
+
+```text
+users/{uid}/characters/{characterId}/weeklyRaidClears/{resetWeekKey_raidId}
+  resetWeekKey
+  raidId
+  completedDifficultyId
+  recruitmentId
+  completedAt
+  completedByUid
+```
+
+- 주차 경계는 `Asia/Seoul` 기준 매주 수요일 오전 6시다.
+- 귀속은 캐릭터와 레이드 단위이며 같은 레이드의 모든 난이도가 한 주간 귀속을 공유한다.
+- 승인된 파티원 누구나 완료 명령을 호출할 수 있고 최초 성공한 한 건이 파티 완료와 당시 멤버 전원의 주간 완료 기록을 하나의 트랜잭션으로 생성한다.
+- 완료 이후의 중복 완료, 새 가입 승인 및 캐릭터 교체는 거절한다.
 
 ---
 
@@ -254,6 +276,13 @@ ApprovalPolicy
 
 기준을 만족하면 같은 트랜잭션에서 신청서 승인, 멤버 생성, 전체/역할별 인원 및 모집 상태를 갱신한다.
 
+### 승인 후 캐릭터 교체
+
+- 현재 파티원은 완료 전까지 자기 멤버 문서의 캐릭터만 교체 요청할 수 있다.
+- 승인된 역할과 파티 위치는 유지한다.
+- 서버는 캐릭터 소유권, 역할 세팅, 카탈로그 입장 레벨, 주간 귀속, 선택 모집 조건 및 동일 딜러 직업 제한을 최신 값으로 재검증한다.
+- 교체 후 전체 파티 구성이 유효할 때만 추가 승인 없이 한 트랜잭션으로 멤버 스냅샷을 교체한다.
+
 ---
 
 ## 10. 목록 노출과 신청 검증
@@ -283,6 +312,8 @@ startAt >= now
 - `applyToRecruitment`
 - `withdrawApplication`
 - `voteOnApplication`
+- `changePartyCharacter`
+- `completeRecruitment`
 - `leaveParty`
 - `createGroup`
 - `inviteToGroup`
@@ -319,16 +350,18 @@ startAt >= now
 7. 로컬 모집 생성 UI
 8. 로컬 신청 UI
 9. 로컬 승인·투표·파티 구성 UI
-10. 하단 `내 파티` 탭과 창설·가입·신청 중 파티 조회 UI
-11. 계정 그룹 Domain, Fake Repository 및 그룹 UI
-12. 공개/그룹 전용 모집과 `내 파티`를 포함한 로컬 통합 시나리오 테스트 및 실기기 검증
-13. Firebase 프로젝트와 Authentication
-14. Firestore 읽기 모델
-15. Callable Functions 명령과 Transaction
-16. Security Rules 및 Emulator 다중 사용자 테스트
-17. Firebase 연결 후 다중 계정 실기기 테스트
-18. App Check
-19. 후속 알림
+10. 승인 후 캐릭터 교체 Domain과 UI
+11. 파티 완료 선언과 주간 레이드 완료 Domain 및 UI
+12. 하단 `내 파티` 탭과 창설·가입·신청 중 파티 조회 UI
+13. 계정 그룹 Domain, Fake Repository 및 그룹 UI
+14. 공개/그룹 전용 모집과 `내 파티`를 포함한 로컬 통합 시나리오 테스트 및 실기기 검증
+15. Firebase 프로젝트와 Authentication
+16. Firestore 읽기 모델
+17. Callable Functions 명령과 Transaction
+18. Security Rules 및 Emulator 다중 사용자 테스트
+19. Firebase 연결 후 다중 계정 실기기 테스트
+20. App Check
+21. 후속 알림
 ```
 
 Firebase 연결은 로컬 목데이터만으로 모집 생성 → 목록 노출 → 신청 → 승인/투표 → 파티 구성과 그룹 초대/수락 → 그룹 전용 모집 노출까지 검증한 뒤 시작한다. 로컬 단계와 Firebase 단계는 같은 Domain 및 Repository 계약을 사용하고 구현체만 교체한다.
