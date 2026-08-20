@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../domain/entities/party_recruitment.dart';
 
 class RecruitmentCard extends StatelessWidget {
@@ -75,7 +76,7 @@ class RecruitmentCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '최소 전투력 ${recruitment.requirements.minCombatPower} '
+              '최소 전투력 ${DisplayNumberFormatter.integer(recruitment.requirements.minCombatPower)} '
               '/ 숙련도 ${_experienceLabel(recruitment.requirements.experienceLevel)} '
               '/ 최대 시간 ${_playTimeLabel(recruitment.schedule.maxPlayHours)}',
               style: theme.textTheme.bodySmall,

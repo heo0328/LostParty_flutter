@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/formatters/display_number_formatter.dart';
+
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/repositories/account_repository.dart';
 import '../viewmodels/character_management_view_model.dart';
@@ -171,6 +173,8 @@ class _CharacterManagementTile extends StatelessWidget {
   }
 
   String _formatItemLevel(double? value) {
-    return value == null ? '아이템 Lv. -' : '아이템 Lv. ${value.toStringAsFixed(2)}';
+    return value == null
+        ? '아이템 Lv. -'
+        : '아이템 Lv. ${DisplayNumberFormatter.fixed(value)}';
   }
 }

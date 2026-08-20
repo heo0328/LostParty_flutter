@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/formatters/display_number_formatter.dart';
+
 import '../../domain/entities/character_build_analysis.dart';
 import '../../domain/entities/character_build_draft.dart';
 import '../../domain/entities/character_build_snapshot.dart';
@@ -465,6 +467,6 @@ class _CharacterDetailPageState extends State<CharacterDetailPage> {
   String _two(int value) => value.toString().padLeft(2, '0');
 
   String _formatNumber(double? value) {
-    return value == null ? '-' : value.toStringAsFixed(2);
+    return value == null ? '-' : DisplayNumberFormatter.fixed(value);
   }
 }

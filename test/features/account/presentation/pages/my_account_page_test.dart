@@ -42,12 +42,12 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('아이템 Lv. 1766.66'), findsOneWidget);
+    expect(find.text('아이템 Lv. 1,766.66'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('lookupCharacterProfileCard')),
       findsOneWidget,
     );
-    expect(find.text('전투력 338229.42'), findsNWidgets(2));
+    expect(find.text('전투력 338,229.42'), findsNWidgets(2));
   });
 
   testWidgets('validates a missing character name after token registration', (
