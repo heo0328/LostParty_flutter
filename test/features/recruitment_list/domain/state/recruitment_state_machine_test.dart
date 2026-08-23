@@ -120,6 +120,75 @@ void main() {
     );
   });
 
+  test('종료된 신청은 다른 캐릭터로 다시 신청할 수 있다', () {
+    final state = _state().copyWith(
+      applications: {
+        'applicant': _application().copyWith(
+          status: RecruitmentApplicationStatus.superseded,
+        ),
+      },
+    );
+
+    final reapplied = machine.apply(
+      state: state,
+      application: _application(
+        characterId: 'other-character',
+        className: '소서리스',
+      ),
+    );
+
+    expect(reapplied.isSuccess, isTrue);
+    expect(
+      reapplied.state.applications['applicant']!.characterId,
+      'other-character',
+    );
+    expect(
+      reapplied.state.applications['applicant']!.status,
+      RecruitmentApplicationStatus.pending,
+    );
+  });
+
+  test('파티 자리가 허용하면 캐릭터 변경과 함께 역할도 변경한다', () {
+    final state = _state(
+      members: [
+        _member('leader', '블레이드', PartyRole.dealer),
+        _member('dealer', '소서리스', PartyRole.dealer),
+      ],
+    );
+
+    final changed = machine.changeCharacter(
+      state: state,
+      actorUserId: 'leader',
+      characterId: 'support-character',
+      className: '바드',
+      role: PartyRole.support,
+    );
+
+    expect(changed.isSuccess, isTrue);
+    expect(changed.state.members.first.role, PartyRole.support);
+    expect(changed.state.members.first.characterId, 'support-character');
+  });
+
+  test('같은 캐릭터도 저장된 반대 역할로 바로 변경할 수 있다', () {
+    final state = _state(
+      members: [
+        _member('leader', '바드', PartyRole.support),
+        _member('dealer', '소서리스', PartyRole.dealer),
+      ],
+    );
+
+    final changed = machine.changeCharacter(
+      state: state,
+      actorUserId: 'leader',
+      characterId: 'leader-character',
+      className: '바드',
+      role: PartyRole.dealer,
+    );
+
+    expect(changed.isSuccess, isTrue);
+    expect(changed.state.members.first.role, PartyRole.dealer);
+  });
+
   test('파티장 전용 정책은 파티장의 승인만 허용하고 즉시 가입시킨다', () {
     final pending = _appliedState(_state());
     final outsiderVote = machine.vote(

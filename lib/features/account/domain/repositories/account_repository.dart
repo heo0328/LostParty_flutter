@@ -62,4 +62,9 @@ abstract interface class AccountRepository {
     required int accountId,
     required List<int> characterIds,
   });
+
+  Future<void> setPreferredCharacterRole({
+    required int characterId,
+    required CharacterBuildRole role,
+  });
 }

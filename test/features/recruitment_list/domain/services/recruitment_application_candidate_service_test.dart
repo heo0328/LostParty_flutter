@@ -118,7 +118,7 @@ void main() {
     expect(candidate.rejectionReasons, contains('동일 레이드 참가 중'));
   });
 
-  test('캐릭터 변경 후보는 현재 파티 역할을 유지하며 부계정까지 포함한다', () async {
+  test('캐릭터 변경 후보는 가능한 다른 역할과 부계정까지 포함한다', () async {
     final service = RecruitmentApplicationCandidateService(
       accountRepository: _AccountRepository(),
       weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
@@ -130,15 +130,11 @@ void main() {
 
     expect(
       candidates.map((candidate) => candidate.characterId),
-      containsAll(['가능딜러', '부계정소서']),
+      containsAll(['가능딜러', '완료바드', '부계정소서']),
     );
     expect(
-      candidates.every((candidate) => candidate.role == PartyRole.dealer),
-      isTrue,
-    );
-    expect(
-      candidates.map((candidate) => candidate.characterId),
-      isNot(contains('완료바드')),
+      candidates.map((candidate) => candidate.role),
+      containsAll([PartyRole.dealer, PartyRole.support]),
     );
   });
 }

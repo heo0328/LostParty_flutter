@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../domain/entities/party_recruitment.dart';
@@ -29,6 +30,7 @@ class RecruitmentDetailPage extends StatefulWidget {
 class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
   late Future<RecruitmentAggregate?> _future = _load();
   bool _submitting = false;
+  final Map<String, PartyRole> _candidateRoleSelections = {};
   Future<RecruitmentAggregate?> _load() =>
       widget.repository.getById(widget.recruitmentId);
   void _reload() => setState(() {
@@ -57,6 +59,23 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
               aggregate.title,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            if (state.leaderUserId == widget.commandService.currentUserId) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: OutlinedButton.icon(
+                  key: const ValueKey('deleteRecruitmentButton'),
+                  onPressed: _submitting
+                      ? null
+                      : () => _confirmDelete(aggregate),
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('모집 삭제'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             Text(
               '${metadata.raidName} - ${metadata.difficultyName} (${metadata.difficultyAlias})',
@@ -79,9 +98,6 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
               metadata.experienceLevel == null
                   ? '클리어 경험 제한 없음'
                   : '숙련도 ${_experience(metadata.experienceLevel!)}',
-            ),
-            Text(
-              '최대 시간 ${metadata.maxPlayHours == null ? '클리어 시까지' : '${metadata.maxPlayHours}시간'}',
             ),
             Text('가입 승인 ${_approval(state.approvalPolicy)}'),
             const Divider(height: 32),
@@ -114,8 +130,7 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
                   ),
                   title: Text(member.characterId),
                   subtitle: Text('${member.className} · ${_role(member.role)}'),
-                  trailing:
-                      member.userId == widget.commandService.currentUserId
+                  trailing: member.userId == widget.commandService.currentUserId
                       ? TextButton(
                           key: const ValueKey('openCharacterChangeButton'),
                           onPressed: _submitting
@@ -165,15 +180,17 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
       );
     }
     if (application?.status == RecruitmentApplicationStatus.rejected) {
-      return const Text(
-        '가입 신청이 거절되었습니다.',
-        key: ValueKey('rejectedApplicationStatus'),
+      return _terminalApplicationSection(
+        message: '가입 신청이 거절되었습니다.',
+        messageKey: const ValueKey('rejectedApplicationStatus'),
+        aggregate: aggregate,
       );
     }
     if (application?.status == RecruitmentApplicationStatus.superseded) {
-      return const Text(
-        '같은 캐릭터의 다른 파티 참가가 확정되어 신청이 종료되었습니다.',
-        key: ValueKey('supersededApplicationStatus'),
+      return _terminalApplicationSection(
+        message: '같은 캐릭터의 다른 파티 참가가 확정되어 신청이 종료되었습니다.',
+        messageKey: const ValueKey('supersededApplicationStatus'),
+        aggregate: aggregate,
       );
     }
     if (!aggregate.state.isRecruiting) return const Text('모집이 마감되었습니다.');
@@ -182,6 +199,58 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
       onPressed: _submitting ? null : () => _showCandidates(aggregate),
       child: const Text('지원하기'),
     );
+  }
+
+  Widget _terminalApplicationSection({
+    required String message,
+    required Key messageKey,
+    required RecruitmentAggregate aggregate,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text(message, key: messageKey),
+      const SizedBox(height: 8),
+      OutlinedButton(
+        key: const ValueKey('reapplyWithAnotherCharacterButton'),
+        onPressed: _submitting ? null : () => _showCandidates(aggregate),
+        child: const Text('다른 캐릭터로 다시 지원'),
+      ),
+    ],
+  );
+
+  Future<void> _confirmDelete(RecruitmentAggregate aggregate) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('모집을 삭제할까요?'),
+        content: const Text('모집과 현재 확정 참가 정보가 함께 삭제됩니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirmDeleteRecruitmentButton'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _submitting = true);
+    final result = await widget.commandService.deleteRecruitment(aggregate.id);
+    if (!mounted) return;
+    if (result.isSuccess) {
+      context.pop();
+      return;
+    }
+    setState(() => _submitting = false);
+    final message = result.failure == LocalRecruitmentFailure.revisionConflict
+        ? '다른 변경이 먼저 반영되었습니다. 다시 확인해주세요.'
+        : '모집을 삭제하지 못했습니다.';
+    _message(message);
+    _reload();
   }
 
   bool _shouldShowPendingApplications(RecruitmentAggregate aggregate) {
@@ -312,109 +381,181 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
     final candidates = characterChange
         ? await widget.candidateService.loadForCharacterChange(aggregate)
         : await widget.candidateService.load(aggregate);
+    final groups = <String, List<RecruitmentApplicationCandidate>>{};
+    for (final candidate in candidates) {
+      groups.putIfAbsent(candidate.characterId, () => []).add(candidate);
+    }
+    final candidateGroups = groups.values.toList(growable: false);
     if (!mounted) return;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (sheetContext) => SafeArea(
-        child: SizedBox(
-          height: MediaQuery.sizeOf(sheetContext).height * 0.75,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  characterChange ? '변경할 캐릭터 선택' : '신청 캐릭터와 역할 선택',
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(sheetContext).height * 0.75,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(characterChange ? '변경할 캐릭터 선택' : '신청 캐릭터와 역할 선택'),
                 ),
-              ),
-              if (aggregate.metadata.experienceLevel != null)
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Text('클리어 경험 조건은 신청자가 직접 확인해야 합니다.'),
-                ),
-              Expanded(
-                child: candidates.isEmpty
-                    ? const Center(child: Text('저장된 역할 세팅이 없습니다.'))
-                    : ListView.builder(
-                        itemCount: candidates.length,
-                        itemBuilder: (context, index) {
-                          final candidate = candidates[index];
-                          return ListTile(
-                            key: ValueKey(
-                              'candidate-${candidate.characterId}-${candidate.role.name}',
-                            ),
-                            enabled: candidate.canApply,
-                            title: Text(candidate.characterId),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${candidate.accountLabel} · ${candidate.className} · ${_role(candidate.role)}',
-                                ),
-                                if (candidate.participationStatuses.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 6),
-                                    child: Wrap(
-                                      spacing: 6,
-                                      runSpacing: 6,
-                                      children: [
-                                        for (final status
-                                            in candidate.participationStatuses)
-                                          _participationStatusChip(status),
-                                      ],
+                if (aggregate.metadata.experienceLevel != null)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Text('클리어 경험 조건은 신청자가 직접 확인해야 합니다.'),
+                  ),
+                Expanded(
+                  child: candidateGroups.isEmpty
+                      ? const Center(child: Text('저장된 역할 세팅이 없습니다.'))
+                      : ListView.builder(
+                          itemCount: candidateGroups.length,
+                          itemBuilder: (context, index) {
+                            final options = candidateGroups[index];
+                            final preferred = options
+                                .where((item) => item.isPreferred)
+                                .firstOrNull;
+                            final selectedRole =
+                                _candidateRoleSelections[options
+                                    .first
+                                    .characterId] ??
+                                preferred?.role ??
+                                options.first.role;
+                            final candidate = options.firstWhere(
+                              (item) => item.role == selectedRole,
+                              orElse: () => options.first,
+                            );
+                            return Card(
+                              key: ValueKey(
+                                'candidate-${candidate.characterId}',
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Text(
+                                      candidate.characterId,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium,
                                     ),
-                                  ),
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    candidate.canApply
-                                        ? '신청 가능'
-                                        : candidate.rejectionReasons.join(
-                                            ' · ',
-                                          ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            onTap: candidate.canApply
-                                ? () async {
-                                    Navigator.pop(sheetContext);
-                                    final hasPending = candidate
+                                    Text(
+                                      '${candidate.accountLabel} · ${candidate.className}',
+                                    ),
+                                    if (options.length > 1)
+                                      SegmentedButton<PartyRole>(
+                                        segments: [
+                                          for (final option in options)
+                                            ButtonSegment(
+                                              value: option.role,
+                                              label: Text(_role(option.role)),
+                                            ),
+                                        ],
+                                        selected: {candidate.role},
+                                        onSelectionChanged: (selection) {
+                                          if (selection.isEmpty) return;
+                                          setSheetState(() {
+                                            _candidateRoleSelections[candidate
+                                                    .characterId] =
+                                                selection.first;
+                                          });
+                                        },
+                                      )
+                                    else
+                                      Text('역할 ${_role(candidate.role)}'),
+                                    if (candidate
                                         .participationStatuses
-                                        .any(
-                                          (status) =>
-                                              status.type ==
-                                                  CandidateParticipationStatusType
-                                                      .pendingSameRaid,
-                                        );
-                                    if (hasPending &&
-                                        (characterChange ||
-                                            aggregate
-                                                    .state
-                                                    .approvalPolicy
-                                                    .mode ==
-                                                ApprovalMode.directJoin)) {
-                                      final confirmed = await _confirmPendingCancellation(
-                                        candidate,
-                                        characterChange: characterChange,
-                                      );
-                                      if (!confirmed) return;
-                                    }
-                                    if (characterChange) {
-                                      await _changeCharacter(
-                                        candidate,
-                                        cancelPendingApplications: hasPending,
-                                      );
-                                    } else {
-                                      await _apply(candidate, aggregate);
-                                    }
-                                  }
-                                : null,
-                          );
-                        },
-                      ),
-              ),
-            ],
+                                        .isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 6),
+                                        child: Wrap(
+                                          spacing: 6,
+                                          runSpacing: 6,
+                                          children: [
+                                            for (final status
+                                                in candidate
+                                                    .participationStatuses)
+                                              _participationStatusChip(status),
+                                          ],
+                                        ),
+                                      ),
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text(
+                                        candidate.canApply
+                                            ? '신청 가능'
+                                            : candidate.rejectionReasons.join(
+                                                ' · ',
+                                              ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    FilledButton(
+                                      key: ValueKey(
+                                        'candidate-${candidate.characterId}-${candidate.role.name}',
+                                      ),
+                                      onPressed: candidate.canApply
+                                          ? () async {
+                                              Navigator.pop(sheetContext);
+                                              final hasPending = candidate
+                                                  .participationStatuses
+                                                  .any(
+                                                    (status) =>
+                                                        status.type ==
+                                                        CandidateParticipationStatusType
+                                                            .pendingSameRaid,
+                                                  );
+                                              if (hasPending &&
+                                                  (characterChange ||
+                                                      aggregate
+                                                              .state
+                                                              .approvalPolicy
+                                                              .mode ==
+                                                          ApprovalMode
+                                                              .directJoin)) {
+                                                final confirmed =
+                                                    await _confirmPendingCancellation(
+                                                      candidate,
+                                                      characterChange:
+                                                          characterChange,
+                                                    );
+                                                if (!confirmed) return;
+                                              }
+                                              if (characterChange) {
+                                                await _changeCharacter(
+                                                  candidate,
+                                                  cancelPendingApplications:
+                                                      hasPending,
+                                                );
+                                              } else {
+                                                await _apply(
+                                                  candidate,
+                                                  aggregate,
+                                                );
+                                              }
+                                            }
+                                          : null,
+                                      child: Text(
+                                        candidate.canApply
+                                            ? (characterChange
+                                                  ? '이 캐릭터로 변경'
+                                                  : '이 캐릭터로 지원')
+                                            : candidate.rejectionReasons.join(
+                                                ' · ',
+                                              ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -447,9 +588,9 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
   }
 
   Future<bool> _confirmPendingCancellation(
-    RecruitmentApplicationCandidate candidate,
-    {bool characterChange = false,}
-  ) async {
+    RecruitmentApplicationCandidate candidate, {
+    bool characterChange = false,
+  }) async {
     final count = candidate.participationStatuses
         .where(
           (status) =>
@@ -473,9 +614,7 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
               FilledButton(
                 key: const ValueKey('cancelPendingAndJoinButton'),
                 onPressed: () => Navigator.pop(dialogContext, true),
-                child: Text(
-                  characterChange ? '신청 취소하고 변경' : '신청 취소하고 참가',
-                ),
+                child: Text(characterChange ? '신청 취소하고 변경' : '신청 취소하고 참가'),
               ),
             ],
           ),
@@ -484,14 +623,15 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
   }
 
   Future<void> _changeCharacter(
-    RecruitmentApplicationCandidate candidate,
-    {required bool cancelPendingApplications,}
-  ) async {
+    RecruitmentApplicationCandidate candidate, {
+    required bool cancelPendingApplications,
+  }) async {
     setState(() => _submitting = true);
     final result = await widget.commandService.changeCharacter(
       recruitmentId: widget.recruitmentId,
       characterId: candidate.characterId,
       className: candidate.className,
+      role: candidate.role,
       cancelPendingApplications: cancelPendingApplications,
     );
     if (!mounted) return;

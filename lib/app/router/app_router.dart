@@ -20,6 +20,8 @@ import '../../features/recruitment_list/data/fakes/in_memory_active_raid_assignm
 import '../../features/recruitment_list/data/fakes/local_recruitment_demo_seed.dart';
 import '../../features/recruitment_list/domain/services/recruitment_command_service.dart';
 import '../../features/recruitment_list/domain/services/recruitment_application_candidate_service.dart';
+import '../../features/recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
+import '../../features/recruitment_list/domain/policies/participation_conflict_policy.dart';
 import '../../shared/game_catalog/data/datasources/asset_game_catalog_data_source.dart';
 import '../../shared/game_catalog/data/repositories/game_catalog_repository_impl.dart';
 import '../../shared/raid_catalog/data/datasources/asset_raid_catalog_data_source.dart';
@@ -51,8 +53,12 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
   final recruitmentRepository = InMemoryRecruitmentStateRepository();
   recruitmentRepository.seed(createLocalRecruitmentDemoSeed(DateTime.now()));
   final weeklyRaidClearRepository = InMemoryWeeklyRaidClearRepository();
-  final activeRaidAssignmentRepository =
-      InMemoryActiveRaidAssignmentRepository();
+  const participationConflictPolicy = ParticipationConflictPolicy(
+    scheduleConflictsEnabled: false,
+  );
+  final activeRaidAssignmentRepository = InMemoryActiveRaidAssignmentRepository(
+    conflictPolicy: participationConflictPolicy,
+  );
   final recruitmentCommandService = RecruitmentCommandService(
     session: FakeUserSession('local-user'),
     clock: FakeRecruitmentClock(DateTime.now()),
@@ -68,6 +74,16 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
     clock: recruitmentCommandService.clock,
     assignmentRepository: activeRaidAssignmentRepository,
     recruitmentRepository: recruitmentRepository,
+    conflictPolicy: participationConflictPolicy,
+  );
+  final recruitmentLeaderCandidateService = RecruitmentLeaderCandidateService(
+    accountRepository: accountRepository,
+    weeklyClearRepository: weeklyRaidClearRepository,
+    session: recruitmentCommandService.session,
+    clock: recruitmentCommandService.clock,
+    assignmentRepository: activeRaidAssignmentRepository,
+    recruitmentRepository: recruitmentRepository,
+    conflictPolicy: participationConflictPolicy,
   );
 
   return GoRouter(
@@ -136,9 +152,9 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
                   GoRoute(
                     path: 'create',
                     builder: (context, state) => RecruitmentCreatePage(
-                      accountRepository: accountRepository,
                       catalogRepository: raidCatalogRepository,
                       commandService: recruitmentCommandService,
+                      candidateService: recruitmentLeaderCandidateService,
                     ),
                   ),
                   GoRoute(

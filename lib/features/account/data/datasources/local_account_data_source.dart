@@ -129,6 +129,9 @@ class LocalAccountDataSource {
               combatPower: character.combatPower,
               isVisible: character.isVisible,
               displayOrder: character.displayOrder,
+              preferredRole: character.preferredRole == null
+                  ? null
+                  : CharacterBuildRole.values.byName(character.preferredRole!),
             ),
           )
           .toList(growable: false),
@@ -241,4 +244,12 @@ class LocalAccountDataSource {
       characterIds: characterIds,
     );
   }
+
+  Future<void> setPreferredCharacterRole({
+    required int characterId,
+    required CharacterBuildRole role,
+  }) => _database.setPreferredCharacterRole(
+    characterId: characterId,
+    role: role.name,
+  );
 }

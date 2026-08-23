@@ -47,6 +47,51 @@ void main() {
     expect(viewModel.selectedRole, CharacterBuildRole.dealer);
   });
 
+  test('두 역할 세팅이 있으면 선호 역할을 저장한다', () async {
+    final repository = _FakeAccountRepository();
+    final draft = repository.buildDraft();
+    await repository.commitCharacterBuildDraft(
+      draft: draft,
+      role: CharacterBuildRole.dealer,
+    );
+    await repository.commitCharacterBuildDraft(
+      draft: draft,
+      role: CharacterBuildRole.support,
+    );
+    final viewModel = CharacterDetailViewModel(
+      character: _character(className: '바드'),
+      accountRepository: repository,
+    );
+
+    await viewModel.initialize();
+    await viewModel.setPreferredRole(CharacterBuildRole.dealer);
+
+    expect(viewModel.canSelectPreferredRole, isTrue);
+    expect(viewModel.preferredRole, CharacterBuildRole.dealer);
+    expect(repository.preferredRoles, [CharacterBuildRole.dealer]);
+  });
+
+  test('두 번째 역할 저장 직후 선호 역할을 비어 두지 않는다', () async {
+    final repository = _FakeAccountRepository();
+    await repository.commitCharacterBuildDraft(
+      draft: repository.buildDraft(),
+      role: CharacterBuildRole.dealer,
+    );
+    final viewModel = CharacterDetailViewModel(
+      character: _character(className: '바드'),
+      accountRepository: repository,
+    );
+    await viewModel.initialize();
+    viewModel.selectRole(CharacterBuildRole.support);
+    await viewModel.requestBuildDraft();
+
+    final committed = await viewModel.commitDraft();
+
+    expect(committed, isTrue);
+    expect(viewModel.preferredRole, CharacterBuildRole.support);
+    expect(repository.preferredRoles, [CharacterBuildRole.support]);
+  });
+
   test('cancels a draft without committing it', () async {
     final repository = _FakeAccountRepository();
     final viewModel = CharacterDetailViewModel(
@@ -130,6 +175,14 @@ void main() {
 
 class _FakeAccountRepository implements AccountRepository {
   @override
+  Future<void> setPreferredCharacterRole({
+    required int characterId,
+    required CharacterBuildRole role,
+  }) async {
+    preferredRoles.add(role);
+  }
+
+  @override
   Future<List<LocalGameAccount>> loadAccounts() async {
     final account = await loadMainAccount();
     return account == null ? const [] : [account];
@@ -137,6 +190,7 @@ class _FakeAccountRepository implements AccountRepository {
 
   int createDraftCallCount = 0;
   final List<CharacterBuildRole> committedRoles = [];
+  final List<CharacterBuildRole> preferredRoles = [];
   final List<CharacterBuildSnapshot> _snapshots = [];
   bool failCommit = false;
   Completer<CharacterBuildDraft>? draftCompleter;

@@ -15,6 +15,11 @@ abstract class RecruitmentStateRepository {
     required DateTime updatedAt,
   });
 
+  Future<bool> deleteIfRevision({
+    required String recruitmentId,
+    required int expectedRevision,
+  });
+
   Future<int> supersedePendingApplications({
     required String applicantUserId,
     required String characterId,

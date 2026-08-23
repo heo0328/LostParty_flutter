@@ -40,7 +40,9 @@ class LocalRecruitmentCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '${metadata.experienceLevel == null ? '클리어 경험 제한 없음' : '숙련도 ${_experience(metadata.experienceLevel!)}'} · 최대 시간 ${metadata.maxPlayHours == null ? '클리어 시까지' : '${metadata.maxPlayHours}시간'}',
+                metadata.experienceLevel == null
+                    ? '클리어 경험 제한 없음'
+                    : '숙련도 ${_experience(metadata.experienceLevel!)}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],

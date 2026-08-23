@@ -56,6 +56,18 @@ class InMemoryRecruitmentStateRepository extends ChangeNotifier
   }
 
   @override
+  Future<bool> deleteIfRevision({
+    required String recruitmentId,
+    required int expectedRevision,
+  }) async {
+    final current = _store[recruitmentId];
+    if (current == null || current.revision != expectedRevision) return false;
+    _store.remove(recruitmentId);
+    notifyListeners();
+    return true;
+  }
+
+  @override
   Future<int> supersedePendingApplications({
     required String applicantUserId,
     required String characterId,

@@ -1,3 +1,5 @@
+import 'character_build_role.dart';
+
 class LocalGameAccount {
   const LocalGameAccount({
     required this.id,
@@ -65,6 +67,7 @@ class LocalAccountCharacter {
     required this.combatPower,
     required this.isVisible,
     required this.displayOrder,
+    this.preferredRole,
   });
 
   final int id;
@@ -76,4 +79,5 @@ class LocalAccountCharacter {
   final double? combatPower;
   final bool isVisible;
   final int? displayOrder;
+  final CharacterBuildRole? preferredRole;
 }
