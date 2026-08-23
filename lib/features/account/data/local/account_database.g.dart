@@ -659,6 +659,17 @@ class $AccountCharactersTable extends AccountCharacters
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _preferredRoleMeta = const VerificationMeta(
+    'preferredRole',
+  );
+  @override
+  late final GeneratedColumn<String> preferredRole = GeneratedColumn<String>(
+    'preferred_role',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _lastSummaryFetchedAtMeta =
       const VerificationMeta('lastSummaryFetchedAt');
   @override
@@ -682,6 +693,7 @@ class $AccountCharactersTable extends AccountCharacters
     combatPower,
     isVisible,
     displayOrder,
+    preferredRole,
     lastSummaryFetchedAt,
   ];
   @override
@@ -778,6 +790,15 @@ class $AccountCharactersTable extends AccountCharacters
         ),
       );
     }
+    if (data.containsKey('preferred_role')) {
+      context.handle(
+        _preferredRoleMeta,
+        preferredRole.isAcceptableOrUnknown(
+          data['preferred_role']!,
+          _preferredRoleMeta,
+        ),
+      );
+    }
     if (data.containsKey('last_summary_fetched_at')) {
       context.handle(
         _lastSummaryFetchedAtMeta,
@@ -842,6 +863,10 @@ class $AccountCharactersTable extends AccountCharacters
         DriftSqlType.int,
         data['${effectivePrefix}display_order'],
       ),
+      preferredRole: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}preferred_role'],
+      ),
       lastSummaryFetchedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_summary_fetched_at'],
@@ -867,6 +892,7 @@ class AccountCharacter extends DataClass
   final double? combatPower;
   final bool isVisible;
   final int? displayOrder;
+  final String? preferredRole;
   final DateTime lastSummaryFetchedAt;
   const AccountCharacter({
     required this.id,
@@ -879,6 +905,7 @@ class AccountCharacter extends DataClass
     this.combatPower,
     required this.isVisible,
     this.displayOrder,
+    this.preferredRole,
     required this.lastSummaryFetchedAt,
   });
   @override
@@ -899,6 +926,9 @@ class AccountCharacter extends DataClass
     map['is_visible'] = Variable<bool>(isVisible);
     if (!nullToAbsent || displayOrder != null) {
       map['display_order'] = Variable<int>(displayOrder);
+    }
+    if (!nullToAbsent || preferredRole != null) {
+      map['preferred_role'] = Variable<String>(preferredRole);
     }
     map['last_summary_fetched_at'] = Variable<DateTime>(lastSummaryFetchedAt);
     return map;
@@ -922,6 +952,9 @@ class AccountCharacter extends DataClass
       displayOrder: displayOrder == null && nullToAbsent
           ? const Value.absent()
           : Value(displayOrder),
+      preferredRole: preferredRole == null && nullToAbsent
+          ? const Value.absent()
+          : Value(preferredRole),
       lastSummaryFetchedAt: Value(lastSummaryFetchedAt),
     );
   }
@@ -944,6 +977,7 @@ class AccountCharacter extends DataClass
       combatPower: serializer.fromJson<double?>(json['combatPower']),
       isVisible: serializer.fromJson<bool>(json['isVisible']),
       displayOrder: serializer.fromJson<int?>(json['displayOrder']),
+      preferredRole: serializer.fromJson<String?>(json['preferredRole']),
       lastSummaryFetchedAt: serializer.fromJson<DateTime>(
         json['lastSummaryFetchedAt'],
       ),
@@ -963,6 +997,7 @@ class AccountCharacter extends DataClass
       'combatPower': serializer.toJson<double?>(combatPower),
       'isVisible': serializer.toJson<bool>(isVisible),
       'displayOrder': serializer.toJson<int?>(displayOrder),
+      'preferredRole': serializer.toJson<String?>(preferredRole),
       'lastSummaryFetchedAt': serializer.toJson<DateTime>(lastSummaryFetchedAt),
     };
   }
@@ -978,6 +1013,7 @@ class AccountCharacter extends DataClass
     Value<double?> combatPower = const Value.absent(),
     bool? isVisible,
     Value<int?> displayOrder = const Value.absent(),
+    Value<String?> preferredRole = const Value.absent(),
     DateTime? lastSummaryFetchedAt,
   }) => AccountCharacter(
     id: id ?? this.id,
@@ -990,6 +1026,9 @@ class AccountCharacter extends DataClass
     combatPower: combatPower.present ? combatPower.value : this.combatPower,
     isVisible: isVisible ?? this.isVisible,
     displayOrder: displayOrder.present ? displayOrder.value : this.displayOrder,
+    preferredRole: preferredRole.present
+        ? preferredRole.value
+        : this.preferredRole,
     lastSummaryFetchedAt: lastSummaryFetchedAt ?? this.lastSummaryFetchedAt,
   );
   AccountCharacter copyWithCompanion(AccountCharactersCompanion data) {
@@ -1016,6 +1055,9 @@ class AccountCharacter extends DataClass
       displayOrder: data.displayOrder.present
           ? data.displayOrder.value
           : this.displayOrder,
+      preferredRole: data.preferredRole.present
+          ? data.preferredRole.value
+          : this.preferredRole,
       lastSummaryFetchedAt: data.lastSummaryFetchedAt.present
           ? data.lastSummaryFetchedAt.value
           : this.lastSummaryFetchedAt,
@@ -1035,6 +1077,7 @@ class AccountCharacter extends DataClass
           ..write('combatPower: $combatPower, ')
           ..write('isVisible: $isVisible, ')
           ..write('displayOrder: $displayOrder, ')
+          ..write('preferredRole: $preferredRole, ')
           ..write('lastSummaryFetchedAt: $lastSummaryFetchedAt')
           ..write(')'))
         .toString();
@@ -1052,6 +1095,7 @@ class AccountCharacter extends DataClass
     combatPower,
     isVisible,
     displayOrder,
+    preferredRole,
     lastSummaryFetchedAt,
   );
   @override
@@ -1068,6 +1112,7 @@ class AccountCharacter extends DataClass
           other.combatPower == this.combatPower &&
           other.isVisible == this.isVisible &&
           other.displayOrder == this.displayOrder &&
+          other.preferredRole == this.preferredRole &&
           other.lastSummaryFetchedAt == this.lastSummaryFetchedAt);
 }
 
@@ -1082,6 +1127,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
   final Value<double?> combatPower;
   final Value<bool> isVisible;
   final Value<int?> displayOrder;
+  final Value<String?> preferredRole;
   final Value<DateTime> lastSummaryFetchedAt;
   const AccountCharactersCompanion({
     this.id = const Value.absent(),
@@ -1094,6 +1140,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
     this.combatPower = const Value.absent(),
     this.isVisible = const Value.absent(),
     this.displayOrder = const Value.absent(),
+    this.preferredRole = const Value.absent(),
     this.lastSummaryFetchedAt = const Value.absent(),
   });
   AccountCharactersCompanion.insert({
@@ -1107,6 +1154,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
     this.combatPower = const Value.absent(),
     this.isVisible = const Value.absent(),
     this.displayOrder = const Value.absent(),
+    this.preferredRole = const Value.absent(),
     required DateTime lastSummaryFetchedAt,
   }) : accountId = Value(accountId),
        serverName = Value(serverName),
@@ -1125,6 +1173,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
     Expression<double>? combatPower,
     Expression<bool>? isVisible,
     Expression<int>? displayOrder,
+    Expression<String>? preferredRole,
     Expression<DateTime>? lastSummaryFetchedAt,
   }) {
     return RawValuesInsertable({
@@ -1139,6 +1188,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
       if (combatPower != null) 'combat_power': combatPower,
       if (isVisible != null) 'is_visible': isVisible,
       if (displayOrder != null) 'display_order': displayOrder,
+      if (preferredRole != null) 'preferred_role': preferredRole,
       if (lastSummaryFetchedAt != null)
         'last_summary_fetched_at': lastSummaryFetchedAt,
     });
@@ -1155,6 +1205,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
     Value<double?>? combatPower,
     Value<bool>? isVisible,
     Value<int?>? displayOrder,
+    Value<String?>? preferredRole,
     Value<DateTime>? lastSummaryFetchedAt,
   }) {
     return AccountCharactersCompanion(
@@ -1168,6 +1219,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
       combatPower: combatPower ?? this.combatPower,
       isVisible: isVisible ?? this.isVisible,
       displayOrder: displayOrder ?? this.displayOrder,
+      preferredRole: preferredRole ?? this.preferredRole,
       lastSummaryFetchedAt: lastSummaryFetchedAt ?? this.lastSummaryFetchedAt,
     );
   }
@@ -1205,6 +1257,9 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
     if (displayOrder.present) {
       map['display_order'] = Variable<int>(displayOrder.value);
     }
+    if (preferredRole.present) {
+      map['preferred_role'] = Variable<String>(preferredRole.value);
+    }
     if (lastSummaryFetchedAt.present) {
       map['last_summary_fetched_at'] = Variable<DateTime>(
         lastSummaryFetchedAt.value,
@@ -1226,6 +1281,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
           ..write('combatPower: $combatPower, ')
           ..write('isVisible: $isVisible, ')
           ..write('displayOrder: $displayOrder, ')
+          ..write('preferredRole: $preferredRole, ')
           ..write('lastSummaryFetchedAt: $lastSummaryFetchedAt')
           ..write(')'))
         .toString();
@@ -2179,6 +2235,7 @@ typedef $$AccountCharactersTableCreateCompanionBuilder =
       Value<double?> combatPower,
       Value<bool> isVisible,
       Value<int?> displayOrder,
+      Value<String?> preferredRole,
       required DateTime lastSummaryFetchedAt,
     });
 typedef $$AccountCharactersTableUpdateCompanionBuilder =
@@ -2193,6 +2250,7 @@ typedef $$AccountCharactersTableUpdateCompanionBuilder =
       Value<double?> combatPower,
       Value<bool> isVisible,
       Value<int?> displayOrder,
+      Value<String?> preferredRole,
       Value<DateTime> lastSummaryFetchedAt,
     });
 
@@ -2308,6 +2366,11 @@ class $$AccountCharactersTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get preferredRole => $composableBuilder(
+    column: $table.preferredRole,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get lastSummaryFetchedAt => $composableBuilder(
     column: $table.lastSummaryFetchedAt,
     builder: (column) => ColumnFilters(column),
@@ -2417,6 +2480,11 @@ class $$AccountCharactersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get preferredRole => $composableBuilder(
+    column: $table.preferredRole,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get lastSummaryFetchedAt => $composableBuilder(
     column: $table.lastSummaryFetchedAt,
     builder: (column) => ColumnOrderings(column),
@@ -2491,6 +2559,11 @@ class $$AccountCharactersTableAnnotationComposer
 
   GeneratedColumn<int> get displayOrder => $composableBuilder(
     column: $table.displayOrder,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get preferredRole => $composableBuilder(
+    column: $table.preferredRole,
     builder: (column) => column,
   );
 
@@ -2596,6 +2669,7 @@ class $$AccountCharactersTableTableManager
                 Value<double?> combatPower = const Value.absent(),
                 Value<bool> isVisible = const Value.absent(),
                 Value<int?> displayOrder = const Value.absent(),
+                Value<String?> preferredRole = const Value.absent(),
                 Value<DateTime> lastSummaryFetchedAt = const Value.absent(),
               }) => AccountCharactersCompanion(
                 id: id,
@@ -2608,6 +2682,7 @@ class $$AccountCharactersTableTableManager
                 combatPower: combatPower,
                 isVisible: isVisible,
                 displayOrder: displayOrder,
+                preferredRole: preferredRole,
                 lastSummaryFetchedAt: lastSummaryFetchedAt,
               ),
           createCompanionCallback:
@@ -2622,6 +2697,7 @@ class $$AccountCharactersTableTableManager
                 Value<double?> combatPower = const Value.absent(),
                 Value<bool> isVisible = const Value.absent(),
                 Value<int?> displayOrder = const Value.absent(),
+                Value<String?> preferredRole = const Value.absent(),
                 required DateTime lastSummaryFetchedAt,
               }) => AccountCharactersCompanion.insert(
                 id: id,
@@ -2634,6 +2710,7 @@ class $$AccountCharactersTableTableManager
                 combatPower: combatPower,
                 isVisible: isVisible,
                 displayOrder: displayOrder,
+                preferredRole: preferredRole,
                 lastSummaryFetchedAt: lastSummaryFetchedAt,
               ),
           withReferenceMapper: (p0) => p0

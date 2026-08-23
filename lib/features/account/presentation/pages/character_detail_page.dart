@@ -353,6 +353,30 @@ class _CharacterDetailPageState extends State<CharacterDetailPage> {
               title: Text(role == CharacterBuildRole.dealer ? '딜러' : '서포터'),
               subtitle: Text(_snapshotLabel(_snapshotFor(role))),
             ),
+        if (_viewModel.canSelectPreferredRole) ...[
+          const SizedBox(height: 8),
+          const Text('모집 생성·지원 선호 역할'),
+          const SizedBox(height: 8),
+          SegmentedButton<CharacterBuildRole>(
+            key: const ValueKey('preferredCharacterRoleControl'),
+            segments: const [
+              ButtonSegment(
+                value: CharacterBuildRole.dealer,
+                label: Text('딜러'),
+              ),
+              ButtonSegment(
+                value: CharacterBuildRole.support,
+                label: Text('서포터'),
+              ),
+            ],
+            selected: {_viewModel.preferredRole ?? CharacterBuildRole.support},
+            onSelectionChanged: (selection) {
+              if (selection.isNotEmpty) {
+                _viewModel.setPreferredRole(selection.first);
+              }
+            },
+          ),
+        ],
       ],
     );
   }

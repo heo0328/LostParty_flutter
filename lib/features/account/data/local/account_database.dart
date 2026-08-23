@@ -61,6 +61,8 @@ class AccountCharacters extends Table {
 
   IntColumn get displayOrder => integer().nullable()();
 
+  TextColumn get preferredRole => text().nullable()();
+
   DateTimeColumn get lastSummaryFetchedAt => dateTime()();
 
   @override
@@ -105,7 +107,7 @@ class AccountDatabase extends _$AccountDatabase {
     : super(executor ?? driftDatabase(name: 'lost_party'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -113,6 +115,12 @@ class AccountDatabase extends _$AccountDatabase {
     onUpgrade: (migrator, from, to) async {
       if (from < 2) {
         await migrator.createTable(characterBuildSnapshots);
+      }
+      if (from < 3) {
+        await migrator.addColumn(
+          accountCharacters,
+          accountCharacters.preferredRole,
+        );
       }
     },
   );
@@ -381,6 +389,23 @@ class AccountDatabase extends _$AccountDatabase {
             .write(AccountCharactersCompanion(displayOrder: Value(index)));
       }
     });
+  }
+
+  Future<void> setPreferredCharacterRole({
+    required int characterId,
+    required String role,
+  }) async {
+    final updatedRows =
+        await (update(accountCharacters)
+              ..where((table) => table.id.equals(characterId)))
+            .write(AccountCharactersCompanion(preferredRole: Value(role)));
+    if (updatedRows != 1) {
+      throw ArgumentError.value(
+        characterId,
+        'characterId',
+        'Character not found.',
+      );
+    }
   }
 
   Future<int> saveMainAccountSnapshot({

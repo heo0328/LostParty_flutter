@@ -27,6 +27,7 @@ class CharacterDetailViewModel extends ChangeNotifier {
   CharacterBuildDraft? _draft;
   CharacterBuildRole? _draftRole;
   List<CharacterBuildSnapshot> _snapshots = const [];
+  CharacterBuildRole? _preferredRole;
   String? _errorMessage;
 
   bool get isLoading => _isLoading;
@@ -39,6 +40,10 @@ class CharacterDetailViewModel extends ChangeNotifier {
   CharacterBuildRole? get draftRole => _draftRole;
   List<CharacterBuildSnapshot> get snapshots => _snapshots;
   String? get errorMessage => _errorMessage;
+  CharacterBuildRole? get preferredRole => _preferredRole;
+  bool get canSelectPreferredRole =>
+      _snapshots.any((item) => item.role == CharacterBuildRole.dealer) &&
+      _snapshots.any((item) => item.role == CharacterBuildRole.support);
 
   CharacterBuildSnapshot? get selectedSnapshot {
     final role = _selectedRole;
@@ -60,10 +65,24 @@ class CharacterDetailViewModel extends ChangeNotifier {
       _snapshots = await _accountRepository.loadCharacterBuildSnapshots(
         character.id,
       );
+      _preferredRole = character.preferredRole;
+      if (_preferredRole == null && canSelectPreferredRole) {
+        _preferredRole = CharacterBuildRole.support;
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> setPreferredRole(CharacterBuildRole role) async {
+    if (!canSelectPreferredRole || _preferredRole == role) return;
+    await _accountRepository.setPreferredCharacterRole(
+      characterId: character.id,
+      role: role,
+    );
+    _preferredRole = role;
+    notifyListeners();
   }
 
   void selectRole(CharacterBuildRole role) {
@@ -139,6 +158,13 @@ class CharacterDetailViewModel extends ChangeNotifier {
         character.id,
       );
       _selectedRole = role;
+      if (_preferredRole == null && canSelectPreferredRole) {
+        await _accountRepository.setPreferredCharacterRole(
+          characterId: character.id,
+          role: role,
+        );
+        _preferredRole = role;
+      }
       _draft = null;
       _draftRole = null;
       return true;

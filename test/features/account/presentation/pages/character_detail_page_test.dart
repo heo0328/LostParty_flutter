@@ -115,6 +115,11 @@ const _character = LocalAccountCharacter(
 
 class _FakeAccountRepository implements AccountRepository {
   @override
+  Future<void> setPreferredCharacterRole({
+    required int characterId,
+    required CharacterBuildRole role,
+  }) async {}
+  @override
   Future<List<LocalGameAccount>> loadAccounts() async {
     final account = await loadMainAccount();
     return account == null ? const [] : [account];

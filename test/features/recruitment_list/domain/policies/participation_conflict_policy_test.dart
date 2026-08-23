@@ -3,6 +3,40 @@ import 'package:lost_party/features/recruitment_list/domain/entities/active_raid
 import 'package:lost_party/features/recruitment_list/domain/policies/participation_conflict_policy.dart';
 
 void main() {
+  test('일정 충돌을 비활성화해도 동일 캐릭터 레이드 충돌은 유지한다', () {
+    const policy = ParticipationConflictPolicy(scheduleConflictsEnabled: false);
+    final active = _assignment(
+      characterId: 'character-a',
+      raidId: 'raid-a',
+      recruitmentId: 'active',
+      hasKnownEnd: false,
+    );
+
+    final otherCharacter = policy.evaluate(
+      proposed: _assignment(
+        characterId: 'character-b',
+        raidId: 'raid-b',
+        recruitmentId: 'other',
+        hasKnownEnd: false,
+      ),
+      activeAssignments: [active],
+    );
+    final sameCharacterRaid = policy.evaluate(
+      proposed: _assignment(
+        characterId: 'character-a',
+        raidId: 'raid-a',
+        recruitmentId: 'same-raid',
+        hasKnownEnd: false,
+      ),
+      activeAssignments: [active],
+    );
+
+    expect(otherCharacter.canConfirm, isTrue);
+    expect(
+      sameCharacterRaid.conflicts.single.type,
+      ParticipationConflictType.sameCharacterAndRaid,
+    );
+  });
   const policy = ParticipationConflictPolicy();
 
   test('같은 사용자는 본계정과 부계정 캐릭터로 같은 모집에 중복 참가할 수 없다', () {
@@ -160,8 +194,6 @@ ActiveRaidAssignment _assignment({
   recruitmentId: recruitmentId,
   schedule: RaidParticipationSchedule(
     startAt: DateTime.utc(2026, 8, 20, startHour),
-    expectedEndAt: hasKnownEnd
-        ? DateTime.utc(2026, 8, 20, endHour)
-        : null,
+    expectedEndAt: hasKnownEnd ? DateTime.utc(2026, 8, 20, endHour) : null,
   ),
 );

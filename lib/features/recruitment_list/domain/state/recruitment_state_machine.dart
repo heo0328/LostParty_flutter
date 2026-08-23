@@ -123,7 +123,11 @@ class RecruitmentStateMachine {
         RecruitmentCommandFailure.alreadyMember,
       );
     }
-    if (state.applications.containsKey(application.applicantUserId)) {
+    final existingApplication = state.applications[application.applicantUserId];
+    if (existingApplication != null &&
+        (existingApplication.status == RecruitmentApplicationStatus.pending ||
+            existingApplication.status ==
+                RecruitmentApplicationStatus.approved)) {
       return RecruitmentCommandResult.failure(
         state,
         RecruitmentCommandFailure.duplicateApplication,
@@ -186,6 +190,7 @@ class RecruitmentStateMachine {
     required String actorUserId,
     required String characterId,
     required String className,
+    PartyRole? role,
   }) {
     final memberIndex = state.members.indexWhere(
       (member) => member.userId == actorUserId,
@@ -197,7 +202,8 @@ class RecruitmentStateMachine {
       );
     }
     final current = state.members[memberIndex];
-    if (current.characterId == characterId) {
+    final proposedRole = role ?? current.role;
+    if (current.characterId == characterId && current.role == proposedRole) {
       return RecruitmentCommandResult.failure(
         state,
         RecruitmentCommandFailure.invalidApplication,
@@ -206,7 +212,11 @@ class RecruitmentStateMachine {
     final proposedMembers = [
       for (final member in state.members)
         member.userId == actorUserId
-            ? member.copyWith(characterId: characterId, className: className)
+            ? member.copyWith(
+                characterId: characterId,
+                className: className,
+                role: proposedRole,
+              )
             : member,
     ];
     final composition = state.compositionPolicy.arrange(

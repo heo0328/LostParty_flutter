@@ -207,4 +207,13 @@ class AccountRepositoryImpl implements AccountRepository {
       characterIds: characterIds,
     );
   }
+
+  @override
+  Future<void> setPreferredCharacterRole({
+    required int characterId,
+    required CharacterBuildRole role,
+  }) => _localDataSource.setPreferredCharacterRole(
+    characterId: characterId,
+    role: role,
+  );
 }

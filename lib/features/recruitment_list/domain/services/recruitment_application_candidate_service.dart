@@ -12,24 +12,9 @@ import '../repositories/active_raid_assignment_repository.dart';
 import '../repositories/recruitment_state_repository.dart';
 import '../repositories/weekly_raid_clear_repository.dart';
 import 'recruitment_runtime.dart';
+import 'candidate_participation_status.dart';
 
-enum CandidateParticipationStatusType {
-  pendingSameRaid,
-  activeSameRaid,
-  overlappingSchedule,
-  uncertainSchedule,
-  weeklyRaidClear,
-}
-
-class CandidateParticipationStatus {
-  const CandidateParticipationStatus({required this.type, this.count = 1});
-
-  final CandidateParticipationStatusType type;
-  final int count;
-
-  bool get isBlocking =>
-      type != CandidateParticipationStatusType.pendingSameRaid;
-}
+export 'candidate_participation_status.dart';
 
 class RecruitmentApplicationCandidate {
   const RecruitmentApplicationCandidate({
@@ -41,6 +26,7 @@ class RecruitmentApplicationCandidate {
     required this.itemLevel,
     required this.combatPower,
     required this.rejectionReasons,
+    this.isPreferred = false,
     this.participationStatuses = const [],
   });
 
@@ -52,6 +38,7 @@ class RecruitmentApplicationCandidate {
   final double? itemLevel;
   final double? combatPower;
   final List<String> rejectionReasons;
+  final bool isPreferred;
   final List<CandidateParticipationStatus> participationStatuses;
 
   bool get canApply => rejectionReasons.isEmpty;
@@ -121,8 +108,8 @@ class RecruitmentApplicationCandidateService {
             CharacterBuildRole.support => PartyRole.support,
           };
           if (replacingMember != null &&
-              (character.characterName == replacingMember.characterId ||
-                  role != replacingMember.role)) {
+              character.characterName == replacingMember.characterId &&
+              role == replacingMember.role) {
             continue;
           }
           final reasons = <String>[];
@@ -228,7 +215,11 @@ class RecruitmentApplicationCandidateService {
                         member.userId == replacingMember.userId
                     ? character.characterClassName
                     : member.className,
-                role: member.role,
+                role:
+                    replacingMember != null &&
+                        member.userId == replacingMember.userId
+                    ? role
+                    : member.role,
               ),
             ),
             if (replacingMember == null)
@@ -251,12 +242,20 @@ class RecruitmentApplicationCandidateService {
               itemLevel: itemLevel,
               combatPower: combatPower,
               rejectionReasons: List.unmodifiable(reasons),
+              isPreferred: snapshot.role == character.preferredRole,
               participationStatuses: List.unmodifiable(statuses),
             ),
           );
         }
       }
     }
+    candidates.sort((left, right) {
+      if (left.characterId == right.characterId &&
+          left.isPreferred != right.isPreferred) {
+        return left.isPreferred ? -1 : 1;
+      }
+      return 0;
+    });
     return candidates;
   }
 

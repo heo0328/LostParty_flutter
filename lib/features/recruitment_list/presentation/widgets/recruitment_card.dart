@@ -77,8 +77,7 @@ class RecruitmentCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               '최소 전투력 ${DisplayNumberFormatter.integer(recruitment.requirements.minCombatPower)} '
-              '/ 숙련도 ${_experienceLabel(recruitment.requirements.experienceLevel)} '
-              '/ 최대 시간 ${_playTimeLabel(recruitment.schedule.maxPlayHours)}',
+              '/ 숙련도 ${_experienceLabel(recruitment.requirements.experienceLevel)}',
               style: theme.textTheme.bodySmall,
             ),
           ],
@@ -95,14 +94,6 @@ class RecruitmentCard extends StatelessWidget {
       ExperienceLevel.semiExperienced => '반숙',
       ExperienceLevel.experienced => '숙련',
     };
-  }
-
-  String _playTimeLabel(int? maxPlayHours) {
-    if (maxPlayHours == null) {
-      return '클리어 시까지';
-    }
-
-    return '$maxPlayHours시간';
   }
 }
 

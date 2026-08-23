@@ -220,6 +220,66 @@ void main() {
     expect(await repository.getPublicRecruitments(), hasLength(1));
   });
 
+  test('모집 생성은 동일 레이드 pending 종료를 명시적으로 확인한다', () async {
+    repository.seed(
+      RecruitmentAggregate(
+        id: 'pending-recruitment',
+        title: '신청 중인 모집',
+        metadata: _metadata,
+        state: RecruitmentState(
+          leaderUserId: 'other-user',
+          approvalPolicy: const ApprovalPolicy.leaderOnly(),
+          compositionPolicy: _compositionPolicy,
+          members: const [
+            RecruitmentPartyMember(
+              userId: 'other-user',
+              characterId: 'other-character',
+              className: '블레이드',
+              role: PartyRole.dealer,
+              partyIndex: 0,
+            ),
+          ],
+          applications: const {
+            'user-a': RecruitmentApplication(
+              applicantUserId: 'user-a',
+              characterId: 'a-character',
+              className: '바드',
+              requestedRole: PartyRole.support,
+            ),
+          },
+        ),
+        revision: 0,
+        createdAt: DateTime.utc(2026, 8, 20),
+        updatedAt: DateTime.utc(2026, 8, 20),
+      ),
+    );
+
+    final rejected = await _create(service);
+    expect(
+      rejected.domainFailure,
+      RecruitmentCommandFailure.pendingApplicationsRequireConfirmation,
+    );
+
+    final created = await _create(service, cancelPendingApplications: true);
+    expect(created.isSuccess, isTrue);
+    expect(
+      (await repository.getById(
+        'pending-recruitment',
+      ))!.state.applications['user-a']!.status,
+      RecruitmentApplicationStatus.superseded,
+    );
+  });
+
+  test('파티장은 모집을 삭제하고 모든 확정 점유를 해제한다', () async {
+    final created = await _create(service);
+
+    final deleted = await service.deleteRecruitment(created.aggregate!.id);
+
+    expect(deleted.isSuccess, isTrue);
+    expect(await repository.getById(created.aggregate!.id), isNull);
+    expect(await assignmentRepository.getByUser('user-a'), isEmpty);
+  });
+
   test('즉시 가입 확정 시 같은 캐릭터와 레이드의 다른 pending 신청을 종료한다', () async {
     final approval = await _create(service);
     final direct = await service.createRecruitment(
@@ -413,6 +473,23 @@ void main() {
       RecruitmentApplicationStatus.superseded,
     );
   });
+
+  test('같은 캐릭터의 반대 역할로 확정 점유를 유지하며 변경한다', () async {
+    final created = await _create(service);
+
+    final changed = await service.changeCharacter(
+      recruitmentId: created.aggregate!.id,
+      characterId: 'a-character',
+      className: '바드',
+      role: PartyRole.dealer,
+    );
+
+    expect(changed.isSuccess, isTrue);
+    expect(changed.aggregate!.state.members.single.role, PartyRole.dealer);
+    final assignments = await assignmentRepository.getByUser('user-a');
+    expect(assignments, hasLength(1));
+    expect(assignments.single.characterId, 'a-character');
+  });
 }
 
 final _laterStart = DateTime.utc(2026, 8, 20, 10);
@@ -446,16 +523,19 @@ Future<LocalRecruitmentResult> _createWith(
   compositionPolicy: _compositionPolicy,
 );
 
-Future<LocalRecruitmentResult> _create(RecruitmentCommandService service) =>
-    service.createRecruitment(
-      title: '세르카 모집',
-      metadata: _metadata,
-      leaderCharacterId: 'a-character',
-      leaderClassName: '바드',
-      leaderRole: PartyRole.support,
-      approvalPolicy: const ApprovalPolicy.anyMember(),
-      compositionPolicy: _compositionPolicy,
-    );
+Future<LocalRecruitmentResult> _create(
+  RecruitmentCommandService service, {
+  bool cancelPendingApplications = false,
+}) => service.createRecruitment(
+  title: '세르카 모집',
+  metadata: _metadata,
+  leaderCharacterId: 'a-character',
+  leaderClassName: '바드',
+  leaderRole: PartyRole.support,
+  approvalPolicy: const ApprovalPolicy.anyMember(),
+  compositionPolicy: _compositionPolicy,
+  cancelPendingApplications: cancelPendingApplications,
+);
 
 const _compositionPolicy = PartyCompositionPolicy(
   RecruitmentPartyRules(
@@ -497,6 +577,15 @@ class _ConflictingRepository implements RecruitmentStateRepository {
   @override
   Future<List<PublicRecruitmentSummary>> getPublicRecruitments() =>
       delegate.getPublicRecruitments();
+
+  @override
+  Future<bool> deleteIfRevision({
+    required String recruitmentId,
+    required int expectedRevision,
+  }) => delegate.deleteIfRevision(
+    recruitmentId: recruitmentId,
+    expectedRevision: expectedRevision,
+  );
 
   @override
   Future<RecruitmentAggregate?> updateIfRevision({

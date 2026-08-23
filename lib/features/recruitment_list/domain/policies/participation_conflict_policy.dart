@@ -29,7 +29,9 @@ class ParticipationConflictDecision {
 }
 
 class ParticipationConflictPolicy {
-  const ParticipationConflictPolicy();
+  const ParticipationConflictPolicy({this.scheduleConflictsEnabled = true});
+
+  final bool scheduleConflictsEnabled;
 
   ParticipationConflictDecision evaluate({
     required ActiveRaidAssignment proposed,
@@ -59,6 +61,7 @@ class ParticipationConflictPolicy {
         );
       }
 
+      if (!scheduleConflictsEnabled) continue;
       final scheduleConflict = _scheduleConflict(
         active.schedule,
         proposed.schedule,
@@ -83,8 +86,8 @@ class ParticipationConflictPolicy {
     if (leftEnd == null || rightEnd == null) {
       return ParticipationConflictType.uncertainSchedule;
     }
-    final overlaps = left.startAt.isBefore(rightEnd) &&
-        right.startAt.isBefore(leftEnd);
+    final overlaps =
+        left.startAt.isBefore(rightEnd) && right.startAt.isBefore(leftEnd);
     return overlaps ? ParticipationConflictType.overlappingSchedule : null;
   }
 }

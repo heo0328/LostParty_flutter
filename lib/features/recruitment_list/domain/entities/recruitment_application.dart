@@ -73,12 +73,13 @@ class RecruitmentPartyMember {
   RecruitmentPartyMember copyWith({
     String? characterId,
     String? className,
+    PartyRole? role,
     int? partyIndex,
   }) => RecruitmentPartyMember(
     userId: userId,
     characterId: characterId ?? this.characterId,
     className: className ?? this.className,
-    role: role,
+    role: role ?? this.role,
     partyIndex: partyIndex ?? this.partyIndex,
   );
 }
