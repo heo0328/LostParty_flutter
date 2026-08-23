@@ -23,6 +23,7 @@ class RecruitmentApplication {
     required this.characterId,
     required this.className,
     required this.requestedRole,
+    this.itemLevel,
     this.status = RecruitmentApplicationStatus.pending,
     this.votes = const {},
   });
@@ -31,6 +32,7 @@ class RecruitmentApplication {
   final String characterId;
   final String className;
   final PartyRole requestedRole;
+  final double? itemLevel;
   final RecruitmentApplicationStatus status;
   final Map<String, ApplicationVote> votes;
 
@@ -50,6 +52,7 @@ class RecruitmentApplication {
     characterId: characterId,
     className: className,
     requestedRole: requestedRole,
+    itemLevel: itemLevel,
     status: status ?? this.status,
     votes: votes ?? this.votes,
   );
@@ -62,6 +65,7 @@ class RecruitmentPartyMember {
     required this.className,
     required this.role,
     required this.partyIndex,
+    this.itemLevel,
   });
 
   final String userId;
@@ -69,17 +73,20 @@ class RecruitmentPartyMember {
   final String className;
   final PartyRole role;
   final int partyIndex;
+  final double? itemLevel;
 
   RecruitmentPartyMember copyWith({
     String? characterId,
     String? className,
     PartyRole? role,
     int? partyIndex,
+    double? itemLevel,
   }) => RecruitmentPartyMember(
     userId: userId,
     characterId: characterId ?? this.characterId,
     className: className ?? this.className,
     role: role ?? this.role,
     partyIndex: partyIndex ?? this.partyIndex,
+    itemLevel: itemLevel ?? this.itemLevel,
   );
 }

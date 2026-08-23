@@ -15,6 +15,14 @@ abstract class RecruitmentStateRepository {
     required DateTime updatedAt,
   });
 
+  Future<RecruitmentAggregate?> updateAggregateIfRevision({
+    required String recruitmentId,
+    required int expectedRevision,
+    required RecruitmentMetadata metadata,
+    required RecruitmentState nextState,
+    required DateTime updatedAt,
+  });
+
   Future<bool> deleteIfRevision({
     required String recruitmentId,
     required int expectedRevision,

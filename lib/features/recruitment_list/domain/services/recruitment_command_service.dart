@@ -94,6 +94,7 @@ class RecruitmentCommandService {
     required String leaderCharacterId,
     required String leaderClassName,
     required PartyRole leaderRole,
+    double? leaderItemLevel,
     required ApprovalPolicy approvalPolicy,
     required PartyCompositionPolicy compositionPolicy,
     bool cancelPendingApplications = false,
@@ -133,6 +134,7 @@ class RecruitmentCommandService {
             className: leaderClassName,
             role: leaderRole,
             partyIndex: 0,
+            itemLevel: leaderItemLevel,
           ),
         ],
       ),
@@ -162,6 +164,7 @@ class RecruitmentCommandService {
     required String characterId,
     required String className,
     required PartyRole role,
+    double? itemLevel,
   }) async {
     final userId = session.currentUserId;
     if (userId == null) {
@@ -199,6 +202,7 @@ class RecruitmentCommandService {
             characterId: characterId,
             className: className,
             requestedRole: role,
+            itemLevel: itemLevel,
           ),
         );
       },
@@ -224,6 +228,121 @@ class RecruitmentCommandService {
           actorUserId: userId,
         );
       });
+
+  Future<LocalRecruitmentResult> updateRaid({
+    required String recruitmentId,
+    required RecruitmentMetadata metadata,
+    required PartyCompositionPolicy compositionPolicy,
+  }) async {
+    final userId = session.currentUserId;
+    if (userId == null) {
+      return const LocalRecruitmentResult.failure(
+        LocalRecruitmentFailure.unauthenticated,
+      );
+    }
+    final current = await repository.getById(recruitmentId);
+    if (current == null) {
+      return const LocalRecruitmentResult.failure(
+        LocalRecruitmentFailure.notFound,
+      );
+    }
+    if (current.state.leaderUserId != userId) {
+      return LocalRecruitmentResult.failure(
+        LocalRecruitmentFailure.domainRejected,
+        aggregate: current,
+        domainFailure: RecruitmentCommandFailure.unauthorized,
+      );
+    }
+    final composition = compositionPolicy.arrange(
+      current.state.members
+          .map(
+            (member) => PartyCompositionMember(
+              id: member.userId,
+              className: member.className,
+              role: member.role,
+            ),
+          )
+          .toList(growable: false),
+    );
+    if (!composition.canJoin) {
+      return LocalRecruitmentResult.failure(
+        LocalRecruitmentFailure.domainRejected,
+        aggregate: current,
+        domainFailure: RecruitmentCommandFailure.compositionRejected,
+      );
+    }
+    final nextState = current.state.copyWith(
+      compositionPolicy: compositionPolicy,
+      members: [
+        for (final member in current.state.members)
+          member.copyWith(partyIndex: composition.assignments[member.userId]),
+      ],
+    );
+    final assignmentChanges = <
+      ({ActiveRaidAssignment before, ActiveRaidAssignment after})
+    >[];
+    final assignmentStore = assignmentRepository;
+    if (assignmentStore != null &&
+        (current.metadata.raidId != metadata.raidId ||
+            current.metadata.difficultyId != metadata.difficultyId)) {
+      final proposedAggregate = current.copyWith(metadata: metadata);
+      for (final member in current.state.members) {
+        final assignments = await assignmentStore.getByUser(member.userId);
+        final before = assignments
+            .where(
+              (assignment) =>
+                  assignment.recruitmentId == current.id &&
+                  assignment.characterId == member.characterId &&
+                  assignment.raidId == current.metadata.raidId,
+            )
+            .firstOrNull;
+        if (before == null) continue;
+        final after = _assignmentFor(
+          aggregate: proposedAggregate,
+          userId: member.userId,
+          characterId: member.characterId,
+        );
+        final replaced = await assignmentStore.replace(
+          current: before,
+          replacement: after,
+        );
+        if (!replaced.isSuccess) {
+          for (final change in assignmentChanges.reversed) {
+            await assignmentStore.replace(
+              current: change.after,
+              replacement: change.before,
+            );
+          }
+          return LocalRecruitmentResult.failure(
+            LocalRecruitmentFailure.domainRejected,
+            aggregate: current,
+            domainFailure: RecruitmentCommandFailure.participationConflict,
+          );
+        }
+        assignmentChanges.add((before: before, after: after));
+      }
+    }
+    final updated = await repository.updateAggregateIfRevision(
+      recruitmentId: recruitmentId,
+      expectedRevision: current.revision,
+      metadata: metadata,
+      nextState: nextState,
+      updatedAt: clock.now(),
+    );
+    if (updated == null) {
+      for (final change in assignmentChanges.reversed) {
+        await assignmentStore?.replace(
+          current: change.after,
+          replacement: change.before,
+        );
+      }
+      return LocalRecruitmentResult.failure(
+        LocalRecruitmentFailure.revisionConflict,
+        aggregate: current,
+      );
+    }
+    return LocalRecruitmentResult.success(updated);
+  }
 
   Future<LocalRecruitmentResult> deleteRecruitment(String recruitmentId) async {
     final userId = session.currentUserId;
@@ -271,6 +390,7 @@ class RecruitmentCommandService {
     required String characterId,
     required String className,
     PartyRole? role,
+    double? itemLevel,
     bool cancelPendingApplications = false,
   }) async {
     final userId = session.currentUserId;
@@ -328,6 +448,7 @@ class RecruitmentCommandService {
       characterId: characterId,
       className: className,
       role: role ?? currentMember.role,
+      itemLevel: itemLevel,
     );
     if (!transition.isSuccess) {
       return LocalRecruitmentResult.failure(

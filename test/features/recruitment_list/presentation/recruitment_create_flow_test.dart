@@ -460,7 +460,84 @@ void main() {
     );
     expect(find.text('가입 신청이 거절되었습니다.'), findsOneWidget);
   });
+
+  testWidgets('파티원이 수동 알림 전송 전에 확인하고 미연결 상태를 안내받는다', (
+    tester,
+  ) async {
+    final repository = InMemoryRecruitmentStateRepository();
+    await repository.create(_memberRecruitment);
+    final service = _service(repository, FakeUserSession('local-user'));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: _detailFor(_memberRecruitment.id, repository, service),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('notifyPartyMembersButton')));
+    await tester.pumpAndSettle();
+    expect(find.text('참가 인원에게 알림을 보냅니다.'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('confirmNotifyPartyMembersButton')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Firebase 알림 서버 연결 후 사용할 수 있습니다.'), findsOneWidget);
+  });
+
+  testWidgets('파티장이 레이드 수정 내용을 검토한 뒤 저장한다', (tester) async {
+    final repository = InMemoryRecruitmentStateRepository();
+    await repository.create(_pendingRecruitment);
+    final service = _service(repository, FakeUserSession('other-user'));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RecruitmentDetailPage(
+          recruitmentId: _pendingRecruitment.id,
+          repository: repository,
+          commandService: service,
+          candidateService: RecruitmentApplicationCandidateService(
+            accountRepository: _AccountRepository(),
+            weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+            session: service.session,
+            clock: service.clock,
+          ),
+          catalogRepository: _CatalogRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('editRecruitmentRaidButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('reviewRecruitmentRaidEditButton')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('자동으로 제외되지 않습니다.'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('confirmRecruitmentRaidEditButton')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('레이드·난이도를 변경했습니다.'), findsOneWidget);
+    expect((await repository.getById(_pendingRecruitment.id))!.revision, 1);
+  });
 }
+
+RecruitmentDetailPage _detailFor(
+  String recruitmentId,
+  InMemoryRecruitmentStateRepository repository,
+  RecruitmentCommandService service,
+) => RecruitmentDetailPage(
+  recruitmentId: recruitmentId,
+  repository: repository,
+  commandService: service,
+  candidateService: RecruitmentApplicationCandidateService(
+    accountRepository: _AccountRepository(),
+    weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+    session: service.session,
+    clock: service.clock,
+  ),
+);
 
 RecruitmentCommandService _service(
   InMemoryRecruitmentStateRepository repository,

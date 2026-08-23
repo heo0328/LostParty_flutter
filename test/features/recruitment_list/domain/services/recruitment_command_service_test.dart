@@ -610,6 +610,30 @@ class _ConflictingRepository implements RecruitmentStateRepository {
   }
 
   @override
+  Future<RecruitmentAggregate?> updateAggregateIfRevision({
+    required String recruitmentId,
+    required int expectedRevision,
+    required RecruitmentMetadata metadata,
+    required RecruitmentState nextState,
+    required DateTime updatedAt,
+  }) async {
+    final current = await delegate.getById(recruitmentId);
+    await delegate.updateIfRevision(
+      recruitmentId: recruitmentId,
+      expectedRevision: expectedRevision,
+      nextState: current!.state,
+      updatedAt: updatedAt,
+    );
+    return delegate.updateAggregateIfRevision(
+      recruitmentId: recruitmentId,
+      expectedRevision: expectedRevision,
+      metadata: metadata,
+      nextState: nextState,
+      updatedAt: updatedAt,
+    );
+  }
+
+  @override
   Future<int> supersedePendingApplications({
     required String applicantUserId,
     required String characterId,
