@@ -248,6 +248,7 @@
 
 현재 작업 순서와 완료 상태의 단일 기준은 `docs/NEXT_WORK.md`다.
 `codex/combat-power-auto-title`에서 전투력 표시 통일과 자동 모집 제목 구현 및 자동 검증을 완료했다.
+현재 작업 브랜치는 `codex/full-recruitment-edit`이며 생성·수정 공용 폼과 전체 모집 수정 흐름을 구현한다.
 
 그 이후에는 최근 레이드 조건 기억을 진행하고, Firebase 기반 다중 사용자 전환은
 `BACKEND_PARTY_ARCHITECTURE.md`와 `PARTY_PARTICIPATION_RULES.md`를 기준으로 별도 대형 작업에서 진행한다.
