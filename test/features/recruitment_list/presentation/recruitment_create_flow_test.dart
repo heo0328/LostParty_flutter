@@ -106,21 +106,34 @@ void main() {
     await tester.tap(find.text('파티장 승인').last);
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('saveRecruitmentButton')),
+    final titleField = tester.widget<TextFormField>(
+      find.byKey(const ValueKey('recruitmentTitleField')),
     );
-    await tester.tap(find.byKey(const ValueKey('saveRecruitmentButton')));
-    await tester.pump();
-    expect(find.text('모집 제목을 입력해주세요.'), findsOneWidget);
-    expect(find.text('1 이상의 전투력을 입력해주세요.'), findsNothing);
+    expect(titleField.controller!.text, '노르카 모집');
+
+    await tester.enterText(
+      find.byKey(const ValueKey('recruitmentTitleField')),
+      '직접 입력 제목',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('recruitmentTitleField')),
+      '',
+    );
+    expect(titleField.controller!.text, '노르카 모집');
+    await tester.enterText(
+      find.byKey(const ValueKey('minCombatPowerField')),
+      '0',
+    );
+    expect(titleField.controller!.text, '노르카 모집');
+    await tester.enterText(
+      find.byKey(const ValueKey('minCombatPowerField')),
+      '250000.99',
+    );
+    expect(titleField.controller!.text, '노르카 250,000 모집');
 
     await tester.enterText(
       find.byKey(const ValueKey('recruitmentTitleField')),
       '세르카 클경 모집',
-    );
-    await tester.enterText(
-      find.byKey(const ValueKey('minCombatPowerField')),
-      '250000',
     );
     await tester.ensureVisible(
       find.byKey(const ValueKey('saveRecruitmentButton')),

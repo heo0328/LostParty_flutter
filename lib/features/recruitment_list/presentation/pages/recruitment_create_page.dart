@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../../../../shared/raid_catalog/domain/policies/raid_eligibility_policy.dart';
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
@@ -9,10 +8,12 @@ import '../../domain/entities/party_recruitment.dart';
 import '../../domain/entities/recruitment_aggregate.dart';
 import '../../domain/policies/approval_policy.dart';
 import '../../domain/policies/party_composition_policy.dart';
+import '../../domain/policies/recruitment_auto_title_policy.dart';
 import '../../domain/services/recruitment_command_service.dart';
 import '../../domain/services/recruitment_application_candidate_service.dart';
 import '../../domain/services/recruitment_leader_candidate_service.dart';
 import '../../domain/state/recruitment_state_machine.dart';
+import '../models/candidate_build_display_model.dart';
 
 class RecruitmentCreatePage extends StatefulWidget {
   const RecruitmentCreatePage({
@@ -30,6 +31,7 @@ class RecruitmentCreatePage extends StatefulWidget {
 
 class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
   static const _eligibilityPolicy = RaidEligibilityPolicy();
+  static const _autoTitlePolicy = RecruitmentAutoTitlePolicy();
   final _formKey = GlobalKey<FormState>();
   final _title = TextEditingController();
   final _combatPower = TextEditingController();
@@ -43,6 +45,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
   ApprovalMode _approval = ApprovalMode.leaderOnly;
   bool _loading = true;
   bool _saving = false;
+  bool _usingAutoTitle = true;
   String? _loadError;
 
   double? get _selectedItemLevel => _leader?.optionFor(_role)?.itemLevel;
@@ -106,6 +109,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
         _difficulty = selectedDifficulty;
         _loading = false;
       });
+      _syncAutoTitle();
     } catch (_) {
       setState(() {
         _loadError = '모집 생성 정보를 불러오지 못했습니다.';
@@ -135,9 +139,10 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
                     labelText: '모집 제목',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? '모집 제목을 입력해주세요.'
-                      : null,
+                  onChanged: (value) {
+                    _usingAutoTitle = value.trim().isEmpty;
+                    if (_usingAutoTitle) _syncAutoTitle();
+                  },
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<RaidDefinition>(
@@ -222,6 +227,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
                     border: OutlineInputBorder(),
                   ),
                   validator: _positiveInteger,
+                  onChanged: (_) => _syncAutoTitle(),
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<ExperienceLevel?>(
@@ -253,7 +259,10 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
                       child: Text('숙련'),
                     ),
                   ],
-                  onChanged: (value) => setState(() => _experience = value),
+                  onChanged: (value) {
+                    setState(() => _experience = value);
+                    _syncAutoTitle();
+                  },
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<ApprovalMode>(
@@ -286,7 +295,30 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
   );
   String? _positiveInteger(String? value) {
     if (value == null || value.trim().isEmpty) return null;
-    return (int.tryParse(value) ?? 0) > 0 ? null : '1 이상의 전투력을 입력해주세요.';
+    final parsed = num.tryParse(value.replaceAll(',', ''));
+    return parsed != null && parsed >= 0 ? null : '0 이상의 전투력을 입력해주세요.';
+  }
+
+  int? get _normalizedMinCombatPower {
+    final parsed = num.tryParse(_combatPower.text.replaceAll(',', '').trim());
+    final value = parsed?.toInt() ?? 0;
+    return value > 0 ? value : null;
+  }
+
+  String get _generatedTitle => _autoTitlePolicy.build(
+    difficultyAlias: _difficulty?.displayAlias ?? '',
+    experienceLevel: _experience,
+    minCombatPower: _normalizedMinCombatPower,
+  );
+
+  void _syncAutoTitle() {
+    if (!_usingAutoTitle) return;
+    final title = _generatedTitle;
+    if (_title.text == title) return;
+    _title.value = TextEditingValue(
+      text: title,
+      selection: TextSelection.collapsed(offset: title.length),
+    );
   }
 
   Future<List<RecruitmentLeaderCandidate>> _loadCandidates(
@@ -311,11 +343,13 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       _raid = raid;
       _difficulty = difficulty;
     });
+    _syncAutoTitle();
     await _refreshCandidates();
   }
 
   Future<void> _changeDifficulty(RaidDifficultyDefinition difficulty) async {
     setState(() => _difficulty = difficulty);
+    _syncAutoTitle();
     await _refreshCandidates();
   }
 
@@ -341,6 +375,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       _raid = option.raid;
       _difficulty = eligibleDifficulty ?? option.highestDifficulty;
     });
+    _syncAutoTitle();
     await _refreshCandidates();
   }
 
@@ -546,10 +581,12 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
   String _candidateDescription(RecruitmentLeaderCandidate candidate) {
     final roles = candidate.roles
         .map((option) {
-          final level = option.itemLevel == null
-              ? '-'
-              : DisplayNumberFormatter.fixed(option.itemLevel!);
-          return '${_roleLabel(option.role)} $level';
+          return CandidateBuildDisplayModel(
+            role: option.role,
+            itemLevel: option.itemLevel,
+            combatPower: option.combatPower,
+            minCombatPower: _normalizedMinCombatPower,
+          ).label;
         })
         .join(' · ');
     final reasons = [
@@ -617,7 +654,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       ApprovalMode.quorum => throw StateError('현재 생성 화면에서 지원하지 않는 승인 방식입니다.'),
     };
     final result = await widget.commandService.createRecruitment(
-      title: _title.text.trim(),
+      title: _title.text.trim().isEmpty ? _generatedTitle : _title.text.trim(),
       metadata: RecruitmentMetadata(
         catalogVersion: _catalog!.catalogVersion,
         raidId: raid.raidId,
@@ -627,9 +664,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
         difficultyAlias: difficulty.displayAlias,
         gateCount: raid.gateCount,
         minItemLevel: difficulty.minItemLevel,
-        minCombatPower: _combatPower.text.isEmpty
-            ? null
-            : int.parse(_combatPower.text),
+        minCombatPower: _normalizedMinCombatPower,
         experienceLevel: _experience,
         maxPlayHours: null,
       ),

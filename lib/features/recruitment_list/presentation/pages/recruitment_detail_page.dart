@@ -13,6 +13,7 @@ import '../../domain/repositories/recruitment_state_repository.dart';
 import '../../domain/services/recruitment_application_candidate_service.dart';
 import '../../domain/services/recruitment_command_service.dart';
 import '../../domain/state/recruitment_state_machine.dart';
+import '../models/candidate_build_display_model.dart';
 
 class RecruitmentDetailPage extends StatefulWidget {
   const RecruitmentDetailPage({
@@ -685,6 +686,18 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
                                     ),
                                     Text(
                                       '${candidate.accountLabel} · ${candidate.className}',
+                                    ),
+                                    Text(
+                                      CandidateBuildDisplayModel(
+                                        role: candidate.role,
+                                        itemLevel: candidate.itemLevel,
+                                        combatPower: candidate.combatPower,
+                                        minCombatPower:
+                                            aggregate.metadata.minCombatPower,
+                                      ).label,
+                                      key: ValueKey(
+                                        'candidate-build-${candidate.characterId}-${candidate.role.name}',
+                                      ),
                                     ),
                                     if (options.length > 1)
                                       SegmentedButton<PartyRole>(
