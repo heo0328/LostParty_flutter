@@ -56,6 +56,27 @@ class InMemoryRecruitmentStateRepository extends ChangeNotifier
   }
 
   @override
+  Future<RecruitmentAggregate?> updateAggregateIfRevision({
+    required String recruitmentId,
+    required int expectedRevision,
+    required RecruitmentMetadata metadata,
+    required RecruitmentState nextState,
+    required DateTime updatedAt,
+  }) async {
+    final current = _store[recruitmentId];
+    if (current == null || current.revision != expectedRevision) return null;
+    final updated = current.copyWith(
+      metadata: metadata,
+      state: nextState,
+      revision: current.revision + 1,
+      updatedAt: updatedAt,
+    );
+    _store[recruitmentId] = updated;
+    notifyListeners();
+    return updated;
+  }
+
+  @override
   Future<bool> deleteIfRevision({
     required String recruitmentId,
     required int expectedRevision,

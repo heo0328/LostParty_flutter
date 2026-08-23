@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../shared/formatters/display_number_formatter.dart';
+import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
+import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/entities/recruitment_aggregate.dart';
 import '../../domain/entities/recruitment_application.dart';
 import '../../domain/policies/approval_policy.dart';
+import '../../domain/policies/party_composition_policy.dart';
 import '../../domain/repositories/recruitment_state_repository.dart';
 import '../../domain/services/recruitment_application_candidate_service.dart';
 import '../../domain/services/recruitment_command_service.dart';
@@ -17,12 +20,14 @@ class RecruitmentDetailPage extends StatefulWidget {
     required this.repository,
     required this.commandService,
     required this.candidateService,
+    this.catalogRepository,
     super.key,
   });
   final String recruitmentId;
   final RecruitmentStateRepository repository;
   final RecruitmentCommandService commandService;
   final RecruitmentApplicationCandidateService candidateService;
+  final RaidCatalogRepository? catalogRepository;
   @override
   State<RecruitmentDetailPage> createState() => _RecruitmentDetailPageState();
 }
@@ -30,6 +35,7 @@ class RecruitmentDetailPage extends StatefulWidget {
 class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
   late Future<RecruitmentAggregate?> _future = _load();
   bool _submitting = false;
+  bool _notifying = false;
   final Map<String, PartyRole> _candidateRoleSelections = {};
   Future<RecruitmentAggregate?> _load() =>
       widget.repository.getById(widget.recruitmentId);
@@ -61,18 +67,46 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
             ),
             if (state.leaderUserId == widget.commandService.currentUserId) ...[
               const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (widget.catalogRepository != null)
+                    OutlinedButton.icon(
+                      key: const ValueKey('editRecruitmentRaidButton'),
+                      onPressed: _submitting
+                          ? null
+                          : () => _showRaidEditor(aggregate),
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('레이드 수정'),
+                    ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    key: const ValueKey('deleteRecruitmentButton'),
+                    onPressed: _submitting
+                        ? null
+                        : () => _confirmDelete(aggregate),
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('모집 삭제'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (state.members.any(
+              (member) => member.userId == widget.commandService.currentUserId,
+            )) ...[
+              const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerRight,
                 child: OutlinedButton.icon(
-                  key: const ValueKey('deleteRecruitmentButton'),
-                  onPressed: _submitting
+                  key: const ValueKey('notifyPartyMembersButton'),
+                  onPressed: _submitting || _notifying
                       ? null
-                      : () => _confirmDelete(aggregate),
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('모집 삭제'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Theme.of(context).colorScheme.error,
-                  ),
+                      : () => _confirmNotifyParticipants(aggregate),
+                  icon: const Icon(Icons.notifications_active_outlined),
+                  label: Text(_notifying ? '알림 요청 중...' : '알림 보내기'),
                 ),
               ),
             ],
@@ -124,12 +158,28 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
                   key: ValueKey('partyMember-${member.userId}'),
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(
-                    member.role == PartyRole.support
+                    member.itemLevel != null &&
+                            member.itemLevel! < metadata.minItemLevel
+                        ? Icons.warning_amber_rounded
+                        : member.role == PartyRole.support
                         ? Icons.health_and_safety
                         : Icons.sports_martial_arts,
+                    color: member.itemLevel != null &&
+                            member.itemLevel! < metadata.minItemLevel
+                        ? Theme.of(context).colorScheme.error
+                        : null,
                   ),
                   title: Text(member.characterId),
-                  subtitle: Text('${member.className} · ${_role(member.role)}'),
+                  subtitle: Text(
+                    member.itemLevel != null &&
+                            member.itemLevel! < metadata.minItemLevel
+                        ? '${member.className} · ${_role(member.role)}\n입장 레벨 ${DisplayNumberFormatter.integer(metadata.minItemLevel)} 미달'
+                        : '${member.className} · ${_role(member.role)}',
+                    style: member.itemLevel != null &&
+                            member.itemLevel! < metadata.minItemLevel
+                        ? TextStyle(color: Theme.of(context).colorScheme.error)
+                        : null,
+                  ),
                   trailing: member.userId == widget.commandService.currentUserId
                       ? TextButton(
                           key: const ValueKey('openCharacterChangeButton'),
@@ -217,6 +267,198 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
       ),
     ],
   );
+
+  Future<void> _showRaidEditor(RecruitmentAggregate aggregate) async {
+    final repository = widget.catalogRepository;
+    if (repository == null) return;
+    final catalog = await repository.loadCatalog();
+    if (!mounted) return;
+    var raid = catalog.raids.firstWhere(
+      (item) => item.raidId == aggregate.metadata.raidId,
+      orElse: () => catalog.raids.where((item) => item.isActive).first,
+    );
+    var difficulty = raid.difficulties.firstWhere(
+      (item) => item.difficultyId == aggregate.metadata.difficultyId,
+      orElse: () => _highestActiveDifficulty(raid),
+    );
+    final selection = await showDialog<_RaidEditSelection>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('레이드·난이도 수정'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<RaidDefinition>(
+                key: const ValueKey('editRaidDropdown'),
+                initialValue: raid,
+                decoration: const InputDecoration(labelText: '레이드'),
+                items: [
+                  for (final item in catalog.raids.where(
+                    (item) => item.isActive,
+                  ))
+                    DropdownMenuItem(
+                      value: item,
+                      child: Text(item.displayName),
+                    ),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  setDialogState(() {
+                    raid = value;
+                    difficulty = _highestActiveDifficulty(value);
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<RaidDifficultyDefinition>(
+                key: ValueKey('editDifficulty-${raid.raidId}'),
+                initialValue: difficulty,
+                decoration: const InputDecoration(labelText: '난이도'),
+                items: [
+                  for (final item in raid.difficulties.where(
+                    (item) => item.isActive,
+                  ))
+                    DropdownMenuItem(
+                      value: item,
+                      child: Text('${item.name} (${item.displayAlias})'),
+                    ),
+                ],
+                onChanged: (value) =>
+                    setDialogState(() => difficulty = value ?? difficulty),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              key: const ValueKey('reviewRecruitmentRaidEditButton'),
+              onPressed: () => Navigator.pop(
+                dialogContext,
+                _RaidEditSelection(raid, difficulty),
+              ),
+              child: const Text('변경 검토'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (selection == null || !mounted) return;
+    final affectedMembers = aggregate.state.members
+        .where(
+          (member) =>
+              member.itemLevel != null &&
+              member.itemLevel! < selection.difficulty.minItemLevel,
+        )
+        .toList(growable: false);
+    final unknownCount = aggregate.state.members
+        .where((member) => member.itemLevel == null)
+        .length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('레이드 조건을 변경할까요?'),
+        content: Text(
+          [
+            '${selection.raid.displayName} - ${selection.difficulty.name}',
+            '입장 레벨 ${DisplayNumberFormatter.integer(selection.difficulty.minItemLevel)}',
+            if (affectedMembers.isNotEmpty)
+              '입장 불가능 ${affectedMembers.length}명: ${affectedMembers.map((member) => member.characterId).join(', ')}',
+            if (unknownCount > 0) '저장 레벨을 확인할 수 없는 참가자 $unknownCount명',
+            '입장 불가능한 참가자는 자동으로 제외되지 않습니다.',
+          ].join('\n'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirmRecruitmentRaidEditButton'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('변경'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _submitting = true);
+    final old = aggregate.metadata;
+    final result = await widget.commandService.updateRaid(
+      recruitmentId: aggregate.id,
+      metadata: RecruitmentMetadata(
+        catalogVersion: catalog.catalogVersion,
+        raidId: selection.raid.raidId,
+        difficultyId: selection.difficulty.difficultyId,
+        raidName: selection.raid.displayName,
+        difficultyName: selection.difficulty.name,
+        difficultyAlias: selection.difficulty.displayAlias,
+        gateCount: selection.raid.gateCount,
+        minItemLevel: selection.difficulty.minItemLevel,
+        minCombatPower: old.minCombatPower,
+        experienceLevel: old.experienceLevel,
+        maxPlayHours: old.maxPlayHours,
+        raidStartAt: old.raidStartAt,
+      ),
+      compositionPolicy: PartyCompositionPolicy(
+        RecruitmentPartyRules.fromRaid(selection.raid),
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    _message(
+      result.isSuccess
+          ? '레이드·난이도를 변경했습니다.'
+          : result.domainFailure == RecruitmentCommandFailure.compositionRejected
+          ? '현재 파티 구성을 새 레이드 정원에 배치할 수 없습니다.'
+          : '레이드·난이도를 변경하지 못했습니다.',
+    );
+    _reload();
+  }
+
+  RaidDifficultyDefinition _highestActiveDifficulty(RaidDefinition raid) =>
+      raid.difficulties.where((item) => item.isActive).reduce(
+        (current, candidate) => candidate.displayOrder > current.displayOrder
+            ? candidate
+            : current,
+      );
+
+  Future<void> _confirmNotifyParticipants(
+    RecruitmentAggregate aggregate,
+  ) async {
+    final recipientCount = aggregate.state.members.length - 1;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('알림을 보낼까요?'),
+        content: Text(
+          recipientCount > 0
+              ? '참가 인원에게 알림을 보냅니다.'
+              : '알림을 받을 다른 참가자가 없습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirmNotifyPartyMembersButton'),
+            onPressed: recipientCount > 0
+                ? () => Navigator.pop(dialogContext, true)
+                : null,
+            child: const Text('알림 보내기'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted || _notifying) return;
+    setState(() => _notifying = true);
+    _message('Firebase 알림 서버 연결 후 사용할 수 있습니다.');
+    if (mounted) setState(() => _notifying = false);
+  }
 
   Future<void> _confirmDelete(RecruitmentAggregate aggregate) async {
     final confirmed = await showDialog<bool>(
@@ -632,6 +874,7 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
       characterId: candidate.characterId,
       className: candidate.className,
       role: candidate.role,
+      itemLevel: candidate.itemLevel,
       cancelPendingApplications: cancelPendingApplications,
     );
     if (!mounted) return;
@@ -657,6 +900,7 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
       characterId: candidate.characterId,
       className: candidate.className,
       role: candidate.role,
+      itemLevel: candidate.itemLevel,
     );
     if (!mounted) return;
     setState(() => _submitting = false);
@@ -745,4 +989,11 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
     ApprovalMode.anyMember => '파티원 승인',
     ApprovalMode.quorum => '${policy.requiredApprovals}명 이상 동의',
   };
+}
+
+class _RaidEditSelection {
+  const _RaidEditSelection(this.raid, this.difficulty);
+
+  final RaidDefinition raid;
+  final RaidDifficultyDefinition difficulty;
 }

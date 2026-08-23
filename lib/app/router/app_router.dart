@@ -165,6 +165,7 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
                       repository: recruitmentRepository,
                       commandService: recruitmentCommandService,
                       candidateService: recruitmentCandidateService,
+                      catalogRepository: raidCatalogRepository,
                     ),
                   ),
                 ],

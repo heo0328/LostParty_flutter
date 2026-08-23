@@ -51,13 +51,15 @@ class RecruitmentAggregate {
   final DateTime updatedAt;
 
   RecruitmentAggregate copyWith({
+    String? title,
+    RecruitmentMetadata? metadata,
     RecruitmentState? state,
     int? revision,
     DateTime? updatedAt,
   }) => RecruitmentAggregate(
     id: id,
-    title: title,
-    metadata: metadata,
+    title: title ?? this.title,
+    metadata: metadata ?? this.metadata,
     state: state ?? this.state,
     revision: revision ?? this.revision,
     createdAt: createdAt,

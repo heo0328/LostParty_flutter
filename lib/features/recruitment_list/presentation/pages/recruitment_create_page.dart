@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
+import '../../../../shared/raid_catalog/domain/policies/raid_eligibility_policy.dart';
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/entities/recruitment_aggregate.dart';
@@ -28,6 +29,7 @@ class RecruitmentCreatePage extends StatefulWidget {
 }
 
 class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
+  static const _eligibilityPolicy = RaidEligibilityPolicy();
   final _formKey = GlobalKey<FormState>();
   final _title = TextEditingController();
   final _combatPower = TextEditingController();
@@ -42,6 +44,17 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
   bool _loading = true;
   bool _saving = false;
   String? _loadError;
+
+  double? get _selectedItemLevel => _leader?.optionFor(_role)?.itemLevel;
+
+  List<EligibleRaidOption> get _eligibleRaidOptions {
+    final catalog = _catalog;
+    if (catalog == null) return const [];
+    return _eligibilityPolicy.eligibleRaids(
+      catalog: catalog,
+      itemLevel: _selectedItemLevel,
+    );
+  }
   @override
   void initState() {
     super.initState();
@@ -66,15 +79,31 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
             (candidate) => candidate.isRepresentative && candidate.canSelect,
           )
           .firstOrNull;
+      final role =
+          leader?.roles.where((role) => role.canSelect).firstOrNull?.role ??
+          PartyRole.dealer;
+      final eligible = _eligibilityPolicy.eligibleRaids(
+        catalog: catalog,
+        itemLevel: leader?.optionFor(role)?.itemLevel,
+      );
+      final selectedRaid = eligible
+          .where((option) => option.raid.raidId == raid.raidId)
+          .firstOrNull;
+      final selectedOption = selectedRaid ?? eligible.firstOrNull;
+      final selectedDifficulty = selectedOption?.highestDifficulty ?? difficulty;
+      final refreshedCandidates = selectedOption == null
+          ? candidates
+          : await _loadCandidates(selectedOption.raid, selectedDifficulty);
+      final refreshedLeader = refreshedCandidates
+          .where((candidate) => candidate.characterId == leader?.characterId)
+          .firstOrNull;
       setState(() {
         _catalog = catalog;
-        _candidates = candidates;
-        _leader = leader;
-        _role =
-            leader?.roles.where((role) => role.canSelect).firstOrNull?.role ??
-            PartyRole.dealer;
-        _raid = raid;
-        _difficulty = difficulty;
+        _candidates = refreshedCandidates;
+        _leader = refreshedLeader ?? leader;
+        _role = role;
+        _raid = selectedOption?.raid ?? raid;
+        _difficulty = selectedDifficulty;
         _loading = false;
       });
     } catch (_) {
@@ -112,34 +141,50 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<RaidDefinition>(
-                  initialValue: _raid,
-                  decoration: const InputDecoration(
+                  key: ValueKey('raid-${_leader?.characterId}-$_role'),
+                  initialValue: _eligibleRaidOptions.any(
+                    (option) => option.raid.raidId == _raid?.raidId,
+                  )
+                      ? _raid
+                      : null,
+                  decoration: InputDecoration(
                     labelText: '레이드',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
+                    errorText: _leader != null && _eligibleRaidOptions.isEmpty
+                        ? '선택 캐릭터가 입장 가능한 레이드가 없습니다.'
+                        : null,
                   ),
                   items: [
-                    for (final raid in _catalog!.raids.where(
-                      (item) => item.isActive,
-                    ))
+                    for (final option in _eligibleRaidOptions)
                       DropdownMenuItem(
-                        value: raid,
-                        child: Text(raid.displayName),
+                        value: option.raid,
+                        child: Text(option.raid.displayName),
                       ),
                   ],
-                  onChanged: (raid) => _changeRaid(raid!),
+                  onChanged: (raid) => raid == null ? null : _changeRaid(raid),
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<RaidDifficultyDefinition>(
                   key: ValueKey(_raid!.raidId),
-                  initialValue: _difficulty,
+                  initialValue: _eligibleRaidOptions
+                          .where(
+                            (option) => option.raid.raidId == _raid?.raidId,
+                          )
+                          .expand((option) => option.difficulties)
+                          .any(
+                            (item) =>
+                                item.difficultyId == _difficulty?.difficultyId,
+                          )
+                      ? _difficulty
+                      : null,
                   decoration: const InputDecoration(
                     labelText: '난이도',
                     border: OutlineInputBorder(),
                   ),
                   items: [
-                    for (final item in _raid!.difficulties.where(
-                      (item) => item.isActive,
-                    ))
+                    for (final item in _eligibleRaidOptions
+                        .where((option) => option.raid.raidId == _raid!.raidId)
+                        .expand((option) => option.difficulties))
                       DropdownMenuItem(
                         value: item,
                         child: Text('${item.name} (${item.displayAlias})'),
@@ -165,7 +210,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
                         child: Text(_roleLabel(option.role)),
                       ),
                   ],
-                  onChanged: (value) => setState(() => _role = value!),
+                  onChanged: (value) => _changeRole(value!),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -258,7 +303,10 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
   );
 
   Future<void> _changeRaid(RaidDefinition raid) async {
-    final difficulty = raid.difficulties.where((item) => item.isActive).first;
+    final option = _eligibleRaidOptions.firstWhere(
+      (option) => option.raid.raidId == raid.raidId,
+    );
+    final difficulty = option.highestDifficulty;
     setState(() {
       _raid = raid;
       _difficulty = difficulty;
@@ -268,6 +316,31 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
 
   Future<void> _changeDifficulty(RaidDifficultyDefinition difficulty) async {
     setState(() => _difficulty = difficulty);
+    await _refreshCandidates();
+  }
+
+  Future<void> _changeRole(PartyRole role) async {
+    setState(() => _role = role);
+    await _refreshRaidSelectionForLeader();
+  }
+
+  Future<void> _refreshRaidSelectionForLeader() async {
+    final options = _eligibleRaidOptions;
+    if (options.isEmpty) {
+      setState(() {});
+      return;
+    }
+    final option = options
+        .where((option) => option.raid.raidId == _raid?.raidId)
+        .firstOrNull ??
+        options.first;
+    final eligibleDifficulty = option.difficulties
+        .where((item) => item.difficultyId == _difficulty?.difficultyId)
+        .firstOrNull;
+    setState(() {
+      _raid = option.raid;
+      _difficulty = eligibleDifficulty ?? option.highestDifficulty;
+    });
     await _refreshCandidates();
   }
 
@@ -342,10 +415,15 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       ),
     );
     if (selected == null || !mounted) return;
+    final role = selected.roles
+        .where((option) => _hasEligibleRaid(option.itemLevel))
+        .first
+        .role;
     setState(() {
       _leader = selected;
-      _role = selected.roles.where((option) => option.canSelect).first.role;
+      _role = role;
     });
+    await _refreshRaidSelectionForLeader();
   }
 
   List<Widget> _candidateTiles(BuildContext context) {
@@ -368,7 +446,8 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
         (status) =>
             status.type == CandidateParticipationStatusType.pendingSameRaid,
       );
-      final borderColor = candidate.canSelect
+      final canChoose = _canChooseCandidate(candidate);
+      final borderColor = canChoose
           ? hasPending
                 ? Theme.of(context).colorScheme.tertiary
                 : Theme.of(context).colorScheme.outlineVariant
@@ -381,10 +460,10 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
           ),
           child: ListTile(
             key: ValueKey('leader-candidate-${candidate.characterId}'),
-            enabled: candidate.canSelect,
+            enabled: canChoose,
             leading: Icon(
-              candidate.canSelect ? Icons.person : Icons.block,
-              color: candidate.canSelect
+              canChoose ? Icons.person : Icons.block,
+              color: canChoose
                   ? null
                   : Theme.of(context).colorScheme.error,
             ),
@@ -409,7 +488,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
             trailing: candidate.isRepresentative
                 ? const Chip(label: Text('대표'))
                 : null,
-            onTap: candidate.canSelect
+            onTap: canChoose
                 ? () => Navigator.pop(context, candidate)
                 : null,
           ),
@@ -417,6 +496,23 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       );
     }
     return widgets;
+  }
+
+  bool _canChooseCandidate(RecruitmentLeaderCandidate candidate) =>
+      !candidate.participationStatuses.any(
+        (status) =>
+            status.type ==
+                CandidateParticipationStatusType.overlappingSchedule ||
+            status.type == CandidateParticipationStatusType.uncertainSchedule,
+      ) &&
+      candidate.roles.any((option) => _hasEligibleRaid(option.itemLevel));
+
+  bool _hasEligibleRaid(double? itemLevel) {
+    final catalog = _catalog;
+    if (catalog == null) return false;
+    return _eligibilityPolicy
+        .eligibleRaids(catalog: catalog, itemLevel: itemLevel)
+        .isNotEmpty;
   }
 
   Widget _participationChip(
@@ -540,6 +636,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       leaderCharacterId: leader.characterId,
       leaderClassName: leader.className,
       leaderRole: _role,
+      leaderItemLevel: leader.optionFor(_role)?.itemLevel,
       approvalPolicy: approval,
       compositionPolicy: PartyCompositionPolicy(
         RecruitmentPartyRules.fromRaid(raid),
