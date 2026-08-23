@@ -68,3 +68,18 @@ abstract interface class AccountRepository {
     required CharacterBuildRole role,
   });
 }
+
+abstract interface class AccountManagementRepository {
+  Future<LocalGameAccount> addAccount({
+    required String label,
+    required String lookupCharacterName,
+  });
+
+  Future<void> updateAccount({
+    required int accountId,
+    required String label,
+    required bool isMain,
+  });
+
+  Future<void> deleteAccount(int accountId);
+}

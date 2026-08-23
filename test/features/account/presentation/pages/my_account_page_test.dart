@@ -71,9 +71,52 @@ void main() {
 
     expect(find.text('조회할 캐릭터명을 입력해 주세요.'), findsOneWidget);
   });
+
+  testWidgets('adds a sub account and closes its dialog cleanly', (
+    WidgetTester tester,
+  ) async {
+    final tokenStore = _InMemoryApiTokenStore();
+    await tokenStore.write(ApiToken('jwt-value'));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MyAccountPage(
+          apiTokenStore: tokenStore,
+          accountRepository: _FakeAccountRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('addSubAccountButton')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('subAccountCharacterNameField')),
+      '부계정캐릭터',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, '추가'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('부계정1'), findsOneWidget);
+    expect(find.text('부계정'), findsOneWidget);
+
+    final deleteButton = find.byKey(const ValueKey('deleteAccountButton-2'));
+    await tester.ensureVisible(deleteButton);
+    await tester.pumpAndSettle();
+    await tester.tap(deleteButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '삭제'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('부계정1'), findsNothing);
+  });
 }
 
-class _FakeAccountRepository implements AccountRepository {
+class _FakeAccountRepository
+    implements AccountRepository, AccountManagementRepository {
+  LocalGameAccount? _subAccount;
+
   @override
   Future<void> setPreferredCharacterRole({
     required int characterId,
@@ -82,7 +125,47 @@ class _FakeAccountRepository implements AccountRepository {
   @override
   Future<List<LocalGameAccount>> loadAccounts() async {
     final account = await loadMainAccount();
-    return account == null ? const [] : [account];
+    return [?account, ?_subAccount];
+  }
+
+  @override
+  Future<LocalGameAccount> addAccount({
+    required String label,
+    required String lookupCharacterName,
+  }) async {
+    return _subAccount = LocalGameAccount(
+      id: 2,
+      label: label.trim().isEmpty ? '부계정1' : label,
+      isMain: false,
+      lookupCharacterName: lookupCharacterName,
+      representativeCharacterId: 2,
+      displayLimit: 6,
+      characters: [
+        LocalAccountCharacter(
+          id: 2,
+          serverName: '카단',
+          characterName: lookupCharacterName,
+          characterLevel: 70,
+          characterClassName: '슬레이어',
+          itemLevel: 1700,
+          combatPower: 300000,
+          isVisible: true,
+          displayOrder: 0,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<void> updateAccount({
+    required int accountId,
+    required String label,
+    required bool isMain,
+  }) async {}
+
+  @override
+  Future<void> deleteAccount(int accountId) async {
+    if (_subAccount?.id == accountId) _subAccount = null;
   }
 
   @override

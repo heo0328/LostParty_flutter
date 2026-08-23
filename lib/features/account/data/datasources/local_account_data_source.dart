@@ -106,6 +106,45 @@ class LocalAccountDataSource {
     return List.unmodifiable(result);
   }
 
+  Future<int> addAccount({
+    required String label,
+    required String lookupCharacterName,
+    required List<CharacterSummary> characters,
+    DateTime? fetchedAt,
+  }) {
+    final timestamp = fetchedAt ?? DateTime.now();
+    return _database.addAccountSnapshot(
+      label: label,
+      lookupCharacterName: lookupCharacterName,
+      now: timestamp,
+      characters: characters
+          .map(
+            (character) => AccountCharacterSnapshot(
+              serverName: character.serverName,
+              characterName: character.characterName,
+              characterLevel: character.characterLevel,
+              characterClassName: character.characterClassName,
+              itemLevel: character.itemLevel,
+              fetchedAt: timestamp,
+            ),
+          )
+          .toList(growable: false),
+    );
+  }
+
+  Future<void> updateAccount({
+    required int accountId,
+    required String label,
+    required bool isMain,
+  }) => _database.updateAccount(
+    accountId: accountId,
+    label: label,
+    isMain: isMain,
+  );
+
+  Future<void> deleteAccount(int accountId) =>
+      _database.deleteAccount(accountId);
+
   Future<LocalGameAccount> _loadAccount(GameAccount account) async {
     final characters = await (_database.select(
       _database.accountCharacters,

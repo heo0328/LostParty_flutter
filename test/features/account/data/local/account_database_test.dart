@@ -33,6 +33,222 @@ void main() {
     expect(account.displayLimit, 6);
   });
 
+  test('adds a sub account with its own representative character', () async {
+    await database.saveMainAccountSnapshot(
+      lookupCharacterName: '본캐',
+      characters: [_snapshot('본캐', DateTime.utc(2026, 8, 24))],
+    );
+
+    final subAccountId = await database.addAccountSnapshot(
+      label: '레이드 부계정',
+      lookupCharacterName: '부캐',
+      characters: [
+        AccountCharacterSnapshot(
+          serverName: '카단',
+          characterName: '부캐',
+          characterLevel: 70,
+          characterClassName: '슬레이어',
+          itemLevel: 1700,
+          fetchedAt: DateTime.utc(2026, 8, 24),
+        ),
+      ],
+    );
+
+    final account = await (database.select(
+      database.gameAccounts,
+    )..where((table) => table.id.equals(subAccountId))).getSingle();
+    final character = await (database.select(
+      database.accountCharacters,
+    )..where((table) => table.accountId.equals(subAccountId))).getSingle();
+    expect(account.label, '레이드 부계정');
+    expect(account.isMain, isFalse);
+    expect(account.representativeCharacterId, character.id);
+  });
+
+  test('rejects registering an already owned game account', () async {
+    final fetchedAt = DateTime.utc(2026, 8, 24);
+    await database.saveMainAccountSnapshot(
+      lookupCharacterName: '중복캐릭터',
+      characters: [_snapshot('중복캐릭터', fetchedAt)],
+    );
+
+    await expectLater(
+      database.addAccountSnapshot(
+        label: '중복 계정',
+        lookupCharacterName: '중복캐릭터',
+        characters: [_snapshot('중복캐릭터', fetchedAt)],
+      ),
+      throwsStateError,
+    );
+  });
+
+  test('promoting a sub account keeps exactly one main account', () async {
+    final fetchedAt = DateTime.utc(2026, 8, 24);
+    final mainId = await database.saveMainAccountSnapshot(
+      lookupCharacterName: '본캐',
+      characters: [_snapshot('본캐', fetchedAt)],
+    );
+    final subId = await database.addAccountSnapshot(
+      label: '부계정',
+      lookupCharacterName: '부캐',
+      characters: [
+        AccountCharacterSnapshot(
+          serverName: '카단',
+          characterName: '부캐',
+          characterLevel: 70,
+          characterClassName: '바드',
+          itemLevel: 1700,
+          fetchedAt: fetchedAt,
+        ),
+      ],
+    );
+
+    await database.updateAccount(
+      accountId: subId,
+      label: '새 본계정',
+      isMain: true,
+    );
+
+    final accounts = await database.select(database.gameAccounts).get();
+    expect(accounts.where((account) => account.isMain), hasLength(1));
+    expect(
+      accounts.singleWhere((account) => account.id == subId).isMain,
+      isTrue,
+    );
+    expect(
+      accounts.singleWhere((account) => account.id == mainId).isMain,
+      isFalse,
+    );
+  });
+
+  test('does not allow demoting the current main account directly', () async {
+    final mainId = await database.saveMainAccountSnapshot(
+      lookupCharacterName: '본캐',
+      characters: [_snapshot('본캐', DateTime.utc(2026, 8, 24))],
+    );
+
+    await expectLater(
+      database.updateAccount(accountId: mainId, label: '본계정', isMain: false),
+      throwsStateError,
+    );
+  });
+
+  test('assigns the next available default sub account label', () async {
+    final fetchedAt = DateTime.utc(2026, 8, 24);
+    await database.saveMainAccountSnapshot(
+      lookupCharacterName: '본캐',
+      characters: [_snapshot('본캐', fetchedAt)],
+    );
+    await database.addAccountSnapshot(
+      label: '',
+      lookupCharacterName: '첫부캐',
+      characters: [
+        AccountCharacterSnapshot(
+          serverName: '카단',
+          characterName: '첫부캐',
+          characterLevel: 70,
+          characterClassName: '바드',
+          itemLevel: 1700,
+          fetchedAt: fetchedAt,
+        ),
+      ],
+    );
+    await database.addAccountSnapshot(
+      label: '',
+      lookupCharacterName: '둘째부캐',
+      characters: [
+        AccountCharacterSnapshot(
+          serverName: '아만',
+          characterName: '둘째부캐',
+          characterLevel: 70,
+          characterClassName: '바드',
+          itemLevel: 1700,
+          fetchedAt: fetchedAt,
+        ),
+      ],
+    );
+
+    final accounts = await database.select(database.gameAccounts).get();
+    expect(
+      accounts.map((account) => account.label),
+      containsAll(['부계정1', '부계정2']),
+    );
+  });
+
+  test('rejects a duplicate custom account label', () async {
+    final fetchedAt = DateTime.utc(2026, 8, 24);
+    await database.saveMainAccountSnapshot(
+      lookupCharacterName: '본캐',
+      characters: [_snapshot('본캐', fetchedAt)],
+    );
+    await database.addAccountSnapshot(
+      label: '레이드용',
+      lookupCharacterName: '첫부캐',
+      characters: [
+        AccountCharacterSnapshot(
+          serverName: '카단',
+          characterName: '첫부캐',
+          characterLevel: 70,
+          characterClassName: '바드',
+          itemLevel: 1700,
+          fetchedAt: fetchedAt,
+        ),
+      ],
+    );
+
+    await expectLater(
+      database.addAccountSnapshot(
+        label: '레이드용',
+        lookupCharacterName: '둘째부캐',
+        characters: [
+          AccountCharacterSnapshot(
+            serverName: '아만',
+            characterName: '둘째부캐',
+            characterLevel: 70,
+            characterClassName: '바드',
+            itemLevel: 1700,
+            fetchedAt: fetchedAt,
+          ),
+        ],
+      ),
+      throwsStateError,
+    );
+  });
+
+  test(
+    'deletes a sub account and its characters but not the main account',
+    () async {
+      final fetchedAt = DateTime.utc(2026, 8, 24);
+      final mainId = await database.saveMainAccountSnapshot(
+        lookupCharacterName: '본캐',
+        characters: [_snapshot('본캐', fetchedAt)],
+      );
+      final subId = await database.addAccountSnapshot(
+        label: '',
+        lookupCharacterName: '부캐',
+        characters: [
+          AccountCharacterSnapshot(
+            serverName: '카단',
+            characterName: '부캐',
+            characterLevel: 70,
+            characterClassName: '바드',
+            itemLevel: 1700,
+            fetchedAt: fetchedAt,
+          ),
+        ],
+      );
+
+      await database.deleteAccount(subId);
+
+      expect(await database.select(database.gameAccounts).get(), hasLength(1));
+      expect(
+        await database.select(database.accountCharacters).get(),
+        hasLength(1),
+      );
+      await expectLater(database.deleteAccount(mainId), throwsStateError);
+    },
+  );
+
   test('changes the representative to a character in the account', () async {
     final accountId = await database.createAccount(
       label: '메인 계정',

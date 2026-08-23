@@ -23,7 +23,7 @@ class MyAccountViewModel extends ChangeNotifier {
   bool _hasFetchedCharacters = false;
   List<CharacterSummary> _characters = const [];
   CharacterProfile? _lookupProfile;
-  LocalGameAccount? _mainAccount;
+  List<LocalGameAccount> _accounts = const [];
   LostArkApiErrorType? _errorType;
 
   bool get isLoadingTokenStatus => _isLoadingTokenStatus;
@@ -32,7 +32,14 @@ class MyAccountViewModel extends ChangeNotifier {
   bool get hasFetchedCharacters => _hasFetchedCharacters;
   List<CharacterSummary> get characters => _characters;
   CharacterProfile? get lookupProfile => _lookupProfile;
-  LocalGameAccount? get mainAccount => _mainAccount;
+  List<LocalGameAccount> get accounts => _accounts;
+  LocalGameAccount? get mainAccount {
+    for (final account in _accounts) {
+      if (account.isMain) return account;
+    }
+    return null;
+  }
+
   LostArkApiErrorType? get errorType => _errorType;
 
   Future<void> loadTokenStatus() async {
@@ -50,7 +57,7 @@ class MyAccountViewModel extends ChangeNotifier {
   }
 
   Future<void> loadStoredAccount() async {
-    _mainAccount = await _accountRepository.loadMainAccount();
+    _accounts = await _accountRepository.loadAccounts();
     notifyListeners();
   }
 
@@ -64,7 +71,7 @@ class MyAccountViewModel extends ChangeNotifier {
       _lookupProfile = await _accountRepository.fetchCharacterProfile(
         characterName,
       );
-      _mainAccount = await _accountRepository.loadMainAccount();
+      _accounts = await _accountRepository.loadAccounts();
       _hasFetchedCharacters = true;
     } on LostArkApiException catch (error) {
       _errorType = error.type;
@@ -73,6 +80,60 @@ class MyAccountViewModel extends ChangeNotifier {
       _isFetchingCharacters = false;
     }
 
+    notifyListeners();
+  }
+
+  Future<void> addAccount({
+    required String label,
+    required String lookupCharacterName,
+  }) async {
+    if (_accountRepository is! AccountManagementRepository) {
+      throw UnsupportedError('Account management is not available.');
+    }
+    final repository = _accountRepository as AccountManagementRepository;
+    _isFetchingCharacters = true;
+    _errorType = null;
+    notifyListeners();
+    try {
+      await repository.addAccount(
+        label: label,
+        lookupCharacterName: lookupCharacterName,
+      );
+      _accounts = await _accountRepository.loadAccounts();
+    } on LostArkApiException catch (error) {
+      _errorType = error.type;
+      rethrow;
+    } finally {
+      _isFetchingCharacters = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateAccount({
+    required int accountId,
+    required String label,
+    required bool isMain,
+  }) async {
+    if (_accountRepository is! AccountManagementRepository) {
+      throw UnsupportedError('Account management is not available.');
+    }
+    final repository = _accountRepository as AccountManagementRepository;
+    await repository.updateAccount(
+      accountId: accountId,
+      label: label,
+      isMain: isMain,
+    );
+    _accounts = await _accountRepository.loadAccounts();
+    notifyListeners();
+  }
+
+  Future<void> deleteAccount(int accountId) async {
+    if (_accountRepository is! AccountManagementRepository) {
+      throw UnsupportedError('Account management is not available.');
+    }
+    final repository = _accountRepository as AccountManagementRepository;
+    await repository.deleteAccount(accountId);
+    _accounts = await _accountRepository.loadAccounts();
     notifyListeners();
   }
 }

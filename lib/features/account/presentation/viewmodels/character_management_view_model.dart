@@ -4,10 +4,13 @@ import '../../domain/entities/local_game_account.dart';
 import '../../domain/repositories/account_repository.dart';
 
 class CharacterManagementViewModel extends ChangeNotifier {
-  CharacterManagementViewModel({required AccountRepository accountRepository})
-    : _accountRepository = accountRepository;
+  CharacterManagementViewModel({
+    required AccountRepository accountRepository,
+    this.accountId,
+  }) : _accountRepository = accountRepository;
 
   final AccountRepository _accountRepository;
+  final int? accountId;
 
   bool _isLoading = false;
   bool _isSaving = false;
@@ -152,7 +155,18 @@ class CharacterManagementViewModel extends ChangeNotifier {
   }
 
   Future<void> _reload() async {
-    _account = await _accountRepository.loadMainAccount();
+    if (accountId == null) {
+      _account = await _accountRepository.loadMainAccount();
+    } else {
+      final accounts = await _accountRepository.loadAccounts();
+      _account = null;
+      for (final account in accounts) {
+        if (account.id == accountId) {
+          _account = account;
+          break;
+        }
+      }
+    }
     final account = _account;
     if (account == null) {
       _characters = const [];

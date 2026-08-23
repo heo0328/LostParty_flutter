@@ -13,7 +13,8 @@ import '../dtos/character_profile_dto.dart';
 import '../mappers/character_profile_mapper.dart';
 import '../mappers/sibling_character_mapper.dart';
 
-class AccountRepositoryImpl implements AccountRepository {
+class AccountRepositoryImpl
+    implements AccountRepository, AccountManagementRepository {
   AccountRepositoryImpl({
     required LostArkCharacterRemoteDataSource remoteDataSource,
     required LocalAccountDataSource localDataSource,
@@ -78,6 +79,50 @@ class AccountRepositoryImpl implements AccountRepository {
   Future<List<LocalGameAccount>> loadAccounts() {
     return _localDataSource.loadAccounts();
   }
+
+  @override
+  Future<LocalGameAccount> addAccount({
+    required String label,
+    required String lookupCharacterName,
+  }) async {
+    final normalizedName = lookupCharacterName.trim();
+    final dtos = await _remoteDataSource.fetchSiblings(normalizedName);
+    try {
+      final characters = dtos.map((dto) => dto.toDomain()).toList();
+      if (characters.isEmpty) {
+        throw const LostArkApiException(
+          type: LostArkApiErrorType.invalidResponse,
+        );
+      }
+      final accountId = await _localDataSource.addAccount(
+        label: label,
+        lookupCharacterName: normalizedName,
+        characters: characters,
+      );
+      return (await _localDataSource.loadAccounts()).singleWhere(
+        (account) => account.id == accountId,
+      );
+    } on FormatException {
+      throw const LostArkApiException(
+        type: LostArkApiErrorType.invalidResponse,
+      );
+    }
+  }
+
+  @override
+  Future<void> updateAccount({
+    required int accountId,
+    required String label,
+    required bool isMain,
+  }) => _localDataSource.updateAccount(
+    accountId: accountId,
+    label: label,
+    isMain: isMain,
+  );
+
+  @override
+  Future<void> deleteAccount(int accountId) =>
+      _localDataSource.deleteAccount(accountId);
 
   @override
   Future<void> saveCharacterBuildSnapshot({

@@ -7,9 +7,14 @@ import '../../domain/repositories/account_repository.dart';
 import '../viewmodels/character_management_view_model.dart';
 
 class CharacterManagementPage extends StatefulWidget {
-  const CharacterManagementPage({required this.accountRepository, super.key});
+  const CharacterManagementPage({
+    required this.accountRepository,
+    this.accountId,
+    super.key,
+  });
 
   final AccountRepository accountRepository;
+  final int? accountId;
 
   @override
   State<CharacterManagementPage> createState() =>
@@ -24,6 +29,7 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
     super.initState();
     _viewModel = CharacterManagementViewModel(
       accountRepository: widget.accountRepository,
+      accountId: widget.accountId,
     )..addListener(_onChanged);
     _viewModel.initialize();
   }

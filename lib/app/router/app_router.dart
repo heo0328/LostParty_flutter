@@ -120,6 +120,7 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
                     path: 'characters/manage',
                     builder: (context, state) => CharacterManagementPage(
                       accountRepository: accountRepository,
+                      accountId: state.extra as int?,
                     ),
                   ),
                   GoRoute(

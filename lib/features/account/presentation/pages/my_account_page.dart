@@ -60,9 +60,73 @@ class _MyAccountPageState extends State<MyAccountPage> {
     await _viewModel.loadTokenStatus();
   }
 
-  Future<void> _openCharacterManagement() async {
-    await context.push('/account/characters/manage');
+  Future<void> _openCharacterManagement(LocalGameAccount account) async {
+    await context.push('/account/characters/manage', extra: account.id);
     await _viewModel.loadStoredAccount();
+  }
+
+  Future<void> _showAddAccountDialog() async {
+    final result = await showDialog<(String, String)>(
+      context: context,
+      builder: (dialogContext) => const _AddAccountDialog(),
+    );
+    if (result == null || !mounted) return;
+    try {
+      await _viewModel.addAccount(
+        label: result.$1,
+        lookupCharacterName: result.$2,
+      );
+    } on Object catch (error) {
+      if (!mounted) return;
+      final message = error is StateError
+          ? '이미 등록된 계정입니다.'
+          : '부계정을 추가하지 못했습니다.';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  Future<void> _showEditAccountDialog(LocalGameAccount account) async {
+    final result = await showDialog<(String, bool)>(
+      context: context,
+      builder: (dialogContext) => _EditAccountDialog(account: account),
+    );
+    if (result == null || !mounted) return;
+    try {
+      await _viewModel.updateAccount(
+        accountId: account.id,
+        label: result.$1,
+        isMain: result.$2,
+      );
+    } on StateError {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('이미 사용 중인 계정 표시명입니다.')));
+    }
+  }
+
+  Future<void> _confirmDeleteAccount(LocalGameAccount account) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('부계정 삭제'),
+        content: Text('${account.label}과 저장된 캐릭터 정보를 삭제할까요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _viewModel.deleteAccount(account.id);
   }
 
   Future<void> _openCharacterDetail(LocalAccountCharacter character) async {
@@ -163,98 +227,138 @@ class _MyAccountPageState extends State<MyAccountPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('내 계정')),
       body: SafeArea(
-        child: ListView(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
-          children: [
-            if (_viewModel.isLoadingTokenStatus)
-              const LinearProgressIndicator(),
-            _buildTokenStatusPanel(context),
-            const SizedBox(height: 16),
-            TextField(
-              key: const ValueKey('representativeCharacterNameField'),
-              controller: _characterNameController,
-              enabled: !_viewModel.isFetchingCharacters,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                labelText: '조회 캐릭터명',
-                errorText: _characterNameError,
-                border: const OutlineInputBorder(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_viewModel.isLoadingTokenStatus)
+                const LinearProgressIndicator(),
+              _buildTokenStatusPanel(context),
+              const SizedBox(height: 16),
+              TextField(
+                key: const ValueKey('representativeCharacterNameField'),
+                controller: _characterNameController,
+                enabled: !_viewModel.isFetchingCharacters,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  labelText: '조회 캐릭터명',
+                  errorText: _characterNameError,
+                  border: const OutlineInputBorder(),
+                ),
+                onSubmitted: (_) {
+                  if (!_viewModel.isFetchingCharacters) {
+                    _requestAccountData();
+                  }
+                },
               ),
-              onSubmitted: (_) {
-                if (!_viewModel.isFetchingCharacters) {
-                  _requestAccountData();
-                }
-              },
-            ),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              key: const ValueKey('loadAccountDataButton'),
-              onPressed: _viewModel.isFetchingCharacters
-                  ? null
-                  : _requestAccountData,
-              icon: _viewModel.isFetchingCharacters
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.cloud_download_outlined),
-              label: const Text('계정 데이터 불러오기'),
-            ),
-            if (_viewModel.hasFetchedCharacters) ...[
-              const SizedBox(height: 24),
-              if (_viewModel.lookupProfile case final profile?) ...[
-                Text('조회 캐릭터', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Card(
-                  key: const ValueKey('lookupCharacterProfileCard'),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          profile.characterName,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${profile.serverName} · ${profile.characterClassName} · 전투 Lv. ${profile.characterLevel}',
-                        ),
-                        const SizedBox(height: 12),
-                        Text('아이템 레벨 ${_formatNumber(profile.itemLevel)}'),
-                        Text('전투력 ${_formatNumber(profile.combatPower)}'),
-                      ],
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                key: const ValueKey('loadAccountDataButton'),
+                onPressed: _viewModel.isFetchingCharacters
+                    ? null
+                    : _requestAccountData,
+                icon: _viewModel.isFetchingCharacters
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.cloud_download_outlined),
+                label: const Text('계정 데이터 불러오기'),
+              ),
+              if (_viewModel.accounts.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  key: const ValueKey('addSubAccountButton'),
+                  onPressed: _viewModel.isFetchingCharacters
+                      ? null
+                      : _showAddAccountDialog,
+                  icon: const Icon(Icons.person_add_alt_1_outlined),
+                  label: const Text('부계정 추가'),
+                ),
+              ],
+              if (_viewModel.hasFetchedCharacters) ...[
+                const SizedBox(height: 24),
+                if (_viewModel.lookupProfile case final profile?) ...[
+                  Text(
+                    '조회 캐릭터',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Card(
+                    key: const ValueKey('lookupCharacterProfileCard'),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            profile.characterName,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${profile.serverName} · ${profile.characterClassName} · 전투 Lv. ${profile.characterLevel}',
+                          ),
+                          const SizedBox(height: 12),
+                          Text('아이템 레벨 ${_formatNumber(profile.itemLevel)}'),
+                          Text('전투력 ${_formatNumber(profile.combatPower)}'),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 24),
+                ],
+              ],
+              for (final account in _viewModel.accounts) ...[
                 const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              account.label,
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Chip(
+                            visualDensity: VisualDensity.compact,
+                            label: Text(account.isMain ? '본계정' : '부계정'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '${account.visibleCharacters.length}/${account.characters.length}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    IconButton(
+                      tooltip: '계정 수정',
+                      onPressed: () => _showEditAccountDialog(account),
+                      icon: const Icon(Icons.edit_outlined),
+                    ),
+                    IconButton(
+                      tooltip: '캐릭터 관리',
+                      onPressed: () => _openCharacterManagement(account),
+                      icon: const Icon(Icons.tune),
+                    ),
+                    if (!account.isMain)
+                      IconButton(
+                        key: ValueKey('deleteAccountButton-${account.id}'),
+                        tooltip: '부계정 삭제',
+                        onPressed: () => _confirmDeleteAccount(account),
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _buildCharacterGrid(account),
               ],
             ],
-            if (_viewModel.mainAccount case final account?) ...[
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      account.label,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  Text(
-                    '${account.visibleCharacters.length}/${account.characters.length}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  IconButton(
-                    tooltip: '캐릭터 관리',
-                    onPressed: _openCharacterManagement,
-                    icon: const Icon(Icons.tune),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              _buildCharacterGrid(account),
-            ],
-          ],
+          ),
         ),
       ),
     );
@@ -308,7 +412,9 @@ class _MyAccountPageState extends State<MyAccountPage> {
         };
 
         return GridView.builder(
-          key: const ValueKey('mainAccountCharacterGrid'),
+          key: account.isMain
+              ? const ValueKey('mainAccountCharacterGrid')
+              : ValueKey('accountCharacterGrid-${account.id}'),
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: characters.length,
@@ -339,4 +445,130 @@ class _MyAccountPageState extends State<MyAccountPage> {
 
     return DisplayNumberFormatter.fixed(value);
   }
+}
+
+class _AddAccountDialog extends StatefulWidget {
+  const _AddAccountDialog();
+
+  @override
+  State<_AddAccountDialog> createState() => _AddAccountDialogState();
+}
+
+class _AddAccountDialogState extends State<_AddAccountDialog> {
+  final _labelController = TextEditingController();
+  final _characterController = TextEditingController();
+
+  @override
+  void dispose() {
+    _labelController.dispose();
+    _characterController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('부계정 추가'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          key: const ValueKey('accountLabelField'),
+          controller: _labelController,
+          decoration: const InputDecoration(
+            labelText: '계정 표시명',
+            hintText: '비워두면 부계정1처럼 자동 지정',
+            helperText: '같은 이름이 있으면 다음 번호를 사용합니다.',
+          ),
+        ),
+        TextField(
+          key: const ValueKey('subAccountCharacterNameField'),
+          controller: _characterController,
+          decoration: const InputDecoration(labelText: '조회 캐릭터명'),
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('취소'),
+      ),
+      FilledButton(
+        onPressed: () {
+          final label = _labelController.text.trim();
+          final character = _characterController.text.trim();
+          if (character.isNotEmpty) {
+            Navigator.pop(context, (label, character));
+          }
+        },
+        child: const Text('추가'),
+      ),
+    ],
+  );
+}
+
+class _EditAccountDialog extends StatefulWidget {
+  const _EditAccountDialog({required this.account});
+
+  final LocalGameAccount account;
+
+  @override
+  State<_EditAccountDialog> createState() => _EditAccountDialogState();
+}
+
+class _EditAccountDialogState extends State<_EditAccountDialog> {
+  late final TextEditingController _labelController;
+  late bool _makeMain;
+
+  @override
+  void initState() {
+    super.initState();
+    _labelController = TextEditingController(text: widget.account.label);
+    _makeMain = widget.account.isMain;
+  }
+
+  @override
+  void dispose() {
+    _labelController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('계정 수정'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          key: const ValueKey('editAccountLabelField'),
+          controller: _labelController,
+          decoration: const InputDecoration(
+            labelText: '계정 표시명',
+            helperText: '비워두면 현재 이름을 유지합니다.',
+          ),
+        ),
+        SwitchListTile(
+          key: const ValueKey('mainAccountSwitch'),
+          contentPadding: EdgeInsets.zero,
+          title: const Text('본계정으로 설정'),
+          value: _makeMain,
+          onChanged: widget.account.isMain
+              ? null
+              : (value) => setState(() => _makeMain = value),
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('취소'),
+      ),
+      FilledButton(
+        onPressed: () {
+          final label = _labelController.text.trim();
+          Navigator.pop(context, (label, _makeMain));
+        },
+        child: const Text('저장'),
+      ),
+    ],
+  );
 }

@@ -277,6 +277,181 @@ class AccountDatabase extends _$AccountDatabase {
     );
   }
 
+  Future<int> addAccountSnapshot({
+    required String label,
+    required String lookupCharacterName,
+    required List<AccountCharacterSnapshot> characters,
+    DateTime? now,
+  }) {
+    return transaction(() async {
+      if (characters.isEmpty) {
+        throw ArgumentError.value(
+          characters,
+          'characters',
+          'Account must contain at least one character.',
+        );
+      }
+
+      final storedAccounts = await select(gameAccounts).get();
+      final normalizedLabel = _resolveAccountLabel(
+        requestedLabel: label,
+        storedAccounts: storedAccounts,
+      );
+
+      final incomingKeys = characters
+          .map(
+            (character) =>
+                _characterKey(character.serverName, character.characterName),
+          )
+          .toSet();
+      final storedCharacters = await select(accountCharacters).get();
+      final overlaps = storedCharacters.any(
+        (character) => incomingKeys.contains(
+          _characterKey(character.serverName, character.characterName),
+        ),
+      );
+      if (overlaps) {
+        throw StateError('This game account is already registered.');
+      }
+
+      final accountId = await createAccount(
+        label: normalizedLabel,
+        isMain: false,
+        lookupCharacterName: lookupCharacterName,
+        now: now,
+      );
+      int? representativeId;
+      for (var index = 0; index < characters.length; index++) {
+        final character = characters[index];
+        final characterId = await into(accountCharacters).insert(
+          AccountCharactersCompanion.insert(
+            accountId: accountId,
+            serverName: character.serverName,
+            characterName: character.characterName,
+            characterLevel: character.characterLevel,
+            characterClassName: character.characterClassName,
+            itemLevel: Value(character.itemLevel),
+            displayOrder: Value(index),
+            lastSummaryFetchedAt: character.fetchedAt,
+          ),
+        );
+        if (character.characterName == lookupCharacterName) {
+          representativeId = characterId;
+        }
+        representativeId ??= characterId;
+      }
+      await (update(
+        gameAccounts,
+      )..where((table) => table.id.equals(accountId))).write(
+        GameAccountsCompanion(
+          representativeCharacterId: Value(representativeId),
+          displayLimit: Value(characters.length < 6 ? characters.length : 6),
+          updatedAt: Value(now ?? DateTime.now()),
+        ),
+      );
+      return accountId;
+    });
+  }
+
+  Future<void> updateAccount({
+    required int accountId,
+    required String label,
+    required bool isMain,
+    DateTime? now,
+  }) {
+    return transaction(() async {
+      final account = await (select(
+        gameAccounts,
+      )..where((table) => table.id.equals(accountId))).getSingleOrNull();
+      if (account == null) {
+        throw ArgumentError.value(accountId, 'accountId', 'Account not found.');
+      }
+      final storedAccounts = await select(gameAccounts).get();
+      final normalizedLabel = _resolveAccountLabel(
+        requestedLabel: label.trim().isEmpty ? account.label : label,
+        storedAccounts: storedAccounts,
+        excludedAccountId: accountId,
+      );
+      if (!isMain && account.isMain) {
+        throw StateError(
+          'Promote another account instead of removing the main account.',
+        );
+      }
+      final timestamp = now ?? DateTime.now();
+      if (isMain && !account.isMain) {
+        await (update(
+          gameAccounts,
+        )..where((table) => table.isMain.equals(true))).write(
+          GameAccountsCompanion(
+            isMain: const Value(false),
+            updatedAt: Value(timestamp),
+          ),
+        );
+      }
+      await (update(
+        gameAccounts,
+      )..where((table) => table.id.equals(accountId))).write(
+        GameAccountsCompanion(
+          label: Value(normalizedLabel),
+          isMain: Value(isMain),
+          updatedAt: Value(timestamp),
+        ),
+      );
+    });
+  }
+
+  Future<void> deleteAccount(int accountId) {
+    return transaction(() async {
+      final account = await (select(
+        gameAccounts,
+      )..where((table) => table.id.equals(accountId))).getSingleOrNull();
+      if (account == null) {
+        throw ArgumentError.value(accountId, 'accountId', 'Account not found.');
+      }
+      if (account.isMain) {
+        throw StateError('The main account cannot be deleted.');
+      }
+      final characters = await (select(
+        accountCharacters,
+      )..where((table) => table.accountId.equals(accountId))).get();
+      final characterIds = characters.map((character) => character.id).toList();
+      if (characterIds.isNotEmpty) {
+        await (delete(
+          characterBuildSnapshots,
+        )..where((table) => table.characterId.isIn(characterIds))).go();
+      }
+      await (delete(
+        accountCharacters,
+      )..where((table) => table.accountId.equals(accountId))).go();
+      await (delete(
+        gameAccounts,
+      )..where((table) => table.id.equals(accountId))).go();
+    });
+  }
+
+  String _resolveAccountLabel({
+    required String requestedLabel,
+    required List<GameAccount> storedAccounts,
+    int? excludedAccountId,
+  }) {
+    final usedLabels = storedAccounts
+        .where((account) => account.id != excludedAccountId)
+        .map((account) => account.label.trim().toLowerCase())
+        .toSet();
+    final requested = requestedLabel.trim();
+    if (requested.isNotEmpty) {
+      if (usedLabels.contains(requested.toLowerCase())) {
+        throw StateError('The account label is already in use.');
+      }
+      return requested;
+    }
+    var sequence = 1;
+    while (usedLabels.contains('부계정$sequence')) {
+      sequence++;
+    }
+    return '부계정$sequence';
+  }
+
   Future<void> setRepresentativeCharacter({
     required int accountId,
     required int characterId,
