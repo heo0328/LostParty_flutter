@@ -3,12 +3,13 @@
 ## 기준 상태
 
 - 통합 기준 브랜치: `main`
-- 기준 상태: Firebase 초기 연결 설정, Player 식별자 검토 및 Firebase 파티 제품 흐름 1차 통합 기준이 작성된 문서 브랜치
+- 기준 상태: Firebase 초기 연결 설정, Player 식별자 검토 및 Firebase 파티 제품 흐름 1차 통합 기준이 `main`에 반영된 상태
 - 작업 트리는 깨끗하며 `main`과 `origin/main`이 일치한다.
 - 현재 진행 중인 기능 구현은 없다.
 - Firebase 프로젝트 및 플랫폼 연결 설정은 완료됐으며 제품 흐름의 주요 정책은 `../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`에 통합했다.
-- 현재는 기존 문서의 충돌을 정리하고 데이터 계약·서버 명령·Security Rules·테스트 경계를 산정하는 문서 단계다.
-- 기술 설계와 첫 구현 작업 범위가 승인되기 전에는 Firebase 기능 코드를 구현하지 않는다.
+- 로컬 Fake 환경에서 제품 흐름과 UI를 검증하기 위해 두었던 Firebase 구현 보류 단계는 종료됐다.
+- 이제 기능 단위로 데이터 계약·서버 명령·Security Rules·테스트 경계를 먼저 확정한 뒤 Firebase 구현을 단계적으로 진행한다.
+- 전체 기술 설계가 한 번에 완료될 때까지 구현을 막지 않는다. 다만 계약과 검증 범위가 정해지지 않은 서버 기능은 먼저 구현하지 않는다.
 
 ## 최근 완료 작업
 
@@ -18,7 +19,7 @@
 - Android 패키지 `com.example.lost_party`와 Firebase Android 앱 등록 정보가 일치한다.
 - Android Google Services Plugin과 생성된 Firebase 옵션을 저장소에 반영했다.
 - 생성된 옵션이 컴파일될 수 있도록 `firebase_core`까지만 초기 연결 의존성에 포함한다.
-- Firebase 앱 초기화, Anonymous Auth 실행, Player binding, Firestore Repository와 Security Rules는 아직 구현하지 않는다.
+- Firebase 앱 초기화, Anonymous Auth 실행, Player binding, Firestore Repository와 Security Rules는 아직 미구현이며 다음 단계부터 순서대로 구현한다.
 - `AuthUid`와 LOSTPARTY 영속 `PlayerId`를 분리하는 방향 및 기존 코드 영향 범위를 별도 문서로 검토했다.
 
 ### 아이템 레벨 기반 레이드 선택과 모집 수정 기반
@@ -60,13 +61,14 @@
 - 재개 시 모집 생성 전용인지, 목록 필터까지 포함하는지, 디바이스 공통인지 계정별인지 먼저 결정한다.
 - 별도 결정 전에는 로컬 저장 모델이나 UI를 구현하지 않는다.
 
-### Firebase 기반 다중 사용자 전환
+### Firebase 기반 다중 사용자 전환의 과거 보류 상태
 
-- Firebase 프로젝트와 플랫폼 연결은 완료했고 주요 제품 흐름은 1차 확정했지만 기술 설계가 확정되기 전에는 앱 초기화와 데이터 기능을 구현하지 않는다.
+- Firebase 프로젝트와 플랫폼 연결 및 주요 제품 흐름의 1차 확정 전까지 적용했던 전역 구현 보류 정책은 종료됐다.
+- 이후에는 각 작업 브랜치가 다루는 데이터 계약, 권한, 실패 처리와 테스트 경계를 먼저 확정한 뒤 해당 범위의 앱 및 서버 코드를 함께 구현할 수 있다.
 - Authentication, Firestore, Cloud Functions, FCM, Security Rules와 App Check는 하나의 큰 전환을 구성하므로 단계별 경계가 필요하다.
 - 실제 다중 사용자 동기화, 서버 트랜잭션과 알림 전달은 로컬 UI 구현 완료와 별개의 검증 영역으로 취급한다.
 
-## 다음 기술 설계에서 정할 항목
+## Firebase 단계적 구현에서 정할 항목
 
 1. `AuthUid -> PlayerId -> GameAccountId -> CharacterId`의 Firestore 데이터 계약
 2. 서버 CharacterId 발급, 소유 검증 및 캐릭터명 변경 추적
@@ -79,17 +81,29 @@
 9. 기존 Drift 데이터와 로컬 Fake 데이터의 마이그레이션 또는 폐기 정책
 10. Firebase Core 초기화 실패와 Anonymous Auth 준비 중의 앱 진입 정책
 11. Emulator Suite, Security Rules, Functions와 다중 사용자 동시성 테스트 경계
-12. 기술 설계를 독립적으로 검증·병합할 첫 구현 브랜치 단위와 롤백 기준
+12. 각 계약을 독립적으로 검증·병합할 구현 브랜치 단위와 롤백 기준
 
-## 기술 설계 단계 완료 조건
+## 기능 단위 설계·구현 착수 조건
 
 - 통합 제품 흐름의 포함·제외 범위가 문서로 합의된다.
 - 핵심 엔티티의 소유권과 단일 기준 저장소가 정의된다.
 - 주요 명령의 권한, 검증 주체, 원자성 및 실패 처리가 정의된다.
 - 기존 코드에서 재사용·수정·제거할 영역이 구분된다.
 - 데이터 마이그레이션과 호환 정책이 정해진다.
-- 첫 구현 브랜치가 독립적으로 검증·병합 가능한 크기로 산정된다.
-- 설계 승인 전에는 구현을 시작하지 않는다.
+- 해당 구현 브랜치가 독립적으로 검증·병합 가능한 크기로 산정된다.
+- 위 조건을 만족한 기능은 구현할 수 있으며, 아직 계약이 없는 후속 기능만 보류한다.
+
+## 권장 구현 순서
+
+1. Firebase Core 초기화와 앱 부트스트랩 실패·준비 상태
+2. Anonymous Auth와 `AuthUid -> PlayerId` binding
+3. 서버 `GameAccountId`·`CharacterId` 계약과 소유 검증
+4. Firestore 파티 읽기 모델과 Repository 전환 경계
+5. 생성·수정·신청·철회·승인·즉시 가입 Callable Function
+6. 참가 캐릭터 변경·탈퇴·추방·승인권·책임자 승계
+7. 회차 완료·완료 취소·반복 파티·주차 전환과 Snapshot
+8. 사용자 이벤트·로컬 히스토리·FCM·TTL
+9. Security Rules·Emulator 동시성 테스트·App Check 강화
 
 ## 유지되는 제품 규칙
 

@@ -1129,3 +1129,13 @@
 - Anonymous Auth 실행, Firestore Repository, Player binding, Security Rules 및 파티 데이터 전환은 후속 설계 범위로 유지
 - 현재 코드 기준 Player/Firebase 구조 변경 영향과 Firebase 초기 연결 상태를 별도 문서로 기록
 - 다음 단계는 Firebase 적용과 메인 파티현황 개편의 제품 정책, 데이터 소유권, 상태 전이 및 작업 단위를 작업 지시서로 확정하는 것
+
+---
+
+## Task-040. Firebase 단계적 구현 전환 문서 정리
+
+- 로컬 Fake 환경에서 제품 흐름과 UI를 검증하기 위해 적용했던 Firebase 전역 구현 보류 단계 종료
+- 전체 백엔드 기술 설계 완료를 기다리지 않고 기능 단위 계약과 검증 범위를 먼저 확정한 뒤 단계적으로 구현하는 기준으로 전환
+- `NEXT_WORK.md`, `AI_CONTEXT.md`, `FIREBASE_PARTY_PRODUCT_FLOW.md`, `BACKEND_PARTY_ARCHITECTURE.md`의 착수 조건과 구현 순서 통일
+- 첫 구현 단위를 Firebase Core 부트스트랩과 Anonymous Auth 준비·실패 진입 정책으로 지정
+- 계약이 없는 후속 서버 기능만 보류하고, 계약이 준비된 기능은 독립 브랜치에서 구현·검증하도록 기준 변경
