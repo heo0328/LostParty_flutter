@@ -14,6 +14,8 @@ import '../../domain/services/recruitment_application_candidate_service.dart';
 import '../../domain/services/recruitment_leader_candidate_service.dart';
 import '../../domain/state/recruitment_state_machine.dart';
 import '../models/candidate_build_display_model.dart';
+import '../models/recruitment_form_draft.dart';
+import '../widgets/recruitment_form.dart';
 
 class RecruitmentCreatePage extends StatefulWidget {
   const RecruitmentCreatePage({
@@ -41,11 +43,9 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
   RaidDefinition? _raid;
   RaidDifficultyDefinition? _difficulty;
   PartyRole _role = PartyRole.dealer;
-  ExperienceLevel? _experience;
-  ApprovalMode _approval = ApprovalMode.leaderOnly;
+  RecruitmentFormDraft _draft = const RecruitmentFormDraft.empty();
   bool _loading = true;
   bool _saving = false;
-  bool _usingAutoTitle = true;
   String? _loadError;
 
   double? get _selectedItemLevel => _leader?.optionFor(_role)?.itemLevel;
@@ -107,9 +107,13 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
         _role = role;
         _raid = selectedOption?.raid ?? raid;
         _difficulty = selectedDifficulty;
+        _draft = _draft.copyWith(
+          raidId: (selectedOption?.raid ?? raid).raidId,
+          difficultyId: selectedDifficulty.difficultyId,
+        );
         _loading = false;
       });
-      _syncAutoTitle();
+      _syncAutoTitle(force: true);
     } catch (_) {
       setState(() {
         _loadError = '모집 생성 정보를 불러오지 못했습니다.';
@@ -127,198 +131,75 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
         ? Center(child: Text(_loadError!))
         : Form(
             key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _leaderSelector(),
-                const SizedBox(height: 16),
-                TextFormField(
-                  key: const ValueKey('recruitmentTitleField'),
-                  controller: _title,
-                  decoration: const InputDecoration(
-                    labelText: '모집 제목',
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (value) {
-                    _usingAutoTitle = value.trim().isEmpty;
-                    if (_usingAutoTitle) _syncAutoTitle();
-                  },
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<RaidDefinition>(
-                  key: ValueKey('raid-${_leader?.characterId}-$_role'),
-                  initialValue: _eligibleRaidOptions.any(
-                    (option) => option.raid.raidId == _raid?.raidId,
-                  )
-                      ? _raid
-                      : null,
-                  decoration: InputDecoration(
-                    labelText: '레이드',
-                    border: const OutlineInputBorder(),
-                    errorText: _leader != null && _eligibleRaidOptions.isEmpty
-                        ? '선택 캐릭터가 입장 가능한 레이드가 없습니다.'
-                        : null,
-                  ),
-                  items: [
-                    for (final option in _eligibleRaidOptions)
-                      DropdownMenuItem(
-                        value: option.raid,
-                        child: Text(option.raid.displayName),
-                      ),
-                  ],
-                  onChanged: (raid) => raid == null ? null : _changeRaid(raid),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<RaidDifficultyDefinition>(
-                  key: ValueKey(_raid!.raidId),
-                  initialValue: _eligibleRaidOptions
-                          .where(
-                            (option) => option.raid.raidId == _raid?.raidId,
-                          )
-                          .expand((option) => option.difficulties)
-                          .any(
-                            (item) =>
-                                item.difficultyId == _difficulty?.difficultyId,
-                          )
-                      ? _difficulty
-                      : null,
-                  decoration: const InputDecoration(
-                    labelText: '난이도',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [
-                    for (final item in _eligibleRaidOptions
-                        .where((option) => option.raid.raidId == _raid!.raidId)
-                        .expand((option) => option.difficulties))
-                      DropdownMenuItem(
-                        value: item,
-                        child: Text('${item.name} (${item.displayAlias})'),
-                      ),
-                  ],
-                  onChanged: (value) => _changeDifficulty(value!),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<PartyRole>(
-                  initialValue: _leader?.optionFor(_role)?.canSelect == true
-                      ? _role
-                      : null,
-                  decoration: const InputDecoration(
-                    labelText: '파티장 역할',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [
-                    for (final option
-                        in _leader?.roles.where((option) => option.canSelect) ??
-                            const <RecruitmentLeaderRoleOption>[])
-                      DropdownMenuItem(
-                        value: option.role,
-                        child: Text(_roleLabel(option.role)),
-                      ),
-                  ],
-                  onChanged: (value) => _changeRole(value!),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  key: const ValueKey('minCombatPowerField'),
-                  controller: _combatPower,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: '최소 전투력',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: _positiveInteger,
-                  onChanged: (_) => _syncAutoTitle(),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<ExperienceLevel?>(
-                  initialValue: _experience,
-                  decoration: const InputDecoration(
-                    labelText: '숙련도',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: null, child: Text('제한 없음')),
-                    DropdownMenuItem(
-                      value: ExperienceLevel.tryLevel,
-                      child: Text('트라이'),
-                    ),
-                    DropdownMenuItem(
-                      value: ExperienceLevel.clearExp,
-                      child: Text('클경'),
-                    ),
-                    DropdownMenuItem(
-                      value: ExperienceLevel.multiClearExp,
-                      child: Text('다클경'),
-                    ),
-                    DropdownMenuItem(
-                      value: ExperienceLevel.semiExperienced,
-                      child: Text('반숙'),
-                    ),
-                    DropdownMenuItem(
-                      value: ExperienceLevel.experienced,
-                      child: Text('숙련'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() => _experience = value);
-                    _syncAutoTitle();
-                  },
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<ApprovalMode>(
-                  initialValue: _approval,
-                  decoration: const InputDecoration(
-                    labelText: '가입 승인',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: ApprovalMode.leaderOnly,
-                      child: Text('파티장 승인'),
-                    ),
-                    DropdownMenuItem(
-                      value: ApprovalMode.directJoin,
-                      child: Text('승인 없이 바로 가입'),
-                    ),
-                  ],
-                  onChanged: (value) => setState(() => _approval = value!),
-                ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  key: const ValueKey('saveRecruitmentButton'),
-                  onPressed: _saving ? null : _save,
-                  child: Text(_saving ? '생성 중...' : '모집 생성'),
-                ),
-              ],
+            child: RecruitmentForm(
+              titleController: _title,
+              combatPowerController: _combatPower,
+              draft: _draft,
+              raidOptions: _eligibleRaidOptions,
+              selectedRaid: _raid!,
+              selectedDifficulty: _difficulty!,
+              beforeFields: [_leaderSelector(), const SizedBox(height: 16)],
+              selectedRole: _role,
+              roleOptions:
+                  _leader?.roles
+                      .where((option) => option.canSelect)
+                      .map((option) => option.role)
+                      .toList(growable: false) ??
+                  const [],
+              raidErrorText: _leader != null && _eligibleRaidOptions.isEmpty
+                  ? '선택 캐릭터가 입장 가능한 레이드가 없습니다.'
+                  : null,
+              onTitleChanged: (value) {
+                final usesAutoTitle = value.trim().isEmpty;
+                _draft = _draft.copyWith(
+                  title: value,
+                  usesAutoTitle: usesAutoTitle,
+                );
+              },
+              onRaidChanged: _changeRaid,
+              onDifficultyChanged: _changeDifficulty,
+              onRoleChanged: _changeRole,
+              onCombatPowerChanged: (value) {
+                _draft = _draft.copyWith(
+                  minCombatPower:
+                      RecruitmentFormDraft.normalizeMinCombatPower(value),
+                );
+                _syncAutoTitle();
+              },
+              onExperienceChanged: (value) {
+                setState(() {
+                  _draft = _draft.copyWith(experienceLevel: value);
+                });
+                _syncAutoTitle();
+              },
+              onApprovalChanged: (value) {
+                setState(() => _draft = _draft.copyWith(approvalMode: value));
+              },
+              onSubmit: _save,
+              submitLabel: '모집 생성',
+              submitting: _saving,
             ),
           ),
   );
-  String? _positiveInteger(String? value) {
-    if (value == null || value.trim().isEmpty) return null;
-    final parsed = num.tryParse(value.replaceAll(',', ''));
-    return parsed != null && parsed >= 0 ? null : '0 이상의 전투력을 입력해주세요.';
-  }
 
-  int? get _normalizedMinCombatPower {
-    final parsed = num.tryParse(_combatPower.text.replaceAll(',', '').trim());
-    final value = parsed?.toInt() ?? 0;
-    return value > 0 ? value : null;
-  }
+  int? get _normalizedMinCombatPower => _draft.minCombatPower;
 
   String get _generatedTitle => _autoTitlePolicy.build(
     difficultyAlias: _difficulty?.displayAlias ?? '',
-    experienceLevel: _experience,
+    experienceLevel: _draft.experienceLevel,
     minCombatPower: _normalizedMinCombatPower,
   );
 
-  void _syncAutoTitle() {
-    if (!_usingAutoTitle) return;
+  void _syncAutoTitle({bool force = false}) {
+    if (!_draft.usesAutoTitle) return;
+    if (!force && _title.text.isEmpty) return;
     final title = _generatedTitle;
     if (_title.text == title) return;
     _title.value = TextEditingValue(
       text: title,
       selection: TextSelection.collapsed(offset: title.length),
     );
+    _draft = _draft.copyWith(title: title);
   }
 
   Future<List<RecruitmentLeaderCandidate>> _loadCandidates(
@@ -342,13 +223,20 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     setState(() {
       _raid = raid;
       _difficulty = difficulty;
+      _draft = _draft.copyWith(
+        raidId: raid.raidId,
+        difficultyId: difficulty.difficultyId,
+      );
     });
     _syncAutoTitle();
     await _refreshCandidates();
   }
 
   Future<void> _changeDifficulty(RaidDifficultyDefinition difficulty) async {
-    setState(() => _difficulty = difficulty);
+    setState(() {
+      _difficulty = difficulty;
+      _draft = _draft.copyWith(difficultyId: difficulty.difficultyId);
+    });
     _syncAutoTitle();
     await _refreshCandidates();
   }
@@ -374,6 +262,11 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     setState(() {
       _raid = option.raid;
       _difficulty = eligibleDifficulty ?? option.highestDifficulty;
+      _draft = _draft.copyWith(
+        raidId: option.raid.raidId,
+        difficultyId:
+            (eligibleDifficulty ?? option.highestDifficulty).difficultyId,
+      );
     });
     _syncAutoTitle();
     await _refreshCandidates();
@@ -601,8 +494,6 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     ].where((value) => value.isNotEmpty).join('\n');
   }
 
-  String _roleLabel(PartyRole role) => role == PartyRole.support ? '서포터' : '딜러';
-
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final leader = _leader;
@@ -647,7 +538,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       if (confirmed != true || !mounted) return;
     }
     setState(() => _saving = true);
-    final approval = switch (_approval) {
+    final approval = switch (_draft.approvalMode) {
       ApprovalMode.leaderOnly => const ApprovalPolicy.leaderOnly(),
       ApprovalMode.directJoin => const ApprovalPolicy.directJoin(),
       ApprovalMode.anyMember ||
@@ -665,13 +556,14 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
         gateCount: raid.gateCount,
         minItemLevel: difficulty.minItemLevel,
         minCombatPower: _normalizedMinCombatPower,
-        experienceLevel: _experience,
+        experienceLevel: _draft.experienceLevel,
         maxPlayHours: null,
       ),
       leaderCharacterId: leader.characterId,
       leaderClassName: leader.className,
       leaderRole: _role,
       leaderItemLevel: leader.optionFor(_role)?.itemLevel,
+      leaderCombatPower: leader.optionFor(_role)?.combatPower,
       approvalPolicy: approval,
       compositionPolicy: PartyCompositionPolicy(
         RecruitmentPartyRules.fromRaid(raid),

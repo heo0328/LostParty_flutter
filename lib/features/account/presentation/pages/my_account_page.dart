@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-
-import '../../../../shared/formatters/display_number_formatter.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../../shared/lost_ark_api/auth/api_token_store.dart';
 import '../../../../shared/lost_ark_api/client/lost_ark_api_exception.dart';
+import '../../../../shared/widgets/clearable_text_form_field.dart';
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/repositories/account_repository.dart';
 import '../viewmodels/my_account_view_model.dart';
@@ -236,16 +236,14 @@ class _MyAccountPageState extends State<MyAccountPage> {
                 const LinearProgressIndicator(),
               _buildTokenStatusPanel(context),
               const SizedBox(height: 16),
-              TextField(
-                key: const ValueKey('representativeCharacterNameField'),
+              ClearableTextFormField(
+                fieldKey: const ValueKey('representativeCharacterNameField'),
                 controller: _characterNameController,
                 enabled: !_viewModel.isFetchingCharacters,
                 textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                  labelText: '조회 캐릭터명',
-                  errorText: _characterNameError,
-                  border: const OutlineInputBorder(),
-                ),
+                labelText: '조회 캐릭터명',
+                errorText: _characterNameError,
+                border: const OutlineInputBorder(),
                 onSubmitted: (_) {
                   if (!_viewModel.isFetchingCharacters) {
                     _requestAccountData();
@@ -471,19 +469,17 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
     content: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        TextField(
-          key: const ValueKey('accountLabelField'),
+        ClearableTextFormField(
+          fieldKey: const ValueKey('accountLabelField'),
           controller: _labelController,
-          decoration: const InputDecoration(
-            labelText: '계정 표시명',
-            hintText: '비워두면 부계정1처럼 자동 지정',
-            helperText: '같은 이름이 있으면 다음 번호를 사용합니다.',
-          ),
+          labelText: '계정 표시명',
+          hintText: '비워두면 부계정1처럼 자동 지정',
+          helperText: '같은 이름이 있으면 다음 번호를 사용합니다.',
         ),
-        TextField(
-          key: const ValueKey('subAccountCharacterNameField'),
+        ClearableTextFormField(
+          fieldKey: const ValueKey('subAccountCharacterNameField'),
           controller: _characterController,
-          decoration: const InputDecoration(labelText: '조회 캐릭터명'),
+          labelText: '조회 캐릭터명',
         ),
       ],
     ),
@@ -538,13 +534,11 @@ class _EditAccountDialogState extends State<_EditAccountDialog> {
     content: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        TextField(
-          key: const ValueKey('editAccountLabelField'),
+        ClearableTextFormField(
+          fieldKey: const ValueKey('editAccountLabelField'),
           controller: _labelController,
-          decoration: const InputDecoration(
-            labelText: '계정 표시명',
-            helperText: '비워두면 현재 이름을 유지합니다.',
-          ),
+          labelText: '계정 표시명',
+          helperText: '비워두면 현재 이름을 유지합니다.',
         ),
         SwitchListTile(
           key: const ValueKey('mainAccountSwitch'),

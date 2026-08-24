@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/clearable_text_form_field.dart';
+
 import '../../../../shared/lost_ark_api/auth/api_token.dart';
 import '../../../../shared/lost_ark_api/auth/api_token_store.dart';
 
@@ -90,26 +92,24 @@ class _ApiTokenSettingsPageState extends State<ApiTokenSettingsPage> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 16),
-              TextField(
-                key: const ValueKey('apiTokenField'),
+              ClearableTextFormField(
+                fieldKey: const ValueKey('apiTokenField'),
                 controller: _tokenController,
                 obscureText: _obscureToken,
                 autocorrect: false,
                 enableSuggestions: false,
-                decoration: InputDecoration(
-                  labelText: _hasStoredToken ? '새 토큰' : 'JWT 토큰',
-                  errorText: _errorText,
-                  border: const OutlineInputBorder(),
-                  suffixIcon: IconButton(
-                    tooltip: _obscureToken ? '토큰 표시' : '토큰 숨기기',
-                    onPressed: () {
-                      setState(() {
-                        _obscureToken = !_obscureToken;
-                      });
-                    },
-                    icon: Icon(
-                      _obscureToken ? Icons.visibility : Icons.visibility_off,
-                    ),
+                labelText: _hasStoredToken ? '새 토큰' : 'JWT 토큰',
+                errorText: _errorText,
+                border: const OutlineInputBorder(),
+                trailing: IconButton(
+                  tooltip: _obscureToken ? '토큰 표시' : '토큰 숨기기',
+                  onPressed: () {
+                    setState(() {
+                      _obscureToken = !_obscureToken;
+                    });
+                  },
+                  icon: Icon(
+                    _obscureToken ? Icons.visibility : Icons.visibility_off,
                   ),
                 ),
                 onSubmitted: (_) => _isSaving ? null : _saveToken(),

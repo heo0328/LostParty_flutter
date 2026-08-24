@@ -248,6 +248,8 @@
 
 현재 작업 순서와 완료 상태의 단일 기준은 `docs/NEXT_WORK.md`다.
 `codex/combat-power-auto-title`에서 전투력 표시 통일과 자동 모집 제목 구현 및 자동 검증을 완료했다.
+`codex/full-recruitment-edit`에서 생성·수정 공용 폼, 전체 모집 수정 흐름과 공통 입력 지우기 동작을 구현했다.
+전체 화면 모집 수정, 통합 저장 명령 및 영향 검토 구현을 완료했고 관련 자동 검증과 Android 실기기 검증을 통과했다.
 
 그 이후에는 최근 레이드 조건 기억을 진행하고, Firebase 기반 다중 사용자 전환은
 `BACKEND_PARTY_ARCHITECTURE.md`와 `PARTY_PARTICIPATION_RULES.md`를 기준으로 별도 대형 작업에서 진행한다.

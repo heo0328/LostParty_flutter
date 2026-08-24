@@ -82,13 +82,14 @@ class RecruitmentState {
   int get supportCount => members.length - dealerCount;
 
   RecruitmentState copyWith({
+    ApprovalPolicy? approvalPolicy,
     PartyCompositionPolicy? compositionPolicy,
     List<RecruitmentPartyMember>? members,
     Map<String, RecruitmentApplication>? applications,
     bool? isRecruiting,
   }) => RecruitmentState(
     leaderUserId: leaderUserId,
-    approvalPolicy: approvalPolicy,
+    approvalPolicy: approvalPolicy ?? this.approvalPolicy,
     compositionPolicy: compositionPolicy ?? this.compositionPolicy,
     members: members ?? this.members,
     applications: applications ?? this.applications,
@@ -193,6 +194,7 @@ class RecruitmentStateMachine {
     required String className,
     PartyRole? role,
     double? itemLevel,
+    double? combatPower,
   }) {
     final memberIndex = state.members.indexWhere(
       (member) => member.userId == actorUserId,
@@ -219,6 +221,7 @@ class RecruitmentStateMachine {
                 className: className,
                 role: proposedRole,
                 itemLevel: itemLevel,
+                combatPower: combatPower,
               )
             : member,
     ];
@@ -327,6 +330,7 @@ class RecruitmentStateMachine {
                 className: application.className,
                 role: application.requestedRole,
                 itemLevel: application.itemLevel,
+                combatPower: application.combatPower,
                 partyIndex:
                     composition.assignments[application.applicantUserId]!,
               ),

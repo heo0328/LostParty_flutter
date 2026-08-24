@@ -490,6 +490,45 @@ void main() {
     expect(assignments, hasLength(1));
     expect(assignments.single.characterId, 'a-character');
   });
+
+  test('모집 제목과 조건 및 가입 승인 방식을 revision 단위로 함께 수정한다', () async {
+    final created = await _create(service);
+    final metadata = RecruitmentMetadata(
+      catalogVersion: _metadata.catalogVersion,
+      raidId: _metadata.raidId,
+      difficultyId: _metadata.difficultyId,
+      raidName: _metadata.raidName,
+      difficultyName: _metadata.difficultyName,
+      difficultyAlias: _metadata.difficultyAlias,
+      gateCount: _metadata.gateCount,
+      minItemLevel: _metadata.minItemLevel,
+      minCombatPower: 350000,
+      experienceLevel: ExperienceLevel.semiExperienced,
+      maxPlayHours: _metadata.maxPlayHours,
+      raidStartAt: _metadata.raidStartAt,
+    );
+
+    final updated = await service.updateRecruitment(
+      recruitmentId: created.aggregate!.id,
+      title: '수정된 모집',
+      metadata: metadata,
+      approvalPolicy: const ApprovalPolicy.directJoin(),
+      compositionPolicy: _compositionPolicy,
+    );
+
+    expect(updated.isSuccess, isTrue);
+    expect(updated.aggregate!.title, '수정된 모집');
+    expect(updated.aggregate!.metadata.minCombatPower, 350000);
+    expect(
+      updated.aggregate!.metadata.experienceLevel,
+      ExperienceLevel.semiExperienced,
+    );
+    expect(
+      updated.aggregate!.state.approvalPolicy.mode,
+      ApprovalMode.directJoin,
+    );
+    expect(updated.aggregate!.revision, 1);
+  });
 }
 
 final _laterStart = DateTime.utc(2026, 8, 20, 10);
@@ -613,6 +652,7 @@ class _ConflictingRepository implements RecruitmentStateRepository {
   Future<RecruitmentAggregate?> updateAggregateIfRevision({
     required String recruitmentId,
     required int expectedRevision,
+    required String title,
     required RecruitmentMetadata metadata,
     required RecruitmentState nextState,
     required DateTime updatedAt,
@@ -627,6 +667,7 @@ class _ConflictingRepository implements RecruitmentStateRepository {
     return delegate.updateAggregateIfRevision(
       recruitmentId: recruitmentId,
       expectedRevision: expectedRevision,
+      title: title,
       metadata: metadata,
       nextState: nextState,
       updatedAt: updatedAt,

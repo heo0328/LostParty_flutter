@@ -119,17 +119,17 @@ void main() {
       find.byKey(const ValueKey('recruitmentTitleField')),
       '',
     );
-    expect(titleField.controller!.text, '노르카 모집');
+    expect(titleField.controller!.text, isEmpty);
     await tester.enterText(
       find.byKey(const ValueKey('minCombatPowerField')),
       '0',
     );
-    expect(titleField.controller!.text, '노르카 모집');
+    expect(titleField.controller!.text, isEmpty);
     await tester.enterText(
       find.byKey(const ValueKey('minCombatPowerField')),
       '250000.99',
     );
-    expect(titleField.controller!.text, '노르카 250,000 모집');
+    expect(titleField.controller!.text, isEmpty);
 
     await tester.enterText(
       find.byKey(const ValueKey('recruitmentTitleField')),
@@ -497,7 +497,7 @@ void main() {
     expect(find.text('Firebase 알림 서버 연결 후 사용할 수 있습니다.'), findsOneWidget);
   });
 
-  testWidgets('파티장이 레이드 수정 내용을 검토한 뒤 저장한다', (tester) async {
+  testWidgets('파티장이 전체 모집 수정 내용을 검토한 뒤 저장한다', (tester) async {
     final repository = InMemoryRecruitmentStateRepository();
     await repository.create(_pendingRecruitment);
     final service = _service(repository, FakeUserSession('other-user'));
@@ -521,18 +521,38 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('editRecruitmentRaidButton')));
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.byKey(const ValueKey('reviewRecruitmentRaidEditButton')),
+    expect(find.text('모집 수정'), findsWidgets);
+    await tester.enterText(
+      find.byKey(const ValueKey('recruitmentTitleField')),
+      '',
     );
+    final editTitleField = tester.widget<TextFormField>(
+      find.byKey(const ValueKey('recruitmentTitleField')),
+    );
+    expect(editTitleField.controller!.text, isEmpty);
+    await tester.enterText(
+      find.byKey(const ValueKey('recruitmentTitleField')),
+      '수정된 모집 제목',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('minCombatPowerField')),
+      '350000',
+    );
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('saveRecruitmentButton')),
+    );
+    await tester.tap(find.byKey(const ValueKey('saveRecruitmentButton')));
     await tester.pumpAndSettle();
     expect(find.textContaining('자동으로 제외되지 않습니다.'), findsOneWidget);
-    await tester.tap(
-      find.byKey(const ValueKey('confirmRecruitmentRaidEditButton')),
-    );
+    expect(find.textContaining('최소 전투력 확인 필요 파티원'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('confirmRecruitmentEditButton')));
     await tester.pumpAndSettle();
 
-    expect(find.text('레이드·난이도를 변경했습니다.'), findsOneWidget);
-    expect((await repository.getById(_pendingRecruitment.id))!.revision, 1);
+    final updated = (await repository.getById(_pendingRecruitment.id))!;
+    expect(find.text('수정된 모집 제목'), findsOneWidget);
+    expect(updated.title, '수정된 모집 제목');
+    expect(updated.metadata.minCombatPower, 350000);
+    expect(updated.revision, 1);
   });
 }
 
