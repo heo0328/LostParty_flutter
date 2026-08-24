@@ -5,7 +5,7 @@
 - 통합 기준 브랜치: `main`
 - 기준 상태: Firebase 초기 연결 설정, Player 식별자 검토 및 Firebase 파티 제품 흐름 1차 통합 기준이 `main`에 반영된 상태
 - 작업 트리는 깨끗하며 `main`과 `origin/main`이 일치한다.
-- 현재 `codex/firebase-anonymous-auth`에서 Anonymous Auth 부트스트랩의 Android 실기기 검증을 준비하고 있다.
+- Firebase Core와 Anonymous Auth 부트스트랩 구현·실기기 검증을 완료했으며 다음 단계는 `AuthUid -> PlayerId` binding 계약과 구현이다.
 - Firebase 프로젝트 및 플랫폼 연결 설정은 완료됐으며 제품 흐름의 주요 정책은 `../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`에 통합했다.
 - 로컬 Fake 환경에서 제품 흐름과 UI를 검증하기 위해 두었던 Firebase 구현 보류 단계는 종료됐다.
 - 이제 기능 단위로 데이터 계약·서버 명령·Security Rules·테스트 경계를 먼저 확정한 뒤 Firebase 구현을 단계적으로 진행한다.
@@ -13,7 +13,7 @@
 
 ## 최근 완료 작업
 
-### Anonymous Auth 부트스트랩 자동 검증
+### Anonymous Auth 부트스트랩
 
 - Firebase Core 초기화 후 기존 인증 사용자가 있으면 그대로 재사용한다.
 - 현재 인증 사용자가 없을 때만 `signInAnonymously()`를 호출한다.
@@ -21,7 +21,8 @@
 - Auth UID는 UI와 로그에 노출하지 않으며 Player binding은 다음 작업으로 분리한다.
 - `firebase_auth` 의존성과 플랫폼 플러그인 등록을 반영했다.
 - `flutter analyze`와 전체 `flutter test` 229개를 통과했다.
-- Android 실기기에서 최초 익명 로그인 후 기존 앱 진입과 재실행 시 인증 재사용을 확인하기 전까지 병합하지 않는다.
+- Android 실기기에서 최초 익명 로그인, 기존 앱 진입, 기존 캐릭터 데이터 유지와 재실행 시 인증 재사용을 확인했다.
+- Firebase Console에서 익명 사용자 생성과 재실행 시 불필요한 사용자 추가가 없는 것을 확인했다.
 
 ### Firebase Core 앱 부트스트랩 자동 검증
 
@@ -39,7 +40,8 @@
 - Android 패키지 `com.example.lost_party`와 Firebase Android 앱 등록 정보가 일치한다.
 - Android Google Services Plugin과 생성된 Firebase 옵션을 저장소에 반영했다.
 - 생성된 옵션이 컴파일될 수 있도록 `firebase_core`까지만 초기 연결 의존성에 포함한다.
-- Firebase 앱 초기화, Anonymous Auth 실행, Player binding, Firestore Repository와 Security Rules는 아직 미구현이며 다음 단계부터 순서대로 구현한다.
+- Firebase 앱 초기화와 Anonymous Auth는 구현·검증 완료했다.
+- Player binding, Firestore Repository와 Security Rules는 아직 미구현이며 다음 단계부터 순서대로 구현한다.
 - `AuthUid`와 LOSTPARTY 영속 `PlayerId`를 분리하는 방향 및 기존 코드 영향 범위를 별도 문서로 검토했다.
 
 ### 아이템 레벨 기반 레이드 선택과 모집 수정 기반

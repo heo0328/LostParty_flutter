@@ -1165,4 +1165,5 @@
 - Auth UID를 사용자 화면과 로그에 노출하지 않고 Player binding은 다음 작업으로 분리
 - Fake Auth Gateway 기반 기존 사용자 재사용, 최초 로그인, 실패 및 결과 누락 테스트 추가
 - `flutter analyze` 통과, 전체 `flutter test` 229개 통과
-- Android 실기기에서 최초 로그인과 재실행 인증 재사용 검증 대기
+- Android 실기기에서 최초 익명 로그인, 기존 앱 진입, 기존 캐릭터 데이터 유지와 앱 재실행 확인 완료
+- Firebase Console에서 익명 사용자 생성과 재실행 시 불필요한 사용자 추가가 없는 것을 확인해 실기기 검증 통과
