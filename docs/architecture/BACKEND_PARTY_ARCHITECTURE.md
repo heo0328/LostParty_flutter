@@ -6,6 +6,8 @@ LOSTPARTY의 정적 레이드 기준정보, 멀티유저 파티 모집/신청/�
 
 클라이언트가 화면과 요청을 담당하고, 가입 승인과 정원 변경 같은 최종 상태 전이는 서버가 원자적으로 결정한다.
 
+사용자 흐름, 반복 파티, 주차별 회차, 완료·취소·해산, 알림과 개인 레이드 히스토리의 최신 제품 기준은 `FIREBASE_PARTY_PRODUCT_FLOW.md`를 따른다. 이 문서는 그 제품 기준을 구현하기 위한 백엔드 구조를 설명한다.
+
 ---
 
 ## 2. 권장 기술 구성
@@ -19,7 +21,7 @@ Flutter
 → Firebase App Check
 ```
 
-- Firebase Authentication: 앱 사용자 UID와 로그인 수명 관리
+- Firebase Authentication: AuthUid와 로그인 수명 관리
 - Cloud Firestore: 모집글, 신청, 파티원, 그룹 및 초대의 실시간 읽기 모델
 - Callable Cloud Functions: 모집 생성, 신청, 투표, 승인, 그룹 초대/수락 등 권한이 필요한 명령 처리
 - Firestore Transaction: 정원, 역할별 자리, 투표 수 및 가입 상태의 동시성 보장
@@ -35,7 +37,7 @@ Flutter
 
 클라이언트는 다음 서버 관리 필드를 직접 수정할 수 없다.
 
-- 파티장 UID
+- 파티장 또는 공대장 PlayerId
 - 가입 승인 상태
 - 파티원 목록과 현재 인원
 - 역할별 현재/남은 자리
@@ -70,11 +72,11 @@ Flutter와 Functions가 동일한 원본 카탈로그 또는 같은 원본에서
 
 ## 5. 파티 모집 데이터
 
-사용자·캐릭터의 신청, 확정 참가, 일정 충돌 및 캐릭터 변경에 대한 제품 규칙은 `../product/PARTY_PARTICIPATION_RULES.md`를 기준으로 한다. 본계정과 부계정은 모두 같은 Firebase UID 소유이며 동일 사용자를 별도 파티원으로 취급하지 않는다.
+사용자·캐릭터의 신청, 확정 참가, 일정 충돌 및 캐릭터 변경에 대한 제품 규칙은 `../product/PARTY_PARTICIPATION_RULES.md`를 기준으로 한다. AuthUid는 인증과 Player binding에만 사용하고, 본계정과 부계정은 모두 같은 PlayerId 소유이며 동일 사용자를 별도 파티원으로 취급하지 않는다.
 
 ```text
 recruitments/{recruitmentId}
-  leaderUid
+  leaderPlayerId
   raidId
   difficultyId
   raidCatalogVersion
@@ -92,10 +94,10 @@ recruitments/{recruitmentId}
   createdAt
   updatedAt
   completedAt
-  completedByUid
+  completedByPlayerId
 
-recruitments/{recruitmentId}/members/{uid}
-  uid
+recruitments/{recruitmentId}/members/{playerId}
+  playerId
   characterId
   role
   joinedAt
@@ -103,8 +105,8 @@ recruitments/{recruitmentId}/members/{uid}
   submittedBuildSnapshotId
   characterChangedAt
 
-recruitments/{recruitmentId}/applications/{uid}
-  applicantUid
+recruitments/{recruitmentId}/applications/{playerId}
+  applicantPlayerId
   characterId
   requestedRole
   status
@@ -114,34 +116,36 @@ recruitments/{recruitmentId}/applications/{uid}
   createdAt
   decidedAt
 
-recruitments/{recruitmentId}/applications/{uid}/votes/{voterUid}
-  voterUid
+recruitments/{recruitmentId}/applications/{playerId}/votes/{voterPlayerId}
+  voterPlayerId
   decision
   createdAt
 ```
 
-신청 문서와 투표 문서는 UID를 문서 ID로 사용해 같은 사용자의 중복 신청과 중복 투표를 구조적으로 방지한다.
+신청 문서와 투표 문서는 PlayerId를 문서 ID로 사용해 같은 사용자의 중복 신청과 중복 투표를 구조적으로 방지한다.
 
-확정 참가 충돌은 `users/{uid}/activeRaidAssignments/{characterId_raidId}` 서버 관리 인덱스로 원자적으로 차단한다. 모집 생성, 승인 및 즉시 가입 중 최초 성공한 명령만 점유권을 얻으며 같은 캐릭터·레이드의 다른 pending 신청은 자동 종료한다. 사용자 소유의 다른 게임 계정도 같은 UID의 일정 충돌 검증 범위에 포함한다.
+확정 참가 충돌은 `players/{playerId}/activeRaidAssignments/{characterId_raidId}` 서버 관리 인덱스로 원자적으로 차단한다. 모집 생성, 승인 및 즉시 가입 중 최초 성공한 명령만 점유권을 얻으며 같은 캐릭터·레이드의 다른 승인 대기 신청은 자동 종료한다. 사용자 소유의 다른 게임 계정도 같은 PlayerId의 일정 충돌 검증 범위에 포함한다.
 
 추가 모집 조건인 최소 전투력, 클리어 경험 및 최대 진행 시간은 nullable 값으로 저장한다. 값이 없으면 제한 없음이며, 카탈로그 입장 레벨과 파티 역할·직업 구성은 값과 관계없이 항상 검증한다.
 
-### 주간 레이드 완료 기록
+### 파티 회차 완료와 개인 레이드 기록
 
 ```text
-users/{uid}/characters/{characterId}/weeklyRaidClears/{resetWeekKey_raidId}
-  resetWeekKey
-  raidId
-  completedDifficultyId
-  recruitmentId
+recruitments/{recruitmentId}/cycles/{cycleKey}
+  status
   completedAt
-  completedByUid
+  completedByPlayerId
+  completionRevision
+  completedMemberSnapshot
 ```
 
 - 주차 경계는 `Asia/Seoul` 기준 매주 수요일 오전 6시다.
-- 귀속은 캐릭터와 레이드 단위이며 같은 레이드의 모든 난이도가 한 주간 귀속을 공유한다.
-- 승인된 파티원 누구나 완료 명령을 호출할 수 있고 최초 성공한 한 건이 파티 완료와 당시 멤버 전원의 주간 완료 기록을 하나의 트랜잭션으로 생성한다.
-- 완료 이후의 중복 완료, 새 가입 승인 및 캐릭터 교체는 거절한다.
+- 승인된 현재 파티원 누구나 완료 명령을 호출할 수 있고 최초 성공한 한 건이 회차 완료와 당시 참가자 Snapshot 및 사용자별 완료 이벤트를 하나의 트랜잭션으로 생성한다.
+- 반복 파티의 완료 취소는 파티장 또는 공대장만 화요일 22:00 전까지 실행할 수 있다.
+- 서버 파티 완료와 사용자가 관리하는 개인 캐릭터 완료는 서로 다른 상태다.
+- 개인 완료 기록은 로컬이 기준이며 사용자의 수동 체크와 해제가 서버 완료 이벤트보다 우선한다.
+- 서버는 사용자가 수정할 수 있는 로컬 완료 기록을 신청의 최종 강제 판정 근거로 사용하지 않는다.
+- 완료 및 기타 사용자 알림 이벤트와 완료 파티 원본·Snapshot은 초기 범위에서 28일 보관 후 TTL 삭제한다.
 
 ---
 
@@ -188,22 +192,22 @@ Firestore Security Rules는 결과 필터가 아니므로 공개 모집글 쿼�
 
 ```text
 groups/{groupId}
-  ownerUid
+  ownerPlayerId
   name
   status
   memberCount
   createdAt
   updatedAt
 
-groups/{groupId}/members/{uid}
-  uid
+groups/{groupId}/members/{playerId}
+  playerId
   role
   joinedAt
   invitedBy
 
 groups/{groupId}/invites/{inviteId}
-  inviterUid
-  inviteeUid
+  inviterPlayerId
+  inviteePlayerId
   status
   createdAt
   expiresAt
@@ -291,9 +295,9 @@ ApprovalPolicy
 - 서버는 캐릭터 소유권, 역할 세팅, 카탈로그 입장 레벨, 주간 귀속, 선택 모집 조건 및 동일 딜러 직업 제한을 최신 값으로 재검증한다.
 - 교체 후 전체 파티 구성이 유효할 때만 추가 승인 없이 한 트랜잭션으로 멤버 스냅샷을 교체한다.
 - 같은 사용자의 본계정과 부계정 캐릭터를 모두 후보로 사용할 수 있다.
-- 대상 캐릭터의 같은 레이드 pending 신청은 사용자 확인 후 철회와 교체를 하나의 서버 명령으로 처리한다.
+- 대상 캐릭터의 같은 레이드 승인 대기 신청은 사용자 확인 후 철회와 교체를 하나의 서버 명령으로 처리한다.
 - 대상 캐릭터가 다른 파티에 확정 참가 중이면 단순 교체와 구분해 `이동` 또는 양쪽 파티 조건을 모두 만족하는 `스왑` 명령으로 처리한다.
-- 초기 구현은 pending 철회 후 변경을 우선하고, 확정 파티 간 이동·스왑은 다중 문서 트랜잭션과 탈퇴 정책 구현 후 제공한다.
+- 초기 구현은 승인 대기 신청 철회 후 변경을 우선하고, 확정 파티 간 이동·스왑은 다중 문서 트랜잭션과 탈퇴 정책 구현 후 제공한다.
 
 ---
 
@@ -320,15 +324,21 @@ startAt >= now
 
 - `createRecruitment`
 - `updateRecruitment`
-- `closeRecruitment`
+- `setRecruitmentEnabled`
+- `setContinueTogether`
 - `applyToRecruitment`
 - `withdrawApplication`
 - `voteOnApplication`
+- `setApprovalPermission`
+- `removePartyMember`
 - `changePartyCharacter`
 - `movePartyCharacter`
 - `swapPartyCharacters`
 - `completeRecruitment`
+- `cancelRecruitmentCompletion`
 - `leaveParty`
+- `disbandParty`
+- `transitionWeeklyCycle`
 - `createGroup`
 - `inviteToGroup`
 - `respondToGroupInvite`
@@ -352,35 +362,26 @@ startAt >= now
 
 ---
 
-## 13. 구현 단계
+## 13. 후속 기술 설계와 구현 순서
 
 ```text
-1. 레이드 정적 카탈로그 구조와 검증 규칙
-2. 실제 레이드 카탈로그 데이터 입력
-3. 모집 조건과 가입 승인 정책 Domain 모델
-4. 신청·투표·가입 상태 머신
-5. FakeUserSession, Fake Repository, Fake Clock/ID 기반 다중 사용자 환경
-6. 로컬 모집 목록과 상세 UI
-7. 로컬 모집 생성 UI
-8. 로컬 신청 UI
-9. 로컬 승인·투표·파티 구성 UI
-10. 승인 후 캐릭터 교체 Domain과 UI
-11. 파티 완료 선언과 주간 레이드 완료 Domain 및 UI
-12. 하단 `내 파티` 탭과 창설·가입·신청 중 파티 조회 UI
-13. 계정 그룹 Domain, Fake Repository 및 그룹 UI
-14. 공개/그룹 전용 모집과 `내 파티`를 포함한 로컬 통합 시나리오 테스트 및 실기기 검증
-15. Firebase 프로젝트와 Authentication
-16. Firestore 읽기 모델
-17. Callable Functions 명령과 Transaction
-18. Security Rules 및 Emulator 다중 사용자 테스트
-19. Firebase 연결 후 다중 계정 실기기 테스트
-20. App Check
-21. 후속 알림
+1. AuthUid, PlayerId, GameAccountId와 CharacterId 데이터 계약
+2. Firebase Core 초기화와 Anonymous Auth 부트스트랩 정책
+3. Player binding과 서버 Character 소유 검증
+4. 파티방, 주차별 회차, 완료 Snapshot과 다음 회차 준비 구성
+5. 사용자별 이벤트, 전체·방별 알림 설정과 28일 TTL
+6. Firestore 실시간 읽기 모델과 인덱스
+7. Callable Functions 명령과 Transaction
+8. Security Rules 및 Emulator 다중 사용자·동시성 테스트
+9. 로컬 레이드 히스토리와 캐릭터별 표시 설정 연결
+10. Firebase 연결 후 다중 계정·다중 디바이스 실기기 테스트
+11. App Check
+12. 후속 평가와 확장 알림
 ```
 
-Firebase 연결 전에는 모집 생성·신청·교체 규칙을 자동화 테스트로 검증한다. 승인 화면의 실제 다중 사용자 실기기 검증은 Firebase Authentication과 서버 명령 연결 후 진행한다. 동일 계정 캐릭터를 서로 다른 사용자처럼 사용하는 로컬 실기기 시나리오는 만들지 않는다. 로컬 단계와 Firebase 단계는 같은 Domain 및 Repository 계약을 사용하고 구현체만 교체한다.
+기존 로컬 Domain, 상태 머신, Fake Session과 Repository 테스트는 Firebase 서버 규칙의 기준 자산으로 유지한다. 승인 화면의 실제 다중 사용자 실기기 검증은 Firebase Authentication과 서버 명령 연결 후 진행한다. 동일 계정 캐릭터를 서로 다른 사용자처럼 사용하는 로컬 실기기 시나리오는 만들지 않는다.
 
-`내 파티`는 별도 서버 상태를 복제하지 않고 현재 사용자의 모집 소유권, 승인된 멤버십 및 pending 신청을 조합한 읽기 모델이다. 화면에서는 `참여 중 / 내가 만든 파티 / 신청 중`을 구분하며, pending 신청은 승인된 멤버십으로 취급하지 않는다. 이 조회 계약도 로컬 Fake에서 먼저 확정한 뒤 Firestore 읽기 모델로 교체한다.
+`내 파티`는 별도 서버 상태를 복제하지 않고 현재 Player의 모집 소유권, 승인된 멤버십 및 승인 대기 신청을 조합한 읽기 모델이다. 화면에서는 `참여 중 / 내가 만든 파티 / 신청 중`을 구분하며, 승인 대기 신청은 승인된 멤버십으로 취급하지 않는다.
 
 각 단계는 독립 작업 그룹으로 나눌 수 있지만, 서로 강하게 연결된 Domain·상태 머신·UI는 같은 채팅에서 이어서 작업해 문서 재탐색 비용을 줄인다. 실물 디바이스 확인이 필요한 작업은 최신 APK를 빌드할 수 있는 정확한 브랜치와 테스트 체크리스트를 사용자에게 전달하고, 사용자가 직접 빌드·설치해 결과를 회신한다.
 

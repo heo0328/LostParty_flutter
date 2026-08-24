@@ -13,7 +13,7 @@
 - `PLAYER_FIREBASE_MIGRATION_REVIEW.md`
 - `../integrations/FIREBASE_INITIAL_SETUP_REVIEW.md`
 
-기존 문서의 Firebase UID 직접 사용, 파티 완료 및 주간 회차 관련 내용은 이 문서 승인 후 별도 문서 정리 작업에서 갱신한다.
+기존 문서의 Firebase UID 직접 사용, 파티 완료 및 주간 회차 관련 내용은 이 기준에 맞춰 정리한다.
 
 ---
 
@@ -690,17 +690,16 @@ source
 
 ---
 
-## 20. 후속 문서 정리 항목
+## 20. 관련 문서 정리 결과
 
-이 문서 승인 후 별도 문서 작업에서 다음을 정리한다.
+관련 문서는 다음 책임으로 정리한다.
 
-1. `BACKEND_PARTY_ARCHITECTURE.md`의 Firebase UID 직접 사용을 PlayerId 기반으로 변경
-2. Firestore Current State, 회차 Snapshot, 사용자별 이벤트 및 알림 설정 초안 작성
-3. `../product/PARTY_PARTICIPATION_RULES.md`에 반복 파티, 완료, 탈퇴, 책임자 승계와 회차 정책 반영
-4. `PLAYER_FIREBASE_MIGRATION_REVIEW.md`의 검토안을 확정 결정과 미결정 항목으로 구분
-5. `../product/DETAIL_IMPROVEMENTS.md`에 완료 참가자 평가 기능 후보 추가
-6. `../project/NEXT_WORK.md`에 설계 승인 상태와 첫 구현 작업 범위 기록
-7. 최종 확정된 현재 상태만 `../project/AI_CONTEXT.md`에 요약
+1. `BACKEND_PARTY_ARCHITECTURE.md`: PlayerId 기반 서버 구조와 명령 경계
+2. `../product/PARTY_PARTICIPATION_RULES.md`: 신청, 확정 참가, 충돌과 캐릭터 변경 규칙
+3. `PLAYER_FIREBASE_MIGRATION_REVIEW.md`: Player 식별자 분리의 검토 근거와 기존 코드 영향
+4. `../product/DETAIL_IMPROVEMENTS.md`: 완료 참가자 평가를 포함한 후속 제품 후보
+5. `../project/NEXT_WORK.md`: 남은 기술 설계와 첫 구현 범위
+6. `../project/AI_CONTEXT.md`: 프로젝트 전체 현재 상태 요약
 
 ---
 

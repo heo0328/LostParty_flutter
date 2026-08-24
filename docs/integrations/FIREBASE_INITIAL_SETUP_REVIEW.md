@@ -4,7 +4,7 @@
 
 이 문서는 2026-08-24에 사용자가 수행한 Firebase 프로젝트 생성 및 FlutterFire 연결 작업을 현재 LOSTPARTY 저장소와 대조한 결과를 기록한다.
 
-이 문서의 범위는 Firebase 초기 연결 상태 확인이다. Firebase 패키지 추가, 앱 초기화, Anonymous Auth 실행, Firestore 데이터 모델 확정 및 기존 Repository 교체는 포함하지 않는다.
+이 문서의 범위는 Firebase 초기 연결 상태 확인이다. 최초 작성 이후 생성 옵션의 컴파일 기반인 `firebase_core` 의존성까지 추가됐으며, 앱 초기화, Anonymous Auth 실행, Firestore 데이터 모델 확정 및 기존 Repository 교체는 포함하지 않는다.
 
 Player와 Firebase의 장기 구조 방향은 `../architecture/PLAYER_FIREBASE_MIGRATION_REVIEW.md`를 기준으로 별도 검토한다.
 
@@ -31,7 +31,7 @@ Player와 Firebase의 장기 구조 방향은 `../architecture/PLAYER_FIREBASE_M
 | Web 설정값 | 코드 확인 | `firebase_options.dart`에 Web 설정 존재 |
 | Windows 설정값 | 코드 확인 | `firebase_options.dart`에 Windows 설정 존재 |
 | Linux 설정값 | 미설정 | 생성 파일에서 Linux는 구성되지 않은 플랫폼으로 처리됨 |
-| `firebase_core` 패키지 | 미적용 | `firebase_options.dart`에서 import하지만 `pubspec.yaml`에는 아직 없음 |
+| `firebase_core` 패키지 | 코드 확인 | 생성된 `firebase_options.dart`의 컴파일 기반으로 `pubspec.yaml`에 반영됨 |
 | `firebase_auth` 패키지 | 미적용 | `pubspec.yaml`에 없음 |
 | `cloud_firestore` 패키지 | 미적용 | `pubspec.yaml`에 없음 |
 | Firebase 앱 초기화 | 미적용 | `main.dart`에서 `Firebase.initializeApp`을 호출하지 않음 |
@@ -125,19 +125,18 @@ WidgetsFlutterBinding.ensureInitialized
 
 ## 6. 현재 패키지 상태
 
-현재 `pubspec.yaml`에는 다음 Firebase 패키지가 없다.
+현재 `pubspec.yaml`에는 `firebase_core`가 있고 다음 Firebase 기능 패키지는 아직 없다.
 
 ```text
-firebase_core
 firebase_auth
 cloud_firestore
 ```
 
-따라서 생성된 `lib/firebase_options.dart`는 아직 프로젝트 의존성만으로 컴파일할 수 없는 상태다. 이는 FlutterFire 연결 파일 생성이 잘못됐다는 뜻이 아니라, CLI 설정 생성과 앱 코드 적용이 서로 다른 단계에 머물러 있다는 의미다.
+따라서 생성된 `lib/firebase_options.dart`는 현재 의존성으로 컴파일할 수 있지만, Firebase 앱 초기화와 Auth·Firestore 기능은 아직 적용되지 않았다. CLI 설정 생성과 앱 런타임 적용이 서로 다른 단계에 머물러 있다는 의미다.
 
 다음 패키지의 실제 추가는 각각의 구현 작업이 승인될 때 진행한다.
 
-- Firebase 연결 및 초기화: `firebase_core`
+- Firebase 연결 및 초기화: 반영된 `firebase_core`를 사용해 앱 초기화 구현
 - Anonymous Auth 세션: `firebase_auth`
 - Firestore 읽기/쓰기: `cloud_firestore`
 
@@ -262,11 +261,11 @@ Firestore 컬렉션을 아직 수동 생성하지 않은 것은 현재 단계에
 
 초기 연결 이후의 작업을 다음과 같이 작은 단위로 분리한다.
 
-### 단계 1. Firebase Core 초기화
+### 단계 1. Firebase Core 앱 초기화
 
 범위:
 
-- `firebase_core` 추가
+- 반영된 `firebase_core`를 사용한 초기화 경계 구현
 - Android에서 `Firebase.initializeApp` 실행
 - 기존 `MyApp` 및 AccountDatabase 수명 유지
 - 초기화 실패 처리의 최소 정책 결정
@@ -386,7 +385,7 @@ Firebase 프로젝트와 FlutterFire 설정 파일 생성, Android 앱 등록 �
 ```text
 Firebase 프로젝트 및 플랫폼 설정 생성 완료
 Android 네이티브 연결 설정 완료
-Firebase Dart 런타임 의존성과 앱 초기화는 미적용
+Firebase Core 의존성 반영 완료, 앱 초기화는 미적용
 Auth 및 Firestore 애플리케이션 기능은 미구현
 ```
 

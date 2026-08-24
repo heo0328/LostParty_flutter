@@ -4,6 +4,8 @@
 
 이 문서는 LOSTPARTY에 `Player` 개념과 Firebase Anonymous Authentication, Cloud Firestore를 도입하기 전에 현재 구현을 기준으로 영향 범위와 적용 방향을 정리한 설계 검토 문서다.
 
+검토 결과 `AuthUid`와 `PlayerId` 분리 방향은 채택됐다. 반복 파티, 완료·취소·해산, 알림과 개인 히스토리의 확정 제품 정책은 후속 통합 기준인 `FIREBASE_PARTY_PRODUCT_FLOW.md`를 따른다. 본 문서의 미결정 제품 항목과 UID 직접 사용 비교는 당시 검토 맥락으로만 본다.
+
 현재 단계의 목적은 구현 범위를 확정하는 것이 아니라 다음 구조적 결정을 분리하고 후속 논의의 기준을 만드는 것이다.
 
 - Firebase 인증 주체와 LOSTPARTY 내부 사용자의 식별 분리
@@ -453,26 +455,30 @@ CharacterSubmissionSnapshot
 
 각 단계는 독립적인 검토, 구현 및 테스트가 가능한 작업 단위로 분리한다. Player와 식별자 경계를 확정하기 전에 UI부터 변경하지 않는다.
 
-## 12. 구현 전 추가 결정사항
+## 12. 검토 이후 결정 결과
 
-### 제품 기획이 필요한 사항
+### 통합 기준에서 확정된 사항
+
+- `AuthUid`와 `PlayerId`를 분리한다.
+- 파티 Domain, 모집, 신청, 그룹과 권한에는 PlayerId를 사용한다.
+- 한 Player가 소유한 본계정과 부계정은 같은 사용자로 취급한다.
+- 한 Player는 같은 파티에 Character 하나로 한 자리만 가진다.
+- 서버 파티 완료와 사용자가 관리하는 로컬 개인 완료 기록을 분리한다.
+- 반복 파티는 방과 주차별 회차를 분리한다.
+- 완료 당시 멤버와 Character는 Snapshot으로 고정한다.
+- 완료 전에 탈퇴한 사용자는 완료 Snapshot에 포함하지 않는다.
+- 개인 히스토리와 캐릭터 메모는 로컬에 유지한다.
+- 사용자별 완료 및 구성 변경 이벤트와 완료 파티 원본은 초기 범위에서 28일 보관한다.
+- 상세 상태, 권한과 전이는 `FIREBASE_PARTY_PRODUCT_FLOW.md`를 따른다.
+
+### 후속 기술 설계 항목
 
 - Player 공개 표시명 및 검색용 고유 ID 제공 여부
-- 한 Player가 같은 파티에 여러 Character로 참가할 수 있는지
-- 대표 캐릭터 설정의 서버 동기화 여부
-- 여러 Lost Ark 계정을 한 Player에 묶는 기준
-- 캐릭터 이름 변경 시 동일 캐릭터 추적 방법
+- 서버 CharacterId 발급과 캐릭터명 변경 추적
 - 캐릭터 소유 검증 수준과 갱신 주기
-- 모집 마감, 파티 형성, 진행, 완료, 취소 및 해산의 상태 정의
-- 완료 선언 권한과 완료 취소 또는 정정 정책
-- 완료 당시 멤버와 중도 이탈자 처리
-- 이번 주 완료 분류가 파티 완료 기준인지 캐릭터 귀속 기준인지
-- 전체 완료 기록의 보존 및 삭제 정책
-- 다중 Player 필터에 pending 신청자를 포함할지
-- 필터 대상 Player를 친구, 그룹, 최근 참가자 중 어디서 가져올지
-- 복구키의 발급, 보관, 만료, 회수 및 재사용 정책
-- 복구 후 이전 Auth UID 처리와 복수 Auth UID 연결 허용 여부
-- 오프라인 읽기 및 쓰기 허용 범위
+- 복구키와 새 AuthUid 재연결 정책
+- 오프라인 읽기와 쓰기 허용 범위
+- 다중 Player 필터의 실제 읽기 모델
 
 ### 코드 구조를 기준으로 결정 가능한 사항
 
@@ -490,22 +496,22 @@ CharacterSubmissionSnapshot
 
 ## 13. 기존 문서와의 관계
 
-`docs/architecture/BACKEND_PARTY_ARCHITECTURE.md`는 Firebase UID를 파티의 사용자 식별자와 Firestore 하위 문서 ID로 직접 사용하는 전제를 포함한다. 이 전제는 본 문서의 `AuthUid`와 `PlayerId` 분리 권장안과 충돌한다.
+`docs/architecture/BACKEND_PARTY_ARCHITECTURE.md`의 Firebase UID 직접 사용 전제는 본 검토 결과에 따라 PlayerId 기반으로 갱신한다.
 
-현재 단계에서는 기존 문서를 수정하지 않는다. 다음 순서로 문서를 정리한다.
+문서 관계는 다음과 같이 정리한다.
 
-1. 본 검토 문서에서 식별자와 제품 정책을 논의한다.
-2. 확정된 결정에 따라 `BACKEND_PARTY_ARCHITECTURE.md`의 UID 기반 스키마를 Player ID 기반으로 갱신한다.
-3. 확정된 현재 상태만 `../project/AI_CONTEXT.md`에 요약한다.
-4. 실제 구현 작업 단위가 결정되면 `../project/NEXT_WORK.md`에 첫 작업 범위와 완료 조건을 기록한다.
+1. `FIREBASE_PARTY_PRODUCT_FLOW.md`가 최신 제품 흐름의 기준이다.
+2. 본 문서는 Player 식별자 분리의 검토 근거와 기존 코드 영향을 보존한다.
+3. `BACKEND_PARTY_ARCHITECTURE.md`는 확정 제품 흐름을 구현할 서버 구조를 관리한다.
+4. 현재 상태와 다음 구현 작업은 각각 `../project/AI_CONTEXT.md`와 `../project/NEXT_WORK.md`에 기록한다.
 
 ## 14. 현재 결론
 
-Firebase 연결 전에 다음 네 가지 경계를 먼저 확정해야 한다.
+Firebase 연결 전 검토한 다음 네 가지 경계 중 제품 정책은 통합 기준에서 확정됐고, 서버 CharacterId의 기술 설계가 남아 있다.
 
 1. `AuthUid`와 `PlayerId`
 2. 서버 영속 `CharacterId`
 3. 파티 수명주기와 완료 상태
 4. 현재 Character 정보와 행동 시점 Snapshot
 
-이 경계를 먼저 정하면 기존 Domain, 정책, 상태 머신, Repository 및 로컬 캐시를 대규모로 폐기하지 않고 Firebase 구현체를 단계적으로 추가할 수 있다.
+이 경계를 기준으로 기존 Domain, 정책, 상태 머신, Repository 및 로컬 캐시를 대규모로 폐기하지 않고 Firebase 구현체를 단계적으로 추가한다.
