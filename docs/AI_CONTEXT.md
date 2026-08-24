@@ -24,6 +24,18 @@
 
 ## 완료 상태
 
+### Firebase 초기 연결 준비
+
+- Firebase 프로젝트 ID `lost-party` 기준 FlutterFire 플랫폼 설정 생성 완료
+- Android 앱 패키지 `com.example.lost_party` 등록 정보 일치 확인
+- Android Google Services Plugin 연결 완료
+- Android, iOS, macOS, Web 및 Windows용 `firebase_options.dart` 생성 완료
+- 생성 옵션의 컴파일 기반인 `firebase_core`만 초기 연결 의존성으로 반영
+- Firebase 앱 초기화, Anonymous Auth 로그인, Player binding 및 Firestore 데이터 기능은 미구현
+- Firebase Console의 Anonymous Auth와 Seoul 리전 `(default)` Firestore 생성은 사용자 완료 보고 기준
+- Auth UID와 LOSTPARTY 영속 Player ID를 분리하는 방향을 사전 검토 문서에 기록
+- 실제 Firebase 적용과 메인 파티현황 개편은 정책 및 작업 지시서 확정 후 별도 작업 그룹으로 진행
+
 ### 구조
 - 폴더 구조 생성 완료
 - feature-first 구조 적용

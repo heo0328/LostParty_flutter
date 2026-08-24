@@ -1117,3 +1117,15 @@
 - 지원 화면에는 재사용할 레이드 조건 선택이 없다는 기존 범위 불일치 기록
 - Firebase 다중 사용자 전환을 포함해 제품 목표, 소유권, 상태 전이, 저장 기준과 마이그레이션 범위를 다시 산정하기로 결정
 - 다음 설계 승인 전에는 코드 구현과 기능 브랜치를 시작하지 않는 기준 확정
+
+---
+
+## Task-039. Firebase 초기 연결 기준 상태 준비
+
+- Firebase 프로젝트 `lost-party`와 FlutterFire CLI를 이용한 플랫폼 연결 설정 반영
+- Android 패키지 `com.example.lost_party`와 Firebase 앱 등록 정보 일치 확인
+- Android Google Services Gradle Plugin, `google-services.json`, `firebase.json` 및 `firebase_options.dart` 반영
+- 생성 Firebase 옵션이 정적 분석 가능한 상태가 되도록 `firebase_core`까지만 초기 의존성에 포함
+- Anonymous Auth 실행, Firestore Repository, Player binding, Security Rules 및 파티 데이터 전환은 후속 설계 범위로 유지
+- 현재 코드 기준 Player/Firebase 구조 변경 영향과 Firebase 초기 연결 상태를 별도 문서로 기록
+- 다음 단계는 Firebase 적용과 메인 파티현황 개편의 제품 정책, 데이터 소유권, 상태 전이 및 작업 단위를 작업 지시서로 확정하는 것
