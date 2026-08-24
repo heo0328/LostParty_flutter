@@ -5,7 +5,7 @@
 - 통합 기준 브랜치: `main`
 - 기준 상태: Firebase 초기 연결 설정, Player 식별자 검토 및 Firebase 파티 제품 흐름 1차 통합 기준이 `main`에 반영된 상태
 - 작업 트리는 깨끗하며 `main`과 `origin/main`이 일치한다.
-- 현재 `codex/firebase-core-bootstrap`에서 Firebase Core 앱 부트스트랩의 Android 실기기 검증을 준비하고 있다.
+- Firebase Core 앱 부트스트랩 구현과 Android 실기기 검증을 완료했으며 다음 단계는 Anonymous Auth 부트스트랩이다.
 - Firebase 프로젝트 및 플랫폼 연결 설정은 완료됐으며 제품 흐름의 주요 정책은 `../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`에 통합했다.
 - 로컬 Fake 환경에서 제품 흐름과 UI를 검증하기 위해 두었던 Firebase 구현 보류 단계는 종료됐다.
 - 이제 기능 단위로 데이터 계약·서버 명령·Security Rules·테스트 경계를 먼저 확정한 뒤 Firebase 구현을 단계적으로 진행한다.
@@ -20,7 +20,8 @@
 - 초기화 실패 시 오류 상세를 노출하지 않고 재시도 가능한 안내 화면을 표시한다.
 - 테스트에서는 초기화 함수를 주입해 Firebase 없이 대기·성공·실패·재시도 경계를 검증한다.
 - `flutter analyze`와 전체 `flutter test` 225개를 통과했다.
-- Android 실기기에서 정상 초기화 후 기존 앱 진입과 오프라인 실패·재시도 흐름을 확인하기 전까지 병합하지 않는다.
+- Android 실기기에서 Firebase 초기화 후 기존 내 계정과 저장된 캐릭터 데이터가 정상 표시되는 것을 확인했다.
+- 실패·재시도 흐름은 주입형 위젯 테스트로 검증했다.
 
 ### Firebase 프로젝트 초기 연결과 구조 검토
 

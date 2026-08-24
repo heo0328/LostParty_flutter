@@ -31,7 +31,7 @@
 - Android Google Services Plugin 연결 완료
 - Android, iOS, macOS, Web 및 Windows용 `firebase_options.dart` 생성 완료
 - 생성 옵션의 컴파일 기반인 `firebase_core`만 초기 연결 의존성으로 반영
-- Firebase Core 앱 초기화와 준비·실패·재시도 부트스트랩 구현 및 자동 검증 완료, Android 실기기 검증 대기
+- Firebase Core 앱 초기화와 준비·실패·재시도 부트스트랩 구현, 자동 검증 및 Android 실기기 정상 진입 확인 완료
 - Anonymous Auth 로그인, Player binding 및 Firestore 데이터 기능은 아직 미구현
 - Firebase Console의 Anonymous Auth와 Seoul 리전 `(default)` Firestore 생성은 사용자 완료 보고 기준
 - Auth UID와 LOSTPARTY 영속 Player ID를 분리하는 방향을 사전 검토 문서에 기록
@@ -275,9 +275,9 @@
 `codex/full-recruitment-edit`에서 생성·수정 공용 폼, 전체 모집 수정 흐름과 공통 입력 지우기 동작을 구현하고 Android 실기기 검증을 통과했다.
 완료 결과는 `main`과 `origin/main`에 통합됐다.
 
-현재 `codex/firebase-core-bootstrap`에서 첫 Firebase 기능의 자동 검증을 완료했고 Android 실기기 검증을 준비하고 있다.
+첫 Firebase Core 부트스트랩 구현과 Android 실기기 검증을 완료했다.
 다음 단계부터 Firestore 데이터 계약, 서버 명령, Security Rules와 Emulator 테스트 범위를 기능 단위로 확정하면서 Firebase 구현을 시작한다.
-첫 구현 단위인 Firebase Core 부트스트랩의 자동 검증은 완료됐으며 Android 실기기 검증 후, Anonymous Auth와 Player binding 및 서버 식별자 계약으로 확장한다.
+다음 구현 단위는 Anonymous Auth 준비·실패·재시도이며, 이후 Player binding과 서버 식별자 계약으로 확장한다.
 계약과 검증 범위가 정해진 기능은 구현할 수 있고, 아직 계약이 없는 서버 기능만 보류한다.
 
 모집 생성의 대표 캐릭터 고정은 제품 요구와 맞지 않는다. 대표 캐릭터는 최초 추천값으로만 사용하고, 선택 레이드·난이도 조건을 기준으로 모든 소유 계정의 표시 캐릭터와 저장 역할을 파티장 후보로 제공한다. 레이드 변경으로 기존 선택이 무효가 되면 자동 교체하지 않고 사용자의 재선택을 요구한다.
