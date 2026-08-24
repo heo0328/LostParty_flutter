@@ -27,7 +27,7 @@ Flutter
 - Firestore Transaction: 정원, 역할별 자리, 투표 수 및 가입 상태의 동시성 보장
 - Security Rules: 모바일 클라이언트의 직접 쓰기 제한과 읽기 권한 검증
 - App Check: 변조 앱과 비정상 요청 완화
-- Firebase Cloud Messaging: 후속 알림 기능에서 사용하며 초기 구현 범위에는 포함하지 않음
+- Firebase Cloud Messaging: 완료, 완료 취소, 신청, 구성 변경과 해산 알림 전달. 서버 이벤트 동기화 이후 Firebase 전환 1차 완성 범위에 포함
 
 현재 단계에서는 별도 애플리케이션 서버보다 Firebase 구성이 개발 및 운영 비용에 적합하다. Repository 경계를 유지해 향후 별도 REST 서버로 교체할 수 있게 한다.
 
@@ -84,6 +84,11 @@ recruitments/{recruitmentId}
   visibility
   groupId
   approvalPolicy
+  continueTogether
+  manualRecruitmentEnabled
+  hasAvailableSlot
+  currentCycleKey
+  targetCycleKey
   conditions
   schedule
   memberCount
@@ -104,6 +109,7 @@ recruitments/{recruitmentId}/members/{playerId}
   joinedBy
   submittedBuildSnapshotId
   characterChangedAt
+  canApproveApplications
 
 recruitments/{recruitmentId}/applications/{playerId}
   applicantPlayerId
@@ -145,7 +151,10 @@ recruitments/{recruitmentId}/cycles/{cycleKey}
 - 서버 파티 완료와 사용자가 관리하는 개인 캐릭터 완료는 서로 다른 상태다.
 - 개인 완료 기록은 로컬이 기준이며 사용자의 수동 체크와 해제가 서버 완료 이벤트보다 우선한다.
 - 서버는 사용자가 수정할 수 있는 로컬 완료 기록을 신청의 최종 강제 판정 근거로 사용하지 않는다.
-- 완료 및 기타 사용자 알림 이벤트와 완료 파티 원본·Snapshot은 초기 범위에서 28일 보관 후 TTL 삭제한다.
+- 완료 및 기타 사용자 알림 이벤트는 28일 보관 후 TTL 삭제한다.
+- 완료되지 않은 회차가 수요일 오전 6시에 도달하면 `incompleteEnded`로 종료하고 당시 참가자에게 미완료 종료 이벤트를 생성한다.
+- 미완료 종료된 1회성 파티는 자동 종료하고, 반복 파티는 현재 구성을 새 회차로 승계한다.
+- 종료된 1회성 파티 원본과 회차 Snapshot은 28일 후 삭제하지만 반복 파티방 Current State는 해산할 때까지 유지한다.
 
 ---
 
@@ -264,7 +273,7 @@ pending
 
 ```text
 ApprovalMode
-  leaderOnly
+  manualApproval
   directJoin
   anyMember
   quorum
@@ -276,13 +285,13 @@ ApprovalPolicy
   rejectionMode
 ```
 
-- `leaderOnly`: 파티장만 승인/거절
+- `manualApproval`: 파티장·공대장 또는 책임자가 현재 참가자에게 부여한 가입 승인권자가 승인/거절
 - `directJoin`: 신청 조건을 만족하면 별도 승인 없이 같은 명령에서 즉시 가입
 - `anyMember`: 현재 파티원 한 명의 승인으로 가입
 - `quorum`: 서로 다른 현재 파티원 N명의 승인으로 가입
 - 비율 기반 동의는 파티원 수 변경에 따라 의미가 달라지므로 초기 범위에서 제외
 
-초기 제품의 신규 모집 생성 화면은 `leaderOnly`와 `directJoin`만 제공한다. `anyMember`와 `quorum`은 기존 Domain/저장 데이터 호환을 위해 유지하지만 신규 선택지는 노출하지 않는다.
+초기 제품의 신규 모집 생성 화면은 사용자에게 `파티장 승인`과 `승인 없이 바로 가입`만 제공한다. 전자는 서버의 `manualApproval`, 후자는 `directJoin`에 대응한다. 기존 `leaderOnly` enum을 코드 호환 때문에 유지한다면 파티장과 지정 승인권자를 포함하는 의미로 명시적으로 마이그레이션한다. `anyMember`와 `quorum`은 기존 Domain/저장 데이터 호환을 위해 유지하지만 신규 선택지는 노출하지 않는다.
 
 승인 Function은 인증, 승인 권한, 신청 상태, 중복 투표, 전체 정원, 역할별 자리, 가입 조건 및 승인 수를 한 트랜잭션에서 검증한다.
 
@@ -292,7 +301,7 @@ ApprovalPolicy
 
 - 현재 파티원은 완료 전까지 자기 멤버 문서의 캐릭터만 교체 요청할 수 있다.
 - 승인된 역할과 파티 위치는 유지한다.
-- 서버는 캐릭터 소유권, 역할 세팅, 카탈로그 입장 레벨, 주간 귀속, 선택 모집 조건 및 동일 딜러 직업 제한을 최신 값으로 재검증한다.
+- 서버는 캐릭터 소유권, 역할 세팅, 카탈로그 입장 레벨, 활성 참가 점유, 선택 모집 조건 및 동일 딜러 직업 제한을 최신 값으로 재검증한다. 사용자가 수정할 수 있는 로컬 개인 완료는 서버 강제 조건으로 사용하지 않는다.
 - 교체 후 전체 파티 구성이 유효할 때만 추가 승인 없이 한 트랜잭션으로 멤버 스냅샷을 교체한다.
 - 같은 사용자의 본계정과 부계정 캐릭터를 모두 후보로 사용할 수 있다.
 - 대상 캐릭터의 같은 레이드 승인 대기 신청은 사용자 확인 후 철회와 교체를 하나의 서버 명령으로 처리한다.
@@ -303,14 +312,18 @@ ApprovalPolicy
 
 ## 10. 목록 노출과 신청 검증
 
-목록은 Firestore에서 인덱스 가능한 넓은 후보를 조회한다.
+목록은 Firestore에서 인덱스 가능한 넓은 후보를 조회한다. 파티방 상태와 주차별 회차 상태를 분리하고, 반복 파티 완료 후 모집은 다음 회차를 대상으로 한다.
 
 ```text
-status == recruiting
+recruitmentVisible == true
 visibility == public
 raidId == selectedRaidId
-startAt >= now
+targetCycleKey >= currentCycleKey
 ```
+
+- `recruitmentVisible`은 `manualRecruitmentEnabled && hasAvailableSlot`의 서버 관리 결과다.
+- 반복 파티 완료 후에는 `targetCycleKey`를 다음 주차로 설정하고 카드에 `다음 주 레이드 구성 현황입니다.`를 표시한다.
+- 신청, 승인과 참가 Character 변경은 `targetCycleKey`의 구성에만 반영한다.
 
 그룹 전용 목록은 사용자의 현재 그룹 ID별 쿼리 또는 서버가 제공하는 읽기 모델로 조회한다.
 

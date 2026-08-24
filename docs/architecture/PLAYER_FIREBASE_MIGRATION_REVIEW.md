@@ -468,7 +468,7 @@ CharacterSubmissionSnapshot
 - 완료 당시 멤버와 Character는 Snapshot으로 고정한다.
 - 완료 전에 탈퇴한 사용자는 완료 Snapshot에 포함하지 않는다.
 - 개인 히스토리와 캐릭터 메모는 로컬에 유지한다.
-- 사용자별 완료 및 구성 변경 이벤트와 완료 파티 원본은 초기 범위에서 28일 보관한다.
+- 사용자별 완료 및 구성 변경 이벤트, 종료된 1회성 파티 원본과 회차 Snapshot은 28일 보관한다. 반복 파티방 Current State는 해산할 때까지 유지한다.
 - 상세 상태, 권한과 전이는 `FIREBASE_PARTY_PRODUCT_FLOW.md`를 따른다.
 
 ### 후속 기술 설계 항목
