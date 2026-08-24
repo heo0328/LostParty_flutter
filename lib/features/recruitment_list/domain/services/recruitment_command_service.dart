@@ -95,6 +95,7 @@ class RecruitmentCommandService {
     required String leaderClassName,
     required PartyRole leaderRole,
     double? leaderItemLevel,
+    double? leaderCombatPower,
     required ApprovalPolicy approvalPolicy,
     required PartyCompositionPolicy compositionPolicy,
     bool cancelPendingApplications = false,
@@ -135,6 +136,7 @@ class RecruitmentCommandService {
             role: leaderRole,
             partyIndex: 0,
             itemLevel: leaderItemLevel,
+            combatPower: leaderCombatPower,
           ),
         ],
       ),
@@ -165,6 +167,7 @@ class RecruitmentCommandService {
     required String className,
     required PartyRole role,
     double? itemLevel,
+    double? combatPower,
   }) async {
     final userId = session.currentUserId;
     if (userId == null) {
@@ -203,6 +206,7 @@ class RecruitmentCommandService {
             className: className,
             requestedRole: role,
             itemLevel: itemLevel,
+            combatPower: combatPower,
           ),
         );
       },
@@ -232,6 +236,28 @@ class RecruitmentCommandService {
   Future<LocalRecruitmentResult> updateRaid({
     required String recruitmentId,
     required RecruitmentMetadata metadata,
+    required PartyCompositionPolicy compositionPolicy,
+  }) async {
+    final current = await repository.getById(recruitmentId);
+    if (current == null) {
+      return const LocalRecruitmentResult.failure(
+        LocalRecruitmentFailure.notFound,
+      );
+    }
+    return updateRecruitment(
+      recruitmentId: recruitmentId,
+      title: current.title,
+      metadata: metadata,
+      approvalPolicy: current.state.approvalPolicy,
+      compositionPolicy: compositionPolicy,
+    );
+  }
+
+  Future<LocalRecruitmentResult> updateRecruitment({
+    required String recruitmentId,
+    required String title,
+    required RecruitmentMetadata metadata,
+    required ApprovalPolicy approvalPolicy,
     required PartyCompositionPolicy compositionPolicy,
   }) async {
     final userId = session.currentUserId;
@@ -272,6 +298,7 @@ class RecruitmentCommandService {
       );
     }
     final nextState = current.state.copyWith(
+      approvalPolicy: approvalPolicy,
       compositionPolicy: compositionPolicy,
       members: [
         for (final member in current.state.members)
@@ -325,6 +352,7 @@ class RecruitmentCommandService {
     final updated = await repository.updateAggregateIfRevision(
       recruitmentId: recruitmentId,
       expectedRevision: current.revision,
+      title: title,
       metadata: metadata,
       nextState: nextState,
       updatedAt: clock.now(),
@@ -391,6 +419,7 @@ class RecruitmentCommandService {
     required String className,
     PartyRole? role,
     double? itemLevel,
+    double? combatPower,
     bool cancelPendingApplications = false,
   }) async {
     final userId = session.currentUserId;
@@ -449,6 +478,7 @@ class RecruitmentCommandService {
       className: className,
       role: role ?? currentMember.role,
       itemLevel: itemLevel,
+      combatPower: combatPower,
     );
     if (!transition.isSuccess) {
       return LocalRecruitmentResult.failure(

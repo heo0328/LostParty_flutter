@@ -18,6 +18,7 @@ abstract class RecruitmentStateRepository {
   Future<RecruitmentAggregate?> updateAggregateIfRevision({
     required String recruitmentId,
     required int expectedRevision,
+    required String title,
     required RecruitmentMetadata metadata,
     required RecruitmentState nextState,
     required DateTime updatedAt,

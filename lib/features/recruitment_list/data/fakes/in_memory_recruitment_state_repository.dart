@@ -59,6 +59,7 @@ class InMemoryRecruitmentStateRepository extends ChangeNotifier
   Future<RecruitmentAggregate?> updateAggregateIfRevision({
     required String recruitmentId,
     required int expectedRevision,
+    required String title,
     required RecruitmentMetadata metadata,
     required RecruitmentState nextState,
     required DateTime updatedAt,
@@ -66,6 +67,7 @@ class InMemoryRecruitmentStateRepository extends ChangeNotifier
     final current = _store[recruitmentId];
     if (current == null || current.revision != expectedRevision) return null;
     final updated = current.copyWith(
+      title: title,
       metadata: metadata,
       state: nextState,
       revision: current.revision + 1,

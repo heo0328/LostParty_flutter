@@ -2,18 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../shared/formatters/display_number_formatter.dart';
-import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/entities/recruitment_aggregate.dart';
 import '../../domain/entities/recruitment_application.dart';
 import '../../domain/policies/approval_policy.dart';
-import '../../domain/policies/party_composition_policy.dart';
 import '../../domain/repositories/recruitment_state_repository.dart';
 import '../../domain/services/recruitment_application_candidate_service.dart';
 import '../../domain/services/recruitment_command_service.dart';
 import '../../domain/state/recruitment_state_machine.dart';
 import '../models/candidate_build_display_model.dart';
+import 'recruitment_edit_page.dart';
 
 class RecruitmentDetailPage extends StatefulWidget {
   const RecruitmentDetailPage({
@@ -76,9 +75,9 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
                       key: const ValueKey('editRecruitmentRaidButton'),
                       onPressed: _submitting
                           ? null
-                          : () => _showRaidEditor(aggregate),
+                          : () => _openEditor(aggregate),
                       icon: const Icon(Icons.edit_outlined),
-                      label: const Text('레이드 수정'),
+                      label: const Text('모집 수정'),
                     ),
                   const SizedBox(width: 8),
                   OutlinedButton.icon(
@@ -269,163 +268,21 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
     ],
   );
 
-  Future<void> _showRaidEditor(RecruitmentAggregate aggregate) async {
+  Future<void> _openEditor(RecruitmentAggregate aggregate) async {
     final repository = widget.catalogRepository;
     if (repository == null) return;
-    final catalog = await repository.loadCatalog();
-    if (!mounted) return;
-    var raid = catalog.raids.firstWhere(
-      (item) => item.raidId == aggregate.metadata.raidId,
-      orElse: () => catalog.raids.where((item) => item.isActive).first,
-    );
-    var difficulty = raid.difficulties.firstWhere(
-      (item) => item.difficultyId == aggregate.metadata.difficultyId,
-      orElse: () => _highestActiveDifficulty(raid),
-    );
-    final selection = await showDialog<_RaidEditSelection>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('레이드·난이도 수정'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<RaidDefinition>(
-                key: const ValueKey('editRaidDropdown'),
-                initialValue: raid,
-                decoration: const InputDecoration(labelText: '레이드'),
-                items: [
-                  for (final item in catalog.raids.where(
-                    (item) => item.isActive,
-                  ))
-                    DropdownMenuItem(
-                      value: item,
-                      child: Text(item.displayName),
-                    ),
-                ],
-                onChanged: (value) {
-                  if (value == null) return;
-                  setDialogState(() {
-                    raid = value;
-                    difficulty = _highestActiveDifficulty(value);
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<RaidDifficultyDefinition>(
-                key: ValueKey('editDifficulty-${raid.raidId}'),
-                initialValue: difficulty,
-                decoration: const InputDecoration(labelText: '난이도'),
-                items: [
-                  for (final item in raid.difficulties.where(
-                    (item) => item.isActive,
-                  ))
-                    DropdownMenuItem(
-                      value: item,
-                      child: Text('${item.name} (${item.displayAlias})'),
-                    ),
-                ],
-                onChanged: (value) =>
-                    setDialogState(() => difficulty = value ?? difficulty),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('취소'),
-            ),
-            FilledButton(
-              key: const ValueKey('reviewRecruitmentRaidEditButton'),
-              onPressed: () => Navigator.pop(
-                dialogContext,
-                _RaidEditSelection(raid, difficulty),
-              ),
-              child: const Text('변경 검토'),
-            ),
-          ],
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => RecruitmentEditPage(
+          recruitmentId: aggregate.id,
+          repository: widget.repository,
+          commandService: widget.commandService,
+          catalogRepository: repository,
         ),
       ),
     );
-    if (selection == null || !mounted) return;
-    final affectedMembers = aggregate.state.members
-        .where(
-          (member) =>
-              member.itemLevel != null &&
-              member.itemLevel! < selection.difficulty.minItemLevel,
-        )
-        .toList(growable: false);
-    final unknownCount = aggregate.state.members
-        .where((member) => member.itemLevel == null)
-        .length;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('레이드 조건을 변경할까요?'),
-        content: Text(
-          [
-            '${selection.raid.displayName} - ${selection.difficulty.name}',
-            '입장 레벨 ${DisplayNumberFormatter.integer(selection.difficulty.minItemLevel)}',
-            if (affectedMembers.isNotEmpty)
-              '입장 불가능 ${affectedMembers.length}명: ${affectedMembers.map((member) => member.characterId).join(', ')}',
-            if (unknownCount > 0) '저장 레벨을 확인할 수 없는 참가자 $unknownCount명',
-            '입장 불가능한 참가자는 자동으로 제외되지 않습니다.',
-          ].join('\n'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('취소'),
-          ),
-          FilledButton(
-            key: const ValueKey('confirmRecruitmentRaidEditButton'),
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('변경'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    setState(() => _submitting = true);
-    final old = aggregate.metadata;
-    final result = await widget.commandService.updateRaid(
-      recruitmentId: aggregate.id,
-      metadata: RecruitmentMetadata(
-        catalogVersion: catalog.catalogVersion,
-        raidId: selection.raid.raidId,
-        difficultyId: selection.difficulty.difficultyId,
-        raidName: selection.raid.displayName,
-        difficultyName: selection.difficulty.name,
-        difficultyAlias: selection.difficulty.displayAlias,
-        gateCount: selection.raid.gateCount,
-        minItemLevel: selection.difficulty.minItemLevel,
-        minCombatPower: old.minCombatPower,
-        experienceLevel: old.experienceLevel,
-        maxPlayHours: old.maxPlayHours,
-        raidStartAt: old.raidStartAt,
-      ),
-      compositionPolicy: PartyCompositionPolicy(
-        RecruitmentPartyRules.fromRaid(selection.raid),
-      ),
-    );
-    if (!mounted) return;
-    setState(() => _submitting = false);
-    _message(
-      result.isSuccess
-          ? '레이드·난이도를 변경했습니다.'
-          : result.domainFailure == RecruitmentCommandFailure.compositionRejected
-          ? '현재 파티 구성을 새 레이드 정원에 배치할 수 없습니다.'
-          : '레이드·난이도를 변경하지 못했습니다.',
-    );
-    _reload();
+    if (changed == true && mounted) _reload();
   }
-
-  RaidDifficultyDefinition _highestActiveDifficulty(RaidDefinition raid) =>
-      raid.difficulties.where((item) => item.isActive).reduce(
-        (current, candidate) => candidate.displayOrder > current.displayOrder
-            ? candidate
-            : current,
-      );
 
   Future<void> _confirmNotifyParticipants(
     RecruitmentAggregate aggregate,
@@ -888,6 +745,7 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
       className: candidate.className,
       role: candidate.role,
       itemLevel: candidate.itemLevel,
+      combatPower: candidate.combatPower,
       cancelPendingApplications: cancelPendingApplications,
     );
     if (!mounted) return;
@@ -914,6 +772,7 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
       className: candidate.className,
       role: candidate.role,
       itemLevel: candidate.itemLevel,
+      combatPower: candidate.combatPower,
     );
     if (!mounted) return;
     setState(() => _submitting = false);
@@ -1002,11 +861,4 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
     ApprovalMode.anyMember => '파티원 승인',
     ApprovalMode.quorum => '${policy.requiredApprovals}명 이상 동의',
   };
-}
-
-class _RaidEditSelection {
-  const _RaidEditSelection(this.raid, this.difficulty);
-
-  final RaidDefinition raid;
-  final RaidDifficultyDefinition difficulty;
 }
