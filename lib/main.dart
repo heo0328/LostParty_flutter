@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'app/bootstrap/app_bootstrap.dart';
-import 'app/bootstrap/firebase_app_initializer.dart';
+import 'app/bootstrap/app_services_initializer.dart';
 import 'app/router/app_router.dart';
 import 'features/account/data/local/account_database.dart';
 
@@ -10,7 +10,7 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
     AppBootstrap(
-      initialize: initializeFirebaseApp,
+      initialize: initializeAppServices,
       appBuilder: (_) => const MyApp(),
     ),
   );

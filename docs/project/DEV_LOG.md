@@ -1152,3 +1152,17 @@
 - `flutter analyze` 통과, 전체 `flutter test` 225개 통과
 - 사용자가 최신 브랜치를 Android 실기기에서 실행해 Firebase 초기화 후 기존 내 계정과 저장 캐릭터 데이터가 정상 표시되는 것을 확인
 - 초기화 실패·재시도는 주입형 위젯 테스트로 검증했으며 정상 진입 실기기 검증과 함께 작업 완료
+
+---
+
+## Task-042. Firebase Anonymous Auth 부트스트랩
+
+- 작업 브랜치: `codex/firebase-anonymous-auth`
+- `firebase_auth` 의존성과 Android·Apple·Windows 플랫폼 플러그인 등록 반영
+- Firebase Core 초기화 뒤 현재 인증 사용자를 확인하고 기존 사용자가 있으면 재로그인 없이 재사용
+- 현재 사용자가 없을 때만 `signInAnonymously()`를 실행하고 인증 완료 전 기존 앱 생성을 지연
+- 인증 실패 또는 로그인 결과 누락을 공용 부트스트랩 실패·재시도 흐름으로 전달
+- Auth UID를 사용자 화면과 로그에 노출하지 않고 Player binding은 다음 작업으로 분리
+- Fake Auth Gateway 기반 기존 사용자 재사용, 최초 로그인, 실패 및 결과 누락 테스트 추가
+- `flutter analyze` 통과, 전체 `flutter test` 229개 통과
+- Android 실기기에서 최초 로그인과 재실행 인증 재사용 검증 대기
