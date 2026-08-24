@@ -3,13 +3,22 @@
 ## 기준 상태
 
 - 통합 기준 브랜치: `main`
-- 기준 커밋: `414b301 merge: full recruitment editing`
+- 기준 상태: Firebase 초기 연결 설정과 Player/Firebase 구조 변경 사전 검토가 반영된 최신 `main`
 - 작업 트리는 깨끗하며 `main`과 `origin/main`이 일치한다.
 - 현재 진행 중인 기능 구현은 없다.
-- 다음 구현에 앞서 제품과 데이터 흐름을 포함한 대형 재설계 범위를 새로 산정한다.
+- Firebase 프로젝트 및 플랫폼 연결 설정은 완료됐으며 다음 구현에 앞서 제품과 데이터 흐름을 포함한 대형 재설계 범위를 새로 산정한다.
 - 새 설계가 승인되기 전에는 코드 구현과 기능 브랜치 생성을 시작하지 않는다.
 
 ## 최근 완료 작업
+
+### Firebase 프로젝트 초기 연결과 구조 검토
+
+- Firebase 프로젝트 `lost-party`와 FlutterFire 플랫폼 설정을 생성했다.
+- Android 패키지 `com.example.lost_party`와 Firebase Android 앱 등록 정보가 일치한다.
+- Android Google Services Plugin과 생성된 Firebase 옵션을 저장소에 반영했다.
+- 생성된 옵션이 컴파일될 수 있도록 `firebase_core`까지만 초기 연결 의존성에 포함한다.
+- Firebase 앱 초기화, Anonymous Auth 실행, Player binding, Firestore Repository와 Security Rules는 아직 구현하지 않는다.
+- `AuthUid`와 LOSTPARTY 영속 `PlayerId`를 분리하는 방향 및 기존 코드 영향 범위를 별도 문서로 검토했다.
 
 ### 아이템 레벨 기반 레이드 선택과 모집 수정 기반
 
@@ -52,7 +61,7 @@
 
 ### Firebase 기반 다중 사용자 전환
 
-- 기존 문서는 참고 자료로 유지하지만 현재 설계가 확정되기 전에는 구현하지 않는다.
+- Firebase 프로젝트와 플랫폼 연결은 완료했지만 현재 설계가 확정되기 전에는 앱 초기화와 데이터 기능을 구현하지 않는다.
 - Authentication, Firestore, Cloud Functions, FCM, Security Rules와 App Check는 하나의 큰 전환을 구성하므로 단계별 경계가 필요하다.
 - 실제 다중 사용자 동기화, 서버 트랜잭션과 알림 전달은 로컬 UI 구현 완료와 별개의 검증 영역으로 취급한다.
 
@@ -67,6 +76,9 @@
 7. Firebase Authentication, Firestore, Functions와 FCM의 단계별 도입 범위
 8. 자동 테스트, 에뮬레이터, 다중 계정·다중 디바이스 실기기 검증 경계
 9. 작업을 독립적으로 병합할 수 있는 기능 브랜치 단위와 롤백 기준
+10. Firebase Core 초기화 실패와 Anonymous Auth 준비 중의 앱 진입 정책
+11. `AuthUid -> PlayerId` binding 생성·복구·권한 검증 경계
+12. 메인 파티현황의 미진행·이번 주 완료·전체 기록 및 다중 Player 교집합 필터 계약
 
 ## 설계 단계 완료 조건
 
@@ -101,5 +113,7 @@
 - `AI_CONTEXT.md`: 프로젝트 구조와 현재 개발 기준
 - `PARTY_PARTICIPATION_RULES.md`: 참가 및 충돌 규칙
 - `BACKEND_PARTY_ARCHITECTURE.md`: 기존 Firebase 전환 설계 참고안
+- `PLAYER_FIREBASE_MIGRATION_REVIEW.md`: Player 식별자와 Firebase 전환 영향 검토
+- `FIREBASE_INITIAL_SETUP_REVIEW.md`: Firebase 프로젝트 및 플랫폼 초기 연결 확인
 - `DETAIL_IMPROVEMENTS.md`: 재설계 이후 다시 평가할 세부 개선 후보
 - `DEV_LOG.md`: 완료 작업 이력
