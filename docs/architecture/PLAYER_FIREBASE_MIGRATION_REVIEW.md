@@ -6,7 +6,7 @@
 
 검토 결과 `AuthUid`와 `PlayerId` 분리 방향은 채택됐다. 반복 파티, 완료·취소·해산, 알림과 개인 히스토리의 확정 제품 정책은 후속 통합 기준인 `FIREBASE_PARTY_PRODUCT_FLOW.md`를 따른다. 본 문서의 미결정 제품 항목과 UID 직접 사용 비교는 당시 검토 맥락으로만 본다.
 
-현재 단계의 목적은 구현 범위를 확정하는 것이 아니라 다음 구조적 결정을 분리하고 후속 논의의 기준을 만드는 것이다.
+이 문서는 초기 검토 근거를 보존한다. Firebase Core와 Anonymous Auth 구현은 완료됐으며 `AuthUid -> PlayerId`의 현재 구현 계약은 `FIREBASE_PLAYER_BINDING_CONTRACT.md`를 따른다.
 
 - Firebase 인증 주체와 LOSTPARTY 내부 사용자의 식별 분리
 - 한 Player와 여러 Character의 관계

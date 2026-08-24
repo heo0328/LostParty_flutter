@@ -1,0 +1,71 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function bindingPath(authUid) {
+      return /databases/$(database)/documents/authBindings/$(authUid);
+    }
+
+    function playerPath(playerId) {
+      return /databases/$(database)/documents/players/$(playerId);
+    }
+
+    function validActiveBinding(data) {
+      return data.keys().hasOnly([
+          'schemaVersion',
+          'playerId',
+          'status',
+          'linkedAt',
+          'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.playerId is string
+        && data.playerId.size() > 0
+        && data.status == 'active'
+        && data.linkedAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    function validActivePlayer(data) {
+      return data.keys().hasOnly([
+          'schemaVersion',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.status == 'active'
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    match /authBindings/{authUid} {
+      allow get: if signedIn() && request.auth.uid == authUid;
+      allow list: if false;
+      allow create: if signedIn()
+        && request.auth.uid == authUid
+        && !exists(bindingPath(authUid))
+        && validActiveBinding(request.resource.data)
+        && !exists(playerPath(request.resource.data.playerId))
+        && getAfter(playerPath(request.resource.data.playerId)).data.status
+          == 'active';
+      allow update, delete: if false;
+    }
+
+    match /players/{playerId} {
+      allow get: if signedIn()
+        && exists(bindingPath(request.auth.uid))
+        && get(bindingPath(request.auth.uid)).data.playerId == playerId;
+      allow list: if false;
+      allow create: if signedIn()
+        && !exists(bindingPath(request.auth.uid))
+        && validActivePlayer(request.resource.data)
+        && getAfter(bindingPath(request.auth.uid)).data.playerId == playerId;
+      allow update, delete: if false;
+    }
+  }
+}

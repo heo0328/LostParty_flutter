@@ -4,7 +4,7 @@
 
 이 문서는 2026-08-24에 사용자가 수행한 Firebase 프로젝트 생성 및 FlutterFire 연결 작업을 현재 LOSTPARTY 저장소와 대조한 결과를 기록한다.
 
-이 문서의 범위는 Firebase 초기 연결 상태 확인이다. 최초 작성 이후 생성 옵션의 컴파일 기반인 `firebase_core` 의존성까지 추가됐으며, 앱 초기화, Anonymous Auth 실행, Firestore 데이터 모델 확정 및 기존 Repository 교체는 포함하지 않는다.
+이 문서의 범위는 2026-08-24 당시 Firebase 초기 연결 상태 확인이다. 이후 Firebase Core, Anonymous Auth와 Player binding 구현이 진행됐으며 최신 상태는 `../project/AI_CONTEXT.md`, 다음 작업은 `../project/NEXT_WORK.md`, binding 계약은 `../architecture/FIREBASE_PLAYER_BINDING_CONTRACT.md`를 따른다.
 
 Player와 Firebase의 장기 구조 방향은 `../architecture/PLAYER_FIREBASE_MIGRATION_REVIEW.md`를 기준으로 별도 검토한다.
 
@@ -32,14 +32,14 @@ Player와 Firebase의 장기 구조 방향은 `../architecture/PLAYER_FIREBASE_M
 | Windows 설정값 | 코드 확인 | `firebase_options.dart`에 Windows 설정 존재 |
 | Linux 설정값 | 미설정 | 생성 파일에서 Linux는 구성되지 않은 플랫폼으로 처리됨 |
 | `firebase_core` 패키지 | 코드 확인 | 생성된 `firebase_options.dart`의 컴파일 기반으로 `pubspec.yaml`에 반영됨 |
-| `firebase_auth` 패키지 | 미적용 | `pubspec.yaml`에 없음 |
-| `cloud_firestore` 패키지 | 미적용 | `pubspec.yaml`에 없음 |
-| Firebase 앱 초기화 | 미적용 | `main.dart`에서 `Firebase.initializeApp`을 호출하지 않음 |
+| `firebase_auth` 패키지 | 적용 | Anonymous Auth 부트스트랩에 사용 |
+| `cloud_firestore` 패키지 | 적용 | Player binding Transaction에 사용 |
+| Firebase 앱 초기화 | 적용·검증 | 앱 부트스트랩과 Android 실기기 정상 진입 확인 |
 | Anonymous Auth 제공자 | 사용자 완료 보고 | Anonymous 인증 사용을 위한 Console 설정 완료로 전달받음 |
-| 앱의 Anonymous 로그인 | 미적용 | 로그인 호출 및 인증 세션 구현 없음 |
+| 앱의 Anonymous 로그인 | 적용·검증 | 최초 로그인과 재실행 인증 재사용 실기기 확인 |
 | Firestore 데이터베이스 | 사용자 완료 보고 | Standard, `(default)`, Seoul, Production mode로 생성 완료 |
 | Firestore 컬렉션 | 미생성 | 현재 의도적으로 컬렉션을 수동 생성하지 않음 |
-| Firestore Security Rules | 미검증 | Console의 Production mode 외 실제 Rules 내용은 저장소에 없음 |
+| Firestore Security Rules | 적용 | Player binding 최소 Rules 컴파일 및 배포 완료 |
 | Firebase Emulator 설정 | 미적용 | 관련 설정 및 테스트 없음 |
 
 ## 4. 저장소에서 확인된 변경

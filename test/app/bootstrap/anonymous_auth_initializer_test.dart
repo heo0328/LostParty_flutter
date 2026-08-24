@@ -16,7 +16,7 @@ void main() {
     await AnonymousAuthInitializer(gateway).initialize();
 
     expect(gateway.signInAttempts, 1);
-    expect(gateway.hasCurrentUser, isTrue);
+    expect(gateway.currentAuthUid, 'auth-uid');
   });
 
   test('익명 로그인 실패를 부트스트랩에 전달한다', () async {
@@ -53,7 +53,7 @@ class _FakeAnonymousAuthGateway implements AnonymousAuthGateway {
   var signInAttempts = 0;
 
   @override
-  bool get hasCurrentUser => _hasCurrentUser;
+  String? get currentAuthUid => _hasCurrentUser ? 'auth-uid' : null;
 
   @override
   Future<void> signInAnonymously() async {

@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 
 abstract class AnonymousAuthGateway {
-  bool get hasCurrentUser;
+  String? get currentAuthUid;
 
   Future<void> signInAnonymously();
 }
@@ -12,7 +12,7 @@ class FirebaseAnonymousAuthGateway implements AnonymousAuthGateway {
   final FirebaseAuth _firebaseAuth;
 
   @override
-  bool get hasCurrentUser => _firebaseAuth.currentUser != null;
+  String? get currentAuthUid => _firebaseAuth.currentUser?.uid;
 
   @override
   Future<void> signInAnonymously() async {
@@ -25,12 +25,15 @@ class AnonymousAuthInitializer {
 
   final AnonymousAuthGateway _gateway;
 
-  Future<void> initialize() async {
-    if (_gateway.hasCurrentUser) return;
+  Future<String> initialize() async {
+    final currentAuthUid = _gateway.currentAuthUid;
+    if (currentAuthUid != null) return currentAuthUid;
 
     await _gateway.signInAnonymously();
-    if (!_gateway.hasCurrentUser) {
+    final createdAuthUid = _gateway.currentAuthUid;
+    if (createdAuthUid == null) {
       throw StateError('Anonymous authentication did not create a user.');
     }
+    return createdAuthUid;
   }
 }

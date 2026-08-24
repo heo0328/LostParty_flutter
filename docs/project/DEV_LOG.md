@@ -1167,3 +1167,18 @@
 - `flutter analyze` 통과, 전체 `flutter test` 229개 통과
 - Android 실기기에서 최초 익명 로그인, 기존 앱 진입, 기존 캐릭터 데이터 유지와 앱 재실행 확인 완료
 - Firebase Console에서 익명 사용자 생성과 재실행 시 불필요한 사용자 추가가 없는 것을 확인해 실기기 검증 통과
+
+---
+
+## Task-043. Firebase Player binding
+
+- 작업 브랜치: `codex/firebase-player-binding`
+- `FIREBASE_PLAYER_BINDING_CONTRACT.md`에 `AuthUid -> PlayerId` 최소 데이터 계약, 최초 생성·재사용, 실패 및 Rules 경계 확정
+- `cloud_firestore` 의존성과 Android·Apple·Windows 플랫폼 플러그인 등록 반영
+- `PlayerSession`, Player binding Repository와 Firestore Store 경계 추가
+- `authBindings/{authUid}`와 `players/{playerId}`를 하나의 Firestore Transaction에서 최초 생성하고 기존 binding은 active Player 검증 후 재사용
+- Player binding 완료 전 기존 앱 생성을 지연하고 실패를 공용 부트스트랩 재시도 흐름으로 전달
+- 자기 AuthUid의 최초 문서 쌍 생성과 단건 읽기만 허용하고 목록·수정·삭제·기존 Player 임의 연결을 차단하는 `firestore.rules` 추가
+- Firebase CLI 15.28.1에서 Rules 컴파일 성공 및 `lost-party` 프로젝트 배포 완료
+- PlayerSession과 Repository 단위 테스트 추가, `flutter analyze` 통과 및 전체 `flutter test` 234개 통과
+- Android 실기기에서 최초 Player 문서 쌍 생성과 재실행 재사용 검증 대기

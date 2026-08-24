@@ -10,6 +10,8 @@ LOSTPARTY의 정적 레이드 기준정보, 멀티유저 파티 모집/신청/�
 
 로컬 Fake 환경에서 UI와 제품 흐름을 검증하기 위해 적용했던 Firebase 전역 구현 보류 단계는 종료됐다. 이후 작업은 전체 백엔드 설계 완료를 기다리지 않고, 각 기능의 데이터 계약·권한·트랜잭션·Security Rules·테스트 범위를 먼저 확정한 뒤 단계적으로 구현한다.
 
+`AuthUid -> PlayerId` 최초 생성·재사용과 Security Rules의 현재 계약은 `FIREBASE_PLAYER_BINDING_CONTRACT.md`를 따른다.
+
 ---
 
 ## 2. 권장 기술 구성
