@@ -1181,4 +1181,5 @@
 - 자기 AuthUid의 최초 문서 쌍 생성과 단건 읽기만 허용하고 목록·수정·삭제·기존 Player 임의 연결을 차단하는 `firestore.rules` 추가
 - Firebase CLI 15.28.1에서 Rules 컴파일 성공 및 `lost-party` 프로젝트 배포 완료
 - PlayerSession과 Repository 단위 테스트 추가, `flutter analyze` 통과 및 전체 `flutter test` 234개 통과
-- Android 실기기에서 최초 Player 문서 쌍 생성과 재실행 재사용 검증 대기
+- Android 실기기에서 최초 Player와 binding 문서 쌍 생성, 연결 ID 일치 및 기존 Drift 데이터 유지 확인
+- 앱 재실행 시 동일 binding을 재사용하고 불필요한 Player 문서가 추가되지 않는 것을 확인해 실기기 검증 통과

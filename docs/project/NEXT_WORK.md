@@ -5,7 +5,7 @@
 - 통합 기준 브랜치: `main`
 - 기준 상태: Firebase 초기 연결 설정, Player 식별자 검토 및 Firebase 파티 제품 흐름 1차 통합 기준이 `main`에 반영된 상태
 - 작업 트리는 깨끗하며 `main`과 `origin/main`이 일치한다.
-- 현재 `codex/firebase-player-binding`에서 `AuthUid -> PlayerId` binding의 Android 실기기 검증을 준비하고 있다.
+- Firebase Player binding 구현·Rules 배포·Android 실기기 검증을 완료했으며 다음 단계는 서버 `GameAccountId`·`CharacterId` 계약이다.
 - Firebase 프로젝트 및 플랫폼 연결 설정은 완료됐으며 제품 흐름의 주요 정책은 `../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`에 통합했다.
 - 로컬 Fake 환경에서 제품 흐름과 UI를 검증하기 위해 두었던 Firebase 구현 보류 단계는 종료됐다.
 - 이제 기능 단위로 데이터 계약·서버 명령·Security Rules·테스트 경계를 먼저 확정한 뒤 Firebase 구현을 단계적으로 진행한다.
@@ -13,7 +13,7 @@
 
 ## 최근 완료 작업
 
-### Player binding 계약·구현 자동 검증
+### Player binding 계약·구현
 
 - `authBindings/{authUid}`와 `players/{playerId}`의 최소 스키마 및 최초 생성·재사용 계약을 확정했다.
 - Firestore Transaction으로 Player와 binding을 원자 생성하고 기존 binding은 연결된 active Player 검증 후 재사용한다.
@@ -22,7 +22,8 @@
 - 클라이언트 최초 생성과 자기 문서 단건 읽기만 허용하고 목록·수정·삭제·기존 Player 임의 연결을 차단하는 Rules를 배포했다.
 - Firebase CLI에서 Rules 컴파일과 `lost-party` 프로젝트 배포를 완료했다.
 - `flutter analyze`와 전체 `flutter test` 234개를 통과했다.
-- Android 실기기에서 최초 문서 쌍 생성, 재실행 시 동일 binding 재사용과 기존 Drift 데이터 유지를 확인하기 전까지 병합하지 않는다.
+- Android 실기기에서 최초 Player와 binding 문서 쌍 생성, 연결 ID 일치, 기존 Drift 데이터 유지와 재실행 시 동일 binding 재사용을 확인했다.
+- 재실행 시 불필요한 Player 문서가 추가되지 않는 것을 확인했다.
 
 ### Anonymous Auth 부트스트랩
 
@@ -52,7 +53,8 @@
 - Android Google Services Plugin과 생성된 Firebase 옵션을 저장소에 반영했다.
 - 생성된 옵션이 컴파일될 수 있도록 `firebase_core`까지만 초기 연결 의존성에 포함한다.
 - Firebase 앱 초기화와 Anonymous Auth는 구현·검증 완료했다.
-- Player binding, Firestore Repository와 Security Rules는 아직 미구현이며 다음 단계부터 순서대로 구현한다.
+- Player binding과 최소 Security Rules는 구현·배포·검증 완료했다.
+- 게임 계정·Character 및 파티 Firestore Repository와 해당 Rules는 아직 미구현이며 다음 단계부터 순서대로 구현한다.
 - `AuthUid`와 LOSTPARTY 영속 `PlayerId`를 분리하는 방향 및 기존 코드 영향 범위를 별도 문서로 검토했다.
 
 ### 아이템 레벨 기반 레이드 선택과 모집 수정 기반
