@@ -70,7 +70,7 @@ Flutter와 Functions가 동일한 원본 카탈로그 또는 같은 원본에서
 
 ## 5. 파티 모집 데이터
 
-사용자·캐릭터의 신청, 확정 참가, 일정 충돌 및 캐릭터 변경에 대한 제품 규칙은 `PARTY_PARTICIPATION_RULES.md`를 기준으로 한다. 본계정과 부계정은 모두 같은 Firebase UID 소유이며 동일 사용자를 별도 파티원으로 취급하지 않는다.
+사용자·캐릭터의 신청, 확정 참가, 일정 충돌 및 캐릭터 변경에 대한 제품 규칙은 `../product/PARTY_PARTICIPATION_RULES.md`를 기준으로 한다. 본계정과 부계정은 모두 같은 Firebase UID 소유이며 동일 사용자를 별도 파티원으로 취급하지 않는다.
 
 ```text
 recruitments/{recruitmentId}

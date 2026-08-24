@@ -6,7 +6,7 @@
 
 이 문서의 범위는 Firebase 초기 연결 상태 확인이다. Firebase 패키지 추가, 앱 초기화, Anonymous Auth 실행, Firestore 데이터 모델 확정 및 기존 Repository 교체는 포함하지 않는다.
 
-Player와 Firebase의 장기 구조 방향은 `PLAYER_FIREBASE_MIGRATION_REVIEW.md`를 기준으로 별도 검토한다.
+Player와 Firebase의 장기 구조 방향은 `../architecture/PLAYER_FIREBASE_MIGRATION_REVIEW.md`를 기준으로 별도 검토한다.
 
 ## 2. 확인 기준
 
@@ -172,7 +172,7 @@ Player ID
 
 관련 검토 문서:
 
-- `docs/PLAYER_FIREBASE_MIGRATION_REVIEW.md`
+- `docs/architecture/PLAYER_FIREBASE_MIGRATION_REVIEW.md`
 
 ## 8. Firestore 확인 결과
 
@@ -320,8 +320,8 @@ Firestore 컬렉션을 아직 수동 생성하지 않은 것은 현재 단계에
 - Player Domain 및 Repository 신규 파일
 - `recruitment_runtime.dart`
 - 파티 entity/state/service 및 관련 테스트
-- `PLAYER_FIREBASE_MIGRATION_REVIEW.md`
-- 확정 후 `BACKEND_PARTY_ARCHITECTURE.md`
+- `../architecture/PLAYER_FIREBASE_MIGRATION_REVIEW.md`
+- 확정 후 `../architecture/BACKEND_PARTY_ARCHITECTURE.md`
 
 검증:
 

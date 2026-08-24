@@ -490,14 +490,14 @@ CharacterSubmissionSnapshot
 
 ## 13. 기존 문서와의 관계
 
-`docs/BACKEND_PARTY_ARCHITECTURE.md`는 Firebase UID를 파티의 사용자 식별자와 Firestore 하위 문서 ID로 직접 사용하는 전제를 포함한다. 이 전제는 본 문서의 `AuthUid`와 `PlayerId` 분리 권장안과 충돌한다.
+`docs/architecture/BACKEND_PARTY_ARCHITECTURE.md`는 Firebase UID를 파티의 사용자 식별자와 Firestore 하위 문서 ID로 직접 사용하는 전제를 포함한다. 이 전제는 본 문서의 `AuthUid`와 `PlayerId` 분리 권장안과 충돌한다.
 
 현재 단계에서는 기존 문서를 수정하지 않는다. 다음 순서로 문서를 정리한다.
 
 1. 본 검토 문서에서 식별자와 제품 정책을 논의한다.
 2. 확정된 결정에 따라 `BACKEND_PARTY_ARCHITECTURE.md`의 UID 기반 스키마를 Player ID 기반으로 갱신한다.
-3. 확정된 현재 상태만 `AI_CONTEXT.md`에 요약한다.
-4. 실제 구현 작업 단위가 결정되면 `NEXT_WORK.md`에 첫 작업 범위와 완료 조건을 기록한다.
+3. 확정된 현재 상태만 `../project/AI_CONTEXT.md`에 요약한다.
+4. 실제 구현 작업 단위가 결정되면 `../project/NEXT_WORK.md`에 첫 작업 범위와 완료 조건을 기록한다.
 
 ## 14. 현재 결론
 

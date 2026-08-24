@@ -1,0 +1,51 @@
+# LOSTPARTY 문서 안내
+
+## 문서 읽는 순서
+
+현재 작업을 시작할 때는 다음 순서로 확인한다.
+
+1. [`project/NEXT_WORK.md`](project/NEXT_WORK.md): 현재 기준 상태와 다음 작업
+2. [`project/AI_CONTEXT.md`](project/AI_CONTEXT.md): 프로젝트 전체 현재 상태
+3. [`project/ai_rules.md`](project/ai_rules.md): 작업 및 문서 관리 규칙
+4. 작업 영역에 해당하는 제품 또는 아키텍처 문서
+
+## Product
+
+사용자가 경험하는 기능과 제품 정책을 관리한다.
+
+- [`product/MVP.md`](product/MVP.md): 초기 제품 범위
+- [`product/PARTY_PARTICIPATION_RULES.md`](product/PARTY_PARTICIPATION_RULES.md): 신청, 참가 충돌과 캐릭터 변경 규칙
+- [`product/RAID_CATALOG_DATA.md`](product/RAID_CATALOG_DATA.md): 레이드 정적 카탈로그 기준
+- [`product/DETAIL_IMPROVEMENTS.md`](product/DETAIL_IMPROVEMENTS.md): 후속 세부 개선 후보
+
+## Architecture
+
+데이터 관계, Firebase 전환 및 백엔드 구조를 관리한다.
+
+- [`architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`](architecture/FIREBASE_PARTY_PRODUCT_FLOW.md): Firebase 파티 제품 흐름의 최신 통합 기준
+- [`architecture/BACKEND_PARTY_ARCHITECTURE.md`](architecture/BACKEND_PARTY_ARCHITECTURE.md): 기존 백엔드·파티·그룹 설계
+- [`architecture/PLAYER_FIREBASE_MIGRATION_REVIEW.md`](architecture/PLAYER_FIREBASE_MIGRATION_REVIEW.md): Player 식별자와 Firebase 전환 영향 검토
+
+## Integrations
+
+외부 서비스 연결과 API 기준을 관리한다.
+
+- [`integrations/FIREBASE_INITIAL_SETUP_REVIEW.md`](integrations/FIREBASE_INITIAL_SETUP_REVIEW.md): Firebase 프로젝트와 플랫폼 초기 연결 확인
+- [`integrations/LOST_ARK_API.md`](integrations/LOST_ARK_API.md): Lost Ark API 연동 기준
+
+## Project
+
+현재 작업 상태, 개발 이력과 작업 규칙을 관리한다.
+
+- [`project/NEXT_WORK.md`](project/NEXT_WORK.md): 다음 작업의 단일 기준
+- [`project/AI_CONTEXT.md`](project/AI_CONTEXT.md): 프로젝트 전체 현재 상태
+- [`project/DEV_LOG.md`](project/DEV_LOG.md): 완료 작업 누적 이력
+- [`project/ai_rules.md`](project/ai_rules.md): AI 협업 및 작업 규칙
+
+## 관리 원칙
+
+- 새 문서를 만들기 전에 기존 기준 문서에 포함할 수 있는지 확인한다.
+- 현재 상태와 다음 작업은 각각 `AI_CONTEXT.md`와 `NEXT_WORK.md`에서 관리한다.
+- 누적 완료 이력은 `DEV_LOG.md`에서 관리한다.
+- 제품 정책과 기술 구현 초안을 한 문서에서 무분별하게 혼합하지 않는다.
+- 파일을 이동할 때 저장소 전체의 경로 참조를 함께 갱신한다.

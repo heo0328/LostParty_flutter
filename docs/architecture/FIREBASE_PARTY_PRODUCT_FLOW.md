@@ -9,9 +9,9 @@
 이 문서는 다음 기존 문서보다 이번 재설계에서 합의한 제품 흐름을 우선하여 기록한다.
 
 - `BACKEND_PARTY_ARCHITECTURE.md`
-- `PARTY_PARTICIPATION_RULES.md`
+- `../product/PARTY_PARTICIPATION_RULES.md`
 - `PLAYER_FIREBASE_MIGRATION_REVIEW.md`
-- `FIREBASE_INITIAL_SETUP_REVIEW.md`
+- `../integrations/FIREBASE_INITIAL_SETUP_REVIEW.md`
 
 기존 문서의 Firebase UID 직접 사용, 파티 완료 및 주간 회차 관련 내용은 이 문서 승인 후 별도 문서 정리 작업에서 갱신한다.
 
@@ -191,7 +191,7 @@ Git으로 버전 관리한다.
 
 - 승인된 Player와 Character는 현재 참가 구성에 포함된다.
 - 참가자 추가, 탈퇴, 참가 캐릭터 변경 및 책임자 변경은 현재 방 참가자에게 알림 대상이 된다.
-- 기존 참가 충돌과 중복 참가 규칙은 `PARTY_PARTICIPATION_RULES.md`를 기준으로 유지하되 PlayerId 의미와 회차 정책을 후속 갱신한다.
+- 기존 참가 충돌과 중복 참가 규칙은 `../product/PARTY_PARTICIPATION_RULES.md`를 기준으로 유지하되 PlayerId 의미와 회차 정책을 후속 갱신한다.
 
 ### 가입 승인 권한
 
@@ -686,7 +686,7 @@ source
 - 공개 범위와 익명성
 - 수정, 삭제와 신고 정책
 
-이 기능은 `DETAIL_IMPROVEMENTS.md`에 후속 설계 후보로 기록하고 별도 제품 논의를 거친다.
+이 기능은 `../product/DETAIL_IMPROVEMENTS.md`에 후속 설계 후보로 기록하고 별도 제품 논의를 거친다.
 
 ---
 
@@ -696,11 +696,11 @@ source
 
 1. `BACKEND_PARTY_ARCHITECTURE.md`의 Firebase UID 직접 사용을 PlayerId 기반으로 변경
 2. Firestore Current State, 회차 Snapshot, 사용자별 이벤트 및 알림 설정 초안 작성
-3. `PARTY_PARTICIPATION_RULES.md`에 반복 파티, 완료, 탈퇴, 책임자 승계와 회차 정책 반영
+3. `../product/PARTY_PARTICIPATION_RULES.md`에 반복 파티, 완료, 탈퇴, 책임자 승계와 회차 정책 반영
 4. `PLAYER_FIREBASE_MIGRATION_REVIEW.md`의 검토안을 확정 결정과 미결정 항목으로 구분
-5. `DETAIL_IMPROVEMENTS.md`에 완료 참가자 평가 기능 후보 추가
-6. `NEXT_WORK.md`에 설계 승인 상태와 첫 구현 작업 범위 기록
-7. 최종 확정된 현재 상태만 `AI_CONTEXT.md`에 요약
+5. `../product/DETAIL_IMPROVEMENTS.md`에 완료 참가자 평가 기능 후보 추가
+6. `../project/NEXT_WORK.md`에 설계 승인 상태와 첫 구현 작업 범위 기록
+7. 최종 확정된 현재 상태만 `../project/AI_CONTEXT.md`에 요약
 
 ---
 

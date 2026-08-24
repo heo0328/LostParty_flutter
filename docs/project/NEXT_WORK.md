@@ -93,7 +93,7 @@
 ## 유지되는 제품 규칙
 
 - 레이드 카탈로그는 `assets/raid_catalog/raid_catalog.v1.json`을 기준으로 한다.
-- 참가와 충돌 규칙은 `PARTY_PARTICIPATION_RULES.md`를 기준으로 하되 새 설계에서 변경 여부를 명시한다.
+- 참가와 충돌 규칙은 `../product/PARTY_PARTICIPATION_RULES.md`를 기준으로 하되 새 설계에서 변경 여부를 명시한다.
 - 최소 전투력의 빈 값과 `0`은 제한 없음으로 처리한다.
 - 표시 숫자는 소수점을 버리고 천 단위 쉼표를 적용한다.
 - 모집 제목을 입력하지 않은 경우에만 자동 제목을 사용한다.
@@ -111,9 +111,10 @@
 ## 참고 문서
 
 - `AI_CONTEXT.md`: 프로젝트 구조와 현재 개발 기준
-- `PARTY_PARTICIPATION_RULES.md`: 참가 및 충돌 규칙
-- `BACKEND_PARTY_ARCHITECTURE.md`: 기존 Firebase 전환 설계 참고안
-- `PLAYER_FIREBASE_MIGRATION_REVIEW.md`: Player 식별자와 Firebase 전환 영향 검토
-- `FIREBASE_INITIAL_SETUP_REVIEW.md`: Firebase 프로젝트 및 플랫폼 초기 연결 확인
-- `DETAIL_IMPROVEMENTS.md`: 재설계 이후 다시 평가할 세부 개선 후보
+- `../product/PARTY_PARTICIPATION_RULES.md`: 참가 및 충돌 규칙
+- `../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`: Firebase 파티 제품 흐름 통합 기준
+- `../architecture/BACKEND_PARTY_ARCHITECTURE.md`: 기존 Firebase 전환 설계 참고안
+- `../architecture/PLAYER_FIREBASE_MIGRATION_REVIEW.md`: Player 식별자와 Firebase 전환 영향 검토
+- `../integrations/FIREBASE_INITIAL_SETUP_REVIEW.md`: Firebase 프로젝트 및 플랫폼 초기 연결 확인
+- `../product/DETAIL_IMPROVEMENTS.md`: 재설계 이후 다시 평가할 세부 개선 후보
 - `DEV_LOG.md`: 완료 작업 이력
