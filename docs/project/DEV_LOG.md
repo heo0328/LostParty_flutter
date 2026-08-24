@@ -1139,3 +1139,15 @@
 - `NEXT_WORK.md`, `AI_CONTEXT.md`, `FIREBASE_PARTY_PRODUCT_FLOW.md`, `BACKEND_PARTY_ARCHITECTURE.md`의 착수 조건과 구현 순서 통일
 - 첫 구현 단위를 Firebase Core 부트스트랩과 Anonymous Auth 준비·실패 진입 정책으로 지정
 - 계약이 없는 후속 서버 기능만 보류하고, 계약이 준비된 기능은 독립 브랜치에서 구현·검증하도록 기준 변경
+
+---
+
+## Task-041. Firebase Core 앱 부트스트랩
+
+- 작업 브랜치: `codex/firebase-core-bootstrap`
+- 앱 진입 전에 플랫폼별 Firebase 옵션으로 `Firebase.initializeApp()`을 실행하는 외곽 부트스트랩 추가
+- 초기화 성공 전에는 기존 `MyApp`, Drift 데이터베이스와 Fake 파티 런타임을 생성하지 않도록 경계 분리
+- 초기화 대기 화면과 오류 상세를 노출하지 않는 실패 안내 및 재시도 동작 구현
+- 초기화 함수를 주입해 Firebase 런타임 없이 대기·성공·실패·재시도를 검증하는 위젯 테스트 추가
+- `flutter analyze` 통과, 전체 `flutter test` 225개 통과
+- Android 디버그 APK 빌드는 도구 프로세스가 출력 없이 장시간 대기해 중단했으며 실기기 검증 전 재확인 필요
