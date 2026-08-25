@@ -60,6 +60,11 @@ class _MyAccountPageState extends State<MyAccountPage> {
     await _viewModel.loadTokenStatus();
   }
 
+  Future<void> _openGameAccountVerification() async {
+    await context.push('/account/verify');
+    await _viewModel.loadStoredAccount();
+  }
+
   Future<void> _openCharacterManagement(LocalGameAccount account) async {
     await context.push('/account/characters/manage', extra: account.id);
     await _viewModel.loadStoredAccount();
@@ -235,6 +240,13 @@ class _MyAccountPageState extends State<MyAccountPage> {
               if (_viewModel.isLoadingTokenStatus)
                 const LinearProgressIndicator(),
               _buildTokenStatusPanel(context),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                key: const ValueKey('gameAccountVerificationButton'),
+                onPressed: _openGameAccountVerification,
+                icon: const Icon(Icons.verified_user_outlined),
+                label: const Text('내 게임계정 인증'),
+              ),
               const SizedBox(height: 16),
               ClearableTextFormField(
                 fieldKey: const ValueKey('representativeCharacterNameField'),

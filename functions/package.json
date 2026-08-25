@@ -1,0 +1,20 @@
+{
+  "name": "lost-party-functions",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/confirm_verification.test.js test/equipment_verification.test.js test/firestore_stores.test.js test/lost_ark_api.test.js test/start_verification.test.js",
+    "test:emulator": "node test/emulator/run_emulator_tests.js"
+  },
+  "main": "src/index.js",
+  "engines": {
+    "node": "22"
+  },
+  "dependencies": {
+    "firebase-admin": "14.3.0",
+    "firebase-functions": "7.3.2"
+  },
+  "devDependencies": {
+    "firebase": "12.18.0"
+  }
+}

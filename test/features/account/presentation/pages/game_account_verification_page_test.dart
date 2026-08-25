@@ -1,0 +1,103 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lost_party/features/account/domain/entities/game_account_verification.dart';
+import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
+import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
+import 'package:lost_party/features/account/domain/repositories/account_identity_gateway.dart';
+import 'package:lost_party/features/account/domain/repositories/game_account_verification_gateway.dart';
+import 'package:lost_party/features/account/presentation/pages/game_account_verification_page.dart';
+
+void main() {
+  testWidgets('supports provisional selection and direct character input', (
+    tester,
+  ) async {
+    final gateway = _FakeVerificationGateway();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameAccountVerificationPage(
+          accountRepository: _FakeAccountRepository(),
+          mappingRepository: _FakeMappingRepository(),
+          gateway: gateway,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('가등록 캐릭터 선택'), findsOneWidget);
+    expect(find.text('또는 캐릭터명 직접 입력'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, '선택한 캐릭터로 인증'));
+    await tester.pumpAndSettle();
+    expect(gateway.lastSource, 'provisional');
+    expect(gateway.lastLocalAccountId, 1);
+    expect(find.textContaining('머리, 무기'), findsOneWidget);
+    expect(find.textContaining('접속을 한 번 종료'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('verificationDirectCharacterField')),
+      '직접입력캐릭터',
+    );
+    await tester.tap(find.widgetWithText(OutlinedButton, '직접 입력으로 인증'));
+    await tester.pumpAndSettle();
+    expect(gateway.lastCharacterName, '직접입력캐릭터');
+    expect(gateway.lastSource, 'directInput');
+    expect(gateway.lastLocalAccountId, isNull);
+  });
+}
+
+class _FakeMappingRepository extends Fake
+    implements AccountIdentityMappingRepository {}
+
+class _FakeAccountRepository extends Fake implements AccountRepository {
+  @override
+  Future<List<LocalGameAccount>> loadAccounts() async => const [
+    LocalGameAccount(
+      id: 1,
+      label: '메인 계정',
+      isMain: true,
+      lookupCharacterName: '이슈아이',
+      representativeCharacterId: 11,
+      displayLimit: 1,
+      characters: [
+        LocalAccountCharacter(
+          id: 11,
+          serverName: '루페온',
+          characterName: '이슈아이',
+          characterLevel: 70,
+          characterClassName: '도화가',
+          itemLevel: 1700,
+          combatPower: null,
+          isVisible: true,
+          displayOrder: 0,
+        ),
+      ],
+    ),
+  ];
+}
+
+class _FakeVerificationGateway implements GameAccountVerificationGateway {
+  String? lastCharacterName;
+  String? lastSource;
+  int? lastLocalAccountId;
+
+  @override
+  Future<GameAccountVerificationChallenge> start({
+    required String characterName,
+    required String source,
+    int? localAccountId,
+  }) async {
+    lastCharacterName = characterName;
+    lastSource = source;
+    lastLocalAccountId = localAccountId;
+    return GameAccountVerificationChallenge(
+      challengeId: 'challenge-1',
+      characterName: characterName,
+      requiredUnequippedSlots: const ['head', 'weapon'],
+      expiresAt: DateTime(2026, 8, 25, 10, 10),
+    );
+  }
+
+  @override
+  Future<GameAccountVerificationResult> confirm(String challengeId) =>
+      throw UnimplementedError();
+}

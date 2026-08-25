@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../../features/account/data/datasources/lost_ark_character_remote_data_source.dart';
 import '../../features/account/data/datasources/local_account_data_source.dart';
 import '../../features/account/data/local/account_database.dart';
 import '../../features/account/data/repositories/account_repository_impl.dart';
+import '../../features/account/data/gateways/firebase_game_account_verification_gateway.dart';
 import '../../features/account/presentation/pages/api_token_settings_page.dart';
 import '../../features/account/presentation/pages/character_management_page.dart';
 import '../../features/account/presentation/pages/character_detail_page.dart';
 import '../../features/account/presentation/pages/my_account_page.dart';
+import '../../features/account/presentation/pages/game_account_verification_page.dart';
 import '../../features/account/domain/entities/local_game_account.dart';
 import '../../features/recruitment_list/presentation/pages/recruitment_list_page.dart';
 import '../../features/recruitment_list/presentation/pages/recruitment_create_page.dart';
@@ -46,6 +49,9 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
       database: accountDatabase,
       gameCatalogRepository: gameCatalogRepository,
     ),
+  );
+  final verificationGateway = FirebaseGameAccountVerificationGateway(
+    FirebaseFunctions.instanceFor(region: 'asia-northeast3'),
   );
   final raidCatalogRepository = RaidCatalogRepositoryImpl(
     dataSource: AssetRaidCatalogDataSource(),
@@ -115,6 +121,14 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
                     path: 'api-token',
                     builder: (context, state) =>
                         ApiTokenSettingsPage(apiTokenStore: apiTokenStore),
+                  ),
+                  GoRoute(
+                    path: 'verify',
+                    builder: (context, state) => GameAccountVerificationPage(
+                      accountRepository: accountRepository,
+                      mappingRepository: accountRepository,
+                      gateway: verificationGateway,
+                    ),
                   ),
                   GoRoute(
                     path: 'characters/manage',

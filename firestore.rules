@@ -67,5 +67,29 @@ service cloud.firestore {
         && getAfter(bindingPath(request.auth.uid)).data.playerId == playerId;
       allow update, delete: if false;
     }
+
+    match /accountVerificationChallenges/{challengeId} {
+      allow read, write: if false;
+    }
+
+    match /activeAccountVerificationChallenges/{playerId} {
+      allow read, write: if false;
+    }
+
+    match /gameAccounts/{gameAccountId} {
+      allow read, write: if false;
+    }
+
+    match /characters/{characterId} {
+      allow read, write: if false;
+    }
+
+    match /characterIdentityClaims/{claimId} {
+      allow read, write: if false;
+    }
+
+    match /playerGameAccounts/{ownershipId} {
+      allow read, write: if false;
+    }
   }
 }
