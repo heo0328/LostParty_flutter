@@ -511,6 +511,37 @@ service cloud.firestore {
           || memberAfter.data.characterId != data.characterId);
     }
 
+    function validCycleEvent(playerId, eventId, data) {
+      let cycle = getAfter(recruitmentCyclePath(
+        data.recruitmentId,
+        data.cycleKey
+      )).data;
+      let expectedStatus = data.type == 'partyCompleted'
+        ? 'completed'
+        : (data.type == 'partyCompletionCancelled'
+          ? 'completionCancelled'
+          : 'incompleteEnded');
+      return hasActiveBinding()
+        && data.schemaVersion == 1
+        && data.eventId == eventId
+        && data.playerId == playerId
+        && data.type in [
+          'partyCompleted',
+          'partyCompletionCancelled',
+          'partyIncompleteEnded'
+        ]
+        && cycle.status == expectedStatus
+        && cycle.updatedAt == request.time
+        && playerId in cycle.memberPlayerIds
+        && data.eventRevision == cycle.completionRevision
+        && data.raidId is string
+        && data.difficultyId is string
+        && data.characterId is string
+        && data.occurredAt == request.time
+        && data.expiresAt >= request.time + duration.value(27, 'd')
+        && data.expiresAt <= request.time + duration.value(29, 'd');
+    }
+
     function validPendingApplication(recruitmentId, playerId, data) {
       let recruitment = get(recruitmentPath(recruitmentId)).data;
       return hasActiveBinding()
@@ -650,6 +681,17 @@ service cloud.firestore {
         ) || validJoinedAssignment(playerId, assignmentId, request.resource.data);
         allow update: if false;
         allow delete: if validAssignmentRemoval(playerId, resource.data);
+      }
+
+      match /events/{eventId} {
+        allow get, list: if hasActiveBinding()
+          && playerId == currentPlayerId();
+        allow create: if validCycleEvent(
+          playerId,
+          eventId,
+          request.resource.data
+        );
+        allow update, delete: if false;
       }
     }
 

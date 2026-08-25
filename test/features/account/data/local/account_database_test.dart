@@ -829,6 +829,30 @@ void main() {
     )..where((table) => table.id.equals(secondAccountId))).getSingle();
     expect(secondAccount.serverGameAccountId, isNull);
   });
+
+  test('party event sync is idempotent and preserves local choices', () async {
+    final occurredAt = DateTime.utc(2026, 8, 25);
+    await database.syncPartyHistoryEvent(
+      eventId: 'event-1', playerId: 'player', characterId: 'character',
+      recruitmentId: 'party', raidId: 'serca', difficultyId: 'hard',
+      cycleKey: '2026-08-26', serverStatus: 'completed',
+      occurredAt: occurredAt,
+    );
+    await database.setRaidHistoryVisibility('event-1', false);
+    await database.setRaidHistoryLocalOverride('event-1', 'incomplete');
+    await database.syncPartyHistoryEvent(
+      eventId: 'event-1', playerId: 'player', characterId: 'character',
+      recruitmentId: 'party', raidId: 'serca', difficultyId: 'hard',
+      cycleKey: '2026-08-26', serverStatus: 'completionCancelled',
+      occurredAt: occurredAt.add(const Duration(minutes: 1)),
+    );
+
+    final rows = await database.select(database.raidHistoryEntries).get();
+    expect(rows, hasLength(1));
+    expect(rows.single.serverStatus, 'completionCancelled');
+    expect(rows.single.visibility, 'hidden');
+    expect(rows.single.localStatusOverride, 'incomplete');
+  });
 }
 
 AccountCharacterSnapshot _snapshot(String characterName, DateTime fetchedAt) {

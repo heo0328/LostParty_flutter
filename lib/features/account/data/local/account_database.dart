@@ -108,15 +108,39 @@ class CharacterBuildSnapshots extends Table {
   ];
 }
 
+class RaidHistoryEntries extends Table {
+  TextColumn get eventId => text()();
+  TextColumn get playerId => text()();
+  TextColumn get characterId => text()();
+  TextColumn get recruitmentId => text()();
+  TextColumn get raidId => text()();
+  TextColumn get difficultyId => text()();
+  TextColumn get cycleKey => text()();
+  TextColumn get serverStatus => text()();
+  TextColumn get localStatusOverride => text().nullable()();
+  TextColumn get source => text().withDefault(const Constant('partyEvent'))();
+  TextColumn get visibility => text().withDefault(const Constant('visible'))();
+  DateTimeColumn get occurredAt => dateTime()();
+  DateTimeColumn get syncedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {eventId};
+}
+
 @DriftDatabase(
-  tables: [GameAccounts, AccountCharacters, CharacterBuildSnapshots],
+  tables: [
+    GameAccounts,
+    AccountCharacters,
+    CharacterBuildSnapshots,
+    RaidHistoryEntries,
+  ],
 )
 class AccountDatabase extends _$AccountDatabase {
   AccountDatabase([QueryExecutor? executor])
     : super(executor ?? driftDatabase(name: 'lost_party'));
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -157,8 +181,83 @@ class AccountDatabase extends _$AccountDatabase {
           gameAccounts.serverOwnershipStatus,
         );
       }
+      if (from < 7) {
+        await migrator.createTable(raidHistoryEntries);
+      }
     },
   );
+
+  Future<void> syncPartyHistoryEvent({
+    required String eventId,
+    required String playerId,
+    required String characterId,
+    required String recruitmentId,
+    required String raidId,
+    required String difficultyId,
+    required String cycleKey,
+    required String serverStatus,
+    required DateTime occurredAt,
+    DateTime? syncedAt,
+  }) async {
+    if (serverStatus != 'completed' &&
+        serverStatus != 'incompleteEnded' &&
+        serverStatus != 'completionCancelled') {
+      throw ArgumentError.value(serverStatus, 'serverStatus');
+    }
+    final existing = await (select(
+      raidHistoryEntries,
+    )..where((table) => table.eventId.equals(eventId))).getSingleOrNull();
+    final timestamp = syncedAt ?? DateTime.now();
+    if (existing == null) {
+      await into(raidHistoryEntries).insert(
+        RaidHistoryEntriesCompanion.insert(
+          eventId: eventId,
+          playerId: playerId,
+          characterId: characterId,
+          recruitmentId: recruitmentId,
+          raidId: raidId,
+          difficultyId: difficultyId,
+          cycleKey: cycleKey,
+          serverStatus: serverStatus,
+          occurredAt: occurredAt,
+          syncedAt: timestamp,
+        ),
+      );
+      return;
+    }
+    await (update(
+      raidHistoryEntries,
+    )..where((table) => table.eventId.equals(eventId))).write(
+      RaidHistoryEntriesCompanion(
+        serverStatus: Value(serverStatus),
+        occurredAt: Value(occurredAt),
+        syncedAt: Value(timestamp),
+      ),
+    );
+  }
+
+  Future<void> setRaidHistoryVisibility(String eventId, bool visible) =>
+      (update(raidHistoryEntries)
+            ..where((table) => table.eventId.equals(eventId)))
+          .write(
+            RaidHistoryEntriesCompanion(
+              visibility: Value(visible ? 'visible' : 'hidden'),
+            ),
+          );
+
+  Future<void> setRaidHistoryLocalOverride(
+    String eventId,
+    String? status,
+  ) {
+    if (status != null && status != 'completed' && status != 'incomplete') {
+      throw ArgumentError.value(status, 'status');
+    }
+    return (update(raidHistoryEntries)
+          ..where((table) => table.eventId.equals(eventId)))
+        .write(
+          RaidHistoryEntriesCompanion(localStatusOverride: Value(status)),
+        );
+  }
 
   Future<void> _createServerIdIndexes() async {
     await customStatement(

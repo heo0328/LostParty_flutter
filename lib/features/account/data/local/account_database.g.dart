@@ -2057,6 +2057,793 @@ class CharacterBuildSnapshotsCompanion
   }
 }
 
+class $RaidHistoryEntriesTable extends RaidHistoryEntries
+    with TableInfo<$RaidHistoryEntriesTable, RaidHistoryEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RaidHistoryEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _eventIdMeta = const VerificationMeta(
+    'eventId',
+  );
+  @override
+  late final GeneratedColumn<String> eventId = GeneratedColumn<String>(
+    'event_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _playerIdMeta = const VerificationMeta(
+    'playerId',
+  );
+  @override
+  late final GeneratedColumn<String> playerId = GeneratedColumn<String>(
+    'player_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<String> characterId = GeneratedColumn<String>(
+    'character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recruitmentIdMeta = const VerificationMeta(
+    'recruitmentId',
+  );
+  @override
+  late final GeneratedColumn<String> recruitmentId = GeneratedColumn<String>(
+    'recruitment_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _raidIdMeta = const VerificationMeta('raidId');
+  @override
+  late final GeneratedColumn<String> raidId = GeneratedColumn<String>(
+    'raid_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _difficultyIdMeta = const VerificationMeta(
+    'difficultyId',
+  );
+  @override
+  late final GeneratedColumn<String> difficultyId = GeneratedColumn<String>(
+    'difficulty_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cycleKeyMeta = const VerificationMeta(
+    'cycleKey',
+  );
+  @override
+  late final GeneratedColumn<String> cycleKey = GeneratedColumn<String>(
+    'cycle_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _serverStatusMeta = const VerificationMeta(
+    'serverStatus',
+  );
+  @override
+  late final GeneratedColumn<String> serverStatus = GeneratedColumn<String>(
+    'server_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _localStatusOverrideMeta =
+      const VerificationMeta('localStatusOverride');
+  @override
+  late final GeneratedColumn<String> localStatusOverride =
+      GeneratedColumn<String>(
+        'local_status_override',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('partyEvent'),
+  );
+  static const VerificationMeta _visibilityMeta = const VerificationMeta(
+    'visibility',
+  );
+  @override
+  late final GeneratedColumn<String> visibility = GeneratedColumn<String>(
+    'visibility',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('visible'),
+  );
+  static const VerificationMeta _occurredAtMeta = const VerificationMeta(
+    'occurredAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> occurredAt = GeneratedColumn<DateTime>(
+    'occurred_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _syncedAtMeta = const VerificationMeta(
+    'syncedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> syncedAt = GeneratedColumn<DateTime>(
+    'synced_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    eventId,
+    playerId,
+    characterId,
+    recruitmentId,
+    raidId,
+    difficultyId,
+    cycleKey,
+    serverStatus,
+    localStatusOverride,
+    source,
+    visibility,
+    occurredAt,
+    syncedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'raid_history_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RaidHistoryEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('event_id')) {
+      context.handle(
+        _eventIdMeta,
+        eventId.isAcceptableOrUnknown(data['event_id']!, _eventIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_eventIdMeta);
+    }
+    if (data.containsKey('player_id')) {
+      context.handle(
+        _playerIdMeta,
+        playerId.isAcceptableOrUnknown(data['player_id']!, _playerIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_playerIdMeta);
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('recruitment_id')) {
+      context.handle(
+        _recruitmentIdMeta,
+        recruitmentId.isAcceptableOrUnknown(
+          data['recruitment_id']!,
+          _recruitmentIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_recruitmentIdMeta);
+    }
+    if (data.containsKey('raid_id')) {
+      context.handle(
+        _raidIdMeta,
+        raidId.isAcceptableOrUnknown(data['raid_id']!, _raidIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_raidIdMeta);
+    }
+    if (data.containsKey('difficulty_id')) {
+      context.handle(
+        _difficultyIdMeta,
+        difficultyId.isAcceptableOrUnknown(
+          data['difficulty_id']!,
+          _difficultyIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_difficultyIdMeta);
+    }
+    if (data.containsKey('cycle_key')) {
+      context.handle(
+        _cycleKeyMeta,
+        cycleKey.isAcceptableOrUnknown(data['cycle_key']!, _cycleKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cycleKeyMeta);
+    }
+    if (data.containsKey('server_status')) {
+      context.handle(
+        _serverStatusMeta,
+        serverStatus.isAcceptableOrUnknown(
+          data['server_status']!,
+          _serverStatusMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_serverStatusMeta);
+    }
+    if (data.containsKey('local_status_override')) {
+      context.handle(
+        _localStatusOverrideMeta,
+        localStatusOverride.isAcceptableOrUnknown(
+          data['local_status_override']!,
+          _localStatusOverrideMeta,
+        ),
+      );
+    }
+    if (data.containsKey('source')) {
+      context.handle(
+        _sourceMeta,
+        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
+      );
+    }
+    if (data.containsKey('visibility')) {
+      context.handle(
+        _visibilityMeta,
+        visibility.isAcceptableOrUnknown(data['visibility']!, _visibilityMeta),
+      );
+    }
+    if (data.containsKey('occurred_at')) {
+      context.handle(
+        _occurredAtMeta,
+        occurredAt.isAcceptableOrUnknown(data['occurred_at']!, _occurredAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_occurredAtMeta);
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(
+        _syncedAtMeta,
+        syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_syncedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {eventId};
+  @override
+  RaidHistoryEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RaidHistoryEntry(
+      eventId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}event_id'],
+      )!,
+      playerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}player_id'],
+      )!,
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}character_id'],
+      )!,
+      recruitmentId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recruitment_id'],
+      )!,
+      raidId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}raid_id'],
+      )!,
+      difficultyId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}difficulty_id'],
+      )!,
+      cycleKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cycle_key'],
+      )!,
+      serverStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_status'],
+      )!,
+      localStatusOverride: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_status_override'],
+      ),
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      )!,
+      visibility: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}visibility'],
+      )!,
+      occurredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}occurred_at'],
+      )!,
+      syncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}synced_at'],
+      )!,
+    );
+  }
+
+  @override
+  $RaidHistoryEntriesTable createAlias(String alias) {
+    return $RaidHistoryEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class RaidHistoryEntry extends DataClass
+    implements Insertable<RaidHistoryEntry> {
+  final String eventId;
+  final String playerId;
+  final String characterId;
+  final String recruitmentId;
+  final String raidId;
+  final String difficultyId;
+  final String cycleKey;
+  final String serverStatus;
+  final String? localStatusOverride;
+  final String source;
+  final String visibility;
+  final DateTime occurredAt;
+  final DateTime syncedAt;
+  const RaidHistoryEntry({
+    required this.eventId,
+    required this.playerId,
+    required this.characterId,
+    required this.recruitmentId,
+    required this.raidId,
+    required this.difficultyId,
+    required this.cycleKey,
+    required this.serverStatus,
+    this.localStatusOverride,
+    required this.source,
+    required this.visibility,
+    required this.occurredAt,
+    required this.syncedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['event_id'] = Variable<String>(eventId);
+    map['player_id'] = Variable<String>(playerId);
+    map['character_id'] = Variable<String>(characterId);
+    map['recruitment_id'] = Variable<String>(recruitmentId);
+    map['raid_id'] = Variable<String>(raidId);
+    map['difficulty_id'] = Variable<String>(difficultyId);
+    map['cycle_key'] = Variable<String>(cycleKey);
+    map['server_status'] = Variable<String>(serverStatus);
+    if (!nullToAbsent || localStatusOverride != null) {
+      map['local_status_override'] = Variable<String>(localStatusOverride);
+    }
+    map['source'] = Variable<String>(source);
+    map['visibility'] = Variable<String>(visibility);
+    map['occurred_at'] = Variable<DateTime>(occurredAt);
+    map['synced_at'] = Variable<DateTime>(syncedAt);
+    return map;
+  }
+
+  RaidHistoryEntriesCompanion toCompanion(bool nullToAbsent) {
+    return RaidHistoryEntriesCompanion(
+      eventId: Value(eventId),
+      playerId: Value(playerId),
+      characterId: Value(characterId),
+      recruitmentId: Value(recruitmentId),
+      raidId: Value(raidId),
+      difficultyId: Value(difficultyId),
+      cycleKey: Value(cycleKey),
+      serverStatus: Value(serverStatus),
+      localStatusOverride: localStatusOverride == null && nullToAbsent
+          ? const Value.absent()
+          : Value(localStatusOverride),
+      source: Value(source),
+      visibility: Value(visibility),
+      occurredAt: Value(occurredAt),
+      syncedAt: Value(syncedAt),
+    );
+  }
+
+  factory RaidHistoryEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RaidHistoryEntry(
+      eventId: serializer.fromJson<String>(json['eventId']),
+      playerId: serializer.fromJson<String>(json['playerId']),
+      characterId: serializer.fromJson<String>(json['characterId']),
+      recruitmentId: serializer.fromJson<String>(json['recruitmentId']),
+      raidId: serializer.fromJson<String>(json['raidId']),
+      difficultyId: serializer.fromJson<String>(json['difficultyId']),
+      cycleKey: serializer.fromJson<String>(json['cycleKey']),
+      serverStatus: serializer.fromJson<String>(json['serverStatus']),
+      localStatusOverride: serializer.fromJson<String?>(
+        json['localStatusOverride'],
+      ),
+      source: serializer.fromJson<String>(json['source']),
+      visibility: serializer.fromJson<String>(json['visibility']),
+      occurredAt: serializer.fromJson<DateTime>(json['occurredAt']),
+      syncedAt: serializer.fromJson<DateTime>(json['syncedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'eventId': serializer.toJson<String>(eventId),
+      'playerId': serializer.toJson<String>(playerId),
+      'characterId': serializer.toJson<String>(characterId),
+      'recruitmentId': serializer.toJson<String>(recruitmentId),
+      'raidId': serializer.toJson<String>(raidId),
+      'difficultyId': serializer.toJson<String>(difficultyId),
+      'cycleKey': serializer.toJson<String>(cycleKey),
+      'serverStatus': serializer.toJson<String>(serverStatus),
+      'localStatusOverride': serializer.toJson<String?>(localStatusOverride),
+      'source': serializer.toJson<String>(source),
+      'visibility': serializer.toJson<String>(visibility),
+      'occurredAt': serializer.toJson<DateTime>(occurredAt),
+      'syncedAt': serializer.toJson<DateTime>(syncedAt),
+    };
+  }
+
+  RaidHistoryEntry copyWith({
+    String? eventId,
+    String? playerId,
+    String? characterId,
+    String? recruitmentId,
+    String? raidId,
+    String? difficultyId,
+    String? cycleKey,
+    String? serverStatus,
+    Value<String?> localStatusOverride = const Value.absent(),
+    String? source,
+    String? visibility,
+    DateTime? occurredAt,
+    DateTime? syncedAt,
+  }) => RaidHistoryEntry(
+    eventId: eventId ?? this.eventId,
+    playerId: playerId ?? this.playerId,
+    characterId: characterId ?? this.characterId,
+    recruitmentId: recruitmentId ?? this.recruitmentId,
+    raidId: raidId ?? this.raidId,
+    difficultyId: difficultyId ?? this.difficultyId,
+    cycleKey: cycleKey ?? this.cycleKey,
+    serverStatus: serverStatus ?? this.serverStatus,
+    localStatusOverride: localStatusOverride.present
+        ? localStatusOverride.value
+        : this.localStatusOverride,
+    source: source ?? this.source,
+    visibility: visibility ?? this.visibility,
+    occurredAt: occurredAt ?? this.occurredAt,
+    syncedAt: syncedAt ?? this.syncedAt,
+  );
+  RaidHistoryEntry copyWithCompanion(RaidHistoryEntriesCompanion data) {
+    return RaidHistoryEntry(
+      eventId: data.eventId.present ? data.eventId.value : this.eventId,
+      playerId: data.playerId.present ? data.playerId.value : this.playerId,
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      recruitmentId: data.recruitmentId.present
+          ? data.recruitmentId.value
+          : this.recruitmentId,
+      raidId: data.raidId.present ? data.raidId.value : this.raidId,
+      difficultyId: data.difficultyId.present
+          ? data.difficultyId.value
+          : this.difficultyId,
+      cycleKey: data.cycleKey.present ? data.cycleKey.value : this.cycleKey,
+      serverStatus: data.serverStatus.present
+          ? data.serverStatus.value
+          : this.serverStatus,
+      localStatusOverride: data.localStatusOverride.present
+          ? data.localStatusOverride.value
+          : this.localStatusOverride,
+      source: data.source.present ? data.source.value : this.source,
+      visibility: data.visibility.present
+          ? data.visibility.value
+          : this.visibility,
+      occurredAt: data.occurredAt.present
+          ? data.occurredAt.value
+          : this.occurredAt,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RaidHistoryEntry(')
+          ..write('eventId: $eventId, ')
+          ..write('playerId: $playerId, ')
+          ..write('characterId: $characterId, ')
+          ..write('recruitmentId: $recruitmentId, ')
+          ..write('raidId: $raidId, ')
+          ..write('difficultyId: $difficultyId, ')
+          ..write('cycleKey: $cycleKey, ')
+          ..write('serverStatus: $serverStatus, ')
+          ..write('localStatusOverride: $localStatusOverride, ')
+          ..write('source: $source, ')
+          ..write('visibility: $visibility, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('syncedAt: $syncedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    eventId,
+    playerId,
+    characterId,
+    recruitmentId,
+    raidId,
+    difficultyId,
+    cycleKey,
+    serverStatus,
+    localStatusOverride,
+    source,
+    visibility,
+    occurredAt,
+    syncedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RaidHistoryEntry &&
+          other.eventId == this.eventId &&
+          other.playerId == this.playerId &&
+          other.characterId == this.characterId &&
+          other.recruitmentId == this.recruitmentId &&
+          other.raidId == this.raidId &&
+          other.difficultyId == this.difficultyId &&
+          other.cycleKey == this.cycleKey &&
+          other.serverStatus == this.serverStatus &&
+          other.localStatusOverride == this.localStatusOverride &&
+          other.source == this.source &&
+          other.visibility == this.visibility &&
+          other.occurredAt == this.occurredAt &&
+          other.syncedAt == this.syncedAt);
+}
+
+class RaidHistoryEntriesCompanion extends UpdateCompanion<RaidHistoryEntry> {
+  final Value<String> eventId;
+  final Value<String> playerId;
+  final Value<String> characterId;
+  final Value<String> recruitmentId;
+  final Value<String> raidId;
+  final Value<String> difficultyId;
+  final Value<String> cycleKey;
+  final Value<String> serverStatus;
+  final Value<String?> localStatusOverride;
+  final Value<String> source;
+  final Value<String> visibility;
+  final Value<DateTime> occurredAt;
+  final Value<DateTime> syncedAt;
+  final Value<int> rowid;
+  const RaidHistoryEntriesCompanion({
+    this.eventId = const Value.absent(),
+    this.playerId = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.recruitmentId = const Value.absent(),
+    this.raidId = const Value.absent(),
+    this.difficultyId = const Value.absent(),
+    this.cycleKey = const Value.absent(),
+    this.serverStatus = const Value.absent(),
+    this.localStatusOverride = const Value.absent(),
+    this.source = const Value.absent(),
+    this.visibility = const Value.absent(),
+    this.occurredAt = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RaidHistoryEntriesCompanion.insert({
+    required String eventId,
+    required String playerId,
+    required String characterId,
+    required String recruitmentId,
+    required String raidId,
+    required String difficultyId,
+    required String cycleKey,
+    required String serverStatus,
+    this.localStatusOverride = const Value.absent(),
+    this.source = const Value.absent(),
+    this.visibility = const Value.absent(),
+    required DateTime occurredAt,
+    required DateTime syncedAt,
+    this.rowid = const Value.absent(),
+  }) : eventId = Value(eventId),
+       playerId = Value(playerId),
+       characterId = Value(characterId),
+       recruitmentId = Value(recruitmentId),
+       raidId = Value(raidId),
+       difficultyId = Value(difficultyId),
+       cycleKey = Value(cycleKey),
+       serverStatus = Value(serverStatus),
+       occurredAt = Value(occurredAt),
+       syncedAt = Value(syncedAt);
+  static Insertable<RaidHistoryEntry> custom({
+    Expression<String>? eventId,
+    Expression<String>? playerId,
+    Expression<String>? characterId,
+    Expression<String>? recruitmentId,
+    Expression<String>? raidId,
+    Expression<String>? difficultyId,
+    Expression<String>? cycleKey,
+    Expression<String>? serverStatus,
+    Expression<String>? localStatusOverride,
+    Expression<String>? source,
+    Expression<String>? visibility,
+    Expression<DateTime>? occurredAt,
+    Expression<DateTime>? syncedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (eventId != null) 'event_id': eventId,
+      if (playerId != null) 'player_id': playerId,
+      if (characterId != null) 'character_id': characterId,
+      if (recruitmentId != null) 'recruitment_id': recruitmentId,
+      if (raidId != null) 'raid_id': raidId,
+      if (difficultyId != null) 'difficulty_id': difficultyId,
+      if (cycleKey != null) 'cycle_key': cycleKey,
+      if (serverStatus != null) 'server_status': serverStatus,
+      if (localStatusOverride != null)
+        'local_status_override': localStatusOverride,
+      if (source != null) 'source': source,
+      if (visibility != null) 'visibility': visibility,
+      if (occurredAt != null) 'occurred_at': occurredAt,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RaidHistoryEntriesCompanion copyWith({
+    Value<String>? eventId,
+    Value<String>? playerId,
+    Value<String>? characterId,
+    Value<String>? recruitmentId,
+    Value<String>? raidId,
+    Value<String>? difficultyId,
+    Value<String>? cycleKey,
+    Value<String>? serverStatus,
+    Value<String?>? localStatusOverride,
+    Value<String>? source,
+    Value<String>? visibility,
+    Value<DateTime>? occurredAt,
+    Value<DateTime>? syncedAt,
+    Value<int>? rowid,
+  }) {
+    return RaidHistoryEntriesCompanion(
+      eventId: eventId ?? this.eventId,
+      playerId: playerId ?? this.playerId,
+      characterId: characterId ?? this.characterId,
+      recruitmentId: recruitmentId ?? this.recruitmentId,
+      raidId: raidId ?? this.raidId,
+      difficultyId: difficultyId ?? this.difficultyId,
+      cycleKey: cycleKey ?? this.cycleKey,
+      serverStatus: serverStatus ?? this.serverStatus,
+      localStatusOverride: localStatusOverride ?? this.localStatusOverride,
+      source: source ?? this.source,
+      visibility: visibility ?? this.visibility,
+      occurredAt: occurredAt ?? this.occurredAt,
+      syncedAt: syncedAt ?? this.syncedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (eventId.present) {
+      map['event_id'] = Variable<String>(eventId.value);
+    }
+    if (playerId.present) {
+      map['player_id'] = Variable<String>(playerId.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<String>(characterId.value);
+    }
+    if (recruitmentId.present) {
+      map['recruitment_id'] = Variable<String>(recruitmentId.value);
+    }
+    if (raidId.present) {
+      map['raid_id'] = Variable<String>(raidId.value);
+    }
+    if (difficultyId.present) {
+      map['difficulty_id'] = Variable<String>(difficultyId.value);
+    }
+    if (cycleKey.present) {
+      map['cycle_key'] = Variable<String>(cycleKey.value);
+    }
+    if (serverStatus.present) {
+      map['server_status'] = Variable<String>(serverStatus.value);
+    }
+    if (localStatusOverride.present) {
+      map['local_status_override'] = Variable<String>(
+        localStatusOverride.value,
+      );
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (visibility.present) {
+      map['visibility'] = Variable<String>(visibility.value);
+    }
+    if (occurredAt.present) {
+      map['occurred_at'] = Variable<DateTime>(occurredAt.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<DateTime>(syncedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RaidHistoryEntriesCompanion(')
+          ..write('eventId: $eventId, ')
+          ..write('playerId: $playerId, ')
+          ..write('characterId: $characterId, ')
+          ..write('recruitmentId: $recruitmentId, ')
+          ..write('raidId: $raidId, ')
+          ..write('difficultyId: $difficultyId, ')
+          ..write('cycleKey: $cycleKey, ')
+          ..write('serverStatus: $serverStatus, ')
+          ..write('localStatusOverride: $localStatusOverride, ')
+          ..write('source: $source, ')
+          ..write('visibility: $visibility, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AccountDatabase extends GeneratedDatabase {
   _$AccountDatabase(QueryExecutor e) : super(e);
   $AccountDatabaseManager get managers => $AccountDatabaseManager(this);
@@ -2065,6 +2852,8 @@ abstract class _$AccountDatabase extends GeneratedDatabase {
       $AccountCharactersTable(this);
   late final $CharacterBuildSnapshotsTable characterBuildSnapshots =
       $CharacterBuildSnapshotsTable(this);
+  late final $RaidHistoryEntriesTable raidHistoryEntries =
+      $RaidHistoryEntriesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2073,6 +2862,7 @@ abstract class _$AccountDatabase extends GeneratedDatabase {
     gameAccounts,
     accountCharacters,
     characterBuildSnapshots,
+    raidHistoryEntries,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -3528,6 +4318,385 @@ typedef $$CharacterBuildSnapshotsTableProcessedTableManager =
       CharacterBuildSnapshotRow,
       PrefetchHooks Function({bool characterId})
     >;
+typedef $$RaidHistoryEntriesTableCreateCompanionBuilder =
+    RaidHistoryEntriesCompanion Function({
+      required String eventId,
+      required String playerId,
+      required String characterId,
+      required String recruitmentId,
+      required String raidId,
+      required String difficultyId,
+      required String cycleKey,
+      required String serverStatus,
+      Value<String?> localStatusOverride,
+      Value<String> source,
+      Value<String> visibility,
+      required DateTime occurredAt,
+      required DateTime syncedAt,
+      Value<int> rowid,
+    });
+typedef $$RaidHistoryEntriesTableUpdateCompanionBuilder =
+    RaidHistoryEntriesCompanion Function({
+      Value<String> eventId,
+      Value<String> playerId,
+      Value<String> characterId,
+      Value<String> recruitmentId,
+      Value<String> raidId,
+      Value<String> difficultyId,
+      Value<String> cycleKey,
+      Value<String> serverStatus,
+      Value<String?> localStatusOverride,
+      Value<String> source,
+      Value<String> visibility,
+      Value<DateTime> occurredAt,
+      Value<DateTime> syncedAt,
+      Value<int> rowid,
+    });
+
+class $$RaidHistoryEntriesTableFilterComposer
+    extends Composer<_$AccountDatabase, $RaidHistoryEntriesTable> {
+  $$RaidHistoryEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get eventId => $composableBuilder(
+    column: $table.eventId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get playerId => $composableBuilder(
+    column: $table.playerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recruitmentId => $composableBuilder(
+    column: $table.recruitmentId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get raidId => $composableBuilder(
+    column: $table.raidId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get difficultyId => $composableBuilder(
+    column: $table.difficultyId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cycleKey => $composableBuilder(
+    column: $table.cycleKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverStatus => $composableBuilder(
+    column: $table.serverStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localStatusOverride => $composableBuilder(
+    column: $table.localStatusOverride,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get visibility => $composableBuilder(
+    column: $table.visibility,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$RaidHistoryEntriesTableOrderingComposer
+    extends Composer<_$AccountDatabase, $RaidHistoryEntriesTable> {
+  $$RaidHistoryEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get eventId => $composableBuilder(
+    column: $table.eventId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get playerId => $composableBuilder(
+    column: $table.playerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recruitmentId => $composableBuilder(
+    column: $table.recruitmentId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get raidId => $composableBuilder(
+    column: $table.raidId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get difficultyId => $composableBuilder(
+    column: $table.difficultyId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cycleKey => $composableBuilder(
+    column: $table.cycleKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverStatus => $composableBuilder(
+    column: $table.serverStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get localStatusOverride => $composableBuilder(
+    column: $table.localStatusOverride,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get visibility => $composableBuilder(
+    column: $table.visibility,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$RaidHistoryEntriesTableAnnotationComposer
+    extends Composer<_$AccountDatabase, $RaidHistoryEntriesTable> {
+  $$RaidHistoryEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get eventId =>
+      $composableBuilder(column: $table.eventId, builder: (column) => column);
+
+  GeneratedColumn<String> get playerId =>
+      $composableBuilder(column: $table.playerId, builder: (column) => column);
+
+  GeneratedColumn<String> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get recruitmentId => $composableBuilder(
+    column: $table.recruitmentId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get raidId =>
+      $composableBuilder(column: $table.raidId, builder: (column) => column);
+
+  GeneratedColumn<String> get difficultyId => $composableBuilder(
+    column: $table.difficultyId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cycleKey =>
+      $composableBuilder(column: $table.cycleKey, builder: (column) => column);
+
+  GeneratedColumn<String> get serverStatus => $composableBuilder(
+    column: $table.serverStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get localStatusOverride => $composableBuilder(
+    column: $table.localStatusOverride,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<String> get visibility => $composableBuilder(
+    column: $table.visibility,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+}
+
+class $$RaidHistoryEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AccountDatabase,
+          $RaidHistoryEntriesTable,
+          RaidHistoryEntry,
+          $$RaidHistoryEntriesTableFilterComposer,
+          $$RaidHistoryEntriesTableOrderingComposer,
+          $$RaidHistoryEntriesTableAnnotationComposer,
+          $$RaidHistoryEntriesTableCreateCompanionBuilder,
+          $$RaidHistoryEntriesTableUpdateCompanionBuilder,
+          (
+            RaidHistoryEntry,
+            BaseReferences<
+              _$AccountDatabase,
+              $RaidHistoryEntriesTable,
+              RaidHistoryEntry
+            >,
+          ),
+          RaidHistoryEntry,
+          PrefetchHooks Function()
+        > {
+  $$RaidHistoryEntriesTableTableManager(
+    _$AccountDatabase db,
+    $RaidHistoryEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RaidHistoryEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RaidHistoryEntriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RaidHistoryEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> eventId = const Value.absent(),
+                Value<String> playerId = const Value.absent(),
+                Value<String> characterId = const Value.absent(),
+                Value<String> recruitmentId = const Value.absent(),
+                Value<String> raidId = const Value.absent(),
+                Value<String> difficultyId = const Value.absent(),
+                Value<String> cycleKey = const Value.absent(),
+                Value<String> serverStatus = const Value.absent(),
+                Value<String?> localStatusOverride = const Value.absent(),
+                Value<String> source = const Value.absent(),
+                Value<String> visibility = const Value.absent(),
+                Value<DateTime> occurredAt = const Value.absent(),
+                Value<DateTime> syncedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RaidHistoryEntriesCompanion(
+                eventId: eventId,
+                playerId: playerId,
+                characterId: characterId,
+                recruitmentId: recruitmentId,
+                raidId: raidId,
+                difficultyId: difficultyId,
+                cycleKey: cycleKey,
+                serverStatus: serverStatus,
+                localStatusOverride: localStatusOverride,
+                source: source,
+                visibility: visibility,
+                occurredAt: occurredAt,
+                syncedAt: syncedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String eventId,
+                required String playerId,
+                required String characterId,
+                required String recruitmentId,
+                required String raidId,
+                required String difficultyId,
+                required String cycleKey,
+                required String serverStatus,
+                Value<String?> localStatusOverride = const Value.absent(),
+                Value<String> source = const Value.absent(),
+                Value<String> visibility = const Value.absent(),
+                required DateTime occurredAt,
+                required DateTime syncedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => RaidHistoryEntriesCompanion.insert(
+                eventId: eventId,
+                playerId: playerId,
+                characterId: characterId,
+                recruitmentId: recruitmentId,
+                raidId: raidId,
+                difficultyId: difficultyId,
+                cycleKey: cycleKey,
+                serverStatus: serverStatus,
+                localStatusOverride: localStatusOverride,
+                source: source,
+                visibility: visibility,
+                occurredAt: occurredAt,
+                syncedAt: syncedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$RaidHistoryEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AccountDatabase,
+      $RaidHistoryEntriesTable,
+      RaidHistoryEntry,
+      $$RaidHistoryEntriesTableFilterComposer,
+      $$RaidHistoryEntriesTableOrderingComposer,
+      $$RaidHistoryEntriesTableAnnotationComposer,
+      $$RaidHistoryEntriesTableCreateCompanionBuilder,
+      $$RaidHistoryEntriesTableUpdateCompanionBuilder,
+      (
+        RaidHistoryEntry,
+        BaseReferences<
+          _$AccountDatabase,
+          $RaidHistoryEntriesTable,
+          RaidHistoryEntry
+        >,
+      ),
+      RaidHistoryEntry,
+      PrefetchHooks Function()
+    >;
 
 class $AccountDatabaseManager {
   final _$AccountDatabase _db;
@@ -3541,4 +4710,6 @@ class $AccountDatabaseManager {
         _db,
         _db.characterBuildSnapshots,
       );
+  $$RaidHistoryEntriesTableTableManager get raidHistoryEntries =>
+      $$RaidHistoryEntriesTableTableManager(_db, _db.raidHistoryEntries);
 }
