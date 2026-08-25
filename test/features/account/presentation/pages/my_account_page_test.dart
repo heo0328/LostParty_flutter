@@ -11,6 +11,26 @@ import 'package:lost_party/shared/lost_ark_api/auth/api_token.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token_store.dart';
 
 void main() {
+  testWidgets('shows a verification badge for a server-bound account', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MyAccountPage(
+          apiTokenStore: _InMemoryApiTokenStore(),
+          accountRepository: _FakeAccountRepository(serverBound: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('계정 인증 완료'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('verifiedGameAccountChip')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('shows characters returned from an account lookup', (
     WidgetTester tester,
   ) async {
@@ -115,6 +135,9 @@ void main() {
 
 class _FakeAccountRepository
     implements AccountRepository, AccountManagementRepository {
+  _FakeAccountRepository({this.serverBound = false});
+
+  final bool serverBound;
   LocalGameAccount? _subAccount;
 
   @override
@@ -254,8 +277,9 @@ class _FakeAccountRepository
 
   @override
   Future<LocalGameAccount?> loadMainAccount() async {
-    return const LocalGameAccount(
+    return LocalGameAccount(
       id: 1,
+      serverGameAccountId: serverBound ? 'game-account-1' : null,
       label: '메인 계정',
       isMain: true,
       lookupCharacterName: '이슈아이',
