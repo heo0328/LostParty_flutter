@@ -24,6 +24,8 @@ class AccountCharacterSnapshot {
 class GameAccounts extends Table {
   IntColumn get id => integer().autoIncrement()();
 
+  TextColumn get serverGameAccountId => text().nullable()();
+
   TextColumn get label => text()();
 
   BoolColumn get isMain => boolean().withDefault(const Constant(false))();
@@ -41,6 +43,8 @@ class GameAccounts extends Table {
 
 class AccountCharacters extends Table {
   IntColumn get id => integer().autoIncrement()();
+
+  TextColumn get serverCharacterId => text().nullable()();
 
   IntColumn get accountId =>
       integer().references(GameAccounts, #id, onDelete: KeyAction.cascade)();
@@ -107,11 +111,14 @@ class AccountDatabase extends _$AccountDatabase {
     : super(executor ?? driftDatabase(name: 'lost_party'));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (migrator) => migrator.createAll(),
+    onCreate: (migrator) async {
+      await migrator.createAll();
+      await _createServerIdIndexes();
+    },
     onUpgrade: (migrator, from, to) async {
       if (from < 2) {
         await migrator.createTable(characterBuildSnapshots);
@@ -122,8 +129,128 @@ class AccountDatabase extends _$AccountDatabase {
           accountCharacters.preferredRole,
         );
       }
+      if (from < 4) {
+        await migrator.addColumn(
+          gameAccounts,
+          gameAccounts.serverGameAccountId,
+        );
+        await migrator.addColumn(
+          accountCharacters,
+          accountCharacters.serverCharacterId,
+        );
+        await _createServerIdIndexes();
+      }
     },
   );
+
+  Future<void> _createServerIdIndexes() async {
+    await customStatement(
+      'CREATE UNIQUE INDEX game_accounts_server_game_account_id '
+      'ON game_accounts (server_game_account_id)',
+    );
+    await customStatement(
+      'CREATE UNIQUE INDEX account_characters_server_character_id '
+      'ON account_characters (server_character_id)',
+    );
+  }
+
+  Future<void> bindServerIdentity({
+    required int localAccountId,
+    required String serverGameAccountId,
+    required Map<int, String> serverCharacterIdsByLocalId,
+  }) {
+    final normalizedAccountId = _requireServerId(
+      serverGameAccountId,
+      'serverGameAccountId',
+    );
+    final normalizedCharacterIds = serverCharacterIdsByLocalId.map(
+      (localId, serverId) =>
+          MapEntry(localId, _requireServerId(serverId, 'serverCharacterId')),
+    );
+    if (normalizedCharacterIds.values.toSet().length !=
+        normalizedCharacterIds.length) {
+      throw ArgumentError.value(
+        serverCharacterIdsByLocalId,
+        'serverCharacterIdsByLocalId',
+        'Server character IDs must be unique.',
+      );
+    }
+
+    return transaction(() async {
+      final account = await (select(
+        gameAccounts,
+      )..where((table) => table.id.equals(localAccountId))).getSingleOrNull();
+      if (account == null) {
+        throw ArgumentError.value(
+          localAccountId,
+          'localAccountId',
+          'Local game account does not exist.',
+        );
+      }
+      _rejectRemap(
+        currentId: account.serverGameAccountId,
+        requestedId: normalizedAccountId,
+        argumentName: 'serverGameAccountId',
+      );
+
+      final localCharacterIds = normalizedCharacterIds.keys.toList();
+      final characters = localCharacterIds.isEmpty
+          ? const <AccountCharacter>[]
+          : await (select(accountCharacters)..where(
+                  (table) =>
+                      table.id.isIn(localCharacterIds) &
+                      table.accountId.equals(localAccountId),
+                ))
+                .get();
+      if (characters.length != localCharacterIds.length) {
+        throw ArgumentError.value(
+          localCharacterIds,
+          'serverCharacterIdsByLocalId',
+          'Every local character must belong to the selected account.',
+        );
+      }
+      for (final character in characters) {
+        _rejectRemap(
+          currentId: character.serverCharacterId,
+          requestedId: normalizedCharacterIds[character.id]!,
+          argumentName: 'serverCharacterId',
+        );
+      }
+
+      await (update(
+        gameAccounts,
+      )..where((table) => table.id.equals(localAccountId))).write(
+        GameAccountsCompanion(serverGameAccountId: Value(normalizedAccountId)),
+      );
+      for (final entry in normalizedCharacterIds.entries) {
+        await (update(
+          accountCharacters,
+        )..where((table) => table.id.equals(entry.key))).write(
+          AccountCharactersCompanion(serverCharacterId: Value(entry.value)),
+        );
+      }
+    });
+  }
+
+  static String _requireServerId(String value, String argumentName) {
+    final normalized = value.trim();
+    if (normalized.isEmpty) {
+      throw ArgumentError.value(value, argumentName, 'Must not be blank.');
+    }
+    return normalized;
+  }
+
+  static void _rejectRemap({
+    required String? currentId,
+    required String requestedId,
+    required String argumentName,
+  }) {
+    if (currentId != null && currentId != requestedId) {
+      throw StateError(
+        '$argumentName is already bound and cannot be remapped.',
+      );
+    }
+  }
 
   Future<void> saveCharacterBuildSnapshot({
     required int characterId,

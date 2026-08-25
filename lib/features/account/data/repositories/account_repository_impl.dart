@@ -6,6 +6,8 @@ import '../../domain/entities/character_build_snapshot.dart';
 import '../../domain/entities/character_profile.dart';
 import '../../domain/entities/character_summary.dart';
 import '../../domain/entities/local_game_account.dart';
+import '../../domain/entities/server_account_identity_binding.dart';
+import '../../domain/repositories/account_identity_gateway.dart';
 import '../../domain/repositories/account_repository.dart';
 import '../datasources/local_account_data_source.dart';
 import '../datasources/lost_ark_character_remote_data_source.dart';
@@ -14,7 +16,10 @@ import '../mappers/character_profile_mapper.dart';
 import '../mappers/sibling_character_mapper.dart';
 
 class AccountRepositoryImpl
-    implements AccountRepository, AccountManagementRepository {
+    implements
+        AccountRepository,
+        AccountManagementRepository,
+        AccountIdentityMappingRepository {
   AccountRepositoryImpl({
     required LostArkCharacterRemoteDataSource remoteDataSource,
     required LocalAccountDataSource localDataSource,
@@ -123,6 +128,10 @@ class AccountRepositoryImpl
   @override
   Future<void> deleteAccount(int accountId) =>
       _localDataSource.deleteAccount(accountId);
+
+  @override
+  Future<void> bindServerIdentity(ServerAccountIdentityBinding binding) =>
+      _localDataSource.bindServerIdentity(binding);
 
   @override
   Future<void> saveCharacterBuildSnapshot({

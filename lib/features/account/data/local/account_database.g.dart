@@ -22,6 +22,17 @@ class $GameAccountsTable extends GameAccounts
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _serverGameAccountIdMeta =
+      const VerificationMeta('serverGameAccountId');
+  @override
+  late final GeneratedColumn<String> serverGameAccountId =
+      GeneratedColumn<String>(
+        'server_game_account_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _labelMeta = const VerificationMeta('label');
   @override
   late final GeneratedColumn<String> label = GeneratedColumn<String>(
@@ -103,6 +114,7 @@ class $GameAccountsTable extends GameAccounts
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    serverGameAccountId,
     label,
     isMain,
     lookupCharacterName,
@@ -125,6 +137,15 @@ class $GameAccountsTable extends GameAccounts
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('server_game_account_id')) {
+      context.handle(
+        _serverGameAccountIdMeta,
+        serverGameAccountId.isAcceptableOrUnknown(
+          data['server_game_account_id']!,
+          _serverGameAccountIdMeta,
+        ),
+      );
     }
     if (data.containsKey('label')) {
       context.handle(
@@ -198,6 +219,10 @@ class $GameAccountsTable extends GameAccounts
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      serverGameAccountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_game_account_id'],
+      ),
       label: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}label'],
@@ -237,6 +262,7 @@ class $GameAccountsTable extends GameAccounts
 
 class GameAccount extends DataClass implements Insertable<GameAccount> {
   final int id;
+  final String? serverGameAccountId;
   final String label;
   final bool isMain;
   final String lookupCharacterName;
@@ -246,6 +272,7 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
   final DateTime updatedAt;
   const GameAccount({
     required this.id,
+    this.serverGameAccountId,
     required this.label,
     required this.isMain,
     required this.lookupCharacterName,
@@ -258,6 +285,9 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    if (!nullToAbsent || serverGameAccountId != null) {
+      map['server_game_account_id'] = Variable<String>(serverGameAccountId);
+    }
     map['label'] = Variable<String>(label);
     map['is_main'] = Variable<bool>(isMain);
     map['lookup_character_name'] = Variable<String>(lookupCharacterName);
@@ -275,6 +305,9 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
   GameAccountsCompanion toCompanion(bool nullToAbsent) {
     return GameAccountsCompanion(
       id: Value(id),
+      serverGameAccountId: serverGameAccountId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverGameAccountId),
       label: Value(label),
       isMain: Value(isMain),
       lookupCharacterName: Value(lookupCharacterName),
@@ -295,6 +328,9 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return GameAccount(
       id: serializer.fromJson<int>(json['id']),
+      serverGameAccountId: serializer.fromJson<String?>(
+        json['serverGameAccountId'],
+      ),
       label: serializer.fromJson<String>(json['label']),
       isMain: serializer.fromJson<bool>(json['isMain']),
       lookupCharacterName: serializer.fromJson<String>(
@@ -313,6 +349,7 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'serverGameAccountId': serializer.toJson<String?>(serverGameAccountId),
       'label': serializer.toJson<String>(label),
       'isMain': serializer.toJson<bool>(isMain),
       'lookupCharacterName': serializer.toJson<String>(lookupCharacterName),
@@ -327,6 +364,7 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
 
   GameAccount copyWith({
     int? id,
+    Value<String?> serverGameAccountId = const Value.absent(),
     String? label,
     bool? isMain,
     String? lookupCharacterName,
@@ -336,6 +374,9 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
     DateTime? updatedAt,
   }) => GameAccount(
     id: id ?? this.id,
+    serverGameAccountId: serverGameAccountId.present
+        ? serverGameAccountId.value
+        : this.serverGameAccountId,
     label: label ?? this.label,
     isMain: isMain ?? this.isMain,
     lookupCharacterName: lookupCharacterName ?? this.lookupCharacterName,
@@ -349,6 +390,9 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
   GameAccount copyWithCompanion(GameAccountsCompanion data) {
     return GameAccount(
       id: data.id.present ? data.id.value : this.id,
+      serverGameAccountId: data.serverGameAccountId.present
+          ? data.serverGameAccountId.value
+          : this.serverGameAccountId,
       label: data.label.present ? data.label.value : this.label,
       isMain: data.isMain.present ? data.isMain.value : this.isMain,
       lookupCharacterName: data.lookupCharacterName.present
@@ -369,6 +413,7 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
   String toString() {
     return (StringBuffer('GameAccount(')
           ..write('id: $id, ')
+          ..write('serverGameAccountId: $serverGameAccountId, ')
           ..write('label: $label, ')
           ..write('isMain: $isMain, ')
           ..write('lookupCharacterName: $lookupCharacterName, ')
@@ -383,6 +428,7 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
   @override
   int get hashCode => Object.hash(
     id,
+    serverGameAccountId,
     label,
     isMain,
     lookupCharacterName,
@@ -396,6 +442,7 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
       identical(this, other) ||
       (other is GameAccount &&
           other.id == this.id &&
+          other.serverGameAccountId == this.serverGameAccountId &&
           other.label == this.label &&
           other.isMain == this.isMain &&
           other.lookupCharacterName == this.lookupCharacterName &&
@@ -407,6 +454,7 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
 
 class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
   final Value<int> id;
+  final Value<String?> serverGameAccountId;
   final Value<String> label;
   final Value<bool> isMain;
   final Value<String> lookupCharacterName;
@@ -416,6 +464,7 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
   final Value<DateTime> updatedAt;
   const GameAccountsCompanion({
     this.id = const Value.absent(),
+    this.serverGameAccountId = const Value.absent(),
     this.label = const Value.absent(),
     this.isMain = const Value.absent(),
     this.lookupCharacterName = const Value.absent(),
@@ -426,6 +475,7 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
   });
   GameAccountsCompanion.insert({
     this.id = const Value.absent(),
+    this.serverGameAccountId = const Value.absent(),
     required String label,
     this.isMain = const Value.absent(),
     required String lookupCharacterName,
@@ -439,6 +489,7 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
        updatedAt = Value(updatedAt);
   static Insertable<GameAccount> custom({
     Expression<int>? id,
+    Expression<String>? serverGameAccountId,
     Expression<String>? label,
     Expression<bool>? isMain,
     Expression<String>? lookupCharacterName,
@@ -449,6 +500,8 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (serverGameAccountId != null)
+        'server_game_account_id': serverGameAccountId,
       if (label != null) 'label': label,
       if (isMain != null) 'is_main': isMain,
       if (lookupCharacterName != null)
@@ -463,6 +516,7 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
 
   GameAccountsCompanion copyWith({
     Value<int>? id,
+    Value<String?>? serverGameAccountId,
     Value<String>? label,
     Value<bool>? isMain,
     Value<String>? lookupCharacterName,
@@ -473,6 +527,7 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
   }) {
     return GameAccountsCompanion(
       id: id ?? this.id,
+      serverGameAccountId: serverGameAccountId ?? this.serverGameAccountId,
       label: label ?? this.label,
       isMain: isMain ?? this.isMain,
       lookupCharacterName: lookupCharacterName ?? this.lookupCharacterName,
@@ -489,6 +544,11 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (serverGameAccountId.present) {
+      map['server_game_account_id'] = Variable<String>(
+        serverGameAccountId.value,
+      );
     }
     if (label.present) {
       map['label'] = Variable<String>(label.value);
@@ -522,6 +582,7 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
   String toString() {
     return (StringBuffer('GameAccountsCompanion(')
           ..write('id: $id, ')
+          ..write('serverGameAccountId: $serverGameAccountId, ')
           ..write('label: $label, ')
           ..write('isMain: $isMain, ')
           ..write('lookupCharacterName: $lookupCharacterName, ')
@@ -553,6 +614,18 @@ class $AccountCharactersTable extends AccountCharacters
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _serverCharacterIdMeta = const VerificationMeta(
+    'serverCharacterId',
+  );
+  @override
+  late final GeneratedColumn<String> serverCharacterId =
+      GeneratedColumn<String>(
+        'server_character_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _accountIdMeta = const VerificationMeta(
     'accountId',
   );
@@ -684,6 +757,7 @@ class $AccountCharactersTable extends AccountCharacters
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    serverCharacterId,
     accountId,
     serverName,
     characterName,
@@ -710,6 +784,15 @@ class $AccountCharactersTable extends AccountCharacters
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('server_character_id')) {
+      context.handle(
+        _serverCharacterIdMeta,
+        serverCharacterId.isAcceptableOrUnknown(
+          data['server_character_id']!,
+          _serverCharacterIdMeta,
+        ),
+      );
     }
     if (data.containsKey('account_id')) {
       context.handle(
@@ -827,6 +910,10 @@ class $AccountCharactersTable extends AccountCharacters
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      serverCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_character_id'],
+      ),
       accountId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}account_id'],
@@ -883,6 +970,7 @@ class $AccountCharactersTable extends AccountCharacters
 class AccountCharacter extends DataClass
     implements Insertable<AccountCharacter> {
   final int id;
+  final String? serverCharacterId;
   final int accountId;
   final String serverName;
   final String characterName;
@@ -896,6 +984,7 @@ class AccountCharacter extends DataClass
   final DateTime lastSummaryFetchedAt;
   const AccountCharacter({
     required this.id,
+    this.serverCharacterId,
     required this.accountId,
     required this.serverName,
     required this.characterName,
@@ -912,6 +1001,9 @@ class AccountCharacter extends DataClass
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    if (!nullToAbsent || serverCharacterId != null) {
+      map['server_character_id'] = Variable<String>(serverCharacterId);
+    }
     map['account_id'] = Variable<int>(accountId);
     map['server_name'] = Variable<String>(serverName);
     map['character_name'] = Variable<String>(characterName);
@@ -937,6 +1029,9 @@ class AccountCharacter extends DataClass
   AccountCharactersCompanion toCompanion(bool nullToAbsent) {
     return AccountCharactersCompanion(
       id: Value(id),
+      serverCharacterId: serverCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverCharacterId),
       accountId: Value(accountId),
       serverName: Value(serverName),
       characterName: Value(characterName),
@@ -966,6 +1061,9 @@ class AccountCharacter extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return AccountCharacter(
       id: serializer.fromJson<int>(json['id']),
+      serverCharacterId: serializer.fromJson<String?>(
+        json['serverCharacterId'],
+      ),
       accountId: serializer.fromJson<int>(json['accountId']),
       serverName: serializer.fromJson<String>(json['serverName']),
       characterName: serializer.fromJson<String>(json['characterName']),
@@ -988,6 +1086,7 @@ class AccountCharacter extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'serverCharacterId': serializer.toJson<String?>(serverCharacterId),
       'accountId': serializer.toJson<int>(accountId),
       'serverName': serializer.toJson<String>(serverName),
       'characterName': serializer.toJson<String>(characterName),
@@ -1004,6 +1103,7 @@ class AccountCharacter extends DataClass
 
   AccountCharacter copyWith({
     int? id,
+    Value<String?> serverCharacterId = const Value.absent(),
     int? accountId,
     String? serverName,
     String? characterName,
@@ -1017,6 +1117,9 @@ class AccountCharacter extends DataClass
     DateTime? lastSummaryFetchedAt,
   }) => AccountCharacter(
     id: id ?? this.id,
+    serverCharacterId: serverCharacterId.present
+        ? serverCharacterId.value
+        : this.serverCharacterId,
     accountId: accountId ?? this.accountId,
     serverName: serverName ?? this.serverName,
     characterName: characterName ?? this.characterName,
@@ -1034,6 +1137,9 @@ class AccountCharacter extends DataClass
   AccountCharacter copyWithCompanion(AccountCharactersCompanion data) {
     return AccountCharacter(
       id: data.id.present ? data.id.value : this.id,
+      serverCharacterId: data.serverCharacterId.present
+          ? data.serverCharacterId.value
+          : this.serverCharacterId,
       accountId: data.accountId.present ? data.accountId.value : this.accountId,
       serverName: data.serverName.present
           ? data.serverName.value
@@ -1068,6 +1174,7 @@ class AccountCharacter extends DataClass
   String toString() {
     return (StringBuffer('AccountCharacter(')
           ..write('id: $id, ')
+          ..write('serverCharacterId: $serverCharacterId, ')
           ..write('accountId: $accountId, ')
           ..write('serverName: $serverName, ')
           ..write('characterName: $characterName, ')
@@ -1086,6 +1193,7 @@ class AccountCharacter extends DataClass
   @override
   int get hashCode => Object.hash(
     id,
+    serverCharacterId,
     accountId,
     serverName,
     characterName,
@@ -1103,6 +1211,7 @@ class AccountCharacter extends DataClass
       identical(this, other) ||
       (other is AccountCharacter &&
           other.id == this.id &&
+          other.serverCharacterId == this.serverCharacterId &&
           other.accountId == this.accountId &&
           other.serverName == this.serverName &&
           other.characterName == this.characterName &&
@@ -1118,6 +1227,7 @@ class AccountCharacter extends DataClass
 
 class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
   final Value<int> id;
+  final Value<String?> serverCharacterId;
   final Value<int> accountId;
   final Value<String> serverName;
   final Value<String> characterName;
@@ -1131,6 +1241,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
   final Value<DateTime> lastSummaryFetchedAt;
   const AccountCharactersCompanion({
     this.id = const Value.absent(),
+    this.serverCharacterId = const Value.absent(),
     this.accountId = const Value.absent(),
     this.serverName = const Value.absent(),
     this.characterName = const Value.absent(),
@@ -1145,6 +1256,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
   });
   AccountCharactersCompanion.insert({
     this.id = const Value.absent(),
+    this.serverCharacterId = const Value.absent(),
     required int accountId,
     required String serverName,
     required String characterName,
@@ -1164,6 +1276,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
        lastSummaryFetchedAt = Value(lastSummaryFetchedAt);
   static Insertable<AccountCharacter> custom({
     Expression<int>? id,
+    Expression<String>? serverCharacterId,
     Expression<int>? accountId,
     Expression<String>? serverName,
     Expression<String>? characterName,
@@ -1178,6 +1291,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (serverCharacterId != null) 'server_character_id': serverCharacterId,
       if (accountId != null) 'account_id': accountId,
       if (serverName != null) 'server_name': serverName,
       if (characterName != null) 'character_name': characterName,
@@ -1196,6 +1310,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
 
   AccountCharactersCompanion copyWith({
     Value<int>? id,
+    Value<String?>? serverCharacterId,
     Value<int>? accountId,
     Value<String>? serverName,
     Value<String>? characterName,
@@ -1210,6 +1325,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
   }) {
     return AccountCharactersCompanion(
       id: id ?? this.id,
+      serverCharacterId: serverCharacterId ?? this.serverCharacterId,
       accountId: accountId ?? this.accountId,
       serverName: serverName ?? this.serverName,
       characterName: characterName ?? this.characterName,
@@ -1229,6 +1345,9 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (serverCharacterId.present) {
+      map['server_character_id'] = Variable<String>(serverCharacterId.value);
     }
     if (accountId.present) {
       map['account_id'] = Variable<int>(accountId.value);
@@ -1272,6 +1391,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
   String toString() {
     return (StringBuffer('AccountCharactersCompanion(')
           ..write('id: $id, ')
+          ..write('serverCharacterId: $serverCharacterId, ')
           ..write('accountId: $accountId, ')
           ..write('serverName: $serverName, ')
           ..write('characterName: $characterName, ')
@@ -1860,6 +1980,7 @@ abstract class _$AccountDatabase extends GeneratedDatabase {
 typedef $$GameAccountsTableCreateCompanionBuilder =
     GameAccountsCompanion Function({
       Value<int> id,
+      Value<String?> serverGameAccountId,
       required String label,
       Value<bool> isMain,
       required String lookupCharacterName,
@@ -1871,6 +1992,7 @@ typedef $$GameAccountsTableCreateCompanionBuilder =
 typedef $$GameAccountsTableUpdateCompanionBuilder =
     GameAccountsCompanion Function({
       Value<int> id,
+      Value<String?> serverGameAccountId,
       Value<String> label,
       Value<bool> isMain,
       Value<String> lookupCharacterName,
@@ -1917,6 +2039,11 @@ class $$GameAccountsTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverGameAccountId => $composableBuilder(
+    column: $table.serverGameAccountId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1995,6 +2122,11 @@ class $$GameAccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get serverGameAccountId => $composableBuilder(
+    column: $table.serverGameAccountId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get label => $composableBuilder(
     column: $table.label,
     builder: (column) => ColumnOrderings(column),
@@ -2042,6 +2174,11 @@ class $$GameAccountsTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get serverGameAccountId => $composableBuilder(
+    column: $table.serverGameAccountId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get label =>
       $composableBuilder(column: $table.label, builder: (column) => column);
@@ -2128,6 +2265,7 @@ class $$GameAccountsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String?> serverGameAccountId = const Value.absent(),
                 Value<String> label = const Value.absent(),
                 Value<bool> isMain = const Value.absent(),
                 Value<String> lookupCharacterName = const Value.absent(),
@@ -2137,6 +2275,7 @@ class $$GameAccountsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => GameAccountsCompanion(
                 id: id,
+                serverGameAccountId: serverGameAccountId,
                 label: label,
                 isMain: isMain,
                 lookupCharacterName: lookupCharacterName,
@@ -2148,6 +2287,7 @@ class $$GameAccountsTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String?> serverGameAccountId = const Value.absent(),
                 required String label,
                 Value<bool> isMain = const Value.absent(),
                 required String lookupCharacterName,
@@ -2157,6 +2297,7 @@ class $$GameAccountsTableTableManager
                 required DateTime updatedAt,
               }) => GameAccountsCompanion.insert(
                 id: id,
+                serverGameAccountId: serverGameAccountId,
                 label: label,
                 isMain: isMain,
                 lookupCharacterName: lookupCharacterName,
@@ -2226,6 +2367,7 @@ typedef $$GameAccountsTableProcessedTableManager =
 typedef $$AccountCharactersTableCreateCompanionBuilder =
     AccountCharactersCompanion Function({
       Value<int> id,
+      Value<String?> serverCharacterId,
       required int accountId,
       required String serverName,
       required String characterName,
@@ -2241,6 +2383,7 @@ typedef $$AccountCharactersTableCreateCompanionBuilder =
 typedef $$AccountCharactersTableUpdateCompanionBuilder =
     AccountCharactersCompanion Function({
       Value<int> id,
+      Value<String?> serverCharacterId,
       Value<int> accountId,
       Value<String> serverName,
       Value<String> characterName,
@@ -2323,6 +2466,11 @@ class $$AccountCharactersTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverCharacterId => $composableBuilder(
+    column: $table.serverCharacterId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2440,6 +2588,11 @@ class $$AccountCharactersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get serverCharacterId => $composableBuilder(
+    column: $table.serverCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get serverName => $composableBuilder(
     column: $table.serverName,
     builder: (column) => ColumnOrderings(column),
@@ -2525,6 +2678,11 @@ class $$AccountCharactersTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get serverCharacterId => $composableBuilder(
+    column: $table.serverCharacterId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get serverName => $composableBuilder(
     column: $table.serverName,
@@ -2660,6 +2818,7 @@ class $$AccountCharactersTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String?> serverCharacterId = const Value.absent(),
                 Value<int> accountId = const Value.absent(),
                 Value<String> serverName = const Value.absent(),
                 Value<String> characterName = const Value.absent(),
@@ -2673,6 +2832,7 @@ class $$AccountCharactersTableTableManager
                 Value<DateTime> lastSummaryFetchedAt = const Value.absent(),
               }) => AccountCharactersCompanion(
                 id: id,
+                serverCharacterId: serverCharacterId,
                 accountId: accountId,
                 serverName: serverName,
                 characterName: characterName,
@@ -2688,6 +2848,7 @@ class $$AccountCharactersTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String?> serverCharacterId = const Value.absent(),
                 required int accountId,
                 required String serverName,
                 required String characterName,
@@ -2701,6 +2862,7 @@ class $$AccountCharactersTableTableManager
                 required DateTime lastSummaryFetchedAt,
               }) => AccountCharactersCompanion.insert(
                 id: id,
+                serverCharacterId: serverCharacterId,
                 accountId: accountId,
                 serverName: serverName,
                 characterName: characterName,

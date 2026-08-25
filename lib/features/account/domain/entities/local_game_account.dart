@@ -9,9 +9,11 @@ class LocalGameAccount {
     required this.representativeCharacterId,
     required this.displayLimit,
     required this.characters,
+    this.serverGameAccountId,
   });
 
   final int id;
+  final String? serverGameAccountId;
   final String label;
   final bool isMain;
   final String lookupCharacterName;
@@ -68,9 +70,11 @@ class LocalAccountCharacter {
     required this.isVisible,
     required this.displayOrder,
     this.preferredRole,
+    this.serverCharacterId,
   });
 
   final int id;
+  final String? serverCharacterId;
   final String serverName;
   final String characterName;
   final int characterLevel;

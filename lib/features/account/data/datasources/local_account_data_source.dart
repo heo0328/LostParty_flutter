@@ -10,6 +10,7 @@ import '../../domain/entities/character_build_snapshot.dart';
 import '../../domain/entities/character_profile.dart';
 import '../../domain/entities/character_summary.dart';
 import '../../domain/entities/local_game_account.dart';
+import '../../domain/entities/server_account_identity_binding.dart';
 import '../local/account_database.dart';
 import '../mappers/character_build_analysis_mapper.dart';
 
@@ -145,12 +146,21 @@ class LocalAccountDataSource {
   Future<void> deleteAccount(int accountId) =>
       _database.deleteAccount(accountId);
 
+  Future<void> bindServerIdentity(ServerAccountIdentityBinding binding) {
+    return _database.bindServerIdentity(
+      localAccountId: binding.localAccountId,
+      serverGameAccountId: binding.serverGameAccountId,
+      serverCharacterIdsByLocalId: binding.serverCharacterIdsByLocalId,
+    );
+  }
+
   Future<LocalGameAccount> _loadAccount(GameAccount account) async {
     final characters = await (_database.select(
       _database.accountCharacters,
     )..where((table) => table.accountId.equals(account.id))).get();
     return LocalGameAccount(
       id: account.id,
+      serverGameAccountId: account.serverGameAccountId,
       label: account.label,
       isMain: account.isMain,
       lookupCharacterName: account.lookupCharacterName,
@@ -160,6 +170,7 @@ class LocalAccountDataSource {
           .map(
             (character) => LocalAccountCharacter(
               id: character.id,
+              serverCharacterId: character.serverCharacterId,
               serverName: character.serverName,
               characterName: character.characterName,
               characterLevel: character.characterLevel,

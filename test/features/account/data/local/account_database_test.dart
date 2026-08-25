@@ -585,6 +585,149 @@ void main() {
       expect(snapshot.dataVersion, 1);
     },
   );
+
+  test('binds server account and character IDs atomically', () async {
+    final fetchedAt = DateTime.utc(2026, 8, 25);
+    await database.saveMainAccountSnapshot(
+      lookupCharacterName: '조회캐릭터',
+      characters: [_snapshot('조회캐릭터', fetchedAt), _snapshot('부캐릭터', fetchedAt)],
+    );
+    final account = await database.select(database.gameAccounts).getSingle();
+    final characters = await database.select(database.accountCharacters).get();
+
+    await database.bindServerIdentity(
+      localAccountId: account.id,
+      serverGameAccountId: ' game-account-1 ',
+      serverCharacterIdsByLocalId: {
+        for (final character in characters)
+          character.id: 'character-${character.id}',
+      },
+    );
+
+    final storedAccount = await database
+        .select(database.gameAccounts)
+        .getSingle();
+    final storedCharacters = await database
+        .select(database.accountCharacters)
+        .get();
+    expect(storedAccount.serverGameAccountId, 'game-account-1');
+    expect(
+      storedCharacters.map((character) => character.serverCharacterId),
+      containsAll(characters.map((character) => 'character-${character.id}')),
+    );
+
+    await database.bindServerIdentity(
+      localAccountId: account.id,
+      serverGameAccountId: 'game-account-1',
+      serverCharacterIdsByLocalId: {
+        for (final character in characters)
+          character.id: 'character-${character.id}',
+      },
+    );
+  });
+
+  test('rejects server ID remapping without partial writes', () async {
+    final fetchedAt = DateTime.utc(2026, 8, 25);
+    await database.saveMainAccountSnapshot(
+      lookupCharacterName: '조회캐릭터',
+      characters: [_snapshot('조회캐릭터', fetchedAt)],
+    );
+    final account = await database.select(database.gameAccounts).getSingle();
+    final character = await database
+        .select(database.accountCharacters)
+        .getSingle();
+    await database.bindServerIdentity(
+      localAccountId: account.id,
+      serverGameAccountId: 'game-account-1',
+      serverCharacterIdsByLocalId: {character.id: 'character-1'},
+    );
+
+    await expectLater(
+      database.bindServerIdentity(
+        localAccountId: account.id,
+        serverGameAccountId: 'game-account-2',
+        serverCharacterIdsByLocalId: {character.id: 'character-2'},
+      ),
+      throwsStateError,
+    );
+    final storedAccount = await database
+        .select(database.gameAccounts)
+        .getSingle();
+    final storedCharacter = await database
+        .select(database.accountCharacters)
+        .getSingle();
+    expect(storedAccount.serverGameAccountId, 'game-account-1');
+    expect(storedCharacter.serverCharacterId, 'character-1');
+  });
+
+  test('rejects a character that belongs to another local account', () async {
+    final fetchedAt = DateTime.utc(2026, 8, 25);
+    final mainAccountId = await database.saveMainAccountSnapshot(
+      lookupCharacterName: '본캐릭터',
+      characters: [_snapshot('본캐릭터', fetchedAt)],
+    );
+    await database.addAccountSnapshot(
+      label: '부계정',
+      lookupCharacterName: '부캐릭터',
+      characters: [_snapshot('부캐릭터', fetchedAt)],
+      now: fetchedAt,
+    );
+    final foreignCharacter = await (database.select(
+      database.accountCharacters,
+    )..where((table) => table.accountId.isNotValue(mainAccountId))).getSingle();
+
+    await expectLater(
+      database.bindServerIdentity(
+        localAccountId: mainAccountId,
+        serverGameAccountId: 'game-account-1',
+        serverCharacterIdsByLocalId: {foreignCharacter.id: 'character-1'},
+      ),
+      throwsArgumentError,
+    );
+    final mainAccount = await (database.select(
+      database.gameAccounts,
+    )..where((table) => table.id.equals(mainAccountId))).getSingle();
+    expect(mainAccount.serverGameAccountId, isNull);
+  });
+
+  test('rejects duplicate server IDs across local rows', () async {
+    final fetchedAt = DateTime.utc(2026, 8, 25);
+    final firstAccountId = await database.saveMainAccountSnapshot(
+      lookupCharacterName: '본캐릭터',
+      characters: [_snapshot('본캐릭터', fetchedAt)],
+    );
+    final secondAccountId = await database.addAccountSnapshot(
+      label: '부계정',
+      lookupCharacterName: '부캐릭터',
+      characters: [_snapshot('부캐릭터', fetchedAt)],
+      now: fetchedAt,
+    );
+    final characters = await database.select(database.accountCharacters).get();
+    final firstCharacter = characters.singleWhere(
+      (character) => character.accountId == firstAccountId,
+    );
+    final secondCharacter = characters.singleWhere(
+      (character) => character.accountId == secondAccountId,
+    );
+    await database.bindServerIdentity(
+      localAccountId: firstAccountId,
+      serverGameAccountId: 'game-account-1',
+      serverCharacterIdsByLocalId: {firstCharacter.id: 'character-1'},
+    );
+
+    await expectLater(
+      database.bindServerIdentity(
+        localAccountId: secondAccountId,
+        serverGameAccountId: 'game-account-2',
+        serverCharacterIdsByLocalId: {secondCharacter.id: 'character-1'},
+      ),
+      throwsA(isA<Exception>()),
+    );
+    final secondAccount = await (database.select(
+      database.gameAccounts,
+    )..where((table) => table.id.equals(secondAccountId))).getSingle();
+    expect(secondAccount.serverGameAccountId, isNull);
+  });
 }
 
 AccountCharacterSnapshot _snapshot(String characterName, DateTime fetchedAt) {
