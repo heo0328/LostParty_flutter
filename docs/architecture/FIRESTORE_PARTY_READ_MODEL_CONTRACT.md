@@ -4,7 +4,7 @@
 
 이 문서는 `레이드 모집`, `레이드 현황 > 진행 중`, `레이드 현황 > 신청 중`에 필요한 Firestore 읽기 계약을 정의한다.
 
-이 작업은 읽기 전용 DTO·Mapper·Repository 경계까지 다룬다. 실행 앱 쓰기 전환 상태는 `FIRESTORE_PARTY_COMMAND_CONTRACT.md` §9를 따른다. 모집 생성·신청·철회는 Firestore 명령으로 연결됐으며, 승인·멤버·회차와 `레이드 모집` 공개 목록 UI는 아직 Fake다. `watchPublicRecruitments` Repository는 있으나 실행 앱 목록에 미연결이다.
+이 작업은 읽기 DTO·Mapper·Repository 경계까지 다룬다. 실행 앱 쓰기 전환 상태는 `FIRESTORE_PARTY_COMMAND_CONTRACT.md` §9를 따른다. 모집 생성·신청·철회는 Firestore 명령으로 연결됐으며, 승인·멤버·회차와 `레이드 모집` 공개 목록 UI는 아직 Fake다. 기존 `watchPublicRecruitments` Repository는 제한 없는 실시간 쿼리이므로 실행 앱 목록 연결 전에 아래 페이징 계약으로 확장한다.
 
 `완료 기록`은 개인 로컬 기록이 단일 기준이므로 이 계약의 Firestore 목록 쿼리에 포함하지 않는다.
 
@@ -107,9 +107,24 @@ where manualRecruitmentEnabled == true
 where hasAvailableSlot == true
 where targetCycleKey == currentCycleKey
 orderBy updatedAt desc
+orderBy documentId desc
+limit 20
 ```
 
 그룹 전용 모집은 공개 쿼리와 합치지 않고 현재 그룹 ID별 쿼리로 분리한다.
+
+#### 공개 목록 페이징
+
+- 페이지 크기는 20개로 고정한다.
+- 첫 페이지는 위 쿼리를 `includeMetadataChanges: true`로 실시간 구독한다.
+- 다음 페이지는 마지막 문서 cursor에 `startAfter`를 적용해 같은 필터·정렬로 20개를 일회성 조회한다.
+- 추가 페이지마다 listener를 만들지 않는다. 최신 첫 페이지만 실시간이며 이전 항목은 사용자가 불러온 시점의 결과다.
+- `updatedAt`이 같은 문서 사이에서도 페이지 순서가 바뀌지 않도록 문서 ID desc를 보조 정렬로 사용한다.
+- 페이지 결과는 항목, Repository 전용 다음 cursor, `hasMore`, 캐시 여부를 포함한다. Firestore `DocumentSnapshot` 타입은 data 계층 밖으로 노출하지 않는다.
+- 소비자는 `recruitmentId`로 페이지를 병합하고 같은 ID가 있으면 최신 첫 페이지 snapshot을 우선한다.
+- 추가 결과가 페이지 크기보다 작거나 다음 cursor가 없으면 `hasMore == false`다.
+- 첫 페이지 항목의 내용만 바뀌고 ID 집합이 같으면 추가 페이지를 유지한다. 새 모집 유입·필터 제외 등으로 첫 페이지 ID 집합이 바뀌면 사라진 이유를 안전하게 구분할 수 없으므로 추가 페이지와 cursor를 초기화하고 새 경계에서 다시 조회한다.
+- 명시적 새로고침은 첫 페이지 listener와 추가 페이지, cursor, 추가 오류를 모두 초기화한다.
 
 ### 레이드 현황—진행 중
 
@@ -138,14 +153,15 @@ orderBy updatedAt desc
 
 ```text
 PartyReadRepository
-  watchPublicRecruitments(cycleKey)
+  watchPublicRecruitmentFirstPage(cycleKey, limit = 20)
+  loadPublicRecruitmentNextPage(cycleKey, limit = 20, cursor)
   watchActiveRaids(playerId)
   watchApplications(playerId, cycleKey)
   watchRecruitment(recruitmentId)
 ```
 
 - `watchRecruitment`은 `PartyReadDetailSnapshot`을 반환한다. 문서 누락은 `item == null`이고, 캐시 여부는 목록과 같이 `isFromCache`로 전달한다. 누락을 권한 오류와 구분하려면 존재하지 않는 모집의 단건 `get`이 active binding만으로 허용되어야 한다.
-- `레이드 현황`의 진행 중·신청 중 목록은 `/raid-status/:recruitmentId` 읽기 전용 상세로 들어가며, Fake 쓰기 `RecruitmentDetailPage`와 경로·데이터를 섞지 않는다.
+- `레이드 현황`과 공개 모집 목록은 `/raid-status/:recruitmentId` Firestore 현황 상세로 들어간다. 이 상세에는 신청·철회 명령이 연결되어 있으며 Fake `RecruitmentDetailPage`와 경로·데이터를 섞지 않는다.
 - Domain Entity는 Firestore 타입을 import하지 않는다.
 - Firestore Timestamp·DocumentSnapshot 변환은 data 계층에서 종료한다.
 - 문서 누락은 상세 조회에서 `null`, 목록에서 제외로 처리한다.
@@ -160,6 +176,9 @@ PartyReadRepository
 - Firestore 로컬 캐시 snapshot은 정상 목록으로 제공하되 `isFromCache`를 읽기 상태에 함께 전달해 UI가 오프라인 안내를 표시할 수 있게 한다.
 - `isFromCache`를 UI에 노출하므로 모든 읽기 stream은 `snapshots(includeMetadataChanges: true)`로 구독한다. 목록이 비어 있으면 캐시에서 서버로 바뀔 때 문서 집합이 동일해 메타데이터 변화만 발생하고, 이 옵션이 없으면 오프라인 안내가 사라지지 않는다.
 - 기존 성공 목록이 있는 상태에서 후속 stream 오류가 발생하면 목록을 즉시 지우지 않고 오류 상태를 함께 표시한다.
+- 다음 페이지를 불러오는 동안 기존 목록을 유지하고 하단 loading을 표시한다. 추가 요청 진행 중 같은 요청은 무시한다.
+- 다음 페이지 조회가 실패하면 기존 목록을 유지하고 하단 오류와 재시도를 표시한다. 첫 페이지 전체 오류와 혼합하지 않는다.
+- 마지막 페이지에서는 추가 요청과 하단 loading을 중단한다.
 
 ### 7.1 로컬 Projection과 최신화 기준
 
@@ -183,12 +202,12 @@ PartyReadRepository
 
 ## 9. 필요 인덱스
 
-- `recruitments`: `visibility, status, manualRecruitmentEnabled, hasAvailableSlot, targetCycleKey, schemaVersion, updatedAt desc`
+- `recruitments`: `visibility, status, manualRecruitmentEnabled, hasAvailableSlot, targetCycleKey, schemaVersion, updatedAt desc`와 문서 ID desc 안정 정렬
 - `recruitments`: `leaderPlayerId, status, schemaVersion`
 - `recruitments`: `memberPlayerIds array-contains, status, schemaVersion`
 - `applications` collection group: `applicantPlayerId, cycleKey, schemaVersion, updatedAt desc`
 
-인덱스는 실제 Repository 쿼리와 동일한 필드·정렬 순서로 `firestore.indexes.json`에 반영한다. 위 4개 복합 인덱스는 `lost-party`에 배포되어 있다.
+인덱스는 실제 Repository 쿼리와 동일한 필드·정렬 순서로 `firestore.indexes.json`에 반영한다. 기존 4개 복합 인덱스는 `lost-party`에 배포되어 있다. 공개 목록에 문서 ID 보조 정렬을 추가한 최종 쿼리는 구현 시 로컬 인덱스 정의와 실제 프로젝트 배포 상태를 다시 확인한다.
 
 ## 10. 전환 조건
 
