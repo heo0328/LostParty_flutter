@@ -1238,3 +1238,14 @@
 - 공개 목록·자기 membership·자기 신청 읽기만 허용하고 파티 관련 클라이언트 쓰기를 금지하는 Rules 초안과 복합 인덱스를 추가했다.
 - 파티 서버 쓰기 명령이 없는 상태에서 로컬 생성 후 목록이 사라지는 모순을 피하기 위해 실행 앱의 Repository 교체는 보류했다.
 - Firestore Emulator 검증과 Rules·인덱스 배포는 수행하지 않고 서버 명령·다중 사용자 권한 작업 단계로 보류했다.
+
+---
+
+## Task-048. Spark Firestore 파티 명령 계약
+
+- 작업 브랜치: `codex/firebase-party-commands-contract`
+- 별도 지시 전까지 Firebase와 다른 외부 서비스의 유료 플랜·결제수단·과금 가능 기능을 사용하지 않는 전역 운영 원칙을 확정했다.
+- Cloud Functions가 Blaze 요금제를 요구하는 현재 정책과 충돌하므로 Callable Functions 전제를 제거했다.
+- `FIRESTORE_PARTY_COMMAND_CONTRACT.md`에 파티 생성·수정·신청·철회·즉시 가입·승인·거절의 클라이언트 Transaction, Rules, 점유, revision, 오류·재시도 계약을 정의했다.
+- Spark에서 Rules로 충분히 강제하기 어려운 레이드·난이도 수정은 초기 서버 전환 범위에서 제외하고 `unsupportedOnSpark`로 구분한다.
+- Firestore Emulator, Rules 배포, 유료 서비스 호출은 수행하지 않았다.

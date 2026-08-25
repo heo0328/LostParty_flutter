@@ -739,7 +739,7 @@ source
 - 동시 요청 처리
 - 실패 시 원상 유지 또는 복구 정책
 
-읽기는 Firestore 실시간 읽기 모델을 사용하고 공유 상태 변경은 Callable Function과 서버 Transaction을 사용하는 기존 방향을 유지한다.
+읽기는 Firestore 실시간 읽기 모델을 사용한다. 별도 지시 전까지 Spark 무료 요금제를 유지하므로 공유 상태 변경은 Firestore 클라이언트 Transaction과 Security Rules로 구현한다. Callable Functions와 서버 Transaction은 Blaze 전환과 비용을 별도로 합의할 때까지 보류한다.
 
 ---
 

@@ -12,7 +12,7 @@
 - feature-first 구조
 - repository pattern
 - 로컬 캐릭터 데이터와 Firebase 멀티유저 파티 시스템 분리
-- Firebase Auth + Firestore + Callable Functions + Transaction + App Check 예정
+- Firebase Auth + Firestore + 클라이언트 Transaction + Security Rules 기반. Callable Functions·유료 기능은 별도 지시 전까지 보류
 
 ---
 
@@ -251,7 +251,7 @@
 - 일반 장착 스킬, 카탈로그 특수/복합 대상, 아이콘 근거 및 실제 미확인 대상을 순서대로 구분함
 - Galaxy Z Fold6의 실제 서포터 바드 세팅에서 세레나데 보석 미확인 경고 해소와 정상 특수 스킬 표시 확인 완료
 - 발키리 서포터의 `신앙 스킬`처럼 다른 직업에도 복합 아이덴티티 대상이 있으므로 실제 응답을 확보해 직업별 카탈로그 데이터로 점진 입력 예정
-- Firebase 플랫폼 설정과 `firebase_core` 의존성까지만 반영됐으며 앱 초기화, Auth, Firestore와 Functions 런타임 연동은 아직 없음
+- Firebase Core, Anonymous Auth, Player binding, 게임계정 소유 인증과 Firestore 읽기 계약까지 반영됐으며 Functions 런타임은 사용하지 않음
 - Firebase 파티 사용자 흐름의 최신 기준은 `../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`이며 기존 백엔드 구조는 `../architecture/BACKEND_PARTY_ARCHITECTURE.md`에서 관리
 - AuthUid는 인증과 binding에만 사용하고 파티·신청·그룹에는 LOSTPARTY 영속 PlayerId를 사용
 - 공유 파티 완료와 사용자가 직접 관리하는 로컬 캐릭터 완료 기록을 분리
@@ -262,7 +262,7 @@
 - 캐릭터별 주간 레이드 표시는 로컬에서 0~5개, 기본 3개로 관리하며 같은 raidId의 난이도를 중복 표시하지 않음
 - 개인 진행은 현재 주차 `미완료/완료`, 지난 회차 히스토리는 `완료/미완료 종료`로 구분
 - 완료되지 않은 1회성 파티는 수요일 오전 6시에 자동 미완료 종료하며 반복 파티는 현재 구성을 새 회차로 승계
-- 가입 승인과 정원 변경은 클라이언트 직접 쓰기가 아니라 Callable Function 트랜잭션이 결정
+- 가입 승인과 정원 변경은 명령별 Firestore 클라이언트 Transaction과 Security Rules가 함께 검증. Rules로 충분히 보장할 수 없는 명령은 Spark 범위에서 제외
 - 모집글 공개 범위는 `public`과 `groupOnly`이며 그룹 전용 글은 현재 멤버만 조회/신청 가능
 - 계정 그룹은 사용자 ID 초대와 상대 수락 방식이며 멤버는 하위 컬렉션으로 저장해 제품 인원 제한을 두지 않음
 - 초기 정책은 사용자당 소유 그룹 최대 1개, 다른 그룹 다중 가입 허용이며 구현 전 변경 가능
@@ -279,7 +279,7 @@
 완료 결과는 `main`과 `origin/main`에 통합됐다.
 
 첫 Firebase Core 부트스트랩 구현과 Android 실기기 검증을 완료했다.
-다음 단계부터 Firestore 데이터 계약, 서버 명령, Security Rules와 Emulator 테스트 범위를 기능 단위로 확정하면서 Firebase 구현을 시작한다.
+다음 단계부터 Firestore 데이터 계약, 클라이언트 Transaction 명령, Security Rules와 검증 범위를 기능 단위로 확정하면서 Firebase 구현을 진행한다.
 Player binding의 계약·구현·Rules 배포와 실기기 검증을 완료했으며 다음 단계는 서버 GameAccountId·CharacterId 계약이다.
 계약과 검증 범위가 정해진 기능은 구현할 수 있고, 아직 계약이 없는 서버 기능만 보류한다.
 
@@ -440,5 +440,7 @@ Player binding의 계약·구현·Rules 배포와 실기기 검증을 완료했�
 - 설정 탭에는 `내 게임계정 인증`, Lost Ark API 토큰과 앱 공통 설정을 배치한다.
 - 4탭 앱 셸·라우팅과 최소 진입 화면 구현을 완료했고 Widget 테스트 6개, `flutter analyze`, 전체 `flutter test` 252개가 통과했다.
 - Android 실기기 확인을 완료했고 API 토큰 삭제 경고·확인 절차도 추가했다. 커밋 `84769f8`, 병합 커밋 `23af0b3`으로 `main`에 반영했다.
-- 현재 `codex/firestore-party-read-model` 브랜치에서 파티 읽기 계약과 Firestore DTO·Mapper·Repository 경계를 구현 중이다. 쓰기 명령 전환 전에는 실행 앱의 로컬 모집 목록을 Firestore로 교체하지 않는다.
+- 읽기 모델은 커밋 `0d94caf`, 병합 커밋 `7f9976e`으로 `main`에 반영했다.
+- 현재 브랜치는 `codex/firebase-party-commands-contract`이다. 별도 지시 전까지 Firebase와 다른 외부 서비스의 유료 플랜·결제수단·과금 가능 기능을 사용하지 않는다.
+- 파티 명령은 Spark의 Firestore 클라이언트 Transaction과 Security Rules를 기준으로 한다. Callable Functions와 서버 전용 검증은 보류한다.
 - 다음 설계부터 비용 제약, 검증 목적, 실패 시 중단 기준을 구현 전에 확인하고 목적 없는 전체 테스트나 에뮬레이터 반복을 피한다.
