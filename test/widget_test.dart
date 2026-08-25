@@ -43,7 +43,7 @@ void main() {
 
     expect(find.text('파티 모집'), findsOneWidget);
     expect(find.text('레이드 모집'), findsOneWidget);
-    expect(find.text('4막 노말 로컬 모집'), findsOneWidget);
+    expect(find.text('현재 모집 중인 파티가 없습니다.'), findsOneWidget);
     expect(find.text('모집 만들기'), findsOneWidget);
   });
 

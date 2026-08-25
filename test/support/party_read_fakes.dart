@@ -13,27 +13,79 @@ const emptyApplications = PartyReadSnapshot<PartyApplicationSummary>(
   isFromCache: false,
 );
 
+const emptyPublicRecruitmentPage = PublicRecruitmentPage(
+  items: [],
+  hasMore: false,
+  isFromCache: false,
+);
+
 class FakePartyReadRepository implements PartyReadRepository {
   FakePartyReadRepository({
     Stream<PartyReadSnapshot<ActiveRaidSummary>>? activeRaids,
     Stream<PartyReadSnapshot<PartyApplicationSummary>>? applications,
     Stream<PartyReadDetailSnapshot<PublicRecruitmentSummary>>? recruitment,
     Stream<PartyReadDetailSnapshot<PartyApplicationSummary?>>? myApplication,
+    Stream<PublicRecruitmentPage>? publicFirstPage,
+    Future<PublicRecruitmentPage> Function({
+      required String cycleKey,
+      required PublicRecruitmentPageCursor cursor,
+      int limit,
+    })?
+    loadNextPage,
   }) : _activeRaids = activeRaids ?? Stream.value(emptyActiveRaids),
        _applications = applications ?? Stream.value(emptyApplications),
        _recruitment = recruitment,
-       _myApplication = myApplication;
+       _myApplication = myApplication,
+       _publicFirstPage =
+           publicFirstPage ?? Stream.value(emptyPublicRecruitmentPage),
+       _loadNextPage = loadNextPage;
 
   final Stream<PartyReadSnapshot<ActiveRaidSummary>> _activeRaids;
   final Stream<PartyReadSnapshot<PartyApplicationSummary>> _applications;
   final Stream<PartyReadDetailSnapshot<PublicRecruitmentSummary>>? _recruitment;
   final Stream<PartyReadDetailSnapshot<PartyApplicationSummary?>>?
   _myApplication;
+  final Stream<PublicRecruitmentPage> _publicFirstPage;
+  final Future<PublicRecruitmentPage> Function({
+    required String cycleKey,
+    required PublicRecruitmentPageCursor cursor,
+    int limit,
+  })?
+  _loadNextPage;
 
   String? requestedActiveRaidsPlayerId;
   String? requestedApplicationsPlayerId;
   String? requestedApplicationsCycleKey;
   String? requestedRecruitmentId;
+  String? requestedPublicFirstPageCycleKey;
+  String? requestedNextPageCycleKey;
+  PublicRecruitmentPageCursor? requestedNextPageCursor;
+  var nextPageCallCount = 0;
+
+  @override
+  Stream<PublicRecruitmentPage> watchPublicRecruitmentFirstPage({
+    required String cycleKey,
+    int limit = publicRecruitmentPageSize,
+  }) {
+    requestedPublicFirstPageCycleKey = cycleKey;
+    return _publicFirstPage;
+  }
+
+  @override
+  Future<PublicRecruitmentPage> loadPublicRecruitmentNextPage({
+    required String cycleKey,
+    required PublicRecruitmentPageCursor cursor,
+    int limit = publicRecruitmentPageSize,
+  }) async {
+    nextPageCallCount += 1;
+    requestedNextPageCycleKey = cycleKey;
+    requestedNextPageCursor = cursor;
+    final loader = _loadNextPage;
+    if (loader == null) {
+      return emptyPublicRecruitmentPage;
+    }
+    return loader(cycleKey: cycleKey, cursor: cursor, limit: limit);
+  }
 
   @override
   Stream<PartyReadSnapshot<ActiveRaidSummary>> watchActiveRaids({
@@ -52,11 +104,6 @@ class FakePartyReadRepository implements PartyReadRepository {
     requestedApplicationsCycleKey = cycleKey;
     return _applications;
   }
-
-  @override
-  Stream<PartyReadSnapshot<PublicRecruitmentSummary>> watchPublicRecruitments({
-    required String cycleKey,
-  }) => Stream<PartyReadSnapshot<PublicRecruitmentSummary>>.empty();
 
   @override
   Stream<PartyReadDetailSnapshot<PublicRecruitmentSummary>> watchRecruitment(
@@ -79,6 +126,12 @@ class FakePartyReadRepository implements PartyReadRepository {
           const PartyReadDetailSnapshot(item: null, isFromCache: false),
         );
   }
+}
+
+class FakePublicRecruitmentPageCursor extends PublicRecruitmentPageCursor {
+  const FakePublicRecruitmentPageCursor(this.id);
+
+  final String id;
 }
 
 class FakePartyEventSyncService implements PartyEventSyncService {

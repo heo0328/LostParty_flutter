@@ -10,8 +10,17 @@ class PartyReadException implements Exception {
 }
 
 abstract class PartyReadRepository {
-  Stream<PartyReadSnapshot<PublicRecruitmentSummary>> watchPublicRecruitments({
+  /// 공개 모집 첫 페이지를 실시간 구독한다. 페이지 크기는 [publicRecruitmentPageSize].
+  Stream<PublicRecruitmentPage> watchPublicRecruitmentFirstPage({
     required String cycleKey,
+    int limit = publicRecruitmentPageSize,
+  });
+
+  /// [cursor] 이후 다음 페이지를 일회성 조회한다. 추가 listener를 만들지 않는다.
+  Future<PublicRecruitmentPage> loadPublicRecruitmentNextPage({
+    required String cycleKey,
+    required PublicRecruitmentPageCursor cursor,
+    int limit = publicRecruitmentPageSize,
   });
 
   Stream<PartyReadSnapshot<ActiveRaidSummary>> watchActiveRaids({

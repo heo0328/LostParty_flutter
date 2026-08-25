@@ -10,7 +10,8 @@
         { "fieldPath": "hasAvailableSlot", "order": "ASCENDING" },
         { "fieldPath": "targetCycleKey", "order": "ASCENDING" },
         { "fieldPath": "schemaVersion", "order": "ASCENDING" },
-        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+        { "fieldPath": "updatedAt", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "DESCENDING" }
       ]
     },
     {

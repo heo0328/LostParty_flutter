@@ -4,7 +4,7 @@
 
 이 문서는 `레이드 모집`, `레이드 현황 > 진행 중`, `레이드 현황 > 신청 중`에 필요한 Firestore 읽기 계약을 정의한다.
 
-이 작업은 읽기 DTO·Mapper·Repository 경계까지 다룬다. 실행 앱 쓰기 전환 상태는 `FIRESTORE_PARTY_COMMAND_CONTRACT.md` §9를 따른다. 모집 생성·신청·철회는 Firestore 명령으로 연결됐으며, 승인·멤버·회차와 `레이드 모집` 공개 목록 UI는 아직 Fake다. 기존 `watchPublicRecruitments` Repository는 제한 없는 실시간 쿼리이므로 실행 앱 목록 연결 전에 아래 페이징 계약으로 확장한다.
+이 작업은 읽기 DTO·Mapper·Repository 경계까지 다룬다. 실행 앱 쓰기 전환 상태는 `FIRESTORE_PARTY_COMMAND_CONTRACT.md` §9를 따른다. 모집 생성·신청·철회와 `레이드 모집` 공개 목록 읽기는 Firestore로 연결됐으며, 승인·멤버·회차와 Fake 모집 상세는 아직 Fake다.
 
 `완료 기록`은 개인 로컬 기록이 단일 기준이므로 이 계약의 Firestore 목록 쿼리에 포함하지 않는다.
 

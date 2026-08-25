@@ -26,8 +26,38 @@ class FirestorePartyReadRepository implements PartyReadRepository {
   final PartyReadDocumentMapper _mapper;
 
   @override
-  Stream<PartyReadSnapshot<PublicRecruitmentSummary>>
-  watchPublicRecruitments({required String cycleKey}) {
+  Stream<PublicRecruitmentPage> watchPublicRecruitmentFirstPage({
+    required String cycleKey,
+    int limit = publicRecruitmentPageSize,
+  }) {
+    return _publicRecruitmentsQuery(cycleKey)
+        .limit(limit)
+        .snapshots(includeMetadataChanges: true)
+        .map((snapshot) => _toPublicPage(snapshot, limit: limit))
+        .transform(_errorTransformer());
+  }
+
+  @override
+  Future<PublicRecruitmentPage> loadPublicRecruitmentNextPage({
+    required String cycleKey,
+    required PublicRecruitmentPageCursor cursor,
+    int limit = publicRecruitmentPageSize,
+  }) async {
+    if (cursor is! _FirestorePublicRecruitmentPageCursor) {
+      throw const PartyReadException(PartyReadFailureType.unknown);
+    }
+    try {
+      final snapshot = await _publicRecruitmentsQuery(cycleKey)
+          .startAfterDocument(cursor.snapshot)
+          .limit(limit)
+          .get();
+      return _toPublicPage(snapshot, limit: limit);
+    } catch (error) {
+      throw _mapError(error);
+    }
+  }
+
+  Query<Map<String, dynamic>> _publicRecruitmentsQuery(String cycleKey) {
     return _firestore
         .collection('recruitments')
         .where('schemaVersion', isEqualTo: 1)
@@ -37,17 +67,27 @@ class FirestorePartyReadRepository implements PartyReadRepository {
         .where('hasAvailableSlot', isEqualTo: true)
         .where('targetCycleKey', isEqualTo: cycleKey)
         .orderBy('updatedAt', descending: true)
-        .snapshots(includeMetadataChanges: true)
-        .map(
-          (snapshot) => PartyReadSnapshot(
-            items: snapshot.docs
-                .map(_document)
-                .map(_mapper.toPublicRecruitment)
-                .toList(growable: false),
-            isFromCache: snapshot.metadata.isFromCache,
-          ),
-        )
-        .transform(_errorTransformer());
+        .orderBy(FieldPath.documentId, descending: true);
+  }
+
+  PublicRecruitmentPage _toPublicPage(
+    QuerySnapshot<Map<String, dynamic>> snapshot, {
+    required int limit,
+  }) {
+    final items = snapshot.docs
+        .map(_document)
+        .map(_mapper.toPublicRecruitment)
+        .toList(growable: false);
+    final hasMore = items.length >= limit;
+    final lastDocument = snapshot.docs.isEmpty ? null : snapshot.docs.last;
+    return PublicRecruitmentPage(
+      items: items,
+      nextCursor: hasMore && lastDocument != null
+          ? _FirestorePublicRecruitmentPageCursor(lastDocument)
+          : null,
+      hasMore: hasMore,
+      isFromCache: snapshot.metadata.isFromCache,
+    );
   }
 
   @override
@@ -237,6 +277,12 @@ PartyReadException _mapError(Object error) {
     );
   }
   return const PartyReadException(PartyReadFailureType.unknown);
+}
+
+class _FirestorePublicRecruitmentPageCursor extends PublicRecruitmentPageCursor {
+  const _FirestorePublicRecruitmentPageCursor(this.snapshot);
+
+  final DocumentSnapshot<Map<String, dynamic>> snapshot;
 }
 
 int _compareActiveRaids(ActiveRaidSummary left, ActiveRaidSummary right) {

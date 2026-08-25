@@ -2,10 +2,32 @@ import 'recruitment_aggregate.dart';
 import 'recruitment_application.dart';
 import 'party_recruitment.dart';
 
+/// 공개 목록 페이지 크기. Repository·ViewModel이 동일한 값을 사용한다.
+const int publicRecruitmentPageSize = 20;
+
 class PartyReadSnapshot<T> {
   const PartyReadSnapshot({required this.items, required this.isFromCache});
 
   final List<T> items;
+  final bool isFromCache;
+}
+
+/// Repository가 해석하는 불투명 cursor. Firestore DocumentSnapshot을 Domain에 노출하지 않는다.
+abstract class PublicRecruitmentPageCursor {
+  const PublicRecruitmentPageCursor();
+}
+
+class PublicRecruitmentPage {
+  const PublicRecruitmentPage({
+    required this.items,
+    required this.hasMore,
+    required this.isFromCache,
+    this.nextCursor,
+  });
+
+  final List<PublicRecruitmentSummary> items;
+  final PublicRecruitmentPageCursor? nextCursor;
+  final bool hasMore;
   final bool isFromCache;
 }
 

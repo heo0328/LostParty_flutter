@@ -1425,3 +1425,17 @@
 - 표적 상세·mapper·현황 테스트와 `flutter analyze --no-pub`를 통과했다.
 - 단일 Android 기기(Player 1개)라 타 계정 신청·철회 실기기는 보류했다. 본인 방 신청은 `alreadyMember`로 거절되는 것을 확인했다.
 - 철회 후 재신청 Transaction과 공개 목록 UI 연결은 후속으로 남긴다.
+
+---
+
+## Task-063. 레이드 모집 공개 목록 Firestore 페이징 읽기 전환
+
+- 작업 브랜치: `cursor/public-recruitment-list`
+- `PartyReadRepository`에 `watchPublicRecruitmentFirstPage`와 `loadPublicRecruitmentNextPage`를 추가하고 제한 없는 `watchPublicRecruitments`를 제거했다.
+- 첫 페이지는 `updatedAt desc` + 문서 ID desc, `limit(20)` 실시간 구독이고, 다음 페이지는 불투명 cursor의 일회 조회다.
+- ViewModel은 `recruitmentId`로 병합하고, 첫 페이지 ID 집합 변경 시 추가 페이지를 초기화하며, 명시적 새로고침으로 listener·cursor·추가 오류를 리셋한다.
+- `RecruitmentListPage`는 실행 앱에서 `PartyReadRepository`와 현재 `cycleKey`를 사용한다. 카드 탭은 `/raid-status/{id}`로 이동하고 Fake `/recruitments/:id`와 데이터를 섞지 않는다.
+- loading·빈 목록·캐시·첫 페이지 오류·추가 loading·추가 오류·마지막 페이지 경계를 표적 ViewModel/Widget 테스트로 검증했다.
+- `firestore.indexes.json` 공개 목록 인덱스에 `__name__ desc`를 추가했다. 실제 배포 확인과 Android 실기기 검증은 남긴다.
+- Fake 상세·승인·멤버·회차는 InMemory 경로를 유지한다.
+- `flutter analyze --no-pub`과 표적 테스트가 통과했다.

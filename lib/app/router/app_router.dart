@@ -244,8 +244,10 @@ GoRouter createAppRouter({
             routes: [
               GoRoute(
                 path: '/recruitments',
-                builder: (context, state) =>
-                    RecruitmentListPage(repository: recruitmentRepository),
+                builder: (context, state) => RecruitmentListPage(
+                  partyReadRepository: partyReadRepositoryOrDefault,
+                  cycleKey: currentCycleKey,
+                ),
                 routes: [
                   GoRoute(
                     path: 'create',
