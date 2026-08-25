@@ -4,7 +4,7 @@
 
 LOSTPARTY의 정적 레이드 기준정보, 멀티유저 파티 모집/신청/승인 및 계정 그룹 전용 모집글을 구현하기 위한 기준 아키텍처다.
 
-클라이언트가 화면과 요청을 담당하고, 가입 승인과 정원 변경 같은 최종 상태 전이는 서버가 원자적으로 결정한다.
+별도 지시 전까지 Spark 무료 요금제를 유지한다. 클라이언트가 화면과 명령을 담당하고 Firestore Transaction과 Security Rules로 허용된 상태 전이를 원자적으로 반영한다. 서버 전용 권한이 필요한 변경은 현재 범위에서 제외한다.
 
 사용자 흐름, 반복 파티, 주차별 회차, 완료·취소·해산, 알림과 개인 레이드 히스토리의 최신 제품 기준은 `FIREBASE_PARTY_PRODUCT_FLOW.md`를 따른다. 이 문서는 그 제품 기준을 구현하기 위한 백엔드 구조를 설명한다.
 
@@ -14,24 +14,21 @@ LOSTPARTY의 정적 레이드 기준정보, 멀티유저 파티 모집/신청/�
 
 ---
 
-## 2. 권장 기술 구성
+## 2. 현재 기술 구성
 
 ```text
 Flutter
 → Firebase Authentication
 → Cloud Firestore
-→ Callable Cloud Functions 2nd gen
-→ Firestore Transaction
-→ Firebase App Check
+→ Flutter Firestore Transaction
+→ Firestore Security Rules
 ```
 
 - Firebase Authentication: AuthUid와 로그인 수명 관리
 - Cloud Firestore: 모집글, 신청, 파티원, 그룹 및 초대의 실시간 읽기 모델
-- Callable Cloud Functions: 모집 생성, 신청, 투표, 승인, 그룹 초대/수락 등 권한이 필요한 명령 처리
 - Firestore Transaction: 정원, 역할별 자리, 투표 수 및 가입 상태의 동시성 보장
-- Security Rules: 모바일 클라이언트의 직접 쓰기 제한과 읽기 권한 검증
-- App Check: 변조 앱과 비정상 요청 완화
-- Firebase Cloud Messaging: 완료, 완료 취소, 신청, 구성 변경과 해산 알림 전달. 서버 이벤트 동기화 이후 Firebase 전환 1차 완성 범위에 포함
+- Security Rules: binding, 소유권, revision과 허용된 다중 문서 변경 형태 검증
+- Callable Functions·App Check 강화·FCM 서버 이벤트: 유료 플랜과 비용을 별도로 승인할 때까지 보류
 
 현재 단계에서는 별도 애플리케이션 서버보다 Firebase 구성이 개발 및 운영 비용에 적합하다. Repository 경계를 유지해 향후 별도 REST 서버로 교체할 수 있게 한다.
 
@@ -39,7 +36,7 @@ Flutter
 
 ## 3. 신뢰 경계
 
-클라이언트는 다음 서버 관리 필드를 직접 수정할 수 없다.
+클라이언트는 다음 공유 필드를 단독 문서 쓰기로 수정할 수 없다. 허용된 Transaction 명령 형태와 Rules `getAfter()` 검증을 모두 만족해야 한다.
 
 - 파티장 또는 공대장 PlayerId
 - 가입 승인 상태
@@ -50,7 +47,7 @@ Flutter
 - 그룹 소유자와 멤버십 상태
 - 그룹 초대의 최종 수락 상태
 
-Flutter 앱은 Callable Function에 명령만 전달한다. Function은 인증, 권한, 현재 상태, 정원 및 조건을 다시 확인한 후 트랜잭션으로 저장한다.
+Flutter 앱은 명령별 Firestore Transaction을 실행한다. Rules는 binding, 권한, revision, 현재 상태와 함께 변경되어야 하는 문서를 검증한다. Rules로 충분히 보장할 수 없는 명령은 Spark 범위에서 비활성한다.
 
 Lost Ark 캐릭터 정보도 클라이언트 제출값을 최종 신뢰하지 않는다. 강제 가입 조건에 사용하려면 서버가 조회하거나 검증한 캐릭터 스냅샷이 필요하다. 서버 검증 전 단계의 조건은 참고용으로 표시한다.
 
@@ -68,7 +65,7 @@ Lost Ark API가 레이드 기준정보를 제공하지 않으므로 다음 정�
 - 보상 정보
 - 활성/비활성 상태와 데이터 버전
 
-Flutter와 Functions가 동일한 원본 카탈로그 또는 같은 원본에서 생성한 산출물을 사용한다.
+Flutter Domain과 Firestore Rules가 동일한 원본 카탈로그 또는 같은 원본에서 생성한 검증 산출물을 사용한다.
 
 모집글은 임의의 레이드 속성을 신뢰하지 않고 `raidId`, `difficultyId`, `raidCatalogVersion`을 저장한다. 서버는 모집 생성 시 카탈로그를 이용해 관문, 정원 및 최소 레벨을 검증한다.
 
@@ -335,7 +332,7 @@ targetCycleKey >= currentCycleKey
 
 ---
 
-## 11. Callable Function 명령 경계
+## 11. Firestore Transaction 명령 경계
 
 초기 명령 목록:
 
@@ -362,7 +359,7 @@ targetCycleKey >= currentCycleKey
 - `leaveGroup`
 - `removeGroupMember`
 
-읽기 모델은 Firestore 실시간 리스너를 사용하고, 상태를 변경하는 명령은 Function을 사용한다.
+읽기 모델은 Firestore 실시간 리스너를 사용하고, 상태를 변경하는 명령은 `FIRESTORE_PARTY_COMMAND_CONTRACT.md`의 클라이언트 Transaction 계약을 따른다.
 
 ---
 
@@ -370,12 +367,12 @@ targetCycleKey >= currentCycleKey
 
 - 인증된 사용자만 허용된 범위 읽기 가능
 - 사용자는 자신의 공개 프로필만 제한적으로 수정 가능
-- 모집글의 서버 관리 필드 직접 쓰기 금지
-- 파티 멤버, 신청 승인, 투표 집계 직접 쓰기 금지
+- 모집글 파생 필드는 명령별 Transaction과 `getAfter()` 조건을 만족할 때만 쓰기 가능
+- 파티 멤버십, 신청 상태와 확정 점유는 인증된 호출 주체와 허용된 상태 전이를 모두 검증
 - 그룹 소유자, 멤버 및 초대 상태 직접 쓰기 금지
 - groupOnly 모집글은 현재 그룹 멤버만 읽기 가능
-- Functions 서버 SDK의 쓰기는 Function 내부 인증/권한 검사와 IAM으로 보호
-- Rules와 Function은 Emulator Suite에서 함께 테스트
+- 서버 전용 권한이 필요한 명령은 Spark 범위에서 금지
+- Firestore Emulator는 사용하지 않으며 Rules 배포 전 검증 방법은 별도 합의
 
 ---
 
@@ -388,8 +385,8 @@ targetCycleKey >= currentCycleKey
 4. 파티방, 주차별 회차, 완료 Snapshot과 다음 회차 준비 구성
 5. 사용자별 이벤트, 전체·방별 알림 설정과 28일 TTL
 6. Firestore 실시간 읽기 모델과 인덱스
-7. Callable Functions 명령과 Transaction
-8. Security Rules 및 Emulator 다중 사용자·동시성 테스트
+7. Spark 클라이언트 Transaction 명령
+8. Security Rules 및 다중 사용자·동시성 테스트
 9. 로컬 레이드 히스토리와 캐릭터별 표시 설정 연결
 10. Firebase 연결 후 다중 계정·다중 디바이스 실기기 테스트
 11. App Check
