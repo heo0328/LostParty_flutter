@@ -1384,3 +1384,16 @@
 - loading·누락·권한 오류·오프라인 안내를 목록과 같은 문구로 표시한다.
 - ViewModel/Widget 표적 테스트와 전체 테스트 323개, `flutter analyze --no-pub`이 통과했다.
 - 쓰기 Repository 전환 전까지 로컬에서 만든 방은 이 상세에도 없다.
+
+---
+
+## Task-059. 모집 생성 명령의 실행 앱 Firestore 전환
+
+- 작업 브랜치: `cursor/firebase-runtime-stage1`
+- 실행 앱 모집 생성만 `FirestorePartyCreateRepository`에 연결하고, 목록·신청·승인·멤버·회차·Fake 상세는 InMemory 경로를 유지했다.
+- 파티장 Character ID는 게임 계정 인증의 `serverCharacterId`를 사용한다. 없으면 명령을 보내지 않고 인증 안내를 표시한다.
+- 생성 성공 시 Fake 상세 대신 `/raid-status/{recruitmentId}` 읽기 상세로 이동한다.
+- Fake 생성 흐름 회귀와 Firestore 생성 경로 표적 테스트를 통과했다. 전체 테스트 325개, `flutter analyze --no-pub` 통과.
+- 인증되지 않은 로컬 캐릭터로 만든 방은 여전히 Firestore 현황에 나타나지 않는다.
+- 인증된 캐릭터로 생성이 `permission-denied` 되던 원인은 캐릭터 인증이 아니라, 신규 모집 ID에 대한 `get`이 없는 문서의 `resource.data`를 읽어 거부된 것이다. 존재하지 않는 모집 단건 `get`은 active binding만 요구하도록 Rules를 수정하고 `lost-party`에 배포했다.
+- Android 실기기에서 인증된 캐릭터로 모집 생성, `진행 중` 목록 표시, 읽기 전용 상세 진입, 수정 화면 미적용 안내까지 확인했다.

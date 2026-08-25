@@ -611,6 +611,14 @@ service cloud.firestore {
           || currentPlayerId() in data.memberPlayerIds);
     }
 
+    // 생성 Transaction은 신규 ID의 존재 여부를 get으로 확인한다.
+    // 없는 문서에서 resource.data를 읽으면 규칙이 거부되므로 단건 get만 분기한다.
+    function canGetRecruitment(recruitmentId) {
+      return hasActiveBinding()
+        && (!exists(recruitmentPath(recruitmentId))
+          || canReadRecruitment(resource.data));
+    }
+
     function canReadPrivateRecruitmentData(recruitmentId) {
       let recruitment = get(recruitmentPath(recruitmentId)).data;
       return hasActiveBinding()
@@ -720,7 +728,8 @@ service cloud.firestore {
     }
 
     match /recruitments/{recruitmentId} {
-      allow get, list: if canReadRecruitment(resource.data);
+      allow get: if canGetRecruitment(recruitmentId);
+      allow list: if canReadRecruitment(resource.data);
       allow create: if validInitialRecruitment(
         recruitmentId,
         request.resource.data

@@ -6,9 +6,12 @@ import '../../../../shared/raid_catalog/domain/policies/raid_eligibility_policy.
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/entities/recruitment_aggregate.dart';
+import '../../domain/entities/party_create_command.dart';
 import '../../domain/policies/approval_policy.dart';
 import '../../domain/policies/party_composition_policy.dart';
+import '../../domain/policies/party_cycle_policy.dart';
 import '../../domain/policies/recruitment_auto_title_policy.dart';
+import '../../domain/repositories/party_create_repository.dart';
 import '../../domain/services/recruitment_command_service.dart';
 import '../../domain/services/recruitment_application_candidate_service.dart';
 import '../../domain/services/recruitment_leader_candidate_service.dart';
@@ -22,11 +25,17 @@ class RecruitmentCreatePage extends StatefulWidget {
     required this.catalogRepository,
     required this.commandService,
     required this.candidateService,
+    this.partyCreateRepository,
+    this.newRecruitmentId,
+    this.cycleKey,
     super.key,
   });
   final RaidCatalogRepository catalogRepository;
   final RecruitmentCommandService commandService;
   final RecruitmentLeaderCandidateService candidateService;
+  final PartyCreateRepository? partyCreateRepository;
+  final String Function()? newRecruitmentId;
+  final String? cycleKey;
   @override
   State<RecruitmentCreatePage> createState() => _RecruitmentCreatePageState();
 }
@@ -58,6 +67,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       itemLevel: _selectedItemLevel,
     );
   }
+
   @override
   void initState() {
     super.initState();
@@ -93,7 +103,8 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
           .where((option) => option.raid.raidId == raid.raidId)
           .firstOrNull;
       final selectedOption = selectedRaid ?? eligible.firstOrNull;
-      final selectedDifficulty = selectedOption?.highestDifficulty ?? difficulty;
+      final selectedDifficulty =
+          selectedOption?.highestDifficulty ?? difficulty;
       final refreshedCandidates = selectedOption == null
           ? candidates
           : await _loadCandidates(selectedOption.raid, selectedDifficulty);
@@ -161,8 +172,9 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
               onRoleChanged: _changeRole,
               onCombatPowerChanged: (value) {
                 _draft = _draft.copyWith(
-                  minCombatPower:
-                      RecruitmentFormDraft.normalizeMinCombatPower(value),
+                  minCombatPower: RecruitmentFormDraft.normalizeMinCombatPower(
+                    value,
+                  ),
                 );
                 _syncAutoTitle();
               },
@@ -252,9 +264,10 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       setState(() {});
       return;
     }
-    final option = options
-        .where((option) => option.raid.raidId == _raid?.raidId)
-        .firstOrNull ??
+    final option =
+        options
+            .where((option) => option.raid.raidId == _raid?.raidId)
+            .firstOrNull ??
         options.first;
     final eligibleDifficulty = option.difficulties
         .where((item) => item.difficultyId == _difficulty?.difficultyId)
@@ -391,9 +404,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
             enabled: canChoose,
             leading: Icon(
               canChoose ? Icons.person : Icons.block,
-              color: canChoose
-                  ? null
-                  : Theme.of(context).colorScheme.error,
+              color: canChoose ? null : Theme.of(context).colorScheme.error,
             ),
             title: Text('${candidate.characterId} · ${candidate.className}'),
             subtitle: Column(
@@ -416,9 +427,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
             trailing: candidate.isRepresentative
                 ? const Chip(label: Text('대표'))
                 : null,
-            onTap: canChoose
-                ? () => Navigator.pop(context, candidate)
-                : null,
+            onTap: canChoose ? () => Navigator.pop(context, candidate) : null,
           ),
         ),
       );
@@ -507,35 +516,39 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     }
     final raid = _raid!;
     final difficulty = _difficulty!;
-    final pendingCount = await widget.commandService.countPendingApplications(
-      characterId: leader.characterId,
-      raidId: raid.raidId,
-    );
-    if (!mounted) return;
-    if (pendingCount > 0) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('기존 신청을 취소할까요?'),
-          content: Text(
-            '${leader.characterId} 캐릭터의 동일 레이드 신청 $pendingCount건이 있습니다. '
-            '모집을 만들면 기존 신청이 모두 종료됩니다.',
-          ),
-          actions: [
-            TextButton(
-              key: const ValueKey('keepPendingAndCancelCreationButton'),
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('돌아가기'),
-            ),
-            FilledButton(
-              key: const ValueKey('cancelPendingAndCreateButton'),
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('신청 취소하고 생성'),
-            ),
-          ],
-        ),
+    var cancelPendingApplications = false;
+    if (widget.partyCreateRepository == null) {
+      final pendingCount = await widget.commandService.countPendingApplications(
+        characterId: leader.characterId,
+        raidId: raid.raidId,
       );
-      if (confirmed != true || !mounted) return;
+      if (!mounted) return;
+      if (pendingCount > 0) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('기존 신청을 취소할까요?'),
+            content: Text(
+              '${leader.characterId} 캐릭터의 동일 레이드 신청 $pendingCount건이 있습니다. '
+              '모집을 만들면 기존 신청이 모두 종료됩니다.',
+            ),
+            actions: [
+              TextButton(
+                key: const ValueKey('keepPendingAndCancelCreationButton'),
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('돌아가기'),
+              ),
+              FilledButton(
+                key: const ValueKey('cancelPendingAndCreateButton'),
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('신청 취소하고 생성'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true || !mounted) return;
+        cancelPendingApplications = true;
+      }
     }
     setState(() => _saving = true);
     final approval = switch (_draft.approvalMode) {
@@ -544,21 +557,37 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       ApprovalMode.anyMember ||
       ApprovalMode.quorum => throw StateError('현재 생성 화면에서 지원하지 않는 승인 방식입니다.'),
     };
+    final title = _title.text.trim().isEmpty
+        ? _generatedTitle
+        : _title.text.trim();
+    final metadata = RecruitmentMetadata(
+      catalogVersion: _catalog!.catalogVersion,
+      raidId: raid.raidId,
+      difficultyId: difficulty.difficultyId,
+      raidName: raid.displayName,
+      difficultyName: difficulty.name,
+      difficultyAlias: difficulty.displayAlias,
+      gateCount: raid.gateCount,
+      minItemLevel: difficulty.minItemLevel,
+      minCombatPower: _normalizedMinCombatPower,
+      experienceLevel: _draft.experienceLevel,
+      maxPlayHours: null,
+    );
+    final partyCreateRepository = widget.partyCreateRepository;
+    if (partyCreateRepository != null) {
+      await _saveToFirestore(
+        repository: partyCreateRepository,
+        title: title,
+        metadata: metadata,
+        leader: leader,
+        approval: approval,
+        raid: raid,
+      );
+      return;
+    }
     final result = await widget.commandService.createRecruitment(
-      title: _title.text.trim().isEmpty ? _generatedTitle : _title.text.trim(),
-      metadata: RecruitmentMetadata(
-        catalogVersion: _catalog!.catalogVersion,
-        raidId: raid.raidId,
-        difficultyId: difficulty.difficultyId,
-        raidName: raid.displayName,
-        difficultyName: difficulty.name,
-        difficultyAlias: difficulty.displayAlias,
-        gateCount: raid.gateCount,
-        minItemLevel: difficulty.minItemLevel,
-        minCombatPower: _normalizedMinCombatPower,
-        experienceLevel: _draft.experienceLevel,
-        maxPlayHours: null,
-      ),
+      title: title,
+      metadata: metadata,
       leaderCharacterId: leader.characterId,
       leaderClassName: leader.className,
       leaderRole: _role,
@@ -568,7 +597,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       compositionPolicy: PartyCompositionPolicy(
         RecruitmentPartyRules.fromRaid(raid),
       ),
-      cancelPendingApplications: pendingCount > 0,
+      cancelPendingApplications: cancelPendingApplications,
     );
     if (!mounted) return;
     setState(() => _saving = false);
@@ -587,4 +616,70 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
+
+  Future<void> _saveToFirestore({
+    required PartyCreateRepository repository,
+    required String title,
+    required RecruitmentMetadata metadata,
+    required RecruitmentLeaderCandidate leader,
+    required ApprovalPolicy approval,
+    required RaidDefinition raid,
+  }) async {
+    final serverCharacterId = leader.serverCharacterId;
+    final itemLevel = leader.optionFor(_role)?.itemLevel;
+    if (serverCharacterId == null ||
+        serverCharacterId.isEmpty ||
+        itemLevel == null) {
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('게임 계정 인증이 완료된 캐릭터만 모집을 만들 수 있습니다.')),
+      );
+      return;
+    }
+
+    final recruitmentId =
+        widget.newRecruitmentId?.call() ??
+        DateTime.now().microsecondsSinceEpoch.toString();
+    final cycleKey =
+        widget.cycleKey ?? const PartyCyclePolicy().keyFor(DateTime.now());
+    final result = await repository.create(
+      PartyCreateCommand(
+        recruitmentId: recruitmentId,
+        title: title,
+        metadata: metadata,
+        leaderCharacterId: serverCharacterId,
+        leaderCharacterName: leader.characterId,
+        leaderClassName: leader.className,
+        leaderRole: _role,
+        leaderItemLevel: itemLevel,
+        leaderCombatPower: leader.optionFor(_role)?.combatPower,
+        approvalPolicy: approval,
+        compositionRules: RecruitmentPartyRules.fromRaid(raid),
+        cycleKey: cycleKey,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (result.isSuccess) {
+      context.go('/raid-status/${result.recruitmentId}');
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_createFailureMessage(result.failure!))),
+    );
+  }
 }
+
+String _createFailureMessage(PartyCreateFailure failure) => switch (failure) {
+  PartyCreateFailure.unauthenticated ||
+  PartyCreateFailure.playerBindingMissing => '계정 연결을 준비하지 못했습니다.',
+  PartyCreateFailure.ownershipLost => '캐릭터 소유권을 확인하지 못했습니다.',
+  PartyCreateFailure.invalidCharacter => '참가할 수 없는 캐릭터입니다.',
+  PartyCreateFailure.participationConflict =>
+    '이미 확정된 참가 또는 겹치는 일정이 있어 모집을 만들 수 없습니다.',
+  PartyCreateFailure.idConflict => '같은 모집이 이미 있습니다. 다시 시도해 주세요.',
+  PartyCreateFailure.permissionDenied => '모집 생성 권한을 확인하지 못했습니다.',
+  PartyCreateFailure.temporarilyUnavailable => '네트워크 연결이 불안정합니다.',
+  PartyCreateFailure.invalidRequest => '입력한 모집 정보를 확인하지 못했습니다.',
+  PartyCreateFailure.unknown => '모집을 생성하지 못했습니다.',
+};

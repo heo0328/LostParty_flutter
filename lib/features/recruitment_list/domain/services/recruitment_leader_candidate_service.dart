@@ -39,9 +39,11 @@ class RecruitmentLeaderCandidate {
     required this.roles,
     required this.participationStatuses,
     required this.rejectionReasons,
+    this.serverCharacterId,
   });
 
   final String characterId;
+  final String? serverCharacterId;
   final int localCharacterId;
   final int accountId;
   final String accountLabel;
@@ -219,6 +221,7 @@ class RecruitmentLeaderCandidateService {
         candidates.add(
           RecruitmentLeaderCandidate(
             characterId: character.characterName,
+            serverCharacterId: character.serverCharacterId,
             localCharacterId: character.id,
             accountId: account.id,
             accountLabel: account.label,

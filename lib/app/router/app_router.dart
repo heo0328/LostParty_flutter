@@ -22,6 +22,7 @@ import '../../features/raid_status/data/services/firestore_party_event_sync_serv
 import '../../features/raid_status/domain/services/party_event_sync_service.dart';
 import '../../features/raid_status/presentation/pages/party_read_detail_page.dart';
 import '../../features/raid_status/presentation/pages/raid_status_page.dart';
+import '../../features/recruitment_list/data/repositories/firestore_party_create_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_read_repository.dart';
 import '../../features/recruitment_list/domain/repositories/party_read_repository.dart';
 import '../../features/recruitment_list/domain/policies/party_cycle_policy.dart';
@@ -228,6 +229,15 @@ GoRouter createAppRouter({
                       catalogRepository: raidCatalogRepository,
                       commandService: recruitmentCommandService,
                       candidateService: recruitmentLeaderCandidateService,
+                      partyCreateRepository: FirestorePartyCreateRepository(
+                        firestore: FirebaseFirestore.instance,
+                        firebaseAuth: FirebaseAuth.instance,
+                      ),
+                      newRecruitmentId: () => FirebaseFirestore.instance
+                          .collection('recruitments')
+                          .doc()
+                          .id,
+                      cycleKey: currentCycleKey,
                     ),
                   ),
                   GoRoute(
