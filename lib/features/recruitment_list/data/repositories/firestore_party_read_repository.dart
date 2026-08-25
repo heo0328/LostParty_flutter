@@ -163,6 +163,30 @@ class FirestorePartyReadRepository implements PartyReadRepository {
   }
 
   @override
+  Stream<PartyReadSnapshot<PartyMemberDisplay>> watchRecruitmentMembers(
+    String recruitmentId,
+  ) {
+    return _firestore
+        .collection('recruitments')
+        .doc(recruitmentId)
+        .collection('members')
+        .snapshots(includeMetadataChanges: true)
+        .map((snapshot) {
+          final items =
+              snapshot.docs
+                  .map(_document)
+                  .map(_mapper.toMemberDisplay)
+                  .toList(growable: false)
+                ..sort(_compareMembers);
+          return PartyReadSnapshot(
+            items: items,
+            isFromCache: snapshot.metadata.isFromCache,
+          );
+        })
+        .transform(_errorTransformer());
+  }
+
+  @override
   Stream<PartyReadDetailSnapshot<PartyApplicationSummary?>> watchMyApplication({
     required String recruitmentId,
     required String playerId,
@@ -298,4 +322,12 @@ int _compareActiveRaids(ActiveRaidSummary left, ActiveRaidSummary right) {
   }
   final byUpdated = right.updatedAt.compareTo(left.updatedAt);
   return byUpdated != 0 ? byUpdated : left.id.compareTo(right.id);
+}
+
+int _compareMembers(PartyMemberDisplay left, PartyMemberDisplay right) {
+  final byParty = left.partyIndex.compareTo(right.partyIndex);
+  if (byParty != 0) return byParty;
+  final byRole = left.role.index.compareTo(right.role.index);
+  if (byRole != 0) return byRole;
+  return (left.characterName ?? '').compareTo(right.characterName ?? '');
 }

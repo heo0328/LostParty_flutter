@@ -54,12 +54,16 @@ class ActiveRaidSummary {
     required this.revision,
     required this.updatedAt,
     required this.isOwnedByCurrentPlayer,
+    this.leaderCharacterName,
+    this.leaderClassName,
     this.raidStartAt,
   });
 
   final String id;
   final String title;
   final String leaderPlayerId;
+  final String? leaderCharacterName;
+  final String? leaderClassName;
   final RecruitmentMetadata metadata;
   final String currentCycleKey;
   final int memberCount;
@@ -68,6 +72,26 @@ class ActiveRaidSummary {
   final DateTime updatedAt;
   final bool isOwnedByCurrentPlayer;
   final DateTime? raidStartAt;
+}
+
+/// 공개 상세·확정 멤버 상세에 공통으로 쓰는 파티 표시 전용 모델.
+/// PlayerId·권한 플래그는 presentation에 노출하지 않는다.
+class PartyMemberDisplay {
+  const PartyMemberDisplay({
+    required this.characterName,
+    required this.className,
+    required this.role,
+    required this.partyIndex,
+    this.itemLevel,
+    this.combatPower,
+  });
+
+  final String? characterName;
+  final String? className;
+  final PartyRole role;
+  final int partyIndex;
+  final double? itemLevel;
+  final double? combatPower;
 }
 
 class PartyApplicationSummary {

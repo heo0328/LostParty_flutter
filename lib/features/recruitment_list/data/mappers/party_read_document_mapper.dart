@@ -27,9 +27,12 @@ class PartyReadDocumentMapper {
       id: document.id,
       title: _string(data, 'title'),
       leaderUserId: _string(data, 'leaderPlayerId'),
+      leaderCharacterName: _softString(data, 'leaderCharacterNameSnapshot'),
+      leaderClassName: _softString(data, 'leaderClassNameSnapshot'),
       metadata: _metadata(data),
       memberCount: _integer(data, 'memberCount'),
       maxMemberCount: _integer(data, 'maxMemberCount'),
+      membersPerParty: _optionalPositiveInteger(data, 'membersPerParty') ?? 4,
       isRecruiting:
           _string(data, 'status') == 'active' &&
           _boolean(data, 'manualRecruitmentEnabled') &&
@@ -51,6 +54,8 @@ class PartyReadDocumentMapper {
       id: document.id,
       title: _string(data, 'title'),
       leaderPlayerId: leaderPlayerId,
+      leaderCharacterName: _softString(data, 'leaderCharacterNameSnapshot'),
+      leaderClassName: _softString(data, 'leaderClassNameSnapshot'),
       metadata: _metadata(data),
       currentCycleKey: _string(data, 'currentCycleKey'),
       memberCount: _integer(data, 'memberCount'),
@@ -59,6 +64,19 @@ class PartyReadDocumentMapper {
       updatedAt: _date(data, 'updatedAt'),
       raidStartAt: _nullableDate(data, 'raidStartAt'),
       isOwnedByCurrentPlayer: leaderPlayerId == currentPlayerId,
+    );
+  }
+
+  PartyMemberDisplay toMemberDisplay(PartyReadDocumentDto document) {
+    final data = document.data;
+    _requireSchema(data);
+    return PartyMemberDisplay(
+      characterName: _softString(data, 'characterNameSnapshot'),
+      className: _softString(data, 'classNameSnapshot'),
+      role: _enumValue(PartyRole.values, _string(data, 'role'), 'role'),
+      partyIndex: _integer(data, 'partyIndex'),
+      itemLevel: _softNumber(data, 'itemLevelSnapshot'),
+      combatPower: _softNumber(data, 'combatPowerSnapshot'),
     );
   }
 
@@ -122,6 +140,17 @@ class PartyReadDocumentMapper {
     throw PartyReadContractException('$field must be a non-empty string.');
   }
 
+  /// 이전 문서의 Snapshot 누락은 전체 실패 대신 null로 넘긴다.
+  String? _softString(Map<String, Object?> data, String field) {
+    final value = data[field];
+    if (value == null) return null;
+    if (value is String) {
+      final trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    return null;
+  }
+
   String? _nullableString(Map<String, Object?> data, String field) {
     final value = data[field];
     if (value == null) return null;
@@ -135,11 +164,25 @@ class PartyReadDocumentMapper {
     throw PartyReadContractException('$field must be an integer.');
   }
 
+  int? _optionalPositiveInteger(Map<String, Object?> data, String field) {
+    final value = data[field];
+    if (value == null) return null;
+    if (value is int && value > 0) return value;
+    return null;
+  }
+
   int? _nullableInteger(Map<String, Object?> data, String field) {
     final value = data[field];
     if (value == null) return null;
     if (value is int) return value;
     throw PartyReadContractException('$field must be null or an integer.');
+  }
+
+  double? _softNumber(Map<String, Object?> data, String field) {
+    final value = data[field];
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return null;
   }
 
   bool _boolean(Map<String, Object?> data, String field) {

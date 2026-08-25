@@ -74,6 +74,7 @@ void main() {
     expect(find.text('4막 노말 모집'), findsOneWidget);
     expect(find.textContaining('4막 - 노말'), findsOneWidget);
     expect(find.text('내가 만든 방'), findsOneWidget);
+    expect(find.text('파티장 이슈아이 · 기상술사'), findsOneWidget);
     expect(find.text('진행 중인 레이드가 없습니다.'), findsNothing);
   });
 
@@ -267,6 +268,8 @@ ActiveRaidSummary _activeRaid({DateTime? raidStartAt}) => ActiveRaidSummary(
   id: 'recruitment-1',
   title: '4막 노말 모집',
   leaderPlayerId: 'player-1',
+  leaderCharacterName: '이슈아이',
+  leaderClassName: '기상술사',
   raidStartAt: raidStartAt,
   metadata: const RecruitmentMetadata(
     catalogVersion: '2026-08-01',

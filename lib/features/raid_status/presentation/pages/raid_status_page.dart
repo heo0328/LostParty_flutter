@@ -315,6 +315,11 @@ class _ActiveRaidCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               _IconLine(
+                icon: Icons.person_outline,
+                text: _leaderLabel(summary),
+              ),
+              const SizedBox(height: 6),
+              _IconLine(
                 icon: Icons.schedule_outlined,
                 text: startAt == null
                     ? '시작 시간 미정'
@@ -737,6 +742,18 @@ String _memberLabel(ActiveRaidSummary summary) {
   final remaining = summary.maxMemberCount - summary.memberCount;
   final slot = remaining > 0 ? '남은 자리 $remaining' : '자리 마감';
   return '멤버 ${summary.memberCount}/${summary.maxMemberCount} · $slot';
+}
+
+String _leaderLabel(ActiveRaidSummary summary) {
+  final name = summary.leaderCharacterName?.trim();
+  final className = summary.leaderClassName?.trim();
+  if (name == null || name.isEmpty) {
+    return '파티장 정보 없음';
+  }
+  if (className == null || className.isEmpty) {
+    return '파티장 $name';
+  }
+  return '파티장 $name · $className';
 }
 
 String _requirementLabel(RecruitmentMetadata metadata) {

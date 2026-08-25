@@ -86,6 +86,8 @@ service cloud.firestore {
         && data.revision == 1
         && data.createdAt == request.time
         && data.updatedAt == request.time
+        && data.leaderCharacterNameSnapshot == member.characterNameSnapshot
+        && data.leaderClassNameSnapshot == member.classNameSnapshot
         && member.playerId == playerId
         && member.joinedBy == playerId
         && member.partyIndex == 0
@@ -208,6 +210,12 @@ service cloud.firestore {
       let memberPath = recruitmentMemberPath(recruitmentId, playerId);
       let memberBefore = get(memberPath);
       let memberAfter = getAfter(memberPath);
+      let keys = newData.diff(oldData).affectedKeys();
+      let revisionOnly = keys.hasOnly(['revision', 'updatedAt']);
+      let leaderDisplayUpdate = keys.hasOnly([
+        'revision', 'updatedAt',
+        'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot'
+      ]);
       return hasActiveBinding()
         && oldData.status == 'active'
         && playerId in oldData.memberPlayerIds
@@ -215,9 +223,14 @@ service cloud.firestore {
           || (exists(memberPath)
             && existsAfter(memberPath)
             && memberBefore.data.characterId != memberAfter.data.characterId))
-        && newData.diff(oldData).affectedKeys().hasOnly([
-          'revision', 'updatedAt'
-        ])
+        && (revisionOnly
+          || (leaderDisplayUpdate
+            && oldData.leaderPlayerId == playerId
+            && existsAfter(memberPath)
+            && newData.leaderCharacterNameSnapshot
+              == memberAfter.data.characterNameSnapshot
+            && newData.leaderClassNameSnapshot
+              == memberAfter.data.classNameSnapshot))
         && newData.revision == oldData.revision + 1
         && newData.updatedAt == request.time;
     }
@@ -237,7 +250,8 @@ service cloud.firestore {
         && (selfLeave || (actorIsLeader && !selfLeave))
         && newData.diff(oldData).affectedKeys().hasOnly([
           'memberPlayerIds', 'memberCount', 'dealerCount', 'supportCount',
-          'leaderPlayerId', 'hasAvailableSlot', 'status',
+          'leaderPlayerId', 'leaderCharacterNameSnapshot',
+          'leaderClassNameSnapshot', 'hasAvailableSlot', 'status',
           'manualRecruitmentEnabled', 'revision', 'updatedAt'
         ])
         && newData.memberCount == oldData.memberCount - 1
@@ -249,6 +263,8 @@ service cloud.firestore {
         && newData.updatedAt == request.time
         && (empty
           ? (newData.leaderPlayerId == null
+            && newData.leaderCharacterNameSnapshot == null
+            && newData.leaderClassNameSnapshot == null
             && newData.status == 'disbanded'
             && newData.manualRecruitmentEnabled == false
             && newData.hasAvailableSlot == false)
@@ -259,7 +275,17 @@ service cloud.firestore {
             && newData.leaderPlayerId
               == (!(oldData.leaderPlayerId in newData.memberPlayerIds)
                 ? newData.memberPlayerIds[0]
-                : oldData.leaderPlayerId)));
+                : oldData.leaderPlayerId)
+            && newData.leaderCharacterNameSnapshot
+              == get(recruitmentMemberPath(
+                recruitmentId,
+                newData.leaderPlayerId
+              )).data.characterNameSnapshot
+            && newData.leaderClassNameSnapshot
+              == get(recruitmentMemberPath(
+                recruitmentId,
+                newData.leaderPlayerId
+              )).data.classNameSnapshot));
     }
 
     function validRecurrenceChange(oldData, newData) {
@@ -626,6 +652,14 @@ service cloud.firestore {
           || currentPlayerId() in recruitment.memberPlayerIds);
     }
 
+    // Option 1: 공개 모집 membership 목록은 로그인 사용자에게 허용하고
+    // Domain/UI는 표시 Snapshot만 소비한다.
+    function canReadPublicRecruitmentMembers(recruitmentId) {
+      return hasActiveBinding()
+        && exists(recruitmentPath(recruitmentId))
+        && get(recruitmentPath(recruitmentId)).data.visibility == 'public';
+    }
+
     function validActiveBinding(data) {
       return data.keys().hasOnly([
           'schemaVersion',
@@ -766,6 +800,7 @@ service cloud.firestore {
 
       match /members/{playerId} {
         allow get, list: if canReadPrivateRecruitmentData(recruitmentId)
+          || canReadPublicRecruitmentMembers(recruitmentId)
           || (hasActiveBinding() && playerId == currentPlayerId());
         allow create: if validInitialLeaderMembership(
           recruitmentId,

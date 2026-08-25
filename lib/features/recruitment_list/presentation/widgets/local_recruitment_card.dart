@@ -70,6 +70,11 @@ class LocalRecruitmentCard extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               _InfoLine(
+                icon: Icons.person_outline,
+                text: _leaderLabel(recruitment),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              _InfoLine(
                 icon: Icons.schedule_outlined,
                 text: metadata.raidStartAt == null
                     ? '시작 시간 미정'
@@ -185,4 +190,16 @@ String _memberLabel(PublicRecruitmentSummary recruitment) {
   final remaining = recruitment.maxMemberCount - recruitment.memberCount;
   return '멤버 ${recruitment.memberCount}/${recruitment.maxMemberCount} · '
       '${remaining > 0 ? '남은 자리 $remaining' : '자리 마감'}';
+}
+
+String _leaderLabel(PublicRecruitmentSummary recruitment) {
+  final name = recruitment.leaderCharacterName?.trim();
+  final className = recruitment.leaderClassName?.trim();
+  if (name == null || name.isEmpty) {
+    return '파티장 정보 없음';
+  }
+  if (className == null || className.isEmpty) {
+    return '파티장 $name';
+  }
+  return '파티장 $name · $className';
 }

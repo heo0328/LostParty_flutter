@@ -38,7 +38,13 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
   late final PartyReadDetailViewModel<PublicRecruitmentSummary> _viewModel;
   StreamSubscription<PartyReadDetailSnapshot<PartyApplicationSummary?>>?
   _myApplicationSubscription;
+  StreamSubscription<PartyReadSnapshot<PartyMemberDisplay>>?
+  _membersSubscription;
   PartyApplicationSummary? _myApplication;
+  List<PartyMemberDisplay> _members = const [];
+  bool _membersLoading = true;
+  PartyReadFailureType? _membersFailure;
+  bool _membersFromCache = false;
   bool _myApplicationLoading = false;
   bool _submitting = false;
 
@@ -55,6 +61,9 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       streamFactory: () =>
           widget.partyReadRepository.watchRecruitment(widget.recruitmentId),
     )..start();
+    _membersSubscription = widget.partyReadRepository
+        .watchRecruitmentMembers(widget.recruitmentId)
+        .listen(_onMembers, onError: _onMembersError);
     if (_canCommand) {
       _myApplicationLoading = true;
       _myApplicationSubscription = widget.partyReadRepository
@@ -72,8 +81,29 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
   @override
   void dispose() {
     _myApplicationSubscription?.cancel();
+    _membersSubscription?.cancel();
     _viewModel.dispose();
     super.dispose();
+  }
+
+  void _onMembers(PartyReadSnapshot<PartyMemberDisplay> snapshot) {
+    if (!mounted) return;
+    setState(() {
+      _members = snapshot.items;
+      _membersLoading = false;
+      _membersFailure = null;
+      _membersFromCache = snapshot.isFromCache;
+    });
+  }
+
+  void _onMembersError(Object error) {
+    if (!mounted) return;
+    setState(() {
+      _membersLoading = false;
+      _membersFailure = error is PartyReadException
+          ? error.type
+          : PartyReadFailureType.unknown;
+    });
   }
 
   void _onMyApplication(
@@ -232,6 +262,10 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                 ),
               ),
               const SizedBox(height: 12),
+              _DetailLine(
+                label: '파티장',
+                value: _leaderDetailLabel(summary),
+              ),
               _DetailLine(label: '레이드', value: _raidLabel(summary.metadata)),
               _DetailLine(label: '일정', value: _scheduleLabel(summary.metadata)),
               _DetailLine(
@@ -243,6 +277,13 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
               _DetailLine(
                 label: '조건',
                 value: _requirementLabel(summary.metadata),
+              ),
+              _PartyCompositionSection(
+                members: _members,
+                membersPerParty: summary.membersPerParty,
+                loading: _membersLoading,
+                failure: _membersFailure,
+                isFromCache: _membersFromCache,
               ),
               if (_canCommand)
                 _ApplicationActions(
@@ -263,6 +304,72 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _PartyCompositionSection extends StatelessWidget {
+  const _PartyCompositionSection({
+    required this.members,
+    required this.membersPerParty,
+    required this.loading,
+    required this.failure,
+    required this.isFromCache,
+  });
+
+  final List<PartyMemberDisplay> members;
+  final int membersPerParty;
+  final bool loading;
+  final PartyReadFailureType? failure;
+  final bool isFromCache;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('파티 구성', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 8),
+          if (isFromCache)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                '오프라인 캐시의 파티원 정보입니다.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+          if (loading)
+            const LinearProgressIndicator()
+          else if (failure != null && members.isEmpty)
+            Text(_failureMessage(failure!))
+          else if (members.isEmpty)
+            const Text('표시할 파티원이 없습니다.')
+          else ...[
+            if (failure != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(_failureMessage(failure!)),
+              ),
+            for (final entry in _groupByParty(members, membersPerParty).entries) ...[
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 4),
+                child: Text(
+                  '${entry.key}파티',
+                  style: theme.textTheme.titleSmall,
+                ),
+              ),
+              for (final member in entry.value)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(_memberLine(member, membersPerParty)),
+                ),
+            ],
+          ],
+        ],
       ),
     );
   }
@@ -527,6 +634,51 @@ String _roleLabel(PartyRole role) => switch (role) {
   PartyRole.dealer => '딜러',
   PartyRole.support => '서포터',
 };
+
+String _leaderDetailLabel(PublicRecruitmentSummary summary) {
+  final name = summary.leaderCharacterName?.trim();
+  final className = summary.leaderClassName?.trim();
+  if (name == null || name.isEmpty) return '정보 없음';
+  if (className == null || className.isEmpty) return name;
+  return '$name · $className';
+}
+
+String _memberLine(PartyMemberDisplay member, int membersPerParty) {
+  final seat = (member.partyIndex % membersPerParty) + 1;
+  final parts = <String>[
+    '$seat자리',
+    member.characterName?.trim().isNotEmpty == true
+        ? member.characterName!.trim()
+        : '정보 없음',
+    member.className?.trim().isNotEmpty == true
+        ? member.className!.trim()
+        : '정보 없음',
+    if (member.combatPower != null)
+      '전투력 ${DisplayNumberFormatter.integer(member.combatPower!)}'
+    else
+      '전투력 정보 없음',
+    if (member.itemLevel != null)
+      '아이템 Lv. ${DisplayNumberFormatter.integer(member.itemLevel!)}'
+    else
+      '아이템 레벨 정보 없음',
+    _roleLabel(member.role),
+  ];
+  return parts.join(' · ');
+}
+
+Map<int, List<PartyMemberDisplay>> _groupByParty(
+  List<PartyMemberDisplay> members,
+  int membersPerParty,
+) {
+  final size = membersPerParty <= 0 ? 4 : membersPerParty;
+  final grouped = <int, List<PartyMemberDisplay>>{};
+  for (final member in members) {
+    final partyNumber = (member.partyIndex ~/ size) + 1;
+    grouped.putIfAbsent(partyNumber, () => <PartyMemberDisplay>[]).add(member);
+  }
+  final keys = grouped.keys.toList()..sort();
+  return {for (final key in keys) key: grouped[key]!};
+}
 
 String _applicationStatusLabel(PartyApplicationSummary application) =>
     switch (application.status) {

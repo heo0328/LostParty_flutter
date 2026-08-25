@@ -166,6 +166,8 @@ orderBy updatedAt desc
 
 공개 문서의 모든 필드는 클라이언트에서 기술적으로 읽힐 수 있으므로 민감하거나 권한 전용인 필드를 숨겨야 한다면 2안을 사용한다.
 
+**확정(Option 1):** 공개 모집의 membership `get`/`list`는 active binding 사용자에게 허용한다. `PartyMemberDisplay`와 UI는 `characterNameSnapshot`, `classNameSnapshot`, `role`, `partyIndex`, `itemLevelSnapshot`, `combatPowerSnapshot`만 소비하고 PlayerId·권한 플래그는 presentation에 노출하지 않는다. Lost Ark 프로필성 표시 정보와 레이드 참가 구성은 극비 비밀이 아니며, AuthUid·API JWT·권한 식별자만 별도로 보호한다.
+
 ## 6. Repository 경계
 
 읽기 계약은 기존 쓰기 중심 `RecruitmentStateRepository`에 추가하지 않는다.
@@ -215,7 +217,7 @@ PartyReadRepository
 - 모든 조회는 유효한 `AuthUid -> PlayerId` binding을 요구한다.
 - `public` 모집은 로그인된 사용자가 계약된 공개 쿼리로 목록·상세를 읽을 수 있다.
 - `groupOnly` 모집은 해당 그룹 멤버만 읽을 수 있다. 그룹 멤버십 계약 전에는 실행 앱에 연결하지 않는다.
-- 비공개 멤버·신청 정보는 해당 방의 현재 멤버 또는 해당 신청자만 읽을 수 있다. 공개 모집 상세의 파티 구성 표시에 필요한 캐릭터 Snapshot은 별도 공개 요약 또는 제한된 공개 membership 계약으로 명시적으로 분리한다.
+- 비공개 멤버·신청 정보는 해당 방의 현재 멤버 또는 해당 신청자만 읽을 수 있다. 공개 모집의 membership 목록 읽기는 Option 1에 따라 active binding 사용자에게 허용하며, Domain/UI는 표시 Snapshot만 소비한다.
 - 모집 생성은 허용된 생성 Transaction과 Rules만 사용한다. 신청·멤버·회차 쓰기는 실행 앱에 아직 연결하지 않는다.
 - `신청 중` collection group 쿼리는 중첩 경로 규칙이 적용되지 않으므로 `match /{path=**}/applications/{applicantPlayerId}` 재귀 와일드카드 규칙이 반드시 필요하다. 이 규칙은 `list`만 허용하고 `resource.data.applicantPlayerId == currentPlayerId()`로 본인 신청에 한정한다. 단건 조회와 방 멤버의 신청 열람은 기존 중첩 경로 규칙이 계속 담당한다.
 - 모집 단건 `get`은 문서가 없으면 active binding만으로 허용하고, 문서가 있으면 `canReadRecruitment`을 적용한다. `list`는 존재하는 문서만 다루므로 기존 공개·멤버 조건을 유지한다. 생성 Transaction과 상세의 문서 누락 상태가 이 분기를 사용한다.

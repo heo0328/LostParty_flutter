@@ -51,10 +51,40 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
       final composition = await _composition(transaction, knownMembers, replacePlayerId: playerId, replacementClassName: className, replacementRole: role, recruitment: r!);
       if (!composition) return const PartyMembershipResult.failure(PartyMembershipFailure.invalidComposition);
       final now = FieldValue.serverTimestamp();
-      transaction.update(memberRef, PartyMembershipWritePlan.changeCharacter(characterId: command.newCharacterId, characterName: name, className: className, itemLevel: itemLevel, combatPower: command.combatPower, serverTimestamp: now));
+      transaction.update(
+        memberRef,
+        PartyMembershipWritePlan.changeCharacter(
+          characterId: command.newCharacterId,
+          characterName: name,
+          className: className,
+          itemLevel: itemLevel,
+          combatPower: command.combatPower,
+          serverTimestamp: now,
+        ),
+      );
       transaction.delete(oldAssignmentRef);
-      transaction.set(newAssignmentRef, {...oldAssignment.data()!, 'characterId': command.newCharacterId, 'createdAt': now, 'updatedAt': now});
-      transaction.update(recruitmentRef, {'revision': command.expectedRecruitmentRevision + 1, 'updatedAt': now});
+      transaction.set(newAssignmentRef, {
+        ...oldAssignment.data()!,
+        'characterId': command.newCharacterId,
+        'createdAt': now,
+        'updatedAt': now,
+      });
+      if (r['leaderPlayerId'] == playerId) {
+        transaction.update(
+          recruitmentRef,
+          PartyMembershipWritePlan.leaderDisplaySnapshots(
+            characterName: name,
+            className: className,
+            revision: command.expectedRecruitmentRevision,
+            serverTimestamp: now,
+          ),
+        );
+      } else {
+        transaction.update(recruitmentRef, {
+          'revision': command.expectedRecruitmentRevision + 1,
+          'updatedAt': now,
+        });
+      }
       return const PartyMembershipResult.success();
     });
   }
@@ -98,11 +128,43 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
       final characterId = m?['characterId'] as String;
       final role = m?['role'] as String;
       final now = FieldValue.serverTimestamp();
-      transaction.update(recruitmentRef, PartyMembershipWritePlan.removeFromRecruitment(memberPlayerIds: List<String>.from(r?['memberPlayerIds'] as List), targetPlayerId: command.targetPlayerId, memberCount: r?['memberCount'] as int, dealerCount: r?['dealerCount'] as int, supportCount: r?['supportCount'] as int, targetRole: role, maxMemberCount: r?['maxMemberCount'] as int, revision: command.expectedRecruitmentRevision, nextLeaderPlayerId: nextLeader, serverTimestamp: now));
+      String? nextLeaderCharacterName;
+      String? nextLeaderClassName;
+      if (nextLeader != null) {
+        final nextLeaderDoc = await transaction.get(
+          recruitmentRef.collection('members').doc(nextLeader),
+        );
+        final leaderData = nextLeaderDoc.data();
+        nextLeaderCharacterName =
+            leaderData?['characterNameSnapshot'] as String?;
+        nextLeaderClassName = leaderData?['classNameSnapshot'] as String?;
+      }
+      transaction.update(
+        recruitmentRef,
+        PartyMembershipWritePlan.removeFromRecruitment(
+          memberPlayerIds: List<String>.from(r?['memberPlayerIds'] as List),
+          targetPlayerId: command.targetPlayerId,
+          memberCount: r?['memberCount'] as int,
+          dealerCount: r?['dealerCount'] as int,
+          supportCount: r?['supportCount'] as int,
+          targetRole: role,
+          maxMemberCount: r?['maxMemberCount'] as int,
+          revision: command.expectedRecruitmentRevision,
+          nextLeaderPlayerId: nextLeader,
+          nextLeaderCharacterName: nextLeaderCharacterName,
+          nextLeaderClassName: nextLeaderClassName,
+          serverTimestamp: now,
+        ),
+      );
       transaction.delete(targetRef);
-      transaction.delete(_assignment(command.targetPlayerId, characterId, r?['raidId'] as String));
+      transaction.delete(
+        _assignment(command.targetPlayerId, characterId, r?['raidId'] as String),
+      );
       if (nextLeader != null && nextLeader != oldLeader) {
-        transaction.update(recruitmentRef.collection('members').doc(nextLeader), {'canApproveApplications': true, 'updatedAt': now});
+        transaction.update(
+          recruitmentRef.collection('members').doc(nextLeader),
+          {'canApproveApplications': true, 'updatedAt': now},
+        );
       }
       return const PartyMembershipResult.success();
     });
