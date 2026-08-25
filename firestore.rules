@@ -195,6 +195,122 @@ service cloud.firestore {
         && newData.updatedAt == request.time;
     }
 
+    function validMembershipRevisionUpdate(recruitmentId, oldData, newData) {
+      let playerId = currentPlayerId();
+      let memberPath = recruitmentMemberPath(recruitmentId, playerId);
+      let memberBefore = get(memberPath);
+      let memberAfter = getAfter(memberPath);
+      return hasActiveBinding()
+        && oldData.status == 'active'
+        && playerId in oldData.memberPlayerIds
+        && (oldData.leaderPlayerId == playerId
+          || (exists(memberPath)
+            && existsAfter(memberPath)
+            && memberBefore.data.characterId != memberAfter.data.characterId))
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'revision', 'updatedAt'
+        ])
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validRecruitmentMemberRemoval(recruitmentId, oldData, newData) {
+      let playerId = currentPlayerId();
+      let removed = oldData.memberPlayerIds.toSet().difference(
+        newData.memberPlayerIds.toSet()
+      );
+      let actorIsLeader = oldData.leaderPlayerId == playerId;
+      let selfLeave = removed.hasAny([playerId]);
+      let empty = newData.memberCount == 0;
+      return hasActiveBinding()
+        && oldData.status == 'active'
+        && removed.size() == 1
+        && newData.memberPlayerIds.size() == oldData.memberPlayerIds.size() - 1
+        && (selfLeave || (actorIsLeader && !selfLeave))
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'memberPlayerIds', 'memberCount', 'dealerCount', 'supportCount',
+          'leaderPlayerId', 'hasAvailableSlot', 'status',
+          'manualRecruitmentEnabled', 'revision', 'updatedAt'
+        ])
+        && newData.memberCount == oldData.memberCount - 1
+        && ((newData.dealerCount == oldData.dealerCount - 1
+            && newData.supportCount == oldData.supportCount)
+          || (newData.supportCount == oldData.supportCount - 1
+            && newData.dealerCount == oldData.dealerCount))
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time
+        && (empty
+          ? (newData.leaderPlayerId == null
+            && newData.status == 'disbanded'
+            && newData.manualRecruitmentEnabled == false
+            && newData.hasAvailableSlot == false)
+          : (newData.status == oldData.status
+            && newData.manualRecruitmentEnabled
+              == oldData.manualRecruitmentEnabled
+            && newData.hasAvailableSlot == true
+            && newData.leaderPlayerId
+              == (!(oldData.leaderPlayerId in newData.memberPlayerIds)
+                ? newData.memberPlayerIds[0]
+                : oldData.leaderPlayerId)));
+    }
+
+    function validMemberCharacterChange(recruitmentId, playerId, oldData, newData) {
+      let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
+      let oldAssignmentId = oldData.characterId + '_' + recruitment.raidId;
+      let newAssignmentId = newData.characterId + '_' + recruitment.raidId;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'characterId', 'characterNameSnapshot', 'classNameSnapshot',
+          'itemLevelSnapshot', 'combatPowerSnapshot', 'characterChangedAt',
+          'updatedAt'
+        ])
+        && newData.characterId != oldData.characterId
+        && newData.role == oldData.role
+        && newData.partyIndex == oldData.partyIndex
+        && newData.canApproveApplications == oldData.canApproveApplications
+        && ownsActiveCharacter(newData.characterId)
+        && newData.characterChangedAt == request.time
+        && newData.updatedAt == request.time
+        && !existsAfter(assignmentPath(playerId, oldAssignmentId))
+        && getAfter(assignmentPath(playerId, newAssignmentId)).data.characterId
+          == newData.characterId;
+    }
+
+    function validApprovalPermissionChange(recruitmentId, playerId, oldData, newData) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && recruitment.leaderPlayerId == currentPlayerId()
+        && playerId != currentPlayerId()
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'canApproveApplications', 'updatedAt'
+        ])
+        && newData.canApproveApplications is bool
+        && newData.updatedAt == request.time;
+    }
+
+    function validMemberRemoval(recruitmentId, playerId, data) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      let after = getAfter(recruitmentPath(recruitmentId)).data;
+      let assignmentId = data.characterId + '_' + recruitment.raidId;
+      return hasActiveBinding()
+        && (playerId == currentPlayerId()
+          || recruitment.leaderPlayerId == currentPlayerId())
+        && !(playerId in after.memberPlayerIds)
+        && !existsAfter(assignmentPath(playerId, assignmentId));
+    }
+
+    function validAssignmentRemoval(playerId, data) {
+      let recruitment = get(recruitmentPath(data.recruitmentId)).data;
+      let memberPath = recruitmentMemberPath(data.recruitmentId, playerId);
+      let memberAfter = getAfter(memberPath);
+      return hasActiveBinding()
+        && (playerId == currentPlayerId()
+          || recruitment.leaderPlayerId == currentPlayerId())
+        && (!existsAfter(memberPath)
+          || memberAfter.data.characterId != data.characterId);
+    }
+
     function validPendingApplication(recruitmentId, playerId, data) {
       let recruitment = get(recruitmentPath(recruitmentId)).data;
       return hasActiveBinding()
@@ -332,7 +448,8 @@ service cloud.firestore {
           assignmentId,
           request.resource.data
         ) || validJoinedAssignment(playerId, assignmentId, request.resource.data);
-        allow update, delete: if false;
+        allow update: if false;
+        allow delete: if validAssignmentRemoval(playerId, resource.data);
       }
     }
 
@@ -367,10 +484,18 @@ service cloud.firestore {
         request.resource.data
       );
       allow update: if validRecruitmentJoin(
-        recruitmentId,
-        resource.data,
-        request.resource.data
-      );
+          recruitmentId,
+          resource.data,
+          request.resource.data
+        ) || validMembershipRevisionUpdate(
+          recruitmentId,
+          resource.data,
+          request.resource.data
+        ) || validRecruitmentMemberRemoval(
+          recruitmentId,
+          resource.data,
+          request.resource.data
+        );
       allow delete: if false;
 
       match /members/{playerId} {
@@ -385,7 +510,22 @@ service cloud.firestore {
           playerId,
           request.resource.data
         );
-        allow update, delete: if false;
+        allow update: if validMemberCharacterChange(
+            recruitmentId,
+            playerId,
+            resource.data,
+            request.resource.data
+          ) || validApprovalPermissionChange(
+            recruitmentId,
+            playerId,
+            resource.data,
+            request.resource.data
+          );
+        allow delete: if validMemberRemoval(
+          recruitmentId,
+          playerId,
+          resource.data
+        );
       }
 
       match /applications/{playerId} {
