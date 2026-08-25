@@ -1275,3 +1275,17 @@
 - Rules에서 본인의 최초 pending 생성과 `pending -> withdrawn` 허용 필드만 변경하는 형태를 제한했다.
 - 저장 계획·입력 검증 표적 테스트 4개와 `flutter analyze --no-pub`가 통과했다.
 - Firestore Emulator, Rules 배포, 실행 앱 Repository 교체는 수행하지 않았다.
+
+---
+
+## Task-051. Firestore 즉시 가입과 신청 승인·거절
+
+- 작업 브랜치: `codex/firestore-party-join-approval`
+- 즉시 가입, 신청 승인과 거절 명령·Repository 경계·입력 Validator를 추가했다.
+- 즉시 가입은 `directJoin` 모집에서 pending 신청을 만들지 않고 멤버십·확정 참가 점유·모집 인원과 revision을 단일 Transaction으로 갱신한다.
+- 승인은 파티장 권한, pending 신청과 양쪽 revision, Character 소유권, 확정 참가 점유와 최신 파티 배치를 다시 확인한 뒤 신청·멤버십·점유·모집을 함께 갱신한다.
+- 거절은 권한과 revision을 확인한 뒤 pending 신청만 `rejected`로 종료하며 멤버십과 점유를 만들지 않는다.
+- 모집 revision과 Transaction에서 다시 읽은 기존 멤버 문서를 결합해 동시 가입 시 오래된 파티 배치가 저장되지 않도록 했다.
+- Rules에 모집 가입 갱신, 일반 멤버십·점유 생성과 승인자 신청 결정을 허용하는 결합 불변식을 추가했다.
+- 저장 계획·입력 검증 표적 테스트 3개와 `flutter analyze --no-pub`가 통과했다.
+- 실행 앱 Repository 교체, Firestore Emulator, Rules 배포와 외부 유료 서비스 호출은 수행하지 않았다.
