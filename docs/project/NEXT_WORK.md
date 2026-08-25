@@ -5,11 +5,11 @@
 - 통합 기준 브랜치: `main` (`9652231`)
 - 현재 작업 브랜치: `codex/firestore-party-applications` (`main`의 `9652231`에서 시작)
 - 기준 상태: Firebase 초기 연결 설정, Player 식별자 검토, 계정 소유 인증 및 Firebase 파티 제품 흐름이 로컬 `main`에 반영된 상태
-- `main`과 `origin/main`은 `9652231`에서 일치한다.
+- `main`과 `origin/main`은 `cb314fb`에서 일치한다.
 - Firestore 파티 읽기 모델은 커밋 `0d94caf`, 병합 커밋 `7f9976e`으로 반영했다.
 - Spark Firestore 파티 명령 계약은 커밋 `ed93f90`, 병합 커밋 `1295cd6`으로 반영했다.
 - Firestore 파티 생성·파티장 membership·확정 참가 점유는 커밋 `b89ddb1`, 병합 커밋 `9652231`으로 반영했다.
-- 현재 작업 트리에는 승인 대기 신청·본인 철회 Transaction과 Rules·테스트 변경이 남아 있다.
+- 현재 작업 브랜치에는 즉시 가입과 신청 승인·거절 Transaction, Rules와 표적 테스트 변경이 남아 있다.
 - Firebase Player binding과 `GameAccountId`·`CharacterId` 계약·로컬 소유 인증을 구현·검증했다.
 - Firebase 프로젝트 및 플랫폼 연결 설정은 완료됐으며 제품 흐름의 주요 정책은 `../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`에 통합했다.
 - 로컬 Fake 환경에서 제품 흐름과 UI를 검증하기 위해 두었던 Firebase 구현 보류 단계는 종료됐다.
@@ -162,8 +162,8 @@
 
 ## 이후 기능의 잠정 순서
 
-1. 승인 대기 신청과 본인 철회 구현 (현재 작업)
-2. 즉시 가입과 신청 승인·거절 구현
+1. 승인 대기 신청과 본인 철회 구현 (완료)
+2. 즉시 가입과 신청 승인·거절 구현 (현재 작업)
 3. 참가 캐릭터 변경·탈퇴·추방·승인권·책임자 승계
 4. 회차 완료·완료 취소·반복 파티·주차 전환과 Snapshot
 5. 사용자 이벤트와 로컬 히스토리

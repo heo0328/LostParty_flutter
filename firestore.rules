@@ -46,6 +46,21 @@ service cloud.firestore {
         && character.ownerPlayerId == currentPlayerId();
     }
 
+    function ownsActiveCharacterForPlayer(characterId, playerId) {
+      let character = get(characterPath(characterId)).data;
+      return character.status == 'active'
+        && character.ownerPlayerId == playerId;
+    }
+
+    function canApproveApplications(recruitmentId) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      let playerId = currentPlayerId();
+      return recruitment.leaderPlayerId == playerId
+        || (exists(recruitmentMemberPath(recruitmentId, playerId))
+          && get(recruitmentMemberPath(recruitmentId, playerId))
+            .data.canApproveApplications == true);
+    }
+
     function validInitialRecruitment(recruitmentId, data) {
       let playerId = currentPlayerId();
       let member = getAfter(recruitmentMemberPath(recruitmentId, playerId)).data;
@@ -111,6 +126,75 @@ service cloud.firestore {
         && ownsActiveCharacter(data.characterId);
     }
 
+    function validJoinedMembership(recruitmentId, playerId, data) {
+      let before = get(recruitmentPath(recruitmentId)).data;
+      let after = getAfter(recruitmentPath(recruitmentId)).data;
+      let assignmentId = data.characterId + '_' + after.raidId;
+      let directJoin = playerId == currentPlayerId()
+        && before.approvalPolicy.mode == 'directJoin'
+        && data.joinedBy == playerId;
+      let approvedJoin = canApproveApplications(recruitmentId)
+        && data.joinedBy == currentPlayerId();
+      return hasActiveBinding()
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && data.partyIndex >= 0
+        && data.partyIndex < after.partyCount
+        && data.canApproveApplications == false
+        && data.joinedAt == request.time
+        && data.updatedAt == request.time
+        && ownsActiveCharacterForPlayer(data.characterId, playerId)
+        && !(playerId in before.memberPlayerIds)
+        && playerId in after.memberPlayerIds
+        && (directJoin || approvedJoin)
+        && getAfter(assignmentPath(playerId, assignmentId)).data.recruitmentId
+          == recruitmentId;
+    }
+
+    function validJoinedAssignment(playerId, assignmentId, data) {
+      let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
+      let member = getAfter(recruitmentMemberPath(data.recruitmentId, playerId)).data;
+      return hasActiveBinding()
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && assignmentId == data.characterId + '_' + data.raidId
+        && data.cycleKey == recruitment.targetCycleKey
+        && data.raidId == recruitment.raidId
+        && data.characterId == member.characterId
+        && data.role == member.role
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && ownsActiveCharacterForPlayer(data.characterId, playerId)
+        && playerId in recruitment.memberPlayerIds
+        && (playerId == currentPlayerId()
+          || canApproveApplications(data.recruitmentId));
+    }
+
+    function validRecruitmentJoin(recruitmentId, oldData, newData) {
+      let added = newData.memberPlayerIds.toSet().difference(
+        oldData.memberPlayerIds.toSet()
+      );
+      return hasActiveBinding()
+        && oldData.status == 'active'
+        && oldData.manualRecruitmentEnabled == true
+        && oldData.hasAvailableSlot == true
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'memberPlayerIds', 'memberCount', 'dealerCount', 'supportCount',
+          'hasAvailableSlot', 'revision', 'updatedAt'
+        ])
+        && added.size() == 1
+        && newData.memberPlayerIds.size() == oldData.memberPlayerIds.size() + 1
+        && newData.memberCount == oldData.memberCount + 1
+        && newData.dealerCount + newData.supportCount
+          == oldData.dealerCount + oldData.supportCount + 1
+        && newData.memberCount == newData.dealerCount + newData.supportCount
+        && newData.memberCount <= newData.maxMemberCount
+        && newData.hasAvailableSlot
+          == (newData.memberCount < newData.maxMemberCount)
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
     function validPendingApplication(recruitmentId, playerId, data) {
       let recruitment = get(recruitmentPath(recruitmentId)).data;
       return hasActiveBinding()
@@ -143,6 +227,31 @@ service cloud.firestore {
         ])
         && newData.status == 'withdrawn'
         && newData.resolutionReason == 'withdrawnByApplicant'
+        && newData.revision == oldData.revision + 1
+        && newData.decidedAt == request.time
+        && newData.updatedAt == request.time;
+    }
+
+    function validApplicationDecision(recruitmentId, oldData, newData) {
+      let approved = newData.status == 'approved'
+        && newData.approvalCount == oldData.approvalCount + 1
+        && newData.rejectionCount == oldData.rejectionCount
+        && existsAfter(recruitmentMemberPath(
+          recruitmentId,
+          oldData.applicantPlayerId
+        ));
+      let rejected = newData.status == 'rejected'
+        && newData.rejectionCount == oldData.rejectionCount + 1
+        && newData.approvalCount == oldData.approvalCount;
+      return hasActiveBinding()
+        && canApproveApplications(recruitmentId)
+        && oldData.status == 'pending'
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'resolutionReason', 'approvalCount', 'rejectionCount',
+          'revision', 'decidedAt', 'updatedAt'
+        ])
+        && ((approved && newData.resolutionReason == 'approvedByApprover')
+          || (rejected && newData.resolutionReason == 'rejectedByApprover'))
         && newData.revision == oldData.revision + 1
         && newData.decidedAt == request.time
         && newData.updatedAt == request.time;
@@ -218,11 +327,11 @@ service cloud.firestore {
       match /activeRaidAssignments/{assignmentId} {
         allow get: if hasActiveBinding() && playerId == currentPlayerId();
         allow list: if false;
-        allow create: if validInitialAssignment(
+      allow create: if validInitialAssignment(
           playerId,
           assignmentId,
           request.resource.data
-        );
+        ) || validJoinedAssignment(playerId, assignmentId, request.resource.data);
         allow update, delete: if false;
       }
     }
@@ -257,12 +366,21 @@ service cloud.firestore {
         recruitmentId,
         request.resource.data
       );
-      allow update, delete: if false;
+      allow update: if validRecruitmentJoin(
+        recruitmentId,
+        resource.data,
+        request.resource.data
+      );
+      allow delete: if false;
 
       match /members/{playerId} {
         allow get, list: if canReadPrivateRecruitmentData(recruitmentId)
           || (hasActiveBinding() && playerId == currentPlayerId());
         allow create: if validInitialLeaderMembership(
+          recruitmentId,
+          playerId,
+          request.resource.data
+        ) || validJoinedMembership(
           recruitmentId,
           playerId,
           request.resource.data
@@ -280,10 +398,14 @@ service cloud.firestore {
           request.resource.data
         );
         allow update: if validApplicantWithdrawal(
-          playerId,
-          resource.data,
-          request.resource.data
-        );
+            playerId,
+            resource.data,
+            request.resource.data
+          ) || validApplicationDecision(
+            recruitmentId,
+            resource.data,
+            request.resource.data
+          );
         allow delete: if false;
 
         match /votes/{voterPlayerId} {
