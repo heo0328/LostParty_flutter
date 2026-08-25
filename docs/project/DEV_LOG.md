@@ -1289,3 +1289,20 @@
 - Rules에 모집 가입 갱신, 일반 멤버십·점유 생성과 승인자 신청 결정을 허용하는 결합 불변식을 추가했다.
 - 저장 계획·입력 검증 표적 테스트 3개와 `flutter analyze --no-pub`가 통과했다.
 - 실행 앱 Repository 교체, Firestore Emulator, Rules 배포와 외부 유료 서비스 호출은 수행하지 않았다.
+
+---
+
+## Task-052. Firestore 확정 파티원 관리
+
+- 작업 브랜치: `codex/firestore-party-membership-management`
+- 참가 캐릭터 변경, 본인 탈퇴, 책임자 추방과 가입 승인 권한 변경 명령·Repository·입력 Validator를 추가했다.
+- 캐릭터 변경은 역할과 파티 자리를 유지하면서 새 Character 소유권·입장 레벨·점유·같은 파티의 동일 직업 딜러 제한을 재검증하고 기존·신규 점유와 membership을 한 Transaction으로 교체한다.
+- 탈퇴·추방은 membership과 점유를 제거하고 모집 인원·빈자리·revision을 함께 갱신한다.
+- 책임자 탈퇴 시 Transaction으로 유지되는 `memberPlayerIds` 가입 순서의 첫 잔여 멤버에게 책임자와 승인 권한을 승계하며, 마지막 멤버라면 모집을 `disbanded`로 종료한다.
+- 책임자만 다른 현재 멤버의 가입 승인 권한을 부여·회수할 수 있도록 제한했다.
+- 다른 확정 파티 사이의 Character 이동·스왑은 이번 단일 파티 명령 범위에서 분리하되 Spark에서 원천 제외하지 않고, 로컬 예상 결과와 양쪽 파티 서버 Transaction을 결합하는 후속 명령으로 정의했다.
+- 파티 서버 상태는 최종 진실, 로컬 데이터는 표시·후보 계산용 Projection으로 구분하고 목록·알림·상세 진입 시 최신화한 뒤 명령 시 서버가 revision과 조건을 재검증하는 기준을 읽기 계약에 기록했다.
+- Firestore 영속 캐시와 별도 Drift Projection 중 실제 저장 위치, 보존·계정 전환·오프라인 정책은 실행 앱 Repository 전환 전 확정할 후속 설계로 남겼다.
+- Rules에 Character 점유 교체, 멤버 제거, 책임자 승계와 승인 권한 변경의 결합 불변식을 추가했다.
+- 저장 계획·입력 검증 표적 테스트 5개와 `flutter analyze --no-pub`가 통과했다.
+- 실행 앱 Repository 교체, Firestore Emulator, Rules 배포와 외부 유료 서비스 호출은 수행하지 않았다.

@@ -355,7 +355,7 @@ Player binding의 계약·구현·Rules 배포와 실기기 검증을 완료했�
 - 일정 확인 기능은 기획 확정 전까지 Domain 코드는 유지하고 앱 UI 및 런타임 차단에서 숨김
 - 관련 사용자 실기기 테스트 통과
 - 바드 카탈로그 기반 계열 및 역할 감지 구현 완료
-- 현재 Firebase 명령 작업 브랜치는 `codex/firestore-party-join-approval`이며 즉시 가입과 신청 승인·거절을 구현·검증 중
+- 현재 Firebase 명령 작업 브랜치는 `codex/firestore-party-membership-management`이며 참가 캐릭터 변경·탈퇴·추방·승인권·책임자 승계를 구현·검증 중
 - 다음 채팅은 `docs/project/NEXT_WORK.md`를 먼저 확인하고 현재 기능 브랜치와 최신 `main` 상태를 대조해 이어서 진행
 - 제품 방향을 레이드 정적 카탈로그와 서버 기반 파티 모집/그룹 흐름으로 전환
 - 카탈로그 파티 기준을 사용하는 모집 조건과 가입 승인 정책 Domain 구현 완료

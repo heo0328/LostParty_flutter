@@ -158,6 +158,15 @@ PartyReadRepository
 - Firestore 로컬 캐시 snapshot은 정상 목록으로 제공하되 `isFromCache`를 읽기 상태에 함께 전달해 UI가 오프라인 안내를 표시할 수 있게 한다.
 - 기존 성공 목록이 있는 상태에서 후속 stream 오류가 발생하면 목록을 즉시 지우지 않고 오류 상태를 함께 표시한다.
 
+### 7.1 로컬 Projection과 최신화 기준
+
+- 파티 Current State의 최종 진실 공급원은 Firestore이며 로컬 데이터는 목록 표시, 후보 계산과 예상 결과 안내를 위한 Projection이다.
+- 모집 목록 조회, 신청·가입·승인 결과 수신, 관련 알림 진입과 파티 상세 진입 시 서버 snapshot을 받아 로컬 Projection을 최신화한다.
+- 내가 확정 가입한 파티의 캐릭터 변경·이동·스왑 후보는 마지막으로 최신화된 로컬 Projection을 기반으로 계산한다.
+- 사용자가 명령을 확정하면 로컬 판정을 최종 권한으로 사용하지 않는다. 서버 Transaction이 관련 파티 revision과 조건을 다시 읽고 검증하며, 충돌하면 어떤 파티도 일부 변경하지 않고 최신 snapshot을 다시 동기화한다.
+- 알림은 최신화 계기일 뿐 데이터 변경의 단일 진실 공급원이 아니다. 알림을 놓쳐도 화면 진입과 stream 재연결로 복구할 수 있어야 한다.
+- Firestore SDK 영속 캐시만 사용할지 Drift에 별도 파티 Projection을 저장할지, 캐시 보존 기간·삭제·계정 전환·오프라인 명령 정책은 실행 앱 Repository 전환 전에 별도 설계로 확정한다.
+
 ## 8. Security Rules 원칙
 
 - 모든 조회는 유효한 `AuthUid -> PlayerId` binding을 요구한다.

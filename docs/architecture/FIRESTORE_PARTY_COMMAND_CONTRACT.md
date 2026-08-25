@@ -154,6 +154,30 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 - 신청을 `approved`로 변경하고 membership·확정 점유를 생성하며 모집 인원·파생 필드·revision을 갱신한다.
 - 점유 문서 생성 경쟁에서 신 승인만 성공하고 나머지는 `participationConflict`로 실패한다.
 
+### 4.7 확정 파티원 관리
+
+#### 참가 캐릭터 변경
+
+- 현재 멤버 본인만 자기 소유 Character로 변경할 수 있다.
+- 역할과 `partyIndex`는 유지하고 새 Character의 소유권, 입장 레벨, 확정 점유와 현재 파티의 동일 직업 딜러 제한을 다시 검증한다.
+- 기존 확정 점유 삭제, 새 확정 점유 생성, membership Character Snapshot과 모집 revision 갱신을 한 Transaction으로 처리한다.
+- 다른 확정 파티에 참가 중인 Character의 이동·스왑은 로컬 최신 Projection으로 결과를 미리 계산하되, 양쪽 모집·membership·점유와 revision을 서버 Transaction에서 다시 검증하는 별도 후속 명령으로 구현한다.
+- 완전 스왑 조건을 만족하지 못해 한쪽 파티 탈퇴가 동반되는 경우 예상 결과를 먼저 표시하고 사용자가 명시적으로 확인한 때에만 실행한다.
+- 이 후속 명령은 Spark에서 원천 제외하지 않는다. Rules로 결합 불변식을 안전하게 강제할 수 있는지 기능 설계와 함께 검증한다.
+
+#### 탈퇴와 추방
+
+- 일반 참가자는 본인만 탈퇴할 수 있고 현재 책임자만 다른 참가자를 추방할 수 있다.
+- membership과 확정 점유를 삭제하고 모집의 멤버 목록·역할별 인원·빈자리·revision을 함께 갱신한다.
+- 책임자가 탈퇴하면 Transaction으로 직렬화된 `memberPlayerIds` 가입 순서의 첫 잔여 Player에게 책임자를 승계하고 가입 승인 권한을 부여한다.
+- 마지막 책임자가 탈퇴하면 모집을 삭제하지 않고 `disbanded`로 종료하며 수동 모집을 비활성화한다.
+
+#### 가입 승인 권한
+
+- 현재 책임자만 다른 현재 멤버의 `canApproveApplications`를 부여하거나 회수할 수 있다.
+- 책임자 자신의 고유 승인 권한은 이 명령으로 회수할 수 없다.
+- membership 권한과 모집 revision을 같은 Transaction에서 갱신한다.
+
 ## 5. Security Rules 보장 범위
 
 Rules는 적어도 다음을 `getAfter()`를 포함해 검증해야 한다.
@@ -208,7 +232,8 @@ unknown
 2. 승인 대기 신청과 본인 철회
 3. 즉시 가입
 4. 신청 승인·거절
-5. 제목·조건·승인 방식·모집 활성 수정
-6. 실행 앱을 Firestore 읽기·쓰기 Repository로 전환
+5. 참가 캐릭터 변경·탈퇴·추방·승인권·책임자 승계
+6. 제목·조건·승인 방식·모집 활성 수정
+7. 실행 앱을 Firestore 읽기·쓰기 Repository로 전환
 
 각 단위는 해당 명령의 Rules, 동시 Transaction 테스트, 오류 UI와 로컬 Domain 회귀 테스트를 함께 마감한다.
