@@ -443,4 +443,6 @@ Player binding의 계약·구현·Rules 배포와 실기기 검증을 완료했�
 - 읽기 모델은 커밋 `0d94caf`, 병합 커밋 `7f9976e`으로 `main`에 반영했다.
 - 현재 브랜치는 `codex/firebase-party-commands-contract`이다. 별도 지시 전까지 Firebase와 다른 외부 서비스의 유료 플랜·결제수단·과금 가능 기능을 사용하지 않는다.
 - 파티 명령은 Spark의 Firestore 클라이언트 Transaction과 Security Rules를 기준으로 한다. Callable Functions와 서버 전용 검증은 보류한다.
+- 명령 계약은 커밋 `ed93f90`, 병합 커밋 `1295cd6`으로 `main`에 반영했다.
+- 현재 `codex/firestore-party-create` 브랜치에 Firestore 파티 생성·파티장 membership·확정 참가 점유 원자 Transaction을 구현했다. 실행 앱의 로컬 Repository는 아직 교체하지 않았다.
 - 다음 설계부터 비용 제약, 검증 목적, 실패 시 중단 기준을 구현 전에 확인하고 목적 없는 전체 테스트나 에뮬레이터 반복을 피한다.

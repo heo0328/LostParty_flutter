@@ -1249,3 +1249,16 @@
 - `FIRESTORE_PARTY_COMMAND_CONTRACT.md`에 파티 생성·수정·신청·철회·즉시 가입·승인·거절의 클라이언트 Transaction, Rules, 점유, revision, 오류·재시도 계약을 정의했다.
 - Spark에서 Rules로 충분히 강제하기 어려운 레이드·난이도 수정은 초기 서버 전환 범위에서 제외하고 `unsupportedOnSpark`로 구분한다.
 - Firestore Emulator, Rules 배포, 유료 서비스 호출은 수행하지 않았다.
+
+---
+
+## Task-049. Firestore 파티 생성과 확정 참가 점유
+
+- 작업 브랜치: `codex/firestore-party-create`
+- 파티 생성 명령과 오류 계약, Repository 경계, 입력 Validator를 추가했다.
+- active binding에서 PlayerId를 확정하고 서버 Character의 active 소유권·입장 레벨을 다시 검증한다.
+- `recruitments/{id}`, `members/{leaderPlayerId}`, `activeRaidAssignments/{characterId_raidId}`를 한 Firestore Transaction에서 생성한다.
+- 모집 ID 중복과 기존 확정 참가 점유를 저장 전에 차단하고 Firebase 권한·일시 오류를 Domain 실패로 변환한다.
+- Rules에서 파티장 membership과 점유가 함께 생성되고 Character 소유권·파생 필드가 일치하는 초기 생성 형태만 허용하는 초안을 추가했다.
+- 저장 계획과 입력 검증 표적 테스트 5개, `flutter analyze --no-pub`가 통과했다.
+- Firestore Emulator, Rules 배포, 실행 앱 Repository 교체는 수행하지 않았다.
