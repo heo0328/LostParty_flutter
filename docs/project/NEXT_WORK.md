@@ -7,13 +7,17 @@
 ## 현재 기준 상태
 
 - 통합 대상: 최신 `main`
-- 완료 기능 브랜치: `codex/party-events-local-history`
+- 작업 브랜치: `cursor/character-summary-sync`
 - Task-050~054의 Firestore 명령·Rules·Snapshot·Player 이벤트·Drift 로컬 히스토리 기반 구현을 완료했다.
-- Task-054 검증: 로컬 DB·이벤트·회차 저장 계획 테스트 30개, `flutter analyze --no-pub`, `git diff --check` 통과
-- Firestore Emulator, 신규 Rules 배포, FCM, TTL 배포와 유료 서비스 호출은 수행하지 않았다.
-- 실행 앱은 아직 `lib/app/router/app_router.dart`에서 `InMemoryRecruitmentStateRepository`를 생성한다.
-- Firestore Repository와 `FirestorePartyEventSyncService`는 앱 런타임 및 최종 화면에 연결되지 않았다.
-- `레이드 현황`의 `진행 중 / 신청 중 / 완료 기록`은 최소 빈 화면이다.
+- Task-056~058에서 레이드 현황 읽기·목록 UX·읽기 전용 상세 진입을 완료했다.
+- Task-059 모집 생성 Firestore 전환을 완료했고 Android 실기기에서 확인했다.
+  - 실행 앱의 `RecruitmentCreatePage`는 `FirestorePartyCreateRepository`를 사용한다.
+  - 파티장 캐릭터는 게임 계정 인증의 `serverCharacterId`가 있을 때만 명령을 보낸다.
+  - 인증된 캐릭터로 만든 방은 `레이드 현황 > 진행 중`에 나타나고, 카드에서 `/raid-status/{id}` 읽기 전용 상세로 들어간다.
+  - 상세에는 수정 화면이 아직 적용되지 않았다는 안내가 표시된다.
+  - 신규 모집 ID `get`이 문서 부재에서 거부되지 않도록 단건 읽기 Rules를 보완해 `lost-party`에 배포했다.
+  - 모집 목록·신청·승인·멤버·회차와 Fake 상세는 여전히 `InMemoryRecruitmentStateRepository`다. 로컬 Fake로 만든 방은 Firestore 현황에 나타나지 않는다.
+- Firestore Emulator, FCM, TTL 배포와 유료 서비스 호출은 수행하지 않았다.
 
 ## 확정된 협업 역할
 
@@ -23,40 +27,39 @@
 - 구현 중 계약 변경이 필요하면 Cursor가 임의 확장하지 않고 영향과 제안을 문서에 먼저 기록한다.
 - 완료 시 코드, 테스트, 문서와 실제 Git 상태를 함께 갱신한다.
 
-## Cursor 다음 작업: 실행 앱 Firebase 전환 1단계
+## 다음 작업 설계 대상: 인증 캐릭터 최소 정보 자동 동기화
+
+모집 생성과 신청 명령은 서버 Character Snapshot의 아이템 레벨을 최종 조건으로 사용한다. 인증 이후 로컬에서 최신 정보를 조회해도 서버 Character가 갱신되지 않으면 실제 조건을 만족한 캐릭터가 명령에서 거절될 수 있다. 신청·철회 실행 앱 전환 전에 이 동기화 경계를 먼저 구현한다.
+
+### 설계 시 고정된 런타임 사실
+
+- Drift에는 게임 계정과 원정대 Character 기본 정보가 있으며 대표 캐릭터명으로 siblings를 다시 조회할 수 있다.
+- 인증된 로컬 Character에는 서버가 발급한 `serverCharacterId`가 연결돼 있다.
+- 모집 생성 Transaction은 서버 Character의 아이템 레벨을 검증하므로 로컬 값만 최신이어서는 충분하지 않다.
+- 캐릭터명은 변경 가능한 표시 정보이며 서버 동기화 대상 식별은 `serverCharacterId`로 한다.
+- Lost Ark API 토큰은 기기의 secure storage에만 두고 원문을 서버·로그·문서 예시에 남기지 않는다.
 
 ### 목표
 
-실행 앱에서 Firebase 파티 읽기와 Player 이벤트 로컬 동기화를 사용할 Composition Root를 구성하고, `레이드 현황` 세 내부 페이지가 실제 읽기 상태를 표현할 기반을 만든다.
+`내 계정` 진입 시 제한된 주기로 원정대 최소 정보를 조회하고, 바뀐 Character 요약만 Drift와 인증된 서버 Character에 반영한다. 별도 `서버에 저장` 버튼은 만들지 않고 기존 수동 새로고침도 유지한다.
 
 ### 우선 확인 파일
 
-- `lib/app/router/app_router.dart`
-- `lib/features/raid_status/presentation/pages/raid_status_page.dart`
-- `lib/features/recruitment_list/data/repositories/firestore_party_read_repository.dart`
-- `lib/features/recruitment_list/domain/repositories/party_read_repository.dart`
-- `lib/features/raid_status/data/services/firestore_party_event_sync_service.dart`
-- `lib/features/account/data/local/account_database.dart`
-- `docs/architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`
-- `docs/architecture/FIRESTORE_PARTY_EVENT_CONTRACT.md`
+- 내 계정 화면 진입과 현재 원정대 새로고침 ViewModel·Repository
+- Lost Ark siblings 응답의 최소 Character 요약 Mapper
+- Drift `game_accounts`, `account_characters` 갱신 경계
+- 게임 계정 인증 후 서버 Character 동기화 Gateway·Repository와 Rules
+- `docs/architecture/GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT.md`
 
 ### 포함 범위
 
-1. Composition Root에서 `FirebaseFirestore`, `FirebaseAuth`, `AccountDatabase`를 재사용해 읽기 Repository와 이벤트 동기화 서비스를 구성한다.
-2. 기존 Fake 모집 UI를 즉시 전부 제거하지 않고 Firebase 전환 경계를 분리한다.
-3. Player binding 완료 후와 `레이드 현황` 진입 시 이벤트 동기화를 멱등 실행한다.
-4. `진행 중`은 `watchActiveRaids`, `신청 중`은 `watchApplications`, `완료 기록`은 Drift `raidHistoryEntries`를 읽는 ViewModel/표현 모델 경계를 만든다.
-5. loading, 빈 상태, `isFromCache`, 기존 성공 데이터가 있는 후속 오류를 읽기 계약대로 구분한다.
-6. 로그인·binding 준비 전에는 Player 전용 쿼리를 시작하지 않는다.
-
-### 로컬 Projection 최소 정책
-
-- 서버 파티 Current State가 최종 진실이며 로컬은 표시·후보 계산용 Projection이다.
-- Firestore SDK 캐시를 1차 파티 Projection으로 사용하고 완료 히스토리만 Drift에 영속 저장한다.
-- 별도 파티 Current State Drift 복제는 이번 단계에서 추가하지 않는다.
-- 목록·상세·알림 진입과 stream 재연결이 최신화 계기다.
-- 오프라인 서버 명령을 로컬 큐에 적재하지 않는다. 연결 회복과 최신 revision 확인 후 다시 실행한다.
-- Auth Player가 바뀌면 이전 Player의 메모리 Projection과 구독을 폐기하고 로컬 히스토리는 `playerId`로 분리한다.
+1. `내 계정`은 기존 Drift 데이터를 먼저 표시하고 백그라운드에서 원정대 최소 정보를 조회한다. 화면 진입을 네트워크 완료까지 막지 않는다.
+2. 자동 조회에는 마지막 성공 시각 기준 6~24시간의 제한을 두고, 구체적인 기본 간격은 구현 전 기존 새로고침 정책과 API 사용량을 대조해 확정한다.
+3. 비교 필드는 캐릭터명·아이템 레벨·캐릭터 레벨로 제한한다. 값이 바뀐 Character만 Drift에 반영하고, `serverCharacterId`가 있는 active 소유 Character만 서버에도 갱신한다.
+4. 변경이 없으면 Drift·Firestore 쓰기를 생략한다. 늦게 도착한 조회가 더 최신 Snapshot을 덮지 않도록 `lastSummaryFetchedAt`을 비교한다.
+5. 자동 조회 실패 시 기존 데이터를 유지한다. 수동 새로고침은 제한 시간과 관계없이 다시 시도할 수 있게 유지한다.
+6. API 조회는 성공했지만 서버 반영이 실패하면 로컬 성공으로 숨기지 않고 서버 미반영 상태와 재시도 동작을 안내한다.
+7. 모집 생성에서 서버 Character 정보가 오래됐거나 레벨 조건에 미달하면 자동 API 호출을 강제하지 않고 `내 계정 정보 새로고침` 안내와 재시도 경계를 제공한다.
 
 ### 제외 범위
 
@@ -64,28 +67,33 @@
 - Firestore TTL 정책 배포
 - Cloud Functions, Blaze 전환과 결제수단 연결
 - Firestore Emulator 실행
-- 다중 파티 캐릭터 이동·스왑 명령
-- 전체 쓰기 UI의 한 번에 전환
+- 앱 실행·화면 재진입마다 제한 없는 Lost Ark API 조회
+- 전체 캐릭터 종합 상세 API 자동 조회와 장비·세팅 Snapshot 갱신
+- 서버에 저장하는 별도 사용자 버튼
+- 이름만으로 서버 Character를 찾거나 다른 `serverCharacterId`로 재매핑하는 동작
+- API에서 사라진 Character의 자동 삭제·자동 병합
+- 신청·철회 명령의 실행 앱 전환
+- 승인·즉시 가입·멤버·회차 명령 전환
 - 대규모 UI 개편
 
 ### 완료 조건
 
-- Composition Root가 중복 DB/Firebase 인스턴스를 만들지 않는다.
-- 세 페이지의 loading·빈 상태·데이터·오프라인·오류 경계를 Widget 또는 ViewModel 테스트로 검증한다.
-- 이벤트 재동기화가 기록을 중복 생성하지 않고 hidden·local override를 유지한다.
-- Fake 기반 기존 모집 흐름의 회귀 범위가 명확하고 관련 표적 테스트가 통과한다.
+- 변경된 최소 요약이 Drift와 동일한 `serverCharacterId`의 서버 Character에 반영되고, 변경이 없을 때 쓰기가 발생하지 않는다.
+- 화면 진입 자동 조회 제한, 수동 새로고침, 부분 실패와 재시도 상태가 표적 테스트로 검증된다.
+- 조회 실패와 서버 반영 실패가 기존 유효 데이터를 삭제하거나 성공으로 오인시키지 않는다.
+- 모집 생성의 오래된 서버 정보 안내 경계가 검증된다.
 - `flutter analyze --no-pub`와 변경 범위 표적 테스트가 통과한다.
 - 실행 화면이 바뀌면 Android 실기기 체크리스트를 제공하고 사용자가 직접 확인한다.
-- 구현 파일, 검증 결과, 미연결 명령과 다음 전환 단위를 문서에 기록한다.
+- 동기화 간격과 최종 Rules 보장 범위를 문서에 기록한다.
 
 ## 후속 순서
 
-1. 실행 앱 Firebase 읽기·이벤트 동기화 전환 1단계
-2. 레이드 현황 실제 목록·상세와 로컬 완료 기록 UX
-3. 모집·신청·승인·멤버·회차 명령의 실행 앱 Repository 전환
-4. 캐릭터 이동·스왑 예상 결과와 다중 파티 Transaction 설계
-5. 그룹과 그룹 전용 모집
-6. 유료 기능은 사용자가 비용과 필요성을 별도로 승인한 경우에만 재설계
+1. 인증 캐릭터 최소 정보 자동 동기화
+2. 신청·철회 명령의 실행 앱 전환
+3. 즉시 가입·승인·거절
+4. 멤버·회차 명령
+5. 캐릭터 이동·스왑 예상 결과와 다중 파티 Transaction 설계
+6. 그룹과 그룹 전용 모집
 
 ## 지속 운영 제약
 
@@ -93,6 +101,7 @@
 - Emulator Suite는 사용하지 않는다. 필요하면 목적·발견할 실패·종료 조건을 제시하고 명시적 승인을 받는다.
 - 실기기 흐름을 대신하기 위한 무의미한 전체 테스트 반복을 하지 않는다.
 - AuthUid, API 토큰과 민감한 식별자를 UI·로그·문서 예시에 노출하지 않는다.
+- Android Drift(`sqlite3` native assets) 빌드 산출물을 임의로 삭제하지 않는다. 정리 후엔 전체 재설치(`flutter run`)가 필요하다.
 
 ## 참고 문서
 
@@ -103,4 +112,6 @@
 - `../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`
 - `../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`
 - `../architecture/FIRESTORE_PARTY_EVENT_CONTRACT.md`
+- `../architecture/GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT.md`
+- `../architecture/GAME_ACCOUNT_VERIFICATION_CONTRACT.md`
 - `../product/PARTY_PARTICIPATION_RULES.md`

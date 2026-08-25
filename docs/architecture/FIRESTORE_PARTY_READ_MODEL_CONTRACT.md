@@ -4,7 +4,7 @@
 
 이 문서는 `레이드 모집`, `레이드 현황 > 진행 중`, `레이드 현황 > 신청 중`에 필요한 Firestore 읽기 계약을 정의한다.
 
-이 작업은 읽기 전용 DTO·Mapper·Repository 경계까지 다룬다. 파티 생성·수정·신청·철회·승인 쓰기는 Callable Function과 Transaction 계약이 완료될 때까지 기존 로컬 Domain과 Fake Repository를 유지한다. 실행 앱의 `레이드 모집` 목록을 Firestore로 교체하지 않는다.
+이 작업은 읽기 전용 DTO·Mapper·Repository 경계까지 다룬다. 실행 앱 쓰기 전환 상태는 `FIRESTORE_PARTY_COMMAND_CONTRACT.md` §9를 따른다. 모집 생성은 Firestore 명령으로 연결됐으며, 신청·승인·멤버·회차와 `레이드 모집` 목록은 아직 Fake다.
 
 `완료 기록`은 개인 로컬 기록이 단일 기준이므로 이 계약의 Firestore 목록 쿼리에 포함하지 않는다.
 
@@ -144,6 +144,8 @@ PartyReadRepository
   watchRecruitment(recruitmentId)
 ```
 
+- `watchRecruitment`은 `PartyReadDetailSnapshot`을 반환한다. 문서 누락은 `item == null`이고, 캐시 여부는 목록과 같이 `isFromCache`로 전달한다. 누락을 권한 오류와 구분하려면 존재하지 않는 모집의 단건 `get`이 active binding만으로 허용되어야 한다.
+- `레이드 현황`의 진행 중·신청 중 목록은 `/raid-status/:recruitmentId` 읽기 전용 상세로 들어가며, Fake 쓰기 `RecruitmentDetailPage`와 경로·데이터를 섞지 않는다.
 - Domain Entity는 Firestore 타입을 import하지 않는다.
 - Firestore Timestamp·DocumentSnapshot 변환은 data 계층에서 종료한다.
 - 문서 누락은 상세 조회에서 `null`, 목록에서 제외로 처리한다.
@@ -156,6 +158,7 @@ PartyReadRepository
 - 첫 snapshot이 빈 목록이면 빈 상태로 표시한다.
 - `permission-denied`는 세션 또는 권한 준비 오류, `unavailable`은 일시적 연결 오류, Mapper 실패는 데이터 계약 오류로 구분한다.
 - Firestore 로컬 캐시 snapshot은 정상 목록으로 제공하되 `isFromCache`를 읽기 상태에 함께 전달해 UI가 오프라인 안내를 표시할 수 있게 한다.
+- `isFromCache`를 UI에 노출하므로 모든 읽기 stream은 `snapshots(includeMetadataChanges: true)`로 구독한다. 목록이 비어 있으면 캐시에서 서버로 바뀔 때 문서 집합이 동일해 메타데이터 변화만 발생하고, 이 옵션이 없으면 오프라인 안내가 사라지지 않는다.
 - 기존 성공 목록이 있는 상태에서 후속 stream 오류가 발생하면 목록을 즉시 지우지 않고 오류 상태를 함께 표시한다.
 
 ### 7.1 로컬 Projection과 최신화 기준
@@ -173,17 +176,19 @@ PartyReadRepository
 - `public` 모집은 로그인된 사용자가 계약된 공개 쿼리로 목록·상세를 읽을 수 있다.
 - `groupOnly` 모집은 해당 그룹 멤버만 읽을 수 있다. 그룹 멤버십 계약 전에는 실행 앱에 연결하지 않는다.
 - 비공개 멤버·신청 정보는 해당 방의 현재 멤버 또는 해당 신청자만 읽을 수 있다.
-- 클라이언트의 파티·멤버·신청 직접 create·update·delete는 모두 금지한다.
+- 모집 생성은 허용된 생성 Transaction과 Rules만 사용한다. 신청·멤버·회차 쓰기는 실행 앱에 아직 연결하지 않는다.
+- `신청 중` collection group 쿼리는 중첩 경로 규칙이 적용되지 않으므로 `match /{path=**}/applications/{applicantPlayerId}` 재귀 와일드카드 규칙이 반드시 필요하다. 이 규칙은 `list`만 허용하고 `resource.data.applicantPlayerId == currentPlayerId()`로 본인 신청에 한정한다. 단건 조회와 방 멤버의 신청 열람은 기존 중첩 경로 규칙이 계속 담당한다.
+- 모집 단건 `get`은 문서가 없으면 active binding만으로 허용하고, 문서가 있으면 `canReadRecruitment`을 적용한다. `list`는 존재하는 문서만 다루므로 기존 공개·멤버 조건을 유지한다. 생성 Transaction과 상세의 문서 누락 상태가 이 분기를 사용한다.
 - Rules와 쿼리는 Emulator Suite에서 공개 목록, 자기 멤버십, 자기 신청, 타인 비공개 데이터 차단을 같이 검증한 후 배포한다.
 
 ## 9. 필요 인덱스
 
-- `recruitments`: `visibility, status, manualRecruitmentEnabled, hasAvailableSlot, targetCycleKey, updatedAt desc`
-- `recruitments`: `leaderPlayerId, status, updatedAt desc`
-- `recruitments`: `memberPlayerIds array-contains, status, updatedAt desc`
-- `applications` collection group: `applicantPlayerId, cycleKey, updatedAt desc`
+- `recruitments`: `visibility, status, manualRecruitmentEnabled, hasAvailableSlot, targetCycleKey, schemaVersion, updatedAt desc`
+- `recruitments`: `leaderPlayerId, status, schemaVersion`
+- `recruitments`: `memberPlayerIds array-contains, status, schemaVersion`
+- `applications` collection group: `applicantPlayerId, cycleKey, schemaVersion, updatedAt desc`
 
-인덱스는 실제 Repository 쿼리와 동일한 필드·정렬 순서로 `firestore.indexes.json`에 반영한다.
+인덱스는 실제 Repository 쿼리와 동일한 필드·정렬 순서로 `firestore.indexes.json`에 반영한다. 위 4개 복합 인덱스는 `lost-party`에 배포되어 있다.
 
 ## 10. 전환 조건
 

@@ -17,7 +17,15 @@ import '../../features/account/presentation/pages/game_account_verification_page
 import '../../features/account/domain/entities/local_game_account.dart';
 import '../../features/account/domain/repositories/account_ownership_status_gateway.dart';
 import '../../features/account/domain/repositories/game_account_verification_gateway.dart';
+import '../../features/player/domain/entities/player_session.dart';
+import '../../features/raid_status/data/services/firestore_party_event_sync_service.dart';
+import '../../features/raid_status/domain/services/party_event_sync_service.dart';
+import '../../features/raid_status/presentation/pages/party_read_detail_page.dart';
 import '../../features/raid_status/presentation/pages/raid_status_page.dart';
+import '../../features/recruitment_list/data/repositories/firestore_party_create_repository.dart';
+import '../../features/recruitment_list/data/repositories/firestore_party_read_repository.dart';
+import '../../features/recruitment_list/domain/repositories/party_read_repository.dart';
+import '../../features/recruitment_list/domain/policies/party_cycle_policy.dart';
 import '../../features/recruitment_list/presentation/pages/recruitment_list_page.dart';
 import '../../features/recruitment_list/presentation/pages/recruitment_create_page.dart';
 import '../../features/recruitment_list/presentation/pages/recruitment_detail_page.dart';
@@ -47,9 +55,23 @@ final _settingsNavigatorKey = GlobalKey<NavigatorState>();
 
 GoRouter createAppRouter({
   required AccountDatabase accountDatabase,
+  required PlayerSession playerSession,
   AccountOwnershipStatusGateway? ownershipStatusGateway,
   GameAccountVerificationGateway? gameAccountVerificationGateway,
+  PartyReadRepository? partyReadRepository,
+  PartyEventSyncService? partyEventSyncService,
 }) {
+  final partyReadRepositoryOrDefault =
+      partyReadRepository ??
+      FirestorePartyReadRepository(firestore: FirebaseFirestore.instance);
+  final partyEventSyncServiceOrDefault =
+      partyEventSyncService ??
+      FirestorePartyEventSyncService(
+        firestore: FirebaseFirestore.instance,
+        firebaseAuth: FirebaseAuth.instance,
+        database: accountDatabase,
+      );
+  final currentCycleKey = const PartyCyclePolicy().keyFor(DateTime.now());
   final apiTokenStore = SecureApiTokenStore();
   final apiClient = LostArkApiClient(apiTokenStore: apiTokenStore);
   final gameCatalogRepository = GameCatalogRepositoryImpl(
@@ -137,7 +159,23 @@ GoRouter createAppRouter({
             routes: [
               GoRoute(
                 path: '/raid-status',
-                builder: (context, state) => const RaidStatusPage(),
+                builder: (context, state) => RaidStatusPage(
+                  partyReadRepository: partyReadRepositoryOrDefault,
+                  accountDatabase: accountDatabase,
+                  eventSyncService: partyEventSyncServiceOrDefault,
+                  playerId: playerSession.playerId,
+                  cycleKey: currentCycleKey,
+                  raidCatalogRepository: raidCatalogRepository,
+                ),
+                routes: [
+                  GoRoute(
+                    path: ':recruitmentId',
+                    builder: (context, state) => PartyReadDetailPage(
+                      recruitmentId: state.pathParameters['recruitmentId']!,
+                      partyReadRepository: partyReadRepositoryOrDefault,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -191,6 +229,15 @@ GoRouter createAppRouter({
                       catalogRepository: raidCatalogRepository,
                       commandService: recruitmentCommandService,
                       candidateService: recruitmentLeaderCandidateService,
+                      partyCreateRepository: FirestorePartyCreateRepository(
+                        firestore: FirebaseFirestore.instance,
+                        firebaseAuth: FirebaseAuth.instance,
+                      ),
+                      newRecruitmentId: () => FirebaseFirestore.instance
+                          .collection('recruitments')
+                          .doc()
+                          .id,
+                      cycleKey: currentCycleKey,
                     ),
                   ),
                   GoRoute(

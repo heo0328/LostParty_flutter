@@ -1344,3 +1344,56 @@
 - 다음 작업의 목표, 확인 파일, 포함·제외 범위, 로컬 Projection 최소 정책과 완료 조건을 명시했다.
 - `AI_CONTEXT.md`의 현재 인계 기준을 과거 인계 기록보다 우선하도록 분리하고 오래된 현재 브랜치 표현을 과거 이력으로 정정했다.
 - 문서 색인에 Firestore 읽기·명령·이벤트 계약을 추가했다.
+
+---
+
+## Task-056. 실행 앱 Firebase 읽기·이벤트 동기화 전환 1단계
+
+- 작업 브랜치: `cursor/firebase-runtime-stage1`
+- `AppBootstrap`을 제네릭화하고 `initializeAppServices`가 `PlayerSession`을 반환하도록 바꿔 Composition Root에 PlayerId를 전달했다.
+- `FirestorePartyReadRepository`와 `PartyEventSyncService`를 레이드 현황에 연결하고, 테스트용 Fake 주입 경계를 유지했다.
+- `진행 중`은 `watchActiveRaids`, `신청 중`은 `watchApplications`, `완료 기록`은 Drift `loadRaidHistory` + 멱등 이벤트 동기화 ViewModel로 구성했다.
+- loading·빈 상태·캐시·오류·로컬 조회 실패를 구분해 표시하고, 로컬 DB 실패 시 동기화를 생략한다.
+- Android에서 `libsqlite3.so`(native assets) 누락으로 완료 기록이 실패하던 문제를 전체 재설치로 해소했다.
+- 표적 ViewModel/Widget 테스트와 Android 실기기 세 탭 검증을 통과했다.
+- Fake 기반 모집·신청 쓰기 UI와 명령 Repository 실행 앱 전환, Emulator, FCM, TTL 배포는 범위 밖이다.
+
+---
+
+## Task-057. 레이드 현황 목록·완료 기록 UX와 읽기 규칙 보강
+
+- 작업 브랜치: `cursor/firebase-runtime-stage1`
+- `진행 중` 카드를 레이드·난이도·관문, KST 시작 일정, 인원/남은 자리, 최소 조건 중심으로 표시한다. 시작 시각이 없으면 `시작 시간 미정`이다.
+- `신청 중`은 `승인 대기`와 `최근 처리 결과`를 나누고, `superseded` + `recruitmentClosed`는 거절과 구분해 안내한다.
+- `완료 기록`에 카탈로그 표시명, 숨김·로컬 정정 메뉴, `숨긴 기록 보기` 토글을 연결했다. 숨김·정정은 Drift에만 남고 재동기화해도 유지된다.
+- 빈 목록에서 오프라인 안내가 풀리지 않던 문제를 `snapshots(includeMetadataChanges: true)`로 수정했다.
+- `신청 중` collection group 쿼리가 중첩 경로 규칙만으로는 거부되던 문제를 `match /{path=**}/applications/{applicantPlayerId}` `list` 규칙으로 보완하고 `lost-party`에 배포했다.
+- 읽기·이벤트 계약 문서에 메타데이터 구독, collection group 규칙, 완료 기록 화면 연결을 반영했다.
+- `flutter analyze --no-pub`과 전체 테스트 312개가 통과했다.
+- Android 실기기에서 진행 중 탭의 오프라인 안내가 사라지고, 재실행 시 `PERMISSION_DENIED` 로그가 더 이상 나오지 않음을 확인했다.
+- 모집 만들기 등 쓰기 UI는 여전히 Fake이므로 만든 방은 레이드 현황에 나타나지 않는다. 목록→상세 진입은 다음 작업이다.
+
+---
+
+## Task-058. 레이드 현황 목록에서 읽기 전용 상세 진입
+
+- 작업 브랜치: `cursor/firebase-runtime-stage1`
+- `watchRecruitment`이 `PartyReadDetailSnapshot`으로 문서 누락과 `isFromCache`를 함께 전달하도록 읽기 계약을 맞췄다.
+- 진행 중·신청 중 카드는 레이드 현황 Navigator의 `/raid-status/:recruitmentId`로 들어가 탭 상태를 유지한다.
+- `PartyReadDetailPage`는 Firestore 읽기만 표시하고 Fake `RecruitmentDetailPage`의 신청·수정 버튼을 연결하지 않는다.
+- loading·누락·권한 오류·오프라인 안내를 목록과 같은 문구로 표시한다.
+- ViewModel/Widget 표적 테스트와 전체 테스트 323개, `flutter analyze --no-pub`이 통과했다.
+- 쓰기 Repository 전환 전까지 로컬에서 만든 방은 이 상세에도 없다.
+
+---
+
+## Task-059. 모집 생성 명령의 실행 앱 Firestore 전환
+
+- 작업 브랜치: `cursor/firebase-runtime-stage1`
+- 실행 앱 모집 생성만 `FirestorePartyCreateRepository`에 연결하고, 목록·신청·승인·멤버·회차·Fake 상세는 InMemory 경로를 유지했다.
+- 파티장 Character ID는 게임 계정 인증의 `serverCharacterId`를 사용한다. 없으면 명령을 보내지 않고 인증 안내를 표시한다.
+- 생성 성공 시 Fake 상세 대신 `/raid-status/{recruitmentId}` 읽기 상세로 이동한다.
+- Fake 생성 흐름 회귀와 Firestore 생성 경로 표적 테스트를 통과했다. 전체 테스트 325개, `flutter analyze --no-pub` 통과.
+- 인증되지 않은 로컬 캐릭터로 만든 방은 여전히 Firestore 현황에 나타나지 않는다.
+- 인증된 캐릭터로 생성이 `permission-denied` 되던 원인은 캐릭터 인증이 아니라, 신규 모집 ID에 대한 `get`이 없는 문서의 `resource.data`를 읽어 거부된 것이다. 존재하지 않는 모집 단건 `get`은 active binding만 요구하도록 Rules를 수정하고 `lost-party`에 배포했다.
+- Android 실기기에서 인증된 캐릭터로 모집 생성, `진행 중` 목록 표시, 읽기 전용 상세 진입, 수정 화면 미적용 안내까지 확인했다.

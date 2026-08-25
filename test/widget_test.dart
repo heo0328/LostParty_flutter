@@ -7,7 +7,10 @@ import 'package:lost_party/features/account/data/local/account_database.dart';
 import 'package:lost_party/features/account/domain/entities/game_account_verification.dart';
 import 'package:lost_party/features/account/domain/repositories/account_ownership_status_gateway.dart';
 import 'package:lost_party/features/account/domain/repositories/game_account_verification_gateway.dart';
+import 'package:lost_party/features/player/domain/entities/player_session.dart';
 import 'package:lost_party/main.dart';
+
+import 'support/party_read_fakes.dart';
 
 void main() {
   setUp(() {
@@ -178,9 +181,15 @@ Future<void> _pumpApp(WidgetTester tester) async {
   addTearDown(database.close);
   await tester.pumpWidget(
     MyApp(
+      playerSession: PlayerSession(
+        authUid: 'test-auth-uid',
+        playerId: 'test-player',
+      ),
       accountDatabase: database,
       ownershipStatusGateway: _AccountOwnershipStatusGateway(),
       gameAccountVerificationGateway: _GameAccountVerificationGateway(),
+      partyReadRepository: FakePartyReadRepository(),
+      partyEventSyncService: FakePartyEventSyncService(),
     ),
   );
 }

@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
 
-typedef AppInitializer = Future<void> Function();
+typedef AppInitializer<T> = Future<T> Function();
 
-class AppBootstrap extends StatefulWidget {
+typedef AppBuilder<T> = Widget Function(BuildContext context, T services);
+
+class AppBootstrap<T extends Object> extends StatefulWidget {
   const AppBootstrap({
     required this.initialize,
     required this.appBuilder,
     super.key,
   });
 
-  final AppInitializer initialize;
-  final WidgetBuilder appBuilder;
+  final AppInitializer<T> initialize;
+  final AppBuilder<T> appBuilder;
 
   @override
-  State<AppBootstrap> createState() => _AppBootstrapState();
+  State<AppBootstrap<T>> createState() => _AppBootstrapState<T>();
 }
 
-class _AppBootstrapState extends State<AppBootstrap> {
+class _AppBootstrapState<T extends Object> extends State<AppBootstrap<T>> {
   var _attempt = 0;
-  late Future<void> _initialization;
+  late Future<T> _initialization;
 
   @override
   void initState() {
@@ -35,10 +37,11 @@ class _AppBootstrapState extends State<AppBootstrap> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<void>(
+    return FutureBuilder<T>(
       key: ValueKey(_attempt),
       future: _initialization,
       builder: (context, snapshot) {
+        final services = snapshot.data;
         if (snapshot.connectionState != ConnectionState.done) {
           return const _BootstrapFrame(
             child: CircularProgressIndicator(
@@ -46,7 +49,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
             ),
           );
         }
-        if (snapshot.hasError) {
+        if (snapshot.hasError || services == null) {
           return _BootstrapFrame(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -72,7 +75,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
             ),
           );
         }
-        return widget.appBuilder(context);
+        return widget.appBuilder(context, services);
       },
     );
   }

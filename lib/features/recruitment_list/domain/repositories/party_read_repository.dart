@@ -23,5 +23,7 @@ abstract class PartyReadRepository {
     required String cycleKey,
   });
 
-  Stream<PublicRecruitmentSummary?> watchRecruitment(String recruitmentId);
+  Stream<PartyReadDetailSnapshot<PublicRecruitmentSummary>> watchRecruitment(
+    String recruitmentId,
+  );
 }

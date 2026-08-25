@@ -1,0 +1,266 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
+import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
+import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
+import 'package:lost_party/features/recruitment_list/data/fakes/fake_recruitment_runtime.dart';
+import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_active_raid_assignment_repository.dart';
+import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
+import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_create_command.dart';
+import 'package:lost_party/features/recruitment_list/domain/repositories/party_create_repository.dart';
+import 'package:lost_party/features/recruitment_list/domain/services/recruitment_command_service.dart';
+import 'package:lost_party/features/recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
+import 'package:lost_party/features/recruitment_list/presentation/pages/recruitment_create_page.dart';
+import 'package:lost_party/shared/raid_catalog/domain/entities/raid_catalog.dart';
+import 'package:lost_party/shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
+
+void main() {
+  testWidgets('인증된 캐릭터로 모집을 만들면 Firestore 명령을 보내고 현황 상세로 이동한다', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final createRepository = _RecordingPartyCreateRepository();
+    final session = FakeUserSession('player-1');
+    final clock = FakeRecruitmentClock(DateTime.utc(2026, 8, 20));
+    final accountRepository = _VerifiedAccountRepository();
+    final assignmentRepository = InMemoryActiveRaidAssignmentRepository();
+    final weeklyRepository = InMemoryWeeklyRaidClearRepository();
+    final recruitmentRepository = InMemoryRecruitmentStateRepository();
+    final commandService = RecruitmentCommandService(
+      session: session,
+      clock: clock,
+      idGenerator: SequentialRecruitmentIdGenerator(),
+      repository: recruitmentRepository,
+      weeklyClearRepository: weeklyRepository,
+      assignmentRepository: assignmentRepository,
+    );
+    final router = GoRouter(
+      initialLocation: '/create',
+      routes: [
+        GoRoute(
+          path: '/create',
+          builder: (context, state) => RecruitmentCreatePage(
+            catalogRepository: _CatalogRepository(),
+            commandService: commandService,
+            candidateService: RecruitmentLeaderCandidateService(
+              accountRepository: accountRepository,
+              weeklyClearRepository: weeklyRepository,
+              session: session,
+              clock: clock,
+              assignmentRepository: assignmentRepository,
+              recruitmentRepository: recruitmentRepository,
+            ),
+            partyCreateRepository: createRepository,
+            newRecruitmentId: () => 'firestore-recruitment-1',
+            cycleKey: '2026-08-19',
+          ),
+        ),
+        GoRoute(
+          path: '/raid-status/:recruitmentId',
+          builder: (context, state) => Scaffold(
+            body: Text(
+              'read-detail:${state.pathParameters['recruitmentId']}',
+            ),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('saveRecruitmentButton')));
+    await tester.pumpAndSettle();
+
+    expect(createRepository.lastCommand?.leaderCharacterId, 'server-char-1');
+    expect(createRepository.lastCommand?.cycleKey, '2026-08-19');
+    expect(createRepository.lastCommand?.recruitmentId, 'firestore-recruitment-1');
+    expect(find.text('read-detail:firestore-recruitment-1'), findsOneWidget);
+    expect(
+      await recruitmentRepository.getById('firestore-recruitment-1'),
+      isNull,
+    );
+  });
+
+  testWidgets('서버 캐릭터 ID가 없으면 Firestore 명령을 보내지 않는다', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final createRepository = _RecordingPartyCreateRepository();
+    final session = FakeUserSession('player-1');
+    final clock = FakeRecruitmentClock(DateTime.utc(2026, 8, 20));
+    final accountRepository = _LocalOnlyAccountRepository();
+    final assignmentRepository = InMemoryActiveRaidAssignmentRepository();
+    final weeklyRepository = InMemoryWeeklyRaidClearRepository();
+    final recruitmentRepository = InMemoryRecruitmentStateRepository();
+    final commandService = RecruitmentCommandService(
+      session: session,
+      clock: clock,
+      idGenerator: SequentialRecruitmentIdGenerator(),
+      repository: recruitmentRepository,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RecruitmentCreatePage(
+          catalogRepository: _CatalogRepository(),
+          commandService: commandService,
+          candidateService: RecruitmentLeaderCandidateService(
+            accountRepository: accountRepository,
+            weeklyClearRepository: weeklyRepository,
+            session: session,
+            clock: clock,
+            assignmentRepository: assignmentRepository,
+            recruitmentRepository: recruitmentRepository,
+          ),
+          partyCreateRepository: createRepository,
+          newRecruitmentId: () => 'firestore-recruitment-1',
+          cycleKey: '2026-08-19',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('saveRecruitmentButton')));
+    await tester.pumpAndSettle();
+
+    expect(createRepository.lastCommand, isNull);
+    expect(find.text('게임 계정 인증이 완료된 캐릭터만 모집을 만들 수 있습니다.'), findsOneWidget);
+  });
+}
+
+class _RecordingPartyCreateRepository implements PartyCreateRepository {
+  PartyCreateCommand? lastCommand;
+
+  @override
+  Future<PartyCreateResult> create(PartyCreateCommand command) async {
+    lastCommand = command;
+    return PartyCreateResult.success(command.recruitmentId);
+  }
+}
+
+class _CatalogRepository implements RaidCatalogRepository {
+  @override
+  Future<RaidCatalog> loadCatalog() async => RaidCatalog(
+    schemaVersion: 2,
+    catalogVersion: 'test',
+    updatedAt: DateTime.utc(2026, 8, 20),
+    raids: const [
+      RaidDefinition(
+        raidId: 'serca',
+        officialName: '고통의 마녀, 세르카',
+        displayName: '세르카',
+        aliases: ['세르카'],
+        partySize: 4,
+        partyCount: 1,
+        requiredSupportCount: 1,
+        maxDealerCountPerClass: 1,
+        gateCount: 2,
+        isActive: true,
+        difficulties: [
+          RaidDifficultyDefinition(
+            difficultyId: 'normal',
+            name: '노말',
+            displayAlias: '노르카',
+            displayOrder: 1,
+            minItemLevel: 1710,
+            clearGold: 16000,
+            boundGold: 16000,
+            isActive: true,
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+class _VerifiedAccountRepository implements AccountRepository {
+  @override
+  Future<List<LocalGameAccount>> loadAccounts() async => [
+    (await loadMainAccount())!,
+  ];
+
+  @override
+  Future<LocalGameAccount?> loadMainAccount() async => const LocalGameAccount(
+    id: 1,
+    label: '계정',
+    isMain: true,
+    lookupCharacterName: '대표바드',
+    representativeCharacterId: 1,
+    displayLimit: 6,
+    serverOwnershipStatus: 'active',
+    characters: [
+      LocalAccountCharacter(
+        id: 1,
+        serverCharacterId: 'server-char-1',
+        serverName: '루페온',
+        characterName: '대표바드',
+        characterLevel: 70,
+        characterClassName: '바드',
+        itemLevel: 1750,
+        combatPower: 250000,
+        isVisible: true,
+        displayOrder: 0,
+      ),
+    ],
+  );
+
+  @override
+  Future<List<CharacterBuildSnapshot>> loadCharacterBuildSnapshots(
+    int characterId,
+  ) async => [_snapshot(characterId)];
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _LocalOnlyAccountRepository extends _VerifiedAccountRepository {
+  @override
+  Future<LocalGameAccount?> loadMainAccount() async => const LocalGameAccount(
+    id: 1,
+    label: '계정',
+    isMain: true,
+    lookupCharacterName: '대표바드',
+    representativeCharacterId: 1,
+    displayLimit: 6,
+    characters: [
+      LocalAccountCharacter(
+        id: 1,
+        serverName: '루페온',
+        characterName: '대표바드',
+        characterLevel: 70,
+        characterClassName: '바드',
+        itemLevel: 1750,
+        combatPower: 250000,
+        isVisible: true,
+        displayOrder: 0,
+      ),
+    ],
+  );
+}
+
+CharacterBuildSnapshot _snapshot(int characterId) => CharacterBuildSnapshot(
+  id: 1,
+  characterId: characterId,
+  role: CharacterBuildRole.dealer,
+  rawJson: '{}',
+  itemLevel: 1750,
+  combatPower: 250000,
+  capturedAt: DateTime.utc(2026, 8, 20),
+  dataVersion: 1,
+  analysis: const CharacterBuildAnalysis(
+    runeCount: 8,
+    gemEffects: [],
+    arkGridConditions: [],
+    arkGridCorePoints: [],
+    notices: [],
+  ),
+);

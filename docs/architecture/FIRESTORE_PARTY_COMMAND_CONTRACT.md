@@ -212,6 +212,8 @@ Rules는 적어도 다음을 `getAfter()`를 포함해 검증해야 한다.
 - 모집 수정은 파티장만 허용하고 불변 필드와 revision 증가를 검증
 - 서버 검증이 필요하지만 Rules로 안전하게 표현할 수 없는 변경은 허용하지 않음
 
+생성 Transaction은 신규 `recruitments/{id}` 존재 여부를 `get`으로 확인한다. 문서가 없을 때 `resource.data`를 읽으면 Rules가 `permission-denied`를 내므로, 존재하지 않는 모집의 단건 `get`은 active binding만으로 허용한다. 존재하는 문서의 읽기와 `list`는 기존 `canReadRecruitment`을 유지한다.
+
 Rules 상세 구현·배포는 명령별 작업 브랜치에서 진행한다. Firestore Emulator는 사용하지 않는다. Rules 배포 전 검증 방법은 별도로 합의한다.
 
 ## 6. 오류 계약
@@ -260,3 +262,12 @@ unknown
 8. 실행 앱을 Firestore 읽기·쓰기 Repository로 전환
 
 각 단위는 해당 명령의 Rules, 동시 Transaction 테스트, 오류 UI와 로컬 Domain 회귀 테스트를 함께 마감한다.
+
+## 9. 실행 앱 전환 상태
+
+- 읽기: `레이드 현황`의 진행 중·신청 중·읽기 전용 상세는 Firestore `PartyReadRepository`를 사용한다.
+- 쓰기 1단위: `레이드 모집 > 모집 생성`만 `FirestorePartyCreateRepository`로 연결한다. 성공 시 `/raid-status/{recruitmentId}` 읽기 상세로 이동한다.
+- 생성 명령의 `leaderCharacterId`는 Drift 로컬 ID가 아니라 게임 계정 인증으로 저장된 `serverCharacterId`다. 인증되지 않은 캐릭터는 명령을 보내지 않는다.
+- 생성 Transaction의 신규 모집 `get`이 문서 부재에서 `permission-denied`가 되지 않도록, 존재하지 않는 `recruitments/{id}` 단건 읽기는 active binding만으로 허용한다. 이 Rules는 `lost-party`에 배포했다.
+- Android 실기기에서 인증된 캐릭터로 생성한 방이 `진행 중`에 나타나고 읽기 전용 상세(수정 미적용 안내 포함)로 연결되는 것을 확인했다.
+- 모집 목록·Fake 상세·신청·승인·멤버·회차 명령은 아직 `InMemoryRecruitmentStateRepository`와 `RecruitmentCommandService`를 유지한다. 로컬 Fake로 만든 방은 Firestore 현황에 나타나지 않는다.

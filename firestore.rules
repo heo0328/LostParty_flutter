@@ -611,6 +611,14 @@ service cloud.firestore {
           || currentPlayerId() in data.memberPlayerIds);
     }
 
+    // 생성 Transaction은 신규 ID의 존재 여부를 get으로 확인한다.
+    // 없는 문서에서 resource.data를 읽으면 규칙이 거부되므로 단건 get만 분기한다.
+    function canGetRecruitment(recruitmentId) {
+      return hasActiveBinding()
+        && (!exists(recruitmentPath(recruitmentId))
+          || canReadRecruitment(resource.data));
+    }
+
     function canReadPrivateRecruitmentData(recruitmentId) {
       let recruitment = get(recruitmentPath(recruitmentId)).data;
       return hasActiveBinding()
@@ -720,7 +728,8 @@ service cloud.firestore {
     }
 
     match /recruitments/{recruitmentId} {
-      allow get, list: if canReadRecruitment(resource.data);
+      allow get: if canGetRecruitment(recruitmentId);
+      allow list: if canReadRecruitment(resource.data);
       allow create: if validInitialRecruitment(
         recruitmentId,
         request.resource.data
@@ -833,6 +842,13 @@ service cloud.firestore {
           );
         allow delete: if false;
       }
+    }
+
+    // 컬렉션 그룹 쿼리는 중첩 경로 규칙이 적용되지 않아 재귀 와일드카드가 필요하다.
+    // 신청 중 화면이 본인 신청만 회차 단위로 조회하는 용도로만 연다.
+    match /{path=**}/applications/{applicantPlayerId} {
+      allow list: if hasActiveBinding()
+        && resource.data.applicantPlayerId == currentPlayerId();
     }
   }
 }
