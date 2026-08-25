@@ -49,7 +49,7 @@ API 토큰은 기기의 secure storage에만 저장하며, Flutter 앱이 장비
 challenge는 앱 메모리에만 보관하며 앱 종료 시 폐기한다. 서버 challenge 문서는
 향후 신뢰 가능한 서버 검증이 필요해질 때 사용할 참고 계약으로 유지한다.
 
-### 향후 서버 전환용 문서
+### 향후 서버 전환 시 참고할 문서
 
 `accountVerificationChallenges/{challengeId}`는 서버만 생성·수정한다.
 
@@ -67,7 +67,8 @@ challenge는 앱 메모리에만 보관하며 앱 종료 시 폐기한다. 서�
 - `createdAt`, `expiresAt`, `lastCheckedAt`, `verifiedAt`: server timestamp 또는 null
 - `failureCode: string | null`
 
-기준 장비와 siblings Snapshot은 민감한 서버 판정 자료이므로 클라이언트가 문서 원문을 직접 읽지 않는다. Callable 응답은 `challengeId`, 캐릭터명, 해제할 부위, 만료 시각, 사용자용 상태만 반환한다.
+아래 문서 형식은 향후 서버 검증이 실제로 필요해질 경우의 참고 계약이며 현재
+Firestore에는 생성하지 않는다.
 
 ## 6. 초기 Spark 구현과 향후 Callable 경계
 
@@ -142,5 +143,6 @@ Functions와 Secret Manager는 앱 런타임 및 배포 설정에서 사용하�
 
 - challenge, GameAccount와 Character의 클라이언트 직접 create/update/delete를 차단한다.
 - 기준 장비 Snapshot과 다른 Player의 인증 상태를 클라이언트가 읽지 못하게 한다.
-- 인증 시작·확인과 소유권 이전은 Callable만 수행한다.
+- 현재 초기 구현에서는 인증 시작·확인과 소유권 이전을 Flutter 앱이 수행한다.
+- 향후 악용 방어가 필요해질 때만 별도 합의 후 서버 명령으로 이전한다.
 - 이후 모든 파티 명령은 요청 Character의 active 소유자와 호출 Player가 같은지 서버에서 다시 검증한다.

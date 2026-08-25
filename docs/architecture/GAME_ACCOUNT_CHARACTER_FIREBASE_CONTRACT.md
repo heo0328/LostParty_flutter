@@ -37,7 +37,8 @@
 
 ## 명령과 검증 경계
 
-- 생성·동기화는 Callable Function에서 현재 Auth binding의 `PlayerId`를 구한 뒤 처리한다.
+- 현재 초기 구현은 Flutter Firestore transaction에서 Auth binding의 `PlayerId`를
+  구한 뒤 생성·동기화한다.
 - 서버는 대상 게임 계정의 `ownerPlayerId`, 모든 캐릭터의 `gameAccountId`와 `ownerPlayerId`, 요청 내 중복을 검증한다.
 - 계정과 캐릭터 문서 갱신은 하나의 원자 작업으로 처리한다.
 - 이름 변경은 같은 `CharacterId` 문서의 현재 이름을 갱신하고, 이름만으로 다른 Character에 병합하지 않는다.
@@ -58,11 +59,12 @@
   유지하며, `ownershipLost` 계정은 재인증 화면에서는 보이지만 파티 모집·신청
   캐릭터 후보에서는 제외한다.
 - 앱의 동기화 서비스는 Gateway 응답의 로컬 계정 ID가 요청과 같고 모든 요청 캐릭터가 정확히 한 번 포함됐는지 확인한 후에만 Drift transaction을 호출한다.
-- 실제 Callable 구현은 `AccountIdentityGateway` 뒤에 위치하며, 응답 검증과 로컬 매핑은 Firebase SDK에 의존하지 않는다.
+- 향후 서버 검증이 필요하면 `AccountIdentityGateway` 경계 뒤 구현만 교체하며,
+  응답 검증과 로컬 매핑은 Firebase SDK에 의존하지 않는다.
 
 ## 이번 작업 제외 범위
 
-- Callable Function 구현과 배포
+- 유료 서버 검증 도입
 - 게임 계정 소유 인증 방식 및 충돌 복구 UX
 - Firestore 읽기 Repository와 오프라인 동기화
 - 파티·신청 문서의 CharacterId 전환
