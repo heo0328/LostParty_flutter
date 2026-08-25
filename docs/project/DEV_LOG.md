@@ -1223,6 +1223,18 @@
 - 설정 탭에 기존 게임계정 인증과 API 토큰 화면의 진입점을 추가했고 내 계정의 상태 기반 복구 진입점은 유지했다.
 - 초기 탭, 4탭 이동, 상단 스와이프, branch 상태 보존, 설정 뒤로가기와 탭 재선택 루트 복귀를 Widget 테스트 6개로 검증했다.
 - `flutter analyze` 통과, 전체 `flutter test` 252개 통과.
-- Android 실기기 확을 사용자가 완료했다.
+- Android 실기기 확인을 사용자가 완료했다.
 - API 토큰 삭제 전에 계정 데이터 조회·게임계정 인증 등이 정상 작동하지 않음을 알리는 확인창을 추가했고, 취소·확정·삭제 후 미등록 상태를 Widget 테스트로 검증했다.
-- 커밋·병합·푸시는 아직 남아 있다.
+- 커밋 `84769f8`, 병합 커밋 `23af0b3`으로 기능 브랜치와 `main`에 반영하고 모두 원격 푸시했다.
+
+---
+
+## Task-047. Firestore 파티 읽기 모델 계약과 Repository 경계
+
+- 작업 브랜치: `codex/firestore-party-read-model`
+- `FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`에 공개 모집, 내 진행 중 레이드, 내 신청 중 목록의 스키마·쿼리·권한·인덱스를 정의했다.
+- 내 파티 복제 문서를 두지 않고 서버 관리 `memberPlayerIds`로 membership 실시간 쿼리를 구성했다.
+- Firestore 타입을 Domain에 노출하지 않는 읽기 Entity, Repository, DTO, Mapper와 실시간 Firestore Repository를 추가했다.
+- 공개 목록·자기 membership·자기 신청 읽기만 허용하고 파티 관련 클라이언트 쓰기를 금지하는 Rules 초안과 복합 인덱스를 추가했다.
+- 파티 서버 쓰기 명령이 없는 상태에서 로컬 생성 후 목록이 사라지는 모순을 피하기 위해 실행 앱의 Repository 교체는 보류했다.
+- Firestore Emulator 검증과 Rules·인덱스 배포는 수행하지 않고 서버 명령·다중 사용자 권한 작업 단계로 보류했다.

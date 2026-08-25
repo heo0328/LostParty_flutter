@@ -14,6 +14,34 @@ service cloud.firestore {
       return /databases/$(database)/documents/players/$(playerId);
     }
 
+    function hasActiveBinding() {
+      return signedIn()
+        && exists(bindingPath(request.auth.uid))
+        && get(bindingPath(request.auth.uid)).data.status == 'active';
+    }
+
+    function currentPlayerId() {
+      return get(bindingPath(request.auth.uid)).data.playerId;
+    }
+
+    function recruitmentPath(recruitmentId) {
+      return /databases/$(database)/documents/recruitments/$(recruitmentId);
+    }
+
+    function canReadRecruitment(data) {
+      return hasActiveBinding()
+        && (data.visibility == 'public'
+          || data.leaderPlayerId == currentPlayerId()
+          || currentPlayerId() in data.memberPlayerIds);
+    }
+
+    function canReadPrivateRecruitmentData(recruitmentId) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && (recruitment.leaderPlayerId == currentPlayerId()
+          || currentPlayerId() in recruitment.memberPlayerIds);
+    }
+
     function validActiveBinding(data) {
       return data.keys().hasOnly([
           'schemaVersion',
@@ -90,6 +118,29 @@ service cloud.firestore {
 
     match /playerGameAccounts/{ownershipId} {
       allow read, write: if signedIn();
+    }
+
+    match /recruitments/{recruitmentId} {
+      allow get, list: if canReadRecruitment(resource.data);
+      allow create, update, delete: if false;
+
+      match /members/{playerId} {
+        allow get, list: if canReadPrivateRecruitmentData(recruitmentId)
+          || (hasActiveBinding() && playerId == currentPlayerId());
+        allow create, update, delete: if false;
+      }
+
+      match /applications/{playerId} {
+        allow get, list: if canReadPrivateRecruitmentData(recruitmentId)
+          || (hasActiveBinding()
+            && resource.data.applicantPlayerId == currentPlayerId());
+        allow create, update, delete: if false;
+
+        match /votes/{voterPlayerId} {
+          allow get, list: if canReadPrivateRecruitmentData(recruitmentId);
+          allow create, update, delete: if false;
+        }
+      }
     }
   }
 }
