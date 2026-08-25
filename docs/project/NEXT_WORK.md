@@ -2,12 +2,12 @@
 
 ## 기준 상태
 
-- 통합 기준 브랜치: 로컬 `main` (`0865853`)
-- 현재 작업 브랜치: `codex/app-shell-navigation` (로컬 `main`과 같은 `0865853`에서 시작)
+- 통합 기준 브랜치: `main` (`23af0b3`)
+- 현재 작업 브랜치: `codex/firestore-party-read-model` (`main`의 `23af0b3`에서 시작)
 - 기준 상태: Firebase 초기 연결 설정, Player 식별자 검토, 계정 소유 인증 및 Firebase 파티 제품 흐름이 로컬 `main`에 반영된 상태
-- `origin/main`은 로컬 `main`보다 10커밋 뒤에 있으며 원격 최신화는 아직 수행하지 않았다.
-- 내용 차이가 없던 생성 파일 4개의 줄바꿈 기반 변경 표시는 Git 인덱스 재확인으로 정리했으며, 현재 작업 트리에는 이 작업의 문서 변경만 남아 있다.
-- Firebase Player binding 구현·Rules 배포·Android 실기기 검증을 완료했으며 다음 단계는 서버 `GameAccountId`·`CharacterId` 계약이다.
+- `main`과 `origin/main`은 `23af0b3`에서 일치한다.
+- 현재 작업 트리에는 Firestore 파티 읽기 계약·DTO·Mapper·Repository·Rules·인덱스 변경이 남아 있다.
+- Firebase Player binding과 `GameAccountId`·`CharacterId` 계약·로컬 소유 인증을 구현·검증했다.
 - Firebase 프로젝트 및 플랫폼 연결 설정은 완료됐으며 제품 흐름의 주요 정책은 `../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`에 통합했다.
 - 로컬 Fake 환경에서 제품 흐름과 UI를 검증하기 위해 두었던 Firebase 구현 보류 단계는 종료됐다.
 - 이제 기능 단위로 데이터 계약·서버 명령·Security Rules·테스트 경계를 먼저 확정한 뒤 Firebase 구현을 단계적으로 진행한다.
@@ -125,9 +125,9 @@
 - `레이드 모집`은 현재 파티 모집 목록, 검색·신청과 모집 생성 기능을 담당한다.
 - `설정`에는 `내 게임계정 인증`, Lost Ark API 토큰과 앱 공통 설정을 배치한다.
 
-다음 구현 작업은 앱 셸과 라우팅 기반을 위 구조로 전환하는 독립 작업 단위다.
+앱 셸과 라우팅 기반 전환은 완료했다.
 
-구현 상태: StatefulShellRoute 4개 branch, 내부 TabBarView와 충돌하지 않는 IndexedStack branch 전환, 설정 진입점을 반영했다. API 토큰 삭제 전에 주요 기능이 정상 작동하지 않을 수 있음을 안내하고 확인받는 절차도 추가했다. Widget 테스트 6개, `flutter analyze`, 전체 `flutter test` 252개가 통과했고 Android 실기기 확을 완료했다. 커밋 마감만 남아 있다.
+구현 상태: StatefulShellRoute 4개 branch, 내부 TabBarView와 충돌하지 않는 IndexedStack branch 전환, 설정 진입점과 API 토큰 삭제 확인을 반영했다. 자동 검증과 Android 실기기 확인을 완료했고 커밋 `84769f8`, 병합 커밋 `23af0b3`으로 `main`과 `origin/main`에 반영했다.
 
 1. 기존 StatefulShellRoute를 4개 branch로 확장한다. (구현 완료)
 2. 기존 `내 계정` 화면을 두 번째 branch로, 기존 `파티 모집` 화면을 세 번째 branch로 이동한다.
@@ -159,13 +159,12 @@
 
 ## 이후 기능의 잠정 순서
 
-1. 하단 4탭 앱 셸과 설정·인증 진입 구조
-2. Firestore 파티 읽기 모델과 Repository 전환 경계
-3. Spark 범위에서 가능한 생성·수정·신청·철회·승인·즉시 가입 계약
-4. 참가 캐릭터 변경·탈퇴·추방·승인권·책임자 승계
-5. 회차 완료·완료 취소·반복 파티·주차 전환과 Snapshot
-6. 사용자 이벤트와 로컬 히스토리
-7. 유료 서비스가 필요한 FCM·Functions·강화된 서버 검증은 별도 승인 후 재설계
+1. Firestore 파티 읽기 모델과 Repository 전환 경계 (현재 작업)
+2. Spark 범위에서 가능한 생성·수정·신청·철회·승인·즉시 가입 계약
+3. 참가 캐릭터 변경·탈퇴·추방·승인권·책임자 승계
+4. 회차 완료·완료 취소·반복 파티·주차 전환과 Snapshot
+5. 사용자 이벤트와 로컬 히스토리
+6. 유료 서비스가 필요한 FCM·Functions·강화된 서버 검증은 별도 승인 후 재설계
 
 ## 유지되는 제품 규칙
 
