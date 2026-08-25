@@ -1262,3 +1262,16 @@
 - Rules에서 파티장 membership과 점유가 함께 생성되고 Character 소유권·파생 필드가 일치하는 초기 생성 형태만 허용하는 초안을 추가했다.
 - 저장 계획과 입력 검증 표적 테스트 5개, `flutter analyze --no-pub`가 통과했다.
 - Firestore Emulator, Rules 배포, 실행 앱 Repository 교체는 수행하지 않았다.
+
+---
+
+## Task-050. Firestore 승인 대기 신청과 본인 철회
+
+- 작업 브랜치: `codex/firestore-party-applications`
+- 신청·철회 명령, Repository 경계와 입력 Validator를 추가했다.
+- 신청 시 active binding, 모집 상태·승인 방식·빈자리·기존 멤버·중복 신청·Character 소유권·입장 레벨을 Transaction에서 재검증한다.
+- 승인 대기 신청은 application 문서만 생성하고 membership과 확정 참가 점유를 만들지 않는다.
+- 본인의 `pending` 신청만 expected revision 일치 시 `withdrawn`으로 전환한다.
+- Rules에서 본인의 최초 pending 생성과 `pending -> withdrawn` 허용 필드만 변경하는 형태를 제한했다.
+- 저장 계획·입력 검증 표적 테스트 4개와 `flutter analyze --no-pub`가 통과했다.
+- Firestore Emulator, Rules 배포, 실행 앱 Repository 교체는 수행하지 않았다.

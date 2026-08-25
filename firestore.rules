@@ -111,6 +111,43 @@ service cloud.firestore {
         && ownsActiveCharacter(data.characterId);
     }
 
+    function validPendingApplication(recruitmentId, playerId, data) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.schemaVersion == 1
+        && data.recruitmentId == recruitmentId
+        && data.applicantPlayerId == playerId
+        && data.cycleKey == recruitment.targetCycleKey
+        && data.status == 'pending'
+        && data.revision == 1
+        && data.approvalCount == 0
+        && data.rejectionCount == 0
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && recruitment.status == 'active'
+        && recruitment.manualRecruitmentEnabled == true
+        && recruitment.hasAvailableSlot == true
+        && recruitment.approvalPolicy.mode == 'leaderOnly'
+        && !(playerId in recruitment.memberPlayerIds)
+        && ownsActiveCharacter(data.characterId);
+    }
+
+    function validApplicantWithdrawal(playerId, oldData, newData) {
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && oldData.applicantPlayerId == playerId
+        && oldData.status == 'pending'
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'resolutionReason', 'revision', 'decidedAt', 'updatedAt'
+        ])
+        && newData.status == 'withdrawn'
+        && newData.resolutionReason == 'withdrawnByApplicant'
+        && newData.revision == oldData.revision + 1
+        && newData.decidedAt == request.time
+        && newData.updatedAt == request.time;
+    }
+
     function canReadRecruitment(data) {
       return hasActiveBinding()
         && (data.visibility == 'public'
@@ -237,7 +274,17 @@ service cloud.firestore {
         allow get, list: if canReadPrivateRecruitmentData(recruitmentId)
           || (hasActiveBinding()
             && resource.data.applicantPlayerId == currentPlayerId());
-        allow create, update, delete: if false;
+        allow create: if validPendingApplication(
+          recruitmentId,
+          playerId,
+          request.resource.data
+        );
+        allow update: if validApplicantWithdrawal(
+          playerId,
+          resource.data,
+          request.resource.data
+        );
+        allow delete: if false;
 
         match /votes/{voterPlayerId} {
           allow get, list: if canReadPrivateRecruitmentData(recruitmentId);
