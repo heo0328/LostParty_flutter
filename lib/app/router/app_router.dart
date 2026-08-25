@@ -15,6 +15,9 @@ import '../../features/account/presentation/pages/character_detail_page.dart';
 import '../../features/account/presentation/pages/my_account_page.dart';
 import '../../features/account/presentation/pages/game_account_verification_page.dart';
 import '../../features/account/domain/entities/local_game_account.dart';
+import '../../features/account/domain/repositories/account_ownership_status_gateway.dart';
+import '../../features/account/domain/repositories/game_account_verification_gateway.dart';
+import '../../features/raid_status/presentation/pages/raid_status_page.dart';
 import '../../features/recruitment_list/presentation/pages/recruitment_list_page.dart';
 import '../../features/recruitment_list/presentation/pages/recruitment_create_page.dart';
 import '../../features/recruitment_list/presentation/pages/recruitment_detail_page.dart';
@@ -27,6 +30,7 @@ import '../../features/recruitment_list/domain/services/recruitment_command_serv
 import '../../features/recruitment_list/domain/services/recruitment_application_candidate_service.dart';
 import '../../features/recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
 import '../../features/recruitment_list/domain/policies/participation_conflict_policy.dart';
+import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../shared/game_catalog/data/datasources/asset_game_catalog_data_source.dart';
 import '../../shared/game_catalog/data/repositories/game_catalog_repository_impl.dart';
 import '../../shared/raid_catalog/data/datasources/asset_raid_catalog_data_source.dart';
@@ -36,10 +40,16 @@ import '../../shared/lost_ark_api/client/lost_ark_api_client.dart';
 import '../shell/app_shell.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final _raidStatusNavigatorKey = GlobalKey<NavigatorState>();
 final _accountNavigatorKey = GlobalKey<NavigatorState>();
 final _recruitmentNavigatorKey = GlobalKey<NavigatorState>();
+final _settingsNavigatorKey = GlobalKey<NavigatorState>();
 
-GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
+GoRouter createAppRouter({
+  required AccountDatabase accountDatabase,
+  AccountOwnershipStatusGateway? ownershipStatusGateway,
+  GameAccountVerificationGateway? gameAccountVerificationGateway,
+}) {
   final apiTokenStore = SecureApiTokenStore();
   final apiClient = LostArkApiClient(apiTokenStore: apiTokenStore);
   final gameCatalogRepository = GameCatalogRepositoryImpl(
@@ -54,16 +64,20 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
       database: accountDatabase,
       gameCatalogRepository: gameCatalogRepository,
     ),
-    ownershipStatusGateway: FirestoreAccountOwnershipStatusGateway(
-      firestore: FirebaseFirestore.instance,
-      firebaseAuth: FirebaseAuth.instance,
-    ),
+    ownershipStatusGateway:
+        ownershipStatusGateway ??
+        FirestoreAccountOwnershipStatusGateway(
+          firestore: FirebaseFirestore.instance,
+          firebaseAuth: FirebaseAuth.instance,
+        ),
   );
-  final verificationGateway = LocalGameAccountVerificationGateway(
-    remoteDataSource: remoteDataSource,
-    firestore: FirebaseFirestore.instance,
-    firebaseAuth: FirebaseAuth.instance,
-  );
+  final verificationGateway =
+      gameAccountVerificationGateway ??
+      LocalGameAccountVerificationGateway(
+        remoteDataSource: remoteDataSource,
+        firestore: FirebaseFirestore.instance,
+        firebaseAuth: FirebaseAuth.instance,
+      );
   final raidCatalogRepository = RaidCatalogRepositoryImpl(
     dataSource: AssetRaidCatalogDataSource(),
   );
@@ -105,19 +119,28 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/account',
+    initialLocation: '/raid-status',
     routes: [
       StatefulShellRoute(
         builder: (context, state, navigationShell) {
           return AppShell(navigationShell: navigationShell);
         },
         navigatorContainerBuilder: (context, navigationShell, children) {
-          return AppBranchPageView(
+          return AppBranchContainer(
             navigationShell: navigationShell,
             children: children,
           );
         },
         branches: [
+          StatefulShellBranch(
+            navigatorKey: _raidStatusNavigatorKey,
+            routes: [
+              GoRoute(
+                path: '/raid-status',
+                builder: (context, state) => const RaidStatusPage(),
+              ),
+            ],
+          ),
           StatefulShellBranch(
             navigatorKey: _accountNavigatorKey,
             routes: [
@@ -128,20 +151,6 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
                   accountRepository: accountRepository,
                 ),
                 routes: [
-                  GoRoute(
-                    path: 'api-token',
-                    builder: (context, state) =>
-                        ApiTokenSettingsPage(apiTokenStore: apiTokenStore),
-                  ),
-                  GoRoute(
-                    path: 'verify',
-                    builder: (context, state) => GameAccountVerificationPage(
-                      accountRepository: accountRepository,
-                      accountManagementRepository: accountRepository,
-                      mappingRepository: accountRepository,
-                      gateway: verificationGateway,
-                    ),
-                  ),
                   GoRoute(
                     path: 'characters/manage',
                     builder: (context, state) => CharacterManagementPage(
@@ -193,6 +202,31 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
                       candidateService: recruitmentCandidateService,
                       catalogRepository: raidCatalogRepository,
                     ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _settingsNavigatorKey,
+            routes: [
+              GoRoute(
+                path: '/settings',
+                builder: (context, state) => const SettingsPage(),
+                routes: [
+                  GoRoute(
+                    path: 'game-account-verification',
+                    builder: (context, state) => GameAccountVerificationPage(
+                      accountRepository: accountRepository,
+                      accountManagementRepository: accountRepository,
+                      mappingRepository: accountRepository,
+                      gateway: verificationGateway,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'api-token',
+                    builder: (context, state) =>
+                        ApiTokenSettingsPage(apiTokenStore: apiTokenStore),
                   ),
                 ],
               ),

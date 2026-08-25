@@ -56,12 +56,12 @@ class _MyAccountPageState extends State<MyAccountPage> {
   }
 
   Future<void> _openTokenSettings() async {
-    await context.push('/account/api-token');
+    await context.push('/settings/api-token');
     await _viewModel.loadTokenStatus();
   }
 
   Future<void> _openGameAccountVerification() async {
-    await context.push('/account/verify');
+    await context.push('/settings/game-account-verification');
     await _viewModel.loadStoredAccount();
   }
 

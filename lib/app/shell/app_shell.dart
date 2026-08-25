@@ -15,6 +15,11 @@ class AppShell extends StatelessWidget {
         onDestinationSelected: _selectBranch,
         destinations: const [
           NavigationDestination(
+            icon: Icon(Icons.event_note_outlined),
+            selectedIcon: Icon(Icons.event_note),
+            label: '레이드 현황',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
             label: '내 계정',
@@ -22,7 +27,12 @@ class AppShell extends StatelessWidget {
           NavigationDestination(
             icon: Icon(Icons.groups_outlined),
             selectedIcon: Icon(Icons.groups),
-            label: '파티 모집',
+            label: '레이드 모집',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: '설정',
           ),
         ],
       ),
@@ -37,8 +47,8 @@ class AppShell extends StatelessWidget {
   }
 }
 
-class AppBranchPageView extends StatefulWidget {
-  const AppBranchPageView({
+class AppBranchContainer extends StatelessWidget {
+  const AppBranchContainer({
     required this.navigationShell,
     required this.children,
     super.key,
@@ -48,53 +58,10 @@ class AppBranchPageView extends StatefulWidget {
   final List<Widget> children;
 
   @override
-  State<AppBranchPageView> createState() => _AppBranchPageViewState();
-}
-
-class _AppBranchPageViewState extends State<AppBranchPageView> {
-  late final PageController _pageController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController(
-      initialPage: widget.navigationShell.currentIndex,
-    );
-  }
-
-  @override
-  void didUpdateWidget(AppBranchPageView oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    final selectedIndex = widget.navigationShell.currentIndex;
-    if (_pageController.hasClients &&
-        _pageController.page?.round() != selectedIndex) {
-      _pageController.animateToPage(
-        selectedIndex,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutCubic,
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return PageView(
-      controller: _pageController,
-      onPageChanged: _selectBranch,
-      children: widget.children,
+    return IndexedStack(
+      index: navigationShell.currentIndex,
+      children: children,
     );
-  }
-
-  void _selectBranch(int index) {
-    if (index != widget.navigationShell.currentIndex) {
-      widget.navigationShell.goBranch(index);
-    }
   }
 }
