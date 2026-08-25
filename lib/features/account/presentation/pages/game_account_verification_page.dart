@@ -12,12 +12,14 @@ import '../../domain/repositories/game_account_verification_gateway.dart';
 class GameAccountVerificationPage extends StatefulWidget {
   const GameAccountVerificationPage({
     required this.accountRepository,
+    required this.accountManagementRepository,
     required this.mappingRepository,
     required this.gateway,
     super.key,
   });
 
   final AccountRepository accountRepository;
+  final AccountManagementRepository accountManagementRepository;
   final AccountIdentityMappingRepository mappingRepository;
   final GameAccountVerificationGateway gateway;
 
@@ -89,12 +91,13 @@ class _GameAccountVerificationPageState
     await _run(() async {
       final result = await widget.gateway.confirm(challenge.challengeId);
       if (result.status == 'verified') {
-        await _saveBinding(result);
+        await _saveBinding(
+          result,
+          verifiedCharacterName: challenge.characterName,
+        );
         setState(() {
           _challenge = null;
-          _message = _selectedAccount == null
-              ? '서버 계정 인증이 완료되었습니다. 로컬 계정 데이터는 다음 조회 때 연결됩니다.'
-              : '게임 계정 인증과 로컬 연결이 완료되었습니다.';
+          _message = '게임 계정 인증과 로컬 연결이 완료되었습니다.';
         });
         return;
       }
@@ -102,10 +105,23 @@ class _GameAccountVerificationPageState
     });
   }
 
-  Future<void> _saveBinding(GameAccountVerificationResult result) async {
-    final account = _selectedAccount;
+  Future<void> _saveBinding(
+    GameAccountVerificationResult result, {
+    required String verifiedCharacterName,
+  }) async {
+    var account = _selectedAccount;
     final accountId = result.serverGameAccountId;
-    if (account == null || accountId == null) return;
+    if (accountId == null) {
+      throw const FormatException('Missing server game account ID.');
+    }
+    if (account == null) {
+      account = await widget.accountManagementRepository.addAccount(
+        label: '인증 계정',
+        lookupCharacterName: verifiedCharacterName,
+      );
+      _selectedAccount = account;
+      _accounts = [..._accounts, account];
+    }
     final remoteByKey = {
       for (final character in result.serverCharacters)
         '${character.serverName}\u0000${character.characterName}':

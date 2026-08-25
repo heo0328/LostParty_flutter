@@ -132,6 +132,7 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
                     path: 'verify',
                     builder: (context, state) => GameAccountVerificationPage(
                       accountRepository: accountRepository,
+                      accountManagementRepository: accountRepository,
                       mappingRepository: accountRepository,
                       gateway: verificationGateway,
                     ),

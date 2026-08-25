@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/entities/game_account_verification.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
+import 'package:lost_party/features/account/domain/entities/server_account_identity_binding.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/account/domain/repositories/account_identity_gateway.dart';
 import 'package:lost_party/features/account/domain/repositories/game_account_verification_gateway.dart';
@@ -16,6 +17,7 @@ void main() {
       MaterialApp(
         home: GameAccountVerificationPage(
           accountRepository: _FakeAccountRepository(),
+          accountManagementRepository: _FakeAccountManagementRepository(),
           mappingRepository: _FakeMappingRepository(),
           gateway: gateway,
         ),
@@ -43,10 +45,91 @@ void main() {
     expect(gateway.lastSource, 'directInput');
     expect(gateway.lastLocalAccountId, isNull);
   });
+
+  testWidgets('creates and binds a local account after direct verification', (
+    tester,
+  ) async {
+    final gateway = _FakeVerificationGateway();
+    final management = _FakeAccountManagementRepository();
+    final mapping = _FakeMappingRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameAccountVerificationPage(
+          accountRepository: _EmptyAccountRepository(),
+          accountManagementRepository: management,
+          mappingRepository: mapping,
+          gateway: gateway,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('verificationDirectCharacterField')),
+      '직접입력캐릭터',
+    );
+    await tester.tap(find.widgetWithText(OutlinedButton, '직접 입력으로 인증'));
+    await tester.pumpAndSettle();
+    final confirmButton = find.widgetWithText(FilledButton, '장비 변경 확인');
+    await tester.ensureVisible(confirmButton);
+    await tester.pumpAndSettle();
+    await tester.tap(confirmButton);
+    await tester.pumpAndSettle();
+
+    expect(management.lookupCharacterName, '직접입력캐릭터');
+    expect(mapping.saved?.serverGameAccountId, 'game-account-1');
+    expect(mapping.saved?.serverCharacterIdsByLocalId, {21: 'character-1'});
+    expect(find.text('게임 계정 인증과 로컬 연결이 완료되었습니다.'), findsOneWidget);
+  });
 }
 
 class _FakeMappingRepository extends Fake
-    implements AccountIdentityMappingRepository {}
+    implements AccountIdentityMappingRepository {
+  ServerAccountIdentityBinding? saved;
+
+  @override
+  Future<void> bindServerIdentity(ServerAccountIdentityBinding binding) async {
+    saved = binding;
+  }
+}
+
+class _EmptyAccountRepository extends Fake implements AccountRepository {
+  @override
+  Future<List<LocalGameAccount>> loadAccounts() async => const [];
+}
+
+class _FakeAccountManagementRepository extends Fake
+    implements AccountManagementRepository {
+  String? lookupCharacterName;
+
+  @override
+  Future<LocalGameAccount> addAccount({
+    required String label,
+    required String lookupCharacterName,
+  }) async {
+    this.lookupCharacterName = lookupCharacterName;
+    return LocalGameAccount(
+      id: 2,
+      label: label,
+      isMain: false,
+      lookupCharacterName: lookupCharacterName,
+      representativeCharacterId: 21,
+      displayLimit: 1,
+      characters: [
+        LocalAccountCharacter(
+          id: 21,
+          serverName: '루페온',
+          characterName: lookupCharacterName,
+          characterLevel: 70,
+          characterClassName: '도화가',
+          itemLevel: 1700,
+          combatPower: null,
+          isVisible: true,
+          displayOrder: 0,
+        ),
+      ],
+    );
+  }
+}
 
 class _FakeAccountRepository extends Fake implements AccountRepository {
   @override
@@ -98,6 +181,16 @@ class _FakeVerificationGateway implements GameAccountVerificationGateway {
   }
 
   @override
-  Future<GameAccountVerificationResult> confirm(String challengeId) =>
-      throw UnimplementedError();
+  Future<GameAccountVerificationResult> confirm(String challengeId) async =>
+      const GameAccountVerificationResult(
+        status: 'verified',
+        serverGameAccountId: 'game-account-1',
+        serverCharacters: [
+          VerifiedServerCharacter(
+            serverName: '루페온',
+            characterName: '직접입력캐릭터',
+            serverCharacterId: 'character-1',
+          ),
+        ],
+      );
 }
