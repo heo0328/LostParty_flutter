@@ -1428,6 +1428,20 @@
 
 ---
 
+## Task-062. LostParty Design System v1 기반과 대표 Card 시범 적용
+
+- 작업 브랜치: `codex/design-system-v1-doc`
+- `Soft Lavender Gaming Utility` 방향과 Light Theme의 Color·Spacing·Radius token을 확정했다.
+- 기존 `main.dart`의 `deepPurple` seed 직접 구성을 `AppTheme.light`로 분리했다.
+- Neutral Background와 흰색 Surface, muted purple Primary, 약한 Card border, 버튼 계층의 기본 Theme을 적용했다.
+- 기존 Material 3 Bottom Navigation 구조를 유지하면서 흰색 Surface, Lavender 선택 Pill과 선택·비선택 색상 규칙을 연결했다.
+- `PublicRecruitmentSummary` 기반 공개 모집 Card를 대표 컴포넌트로 지정하고 제목·모집 상태·난이도·시작 시간·멤버/남은 자리·최소 조건의 정보 계층을 적용했다.
+- Theme과 대표 Card 표적 테스트 3개 및 `flutter analyze --no-pub`가 통과했다.
+- 기존 `widget_test.dart`는 Router가 테스트 주입과 무관하게 Firebase 기본 인스턴스를 생성하는 기존 결합으로 실패했으며 디자인 범위에서 Router를 변경하지 않았다.
+- 사용자가 시범 디자인 방향을 확인하고 승인했다. 전체 화면 일괄 리디자인은 하지 않으며 후속 기능 작업에서 점진적으로 확장한다.
+
+---
+
 ## Task-063. 레이드 모집 공개 목록 Firestore 페이징 읽기 전환
 
 - 작업 브랜치: `cursor/public-recruitment-list`

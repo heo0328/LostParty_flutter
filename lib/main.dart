@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'app/bootstrap/app_bootstrap.dart';
 import 'app/bootstrap/app_services_initializer.dart';
 import 'app/router/app_router.dart';
+import 'app/theme/app_theme.dart';
 import 'features/account/data/local/account_database.dart';
 import 'features/account/domain/repositories/account_ownership_status_gateway.dart';
 import 'features/account/domain/repositories/game_account_verification_gateway.dart';
@@ -74,20 +75,9 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = ColorScheme.fromSeed(seedColor: Colors.deepPurple);
     return MaterialApp.router(
       title: 'LOSTPARTY',
-      theme: ThemeData(
-        colorScheme: colorScheme,
-        scaffoldBackgroundColor: colorScheme.surface,
-        appBarTheme: AppBarTheme(
-          backgroundColor: colorScheme.surface,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          surfaceTintColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-        ),
-      ),
+      theme: AppTheme.light,
       routerConfig: _router,
     );
   }
