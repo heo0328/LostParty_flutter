@@ -1412,3 +1412,16 @@
 - 표적 동기화 서비스·계정 ViewModel/Page·모집 생성 테스트와 `flutter analyze --no-pub`를 통과했다.
 - Android 실기기에서 자동 조회, 아이템 레벨 변경 반영, 로컬·서버 불일치 시 새로고침 안내와 갱신 후 모집 생성을 확인했다.
 - Rules 필드 단위 강화는 후속 작업으로 남긴다.
+
+---
+
+## Task-061. 신청·철회 명령의 실행 앱 Firestore 전환
+
+- 작업 브랜치: `cursor/party-application-commands`
+- `/raid-status/:recruitmentId` 상세에 `FirestorePartyApplicationCommandRepository`와 리더 후보 서비스를 연결했다.
+- 신청은 인증된 `serverCharacterId`만 사용하고, 본인 pending 신청은 `revision`으로 철회한다.
+- `PartyApplicationSummary.revision`과 `PublicRecruitmentSummary.currentCycleKey`, `watchMyApplication` 읽기 경계를 추가했다.
+- Fake 모집 상세(`/recruitments/:id`) UI는 재사용하지 않았다.
+- 표적 상세·mapper·현황 테스트와 `flutter analyze --no-pub`를 통과했다.
+- 단일 Android 기기(Player 1개)라 타 계정 신청·철회 실기기는 보류했다. 본인 방 신청은 `alreadyMember`로 거절되는 것을 확인했다.
+- 철회 후 재신청 Transaction과 공개 목록 UI 연결은 후속으로 남긴다.

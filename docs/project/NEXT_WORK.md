@@ -7,15 +7,17 @@
 ## 현재 기준 상태
 
 - 통합 대상: 최신 `main`
-- 작업 브랜치: `cursor/party-application-commands`
+- 작업 브랜치: `cursor/public-recruitment-list`
 - Task-050~054의 Firestore 명령·Rules·Snapshot·Player 이벤트·Drift 로컬 히스토리 기반 구현을 완료했다.
-- Task-056~059에서 레이드 현황 읽기·목록 UX·읽기 전용 상세·모집 생성 Firestore 전환을 완료했다.
-- Task-060 인증 캐릭터 최소 정보 자동 동기화를 완료했고 Android 실기기에서 확인했다.
-  - `내 계정` 진입 시 Drift를 먼저 표시하고, 마지막 성공 기준 1분이 지나면 siblings 최소 요약을 백그라운드 조회한다.
-  - 변경된 캐릭터명·아이템 레벨·캐릭터 레벨만 Drift·active `serverCharacterId` Firestore에 반영한다. 변경이 없으면 앱 서버 전송을 생략한다.
-  - 수동 `계정 데이터 불러오기`는 제한과 무관하며 요청 중 연타를 막고, 조회란에 메인 대표 캐릭터명을 자동 채운다.
-  - 모집 생성의 오래된·미달 서버 Character 안내에 내 계정 새로고침을 안내한다.
-- 모집 목록·신청·승인·멤버·회차와 Fake 상세는 여전히 `InMemoryRecruitmentStateRepository`다. 로컬 Fake로 만든 방은 Firestore 현황에 나타나지 않는다.
+- Task-056~060에서 레이드 현황 읽기·목록 UX·읽기 전용 상세·모집 생성·인증 캐릭터 최소 정보 동기화를 완료했다.
+- Task-061 신청·철회 명령의 실행 앱 연결을 완료했다.
+  - `/raid-status/:id` 읽기 전용 상세에 `FirestorePartyApplicationCommandRepository`를 연결했다.
+  - 신청 Character는 인증된 `serverCharacterId`만 사용하며, 후보 선택은 `RecruitmentLeaderCandidateService`를 재사용한다.
+  - 본인 pending 신청은 `revision`으로 철회하고, 요청 중 버튼을 비활성한다.
+  - Fake `/recruitments/:id` 상세 UI는 그대로 두며 데이터를 섞지 않는다.
+  - 단일 Android 기기(Player 1개)라 타 계정 신청·철회 실기기 확인은 보류했다. 표적 테스트로 검증했다.
+- `레이드 모집` 탭 공개 목록은 여전히 `InMemoryRecruitmentStateRepository` Fake다. `watchPublicRecruitments`는 Repository에 있으나 UI에 미연결이다.
+- 승인·즉시 가입·멤버·회차는 Fake 경로를 유지한다.
 - Firestore Emulator, FCM, TTL 배포와 유료 서비스 호출은 수행하지 않았다.
 
 ## 확정된 협업 역할
@@ -26,38 +28,37 @@
 - 구현 중 계약 변경이 필요하면 Cursor가 임의 확장하지 않고 영향과 제안을 문서에 먼저 기록한다.
 - 완료 시 코드, 테스트, 문서와 실제 Git 상태를 함께 갱신한다.
 
-## 다음 작업 설계 대상: 신청·철회 명령의 실행 앱 전환
+## 다음 작업 설계 대상: 레이드 모집 공개 목록 Firestore 읽기 전환
 
-모집 생성은 Firestore 명령이다. 신청·철회는 아직 Fake 경로라 읽기 전용 현황 상세와 데이터가 섞이지 않도록, 인증된 `serverCharacterId`로 Firestore 신청 명령 Repository에 연결한다.
+신청·철회는 현황 상세에 연결됐지만, 공개 모집을 고르려면 `레이드 모집` 탭이 서버 목록을 보여야 한다. 현재는 Fake 시드만 쓰므로 재설치·다른 Player에서는 서버에 있는 방이 보이지 않는다.
 
 ### 설계 시 고정된 런타임 사실
 
-- 현황 상세는 Firestore 읽기 전용이며 Fake `RecruitmentDetailPage`와 경로·데이터를 섞지 않는다.
-- 모집 생성만 Firestore 명령이다. 신청·철회·승인·즉시 가입은 아직 Fake다.
-- `FirestorePartyApplicationCommandRepository` 등 신청 명령 Repository 구현은 이미 존재할 수 있으며, 실행 앱 화면 연결이 남은 경계다.
-- 신청 Character ID는 게임 계정 인증의 `serverCharacterId`여야 한다.
-- 서버 Character Snapshot 아이템 레벨이 최종 조건이다. 로컬만 최신이면 거절될 수 있으므로 Task-060 동기화·새로고침 안내를 유지한다.
-- 존재하지 않는 모집 단건 `get`과 `신청 중` collection group `list` Rules는 `lost-party`에 배포된 상태다.
+- `FirestorePartyReadRepository.watchPublicRecruitments(cycleKey:)`가 이미 있다.
+- 공개 목록 필터는 `visibility == public`, `status == active`, `manualRecruitmentEnabled`, `hasAvailableSlot`, `targetCycleKey == cycleKey`다.
+- 카드 탭 시 `/raid-status/{id}` 읽기 전용 상세로 들어가면 신청·철회가 가능하다.
+- Fake `/recruitments/:id` 상세와 데이터를 섞지 않는다.
+- 모집 생성은 이미 Firestore이며 성공 시 현황 상세로 이동한다.
 
 ### 목표
 
-인증된 사용자의 신청과 본인 철회를 Firestore 신청 명령 Repository에 연결한다. 승인·즉시 가입·멤버 관리·회차는 Fake로 둔다.
+`레이드 모집` 탭을 `watchPublicRecruitments`에 연결해 현재 주차 공개·모집 중 방을 실시간으로 표시하고, 선택 시 Firestore 읽기 상세로 진입한다.
 
 ### 우선 확인 파일
 
-- `lib/features/recruitment_list/data/repositories/firestore_party_application_command_repository.dart`
-- `lib/features/raid_status/presentation/pages/party_read_detail_page.dart`
+- `lib/features/recruitment_list/presentation/pages/recruitment_list_page.dart`
+- `lib/features/recruitment_list/data/repositories/firestore_party_read_repository.dart`
 - `lib/app/router/app_router.dart`
-- `docs/architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`
 - `docs/architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`
+- `docs/architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md` §9
 
 ### 포함 범위
 
-1. 읽기 전용 상세에서 신청 진입 경계를 정한다. Fake `RecruitmentDetailPage`의 신청 UI를 그대로 재사용하지 않는다.
-2. 신청·철회 실패 유형을 명령 계약대로 화면에 전달한다.
-3. 신청 Character는 `serverCharacterId`만 사용하고, 미인증·레벨 미달·오래된 서버 정보는 내 계정 새로고침 안내와 함께 막는다.
-4. 성공 후 `레이드 현황 > 신청 중` 읽기 목록이 갱신되는지 표적 테스트로 검증한다.
-5. 네트워크 요청 버튼은 진행 중 연타·중복 요청을 막는다.
+1. `RecruitmentListPage`를 Firestore 공개 목록 stream에 연결한다. InMemory Fake 목록을 실행 앱 기본 경로에서 제거한다.
+2. loading·빈 목록·캐시·오류 상태를 현황 목록과 같은 계약으로 표시한다.
+3. 카드 선택 시 `/raid-status/{recruitmentId}`로 이동한다. Fake 상세로 보내지 않는다.
+4. 모집 생성 진입은 유지한다.
+5. 표적 테스트와 필요 시 Rules/인덱스 누락을 확인한다.
 
 ### 제외 범위
 
@@ -66,19 +67,20 @@
 - Cloud Functions, Blaze 전환과 결제수단 연결
 - Firestore Emulator 실행
 - 승인·즉시 가입·멤버·회차 명령 전환
+- Fake 상세 UI 전면 제거(경로만 분리 유지 가능)
 - 대규모 UI 개편
 
 ### 완료 조건
 
-- 신청 명령의 Character ID가 서버 `serverCharacterId`를 사용한다.
-- 본인 철회가 pending 신청에만 적용되고, 이미 종료된 상태는 멱등적으로 처리된다.
+- 서버에 있는 현재 주차 공개 모집이 `레이드 모집` 탭에 나타난다.
+- 카드에서 읽기 전용 상세로 들어가 신청 흐름 이어진다.
 - `flutter analyze --no-pub`와 변경 범위 표적 테스트가 통과한다.
-- 실행 화면이 바뀌면 Android 실기기 체크리스트를 제공하고 사용자가 직접 확인한다.
+- Android 실기기에서 공개 목록·상세 진입을 확인한다.
 - 남은 Fake 범위와 다음 전환 단위를 문서에 기록한다.
 
 ## 후속 순서
 
-1. 신청·철회 명령의 실행 앱 전환
+1. 레이드 모집 공개 목록 Firestore 읽기 전환
 2. 즉시 가입·승인·거절
 3. 멤버·회차 명령
 4. 캐릭터 이동·스왑 예상 결과와 다중 파티 Transaction 설계

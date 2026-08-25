@@ -58,6 +58,7 @@ class PartyApplicationSummary {
     required this.className,
     required this.requestedRole,
     required this.status,
+    required this.revision,
     required this.createdAt,
     required this.updatedAt,
     this.resolutionReason,
@@ -72,6 +73,7 @@ class PartyApplicationSummary {
   final String className;
   final PartyRole requestedRole;
   final RecruitmentApplicationStatus status;
+  final int revision;
   final String? resolutionReason;
   final DateTime createdAt;
   final DateTime? decidedAt;

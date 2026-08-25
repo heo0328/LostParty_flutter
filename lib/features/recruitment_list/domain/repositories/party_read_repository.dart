@@ -26,4 +26,9 @@ abstract class PartyReadRepository {
   Stream<PartyReadDetailSnapshot<PublicRecruitmentSummary>> watchRecruitment(
     String recruitmentId,
   );
+
+  Stream<PartyReadDetailSnapshot<PartyApplicationSummary?>> watchMyApplication({
+    required String recruitmentId,
+    required String playerId,
+  });
 }

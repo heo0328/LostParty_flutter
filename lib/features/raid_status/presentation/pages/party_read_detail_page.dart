@@ -1,21 +1,34 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../../shared/formatters/korea_time_formatter.dart';
+import '../../../recruitment_list/domain/entities/party_application_command.dart';
+import '../../../recruitment_list/domain/entities/party_read_models.dart';
 import '../../../recruitment_list/domain/entities/party_recruitment.dart';
 import '../../../recruitment_list/domain/entities/recruitment_aggregate.dart';
+import '../../../recruitment_list/domain/entities/recruitment_application.dart';
+import '../../../recruitment_list/domain/repositories/party_application_command_repository.dart';
 import '../../../recruitment_list/domain/repositories/party_read_repository.dart';
+import '../../../recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
 import '../viewmodels/party_read_detail_view_model.dart';
 
 class PartyReadDetailPage extends StatefulWidget {
   const PartyReadDetailPage({
     required this.recruitmentId,
     required this.partyReadRepository,
+    this.applicationCommandRepository,
+    this.candidateService,
+    this.playerId,
     super.key,
   });
 
   final String recruitmentId;
   final PartyReadRepository partyReadRepository;
+  final PartyApplicationCommandRepository? applicationCommandRepository;
+  final RecruitmentLeaderCandidateService? candidateService;
+  final String? playerId;
 
   @override
   State<PartyReadDetailPage> createState() => _PartyReadDetailPageState();
@@ -23,6 +36,17 @@ class PartyReadDetailPage extends StatefulWidget {
 
 class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
   late final PartyReadDetailViewModel<PublicRecruitmentSummary> _viewModel;
+  StreamSubscription<PartyReadDetailSnapshot<PartyApplicationSummary?>>?
+  _myApplicationSubscription;
+  PartyApplicationSummary? _myApplication;
+  bool _myApplicationLoading = false;
+  bool _submitting = false;
+
+  bool get _canCommand =>
+      widget.applicationCommandRepository != null &&
+      widget.candidateService != null &&
+      widget.playerId != null &&
+      widget.playerId!.isNotEmpty;
 
   @override
   void initState() {
@@ -31,12 +55,133 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       streamFactory: () =>
           widget.partyReadRepository.watchRecruitment(widget.recruitmentId),
     )..start();
+    if (_canCommand) {
+      _myApplicationLoading = true;
+      _myApplicationSubscription = widget.partyReadRepository
+          .watchMyApplication(
+            recruitmentId: widget.recruitmentId,
+            playerId: widget.playerId!,
+          )
+          .listen(_onMyApplication, onError: (_) {
+            if (!mounted) return;
+            setState(() => _myApplicationLoading = false);
+          });
+    }
   }
 
   @override
   void dispose() {
+    _myApplicationSubscription?.cancel();
     _viewModel.dispose();
     super.dispose();
+  }
+
+  void _onMyApplication(
+    PartyReadDetailSnapshot<PartyApplicationSummary?> snapshot,
+  ) {
+    if (!mounted) return;
+    setState(() {
+      _myApplication = snapshot.item;
+      _myApplicationLoading = false;
+    });
+  }
+
+  Future<void> _openApplySheet(PublicRecruitmentSummary summary) async {
+    final candidateService = widget.candidateService;
+    final repository = widget.applicationCommandRepository;
+    if (candidateService == null || repository == null || _submitting) return;
+
+    final startAt = summary.metadata.raidStartAt ?? DateTime.now();
+    final candidates = await candidateService.load(
+      RecruitmentLeaderCandidateQuery(
+        raidId: summary.metadata.raidId,
+        difficultyId: summary.metadata.difficultyId,
+        minItemLevel: summary.metadata.minItemLevel,
+        startAt: startAt,
+        maxPlayHours: summary.metadata.maxPlayHours,
+      ),
+    );
+    if (!mounted) return;
+
+    final eligible = candidates
+        .where(
+          (candidate) =>
+              candidate.canSelect &&
+              candidate.serverCharacterId != null &&
+              candidate.serverCharacterId!.isNotEmpty,
+        )
+        .toList(growable: false);
+    if (eligible.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            '신청할 수 있는 인증된 캐릭터가 없습니다. 내 계정에서 정보를 새로고침한 뒤 다시 시도해 주세요.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final selected = await showModalBottomSheet<_ApplySelection>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => _ApplyCandidateSheet(candidates: eligible),
+    );
+    if (selected == null || !mounted) return;
+
+    setState(() => _submitting = true);
+    final result = await repository.apply(
+      PartyApplyCommand(
+        recruitmentId: widget.recruitmentId,
+        characterId: selected.serverCharacterId,
+        requestedRole: selected.role,
+        cycleKey: summary.currentCycleKey,
+        combatPower: selected.combatPower,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+
+    if (result.isSuccess) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('신청을 보냈습니다.')));
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_applicationFailureMessage(result.failure!))),
+    );
+  }
+
+  Future<void> _withdraw() async {
+    final repository = widget.applicationCommandRepository;
+    final application = _myApplication;
+    if (repository == null ||
+        application == null ||
+        application.status != RecruitmentApplicationStatus.pending ||
+        _submitting) {
+      return;
+    }
+
+    setState(() => _submitting = true);
+    final result = await repository.withdraw(
+      PartyWithdrawApplicationCommand(
+        recruitmentId: widget.recruitmentId,
+        expectedRevision: application.revision,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+
+    if (result.isSuccess) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('신청을 철회했습니다.')));
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_applicationFailureMessage(result.failure!))),
+    );
   }
 
   @override
@@ -99,13 +244,133 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                 label: '조건',
                 value: _requirementLabel(summary.metadata),
               ),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 24, 16, 0),
-                child: Text('이 화면은 조회 전용입니다. 신청과 수정은 아직 연결되지 않았습니다.'),
-              ),
+              if (_canCommand)
+                _ApplicationActions(
+                  summary: summary,
+                  myApplication: _myApplication,
+                  loadingApplication: _myApplicationLoading,
+                  submitting: _submitting,
+                  onApply: () => _openApplySheet(summary),
+                  onWithdraw: _withdraw,
+                )
+              else
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 24, 16, 0),
+                  child: Text(
+                    '이 화면은 조회 전용입니다. 신청과 수정은 아직 연결되지 않았습니다.',
+                  ),
+                ),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _ApplicationActions extends StatelessWidget {
+  const _ApplicationActions({
+    required this.summary,
+    required this.myApplication,
+    required this.loadingApplication,
+    required this.submitting,
+    required this.onApply,
+    required this.onWithdraw,
+  });
+
+  final PublicRecruitmentSummary summary;
+  final PartyApplicationSummary? myApplication;
+  final bool loadingApplication;
+  final bool submitting;
+  final VoidCallback onApply;
+  final VoidCallback onWithdraw;
+
+  @override
+  Widget build(BuildContext context) {
+    final application = myApplication;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('신청', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          if (loadingApplication)
+            const LinearProgressIndicator()
+          else if (application?.status == RecruitmentApplicationStatus.pending) ...[
+            Text(
+              '${application!.characterName} · ${_roleLabel(application.requestedRole)} 승인 대기',
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              key: const ValueKey('withdrawApplicationButton'),
+              onPressed: submitting ? null : onWithdraw,
+              child: Text(submitting ? '처리 중...' : '신청 철회'),
+            ),
+          ] else if (application != null) ...[
+            Text(_applicationStatusLabel(application)),
+            const SizedBox(height: 8),
+            const Text('같은 방에 다시 신청하는 기능은 아직 연결되지 않았습니다.'),
+          ] else if (!summary.isRecruiting)
+            const Text('현재 모집이 마감되어 신청할 수 없습니다.')
+          else
+            FilledButton(
+              key: const ValueKey('openApplicationButton'),
+              onPressed: submitting ? null : onApply,
+              child: Text(submitting ? '처리 중...' : '지원하기'),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ApplySelection {
+  const _ApplySelection({
+    required this.serverCharacterId,
+    required this.role,
+    this.combatPower,
+  });
+
+  final String serverCharacterId;
+  final PartyRole role;
+  final double? combatPower;
+}
+
+class _ApplyCandidateSheet extends StatelessWidget {
+  const _ApplyCandidateSheet({required this.candidates});
+
+  final List<RecruitmentLeaderCandidate> candidates;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ListView(
+        shrinkWrap: true,
+        children: [
+          const ListTile(title: Text('신청할 캐릭터')),
+          for (final candidate in candidates)
+            for (final option in candidate.roles.where((role) => role.canSelect))
+              ListTile(
+                key: ValueKey(
+                  'apply-candidate-${candidate.localCharacterId}-${option.role.name}',
+                ),
+                title: Text(candidate.characterId),
+                subtitle: Text(
+                  '${candidate.accountLabel} · ${candidate.className} · '
+                  '${_roleLabel(option.role)} · 아이템 Lv. '
+                  '${DisplayNumberFormatter.integer(option.itemLevel ?? 0)}',
+                ),
+                onTap: () => Navigator.pop(
+                  context,
+                  _ApplySelection(
+                    serverCharacterId: candidate.serverCharacterId!,
+                    role: option.role,
+                    combatPower: option.combatPower,
+                  ),
+                ),
+              ),
+        ],
       ),
     );
   }
@@ -205,6 +470,28 @@ String _failureMessage(PartyReadFailureType failure) => switch (failure) {
   PartyReadFailureType.unknown => '모집을 불러오지 못했습니다.',
 };
 
+String _applicationFailureMessage(PartyApplicationFailure failure) =>
+    switch (failure) {
+      PartyApplicationFailure.unauthenticated ||
+      PartyApplicationFailure.playerBindingMissing => '계정 연결을 준비하지 못했습니다.',
+      PartyApplicationFailure.notFound => '모집 또는 신청 정보를 찾지 못했습니다.',
+      PartyApplicationFailure.ownershipLost => '캐릭터 소유권을 확인하지 못했습니다.',
+      PartyApplicationFailure.invalidCharacter =>
+        '참가할 수 없는 캐릭터입니다. 내 계정에서 정보를 새로고침한 뒤 다시 시도해 주세요.',
+      PartyApplicationFailure.recruitmentClosed => '모집이 마감되어 신청할 수 없습니다.',
+      PartyApplicationFailure.approvalModeMismatch => '이 방은 신청 방식이 다릅니다.',
+      PartyApplicationFailure.capacityFull => '모집 정원이 가득 찼습니다.',
+      PartyApplicationFailure.alreadyMember => '이미 이 방의 멤버입니다.',
+      PartyApplicationFailure.applicationAlreadyExists => '이미 이 방에 신청했습니다.',
+      PartyApplicationFailure.applicationNotPending => '철회할 수 있는 신청이 아닙니다.',
+      PartyApplicationFailure.revisionConflict =>
+        '신청 상태가 바뀌었습니다. 다시 확인해 주세요.',
+      PartyApplicationFailure.permissionDenied => '신청 권한을 확인하지 못했습니다.',
+      PartyApplicationFailure.temporarilyUnavailable => '네트워크 연결이 불안정합니다.',
+      PartyApplicationFailure.invalidRequest => '신청 정보를 확인하지 못했습니다.',
+      PartyApplicationFailure.unknown => '신청을 처리하지 못했습니다.',
+    };
+
 String _raidLabel(RecruitmentMetadata metadata) {
   final difficulty = metadata.difficultyAlias == metadata.difficultyName
       ? metadata.difficultyName
@@ -235,3 +522,17 @@ String _experienceLabel(ExperienceLevel level) => switch (level) {
   ExperienceLevel.semiExperienced => '반숙',
   ExperienceLevel.experienced => '숙련',
 };
+
+String _roleLabel(PartyRole role) => switch (role) {
+  PartyRole.dealer => '딜러',
+  PartyRole.support => '서포터',
+};
+
+String _applicationStatusLabel(PartyApplicationSummary application) =>
+    switch (application.status) {
+      RecruitmentApplicationStatus.pending => '승인 대기',
+      RecruitmentApplicationStatus.approved => '승인됨',
+      RecruitmentApplicationStatus.rejected => '거절됨',
+      RecruitmentApplicationStatus.withdrawn => '철회함',
+      RecruitmentApplicationStatus.superseded => '다른 신청으로 대체됨',
+    };

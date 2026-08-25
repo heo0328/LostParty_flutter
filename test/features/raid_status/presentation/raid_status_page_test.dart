@@ -327,6 +327,7 @@ PartyApplicationSummary _application({
   className: '바드',
   requestedRole: PartyRole.support,
   status: status,
+  revision: 1,
   resolutionReason: resolutionReason,
   createdAt: DateTime.utc(2026, 8, 20),
   updatedAt: DateTime.utc(2026, 8, 21),

@@ -18,13 +18,17 @@ class FakePartyReadRepository implements PartyReadRepository {
     Stream<PartyReadSnapshot<ActiveRaidSummary>>? activeRaids,
     Stream<PartyReadSnapshot<PartyApplicationSummary>>? applications,
     Stream<PartyReadDetailSnapshot<PublicRecruitmentSummary>>? recruitment,
+    Stream<PartyReadDetailSnapshot<PartyApplicationSummary?>>? myApplication,
   }) : _activeRaids = activeRaids ?? Stream.value(emptyActiveRaids),
        _applications = applications ?? Stream.value(emptyApplications),
-       _recruitment = recruitment;
+       _recruitment = recruitment,
+       _myApplication = myApplication;
 
   final Stream<PartyReadSnapshot<ActiveRaidSummary>> _activeRaids;
   final Stream<PartyReadSnapshot<PartyApplicationSummary>> _applications;
   final Stream<PartyReadDetailSnapshot<PublicRecruitmentSummary>>? _recruitment;
+  final Stream<PartyReadDetailSnapshot<PartyApplicationSummary?>>?
+  _myApplication;
 
   String? requestedActiveRaidsPlayerId;
   String? requestedApplicationsPlayerId;
@@ -60,6 +64,17 @@ class FakePartyReadRepository implements PartyReadRepository {
   ) {
     requestedRecruitmentId = recruitmentId;
     return _recruitment ??
+        Stream.value(
+          const PartyReadDetailSnapshot(item: null, isFromCache: false),
+        );
+  }
+
+  @override
+  Stream<PartyReadDetailSnapshot<PartyApplicationSummary?>> watchMyApplication({
+    required String recruitmentId,
+    required String playerId,
+  }) {
+    return _myApplication ??
         Stream.value(
           const PartyReadDetailSnapshot(item: null, isFromCache: false),
         );
