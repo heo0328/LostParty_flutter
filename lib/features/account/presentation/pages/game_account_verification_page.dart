@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 
+import '../../../../shared/lost_ark_api/client/lost_ark_api_exception.dart';
 import '../../domain/entities/game_account_verification.dart';
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/entities/server_account_identity_binding.dart';
@@ -142,6 +144,22 @@ class _GameAccountVerificationPageState
     setState(() => _busy = true);
     try {
       await action();
+    } on LostArkApiException catch (error) {
+      if (mounted) {
+        setState(() => _message = _apiErrorMessage(error.type));
+      }
+    } on FirebaseException catch (error) {
+      if (mounted) {
+        setState(
+          () => _message = error.code == 'permission-denied'
+              ? 'Firebase 인증 권한이 없습니다. 앱을 다시 시작해 로그인 상태를 확인해 주세요.'
+              : 'Firebase 계정 정보를 저장하지 못했습니다. 네트워크 연결을 확인해 주세요.',
+        );
+      }
+    } on FormatException {
+      if (mounted) {
+        setState(() => _message = '캐릭터 또는 장비 정보를 처리할 수 없습니다.');
+      }
     } on Object {
       if (mounted) {
         setState(() => _message = '인증 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
@@ -152,6 +170,17 @@ class _GameAccountVerificationPageState
       }
     }
   }
+
+  String _apiErrorMessage(LostArkApiErrorType type) => switch (type) {
+    LostArkApiErrorType.missingToken => '먼저 Lost Ark API 토큰을 등록해 주세요.',
+    LostArkApiErrorType.unauthorized => 'Lost Ark API 토큰이 올바르지 않거나 만료되었습니다.',
+    LostArkApiErrorType.notFound => '캐릭터를 찾을 수 없습니다.',
+    LostArkApiErrorType.rateLimited => 'API 호출 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.',
+    LostArkApiErrorType.timeout => 'Lost Ark API 응답 시간이 초과되었습니다.',
+    LostArkApiErrorType.network => '네트워크 연결을 확인해 주세요.',
+    LostArkApiErrorType.server => 'Lost Ark API 서버에서 오류가 발생했습니다.',
+    _ => 'Lost Ark API 응답을 처리하지 못했습니다.',
+  };
 
   String _resultMessage(GameAccountVerificationResult result) =>
       switch (result.status) {

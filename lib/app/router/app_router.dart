@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../features/account/data/datasources/lost_ark_character_remote_data_source.dart';
 import '../../features/account/data/datasources/local_account_data_source.dart';
 import '../../features/account/data/local/account_database.dart';
 import '../../features/account/data/repositories/account_repository_impl.dart';
-import '../../features/account/data/gateways/firebase_game_account_verification_gateway.dart';
+import '../../features/account/data/gateways/local_game_account_verification_gateway.dart';
 import '../../features/account/presentation/pages/api_token_settings_page.dart';
 import '../../features/account/presentation/pages/character_management_page.dart';
 import '../../features/account/presentation/pages/character_detail_page.dart';
@@ -43,15 +44,20 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
   final gameCatalogRepository = GameCatalogRepositoryImpl(
     dataSource: AssetGameCatalogDataSource(),
   );
+  final remoteDataSource = LostArkCharacterRemoteDataSource(
+    apiClient: apiClient,
+  );
   final accountRepository = AccountRepositoryImpl(
-    remoteDataSource: LostArkCharacterRemoteDataSource(apiClient: apiClient),
+    remoteDataSource: remoteDataSource,
     localDataSource: LocalAccountDataSource(
       database: accountDatabase,
       gameCatalogRepository: gameCatalogRepository,
     ),
   );
-  final verificationGateway = FirebaseGameAccountVerificationGateway(
-    FirebaseFunctions.instanceFor(region: 'asia-northeast3'),
+  final verificationGateway = LocalGameAccountVerificationGateway(
+    remoteDataSource: remoteDataSource,
+    firestore: FirebaseFirestore.instance,
+    firebaseAuth: FirebaseAuth.instance,
   );
   final raidCatalogRepository = RaidCatalogRepositoryImpl(
     dataSource: AssetRaidCatalogDataSource(),

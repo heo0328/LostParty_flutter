@@ -4,7 +4,9 @@
 
 이 문서는 가등록 또는 직접 입력한 캐릭터를 이용해 게임 계정 소유권을 확인하는 서버 계약을 정의한다. 인증 성공 후 `GameAccountId`·`CharacterId`를 생성하거나 현재 Player에게 이전한다.
 
-이번 작업은 인증 요청 문서, 명령 경계, 순수 장비 판정 규칙과 소유권 이전 Transaction을 확정한다. 실제 배포와 Flutter 설정 화면은 후속 작업이다.
+현재 초기 운영 단계에서는 Firebase Spark 무료 범위만 사용한다. 사용자별 Lost Ark
+API 토큰은 기기의 secure storage에만 저장하며, Flutter 앱이 장비 challenge 생성과
+판정을 수행한 뒤 Firestore 클라이언트 transaction으로 소유권을 갱신한다.
 
 ## 2. 사용자 진입점
 
@@ -42,7 +44,12 @@
 - 안내 문구에 장비 변경 후 캐릭터 선택 화면으로 이동하거나 접속을 한 번 종료해야 API가 갱신된다고 표시한다.
 - 지정 부위가 남아 있거나 API 갱신이 지연된 경우 요청을 종료하지 않고 다시 확인할 수 있다.
 
-## 5. 인증 요청 문서
+## 5. 로컬 인증 요청
+
+challenge는 앱 메모리에만 보관하며 앱 종료 시 폐기한다. 서버 challenge 문서는
+향후 신뢰 가능한 서버 검증이 필요해질 때 사용할 참고 계약으로 유지한다.
+
+### 향후 서버 전환용 문서
 
 `accountVerificationChallenges/{challengeId}`는 서버만 생성·수정한다.
 
@@ -62,7 +69,10 @@
 
 기준 장비와 siblings Snapshot은 민감한 서버 판정 자료이므로 클라이언트가 문서 원문을 직접 읽지 않는다. Callable 응답은 `challengeId`, 캐릭터명, 해제할 부위, 만료 시각, 사용자용 상태만 반환한다.
 
-## 6. Callable 명령
+## 6. 초기 Spark 구현과 향후 Callable 경계
+
+현재 앱은 아래 명령과 동일한 입출력 경계를 로컬 Gateway로 구현한다. Firebase
+Functions와 Secret Manager는 앱 런타임 및 배포 설정에서 사용하지 않는다.
 
 ### `startGameAccountVerification`
 

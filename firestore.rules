@@ -77,19 +77,19 @@ service cloud.firestore {
     }
 
     match /gameAccounts/{gameAccountId} {
-      allow read, write: if false;
+      allow read, write: if signedIn();
     }
 
     match /characters/{characterId} {
-      allow read, write: if false;
+      allow read, write: if signedIn();
     }
 
     match /characterIdentityClaims/{claimId} {
-      allow read, write: if false;
+      allow read, write: if signedIn();
     }
 
     match /playerGameAccounts/{ownershipId} {
-      allow read, write: if false;
+      allow read, write: if signedIn();
     }
   }
 }
