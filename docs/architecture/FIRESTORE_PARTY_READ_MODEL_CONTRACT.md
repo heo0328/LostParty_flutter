@@ -22,6 +22,8 @@ recruitments/{recruitmentId}
   schemaVersion: 1
   title
   leaderPlayerId
+  leaderCharacterNameSnapshot
+  leaderClassNameSnapshot
   memberPlayerIds[]
   raidCatalogVersion
   raidId
@@ -53,6 +55,8 @@ recruitments/{recruitmentId}
 
 `memberPlayerIds`는 `members` 서브컬렉션의 서버 관리 파생 필드다. 별도의 내 파티 문서를 복제하지 않고 `array-contains playerId`로 확정 참가 방을 실시간 조회하기 위해 둔다. 클라이언트는 이 필드를 직접 쓰지 못한다.
 
+`leaderCharacterNameSnapshot`과 `leaderClassNameSnapshot`은 공개 목록과 진행 중 목록에서 Card별 membership 추가 조회 없이 파티장을 표시하기 위한 파생 Snapshot이다. 파티 생성 시 파티장 membership과 같은 값으로 기록하고, 파티장 캐릭터 변경과 책임자 승계 시 모집 문서와 membership을 같은 Transaction에서 갱신한다. `leaderPlayerId`는 권한 판정용이며 UI에는 노출하지 않는다.
+
 `raidNameSnapshot`과 난이도 표시 Snapshot은 카탈로그 갱신 후에도 기존 모집의 표시 의미를 보존한다. 신청 조건 검증은 ID와 버전 기준 카탈로그를 다시 사용한다.
 
 ## 4. 멤버와 신청
@@ -69,6 +73,8 @@ recruitments/{recruitmentId}/members/{playerId}
   joinedAt
   joinedBy
   submittedBuildSnapshotId
+  itemLevelSnapshot
+  combatPowerSnapshot
   characterChangedAt
   canApproveApplications
   updatedAt
@@ -93,6 +99,8 @@ recruitments/{recruitmentId}/applications/{playerId}
 ```
 
 신청 문서 ID는 `PlayerId`로 유지해 같은 방에 한 사용자의 중복 신청을 구조적으로 차단한다. `recruitmentId`, `applicantPlayerId`, `cycleKey`, `updatedAt`은 collection group 조회와 오프라인 정렬을 위한 명시적 필드다.
+
+상세의 파티원 필수 표시는 `characterNameSnapshot`, `classNameSnapshot`, `role`, `partyIndex`, `itemLevelSnapshot`, `combatPowerSnapshot`만 사용한다. `playerId`, `joinedBy`, `canApproveApplications`와 내부 식별자는 공개 표시 정보가 아니다. Snapshot 값이 없을 수 있는 이전 데이터는 계약 오류로 전체 상세를 막지 않고 해당 값만 `정보 없음`으로 처리하는 이행 정책을 구현 전에 확정한다.
 
 ## 5. 화면별 쿼리
 
@@ -147,6 +155,17 @@ orderBy updatedAt desc
 
 `pending`은 목록 상단에 표시하고 `rejected`, `withdrawn`, `superseded`는 최근 처리 결과로 구분한다. 모집 종료로 닫힌 신청은 `superseded` 상태와 `resolutionReason == recruitmentClosed`로 구분한다. `approved`는 확정 참가로 전환되므로 신청 중 목록에 남기지 않고 진행 중 membership을 기준으로 한다.
 
+### 모집 상세—현재 파티원
+
+상세 진입 시 모집 문서와 `recruitments/{recruitmentId}/members`를 각각 실시간 구독한다. 멤버는 `partyIndex`, 역할, 안정적인 보조 키 순서로 표시하며, 4인 파티와 공격대 모두 파티별 구성을 구분한다. 공개 상세 방문자에게는 위에서 정의한 필수 표시 Snapshot만 노출하고 권한·내부 식별 정보는 UI에 전달하지 않는다.
+
+현재 Rules는 확정 멤버만 전체 membership 목록을 읽을 수 있으므로 구현 전에 다음 중 하나를 선택하고 Rules·Repository·테스트를 함께 갱신한다.
+
+1. 공개 모집의 membership 목록 읽기를 허용하되 Domain DTO와 UI에서 공개 필드만 소비한다.
+2. 공개 필드만 담은 별도 멤버 요약 읽기 모델을 두고 private membership은 기존 권한을 유지한다.
+
+공개 문서의 모든 필드는 클라이언트에서 기술적으로 읽힐 수 있으므로 민감하거나 권한 전용인 필드를 숨겨야 한다면 2안을 사용한다.
+
 ## 6. Repository 경계
 
 읽기 계약은 기존 쓰기 중심 `RecruitmentStateRepository`에 추가하지 않는다.
@@ -158,9 +177,11 @@ PartyReadRepository
   watchActiveRaids(playerId)
   watchApplications(playerId, cycleKey)
   watchRecruitment(recruitmentId)
+  watchRecruitmentMembers(recruitmentId)
 ```
 
 - `watchRecruitment`은 `PartyReadDetailSnapshot`을 반환한다. 문서 누락은 `item == null`이고, 캐시 여부는 목록과 같이 `isFromCache`로 전달한다. 누락을 권한 오류와 구분하려면 존재하지 않는 모집의 단건 `get`이 active binding만으로 허용되어야 한다.
+- `watchRecruitmentMembers`는 파티 표시 전용 DTO 목록과 캐시 여부를 반환한다. Firestore membership 원문이나 PlayerId를 presentation 계층에 노출하지 않는다.
 - `레이드 현황`과 공개 모집 목록은 `/raid-status/:recruitmentId` Firestore 현황 상세로 들어간다. 이 상세에는 신청·철회 명령이 연결되어 있으며 Fake `RecruitmentDetailPage`와 경로·데이터를 섞지 않는다.
 - Domain Entity는 Firestore 타입을 import하지 않는다.
 - Firestore Timestamp·DocumentSnapshot 변환은 data 계층에서 종료한다.
@@ -194,7 +215,7 @@ PartyReadRepository
 - 모든 조회는 유효한 `AuthUid -> PlayerId` binding을 요구한다.
 - `public` 모집은 로그인된 사용자가 계약된 공개 쿼리로 목록·상세를 읽을 수 있다.
 - `groupOnly` 모집은 해당 그룹 멤버만 읽을 수 있다. 그룹 멤버십 계약 전에는 실행 앱에 연결하지 않는다.
-- 비공개 멤버·신청 정보는 해당 방의 현재 멤버 또는 해당 신청자만 읽을 수 있다.
+- 비공개 멤버·신청 정보는 해당 방의 현재 멤버 또는 해당 신청자만 읽을 수 있다. 공개 모집 상세의 파티 구성 표시에 필요한 캐릭터 Snapshot은 별도 공개 요약 또는 제한된 공개 membership 계약으로 명시적으로 분리한다.
 - 모집 생성은 허용된 생성 Transaction과 Rules만 사용한다. 신청·멤버·회차 쓰기는 실행 앱에 아직 연결하지 않는다.
 - `신청 중` collection group 쿼리는 중첩 경로 규칙이 적용되지 않으므로 `match /{path=**}/applications/{applicantPlayerId}` 재귀 와일드카드 규칙이 반드시 필요하다. 이 규칙은 `list`만 허용하고 `resource.data.applicantPlayerId == currentPlayerId()`로 본인 신청에 한정한다. 단건 조회와 방 멤버의 신청 열람은 기존 중첩 경로 규칙이 계속 담당한다.
 - 모집 단건 `get`은 문서가 없으면 active binding만으로 허용하고, 문서가 있으면 `canReadRecruitment`을 적용한다. `list`는 존재하는 문서만 다루므로 기존 공개·멤버 조건을 유지한다. 생성 Transaction과 상세의 문서 누락 상태가 이 분기를 사용한다.
