@@ -28,6 +28,89 @@ service cloud.firestore {
       return /databases/$(database)/documents/recruitments/$(recruitmentId);
     }
 
+    function recruitmentMemberPath(recruitmentId, playerId) {
+      return /databases/$(database)/documents/recruitments/$(recruitmentId)/members/$(playerId);
+    }
+
+    function assignmentPath(playerId, assignmentId) {
+      return /databases/$(database)/documents/players/$(playerId)/activeRaidAssignments/$(assignmentId);
+    }
+
+    function characterPath(characterId) {
+      return /databases/$(database)/documents/characters/$(characterId);
+    }
+
+    function ownsActiveCharacter(characterId) {
+      let character = get(characterPath(characterId)).data;
+      return character.status == 'active'
+        && character.ownerPlayerId == currentPlayerId();
+    }
+
+    function validInitialRecruitment(recruitmentId, data) {
+      let playerId = currentPlayerId();
+      let member = getAfter(recruitmentMemberPath(recruitmentId, playerId)).data;
+      let assignmentId = member.characterId + '_' + data.raidId;
+      return hasActiveBinding()
+        && data.schemaVersion == 1
+        && data.leaderPlayerId == playerId
+        && data.memberPlayerIds == [playerId]
+        && data.memberCount == 1
+        && data.maxMemberCount >= 1
+        && data.dealerCount + data.supportCount == 1
+        && data.status == 'active'
+        && data.visibility == 'public'
+        && data.currentCycleKey == data.targetCycleKey
+        && data.revision == 1
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && member.playerId == playerId
+        && member.joinedBy == playerId
+        && member.partyIndex == 0
+        && member.canApproveApplications == true
+        && ownsActiveCharacter(member.characterId)
+        && getAfter(assignmentPath(playerId, assignmentId)).data.recruitmentId
+          == recruitmentId;
+    }
+
+    function validInitialLeaderMembership(recruitmentId, playerId, data) {
+      let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
+      let assignmentId = data.characterId + '_' + recruitment.raidId;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && data.joinedBy == playerId
+        && data.partyIndex == 0
+        && data.canApproveApplications == true
+        && data.joinedAt == request.time
+        && data.updatedAt == request.time
+        && recruitment.leaderPlayerId == playerId
+        && recruitment.memberPlayerIds == [playerId]
+        && ownsActiveCharacter(data.characterId)
+        && getAfter(assignmentPath(playerId, assignmentId)).data.recruitmentId
+          == recruitmentId;
+    }
+
+    function validInitialAssignment(playerId, assignmentId, data) {
+      let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
+      let member = getAfter(
+        recruitmentMemberPath(data.recruitmentId, playerId)
+      ).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && assignmentId == data.characterId + '_' + data.raidId
+        && data.cycleKey == recruitment.currentCycleKey
+        && data.raidId == recruitment.raidId
+        && data.characterId == member.characterId
+        && data.role == member.role
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && recruitment.leaderPlayerId == playerId
+        && ownsActiveCharacter(data.characterId);
+    }
+
     function canReadRecruitment(data) {
       return hasActiveBinding()
         && (data.visibility == 'public'
@@ -94,6 +177,17 @@ service cloud.firestore {
         && validActivePlayer(request.resource.data)
         && getAfter(bindingPath(request.auth.uid)).data.playerId == playerId;
       allow update, delete: if false;
+
+      match /activeRaidAssignments/{assignmentId} {
+        allow get: if hasActiveBinding() && playerId == currentPlayerId();
+        allow list: if false;
+        allow create: if validInitialAssignment(
+          playerId,
+          assignmentId,
+          request.resource.data
+        );
+        allow update, delete: if false;
+      }
     }
 
     match /accountVerificationChallenges/{challengeId} {
@@ -122,12 +216,21 @@ service cloud.firestore {
 
     match /recruitments/{recruitmentId} {
       allow get, list: if canReadRecruitment(resource.data);
-      allow create, update, delete: if false;
+      allow create: if validInitialRecruitment(
+        recruitmentId,
+        request.resource.data
+      );
+      allow update, delete: if false;
 
       match /members/{playerId} {
         allow get, list: if canReadPrivateRecruitmentData(recruitmentId)
           || (hasActiveBinding() && playerId == currentPlayerId());
-        allow create, update, delete: if false;
+        allow create: if validInitialLeaderMembership(
+          recruitmentId,
+          playerId,
+          request.resource.data
+        );
+        allow update, delete: if false;
       }
 
       match /applications/{playerId} {
