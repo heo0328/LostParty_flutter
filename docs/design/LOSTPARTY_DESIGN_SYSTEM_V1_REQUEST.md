@@ -1,0 +1,633 @@
+# LostParty UI / Design System v1 설계 요청서
+
+## 적용 상태와 확정 기준
+
+이 문서는 LostParty에 실제 적용할 Design System v1 계약이다. 최초 요청서의 후보 가운데 다음 값을 v1 기준으로 확정한다.
+
+Theme·Bottom Navigation·공개 모집 대표 Card 시범 적용 결과를 사용자가 확인하고 디자인 방향을 승인했다. 다른 화면은 기능 작업과 함께 점진적으로 전환한다.
+
+- Material 3와 시스템 폰트를 유지한다.
+- v1은 Light Theme만 구현하고 Dark Theme은 후속으로 둔다.
+- Primary는 `#725A9F`, App Background는 `#F8F7FA`, Surface·Card·Navigation은 `#FFFFFF`를 사용한다.
+- Text Primary는 `#25232A`, Text Secondary는 `#68646F`, Text Disabled는 `#A8A4AD`를 사용한다.
+- spacing scale은 `4, 8, 12, 16, 20, 24, 32`다.
+- radius는 Small `6`, Medium `12`, Large `16`, Pill `999`다.
+- 일반 Card는 흰색 Surface, Large radius, 약한 `#E8E4EC` border와 elevation 0을 기본으로 한다.
+- Bottom Navigation은 흰색 Surface와 Lavender 선택 Pill을 유지한다.
+- 공개 모집 목록에서 사용하는 Firestore `PublicRecruitmentSummary` 기반 카드를 대표 RecruitmentCard로 삼는다.
+- 상태색은 v1에서 success·warning·error·neutral의 최소 semantic 집합만 둔다. Dealer·Support 전용 색상은 실제 역할 Chip 적용 단계에서 확정한다.
+- 화면 밀도는 Utility App에 맞춘 중간 밀도를 사용한다. 화면 좌우와 Card 내부는 기본 16, 주요 정보 간격은 8, 밀접한 metadata 간격은 4~6을 기준으로 한다.
+
+### v1 시범 적용 범위
+
+1. 공통 Color·Spacing·Radius token과 Light Theme
+2. 기존 Bottom Navigation의 token 적용
+3. 공개 모집 대표 Card의 정보 계층·Badge·Surface 적용
+4. 자동 테스트와 Android 실기기 확인
+
+전체 화면으로 자동 확장하지 않는다. 시범 적용을 사용자가 확인한 뒤 다음 화면 적용 여부를 결정한다. 공개 모집 Firestore 페이징은 이 시범 디자인 완료 후 확정된 Card를 사용해 구현한다.
+
+## 1. 목적
+
+현재 LostParty는 기능 구현을 우선하여 개발되어 왔으며, Flutter/Material 기본 UI에 가까운 형태를 가지고 있다.
+
+기능 구조를 크게 변경하지 않으면서 LostParty만의 일관된 디자인 언어를 만들고자 한다.
+
+이번 작업의 핵심은 개별 화면을 임의로 꾸미는 것이 아니라 다음 순서로 진행하는 것이다.
+
+1. LostParty Design System v1 정의
+2. 공통 Theme 및 디자인 토큰 정리
+3. 기존 UI에 점진적으로 적용
+4. 대표 컴포넌트에서 실제 디자인 검증
+5. 검증 후 전체 화면으로 확장
+
+이번 단계에서는 전체 UI를 한 번에 리디자인하지 않는다.
+
+---
+
+## 2. 디자인 방향
+
+LostParty의 기본 디자인 콘셉트는 다음과 같이 정의한다.
+
+> Soft Lavender Gaming Utility
+
+LostParty는 게임 자체가 아니라 Lost Ark 플레이를 보조하는 파티 모집/관리 도구이다.
+
+따라서 Lost Ark 게임 UI의 어두운 배경, 금색 장식, 판타지 스타일 등을 직접 모방하지 않는다.
+
+게임 커뮤니티 도구와 현대적인 Utility App 사이의 느낌을 목표로 한다.
+
+전체적인 컬러 비율은 대략 다음 방향을 따른다.
+
+- Neutral: 약 75%
+- Lavender/Purple: 약 15%
+- Status Color: 약 10%
+
+보라색으로 앱 전체를 덮지 않는다.
+
+보라색은 LostParty의 브랜드 컬러이면서 동시에 사용자 인터랙션과 선택 상태를 표현하는 색으로 사용한다.
+
+---
+
+## 3. 현재 UI에서 유지할 요소
+
+현재 UI에 이미 적용되어 있는 연보라 계열의 방향성 자체는 유지한다.
+
+특히 다음 요소는 LostParty의 디자인 언어로 발전시킨다.
+
+- 진한 보라색 Primary Button
+- 선택된 Bottom Navigation 항목의 연보라 Pill
+- 연보라색 Badge/Chip
+- 밝고 부드러운 전체 UI
+- 둥근 형태의 인터랙션 요소
+
+현재 디자인을 완전히 폐기하고 새로운 스타일로 교체하는 것이 목적이 아니다.
+
+현재 디자인에서 좋은 요소를 유지하면서 색상, Surface, Card, Button 등의 규칙을 통일한다.
+
+---
+
+## 4. Color System
+
+### Primary
+
+LostParty의 Primary Color는 채도가 지나치게 높지 않은 muted purple 계열을 사용한다.
+
+기본 후보:
+
+- Purple 700: `#59427F`
+- Purple 500: `#725A9F`
+- Purple 200: `#D9CCED`
+- Purple 100: `#EEE7F7`
+
+기본 Primary는 `#725A9F`를 기준으로 한다.
+
+현재 앱에서 사용되고 있는 진한 보라색 버튼의 분위기를 유지하는 방향이다. 지나치게 밝거나 형광에 가까운 violet 계열은 피한다.
+
+---
+
+## 5. Neutral Color / Surface
+
+현재 앱은 배경, 카드, Bottom Navigation 등의 명도 차이가 작아 화면 전체가 평평하게 보이는 문제가 있다.
+
+이를 해결하기 위해 Surface 계층을 명확하게 분리한다.
+
+### App Background
+
+기본 후보는 `#F8F7FA`다.
+
+거의 흰색에 가까우면서 아주 약한 cool/lavender tone만 가진다. 앱 전체 배경에 강한 보라색 느낌을 주지 않는다.
+
+### Surface / Card
+
+기본값은 `#FFFFFF`이다.
+
+일반 카드와 주요 Surface는 흰색을 기본으로 한다. 현재 일부 카드처럼 연보라/회색 Surface를 기본 카드 배경으로 반복 사용하는 것은 줄인다.
+
+### Bottom Navigation
+
+기본값은 `#FFFFFF`이다.
+
+화면 Background와 Bottom Navigation의 계층을 구분한다. 필요한 경우 매우 약한 divider 또는 elevation만 사용한다.
+
+---
+
+## 6. Text Color
+
+텍스트는 완전한 `#000000` 사용을 최소화하고 neutral 계열을 사용한다.
+
+초기 후보:
+
+- Text Primary: `#25232A`
+- Text Secondary: `#68646F`
+- Text Disabled: `#A8A4AD`
+
+최종 값은 현재 Flutter Theme 및 접근성 대비를 검토하여 조정 가능하다.
+
+Primary Purple을 일반 본문 텍스트에 남용하지 않는다. Purple text는 선택 상태 또는 브랜드 강조가 필요한 경우에만 사용한다.
+
+---
+
+## 7. Purple 사용 원칙
+
+Purple 500 이상의 진한 색상은 화면에서 차지하는 면적을 제한한다.
+
+주요 사용 대상:
+
+- Primary Action
+- Selected State
+- Active Tab
+- 중요한 Icon
+- Focus State
+- 브랜드 강조
+
+다음 영역 전체를 진한 보라색으로 채우는 방식은 피한다.
+
+- 전체 화면 Background
+- 일반 Card 전체
+- Bottom Navigation 전체
+- AppBar 전체
+
+즉, 다음 구조를 기본 원칙으로 한다.
+
+> Neutral Surface 위에 Lavender/Purple Accent를 사용하는 구조
+
+---
+
+## 8. Status Color와 Brand Color 분리
+
+모든 정보를 Purple로 표현하지 않는다. Purple은 브랜드/인터랙션 색상이다.
+
+상태 정보는 필요에 따라 별도의 Semantic Color를 사용한다.
+
+향후 정의 대상:
+
+- Success
+- Warning
+- Error
+- Recruiting
+- Closed
+- Completed
+
+역할 표시가 필요할 경우 다음과 같이 별도 색상 사용을 검토할 수 있다.
+
+- Dealer: muted coral/red 계열
+- Support: muted mint/teal 계열
+
+단, 상태색 역시 채도를 낮춰 전체 Soft Lavender 디자인과 충돌하지 않도록 한다. 이번 v1에서 불필요하다면 상태색을 무리하게 추가하지 않아도 된다.
+
+---
+
+## 9. Bottom Navigation
+
+현재 Bottom Navigation의 선택 표현 방식, 특히 선택 항목 뒤의 Lavender Pill을 LostParty의 대표적인 인터랙션 디자인 중 하나로 유지한다.
+
+기본 구조:
+
+- Navigation Background: White
+- Selected Pill: Purple 100
+- Selected Icon: Purple 700 또는 Purple 500
+- Selected Label: Text Primary 또는 Purple 700
+- Unselected Icon: Neutral Gray
+- Unselected Label: Neutral Gray
+
+선택된 항목 전체에 진한 보라색을 사용하지 않는다. 현재 사용 중인 Pill 형태를 유지하되 모든 탭에서 크기, radius, padding이 동일하도록 한다.
+
+---
+
+## 10. Button Hierarchy
+
+버튼을 최소한 다음 계층으로 구분한다.
+
+### Primary Button
+
+가장 중요한 행동에 사용한다.
+
+예:
+
+- 계정 데이터 불러오기
+- 세팅 갱신
+- 모집글 최종 생성
+- 지원하기
+
+스타일:
+
+- Background: Purple 500
+- Foreground: White
+- 충분한 contrast 유지
+
+한 화면에서 Primary Button이 지나치게 많이 존재하지 않도록 한다.
+
+### Secondary Button
+
+부계정 추가, 게임계정 인증, 설정 관련 보조 행동 등에 사용한다.
+
+스타일 후보:
+
+- White 또는 Transparent Background
+- Purple 또는 Neutral Border
+- Purple 500/700 Foreground
+
+### Tertiary / Text Action
+
+중요도가 낮은 행동은 TextButton 또는 IconButton 계열로 처리한다. Primary Button과 시각적 경쟁을 하지 않도록 한다.
+
+### Disabled
+
+Disabled 상태에서는 Purple을 유지하면서 opacity만 낮추기보다 Neutral Disabled Color 사용을 우선 검토한다.
+
+---
+
+## 11. Card System
+
+현재 LostParty의 카드 UI는 Flutter/Material 기본 Card의 인상이 강하다.
+
+Design System v1에서는 다음 공통 요소를 결정한다.
+
+- Border Radius
+- Internal Padding
+- Card 간 Vertical Spacing
+- Border 사용 여부
+- Shadow/Elevation
+- Background Color
+
+기본 방향:
+
+- White Surface
+- Medium Rounded Corner
+- 매우 약한 Border 또는 Shadow
+- 강한 Material Shadow는 피함
+- 충분한 내부 여백
+
+Border와 Shadow를 동시에 강하게 사용하지 않는다. 화면마다 서로 다른 Card radius나 elevation을 임의로 사용하지 않는다.
+
+---
+
+## 12. RecruitmentCard를 대표 컴포넌트로 지정
+
+`RecruitmentCard`를 LostParty Design System v1을 처음 검증하는 대표 컴포넌트로 사용한다.
+
+현재 모집 카드가 가진 정보는 유지하면서 정보 계층을 개선한다.
+
+예상 정보:
+
+- 모집글 제목
+- Raid
+- Difficulty
+- Gate
+- 시작 시간
+- Member 현황
+- 남은 자리
+- 최소 Item Level
+- Experience
+- 내가 만든 방 여부
+- 모집 상태
+
+단순히 모든 정보를 동일한 Text 형태로 나열하지 않고 중요도에 따라 다음과 같은 시각적 계층을 만든다.
+
+### High Priority
+
+- 모집글 제목
+- 모집 상태
+
+### Medium Priority
+
+- Raid / Difficulty / Gate
+- 시작 시간
+- Member 현황
+
+### Low Priority / Metadata
+
+- 최소 Item Level
+- Experience
+- 기타 조건
+
+---
+
+## 13. RecruitmentCard의 Color 사용
+
+Card 자체는 기본적으로 White Surface를 사용한다.
+
+Purple은 다음과 같은 작은 영역에서만 사용한다.
+
+- 내가 만든 방 Badge
+- Recruiting Badge
+- Difficulty Chip
+- 선택 상태
+- 일부 중요 Icon
+- Accent Element
+
+Card 전체를 Lavender로 채우는 방식은 기본 디자인으로 사용하지 않는다. Raid/Difficulty/Status Chip 등을 이용해 LostParty만의 카드 문법을 만드는 방향을 우선 검토한다.
+
+---
+
+## 14. Chip / Badge System
+
+향후 다음 정보가 Badge 또는 Chip으로 표현될 가능성이 있다.
+
+- 내가 만든 방
+- 모집중
+- 모집마감
+- Normal
+- Hard
+- Nightmare
+- Dealer
+- Support
+- Experience Level
+
+모든 Chip이 동일한 색을 사용할 필요는 없다. 다만 공통적으로 다음 속성은 Design Token화를 검토한다.
+
+- Height
+- Horizontal Padding
+- Radius
+- Font Size
+- Font Weight
+
+Chip을 지나치게 많이 사용해 화면이 태그 모음처럼 보이지 않도록 한다.
+
+---
+
+## 15. Typography
+
+새로운 커스텀 폰트를 도입하는 것이 이번 작업의 목적은 아니다.
+
+기존 시스템 폰트를 유지하더라도 최소한 다음 Typography 역할을 구분한다.
+
+- Page Title
+- Section Title
+- Card Title
+- Body
+- Metadata
+- Caption
+- Button Label
+- Badge Label
+
+각 화면에서 임의의 fontSize/fontWeight를 직접 지정하는 것을 줄이고 Theme/TextStyle 기반으로 통일하는 방향을 검토한다.
+
+---
+
+## 16. Spacing System
+
+AI에 의해 화면별 spacing 값이 제각각 생성되지 않도록 공통 spacing scale을 정의한다.
+
+예시 후보:
+
+- 4
+- 8
+- 12
+- 16
+- 20
+- 24
+- 32
+
+필요하지 않은 13, 17, 19 등의 임의 spacing 값을 화면별로 추가하지 않는다.
+
+특히 다음 값은 공통화한다.
+
+- Screen Horizontal Padding
+- Section 간 Vertical Spacing
+- Card Internal Padding
+- Card 간 Spacing
+- Button 내부 Padding
+- Icon/Text 간격
+
+현재 프로젝트의 기존 UI 구조를 확인한 뒤 적절한 값을 제안한다.
+
+---
+
+## 17. Radius System
+
+Rounded UI는 LostParty의 디자인 특성으로 유지한다. 단, 화면마다 서로 다른 radius를 무작위로 사용하지 않는다.
+
+예를 들어 다음 정도의 체계를 검토한다.
+
+- Small: Badge / Chip
+- Medium: Input / 일반 Button
+- Large: Card
+- Full/Pill: Bottom Navigation Selected Indicator 및 특정 Action
+
+실제 숫자는 현재 UI를 분석한 뒤 결정한다.
+
+---
+
+## 18. Icon
+
+기존 Material Icon을 당장 전부 교체할 필요는 없다. 다만 다음 규칙을 통일한다.
+
+- Icon size
+- Icon color
+- Text와의 spacing
+- Selected / Unselected 상태
+- Semantic 상태 Icon
+
+장식 목적으로 불필요한 Icon을 추가하지 않는다. Icon은 정보 전달 또는 인터랙션을 보조하는 용도로 사용한다.
+
+---
+
+## 19. Empty State
+
+현재 `진행 중인 레이드가 없습니다.` 화면과 같은 Empty State도 Design System 대상에 포함한다.
+
+Empty State의 기본 구조를 통일한다.
+
+- Icon
+- Primary Message
+- Secondary Description
+- 필요할 경우 Action
+
+Empty State 전체에 Purple을 많이 사용하지 않는다. Icon 또는 작은 Accent 정도에만 브랜드 컬러를 사용할 수 있다.
+
+---
+
+## 20. 화면 밀도
+
+현재 LostParty는 Utility App이므로 지나치게 큰 UI 요소와 과도한 여백을 사용하지 않는다.
+
+특히 모집 목록처럼 여러 정보를 빠르게 확인해야 하는 화면은 정보 밀도를 적절히 유지한다. 반대로 모든 정보를 작은 글씨로 압축하지 않는다.
+
+목표는 다음과 같다.
+
+> 한눈에 필요한 정보를 파악할 수 있으면서 답답하지 않은 UI
+
+---
+
+## 21. Design Token 우선
+
+가능하다면 화면 내부에 색상과 spacing을 직접 하드코딩하기보다 Design Token / Theme 기반 구조를 사용한다.
+
+예:
+
+- AppColors
+- AppSpacing
+- AppRadius
+- AppTextStyles
+
+단, 기존 프로젝트 구조를 먼저 분석한 후 현재 Architecture에 맞는 위치와 이름을 제안한다.
+
+불필요하게 거대한 Design System Framework를 만들지 않고 MVP 규모에 적절한 단순한 구조를 유지한다.
+
+---
+
+## 22. Dark Mode
+
+이번 Design System v1에서는 Dark Mode 구현을 우선 목표로 하지 않는다.
+
+먼저 Light Theme의 디자인 언어를 완성한다. Dark Theme은 Light Theme이 안정화된 이후 별도 단계에서 파생한다.
+
+다만 Theme 구현 과정에서 향후 Dark Theme 추가가 지나치게 어려워지는 하드코딩은 피한다.
+
+---
+
+## 23. 이번 작업에서 하지 않을 것
+
+다음 작업을 한 번에 진행하지 않는다.
+
+- 전체 화면 일괄 리디자인
+- 모든 Widget 재작성
+- Architecture 변경
+- 새로운 상태관리 도입
+- 새로운 UI Framework 도입
+- 불필요한 Animation 추가
+- Dark Mode 동시 구현
+- 모든 Card를 한 번에 교체
+- 게임 UI를 직접 모방하는 디자인
+- 기능 로직 변경
+
+이번 작업의 목적은 기능 변경이 아니라 디자인 기반을 만드는 것이다.
+
+---
+
+## 24. 권장 작업 순서
+
+### Phase 1 — 현재 프로젝트 분석
+
+현재 프로젝트에서 다음을 먼저 확인한다.
+
+- Theme 정의 위치
+- Color 하드코딩 현황
+- TextStyle 사용 현황
+- Card 스타일
+- Button 스타일
+- Bottom Navigation 구현
+- RecruitmentCard 구현
+- 공통 Widget 구조
+
+코드는 아직 수정하지 않는다.
+
+### Phase 2 — Design System v1 제안
+
+분석 결과를 기준으로 다음을 확정한다.
+
+- Color Tokens
+- Typography
+- Spacing
+- Radius
+- Surface
+- Button hierarchy
+- Card rule
+- Chip/Badge rule
+- Bottom Navigation rule
+
+현재 문서의 색상 값은 방향성을 위한 후보이므로 프로젝트의 기존 UI와 비교 후 필요한 경우 소폭 조정할 수 있다. 단, 전체적인 Soft Lavender 방향은 유지한다.
+
+### Phase 3 — Theme / Token 기반 구현
+
+확정된 Design System을 코드 구조에 반영한다. 가능한 한 기존 기능 로직에는 영향을 주지 않는다.
+
+### Phase 4 — Bottom Navigation 적용
+
+현재 디자인을 크게 변경하지 않고 새로운 Color/Token 규칙을 적용한다. 현재의 Selected Lavender Pill 디자인은 유지한다.
+
+### Phase 5 — RecruitmentCard 시범 적용
+
+RecruitmentCard 하나에 새로운 Design System을 적용한다. 이 단계에서 LostParty의 대표적인 Card 디자인을 만든다.
+
+### Phase 6 — 사용자 확인
+
+여기서 작업을 중단한다. 전체 화면으로 자동 확장하지 않는다.
+
+실제 Emulator/Device에서 결과를 확인한 뒤 다음 단계 진행 여부를 결정한다.
+
+### Phase 7 — 전체 화면 확장
+
+사용자가 디자인 방향을 승인한 경우에만 다음 화면으로 순차 확장한다.
+
+예:
+
+- 레이드 현황
+- 내 계정
+- Character Detail
+- 파티 모집
+- 설정
+- 기타 화면
+
+---
+
+## 25. Codex 작업 요청
+
+현재 프로젝트를 먼저 분석하고 위 Design System v1 방향을 실제 프로젝트 구조와 비교한다.
+
+바로 전체 UI를 수정하지 않는다. 우선 다음 결과를 보고한다.
+
+1. 현재 Theme/Color/TextStyle 구조
+2. 하드코딩된 디자인 값이 주로 존재하는 위치
+3. 공통화할 수 있는 디자인 요소
+4. Design System v1을 적용하기 위해 추가/수정할 파일 후보
+5. 현재 구조를 최대한 유지하는 최소 변경 방안
+6. RecruitmentCard를 대표 컴포넌트로 개선할 구체적인 디자인 제안
+7. 예상 작업 순서
+8. 각 단계에서 수정될 파일 범위
+9. 기존 기능에 영향을 줄 가능성이 있는 부분
+
+이 분석 결과를 먼저 제시하고 사용자 승인 없이 전체 UI 리팩터링을 시작하지 않는다.
+
+---
+
+## 26. 최종 목표
+
+LostParty의 디자인 목표는 화려함이 아니다.
+
+사용자가 앱을 보았을 때 다음과 같은 느낌보다
+
+> 기본 Flutter Material 화면
+
+다음과 같은 인상을 받을 수 있도록 만드는 것이 목표다.
+
+> LostParty라는 하나의 제품
+
+이를 위해 새로운 장식 요소를 많이 추가하기보다 다음 요소의 일관성을 우선한다.
+
+- Color
+- Surface
+- Typography
+- Spacing
+- Radius
+- Card
+- Button
+- Navigation
+- Badge
+- 상태 표현
+
+LostParty의 시각적 아이덴티티는 다음을 중심으로 구축한다.
+
+> Neutral Surface + Soft Lavender Accent + Muted Purple Primary

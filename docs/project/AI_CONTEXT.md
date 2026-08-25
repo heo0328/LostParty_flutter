@@ -70,6 +70,16 @@
 - 앱 셸의 세 번째 `레이드 모집` 탭에 RecruitmentListPage 연결 완료
 - mock 모집글 6개 화면 표시 완료
 
+### Design System v1
+
+- `Soft Lavender Gaming Utility`를 시각적 방향으로 확정했다.
+- Material 3와 시스템 폰트를 유지하고 Light Theme을 우선 적용한다.
+- Color·Spacing·Radius token과 공통 `AppTheme.light`를 추가했다.
+- Neutral Surface, muted purple Primary, Lavender 선택 상태와 최소 semantic 상태색을 정의했다.
+- Bottom Navigation은 흰색 Surface와 Lavender 선택 Pill을 유지한다.
+- Firestore 공개 모집 목록에서 사용할 `PublicRecruitmentSummary` 기반 카드를 대표 Card로 시범 적용했다.
+- 디자인 방향은 사용자 확인을 통과했으며 다른 화면은 자동 일괄 변경하지 않고 후속 기능 작업과 함께 점진적으로 적용한다.
+
 ### 앱 셸 및 내 계정
 - StatefulShellRoute 기반 하단 탭 구조 적용 완료
 - `레이드 현황 / 내 계정 / 레이드 모집 / 설정` 4탭으로 구성

@@ -47,6 +47,12 @@
 - [`project/DEV_LOG.md`](project/DEV_LOG.md): 완료 작업 누적 이력
 - [`project/ai_rules.md`](project/ai_rules.md): AI 협업 및 작업 규칙
 
+## Design
+
+UI 방향, 디자인 시스템과 시각적 적용 기준을 관리한다.
+
+- [`design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md`](design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md): Soft Lavender 기반 Design System v1 설계 요청과 단계적 적용 기준
+
 ## 관리 원칙
 
 - 새 문서를 만들기 전에 기존 기준 문서에 포함할 수 있는지 확인한다.
