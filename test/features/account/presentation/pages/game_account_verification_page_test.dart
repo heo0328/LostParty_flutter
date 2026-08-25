@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/entities/game_account_verification.dart';
+import 'package:lost_party/features/account/domain/entities/character_summary.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
+import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
 import 'package:lost_party/features/account/domain/entities/server_account_identity_binding.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/account/domain/repositories/account_identity_gateway.dart';
@@ -93,6 +95,16 @@ class _FakeMappingRepository extends Fake
 }
 
 class _EmptyAccountRepository extends Fake implements AccountRepository {
+
+  @override
+  Future<RosterSummaryApplyResult> applyRosterSummarySync({
+    required int accountId,
+    required String lookupCharacterName,
+    required List<CharacterSummary> summaries,
+    required DateTime fetchedAt,
+  }) async =>
+      const RosterSummaryApplyResult(updatedLocalCount: 0, serverPatches: []);
+
   @override
   Future<List<LocalGameAccount>> loadAccounts() async => const [];
 }
@@ -138,6 +150,16 @@ class _FakeAccountManagementRepository extends Fake
 }
 
 class _FakeAccountRepository extends Fake implements AccountRepository {
+
+  @override
+  Future<RosterSummaryApplyResult> applyRosterSummarySync({
+    required int accountId,
+    required String lookupCharacterName,
+    required List<CharacterSummary> summaries,
+    required DateTime fetchedAt,
+  }) async =>
+      const RosterSummaryApplyResult(updatedLocalCount: 0, serverPatches: []);
+
   @override
   Future<List<LocalGameAccount>> loadAccounts() async => const [
     LocalGameAccount(

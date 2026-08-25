@@ -5,6 +5,7 @@ import 'package:lost_party/features/account/domain/entities/character_build_draf
 import 'package:lost_party/features/account/domain/entities/character_profile.dart';
 import 'package:lost_party/features/account/domain/entities/character_summary.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
+import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/account/presentation/pages/my_account_page.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token.dart';
@@ -72,6 +73,33 @@ void main() {
     expect(repository.deletedMissingCharacterId, 2);
   });
 
+  testWidgets('prefills the main representative character name', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MyAccountPage(
+          apiTokenStore: _InMemoryApiTokenStore(),
+          accountRepository: _FakeAccountRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<TextField>(
+            find.descendant(
+              of: find.byKey(const ValueKey('representativeCharacterNameField')),
+              matching: find.byType(TextField),
+            ),
+          )
+          .controller
+          ?.text,
+      '이슈아이',
+    );
+  });
+
   testWidgets('shows characters returned from an account lookup', (
     WidgetTester tester,
   ) async {
@@ -88,10 +116,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(
-      find.byKey(const ValueKey('representativeCharacterNameField')),
-      '이슈아이',
-    );
     await tester.tap(find.byKey(const ValueKey('loadAccountDataButton')));
     await tester.pumpAndSettle();
 
@@ -127,6 +151,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.enterText(
+      find.byKey(const ValueKey('representativeCharacterNameField')),
+      '',
+    );
     await tester.tap(find.byKey(const ValueKey('loadAccountDataButton')));
     await tester.pumpAndSettle();
 
@@ -193,6 +221,16 @@ class _FakeAccountRepository
     required int characterId,
     required CharacterBuildRole role,
   }) async {}
+
+  @override
+  Future<RosterSummaryApplyResult> applyRosterSummarySync({
+    required int accountId,
+    required String lookupCharacterName,
+    required List<CharacterSummary> summaries,
+    required DateTime fetchedAt,
+  }) async =>
+      const RosterSummaryApplyResult(updatedLocalCount: 0, serverPatches: []);
+
   @override
   Future<List<LocalGameAccount>> loadAccounts() async {
     final account = await loadMainAccount();

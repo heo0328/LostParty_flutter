@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
+import 'package:lost_party/features/account/domain/entities/character_summary.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
+import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/fake_recruitment_runtime.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_active_raid_assignment_repository.dart';
@@ -183,6 +185,16 @@ class _CatalogRepository implements RaidCatalogRepository {
 }
 
 class _VerifiedAccountRepository implements AccountRepository {
+
+  @override
+  Future<RosterSummaryApplyResult> applyRosterSummarySync({
+    required int accountId,
+    required String lookupCharacterName,
+    required List<CharacterSummary> summaries,
+    required DateTime fetchedAt,
+  }) async =>
+      const RosterSummaryApplyResult(updatedLocalCount: 0, serverPatches: []);
+
   @override
   Future<List<LocalGameAccount>> loadAccounts() async => [
     (await loadMainAccount())!,

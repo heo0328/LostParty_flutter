@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
+import 'package:lost_party/features/account/domain/entities/character_summary.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
+import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/fake_recruitment_runtime.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
@@ -18,12 +20,12 @@ import 'package:lost_party/features/recruitment_list/domain/services/recruitment
 import 'package:lost_party/features/recruitment_list/domain/state/recruitment_state_machine.dart';
 
 void main() {
-  test('역할별 저장 세팅과 모든 신청 조건을 후보별로 판정한다', () async {
+  test('ě­í ëł ě ěĽ ě¸íęłź ëŞ¨ë  ě ě˛­ ěĄ°ęą´ě íëł´ëłëĄ íě íë¤', () async {
     final weeklyRepository = InMemoryWeeklyRaidClearRepository();
     await weeklyRepository.saveAll([
       WeeklyRaidClear(
         userId: 'user-b',
-        characterId: '완료바드',
+        characterId: 'ěëŁë°ë',
         raidId: 'serca',
         difficultyId: 'hard',
         resetWeekKey: '2026-08-19',
@@ -41,23 +43,23 @@ void main() {
 
     final candidates = await service.load(_aggregate);
 
-    final dealer = candidates.singleWhere((item) => item.characterId == '가능딜러');
+    final dealer = candidates.singleWhere((item) => item.characterId == 'ę°ëĽëëŹ');
     final cleared = candidates.singleWhere(
-      (item) => item.characterId == '완료바드',
+      (item) => item.characterId == 'ěëŁë°ë',
     );
     expect(dealer.canApply, isTrue);
     expect(cleared.canApply, isFalse);
-    expect(cleared.rejectionReasons, contains('이번 주 동일 레이드 완료'));
+    expect(cleared.rejectionReasons, contains('ě´ë˛ ěŁź ëěź ë ě´ë ěëŁ'));
     expect(
       candidates.any(
         (candidate) =>
-            candidate.characterId == '부계정소서' && candidate.accountLabel == '부계정',
+            candidate.characterId == 'ëśęłě ěě' && candidate.accountLabel == 'ëśęłě ',
       ),
       isTrue,
     );
   });
 
-  test('동일 레이드 신청 수와 확정 참가 충돌을 후보 상태로 제공한다', () async {
+  test('ëěź ë ě´ë ě ě˛­ ěě íě  ě°¸ę° ěśŠëě íëł´ ěíëĄ ě ęłľíë¤', () async {
     final recruitmentRepository = InMemoryRecruitmentStateRepository();
     recruitmentRepository.seed(
       _aggregate.copyWith(
@@ -65,8 +67,8 @@ void main() {
           applications: const {
             'user-b': RecruitmentApplication(
               applicantUserId: 'user-b',
-              characterId: '가능딜러',
-              className: '블레이드',
+              characterId: 'ę°ëĽëëŹ',
+              className: 'ë¸ë ě´ë',
               requestedRole: PartyRole.dealer,
             ),
           },
@@ -77,7 +79,7 @@ void main() {
     await assignmentRepository.acquire(
       ActiveRaidAssignment(
         userId: 'user-b',
-        characterId: '가능딜러',
+        characterId: 'ę°ëĽëëŹ',
         raidId: 'serca',
         difficultyId: 'hard',
         recruitmentId: 'confirmed-party',
@@ -98,7 +100,7 @@ void main() {
 
     final candidate = (await service.load(
       _aggregate,
-    )).singleWhere((item) => item.characterId == '가능딜러');
+    )).singleWhere((item) => item.characterId == 'ę°ëĽëëŹ');
 
     expect(candidate.canApply, isFalse);
     expect(
@@ -115,10 +117,10 @@ void main() {
       candidate.participationStatuses.map((status) => status.type),
       contains(CandidateParticipationStatusType.activeSameRaid),
     );
-    expect(candidate.rejectionReasons, contains('동일 레이드 참가 중'));
+    expect(candidate.rejectionReasons, contains('ëěź ë ě´ë ě°¸ę° ě¤'));
   });
 
-  test('캐릭터 변경 후보는 가능한 다른 역할과 부계정까지 포함한다', () async {
+  test('ěşëŚ­í° ëłę˛˝ íëł´ë ę°ëĽí ë¤ëĽ¸ ě­í ęłź ëśęłě ęšě§ íŹí¨íë¤', () async {
     final service = RecruitmentApplicationCandidateService(
       accountRepository: _AccountRepository(),
       weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
@@ -130,7 +132,7 @@ void main() {
 
     expect(
       candidates.map((candidate) => candidate.characterId),
-      containsAll(['가능딜러', '완료바드', '부계정소서']),
+      containsAll(['ę°ëĽëëŹ', 'ěëŁë°ë', 'ëśęłě ěě']),
     );
     expect(
       candidates.map((candidate) => candidate.role),
@@ -138,7 +140,7 @@ void main() {
     );
   });
 
-  test('인증 상실 계정은 신청 캐릭터 후보에서 제외한다', () async {
+  test('ě¸ěŚ ěě¤ ęłě ě ě ě˛­ ěşëŚ­í° íëł´ěě ě ě¸íë¤', () async {
     final service = RecruitmentApplicationCandidateService(
       accountRepository: _LostOwnershipAccountRepository(),
       weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
@@ -151,23 +153,33 @@ void main() {
 }
 
 class _AccountRepository implements AccountRepository {
+
+  @override
+  Future<RosterSummaryApplyResult> applyRosterSummarySync({
+    required int accountId,
+    required String lookupCharacterName,
+    required List<CharacterSummary> summaries,
+    required DateTime fetchedAt,
+  }) async =>
+      const RosterSummaryApplyResult(updatedLocalCount: 0, serverPatches: []);
+
   @override
   Future<List<LocalGameAccount>> loadAccounts() async => [
     (await loadMainAccount())!,
     const LocalGameAccount(
       id: 2,
-      label: '부계정',
+      label: 'ëśęłě ',
       isMain: false,
-      lookupCharacterName: '부계정소서',
+      lookupCharacterName: 'ëśęłě ěě',
       representativeCharacterId: 3,
       displayLimit: 6,
       characters: [
         LocalAccountCharacter(
           id: 3,
-          serverName: '카단',
-          characterName: '부계정소서',
+          serverName: 'ěš´ë¨',
+          characterName: 'ëśęłě ěě',
           characterLevel: 70,
-          characterClassName: '소서리스',
+          characterClassName: 'ěěëŚŹě¤',
           itemLevel: 1750,
           combatPower: 300000,
           isVisible: true,
@@ -180,18 +192,18 @@ class _AccountRepository implements AccountRepository {
   @override
   Future<LocalGameAccount?> loadMainAccount() async => const LocalGameAccount(
     id: 1,
-    label: '계정',
+    label: 'ęłě ',
     isMain: true,
-    lookupCharacterName: '가능딜러',
+    lookupCharacterName: 'ę°ëĽëëŹ',
     representativeCharacterId: 1,
     displayLimit: 6,
     characters: [
       LocalAccountCharacter(
         id: 1,
-        serverName: '루페온',
-        characterName: '가능딜러',
+        serverName: 'ëŁ¨íě¨',
+        characterName: 'ę°ëĽëëŹ',
         characterLevel: 70,
-        characterClassName: '블레이드',
+        characterClassName: 'ë¸ë ě´ë',
         itemLevel: 1750,
         combatPower: 300000,
         isVisible: true,
@@ -199,10 +211,10 @@ class _AccountRepository implements AccountRepository {
       ),
       LocalAccountCharacter(
         id: 2,
-        serverName: '루페온',
-        characterName: '완료바드',
+        serverName: 'ëŁ¨íě¨',
+        characterName: 'ěëŁë°ë',
         characterLevel: 70,
-        characterClassName: '바드',
+        characterClassName: 'ë°ë',
         itemLevel: 1750,
         combatPower: 300000,
         isVisible: true,
@@ -243,24 +255,34 @@ class _AccountRepository implements AccountRepository {
 }
 
 class _LostOwnershipAccountRepository extends _AccountRepository {
+
+  @override
+  Future<RosterSummaryApplyResult> applyRosterSummarySync({
+    required int accountId,
+    required String lookupCharacterName,
+    required List<CharacterSummary> summaries,
+    required DateTime fetchedAt,
+  }) async =>
+      const RosterSummaryApplyResult(updatedLocalCount: 0, serverPatches: []);
+
   @override
   Future<List<LocalGameAccount>> loadAccounts() async => const [
     LocalGameAccount(
       id: 1,
       serverGameAccountId: 'account-1',
       serverOwnershipStatus: 'ownershipLost',
-      label: '인증 상실 계정',
+      label: 'ě¸ěŚ ěě¤ ęłě ',
       isMain: true,
-      lookupCharacterName: '가능딜러',
+      lookupCharacterName: 'ę°ëĽëëŹ',
       representativeCharacterId: 1,
       displayLimit: 1,
       characters: [
         LocalAccountCharacter(
           id: 1,
-          serverName: '루페온',
-          characterName: '가능딜러',
+          serverName: 'ëŁ¨íě¨',
+          characterName: 'ę°ëĽëëŹ',
           characterLevel: 70,
-          characterClassName: '블레이드',
+          characterClassName: 'ë¸ë ě´ë',
           itemLevel: 1750,
           combatPower: 300000,
           isVisible: true,
@@ -273,14 +295,14 @@ class _LostOwnershipAccountRepository extends _AccountRepository {
 
 final _aggregate = RecruitmentAggregate(
   id: 'recruitment-1',
-  title: '세르카',
+  title: 'ě¸ëĽ´ěš´',
   metadata: const RecruitmentMetadata(
     catalogVersion: 'test',
     raidId: 'serca',
     difficultyId: 'normal',
-    raidName: '세르카',
-    difficultyName: '노말',
-    difficultyAlias: '노르카',
+    raidName: 'ě¸ëĽ´ěš´',
+    difficultyName: 'ë¸ë§',
+    difficultyAlias: 'ë¸ëĽ´ěš´',
     gateCount: 2,
     minItemLevel: 1710,
     minCombatPower: 250000,
@@ -301,8 +323,8 @@ final _aggregate = RecruitmentAggregate(
     members: const [
       RecruitmentPartyMember(
         userId: 'user-a',
-        characterId: '리더',
-        className: '발키리',
+        characterId: 'ëŚŹë',
+        className: 'ë°í¤ëŚŹ',
         role: PartyRole.dealer,
         partyIndex: 0,
       ),

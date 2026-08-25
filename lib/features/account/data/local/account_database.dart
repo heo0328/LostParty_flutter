@@ -1025,6 +1025,134 @@ class AccountDatabase extends _$AccountDatabase {
     });
   }
 
+  Future<({int updatedLocalCount, List<AccountCharacter> changedBound})>
+  applyRosterSummarySync({
+    required int accountId,
+    required String lookupCharacterName,
+    required List<AccountCharacterSnapshot> characters,
+    required DateTime fetchedAt,
+  }) {
+    return transaction(() async {
+      final account =
+          await (select(gameAccounts)
+                ..where((table) => table.id.equals(accountId)))
+              .getSingleOrNull();
+      if (account == null) {
+        throw ArgumentError.value(accountId, 'accountId', 'Account not found.');
+      }
+
+      final existingCharacters =
+          await (select(accountCharacters)
+                ..where((table) => table.accountId.equals(accountId)))
+              .get();
+      final existingByKey = {
+        for (final character in existingCharacters)
+          _characterKey(character.serverName, character.characterName):
+              character,
+      };
+
+      await (update(gameAccounts)..where((table) => table.id.equals(accountId)))
+          .write(
+            GameAccountsCompanion(
+              lookupCharacterName: Value(lookupCharacterName),
+              updatedAt: Value(fetchedAt),
+            ),
+          );
+
+      var updatedLocalCount = 0;
+      final changedBound = <AccountCharacter>[];
+      final incomingKeys = <String>{};
+
+      for (final character in characters) {
+        final key = _characterKey(character.serverName, character.characterName);
+        incomingKeys.add(key);
+        final existing = existingByKey[key];
+        if (existing != null &&
+            existing.lastSummaryFetchedAt.isAfter(fetchedAt)) {
+          continue;
+        }
+
+        if (existing == null) {
+          final insertedId = await into(accountCharacters).insert(
+            AccountCharactersCompanion.insert(
+              accountId: accountId,
+              serverName: character.serverName,
+              characterName: character.characterName,
+              characterLevel: character.characterLevel,
+              characterClassName: character.characterClassName,
+              itemLevel: Value(character.itemLevel),
+              lastSummaryFetchedAt: fetchedAt,
+            ),
+          );
+          updatedLocalCount += 1;
+          final inserted = await (select(
+            accountCharacters,
+          )..where((table) => table.id.equals(insertedId))).getSingle();
+          if (inserted.serverCharacterId != null) {
+            changedBound.add(inserted);
+          }
+          continue;
+        }
+
+        final fieldsChanged =
+            existing.characterLevel != character.characterLevel ||
+            existing.itemLevel != character.itemLevel ||
+            existing.characterName != character.characterName ||
+            existing.isRosterMissing;
+
+        if (fieldsChanged) {
+          await (update(
+            accountCharacters,
+          )..where((table) => table.id.equals(existing.id))).write(
+            AccountCharactersCompanion(
+              characterName: Value(character.characterName),
+              characterLevel: Value(character.characterLevel),
+              characterClassName: Value(character.characterClassName),
+              itemLevel: Value(character.itemLevel),
+              lastSummaryFetchedAt: Value(fetchedAt),
+              isRosterMissing: const Value(false),
+            ),
+          );
+          updatedLocalCount += 1;
+          final updated = existing.copyWith(
+            characterName: character.characterName,
+            characterLevel: character.characterLevel,
+            characterClassName: character.characterClassName,
+            itemLevel: Value(character.itemLevel),
+            lastSummaryFetchedAt: fetchedAt,
+            isRosterMissing: false,
+          );
+          if (updated.serverCharacterId != null) {
+            changedBound.add(updated);
+          }
+        } else if (existing.lastSummaryFetchedAt != fetchedAt) {
+          await (update(
+            accountCharacters,
+          )..where((table) => table.id.equals(existing.id))).write(
+            AccountCharactersCompanion(
+              lastSummaryFetchedAt: Value(fetchedAt),
+              isRosterMissing: const Value(false),
+            ),
+          );
+        }
+      }
+
+      for (final existing in existingCharacters) {
+        final key = _characterKey(existing.serverName, existing.characterName);
+        if (!incomingKeys.contains(key) && !existing.isRosterMissing) {
+          await (update(
+            accountCharacters,
+          )..where((table) => table.id.equals(existing.id))).write(
+            const AccountCharactersCompanion(isRosterMissing: Value(true)),
+          );
+          updatedLocalCount += 1;
+        }
+      }
+
+      return (updatedLocalCount: updatedLocalCount, changedBound: changedBound);
+    });
+  }
+
   String _characterKey(String serverName, String characterName) {
     return '$serverName\u0000$characterName';
   }

@@ -674,7 +674,8 @@ String _createFailureMessage(PartyCreateFailure failure) => switch (failure) {
   PartyCreateFailure.unauthenticated ||
   PartyCreateFailure.playerBindingMissing => '계정 연결을 준비하지 못했습니다.',
   PartyCreateFailure.ownershipLost => '캐릭터 소유권을 확인하지 못했습니다.',
-  PartyCreateFailure.invalidCharacter => '참가할 수 없는 캐릭터입니다.',
+  PartyCreateFailure.invalidCharacter =>
+    '참가할 수 없는 캐릭터입니다. 내 계정에서 정보를 새로고침한 뒤 다시 시도해 주세요.',
   PartyCreateFailure.participationConflict =>
     '이미 확정된 참가 또는 겹치는 일정이 있어 모집을 만들 수 없습니다.',
   PartyCreateFailure.idConflict => '같은 모집이 이미 있습니다. 다시 시도해 주세요.',
