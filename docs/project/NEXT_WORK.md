@@ -1,201 +1,106 @@
 # NEXT WORK
 
-## 기준 상태
+## 문서의 역할
 
-- 통합 기준 브랜치: `main` (`703a4f5`)
-- 현재 작업 브랜치: `codex/party-events-local-history` (`main`의 `703a4f5`에서 시작)
-- 기준 상태: Firebase 초기 연결 설정, Player 식별자 검토, 계정 소유 인증 및 Firebase 파티 제품 흐름이 로컬 `main`에 반영된 상태
-- `main`과 `origin/main`은 `703a4f5`에서 일치한다.
-- Firestore 파티 읽기 모델은 커밋 `0d94caf`, 병합 커밋 `7f9976e`으로 반영했다.
-- Spark Firestore 파티 명령 계약은 커밋 `ed93f90`, 병합 커밋 `1295cd6`으로 반영했다.
-- Firestore 파티 생성·파티장 membership·확정 참가 점유는 커밋 `b89ddb1`, 병합 커밋 `9652231`으로 반영했다.
-- 현재 작업 브랜치에는 Player별 회차 이벤트, Drift 로컬 히스토리와 동기화 서비스 변경이 남아 있다.
-- Firebase Player binding과 `GameAccountId`·`CharacterId` 계약·로컬 소유 인증을 구현·검증했다.
-- Firebase 프로젝트 및 플랫폼 연결 설정은 완료됐으며 제품 흐름의 주요 정책은 `../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`에 통합했다.
-- 로컬 Fake 환경에서 제품 흐름과 UI를 검증하기 위해 두었던 Firebase 구현 보류 단계는 종료됐다.
-- 이제 기능 단위로 데이터 계약·서버 명령·Security Rules·테스트 경계를 먼저 확정한 뒤 Firebase 구현을 단계적으로 진행한다.
-- 전체 기술 설계가 한 번에 완료될 때까지 구현을 막지 않는다. 다만 계약과 검증 범위가 정해지지 않은 서버 기능은 먼저 구현하지 않는다.
+이 문서는 다음 구현 작업의 단일 인수인계 기준이다. 누적 이력은 `DEV_LOG.md`, 전체 제품 규칙은 `AI_CONTEXT.md`와 architecture/product 문서를 사용한다. 작업 시작 시 실제 `git status`, `git log -3`과 대조한다.
 
-## 최근 완료 작업
+## 현재 기준 상태
 
-### Player binding 계약·구현
+- 통합 대상: 최신 `main`
+- 완료 기능 브랜치: `codex/party-events-local-history`
+- Task-050~054의 Firestore 명령·Rules·Snapshot·Player 이벤트·Drift 로컬 히스토리 기반 구현을 완료했다.
+- Task-054 검증: 로컬 DB·이벤트·회차 저장 계획 테스트 30개, `flutter analyze --no-pub`, `git diff --check` 통과
+- Firestore Emulator, 신규 Rules 배포, FCM, TTL 배포와 유료 서비스 호출은 수행하지 않았다.
+- 실행 앱은 아직 `lib/app/router/app_router.dart`에서 `InMemoryRecruitmentStateRepository`를 생성한다.
+- Firestore Repository와 `FirestorePartyEventSyncService`는 앱 런타임 및 최종 화면에 연결되지 않았다.
+- `레이드 현황`의 `진행 중 / 신청 중 / 완료 기록`은 최소 빈 화면이다.
 
-- `authBindings/{authUid}`와 `players/{playerId}`의 최소 스키마 및 최초 생성·재사용 계약을 확정했다.
-- Firestore Transaction으로 Player와 binding을 원자 생성하고 기존 binding은 연결된 active Player 검증 후 재사용한다.
-- Player binding이 완료될 때까지 기존 앱 진입을 지연하며 실패는 공용 재시도 화면으로 전달한다.
-- `cloud_firestore` 의존성과 플랫폼 플러그인 등록을 반영했다.
-- 클라이언트 최초 생성과 자기 문서 단건 읽기만 허용하고 목록·수정·삭제·기존 Player 임의 연결을 차단하는 Rules를 배포했다.
-- Firebase CLI에서 Rules 컴파일과 `lost-party` 프로젝트 배포를 완료했다.
-- `flutter analyze`와 전체 `flutter test` 234개를 통과했다.
-- Android 실기기에서 최초 Player와 binding 문서 쌍 생성, 연결 ID 일치, 기존 Drift 데이터 유지와 재실행 시 동일 binding 재사용을 확인했다.
-- 재실행 시 불필요한 Player 문서가 추가되지 않는 것을 확인했다.
+## 확정된 협업 역할
 
-### Anonymous Auth 부트스트랩
+- Codex는 설계·계약·작업 분해·문서 정합성·인수인계를 중심으로 담당한다.
+- Cursor는 주 코드 구현·빌드·표적 테스트를 중심으로 담당한다.
+- Codex의 코드 수정과 Cursor의 설계 제안을 금지하지 않는다.
+- 구현 중 계약 변경이 필요하면 Cursor가 임의 확장하지 않고 영향과 제안을 문서에 먼저 기록한다.
+- 완료 시 코드, 테스트, 문서와 실제 Git 상태를 함께 갱신한다.
 
-- Firebase Core 초기화 후 기존 인증 사용자가 있으면 그대로 재사용한다.
-- 현재 인증 사용자가 없을 때만 `signInAnonymously()`를 호출한다.
-- 인증 준비가 완료될 때까지 기존 앱 진입을 지연하고 실패는 공용 재시도 화면으로 전달한다.
-- Auth UID는 UI와 로그에 노출하지 않으며 Player binding은 다음 작업으로 분리한다.
-- `firebase_auth` 의존성과 플랫폼 플러그인 등록을 반영했다.
-- `flutter analyze`와 전체 `flutter test` 229개를 통과했다.
-- Android 실기기에서 최초 익명 로그인, 기존 앱 진입, 기존 캐릭터 데이터 유지와 재실행 시 인증 재사용을 확인했다.
-- Firebase Console에서 익명 사용자 생성과 재실행 시 불필요한 사용자 추가가 없는 것을 확인했다.
+## Cursor 다음 작업: 실행 앱 Firebase 전환 1단계
 
-### Firebase Core 앱 부트스트랩 자동 검증
+### 목표
 
-- 앱 진입 전에 플랫폼별 Firebase 옵션으로 `Firebase.initializeApp()`을 실행한다.
-- 초기화 중에는 로딩 화면을 표시하고 기존 Drift 및 Fake 파티 런타임 생성을 지연한다.
-- 초기화 실패 시 오류 상세를 노출하지 않고 재시도 가능한 안내 화면을 표시한다.
-- 테스트에서는 초기화 함수를 주입해 Firebase 없이 대기·성공·실패·재시도 경계를 검증한다.
-- `flutter analyze`와 전체 `flutter test` 225개를 통과했다.
-- Android 실기기에서 Firebase 초기화 후 기존 내 계정과 저장된 캐릭터 데이터가 정상 표시되는 것을 확인했다.
-- 실패·재시도 흐름은 주입형 위젯 테스트로 검증했다.
+실행 앱에서 Firebase 파티 읽기와 Player 이벤트 로컬 동기화를 사용할 Composition Root를 구성하고, `레이드 현황` 세 내부 페이지가 실제 읽기 상태를 표현할 기반을 만든다.
 
-### Firebase 프로젝트 초기 연결과 구조 검토
+### 우선 확인 파일
 
-- Firebase 프로젝트 `lost-party`와 FlutterFire 플랫폼 설정을 생성했다.
-- Android 패키지 `com.example.lost_party`와 Firebase Android 앱 등록 정보가 일치한다.
-- Android Google Services Plugin과 생성된 Firebase 옵션을 저장소에 반영했다.
-- 생성된 옵션이 컴파일될 수 있도록 `firebase_core`까지만 초기 연결 의존성에 포함한다.
-- Firebase 앱 초기화와 Anonymous Auth는 구현·검증 완료했다.
-- Player binding과 최소 Security Rules는 구현·배포·검증 완료했다.
-- 게임 계정·Character 및 파티 Firestore Repository와 해당 Rules는 아직 미구현이며 다음 단계부터 순서대로 구현한다.
-- `AuthUid`와 LOSTPARTY 영속 `PlayerId`를 분리하는 방향 및 기존 코드 영향 범위를 별도 문서로 검토했다.
+- `lib/app/router/app_router.dart`
+- `lib/features/raid_status/presentation/pages/raid_status_page.dart`
+- `lib/features/recruitment_list/data/repositories/firestore_party_read_repository.dart`
+- `lib/features/recruitment_list/domain/repositories/party_read_repository.dart`
+- `lib/features/raid_status/data/services/firestore_party_event_sync_service.dart`
+- `lib/features/account/data/local/account_database.dart`
+- `docs/architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`
+- `docs/architecture/FIRESTORE_PARTY_EVENT_CONTRACT.md`
 
-### 아이템 레벨 기반 레이드 선택과 모집 수정 기반
+### 포함 범위
 
-구현 브랜치: `codex/raid-eligibility-defaults` (main 병합 및 실기기 검증 완료)
+1. Composition Root에서 `FirebaseFirestore`, `FirebaseAuth`, `AccountDatabase`를 재사용해 읽기 Repository와 이벤트 동기화 서비스를 구성한다.
+2. 기존 Fake 모집 UI를 즉시 전부 제거하지 않고 Firebase 전환 경계를 분리한다.
+3. Player binding 완료 후와 `레이드 현황` 진입 시 이벤트 동기화를 멱등 실행한다.
+4. `진행 중`은 `watchActiveRaids`, `신청 중`은 `watchApplications`, `완료 기록`은 Drift `raidHistoryEntries`를 읽는 ViewModel/표현 모델 경계를 만든다.
+5. loading, 빈 상태, `isFromCache`, 기존 성공 데이터가 있는 후속 오류를 읽기 계약대로 구분한다.
+6. 로그인·binding 준비 전에는 Player 전용 쿼리를 시작하지 않는다.
 
-- 저장 세팅 아이템 레벨을 기준으로 입장 가능한 레이드·난이도만 표시한다.
-- 입장 가능한 최고 난이도를 기본 선택하고 캐릭터·역할 변경 시 선택 유효성을 다시 검사한다.
-- 모집 수정 결과 입장 불가능해진 참가자를 저장 전에 표시하며 자동 퇴장시키지 않는다.
-- 수동 참가자 알림 UI는 Firebase 미연결 상태를 명확히 안내한다.
+### 로컬 Projection 최소 정책
 
-### 전투력 표시와 자동 모집 제목
+- 서버 파티 Current State가 최종 진실이며 로컬은 표시·후보 계산용 Projection이다.
+- Firestore SDK 캐시를 1차 파티 Projection으로 사용하고 완료 히스토리만 Drift에 영속 저장한다.
+- 별도 파티 Current State Drift 복제는 이번 단계에서 추가하지 않는다.
+- 목록·상세·알림 진입과 stream 재연결이 최신화 계기다.
+- 오프라인 서버 명령을 로컬 큐에 적재하지 않는다. 연결 회복과 최신 revision 확인 후 다시 실행한다.
+- Auth Player가 바뀌면 이전 Player의 메모리 Projection과 구독을 폐기하고 로컬 히스토리는 `playerId`로 분리한다.
 
-구현 브랜치: `codex/combat-power-auto-title` (main 병합 및 자동 검증 완료)
+### 제외 범위
 
-- 모집 생성, 지원 및 파티 내 캐릭터 변경 후보가 공용 세팅 표시 모델을 사용한다.
-- 아이템 레벨과 전투력은 소수점을 버리고 천 단위 쉼표로 표시한다.
-- 빈 값과 `0`인 최소 전투력은 제한 없음으로 처리한다.
-- 제목을 입력하지 않은 경우 난이도 별칭, 숙련도와 최소 전투력으로 자동 제목을 만든다.
-- 수동 제목을 조건 변경으로 덮어쓰지 않으며 빈 제목은 저장 시 자동 제목을 적용한다.
+- FCM과 OS 알림 권한
+- Firestore TTL 정책 배포
+- Cloud Functions, Blaze 전환과 결제수단 연결
+- Firestore Emulator 실행
+- 다중 파티 캐릭터 이동·스왑 명령
+- 전체 쓰기 UI의 한 번에 전환
+- 대규모 UI 개편
 
-### 전체 모집 수정과 공통 입력 UX
+### 완료 조건
 
-구현 브랜치: `codex/full-recruitment-edit` (main 병합 및 Android 실기기 검증 완료)
+- Composition Root가 중복 DB/Firebase 인스턴스를 만들지 않는다.
+- 세 페이지의 loading·빈 상태·데이터·오프라인·오류 경계를 Widget 또는 ViewModel 테스트로 검증한다.
+- 이벤트 재동기화가 기록을 중복 생성하지 않고 hidden·local override를 유지한다.
+- Fake 기반 기존 모집 흐름의 회귀 범위가 명확하고 관련 표적 테스트가 통과한다.
+- `flutter analyze --no-pub`와 변경 범위 표적 테스트가 통과한다.
+- 실행 화면이 바뀌면 Android 실기기 체크리스트를 제공하고 사용자가 직접 확인한다.
+- 구현 파일, 검증 결과, 미연결 명령과 다음 전환 단위를 문서에 기록한다.
 
-- 생성·수정 공용 Draft와 폼을 사용해 제목, 레이드, 난이도, 숙련도, 최소 전투력과 가입 승인 방식을 수정한다.
-- 제목, 모집 Metadata와 가입 승인 정책을 revision 기반 통합 명령으로 저장한다.
-- 파티장, 확정 파티원과 승인 대기 신청자에게 미치는 영향을 저장 전에 표시한다.
-- 입장 불가능한 참가자를 자동 퇴장시키거나 승인 대기 신청을 자동 종료하지 않는다.
-- 수정 중 뒤로가기 시 미저장 변경 폐기 여부를 확인한다.
-- 단일행 텍스트·숫자 입력은 값이 있을 때 우측 전체 지우기(X) 동작을 제공한다.
+## 후속 순서
 
-## 현재 중단 및 보류 상태
+1. 실행 앱 Firebase 읽기·이벤트 동기화 전환 1단계
+2. 레이드 현황 실제 목록·상세와 로컬 완료 기록 UX
+3. 모집·신청·승인·멤버·회차 명령의 실행 앱 Repository 전환
+4. 캐릭터 이동·스왑 예상 결과와 다중 파티 Transaction 설계
+5. 그룹과 그룹 전용 모집
+6. 유료 기능은 사용자가 비용과 필요성을 별도로 승인한 경우에만 재설계
 
-### 최근 레이드 조건 기억
+## 지속 운영 제약
 
-- 기존 후속 작업 후보였으나 새 대형 설계가 확정될 때까지 보류한다.
-- 현재 지원 흐름은 이미 정해진 모집에 신청하는 구조이므로 `지원 화면에서 레이드 조건 재사용` 요구는 적용 대상이 불명확하다.
-- 재개 시 모집 생성 전용인지, 목록 필터까지 포함하는지, 디바이스 공통인지 계정별인지 먼저 결정한다.
-- 별도 결정 전에는 로컬 저장 모델이나 UI를 구현하지 않는다.
-
-### Firebase 기반 다중 사용자 전환의 과거 보류 상태
-
-- Firebase 프로젝트와 플랫폼 연결 및 주요 제품 흐름의 1차 확정 전까지 적용했던 전역 구현 보류 정책은 종료됐다.
-- 현재 단계는 Firebase Spark 무료 요금제 안에서만 구현한다. 사용자의 별도 지시 전에는 Firebase와 다른 외부 서비스 모두 결제수단 연결, 유료 플랜 전환, 사용량 초과 과금 가능성이 있는 기능을 설계 전제나 필수 경로에 포함하지 않는다.
-- Lost Ark API 토큰과 장비 인증 판정은 클라이언트에서 처리하며, 초기 서비스에서 클라이언트 조작 위험을 수용한다.
-- Cloud Functions, App Check 강화, 서버 권한 인증은 현재 범위가 아니며 필요성과 비용을 다시 합의한 뒤 별도 작업으로 다룬다.
-
-## 현재 완료된 계정 소유 인증 범위
-
-- `GameAccountId`와 `CharacterId` Firestore 계약 및 Drift 로컬 매핑을 구현했다.
-- 장비 6부위 중 1~3개를 무작위 지정하고 10분 안에 해제 여부를 Lost Ark API로 다시 확인한다.
-- API 토큰은 디바이스 보안 저장소에만 두며 인증 기준 스냅샷과 판정은 앱에서 처리한다.
-- 인증 성공 시 Firestore Transaction으로 소유권을 가져오고 이전 등록자는 `ownershipLost`로 전환한다.
-- 인증 완료 표시, 직접 캐릭터명 입력, 부계정 추가 인증, 누락 원정대 캐릭터 경고와 수동 삭제를 구현했다.
-- 소유권을 잃은 계정은 파티 모집 생성과 신청 후보에서 차단한다.
-- 사용자가 Android 실기기에서 캐릭터 인증 절차가 동작함을 확인했다.
-
-## 확정된 앱 셸과 다음 작업
-
-- 하단 탭은 `레이드 현황 / 내 계정 / 레이드 모집 / 설정` 순서로 구성한다.
-- 첫 화면은 `레이드 현황`이며 상단 페이지 전환으로 `진행 중 / 신청 중 / 완료 기록`을 구분한다.
-- `진행 중`에는 내가 만들었거나 가입이 확정된 레이드방을 표시한다.
-- `신청 중`에는 승인 대기 신청과 종료된 신청 결과를 표시하며 확정 참가와 섞지 않는다.
-- `완료 기록`에는 이번 주 완료와 과거 완료·미완료 종료 로컬 히스토리를 함께 표시하고 내부 필터로 구분한다.
-- `레이드 모집`은 현재 파티 모집 목록, 검색·신청과 모집 생성 기능을 담당한다.
-- `설정`에는 `내 게임계정 인증`, Lost Ark API 토큰과 앱 공통 설정을 배치한다.
-
-앱 셸과 라우팅 기반 전환은 완료했다.
-
-구현 상태: StatefulShellRoute 4개 branch, 내부 TabBarView와 충돌하지 않는 IndexedStack branch 전환, 설정 진입점과 API 토큰 삭제 확인을 반영했다. 자동 검증과 Android 실기기 확인을 완료했고 커밋 `84769f8`, 병합 커밋 `23af0b3`으로 `main`과 `origin/main`에 반영했다.
-
-1. 기존 StatefulShellRoute를 4개 branch로 확장한다. (구현 완료)
-2. 기존 `내 계정` 화면을 두 번째 branch로, 기존 `파티 모집` 화면을 세 번째 branch로 이동한다.
-3. 첫 번째 `레이드 현황`과 네 번째 `설정`의 최소 진입 화면을 추가한다.
-4. `레이드 현황`의 상단 세 페이지가 독립적으로 상태를 보존할 표현 구조를 마련하되 Firestore 읽기 모델은 아직 구현하지 않는다.
-5. 설정에서 기존 게임계정 인증 및 API 토큰 화면으로 이동하고, 내 계정의 상태 기반 복구 진입점과 동일한 화면을 공유한다.
-6. 탭별 Navigator 상태, 탭 재선택, 시스템 뒤로가기와 인증 완료 후 복귀를 Widget 테스트로 검증한다.
-
-### 이번 작업 제외 범위
-
-- Firestore 파티 읽기 모델과 실제 다중 사용자 목록 전환
-- 진행 중·신청 중·완료 기록의 최종 데이터 조회 구현
-- 완료 히스토리 저장 스키마 변경
-- 모집, 신청, 승인과 완료 명령의 Firebase 전환
-- 알림과 OS 권한 실제 구현
-
-## 기능 단위 설계·구현 착수 조건
-
-- 무료 요금제와 로컬 처리 원칙을 포함한 운영 제약을 먼저 확인한다.
-- 자동 테스트·에뮬레이터·실기기 검증 각각이 발견하려는 구체적 실패와 중단 기준을 정한다.
-- 이미 사용자 실기기로 확인 가능한 항목은 자동화 목적이 명확하지 않으면 반복하지 않는다.
-- 통합 제품 흐름의 포함·제외 범위가 문서로 합의된다.
-- 핵심 엔티티의 소유권과 단일 기준 저장소가 정의된다.
-- 주요 명령의 권한, 검증 주체, 원자성 및 실패 처리가 정의된다.
-- 기존 코드에서 재사용·수정·제거할 영역이 구분된다.
-- 데이터 마이그레이션과 호환 정책이 정해진다.
-- 해당 구현 브랜치가 독립적으로 검증·병합 가능한 크기로 산정된다.
-- 위 조건을 만족한 기능은 구현할 수 있으며, 아직 계약이 없는 후속 기능만 보류한다.
-
-## 이후 기능의 잠정 순서
-
-1. 승인 대기 신청과 본인 철회 구현 (완료)
-2. 즉시 가입과 신청 승인·거절 구현 (완료)
-3. 참가 캐릭터 변경·탈퇴·추방·승인권·책임자 승계 (완료)
-4. 회차 완료·완료 취소·반복 파티·주차 전환과 Snapshot (완료)
-5. 사용자 이벤트와 로컬 히스토리 (현재 작업)
-6. 실행 앱 Repository 전환 전 파티 로컬 Projection 저장 위치·최신화·계정 전환·오프라인 정책 확정
-7. 유료 서비스가 필요한 FCM·Functions·강화된 서버 검증은 별도 지시 후에만 재설계
-
-## 유지되는 제품 규칙
-
-- 레이드 카탈로그는 `assets/raid_catalog/raid_catalog.v1.json`을 기준으로 한다.
-- 참가와 충돌 규칙은 `../product/PARTY_PARTICIPATION_RULES.md`를 기준으로 하되 새 설계에서 변경 여부를 명시한다.
-- 최소 전투력의 빈 값과 `0`은 제한 없음으로 처리한다.
-- 표시 숫자는 소수점을 버리고 천 단위 쉼표를 적용한다.
-- 모집 제목을 입력하지 않은 경우에만 자동 제목을 사용한다.
-- 단일행 텍스트·숫자 입력은 값이 있을 때 전체 지우기(X)를 제공하고 읽기 전용·선택형 필드에는 적용하지 않는다.
-- 사용자 동의가 필요한 설정은 자동 저장하지 않는다.
-
-## 작업 및 검증 원칙
-
-- 새로운 작업 영역은 최신 `main`에서 `codex/` 기능 브랜치로 분리한다.
-- 관련 자동 테스트와 사용자 실기기 검증이 통과한 뒤 기능 브랜치를 `main`에 병합하고 `origin/main`에 푸시한다.
-- 실기기에서 확인 가능한 흐름을 대신하기 위한 무의미한 전체 `flutter test` 반복은 하지 않는다.
-- 개발 중에는 변경 범위에 맞는 표적 테스트만 실행하고, 사용자가 필요 시 터미널의 전체 테스트 오류 로그를 제공한다.
-- Emulator Suite는 사용하지 않는다. 후속에 필요해지면 목적과 종료 조건을 제시하고 사용자가 명시적으로 승인한 경우에만 실행한다.
-- 문서의 현재 상태와 실제 브랜치·코드 상태를 함께 갱신한다.
+- 별도 지시 전까지 외부 서비스의 유료 플랜·결제수단·초과 과금 가능 기능을 사용하지 않는다.
+- Emulator Suite는 사용하지 않는다. 필요하면 목적·발견할 실패·종료 조건을 제시하고 명시적 승인을 받는다.
+- 실기기 흐름을 대신하기 위한 무의미한 전체 테스트 반복을 하지 않는다.
+- AuthUid, API 토큰과 민감한 식별자를 UI·로그·문서 예시에 노출하지 않는다.
 
 ## 참고 문서
 
-- `AI_CONTEXT.md`: 프로젝트 구조와 현재 개발 기준
-- `../product/PARTY_PARTICIPATION_RULES.md`: 참가 및 충돌 규칙
-- `../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`: Firebase 파티 제품 흐름 통합 기준
-- `../architecture/BACKEND_PARTY_ARCHITECTURE.md`: 기존 Firebase 전환 설계 참고안
-- `../architecture/PLAYER_FIREBASE_MIGRATION_REVIEW.md`: Player 식별자와 Firebase 전환 영향 검토
-- `../integrations/FIREBASE_INITIAL_SETUP_REVIEW.md`: Firebase 프로젝트 및 플랫폼 초기 연결 확인
-- `../product/DETAIL_IMPROVEMENTS.md`: 재설계 이후 다시 평가할 세부 개선 후보
-- `DEV_LOG.md`: 완료 작업 이력
+- `AI_CONTEXT.md`
+- `DEV_LOG.md`
+- `ai_rules.md`
+- `../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`
+- `../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`
+- `../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`
+- `../architecture/FIRESTORE_PARTY_EVENT_CONTRACT.md`
+- `../product/PARTY_PARTICIPATION_RULES.md`
