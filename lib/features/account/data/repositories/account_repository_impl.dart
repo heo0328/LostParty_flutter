@@ -130,6 +130,15 @@ class AccountRepositoryImpl
       _localDataSource.deleteAccount(accountId);
 
   @override
+  Future<void> deleteMissingCharacter({
+    required int accountId,
+    required int characterId,
+  }) => _localDataSource.deleteMissingCharacter(
+    accountId: accountId,
+    characterId: characterId,
+  );
+
+  @override
   Future<void> bindServerIdentity(ServerAccountIdentityBinding binding) =>
       _localDataSource.bindServerIdentity(binding);
 

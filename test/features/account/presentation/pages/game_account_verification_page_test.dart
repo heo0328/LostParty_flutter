@@ -129,6 +129,12 @@ class _FakeAccountManagementRepository extends Fake
       ],
     );
   }
+
+  @override
+  Future<void> deleteMissingCharacter({
+    required int accountId,
+    required int characterId,
+  }) async {}
 }
 
 class _FakeAccountRepository extends Fake implements AccountRepository {

@@ -554,6 +554,83 @@ void main() {
   });
 
   test(
+    'marks a missing roster character without deleting its local data',
+    () async {
+      final fetchedAt = DateTime.utc(2026, 8, 25);
+      final accountId = await database.saveMainAccountSnapshot(
+        lookupCharacterName: '대표캐릭터',
+        characters: [
+          _snapshot('대표캐릭터', fetchedAt),
+          _snapshot('사라진캐릭터', fetchedAt),
+        ],
+      );
+      final before = await (database.select(
+        database.accountCharacters,
+      )..where((table) => table.characterName.equals('사라진캐릭터'))).getSingle();
+
+      await database.saveMainAccountSnapshot(
+        lookupCharacterName: '대표캐릭터',
+        characters: [
+          _snapshot('대표캐릭터', fetchedAt.add(const Duration(days: 1))),
+        ],
+      );
+
+      final missing = await (database.select(
+        database.accountCharacters,
+      )..where((table) => table.id.equals(before.id))).getSingle();
+      expect(missing.accountId, accountId);
+      expect(missing.isRosterMissing, isTrue);
+    },
+  );
+
+  test(
+    'only manually deletes a character marked missing from the roster',
+    () async {
+      final fetchedAt = DateTime.utc(2026, 8, 25);
+      final accountId = await database.saveMainAccountSnapshot(
+        lookupCharacterName: '대표캐릭터',
+        characters: [
+          _snapshot('대표캐릭터', fetchedAt),
+          _snapshot('사라진캐릭터', fetchedAt),
+        ],
+      );
+      final characters = await database
+          .select(database.accountCharacters)
+          .get();
+      final active = characters.singleWhere(
+        (character) => character.characterName == '대표캐릭터',
+      );
+      final missing = characters.singleWhere(
+        (character) => character.characterName == '사라진캐릭터',
+      );
+      await database.saveMainAccountSnapshot(
+        lookupCharacterName: '대표캐릭터',
+        characters: [
+          _snapshot('대표캐릭터', fetchedAt.add(const Duration(days: 1))),
+        ],
+      );
+
+      await expectLater(
+        database.deleteMissingCharacter(
+          accountId: accountId,
+          characterId: active.id,
+        ),
+        throwsStateError,
+      );
+      await database.deleteMissingCharacter(
+        accountId: accountId,
+        characterId: missing.id,
+      );
+      expect(
+        await (database.select(
+          database.accountCharacters,
+        )..where((table) => table.id.equals(missing.id))).getSingleOrNull(),
+        isNull,
+      );
+    },
+  );
+
+  test(
     'stores and restores the full armory fixture as a dealer build',
     () async {
       final rawJson = await File(

@@ -63,6 +63,9 @@ class AccountCharacters extends Table {
 
   BoolColumn get isVisible => boolean().withDefault(const Constant(true))();
 
+  BoolColumn get isRosterMissing =>
+      boolean().withDefault(const Constant(false))();
+
   IntColumn get displayOrder => integer().nullable()();
 
   TextColumn get preferredRole => text().nullable()();
@@ -111,7 +114,7 @@ class AccountDatabase extends _$AccountDatabase {
     : super(executor ?? driftDatabase(name: 'lost_party'));
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -139,6 +142,12 @@ class AccountDatabase extends _$AccountDatabase {
           accountCharacters.serverCharacterId,
         );
         await _createServerIdIndexes();
+      }
+      if (from < 5) {
+        await migrator.addColumn(
+          accountCharacters,
+          accountCharacters.isRosterMissing,
+        );
       }
     },
   );
@@ -665,6 +674,27 @@ class AccountDatabase extends _$AccountDatabase {
     }
   }
 
+  Future<void> deleteMissingCharacter({
+    required int accountId,
+    required int characterId,
+  }) {
+    return transaction(() async {
+      final character =
+          await (select(accountCharacters)..where(
+                (table) =>
+                    table.id.equals(characterId) &
+                    table.accountId.equals(accountId),
+              ))
+              .getSingleOrNull();
+      if (character == null || !character.isRosterMissing) {
+        throw StateError('Only a missing roster character can be deleted.');
+      }
+      await (delete(
+        accountCharacters,
+      )..where((table) => table.id.equals(characterId))).go();
+    });
+  }
+
   Future<void> updateCharacterDisplayOrder({
     required int accountId,
     required List<int> characterIds,
@@ -793,6 +823,7 @@ class AccountDatabase extends _$AccountDatabase {
               characterClassName: Value(character.characterClassName),
               itemLevel: Value(character.itemLevel),
               lastSummaryFetchedAt: Value(character.fetchedAt),
+              isRosterMissing: const Value(false),
             ),
           );
         }
@@ -805,9 +836,11 @@ class AccountDatabase extends _$AccountDatabase {
           existingCharacter.characterName,
         );
         if (!incomingCharacterKeys.contains(key)) {
-          await (delete(
+          await (update(
             accountCharacters,
-          )..where((table) => table.id.equals(existingCharacter.id))).go();
+          )..where((table) => table.id.equals(existingCharacter.id))).write(
+            const AccountCharactersCompanion(isRosterMissing: Value(true)),
+          );
         }
       }
 

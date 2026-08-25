@@ -721,6 +721,21 @@ class $AccountCharactersTable extends AccountCharacters
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _isRosterMissingMeta = const VerificationMeta(
+    'isRosterMissing',
+  );
+  @override
+  late final GeneratedColumn<bool> isRosterMissing = GeneratedColumn<bool>(
+    'is_roster_missing',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_roster_missing" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _displayOrderMeta = const VerificationMeta(
     'displayOrder',
   );
@@ -766,6 +781,7 @@ class $AccountCharactersTable extends AccountCharacters
     itemLevel,
     combatPower,
     isVisible,
+    isRosterMissing,
     displayOrder,
     preferredRole,
     lastSummaryFetchedAt,
@@ -864,6 +880,15 @@ class $AccountCharactersTable extends AccountCharacters
         isVisible.isAcceptableOrUnknown(data['is_visible']!, _isVisibleMeta),
       );
     }
+    if (data.containsKey('is_roster_missing')) {
+      context.handle(
+        _isRosterMissingMeta,
+        isRosterMissing.isAcceptableOrUnknown(
+          data['is_roster_missing']!,
+          _isRosterMissingMeta,
+        ),
+      );
+    }
     if (data.containsKey('display_order')) {
       context.handle(
         _displayOrderMeta,
@@ -946,6 +971,10 @@ class $AccountCharactersTable extends AccountCharacters
         DriftSqlType.bool,
         data['${effectivePrefix}is_visible'],
       )!,
+      isRosterMissing: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_roster_missing'],
+      )!,
       displayOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}display_order'],
@@ -979,6 +1008,7 @@ class AccountCharacter extends DataClass
   final double? itemLevel;
   final double? combatPower;
   final bool isVisible;
+  final bool isRosterMissing;
   final int? displayOrder;
   final String? preferredRole;
   final DateTime lastSummaryFetchedAt;
@@ -993,6 +1023,7 @@ class AccountCharacter extends DataClass
     this.itemLevel,
     this.combatPower,
     required this.isVisible,
+    required this.isRosterMissing,
     this.displayOrder,
     this.preferredRole,
     required this.lastSummaryFetchedAt,
@@ -1016,6 +1047,7 @@ class AccountCharacter extends DataClass
       map['combat_power'] = Variable<double>(combatPower);
     }
     map['is_visible'] = Variable<bool>(isVisible);
+    map['is_roster_missing'] = Variable<bool>(isRosterMissing);
     if (!nullToAbsent || displayOrder != null) {
       map['display_order'] = Variable<int>(displayOrder);
     }
@@ -1044,6 +1076,7 @@ class AccountCharacter extends DataClass
           ? const Value.absent()
           : Value(combatPower),
       isVisible: Value(isVisible),
+      isRosterMissing: Value(isRosterMissing),
       displayOrder: displayOrder == null && nullToAbsent
           ? const Value.absent()
           : Value(displayOrder),
@@ -1074,6 +1107,7 @@ class AccountCharacter extends DataClass
       itemLevel: serializer.fromJson<double?>(json['itemLevel']),
       combatPower: serializer.fromJson<double?>(json['combatPower']),
       isVisible: serializer.fromJson<bool>(json['isVisible']),
+      isRosterMissing: serializer.fromJson<bool>(json['isRosterMissing']),
       displayOrder: serializer.fromJson<int?>(json['displayOrder']),
       preferredRole: serializer.fromJson<String?>(json['preferredRole']),
       lastSummaryFetchedAt: serializer.fromJson<DateTime>(
@@ -1095,6 +1129,7 @@ class AccountCharacter extends DataClass
       'itemLevel': serializer.toJson<double?>(itemLevel),
       'combatPower': serializer.toJson<double?>(combatPower),
       'isVisible': serializer.toJson<bool>(isVisible),
+      'isRosterMissing': serializer.toJson<bool>(isRosterMissing),
       'displayOrder': serializer.toJson<int?>(displayOrder),
       'preferredRole': serializer.toJson<String?>(preferredRole),
       'lastSummaryFetchedAt': serializer.toJson<DateTime>(lastSummaryFetchedAt),
@@ -1112,6 +1147,7 @@ class AccountCharacter extends DataClass
     Value<double?> itemLevel = const Value.absent(),
     Value<double?> combatPower = const Value.absent(),
     bool? isVisible,
+    bool? isRosterMissing,
     Value<int?> displayOrder = const Value.absent(),
     Value<String?> preferredRole = const Value.absent(),
     DateTime? lastSummaryFetchedAt,
@@ -1128,6 +1164,7 @@ class AccountCharacter extends DataClass
     itemLevel: itemLevel.present ? itemLevel.value : this.itemLevel,
     combatPower: combatPower.present ? combatPower.value : this.combatPower,
     isVisible: isVisible ?? this.isVisible,
+    isRosterMissing: isRosterMissing ?? this.isRosterMissing,
     displayOrder: displayOrder.present ? displayOrder.value : this.displayOrder,
     preferredRole: preferredRole.present
         ? preferredRole.value
@@ -1158,6 +1195,9 @@ class AccountCharacter extends DataClass
           ? data.combatPower.value
           : this.combatPower,
       isVisible: data.isVisible.present ? data.isVisible.value : this.isVisible,
+      isRosterMissing: data.isRosterMissing.present
+          ? data.isRosterMissing.value
+          : this.isRosterMissing,
       displayOrder: data.displayOrder.present
           ? data.displayOrder.value
           : this.displayOrder,
@@ -1183,6 +1223,7 @@ class AccountCharacter extends DataClass
           ..write('itemLevel: $itemLevel, ')
           ..write('combatPower: $combatPower, ')
           ..write('isVisible: $isVisible, ')
+          ..write('isRosterMissing: $isRosterMissing, ')
           ..write('displayOrder: $displayOrder, ')
           ..write('preferredRole: $preferredRole, ')
           ..write('lastSummaryFetchedAt: $lastSummaryFetchedAt')
@@ -1202,6 +1243,7 @@ class AccountCharacter extends DataClass
     itemLevel,
     combatPower,
     isVisible,
+    isRosterMissing,
     displayOrder,
     preferredRole,
     lastSummaryFetchedAt,
@@ -1220,6 +1262,7 @@ class AccountCharacter extends DataClass
           other.itemLevel == this.itemLevel &&
           other.combatPower == this.combatPower &&
           other.isVisible == this.isVisible &&
+          other.isRosterMissing == this.isRosterMissing &&
           other.displayOrder == this.displayOrder &&
           other.preferredRole == this.preferredRole &&
           other.lastSummaryFetchedAt == this.lastSummaryFetchedAt);
@@ -1236,6 +1279,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
   final Value<double?> itemLevel;
   final Value<double?> combatPower;
   final Value<bool> isVisible;
+  final Value<bool> isRosterMissing;
   final Value<int?> displayOrder;
   final Value<String?> preferredRole;
   final Value<DateTime> lastSummaryFetchedAt;
@@ -1250,6 +1294,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
     this.itemLevel = const Value.absent(),
     this.combatPower = const Value.absent(),
     this.isVisible = const Value.absent(),
+    this.isRosterMissing = const Value.absent(),
     this.displayOrder = const Value.absent(),
     this.preferredRole = const Value.absent(),
     this.lastSummaryFetchedAt = const Value.absent(),
@@ -1265,6 +1310,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
     this.itemLevel = const Value.absent(),
     this.combatPower = const Value.absent(),
     this.isVisible = const Value.absent(),
+    this.isRosterMissing = const Value.absent(),
     this.displayOrder = const Value.absent(),
     this.preferredRole = const Value.absent(),
     required DateTime lastSummaryFetchedAt,
@@ -1285,6 +1331,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
     Expression<double>? itemLevel,
     Expression<double>? combatPower,
     Expression<bool>? isVisible,
+    Expression<bool>? isRosterMissing,
     Expression<int>? displayOrder,
     Expression<String>? preferredRole,
     Expression<DateTime>? lastSummaryFetchedAt,
@@ -1301,6 +1348,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
       if (itemLevel != null) 'item_level': itemLevel,
       if (combatPower != null) 'combat_power': combatPower,
       if (isVisible != null) 'is_visible': isVisible,
+      if (isRosterMissing != null) 'is_roster_missing': isRosterMissing,
       if (displayOrder != null) 'display_order': displayOrder,
       if (preferredRole != null) 'preferred_role': preferredRole,
       if (lastSummaryFetchedAt != null)
@@ -1319,6 +1367,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
     Value<double?>? itemLevel,
     Value<double?>? combatPower,
     Value<bool>? isVisible,
+    Value<bool>? isRosterMissing,
     Value<int?>? displayOrder,
     Value<String?>? preferredRole,
     Value<DateTime>? lastSummaryFetchedAt,
@@ -1334,6 +1383,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
       itemLevel: itemLevel ?? this.itemLevel,
       combatPower: combatPower ?? this.combatPower,
       isVisible: isVisible ?? this.isVisible,
+      isRosterMissing: isRosterMissing ?? this.isRosterMissing,
       displayOrder: displayOrder ?? this.displayOrder,
       preferredRole: preferredRole ?? this.preferredRole,
       lastSummaryFetchedAt: lastSummaryFetchedAt ?? this.lastSummaryFetchedAt,
@@ -1373,6 +1423,9 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
     if (isVisible.present) {
       map['is_visible'] = Variable<bool>(isVisible.value);
     }
+    if (isRosterMissing.present) {
+      map['is_roster_missing'] = Variable<bool>(isRosterMissing.value);
+    }
     if (displayOrder.present) {
       map['display_order'] = Variable<int>(displayOrder.value);
     }
@@ -1400,6 +1453,7 @@ class AccountCharactersCompanion extends UpdateCompanion<AccountCharacter> {
           ..write('itemLevel: $itemLevel, ')
           ..write('combatPower: $combatPower, ')
           ..write('isVisible: $isVisible, ')
+          ..write('isRosterMissing: $isRosterMissing, ')
           ..write('displayOrder: $displayOrder, ')
           ..write('preferredRole: $preferredRole, ')
           ..write('lastSummaryFetchedAt: $lastSummaryFetchedAt')
@@ -2376,6 +2430,7 @@ typedef $$AccountCharactersTableCreateCompanionBuilder =
       Value<double?> itemLevel,
       Value<double?> combatPower,
       Value<bool> isVisible,
+      Value<bool> isRosterMissing,
       Value<int?> displayOrder,
       Value<String?> preferredRole,
       required DateTime lastSummaryFetchedAt,
@@ -2392,6 +2447,7 @@ typedef $$AccountCharactersTableUpdateCompanionBuilder =
       Value<double?> itemLevel,
       Value<double?> combatPower,
       Value<bool> isVisible,
+      Value<bool> isRosterMissing,
       Value<int?> displayOrder,
       Value<String?> preferredRole,
       Value<DateTime> lastSummaryFetchedAt,
@@ -2506,6 +2562,11 @@ class $$AccountCharactersTableFilterComposer
 
   ColumnFilters<bool> get isVisible => $composableBuilder(
     column: $table.isVisible,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isRosterMissing => $composableBuilder(
+    column: $table.isRosterMissing,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2628,6 +2689,11 @@ class $$AccountCharactersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isRosterMissing => $composableBuilder(
+    column: $table.isRosterMissing,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get displayOrder => $composableBuilder(
     column: $table.displayOrder,
     builder: (column) => ColumnOrderings(column),
@@ -2714,6 +2780,11 @@ class $$AccountCharactersTableAnnotationComposer
 
   GeneratedColumn<bool> get isVisible =>
       $composableBuilder(column: $table.isVisible, builder: (column) => column);
+
+  GeneratedColumn<bool> get isRosterMissing => $composableBuilder(
+    column: $table.isRosterMissing,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get displayOrder => $composableBuilder(
     column: $table.displayOrder,
@@ -2827,6 +2898,7 @@ class $$AccountCharactersTableTableManager
                 Value<double?> itemLevel = const Value.absent(),
                 Value<double?> combatPower = const Value.absent(),
                 Value<bool> isVisible = const Value.absent(),
+                Value<bool> isRosterMissing = const Value.absent(),
                 Value<int?> displayOrder = const Value.absent(),
                 Value<String?> preferredRole = const Value.absent(),
                 Value<DateTime> lastSummaryFetchedAt = const Value.absent(),
@@ -2841,6 +2913,7 @@ class $$AccountCharactersTableTableManager
                 itemLevel: itemLevel,
                 combatPower: combatPower,
                 isVisible: isVisible,
+                isRosterMissing: isRosterMissing,
                 displayOrder: displayOrder,
                 preferredRole: preferredRole,
                 lastSummaryFetchedAt: lastSummaryFetchedAt,
@@ -2857,6 +2930,7 @@ class $$AccountCharactersTableTableManager
                 Value<double?> itemLevel = const Value.absent(),
                 Value<double?> combatPower = const Value.absent(),
                 Value<bool> isVisible = const Value.absent(),
+                Value<bool> isRosterMissing = const Value.absent(),
                 Value<int?> displayOrder = const Value.absent(),
                 Value<String?> preferredRole = const Value.absent(),
                 required DateTime lastSummaryFetchedAt,
@@ -2871,6 +2945,7 @@ class $$AccountCharactersTableTableManager
                 itemLevel: itemLevel,
                 combatPower: combatPower,
                 isVisible: isVisible,
+                isRosterMissing: isRosterMissing,
                 displayOrder: displayOrder,
                 preferredRole: preferredRole,
                 lastSummaryFetchedAt: lastSummaryFetchedAt,

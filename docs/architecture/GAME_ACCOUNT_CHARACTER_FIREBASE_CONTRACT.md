@@ -50,6 +50,9 @@
 - 서버 응답을 적용할 때 계정과 포함된 캐릭터 매핑을 한 Drift transaction에서 저장한다.
 - 같은 값의 재적용은 허용하지만, 이미 연결된 행을 다른 서버 ID로 재매핑하거나 같은 서버 ID를 두 로컬 행에 연결하는 것은 거부한다.
 - 서버 ID가 없는 기존 v3 데이터는 v4 migration 후에도 그대로 사용 가능하며 자동 업로드하지 않는다.
+- Drift v5의 `is_roster_missing`은 최신 원정대 조회에서 사라진 캐릭터를
+  자동 삭제하지 않고 보존하기 위한 값이다. 다시 확인되면 false로 복구하고,
+  true인 캐릭터만 사용자 확인 후 수동 삭제할 수 있다.
 - 앱의 동기화 서비스는 Gateway 응답의 로컬 계정 ID가 요청과 같고 모든 요청 캐릭터가 정확히 한 번 포함됐는지 확인한 후에만 Drift transaction을 호출한다.
 - 실제 Callable 구현은 `AccountIdentityGateway` 뒤에 위치하며, 응답 검증과 로컬 매핑은 Firebase SDK에 의존하지 않는다.
 

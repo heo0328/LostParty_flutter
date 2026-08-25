@@ -23,7 +23,11 @@ class LocalGameAccount {
 
   List<LocalAccountCharacter> get visibleCharacters {
     final visible =
-        characters.where((character) => character.isVisible).toList()
+        characters
+            .where(
+              (character) => character.isVisible && !character.isRosterMissing,
+            )
+            .toList()
           ..sort((left, right) {
             final leftIsRepresentative = left.id == representativeCharacterId;
             final rightIsRepresentative = right.id == representativeCharacterId;
@@ -71,10 +75,12 @@ class LocalAccountCharacter {
     required this.displayOrder,
     this.preferredRole,
     this.serverCharacterId,
+    this.isRosterMissing = false,
   });
 
   final int id;
   final String? serverCharacterId;
+  final bool isRosterMissing;
   final String serverName;
   final String characterName;
   final int characterLevel;

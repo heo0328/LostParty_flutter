@@ -134,6 +134,37 @@ class _MyAccountPageState extends State<MyAccountPage> {
     await _viewModel.deleteAccount(account.id);
   }
 
+  Future<void> _confirmDeleteMissingCharacter(
+    LocalGameAccount account,
+    LocalAccountCharacter character,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('확인되지 않는 캐릭터 삭제'),
+        content: Text(
+          '${character.characterName} 캐릭터는 최근 원정대 조회에서 확인되지 않았습니다. '
+          '로컬 저장 정보도 삭제할까요?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _viewModel.deleteMissingCharacter(
+      accountId: account.id,
+      characterId: character.id,
+    );
+  }
+
   Future<void> _openCharacterDetail(LocalAccountCharacter character) async {
     await context.push('/account/characters/${character.id}', extra: character);
     await _viewModel.loadStoredAccount();
@@ -374,6 +405,12 @@ class _MyAccountPageState extends State<MyAccountPage> {
                   ],
                 ),
                 const SizedBox(height: 8),
+                if (account.characters
+                    .where((character) => character.isRosterMissing)
+                    .isNotEmpty) ...[
+                  _buildMissingCharactersWarning(account),
+                  const SizedBox(height: 8),
+                ],
                 _buildCharacterGrid(account),
               ],
             ],
@@ -454,6 +491,42 @@ class _MyAccountPageState extends State<MyAccountPage> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildMissingCharactersWarning(LocalGameAccount account) {
+    final missing = account.characters
+        .where((character) => character.isRosterMissing)
+        .toList(growable: false);
+    return Card(
+      color: Theme.of(context).colorScheme.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded),
+                SizedBox(width: 8),
+                Expanded(child: Text('최근 원정대에서 확인되지 않는 캐릭터가 있습니다.')),
+              ],
+            ),
+            for (final character in missing)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(character.characterName),
+                subtitle: Text(character.serverName),
+                trailing: TextButton(
+                  key: ValueKey('deleteMissingCharacter-${character.id}'),
+                  onPressed: () =>
+                      _confirmDeleteMissingCharacter(account, character),
+                  child: const Text('삭제'),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 

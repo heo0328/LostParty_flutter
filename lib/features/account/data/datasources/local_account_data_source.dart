@@ -146,6 +146,14 @@ class LocalAccountDataSource {
   Future<void> deleteAccount(int accountId) =>
       _database.deleteAccount(accountId);
 
+  Future<void> deleteMissingCharacter({
+    required int accountId,
+    required int characterId,
+  }) => _database.deleteMissingCharacter(
+    accountId: accountId,
+    characterId: characterId,
+  );
+
   Future<void> bindServerIdentity(ServerAccountIdentityBinding binding) {
     return _database.bindServerIdentity(
       localAccountId: binding.localAccountId,
@@ -178,6 +186,7 @@ class LocalAccountDataSource {
               itemLevel: character.itemLevel,
               combatPower: character.combatPower,
               isVisible: character.isVisible,
+              isRosterMissing: character.isRosterMissing,
               displayOrder: character.displayOrder,
               preferredRole: character.preferredRole == null
                   ? null

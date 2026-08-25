@@ -31,6 +31,30 @@ void main() {
     );
   });
 
+  testWidgets('warns about and manually deletes a missing roster character', (
+    WidgetTester tester,
+  ) async {
+    final repository = _FakeAccountRepository(missingRoster: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MyAccountPage(
+          apiTokenStore: _InMemoryApiTokenStore(),
+          accountRepository: repository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('최근 원정대에서 확인되지 않는 캐릭터가 있습니다.'), findsOneWidget);
+    expect(find.text('사라진캐릭터'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('deleteMissingCharacter-2')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '삭제'));
+    await tester.pumpAndSettle();
+
+    expect(repository.deletedMissingCharacterId, 2);
+  });
+
   testWidgets('shows characters returned from an account lookup', (
     WidgetTester tester,
   ) async {
@@ -135,9 +159,14 @@ void main() {
 
 class _FakeAccountRepository
     implements AccountRepository, AccountManagementRepository {
-  _FakeAccountRepository({this.serverBound = false});
+  _FakeAccountRepository({
+    this.serverBound = false,
+    this.missingRoster = false,
+  });
 
   final bool serverBound;
+  final bool missingRoster;
+  int? deletedMissingCharacterId;
   LocalGameAccount? _subAccount;
 
   @override
@@ -189,6 +218,14 @@ class _FakeAccountRepository
   @override
   Future<void> deleteAccount(int accountId) async {
     if (_subAccount?.id == accountId) _subAccount = null;
+  }
+
+  @override
+  Future<void> deleteMissingCharacter({
+    required int accountId,
+    required int characterId,
+  }) async {
+    deletedMissingCharacterId = characterId;
   }
 
   @override
@@ -297,6 +334,19 @@ class _FakeAccountRepository
           isVisible: true,
           displayOrder: 0,
         ),
+        if (missingRoster)
+          const LocalAccountCharacter(
+            id: 2,
+            serverName: '루페온',
+            characterName: '사라진캐릭터',
+            characterLevel: 70,
+            characterClassName: '바드',
+            itemLevel: 1600,
+            combatPower: null,
+            isVisible: true,
+            isRosterMissing: true,
+            displayOrder: 1,
+          ),
       ],
     );
   }

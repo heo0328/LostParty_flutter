@@ -136,4 +136,17 @@ class MyAccountViewModel extends ChangeNotifier {
     _accounts = await _accountRepository.loadAccounts();
     notifyListeners();
   }
+
+  Future<void> deleteMissingCharacter({
+    required int accountId,
+    required int characterId,
+  }) async {
+    if (_accountRepository is! AccountManagementRepository) {
+      throw UnsupportedError('Account management is not available.');
+    }
+    await (_accountRepository as AccountManagementRepository)
+        .deleteMissingCharacter(accountId: accountId, characterId: characterId);
+    _accounts = await _accountRepository.loadAccounts();
+    notifyListeners();
+  }
 }

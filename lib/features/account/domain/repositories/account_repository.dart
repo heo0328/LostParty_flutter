@@ -82,4 +82,9 @@ abstract interface class AccountManagementRepository {
   });
 
   Future<void> deleteAccount(int accountId);
+
+  Future<void> deleteMissingCharacter({
+    required int accountId,
+    required int characterId,
+  });
 }
