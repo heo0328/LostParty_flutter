@@ -89,6 +89,73 @@ void main() {
     expect(viewModel.state.items, isEmpty);
   });
 
+  test('숨긴 기록은 기본 목록에서 빠지고 토글하면 다시 보인다', () async {
+    final viewModel = RaidHistoryViewModel(
+      database: database,
+      playerId: 'player-1',
+      syncService: _RecordingSyncService(() => writeCompletedEvent('event-1')),
+    );
+    addTearDown(viewModel.dispose);
+
+    await viewModel.initialize();
+    await viewModel.setHidden('event-1', true);
+
+    expect(viewModel.state.items, isEmpty);
+
+    await viewModel.setShowHidden(true);
+
+    expect(viewModel.state.items, hasLength(1));
+    expect(viewModel.state.items.single.isHidden, isTrue);
+
+    await viewModel.setHidden('event-1', false);
+    await viewModel.setShowHidden(false);
+
+    expect(viewModel.state.items, hasLength(1));
+    expect(viewModel.state.items.single.isHidden, isFalse);
+  });
+
+  test('로컬 정정은 서버 상태를 유지한 채 표시만 바꾼다', () async {
+    final viewModel = RaidHistoryViewModel(
+      database: database,
+      playerId: 'player-1',
+      syncService: _RecordingSyncService(() => writeCompletedEvent('event-1')),
+    );
+    addTearDown(viewModel.dispose);
+
+    await viewModel.initialize();
+    await viewModel.setLocalOverride(
+      'event-1',
+      RaidHistoryLocalOverride.incomplete,
+    );
+
+    expect(
+      viewModel.state.items.single.serverStatus,
+      RaidHistoryServerStatus.completed,
+    );
+    expect(
+      viewModel.state.items.single.localOverride,
+      RaidHistoryLocalOverride.incomplete,
+    );
+
+    await viewModel.setLocalOverride('event-1', null);
+
+    expect(viewModel.state.items.single.isLocallyCorrected, isFalse);
+  });
+
+  test('카탈로그가 없으면 레이드 ID를 그대로 표시한다', () async {
+    final viewModel = RaidHistoryViewModel(
+      database: database,
+      playerId: 'player-1',
+      syncService: _RecordingSyncService(() => writeCompletedEvent('event-1')),
+    );
+    addTearDown(viewModel.dispose);
+
+    await viewModel.initialize();
+
+    expect(viewModel.state.items.single.raidName, 'act4');
+    expect(viewModel.state.items.single.difficultyName, 'normal');
+  });
+
   test('로컬 조회가 실패해도 로딩에 갇히지 않고 실패를 표시한다', () async {
     final brokenDatabase = _BrokenDatabase();
     addTearDown(brokenDatabase.close);
@@ -160,7 +227,10 @@ class _BrokenDatabase extends AccountDatabase {
   _BrokenDatabase() : super(NativeDatabase.memory());
 
   @override
-  Future<List<RaidHistoryEntry>> loadRaidHistory(String playerId) async {
+  Future<List<RaidHistoryEntry>> loadRaidHistory(
+    String playerId, {
+    bool includeHidden = false,
+  }) async {
     throw StateError('로컬 기록 조회 실패');
   }
 }

@@ -163,6 +163,7 @@ GoRouter createAppRouter({
                   eventSyncService: partyEventSyncServiceOrDefault,
                   playerId: playerSession.playerId,
                   cycleKey: currentCycleKey,
+                  raidCatalogRepository: raidCatalogRepository,
                 ),
               ),
             ],

@@ -1357,3 +1357,18 @@
 - Android에서 `libsqlite3.so`(native assets) 누락으로 완료 기록이 실패하던 문제를 전체 재설치로 해소했다.
 - 표적 ViewModel/Widget 테스트와 Android 실기기 세 탭 검증을 통과했다.
 - Fake 기반 모집·신청 쓰기 UI와 명령 Repository 실행 앱 전환, Emulator, FCM, TTL 배포는 범위 밖이다.
+
+---
+
+## Task-057. 레이드 현황 목록·완료 기록 UX와 읽기 규칙 보강
+
+- 작업 브랜치: `cursor/firebase-runtime-stage1`
+- `진행 중` 카드를 레이드·난이도·관문, KST 시작 일정, 인원/남은 자리, 최소 조건 중심으로 표시한다. 시작 시각이 없으면 `시작 시간 미정`이다.
+- `신청 중`은 `승인 대기`와 `최근 처리 결과`를 나누고, `superseded` + `recruitmentClosed`는 거절과 구분해 안내한다.
+- `완료 기록`에 카탈로그 표시명, 숨김·로컬 정정 메뉴, `숨긴 기록 보기` 토글을 연결했다. 숨김·정정은 Drift에만 남고 재동기화해도 유지된다.
+- 빈 목록에서 오프라인 안내가 풀리지 않던 문제를 `snapshots(includeMetadataChanges: true)`로 수정했다.
+- `신청 중` collection group 쿼리가 중첩 경로 규칙만으로는 거부되던 문제를 `match /{path=**}/applications/{applicantPlayerId}` `list` 규칙으로 보완하고 `lost-party`에 배포했다.
+- 읽기·이벤트 계약 문서에 메타데이터 구독, collection group 규칙, 완료 기록 화면 연결을 반영했다.
+- `flutter analyze --no-pub`과 전체 테스트 312개가 통과했다.
+- Android 실기기에서 진행 중 탭의 오프라인 안내가 사라지고, 재실행 시 `PERMISSION_DENIED` 로그가 더 이상 나오지 않음을 확인했다.
+- 모집 만들기 등 쓰기 UI는 여전히 Fake이므로 만든 방은 레이드 현황에 나타나지 않는다. 목록→상세 진입은 다음 작업이다.

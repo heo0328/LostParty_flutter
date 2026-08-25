@@ -834,5 +834,12 @@ service cloud.firestore {
         allow delete: if false;
       }
     }
+
+    // 컬렉션 그룹 쿼리는 중첩 경로 규칙이 적용되지 않아 재귀 와일드카드가 필요하다.
+    // 신청 중 화면이 본인 신청만 회차 단위로 조회하는 용도로만 연다.
+    match /{path=**}/applications/{applicantPlayerId} {
+      allow list: if hasActiveBinding()
+        && resource.data.applicantPlayerId == currentPlayerId();
+    }
   }
 }

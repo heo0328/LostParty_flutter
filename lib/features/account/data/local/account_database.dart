@@ -236,14 +236,18 @@ class AccountDatabase extends _$AccountDatabase {
     );
   }
 
-  /// 숨김 처리한 기록은 제외하고 최근 발생 순으로 반환한다.
-  Future<List<RaidHistoryEntry>> loadRaidHistory(String playerId) {
+  /// 기본은 사용자가 숨긴 기록을 제외하고 최근 발생 순으로 반환한다.
+  Future<List<RaidHistoryEntry>> loadRaidHistory(
+    String playerId, {
+    bool includeHidden = false,
+  }) {
     return (select(raidHistoryEntries)
-          ..where(
-            (table) =>
-                table.playerId.equals(playerId) &
-                table.visibility.equals('visible'),
-          )
+          ..where((table) {
+            final owned = table.playerId.equals(playerId);
+            return includeHidden
+                ? owned
+                : owned & table.visibility.equals('visible');
+          })
           ..orderBy([(table) => OrderingTerm.desc(table.occurredAt)]))
         .get();
   }

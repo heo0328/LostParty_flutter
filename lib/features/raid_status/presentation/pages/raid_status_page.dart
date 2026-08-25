@@ -2,9 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../../shared/formatters/display_number_formatter.dart';
+import '../../../../shared/formatters/korea_time_formatter.dart';
+import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 import '../../../account/data/local/account_database.dart';
 import '../../../recruitment_list/domain/entities/party_read_models.dart';
 import '../../../recruitment_list/domain/entities/party_recruitment.dart';
+import '../../../recruitment_list/domain/entities/recruitment_aggregate.dart';
 import '../../../recruitment_list/domain/entities/recruitment_application.dart';
 import '../../../recruitment_list/domain/repositories/party_read_repository.dart';
 import '../../domain/services/party_event_sync_service.dart';
@@ -18,6 +22,7 @@ class RaidStatusPage extends StatefulWidget {
     required this.eventSyncService,
     required this.playerId,
     required this.cycleKey,
+    this.raidCatalogRepository,
     super.key,
   });
 
@@ -26,6 +31,7 @@ class RaidStatusPage extends StatefulWidget {
   final PartyEventSyncService eventSyncService;
   final String playerId;
   final String cycleKey;
+  final RaidCatalogRepository? raidCatalogRepository;
 
   @override
   State<RaidStatusPage> createState() => _RaidStatusPageState();
@@ -53,6 +59,7 @@ class _RaidStatusPageState extends State<RaidStatusPage> {
       database: widget.accountDatabase,
       playerId: widget.playerId,
       syncService: widget.eventSyncService,
+      catalogRepository: widget.raidCatalogRepository,
     );
     unawaited(_history.initialize());
   }
@@ -88,7 +95,9 @@ class _RaidStatusPageState extends State<RaidStatusPage> {
               icon: Icons.event_available_outlined,
               emptyTitle: '진행 중인 레이드가 없습니다.',
               emptyDescription: '생성하거나 가입이 확정된 레이드가 여기에 표시됩니다.',
-              itemBuilder: (context, item) => _ActiveRaidTile(summary: item),
+              rowsBuilder: (items) => [
+                for (final item in items) _ActiveRaidCard(summary: item),
+              ],
             ),
             _PartyReadTab<PartyApplicationSummary>(
               key: const ValueKey('pendingRaidsPage'),
@@ -96,7 +105,7 @@ class _RaidStatusPageState extends State<RaidStatusPage> {
               icon: Icons.hourglass_empty_outlined,
               emptyTitle: '신청 중인 레이드가 없습니다.',
               emptyDescription: '승인 대기 신청과 처리 결과가 여기에 표시됩니다.',
-              itemBuilder: (context, item) => _ApplicationTile(summary: item),
+              rowsBuilder: _applicationRows,
             ),
             _RaidHistoryTab(
               key: const ValueKey('raidHistoryPage'),
@@ -115,7 +124,7 @@ class _PartyReadTab<T> extends StatelessWidget {
     required this.icon,
     required this.emptyTitle,
     required this.emptyDescription,
-    required this.itemBuilder,
+    required this.rowsBuilder,
     super.key,
   });
 
@@ -123,7 +132,7 @@ class _PartyReadTab<T> extends StatelessWidget {
   final IconData icon;
   final String emptyTitle;
   final String emptyDescription;
-  final Widget Function(BuildContext context, T item) itemBuilder;
+  final List<Widget> Function(List<T> items) rowsBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -155,6 +164,7 @@ class _PartyReadTab<T> extends StatelessWidget {
             ],
           );
         }
+        final rows = rowsBuilder(state.items);
         return Column(
           children: [
             if (state.isFromCache) const _OfflineNotice(),
@@ -165,9 +175,9 @@ class _PartyReadTab<T> extends StatelessWidget {
               ),
             Expanded(
               child: ListView.builder(
-                itemCount: state.items.length,
-                itemBuilder: (context, index) =>
-                    itemBuilder(context, state.items[index]),
+                padding: const EdgeInsets.only(bottom: 16),
+                itemCount: rows.length,
+                itemBuilder: (context, index) => rows[index],
               ),
             ),
           ],
@@ -216,24 +226,33 @@ class _RaidHistoryTab extends StatelessWidget {
                   icon: Icons.sync_problem_outlined,
                   message: _syncFailureMessage(state.syncFailure!),
                 ),
+              _HiddenHistoryToggle(
+                showHidden: state.showHidden,
+                onChanged: viewModel.setShowHidden,
+              ),
               Expanded(
                 child: state.isEmpty
                     ? ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        children: const [
-                          SizedBox(height: 120),
+                        children: [
+                          const SizedBox(height: 100),
                           _RaidStatusMessageView(
                             icon: Icons.history_outlined,
                             title: '완료 기록이 없습니다.',
-                            description: '이번 주 완료와 지난 회차 기록이 여기에 표시됩니다.',
+                            description: state.showHidden
+                                ? '숨긴 기록도 아직 없습니다.'
+                                : '이번 주 완료와 지난 회차 기록이 여기에 표시됩니다.',
                           ),
                         ],
                       )
                     : ListView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.only(bottom: 16),
                         itemCount: state.items.length,
-                        itemBuilder: (context, index) =>
-                            _RaidHistoryTile(item: state.items[index]),
+                        itemBuilder: (context, index) => _RaidHistoryCard(
+                          item: state.items[index],
+                          viewModel: viewModel,
+                        ),
                       ),
               ),
             ],
@@ -244,61 +263,337 @@ class _RaidHistoryTab extends StatelessWidget {
   }
 }
 
-class _ActiveRaidTile extends StatelessWidget {
-  const _ActiveRaidTile({required this.summary});
+class _ActiveRaidCard extends StatelessWidget {
+  const _ActiveRaidCard({required this.summary});
 
   final ActiveRaidSummary summary;
 
   @override
   Widget build(BuildContext context) {
-    final metadata = summary.metadata;
-    return ListTile(
-      title: Text(summary.title),
-      subtitle: Text(
-        '${metadata.raidName} - ${metadata.difficultyName}'
-        ' · ${summary.memberCount}/${summary.maxMemberCount}명',
+    final theme = Theme.of(context);
+    final startAt = summary.raidStartAt;
+    return Card(
+      key: ValueKey(summary.id),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(summary.title, style: theme.textTheme.titleMedium),
+                ),
+                if (summary.isOwnedByCurrentPlayer) ...[
+                  const SizedBox(width: 12),
+                  const _Badge(label: '내가 만든 방', tone: _BadgeTone.highlight),
+                ],
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(_raidLabel(summary.metadata), style: theme.textTheme.bodyMedium),
+            const SizedBox(height: 8),
+            _IconLine(
+              icon: Icons.schedule_outlined,
+              text: startAt == null
+                  ? '시작 시간 미정'
+                  : KoreaTimeFormatter.dayAndTime(startAt),
+            ),
+            const SizedBox(height: 6),
+            _IconLine(icon: Icons.groups_outlined, text: _memberLabel(summary)),
+            const SizedBox(height: 8),
+            Text(
+              _requirementLabel(summary.metadata),
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+        ),
       ),
-      trailing: summary.isOwnedByCurrentPlayer
-          ? const Chip(label: Text('내가 만든 방'))
-          : null,
     );
   }
 }
 
-class _ApplicationTile extends StatelessWidget {
-  const _ApplicationTile({required this.summary});
+class _ApplicationCard extends StatelessWidget {
+  const _ApplicationCard({required this.summary});
 
   final PartyApplicationSummary summary;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(summary.characterName),
-      subtitle: Text(
-        '${summary.className} · ${_roleLabel(summary.requestedRole)}',
+    final theme = Theme.of(context);
+    final resolution = _resolutionMessage(summary);
+    return Card(
+      key: ValueKey('${summary.recruitmentId}_${summary.characterId}'),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    summary.characterName,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _Badge(
+                  label: _applicationStatusLabel(summary.status),
+                  tone: _applicationStatusTone(summary.status),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '${summary.className} · ${_roleLabel(summary.requestedRole)}',
+              style: theme.textTheme.bodyMedium,
+            ),
+            if (resolution != null) ...[
+              const SizedBox(height: 8),
+              Text(resolution, style: theme.textTheme.bodyMedium),
+            ],
+            const SizedBox(height: 8),
+            Text(_applicationTimeLabel(summary), style: theme.textTheme.bodySmall),
+          ],
+        ),
       ),
-      trailing: Text(_applicationStatusLabel(summary.status)),
     );
   }
 }
 
-class _RaidHistoryTile extends StatelessWidget {
-  const _RaidHistoryTile({required this.item});
+/// 승인 대기는 아직 결과를 기다리는 신청이므로 종료된 신청과 섞지 않는다.
+List<Widget> _applicationRows(List<PartyApplicationSummary> items) {
+  final pending = <PartyApplicationSummary>[];
+  final resolved = <PartyApplicationSummary>[];
+  for (final item in items) {
+    if (item.status == RecruitmentApplicationStatus.pending) {
+      pending.add(item);
+    } else {
+      resolved.add(item);
+    }
+  }
 
-  final RaidHistoryItem item;
+  return [
+    if (pending.isNotEmpty) const _SectionHeader(label: '승인 대기'),
+    for (final item in pending) _ApplicationCard(summary: item),
+    if (resolved.isNotEmpty) const _SectionHeader(label: '최근 처리 결과'),
+    for (final item in resolved) _ApplicationCard(summary: item),
+  ];
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.label});
+
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      title: Text('${item.raidId} - ${item.difficultyId}'),
-      subtitle: Text('${item.cycleKey} 회차'),
-      trailing: Text(
-        item.isLocallyCorrected
-            ? '${_historyStatusLabel(item.serverStatus)} (정정됨)'
-            : _historyStatusLabel(item.serverStatus),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: Text(label, style: Theme.of(context).textTheme.titleSmall),
+    );
+  }
+}
+
+class _IconLine extends StatelessWidget {
+  const _IconLine({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 16),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
+        ),
+      ],
+    );
+  }
+}
+
+enum _BadgeTone { highlight, waiting, negative, neutral }
+
+class _Badge extends StatelessWidget {
+  const _Badge({required this.label, required this.tone});
+
+  final String label;
+  final _BadgeTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final background = switch (tone) {
+      _BadgeTone.highlight => colorScheme.secondaryContainer,
+      _BadgeTone.waiting => colorScheme.primaryContainer,
+      _BadgeTone.negative => colorScheme.errorContainer,
+      _BadgeTone.neutral => colorScheme.surfaceContainerHighest,
+    };
+    final foreground = switch (tone) {
+      _BadgeTone.highlight => colorScheme.onSecondaryContainer,
+      _BadgeTone.waiting => colorScheme.onPrimaryContainer,
+      _BadgeTone.negative => colorScheme.onErrorContainer,
+      _BadgeTone.neutral => colorScheme.onSurfaceVariant,
+    };
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: foreground,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
+}
+
+class _HiddenHistoryToggle extends StatelessWidget {
+  const _HiddenHistoryToggle({
+    required this.showHidden,
+    required this.onChanged,
+  });
+
+  final bool showHidden;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        child: FilterChip(
+          label: const Text('숨긴 기록 보기'),
+          selected: showHidden,
+          onSelected: onChanged,
+        ),
+      ),
+    );
+  }
+}
+
+enum _HistoryAction { correctCompleted, correctIncomplete, clearCorrection, hide, restore }
+
+class _RaidHistoryCard extends StatelessWidget {
+  const _RaidHistoryCard({required this.item, required this.viewModel});
+
+  final RaidHistoryItem item;
+  final RaidHistoryViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      key: ValueKey(item.eventId),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 8, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    '${item.raidName} - ${item.difficultyName}',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _Badge(
+                  label: _historyStatusLabel(item.serverStatus),
+                  tone: _historyStatusTone(item.serverStatus),
+                ),
+                PopupMenuButton<_HistoryAction>(
+                  onSelected: (action) => _run(action),
+                  itemBuilder: (context) => _menuItems(),
+                ),
+              ],
+            ),
+            Text(
+              '${item.cycleKey} 회차 · '
+              '${KoreaTimeFormatter.dayAndTime(item.occurredAt)}',
+              style: theme.textTheme.bodySmall,
+            ),
+            if (item.isLocallyCorrected) ...[
+              const SizedBox(height: 8),
+              _IconLine(
+                icon: Icons.edit_note_outlined,
+                text: _overrideLabel(item.localOverride!),
+              ),
+            ],
+            if (item.isHidden) ...[
+              const SizedBox(height: 8),
+              const _IconLine(
+                icon: Icons.visibility_off_outlined,
+                text: '목록에서 숨긴 기록입니다.',
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<PopupMenuEntry<_HistoryAction>> _menuItems() => [
+    if (item.localOverride != RaidHistoryLocalOverride.completed)
+      const PopupMenuItem(
+        value: _HistoryAction.correctCompleted,
+        child: Text('완료로 정정'),
+      ),
+    if (item.localOverride != RaidHistoryLocalOverride.incomplete)
+      const PopupMenuItem(
+        value: _HistoryAction.correctIncomplete,
+        child: Text('미완료로 정정'),
+      ),
+    if (item.isLocallyCorrected)
+      const PopupMenuItem(
+        value: _HistoryAction.clearCorrection,
+        child: Text('정정 해제'),
+      ),
+    if (item.isHidden)
+      const PopupMenuItem(
+        value: _HistoryAction.restore,
+        child: Text('다시 표시'),
+      )
+    else
+      const PopupMenuItem(value: _HistoryAction.hide, child: Text('숨기기')),
+  ];
+
+  Future<void> _run(_HistoryAction action) => switch (action) {
+    _HistoryAction.correctCompleted => viewModel.setLocalOverride(
+      item.eventId,
+      RaidHistoryLocalOverride.completed,
+    ),
+    _HistoryAction.correctIncomplete => viewModel.setLocalOverride(
+      item.eventId,
+      RaidHistoryLocalOverride.incomplete,
+    ),
+    _HistoryAction.clearCorrection => viewModel.setLocalOverride(
+      item.eventId,
+      null,
+    ),
+    _HistoryAction.hide => viewModel.setHidden(item.eventId, true),
+    _HistoryAction.restore => viewModel.setHidden(item.eventId, false),
+  };
 }
 
 class _OfflineNotice extends StatelessWidget {
@@ -394,6 +689,65 @@ String _syncFailureMessage(PartyEventSyncFailure failure) => switch (failure) {
 String _roleLabel(PartyRole role) =>
     role == PartyRole.support ? '서포터' : '딜러';
 
+String _raidLabel(RecruitmentMetadata metadata) {
+  final difficulty = metadata.difficultyAlias == metadata.difficultyName
+      ? metadata.difficultyName
+      : '${metadata.difficultyName} (${metadata.difficultyAlias})';
+  return '${metadata.raidName} - $difficulty · ${metadata.gateCount}관문';
+}
+
+String _memberLabel(ActiveRaidSummary summary) {
+  final remaining = summary.maxMemberCount - summary.memberCount;
+  final slot = remaining > 0 ? '남은 자리 $remaining' : '자리 마감';
+  return '멤버 ${summary.memberCount}/${summary.maxMemberCount} · $slot';
+}
+
+String _requirementLabel(RecruitmentMetadata metadata) {
+  final parts = [
+    '최소 아이템 레벨 ${DisplayNumberFormatter.integer(metadata.minItemLevel)}',
+    if (metadata.minCombatPower != null)
+      '최소 전투력 ${DisplayNumberFormatter.integer(metadata.minCombatPower!)}',
+    if (metadata.experienceLevel != null)
+      '숙련도 ${_experienceLabel(metadata.experienceLevel!)}',
+  ];
+  return parts.join(' · ');
+}
+
+String _experienceLabel(ExperienceLevel level) => switch (level) {
+  ExperienceLevel.tryLevel => '트라이',
+  ExperienceLevel.clearExp => '클경',
+  ExperienceLevel.multiClearExp => '다클경',
+  ExperienceLevel.semiExperienced => '반숙',
+  ExperienceLevel.experienced => '숙련',
+};
+
+/// 모집 종료로 닫힌 신청은 거절과 구분해서 안내한다.
+String? _resolutionMessage(PartyApplicationSummary summary) =>
+    switch (summary.status) {
+      RecruitmentApplicationStatus.superseded =>
+        summary.resolutionReason == 'recruitmentClosed'
+            ? '모집이 종료되어 신청이 닫혔습니다.'
+            : '신청이 더 이상 유효하지 않습니다.',
+      _ => null,
+    };
+
+String _applicationTimeLabel(PartyApplicationSummary summary) {
+  if (summary.status == RecruitmentApplicationStatus.pending) {
+    return '신청 ${KoreaTimeFormatter.dayAndTime(summary.createdAt)}';
+  }
+  final decidedAt = summary.decidedAt ?? summary.updatedAt;
+  return '처리 ${KoreaTimeFormatter.dayAndTime(decidedAt)}';
+}
+
+_BadgeTone _applicationStatusTone(RecruitmentApplicationStatus status) =>
+    switch (status) {
+      RecruitmentApplicationStatus.pending => _BadgeTone.waiting,
+      RecruitmentApplicationStatus.approved => _BadgeTone.highlight,
+      RecruitmentApplicationStatus.rejected => _BadgeTone.negative,
+      RecruitmentApplicationStatus.withdrawn ||
+      RecruitmentApplicationStatus.superseded => _BadgeTone.neutral,
+    };
+
 String _applicationStatusLabel(RecruitmentApplicationStatus status) =>
     switch (status) {
       RecruitmentApplicationStatus.pending => '승인 대기',
@@ -402,6 +756,17 @@ String _applicationStatusLabel(RecruitmentApplicationStatus status) =>
       RecruitmentApplicationStatus.withdrawn => '철회함',
       RecruitmentApplicationStatus.superseded => '종료됨',
     };
+
+_BadgeTone _historyStatusTone(RaidHistoryServerStatus status) => switch (status) {
+  RaidHistoryServerStatus.completed => _BadgeTone.highlight,
+  RaidHistoryServerStatus.incompleteEnded => _BadgeTone.neutral,
+  RaidHistoryServerStatus.completionCancelled => _BadgeTone.negative,
+};
+
+String _overrideLabel(RaidHistoryLocalOverride override) => switch (override) {
+  RaidHistoryLocalOverride.completed => '완료로 정정했습니다.',
+  RaidHistoryLocalOverride.incomplete => '미완료로 정정했습니다.',
+};
 
 String _historyStatusLabel(RaidHistoryServerStatus status) => switch (status) {
   RaidHistoryServerStatus.completed => '완료',

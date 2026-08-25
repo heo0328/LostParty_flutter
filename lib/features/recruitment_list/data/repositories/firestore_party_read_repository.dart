@@ -9,6 +9,8 @@ import '../../domain/repositories/party_read_repository.dart';
 import '../dto/party_read_document_dto.dart';
 import '../mappers/party_read_document_mapper.dart';
 
+/// 목록이 비어 있으면 캐시에서 서버로 바뀌는 변화가 메타데이터뿐이라
+/// `includeMetadataChanges` 없이는 오프라인 표시가 갱신되지 않는다.
 class FirestorePartyReadRepository implements PartyReadRepository {
   FirestorePartyReadRepository({required FirebaseFirestore firestore})
     : _firestore = firestore,
@@ -35,7 +37,7 @@ class FirestorePartyReadRepository implements PartyReadRepository {
         .where('hasAvailableSlot', isEqualTo: true)
         .where('targetCycleKey', isEqualTo: cycleKey)
         .orderBy('updatedAt', descending: true)
-        .snapshots()
+        .snapshots(includeMetadataChanges: true)
         .map(
           (snapshot) => PartyReadSnapshot(
             items: snapshot.docs
@@ -57,13 +59,13 @@ class FirestorePartyReadRepository implements PartyReadRepository {
         .where('schemaVersion', isEqualTo: 1)
         .where('leaderPlayerId', isEqualTo: playerId)
         .where('status', isEqualTo: 'active')
-        .snapshots();
+        .snapshots(includeMetadataChanges: true);
     final joined = _firestore
         .collection('recruitments')
         .where('schemaVersion', isEqualTo: 1)
         .where('memberPlayerIds', arrayContains: playerId)
         .where('status', isEqualTo: 'active')
-        .snapshots();
+        .snapshots(includeMetadataChanges: true);
 
     return _combineActiveQueries(
       owned,
@@ -83,7 +85,7 @@ class FirestorePartyReadRepository implements PartyReadRepository {
         .where('applicantPlayerId', isEqualTo: playerId)
         .where('cycleKey', isEqualTo: cycleKey)
         .orderBy('updatedAt', descending: true)
-        .snapshots()
+        .snapshots(includeMetadataChanges: true)
         .map(
           (snapshot) => PartyReadSnapshot(
             items: snapshot.docs
@@ -106,7 +108,7 @@ class FirestorePartyReadRepository implements PartyReadRepository {
     return _firestore
         .collection('recruitments')
         .doc(recruitmentId)
-        .snapshots()
+        .snapshots(includeMetadataChanges: true)
         .map(
           (snapshot) => snapshot.exists
               ? _mapper.toPublicRecruitment(_document(snapshot))
