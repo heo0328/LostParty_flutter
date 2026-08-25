@@ -32,6 +32,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/recruitments/$(recruitmentId)/members/$(playerId);
     }
 
+    function recruitmentCyclePath(recruitmentId, cycleKey) {
+      return /databases/$(database)/documents/recruitments/$(recruitmentId)/cycles/$(cycleKey);
+    }
+
     function assignmentPath(playerId, assignmentId) {
       return /databases/$(database)/documents/players/$(playerId)/activeRaidAssignments/$(assignmentId);
     }
@@ -75,6 +79,10 @@ service cloud.firestore {
         && data.status == 'active'
         && data.visibility == 'public'
         && data.currentCycleKey == data.targetCycleKey
+        && data.currentCycleStatus == 'active'
+        && data.cycleEndsAt == data.cycleStartedAt + duration.value(7, 'd')
+        && request.time >= data.cycleStartedAt
+        && request.time < data.cycleEndsAt
         && data.revision == 1
         && data.createdAt == request.time
         && data.updatedAt == request.time
@@ -252,6 +260,198 @@ service cloud.firestore {
               == (!(oldData.leaderPlayerId in newData.memberPlayerIds)
                 ? newData.memberPlayerIds[0]
                 : oldData.leaderPlayerId)));
+    }
+
+    function validRecurrenceChange(oldData, newData) {
+      return hasActiveBinding()
+        && oldData.leaderPlayerId == currentPlayerId()
+        && oldData.status == 'active'
+        && oldData.currentCycleStatus == 'active'
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'continueTogether', 'revision', 'updatedAt'
+        ])
+        && newData.continueTogether is bool
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validCycleCompletion(recruitmentId, oldData, newData) {
+      let cycle = getAfter(recruitmentCyclePath(
+        recruitmentId,
+        oldData.currentCycleKey
+      )).data;
+      let repeating = oldData.continueTogether == true;
+      return hasActiveBinding()
+        && currentPlayerId() in oldData.memberPlayerIds
+        && oldData.status == 'active'
+        && oldData.currentCycleStatus == 'active'
+        && request.time < oldData.cycleEndsAt
+        && cycle.status == 'completed'
+        && cycle.memberPlayerIds == oldData.memberPlayerIds
+        && cycle.completedByPlayerId == currentPlayerId()
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'currentCycleStatus', 'manualRecruitmentEnabled',
+          'completedAt', 'completedByPlayerId', 'revision', 'updatedAt'
+        ])
+        && newData.status == (repeating ? 'active' : 'completed')
+        && newData.currentCycleStatus == 'completed'
+        && newData.manualRecruitmentEnabled == repeating
+        && newData.completedAt == request.time
+        && newData.completedByPlayerId == currentPlayerId()
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validCompletionCancellation(recruitmentId, oldData, newData) {
+      let cycle = getAfter(recruitmentCyclePath(
+        recruitmentId,
+        oldData.currentCycleKey
+      )).data;
+      return hasActiveBinding()
+        && oldData.leaderPlayerId == currentPlayerId()
+        && oldData.continueTogether == true
+        && oldData.status == 'active'
+        && oldData.currentCycleStatus == 'completed'
+        && request.time < oldData.cycleEndsAt - duration.value(8, 'h')
+        && cycle.status == 'completionCancelled'
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'currentCycleStatus', 'manualRecruitmentEnabled',
+          'hasAvailableSlot', 'completedAt', 'completedByPlayerId',
+          'revision', 'updatedAt'
+        ])
+        && newData.status == 'active'
+        && newData.currentCycleStatus == 'active'
+        && newData.manualRecruitmentEnabled == true
+        && newData.hasAvailableSlot
+          == (newData.memberCount < newData.maxMemberCount)
+        && newData.completedAt == null
+        && newData.completedByPlayerId == null
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validCycleAdvance(recruitmentId, oldData, newData) {
+      let cycle = getAfter(recruitmentCyclePath(
+        recruitmentId,
+        oldData.currentCycleKey
+      )).data;
+      let repeating = oldData.continueTogether == true;
+      return hasActiveBinding()
+        && currentPlayerId() in oldData.memberPlayerIds
+        && oldData.status == 'active'
+        && request.time >= oldData.cycleEndsAt
+        && (cycle.status == 'completed'
+          || (cycle.status == 'incompleteEnded'
+            && cycle.memberPlayerIds == oldData.memberPlayerIds))
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time
+        && (repeating
+          ? (newData.diff(oldData).affectedKeys().hasOnly([
+              'status', 'currentCycleStatus', 'currentCycleKey',
+              'targetCycleKey', 'cycleStartedAt', 'cycleEndsAt',
+              'completedAt', 'completedByPlayerId', 'hasAvailableSlot',
+              'revision', 'updatedAt'
+            ])
+            && newData.status == 'active'
+            && newData.currentCycleStatus == 'active'
+            && newData.currentCycleKey == newData.targetCycleKey
+            && newData.cycleStartedAt == oldData.cycleEndsAt
+            && newData.cycleEndsAt
+              == newData.cycleStartedAt + duration.value(7, 'd')
+            && newData.completedAt == null
+            && newData.completedByPlayerId == null
+            && newData.hasAvailableSlot
+              == (newData.memberCount < newData.maxMemberCount))
+          : (newData.diff(oldData).affectedKeys().hasOnly([
+              'status', 'currentCycleStatus', 'manualRecruitmentEnabled',
+              'hasAvailableSlot', 'revision', 'updatedAt'
+            ])
+            && newData.status == 'incompleteEnded'
+            && newData.currentCycleStatus == 'incompleteEnded'
+            && newData.manualRecruitmentEnabled == false
+            && newData.hasAvailableSlot == false));
+    }
+
+    function validInitialCycle(recruitmentId, cycleKey, data) {
+      let before = get(recruitmentPath(recruitmentId)).data;
+      let after = getAfter(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && currentPlayerId() in before.memberPlayerIds
+        && data.schemaVersion == 1
+        && data.recruitmentId == recruitmentId
+        && data.cycleKey == cycleKey
+        && cycleKey == before.currentCycleKey
+        && data.memberPlayerIds == before.memberPlayerIds
+        && data.completedMemberSnapshot.size() == before.memberCount
+        && data.completionRevision == 1
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && ((data.status == 'completed'
+            && request.time < before.cycleEndsAt
+            && data.completedAt == request.time
+            && data.completedByPlayerId == currentPlayerId()
+            && after.currentCycleStatus == 'completed')
+          || (data.status == 'incompleteEnded'
+            && request.time >= before.cycleEndsAt
+            && data.completedAt == null
+            && data.completedByPlayerId == null));
+    }
+
+    function validCycleCancellation(recruitmentId, oldData, newData) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && recruitment.leaderPlayerId == currentPlayerId()
+        && recruitment.continueTogether == true
+        && request.time < recruitment.cycleEndsAt - duration.value(8, 'h')
+        && oldData.status == 'completed'
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'completionRevision', 'updatedAt'
+        ])
+        && newData.status == 'completionCancelled'
+        && newData.completionRevision == oldData.completionRevision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validCycleRecompletion(recruitmentId, oldData, newData) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      let recruitmentAfter = getAfter(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && currentPlayerId() in recruitment.memberPlayerIds
+        && oldData.status == 'completionCancelled'
+        && request.time < recruitment.cycleEndsAt
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'completedAt', 'completedByPlayerId',
+          'completionRevision', 'memberPlayerIds',
+          'completedMemberSnapshot', 'updatedAt'
+        ])
+        && newData.status == 'completed'
+        && newData.completedAt == request.time
+        && newData.completedByPlayerId == currentPlayerId()
+        && newData.completionRevision == oldData.completionRevision + 1
+        && newData.memberPlayerIds == recruitment.memberPlayerIds
+        && newData.completedMemberSnapshot.size() == recruitment.memberCount
+        && newData.updatedAt == request.time
+        && recruitmentAfter.currentCycleStatus == 'completed';
+    }
+
+    function validCancelledCycleEnd(recruitmentId, oldData, newData) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && currentPlayerId() in recruitment.memberPlayerIds
+        && oldData.status == 'completionCancelled'
+        && request.time >= recruitment.cycleEndsAt
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'completedAt', 'completedByPlayerId',
+          'completionRevision', 'memberPlayerIds',
+          'completedMemberSnapshot', 'updatedAt'
+        ])
+        && newData.status == 'incompleteEnded'
+        && newData.completedAt == null
+        && newData.completedByPlayerId == null
+        && newData.completionRevision == oldData.completionRevision + 1
+        && newData.memberPlayerIds == recruitment.memberPlayerIds
+        && newData.completedMemberSnapshot.size() == recruitment.memberCount
+        && newData.updatedAt == request.time;
     }
 
     function validMemberCharacterChange(recruitmentId, playerId, oldData, newData) {
@@ -495,6 +695,21 @@ service cloud.firestore {
           recruitmentId,
           resource.data,
           request.resource.data
+        ) || validRecurrenceChange(
+          resource.data,
+          request.resource.data
+        ) || validCycleCompletion(
+          recruitmentId,
+          resource.data,
+          request.resource.data
+        ) || validCompletionCancellation(
+          recruitmentId,
+          resource.data,
+          request.resource.data
+        ) || validCycleAdvance(
+          recruitmentId,
+          resource.data,
+          request.resource.data
         );
       allow delete: if false;
 
@@ -552,6 +767,29 @@ service cloud.firestore {
           allow get, list: if canReadPrivateRecruitmentData(recruitmentId);
           allow create, update, delete: if false;
         }
+      }
+
+      match /cycles/{cycleKey} {
+        allow get, list: if canReadPrivateRecruitmentData(recruitmentId);
+        allow create: if validInitialCycle(
+          recruitmentId,
+          cycleKey,
+          request.resource.data
+        );
+        allow update: if validCycleCancellation(
+            recruitmentId,
+            resource.data,
+            request.resource.data
+          ) || validCycleRecompletion(
+            recruitmentId,
+            resource.data,
+            request.resource.data
+          ) || validCancelledCycleEnd(
+            recruitmentId,
+            resource.data,
+            request.resource.data
+          );
+        allow delete: if false;
       }
     }
   }

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../domain/entities/party_create_command.dart';
+import '../../domain/policies/party_cycle_policy.dart';
 
 class PartyCreateWritePlan {
   const PartyCreateWritePlan({
@@ -19,6 +20,8 @@ class PartyCreateWritePlan {
   }) {
     final metadata = command.metadata;
     final rules = command.compositionRules;
+    final cycle = const PartyCyclePolicy().fromKey(command.cycleKey);
+    if (cycle == null) throw ArgumentError.value(command.cycleKey, 'cycleKey');
     return PartyCreateWritePlan(
       recruitment: {
         'schemaVersion': 1,
@@ -48,6 +51,9 @@ class PartyCreateWritePlan {
         'hasAvailableSlot': rules.totalMembers > 1,
         'currentCycleKey': command.cycleKey,
         'targetCycleKey': command.cycleKey,
+        'currentCycleStatus': 'active',
+        'cycleStartedAt': Timestamp.fromDate(cycle.startedAt),
+        'cycleEndsAt': Timestamp.fromDate(cycle.endsAt),
         'partyCount': rules.partyCount,
         'membersPerParty': rules.membersPerParty,
         'supportsPerParty': rules.supportsPerParty,
