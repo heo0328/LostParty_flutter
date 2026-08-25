@@ -16,6 +16,7 @@
   - 본인 pending 신청은 `revision`으로 철회하고, 요청 중 버튼을 비활성한다.
   - Fake `/recruitments/:id` 상세 UI는 그대로 두며 데이터를 섞지 않는다.
   - 단일 Android 기기(Player 1개)라 타 계정 신청·철회 실기기 확인은 보류했다. 표적 테스트로 검증했다.
+- Task-062에서 LostParty Design System v1의 Theme·token·Bottom Navigation과 공개 모집 대표 Card 시범 적용을 완료하고 사용자 디자인 확인을 통과했다.
 - `레이드 모집` 탭 공개 목록은 여전히 `InMemoryRecruitmentStateRepository` Fake다. `watchPublicRecruitments`는 Repository에 있으나 UI에 미연결이다.
 - 승인·즉시 가입·멤버·회차는 Fake 경로를 유지한다.
 - Firestore Emulator, FCM, TTL 배포와 유료 서비스 호출은 수행하지 않았다.
@@ -24,6 +25,7 @@
 
 - Codex는 설계·계약·작업 분해·문서 정합성·인수인계를 중심으로 담당한다.
 - Cursor는 주 코드 구현·빌드·표적 테스트를 중심으로 담당한다.
+- 디자인 시스템의 설계·구현·시범 적용과 사용자 피드백 반영은 Codex가 담당한다. Cursor는 확정된 디자인 기준을 후속 기능 화면에 적용한다.
 - Codex의 코드 수정과 Cursor의 설계 제안을 금지하지 않는다.
 - 구현 중 계약 변경이 필요하면 Cursor가 임의 확장하지 않고 영향과 제안을 문서에 먼저 기록한다.
 - 완료 시 코드, 테스트, 문서와 실제 Git 상태를 함께 갱신한다.
