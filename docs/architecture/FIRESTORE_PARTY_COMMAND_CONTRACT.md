@@ -178,6 +178,28 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 - 책임자 자신의 고유 승인 권한은 이 명령으로 회수할 수 없다.
 - membership 권한과 모집 revision을 같은 Transaction에서 갱신한다.
 
+### 4.8 회차 수명주기
+
+#### 완료와 Snapshot
+
+- 현재 회차 참가자는 누구나 완료할 수 있고 최초 완료 또는 완료 취소 후 재완료만 성공한다.
+- `cycles/{cycleKey}`에 완료 당시 Player·Character·역할·파티 위치 Snapshot과 완료자를 저장하고 모집의 `currentCycleStatus`, 완료자와 revision을 함께 갱신한다.
+- 1회성 파티는 모집을 `completed`로 종료하고 반복 파티는 방을 `active`로 유지해 다음 회차 준비 변경을 허용한다.
+
+#### 완료 취소
+
+- 반복 파티 책임자만 KST 화요일 22:00, 즉 `cycleEndsAt` 8시간 전까지 취소할 수 있다.
+- cycle의 `completionRevision`과 모집 revision을 함께 비교하고 취소된 완료는 같은 회차에서 다시 완료할 수 있다.
+- 시간 제한은 클라이언트 안내와 별개로 Rules의 `request.time`이 최종 강제한다.
+
+#### 반복 설정과 주차 전환
+
+- 현재 미완료 회차의 책임자만 `continueTogether`를 변경할 수 있다.
+- 각 모집은 KST 수요일 6시 기준 `cycleStartedAt`, `cycleEndsAt`과 7일 간격을 저장한다.
+- 유료 스케줄러를 사용하지 않는다. 앱 실행·관련 화면 진입·명령 수행 시 만료 회차를 발견한 현재 멤버가 멱등 전환 Transaction을 실행한다.
+- 미완료 회차는 `incompleteEnded` Snapshot을 생성한다. 반복 파티는 현재 구성을 다음 회차로 승계하고 1회성 파티는 종료한다.
+- 지연 실행되더라도 Rules의 `request.time >= cycleEndsAt`, 연속된 다음 회차 경계와 revision 검증을 모두 통과해야 한다.
+
 ## 5. Security Rules 보장 범위
 
 Rules는 적어도 다음을 `getAfter()`를 포함해 검증해야 한다.
@@ -233,7 +255,8 @@ unknown
 3. 즉시 가입
 4. 신청 승인·거절
 5. 참가 캐릭터 변경·탈퇴·추방·승인권·책임자 승계
-6. 제목·조건·승인 방식·모집 활성 수정
-7. 실행 앱을 Firestore 읽기·쓰기 Repository로 전환
+6. 회차 완료·완료 취소·반복 설정·주차 전환과 Snapshot
+7. 제목·조건·승인 방식·모집 활성 수정
+8. 실행 앱을 Firestore 읽기·쓰기 Repository로 전환
 
 각 단위는 해당 명령의 Rules, 동시 Transaction 테스트, 오류 UI와 로컬 Domain 회귀 테스트를 함께 마감한다.

@@ -1306,3 +1306,16 @@
 - Rules에 Character 점유 교체, 멤버 제거, 책임자 승계와 승인 권한 변경의 결합 불변식을 추가했다.
 - 저장 계획·입력 검증 표적 테스트 5개와 `flutter analyze --no-pub`가 통과했다.
 - 실행 앱 Repository 교체, Firestore Emulator, Rules 배포와 외부 유료 서비스 호출은 수행하지 않았다.
+
+---
+
+## Task-053. Firestore 회차 수명주기
+
+- 작업 브랜치: `codex/firestore-party-cycle-lifecycle`
+- KST 수요일 오전 6시 기준 회차 경계와 화요일 22시 완료 취소 마감을 계산하는 순수 정책을 추가했다.
+- 파티 완료, 반복 파티 완료 취소·재완료, 반복 설정과 만료 회차 전환 명령·Repository·Validator를 추가했다.
+- 완료와 미완료 종료 시 `cycles/{cycleKey}`에 당시 참가자 Snapshot을 저장하고 모집 상태와 revision을 같은 Transaction에서 갱신한다.
+- 1회성 완료·미완료 회차는 종료하고 반복 파티는 현재 구성을 연속된 다음 회차로 승계한다.
+- 유료 스케줄러 대신 앱 동기화 시 현재 멤버가 멱등 전환을 실행하며, Rules가 서버 시간·7일 경계·revision을 최종 검증한다.
+- 회차 정책·Validator·저장 계획과 파티 생성 회귀 표적 테스트 12개 및 `flutter analyze --no-pub`가 통과했다.
+- 실행 앱 Repository 연결, 사용자 이벤트, 로컬 히스토리, Firestore Emulator, Rules 배포와 외부 유료 서비스 호출은 수행하지 않았다.
