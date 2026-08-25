@@ -1,5 +1,6 @@
 import '../state/recruitment_state_machine.dart';
 import 'party_recruitment.dart';
+import 'recruitment_application.dart';
 
 class RecruitmentMetadata {
   const RecruitmentMetadata({
@@ -79,28 +80,46 @@ class PublicRecruitmentSummary {
     required this.revision,
     required this.updatedAt,
     this.currentCycleKey = '',
+    this.leaderCharacterName,
+    this.leaderClassName,
+    this.membersPerParty = 4,
   });
 
   factory PublicRecruitmentSummary.fromAggregate(
     RecruitmentAggregate aggregate,
-  ) => PublicRecruitmentSummary(
-    id: aggregate.id,
-    title: aggregate.title,
-    metadata: aggregate.metadata,
-    leaderUserId: aggregate.state.leaderUserId,
-    memberCount: aggregate.state.members.length,
-    maxMemberCount: aggregate.state.compositionPolicy.rules.totalMembers,
-    isRecruiting: aggregate.state.isRecruiting,
-    revision: aggregate.revision,
-    updatedAt: aggregate.updatedAt,
-  );
+  ) {
+    RecruitmentPartyMember? leader;
+    for (final member in aggregate.state.members) {
+      if (member.userId == aggregate.state.leaderUserId) {
+        leader = member;
+        break;
+      }
+    }
+    return PublicRecruitmentSummary(
+      id: aggregate.id,
+      title: aggregate.title,
+      metadata: aggregate.metadata,
+      leaderUserId: aggregate.state.leaderUserId,
+      leaderCharacterName: leader?.characterId,
+      leaderClassName: leader?.className,
+      memberCount: aggregate.state.members.length,
+      maxMemberCount: aggregate.state.compositionPolicy.rules.totalMembers,
+      membersPerParty: aggregate.state.compositionPolicy.rules.membersPerParty,
+      isRecruiting: aggregate.state.isRecruiting,
+      revision: aggregate.revision,
+      updatedAt: aggregate.updatedAt,
+    );
+  }
 
   final String id;
   final String title;
   final String leaderUserId;
+  final String? leaderCharacterName;
+  final String? leaderClassName;
   final RecruitmentMetadata metadata;
   final int memberCount;
   final int maxMemberCount;
+  final int membersPerParty;
   final bool isRecruiting;
   final int revision;
   final DateTime updatedAt;

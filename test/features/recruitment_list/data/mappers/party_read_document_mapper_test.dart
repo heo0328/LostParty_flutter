@@ -17,6 +17,9 @@ void main() {
 
     expect(summary.id, 'raid-1');
     expect(summary.leaderUserId, 'player-leader');
+    expect(summary.leaderCharacterName, '리더캐릭');
+    expect(summary.leaderClassName, '바드');
+    expect(summary.membersPerParty, 4);
     expect(summary.metadata.raidId, 'act4');
     expect(summary.metadata.experienceLevel, ExperienceLevel.experienced);
     expect(summary.isRecruiting, isTrue);
@@ -30,7 +33,62 @@ void main() {
 
     expect(summary.currentCycleKey, '2026-08-19');
     expect(summary.isOwnedByCurrentPlayer, isTrue);
+    expect(summary.leaderCharacterName, '리더캐릭');
+    expect(summary.leaderClassName, '바드');
     expect(summary.raidStartAt, DateTime.utc(2026, 8, 25, 12));
+  });
+
+  test('maps a member display document without player identifiers', () {
+    final member = mapper.toMemberDisplay(
+      PartyReadDocumentDto(
+        id: 'player-member',
+        data: {
+          'schemaVersion': 1,
+          'playerId': 'player-member',
+          'characterId': 'character-2',
+          'characterNameSnapshot': '딜러캐릭',
+          'classNameSnapshot': '블레이드',
+          'role': 'dealer',
+          'partyIndex': 1,
+          'itemLevelSnapshot': 1710.5,
+          'combatPowerSnapshot': 250000,
+          'canApproveApplications': false,
+        },
+      ),
+    );
+
+    expect(member.characterName, '딜러캐릭');
+    expect(member.className, '블레이드');
+    expect(member.role, PartyRole.dealer);
+    expect(member.partyIndex, 1);
+    expect(member.itemLevel, 1710.5);
+    expect(member.combatPower, 250000);
+  });
+
+  test('tolerates missing leader and member display snapshots', () {
+    final data = _recruitmentData()
+      ..remove('leaderCharacterNameSnapshot')
+      ..remove('leaderClassNameSnapshot');
+    final summary = mapper.toPublicRecruitment(
+      PartyReadDocumentDto(id: 'raid-1', data: data),
+    );
+    expect(summary.leaderCharacterName, isNull);
+    expect(summary.leaderClassName, isNull);
+
+    final member = mapper.toMemberDisplay(
+      PartyReadDocumentDto(
+        id: 'player-member',
+        data: {
+          'schemaVersion': 1,
+          'role': 'support',
+          'partyIndex': 0,
+        },
+      ),
+    );
+    expect(member.characterName, isNull);
+    expect(member.className, isNull);
+    expect(member.itemLevel, isNull);
+    expect(member.combatPower, isNull);
   });
 
   test('maps an application document without treating it as membership', () {
@@ -103,6 +161,8 @@ Map<String, Object?> _recruitmentData() => {
   'schemaVersion': 1,
   'title': '4막 노말',
   'leaderPlayerId': 'player-leader',
+  'leaderCharacterNameSnapshot': '리더캐릭',
+  'leaderClassNameSnapshot': '바드',
   'raidCatalogVersion': 'v1',
   'raidId': 'act4',
   'difficultyId': 'normal',
@@ -121,6 +181,7 @@ Map<String, Object?> _recruitmentData() => {
   'currentCycleKey': '2026-08-19',
   'memberCount': 4,
   'maxMemberCount': 8,
+  'membersPerParty': 4,
   'revision': 3,
   'updatedAt': DateTime.utc(2026, 8, 25),
 };

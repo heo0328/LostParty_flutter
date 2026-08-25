@@ -27,6 +27,8 @@ class PartyCreateWritePlan {
         'schemaVersion': 1,
         'title': command.title.trim(),
         'leaderPlayerId': playerId,
+        'leaderCharacterNameSnapshot': verifiedCharacterName,
+        'leaderClassNameSnapshot': verifiedClassName,
         'memberPlayerIds': [playerId],
         'raidCatalogVersion': metadata.catalogVersion,
         'raidId': metadata.raidId,

@@ -1467,3 +1467,16 @@
 - 파티장 표시는 Firestore 전환 중 누락, 전체 파티원 표시는 읽기 계약·권한·UI 이관 누락으로 분류했다. 자기 캐릭터 변경과 멤버 관리는 기반 구현 후 실행 연결 대기, 파티 내 자리 이동과 다른 파티 사이 이동·스왑은 별도 후속 설계로 구분했다.
 - 다음 작업을 파티장 표시 Snapshot, 멤버 읽기 경계, 공개 권한과 목록·상세 UI 복구로 변경하고 즉시 가입·승인·거절을 그 다음 순서로 이동했다.
 - 문서만 변경했으므로 Flutter 검증은 실행하지 않고 `git diff --check`와 문서 간 정합성 검토로 검증한다.
+
+---
+
+## Task-065. 파티장·파티원 읽기 모델과 목록·상세 UI 복구
+
+- 작업 브랜치: `cursor/party-leader-members-read`
+- 공개 membership 읽기는 Option 1로 확정했다. Rules에서 공개 모집 membership `get`/`list`를 active binding에 허용하고 Domain/UI는 표시 Snapshot만 소비한다.
+- 모집 Current State에 `leaderCharacterNameSnapshot` / `leaderClassNameSnapshot`을 추가하고 생성·파티장 캐릭터 변경·책임자 승계 시 같은 Transaction에서 유지한다.
+- `PartyMemberDisplay`, `watchRecruitmentMembers`, Mapper 소프트 Snapshot 파싱을 추가했다. 누락 Snapshot은 전체 실패 대신 `정보 없음`으로 표시한다.
+- `레이드 모집` Card·`진행 중` Card·`/raid-status/:id` 상세에 파티장과 파티별 구성을 표시한다.
+- 표적 Mapper·WritePlan·Card·상세·현황 테스트와 `flutter analyze --no-pub`을 통과했다.
+- Android 실기기에서 목록·상세 파티장·파티원 표시를 확인했다.
+- `firebase deploy --only firestore:rules --project lost-party`로 Option 1 포함 Rules 전체를 배포했고 Console에서 `canReadPublicRecruitmentMembers`를 확인했다.

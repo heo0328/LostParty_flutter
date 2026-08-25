@@ -36,6 +36,11 @@ abstract class PartyReadRepository {
     String recruitmentId,
   );
 
+  /// 모집의 확정 멤버를 실시간 구독한다. PlayerId는 Domain DTO에 담지 않는다.
+  Stream<PartyReadSnapshot<PartyMemberDisplay>> watchRecruitmentMembers(
+    String recruitmentId,
+  );
+
   Stream<PartyReadDetailSnapshot<PartyApplicationSummary?>> watchMyApplication({
     required String recruitmentId,
     required String playerId,

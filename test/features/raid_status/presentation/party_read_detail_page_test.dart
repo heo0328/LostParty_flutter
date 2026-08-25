@@ -32,6 +32,7 @@ void main() {
     required Stream<PartyReadDetailSnapshot<PublicRecruitmentSummary>>
     recruitment,
     Stream<PartyReadDetailSnapshot<PartyApplicationSummary?>>? myApplication,
+    Stream<PartyReadSnapshot<PartyMemberDisplay>>? members,
     PartyApplicationCommandRepository? applicationCommandRepository,
     RecruitmentLeaderCandidateService? candidateService,
     String? playerId,
@@ -43,6 +44,7 @@ void main() {
           partyReadRepository: FakePartyReadRepository(
             recruitment: recruitment,
             myApplication: myApplication,
+            members: members,
           ),
           applicationCommandRepository: applicationCommandRepository,
           candidateService: candidateService,
@@ -83,10 +85,41 @@ void main() {
       recruitment: Stream.value(
         PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
       ),
+      members: Stream.value(
+        const PartyReadSnapshot(
+          items: [
+            PartyMemberDisplay(
+              characterName: '이슈아이',
+              className: '기상술사',
+              role: PartyRole.dealer,
+              partyIndex: 0,
+              itemLevel: 1720,
+              combatPower: 300000,
+            ),
+            PartyMemberDisplay(
+              characterName: '서폿캐릭',
+              className: '바드',
+              role: PartyRole.support,
+              partyIndex: 4,
+              itemLevel: 1710,
+              combatPower: 280000,
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('4막 노말 모집'), findsOneWidget);
+    expect(find.textContaining('이슈아이 · 기상술사'), findsWidgets);
+    expect(find.text('파티 구성'), findsOneWidget);
+    expect(find.text('1파티'), findsOneWidget);
+    expect(find.text('2파티'), findsOneWidget);
+    expect(
+      find.textContaining('이슈아이 · 기상술사 · 전투력 300,000'),
+      findsOneWidget,
+    );
     expect(find.textContaining('조회 전용'), findsOneWidget);
     expect(find.byKey(const ValueKey('openApplicationButton')), findsNothing);
   });
@@ -210,6 +243,8 @@ PublicRecruitmentSummary _summary() => PublicRecruitmentSummary(
   id: 'recruitment-1',
   title: '4막 노말 모집',
   leaderUserId: 'player-1',
+  leaderCharacterName: '이슈아이',
+  leaderClassName: '기상술사',
   metadata: const RecruitmentMetadata(
     catalogVersion: '2026-08-01',
     raidId: 'act4',

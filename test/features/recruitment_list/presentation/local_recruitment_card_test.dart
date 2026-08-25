@@ -26,6 +26,7 @@ void main() {
     expect(find.text('모집 중'), findsOneWidget);
     expect(find.text('하드'), findsOneWidget);
     expect(find.text('카제로스 4막 · 1-2관문'), findsOneWidget);
+    expect(find.text('파티장 이슈아이 · 기상술사'), findsOneWidget);
     expect(find.text('시작 시간 미정'), findsOneWidget);
     expect(find.text('멤버 6/8 · 남은 자리 2'), findsOneWidget);
     expect(find.text('최소 전투력 250,000 · 숙련도 클경'), findsOneWidget);
@@ -39,6 +40,8 @@ PublicRecruitmentSummary _summary() => PublicRecruitmentSummary(
   id: 'raid-1',
   title: '4막 하드 모집',
   leaderUserId: 'player-1',
+  leaderCharacterName: '이슈아이',
+  leaderClassName: '기상술사',
   metadata: RecruitmentMetadata(
     catalogVersion: 'v1',
     raidId: 'kazeros-act4',

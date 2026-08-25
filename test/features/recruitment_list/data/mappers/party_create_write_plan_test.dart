@@ -20,6 +20,8 @@ void main() {
     );
 
     expect(plan.recruitment['leaderPlayerId'], 'player-1');
+    expect(plan.recruitment['leaderCharacterNameSnapshot'], '검증된캐릭터');
+    expect(plan.recruitment['leaderClassNameSnapshot'], '바드');
     expect(plan.recruitment['memberPlayerIds'], ['player-1']);
     expect(plan.recruitment['memberCount'], 1);
     expect(plan.recruitment['revision'], 1);
