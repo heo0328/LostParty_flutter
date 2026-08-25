@@ -6,7 +6,8 @@
 
 ## 현재 기준 상태
 
-- 통합 기준 브랜치: `main` (Task-063까지 포함). Task-065 완료 브랜치: `cursor/party-leader-members-read` (main 통합 대기)
+- 통합 기준 브랜치: `main` (Task-065 파티장·파티원 읽기/UI 복구까지 포함)
+- 다음 구현은 최신 `main`에서 작업 브랜치 `cursor/party-join-approve-reject`를 분기해 진행한다.
 - Task-050~054의 Firestore 명령·Rules·Snapshot·Player 이벤트·Drift 로컬 히스토리 기반 구현을 완료했다.
 - Task-056~061에서 레이드 현황 읽기·목록 UX·읽기 전용 상세·모집 생성·인증 캐릭터 동기화·신청·철회를 완료했다.
 - Task-062에서 LostParty Design System v1의 Theme·token·Bottom Navigation과 공개 모집 대표 Card 시범 적용을 완료했다.
@@ -34,6 +35,22 @@
 ## 다음 작업 대상: 즉시 가입·승인·거절
 
 실행 앱 Firestore 상세에 즉시 가입·승인·거절 명령을 연결한다. Fake `/recruitments/:id`와 Firestore 상세를 섞지 않는다.
+
+### 우선 확인 파일
+
+- `lib/features/raid_status/presentation/pages/party_read_detail_page.dart`
+- `lib/features/recruitment_list/domain/repositories/party_application_command_repository.dart`
+- `lib/features/recruitment_list/data/repositories/firestore_party_application_command_repository.dart`
+- `lib/features/recruitment_list/data/repositories/firestore_party_join_command_repository.dart` (존재 시)
+- `docs/architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`
+- `docs/product/PARTY_PARTICIPATION_RULES.md`
+
+### 포함 범위
+
+1. 승인형 모집: 파티장(또는 승인 권한 멤버)이 pending 신청을 승인·거절할 수 있게 Firestore 명령을 현황 상세에 연결한다.
+2. 즉시 가입형 모집: 조건·배치를 만족하면 pending 없이 바로 가입하는 Firestore 명령을 연결한다.
+3. 성공 후 상세·멤버 목록·신청 상태가 실시간으로 갱신되는지 확인한다.
+4. Fake 상세 경로와 데이터를 섞지 않고 표적 테스트와 `flutter analyze --no-pub`로 검증한다.
 
 ### 제외 범위
 
