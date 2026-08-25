@@ -1454,3 +1454,16 @@
 - Fake 상세·승인·멤버·회차는 InMemory 경로를 유지한다.
 - `flutter analyze --no-pub`과 표적 테스트가 통과했다.
 - 최신 `main`을 작업 브랜치에 merge한 뒤, Task-063을 `main`에 통합해 다음 작업의 기초를 `main`으로 맞췄다.
+
+---
+
+## Task-064. 파티장·파티원 표시 누락 점검과 다음 작업 재정의
+
+- 작업 브랜치: `codex/document-party-leader-members`
+- 기존 Fake 모집 Card에는 파티장 캐릭터명·직업이, Fake 상세에는 파티별 멤버 구성과 자기 캐릭터 변경 진입점이 있었음을 확인했다.
+- Firestore 실행 화면의 `PublicRecruitmentSummary`와 `ActiveRaidSummary`는 파티장 PlayerId만 보유하며, 현재 공개 모집·진행 중 Card와 현황 상세에는 파티장 표시가 없다.
+- Firestore membership에는 캐릭터명·직업·역할·파티 위치·아이템 레벨·전투력 Snapshot이 저장되지만 읽기 계약 문서에는 아이템 레벨·전투력이 빠져 있었고, 멤버 DTO·Repository stream·상세 UI가 구현되지 않았다.
+- 현재 Rules는 확정 멤버만 전체 membership 목록을 읽을 수 있어 공개 상세 방문자에게 파티 구성을 보여 주려면 안전한 공개 필드와 읽기 구조를 먼저 결정해야 한다.
+- 파티장 표시는 Firestore 전환 중 누락, 전체 파티원 표시는 읽기 계약·권한·UI 이관 누락으로 분류했다. 자기 캐릭터 변경과 멤버 관리는 기반 구현 후 실행 연결 대기, 파티 내 자리 이동과 다른 파티 사이 이동·스왑은 별도 후속 설계로 구분했다.
+- 다음 작업을 파티장 표시 Snapshot, 멤버 읽기 경계, 공개 권한과 목록·상세 UI 복구로 변경하고 즉시 가입·승인·거절을 그 다음 순서로 이동했다.
+- 문서만 변경했으므로 Flutter 검증은 실행하지 않고 `git diff --check`와 문서 간 정합성 검토로 검증한다.
