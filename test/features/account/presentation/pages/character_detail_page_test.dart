@@ -7,6 +7,7 @@ import 'package:lost_party/features/account/domain/entities/character_build_snap
 import 'package:lost_party/features/account/domain/entities/character_profile.dart';
 import 'package:lost_party/features/account/domain/entities/character_summary.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
+import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/account/presentation/pages/character_detail_page.dart';
 
@@ -119,6 +120,16 @@ class _FakeAccountRepository implements AccountRepository {
     required int characterId,
     required CharacterBuildRole role,
   }) async {}
+
+  @override
+  Future<RosterSummaryApplyResult> applyRosterSummarySync({
+    required int accountId,
+    required String lookupCharacterName,
+    required List<CharacterSummary> summaries,
+    required DateTime fetchedAt,
+  }) async =>
+      const RosterSummaryApplyResult(updatedLocalCount: 0, serverPatches: []);
+
   @override
   Future<List<LocalGameAccount>> loadAccounts() async {
     final account = await loadMainAccount();

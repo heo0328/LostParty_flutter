@@ -10,7 +10,9 @@ import '../../domain/entities/character_build_snapshot.dart';
 import '../../domain/entities/character_profile.dart';
 import '../../domain/entities/character_summary.dart';
 import '../../domain/entities/local_game_account.dart';
+import '../../domain/entities/roster_summary_apply_result.dart';
 import '../../domain/entities/server_account_identity_binding.dart';
+import '../../domain/repositories/character_summary_sync_gateway.dart';
 import '../local/account_database.dart';
 import '../mappers/character_build_analysis_mapper.dart';
 
@@ -196,6 +198,7 @@ class LocalAccountDataSource {
               preferredRole: character.preferredRole == null
                   ? null
                   : CharacterBuildRole.values.byName(character.preferredRole!),
+              lastSummaryFetchedAt: character.lastSummaryFetchedAt,
             ),
           )
           .toList(growable: false),
@@ -316,4 +319,71 @@ class LocalAccountDataSource {
     characterId: characterId,
     role: role.name,
   );
+
+  Future<RosterSummaryApplyResult> applyRosterSummarySync({
+    required int accountId,
+    required String lookupCharacterName,
+    required List<CharacterSummary> summaries,
+    required DateTime fetchedAt,
+  }) async {
+    final account = await (_database.select(
+      _database.gameAccounts,
+    )..where((table) => table.id.equals(accountId))).getSingleOrNull();
+    if (account == null) {
+      throw ArgumentError.value(accountId, 'accountId', 'Account not found.');
+    }
+
+    final result = await _database.applyRosterSummarySync(
+      accountId: accountId,
+      lookupCharacterName: lookupCharacterName,
+      fetchedAt: fetchedAt,
+      characters: summaries
+          .map(
+            (character) => AccountCharacterSnapshot(
+              serverName: character.serverName,
+              characterName: character.characterName,
+              characterLevel: character.characterLevel,
+              characterClassName: character.characterClassName,
+              itemLevel: character.itemLevel,
+              fetchedAt: fetchedAt,
+            ),
+          )
+          .toList(growable: false),
+    );
+
+    final canSyncToServer = account.serverOwnershipStatus == 'active';
+    final patches = <CharacterSummaryServerPatch>[];
+    if (canSyncToServer) {
+      for (final character in result.changedBound) {
+        final serverCharacterId = character.serverCharacterId;
+        if (serverCharacterId == null || serverCharacterId.isEmpty) continue;
+        patches.add(
+          CharacterSummaryServerPatch(
+            serverCharacterId: serverCharacterId,
+            characterName: character.characterName,
+            characterLevel: character.characterLevel,
+            itemAvgLevel: _formatItemAvgLevel(character.itemLevel),
+            fetchedAt: fetchedAt,
+          ),
+        );
+      }
+    }
+
+    return RosterSummaryApplyResult(
+      updatedLocalCount: result.updatedLocalCount,
+      serverPatches: patches,
+    );
+  }
+
+  String _formatItemAvgLevel(double? value) {
+    if (value == null) return '';
+    final fixed = value.toStringAsFixed(2);
+    if (fixed.endsWith('.00')) {
+      return fixed.substring(0, fixed.length - 3);
+    }
+    if (fixed.endsWith('0')) {
+      return fixed.substring(0, fixed.length - 1);
+    }
+    return fixed;
+  }
 }

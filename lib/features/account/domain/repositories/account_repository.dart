@@ -3,6 +3,7 @@ import '../entities/character_build_snapshot.dart';
 import '../entities/character_profile.dart';
 import '../entities/character_summary.dart';
 import '../entities/local_game_account.dart';
+import '../entities/roster_summary_apply_result.dart';
 
 abstract interface class AccountRepository {
   Future<List<CharacterSummary>> fetchCharacters(String characterName);
@@ -12,6 +13,13 @@ abstract interface class AccountRepository {
   Future<LocalGameAccount?> loadMainAccount();
 
   Future<List<LocalGameAccount>> loadAccounts();
+
+  Future<RosterSummaryApplyResult> applyRosterSummarySync({
+    required int accountId,
+    required String lookupCharacterName,
+    required List<CharacterSummary> summaries,
+    required DateTime fetchedAt,
+  });
 
   Future<void> saveCharacterBuildSnapshot({
     required int characterId,

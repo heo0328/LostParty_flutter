@@ -80,6 +80,7 @@ class LocalAccountCharacter {
     this.preferredRole,
     this.serverCharacterId,
     this.isRosterMissing = false,
+    this.lastSummaryFetchedAt,
   });
 
   final int id;
@@ -94,4 +95,5 @@ class LocalAccountCharacter {
   final bool isVisible;
   final int? displayOrder;
   final CharacterBuildRole? preferredRole;
+  final DateTime? lastSummaryFetchedAt;
 }

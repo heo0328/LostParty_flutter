@@ -7,6 +7,7 @@ import '../../../../shared/lost_ark_api/client/lost_ark_api_exception.dart';
 import '../../../../shared/widgets/clearable_text_form_field.dart';
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/repositories/account_repository.dart';
+import '../../domain/services/character_summary_sync_service.dart';
 import '../viewmodels/my_account_view_model.dart';
 import '../widgets/account_character_card.dart';
 
@@ -14,11 +15,13 @@ class MyAccountPage extends StatefulWidget {
   const MyAccountPage({
     required this.apiTokenStore,
     required this.accountRepository,
+    this.summarySyncService,
     super.key,
   });
 
   final ApiTokenStore apiTokenStore;
   final AccountRepository accountRepository;
+  final CharacterSummarySyncService? summarySyncService;
 
   @override
   State<MyAccountPage> createState() => _MyAccountPageState();
@@ -36,6 +39,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
     _viewModel = MyAccountViewModel(
       apiTokenStore: widget.apiTokenStore,
       accountRepository: widget.accountRepository,
+      summarySyncService: widget.summarySyncService,
     );
     _viewModel.addListener(_onViewModelChanged);
     _viewModel.initialize();
@@ -50,9 +54,37 @@ class _MyAccountPageState extends State<MyAccountPage> {
   }
 
   void _onViewModelChanged() {
+    _prefillLookupCharacterNameIfNeeded();
     if (mounted) {
       setState(() {});
     }
+  }
+
+  void _prefillLookupCharacterNameIfNeeded() {
+    if (_characterNameController.text.trim().isNotEmpty) {
+      return;
+    }
+    final name = _mainRepresentativeCharacterName(_viewModel.mainAccount);
+    if (name == null || name.isEmpty) {
+      return;
+    }
+    _characterNameController.text = name;
+  }
+
+  String? _mainRepresentativeCharacterName(LocalGameAccount? account) {
+    if (account == null) {
+      return null;
+    }
+    final representativeId = account.representativeCharacterId;
+    if (representativeId != null) {
+      for (final character in account.characters) {
+        if (character.id == representativeId && !character.isRosterMissing) {
+          return character.characterName;
+        }
+      }
+    }
+    final lookupName = account.lookupCharacterName.trim();
+    return lookupName.isEmpty ? null : lookupName;
   }
 
   Future<void> _openTokenSettings() async {
@@ -199,6 +231,20 @@ class _MyAccountPageState extends State<MyAccountPage> {
       await _showMissingTokenDialog();
     } else if (errorType != null) {
       await _showApiErrorDialog(errorType);
+    } else if (_viewModel.serverSyncFailed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            '로컬 정보는 갱신됐지만 서버 반영에 실패했습니다. 다시 새로고침해 주세요.',
+          ),
+          action: SnackBarAction(
+            label: '재시도',
+            onPressed: () {
+              _requestAccountData();
+            },
+          ),
+        ),
+      );
     }
   }
 
@@ -282,13 +328,13 @@ class _MyAccountPageState extends State<MyAccountPage> {
               ClearableTextFormField(
                 fieldKey: const ValueKey('representativeCharacterNameField'),
                 controller: _characterNameController,
-                enabled: !_viewModel.isFetchingCharacters,
+                enabled: !_viewModel.isNetworkBusy,
                 textInputAction: TextInputAction.search,
                 labelText: '조회 캐릭터명',
                 errorText: _characterNameError,
                 border: const OutlineInputBorder(),
                 onSubmitted: (_) {
-                  if (!_viewModel.isFetchingCharacters) {
+                  if (!_viewModel.isNetworkBusy) {
                     _requestAccountData();
                   }
                 },
@@ -296,22 +342,24 @@ class _MyAccountPageState extends State<MyAccountPage> {
               const SizedBox(height: 12),
               FilledButton.icon(
                 key: const ValueKey('loadAccountDataButton'),
-                onPressed: _viewModel.isFetchingCharacters
-                    ? null
-                    : _requestAccountData,
-                icon: _viewModel.isFetchingCharacters
+                onPressed: _viewModel.isNetworkBusy ? null : _requestAccountData,
+                icon: _viewModel.isNetworkBusy
                     ? const SizedBox.square(
                         dimension: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.cloud_download_outlined),
-                label: const Text('계정 데이터 불러오기'),
+                label: Text(
+                  _viewModel.isFetchingCharacters
+                      ? '불러오는 중...'
+                      : '계정 데이터 불러오기',
+                ),
               ),
               if (_viewModel.accounts.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   key: const ValueKey('addSubAccountButton'),
-                  onPressed: _viewModel.isFetchingCharacters
+                  onPressed: _viewModel.isNetworkBusy
                       ? null
                       : _showAddAccountDialog,
                   icon: const Icon(Icons.person_add_alt_1_outlined),

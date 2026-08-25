@@ -9,6 +9,8 @@ import '../../features/account/data/local/account_database.dart';
 import '../../features/account/data/repositories/account_repository_impl.dart';
 import '../../features/account/data/gateways/local_game_account_verification_gateway.dart';
 import '../../features/account/data/gateways/firestore_account_ownership_status_gateway.dart';
+import '../../features/account/data/gateways/firestore_character_summary_sync_gateway.dart';
+import '../../features/account/data/mappers/sibling_character_mapper.dart';
 import '../../features/account/presentation/pages/api_token_settings_page.dart';
 import '../../features/account/presentation/pages/character_management_page.dart';
 import '../../features/account/presentation/pages/character_detail_page.dart';
@@ -17,6 +19,7 @@ import '../../features/account/presentation/pages/game_account_verification_page
 import '../../features/account/domain/entities/local_game_account.dart';
 import '../../features/account/domain/repositories/account_ownership_status_gateway.dart';
 import '../../features/account/domain/repositories/game_account_verification_gateway.dart';
+import '../../features/account/domain/services/character_summary_sync_service.dart';
 import '../../features/player/domain/entities/player_session.dart';
 import '../../features/raid_status/data/services/firestore_party_event_sync_service.dart';
 import '../../features/raid_status/domain/services/party_event_sync_service.dart';
@@ -80,18 +83,30 @@ GoRouter createAppRouter({
   final remoteDataSource = LostArkCharacterRemoteDataSource(
     apiClient: apiClient,
   );
+  final localAccountDataSource = LocalAccountDataSource(
+    database: accountDatabase,
+    gameCatalogRepository: gameCatalogRepository,
+  );
   final accountRepository = AccountRepositoryImpl(
     remoteDataSource: remoteDataSource,
-    localDataSource: LocalAccountDataSource(
-      database: accountDatabase,
-      gameCatalogRepository: gameCatalogRepository,
-    ),
+    localDataSource: localAccountDataSource,
     ownershipStatusGateway:
         ownershipStatusGateway ??
         FirestoreAccountOwnershipStatusGateway(
           firestore: FirebaseFirestore.instance,
           firebaseAuth: FirebaseAuth.instance,
         ),
+  );
+  final characterSummarySyncService = CharacterSummarySyncService(
+    accountRepository: accountRepository,
+    fetchSummaries: (characterName) async {
+      final dtos = await remoteDataSource.fetchSiblings(characterName);
+      return dtos.map((dto) => dto.toDomain()).toList(growable: false);
+    },
+    syncGateway: FirestoreCharacterSummarySyncGateway(
+      firestore: FirebaseFirestore.instance,
+      firebaseAuth: FirebaseAuth.instance,
+    ),
   );
   final verificationGateway =
       gameAccountVerificationGateway ??
@@ -187,6 +202,7 @@ GoRouter createAppRouter({
                 builder: (context, state) => MyAccountPage(
                   apiTokenStore: apiTokenStore,
                   accountRepository: accountRepository,
+                  summarySyncService: characterSummarySyncService,
                 ),
                 routes: [
                   GoRoute(

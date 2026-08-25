@@ -6,6 +6,7 @@ import '../../domain/entities/character_build_snapshot.dart';
 import '../../domain/entities/character_profile.dart';
 import '../../domain/entities/character_summary.dart';
 import '../../domain/entities/local_game_account.dart';
+import '../../domain/entities/roster_summary_apply_result.dart';
 import '../../domain/entities/server_account_identity_binding.dart';
 import '../../domain/repositories/account_identity_gateway.dart';
 import '../../domain/repositories/account_ownership_status_gateway.dart';
@@ -109,6 +110,21 @@ class AccountRepositoryImpl
     } on Object {
       return accounts;
     }
+  }
+
+  @override
+  Future<RosterSummaryApplyResult> applyRosterSummarySync({
+    required int accountId,
+    required String lookupCharacterName,
+    required List<CharacterSummary> summaries,
+    required DateTime fetchedAt,
+  }) {
+    return _localDataSource.applyRosterSummarySync(
+      accountId: accountId,
+      lookupCharacterName: lookupCharacterName,
+      summaries: summaries,
+      fetchedAt: fetchedAt,
+    );
   }
 
   @override

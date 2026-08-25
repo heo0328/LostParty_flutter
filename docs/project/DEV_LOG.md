@@ -1397,3 +1397,18 @@
 - 인증되지 않은 로컬 캐릭터로 만든 방은 여전히 Firestore 현황에 나타나지 않는다.
 - 인증된 캐릭터로 생성이 `permission-denied` 되던 원인은 캐릭터 인증이 아니라, 신규 모집 ID에 대한 `get`이 없는 문서의 `resource.data`를 읽어 거부된 것이다. 존재하지 않는 모집 단건 `get`은 active binding만 요구하도록 Rules를 수정하고 `lost-party`에 배포했다.
 - Android 실기기에서 인증된 캐릭터로 모집 생성, `진행 중` 목록 표시, 읽기 전용 상세 진입, 수정 화면 미적용 안내까지 확인했다.
+
+---
+
+## Task-060. 인증 캐릭터 최소 정보 자동 동기화
+
+- 작업 브랜치: `cursor/character-summary-sync`
+- `CharacterSummarySyncService`와 `FirestoreCharacterSummarySyncGateway`를 추가했다.
+- `내 계정` 진입 시 기존 Drift를 먼저 표시하고, 마지막 성공 시각 기준 1분이 지나면 siblings 최소 요약을 백그라운드 조회한다.
+- 변경된 캐릭터명·아이템 레벨·캐릭터 레벨만 Drift에 쓰고, active 소유·`serverCharacterId`가 있는 Character만 Firestore에 반영한다. 변경이 없으면 앱 서버 전송을 생략한다.
+- 수동 새로고침은 제한과 무관하며, 네트워크 진행 중 버튼을 비활성한다. 서버 반영 실패는 로컬 성공으로 숨기지 않는다.
+- 모집 생성 `invalidCharacter` 메시지에 내 계정 새로고침 안내를 추가했다.
+- 조회 캐릭터명 입력란에 메인 계정 대표 캐릭터명을 비어 있을 때 자동 채운다.
+- 표적 동기화 서비스·계정 ViewModel/Page·모집 생성 테스트와 `flutter analyze --no-pub`를 통과했다.
+- Android 실기기에서 자동 조회, 아이템 레벨 변경 반영, 로컬·서버 불일치 시 새로고침 안내와 갱신 후 모집 생성을 확인했다.
+- Rules 필드 단위 강화는 후속 작업으로 남긴다.
