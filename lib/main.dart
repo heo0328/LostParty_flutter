@@ -5,6 +5,8 @@ import 'app/bootstrap/app_bootstrap.dart';
 import 'app/bootstrap/app_services_initializer.dart';
 import 'app/router/app_router.dart';
 import 'features/account/data/local/account_database.dart';
+import 'features/account/domain/repositories/account_ownership_status_gateway.dart';
+import 'features/account/domain/repositories/game_account_verification_gateway.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,9 +19,16 @@ void main() {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({this.accountDatabase, super.key});
+  const MyApp({
+    this.accountDatabase,
+    this.ownershipStatusGateway,
+    this.gameAccountVerificationGateway,
+    super.key,
+  });
 
   final AccountDatabase? accountDatabase;
+  final AccountOwnershipStatusGateway? ownershipStatusGateway;
+  final GameAccountVerificationGateway? gameAccountVerificationGateway;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -35,7 +44,11 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     _ownsAccountDatabase = widget.accountDatabase == null;
     _accountDatabase = widget.accountDatabase ?? AccountDatabase();
-    _router = createAppRouter(accountDatabase: _accountDatabase);
+    _router = createAppRouter(
+      accountDatabase: _accountDatabase,
+      ownershipStatusGateway: widget.ownershipStatusGateway,
+      gameAccountVerificationGateway: widget.gameAccountVerificationGateway,
+    );
   }
 
   @override

@@ -70,6 +70,33 @@ class _ApiTokenSettingsPageState extends State<ApiTokenSettingsPage> {
   }
 
   Future<void> _deleteToken() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('API 토큰을 삭제할까요?'),
+        content: const Text(
+          '토큰을 삭제하면 계정 데이터 조회와 게임계정 인증 등 '
+          'Lost Ark API를 사용하는 기능이 정상 작동하지 않습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
     await widget.apiTokenStore.delete();
     if (mounted) {
       Navigator.of(context).pop(true);

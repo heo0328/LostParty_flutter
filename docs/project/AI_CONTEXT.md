@@ -67,13 +67,14 @@
 - recruitment_list_view_model.dart 구현 완료
 - recruitment_list_page.dart 구현 완료
 - recruitment_card.dart 구현 완료
-- 앱 셸의 두 번째 탭에 RecruitmentListPage 연결 완료
+- 앱 셸의 세 번째 `레이드 모집` 탭에 RecruitmentListPage 연결 완료
 - mock 모집글 6개 화면 표시 완료
 
 ### 앱 셸 및 내 계정
 - StatefulShellRoute 기반 하단 탭 구조 적용 완료
-- 첫 번째 탭은 내 계정, 두 번째 탭은 파티 모집으로 구성
-- PageView 스와이프와 탭별 Navigator 스택 적용
+- `레이드 현황 / 내 계정 / 레이드 모집 / 설정` 4탭으로 구성
+- 레이드 현황은 `진행 중 / 신청 중 / 완료 기록` 상단 페이지로 구성
+- IndexedStack으로 탭별 Navigator 상태를 보존하고 내부 TabBarView 스와이프와 분리
 - Android 뒤로가기와 iOS 화면 전환을 고려한 공통 라우팅 기반 구성
 
 ### Lost Ark API 기반
@@ -437,5 +438,6 @@ Player binding의 계약·구현·Rules 배포와 실기기 검증을 완료했�
 - 첫 화면 `레이드 현황`은 상단 페이지 전환으로 `진행 중 / 신청 중 / 완료 기록`을 구분하며 완료 기록을 별도 하단 탭으로 분리하지 않는다.
 - 기존 `내 계정`은 두 번째 탭, 기존 `파티 모집`은 `레이드 모집`이라는 세 번째 탭으로 이동한다.
 - 설정 탭에는 `내 게임계정 인증`, Lost Ark API 토큰과 앱 공통 설정을 배치한다.
-- 다음 작업은 위 구조의 앱 셸·라우팅과 최소 진입 화면만 구현하며 실제 Firestore 파티 읽기 모델은 후속 작업으로 분리한다.
+- 4탭 앱 셸·라우팅과 최소 진입 화면 구현을 완료했고 Widget 테스트 6개, `flutter analyze`, 전체 `flutter test` 252개가 통과했다.
+- Android 실기기 확을 완료했고 API 토큰 삭제 경고·확인 절차도 추가했다. 커밋 마감은 남아 있으며, 실제 Firestore 파티 읽기 모델은 후속 작업으로 분리한다.
 - 다음 설계부터 비용 제약, 검증 목적, 실패 시 중단 기준을 구현 전에 확인하고 목적 없는 전체 테스트나 에뮬레이터 반복을 피한다.

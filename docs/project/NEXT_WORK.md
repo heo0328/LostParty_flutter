@@ -127,7 +127,9 @@
 
 다음 구현 작업은 앱 셸과 라우팅 기반을 위 구조로 전환하는 독립 작업 단위다.
 
-1. 기존 StatefulShellRoute를 4개 branch로 확장한다.
+구현 상태: StatefulShellRoute 4개 branch, 내부 TabBarView와 충돌하지 않는 IndexedStack branch 전환, 설정 진입점을 반영했다. API 토큰 삭제 전에 주요 기능이 정상 작동하지 않을 수 있음을 안내하고 확인받는 절차도 추가했다. Widget 테스트 6개, `flutter analyze`, 전체 `flutter test` 252개가 통과했고 Android 실기기 확을 완료했다. 커밋 마감만 남아 있다.
+
+1. 기존 StatefulShellRoute를 4개 branch로 확장한다. (구현 완료)
 2. 기존 `내 계정` 화면을 두 번째 branch로, 기존 `파티 모집` 화면을 세 번째 branch로 이동한다.
 3. 첫 번째 `레이드 현황`과 네 번째 `설정`의 최소 진입 화면을 추가한다.
 4. `레이드 현황`의 상단 세 페이지가 독립적으로 상태를 보존할 표현 구조를 마련하되 Firestore 읽기 모델은 아직 구현하지 않는다.
