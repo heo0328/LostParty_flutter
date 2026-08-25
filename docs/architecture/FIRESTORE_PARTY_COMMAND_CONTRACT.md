@@ -267,7 +267,8 @@ unknown
 
 - 읽기: `레이드 현황`의 진행 중·신청 중·읽기 전용 상세는 Firestore `PartyReadRepository`를 사용한다.
 - 쓰기 1단위: `레이드 모집 > 모집 생성`만 `FirestorePartyCreateRepository`로 연결한다. 성공 시 `/raid-status/{recruitmentId}` 읽기 상세로 이동한다.
+- 쓰기 2단위: 읽기 전용 상세의 신청·본인 철회는 `FirestorePartyApplicationCommandRepository`로 연결한다. 신청 Character는 `serverCharacterId`다.
 - 생성 명령의 `leaderCharacterId`는 Drift 로컬 ID가 아니라 게임 계정 인증으로 저장된 `serverCharacterId`다. 인증되지 않은 캐릭터는 명령을 보내지 않는다.
 - 생성 Transaction의 신규 모집 `get`이 문서 부재에서 `permission-denied`가 되지 않도록, 존재하지 않는 `recruitments/{id}` 단건 읽기는 active binding만으로 허용한다. 이 Rules는 `lost-party`에 배포했다.
 - Android 실기기에서 인증된 캐릭터로 생성한 방이 `진행 중`에 나타나고 읽기 전용 상세(수정 미적용 안내 포함)로 연결되는 것을 확인했다.
-- 모집 목록·Fake 상세·신청·승인·멤버·회차 명령은 아직 `InMemoryRecruitmentStateRepository`와 `RecruitmentCommandService`를 유지한다. 로컬 Fake로 만든 방은 Firestore 현황에 나타나지 않는다.
+- `레이드 모집` 공개 목록·Fake 상세·승인·멤버·회차 명령은 아직 `InMemoryRecruitmentStateRepository`와 `RecruitmentCommandService`를 유지한다. 공개 목록의 `watchPublicRecruitments` UI 연결이 다음 전환 단위다.

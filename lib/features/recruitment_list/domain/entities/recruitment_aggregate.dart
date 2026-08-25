@@ -78,6 +78,7 @@ class PublicRecruitmentSummary {
     required this.isRecruiting,
     required this.revision,
     required this.updatedAt,
+    this.currentCycleKey = '',
   });
 
   factory PublicRecruitmentSummary.fromAggregate(
@@ -103,4 +104,5 @@ class PublicRecruitmentSummary {
   final bool isRecruiting;
   final int revision;
   final DateTime updatedAt;
+  final String currentCycleKey;
 }

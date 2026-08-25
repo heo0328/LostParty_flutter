@@ -36,6 +36,7 @@ class PartyReadDocumentMapper {
           _boolean(data, 'hasAvailableSlot'),
       revision: _integer(data, 'revision'),
       updatedAt: _date(data, 'updatedAt'),
+      currentCycleKey: _string(data, 'currentCycleKey'),
     );
   }
 
@@ -81,6 +82,7 @@ class PartyReadDocumentMapper {
         _string(data, 'status'),
         'status',
       ),
+      revision: _integer(data, 'revision'),
       resolutionReason: _nullableString(data, 'resolutionReason'),
       createdAt: _date(data, 'createdAt'),
       decidedAt: _nullableDate(data, 'decidedAt'),

@@ -356,8 +356,10 @@ Player binding의 계약·구현·Rules 배포와 실기기 검증을 완료했�
 - Task-059에서 모집 생성만 Firestore 명령 Repository로 연결했다. Android 실기기에서 인증된 캐릭터로 만든 방이 `진행 중`에 나타나고 읽기 전용 상세로 연결되는 것을 확인했다.
 - 신규 모집 단건 `get`이 문서 부재에서 거부되지 않도록 Rules를 보완해 `lost-party`에 배포했다.
 - Task-060에서 인증 캐릭터 최소 정보 자동 동기화를 완료했다. `내 계정` 진입 시 1분 제한 siblings 조회, 변경분만 Drift·Firestore 반영, 수동 새로고침·대표 캐릭터명 자동 채움·서버 미반영 안내를 적용했고 Android 실기기에서 확인했다.
-- 모집 목록·신청·승인 UI는 여전히 Fake Repository 경로다. 인증되지 않은 로컬 캐릭터로 만든 방은 Firestore 현황에 나타나지 않는다.
-- 다음 작업은 신청·철회 명령의 실행 앱 전환이다. 읽기 전용 현황 상세에서 인증된 `serverCharacterId`로 Firestore 신청·철회를 연결하고 승인·즉시 가입은 Fake로 둔다.
+- Task-061에서 읽기 전용 현황 상세에 신청·철회 Firestore 명령을 연결했다. 신청 Character는 `serverCharacterId`만 사용한다. 단일 기기라 타 Player 신청 실기기는 보류하고 표적 테스트로 검증했다.
+- `레이드 모집` 공개 목록 탭은 여전히 Fake Repository 경로다. `watchPublicRecruitments`는 미연결이다.
+- 다음 작업은 레이드 모집 공개 목록의 Firestore 읽기 전환이다. 연결 후 다른 Player(재설치 포함)로 서버 방 신청 흐름 이어서 확인한다.
+- 승인·즉시 가입·멤버·회차는 Fake를 유지한다.
 - 네트워크 요청을 시작하는 버튼은 진행 중 연타·중복 요청을 막는 공통 UI 규칙을 적용한다.
 - Codex는 설계 계약, 문서 정합성, 작업 분해와 인수인계를 중심으로 유지하되 필요한 코드 수정은 가능하다.
 - 유료 플랜·결제수단·과금 가능 기능, Emulator, FCM과 TTL 배포는 별도 승인 전까지 제외한다.

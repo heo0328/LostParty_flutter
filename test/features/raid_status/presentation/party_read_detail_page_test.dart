@@ -2,10 +2,27 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_draft.dart';
+import 'package:lost_party/features/account/domain/entities/character_profile.dart';
+import 'package:lost_party/features/account/domain/entities/character_summary.dart';
+import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
+import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
+import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/raid_status/presentation/pages/party_read_detail_page.dart';
+import 'package:lost_party/features/recruitment_list/data/fakes/fake_recruitment_runtime.dart';
+import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_active_raid_assignment_repository.dart';
+import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
+import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_application_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_read_models.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_aggregate.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_application.dart';
+import 'package:lost_party/features/recruitment_list/domain/repositories/party_application_command_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_read_repository.dart';
+import 'package:lost_party/features/recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
 
 import '../../../support/party_read_fakes.dart';
 
@@ -14,6 +31,10 @@ void main() {
     WidgetTester tester, {
     required Stream<PartyReadDetailSnapshot<PublicRecruitmentSummary>>
     recruitment,
+    Stream<PartyReadDetailSnapshot<PartyApplicationSummary?>>? myApplication,
+    PartyApplicationCommandRepository? applicationCommandRepository,
+    RecruitmentLeaderCandidateService? candidateService,
+    String? playerId,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -21,7 +42,11 @@ void main() {
           recruitmentId: 'recruitment-1',
           partyReadRepository: FakePartyReadRepository(
             recruitment: recruitment,
+            myApplication: myApplication,
           ),
+          applicationCommandRepository: applicationCommandRepository,
+          candidateService: candidateService,
+          playerId: playerId,
         ),
       ),
     );
@@ -52,7 +77,7 @@ void main() {
     expect(find.text('4막 노말 모집'), findsNothing);
   });
 
-  testWidgets('읽기 전용 상세를 표시하고 쓰기 안내를 둔다', (tester) async {
+  testWidgets('명령 Repository가 없으면 조회 전용 안내를 둔다', (tester) async {
     await pumpPage(
       tester,
       recruitment: Stream.value(
@@ -62,10 +87,96 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('4막 노말 모집'), findsOneWidget);
-    expect(find.textContaining('4막 - 노말'), findsOneWidget);
-    expect(find.textContaining('2/8명'), findsOneWidget);
     expect(find.textContaining('조회 전용'), findsOneWidget);
-    expect(find.text('모집 수정'), findsNothing);
+    expect(find.byKey(const ValueKey('openApplicationButton')), findsNothing);
+  });
+
+  testWidgets('모집 중이면 지원하기를 표시한다', (tester) async {
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      myApplication: Stream.value(
+        const PartyReadDetailSnapshot(item: null, isFromCache: false),
+      ),
+      applicationCommandRepository: _FakeApplicationCommandRepository(),
+      candidateService: _candidateService(),
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('openApplicationButton')), findsOneWidget);
+    expect(find.textContaining('조회 전용'), findsNothing);
+  });
+
+  testWidgets('승인 대기 신청이면 철회 버튼을 표시한다', (tester) async {
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      myApplication: Stream.value(
+        PartyReadDetailSnapshot(item: _pendingApplication(), isFromCache: false),
+      ),
+      applicationCommandRepository: _FakeApplicationCommandRepository(),
+      candidateService: _candidateService(),
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('withdrawApplicationButton')), findsOneWidget);
+    expect(find.textContaining('승인 대기'), findsOneWidget);
+  });
+
+  testWidgets('지원하기에서 인증된 캐릭터로 신청 명령을 보낸다', (tester) async {
+    final repository = _FakeApplicationCommandRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      myApplication: Stream.value(
+        const PartyReadDetailSnapshot(item: null, isFromCache: false),
+      ),
+      applicationCommandRepository: repository,
+      candidateService: _candidateService(),
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('openApplicationButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('apply-candidate-1-dealer')));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastApply?.characterId, 'server-character-1');
+    expect(repository.lastApply?.requestedRole, PartyRole.dealer);
+    expect(repository.lastApply?.cycleKey, '2026-08-19');
+    expect(find.text('신청을 보냈습니다.'), findsOneWidget);
+  });
+
+  testWidgets('철회 버튼이 pending 신청 revision으로 명령을 보낸다', (tester) async {
+    final repository = _FakeApplicationCommandRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      myApplication: Stream.value(
+        PartyReadDetailSnapshot(item: _pendingApplication(), isFromCache: false),
+      ),
+      applicationCommandRepository: repository,
+      candidateService: _candidateService(),
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('withdrawApplicationButton')));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastWithdraw?.expectedRevision, 3);
+    expect(find.text('신청을 철회했습니다.'), findsOneWidget);
   });
 
   testWidgets('캐시 snapshot이면 오프라인 안내를 함께 표시한다', (tester) async {
@@ -117,4 +228,185 @@ PublicRecruitmentSummary _summary() => PublicRecruitmentSummary(
   isRecruiting: true,
   revision: 1,
   updatedAt: DateTime.utc(2026, 8, 20),
+  currentCycleKey: '2026-08-19',
 );
+
+PartyApplicationSummary _pendingApplication() => PartyApplicationSummary(
+  recruitmentId: 'recruitment-1',
+  applicantPlayerId: 'player-1',
+  cycleKey: '2026-08-19',
+  characterId: 'server-character-1',
+  characterName: '지원바드',
+  className: '바드',
+  requestedRole: PartyRole.support,
+  status: RecruitmentApplicationStatus.pending,
+  revision: 3,
+  createdAt: DateTime.utc(2026, 8, 20),
+  updatedAt: DateTime.utc(2026, 8, 21),
+);
+
+RecruitmentLeaderCandidateService _candidateService() {
+  return RecruitmentLeaderCandidateService(
+    accountRepository: _AccountRepository(),
+    weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+    session: FakeUserSession('local-user'),
+    clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 20)),
+    assignmentRepository: InMemoryActiveRaidAssignmentRepository(),
+    recruitmentRepository: InMemoryRecruitmentStateRepository(),
+  );
+}
+
+class _FakeApplicationCommandRepository
+    implements PartyApplicationCommandRepository {
+  PartyApplyCommand? lastApply;
+  PartyWithdrawApplicationCommand? lastWithdraw;
+
+  @override
+  Future<PartyApplicationCommandResult> apply(PartyApplyCommand command) async {
+    lastApply = command;
+    return const PartyApplicationCommandResult.success();
+  }
+
+  @override
+  Future<PartyApplicationCommandResult> withdraw(
+    PartyWithdrawApplicationCommand command,
+  ) async {
+    lastWithdraw = command;
+    return const PartyApplicationCommandResult.success();
+  }
+}
+
+class _AccountRepository implements AccountRepository {
+  @override
+  Future<List<LocalGameAccount>> loadAccounts() async => [
+    LocalGameAccount(
+      id: 1,
+      label: '본계정',
+      isMain: true,
+      lookupCharacterName: '지원바드',
+      representativeCharacterId: 1,
+      displayLimit: 6,
+      serverGameAccountId: 'ga-1',
+      serverOwnershipStatus: 'active',
+      characters: [
+        LocalAccountCharacter(
+          id: 1,
+          serverName: '루페온',
+          characterName: '지원바드',
+          characterLevel: 70,
+          characterClassName: '바드',
+          itemLevel: 1700,
+          combatPower: 300000,
+          isVisible: true,
+          displayOrder: 0,
+          serverCharacterId: 'server-character-1',
+          preferredRole: CharacterBuildRole.dealer,
+        ),
+      ],
+    ),
+  ];
+
+  @override
+  Future<List<CharacterBuildSnapshot>> loadCharacterBuildSnapshots(
+    int characterId,
+  ) async => [
+    CharacterBuildSnapshot(
+      id: 1,
+      characterId: characterId,
+      role: CharacterBuildRole.dealer,
+      rawJson: '{}',
+      itemLevel: 1700,
+      combatPower: 300000,
+      capturedAt: DateTime.utc(2026, 8, 1),
+      dataVersion: 1,
+      analysis: const CharacterBuildAnalysis(
+        runeCount: 0,
+        gemEffects: [],
+        arkGridConditions: [],
+        arkGridCorePoints: [],
+        notices: [],
+      ),
+    ),
+  ];
+
+  @override
+  Future<RosterSummaryApplyResult> applyRosterSummarySync({
+    required int accountId,
+    required String lookupCharacterName,
+    required List<CharacterSummary> summaries,
+    required DateTime fetchedAt,
+  }) async =>
+      const RosterSummaryApplyResult(updatedLocalCount: 0, serverPatches: []);
+
+  @override
+  Future<List<CharacterSummary>> fetchCharacters(String characterName) =>
+      throw UnimplementedError();
+
+  @override
+  Future<CharacterProfile> fetchCharacterProfile(String characterName) =>
+      throw UnimplementedError();
+
+  @override
+  Future<LocalGameAccount?> loadMainAccount() async =>
+      (await loadAccounts()).first;
+
+  @override
+  Future<void> saveCharacterBuildSnapshot({
+    required int characterId,
+    required CharacterBuildRole role,
+    required String rawJson,
+    required double? itemLevel,
+    required double? combatPower,
+    required DateTime capturedAt,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<CharacterBuildDraft> createCharacterBuildDraft({
+    required int characterId,
+    required String characterName,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<CharacterBuildSnapshot> commitCharacterBuildDraft({
+    required CharacterBuildDraft draft,
+    required CharacterBuildRole role,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<CharacterBuildSnapshot> refreshCharacterBuildSnapshot({
+    required int characterId,
+    required String characterName,
+    required CharacterBuildRole role,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> setRepresentativeCharacter({
+    required int accountId,
+    required int characterId,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> updateDisplayLimit({
+    required int accountId,
+    required int displayLimit,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> updateCharacterVisibility({
+    required int accountId,
+    required int characterId,
+    required bool isVisible,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> updateCharacterDisplayOrder({
+    required int accountId,
+    required List<int> characterIds,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> setPreferredCharacterRole({
+    required int characterId,
+    required CharacterBuildRole role,
+  }) => throw UnimplementedError();
+}

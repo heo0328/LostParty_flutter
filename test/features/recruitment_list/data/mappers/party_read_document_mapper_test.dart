@@ -47,6 +47,7 @@ void main() {
           'classNameSnapshot': '아르카나',
           'requestedRole': 'dealer',
           'status': 'pending',
+          'revision': 1,
           'resolutionReason': null,
           'createdAt': DateTime.utc(2026, 8, 24),
           'decidedAt': null,
@@ -58,6 +59,7 @@ void main() {
     expect(summary.status, RecruitmentApplicationStatus.pending);
     expect(summary.requestedRole, PartyRole.dealer);
     expect(summary.recruitmentId, 'raid-1');
+    expect(summary.revision, 1);
   });
 
   test('rejects an unsupported schema version', () {
@@ -86,6 +88,7 @@ void main() {
             'classNameSnapshot': '아르카나',
             'requestedRole': 'dealer',
             'status': 'unknown',
+            'revision': 1,
             'createdAt': DateTime.utc(2026, 8, 24),
             'updatedAt': DateTime.utc(2026, 8, 25),
           },
