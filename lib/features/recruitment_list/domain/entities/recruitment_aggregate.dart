@@ -1,4 +1,5 @@
 import '../state/recruitment_state_machine.dart';
+import '../policies/approval_policy.dart';
 import 'party_recruitment.dart';
 import 'recruitment_application.dart';
 
@@ -83,6 +84,7 @@ class PublicRecruitmentSummary {
     this.leaderCharacterName,
     this.leaderClassName,
     this.membersPerParty = 4,
+    this.approvalMode = ApprovalMode.leaderOnly,
   });
 
   factory PublicRecruitmentSummary.fromAggregate(
@@ -108,6 +110,7 @@ class PublicRecruitmentSummary {
       isRecruiting: aggregate.state.isRecruiting,
       revision: aggregate.revision,
       updatedAt: aggregate.updatedAt,
+      approvalMode: aggregate.state.approvalPolicy.mode,
     );
   }
 
@@ -124,4 +127,5 @@ class PublicRecruitmentSummary {
   final int revision;
   final DateTime updatedAt;
   final String currentCycleKey;
+  final ApprovalMode approvalMode;
 }

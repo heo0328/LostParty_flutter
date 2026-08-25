@@ -369,8 +369,10 @@ Player binding의 계약·구현·Rules 배포와 실기기 검증을 완료했�
 - Task-061에서 읽기 전용 현황 상세에 신청·철회 Firestore 명령을 연결했다. 신청 Character는 `serverCharacterId`만 사용한다. 단일 기기라 타 Player 신청 실기기는 보류하고 표적 테스트로 검증했다.
 - Task-063에서 `레이드 모집` 공개 목록을 Firestore 페이징 읽기로 전환하고 `main`에 통합했다. 첫 20개 실시간 구독과 cursor 추가 조회, `/raid-status/{id}` 진입을 연결했다. Android 실기기·인덱스 배포 확인은 남는다.
 - Task-064에서 파티장·파티원 표시 누락을 점검하고 다음 작업을 읽기/UI 복구로 재정의했다.
-- Task-065에서 파티장 Snapshot·`PartyMemberDisplay`·`watchRecruitmentMembers`·공개 membership Rules(Option 1)·목록/상세 UI 복구를 `cursor/party-leader-members-read`에서 완료했다. 표적 테스트, analyze, Android 실기기 표시, `lost-party` Rules 배포를 확인했다.
-- 승인·즉시 가입·멤버·회차는 Fake를 유지한다. 다음 연결 단위는 즉시 가입·승인·거절이다.
+- Task-065에서 파티장 Snapshot·`PartyMemberDisplay`·`watchRecruitmentMembers`·공개 membership Rules(Option 1)·목록/상세 UI 복구를 완료하고 `main`에 통합했다.
+- Task-066에서 `cursor/party-join-approve-reject`로 즉시 가입·승인·거절을 현황 상세에 1차 연결했다. `approvalMode`·`watchRecruitmentApplications`·join Repository wiring과 표적 테스트를 반영했다.
+- Task-066은 **Android 2기기 실기기 검증·수정 대기**이며, 완료 전까지 `main`에 병합하지 않는다. 체크리스트는 `NEXT_WORK.md`를 따른다.
+- 멤버·회차는 Fake를 유지한다.
 - 네트워크 요청을 시작하는 버튼은 진행 중 연타·중복 요청을 막는 공통 UI 규칙을 적용한다.
 - Codex는 설계 계약, 문서 정합성, 작업 분해와 인수인계를 중심으로 유지하되 필요한 코드 수정은 가능하다.
 - 유료 플랜·결제수단·과금 가능 기능, Emulator, FCM과 TTL 배포는 별도 승인 전까지 제외한다.

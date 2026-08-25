@@ -4,6 +4,7 @@ import 'package:lost_party/features/recruitment_list/data/dto/party_read_documen
 import 'package:lost_party/features/recruitment_list/data/mappers/party_read_document_mapper.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_application.dart';
+import 'package:lost_party/features/recruitment_list/domain/policies/approval_policy.dart';
 
 void main() {
   final mapper = PartyReadDocumentMapper(
@@ -20,6 +21,7 @@ void main() {
     expect(summary.leaderCharacterName, '리더캐릭');
     expect(summary.leaderClassName, '바드');
     expect(summary.membersPerParty, 4);
+    expect(summary.approvalMode, ApprovalMode.leaderOnly);
     expect(summary.metadata.raidId, 'act4');
     expect(summary.metadata.experienceLevel, ExperienceLevel.experienced);
     expect(summary.isRecruiting, isTrue);
@@ -182,6 +184,12 @@ Map<String, Object?> _recruitmentData() => {
   'memberCount': 4,
   'maxMemberCount': 8,
   'membersPerParty': 4,
+  'approvalPolicy': {
+    'mode': 'leaderOnly',
+    'requiredApprovals': 1,
+    'leaderVoteRequired': true,
+    'rejectionMode': 'anyAuthorizedMember',
+  },
   'revision': 3,
   'updatedAt': DateTime.utc(2026, 8, 25),
 };

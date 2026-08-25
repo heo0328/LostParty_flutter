@@ -6,51 +6,63 @@
 
 ## 현재 기준 상태
 
-- 통합 기준 브랜치: `main` (Task-065 파티장·파티원 읽기/UI 복구까지 포함)
-- 다음 구현은 최신 `main`에서 작업 브랜치 `cursor/party-join-approve-reject`를 분기해 진행한다.
-- Task-050~054의 Firestore 명령·Rules·Snapshot·Player 이벤트·Drift 로컬 히스토리 기반 구현을 완료했다.
-- Task-056~061에서 레이드 현황 읽기·목록 UX·읽기 전용 상세·모집 생성·인증 캐릭터 동기화·신청·철회를 완료했다.
-- Task-062에서 LostParty Design System v1의 Theme·token·Bottom Navigation과 공개 모집 대표 Card 시범 적용을 완료했다.
-- Task-063에서 `레이드 모집` 공개 목록을 Firestore 페이징 읽기로 전환하고 `main`에 통합했다.
-- Task-064에서 파티장·파티원 표시 누락을 점검하고 다음 작업을 읽기 모델·UI 복구로 재정의했다.
-- Task-065에서 파티장 표시 Snapshot·멤버 읽기 경계·공개 membership Rules(Option 1)·목록·상세 UI 복구를 완료했다.
-  - 모집 문서에 `leaderCharacterNameSnapshot` / `leaderClassNameSnapshot`을 생성·캐릭터 변경·책임자 승계 시 유지한다.
-  - `PartyMemberDisplay`와 `watchRecruitmentMembers`를 추가했다. UI는 표시 Snapshot만 소비한다.
-  - 공개 모집 membership `get`/`list`는 active binding 사용자에게 허용한다(Option 1).
-  - `레이드 모집`·`진행 중` Card와 `/raid-status/:id` 상세에 파티장·파티 구성을 표시한다.
-  - 표적 테스트, `flutter analyze --no-pub`, Android 실기기 표시, `lost-party` Rules 배포를 확인했다.
-  - Snapshot이 없는 기존 모집은 `정보 없음`으로 표시하고, 새 생성·캐릭터 변경·승계부터 Snapshot을 채운다.
-- 승인·즉시 가입·멤버·회차는 Fake 경로를 유지한다.
+- 통합 기준 브랜치: `main` (Task-065까지 포함)
+- 현재 구현 브랜치: `cursor/party-join-approve-reject` (Task-066)
+- Task-066 코드·표적 테스트는 이 브랜치에 커밋한다. **2기기 실기기 검증과 수정이 끝나기 전까지 `main`에 병합하지 않는다.**
+- Task-065에서 파티장·파티원 읽기/UI 복구를 완료하고 `main`에 통합했다.
+- Task-066에서 즉시 가입·승인·거절을 현황 상세에 1차 연결했다.
+  - `PublicRecruitmentSummary.approvalMode`와 `watchRecruitmentApplications`를 추가했다.
+  - `PartyReadDetailPage`에 `FirestorePartyJoinCommandRepository`를 연결했다.
+  - 승인형: 파티장 pending 승인·거절. 즉시 가입형: `joinDirectly`.
+  - 표적 테스트와 `flutter analyze --no-pub`은 통과했다.
+- 멤버·회차와 Fake `/recruitments/:id` 상세는 Fake 경로를 유지한다.
 - Firestore Emulator, FCM, TTL 배포와 유료 서비스 호출은 수행하지 않았다.
 
 ## 확정된 협업 역할
 
 - Codex는 설계·계약·작업 분해·문서 정합성·인수인계를 중심으로 담당한다.
 - Cursor는 주 코드 구현·빌드·표적 테스트를 중심으로 담당한다.
-- 디자인 시스템의 설계·구현·시범 적용과 사용자 피드백 반영은 Codex가 담당한다. Cursor는 확정된 디자인 기준을 후속 기능 화면에 적용한다.
-- Codex의 코드 수정과 Cursor의 설계 제안을 금지하지 않는다.
 - 구현 중 계약 변경이 필요하면 Cursor가 임의 확장하지 않고 영향과 제안을 문서에 먼저 기록한다.
 - 완료 시 코드, 테스트, 문서와 실제 Git 상태를 함께 갱신한다.
 
-## 다음 작업 대상: 즉시 가입·승인·거절
+## Task-066 상태: 2기기 실기기 검증 대기
 
-실행 앱 Firestore 상세에 즉시 가입·승인·거절 명령을 연결한다. Fake `/recruitments/:id`와 Firestore 상세를 섞지 않는다.
+코드 연결은 브랜치에 반영됐으나, 사용자는 디바이스를 하나 더 준비해 **2기기**로 검증한 뒤 수정 지시를 다시 내린다. 검증·수정 전에는 `main` 병합을 하지 않는다.
 
-### 우선 확인 파일
+### 남아 있는 실기기 테스트 체크리스트
 
-- `lib/features/raid_status/presentation/pages/party_read_detail_page.dart`
-- `lib/features/recruitment_list/domain/repositories/party_application_command_repository.dart`
-- `lib/features/recruitment_list/data/repositories/firestore_party_application_command_repository.dart`
-- `lib/features/recruitment_list/data/repositories/firestore_party_join_command_repository.dart` (존재 시)
-- `docs/architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`
-- `docs/product/PARTY_PARTICIPATION_RULES.md`
+단일 기기만으로는 타 Player 신청·승인·즉시 가입을 충분히 확인할 수 없다. 아래는 **Android 기기 2대**(서로 다른 Auth/Player) 기준이다.
 
-### 포함 범위
+#### A. 승인형 모집 (`파티장 승인`)
 
-1. 승인형 모집: 파티장(또는 승인 권한 멤버)이 pending 신청을 승인·거절할 수 있게 Firestore 명령을 현황 상세에 연결한다.
-2. 즉시 가입형 모집: 조건·배치를 만족하면 pending 없이 바로 가입하는 Firestore 명령을 연결한다.
-3. 성공 후 상세·멤버 목록·신청 상태가 실시간으로 갱신되는지 확인한다.
-4. Fake 상세 경로와 데이터를 섞지 않고 표적 테스트와 `flutter analyze --no-pub`로 검증한다.
+1. 기기 A(파티장): 승인형 모집 생성 → `/raid-status/{id}` 상세 진입
+2. 기기 B(신청자): 같은 방 상세 → **지원하기** → 캐릭터 선택
+   - 기대: `가입을 신청했습니다.` / 신청자 화면에 승인 대기·철회
+3. 기기 A: 상세 `가입 신청 관리`에 pending 표시 → **승인**
+   - 기대: 성공 안내, 신청자가 파티 구성에 추가, pending 감소
+4. (별도 신청으로) 기기 A에서 **거절**
+   - 기대: pending 제거, 신청자 상태가 거절됨으로 갱신
+5. 기기 B: pending 중 **신청 철회**
+   - 기대: `신청을 철회했습니다.`
+
+#### B. 즉시 가입형 (`승인 없이 바로 가입`)
+
+1. 기기 A: 즉시 가입형 모집 생성
+2. 기기 B: **바로 가입** → 캐릭터 선택
+   - 기대: `파티에 참가했습니다.` / pending 없이 파티 구성 반영
+3. 기기 A: 해당 방에 승인·거절 UI가 불필요하게 동작하지 않는지 확인
+
+#### C. 공통
+
+- 경로가 Fake `/recruitments/:id`가 아니라 `/raid-status/{id}`인지
+- 목록·상세의 파티장·파티원 표시가 유지되는지
+- 본인 방에는 지원하기가 안 나오고, 파티장에게만 신청 관리가 보이는지
+- 관찰된 버그·어색한 UX는 재작업 지시 전에 사용자 메모로 남긴다
+
+### 다음 Cursor 재개 조건
+
+- 사용자가 2기기 테스트 결과와 수정할 점을 지시한 뒤 이 브랜치에서 이어서 수정한다.
+- 수정·재검증이 끝나기 전까지 `main` 병합·푸시하지 않는다.
 
 ### 제외 범위
 
@@ -67,7 +79,7 @@
 
 ## 후속 순서
 
-1. 즉시 가입·승인·거절
+1. Task-066 2기기 실기기 검증·수정 → `main` 병합
 2. 자기 캐릭터 변경·탈퇴·추방 등 멤버 명령과 회차 명령
 3. 파티 내 자리 이동 및 다른 확정 파티 사이 이동·스왑 설계
 4. 그룹과 그룹 전용 모집

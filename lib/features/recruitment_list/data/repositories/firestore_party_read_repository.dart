@@ -187,6 +187,29 @@ class FirestorePartyReadRepository implements PartyReadRepository {
   }
 
   @override
+  Stream<PartyReadSnapshot<PartyApplicationSummary>> watchRecruitmentApplications(
+    String recruitmentId,
+  ) {
+    return _firestore
+        .collection('recruitments')
+        .doc(recruitmentId)
+        .collection('applications')
+        .snapshots(includeMetadataChanges: true)
+        .map((snapshot) {
+          final items = snapshot.docs
+              .map(_document)
+              .map(_mapper.toApplication)
+              .toList(growable: false)
+            ..sort((left, right) => right.updatedAt.compareTo(left.updatedAt));
+          return PartyReadSnapshot(
+            items: items,
+            isFromCache: snapshot.metadata.isFromCache,
+          );
+        })
+        .transform(_errorTransformer());
+  }
+
+  @override
   Stream<PartyReadDetailSnapshot<PartyApplicationSummary?>> watchMyApplication({
     required String recruitmentId,
     required String playerId,

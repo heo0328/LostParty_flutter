@@ -1480,3 +1480,17 @@
 - 표적 Mapper·WritePlan·Card·상세·현황 테스트와 `flutter analyze --no-pub`을 통과했다.
 - Android 실기기에서 목록·상세 파티장·파티원 표시를 확인했다.
 - `firebase deploy --only firestore:rules --project lost-party`로 Option 1 포함 Rules 전체를 배포했고 Console에서 `canReadPublicRecruitmentMembers`를 확인했다.
+
+---
+
+## Task-066. 즉시 가입·승인·거절 실행 앱 연결
+
+- 작업 브랜치: `cursor/party-join-approve-reject` (`main`의 Task-065 병합 커밋에서 분기)
+- `PublicRecruitmentSummary.approvalMode`와 Mapper 매핑을 추가했다.
+- `watchRecruitmentApplications`로 방의 신청 목록을 구독한다.
+- `PartyReadDetailPage`에 `FirestorePartyJoinCommandRepository`를 연결했다.
+  - `directJoin`: 바로 가입(`joinDirectly`)
+  - `leaderOnly`: 지원하기·철회 유지, 파티장 pending 승인·거절
+- 표적 상세·Mapper 테스트와 `flutter analyze --no-pub`을 통과했다.
+- Android 2기기 실기기 검증은 대기 중이다. 사용자는 추가 디바이스로 테스트한 뒤 수정 지시를 다시 내린다.
+- **2기기 검증·수정 완료 전까지 `main`에 병합하지 않는다.** 체크리스트는 `NEXT_WORK.md`에 둔다.

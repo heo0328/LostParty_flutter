@@ -5,11 +5,14 @@ import 'package:flutter/material.dart';
 import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../../shared/formatters/korea_time_formatter.dart';
 import '../../../recruitment_list/domain/entities/party_application_command.dart';
+import '../../../recruitment_list/domain/entities/party_join_command.dart';
 import '../../../recruitment_list/domain/entities/party_read_models.dart';
 import '../../../recruitment_list/domain/entities/party_recruitment.dart';
 import '../../../recruitment_list/domain/entities/recruitment_aggregate.dart';
 import '../../../recruitment_list/domain/entities/recruitment_application.dart';
+import '../../../recruitment_list/domain/policies/approval_policy.dart';
 import '../../../recruitment_list/domain/repositories/party_application_command_repository.dart';
+import '../../../recruitment_list/domain/repositories/party_join_command_repository.dart';
 import '../../../recruitment_list/domain/repositories/party_read_repository.dart';
 import '../../../recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
 import '../viewmodels/party_read_detail_view_model.dart';
@@ -19,6 +22,7 @@ class PartyReadDetailPage extends StatefulWidget {
     required this.recruitmentId,
     required this.partyReadRepository,
     this.applicationCommandRepository,
+    this.joinCommandRepository,
     this.candidateService,
     this.playerId,
     super.key,
@@ -27,6 +31,7 @@ class PartyReadDetailPage extends StatefulWidget {
   final String recruitmentId;
   final PartyReadRepository partyReadRepository;
   final PartyApplicationCommandRepository? applicationCommandRepository;
+  final PartyJoinCommandRepository? joinCommandRepository;
   final RecruitmentLeaderCandidateService? candidateService;
   final String? playerId;
 
@@ -40,17 +45,28 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
   _myApplicationSubscription;
   StreamSubscription<PartyReadSnapshot<PartyMemberDisplay>>?
   _membersSubscription;
+  StreamSubscription<PartyReadSnapshot<PartyApplicationSummary>>?
+  _applicationsSubscription;
   PartyApplicationSummary? _myApplication;
   List<PartyMemberDisplay> _members = const [];
+  List<PartyApplicationSummary> _applications = const [];
   bool _membersLoading = true;
+  bool _applicationsLoading = false;
   PartyReadFailureType? _membersFailure;
+  PartyReadFailureType? _applicationsFailure;
   bool _membersFromCache = false;
   bool _myApplicationLoading = false;
   bool _submitting = false;
 
-  bool get _canCommand =>
-      widget.applicationCommandRepository != null &&
+  bool get _canApplicantAction =>
       widget.candidateService != null &&
+      widget.playerId != null &&
+      widget.playerId!.isNotEmpty &&
+      (widget.applicationCommandRepository != null ||
+          widget.joinCommandRepository != null);
+
+  bool get _canManageApplications =>
+      widget.joinCommandRepository != null &&
       widget.playerId != null &&
       widget.playerId!.isNotEmpty;
 
@@ -64,7 +80,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     _membersSubscription = widget.partyReadRepository
         .watchRecruitmentMembers(widget.recruitmentId)
         .listen(_onMembers, onError: _onMembersError);
-    if (_canCommand) {
+    if (_canApplicantAction) {
       _myApplicationLoading = true;
       _myApplicationSubscription = widget.partyReadRepository
           .watchMyApplication(
@@ -76,12 +92,19 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
             setState(() => _myApplicationLoading = false);
           });
     }
+    if (_canManageApplications) {
+      _applicationsLoading = true;
+      _applicationsSubscription = widget.partyReadRepository
+          .watchRecruitmentApplications(widget.recruitmentId)
+          .listen(_onApplications, onError: _onApplicationsError);
+    }
   }
 
   @override
   void dispose() {
     _myApplicationSubscription?.cancel();
     _membersSubscription?.cancel();
+    _applicationsSubscription?.cancel();
     _viewModel.dispose();
     super.dispose();
   }
@@ -106,6 +129,25 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     });
   }
 
+  void _onApplications(PartyReadSnapshot<PartyApplicationSummary> snapshot) {
+    if (!mounted) return;
+    setState(() {
+      _applications = snapshot.items;
+      _applicationsLoading = false;
+      _applicationsFailure = null;
+    });
+  }
+
+  void _onApplicationsError(Object error) {
+    if (!mounted) return;
+    setState(() {
+      _applicationsLoading = false;
+      _applicationsFailure = error is PartyReadException
+          ? error.type
+          : PartyReadFailureType.unknown;
+    });
+  }
+
   void _onMyApplication(
     PartyReadDetailSnapshot<PartyApplicationSummary?> snapshot,
   ) {
@@ -118,8 +160,10 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
 
   Future<void> _openApplySheet(PublicRecruitmentSummary summary) async {
     final candidateService = widget.candidateService;
-    final repository = widget.applicationCommandRepository;
-    if (candidateService == null || repository == null || _submitting) return;
+    if (candidateService == null || _submitting) return;
+    final isDirectJoin = summary.approvalMode == ApprovalMode.directJoin;
+    if (isDirectJoin && widget.joinCommandRepository == null) return;
+    if (!isDirectJoin && widget.applicationCommandRepository == null) return;
 
     final startAt = summary.metadata.raidStartAt ?? DateTime.now();
     final candidates = await candidateService.load(
@@ -155,12 +199,40 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     final selected = await showModalBottomSheet<_ApplySelection>(
       context: context,
       showDragHandle: true,
-      builder: (context) => _ApplyCandidateSheet(candidates: eligible),
+      builder: (context) => _ApplyCandidateSheet(
+        candidates: eligible,
+        isDirectJoin: isDirectJoin,
+      ),
     );
     if (selected == null || !mounted) return;
 
     setState(() => _submitting = true);
-    final result = await repository.apply(
+    if (isDirectJoin) {
+      final result = await widget.joinCommandRepository!.joinDirectly(
+        PartyDirectJoinCommand(
+          recruitmentId: widget.recruitmentId,
+          characterId: selected.serverCharacterId,
+          role: selected.role,
+          cycleKey: summary.currentCycleKey,
+          expectedRecruitmentRevision: summary.revision,
+          combatPower: selected.combatPower,
+        ),
+      );
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      if (result.isSuccess) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('파티에 참가했습니다.')));
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_joinFailureMessage(result.failure!))),
+      );
+      return;
+    }
+
+    final result = await widget.applicationCommandRepository!.apply(
       PartyApplyCommand(
         recruitmentId: widget.recruitmentId,
         characterId: selected.serverCharacterId,
@@ -175,7 +247,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     if (result.isSuccess) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('신청을 보냈습니다.')));
+      ).showSnackBar(const SnackBar(content: Text('가입을 신청했습니다.')));
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
@@ -211,6 +283,38 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(_applicationFailureMessage(result.failure!))),
+    );
+  }
+
+  Future<void> _decideApplication({
+    required PublicRecruitmentSummary summary,
+    required PartyApplicationSummary application,
+    required bool approve,
+  }) async {
+    final repository = widget.joinCommandRepository;
+    if (repository == null || _submitting) return;
+    setState(() => _submitting = true);
+    final command = PartyDecideApplicationCommand(
+      recruitmentId: widget.recruitmentId,
+      applicantPlayerId: application.applicantPlayerId,
+      expectedApplicationRevision: application.revision,
+      expectedRecruitmentRevision: summary.revision,
+    );
+    final result = approve
+        ? await repository.approve(command)
+        : await repository.reject(command);
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (result.isSuccess) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(approve ? '가입 신청을 승인했습니다.' : '가입 신청을 거절했습니다.'),
+        ),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_joinFailureMessage(result.failure!))),
     );
   }
 
@@ -278,6 +382,10 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                 label: '조건',
                 value: _requirementLabel(summary.metadata),
               ),
+              _DetailLine(
+                label: '가입',
+                value: _approvalModeLabel(summary.approvalMode),
+              ),
               _PartyCompositionSection(
                 members: _members,
                 membersPerParty: summary.membersPerParty,
@@ -285,7 +393,27 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                 failure: _membersFailure,
                 isFromCache: _membersFromCache,
               ),
-              if (_canCommand)
+              if (_isLeader(summary))
+                _PendingApplicationsSection(
+                  applications: _applications,
+                  loading: _applicationsLoading,
+                  failure: _applicationsFailure,
+                  submitting: _submitting,
+                  canDecide:
+                      summary.approvalMode != ApprovalMode.directJoin &&
+                      widget.joinCommandRepository != null,
+                  onApprove: (application) => _decideApplication(
+                    summary: summary,
+                    application: application,
+                    approve: true,
+                  ),
+                  onReject: (application) => _decideApplication(
+                    summary: summary,
+                    application: application,
+                    approve: false,
+                  ),
+                ),
+              if (_canApplicantAction && !_isLeader(summary))
                 _ApplicationActions(
                   summary: summary,
                   myApplication: _myApplication,
@@ -294,7 +422,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                   onApply: () => _openApplySheet(summary),
                   onWithdraw: _withdraw,
                 )
-              else
+              else if (!_canApplicantAction && !_canManageApplications)
                 const Padding(
                   padding: EdgeInsets.fromLTRB(16, 24, 16, 0),
                   child: Text(
@@ -307,6 +435,9 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       ),
     );
   }
+
+  bool _isLeader(PublicRecruitmentSummary summary) =>
+      widget.playerId != null && widget.playerId == summary.leaderUserId;
 }
 
 class _PartyCompositionSection extends StatelessWidget {
@@ -375,6 +506,107 @@ class _PartyCompositionSection extends StatelessWidget {
   }
 }
 
+class _PendingApplicationsSection extends StatelessWidget {
+  const _PendingApplicationsSection({
+    required this.applications,
+    required this.loading,
+    required this.failure,
+    required this.submitting,
+    required this.canDecide,
+    required this.onApprove,
+    required this.onReject,
+  });
+
+  final List<PartyApplicationSummary> applications;
+  final bool loading;
+  final PartyReadFailureType? failure;
+  final bool submitting;
+  final bool canDecide;
+  final ValueChanged<PartyApplicationSummary> onApprove;
+  final ValueChanged<PartyApplicationSummary> onReject;
+
+  @override
+  Widget build(BuildContext context) {
+    final pending = applications
+        .where((item) => item.status == RecruitmentApplicationStatus.pending)
+        .toList(growable: false);
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('가입 신청 관리', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 8),
+          if (loading)
+            const LinearProgressIndicator()
+          else if (failure != null && pending.isEmpty)
+            Text(_failureMessage(failure!))
+          else if (pending.isEmpty)
+            const Text('대기 중인 가입 신청이 없습니다.')
+          else ...[
+            if (failure != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(_failureMessage(failure!)),
+              ),
+            for (final application in pending)
+              Card(
+                key: ValueKey(
+                  'pendingApplication-${application.applicantPlayerId}',
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        '${application.characterName} · ${application.className} · '
+                        '${_roleLabel(application.requestedRole)}',
+                      ),
+                      const SizedBox(height: 4),
+                      const Text('파티장 승인 대기'),
+                      if (canDecide) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                key: ValueKey(
+                                  'rejectApplication-${application.applicantPlayerId}',
+                                ),
+                                onPressed: submitting
+                                    ? null
+                                    : () => onReject(application),
+                                child: const Text('거절'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: FilledButton(
+                                key: ValueKey(
+                                  'approveApplication-${application.applicantPlayerId}',
+                                ),
+                                onPressed: submitting
+                                    ? null
+                                    : () => onApprove(application),
+                                child: const Text('승인'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _ApplicationActions extends StatelessWidget {
   const _ApplicationActions({
     required this.summary,
@@ -395,12 +627,16 @@ class _ApplicationActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final application = myApplication;
+    final isDirectJoin = summary.approvalMode == ApprovalMode.directJoin;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('신청', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            isDirectJoin ? '참가' : '신청',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 8),
           if (loadingApplication)
             const LinearProgressIndicator()
@@ -424,7 +660,11 @@ class _ApplicationActions extends StatelessWidget {
             FilledButton(
               key: const ValueKey('openApplicationButton'),
               onPressed: submitting ? null : onApply,
-              child: Text(submitting ? '처리 중...' : '지원하기'),
+              child: Text(
+                submitting
+                    ? '처리 중...'
+                    : (isDirectJoin ? '바로 가입' : '지원하기'),
+              ),
             ),
         ],
       ),
@@ -445,9 +685,13 @@ class _ApplySelection {
 }
 
 class _ApplyCandidateSheet extends StatelessWidget {
-  const _ApplyCandidateSheet({required this.candidates});
+  const _ApplyCandidateSheet({
+    required this.candidates,
+    required this.isDirectJoin,
+  });
 
   final List<RecruitmentLeaderCandidate> candidates;
+  final bool isDirectJoin;
 
   @override
   Widget build(BuildContext context) {
@@ -455,7 +699,7 @@ class _ApplyCandidateSheet extends StatelessWidget {
       child: ListView(
         shrinkWrap: true,
         children: [
-          const ListTile(title: Text('신청할 캐릭터')),
+          ListTile(title: Text(isDirectJoin ? '참가할 캐릭터' : '신청할 캐릭터')),
           for (final candidate in candidates)
             for (final option in candidate.roles.where((role) => role.canSelect))
               ListTile(
@@ -598,6 +842,37 @@ String _applicationFailureMessage(PartyApplicationFailure failure) =>
       PartyApplicationFailure.invalidRequest => '신청 정보를 확인하지 못했습니다.',
       PartyApplicationFailure.unknown => '신청을 처리하지 못했습니다.',
     };
+
+String _joinFailureMessage(PartyJoinFailure failure) => switch (failure) {
+  PartyJoinFailure.unauthenticated ||
+  PartyJoinFailure.playerBindingMissing => '계정 연결을 준비하지 못했습니다.',
+  PartyJoinFailure.notFound => '모집 또는 신청 정보를 찾지 못했습니다.',
+  PartyJoinFailure.unauthorized => '승인 또는 거절 권한이 없습니다.',
+  PartyJoinFailure.ownershipLost => '캐릭터 소유권을 확인하지 못했습니다.',
+  PartyJoinFailure.invalidCharacter =>
+    '참가할 수 없는 캐릭터입니다. 내 계정에서 정보를 새로고침한 뒤 다시 시도해 주세요.',
+  PartyJoinFailure.recruitmentClosed => '모집이 마감되어 참가할 수 없습니다.',
+  PartyJoinFailure.approvalModeMismatch => '이 방은 가입 방식이 다릅니다.',
+  PartyJoinFailure.capacityFull ||
+  PartyJoinFailure.roleCapacityFull => '모집 정원이 가득 찼습니다.',
+  PartyJoinFailure.duplicateDealerClass => '같은 파티에 동일 직업 딜러가 이미 있습니다.',
+  PartyJoinFailure.alreadyMember => '이미 이 방의 멤버입니다.',
+  PartyJoinFailure.applicationNotPending => '처리할 수 있는 신청이 아닙니다.',
+  PartyJoinFailure.participationConflict =>
+    '이미 확정된 참가 또는 겹치는 일정이 있어 가입할 수 없습니다.',
+  PartyJoinFailure.revisionConflict => '상태가 바뀌었습니다. 다시 확인해 주세요.',
+  PartyJoinFailure.permissionDenied => '가입 권한을 확인하지 못했습니다.',
+  PartyJoinFailure.temporarilyUnavailable => '네트워크 연결이 불안정합니다.',
+  PartyJoinFailure.invalidRequest => '가입 정보를 확인하지 못했습니다.',
+  PartyJoinFailure.unknown => '가입을 처리하지 못했습니다.',
+};
+
+String _approvalModeLabel(ApprovalMode mode) => switch (mode) {
+  ApprovalMode.leaderOnly => '파티장 승인',
+  ApprovalMode.directJoin => '승인 없이 바로 가입',
+  ApprovalMode.anyMember => '파티원 승인',
+  ApprovalMode.quorum => '정족수 승인',
+};
 
 String _raidLabel(RecruitmentMetadata metadata) {
   final difficulty = metadata.difficultyAlias == metadata.difficultyName

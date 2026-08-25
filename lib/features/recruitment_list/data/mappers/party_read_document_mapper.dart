@@ -2,6 +2,7 @@ import '../../domain/entities/party_read_models.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/entities/recruitment_aggregate.dart';
 import '../../domain/entities/recruitment_application.dart';
+import '../../domain/policies/approval_policy.dart';
 import '../dto/party_read_document_dto.dart';
 
 class PartyReadContractException implements Exception {
@@ -40,6 +41,7 @@ class PartyReadDocumentMapper {
       revision: _integer(data, 'revision'),
       updatedAt: _date(data, 'updatedAt'),
       currentCycleKey: _string(data, 'currentCycleKey'),
+      approvalMode: _approvalMode(data),
     );
   }
 
@@ -127,6 +129,14 @@ class PartyReadDocumentMapper {
         maxPlayHours: _nullableInteger(data, 'maxPlayHours'),
         raidStartAt: _nullableDate(data, 'raidStartAt'),
       );
+
+  ApprovalMode _approvalMode(Map<String, Object?> data) {
+    final policy = data['approvalPolicy'];
+    if (policy is! Map) return ApprovalMode.leaderOnly;
+    final mode = policy['mode'];
+    if (mode is! String || mode.trim().isEmpty) return ApprovalMode.leaderOnly;
+    return _enumValue(ApprovalMode.values, mode, 'approvalPolicy.mode');
+  }
 
   void _requireSchema(Map<String, Object?> data) {
     if (_integer(data, 'schemaVersion') != 1) {

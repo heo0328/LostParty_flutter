@@ -27,6 +27,7 @@ import '../../features/raid_status/presentation/pages/party_read_detail_page.dar
 import '../../features/raid_status/presentation/pages/raid_status_page.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_application_command_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_create_repository.dart';
+import '../../features/recruitment_list/data/repositories/firestore_party_join_command_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_read_repository.dart';
 import '../../features/recruitment_list/domain/repositories/party_read_repository.dart';
 import '../../features/recruitment_list/domain/policies/party_cycle_policy.dart';
@@ -191,6 +192,11 @@ GoRouter createAppRouter({
                       partyReadRepository: partyReadRepositoryOrDefault,
                       applicationCommandRepository:
                           FirestorePartyApplicationCommandRepository(
+                            firestore: FirebaseFirestore.instance,
+                            firebaseAuth: FirebaseAuth.instance,
+                          ),
+                      joinCommandRepository:
+                          FirestorePartyJoinCommandRepository(
                             firestore: FirebaseFirestore.instance,
                             firebaseAuth: FirebaseAuth.instance,
                           ),
