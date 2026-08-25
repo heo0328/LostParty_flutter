@@ -7,7 +7,7 @@
 ## 현재 기준 상태
 
 - 통합 대상: 최신 `main`
-- 작업 브랜치: `cursor/firebase-runtime-stage1`
+- 작업 브랜치: `cursor/character-summary-sync`
 - Task-050~054의 Firestore 명령·Rules·Snapshot·Player 이벤트·Drift 로컬 히스토리 기반 구현을 완료했다.
 - Task-056~058에서 레이드 현황 읽기·목록 UX·읽기 전용 상세 진입을 완료했다.
 - Task-059 모집 생성 Firestore 전환을 완료했고 Android 실기기에서 확인했다.
@@ -27,33 +27,39 @@
 - 구현 중 계약 변경이 필요하면 Cursor가 임의 확장하지 않고 영향과 제안을 문서에 먼저 기록한다.
 - 완료 시 코드, 테스트, 문서와 실제 Git 상태를 함께 갱신한다.
 
-## 다음 작업 설계 대상: 신청·철회 명령의 실행 앱 전환
+## 다음 작업 설계 대상: 인증 캐릭터 최소 정보 자동 동기화
 
-Codex가 화면 진입 경계·계약 영향·작업 분해를 확정한 뒤 Cursor가 구현한다. 아래는 설계 시작점이며 구현 지시로 확정된 것이 아니다.
+모집 생성과 신청 명령은 서버 Character Snapshot의 아이템 레벨을 최종 조건으로 사용한다. 인증 이후 로컬에서 최신 정보를 조회해도 서버 Character가 갱신되지 않으면 실제 조건을 만족한 캐릭터가 명령에서 거절될 수 있다. 신청·철회 실행 앱 전환 전에 이 동기화 경계를 먼저 구현한다.
 
 ### 설계 시 고정된 런타임 사실
 
-- 현황 상세는 Firestore 읽기 전용이며 Fake `RecruitmentDetailPage`와 경로·데이터를 섞지 않는다.
-- 모집 생성만 Firestore 명령이다. 신청·철회·승인·즉시 가입은 아직 Fake다.
-- 생성과 같이 신청 Character ID는 게임 계정 인증의 `serverCharacterId`여야 한다.
-- 존재하지 않는 모집 단건 `get`과 `신청 중` collection group `list` Rules는 `lost-party`에 배포된 상태다.
+- Drift에는 게임 계정과 원정대 Character 기본 정보가 있으며 대표 캐릭터명으로 siblings를 다시 조회할 수 있다.
+- 인증된 로컬 Character에는 서버가 발급한 `serverCharacterId`가 연결돼 있다.
+- 모집 생성 Transaction은 서버 Character의 아이템 레벨을 검증하므로 로컬 값만 최신이어서는 충분하지 않다.
+- 캐릭터명은 변경 가능한 표시 정보이며 서버 동기화 대상 식별은 `serverCharacterId`로 한다.
+- Lost Ark API 토큰은 기기의 secure storage에만 두고 원문을 서버·로그·문서 예시에 남기지 않는다.
 
 ### 목표
 
-인증된 사용자의 신청과 본인 철회를 Firestore 신청 명령 Repository에 연결한다. 승인·즉시 가입·멤버 관리·회차는 Fake로 둔다.
+`내 계정` 진입 시 제한된 주기로 원정대 최소 정보를 조회하고, 바뀐 Character 요약만 Drift와 인증된 서버 Character에 반영한다. 별도 `서버에 저장` 버튼은 만들지 않고 기존 수동 새로고침도 유지한다.
 
 ### 우선 확인 파일
 
-- `lib/features/recruitment_list/data/repositories/firestore_party_application_command_repository.dart`
-- `lib/features/raid_status/presentation/pages/party_read_detail_page.dart`
-- `lib/app/router/app_router.dart`
-- `docs/architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`
+- 내 계정 화면 진입과 현재 원정대 새로고침 ViewModel·Repository
+- Lost Ark siblings 응답의 최소 Character 요약 Mapper
+- Drift `game_accounts`, `account_characters` 갱신 경계
+- 게임 계정 인증 후 서버 Character 동기화 Gateway·Repository와 Rules
+- `docs/architecture/GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT.md`
 
 ### 포함 범위
 
-1. 읽기 전용 상세에서 신청 진입 경계를 정한다. Fake `RecruitmentDetailPage`의 신청 UI를 그대로 재사용하지 않는다.
-2. 신청·철회 실패 유형을 명령 계약대로 화면에 전달한다.
-3. 성공 후 `레이드 현황 > 신청 중` 읽기 목록이 갱신되는지 표적 테스트로 검증한다.
+1. `내 계정`은 기존 Drift 데이터를 먼저 표시하고 백그라운드에서 원정대 최소 정보를 조회한다. 화면 진입을 네트워크 완료까지 막지 않는다.
+2. 자동 조회에는 마지막 성공 시각 기준 6~24시간의 제한을 두고, 구체적인 기본 간격은 구현 전 기존 새로고침 정책과 API 사용량을 대조해 확정한다.
+3. 비교 필드는 캐릭터명·아이템 레벨·캐릭터 레벨로 제한한다. 값이 바뀐 Character만 Drift에 반영하고, `serverCharacterId`가 있는 active 소유 Character만 서버에도 갱신한다.
+4. 변경이 없으면 Drift·Firestore 쓰기를 생략한다. 늦게 도착한 조회가 더 최신 Snapshot을 덮지 않도록 `lastSummaryFetchedAt`을 비교한다.
+5. 자동 조회 실패 시 기존 데이터를 유지한다. 수동 새로고침은 제한 시간과 관계없이 다시 시도할 수 있게 유지한다.
+6. API 조회는 성공했지만 서버 반영이 실패하면 로컬 성공으로 숨기지 않고 서버 미반영 상태와 재시도 동작을 안내한다.
+7. 모집 생성에서 서버 Character 정보가 오래됐거나 레벨 조건에 미달하면 자동 API 호출을 강제하지 않고 `내 계정 정보 새로고침` 안내와 재시도 경계를 제공한다.
 
 ### 제외 범위
 
@@ -61,23 +67,33 @@ Codex가 화면 진입 경계·계약 영향·작업 분해를 확정한 뒤 Cur
 - Firestore TTL 정책 배포
 - Cloud Functions, Blaze 전환과 결제수단 연결
 - Firestore Emulator 실행
+- 앱 실행·화면 재진입마다 제한 없는 Lost Ark API 조회
+- 전체 캐릭터 종합 상세 API 자동 조회와 장비·세팅 Snapshot 갱신
+- 서버에 저장하는 별도 사용자 버튼
+- 이름만으로 서버 Character를 찾거나 다른 `serverCharacterId`로 재매핑하는 동작
+- API에서 사라진 Character의 자동 삭제·자동 병합
+- 신청·철회 명령의 실행 앱 전환
 - 승인·즉시 가입·멤버·회차 명령 전환
 - 대규모 UI 개편
 
 ### 완료 조건
 
-- 신청 명령의 Character ID가 서버 `serverCharacterId`를 사용한다.
+- 변경된 최소 요약이 Drift와 동일한 `serverCharacterId`의 서버 Character에 반영되고, 변경이 없을 때 쓰기가 발생하지 않는다.
+- 화면 진입 자동 조회 제한, 수동 새로고침, 부분 실패와 재시도 상태가 표적 테스트로 검증된다.
+- 조회 실패와 서버 반영 실패가 기존 유효 데이터를 삭제하거나 성공으로 오인시키지 않는다.
+- 모집 생성의 오래된 서버 정보 안내 경계가 검증된다.
 - `flutter analyze --no-pub`와 변경 범위 표적 테스트가 통과한다.
 - 실행 화면이 바뀌면 Android 실기기 체크리스트를 제공하고 사용자가 직접 확인한다.
-- 남은 Fake 범위와 다음 전환 단위를 문서에 기록한다.
+- 동기화 간격과 최종 Rules 보장 범위를 문서에 기록한다.
 
 ## 후속 순서
 
-1. 신청·철회 명령의 실행 앱 전환
-2. 즉시 가입·승인·거절
-3. 멤버·회차 명령
-4. 캐릭터 이동·스왑 예상 결과와 다중 파티 Transaction 설계
-5. 그룹과 그룹 전용 모집
+1. 인증 캐릭터 최소 정보 자동 동기화
+2. 신청·철회 명령의 실행 앱 전환
+3. 즉시 가입·승인·거절
+4. 멤버·회차 명령
+5. 캐릭터 이동·스왑 예상 결과와 다중 파티 Transaction 설계
+6. 그룹과 그룹 전용 모집
 
 ## 지속 운영 제약
 
@@ -96,4 +112,6 @@ Codex가 화면 진입 경계·계약 영향·작업 분해를 확정한 뒤 Cur
 - `../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`
 - `../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`
 - `../architecture/FIRESTORE_PARTY_EVENT_CONTRACT.md`
+- `../architecture/GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT.md`
+- `../architecture/GAME_ACCOUNT_VERIFICATION_CONTRACT.md`
 - `../product/PARTY_PARTICIPATION_RULES.md`
