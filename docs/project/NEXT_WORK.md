@@ -6,12 +6,12 @@
 
 ## 현재 기준 상태
 
-- 통합 대상: 최신 `main`
-- 작업 브랜치: `cursor/public-recruitment-list` (최신 `main`을 merge해 Design System v1 기초를 포함)
+- 통합 기준 브랜치: `main` (Task-063 공개 목록 페이징 읽기 전환까지 포함)
+- 다음 구현은 최신 `main`에서 작업 브랜치를 분기해 진행한다.
 - Task-050~054의 Firestore 명령·Rules·Snapshot·Player 이벤트·Drift 로컬 히스토리 기반 구현을 완료했다.
 - Task-056~061에서 레이드 현황 읽기·목록 UX·읽기 전용 상세·모집 생성·인증 캐릭터 동기화·신청·철회를 완료했다.
 - Task-062에서 LostParty Design System v1의 Theme·token·Bottom Navigation과 공개 모집 대표 Card 시범 적용을 완료했다.
-- Task-063에서 `레이드 모집` 공개 목록을 Firestore 페이징 읽기로 전환했다.
+- Task-063에서 `레이드 모집` 공개 목록을 Firestore 페이징 읽기로 전환하고 `main`에 통합했다.
   - `watchPublicRecruitmentFirstPage` / `loadPublicRecruitmentNextPage` Repository 경계와 불투명 cursor를 추가했다.
   - 첫 20개는 실시간 구독, 이후는 cursor 일회 조회이며 추가 페이지마다 listener를 만들지 않는다.
   - `RecruitmentListPage`는 `PartyReadRepository`와 현재 `cycleKey`를 쓰고, 카드는 `/raid-status/{id}`로 이동한다.

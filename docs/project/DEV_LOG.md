@@ -1453,3 +1453,4 @@
 - `firestore.indexes.json` 공개 목록 인덱스에 `__name__ desc`를 추가했다. 실제 배포 확인과 Android 실기기 검증은 남긴다.
 - Fake 상세·승인·멤버·회차는 InMemory 경로를 유지한다.
 - `flutter analyze --no-pub`과 표적 테스트가 통과했다.
+- 최신 `main`을 작업 브랜치에 merge한 뒤, Task-063을 `main`에 통합해 다음 작업의 기초를 `main`으로 맞췄다.
