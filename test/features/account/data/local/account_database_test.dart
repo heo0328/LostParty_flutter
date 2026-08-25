@@ -688,6 +688,7 @@ void main() {
         .select(database.accountCharacters)
         .get();
     expect(storedAccount.serverGameAccountId, 'game-account-1');
+    expect(storedAccount.serverOwnershipStatus, 'active');
     expect(
       storedCharacters.map((character) => character.serverCharacterId),
       containsAll(characters.map((character) => 'character-${character.id}')),
@@ -701,6 +702,29 @@ void main() {
           character.id: 'character-${character.id}',
       },
     );
+  });
+
+  test('updates a bound account to ownership lost', () async {
+    final now = DateTime.utc(2026, 8, 25);
+    final accountId = await database.saveMainAccountSnapshot(
+      lookupCharacterName: '대표캐릭터',
+      characters: [_snapshot('대표캐릭터', now)],
+    );
+    final character = await database
+        .select(database.accountCharacters)
+        .getSingle();
+    await database.bindServerIdentity(
+      localAccountId: accountId,
+      serverGameAccountId: 'game-account-1',
+      serverCharacterIdsByLocalId: {character.id: 'character-1'},
+    );
+
+    await database.updateServerOwnershipStatuses({accountId: 'ownershipLost'});
+
+    final account = await (database.select(
+      database.gameAccounts,
+    )..where((table) => table.id.equals(accountId))).getSingle();
+    expect(account.serverOwnershipStatus, 'ownershipLost');
   });
 
   test('rejects server ID remapping without partial writes', () async {

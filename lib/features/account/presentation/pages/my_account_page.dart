@@ -369,13 +369,25 @@ class _MyAccountPageState extends State<MyAccountPage> {
                             visualDensity: VisualDensity.compact,
                             label: Text(account.isMain ? '본계정' : '부계정'),
                           ),
-                          if (account.serverGameAccountId != null) ...[
+                          if (account.hasActiveOwnership) ...[
                             const SizedBox(width: 6),
                             const Chip(
                               key: ValueKey('verifiedGameAccountChip'),
                               visualDensity: VisualDensity.compact,
                               avatar: Icon(Icons.verified, size: 16),
                               label: Text('계정 인증 완료'),
+                            ),
+                          ] else if (account.hasLostOwnership) ...[
+                            const SizedBox(width: 6),
+                            Chip(
+                              key: const ValueKey('lostOwnershipChip'),
+                              visualDensity: VisualDensity.compact,
+                              avatar: Icon(
+                                Icons.gpp_bad_outlined,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                              label: const Text('인증 상실'),
                             ),
                           ],
                         ],

@@ -109,6 +109,7 @@ class RecruitmentLeaderCandidateService {
     final seenCharacters = <String>{};
 
     for (final account in accounts) {
+      if (account.hasLostOwnership) continue;
       for (final character in account.visibleCharacters) {
         final key =
             '${character.serverName.trim().toLowerCase()}::${character.characterName.trim().toLowerCase()}';

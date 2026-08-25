@@ -8,6 +8,7 @@ import '../../domain/entities/character_summary.dart';
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/entities/server_account_identity_binding.dart';
 import '../../domain/repositories/account_identity_gateway.dart';
+import '../../domain/repositories/account_ownership_status_gateway.dart';
 import '../../domain/repositories/account_repository.dart';
 import '../datasources/local_account_data_source.dart';
 import '../datasources/lost_ark_character_remote_data_source.dart';
@@ -23,11 +24,14 @@ class AccountRepositoryImpl
   AccountRepositoryImpl({
     required LostArkCharacterRemoteDataSource remoteDataSource,
     required LocalAccountDataSource localDataSource,
+    AccountOwnershipStatusGateway? ownershipStatusGateway,
   }) : _remoteDataSource = remoteDataSource,
-       _localDataSource = localDataSource;
+       _localDataSource = localDataSource,
+       _ownershipStatusGateway = ownershipStatusGateway;
 
   final LostArkCharacterRemoteDataSource _remoteDataSource;
   final LocalAccountDataSource _localDataSource;
+  final AccountOwnershipStatusGateway? _ownershipStatusGateway;
 
   @override
   Future<List<CharacterSummary>> fetchCharacters(String characterName) async {
@@ -81,8 +85,30 @@ class AccountRepositoryImpl
   }
 
   @override
-  Future<List<LocalGameAccount>> loadAccounts() {
-    return _localDataSource.loadAccounts();
+  Future<List<LocalGameAccount>> loadAccounts() async {
+    final accounts = await _localDataSource.loadAccounts();
+    final gateway = _ownershipStatusGateway;
+    if (gateway == null) return accounts;
+    final boundAccounts = accounts.where(
+      (account) => account.serverGameAccountId != null,
+    );
+    if (boundAccounts.isEmpty) return accounts;
+    try {
+      final statuses = await gateway.loadStatuses(
+        boundAccounts.map((account) => account.serverGameAccountId!),
+      );
+      final localStatuses = <int, String>{};
+      for (final account in boundAccounts) {
+        final status = statuses[account.serverGameAccountId];
+        if (status != null) {
+          localStatuses[account.id] = status;
+        }
+      }
+      await _localDataSource.updateServerOwnershipStatuses(localStatuses);
+      return _localDataSource.loadAccounts();
+    } on Object {
+      return accounts;
+    }
   }
 
   @override

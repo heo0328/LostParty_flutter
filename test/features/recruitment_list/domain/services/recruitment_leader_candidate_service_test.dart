@@ -91,6 +91,19 @@ void main() {
       contains(CandidateParticipationStatusType.overlappingSchedule),
     );
   });
+
+  test('인증 상실 계정은 모집장 캐릭터 후보에서 제외한다', () async {
+    final service = RecruitmentLeaderCandidateService(
+      accountRepository: _LostOwnershipAccountRepository(),
+      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+      session: FakeUserSession('local-user'),
+      clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 23)),
+      assignmentRepository: InMemoryActiveRaidAssignmentRepository(),
+      recruitmentRepository: InMemoryRecruitmentStateRepository(),
+    );
+
+    expect(await service.load(_query()), isEmpty);
+  });
 }
 
 RecruitmentLeaderCandidateQuery _query({int minItemLevel = 1700}) =>
@@ -177,6 +190,35 @@ class _AccountRepository implements AccountRepository {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _LostOwnershipAccountRepository extends _AccountRepository {
+  @override
+  Future<List<LocalGameAccount>> loadAccounts() async => const [
+    LocalGameAccount(
+      id: 1,
+      serverGameAccountId: 'account-1',
+      serverOwnershipStatus: 'ownershipLost',
+      label: '인증 상실 계정',
+      isMain: true,
+      lookupCharacterName: '대표바드',
+      representativeCharacterId: 1,
+      displayLimit: 1,
+      characters: [
+        LocalAccountCharacter(
+          id: 1,
+          serverName: '루페온',
+          characterName: '대표바드',
+          characterLevel: 70,
+          characterClassName: '바드',
+          itemLevel: 1750,
+          combatPower: 300000,
+          isVisible: true,
+          displayOrder: 0,
+        ),
+      ],
+    ),
+  ];
 }
 
 CharacterBuildSnapshot _snapshot(int characterId, CharacterBuildRole role) =>

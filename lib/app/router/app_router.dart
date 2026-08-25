@@ -8,6 +8,7 @@ import '../../features/account/data/datasources/local_account_data_source.dart';
 import '../../features/account/data/local/account_database.dart';
 import '../../features/account/data/repositories/account_repository_impl.dart';
 import '../../features/account/data/gateways/local_game_account_verification_gateway.dart';
+import '../../features/account/data/gateways/firestore_account_ownership_status_gateway.dart';
 import '../../features/account/presentation/pages/api_token_settings_page.dart';
 import '../../features/account/presentation/pages/character_management_page.dart';
 import '../../features/account/presentation/pages/character_detail_page.dart';
@@ -52,6 +53,10 @@ GoRouter createAppRouter({required AccountDatabase accountDatabase}) {
     localDataSource: LocalAccountDataSource(
       database: accountDatabase,
       gameCatalogRepository: gameCatalogRepository,
+    ),
+    ownershipStatusGateway: FirestoreAccountOwnershipStatusGateway(
+      firestore: FirebaseFirestore.instance,
+      firebaseAuth: FirebaseAuth.instance,
     ),
   );
   final verificationGateway = LocalGameAccountVerificationGateway(

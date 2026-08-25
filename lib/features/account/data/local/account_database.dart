@@ -26,6 +26,8 @@ class GameAccounts extends Table {
 
   TextColumn get serverGameAccountId => text().nullable()();
 
+  TextColumn get serverOwnershipStatus => text().nullable()();
+
   TextColumn get label => text()();
 
   BoolColumn get isMain => boolean().withDefault(const Constant(false))();
@@ -114,7 +116,7 @@ class AccountDatabase extends _$AccountDatabase {
     : super(executor ?? driftDatabase(name: 'lost_party'));
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -147,6 +149,12 @@ class AccountDatabase extends _$AccountDatabase {
         await migrator.addColumn(
           accountCharacters,
           accountCharacters.isRosterMissing,
+        );
+      }
+      if (from < 6) {
+        await migrator.addColumn(
+          gameAccounts,
+          gameAccounts.serverOwnershipStatus,
         );
       }
     },
@@ -229,13 +237,36 @@ class AccountDatabase extends _$AccountDatabase {
       await (update(
         gameAccounts,
       )..where((table) => table.id.equals(localAccountId))).write(
-        GameAccountsCompanion(serverGameAccountId: Value(normalizedAccountId)),
+        GameAccountsCompanion(
+          serverGameAccountId: Value(normalizedAccountId),
+          serverOwnershipStatus: const Value('active'),
+        ),
       );
       for (final entry in normalizedCharacterIds.entries) {
         await (update(
           accountCharacters,
         )..where((table) => table.id.equals(entry.key))).write(
           AccountCharactersCompanion(serverCharacterId: Value(entry.value)),
+        );
+      }
+    });
+  }
+
+  Future<void> updateServerOwnershipStatuses(
+    Map<int, String> statusesByLocalAccountId,
+  ) {
+    return transaction(() async {
+      for (final entry in statusesByLocalAccountId.entries) {
+        if (entry.value != 'active' && entry.value != 'ownershipLost') {
+          throw ArgumentError.value(entry.value, 'status');
+        }
+        await (update(
+          gameAccounts,
+        )..where((table) => table.id.equals(entry.key))).write(
+          GameAccountsCompanion(
+            serverOwnershipStatus: Value(entry.value),
+            updatedAt: Value(DateTime.now()),
+          ),
         );
       }
     });

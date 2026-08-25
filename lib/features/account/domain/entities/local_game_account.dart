@@ -10,10 +10,14 @@ class LocalGameAccount {
     required this.displayLimit,
     required this.characters,
     this.serverGameAccountId,
+    this.serverOwnershipStatus,
   });
 
   final int id;
   final String? serverGameAccountId;
+  final String? serverOwnershipStatus;
+  bool get hasActiveOwnership => serverOwnershipStatus == 'active';
+  bool get hasLostOwnership => serverOwnershipStatus == 'ownershipLost';
   final String label;
   final bool isMain;
   final String lookupCharacterName;

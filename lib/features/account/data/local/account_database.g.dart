@@ -33,6 +33,17 @@ class $GameAccountsTable extends GameAccounts
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _serverOwnershipStatusMeta =
+      const VerificationMeta('serverOwnershipStatus');
+  @override
+  late final GeneratedColumn<String> serverOwnershipStatus =
+      GeneratedColumn<String>(
+        'server_ownership_status',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _labelMeta = const VerificationMeta('label');
   @override
   late final GeneratedColumn<String> label = GeneratedColumn<String>(
@@ -115,6 +126,7 @@ class $GameAccountsTable extends GameAccounts
   List<GeneratedColumn> get $columns => [
     id,
     serverGameAccountId,
+    serverOwnershipStatus,
     label,
     isMain,
     lookupCharacterName,
@@ -144,6 +156,15 @@ class $GameAccountsTable extends GameAccounts
         serverGameAccountId.isAcceptableOrUnknown(
           data['server_game_account_id']!,
           _serverGameAccountIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('server_ownership_status')) {
+      context.handle(
+        _serverOwnershipStatusMeta,
+        serverOwnershipStatus.isAcceptableOrUnknown(
+          data['server_ownership_status']!,
+          _serverOwnershipStatusMeta,
         ),
       );
     }
@@ -223,6 +244,10 @@ class $GameAccountsTable extends GameAccounts
         DriftSqlType.string,
         data['${effectivePrefix}server_game_account_id'],
       ),
+      serverOwnershipStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_ownership_status'],
+      ),
       label: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}label'],
@@ -263,6 +288,7 @@ class $GameAccountsTable extends GameAccounts
 class GameAccount extends DataClass implements Insertable<GameAccount> {
   final int id;
   final String? serverGameAccountId;
+  final String? serverOwnershipStatus;
   final String label;
   final bool isMain;
   final String lookupCharacterName;
@@ -273,6 +299,7 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
   const GameAccount({
     required this.id,
     this.serverGameAccountId,
+    this.serverOwnershipStatus,
     required this.label,
     required this.isMain,
     required this.lookupCharacterName,
@@ -287,6 +314,9 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
     map['id'] = Variable<int>(id);
     if (!nullToAbsent || serverGameAccountId != null) {
       map['server_game_account_id'] = Variable<String>(serverGameAccountId);
+    }
+    if (!nullToAbsent || serverOwnershipStatus != null) {
+      map['server_ownership_status'] = Variable<String>(serverOwnershipStatus);
     }
     map['label'] = Variable<String>(label);
     map['is_main'] = Variable<bool>(isMain);
@@ -308,6 +338,9 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
       serverGameAccountId: serverGameAccountId == null && nullToAbsent
           ? const Value.absent()
           : Value(serverGameAccountId),
+      serverOwnershipStatus: serverOwnershipStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverOwnershipStatus),
       label: Value(label),
       isMain: Value(isMain),
       lookupCharacterName: Value(lookupCharacterName),
@@ -331,6 +364,9 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
       serverGameAccountId: serializer.fromJson<String?>(
         json['serverGameAccountId'],
       ),
+      serverOwnershipStatus: serializer.fromJson<String?>(
+        json['serverOwnershipStatus'],
+      ),
       label: serializer.fromJson<String>(json['label']),
       isMain: serializer.fromJson<bool>(json['isMain']),
       lookupCharacterName: serializer.fromJson<String>(
@@ -350,6 +386,9 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'serverGameAccountId': serializer.toJson<String?>(serverGameAccountId),
+      'serverOwnershipStatus': serializer.toJson<String?>(
+        serverOwnershipStatus,
+      ),
       'label': serializer.toJson<String>(label),
       'isMain': serializer.toJson<bool>(isMain),
       'lookupCharacterName': serializer.toJson<String>(lookupCharacterName),
@@ -365,6 +404,7 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
   GameAccount copyWith({
     int? id,
     Value<String?> serverGameAccountId = const Value.absent(),
+    Value<String?> serverOwnershipStatus = const Value.absent(),
     String? label,
     bool? isMain,
     String? lookupCharacterName,
@@ -377,6 +417,9 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
     serverGameAccountId: serverGameAccountId.present
         ? serverGameAccountId.value
         : this.serverGameAccountId,
+    serverOwnershipStatus: serverOwnershipStatus.present
+        ? serverOwnershipStatus.value
+        : this.serverOwnershipStatus,
     label: label ?? this.label,
     isMain: isMain ?? this.isMain,
     lookupCharacterName: lookupCharacterName ?? this.lookupCharacterName,
@@ -393,6 +436,9 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
       serverGameAccountId: data.serverGameAccountId.present
           ? data.serverGameAccountId.value
           : this.serverGameAccountId,
+      serverOwnershipStatus: data.serverOwnershipStatus.present
+          ? data.serverOwnershipStatus.value
+          : this.serverOwnershipStatus,
       label: data.label.present ? data.label.value : this.label,
       isMain: data.isMain.present ? data.isMain.value : this.isMain,
       lookupCharacterName: data.lookupCharacterName.present
@@ -414,6 +460,7 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
     return (StringBuffer('GameAccount(')
           ..write('id: $id, ')
           ..write('serverGameAccountId: $serverGameAccountId, ')
+          ..write('serverOwnershipStatus: $serverOwnershipStatus, ')
           ..write('label: $label, ')
           ..write('isMain: $isMain, ')
           ..write('lookupCharacterName: $lookupCharacterName, ')
@@ -429,6 +476,7 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
   int get hashCode => Object.hash(
     id,
     serverGameAccountId,
+    serverOwnershipStatus,
     label,
     isMain,
     lookupCharacterName,
@@ -443,6 +491,7 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
       (other is GameAccount &&
           other.id == this.id &&
           other.serverGameAccountId == this.serverGameAccountId &&
+          other.serverOwnershipStatus == this.serverOwnershipStatus &&
           other.label == this.label &&
           other.isMain == this.isMain &&
           other.lookupCharacterName == this.lookupCharacterName &&
@@ -455,6 +504,7 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
 class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
   final Value<int> id;
   final Value<String?> serverGameAccountId;
+  final Value<String?> serverOwnershipStatus;
   final Value<String> label;
   final Value<bool> isMain;
   final Value<String> lookupCharacterName;
@@ -465,6 +515,7 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
   const GameAccountsCompanion({
     this.id = const Value.absent(),
     this.serverGameAccountId = const Value.absent(),
+    this.serverOwnershipStatus = const Value.absent(),
     this.label = const Value.absent(),
     this.isMain = const Value.absent(),
     this.lookupCharacterName = const Value.absent(),
@@ -476,6 +527,7 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
   GameAccountsCompanion.insert({
     this.id = const Value.absent(),
     this.serverGameAccountId = const Value.absent(),
+    this.serverOwnershipStatus = const Value.absent(),
     required String label,
     this.isMain = const Value.absent(),
     required String lookupCharacterName,
@@ -490,6 +542,7 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
   static Insertable<GameAccount> custom({
     Expression<int>? id,
     Expression<String>? serverGameAccountId,
+    Expression<String>? serverOwnershipStatus,
     Expression<String>? label,
     Expression<bool>? isMain,
     Expression<String>? lookupCharacterName,
@@ -502,6 +555,8 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
       if (id != null) 'id': id,
       if (serverGameAccountId != null)
         'server_game_account_id': serverGameAccountId,
+      if (serverOwnershipStatus != null)
+        'server_ownership_status': serverOwnershipStatus,
       if (label != null) 'label': label,
       if (isMain != null) 'is_main': isMain,
       if (lookupCharacterName != null)
@@ -517,6 +572,7 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
   GameAccountsCompanion copyWith({
     Value<int>? id,
     Value<String?>? serverGameAccountId,
+    Value<String?>? serverOwnershipStatus,
     Value<String>? label,
     Value<bool>? isMain,
     Value<String>? lookupCharacterName,
@@ -528,6 +584,8 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
     return GameAccountsCompanion(
       id: id ?? this.id,
       serverGameAccountId: serverGameAccountId ?? this.serverGameAccountId,
+      serverOwnershipStatus:
+          serverOwnershipStatus ?? this.serverOwnershipStatus,
       label: label ?? this.label,
       isMain: isMain ?? this.isMain,
       lookupCharacterName: lookupCharacterName ?? this.lookupCharacterName,
@@ -548,6 +606,11 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
     if (serverGameAccountId.present) {
       map['server_game_account_id'] = Variable<String>(
         serverGameAccountId.value,
+      );
+    }
+    if (serverOwnershipStatus.present) {
+      map['server_ownership_status'] = Variable<String>(
+        serverOwnershipStatus.value,
       );
     }
     if (label.present) {
@@ -583,6 +646,7 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
     return (StringBuffer('GameAccountsCompanion(')
           ..write('id: $id, ')
           ..write('serverGameAccountId: $serverGameAccountId, ')
+          ..write('serverOwnershipStatus: $serverOwnershipStatus, ')
           ..write('label: $label, ')
           ..write('isMain: $isMain, ')
           ..write('lookupCharacterName: $lookupCharacterName, ')
@@ -2035,6 +2099,7 @@ typedef $$GameAccountsTableCreateCompanionBuilder =
     GameAccountsCompanion Function({
       Value<int> id,
       Value<String?> serverGameAccountId,
+      Value<String?> serverOwnershipStatus,
       required String label,
       Value<bool> isMain,
       required String lookupCharacterName,
@@ -2047,6 +2112,7 @@ typedef $$GameAccountsTableUpdateCompanionBuilder =
     GameAccountsCompanion Function({
       Value<int> id,
       Value<String?> serverGameAccountId,
+      Value<String?> serverOwnershipStatus,
       Value<String> label,
       Value<bool> isMain,
       Value<String> lookupCharacterName,
@@ -2098,6 +2164,11 @@ class $$GameAccountsTableFilterComposer
 
   ColumnFilters<String> get serverGameAccountId => $composableBuilder(
     column: $table.serverGameAccountId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverOwnershipStatus => $composableBuilder(
+    column: $table.serverOwnershipStatus,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2181,6 +2252,11 @@ class $$GameAccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get serverOwnershipStatus => $composableBuilder(
+    column: $table.serverOwnershipStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get label => $composableBuilder(
     column: $table.label,
     builder: (column) => ColumnOrderings(column),
@@ -2231,6 +2307,11 @@ class $$GameAccountsTableAnnotationComposer
 
   GeneratedColumn<String> get serverGameAccountId => $composableBuilder(
     column: $table.serverGameAccountId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get serverOwnershipStatus => $composableBuilder(
+    column: $table.serverOwnershipStatus,
     builder: (column) => column,
   );
 
@@ -2320,6 +2401,7 @@ class $$GameAccountsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String?> serverGameAccountId = const Value.absent(),
+                Value<String?> serverOwnershipStatus = const Value.absent(),
                 Value<String> label = const Value.absent(),
                 Value<bool> isMain = const Value.absent(),
                 Value<String> lookupCharacterName = const Value.absent(),
@@ -2330,6 +2412,7 @@ class $$GameAccountsTableTableManager
               }) => GameAccountsCompanion(
                 id: id,
                 serverGameAccountId: serverGameAccountId,
+                serverOwnershipStatus: serverOwnershipStatus,
                 label: label,
                 isMain: isMain,
                 lookupCharacterName: lookupCharacterName,
@@ -2342,6 +2425,7 @@ class $$GameAccountsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String?> serverGameAccountId = const Value.absent(),
+                Value<String?> serverOwnershipStatus = const Value.absent(),
                 required String label,
                 Value<bool> isMain = const Value.absent(),
                 required String lookupCharacterName,
@@ -2352,6 +2436,7 @@ class $$GameAccountsTableTableManager
               }) => GameAccountsCompanion.insert(
                 id: id,
                 serverGameAccountId: serverGameAccountId,
+                serverOwnershipStatus: serverOwnershipStatus,
                 label: label,
                 isMain: isMain,
                 lookupCharacterName: lookupCharacterName,

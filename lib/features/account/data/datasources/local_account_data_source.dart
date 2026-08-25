@@ -162,6 +162,10 @@ class LocalAccountDataSource {
     );
   }
 
+  Future<void> updateServerOwnershipStatuses(
+    Map<int, String> statusesByLocalAccountId,
+  ) => _database.updateServerOwnershipStatuses(statusesByLocalAccountId);
+
   Future<LocalGameAccount> _loadAccount(GameAccount account) async {
     final characters = await (_database.select(
       _database.accountCharacters,
@@ -169,6 +173,7 @@ class LocalAccountDataSource {
     return LocalGameAccount(
       id: account.id,
       serverGameAccountId: account.serverGameAccountId,
+      serverOwnershipStatus: account.serverOwnershipStatus,
       label: account.label,
       isMain: account.isMain,
       lookupCharacterName: account.lookupCharacterName,

@@ -31,6 +31,23 @@ void main() {
     );
   });
 
+  testWidgets('shows an ownership lost badge for a taken-over account', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MyAccountPage(
+          apiTokenStore: _InMemoryApiTokenStore(),
+          accountRepository: _FakeAccountRepository(lostOwnership: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('인증 상실'), findsOneWidget);
+    expect(find.text('계정 인증 완료'), findsNothing);
+  });
+
   testWidgets('warns about and manually deletes a missing roster character', (
     WidgetTester tester,
   ) async {
@@ -162,10 +179,12 @@ class _FakeAccountRepository
   _FakeAccountRepository({
     this.serverBound = false,
     this.missingRoster = false,
+    this.lostOwnership = false,
   });
 
   final bool serverBound;
   final bool missingRoster;
+  final bool lostOwnership;
   int? deletedMissingCharacterId;
   LocalGameAccount? _subAccount;
 
@@ -316,7 +335,14 @@ class _FakeAccountRepository
   Future<LocalGameAccount?> loadMainAccount() async {
     return LocalGameAccount(
       id: 1,
-      serverGameAccountId: serverBound ? 'game-account-1' : null,
+      serverGameAccountId: serverBound || lostOwnership
+          ? 'game-account-1'
+          : null,
+      serverOwnershipStatus: lostOwnership
+          ? 'ownershipLost'
+          : serverBound
+          ? 'active'
+          : null,
       label: '메인 계정',
       isMain: true,
       lookupCharacterName: '이슈아이',

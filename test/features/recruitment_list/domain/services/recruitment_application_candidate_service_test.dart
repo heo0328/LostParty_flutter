@@ -137,6 +137,17 @@ void main() {
       containsAll([PartyRole.dealer, PartyRole.support]),
     );
   });
+
+  test('인증 상실 계정은 신청 캐릭터 후보에서 제외한다', () async {
+    final service = RecruitmentApplicationCandidateService(
+      accountRepository: _LostOwnershipAccountRepository(),
+      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+      session: FakeUserSession('user-a'),
+      clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 20)),
+    );
+
+    expect(await service.load(_aggregate), isEmpty);
+  });
 }
 
 class _AccountRepository implements AccountRepository {
@@ -229,6 +240,35 @@ class _AccountRepository implements AccountRepository {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _LostOwnershipAccountRepository extends _AccountRepository {
+  @override
+  Future<List<LocalGameAccount>> loadAccounts() async => const [
+    LocalGameAccount(
+      id: 1,
+      serverGameAccountId: 'account-1',
+      serverOwnershipStatus: 'ownershipLost',
+      label: '인증 상실 계정',
+      isMain: true,
+      lookupCharacterName: '가능딜러',
+      representativeCharacterId: 1,
+      displayLimit: 1,
+      characters: [
+        LocalAccountCharacter(
+          id: 1,
+          serverName: '루페온',
+          characterName: '가능딜러',
+          characterLevel: 70,
+          characterClassName: '블레이드',
+          itemLevel: 1750,
+          combatPower: 300000,
+          isVisible: true,
+          displayOrder: 0,
+        ),
+      ],
+    ),
+  ];
 }
 
 final _aggregate = RecruitmentAggregate(
