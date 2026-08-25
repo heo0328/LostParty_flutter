@@ -6,6 +6,7 @@ import '../../domain/policies/party_cycle_policy.dart';
 import '../../domain/repositories/party_cycle_command_repository.dart';
 import '../../domain/services/party_cycle_command_validator.dart';
 import '../mappers/party_cycle_write_plan.dart';
+import '../mappers/party_event_write_plan.dart';
 
 class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepository {
   const FirestorePartyCycleCommandRepository({required FirebaseFirestore firestore, required FirebaseAuth firebaseAuth, DateTime Function()? now}) : _firestore = firestore, _firebaseAuth = firebaseAuth, _now = now;
@@ -37,7 +38,8 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
       } else {
         transaction.set(cycleRef, PartyCycleWritePlan.completedCycle(recruitmentId: command.recruitmentId, cycleKey: command.cycleKey, completedByPlayerId: playerId, memberSnapshot: snapshot, serverTimestamp: now));
       }
-      transaction.update(recruitmentRef, PartyCycleWritePlan.completeRecruitment(continueTogether: r?['continueTogether'] == true, completedByPlayerId: playerId, revision: command.expectedRecruitmentRevision, serverTimestamp: now));
+      _writeEvents(transaction, command.recruitmentId, snapshot, r!, type: 'partyCompleted', eventRevision: cycle.exists ? (cycle.data()?['completionRevision'] as int) + 1 : 1, serverTimestamp: now);
+      transaction.update(recruitmentRef, PartyCycleWritePlan.completeRecruitment(continueTogether: r['continueTogether'] == true, completedByPlayerId: playerId, revision: command.expectedRecruitmentRevision, serverTimestamp: now));
       return const PartyCycleResult.success();
     });
   }
@@ -62,7 +64,8 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
       if (!(_now ?? DateTime.now)().toUtc().isBefore(window.completionCancelDeadline)) return const PartyCycleResult.failure(PartyCycleFailure.completionCancelExpired);
       final now = FieldValue.serverTimestamp();
       transaction.update(cycleRef, PartyCycleWritePlan.cancelCycle(completionRevision: command.expectedCompletionRevision, serverTimestamp: now));
-      transaction.update(recruitmentRef, PartyCycleWritePlan.cancelRecruitment(revision: command.expectedRecruitmentRevision, hasAvailableSlot: (r?['memberCount'] as int) < (r?['maxMemberCount'] as int), serverTimestamp: now));
+      _writeEvents(transaction, command.recruitmentId, List<Map<String, Object?>>.from((c?['completedMemberSnapshot'] as List).map((item) => Map<String, Object?>.from(item as Map))), r!, type: 'partyCompletionCancelled', eventRevision: command.expectedCompletionRevision + 1, serverTimestamp: now);
+      transaction.update(recruitmentRef, PartyCycleWritePlan.cancelRecruitment(revision: command.expectedRecruitmentRevision, hasAvailableSlot: (r['memberCount'] as int) < (r['maxMemberCount'] as int), serverTimestamp: now));
       return const PartyCycleResult.success();
     });
   }
@@ -107,8 +110,10 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
       final now = FieldValue.serverTimestamp();
       if (!cycle.exists) {
         transaction.set(cycleRef, PartyCycleWritePlan.incompleteCycle(recruitmentId: command.recruitmentId, cycleKey: command.expectedCycleKey, memberSnapshot: snapshot, serverTimestamp: now));
+        _writeEvents(transaction, command.recruitmentId, snapshot, r!, type: 'partyIncompleteEnded', eventRevision: 1, serverTimestamp: now);
       } else if (cycle.data()?['status'] == 'completionCancelled') {
         transaction.update(cycleRef, PartyCycleWritePlan.endCancelledCycle(completionRevision: cycle.data()?['completionRevision'] as int, memberSnapshot: snapshot, serverTimestamp: now));
+        _writeEvents(transaction, command.recruitmentId, snapshot, r!, type: 'partyIncompleteEnded', eventRevision: (cycle.data()?['completionRevision'] as int) + 1, serverTimestamp: now);
       }
       transaction.update(recruitmentRef, PartyCycleWritePlan.advanceRecruitment(continueTogether: r?['continueTogether'] == true, nextCycleKey: command.nextCycleKey, nextStartedAt: nextWindow.startedAt, nextEndsAt: nextWindow.endsAt, revision: command.expectedRecruitmentRevision, hasAvailableSlot: (r?['memberCount'] as int) < (r?['maxMemberCount'] as int), serverTimestamp: now, timestamp: (date) => Timestamp.fromDate(date)));
       return const PartyCycleResult.success();
@@ -124,6 +129,16 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
       result.add({'playerId': member.id, 'characterId': data['characterId'], 'characterNameSnapshot': data['characterNameSnapshot'], 'classNameSnapshot': data['classNameSnapshot'], 'role': data['role'], 'partyIndex': data['partyIndex'], 'itemLevelSnapshot': data['itemLevelSnapshot'], 'combatPowerSnapshot': data['combatPowerSnapshot']});
     }
     return result;
+  }
+
+  void _writeEvents(Transaction transaction, String recruitmentId, List<Map<String, Object?>> members, Map<String, dynamic> recruitment, {required String type, required int eventRevision, required Object serverTimestamp}) {
+    final expiresAt = Timestamp.fromDate((_now ?? DateTime.now)().toUtc().add(const Duration(days: 28)));
+    for (final member in members) {
+      final playerId = member['playerId'] as String;
+      final eventId = PartyEventWritePlan.id(recruitmentId: recruitmentId, cycleKey: recruitment['currentCycleKey'] as String, eventRevision: eventRevision, type: type);
+      final ref = _firestore.collection('players').doc(playerId).collection('events').doc(eventId);
+      transaction.set(ref, PartyEventWritePlan.cycle(eventId: eventId, type: type, playerId: playerId, recruitmentId: recruitmentId, cycleKey: recruitment['currentCycleKey'] as String, raidId: recruitment['raidId'] as String, difficultyId: recruitment['difficultyId'] as String, eventRevision: eventRevision, memberSnapshot: member, serverTimestamp: serverTimestamp, expiresAt: expiresAt));
+    }
   }
 
   Future<QuerySnapshot<Map<String, dynamic>>?> _loadMembers(String id) async { try { return await _recruitment(id).collection('members').get(); } on FirebaseException { return null; } }

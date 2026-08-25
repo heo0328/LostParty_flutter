@@ -1319,3 +1319,17 @@
 - 유료 스케줄러 대신 앱 동기화 시 현재 멤버가 멱등 전환을 실행하며, Rules가 서버 시간·7일 경계·revision을 최종 검증한다.
 - 회차 정책·Validator·저장 계획과 파티 생성 회귀 표적 테스트 12개 및 `flutter analyze --no-pub`가 통과했다.
 - 실행 앱 Repository 연결, 사용자 이벤트, 로컬 히스토리, Firestore Emulator, Rules 배포와 외부 유료 서비스 호출은 수행하지 않았다.
+
+---
+
+## Task-054. Player 이벤트와 로컬 히스토리
+
+- 작업 브랜치: `codex/party-events-local-history`
+- 회차 완료·미완료 종료·완료 취소 Transaction이 대상 Player별 Firestore 이벤트를 함께 생성하도록 연결했다.
+- 이벤트는 안정적인 ID, 회차 revision, Character Snapshot, 서버 발생 시각과 28일 만료 시각을 포함한다.
+- Rules에서 해당 회차가 같은 요청에서 변경됐고 대상 Player와 event revision이 Snapshot에 일치할 때만 이벤트 생성을 허용한다.
+- Drift schema v7에 `raidHistoryEntries`를 추가하고 이벤트 ID 기반 멱등 동기화, 숨김·재표시와 로컬 완료 정정을 구현했다.
+- 재동기화는 서버 상태를 갱신하되 사용자의 숨김과 로컬 정정을 유지한다.
+- active Player 이벤트를 시간순으로 읽어 로컬 DB에 반영하는 동기화 서비스를 추가했다.
+- 로컬 DB·이벤트·회차 저장 계획 표적 및 회귀 테스트 30개와 `flutter analyze --no-pub`가 통과했다.
+- 실행 앱 화면 연결, FCM, TTL 배포, Emulator와 외부 유료 서비스 호출은 수행하지 않았다.
