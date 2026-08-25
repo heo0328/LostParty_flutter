@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../../shared/formatters/korea_time_formatter.dart';
@@ -46,8 +47,9 @@ class _RaidStatusPageState extends State<RaidStatusPage> {
   void initState() {
     super.initState();
     _activeRaids = PartyReadStreamViewModel<ActiveRaidSummary>(
-      streamFactory: () =>
-          widget.partyReadRepository.watchActiveRaids(playerId: widget.playerId),
+      streamFactory: () => widget.partyReadRepository.watchActiveRaids(
+        playerId: widget.playerId,
+      ),
     )..start();
     _applications = PartyReadStreamViewModel<PartyApplicationSummary>(
       streamFactory: () => widget.partyReadRepository.watchApplications(
@@ -96,7 +98,11 @@ class _RaidStatusPageState extends State<RaidStatusPage> {
               emptyTitle: '진행 중인 레이드가 없습니다.',
               emptyDescription: '생성하거나 가입이 확정된 레이드가 여기에 표시됩니다.',
               rowsBuilder: (items) => [
-                for (final item in items) _ActiveRaidCard(summary: item),
+                for (final item in items)
+                  _ActiveRaidCard(
+                    summary: item,
+                    onOpen: () => context.push('/raid-status/${item.id}'),
+                  ),
               ],
             ),
             _PartyReadTab<PartyApplicationSummary>(
@@ -105,7 +111,11 @@ class _RaidStatusPageState extends State<RaidStatusPage> {
               icon: Icons.hourglass_empty_outlined,
               emptyTitle: '신청 중인 레이드가 없습니다.',
               emptyDescription: '승인 대기 신청과 처리 결과가 여기에 표시됩니다.',
-              rowsBuilder: _applicationRows,
+              rowsBuilder: (items) => _applicationRows(
+                items,
+                onOpen: (recruitmentId) =>
+                    context.push('/raid-status/$recruitmentId'),
+              ),
             ),
             _RaidHistoryTab(
               key: const ValueKey('raidHistoryPage'),
@@ -264,9 +274,10 @@ class _RaidHistoryTab extends StatelessWidget {
 }
 
 class _ActiveRaidCard extends StatelessWidget {
-  const _ActiveRaidCard({required this.summary});
+  const _ActiveRaidCard({required this.summary, required this.onOpen});
 
   final ActiveRaidSummary summary;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -275,40 +286,52 @@ class _ActiveRaidCard extends StatelessWidget {
     return Card(
       key: ValueKey(summary.id),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(summary.title, style: theme.textTheme.titleMedium),
-                ),
-                if (summary.isOwnedByCurrentPlayer) ...[
-                  const SizedBox(width: 12),
-                  const _Badge(label: '내가 만든 방', tone: _BadgeTone.highlight),
+      child: InkWell(
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      summary.title,
+                      style: theme.textTheme.titleMedium,
+                    ),
+                  ),
+                  if (summary.isOwnedByCurrentPlayer) ...[
+                    const SizedBox(width: 12),
+                    const _Badge(label: '내가 만든 방', tone: _BadgeTone.highlight),
+                  ],
                 ],
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(_raidLabel(summary.metadata), style: theme.textTheme.bodyMedium),
-            const SizedBox(height: 8),
-            _IconLine(
-              icon: Icons.schedule_outlined,
-              text: startAt == null
-                  ? '시작 시간 미정'
-                  : KoreaTimeFormatter.dayAndTime(startAt),
-            ),
-            const SizedBox(height: 6),
-            _IconLine(icon: Icons.groups_outlined, text: _memberLabel(summary)),
-            const SizedBox(height: 8),
-            Text(
-              _requirementLabel(summary.metadata),
-              style: theme.textTheme.bodySmall,
-            ),
-          ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _raidLabel(summary.metadata),
+                style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 8),
+              _IconLine(
+                icon: Icons.schedule_outlined,
+                text: startAt == null
+                    ? '시작 시간 미정'
+                    : KoreaTimeFormatter.dayAndTime(startAt),
+              ),
+              const SizedBox(height: 6),
+              _IconLine(
+                icon: Icons.groups_outlined,
+                text: _memberLabel(summary),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _requirementLabel(summary.metadata),
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -316,9 +339,10 @@ class _ActiveRaidCard extends StatelessWidget {
 }
 
 class _ApplicationCard extends StatelessWidget {
-  const _ApplicationCard({required this.summary});
+  const _ApplicationCard({required this.summary, required this.onOpen});
 
   final PartyApplicationSummary summary;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -327,39 +351,45 @@ class _ApplicationCard extends StatelessWidget {
     return Card(
       key: ValueKey('${summary.recruitmentId}_${summary.characterId}'),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    summary.characterName,
-                    style: theme.textTheme.titleMedium,
+      child: InkWell(
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      summary.characterName,
+                      style: theme.textTheme.titleMedium,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                _Badge(
-                  label: _applicationStatusLabel(summary.status),
-                  tone: _applicationStatusTone(summary.status),
-                ),
+                  const SizedBox(width: 12),
+                  _Badge(
+                    label: _applicationStatusLabel(summary.status),
+                    tone: _applicationStatusTone(summary.status),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '${summary.className} · ${_roleLabel(summary.requestedRole)}',
+                style: theme.textTheme.bodyMedium,
+              ),
+              if (resolution != null) ...[
+                const SizedBox(height: 8),
+                Text(resolution, style: theme.textTheme.bodyMedium),
               ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '${summary.className} · ${_roleLabel(summary.requestedRole)}',
-              style: theme.textTheme.bodyMedium,
-            ),
-            if (resolution != null) ...[
               const SizedBox(height: 8),
-              Text(resolution, style: theme.textTheme.bodyMedium),
+              Text(
+                _applicationTimeLabel(summary),
+                style: theme.textTheme.bodySmall,
+              ),
             ],
-            const SizedBox(height: 8),
-            Text(_applicationTimeLabel(summary), style: theme.textTheme.bodySmall),
-          ],
+          ),
         ),
       ),
     );
@@ -367,7 +397,10 @@ class _ApplicationCard extends StatelessWidget {
 }
 
 /// 승인 대기는 아직 결과를 기다리는 신청이므로 종료된 신청과 섞지 않는다.
-List<Widget> _applicationRows(List<PartyApplicationSummary> items) {
+List<Widget> _applicationRows(
+  List<PartyApplicationSummary> items, {
+  required ValueChanged<String> onOpen,
+}) {
   final pending = <PartyApplicationSummary>[];
   final resolved = <PartyApplicationSummary>[];
   for (final item in items) {
@@ -380,9 +413,11 @@ List<Widget> _applicationRows(List<PartyApplicationSummary> items) {
 
   return [
     if (pending.isNotEmpty) const _SectionHeader(label: '승인 대기'),
-    for (final item in pending) _ApplicationCard(summary: item),
+    for (final item in pending)
+      _ApplicationCard(summary: item, onOpen: () => onOpen(item.recruitmentId)),
     if (resolved.isNotEmpty) const _SectionHeader(label: '최근 처리 결과'),
-    for (final item in resolved) _ApplicationCard(summary: item),
+    for (final item in resolved)
+      _ApplicationCard(summary: item, onOpen: () => onOpen(item.recruitmentId)),
   ];
 }
 
@@ -489,7 +524,13 @@ class _HiddenHistoryToggle extends StatelessWidget {
   }
 }
 
-enum _HistoryAction { correctCompleted, correctIncomplete, clearCorrection, hide, restore }
+enum _HistoryAction {
+  correctCompleted,
+  correctIncomplete,
+  clearCorrection,
+  hide,
+  restore,
+}
 
 class _RaidHistoryCard extends StatelessWidget {
   const _RaidHistoryCard({required this.item, required this.viewModel});
@@ -570,10 +611,7 @@ class _RaidHistoryCard extends StatelessWidget {
         child: Text('정정 해제'),
       ),
     if (item.isHidden)
-      const PopupMenuItem(
-        value: _HistoryAction.restore,
-        child: Text('다시 표시'),
-      )
+      const PopupMenuItem(value: _HistoryAction.restore, child: Text('다시 표시'))
     else
       const PopupMenuItem(value: _HistoryAction.hide, child: Text('숨기기')),
   ];
@@ -686,8 +724,7 @@ String _syncFailureMessage(PartyEventSyncFailure failure) => switch (failure) {
   PartyEventSyncFailure.unknown => '기록을 동기화하지 못했습니다.',
 };
 
-String _roleLabel(PartyRole role) =>
-    role == PartyRole.support ? '서포터' : '딜러';
+String _roleLabel(PartyRole role) => role == PartyRole.support ? '서포터' : '딜러';
 
 String _raidLabel(RecruitmentMetadata metadata) {
   final difficulty = metadata.difficultyAlias == metadata.difficultyName
@@ -757,11 +794,12 @@ String _applicationStatusLabel(RecruitmentApplicationStatus status) =>
       RecruitmentApplicationStatus.superseded => '종료됨',
     };
 
-_BadgeTone _historyStatusTone(RaidHistoryServerStatus status) => switch (status) {
-  RaidHistoryServerStatus.completed => _BadgeTone.highlight,
-  RaidHistoryServerStatus.incompleteEnded => _BadgeTone.neutral,
-  RaidHistoryServerStatus.completionCancelled => _BadgeTone.negative,
-};
+_BadgeTone _historyStatusTone(RaidHistoryServerStatus status) =>
+    switch (status) {
+      RaidHistoryServerStatus.completed => _BadgeTone.highlight,
+      RaidHistoryServerStatus.incompleteEnded => _BadgeTone.neutral,
+      RaidHistoryServerStatus.completionCancelled => _BadgeTone.negative,
+    };
 
 String _overrideLabel(RaidHistoryLocalOverride override) => switch (override) {
   RaidHistoryLocalOverride.completed => '완료로 정정했습니다.',

@@ -17,15 +17,19 @@ class FakePartyReadRepository implements PartyReadRepository {
   FakePartyReadRepository({
     Stream<PartyReadSnapshot<ActiveRaidSummary>>? activeRaids,
     Stream<PartyReadSnapshot<PartyApplicationSummary>>? applications,
+    Stream<PartyReadDetailSnapshot<PublicRecruitmentSummary>>? recruitment,
   }) : _activeRaids = activeRaids ?? Stream.value(emptyActiveRaids),
-       _applications = applications ?? Stream.value(emptyApplications);
+       _applications = applications ?? Stream.value(emptyApplications),
+       _recruitment = recruitment;
 
   final Stream<PartyReadSnapshot<ActiveRaidSummary>> _activeRaids;
   final Stream<PartyReadSnapshot<PartyApplicationSummary>> _applications;
+  final Stream<PartyReadDetailSnapshot<PublicRecruitmentSummary>>? _recruitment;
 
   String? requestedActiveRaidsPlayerId;
   String? requestedApplicationsPlayerId;
   String? requestedApplicationsCycleKey;
+  String? requestedRecruitmentId;
 
   @override
   Stream<PartyReadSnapshot<ActiveRaidSummary>> watchActiveRaids({
@@ -51,8 +55,15 @@ class FakePartyReadRepository implements PartyReadRepository {
   }) => Stream<PartyReadSnapshot<PublicRecruitmentSummary>>.empty();
 
   @override
-  Stream<PublicRecruitmentSummary?> watchRecruitment(String recruitmentId) =>
-      Stream<PublicRecruitmentSummary?>.empty();
+  Stream<PartyReadDetailSnapshot<PublicRecruitmentSummary>> watchRecruitment(
+    String recruitmentId,
+  ) {
+    requestedRecruitmentId = recruitmentId;
+    return _recruitment ??
+        Stream.value(
+          const PartyReadDetailSnapshot(item: null, isFromCache: false),
+        );
+  }
 }
 
 class FakePartyEventSyncService implements PartyEventSyncService {

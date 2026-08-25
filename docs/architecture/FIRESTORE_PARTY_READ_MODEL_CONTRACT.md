@@ -144,6 +144,8 @@ PartyReadRepository
   watchRecruitment(recruitmentId)
 ```
 
+- `watchRecruitment`은 `PartyReadDetailSnapshot`을 반환한다. 문서 누락은 `item == null`이고, 캐시 여부는 목록과 같이 `isFromCache`로 전달한다.
+- `레이드 현황`의 진행 중·신청 중 목록은 `/raid-status/:recruitmentId` 읽기 전용 상세로 들어가며, Fake 쓰기 `RecruitmentDetailPage`와 경로·데이터를 섞지 않는다.
 - Domain Entity는 Firestore 타입을 import하지 않는다.
 - Firestore Timestamp·DocumentSnapshot 변환은 data 계층에서 종료한다.
 - 문서 누락은 상세 조회에서 `null`, 목록에서 제외로 처리한다.

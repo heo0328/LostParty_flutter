@@ -1372,3 +1372,15 @@
 - `flutter analyze --no-pub`과 전체 테스트 312개가 통과했다.
 - Android 실기기에서 진행 중 탭의 오프라인 안내가 사라지고, 재실행 시 `PERMISSION_DENIED` 로그가 더 이상 나오지 않음을 확인했다.
 - 모집 만들기 등 쓰기 UI는 여전히 Fake이므로 만든 방은 레이드 현황에 나타나지 않는다. 목록→상세 진입은 다음 작업이다.
+
+---
+
+## Task-058. 레이드 현황 목록에서 읽기 전용 상세 진입
+
+- 작업 브랜치: `cursor/firebase-runtime-stage1`
+- `watchRecruitment`이 `PartyReadDetailSnapshot`으로 문서 누락과 `isFromCache`를 함께 전달하도록 읽기 계약을 맞췄다.
+- 진행 중·신청 중 카드는 레이드 현황 Navigator의 `/raid-status/:recruitmentId`로 들어가 탭 상태를 유지한다.
+- `PartyReadDetailPage`는 Firestore 읽기만 표시하고 Fake `RecruitmentDetailPage`의 신청·수정 버튼을 연결하지 않는다.
+- loading·누락·권한 오류·오프라인 안내를 목록과 같은 문구로 표시한다.
+- ViewModel/Widget 표적 테스트와 전체 테스트 323개, `flutter analyze --no-pub`이 통과했다.
+- 쓰기 Repository 전환 전까지 로컬에서 만든 방은 이 상세에도 없다.

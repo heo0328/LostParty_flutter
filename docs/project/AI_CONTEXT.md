@@ -76,6 +76,7 @@
 - 레이드 현황은 `진행 중 / 신청 중 / 완료 기록` 상단 페이지로 구성
 - 레이드 현황 읽기는 Firestore Party Read Model과 Drift 완료 기록에 연결됨 (Task-056)
 - 진행 중·신청 중 카드와 완료 기록 숨김·정정 UX를 연결함 (Task-057)
+- 진행 중·신청 중 카드에서 Firestore 읽기 전용 상세로 진입함 (Task-058)
 - IndexedStack으로 탭별 Navigator 상태를 보존하고 내부 TabBarView 스와이프와 분리
 - Android 뒤로가기와 iOS 화면 전환을 고려한 공통 라우팅 기반 구성
 
@@ -350,8 +351,9 @@ Player binding의 계약·구현·Rules 배포와 실기기 검증을 완료했�
 - Task-050~054에서 Firestore 신청·가입·멤버 관리·회차 수명주기·Player 이벤트와 Drift v7 로컬 히스토리 기반을 구현했다.
 - Task-056에서 실행 앱 Firebase 읽기·이벤트 동기화 1단계를 완료했다. 레이드 현황 세 탭은 Firestore 읽기 stream과 Drift 완료 기록을 사용한다.
 - Task-057에서 진행 중·신청 중 카드, 완료 기록 숨김·정정 UX, 빈 목록 오프라인 안내 수정, `신청 중` collection group 규칙을 배포했다.
+- Task-058에서 레이드 현황 목록을 Firestore 읽기 전용 상세(`/raid-status/:recruitmentId`)에 연결했다. Fake 모집 상세와 데이터를 섞지 않는다.
 - 모집·신청·승인 등 쓰기 UI는 여전히 Fake Repository 경로다. 여기서 만든 방은 Firestore에 없으므로 레이드 현황에 나타나지 않는다.
-- 다음 구현은 레이드 현황 목록에서 Firestore 읽기 상세로 들어가는 진입 경계다.
+- 다음 구현은 모집·신청 명령의 실행 앱 Repository 전환이다.
 - Codex는 설계 계약, 문서 정합성, 작업 분해와 인수인계를 중심으로 유지하되 필요한 코드 수정은 가능하다.
 - 유료 플랜·결제수단·과금 가능 기능, Emulator, FCM과 TTL 배포는 별도 승인 전까지 제외한다.
 - Firestore SDK 캐시를 파티 Current State의 1차 로컬 Projection으로 사용하고 완료 히스토리만 Drift에 영속 저장하는 최소 정책을 적용 중이다.

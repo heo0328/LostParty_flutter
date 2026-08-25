@@ -20,6 +20,7 @@ import '../../features/account/domain/repositories/game_account_verification_gat
 import '../../features/player/domain/entities/player_session.dart';
 import '../../features/raid_status/data/services/firestore_party_event_sync_service.dart';
 import '../../features/raid_status/domain/services/party_event_sync_service.dart';
+import '../../features/raid_status/presentation/pages/party_read_detail_page.dart';
 import '../../features/raid_status/presentation/pages/raid_status_page.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_read_repository.dart';
 import '../../features/recruitment_list/domain/repositories/party_read_repository.dart';
@@ -165,6 +166,15 @@ GoRouter createAppRouter({
                   cycleKey: currentCycleKey,
                   raidCatalogRepository: raidCatalogRepository,
                 ),
+                routes: [
+                  GoRoute(
+                    path: ':recruitmentId',
+                    builder: (context, state) => PartyReadDetailPage(
+                      recruitmentId: state.pathParameters['recruitmentId']!,
+                      partyReadRepository: partyReadRepositoryOrDefault,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

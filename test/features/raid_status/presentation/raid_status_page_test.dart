@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lost_party/features/account/data/local/account_database.dart';
+import 'package:lost_party/features/raid_status/presentation/pages/party_read_detail_page.dart';
 import 'package:lost_party/features/raid_status/presentation/pages/raid_status_page.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_read_models.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
@@ -212,6 +214,53 @@ void main() {
     expect(find.text('act4 - normal'), findsOneWidget);
     expect(find.text('목록에서 숨긴 기록입니다.'), findsOneWidget);
   });
+
+  testWidgets('진행 중 카드를 누르면 읽기 전용 상세로 이동한다', (tester) async {
+    final database = AccountDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    final repository = FakePartyReadRepository(
+      activeRaids: Stream.value(
+        PartyReadSnapshot(items: [_activeRaid()], isFromCache: false),
+      ),
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _publicSummary(), isFromCache: false),
+      ),
+    );
+    final router = GoRouter(
+      initialLocation: '/raid-status',
+      routes: [
+        GoRoute(
+          path: '/raid-status',
+          builder: (context, state) => RaidStatusPage(
+            partyReadRepository: repository,
+            accountDatabase: database,
+            eventSyncService: FakePartyEventSyncService(),
+            playerId: 'player-1',
+            cycleKey: '2026-08-19',
+          ),
+          routes: [
+            GoRoute(
+              path: ':recruitmentId',
+              builder: (context, state) => PartyReadDetailPage(
+                recruitmentId: state.pathParameters['recruitmentId']!,
+                partyReadRepository: repository,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('4막 노말 모집'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('이 화면은 조회 전용입니다. 신청과 수정은 아직 연결되지 않았습니다.'), findsOneWidget);
+    expect(find.text('모집 수정'), findsNothing);
+    expect(repository.requestedRecruitmentId, 'recruitment-1');
+  });
 }
 
 ActiveRaidSummary _activeRaid({DateTime? raidStartAt}) => ActiveRaidSummary(
@@ -238,6 +287,30 @@ ActiveRaidSummary _activeRaid({DateTime? raidStartAt}) => ActiveRaidSummary(
   revision: 1,
   updatedAt: DateTime.utc(2026, 8, 20),
   isOwnedByCurrentPlayer: true,
+);
+
+PublicRecruitmentSummary _publicSummary() => PublicRecruitmentSummary(
+  id: 'recruitment-1',
+  title: '4막 노말 모집',
+  leaderUserId: 'player-1',
+  metadata: const RecruitmentMetadata(
+    catalogVersion: '2026-08-01',
+    raidId: 'act4',
+    difficultyId: 'normal',
+    raidName: '4막',
+    difficultyName: '노말',
+    difficultyAlias: '노말',
+    gateCount: 2,
+    minItemLevel: 1680,
+    minCombatPower: null,
+    experienceLevel: null,
+    maxPlayHours: null,
+  ),
+  memberCount: 2,
+  maxMemberCount: 8,
+  isRecruiting: true,
+  revision: 1,
+  updatedAt: DateTime.utc(2026, 8, 20),
 );
 
 PartyApplicationSummary _application({

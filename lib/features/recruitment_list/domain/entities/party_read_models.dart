@@ -9,6 +9,17 @@ class PartyReadSnapshot<T> {
   final bool isFromCache;
 }
 
+/// 문서 누락은 `item == null`로 두고, 캐시 여부는 목록과 같은 계약으로 전달한다.
+class PartyReadDetailSnapshot<T> {
+  const PartyReadDetailSnapshot({
+    required this.item,
+    required this.isFromCache,
+  });
+
+  final T? item;
+  final bool isFromCache;
+}
+
 class ActiveRaidSummary {
   const ActiveRaidSummary({
     required this.id,
