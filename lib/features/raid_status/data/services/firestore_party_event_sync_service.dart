@@ -2,23 +2,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../account/data/local/account_database.dart';
+import '../../domain/services/party_event_sync_service.dart';
 
-enum PartyEventSyncFailure { unauthenticated, playerBindingMissing, permissionDenied, temporarilyUnavailable, invalidData, unknown }
-
-class PartyEventSyncResult {
-  const PartyEventSyncResult.success(this.syncedCount) : failure = null;
-  const PartyEventSyncResult.failure(this.failure) : syncedCount = 0;
-  final int syncedCount;
-  final PartyEventSyncFailure? failure;
-  bool get isSuccess => failure == null;
-}
-
-class FirestorePartyEventSyncService {
+class FirestorePartyEventSyncService implements PartyEventSyncService {
   const FirestorePartyEventSyncService({required FirebaseFirestore firestore, required FirebaseAuth firebaseAuth, required AccountDatabase database}) : _firestore = firestore, _firebaseAuth = firebaseAuth, _database = database;
   final FirebaseFirestore _firestore;
   final FirebaseAuth _firebaseAuth;
   final AccountDatabase _database;
 
+  @override
   Future<PartyEventSyncResult> sync() async {
     final uid = _firebaseAuth.currentUser?.uid;
     if (uid == null) return const PartyEventSyncResult.failure(PartyEventSyncFailure.unauthenticated);

@@ -7,28 +7,37 @@ import 'app/router/app_router.dart';
 import 'features/account/data/local/account_database.dart';
 import 'features/account/domain/repositories/account_ownership_status_gateway.dart';
 import 'features/account/domain/repositories/game_account_verification_gateway.dart';
+import 'features/player/domain/entities/player_session.dart';
+import 'features/raid_status/domain/services/party_event_sync_service.dart';
+import 'features/recruitment_list/domain/repositories/party_read_repository.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
-    AppBootstrap(
+    AppBootstrap<PlayerSession>(
       initialize: initializeAppServices,
-      appBuilder: (_) => const MyApp(),
+      appBuilder: (_, playerSession) => MyApp(playerSession: playerSession),
     ),
   );
 }
 
 class MyApp extends StatefulWidget {
   const MyApp({
+    required this.playerSession,
     this.accountDatabase,
     this.ownershipStatusGateway,
     this.gameAccountVerificationGateway,
+    this.partyReadRepository,
+    this.partyEventSyncService,
     super.key,
   });
 
+  final PlayerSession playerSession;
   final AccountDatabase? accountDatabase;
   final AccountOwnershipStatusGateway? ownershipStatusGateway;
   final GameAccountVerificationGateway? gameAccountVerificationGateway;
+  final PartyReadRepository? partyReadRepository;
+  final PartyEventSyncService? partyEventSyncService;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -46,8 +55,11 @@ class _MyAppState extends State<MyApp> {
     _accountDatabase = widget.accountDatabase ?? AccountDatabase();
     _router = createAppRouter(
       accountDatabase: _accountDatabase,
+      playerSession: widget.playerSession,
       ownershipStatusGateway: widget.ownershipStatusGateway,
       gameAccountVerificationGateway: widget.gameAccountVerificationGateway,
+      partyReadRepository: widget.partyReadRepository,
+      partyEventSyncService: widget.partyEventSyncService,
     );
   }
 

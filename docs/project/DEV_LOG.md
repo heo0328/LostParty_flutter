@@ -1344,3 +1344,16 @@
 - 다음 작업의 목표, 확인 파일, 포함·제외 범위, 로컬 Projection 최소 정책과 완료 조건을 명시했다.
 - `AI_CONTEXT.md`의 현재 인계 기준을 과거 인계 기록보다 우선하도록 분리하고 오래된 현재 브랜치 표현을 과거 이력으로 정정했다.
 - 문서 색인에 Firestore 읽기·명령·이벤트 계약을 추가했다.
+
+---
+
+## Task-056. 실행 앱 Firebase 읽기·이벤트 동기화 전환 1단계
+
+- 작업 브랜치: `cursor/firebase-runtime-stage1`
+- `AppBootstrap`을 제네릭화하고 `initializeAppServices`가 `PlayerSession`을 반환하도록 바꿔 Composition Root에 PlayerId를 전달했다.
+- `FirestorePartyReadRepository`와 `PartyEventSyncService`를 레이드 현황에 연결하고, 테스트용 Fake 주입 경계를 유지했다.
+- `진행 중`은 `watchActiveRaids`, `신청 중`은 `watchApplications`, `완료 기록`은 Drift `loadRaidHistory` + 멱등 이벤트 동기화 ViewModel로 구성했다.
+- loading·빈 상태·캐시·오류·로컬 조회 실패를 구분해 표시하고, 로컬 DB 실패 시 동기화를 생략한다.
+- Android에서 `libsqlite3.so`(native assets) 누락으로 완료 기록이 실패하던 문제를 전체 재설치로 해소했다.
+- 표적 ViewModel/Widget 테스트와 Android 실기기 세 탭 검증을 통과했다.
+- Fake 기반 모집·신청 쓰기 UI와 명령 Repository 실행 앱 전환, Emulator, FCM, TTL 배포는 범위 밖이다.
