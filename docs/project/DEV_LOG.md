@@ -1621,3 +1621,16 @@
 - 코드, Firestore Rules와 Firebase 배포는 변경하지 않았다. 문서 정합성과 `git diff --check`로 검증한다.
 - Codex와 Cursor가 교대로 작업할 때 대화 맥락 없이도 이어갈 수 있도록 `NEXT_WORK.md`를 실행 지시서 형식으로 보강했다. 공통 인계 상태 양식, 단계별 담당, Task-073 코드 확인 지점·불변식·산출물·검증 체크리스트·중단 조건을 추가했다.
 - 다음: Task-073 공통 알림 이벤트 schema·Rules 기반.
+
+---
+
+## Task-073. 앱 내부 알림 이벤트·로컬 UI (2026-08-27)
+
+- 작업 브랜치: `cursor/party-notification-event-foundation`
+- 공통 `PartyEvent` / write plan / mapper와 자기 Player Event 읽기 Repository를 추가했다.
+- Rules에 신청·멤버십·`partyDisbanded` 유형별 create 검증을 넣고 `lost-party`에 배포했다. 일반 create는 열지 않았다.
+- 신청·멤버십·해산 명령 Transaction에 이벤트를 연결했다. `partyEnded`·`memberMoved`는 보류했다.
+- Drift v8 `partyNotificationReceipts`와 unread 집계, 현황 AppBar 알림 아이콘·목록 UI·문구 템플릿을 추가했다.
+- 다인 해산이 실패하던 원인을 Transaction에서 `get`/`delete` 교차 호출로 확인했다. 모든 읽기 후 쓰기로 수정했고 실기기에서 다인 해산이 정상 동작했다.
+- FCM·OS 알림·Emulator·유료 서비스는 제외했다.
+- 다음: Task-074 상세 페이지 최근 10개 텍스트 채팅 (`NEXT_WORK.md`). Task-073 브랜치는 `main` 병합 대기.

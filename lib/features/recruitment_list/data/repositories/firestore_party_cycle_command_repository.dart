@@ -2,11 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/entities/party_cycle_command.dart';
+import '../../domain/entities/party_event.dart';
 import '../../domain/policies/party_cycle_policy.dart';
 import '../../domain/repositories/party_cycle_command_repository.dart';
 import '../../domain/services/party_cycle_command_validator.dart';
 import '../mappers/party_cycle_write_plan.dart';
 import '../mappers/party_event_write_plan.dart';
+import '../mappers/party_lifecycle_event_writer.dart';
 
 class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepository {
   const FirestorePartyCycleCommandRepository({required FirebaseFirestore firestore, required FirebaseAuth firebaseAuth, DateTime Function()? now}) : _firestore = firestore, _firebaseAuth = firebaseAuth, _now = now;
@@ -136,6 +138,12 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
         PartyCycleFailure.temporarilyUnavailable,
       );
     }
+    final applications = await _loadApplications(command.recruitmentId);
+    if (applications == null) {
+      return const PartyCycleResult.failure(
+        PartyCycleFailure.temporarilyUnavailable,
+      );
+    }
     return _run((transaction, playerId) async {
       final recruitmentRef = _recruitment(command.recruitmentId);
       final recruitment = await transaction.get(recruitmentRef);
@@ -154,22 +162,66 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
         return const PartyCycleResult.failure(PartyCycleFailure.recruitmentClosed);
       }
       final raidId = r['raidId'] as String;
-      final now = FieldValue.serverTimestamp();
+      final cycleKey = r['currentCycleKey'];
+      if (cycleKey is! String || cycleKey.isEmpty) {
+        return const PartyCycleResult.failure(PartyCycleFailure.invalidRequest);
+      }
+
+      // Native Firestore transactions require every get before any write.
+      // Interleaving get/delete in the member loop fails multi-member disband
+      // with failed-precondition (surfaced as PartyCycleFailure.unknown).
+      final memberSnapshots = <DocumentSnapshot<Map<String, dynamic>>>[];
       for (final member in members.docs) {
-        final current = await transaction.get(member.reference);
+        memberSnapshots.add(await transaction.get(member.reference));
+      }
+      final applicationSnapshots = <DocumentSnapshot<Map<String, dynamic>>>[];
+      for (final application in applications.docs) {
+        applicationSnapshots.add(await transaction.get(application.reference));
+      }
+
+      final beforeMemberIds = <String>[];
+      final characterNames = <String, String?>{};
+      final assignmentDeletes =
+          <DocumentReference<Map<String, dynamic>>>[];
+      for (final current in memberSnapshots) {
         if (!current.exists) continue;
+        beforeMemberIds.add(current.id);
         final data = current.data()!;
+        characterNames[current.id] = data['characterNameSnapshot'] is String
+            ? data['characterNameSnapshot'] as String
+            : null;
         final characterId = data['characterId'] as String?;
-        transaction.delete(member.reference);
         if (characterId != null && characterId.isNotEmpty) {
-          transaction.delete(
+          assignmentDeletes.add(
             _firestore
                 .collection('players')
-                .doc(member.id)
+                .doc(current.id)
                 .collection('activeRaidAssignments')
                 .doc('${characterId}_$raidId'),
           );
         }
+      }
+      final pendingApplicantIds = <String>[];
+      for (final current in applicationSnapshots) {
+        if (!current.exists) continue;
+        final data = current.data();
+        if (data?['status'] != 'pending') continue;
+        final applicantId = data?['applicantPlayerId'];
+        if (applicantId is! String || applicantId.isEmpty) continue;
+        pendingApplicantIds.add(applicantId);
+        characterNames[applicantId] = data?['characterNameSnapshot'] is String
+            ? data!['characterNameSnapshot'] as String
+            : characterNames[applicantId];
+      }
+
+      final now = FieldValue.serverTimestamp();
+      final nextRevision = command.expectedRecruitmentRevision + 1;
+      for (final current in memberSnapshots) {
+        if (!current.exists) continue;
+        transaction.delete(current.reference);
+      }
+      for (final assignmentRef in assignmentDeletes) {
+        transaction.delete(assignmentRef);
       }
       transaction.update(
         recruitmentRef,
@@ -177,6 +229,24 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
           revision: command.expectedRecruitmentRevision,
           serverTimestamp: now,
         ),
+      );
+      PartyLifecycleEventWriter.writeToRecipients(
+        transaction: transaction,
+        firestore: _firestore,
+        type: PartyEventType.partyDisbanded,
+        recipientPlayerIds: {...beforeMemberIds, ...pendingApplicantIds},
+        recruitmentId: command.recruitmentId,
+        cycleKey: cycleKey,
+        recruitmentRevision: nextRevision,
+        actorPlayerId: playerId,
+        raidId: raidId,
+        difficultyId: r['difficultyId'] is String
+            ? r['difficultyId'] as String
+            : null,
+        characterNameByPlayerId: characterNames,
+        endReason: 'disbandedByLeader',
+        serverTimestamp: now,
+        now: _now,
       );
       return const PartyCycleResult.success();
     });
@@ -203,13 +273,59 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
     }
   }
 
-  Future<QuerySnapshot<Map<String, dynamic>>?> _loadMembers(String id) async { try { return await _recruitment(id).collection('members').get(); } on FirebaseException { return null; } }
-  DocumentReference<Map<String, dynamic>> _recruitment(String id) => _firestore.collection('recruitments').doc(id);
+  Future<QuerySnapshot<Map<String, dynamic>>?> _loadMembers(String id) async {
+    try {
+      return await _recruitment(id).collection('members').get();
+    } on FirebaseException {
+      return null;
+    }
+  }
+
+  Future<QuerySnapshot<Map<String, dynamic>>?> _loadApplications(
+    String id,
+  ) async {
+    try {
+      return await _recruitment(id).collection('applications').get();
+    } on FirebaseException {
+      return null;
+    }
+  }
+
+  DocumentReference<Map<String, dynamic>> _recruitment(String id) =>
+      _firestore.collection('recruitments').doc(id);
 
   Future<PartyCycleResult> _run(Future<PartyCycleResult> Function(Transaction, String) action) async {
     final uid = _firebaseAuth.currentUser?.uid;
     if (uid == null) return const PartyCycleResult.failure(PartyCycleFailure.unauthenticated);
-    try { return await _firestore.runTransaction((transaction) async { final binding = await transaction.get(_firestore.collection('authBindings').doc(uid)); final data = binding.data(); final playerId = data?['playerId']; if (data?['status'] != 'active' || playerId is! String || playerId.isEmpty) return const PartyCycleResult.failure(PartyCycleFailure.playerBindingMissing); return action(transaction, playerId); }); } on FirebaseException catch (error) { return PartyCycleResult.failure(switch (error.code) { 'permission-denied' => PartyCycleFailure.permissionDenied, 'unavailable' || 'deadline-exceeded' || 'aborted' => PartyCycleFailure.temporarilyUnavailable, _ => PartyCycleFailure.unknown }); } catch (_) { return const PartyCycleResult.failure(PartyCycleFailure.unknown); }
+    try {
+      return await _firestore.runTransaction((transaction) async {
+        final binding = await transaction.get(
+          _firestore.collection('authBindings').doc(uid),
+        );
+        final data = binding.data();
+        final playerId = data?['playerId'];
+        if (data?['status'] != 'active' ||
+            playerId is! String ||
+            playerId.isEmpty) {
+          return const PartyCycleResult.failure(
+            PartyCycleFailure.playerBindingMissing,
+          );
+        }
+        return action(transaction, playerId);
+      });
+    } on FirebaseException catch (error) {
+      return PartyCycleResult.failure(switch (error.code) {
+        'permission-denied' => PartyCycleFailure.permissionDenied,
+        'unavailable' ||
+        'deadline-exceeded' ||
+        'aborted' ||
+        'failed-precondition' =>
+          PartyCycleFailure.temporarilyUnavailable,
+        _ => PartyCycleFailure.unknown,
+      });
+    } catch (_) {
+      return const PartyCycleResult.failure(PartyCycleFailure.unknown);
+    }
   }
 }
 

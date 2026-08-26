@@ -576,6 +576,12 @@ service cloud.firestore {
           || after.status == 'disbanded');
     }
 
+    function validEventTiming(data) {
+      return data.occurredAt == request.time
+        && data.expiresAt >= request.time + duration.value(27, 'd')
+        && data.expiresAt <= request.time + duration.value(29, 'd');
+    }
+
     function validCycleEvent(playerId, eventId, data) {
       let cycle = getAfter(recruitmentCyclePath(
         data.recruitmentId,
@@ -587,6 +593,12 @@ service cloud.firestore {
           ? 'completionCancelled'
           : 'incompleteEnded');
       return hasActiveBinding()
+        && data.keys().hasOnly([
+          'schemaVersion', 'eventId', 'type', 'playerId', 'recruitmentId',
+          'cycleKey', 'raidId', 'difficultyId', 'eventRevision', 'characterId',
+          'characterNameSnapshot', 'classNameSnapshot', 'role', 'partyIndex',
+          'occurredAt', 'expiresAt'
+        ])
         && data.schemaVersion == 1
         && data.eventId == eventId
         && data.playerId == playerId
@@ -602,9 +614,284 @@ service cloud.firestore {
         && data.raidId is string
         && data.difficultyId is string
         && data.characterId is string
-        && data.occurredAt == request.time
-        && data.expiresAt >= request.time + duration.value(27, 'd')
-        && data.expiresAt <= request.time + duration.value(29, 'd');
+        && validEventTiming(data);
+    }
+
+    // 신청 계열: 같은 Transaction의 application 상태 전이와 수신자만 허용.
+    // 명령 Repository가 이벤트를 쓰지 않으면 orphan create는 전이 검증에서 거절된다.
+    function validApplicationEvent(playerId, eventId, data) {
+      return data.type == 'applicationSubmitted'
+        ? validApplicationSubmittedEvent(playerId, eventId, data)
+        : (data.type == 'applicationApproved'
+          ? validApplicationApprovedEvent(playerId, eventId, data)
+          : (data.type == 'applicationRejected'
+            ? validApplicationRejectedEvent(playerId, eventId, data)
+            : (data.type == 'applicationWithdrawn'
+              ? validApplicationWithdrawnEvent(playerId, eventId, data)
+              : false)));
+    }
+
+    function validApplicationEventBase(playerId, eventId, data) {
+      return hasActiveBinding()
+        && data.keys().hasOnly([
+          'schemaVersion', 'eventId', 'type', 'playerId', 'recruitmentId',
+          'eventRevision', 'actorPlayerId', 'characterNameSnapshot',
+          'classNameSnapshot', 'role', 'raidId', 'difficultyId',
+          'rejectionCount', 'occurredAt', 'expiresAt'
+        ])
+        && data.schemaVersion == 1
+        && data.eventId == eventId
+        && data.playerId == playerId
+        && data.recruitmentId is string
+        && data.eventRevision is int
+        && data.actorPlayerId is string
+        && data.characterNameSnapshot is string
+        && validEventTiming(data);
+    }
+
+    function validApplicationSubmittedEvent(playerId, eventId, data) {
+      let recruitment = get(recruitmentPath(data.recruitmentId)).data;
+      let application = getAfter(recruitmentApplicationPath(
+        data.recruitmentId,
+        data.actorPlayerId
+      )).data;
+      return validApplicationEventBase(playerId, eventId, data)
+        && data.type == 'applicationSubmitted'
+        && currentPlayerId() == data.actorPlayerId
+        && playerId == recruitment.leaderPlayerId
+        && playerId != data.actorPlayerId
+        && application.status == 'pending'
+        && application.applicantPlayerId == data.actorPlayerId
+        && application.revision == data.eventRevision
+        && application.updatedAt == request.time
+        && application.characterNameSnapshot == data.characterNameSnapshot;
+    }
+
+    function validApplicationApprovedEvent(playerId, eventId, data) {
+      let application = getAfter(recruitmentApplicationPath(
+        data.recruitmentId,
+        playerId
+      )).data;
+      return validApplicationEventBase(playerId, eventId, data)
+        && data.type == 'applicationApproved'
+        && canApproveApplications(data.recruitmentId)
+        && currentPlayerId() == data.actorPlayerId
+        && playerId == application.applicantPlayerId
+        && playerId != data.actorPlayerId
+        && application.status == 'approved'
+        && application.revision == data.eventRevision
+        && application.updatedAt == request.time
+        && application.characterNameSnapshot == data.characterNameSnapshot;
+    }
+
+    function validApplicationRejectedEvent(playerId, eventId, data) {
+      let application = getAfter(recruitmentApplicationPath(
+        data.recruitmentId,
+        playerId
+      )).data;
+      return validApplicationEventBase(playerId, eventId, data)
+        && data.type == 'applicationRejected'
+        && canApproveApplications(data.recruitmentId)
+        && currentPlayerId() == data.actorPlayerId
+        && playerId == application.applicantPlayerId
+        && playerId != data.actorPlayerId
+        && application.status == 'rejected'
+        && application.revision == data.eventRevision
+        && application.updatedAt == request.time
+        && application.characterNameSnapshot == data.characterNameSnapshot
+        && (!('rejectionCount' in data)
+          || data.rejectionCount == application.rejectionCount);
+    }
+
+    function validApplicationWithdrawnEvent(playerId, eventId, data) {
+      let recruitment = get(recruitmentPath(data.recruitmentId)).data;
+      let application = getAfter(recruitmentApplicationPath(
+        data.recruitmentId,
+        data.actorPlayerId
+      )).data;
+      return validApplicationEventBase(playerId, eventId, data)
+        && data.type == 'applicationWithdrawn'
+        && currentPlayerId() == data.actorPlayerId
+        && playerId == recruitment.leaderPlayerId
+        && playerId != data.actorPlayerId
+        && application.status == 'withdrawn'
+        && application.applicantPlayerId == data.actorPlayerId
+        && application.revision == data.eventRevision
+        && application.updatedAt == request.time
+        && application.characterNameSnapshot == data.characterNameSnapshot;
+    }
+
+    // 멤버십 계열: 모집 revision·멤버 전후 집합과 수신자를 검증한다.
+    function validMembershipEvent(playerId, eventId, data) {
+      return data.type == 'memberJoined'
+        ? validMemberJoinedEvent(playerId, eventId, data)
+        : (data.type == 'memberLeft'
+          ? validMemberLeftEvent(playerId, eventId, data)
+          : (data.type == 'memberKicked'
+            ? validMemberKickedEvent(playerId, eventId, data)
+            : (data.type == 'memberCharacterChanged'
+              ? validMemberCharacterChangedEvent(playerId, eventId, data)
+              : false)));
+    }
+
+    function validMembershipEventBase(playerId, eventId, data) {
+      return hasActiveBinding()
+        && data.keys().hasOnly([
+          'schemaVersion', 'eventId', 'type', 'playerId', 'recruitmentId',
+          'eventRevision', 'actorPlayerId', 'targetPlayerId',
+          'characterNameSnapshot', 'classNameSnapshot', 'role',
+          'previousCharacterNameSnapshot', 'targetCharacterNameSnapshot',
+          'raidId', 'difficultyId', 'partyIndex', 'slotIndex',
+          'previousPartyIndex', 'previousSlotIndex', 'occurredAt', 'expiresAt'
+        ])
+        && data.schemaVersion == 1
+        && data.eventId == eventId
+        && data.playerId == playerId
+        && data.recruitmentId is string
+        && data.eventRevision is int
+        && data.actorPlayerId is string
+        && validEventTiming(data);
+    }
+
+    function validMemberJoinedEvent(playerId, eventId, data) {
+      let before = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
+      return validMembershipEventBase(playerId, eventId, data)
+        && data.type == 'memberJoined'
+        && currentPlayerId() == data.actorPlayerId
+        && data.eventRevision == after.revision
+        && data.eventRevision == before.revision + 1
+        && !(data.actorPlayerId in before.memberPlayerIds)
+        && data.actorPlayerId in after.memberPlayerIds
+        && playerId in before.memberPlayerIds
+        && playerId != data.actorPlayerId
+        && data.characterNameSnapshot is string
+        && existsAfter(recruitmentMemberPath(
+          data.recruitmentId,
+          data.actorPlayerId
+        ));
+    }
+
+    function validMemberLeftEvent(playerId, eventId, data) {
+      let before = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
+      return validMembershipEventBase(playerId, eventId, data)
+        && data.type == 'memberLeft'
+        && currentPlayerId() == data.actorPlayerId
+        && data.eventRevision == after.revision
+        && data.eventRevision == before.revision + 1
+        && data.actorPlayerId in before.memberPlayerIds
+        && !(data.actorPlayerId in after.memberPlayerIds)
+        && playerId in before.memberPlayerIds
+        && playerId != data.actorPlayerId
+        && data.characterNameSnapshot is string;
+    }
+
+    function validMemberKickedEvent(playerId, eventId, data) {
+      let before = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
+      return validMembershipEventBase(playerId, eventId, data)
+        && data.type == 'memberKicked'
+        && currentPlayerId() == data.actorPlayerId
+        && before.leaderPlayerId == data.actorPlayerId
+        && data.targetPlayerId is string
+        && data.eventRevision == after.revision
+        && data.eventRevision == before.revision + 1
+        && data.targetPlayerId in before.memberPlayerIds
+        && !(data.targetPlayerId in after.memberPlayerIds)
+        && playerId != data.actorPlayerId
+        && (playerId == data.targetPlayerId
+          || playerId in after.memberPlayerIds)
+        && data.targetCharacterNameSnapshot is string;
+    }
+
+    function validMemberCharacterChangedEvent(playerId, eventId, data) {
+      let before = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
+      let memberAfter = getAfter(recruitmentMemberPath(
+        data.recruitmentId,
+        data.actorPlayerId
+      )).data;
+      return validMembershipEventBase(playerId, eventId, data)
+        && data.type == 'memberCharacterChanged'
+        && currentPlayerId() == data.actorPlayerId
+        && data.eventRevision == after.revision
+        && data.eventRevision == before.revision + 1
+        && data.actorPlayerId in before.memberPlayerIds
+        && data.actorPlayerId in after.memberPlayerIds
+        && playerId in before.memberPlayerIds
+        && playerId != data.actorPlayerId
+        && memberAfter.updatedAt == request.time
+        && data.characterNameSnapshot is string
+        && data.previousCharacterNameSnapshot is string;
+    }
+
+    function validLifecycleEvent(playerId, eventId, data) {
+      return data.type == 'partyDisbanded'
+        ? validPartyDisbandedEvent(playerId, eventId, data)
+        : false;
+    }
+
+    function validPartyDisbandedEvent(playerId, eventId, data) {
+      let before = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
+      let applicationPath = recruitmentApplicationPath(
+        data.recruitmentId,
+        playerId
+      );
+      let isFormerMember = playerId in before.memberPlayerIds;
+      let isPendingApplicant = exists(applicationPath)
+        && get(applicationPath).data.status == 'pending'
+        && get(applicationPath).data.applicantPlayerId == playerId;
+      return hasActiveBinding()
+        && data.keys().hasOnly([
+          'schemaVersion', 'eventId', 'type', 'playerId', 'recruitmentId',
+          'cycleKey', 'eventRevision', 'actorPlayerId', 'raidId',
+          'difficultyId', 'characterNameSnapshot', 'endReason',
+          'occurredAt', 'expiresAt'
+        ])
+        && data.schemaVersion == 1
+        && data.eventId == eventId
+        && data.playerId == playerId
+        && data.type == 'partyDisbanded'
+        && data.recruitmentId is string
+        && data.cycleKey == before.currentCycleKey
+        && data.eventRevision is int
+        && data.actorPlayerId is string
+        && currentPlayerId() == data.actorPlayerId
+        && data.actorPlayerId == before.leaderPlayerId
+        && playerId != data.actorPlayerId
+        && after.status == 'disbanded'
+        && after.revision == before.revision + 1
+        && data.eventRevision == after.revision
+        && (isFormerMember || isPendingApplicant)
+        && validEventTiming(data);
+    }
+
+    function validPlayerEvent(playerId, eventId, data) {
+      return data.type in [
+          'partyCompleted',
+          'partyCompletionCancelled',
+          'partyIncompleteEnded'
+        ]
+        ? validCycleEvent(playerId, eventId, data)
+        : (data.type in [
+            'applicationSubmitted',
+            'applicationApproved',
+            'applicationRejected',
+            'applicationWithdrawn'
+          ]
+          ? validApplicationEvent(playerId, eventId, data)
+          : (data.type in [
+              'memberJoined',
+              'memberLeft',
+              'memberKicked',
+              'memberCharacterChanged'
+            ]
+            ? validMembershipEvent(playerId, eventId, data)
+            : (data.type == 'partyDisbanded'
+              ? validLifecycleEvent(playerId, eventId, data)
+              : false)));
     }
 
     function validPendingApplication(recruitmentId, playerId, data) {
@@ -817,7 +1104,8 @@ service cloud.firestore {
       match /events/{eventId} {
         allow get, list: if hasActiveBinding()
           && playerId == currentPlayerId();
-        allow create: if validCycleEvent(
+        // 일반 create를 열지 않는다. type별 상태 전이·수신자·필드만 허용.
+        allow create: if validPlayerEvent(
           playerId,
           eventId,
           request.resource.data

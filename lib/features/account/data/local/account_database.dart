@@ -127,12 +127,33 @@ class RaidHistoryEntries extends Table {
   Set<Column<Object>> get primaryKey => {eventId};
 }
 
+/// Firestore Player Event의 로컬 알림 receipt. 읽음은 기기 전용이다.
+class PartyNotificationReceipts extends Table {
+  TextColumn get eventId => text()();
+  TextColumn get playerId => text()();
+  TextColumn get type => text()();
+  TextColumn get recruitmentId => text()();
+  TextColumn get cycleKey => text().nullable()();
+  TextColumn get raidId => text().nullable()();
+  TextColumn get difficultyId => text().nullable()();
+  TextColumn get characterNameSnapshot => text().nullable()();
+  DateTimeColumn get occurredAt => dateTime()();
+  DateTimeColumn get expiresAt => dateTime()();
+  DateTimeColumn get readAt => dateTime().nullable()();
+  DateTimeColumn get firstSyncedAt => dateTime()();
+  DateTimeColumn get lastSyncedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {eventId};
+}
+
 @DriftDatabase(
   tables: [
     GameAccounts,
     AccountCharacters,
     CharacterBuildSnapshots,
     RaidHistoryEntries,
+    PartyNotificationReceipts,
   ],
 )
 class AccountDatabase extends _$AccountDatabase {
@@ -140,7 +161,7 @@ class AccountDatabase extends _$AccountDatabase {
     : super(executor ?? driftDatabase(name: 'lost_party'));
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -183,6 +204,9 @@ class AccountDatabase extends _$AccountDatabase {
       }
       if (from < 7) {
         await migrator.createTable(raidHistoryEntries);
+      }
+      if (from < 8) {
+        await migrator.createTable(partyNotificationReceipts);
       }
     },
   );
@@ -272,6 +296,107 @@ class AccountDatabase extends _$AccountDatabase {
           ..where((table) => table.eventId.equals(eventId)))
         .write(
           RaidHistoryEntriesCompanion(localStatusOverride: Value(status)),
+        );
+  }
+
+  /// 알림 receipt를 멱등 반영한다. 기존 [readAt]은 유지한다.
+  Future<void> syncPartyNotificationReceipt({
+    required String eventId,
+    required String playerId,
+    required String type,
+    required String recruitmentId,
+    required DateTime occurredAt,
+    required DateTime expiresAt,
+    String? cycleKey,
+    String? raidId,
+    String? difficultyId,
+    String? characterNameSnapshot,
+    DateTime? syncedAt,
+  }) async {
+    final timestamp = syncedAt ?? DateTime.now().toUtc();
+    final existing =
+        await (select(partyNotificationReceipts)
+              ..where((table) => table.eventId.equals(eventId)))
+            .getSingleOrNull();
+    if (existing == null) {
+      await into(partyNotificationReceipts).insert(
+        PartyNotificationReceiptsCompanion.insert(
+          eventId: eventId,
+          playerId: playerId,
+          type: type,
+          recruitmentId: recruitmentId,
+          cycleKey: Value(cycleKey),
+          raidId: Value(raidId),
+          difficultyId: Value(difficultyId),
+          characterNameSnapshot: Value(characterNameSnapshot),
+          occurredAt: occurredAt,
+          expiresAt: expiresAt,
+          firstSyncedAt: timestamp,
+          lastSyncedAt: timestamp,
+        ),
+      );
+      return;
+    }
+    await (update(partyNotificationReceipts)
+          ..where((table) => table.eventId.equals(eventId)))
+        .write(
+          PartyNotificationReceiptsCompanion(
+            type: Value(type),
+            recruitmentId: Value(recruitmentId),
+            cycleKey: Value(cycleKey),
+            raidId: Value(raidId),
+            difficultyId: Value(difficultyId),
+            characterNameSnapshot: Value(characterNameSnapshot),
+            occurredAt: Value(occurredAt),
+            expiresAt: Value(expiresAt),
+            lastSyncedAt: Value(timestamp),
+          ),
+        );
+  }
+
+  Future<List<PartyNotificationReceipt>> loadRecentPartyNotifications(
+    String playerId, {
+    int limit = 20,
+    DateTime? now,
+  }) {
+    final cutoff = (now ?? DateTime.now()).toUtc();
+    return (select(partyNotificationReceipts)
+          ..where(
+            (table) =>
+                table.playerId.equals(playerId) &
+                table.expiresAt.isBiggerThanValue(cutoff),
+          )
+          ..orderBy([(table) => OrderingTerm.desc(table.occurredAt)])
+          ..limit(limit))
+        .get();
+  }
+
+  Future<int> countUnreadPartyNotifications(
+    String playerId, {
+    DateTime? now,
+  }) async {
+    final cutoff = (now ?? DateTime.now()).toUtc();
+    final rows =
+        await (select(partyNotificationReceipts)..where(
+              (table) =>
+                  table.playerId.equals(playerId) &
+                  table.readAt.isNull() &
+                  table.expiresAt.isBiggerThanValue(cutoff),
+            ))
+            .get();
+    return rows.length;
+  }
+
+  Future<void> markPartyNotificationRead(
+    String eventId, {
+    DateTime? readAt,
+  }) {
+    return (update(partyNotificationReceipts)
+          ..where((table) => table.eventId.equals(eventId)))
+        .write(
+          PartyNotificationReceiptsCompanion(
+            readAt: Value(readAt ?? DateTime.now().toUtc()),
+          ),
         );
   }
 

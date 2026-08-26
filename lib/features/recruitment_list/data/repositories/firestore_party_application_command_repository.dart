@@ -2,8 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/entities/party_application_command.dart';
+import '../../domain/entities/party_event.dart';
 import '../../domain/repositories/party_application_command_repository.dart';
 import '../../domain/services/party_application_command_validator.dart';
+import '../mappers/party_application_event_writer.dart';
 import '../mappers/party_application_write_plan.dart';
 
 class FirestorePartyApplicationCommandRepository
@@ -94,7 +96,17 @@ class FirestorePartyApplicationCommandRepository
         );
       }
 
+      final leaderPlayerId = r?['leaderPlayerId'];
+      if (leaderPlayerId is! String || leaderPlayerId.isEmpty) {
+        return const PartyApplicationCommandResult.failure(
+          PartyApplicationFailure.invalidRequest,
+        );
+      }
+
       final now = FieldValue.serverTimestamp();
+      final raidId = r?['raidId'] is String ? r!['raidId'] as String : null;
+      final difficultyId =
+          r?['difficultyId'] is String ? r!['difficultyId'] as String : null;
       if (!application.exists) {
         transaction.set(
           applicationRef,
@@ -106,6 +118,21 @@ class FirestorePartyApplicationCommandRepository
             itemLevel: itemLevel,
             serverTimestamp: now,
           ),
+        );
+        PartyApplicationEventWriter.write(
+          transaction: transaction,
+          firestore: _firestore,
+          type: PartyEventType.applicationSubmitted,
+          recipientPlayerId: leaderPlayerId,
+          recruitmentId: command.recruitmentId,
+          applicationRevision: 1,
+          actorPlayerId: playerId,
+          characterNameSnapshot: name,
+          classNameSnapshot: className,
+          role: command.requestedRole.name,
+          raidId: raidId,
+          difficultyId: difficultyId,
+          serverTimestamp: now,
         );
         return const PartyApplicationCommandResult.success();
       }
@@ -135,6 +162,7 @@ class FirestorePartyApplicationCommandRepository
           PartyApplicationFailure.invalidRequest,
         );
       }
+      final nextRevision = revision + 1;
       transaction.update(
         applicationRef,
         PartyApplicationWritePlan.reapply(
@@ -142,9 +170,24 @@ class FirestorePartyApplicationCommandRepository
           characterName: name,
           className: className,
           itemLevel: itemLevel,
-          nextRevision: revision + 1,
+          nextRevision: nextRevision,
           serverTimestamp: now,
         ),
+      );
+      PartyApplicationEventWriter.write(
+        transaction: transaction,
+        firestore: _firestore,
+        type: PartyEventType.applicationSubmitted,
+        recipientPlayerId: leaderPlayerId,
+        recruitmentId: command.recruitmentId,
+        applicationRevision: nextRevision,
+        actorPlayerId: playerId,
+        characterNameSnapshot: name,
+        classNameSnapshot: className,
+        role: command.requestedRole.name,
+        raidId: raidId,
+        difficultyId: difficultyId,
+        serverTimestamp: now,
       );
       return const PartyApplicationCommandResult.success();
     });
@@ -158,14 +201,15 @@ class FirestorePartyApplicationCommandRepository
     final invalid = validator.validateWithdraw(command);
     if (invalid != null) return PartyApplicationCommandResult.failure(invalid);
     return _run((transaction, playerId) async {
-      final ref = _firestore
+      final recruitmentRef = _firestore
           .collection('recruitments')
-          .doc(command.recruitmentId)
-          .collection('applications')
-          .doc(playerId);
+          .doc(command.recruitmentId);
+      final ref = recruitmentRef.collection('applications').doc(playerId);
+      final recruitment = await transaction.get(recruitmentRef);
       final snapshot = await transaction.get(ref);
       final data = snapshot.data();
-      if (!snapshot.exists) {
+      final recruitmentData = recruitment.data();
+      if (!snapshot.exists || !recruitment.exists) {
         return const PartyApplicationCommandResult.failure(
           PartyApplicationFailure.notFound,
         );
@@ -180,12 +224,46 @@ class FirestorePartyApplicationCommandRepository
           PartyApplicationFailure.revisionConflict,
         );
       }
+      final leaderPlayerId = recruitmentData?['leaderPlayerId'];
+      final characterName = data?['characterNameSnapshot'];
+      if (leaderPlayerId is! String ||
+          leaderPlayerId.isEmpty ||
+          characterName is! String) {
+        return const PartyApplicationCommandResult.failure(
+          PartyApplicationFailure.invalidRequest,
+        );
+      }
+      final now = FieldValue.serverTimestamp();
+      final nextRevision = command.expectedRevision + 1;
       transaction.update(
         ref,
         PartyApplicationWritePlan.withdraw(
-          nextRevision: command.expectedRevision + 1,
-          serverTimestamp: FieldValue.serverTimestamp(),
+          nextRevision: nextRevision,
+          serverTimestamp: now,
         ),
+      );
+      PartyApplicationEventWriter.write(
+        transaction: transaction,
+        firestore: _firestore,
+        type: PartyEventType.applicationWithdrawn,
+        recipientPlayerId: leaderPlayerId,
+        recruitmentId: command.recruitmentId,
+        applicationRevision: nextRevision,
+        actorPlayerId: playerId,
+        characterNameSnapshot: characterName,
+        classNameSnapshot: data?['classNameSnapshot'] is String
+            ? data!['classNameSnapshot'] as String
+            : null,
+        role: data?['requestedRole'] is String
+            ? data!['requestedRole'] as String
+            : null,
+        raidId: recruitmentData?['raidId'] is String
+            ? recruitmentData!['raidId'] as String
+            : null,
+        difficultyId: recruitmentData?['difficultyId'] is String
+            ? recruitmentData!['difficultyId'] as String
+            : null,
+        serverTimestamp: now,
       );
       return const PartyApplicationCommandResult.success();
     });
