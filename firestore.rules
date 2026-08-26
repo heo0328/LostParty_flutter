@@ -1112,6 +1112,13 @@ service cloud.firestore {
         );
         allow update, delete: if false;
       }
+
+      match /weeklyRaidClaims/{claimId} {
+        // Task-075 A: 자기 Player의 Claim 읽기만 연다. 쓰기는 후속 명령 계약 전까지 금지한다.
+        allow get, list: if hasActiveBinding()
+          && playerId == currentPlayerId();
+        allow create, update, delete: if false;
+      }
     }
 
     match /accountVerificationChallenges/{challengeId} {

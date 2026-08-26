@@ -7,7 +7,9 @@ import 'app/router/app_router.dart';
 import 'app/theme/app_theme.dart';
 import 'features/account/data/local/account_database.dart';
 import 'features/account/domain/repositories/account_ownership_status_gateway.dart';
+import 'features/account/domain/repositories/character_summary_sync_gateway.dart';
 import 'features/account/domain/repositories/game_account_verification_gateway.dart';
+import 'features/account/domain/repositories/weekly_raid_claim_repository.dart';
 import 'features/player/domain/entities/player_session.dart';
 import 'features/raid_status/domain/services/party_event_sync_service.dart';
 import 'features/recruitment_list/domain/repositories/party_read_repository.dart';
@@ -30,6 +32,8 @@ class MyApp extends StatefulWidget {
     this.gameAccountVerificationGateway,
     this.partyReadRepository,
     this.partyEventSyncService,
+    this.weeklyRaidClaimRepository,
+    this.characterSummarySyncGateway,
     super.key,
   });
 
@@ -39,6 +43,8 @@ class MyApp extends StatefulWidget {
   final GameAccountVerificationGateway? gameAccountVerificationGateway;
   final PartyReadRepository? partyReadRepository;
   final PartyEventSyncService? partyEventSyncService;
+  final WeeklyRaidClaimRepository? weeklyRaidClaimRepository;
+  final CharacterSummarySyncGateway? characterSummarySyncGateway;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -61,6 +67,8 @@ class _MyAppState extends State<MyApp> {
       gameAccountVerificationGateway: widget.gameAccountVerificationGateway,
       partyReadRepository: widget.partyReadRepository,
       partyEventSyncService: widget.partyEventSyncService,
+      weeklyRaidClaimRepository: widget.weeklyRaidClaimRepository,
+      characterSummarySyncGateway: widget.characterSummarySyncGateway,
     );
   }
 

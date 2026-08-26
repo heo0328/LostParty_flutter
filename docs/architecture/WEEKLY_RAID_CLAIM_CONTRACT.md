@@ -77,7 +77,7 @@ players/{playerId}/weeklyRaidClaims/{cycleKey_characterId_raidId}
   updatedAt: server timestamp
 ```
 
-문서 ID 구성 요소는 충돌하지 않도록 escape 또는 안정적인 hash 규칙을 구현 전에 확정한다. 표시 이름은 식별 키로 사용하지 않는다.
+문서 ID는 `cycleKey`, `characterId`, `raidId`를 각각 UTF-8 base64url(no padding)로 인코딩한 뒤 `~`로 연결한다. 인코딩된 구성 요소에는 `/`와 구분자 `~`가 들어가지 않아 Firestore 경로와 구성 요소 경계가 안정적이다. 표시 이름은 식별 키로 사용하지 않는다.
 
 ### 기존 Claim과 멱등성
 

@@ -11,13 +11,16 @@ import '../../features/account/data/gateways/local_game_account_verification_gat
 import '../../features/account/data/gateways/firestore_account_ownership_status_gateway.dart';
 import '../../features/account/data/gateways/firestore_character_summary_sync_gateway.dart';
 import '../../features/account/data/mappers/sibling_character_mapper.dart';
+import '../../features/account/data/repositories/firestore_weekly_raid_claim_repository.dart';
 import '../../features/account/presentation/pages/api_token_settings_page.dart';
 import '../../features/account/presentation/pages/character_management_page.dart';
 import '../../features/account/presentation/pages/character_detail_page.dart';
 import '../../features/account/presentation/pages/my_account_page.dart';
 import '../../features/account/presentation/pages/game_account_verification_page.dart';
+import '../../features/account/domain/repositories/weekly_raid_claim_repository.dart';
 import '../../features/account/domain/entities/local_game_account.dart';
 import '../../features/account/domain/repositories/account_ownership_status_gateway.dart';
+import '../../features/account/domain/repositories/character_summary_sync_gateway.dart';
 import '../../features/account/domain/repositories/game_account_verification_gateway.dart';
 import '../../features/account/domain/services/character_summary_sync_service.dart';
 import '../../features/player/domain/entities/player_session.dart';
@@ -68,6 +71,8 @@ GoRouter createAppRouter({
   GameAccountVerificationGateway? gameAccountVerificationGateway,
   PartyReadRepository? partyReadRepository,
   PartyEventSyncService? partyEventSyncService,
+  WeeklyRaidClaimRepository? weeklyRaidClaimRepository,
+  CharacterSummarySyncGateway? characterSummarySyncGateway,
 }) {
   final partyReadRepositoryOrDefault =
       partyReadRepository ??
@@ -79,6 +84,9 @@ GoRouter createAppRouter({
         firebaseAuth: FirebaseAuth.instance,
         database: accountDatabase,
       );
+  final weeklyRaidClaimRepositoryOrDefault =
+      weeklyRaidClaimRepository ??
+      FirestoreWeeklyRaidClaimRepository(firestore: FirebaseFirestore.instance);
   final currentCycleKey = const PartyCyclePolicy().keyFor(DateTime.now());
   final apiTokenStore = SecureApiTokenStore();
   final apiClient = LostArkApiClient(apiTokenStore: apiTokenStore);
@@ -108,10 +116,12 @@ GoRouter createAppRouter({
       final dtos = await remoteDataSource.fetchSiblings(characterName);
       return dtos.map((dto) => dto.toDomain()).toList(growable: false);
     },
-    syncGateway: FirestoreCharacterSummarySyncGateway(
-      firestore: FirebaseFirestore.instance,
-      firebaseAuth: FirebaseAuth.instance,
-    ),
+    syncGateway:
+        characterSummarySyncGateway ??
+        FirestoreCharacterSummarySyncGateway(
+          firestore: FirebaseFirestore.instance,
+          firebaseAuth: FirebaseAuth.instance,
+        ),
   );
   final verificationGateway =
       gameAccountVerificationGateway ??
@@ -238,6 +248,10 @@ GoRouter createAppRouter({
                   apiTokenStore: apiTokenStore,
                   accountRepository: accountRepository,
                   summarySyncService: characterSummarySyncService,
+                  weeklyRaidClaimRepository: weeklyRaidClaimRepositoryOrDefault,
+                  raidCatalogRepository: raidCatalogRepository,
+                  playerId: playerSession.playerId,
+                  cycleKey: currentCycleKey,
                 ),
                 routes: [
                   GoRoute(

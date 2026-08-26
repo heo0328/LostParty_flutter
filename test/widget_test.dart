@@ -2,6 +2,9 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lost_party/features/account/domain/entities/weekly_raid_claim.dart';
+import 'package:lost_party/features/account/domain/repositories/weekly_raid_claim_repository.dart';
+import 'package:lost_party/features/account/domain/repositories/character_summary_sync_gateway.dart';
 
 import 'package:lost_party/features/account/data/local/account_database.dart';
 import 'package:lost_party/features/account/domain/entities/game_account_verification.dart';
@@ -190,12 +193,28 @@ Future<void> _pumpApp(WidgetTester tester) async {
       gameAccountVerificationGateway: _GameAccountVerificationGateway(),
       partyReadRepository: FakePartyReadRepository(),
       partyEventSyncService: FakePartyEventSyncService(),
+      weeklyRaidClaimRepository: _WeeklyRaidClaimRepository(),
+      characterSummarySyncGateway: _CharacterSummarySyncGateway(),
     ),
   );
 }
 
-class _AccountOwnershipStatusGateway
-    implements AccountOwnershipStatusGateway {
+class _WeeklyRaidClaimRepository implements WeeklyRaidClaimRepository {
+  @override
+  Stream<List<WeeklyRaidClaim>> watchCurrentCycleClaims({
+    required String playerId,
+    required String cycleKey,
+  }) => const Stream.empty();
+}
+
+class _CharacterSummarySyncGateway implements CharacterSummarySyncGateway {
+  @override
+  Future<void> updateSummaries(
+    List<CharacterSummaryServerPatch> patches,
+  ) async {}
+}
+
+class _AccountOwnershipStatusGateway implements AccountOwnershipStatusGateway {
   @override
   Future<Map<String, String>> loadStatuses(
     Iterable<String> gameAccountIds,

@@ -3,17 +3,20 @@ import 'package:flutter/material.dart';
 import '../../../../shared/formatters/display_number_formatter.dart';
 
 import '../../domain/entities/local_game_account.dart';
+import '../models/weekly_raid_status_item.dart';
 
 class AccountCharacterCard extends StatelessWidget {
   const AccountCharacterCard({
     required this.character,
     required this.isRepresentative,
+    this.weeklyRaids = const [],
     this.onTap,
     super.key,
   });
 
   final LocalAccountCharacter character;
   final bool isRepresentative;
+  final List<WeeklyRaidStatusItem> weeklyRaids;
   final VoidCallback? onTap;
 
   @override
@@ -61,6 +64,39 @@ class AccountCharacterCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
+              if (weeklyRaids.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  '주간 레이드 · 읽기 전용',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+                for (final raid in weeklyRaids)
+                  SizedBox(
+                    height: 30,
+                    child: Row(
+                      children: [
+                        IgnorePointer(
+                          child: Checkbox(
+                            key: ValueKey(
+                              'weeklyRaidClaim-${character.serverCharacterId}-${raid.raidId}',
+                            ),
+                            value: raid.isCompleted,
+                            onChanged: null,
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            raid.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ],
           ),
         ),

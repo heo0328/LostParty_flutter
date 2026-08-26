@@ -291,7 +291,7 @@
 ## 다음 작업
 
 현재 작업 순서와 완료 상태의 단일 기준은 `docs/project/NEXT_WORK.md`다.
-Task-073(앱 내부 알림 이벤트·Rules·Drift receipt·최소 UI·다인 해산 수정)까지 `main`에 반영됐다. 현재 Task-074에서 개인 주간 완료 Claim 계약을 문서화하며, 다음 구현은 `NEXT_WORK.md`의 Task-075 Claim 기반 A다.
+Task-074 개인 주간 완료 Claim 계약까지 `main`에 반영됐다. `codex/weekly-raid-claim-foundation`에서 Task-075 A의 Claim 읽기 경계와 내 계정 읽기 전용 체크박스 구현·자동·실기기 검증 및 Rules 배포를 완료했으며 Git 종료 전이다.
 `codex/combat-power-auto-title`에서 전투력 표시 통일과 자동 모집 제목 구현 및 자동 검증을 완료했다.
 `codex/full-recruitment-edit`에서 생성·수정 공용 폼, 전체 모집 수정 흐름과 공통 입력 지우기 동작을 구현하고 Android 실기기 검증을 통과했다.
 완료 결과는 `main`과 `origin/main`에 통합됐다.
@@ -381,7 +381,8 @@ Player binding의 계약·구현·Rules 배포와 실기기 검증을 완료했�
 - Task-071에서 회차 완료·완료 취소·반복 설정·주차 전환·다인/완료 후 해산을 현황 상세에 연결하고, 1회성 완료 후 **해산 대기** 목록·이벤트 sync·탭 루트 복귀를 반영해 실기기에서 통과한 뒤 **`main`에 병합**했다. Rules(해산·완료 후 반복 설정)는 `lost-party`에 배포된 상태다.
 - Task-072에서 알림 설계를 `PARTY_NOTIFICATION_CONTRACT.md`로 확정하고 **`main`에 병합**했다. FCM은 신뢰 서버와 유료 플랜 합의 전까지 보류한다.
 - Task-073에서 공통 Party Event·유형별 Rules·신청/멤버십/해산 이벤트 연결·Drift 알림 receipt·현황 알림 UI를 구현했다. 다인 해산 Transaction 읽기 순서 버그를 수정해 실기기에서 확인한 뒤 **`main`에 병합**했다. Rules(알림 이벤트)는 `lost-party`에 배포됐다.
-- Task-074에서 파티 회차·활성 점유·개인 주간 완료를 분리한 [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)를 작성한다. 다음 구현은 쓰기 없이 Claim 읽기 경계와 내 계정 읽기 전용 체크박스를 만드는 Task-075 A다.
+- Task-074에서 파티 회차·활성 점유·개인 주간 완료를 분리한 [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)를 작성해 `main`에 병합했다.
+- Task-075 A에서 Claim Domain·DTO·mapper·Firestore 읽기 Repository와 내 계정 읽기 전용 체크박스를 연결했다. 자기 Player 읽기 Rules를 `lost-party`에 배포했고, 실기기에서 카드 레이아웃·모두 미체크인 읽기 전용 체크박스·기존 기능이 정상임을 확인했다. 전체 테스트 421개와 analyze가 통과했다.
 - 네트워크 요청을 시작하는 버튼은 진행 중 연타·중복 요청을 막는 공통 UI 규칙을 적용한다.
 - Codex는 설계 계약, 문서 정합성, 작업 분해와 인수인계를 중심으로 유지하되 필요한 코드 수정은 가능하다.
 - 유료 플랜·결제수단·과금 가능 기능, Emulator, FCM과 TTL 배포는 별도 승인 전까지 제외한다.

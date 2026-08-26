@@ -8,21 +8,39 @@ import '../../domain/entities/character_profile.dart';
 import '../../domain/entities/character_summary.dart';
 import '../../domain/entities/character_summary_sync_result.dart';
 import '../../domain/entities/local_game_account.dart';
+import '../../domain/entities/weekly_raid_claim.dart';
 import '../../domain/repositories/account_repository.dart';
+import '../../domain/repositories/weekly_raid_claim_repository.dart';
 import '../../domain/services/character_summary_sync_service.dart';
+import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
+import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
+import '../models/weekly_raid_status_item.dart';
 
 class MyAccountViewModel extends ChangeNotifier {
   MyAccountViewModel({
     required ApiTokenStore apiTokenStore,
     required AccountRepository accountRepository,
     CharacterSummarySyncService? summarySyncService,
+    WeeklyRaidClaimRepository? weeklyRaidClaimRepository,
+    RaidCatalogRepository? raidCatalogRepository,
+    String? playerId,
+    String? cycleKey,
   }) : _apiTokenStore = apiTokenStore,
        _accountRepository = accountRepository,
-       _summarySyncService = summarySyncService;
+       _summarySyncService = summarySyncService,
+       _weeklyRaidClaimRepository = weeklyRaidClaimRepository,
+       _raidCatalogRepository = raidCatalogRepository,
+       _playerId = playerId,
+       _cycleKey = cycleKey;
 
   final ApiTokenStore _apiTokenStore;
   final AccountRepository _accountRepository;
   final CharacterSummarySyncService? _summarySyncService;
+  final WeeklyRaidClaimRepository? _weeklyRaidClaimRepository;
+  final RaidCatalogRepository? _raidCatalogRepository;
+  final String? _playerId;
+  final String? _cycleKey;
+  StreamSubscription<List<WeeklyRaidClaim>>? _claimSubscription;
 
   bool _isLoadingTokenStatus = false;
   bool _isFetchingCharacters = false;
@@ -34,6 +52,9 @@ class MyAccountViewModel extends ChangeNotifier {
   CharacterProfile? _lookupProfile;
   List<LocalGameAccount> _accounts = const [];
   LostArkApiErrorType? _errorType;
+  RaidCatalog? _raidCatalog;
+  List<WeeklyRaidClaim> _weeklyRaidClaims = const [];
+  WeeklyRaidClaimReadFailureType? _claimReadFailure;
 
   bool get isLoadingTokenStatus => _isLoadingTokenStatus;
   bool get isFetchingCharacters => _isFetchingCharacters;
@@ -53,6 +74,50 @@ class MyAccountViewModel extends ChangeNotifier {
   }
 
   LostArkApiErrorType? get errorType => _errorType;
+  WeeklyRaidClaimReadFailureType? get claimReadFailure => _claimReadFailure;
+
+  List<WeeklyRaidStatusItem> weeklyRaidStatusesFor(
+    LocalAccountCharacter character,
+  ) {
+    final catalog = _raidCatalog;
+    final serverCharacterId = character.serverCharacterId;
+    final itemLevel = character.itemLevel;
+    if (catalog == null || serverCharacterId == null || itemLevel == null) {
+      return const [];
+    }
+    final completedRaidIds = _weeklyRaidClaims
+        .where((claim) => claim.characterId == serverCharacterId)
+        .map((claim) => claim.raidId)
+        .toSet();
+    final eligible = <({RaidDefinition raid, int gold})>[];
+    for (final raid in catalog.raids.where((raid) => raid.isActive)) {
+      final difficulties = raid.difficulties.where(
+        (difficulty) =>
+            difficulty.isActive && difficulty.minItemLevel <= itemLevel,
+      );
+      if (difficulties.isEmpty) continue;
+      final maxGold = difficulties
+          .map((difficulty) => difficulty.clearGold + difficulty.boundGold)
+          .reduce((left, right) => left > right ? left : right);
+      eligible.add((raid: raid, gold: maxGold));
+    }
+    eligible.sort((left, right) {
+      final gold = right.gold.compareTo(left.gold);
+      return gold != 0
+          ? gold
+          : left.raid.displayName.compareTo(right.raid.displayName);
+    });
+    return eligible
+        .take(3)
+        .map(
+          (entry) => WeeklyRaidStatusItem(
+            raidId: entry.raid.raidId,
+            label: entry.raid.displayName,
+            isCompleted: completedRaidIds.contains(entry.raid.raidId),
+          ),
+        )
+        .toList(growable: false);
+  }
 
   Future<void> loadTokenStatus() async {
     _isLoadingTokenStatus = true;
@@ -65,10 +130,47 @@ class MyAccountViewModel extends ChangeNotifier {
 
   Future<void> initialize() async {
     await loadTokenStatus();
+    await _loadRaidCatalog();
     await loadStoredAccount();
+    _watchWeeklyRaidClaims();
     if (_hasApiToken && _accounts.isNotEmpty) {
       unawaited(syncRosterSummaries(force: false));
     }
+  }
+
+  Future<void> _loadRaidCatalog() async {
+    final repository = _raidCatalogRepository;
+    if (repository == null) return;
+    _raidCatalog = await repository.loadCatalog();
+  }
+
+  void _watchWeeklyRaidClaims() {
+    final repository = _weeklyRaidClaimRepository;
+    final playerId = _playerId;
+    final cycleKey = _cycleKey;
+    if (repository == null || playerId == null || cycleKey == null) return;
+    unawaited(_claimSubscription?.cancel());
+    _claimSubscription = repository
+        .watchCurrentCycleClaims(playerId: playerId, cycleKey: cycleKey)
+        .listen(
+          (claims) {
+            _weeklyRaidClaims = claims;
+            _claimReadFailure = null;
+            notifyListeners();
+          },
+          onError: (Object error) {
+            _claimReadFailure = error is WeeklyRaidClaimReadException
+                ? error.type
+                : WeeklyRaidClaimReadFailureType.unknown;
+            notifyListeners();
+          },
+        );
+  }
+
+  @override
+  void dispose() {
+    unawaited(_claimSubscription?.cancel());
+    super.dispose();
   }
 
   Future<void> loadStoredAccount() async {

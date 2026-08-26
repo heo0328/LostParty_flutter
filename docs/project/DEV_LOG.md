@@ -1648,3 +1648,19 @@
 - [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)를 새 기준 문서로 추가하고 `NEXT_WORK.md`의 다음 구현을 Task-075 읽기 기반 A로 분해했다.
 - BUG-005는 이 작업에 흡수하고, 현재 재현되지 않는 BUG-002·006은 재발 시 다시 여는 조건으로 종료 간주했다.
 - 코드, Firestore Rules와 Firebase 배포는 변경하지 않았다.
+
+---
+
+## Task-075. 개인 주간 레이드 Claim 기반 A (2026-08-27)
+
+- 작업 브랜치: `codex/weekly-raid-claim-foundation`
+- `WeeklyRaidClaim` Domain·DTO·mapper와 현재 Player·현재 주차 전용 Firestore stream Repository를 추가했다.
+- 문서 ID는 `cycleKey`, `characterId`, `raidId`를 각각 UTF-8 base64url(no padding)로 인코딩해 `~`로 연결하도록 확정하고 안정성 테스트를 추가했다.
+- 내 계정 캐릭터 Card에 입장 가능한 활성 레이드 중 골드 기준 기본 3개를 읽기 전용 체크박스로 표시한다. Claim이 있으면 체크되고 같은 raidId의 난이도는 중복 표시하지 않는다.
+- Drift 완료 히스토리·Party Event·기존 InMemory `WeeklyRaidClearRepository`는 변경하거나 Claim 저장소와 합치지 않았다.
+- `firestore.rules`에 자기 Player `weeklyRaidClaims` get/list만 허용하고 create/update/delete는 닫았다. 사용자가 Firebase 프로젝트 `lost-party`에 배포했다.
+- Firebase 의존 Repository/Gateway를 앱 생성자에서 주입할 수 있게 해 미초기화 위젯 테스트 회귀를 제거했다.
+- 기존 테스트의 깨진 한글 기대 문자열 두 건을 실제 제품 문구로 복구했다.
+- Claim 표적 테스트 6개, 내 계정 기존 테스트, 앱 위젯 테스트, 전체 `flutter test --no-pub` 421개와 `flutter analyze --no-pub`가 통과했다.
+- Claim create/delete, 모집 제한, 활성 파티 탈퇴와 pending 종료 및 개인/전체 완료 변경은 제외했다.
+- 실기기에서 새 주간 레이드 표현, 기존 계정 기능과 카드 레이아웃이 정상임을 확인했다. 현재 Claim이 없어 체크박스는 모두 미체크이며 읽기 전용으로 조작되지 않는다.

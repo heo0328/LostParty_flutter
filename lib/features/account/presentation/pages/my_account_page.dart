@@ -7,7 +7,9 @@ import '../../../../shared/lost_ark_api/client/lost_ark_api_exception.dart';
 import '../../../../shared/widgets/clearable_text_form_field.dart';
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/repositories/account_repository.dart';
+import '../../domain/repositories/weekly_raid_claim_repository.dart';
 import '../../domain/services/character_summary_sync_service.dart';
+import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 import '../viewmodels/my_account_view_model.dart';
 import '../widgets/account_character_card.dart';
 
@@ -16,12 +18,20 @@ class MyAccountPage extends StatefulWidget {
     required this.apiTokenStore,
     required this.accountRepository,
     this.summarySyncService,
+    this.weeklyRaidClaimRepository,
+    this.raidCatalogRepository,
+    this.playerId,
+    this.cycleKey,
     super.key,
   });
 
   final ApiTokenStore apiTokenStore;
   final AccountRepository accountRepository;
   final CharacterSummarySyncService? summarySyncService;
+  final WeeklyRaidClaimRepository? weeklyRaidClaimRepository;
+  final RaidCatalogRepository? raidCatalogRepository;
+  final String? playerId;
+  final String? cycleKey;
 
   @override
   State<MyAccountPage> createState() => _MyAccountPageState();
@@ -40,6 +50,10 @@ class _MyAccountPageState extends State<MyAccountPage> {
       apiTokenStore: widget.apiTokenStore,
       accountRepository: widget.accountRepository,
       summarySyncService: widget.summarySyncService,
+      weeklyRaidClaimRepository: widget.weeklyRaidClaimRepository,
+      raidCatalogRepository: widget.raidCatalogRepository,
+      playerId: widget.playerId,
+      cycleKey: widget.cycleKey,
     );
     _viewModel.addListener(_onViewModelChanged);
     _viewModel.initialize();
@@ -538,7 +552,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: 8,
             mainAxisSpacing: 8,
-            mainAxisExtent: 132,
+            mainAxisExtent: 238,
           ),
           itemBuilder: (context, index) {
             final character = characters[index];
@@ -546,6 +560,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
               character: character,
               isRepresentative:
                   account.representativeCharacterId == character.id,
+              weeklyRaids: _viewModel.weeklyRaidStatusesFor(character),
               onTap: () => _openCharacterDetail(character),
             );
           },

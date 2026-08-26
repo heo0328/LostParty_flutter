@@ -49,7 +49,7 @@ void main() {
     );
     expect(dealer.canApply, isTrue);
     expect(cleared.canApply, isFalse);
-    expect(cleared.rejectionReasons, contains('ě´ë˛ ěŁź ëěź ë ě´ë ěëŁ'));
+    expect(cleared.rejectionReasons, contains('이번 주 동일 레이드 완료'));
     expect(
       candidates.any(
         (candidate) =>
@@ -117,7 +117,7 @@ void main() {
       candidate.participationStatuses.map((status) => status.type),
       contains(CandidateParticipationStatusType.activeSameRaid),
     );
-    expect(candidate.rejectionReasons, contains('ëěź ë ě´ë ě°¸ę° ě¤'));
+    expect(candidate.rejectionReasons, contains('동일 레이드 참가 중'));
   });
 
   test('ěşëŚ­í° ëłę˛˝ íëł´ë ę°ëĽí ë¤ëĽ¸ ě­í ęłź ëśęłě ęšě§ íŹí¨íë¤', () async {
