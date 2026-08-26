@@ -82,7 +82,50 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     _viewModel = PartyReadDetailViewModel<PublicRecruitmentSummary>(
       streamFactory: () =>
           widget.partyReadRepository.watchRecruitment(widget.recruitmentId),
-    )..start();
+    );
+    _bindDetailSubscriptions();
+  }
+
+  @override
+  void didUpdateWidget(covariant PartyReadDetailPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final recruitmentChanged =
+        oldWidget.recruitmentId != widget.recruitmentId;
+    final playerChanged = oldWidget.playerId != widget.playerId;
+    final repositoryChanged =
+        oldWidget.partyReadRepository != widget.partyReadRepository;
+    if (!recruitmentChanged && !playerChanged && !repositoryChanged) {
+      return;
+    }
+    _bindDetailSubscriptions(restartRecruitment: recruitmentChanged || repositoryChanged);
+  }
+
+  void _bindDetailSubscriptions({bool restartRecruitment = false}) {
+    _myApplicationSubscription?.cancel();
+    _myApplicationSubscription = null;
+    _membersSubscription?.cancel();
+    _membersSubscription = null;
+    _applicationsSubscription?.cancel();
+    _applicationsSubscription = null;
+
+    if (restartRecruitment) {
+      _viewModel.restart(
+        () => widget.partyReadRepository.watchRecruitment(widget.recruitmentId),
+      );
+    } else {
+      _viewModel.start();
+    }
+
+    _membersLoading = true;
+    _members = const [];
+    _membersFailure = null;
+    _membersFromCache = false;
+    _myApplication = null;
+    _myApplicationLoading = false;
+    _applications = const [];
+    _applicationsLoading = false;
+    _applicationsFailure = null;
+
     _membersSubscription = widget.partyReadRepository
         .watchRecruitmentMembers(widget.recruitmentId)
         .listen(_onMembers, onError: _onMembersError);
@@ -104,6 +147,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
           .watchRecruitmentApplications(widget.recruitmentId)
           .listen(_onApplications, onError: _onApplicationsError);
     }
+    if (mounted) setState(() {});
   }
 
   @override
@@ -430,7 +474,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                     approve: false,
                   ),
                 ),
-              if (_canApplicantAction && !_isLeader(summary))
+              if (_canApplicantAction && !_isLeader(summary) && !_isConfirmedMember)
                 _ApplicationActions(
                   summary: summary,
                   myApplication: _myApplication,
@@ -439,12 +483,31 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                   onApply: () => _openApplySheet(summary),
                   onWithdraw: _withdraw,
                 )
-              else if (!_canApplicantAction && !_canManageApplications)
+              else if (!_canApplicantAction &&
+                  !_canManageApplications &&
+                  !_canUseMembershipCommands)
                 const Padding(
                   padding: EdgeInsets.fromLTRB(16, 24, 16, 0),
                   child: Text(
                     '이 화면은 조회 전용입니다. 신청과 수정은 아직 연결되지 않았습니다.',
                   ),
+                ),
+              if (_isConfirmedMember && _canUseMembershipCommands)
+                _MembershipSelfActions(
+                  canLeave: summary.memberCount > 1,
+                  submitting: _submitting,
+                  onChangeCharacter: () => _openChangeCharacterSheet(summary),
+                  onLeave: () => _confirmLeave(summary),
+                ),
+              if (_isLeader(summary) &&
+                  _canUseMembershipCommands &&
+                  summary.memberCount > 1)
+                _KickMembersSection(
+                  members: _members
+                      .where((member) => member.playerId != widget.playerId)
+                      .toList(growable: false),
+                  submitting: _submitting,
+                  onKick: (member) => _confirmKick(summary, member),
                 ),
               if (_canDeleteRecruitment(summary))
                 Padding(
@@ -466,11 +529,206 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     );
   }
 
-  bool _canDeleteRecruitment(PublicRecruitmentSummary summary) =>
-      _isLeader(summary) &&
+  bool get _canUseMembershipCommands =>
       widget.membershipCommandRepository != null &&
       widget.playerId != null &&
       widget.playerId!.isNotEmpty;
+
+  bool get _isConfirmedMember =>
+      widget.playerId != null &&
+      _members.any((member) => member.playerId == widget.playerId);
+
+  bool _canDeleteRecruitment(PublicRecruitmentSummary summary) =>
+      _isLeader(summary) &&
+      _canUseMembershipCommands &&
+      summary.memberCount <= 1;
+
+  Future<void> _openChangeCharacterSheet(
+    PublicRecruitmentSummary summary,
+  ) async {
+    final candidateService = widget.candidateService;
+    final repository = widget.membershipCommandRepository;
+    if (candidateService == null ||
+        repository == null ||
+        !_isConfirmedMember ||
+        _submitting) {
+      return;
+    }
+    final me = _members.firstWhere(
+      (member) => member.playerId == widget.playerId,
+    );
+    final candidates = await candidateService.load(
+      RecruitmentLeaderCandidateQuery(
+        raidId: summary.metadata.raidId,
+        difficultyId: summary.metadata.difficultyId,
+        minItemLevel: summary.metadata.minItemLevel,
+        startAt: summary.metadata.raidStartAt ?? DateTime.now(),
+        maxPlayHours: summary.metadata.maxPlayHours,
+      ),
+    );
+    if (!mounted) return;
+
+    final eligible = <({RecruitmentLeaderCandidate candidate, double? combatPower})>[];
+    for (final candidate in candidates) {
+      final serverId = candidate.serverCharacterId;
+      if (serverId == null || serverId.isEmpty) continue;
+      if (me.characterId != null && me.characterId == serverId) continue;
+      final option = candidate.optionFor(me.role);
+      if (option == null || !option.canSelect) continue;
+      if (!candidate.canSelect) continue;
+      eligible.add((candidate: candidate, combatPower: option.combatPower));
+    }
+    if (eligible.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            '변경할 수 있는 같은 역할의 인증 캐릭터가 없습니다. 역할 세팅과 입장 레벨을 확인해 주세요.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final selected = await showModalBottomSheet<_ApplySelection>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => _ChangeCharacterCandidateSheet(
+        role: me.role,
+        entries: eligible,
+      ),
+    );
+    if (selected == null || !mounted) return;
+
+    setState(() => _submitting = true);
+    final result = await repository.changeCharacter(
+      PartyChangeCharacterCommand(
+        recruitmentId: widget.recruitmentId,
+        newCharacterId: selected.serverCharacterId,
+        expectedRecruitmentRevision: summary.revision,
+        combatPower: selected.combatPower,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (result.isSuccess) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('참가 캐릭터를 변경했습니다.')));
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_membershipFailureMessage(result.failure!))),
+    );
+  }
+
+  Future<void> _confirmLeave(PublicRecruitmentSummary summary) async {
+    if (!_canUseMembershipCommands ||
+        !_isConfirmedMember ||
+        summary.memberCount <= 1 ||
+        _submitting) {
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('파티에서 탈퇴할까요?'),
+        content: Text(
+          _isLeader(summary)
+              ? '책임자 권한이 다음 멤버에게 넘어갑니다. 자리는 비워 두고 남은 멤버를 앞으로 당기지 않습니다.'
+              : '탈퇴하면 자리가 비워지며 남은 멤버를 앞으로 당기지 않습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirmLeavePartyButton'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('탈퇴'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _submitting = true);
+    final result = await widget.membershipCommandRepository!.leave(
+      PartyRemoveMemberCommand(
+        recruitmentId: widget.recruitmentId,
+        targetPlayerId: widget.playerId!,
+        expectedRecruitmentRevision: summary.revision,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (result.isSuccess) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('파티에서 탈퇴했습니다.')));
+      Navigator.of(context).maybePop();
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_membershipFailureMessage(result.failure!))),
+    );
+  }
+
+  Future<void> _confirmKick(
+    PublicRecruitmentSummary summary,
+    PartyMemberDisplay member,
+  ) async {
+    if (!_isLeader(summary) ||
+        !_canUseMembershipCommands ||
+        member.playerId == widget.playerId ||
+        _submitting) {
+      return;
+    }
+    final name = member.characterName?.trim().isNotEmpty == true
+        ? member.characterName!.trim()
+        : '선택한 파티원';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('파티원을 추방할까요?'),
+        content: Text(
+          '$name 님을 추방합니다. 자리는 비워 두고 남은 멤버를 앞으로 당기지 않습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirmKickMemberButton'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('추방'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _submitting = true);
+    final result = await widget.membershipCommandRepository!.kick(
+      PartyRemoveMemberCommand(
+        recruitmentId: widget.recruitmentId,
+        targetPlayerId: member.playerId,
+        expectedRecruitmentRevision: summary.revision,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (result.isSuccess) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('파티원을 추방했습니다.')));
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_membershipFailureMessage(result.failure!))),
+    );
+  }
 
   Future<void> _confirmDeleteRecruitment(
     PublicRecruitmentSummary summary,
@@ -1125,6 +1383,145 @@ class _ApplySelection {
   final double? combatPower;
 }
 
+class _MembershipSelfActions extends StatelessWidget {
+  const _MembershipSelfActions({
+    required this.canLeave,
+    required this.submitting,
+    required this.onChangeCharacter,
+    required this.onLeave,
+  });
+
+  final bool canLeave;
+  final bool submitting;
+  final VoidCallback onChangeCharacter;
+  final VoidCallback onLeave;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('내 참가', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: AppSpacing.xs),
+          FilledButton.tonalIcon(
+            key: const ValueKey('changeParticipatingCharacterButton'),
+            onPressed: submitting ? null : onChangeCharacter,
+            icon: const Icon(Icons.swap_horiz),
+            label: Text(submitting ? '처리 중...' : '참가 캐릭터 변경'),
+          ),
+          if (canLeave) ...[
+            const SizedBox(height: AppSpacing.xs),
+            OutlinedButton.icon(
+              key: const ValueKey('leavePartyButton'),
+              onPressed: submitting ? null : onLeave,
+              icon: const Icon(Icons.logout),
+              label: const Text('파티 탈퇴'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _KickMembersSection extends StatelessWidget {
+  const _KickMembersSection({
+    required this.members,
+    required this.submitting,
+    required this.onKick,
+  });
+
+  final List<PartyMemberDisplay> members;
+  final bool submitting;
+  final ValueChanged<PartyMemberDisplay> onKick;
+
+  @override
+  Widget build(BuildContext context) {
+    if (members.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('파티원 추방', style: theme.textTheme.titleMedium),
+          const SizedBox(height: AppSpacing.xs),
+          for (final member in members)
+            Card(
+              key: ValueKey('kickMemberCard-${member.playerId}'),
+              margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: ListTile(
+                title: Text(
+                  member.characterName?.trim().isNotEmpty == true
+                      ? member.characterName!.trim()
+                      : '정보 없음',
+                ),
+                subtitle: Text(
+                  [
+                    member.className?.trim().isNotEmpty == true
+                        ? member.className!.trim()
+                        : '정보 없음',
+                    _roleLabel(member.role),
+                  ].join(' · '),
+                ),
+                trailing: TextButton(
+                  key: ValueKey('kickMemberButton-${member.playerId}'),
+                  onPressed: submitting ? null : () => onKick(member),
+                  child: const Text('추방'),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChangeCharacterCandidateSheet extends StatelessWidget {
+  const _ChangeCharacterCandidateSheet({
+    required this.role,
+    required this.entries,
+  });
+
+  final PartyRole role;
+  final List<({RecruitmentLeaderCandidate candidate, double? combatPower})>
+  entries;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ListView(
+        shrinkWrap: true,
+        children: [
+          ListTile(
+            title: Text('변경할 캐릭터 (${_roleLabel(role)})'),
+          ),
+          for (final entry in entries)
+            ListTile(
+              key: ValueKey(
+                'change-candidate-${entry.candidate.localCharacterId}',
+              ),
+              title: Text(entry.candidate.characterId),
+              subtitle: Text(
+                '${entry.candidate.accountLabel} · ${entry.candidate.className}',
+              ),
+              onTap: () => Navigator.pop(
+                context,
+                _ApplySelection(
+                  serverCharacterId: entry.candidate.serverCharacterId!,
+                  role: role,
+                  combatPower: entry.combatPower,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ApplyCandidateSheet extends StatelessWidget {
   const _ApplyCandidateSheet({
     required this.candidates,
@@ -1315,14 +1712,24 @@ String _membershipFailureMessage(PartyMembershipFailure failure) =>
       PartyMembershipFailure.unauthenticated ||
       PartyMembershipFailure.playerBindingMissing => '계정 연결을 준비하지 못했습니다.',
       PartyMembershipFailure.notFound => '모집 또는 멤버 정보를 찾지 못했습니다.',
-      PartyMembershipFailure.unauthorized => '모집을 삭제할 권한이 없습니다.',
+      PartyMembershipFailure.unauthorized => '이 동작을 할 권한이 없습니다.',
+      PartyMembershipFailure.ownershipLost => '캐릭터 소유권을 확인하지 못했습니다.',
+      PartyMembershipFailure.invalidCharacter =>
+        '변경할 캐릭터를 확인하지 못했습니다. 인증과 입장 레벨을 확인해 주세요.',
       PartyMembershipFailure.recruitmentClosed => '이미 종료된 모집입니다.',
+      PartyMembershipFailure.alreadyCurrentCharacter => '이미 참가 중인 캐릭터입니다.',
+      PartyMembershipFailure.participationConflict =>
+        '다른 확정 참가와 충돌합니다. 캐릭터를 다시 선택해 주세요.',
+      PartyMembershipFailure.roleMismatch ||
+      PartyMembershipFailure.invalidComposition =>
+        '현재 파티 구성과 맞지 않는 캐릭터입니다.',
       PartyMembershipFailure.revisionConflict =>
         '모집 상태가 바뀌었습니다. 다시 확인해 주세요.',
-      PartyMembershipFailure.permissionDenied => '모집 삭제 권한을 확인하지 못했습니다.',
+      PartyMembershipFailure.unsupportedOnSpark => '현재 환경에서 지원하지 않는 동작입니다.',
+      PartyMembershipFailure.permissionDenied => '권한을 확인하지 못했습니다.',
       PartyMembershipFailure.temporarilyUnavailable => '네트워크 연결이 불안정합니다.',
-      PartyMembershipFailure.invalidRequest => '삭제 요청을 확인하지 못했습니다.',
-      _ => '모집을 삭제하지 못했습니다.',
+      PartyMembershipFailure.invalidRequest => '요청을 확인하지 못했습니다.',
+      PartyMembershipFailure.unknown => '멤버 명령을 처리하지 못했습니다.',
     };
 
 String _approvalModeLabel(ApprovalMode mode) => switch (mode) {

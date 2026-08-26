@@ -373,8 +373,9 @@ Player binding의 계약·구현·Rules 배포와 실기기 검증을 완료했�
 - Task-065에서 파티장 Snapshot·`PartyMemberDisplay`·`watchRecruitmentMembers`·공개 membership Rules(Option 1)·목록/상세 UI 복구를 완료하고 `main`에 통합했다.
 - Task-066에서 즉시 가입·승인·거절·방 단위 재신청·N회 안내·단독 모집 삭제를 현황 상세에 연결하고 실기기에서 통과한 뒤 **`main`에 병합**했다. Rules(신청 get·재신청)는 `lost-party`에 배포된 상태다.
 - Task-068에서 `partyIndex`/`slotIndex` 고정 슬롯 쓰기, 빈 슬롯 배정, 현황 상세 구성판 Card, 승인 시 신청자 점유 get Rules를 구현하고 실기기에서 즉시 가입·승인을 확인한 뒤 **`main`에 병합**했다. Rules(슬롯·점유 get)는 `lost-party`에 배포된 상태다.
-- Task-069에서 구성판을 파티 그룹 반응형 배치로 바꾸고 breakpoint `600dp`·같은 자리 좌우 높이 맞춤을 적용해 바형·폴드 실기기에서 통과한 뒤 **`main`에 병합**했다. 다음 작업은 `NEXT_WORK.md`의 멤버 명령(Task-070)부터 시작한다.
-- 멤버·회차는 Fake를 유지한다.
+- Task-069에서 구성판을 파티 그룹 반응형 배치로 바꾸고 breakpoint `600dp`·같은 자리 좌우 높이 맞춤을 적용해 바형·폴드 실기기에서 통과한 뒤 **`main`에 병합**했다.
+- Task-070에서 현황 상세에 자기 참가 캐릭터 변경·탈퇴·추방을 연결하고, 상세 `recruitmentId` 재구독(BUG-001)을 반영해 실기기에서 통과한 뒤 **`main`에 병합**했다. 다음 작업은 `NEXT_WORK.md`의 회차·해산(Task-071)부터 시작한다.
+- 회차 명령(완료·완료 취소·주차 전환)은 Repository는 있으나 실행 앱 UI 연결은 Task-071이다.
 - 네트워크 요청을 시작하는 버튼은 진행 중 연타·중복 요청을 막는 공통 UI 규칙을 적용한다.
 - Codex는 설계 계약, 문서 정합성, 작업 분해와 인수인계를 중심으로 유지하되 필요한 코드 수정은 가능하다.
 - 유료 플랜·결제수단·과금 가능 기능, Emulator, FCM과 TTL 배포는 별도 승인 전까지 제외한다.

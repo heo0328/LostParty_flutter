@@ -75,6 +75,8 @@ class PartyReadDocumentMapper {
     final data = document.data;
     _requireSchema(data);
     return PartyMemberDisplay(
+      playerId: document.id,
+      characterId: _softString(data, 'characterId'),
       characterName: _softString(data, 'characterNameSnapshot'),
       className: _softString(data, 'classNameSnapshot'),
       role: _enumValue(PartyRole.values, _string(data, 'role'), 'role'),

@@ -45,6 +45,7 @@
 - [`project/NEXT_WORK.md`](project/NEXT_WORK.md): 다음 작업의 단일 기준
 - [`project/AI_CONTEXT.md`](project/AI_CONTEXT.md): 프로젝트 전체 현재 상태
 - [`project/DEV_LOG.md`](project/DEV_LOG.md): 완료 작업 누적 이력
+- [`project/BUG_REPORTS.md`](project/BUG_REPORTS.md): 실기기·사용 중 발견 버그와 조사 메모
 - [`project/ai_rules.md`](project/ai_rules.md): AI 협업 및 작업 규칙
 
 ## Design

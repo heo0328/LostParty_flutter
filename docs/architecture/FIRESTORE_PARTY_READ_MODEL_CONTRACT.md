@@ -4,7 +4,7 @@
 
 이 문서는 `레이드 모집`, `레이드 현황 > 진행 중`, `레이드 현황 > 신청 중`에 필요한 Firestore 읽기 계약을 정의한다.
 
-이 작업은 읽기 DTO·Mapper·Repository 경계까지 다룬다. 실행 앱 쓰기 전환 상태는 `FIRESTORE_PARTY_COMMAND_CONTRACT.md` §9를 따른다. 모집 생성·신청·철회·즉시 가입·승인·거절·방 단위 재신청·단독 모집 삭제와 공개 목록·현황 상세 읽기는 Firestore로 연결됐다. 참가 캐릭터 변경·탈퇴·추방, 고정 슬롯, 다인 해산과 회차 명령은 후속 작업이다.
+이 작업은 읽기 DTO·Mapper·Repository 경계까지 다룬다. 실행 앱 쓰기 전환 상태는 `FIRESTORE_PARTY_COMMAND_CONTRACT.md` §9를 따른다. 모집 생성·신청·철회·즉시 가입·승인·거절·방 단위 재신청·단독 모집 삭제·고정 슬롯·참가 캐릭터 변경·탈퇴·추방과 공개 목록·현황 상세 읽기는 Firestore로 연결됐다. 다인 해산과 회차 명령은 후속 작업이다.
 
 `완료 기록`은 개인 로컬 기록이 단일 기준이므로 이 계약의 Firestore 목록 쿼리에 포함하지 않는다.
 
@@ -223,7 +223,7 @@ PartyReadRepository
 - `public` 모집은 로그인된 사용자가 계약된 공개 쿼리로 목록·상세를 읽을 수 있다.
 - `groupOnly` 모집은 해당 그룹 멤버만 읽을 수 있다. 그룹 멤버십 계약 전에는 실행 앱에 연결하지 않는다.
 - 비공개 멤버·신청 정보는 해당 방의 현재 멤버 또는 해당 신청자만 읽을 수 있다. 공개 모집의 membership 목록 읽기는 Option 1에 따라 active binding 사용자에게 허용하며, Domain/UI는 표시 Snapshot만 소비한다.
-- 모집 생성·신청·철회·즉시 가입·승인·거절·재신청과 단독 모집 삭제는 허용된 클라이언트 Transaction과 Rules를 사용한다. 참가 캐릭터 변경·탈퇴·추방, 고정 슬롯·다인 해산과 회차 쓰기는 실행 앱에 아직 연결하지 않는다.
+- 모집 생성·신청·철회·즉시 가입·승인·거절·재신청·단독 모집 삭제·고정 슬롯·참가 캐릭터 변경·탈퇴·추방은 허용된 클라이언트 Transaction과 Rules를 사용한다. 다인 해산과 회차 쓰기는 실행 앱에 아직 연결하지 않는다.
 - `신청 중` collection group 쿼리는 중첩 경로 규칙이 적용되지 않으므로 `match /{path=**}/applications/{applicantPlayerId}` 재귀 와일드카드 규칙이 반드시 필요하다. 이 규칙은 `list`만 허용하고 `resource.data.applicantPlayerId == currentPlayerId()`로 본인 신청에 한정한다. 단건 조회와 방 멤버의 신청 열람은 기존 중첩 경로 규칙이 계속 담당한다.
 - 모집 단건 `get`은 문서가 없으면 active binding만으로 허용하고, 문서가 있으면 `canReadRecruitment`을 적용한다. `list`는 존재하는 문서만 다루므로 기존 공개·멤버 조건을 유지한다. 생성 Transaction과 상세의 문서 누락 상태가 이 분기를 사용한다.
 - Rules와 쿼리는 Emulator Suite에서 공개 목록, 자기 멤버십, 자기 신청, 타인 비공개 데이터 차단을 같이 검증한 후 배포한다.

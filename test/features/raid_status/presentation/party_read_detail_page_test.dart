@@ -106,6 +106,7 @@ void main() {
         const PartyReadSnapshot(
           items: [
             PartyMemberDisplay(
+              playerId: 'p-b053f130',
               characterName: '이슈아이',
               className: '기상술사',
               role: PartyRole.dealer,
@@ -115,6 +116,7 @@ void main() {
               combatPower: 300000,
             ),
             PartyMemberDisplay(
+              playerId: 'p-c2d8f28e',
               characterName: '서폿캐릭',
               className: '바드',
               role: PartyRole.support,
@@ -402,7 +404,7 @@ void main() {
     expect(find.text('모집을 삭제했습니다.'), findsOneWidget);
   });
 
-  testWidgets('멤버가 더 있으면 모집 삭제를 막는다', (tester) async {
+  testWidgets('멤버가 더 있으면 모집 삭제 버튼을 숨긴다', (tester) async {
     final membership = _RecordingMembershipRepository();
     await pumpPage(
       tester,
@@ -413,18 +415,236 @@ void main() {
         ),
       ),
       members: Stream.value(
-        const PartyReadSnapshot(items: [], isFromCache: false),
+        const PartyReadSnapshot(
+          items: [
+            PartyMemberDisplay(
+              playerId: 'player-1',
+              characterId: 'char-leader',
+              characterName: '이슈아이',
+              className: '기상술사',
+              role: PartyRole.dealer,
+              partyIndex: 0,
+              slotIndex: 0,
+            ),
+            PartyMemberDisplay(
+              playerId: 'player-2',
+              characterId: 'char-member',
+              characterName: '서폿캐릭',
+              className: '바드',
+              role: PartyRole.support,
+              partyIndex: 0,
+              slotIndex: 1,
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      membershipCommandRepository: membership,
+      candidateService: _candidateService(),
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('deleteOwnRecruitmentButton')), findsNothing);
+    expect(find.byKey(const ValueKey('leavePartyButton')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('changeParticipatingCharacterButton')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('kickMemberButton-player-2')), findsOneWidget);
+  });
+
+  testWidgets('확정 멤버가 탈퇴하면 leave 명령을 보낸다', (tester) async {
+    final membership = _RecordingMembershipRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(memberCount: 2),
+          isFromCache: false,
+        ),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(
+          items: [
+            PartyMemberDisplay(
+              playerId: 'player-1',
+              characterName: '이슈아이',
+              className: '기상술사',
+              role: PartyRole.dealer,
+              partyIndex: 0,
+              slotIndex: 0,
+            ),
+            PartyMemberDisplay(
+              playerId: 'player-2',
+              characterName: '서폿캐릭',
+              className: '바드',
+              role: PartyRole.support,
+              partyIndex: 0,
+              slotIndex: 1,
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      membershipCommandRepository: membership,
+      playerId: 'player-2',
+    );
+    await tester.pumpAndSettle();
+
+    await tapVisible(tester, find.byKey(const ValueKey('leavePartyButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('confirmLeavePartyButton')));
+    await tester.pumpAndSettle();
+
+    expect(membership.leaveCommands, hasLength(1));
+    expect(membership.leaveCommands.single.targetPlayerId, 'player-2');
+    expect(find.text('파티에서 탈퇴했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('파티장이 다른 멤버를 추방하면 kick 명령을 보낸다', (tester) async {
+    final membership = _RecordingMembershipRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(memberCount: 2),
+          isFromCache: false,
+        ),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(
+          items: [
+            PartyMemberDisplay(
+              playerId: 'player-1',
+              characterName: '이슈아이',
+              className: '기상술사',
+              role: PartyRole.dealer,
+              partyIndex: 0,
+              slotIndex: 0,
+            ),
+            PartyMemberDisplay(
+              playerId: 'player-2',
+              characterName: '서폿캐릭',
+              className: '바드',
+              role: PartyRole.support,
+              partyIndex: 0,
+              slotIndex: 1,
+            ),
+          ],
+          isFromCache: false,
+        ),
       ),
       membershipCommandRepository: membership,
       playerId: 'player-1',
     );
     await tester.pumpAndSettle();
 
-    await tapVisible(tester, find.byKey(const ValueKey('deleteOwnRecruitmentButton')));
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('kickMemberButton-player-2')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('confirmKickMemberButton')));
     await tester.pumpAndSettle();
 
-    expect(membership.leaveCommands, isEmpty);
-    expect(find.textContaining('다른 파티원이 있는 방'), findsOneWidget);
+    expect(membership.kickCommands, hasLength(1));
+    expect(membership.kickCommands.single.targetPlayerId, 'player-2');
+    expect(find.text('파티원을 추방했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('참가 캐릭터 변경이 changeCharacter 명령을 보낸다', (tester) async {
+    final membership = _RecordingMembershipRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(memberCount: 1, maxMemberCount: 4),
+          isFromCache: false,
+        ),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(
+          items: [
+            PartyMemberDisplay(
+              playerId: 'player-1',
+              characterId: 'server-character-1',
+              characterName: '지원바드',
+              className: '바드',
+              role: PartyRole.dealer,
+              partyIndex: 0,
+              slotIndex: 0,
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      membershipCommandRepository: membership,
+      candidateService: _multiCharacterCandidateService(),
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('changeParticipatingCharacterButton')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('change-candidate-2')));
+    await tester.pumpAndSettle();
+
+    expect(membership.changeCommands, hasLength(1));
+    expect(
+      membership.changeCommands.single.newCharacterId,
+      'server-character-2',
+    );
+    expect(find.text('참가 캐릭터를 변경했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('같은 State에서 recruitmentId가 바뀌면 새 방 제목을 구독한다', (
+    tester,
+  ) async {
+    final repository = FakePartyReadRepository(
+      recruitmentForId: (recruitmentId) => Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(
+            id: recruitmentId,
+            title: recruitmentId == 'room-a' ? '방 A 모집' : '방 B 모집',
+          ),
+          isFromCache: false,
+        ),
+      ),
+      membersForId: (_) => Stream.value(
+        const PartyReadSnapshot(items: [], isFromCache: false),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PartyReadDetailPage(
+          recruitmentId: 'room-a',
+          partyReadRepository: repository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('방 A 모집'), findsOneWidget);
+    expect(find.text('방 B 모집'), findsNothing);
+    expect(repository.requestedRecruitmentIds, ['room-a']);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PartyReadDetailPage(
+          recruitmentId: 'room-b',
+          partyReadRepository: repository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('방 B 모집'), findsOneWidget);
+    expect(find.text('방 A 모집'), findsNothing);
+    expect(repository.requestedRecruitmentIds, ['room-a', 'room-b']);
   });
 
   group('파티 구성판 반응형 그룹 배치', () {
@@ -469,6 +689,7 @@ void main() {
         summary: _summary(maxMemberCount: 4, memberCount: 1),
         members: const [
           PartyMemberDisplay(
+            playerId: 'p-53b6414d',
             characterName: '이슈아이',
             className: '기상술사',
             role: PartyRole.dealer,
@@ -501,6 +722,7 @@ void main() {
         summary: _summary(maxMemberCount: 8, memberCount: 2),
         members: const [
           PartyMemberDisplay(
+            playerId: 'p-53b6414d',
             characterName: '이슈아이',
             className: '기상술사',
             role: PartyRole.dealer,
@@ -508,6 +730,7 @@ void main() {
             slotIndex: 0,
           ),
           PartyMemberDisplay(
+            playerId: 'p-6086be75',
             characterName: '서폿캐릭',
             className: '바드',
             role: PartyRole.support,
@@ -540,6 +763,7 @@ void main() {
         summary: _summary(maxMemberCount: 4, memberCount: 1),
         members: const [
           PartyMemberDisplay(
+            playerId: 'p-53b6414d',
             characterName: '이슈아이',
             className: '기상술사',
             role: PartyRole.dealer,
@@ -581,6 +805,7 @@ void main() {
         summary: _summary(maxMemberCount: 8, memberCount: 2),
         members: const [
           PartyMemberDisplay(
+            playerId: 'p-53b6414d',
             characterName: '이슈아이',
             className: '기상술사',
             role: PartyRole.dealer,
@@ -588,6 +813,7 @@ void main() {
             slotIndex: 0,
           ),
           PartyMemberDisplay(
+            playerId: 'p-6086be75',
             characterName: '서폿캐릭',
             className: '바드',
             role: PartyRole.support,
@@ -626,6 +852,7 @@ void main() {
         summary: _summary(maxMemberCount: 8, memberCount: 2),
         members: const [
           PartyMemberDisplay(
+            playerId: 'p-53b6414d',
             characterName: '이슈아이',
             className: '기상술사',
             role: PartyRole.dealer,
@@ -633,6 +860,7 @@ void main() {
             slotIndex: 0,
           ),
           PartyMemberDisplay(
+            playerId: 'p-63764396',
             characterName: '서폿캐릭',
             className: '바드',
             role: PartyRole.support,
@@ -660,6 +888,7 @@ void main() {
         summary: _summary(maxMemberCount: 8, memberCount: 1),
         members: const [
           PartyMemberDisplay(
+            playerId: 'p-fa97298b',
             characterName: '아주아주긴캐릭터이름입니다',
             className: '기상술사',
             role: PartyRole.dealer,
@@ -686,6 +915,7 @@ void main() {
         summary: _summary(maxMemberCount: 8, memberCount: 1),
         members: const [
           PartyMemberDisplay(
+            playerId: 'p-53b6414d',
             characterName: '이슈아이',
             className: '기상술사',
             role: PartyRole.dealer,
@@ -709,6 +939,7 @@ void main() {
         summary: _summary(maxMemberCount: 8, memberCount: 1),
         members: const [
           PartyMemberDisplay(
+            playerId: 'p-53b6414d',
             characterName: '이슈아이',
             className: '기상술사',
             role: PartyRole.dealer,
@@ -733,13 +964,15 @@ void main() {
 }
 
 PublicRecruitmentSummary _summary({
+  String id = 'recruitment-1',
+  String title = '4막 노말 모집',
   ApprovalMode approvalMode = ApprovalMode.leaderOnly,
   int memberCount = 2,
   int maxMemberCount = 8,
   int membersPerParty = 4,
 }) => PublicRecruitmentSummary(
-  id: 'recruitment-1',
-  title: '4막 노말 모집',
+  id: id,
+  title: title,
   leaderUserId: 'player-1',
   leaderCharacterName: '이슈아이',
   leaderClassName: '기상술사',
@@ -801,6 +1034,17 @@ PartyApplicationSummary _rejectedApplication({required int rejectionCount}) =>
 RecruitmentLeaderCandidateService _candidateService() {
   return RecruitmentLeaderCandidateService(
     accountRepository: _AccountRepository(),
+    weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+    session: FakeUserSession('local-user'),
+    clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 20)),
+    assignmentRepository: InMemoryActiveRaidAssignmentRepository(),
+    recruitmentRepository: InMemoryRecruitmentStateRepository(),
+  );
+}
+
+RecruitmentLeaderCandidateService _multiCharacterCandidateService() {
+  return RecruitmentLeaderCandidateService(
+    accountRepository: _MultiDealerAccountRepository(),
     weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
     session: FakeUserSession('local-user'),
     clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 20)),
@@ -888,7 +1132,7 @@ class _AccountRepository implements AccountRepository {
     int characterId,
   ) async => [
     CharacterBuildSnapshot(
-      id: 1,
+      id: characterId,
       characterId: characterId,
       role: CharacterBuildRole.dealer,
       rawJson: '{}',
@@ -988,8 +1232,54 @@ class _AccountRepository implements AccountRepository {
   }) => throw UnimplementedError();
 }
 
+class _MultiDealerAccountRepository extends _AccountRepository {
+  @override
+  Future<List<LocalGameAccount>> loadAccounts() async => [
+    LocalGameAccount(
+      id: 1,
+      label: '본계정',
+      isMain: true,
+      lookupCharacterName: '지원바드',
+      representativeCharacterId: 1,
+      displayLimit: 6,
+      serverGameAccountId: 'ga-1',
+      serverOwnershipStatus: 'active',
+      characters: [
+        LocalAccountCharacter(
+          id: 1,
+          serverName: '루페온',
+          characterName: '지원바드',
+          characterLevel: 70,
+          characterClassName: '바드',
+          itemLevel: 1700,
+          combatPower: 300000,
+          isVisible: true,
+          displayOrder: 0,
+          serverCharacterId: 'server-character-1',
+          preferredRole: CharacterBuildRole.dealer,
+        ),
+        LocalAccountCharacter(
+          id: 2,
+          serverName: '루페온',
+          characterName: '교체딜러',
+          characterLevel: 70,
+          characterClassName: '블레이드',
+          itemLevel: 1710,
+          combatPower: 310000,
+          isVisible: true,
+          displayOrder: 1,
+          serverCharacterId: 'server-character-2',
+          preferredRole: CharacterBuildRole.dealer,
+        ),
+      ],
+    ),
+  ];
+}
+
 class _RecordingMembershipRepository implements PartyMembershipCommandRepository {
   final leaveCommands = <PartyRemoveMemberCommand>[];
+  final kickCommands = <PartyRemoveMemberCommand>[];
+  final changeCommands = <PartyChangeCharacterCommand>[];
 
   @override
   Future<PartyMembershipResult> leave(PartyRemoveMemberCommand command) async {
@@ -1000,11 +1290,16 @@ class _RecordingMembershipRepository implements PartyMembershipCommandRepository
   @override
   Future<PartyMembershipResult> changeCharacter(
     PartyChangeCharacterCommand command,
-  ) => throw UnimplementedError();
+  ) async {
+    changeCommands.add(command);
+    return const PartyMembershipResult.success();
+  }
 
   @override
-  Future<PartyMembershipResult> kick(PartyRemoveMemberCommand command) =>
-      throw UnimplementedError();
+  Future<PartyMembershipResult> kick(PartyRemoveMemberCommand command) async {
+    kickCommands.add(command);
+    return const PartyMembershipResult.success();
+  }
 
   @override
   Future<PartyMembershipResult> setApprovalPermission(

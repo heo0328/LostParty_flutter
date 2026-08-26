@@ -41,7 +41,7 @@ void main() {
     expect(summary.raidStartAt, DateTime.utc(2026, 8, 25, 12));
   });
 
-  test('maps a member display document without player identifiers', () {
+  test('maps a member display document with opaque player and character ids', () {
     final member = mapper.toMemberDisplay(
       PartyReadDocumentDto(
         id: 'player-member',
@@ -61,6 +61,8 @@ void main() {
       ),
     );
 
+    expect(member.playerId, 'player-member');
+    expect(member.characterId, 'character-2');
     expect(member.characterName, '딜러캐릭');
     expect(member.className, '블레이드');
     expect(member.role, PartyRole.dealer);
@@ -92,6 +94,8 @@ void main() {
     );
     expect(member.characterName, isNull);
     expect(member.className, isNull);
+    expect(member.playerId, 'player-member');
+    expect(member.characterId, isNull);
     expect(member.slotIndex, isNull);
     expect(member.itemLevel, isNull);
     expect(member.combatPower, isNull);
@@ -126,6 +130,7 @@ void main() {
 
   test('sorts members by party then slot without inferring missing seats', () {
     const later = PartyMemberDisplay(
+      playerId: 'player-later',
       characterName: '후발',
       className: '바드',
       role: PartyRole.support,
@@ -133,6 +138,7 @@ void main() {
       slotIndex: 2,
     );
     const first = PartyMemberDisplay(
+      playerId: 'player-first',
       characterName: '리더',
       className: '블레이드',
       role: PartyRole.dealer,
@@ -140,12 +146,14 @@ void main() {
       slotIndex: 0,
     );
     const unknown = PartyMemberDisplay(
+      playerId: 'player-unknown',
       characterName: '이전멤버',
       className: '워로드',
       role: PartyRole.dealer,
       partyIndex: 0,
     );
     const secondParty = PartyMemberDisplay(
+      playerId: 'player-2',
       characterName: '2파티',
       className: '기공사',
       role: PartyRole.dealer,

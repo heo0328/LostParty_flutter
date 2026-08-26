@@ -29,7 +29,7 @@ class PartyReadDetailViewModel<T> extends ChangeNotifier {
     required Stream<PartyReadDetailSnapshot<T>> Function() streamFactory,
   }) : _streamFactory = streamFactory;
 
-  final Stream<PartyReadDetailSnapshot<T>> Function() _streamFactory;
+  Stream<PartyReadDetailSnapshot<T>> Function() _streamFactory;
   StreamSubscription<PartyReadDetailSnapshot<T>>? _subscription;
   PartyReadDetailViewState<T> _state = PartyReadDetailViewState<T>();
 
@@ -38,6 +38,18 @@ class PartyReadDetailViewModel<T> extends ChangeNotifier {
   void start() {
     if (_subscription != null) return;
     _subscription = _streamFactory().listen(_onSnapshot, onError: _onError);
+  }
+
+  /// 라우트 `recruitmentId` 변경 시 이전 구독을 끊고 새 문서를 구독한다.
+  void restart(
+    Stream<PartyReadDetailSnapshot<T>> Function() streamFactory,
+  ) {
+    _subscription?.cancel();
+    _subscription = null;
+    _streamFactory = streamFactory;
+    _state = PartyReadDetailViewState<T>();
+    notifyListeners();
+    start();
   }
 
   void _onSnapshot(PartyReadDetailSnapshot<T> snapshot) {
