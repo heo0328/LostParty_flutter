@@ -1507,3 +1507,11 @@
 - `firebase deploy --only firestore:rules --project lost-party`로 `canGetRecruitmentApplication` 포함 Rules를 배포했다.
 - 배포 전에도 동일 메시지가 났다면 미배포가 원인이었을 가능성이 크다.
 - 추가로 신청/즉시가입에 `targetCycleKey`를 쓰도록 클라이언트를 보강했다.
+
+### Task-066 실기기 현황 정리 (꼬임 방지, 2026-08-26)
+
+- **확인됨:** Rules 배포 후 신청(지원하기)·신청 리스트 표시 성공.
+- **실패·미수정:** 파티장 **승인**. 신청 get Rules와 별개. 다음 수정은 승인부터.
+- **미확인:** 거절·철회·즉시가입.
+- 브랜치 `cursor/party-join-approve-reject` (`3cfd835` Rules/인증 UX, `ed7ec10` targetCycleKey). `main` 미병합.
+- 사용자가 지금 할 테스트·보고 형식은 `NEXT_WORK.md` 「지금 사용자가 할 테스트」에만 둔다.
