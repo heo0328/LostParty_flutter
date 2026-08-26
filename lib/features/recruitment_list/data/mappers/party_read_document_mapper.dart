@@ -105,6 +105,7 @@ class PartyReadDocumentMapper {
         'status',
       ),
       revision: _integer(data, 'revision'),
+      rejectionCount: _nullableInteger(data, 'rejectionCount') ?? 0,
       resolutionReason: _nullableString(data, 'resolutionReason'),
       createdAt: _date(data, 'createdAt'),
       decidedAt: _nullableDate(data, 'decidedAt'),

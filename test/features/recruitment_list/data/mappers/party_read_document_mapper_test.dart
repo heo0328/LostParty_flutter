@@ -120,6 +120,7 @@ void main() {
     expect(summary.requestedRole, PartyRole.dealer);
     expect(summary.recruitmentId, 'raid-1');
     expect(summary.revision, 1);
+    expect(summary.rejectionCount, 0);
   });
 
   test('rejects an unsupported schema version', () {

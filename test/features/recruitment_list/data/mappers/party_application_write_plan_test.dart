@@ -19,9 +19,45 @@ void main() {
 
   test('withdraw only describes the allowed state transition fields', () {
     final timestamp = Object();
-    final data = PartyApplicationWritePlan.withdraw(nextRevision: 2, serverTimestamp: timestamp);
-    expect(data.keys, unorderedEquals(['status', 'resolutionReason', 'revision', 'decidedAt', 'updatedAt']));
+    final data = PartyApplicationWritePlan.withdraw(
+      nextRevision: 2,
+      serverTimestamp: timestamp,
+    );
+    expect(
+      data.keys,
+      unorderedEquals([
+        'status',
+        'resolutionReason',
+        'revision',
+        'decidedAt',
+        'updatedAt',
+      ]),
+    );
     expect(data['status'], 'withdrawn');
     expect(data['revision'], 2);
+  });
+
+  test('reapply resets pending fields without touching rejectionCount', () {
+    final timestamp = Object();
+    final data = PartyApplicationWritePlan.reapply(
+      command: const PartyApplyCommand(
+        recruitmentId: 'raid-1',
+        characterId: 'char-2',
+        requestedRole: PartyRole.support,
+        cycleKey: '2026-08-26',
+        combatPower: 90,
+      ),
+      characterName: '재신청',
+      className: '바드',
+      itemLevel: 1700,
+      nextRevision: 3,
+      serverTimestamp: timestamp,
+    );
+    expect(data['status'], 'pending');
+    expect(data['revision'], 3);
+    expect(data['approvalCount'], 0);
+    expect(data['characterId'], 'char-2');
+    expect(data.containsKey('rejectionCount'), isFalse);
+    expect(data.containsKey('createdAt'), isFalse);
   });
 }

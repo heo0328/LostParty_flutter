@@ -609,6 +609,45 @@ service cloud.firestore {
         && newData.updatedAt == request.time;
     }
 
+    // 거절·철회·superseded 후 같은 방 재신청. rejectionCount는 유지한다.
+    function validApplicationReapply(recruitmentId, playerId, oldData, newData) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && oldData.applicantPlayerId == playerId
+        && (oldData.status == 'rejected'
+          || oldData.status == 'withdrawn'
+          || oldData.status == 'superseded')
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'cycleKey', 'characterId', 'characterNameSnapshot', 'classNameSnapshot',
+          'requestedRole', 'submittedBuildSnapshot', 'status', 'resolutionReason',
+          'approvalCount', 'revision', 'decidedAt', 'updatedAt'
+        ])
+        && newData.status == 'pending'
+        && newData.resolutionReason == null
+        && newData.approvalCount == 0
+        && newData.rejectionCount == oldData.rejectionCount
+        && newData.revision == oldData.revision + 1
+        && newData.decidedAt == null
+        && newData.updatedAt == request.time
+        && newData.schemaVersion == oldData.schemaVersion
+        && newData.recruitmentId == recruitmentId
+        && newData.applicantPlayerId == playerId
+        && newData.cycleKey == recruitment.targetCycleKey
+        && newData.characterId is string
+        && newData.characterId.size() > 0
+        && newData.characterNameSnapshot is string
+        && newData.classNameSnapshot is string
+        && (newData.requestedRole == 'dealer'
+          || newData.requestedRole == 'support')
+        && recruitment.status == 'active'
+        && recruitment.manualRecruitmentEnabled == true
+        && recruitment.hasAvailableSlot == true
+        && recruitment.approvalPolicy.mode == 'leaderOnly'
+        && !(playerId in recruitment.memberPlayerIds)
+        && ownsActiveCharacter(newData.characterId);
+    }
+
     function validApplicationDecision(recruitmentId, oldData, newData) {
       let approved = newData.status == 'approved'
         && newData.approvalCount == oldData.approvalCount + 1
@@ -858,6 +897,11 @@ service cloud.firestore {
             request.resource.data
           ) || validApplicationDecision(
             recruitmentId,
+            resource.data,
+            request.resource.data
+          ) || validApplicationReapply(
+            recruitmentId,
+            playerId,
             resource.data,
             request.resource.data
           );

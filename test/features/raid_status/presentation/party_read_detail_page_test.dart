@@ -223,6 +223,30 @@ void main() {
     expect(find.text('신청을 철회했습니다.'), findsOneWidget);
   });
 
+  testWidgets('거절된 신청은 횟수 안내와 다시 지원하기를 보여 준다', (tester) async {
+    final repository = _FakeApplicationCommandRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      myApplication: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _rejectedApplication(rejectionCount: 2),
+          isFromCache: false,
+        ),
+      ),
+      applicationCommandRepository: repository,
+      candidateService: _candidateService(),
+      playerId: 'player-applicant',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('2회 거절되었습니다'), findsOneWidget);
+    expect(find.text('다시 지원하기'), findsOneWidget);
+    expect(find.textContaining('아직 연결되지 않았습니다'), findsNothing);
+  });
+
   testWidgets('즉시 가입 모집은 joinDirectly 명령을 보낸다', (tester) async {
     final repository = _FakeJoinCommandRepository();
     await pumpPage(
@@ -433,6 +457,24 @@ PartyApplicationSummary _pendingApplication() => PartyApplicationSummary(
   createdAt: DateTime.utc(2026, 8, 20),
   updatedAt: DateTime.utc(2026, 8, 21),
 );
+
+PartyApplicationSummary _rejectedApplication({required int rejectionCount}) =>
+    PartyApplicationSummary(
+      recruitmentId: 'recruitment-1',
+      applicantPlayerId: 'player-applicant',
+      cycleKey: '2026-08-19',
+      characterId: 'server-character-1',
+      characterName: '지원바드',
+      className: '바드',
+      requestedRole: PartyRole.support,
+      status: RecruitmentApplicationStatus.rejected,
+      revision: 4,
+      rejectionCount: rejectionCount,
+      resolutionReason: 'rejectedByApprover',
+      createdAt: DateTime.utc(2026, 8, 20),
+      decidedAt: DateTime.utc(2026, 8, 21),
+      updatedAt: DateTime.utc(2026, 8, 21),
+    );
 
 RecruitmentLeaderCandidateService _candidateService() {
   return RecruitmentLeaderCandidateService(

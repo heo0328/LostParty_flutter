@@ -728,7 +728,8 @@ class _ApplicationActions extends StatelessWidget {
           const SizedBox(height: 8),
           if (loadingApplication)
             const LinearProgressIndicator()
-          else if (application?.status == RecruitmentApplicationStatus.pending) ...[
+          else if (application?.status ==
+              RecruitmentApplicationStatus.pending) ...[
             Text(
               '${application!.characterName} · ${_roleLabel(application.requestedRole)} 승인 대기',
             ),
@@ -738,22 +739,32 @@ class _ApplicationActions extends StatelessWidget {
               onPressed: submitting ? null : onWithdraw,
               child: Text(submitting ? '처리 중...' : '신청 철회'),
             ),
-          ] else if (application != null) ...[
-            Text(_applicationStatusLabel(application)),
-            const SizedBox(height: 8),
-            const Text('같은 방에 다시 신청하는 기능은 아직 연결되지 않았습니다.'),
           ] else if (!summary.isRecruiting)
             const Text('현재 모집이 마감되어 신청할 수 없습니다.')
-          else
+          else ...[
+            if (application != null) ...[
+              Text(_applicationStatusLabel(application)),
+              if (application.rejectionCount > 0) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '이 방에서 ${application.rejectionCount}회 거절되었습니다. '
+                  '다른 캐릭터로 다시 신청할 수 있습니다.',
+                ),
+              ],
+              const SizedBox(height: 12),
+            ],
             FilledButton(
               key: const ValueKey('openApplicationButton'),
               onPressed: submitting ? null : onApply,
               child: Text(
                 submitting
                     ? '처리 중...'
-                    : (isDirectJoin ? '바로 가입' : '지원하기'),
+                    : (isDirectJoin
+                          ? '바로 가입'
+                          : (application == null ? '지원하기' : '다시 지원하기')),
               ),
             ),
+          ],
         ],
       ),
     );

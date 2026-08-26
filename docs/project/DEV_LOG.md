@@ -1528,8 +1528,8 @@
 - 다인 방은 아직 해산 불가 안내. Rules 추가 배포 없음.
 - 다음: Step B 거절 후 재신청·N회 안내. `main` 미병합.
 
-### 하단 탭 back-callback 로그·탭 깜빡임 (2026-08-26)
+### Task-066 Step B — 방 단위 재신청 (2026-08-26)
 
-- 증상: 하단 탭 전환 시 `WindowOnBackDispatcher setTopOnBackInvokedCallback` 다량 로그, 가끔 다른 탭이 잠깐 보이는 체감.
-- 조치: `StatefulShellRoute.indexedStack`(Offstage/TickerMode)로 전환, `enableOnBackInvokedCallback=false`로 predictive back thrashing 완화.
-- 로그가 완전히 사라지진 않을 수 있으나, 비활성 브랜치 Navigator 경합을 줄이는 목적.
+- 거절·철회·superseded 후 같은 `applications/{playerId}`를 `pending`으로 재신청. `rejectionCount` 유지.
+- Rules `validApplicationReapply` + 상세 N회 거절·다시 지원하기 UI.
+- **Rules 재배포 후** Step C 합동 테스트. `main` 미병합.
