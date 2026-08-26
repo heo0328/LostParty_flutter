@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | 통합 기준 | **`main` = Task-068까지** | 고정 슬롯 쓰기·구성판·승인 점유 get |
 | Firestore Rules | 슬롯 필드 + 점유 get **배포됨** | `lost-party` |
-| 직전 브랜치 | `cursor/party-fixed-slots` | `main`에 병합 예정/완료 |
+| 직전 브랜치 | `cursor/party-fixed-slots` | `main`에 병합됨 |
 
 ### Task-068 실기기 확인됨 (2026-08-26)
 
