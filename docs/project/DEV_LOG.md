@@ -1633,4 +1633,4 @@
 - Drift v8 `partyNotificationReceipts`와 unread 집계, 현황 AppBar 알림 아이콘·목록 UI·문구 템플릿을 추가했다.
 - 다인 해산이 실패하던 원인을 Transaction에서 `get`/`delete` 교차 호출로 확인했다. 모든 읽기 후 쓰기로 수정했고 실기기에서 다인 해산이 정상 동작했다.
 - FCM·OS 알림·Emulator·유료 서비스는 제외했다.
-- 다음: Task-074 상세 페이지 최근 10개 텍스트 채팅 (`NEXT_WORK.md`). Task-073 브랜치는 `main` 병합 대기.
+- 다음: Task-074 상세 페이지 최근 10개 텍스트 채팅 (`NEXT_WORK.md`). Task-073은 `main`에 병합됨.
