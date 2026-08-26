@@ -826,6 +826,48 @@ service cloud.firestore {
         && data.previousCharacterNameSnapshot is string;
     }
 
+    function validLifecycleEvent(playerId, eventId, data) {
+      return data.type == 'partyDisbanded'
+        ? validPartyDisbandedEvent(playerId, eventId, data)
+        : false;
+    }
+
+    function validPartyDisbandedEvent(playerId, eventId, data) {
+      let before = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
+      let applicationPath = recruitmentApplicationPath(
+        data.recruitmentId,
+        playerId
+      );
+      let isFormerMember = playerId in before.memberPlayerIds;
+      let isPendingApplicant = exists(applicationPath)
+        && get(applicationPath).data.status == 'pending'
+        && get(applicationPath).data.applicantPlayerId == playerId;
+      return hasActiveBinding()
+        && data.keys().hasOnly([
+          'schemaVersion', 'eventId', 'type', 'playerId', 'recruitmentId',
+          'cycleKey', 'eventRevision', 'actorPlayerId', 'raidId',
+          'difficultyId', 'characterNameSnapshot', 'endReason',
+          'occurredAt', 'expiresAt'
+        ])
+        && data.schemaVersion == 1
+        && data.eventId == eventId
+        && data.playerId == playerId
+        && data.type == 'partyDisbanded'
+        && data.recruitmentId is string
+        && data.cycleKey == before.currentCycleKey
+        && data.eventRevision is int
+        && data.actorPlayerId is string
+        && currentPlayerId() == data.actorPlayerId
+        && data.actorPlayerId == before.leaderPlayerId
+        && playerId != data.actorPlayerId
+        && after.status == 'disbanded'
+        && after.revision == before.revision + 1
+        && data.eventRevision == after.revision
+        && (isFormerMember || isPendingApplicant)
+        && validEventTiming(data);
+    }
+
     function validPlayerEvent(playerId, eventId, data) {
       return data.type in [
           'partyCompleted',
@@ -847,7 +889,9 @@ service cloud.firestore {
               'memberCharacterChanged'
             ]
             ? validMembershipEvent(playerId, eventId, data)
-            : false));
+            : (data.type == 'partyDisbanded'
+              ? validLifecycleEvent(playerId, eventId, data)
+              : false)));
     }
 
     function validPendingApplication(recruitmentId, playerId, data) {

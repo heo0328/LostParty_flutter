@@ -18,11 +18,11 @@ void main() {
         'memberLeft',
         'memberKicked',
         'memberCharacterChanged',
+        'partyDisbanded',
       };
       const deferred = {
         'memberMoved',
         'partyEnded',
-        'partyDisbanded',
       };
 
       for (final type in PartyEventType.values) {

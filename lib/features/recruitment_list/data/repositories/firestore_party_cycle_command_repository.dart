@@ -2,11 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/entities/party_cycle_command.dart';
+import '../../domain/entities/party_event.dart';
 import '../../domain/policies/party_cycle_policy.dart';
 import '../../domain/repositories/party_cycle_command_repository.dart';
 import '../../domain/services/party_cycle_command_validator.dart';
 import '../mappers/party_cycle_write_plan.dart';
 import '../mappers/party_event_write_plan.dart';
+import '../mappers/party_lifecycle_event_writer.dart';
 
 class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepository {
   const FirestorePartyCycleCommandRepository({required FirebaseFirestore firestore, required FirebaseAuth firebaseAuth, DateTime Function()? now}) : _firestore = firestore, _firebaseAuth = firebaseAuth, _now = now;
@@ -136,6 +138,12 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
         PartyCycleFailure.temporarilyUnavailable,
       );
     }
+    final applications = await _loadApplications(command.recruitmentId);
+    if (applications == null) {
+      return const PartyCycleResult.failure(
+        PartyCycleFailure.temporarilyUnavailable,
+      );
+    }
     return _run((transaction, playerId) async {
       final recruitmentRef = _recruitment(command.recruitmentId);
       final recruitment = await transaction.get(recruitmentRef);
@@ -154,11 +162,22 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
         return const PartyCycleResult.failure(PartyCycleFailure.recruitmentClosed);
       }
       final raidId = r['raidId'] as String;
+      final cycleKey = r['currentCycleKey'];
+      if (cycleKey is! String || cycleKey.isEmpty) {
+        return const PartyCycleResult.failure(PartyCycleFailure.invalidRequest);
+      }
       final now = FieldValue.serverTimestamp();
+      final nextRevision = command.expectedRecruitmentRevision + 1;
+      final beforeMemberIds = <String>[];
+      final characterNames = <String, String?>{};
       for (final member in members.docs) {
         final current = await transaction.get(member.reference);
         if (!current.exists) continue;
+        beforeMemberIds.add(member.id);
         final data = current.data()!;
+        characterNames[member.id] = data['characterNameSnapshot'] is String
+            ? data['characterNameSnapshot'] as String
+            : null;
         final characterId = data['characterId'] as String?;
         transaction.delete(member.reference);
         if (characterId != null && characterId.isNotEmpty) {
@@ -171,12 +190,43 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
           );
         }
       }
+      final pendingApplicantIds = <String>[];
+      for (final application in applications.docs) {
+        final current = await transaction.get(application.reference);
+        if (!current.exists) continue;
+        final data = current.data();
+        if (data?['status'] != 'pending') continue;
+        final applicantId = data?['applicantPlayerId'];
+        if (applicantId is! String || applicantId.isEmpty) continue;
+        pendingApplicantIds.add(applicantId);
+        characterNames[applicantId] = data?['characterNameSnapshot'] is String
+            ? data!['characterNameSnapshot'] as String
+            : characterNames[applicantId];
+      }
       transaction.update(
         recruitmentRef,
         PartyCycleWritePlan.disbandRecruitment(
           revision: command.expectedRecruitmentRevision,
           serverTimestamp: now,
         ),
+      );
+      PartyLifecycleEventWriter.writeToRecipients(
+        transaction: transaction,
+        firestore: _firestore,
+        type: PartyEventType.partyDisbanded,
+        recipientPlayerIds: {...beforeMemberIds, ...pendingApplicantIds},
+        recruitmentId: command.recruitmentId,
+        cycleKey: cycleKey,
+        recruitmentRevision: nextRevision,
+        actorPlayerId: playerId,
+        raidId: raidId,
+        difficultyId: r['difficultyId'] is String
+            ? r['difficultyId'] as String
+            : null,
+        characterNameByPlayerId: characterNames,
+        endReason: 'disbandedByLeader',
+        serverTimestamp: now,
+        now: _now,
       );
       return const PartyCycleResult.success();
     });
@@ -203,8 +253,26 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
     }
   }
 
-  Future<QuerySnapshot<Map<String, dynamic>>?> _loadMembers(String id) async { try { return await _recruitment(id).collection('members').get(); } on FirebaseException { return null; } }
-  DocumentReference<Map<String, dynamic>> _recruitment(String id) => _firestore.collection('recruitments').doc(id);
+  Future<QuerySnapshot<Map<String, dynamic>>?> _loadMembers(String id) async {
+    try {
+      return await _recruitment(id).collection('members').get();
+    } on FirebaseException {
+      return null;
+    }
+  }
+
+  Future<QuerySnapshot<Map<String, dynamic>>?> _loadApplications(
+    String id,
+  ) async {
+    try {
+      return await _recruitment(id).collection('applications').get();
+    } on FirebaseException {
+      return null;
+    }
+  }
+
+  DocumentReference<Map<String, dynamic>> _recruitment(String id) =>
+      _firestore.collection('recruitments').doc(id);
 
   Future<PartyCycleResult> _run(Future<PartyCycleResult> Function(Transaction, String) action) async {
     final uid = _firebaseAuth.currentUser?.uid;
