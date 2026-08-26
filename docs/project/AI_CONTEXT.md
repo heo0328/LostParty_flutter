@@ -371,7 +371,7 @@ Player binding의 계약·구현·Rules 배포와 실기기 검증을 완료했�
 - Task-064에서 파티장·파티원 표시 누락을 점검하고 다음 작업을 읽기/UI 복구로 재정의했다.
 - Task-065에서 파티장 Snapshot·`PartyMemberDisplay`·`watchRecruitmentMembers`·공개 membership Rules(Option 1)·목록/상세 UI 복구를 완료하고 `main`에 통합했다.
 - Task-066에서 `cursor/party-join-approve-reject`로 즉시 가입·승인·거절을 현황 상세에 1차 연결했다. `approvalMode`·`watchRecruitmentApplications`·join Repository wiring과 표적 테스트를 반영했다.
-- 신청 get Rules 배포 후 신청·신청 리스트는 실기기에서 확인됐다. **내 모집 삭제(단독)와 방 단위 거절 후 재신청·N회 안내를 반영했고 Rules도 배포했다.** 다음은 합동 실기기(삭제·거절·재신청·다른 방·승인). 상세는 `NEXT_WORK.md`.
+- 신청 get Rules 배포 후 신청·신청 리스트는 실기기에서 확인됐다. 내 모집 삭제(단독), 방 단위 거절 후 재신청·N회 안내·캐릭터 재선택, **승인·철회·즉시 가입**까지 합동 실기기에서 통과했다. 브랜치 `cursor/party-join-approve-reject`. **`main` 병합은 사용자 지시 후.** 상세는 `NEXT_WORK.md`.
 - 멤버·회차는 Fake를 유지한다.
 - 네트워크 요청을 시작하는 버튼은 진행 중 연타·중복 요청을 막는 공통 UI 규칙을 적용한다.
 - Codex는 설계 계약, 문서 정합성, 작업 분해와 인수인계를 중심으로 유지하되 필요한 코드 수정은 가능하다.

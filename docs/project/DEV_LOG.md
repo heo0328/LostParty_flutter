@@ -1533,3 +1533,9 @@
 - 거절·철회·superseded 후 같은 `applications/{playerId}`를 `pending`으로 재신청. `rejectionCount` 유지.
 - Rules `validApplicationReapply` + 상세 N회 거절·다시 지원하기 UI.
 - **Rules 재배포 후** Step C 합동 테스트. `main` 미병합.
+
+### Task-066 Step C 합동 실기기 통과 (2026-08-26)
+
+- 확인: N회 거절 안내·재신청·캐릭터 재선택, 단독 모집 삭제, 승인, 철회, 즉시 가입.
+- 브랜치 `cursor/party-join-approve-reject`. **`main` 병합은 사용자 지시 대기.**
+- 후속: 다인 해산, 멤버·회차 명령 등 (`NEXT_WORK.md`).
