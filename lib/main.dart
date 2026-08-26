@@ -10,6 +10,7 @@ import 'features/account/domain/repositories/account_ownership_status_gateway.da
 import 'features/account/domain/repositories/character_summary_sync_gateway.dart';
 import 'features/account/domain/repositories/game_account_verification_gateway.dart';
 import 'features/account/domain/repositories/weekly_raid_claim_repository.dart';
+import 'features/account/domain/repositories/weekly_raid_claim_command_repository.dart';
 import 'features/player/domain/entities/player_session.dart';
 import 'features/raid_status/domain/services/party_event_sync_service.dart';
 import 'features/recruitment_list/domain/repositories/party_read_repository.dart';
@@ -34,6 +35,7 @@ class MyApp extends StatefulWidget {
     this.partyEventSyncService,
     this.weeklyRaidClaimRepository,
     this.characterSummarySyncGateway,
+    this.weeklyRaidClaimCommandRepository,
     super.key,
   });
 
@@ -45,6 +47,7 @@ class MyApp extends StatefulWidget {
   final PartyEventSyncService? partyEventSyncService;
   final WeeklyRaidClaimRepository? weeklyRaidClaimRepository;
   final CharacterSummarySyncGateway? characterSummarySyncGateway;
+  final WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -69,6 +72,7 @@ class _MyAppState extends State<MyApp> {
       partyEventSyncService: widget.partyEventSyncService,
       weeklyRaidClaimRepository: widget.weeklyRaidClaimRepository,
       characterSummarySyncGateway: widget.characterSummarySyncGateway,
+      weeklyRaidClaimCommandRepository: widget.weeklyRaidClaimCommandRepository,
     );
   }
 

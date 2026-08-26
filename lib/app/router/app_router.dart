@@ -18,6 +18,7 @@ import '../../features/account/presentation/pages/character_detail_page.dart';
 import '../../features/account/presentation/pages/my_account_page.dart';
 import '../../features/account/presentation/pages/game_account_verification_page.dart';
 import '../../features/account/domain/repositories/weekly_raid_claim_repository.dart';
+import '../../features/account/domain/repositories/weekly_raid_claim_command_repository.dart';
 import '../../features/account/domain/entities/local_game_account.dart';
 import '../../features/account/domain/repositories/account_ownership_status_gateway.dart';
 import '../../features/account/domain/repositories/character_summary_sync_gateway.dart';
@@ -73,6 +74,7 @@ GoRouter createAppRouter({
   PartyEventSyncService? partyEventSyncService,
   WeeklyRaidClaimRepository? weeklyRaidClaimRepository,
   CharacterSummarySyncGateway? characterSummarySyncGateway,
+  WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository,
 }) {
   final partyReadRepositoryOrDefault =
       partyReadRepository ??
@@ -84,10 +86,23 @@ GoRouter createAppRouter({
         firebaseAuth: FirebaseAuth.instance,
         database: accountDatabase,
       );
+  final defaultWeeklyRaidClaimRepository = weeklyRaidClaimRepository == null
+      ? FirestoreWeeklyRaidClaimRepository(
+          firestore: FirebaseFirestore.instance,
+          firebaseAuth: FirebaseAuth.instance,
+        )
+      : null;
   final weeklyRaidClaimRepositoryOrDefault =
-      weeklyRaidClaimRepository ??
-      FirestoreWeeklyRaidClaimRepository(firestore: FirebaseFirestore.instance);
-  final currentCycleKey = const PartyCyclePolicy().keyFor(DateTime.now());
+      weeklyRaidClaimRepository ?? defaultWeeklyRaidClaimRepository!;
+  final weeklyRaidClaimCommandRepositoryOrDefault =
+      weeklyRaidClaimCommandRepository ??
+      (weeklyRaidClaimRepositoryOrDefault is WeeklyRaidClaimCommandRepository
+          ? weeklyRaidClaimRepositoryOrDefault
+                as WeeklyRaidClaimCommandRepository
+          : null);
+  const cyclePolicy = PartyCyclePolicy();
+  final currentCycleKey = cyclePolicy.keyFor(DateTime.now());
+  final currentCycle = cyclePolicy.fromKey(currentCycleKey)!;
   final apiTokenStore = SecureApiTokenStore();
   final apiClient = LostArkApiClient(apiTokenStore: apiTokenStore);
   final gameCatalogRepository = GameCatalogRepositoryImpl(
@@ -252,6 +267,10 @@ GoRouter createAppRouter({
                   raidCatalogRepository: raidCatalogRepository,
                   playerId: playerSession.playerId,
                   cycleKey: currentCycleKey,
+                  cycleStartedAt: currentCycle.startedAt,
+                  cycleEndsAt: currentCycle.endsAt,
+                  weeklyRaidClaimCommandRepository:
+                      weeklyRaidClaimCommandRepositoryOrDefault,
                 ),
                 routes: [
                   GoRoute(

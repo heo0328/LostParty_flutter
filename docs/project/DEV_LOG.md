@@ -1664,3 +1664,17 @@
 - Claim 표적 테스트 6개, 내 계정 기존 테스트, 앱 위젯 테스트, 전체 `flutter test --no-pub` 421개와 `flutter analyze --no-pub`가 통과했다.
 - Claim create/delete, 모집 제한, 활성 파티 탈퇴와 pending 종료 및 개인/전체 완료 변경은 제외했다.
 - 실기기에서 새 주간 레이드 표현, 기존 계정 기능과 카드 레이아웃이 정상임을 확인했다. 현재 Claim이 없어 체크박스는 모두 미체크이며 읽기 전용으로 조작되지 않는다.
+
+---
+
+## Task-076. 개인 주간 레이드 Claim 기반 B (2026-08-27)
+
+- 작업 브랜치: `codex/weekly-raid-claim-manual`
+- 내 계정 체크박스에서 자기 수동 Claim create/delete를 확인창과 함께 실행하고, 처리 중 같은 항목의 중복 입력을 막는다.
+- 활성 assignment 또는 pending 신청이 있으면 상태를 변경하지 않고 사유를 안내한다. 자동 탈퇴·신청 종료는 후속 D 범위다.
+- Claim 문서 ID를 Rules가 재구성 가능한 `${cycleKey}_${characterId}_${raidId}`로 교정하고, 읽기 mapper도 문서 ID와 내용의 일치를 검증한다.
+- Rules는 본인 Player·소유 Character·현재 7일 주차·수동 source·서버 timestamp·허용 필드·결정적 ID를 검증한다.
+- Claim과 신청/assignment의 경쟁 생성을 막기 위해 신청·가입·캐릭터 변경 Rules에 Claim 부재 검사를 최소 선반영했다. 전체 UI 오류 매핑은 Task-077 C에서 완성한다.
+- 전체 `flutter test` 424개, `flutter analyze`, Firebase Rules dry-run compile이 통과했다. 사용자가 Rules를 배포했다.
+- Android 실기기에서 수동 체크·해제, 앱 종료 후 재실행 상태 유지, 참가 중 동일 레이드 모집 생성 차단과 pending 신청 상태의 체크 차단을 확인했다.
+- 파티 완료 후 참가자 Claim 자동 생성은 아직 연결하지 않았으며 Task-079 E 범위다.

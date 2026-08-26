@@ -19,6 +19,8 @@
 ## 브랜치 기준
 - 통합 기준 브랜치: `main`
 - 현재 저장 브랜치와 커밋은 `NEXT_WORK.md`의 기준 상태를 따른다.
+- 2026-08-27 현재 `main`에는 Task-075 A가 반영됐고, `codex/weekly-raid-claim-manual`의 Task-076 B 수동 Claim 체크·해제는 Rules 배포와 실기기 검증까지 완료해 Git 종료 단계다.
+- Task-076 B는 활성 참가·pending이 없는 경우만 처리한다. 자동 탈퇴·신청 종료는 Task-078 D이며, 모집 전반의 Claim 제한 UX는 Task-077 C다.
 
 ---
 

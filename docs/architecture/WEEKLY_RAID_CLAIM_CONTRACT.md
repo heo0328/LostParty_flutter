@@ -73,11 +73,13 @@ players/{playerId}/weeklyRaidClaims/{cycleKey_characterId_raidId}
   source: manual | partyMember | partyOwner
   sourceRecruitmentId: String?
   sourceCompletionRevision: int?
+  cycleStartedAt: timestamp
+  cycleEndsAt: timestamp
   completedAt: server timestamp
   updatedAt: server timestamp
 ```
 
-문서 ID는 `cycleKey`, `characterId`, `raidId`를 각각 UTF-8 base64url(no padding)로 인코딩한 뒤 `~`로 연결한다. 인코딩된 구성 요소에는 `/`와 구분자 `~`가 들어가지 않아 Firestore 경로와 구성 요소 경계가 안정적이다. 표시 이름은 식별 키로 사용하지 않는다.
+문서 ID는 `${cycleKey}_${characterId}_${raidId}`다. Firestore Rules가 같은 값을 직접 재구성해 임의 ID와 중복 Claim을 거절할 수 있어야 한다. `cycleKey`는 `YYYY-MM-DD`, 서버 Character ID는 Firestore 자동 ID 형식인 영숫자 20자, `raidId`는 소문자 영숫자와 밑줄만 허용한다. 표시 이름은 식별 키로 사용하지 않는다.
 
 ### 기존 Claim과 멱등성
 

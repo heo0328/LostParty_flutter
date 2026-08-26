@@ -11,6 +11,8 @@ class AccountCharacterCard extends StatelessWidget {
     required this.isRepresentative,
     this.weeklyRaids = const [],
     this.onTap,
+    this.onWeeklyRaidChanged,
+    this.busyRaidIds = const {},
     super.key,
   });
 
@@ -18,6 +20,9 @@ class AccountCharacterCard extends StatelessWidget {
   final bool isRepresentative;
   final List<WeeklyRaidStatusItem> weeklyRaids;
   final VoidCallback? onTap;
+  final void Function(WeeklyRaidStatusItem raid, bool value)?
+  onWeeklyRaidChanged;
+  final Set<String> busyRaidIds;
 
   @override
   Widget build(BuildContext context) {
@@ -66,24 +71,24 @@ class AccountCharacterCard extends StatelessWidget {
               ),
               if (weeklyRaids.isNotEmpty) ...[
                 const SizedBox(height: 6),
-                Text(
-                  '주간 레이드 · 읽기 전용',
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
+                Text('주간 레이드', style: Theme.of(context).textTheme.labelSmall),
                 for (final raid in weeklyRaids)
                   SizedBox(
                     height: 30,
                     child: Row(
                       children: [
-                        IgnorePointer(
-                          child: Checkbox(
-                            key: ValueKey(
-                              'weeklyRaidClaim-${character.serverCharacterId}-${raid.raidId}',
-                            ),
-                            value: raid.isCompleted,
-                            onChanged: null,
-                            visualDensity: VisualDensity.compact,
+                        Checkbox(
+                          key: ValueKey(
+                            'weeklyRaidClaim-${character.serverCharacterId}-${raid.raidId}',
                           ),
+                          value: raid.isCompleted,
+                          onChanged:
+                              onWeeklyRaidChanged == null ||
+                                  busyRaidIds.contains(raid.raidId)
+                              ? null
+                              : (value) =>
+                                    onWeeklyRaidChanged!(raid, value ?? false),
+                          visualDensity: VisualDensity.compact,
                         ),
                         Expanded(
                           child: Text(
