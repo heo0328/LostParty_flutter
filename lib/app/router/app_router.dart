@@ -161,15 +161,9 @@ GoRouter createAppRouter({
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/raid-status',
     routes: [
-      StatefulShellRoute(
+      StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return AppShell(navigationShell: navigationShell);
-        },
-        navigatorContainerBuilder: (context, navigationShell, children) {
-          return AppBranchContainer(
-            navigationShell: navigationShell,
-            children: children,
-          );
         },
         branches: [
           StatefulShellBranch(
