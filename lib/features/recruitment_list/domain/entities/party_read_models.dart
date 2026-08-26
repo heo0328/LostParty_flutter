@@ -78,15 +78,21 @@ class ActiveRaidSummary {
 /// PlayerId·권한 플래그는 presentation에 노출하지 않는다.
 class PartyMemberDisplay {
   const PartyMemberDisplay({
+    required this.playerId,
     required this.characterName,
     required this.className,
     required this.role,
     required this.partyIndex,
+    this.characterId,
     this.slotIndex,
     this.itemLevel,
     this.combatPower,
   });
 
+  /// 명령 대상용. UI 문구에는 노출하지 않는다.
+  final String playerId;
+  /// 캐릭터 변경 후보 필터용. UI 문구에는 노출하지 않는다.
+  final String? characterId;
   final String? characterName;
   final String? className;
   final PartyRole role;

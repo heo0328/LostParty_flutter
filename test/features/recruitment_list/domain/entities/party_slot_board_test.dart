@@ -5,6 +5,7 @@ import 'package:lost_party/features/recruitment_list/domain/entities/party_recru
 void main() {
   test('정원 전체 슬롯을 만들고 점유·빈자리·미정 멤버를 구분한다', () {
     const occupied = PartyMemberDisplay(
+      playerId: 'player-leader',
       characterName: '리더',
       className: '블레이드',
       role: PartyRole.dealer,
@@ -12,6 +13,7 @@ void main() {
       slotIndex: 0,
     );
     const unassigned = PartyMemberDisplay(
+      playerId: 'player-old',
       characterName: '이전멤버',
       className: '바드',
       role: PartyRole.support,
@@ -38,6 +40,7 @@ void main() {
 
   test('저장된 자리는 다른 멤버를 당기지 않는다', () {
     const lateJoin = PartyMemberDisplay(
+      playerId: 'player-late',
       characterName: '후발',
       className: '워로드',
       role: PartyRole.dealer,

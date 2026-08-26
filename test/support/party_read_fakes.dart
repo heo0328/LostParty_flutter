@@ -29,8 +29,16 @@ class FakePartyReadRepository implements PartyReadRepository {
     Stream<PartyReadSnapshot<ActiveRaidSummary>>? activeRaids,
     Stream<PartyReadSnapshot<PartyApplicationSummary>>? applications,
     Stream<PartyReadDetailSnapshot<PublicRecruitmentSummary>>? recruitment,
+    Stream<PartyReadDetailSnapshot<PublicRecruitmentSummary>> Function(
+      String recruitmentId,
+    )?
+    recruitmentForId,
     Stream<PartyReadDetailSnapshot<PartyApplicationSummary?>>? myApplication,
     Stream<PartyReadSnapshot<PartyMemberDisplay>>? members,
+    Stream<PartyReadSnapshot<PartyMemberDisplay>> Function(
+      String recruitmentId,
+    )?
+    membersForId,
     Stream<PartyReadSnapshot<PartyApplicationSummary>>? recruitmentApplications,
     Stream<PublicRecruitmentPage>? publicFirstPage,
     Future<PublicRecruitmentPage> Function({
@@ -42,8 +50,10 @@ class FakePartyReadRepository implements PartyReadRepository {
   }) : _activeRaids = activeRaids ?? Stream.value(emptyActiveRaids),
        _applications = applications ?? Stream.value(emptyApplications),
        _recruitment = recruitment,
+       _recruitmentForId = recruitmentForId,
        _myApplication = myApplication,
        _members = members ?? Stream.value(emptyMembers),
+       _membersForId = membersForId,
        _recruitmentApplications =
            recruitmentApplications ?? Stream.value(emptyApplications),
        _publicFirstPage =
@@ -53,9 +63,17 @@ class FakePartyReadRepository implements PartyReadRepository {
   final Stream<PartyReadSnapshot<ActiveRaidSummary>> _activeRaids;
   final Stream<PartyReadSnapshot<PartyApplicationSummary>> _applications;
   final Stream<PartyReadDetailSnapshot<PublicRecruitmentSummary>>? _recruitment;
+  final Stream<PartyReadDetailSnapshot<PublicRecruitmentSummary>> Function(
+    String recruitmentId,
+  )?
+  _recruitmentForId;
   final Stream<PartyReadDetailSnapshot<PartyApplicationSummary?>>?
   _myApplication;
   final Stream<PartyReadSnapshot<PartyMemberDisplay>> _members;
+  final Stream<PartyReadSnapshot<PartyMemberDisplay>> Function(
+    String recruitmentId,
+  )?
+  _membersForId;
   final Stream<PartyReadSnapshot<PartyApplicationSummary>>
   _recruitmentApplications;
   final Stream<PublicRecruitmentPage> _publicFirstPage;
@@ -70,6 +88,7 @@ class FakePartyReadRepository implements PartyReadRepository {
   String? requestedApplicationsPlayerId;
   String? requestedApplicationsCycleKey;
   String? requestedRecruitmentId;
+  final requestedRecruitmentIds = <String>[];
   String? requestedMembersRecruitmentId;
   String? requestedRecruitmentApplicationsId;
   String? requestedPublicFirstPageCycleKey;
@@ -125,6 +144,9 @@ class FakePartyReadRepository implements PartyReadRepository {
     String recruitmentId,
   ) {
     requestedRecruitmentId = recruitmentId;
+    requestedRecruitmentIds.add(recruitmentId);
+    final byId = _recruitmentForId;
+    if (byId != null) return byId(recruitmentId);
     return _recruitment ??
         Stream.value(
           const PartyReadDetailSnapshot(item: null, isFromCache: false),
@@ -136,6 +158,8 @@ class FakePartyReadRepository implements PartyReadRepository {
     String recruitmentId,
   ) {
     requestedMembersRecruitmentId = recruitmentId;
+    final byId = _membersForId;
+    if (byId != null) return byId(recruitmentId);
     return _members;
   }
 

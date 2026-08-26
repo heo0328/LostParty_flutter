@@ -182,27 +182,32 @@ GoRouter createAppRouter({
                 routes: [
                   GoRoute(
                     path: ':recruitmentId',
-                    builder: (context, state) => PartyReadDetailPage(
-                      recruitmentId: state.pathParameters['recruitmentId']!,
-                      partyReadRepository: partyReadRepositoryOrDefault,
-                      applicationCommandRepository:
-                          FirestorePartyApplicationCommandRepository(
-                            firestore: FirebaseFirestore.instance,
-                            firebaseAuth: FirebaseAuth.instance,
-                          ),
-                      joinCommandRepository:
-                          FirestorePartyJoinCommandRepository(
-                            firestore: FirebaseFirestore.instance,
-                            firebaseAuth: FirebaseAuth.instance,
-                          ),
-                      membershipCommandRepository:
-                          FirestorePartyMembershipCommandRepository(
-                            firestore: FirebaseFirestore.instance,
-                            firebaseAuth: FirebaseAuth.instance,
-                          ),
-                      candidateService: recruitmentLeaderCandidateService,
-                      playerId: playerSession.playerId,
-                    ),
+                    builder: (context, state) {
+                      final recruitmentId =
+                          state.pathParameters['recruitmentId']!;
+                      return PartyReadDetailPage(
+                        key: ValueKey(recruitmentId),
+                        recruitmentId: recruitmentId,
+                        partyReadRepository: partyReadRepositoryOrDefault,
+                        applicationCommandRepository:
+                            FirestorePartyApplicationCommandRepository(
+                              firestore: FirebaseFirestore.instance,
+                              firebaseAuth: FirebaseAuth.instance,
+                            ),
+                        joinCommandRepository:
+                            FirestorePartyJoinCommandRepository(
+                              firestore: FirebaseFirestore.instance,
+                              firebaseAuth: FirebaseAuth.instance,
+                            ),
+                        membershipCommandRepository:
+                            FirestorePartyMembershipCommandRepository(
+                              firestore: FirebaseFirestore.instance,
+                              firebaseAuth: FirebaseAuth.instance,
+                            ),
+                        candidateService: recruitmentLeaderCandidateService,
+                        playerId: playerSession.playerId,
+                      );
+                    },
                   ),
                 ],
               ),

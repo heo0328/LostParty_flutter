@@ -1581,3 +1581,15 @@
 - 넓은 8인에서 같은 자리 좌우 Slot Card 높이를 `IntrinsicHeight`로 맞췄다.
 - 표적 위젯 테스트와 `flutter analyze` 통과. 바형·폴드 실기기 디자인 통과.
 - 다음: 자기 참가 캐릭터 변경·탈퇴·추방 (`NEXT_WORK.md` Task-070).
+
+---
+
+## Task-070. 자기 참가 캐릭터 변경·탈퇴·추방 (2026-08-26)
+
+- 작업 브랜치: `cursor/party-membership-commands`
+- 현황 상세에 `changeCharacter` / `leave` / `kick`을 연결했다. 캐릭터 변경은 역할과 `(partyIndex, slotIndex)`를 유지한다.
+- 탈퇴·추방 후 남은 멤버를 앞자리로 당기지 않는다. 다인 해산은 범위 밖이며 단독 모집 삭제만 1인일 때 유지한다.
+- `PartyMemberDisplay`에 표시하지 않는 `playerId`·`characterId`를 두어 명령 대상 식별에 쓴다.
+- BUG-001: 상세 `recruitmentId` 변경 시 State가 남는 문제를 `ValueKey`와 ViewModel `restart`/`didUpdateWidget`으로 수정했다. 정상 스텝 실기기 통과 후 종료 기록만 `BUG_REPORTS.md`에 남김.
+- 표적 테스트·`flutter analyze` 통과. 실기기에서 변경·탈퇴·추방 통과.
+- 다음: 완료·완료 취소·종료·해산 (`NEXT_WORK.md` Task-071).
