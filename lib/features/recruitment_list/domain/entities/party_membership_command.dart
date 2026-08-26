@@ -1,7 +1,10 @@
+import 'party_recruitment.dart';
+
 class PartyChangeCharacterCommand {
-  const PartyChangeCharacterCommand({required this.recruitmentId, required this.newCharacterId, required this.expectedRecruitmentRevision, this.combatPower});
+  const PartyChangeCharacterCommand({required this.recruitmentId, required this.newCharacterId, required this.newRole, required this.expectedRecruitmentRevision, this.combatPower});
   final String recruitmentId;
   final String newCharacterId;
+  final PartyRole newRole;
   final int expectedRecruitmentRevision;
   final double? combatPower;
 }
@@ -21,7 +24,7 @@ class PartySetApprovalPermissionCommand {
   final int expectedRecruitmentRevision;
 }
 
-enum PartyMembershipFailure { unauthenticated, playerBindingMissing, notFound, unauthorized, ownershipLost, invalidCharacter, recruitmentClosed, alreadyCurrentCharacter, participationConflict, roleMismatch, invalidComposition, revisionConflict, unsupportedOnSpark, permissionDenied, temporarilyUnavailable, invalidRequest, unknown }
+enum PartyMembershipFailure { unauthenticated, playerBindingMissing, notFound, unauthorized, ownershipLost, invalidCharacter, weeklyRaidCompleted, recruitmentClosed, alreadyCurrentCharacter, participationConflict, roleMismatch, invalidComposition, revisionConflict, unsupportedOnSpark, permissionDenied, temporarilyUnavailable, invalidRequest, unknown }
 
 class PartyMembershipResult {
   const PartyMembershipResult.success() : failure = null;

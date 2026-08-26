@@ -248,24 +248,35 @@ service cloud.firestore {
       let memberBefore = get(memberPath);
       let memberAfter = getAfter(memberPath);
       let keys = newData.diff(oldData).affectedKeys();
-      let revisionOnly = keys.hasOnly(['revision', 'updatedAt']);
-      let leaderDisplayUpdate = keys.hasOnly([
+      let allowedUpdate = keys.hasOnly([
         'revision', 'updatedAt',
-        'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot'
+        'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot',
+        'dealerCount', 'supportCount'
       ]);
       return hasActiveBinding()
         && oldData.status == 'active'
         && playerId in oldData.memberPlayerIds
-        && (oldData.leaderPlayerId == playerId
-          || (exists(memberPath)
-            && existsAfter(memberPath)
-            && memberBefore.data.characterId != memberAfter.data.characterId))
-        && (revisionOnly
-          || (leaderDisplayUpdate
-            && oldData.leaderPlayerId == playerId
-            && existsAfter(memberPath)
-            && newData.leaderCharacterNameSnapshot
-              == memberAfter.data.characterNameSnapshot
+        && allowedUpdate
+        && exists(memberPath)
+        && existsAfter(memberPath)
+        && (memberBefore.data.characterId != memberAfter.data.characterId
+          || memberBefore.data.role != memberAfter.data.role)
+        && newData.dealerCount == oldData.dealerCount
+          + (memberAfter.data.role == 'dealer' ? 1 : 0)
+          - (memberBefore.data.role == 'dealer' ? 1 : 0)
+        && newData.supportCount == oldData.supportCount
+          + (memberAfter.data.role == 'support' ? 1 : 0)
+          - (memberBefore.data.role == 'support' ? 1 : 0)
+        && newData.memberCount
+          == newData.dealerCount + newData.supportCount
+        && newData.supportCount
+          <= newData.partyCount * newData.supportsPerParty
+        && newData.dealerCount
+          <= newData.partyCount
+            * (newData.membersPerParty - newData.supportsPerParty)
+        && (oldData.leaderPlayerId != playerId
+          || (newData.leaderCharacterNameSnapshot
+            == memberAfter.data.characterNameSnapshot
             && newData.leaderClassNameSnapshot
               == memberAfter.data.classNameSnapshot))
         && newData.revision == oldData.revision + 1
@@ -552,26 +563,47 @@ service cloud.firestore {
         && playerId == currentPlayerId()
         && newData.diff(oldData).affectedKeys().hasOnly([
           'characterId', 'characterNameSnapshot', 'classNameSnapshot',
-          'itemLevelSnapshot', 'combatPowerSnapshot', 'characterChangedAt',
-          'updatedAt'
+          'itemLevelSnapshot', 'combatPowerSnapshot', 'role',
+          'characterChangedAt', 'updatedAt'
         ])
-        && newData.characterId != oldData.characterId
-        && newData.role == oldData.role
+        && (newData.characterId != oldData.characterId
+          || newData.role != oldData.role)
+        && newData.role in ['dealer', 'support']
         && newData.partyIndex == oldData.partyIndex
         && newData.get('slotIndex', -1) == oldData.get('slotIndex', -1)
         && newData.canApproveApplications == oldData.canApproveApplications
         && ownsActiveCharacter(newData.characterId)
         && newData.characterChangedAt == request.time
         && newData.updatedAt == request.time
-        && !existsAfter(assignmentPath(playerId, oldAssignmentId))
-        && getAfter(assignmentPath(playerId, newAssignmentId)).data.characterId
-          == newData.characterId
+        && (oldAssignmentId == newAssignmentId
+          ? (existsAfter(assignmentPath(playerId, newAssignmentId))
+            && getAfter(assignmentPath(playerId, newAssignmentId)).data.role
+              == newData.role)
+          : (!existsAfter(assignmentPath(playerId, oldAssignmentId))
+            && getAfter(assignmentPath(playerId, newAssignmentId)).data.characterId
+              == newData.characterId
+            && getAfter(assignmentPath(playerId, newAssignmentId)).data.role
+              == newData.role))
         && !hasWeeklyRaidClaimAfter(
           playerId,
           recruitment.currentCycleKey,
           newData.characterId,
           recruitment.raidId
         );
+    }
+
+    function validAssignmentRoleChange(playerId, data, newData) {
+      let member = getAfter(recruitmentMemberPath(
+        data.recruitmentId,
+        playerId
+      )).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && newData.diff(data).affectedKeys().hasOnly(['role', 'updatedAt'])
+        && newData.role in ['dealer', 'support']
+        && newData.role == member.role
+        && newData.characterId == member.characterId
+        && newData.updatedAt == request.time;
     }
 
     function validApprovalPermissionChange(recruitmentId, playerId, oldData, newData) {
@@ -1201,7 +1233,11 @@ service cloud.firestore {
           assignmentId,
           request.resource.data
         ) || validJoinedAssignment(playerId, assignmentId, request.resource.data);
-        allow update: if false;
+        allow update: if validAssignmentRoleChange(
+          playerId,
+          resource.data,
+          request.resource.data
+        );
         allow delete: if validAssignmentRemoval(playerId, resource.data);
       }
 

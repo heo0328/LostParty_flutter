@@ -15,7 +15,7 @@ class PartyWithdrawApplicationCommand {
   final int expectedRevision;
 }
 
-enum PartyApplicationFailure { unauthenticated, playerBindingMissing, notFound, ownershipLost, invalidCharacter, recruitmentClosed, approvalModeMismatch, capacityFull, alreadyMember, applicationAlreadyExists, applicationNotPending, revisionConflict, permissionDenied, temporarilyUnavailable, invalidRequest, unknown }
+enum PartyApplicationFailure { unauthenticated, playerBindingMissing, notFound, ownershipLost, invalidCharacter, weeklyRaidCompleted, recruitmentClosed, approvalModeMismatch, capacityFull, alreadyMember, applicationAlreadyExists, applicationNotPending, revisionConflict, permissionDenied, temporarilyUnavailable, invalidRequest, unknown }
 
 class PartyApplicationCommandResult {
   const PartyApplicationCommandResult.success() : failure = null;

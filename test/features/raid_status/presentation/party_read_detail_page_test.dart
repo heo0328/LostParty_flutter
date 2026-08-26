@@ -125,6 +125,7 @@ void main() {
               className: '바드',
               role: PartyRole.support,
               partyIndex: 1,
+              slotIndex: 0,
               itemLevel: 1710,
               combatPower: 280000,
             ),
@@ -138,16 +139,20 @@ void main() {
     expect(find.text('4막 노말 모집'), findsOneWidget);
     expect(find.textContaining('이슈아이 · 기상술사'), findsWidgets);
     expect(find.text('파티 구성'), findsOneWidget);
-    expect(find.text('1파티'), findsOneWidget);
-    expect(find.text('2파티'), findsOneWidget);
+    expect(
+      find.text('2/8명 · 모집 중 (딜러 1/6, 서포터 1/2)'),
+      findsOneWidget,
+    );
+    expect(find.text('1파티 · 딜러 1/3 · 서포터 0/1'), findsOneWidget);
+    expect(find.text('2파티 · 딜러 0/3 · 서포터 1/1'), findsOneWidget);
+    expect(find.textContaining('1파티 · 딜러'), findsOneWidget);
+    expect(find.textContaining('2파티 · 딜러'), findsOneWidget);
     expect(find.text('1번'), findsWidgets);
     expect(find.text('이슈아이'), findsWidgets);
     expect(find.text('기상술사'), findsOneWidget);
     expect(find.text('공대장'), findsOneWidget);
     expect(find.text('빈자리'), findsWidgets);
     expect(find.text('현재 별도 참가 조건 없음'), findsWidgets);
-    expect(find.text('자리 미정'), findsOneWidget);
-    expect(find.text('자리 정보 없음'), findsOneWidget);
     expect(find.textContaining('서폿캐릭'), findsOneWidget);
     expect(find.textContaining('전투력 300,000'), findsOneWidget);
     expect(find.textContaining('조회 전용'), findsOneWidget);
@@ -682,7 +687,9 @@ void main() {
       find.byKey(const ValueKey('changeParticipatingCharacterButton')),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('change-candidate-2')));
+    await tester.tap(
+      find.byKey(const ValueKey('change-candidate-2-dealer')),
+    );
     await tester.pumpAndSettle();
 
     expect(membership.changeCommands, hasLength(1));
@@ -690,7 +697,108 @@ void main() {
       membership.changeCommands.single.newCharacterId,
       'server-character-2',
     );
+    expect(membership.changeCommands.single.newRole, PartyRole.dealer);
     expect(find.text('참가 캐릭터를 변경했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('참가 캐릭터를 반대 역할 설정으로 변경할 수 있다', (tester) async {
+    final membership = _RecordingMembershipRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(memberCount: 1, maxMemberCount: 4),
+          isFromCache: false,
+        ),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(
+          items: [
+            PartyMemberDisplay(
+              playerId: 'player-1',
+              characterId: 'server-character-1',
+              characterName: '지원바드',
+              className: '바드',
+              role: PartyRole.dealer,
+              partyIndex: 0,
+              slotIndex: 0,
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      membershipCommandRepository: membership,
+      candidateService: _multiCharacterCandidateService(),
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('changeParticipatingCharacterButton')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('change-candidate-2-support')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(membership.changeCommands.single.newRole, PartyRole.support);
+    expect(
+      membership.changeCommands.single.newCharacterId,
+      'server-character-2',
+    );
+  });
+
+  testWidgets('같은 참가 캐릭터의 반대 역할 설정으로 바로 변경할 수 있다', (
+    tester,
+  ) async {
+    final membership = _RecordingMembershipRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(memberCount: 1, maxMemberCount: 4),
+          isFromCache: false,
+        ),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(
+          items: [
+            PartyMemberDisplay(
+              playerId: 'player-1',
+              characterId: 'server-character-1',
+              characterName: '지원바드',
+              className: '바드',
+              role: PartyRole.dealer,
+              partyIndex: 0,
+              slotIndex: 0,
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      membershipCommandRepository: membership,
+      candidateService: _multiCharacterCandidateService(),
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('changeParticipatingCharacterButton')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('change-candidate-1-support')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(membership.changeCommands.single.newRole, PartyRole.support);
+    expect(
+      membership.changeCommands.single.newCharacterId,
+      'server-character-1',
+    );
   });
 
   testWidgets('같은 State에서 recruitmentId가 바뀌면 새 방 제목을 구독한다', (
@@ -794,7 +902,7 @@ void main() {
       expect(find.byKey(const ValueKey('partyGroupRow')), findsNothing);
       expect(find.byKey(const ValueKey('partyGroup-0')), findsOneWidget);
       expect(find.byKey(const ValueKey('partyGroup-1')), findsNothing);
-      expect(find.text('2파티'), findsNothing);
+      expect(find.textContaining('2파티 · 딜러'), findsNothing);
 
       final boardWidth =
           tester.getSize(find.byKey(const ValueKey('partyCompositionBoard'))).width;
@@ -1044,11 +1152,13 @@ void main() {
       final partyLabels = find.textContaining('파티');
       // titleMedium '파티 구성' 다음에 titleSmall '1파티', '2파티'
       expect(find.text('파티 구성'), findsOneWidget);
-      expect(find.text('1파티'), findsOneWidget);
-      expect(find.text('2파티'), findsOneWidget);
+      final partyOne = find.textContaining('1파티 · 딜러');
+      final partyTwo = find.textContaining('2파티 · 딜러');
+      expect(partyOne, findsOneWidget);
+      expect(partyTwo, findsOneWidget);
       expect(
-        tester.getTopLeft(find.text('1파티')).dx,
-        lessThan(tester.getTopLeft(find.text('2파티')).dx),
+        tester.getTopLeft(partyOne).dx,
+        lessThan(tester.getTopLeft(partyTwo).dx),
       );
       expect(partyLabels, findsWidgets);
     });
@@ -1062,6 +1172,10 @@ PublicRecruitmentSummary _summary({
   int memberCount = 2,
   int maxMemberCount = 8,
   int membersPerParty = 4,
+  int partyCount = 2,
+  int supportsPerParty = 1,
+  int dealerCount = 1,
+  int supportCount = 1,
 }) => PublicRecruitmentSummary(
   id: id,
   title: title,
@@ -1084,6 +1198,10 @@ PublicRecruitmentSummary _summary({
   memberCount: memberCount,
   maxMemberCount: maxMemberCount,
   membersPerParty: membersPerParty,
+  partyCount: partyCount,
+  supportsPerParty: supportsPerParty,
+  dealerCount: dealerCount,
+  supportCount: supportCount,
   isRecruiting: true,
   revision: 1,
   updatedAt: DateTime.utc(2026, 8, 20),
@@ -1365,6 +1483,31 @@ class _MultiDealerAccountRepository extends _AccountRepository {
         ),
       ],
     ),
+  ];
+
+  @override
+  Future<List<CharacterBuildSnapshot>> loadCharacterBuildSnapshots(
+    int characterId,
+  ) async => [
+    ...await super.loadCharacterBuildSnapshots(characterId),
+    if (characterId == 1 || characterId == 2)
+      CharacterBuildSnapshot(
+        id: 20,
+        characterId: characterId,
+        role: CharacterBuildRole.support,
+        rawJson: '{}',
+        itemLevel: 1710,
+        combatPower: 310000,
+        capturedAt: DateTime.utc(2026, 8, 1),
+        dataVersion: 1,
+        analysis: const CharacterBuildAnalysis(
+          runeCount: 0,
+          gemEffects: [],
+          arkGridConditions: [],
+          arkGridCorePoints: [],
+          notices: [],
+        ),
+      ),
   ];
 }
 

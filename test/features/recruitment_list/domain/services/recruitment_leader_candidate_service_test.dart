@@ -3,8 +3,10 @@ import 'package:lost_party/features/account/domain/entities/character_build_anal
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
 import 'package:lost_party/features/account/domain/entities/character_summary.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
+import 'package:lost_party/features/account/domain/entities/weekly_raid_claim.dart';
 import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
+import 'package:lost_party/features/account/domain/repositories/weekly_raid_claim_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/fake_recruitment_runtime.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_active_raid_assignment_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
@@ -106,6 +108,50 @@ void main() {
 
     expect(await service.load(_query()), isEmpty);
   });
+
+  test('서버 Claim이 있는 캐릭터는 모집 생성 후보에서 차단한다', () async {
+    final service = RecruitmentLeaderCandidateService(
+      accountRepository: _AccountRepository(),
+      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+      weeklyRaidClaimRepository: _ClaimRepository(),
+      claimPlayerId: 'player-1',
+      session: FakeUserSession('local-user'),
+      clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 27)),
+      assignmentRepository: InMemoryActiveRaidAssignmentRepository(),
+      recruitmentRepository: InMemoryRecruitmentStateRepository(),
+    );
+
+    final candidate = (await service.load(_query())).first;
+
+    expect(candidate.canSelect, isFalse);
+    expect(candidate.rejectionReasons, contains('이번 주 동일 레이드 완료'));
+    expect(
+      candidate.participationStatuses.map((status) => status.type),
+      contains(CandidateParticipationStatusType.weeklyRaidClear),
+    );
+  });
+}
+
+class _ClaimRepository implements WeeklyRaidClaimRepository {
+  @override
+  Stream<List<WeeklyRaidClaim>> watchCurrentCycleClaims({
+    required String playerId,
+    required String cycleKey,
+  }) => Stream.value([
+    WeeklyRaidClaim(
+      id: '${cycleKey}_AbCdEfGhIjKlMnOpQrSt_serca',
+      playerId: playerId,
+      characterId: 'AbCdEfGhIjKlMnOpQrSt',
+      raidId: 'serca',
+      cycleKey: cycleKey,
+      difficultyId: 'hard',
+      source: WeeklyRaidClaimSource.manual,
+      cycleStartedAt: DateTime.utc(2026, 8, 25, 21),
+      cycleEndsAt: DateTime.utc(2026, 9, 1, 21),
+      completedAt: DateTime.utc(2026, 8, 27),
+      updatedAt: DateTime.utc(2026, 8, 27),
+    ),
+  ]);
 }
 
 RecruitmentLeaderCandidateQuery _query({int minItemLevel = 1700}) =>
@@ -143,6 +189,7 @@ class _AccountRepository implements AccountRepository {
       characters: [
         LocalAccountCharacter(
           id: 1,
+          serverCharacterId: 'AbCdEfGhIjKlMnOpQrSt',
           serverName: '루페온',
           characterName: '대표바드',
           characterLevel: 70,

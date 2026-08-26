@@ -487,7 +487,9 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                 label: '인원',
                 value:
                     '${summary.memberCount}/${summary.maxMemberCount}명'
-                    '${summary.isRecruiting ? ' · 모집 중' : ' · 모집 마감'}',
+                    '${summary.isRecruiting ? ' · 모집 중' : ' · 모집 마감'} '
+                    '(딜러 ${summary.dealerCount}/${summary.maxDealerCount}, '
+                    '서포터 ${summary.supportCount}/${summary.maxSupportCount})',
               ),
               _DetailLine(
                 label: '조건',
@@ -500,6 +502,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
               _PartyCompositionSection(
                 members: _members,
                 membersPerParty: summary.membersPerParty,
+                supportsPerParty: summary.supportsPerParty,
                 maxMemberCount: summary.maxMemberCount,
                 loading: _membersLoading,
                 failure: _membersFailure,
@@ -647,21 +650,27 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     );
     if (!mounted) return;
 
-    final eligible = <({RecruitmentLeaderCandidate candidate, double? combatPower})>[];
+    final eligible =
+        <
+          ({
+            RecruitmentLeaderCandidate candidate,
+            RecruitmentLeaderRoleOption option,
+          })
+        >[];
     for (final candidate in candidates) {
       final serverId = candidate.serverCharacterId;
       if (serverId == null || serverId.isEmpty) continue;
-      if (me.characterId != null && me.characterId == serverId) continue;
-      final option = candidate.optionFor(me.role);
-      if (option == null || !option.canSelect) continue;
       if (!candidate.canSelect) continue;
-      eligible.add((candidate: candidate, combatPower: option.combatPower));
+      for (final option in candidate.roles.where((option) => option.canSelect)) {
+        if (me.characterId == serverId && option.role == me.role) continue;
+        eligible.add((candidate: candidate, option: option));
+      }
     }
     if (eligible.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            '변경할 수 있는 같은 역할의 인증 캐릭터가 없습니다. 역할 세팅과 입장 레벨을 확인해 주세요.',
+            '변경할 수 있는 인증 캐릭터가 없습니다. 역할 세팅과 파티 구성을 확인해 주세요.',
           ),
         ),
       );
@@ -672,7 +681,6 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       context: context,
       showDragHandle: true,
       builder: (context) => _ChangeCharacterCandidateSheet(
-        role: me.role,
         entries: eligible,
       ),
     );
@@ -683,6 +691,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       PartyChangeCharacterCommand(
         recruitmentId: widget.recruitmentId,
         newCharacterId: selected.serverCharacterId,
+        newRole: selected.role,
         expectedRecruitmentRevision: summary.revision,
         combatPower: selected.combatPower,
       ),
@@ -1190,6 +1199,7 @@ class _PartyCompositionSection extends StatelessWidget {
   const _PartyCompositionSection({
     required this.members,
     required this.membersPerParty,
+    required this.supportsPerParty,
     required this.maxMemberCount,
     required this.loading,
     required this.failure,
@@ -1202,6 +1212,7 @@ class _PartyCompositionSection extends StatelessWidget {
 
   final List<PartyMemberDisplay> members;
   final int membersPerParty;
+  final int supportsPerParty;
   final int maxMemberCount;
   final bool loading;
   final PartyReadFailureType? failure;
@@ -1254,6 +1265,7 @@ class _PartyCompositionSection extends StatelessWidget {
                       _WidePartyGroups(
                         board: board,
                         raidLeaderLabel: raidLeaderLabel,
+                        supportsPerParty: supportsPerParty,
                       )
                     else
                       for (
@@ -1266,6 +1278,7 @@ class _PartyCompositionSection extends StatelessWidget {
                           partyIndex: partyIndex,
                           cells: board.cellsForParty(partyIndex),
                           raidLeaderLabel: raidLeaderLabel,
+                          supportsPerParty: supportsPerParty,
                         ),
                     if (board.unassignedMembers.isNotEmpty) ...[
                       Padding(
@@ -1295,15 +1308,34 @@ class _PartyCompositionSection extends StatelessWidget {
   }
 }
 
+String _partyGroupLabel(
+  int partyIndex,
+  List<PartySlotCell> cells,
+  int supportsPerParty,
+) {
+  final dealerCount = cells
+      .where((cell) => cell.member?.role == PartyRole.dealer)
+      .length;
+  final supportCount = cells
+      .where((cell) => cell.member?.role == PartyRole.support)
+      .length;
+  final maxSupports = supportsPerParty.clamp(0, cells.length);
+  final maxDealers = cells.length - maxSupports;
+  return '${partyIndex + 1}파티 · 딜러 $dealerCount/$maxDealers · '
+      '서포터 $supportCount/$maxSupports';
+}
+
 /// 넓은 화면: 파티 제목을 좌우로 두고, 같은 자리(1~4번) Slot Card 높이를 맞춘다.
 class _WidePartyGroups extends StatelessWidget {
   const _WidePartyGroups({
     required this.board,
     required this.raidLeaderLabel,
+    required this.supportsPerParty,
   });
 
   final PartySlotBoard board;
   final String raidLeaderLabel;
+  final int supportsPerParty;
 
   @override
   Widget build(BuildContext context) {
@@ -1327,7 +1359,10 @@ class _WidePartyGroups extends StatelessWidget {
                   top: AppSpacing.xs,
                   bottom: AppSpacing.xxs,
                 ),
-                child: Text('1파티', style: theme.textTheme.titleSmall),
+                child: Text(
+                  _partyGroupLabel(0, leftCells, supportsPerParty),
+                  style: theme.textTheme.titleSmall,
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -1339,7 +1374,10 @@ class _WidePartyGroups extends StatelessWidget {
                         top: AppSpacing.xs,
                         bottom: AppSpacing.xxs,
                       ),
-                      child: Text('2파티', style: theme.textTheme.titleSmall),
+                      child: Text(
+                        _partyGroupLabel(1, rightCells, supportsPerParty),
+                        style: theme.textTheme.titleSmall,
+                      ),
                     )
                   : const SizedBox.shrink(),
             ),
@@ -1382,11 +1420,13 @@ class _PartyGroupColumn extends StatelessWidget {
     required this.partyIndex,
     required this.cells,
     required this.raidLeaderLabel,
+    required this.supportsPerParty,
   });
 
   final int partyIndex;
   final List<PartySlotCell> cells;
   final String raidLeaderLabel;
+  final int supportsPerParty;
 
   @override
   Widget build(BuildContext context) {
@@ -1400,7 +1440,7 @@ class _PartyGroupColumn extends StatelessWidget {
             bottom: AppSpacing.xxs,
           ),
           child: Text(
-            '${partyIndex + 1}파티',
+            _partyGroupLabel(partyIndex, cells, supportsPerParty),
             style: theme.textTheme.titleSmall,
           ),
         ),
@@ -2004,13 +2044,10 @@ class _KickMembersSection extends StatelessWidget {
 
 class _ChangeCharacterCandidateSheet extends StatelessWidget {
   const _ChangeCharacterCandidateSheet({
-    required this.role,
     required this.entries,
   });
 
-  final PartyRole role;
-  final List<({RecruitmentLeaderCandidate candidate, double? combatPower})>
-  entries;
+  final List<({RecruitmentLeaderCandidate candidate, RecruitmentLeaderRoleOption option})> entries;
 
   @override
   Widget build(BuildContext context) {
@@ -2018,24 +2055,23 @@ class _ChangeCharacterCandidateSheet extends StatelessWidget {
       child: ListView(
         shrinkWrap: true,
         children: [
-          ListTile(
-            title: Text('변경할 캐릭터 (${_roleLabel(role)})'),
-          ),
+          const ListTile(title: Text('변경할 캐릭터와 역할')),
           for (final entry in entries)
             ListTile(
               key: ValueKey(
-                'change-candidate-${entry.candidate.localCharacterId}',
+                'change-candidate-${entry.candidate.localCharacterId}-${entry.option.role.name}',
               ),
               title: Text(entry.candidate.characterId),
               subtitle: Text(
-                '${entry.candidate.accountLabel} · ${entry.candidate.className}',
+                '${entry.candidate.accountLabel} · ${entry.candidate.className} · '
+                '${_roleLabel(entry.option.role)}',
               ),
               onTap: () => Navigator.pop(
                 context,
                 _ApplySelection(
                   serverCharacterId: entry.candidate.serverCharacterId!,
-                  role: role,
-                  combatPower: entry.combatPower,
+                  role: entry.option.role,
+                  combatPower: entry.option.combatPower,
                 ),
               ),
             ),
@@ -2190,6 +2226,8 @@ String _applicationFailureMessage(PartyApplicationFailure failure) =>
       PartyApplicationFailure.ownershipLost => '캐릭터 소유권을 확인하지 못했습니다.',
       PartyApplicationFailure.invalidCharacter =>
         '참가할 수 없는 캐릭터입니다. 내 계정에서 정보를 새로고침한 뒤 다시 시도해 주세요.',
+      PartyApplicationFailure.weeklyRaidCompleted =>
+        '이 캐릭터는 이번 주 동일 레이드를 이미 완료했습니다.',
       PartyApplicationFailure.recruitmentClosed => '모집이 마감되어 신청할 수 없습니다.',
       PartyApplicationFailure.approvalModeMismatch => '이 방은 신청 방식이 다릅니다.',
       PartyApplicationFailure.capacityFull => '모집 정원이 가득 찼습니다.',
@@ -2214,6 +2252,8 @@ String _joinFailureMessage(PartyJoinFailure failure) => switch (failure) {
   PartyJoinFailure.ownershipLost => '캐릭터 소유권을 확인하지 못했습니다.',
   PartyJoinFailure.invalidCharacter =>
     '참가할 수 없는 캐릭터입니다. 내 계정에서 정보를 새로고침한 뒤 다시 시도해 주세요.',
+  PartyJoinFailure.weeklyRaidCompleted =>
+    '이 캐릭터는 이번 주 동일 레이드를 이미 완료했습니다.',
   PartyJoinFailure.recruitmentClosed => '모집이 마감되어 참가할 수 없습니다.',
   PartyJoinFailure.approvalModeMismatch => '이 방은 가입 방식이 다릅니다.',
   PartyJoinFailure.capacityFull ||
@@ -2239,6 +2279,8 @@ String _membershipFailureMessage(PartyMembershipFailure failure) =>
       PartyMembershipFailure.ownershipLost => '캐릭터 소유권을 확인하지 못했습니다.',
       PartyMembershipFailure.invalidCharacter =>
         '변경할 캐릭터를 확인하지 못했습니다. 인증과 입장 레벨을 확인해 주세요.',
+      PartyMembershipFailure.weeklyRaidCompleted =>
+        '이 캐릭터는 이번 주 동일 레이드를 이미 완료했습니다.',
       PartyMembershipFailure.recruitmentClosed => '이미 종료된 모집입니다.',
       PartyMembershipFailure.alreadyCurrentCharacter => '이미 참가 중인 캐릭터입니다.',
       PartyMembershipFailure.participationConflict =>

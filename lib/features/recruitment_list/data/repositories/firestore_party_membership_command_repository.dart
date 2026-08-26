@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../../account/data/mappers/weekly_raid_claim_document_id.dart';
 import '../../domain/entities/party_event.dart';
 import '../../domain/entities/party_membership_command.dart';
 import '../../domain/entities/party_recruitment.dart';
@@ -32,25 +33,44 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
       if (common != null) return PartyMembershipResult.failure(common);
       if (!member.exists) return const PartyMembershipResult.failure(PartyMembershipFailure.notFound);
       final oldCharacterId = m?['characterId'];
-      final role = _role(m?['role']);
-      if (oldCharacterId == command.newCharacterId) return const PartyMembershipResult.failure(PartyMembershipFailure.alreadyCurrentCharacter);
-      if (oldCharacterId is! String || role == null) return const PartyMembershipResult.failure(PartyMembershipFailure.unknown);
+      final oldRole = _role(m?['role']);
+      final newRole = command.newRole;
+      if (oldCharacterId == command.newCharacterId && oldRole == newRole) return const PartyMembershipResult.failure(PartyMembershipFailure.alreadyCurrentCharacter);
+      if (oldCharacterId is! String || oldRole == null) return const PartyMembershipResult.failure(PartyMembershipFailure.unknown);
       final characterRef = _firestore.collection('characters').doc(command.newCharacterId);
       final oldAssignmentRef = _assignment(playerId, oldCharacterId, r?['raidId'] as String);
       final newAssignmentRef = _assignment(playerId, command.newCharacterId, r?['raidId'] as String);
       final character = await transaction.get(characterRef);
       final oldAssignment = await transaction.get(oldAssignmentRef);
       final newAssignment = await transaction.get(newAssignmentRef);
+      final claim = await transaction.get(
+        _firestore
+            .collection('players')
+            .doc(playerId)
+            .collection('weeklyRaidClaims')
+            .doc(
+              WeeklyRaidClaimDocumentId.create(
+                cycleKey: r?['currentCycleKey'] as String,
+                characterId: command.newCharacterId,
+                raidId: r?['raidId'] as String,
+              ),
+            ),
+      );
       final c = character.data();
       if (!character.exists || c?['status'] != 'active') return const PartyMembershipResult.failure(PartyMembershipFailure.invalidCharacter);
       if (c?['ownerPlayerId'] != playerId) return const PartyMembershipResult.failure(PartyMembershipFailure.ownershipLost);
       if (!oldAssignment.exists) return const PartyMembershipResult.failure(PartyMembershipFailure.notFound);
-      if (newAssignment.exists) return const PartyMembershipResult.failure(PartyMembershipFailure.participationConflict);
+      if (oldAssignmentRef.path != newAssignmentRef.path && newAssignment.exists) return const PartyMembershipResult.failure(PartyMembershipFailure.participationConflict);
+      if (claim.exists) {
+        return const PartyMembershipResult.failure(
+          PartyMembershipFailure.weeklyRaidCompleted,
+        );
+      }
       final itemLevel = _itemLevel(c?['itemAvgLevel']);
       final name = c?['characterName'];
       final className = c?['characterClassName'];
       if (itemLevel == null || itemLevel < (r?['minItemLevel'] as num? ?? double.infinity) || name is! String || className is! String) return const PartyMembershipResult.failure(PartyMembershipFailure.invalidCharacter);
-      final composition = await _composition(transaction, knownMembers, replacePlayerId: playerId, replacementClassName: className, replacementRole: role, recruitment: r!);
+      final composition = await _composition(transaction, knownMembers, replacePlayerId: playerId, replacementClassName: className, replacementRole: newRole, recruitment: r!);
       if (!composition) return const PartyMembershipResult.failure(PartyMembershipFailure.invalidComposition);
       final previousCharacterName = m?['characterNameSnapshot'];
       if (previousCharacterName is! String) {
@@ -61,24 +81,41 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
       final now = FieldValue.serverTimestamp();
       final nextRevision = command.expectedRecruitmentRevision + 1;
       final beforeMembers = List<String>.from(r['memberPlayerIds'] as List);
+      final oldDealerCount = r['dealerCount'] as int;
+      final oldSupportCount = r['supportCount'] as int;
+      final dealerCount = oldDealerCount +
+          (newRole == PartyRole.dealer ? 1 : 0) -
+          (oldRole == PartyRole.dealer ? 1 : 0);
+      final supportCount = oldSupportCount +
+          (newRole == PartyRole.support ? 1 : 0) -
+          (oldRole == PartyRole.support ? 1 : 0);
       transaction.update(
         memberRef,
         PartyMembershipWritePlan.changeCharacter(
           characterId: command.newCharacterId,
           characterName: name,
           className: className,
+          role: newRole.name,
           itemLevel: itemLevel,
           combatPower: command.combatPower,
           serverTimestamp: now,
         ),
       );
-      transaction.delete(oldAssignmentRef);
-      transaction.set(newAssignmentRef, {
-        ...oldAssignment.data()!,
-        'characterId': command.newCharacterId,
-        'createdAt': now,
-        'updatedAt': now,
-      });
+      if (oldAssignmentRef.path == newAssignmentRef.path) {
+        transaction.update(oldAssignmentRef, {
+          'role': newRole.name,
+          'updatedAt': now,
+        });
+      } else {
+        transaction.delete(oldAssignmentRef);
+        transaction.set(newAssignmentRef, {
+          ...oldAssignment.data()!,
+          'characterId': command.newCharacterId,
+          'role': newRole.name,
+          'createdAt': now,
+          'updatedAt': now,
+        });
+      }
       if (r['leaderPlayerId'] == playerId) {
         transaction.update(
           recruitmentRef,
@@ -87,10 +124,14 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
             className: className,
             revision: command.expectedRecruitmentRevision,
             serverTimestamp: now,
+            dealerCount: dealerCount,
+            supportCount: supportCount,
           ),
         );
       } else {
         transaction.update(recruitmentRef, {
+          'dealerCount': dealerCount,
+          'supportCount': supportCount,
           'revision': nextRevision,
           'updatedAt': now,
         });
@@ -106,7 +147,7 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
         targetPlayerId: playerId,
         characterNameSnapshot: name,
         classNameSnapshot: className,
-        role: role.name,
+        role: newRole.name,
         previousCharacterNameSnapshot: previousCharacterName,
         raidId: r['raidId'] is String ? r['raidId'] as String : null,
         difficultyId: r['difficultyId'] is String
@@ -286,6 +327,8 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
   Future<bool> _composition(Transaction transaction, QuerySnapshot<Map<String, dynamic>> known, {required String replacePlayerId, required String replacementClassName, required PartyRole replacementRole, required Map<String, dynamic> recruitment}) async {
     int? targetPartyIndex;
     final dealerClassesByParty = <int, List<String>>{};
+    final dealerCountsByParty = <int, int>{};
+    final supportCountsByParty = <int, int>{};
     for (final item in known.docs) {
       final snapshot = await transaction.get(item.reference);
       if (!snapshot.exists) continue;
@@ -295,9 +338,21 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
       final partyIndex = data?['partyIndex'];
       if (role == null || className is! String || partyIndex is! int) return false;
       if (item.id == replacePlayerId) targetPartyIndex = partyIndex;
-      if (role == PartyRole.dealer) dealerClassesByParty.putIfAbsent(partyIndex, () => []).add(className);
+      if (role == PartyRole.dealer) {
+        dealerClassesByParty.putIfAbsent(partyIndex, () => []).add(className);
+        dealerCountsByParty[partyIndex] = (dealerCountsByParty[partyIndex] ?? 0) + 1;
+      } else {
+        supportCountsByParty[partyIndex] = (supportCountsByParty[partyIndex] ?? 0) + 1;
+      }
     }
     if (targetPartyIndex == null) return false;
+    final membersPerParty = recruitment['membersPerParty'] as int;
+    final supportsPerParty = recruitment['supportsPerParty'] as int;
+    if ((supportCountsByParty[targetPartyIndex] ?? 0) > supportsPerParty ||
+        (dealerCountsByParty[targetPartyIndex] ?? 0) >
+            membersPerParty - supportsPerParty) {
+      return false;
+    }
     if (replacementRole == PartyRole.support) return true;
     final sameClassCount = dealerClassesByParty[targetPartyIndex]!.where((name) => name == replacementClassName).length;
     final classLimit = recruitment['maxDealersPerClassPerParty'] as int;

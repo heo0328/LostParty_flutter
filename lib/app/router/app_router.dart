@@ -172,6 +172,8 @@ GoRouter createAppRouter({
     clock: recruitmentCommandService.clock,
     assignmentRepository: activeRaidAssignmentRepository,
     recruitmentRepository: recruitmentRepository,
+    weeklyRaidClaimRepository: weeklyRaidClaimRepositoryOrDefault,
+    claimPlayerId: playerSession.playerId,
     conflictPolicy: participationConflictPolicy,
   );
   final recruitmentLeaderCandidateService = RecruitmentLeaderCandidateService(
@@ -181,6 +183,8 @@ GoRouter createAppRouter({
     clock: recruitmentCommandService.clock,
     assignmentRepository: activeRaidAssignmentRepository,
     recruitmentRepository: recruitmentRepository,
+    weeklyRaidClaimRepository: weeklyRaidClaimRepositoryOrDefault,
+    claimPlayerId: playerSession.playerId,
     conflictPolicy: participationConflictPolicy,
   );
 

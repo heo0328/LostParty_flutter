@@ -2,6 +2,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_membership_write_plan.dart';
 
 void main() {
+  test('캐릭터 변경 맵에 선택한 새 역할을 포함한다', () {
+    final timestamp = Object();
+    final plan = PartyMembershipWritePlan.changeCharacter(
+      characterId: 'character-2',
+      characterName: '교체캐릭터',
+      className: '바드',
+      role: 'support',
+      itemLevel: 1700,
+      combatPower: 300000,
+      serverTimestamp: timestamp,
+    );
+
+    expect(plan['role'], 'support');
+    expect(plan['characterChangedAt'], same(timestamp));
+  });
+
   test('일반 탈퇴는 자리와 역할 카운트를 되돌리고 모집 자리를 연다', () {
     final plan = PartyMembershipWritePlan.removeFromRecruitment(
       memberPlayerIds: const ['leader', 'member'],
@@ -56,10 +72,14 @@ void main() {
       className: '기상술사',
       revision: 2,
       serverTimestamp: timestamp,
+      dealerCount: 2,
+      supportCount: 1,
     );
     expect(plan['leaderCharacterNameSnapshot'], '새캐릭');
     expect(plan['leaderClassNameSnapshot'], '기상술사');
     expect(plan['revision'], 3);
+    expect(plan['dealerCount'], 2);
+    expect(plan['supportCount'], 1);
     expect(plan['updatedAt'], same(timestamp));
   });
 }

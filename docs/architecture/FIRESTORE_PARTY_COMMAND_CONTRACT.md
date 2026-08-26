@@ -169,8 +169,10 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 #### 참가 캐릭터 변경
 
 - 현재 멤버 본인만 자기 소유 Character로 변경할 수 있다.
-- 역할, `partyIndex`와 `slotIndex`는 유지하고 새 Character의 소유권, 입장 레벨, 확정 점유와 현재 파티의 동일 직업 딜러 제한을 다시 검증한다.
-- 기존 확정 점유 삭제, 새 확정 점유 생성, membership Character Snapshot과 모집 revision 갱신을 한 Transaction으로 처리한다.
+- `partyIndex`와 `slotIndex`는 유지한다. 역할은 유지하거나 해당 파티의 역할 여유와 전체 구성 조건을 만족할 때 dealer↔support로 변경할 수 있다.
+- 다른 Character뿐 아니라 같은 Character의 저장된 반대 역할 설정도 허용한다.
+- 새 Character의 소유권, 입장 레벨, 확정 점유, 역할별 자리와 현재 파티의 동일 직업 딜러 제한을 다시 검증한다.
+- 다른 Character 변경은 기존 확정 점유 삭제와 새 점유 생성을, 같은 Character 역할 변경은 기존 점유의 역할 갱신을 사용한다. membership Snapshot·role, 모집 역할별 집계와 revision을 같은 Transaction에서 갱신한다.
 - 다른 확정 파티에 참가 중인 Character의 이동·스왑은 로컬 최신 Projection으로 결과를 미리 계산하되, 양쪽 모집·membership·점유와 revision을 서버 Transaction에서 다시 검증하는 별도 후속 명령으로 구현한다.
 - 완전 스왑 조건을 만족하지 못해 한쪽 파티 탈퇴가 동반되는 경우 예상 결과를 먼저 표시하고 사용자가 명시적으로 확인한 때에만 실행한다.
 - 이 후속 명령은 Spark에서 원천 제외하지 않는다. Rules로 결합 불변식을 안전하게 강제할 수 있는지 기능 설계와 함께 검증한다.

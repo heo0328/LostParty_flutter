@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../domain/entities/party_create_command.dart';
 import '../../domain/repositories/party_create_repository.dart';
 import '../../domain/services/party_create_command_validator.dart';
+import '../../../account/data/mappers/weekly_raid_claim_document_id.dart';
 import '../mappers/party_create_write_plan.dart';
 
 class FirestorePartyCreateRepository implements PartyCreateRepository {
@@ -53,10 +54,22 @@ class FirestorePartyCreateRepository implements PartyCreateRepository {
             .doc(playerId)
             .collection('activeRaidAssignments')
             .doc('${command.leaderCharacterId}_${command.metadata.raidId}');
+        final claimRef = _firestore
+            .collection('players')
+            .doc(playerId)
+            .collection('weeklyRaidClaims')
+            .doc(
+              WeeklyRaidClaimDocumentId.create(
+                cycleKey: command.cycleKey,
+                characterId: command.leaderCharacterId,
+                raidId: command.metadata.raidId,
+              ),
+            );
 
         final character = await transaction.get(characterRef);
         final recruitment = await transaction.get(recruitmentRef);
         final assignment = await transaction.get(assignmentRef);
+        final claim = await transaction.get(claimRef);
         final characterData = character.data();
 
         if (!character.exists || characterData?['status'] != 'active') {
@@ -77,6 +90,11 @@ class FirestorePartyCreateRepository implements PartyCreateRepository {
         if (assignment.exists) {
           return const PartyCreateResult.failure(
             PartyCreateFailure.participationConflict,
+          );
+        }
+        if (claim.exists) {
+          return const PartyCreateResult.failure(
+            PartyCreateFailure.weeklyRaidCompleted,
           );
         }
 

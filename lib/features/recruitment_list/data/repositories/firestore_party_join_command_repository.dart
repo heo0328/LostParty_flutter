@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../../account/data/mappers/weekly_raid_claim_document_id.dart';
 import '../../domain/entities/party_event.dart';
 import '../../domain/entities/party_join_command.dart';
 import '../../domain/entities/party_recruitment.dart';
@@ -164,10 +165,37 @@ class FirestorePartyJoinCommandRepository
       final assignmentRef = _firestore.collection('players').doc(playerId).collection('activeRaidAssignments').doc('${characterId}_${r?['raidId']}');
       final character = await transaction.get(characterRef);
       final assignment = await transaction.get(assignmentRef);
+      DocumentSnapshot<Map<String, dynamic>>? claim;
+      if (requiresDirectJoin) {
+        final raidId = r?['raidId'];
+        if (raidId is! String) {
+          return const PartyJoinResult.failure(
+            PartyJoinFailure.invalidRequest,
+          );
+        }
+        claim = await transaction.get(
+          _firestore
+              .collection('players')
+              .doc(playerId)
+              .collection('weeklyRaidClaims')
+              .doc(
+                WeeklyRaidClaimDocumentId.create(
+                  cycleKey: cycleKey,
+                  characterId: characterId,
+                  raidId: raidId,
+                ),
+              ),
+        );
+      }
       final c = character.data();
       if (!character.exists || c?['status'] != 'active') return const PartyJoinResult.failure(PartyJoinFailure.invalidCharacter);
       if (c?['ownerPlayerId'] != playerId) return const PartyJoinResult.failure(PartyJoinFailure.ownershipLost);
       if (assignment.exists) return const PartyJoinResult.failure(PartyJoinFailure.participationConflict);
+      if (claim?.exists == true) {
+        return const PartyJoinResult.failure(
+          PartyJoinFailure.weeklyRaidCompleted,
+        );
+      }
       final itemLevel = _parseItemLevel(c?['itemAvgLevel']);
       final name = c?['characterName'];
       final className = c?['characterClassName'];

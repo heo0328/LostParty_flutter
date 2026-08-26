@@ -89,6 +89,10 @@ class PublicRecruitmentSummary {
     this.leaderCharacterName,
     this.leaderClassName,
     this.membersPerParty = 4,
+    this.partyCount = 1,
+    this.supportsPerParty = 1,
+    this.dealerCount = 0,
+    this.supportCount = 0,
     this.approvalMode = ApprovalMode.leaderOnly,
   });
 
@@ -112,6 +116,15 @@ class PublicRecruitmentSummary {
       memberCount: aggregate.state.members.length,
       maxMemberCount: aggregate.state.compositionPolicy.rules.totalMembers,
       membersPerParty: aggregate.state.compositionPolicy.rules.membersPerParty,
+      partyCount: aggregate.state.compositionPolicy.rules.partyCount,
+      supportsPerParty:
+          aggregate.state.compositionPolicy.rules.supportsPerParty,
+      dealerCount: aggregate.state.members
+          .where((member) => member.role == PartyRole.dealer)
+          .length,
+      supportCount: aggregate.state.members
+          .where((member) => member.role == PartyRole.support)
+          .length,
       isRecruiting: aggregate.state.isRecruiting,
       revision: aggregate.revision,
       updatedAt: aggregate.updatedAt,
@@ -128,6 +141,13 @@ class PublicRecruitmentSummary {
   final int memberCount;
   final int maxMemberCount;
   final int membersPerParty;
+  final int partyCount;
+  final int supportsPerParty;
+  final int dealerCount;
+  final int supportCount;
+
+  int get maxSupportCount => partyCount * supportsPerParty;
+  int get maxDealerCount => maxMemberCount - maxSupportCount;
   final bool isRecruiting;
   final int revision;
   final DateTime updatedAt;

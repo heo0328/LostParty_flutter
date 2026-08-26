@@ -22,6 +22,12 @@ void main() {
     expect(summary.leaderCharacterName, '리더캐릭');
     expect(summary.leaderClassName, '바드');
     expect(summary.membersPerParty, 4);
+    expect(summary.partyCount, 2);
+    expect(summary.supportsPerParty, 1);
+    expect(summary.dealerCount, 3);
+    expect(summary.supportCount, 1);
+    expect(summary.maxDealerCount, 6);
+    expect(summary.maxSupportCount, 2);
     expect(summary.approvalMode, ApprovalMode.leaderOnly);
     expect(summary.metadata.raidId, 'act4');
     expect(summary.metadata.experienceLevel, ExperienceLevel.experienced);
@@ -273,6 +279,10 @@ Map<String, Object?> _recruitmentData() => {
   'memberCount': 4,
   'maxMemberCount': 8,
   'membersPerParty': 4,
+  'partyCount': 2,
+  'supportsPerParty': 1,
+  'dealerCount': 3,
+  'supportCount': 1,
   'approvalPolicy': {
     'mode': 'leaderOnly',
     'requiredApprovals': 1,

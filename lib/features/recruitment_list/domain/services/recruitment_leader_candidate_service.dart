@@ -1,5 +1,7 @@
 import '../../../account/domain/entities/character_build_role.dart';
 import '../../../account/domain/repositories/account_repository.dart';
+import '../../../account/domain/entities/weekly_raid_claim.dart';
+import '../../../account/domain/repositories/weekly_raid_claim_repository.dart';
 import '../entities/active_raid_assignment.dart';
 import '../entities/party_recruitment.dart';
 import '../policies/participation_conflict_policy.dart';
@@ -86,6 +88,8 @@ class RecruitmentLeaderCandidateService {
     required this.clock,
     required this.assignmentRepository,
     required this.recruitmentRepository,
+    this.weeklyRaidClaimRepository,
+    this.claimPlayerId,
     this.conflictPolicy = const ParticipationConflictPolicy(),
     this.resetPolicy = const WeeklyRaidResetPolicy(),
   });
@@ -96,6 +100,8 @@ class RecruitmentLeaderCandidateService {
   final RecruitmentClock clock;
   final ActiveRaidAssignmentRepository assignmentRepository;
   final RecruitmentStateRepository recruitmentRepository;
+  final WeeklyRaidClaimRepository? weeklyRaidClaimRepository;
+  final String? claimPlayerId;
   final ParticipationConflictPolicy conflictPolicy;
   final WeeklyRaidResetPolicy resetPolicy;
 
@@ -107,6 +113,7 @@ class RecruitmentLeaderCandidateService {
     final accounts = await accountRepository.loadAccounts();
     final activeAssignments = await assignmentRepository.getByUser(userId);
     final weekKey = resetPolicy.weekFor(clock.now()).key;
+    final serverClaims = await _loadServerClaims(weekKey);
     final candidates = <RecruitmentLeaderCandidate>[];
     final seenCharacters = <String>{};
 
@@ -154,7 +161,13 @@ class RecruitmentLeaderCandidateService {
         final statuses = <CandidateParticipationStatus>[];
         final rejectionReasons = <String>[];
         if (roles.isEmpty) rejectionReasons.add('저장된 역할 세팅이 없습니다.');
-        if (await weeklyClearRepository.hasClear(
+        final hasServerClaim = character.serverCharacterId != null &&
+            serverClaims.any(
+              (claim) =>
+                  claim.characterId == character.serverCharacterId &&
+                  claim.raidId == query.raidId,
+            );
+        if (hasServerClaim || await weeklyClearRepository.hasClear(
           userId: userId,
           characterId: character.characterName,
           raidId: query.raidId,
@@ -239,5 +252,14 @@ class RecruitmentLeaderCandidateService {
       }
     }
     return List.unmodifiable(candidates);
+  }
+
+  Future<List<WeeklyRaidClaim>> _loadServerClaims(String cycleKey) async {
+    final repository = weeklyRaidClaimRepository;
+    final playerId = claimPlayerId;
+    if (repository == null || playerId == null) return const [];
+    return repository
+        .watchCurrentCycleClaims(playerId: playerId, cycleKey: cycleKey)
+        .first;
   }
 }

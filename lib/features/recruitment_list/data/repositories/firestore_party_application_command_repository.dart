@@ -7,6 +7,7 @@ import '../../domain/repositories/party_application_command_repository.dart';
 import '../../domain/services/party_application_command_validator.dart';
 import '../mappers/party_application_event_writer.dart';
 import '../mappers/party_application_write_plan.dart';
+import '../../../account/data/mappers/weekly_raid_claim_document_id.dart';
 
 class FirestorePartyApplicationCommandRepository
     implements PartyApplicationCommandRepository {
@@ -71,6 +72,30 @@ class FirestorePartyApplicationCommandRepository
           PartyApplicationFailure.invalidRequest,
         );
       }
+      final raidId = r?['raidId'];
+      if (raidId is! String || raidId.isEmpty) {
+        return const PartyApplicationCommandResult.failure(
+          PartyApplicationFailure.invalidRequest,
+        );
+      }
+      final claim = await transaction.get(
+        _firestore
+            .collection('players')
+            .doc(playerId)
+            .collection('weeklyRaidClaims')
+            .doc(
+              WeeklyRaidClaimDocumentId.create(
+                cycleKey: command.cycleKey,
+                characterId: command.characterId,
+                raidId: raidId,
+              ),
+            ),
+      );
+      if (claim.exists) {
+        return const PartyApplicationCommandResult.failure(
+          PartyApplicationFailure.weeklyRaidCompleted,
+        );
+      }
       if (!character.exists || c?['status'] != 'active') {
         return const PartyApplicationCommandResult.failure(
           PartyApplicationFailure.invalidCharacter,
@@ -104,7 +129,6 @@ class FirestorePartyApplicationCommandRepository
       }
 
       final now = FieldValue.serverTimestamp();
-      final raidId = r?['raidId'] is String ? r!['raidId'] as String : null;
       final difficultyId =
           r?['difficultyId'] is String ? r!['difficultyId'] as String : null;
       if (!application.exists) {

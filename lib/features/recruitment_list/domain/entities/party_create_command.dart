@@ -38,6 +38,7 @@ enum PartyCreateFailure {
   playerBindingMissing,
   ownershipLost,
   invalidCharacter,
+  weeklyRaidCompleted,
   participationConflict,
   idConflict,
   permissionDenied,
