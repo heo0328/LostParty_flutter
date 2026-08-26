@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../domain/entities/party_event.dart';
 import '../../domain/entities/party_membership_command.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/repositories/party_membership_command_repository.dart';
 import '../../domain/services/party_membership_command_validator.dart';
+import '../mappers/party_membership_event_writer.dart';
 import '../mappers/party_membership_write_plan.dart';
 
 class FirestorePartyMembershipCommandRepository implements PartyMembershipCommandRepository {
@@ -50,7 +52,15 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
       if (itemLevel == null || itemLevel < (r?['minItemLevel'] as num? ?? double.infinity) || name is! String || className is! String) return const PartyMembershipResult.failure(PartyMembershipFailure.invalidCharacter);
       final composition = await _composition(transaction, knownMembers, replacePlayerId: playerId, replacementClassName: className, replacementRole: role, recruitment: r!);
       if (!composition) return const PartyMembershipResult.failure(PartyMembershipFailure.invalidComposition);
+      final previousCharacterName = m?['characterNameSnapshot'];
+      if (previousCharacterName is! String) {
+        return const PartyMembershipResult.failure(
+          PartyMembershipFailure.unknown,
+        );
+      }
       final now = FieldValue.serverTimestamp();
+      final nextRevision = command.expectedRecruitmentRevision + 1;
+      final beforeMembers = List<String>.from(r['memberPlayerIds'] as List);
       transaction.update(
         memberRef,
         PartyMembershipWritePlan.changeCharacter(
@@ -81,10 +91,31 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
         );
       } else {
         transaction.update(recruitmentRef, {
-          'revision': command.expectedRecruitmentRevision + 1,
+          'revision': nextRevision,
           'updatedAt': now,
         });
       }
+      PartyMembershipEventWriter.writeToRecipients(
+        transaction: transaction,
+        firestore: _firestore,
+        type: PartyEventType.memberCharacterChanged,
+        recipientPlayerIds: beforeMembers,
+        recruitmentId: command.recruitmentId,
+        recruitmentRevision: nextRevision,
+        actorPlayerId: playerId,
+        targetPlayerId: playerId,
+        characterNameSnapshot: name,
+        classNameSnapshot: className,
+        role: role.name,
+        previousCharacterNameSnapshot: previousCharacterName,
+        raidId: r['raidId'] is String ? r['raidId'] as String : null,
+        difficultyId: r['difficultyId'] is String
+            ? r['difficultyId'] as String
+            : null,
+        partyIndex: m?['partyIndex'] is int ? m!['partyIndex'] as int : null,
+        slotIndex: m?['slotIndex'] is int ? m!['slotIndex'] as int : null,
+        serverTimestamp: now,
+      );
       return const PartyMembershipResult.success();
     });
   }
@@ -127,7 +158,15 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
           : oldLeader;
       final characterId = m?['characterId'] as String;
       final role = m?['role'] as String;
+      final characterName = m?['characterNameSnapshot'];
+      if (characterName is! String) {
+        return const PartyMembershipResult.failure(
+          PartyMembershipFailure.unknown,
+        );
+      }
+      final beforeMembers = List<String>.from(r?['memberPlayerIds'] as List);
       final now = FieldValue.serverTimestamp();
+      final nextRevision = command.expectedRecruitmentRevision + 1;
       String? nextLeaderCharacterName;
       String? nextLeaderClassName;
       if (nextLeader != null) {
@@ -164,6 +203,54 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
         transaction.update(
           recruitmentRef.collection('members').doc(nextLeader),
           {'canApproveApplications': true, 'updatedAt': now},
+        );
+      }
+      final raidId = r?['raidId'] is String ? r!['raidId'] as String : null;
+      final difficultyId =
+          r?['difficultyId'] is String ? r!['difficultyId'] as String : null;
+      final className = m?['classNameSnapshot'] is String
+          ? m!['classNameSnapshot'] as String
+          : null;
+      final partyIndex = m?['partyIndex'] is int ? m!['partyIndex'] as int : null;
+      final slotIndex = m?['slotIndex'] is int ? m!['slotIndex'] as int : null;
+      if (kick) {
+        PartyMembershipEventWriter.writeToRecipients(
+          transaction: transaction,
+          firestore: _firestore,
+          type: PartyEventType.memberKicked,
+          recipientPlayerIds: {...remaining, command.targetPlayerId},
+          recruitmentId: command.recruitmentId,
+          recruitmentRevision: nextRevision,
+          actorPlayerId: actorPlayerId,
+          targetPlayerId: command.targetPlayerId,
+          targetCharacterNameSnapshot: characterName,
+          characterNameSnapshot: characterName,
+          classNameSnapshot: className,
+          role: role,
+          raidId: raidId,
+          difficultyId: difficultyId,
+          partyIndex: partyIndex,
+          slotIndex: slotIndex,
+          serverTimestamp: now,
+        );
+      } else {
+        PartyMembershipEventWriter.writeToRecipients(
+          transaction: transaction,
+          firestore: _firestore,
+          type: PartyEventType.memberLeft,
+          recipientPlayerIds: beforeMembers,
+          recruitmentId: command.recruitmentId,
+          recruitmentRevision: nextRevision,
+          actorPlayerId: actorPlayerId,
+          targetPlayerId: command.targetPlayerId,
+          characterNameSnapshot: characterName,
+          classNameSnapshot: className,
+          role: role,
+          raidId: raidId,
+          difficultyId: difficultyId,
+          partyIndex: partyIndex,
+          slotIndex: slotIndex,
+          serverTimestamp: now,
         );
       }
       return const PartyMembershipResult.success();

@@ -9,6 +9,7 @@ import '../../domain/repositories/party_join_command_repository.dart';
 import '../../domain/services/party_join_command_validator.dart';
 import '../mappers/party_application_event_writer.dart';
 import '../mappers/party_join_write_plan.dart';
+import '../mappers/party_membership_event_writer.dart';
 
 class FirestorePartyJoinCommandRepository
     implements PartyJoinCommandRepository {
@@ -242,6 +243,31 @@ class FirestorePartyJoinCommandRepository
       transaction.update(recruitmentRef, plan.recruitmentUpdate);
       transaction.set(memberRef, plan.membership);
       transaction.set(assignmentRef, plan.assignment);
+      final nextRecruitmentRevision = expectedRecruitmentRevision + 1;
+      final difficultyId = r?['difficultyId'] is String
+          ? r!['difficultyId'] as String
+          : null;
+      // 즉시 가입만 기존 멤버에게 memberJoined를 보낸다. 승인은 applicationApproved만.
+      if (requiresDirectJoin) {
+        PartyMembershipEventWriter.writeToRecipients(
+          transaction: transaction,
+          firestore: _firestore,
+          type: PartyEventType.memberJoined,
+          recipientPlayerIds: List<String>.from(memberPlayerIds),
+          recruitmentId: recruitmentId,
+          recruitmentRevision: nextRecruitmentRevision,
+          actorPlayerId: playerId,
+          targetPlayerId: playerId,
+          characterNameSnapshot: name,
+          classNameSnapshot: className,
+          role: role.name,
+          raidId: raidId,
+          difficultyId: difficultyId,
+          partyIndex: placement.slot!.partyIndex,
+          slotIndex: placement.slot!.slotIndex,
+          serverTimestamp: now,
+        );
+      }
       if (applicationRef != null) {
         final nextApplicationRevision = expectedApplicationRevision! + 1;
         final approvedCharacterName =
@@ -272,9 +298,7 @@ class FirestorePartyJoinCommandRepository
               : className,
           role: role.name,
           raidId: raidId,
-          difficultyId: r?['difficultyId'] is String
-              ? r!['difficultyId'] as String
-              : null,
+          difficultyId: difficultyId,
           serverTimestamp: now,
         );
       }
