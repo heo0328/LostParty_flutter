@@ -167,7 +167,7 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 #### 참가 캐릭터 변경
 
 - 현재 멤버 본인만 자기 소유 Character로 변경할 수 있다.
-- 역할과 `partyIndex`는 유지하고 새 Character의 소유권, 입장 레벨, 확정 점유와 현재 파티의 동일 직업 딜러 제한을 다시 검증한다.
+- 역할, `partyIndex`와 `slotIndex`는 유지하고 새 Character의 소유권, 입장 레벨, 확정 점유와 현재 파티의 동일 직업 딜러 제한을 다시 검증한다.
 - 기존 확정 점유 삭제, 새 확정 점유 생성, membership Character Snapshot과 모집 revision 갱신을 한 Transaction으로 처리한다.
 - 다른 확정 파티에 참가 중인 Character의 이동·스왑은 로컬 최신 Projection으로 결과를 미리 계산하되, 양쪽 모집·membership·점유와 revision을 서버 Transaction에서 다시 검증하는 별도 후속 명령으로 구현한다.
 - 완전 스왑 조건을 만족하지 못해 한쪽 파티 탈퇴가 동반되는 경우 예상 결과를 먼저 표시하고 사용자가 명시적으로 확인한 때에만 실행한다.
@@ -185,6 +185,15 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 - 현재 책임자만 다른 현재 멤버의 `canApproveApplications`를 부여하거나 회수할 수 있다.
 - 책임자 자신의 고유 승인 권한은 이 명령으로 회수할 수 없다.
 - membership 권한과 모집 revision을 같은 Transaction에서 갱신한다.
+
+#### 고정 슬롯 배치
+
+- `partyIndex`는 파티 번호, `slotIndex`는 파티 내부 자리 번호로 분리하고 두 값의 조합을 모집 안에서 유일하게 유지한다.
+- 파티 생성 시 책임자를 `partyIndex == 0`, `slotIndex == 0`에 배치한다. 8인 레이드에서도 이 자리가 파티장 겸 공대장이다.
+- 가입·승인은 현재 멤버의 자리를 재배치하지 않고 역할·직업 구성 조건을 만족하는 빈 슬롯 하나를 결정해 membership에 기록한다.
+- 탈퇴·추방으로 빈자리가 생겨도 남은 멤버를 자동 이동하지 않는다. 자리 이동과 스왑은 별도 명령과 revision 검증으로 처리한다.
+- 현재 배포된 `partyIndex` 전용 membership은 신규 가입 명령을 전환하기 전에 결정적인 규칙으로 `slotIndex`를 채워야 한다. 문서 순회 순서처럼 실행마다 달라질 수 있는 값은 이행 기준으로 사용하지 않는다.
+- 향후 빈 슬롯의 역할·직업군·시너지 요청 조건은 membership과 분리한 슬롯 요구조건으로 저장하고 가입 시 Transaction과 Rules가 함께 검증한다.
 
 ### 4.8 회차 수명주기
 
@@ -276,7 +285,8 @@ unknown
 - 읽기: `레이드 현황`의 진행 중·신청 중·읽기 전용 상세는 Firestore `PartyReadRepository`를 사용한다.
 - 쓰기 1단위: `레이드 모집 > 모집 생성`만 `FirestorePartyCreateRepository`로 연결한다. 성공 시 `/raid-status/{recruitmentId}` 읽기 상세로 이동한다.
 - 쓰기 2단위: 읽기 전용 상세의 신청·본인 철회는 `FirestorePartyApplicationCommandRepository`로 연결한다. 신청 Character는 `serverCharacterId`다.
+- 쓰기 3단위: 상세의 즉시 가입·승인·거절·방 단위 재신청은 Firestore 명령으로 연결했고 합동 실기기 검증을 통과했다. 단독 멤버 모집 삭제도 연결했다.
 - 생성 명령의 `leaderCharacterId`는 Drift 로컬 ID가 아니라 게임 계정 인증으로 저장된 `serverCharacterId`다. 인증되지 않은 캐릭터는 명령을 보내지 않는다.
 - 생성 Transaction의 신규 모집 `get`이 문서 부재에서 `permission-denied`가 되지 않도록, 존재하지 않는 `recruitments/{id}` 단건 읽기는 active binding만으로 허용한다. 이 Rules는 `lost-party`에 배포했다.
 - Android 실기기에서 인증된 캐릭터로 생성한 방이 `진행 중`에 나타나고 읽기 전용 상세(수정 미적용 안내 포함)로 연결되는 것을 확인했다.
-- `레이드 모집` 공개 목록은 Firestore 페이징 읽기(`watchPublicRecruitmentFirstPage` / `loadPublicRecruitmentNextPage`)를 사용한다. Fake 상세·승인·멤버·회차 명령은 아직 `InMemoryRecruitmentStateRepository`와 `RecruitmentCommandService`를 유지한다. 다음 전환 단위는 즉시 가입·승인·거절이다.
+- `레이드 모집` 공개 목록은 Firestore 페이징 읽기(`watchPublicRecruitmentFirstPage` / `loadPublicRecruitmentNextPage`)를 사용한다. 다음 전환 단위는 고정 슬롯 기반 파티 구성판이며 이후 참가 캐릭터 변경·탈퇴·추방과 회차 명령을 순차 연결한다.

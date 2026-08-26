@@ -4,7 +4,7 @@
 
 이 문서는 `레이드 모집`, `레이드 현황 > 진행 중`, `레이드 현황 > 신청 중`에 필요한 Firestore 읽기 계약을 정의한다.
 
-이 작업은 읽기 DTO·Mapper·Repository 경계까지 다룬다. 실행 앱 쓰기 전환 상태는 `FIRESTORE_PARTY_COMMAND_CONTRACT.md` §9를 따른다. 모집 생성·신청·철회와 `레이드 모집` 공개 목록 읽기는 Firestore로 연결됐으며, 승인·멤버·회차와 Fake 모집 상세는 아직 Fake다.
+이 작업은 읽기 DTO·Mapper·Repository 경계까지 다룬다. 실행 앱 쓰기 전환 상태는 `FIRESTORE_PARTY_COMMAND_CONTRACT.md` §9를 따른다. 모집 생성·신청·철회·즉시 가입·승인·거절·방 단위 재신청·단독 모집 삭제와 공개 목록·현황 상세 읽기는 Firestore로 연결됐다. 참가 캐릭터 변경·탈퇴·추방, 고정 슬롯, 다인 해산과 회차 명령은 후속 작업이다.
 
 `완료 기록`은 개인 로컬 기록이 단일 기준이므로 이 계약의 Firestore 목록 쿼리에 포함하지 않는다.
 
@@ -70,6 +70,7 @@ recruitments/{recruitmentId}/members/{playerId}
   classNameSnapshot
   role
   partyIndex
+  slotIndex
   joinedAt
   joinedBy
   submittedBuildSnapshotId
@@ -100,7 +101,11 @@ recruitments/{recruitmentId}/applications/{playerId}
 
 신청 문서 ID는 `PlayerId`로 유지해 같은 방에 한 사용자의 중복 신청을 구조적으로 차단한다. `recruitmentId`, `applicantPlayerId`, `cycleKey`, `updatedAt`은 collection group 조회와 오프라인 정렬을 위한 명시적 필드다.
 
-상세의 파티원 필수 표시는 `characterNameSnapshot`, `classNameSnapshot`, `role`, `partyIndex`, `itemLevelSnapshot`, `combatPowerSnapshot`만 사용한다. `playerId`, `joinedBy`, `canApproveApplications`와 내부 식별자는 공개 표시 정보가 아니다. Snapshot 값이 없을 수 있는 이전 데이터는 계약 오류로 전체 상세를 막지 않고 해당 값만 `정보 없음`으로 처리하는 이행 정책을 구현 전에 확정한다.
+`partyIndex`는 0부터 시작하는 파티 번호이고 `slotIndex`는 해당 파티 안에서 0부터 시작하는 자리 번호다. 현재 배포 데이터와 실행 코드는 `partyIndex`만 저장하므로 같은 파티 멤버가 모두 첫 자리로 표시되는 문제가 있으며, `slotIndex`는 다음 작업에서 이행·쓰기·Rules를 함께 반영할 예정 필드다. 이행 완료 전에는 `partyIndex`만으로 실제 자리 번호를 추정하지 않는다.
+
+4인 레이드는 `partyIndex == 0`, `slotIndex == 0..3`, 8인 레이드는 `partyIndex == 0..1`, 각 `slotIndex == 0..3`을 사용한다. `partyIndex == 0 && slotIndex == 0`은 항상 파티장이고 8인에서는 공대장을 겸한다.
+
+상세의 파티원 필수 표시는 `characterNameSnapshot`, `classNameSnapshot`, `role`, `partyIndex`, `slotIndex`, `itemLevelSnapshot`, `combatPowerSnapshot`을 사용한다. `playerId`, `joinedBy`, `canApproveApplications`와 내부 식별자는 공개 표시 정보가 아니다. Snapshot 값이나 이행 전 `slotIndex`가 없을 수 있는 데이터는 계약 오류로 전체 상세를 막지 않고 `정보 없음` 또는 명시적인 이행 필요 상태로 처리한다.
 
 ## 5. 화면별 쿼리
 
@@ -157,7 +162,7 @@ orderBy updatedAt desc
 
 ### 모집 상세—현재 파티원
 
-상세 진입 시 모집 문서와 `recruitments/{recruitmentId}/members`를 각각 실시간 구독한다. 멤버는 `partyIndex`, 역할, 안정적인 보조 키 순서로 표시하며, 4인 파티와 공격대 모두 파티별 구성을 구분한다. 공개 상세 방문자에게는 위에서 정의한 필수 표시 Snapshot만 노출하고 권한·내부 식별 정보는 UI에 전달하지 않는다.
+상세 진입 시 모집 문서와 `recruitments/{recruitmentId}/members`를 각각 실시간 구독한다. 슬롯 이행 후 멤버는 `partyIndex`, `slotIndex` 순서로 안정 정렬하며, 4인 파티와 공격대 모두 정원 전체의 점유·빈 슬롯을 구분한다. 현재처럼 가입 멤버만 나열하지 않고 빈 슬롯도 표시 전용 모델에서 생성해 Card/Cell로 렌더링한다. 공개 상세 방문자에게는 위에서 정의한 필수 표시 Snapshot만 노출하고 권한·내부 식별 정보는 UI에 전달하지 않는다.
 
 현재 Rules는 확정 멤버만 전체 membership 목록을 읽을 수 있으므로 구현 전에 다음 중 하나를 선택하고 Rules·Repository·테스트를 함께 갱신한다.
 
@@ -166,7 +171,7 @@ orderBy updatedAt desc
 
 공개 문서의 모든 필드는 클라이언트에서 기술적으로 읽힐 수 있으므로 민감하거나 권한 전용인 필드를 숨겨야 한다면 2안을 사용한다.
 
-**확정(Option 1):** 공개 모집의 membership `get`/`list`는 active binding 사용자에게 허용한다. `PartyMemberDisplay`와 UI는 `characterNameSnapshot`, `classNameSnapshot`, `role`, `partyIndex`, `itemLevelSnapshot`, `combatPowerSnapshot`만 소비하고 PlayerId·권한 플래그는 presentation에 노출하지 않는다. Lost Ark 프로필성 표시 정보와 레이드 참가 구성은 극비 비밀이 아니며, AuthUid·API JWT·권한 식별자만 별도로 보호한다.
+**확정(Option 1):** 공개 모집의 membership `get`/`list`는 active binding 사용자에게 허용한다. `PartyMemberDisplay`와 UI는 `characterNameSnapshot`, `classNameSnapshot`, `role`, `partyIndex`, `slotIndex`, `itemLevelSnapshot`, `combatPowerSnapshot`만 소비하고 PlayerId·권한 플래그는 presentation에 노출하지 않는다. Lost Ark 프로필성 표시 정보와 레이드 참가 구성은 극비 비밀이 아니며, AuthUid·API JWT·권한 식별자만 별도로 보호한다.
 
 ## 6. Repository 경계
 
@@ -218,7 +223,7 @@ PartyReadRepository
 - `public` 모집은 로그인된 사용자가 계약된 공개 쿼리로 목록·상세를 읽을 수 있다.
 - `groupOnly` 모집은 해당 그룹 멤버만 읽을 수 있다. 그룹 멤버십 계약 전에는 실행 앱에 연결하지 않는다.
 - 비공개 멤버·신청 정보는 해당 방의 현재 멤버 또는 해당 신청자만 읽을 수 있다. 공개 모집의 membership 목록 읽기는 Option 1에 따라 active binding 사용자에게 허용하며, Domain/UI는 표시 Snapshot만 소비한다.
-- 모집 생성은 허용된 생성 Transaction과 Rules만 사용한다. 신청·멤버·회차 쓰기는 실행 앱에 아직 연결하지 않는다.
+- 모집 생성·신청·철회·즉시 가입·승인·거절·재신청과 단독 모집 삭제는 허용된 클라이언트 Transaction과 Rules를 사용한다. 참가 캐릭터 변경·탈퇴·추방, 고정 슬롯·다인 해산과 회차 쓰기는 실행 앱에 아직 연결하지 않는다.
 - `신청 중` collection group 쿼리는 중첩 경로 규칙이 적용되지 않으므로 `match /{path=**}/applications/{applicantPlayerId}` 재귀 와일드카드 규칙이 반드시 필요하다. 이 규칙은 `list`만 허용하고 `resource.data.applicantPlayerId == currentPlayerId()`로 본인 신청에 한정한다. 단건 조회와 방 멤버의 신청 열람은 기존 중첩 경로 규칙이 계속 담당한다.
 - 모집 단건 `get`은 문서가 없으면 active binding만으로 허용하고, 문서가 있으면 `canReadRecruitment`을 적용한다. `list`는 존재하는 문서만 다루므로 기존 공개·멤버 조건을 유지한다. 생성 Transaction과 상세의 문서 누락 상태가 이 분기를 사용한다.
 - Rules와 쿼리는 Emulator Suite에서 공개 목록, 자기 멤버십, 자기 신청, 타인 비공개 데이터 차단을 같이 검증한 후 배포한다.
