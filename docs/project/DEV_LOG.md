@@ -1606,3 +1606,18 @@
 - 표적 테스트·analyze 통과. 실기기에서 완료·해산·해산 대기 목록 확인.
 - 열린 이슈: BUG-002, BUG-005(주간 재완료 미차단), BUG-006(초기 권한 실패 관찰).
 - 다음: 알림 서비스 별도 설계 (`NEXT_WORK.md` Task-072).
+
+---
+
+## Task-072. 파티 이벤트 기반 앱 내부 알림·FCM 확장 설계 (2026-08-26)
+
+- 작업 브랜치: `codex/notification-event-design`
+- 실제 Party Event, application, membership, read model, Drift v7 히스토리와 Firestore Rules를 문서 계약과 대조했다.
+- Spark에서는 `players/{playerId}/events/{eventId}`를 사용자별 비공개 알림 투영본으로 확장하고, 앱 내부 알림을 먼저 구현하기로 결정했다.
+- 알림은 성공한 파티 명령의 파생 정보이며 자유 문구를 저장하지 않는다. 명령 Transaction과 유형별 Rules가 상태 전이·수신자·Snapshot·event ID를 검증한다.
+- 초기 읽음 상태는 event ID별 Drift 로컬 Projection으로 두고 여러 기기 동기화는 후속으로 보류했다. 완료 히스토리의 숨김·로컬 정정 필드는 읽음 상태로 재사용하지 않는다.
+- 가입 신청부터 해산까지 이벤트별 행위자·수신 대상·표시 문구·이동 목적지·제외 대상·Snapshot·중복 방지 기준을 `PARTY_NOTIFICATION_CONTRACT.md`에 기록했다.
+- 향후 신뢰 서버가 같은 Player Event를 검증하고 방별 설정·토큰을 확인해 FCM을 전달하는 확장 지점을 정의했다. Flutter의 토큰 조회·FCM 직접 호출·자격 증명 포함은 금지했다.
+- 코드, Firestore Rules와 Firebase 배포는 변경하지 않았다. 문서 정합성과 `git diff --check`로 검증한다.
+- Codex와 Cursor가 교대로 작업할 때 대화 맥락 없이도 이어갈 수 있도록 `NEXT_WORK.md`를 실행 지시서 형식으로 보강했다. 공통 인계 상태 양식, 단계별 담당, Task-073 코드 확인 지점·불변식·산출물·검증 체크리스트·중단 조건을 추가했다.
+- 다음: Task-073 공통 알림 이벤트 schema·Rules 기반.
