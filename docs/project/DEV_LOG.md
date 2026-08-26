@@ -1494,3 +1494,10 @@
 - 표적 상세·Mapper 테스트와 `flutter analyze --no-pub`을 통과했다.
 - Android 2기기 실기기 검증은 대기 중이다. 사용자는 추가 디바이스로 테스트한 뒤 수정 지시를 다시 내린다.
 - **2기기 검증·수정 완료 전까지 `main`에 병합하지 않는다.** 체크리스트는 `NEXT_WORK.md`에 둔다.
+
+### Task-066 1차 실기기 피드백 대응 (브랜치 전용)
+
+- 증상: 재시작 후 지원 시 `신청 권한을 확인하지 못했습니다`, 인증 캐릭터 목록 토스트, 인증 직후 미반영 추정, 인증 진행 UI 재진입 소실.
+- Rules: `recruitmentApplicationPath` + `canGetRecruitmentApplication`으로 **없는 application 문서 get**을 허용. 공개 membership 읽기 헬퍼는 유지.
+- 앱: Gateway `activeChallenge`로 인증 진행 UI 복원, 인증 바인딩 후 `loadAccounts` 재조회, 신청 후보 없음 메시지 분리.
+- **Rules는 사용자/운영자가 `firebase deploy --only firestore:rules`로 재배포해야 신청이 풀린다.** `main` 병합은 재검증 후.

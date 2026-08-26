@@ -186,12 +186,16 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
         )
         .toList(growable: false);
     if (eligible.isEmpty) {
+      final hasVerified = candidates.any(
+        (candidate) =>
+            candidate.serverCharacterId != null &&
+            candidate.serverCharacterId!.isNotEmpty,
+      );
+      final message = !hasVerified
+          ? '서버에 연결된 인증 캐릭터가 없습니다. 설정에서 게임계정 인증을 완료한 뒤 다시 시도해 주세요.'
+          : '신청 가능한 역할·조건에 맞는 캐릭터가 없습니다. 캐릭터 역할 세팅과 입장 레벨을 확인해 주세요.';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            '신청할 수 있는 인증된 캐릭터가 없습니다. 내 계정에서 정보를 새로고침한 뒤 다시 시도해 주세요.',
-          ),
-        ),
+        SnackBar(content: Text(message)),
       );
       return;
     }

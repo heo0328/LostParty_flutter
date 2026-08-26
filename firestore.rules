@@ -32,6 +32,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/recruitments/$(recruitmentId)/members/$(playerId);
     }
 
+    function recruitmentApplicationPath(recruitmentId, applicantPlayerId) {
+      return /databases/$(database)/documents/recruitments/$(recruitmentId)/applications/$(applicantPlayerId);
+    }
+
     function recruitmentCyclePath(recruitmentId, cycleKey) {
       return /databases/$(database)/documents/recruitments/$(recruitmentId)/cycles/$(cycleKey);
     }
@@ -660,6 +664,15 @@ service cloud.firestore {
         && get(recruitmentPath(recruitmentId)).data.visibility == 'public';
     }
 
+    // 신청 Transaction은 신규 application get으로 존재 여부를 확인한다.
+    // 없는 문서에서 resource.data를 읽으면 규칙이 거부되므로 단건 get만 분기한다.
+    function canGetRecruitmentApplication(recruitmentId, applicantPlayerId) {
+      return hasActiveBinding()
+        && (!exists(recruitmentApplicationPath(recruitmentId, applicantPlayerId))
+          || canReadPrivateRecruitmentData(recruitmentId)
+          || resource.data.applicantPlayerId == currentPlayerId());
+    }
+
     function validActiveBinding(data) {
       return data.keys().hasOnly([
           'schemaVersion',
@@ -830,7 +843,8 @@ service cloud.firestore {
       }
 
       match /applications/{playerId} {
-        allow get, list: if canReadPrivateRecruitmentData(recruitmentId)
+        allow get: if canGetRecruitmentApplication(recruitmentId, playerId);
+        allow list: if canReadPrivateRecruitmentData(recruitmentId)
           || (hasActiveBinding()
             && resource.data.applicantPlayerId == currentPlayerId());
         allow create: if validPendingApplication(

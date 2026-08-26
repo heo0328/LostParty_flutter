@@ -82,6 +82,40 @@ void main() {
     expect(mapping.saved?.serverCharacterIdsByLocalId, {21: 'character-1'});
     expect(find.text('게임 계정 인증과 로컬 연결이 완료되었습니다.'), findsOneWidget);
   });
+
+  testWidgets('restores in-progress challenge when the page is reopened', (
+    tester,
+  ) async {
+    final gateway = _FakeVerificationGateway();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameAccountVerificationPage(
+          accountRepository: _FakeAccountRepository(),
+          accountManagementRepository: _FakeAccountManagementRepository(),
+          mappingRepository: _FakeMappingRepository(),
+          gateway: gateway,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '선택한 캐릭터로 인증'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('인증 진행 중'), findsOneWidget);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameAccountVerificationPage(
+          accountRepository: _FakeAccountRepository(),
+          accountManagementRepository: _FakeAccountManagementRepository(),
+          mappingRepository: _FakeMappingRepository(),
+          gateway: gateway,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('인증 진행 중'), findsOneWidget);
+    expect(find.textContaining('머리, 무기'), findsOneWidget);
+  });
 }
 
 class _FakeMappingRepository extends Fake
@@ -190,6 +224,10 @@ class _FakeVerificationGateway implements GameAccountVerificationGateway {
   String? lastCharacterName;
   String? lastSource;
   int? lastLocalAccountId;
+  GameAccountVerificationChallenge? _active;
+
+  @override
+  GameAccountVerificationChallenge? get activeChallenge => _active;
 
   @override
   Future<GameAccountVerificationChallenge> start({
@@ -200,25 +238,28 @@ class _FakeVerificationGateway implements GameAccountVerificationGateway {
     lastCharacterName = characterName;
     lastSource = source;
     lastLocalAccountId = localAccountId;
-    return GameAccountVerificationChallenge(
+    _active = GameAccountVerificationChallenge(
       challengeId: 'challenge-1',
       characterName: characterName,
       requiredUnequippedSlots: const ['head', 'weapon'],
       expiresAt: DateTime(2026, 8, 25, 10, 10),
     );
+    return _active!;
   }
 
   @override
-  Future<GameAccountVerificationResult> confirm(String challengeId) async =>
-      const GameAccountVerificationResult(
-        status: 'verified',
-        serverGameAccountId: 'game-account-1',
-        serverCharacters: [
-          VerifiedServerCharacter(
-            serverName: '루페온',
-            characterName: '직접입력캐릭터',
-            serverCharacterId: 'character-1',
-          ),
-        ],
-      );
+  Future<GameAccountVerificationResult> confirm(String challengeId) async {
+    _active = null;
+    return const GameAccountVerificationResult(
+      status: 'verified',
+      serverGameAccountId: 'game-account-1',
+      serverCharacters: [
+        VerifiedServerCharacter(
+          serverName: '루페온',
+          characterName: '직접입력캐릭터',
+          serverCharacterId: 'character-1',
+        ),
+      ],
+    );
+  }
 }

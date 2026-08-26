@@ -205,6 +205,9 @@ class _AccountOwnershipStatusGateway
 class _GameAccountVerificationGateway
     implements GameAccountVerificationGateway {
   @override
+  GameAccountVerificationChallenge? get activeChallenge => null;
+
+  @override
   Future<GameAccountVerificationChallenge> start({
     required String characterName,
     required String source,

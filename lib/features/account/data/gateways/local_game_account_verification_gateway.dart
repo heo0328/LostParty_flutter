@@ -40,6 +40,17 @@ class LocalGameAccountVerificationGateway
   _LocalChallenge? _activeChallenge;
 
   @override
+  GameAccountVerificationChallenge? get activeChallenge {
+    final challenge = _activeChallenge;
+    if (challenge == null) return null;
+    if (!_clock().isBefore(challenge.expiresAt)) {
+      _activeChallenge = null;
+      return null;
+    }
+    return challenge.publicValue;
+  }
+
+  @override
   Future<GameAccountVerificationChallenge> start({
     required String characterName,
     required String source,
