@@ -1539,3 +1539,9 @@
 - 확인: N회 거절 안내·재신청·캐릭터 재선택, 단독 모집 삭제, 승인, 철회, 즉시 가입.
 - 브랜치 `cursor/party-join-approve-reject`. **`main` 병합은 사용자 지시 대기.**
 - 후속: 다인 해산, 멤버·회차 명령 등 (`NEXT_WORK.md`).
+
+### Task-066 `main` 병합 (2026-08-26)
+
+- `cursor/party-join-approve-reject`를 `main`에 병합·푸시했다.
+- 통합 기준은 Task-066(가입·승인·거절·재신청·즉시가입·단독 삭제)까지.
+- 다음 작업은 멤버 명령·회차 명령부터 (`NEXT_WORK.md`).
