@@ -119,6 +119,195 @@ void main() {
       expect(decision.failure, PartyCompositionFailure.duplicateMember);
     });
   });
+
+  group('PartyCompositionPolicy 고정 슬롯', () {
+    test('기존 멤버 자리를 유지하고 빈 슬롯만 배정한다', () {
+      final existing = [
+        _occupied(
+          'leader',
+          '블레이드',
+          partyIndex: 0,
+          slotIndex: 0,
+          isLeader: true,
+        ),
+        _occupied('d2', '소서리스', partyIndex: 0, slotIndex: 2),
+      ];
+
+      final occupancy = _fourPlayerPolicy.resolveOccupancy(existing);
+      expect(occupancy['leader'], const PartySlot(partyIndex: 0, slotIndex: 0));
+      expect(occupancy['d2'], const PartySlot(partyIndex: 0, slotIndex: 2));
+
+      final decision = _fourPlayerPolicy.assignEmptySlot(
+        joining: _occupied('s1', '바드', role: PartyRole.support),
+        existing: existing,
+      );
+
+      expect(decision.canJoin, isTrue);
+      expect(decision.slot, const PartySlot(partyIndex: 0, slotIndex: 1));
+      expect(
+        decision.occupancy['d2'],
+        const PartySlot(partyIndex: 0, slotIndex: 2),
+      );
+    });
+
+    test('slotIndex가 없는 기존 멤버는 리더·가입 시각·ID 순으로 자리를 채운다', () {
+      final occupancy = _fourPlayerPolicy.resolveOccupancy([
+        _occupied(
+          'member-b',
+          '소서리스',
+          joinedAt: DateTime.utc(2026, 8, 26, 10),
+        ),
+        _occupied(
+          'leader',
+          '블레이드',
+          isLeader: true,
+          joinedAt: DateTime.utc(2026, 8, 26, 9),
+        ),
+        _occupied(
+          'member-a',
+          '바드',
+          role: PartyRole.support,
+          joinedAt: DateTime.utc(2026, 8, 26, 10),
+        ),
+      ]);
+
+      expect(
+        occupancy['leader'],
+        const PartySlot(partyIndex: 0, slotIndex: 0),
+      );
+      expect(
+        occupancy['member-a'],
+        const PartySlot(partyIndex: 0, slotIndex: 1),
+      );
+      expect(
+        occupancy['member-b'],
+        const PartySlot(partyIndex: 0, slotIndex: 2),
+      );
+    });
+
+    test('가입 시각이 같으면 문서 순서가 아니라 playerId로 자리를 정한다', () {
+      final joinedAt = DateTime.utc(2026, 8, 26, 12);
+      final occupancy = _fourPlayerPolicy.resolveOccupancy([
+        _occupied('zeta', '소서리스', joinedAt: joinedAt),
+        _occupied(
+          'leader',
+          '블레이드',
+          isLeader: true,
+          joinedAt: DateTime.utc(2026, 8, 26, 11),
+        ),
+        _occupied('alpha', '워로드', joinedAt: joinedAt),
+      ]);
+
+      expect(
+        occupancy['alpha'],
+        const PartySlot(partyIndex: 0, slotIndex: 1),
+      );
+      expect(
+        occupancy['zeta'],
+        const PartySlot(partyIndex: 0, slotIndex: 2),
+      );
+    });
+
+    test('8인에서 같은 직업 딜러는 다른 파티의 빈 슬롯으로 보낸다', () {
+      final decision = _eightPlayerPolicy.assignEmptySlot(
+        joining: _occupied('d2', '발키리'),
+        existing: [
+          _occupied(
+            'd1',
+            '발키리',
+            partyIndex: 0,
+            slotIndex: 0,
+            isLeader: true,
+          ),
+        ],
+      );
+
+      expect(decision.canJoin, isTrue);
+      expect(decision.slot, const PartySlot(partyIndex: 1, slotIndex: 0));
+      expect(
+        decision.occupancy['d1'],
+        const PartySlot(partyIndex: 0, slotIndex: 0),
+      );
+    });
+
+    test('8인에서 파티 번호를 유지하고 넘치는 인원만 다른 파티로 보낸다', () {
+      final occupancy = _eightPlayerPolicy.resolveOccupancy([
+        _occupied('leader', '블레이드', isLeader: true),
+        _occupied('a', '워로드', joinedAt: DateTime.utc(2026, 8, 26, 1)),
+        _occupied('b', '소서리스', joinedAt: DateTime.utc(2026, 8, 26, 2)),
+        _occupied('c', '기공사', joinedAt: DateTime.utc(2026, 8, 26, 3)),
+        _occupied(
+          'd',
+          '바드',
+          role: PartyRole.support,
+          joinedAt: DateTime.utc(2026, 8, 26, 4),
+        ),
+      ]);
+
+      expect(occupancy['leader']!.partyIndex, 0);
+      expect(occupancy['leader']!.slotIndex, 0);
+      expect(
+        {occupancy['a'], occupancy['b'], occupancy['c']}.every(
+          (slot) => slot?.partyIndex == 0,
+        ),
+        isTrue,
+      );
+      expect(occupancy['d'], const PartySlot(partyIndex: 1, slotIndex: 0));
+    });
+
+    test('이미 있는 파티의 저장 자리는 당기지 않는다', () {
+      final occupancy = _eightPlayerPolicy.resolveOccupancy([
+        _occupied(
+          'leader',
+          '블레이드',
+          partyIndex: 0,
+          slotIndex: 0,
+          isLeader: true,
+        ),
+        _occupied('late', '바드', role: PartyRole.support, partyIndex: 1),
+      ]);
+
+      expect(occupancy['late'], const PartySlot(partyIndex: 1, slotIndex: 0));
+    });
+
+    test('slotIndex가 없는 리더 방에서는 신규 가입이 공대장 자리를 쓰지 않는다', () {
+      final decision = _fourPlayerPolicy.assignEmptySlot(
+        joining: _occupied('member', '소서리스'),
+        existing: [_occupied('leader', '블레이드', isLeader: true)],
+      );
+
+      expect(decision.canJoin, isTrue);
+      expect(decision.slot, const PartySlot(partyIndex: 0, slotIndex: 1));
+      expect(
+        decision.occupancy['leader'],
+        const PartySlot(partyIndex: 0, slotIndex: 0),
+      );
+    });
+
+    test('역할 정원을 넘기면 기존 자리를 바꾸지 않고 거절한다', () {
+      final existing = [
+        _occupied(
+          'leader',
+          '바드',
+          role: PartyRole.support,
+          partyIndex: 0,
+          slotIndex: 0,
+          isLeader: true,
+        ),
+      ];
+      final decision = _fourPlayerPolicy.assignEmptySlot(
+        joining: _occupied('s2', '도화가', role: PartyRole.support),
+        existing: existing,
+      );
+
+      expect(decision.canJoin, isFalse);
+      expect(decision.failure, PartyCompositionFailure.supportSlotsFull);
+      expect(
+        _fourPlayerPolicy.resolveOccupancy(existing)['leader'],
+        const PartySlot(partyIndex: 0, slotIndex: 0),
+      );
+    });
+  });
 }
 
 final _fourPlayerPolicy = PartyCompositionPolicy(
@@ -141,6 +330,24 @@ PartyCompositionMember _member(
   String className, {
   PartyRole role = PartyRole.dealer,
 }) => PartyCompositionMember(id: id, className: className, role: role);
+
+OccupiedPartyMember _occupied(
+  String id,
+  String className, {
+  PartyRole role = PartyRole.dealer,
+  int partyIndex = 0,
+  int? slotIndex,
+  DateTime? joinedAt,
+  bool isLeader = false,
+}) => OccupiedPartyMember(
+  id: id,
+  className: className,
+  role: role,
+  partyIndex: partyIndex,
+  slotIndex: slotIndex,
+  joinedAt: joinedAt,
+  isLeader: isLeader,
+);
 
 RaidDefinition _raid({
   required int partySize,

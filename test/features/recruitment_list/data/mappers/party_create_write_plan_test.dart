@@ -33,6 +33,8 @@ void main() {
     expect(plan.leaderMembership['classNameSnapshot'], '바드');
     expect(plan.leaderMembership['itemLevelSnapshot'], 1715.25);
     expect(plan.leaderMembership['canApproveApplications'], isTrue);
+    expect(plan.leaderMembership['partyIndex'], 0);
+    expect(plan.leaderMembership['slotIndex'], 0);
 
     expect(plan.assignment['playerId'], 'player-1');
     expect(plan.assignment['characterId'], 'character-1');

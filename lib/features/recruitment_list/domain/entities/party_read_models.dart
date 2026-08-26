@@ -82,6 +82,7 @@ class PartyMemberDisplay {
     required this.className,
     required this.role,
     required this.partyIndex,
+    this.slotIndex,
     this.itemLevel,
     this.combatPower,
   });
@@ -90,8 +91,104 @@ class PartyMemberDisplay {
   final String? className;
   final PartyRole role;
   final int partyIndex;
+  final int? slotIndex;
   final double? itemLevel;
   final double? combatPower;
+
+  int compareByPartySlot(PartyMemberDisplay other) {
+    final byParty = partyIndex.compareTo(other.partyIndex);
+    if (byParty != 0) return byParty;
+    final leftSlot = slotIndex;
+    final rightSlot = other.slotIndex;
+    if (leftSlot != null && rightSlot != null) {
+      final bySlot = leftSlot.compareTo(rightSlot);
+      if (bySlot != 0) return bySlot;
+    } else if (leftSlot != null) {
+      return -1;
+    } else if (rightSlot != null) {
+      return 1;
+    }
+    return (characterName ?? '').compareTo(other.characterName ?? '');
+  }
+}
+
+class PartySlotCell {
+  const PartySlotCell({
+    required this.partyIndex,
+    required this.slotIndex,
+    this.member,
+  });
+
+  final int partyIndex;
+  final int slotIndex;
+  final PartyMemberDisplay? member;
+
+  bool get isOccupied => member != null;
+  bool get isLeaderSeat => partyIndex == 0 && slotIndex == 0;
+}
+
+class PartySlotBoard {
+  const PartySlotBoard({
+    required this.partyCount,
+    required this.membersPerParty,
+    required this.cells,
+    required this.unassignedMembers,
+  });
+
+  final int partyCount;
+  final int membersPerParty;
+  final List<PartySlotCell> cells;
+  final List<PartyMemberDisplay> unassignedMembers;
+
+  factory PartySlotBoard.fromMembers({
+    required List<PartyMemberDisplay> members,
+    required int membersPerParty,
+    required int maxMemberCount,
+  }) {
+    final perParty = membersPerParty > 0 ? membersPerParty : 4;
+    final rawPartyCount = maxMemberCount > 0
+        ? (maxMemberCount / perParty).ceil()
+        : 1;
+    final partyCount = rawPartyCount < 1 ? 1 : rawPartyCount;
+    final occupied = <String, PartyMemberDisplay>{};
+    final unassigned = <PartyMemberDisplay>[];
+    for (final member in members) {
+      final slotIndex = member.slotIndex;
+      if (slotIndex == null ||
+          member.partyIndex < 0 ||
+          member.partyIndex >= partyCount ||
+          slotIndex < 0 ||
+          slotIndex >= perParty) {
+        unassigned.add(member);
+        continue;
+      }
+      final key = '${member.partyIndex}:$slotIndex';
+      if (occupied.containsKey(key)) {
+        unassigned.add(member);
+        continue;
+      }
+      occupied[key] = member;
+    }
+    return PartySlotBoard(
+      partyCount: partyCount,
+      membersPerParty: perParty,
+      cells: [
+        for (var partyIndex = 0; partyIndex < partyCount; partyIndex++)
+          for (var slotIndex = 0; slotIndex < perParty; slotIndex++)
+            PartySlotCell(
+              partyIndex: partyIndex,
+              slotIndex: slotIndex,
+              member: occupied['$partyIndex:$slotIndex'],
+            ),
+      ],
+      unassignedMembers: unassigned,
+    );
+  }
+
+  List<PartySlotCell> cellsForParty(int partyIndex) => [
+    for (final cell in cells)
+      if (cell.partyIndex == partyIndex) cell,
+  ];
 }
 
 class PartyApplicationSummary {

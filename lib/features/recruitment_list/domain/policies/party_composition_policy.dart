@@ -48,6 +48,80 @@ class PartyCompositionMember {
   final PartyRole role;
 }
 
+class PartySlot {
+  const PartySlot({required this.partyIndex, required this.slotIndex});
+
+  final int partyIndex;
+  final int slotIndex;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PartySlot &&
+      other.partyIndex == partyIndex &&
+      other.slotIndex == slotIndex;
+
+  @override
+  int get hashCode => Object.hash(partyIndex, slotIndex);
+}
+
+class OccupiedPartyMember {
+  const OccupiedPartyMember({
+    required this.id,
+    required this.className,
+    required this.role,
+    required this.partyIndex,
+    this.slotIndex,
+    this.joinedAt,
+    this.isLeader = false,
+  });
+
+  final String id;
+  final String className;
+  final PartyRole role;
+  final int partyIndex;
+  final int? slotIndex;
+  final DateTime? joinedAt;
+  final bool isLeader;
+
+  PartyCompositionMember toCompositionMember() => PartyCompositionMember(
+    id: id,
+    className: className,
+    role: role,
+  );
+}
+
+class PartySlotDecision {
+  const PartySlotDecision._({
+    required this.canJoin,
+    required this.slot,
+    required this.occupancy,
+    required this.failure,
+  });
+
+  const PartySlotDecision.accepted({
+    required PartySlot slot,
+    required Map<String, PartySlot> occupancy,
+  }) : this._(
+         canJoin: true,
+         slot: slot,
+         occupancy: occupancy,
+         failure: PartyCompositionFailure.none,
+       );
+
+  const PartySlotDecision.rejected(PartyCompositionFailure failure)
+    : this._(
+        canJoin: false,
+        slot: null,
+        occupancy: const {},
+        failure: failure,
+      );
+
+  final bool canJoin;
+  final PartySlot? slot;
+  final Map<String, PartySlot> occupancy;
+  final PartyCompositionFailure failure;
+}
+
 enum PartyCompositionFailure {
   none,
   duplicateMember,
@@ -137,6 +211,108 @@ class PartyCompositionPolicy {
     );
   }
 
+  Map<String, PartySlot> resolveOccupancy(List<OccupiedPartyMember> members) {
+    final occupancy = <String, PartySlot>{};
+    final used = <PartySlot>{};
+    final pending = <OccupiedPartyMember>[];
+
+    for (final member in members) {
+      final slotIndex = member.slotIndex;
+      if (slotIndex == null ||
+          !_isValidSlot(member.partyIndex, slotIndex)) {
+        pending.add(member);
+        continue;
+      }
+      final slot = PartySlot(
+        partyIndex: member.partyIndex,
+        slotIndex: slotIndex,
+      );
+      if (used.contains(slot) || occupancy.containsKey(member.id)) {
+        pending.add(member);
+        continue;
+      }
+      occupancy[member.id] = slot;
+      used.add(slot);
+    }
+
+    final remaining = [...pending]..sort(_comparePending);
+    for (final member in remaining) {
+      if (occupancy.containsKey(member.id)) continue;
+      final seen = <PartySlot>{};
+      for (final slot in _fillOrder(member)) {
+        if (!seen.add(slot) || !_isValidSlot(slot.partyIndex, slot.slotIndex)) {
+          continue;
+        }
+        if (used.contains(slot)) continue;
+        occupancy[member.id] = slot;
+        used.add(slot);
+        break;
+      }
+    }
+    return Map.unmodifiable(occupancy);
+  }
+
+  PartySlotDecision assignEmptySlot({
+    required OccupiedPartyMember joining,
+    required List<OccupiedPartyMember> existing,
+  }) {
+    if (existing.any((member) => member.id == joining.id)) {
+      return const PartySlotDecision.rejected(
+        PartyCompositionFailure.duplicateMember,
+      );
+    }
+    if (existing.length + 1 > rules.totalMembers) {
+      return const PartySlotDecision.rejected(PartyCompositionFailure.partyFull);
+    }
+
+    final allMembers = [
+      ...existing.map((member) => member.toCompositionMember()),
+      joining.toCompositionMember(),
+    ];
+    final supportCount = allMembers
+        .where((member) => member.role == PartyRole.support)
+        .length;
+    final dealerCount = allMembers.length - supportCount;
+    if (supportCount > rules.totalSupports) {
+      return const PartySlotDecision.rejected(
+        PartyCompositionFailure.supportSlotsFull,
+      );
+    }
+    if (dealerCount > rules.totalDealers) {
+      return const PartySlotDecision.rejected(
+        PartyCompositionFailure.dealerSlotsFull,
+      );
+    }
+
+    final occupancy = resolveOccupancy(existing);
+    final parties = List.generate(
+      rules.partyCount,
+      (_) => <PartyCompositionMember>[],
+    );
+    final existingById = {for (final member in existing) member.id: member};
+    for (final entry in occupancy.entries) {
+      final member = existingById[entry.key];
+      if (member == null) continue;
+      parties[entry.value.partyIndex].add(member.toCompositionMember());
+    }
+
+    final joiner = joining.toCompositionMember();
+    for (final slot in _allSlots()) {
+      if (occupancy.values.contains(slot)) continue;
+      if (!_canPlace(joiner, parties[slot.partyIndex])) continue;
+      return PartySlotDecision.accepted(
+        slot: slot,
+        occupancy: occupancy,
+      );
+    }
+
+    return PartySlotDecision.rejected(
+      _hasDealerClassOverTotalLimit(allMembers)
+          ? PartyCompositionFailure.duplicateDealerClass
+          : PartyCompositionFailure.noValidPlacement,
+    );
+  }
+
   bool _place(
     List<PartyCompositionMember> members,
     int memberIndex,
@@ -186,5 +362,55 @@ class PartyCompositionPolicy {
     }
     final totalLimit = rules.partyCount * rules.maxDealersPerClassPerParty;
     return counts.values.any((count) => count > totalLimit);
+  }
+
+  bool _isValidSlot(int partyIndex, int slotIndex) =>
+      partyIndex >= 0 &&
+      partyIndex < rules.partyCount &&
+      slotIndex >= 0 &&
+      slotIndex < rules.membersPerParty;
+
+  int _preferredParty(OccupiedPartyMember member) {
+    if (member.isLeader) return 0;
+    if (member.partyIndex < 0 || member.partyIndex >= rules.partyCount) {
+      return 0;
+    }
+    return member.partyIndex;
+  }
+
+  Iterable<PartySlot> _allSlots() sync* {
+    for (var partyIndex = 0; partyIndex < rules.partyCount; partyIndex++) {
+      for (var slotIndex = 0; slotIndex < rules.membersPerParty; slotIndex++) {
+        yield PartySlot(partyIndex: partyIndex, slotIndex: slotIndex);
+      }
+    }
+  }
+
+  Iterable<PartySlot> _fillOrder(OccupiedPartyMember member) sync* {
+    if (member.isLeader) {
+      yield const PartySlot(partyIndex: 0, slotIndex: 0);
+    }
+    final preferred = _preferredParty(member);
+    for (var slotIndex = 0; slotIndex < rules.membersPerParty; slotIndex++) {
+      yield PartySlot(partyIndex: preferred, slotIndex: slotIndex);
+    }
+    yield* _allSlots();
+  }
+
+  int _comparePending(OccupiedPartyMember left, OccupiedPartyMember right) {
+    if (left.isLeader != right.isLeader) {
+      return left.isLeader ? -1 : 1;
+    }
+    final leftJoinedAt = left.joinedAt;
+    final rightJoinedAt = right.joinedAt;
+    if (leftJoinedAt != null && rightJoinedAt != null) {
+      final byJoinedAt = leftJoinedAt.compareTo(rightJoinedAt);
+      if (byJoinedAt != 0) return byJoinedAt;
+    } else if (leftJoinedAt != null) {
+      return -1;
+    } else if (rightJoinedAt != null) {
+      return 1;
+    }
+    return left.id.compareTo(right.id);
   }
 }

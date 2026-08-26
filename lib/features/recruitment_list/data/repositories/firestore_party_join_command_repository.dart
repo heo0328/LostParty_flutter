@@ -95,11 +95,7 @@ class FirestorePartyJoinCommandRepository
     try {
       knownMembers = await recruitmentRef.collection('members').get();
     } on FirebaseException catch (error) {
-      return PartyJoinResult.failure(switch (error.code) {
-        'permission-denied' => PartyJoinFailure.permissionDenied,
-        'unavailable' || 'deadline-exceeded' => PartyJoinFailure.temporarilyUnavailable,
-        _ => PartyJoinFailure.unknown,
-      });
+      return PartyJoinResult.failure(_firebaseFailure(error.code));
     }
     return _run((transaction, actorPlayerId) async {
       final recruitment = await transaction.get(recruitmentRef);
@@ -146,35 +142,71 @@ class FirestorePartyJoinCommandRepository
       final className = c?['characterClassName'];
       if (itemLevel == null || itemLevel < (r?['minItemLevel'] as num? ?? double.infinity) || name is! String || className is! String) return const PartyJoinResult.failure(PartyJoinFailure.invalidCharacter);
 
-      final members = <PartyCompositionMember>[];
+      final existing = <OccupiedPartyMember>[];
       for (final known in knownMembers.docs) {
         final current = await transaction.get(known.reference);
         if (!current.exists) continue;
-        final data = current.data();
-        final role = _role(data?['role']);
-        final memberClass = data?['classNameSnapshot'];
-        if (role == null || memberClass is! String) return const PartyJoinResult.failure(PartyJoinFailure.unknown);
-        members.add(PartyCompositionMember(id: known.id, className: memberClass, role: role));
+        final occupied = _occupiedMember(
+          playerId: known.id,
+          data: current.data(),
+          leaderPlayerId: r?['leaderPlayerId'] as String?,
+        );
+        if (occupied == null) {
+          return const PartyJoinResult.failure(PartyJoinFailure.invalidRequest);
+        }
+        existing.add(occupied);
       }
-      members.add(PartyCompositionMember(id: playerId, className: className, role: role));
+      final partyCount = _asInt(r?['partyCount']);
+      final membersPerParty = _asInt(r?['membersPerParty']);
+      final supportsPerParty = _asInt(r?['supportsPerParty']);
+      final maxDealersPerClassPerParty = _asInt(r?['maxDealersPerClassPerParty']);
+      final memberCount = _asInt(r?['memberCount']);
+      final maxMemberCount = _asInt(r?['maxMemberCount']);
+      final dealerCount = _asInt(r?['dealerCount']);
+      final supportCount = _asInt(r?['supportCount']);
+      final raidId = r?['raidId'];
+      final memberPlayerIds = r?['memberPlayerIds'];
+      if (partyCount == null ||
+          membersPerParty == null ||
+          supportsPerParty == null ||
+          maxDealersPerClassPerParty == null ||
+          memberCount == null ||
+          maxMemberCount == null ||
+          dealerCount == null ||
+          supportCount == null ||
+          raidId is! String ||
+          memberPlayerIds is! List) {
+        return const PartyJoinResult.failure(PartyJoinFailure.invalidRequest);
+      }
       final rules = RecruitmentPartyRules(
-        partyCount: r?['partyCount'] as int,
-        membersPerParty: r?['membersPerParty'] as int,
-        supportsPerParty: r?['supportsPerParty'] as int,
-        maxDealersPerClassPerParty: r?['maxDealersPerClassPerParty'] as int,
+        partyCount: partyCount,
+        membersPerParty: membersPerParty,
+        supportsPerParty: supportsPerParty,
+        maxDealersPerClassPerParty: maxDealersPerClassPerParty,
       );
-      final placement = PartyCompositionPolicy(rules).arrange(members);
-      if (!placement.canJoin) return PartyJoinResult.failure(_placementFailure(placement.failure));
+      final placement = PartyCompositionPolicy(rules).assignEmptySlot(
+        joining: OccupiedPartyMember(
+          id: playerId,
+          className: className,
+          role: role,
+          partyIndex: 0,
+        ),
+        existing: existing,
+      );
+      if (!placement.canJoin || placement.slot == null) {
+        return PartyJoinResult.failure(_placementFailure(placement.failure));
+      }
 
       final now = FieldValue.serverTimestamp();
       final plan = PartyJoinWritePlan.create(
         recruitmentId: recruitmentId, playerId: playerId, characterId: characterId,
         characterName: name, className: className, itemLevel: itemLevel, combatPower: combatPower,
-        role: role, partyIndex: placement.assignments[playerId]!, joinedBy: actorPlayerId,
-        raidId: r?['raidId'] as String, cycleKey: cycleKey, memberCount: r?['memberCount'] as int,
-        memberPlayerIds: List<String>.from(r?['memberPlayerIds'] as List),
-        maxMemberCount: r?['maxMemberCount'] as int, dealerCount: r?['dealerCount'] as int,
-        supportCount: r?['supportCount'] as int, revision: expectedRecruitmentRevision, serverTimestamp: now,
+        role: role, partyIndex: placement.slot!.partyIndex, slotIndex: placement.slot!.slotIndex,
+        joinedBy: actorPlayerId,
+        raidId: raidId, cycleKey: cycleKey, memberCount: memberCount,
+        memberPlayerIds: List<String>.from(memberPlayerIds),
+        maxMemberCount: maxMemberCount, dealerCount: dealerCount,
+        supportCount: supportCount, revision: expectedRecruitmentRevision, serverTimestamp: now,
       );
       final memberRef = recruitmentRef.collection('members').doc(playerId);
       transaction.update(recruitmentRef, plan.recruitmentUpdate);
@@ -203,12 +235,10 @@ class FirestorePartyJoinCommandRepository
         return action(transaction, playerId);
       });
     } on FirebaseException catch (error) {
-      return PartyJoinResult.failure(switch (error.code) {
-        'permission-denied' => PartyJoinFailure.permissionDenied,
-        'unavailable' || 'deadline-exceeded' || 'aborted' => PartyJoinFailure.temporarilyUnavailable,
-        _ => PartyJoinFailure.unknown,
-      });
-    } catch (_) { return const PartyJoinResult.failure(PartyJoinFailure.unknown); }
+      return PartyJoinResult.failure(_firebaseFailure(error.code));
+    } catch (_) {
+      return const PartyJoinResult.failure(PartyJoinFailure.unknown);
+    }
   }
 
   Future<bool> _canApprove(
@@ -235,6 +265,39 @@ PartyRole? _role(Object? value) => switch (value) {
   _ => null,
 };
 
+OccupiedPartyMember? _occupiedMember({
+  required String playerId,
+  required Map<String, dynamic>? data,
+  required String? leaderPlayerId,
+}) {
+  final role = _role(data?['role']);
+  final memberClass = data?['classNameSnapshot'];
+  final partyIndex = _asInt(data?['partyIndex']);
+  final slotIndex = _asInt(data?['slotIndex']);
+  if (role == null || memberClass is! String || partyIndex == null) return null;
+  return OccupiedPartyMember(
+    id: playerId,
+    className: memberClass,
+    role: role,
+    partyIndex: partyIndex,
+    slotIndex: slotIndex,
+    joinedAt: _joinedAt(data?['joinedAt']),
+    isLeader: playerId == leaderPlayerId,
+  );
+}
+
+DateTime? _joinedAt(Object? value) {
+  if (value is Timestamp) return value.toDate();
+  if (value is DateTime) return value;
+  return null;
+}
+
+int? _asInt(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return null;
+}
+
 double? _parseItemLevel(Object? value) => value is num ? value.toDouble() : value is String ? double.tryParse(value.replaceAll(',', '').trim()) : null;
 
 PartyJoinFailure _placementFailure(PartyCompositionFailure failure) => switch (failure) {
@@ -242,4 +305,11 @@ PartyJoinFailure _placementFailure(PartyCompositionFailure failure) => switch (f
   PartyCompositionFailure.dealerSlotsFull || PartyCompositionFailure.supportSlotsFull => PartyJoinFailure.roleCapacityFull,
   PartyCompositionFailure.duplicateDealerClass => PartyJoinFailure.duplicateDealerClass,
   _ => PartyJoinFailure.invalidRequest,
+};
+
+PartyJoinFailure _firebaseFailure(String code) => switch (code) {
+  'permission-denied' => PartyJoinFailure.permissionDenied,
+  'unavailable' || 'deadline-exceeded' || 'aborted' =>
+    PartyJoinFailure.temporarilyUnavailable,
+  _ => PartyJoinFailure.unknown,
 };

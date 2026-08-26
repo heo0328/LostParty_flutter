@@ -177,7 +177,7 @@ class FirestorePartyReadRepository implements PartyReadRepository {
                   .map(_document)
                   .map(_mapper.toMemberDisplay)
                   .toList(growable: false)
-                ..sort(_compareMembers);
+                ..sort((left, right) => left.compareByPartySlot(right));
           return PartyReadSnapshot(
             items: items,
             isFromCache: snapshot.metadata.isFromCache,
@@ -347,10 +347,3 @@ int _compareActiveRaids(ActiveRaidSummary left, ActiveRaidSummary right) {
   return byUpdated != 0 ? byUpdated : left.id.compareTo(right.id);
 }
 
-int _compareMembers(PartyMemberDisplay left, PartyMemberDisplay right) {
-  final byParty = left.partyIndex.compareTo(right.partyIndex);
-  if (byParty != 0) return byParty;
-  final byRole = left.role.index.compareTo(right.role.index);
-  if (byRole != 0) return byRole;
-  return (left.characterName ?? '').compareTo(right.characterName ?? '');
-}

@@ -78,6 +78,7 @@ class PartyCreateWritePlan {
         'classNameSnapshot': verifiedClassName,
         'role': command.leaderRole.name,
         'partyIndex': 0,
+        'slotIndex': 0,
         'joinedAt': serverTimestamp,
         'joinedBy': playerId,
         'submittedBuildSnapshotId': null,

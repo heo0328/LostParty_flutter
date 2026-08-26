@@ -8,7 +8,7 @@ void main() {
     final plan = PartyJoinWritePlan.create(
       recruitmentId: 'raid-1', playerId: 'player-2', characterId: 'character-2',
       characterName: '테스트', className: '바드', itemLevel: 1700,
-      combatPower: 100000, role: PartyRole.support, partyIndex: 1,
+      combatPower: 100000, role: PartyRole.support, partyIndex: 1, slotIndex: 0,
       joinedBy: 'leader', raidId: 'serca', cycleKey: '2026-W34',
       memberCount: 7, memberPlayerIds: const ['leader'], maxMemberCount: 8,
       dealerCount: 6, supportCount: 1, revision: 4,
@@ -21,6 +21,7 @@ void main() {
     expect(plan.recruitmentUpdate['hasAvailableSlot'], isFalse);
     expect(plan.recruitmentUpdate['revision'], 5);
     expect(plan.membership['partyIndex'], 1);
+    expect(plan.membership['slotIndex'], 0);
     expect(plan.membership['joinedBy'], 'leader');
     expect(plan.assignment['recruitmentId'], 'raid-1');
   });

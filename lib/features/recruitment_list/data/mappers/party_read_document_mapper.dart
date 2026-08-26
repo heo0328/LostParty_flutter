@@ -79,6 +79,7 @@ class PartyReadDocumentMapper {
       className: _softString(data, 'classNameSnapshot'),
       role: _enumValue(PartyRole.values, _string(data, 'role'), 'role'),
       partyIndex: _integer(data, 'partyIndex'),
+      slotIndex: _optionalSlotIndex(data),
       itemLevel: _softNumber(data, 'itemLevelSnapshot'),
       combatPower: _softNumber(data, 'combatPowerSnapshot'),
     );
@@ -181,6 +182,13 @@ class PartyReadDocumentMapper {
     final value = data[field];
     if (value == null) return null;
     if (value is int && value > 0) return value;
+    return null;
+  }
+
+  int? _optionalSlotIndex(Map<String, Object?> data) {
+    final value = data['slotIndex'];
+    if (value == null) return null;
+    if (value is int && value >= 0) return value;
     return null;
   }
 

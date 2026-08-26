@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lost_party/features/recruitment_list/data/dto/party_read_document_dto.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_read_document_mapper.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_read_models.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_application.dart';
 import 'package:lost_party/features/recruitment_list/domain/policies/approval_policy.dart';
@@ -52,6 +53,7 @@ void main() {
           'classNameSnapshot': '블레이드',
           'role': 'dealer',
           'partyIndex': 1,
+          'slotIndex': 2,
           'itemLevelSnapshot': 1710.5,
           'combatPowerSnapshot': 250000,
           'canApproveApplications': false,
@@ -63,6 +65,7 @@ void main() {
     expect(member.className, '블레이드');
     expect(member.role, PartyRole.dealer);
     expect(member.partyIndex, 1);
+    expect(member.slotIndex, 2);
     expect(member.itemLevel, 1710.5);
     expect(member.combatPower, 250000);
   });
@@ -89,8 +92,76 @@ void main() {
     );
     expect(member.characterName, isNull);
     expect(member.className, isNull);
+    expect(member.slotIndex, isNull);
     expect(member.itemLevel, isNull);
     expect(member.combatPower, isNull);
+  });
+
+  test('maps slotIndex when present and ignores invalid values', () {
+    final missing = mapper.toMemberDisplay(
+      PartyReadDocumentDto(
+        id: 'player-member',
+        data: {
+          'schemaVersion': 1,
+          'role': 'dealer',
+          'partyIndex': 0,
+        },
+      ),
+    );
+    expect(missing.slotIndex, isNull);
+
+    final invalid = mapper.toMemberDisplay(
+      PartyReadDocumentDto(
+        id: 'player-member',
+        data: {
+          'schemaVersion': 1,
+          'role': 'dealer',
+          'partyIndex': 0,
+          'slotIndex': -1,
+        },
+      ),
+    );
+    expect(invalid.slotIndex, isNull);
+  });
+
+  test('sorts members by party then slot without inferring missing seats', () {
+    const later = PartyMemberDisplay(
+      characterName: '후발',
+      className: '바드',
+      role: PartyRole.support,
+      partyIndex: 0,
+      slotIndex: 2,
+    );
+    const first = PartyMemberDisplay(
+      characterName: '리더',
+      className: '블레이드',
+      role: PartyRole.dealer,
+      partyIndex: 0,
+      slotIndex: 0,
+    );
+    const unknown = PartyMemberDisplay(
+      characterName: '이전멤버',
+      className: '워로드',
+      role: PartyRole.dealer,
+      partyIndex: 0,
+    );
+    const secondParty = PartyMemberDisplay(
+      characterName: '2파티',
+      className: '기공사',
+      role: PartyRole.dealer,
+      partyIndex: 1,
+      slotIndex: 0,
+    );
+
+    final ordered = [later, secondParty, unknown, first]
+      ..sort((left, right) => left.compareByPartySlot(right));
+
+    expect(ordered.map((member) => member.characterName), [
+      '리더',
+      '후발',
+      '이전멤버',
+      '2파티',
+    ]);
   });
 
   test('maps an application document without treating it as membership', () {

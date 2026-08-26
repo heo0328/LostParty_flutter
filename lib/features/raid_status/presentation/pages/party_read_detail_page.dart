@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_radius.dart';
+import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../../shared/formatters/korea_time_formatter.dart';
 import '../../../recruitment_list/domain/entities/party_application_command.dart';
@@ -357,8 +359,10 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
           }
 
           final summary = state.item!;
-          return ListView(
+          return SingleChildScrollView(
             padding: const EdgeInsets.only(bottom: 24),
+            child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (state.isFromCache)
                 const _Notice(
@@ -401,6 +405,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
               _PartyCompositionSection(
                 members: _members,
                 membersPerParty: summary.membersPerParty,
+                maxMemberCount: summary.maxMemberCount,
                 loading: _membersLoading,
                 failure: _membersFailure,
                 isFromCache: _membersFromCache,
@@ -454,6 +459,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                   ),
                 ),
             ],
+            ),
           );
         },
       ),
@@ -532,6 +538,7 @@ class _PartyCompositionSection extends StatelessWidget {
   const _PartyCompositionSection({
     required this.members,
     required this.membersPerParty,
+    required this.maxMemberCount,
     required this.loading,
     required this.failure,
     required this.isFromCache,
@@ -539,6 +546,7 @@ class _PartyCompositionSection extends StatelessWidget {
 
   final List<PartyMemberDisplay> members;
   final int membersPerParty;
+  final int maxMemberCount;
   final bool loading;
   final PartyReadFailureType? failure;
   final bool isFromCache;
@@ -546,16 +554,21 @@ class _PartyCompositionSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final board = PartySlotBoard.fromMembers(
+      members: members,
+      membersPerParty: membersPerParty,
+      maxMemberCount: maxMemberCount,
+    );
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text('파티 구성', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.xs),
           if (isFromCache)
             Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
               child: Text(
                 '오프라인 캐시의 파티원 정보입니다.',
                 style: theme.textTheme.bodySmall,
@@ -565,31 +578,268 @@ class _PartyCompositionSection extends StatelessWidget {
             const LinearProgressIndicator()
           else if (failure != null && members.isEmpty)
             Text(_failureMessage(failure!))
-          else if (members.isEmpty)
-            const Text('표시할 파티원이 없습니다.')
           else ...[
             if (failure != null)
               Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
                 child: Text(_failureMessage(failure!)),
               ),
-            for (final entry in _groupByParty(members, membersPerParty).entries) ...[
-              Padding(
-                padding: const EdgeInsets.only(top: 8, bottom: 4),
-                child: Text(
-                  '${entry.key}파티',
-                  style: theme.textTheme.titleSmall,
-                ),
-              ),
-              for (final member in entry.value)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Text(_memberLine(member, membersPerParty)),
-                ),
-            ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = constraints.maxWidth >= 600 ? 2 : 1;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (
+                      var partyIndex = 0;
+                      partyIndex < board.partyCount;
+                      partyIndex++
+                    ) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          top: AppSpacing.xs,
+                          bottom: AppSpacing.xxs,
+                        ),
+                        child: Text(
+                          '${partyIndex + 1}파티',
+                          style: theme.textTheme.titleSmall,
+                        ),
+                      ),
+                      _SlotCardGrid(
+                        cells: board.cellsForParty(partyIndex),
+                        columns: columns,
+                        raidLeaderLabel: board.partyCount > 1 ? '공대장' : '파티장',
+                      ),
+                    ],
+                    if (board.unassignedMembers.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          top: AppSpacing.sm,
+                          bottom: AppSpacing.xxs,
+                        ),
+                        child: Text(
+                          '자리 미정',
+                          style: theme.textTheme.titleSmall,
+                        ),
+                      ),
+                      for (final member in board.unassignedMembers)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                          child: _UnassignedMemberCard(member: member),
+                        ),
+                    ],
+                  ],
+                );
+              },
+            ),
           ],
         ],
       ),
+    );
+  }
+}
+
+class _SlotCardGrid extends StatelessWidget {
+  const _SlotCardGrid({
+    required this.cells,
+    required this.columns,
+    required this.raidLeaderLabel,
+  });
+
+  final List<PartySlotCell> cells;
+  final int columns;
+  final String raidLeaderLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    if (columns == 1) {
+      return Column(
+        children: [
+          for (final cell in cells)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: _SlotCard(cell: cell, raidLeaderLabel: raidLeaderLabel),
+            ),
+        ],
+      );
+    }
+    final rows = <Widget>[];
+    for (var index = 0; index < cells.length; index += 2) {
+      rows.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _SlotCard(
+                  cell: cells[index],
+                  raidLeaderLabel: raidLeaderLabel,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: index + 1 < cells.length
+                    ? _SlotCard(
+                        cell: cells[index + 1],
+                        raidLeaderLabel: raidLeaderLabel,
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return Column(children: rows);
+  }
+}
+
+class _SlotCard extends StatelessWidget {
+  const _SlotCard({required this.cell, required this.raidLeaderLabel});
+
+  final PartySlotCell cell;
+  final String raidLeaderLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final member = cell.member;
+    final seatLabel = '${cell.slotIndex + 1}번';
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        child: member == null
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(seatLabel, style: theme.textTheme.titleSmall),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text('빈자리', style: theme.textTheme.bodyMedium),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    '현재 별도 참가 조건 없음',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: AppSpacing.xs,
+                    runSpacing: AppSpacing.xxs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(seatLabel, style: theme.textTheme.titleSmall),
+                      if (cell.isLeaderSeat)
+                        _RoleBadge(label: raidLeaderLabel),
+                      _RoleBadge(label: _roleLabel(member.role)),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  _CharacterNameText(name: member.characterName),
+                  Text(
+                    member.className?.trim().isNotEmpty == true
+                        ? member.className!.trim()
+                        : '정보 없음',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    member.combatPower != null
+                        ? '전투력 ${DisplayNumberFormatter.integer(member.combatPower!)}'
+                        : '전투력 정보 없음',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  Text(
+                    member.itemLevel != null
+                        ? '아이템 Lv. ${DisplayNumberFormatter.integer(member.itemLevel!)}'
+                        : '아이템 레벨 정보 없음',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _UnassignedMemberCard extends StatelessWidget {
+  const _UnassignedMemberCard({required this.member});
+
+  final PartyMemberDisplay member;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('자리 정보 없음', style: theme.textTheme.titleSmall),
+            const SizedBox(height: AppSpacing.xxs),
+            _CharacterNameText(name: member.characterName),
+            Text(
+              [
+                member.className?.trim().isNotEmpty == true
+                    ? member.className!.trim()
+                    : '정보 없음',
+                _roleLabel(member.role),
+                if (member.combatPower != null)
+                  '전투력 ${DisplayNumberFormatter.integer(member.combatPower!)}',
+              ].join(' · '),
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CharacterNameText extends StatelessWidget {
+  const _CharacterNameText({required this.name});
+
+  final String? name;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = name?.trim().isNotEmpty == true ? name!.trim() : '정보 없음';
+    return Tooltip(
+      message: label,
+      child: Text(
+        label,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.bodyMedium,
+      ),
+    );
+  }
+}
+
+class _RoleBadge extends StatelessWidget {
+  const _RoleBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xs,
+        vertical: AppSpacing.xxs,
+      ),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Text(label, style: theme.textTheme.labelSmall),
     );
   }
 }
@@ -1032,43 +1282,6 @@ String _leaderDetailLabel(PublicRecruitmentSummary summary) {
   if (name == null || name.isEmpty) return '정보 없음';
   if (className == null || className.isEmpty) return name;
   return '$name · $className';
-}
-
-String _memberLine(PartyMemberDisplay member, int membersPerParty) {
-  final seat = (member.partyIndex % membersPerParty) + 1;
-  final parts = <String>[
-    '$seat자리',
-    member.characterName?.trim().isNotEmpty == true
-        ? member.characterName!.trim()
-        : '정보 없음',
-    member.className?.trim().isNotEmpty == true
-        ? member.className!.trim()
-        : '정보 없음',
-    if (member.combatPower != null)
-      '전투력 ${DisplayNumberFormatter.integer(member.combatPower!)}'
-    else
-      '전투력 정보 없음',
-    if (member.itemLevel != null)
-      '아이템 Lv. ${DisplayNumberFormatter.integer(member.itemLevel!)}'
-    else
-      '아이템 레벨 정보 없음',
-    _roleLabel(member.role),
-  ];
-  return parts.join(' · ');
-}
-
-Map<int, List<PartyMemberDisplay>> _groupByParty(
-  List<PartyMemberDisplay> members,
-  int membersPerParty,
-) {
-  final size = membersPerParty <= 0 ? 4 : membersPerParty;
-  final grouped = <int, List<PartyMemberDisplay>>{};
-  for (final member in members) {
-    final partyNumber = (member.partyIndex ~/ size) + 1;
-    grouped.putIfAbsent(partyNumber, () => <PartyMemberDisplay>[]).add(member);
-  }
-  final keys = grouped.keys.toList()..sort();
-  return {for (final key in keys) key: grouped[key]!};
 }
 
 String _applicationStatusLabel(PartyApplicationSummary application) =>

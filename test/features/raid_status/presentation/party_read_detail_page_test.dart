@@ -65,6 +65,12 @@ void main() {
     );
   }
 
+  Future<void> tapVisible(WidgetTester tester, Finder finder) async {
+    await tester.ensureVisible(finder);
+    await tester.pumpAndSettle();
+    await tester.tap(finder);
+  }
+
   testWidgets('첫 snapshot 전에는 로딩을 표시한다', (tester) async {
     final pending =
         StreamController<PartyReadDetailSnapshot<PublicRecruitmentSummary>>();
@@ -104,6 +110,7 @@ void main() {
               className: '기상술사',
               role: PartyRole.dealer,
               partyIndex: 0,
+              slotIndex: 0,
               itemLevel: 1720,
               combatPower: 300000,
             ),
@@ -111,7 +118,7 @@ void main() {
               characterName: '서폿캐릭',
               className: '바드',
               role: PartyRole.support,
-              partyIndex: 4,
+              partyIndex: 1,
               itemLevel: 1710,
               combatPower: 280000,
             ),
@@ -127,10 +134,16 @@ void main() {
     expect(find.text('파티 구성'), findsOneWidget);
     expect(find.text('1파티'), findsOneWidget);
     expect(find.text('2파티'), findsOneWidget);
-    expect(
-      find.textContaining('이슈아이 · 기상술사 · 전투력 300,000'),
-      findsOneWidget,
-    );
+    expect(find.text('1번'), findsWidgets);
+    expect(find.text('이슈아이'), findsWidgets);
+    expect(find.text('기상술사'), findsOneWidget);
+    expect(find.text('공대장'), findsOneWidget);
+    expect(find.text('빈자리'), findsWidgets);
+    expect(find.text('현재 별도 참가 조건 없음'), findsWidgets);
+    expect(find.text('자리 미정'), findsOneWidget);
+    expect(find.text('자리 정보 없음'), findsOneWidget);
+    expect(find.textContaining('서폿캐릭'), findsOneWidget);
+    expect(find.textContaining('전투력 300,000'), findsOneWidget);
     expect(find.textContaining('조회 전용'), findsOneWidget);
     expect(find.byKey(const ValueKey('openApplicationButton')), findsNothing);
   });
@@ -189,9 +202,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('openApplicationButton')));
+    await tapVisible(tester, find.byKey(const ValueKey('openApplicationButton')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('apply-candidate-1-dealer')));
+    await tapVisible(tester, find.byKey(const ValueKey('apply-candidate-1-dealer')));
     await tester.pumpAndSettle();
 
     expect(repository.lastApply?.characterId, 'server-character-1');
@@ -216,7 +229,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('withdrawApplicationButton')));
+    await tapVisible(tester, find.byKey(const ValueKey('withdrawApplicationButton')));
     await tester.pumpAndSettle();
 
     expect(repository.lastWithdraw?.expectedRevision, 3);
@@ -267,9 +280,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('바로 가입'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('openApplicationButton')));
+    await tapVisible(tester, find.byKey(const ValueKey('openApplicationButton')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('apply-candidate-1-dealer')));
+    await tapVisible(tester, find.byKey(const ValueKey('apply-candidate-1-dealer')));
     await tester.pumpAndSettle();
 
     expect(repository.lastDirectJoin?.characterId, 'server-character-1');
@@ -296,7 +309,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('가입 신청 관리'), findsOneWidget);
-    await tester.tap(
+    await tapVisible(
+      tester,
       find.byKey(const ValueKey('approveApplication-player-applicant')),
     );
     await tester.pumpAndSettle();
@@ -322,7 +336,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(
+    await tapVisible(
+      tester,
       find.byKey(const ValueKey('rejectApplication-player-applicant')),
     );
     await tester.pumpAndSettle();
@@ -374,7 +389,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('deleteOwnRecruitmentButton')));
+    await tapVisible(tester, find.byKey(const ValueKey('deleteOwnRecruitmentButton')));
     await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey('confirmDeleteOwnRecruitmentButton')),
@@ -405,7 +420,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('deleteOwnRecruitmentButton')));
+    await tapVisible(tester, find.byKey(const ValueKey('deleteOwnRecruitmentButton')));
     await tester.pumpAndSettle();
 
     expect(membership.leaveCommands, isEmpty);

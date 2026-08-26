@@ -95,6 +95,7 @@ service cloud.firestore {
         && member.playerId == playerId
         && member.joinedBy == playerId
         && member.partyIndex == 0
+        && member.slotIndex == 0
         && member.canApproveApplications == true
         && ownsActiveCharacter(member.characterId)
         && getAfter(assignmentPath(playerId, assignmentId)).data.recruitmentId
@@ -110,6 +111,7 @@ service cloud.firestore {
         && data.playerId == playerId
         && data.joinedBy == playerId
         && data.partyIndex == 0
+        && data.slotIndex == 0
         && data.canApproveApplications == true
         && data.joinedAt == request.time
         && data.updatedAt == request.time
@@ -154,6 +156,8 @@ service cloud.firestore {
         && data.playerId == playerId
         && data.partyIndex >= 0
         && data.partyIndex < after.partyCount
+        && data.slotIndex >= 0
+        && data.slotIndex < after.membersPerParty
         && data.canApproveApplications == false
         && data.joinedAt == request.time
         && data.updatedAt == request.time
@@ -498,6 +502,7 @@ service cloud.firestore {
         && newData.characterId != oldData.characterId
         && newData.role == oldData.role
         && newData.partyIndex == oldData.partyIndex
+        && newData.get('slotIndex', -1) == oldData.get('slotIndex', -1)
         && newData.canApproveApplications == oldData.canApproveApplications
         && ownsActiveCharacter(newData.characterId)
         && newData.characterChangedAt == request.time
@@ -766,7 +771,9 @@ service cloud.firestore {
       allow update, delete: if false;
 
       match /activeRaidAssignments/{assignmentId} {
-        allow get: if hasActiveBinding() && playerId == currentPlayerId();
+        // 승인 Transaction이 신청자 점유 문서 존재 여부를 확인해야 한다.
+        // AuthUid·JWT는 없고 레이드 점유 식별만 담으므로 active binding 사용자에게 get만 허용한다.
+        allow get: if hasActiveBinding();
         allow list: if false;
       allow create: if validInitialAssignment(
           playerId,
