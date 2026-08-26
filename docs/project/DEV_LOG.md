@@ -1480,3 +1480,68 @@
 - 표적 Mapper·WritePlan·Card·상세·현황 테스트와 `flutter analyze --no-pub`을 통과했다.
 - Android 실기기에서 목록·상세 파티장·파티원 표시를 확인했다.
 - `firebase deploy --only firestore:rules --project lost-party`로 Option 1 포함 Rules 전체를 배포했고 Console에서 `canReadPublicRecruitmentMembers`를 확인했다.
+
+---
+
+## Task-066. 즉시 가입·승인·거절 실행 앱 연결
+
+- 작업 브랜치: `cursor/party-join-approve-reject` (`main`의 Task-065 병합 커밋에서 분기)
+- `PublicRecruitmentSummary.approvalMode`와 Mapper 매핑을 추가했다.
+- `watchRecruitmentApplications`로 방의 신청 목록을 구독한다.
+- `PartyReadDetailPage`에 `FirestorePartyJoinCommandRepository`를 연결했다.
+  - `directJoin`: 바로 가입(`joinDirectly`)
+  - `leaderOnly`: 지원하기·철회 유지, 파티장 pending 승인·거절
+- 표적 상세·Mapper 테스트와 `flutter analyze --no-pub`을 통과했다.
+- Android 2기기 실기기 검증은 대기 중이다. 사용자는 추가 디바이스로 테스트한 뒤 수정 지시를 다시 내린다.
+- **2기기 검증·수정 완료 전까지 `main`에 병합하지 않는다.** 체크리스트는 `NEXT_WORK.md`에 둔다.
+
+### Task-066 1차 실기기 피드백 대응 (브랜치 전용)
+
+- 증상: 재시작 후 지원 시 `신청 권한을 확인하지 못했습니다`, 인증 캐릭터 목록 토스트, 인증 직후 미반영 추정, 인증 진행 UI 재진입 소실.
+- Rules: `recruitmentApplicationPath` + `canGetRecruitmentApplication`으로 **없는 application 문서 get**을 허용. 공개 membership 읽기 헬퍼는 유지.
+- 앱: Gateway `activeChallenge`로 인증 진행 UI 복원, 인증 바인딩 후 `loadAccounts` 재조회, 신청 후보 없음 메시지 분리.
+- **Rules는 사용자/운영자가 `firebase deploy --only firestore:rules`로 재배포해야 신청이 풀린다.** `main` 병합은 재검증 후.
+
+### Task-066 Rules 재배포·재시도 (2026-08-26)
+
+- `firebase deploy --only firestore:rules --project lost-party`로 `canGetRecruitmentApplication` 포함 Rules를 배포했다.
+- 배포 전에도 동일 메시지가 났다면 미배포가 원인이었을 가능성이 크다.
+- 추가로 신청/즉시가입에 `targetCycleKey`를 쓰도록 클라이언트를 보강했다.
+
+### Task-066 실기기 현황 정리 (꼬임 방지, 2026-08-26)
+
+- **확인됨:** Rules 배포 후 신청(지원하기)·신청 리스트 표시 성공.
+- **실패·미수정:** 파티장 **승인**. 신청 get Rules와 별개.
+- **미확인:** 거절·철회·즉시가입.
+- 브랜치 `cursor/party-join-approve-reject` (`3cfd835` Rules/인증 UX, `ed7ec10` targetCycleKey). `main` 미병합.
+- 사용자가 지금 할 테스트·보고 형식은 `NEXT_WORK.md` 「지금 사용자가 할 테스트」에만 둔다.
+
+### Task-066 우선순위 재정의 (2026-08-26 오후)
+
+- 사용자: 거절 후 B의 전 캐릭터가 A의 전 방에 막히는 체감 → **방 단위** 거절 기억 + **재신청 허용** + **N회 거절 안내**가 필요. 합동 테스트는 기능 추가 후.
+- **구현 순서:** (A) 내 모집 삭제/해산 → (B) 방 단위 재신청·N회 안내 → (C) 합동 실기기. 승인 단독 수정은 뒤로.
+- 기술 메모: 같은 방 재신청 불가는 `apply`의 `application.exists` 거부에 해당. 전역 차단은 재현·분리 예정.
+
+### Task-066 Step A — 내 모집 삭제 1차 (2026-08-26)
+
+- `/raid-status/{id}`에 파티장 **모집 삭제** 연결. 단독 멤버면 membership `leave`로 `disbanded`.
+- 다인 방은 아직 해산 불가 안내. Rules 추가 배포 없음.
+- 다음: Step B 거절 후 재신청·N회 안내. `main` 미병합.
+
+### Task-066 Step B — 방 단위 재신청 (2026-08-26)
+
+- 거절·철회·superseded 후 같은 `applications/{playerId}`를 `pending`으로 재신청. `rejectionCount` 유지.
+- Rules `validApplicationReapply` + 상세 N회 거절·다시 지원하기 UI.
+- **Rules 재배포 후** Step C 합동 테스트. `main` 미병합.
+
+### Task-066 Step C 합동 실기기 통과 (2026-08-26)
+
+- 확인: N회 거절 안내·재신청·캐릭터 재선택, 단독 모집 삭제, 승인, 철회, 즉시 가입.
+- 브랜치 `cursor/party-join-approve-reject`. **`main` 병합은 사용자 지시 대기.**
+- 후속: 다인 해산, 멤버·회차 명령 등 (`NEXT_WORK.md`).
+
+### Task-066 `main` 병합 (2026-08-26)
+
+- `cursor/party-join-approve-reject`를 `main`에 병합·푸시했다.
+- 통합 기준은 Task-066(가입·승인·거절·재신청·즉시가입·단독 삭제)까지.
+- 다음 작업은 멤버 명령·회차 명령부터 (`NEXT_WORK.md`).

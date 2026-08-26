@@ -112,6 +112,14 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 
 승인 대기는 확정 점유를 생성하지 않는다.
 
+#### 거절·철회·superseded 후 재신청
+
+- 같은 방·같은 Player 문서가 `rejected` / `withdrawn` / `superseded`이면 **새 문서를 만들지 않고** 해당 문서를 다시 `pending`으로 갱신한다.
+- `rejectionCount`는 유지한다(거절 누적 안내). `approvalCount`는 0으로 초기화한다.
+- Character·역할·빌드 Snapshot과 `cycleKey`는 재신청 시점으로 교체하고 `revision`을 1 증가시킨다.
+- `pending`이 이미 있으면 중복 신청으로 거절한다. `approved`는 재신청하지 않는다.
+- 거절 이력은 **모집방(recruitmentId) 단위**이며 다른 방으로 전파하지 않는다.
+
 ### 4.4 신청 철회
 
 - 신청자 본인의 `pending` 문서만 `withdrawn`으로 변경한다.

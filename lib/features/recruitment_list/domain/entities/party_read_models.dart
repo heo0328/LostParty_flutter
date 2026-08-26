@@ -107,6 +107,7 @@ class PartyApplicationSummary {
     required this.revision,
     required this.createdAt,
     required this.updatedAt,
+    this.rejectionCount = 0,
     this.resolutionReason,
     this.decidedAt,
   });
@@ -120,6 +121,7 @@ class PartyApplicationSummary {
   final PartyRole requestedRole;
   final RecruitmentApplicationStatus status;
   final int revision;
+  final int rejectionCount;
   final String? resolutionReason;
   final DateTime createdAt;
   final DateTime? decidedAt;

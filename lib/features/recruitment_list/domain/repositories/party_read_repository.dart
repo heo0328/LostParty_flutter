@@ -41,6 +41,11 @@ abstract class PartyReadRepository {
     String recruitmentId,
   );
 
+  /// 모집의 신청 목록을 실시간 구독한다. 리더·멤버 읽기 권한에 의존한다.
+  Stream<PartyReadSnapshot<PartyApplicationSummary>> watchRecruitmentApplications(
+    String recruitmentId,
+  );
+
   Stream<PartyReadDetailSnapshot<PartyApplicationSummary?>> watchMyApplication({
     required String recruitmentId,
     required String playerId,

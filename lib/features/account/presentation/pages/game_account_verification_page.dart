@@ -41,6 +41,7 @@ class _GameAccountVerificationPageState
   @override
   void initState() {
     super.initState();
+    _challenge = widget.gateway.activeChallenge;
     _loadAccounts();
   }
 
@@ -143,6 +144,19 @@ class _GameAccountVerificationPageState
         serverCharacterIdsByLocalId: mapping,
       ),
     );
+    // 바인딩 직후 Drift를 다시 읽어 같은 세션의 신청/생성 후보에 즉시 반영한다.
+    final boundAccountId = account.id;
+    final refreshed = await widget.accountRepository.loadAccounts();
+    if (!mounted) return;
+    final matched = refreshed
+        .where((item) => item.id == boundAccountId)
+        .firstOrNull;
+    setState(() {
+      _accounts = refreshed;
+      _selectedAccount = matched ?? account;
+      _selectedCharacter =
+          matched?.characters.firstOrNull ?? _selectedCharacter;
+    });
   }
 
   LocalGameAccount? _findAccount(String characterName) {

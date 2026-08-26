@@ -16,11 +16,16 @@ import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_active
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_application_command.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_join_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_read_models.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_aggregate.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_application.dart';
+import 'package:lost_party/features/recruitment_list/domain/policies/approval_policy.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_membership_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_application_command_repository.dart';
+import 'package:lost_party/features/recruitment_list/domain/repositories/party_join_command_repository.dart';
+import 'package:lost_party/features/recruitment_list/domain/repositories/party_membership_command_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_read_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
 
@@ -33,7 +38,10 @@ void main() {
     recruitment,
     Stream<PartyReadDetailSnapshot<PartyApplicationSummary?>>? myApplication,
     Stream<PartyReadSnapshot<PartyMemberDisplay>>? members,
+    Stream<PartyReadSnapshot<PartyApplicationSummary>>? recruitmentApplications,
     PartyApplicationCommandRepository? applicationCommandRepository,
+    PartyJoinCommandRepository? joinCommandRepository,
+    PartyMembershipCommandRepository? membershipCommandRepository,
     RecruitmentLeaderCandidateService? candidateService,
     String? playerId,
   }) async {
@@ -45,8 +53,11 @@ void main() {
             recruitment: recruitment,
             myApplication: myApplication,
             members: members,
+            recruitmentApplications: recruitmentApplications,
           ),
           applicationCommandRepository: applicationCommandRepository,
+          joinCommandRepository: joinCommandRepository,
+          membershipCommandRepository: membershipCommandRepository,
           candidateService: candidateService,
           playerId: playerId,
         ),
@@ -135,7 +146,7 @@ void main() {
       ),
       applicationCommandRepository: _FakeApplicationCommandRepository(),
       candidateService: _candidateService(),
-      playerId: 'player-1',
+      playerId: 'player-applicant',
     );
     await tester.pumpAndSettle();
 
@@ -154,7 +165,7 @@ void main() {
       ),
       applicationCommandRepository: _FakeApplicationCommandRepository(),
       candidateService: _candidateService(),
-      playerId: 'player-1',
+      playerId: 'player-applicant',
     );
     await tester.pumpAndSettle();
 
@@ -174,7 +185,7 @@ void main() {
       ),
       applicationCommandRepository: repository,
       candidateService: _candidateService(),
-      playerId: 'player-1',
+      playerId: 'player-applicant',
     );
     await tester.pumpAndSettle();
 
@@ -186,7 +197,7 @@ void main() {
     expect(repository.lastApply?.characterId, 'server-character-1');
     expect(repository.lastApply?.requestedRole, PartyRole.dealer);
     expect(repository.lastApply?.cycleKey, '2026-08-19');
-    expect(find.text('신청을 보냈습니다.'), findsOneWidget);
+    expect(find.text('가입을 신청했습니다.'), findsOneWidget);
   });
 
   testWidgets('철회 버튼이 pending 신청 revision으로 명령을 보낸다', (tester) async {
@@ -201,7 +212,7 @@ void main() {
       ),
       applicationCommandRepository: repository,
       candidateService: _candidateService(),
-      playerId: 'player-1',
+      playerId: 'player-applicant',
     );
     await tester.pumpAndSettle();
 
@@ -210,6 +221,113 @@ void main() {
 
     expect(repository.lastWithdraw?.expectedRevision, 3);
     expect(find.text('신청을 철회했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('거절된 신청은 횟수 안내와 다시 지원하기를 보여 준다', (tester) async {
+    final repository = _FakeApplicationCommandRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      myApplication: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _rejectedApplication(rejectionCount: 2),
+          isFromCache: false,
+        ),
+      ),
+      applicationCommandRepository: repository,
+      candidateService: _candidateService(),
+      playerId: 'player-applicant',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('2회 거절되었습니다'), findsOneWidget);
+    expect(find.text('다시 지원하기'), findsOneWidget);
+    expect(find.textContaining('아직 연결되지 않았습니다'), findsNothing);
+  });
+
+  testWidgets('즉시 가입 모집은 joinDirectly 명령을 보낸다', (tester) async {
+    final repository = _FakeJoinCommandRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(approvalMode: ApprovalMode.directJoin),
+          isFromCache: false,
+        ),
+      ),
+      myApplication: Stream.value(
+        const PartyReadDetailSnapshot(item: null, isFromCache: false),
+      ),
+      joinCommandRepository: repository,
+      candidateService: _candidateService(),
+      playerId: 'player-applicant',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('바로 가입'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('openApplicationButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('apply-candidate-1-dealer')));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastDirectJoin?.characterId, 'server-character-1');
+    expect(repository.lastDirectJoin?.expectedRecruitmentRevision, 1);
+    expect(find.text('파티에 참가했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('파티장은 pending 신청을 승인할 수 있다', (tester) async {
+    final repository = _FakeJoinCommandRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      recruitmentApplications: Stream.value(
+        PartyReadSnapshot(
+          items: [_pendingApplication()],
+          isFromCache: false,
+        ),
+      ),
+      joinCommandRepository: repository,
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('가입 신청 관리'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('approveApplication-player-applicant')),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.lastApprove?.applicantPlayerId, 'player-applicant');
+    expect(find.text('가입 신청을 승인했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('파티장은 pending 신청을 거절할 수 있다', (tester) async {
+    final repository = _FakeJoinCommandRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      recruitmentApplications: Stream.value(
+        PartyReadSnapshot(
+          items: [_pendingApplication()],
+          isFromCache: false,
+        ),
+      ),
+      joinCommandRepository: repository,
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('rejectApplication-player-applicant')),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.lastReject?.applicantPlayerId, 'player-applicant');
+    expect(find.text('가입 신청을 거절했습니다.'), findsOneWidget);
   });
 
   testWidgets('캐시 snapshot이면 오프라인 안내를 함께 표시한다', (tester) async {
@@ -237,9 +355,68 @@ void main() {
     expect(find.text('조회 권한을 확인하지 못했습니다.'), findsOneWidget);
     expect(find.text('4막 노말 모집'), findsNothing);
   });
+
+  testWidgets('파티장이 단독 모집을 삭제하면 leave 명령을 보낸다', (tester) async {
+    final membership = _RecordingMembershipRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(memberCount: 1),
+          isFromCache: false,
+        ),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(items: [], isFromCache: false),
+      ),
+      membershipCommandRepository: membership,
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('deleteOwnRecruitmentButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('confirmDeleteOwnRecruitmentButton')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(membership.leaveCommands, hasLength(1));
+    expect(membership.leaveCommands.single.targetPlayerId, 'player-1');
+    expect(membership.leaveCommands.single.expectedRecruitmentRevision, 1);
+    expect(find.text('모집을 삭제했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('멤버가 더 있으면 모집 삭제를 막는다', (tester) async {
+    final membership = _RecordingMembershipRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(memberCount: 2),
+          isFromCache: false,
+        ),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(items: [], isFromCache: false),
+      ),
+      membershipCommandRepository: membership,
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('deleteOwnRecruitmentButton')));
+    await tester.pumpAndSettle();
+
+    expect(membership.leaveCommands, isEmpty);
+    expect(find.textContaining('다른 파티원이 있는 방'), findsOneWidget);
+  });
 }
 
-PublicRecruitmentSummary _summary() => PublicRecruitmentSummary(
+PublicRecruitmentSummary _summary({
+  ApprovalMode approvalMode = ApprovalMode.leaderOnly,
+  int memberCount = 2,
+}) => PublicRecruitmentSummary(
   id: 'recruitment-1',
   title: '4막 노말 모집',
   leaderUserId: 'player-1',
@@ -258,17 +435,18 @@ PublicRecruitmentSummary _summary() => PublicRecruitmentSummary(
     experienceLevel: null,
     maxPlayHours: null,
   ),
-  memberCount: 2,
+  memberCount: memberCount,
   maxMemberCount: 8,
   isRecruiting: true,
   revision: 1,
   updatedAt: DateTime.utc(2026, 8, 20),
   currentCycleKey: '2026-08-19',
+  approvalMode: approvalMode,
 );
 
 PartyApplicationSummary _pendingApplication() => PartyApplicationSummary(
   recruitmentId: 'recruitment-1',
-  applicantPlayerId: 'player-1',
+  applicantPlayerId: 'player-applicant',
   cycleKey: '2026-08-19',
   characterId: 'server-character-1',
   characterName: '지원바드',
@@ -279,6 +457,24 @@ PartyApplicationSummary _pendingApplication() => PartyApplicationSummary(
   createdAt: DateTime.utc(2026, 8, 20),
   updatedAt: DateTime.utc(2026, 8, 21),
 );
+
+PartyApplicationSummary _rejectedApplication({required int rejectionCount}) =>
+    PartyApplicationSummary(
+      recruitmentId: 'recruitment-1',
+      applicantPlayerId: 'player-applicant',
+      cycleKey: '2026-08-19',
+      characterId: 'server-character-1',
+      characterName: '지원바드',
+      className: '바드',
+      requestedRole: PartyRole.support,
+      status: RecruitmentApplicationStatus.rejected,
+      revision: 4,
+      rejectionCount: rejectionCount,
+      resolutionReason: 'rejectedByApprover',
+      createdAt: DateTime.utc(2026, 8, 20),
+      decidedAt: DateTime.utc(2026, 8, 21),
+      updatedAt: DateTime.utc(2026, 8, 21),
+    );
 
 RecruitmentLeaderCandidateService _candidateService() {
   return RecruitmentLeaderCandidateService(
@@ -308,6 +504,30 @@ class _FakeApplicationCommandRepository
   ) async {
     lastWithdraw = command;
     return const PartyApplicationCommandResult.success();
+  }
+}
+
+class _FakeJoinCommandRepository implements PartyJoinCommandRepository {
+  PartyDirectJoinCommand? lastDirectJoin;
+  PartyDecideApplicationCommand? lastApprove;
+  PartyDecideApplicationCommand? lastReject;
+
+  @override
+  Future<PartyJoinResult> joinDirectly(PartyDirectJoinCommand command) async {
+    lastDirectJoin = command;
+    return const PartyJoinResult.success();
+  }
+
+  @override
+  Future<PartyJoinResult> approve(PartyDecideApplicationCommand command) async {
+    lastApprove = command;
+    return const PartyJoinResult.success();
+  }
+
+  @override
+  Future<PartyJoinResult> reject(PartyDecideApplicationCommand command) async {
+    lastReject = command;
+    return const PartyJoinResult.success();
   }
 }
 
@@ -444,4 +664,28 @@ class _AccountRepository implements AccountRepository {
     required int characterId,
     required CharacterBuildRole role,
   }) => throw UnimplementedError();
+}
+
+class _RecordingMembershipRepository implements PartyMembershipCommandRepository {
+  final leaveCommands = <PartyRemoveMemberCommand>[];
+
+  @override
+  Future<PartyMembershipResult> leave(PartyRemoveMemberCommand command) async {
+    leaveCommands.add(command);
+    return const PartyMembershipResult.success();
+  }
+
+  @override
+  Future<PartyMembershipResult> changeCharacter(
+    PartyChangeCharacterCommand command,
+  ) => throw UnimplementedError();
+
+  @override
+  Future<PartyMembershipResult> kick(PartyRemoveMemberCommand command) =>
+      throw UnimplementedError();
+
+  @override
+  Future<PartyMembershipResult> setApprovalPermission(
+    PartySetApprovalPermissionCommand command,
+  ) => throw UnimplementedError();
 }

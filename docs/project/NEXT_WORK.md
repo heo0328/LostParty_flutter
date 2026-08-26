@@ -6,73 +6,50 @@
 
 ## 현재 기준 상태
 
-- 통합 기준 브랜치: `main` (Task-063까지 포함). Task-065 완료 브랜치: `cursor/party-leader-members-read` (main 통합 대기)
-- Task-050~054의 Firestore 명령·Rules·Snapshot·Player 이벤트·Drift 로컬 히스토리 기반 구현을 완료했다.
-- Task-056~061에서 레이드 현황 읽기·목록 UX·읽기 전용 상세·모집 생성·인증 캐릭터 동기화·신청·철회를 완료했다.
-- Task-062에서 LostParty Design System v1의 Theme·token·Bottom Navigation과 공개 모집 대표 Card 시범 적용을 완료했다.
-- Task-063에서 `레이드 모집` 공개 목록을 Firestore 페이징 읽기로 전환하고 `main`에 통합했다.
-- Task-064에서 파티장·파티원 표시 누락을 점검하고 다음 작업을 읽기 모델·UI 복구로 재정의했다.
-- Task-065에서 파티장 표시 Snapshot·멤버 읽기 경계·공개 membership Rules(Option 1)·목록·상세 UI 복구를 완료했다.
-  - 모집 문서에 `leaderCharacterNameSnapshot` / `leaderClassNameSnapshot`을 생성·캐릭터 변경·책임자 승계 시 유지한다.
-  - `PartyMemberDisplay`와 `watchRecruitmentMembers`를 추가했다. UI는 표시 Snapshot만 소비한다.
-  - 공개 모집 membership `get`/`list`는 active binding 사용자에게 허용한다(Option 1).
-  - `레이드 모집`·`진행 중` Card와 `/raid-status/:id` 상세에 파티장·파티 구성을 표시한다.
-  - 표적 테스트, `flutter analyze --no-pub`, Android 실기기 표시, `lost-party` Rules 배포를 확인했다.
-  - Snapshot이 없는 기존 모집은 `정보 없음`으로 표시하고, 새 생성·캐릭터 변경·승계부터 Snapshot을 채운다.
-- 승인·즉시 가입·멤버·회차는 Fake 경로를 유지한다.
-- Firestore Emulator, FCM, TTL 배포와 유료 서비스 호출은 수행하지 않았다.
+| 구분 | 상태 | 비고 |
+| --- | --- | --- |
+| 통합 기준 | **`main` = Task-066까지** | 신청·승인·거절·재신청·즉시가입·단독 삭제 |
+| Firestore Rules | 신청 get + 재신청 **배포됨** | `lost-party` |
+| 직전 브랜치 | `cursor/party-join-approve-reject` | `main`에 병합됨 |
+
+### Task-066 실기기 확인됨 (2026-08-26)
+
+- 거절 시 N회 안내 · 다시 신청 · 캐릭터 재선택
+- 단독 방 모집 삭제
+- 승인 · 신청 철회 · 즉시 가입
+- 신청·신청 리스트
 
 ## 확정된 협업 역할
 
-- Codex는 설계·계약·작업 분해·문서 정합성·인수인계를 중심으로 담당한다.
-- Cursor는 주 코드 구현·빌드·표적 테스트를 중심으로 담당한다.
-- 디자인 시스템의 설계·구현·시범 적용과 사용자 피드백 반영은 Codex가 담당한다. Cursor는 확정된 디자인 기준을 후속 기능 화면에 적용한다.
-- Codex의 코드 수정과 Cursor의 설계 제안을 금지하지 않는다.
-- 구현 중 계약 변경이 필요하면 Cursor가 임의 확장하지 않고 영향과 제안을 문서에 먼저 기록한다.
-- 완료 시 코드, 테스트, 문서와 실제 Git 상태를 함께 갱신한다.
+- Codex: 설계·계약·문서·인수인계.
+- Cursor: 구현·빌드·표적 테스트.
+- 계약 변경이 필요하면 문서에 먼저 반영한다.
 
-## 다음 작업 대상: 즉시 가입·승인·거절
+## 다음 작업
 
-실행 앱 Firestore 상세에 즉시 가입·승인·거절 명령을 연결한다. Fake `/recruitments/:id`와 Firestore 상세를 섞지 않는다.
+1. **자기 참가 캐릭터 변경 · 탈퇴 · 추방** 등 멤버 명령 UI/실행 앱 연결
+2. **회차 완료 · 취소 · 주차 전환** 명령 연결
+3. 파티 내 자리 이동 및 확정 파티 간 이동·스왑 설계
+4. 다인 방 일괄 해산
+5. 그룹과 그룹 전용 모집
 
-### 제외 범위
+## 제외 범위 (당분간)
 
-- FCM과 OS 알림 권한
-- Firestore TTL 정책 배포
-- Cloud Functions, Blaze 전환과 결제수단 연결
-- Firestore Emulator 실행
-- 멤버·회차 명령 전환
-- 자기 참가 캐릭터 변경·탈퇴·추방·승인 권한 변경 UI 연결
-- 1파티↔2파티 자리 이동 명령
-- 다른 확정 파티 사이 캐릭터 이동·스왑
-- 철회 후 재신청 Transaction
+- FCM·TTL·Functions·Blaze·Emulator
 - 대규모 UI 개편
-
-## 후속 순서
-
-1. 즉시 가입·승인·거절
-2. 자기 캐릭터 변경·탈퇴·추방 등 멤버 명령과 회차 명령
-3. 파티 내 자리 이동 및 다른 확정 파티 사이 이동·스왑 설계
-4. 그룹과 그룹 전용 모집
 
 ## 지속 운영 제약
 
-- 별도 지시 전까지 외부 서비스의 유료 플랜·결제수단·초과 과금 가능 기능을 사용하지 않는다.
-- Emulator Suite는 사용하지 않는다. 필요하면 목적·발견할 실패·종료 조건을 제시하고 명시적 승인을 받는다.
-- 실기기 흐름을 대신하기 위한 무의미한 전체 테스트 반복을 하지 않는다.
-- AuthUid, API 토큰과 민감한 식별자를 UI·로그·문서 예시에 노출하지 않는다.
-- Android Drift(`sqlite3` native assets) 빌드 산출물을 임의로 삭제하지 않는다. 정리 후엔 전체 재설치(`flutter run`)가 필요하다.
-- Lost Ark API·Firestore 등 네트워크 요청을 시작하는 버튼은 요청 진행 중 비활성 또는 동일 동작 무시로 연타·중복 요청을 막는다. 화면마다 예외를 두지 않는 공통 UI 규칙이다.
+- 유료 플랜·결제·과금 가능 기능 금지(별도 지시 전).
+- Emulator는 명시 승인 후에만.
+- AuthUid·토큰·민감 ID 비노출.
+- Drift native assets 임의 삭제 금지.
+- 네트워크 버튼 연타 방지.
 
 ## 참고 문서
 
-- `AI_CONTEXT.md`
-- `DEV_LOG.md`
-- `ai_rules.md`
+- `AI_CONTEXT.md`, `DEV_LOG.md`, `ai_rules.md`
 - `../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`
-- `../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`
 - `../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`
-- `../architecture/FIRESTORE_PARTY_EVENT_CONTRACT.md`
-- `../architecture/GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT.md`
-- `../architecture/GAME_ACCOUNT_VERIFICATION_CONTRACT.md`
+- `../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`
 - `../product/PARTY_PARTICIPATION_RULES.md`

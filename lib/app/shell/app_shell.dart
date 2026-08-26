@@ -40,28 +40,11 @@ class AppShell extends StatelessWidget {
   }
 
   void _selectBranch(int index) {
+    // 같은 탭을 다시 누르면 해당 브랜치 루트로만 되돌린다.
+    // 다른 탭은 스택을 유지한 채 전환한다.
     navigationShell.goBranch(
       index,
       initialLocation: index == navigationShell.currentIndex,
-    );
-  }
-}
-
-class AppBranchContainer extends StatelessWidget {
-  const AppBranchContainer({
-    required this.navigationShell,
-    required this.children,
-    super.key,
-  });
-
-  final StatefulNavigationShell navigationShell;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return IndexedStack(
-      index: navigationShell.currentIndex,
-      children: children,
     );
   }
 }
