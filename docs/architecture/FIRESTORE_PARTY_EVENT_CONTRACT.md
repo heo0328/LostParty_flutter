@@ -1,5 +1,7 @@
 # Firestore 파티 이벤트와 로컬 히스토리 계약
 
+파티 이벤트 전체를 앱 내부 알림과 향후 FCM의 공통 원본으로 확장하는 기준은 [`PARTY_NOTIFICATION_CONTRACT.md`](PARTY_NOTIFICATION_CONTRACT.md)를 따른다. 이 문서는 현재 구현된 완료 계열 이벤트와 Drift 완료 히스토리 Projection의 세부 계약이다.
+
 ## 서버 이벤트
 
 - 경로는 `players/{playerId}/events/{eventId}`이며 해당 Player만 읽는다.
@@ -22,4 +24,4 @@
 - 앱 실행, Player 연결 완료, 레이드 현황 진입과 알림 진입이 동기화 계기다.
 - 푸시 알림은 동기화 계기일 뿐 로컬 DB의 직접 변경 명령이 아니다.
 - `레이드 현황 > 완료 기록`은 Drift 로컬 기록을 단일 기준으로 표시한다. 숨김과 로컬 정정은 이 기기에서만 적용하고 서버에 전송하지 않는다.
-- FCM과 OS 알림 권한은 아직 연결하지 않는다.
+- Spark 앱 내부 알림은 후속 작업에서 같은 Player Event를 사용해 연결한다. FCM과 OS 알림 권한은 신뢰할 수 있는 서버가 준비될 때까지 연결하지 않는다.

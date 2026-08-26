@@ -266,6 +266,7 @@ unknown
 - 신청은 `applications/{playerId}` 고정 ID로 중복 생성을 방지한다.
 - 철회·거절는 이미 같은 최종 상태면 성공으로 간주할 수 있다.
 - 승인·즉시 가입은 membership과 점유가 모두 일치하는 경우에만 기존 성공 결과를 반환한다.
+- 후속 알림 이벤트는 성공한 명령의 같은 Transaction에서 기록하며 명령 revision과 event type으로 안정적인 ID를 만든다. 클라이언트가 다른 Player 경로에 자유 형식 알림을 쓰는 권한은 허용하지 않는다. 이벤트별 수신자와 Rules 기준은 [`PARTY_NOTIFICATION_CONTRACT.md`](PARTY_NOTIFICATION_CONTRACT.md)를 따른다.
 
 ## 8. 구현 분할
 
