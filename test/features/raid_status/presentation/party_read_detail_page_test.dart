@@ -426,11 +426,317 @@ void main() {
     expect(membership.leaveCommands, isEmpty);
     expect(find.textContaining('다른 파티원이 있는 방'), findsOneWidget);
   });
+
+  group('파티 구성판 반응형 그룹 배치', () {
+    void setSurface(WidgetTester tester, Size size) {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+    }
+
+    Stream<PartyReadSnapshot<PartyMemberDisplay>> membersStream(
+      List<PartyMemberDisplay> members,
+    ) => Stream.value(
+      PartyReadSnapshot(items: members, isFromCache: false),
+    );
+
+    Future<void> pumpComposition(
+      WidgetTester tester, {
+      required Size surface,
+      required PublicRecruitmentSummary summary,
+      required List<PartyMemberDisplay> members,
+    }) async {
+      setSurface(tester, surface);
+      await pumpPage(
+        tester,
+        recruitment: Stream.value(
+          PartyReadDetailSnapshot(item: summary, isFromCache: false),
+        ),
+        members: membersStream(members),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const ValueKey('partyCompositionBoard')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('좁은 4인: 파티 1열이며 Slot Card가 구성판 전체 폭을 쓴다', (
+      tester,
+    ) async {
+      await pumpComposition(
+        tester,
+        surface: const Size(400, 1400),
+        summary: _summary(maxMemberCount: 4, memberCount: 1),
+        members: const [
+          PartyMemberDisplay(
+            characterName: '이슈아이',
+            className: '기상술사',
+            role: PartyRole.dealer,
+            partyIndex: 0,
+            slotIndex: 0,
+          ),
+        ],
+      );
+
+      expect(find.byKey(const ValueKey('partyGroupRow')), findsNothing);
+      expect(find.byKey(const ValueKey('partyGroup-0')), findsOneWidget);
+      expect(find.byKey(const ValueKey('partyGroup-1')), findsNothing);
+      expect(find.text('2파티'), findsNothing);
+
+      final boardWidth =
+          tester.getSize(find.byKey(const ValueKey('partyCompositionBoard'))).width;
+      final cardWidth =
+          tester.getSize(find.byKey(const ValueKey('slotCard-0-0'))).width;
+      expect(cardWidth, closeTo(boardWidth, 0.5));
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-1'))).dy,
+        greaterThan(tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-0'))).dy),
+      );
+    });
+
+    testWidgets('좁은 8인: 1파티 다음 2파티가 세로로 배치된다', (tester) async {
+      await pumpComposition(
+        tester,
+        surface: const Size(400, 1800),
+        summary: _summary(maxMemberCount: 8, memberCount: 2),
+        members: const [
+          PartyMemberDisplay(
+            characterName: '이슈아이',
+            className: '기상술사',
+            role: PartyRole.dealer,
+            partyIndex: 0,
+            slotIndex: 0,
+          ),
+          PartyMemberDisplay(
+            characterName: '서폿캐릭',
+            className: '바드',
+            role: PartyRole.support,
+            partyIndex: 1,
+            slotIndex: 0,
+          ),
+        ],
+      );
+
+      expect(find.byKey(const ValueKey('partyGroupRow')), findsNothing);
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('partyGroup-1'))).dy,
+        greaterThan(tester.getTopLeft(find.byKey(const ValueKey('partyGroup-0'))).dy),
+      );
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('partyGroup-0'))).dx,
+        closeTo(
+          tester.getTopLeft(find.byKey(const ValueKey('partyGroup-1'))).dx,
+          0.5,
+        ),
+      );
+    });
+
+    testWidgets('넓은 4인: 1파티가 왼쪽 절반이고 Slot Card는 파티 내부 1열이다', (
+      tester,
+    ) async {
+      await pumpComposition(
+        tester,
+        surface: const Size(800, 1400),
+        summary: _summary(maxMemberCount: 4, memberCount: 1),
+        members: const [
+          PartyMemberDisplay(
+            characterName: '이슈아이',
+            className: '기상술사',
+            role: PartyRole.dealer,
+            partyIndex: 0,
+            slotIndex: 0,
+          ),
+        ],
+      );
+
+      expect(find.byKey(const ValueKey('partyGroupRow')), findsOneWidget);
+      expect(find.byKey(const ValueKey('partyGroup-1')), findsNothing);
+
+      final boardWidth =
+          tester.getSize(find.byKey(const ValueKey('partyCompositionBoard'))).width;
+      final groupWidth =
+          tester.getSize(find.byKey(const ValueKey('partyGroup-0'))).width;
+      final cardWidth =
+          tester.getSize(find.byKey(const ValueKey('slotCard-0-0'))).width;
+
+      expect(groupWidth, lessThan(boardWidth * 0.6));
+      expect(cardWidth, closeTo(groupWidth, 0.5));
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-1'))).dy,
+        greaterThan(tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-0'))).dy),
+      );
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-0'))).dx,
+        closeTo(
+          tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-1'))).dx,
+          0.5,
+        ),
+      );
+    });
+
+    testWidgets('넓은 8인: 1·2파티가 좌우 동일 폭이며 Slot은 1열이다', (tester) async {
+      await pumpComposition(
+        tester,
+        surface: const Size(800, 1800),
+        summary: _summary(maxMemberCount: 8, memberCount: 2),
+        members: const [
+          PartyMemberDisplay(
+            characterName: '이슈아이',
+            className: '기상술사',
+            role: PartyRole.dealer,
+            partyIndex: 0,
+            slotIndex: 0,
+          ),
+          PartyMemberDisplay(
+            characterName: '서폿캐릭',
+            className: '바드',
+            role: PartyRole.support,
+            partyIndex: 1,
+            slotIndex: 0,
+          ),
+        ],
+      );
+
+      expect(find.byKey(const ValueKey('partyGroupRow')), findsOneWidget);
+      final left = find.byKey(const ValueKey('partyGroup-0'));
+      final right = find.byKey(const ValueKey('partyGroup-1'));
+      expect(tester.getSize(left).width, closeTo(tester.getSize(right).width, 0.5));
+      expect(
+        tester.getTopLeft(right).dx,
+        greaterThan(tester.getTopLeft(left).dx),
+      );
+      expect(
+        tester.getTopLeft(left).dy,
+        closeTo(tester.getTopLeft(right).dy, 0.5),
+      );
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-1'))).dy,
+        greaterThan(tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-0'))).dy),
+      );
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('slotCard-1-0'))).dx,
+        greaterThan(tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-0'))).dx),
+      );
+    });
+
+    testWidgets('넓은 화면에서도 자리 미정은 파티 아래 전체 폭을 쓴다', (tester) async {
+      await pumpComposition(
+        tester,
+        surface: const Size(800, 1800),
+        summary: _summary(maxMemberCount: 8, memberCount: 2),
+        members: const [
+          PartyMemberDisplay(
+            characterName: '이슈아이',
+            className: '기상술사',
+            role: PartyRole.dealer,
+            partyIndex: 0,
+            slotIndex: 0,
+          ),
+          PartyMemberDisplay(
+            characterName: '서폿캐릭',
+            className: '바드',
+            role: PartyRole.support,
+            partyIndex: 1,
+          ),
+        ],
+      );
+
+      expect(find.text('자리 미정'), findsOneWidget);
+      final boardTop = tester.getTopLeft(
+        find.byKey(const ValueKey('partyCompositionBoard')),
+      );
+      final unassignedTop = tester.getTopLeft(find.text('자리 미정'));
+      final partyBottom = tester.getBottomLeft(
+        find.byKey(const ValueKey('partyGroupRow')),
+      );
+      expect(unassignedTop.dy, greaterThan(partyBottom.dy));
+      expect(unassignedTop.dx, closeTo(boardTop.dx, 0.5));
+    });
+
+    testWidgets('넓은 8인: 같은 자리의 좌우 Slot Card 높이가 같다', (tester) async {
+      await pumpComposition(
+        tester,
+        surface: const Size(800, 1800),
+        summary: _summary(maxMemberCount: 8, memberCount: 1),
+        members: const [
+          PartyMemberDisplay(
+            characterName: '아주아주긴캐릭터이름입니다',
+            className: '기상술사',
+            role: PartyRole.dealer,
+            partyIndex: 0,
+            slotIndex: 0,
+            itemLevel: 1720,
+            combatPower: 300000,
+          ),
+        ],
+      );
+
+      final leftHeight =
+          tester.getSize(find.byKey(const ValueKey('slotCard-0-0'))).height;
+      final rightHeight =
+          tester.getSize(find.byKey(const ValueKey('slotCard-1-0'))).height;
+      expect(leftHeight, greaterThan(0));
+      expect(rightHeight, closeTo(leftHeight, 0.5));
+    });
+
+    testWidgets('펼친 폴드급 폭(650)에서도 파티 그룹이 좌우로 배치된다', (tester) async {
+      await pumpComposition(
+        tester,
+        surface: const Size(650, 1800),
+        summary: _summary(maxMemberCount: 8, memberCount: 1),
+        members: const [
+          PartyMemberDisplay(
+            characterName: '이슈아이',
+            className: '기상술사',
+            role: PartyRole.dealer,
+            partyIndex: 0,
+            slotIndex: 0,
+          ),
+        ],
+      );
+
+      expect(find.byKey(const ValueKey('partyGroupRow')), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('partyGroup-1'))).dx,
+        greaterThan(tester.getTopLeft(find.byKey(const ValueKey('partyGroup-0'))).dx),
+      );
+    });
+
+    testWidgets('넓은 8인에서도 읽기 순서는 1파티 다음 2파티다', (tester) async {
+      await pumpComposition(
+        tester,
+        surface: const Size(800, 1800),
+        summary: _summary(maxMemberCount: 8, memberCount: 1),
+        members: const [
+          PartyMemberDisplay(
+            characterName: '이슈아이',
+            className: '기상술사',
+            role: PartyRole.dealer,
+            partyIndex: 0,
+            slotIndex: 0,
+          ),
+        ],
+      );
+
+      final partyLabels = find.textContaining('파티');
+      // titleMedium '파티 구성' 다음에 titleSmall '1파티', '2파티'
+      expect(find.text('파티 구성'), findsOneWidget);
+      expect(find.text('1파티'), findsOneWidget);
+      expect(find.text('2파티'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('1파티')).dx,
+        lessThan(tester.getTopLeft(find.text('2파티')).dx),
+      );
+      expect(partyLabels, findsWidgets);
+    });
+  });
 }
 
 PublicRecruitmentSummary _summary({
   ApprovalMode approvalMode = ApprovalMode.leaderOnly,
   int memberCount = 2,
+  int maxMemberCount = 8,
+  int membersPerParty = 4,
 }) => PublicRecruitmentSummary(
   id: 'recruitment-1',
   title: '4막 노말 모집',
@@ -451,7 +757,8 @@ PublicRecruitmentSummary _summary({
     maxPlayHours: null,
   ),
   memberCount: memberCount,
-  maxMemberCount: 8,
+  maxMemberCount: maxMemberCount,
+  membersPerParty: membersPerParty,
   isRecruiting: true,
   revision: 1,
   updatedAt: DateTime.utc(2026, 8, 20),
