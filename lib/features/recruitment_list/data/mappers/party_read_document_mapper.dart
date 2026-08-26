@@ -41,6 +41,8 @@ class PartyReadDocumentMapper {
       revision: _integer(data, 'revision'),
       updatedAt: _date(data, 'updatedAt'),
       currentCycleKey: _string(data, 'currentCycleKey'),
+      targetCycleKey: _softString(data, 'targetCycleKey') ??
+          _string(data, 'currentCycleKey'),
       approvalMode: _approvalMode(data),
     );
   }

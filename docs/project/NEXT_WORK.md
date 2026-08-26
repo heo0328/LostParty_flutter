@@ -70,10 +70,9 @@
 
 ### 다음 사용자 액션
 
-1. **Firestore Rules 재배포** (신청 get 누락 수정 포함):
-   `firebase deploy --only firestore:rules --project lost-party`
-2. 앱을 최신 브랜치로 다시 설치·실행한 뒤 체크리스트 A/B를 재검증한다.
-3. 특히 기기 B에서 **지원하기**가 `가입을 신청했습니다.`까지 가는지 확인한다.
+1. Firestore Rules는 **이미 재배포됨** (`canGetRecruitmentApplication` 포함, 2026-08-26).
+2. 앱을 완전히 종료했다가 다시 실행한 뒤, 기기 B에서 **지원하기**를 재시도한다.
+3. 여전히 실패하면 토스트 문구 전문(권한 / 주차 / 소유권 등)을 알려 준다.
 
 ### 다음 Cursor 재개 조건
 

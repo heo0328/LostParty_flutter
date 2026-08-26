@@ -81,6 +81,7 @@ class PublicRecruitmentSummary {
     required this.revision,
     required this.updatedAt,
     this.currentCycleKey = '',
+    this.targetCycleKey = '',
     this.leaderCharacterName,
     this.leaderClassName,
     this.membersPerParty = 4,
@@ -127,5 +128,7 @@ class PublicRecruitmentSummary {
   final int revision;
   final DateTime updatedAt;
   final String currentCycleKey;
+  /// 신청·가입 Rules가 요구하는 주차. 없으면 [currentCycleKey]와 동일하다.
+  final String targetCycleKey;
   final ApprovalMode approvalMode;
 }

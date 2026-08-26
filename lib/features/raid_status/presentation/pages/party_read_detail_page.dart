@@ -217,7 +217,9 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
           recruitmentId: widget.recruitmentId,
           characterId: selected.serverCharacterId,
           role: selected.role,
-          cycleKey: summary.currentCycleKey,
+          cycleKey: summary.targetCycleKey.isNotEmpty
+              ? summary.targetCycleKey
+              : summary.currentCycleKey,
           expectedRecruitmentRevision: summary.revision,
           combatPower: selected.combatPower,
         ),
@@ -241,7 +243,9 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
         recruitmentId: widget.recruitmentId,
         characterId: selected.serverCharacterId,
         requestedRole: selected.role,
-        cycleKey: summary.currentCycleKey,
+        cycleKey: summary.targetCycleKey.isNotEmpty
+            ? summary.targetCycleKey
+            : summary.currentCycleKey,
         combatPower: selected.combatPower,
       ),
     );
@@ -841,9 +845,11 @@ String _applicationFailureMessage(PartyApplicationFailure failure) =>
       PartyApplicationFailure.applicationNotPending => '철회할 수 있는 신청이 아닙니다.',
       PartyApplicationFailure.revisionConflict =>
         '신청 상태가 바뀌었습니다. 다시 확인해 주세요.',
-      PartyApplicationFailure.permissionDenied => '신청 권한을 확인하지 못했습니다.',
+      PartyApplicationFailure.permissionDenied =>
+        '신청 권한을 확인하지 못했습니다. 앱을 최신으로 켠 뒤 다시 시도해 주세요.',
       PartyApplicationFailure.temporarilyUnavailable => '네트워크 연결이 불안정합니다.',
-      PartyApplicationFailure.invalidRequest => '신청 정보를 확인하지 못했습니다.',
+      PartyApplicationFailure.invalidRequest =>
+        '신청 주차 또는 요청 정보가 모집과 맞지 않습니다. 상세를 새로고침한 뒤 다시 시도해 주세요.',
       PartyApplicationFailure.unknown => '신청을 처리하지 못했습니다.',
     };
 

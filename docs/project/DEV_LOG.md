@@ -1501,3 +1501,9 @@
 - Rules: `recruitmentApplicationPath` + `canGetRecruitmentApplication`으로 **없는 application 문서 get**을 허용. 공개 membership 읽기 헬퍼는 유지.
 - 앱: Gateway `activeChallenge`로 인증 진행 UI 복원, 인증 바인딩 후 `loadAccounts` 재조회, 신청 후보 없음 메시지 분리.
 - **Rules는 사용자/운영자가 `firebase deploy --only firestore:rules`로 재배포해야 신청이 풀린다.** `main` 병합은 재검증 후.
+
+### Task-066 Rules 재배포·재시도 (2026-08-26)
+
+- `firebase deploy --only firestore:rules --project lost-party`로 `canGetRecruitmentApplication` 포함 Rules를 배포했다.
+- 배포 전에도 동일 메시지가 났다면 미배포가 원인이었을 가능성이 크다.
+- 추가로 신청/즉시가입에 `targetCycleKey`를 쓰도록 클라이언트를 보강했다.

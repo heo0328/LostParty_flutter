@@ -31,6 +31,7 @@ class FirestorePartyApplicationCommandRepository implements PartyApplicationComm
       if (r?['hasAvailableSlot'] != true) return const PartyApplicationCommandResult.failure(PartyApplicationFailure.capacityFull);
       if ((r?['memberPlayerIds'] as List?)?.contains(playerId) == true) return const PartyApplicationCommandResult.failure(PartyApplicationFailure.alreadyMember);
       if (application.exists) return const PartyApplicationCommandResult.failure(PartyApplicationFailure.applicationAlreadyExists);
+      if (command.cycleKey != r?['targetCycleKey']) return const PartyApplicationCommandResult.failure(PartyApplicationFailure.invalidRequest);
       if (!character.exists || c?['status'] != 'active') return const PartyApplicationCommandResult.failure(PartyApplicationFailure.invalidCharacter);
       if (c?['ownerPlayerId'] != playerId) return const PartyApplicationCommandResult.failure(PartyApplicationFailure.ownershipLost);
       final itemLevel = _parseItemLevel(c?['itemAvgLevel']);
@@ -72,6 +73,11 @@ class FirestorePartyApplicationCommandRepository implements PartyApplicationComm
         return action(transaction, playerId);
       });
     } on FirebaseException catch (error) {
+      assert(() {
+        // ignore: avoid_print
+        print('PartyApplication apply/withdraw FirebaseException: ${error.code} ${error.message}');
+        return true;
+      }());
       return PartyApplicationCommandResult.failure(switch (error.code) {
         'permission-denied' => PartyApplicationFailure.permissionDenied,
         'unavailable' || 'deadline-exceeded' || 'aborted' => PartyApplicationFailure.temporarilyUnavailable,
