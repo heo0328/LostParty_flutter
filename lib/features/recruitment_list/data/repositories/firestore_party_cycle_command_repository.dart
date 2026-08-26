@@ -166,33 +166,43 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
       if (cycleKey is! String || cycleKey.isEmpty) {
         return const PartyCycleResult.failure(PartyCycleFailure.invalidRequest);
       }
-      final now = FieldValue.serverTimestamp();
-      final nextRevision = command.expectedRecruitmentRevision + 1;
+
+      // Native Firestore transactions require every get before any write.
+      // Interleaving get/delete in the member loop fails multi-member disband
+      // with failed-precondition (surfaced as PartyCycleFailure.unknown).
+      final memberSnapshots = <DocumentSnapshot<Map<String, dynamic>>>[];
+      for (final member in members.docs) {
+        memberSnapshots.add(await transaction.get(member.reference));
+      }
+      final applicationSnapshots = <DocumentSnapshot<Map<String, dynamic>>>[];
+      for (final application in applications.docs) {
+        applicationSnapshots.add(await transaction.get(application.reference));
+      }
+
       final beforeMemberIds = <String>[];
       final characterNames = <String, String?>{};
-      for (final member in members.docs) {
-        final current = await transaction.get(member.reference);
+      final assignmentDeletes =
+          <DocumentReference<Map<String, dynamic>>>[];
+      for (final current in memberSnapshots) {
         if (!current.exists) continue;
-        beforeMemberIds.add(member.id);
+        beforeMemberIds.add(current.id);
         final data = current.data()!;
-        characterNames[member.id] = data['characterNameSnapshot'] is String
+        characterNames[current.id] = data['characterNameSnapshot'] is String
             ? data['characterNameSnapshot'] as String
             : null;
         final characterId = data['characterId'] as String?;
-        transaction.delete(member.reference);
         if (characterId != null && characterId.isNotEmpty) {
-          transaction.delete(
+          assignmentDeletes.add(
             _firestore
                 .collection('players')
-                .doc(member.id)
+                .doc(current.id)
                 .collection('activeRaidAssignments')
                 .doc('${characterId}_$raidId'),
           );
         }
       }
       final pendingApplicantIds = <String>[];
-      for (final application in applications.docs) {
-        final current = await transaction.get(application.reference);
+      for (final current in applicationSnapshots) {
         if (!current.exists) continue;
         final data = current.data();
         if (data?['status'] != 'pending') continue;
@@ -202,6 +212,16 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
         characterNames[applicantId] = data?['characterNameSnapshot'] is String
             ? data!['characterNameSnapshot'] as String
             : characterNames[applicantId];
+      }
+
+      final now = FieldValue.serverTimestamp();
+      final nextRevision = command.expectedRecruitmentRevision + 1;
+      for (final current in memberSnapshots) {
+        if (!current.exists) continue;
+        transaction.delete(current.reference);
+      }
+      for (final assignmentRef in assignmentDeletes) {
+        transaction.delete(assignmentRef);
       }
       transaction.update(
         recruitmentRef,
@@ -277,7 +297,35 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
   Future<PartyCycleResult> _run(Future<PartyCycleResult> Function(Transaction, String) action) async {
     final uid = _firebaseAuth.currentUser?.uid;
     if (uid == null) return const PartyCycleResult.failure(PartyCycleFailure.unauthenticated);
-    try { return await _firestore.runTransaction((transaction) async { final binding = await transaction.get(_firestore.collection('authBindings').doc(uid)); final data = binding.data(); final playerId = data?['playerId']; if (data?['status'] != 'active' || playerId is! String || playerId.isEmpty) return const PartyCycleResult.failure(PartyCycleFailure.playerBindingMissing); return action(transaction, playerId); }); } on FirebaseException catch (error) { return PartyCycleResult.failure(switch (error.code) { 'permission-denied' => PartyCycleFailure.permissionDenied, 'unavailable' || 'deadline-exceeded' || 'aborted' => PartyCycleFailure.temporarilyUnavailable, _ => PartyCycleFailure.unknown }); } catch (_) { return const PartyCycleResult.failure(PartyCycleFailure.unknown); }
+    try {
+      return await _firestore.runTransaction((transaction) async {
+        final binding = await transaction.get(
+          _firestore.collection('authBindings').doc(uid),
+        );
+        final data = binding.data();
+        final playerId = data?['playerId'];
+        if (data?['status'] != 'active' ||
+            playerId is! String ||
+            playerId.isEmpty) {
+          return const PartyCycleResult.failure(
+            PartyCycleFailure.playerBindingMissing,
+          );
+        }
+        return action(transaction, playerId);
+      });
+    } on FirebaseException catch (error) {
+      return PartyCycleResult.failure(switch (error.code) {
+        'permission-denied' => PartyCycleFailure.permissionDenied,
+        'unavailable' ||
+        'deadline-exceeded' ||
+        'aborted' ||
+        'failed-precondition' =>
+          PartyCycleFailure.temporarilyUnavailable,
+        _ => PartyCycleFailure.unknown,
+      });
+    } catch (_) {
+      return const PartyCycleResult.failure(PartyCycleFailure.unknown);
+    }
   }
 }
 

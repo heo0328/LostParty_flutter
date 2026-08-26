@@ -44,6 +44,7 @@ class _RaidStatusPageState extends State<RaidStatusPage>
   late final PartyReadStreamViewModel<PartyApplicationSummary> _applications;
   late final RaidHistoryViewModel _history;
   late final TabController _tabController;
+  var _unreadCount = 0;
 
   @override
   void initState() {
@@ -65,16 +66,29 @@ class _RaidStatusPageState extends State<RaidStatusPage>
       syncService: widget.eventSyncService,
       catalogRepository: widget.raidCatalogRepository,
     );
-    unawaited(_history.initialize());
+    unawaited(_initializeStatus());
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_onTabChanged);
+  }
+
+  Future<void> _initializeStatus() async {
+    await _history.initialize();
+    await _refreshUnread();
+  }
+
+  Future<void> _refreshUnread() async {
+    final count = await widget.accountDatabase.countUnreadPartyNotifications(
+      widget.playerId,
+    );
+    if (!mounted) return;
+    setState(() => _unreadCount = count);
   }
 
   void _onTabChanged() {
     if (_tabController.indexIsChanging) return;
     // 완료 직후 상세에 머무르다 돌아오면 초기 sync만으로는 기록이 비어 보일 수 있다.
     if (_tabController.index == 2) {
-      unawaited(_history.syncNow());
+      unawaited(_history.syncNow().then((_) => _refreshUnread()));
     }
   }
 
@@ -93,6 +107,21 @@ class _RaidStatusPageState extends State<RaidStatusPage>
     return Scaffold(
       appBar: AppBar(
         title: const Text('레이드 현황'),
+        actions: [
+          IconButton(
+            key: const ValueKey('partyNotificationsButton'),
+            tooltip: '알림',
+            onPressed: () async {
+              await context.push('/raid-status/notifications');
+              await _refreshUnread();
+            },
+            icon: Badge(
+              isLabelVisible: _unreadCount > 0,
+              label: Text(_unreadCount > 99 ? '99+' : '$_unreadCount'),
+              child: const Icon(Icons.notifications_outlined),
+            ),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
