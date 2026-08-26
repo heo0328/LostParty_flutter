@@ -73,4 +73,23 @@ class PartyCycleWritePlan {
           'manualRecruitmentEnabled': false, 'hasAvailableSlot': false,
           'revision': revision + 1, 'updatedAt': serverTimestamp,
         };
+
+  static Map<String, Object?> disbandRecruitment({
+    required int revision,
+    required Object serverTimestamp,
+  }) => {
+        'status': 'disbanded',
+        'currentCycleStatus': 'disbanded',
+        'manualRecruitmentEnabled': false,
+        'hasAvailableSlot': false,
+        'memberPlayerIds': const <String>[],
+        'memberCount': 0,
+        'dealerCount': 0,
+        'supportCount': 0,
+        'leaderPlayerId': null,
+        'leaderCharacterNameSnapshot': null,
+        'leaderClassNameSnapshot': null,
+        'revision': revision + 1,
+        'updatedAt': serverTimestamp,
+      };
 }

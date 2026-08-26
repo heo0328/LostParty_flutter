@@ -28,6 +28,16 @@ class PartyAdvanceCycleCommand {
   final int expectedRecruitmentRevision;
 }
 
+class PartyDisbandCommand {
+  const PartyDisbandCommand({
+    required this.recruitmentId,
+    required this.expectedRecruitmentRevision,
+  });
+
+  final String recruitmentId;
+  final int expectedRecruitmentRevision;
+}
+
 enum PartyCycleFailure { unauthenticated, playerBindingMissing, notFound, unauthorized, recruitmentClosed, cycleMismatch, alreadyCompleted, notCompleted, completionCancelExpired, notReadyForAdvance, revisionConflict, permissionDenied, temporarilyUnavailable, invalidRequest, unknown }
 
 class PartyCycleResult {

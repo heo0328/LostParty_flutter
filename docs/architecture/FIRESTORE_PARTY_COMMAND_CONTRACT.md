@@ -290,5 +290,6 @@ unknown
 - 생성 Transaction의 신규 모집 `get`이 문서 부재에서 `permission-denied`가 되지 않도록, 존재하지 않는 `recruitments/{id}` 단건 읽기는 active binding만으로 허용한다. 이 Rules는 `lost-party`에 배포했다.
 - Android 실기기에서 인증된 캐릭터로 생성한 방이 `진행 중`에 나타나고 읽기 전용 상세(수정 미적용 안내 포함)로 연결되는 것을 확인했다.
 - `레이드 모집` 공개 목록은 Firestore 페이징 읽기(`watchPublicRecruitmentFirstPage` / `loadPublicRecruitmentNextPage`)를 사용한다.
-- 고정 슬롯 구성판과 참가 캐릭터 변경·탈퇴·추방은 현황 상세에 연결됐다. 다음 전환 단위는 회차 완료·완료 취소·종료·해산이다.
+- 고정 슬롯 구성판과 참가 캐릭터 변경·탈퇴·추방은 현황 상세에 연결됐다.
+- 회차 완료·완료 취소·반복 설정·주차 전환·다인 해산은 현황 상세에 연결됐다. Rules에 해산·완료 후 반복 설정 변경을 허용하는 식을 추가했으며 **배포 후** 실기기에서 확인한다.
 - 상세 라우트는 `ValueKey(recruitmentId)`와 ViewModel 재구독으로 id 변경 시 이전 방 State가 남지 않게 한다.

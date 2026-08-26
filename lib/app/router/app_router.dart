@@ -27,6 +27,7 @@ import '../../features/raid_status/presentation/pages/party_read_detail_page.dar
 import '../../features/raid_status/presentation/pages/raid_status_page.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_application_command_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_create_repository.dart';
+import '../../features/recruitment_list/data/repositories/firestore_party_cycle_command_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_join_command_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_membership_command_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_read_repository.dart';
@@ -204,6 +205,12 @@ GoRouter createAppRouter({
                               firestore: FirebaseFirestore.instance,
                               firebaseAuth: FirebaseAuth.instance,
                             ),
+                        cycleCommandRepository:
+                            FirestorePartyCycleCommandRepository(
+                              firestore: FirebaseFirestore.instance,
+                              firebaseAuth: FirebaseAuth.instance,
+                            ),
+                        eventSyncService: partyEventSyncServiceOrDefault,
                         candidateService: recruitmentLeaderCandidateService,
                         playerId: playerSession.playerId,
                       );

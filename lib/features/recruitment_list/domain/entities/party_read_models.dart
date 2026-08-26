@@ -54,6 +54,7 @@ class ActiveRaidSummary {
     required this.revision,
     required this.updatedAt,
     required this.isOwnedByCurrentPlayer,
+    this.status = 'active',
     this.leaderCharacterName,
     this.leaderClassName,
     this.raidStartAt,
@@ -71,7 +72,11 @@ class ActiveRaidSummary {
   final int revision;
   final DateTime updatedAt;
   final bool isOwnedByCurrentPlayer;
+  /// Firestore `status`. 1회성 완료 후 해산 전은 `completed`로 진행 중에 남긴다.
+  final String status;
   final DateTime? raidStartAt;
+
+  bool get isAwaitingDisband => status == 'completed';
 }
 
 /// 공개 상세·확정 멤버 상세에 공통으로 쓰는 파티 표시 전용 모델.
@@ -229,4 +234,20 @@ class PartyApplicationSummary {
   final DateTime createdAt;
   final DateTime? decidedAt;
   final DateTime updatedAt;
+}
+
+/// 상세의 완료 취소 등에 쓰는 회차 Snapshot. 민감 ID를 UI에 노출하지 않는다.
+class PartyCycleSnapshot {
+  const PartyCycleSnapshot({
+    required this.cycleKey,
+    required this.status,
+    required this.completionRevision,
+  });
+
+  final String cycleKey;
+  final String status;
+  final int completionRevision;
+
+  bool get isCompleted => status == 'completed';
+  bool get isCompletionCancelled => status == 'completionCancelled';
 }

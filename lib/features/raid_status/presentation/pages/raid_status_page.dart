@@ -38,10 +38,12 @@ class RaidStatusPage extends StatefulWidget {
   State<RaidStatusPage> createState() => _RaidStatusPageState();
 }
 
-class _RaidStatusPageState extends State<RaidStatusPage> {
+class _RaidStatusPageState extends State<RaidStatusPage>
+    with SingleTickerProviderStateMixin {
   late final PartyReadStreamViewModel<ActiveRaidSummary> _activeRaids;
   late final PartyReadStreamViewModel<PartyApplicationSummary> _applications;
   late final RaidHistoryViewModel _history;
+  late final TabController _tabController;
 
   @override
   void initState() {
@@ -64,10 +66,22 @@ class _RaidStatusPageState extends State<RaidStatusPage> {
       catalogRepository: widget.raidCatalogRepository,
     );
     unawaited(_history.initialize());
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(_onTabChanged);
+  }
+
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) return;
+    // 완료 직후 상세에 머무르다 돌아오면 초기 sync만으로는 기록이 비어 보일 수 있다.
+    if (_tabController.index == 2) {
+      unawaited(_history.syncNow());
+    }
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
+    _tabController.dispose();
     _activeRaids.dispose();
     _applications.dispose();
     _history.dispose();
@@ -76,21 +90,21 @@ class _RaidStatusPageState extends State<RaidStatusPage> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('레이드 현황'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(key: ValueKey('activeRaidsTab'), text: '진행 중'),
-              Tab(key: ValueKey('pendingRaidsTab'), text: '신청 중'),
-              Tab(key: ValueKey('raidHistoryTab'), text: '완료 기록'),
-            ],
-          ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('레이드 현황'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(key: ValueKey('activeRaidsTab'), text: '진행 중'),
+            Tab(key: ValueKey('pendingRaidsTab'), text: '신청 중'),
+            Tab(key: ValueKey('raidHistoryTab'), text: '완료 기록'),
+          ],
         ),
-        body: TabBarView(
-          children: [
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
             _PartyReadTab<ActiveRaidSummary>(
               key: const ValueKey('activeRaidsPage'),
               viewModel: _activeRaids,
@@ -123,7 +137,6 @@ class _RaidStatusPageState extends State<RaidStatusPage> {
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -302,12 +315,25 @@ class _ActiveRaidCard extends StatelessWidget {
                       style: theme.textTheme.titleMedium,
                     ),
                   ),
-                  if (summary.isOwnedByCurrentPlayer) ...[
+                  if (summary.isAwaitingDisband) ...[
+                    const SizedBox(width: 12),
+                    const _Badge(label: '해산 대기', tone: _BadgeTone.waiting),
+                  ] else if (summary.isOwnedByCurrentPlayer) ...[
                     const SizedBox(width: 12),
                     const _Badge(label: '내가 만든 방', tone: _BadgeTone.highlight),
                   ],
                 ],
               ),
+              if (summary.isAwaitingDisband && summary.isOwnedByCurrentPlayer)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    '회차 완료됨. 상세에서 해산하면 방이 닫힙니다.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 12),
               Text(
                 _raidLabel(summary.metadata),

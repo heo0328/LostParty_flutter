@@ -300,11 +300,38 @@ service cloud.firestore {
       return hasActiveBinding()
         && oldData.leaderPlayerId == currentPlayerId()
         && oldData.status == 'active'
-        && oldData.currentCycleStatus == 'active'
+        && (oldData.currentCycleStatus == 'active'
+          || oldData.currentCycleStatus == 'completed')
         && newData.diff(oldData).affectedKeys().hasOnly([
           'continueTogether', 'revision', 'updatedAt'
         ])
         && newData.continueTogether is bool
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validRecruitmentDisband(oldData, newData) {
+      return hasActiveBinding()
+        && oldData.leaderPlayerId == currentPlayerId()
+        && (oldData.status == 'active' || oldData.status == 'completed')
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'currentCycleStatus', 'manualRecruitmentEnabled',
+          'hasAvailableSlot', 'memberPlayerIds', 'memberCount',
+          'dealerCount', 'supportCount', 'leaderPlayerId',
+          'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot',
+          'revision', 'updatedAt'
+        ])
+        && newData.status == 'disbanded'
+        && newData.currentCycleStatus == 'disbanded'
+        && newData.manualRecruitmentEnabled == false
+        && newData.hasAvailableSlot == false
+        && newData.memberPlayerIds.size() == 0
+        && newData.memberCount == 0
+        && newData.dealerCount == 0
+        && newData.supportCount == 0
+        && newData.leaderPlayerId == null
+        && newData.leaderCharacterNameSnapshot == null
+        && newData.leaderClassNameSnapshot == null
         && newData.revision == oldData.revision + 1
         && newData.updatedAt == request.time;
     }
@@ -537,13 +564,16 @@ service cloud.firestore {
 
     function validAssignmentRemoval(playerId, data) {
       let recruitment = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
       let memberPath = recruitmentMemberPath(data.recruitmentId, playerId);
       let memberAfter = getAfter(memberPath);
       return hasActiveBinding()
         && (playerId == currentPlayerId()
-          || recruitment.leaderPlayerId == currentPlayerId())
+          || recruitment.leaderPlayerId == currentPlayerId()
+          || after.status == 'disbanded')
         && (!existsAfter(memberPath)
-          || memberAfter.data.characterId != data.characterId);
+          || memberAfter.data.characterId != data.characterId
+          || after.status == 'disbanded');
     }
 
     function validCycleEvent(playerId, eventId, data) {
@@ -852,6 +882,9 @@ service cloud.firestore {
           request.resource.data
         ) || validCycleAdvance(
           recruitmentId,
+          resource.data,
+          request.resource.data
+        ) || validRecruitmentDisband(
           resource.data,
           request.resource.data
         );

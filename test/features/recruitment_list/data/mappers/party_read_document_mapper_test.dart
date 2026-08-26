@@ -26,6 +26,10 @@ void main() {
     expect(summary.metadata.raidId, 'act4');
     expect(summary.metadata.experienceLevel, ExperienceLevel.experienced);
     expect(summary.isRecruiting, isTrue);
+    expect(summary.status, 'active');
+    expect(summary.currentCycleStatus, 'active');
+    expect(summary.continueTogether, isFalse);
+    expect(summary.cycleEndsAt, DateTime.utc(2026, 8, 26, 21));
   });
 
   test('marks an owned active raid for the current player', () {
@@ -39,6 +43,8 @@ void main() {
     expect(summary.leaderCharacterName, '리더캐릭');
     expect(summary.leaderClassName, '바드');
     expect(summary.raidStartAt, DateTime.utc(2026, 8, 25, 12));
+    expect(summary.status, 'active');
+    expect(summary.isAwaitingDisband, isFalse);
   });
 
   test('maps a member display document with opaque player and character ids', () {
@@ -261,6 +267,9 @@ Map<String, Object?> _recruitmentData() => {
   'manualRecruitmentEnabled': true,
   'hasAvailableSlot': true,
   'currentCycleKey': '2026-08-19',
+  'currentCycleStatus': 'active',
+  'continueTogether': false,
+  'cycleEndsAt': DateTime.utc(2026, 8, 26, 21),
   'memberCount': 4,
   'maxMemberCount': 8,
   'membersPerParty': 4,

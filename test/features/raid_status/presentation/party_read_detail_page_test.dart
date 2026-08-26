@@ -16,6 +16,7 @@ import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_active
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_application_command.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_cycle_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_join_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_read_models.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
@@ -24,6 +25,7 @@ import 'package:lost_party/features/recruitment_list/domain/entities/recruitment
 import 'package:lost_party/features/recruitment_list/domain/policies/approval_policy.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_membership_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_application_command_repository.dart';
+import 'package:lost_party/features/recruitment_list/domain/repositories/party_cycle_command_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_join_command_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_membership_command_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_read_repository.dart';
@@ -42,6 +44,7 @@ void main() {
     PartyApplicationCommandRepository? applicationCommandRepository,
     PartyJoinCommandRepository? joinCommandRepository,
     PartyMembershipCommandRepository? membershipCommandRepository,
+    PartyCycleCommandRepository? cycleCommandRepository,
     RecruitmentLeaderCandidateService? candidateService,
     String? playerId,
   }) async {
@@ -58,6 +61,7 @@ void main() {
           applicationCommandRepository: applicationCommandRepository,
           joinCommandRepository: joinCommandRepository,
           membershipCommandRepository: membershipCommandRepository,
+          cycleCommandRepository: cycleCommandRepository,
           candidateService: candidateService,
           playerId: playerId,
         ),
@@ -402,6 +406,94 @@ void main() {
     expect(membership.leaveCommands.single.targetPlayerId, 'player-1');
     expect(membership.leaveCommands.single.expectedRecruitmentRevision, 1);
     expect(find.text('모집을 삭제했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('확정 멤버가 회차 완료를 누르면 complete 명령을 보낸다', (tester) async {
+    final cycle = _RecordingCycleRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(
+          items: [
+            PartyMemberDisplay(
+              playerId: 'player-1',
+              characterId: 'char-leader',
+              characterName: '이슈아이',
+              className: '기상술사',
+              role: PartyRole.dealer,
+              partyIndex: 0,
+              slotIndex: 0,
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      cycleCommandRepository: cycle,
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tapVisible(tester, find.byKey(const ValueKey('completeCycleButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('confirmCompleteCycleButton')));
+    await tester.pumpAndSettle();
+
+    expect(cycle.completeCommands, hasLength(1));
+    expect(cycle.completeCommands.single.cycleKey, '2026-08-19');
+    expect(find.textContaining('회차를 완료했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('파티장이 다인 방을 해산하면 disband 명령을 보낸다', (tester) async {
+    final cycle = _RecordingCycleRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(memberCount: 2),
+          isFromCache: false,
+        ),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(
+          items: [
+            PartyMemberDisplay(
+              playerId: 'player-1',
+              characterId: 'char-leader',
+              characterName: '이슈아이',
+              className: '기상술사',
+              role: PartyRole.dealer,
+              partyIndex: 0,
+              slotIndex: 0,
+            ),
+            PartyMemberDisplay(
+              playerId: 'player-2',
+              characterId: 'char-member',
+              characterName: '서폿캐릭',
+              className: '바드',
+              role: PartyRole.support,
+              partyIndex: 0,
+              slotIndex: 1,
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      cycleCommandRepository: cycle,
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tapVisible(tester, find.byKey(const ValueKey('disbandPartyButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('confirmDisbandPartyButton')));
+    await tester.pumpAndSettle();
+
+    expect(cycle.disbandCommands, hasLength(1));
+    expect(cycle.disbandCommands.single.expectedRecruitmentRevision, 1);
+    expect(find.text('파티를 해산했습니다.'), findsOneWidget);
   });
 
   testWidgets('멤버가 더 있으면 모집 삭제 버튼을 숨긴다', (tester) async {
@@ -1305,4 +1397,34 @@ class _RecordingMembershipRepository implements PartyMembershipCommandRepository
   Future<PartyMembershipResult> setApprovalPermission(
     PartySetApprovalPermissionCommand command,
   ) => throw UnimplementedError();
+}
+
+class _RecordingCycleRepository implements PartyCycleCommandRepository {
+  final completeCommands = <PartyCompleteCycleCommand>[];
+  final disbandCommands = <PartyDisbandCommand>[];
+
+  @override
+  Future<PartyCycleResult> complete(PartyCompleteCycleCommand command) async {
+    completeCommands.add(command);
+    return const PartyCycleResult.success();
+  }
+
+  @override
+  Future<PartyCycleResult> cancelCompletion(
+    PartyCancelCompletionCommand command,
+  ) => throw UnimplementedError();
+
+  @override
+  Future<PartyCycleResult> setRecurrence(PartySetRecurrenceCommand command) =>
+      throw UnimplementedError();
+
+  @override
+  Future<PartyCycleResult> advance(PartyAdvanceCycleCommand command) =>
+      throw UnimplementedError();
+
+  @override
+  Future<PartyCycleResult> disband(PartyDisbandCommand command) async {
+    disbandCommands.add(command);
+    return const PartyCycleResult.success();
+  }
 }

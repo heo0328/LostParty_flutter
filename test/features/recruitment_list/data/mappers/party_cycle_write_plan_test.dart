@@ -16,4 +16,16 @@ void main() {
     expect(plan['currentCycleStatus'], 'active');
     expect(plan['revision'], 5);
   });
+  test('해산은 멤버와 책임자를 비우고 disbanded로 둔다', () {
+    final plan = PartyCycleWritePlan.disbandRecruitment(
+      revision: 2,
+      serverTimestamp: Object(),
+    );
+    expect(plan['status'], 'disbanded');
+    expect(plan['currentCycleStatus'], 'disbanded');
+    expect(plan['memberCount'], 0);
+    expect(plan['memberPlayerIds'], isEmpty);
+    expect(plan['leaderPlayerId'], isNull);
+    expect(plan['revision'], 3);
+  });
 }

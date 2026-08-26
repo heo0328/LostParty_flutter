@@ -1593,3 +1593,16 @@
 - BUG-001: 상세 `recruitmentId` 변경 시 State가 남는 문제를 `ValueKey`와 ViewModel `restart`/`didUpdateWidget`으로 수정했다. 정상 스텝 실기기 통과 후 종료 기록만 `BUG_REPORTS.md`에 남김.
 - 표적 테스트·`flutter analyze` 통과. 실기기에서 변경·탈퇴·추방 통과.
 - 다음: 완료·완료 취소·종료·해산 (`NEXT_WORK.md` Task-071).
+
+---
+
+## Task-071. 완료·완료 취소·종료·해산 (2026-08-26)
+
+- 작업 브랜치: `cursor/party-cycle-lifecycle`
+- 현황 상세에 `complete` / `cancelCompletion` / `setRecurrence` / `advance` / `disband`를 연결했다.
+- Rules에 다인·완료 후 해산(`validRecruitmentDisband`)과 완료 후 반복 설정 변경을 추가했고 `lost-party`에 배포했다.
+- 1회성 완료 후 진행 중 목록에 `status in [active, completed]`로 **해산 대기**를 남겨 상세 재진입·해산이 가능하게 했다.
+- 완료 직후·완료 기록 탭 이벤트 sync, 하단 탭 터치 시 브랜치 루트 복귀를 보강했다.
+- 표적 테스트·analyze 통과. 실기기에서 완료·해산·해산 대기 목록 확인.
+- 열린 이슈: BUG-002, BUG-005(주간 재완료 미차단), BUG-006(초기 권한 실패 관찰).
+- 다음: 알림 서비스 별도 설계 (`NEXT_WORK.md` Task-072).
