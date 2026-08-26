@@ -2,20 +2,30 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../account/data/local/account_database.dart';
+import '../../../recruitment_list/data/mappers/party_event_mapper.dart';
 import '../../../recruitment_list/domain/entities/party_event.dart';
 import '../../domain/services/party_event_sync_service.dart';
 
 class FirestorePartyEventSyncService implements PartyEventSyncService {
-  const FirestorePartyEventSyncService({
+  FirestorePartyEventSyncService({
     required FirebaseFirestore firestore,
     required FirebaseAuth firebaseAuth,
     required AccountDatabase database,
   }) : _firestore = firestore,
        _firebaseAuth = firebaseAuth,
-       _database = database;
+       _database = database,
+       _mapper = PartyEventMapper(
+         toDateTime: (value) => switch (value) {
+           Timestamp timestamp => timestamp.toDate().toUtc(),
+           DateTime dateTime => dateTime.toUtc(),
+           _ => throw const FormatException('Expected Firestore Timestamp.'),
+         },
+       );
+
   final FirebaseFirestore _firestore;
   final FirebaseAuth _firebaseAuth;
   final AccountDatabase _database;
+  final PartyEventMapper _mapper;
 
   @override
   Future<PartyEventSyncResult> sync() async {
@@ -44,42 +54,61 @@ class FirestorePartyEventSyncService implements PartyEventSyncService {
           .get();
       var count = 0;
       for (final event in events.docs) {
-        final value = event.data();
-        final status = _historyStatus(value['type']);
-        // 알림 전용·미래 type은 완료 히스토리 Projection 대상이 아니다.
-        if (status == null) continue;
-        final occurredAt = value['occurredAt'];
-        if (value['playerId'] != playerId || occurredAt is! Timestamp) {
+        final value = Map<String, Object?>.from(event.data());
+        final mapped = _mapper.map(value, documentId: event.id);
+        if (mapped == null) {
+          // 알 수 없는 깨진 문서는 전체 sync를 실패시키지 않는다.
+          continue;
+        }
+        if (mapped.playerId != playerId) {
           return const PartyEventSyncResult.failure(
             PartyEventSyncFailure.invalidData,
           );
         }
-        final characterId = value['characterId'];
-        final recruitmentId = value['recruitmentId'];
-        final raidId = value['raidId'];
-        final difficultyId = value['difficultyId'];
-        final cycleKey = value['cycleKey'];
-        if (characterId is! String ||
-            recruitmentId is! String ||
-            raidId is! String ||
-            difficultyId is! String ||
-            cycleKey is! String) {
-          return const PartyEventSyncResult.failure(
-            PartyEventSyncFailure.invalidData,
+
+        final historyStatus = _historyStatus(mapped.knownType);
+        if (historyStatus != null) {
+          final characterId = value['characterId'];
+          final raidId = value['raidId'];
+          final difficultyId = value['difficultyId'];
+          final cycleKey = value['cycleKey'];
+          if (characterId is! String ||
+              raidId is! String ||
+              difficultyId is! String ||
+              cycleKey is! String) {
+            return const PartyEventSyncResult.failure(
+              PartyEventSyncFailure.invalidData,
+            );
+          }
+          await _database.syncPartyHistoryEvent(
+            eventId: mapped.eventId,
+            playerId: playerId,
+            characterId: characterId,
+            recruitmentId: mapped.recruitmentId,
+            raidId: raidId,
+            difficultyId: difficultyId,
+            cycleKey: cycleKey,
+            serverStatus: historyStatus,
+            occurredAt: mapped.occurredAt,
+          );
+          count++;
+        }
+
+        final known = mapped.knownType;
+        if (known != null && known.isNotificationCandidate) {
+          await _database.syncPartyNotificationReceipt(
+            eventId: mapped.eventId,
+            playerId: playerId,
+            type: mapped.type,
+            recruitmentId: mapped.recruitmentId,
+            cycleKey: mapped.cycleKey,
+            raidId: mapped.raidId,
+            difficultyId: mapped.difficultyId,
+            characterNameSnapshot: mapped.characterNameSnapshot,
+            occurredAt: mapped.occurredAt,
+            expiresAt: mapped.expiresAt,
           );
         }
-        await _database.syncPartyHistoryEvent(
-          eventId: event.id,
-          playerId: playerId,
-          characterId: characterId,
-          recruitmentId: recruitmentId,
-          raidId: raidId,
-          difficultyId: difficultyId,
-          cycleKey: cycleKey,
-          serverStatus: status,
-          occurredAt: occurredAt.toDate().toUtc(),
-        );
-        count++;
       }
       return PartyEventSyncResult.success(count);
     } on FirebaseException catch (error) {
@@ -95,10 +124,9 @@ class FirestorePartyEventSyncService implements PartyEventSyncService {
   }
 }
 
-String? _historyStatus(Object? type) {
-  final known = PartyEventType.tryParse(type is String ? type : null);
-  if (known == null || !known.isRaidHistoryEvent) return null;
-  return switch (known) {
+String? _historyStatus(PartyEventType? type) {
+  if (type == null || !type.isRaidHistoryEvent) return null;
+  return switch (type) {
     PartyEventType.partyCompleted => 'completed',
     PartyEventType.partyIncompleteEnded => 'incompleteEnded',
     PartyEventType.partyCompletionCancelled => 'completionCancelled',

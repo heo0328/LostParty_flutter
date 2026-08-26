@@ -2844,6 +2844,807 @@ class RaidHistoryEntriesCompanion extends UpdateCompanion<RaidHistoryEntry> {
   }
 }
 
+class $PartyNotificationReceiptsTable extends PartyNotificationReceipts
+    with TableInfo<$PartyNotificationReceiptsTable, PartyNotificationReceipt> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PartyNotificationReceiptsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _eventIdMeta = const VerificationMeta(
+    'eventId',
+  );
+  @override
+  late final GeneratedColumn<String> eventId = GeneratedColumn<String>(
+    'event_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _playerIdMeta = const VerificationMeta(
+    'playerId',
+  );
+  @override
+  late final GeneratedColumn<String> playerId = GeneratedColumn<String>(
+    'player_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recruitmentIdMeta = const VerificationMeta(
+    'recruitmentId',
+  );
+  @override
+  late final GeneratedColumn<String> recruitmentId = GeneratedColumn<String>(
+    'recruitment_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cycleKeyMeta = const VerificationMeta(
+    'cycleKey',
+  );
+  @override
+  late final GeneratedColumn<String> cycleKey = GeneratedColumn<String>(
+    'cycle_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _raidIdMeta = const VerificationMeta('raidId');
+  @override
+  late final GeneratedColumn<String> raidId = GeneratedColumn<String>(
+    'raid_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _difficultyIdMeta = const VerificationMeta(
+    'difficultyId',
+  );
+  @override
+  late final GeneratedColumn<String> difficultyId = GeneratedColumn<String>(
+    'difficulty_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _characterNameSnapshotMeta =
+      const VerificationMeta('characterNameSnapshot');
+  @override
+  late final GeneratedColumn<String> characterNameSnapshot =
+      GeneratedColumn<String>(
+        'character_name_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _occurredAtMeta = const VerificationMeta(
+    'occurredAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> occurredAt = GeneratedColumn<DateTime>(
+    'occurred_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _expiresAtMeta = const VerificationMeta(
+    'expiresAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> expiresAt = GeneratedColumn<DateTime>(
+    'expires_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _readAtMeta = const VerificationMeta('readAt');
+  @override
+  late final GeneratedColumn<DateTime> readAt = GeneratedColumn<DateTime>(
+    'read_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _firstSyncedAtMeta = const VerificationMeta(
+    'firstSyncedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> firstSyncedAt =
+      GeneratedColumn<DateTime>(
+        'first_synced_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _lastSyncedAtMeta = const VerificationMeta(
+    'lastSyncedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastSyncedAt = GeneratedColumn<DateTime>(
+    'last_synced_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    eventId,
+    playerId,
+    type,
+    recruitmentId,
+    cycleKey,
+    raidId,
+    difficultyId,
+    characterNameSnapshot,
+    occurredAt,
+    expiresAt,
+    readAt,
+    firstSyncedAt,
+    lastSyncedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'party_notification_receipts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PartyNotificationReceipt> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('event_id')) {
+      context.handle(
+        _eventIdMeta,
+        eventId.isAcceptableOrUnknown(data['event_id']!, _eventIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_eventIdMeta);
+    }
+    if (data.containsKey('player_id')) {
+      context.handle(
+        _playerIdMeta,
+        playerId.isAcceptableOrUnknown(data['player_id']!, _playerIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_playerIdMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('recruitment_id')) {
+      context.handle(
+        _recruitmentIdMeta,
+        recruitmentId.isAcceptableOrUnknown(
+          data['recruitment_id']!,
+          _recruitmentIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_recruitmentIdMeta);
+    }
+    if (data.containsKey('cycle_key')) {
+      context.handle(
+        _cycleKeyMeta,
+        cycleKey.isAcceptableOrUnknown(data['cycle_key']!, _cycleKeyMeta),
+      );
+    }
+    if (data.containsKey('raid_id')) {
+      context.handle(
+        _raidIdMeta,
+        raidId.isAcceptableOrUnknown(data['raid_id']!, _raidIdMeta),
+      );
+    }
+    if (data.containsKey('difficulty_id')) {
+      context.handle(
+        _difficultyIdMeta,
+        difficultyId.isAcceptableOrUnknown(
+          data['difficulty_id']!,
+          _difficultyIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('character_name_snapshot')) {
+      context.handle(
+        _characterNameSnapshotMeta,
+        characterNameSnapshot.isAcceptableOrUnknown(
+          data['character_name_snapshot']!,
+          _characterNameSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('occurred_at')) {
+      context.handle(
+        _occurredAtMeta,
+        occurredAt.isAcceptableOrUnknown(data['occurred_at']!, _occurredAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_occurredAtMeta);
+    }
+    if (data.containsKey('expires_at')) {
+      context.handle(
+        _expiresAtMeta,
+        expiresAt.isAcceptableOrUnknown(data['expires_at']!, _expiresAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_expiresAtMeta);
+    }
+    if (data.containsKey('read_at')) {
+      context.handle(
+        _readAtMeta,
+        readAt.isAcceptableOrUnknown(data['read_at']!, _readAtMeta),
+      );
+    }
+    if (data.containsKey('first_synced_at')) {
+      context.handle(
+        _firstSyncedAtMeta,
+        firstSyncedAt.isAcceptableOrUnknown(
+          data['first_synced_at']!,
+          _firstSyncedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_firstSyncedAtMeta);
+    }
+    if (data.containsKey('last_synced_at')) {
+      context.handle(
+        _lastSyncedAtMeta,
+        lastSyncedAt.isAcceptableOrUnknown(
+          data['last_synced_at']!,
+          _lastSyncedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastSyncedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {eventId};
+  @override
+  PartyNotificationReceipt map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PartyNotificationReceipt(
+      eventId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}event_id'],
+      )!,
+      playerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}player_id'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      recruitmentId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recruitment_id'],
+      )!,
+      cycleKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cycle_key'],
+      ),
+      raidId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}raid_id'],
+      ),
+      difficultyId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}difficulty_id'],
+      ),
+      characterNameSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}character_name_snapshot'],
+      ),
+      occurredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}occurred_at'],
+      )!,
+      expiresAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}expires_at'],
+      )!,
+      readAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}read_at'],
+      ),
+      firstSyncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}first_synced_at'],
+      )!,
+      lastSyncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_synced_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PartyNotificationReceiptsTable createAlias(String alias) {
+    return $PartyNotificationReceiptsTable(attachedDatabase, alias);
+  }
+}
+
+class PartyNotificationReceipt extends DataClass
+    implements Insertable<PartyNotificationReceipt> {
+  final String eventId;
+  final String playerId;
+  final String type;
+  final String recruitmentId;
+  final String? cycleKey;
+  final String? raidId;
+  final String? difficultyId;
+  final String? characterNameSnapshot;
+  final DateTime occurredAt;
+  final DateTime expiresAt;
+  final DateTime? readAt;
+  final DateTime firstSyncedAt;
+  final DateTime lastSyncedAt;
+  const PartyNotificationReceipt({
+    required this.eventId,
+    required this.playerId,
+    required this.type,
+    required this.recruitmentId,
+    this.cycleKey,
+    this.raidId,
+    this.difficultyId,
+    this.characterNameSnapshot,
+    required this.occurredAt,
+    required this.expiresAt,
+    this.readAt,
+    required this.firstSyncedAt,
+    required this.lastSyncedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['event_id'] = Variable<String>(eventId);
+    map['player_id'] = Variable<String>(playerId);
+    map['type'] = Variable<String>(type);
+    map['recruitment_id'] = Variable<String>(recruitmentId);
+    if (!nullToAbsent || cycleKey != null) {
+      map['cycle_key'] = Variable<String>(cycleKey);
+    }
+    if (!nullToAbsent || raidId != null) {
+      map['raid_id'] = Variable<String>(raidId);
+    }
+    if (!nullToAbsent || difficultyId != null) {
+      map['difficulty_id'] = Variable<String>(difficultyId);
+    }
+    if (!nullToAbsent || characterNameSnapshot != null) {
+      map['character_name_snapshot'] = Variable<String>(characterNameSnapshot);
+    }
+    map['occurred_at'] = Variable<DateTime>(occurredAt);
+    map['expires_at'] = Variable<DateTime>(expiresAt);
+    if (!nullToAbsent || readAt != null) {
+      map['read_at'] = Variable<DateTime>(readAt);
+    }
+    map['first_synced_at'] = Variable<DateTime>(firstSyncedAt);
+    map['last_synced_at'] = Variable<DateTime>(lastSyncedAt);
+    return map;
+  }
+
+  PartyNotificationReceiptsCompanion toCompanion(bool nullToAbsent) {
+    return PartyNotificationReceiptsCompanion(
+      eventId: Value(eventId),
+      playerId: Value(playerId),
+      type: Value(type),
+      recruitmentId: Value(recruitmentId),
+      cycleKey: cycleKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cycleKey),
+      raidId: raidId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(raidId),
+      difficultyId: difficultyId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(difficultyId),
+      characterNameSnapshot: characterNameSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(characterNameSnapshot),
+      occurredAt: Value(occurredAt),
+      expiresAt: Value(expiresAt),
+      readAt: readAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(readAt),
+      firstSyncedAt: Value(firstSyncedAt),
+      lastSyncedAt: Value(lastSyncedAt),
+    );
+  }
+
+  factory PartyNotificationReceipt.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PartyNotificationReceipt(
+      eventId: serializer.fromJson<String>(json['eventId']),
+      playerId: serializer.fromJson<String>(json['playerId']),
+      type: serializer.fromJson<String>(json['type']),
+      recruitmentId: serializer.fromJson<String>(json['recruitmentId']),
+      cycleKey: serializer.fromJson<String?>(json['cycleKey']),
+      raidId: serializer.fromJson<String?>(json['raidId']),
+      difficultyId: serializer.fromJson<String?>(json['difficultyId']),
+      characterNameSnapshot: serializer.fromJson<String?>(
+        json['characterNameSnapshot'],
+      ),
+      occurredAt: serializer.fromJson<DateTime>(json['occurredAt']),
+      expiresAt: serializer.fromJson<DateTime>(json['expiresAt']),
+      readAt: serializer.fromJson<DateTime?>(json['readAt']),
+      firstSyncedAt: serializer.fromJson<DateTime>(json['firstSyncedAt']),
+      lastSyncedAt: serializer.fromJson<DateTime>(json['lastSyncedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'eventId': serializer.toJson<String>(eventId),
+      'playerId': serializer.toJson<String>(playerId),
+      'type': serializer.toJson<String>(type),
+      'recruitmentId': serializer.toJson<String>(recruitmentId),
+      'cycleKey': serializer.toJson<String?>(cycleKey),
+      'raidId': serializer.toJson<String?>(raidId),
+      'difficultyId': serializer.toJson<String?>(difficultyId),
+      'characterNameSnapshot': serializer.toJson<String?>(
+        characterNameSnapshot,
+      ),
+      'occurredAt': serializer.toJson<DateTime>(occurredAt),
+      'expiresAt': serializer.toJson<DateTime>(expiresAt),
+      'readAt': serializer.toJson<DateTime?>(readAt),
+      'firstSyncedAt': serializer.toJson<DateTime>(firstSyncedAt),
+      'lastSyncedAt': serializer.toJson<DateTime>(lastSyncedAt),
+    };
+  }
+
+  PartyNotificationReceipt copyWith({
+    String? eventId,
+    String? playerId,
+    String? type,
+    String? recruitmentId,
+    Value<String?> cycleKey = const Value.absent(),
+    Value<String?> raidId = const Value.absent(),
+    Value<String?> difficultyId = const Value.absent(),
+    Value<String?> characterNameSnapshot = const Value.absent(),
+    DateTime? occurredAt,
+    DateTime? expiresAt,
+    Value<DateTime?> readAt = const Value.absent(),
+    DateTime? firstSyncedAt,
+    DateTime? lastSyncedAt,
+  }) => PartyNotificationReceipt(
+    eventId: eventId ?? this.eventId,
+    playerId: playerId ?? this.playerId,
+    type: type ?? this.type,
+    recruitmentId: recruitmentId ?? this.recruitmentId,
+    cycleKey: cycleKey.present ? cycleKey.value : this.cycleKey,
+    raidId: raidId.present ? raidId.value : this.raidId,
+    difficultyId: difficultyId.present ? difficultyId.value : this.difficultyId,
+    characterNameSnapshot: characterNameSnapshot.present
+        ? characterNameSnapshot.value
+        : this.characterNameSnapshot,
+    occurredAt: occurredAt ?? this.occurredAt,
+    expiresAt: expiresAt ?? this.expiresAt,
+    readAt: readAt.present ? readAt.value : this.readAt,
+    firstSyncedAt: firstSyncedAt ?? this.firstSyncedAt,
+    lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+  );
+  PartyNotificationReceipt copyWithCompanion(
+    PartyNotificationReceiptsCompanion data,
+  ) {
+    return PartyNotificationReceipt(
+      eventId: data.eventId.present ? data.eventId.value : this.eventId,
+      playerId: data.playerId.present ? data.playerId.value : this.playerId,
+      type: data.type.present ? data.type.value : this.type,
+      recruitmentId: data.recruitmentId.present
+          ? data.recruitmentId.value
+          : this.recruitmentId,
+      cycleKey: data.cycleKey.present ? data.cycleKey.value : this.cycleKey,
+      raidId: data.raidId.present ? data.raidId.value : this.raidId,
+      difficultyId: data.difficultyId.present
+          ? data.difficultyId.value
+          : this.difficultyId,
+      characterNameSnapshot: data.characterNameSnapshot.present
+          ? data.characterNameSnapshot.value
+          : this.characterNameSnapshot,
+      occurredAt: data.occurredAt.present
+          ? data.occurredAt.value
+          : this.occurredAt,
+      expiresAt: data.expiresAt.present ? data.expiresAt.value : this.expiresAt,
+      readAt: data.readAt.present ? data.readAt.value : this.readAt,
+      firstSyncedAt: data.firstSyncedAt.present
+          ? data.firstSyncedAt.value
+          : this.firstSyncedAt,
+      lastSyncedAt: data.lastSyncedAt.present
+          ? data.lastSyncedAt.value
+          : this.lastSyncedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PartyNotificationReceipt(')
+          ..write('eventId: $eventId, ')
+          ..write('playerId: $playerId, ')
+          ..write('type: $type, ')
+          ..write('recruitmentId: $recruitmentId, ')
+          ..write('cycleKey: $cycleKey, ')
+          ..write('raidId: $raidId, ')
+          ..write('difficultyId: $difficultyId, ')
+          ..write('characterNameSnapshot: $characterNameSnapshot, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('readAt: $readAt, ')
+          ..write('firstSyncedAt: $firstSyncedAt, ')
+          ..write('lastSyncedAt: $lastSyncedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    eventId,
+    playerId,
+    type,
+    recruitmentId,
+    cycleKey,
+    raidId,
+    difficultyId,
+    characterNameSnapshot,
+    occurredAt,
+    expiresAt,
+    readAt,
+    firstSyncedAt,
+    lastSyncedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PartyNotificationReceipt &&
+          other.eventId == this.eventId &&
+          other.playerId == this.playerId &&
+          other.type == this.type &&
+          other.recruitmentId == this.recruitmentId &&
+          other.cycleKey == this.cycleKey &&
+          other.raidId == this.raidId &&
+          other.difficultyId == this.difficultyId &&
+          other.characterNameSnapshot == this.characterNameSnapshot &&
+          other.occurredAt == this.occurredAt &&
+          other.expiresAt == this.expiresAt &&
+          other.readAt == this.readAt &&
+          other.firstSyncedAt == this.firstSyncedAt &&
+          other.lastSyncedAt == this.lastSyncedAt);
+}
+
+class PartyNotificationReceiptsCompanion
+    extends UpdateCompanion<PartyNotificationReceipt> {
+  final Value<String> eventId;
+  final Value<String> playerId;
+  final Value<String> type;
+  final Value<String> recruitmentId;
+  final Value<String?> cycleKey;
+  final Value<String?> raidId;
+  final Value<String?> difficultyId;
+  final Value<String?> characterNameSnapshot;
+  final Value<DateTime> occurredAt;
+  final Value<DateTime> expiresAt;
+  final Value<DateTime?> readAt;
+  final Value<DateTime> firstSyncedAt;
+  final Value<DateTime> lastSyncedAt;
+  final Value<int> rowid;
+  const PartyNotificationReceiptsCompanion({
+    this.eventId = const Value.absent(),
+    this.playerId = const Value.absent(),
+    this.type = const Value.absent(),
+    this.recruitmentId = const Value.absent(),
+    this.cycleKey = const Value.absent(),
+    this.raidId = const Value.absent(),
+    this.difficultyId = const Value.absent(),
+    this.characterNameSnapshot = const Value.absent(),
+    this.occurredAt = const Value.absent(),
+    this.expiresAt = const Value.absent(),
+    this.readAt = const Value.absent(),
+    this.firstSyncedAt = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PartyNotificationReceiptsCompanion.insert({
+    required String eventId,
+    required String playerId,
+    required String type,
+    required String recruitmentId,
+    this.cycleKey = const Value.absent(),
+    this.raidId = const Value.absent(),
+    this.difficultyId = const Value.absent(),
+    this.characterNameSnapshot = const Value.absent(),
+    required DateTime occurredAt,
+    required DateTime expiresAt,
+    this.readAt = const Value.absent(),
+    required DateTime firstSyncedAt,
+    required DateTime lastSyncedAt,
+    this.rowid = const Value.absent(),
+  }) : eventId = Value(eventId),
+       playerId = Value(playerId),
+       type = Value(type),
+       recruitmentId = Value(recruitmentId),
+       occurredAt = Value(occurredAt),
+       expiresAt = Value(expiresAt),
+       firstSyncedAt = Value(firstSyncedAt),
+       lastSyncedAt = Value(lastSyncedAt);
+  static Insertable<PartyNotificationReceipt> custom({
+    Expression<String>? eventId,
+    Expression<String>? playerId,
+    Expression<String>? type,
+    Expression<String>? recruitmentId,
+    Expression<String>? cycleKey,
+    Expression<String>? raidId,
+    Expression<String>? difficultyId,
+    Expression<String>? characterNameSnapshot,
+    Expression<DateTime>? occurredAt,
+    Expression<DateTime>? expiresAt,
+    Expression<DateTime>? readAt,
+    Expression<DateTime>? firstSyncedAt,
+    Expression<DateTime>? lastSyncedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (eventId != null) 'event_id': eventId,
+      if (playerId != null) 'player_id': playerId,
+      if (type != null) 'type': type,
+      if (recruitmentId != null) 'recruitment_id': recruitmentId,
+      if (cycleKey != null) 'cycle_key': cycleKey,
+      if (raidId != null) 'raid_id': raidId,
+      if (difficultyId != null) 'difficulty_id': difficultyId,
+      if (characterNameSnapshot != null)
+        'character_name_snapshot': characterNameSnapshot,
+      if (occurredAt != null) 'occurred_at': occurredAt,
+      if (expiresAt != null) 'expires_at': expiresAt,
+      if (readAt != null) 'read_at': readAt,
+      if (firstSyncedAt != null) 'first_synced_at': firstSyncedAt,
+      if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PartyNotificationReceiptsCompanion copyWith({
+    Value<String>? eventId,
+    Value<String>? playerId,
+    Value<String>? type,
+    Value<String>? recruitmentId,
+    Value<String?>? cycleKey,
+    Value<String?>? raidId,
+    Value<String?>? difficultyId,
+    Value<String?>? characterNameSnapshot,
+    Value<DateTime>? occurredAt,
+    Value<DateTime>? expiresAt,
+    Value<DateTime?>? readAt,
+    Value<DateTime>? firstSyncedAt,
+    Value<DateTime>? lastSyncedAt,
+    Value<int>? rowid,
+  }) {
+    return PartyNotificationReceiptsCompanion(
+      eventId: eventId ?? this.eventId,
+      playerId: playerId ?? this.playerId,
+      type: type ?? this.type,
+      recruitmentId: recruitmentId ?? this.recruitmentId,
+      cycleKey: cycleKey ?? this.cycleKey,
+      raidId: raidId ?? this.raidId,
+      difficultyId: difficultyId ?? this.difficultyId,
+      characterNameSnapshot:
+          characterNameSnapshot ?? this.characterNameSnapshot,
+      occurredAt: occurredAt ?? this.occurredAt,
+      expiresAt: expiresAt ?? this.expiresAt,
+      readAt: readAt ?? this.readAt,
+      firstSyncedAt: firstSyncedAt ?? this.firstSyncedAt,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (eventId.present) {
+      map['event_id'] = Variable<String>(eventId.value);
+    }
+    if (playerId.present) {
+      map['player_id'] = Variable<String>(playerId.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (recruitmentId.present) {
+      map['recruitment_id'] = Variable<String>(recruitmentId.value);
+    }
+    if (cycleKey.present) {
+      map['cycle_key'] = Variable<String>(cycleKey.value);
+    }
+    if (raidId.present) {
+      map['raid_id'] = Variable<String>(raidId.value);
+    }
+    if (difficultyId.present) {
+      map['difficulty_id'] = Variable<String>(difficultyId.value);
+    }
+    if (characterNameSnapshot.present) {
+      map['character_name_snapshot'] = Variable<String>(
+        characterNameSnapshot.value,
+      );
+    }
+    if (occurredAt.present) {
+      map['occurred_at'] = Variable<DateTime>(occurredAt.value);
+    }
+    if (expiresAt.present) {
+      map['expires_at'] = Variable<DateTime>(expiresAt.value);
+    }
+    if (readAt.present) {
+      map['read_at'] = Variable<DateTime>(readAt.value);
+    }
+    if (firstSyncedAt.present) {
+      map['first_synced_at'] = Variable<DateTime>(firstSyncedAt.value);
+    }
+    if (lastSyncedAt.present) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PartyNotificationReceiptsCompanion(')
+          ..write('eventId: $eventId, ')
+          ..write('playerId: $playerId, ')
+          ..write('type: $type, ')
+          ..write('recruitmentId: $recruitmentId, ')
+          ..write('cycleKey: $cycleKey, ')
+          ..write('raidId: $raidId, ')
+          ..write('difficultyId: $difficultyId, ')
+          ..write('characterNameSnapshot: $characterNameSnapshot, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('readAt: $readAt, ')
+          ..write('firstSyncedAt: $firstSyncedAt, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AccountDatabase extends GeneratedDatabase {
   _$AccountDatabase(QueryExecutor e) : super(e);
   $AccountDatabaseManager get managers => $AccountDatabaseManager(this);
@@ -2854,6 +3655,8 @@ abstract class _$AccountDatabase extends GeneratedDatabase {
       $CharacterBuildSnapshotsTable(this);
   late final $RaidHistoryEntriesTable raidHistoryEntries =
       $RaidHistoryEntriesTable(this);
+  late final $PartyNotificationReceiptsTable partyNotificationReceipts =
+      $PartyNotificationReceiptsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2863,6 +3666,7 @@ abstract class _$AccountDatabase extends GeneratedDatabase {
     accountCharacters,
     characterBuildSnapshots,
     raidHistoryEntries,
+    partyNotificationReceipts,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -4697,6 +5501,389 @@ typedef $$RaidHistoryEntriesTableProcessedTableManager =
       RaidHistoryEntry,
       PrefetchHooks Function()
     >;
+typedef $$PartyNotificationReceiptsTableCreateCompanionBuilder =
+    PartyNotificationReceiptsCompanion Function({
+      required String eventId,
+      required String playerId,
+      required String type,
+      required String recruitmentId,
+      Value<String?> cycleKey,
+      Value<String?> raidId,
+      Value<String?> difficultyId,
+      Value<String?> characterNameSnapshot,
+      required DateTime occurredAt,
+      required DateTime expiresAt,
+      Value<DateTime?> readAt,
+      required DateTime firstSyncedAt,
+      required DateTime lastSyncedAt,
+      Value<int> rowid,
+    });
+typedef $$PartyNotificationReceiptsTableUpdateCompanionBuilder =
+    PartyNotificationReceiptsCompanion Function({
+      Value<String> eventId,
+      Value<String> playerId,
+      Value<String> type,
+      Value<String> recruitmentId,
+      Value<String?> cycleKey,
+      Value<String?> raidId,
+      Value<String?> difficultyId,
+      Value<String?> characterNameSnapshot,
+      Value<DateTime> occurredAt,
+      Value<DateTime> expiresAt,
+      Value<DateTime?> readAt,
+      Value<DateTime> firstSyncedAt,
+      Value<DateTime> lastSyncedAt,
+      Value<int> rowid,
+    });
+
+class $$PartyNotificationReceiptsTableFilterComposer
+    extends Composer<_$AccountDatabase, $PartyNotificationReceiptsTable> {
+  $$PartyNotificationReceiptsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get eventId => $composableBuilder(
+    column: $table.eventId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get playerId => $composableBuilder(
+    column: $table.playerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recruitmentId => $composableBuilder(
+    column: $table.recruitmentId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cycleKey => $composableBuilder(
+    column: $table.cycleKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get raidId => $composableBuilder(
+    column: $table.raidId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get difficultyId => $composableBuilder(
+    column: $table.difficultyId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get characterNameSnapshot => $composableBuilder(
+    column: $table.characterNameSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get expiresAt => $composableBuilder(
+    column: $table.expiresAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get readAt => $composableBuilder(
+    column: $table.readAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get firstSyncedAt => $composableBuilder(
+    column: $table.firstSyncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PartyNotificationReceiptsTableOrderingComposer
+    extends Composer<_$AccountDatabase, $PartyNotificationReceiptsTable> {
+  $$PartyNotificationReceiptsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get eventId => $composableBuilder(
+    column: $table.eventId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get playerId => $composableBuilder(
+    column: $table.playerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recruitmentId => $composableBuilder(
+    column: $table.recruitmentId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cycleKey => $composableBuilder(
+    column: $table.cycleKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get raidId => $composableBuilder(
+    column: $table.raidId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get difficultyId => $composableBuilder(
+    column: $table.difficultyId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get characterNameSnapshot => $composableBuilder(
+    column: $table.characterNameSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get expiresAt => $composableBuilder(
+    column: $table.expiresAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get readAt => $composableBuilder(
+    column: $table.readAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get firstSyncedAt => $composableBuilder(
+    column: $table.firstSyncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PartyNotificationReceiptsTableAnnotationComposer
+    extends Composer<_$AccountDatabase, $PartyNotificationReceiptsTable> {
+  $$PartyNotificationReceiptsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get eventId =>
+      $composableBuilder(column: $table.eventId, builder: (column) => column);
+
+  GeneratedColumn<String> get playerId =>
+      $composableBuilder(column: $table.playerId, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get recruitmentId => $composableBuilder(
+    column: $table.recruitmentId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cycleKey =>
+      $composableBuilder(column: $table.cycleKey, builder: (column) => column);
+
+  GeneratedColumn<String> get raidId =>
+      $composableBuilder(column: $table.raidId, builder: (column) => column);
+
+  GeneratedColumn<String> get difficultyId => $composableBuilder(
+    column: $table.difficultyId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get characterNameSnapshot => $composableBuilder(
+    column: $table.characterNameSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get expiresAt =>
+      $composableBuilder(column: $table.expiresAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get readAt =>
+      $composableBuilder(column: $table.readAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get firstSyncedAt => $composableBuilder(
+    column: $table.firstSyncedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$PartyNotificationReceiptsTableTableManager
+    extends
+        RootTableManager<
+          _$AccountDatabase,
+          $PartyNotificationReceiptsTable,
+          PartyNotificationReceipt,
+          $$PartyNotificationReceiptsTableFilterComposer,
+          $$PartyNotificationReceiptsTableOrderingComposer,
+          $$PartyNotificationReceiptsTableAnnotationComposer,
+          $$PartyNotificationReceiptsTableCreateCompanionBuilder,
+          $$PartyNotificationReceiptsTableUpdateCompanionBuilder,
+          (
+            PartyNotificationReceipt,
+            BaseReferences<
+              _$AccountDatabase,
+              $PartyNotificationReceiptsTable,
+              PartyNotificationReceipt
+            >,
+          ),
+          PartyNotificationReceipt,
+          PrefetchHooks Function()
+        > {
+  $$PartyNotificationReceiptsTableTableManager(
+    _$AccountDatabase db,
+    $PartyNotificationReceiptsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PartyNotificationReceiptsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$PartyNotificationReceiptsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$PartyNotificationReceiptsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> eventId = const Value.absent(),
+                Value<String> playerId = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<String> recruitmentId = const Value.absent(),
+                Value<String?> cycleKey = const Value.absent(),
+                Value<String?> raidId = const Value.absent(),
+                Value<String?> difficultyId = const Value.absent(),
+                Value<String?> characterNameSnapshot = const Value.absent(),
+                Value<DateTime> occurredAt = const Value.absent(),
+                Value<DateTime> expiresAt = const Value.absent(),
+                Value<DateTime?> readAt = const Value.absent(),
+                Value<DateTime> firstSyncedAt = const Value.absent(),
+                Value<DateTime> lastSyncedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PartyNotificationReceiptsCompanion(
+                eventId: eventId,
+                playerId: playerId,
+                type: type,
+                recruitmentId: recruitmentId,
+                cycleKey: cycleKey,
+                raidId: raidId,
+                difficultyId: difficultyId,
+                characterNameSnapshot: characterNameSnapshot,
+                occurredAt: occurredAt,
+                expiresAt: expiresAt,
+                readAt: readAt,
+                firstSyncedAt: firstSyncedAt,
+                lastSyncedAt: lastSyncedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String eventId,
+                required String playerId,
+                required String type,
+                required String recruitmentId,
+                Value<String?> cycleKey = const Value.absent(),
+                Value<String?> raidId = const Value.absent(),
+                Value<String?> difficultyId = const Value.absent(),
+                Value<String?> characterNameSnapshot = const Value.absent(),
+                required DateTime occurredAt,
+                required DateTime expiresAt,
+                Value<DateTime?> readAt = const Value.absent(),
+                required DateTime firstSyncedAt,
+                required DateTime lastSyncedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => PartyNotificationReceiptsCompanion.insert(
+                eventId: eventId,
+                playerId: playerId,
+                type: type,
+                recruitmentId: recruitmentId,
+                cycleKey: cycleKey,
+                raidId: raidId,
+                difficultyId: difficultyId,
+                characterNameSnapshot: characterNameSnapshot,
+                occurredAt: occurredAt,
+                expiresAt: expiresAt,
+                readAt: readAt,
+                firstSyncedAt: firstSyncedAt,
+                lastSyncedAt: lastSyncedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PartyNotificationReceiptsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AccountDatabase,
+      $PartyNotificationReceiptsTable,
+      PartyNotificationReceipt,
+      $$PartyNotificationReceiptsTableFilterComposer,
+      $$PartyNotificationReceiptsTableOrderingComposer,
+      $$PartyNotificationReceiptsTableAnnotationComposer,
+      $$PartyNotificationReceiptsTableCreateCompanionBuilder,
+      $$PartyNotificationReceiptsTableUpdateCompanionBuilder,
+      (
+        PartyNotificationReceipt,
+        BaseReferences<
+          _$AccountDatabase,
+          $PartyNotificationReceiptsTable,
+          PartyNotificationReceipt
+        >,
+      ),
+      PartyNotificationReceipt,
+      PrefetchHooks Function()
+    >;
 
 class $AccountDatabaseManager {
   final _$AccountDatabase _db;
@@ -4712,4 +5899,9 @@ class $AccountDatabaseManager {
       );
   $$RaidHistoryEntriesTableTableManager get raidHistoryEntries =>
       $$RaidHistoryEntriesTableTableManager(_db, _db.raidHistoryEntries);
+  $$PartyNotificationReceiptsTableTableManager get partyNotificationReceipts =>
+      $$PartyNotificationReceiptsTableTableManager(
+        _db,
+        _db.partyNotificationReceipts,
+      );
 }
