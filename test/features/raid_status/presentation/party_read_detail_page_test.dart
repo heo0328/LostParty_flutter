@@ -22,8 +22,10 @@ import 'package:lost_party/features/recruitment_list/domain/entities/party_recru
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_aggregate.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_application.dart';
 import 'package:lost_party/features/recruitment_list/domain/policies/approval_policy.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_membership_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_application_command_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_join_command_repository.dart';
+import 'package:lost_party/features/recruitment_list/domain/repositories/party_membership_command_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_read_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
 
@@ -39,6 +41,7 @@ void main() {
     Stream<PartyReadSnapshot<PartyApplicationSummary>>? recruitmentApplications,
     PartyApplicationCommandRepository? applicationCommandRepository,
     PartyJoinCommandRepository? joinCommandRepository,
+    PartyMembershipCommandRepository? membershipCommandRepository,
     RecruitmentLeaderCandidateService? candidateService,
     String? playerId,
   }) async {
@@ -54,6 +57,7 @@ void main() {
           ),
           applicationCommandRepository: applicationCommandRepository,
           joinCommandRepository: joinCommandRepository,
+          membershipCommandRepository: membershipCommandRepository,
           candidateService: candidateService,
           playerId: playerId,
         ),
@@ -327,10 +331,67 @@ void main() {
     expect(find.text('조회 권한을 확인하지 못했습니다.'), findsOneWidget);
     expect(find.text('4막 노말 모집'), findsNothing);
   });
+
+  testWidgets('파티장이 단독 모집을 삭제하면 leave 명령을 보낸다', (tester) async {
+    final membership = _RecordingMembershipRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(memberCount: 1),
+          isFromCache: false,
+        ),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(items: [], isFromCache: false),
+      ),
+      membershipCommandRepository: membership,
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('deleteOwnRecruitmentButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('confirmDeleteOwnRecruitmentButton')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(membership.leaveCommands, hasLength(1));
+    expect(membership.leaveCommands.single.targetPlayerId, 'player-1');
+    expect(membership.leaveCommands.single.expectedRecruitmentRevision, 1);
+    expect(find.text('모집을 삭제했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('멤버가 더 있으면 모집 삭제를 막는다', (tester) async {
+    final membership = _RecordingMembershipRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(memberCount: 2),
+          isFromCache: false,
+        ),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(items: [], isFromCache: false),
+      ),
+      membershipCommandRepository: membership,
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('deleteOwnRecruitmentButton')));
+    await tester.pumpAndSettle();
+
+    expect(membership.leaveCommands, isEmpty);
+    expect(find.textContaining('다른 파티원이 있는 방'), findsOneWidget);
+  });
 }
 
 PublicRecruitmentSummary _summary({
   ApprovalMode approvalMode = ApprovalMode.leaderOnly,
+  int memberCount = 2,
 }) => PublicRecruitmentSummary(
   id: 'recruitment-1',
   title: '4막 노말 모집',
@@ -350,7 +411,7 @@ PublicRecruitmentSummary _summary({
     experienceLevel: null,
     maxPlayHours: null,
   ),
-  memberCount: 2,
+  memberCount: memberCount,
   maxMemberCount: 8,
   isRecruiting: true,
   revision: 1,
@@ -561,4 +622,28 @@ class _AccountRepository implements AccountRepository {
     required int characterId,
     required CharacterBuildRole role,
   }) => throw UnimplementedError();
+}
+
+class _RecordingMembershipRepository implements PartyMembershipCommandRepository {
+  final leaveCommands = <PartyRemoveMemberCommand>[];
+
+  @override
+  Future<PartyMembershipResult> leave(PartyRemoveMemberCommand command) async {
+    leaveCommands.add(command);
+    return const PartyMembershipResult.success();
+  }
+
+  @override
+  Future<PartyMembershipResult> changeCharacter(
+    PartyChangeCharacterCommand command,
+  ) => throw UnimplementedError();
+
+  @override
+  Future<PartyMembershipResult> kick(PartyRemoveMemberCommand command) =>
+      throw UnimplementedError();
+
+  @override
+  Future<PartyMembershipResult> setApprovalPermission(
+    PartySetApprovalPermissionCommand command,
+  ) => throw UnimplementedError();
 }

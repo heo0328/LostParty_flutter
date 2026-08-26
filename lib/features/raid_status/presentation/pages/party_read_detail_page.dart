@@ -13,7 +13,9 @@ import '../../../recruitment_list/domain/entities/recruitment_application.dart';
 import '../../../recruitment_list/domain/policies/approval_policy.dart';
 import '../../../recruitment_list/domain/repositories/party_application_command_repository.dart';
 import '../../../recruitment_list/domain/repositories/party_join_command_repository.dart';
+import '../../../recruitment_list/domain/repositories/party_membership_command_repository.dart';
 import '../../../recruitment_list/domain/repositories/party_read_repository.dart';
+import '../../../recruitment_list/domain/entities/party_membership_command.dart';
 import '../../../recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
 import '../viewmodels/party_read_detail_view_model.dart';
 
@@ -23,6 +25,7 @@ class PartyReadDetailPage extends StatefulWidget {
     required this.partyReadRepository,
     this.applicationCommandRepository,
     this.joinCommandRepository,
+    this.membershipCommandRepository,
     this.candidateService,
     this.playerId,
     super.key,
@@ -32,6 +35,7 @@ class PartyReadDetailPage extends StatefulWidget {
   final PartyReadRepository partyReadRepository;
   final PartyApplicationCommandRepository? applicationCommandRepository;
   final PartyJoinCommandRepository? joinCommandRepository;
+  final PartyMembershipCommandRepository? membershipCommandRepository;
   final RecruitmentLeaderCandidateService? candidateService;
   final String? playerId;
 
@@ -437,10 +441,86 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                     '이 화면은 조회 전용입니다. 신청과 수정은 아직 연결되지 않았습니다.',
                   ),
                 ),
+              if (_canDeleteRecruitment(summary))
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
+                  child: OutlinedButton.icon(
+                    key: const ValueKey('deleteOwnRecruitmentButton'),
+                    onPressed: _submitting
+                        ? null
+                        : () => _confirmDeleteRecruitment(summary),
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('모집 삭제'),
+                  ),
+                ),
             ],
           );
         },
       ),
+    );
+  }
+
+  bool _canDeleteRecruitment(PublicRecruitmentSummary summary) =>
+      _isLeader(summary) &&
+      widget.membershipCommandRepository != null &&
+      widget.playerId != null &&
+      widget.playerId!.isNotEmpty;
+
+  Future<void> _confirmDeleteRecruitment(
+    PublicRecruitmentSummary summary,
+  ) async {
+    if (!_canDeleteRecruitment(summary) || _submitting) return;
+    if (summary.memberCount > 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            '다른 파티원이 있는 방의 해산은 아직 지원하지 않습니다. 멤버가 나만 있을 때 삭제할 수 있습니다.',
+          ),
+        ),
+      );
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('모집을 삭제할까요?'),
+        content: const Text(
+          '방이 모집 목록에서 사라지고 해산 처리됩니다. 이 동작은 되돌릴 수 없습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirmDeleteOwnRecruitmentButton'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _submitting = true);
+    final result = await widget.membershipCommandRepository!.leave(
+      PartyRemoveMemberCommand(
+        recruitmentId: widget.recruitmentId,
+        targetPlayerId: widget.playerId!,
+        expectedRecruitmentRevision: summary.revision,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (result.isSuccess) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('모집을 삭제했습니다.')));
+      Navigator.of(context).maybePop();
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_membershipFailureMessage(result.failure!))),
     );
   }
 
@@ -876,6 +956,21 @@ String _joinFailureMessage(PartyJoinFailure failure) => switch (failure) {
   PartyJoinFailure.invalidRequest => '가입 정보를 확인하지 못했습니다.',
   PartyJoinFailure.unknown => '가입을 처리하지 못했습니다.',
 };
+
+String _membershipFailureMessage(PartyMembershipFailure failure) =>
+    switch (failure) {
+      PartyMembershipFailure.unauthenticated ||
+      PartyMembershipFailure.playerBindingMissing => '계정 연결을 준비하지 못했습니다.',
+      PartyMembershipFailure.notFound => '모집 또는 멤버 정보를 찾지 못했습니다.',
+      PartyMembershipFailure.unauthorized => '모집을 삭제할 권한이 없습니다.',
+      PartyMembershipFailure.recruitmentClosed => '이미 종료된 모집입니다.',
+      PartyMembershipFailure.revisionConflict =>
+        '모집 상태가 바뀌었습니다. 다시 확인해 주세요.',
+      PartyMembershipFailure.permissionDenied => '모집 삭제 권한을 확인하지 못했습니다.',
+      PartyMembershipFailure.temporarilyUnavailable => '네트워크 연결이 불안정합니다.',
+      PartyMembershipFailure.invalidRequest => '삭제 요청을 확인하지 못했습니다.',
+      _ => '모집을 삭제하지 못했습니다.',
+    };
 
 String _approvalModeLabel(ApprovalMode mode) => switch (mode) {
   ApprovalMode.leaderOnly => '파티장 승인',
