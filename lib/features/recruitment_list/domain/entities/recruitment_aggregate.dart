@@ -82,6 +82,10 @@ class PublicRecruitmentSummary {
     required this.updatedAt,
     this.currentCycleKey = '',
     this.targetCycleKey = '',
+    this.status = 'active',
+    this.currentCycleStatus = 'active',
+    this.continueTogether = false,
+    this.cycleEndsAt,
     this.leaderCharacterName,
     this.leaderClassName,
     this.membersPerParty = 4,
@@ -130,5 +134,17 @@ class PublicRecruitmentSummary {
   final String currentCycleKey;
   /// 신청·가입 Rules가 요구하는 주차. 없으면 [currentCycleKey]와 동일하다.
   final String targetCycleKey;
+  /// Firestore `status` (active / completed / incompleteEnded / disbanded).
+  final String status;
+  /// Firestore `currentCycleStatus`.
+  final String currentCycleStatus;
+  final bool continueTogether;
+  final DateTime? cycleEndsAt;
   final ApprovalMode approvalMode;
+
+  bool get isActiveRecruitment => status == 'active';
+  bool get isCycleActive => currentCycleStatus == 'active';
+  bool get isCycleCompleted => currentCycleStatus == 'completed';
+  bool get isOneShotCompleted =>
+      status == 'completed' && currentCycleStatus == 'completed';
 }

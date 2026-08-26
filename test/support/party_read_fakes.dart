@@ -40,6 +40,7 @@ class FakePartyReadRepository implements PartyReadRepository {
     )?
     membersForId,
     Stream<PartyReadSnapshot<PartyApplicationSummary>>? recruitmentApplications,
+    Stream<PartyReadDetailSnapshot<PartyCycleSnapshot?>>? recruitmentCycle,
     Stream<PublicRecruitmentPage>? publicFirstPage,
     Future<PublicRecruitmentPage> Function({
       required String cycleKey,
@@ -56,6 +57,7 @@ class FakePartyReadRepository implements PartyReadRepository {
        _membersForId = membersForId,
        _recruitmentApplications =
            recruitmentApplications ?? Stream.value(emptyApplications),
+       _recruitmentCycle = recruitmentCycle,
        _publicFirstPage =
            publicFirstPage ?? Stream.value(emptyPublicRecruitmentPage),
        _loadNextPage = loadNextPage;
@@ -76,6 +78,7 @@ class FakePartyReadRepository implements PartyReadRepository {
   _membersForId;
   final Stream<PartyReadSnapshot<PartyApplicationSummary>>
   _recruitmentApplications;
+  final Stream<PartyReadDetailSnapshot<PartyCycleSnapshot?>>? _recruitmentCycle;
   final Stream<PublicRecruitmentPage> _publicFirstPage;
   final Future<PublicRecruitmentPage> Function({
     required String cycleKey,
@@ -91,6 +94,8 @@ class FakePartyReadRepository implements PartyReadRepository {
   final requestedRecruitmentIds = <String>[];
   String? requestedMembersRecruitmentId;
   String? requestedRecruitmentApplicationsId;
+  String? requestedCycleRecruitmentId;
+  String? requestedCycleKey;
   String? requestedPublicFirstPageCycleKey;
   String? requestedNextPageCycleKey;
   PublicRecruitmentPageCursor? requestedNextPageCursor;
@@ -177,6 +182,19 @@ class FakePartyReadRepository implements PartyReadRepository {
     required String playerId,
   }) {
     return _myApplication ??
+        Stream.value(
+          const PartyReadDetailSnapshot(item: null, isFromCache: false),
+        );
+  }
+
+  @override
+  Stream<PartyReadDetailSnapshot<PartyCycleSnapshot?>> watchRecruitmentCycle({
+    required String recruitmentId,
+    required String cycleKey,
+  }) {
+    requestedCycleRecruitmentId = recruitmentId;
+    requestedCycleKey = cycleKey;
+    return _recruitmentCycle ??
         Stream.value(
           const PartyReadDetailSnapshot(item: null, isFromCache: false),
         );

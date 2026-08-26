@@ -94,17 +94,20 @@ class FirestorePartyReadRepository implements PartyReadRepository {
   Stream<PartyReadSnapshot<ActiveRaidSummary>> watchActiveRaids({
     required String playerId,
   }) {
+    // 1회성 완료 후 해산 전(`completed`)도 멤버가 상세·해산에 다시 들어갈 수 있게 남긴다.
+    // 공개 모집 목록은 active만 유지한다.
+    const openStatuses = ['active', 'completed'];
     final owned = _firestore
         .collection('recruitments')
         .where('schemaVersion', isEqualTo: 1)
         .where('leaderPlayerId', isEqualTo: playerId)
-        .where('status', isEqualTo: 'active')
+        .where('status', whereIn: openStatuses)
         .snapshots(includeMetadataChanges: true);
     final joined = _firestore
         .collection('recruitments')
         .where('schemaVersion', isEqualTo: 1)
         .where('memberPlayerIds', arrayContains: playerId)
-        .where('status', isEqualTo: 'active')
+        .where('status', whereIn: openStatuses)
         .snapshots(includeMetadataChanges: true);
 
     return _combineActiveQueries(
@@ -228,6 +231,44 @@ class FirestorePartyReadRepository implements PartyReadRepository {
             isFromCache: snapshot.metadata.isFromCache,
           ),
         )
+        .transform(_errorTransformer());
+  }
+
+  @override
+  Stream<PartyReadDetailSnapshot<PartyCycleSnapshot?>> watchRecruitmentCycle({
+    required String recruitmentId,
+    required String cycleKey,
+  }) {
+    return _firestore
+        .collection('recruitments')
+        .doc(recruitmentId)
+        .collection('cycles')
+        .doc(cycleKey)
+        .snapshots(includeMetadataChanges: true)
+        .map((snapshot) {
+          if (!snapshot.exists) {
+            return PartyReadDetailSnapshot<PartyCycleSnapshot?>(
+              item: null,
+              isFromCache: snapshot.metadata.isFromCache,
+            );
+          }
+          final data = snapshot.data() ?? const <String, dynamic>{};
+          final status = data['status'];
+          final revision = data['completionRevision'];
+          if (status is! String || status.isEmpty || revision is! int) {
+            throw const PartyReadContractException(
+              'cycle document is missing status or completionRevision.',
+            );
+          }
+          return PartyReadDetailSnapshot(
+            item: PartyCycleSnapshot(
+              cycleKey: cycleKey,
+              status: status,
+              completionRevision: revision,
+            ),
+            isFromCache: snapshot.metadata.isFromCache,
+          );
+        })
         .transform(_errorTransformer());
   }
 

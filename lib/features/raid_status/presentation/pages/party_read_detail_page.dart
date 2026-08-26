@@ -7,18 +7,22 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../../shared/formatters/korea_time_formatter.dart';
 import '../../../recruitment_list/domain/entities/party_application_command.dart';
+import '../../../recruitment_list/domain/entities/party_cycle_command.dart';
 import '../../../recruitment_list/domain/entities/party_join_command.dart';
 import '../../../recruitment_list/domain/entities/party_read_models.dart';
 import '../../../recruitment_list/domain/entities/party_recruitment.dart';
 import '../../../recruitment_list/domain/entities/recruitment_aggregate.dart';
 import '../../../recruitment_list/domain/entities/recruitment_application.dart';
 import '../../../recruitment_list/domain/policies/approval_policy.dart';
+import '../../../recruitment_list/domain/policies/party_cycle_policy.dart';
 import '../../../recruitment_list/domain/repositories/party_application_command_repository.dart';
+import '../../../recruitment_list/domain/repositories/party_cycle_command_repository.dart';
 import '../../../recruitment_list/domain/repositories/party_join_command_repository.dart';
 import '../../../recruitment_list/domain/repositories/party_membership_command_repository.dart';
 import '../../../recruitment_list/domain/repositories/party_read_repository.dart';
 import '../../../recruitment_list/domain/entities/party_membership_command.dart';
 import '../../../recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
+import '../../domain/services/party_event_sync_service.dart';
 import '../viewmodels/party_read_detail_view_model.dart';
 
 class PartyReadDetailPage extends StatefulWidget {
@@ -28,6 +32,8 @@ class PartyReadDetailPage extends StatefulWidget {
     this.applicationCommandRepository,
     this.joinCommandRepository,
     this.membershipCommandRepository,
+    this.cycleCommandRepository,
+    this.eventSyncService,
     this.candidateService,
     this.playerId,
     super.key,
@@ -38,6 +44,8 @@ class PartyReadDetailPage extends StatefulWidget {
   final PartyApplicationCommandRepository? applicationCommandRepository;
   final PartyJoinCommandRepository? joinCommandRepository;
   final PartyMembershipCommandRepository? membershipCommandRepository;
+  final PartyCycleCommandRepository? cycleCommandRepository;
+  final PartyEventSyncService? eventSyncService;
   final RecruitmentLeaderCandidateService? candidateService;
   final String? playerId;
 
@@ -53,9 +61,13 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
   _membersSubscription;
   StreamSubscription<PartyReadSnapshot<PartyApplicationSummary>>?
   _applicationsSubscription;
+  StreamSubscription<PartyReadDetailSnapshot<PartyCycleSnapshot?>>?
+  _cycleSubscription;
   PartyApplicationSummary? _myApplication;
   List<PartyMemberDisplay> _members = const [];
   List<PartyApplicationSummary> _applications = const [];
+  PartyCycleSnapshot? _cycle;
+  String? _subscribedCycleKey;
   bool _membersLoading = true;
   bool _applicationsLoading = false;
   PartyReadFailureType? _membersFailure;
@@ -107,6 +119,10 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     _membersSubscription = null;
     _applicationsSubscription?.cancel();
     _applicationsSubscription = null;
+    _cycleSubscription?.cancel();
+    _cycleSubscription = null;
+    _subscribedCycleKey = null;
+    _cycle = null;
 
     if (restartRecruitment) {
       _viewModel.restart(
@@ -150,11 +166,34 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     if (mounted) setState(() {});
   }
 
+  void _ensureCycleSubscription(String cycleKey) {
+    if (cycleKey.isEmpty || _subscribedCycleKey == cycleKey) return;
+    _cycleSubscription?.cancel();
+    _subscribedCycleKey = cycleKey;
+    _cycle = null;
+    _cycleSubscription = widget.partyReadRepository
+        .watchRecruitmentCycle(
+          recruitmentId: widget.recruitmentId,
+          cycleKey: cycleKey,
+        )
+        .listen(
+          (snapshot) {
+            if (!mounted) return;
+            setState(() => _cycle = snapshot.item);
+          },
+          onError: (_) {
+            if (!mounted) return;
+            setState(() => _cycle = null);
+          },
+        );
+  }
+
   @override
   void dispose() {
     _myApplicationSubscription?.cancel();
     _membersSubscription?.cancel();
     _applicationsSubscription?.cancel();
+    _cycleSubscription?.cancel();
     _viewModel.dispose();
     super.dispose();
   }
@@ -403,6 +442,18 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
           }
 
           final summary = state.item!;
+          if (summary.status == 'disbanded') {
+            return const _MessageView(
+              icon: Icons.meeting_room_outlined,
+              title: '해산된 파티입니다.',
+              description: '이 방은 더 이상 진행 중이 아닙니다.',
+            );
+          }
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _ensureCycleSubscription(summary.currentCycleKey);
+            }
+          });
           return SingleChildScrollView(
             padding: const EdgeInsets.only(bottom: 24),
             child: Column(
@@ -492,7 +543,9 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                     '이 화면은 조회 전용입니다. 신청과 수정은 아직 연결되지 않았습니다.',
                   ),
                 ),
-              if (_isConfirmedMember && _canUseMembershipCommands)
+              if (_isConfirmedMember &&
+                  _canUseMembershipCommands &&
+                  _membershipActionsAllowed(summary))
                 _MembershipSelfActions(
                   canLeave: summary.memberCount > 1,
                   submitting: _submitting,
@@ -501,6 +554,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                 ),
               if (_isLeader(summary) &&
                   _canUseMembershipCommands &&
+                  _membershipActionsAllowed(summary) &&
                   summary.memberCount > 1)
                 _KickMembersSection(
                   members: _members
@@ -508,6 +562,19 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                       .toList(growable: false),
                   submitting: _submitting,
                   onKick: (member) => _confirmKick(summary, member),
+                ),
+              if (_canUseCycleCommands && _isConfirmedMember)
+                _CycleLifecycleSection(
+                  summary: summary,
+                  cycle: _cycle,
+                  isLeader: _isLeader(summary),
+                  submitting: _submitting,
+                  onComplete: () => _confirmComplete(summary),
+                  onCancelCompletion: () => _confirmCancelCompletion(summary),
+                  onAdvance: () => _confirmAdvance(summary),
+                  onToggleRecurrence: (value) =>
+                      _confirmSetRecurrence(summary, value),
+                  onDisband: () => _confirmDisband(summary),
                 ),
               if (_canDeleteRecruitment(summary))
                 Padding(
@@ -534,6 +601,11 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       widget.playerId != null &&
       widget.playerId!.isNotEmpty;
 
+  bool get _canUseCycleCommands =>
+      widget.cycleCommandRepository != null &&
+      widget.playerId != null &&
+      widget.playerId!.isNotEmpty;
+
   bool get _isConfirmedMember =>
       widget.playerId != null &&
       _members.any((member) => member.playerId == widget.playerId);
@@ -541,7 +613,14 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
   bool _canDeleteRecruitment(PublicRecruitmentSummary summary) =>
       _isLeader(summary) &&
       _canUseMembershipCommands &&
+      summary.isActiveRecruitment &&
+      summary.isCycleActive &&
       summary.memberCount <= 1;
+
+  bool _membershipActionsAllowed(PublicRecruitmentSummary summary) =>
+      summary.isActiveRecruitment &&
+      (summary.isCycleActive ||
+          (summary.continueTogether && summary.isCycleCompleted));
 
   Future<void> _openChangeCharacterSheet(
     PublicRecruitmentSummary summary,
@@ -734,16 +813,6 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     PublicRecruitmentSummary summary,
   ) async {
     if (!_canDeleteRecruitment(summary) || _submitting) return;
-    if (summary.memberCount > 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            '다른 파티원이 있는 방의 해산은 아직 지원하지 않습니다. 멤버가 나만 있을 때 삭제할 수 있습니다.',
-          ),
-        ),
-      );
-      return;
-    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -788,8 +857,333 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     );
   }
 
+  Future<void> _confirmComplete(PublicRecruitmentSummary summary) async {
+    final repository = widget.cycleCommandRepository;
+    if (repository == null ||
+        !_isConfirmedMember ||
+        !summary.isActiveRecruitment ||
+        !summary.isCycleActive ||
+        _submitting) {
+      return;
+    }
+    final endsAt = summary.cycleEndsAt;
+    if (endsAt != null && !DateTime.now().toUtc().isBefore(endsAt)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            '이 회차 기간이 끝나 완료할 수 없습니다. 다음 회차 전환을 사용해 주세요.',
+          ),
+        ),
+      );
+      return;
+    }
+    final repeating = summary.continueTogether;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('이번 회차를 완료할까요?'),
+        content: Text(
+          repeating
+              ? '완료하면 이번 회차 기록이 남고, 방과 다음 회차 준비 구성은 유지됩니다. 파티장은 허용 기한까지 완료를 취소할 수 있습니다.'
+              : '완료하면 활성 모집에서 제외되고 이후 수정할 수 없습니다. 이어서 해산 절차로 이동합니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirmCompleteCycleButton'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('완료'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _submitting = true);
+    final result = await repository.complete(
+      PartyCompleteCycleCommand(
+        recruitmentId: widget.recruitmentId,
+        cycleKey: summary.currentCycleKey,
+        expectedRecruitmentRevision: summary.revision,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (result.isSuccess) {
+      await _syncPartyEventsAfterCycleChange();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            repeating
+                ? '회차를 완료했습니다. 완료 기록 탭에서 확인할 수 있습니다.'
+                : '회차를 완료했습니다. 해산하면 방이 닫히고, 완료 기록 탭에서 확인할 수 있습니다.',
+          ),
+        ),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_cycleFailureMessage(result.failure!))),
+    );
+  }
+
+  Future<void> _confirmCancelCompletion(
+    PublicRecruitmentSummary summary,
+  ) async {
+    final repository = widget.cycleCommandRepository;
+    final cycle = _cycle;
+    if (repository == null ||
+        !_isLeader(summary) ||
+        !summary.continueTogether ||
+        !summary.isCycleCompleted ||
+        cycle == null ||
+        !cycle.isCompleted ||
+        _submitting) {
+      return;
+    }
+    final window = const PartyCyclePolicy().fromKey(summary.currentCycleKey);
+    final deadline = window?.completionCancelDeadline;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('완료를 취소할까요?'),
+        content: Text(
+          deadline == null
+              ? '완료 취소를 허용 기한 안에만 할 수 있습니다.'
+              : '허용 기한(${KoreaTimeFormatter.dayAndTime(deadline)}) 전에만 취소할 수 있습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('닫기'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirmCancelCompletionButton'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('완료 취소'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _submitting = true);
+    final result = await repository.cancelCompletion(
+      PartyCancelCompletionCommand(
+        recruitmentId: widget.recruitmentId,
+        cycleKey: summary.currentCycleKey,
+        expectedRecruitmentRevision: summary.revision,
+        expectedCompletionRevision: cycle.completionRevision,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (result.isSuccess) {
+      await _syncPartyEventsAfterCycleChange();
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('완료를 취소했습니다.')));
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_cycleFailureMessage(result.failure!))),
+    );
+  }
+
+  Future<void> _confirmAdvance(PublicRecruitmentSummary summary) async {
+    final repository = widget.cycleCommandRepository;
+    final window = const PartyCyclePolicy().fromKey(summary.currentCycleKey);
+    if (repository == null ||
+        !_isConfirmedMember ||
+        !summary.isActiveRecruitment ||
+        window == null ||
+        _submitting) {
+      return;
+    }
+    final nextKey = const PartyCyclePolicy().keyFor(window.endsAt);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('다음 회차로 전환할까요?'),
+        content: Text(
+          summary.continueTogether
+              ? '만료된 회차를 마치고 현재 구성으로 다음 주차를 시작합니다.'
+              : '만료된 회차를 미완료로 종료하고 방을 닫습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirmAdvanceCycleButton'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('전환'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _submitting = true);
+    final result = await repository.advance(
+      PartyAdvanceCycleCommand(
+        recruitmentId: widget.recruitmentId,
+        expectedCycleKey: summary.currentCycleKey,
+        nextCycleKey: nextKey,
+        expectedRecruitmentRevision: summary.revision,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (result.isSuccess) {
+      await _syncPartyEventsAfterCycleChange();
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('회차를 전환했습니다.')));
+      if (!summary.continueTogether) {
+        Navigator.of(context).maybePop();
+      }
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_cycleFailureMessage(result.failure!))),
+    );
+  }
+
+  Future<void> _confirmSetRecurrence(
+    PublicRecruitmentSummary summary,
+    bool continueTogether,
+  ) async {
+    final repository = widget.cycleCommandRepository;
+    if (repository == null ||
+        !_isLeader(summary) ||
+        !summary.isActiveRecruitment ||
+        _submitting) {
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          continueTogether ? '다음 주도 함께할까요?' : '다음 주 함께하기를 끌까요?',
+        ),
+        content: Text(
+          continueTogether
+              ? '완료 후에도 방과 참가자가 유지되고 다음 회차 준비를 이어갑니다.'
+              : '1회성 파티처럼 동작합니다. 완료 후에는 해산 절차로 이동합니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirmSetRecurrenceButton'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _submitting = true);
+    final result = await repository.setRecurrence(
+      PartySetRecurrenceCommand(
+        recruitmentId: widget.recruitmentId,
+        continueTogether: continueTogether,
+        expectedRecruitmentRevision: summary.revision,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (result.isSuccess) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            continueTogether
+                ? '다음 주도 함께하기로 설정했습니다.'
+                : '다음 주 함께하기를 껐습니다.',
+          ),
+        ),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_cycleFailureMessage(result.failure!))),
+    );
+  }
+
+  Future<void> _confirmDisband(PublicRecruitmentSummary summary) async {
+    final repository = widget.cycleCommandRepository;
+    if (repository == null ||
+        !_isLeader(summary) ||
+        _submitting ||
+        (summary.status != 'active' && summary.status != 'completed')) {
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('파티를 해산할까요?'),
+        content: const Text(
+          '모든 참가가 해제되고 방은 목록에서 사라집니다. 이 동작은 되돌릴 수 없습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirmDisbandPartyButton'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('해산'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _submitting = true);
+    final result = await repository.disband(
+      PartyDisbandCommand(
+        recruitmentId: widget.recruitmentId,
+        expectedRecruitmentRevision: summary.revision,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (result.isSuccess) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('파티를 해산했습니다.')));
+      Navigator.of(context).maybePop();
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_cycleFailureMessage(result.failure!))),
+    );
+  }
+
   bool _isLeader(PublicRecruitmentSummary summary) =>
       widget.playerId != null && widget.playerId == summary.leaderUserId;
+
+  Future<void> _syncPartyEventsAfterCycleChange() async {
+    final sync = widget.eventSyncService;
+    if (sync == null) return;
+    try {
+      await sync.sync();
+    } catch (_) {
+      // 완료 자체는 성공했을 수 있다. 기록 탭 진입 시 다시 동기화한다.
+    }
+  }
 }
 
 class _PartyCompositionSection extends StatelessWidget {
@@ -1383,6 +1777,135 @@ class _ApplySelection {
   final double? combatPower;
 }
 
+class _CycleLifecycleSection extends StatelessWidget {
+  const _CycleLifecycleSection({
+    required this.summary,
+    required this.cycle,
+    required this.isLeader,
+    required this.submitting,
+    required this.onComplete,
+    required this.onCancelCompletion,
+    required this.onAdvance,
+    required this.onToggleRecurrence,
+    required this.onDisband,
+  });
+
+  final PublicRecruitmentSummary summary;
+  final PartyCycleSnapshot? cycle;
+  final bool isLeader;
+  final bool submitting;
+  final VoidCallback onComplete;
+  final VoidCallback onCancelCompletion;
+  final VoidCallback onAdvance;
+  final ValueChanged<bool> onToggleRecurrence;
+  final VoidCallback onDisband;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now().toUtc();
+    final endsAt = summary.cycleEndsAt;
+    final window = const PartyCyclePolicy().fromKey(summary.currentCycleKey);
+    final cancelDeadline = window?.completionCancelDeadline;
+    final canAdvance =
+        summary.isActiveRecruitment &&
+        endsAt != null &&
+        !now.isBefore(endsAt);
+    final canCancel =
+        isLeader &&
+        summary.continueTogether &&
+        summary.isActiveRecruitment &&
+        summary.isCycleCompleted &&
+        cycle != null &&
+        cycle!.isCompleted &&
+        cancelDeadline != null &&
+        now.isBefore(cancelDeadline);
+    final canComplete =
+        summary.isActiveRecruitment && summary.isCycleActive;
+    final showDisband =
+        isLeader &&
+        (summary.isOneShotCompleted ||
+            summary.memberCount > 1 ||
+            (summary.isActiveRecruitment && summary.isCycleCompleted));
+    final canToggleRecurrence =
+        isLeader &&
+        summary.isActiveRecruitment &&
+        (summary.isCycleActive || summary.isCycleCompleted);
+
+    if (!canComplete &&
+        !canCancel &&
+        !canAdvance &&
+        !showDisband &&
+        !canToggleRecurrence) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('회차·방 관리', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: AppSpacing.xs),
+          if (canToggleRecurrence) ...[
+            SwitchListTile(
+              key: const ValueKey('continueTogetherSwitch'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('다음 주도 함께하기'),
+              subtitle: Text(
+                summary.continueTogether
+                    ? '완료 후에도 방과 구성을 유지합니다.'
+                    : '1회성으로 완료·해산합니다.',
+              ),
+              value: summary.continueTogether,
+              onChanged: submitting
+                  ? null
+                  : (value) => onToggleRecurrence(value),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+          ],
+          if (canComplete)
+            FilledButton.icon(
+              key: const ValueKey('completeCycleButton'),
+              onPressed: submitting ? null : onComplete,
+              icon: const Icon(Icons.check_circle_outline),
+              label: const Text('회차 완료'),
+            ),
+          if (canCancel) ...[
+            if (canComplete) const SizedBox(height: AppSpacing.xs),
+            OutlinedButton.icon(
+              key: const ValueKey('cancelCompletionButton'),
+              onPressed: submitting ? null : onCancelCompletion,
+              icon: const Icon(Icons.undo),
+              label: const Text('완료 취소'),
+            ),
+          ],
+          if (canAdvance) ...[
+            if (canComplete || canCancel) const SizedBox(height: AppSpacing.xs),
+            FilledButton.tonalIcon(
+              key: const ValueKey('advanceCycleButton'),
+              onPressed: submitting ? null : onAdvance,
+              icon: const Icon(Icons.skip_next),
+              label: const Text('다음 회차 전환'),
+            ),
+          ],
+          if (showDisband) ...[
+            if (canComplete || canCancel || canAdvance)
+              const SizedBox(height: AppSpacing.xs),
+            OutlinedButton.icon(
+              key: const ValueKey('disbandPartyButton'),
+              onPressed: submitting ? null : onDisband,
+              icon: const Icon(Icons.meeting_room_outlined),
+              label: Text(
+                summary.isOneShotCompleted ? '해산' : '파티 해산',
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _MembershipSelfActions extends StatelessWidget {
   const _MembershipSelfActions({
     required this.canLeave,
@@ -1731,6 +2254,25 @@ String _membershipFailureMessage(PartyMembershipFailure failure) =>
       PartyMembershipFailure.invalidRequest => '요청을 확인하지 못했습니다.',
       PartyMembershipFailure.unknown => '멤버 명령을 처리하지 못했습니다.',
     };
+
+String _cycleFailureMessage(PartyCycleFailure failure) => switch (failure) {
+  PartyCycleFailure.unauthenticated ||
+  PartyCycleFailure.playerBindingMissing => '계정 연결을 준비하지 못했습니다.',
+  PartyCycleFailure.notFound => '모집 정보를 찾지 못했습니다.',
+  PartyCycleFailure.unauthorized => '이 동작을 할 권한이 없습니다.',
+  PartyCycleFailure.recruitmentClosed => '이미 종료된 모집입니다.',
+  PartyCycleFailure.cycleMismatch => '회차 정보가 바뀌었습니다. 다시 확인해 주세요.',
+  PartyCycleFailure.alreadyCompleted => '이미 완료된 회차입니다.',
+  PartyCycleFailure.notCompleted => '완료된 회차만 취소할 수 있습니다.',
+  PartyCycleFailure.completionCancelExpired => '완료 취소 허용 기한이 지났습니다.',
+  PartyCycleFailure.notReadyForAdvance => '아직 다음 회차로 전환할 수 없습니다.',
+  PartyCycleFailure.revisionConflict => '모집 상태가 바뀌었습니다. 다시 확인해 주세요.',
+  PartyCycleFailure.permissionDenied =>
+    '권한을 확인하지 못했습니다. 잠시 후 다시 시도하거나 Rules 배포 상태를 확인해 주세요.',
+  PartyCycleFailure.temporarilyUnavailable => '네트워크 연결이 불안정합니다.',
+  PartyCycleFailure.invalidRequest => '요청을 확인하지 못했습니다.',
+  PartyCycleFailure.unknown => '회차 명령을 처리하지 못했습니다.',
+};
 
 String _approvalModeLabel(ApprovalMode mode) => switch (mode) {
   ApprovalMode.leaderOnly => '파티장 승인',

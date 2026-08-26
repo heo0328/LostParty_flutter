@@ -43,6 +43,10 @@ class PartyReadDocumentMapper {
       currentCycleKey: _string(data, 'currentCycleKey'),
       targetCycleKey: _softString(data, 'targetCycleKey') ??
           _string(data, 'currentCycleKey'),
+      status: _softString(data, 'status') ?? 'active',
+      currentCycleStatus: _softString(data, 'currentCycleStatus') ?? 'active',
+      continueTogether: _optionalBoolean(data, 'continueTogether') ?? false,
+      cycleEndsAt: _nullableDate(data, 'cycleEndsAt'),
       approvalMode: _approvalMode(data),
     );
   }
@@ -67,6 +71,7 @@ class PartyReadDocumentMapper {
       revision: _integer(data, 'revision'),
       updatedAt: _date(data, 'updatedAt'),
       raidStartAt: _nullableDate(data, 'raidStartAt'),
+      status: _softString(data, 'status') ?? 'active',
       isOwnedByCurrentPlayer: leaderPlayerId == currentPlayerId,
     );
   }
@@ -212,6 +217,13 @@ class PartyReadDocumentMapper {
     final value = data[field];
     if (value is bool) return value;
     throw PartyReadContractException('$field must be a boolean.');
+  }
+
+  bool? _optionalBoolean(Map<String, Object?> data, String field) {
+    final value = data[field];
+    if (value == null) return null;
+    if (value is bool) return value;
+    return null;
   }
 
   DateTime _date(Map<String, Object?> data, String field) {

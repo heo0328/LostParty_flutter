@@ -81,7 +81,13 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
       if (r == null) return const PartyCycleResult.failure(PartyCycleFailure.notFound);
       if (r['revision'] != command.expectedRecruitmentRevision) return const PartyCycleResult.failure(PartyCycleFailure.revisionConflict);
       if (r['leaderPlayerId'] != playerId) return const PartyCycleResult.failure(PartyCycleFailure.unauthorized);
-      if (r['status'] != 'active' || r['currentCycleStatus'] != 'active') return const PartyCycleResult.failure(PartyCycleFailure.recruitmentClosed);
+      if (r['status'] != 'active') {
+        return const PartyCycleResult.failure(PartyCycleFailure.recruitmentClosed);
+      }
+      final cycleStatus = r['currentCycleStatus'];
+      if (cycleStatus != 'active' && cycleStatus != 'completed') {
+        return const PartyCycleResult.failure(PartyCycleFailure.recruitmentClosed);
+      }
       transaction.update(ref, PartyCycleWritePlan.recurrence(continueTogether: command.continueTogether, revision: command.expectedRecruitmentRevision, serverTimestamp: FieldValue.serverTimestamp()));
       return const PartyCycleResult.success();
     });
@@ -116,6 +122,62 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
         _writeEvents(transaction, command.recruitmentId, snapshot, r!, type: 'partyIncompleteEnded', eventRevision: (cycle.data()?['completionRevision'] as int) + 1, serverTimestamp: now);
       }
       transaction.update(recruitmentRef, PartyCycleWritePlan.advanceRecruitment(continueTogether: r?['continueTogether'] == true, nextCycleKey: command.nextCycleKey, nextStartedAt: nextWindow.startedAt, nextEndsAt: nextWindow.endsAt, revision: command.expectedRecruitmentRevision, hasAvailableSlot: (r?['memberCount'] as int) < (r?['maxMemberCount'] as int), serverTimestamp: now, timestamp: (date) => Timestamp.fromDate(date)));
+      return const PartyCycleResult.success();
+    });
+  }
+
+  @override
+  Future<PartyCycleResult> disband(PartyDisbandCommand command) async {
+    final invalid = const PartyCycleCommandValidator().validateDisband(command);
+    if (invalid != null) return PartyCycleResult.failure(invalid);
+    final members = await _loadMembers(command.recruitmentId);
+    if (members == null) {
+      return const PartyCycleResult.failure(
+        PartyCycleFailure.temporarilyUnavailable,
+      );
+    }
+    return _run((transaction, playerId) async {
+      final recruitmentRef = _recruitment(command.recruitmentId);
+      final recruitment = await transaction.get(recruitmentRef);
+      final r = recruitment.data();
+      if (r == null) {
+        return const PartyCycleResult.failure(PartyCycleFailure.notFound);
+      }
+      if (r['revision'] != command.expectedRecruitmentRevision) {
+        return const PartyCycleResult.failure(PartyCycleFailure.revisionConflict);
+      }
+      if (r['leaderPlayerId'] != playerId) {
+        return const PartyCycleResult.failure(PartyCycleFailure.unauthorized);
+      }
+      final status = r['status'];
+      if (status != 'active' && status != 'completed') {
+        return const PartyCycleResult.failure(PartyCycleFailure.recruitmentClosed);
+      }
+      final raidId = r['raidId'] as String;
+      final now = FieldValue.serverTimestamp();
+      for (final member in members.docs) {
+        final current = await transaction.get(member.reference);
+        if (!current.exists) continue;
+        final data = current.data()!;
+        final characterId = data['characterId'] as String?;
+        transaction.delete(member.reference);
+        if (characterId != null && characterId.isNotEmpty) {
+          transaction.delete(
+            _firestore
+                .collection('players')
+                .doc(member.id)
+                .collection('activeRaidAssignments')
+                .doc('${characterId}_$raidId'),
+          );
+        }
+      }
+      transaction.update(
+        recruitmentRef,
+        PartyCycleWritePlan.disbandRecruitment(
+          revision: command.expectedRecruitmentRevision,
+          serverTimestamp: now,
+        ),
+      );
       return const PartyCycleResult.success();
     });
   }

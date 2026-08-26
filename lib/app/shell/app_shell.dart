@@ -40,11 +40,7 @@ class AppShell extends StatelessWidget {
   }
 
   void _selectBranch(int index) {
-    // 같은 탭을 다시 누르면 해당 브랜치 루트로만 되돌린다.
-    // 다른 탭은 스택을 유지한 채 전환한다.
-    navigationShell.goBranch(
-      index,
-      initialLocation: index == navigationShell.currentIndex,
-    );
+    // 탭을 누를 때마다 해당 브랜치 루트로 돌아가 이전 상세 스택을 남기지 않는다.
+    navigationShell.goBranch(index, initialLocation: true);
   }
 }

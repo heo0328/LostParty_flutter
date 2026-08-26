@@ -50,4 +50,10 @@ abstract class PartyReadRepository {
     required String recruitmentId,
     required String playerId,
   });
+
+  /// 모집의 현재 회차 문서를 구독한다. 문서가 없으면 `item == null`.
+  Stream<PartyReadDetailSnapshot<PartyCycleSnapshot?>> watchRecruitmentCycle({
+    required String recruitmentId,
+    required String cycleKey,
+  });
 }

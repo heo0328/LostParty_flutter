@@ -14,23 +14,24 @@
 
 | 구분 | 상태 | 비고 |
 | --- | --- | --- |
-| 통합 기준 | **`main` = Task-070까지** | 멤버십 명령 + 상세 id 재구독 |
-| 완료 기능 | 고정 슬롯·반응형 구성판·캐릭터 변경·탈퇴·추방 | Task-068~070 |
-| Firestore Rules | 슬롯·멤버십 관련 **배포됨** (추가 Rules 없음) | Firebase 프로젝트 `lost-party` |
-| 현재 코드 상태 | 현황 상세에서 변경·탈퇴·추방·단독 삭제 연결 | Task-070 실기기 통과 |
-| 다음 구현 | **Task-071 완료·완료 취소·종료·해산** | 아래 현재 실행 작업만 수행 |
+| 통합 기준 | **`main` = Task-071까지** | 회차 완료·해산 + 해산 대기 목록 |
+| 완료 기능 | 멤버십 명령·회차 수명주기(완료/취소/전환/해산) | Task-068~071 |
+| Firestore Rules | 해산·완료 후 반복 설정 포함 **배포됨** | Firebase 프로젝트 `lost-party` |
+| 현재 코드 상태 | 현황 상세 회차·해산 연결, 1회성 완료 후 진행 중 「해산 대기」 | Task-071 실기기 통과 |
+| 다음 구현 | **Task-072 알림 서비스 별도 설계** | 아래 현재 실행 작업만 수행 (즉시 앱 구현 아님) |
 
-### Task-070 확인 완료 사항 (2026-08-26)
+### Task-071 확인 완료 사항 (2026-08-26)
 
-- 자기 참가 캐릭터 변경: 역할·`(partyIndex, slotIndex)` 유지
-- 본인 탈퇴: 다인 방 잔여 자리 비당김, 책임자 탈퇴 시 승계
-- 책임자 추방: 확인 후 membership·점유 제거
-- 단독 모집 삭제는 1인일 때만 (기존 연결 유지)
-- BUG-001: 상세 `recruitmentId` 변경 시 `ValueKey`·`restart`로 구독 재연결 (종료)
+- 회차 완료 / 완료 취소 / 다음 주 함께하기 / 다음 회차 전환 / 다인·완료 후 해산
+- 1회성 완료 후 `status=completed` 방을 진행 중 **해산 대기**로 유지해 상세 재진입·해산 가능
+- 완료 직후·완료 기록 탭 이벤트 sync, 하단 탭 터치 시 브랜치 루트 복귀
+- Rules: `validRecruitmentDisband`, 완료 후 `continueTogether` 변경 허용 — `lost-party` 배포됨
 
 ### 열린 버그 (수정은 별도 작업)
 
-- `BUG_REPORTS.md`의 **BUG-002**(4인 목록 vs 8인 구성 표시). Task-071과 묶지 않는다.
+- **BUG-002** 4인 목록 vs 8인 구성 표시 (조사 대기)
+- **BUG-005** 같은 레이드 주간 재완료 미차단 (조사 대기)
+- **BUG-006** 완료·해산 초기 1~2회 권한 실패 관찰
 
 ## 전체 작업 순서
 
@@ -40,8 +41,8 @@
 | --- | --- | --- | --- |
 | 1 | Task-069 파티 구성판 반응형 그룹 배치 | **완료** | 모바일 전체 폭 Card, 넓은 화면 파티 좌우 배치 |
 | 2 | 자기 참가 캐릭터 변경·탈퇴·추방 연결 | **완료** | 자유로운 멤버십 명령 UI 완성 |
-| 3 | **완료·완료 취소·종료·해산 연결** | Task-070 종료 | 파티·회차 수명주기 완성 |
-| 4 | 알림 서비스 별도 설계 | 파티 수명주기 완성 | 서버 방식과 수신 정책 결정; 즉시 구현을 의미하지 않음 |
+| 3 | 완료·완료 취소·종료·해산 연결 | **완료** | 파티·회차 수명주기 완성 |
+| 4 | **알림 서비스 별도 설계** | Task-071 종료 | 서버 방식과 수신 정책 결정; 즉시 구현을 의미하지 않음 |
 | 5 | 상세 페이지 최근 10개 텍스트 채팅 | 멤버 권한·종료 정책 확정 | 상세 진입 멤버용 최소 채팅 |
 | 6 | 빈 슬롯별 역할·직업·시너지 조건 | 슬롯 명령 안정화 | 파티장이 원하는 모집 조건 설정 |
 | 7 | 전체 공개 파티 목록 조건 필터 | 슬롯 조건 저장·판정 확정 | 조건에 맞는 공개 모집 탐색 |
@@ -49,64 +50,31 @@
 | 9 | 파티·슬롯 이동 및 파티 간 스왑 | 기본 멤버십·슬롯 안정화 | 확정 멤버 위치 조정 |
 | 10 | 그룹과 그룹 전용 모집 | 핵심 파티 기능 안정화 | 그룹 기반 모집 확장 |
 
-## 현재 실행 작업 — Task-071 완료·완료 취소·종료·해산
+## 현재 실행 작업 — Task-072 알림 서비스 별도 설계
 
 ### 목표
 
-현황 상세(`/raid-status/:id`)에 회차·방 수명주기 명령을 연결한다.
+가입·탈퇴·승인·추방·완료·종료·해산 이벤트를 알림 원본으로 두고, 수신 정책과 서버 방식을 **문서에서 먼저** 결정한다. 이 작업은 앱 알림함·FCM 임시 구현을 의미하지 않는다.
 
-- 회차 완료 / 완료 취소
-- 반복 파티의 주차 전환·미완료 종료 구분
-- 다인 방 해산 (단독 모집 삭제와 혼동 금지)
+### 포함 범위
 
-기존 `PartyCycleCommandRepository`(`complete` / `cancelCompletion` / `setRecurrence` / `advance`)와 WritePlan·Rules·Player 이벤트를 재사용한다.
-
-### 변경 대상 (예상)
-
-- `lib/features/raid_status/presentation/pages/party_read_detail_page.dart`
-- 필요 시 ViewModel·확인 다이얼로그용 private Widget
-- `FirestorePartyCycleCommandRepository` 앱 DI/라우터 연결
-- 표적 위젯/ViewModel 테스트
-- Drift 완료 기록 동기화는 기존 이벤트 동기화 경로를 확인·재사용
-
-### 구현 기준
-
-- 완료·완료 취소·종료·해산의 권한·확인 알림창을 제품 계약에 맞춘다.
-- 1회성 완료 후 해산과 반복 파티의 `continueTogether`·주차 전환을 구분한다.
-- 현재 참가자 Snapshot·로컬 완료 기록 동기화를 기존 이벤트 계약에 맞춘다.
-- 네트워크 버튼 연타 방지.
-- AuthUid·PlayerId·민감 ID를 UI·토스트에 노출하지 않는다.
+- Cloud Functions / 별도 서버 / 구현 보류 비교
+- 방별·전체 알림 설정과 제품 대상 정책 정리 (`FIREBASE_PARTY_PRODUCT_FLOW.md`·이벤트 계약과 정합)
+- 유료 플랜·결제·과금 가능 기능은 별도 지시 없이 활성화하지 않음
 
 ### 제외 범위
 
-- 알림함·FCM·서버 알림 설계 구현
-- 채팅·필터·빈 슬롯 조건
-- 파티·슬롯 이동과 스왑
-- 멤버십 명령(변경·탈퇴·추방) 재작업
-- 구성판 레이아웃 재작업
-- BUG-002 조사/수정
-
-### 자동 검증
-
-```text
-flutter test (표적: 상세·회차 관련)
-flutter analyze
-```
+- 앱 내부 알림함 UI 구현
+- FCM / TTL 배포
+- 채팅·필터·슬롯 조건·멤버십·회차 UI 재작업
+- BUG-002/005/006 수정 (별도)
 
 ### 완료 조건
 
-- 현황 상세에서 완료·완료 취소·종료/해산이 동작하고 실기기 확인
-- 표적 테스트·analyze 통과
-- `DEV_LOG.md`·`AI_CONTEXT.md`·본 문서 갱신 후 `main` 병합
+- 설계 문서(또는 기존 제품/아키텍처 문서 갱신)로 방식·보류 사유가 명확함
+- `DEV_LOG.md`·`AI_CONTEXT.md`·본 문서 갱신 후 `main` 병합 (코드 변경이 없으면 문서 커밋만)
 
 ## 후속 작업별 범위 메모
-
-### 4. 알림 서비스 별도 설계
-
-- 가입·탈퇴·승인·추방·완료·종료·해산 이벤트는 향후 알림 원본으로 유지한다.
-- 핵심 파티 흐름 완료 후 Cloud Functions, 별도 서버 또는 구현 보류를 비교한다.
-- 서버 방식 확정 전에는 앱 내부 알림함이나 FCM을 임시 구현하지 않는다.
-- 유료 플랜·결제·과금 가능 기능은 사용자 별도 지시 없이 활성화하지 않는다.
 
 ### 5. 상세 채팅
 
@@ -134,13 +102,12 @@ flutter analyze
 
 ## 참고 문서
 
-현재 Task-071에서 읽어야 할 문서:
+현재 Task-072에서 읽어야 할 문서:
 
 1. [`../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`](../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md)
-2. [`../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md)
-3. [`../architecture/FIRESTORE_PARTY_EVENT_CONTRACT.md`](../architecture/FIRESTORE_PARTY_EVENT_CONTRACT.md)
-4. [`../product/PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md)
-5. [`ai_rules.md`](ai_rules.md)
+2. [`../architecture/FIRESTORE_PARTY_EVENT_CONTRACT.md`](../architecture/FIRESTORE_PARTY_EVENT_CONTRACT.md)
+3. [`../product/DETAIL_IMPROVEMENTS.md`](../product/DETAIL_IMPROVEMENTS.md)
+4. [`ai_rules.md`](ai_rules.md)
 
 열린 결함:
 
@@ -148,7 +115,5 @@ flutter analyze
 
 추가로:
 
-- [`../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`](../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md)
 - [`AI_CONTEXT.md`](AI_CONTEXT.md)
 - [`DEV_LOG.md`](DEV_LOG.md)
-- [`../product/DETAIL_IMPROVEMENTS.md`](../product/DETAIL_IMPROVEMENTS.md)
