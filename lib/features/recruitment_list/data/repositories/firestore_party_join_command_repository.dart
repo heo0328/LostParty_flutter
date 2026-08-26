@@ -1,11 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../domain/entities/party_event.dart';
 import '../../domain/entities/party_join_command.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/policies/party_composition_policy.dart';
 import '../../domain/repositories/party_join_command_repository.dart';
 import '../../domain/services/party_join_command_validator.dart';
+import '../mappers/party_application_event_writer.dart';
 import '../mappers/party_join_write_plan.dart';
 
 class FirestorePartyJoinCommandRepository
@@ -64,14 +66,42 @@ class FirestorePartyJoinCommandRepository
       if (r?['revision'] != command.expectedRecruitmentRevision || a?['revision'] != command.expectedApplicationRevision) return const PartyJoinResult.failure(PartyJoinFailure.revisionConflict);
       if (a?['status'] != 'pending') return const PartyJoinResult.failure(PartyJoinFailure.applicationNotPending);
       final now = FieldValue.serverTimestamp();
+      final nextRevision = command.expectedApplicationRevision + 1;
+      final rejectionCount = (a?['rejectionCount'] as int? ?? 0) + 1;
+      final characterName = a?['characterNameSnapshot'];
+      if (characterName is! String) {
+        return const PartyJoinResult.failure(PartyJoinFailure.invalidRequest);
+      }
       transaction.update(applicationRef, {
         'status': 'rejected',
         'resolutionReason': 'rejectedByApprover',
-        'rejectionCount': (a?['rejectionCount'] as int? ?? 0) + 1,
-        'revision': command.expectedApplicationRevision + 1,
+        'rejectionCount': rejectionCount,
+        'revision': nextRevision,
         'decidedAt': now,
         'updatedAt': now,
       });
+      PartyApplicationEventWriter.write(
+        transaction: transaction,
+        firestore: _firestore,
+        type: PartyEventType.applicationRejected,
+        recipientPlayerId: command.applicantPlayerId,
+        recruitmentId: command.recruitmentId,
+        applicationRevision: nextRevision,
+        actorPlayerId: actorPlayerId,
+        characterNameSnapshot: characterName,
+        classNameSnapshot: a?['classNameSnapshot'] is String
+            ? a!['classNameSnapshot'] as String
+            : null,
+        role: a?['requestedRole'] is String
+            ? a!['requestedRole'] as String
+            : null,
+        raidId: r?['raidId'] is String ? r!['raidId'] as String : null,
+        difficultyId: r?['difficultyId'] is String
+            ? r!['difficultyId'] as String
+            : null,
+        rejectionCount: rejectionCount,
+        serverTimestamp: now,
+      );
       return const PartyJoinResult.success();
     });
   }
@@ -213,11 +243,40 @@ class FirestorePartyJoinCommandRepository
       transaction.set(memberRef, plan.membership);
       transaction.set(assignmentRef, plan.assignment);
       if (applicationRef != null) {
+        final nextApplicationRevision = expectedApplicationRevision! + 1;
+        final approvedCharacterName =
+            applicationData?['characterNameSnapshot'] is String
+            ? applicationData!['characterNameSnapshot'] as String
+            : name;
         transaction.update(applicationRef, {
-          'status': 'approved', 'resolutionReason': 'approvedByApprover',
-          'approvalCount': (applicationData?['approvalCount'] as int? ?? 0) + 1,
-          'revision': expectedApplicationRevision! + 1, 'decidedAt': now, 'updatedAt': now,
+          'status': 'approved',
+          'resolutionReason': 'approvedByApprover',
+          'approvalCount':
+              (applicationData?['approvalCount'] as int? ?? 0) + 1,
+          'revision': nextApplicationRevision,
+          'decidedAt': now,
+          'updatedAt': now,
         });
+        PartyApplicationEventWriter.write(
+          transaction: transaction,
+          firestore: _firestore,
+          type: PartyEventType.applicationApproved,
+          recipientPlayerId: playerId,
+          recruitmentId: recruitmentId,
+          applicationRevision: nextApplicationRevision,
+          actorPlayerId: actorPlayerId,
+          characterNameSnapshot: approvedCharacterName,
+          classNameSnapshot:
+              applicationData?['classNameSnapshot'] is String
+              ? applicationData!['classNameSnapshot'] as String
+              : className,
+          role: role.name,
+          raidId: raidId,
+          difficultyId: r?['difficultyId'] is String
+              ? r!['difficultyId'] as String
+              : null,
+          serverTimestamp: now,
+        );
       }
       return const PartyJoinResult.success();
     });
