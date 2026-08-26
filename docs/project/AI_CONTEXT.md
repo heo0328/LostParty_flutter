@@ -268,7 +268,8 @@
 - Firebase Core, Anonymous Auth, Player binding, 게임계정 소유 인증과 Firestore 읽기 계약까지 반영됐으며 Functions 런타임은 사용하지 않음
 - Firebase 파티 사용자 흐름의 최신 기준은 `../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`이며 기존 백엔드 구조는 `../architecture/BACKEND_PARTY_ARCHITECTURE.md`에서 관리
 - AuthUid는 인증과 binding에만 사용하고 파티·신청·그룹에는 LOSTPARTY 영속 PlayerId를 사용
-- 공유 파티 완료와 사용자가 직접 관리하는 로컬 캐릭터 완료 기록을 분리
+- 공유 파티 회차 상태, 활성 참가 점유와 개인 캐릭터 주간 완료 Claim을 분리
+- 개인 Claim은 서버 권위 상태이며 내 계정 체크박스와 모집 생성·신청·가입 제한이 같은 값을 사용
 - 파티는 기본 1회성이며 파티장 또는 공대장이 `다음 주도 함께하기`를 켜면 방과 다음 회차 준비 구성을 유지
 - 반복 파티 완료 취소는 화요일 22:00까지 책임자만 가능하며 수요일 오전 6시에 새 회차로 전환
 - 완료, 미완료 종료, 취소, 구성 변경과 해산 이벤트, 종료된 1회성 원본 및 회차 Snapshot은 28일 보관하고 반복 파티방은 해산할 때까지 유지
@@ -290,7 +291,7 @@
 ## 다음 작업
 
 현재 작업 순서와 완료 상태의 단일 기준은 `docs/project/NEXT_WORK.md`다.
-Task-073(앱 내부 알림 이벤트·Rules·Drift receipt·최소 UI·다인 해산 수정)까지 `main`에 반영됐다. 다음 우선 작업은 `NEXT_WORK.md`의 Task-074 상세 최근 10개 텍스트 채팅이다.
+Task-073(앱 내부 알림 이벤트·Rules·Drift receipt·최소 UI·다인 해산 수정)까지 `main`에 반영됐다. 현재 Task-074에서 개인 주간 완료 Claim 계약을 문서화하며, 다음 구현은 `NEXT_WORK.md`의 Task-075 Claim 기반 A다.
 `codex/combat-power-auto-title`에서 전투력 표시 통일과 자동 모집 제목 구현 및 자동 검증을 완료했다.
 `codex/full-recruitment-edit`에서 생성·수정 공용 폼, 전체 모집 수정 흐름과 공통 입력 지우기 동작을 구현하고 Android 실기기 검증을 통과했다.
 완료 결과는 `main`과 `origin/main`에 통합됐다.
@@ -379,7 +380,8 @@ Player binding의 계약·구현·Rules 배포와 실기기 검증을 완료했�
 - Task-070에서 현황 상세에 자기 참가 캐릭터 변경·탈퇴·추방을 연결하고, 상세 `recruitmentId` 재구독(BUG-001)을 반영해 실기기에서 통과한 뒤 **`main`에 병합**했다.
 - Task-071에서 회차 완료·완료 취소·반복 설정·주차 전환·다인/완료 후 해산을 현황 상세에 연결하고, 1회성 완료 후 **해산 대기** 목록·이벤트 sync·탭 루트 복귀를 반영해 실기기에서 통과한 뒤 **`main`에 병합**했다. Rules(해산·완료 후 반복 설정)는 `lost-party`에 배포된 상태다.
 - Task-072에서 알림 설계를 `PARTY_NOTIFICATION_CONTRACT.md`로 확정하고 **`main`에 병합**했다. FCM은 신뢰 서버와 유료 플랜 합의 전까지 보류한다.
-- Task-073에서 공통 Party Event·유형별 Rules·신청/멤버십/해산 이벤트 연결·Drift 알림 receipt·현황 알림 UI를 구현했다. 다인 해산 Transaction 읽기 순서 버그를 수정해 실기기에서 확인한 뒤 **`main`에 병합**했다. Rules(알림 이벤트)는 `lost-party`에 배포됨. 다음 작업은 `NEXT_WORK.md`의 상세 채팅(Task-074)이다.
+- Task-073에서 공통 Party Event·유형별 Rules·신청/멤버십/해산 이벤트 연결·Drift 알림 receipt·현황 알림 UI를 구현했다. 다인 해산 Transaction 읽기 순서 버그를 수정해 실기기에서 확인한 뒤 **`main`에 병합**했다. Rules(알림 이벤트)는 `lost-party`에 배포됐다.
+- Task-074에서 파티 회차·활성 점유·개인 주간 완료를 분리한 [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)를 작성한다. 다음 구현은 쓰기 없이 Claim 읽기 경계와 내 계정 읽기 전용 체크박스를 만드는 Task-075 A다.
 - 네트워크 요청을 시작하는 버튼은 진행 중 연타·중복 요청을 막는 공통 UI 규칙을 적용한다.
 - Codex는 설계 계약, 문서 정합성, 작업 분해와 인수인계를 중심으로 유지하되 필요한 코드 수정은 가능하다.
 - 유료 플랜·결제수단·과금 가능 기능, Emulator, FCM과 TTL 배포는 별도 승인 전까지 제외한다.
@@ -434,7 +436,7 @@ Player binding의 계약·구현·Rules 배포와 실기기 검증을 완료했�
 - 최초 확정 시 같은 사용자·캐릭터·레이드의 다른 pending을 `superseded`로 자동 종료하고 지연 경쟁도 점유 저장소에서 차단
 - 로컬 Aggregate 저장 실패 시 점유 해제 보상 처리, Firebase에서는 점유·멤버십·pending 종료 단일 트랜잭션 필요
 - 신청 후보의 `동일 레이드 신청 중 N개 / 참가 중 / 일정 충돌 / 일정 확인 필요 / 주간 완료` 구조화 읽기 모델과 상태 칩 UI 완료
-- 기존 로컬 구현에서 pending은 비차단 안내, 확정 참가·일정·주간 완료는 차단 상태로 구분. Firebase 전환 시 주간 완료는 사용자가 정정 가능한 로컬 1차 차단으로 변경
+- 기존 로컬 구현에서 pending은 비차단 안내, 확정 참가·일정·주간 완료는 차단 상태로 구분한다. 최종 Firebase 구조에서는 서버 Claim이 주간 완료를 강제하고 내 계정 체크박스가 같은 Claim을 조작한다.
 - Account Repository의 본계정·부계정 전체 조회 계약을 추가했고 신청 후보 서비스가 모든 소유 계정의 표시 캐릭터를 통합 조회함
 - 모집 생성·즉시 가입에서 동일 레이드 pending 건수를 확인하고 동의 시 기존 신청을 종료하는 UI 완료
 - 승인형 모집의 복수 승인 대기 신청은 그대로 유지

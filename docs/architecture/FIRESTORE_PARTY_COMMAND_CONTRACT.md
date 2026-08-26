@@ -12,11 +12,13 @@
 
 ## 2. 공통 명령 원칙
 
+개인 캐릭터의 주간 레이드 완료와 명령 차단 기준은 [`WEEKLY_RAID_CLAIM_CONTRACT.md`](WEEKLY_RAID_CLAIM_CONTRACT.md)를 따른다. Claim 구현 이후 모집 생성·즉시 가입·승인·참가 캐릭터 변경은 같은 `playerId + characterId + raidId + cycleKey` Claim 부재를 Transaction과 Rules에서 함께 검증해야 한다.
+
 - 모든 명령은 `AuthUid -> PlayerId` active binding을 요구한다.
 - 클라이언트 입력의 `PlayerId`를 신뢰하지 않고 binding으로 확정한 값만 사용한다.
 - 클라이언트 시간을 상태 경계 판정에 사용하지 않고 `request.time`과 server timestamp를 사용한다.
 - 기존 문서를 변경하는 명령은 `expectedRevision`을 요구하고 성공 시 정확히 1 증가시킨다.
-- 문서 생성·변경·삭제와 확정 참가 점유는 한 Firestore Transaction에서 처리한다.
+- 문서 생성·변경·삭제, 확정 참가 점유와 관련 Claim 변경은 명령별 계약에 따라 한 Firestore Transaction에서 처리한다.
 - 주차는 `Asia/Seoul` 수요일 06:00 기준 `cycleKey`를 사용하고 Rules에서 실행 시각과 단순 비교 가능한 기간 필드를 함께 저장한다.
 - 실패한 Transaction은 일부 상태를 남기지 않는다. Firestore 재시도 후에도 실패하면 사용자에게 최신 상태 새로고침을 안내한다.
 

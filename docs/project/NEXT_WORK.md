@@ -51,11 +51,11 @@
 
 | 구분 | 상태 | 비고 |
 | --- | --- | --- |
-| 통합 기준 | **`main` = Task-073까지** | 알림 이벤트·최소 UI 포함 |
+| 통합 기준 | **`main` = Task-073까지, Task-074 계약 브랜치 진행** | 알림 이벤트·최소 UI + 주간 귀속 재설계 |
 | 완료 기능 | 멤버십·회차 수명주기 + 앱 내부 알림(이벤트·Rules·Drift·최소 UI) | Task-068~073 |
 | Firestore Rules | 신청·멤버십·해산(`partyDisbanded`) 이벤트 포함 **배포됨** | Firebase 프로젝트 `lost-party` |
-| 현재 코드 상태 | `main` @ Task-073 병합 | 실기기 다인 해산 확인 |
-| 다음 구현 | **Task-074 상세 페이지 최근 10개 텍스트 채팅** | `main`에서 분기 |
+| 현재 코드 상태 | `main` @ Task-073 병합 | 개인 주간 완료 Claim은 아직 미구현 |
+| 다음 구현 | **Task-075 개인 주간 완료 Claim 기반 A** | Task-074 계약 병합 후 시작 |
 
 ### Task-073 확인 완료 사항 (2026-08-27)
 
@@ -65,11 +65,10 @@
 - 다인 해산: Transaction 읽기 전부 선행 후 쓰기로 수정, 실기기 정상 확인
 - FCM·OS 알림·유료 서비스·Emulator는 제외
 
-### 열린 버그 (수정은 별도 작업)
+### 기존 버그 정리
 
-- **BUG-002** 4인 목록 vs 8인 구성 표시 (조사 대기)
-- **BUG-005** 같은 레이드 주간 재완료 미차단 (조사 대기)
-- **BUG-006** 완료·해산 초기 1~2회 권한 실패 관찰
+- BUG-002·006은 하단 탭 및 후속 흐름 수정 뒤 재현되지 않아 종료로 간주하고, 같은 증상이 다시 보고되면 새 재현 절차로 연다.
+- BUG-005의 주간 재완료 미차단은 독립 버그 패치가 아니라 Task-074~075 개인 주간 완료 Claim 서버 강제 범위에 흡수한다.
 
 ## 전체 작업 순서
 
@@ -83,76 +82,121 @@
 | 4 | 알림 서비스 별도 설계 | **Task-072 완료** | Spark 앱 내부 알림 + 향후 FCM 2단계 계약 |
 | 5 | 앱 내부 알림 이벤트 schema·Rules 기반 | **Task-073 완료** | 공통 event model과 안전한 create/read 경계 |
 | 6 | 신청·멤버십·회차 이벤트와 로컬 알림/UI | **Task-073에 포함 완료** | foreground/재실행 앱 내부 알림 |
-| 7 | **상세 페이지 최근 10개 텍스트 채팅** | 알림 최소 기능 안정화 | 상세 진입 멤버용 최소 채팅 |
-| 8 | 빈 슬롯별 역할·직업·시너지 조건 | 슬롯 명령 안정화 | 파티장이 원하는 모집 조건 설정 |
-| 9 | 전체 공개 파티 목록 조건 필터 | 슬롯 조건 저장·판정 확정 | 조건에 맞는 공개 모집 탐색 |
-| 10 | 레이드 현황 공통 필터 | 공개 목록 필터 UX 확정 | 가입·신청·완료 기록에 동일한 필터 조작 제공 |
-| 11 | 파티·슬롯 이동 및 파티 간 스왑 | 기본 멤버십·슬롯 안정화 | 확정 멤버 위치 조정 + 이동 이벤트 |
-| 12 | 그룹과 그룹 전용 모집 | 핵심 파티 기능 안정화 | 그룹 기반 모집 확장 |
+| 7 | **개인 주간 완료 Claim 계약** | **Task-074 진행** | 파티·점유·개인 완료 단일 기준 확정 |
+| 8 | 개인 주간 완료 Claim 구현 A~F | Task-074 병합 | 체크박스·서버 제한·개인/전체 완료 |
+| 9 | 레이드 모집에서 내 모집 제외 | Claim 흐름 안정화 | 공개 모집과 내 현황 분리 |
+| 10 | 운영자 계정 권한 기반 설계 | 특정 Player와 기능 확정 전 설계만 | 일반 사용자와 분리된 권한 경계 |
+| 11 | 그룹 생성·가입 | 그룹 계약 확정 | 그룹 membership 기반 |
+| 12 | 그룹 전용 모집 | 그룹 membership 안정화 | 생성 드롭다운과 그룹 Rules |
+| 13 | 레이드 모집·현황 공통 필터 | 그룹 공개 범위 확정 | 공통 UX, Firestore/Drift 조회 분리 |
+| 14 | 빈 슬롯 역할·직업·시너지 조건 | 슬롯 명령 안정화 | 가입·승인 조건 서버 검증 |
+| 15 | 조건 필터 확장 | 슬롯 조건 구현 | 역할·직업·시너지 탐색 |
+| 16 | 파티·슬롯 이동과 스왑 | 조건 판정 안정화 | 원자적 위치 변경과 이벤트 |
+| 17 | 상세 최근 10개 텍스트 채팅 | 핵심 파티 기능 안정화 | 멤버 전용 최소 채팅 |
+| 18 | 참가 일정·신청 자동 만료 | 마지막 | 일정·마감·수요일 06:00 정책 |
 
-## 현재 실행 작업 — Task-074 상세 페이지 최근 10개 텍스트 채팅
+## Task-074 현재 작업 — 캐릭터 주간 레이드 귀속 계약
+
+### 목표
+
+파티 회차 상태, 활성 파티 점유와 개인 캐릭터 주간 완료를 분리하고, 레이드 상세 완료 버튼과 내 계정 체크박스가 같은 서버 Claim을 조작하도록 계약을 확정한다.
+
+### 확정 결정
+
+- 서버 Claim 키는 `playerId + characterId + raidId + cycleKey`다.
+- 파티장·공대장의 레이드 완료는 파티 회차와 완료 당시 전원의 Claim을 처리한다.
+- 일반 파티원의 레이드 완료는 본인 탈퇴와 본인 Claim만 처리하며 파티 회차는 active로 유지한다.
+- 내 계정 체크박스는 앱 밖 완료와 개인 완료를 모두 표시·변경하는 서버 Claim UI다.
+- 체크 해제는 본인 Claim만 삭제하며 공동 Snapshot·다른 파티원·이전 membership을 변경하지 않는다.
+- Claim 생성과 같은 Character·raidId·cycleKey의 active assignment는 공존할 수 없다.
+- 활성 파티나 pending 신청이 있는 상태에서 체크하면 영향을 안내하고 확인 후 탈퇴·신청 종료·Claim 생성을 한 Transaction으로 처리한다.
+
+### 산출물
+
+- [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)
+- 기존 코드와 충돌 지점 및 단계 A~F 구현 분해
+- `NEXT_WORK.md`의 새 우선순위와 다음 실행 작업
+
+### 제외 범위
+
+- Flutter·Firestore Rules·Firebase 배포 변경
+- 기존 completed 데이터 이행
+- 채팅·그룹·필터·운영자 기능 구현
+
+### 완료 조건
+
+- 문서 간 용어·권한·Transaction·UX가 일치함
+- `git diff --check` 통과
+- Task-075 구현 지시가 한 작업 그룹 크기로 준비됨
+
+## 현재 실행 작업 — Task-075 개인 주간 완료 Claim 기반 A
 
 ### 이번 인계의 시작 상태
 
 | 항목 | 기준 |
 | --- | --- |
-| 시작 브랜치 | Task-073이 반영된 최신 `main` |
+| 시작 브랜치 | Task-074 계약이 반영된 최신 `main` |
 | 새 작업 브랜치 | 구현 담당이 작업 전용 브랜치 생성 |
-| 현재 단계 | Task-074 구현 전 검토 |
-| 앱 동작 기준 | 알림 아이콘·목록·다인 해산 동작 |
-| 배포 기준 | 알림 Rules는 `lost-party`에 배포됨. 채팅 Rules는 자동 배포하지 않음 |
-| 실기기 | 설계 확정·구현 후 멤버 간 송수신 확인 |
+| 현재 단계 | Claim Domain·읽기 기반 구현 전 검토 |
+| 앱 동작 기준 | 주간 완료는 InMemory 후보 필터와 Drift 완료 이력만 존재 |
+| 배포 기준 | `weeklyRaidClaims` Rules는 아직 없음. 자동 배포하지 않음 |
+| 실기기 | A단계에서는 읽기·체크 표시 확인, 쓰기는 후속 단계 |
 
 ### 목표
 
-현황 상세에 진입한 **현재 확정 멤버**만 최근 텍스트 메시지 약 10개를 읽고 보낼 수 있는 최소 채팅을 만든다.
+개인 주간 완료 Claim의 Firestore 경로·Domain·Repository 읽기 경계를 만들고, 내 계정 체크박스를 우선 읽기 전용으로 표시한다.
 
 ### 포함 범위
 
-- `createdAt desc`, `limit(10)` 구독과 화면 이탈 시 listener 해제
-- 멤버만 읽기·쓰기 가능한 Firestore 경로와 Security Rules
-- 메시지 길이·연속 전송·서버 timestamp 정책
-- 완료·해산 후 접근 정책(읽기 전용 / 차단 중 하나를 구현 전 확정)
+- `weeklyRaidClaims` Domain/DTO/mapper/Repository
+- 현재 Player 소유 Character의 현재 주차 Claim 읽기
+- 내 계정 캐릭터별 주간 레이드 체크박스 읽기 전용 표시
+- 기존 Drift 완료 히스토리와 Claim Projection 분리
+- 문서 ID escape/hash 규칙 확정 및 테스트
 
 ### 반드시 유지할 설계 불변식
 
-- AuthUid·토큰·자격 증명을 메시지에 저장하지 않는다.
-- 비멤버·해산된 방 방문자가 채팅을 쓰거나 다른 방 메시지를 읽지 못한다.
-- 이미지·파일·읽음 상태·목록 미리보기·채팅 FCM은 초기 범위에서 제외한다.
-- 알림 Player Event와 채팅 메시지를 같은 컬렉션에 섞지 않는다.
+- Claim은 Player·Character·raidId·cycleKey 서버 단일 기준이다.
+- `difficultyId`는 부가 이력이며 같은 raidId의 난이도를 중복 Claim으로 만들지 않는다.
+- 다른 Player의 Claim을 읽거나 임의 변경하지 않는다.
+- Drift 완료 이력·Party Event·active assignment를 Claim과 같은 저장소로 합치지 않는다.
+- A단계에서는 체크·해제, 탈퇴, 모집 제한과 파티 전체 완료를 구현하지 않는다.
 
 ### 제외 범위
 
-- FCM, OS 알림, 이미지/파일 첨부
-- 읽음 상태·타이핑 표시·메시지 검색
-- 슬롯 조건·필터·파티 이동·열린 버그 수정
-- 유료 스케줄러·Cloud Functions
+- Claim create/delete와 Security Rules 배포
+- 모집 생성·신청·가입 제한
+- 활성 파티 탈퇴·pending 신청 종료
+- 개인 완료·파티 전체 완료 명령 변경
+- 채팅·그룹·필터와 기존 데이터 이행
 
 ### 완료 조건
 
-- 확정 멤버만 최근 10개 메시지를 보고 전송할 수 있음
-- 화면 이탈 시 listener가 해제됨
-- 관련 Rules·표적 테스트·`flutter analyze` 통과
-- Emulator·유료 서비스는 별도 승인 없이 사용하지 않음
+- 현재 Player의 이번 주 Claim만 읽을 수 있는 Repository 경계
+- 내 계정 체크박스가 Claim을 정확히 표시하되 아직 조작하지 않음
+- 기존 완료 기록 화면과 알림 sync 회귀 없음
+- 표적 테스트와 `flutter analyze --no-pub` 통과
 
 ### 검증 체크리스트
 
-- [ ] 메시지 경로·필드·길이·rate limit 계약이 문서와 코드에 일치
-- [ ] 멤버만 create/list, 비멤버 거부
-- [ ] `limit(10)` + 최신순, 이탈 시 구독 해제
-- [ ] 완료·해산 후 정책이 명시한 대로 동작
-- [ ] 표적 테스트·analyze 통과
-- [ ] 실기기 2인 송수신 확인(가능 시)
+- [ ] Claim 키가 Player·Character·raidId·cycleKey를 안정적으로 구분
+- [ ] 같은 raidId의 난이도는 하나의 체크 상태로 표시
+- [ ] 자기 Player Claim만 읽음
+- [ ] Claim 없음=미완료, 있음=완료 표시
+- [ ] 체크박스 조작은 비활성 또는 후속 안내 상태
+- [ ] Drift 히스토리 정정과 Claim 상태를 혼합하지 않음
+- [ ] 표적 테스트·`flutter analyze --no-pub` 통과
 
 ### 즉시 중단하고 결정 받아야 하는 경우
 
-- 채팅에 Cloud Functions·Blaze·유료 기능이 필요해지는 경우
-- 비멤버 공개 읽기가 제품 요구로 바뀌는 경우
-- 알림 이벤트와 채팅을 한 저장소로 합쳐야만 구현되는 경우
+- Claim 경로가 기존 Player Rules와 안전하게 분리되지 않는 경우
+- 문서 ID에 Character/raid 식별자를 안전하게 조합할 수 없는 경우
+- 읽기 기반만으로 기존 완료 히스토리 동작을 깨야 하는 경우
+- A단계에서 쓰기·탈퇴·Rules 배포가 선행돼야만 화면 표시가 가능한 경우
 
 ## 후속 작업별 범위 메모
 
-### 8~10. 조건과 필터
+### 14~15. 조건과 필터
 
 - 빈 슬롯 조건 문서·저장·판정 계약을 먼저 확정한다.
 - 전체 공개 목록 필터는 같은 역할·직업·시너지 판정 기준을 사용한다.
@@ -171,11 +215,12 @@
 
 ## 참고 문서
 
-현재 Task-074에서 먼저 확인할 문서:
+Task-075를 시작할 때 먼저 확인할 문서:
 
-1. [`../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`](../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md)
-2. [`../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md)
-3. [`ai_rules.md`](ai_rules.md)
+1. [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)
+2. [`../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`](../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md)
+3. [`../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md)
+4. [`ai_rules.md`](ai_rules.md)
 
 열린 결함:
 

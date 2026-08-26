@@ -1633,4 +1633,18 @@
 - Drift v8 `partyNotificationReceipts`와 unread 집계, 현황 AppBar 알림 아이콘·목록 UI·문구 템플릿을 추가했다.
 - 다인 해산이 실패하던 원인을 Transaction에서 `get`/`delete` 교차 호출로 확인했다. 모든 읽기 후 쓰기로 수정했고 실기기에서 다인 해산이 정상 동작했다.
 - FCM·OS 알림·Emulator·유료 서비스는 제외했다.
-- 다음: Task-074 상세 페이지 최근 10개 텍스트 채팅 (`NEXT_WORK.md`). Task-073은 `main`에 병합됨.
+- Task-073은 `main`에 병합됨. 이후 제품 우선순위 재검토로 상세 채팅은 후순위로 이동했다.
+
+---
+
+## Task-074. 개인 주간 레이드 Claim 계약 문서화 (2026-08-27)
+
+- 작업 브랜치: `codex/weekly-raid-claim-contract`
+- 파티 회차 상태, 활성 참가 점유와 개인 캐릭터 주간 완료를 분리하고 서버 Claim을 내 계정 체크박스와 모집 제한의 단일 기준으로 확정했다.
+- 파티장·공대장 완료는 당시 구성원 전체 완료, 일반 멤버 완료는 본인 탈퇴와 본인 완료, 내 계정 수동 체크는 앱 밖 완료까지 같은 Claim으로 처리하도록 정리했다.
+- Claim을 수동 체크할 때 활성 참가 방이 있으면 명시적 확인 후 탈퇴·점유 해제·pending 종료·Claim 생성을 하나의 Transaction으로 처리한다.
+- 체크 해제는 본인의 Claim만 삭제하며 과거 membership·파티·다른 구성원 Claim을 복구하거나 변경하지 않는다.
+- 같은 `playerId + characterId + raidId + cycleKey`의 Claim과 활성 점유가 공존할 수 없고, 생성·신청·즉시 가입·승인·캐릭터 변경이 서버에서 Claim을 재검증하도록 계약했다.
+- [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)를 새 기준 문서로 추가하고 `NEXT_WORK.md`의 다음 구현을 Task-075 읽기 기반 A로 분해했다.
+- BUG-005는 이 작업에 흡수하고, 현재 재현되지 않는 BUG-002·006은 재발 시 다시 여는 조건으로 종료 간주했다.
+- 코드, Firestore Rules와 Firebase 배포는 변경하지 않았다.
