@@ -51,11 +51,11 @@
 
 | 구분 | 상태 | 비고 |
 | --- | --- | --- |
-| 통합 기준 | **`main` = Task-074 계약까지** | 알림 이벤트·최소 UI + 주간 귀속 계약 |
+| 통합 기준 | **`main` = Task-075 A까지** | Claim 읽기 기반·읽기 전용 체크박스 |
 | 완료 기능 | 멤버십·회차 수명주기 + 앱 내부 알림(이벤트·Rules·Drift·최소 UI) | Task-068~073 |
 | Firestore Rules | 신청·멤버십·해산(`partyDisbanded`) 이벤트 포함 **배포됨** | Firebase 프로젝트 `lost-party` |
-| 현재 코드 상태 | `codex/weekly-raid-claim-foundation` | Task-075 A 구현·자동·실기기 검증 완료, Git 종료 대기 |
-| 다음 구현 | **Task-076 개인 주간 완료 Claim 기반 B** | Task-075 병합 후 시작 |
+| 현재 코드 상태 | `codex/weekly-raid-claim-manual` | Task-076 B 구현·Rules 배포·실기기 검증 완료, Git 종료 단계 |
+| 다음 구현 | **Task-077 개인 주간 완료 Claim 기반 C** | Task-076 Git 종료 후 시작 |
 
 ### Task-073 확인 완료 사항 (2026-08-27)
 
@@ -83,7 +83,7 @@
 | 5 | 앱 내부 알림 이벤트 schema·Rules 기반 | **Task-073 완료** | 공통 event model과 안전한 create/read 경계 |
 | 6 | 신청·멤버십·회차 이벤트와 로컬 알림/UI | **Task-073에 포함 완료** | foreground/재실행 앱 내부 알림 |
 | 7 | **개인 주간 완료 Claim 계약** | **Task-074 완료** | 파티·점유·개인 완료 단일 기준 확정 |
-| 8 | 개인 주간 완료 Claim 구현 A~F | **A 구현 완료, B 대기** | 체크박스·서버 제한·개인/전체 완료 |
+| 8 | 개인 주간 완료 Claim 구현 A~F | **A·B 완료, C 대기** | 체크박스·서버 제한·개인/전체 완료 |
 | 9 | 레이드 모집에서 내 모집 제외 | Claim 흐름 안정화 | 공개 모집과 내 현황 분리 |
 | 10 | 운영자 계정 권한 기반 설계 | 특정 Player와 기능 확정 전 설계만 | 일반 사용자와 분리된 권한 경계 |
 | 11 | 그룹 생성·가입 | 그룹 계약 확정 | 그룹 membership 기반 |
@@ -129,7 +129,7 @@
 - `git diff --check` 통과
 - Task-075 구현 지시가 한 작업 그룹 크기로 준비됨
 
-## 현재 실행 작업 — Task-075 개인 주간 완료 Claim 기반 A
+## 완료 작업 — Task-075 개인 주간 완료 Claim 기반 A
 
 ### 이번 인계의 시작 상태
 
@@ -190,7 +190,7 @@
 ### 구현 결과
 
 - `WeeklyRaidClaim` Domain·DTO·mapper·Repository와 자기 Player·현재 `cycleKey` Firestore stream을 추가했다.
-- 문서 ID는 각 구성 요소를 base64url(no padding)로 인코딩하고 `~`로 연결한다.
+- 문서 ID는 B 시작 시 Rules가 재구성할 수 있는 `${cycleKey}_${characterId}_${raidId}`로 교정했다. A의 base64url 방식은 Rules에서 중복 ID를 검증할 수 없어 폐기했다.
 - 내 계정은 인증된 `serverCharacterId`가 있는 캐릭터에 입장 가능한 활성 레이드 중 골드 기준 기본 3개를 읽기 전용 체크박스로 표시한다.
 - 같은 `raidId`는 난이도와 무관하게 하나의 체크 상태이며 Claim 유무만 반영한다.
 - Claim Repository와 기존 Character summary gateway를 앱 생성자에서 주입할 수 있게 해 Firebase 미초기화 테스트 경계를 복구했다.
@@ -204,12 +204,45 @@
 - 캐릭터 카드 레이아웃이 정상이며 체크박스가 표시된다.
 - 현재 Claim이 없어 모두 미체크 상태이고, 읽기 전용이라 조작되지 않는 것이 확인됐다.
 
-## 다음 실행 예정 — Task-076 개인 주간 완료 Claim 기반 B
+## 현재 실행 작업 — Task-076 개인 주간 완료 Claim 기반 B
 
-- 활성 참가와 pending이 없는 캐릭터에 한해 자기 Claim create/delete 명령을 구현한다.
-- 본인 소유 Character, 현재 주차, 허용 필드와 문서 ID를 Rules에서 검증한다.
-- 체크박스 조작·진행 중 중복 요청 방지·성공/실패 UX를 연결한다.
-- 활성 파티 탈퇴, pending 자동 종료와 모집 명령 차단은 B에 포함하지 않고 후속 C·D로 유지한다.
+### 현재 단계
+
+- Flutter·Rules 구현과 자동 검증 완료
+- Rules 실제 배포와 실기기 체크/해제 검증 완료
+- Git 커밋·`main` 병합·푸시만 남았다.
+
+### 구현 결과
+
+- 활성 assignment와 pending 신청이 없는 캐릭터에 한해 자기 수동 Claim create/delete 명령을 연결했다.
+- 체크/해제 확인창, 처리 중 중복 입력 차단, 실패 사유 안내를 추가했다.
+- 본인 Player·소유 Character·현재 7일 주차·허용 필드·결정적 문서 ID를 Rules에서 검증한다.
+- Claim과 신청/assignment가 경쟁 상태로 동시에 생성되지 않도록 신청·가입·캐릭터 변경 Rules에 최소 Claim 부재 검사를 선반영했다. 전체 후보 UI와 오류 매핑은 C 범위다.
+- 문서 ID는 `${cycleKey}_${characterId}_${raidId}`로 통일하고 읽을 때도 문서 내용과 ID 일치를 검증한다.
+- 전체 `flutter test` 424개, `flutter analyze`, Firebase Rules dry-run compile이 통과했다. Rules compile에는 기존 `recruitmentId` 미사용 경고 1개만 남아 있다.
+
+### 실기기·배포 체크리스트
+
+- [x] `firebase deploy --only firestore:rules --project lost-party`
+- [x] 참가 파티와 pending 신청이 없는 캐릭터에서 체크 → 확인창 → 체크 유지
+- [x] 같은 항목 체크 해제 → 확인창 → 미체크 유지
+- [x] 앱 재실행 후 서버 상태가 동일하게 복원됨
+- [x] 참가 중 캐릭터는 같은 레이드 모집 생성이 차단되고 수동 Claim과 공존하지 않음
+- [x] pending 신청 캐릭터는 체크가 차단되고 신청 상태를 바꾸지 않음
+- [x] 기존 내 계정 표현과 기존 기능이 정상임
+
+### 명시적 제외 범위
+
+- 활성 파티 자동 탈퇴와 pending 자동 종료
+- 레이드 상세의 개인 완료 버튼
+- 파티장 전체 완료와 전원 Claim
+- 전체 모집 후보 UI의 Claim 선제 제외
+
+## 다음 실행 예정 — Task-077 개인 주간 완료 Claim 기반 C
+
+- 모집 생성·신청·즉시 가입·승인·참가 캐릭터 변경에서 Claim 제한을 UI/Repository 오류까지 완성한다.
+- B에서 선반영한 Rules 차단과 같은 판정 기준을 사용한다.
+- 활성 파티 자동 탈퇴·pending 자동 종료·Claim 생성을 묶는 UX와 Transaction은 Task-078 D로 유지한다.
 
 ### 즉시 중단하고 결정 받아야 하는 경우
 

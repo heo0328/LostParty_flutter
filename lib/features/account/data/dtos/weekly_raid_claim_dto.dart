@@ -9,6 +9,8 @@ class WeeklyRaidClaimDto {
     required this.source,
     required this.completedAt,
     required this.updatedAt,
+    required this.cycleStartedAt,
+    required this.cycleEndsAt,
     this.sourceRecruitmentId,
     this.sourceCompletionRevision,
   });
@@ -22,6 +24,8 @@ class WeeklyRaidClaimDto {
   final String source;
   final Object? completedAt;
   final Object? updatedAt;
+  final Object? cycleStartedAt;
+  final Object? cycleEndsAt;
   final String? sourceRecruitmentId;
   final int? sourceCompletionRevision;
 
@@ -38,6 +42,8 @@ class WeeklyRaidClaimDto {
       sourceCompletionRevision: data['sourceCompletionRevision'] as int?,
       completedAt: data['completedAt'],
       updatedAt: data['updatedAt'],
+      cycleStartedAt: data['cycleStartedAt'],
+      cycleEndsAt: data['cycleEndsAt'],
     );
   }
 }

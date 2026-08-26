@@ -13,7 +13,7 @@ void main() {
       WeeklyRaidClaimDto.fromMap({
         'schemaVersion': 1,
         'playerId': 'player-1',
-        'characterId': 'character-1',
+        'characterId': 'AbCdEfGhIjKlMnOpQrSt',
         'raidId': 'serca',
         'cycleKey': '2026-08-26',
         'difficultyId': 'hard',
@@ -22,8 +22,10 @@ void main() {
         'sourceCompletionRevision': 4,
         'completedAt': DateTime.utc(2026, 8, 27),
         'updatedAt': DateTime.utc(2026, 8, 27),
+        'cycleStartedAt': DateTime.utc(2026, 8, 25, 21),
+        'cycleEndsAt': DateTime.utc(2026, 9, 1, 21),
       }),
-      documentId: 'claim-1',
+      documentId: '2026-08-26_AbCdEfGhIjKlMnOpQrSt_serca',
     );
 
     expect(claim.source, WeeklyRaidClaimSource.partyMember);
@@ -37,15 +39,39 @@ void main() {
         WeeklyRaidClaimDto.fromMap({
           'schemaVersion': 1,
           'playerId': 'player-1',
-          'characterId': 'character-1',
+          'characterId': 'AbCdEfGhIjKlMnOpQrSt',
           'raidId': 'serca',
           'cycleKey': '2026-08-26',
           'difficultyId': 'hard',
           'source': 'clientText',
           'completedAt': DateTime.utc(2026, 8, 27),
           'updatedAt': DateTime.utc(2026, 8, 27),
+          'cycleStartedAt': DateTime.utc(2026, 8, 25, 21),
+          'cycleEndsAt': DateTime.utc(2026, 9, 1, 21),
         }),
-        documentId: 'claim-1',
+        documentId: '2026-08-26_AbCdEfGhIjKlMnOpQrSt_serca',
+      ),
+      throwsFormatException,
+    );
+  });
+
+  test('rejects a document id that does not match the claim identity', () {
+    expect(
+      () => mapper.map(
+        WeeklyRaidClaimDto.fromMap({
+          'schemaVersion': 1,
+          'playerId': 'player-1',
+          'characterId': 'AbCdEfGhIjKlMnOpQrSt',
+          'raidId': 'serca',
+          'cycleKey': '2026-08-26',
+          'difficultyId': 'hard',
+          'source': 'manual',
+          'completedAt': DateTime.utc(2026, 8, 27),
+          'updatedAt': DateTime.utc(2026, 8, 27),
+          'cycleStartedAt': DateTime.utc(2026, 8, 25, 21),
+          'cycleEndsAt': DateTime.utc(2026, 9, 1, 21),
+        }),
+        documentId: '2026-08-26_AbCdEfGhIjKlMnOpQrSt_behemoth',
       ),
       throwsFormatException,
     );

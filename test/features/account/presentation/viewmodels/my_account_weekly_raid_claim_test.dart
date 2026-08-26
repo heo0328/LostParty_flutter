@@ -6,7 +6,9 @@ import 'package:lost_party/features/account/domain/entities/character_summary.da
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
 import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
 import 'package:lost_party/features/account/domain/entities/weekly_raid_claim.dart';
+import 'package:lost_party/features/account/domain/entities/weekly_raid_claim_command.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
+import 'package:lost_party/features/account/domain/repositories/weekly_raid_claim_command_repository.dart';
 import 'package:lost_party/features/account/domain/repositories/weekly_raid_claim_repository.dart';
 import 'package:lost_party/features/account/presentation/viewmodels/my_account_view_model.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token.dart';
@@ -38,6 +40,69 @@ void main() {
       viewModel.dispose();
     },
   );
+
+  test('creates and deletes a manual claim through the checkbox command', () async {
+    final commands = _ClaimCommandRepository();
+    final viewModel = MyAccountViewModel(
+      apiTokenStore: _TokenStore(),
+      accountRepository: _AccountRepository(),
+      weeklyRaidClaimRepository: _ClaimRepository(),
+      weeklyRaidClaimCommandRepository: commands,
+      raidCatalogRepository: _RaidRepository(),
+      playerId: 'player-1',
+      cycleKey: '2026-08-26',
+      cycleStartedAt: DateTime.utc(2026, 8, 25, 21),
+      cycleEndsAt: DateTime.utc(2026, 9, 1, 21),
+    );
+
+    await viewModel.initialize();
+    await Future<void>.delayed(Duration.zero);
+    final character = viewModel.accounts.single.characters.single;
+    final raid = viewModel.weeklyRaidStatusesFor(character).single;
+
+    expect(
+      await viewModel.setWeeklyRaidCompleted(
+        character: character,
+        raid: raid,
+        completed: true,
+      ),
+      const WeeklyRaidClaimCommandResult.success(),
+    );
+    expect(commands.created?.difficultyId, 'hard');
+    expect(commands.created?.characterId, 'character-1');
+
+    expect(
+      await viewModel.setWeeklyRaidCompleted(
+        character: character,
+        raid: raid,
+        completed: false,
+      ),
+      const WeeklyRaidClaimCommandResult.success(),
+    );
+    expect(commands.deleted?.raidId, 'serca');
+    viewModel.dispose();
+  });
+}
+
+class _ClaimCommandRepository implements WeeklyRaidClaimCommandRepository {
+  CreateManualWeeklyRaidClaimCommand? created;
+  DeleteManualWeeklyRaidClaimCommand? deleted;
+
+  @override
+  Future<WeeklyRaidClaimCommandResult> createManualClaim(
+    CreateManualWeeklyRaidClaimCommand command,
+  ) async {
+    created = command;
+    return const WeeklyRaidClaimCommandResult.success();
+  }
+
+  @override
+  Future<WeeklyRaidClaimCommandResult> deleteManualClaim(
+    DeleteManualWeeklyRaidClaimCommand command,
+  ) async {
+    deleted = command;
+    return const WeeklyRaidClaimCommandResult.success();
+  }
 }
 
 class _ClaimRepository implements WeeklyRaidClaimRepository {
@@ -56,6 +121,8 @@ class _ClaimRepository implements WeeklyRaidClaimRepository {
       source: WeeklyRaidClaimSource.manual,
       completedAt: DateTime.utc(2026, 8, 27),
       updatedAt: DateTime.utc(2026, 8, 27),
+      cycleStartedAt: DateTime.utc(2026, 8, 25, 21),
+      cycleEndsAt: DateTime.utc(2026, 9, 1, 21),
     ),
   ]);
 }

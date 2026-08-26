@@ -44,6 +44,23 @@ service cloud.firestore {
       return /databases/$(database)/documents/players/$(playerId)/activeRaidAssignments/$(assignmentId);
     }
 
+    function weeklyRaidClaimId(cycleKey, characterId, raidId) {
+      return cycleKey + '_' + characterId + '_' + raidId;
+    }
+
+    function weeklyRaidClaimPath(playerId, cycleKey, characterId, raidId) {
+      return /databases/$(database)/documents/players/$(playerId)/weeklyRaidClaims/$(weeklyRaidClaimId(cycleKey, characterId, raidId));
+    }
+
+    function hasWeeklyRaidClaimAfter(playerId, cycleKey, characterId, raidId) {
+      return existsAfter(weeklyRaidClaimPath(
+        playerId,
+        cycleKey,
+        characterId,
+        raidId
+      ));
+    }
+
     function characterPath(characterId) {
       return /databases/$(database)/documents/characters/$(characterId);
     }
@@ -139,7 +156,13 @@ service cloud.firestore {
         && data.createdAt == request.time
         && data.updatedAt == request.time
         && recruitment.leaderPlayerId == playerId
-        && ownsActiveCharacter(data.characterId);
+        && ownsActiveCharacter(data.characterId)
+        && !hasWeeklyRaidClaimAfter(
+          playerId,
+          data.cycleKey,
+          data.characterId,
+          data.raidId
+        );
     }
 
     function validJoinedMembership(recruitmentId, playerId, data) {
@@ -185,7 +208,13 @@ service cloud.firestore {
         && ownsActiveCharacterForPlayer(data.characterId, playerId)
         && playerId in recruitment.memberPlayerIds
         && (playerId == currentPlayerId()
-          || canApproveApplications(data.recruitmentId));
+          || canApproveApplications(data.recruitmentId))
+        && !hasWeeklyRaidClaimAfter(
+          playerId,
+          data.cycleKey,
+          data.characterId,
+          data.raidId
+        );
     }
 
     function validRecruitmentJoin(recruitmentId, oldData, newData) {
@@ -536,7 +565,13 @@ service cloud.firestore {
         && newData.updatedAt == request.time
         && !existsAfter(assignmentPath(playerId, oldAssignmentId))
         && getAfter(assignmentPath(playerId, newAssignmentId)).data.characterId
-          == newData.characterId;
+          == newData.characterId
+        && !hasWeeklyRaidClaimAfter(
+          playerId,
+          recruitment.currentCycleKey,
+          newData.characterId,
+          recruitment.raidId
+        );
     }
 
     function validApprovalPermissionChange(recruitmentId, playerId, oldData, newData) {
@@ -913,7 +948,13 @@ service cloud.firestore {
         && recruitment.hasAvailableSlot == true
         && recruitment.approvalPolicy.mode == 'leaderOnly'
         && !(playerId in recruitment.memberPlayerIds)
-        && ownsActiveCharacter(data.characterId);
+        && ownsActiveCharacter(data.characterId)
+        && !hasWeeklyRaidClaimAfter(
+          playerId,
+          data.cycleKey,
+          data.characterId,
+          recruitment.raidId
+        );
     }
 
     function validApplicantWithdrawal(playerId, oldData, newData) {
@@ -967,7 +1008,70 @@ service cloud.firestore {
         && recruitment.hasAvailableSlot == true
         && recruitment.approvalPolicy.mode == 'leaderOnly'
         && !(playerId in recruitment.memberPlayerIds)
-        && ownsActiveCharacter(newData.characterId);
+        && ownsActiveCharacter(newData.characterId)
+        && !hasWeeklyRaidClaimAfter(
+          playerId,
+          newData.cycleKey,
+          newData.characterId,
+          recruitment.raidId
+        );
+    }
+
+    function validManualWeeklyRaidClaimCreate(playerId, claimId, data) {
+      let assignmentId = data.characterId + '_' + data.raidId;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.keys().hasOnly([
+          'schemaVersion', 'playerId', 'characterId', 'raidId', 'cycleKey',
+          'difficultyId', 'source', 'cycleStartedAt', 'cycleEndsAt',
+          'completedAt', 'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && data.characterId is string
+        && data.raidId is string
+        && data.difficultyId is string
+        && data.cycleKey is string
+        && data.cycleStartedAt is timestamp
+        && data.cycleEndsAt is timestamp
+        && data.completedAt is timestamp
+        && data.updatedAt is timestamp
+        && data.characterId.matches('^[A-Za-z0-9]{20}$')
+        && data.raidId.matches('^[a-z0-9_]+$')
+        && data.difficultyId.matches('^[a-z0-9_]+$')
+        && data.cycleKey.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && claimId == weeklyRaidClaimId(
+          data.cycleKey,
+          data.characterId,
+          data.raidId
+        )
+        && data.source == 'manual'
+        && data.cycleEndsAt == data.cycleStartedAt + duration.value(7, 'd')
+        && request.time >= data.cycleStartedAt
+        && request.time < data.cycleEndsAt
+        && data.completedAt == request.time
+        && data.updatedAt == request.time
+        && ownsActiveCharacter(data.characterId)
+        && !existsAfter(assignmentPath(playerId, assignmentId));
+    }
+
+    function validManualWeeklyRaidClaimDelete(playerId, claimId, data) {
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.playerId == playerId
+        && data.characterId is string
+        && data.raidId is string
+        && data.cycleKey is string
+        && data.cycleStartedAt is timestamp
+        && data.cycleEndsAt is timestamp
+        && claimId == weeklyRaidClaimId(
+          data.cycleKey,
+          data.characterId,
+          data.raidId
+        )
+        && data.cycleEndsAt == data.cycleStartedAt + duration.value(7, 'd')
+        && request.time >= data.cycleStartedAt
+        && request.time < data.cycleEndsAt;
     }
 
     function validApplicationDecision(recruitmentId, oldData, newData) {
@@ -1114,10 +1218,19 @@ service cloud.firestore {
       }
 
       match /weeklyRaidClaims/{claimId} {
-        // Task-075 A: 자기 Player의 Claim 읽기만 연다. 쓰기는 후속 명령 계약 전까지 금지한다.
         allow get, list: if hasActiveBinding()
           && playerId == currentPlayerId();
-        allow create, update, delete: if false;
+        allow create: if validManualWeeklyRaidClaimCreate(
+          playerId,
+          claimId,
+          request.resource.data
+        );
+        allow update: if false;
+        allow delete: if validManualWeeklyRaidClaimDelete(
+          playerId,
+          claimId,
+          resource.data
+        );
       }
     }
 

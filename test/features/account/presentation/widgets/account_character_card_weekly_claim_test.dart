@@ -31,6 +31,7 @@ void main() {
               weeklyRaids: [
                 WeeklyRaidStatusItem(
                   raidId: 'serca',
+                  difficultyId: 'hard',
                   label: '세르카',
                   isCompleted: true,
                 ),
@@ -46,6 +47,57 @@ void main() {
     );
     expect(checkbox.value, isTrue);
     expect(checkbox.onChanged, isNull);
-    expect(find.text('주간 레이드 · 읽기 전용'), findsOneWidget);
+    expect(find.text('주간 레이드'), findsOneWidget);
+  });
+
+  testWidgets('enables a weekly claim checkbox when a command is connected', (
+    tester,
+  ) async {
+    WeeklyRaidStatusItem? changedRaid;
+    bool? changedValue;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 300,
+            height: 260,
+            child: AccountCharacterCard(
+              character: const LocalAccountCharacter(
+                id: 1,
+                serverCharacterId: 'character-1',
+                serverName: '루페온',
+                characterName: '캐릭터',
+                characterLevel: 70,
+                characterClassName: '바드',
+                itemLevel: 1760,
+                combatPower: 1,
+                isVisible: true,
+                displayOrder: 0,
+              ),
+              isRepresentative: true,
+              weeklyRaids: const [
+                WeeklyRaidStatusItem(
+                  raidId: 'serca',
+                  difficultyId: 'hard',
+                  label: '세르카',
+                  isCompleted: false,
+                ),
+              ],
+              onWeeklyRaidChanged: (raid, value) {
+                changedRaid = raid;
+                changedValue = value;
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('weeklyRaidClaim-character-1-serca')),
+    );
+
+    expect(changedRaid?.raidId, 'serca');
+    expect(changedValue, isTrue);
   });
 }

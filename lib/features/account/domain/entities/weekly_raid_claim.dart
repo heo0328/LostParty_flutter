@@ -11,6 +11,8 @@ class WeeklyRaidClaim {
     required this.source,
     required this.completedAt,
     required this.updatedAt,
+    required this.cycleStartedAt,
+    required this.cycleEndsAt,
     this.sourceRecruitmentId,
     this.sourceCompletionRevision,
   });
@@ -26,4 +28,6 @@ class WeeklyRaidClaim {
   final int? sourceCompletionRevision;
   final DateTime completedAt;
   final DateTime updatedAt;
+  final DateTime cycleStartedAt;
+  final DateTime cycleEndsAt;
 }

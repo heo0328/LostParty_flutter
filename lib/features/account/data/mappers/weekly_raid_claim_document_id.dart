@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 class WeeklyRaidClaimDocumentId {
   const WeeklyRaidClaimDocumentId._();
 
@@ -8,13 +6,15 @@ class WeeklyRaidClaimDocumentId {
     required String characterId,
     required String raidId,
   }) {
-    return [cycleKey, characterId, raidId].map(_encode).join('~');
-  }
-
-  static String _encode(String value) {
-    if (value.trim().isEmpty) {
-      throw ArgumentError.value(value, 'value', 'must not be blank');
+    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(cycleKey)) {
+      throw ArgumentError.value(cycleKey, 'cycleKey', 'invalid format');
     }
-    return base64Url.encode(utf8.encode(value)).replaceAll('=', '');
+    if (!RegExp(r'^[A-Za-z0-9]{20}$').hasMatch(characterId)) {
+      throw ArgumentError.value(characterId, 'characterId', 'invalid id');
+    }
+    if (!RegExp(r'^[a-z0-9_]+$').hasMatch(raidId)) {
+      throw ArgumentError.value(raidId, 'raidId', 'invalid id');
+    }
+    return '${cycleKey}_${characterId}_$raidId';
   }
 }

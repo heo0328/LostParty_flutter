@@ -9,7 +9,9 @@ import '../../domain/entities/character_summary.dart';
 import '../../domain/entities/character_summary_sync_result.dart';
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/entities/weekly_raid_claim.dart';
+import '../../domain/entities/weekly_raid_claim_command.dart';
 import '../../domain/repositories/account_repository.dart';
+import '../../domain/repositories/weekly_raid_claim_command_repository.dart';
 import '../../domain/repositories/weekly_raid_claim_repository.dart';
 import '../../domain/services/character_summary_sync_service.dart';
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
@@ -25,13 +27,19 @@ class MyAccountViewModel extends ChangeNotifier {
     RaidCatalogRepository? raidCatalogRepository,
     String? playerId,
     String? cycleKey,
+    DateTime? cycleStartedAt,
+    DateTime? cycleEndsAt,
+    WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository,
   }) : _apiTokenStore = apiTokenStore,
        _accountRepository = accountRepository,
        _summarySyncService = summarySyncService,
        _weeklyRaidClaimRepository = weeklyRaidClaimRepository,
        _raidCatalogRepository = raidCatalogRepository,
        _playerId = playerId,
-       _cycleKey = cycleKey;
+       _cycleKey = cycleKey,
+       _cycleStartedAt = cycleStartedAt,
+       _cycleEndsAt = cycleEndsAt,
+       _weeklyRaidClaimCommandRepository = weeklyRaidClaimCommandRepository;
 
   final ApiTokenStore _apiTokenStore;
   final AccountRepository _accountRepository;
@@ -40,6 +48,9 @@ class MyAccountViewModel extends ChangeNotifier {
   final RaidCatalogRepository? _raidCatalogRepository;
   final String? _playerId;
   final String? _cycleKey;
+  final DateTime? _cycleStartedAt;
+  final DateTime? _cycleEndsAt;
+  final WeeklyRaidClaimCommandRepository? _weeklyRaidClaimCommandRepository;
   StreamSubscription<List<WeeklyRaidClaim>>? _claimSubscription;
 
   bool _isLoadingTokenStatus = false;
@@ -55,6 +66,7 @@ class MyAccountViewModel extends ChangeNotifier {
   RaidCatalog? _raidCatalog;
   List<WeeklyRaidClaim> _weeklyRaidClaims = const [];
   WeeklyRaidClaimReadFailureType? _claimReadFailure;
+  final Set<String> _busyClaimKeys = <String>{};
 
   bool get isLoadingTokenStatus => _isLoadingTokenStatus;
   bool get isFetchingCharacters => _isFetchingCharacters;
@@ -89,17 +101,27 @@ class MyAccountViewModel extends ChangeNotifier {
         .where((claim) => claim.characterId == serverCharacterId)
         .map((claim) => claim.raidId)
         .toSet();
-    final eligible = <({RaidDefinition raid, int gold})>[];
+    final eligible =
+        <
+          ({RaidDefinition raid, RaidDifficultyDefinition difficulty, int gold})
+        >[];
     for (final raid in catalog.raids.where((raid) => raid.isActive)) {
       final difficulties = raid.difficulties.where(
         (difficulty) =>
             difficulty.isActive && difficulty.minItemLevel <= itemLevel,
       );
       if (difficulties.isEmpty) continue;
-      final maxGold = difficulties
-          .map((difficulty) => difficulty.clearGold + difficulty.boundGold)
-          .reduce((left, right) => left > right ? left : right);
-      eligible.add((raid: raid, gold: maxGold));
+      final selected = difficulties.reduce((left, right) {
+        final leftGold = left.clearGold + left.boundGold;
+        final rightGold = right.clearGold + right.boundGold;
+        if (leftGold != rightGold) return leftGold > rightGold ? left : right;
+        return left.displayOrder > right.displayOrder ? left : right;
+      });
+      eligible.add((
+        raid: raid,
+        difficulty: selected,
+        gold: selected.clearGold + selected.boundGold,
+      ));
     }
     eligible.sort((left, right) {
       final gold = right.gold.compareTo(left.gold);
@@ -112,11 +134,73 @@ class MyAccountViewModel extends ChangeNotifier {
         .map(
           (entry) => WeeklyRaidStatusItem(
             raidId: entry.raid.raidId,
+            difficultyId: entry.difficulty.difficultyId,
             label: entry.raid.displayName,
             isCompleted: completedRaidIds.contains(entry.raid.raidId),
           ),
         )
         .toList(growable: false);
+  }
+
+  bool isClaimCommandBusy(LocalAccountCharacter character, String raidId) {
+    final serverId = character.serverCharacterId;
+    return serverId != null && _busyClaimKeys.contains('$serverId:$raidId');
+  }
+
+  Future<WeeklyRaidClaimCommandResult> setWeeklyRaidCompleted({
+    required LocalAccountCharacter character,
+    required WeeklyRaidStatusItem raid,
+    required bool completed,
+  }) async {
+    final repository = _weeklyRaidClaimCommandRepository;
+    final playerId = _playerId;
+    final cycleKey = _cycleKey;
+    final characterId = character.serverCharacterId;
+    final cycleStartedAt = _cycleStartedAt;
+    final cycleEndsAt = _cycleEndsAt;
+    if (repository == null ||
+        playerId == null ||
+        cycleKey == null ||
+        characterId == null ||
+        cycleStartedAt == null ||
+        cycleEndsAt == null) {
+      return const WeeklyRaidClaimCommandResult.failure(
+        WeeklyRaidClaimCommandFailure.invalidRequest,
+      );
+    }
+    final key = '$characterId:${raid.raidId}';
+    if (!_busyClaimKeys.add(key)) {
+      return const WeeklyRaidClaimCommandResult.failure(
+        WeeklyRaidClaimCommandFailure.temporarilyUnavailable,
+      );
+    }
+    notifyListeners();
+    try {
+      if (completed) {
+        return await repository.createManualClaim(
+          CreateManualWeeklyRaidClaimCommand(
+            playerId: playerId,
+            characterId: characterId,
+            raidId: raid.raidId,
+            difficultyId: raid.difficultyId,
+            cycleKey: cycleKey,
+            cycleStartedAt: cycleStartedAt,
+            cycleEndsAt: cycleEndsAt,
+          ),
+        );
+      }
+      return await repository.deleteManualClaim(
+        DeleteManualWeeklyRaidClaimCommand(
+          playerId: playerId,
+          characterId: characterId,
+          raidId: raid.raidId,
+          cycleKey: cycleKey,
+        ),
+      );
+    } finally {
+      _busyClaimKeys.remove(key);
+      notifyListeners();
+    }
   }
 
   Future<void> loadTokenStatus() async {

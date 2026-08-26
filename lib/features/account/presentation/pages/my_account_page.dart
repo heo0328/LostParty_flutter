@@ -8,8 +8,10 @@ import '../../../../shared/widgets/clearable_text_form_field.dart';
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/repositories/account_repository.dart';
 import '../../domain/repositories/weekly_raid_claim_repository.dart';
+import '../../domain/repositories/weekly_raid_claim_command_repository.dart';
 import '../../domain/services/character_summary_sync_service.dart';
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
+import '../models/weekly_raid_status_item.dart';
 import '../viewmodels/my_account_view_model.dart';
 import '../widgets/account_character_card.dart';
 
@@ -22,6 +24,9 @@ class MyAccountPage extends StatefulWidget {
     this.raidCatalogRepository,
     this.playerId,
     this.cycleKey,
+    this.cycleStartedAt,
+    this.cycleEndsAt,
+    this.weeklyRaidClaimCommandRepository,
     super.key,
   });
 
@@ -32,6 +37,9 @@ class MyAccountPage extends StatefulWidget {
   final RaidCatalogRepository? raidCatalogRepository;
   final String? playerId;
   final String? cycleKey;
+  final DateTime? cycleStartedAt;
+  final DateTime? cycleEndsAt;
+  final WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository;
 
   @override
   State<MyAccountPage> createState() => _MyAccountPageState();
@@ -54,6 +62,9 @@ class _MyAccountPageState extends State<MyAccountPage> {
       raidCatalogRepository: widget.raidCatalogRepository,
       playerId: widget.playerId,
       cycleKey: widget.cycleKey,
+      cycleStartedAt: widget.cycleStartedAt,
+      cycleEndsAt: widget.cycleEndsAt,
+      weeklyRaidClaimCommandRepository: widget.weeklyRaidClaimCommandRepository,
     );
     _viewModel.addListener(_onViewModelChanged);
     _viewModel.initialize();
@@ -248,9 +259,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
     } else if (_viewModel.serverSyncFailed) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            '로컬 정보는 갱신됐지만 서버 반영에 실패했습니다. 다시 새로고침해 주세요.',
-          ),
+          content: const Text('로컬 정보는 갱신됐지만 서버 반영에 실패했습니다. 다시 새로고침해 주세요.'),
           action: SnackBarAction(
             label: '재시도',
             onPressed: () {
@@ -356,7 +365,9 @@ class _MyAccountPageState extends State<MyAccountPage> {
               const SizedBox(height: 12),
               FilledButton.icon(
                 key: const ValueKey('loadAccountDataButton'),
-                onPressed: _viewModel.isNetworkBusy ? null : _requestAccountData,
+                onPressed: _viewModel.isNetworkBusy
+                    ? null
+                    : _requestAccountData,
                 icon: _viewModel.isNetworkBusy
                     ? const SizedBox.square(
                         dimension: 18,
@@ -364,9 +375,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
                       )
                     : const Icon(Icons.cloud_download_outlined),
                 label: Text(
-                  _viewModel.isFetchingCharacters
-                      ? '불러오는 중...'
-                      : '계정 데이터 불러오기',
+                  _viewModel.isFetchingCharacters ? '불러오는 중...' : '계정 데이터 불러오기',
                 ),
               ),
               if (_viewModel.accounts.isNotEmpty) ...[
@@ -561,6 +570,19 @@ class _MyAccountPageState extends State<MyAccountPage> {
               isRepresentative:
                   account.representativeCharacterId == character.id,
               weeklyRaids: _viewModel.weeklyRaidStatusesFor(character),
+              busyRaidIds: {
+                for (final raid in _viewModel.weeklyRaidStatusesFor(character))
+                  if (_viewModel.isClaimCommandBusy(character, raid.raidId))
+                    raid.raidId,
+              },
+              onWeeklyRaidChanged:
+                  widget.weeklyRaidClaimCommandRepository == null
+                  ? null
+                  : (raid, value) => _confirmWeeklyRaidChange(
+                      character: character,
+                      raid: raid,
+                      completed: value,
+                    ),
               onTap: () => _openCharacterDetail(character),
             );
           },
@@ -568,6 +590,64 @@ class _MyAccountPageState extends State<MyAccountPage> {
       },
     );
   }
+
+  Future<void> _confirmWeeklyRaidChange({
+    required LocalAccountCharacter character,
+    required WeeklyRaidStatusItem raid,
+    required bool completed,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(completed ? '레이드 완료 처리' : '레이드 완료 해제'),
+        content: Text(
+          completed
+              ? '${character.characterName} 캐릭터의 ${raid.label} 레이드를 이번 주 완료로 처리할까요? 참가 중인 파티나 승인 대기 신청이 있으면 처리되지 않습니다.'
+              : '${character.characterName} 캐릭터의 ${raid.label} 완료를 해제할까요? 이전 파티에는 자동으로 복귀하지 않습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(completed ? '완료 처리' : '완료 해제'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final result = await _viewModel.setWeeklyRaidCompleted(
+      character: character,
+      raid: raid,
+      completed: completed,
+    );
+    if (!mounted) return;
+    final message = result.isSuccess
+        ? (completed ? '이번 주 완료로 처리했습니다.' : '완료 처리를 해제했습니다.')
+        : _claimFailureMessage(result.failure!);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  String _claimFailureMessage(WeeklyRaidClaimCommandFailure failure) =>
+      switch (failure) {
+        WeeklyRaidClaimCommandFailure.activeAssignment =>
+          '현재 참가 중인 파티가 있어 완료 처리할 수 없습니다.',
+        WeeklyRaidClaimCommandFailure.pendingApplication =>
+          '승인 대기 중인 신청이 있어 먼저 철회해야 합니다.',
+        WeeklyRaidClaimCommandFailure.unauthenticated => '로그인 상태를 다시 확인해 주세요.',
+        WeeklyRaidClaimCommandFailure.permissionDenied =>
+          '완료 상태를 변경할 권한이 없습니다.',
+        WeeklyRaidClaimCommandFailure.temporarilyUnavailable =>
+          '현재 처리할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+        WeeklyRaidClaimCommandFailure.invalidRequest =>
+          '캐릭터 또는 주차 정보를 확인할 수 없어 완료 상태를 변경하지 못했습니다.',
+        WeeklyRaidClaimCommandFailure.unknown =>
+          '서버 처리 중 오류가 발생해 완료 상태를 변경하지 못했습니다.',
+      };
 
   Widget _buildMissingCharactersWarning(LocalGameAccount account) {
     final missing = account.characters
