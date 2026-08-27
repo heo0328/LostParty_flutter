@@ -6,6 +6,7 @@ import '../../../../shared/lost_ark_api/auth/api_token_store.dart';
 import '../../../../shared/lost_ark_api/client/lost_ark_api_exception.dart';
 import '../../../../shared/widgets/clearable_text_form_field.dart';
 import '../../domain/entities/local_game_account.dart';
+import '../../domain/entities/weekly_raid_claim_command.dart';
 import '../../domain/repositories/account_repository.dart';
 import '../../domain/repositories/weekly_raid_claim_repository.dart';
 import '../../domain/repositories/weekly_raid_claim_command_repository.dart';
@@ -596,15 +597,29 @@ class _MyAccountPageState extends State<MyAccountPage> {
     required WeeklyRaidStatusItem raid,
     required bool completed,
   }) async {
+    ManualWeeklyRaidClaimImpact? impact;
+    if (completed) {
+      final impactResult = await _viewModel.inspectWeeklyRaidCompletionImpact(
+        character: character,
+        raid: raid,
+      );
+      if (!mounted) return;
+      if (!impactResult.isSuccess) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_claimFailureMessage(impactResult.failure!))),
+        );
+        return;
+      }
+      impact = impactResult.impact;
+    }
+    final resolveConflicts = impact?.requiresConfirmation == true;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(completed ? '레이드 완료 처리' : '레이드 완료 해제'),
-        content: Text(
-          completed
-              ? '${character.characterName} 캐릭터의 ${raid.label} 레이드를 이번 주 완료로 처리할까요? 참가 중인 파티나 승인 대기 신청이 있으면 처리되지 않습니다.'
-              : '${character.characterName} 캐릭터의 ${raid.label} 완료를 해제할까요? 이전 파티에는 자동으로 복귀하지 않습니다.',
-        ),
+        content: Text(completed
+            ? _weeklyRaidCompletionConfirmation(character, raid, impact!)
+            : '${character.characterName} 캐릭터의 ${raid.label} 완료를 해제할까요? 이전 파티에는 자동으로 복귀하지 않습니다.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -612,7 +627,11 @@ class _MyAccountPageState extends State<MyAccountPage> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(completed ? '완료 처리' : '완료 해제'),
+            child: Text(
+              completed && impact!.hasActiveRecruitment
+                  ? '탈퇴하고 완료 처리'
+                  : '완료 처리',
+            ),
           ),
         ],
       ),
@@ -622,6 +641,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
       character: character,
       raid: raid,
       completed: completed,
+      resolveConflicts: resolveConflicts,
     );
     if (!mounted) return;
     final message = result.isSuccess
@@ -630,6 +650,34 @@ class _MyAccountPageState extends State<MyAccountPage> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  String _weeklyRaidCompletionConfirmation(
+    LocalAccountCharacter character,
+    WeeklyRaidStatusItem raid,
+    ManualWeeklyRaidClaimImpact impact,
+  ) {
+    final lines = <String>[
+      '${character.characterName} 캐릭터의 ${raid.label} 레이드를 이번 주 완료로 처리할까요?',
+    ];
+    if (impact.hasActiveRecruitment) {
+      final title = impact.activeRecruitmentTitle ?? '참가 중인 파티';
+      if (impact.willDisbandRecruitment) {
+        lines.add('$title에서 탈퇴하면 남은 인원이 없어 모집이 해산됩니다.');
+      } else if (impact.isRecruitmentLeader) {
+        final nextLeader = impact.nextLeaderCharacterName ?? '다음 파티원';
+        lines.add('$title에서 탈퇴하고 책임자가 $nextLeader 캐릭터로 승계됩니다.');
+      } else {
+        lines.add('$title에서 탈퇴 처리됩니다.');
+      }
+    }
+    if (impact.pendingApplicationCount > 0) {
+      lines.add(
+        '같은 레이드 승인 대기 신청 ${impact.pendingApplicationCount}건이 함께 종료됩니다.',
+      );
+    }
+    lines.add('완료 해제 시 이전 파티와 신청에는 자동으로 복귀하지 않습니다.');
+    return lines.join('\n\n');
   }
 
   String _claimFailureMessage(WeeklyRaidClaimCommandFailure failure) =>

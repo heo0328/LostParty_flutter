@@ -22,9 +22,24 @@ class WeeklyRaidClaimCommandResult {
   bool get isSuccess => failure == null;
 }
 
+class WeeklyRaidClaimImpactResult {
+  const WeeklyRaidClaimImpactResult.success(this.impact) : failure = null;
+  const WeeklyRaidClaimImpactResult.failure(this.failure) : impact = null;
+
+  final ManualWeeklyRaidClaimImpact? impact;
+  final WeeklyRaidClaimCommandFailure? failure;
+  bool get isSuccess => failure == null;
+}
+
 abstract interface class WeeklyRaidClaimCommandRepository {
-  Future<WeeklyRaidClaimCommandResult> createManualClaim(
+  Future<WeeklyRaidClaimImpactResult> inspectManualClaimImpact(
     CreateManualWeeklyRaidClaimCommand command,
+  );
+
+  Future<WeeklyRaidClaimCommandResult> createManualClaim(
+    CreateManualWeeklyRaidClaimCommand command, {
+    bool resolveConflicts = false,
+  }
   );
 
   Future<WeeklyRaidClaimCommandResult> deleteManualClaim(

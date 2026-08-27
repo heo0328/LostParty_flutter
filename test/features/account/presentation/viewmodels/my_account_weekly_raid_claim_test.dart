@@ -60,16 +60,25 @@ void main() {
     final character = viewModel.accounts.single.characters.single;
     final raid = viewModel.weeklyRaidStatusesFor(character).single;
 
+    final impact = await viewModel.inspectWeeklyRaidCompletionImpact(
+      character: character,
+      raid: raid,
+    );
+    expect(impact.isSuccess, isTrue);
+    expect(commands.inspected?.raidId, 'serca');
+
     expect(
       await viewModel.setWeeklyRaidCompleted(
         character: character,
         raid: raid,
         completed: true,
+        resolveConflicts: true,
       ),
       const WeeklyRaidClaimCommandResult.success(),
     );
     expect(commands.created?.difficultyId, 'hard');
     expect(commands.created?.characterId, 'character-1');
+    expect(commands.resolveConflicts, isTrue);
 
     expect(
       await viewModel.setWeeklyRaidCompleted(
@@ -85,14 +94,29 @@ void main() {
 }
 
 class _ClaimCommandRepository implements WeeklyRaidClaimCommandRepository {
+  CreateManualWeeklyRaidClaimCommand? inspected;
   CreateManualWeeklyRaidClaimCommand? created;
   DeleteManualWeeklyRaidClaimCommand? deleted;
+  bool? resolveConflicts;
+
+  @override
+  Future<WeeklyRaidClaimImpactResult> inspectManualClaimImpact(
+    CreateManualWeeklyRaidClaimCommand command,
+  ) async {
+    inspected = command;
+    return const WeeklyRaidClaimImpactResult.success(
+      ManualWeeklyRaidClaimImpact(),
+    );
+  }
 
   @override
   Future<WeeklyRaidClaimCommandResult> createManualClaim(
-    CreateManualWeeklyRaidClaimCommand command,
+    CreateManualWeeklyRaidClaimCommand command, {
+    bool resolveConflicts = false,
+  }
   ) async {
     created = command;
+    this.resolveConflicts = resolveConflicts;
     return const WeeklyRaidClaimCommandResult.success();
   }
 

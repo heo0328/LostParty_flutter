@@ -809,7 +809,8 @@ service cloud.firestore {
           'characterNameSnapshot', 'classNameSnapshot', 'role',
           'previousCharacterNameSnapshot', 'targetCharacterNameSnapshot',
           'raidId', 'difficultyId', 'partyIndex', 'slotIndex',
-          'previousPartyIndex', 'previousSlotIndex', 'occurredAt', 'expiresAt'
+          'previousPartyIndex', 'previousSlotIndex', 'reason', 'occurredAt',
+          'expiresAt'
         ])
         && data.schemaVersion == 1
         && data.eventId == eventId
@@ -851,7 +852,8 @@ service cloud.firestore {
         && !(data.actorPlayerId in after.memberPlayerIds)
         && playerId in before.memberPlayerIds
         && playerId != data.actorPlayerId
-        && data.characterNameSnapshot is string;
+        && data.characterNameSnapshot is string
+        && (!('reason' in data) || data.reason == 'weeklyRaidCompleted');
     }
 
     function validMemberKickedEvent(playerId, eventId, data) {
@@ -1004,6 +1006,27 @@ service cloud.firestore {
         && newData.updatedAt == request.time;
     }
 
+    function validApplicationWeeklyCompletion(playerId, oldData, newData) {
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && oldData.applicantPlayerId == playerId
+        && oldData.status == 'pending'
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'resolutionReason', 'revision', 'decidedAt', 'updatedAt'
+        ])
+        && newData.status == 'superseded'
+        && newData.resolutionReason == 'weeklyRaidCompleted'
+        && newData.revision == oldData.revision + 1
+        && newData.decidedAt == request.time
+        && newData.updatedAt == request.time
+        && hasWeeklyRaidClaimAfter(
+          playerId,
+          oldData.cycleKey,
+          oldData.characterId,
+          get(recruitmentPath(oldData.recruitmentId)).data.raidId
+        );
+    }
+
     // 거절·철회·superseded 후 같은 방 재신청. rejectionCount는 유지한다.
     function validApplicationReapply(recruitmentId, playerId, oldData, newData) {
       let recruitment = get(recruitmentPath(recruitmentId)).data;
@@ -1012,7 +1035,8 @@ service cloud.firestore {
         && oldData.applicantPlayerId == playerId
         && (oldData.status == 'rejected'
           || oldData.status == 'withdrawn'
-          || oldData.status == 'superseded')
+          || oldData.status == 'superseded'
+          || oldData.status == 'approved')
         && newData.diff(oldData).affectedKeys().hasOnly([
           'cycleKey', 'characterId', 'characterNameSnapshot', 'classNameSnapshot',
           'requestedRole', 'submittedBuildSnapshot', 'status', 'resolutionReason',
@@ -1385,6 +1409,10 @@ service cloud.firestore {
             request.resource.data
           ) || validApplicationReapply(
             recruitmentId,
+            playerId,
+            resource.data,
+            request.resource.data
+          ) || validApplicationWeeklyCompletion(
             playerId,
             resource.data,
             request.resource.data

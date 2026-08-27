@@ -167,14 +167,10 @@ class FirestorePartyApplicationCommandRepository
           PartyApplicationFailure.applicationAlreadyExists,
         );
       }
-      if (status == 'approved') {
-        return const PartyApplicationCommandResult.failure(
-          PartyApplicationFailure.alreadyMember,
-        );
-      }
       if (status != 'rejected' &&
           status != 'withdrawn' &&
-          status != 'superseded') {
+          status != 'superseded' &&
+          status != 'approved') {
         return const PartyApplicationCommandResult.failure(
           PartyApplicationFailure.invalidRequest,
         );

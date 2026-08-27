@@ -151,6 +151,7 @@ class MyAccountViewModel extends ChangeNotifier {
     required LocalAccountCharacter character,
     required WeeklyRaidStatusItem raid,
     required bool completed,
+    bool resolveConflicts = false,
   }) async {
     final repository = _weeklyRaidClaimCommandRepository;
     final playerId = _playerId;
@@ -187,6 +188,7 @@ class MyAccountViewModel extends ChangeNotifier {
             cycleStartedAt: cycleStartedAt,
             cycleEndsAt: cycleEndsAt,
           ),
+          resolveConflicts: resolveConflicts,
         );
       }
       return await repository.deleteManualClaim(
@@ -201,6 +203,39 @@ class MyAccountViewModel extends ChangeNotifier {
       _busyClaimKeys.remove(key);
       notifyListeners();
     }
+  }
+
+  Future<WeeklyRaidClaimImpactResult> inspectWeeklyRaidCompletionImpact({
+    required LocalAccountCharacter character,
+    required WeeklyRaidStatusItem raid,
+  }) async {
+    final repository = _weeklyRaidClaimCommandRepository;
+    final playerId = _playerId;
+    final cycleKey = _cycleKey;
+    final characterId = character.serverCharacterId;
+    final cycleStartedAt = _cycleStartedAt;
+    final cycleEndsAt = _cycleEndsAt;
+    if (repository == null ||
+        playerId == null ||
+        cycleKey == null ||
+        characterId == null ||
+        cycleStartedAt == null ||
+        cycleEndsAt == null) {
+      return const WeeklyRaidClaimImpactResult.failure(
+        WeeklyRaidClaimCommandFailure.invalidRequest,
+      );
+    }
+    return repository.inspectManualClaimImpact(
+      CreateManualWeeklyRaidClaimCommand(
+        playerId: playerId,
+        characterId: characterId,
+        raidId: raid.raidId,
+        difficultyId: raid.difficultyId,
+        cycleKey: cycleKey,
+        cycleStartedAt: cycleStartedAt,
+        cycleEndsAt: cycleEndsAt,
+      ),
+    );
   }
 
   Future<void> loadTokenStatus() async {

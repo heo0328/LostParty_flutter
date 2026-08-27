@@ -26,6 +26,7 @@ class PartyMembershipEventWriter {
     String? difficultyId,
     int? partyIndex,
     int? slotIndex,
+    String? reason,
     DateTime Function()? now,
   }) {
     for (final recipientPlayerId in recipientPlayerIds) {
@@ -47,6 +48,7 @@ class PartyMembershipEventWriter {
         difficultyId: difficultyId,
         partyIndex: partyIndex,
         slotIndex: slotIndex,
+        reason: reason,
         serverTimestamp: serverTimestamp,
         now: now,
       );
@@ -72,6 +74,7 @@ class PartyMembershipEventWriter {
     String? difficultyId,
     int? partyIndex,
     int? slotIndex,
+    String? reason,
     DateTime Function()? now,
   }) {
     assert(
@@ -117,6 +120,7 @@ class PartyMembershipEventWriter {
         difficultyId: difficultyId,
         partyIndex: partyIndex,
         slotIndex: slotIndex,
+        reason: reason,
         serverTimestamp: serverTimestamp,
         expiresAt: expiresAt,
       ),

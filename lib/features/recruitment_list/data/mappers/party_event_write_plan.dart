@@ -145,6 +145,7 @@ class PartyEventWritePlan {
     int? slotIndex,
     int? previousPartyIndex,
     int? previousSlotIndex,
+    String? reason,
   }) {
     assert(
       type == PartyEventType.memberJoined ||
@@ -174,6 +175,7 @@ class PartyEventWritePlan {
       'slotIndex': ?slotIndex,
       'previousPartyIndex': ?previousPartyIndex,
       'previousSlotIndex': ?previousSlotIndex,
+      'reason': ?reason,
       'occurredAt': serverTimestamp,
       'expiresAt': expiresAt,
     };

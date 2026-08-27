@@ -18,6 +18,28 @@ class CreateManualWeeklyRaidClaimCommand {
   final DateTime cycleEndsAt;
 }
 
+class ManualWeeklyRaidClaimImpact {
+  const ManualWeeklyRaidClaimImpact({
+    this.activeRecruitmentId,
+    this.activeRecruitmentTitle,
+    this.isRecruitmentLeader = false,
+    this.willDisbandRecruitment = false,
+    this.nextLeaderCharacterName,
+    this.pendingApplicationCount = 0,
+  });
+
+  final String? activeRecruitmentId;
+  final String? activeRecruitmentTitle;
+  final bool isRecruitmentLeader;
+  final bool willDisbandRecruitment;
+  final String? nextLeaderCharacterName;
+  final int pendingApplicationCount;
+
+  bool get hasActiveRecruitment => activeRecruitmentId != null;
+  bool get requiresConfirmation =>
+      hasActiveRecruitment || pendingApplicationCount > 0;
+}
+
 class DeleteManualWeeklyRaidClaimCommand {
   const DeleteManualWeeklyRaidClaimCommand({
     required this.playerId,

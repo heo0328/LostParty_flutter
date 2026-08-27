@@ -8,6 +8,9 @@ import '../../domain/repositories/weekly_raid_claim_repository.dart';
 import '../dtos/weekly_raid_claim_dto.dart';
 import '../mappers/weekly_raid_claim_mapper.dart';
 import '../mappers/weekly_raid_claim_document_id.dart';
+import '../../../recruitment_list/data/mappers/party_membership_event_writer.dart';
+import '../../../recruitment_list/data/mappers/party_membership_write_plan.dart';
+import '../../../recruitment_list/domain/entities/party_event.dart';
 
 class FirestoreWeeklyRaidClaimRepository
     implements WeeklyRaidClaimRepository, WeeklyRaidClaimCommandRepository {
@@ -27,6 +30,27 @@ class FirestoreWeeklyRaidClaimRepository
   final FirebaseFirestore _firestore;
   final FirebaseAuth _firebaseAuth;
   final WeeklyRaidClaimMapper _mapper;
+
+  @override
+  Future<WeeklyRaidClaimImpactResult> inspectManualClaimImpact(
+    CreateManualWeeklyRaidClaimCommand command,
+  ) async {
+    if (_firebaseAuth.currentUser == null) {
+      return const WeeklyRaidClaimImpactResult.failure(
+        WeeklyRaidClaimCommandFailure.unauthenticated,
+      );
+    }
+    try {
+      final context = await _loadConflictContext(command);
+      return WeeklyRaidClaimImpactResult.success(context.impact);
+    } on FirebaseException catch (error) {
+      return WeeklyRaidClaimImpactResult.failure(_commandFailure(error.code));
+    } catch (_) {
+      return const WeeklyRaidClaimImpactResult.failure(
+        WeeklyRaidClaimCommandFailure.unknown,
+      );
+    }
+  }
 
   @override
   Stream<List<WeeklyRaidClaim>> watchCurrentCycleClaims({
@@ -88,7 +112,9 @@ class FirestoreWeeklyRaidClaimRepository
 
   @override
   Future<WeeklyRaidClaimCommandResult> createManualClaim(
-    CreateManualWeeklyRaidClaimCommand command,
+    CreateManualWeeklyRaidClaimCommand command, {
+    bool resolveConflicts = false,
+  }
   ) async {
     if (_firebaseAuth.currentUser == null) {
       return const WeeklyRaidClaimCommandResult.failure(
@@ -111,19 +137,9 @@ class FirestoreWeeklyRaidClaimRepository
       );
     }
     try {
-      final applications = await _firestore
-          .collectionGroup('applications')
-          .where('schemaVersion', isEqualTo: 1)
-          .where('applicantPlayerId', isEqualTo: command.playerId)
-          .where('cycleKey', isEqualTo: command.cycleKey)
-          .orderBy('updatedAt', descending: true)
-          .get();
-      final hasPending = applications.docs.any((document) {
-        final data = document.data();
-        return data['status'] == 'pending' &&
-            data['characterId'] == command.characterId;
-      });
-      if (hasPending) {
+      final conflictContext = await _loadConflictContext(command);
+      if (!resolveConflicts &&
+          conflictContext.impact.pendingApplicationCount > 0) {
         return const WeeklyRaidClaimCommandResult.failure(
           WeeklyRaidClaimCommandFailure.pendingApplication,
         );
@@ -140,12 +156,135 @@ class FirestoreWeeklyRaidClaimRepository
         if (claim.exists) {
           return const WeeklyRaidClaimCommandResult.success();
         }
-        if (assignment.exists) {
+        if (assignment.exists && !resolveConflicts) {
           return const WeeklyRaidClaimCommandResult.failure(
             WeeklyRaidClaimCommandFailure.activeAssignment,
           );
         }
+        Map<String, dynamic>? recruitmentData;
+        Map<String, dynamic>? memberData;
+        DocumentReference<Map<String, dynamic>>? recruitmentRef;
+        DocumentReference<Map<String, dynamic>>? memberRef;
+        DocumentSnapshot<Map<String, dynamic>>? nextLeader;
+        if (assignment.exists) {
+          final assignmentData = assignment.data();
+          final recruitmentId = assignmentData?['recruitmentId'];
+          if (recruitmentId is! String || recruitmentId.isEmpty) {
+            return const WeeklyRaidClaimCommandResult.failure(
+              WeeklyRaidClaimCommandFailure.invalidRequest,
+            );
+          }
+          recruitmentRef = _firestore.collection('recruitments').doc(recruitmentId);
+          memberRef = recruitmentRef.collection('members').doc(command.playerId);
+          final recruitment = await transaction.get(recruitmentRef);
+          final member = await transaction.get(memberRef);
+          recruitmentData = recruitment.data();
+          memberData = member.data();
+          if (!recruitment.exists ||
+              !member.exists ||
+              recruitmentData?['status'] != 'active' ||
+              memberData?['characterId'] != command.characterId ||
+              recruitmentData?['raidId'] != command.raidId) {
+            return const WeeklyRaidClaimCommandResult.failure(
+              WeeklyRaidClaimCommandFailure.temporarilyUnavailable,
+            );
+          }
+          final remaining = List<String>.from(
+            recruitmentData?['memberPlayerIds'] as List,
+          )..remove(command.playerId);
+          if (recruitmentData?['leaderPlayerId'] == command.playerId &&
+              remaining.isNotEmpty) {
+            nextLeader = await transaction.get(
+              recruitmentRef.collection('members').doc(remaining.first),
+            );
+          }
+        }
+
+        final pendingApplications = <_PendingClaimApplication>[];
+        for (final candidate in conflictContext.pendingApplications) {
+          final application = await transaction.get(candidate.applicationRef);
+          final recruitment = await transaction.get(candidate.recruitmentRef);
+          final applicationData = application.data();
+          if (application.exists &&
+              recruitment.exists &&
+              applicationData?['status'] == 'pending' &&
+              applicationData?['characterId'] == command.characterId &&
+              applicationData?['cycleKey'] == command.cycleKey &&
+              recruitment.data()?['raidId'] == command.raidId) {
+            pendingApplications.add(candidate);
+          }
+        }
         final now = FieldValue.serverTimestamp();
+        if (assignment.exists) {
+          final r = recruitmentData!;
+          final m = memberData!;
+          final beforeMembers = List<String>.from(r['memberPlayerIds'] as List);
+          final remaining = [...beforeMembers]..remove(command.playerId);
+          final oldLeader = r['leaderPlayerId'] as String;
+          final nextLeaderId = oldLeader == command.playerId
+              ? (remaining.isEmpty ? null : remaining.first)
+              : oldLeader;
+          final nextLeaderData = nextLeader?.data();
+          final nextLeaderCharacterName = nextLeaderId == oldLeader
+              ? r['leaderCharacterNameSnapshot'] as String?
+              : nextLeaderData?['characterNameSnapshot'] as String?;
+          final nextLeaderClassName = nextLeaderId == oldLeader
+              ? r['leaderClassNameSnapshot'] as String?
+              : nextLeaderData?['classNameSnapshot'] as String?;
+          transaction.update(
+            recruitmentRef!,
+            PartyMembershipWritePlan.removeFromRecruitment(
+              memberPlayerIds: beforeMembers,
+              targetPlayerId: command.playerId,
+              memberCount: r['memberCount'] as int,
+              dealerCount: r['dealerCount'] as int,
+              supportCount: r['supportCount'] as int,
+              targetRole: m['role'] as String,
+              maxMemberCount: r['maxMemberCount'] as int,
+              revision: r['revision'] as int,
+              nextLeaderPlayerId: nextLeaderId,
+              nextLeaderCharacterName: nextLeaderCharacterName,
+              nextLeaderClassName: nextLeaderClassName,
+              serverTimestamp: now,
+            ),
+          );
+          transaction.delete(memberRef!);
+          transaction.delete(assignmentRef);
+          if (nextLeaderId != null && nextLeaderId != oldLeader) {
+            transaction.update(
+              recruitmentRef.collection('members').doc(nextLeaderId),
+              {'canApproveApplications': true, 'updatedAt': now},
+            );
+          }
+          PartyMembershipEventWriter.writeToRecipients(
+            transaction: transaction,
+            firestore: _firestore,
+            type: PartyEventType.memberLeft,
+            recipientPlayerIds: beforeMembers,
+            recruitmentId: recruitmentRef.id,
+            recruitmentRevision: (r['revision'] as int) + 1,
+            actorPlayerId: command.playerId,
+            targetPlayerId: command.playerId,
+            characterNameSnapshot: m['characterNameSnapshot'] as String?,
+            classNameSnapshot: m['classNameSnapshot'] as String?,
+            role: m['role'] as String?,
+            raidId: command.raidId,
+            difficultyId: r['difficultyId'] as String?,
+            partyIndex: m['partyIndex'] as int?,
+            slotIndex: m['slotIndex'] as int?,
+            reason: 'weeklyRaidCompleted',
+            serverTimestamp: now,
+          );
+        }
+        for (final pending in pendingApplications) {
+          transaction.update(pending.applicationRef, {
+            'status': 'superseded',
+            'resolutionReason': 'weeklyRaidCompleted',
+            'revision': FieldValue.increment(1),
+            'decidedAt': now,
+            'updatedAt': now,
+          });
+        }
         transaction.set(claimRef, {
           'schemaVersion': 1,
           'playerId': command.playerId,
@@ -168,6 +307,81 @@ class FirestoreWeeklyRaidClaimRepository
         WeeklyRaidClaimCommandFailure.unknown,
       );
     }
+  }
+
+  Future<_ManualClaimConflictContext> _loadConflictContext(
+    CreateManualWeeklyRaidClaimCommand command,
+  ) async {
+    final assignmentRef = _firestore
+        .collection('players')
+        .doc(command.playerId)
+        .collection('activeRaidAssignments')
+        .doc('${command.characterId}_${command.raidId}');
+    final assignment = await assignmentRef.get();
+    String? activeRecruitmentId;
+    String? activeRecruitmentTitle;
+    var isLeader = false;
+    var willDisband = false;
+    String? nextLeaderCharacterName;
+    if (assignment.exists) {
+      activeRecruitmentId = assignment.data()?['recruitmentId'] as String?;
+      if (activeRecruitmentId != null) {
+        final recruitment = await _firestore
+            .collection('recruitments')
+            .doc(activeRecruitmentId)
+            .get();
+        final data = recruitment.data();
+        activeRecruitmentTitle = data?['title'] as String?;
+        isLeader = data?['leaderPlayerId'] == command.playerId;
+        final memberIds = List<String>.from(data?['memberPlayerIds'] as List? ?? const []);
+        willDisband = isLeader && memberIds.length == 1;
+        if (isLeader && memberIds.length > 1) {
+          final nextId = memberIds.firstWhere((id) => id != command.playerId);
+          final nextMember = await recruitment.reference
+              .collection('members')
+              .doc(nextId)
+              .get();
+          nextLeaderCharacterName =
+              nextMember.data()?['characterNameSnapshot'] as String?;
+        }
+      }
+    }
+    final applicationQuery = await _firestore
+        .collectionGroup('applications')
+        .where('schemaVersion', isEqualTo: 1)
+        .where('applicantPlayerId', isEqualTo: command.playerId)
+        .where('cycleKey', isEqualTo: command.cycleKey)
+        .orderBy('updatedAt', descending: true)
+        .get();
+    final candidates = <_PendingClaimApplication>[];
+    for (final application in applicationQuery.docs) {
+      final data = application.data();
+      if (data['status'] != 'pending' ||
+          data['characterId'] != command.characterId) {
+        continue;
+      }
+      final recruitmentRef = application.reference.parent.parent;
+      if (recruitmentRef == null) continue;
+      final recruitment = await recruitmentRef.get();
+      if (recruitment.data()?['raidId'] != command.raidId) continue;
+      candidates.add(
+        _PendingClaimApplication(
+          applicationRef: application.reference,
+          recruitmentRef: recruitmentRef,
+        ),
+      );
+    }
+    return _ManualClaimConflictContext(
+      impact: ManualWeeklyRaidClaimImpact(
+        activeRecruitmentId: activeRecruitmentId,
+        activeRecruitmentTitle: activeRecruitmentTitle,
+        isRecruitmentLeader: isLeader,
+        willDisbandRecruitment: willDisband,
+        nextLeaderCharacterName: nextLeaderCharacterName,
+        pendingApplicationCount: candidates.length,
+      ),
+      pendingApplications: candidates,
+    );
   }
 
   @override
@@ -238,4 +452,24 @@ class FirestoreWeeklyRaidClaimRepository
     'aborted' => WeeklyRaidClaimCommandFailure.temporarilyUnavailable,
     _ => WeeklyRaidClaimCommandFailure.unknown,
   };
+}
+
+class _ManualClaimConflictContext {
+  const _ManualClaimConflictContext({
+    required this.impact,
+    required this.pendingApplications,
+  });
+
+  final ManualWeeklyRaidClaimImpact impact;
+  final List<_PendingClaimApplication> pendingApplications;
+}
+
+class _PendingClaimApplication {
+  const _PendingClaimApplication({
+    required this.applicationRef,
+    required this.recruitmentRef,
+  });
+
+  final DocumentReference<Map<String, dynamic>> applicationRef;
+  final DocumentReference<Map<String, dynamic>> recruitmentRef;
 }

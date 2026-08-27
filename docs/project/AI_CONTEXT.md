@@ -19,8 +19,8 @@
 ## 브랜치 기준
 - 통합 기준 브랜치: `main`
 - 현재 저장 브랜치와 커밋은 `NEXT_WORK.md`의 기준 상태를 따른다.
-- 2026-08-27 현재 `main`에는 Task-075 A가 반영됐고, `codex/weekly-raid-claim-manual`의 Task-076 B 수동 Claim 체크·해제는 Rules 배포와 실기기 검증까지 완료해 Git 종료 단계다.
-- Task-076 B는 활성 참가·pending이 없는 경우만 처리한다. 자동 탈퇴·신청 종료는 Task-078 D이며, 모집 전반의 Claim 제한 UX는 Task-077 C다.
+- 2026-08-27 현재 `main`에는 Task-077 C까지 반영됐다. Claim 체크 캐릭터의 모집 생성·신청·즉시 가입·참가 캐릭터 변경 제한과 교차 역할 캐릭터 변경 복구가 Rules 배포·실기기 검증까지 완료됐다.
+- Task-078 D는 내 계정 완료 체크 전 영향 조회와, 확인 후 활성 파티 탈퇴·책임자 승계/단독 해산·동일 레이드 pending 종료·Claim 생성·완료 사유 이벤트를 통합 Transaction으로 처리한다. Rules 배포와 실기기 검증을 완료했으며, 완료 탈퇴 후 Claim 해제·같은 방 재신청 시 과거 `approved` application을 재사용하는 회귀도 수정했다.
 
 ---
 

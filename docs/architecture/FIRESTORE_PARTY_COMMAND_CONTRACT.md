@@ -117,6 +117,7 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 #### 거절·철회·superseded 후 재신청
 
 - 같은 방·같은 Player 문서가 `rejected` / `withdrawn` / `superseded`이면 **새 문서를 만들지 않고** 해당 문서를 다시 `pending`으로 갱신한다.
+- 이전 승인 후 탈퇴해 현재 `memberPlayerIds`에 없는 Player의 application이 `approved`로 남아 있어도 같은 문서를 `pending`으로 갱신해 재신청할 수 있다. `memberPlayerIds`에 실제로 남아 있으면 기존 멤버 검증이 먼저 거절한다.
 - `rejectionCount`는 유지한다(거절 누적 안내). `approvalCount`는 0으로 초기화한다.
 - Character·역할·빌드 Snapshot과 `cycleKey`는 재신청 시점으로 교체하고 `revision`을 1 증가시킨다.
 - `pending`이 이미 있으면 중복 신청으로 거절한다. `approved`는 재신청하지 않는다.
