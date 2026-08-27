@@ -51,7 +51,7 @@
 
 | 구분 | 상태 | 비고 |
 | --- | --- | --- |
-| 통합 기준 | **`main` = Task-081 완료** | HEAD `46506e9` |
+| 통합 기준 | **`main` = Task-081 완료** | HEAD `39c39b1` |
 | 완료 기능 | 멤버십·회차 수명주기 + 앱 내부 알림 + Claim A~E + 내 계정 표기 설정 | Task-068~079, Task-081 |
 | Firestore Rules | 파티 전체 완료·`partyOwner` Claim·취소 복원 포함 **배포됨** | Firebase 프로젝트 `lost-party` |
 | 현재 코드 상태 | **`main`** | Task-081 병합 후 |
