@@ -12,6 +12,7 @@ import '../../features/account/data/gateways/firestore_account_ownership_status_
 import '../../features/account/data/gateways/firestore_character_summary_sync_gateway.dart';
 import '../../features/account/data/mappers/sibling_character_mapper.dart';
 import '../../features/account/data/repositories/firestore_weekly_raid_claim_repository.dart';
+import '../../features/account/data/repositories/local_character_weekly_raid_display_repository.dart';
 import '../../features/account/presentation/pages/api_token_settings_page.dart';
 import '../../features/account/presentation/pages/character_management_page.dart';
 import '../../features/account/presentation/pages/character_detail_page.dart';
@@ -22,6 +23,7 @@ import '../../features/account/domain/repositories/weekly_raid_claim_command_rep
 import '../../features/account/domain/entities/local_game_account.dart';
 import '../../features/account/domain/repositories/account_ownership_status_gateway.dart';
 import '../../features/account/domain/repositories/character_summary_sync_gateway.dart';
+import '../../features/account/domain/repositories/character_weekly_raid_display_repository.dart';
 import '../../features/account/domain/repositories/game_account_verification_gateway.dart';
 import '../../features/account/domain/services/character_summary_sync_service.dart';
 import '../../features/player/domain/entities/player_session.dart';
@@ -75,6 +77,7 @@ GoRouter createAppRouter({
   WeeklyRaidClaimRepository? weeklyRaidClaimRepository,
   CharacterSummarySyncGateway? characterSummarySyncGateway,
   WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository,
+  CharacterWeeklyRaidDisplayRepository? weeklyRaidDisplayRepository,
 }) {
   final partyReadRepositoryOrDefault =
       partyReadRepository ??
@@ -100,6 +103,9 @@ GoRouter createAppRouter({
           ? weeklyRaidClaimRepositoryOrDefault
                 as WeeklyRaidClaimCommandRepository
           : null);
+  final weeklyRaidDisplayRepositoryOrDefault =
+      weeklyRaidDisplayRepository ??
+      LocalCharacterWeeklyRaidDisplayRepository(database: accountDatabase);
   const cyclePolicy = PartyCyclePolicy();
   final currentCycleKey = cyclePolicy.keyFor(DateTime.now());
   final currentCycle = cyclePolicy.fromKey(currentCycleKey)!;
@@ -268,6 +274,8 @@ GoRouter createAppRouter({
                   accountRepository: accountRepository,
                   summarySyncService: characterSummarySyncService,
                   weeklyRaidClaimRepository: weeklyRaidClaimRepositoryOrDefault,
+                  weeklyRaidDisplayRepository:
+                      weeklyRaidDisplayRepositoryOrDefault,
                   raidCatalogRepository: raidCatalogRepository,
                   playerId: playerSession.playerId,
                   cycleKey: currentCycleKey,

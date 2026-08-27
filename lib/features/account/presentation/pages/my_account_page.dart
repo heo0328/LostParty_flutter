@@ -8,9 +8,11 @@ import '../../../../shared/widgets/clearable_text_form_field.dart';
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/entities/weekly_raid_claim_command.dart';
 import '../../domain/repositories/account_repository.dart';
+import '../../domain/repositories/character_weekly_raid_display_repository.dart';
 import '../../domain/repositories/weekly_raid_claim_repository.dart';
 import '../../domain/repositories/weekly_raid_claim_command_repository.dart';
 import '../../domain/services/character_summary_sync_service.dart';
+import '../../domain/services/weekly_raid_display_projector.dart';
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 import '../models/weekly_raid_status_item.dart';
 import '../viewmodels/my_account_view_model.dart';
@@ -23,6 +25,7 @@ class MyAccountPage extends StatefulWidget {
     this.summarySyncService,
     this.weeklyRaidClaimRepository,
     this.raidCatalogRepository,
+    this.weeklyRaidDisplayRepository,
     this.playerId,
     this.cycleKey,
     this.cycleStartedAt,
@@ -36,6 +39,7 @@ class MyAccountPage extends StatefulWidget {
   final CharacterSummarySyncService? summarySyncService;
   final WeeklyRaidClaimRepository? weeklyRaidClaimRepository;
   final RaidCatalogRepository? raidCatalogRepository;
+  final CharacterWeeklyRaidDisplayRepository? weeklyRaidDisplayRepository;
   final String? playerId;
   final String? cycleKey;
   final DateTime? cycleStartedAt;
@@ -61,6 +65,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
       summarySyncService: widget.summarySyncService,
       weeklyRaidClaimRepository: widget.weeklyRaidClaimRepository,
       raidCatalogRepository: widget.raidCatalogRepository,
+      weeklyRaidDisplayRepository: widget.weeklyRaidDisplayRepository,
       playerId: widget.playerId,
       cycleKey: widget.cycleKey,
       cycleStartedAt: widget.cycleStartedAt,
@@ -425,32 +430,33 @@ class _MyAccountPageState extends State<MyAccountPage> {
               ],
               for (final account in _viewModel.accounts) ...[
                 const SizedBox(height: 24),
+                Text(
+                  account.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 4),
                 Row(
                   children: [
                     Expanded(
-                      child: Row(
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Flexible(
-                            child: Text(
-                              account.label,
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
                           Chip(
                             visualDensity: VisualDensity.compact,
                             label: Text(account.isMain ? '본계정' : '부계정'),
                           ),
-                          if (account.hasActiveOwnership) ...[
-                            const SizedBox(width: 6),
+                          if (account.hasActiveOwnership)
                             const Chip(
                               key: ValueKey('verifiedGameAccountChip'),
                               visualDensity: VisualDensity.compact,
                               avatar: Icon(Icons.verified, size: 16),
                               label: Text('계정 인증 완료'),
-                            ),
-                          ] else if (account.hasLostOwnership) ...[
-                            const SizedBox(width: 6),
+                            )
+                          else if (account.hasLostOwnership)
                             Chip(
                               key: const ValueKey('lostOwnershipChip'),
                               visualDensity: VisualDensity.compact,
@@ -461,7 +467,6 @@ class _MyAccountPageState extends State<MyAccountPage> {
                               ),
                               label: const Text('인증 상실'),
                             ),
-                          ],
                         ],
                       ),
                     ),
@@ -488,6 +493,20 @@ class _MyAccountPageState extends State<MyAccountPage> {
                       ),
                   ],
                 ),
+                if (_viewModel.canEditWeeklyRaidDisplay) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      key: ValueKey(
+                        'rosterWeeklyRaidDisplayButton-${account.id}',
+                      ),
+                      onPressed: () => _editRosterWeeklyRaidDisplay(account),
+                      icon: const Icon(Icons.checklist_outlined, size: 18),
+                      label: const Text('원정대 주간레이드수정'),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 if (account.characters
                     .where((character) => character.isRosterMissing)
@@ -545,50 +564,289 @@ class _MyAccountPageState extends State<MyAccountPage> {
     final characters = account.visibleCharacters;
     return LayoutBuilder(
       builder: (context, constraints) {
+        const spacing = 8.0;
         final crossAxisCount = switch (constraints.maxWidth) {
           < 600 => 2,
           < 900 => 3,
           _ => 4,
         };
+        final itemWidth =
+            (constraints.maxWidth - spacing * (crossAxisCount - 1)) /
+            crossAxisCount;
 
-        return GridView.builder(
+        return Wrap(
           key: account.isMain
               ? const ValueKey('mainAccountCharacterGrid')
               : ValueKey('accountCharacterGrid-${account.id}'),
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: characters.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            mainAxisExtent: 238,
-          ),
-          itemBuilder: (context, index) {
-            final character = characters[index];
-            return AccountCharacterCard(
-              character: character,
-              isRepresentative:
-                  account.representativeCharacterId == character.id,
-              weeklyRaids: _viewModel.weeklyRaidStatusesFor(character),
-              busyRaidIds: {
-                for (final raid in _viewModel.weeklyRaidStatusesFor(character))
-                  if (_viewModel.isClaimCommandBusy(character, raid.raidId))
-                    raid.raidId,
-              },
-              onWeeklyRaidChanged:
-                  widget.weeklyRaidClaimCommandRepository == null
-                  ? null
-                  : (raid, value) => _confirmWeeklyRaidChange(
-                      character: character,
-                      raid: raid,
-                      completed: value,
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final character in characters)
+              SizedBox(
+                width: itemWidth,
+                child: AccountCharacterCard(
+                  character: character,
+                  isRepresentative:
+                      account.representativeCharacterId == character.id,
+                  weeklyRaids: _viewModel.weeklyRaidStatusesFor(character),
+                  showWeeklyRaidEditor: _viewModel.canEditWeeklyRaidDisplay &&
+                      character.itemLevel != null,
+                  weeklyRaidHiddenByPreference:
+                      _viewModel.hasWeeklyRaidDisplayConfigured(character) &&
+                      _viewModel.weeklyRaidResolvedCount(character) == 0,
+                  busyRaidIds: {
+                    for (final raid
+                        in _viewModel.weeklyRaidStatusesFor(character))
+                      if (_viewModel.isClaimCommandBusy(
+                        character,
+                        raid.raidId,
+                      ))
+                        raid.raidId,
+                  },
+                  onWeeklyRaidChanged:
+                      widget.weeklyRaidClaimCommandRepository == null
+                      ? null
+                      : (raid, value) => _confirmWeeklyRaidChange(
+                          character: character,
+                          raid: raid,
+                          completed: value,
+                        ),
+                  onEditWeeklyRaids: !_viewModel.canEditWeeklyRaidDisplay
+                      ? null
+                      : () => _editWeeklyRaidDisplay(character),
+                  onTap: () => _openCharacterDetail(character),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _editRosterWeeklyRaidDisplay(LocalGameAccount account) async {
+    var displayCount = WeeklyRaidDisplayProjector.defaultDisplayCount;
+    final result = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('원정대 주간 레이드 표시'),
+              content: SizedBox(
+                width: 360,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      '모든 캐릭터에 같은 표시 개수를 적용합니다. '
+                      '입장 가능한 레이드가 더 적으면 그만큼만 표시됩니다.',
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-              onTap: () => _openCharacterDetail(character),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        for (var count = 0;
+                            count <= WeeklyRaidDisplayProjector.maxDisplayCount;
+                            count++)
+                          ChoiceChip(
+                            key: ValueKey('rosterWeeklyRaidDisplayCount-$count'),
+                            label: Text('$count'),
+                            selected: displayCount == count,
+                            onSelected: (_) {
+                              setDialogState(() => displayCount = count);
+                            },
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('취소'),
+                ),
+                FilledButton(
+                  key: const ValueKey('applyRosterWeeklyRaidDisplayButton'),
+                  onPressed: () => Navigator.of(dialogContext).pop(displayCount),
+                  child: const Text('적용'),
+                ),
+              ],
             );
           },
         );
       },
+    );
+    if (result == null || !mounted) return;
+    final applied = await _viewModel.applyRosterWeeklyRaidDisplayCount(
+      account: account,
+      displayCount: result,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          applied
+              ? '원정대 주간 레이드 표시를 $result개로 맞췄습니다.'
+              : '원정대 주간 레이드 표시를 적용하지 못했습니다.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editWeeklyRaidDisplay(LocalAccountCharacter character) async {
+    final eligible = _viewModel.eligibleWeeklyRaidsFor(character);
+    if (eligible.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('입장 가능한 주간 레이드가 없습니다.')),
+      );
+      return;
+    }
+    final preference = _viewModel.weeklyRaidDisplayPreferenceFor(character);
+    final maxCount = eligible.length < WeeklyRaidDisplayProjector.maxDisplayCount
+        ? eligible.length
+        : WeeklyRaidDisplayProjector.maxDisplayCount;
+    var displayCount =
+        preference?.displayCount ??
+        (eligible.length < WeeklyRaidDisplayProjector.defaultDisplayCount
+            ? eligible.length
+            : WeeklyRaidDisplayProjector.defaultDisplayCount);
+    if (displayCount > maxCount) displayCount = maxCount;
+    final selected = <String>{
+      ...(preference?.raidIds ??
+          _viewModel
+              .weeklyRaidStatusesFor(character)
+              .map((raid) => raid.raidId)),
+    };
+    selected.removeWhere(
+      (raidId) => !eligible.any((candidate) => candidate.raidId == raidId),
+    );
+
+    final result = await showDialog<({int count, List<String> raidIds})?>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final canConfirm = selected.length == displayCount;
+            return AlertDialog(
+              title: const Text('표기 레이드 설정'),
+              content: SizedBox(
+                width: 360,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        '표시 개수',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          for (var count = 0; count <= maxCount; count++)
+                            ChoiceChip(
+                              key: ValueKey('weeklyRaidDisplayCount-$count'),
+                              label: Text('$count'),
+                              selected: displayCount == count,
+                              onSelected: (_) {
+                                setDialogState(() {
+                                  displayCount = count;
+                                  while (selected.length > displayCount) {
+                                    selected.remove(selected.last);
+                                  }
+                                });
+                              },
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        displayCount == 0
+                            ? '표시할 레이드를 숨깁니다.'
+                            : '레이드를 $displayCount개 선택하세요.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      if (displayCount > 0) ...[
+                        const SizedBox(height: 8),
+                        for (final candidate in eligible)
+                          CheckboxListTile(
+                            key: ValueKey(
+                              'weeklyRaidDisplayOption-${candidate.raidId}',
+                            ),
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(candidate.label),
+                            subtitle: Text(
+                              '입장 ${candidate.minItemLevel} · 골드 ${candidate.gold}',
+                            ),
+                            value: selected.contains(candidate.raidId),
+                            onChanged: (checked) {
+                              setDialogState(() {
+                                if (checked == true) {
+                                  if (selected.length >= displayCount) return;
+                                  selected.add(candidate.raidId);
+                                } else {
+                                  selected.remove(candidate.raidId);
+                                }
+                              });
+                            },
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('취소'),
+                ),
+                if (preference != null)
+                  TextButton(
+                    key: const ValueKey('resetWeeklyRaidDisplayButton'),
+                    onPressed: () => Navigator.of(dialogContext).pop((
+                      count: -1,
+                      raidIds: const <String>[],
+                    )),
+                    child: const Text('기본값'),
+                  ),
+                FilledButton(
+                  key: const ValueKey('saveWeeklyRaidDisplayButton'),
+                  onPressed: !canConfirm
+                      ? null
+                      : () {
+                          final ordered = <String>[
+                            for (final candidate in eligible)
+                              if (selected.contains(candidate.raidId))
+                                candidate.raidId,
+                          ];
+                          Navigator.of(dialogContext).pop((
+                            count: displayCount,
+                            raidIds: ordered,
+                          ));
+                        },
+                  child: const Text('저장'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    if (result == null || !mounted) return;
+    if (result.count < 0) {
+      await _viewModel.clearWeeklyRaidDisplayPreference(character);
+      return;
+    }
+    await _viewModel.saveWeeklyRaidDisplayPreference(
+      character: character,
+      displayCount: result.count,
+      raidIds: result.raidIds,
     );
   }
 

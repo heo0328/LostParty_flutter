@@ -1729,3 +1729,16 @@
 - UI는 `파티 전체 완료` 라벨과 책임자 전용 표시, 계약 안내 문구를 반영했다.
 - 표적 테스트 36개와 `flutter analyze --no-pub` 통과. Rules는 `lost-party`에 배포했다.
 - 다중 기기 실기기 검증과 기존 completed 방 assignment 정리는 Task-080 F로 이관했다.
+
+---
+
+## Task-081. 내 계정 주간 레이드 표시 설정 (2026-08-28)
+
+- 작업 브랜치: `cursor/task-081-weekly-raid-display`
+- Drift schema 9에 캐릭터별 주간 레이드 표시 설정(`displayCount`, `raidIdsCsv`)을 추가하고 Claim과 분리된 로컬 Repository로 저장한다.
+- 기본(미설정)은 골드 추천 상위 3개를 입장 레벨 내림차순으로 표시한다. 사용자 설정이 있으면 선택·순서를 존중하고 자동 추천으로 덮어쓰지 않는다.
+- 캐릭터별 수정 UI(0~5·선택 수 일치 시 저장·기본값)와 원정대 일괄 표시 개수 적용을 추가했다. 일괄 적용 시 입장 불가 레이드는 캐릭터별로 자동 축소한다.
+- 제품 결정을 반영해 접기/더보기 UI는 제거했고, 선택 개수만큼 항상 표시한다. 고정 높이 Grid overflow를 피하기 위해 캐릭터 카드는 내용 높이 `Wrap` 배치로 바꿨다.
+- 계정 헤더는 계정명 단독 줄 + 배지·n/n·아이콘 + `원정대 주간레이드수정` 버튼으로 정리했다.
+- 표적 테스트(projector·ViewModel·page) 통과. 에뮬레이터 overflow 수정과 실기기 UI를 확인했다.
+- 계약 문서 `FIREBASE_PARTY_PRODUCT_FLOW` §17·`WEEKLY_RAID_CLAIM_CONTRACT` §15를 접기 제거·일괄 개수 반영으로 갱신했다.

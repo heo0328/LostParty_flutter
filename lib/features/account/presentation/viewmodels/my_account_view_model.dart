@@ -7,13 +7,16 @@ import '../../../../shared/lost_ark_api/client/lost_ark_api_exception.dart';
 import '../../domain/entities/character_profile.dart';
 import '../../domain/entities/character_summary.dart';
 import '../../domain/entities/character_summary_sync_result.dart';
+import '../../domain/entities/character_weekly_raid_display_preference.dart';
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/entities/weekly_raid_claim.dart';
 import '../../domain/entities/weekly_raid_claim_command.dart';
 import '../../domain/repositories/account_repository.dart';
+import '../../domain/repositories/character_weekly_raid_display_repository.dart';
 import '../../domain/repositories/weekly_raid_claim_command_repository.dart';
 import '../../domain/repositories/weekly_raid_claim_repository.dart';
 import '../../domain/services/character_summary_sync_service.dart';
+import '../../domain/services/weekly_raid_display_projector.dart';
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 import '../models/weekly_raid_status_item.dart';
@@ -25,6 +28,7 @@ class MyAccountViewModel extends ChangeNotifier {
     CharacterSummarySyncService? summarySyncService,
     WeeklyRaidClaimRepository? weeklyRaidClaimRepository,
     RaidCatalogRepository? raidCatalogRepository,
+    CharacterWeeklyRaidDisplayRepository? weeklyRaidDisplayRepository,
     String? playerId,
     String? cycleKey,
     DateTime? cycleStartedAt,
@@ -35,6 +39,7 @@ class MyAccountViewModel extends ChangeNotifier {
        _summarySyncService = summarySyncService,
        _weeklyRaidClaimRepository = weeklyRaidClaimRepository,
        _raidCatalogRepository = raidCatalogRepository,
+       _weeklyRaidDisplayRepository = weeklyRaidDisplayRepository,
        _playerId = playerId,
        _cycleKey = cycleKey,
        _cycleStartedAt = cycleStartedAt,
@@ -46,6 +51,7 @@ class MyAccountViewModel extends ChangeNotifier {
   final CharacterSummarySyncService? _summarySyncService;
   final WeeklyRaidClaimRepository? _weeklyRaidClaimRepository;
   final RaidCatalogRepository? _raidCatalogRepository;
+  final CharacterWeeklyRaidDisplayRepository? _weeklyRaidDisplayRepository;
   final String? _playerId;
   final String? _cycleKey;
   final DateTime? _cycleStartedAt;
@@ -67,6 +73,8 @@ class MyAccountViewModel extends ChangeNotifier {
   List<WeeklyRaidClaim> _weeklyRaidClaims = const [];
   WeeklyRaidClaimReadFailureType? _claimReadFailure;
   final Set<String> _busyClaimKeys = <String>{};
+  Map<int, CharacterWeeklyRaidDisplayPreference> _weeklyRaidDisplayPreferences =
+      const {};
 
   bool get isLoadingTokenStatus => _isLoadingTokenStatus;
   bool get isFetchingCharacters => _isFetchingCharacters;
@@ -87,6 +95,23 @@ class MyAccountViewModel extends ChangeNotifier {
 
   LostArkApiErrorType? get errorType => _errorType;
   WeeklyRaidClaimReadFailureType? get claimReadFailure => _claimReadFailure;
+  bool get canEditWeeklyRaidDisplay => _weeklyRaidDisplayRepository != null;
+
+  CharacterWeeklyRaidDisplayPreference? weeklyRaidDisplayPreferenceFor(
+    LocalAccountCharacter character,
+  ) => _weeklyRaidDisplayPreferences[character.id];
+
+  List<WeeklyRaidDisplayCandidate> eligibleWeeklyRaidsFor(
+    LocalAccountCharacter character,
+  ) {
+    final catalog = _raidCatalog;
+    final itemLevel = character.itemLevel;
+    if (catalog == null || itemLevel == null) return const [];
+    return WeeklyRaidDisplayProjector.eligibleCandidates(
+      catalog: catalog,
+      itemLevel: itemLevel,
+    );
+  }
 
   List<WeeklyRaidStatusItem> weeklyRaidStatusesFor(
     LocalAccountCharacter character,
@@ -101,55 +126,105 @@ class MyAccountViewModel extends ChangeNotifier {
         .where((claim) => claim.characterId == serverCharacterId)
         .map((claim) => claim.raidId)
         .toSet();
-    final eligible =
-        <
-          ({RaidDefinition raid, RaidDifficultyDefinition difficulty, int gold})
-        >[];
-    for (final raid in catalog.raids.where((raid) => raid.isActive)) {
-      final difficulties = raid.difficulties.where(
-        (difficulty) =>
-            difficulty.isActive && difficulty.minItemLevel <= itemLevel,
-      );
-      if (difficulties.isEmpty) continue;
-      final selected = difficulties.reduce((left, right) {
-        final leftGold = left.clearGold + left.boundGold;
-        final rightGold = right.clearGold + right.boundGold;
-        if (leftGold != rightGold) return leftGold > rightGold ? left : right;
-        return left.displayOrder > right.displayOrder ? left : right;
-      });
-      eligible.add((
-        raid: raid,
-        difficulty: selected,
-        gold: selected.clearGold + selected.boundGold,
-      ));
-    }
-    eligible.sort((left, right) {
-      final gold = right.gold.compareTo(left.gold);
-      return gold != 0
-          ? gold
-          : left.raid.displayName.compareTo(right.raid.displayName);
-    });
-    // 기본 추천은 골드 상위 3개. 카드에는 입장 레벨 높은 레이드부터 내림차순으로 표시한다.
-    final recommended = eligible.take(3).toList(growable: false)
-      ..sort((left, right) {
-        final level = right.difficulty.minItemLevel.compareTo(
-          left.difficulty.minItemLevel,
-        );
-        if (level != 0) return level;
-        final gold = right.gold.compareTo(left.gold);
-        if (gold != 0) return gold;
-        return left.raid.displayName.compareTo(right.raid.displayName);
-      });
-    return recommended
+    final resolved = WeeklyRaidDisplayProjector.resolve(
+      eligible: WeeklyRaidDisplayProjector.eligibleCandidates(
+        catalog: catalog,
+        itemLevel: itemLevel,
+      ),
+      preference: _weeklyRaidDisplayPreferences[character.id],
+    );
+    return resolved
         .map(
           (entry) => WeeklyRaidStatusItem(
-            raidId: entry.raid.raidId,
-            difficultyId: entry.difficulty.difficultyId,
-            label: entry.raid.displayName,
-            isCompleted: completedRaidIds.contains(entry.raid.raidId),
+            raidId: entry.raidId,
+            difficultyId: entry.difficultyId,
+            label: entry.label,
+            isCompleted: completedRaidIds.contains(entry.raidId),
           ),
         )
         .toList(growable: false);
+  }
+
+  int weeklyRaidResolvedCount(LocalAccountCharacter character) {
+    return weeklyRaidStatusesFor(character).length;
+  }
+
+  bool hasWeeklyRaidDisplayConfigured(LocalAccountCharacter character) =>
+      _weeklyRaidDisplayPreferences.containsKey(character.id);
+
+  Future<bool> saveWeeklyRaidDisplayPreference({
+    required LocalAccountCharacter character,
+    required int displayCount,
+    required List<String> raidIds,
+  }) async {
+    final repository = _weeklyRaidDisplayRepository;
+    if (repository == null) return false;
+    final preference = CharacterWeeklyRaidDisplayPreference(
+      characterId: character.id,
+      displayCount: displayCount,
+      raidIds: raidIds,
+    );
+    if (!preference.isValid) return false;
+    final eligibleIds = eligibleWeeklyRaidsFor(
+      character,
+    ).map((candidate) => candidate.raidId).toSet();
+    if (!raidIds.every(eligibleIds.contains)) return false;
+    await repository.save(preference);
+    _weeklyRaidDisplayPreferences = {
+      ..._weeklyRaidDisplayPreferences,
+      character.id: preference,
+    };
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> clearWeeklyRaidDisplayPreference(
+    LocalAccountCharacter character,
+  ) async {
+    final repository = _weeklyRaidDisplayRepository;
+    if (repository == null) return false;
+    await repository.clear(character.id);
+    final next = Map<int, CharacterWeeklyRaidDisplayPreference>.from(
+      _weeklyRaidDisplayPreferences,
+    )..remove(character.id);
+    _weeklyRaidDisplayPreferences = next;
+    notifyListeners();
+    return true;
+  }
+
+  /// 원정대 전원에 동일 표시 개수를 적용한다. 입장 불가 레이드는 캐릭터별로 자동 축소한다.
+  Future<bool> applyRosterWeeklyRaidDisplayCount({
+    required LocalGameAccount account,
+    required int displayCount,
+  }) async {
+    final repository = _weeklyRaidDisplayRepository;
+    if (repository == null) return false;
+    if (displayCount < 0 ||
+        displayCount > WeeklyRaidDisplayProjector.maxDisplayCount) {
+      return false;
+    }
+    final next = Map<int, CharacterWeeklyRaidDisplayPreference>.from(
+      _weeklyRaidDisplayPreferences,
+    );
+    for (final character in account.characters) {
+      if (character.isRosterMissing) continue;
+      final eligible = eligibleWeeklyRaidsFor(character);
+      final selected = WeeklyRaidDisplayProjector.selectionForCount(
+        eligible: eligible,
+        requestedCount: displayCount,
+      );
+      final preference = CharacterWeeklyRaidDisplayPreference(
+        characterId: character.id,
+        displayCount: selected.length,
+        raidIds: selected.map((candidate) => candidate.raidId).toList(),
+      );
+      if (!preference.isValid) return false;
+      await repository.save(preference);
+      next[character.id] = preference;
+    }
+    _weeklyRaidDisplayPreferences = next;
+    notifyListeners();
+    return true;
   }
 
   bool isClaimCommandBusy(LocalAccountCharacter character, String raidId) {
@@ -261,6 +336,7 @@ class MyAccountViewModel extends ChangeNotifier {
     await loadTokenStatus();
     await _loadRaidCatalog();
     await loadStoredAccount();
+    await _loadWeeklyRaidDisplayPreferences();
     _watchWeeklyRaidClaims();
     if (_hasApiToken && _accounts.isNotEmpty) {
       unawaited(syncRosterSummaries(force: false));
@@ -271,6 +347,12 @@ class MyAccountViewModel extends ChangeNotifier {
     final repository = _raidCatalogRepository;
     if (repository == null) return;
     _raidCatalog = await repository.loadCatalog();
+  }
+
+  Future<void> _loadWeeklyRaidDisplayPreferences() async {
+    final repository = _weeklyRaidDisplayRepository;
+    if (repository == null) return;
+    _weeklyRaidDisplayPreferences = await repository.loadAll();
   }
 
   void _watchWeeklyRaidClaims() {

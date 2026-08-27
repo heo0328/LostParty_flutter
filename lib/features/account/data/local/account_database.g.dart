@@ -3645,6 +3645,292 @@ class PartyNotificationReceiptsCompanion
   }
 }
 
+class $CharacterWeeklyRaidDisplaysTable extends CharacterWeeklyRaidDisplays
+    with
+        TableInfo<
+          $CharacterWeeklyRaidDisplaysTable,
+          CharacterWeeklyRaidDisplay
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CharacterWeeklyRaidDisplaysTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES account_characters (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _displayCountMeta = const VerificationMeta(
+    'displayCount',
+  );
+  @override
+  late final GeneratedColumn<int> displayCount = GeneratedColumn<int>(
+    'display_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _raidIdsCsvMeta = const VerificationMeta(
+    'raidIdsCsv',
+  );
+  @override
+  late final GeneratedColumn<String> raidIdsCsv = GeneratedColumn<String>(
+    'raid_ids_csv',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [characterId, displayCount, raidIdsCsv];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'character_weekly_raid_displays';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CharacterWeeklyRaidDisplay> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('display_count')) {
+      context.handle(
+        _displayCountMeta,
+        displayCount.isAcceptableOrUnknown(
+          data['display_count']!,
+          _displayCountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_displayCountMeta);
+    }
+    if (data.containsKey('raid_ids_csv')) {
+      context.handle(
+        _raidIdsCsvMeta,
+        raidIdsCsv.isAcceptableOrUnknown(
+          data['raid_ids_csv']!,
+          _raidIdsCsvMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_raidIdsCsvMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {characterId};
+  @override
+  CharacterWeeklyRaidDisplay map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CharacterWeeklyRaidDisplay(
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      )!,
+      displayCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}display_count'],
+      )!,
+      raidIdsCsv: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}raid_ids_csv'],
+      )!,
+    );
+  }
+
+  @override
+  $CharacterWeeklyRaidDisplaysTable createAlias(String alias) {
+    return $CharacterWeeklyRaidDisplaysTable(attachedDatabase, alias);
+  }
+}
+
+class CharacterWeeklyRaidDisplay extends DataClass
+    implements Insertable<CharacterWeeklyRaidDisplay> {
+  final int characterId;
+  final int displayCount;
+
+  /// 표시 순서대로 쉼표 구분 raidId. displayCount == 0이면 빈 문자열.
+  final String raidIdsCsv;
+  const CharacterWeeklyRaidDisplay({
+    required this.characterId,
+    required this.displayCount,
+    required this.raidIdsCsv,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['character_id'] = Variable<int>(characterId);
+    map['display_count'] = Variable<int>(displayCount);
+    map['raid_ids_csv'] = Variable<String>(raidIdsCsv);
+    return map;
+  }
+
+  CharacterWeeklyRaidDisplaysCompanion toCompanion(bool nullToAbsent) {
+    return CharacterWeeklyRaidDisplaysCompanion(
+      characterId: Value(characterId),
+      displayCount: Value(displayCount),
+      raidIdsCsv: Value(raidIdsCsv),
+    );
+  }
+
+  factory CharacterWeeklyRaidDisplay.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CharacterWeeklyRaidDisplay(
+      characterId: serializer.fromJson<int>(json['characterId']),
+      displayCount: serializer.fromJson<int>(json['displayCount']),
+      raidIdsCsv: serializer.fromJson<String>(json['raidIdsCsv']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'characterId': serializer.toJson<int>(characterId),
+      'displayCount': serializer.toJson<int>(displayCount),
+      'raidIdsCsv': serializer.toJson<String>(raidIdsCsv),
+    };
+  }
+
+  CharacterWeeklyRaidDisplay copyWith({
+    int? characterId,
+    int? displayCount,
+    String? raidIdsCsv,
+  }) => CharacterWeeklyRaidDisplay(
+    characterId: characterId ?? this.characterId,
+    displayCount: displayCount ?? this.displayCount,
+    raidIdsCsv: raidIdsCsv ?? this.raidIdsCsv,
+  );
+  CharacterWeeklyRaidDisplay copyWithCompanion(
+    CharacterWeeklyRaidDisplaysCompanion data,
+  ) {
+    return CharacterWeeklyRaidDisplay(
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      displayCount: data.displayCount.present
+          ? data.displayCount.value
+          : this.displayCount,
+      raidIdsCsv: data.raidIdsCsv.present
+          ? data.raidIdsCsv.value
+          : this.raidIdsCsv,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CharacterWeeklyRaidDisplay(')
+          ..write('characterId: $characterId, ')
+          ..write('displayCount: $displayCount, ')
+          ..write('raidIdsCsv: $raidIdsCsv')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(characterId, displayCount, raidIdsCsv);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CharacterWeeklyRaidDisplay &&
+          other.characterId == this.characterId &&
+          other.displayCount == this.displayCount &&
+          other.raidIdsCsv == this.raidIdsCsv);
+}
+
+class CharacterWeeklyRaidDisplaysCompanion
+    extends UpdateCompanion<CharacterWeeklyRaidDisplay> {
+  final Value<int> characterId;
+  final Value<int> displayCount;
+  final Value<String> raidIdsCsv;
+  const CharacterWeeklyRaidDisplaysCompanion({
+    this.characterId = const Value.absent(),
+    this.displayCount = const Value.absent(),
+    this.raidIdsCsv = const Value.absent(),
+  });
+  CharacterWeeklyRaidDisplaysCompanion.insert({
+    this.characterId = const Value.absent(),
+    required int displayCount,
+    required String raidIdsCsv,
+  }) : displayCount = Value(displayCount),
+       raidIdsCsv = Value(raidIdsCsv);
+  static Insertable<CharacterWeeklyRaidDisplay> custom({
+    Expression<int>? characterId,
+    Expression<int>? displayCount,
+    Expression<String>? raidIdsCsv,
+  }) {
+    return RawValuesInsertable({
+      if (characterId != null) 'character_id': characterId,
+      if (displayCount != null) 'display_count': displayCount,
+      if (raidIdsCsv != null) 'raid_ids_csv': raidIdsCsv,
+    });
+  }
+
+  CharacterWeeklyRaidDisplaysCompanion copyWith({
+    Value<int>? characterId,
+    Value<int>? displayCount,
+    Value<String>? raidIdsCsv,
+  }) {
+    return CharacterWeeklyRaidDisplaysCompanion(
+      characterId: characterId ?? this.characterId,
+      displayCount: displayCount ?? this.displayCount,
+      raidIdsCsv: raidIdsCsv ?? this.raidIdsCsv,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (displayCount.present) {
+      map['display_count'] = Variable<int>(displayCount.value);
+    }
+    if (raidIdsCsv.present) {
+      map['raid_ids_csv'] = Variable<String>(raidIdsCsv.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CharacterWeeklyRaidDisplaysCompanion(')
+          ..write('characterId: $characterId, ')
+          ..write('displayCount: $displayCount, ')
+          ..write('raidIdsCsv: $raidIdsCsv')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AccountDatabase extends GeneratedDatabase {
   _$AccountDatabase(QueryExecutor e) : super(e);
   $AccountDatabaseManager get managers => $AccountDatabaseManager(this);
@@ -3657,6 +3943,8 @@ abstract class _$AccountDatabase extends GeneratedDatabase {
       $RaidHistoryEntriesTable(this);
   late final $PartyNotificationReceiptsTable partyNotificationReceipts =
       $PartyNotificationReceiptsTable(this);
+  late final $CharacterWeeklyRaidDisplaysTable characterWeeklyRaidDisplays =
+      $CharacterWeeklyRaidDisplaysTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3667,6 +3955,7 @@ abstract class _$AccountDatabase extends GeneratedDatabase {
     characterBuildSnapshots,
     raidHistoryEntries,
     partyNotificationReceipts,
+    characterWeeklyRaidDisplays,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -3684,6 +3973,15 @@ abstract class _$AccountDatabase extends GeneratedDatabase {
       ),
       result: [
         TableUpdate('character_build_snapshots', kind: UpdateKind.delete),
+      ],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'account_characters',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [
+        TableUpdate('character_weekly_raid_displays', kind: UpdateKind.delete),
       ],
     ),
   ]);
@@ -4188,6 +4486,33 @@ final class $$AccountCharactersTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    $CharacterWeeklyRaidDisplaysTable,
+    List<CharacterWeeklyRaidDisplay>
+  >
+  _characterWeeklyRaidDisplaysRefsTable(
+    _$AccountDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.characterWeeklyRaidDisplays,
+    aliasName:
+        'account_characters__id__character_weekly_raid_displays__character_id',
+  );
+
+  $$CharacterWeeklyRaidDisplaysTableProcessedTableManager
+  get characterWeeklyRaidDisplaysRefs {
+    final manager = $$CharacterWeeklyRaidDisplaysTableTableManager(
+      $_db,
+      $_db.characterWeeklyRaidDisplays,
+    ).filter((f) => f.characterId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _characterWeeklyRaidDisplaysRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$AccountCharactersTableFilterComposer
@@ -4304,6 +4629,35 @@ class $$AccountCharactersTableFilterComposer
               }) => $$CharacterBuildSnapshotsTableFilterComposer(
                 $db: $db,
                 $table: $db.characterBuildSnapshots,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> characterWeeklyRaidDisplaysRefs(
+    Expression<bool> Function(
+      $$CharacterWeeklyRaidDisplaysTableFilterComposer f,
+    )
+    f,
+  ) {
+    final $$CharacterWeeklyRaidDisplaysTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.characterWeeklyRaidDisplays,
+          getReferencedColumn: (t) => t.characterId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CharacterWeeklyRaidDisplaysTableFilterComposer(
+                $db: $db,
+                $table: $db.characterWeeklyRaidDisplays,
                 $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
                 joinBuilder: joinBuilder,
                 $removeJoinBuilderFromRootComposer:
@@ -4529,6 +4883,35 @@ class $$AccountCharactersTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> characterWeeklyRaidDisplaysRefs<T extends Object>(
+    Expression<T> Function(
+      $$CharacterWeeklyRaidDisplaysTableAnnotationComposer a,
+    )
+    f,
+  ) {
+    final $$CharacterWeeklyRaidDisplaysTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.characterWeeklyRaidDisplays,
+          getReferencedColumn: (t) => t.characterId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CharacterWeeklyRaidDisplaysTableAnnotationComposer(
+                $db: $db,
+                $table: $db.characterWeeklyRaidDisplays,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$AccountCharactersTableTableManager
@@ -4547,6 +4930,7 @@ class $$AccountCharactersTableTableManager
           PrefetchHooks Function({
             bool accountId,
             bool characterBuildSnapshotsRefs,
+            bool characterWeeklyRaidDisplaysRefs,
           })
         > {
   $$AccountCharactersTableTableManager(
@@ -4638,11 +5022,17 @@ class $$AccountCharactersTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({accountId = false, characterBuildSnapshotsRefs = false}) {
+              ({
+                accountId = false,
+                characterBuildSnapshotsRefs = false,
+                characterWeeklyRaidDisplaysRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (characterBuildSnapshotsRefs) db.characterBuildSnapshots,
+                    if (characterWeeklyRaidDisplaysRefs)
+                      db.characterWeeklyRaidDisplays,
                   ],
                   addJoins:
                       <
@@ -4701,6 +5091,27 @@ class $$AccountCharactersTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (characterWeeklyRaidDisplaysRefs)
+                        await $_getPrefetchedData<
+                          AccountCharacter,
+                          $AccountCharactersTable,
+                          CharacterWeeklyRaidDisplay
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AccountCharactersTableReferences
+                              ._characterWeeklyRaidDisplaysRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AccountCharactersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).characterWeeklyRaidDisplaysRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -4721,7 +5132,11 @@ typedef $$AccountCharactersTableProcessedTableManager =
       $$AccountCharactersTableUpdateCompanionBuilder,
       (AccountCharacter, $$AccountCharactersTableReferences),
       AccountCharacter,
-      PrefetchHooks Function({bool accountId, bool characterBuildSnapshotsRefs})
+      PrefetchHooks Function({
+        bool accountId,
+        bool characterBuildSnapshotsRefs,
+        bool characterWeeklyRaidDisplaysRefs,
+      })
     >;
 typedef $$CharacterBuildSnapshotsTableCreateCompanionBuilder =
     CharacterBuildSnapshotsCompanion Function({
@@ -5884,6 +6299,314 @@ typedef $$PartyNotificationReceiptsTableProcessedTableManager =
       PartyNotificationReceipt,
       PrefetchHooks Function()
     >;
+typedef $$CharacterWeeklyRaidDisplaysTableCreateCompanionBuilder =
+    CharacterWeeklyRaidDisplaysCompanion Function({
+      Value<int> characterId,
+      required int displayCount,
+      required String raidIdsCsv,
+    });
+typedef $$CharacterWeeklyRaidDisplaysTableUpdateCompanionBuilder =
+    CharacterWeeklyRaidDisplaysCompanion Function({
+      Value<int> characterId,
+      Value<int> displayCount,
+      Value<String> raidIdsCsv,
+    });
+
+final class $$CharacterWeeklyRaidDisplaysTableReferences
+    extends
+        BaseReferences<
+          _$AccountDatabase,
+          $CharacterWeeklyRaidDisplaysTable,
+          CharacterWeeklyRaidDisplay
+        > {
+  $$CharacterWeeklyRaidDisplaysTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $AccountCharactersTable _characterIdTable(_$AccountDatabase db) =>
+      db.accountCharacters.createAlias(
+        'character_weekly_raid_displays__character_id__account_characters__id',
+      );
+
+  $$AccountCharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
+    final manager = $$AccountCharactersTableTableManager(
+      $_db,
+      $_db.accountCharacters,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CharacterWeeklyRaidDisplaysTableFilterComposer
+    extends Composer<_$AccountDatabase, $CharacterWeeklyRaidDisplaysTable> {
+  $$CharacterWeeklyRaidDisplaysTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get displayCount => $composableBuilder(
+    column: $table.displayCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get raidIdsCsv => $composableBuilder(
+    column: $table.raidIdsCsv,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$AccountCharactersTableFilterComposer get characterId {
+    final $$AccountCharactersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.characterId,
+      referencedTable: $db.accountCharacters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountCharactersTableFilterComposer(
+            $db: $db,
+            $table: $db.accountCharacters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CharacterWeeklyRaidDisplaysTableOrderingComposer
+    extends Composer<_$AccountDatabase, $CharacterWeeklyRaidDisplaysTable> {
+  $$CharacterWeeklyRaidDisplaysTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get displayCount => $composableBuilder(
+    column: $table.displayCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get raidIdsCsv => $composableBuilder(
+    column: $table.raidIdsCsv,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$AccountCharactersTableOrderingComposer get characterId {
+    final $$AccountCharactersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.characterId,
+      referencedTable: $db.accountCharacters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountCharactersTableOrderingComposer(
+            $db: $db,
+            $table: $db.accountCharacters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CharacterWeeklyRaidDisplaysTableAnnotationComposer
+    extends Composer<_$AccountDatabase, $CharacterWeeklyRaidDisplaysTable> {
+  $$CharacterWeeklyRaidDisplaysTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get displayCount => $composableBuilder(
+    column: $table.displayCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get raidIdsCsv => $composableBuilder(
+    column: $table.raidIdsCsv,
+    builder: (column) => column,
+  );
+
+  $$AccountCharactersTableAnnotationComposer get characterId {
+    final $$AccountCharactersTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.characterId,
+          referencedTable: $db.accountCharacters,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$AccountCharactersTableAnnotationComposer(
+                $db: $db,
+                $table: $db.accountCharacters,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$CharacterWeeklyRaidDisplaysTableTableManager
+    extends
+        RootTableManager<
+          _$AccountDatabase,
+          $CharacterWeeklyRaidDisplaysTable,
+          CharacterWeeklyRaidDisplay,
+          $$CharacterWeeklyRaidDisplaysTableFilterComposer,
+          $$CharacterWeeklyRaidDisplaysTableOrderingComposer,
+          $$CharacterWeeklyRaidDisplaysTableAnnotationComposer,
+          $$CharacterWeeklyRaidDisplaysTableCreateCompanionBuilder,
+          $$CharacterWeeklyRaidDisplaysTableUpdateCompanionBuilder,
+          (
+            CharacterWeeklyRaidDisplay,
+            $$CharacterWeeklyRaidDisplaysTableReferences,
+          ),
+          CharacterWeeklyRaidDisplay,
+          PrefetchHooks Function({bool characterId})
+        > {
+  $$CharacterWeeklyRaidDisplaysTableTableManager(
+    _$AccountDatabase db,
+    $CharacterWeeklyRaidDisplaysTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CharacterWeeklyRaidDisplaysTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CharacterWeeklyRaidDisplaysTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CharacterWeeklyRaidDisplaysTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> characterId = const Value.absent(),
+                Value<int> displayCount = const Value.absent(),
+                Value<String> raidIdsCsv = const Value.absent(),
+              }) => CharacterWeeklyRaidDisplaysCompanion(
+                characterId: characterId,
+                displayCount: displayCount,
+                raidIdsCsv: raidIdsCsv,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> characterId = const Value.absent(),
+                required int displayCount,
+                required String raidIdsCsv,
+              }) => CharacterWeeklyRaidDisplaysCompanion.insert(
+                characterId: characterId,
+                displayCount: displayCount,
+                raidIdsCsv: raidIdsCsv,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$CharacterWeeklyRaidDisplaysTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({characterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (characterId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.characterId,
+                                referencedTable:
+                                    $$CharacterWeeklyRaidDisplaysTableReferences
+                                        ._characterIdTable(db),
+                                referencedColumn:
+                                    $$CharacterWeeklyRaidDisplaysTableReferences
+                                        ._characterIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CharacterWeeklyRaidDisplaysTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AccountDatabase,
+      $CharacterWeeklyRaidDisplaysTable,
+      CharacterWeeklyRaidDisplay,
+      $$CharacterWeeklyRaidDisplaysTableFilterComposer,
+      $$CharacterWeeklyRaidDisplaysTableOrderingComposer,
+      $$CharacterWeeklyRaidDisplaysTableAnnotationComposer,
+      $$CharacterWeeklyRaidDisplaysTableCreateCompanionBuilder,
+      $$CharacterWeeklyRaidDisplaysTableUpdateCompanionBuilder,
+      (
+        CharacterWeeklyRaidDisplay,
+        $$CharacterWeeklyRaidDisplaysTableReferences,
+      ),
+      CharacterWeeklyRaidDisplay,
+      PrefetchHooks Function({bool characterId})
+    >;
 
 class $AccountDatabaseManager {
   final _$AccountDatabase _db;
@@ -5903,5 +6626,11 @@ class $AccountDatabaseManager {
       $$PartyNotificationReceiptsTableTableManager(
         _db,
         _db.partyNotificationReceipts,
+      );
+  $$CharacterWeeklyRaidDisplaysTableTableManager
+  get characterWeeklyRaidDisplays =>
+      $$CharacterWeeklyRaidDisplaysTableTableManager(
+        _db,
+        _db.characterWeeklyRaidDisplays,
       );
 }

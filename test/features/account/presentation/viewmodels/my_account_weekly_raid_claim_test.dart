@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lost_party/features/account/data/fakes/in_memory_character_weekly_raid_display_repository.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_draft.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
 import 'package:lost_party/features/account/domain/entities/character_profile.dart';
@@ -112,6 +113,81 @@ void main() {
       const WeeklyRaidClaimCommandResult.success(),
     );
     expect(commands.deleted?.raidId, 'serca');
+    viewModel.dispose();
+  });
+
+  test('saves display preference and shows all selected raids', () async {
+    final displayRepository = InMemoryCharacterWeeklyRaidDisplayRepository();
+    final viewModel = MyAccountViewModel(
+      apiTokenStore: _TokenStore(),
+      accountRepository: _AccountRepository(),
+      weeklyRaidClaimRepository: _EmptyClaimRepository(),
+      weeklyRaidDisplayRepository: displayRepository,
+      raidCatalogRepository: _MultiRaidRepository(),
+      playerId: 'player-1',
+      cycleKey: '2026-08-26',
+    );
+
+    await viewModel.initialize();
+    await Future<void>.delayed(Duration.zero);
+    final character = viewModel.accounts.single.characters.single;
+
+    expect(
+      await viewModel.saveWeeklyRaidDisplayPreference(
+        character: character,
+        displayCount: 4,
+        raidIds: const ['high_level', 'mid_level', 'low_level', 'junk'],
+      ),
+      isTrue,
+    );
+
+    expect(
+      viewModel.weeklyRaidStatusesFor(character).map((item) => item.raidId),
+      ['high_level', 'mid_level', 'low_level', 'junk'],
+    );
+
+    expect(await viewModel.clearWeeklyRaidDisplayPreference(character), isTrue);
+    expect(
+      viewModel.weeklyRaidStatusesFor(character).map((item) => item.raidId),
+      ['high_level', 'mid_level', 'low_level'],
+    );
+    viewModel.dispose();
+  });
+
+  test('applies roster display count clamped per character eligibility', () async {
+    final displayRepository = InMemoryCharacterWeeklyRaidDisplayRepository();
+    final viewModel = MyAccountViewModel(
+      apiTokenStore: _TokenStore(),
+      accountRepository: _RosterAccountRepository(),
+      weeklyRaidClaimRepository: _EmptyClaimRepository(),
+      weeklyRaidDisplayRepository: displayRepository,
+      raidCatalogRepository: _MultiRaidRepository(),
+      playerId: 'player-1',
+      cycleKey: '2026-08-26',
+    );
+
+    await viewModel.initialize();
+    await Future<void>.delayed(Duration.zero);
+    final account = viewModel.accounts.single;
+    final high = account.characters.firstWhere((c) => c.id == 1);
+    final low = account.characters.firstWhere((c) => c.id == 2);
+
+    expect(
+      await viewModel.applyRosterWeeklyRaidDisplayCount(
+        account: account,
+        displayCount: 5,
+      ),
+      isTrue,
+    );
+
+    expect(
+      viewModel.weeklyRaidStatusesFor(high).map((item) => item.raidId),
+      ['high_level', 'mid_level', 'low_level', 'junk'],
+    );
+    expect(
+      viewModel.weeklyRaidStatusesFor(low).map((item) => item.raidId),
+      ['low_level', 'junk'],
+    );
     viewModel.dispose();
   });
 }
@@ -322,6 +398,44 @@ class _TokenStore implements ApiTokenStore {
   Future<void> write(ApiToken token) async {}
   @override
   Future<void> delete() async {}
+}
+
+class _RosterAccountRepository extends _AccountRepository {
+  @override
+  Future<LocalGameAccount?> loadMainAccount() async => const LocalGameAccount(
+    id: 1,
+    label: '본계정',
+    isMain: true,
+    lookupCharacterName: '캐릭터',
+    representativeCharacterId: 1,
+    displayLimit: 6,
+    characters: [
+      LocalAccountCharacter(
+        id: 1,
+        serverCharacterId: 'character-1',
+        serverName: '루페온',
+        characterName: '고레벨',
+        characterLevel: 70,
+        characterClassName: '바드',
+        itemLevel: 1760,
+        combatPower: 1,
+        isVisible: true,
+        displayOrder: 0,
+      ),
+      LocalAccountCharacter(
+        id: 2,
+        serverCharacterId: 'character-2',
+        serverName: '루페온',
+        characterName: '저레벨',
+        characterLevel: 70,
+        characterClassName: '창술사',
+        itemLevel: 1700,
+        combatPower: 1,
+        isVisible: true,
+        displayOrder: 1,
+      ),
+    ],
+  );
 }
 
 class _AccountRepository implements AccountRepository {

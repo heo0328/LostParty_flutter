@@ -147,6 +147,23 @@ class PartyNotificationReceipts extends Table {
   Set<Column<Object>> get primaryKey => {eventId};
 }
 
+/// 캐릭터 카드 주간 레이드 표기 설정. 없으면 기본 3개 추천.
+class CharacterWeeklyRaidDisplays extends Table {
+  IntColumn get characterId => integer().references(
+    AccountCharacters,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
+
+  IntColumn get displayCount => integer()();
+
+  /// 표시 순서대로 쉼표 구분 raidId. displayCount == 0이면 빈 문자열.
+  TextColumn get raidIdsCsv => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {characterId};
+}
+
 @DriftDatabase(
   tables: [
     GameAccounts,
@@ -154,6 +171,7 @@ class PartyNotificationReceipts extends Table {
     CharacterBuildSnapshots,
     RaidHistoryEntries,
     PartyNotificationReceipts,
+    CharacterWeeklyRaidDisplays,
   ],
 )
 class AccountDatabase extends _$AccountDatabase {
@@ -161,7 +179,7 @@ class AccountDatabase extends _$AccountDatabase {
     : super(executor ?? driftDatabase(name: 'lost_party'));
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -207,6 +225,9 @@ class AccountDatabase extends _$AccountDatabase {
       }
       if (from < 8) {
         await migrator.createTable(partyNotificationReceipts);
+      }
+      if (from < 9) {
+        await migrator.createTable(characterWeeklyRaidDisplays);
       }
     },
   );
@@ -1276,6 +1297,48 @@ class AccountDatabase extends _$AccountDatabase {
 
       return (updatedLocalCount: updatedLocalCount, changedBound: changedBound);
     });
+  }
+
+  Future<Map<int, ({int displayCount, List<String> raidIds})>>
+  loadCharacterWeeklyRaidDisplays() async {
+    final rows = await select(characterWeeklyRaidDisplays).get();
+    return {
+      for (final row in rows)
+        row.characterId: (
+          displayCount: row.displayCount,
+          raidIds: row.raidIdsCsv.isEmpty
+              ? const <String>[]
+              : row.raidIdsCsv.split(','),
+        ),
+    };
+  }
+
+  Future<void> saveCharacterWeeklyRaidDisplay({
+    required int characterId,
+    required int displayCount,
+    required List<String> raidIds,
+  }) async {
+    if (displayCount < 0 || displayCount > 5) {
+      throw ArgumentError.value(displayCount, 'displayCount');
+    }
+    if (raidIds.length != displayCount) {
+      throw ArgumentError(
+        'raidIds length (${raidIds.length}) must equal displayCount ($displayCount).',
+      );
+    }
+    await into(characterWeeklyRaidDisplays).insertOnConflictUpdate(
+      CharacterWeeklyRaidDisplaysCompanion.insert(
+        characterId: Value(characterId),
+        displayCount: displayCount,
+        raidIdsCsv: raidIds.join(','),
+      ),
+    );
+  }
+
+  Future<void> clearCharacterWeeklyRaidDisplay(int characterId) async {
+    await (delete(
+      characterWeeklyRaidDisplays,
+    )..where((table) => table.characterId.equals(characterId))).go();
   }
 
   String _characterKey(String serverName, String characterName) {
