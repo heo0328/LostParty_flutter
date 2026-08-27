@@ -126,6 +126,39 @@ void main() {
     );
   });
 
+  test('isOrphanPartyOwnerClaim은 같은 방 partyOwner만 인정한다', () {
+    expect(
+      PartyCompleteClaimWritePlan.isOrphanPartyOwnerClaim(
+        claim: const {
+          'source': 'partyOwner',
+          'sourceRecruitmentId': 'recruitment-1',
+        },
+        recruitmentId: 'recruitment-1',
+      ),
+      isTrue,
+    );
+    expect(
+      PartyCompleteClaimWritePlan.isOrphanPartyOwnerClaim(
+        claim: const {
+          'source': 'manual',
+          'sourceRecruitmentId': 'recruitment-1',
+        },
+        recruitmentId: 'recruitment-1',
+      ),
+      isFalse,
+    );
+    expect(
+      PartyCompleteClaimWritePlan.isOrphanPartyOwnerClaim(
+        claim: const {
+          'source': 'partyOwner',
+          'sourceRecruitmentId': 'other-room',
+        },
+        recruitmentId: 'recruitment-1',
+      ),
+      isFalse,
+    );
+  });
+
   test('restoredAssignment은 join plan과 같은 점유 필드를 쓴다', () {
     final assignment = PartyCompleteClaimWritePlan.restoredAssignment(
       playerId: 'player-1',

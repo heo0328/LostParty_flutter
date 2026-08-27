@@ -51,11 +51,11 @@
 
 | 구분 | 상태 | 비고 |
 | --- | --- | --- |
-| 통합 기준 | **`main` = Task-081 완료** | HEAD `39c39b1` |
-| 완료 기능 | 멤버십·회차 수명주기 + 앱 내부 알림 + Claim A~E + 내 계정 표기 설정 | Task-068~079, Task-081 |
-| Firestore Rules | 파티 전체 완료·`partyOwner` Claim·취소 복원 포함 **배포됨** | Firebase 프로젝트 `lost-party` |
-| 현재 코드 상태 | **`main`** | Task-081 병합 후 |
-| 다음 구현 | **Task-080 개인 주간 완료 Claim 기반 F** | 다중 기기 검증·기존 completed 방 assignment 정리 |
+| 통합 기준 | **`main` = Task-081 완료** | HEAD `39c39b1`. Task-080 F는 브랜치 커밋·병합만 남음 |
+| 완료 기능 | 멤버십·회차 + 알림 + Claim A~F + 내 계정 표기 설정 | Task-068~081 |
+| Firestore Rules | Claim A~F·다음주 prep·orphan self-heal **재배포 완료** | Firebase `lost-party` (사용자 배포) |
+| 현재 코드 상태 | **`cursor/task-080-claim-foundation-f`** | 구현·검증·Rules 완료, **커밋·main 병합 대기** |
+| 다음 구현 | **Task-082 레이드 모집에서 내 모집 제외** | F 병합 후 착수 |
 
 ### Task-073 확인 완료 사항 (2026-08-27)
 
@@ -69,6 +69,7 @@
 
 - BUG-002·006은 하단 탭 및 후속 흐름 수정 뒤 재현되지 않아 종료로 간주하고, 같은 증상이 다시 보고되면 새 재현 절차로 연다.
 - BUG-005의 주간 재완료 미차단은 독립 버그 패치가 아니라 Task-074~075 개인 주간 완료 Claim 서버 강제 범위에 흡수한다.
+- BUG-007(반복 파티 복잡 꼬임)은 정상·1차 복원 경로 밖 보류. 심화 업그레이드 시 [`BUG_REPORTS.md`](BUG_REPORTS.md)를 본다.
 
 ## 전체 작업 순서
 
@@ -83,9 +84,9 @@
 | 5 | 앱 내부 알림 이벤트 schema·Rules 기반 | **Task-073 완료** | 공통 event model과 안전한 create/read 경계 |
 | 6 | 신청·멤버십·회차 이벤트와 로컬 알림/UI | **Task-073에 포함 완료** | foreground/재실행 앱 내부 알림 |
 | 7 | **개인 주간 완료 Claim 계약** | **Task-074 완료** | 파티·점유·개인 완료 단일 기준 확정 |
-| 8 | 개인 주간 완료 Claim 구현 A~F | **A~E 완료, F는 현재 실행** | 체크박스·서버 제한·개인/전체 완료 |
+| 8 | 개인 주간 완료 Claim 구현 A~F | **A~F 완료** | 체크박스·서버 제한·개인/전체 완료 |
 | 8a | 내 계정 주간 레이드 표시 설정 | **Task-081 완료** | 0~5개·선택·원정대 일괄, 접기 없음 |
-| 9 | 레이드 모집에서 내 모집 제외 | Claim 흐름 안정화 | 공개 모집과 내 현황 분리 |
+| 9 | **레이드 모집에서 내 모집 제외** | **다음 실행 (Task-082)** | 공개 모집과 내 현황 분리 |
 | 10 | 운영자 계정 권한 기반 설계 | 특정 Player와 기능 확정 전 설계만 | 일반 사용자와 분리된 권한 경계 |
 | 11 | 그룹 생성·가입 | 그룹 계약 확정 | 그룹 membership 기반 |
 | 12 | 그룹 전용 모집 | 그룹 membership 안정화 | 생성 드롭다운과 그룹 Rules |
@@ -313,50 +314,76 @@
 
 ### 실기기·다중 기기 검증
 
-다중 사용자 실기기 확인은 Task-080 F 체크리스트로 이관한다.
+다중 사용자 실기기 확인은 Task-080 F에서 수행했다.
 
-## 다음 실행 작업 — Task-080 개인 주간 완료 Claim 기반 F
+## 완료 작업 — Task-080 개인 주간 완료 Claim 기반 F
 
 ```text
 현재 Task: Task-080 개인 주간 완료 Claim 기반 F
-현재 단계: 실기기 대기 / 구현
-브랜치: main 기준 새 작업 브랜치
-작업 트리: 깨끗해야 함
+현재 단계: 구현·실기기·Rules 완료 / 커밋·main 병합만 대기
+브랜치: cursor/task-080-claim-foundation-f
+```
+
+### 구현 결과
+
+- 모집 게이트·후보 UI **Claim-only**(로컬 `WeeklyRaidClear` 폐기)
+- orphan `activeRaidAssignment`: Claim 미변환, completed/disbanded/cycle-completed 시 본인 점유 self-heal(Rules + 파티 상세)
+- 내 계정 주간 레이드 **라벨 탭** 토글
+- 반복 파티 **완료 후 다음주 캐릭터 변경**: membership만 갱신(Claim·새 assignment 없음), 변경 시 완료 취소 포기 안내
+- 재완료 시 Snapshot에 없는 이전 캐릭터 `partyOwner` Claim orphan 정리
+- cycle `completionRevision` num 허용, 취소 거절 시 구성 변경 안내 문구
+
+### 검증
+
+- Task-079 E + F 실기기 체크리스트 통과(화요일 22:00 취소방지는 환경상 미실시)
+- 정상 완료·1차 실수 복원 경로 확인
+- `firestore.rules` **lost-party 재배포 완료**(사용자)
+- 표적 테스트·analyze 통과
+
+### 범위 밖 (완료 조건이 아님)
+
+- 일반 멤버 `내 캐릭터 완료` 버튼 → 별도 단위
+- 의도적 복잡 꼬임 심화 hardening → **BUG-007**로 기록, 앱 심화 업그레이드 시
+
+### 남은 Git
+
+- [ ] 브랜치 커밋·`main` 병합 후 Task-082 시작
+
+## 다음 실행 작업 — Task-082 레이드 모집에서 내 모집 제외
+
+```text
+현재 Task: Task-082 레이드 모집에서 내 모집 제외
+현재 단계: 검토(시작 전)
+브랜치: Task-080 F main 병합 후 신규 (예: cursor/task-082-exclude-own-recruitments)
+작업 트리: F 커밋·병합 후 시작
 ```
 
 ### 목표
 
-Claim A~E 흐름을 다중 기기로 검증하고, 기존 completed·해산 대기 방의 assignment 잔존과 로컬 완료 표시 정책을 정리한다.
+공개 레이드 모집 목록에서 **내가 책임자이거나 이미 참가 중인 방**을 제외하거나 분리해, 공개 탐색과 내 현황(레이드 현황)의 역할을 분명히 한다.
 
-### 지금 사용자가 할 테스트 (Task-079 E)
+### 시작 전 확인
 
-- [ ] 책임자만 `파티 전체 완료` 버튼이 보이고, 일반 멤버에게는 없다
-- [ ] 책임자 완료 후 전원 내 계정 체크박스가 체크되고 동일 레이드 생성·신청·가입이 차단된다
-- [ ] 완료 후 assignment가 사라져 같은 레이드 점유 충돌이 Claim만으로 막힌다
-- [ ] 1회성 완료 후 해산 대기 UX가 유지된다
-- [ ] 반복 파티에서 상태 변경 없이 마감 전 전체 완료 취소 시 Claim 해제·assignment 복원·회차 복구가 함께 된다
-- [ ] 완료 후 한 명이 Claim을 직접 해제하면 전체 완료 취소가 거절된다
-- [ ] 화요일 22:00 이후 전체 완료 취소가 거절된다
-- [ ] (Task-081 이후) 원정대 주간레이드수정을 4~5로 맞춘 뒤 다레이드 Claim 체크를 검증한다
+- Task-080 F가 `main`에 병합됐는지(Rules는 이미 재배포됨)
+- 공개 목록 쿼리·`PublicRecruitmentSummary`·현황 탭 경계를 [`FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`](../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md)와 대조
 
-### 구현·정리 범위
+### 포함 후보(검토에서 확정)
 
-- 기존 completed·해산 대기 방에 남은 `activeRaidAssignment` 정리 정책 확정·필요 시 안전 정리
-- Drift/로컬 완료 정정과 서버 Claim 표시 정책 정리
-- 수동 완료·개인 체크·전체 완료·해제·재모집의 2기기 회귀 확인
-- 일반 멤버 `내 캐릭터 완료` 버튼은 이 단계에 포함하지 않고 별도 단위로 둘 수 있다
+- 공개 모집 목록에서 본인 `leaderPlayerId` 또는 `memberPlayerIds` 포함 문서 클라이언트/쿼리 제외 또는 “내 방” 구분 표시
+- Rules는 결과 필터가 아니므로 **쿼리 조건 또는 클라이언트 필터** 중 Spark 비용·일관성에 맞는 쪽을 계약으로 고정
+- 기존 페이징·정렬·빈 자리 필터와의 충돌 여부
 
 ### 제외 범위
 
-- Cloud Functions·Blaze·별도 서버
-- 그룹·필터·채팅·운영자 기능
-- Claim 계약의 핵심 불변식 변경
+- 그룹 전용 모집, 공통 필터 확장, Claim 계약 변경
+- 그룹·채팅·운영자 기능
+- BUG-007 심화 hardening
 
 ### 완료 조건
 
-- 위 실기기 체크리스트 통과
-- 기존 방 assignment/표시 정책이 문서와 코드에서 일치
-- 문서와 Git 종료 후 다음 주요 기능(예: 레이드 모집에서 내 모집 제외)으로 이동
+- 공개 목록과 내 현황의 역할이 문서·UI에서 분리됨
+- 표적 테스트·analyze·실기기 확인
+- `DEV_LOG`·`AI_CONTEXT`·`NEXT_WORK` 갱신 후 Git 종료
 
 ## 완료 작업 — Task-081 내 계정 주간 레이드 표시 설정
 
@@ -396,11 +423,11 @@ Claim A~E 흐름을 다중 기기로 검증하고, 기존 completed·해산 대�
 
 ## 참고 문서
 
-Task-080을 시작할 때 먼저 확인할 문서:
+Task-082를 시작할 때 먼저 확인할 문서:
 
-1. [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)
+1. [`../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`](../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md)
 2. [`../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`](../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md)
-3. [`../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md)
+3. [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md) (Claim 경계 유지)
 4. [`ai_rules.md`](ai_rules.md)
 
 열린 결함:

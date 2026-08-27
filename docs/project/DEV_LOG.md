@@ -1743,3 +1743,18 @@
 - 표적 테스트(projector·ViewModel·page) 통과. 에뮬레이터 overflow 수정과 실기기 UI를 확인했다.
 - 계약 문서 `FIREBASE_PARTY_PRODUCT_FLOW` §17·`WEEKLY_RAID_CLAIM_CONTRACT` §15를 접기 제거·일괄 개수 반영으로 갱신했다.
 - `main` 반영 커밋: `46506e9`.
+
+---
+
+## Task-080. 개인 주간 완료 Claim 기반 F (2026-08-28)
+
+- 작업 브랜치: `cursor/task-080-claim-foundation-f`
+- 모집 게이트·후보 UI를 서버 Claim만 보도록 정리하고 로컬 `WeeklyRaidClear` OR을 제거했다.
+- E 이전 orphan `activeRaidAssignment`는 Claim으로 바꾸지 않고, 모집 completed/disbanded 또는 cycle completed일 때 본인 점유만 Rules·파티 상세 self-heal로 삭제한다.
+- 내 계정 주간 레이드 이름 탭으로 체크 토글을 연결했다.
+- 반복 파티 완료 후 다음주 참가 캐릭터 변경은 membership만 갱신한다(이번 주 Claim·새 assignment 없음). 변경 시 전체 완료 취소 포기 안내, 취소 거절 시 구성 변경 문구를 넣했다.
+- 재완료 때 이전 Snapshot 캐릭터의 같은 방 `partyOwner` Claim orphan을 정리한다. cycle `completionRevision`은 num을 허용한다.
+- 정상 완료·1차 실수 복원 실기기를 확인했다. 의도적 복잡 꼬임은 **BUG-007**로 `BUG_REPORTS.md`에 보류 기록하고, 앱 심화 업그레이드 시 대응한다.
+- 일반 멤버 `내 캐릭터 완료` 버튼은 별도 단위로 둔다.
+- 표적 테스트·analyze 통과. Rules는 사용자가 `lost-party`에 재배포했다. **커밋·`main` 병합만 남음.**
+- 다음 실행: Task-082 레이드 모집에서 내 모집 제외.

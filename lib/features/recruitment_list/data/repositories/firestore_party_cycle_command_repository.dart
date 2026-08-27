@@ -68,6 +68,13 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
       final sourceCompletionRevision = cycle.exists
           ? _readInt(cycle.data()?['completionRevision']) + 1
           : 1;
+      final previousSnapshot = cycle.exists
+          ? List<Map<String, Object?>>.from(
+              ((cycle.data()?['completedMemberSnapshot'] as List?) ??
+                      const [])
+                  .map((item) => Map<String, Object?>.from(item as Map)),
+            )
+          : const <Map<String, Object?>>[];
       final claimReads = <({
         String playerId,
         String characterId,
@@ -93,6 +100,32 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
           ),
         ));
       }
+      // 이전 완료 Snapshot의 다른 캐릭터 partyOwner Claim은 재완료 때 정리한다.
+      final currentCharacterByPlayer = {
+        for (final member in orderedSnapshot)
+          member['playerId'] as String: member['characterId'] as String,
+      };
+      final orphanClaimReads = <DocumentSnapshot<Map<String, dynamic>>>[];
+      for (final previous in previousSnapshot) {
+        final memberPlayerId = previous['playerId'] as String?;
+        final previousCharacterId = previous['characterId'] as String?;
+        if (memberPlayerId == null || previousCharacterId == null) continue;
+        final currentCharacterId = currentCharacterByPlayer[memberPlayerId];
+        if (currentCharacterId == null ||
+            currentCharacterId == previousCharacterId) {
+          continue;
+        }
+        orphanClaimReads.add(
+          await transaction.get(
+            _claimRef(
+              memberPlayerId,
+              command.cycleKey,
+              previousCharacterId,
+              raidId,
+            ),
+          ),
+        );
+      }
       final now = FieldValue.serverTimestamp();
       if (cycle.exists) {
         transaction.update(
@@ -109,6 +142,16 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
       }
       _writeEvents(transaction, command.recruitmentId, orderedSnapshot, r, type: 'partyCompleted', eventRevision: sourceCompletionRevision, serverTimestamp: now);
       transaction.update(recruitmentRef, PartyCycleWritePlan.completeRecruitment(continueTogether: r['continueTogether'] == true, completedByPlayerId: playerId, revision: command.expectedRecruitmentRevision, serverTimestamp: now));
+      for (final orphan in orphanClaimReads) {
+        if (!orphan.exists) continue;
+        if (!PartyCompleteClaimWritePlan.isOrphanPartyOwnerClaim(
+          claim: orphan.data(),
+          recruitmentId: command.recruitmentId,
+        )) {
+          continue;
+        }
+        transaction.delete(orphan.reference);
+      }
       for (final claim in claimReads) {
         final action = PartyCompleteClaimWritePlan.claimWriteAction(
           existing: claim.snap.exists ? claim.snap.data() : null,
@@ -424,6 +467,68 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
       );
       return const PartyCycleResult.success();
     });
+  }
+
+  @override
+  Future<PartyCycleResult> purgeStaleOwnAssignment(
+    PartyPurgeStaleAssignmentCommand command,
+  ) async {
+    if (command.recruitmentId.trim().isEmpty ||
+        command.characterId.trim().isEmpty ||
+        command.raidId.trim().isEmpty) {
+      return const PartyCycleResult.failure(PartyCycleFailure.invalidRequest);
+    }
+    final authUid = _firebaseAuth.currentUser?.uid;
+    if (authUid == null || authUid.isEmpty) {
+      return const PartyCycleResult.failure(PartyCycleFailure.unauthenticated);
+    }
+    final binding = await _firestore.collection('authBindings').doc(authUid).get();
+    final bindingData = binding.data();
+    final playerId = bindingData?['playerId'];
+    if (bindingData?['status'] != 'active' ||
+        playerId is! String ||
+        playerId.isEmpty) {
+      return const PartyCycleResult.failure(PartyCycleFailure.playerBindingMissing);
+    }
+    final recruitmentSnap = await _recruitment(command.recruitmentId).get();
+    if (!recruitmentSnap.exists) {
+      return const PartyCycleResult.failure(PartyCycleFailure.notFound);
+    }
+    final recruitment = recruitmentSnap.data()!;
+    final status = recruitment['status'];
+    final cycleStatus = recruitment['currentCycleStatus'];
+    final raidId = recruitment['raidId'];
+    final isStale = status == 'completed' ||
+        status == 'disbanded' ||
+        cycleStatus == 'completed';
+    if (!isStale || raidId != command.raidId) {
+      return const PartyCycleResult.success();
+    }
+    final assignmentRef = _assignmentRef(
+      playerId,
+      command.characterId,
+      command.raidId,
+    );
+    final assignmentSnap = await assignmentRef.get();
+    if (!assignmentSnap.exists) {
+      return const PartyCycleResult.success();
+    }
+    final assignment = assignmentSnap.data();
+    if (assignment?['recruitmentId'] != command.recruitmentId ||
+        assignment?['raidId'] != command.raidId) {
+      return const PartyCycleResult.success();
+    }
+    try {
+      await assignmentRef.delete();
+      return const PartyCycleResult.success();
+    } on FirebaseException catch (error) {
+      if (error.code == 'permission-denied') {
+        return const PartyCycleResult.failure(PartyCycleFailure.permissionDenied);
+      }
+      return const PartyCycleResult.failure(
+        PartyCycleFailure.temporarilyUnavailable,
+      );
+    }
   }
 
   DocumentReference<Map<String, dynamic>> _claimRef(

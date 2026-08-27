@@ -255,7 +255,12 @@ class FirestorePartyReadRepository implements PartyReadRepository {
           final data = snapshot.data() ?? const <String, dynamic>{};
           final status = data['status'];
           final revision = data['completionRevision'];
-          if (status is! String || status.isEmpty || revision is! int) {
+          final revisionInt = switch (revision) {
+            final int value => value,
+            final num value => value.toInt(),
+            _ => null,
+          };
+          if (status is! String || status.isEmpty || revisionInt == null) {
             throw const PartyReadContractException(
               'cycle document is missing status or completionRevision.',
             );
@@ -264,7 +269,7 @@ class FirestorePartyReadRepository implements PartyReadRepository {
             item: PartyCycleSnapshot(
               cycleKey: cycleKey,
               status: status,
-              completionRevision: revision,
+              completionRevision: revisionInt,
             ),
             isFromCache: snapshot.metadata.isFromCache,
           );

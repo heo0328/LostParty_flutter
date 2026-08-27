@@ -167,12 +167,7 @@ class RecruitmentLeaderCandidateService {
                   claim.characterId == character.serverCharacterId &&
                   claim.raidId == query.raidId,
             );
-        if (hasServerClaim || await weeklyClearRepository.hasClear(
-          userId: userId,
-          characterId: character.characterName,
-          raidId: query.raidId,
-          resetWeekKey: weekKey,
-        )) {
+        if (hasServerClaim) {
           statuses.add(
             const CandidateParticipationStatus(
               type: CandidateParticipationStatusType.weeklyRaidClear,

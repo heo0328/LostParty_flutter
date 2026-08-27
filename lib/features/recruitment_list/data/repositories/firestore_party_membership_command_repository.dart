@@ -37,34 +37,57 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
       final newRole = command.newRole;
       if (oldCharacterId == command.newCharacterId && oldRole == newRole) return const PartyMembershipResult.failure(PartyMembershipFailure.alreadyCurrentCharacter);
       if (oldCharacterId is! String || oldRole == null) return const PartyMembershipResult.failure(PartyMembershipFailure.unknown);
+      // 반복 파티 완료 후 변경은 다음 회차 준비 구성이다. 이번 주 Claim·assignment는 건드리지 않는다.
+      final isNextWeekPrep = r?['continueTogether'] == true &&
+          r?['currentCycleStatus'] == 'completed';
       final characterRef = _firestore.collection('characters').doc(command.newCharacterId);
       final oldAssignmentRef = _assignment(playerId, oldCharacterId, r?['raidId'] as String);
       final newAssignmentRef = _assignment(playerId, command.newCharacterId, r?['raidId'] as String);
       final character = await transaction.get(characterRef);
       final oldAssignment = await transaction.get(oldAssignmentRef);
       final newAssignment = await transaction.get(newAssignmentRef);
-      final claim = await transaction.get(
-        _firestore
-            .collection('players')
-            .doc(playerId)
-            .collection('weeklyRaidClaims')
-            .doc(
-              WeeklyRaidClaimDocumentId.create(
-                cycleKey: r?['currentCycleKey'] as String,
-                characterId: command.newCharacterId,
-                raidId: r?['raidId'] as String,
-              ),
-            ),
-      );
+      final claim = isNextWeekPrep
+          ? null
+          : await transaction.get(
+              _firestore
+                  .collection('players')
+                  .doc(playerId)
+                  .collection('weeklyRaidClaims')
+                  .doc(
+                    WeeklyRaidClaimDocumentId.create(
+                      cycleKey: r?['currentCycleKey'] as String,
+                      characterId: command.newCharacterId,
+                      raidId: r?['raidId'] as String,
+                    ),
+                  ),
+            );
       final c = character.data();
       if (!character.exists || c?['status'] != 'active') return const PartyMembershipResult.failure(PartyMembershipFailure.invalidCharacter);
       if (c?['ownerPlayerId'] != playerId) return const PartyMembershipResult.failure(PartyMembershipFailure.ownershipLost);
-      if (!oldAssignment.exists) return const PartyMembershipResult.failure(PartyMembershipFailure.notFound);
-      if (oldAssignmentRef.path != newAssignmentRef.path && newAssignment.exists) return const PartyMembershipResult.failure(PartyMembershipFailure.participationConflict);
-      if (claim.exists) {
-        return const PartyMembershipResult.failure(
-          PartyMembershipFailure.weeklyRaidCompleted,
-        );
+      if (isNextWeekPrep) {
+        // 완료 후 assignment는 이미 없다. 남은 orphan만 정리하고 새로 만들지 않는다.
+        if (oldAssignmentRef.path != newAssignmentRef.path && newAssignment.exists) {
+          return const PartyMembershipResult.failure(
+            PartyMembershipFailure.participationConflict,
+          );
+        }
+      } else {
+        if (!oldAssignment.exists) {
+          return const PartyMembershipResult.failure(
+            PartyMembershipFailure.notFound,
+          );
+        }
+        if (oldAssignmentRef.path != newAssignmentRef.path &&
+            newAssignment.exists) {
+          return const PartyMembershipResult.failure(
+            PartyMembershipFailure.participationConflict,
+          );
+        }
+        if (claim != null && claim.exists) {
+          return const PartyMembershipResult.failure(
+            PartyMembershipFailure.weeklyRaidCompleted,
+          );
+        }
       }
       final itemLevel = _itemLevel(c?['itemAvgLevel']);
       final name = c?['characterName'];
@@ -101,7 +124,11 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
           serverTimestamp: now,
         ),
       );
-      if (oldAssignmentRef.path == newAssignmentRef.path) {
+      if (isNextWeekPrep) {
+        if (oldAssignment.exists) {
+          transaction.delete(oldAssignmentRef);
+        }
+      } else if (oldAssignmentRef.path == newAssignmentRef.path) {
         transaction.update(oldAssignmentRef, {
           'role': newRole.name,
           'updatedAt': now,

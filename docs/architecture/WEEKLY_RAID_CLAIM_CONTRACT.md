@@ -367,7 +367,8 @@ cycle completed -> active(또는 completionCancelled 이력 후 active)
 1. Drift `raidHistoryEntries.localStatusOverride`는 표시 정정일 뿐 모집 제한의 서버 근거가 아니다.
 2. 기존 완료 이벤트는 개인 Claim과 별도 이력이므로 삭제하거나 Claim으로 직접 재사용하면 안 된다.
 3. 레이드 상세 일반 멤버 `내 캐릭터 완료` 버튼은 아직 연결하지 않았다.
-4. Task-079 E 이전 completed·해산 대기 방에 남은 active assignment 정리와 로컬 완료 데이터 이행은 단계 F 범위다.
+4. Task-080 F: 로컬 `WeeklyRaidClear`는 모집 게이트에서 **폐기**한다. 서버 Claim만 완료 근거다.
+5. Task-080 F: E 이전 completed·해산 대기 방에 남은 `activeRaidAssignment`는 Claim으로 변환하지 않는다. 해당 모집이 `completed`/`disbanded`(또는 `currentCycleStatus == completed`)이고 assignment의 `recruitmentId`·`raidId`가 일치하면 **본인 점유만** 삭제한다.
 
 ## 13. 구현 작업 분해
 
@@ -405,11 +406,12 @@ cycle completed -> active(또는 completionCancelled 이력 후 active)
 - 체크박스와 완료 이벤트 동기화
 - 반복 파티의 제한적 전체 완료 취소(원자 롤백)
 
-### 단계 F — 이행·실기기 검증
+### 단계 F — 이행·실기기 검증 — **Task-080 (진행)**
 
-- 기존 완료 이벤트·로컬 정정 데이터 표시 정책
-- 기존 completed·해산 대기 방과 assignment 정리 정책
+- Drift 히스토리 정정은 표시 전용 유지. 로컬 `WeeklyRaidClear`는 게이트에서 폐기(Claim-only)
+- completed/해산 대기 orphan assignment: Claim 미생성, 본인 점유 self-heal 삭제(Rules + 클라이언트)
 - 수동 완료, 개인 완료, 전체 완료, 해제와 재모집을 2기기에서 검증
+- 다레이드(표기 4~5) Claim 체크 검증
 
 각 단계는 별도 검토·구현·검증·문서화가 가능한 작업 그룹으로 유지한다.
 
@@ -428,8 +430,8 @@ cycle completed -> active(또는 completionCancelled 이력 후 active)
 2. 파티장·공대장 구분이 현재 `leaderPlayerId` 하나뿐인 구조에서 동일 명령으로 충분한지
 3. Claim 문서 ID escape/hash 규칙
 4. 파티 전체 완료·취소 Transaction의 Rules 접근 수 — Task-079에서 membership 공유 검증으로 약 12회(한도 20)로 확정
-5. 기존 수동 로컬 `WeeklyRaidClear` 데이터를 서버로 이행할지 폐기할지
-6. 기존 completed 방의 active assignment를 언제 안전하게 정리할지
+5. ~~기존 수동 로컬 `WeeklyRaidClear` 데이터를 서버로 이행할지 폐기할지~~ → **폐기(Claim-only)**. Task-080 F
+6. ~~기존 completed 방의 active assignment를 언제 안전하게 정리할지~~ → **본인 점유 self-heal**(모집 completed/disbanded 또는 cycle completed, recruitmentId·raidId 일치). Claim으로 변환하지 않음. Task-080 F
 7. 개인 완료 후 남은 파티의 모집 자동 노출 조건
 8. Claim 체크 해제 확인 문구와 오작동 방지 UX
 

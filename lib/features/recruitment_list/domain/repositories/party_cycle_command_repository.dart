@@ -6,4 +6,7 @@ abstract interface class PartyCycleCommandRepository {
   Future<PartyCycleResult> setRecurrence(PartySetRecurrenceCommand command);
   Future<PartyCycleResult> advance(PartyAdvanceCycleCommand command);
   Future<PartyCycleResult> disband(PartyDisbandCommand command);
+  Future<PartyCycleResult> purgeStaleOwnAssignment(
+    PartyPurgeStaleAssignmentCommand command,
+  );
 }
