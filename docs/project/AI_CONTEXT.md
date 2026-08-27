@@ -19,10 +19,10 @@
 ## 브랜치 기준
 - 통합 기준 브랜치: `main`
 - 현재 저장 브랜치와 커밋은 `NEXT_WORK.md`의 기준 상태를 따른다.
-- 2026-08-28 현재 `main`에는 Task-081까지 반영됐다. 내 계정 주간 레이드 표시는 로컬 0~5개·캐릭터별 선택·원정대 일괄 개수 적용이며 접기 UI 없이 선택 개수만큼 항상 표시한다.
+- 2026-08-28 현재 `main`에는 Task-080 F까지 반영됐다(`c45dba2`). Claim A~F·다음주 prep·orphan self-heal Rules는 `lost-party`에 배포됐다.
 - Task-079 E는 완료 시 Snapshot 전원 Claim 멱등 생성과 assignment 삭제, 취소 시 동일 출처 Claim 삭제·assignment 복원·회차 복구를 각각 한 Transaction으로 처리한다. Rules 접근은 membership 공유 검증으로 약 12회다.
-- Task-080 F(Claim-only 게이트·orphan assignment self-heal·다음주 prep 캐릭터 변경·재완료 orphan Claim 정리)는 구현·실기기·**Rules 재배포까지 완료**. 커밋·`main` 병합만 남았다. 복잡 꼬임은 BUG-007 보류.
-- 다음 작업은 **Task-082 레이드 모집에서 내 모집 제외**다(F 병합 후).
+- Task-080 F(Claim-only 게이트·orphan assignment self-heal·다음주 prep 캐릭터 변경·재완료 orphan Claim 정리) 완료. 복잡 꼬임은 BUG-007 보류.
+- 다음 작업은 **Task-082 레이드 모집에서 내 모집 제외**다.
 
 ---
 
@@ -299,7 +299,7 @@
 ## 다음 작업
 
 현재 작업 순서와 완료 상태의 단일 기준은 `docs/project/NEXT_WORK.md`다.
-Task-081까지 `main`에 반영됐다. Task-080 F는 구현·실기기·Rules 재배포까지 끝났고 **커밋·main 병합 후 Task-082**로 진행한다. 복잡 꼬임은 `BUG_REPORTS.md` BUG-007.
+Task-080 F까지 `main`에 반영됐다(`c45dba2`). 다음 실행은 **Task-082 레이드 모집에서 내 모집 제외**다. 복잡 꼬임은 `BUG_REPORTS.md` BUG-007.
 `codex/combat-power-auto-title`에서 전투력 표시 통일과 자동 모집 제목 구현 및 자동 검증을 완료했다.
 `codex/full-recruitment-edit`에서 생성·수정 공용 폼, 전체 모집 수정 흐름과 공통 입력 지우기 동작을 구현하고 Android 실기기 검증을 통과했다.
 완료 결과는 `main`과 `origin/main`에 통합됐다.

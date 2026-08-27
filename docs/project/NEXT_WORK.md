@@ -51,11 +51,11 @@
 
 | 구분 | 상태 | 비고 |
 | --- | --- | --- |
-| 통합 기준 | **`main` = Task-081 완료** | HEAD `39c39b1`. Task-080 F는 브랜치 커밋·병합만 남음 |
+| 통합 기준 | **`main` = Task-080 F 완료** | HEAD `c45dba2` |
 | 완료 기능 | 멤버십·회차 + 알림 + Claim A~F + 내 계정 표기 설정 | Task-068~081 |
-| Firestore Rules | Claim A~F·다음주 prep·orphan self-heal **재배포 완료** | Firebase `lost-party` (사용자 배포) |
-| 현재 코드 상태 | **`cursor/task-080-claim-foundation-f`** | 구현·검증·Rules 완료, **커밋·main 병합 대기** |
-| 다음 구현 | **Task-082 레이드 모집에서 내 모집 제외** | F 병합 후 착수 |
+| Firestore Rules | Claim A~F·다음주 prep·orphan self-heal **배포됨** | Firebase `lost-party` |
+| 현재 코드 상태 | **`main`** | Task-080 F 병합 후 |
+| 다음 구현 | **Task-082 레이드 모집에서 내 모집 제외** | 공개 목록 UX |
 
 ### Task-073 확인 완료 사항 (2026-08-27)
 
@@ -320,8 +320,8 @@
 
 ```text
 현재 Task: Task-080 개인 주간 완료 Claim 기반 F
-현재 단계: 구현·실기기·Rules 완료 / 커밋·main 병합만 대기
-브랜치: cursor/task-080-claim-foundation-f
+현재 단계: 완료 (`main` `c45dba2`)
+브랜치: main
 ```
 
 ### 구현 결과
@@ -347,15 +347,16 @@
 
 ### 남은 Git
 
-- [ ] 브랜치 커밋·`main` 병합 후 Task-082 시작
+- [x] 브랜치 커밋·`main` 병합 (`3726be8` / `c45dba2`)
+- origin 푸시는 사용자 지시 시
 
 ## 다음 실행 작업 — Task-082 레이드 모집에서 내 모집 제외
 
 ```text
 현재 Task: Task-082 레이드 모집에서 내 모집 제외
-현재 단계: 검토(시작 전)
-브랜치: Task-080 F main 병합 후 신규 (예: cursor/task-082-exclude-own-recruitments)
-작업 트리: F 커밋·병합 후 시작
+현재 단계: 검토(시작 가능)
+브랜치: 신규 (예: cursor/task-082-exclude-own-recruitments)
+작업 트리: main = Task-080 F 완료
 ```
 
 ### 목표
@@ -364,7 +365,7 @@
 
 ### 시작 전 확인
 
-- Task-080 F가 `main`에 병합됐는지(Rules는 이미 재배포됨)
+- 시작 전 확인: Task-080 F가 `main`에 있는지(Rules는 이미 재배포됨)
 - 공개 목록 쿼리·`PublicRecruitmentSummary`·현황 탭 경계를 [`FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`](../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md)와 대조
 
 ### 포함 후보(검토에서 확정)

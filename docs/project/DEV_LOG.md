@@ -1756,5 +1756,6 @@
 - 재완료 때 이전 Snapshot 캐릭터의 같은 방 `partyOwner` Claim orphan을 정리한다. cycle `completionRevision`은 num을 허용한다.
 - 정상 완료·1차 실수 복원 실기기를 확인했다. 의도적 복잡 꼬임은 **BUG-007**로 `BUG_REPORTS.md`에 보류 기록하고, 앱 심화 업그레이드 시 대응한다.
 - 일반 멤버 `내 캐릭터 완료` 버튼은 별도 단위로 둔다.
-- 표적 테스트·analyze 통과. Rules는 사용자가 `lost-party`에 재배포했다. **커밋·`main` 병합만 남음.**
+- 표적 테스트·analyze 통과. Rules는 사용자가 `lost-party`에 재배포했다.
+- `main` 반영: 구현 `3726be8`, 병합 `c45dba2`.
 - 다음 실행: Task-082 레이드 모집에서 내 모집 제외.
