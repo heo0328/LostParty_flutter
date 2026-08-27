@@ -204,15 +204,19 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 
 #### 완료와 Snapshot
 
-- 현재 회차 참가자는 누구나 완료할 수 있고 최초 완료 또는 완료 취소 후 재완료만 성공한다.
+- 파티장·공대장만 파티 전체 완료를 실행할 수 있다. 일반 멤버는 별도 `내 캐릭터 완료`로 본인 탈퇴와 본인 Claim만 처리한다.
 - `cycles/{cycleKey}`에 완료 당시 Player·Character·역할·파티 위치 Snapshot과 완료자를 저장하고 모집의 `currentCycleStatus`, 완료자와 revision을 함께 갱신한다.
 - 1회성 파티는 모집을 `completed`로 종료하고 반복 파티는 방을 `active`로 유지해 다음 회차 준비 변경을 허용한다.
+- 전체 완료는 Snapshot 전원의 `partyOwner` Claim 생성과 active assignment 삭제를 같은 Transaction에서 처리한다.
 
 #### 완료 취소
 
 - 반복 파티 책임자만 KST 화요일 22:00, 즉 `cycleEndsAt` 8시간 전까지 취소할 수 있다.
 - cycle의 `completionRevision`과 모집 revision을 함께 비교하고 취소된 완료는 같은 회차에서 다시 완료할 수 있다.
 - 시간 제한은 클라이언트 안내와 별개로 Rules의 `request.time`이 최종 강제한다.
+- 완료 당시 membership·책임자·역할·슬롯과 전원의 `partyOwner` Claim이 변경되지 않은 경우에만 취소한다.
+- 같은 `sourceRecruitmentId + sourceCompletionRevision`으로 생성된 Claim만 삭제하고, 완료 당시 assignment를 전원 복원한다.
+- 완료 후 Claim·membership·책임자·구성 또는 참가 충돌이 하나라도 변경됐으면 부분 병합하지 않고 전체 취소를 거절한다.
 
 #### 반복 설정과 주차 전환
 

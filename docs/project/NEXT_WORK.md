@@ -303,7 +303,7 @@
 
 ### 목표
 
-레이드 상세에서 책임자만 `파티 전체 완료`를 실행하고, 회차 완료와 완료 당시 전원의 Claim·점유 해제를 하나의 검증 가능한 명령으로 연결한다.
+레이드 상세에서 책임자만 `파티 전체 완료`를 실행하고, 회차 완료와 완료 당시 전원의 Claim·점유 해제를 하나의 검증 가능한 명령으로 연결한다. 반복 파티는 상태가 변하지 않은 경우에만 화요일 22:00 전 `전체 완료 취소`로 같은 명령의 결과 전체를 원자적으로 되돌린다.
 
 ### 시작 전 필수 검토
 
@@ -317,7 +317,7 @@ recruitment + current cycle
 + Player Events 최대 8개
 ```
 
-- Rules의 단일 문서 및 다중 문서 요청 접근 한도 안에서 각 쓰기를 검증할 수 있는지 먼저 표로 남긴다.
+- 전체 완료와 전체 완료 취소를 각각 나눠 Rules의 단일 문서 및 다중 문서 요청 접근 한도 안에서 각 쓰기를 검증할 수 있는지 먼저 표로 남긴다.
 - Spark 클라이언트 Transaction으로 다른 Player의 Claim 생성 권한을 안전하게 제한할 수 없거나 접근 한도를 넘으면 구현을 시작하지 않고 신뢰 서버 선행 여부를 결정받는다.
 - 기존 `FirestorePartyCycleCommandRepository.complete`가 일반 멤버도 허용하는 현재 동작과 완료 후 assignment가 남는 동작을 실제 코드·Rules·UI에서 함께 확인한다.
 
@@ -327,15 +327,20 @@ recruitment + current cycle
 - 책임자 권한, active 회차, revision과 완료 당시 membership Snapshot 재검증
 - 회차와 모집을 completed로 전환
 - Snapshot 전원의 Claim을 `source: partyOwner` 기준으로 생성
+- 각 Claim에 해당 방과 완료 명령을 가리키는 `sourceRecruitmentId + sourceCompletionRevision` 저장
 - Snapshot 전원의 active assignment 삭제
 - 기존 완료 이벤트와 앱 내부 알림 유지
 - 전원의 내 계정 체크박스가 Claim stream으로 갱신됨
 - 같은 명령 재시도 시 중복 Claim·이벤트가 생기지 않는 멱등 기준
+- 반복 파티의 책임자 전용 전체 완료 취소를 `cycleEndsAt - 8시간` 전까지만 허용
+- 완료 Snapshot과 현재 membership·책임자·역할·슬롯 및 전원의 해당 Claim이 그대로인지 재검증
+- 같은 완료 명령이 만든 `partyOwner` Claim 전원 삭제, assignment 전원 복원, 회차 복구와 취소 이벤트를 한 Transaction에서 처리
+- 완료 후 구성·Claim·참가 상태가 하나라도 바뀌었거나 assignment 복원 충돌이 있으면 부분 변경 없이 전체 거절
 
 ### 제외 범위
 
 - 일반 멤버의 레이드 상세 `내 캐릭터 완료` 버튼은 별도 연결 단위로 분리 가능
-- 완료 취소 시 개인 Claim 자동 삭제
+- 책임자가 `manual` 또는 일반 멤버의 `partyMember` Claim을 삭제하는 동작
 - 완료 후 해산된 파티 복구
 - 기존 completed 데이터 일괄 이행
 - Cloud Functions·Blaze·별도 서버 도입
@@ -347,7 +352,10 @@ recruitment + current cycle
 - 한 구성원이라도 Claim 계약·membership Snapshot이 맞지 않으면 일부 상태 없이 전체 실패
 - 완료 직후 전원 체크박스가 체크되고 동일 레이드 생성·신청·가입이 차단됨
 - 1회성 완료 후 기존 해산 대기 UX와 반복 파티의 다음 회차 정책이 깨지지 않음
-- 완료 취소는 공동 회차만 다루며 개인 Claim을 임의 삭제하지 않음
+- 변경 없는 반복 파티는 마감 전 전체 완료 취소 시 해당 완료가 만든 전원 Claim 삭제·assignment 복원·체크박스 해제가 함께 성공
+- 완료 후 구성원 한 명의 Claim 해제, membership·책임자·역할·슬롯 변경 또는 다른 참가 충돌이 있으면 전체 완료 취소가 아무 변경 없이 실패
+- 화요일 22:00 이후에는 전체 완료 취소가 거절됨
+- 완료 취소는 출처가 일치하는 `partyOwner` Claim만 삭제하고 `manual`·`partyMember` Claim은 건드리지 않음
 
 ### 완료 조건
 
@@ -360,7 +368,8 @@ recruitment + current cycle
 - 최대 8인 전체 완료가 Rules 접근 한도를 넘는 경우
 - 책임자가 다른 Player Claim을 자유롭게 만들 수 있는 권한 구멍 없이 검증할 수 없는 경우
 - 완료·Claim·assignment 중 일부만 성공할 가능성이 생기는 경우
-- 현재 1회성 해산 대기 또는 반복 파티 다음 회차 계약을 함께 변경해야 하는 경우
+- 현재 1회성 해산 대기 또는 반복 파티 다음 회차 계약을 이 지시서와 다르게 변경해야 하는 경우
+- 완료 후 다음 회차 준비 변경을 허용하면서도 전체 완료 취소까지 유지하려면 부분 병합 복원이 필요해지는 경우
 
 ## 후속 작업별 범위 메모
 

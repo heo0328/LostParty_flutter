@@ -81,6 +81,9 @@ players/{playerId}/weeklyRaidClaims/{cycleKey_characterId_raidId}
 
 문서 ID는 `${cycleKey}_${characterId}_${raidId}`다. Firestore Rules가 같은 값을 직접 재구성해 임의 ID와 중복 Claim을 거절할 수 있어야 한다. `cycleKey`는 `YYYY-MM-DD`, 서버 Character ID는 Firestore 자동 ID 형식인 영숫자 20자, `raidId`는 소문자 영숫자와 밑줄만 허용한다. 표시 이름은 식별 키로 사용하지 않는다.
 
+- `source == partyOwner`이면 `sourceRecruitmentId`와 `sourceCompletionRevision`은 필수다. 완료 취소가 **해당 파티 전체 완료 명령이 만든 Claim만** 식별하는 근거다.
+- `manual` 또는 `partyMember` Claim을 책임자가 완료 취소 명령으로 삭제할 수 없다.
+
 ### 기존 Claim과 멱등성
 
 - 같은 키의 Claim이 이미 있으면 완료 처리는 성공으로 간주한다.
@@ -295,13 +298,39 @@ cycle completed Snapshot 생성/갱신
 
 ### 완료 취소
 
-파티 완료와 개인 Claim은 분리한다. 공동 완료를 취소하더라도 개인 Claim을 자동 삭제하지 않는다.
+반복 파티의 완료 취소는 책임자가 실수로 실행한 **파티 전체 완료 명령의 제한된 공동 롤백**이다. 일반적인 개인 완료 해제와 다르다.
 
-- 완료 취소는 파티 회차를 다시 진행 가능한 상태로 복구하는 공동 명령이다.
-- 각 사용자의 실제 완료 Claim은 내 계정 체크박스에서만 해제한다.
-- 완료 취소 때문에 실제 완료한 사용자의 Claim을 다른 사람이 삭제할 수 없다.
+허용 조건:
 
-완료 취소 권한과 유지 여부는 Claim 기반 흐름 구현 후 다시 확정한다. 개인 재참가 복구를 위해 공동 완료 취소가 반드시 필요한 것은 아니다.
+- 현재 방이 `continueTogether == true`인 반복 파티다.
+- 현재 회차가 해당 `sourceCompletionRevision`으로 `completed` 상태다.
+- 현재 서버 시간이 `Asia/Seoul` 화요일 22:00보다 이르며 `cycleEndsAt - 8시간`과 일치한다.
+- 완료 당시 membership Snapshot과 현재 보존 membership·책임자·역할·슬롯이 변하지 않았다.
+- 완료 당시 전원의 Claim이 `source: partyOwner`, 같은 `sourceRecruitmentId`, 같은 `sourceCompletionRevision`이다.
+- 전원의 해당 active assignment가 아직 없고, Claim 해제 후 복원할 assignment가 다른 참가·Claim과 충돌하지 않는다.
+
+허용되면 하나의 Transaction에서:
+
+```text
+cycle completed -> active(또는 completionCancelled 이력 후 active)
++ recruitment currentCycleStatus/revision 복구
++ 해당 전체 완료가 만든 partyOwner Claim 전원 삭제
++ 완료 당시 membership 기준 activeRaidAssignment 전원 복원
++ 완료 취소 이벤트·알림 생성
+```
+
+- membership과 역할·슬롯은 완료 시 삭제하지 않았으므로 그대로 유지한다.
+- 완료 취소는 다른 방의 Claim, `manual` Claim, `partyMember` Claim 또는 완료 이후 사용자가 변경한 Claim을 삭제하지 않는다.
+- 한 명이라도 Claim을 직접 해제했거나 다른 모집에 참가·신청해 복원 충돌이 생겼거나 membership/책임자/구성이 바뀌었다면 전체 완료 취소를 거절한다.
+- 실패 시 회차·Claim·assignment 중 일부도 변경하지 않는다. 과거 기획의 부분 병합 복원과 `구성 점검 필요` 전환은 Claim 기반 초기 구현에서 사용하지 않는다.
+
+확인 문구 기본안:
+
+> 파티 전체 완료를 취소할까요? 완료 당시 파티원 전원의 앱 완료 상태가 해제되고 이 방의 참가 상태가 복구됩니다.
+
+거절 문구 기본안:
+
+> 완료 이후 일부 파티원의 참가 또는 완료 상태가 변경되어 전체 완료를 취소할 수 없습니다. 각 파티원이 내 계정에서 완료 상태를 확인해 주세요.
 
 ### 해산
 

@@ -1704,3 +1704,16 @@
 - Rules 배포와 실기기에서 일반 멤버 탈퇴, 책임자 승계, 단독 해산, pending 종료, 취소 무변경, 완료 사유 알림, Claim 해제 후 재신청을 확인했다.
 - 구현 커밋 `ec0def8`, 종료 문서 커밋 `efed5a3`으로 `main`과 `origin/main`에 반영됐다.
 - 레이드 상세의 일반 멤버 개인 완료 버튼과 파티장 전체 완료·전원 Claim은 Task-079 E 이후 범위다.
+
+---
+
+## Task-079 사전 설계. 반복 파티 전체 완료 취소 확정 (2026-08-27)
+
+- 반복 파티도 일반 파티와 같은 완료 흐름을 따르되 방과 membership은 다음 회차 준비를 위해 유지한다.
+- 책임자의 파티 전체 완료는 당시 전원의 `partyOwner` Claim 생성과 active assignment 해제를 회차 완료와 함께 처리한다.
+- 반복 파티 책임자는 KST 화요일 22:00 전, 완료 Snapshot과 현재 membership·책임자·역할·슬롯 및 전원의 해당 Claim이 그대로인 경우에만 전체 완료를 취소할 수 있다.
+- 취소는 같은 `sourceRecruitmentId + sourceCompletionRevision`의 `partyOwner` Claim 전원 삭제, assignment 전원 복원, 회차 복구와 취소 이벤트를 하나의 Transaction으로 처리한다.
+- 완료 후 Claim 직접 해제, 구성·책임자·역할·슬롯 변경 또는 다른 참가 충돌이 하나라도 있으면 부분 병합하지 않고 전체 취소를 거절한다. 다음 회차 준비 변경은 가능하지만 그 시점부터 이전 완료 취소는 포기한다.
+- 책임자는 `manual` 또는 일반 멤버의 `partyMember` Claim을 삭제할 수 없다. 수요일 오전 6시 이후에는 이전 회차를 취소하지 않는다.
+- 기존의 부분 병합 복원과 `구성 점검 필요` 전환안은 Claim 기반 초기 구현에서 폐기했다.
+- 코드는 변경하지 않았으며 Task-079는 전체 완료·전체 취소 각각의 최대 8인 Transaction과 Security Rules 접근 예산을 계산한 뒤 시작한다.

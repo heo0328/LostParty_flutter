@@ -18,7 +18,7 @@
 - 서버 상태는 `completed / incompleteEnded / completionCancelled`, 출처는 `partyEvent`다.
 - 같은 이벤트를 재동기화하면 서버 상태와 동기화 시각만 갱신하고 `visibility`와 `localStatusOverride`는 유지한다.
 - 사용자의 숨김은 서버에 전송하지 않으며 `visible / hidden`으로 로컬에만 저장한다.
-- 완료 취소 이벤트가 와도 사용자의 기록을 강제로 변경하지 않고 `localStatusOverride`로 완료 유지 또는 미완료 정정을 선택할 수 있다.
+- 완료 취소 이벤트가 와도 과거 Drift 히스토리 표시는 사용자의 `localStatusOverride`를 유지한다. 다만 허용된 파티 전체 완료 취소 Transaction은 출처가 일치하는 서버 Claim을 삭제하므로 현재 주차 내 계정 체크박스는 미완료로 갱신된다.
 - 완료 3종 외 type(알림·미래 type 포함)은 히스토리 sync에서 건너뛰며 전체 sync 실패로 만들지 않는다.
 
 ## 로컬 알림 receipt
