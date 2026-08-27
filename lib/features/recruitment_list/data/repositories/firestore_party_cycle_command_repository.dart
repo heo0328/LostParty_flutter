@@ -35,7 +35,29 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
       if (r?['leaderPlayerId'] != playerId) return const PartyCycleResult.failure(PartyCycleFailure.unauthorized);
       if (r?['currentCycleStatus'] != 'active' || (cycle.exists && cycle.data()?['status'] != 'completionCancelled')) return const PartyCycleResult.failure(PartyCycleFailure.alreadyCompleted);
       final snapshot = await _memberSnapshot(transaction, members);
-      if (snapshot == null || snapshot.length != r?['memberCount']) return const PartyCycleResult.failure(PartyCycleFailure.revisionConflict);
+      if (snapshot == null || snapshot.length != r?['memberCount']) {
+        return const PartyCycleResult.failure(PartyCycleFailure.revisionConflict);
+      }
+      final orderedMemberIds = List<String>.from(
+        (r?['memberPlayerIds'] as List?)?.map((id) => id.toString()) ??
+            const <String>[],
+      );
+      if (orderedMemberIds.length != snapshot.length) {
+        return const PartyCycleResult.failure(PartyCycleFailure.revisionConflict);
+      }
+      final snapshotByPlayerId = {
+        for (final member in snapshot) member['playerId'] as String: member,
+      };
+      final orderedSnapshot = <Map<String, Object?>>[];
+      for (final memberPlayerId in orderedMemberIds) {
+        final member = snapshotByPlayerId[memberPlayerId];
+        if (member == null) {
+          return const PartyCycleResult.failure(
+            PartyCycleFailure.revisionConflict,
+          );
+        }
+        orderedSnapshot.add(member);
+      }
       final raidId = r!['raidId'] as String;
       final difficultyId = r['difficultyId'] as String;
       final cycleStartedAt = r['cycleStartedAt'];
@@ -53,7 +75,7 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
         DocumentSnapshot<Map<String, dynamic>> snap,
       })>[];
       final assignmentReads = <({DocumentReference<Map<String, dynamic>> ref, DocumentSnapshot<Map<String, dynamic>> snap})>[];
-      for (final member in snapshot) {
+      for (final member in orderedSnapshot) {
         final memberPlayerId = member['playerId'] as String;
         final characterId = member['characterId'] as String;
         claimReads.add((
@@ -73,11 +95,11 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
       }
       final now = FieldValue.serverTimestamp();
       if (cycle.exists) {
-        transaction.update(cycleRef, PartyCycleWritePlan.recompleteCycle(completedByPlayerId: playerId, completionRevision: cycle.data()?['completionRevision'] as int, memberSnapshot: snapshot, serverTimestamp: now));
+        transaction.update(cycleRef, PartyCycleWritePlan.recompleteCycle(completedByPlayerId: playerId, completionRevision: cycle.data()?['completionRevision'] as int, memberSnapshot: orderedSnapshot, serverTimestamp: now));
       } else {
-        transaction.set(cycleRef, PartyCycleWritePlan.completedCycle(recruitmentId: command.recruitmentId, cycleKey: command.cycleKey, completedByPlayerId: playerId, memberSnapshot: snapshot, serverTimestamp: now));
+        transaction.set(cycleRef, PartyCycleWritePlan.completedCycle(recruitmentId: command.recruitmentId, cycleKey: command.cycleKey, completedByPlayerId: playerId, memberSnapshot: orderedSnapshot, serverTimestamp: now));
       }
-      _writeEvents(transaction, command.recruitmentId, snapshot, r, type: 'partyCompleted', eventRevision: sourceCompletionRevision, serverTimestamp: now);
+      _writeEvents(transaction, command.recruitmentId, orderedSnapshot, r, type: 'partyCompleted', eventRevision: sourceCompletionRevision, serverTimestamp: now);
       transaction.update(recruitmentRef, PartyCycleWritePlan.completeRecruitment(continueTogether: r['continueTogether'] == true, completedByPlayerId: playerId, revision: command.expectedRecruitmentRevision, serverTimestamp: now));
       for (final claim in claimReads) {
         if (claim.snap.exists) continue;
@@ -487,7 +509,6 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
     }
   }
 }
-
 PartyCycleFailure? _validateCurrent(Map<String, dynamic>? data, String cycleKey, int revision) {
   if (data == null) return PartyCycleFailure.notFound;
   if (data['revision'] != revision) return PartyCycleFailure.revisionConflict;

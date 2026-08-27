@@ -635,23 +635,29 @@ service cloud.firestore {
       let recruitment = get(recruitmentPath(data.recruitmentId)).data;
       let after = getAfter(recruitmentPath(data.recruitmentId)).data;
       let memberPath = recruitmentMemberPath(data.recruitmentId, playerId);
-      let memberAfter = getAfter(memberPath);
-      let cycle = getAfter(recruitmentCyclePath(
+      let cyclePath = recruitmentCyclePath(
         data.recruitmentId,
         recruitment.currentCycleKey
-      )).data;
-      let member = get(memberPath).data;
-      let partyCompleteRemoval = recruitment.leaderPlayerId == currentPlayerId()
-        && cycle.status == 'completed'
-        && playerId in cycle.memberPlayerIds
-        && member.characterId == data.characterId;
+      );
+      // 파티 전체 완료: membership은 유지한 채 assignment만 제거한다.
+      // cycle.memberPlayerIds 순서/타입에 의존하지 않고 완료 전 membership을 기준으로 본다.
+      let partyCompleteRemoval = hasActiveBinding()
+        && recruitment.leaderPlayerId == currentPlayerId()
+        && after.currentCycleStatus == 'completed'
+        && existsAfter(cyclePath)
+        && getAfter(cyclePath).data.status == 'completed'
+        && playerId in recruitment.memberPlayerIds
+        && exists(memberPath)
+        && get(memberPath).data.characterId == data.characterId
+        && data.raidId == recruitment.raidId;
       return hasActiveBinding()
         && (playerId == currentPlayerId()
           || recruitment.leaderPlayerId == currentPlayerId()
           || after.status == 'disbanded')
         && (partyCompleteRemoval
           || !existsAfter(memberPath)
-          || memberAfter.data.characterId != data.characterId
+          || (existsAfter(memberPath)
+            && getAfter(memberPath).data.characterId != data.characterId)
           || after.status == 'disbanded');
     }
 
@@ -1120,18 +1126,16 @@ service cloud.firestore {
     }
 
     function validPartyOwnerWeeklyRaidClaimCreate(playerId, claimId, data) {
-      let recruitment = get(recruitmentPath(data.sourceRecruitmentId)).data;
+      let recruitmentAfter = getAfter(recruitmentPath(data.sourceRecruitmentId)).data;
       let cycle = getAfter(recruitmentCyclePath(
         data.sourceRecruitmentId,
         data.cycleKey
       )).data;
-      let member = get(recruitmentMemberPath(
-        data.sourceRecruitmentId,
-        playerId
-      )).data;
+      let memberPath = recruitmentMemberPath(data.sourceRecruitmentId, playerId);
       let assignmentId = data.characterId + '_' + data.raidId;
       return hasActiveBinding()
-        && recruitment.leaderPlayerId == currentPlayerId()
+        && recruitmentAfter.leaderPlayerId == currentPlayerId()
+        && recruitmentAfter.currentCycleStatus == 'completed'
         && data.keys().hasOnly([
           'schemaVersion', 'playerId', 'characterId', 'raidId', 'cycleKey',
           'difficultyId', 'source', 'sourceRecruitmentId',
@@ -1150,28 +1154,25 @@ service cloud.firestore {
         && data.cycleEndsAt is timestamp
         && data.completedAt is timestamp
         && data.updatedAt is timestamp
-        && data.characterId.matches('^[A-Za-z0-9]{20}$')
-        && data.raidId.matches('^[a-z0-9_]+$')
-        && data.difficultyId.matches('^[a-z0-9_]+$')
-        && data.cycleKey.matches('^\\d{4}-\\d{2}-\\d{2}$')
         && claimId == weeklyRaidClaimId(
           data.cycleKey,
           data.characterId,
           data.raidId
         )
         && data.source == 'partyOwner'
-        && data.cycleKey == recruitment.currentCycleKey
-        && data.raidId == recruitment.raidId
-        && data.difficultyId == recruitment.difficultyId
-        && data.cycleEndsAt == data.cycleStartedAt + duration.value(7, 'd')
-        && request.time >= data.cycleStartedAt
-        && request.time < data.cycleEndsAt
+        && data.cycleKey == recruitmentAfter.currentCycleKey
+        && data.raidId == recruitmentAfter.raidId
+        && data.difficultyId == recruitmentAfter.difficultyId
+        && data.cycleStartedAt == recruitmentAfter.cycleStartedAt
+        && data.cycleEndsAt == recruitmentAfter.cycleEndsAt
         && data.completedAt == request.time
         && data.updatedAt == request.time
         && cycle.status == 'completed'
         && cycle.completionRevision == data.sourceCompletionRevision
-        && playerId in cycle.memberPlayerIds
-        && data.characterId == member.characterId
+        && cycle.completedByPlayerId == currentPlayerId()
+        && playerId in recruitmentAfter.memberPlayerIds
+        && exists(memberPath)
+        && data.characterId == get(memberPath).data.characterId
         && !existsAfter(assignmentPath(playerId, assignmentId));
     }
 
