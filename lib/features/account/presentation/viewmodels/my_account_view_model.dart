@@ -129,8 +129,18 @@ class MyAccountViewModel extends ChangeNotifier {
           ? gold
           : left.raid.displayName.compareTo(right.raid.displayName);
     });
-    return eligible
-        .take(3)
+    // 기본 추천은 골드 상위 3개. 카드에는 입장 레벨 높은 레이드부터 내림차순으로 표시한다.
+    final recommended = eligible.take(3).toList(growable: false)
+      ..sort((left, right) {
+        final level = right.difficulty.minItemLevel.compareTo(
+          left.difficulty.minItemLevel,
+        );
+        if (level != 0) return level;
+        final gold = right.gold.compareTo(left.gold);
+        if (gold != 0) return gold;
+        return left.raid.displayName.compareTo(right.raid.displayName);
+      });
+    return recommended
         .map(
           (entry) => WeeklyRaidStatusItem(
             raidId: entry.raid.raidId,

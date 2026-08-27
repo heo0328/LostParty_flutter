@@ -424,7 +424,7 @@ cycle completed -> active(또는 completionCancelled 이력 후 active)
 
 ## 15. 구현 전 추가 확인 항목
 
-1. 내 계정에서 캐릭터별로 표시할 기본 레이드 개수와 정렬은 기존 0~5개·기본 3개 정책을 유지할지
+1. 내 계정에서 캐릭터별로 표시할 기본 레이드 개수와 정렬은 기존 0~5개·기본 3개 정책을 유지한다. Claim A는 기본 3개만 연결했고, 접기·선택 수정은 `NEXT_WORK` Task-081로 기록됐다. 기본 표시 순서는 입장 레벨 내림차순이다.
 2. 파티장·공대장 구분이 현재 `leaderPlayerId` 하나뿐인 구조에서 동일 명령으로 충분한지
 3. Claim 문서 ID escape/hash 규칙
 4. 파티 전체 완료·취소 Transaction의 Rules 접근 수 — Task-079에서 membership 공유 검증으로 약 12회(한도 20)로 확정

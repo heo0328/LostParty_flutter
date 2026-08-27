@@ -41,6 +41,29 @@ void main() {
     },
   );
 
+  test('shows top gold raids ordered by entry item level descending', () async {
+    final viewModel = MyAccountViewModel(
+      apiTokenStore: _TokenStore(),
+      accountRepository: _AccountRepository(),
+      weeklyRaidClaimRepository: _EmptyClaimRepository(),
+      raidCatalogRepository: _MultiRaidRepository(),
+      playerId: 'player-1',
+      cycleKey: '2026-08-26',
+    );
+
+    await viewModel.initialize();
+    await Future<void>.delayed(Duration.zero);
+    final character = viewModel.accounts.single.characters.single;
+    final statuses = viewModel.weeklyRaidStatusesFor(character);
+
+    expect(statuses.map((item) => item.raidId), [
+      'high_level',
+      'mid_level',
+      'low_level',
+    ]);
+    viewModel.dispose();
+  });
+
   test('creates and deletes a manual claim through the checkbox command', () async {
     final commands = _ClaimCommandRepository();
     final viewModel = MyAccountViewModel(
@@ -151,6 +174,47 @@ class _ClaimRepository implements WeeklyRaidClaimRepository {
   ]);
 }
 
+class _EmptyClaimRepository implements WeeklyRaidClaimRepository {
+  @override
+  Stream<List<WeeklyRaidClaim>> watchCurrentCycleClaims({
+    required String playerId,
+    required String cycleKey,
+  }) => Stream.value(const []);
+}
+
+RaidDifficultyDefinition _difficulty({
+  required String difficultyId,
+  required int minItemLevel,
+  required int clearGold,
+}) => RaidDifficultyDefinition(
+  difficultyId: difficultyId,
+  name: difficultyId,
+  displayAlias: difficultyId,
+  displayOrder: 1,
+  minItemLevel: minItemLevel,
+  clearGold: clearGold,
+  boundGold: 0,
+  isActive: true,
+);
+
+RaidDefinition _raid({
+  required String raidId,
+  required String displayName,
+  required List<RaidDifficultyDefinition> difficulties,
+}) => RaidDefinition(
+  raidId: raidId,
+  officialName: displayName,
+  displayName: displayName,
+  aliases: const [],
+  partySize: 4,
+  partyCount: 1,
+  requiredSupportCount: 1,
+  maxDealerCountPerClass: 1,
+  gateCount: 2,
+  isActive: true,
+  difficulties: difficulties,
+);
+
 class _RaidRepository implements RaidCatalogRepository {
   @override
   Future<RaidCatalog> loadCatalog() async => RaidCatalog(
@@ -189,6 +253,61 @@ class _RaidRepository implements RaidCatalogRepository {
             clearGold: 44000,
             boundGold: 0,
             isActive: true,
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+class _MultiRaidRepository implements RaidCatalogRepository {
+  @override
+  Future<RaidCatalog> loadCatalog() async => RaidCatalog(
+    schemaVersion: 1,
+    catalogVersion: 'test',
+    updatedAt: DateTime.utc(2026),
+    raids: [
+      _raid(
+        raidId: 'low_level',
+        displayName: '낮은레벨',
+        difficulties: [
+          _difficulty(
+            difficultyId: 'normal',
+            minItemLevel: 1700,
+            clearGold: 90000,
+          ),
+        ],
+      ),
+      _raid(
+        raidId: 'mid_level',
+        displayName: '중간레벨',
+        difficulties: [
+          _difficulty(
+            difficultyId: 'normal',
+            minItemLevel: 1720,
+            clearGold: 50000,
+          ),
+        ],
+      ),
+      _raid(
+        raidId: 'high_level',
+        displayName: '높은레벨',
+        difficulties: [
+          _difficulty(
+            difficultyId: 'normal',
+            minItemLevel: 1740,
+            clearGold: 40000,
+          ),
+        ],
+      ),
+      _raid(
+        raidId: 'junk',
+        displayName: '제외',
+        difficulties: [
+          _difficulty(
+            difficultyId: 'normal',
+            minItemLevel: 1680,
+            clearGold: 1000,
           ),
         ],
       ),

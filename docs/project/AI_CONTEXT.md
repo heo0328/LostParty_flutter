@@ -21,7 +21,7 @@
 - 현재 저장 브랜치와 커밋은 `NEXT_WORK.md`의 기준 상태를 따른다.
 - 2026-08-27 현재 `main`에는 Task-079 E까지 반영됐다. 책임자 전용 파티 전체 완료와 반복 파티 제한적 전체 완료 취소가 `partyOwner` Claim·assignment 정리와 함께 Rules 배포까지 완료됐다.
 - Task-079 E는 완료 시 Snapshot 전원 Claim 멱등 생성과 assignment 삭제, 취소 시 동일 출처 Claim 삭제·assignment 복원·회차 복구를 각각 한 Transaction으로 처리한다. Rules 접근은 membership 공유 검증으로 약 12회다.
-- 다음 Task-080 F는 다중 기기 실기기 검증과 기존 completed 방 assignment·로컬 표시 정책 정리이다. 레이드 상세 일반 멤버 개인 완료 버튼은 아직 연결하지 않았다.
+- 다음 작업은 **Task-081 내 계정 주간 레이드 표시 설정**이다. Task-080 F는 081 이후로 보류한다.
 
 ---
 
@@ -282,6 +282,7 @@
 - Task-072에서 Spark 앱 내부 알림을 먼저 구현하고 향후 신뢰 서버가 같은 Player Event를 소비해 FCM을 발송하는 2단계 계약을 확정함
 - 알림 저장은 `players/{playerId}/events/{eventId}` 사용자별 투영본을 유지하고, 초기 읽음 상태는 별도 Drift 로컬 Projection으로 관리함
 - 캐릭터별 주간 레이드 표시는 로컬에서 0~5개, 기본 3개로 관리하며 같은 raidId의 난이도를 중복 표시하지 않음
+- 현재 실행 앱(Claim A~E)은 골드 추천 상위 3개만 고정 표시하며, 접기·표기 레이드 수정 UI는 아직 없다. Task-081로 `NEXT_WORK`에 기록됨. 기본 3개 표시 순서는 입장 레벨 내림차순
 - 개인 진행은 현재 주차 `미완료/완료`, 지난 회차 히스토리는 `완료/미완료 종료`로 구분
 - 완료되지 않은 1회성 파티는 수요일 오전 6시에 자동 미완료 종료하며 반복 파티는 현재 구성을 새 회차로 승계
 - 가입 승인과 정원 변경은 명령별 Firestore 클라이언트 Transaction과 Security Rules가 함께 검증. Rules로 충분히 보장할 수 없는 명령은 Spark 범위에서 제외
@@ -296,7 +297,7 @@
 ## 다음 작업
 
 현재 작업 순서와 완료 상태의 단일 기준은 `docs/project/NEXT_WORK.md`다.
-Task-079 개인 주간 완료 Claim 기반 E까지 `main`에 반영됐다. 다음은 Task-080 F이며, 다중 기기 검증과 기존 completed 방 assignment·표시 정책 정리부터 시작한다.
+Task-079 E까지 `main`에 반영됐다. 현재 실행은 **Task-081**(내 계정 주간 레이드 표시 설정)이며, Task-080 F는 그 이후다.
 `codex/combat-power-auto-title`에서 전투력 표시 통일과 자동 모집 제목 구현 및 자동 검증을 완료했다.
 `codex/full-recruitment-edit`에서 생성·수정 공용 폼, 전체 모집 수정 흐름과 공통 입력 지우기 동작을 구현하고 Android 실기기 검증을 통과했다.
 완료 결과는 `main`과 `origin/main`에 통합됐다.
