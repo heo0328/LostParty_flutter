@@ -51,11 +51,11 @@
 
 | 구분 | 상태 | 비고 |
 | --- | --- | --- |
-| 통합 기준 | **`main` = Task-078 D까지** | 개인 주간 완료 Claim과 파티 정리 |
-| 완료 기능 | 멤버십·회차 수명주기 + 앱 내부 알림(이벤트·Rules·Drift·최소 UI) | Task-068~073 |
-| Firestore Rules | 신청·멤버십·해산(`partyDisbanded`) 이벤트 포함 **배포됨** | Firebase 프로젝트 `lost-party` |
-| 현재 코드 상태 | `main` | Task-078 D 구현·Rules 배포·실기기 검증·병합 완료 |
-| 다음 구현 | **Task-079 개인 주간 완료 Claim 기반 E** | Task-078 종료, 다음 작업 시작 가능 |
+| 통합 기준 | **`main` = Task-079 E까지** | 책임자 파티 전체 완료·제한적 전체 취소 |
+| 완료 기능 | 멤버십·회차 수명주기 + 앱 내부 알림 + Claim A~E | Task-068~079 |
+| Firestore Rules | 파티 전체 완료·`partyOwner` Claim·취소 복원 포함 **배포됨** | Firebase 프로젝트 `lost-party` |
+| 현재 코드 상태 | `main` | Task-079 E 구현·Rules 배포·자동 검증·병합 |
+| 다음 구현 | **Task-080 개인 주간 완료 Claim 기반 F** | 이행·다중 기기 검증 |
 
 ### Task-073 확인 완료 사항 (2026-08-27)
 
@@ -83,7 +83,7 @@
 | 5 | 앱 내부 알림 이벤트 schema·Rules 기반 | **Task-073 완료** | 공통 event model과 안전한 create/read 경계 |
 | 6 | 신청·멤버십·회차 이벤트와 로컬 알림/UI | **Task-073에 포함 완료** | foreground/재실행 앱 내부 알림 |
 | 7 | **개인 주간 완료 Claim 계약** | **Task-074 완료** | 파티·점유·개인 완료 단일 기준 확정 |
-| 8 | 개인 주간 완료 Claim 구현 A~F | **A~D 완료, E 다음** | 체크박스·서버 제한·개인/전체 완료 |
+| 8 | 개인 주간 완료 Claim 구현 A~F | **A~E 완료, F 다음** | 체크박스·서버 제한·개인/전체 완료 |
 | 9 | 레이드 모집에서 내 모집 제외 | Claim 흐름 안정화 | 공개 모집과 내 현황 분리 |
 | 10 | 운영자 계정 권한 기반 설계 | 특정 Player와 기능 확정 전 설계만 | 일반 사용자와 분리된 권한 경계 |
 | 11 | 그룹 생성·가입 | 그룹 계약 확정 | 그룹 membership 기반 |
@@ -299,77 +299,55 @@
 - [x] 체크 해제는 이전 파티나 신청을 복구하지 않고 새 모집 참가만 다시 허용함
 - [x] 완료 탈퇴 후 Claim 해제 시 과거 `approved` 신청을 실제 membership으로 오인하지 않고 같은 방에 재신청 가능
 
-## 다음 실행 작업 — Task-079 개인 주간 완료 Claim 기반 E
+## 완료 작업 — Task-079 개인 주간 완료 Claim 기반 E
+
+### 구현 결과
+
+- 책임자만 `파티 전체 완료`를 실행한다. 일반 멤버 UI·Rules·Repository는 모두 거절한다.
+- 완료 Transaction은 회차/모집 completed, Snapshot 전원 `partyOwner` Claim(멱등·기존 Claim 유지), assignment 전원 삭제, 완료 이벤트를 함께 처리한다.
+- Claim에는 `sourceRecruitmentId`와 `sourceCompletionRevision`을 저장한다.
+- 반복 파티 전체 완료 취소는 화요일 22:00 전, Snapshot·membership·책임자·역할·슬롯·해당 `partyOwner` Claim이 그대로일 때만 Claim 삭제·assignment 복원·회차 복구를 원자적으로 수행한다.
+- Rules 접근은 binding·recruitment·cycle 공유와 membership 최대 8회로 약 12회이며, `partyOwner` 경로에서 character 소유 get을 쓰지 않아 한도 20 안이다.
+- 표적 테스트 36개와 `flutter analyze --no-pub` 통과. Rules는 `lost-party`에 배포됐다.
+
+### 실기기·다중 기기 검증
+
+다중 사용자 실기기 확인은 Task-080 F 체크리스트로 이관한다.
+
+## 다음 실행 작업 — Task-080 개인 주간 완료 Claim 기반 F
 
 ### 목표
 
-레이드 상세에서 책임자만 `파티 전체 완료`를 실행하고, 회차 완료와 완료 당시 전원의 Claim·점유 해제를 하나의 검증 가능한 명령으로 연결한다. 반복 파티는 상태가 변하지 않은 경우에만 화요일 22:00 전 `전체 완료 취소`로 같은 명령의 결과 전체를 원자적으로 되돌린다.
+Claim A~E 흐름을 다중 기기로 검증하고, 기존 completed·해산 대기 방의 assignment 잔존과 로컬 완료 표시 정책을 정리한다.
 
-### 시작 전 필수 검토
+### 지금 사용자가 할 테스트 (Task-079 E)
 
-코드를 수정하기 전에 최대 8인 기준 Firestore Transaction과 Security Rules 접근 수를 계산한다.
+- [ ] 책임자만 `파티 전체 완료` 버튼이 보이고, 일반 멤버에게는 없다
+- [ ] 책임자 완료 후 전원 내 계정 체크박스가 체크되고 동일 레이드 생성·신청·가입이 차단된다
+- [ ] 완료 후 assignment가 사라져 같은 레이드 점유 충돌이 Claim만으로 막힌다
+- [ ] 1회성 완료 후 해산 대기 UX가 유지된다
+- [ ] 반복 파티에서 상태 변경 없이 마감 전 전체 완료 취소 시 Claim 해제·assignment 복원·회차 복구가 함께 된다
+- [ ] 완료 후 한 명이 Claim을 직접 해제하면 전체 완료 취소가 거절된다
+- [ ] 화요일 22:00 이후 전체 완료 취소가 거절된다
 
-```text
-recruitment + current cycle
-+ 완료 당시 memberships 최대 8개
-+ weeklyRaidClaims 최대 8개
-+ activeRaidAssignments 최대 8개
-+ Player Events 최대 8개
-```
+### 구현·정리 범위
 
-- 전체 완료와 전체 완료 취소를 각각 나눠 Rules의 단일 문서 및 다중 문서 요청 접근 한도 안에서 각 쓰기를 검증할 수 있는지 먼저 표로 남긴다.
-- Spark 클라이언트 Transaction으로 다른 Player의 Claim 생성 권한을 안전하게 제한할 수 없거나 접근 한도를 넘으면 구현을 시작하지 않고 신뢰 서버 선행 여부를 결정받는다.
-- 기존 `FirestorePartyCycleCommandRepository.complete`가 일반 멤버도 허용하는 현재 동작과 완료 후 assignment가 남는 동작을 실제 코드·Rules·UI에서 함께 확인한다.
-
-### 구현 범위
-
-- 레이드 상세 책임자 버튼을 `파티 전체 완료`로 명확히 표시
-- 책임자 권한, active 회차, revision과 완료 당시 membership Snapshot 재검증
-- 회차와 모집을 completed로 전환
-- Snapshot 전원의 Claim을 `source: partyOwner` 기준으로 생성
-- 각 Claim에 해당 방과 완료 명령을 가리키는 `sourceRecruitmentId + sourceCompletionRevision` 저장
-- Snapshot 전원의 active assignment 삭제
-- 기존 완료 이벤트와 앱 내부 알림 유지
-- 전원의 내 계정 체크박스가 Claim stream으로 갱신됨
-- 같은 명령 재시도 시 중복 Claim·이벤트가 생기지 않는 멱등 기준
-- 반복 파티의 책임자 전용 전체 완료 취소를 `cycleEndsAt - 8시간` 전까지만 허용
-- 완료 Snapshot과 현재 membership·책임자·역할·슬롯 및 전원의 해당 Claim이 그대로인지 재검증
-- 같은 완료 명령이 만든 `partyOwner` Claim 전원 삭제, assignment 전원 복원, 회차 복구와 취소 이벤트를 한 Transaction에서 처리
-- 완료 후 구성·Claim·참가 상태가 하나라도 바뀌었거나 assignment 복원 충돌이 있으면 부분 변경 없이 전체 거절
+- 기존 completed·해산 대기 방에 남은 `activeRaidAssignment` 정리 정책 확정·필요 시 안전 정리
+- Drift/로컬 완료 정정과 서버 Claim 표시 정책 정리
+- 수동 완료·개인 체크·전체 완료·해제·재모집의 2기기 회귀 확인
+- 일반 멤버 `내 캐릭터 완료` 버튼은 이 단계에 포함하지 않고 별도 단위로 둘 수 있다
 
 ### 제외 범위
 
-- 일반 멤버의 레이드 상세 `내 캐릭터 완료` 버튼은 별도 연결 단위로 분리 가능
-- 책임자가 `manual` 또는 일반 멤버의 `partyMember` Claim을 삭제하는 동작
-- 완료 후 해산된 파티 복구
-- 기존 completed 데이터 일괄 이행
-- Cloud Functions·Blaze·별도 서버 도입
-
-### 자동·실기기 검증 기준
-
-- 일반 멤버는 파티 전체 완료를 실행할 수 없음
-- 책임자 완료 시 회차 completed, 전원 Claim 생성, 전원 assignment 삭제가 함께 성공
-- 한 구성원이라도 Claim 계약·membership Snapshot이 맞지 않으면 일부 상태 없이 전체 실패
-- 완료 직후 전원 체크박스가 체크되고 동일 레이드 생성·신청·가입이 차단됨
-- 1회성 완료 후 기존 해산 대기 UX와 반복 파티의 다음 회차 정책이 깨지지 않음
-- 변경 없는 반복 파티는 마감 전 전체 완료 취소 시 해당 완료가 만든 전원 Claim 삭제·assignment 복원·체크박스 해제가 함께 성공
-- 완료 후 구성원 한 명의 Claim 해제, membership·책임자·역할·슬롯 변경 또는 다른 참가 충돌이 있으면 전체 완료 취소가 아무 변경 없이 실패
-- 화요일 22:00 이후에는 전체 완료 취소가 거절됨
-- 완료 취소는 출처가 일치하는 `partyOwner` Claim만 삭제하고 `manual`·`partyMember` Claim은 건드리지 않음
+- Cloud Functions·Blaze·별도 서버
+- 그룹·필터·채팅·운영자 기능
+- Claim 계약의 핵심 불변식 변경
 
 ### 완료 조건
 
-- 접근 수 검토 기록, 계약·Rules·Repository·UI·테스트가 같은 책임자 전용 명령을 설명함
-- Rules dry-run, 전체 자동 테스트와 다중 사용자 실기기 검증 완료
-- 문서와 Git을 종료한 뒤에만 Claim F 또는 다음 주요 기능으로 이동
-
-### 즉시 중단하고 결정 받아야 하는 경우
-
-- 최대 8인 전체 완료가 Rules 접근 한도를 넘는 경우
-- 책임자가 다른 Player Claim을 자유롭게 만들 수 있는 권한 구멍 없이 검증할 수 없는 경우
-- 완료·Claim·assignment 중 일부만 성공할 가능성이 생기는 경우
-- 현재 1회성 해산 대기 또는 반복 파티 다음 회차 계약을 이 지시서와 다르게 변경해야 하는 경우
-- 완료 후 다음 회차 준비 변경을 허용하면서도 전체 완료 취소까지 유지하려면 부분 병합 복원이 필요해지는 경우
+- 위 실기기 체크리스트 통과
+- 기존 방 assignment/표시 정책이 문서와 코드에서 일치
+- 문서와 Git 종료 후 다음 주요 기능(예: 레이드 모집에서 내 모집 제외)으로 이동
 
 ## 후속 작업별 범위 메모
 
@@ -392,7 +370,7 @@ recruitment + current cycle
 
 ## 참고 문서
 
-Task-079를 시작할 때 먼저 확인할 문서:
+Task-080을 시작할 때 먼저 확인할 문서:
 
 1. [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)
 2. [`../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`](../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md)

@@ -1717,3 +1717,15 @@
 - 책임자는 `manual` 또는 일반 멤버의 `partyMember` Claim을 삭제할 수 없다. 수요일 오전 6시 이후에는 이전 회차를 취소하지 않는다.
 - 기존의 부분 병합 복원과 `구성 점검 필요` 전환안은 Claim 기반 초기 구현에서 폐기했다.
 - 코드는 변경하지 않았으며 Task-079는 전체 완료·전체 취소 각각의 최대 8인 Transaction과 Security Rules 접근 예산을 계산한 뒤 시작한다.
+
+---
+
+## Task-079. 개인 주간 완료 Claim 기반 E (2026-08-27)
+
+- 작업 브랜치: `cursor/task-079-party-complete-claims`
+- 책임자 전용 `파티 전체 완료`로 회차 completed·Snapshot 전원 `partyOwner` Claim 멱등 생성·assignment 전원 삭제·완료 이벤트를 한 Transaction에 연결했다.
+- 반복 파티 전체 완료 취소는 Snapshot·membership·책임자·역할·슬롯과 해당 `partyOwner` Claim이 그대로일 때만 Claim 삭제·assignment 복원·회차 복구를 원자적으로 처리한다.
+- Rules는 leader-only 완료, `partyOwner` Claim create/delete, 완료 시 assignment 삭제, 취소 시 assignment 복원을 추가했다. membership 일치로 character 소유 get 없이 접근 약 12회(한도 20)를 유지한다.
+- UI는 `파티 전체 완료` 라벨과 책임자 전용 표시, 계약 안내 문구를 반영했다.
+- 표적 테스트 36개와 `flutter analyze --no-pub` 통과. Rules는 `lost-party`에 배포했다.
+- 다중 기기 실기기 검증과 기존 completed 방 assignment 정리는 Task-080 F로 이관했다.

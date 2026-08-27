@@ -413,7 +413,7 @@ void main() {
     expect(find.text('모집을 삭제했습니다.'), findsOneWidget);
   });
 
-  testWidgets('확정 멤버가 회차 완료를 누르면 complete 명령을 보낸다', (tester) async {
+  testWidgets('파티장이 파티 전체 완료를 누르면 complete 명령을 보낸다', (tester) async {
     final cycle = _RecordingCycleRepository();
     await pumpPage(
       tester,
@@ -441,6 +441,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('파티 전체 완료'), findsOneWidget);
     await tapVisible(tester, find.byKey(const ValueKey('completeCycleButton')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('confirmCompleteCycleButton')));
@@ -449,6 +450,46 @@ void main() {
     expect(cycle.completeCommands, hasLength(1));
     expect(cycle.completeCommands.single.cycleKey, '2026-08-19');
     expect(find.textContaining('회차를 완료했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('일반 멤버는 파티 전체 완료 버튼을 보지 못한다', (tester) async {
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(
+          items: [
+            PartyMemberDisplay(
+              playerId: 'player-1',
+              characterId: 'char-leader',
+              characterName: '이슈아이',
+              className: '기상술사',
+              role: PartyRole.dealer,
+              partyIndex: 0,
+              slotIndex: 0,
+            ),
+            PartyMemberDisplay(
+              playerId: 'player-2',
+              characterId: 'char-member',
+              characterName: '서폿캐릭',
+              className: '바드',
+              role: PartyRole.support,
+              partyIndex: 0,
+              slotIndex: 1,
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      cycleCommandRepository: _RecordingCycleRepository(),
+      playerId: 'player-2',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('completeCycleButton')), findsNothing);
+    expect(find.text('파티 전체 완료'), findsNothing);
   });
 
   testWidgets('파티장이 다인 방을 해산하면 disband 명령을 보낸다', (tester) async {

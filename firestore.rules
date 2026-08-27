@@ -383,7 +383,7 @@ service cloud.firestore {
       )).data;
       let repeating = oldData.continueTogether == true;
       return hasActiveBinding()
-        && currentPlayerId() in oldData.memberPlayerIds
+        && oldData.leaderPlayerId == currentPlayerId()
         && oldData.status == 'active'
         && oldData.currentCycleStatus == 'active'
         && request.time < oldData.cycleEndsAt
@@ -488,11 +488,13 @@ service cloud.firestore {
         && data.createdAt == request.time
         && data.updatedAt == request.time
         && ((data.status == 'completed'
+            && before.leaderPlayerId == currentPlayerId()
             && request.time < before.cycleEndsAt
             && data.completedAt == request.time
             && data.completedByPlayerId == currentPlayerId()
             && after.currentCycleStatus == 'completed')
           || (data.status == 'incompleteEnded'
+            && currentPlayerId() in before.memberPlayerIds
             && request.time >= before.cycleEndsAt
             && data.completedAt == null
             && data.completedByPlayerId == null));
@@ -517,7 +519,7 @@ service cloud.firestore {
       let recruitment = get(recruitmentPath(recruitmentId)).data;
       let recruitmentAfter = getAfter(recruitmentPath(recruitmentId)).data;
       return hasActiveBinding()
-        && currentPlayerId() in recruitment.memberPlayerIds
+        && recruitment.leaderPlayerId == currentPlayerId()
         && oldData.status == 'completionCancelled'
         && request.time < recruitment.cycleEndsAt
         && newData.diff(oldData).affectedKeys().hasOnly([
@@ -634,13 +636,57 @@ service cloud.firestore {
       let after = getAfter(recruitmentPath(data.recruitmentId)).data;
       let memberPath = recruitmentMemberPath(data.recruitmentId, playerId);
       let memberAfter = getAfter(memberPath);
+      let cycle = getAfter(recruitmentCyclePath(
+        data.recruitmentId,
+        recruitment.currentCycleKey
+      )).data;
+      let member = get(memberPath).data;
+      let partyCompleteRemoval = recruitment.leaderPlayerId == currentPlayerId()
+        && cycle.status == 'completed'
+        && playerId in cycle.memberPlayerIds
+        && member.characterId == data.characterId;
       return hasActiveBinding()
         && (playerId == currentPlayerId()
           || recruitment.leaderPlayerId == currentPlayerId()
           || after.status == 'disbanded')
-        && (!existsAfter(memberPath)
+        && (partyCompleteRemoval
+          || !existsAfter(memberPath)
           || memberAfter.data.characterId != data.characterId
           || after.status == 'disbanded');
+    }
+
+    function validCompletionCancelAssignmentRestore(
+      playerId,
+      assignmentId,
+      data
+    ) {
+      let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
+      let cycle = getAfter(recruitmentCyclePath(
+        data.recruitmentId,
+        data.cycleKey
+      )).data;
+      let member = get(recruitmentMemberPath(data.recruitmentId, playerId)).data;
+      return hasActiveBinding()
+        && recruitment.leaderPlayerId == currentPlayerId()
+        && recruitment.status == 'active'
+        && recruitment.currentCycleStatus == 'active'
+        && recruitment.currentCycleKey == data.cycleKey
+        && cycle.status == 'completionCancelled'
+        && playerId in cycle.memberPlayerIds
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && assignmentId == data.characterId + '_' + data.raidId
+        && data.raidId == recruitment.raidId
+        && data.characterId == member.characterId
+        && data.role == member.role
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && !hasWeeklyRaidClaimAfter(
+          playerId,
+          data.cycleKey,
+          data.characterId,
+          data.raidId
+        );
     }
 
     function validEventTiming(data) {
@@ -1073,6 +1119,92 @@ service cloud.firestore {
         );
     }
 
+    function validPartyOwnerWeeklyRaidClaimCreate(playerId, claimId, data) {
+      let recruitment = get(recruitmentPath(data.sourceRecruitmentId)).data;
+      let cycle = getAfter(recruitmentCyclePath(
+        data.sourceRecruitmentId,
+        data.cycleKey
+      )).data;
+      let member = get(recruitmentMemberPath(
+        data.sourceRecruitmentId,
+        playerId
+      )).data;
+      let assignmentId = data.characterId + '_' + data.raidId;
+      return hasActiveBinding()
+        && recruitment.leaderPlayerId == currentPlayerId()
+        && data.keys().hasOnly([
+          'schemaVersion', 'playerId', 'characterId', 'raidId', 'cycleKey',
+          'difficultyId', 'source', 'sourceRecruitmentId',
+          'sourceCompletionRevision', 'cycleStartedAt', 'cycleEndsAt',
+          'completedAt', 'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && data.characterId is string
+        && data.raidId is string
+        && data.difficultyId is string
+        && data.cycleKey is string
+        && data.sourceRecruitmentId is string
+        && data.sourceCompletionRevision is int
+        && data.cycleStartedAt is timestamp
+        && data.cycleEndsAt is timestamp
+        && data.completedAt is timestamp
+        && data.updatedAt is timestamp
+        && data.characterId.matches('^[A-Za-z0-9]{20}$')
+        && data.raidId.matches('^[a-z0-9_]+$')
+        && data.difficultyId.matches('^[a-z0-9_]+$')
+        && data.cycleKey.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && claimId == weeklyRaidClaimId(
+          data.cycleKey,
+          data.characterId,
+          data.raidId
+        )
+        && data.source == 'partyOwner'
+        && data.cycleKey == recruitment.currentCycleKey
+        && data.raidId == recruitment.raidId
+        && data.difficultyId == recruitment.difficultyId
+        && data.cycleEndsAt == data.cycleStartedAt + duration.value(7, 'd')
+        && request.time >= data.cycleStartedAt
+        && request.time < data.cycleEndsAt
+        && data.completedAt == request.time
+        && data.updatedAt == request.time
+        && cycle.status == 'completed'
+        && cycle.completionRevision == data.sourceCompletionRevision
+        && playerId in cycle.memberPlayerIds
+        && data.characterId == member.characterId
+        && !existsAfter(assignmentPath(playerId, assignmentId));
+    }
+
+    function validPartyOwnerWeeklyRaidClaimDelete(playerId, claimId, data) {
+      let recruitment = get(recruitmentPath(data.sourceRecruitmentId)).data;
+      let cycle = getAfter(recruitmentCyclePath(
+        data.sourceRecruitmentId,
+        data.cycleKey
+      )).data;
+      return hasActiveBinding()
+        && recruitment.leaderPlayerId == currentPlayerId()
+        && data.playerId == playerId
+        && data.characterId is string
+        && data.raidId is string
+        && data.cycleKey is string
+        && data.sourceRecruitmentId is string
+        && data.sourceCompletionRevision is int
+        && data.cycleStartedAt is timestamp
+        && data.cycleEndsAt is timestamp
+        && claimId == weeklyRaidClaimId(
+          data.cycleKey,
+          data.characterId,
+          data.raidId
+        )
+        && data.source == 'partyOwner'
+        && data.cycleKey == recruitment.currentCycleKey
+        && cycle.status == 'completionCancelled'
+        && cycle.completionRevision == data.sourceCompletionRevision + 1
+        && data.cycleEndsAt == data.cycleStartedAt + duration.value(7, 'd')
+        && request.time >= data.cycleStartedAt
+        && request.time < data.cycleEndsAt;
+    }
+
     function validManualWeeklyRaidClaimCreate(playerId, claimId, data) {
       let assignmentId = data.characterId + '_' + data.raidId;
       return hasActiveBinding()
@@ -1256,7 +1388,12 @@ service cloud.firestore {
           playerId,
           assignmentId,
           request.resource.data
-        ) || validJoinedAssignment(playerId, assignmentId, request.resource.data);
+        ) || validJoinedAssignment(playerId, assignmentId, request.resource.data)
+        || validCompletionCancelAssignmentRestore(
+          playerId,
+          assignmentId,
+          request.resource.data
+        );
         allow update: if validAssignmentRoleChange(
           playerId,
           resource.data,
@@ -1284,9 +1421,17 @@ service cloud.firestore {
           playerId,
           claimId,
           request.resource.data
+        ) || validPartyOwnerWeeklyRaidClaimCreate(
+          playerId,
+          claimId,
+          request.resource.data
         );
         allow update: if false;
         allow delete: if validManualWeeklyRaidClaimDelete(
+          playerId,
+          claimId,
+          resource.data
+        ) || validPartyOwnerWeeklyRaidClaimDelete(
           playerId,
           claimId,
           resource.data

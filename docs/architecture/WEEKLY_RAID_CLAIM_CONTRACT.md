@@ -123,10 +123,9 @@ membership 제거
 아직 구현하지 않은 범위:
 
 - 레이드 상세의 일반 멤버 `내 캐릭터 완료` 버튼
-- 파티장·공대장의 `파티 전체 완료`와 완료 당시 전원 Claim 생성
 - 기존 completed 방의 assignment 정리 및 데이터 이행
 
-따라서 아래 5.1과 5.2는 최종 제품 계약이며, 현재 실행 앱에서 완료된 범위는 5.3과 5.4의 **내 계정 체크박스 경로**다.
+Task-079 E에서 책임자 `파티 전체 완료`·반복 파티 제한적 전체 완료 취소·`partyOwner` Claim·assignment 정리까지 연결됐다. 아래 5.1은 실행 앱 기준이며, 5.2는 아직 별도 연결 단위다.
 
 ### 5.1 파티장·공대장 — 파티 전체 완료
 
@@ -363,16 +362,12 @@ cycle completed -> active(또는 completionCancelled 이력 후 active)
 - 책임자라면 승계 또는 단독 해산 불변식을 검증한다.
 - 모집 count와 `memberPlayerIds`가 함께 갱신돼야 한다.
 
-## 12. 현재 구현과 충돌하는 지점
+## 12. 현재 구현과 남은 간격
 
-1. 실행 앱의 `WeeklyRaidClearRepository`는 InMemory 기반이며 Firestore Claim과 연결되지 않았다.
-2. Drift `raidHistoryEntries.localStatusOverride`는 표시 정정일 뿐 모집 제한의 서버 근거가 아니다.
-3. Firestore 모집 생성·신청·가입·승인·캐릭터 변경은 주간 Claim을 최종 검증하지 않는다.
-4. 현재 파티 완료는 일반 멤버도 실행할 수 있으며 Claim을 생성하지 않는다.
-5. 현재 파티 완료 후 active assignment가 해산까지 남아 개인 재모집을 막을 수 있다.
-6. 내 계정의 캐릭터별 주간 레이드 체크박스가 현재 UI에서 빠져 있다.
-7. 기존 완료 이벤트는 개인 Claim과 별도 이력이므로 삭제하거나 Claim으로 직접 재사용하면 안 된다.
-8. BUG-005의 같은 주차 재완료 미차단은 Claim 서버 강제 부재와 직접 연결된다.
+1. Drift `raidHistoryEntries.localStatusOverride`는 표시 정정일 뿐 모집 제한의 서버 근거가 아니다.
+2. 기존 완료 이벤트는 개인 Claim과 별도 이력이므로 삭제하거나 Claim으로 직접 재사용하면 안 된다.
+3. 레이드 상세 일반 멤버 `내 캐릭터 완료` 버튼은 아직 연결하지 않았다.
+4. Task-079 E 이전 completed·해산 대기 방에 남은 active assignment 정리와 로컬 완료 데이터 이행은 단계 F 범위다.
 
 ## 13. 구현 작업 분해
 
@@ -402,12 +397,13 @@ cycle completed -> active(또는 completionCancelled 이력 후 active)
 - 책임자 승계/단독 해산
 - 완료 사유 탈퇴 이벤트
 
-### 단계 E — 파티 전체 완료
+### 단계 E — 파티 전체 완료 — **완료 (Task-079)**
 
 - 완료 권한을 파티장·공대장으로 제한
 - Snapshot 전원의 Claim 멱등 생성
 - active assignment 전원 해제
 - 체크박스와 완료 이벤트 동기화
+- 반복 파티의 제한적 전체 완료 취소(원자 롤백)
 
 ### 단계 F — 이행·실기기 검증
 
@@ -431,7 +427,7 @@ cycle completed -> active(또는 completionCancelled 이력 후 active)
 1. 내 계정에서 캐릭터별로 표시할 기본 레이드 개수와 정렬은 기존 0~5개·기본 3개 정책을 유지할지
 2. 파티장·공대장 구분이 현재 `leaderPlayerId` 하나뿐인 구조에서 동일 명령으로 충분한지
 3. Claim 문서 ID escape/hash 규칙
-4. 파티 전체 완료 Transaction의 최대 읽기·쓰기·Rules 접근 수
+4. 파티 전체 완료·취소 Transaction의 Rules 접근 수 — Task-079에서 membership 공유 검증으로 약 12회(한도 20)로 확정
 5. 기존 수동 로컬 `WeeklyRaidClear` 데이터를 서버로 이행할지 폐기할지
 6. 기존 completed 방의 active assignment를 언제 안전하게 정리할지
 7. 개인 완료 후 남은 파티의 모집 자동 노출 조건

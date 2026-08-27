@@ -869,7 +869,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
   Future<void> _confirmComplete(PublicRecruitmentSummary summary) async {
     final repository = widget.cycleCommandRepository;
     if (repository == null ||
-        !_isConfirmedMember ||
+        !_isLeader(summary) ||
         !summary.isActiveRecruitment ||
         !summary.isCycleActive ||
         _submitting) {
@@ -890,11 +890,11 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('이번 회차를 완료할까요?'),
+        title: const Text('파티 전체 완료할까요?'),
         content: Text(
           repeating
-              ? '완료하면 이번 회차 기록이 남고, 방과 다음 회차 준비 구성은 유지됩니다. 파티장은 허용 기한까지 완료를 취소할 수 있습니다.'
-              : '완료하면 활성 모집에서 제외되고 이후 수정할 수 없습니다. 이어서 해산 절차로 이동합니다.',
+              ? '완료 당시 파티원 전원의 주간 레이드 완료 상태가 기록되고, 이번 회차가 완료 처리됩니다. 방과 다음 회차 준비 구성은 유지되며, 파티장은 허용 기한까지 전체 완료를 취소할 수 있습니다.'
+              : '완료 당시 파티원 전원의 주간 레이드 완료 상태가 기록되고, 활성 모집에서 제외됩니다. 이후 수정할 수 없으며 해산 절차로 이동합니다.',
         ),
         actions: [
           TextButton(
@@ -904,7 +904,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
           FilledButton(
             key: const ValueKey('confirmCompleteCycleButton'),
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('완료'),
+            child: const Text('파티 전체 완료'),
           ),
         ],
       ),
@@ -959,11 +959,11 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('완료를 취소할까요?'),
+        title: const Text('전체 완료를 취소할까요?'),
         content: Text(
           deadline == null
-              ? '완료 취소를 허용 기한 안에만 할 수 있습니다.'
-              : '허용 기한(${KoreaTimeFormatter.dayAndTime(deadline)}) 전에만 취소할 수 있습니다.',
+              ? '파티 전체 완료를 취소할까요? 완료 당시 파티원 전원의 앱 완료 상태가 해제되고 이 방의 참가 상태가 복구됩니다.'
+              : '완료 당시 파티원 전원의 앱 완료 상태가 해제되고 이 방의 참가 상태가 복구됩니다. 허용 기한(${KoreaTimeFormatter.dayAndTime(deadline)}) 전에만 취소할 수 있습니다.',
         ),
         actions: [
           TextButton(
@@ -973,7 +973,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
           FilledButton(
             key: const ValueKey('confirmCancelCompletionButton'),
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('완료 취소'),
+            child: const Text('전체 완료 취소'),
           ),
         ],
       ),
@@ -1860,7 +1860,9 @@ class _CycleLifecycleSection extends StatelessWidget {
         cancelDeadline != null &&
         now.isBefore(cancelDeadline);
     final canComplete =
-        summary.isActiveRecruitment && summary.isCycleActive;
+        isLeader &&
+        summary.isActiveRecruitment &&
+        summary.isCycleActive;
     final showDisband =
         isLeader &&
         (summary.isOneShotCompleted ||
@@ -1908,7 +1910,7 @@ class _CycleLifecycleSection extends StatelessWidget {
               key: const ValueKey('completeCycleButton'),
               onPressed: submitting ? null : onComplete,
               icon: const Icon(Icons.check_circle_outline),
-              label: const Text('회차 완료'),
+              label: const Text('파티 전체 완료'),
             ),
           if (canCancel) ...[
             if (canComplete) const SizedBox(height: AppSpacing.xs),
@@ -1916,7 +1918,7 @@ class _CycleLifecycleSection extends StatelessWidget {
               key: const ValueKey('cancelCompletionButton'),
               onPressed: submitting ? null : onCancelCompletion,
               icon: const Icon(Icons.undo),
-              label: const Text('완료 취소'),
+              label: const Text('전체 완료 취소'),
             ),
           ],
           if (canAdvance) ...[

@@ -19,10 +19,9 @@
 ## 브랜치 기준
 - 통합 기준 브랜치: `main`
 - 현재 저장 브랜치와 커밋은 `NEXT_WORK.md`의 기준 상태를 따른다.
-- 2026-08-27 현재 `main`에는 Task-078 D까지 반영됐다. Claim 체크 캐릭터의 모집 생성·신청·즉시 가입·참가 캐릭터 변경 제한과 교차 역할 캐릭터 변경 복구, 개인 완료 후 파티 정리가 Rules 배포·실기기 검증까지 완료됐다.
-- Task-078 D는 내 계정 완료 체크 전 영향 조회와, 확인 후 활성 파티 탈퇴·책임자 승계/단독 해산·동일 레이드 pending 종료·Claim 생성·완료 사유 이벤트를 통합 Transaction으로 처리한다. Rules 배포와 실기기 검증을 완료했으며, 완료 탈퇴 후 Claim 해제·같은 방 재신청 시 과거 `approved` application을 재사용하는 회귀도 수정했다.
-- Task-078의 핵심 불변식은 Claim과 같은 Character·raidId·cycleKey의 active assignment가 공존하지 않는 것, 완료 탈퇴가 membership·assignment·모집 집계·책임자·pending·Claim·이벤트를 부분 성공 없이 함께 바꾸는 것, Claim 해제가 과거 파티를 복구하지 않는 것이다.
-- 다음 Task-079 E는 책임자 전용 파티 전체 완료와 당시 전원의 Claim·assignment 정리다. 최대 8인 Transaction과 Rules 문서 접근 수를 먼저 계산하고 Spark에서 안전하지 않으면 구현을 중단한다. 레이드 상세 일반 멤버 개인 완료 버튼은 Task-078에서 아직 연결하지 않았다.
+- 2026-08-27 현재 `main`에는 Task-079 E까지 반영됐다. 책임자 전용 파티 전체 완료와 반복 파티 제한적 전체 완료 취소가 `partyOwner` Claim·assignment 정리와 함께 Rules 배포까지 완료됐다.
+- Task-079 E는 완료 시 Snapshot 전원 Claim 멱등 생성과 assignment 삭제, 취소 시 동일 출처 Claim 삭제·assignment 복원·회차 복구를 각각 한 Transaction으로 처리한다. Rules 접근은 membership 공유 검증으로 약 12회다.
+- 다음 Task-080 F는 다중 기기 실기기 검증과 기존 completed 방 assignment·로컬 표시 정책 정리이다. 레이드 상세 일반 멤버 개인 완료 버튼은 아직 연결하지 않았다.
 
 ---
 
@@ -297,7 +296,7 @@
 ## 다음 작업
 
 현재 작업 순서와 완료 상태의 단일 기준은 `docs/project/NEXT_WORK.md`다.
-Task-078 개인 주간 완료 Claim 기반 D까지 `main`과 `origin/main`에 반영됐다. 다음은 Task-079 E이며, 책임자 파티 전체 완료와 변경 없는 반복 파티의 제한적 전체 완료 취소를 구현하기 전에 최대 8인 Transaction·Rules 접근 예산을 먼저 확정한다.
+Task-079 개인 주간 완료 Claim 기반 E까지 `main`에 반영됐다. 다음은 Task-080 F이며, 다중 기기 검증과 기존 completed 방 assignment·표시 정책 정리부터 시작한다.
 `codex/combat-power-auto-title`에서 전투력 표시 통일과 자동 모집 제목 구현 및 자동 검증을 완료했다.
 `codex/full-recruitment-edit`에서 생성·수정 공용 폼, 전체 모집 수정 흐름과 공통 입력 지우기 동작을 구현하고 Android 실기기 검증을 통과했다.
 완료 결과는 `main`과 `origin/main`에 통합됐다.
@@ -389,6 +388,7 @@ Player binding의 계약·구현·Rules 배포와 실기기 검증을 완료했�
 - Task-073에서 공통 Party Event·유형별 Rules·신청/멤버십/해산 이벤트 연결·Drift 알림 receipt·현황 알림 UI를 구현했다. 다인 해산 Transaction 읽기 순서 버그를 수정해 실기기에서 확인한 뒤 **`main`에 병합**했다. Rules(알림 이벤트)는 `lost-party`에 배포됐다.
 - Task-074에서 파티 회차·활성 점유·개인 주간 완료를 분리한 [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)를 작성해 `main`에 병합했다.
 - Task-075 A에서 Claim Domain·DTO·mapper·Firestore 읽기 Repository와 내 계정 읽기 전용 체크박스를 연결했다. 자기 Player 읽기 Rules를 `lost-party`에 배포했고, 실기기에서 카드 레이아웃·모두 미체크인 읽기 전용 체크박스·기존 기능이 정상임을 확인했다. 전체 테스트 421개와 analyze가 통과했다.
+- Task-079 E에서 책임자 전용 `파티 전체 완료`와 반복 파티 제한적 전체 완료 취소를 연결했다. `partyOwner` Claim·assignment 삭제/복원 Rules를 `lost-party`에 배포했고, 표적 테스트 36개와 analyze가 통과했다. 다중 기기 실기기는 Task-080 F 체크리스트다.
 - 네트워크 요청을 시작하는 버튼은 진행 중 연타·중복 요청을 막는 공통 UI 규칙을 적용한다.
 - Codex는 설계 계약, 문서 정합성, 작업 분해와 인수인계를 중심으로 유지하되 필요한 코드 수정은 가능하다.
 - 유료 플랜·결제수단·과금 가능 기능, Emulator, FCM과 TTL 배포는 별도 승인 전까지 제외한다.
