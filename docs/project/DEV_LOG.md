@@ -1742,3 +1742,4 @@
 - 계정 헤더는 계정명 단독 줄 + 배지·n/n·아이콘 + `원정대 주간레이드수정` 버튼으로 정리했다.
 - 표적 테스트(projector·ViewModel·page) 통과. 에뮬레이터 overflow 수정과 실기기 UI를 확인했다.
 - 계약 문서 `FIREBASE_PARTY_PRODUCT_FLOW` §17·`WEEKLY_RAID_CLAIM_CONTRACT` §15를 접기 제거·일괄 개수 반영으로 갱신했다.
+- `main` 반영 커밋: `46506e9`.
