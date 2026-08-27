@@ -83,7 +83,7 @@
 | 5 | 앱 내부 알림 이벤트 schema·Rules 기반 | **Task-073 완료** | 공통 event model과 안전한 create/read 경계 |
 | 6 | 신청·멤버십·회차 이벤트와 로컬 알림/UI | **Task-073에 포함 완료** | foreground/재실행 앱 내부 알림 |
 | 7 | **개인 주간 완료 Claim 계약** | **Task-074 완료** | 파티·점유·개인 완료 단일 기준 확정 |
-| 8 | 개인 주간 완료 Claim 구현 A~F | **A·B 완료, C 구현 중** | 체크박스·서버 제한·개인/전체 완료 |
+| 8 | 개인 주간 완료 Claim 구현 A~F | **A~D 완료, E 다음** | 체크박스·서버 제한·개인/전체 완료 |
 | 9 | 레이드 모집에서 내 모집 제외 | Claim 흐름 안정화 | 공개 모집과 내 현황 분리 |
 | 10 | 운영자 계정 권한 기반 설계 | 특정 Player와 기능 확정 전 설계만 | 일반 사용자와 분리된 권한 경계 |
 | 11 | 그룹 생성·가입 | 그룹 계약 확정 | 그룹 membership 기반 |
@@ -95,7 +95,7 @@
 | 17 | 상세 최근 10개 텍스트 채팅 | 핵심 파티 기능 안정화 | 멤버 전용 최소 채팅 |
 | 18 | 참가 일정·신청 자동 만료 | 마지막 | 일정·마감·수요일 06:00 정책 |
 
-## Task-074 현재 작업 — 캐릭터 주간 레이드 귀속 계약
+## Task-074 완료 설계 기준 — 캐릭터 주간 레이드 귀속 계약
 
 ### 목표
 
@@ -275,8 +275,8 @@
 
 ## 완료 작업 — Task-078 개인 주간 완료 Claim 기반 D
 
-- 내 계정 또는 레이드 상세의 개인 완료에서 영향 확인 후 활성 파티 탈퇴·pending 종료·Claim 생성을 하나의 Transaction으로 처리한다.
-- 일반 멤버 완료, 책임자 승계·단독 해산과 완료 사유 탈퇴 이벤트를 연결한다.
+- 내 계정 체크박스의 개인 완료에서 영향 확인 후 활성 파티 탈퇴·pending 종료·Claim 생성을 하나의 Transaction으로 처리한다.
+- 일반 멤버 탈퇴, 책임자 승계·단독 해산과 완료 사유 탈퇴 이벤트를 연결한다. 레이드 상세의 개인 완료 버튼 연결은 후속 범위다.
 
 ### 현재 구현 결과
 
@@ -299,12 +299,68 @@
 - [x] 체크 해제는 이전 파티나 신청을 복구하지 않고 새 모집 참가만 다시 허용함
 - [x] 완료 탈퇴 후 Claim 해제 시 과거 `approved` 신청을 실제 membership으로 오인하지 않고 같은 방에 재신청 가능
 
+## 다음 실행 작업 — Task-079 개인 주간 완료 Claim 기반 E
+
+### 목표
+
+레이드 상세에서 책임자만 `파티 전체 완료`를 실행하고, 회차 완료와 완료 당시 전원의 Claim·점유 해제를 하나의 검증 가능한 명령으로 연결한다.
+
+### 시작 전 필수 검토
+
+코드를 수정하기 전에 최대 8인 기준 Firestore Transaction과 Security Rules 접근 수를 계산한다.
+
+```text
+recruitment + current cycle
++ 완료 당시 memberships 최대 8개
++ weeklyRaidClaims 최대 8개
++ activeRaidAssignments 최대 8개
++ Player Events 최대 8개
+```
+
+- Rules의 단일 문서 및 다중 문서 요청 접근 한도 안에서 각 쓰기를 검증할 수 있는지 먼저 표로 남긴다.
+- Spark 클라이언트 Transaction으로 다른 Player의 Claim 생성 권한을 안전하게 제한할 수 없거나 접근 한도를 넘으면 구현을 시작하지 않고 신뢰 서버 선행 여부를 결정받는다.
+- 기존 `FirestorePartyCycleCommandRepository.complete`가 일반 멤버도 허용하는 현재 동작과 완료 후 assignment가 남는 동작을 실제 코드·Rules·UI에서 함께 확인한다.
+
+### 구현 범위
+
+- 레이드 상세 책임자 버튼을 `파티 전체 완료`로 명확히 표시
+- 책임자 권한, active 회차, revision과 완료 당시 membership Snapshot 재검증
+- 회차와 모집을 completed로 전환
+- Snapshot 전원의 Claim을 `source: partyOwner` 기준으로 생성
+- Snapshot 전원의 active assignment 삭제
+- 기존 완료 이벤트와 앱 내부 알림 유지
+- 전원의 내 계정 체크박스가 Claim stream으로 갱신됨
+- 같은 명령 재시도 시 중복 Claim·이벤트가 생기지 않는 멱등 기준
+
+### 제외 범위
+
+- 일반 멤버의 레이드 상세 `내 캐릭터 완료` 버튼은 별도 연결 단위로 분리 가능
+- 완료 취소 시 개인 Claim 자동 삭제
+- 완료 후 해산된 파티 복구
+- 기존 completed 데이터 일괄 이행
+- Cloud Functions·Blaze·별도 서버 도입
+
+### 자동·실기기 검증 기준
+
+- 일반 멤버는 파티 전체 완료를 실행할 수 없음
+- 책임자 완료 시 회차 completed, 전원 Claim 생성, 전원 assignment 삭제가 함께 성공
+- 한 구성원이라도 Claim 계약·membership Snapshot이 맞지 않으면 일부 상태 없이 전체 실패
+- 완료 직후 전원 체크박스가 체크되고 동일 레이드 생성·신청·가입이 차단됨
+- 1회성 완료 후 기존 해산 대기 UX와 반복 파티의 다음 회차 정책이 깨지지 않음
+- 완료 취소는 공동 회차만 다루며 개인 Claim을 임의 삭제하지 않음
+
+### 완료 조건
+
+- 접근 수 검토 기록, 계약·Rules·Repository·UI·테스트가 같은 책임자 전용 명령을 설명함
+- Rules dry-run, 전체 자동 테스트와 다중 사용자 실기기 검증 완료
+- 문서와 Git을 종료한 뒤에만 Claim F 또는 다음 주요 기능으로 이동
+
 ### 즉시 중단하고 결정 받아야 하는 경우
 
-- Claim 경로가 기존 Player Rules와 안전하게 분리되지 않는 경우
-- 문서 ID에 Character/raid 식별자를 안전하게 조합할 수 없는 경우
-- 읽기 기반만으로 기존 완료 히스토리 동작을 깨야 하는 경우
-- A단계에서 쓰기·탈퇴·Rules 배포가 선행돼야만 화면 표시가 가능한 경우
+- 최대 8인 전체 완료가 Rules 접근 한도를 넘는 경우
+- 책임자가 다른 Player Claim을 자유롭게 만들 수 있는 권한 구멍 없이 검증할 수 없는 경우
+- 완료·Claim·assignment 중 일부만 성공할 가능성이 생기는 경우
+- 현재 1회성 해산 대기 또는 반복 파티 다음 회차 계약을 함께 변경해야 하는 경우
 
 ## 후속 작업별 범위 메모
 
@@ -327,7 +383,7 @@
 
 ## 참고 문서
 
-Task-075를 시작할 때 먼저 확인할 문서:
+Task-079를 시작할 때 먼저 확인할 문서:
 
 1. [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)
 2. [`../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`](../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md)

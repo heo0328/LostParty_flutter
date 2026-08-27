@@ -90,6 +90,41 @@ players/{playerId}/weeklyRaidClaims/{cycleKey_characterId_raidId}
 
 ## 5. 사용자 완료 경로
 
+### 5.0 현재 구현 기준 — Task-078 완료
+
+2026-08-27 `main`의 구현 범위는 다음과 같다.
+
+- 내 계정 체크박스가 개인 주간 완료 Claim의 생성·삭제 UI다.
+- 체크 전에 동일 `playerId + characterId + raidId + cycleKey`의 활성 점유와 승인 대기 신청 영향을 조회한다.
+- 영향이 있으면 파티명, 탈퇴 여부, 책임자 승계 대상 또는 단독 해산, 종료할 신청 건수를 먼저 보여주고 사용자의 명시적 확인을 받는다.
+- 확인 후 아래 상태 변경을 하나의 Firestore Transaction으로 처리한다.
+
+```text
+membership 제거
++ activeRaidAssignment 제거
++ 모집 memberCount/dealerCount/supportCount/hasAvailableSlot/revision 갱신
++ 필요 시 leaderPlayerId와 책임자 표시 Snapshot 승계
++ 단독 책임자라면 모집 해산
++ 동일 캐릭터·동일 레이드·동일 주차 pending 신청 종료
++ 본인 weeklyRaidClaim 생성
++ 남은 파티원에게 완료 사유 memberLeft 이벤트 생성
+```
+
+- 일반 멤버가 탈퇴할 때 기존 책임자의 `leaderCharacterNameSnapshot`과 `leaderClassNameSnapshot`은 그대로 보존한다.
+- 책임자가 탈퇴하면 `memberPlayerIds`의 다음 멤버와 그 membership Snapshot으로 책임자를 승계한다.
+- 같은 캐릭터라도 다른 `raidId`의 신청은 종료하지 않는다.
+- 확인창에서 취소하면 위 문서 중 어느 것도 변경하지 않는다.
+- Claim을 해제해도 이전 membership과 신청은 복구하지 않는다.
+- 완료 탈퇴 전에 `approved`였던 application은 이력 문서로 남는다. Claim 해제 후 같은 방에 다시 신청할 때 현재 membership이 없다면 그 문서를 새 `revision`의 `pending`으로 재사용한다.
+
+아직 구현하지 않은 범위:
+
+- 레이드 상세의 일반 멤버 `내 캐릭터 완료` 버튼
+- 파티장·공대장의 `파티 전체 완료`와 완료 당시 전원 Claim 생성
+- 기존 completed 방의 assignment 정리 및 데이터 이행
+
+따라서 아래 5.1과 5.2는 최종 제품 계약이며, 현재 실행 앱에서 완료된 범위는 5.3과 5.4의 **내 계정 체크박스 경로**다.
+
 ### 5.1 파티장·공대장 — 파티 전체 완료
 
 레이드 상세에서 `파티 전체 완료`를 실행한다.
@@ -118,6 +153,8 @@ players/{playerId}/weeklyRaidClaims/{cycleKey_characterId_raidId}
 5. 본인의 주간 완료 Claim을 생성한다.
 6. 남은 파티원에게 `weeklyRaidCompleted` 사유의 탈퇴 이벤트를 생성한다.
 7. 파티 회차는 계속 `active`다.
+
+이 UX의 레이드 상세 버튼 연결은 후속 작업이다. Task-078에서는 같은 상태 전이를 내 계정 체크박스에서 실행하는 경로를 먼저 구현했다.
 
 ### 5.3 내 계정 — 수동 완료
 
@@ -196,6 +233,8 @@ LOSTPARTY 밖에서 레이드를 완료했거나 사용자가 직접 기록하�
 - 같은 Character·raidId·cycleKey의 pending 신청은 Claim 생성과 함께 `superseded` 또는 완료 전용 종료 사유로 전환한다.
 - 완료 Claim이 생긴 뒤 기존 pending이 승인될 수 없어야 한다.
 - 승인 Transaction도 신청자 Claim을 다시 확인한다.
+- 완료로 종료된 신청은 `status: superseded`, `resolutionReason: weeklyRaidCompleted`로 기록한다.
+- 과거 `approved` application은 membership과 동일하지 않다. 현재 `memberPlayerIds`에 없으면 Claim 해제 후 같은 문서를 `pending`으로 갱신해 재신청할 수 있다.
 
 ### 이벤트
 

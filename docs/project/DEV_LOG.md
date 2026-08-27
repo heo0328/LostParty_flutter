@@ -1678,3 +1678,29 @@
 - 전체 `flutter test` 424개, `flutter analyze`, Firebase Rules dry-run compile이 통과했다. 사용자가 Rules를 배포했다.
 - Android 실기기에서 수동 체크·해제, 앱 종료 후 재실행 상태 유지, 참가 중 동일 레이드 모집 생성 차단과 pending 신청 상태의 체크 차단을 확인했다.
 - 파티 완료 후 참가자 Claim 자동 생성은 아직 연결하지 않았으며 Task-079 E 범위다.
+
+---
+
+## Task-077. 개인 주간 레이드 Claim 기반 C (2026-08-27)
+
+- 작업 브랜치: `codex/weekly-raid-claim-recruitment-guards`
+- Claim이 있는 캐릭터를 동일 `raidId`의 모집 생성·신청·즉시 가입·참가 캐릭터 변경 후보에서 비활성화하고, 각 명령 Transaction과 Rules가 Claim 부재를 최종 재검증한다.
+- 실기기 검증 중 발견된 참가 캐릭터 역할 고정 회귀를 수정했다. 파티 내 역할별 자리와 전체 구성이 허용하면 dealer↔support 변경 및 같은 캐릭터의 반대 역할 설정을 허용한다.
+- 역할 변경은 membership, active assignment, 모집 `dealerCount`·`supportCount`를 같은 Transaction에서 갱신한다.
+- 레이드 상세에 전체 및 파티별 딜러·서포터 현재/정원을 표시한다. 전체는 모집 집계, 파티별 값은 실제 슬롯 배치를 기준으로 한다.
+- 전체 테스트 429개와 `flutter analyze`, Rules dry-run을 통과했고 사용자가 Rules 배포와 Android 실기기 검증을 완료했다.
+- `main` 반영 커밋: `0f43463`.
+
+---
+
+## Task-078. 개인 주간 레이드 Claim 기반 D (2026-08-27)
+
+- 작업 브랜치: `codex/weekly-raid-claim-completion-flow`
+- 내 계정 체크 전에 동일 Character·raidId·cycleKey의 활성 파티와 pending 신청 영향을 조회하고, 파티명·탈퇴·책임자 승계·단독 해산·신청 종료 건수를 확인창에 표시한다.
+- 사용자 확인 후 membership 제거, assignment 삭제, 모집 인원·역할·빈자리·revision 갱신, 필요 시 책임자 승계 또는 단독 해산, 동일 레이드 pending 종료, 본인 Claim 생성과 완료 사유 `memberLeft` 이벤트를 한 Transaction으로 처리한다.
+- 일반 멤버 탈퇴에서는 기존 책임자 표시 Snapshot을 보존하고, 책임자 탈퇴에서는 다음 membership Snapshot으로 책임자를 승계한다.
+- 완료 종료 신청은 `status: superseded`, `resolutionReason: weeklyRaidCompleted`로 기록하며 같은 캐릭터의 다른 raidId 신청은 유지한다.
+- Claim 해제는 과거 파티·신청을 복구하지 않는다. 과거 `approved` application이 남아 있어도 현재 membership이 없다면 같은 문서를 새 revision의 `pending`으로 갱신해 동일 방 재신청을 허용한다.
+- Rules 배포와 실기기에서 일반 멤버 탈퇴, 책임자 승계, 단독 해산, pending 종료, 취소 무변경, 완료 사유 알림, Claim 해제 후 재신청을 확인했다.
+- 구현 커밋 `ec0def8`, 종료 문서 커밋 `efed5a3`으로 `main`과 `origin/main`에 반영됐다.
+- 레이드 상세의 일반 멤버 개인 완료 버튼과 파티장 전체 완료·전원 Claim은 Task-079 E 이후 범위다.

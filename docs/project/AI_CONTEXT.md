@@ -21,6 +21,8 @@
 - 현재 저장 브랜치와 커밋은 `NEXT_WORK.md`의 기준 상태를 따른다.
 - 2026-08-27 현재 `main`에는 Task-078 D까지 반영됐다. Claim 체크 캐릭터의 모집 생성·신청·즉시 가입·참가 캐릭터 변경 제한과 교차 역할 캐릭터 변경 복구, 개인 완료 후 파티 정리가 Rules 배포·실기기 검증까지 완료됐다.
 - Task-078 D는 내 계정 완료 체크 전 영향 조회와, 확인 후 활성 파티 탈퇴·책임자 승계/단독 해산·동일 레이드 pending 종료·Claim 생성·완료 사유 이벤트를 통합 Transaction으로 처리한다. Rules 배포와 실기기 검증을 완료했으며, 완료 탈퇴 후 Claim 해제·같은 방 재신청 시 과거 `approved` application을 재사용하는 회귀도 수정했다.
+- Task-078의 핵심 불변식은 Claim과 같은 Character·raidId·cycleKey의 active assignment가 공존하지 않는 것, 완료 탈퇴가 membership·assignment·모집 집계·책임자·pending·Claim·이벤트를 부분 성공 없이 함께 바꾸는 것, Claim 해제가 과거 파티를 복구하지 않는 것이다.
+- 다음 Task-079 E는 책임자 전용 파티 전체 완료와 당시 전원의 Claim·assignment 정리다. 최대 8인 Transaction과 Rules 문서 접근 수를 먼저 계산하고 Spark에서 안전하지 않으면 구현을 중단한다. 레이드 상세 일반 멤버 개인 완료 버튼은 Task-078에서 아직 연결하지 않았다.
 
 ---
 
