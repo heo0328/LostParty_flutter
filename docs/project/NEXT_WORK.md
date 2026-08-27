@@ -51,7 +51,7 @@
 
 | 구분 | 상태 | 비고 |
 | --- | --- | --- |
-| 통합 기준 | **`main` = Task-080 F 완료** | HEAD `c45dba2` |
+| 통합 기준 | **`main` = Task-080 F 완료** | 병합 `c45dba2` |
 | 완료 기능 | 멤버십·회차 + 알림 + Claim A~F + 내 계정 표기 설정 | Task-068~081 |
 | Firestore Rules | Claim A~F·다음주 prep·orphan self-heal **배포됨** | Firebase `lost-party` |
 | 현재 코드 상태 | **`main`** | Task-080 F 병합 후 |
@@ -320,7 +320,7 @@
 
 ```text
 현재 Task: Task-080 개인 주간 완료 Claim 기반 F
-현재 단계: 완료 (`main` `c45dba2`)
+현재 단계: 완료 (`main`, 병합 `c45dba2`)
 브랜치: main
 ```
 
