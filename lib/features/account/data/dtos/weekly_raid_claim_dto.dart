@@ -31,7 +31,7 @@ class WeeklyRaidClaimDto {
 
   factory WeeklyRaidClaimDto.fromMap(Map<String, Object?> data) {
     return WeeklyRaidClaimDto(
-      schemaVersion: data['schemaVersion'] as int,
+      schemaVersion: _asInt(data['schemaVersion']),
       playerId: data['playerId'] as String,
       characterId: data['characterId'] as String,
       raidId: data['raidId'] as String,
@@ -39,11 +39,19 @@ class WeeklyRaidClaimDto {
       difficultyId: data['difficultyId'] as String,
       source: data['source'] as String,
       sourceRecruitmentId: data['sourceRecruitmentId'] as String?,
-      sourceCompletionRevision: data['sourceCompletionRevision'] as int?,
+      sourceCompletionRevision: data['sourceCompletionRevision'] == null
+          ? null
+          : _asInt(data['sourceCompletionRevision']),
       completedAt: data['completedAt'],
       updatedAt: data['updatedAt'],
       cycleStartedAt: data['cycleStartedAt'],
       cycleEndsAt: data['cycleEndsAt'],
     );
+  }
+
+  static int _asInt(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    throw FormatException('Expected int, got $value');
   }
 }

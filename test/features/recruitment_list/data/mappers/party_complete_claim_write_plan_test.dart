@@ -79,6 +79,53 @@ void main() {
     );
   });
 
+  test('claimWriteAction은 같은 방의 이전 partyOwner Claim을 교체한다', () {
+    expect(
+      PartyCompleteClaimWritePlan.claimWriteAction(
+        existing: null,
+        recruitmentId: 'recruitment-1',
+        sourceCompletionRevision: 3,
+      ),
+      PartyCompleteClaimWriteAction.create,
+    );
+    expect(
+      PartyCompleteClaimWritePlan.claimWriteAction(
+        existing: const {
+          'source': 'partyOwner',
+          'sourceRecruitmentId': 'recruitment-1',
+          'sourceCompletionRevision': 1,
+        },
+        recruitmentId: 'recruitment-1',
+        sourceCompletionRevision: 3,
+      ),
+      PartyCompleteClaimWriteAction.replace,
+    );
+    expect(
+      PartyCompleteClaimWritePlan.claimWriteAction(
+        existing: const {
+          'source': 'partyOwner',
+          'sourceRecruitmentId': 'recruitment-1',
+          'sourceCompletionRevision': 3.0,
+        },
+        recruitmentId: 'recruitment-1',
+        sourceCompletionRevision: 3,
+      ),
+      PartyCompleteClaimWriteAction.skip,
+    );
+    expect(
+      PartyCompleteClaimWritePlan.claimWriteAction(
+        existing: const {
+          'source': 'manual',
+          'sourceRecruitmentId': 'recruitment-1',
+          'sourceCompletionRevision': 1,
+        },
+        recruitmentId: 'recruitment-1',
+        sourceCompletionRevision: 3,
+      ),
+      PartyCompleteClaimWriteAction.skip,
+    );
+  });
+
   test('restoredAssignment은 join plan과 같은 점유 필드를 쓴다', () {
     final assignment = PartyCompleteClaimWritePlan.restoredAssignment(
       playerId: 'player-1',

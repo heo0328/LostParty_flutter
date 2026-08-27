@@ -1149,7 +1149,8 @@ service cloud.firestore {
         && data.difficultyId is string
         && data.cycleKey is string
         && data.sourceRecruitmentId is string
-        && data.sourceCompletionRevision is int
+        && (data.sourceCompletionRevision is int
+          || data.sourceCompletionRevision is float)
         && data.cycleStartedAt is timestamp
         && data.cycleEndsAt is timestamp
         && data.completedAt is timestamp
@@ -1168,7 +1169,7 @@ service cloud.firestore {
         && data.completedAt == request.time
         && data.updatedAt == request.time
         && cycle.status == 'completed'
-        && cycle.completionRevision == data.sourceCompletionRevision
+        && int(cycle.completionRevision) == int(data.sourceCompletionRevision)
         && cycle.completedByPlayerId == currentPlayerId()
         && playerId in recruitmentAfter.memberPlayerIds
         && exists(memberPath)
@@ -1177,33 +1178,48 @@ service cloud.firestore {
     }
 
     function validPartyOwnerWeeklyRaidClaimDelete(playerId, claimId, data) {
-      let recruitment = get(recruitmentPath(data.sourceRecruitmentId)).data;
+      let recruitmentAfter = getAfter(recruitmentPath(data.sourceRecruitmentId)).data;
       let cycle = getAfter(recruitmentCyclePath(
         data.sourceRecruitmentId,
         data.cycleKey
       )).data;
+      let cancelDelete = cycle.status == 'completionCancelled'
+        && recruitmentAfter.currentCycleStatus == 'active'
+        && int(cycle.completionRevision) == int(data.sourceCompletionRevision) + 1;
+      // 취소 후 재완료 때 이전 partyOwner Claim을 새 completionRevision으로 교체
+      let recompleteReplace = cycle.status == 'completed'
+        && recruitmentAfter.currentCycleStatus == 'completed'
+        && cycle.completedByPlayerId == currentPlayerId()
+        && int(cycle.completionRevision) > int(data.sourceCompletionRevision);
       return hasActiveBinding()
-        && recruitment.leaderPlayerId == currentPlayerId()
+        && recruitmentAfter.leaderPlayerId == currentPlayerId()
         && data.playerId == playerId
         && data.characterId is string
         && data.raidId is string
         && data.cycleKey is string
         && data.sourceRecruitmentId is string
-        && data.sourceCompletionRevision is int
-        && data.cycleStartedAt is timestamp
-        && data.cycleEndsAt is timestamp
+        && (data.sourceCompletionRevision is int
+          || data.sourceCompletionRevision is float)
         && claimId == weeklyRaidClaimId(
           data.cycleKey,
           data.characterId,
           data.raidId
         )
         && data.source == 'partyOwner'
-        && data.cycleKey == recruitment.currentCycleKey
-        && cycle.status == 'completionCancelled'
-        && cycle.completionRevision == data.sourceCompletionRevision + 1
-        && data.cycleEndsAt == data.cycleStartedAt + duration.value(7, 'd')
-        && request.time >= data.cycleStartedAt
-        && request.time < data.cycleEndsAt;
+        && data.cycleKey == recruitmentAfter.currentCycleKey
+        && data.raidId == recruitmentAfter.raidId
+        && (cancelDelete || recompleteReplace);
+    }
+
+    function validPartyOwnerWeeklyRaidClaimUpdate(playerId, claimId, data, newData) {
+      return validPartyOwnerWeeklyRaidClaimCreate(playerId, claimId, newData)
+        && data.source == 'partyOwner'
+        && data.sourceRecruitmentId == newData.sourceRecruitmentId
+        && data.playerId == newData.playerId
+        && data.characterId == newData.characterId
+        && data.raidId == newData.raidId
+        && data.cycleKey == newData.cycleKey
+        && int(newData.sourceCompletionRevision) > int(data.sourceCompletionRevision);
     }
 
     function validManualWeeklyRaidClaimCreate(playerId, claimId, data) {
@@ -1400,7 +1416,8 @@ service cloud.firestore {
           resource.data,
           request.resource.data
         );
-        allow delete: if validAssignmentRemoval(playerId, resource.data);
+        allow delete: if resource != null
+          && validAssignmentRemoval(playerId, resource.data);
       }
 
       match /events/{eventId} {
@@ -1430,7 +1447,12 @@ service cloud.firestore {
           claimId,
           request.resource.data
         );
-        allow update: if false;
+        allow update: if validPartyOwnerWeeklyRaidClaimUpdate(
+          playerId,
+          claimId,
+          resource.data,
+          request.resource.data
+        );
         allow delete: if validManualWeeklyRaidClaimDelete(
           playerId,
           claimId,

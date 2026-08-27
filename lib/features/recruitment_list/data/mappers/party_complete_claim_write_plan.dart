@@ -1,3 +1,5 @@
+enum PartyCompleteClaimWriteAction { create, replace, skip }
+
 class PartyCompleteClaimWritePlan {
   const PartyCompleteClaimWritePlan._();
 
@@ -65,6 +67,36 @@ class PartyCompleteClaimWritePlan {
     if (claim == null) return false;
     return claim['source'] == 'partyOwner' &&
         claim['sourceRecruitmentId'] == recruitmentId &&
-        claim['sourceCompletionRevision'] == sourceCompletionRevision;
+        _revisionOf(claim['sourceCompletionRevision']) ==
+            sourceCompletionRevision;
+  }
+
+  /// 같은 방의 이전 partyOwner Claim은 재완료 때 덮어쓴다.
+  /// 없는 Claim만 만들고, manual/partyMember는 출처를 유지한다.
+  static PartyCompleteClaimWriteAction claimWriteAction({
+    required Map<String, dynamic>? existing,
+    required String recruitmentId,
+    required int sourceCompletionRevision,
+  }) {
+    if (existing == null) return PartyCompleteClaimWriteAction.create;
+    final source = existing['source'];
+    if (source == 'manual' || source == 'partyMember') {
+      return PartyCompleteClaimWriteAction.skip;
+    }
+    if (source != 'partyOwner' ||
+        existing['sourceRecruitmentId'] != recruitmentId) {
+      return PartyCompleteClaimWriteAction.skip;
+    }
+    if (_revisionOf(existing['sourceCompletionRevision']) ==
+        sourceCompletionRevision) {
+      return PartyCompleteClaimWriteAction.skip;
+    }
+    return PartyCompleteClaimWriteAction.replace;
+  }
+
+  static int? _revisionOf(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return null;
   }
 }

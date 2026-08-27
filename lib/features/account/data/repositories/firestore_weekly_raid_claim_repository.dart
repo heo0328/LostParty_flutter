@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -64,50 +66,112 @@ class FirestoreWeeklyRaidClaimRepository
         ),
       );
     }
-    return _firestore
+    final claimsQuery = _firestore
         .collection('players')
         .doc(playerId)
         .collection('weeklyRaidClaims')
-        .where('cycleKey', isEqualTo: cycleKey)
-        .snapshots()
-        .map((snapshot) {
-          try {
-            return snapshot.docs
-                .map((document) {
-                  final claim = _mapper.map(
-                    WeeklyRaidClaimDto.fromMap(document.data()),
-                    documentId: document.id,
-                  );
-                  if (claim.playerId != playerId ||
-                      claim.cycleKey != cycleKey) {
-                    throw const FormatException('Claim path mismatch.');
-                  }
-                  return claim;
-                })
-                .toList(growable: false);
-          } on WeeklyRaidClaimReadException {
-            rethrow;
-          } catch (_) {
-            throw const WeeklyRaidClaimReadException(
-              WeeklyRaidClaimReadFailureType.contract,
-            );
-          }
-        })
-        .handleError((Object error) {
-          if (error is WeeklyRaidClaimReadException) throw error;
-          if (error is FirebaseException) {
-            throw WeeklyRaidClaimReadException(switch (error.code) {
-              'permission-denied' =>
-                WeeklyRaidClaimReadFailureType.permissionDenied,
-              'unavailable' ||
-              'deadline-exceeded' => WeeklyRaidClaimReadFailureType.unavailable,
-              _ => WeeklyRaidClaimReadFailureType.unknown,
+        .where('cycleKey', isEqualTo: cycleKey);
+    final eventsQuery = _firestore
+        .collection('players')
+        .doc(playerId)
+        .collection('events');
+    late final StreamController<List<WeeklyRaidClaim>> controller;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? claimsSub;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? eventsSub;
+
+    void emitSnapshot(QuerySnapshot<Map<String, dynamic>> snapshot) {
+      if (controller.isClosed) return;
+      try {
+        controller.add(_mapCurrentCycleClaims(snapshot, playerId, cycleKey));
+      } catch (error, stackTrace) {
+        controller.addError(_readException(error), stackTrace);
+      }
+    }
+
+    Future<void> refreshFromServer() async {
+      try {
+        final snapshot = await claimsQuery.get(
+          const GetOptions(source: Source.server),
+        );
+        emitSnapshot(snapshot);
+      } catch (error, stackTrace) {
+        if (!controller.isClosed) {
+          controller.addError(_readException(error), stackTrace);
+        }
+      }
+    }
+
+    controller = StreamController<List<WeeklyRaidClaim>>(
+      onListen: () {
+        claimsSub = claimsQuery.snapshots().listen(
+          emitSnapshot,
+          onError: (Object error, StackTrace stackTrace) {
+            if (!controller.isClosed) {
+              controller.addError(_readException(error), stackTrace);
+            }
+          },
+        );
+        eventsSub = eventsQuery.snapshots().listen(
+          (snapshot) {
+            final shouldRefresh = snapshot.docChanges.any((change) {
+              if (change.type != DocumentChangeType.added) return false;
+              final type = change.doc.data()?['type'];
+              return type == 'partyCompleted' ||
+                  type == 'partyCompletionCancelled';
             });
-          }
-          throw const WeeklyRaidClaimReadException(
-            WeeklyRaidClaimReadFailureType.unknown,
-          );
-        });
+            if (shouldRefresh) unawaited(refreshFromServer());
+          },
+          onError: (_) {},
+        );
+      },
+      onCancel: () async {
+        await claimsSub?.cancel();
+        await eventsSub?.cancel();
+      },
+    );
+    return controller.stream;
+  }
+
+  List<WeeklyRaidClaim> _mapCurrentCycleClaims(
+    QuerySnapshot<Map<String, dynamic>> snapshot,
+    String playerId,
+    String cycleKey,
+  ) {
+    try {
+      return snapshot.docs
+          .map((document) {
+            final claim = _mapper.map(
+              WeeklyRaidClaimDto.fromMap(document.data()),
+              documentId: document.id,
+            );
+            if (claim.playerId != playerId || claim.cycleKey != cycleKey) {
+              throw const FormatException('Claim path mismatch.');
+            }
+            return claim;
+          })
+          .toList(growable: false);
+    } on WeeklyRaidClaimReadException {
+      rethrow;
+    } catch (_) {
+      throw const WeeklyRaidClaimReadException(
+        WeeklyRaidClaimReadFailureType.contract,
+      );
+    }
+  }
+
+  WeeklyRaidClaimReadException _readException(Object error) {
+    if (error is WeeklyRaidClaimReadException) return error;
+    if (error is FirebaseException) {
+      return WeeklyRaidClaimReadException(switch (error.code) {
+        'permission-denied' => WeeklyRaidClaimReadFailureType.permissionDenied,
+        'unavailable' ||
+        'deadline-exceeded' => WeeklyRaidClaimReadFailureType.unavailable,
+        _ => WeeklyRaidClaimReadFailureType.unknown,
+      });
+    }
+    return const WeeklyRaidClaimReadException(
+      WeeklyRaidClaimReadFailureType.unknown,
+    );
   }
 
   @override

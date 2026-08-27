@@ -66,7 +66,7 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
         return const PartyCycleResult.failure(PartyCycleFailure.invalidRequest);
       }
       final sourceCompletionRevision = cycle.exists
-          ? (cycle.data()?['completionRevision'] as int) + 1
+          ? _readInt(cycle.data()?['completionRevision']) + 1
           : 1;
       final claimReads = <({
         String playerId,
@@ -95,14 +95,27 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
       }
       final now = FieldValue.serverTimestamp();
       if (cycle.exists) {
-        transaction.update(cycleRef, PartyCycleWritePlan.recompleteCycle(completedByPlayerId: playerId, completionRevision: cycle.data()?['completionRevision'] as int, memberSnapshot: orderedSnapshot, serverTimestamp: now));
+        transaction.update(
+          cycleRef,
+          PartyCycleWritePlan.recompleteCycle(
+            completedByPlayerId: playerId,
+            completionRevision: _readInt(cycle.data()?['completionRevision']),
+            memberSnapshot: orderedSnapshot,
+            serverTimestamp: now,
+          ),
+        );
       } else {
         transaction.set(cycleRef, PartyCycleWritePlan.completedCycle(recruitmentId: command.recruitmentId, cycleKey: command.cycleKey, completedByPlayerId: playerId, memberSnapshot: orderedSnapshot, serverTimestamp: now));
       }
       _writeEvents(transaction, command.recruitmentId, orderedSnapshot, r, type: 'partyCompleted', eventRevision: sourceCompletionRevision, serverTimestamp: now);
       transaction.update(recruitmentRef, PartyCycleWritePlan.completeRecruitment(continueTogether: r['continueTogether'] == true, completedByPlayerId: playerId, revision: command.expectedRecruitmentRevision, serverTimestamp: now));
       for (final claim in claimReads) {
-        if (claim.snap.exists) continue;
+        final action = PartyCompleteClaimWritePlan.claimWriteAction(
+          existing: claim.snap.exists ? claim.snap.data() : null,
+          recruitmentId: command.recruitmentId,
+          sourceCompletionRevision: sourceCompletionRevision,
+        );
+        if (action == PartyCompleteClaimWriteAction.skip) continue;
         transaction.set(
           claim.ref,
           PartyCompleteClaimWritePlan.partyOwnerClaim(
@@ -145,7 +158,10 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
       if (failure != null) return PartyCycleResult.failure(failure);
       if (r?['leaderPlayerId'] != playerId) return const PartyCycleResult.failure(PartyCycleFailure.unauthorized);
       if (r?['continueTogether'] != true || r?['currentCycleStatus'] != 'completed' || c?['status'] != 'completed') return const PartyCycleResult.failure(PartyCycleFailure.notCompleted);
-      if (c?['completionRevision'] != command.expectedCompletionRevision) return const PartyCycleResult.failure(PartyCycleFailure.revisionConflict);
+      if (_readInt(c?['completionRevision']) !=
+          command.expectedCompletionRevision) {
+        return const PartyCycleResult.failure(PartyCycleFailure.revisionConflict);
+      }
       final window = const PartyCyclePolicy().fromKey(command.cycleKey)!;
       if (!(_now ?? DateTime.now)().toUtc().isBefore(window.completionCancelDeadline)) return const PartyCycleResult.failure(PartyCycleFailure.completionCancelExpired);
       final completedSnapshot = List<Map<String, Object?>>.from((c?['completedMemberSnapshot'] as List).map((item) => Map<String, Object?>.from(item as Map)));
@@ -333,8 +349,7 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
 
       final beforeMemberIds = <String>[];
       final characterNames = <String, String?>{};
-      final assignmentDeletes =
-          <DocumentReference<Map<String, dynamic>>>[];
+      final assignmentRefs = <DocumentReference<Map<String, dynamic>>>[];
       for (final current in memberSnapshots) {
         if (!current.exists) continue;
         beforeMemberIds.add(current.id);
@@ -344,7 +359,7 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
             : null;
         final characterId = data['characterId'] as String?;
         if (characterId != null && characterId.isNotEmpty) {
-          assignmentDeletes.add(
+          assignmentRefs.add(
             _firestore
                 .collection('players')
                 .doc(current.id)
@@ -352,6 +367,11 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
                 .doc('${characterId}_$raidId'),
           );
         }
+      }
+      // 전체 완료 후에는 assignment가 이미 없다. 없는 문서 delete는 Rules가 거절한다.
+      final assignmentSnapshots = <DocumentSnapshot<Map<String, dynamic>>>[];
+      for (final assignmentRef in assignmentRefs) {
+        assignmentSnapshots.add(await transaction.get(assignmentRef));
       }
       final pendingApplicantIds = <String>[];
       for (final current in applicationSnapshots) {
@@ -372,8 +392,10 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
         if (!current.exists) continue;
         transaction.delete(current.reference);
       }
-      for (final assignmentRef in assignmentDeletes) {
-        transaction.delete(assignmentRef);
+      for (final assignment in assignmentSnapshots) {
+        if (assignment.exists) {
+          transaction.delete(assignment.reference);
+        }
       }
       transaction.update(
         recruitmentRef,
@@ -474,6 +496,12 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
 
   DocumentReference<Map<String, dynamic>> _recruitment(String id) =>
       _firestore.collection('recruitments').doc(id);
+
+  static int _readInt(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    throw ArgumentError.value(value, 'value', 'expected int');
+  }
 
   Future<PartyCycleResult> _run(Future<PartyCycleResult> Function(Transaction, String) action) async {
     final uid = _firebaseAuth.currentUser?.uid;
