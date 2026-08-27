@@ -1415,7 +1415,10 @@ service cloud.firestore {
       }
 
       match /weeklyRaidClaims/{claimId} {
-        allow get, list: if hasActiveBinding()
+        // list는 본인만. get은 assignment와 같이 active binding이면 단건 조회 가능.
+        // 파티 전체 완료 Transaction이 멤버 Claim 존재 여부를 멱등으로 확인해야 한다.
+        allow get: if hasActiveBinding();
+        allow list: if hasActiveBinding()
           && playerId == currentPlayerId();
         allow create: if validManualWeeklyRaidClaimCreate(
           playerId,
