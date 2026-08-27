@@ -511,7 +511,7 @@ service cloud.firestore {
           'status', 'completionRevision', 'updatedAt'
         ])
         && newData.status == 'completionCancelled'
-        && newData.completionRevision == oldData.completionRevision + 1
+        && int(newData.completionRevision) == int(oldData.completionRevision) + 1
         && newData.updatedAt == request.time;
     }
 
@@ -530,7 +530,7 @@ service cloud.firestore {
         && newData.status == 'completed'
         && newData.completedAt == request.time
         && newData.completedByPlayerId == currentPlayerId()
-        && newData.completionRevision == oldData.completionRevision + 1
+        && int(newData.completionRevision) == int(oldData.completionRevision) + 1
         && newData.memberPlayerIds == recruitment.memberPlayerIds
         && newData.completedMemberSnapshot.size() == recruitment.memberCount
         && newData.updatedAt == request.time
@@ -561,7 +561,11 @@ service cloud.firestore {
       let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
       let oldAssignmentId = oldData.characterId + '_' + recruitment.raidId;
       let newAssignmentId = newData.characterId + '_' + recruitment.raidId;
-      return hasActiveBinding()
+      // 반복 완료 후: 다음 회차 준비 membership만 변경. Claim·새 assignment는 유지/생성하지 않는다.
+      let nextWeekPrep = recruitment.status == 'active'
+        && recruitment.continueTogether == true
+        && recruitment.currentCycleStatus == 'completed';
+      let membershipFieldsOk = hasActiveBinding()
         && playerId == currentPlayerId()
         && newData.diff(oldData).affectedKeys().hasOnly([
           'characterId', 'characterNameSnapshot', 'classNameSnapshot',
@@ -576,22 +580,29 @@ service cloud.firestore {
         && newData.canApproveApplications == oldData.canApproveApplications
         && ownsActiveCharacter(newData.characterId)
         && newData.characterChangedAt == request.time
-        && newData.updatedAt == request.time
-        && (oldAssignmentId == newAssignmentId
-          ? (existsAfter(assignmentPath(playerId, newAssignmentId))
-            && getAfter(assignmentPath(playerId, newAssignmentId)).data.role
-              == newData.role)
-          : (!existsAfter(assignmentPath(playerId, oldAssignmentId))
-            && getAfter(assignmentPath(playerId, newAssignmentId)).data.characterId
-              == newData.characterId
-            && getAfter(assignmentPath(playerId, newAssignmentId)).data.role
-              == newData.role))
-        && !hasWeeklyRaidClaimAfter(
-          playerId,
-          recruitment.currentCycleKey,
-          newData.characterId,
-          recruitment.raidId
-        );
+        && newData.updatedAt == request.time;
+      let activeAssignmentChange = oldAssignmentId == newAssignmentId
+        ? (existsAfter(assignmentPath(playerId, newAssignmentId))
+          && getAfter(assignmentPath(playerId, newAssignmentId)).data.role
+            == newData.role)
+        : (!existsAfter(assignmentPath(playerId, oldAssignmentId))
+          && getAfter(assignmentPath(playerId, newAssignmentId)).data.characterId
+            == newData.characterId
+          && getAfter(assignmentPath(playerId, newAssignmentId)).data.role
+            == newData.role);
+      let nextWeekPrepAssignmentOk =
+        !existsAfter(assignmentPath(playerId, oldAssignmentId))
+        && !existsAfter(assignmentPath(playerId, newAssignmentId));
+      return membershipFieldsOk
+        && (nextWeekPrep
+          ? nextWeekPrepAssignmentOk
+          : (activeAssignmentChange
+            && !hasWeeklyRaidClaimAfter(
+              playerId,
+              recruitment.currentCycleKey,
+              newData.characterId,
+              recruitment.raidId
+            )));
     }
 
     function validAssignmentRoleChange(playerId, data, newData) {
@@ -650,11 +661,19 @@ service cloud.firestore {
         && exists(memberPath)
         && get(memberPath).data.characterId == data.characterId
         && data.raidId == recruitment.raidId;
+      // E 이전 completed·해산 대기 orphan: 본인 점유만 정리. Claim은 만들지 않는다.
+      let staleCompletedRemoval = hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.raidId == recruitment.raidId
+        && (recruitment.status == 'completed'
+          || recruitment.status == 'disbanded'
+          || recruitment.currentCycleStatus == 'completed');
       return hasActiveBinding()
         && (playerId == currentPlayerId()
           || recruitment.leaderPlayerId == currentPlayerId()
           || after.status == 'disbanded')
         && (partyCompleteRemoval
+          || staleCompletedRemoval
           || !existsAfter(memberPath)
           || (existsAfter(memberPath)
             && getAfter(memberPath).data.characterId != data.characterId)
@@ -1173,7 +1192,7 @@ service cloud.firestore {
         && cycle.completedByPlayerId == currentPlayerId()
         && playerId in recruitmentAfter.memberPlayerIds
         && exists(memberPath)
-        && data.characterId == get(memberPath).data.characterId
+        && data.characterId == getAfter(memberPath).data.characterId
         && !existsAfter(assignmentPath(playerId, assignmentId));
     }
 

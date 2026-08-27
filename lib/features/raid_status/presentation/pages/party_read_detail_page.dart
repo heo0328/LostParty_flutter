@@ -76,6 +76,8 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
   bool _myApplicationLoading = false;
   bool _submitting = false;
 
+  bool _staleAssignmentHealAttempted = false;
+
   bool get _canApplicantAction =>
       widget.candidateService != null &&
       widget.playerId != null &&
@@ -125,6 +127,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     _cycle = null;
 
     if (restartRecruitment) {
+      _staleAssignmentHealAttempted = false;
       _viewModel.restart(
         () => widget.partyReadRepository.watchRecruitment(widget.recruitmentId),
       );
@@ -164,6 +167,39 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
           .listen(_onApplications, onError: _onApplicationsError);
     }
     if (mounted) setState(() {});
+  }
+
+  Future<void> _purgeStaleOwnAssignmentIfNeeded(
+    PublicRecruitmentSummary summary,
+  ) async {
+    if (_staleAssignmentHealAttempted) return;
+    final repository = widget.cycleCommandRepository;
+    final playerId = widget.playerId;
+    if (repository == null || playerId == null || playerId.isEmpty) return;
+    final cycleCompleted = _cycle?.isCompleted == true;
+    if (summary.status != 'completed' &&
+        summary.status != 'disbanded' &&
+        summary.currentCycleStatus != 'completed' &&
+        !cycleCompleted) {
+      return;
+    }
+    PartyMemberDisplay? mine;
+    for (final member in _members) {
+      if (member.playerId == playerId) {
+        mine = member;
+        break;
+      }
+    }
+    final characterId = mine?.characterId;
+    if (characterId == null || characterId.isEmpty) return;
+    _staleAssignmentHealAttempted = true;
+    await repository.purgeStaleOwnAssignment(
+      PartyPurgeStaleAssignmentCommand(
+        recruitmentId: summary.id,
+        characterId: characterId,
+        raidId: summary.metadata.raidId,
+      ),
+    );
   }
 
   void _ensureCycleSubscription(String cycleKey) {
@@ -443,6 +479,11 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
 
           final summary = state.item!;
           if (summary.status == 'disbanded') {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _purgeStaleOwnAssignmentIfNeeded(summary);
+              }
+            });
             return const _MessageView(
               icon: Icons.meeting_room_outlined,
               title: '해산된 파티입니다.',
@@ -452,6 +493,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
               _ensureCycleSubscription(summary.currentCycleKey);
+              _purgeStaleOwnAssignmentIfNeeded(summary);
             }
           });
           return SingleChildScrollView(
@@ -650,6 +692,8 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     );
     if (!mounted) return;
 
+    final isNextWeekPrep =
+        summary.continueTogether && summary.isCycleCompleted;
     final eligible =
         <
           ({
@@ -660,7 +704,11 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     for (final candidate in candidates) {
       final serverId = candidate.serverCharacterId;
       if (serverId == null || serverId.isEmpty) continue;
-      if (!candidate.canSelect) continue;
+      final claimOnlyBlocked = candidate.rejectionReasons.length == 1 &&
+          candidate.rejectionReasons.single == '이번 주 동일 레이드 완료';
+      if (!candidate.canSelect && !(isNextWeekPrep && claimOnlyBlocked)) {
+        continue;
+      }
       for (final option in candidate.roles.where((option) => option.canSelect)) {
         if (me.characterId == serverId && option.role == me.role) continue;
         eligible.add((candidate: candidate, option: option));
@@ -686,6 +734,29 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     );
     if (selected == null || !mounted) return;
 
+    if (isNextWeekPrep) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('다음 주 참가 캐릭터를 변경할까요?'),
+          content: const Text(
+            '이번 회차 완료 기록은 유지됩니다. 구성을 바꾸면 이 회차의 전체 완료 취소는 더 이상 할 수 없습니다.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('닫기'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('변경'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+
     setState(() => _submitting = true);
     final result = await repository.changeCharacter(
       PartyChangeCharacterCommand(
@@ -701,7 +772,15 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     if (result.isSuccess) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('참가 캐릭터를 변경했습니다.')));
+      ).showSnackBar(
+        SnackBar(
+          content: Text(
+            isNextWeekPrep
+                ? '다음 주 참가 캐릭터를 변경했습니다.'
+                : '참가 캐릭터를 변경했습니다.',
+          ),
+        ),
+      );
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
@@ -999,8 +1078,15 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       ).showSnackBar(const SnackBar(content: Text('완료를 취소했습니다.')));
       return;
     }
+    final failure = result.failure!;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_cycleFailureMessage(result.failure!))),
+      SnackBar(
+        content: Text(
+          failure == PartyCycleFailure.revisionConflict
+              ? '완료 이후 일부 파티원의 참가 또는 완료 상태가 변경되어 전체 완료를 취소할 수 없습니다. 각 파티원이 내 계정에서 완료 상태를 확인해 주세요.'
+              : _cycleFailureMessage(failure),
+        ),
+      ),
     );
   }
 

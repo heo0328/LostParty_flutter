@@ -1611,4 +1611,9 @@ class _RecordingCycleRepository implements PartyCycleCommandRepository {
     disbandCommands.add(command);
     return const PartyCycleResult.success();
   }
+
+  @override
+  Future<PartyCycleResult> purgeStaleOwnAssignment(
+    PartyPurgeStaleAssignmentCommand command,
+  ) async => const PartyCycleResult.success();
 }

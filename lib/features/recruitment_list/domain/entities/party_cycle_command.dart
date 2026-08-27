@@ -38,6 +38,19 @@ class PartyDisbandCommand {
   final int expectedRecruitmentRevision;
 }
 
+/// completed/해산 대기 orphan 본인 점유 정리. Claim은 만들지 않는다.
+class PartyPurgeStaleAssignmentCommand {
+  const PartyPurgeStaleAssignmentCommand({
+    required this.recruitmentId,
+    required this.characterId,
+    required this.raidId,
+  });
+
+  final String recruitmentId;
+  final String characterId;
+  final String raidId;
+}
+
 enum PartyCycleFailure { unauthenticated, playerBindingMissing, notFound, unauthorized, recruitmentClosed, cycleMismatch, alreadyCompleted, notCompleted, completionCancelExpired, notReadyForAdvance, revisionConflict, permissionDenied, temporarilyUnavailable, invalidRequest, unknown }
 
 class PartyCycleResult {

@@ -125,38 +125,48 @@ class AccountCharacterCard extends StatelessWidget {
                 for (final raid in weeklyRaids)
                   SizedBox(
                     height: raidRowHeight,
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 28,
-                          height: raidRowHeight,
-                          child: Checkbox(
-                            key: ValueKey(
-                              'weeklyRaidClaim-${character.serverCharacterId}-${raid.raidId}',
+                    child: InkWell(
+                      onTap:
+                          onWeeklyRaidChanged == null ||
+                              busyRaidIds.contains(raid.raidId)
+                          ? null
+                          : () => onWeeklyRaidChanged!(
+                              raid,
+                              !raid.isCompleted,
                             ),
-                            value: raid.isCompleted,
-                            onChanged:
-                                onWeeklyRaidChanged == null ||
-                                    busyRaidIds.contains(raid.raidId)
-                                ? null
-                                : (value) => onWeeklyRaidChanged!(
-                                    raid,
-                                    value ?? false,
-                                  ),
-                            visualDensity: VisualDensity.compact,
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 28,
+                            height: raidRowHeight,
+                            child: Checkbox(
+                              key: ValueKey(
+                                'weeklyRaidClaim-${character.serverCharacterId}-${raid.raidId}',
+                              ),
+                              value: raid.isCompleted,
+                              onChanged:
+                                  onWeeklyRaidChanged == null ||
+                                      busyRaidIds.contains(raid.raidId)
+                                  ? null
+                                  : (value) => onWeeklyRaidChanged!(
+                                      raid,
+                                      value ?? false,
+                                    ),
+                              visualDensity: VisualDensity.compact,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                            ),
                           ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            raid.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall,
+                          Expanded(
+                            child: Text(
+                              raid.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
               ],

@@ -15,30 +15,18 @@ import 'package:lost_party/features/recruitment_list/domain/entities/active_raid
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_aggregate.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_application.dart';
-import 'package:lost_party/features/recruitment_list/domain/entities/weekly_raid_clear.dart';
 import 'package:lost_party/features/recruitment_list/domain/policies/approval_policy.dart';
 import 'package:lost_party/features/recruitment_list/domain/policies/party_composition_policy.dart';
 import 'package:lost_party/features/recruitment_list/domain/services/recruitment_application_candidate_service.dart';
 import 'package:lost_party/features/recruitment_list/domain/state/recruitment_state_machine.dart';
 
 void main() {
-  test('ě­í ëł ě ěĽ ě¸íęłź ëŞ¨ë  ě ě˛­ ěĄ°ęą´ě íëł´ëłëĄ íě íë¤', () async {
-    final weeklyRepository = InMemoryWeeklyRaidClearRepository();
-    await weeklyRepository.saveAll([
-      WeeklyRaidClear(
-        userId: 'user-b',
-        characterId: 'ěëŁë°ë',
-        raidId: 'serca',
-        difficultyId: 'hard',
-        resetWeekKey: '2026-08-19',
-        completedAt: DateTime.utc(2026, 8, 20),
-        recruitmentId: 'old',
-        completedByUserId: 'user-a',
-      ),
-    ]);
+  test('서버 Claim이 있으면 신청 후보에서 차단한다', () async {
     final service = RecruitmentApplicationCandidateService(
       accountRepository: _AccountRepository(),
-      weeklyClearRepository: weeklyRepository,
+      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+      weeklyRaidClaimRepository: _ClearedBardClaimRepository(),
+      claimPlayerId: 'player-1',
       session: FakeUserSession('user-b'),
       clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 20)),
     );
@@ -174,6 +162,28 @@ void main() {
   });
 }
 
+class _ClearedBardClaimRepository implements WeeklyRaidClaimRepository {
+  @override
+  Stream<List<WeeklyRaidClaim>> watchCurrentCycleClaims({
+    required String playerId,
+    required String cycleKey,
+  }) => Stream.value([
+    WeeklyRaidClaim(
+      id: '${cycleKey}_cleared-bard_serca',
+      playerId: playerId,
+      characterId: 'cleared-bard',
+      raidId: 'serca',
+      cycleKey: cycleKey,
+      difficultyId: 'hard',
+      source: WeeklyRaidClaimSource.manual,
+      cycleStartedAt: DateTime.utc(2026, 8, 18, 21),
+      cycleEndsAt: DateTime.utc(2026, 8, 25, 21),
+      completedAt: DateTime.utc(2026, 8, 20),
+      updatedAt: DateTime.utc(2026, 8, 20),
+    ),
+  ]);
+}
+
 class _ClaimRepository implements WeeklyRaidClaimRepository {
   @override
   Stream<List<WeeklyRaidClaim>> watchCurrentCycleClaims({
@@ -256,6 +266,7 @@ class _AccountRepository implements AccountRepository {
       ),
       LocalAccountCharacter(
         id: 2,
+        serverCharacterId: 'cleared-bard',
         serverName: 'ëŁ¨íě¨',
         characterName: 'ěëŁë°ë',
         characterLevel: 70,

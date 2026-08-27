@@ -143,12 +143,7 @@ class RecruitmentApplicationCandidateService {
                     claim.characterId == character.serverCharacterId &&
                     claim.raidId == aggregate.metadata.raidId,
               );
-          if (hasServerClaim || await weeklyClearRepository.hasClear(
-            userId: userId,
-            characterId: character.characterName,
-            raidId: aggregate.metadata.raidId,
-            resetWeekKey: weekKey,
-          )) {
+          if (hasServerClaim) {
             reasons.add('이번 주 동일 레이드 완료');
             statuses.add(
               const CandidateParticipationStatus(

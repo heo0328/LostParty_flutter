@@ -181,20 +181,6 @@ class RecruitmentCommandService {
         LocalRecruitmentFailure.notFound,
       );
     }
-    final clearRepository = weeklyClearRepository;
-    if (clearRepository != null &&
-        await clearRepository.hasClear(
-          userId: userId,
-          characterId: characterId,
-          raidId: current.metadata.raidId,
-          resetWeekKey: resetPolicy.weekFor(clock.now()).key,
-        )) {
-      return LocalRecruitmentResult.failure(
-        LocalRecruitmentFailure.domainRejected,
-        aggregate: current,
-        domainFailure: RecruitmentCommandFailure.weeklyRaidAlreadyCleared,
-      );
-    }
     return _change(
       recruitmentId,
       (aggregate, currentUserId) {
@@ -455,20 +441,6 @@ class RecruitmentCommandService {
         aggregate: current,
         domainFailure:
             RecruitmentCommandFailure.pendingApplicationsRequireConfirmation,
-      );
-    }
-    final clearRepository = weeklyClearRepository;
-    if (clearRepository != null &&
-        await clearRepository.hasClear(
-          userId: userId,
-          characterId: characterId,
-          raidId: current.metadata.raidId,
-          resetWeekKey: resetPolicy.weekFor(clock.now()).key,
-        )) {
-      return LocalRecruitmentResult.failure(
-        LocalRecruitmentFailure.domainRejected,
-        aggregate: current,
-        domainFailure: RecruitmentCommandFailure.weeklyRaidAlreadyCleared,
       );
     }
     final transition = stateMachine.changeCharacter(

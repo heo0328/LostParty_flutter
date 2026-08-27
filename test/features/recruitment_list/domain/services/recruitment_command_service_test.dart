@@ -175,7 +175,7 @@ void main() {
     expect((await repository.getById(created.aggregate!.id))!.revision, 1);
   });
 
-  test('같은 주차에 동일 레이드를 완료한 캐릭터의 신청을 거절한다', () async {
+  test('로컬 WeeklyRaidClear만으로는 신청을 거절하지 않는다', () async {
     final created = await _create(service);
     session.signIn('user-b');
     await weeklyClearRepository.saveAll([
@@ -198,12 +198,7 @@ void main() {
       role: PartyRole.dealer,
     );
 
-    expect(result.failure, LocalRecruitmentFailure.domainRejected);
-    expect(
-      result.domainFailure,
-      RecruitmentCommandFailure.weeklyRaidAlreadyCleared,
-    );
-    expect(result.aggregate!.revision, 0);
+    expect(result.isSuccess, isTrue);
   });
 
   test('같은 캐릭터로 동일 레이드 모집을 다시 생성하지 못한다', () async {

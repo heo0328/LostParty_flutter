@@ -94,6 +94,15 @@ class PartyCompleteClaimWritePlan {
     return PartyCompleteClaimWriteAction.replace;
   }
 
+  /// 재완료 Snapshot에 없는 이전 캐릭터의 같은 방 partyOwner Claim인지.
+  static bool isOrphanPartyOwnerClaim({
+    required Map<String, dynamic>? claim,
+    required String recruitmentId,
+  }) =>
+      claim != null &&
+      claim['source'] == 'partyOwner' &&
+      claim['sourceRecruitmentId'] == recruitmentId;
+
   static int? _revisionOf(Object? value) {
     if (value is int) return value;
     if (value is num) return value.toInt();
