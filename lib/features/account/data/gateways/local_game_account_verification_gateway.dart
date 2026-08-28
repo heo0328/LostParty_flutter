@@ -289,6 +289,7 @@ class LocalGameAccountVerificationGateway
           'status': 'active',
           'updatedAt': now,
         },
+        SetOptions(merge: true),
       );
       if (previousOwner is String && previousOwner != playerId) {
         transaction.set(
@@ -302,6 +303,7 @@ class LocalGameAccountVerificationGateway
             'status': 'ownershipLost',
             'updatedAt': now,
           },
+          SetOptions(merge: true),
         );
       }
       return GameAccountVerificationResult(

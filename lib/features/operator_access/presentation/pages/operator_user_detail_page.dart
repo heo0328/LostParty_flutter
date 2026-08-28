@@ -15,8 +15,7 @@ class OperatorUserDetailPage extends StatefulWidget {
   final OperatorAccessRepository repository;
 
   @override
-  State<OperatorUserDetailPage> createState() =>
-      _OperatorUserDetailPageState();
+  State<OperatorUserDetailPage> createState() => _OperatorUserDetailPageState();
 }
 
 class _OperatorUserDetailPageState extends State<OperatorUserDetailPage> {
@@ -79,8 +78,14 @@ class _UserSection extends StatelessWidget {
         : KoreaTimeFormatter.dayAndTime(user.lastSeenAt!);
     return Column(
       children: [
-        ListTile(title: Text(user.displayId), subtitle: Text('상태 ${user.status}')),
-        ListTile(title: const Text('대표 캐릭터'), subtitle: Text(user.representativeCharacterName ?? '대표 캐릭터 지정 안 됨')),
+        ListTile(
+          title: Text(user.displayId),
+          subtitle: Text('상태 ${user.status}'),
+        ),
+        ListTile(
+          title: const Text('대표 캐릭터'),
+          subtitle: Text(user.representativeCharacterName ?? '대표 캐릭터 지정 안 됨'),
+        ),
         ListTile(title: const Text('생성일'), subtitle: Text(createdAt)),
         ListTile(title: const Text('마지막 앱 접속'), subtitle: Text(lastSeenAt)),
       ],
@@ -95,14 +100,23 @@ class _GameAccountTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final representative = account.representativeCharacter;
     return ExpansionTile(
       title: Text(account.lookupCharacterName ?? '계정 이름 없음'),
-      subtitle: Text('소유 ${account.ownershipStatus} · 계정 ${account.status}'),
+      subtitle: Text(
+        '대표 ${representative?.characterName ?? '지정 안 됨'} · '
+        '소유 ${account.ownershipStatus} · 계정 ${account.status}',
+      ),
       children: account.characters.isEmpty
           ? const [ListTile(title: Text('서버 캐릭터가 없습니다.'))]
           : account.characters
                 .map(
                   (character) => ListTile(
+                    leading:
+                        character.characterId ==
+                            account.representativeCharacterId
+                        ? const Icon(Icons.star)
+                        : const Icon(Icons.person_outline),
                     title: Text(character.characterName),
                     subtitle: Text(
                       '${character.serverName} · ${character.className} · ${character.status}',

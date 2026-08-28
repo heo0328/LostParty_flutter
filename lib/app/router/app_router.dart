@@ -10,6 +10,7 @@ import '../../features/account/data/repositories/account_repository_impl.dart';
 import '../../features/account/data/gateways/local_game_account_verification_gateway.dart';
 import '../../features/account/data/gateways/firestore_account_ownership_status_gateway.dart';
 import '../../features/account/data/gateways/firestore_character_summary_sync_gateway.dart';
+import '../../features/account/data/gateways/firestore_representative_character_sync_gateway.dart';
 import '../../features/account/data/mappers/sibling_character_mapper.dart';
 import '../../features/account/data/repositories/firestore_weekly_raid_claim_repository.dart';
 import '../../features/account/data/repositories/local_character_weekly_raid_display_repository.dart';
@@ -25,7 +26,9 @@ import '../../features/account/domain/repositories/account_ownership_status_gate
 import '../../features/account/domain/repositories/character_summary_sync_gateway.dart';
 import '../../features/account/domain/repositories/character_weekly_raid_display_repository.dart';
 import '../../features/account/domain/repositories/game_account_verification_gateway.dart';
+import '../../features/account/domain/repositories/representative_character_sync_gateway.dart';
 import '../../features/account/domain/services/character_summary_sync_service.dart';
+import '../../features/account/domain/services/representative_character_sync_service.dart';
 import '../../features/player/domain/entities/player_session.dart';
 import '../../features/operator_access/data/repositories/firestore_operator_access_repository.dart';
 import '../../features/operator_access/domain/repositories/operator_access_repository.dart';
@@ -82,6 +85,7 @@ GoRouter createAppRouter({
   CharacterSummarySyncGateway? characterSummarySyncGateway,
   WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository,
   CharacterWeeklyRaidDisplayRepository? weeklyRaidDisplayRepository,
+  RepresentativeCharacterSyncGateway? representativeCharacterSyncGateway,
   OperatorAccessRepository? operatorAccessRepository,
 }) {
   final operatorAccessRepositoryOrDefault =
@@ -137,6 +141,15 @@ GoRouter createAppRouter({
           firestore: FirebaseFirestore.instance,
           firebaseAuth: FirebaseAuth.instance,
         ),
+  );
+  final representativeSyncGatewayOrDefault =
+      representativeCharacterSyncGateway ??
+      FirestoreRepresentativeCharacterSyncGateway(
+        playerId: playerSession.playerId,
+      );
+  final representativeSyncService = RepresentativeCharacterSyncService(
+    accountRepository: accountRepository,
+    gateway: representativeSyncGatewayOrDefault,
   );
   final characterSummarySyncService = CharacterSummarySyncService(
     accountRepository: accountRepository,
@@ -280,6 +293,7 @@ GoRouter createAppRouter({
                   apiTokenStore: apiTokenStore,
                   accountRepository: accountRepository,
                   summarySyncService: characterSummarySyncService,
+                  representativeSyncService: representativeSyncService,
                   weeklyRaidClaimRepository: weeklyRaidClaimRepositoryOrDefault,
                   weeklyRaidDisplayRepository:
                       weeklyRaidDisplayRepositoryOrDefault,
@@ -296,6 +310,8 @@ GoRouter createAppRouter({
                     path: 'characters/manage',
                     builder: (context, state) => CharacterManagementPage(
                       accountRepository: accountRepository,
+                      representativeSyncGateway:
+                          representativeSyncGatewayOrDefault,
                       accountId: state.extra as int?,
                     ),
                   ),

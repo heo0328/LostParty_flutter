@@ -31,6 +31,7 @@ class OperatorGameAccountSummary {
     required this.ownershipStatus,
     required this.lookupCharacterName,
     required this.characters,
+    this.representativeCharacterId,
   });
 
   final String gameAccountId;
@@ -38,6 +39,15 @@ class OperatorGameAccountSummary {
   final String ownershipStatus;
   final String? lookupCharacterName;
   final List<OperatorCharacterSummary> characters;
+  final String? representativeCharacterId;
+
+  OperatorCharacterSummary? get representativeCharacter {
+    final id = representativeCharacterId;
+    if (id == null) return null;
+    return characters
+        .where((character) => character.characterId == id)
+        .firstOrNull;
+  }
 }
 
 class OperatorCharacterSummary {
@@ -57,10 +67,7 @@ class OperatorCharacterSummary {
 }
 
 class OperatorUserDetail {
-  const OperatorUserDetail({
-    required this.user,
-    required this.gameAccounts,
-  });
+  const OperatorUserDetail({required this.user, required this.gameAccounts});
 
   final OperatorUserSummary user;
   final List<OperatorGameAccountSummary> gameAccounts;

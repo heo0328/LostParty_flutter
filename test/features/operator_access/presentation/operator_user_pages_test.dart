@@ -35,9 +35,8 @@ void main() {
       routes: [
         GoRoute(
           path: '/settings',
-          builder: (_, _) => SettingsPage(
-            operatorAccessRepository: _FakeOperatorRepository(),
-          ),
+          builder: (_, _) =>
+              SettingsPage(operatorAccessRepository: _FakeOperatorRepository()),
           routes: [
             GoRoute(
               path: 'operator/users',
@@ -71,6 +70,27 @@ void main() {
     expect(find.textContaining('인증 계정 있음'), findsOneWidget);
   });
 
+  testWidgets('사용자 목록은 여러 계정의 대표 캐릭터 요약을 표시한다', (tester) async {
+    final representedUser = OperatorUserSummary(
+      playerId: user.playerId,
+      status: user.status,
+      createdAt: user.createdAt,
+      lastSeenAt: user.lastSeenAt,
+      hasVerifiedGameAccount: true,
+      representativeCharacterName: '가나다 외 1개',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OperatorUserListPage(
+          repository: _FakeOperatorRepository(users: [representedUser]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('가나다 외 1개'), findsOneWidget);
+  });
+
   testWidgets('직접 진입한 일반 사용자에게 권한 없음 화면을 표시한다', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -93,6 +113,7 @@ void main() {
           status: 'active',
           ownershipStatus: 'active',
           lookupCharacterName: '인증점요',
+          representativeCharacterId: 'character-1',
           characters: [
             OperatorCharacterSummary(
               characterId: 'character-1',
@@ -118,6 +139,7 @@ void main() {
     expect(find.text('인증점요'), findsOneWidget);
     await tester.tap(find.text('인증점요'));
     await tester.pumpAndSettle();
+    expect(find.textContaining('대표 인증점요'), findsOneWidget);
     expect(find.textContaining('루페온 · 바드'), findsOneWidget);
   });
 }

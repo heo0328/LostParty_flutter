@@ -6,6 +6,7 @@ import 'package:lost_party/features/account/domain/entities/character_summary.da
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
 import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
+import 'package:lost_party/features/account/domain/repositories/representative_character_sync_gateway.dart';
 import 'package:lost_party/features/account/presentation/viewmodels/character_management_view_model.dart';
 
 void main() {
@@ -54,9 +55,110 @@ void main() {
     expect(viewModel.characters.first.id, 2);
     expect(viewModel.characters.first.isVisible, isTrue);
   });
+
+  test('active 인증 계정은 기존 로컬 대표를 서버에 한 번 보강한다', () async {
+    final now = DateTime.utc(2026, 8, 28, 9);
+    final repository = _FakeAccountRepository(serverBacked: true);
+    final gateway = _FakeRepresentativeSyncGateway(
+      state: const RepresentativeCharacterSyncState(
+        representativeCharacterId: null,
+        updatedAt: null,
+      ),
+      clock: () => now,
+    );
+    final viewModel = CharacterManagementViewModel(
+      accountRepository: repository,
+      representativeSyncGateway: gateway,
+      clock: () => now,
+    );
+    addTearDown(viewModel.dispose);
+
+    await viewModel.initialize();
+
+    expect(gateway.savedCharacterIds, ['server-character-1']);
+    expect(
+      viewModel.representativeCooldownRemaining,
+      const Duration(minutes: 5),
+    );
+  });
+
+  test('서버 대표가 있으면 로컬 선택을 서버 값으로 맞춘다', () async {
+    final now = DateTime.utc(2026, 8, 28, 9);
+    final repository = _FakeAccountRepository(serverBacked: true);
+    final gateway = _FakeRepresentativeSyncGateway(
+      state: RepresentativeCharacterSyncState(
+        representativeCharacterId: 'server-character-2',
+        updatedAt: now.subtract(const Duration(minutes: 6)),
+      ),
+      clock: () => now,
+    );
+    final viewModel = CharacterManagementViewModel(
+      accountRepository: repository,
+      representativeSyncGateway: gateway,
+      clock: () => now,
+    );
+    addTearDown(viewModel.dispose);
+
+    await viewModel.initialize();
+
+    expect(repository.representativeCharacterId, 2);
+    expect(gateway.savedCharacterIds, isEmpty);
+  });
+
+  test('서버 기준 5분 안에는 대표 변경과 로컬 변경을 모두 막는다', () async {
+    final now = DateTime.utc(2026, 8, 28, 9);
+    final repository = _FakeAccountRepository(serverBacked: true);
+    final gateway = _FakeRepresentativeSyncGateway(
+      state: RepresentativeCharacterSyncState(
+        representativeCharacterId: 'server-character-1',
+        updatedAt: now.subtract(const Duration(minutes: 1)),
+      ),
+      clock: () => now,
+    );
+    final viewModel = CharacterManagementViewModel(
+      accountRepository: repository,
+      representativeSyncGateway: gateway,
+      clock: () => now,
+    );
+    addTearDown(viewModel.dispose);
+    await viewModel.initialize();
+
+    await viewModel.setRepresentative(viewModel.characters.last);
+
+    expect(repository.representativeCharacterId, 1);
+    expect(gateway.savedCharacterIds, isEmpty);
+    expect(viewModel.representativeMessage, contains('5분'));
+  });
+
+  test('5분 경과 후 서버 저장 성공 뒤 로컬 대표를 변경한다', () async {
+    final now = DateTime.utc(2026, 8, 28, 9);
+    final repository = _FakeAccountRepository(serverBacked: true);
+    final gateway = _FakeRepresentativeSyncGateway(
+      state: RepresentativeCharacterSyncState(
+        representativeCharacterId: 'server-character-1',
+        updatedAt: now.subtract(const Duration(minutes: 6)),
+      ),
+      clock: () => now,
+    );
+    final viewModel = CharacterManagementViewModel(
+      accountRepository: repository,
+      representativeSyncGateway: gateway,
+      clock: () => now,
+    );
+    addTearDown(viewModel.dispose);
+    await viewModel.initialize();
+
+    await viewModel.setRepresentative(viewModel.characters.last);
+
+    expect(gateway.savedCharacterIds, ['server-character-2']);
+    expect(repository.representativeCharacterId, 2);
+  });
 }
 
 class _FakeAccountRepository implements AccountRepository {
+  _FakeAccountRepository({this.serverBacked = false});
+
+  final bool serverBacked;
   @override
   Future<void> setPreferredCharacterRole({
     required int characterId,
@@ -126,6 +228,8 @@ class _FakeAccountRepository implements AccountRepository {
     };
     return LocalGameAccount(
       id: 10,
+      serverGameAccountId: serverBacked ? 'server-account-1' : null,
+      serverOwnershipStatus: serverBacked ? 'active' : null,
       label: '메인 계정',
       isMain: true,
       lookupCharacterName: '첫번째',
@@ -196,5 +300,33 @@ LocalAccountCharacter _character(
     combatPower: null,
     isVisible: isVisible,
     displayOrder: displayOrder,
+    serverCharacterId: 'server-character-$id',
   );
+}
+
+class _FakeRepresentativeSyncGateway
+    implements RepresentativeCharacterSyncGateway {
+  _FakeRepresentativeSyncGateway({required this.state, required this.clock});
+
+  RepresentativeCharacterSyncState state;
+  final DateTime Function() clock;
+  final List<String> savedCharacterIds = [];
+
+  @override
+  Future<RepresentativeCharacterSyncState> loadState({
+    required String gameAccountId,
+  }) async => state;
+
+  @override
+  Future<RepresentativeCharacterSyncState> setRepresentative({
+    required String gameAccountId,
+    required String characterId,
+  }) async {
+    savedCharacterIds.add(characterId);
+    state = RepresentativeCharacterSyncState(
+      representativeCharacterId: characterId,
+      updatedAt: clock(),
+    );
+    return state;
+  }
 }

@@ -42,12 +42,16 @@ class FirestoreOperatorAccessRepository implements OperatorAccessRepository {
         .limit(limit)
         .get();
     final playerIds = players.docs.map((document) => document.id).toList();
-    final verifiedPlayerIds = await _verifiedPlayerIds(playerIds);
+    final activeOwnerships = await _activeOwnerships(playerIds);
+    final representativeNames = await _representativeNames(activeOwnerships);
     return players.docs
         .map(
           (document) => _mapUser(
             document,
-            hasVerifiedGameAccount: verifiedPlayerIds.contains(document.id),
+            hasVerifiedGameAccount:
+                activeOwnerships[document.id]?.isNotEmpty ?? false,
+            representativeCharacterNames:
+                representativeNames[document.id] ?? const [],
           ),
         )
         .toList(growable: false);
@@ -101,6 +105,9 @@ class FirestoreOperatorAccessRepository implements OperatorAccessRepository {
           status: _string(accountData?['status']) ?? 'unknown',
           ownershipStatus: _string(ownershipData['status']) ?? 'unknown',
           lookupCharacterName: _string(accountData?['lookupCharacterName']),
+          representativeCharacterId: ownershipData['status'] == 'active'
+              ? _string(ownershipData['representativeCharacterId'])
+              : null,
           characters: List.unmodifiable(
             charactersByAccount[gameAccountId] ?? const [],
           ),
@@ -119,6 +126,14 @@ class FirestoreOperatorAccessRepository implements OperatorAccessRepository {
         hasVerifiedGameAccount: ownerships.docs.any(
           (document) => document.data()['status'] == 'active',
         ),
+        representativeCharacterNames: accounts
+            .where(
+              (account) =>
+                  account.ownershipStatus == 'active' &&
+                  account.representativeCharacter != null,
+            )
+            .map((account) => account.representativeCharacter!.characterName)
+            .toList(growable: false),
       ),
       gameAccounts: List.unmodifiable(accounts),
     );
@@ -165,8 +180,10 @@ class FirestoreOperatorAccessRepository implements OperatorAccessRepository {
     _legacyPlayersPrepared = true;
   }
 
-  Future<Set<String>> _verifiedPlayerIds(List<String> playerIds) async {
-    final result = <String>{};
+  Future<Map<String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>>
+  _activeOwnerships(List<String> playerIds) async {
+    final result =
+        <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
     for (var start = 0; start < playerIds.length; start += 30) {
       final end = (start + 30).clamp(0, playerIds.length);
       final ids = playerIds.sublist(start, end);
@@ -176,11 +193,54 @@ class FirestoreOperatorAccessRepository implements OperatorAccessRepository {
           .where('playerId', whereIn: ids)
           .where('status', isEqualTo: 'active')
           .get();
-      result.addAll(
-        ownerships.docs
-            .map((document) => document.data()['playerId'])
-            .whereType<String>(),
-      );
+      for (final ownership in ownerships.docs) {
+        final playerId = ownership.data()['playerId'];
+        if (playerId is! String || playerId.isEmpty) continue;
+        result.putIfAbsent(playerId, () => []).add(ownership);
+      }
+    }
+    return result;
+  }
+
+  Future<Map<String, List<String>>> _representativeNames(
+    Map<String, List<QueryDocumentSnapshot<Map<String, dynamic>>>> ownerships,
+  ) async {
+    final representativeIds = ownerships.values
+        .expand((documents) => documents)
+        .map((document) => document.data()['representativeCharacterId'])
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    final namesByCharacterId = <String, String>{};
+    for (var start = 0; start < representativeIds.length; start += 30) {
+      final end = (start + 30).clamp(0, representativeIds.length);
+      final ids = representativeIds.sublist(start, end);
+      if (ids.isEmpty) continue;
+      final characters = await _firestore
+          .collection('characters')
+          .where(FieldPath.documentId, whereIn: ids)
+          .get();
+      for (final character in characters.docs) {
+        final data = character.data();
+        if (data['status'] != 'active') continue;
+        final name = _string(data['characterName']);
+        if (name != null) namesByCharacterId[character.id] = name;
+      }
+    }
+
+    final result = <String, List<String>>{};
+    for (final entry in ownerships.entries) {
+      final names =
+          entry.value
+              .map((document) => document.data()['representativeCharacterId'])
+              .whereType<String>()
+              .map((id) => namesByCharacterId[id])
+              .whereType<String>()
+              .toSet()
+              .toList()
+            ..sort();
+      result[entry.key] = List.unmodifiable(names);
     }
     return result;
   }
@@ -188,6 +248,7 @@ class FirestoreOperatorAccessRepository implements OperatorAccessRepository {
   OperatorUserSummary _mapUser(
     DocumentSnapshot<Map<String, dynamic>> document, {
     required bool hasVerifiedGameAccount,
+    List<String> representativeCharacterNames = const [],
   }) {
     final data = document.data() ?? const <String, dynamic>{};
     return OperatorUserSummary(
@@ -196,8 +257,16 @@ class FirestoreOperatorAccessRepository implements OperatorAccessRepository {
       createdAt: _dateTime(data['createdAt']),
       lastSeenAt: _dateTime(data['lastSeenAt']),
       hasVerifiedGameAccount: hasVerifiedGameAccount,
-      representativeCharacterName: null,
+      representativeCharacterName: _representativeLabel(
+        representativeCharacterNames,
+      ),
     );
+  }
+
+  String? _representativeLabel(List<String> names) {
+    if (names.isEmpty) return null;
+    if (names.length == 1) return names.single;
+    return '${names.first} 외 ${names.length - 1}개';
   }
 
   DateTime? _dateTime(Object? value) =>

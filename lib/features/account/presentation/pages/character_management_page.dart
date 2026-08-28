@@ -4,16 +4,19 @@ import '../../../../shared/formatters/display_number_formatter.dart';
 
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/repositories/account_repository.dart';
+import '../../domain/repositories/representative_character_sync_gateway.dart';
 import '../viewmodels/character_management_view_model.dart';
 
 class CharacterManagementPage extends StatefulWidget {
   const CharacterManagementPage({
     required this.accountRepository,
+    this.representativeSyncGateway,
     this.accountId,
     super.key,
   });
 
   final AccountRepository accountRepository;
+  final RepresentativeCharacterSyncGateway? representativeSyncGateway;
   final int? accountId;
 
   @override
@@ -29,6 +32,7 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
     super.initState();
     _viewModel = CharacterManagementViewModel(
       accountRepository: widget.accountRepository,
+      representativeSyncGateway: widget.representativeSyncGateway,
       accountId: widget.accountId,
     )..addListener(_onChanged);
     _viewModel.initialize();
@@ -66,6 +70,10 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
     return Column(
       children: [
         if (_viewModel.isSaving) const LinearProgressIndicator(),
+        if (_viewModel.representativeMessage case final message?)
+          _RepresentativeNotice(icon: Icons.error_outline, message: message)
+        else if (_viewModel.representativeCooldownLabel case final label?)
+          _RepresentativeNotice(icon: Icons.schedule, message: label),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: Row(
@@ -113,6 +121,9 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
                 isRepresentative:
                     account.representativeCharacterId == character.id,
                 isEnabled: !_viewModel.isSaving,
+                isRepresentativeEnabled: _viewModel.canSetRepresentative(
+                  character,
+                ),
                 onVisibilityChanged: (value) => _viewModel
                     .setCharacterVisibility(character, value ?? false),
                 onSetRepresentative: () =>
@@ -138,6 +149,7 @@ class _CharacterManagementTile extends StatelessWidget {
     required this.character,
     required this.isRepresentative,
     required this.isEnabled,
+    required this.isRepresentativeEnabled,
     required this.onVisibilityChanged,
     required this.onSetRepresentative,
     required this.dragHandle,
@@ -147,6 +159,7 @@ class _CharacterManagementTile extends StatelessWidget {
   final LocalAccountCharacter character;
   final bool isRepresentative;
   final bool isEnabled;
+  final bool isRepresentativeEnabled;
   final ValueChanged<bool?> onVisibilityChanged;
   final VoidCallback onSetRepresentative;
   final Widget dragHandle;
@@ -167,9 +180,7 @@ class _CharacterManagementTile extends StatelessWidget {
         children: [
           IconButton(
             tooltip: isRepresentative ? '현재 대표 캐릭터' : '대표 캐릭터로 설정',
-            onPressed: isEnabled && !isRepresentative
-                ? onSetRepresentative
-                : null,
+            onPressed: isRepresentativeEnabled ? onSetRepresentative : null,
             icon: Icon(isRepresentative ? Icons.star : Icons.star_border),
           ),
           dragHandle,
@@ -182,5 +193,26 @@ class _CharacterManagementTile extends StatelessWidget {
     return value == null
         ? '아이템 Lv. -'
         : '아이템 Lv. ${DisplayNumberFormatter.fixed(value)}';
+  }
+}
+
+class _RepresentativeNotice extends StatelessWidget {
+  const _RepresentativeNotice({required this.icon, required this.message});
+
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Row(
+        children: [
+          Icon(icon, size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(message)),
+        ],
+      ),
+    );
   }
 }

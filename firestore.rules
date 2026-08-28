@@ -1420,6 +1420,44 @@ service cloud.firestore {
         && newData.lastSeenAt == null;
     }
 
+    function changesRepresentativeCharacter(oldData, newData) {
+      return newData.diff(oldData).affectedKeys().hasAny([
+        'representativeCharacterId',
+        'representativeCharacterUpdatedAt'
+      ]);
+    }
+
+    function validRepresentativeCharacterUpdate(oldData, newData) {
+      let character = get(characterPath(newData.representativeCharacterId)).data;
+      let oldRepresentative = oldData.keys().hasAny([
+          'representativeCharacterId'
+        ])
+        ? oldData.representativeCharacterId
+        : null;
+      let cooldownPassed = !oldData.keys().hasAny([
+          'representativeCharacterUpdatedAt'
+        ])
+        || oldData.representativeCharacterUpdatedAt == null
+        || request.time >= oldData.representativeCharacterUpdatedAt
+          + duration.value(5, 'm');
+      return hasActiveBinding()
+        && oldData.playerId == currentPlayerId()
+        && oldData.status == 'active'
+        && oldData.gameAccountId is string
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'representativeCharacterId',
+          'representativeCharacterUpdatedAt'
+        ])
+        && newData.representativeCharacterId is string
+        && newData.representativeCharacterId.size() > 0
+        && newData.representativeCharacterId != oldRepresentative
+        && newData.representativeCharacterUpdatedAt == request.time
+        && cooldownPassed
+        && character.ownerPlayerId == oldData.playerId
+        && character.gameAccountId == oldData.gameAccountId
+        && character.status == 'active';
+    }
+
     match /authBindings/{authUid} {
       allow get: if signedIn() && request.auth.uid == authUid;
       allow list: if false;
@@ -1548,7 +1586,21 @@ service cloud.firestore {
     }
 
     match /playerGameAccounts/{ownershipId} {
-      allow read, write: if signedIn();
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && !request.resource.data.keys().hasAny([
+          'representativeCharacterId',
+          'representativeCharacterUpdatedAt'
+        ]);
+      allow update: if signedIn()
+        && (!changesRepresentativeCharacter(
+            resource.data,
+            request.resource.data
+          ) || validRepresentativeCharacterUpdate(
+            resource.data,
+            request.resource.data
+          ));
+      allow delete: if signedIn();
     }
 
     match /recruitments/{recruitmentId} {

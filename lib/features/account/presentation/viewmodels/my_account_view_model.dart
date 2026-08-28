@@ -16,6 +16,7 @@ import '../../domain/repositories/character_weekly_raid_display_repository.dart'
 import '../../domain/repositories/weekly_raid_claim_command_repository.dart';
 import '../../domain/repositories/weekly_raid_claim_repository.dart';
 import '../../domain/services/character_summary_sync_service.dart';
+import '../../domain/services/representative_character_sync_service.dart';
 import '../../domain/services/weekly_raid_display_projector.dart';
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
@@ -26,6 +27,7 @@ class MyAccountViewModel extends ChangeNotifier {
     required ApiTokenStore apiTokenStore,
     required AccountRepository accountRepository,
     CharacterSummarySyncService? summarySyncService,
+    RepresentativeCharacterSyncService? representativeSyncService,
     WeeklyRaidClaimRepository? weeklyRaidClaimRepository,
     RaidCatalogRepository? raidCatalogRepository,
     CharacterWeeklyRaidDisplayRepository? weeklyRaidDisplayRepository,
@@ -37,6 +39,7 @@ class MyAccountViewModel extends ChangeNotifier {
   }) : _apiTokenStore = apiTokenStore,
        _accountRepository = accountRepository,
        _summarySyncService = summarySyncService,
+       _representativeSyncService = representativeSyncService,
        _weeklyRaidClaimRepository = weeklyRaidClaimRepository,
        _raidCatalogRepository = raidCatalogRepository,
        _weeklyRaidDisplayRepository = weeklyRaidDisplayRepository,
@@ -49,6 +52,7 @@ class MyAccountViewModel extends ChangeNotifier {
   final ApiTokenStore _apiTokenStore;
   final AccountRepository _accountRepository;
   final CharacterSummarySyncService? _summarySyncService;
+  final RepresentativeCharacterSyncService? _representativeSyncService;
   final WeeklyRaidClaimRepository? _weeklyRaidClaimRepository;
   final RaidCatalogRepository? _raidCatalogRepository;
   final CharacterWeeklyRaidDisplayRepository? _weeklyRaidDisplayRepository;
@@ -386,6 +390,10 @@ class MyAccountViewModel extends ChangeNotifier {
 
   Future<void> loadStoredAccount() async {
     _accounts = await _accountRepository.loadAccounts();
+    await _representativeSyncService?.synchronizeAccounts(_accounts);
+    if (_representativeSyncService != null) {
+      _accounts = await _accountRepository.loadAccounts();
+    }
     notifyListeners();
   }
 

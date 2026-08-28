@@ -13,7 +13,9 @@ void main() {
     expect(rules, contains('match /operatorAssignments/{playerId}'));
     expect(
       rules,
-      contains('allow get: if hasActiveBinding() && currentPlayerId() == playerId;'),
+      contains(
+        'allow get: if hasActiveBinding() && currentPlayerId() == playerId;',
+      ),
     );
     expect(rules, contains('allow list, create, update, delete: if false;'));
   });
@@ -23,5 +25,17 @@ void main() {
     expect(rules, contains("affectedKeys().hasOnly(['lastSeenAt'])"));
     expect(rules, contains('newData.lastSeenAt == request.time'));
     expect(rules, contains('newData.lastSeenAt == null'));
+  });
+
+  test('대표 Character 변경은 소유·동일 계정·서버 시각·5분을 검증한다', () {
+    expect(rules, contains('validRepresentativeCharacterUpdate'));
+    expect(rules, contains("duration.value(5, 'm')"));
+    expect(
+      rules,
+      contains('newData.representativeCharacterUpdatedAt == request.time'),
+    );
+    expect(rules, contains('character.ownerPlayerId == oldData.playerId'));
+    expect(rules, contains('character.gameAccountId == oldData.gameAccountId'));
+    expect(rules, contains("character.status == 'active'"));
   });
 }

@@ -12,6 +12,7 @@ import '../../domain/repositories/character_weekly_raid_display_repository.dart'
 import '../../domain/repositories/weekly_raid_claim_repository.dart';
 import '../../domain/repositories/weekly_raid_claim_command_repository.dart';
 import '../../domain/services/character_summary_sync_service.dart';
+import '../../domain/services/representative_character_sync_service.dart';
 import '../../domain/services/weekly_raid_display_projector.dart';
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 import '../models/weekly_raid_status_item.dart';
@@ -23,6 +24,7 @@ class MyAccountPage extends StatefulWidget {
     required this.apiTokenStore,
     required this.accountRepository,
     this.summarySyncService,
+    this.representativeSyncService,
     this.weeklyRaidClaimRepository,
     this.raidCatalogRepository,
     this.weeklyRaidDisplayRepository,
@@ -37,6 +39,7 @@ class MyAccountPage extends StatefulWidget {
   final ApiTokenStore apiTokenStore;
   final AccountRepository accountRepository;
   final CharacterSummarySyncService? summarySyncService;
+  final RepresentativeCharacterSyncService? representativeSyncService;
   final WeeklyRaidClaimRepository? weeklyRaidClaimRepository;
   final RaidCatalogRepository? raidCatalogRepository;
   final CharacterWeeklyRaidDisplayRepository? weeklyRaidDisplayRepository;
@@ -63,6 +66,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
       apiTokenStore: widget.apiTokenStore,
       accountRepository: widget.accountRepository,
       summarySyncService: widget.summarySyncService,
+      representativeSyncService: widget.representativeSyncService,
       weeklyRaidClaimRepository: widget.weeklyRaidClaimRepository,
       raidCatalogRepository: widget.raidCatalogRepository,
       weeklyRaidDisplayRepository: widget.weeklyRaidDisplayRepository,
@@ -589,18 +593,17 @@ class _MyAccountPageState extends State<MyAccountPage> {
                   isRepresentative:
                       account.representativeCharacterId == character.id,
                   weeklyRaids: _viewModel.weeklyRaidStatusesFor(character),
-                  showWeeklyRaidEditor: _viewModel.canEditWeeklyRaidDisplay &&
+                  showWeeklyRaidEditor:
+                      _viewModel.canEditWeeklyRaidDisplay &&
                       character.itemLevel != null,
                   weeklyRaidHiddenByPreference:
                       _viewModel.hasWeeklyRaidDisplayConfigured(character) &&
                       _viewModel.weeklyRaidResolvedCount(character) == 0,
                   busyRaidIds: {
-                    for (final raid
-                        in _viewModel.weeklyRaidStatusesFor(character))
-                      if (_viewModel.isClaimCommandBusy(
-                        character,
-                        raid.raidId,
-                      ))
+                    for (final raid in _viewModel.weeklyRaidStatusesFor(
+                      character,
+                    ))
+                      if (_viewModel.isClaimCommandBusy(character, raid.raidId))
                         raid.raidId,
                   },
                   onWeeklyRaidChanged:
@@ -647,11 +650,15 @@ class _MyAccountPageState extends State<MyAccountPage> {
                     Wrap(
                       spacing: 8,
                       children: [
-                        for (var count = 0;
-                            count <= WeeklyRaidDisplayProjector.maxDisplayCount;
-                            count++)
+                        for (
+                          var count = 0;
+                          count <= WeeklyRaidDisplayProjector.maxDisplayCount;
+                          count++
+                        )
                           ChoiceChip(
-                            key: ValueKey('rosterWeeklyRaidDisplayCount-$count'),
+                            key: ValueKey(
+                              'rosterWeeklyRaidDisplayCount-$count',
+                            ),
                             label: Text('$count'),
                             selected: displayCount == count,
                             onSelected: (_) {
@@ -670,7 +677,8 @@ class _MyAccountPageState extends State<MyAccountPage> {
                 ),
                 FilledButton(
                   key: const ValueKey('applyRosterWeeklyRaidDisplayButton'),
-                  onPressed: () => Navigator.of(dialogContext).pop(displayCount),
+                  onPressed: () =>
+                      Navigator.of(dialogContext).pop(displayCount),
                   child: const Text('적용'),
                 ),
               ],
@@ -700,13 +708,14 @@ class _MyAccountPageState extends State<MyAccountPage> {
     final eligible = _viewModel.eligibleWeeklyRaidsFor(character);
     if (eligible.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('입장 가능한 주간 레이드가 없습니다.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('입장 가능한 주간 레이드가 없습니다.')));
       return;
     }
     final preference = _viewModel.weeklyRaidDisplayPreferenceFor(character);
-    final maxCount = eligible.length < WeeklyRaidDisplayProjector.maxDisplayCount
+    final maxCount =
+        eligible.length < WeeklyRaidDisplayProjector.maxDisplayCount
         ? eligible.length
         : WeeklyRaidDisplayProjector.maxDisplayCount;
     var displayCount =
@@ -809,10 +818,9 @@ class _MyAccountPageState extends State<MyAccountPage> {
                 if (preference != null)
                   TextButton(
                     key: const ValueKey('resetWeeklyRaidDisplayButton'),
-                    onPressed: () => Navigator.of(dialogContext).pop((
-                      count: -1,
-                      raidIds: const <String>[],
-                    )),
+                    onPressed: () => Navigator.of(
+                      dialogContext,
+                    ).pop((count: -1, raidIds: const <String>[])),
                     child: const Text('기본값'),
                   ),
                 FilledButton(
@@ -825,10 +833,9 @@ class _MyAccountPageState extends State<MyAccountPage> {
                               if (selected.contains(candidate.raidId))
                                 candidate.raidId,
                           ];
-                          Navigator.of(dialogContext).pop((
-                            count: displayCount,
-                            raidIds: ordered,
-                          ));
+                          Navigator.of(
+                            dialogContext,
+                          ).pop((count: displayCount, raidIds: ordered));
                         },
                   child: const Text('저장'),
                 ),
@@ -875,9 +882,11 @@ class _MyAccountPageState extends State<MyAccountPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(completed ? '레이드 완료 처리' : '레이드 완료 해제'),
-        content: Text(completed
-            ? _weeklyRaidCompletionConfirmation(character, raid, impact!)
-            : '${character.characterName} 캐릭터의 ${raid.label} 완료를 해제할까요? 이전 파티에는 자동으로 복귀하지 않습니다.'),
+        content: Text(
+          completed
+              ? _weeklyRaidCompletionConfirmation(character, raid, impact!)
+              : '${character.characterName} 캐릭터의 ${raid.label} 완료를 해제할까요? 이전 파티에는 자동으로 복귀하지 않습니다.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
