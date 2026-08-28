@@ -1797,5 +1797,11 @@
 - 같은 Character 재선택과 저장 중 연속 터치는 쓰기를 만들지 않고, 서버 저장 성공 뒤에만 로컬 대표 선택을 반영한다. 오프라인 변경은 거절한다.
 - 기존 로컬 대표는 대응하는 active 서버 Character가 있을 때 계정당 한 번 보강하고 그 시점부터 5분 제한을 적용한다.
 - 운영자 목록은 대표가 여러 계정이면 `Character명 외 N개`, 상세는 GameAccount별 대표 Character를 표시한다.
-- 코드는 아직 수정하지 않았으며 다음 작업은 이 계약의 Rules·Repository·UI·테스트 구현이다.
-- Task-084 기반 구현을 `d31ce01`로 커밋해 로컬 `main`에 fast-forward 반영하고, 다음 구현 브랜치 `codex/task-084-representative-character-sync`를 생성했다. 원격에는 푸시하지 않았다.
+- `RepresentativeCharacterSyncGateway`와 Firestore 구현을 추가해 active 소유 계정의 대표 Character를 서버에서 읽고 Transaction으로 변경한다.
+- 내 계정 진입 시 계정별 한 번 로컬 대표를 서버에 보강하거나 기존 서버 대표를 로컬에 조정한다. 캐릭터 관리에서는 서버 저장 성공 뒤에만 로컬 대표를 변경한다.
+- Rules는 현재 active 소유자, 같은 GameAccount의 active Character, 실제 값 변경, `request.time`, 이전 변경 후 5분 경과를 검증한다. 해당 Rules는 2026-08-28 Firebase `lost-party`에 배포했다.
+- UI는 저장 중 중복 터치와 쿨다운 중 변경을 막고 남은 시간을 표시한다. 운영자 목록은 `Character명 외 N개`, 상세는 계정별 대표 Character를 표시한다.
+- 전체 `flutter test` 464건과 `flutter analyze`를 통과했다.
+- 실기기 최초 보강·5분 차단·재실행 유지·운영자 목록·상세·일반 Player 차단 확인은 대기 중이다. 2026-08-28 기기 조회 실행 권한이 승인되지 않았으므로 자동 검증 결과와 구분해 미완료로 남긴다.
+- Task-084 운영자 기반 구현은 `d31ce01`, 대표 동기화 준비 문서는 `a7ee7ed`에 반영됐다. `a7ee7ed`에서 `codex/task-084-representative-character-sync`를 생성했다.
+- 대표 Character 동기화 구현을 `f15c1b6`으로 작업 브랜치에 커밋했다. 실기기 완료 조건을 충족하기 전이므로 `main` 병합·푸시는 보류한다.
