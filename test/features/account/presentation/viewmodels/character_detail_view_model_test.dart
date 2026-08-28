@@ -304,6 +304,12 @@ class _FakeAccountRepository implements AccountRepository {
   }) async {}
 
   @override
+  Future<void> markRepresentativeReconciled({
+    required int accountId,
+    required String serverCharacterId,
+  }) async {}
+
+  @override
   Future<void> updateCharacterDisplayOrder({
     required int accountId,
     required List<int> characterIds,

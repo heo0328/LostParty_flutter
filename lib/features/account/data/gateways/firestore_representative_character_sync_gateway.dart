@@ -56,18 +56,11 @@ class FirestoreRepresentativeCharacterSyncGateway
         );
       }
 
-      final character = await transaction.get(
-        _firestore.collection('characters').doc(characterId),
+      await _requireOwnedCharacter(
+        transaction,
+        gameAccountId: gameAccountId,
+        characterId: characterId,
       );
-      final characterData = character.data();
-      if (!character.exists ||
-          characterData?['ownerPlayerId'] != playerId ||
-          characterData?['gameAccountId'] != gameAccountId ||
-          characterData?['status'] != 'active') {
-        throw const RepresentativeCharacterSyncException(
-          '같은 인증 계정의 활성 캐릭터만 대표로 지정할 수 있습니다.',
-        );
-      }
 
       transaction.update(ownershipReference, {
         'representativeCharacterId': characterId,
@@ -78,6 +71,60 @@ class FirestoreRepresentativeCharacterSyncGateway
         updatedAt: now,
       );
     });
+  }
+
+  @override
+  Future<RepresentativeCharacterSyncState> seedRepresentative({
+    required String gameAccountId,
+    required String characterId,
+  }) async {
+    final ownershipReference = _ownershipReference(gameAccountId);
+    return _firestore.runTransaction((transaction) async {
+      final ownership = await transaction.get(ownershipReference);
+      final ownershipData = ownership.data();
+      _requireActiveOwnership(ownershipData, gameAccountId);
+
+      final current = _string(ownershipData?['representativeCharacterId']);
+      if (current == characterId) return _mapState(ownershipData!);
+      if (current != null) {
+        throw const RepresentativeCharacterSyncException(
+          '서버에 이미 대표 캐릭터가 있습니다.',
+        );
+      }
+
+      await _requireOwnedCharacter(
+        transaction,
+        gameAccountId: gameAccountId,
+        characterId: characterId,
+      );
+
+      transaction.update(ownershipReference, {
+        'representativeCharacterId': characterId,
+      });
+      return RepresentativeCharacterSyncState(
+        representativeCharacterId: characterId,
+        updatedAt: null,
+      );
+    });
+  }
+
+  Future<void> _requireOwnedCharacter(
+    Transaction transaction, {
+    required String gameAccountId,
+    required String characterId,
+  }) async {
+    final character = await transaction.get(
+      _firestore.collection('characters').doc(characterId),
+    );
+    final characterData = character.data();
+    if (!character.exists ||
+        characterData?['ownerPlayerId'] != playerId ||
+        characterData?['gameAccountId'] != gameAccountId ||
+        characterData?['status'] != 'active') {
+      throw const RepresentativeCharacterSyncException(
+        '같은 인증 계정의 활성 캐릭터만 대표로 지정할 수 있습니다.',
+      );
+    }
   }
 
   DocumentReference<Map<String, dynamic>> _ownershipReference(

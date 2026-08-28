@@ -53,11 +53,11 @@
 
 | 구분 | 상태 | 비고 |
 | --- | --- | --- |
-| 통합 기준 | **`main` = Task-084 기반·대표 동기화 준비 문서** | `a7ee7ed` |
-| 완료 기능 | Task-082까지 + Task-084 코드·자동 검증·Rules 배포 | 대표 Character 실물 기기 테스트는 다음 작업 시작 전 수행 |
-| Firestore Rules | Claim A~F + 운영자·lastSeenAt·대표 Character 5분 제한 **배포됨** | Firebase `lost-party` |
-| 현재 코드 상태 | **Task-084 대표 Character 동기화 완료** | 구현 `f15c1b6`, 문서 포함 `main` 통합 |
-| 다음 실행 | **사용자 실물 기기 테스트** | 통과 확인 전 Task-085를 시작하지 않음 |
+| 통합 기준 | **`main` = Task-084b 완료** | 대표 초회 보강 UX. Git 종료 후 HEAD는 병합 커밋 |
+| 완료 기능 | Task-084b까지 | 초회 보강은 5분을 시작하지 않음 |
+| Firestore Rules | 보강 seed + 사용자 변경 5분 제한 **배포됨** | Firebase `lost-party`, 사용자 배포 2026-08-29 |
+| 현재 코드 상태 | Drift schema 10 로컬 맞춤 기록 | 탭 재진입 skip은 표적 테스트로 고정 |
+| 다음 실행 | **Task-085 수동 인증 요청과 운영자 1차 판정** | 최신 `main`에서 새 작업 브랜치 |
 
 ### Task-073 확인 완료 사항 (2026-08-27)
 
@@ -90,7 +90,8 @@
 | 8a | 내 계정 주간 레이드 표시 설정 | **Task-081 완료** | 0~5개·선택·원정대 일괄, 접기 없음 |
 | 9 | **레이드 모집에서 내 모집 제외** | **완료 (Task-082)** | 공개 모집과 내 현황 분리 |
 | 10 | **운영자 계정 권한 기반 설계** | **완료 (Task-083)** | 일반 사용자와 분리된 권한 경계 |
-| 10a | **운영자 권한·마지막 접속 기반** | **코드 완료 (Task-084)** | 실물 기기 테스트는 Task-085 시작 전 사용자 확인 게이트 |
+| 10a | **운영자 권한·마지막 접속·대표 동기화** | **완료 (Task-084·084b)** | 운영자 목록, 대표 보강, 사용자 변경 5분 |
+| 10b | **수동 인증 요청과 운영자 1차 판정** | **다음 실행 (Task-085)** | 코드 발급·대기 목록·무소유 계정 승인 |
 | 11 | 그룹 생성·가입 | 그룹 계약 확정 | 그룹 membership 기반 |
 | 12 | 그룹 전용 모집 | 그룹 membership 안정화 | 생성 드롭다운과 그룹 Rules |
 | 13 | 레이드 모집·현황 공통 필터 | 그룹 공개 범위 확정 | 공통 UX, Firestore/Drift 조회 분리 |
@@ -380,80 +381,84 @@
 - [x] 브랜치 커밋·`main` 반영 (`6597d7a`, fast-forward)
 - origin 푸시는 사용자 지시 시
 
-## 다음 실행 작업 — Task-084 운영자 권한·마지막 접속 기반
+## 다음 실행 작업 — Task-085 수동 인증 요청과 운영자 1차 판정
 
 ```text
-현재 Task: Task-084 운영자 권한·마지막 접속 기반
-현재 단계: 대표 Character 구현·자동 검증·Rules 배포·Git 종료 완료
-브랜치: codex/task-084-representative-character-sync
-구현 기준: `f15c1b6` (대표 Character 동기화·5분 제한·운영자 표시)
+현재 Task: Task-085 수동 인증 요청과 운영자 1차 판정
+현재 단계: 검토 후 구현 대기
+브랜치: 최신 main에서 새 작업 브랜치 생성
 ```
 
 ### 목표
 
-운영자 진입 경계, 마지막 앱 접속 시각과 사용자 서버 목록을 Firebase와 실기기에서
-확인하고, 실기기에서 발견된 대표 Character 서버 데이터 부재를 계정별 동기화로 보완한다.
+설정에서 게임 계정 단위 수동 인증 요청을 만들고, 운영자가 인게임 채팅 스크린샷을
+대조해 승인·취소·인증 금지를 처리한다. 이번 단위는 **기존 active 소유자가 없는**
+GameAccount만 승인 즉시 소유로 확정한다.
 
-### 구현 완료
+### 시작 조건
 
-- `operatorAssignments/{playerId}` active 지정 읽기와 Rules helper
-- 운영자 전용 라우트·페이지 진입 차단
-- `players/{playerId}.lastSeenAt`을 부트스트랩 완료 후 새 앱 실행당 한 번 서버 시각으로 갱신
-- 새 Player는 `lastSeenAt: null`로 만들고 기존 Player는 명시적 보강 후 정렬 쿼리를 사용
-- 운영자 `사용자 확인` 목록을 접속 기록 없음·오래된 접속순으로 페이지 조회
-- 사용자 상세에서 서버에 이미 존재하는 GameAccount·Character·인증 상태만 조회
-- active 서버 소유 계정의 로컬 대표 Character를 `playerGameAccounts`에 최초 1회 보강하고 이후 서버 값을 로컬에 조정
-- 대표 변경을 서버 성공 후 로컬에 반영하며 같은 값·저장 중 연속 터치·오프라인 변경을 쓰지 않음
-- 대표 변경의 GameAccount별 5분 제한을 UI와 Firestore Rules에서 함께 강제
-- 운영자 목록의 `Character명 외 N개` 요약과 상세의 계정별 대표 Character 표시
-- 전체 테스트 464건 통과
-- `flutter analyze` 통과(No issues found)
+- 최신 `main` (Task-084b 포함)
+- 작업 시작 전 `git status`와 `git log -3`을 이 문서와 대조
+- `main`에서 직접 수정하지 않고 전용 브랜치를 먼저 생성
 
-### 다음 실행 순서
+### 확인 문서
 
-1. [완료] 변경된 `firestore.rules`를 Firebase `lost-party`에 배포한다.
-2. [완료] Firebase Console에서 선택된 AuthUid의 `authBindings/{authUid}.playerId`를 확인한다.
-3. [완료] 잘못 지정한 운영자 문서를 삭제하고 실제 실기기 PlayerId에 `schemaVersion: 1`, 같은 `playerId`, `status: active` 문서를 수동 등록했다. Console에서 이전 문서 부재와 새 문서의 active 상태를 재확인했다.
-4. [완료] 실기기 앱을 다시 실행해 실제 기기 Player의 `players/{playerId}.lastSeenAt`이 서버 시각으로 갱신되는지 확인했다(2026-08-28 17:43:40 KST).
-5. [완료] 설정의 `사용자 확인` 진입과 사용자 목록 표시를 실기기에서 확인했다. 이때 서버 대표 필드 부재 문제를 발견해 후속 구현 범위를 확정했다.
-6. [완료] `playerGameAccounts`에 서버 CharacterId 기반 대표 Character와 서버 갱신 시각을 동기화하고, Rules에서 GameAccount별 5분 변경 제한을 강제했다.
-7. [완료] 운영자 목록은 `Character명 외 N개`, 상세는 계정별 대표 Character를 표시하도록 구현했다.
-8. [다음 작업 시작 전 사용자 테스트] 사용자가 실물 기기에서 최초 보강·정상 변경·5분 차단·재실행 후 유지·운영자 목록·상세 표시를 확인한다. 이 항목은 현재 브랜치 병합을 막지 않지만, 결과 확인 전 Task-085를 시작하지 않는다. AI는 기기를 조회·설치·실행하지 않고 아래 확인 항목만 전달한다.
-9. [부분 완료] 일반 Player 직접 경로의 권한 없음 처리는 자동 테스트로 확인했다. 실물 기기 확인은 사용자가 8번과 함께 수행한다.
+1. [`../architecture/OPERATOR_AUTHORIZATION_CONTRACT.md`](../architecture/OPERATOR_AUTHORIZATION_CONTRACT.md) §5~8, §14 Task-085
+2. [`../architecture/GAME_ACCOUNT_VERIFICATION_CONTRACT.md`](../architecture/GAME_ACCOUNT_VERIFICATION_CONTRACT.md)
+3. [`../architecture/GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT.md`](../architecture/GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT.md)
+4. [`ai_rules.md`](ai_rules.md)
 
-### 사용자 실물 기기 테스트 항목
+### 포함 범위
 
-- [ ] 내 계정 진입 후 기존 로컬 대표 Character가 서버 대표로 최초 보강된다.
-- [ ] 캐릭터 관리에서 대표 Character를 정상적으로 한 번 변경할 수 있다.
-- [ ] 변경 직후 5분 동안 다른 대표 Character 선택이 차단되고 남은 시간이 표시된다.
-- [ ] 5분이 지난 뒤 다른 대표 Character로 변경할 수 있다.
-- [ ] 앱 종료·재실행 후 서버 대표 Character가 유지되고 로컬 표시와 일치한다.
-- [ ] 운영자 `사용자 확인` 목록에 `Character명 외 N개` 형식이 표시된다.
-- [ ] 사용자 상세에서 GameAccount별 대표 Character가 표시된다.
-- [ ] 일반 Player에게 운영자 진입점이 노출되지 않고 직접 경로도 권한 없음으로 끝난다.
+- `manualVerificationRequests` Domain·DTO·Repository·Rules
+- 사용자: 로컬 등록 계정·증명 캐릭터 선택, `LP-` 코드 발급·복사, 만료·재발급·취소, 오픈카톡 안내
+- 요청 단위는 Character가 아니라 선택한 Character가 속한 GameAccount
+- Player와 대상 계정 조합에 active 요청 하나만 허용
+- 운영자 `수동 인증 확인` 대기 목록(오래된 순)과 요청 횟수
+- 승인·취소·인증 금지. 취소는 재요청 가능, 금지는 `PlayerId + 대상 GameAccount`
+- 기존 active 소유자가 없을 때만 승인 Transaction으로 GameAccount 전체 소유 확정
+- 승인 시 오래된 로컬 Snapshot을 그대로 쓰지 않고 Lost Ark API roster를 다시 조회
+- 요청자 앱은 서버명·캐릭터명으로 로컬 행에 서버 ID를 연결
+- 스크린샷 파일과 오픈카톡 원본은 Firestore에 올리지 않음
+
+### 반드시 유지할 불변식
+
+- Spark. Callable Functions·유료 플랜·Emulator는 별도 승인 없이 사용하지 않음
+- 요청 create는 본인 Player만. 요청자는 상태·운영자 판정·기한·시도 횟수를 임의 변경하지 않음
+- 운영 명령은 active 운영자 지정과 binding을 함께 검증
+- AuthUid·토큰·민감 ID를 일반 UI·로그에 노출하지 않음
+- 장비 탈착 인증 경로를 이 작업에서 제거하거나 덮어쓰지 않음
 
 ### 제외 범위
 
-- 수동 인증 요청·승인·24시간 자동 이전 구현(Task-085~086)
+- Task-086: 기존 소유자 24시간 방어, 무응답 자동 이전, ownershipLost 후처리 완성
 - 사용자 삭제·삭제 대기·강제 삭제
-- 로컬 미인증 계정·Character의 추가 서버 업로드
+- 앱 재설치로 새 PlayerId를 만드는 우회 차단
 - 그룹·채팅·필터·Claim 변경
-- 유료 플랜·Callable Functions·FCM 전제
+- FCM·OS 알림
+
+기존 소유자가 있는 승인에서 즉시 이전하지 않고 `awaitingOwnerResponse`만 남기는 것은
+086 범위다. 085에서는 그 상태를 만들더라도 방어·이전 Transaction을 구현하지 않는다.
+구현 중 기존 소유자 분기를 완전히 막을지, 상태만 열어둘지는 계약 §9와 맞춰 한 줄로 기록한다.
 
 ### 완료 조건
 
-- [x] 일반 사용자가 운영자 지정과 사용자 목록을 list할 수 없는 Rules 작성
-- [x] active 운영자만 운영자 페이지와 사용자 read model을 사용하는 앱 경계 작성
-- [x] `lastSeenAt` 본인 Player·`request.time` 전용 Rules 작성
-- [x] 기존 Player 필드 없음의 null 보강과 `접속 기록 없음` UI 구현
-- [x] 로컬 정수 ID와 민감 ID를 추가 업로드하지 않음
-- [x] 표적 테스트·전체 테스트·analyze 통과
-- [x] Rules 배포 (`lost-party`, 2026-08-28)
-- [x] 실기기 Player 기준 운영자 지정 문서 정정 (`lost-party`, 2026-08-28)
-- [x] 실기기 운영자 진입·사용자 목록 확인
-- [x] 계정별 대표 Character 서버 동기화와 Rules 5분 제한
-- [x] 운영자 목록·상세 대표 Character 표시
-- [ ] **Task-085 시작 게이트:** 사용자의 실물 기기 테스트 결과 확인(대표 보강·5분 제한·재실행 유지·운영자 표시·일반 Player 차단)
+- 사용자 요청 발급·복사·재발급·취소가 Rules와 함께 동작
+- 운영자만 대기 목록을 읽고 승인·취소·금지를 실행
+- 무소유 GameAccount 승인이 서버 소유권과 로컬 바인딩을 맞춘다
+- 표적 테스트와 `flutter analyze --no-pub` 통과
+- Rules는 검증 후 사용자에게 배포 명령을 전달하고 배포 결과를 기다림
+- 실물 기기 테스트는 사용자가 수행. AI는 기기 조회·설치·실행을 하지 않음
+
+### 검증 체크리스트
+
+- [ ] 본인만 요청을 만들고 조회·취소할 수 있음
+- [ ] 코드 24시간 만료와 재발급 시 기존 코드 무효
+- [ ] 같은 Player·대상 계정에 active 요청이 둘 이상 생기지 않음
+- [ ] 일반 사용자는 운영자 대기 목록과 판정 명령을 쓸 수 없음
+- [ ] 무소유 계정 승인 후 요청자 로컬에 서버 ID가 연결됨
+- [ ] 스크린샷을 서버에 업로드하지 않음
+- [ ] 표적 테스트·`flutter analyze --no-pub` 통과
 
 ### 기준 계약
 

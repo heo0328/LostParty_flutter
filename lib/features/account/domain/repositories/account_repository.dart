@@ -55,6 +55,11 @@ abstract interface class AccountRepository {
     required int characterId,
   });
 
+  Future<void> markRepresentativeReconciled({
+    required int accountId,
+    required String serverCharacterId,
+  });
+
   Future<void> updateDisplayLimit({
     required int accountId,
     required int displayLimit,

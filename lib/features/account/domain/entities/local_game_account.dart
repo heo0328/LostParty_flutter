@@ -11,6 +11,8 @@ class LocalGameAccount {
     required this.characters,
     this.serverGameAccountId,
     this.serverOwnershipStatus,
+    this.serverRepresentativeCharacterId,
+    this.representativeReconciledAt,
   });
 
   final int id;
@@ -22,7 +24,21 @@ class LocalGameAccount {
   final bool isMain;
   final String lookupCharacterName;
   final int? representativeCharacterId;
+  final String? serverRepresentativeCharacterId;
+  final DateTime? representativeReconciledAt;
   final int displayLimit;
+
+  bool get hasReconciledServerRepresentative {
+    if (serverRepresentativeCharacterId == null ||
+        representativeReconciledAt == null) {
+      return false;
+    }
+    final localRepresentative = characters
+        .where((character) => character.id == representativeCharacterId)
+        .firstOrNull;
+    return localRepresentative?.serverCharacterId ==
+        serverRepresentativeCharacterId;
+  }
   final List<LocalAccountCharacter> characters;
 
   List<LocalAccountCharacter> get visibleCharacters {

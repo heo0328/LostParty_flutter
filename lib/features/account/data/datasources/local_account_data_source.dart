@@ -180,6 +180,8 @@ class LocalAccountDataSource {
       isMain: account.isMain,
       lookupCharacterName: account.lookupCharacterName,
       representativeCharacterId: account.representativeCharacterId,
+      serverRepresentativeCharacterId: account.serverRepresentativeCharacterId,
+      representativeReconciledAt: account.representativeReconciledAt,
       displayLimit: account.displayLimit,
       characters: characters
           .map(
@@ -277,6 +279,16 @@ class LocalAccountDataSource {
     return _database.setRepresentativeCharacter(
       accountId: accountId,
       characterId: characterId,
+    );
+  }
+
+  Future<void> markRepresentativeReconciled({
+    required int accountId,
+    required String serverCharacterId,
+  }) {
+    return _database.markRepresentativeReconciled(
+      accountId: accountId,
+      serverCharacterId: serverCharacterId,
     );
   }
 

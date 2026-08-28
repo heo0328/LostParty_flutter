@@ -36,6 +36,11 @@ class GameAccounts extends Table {
 
   IntColumn get representativeCharacterId => integer().nullable()();
 
+  /// Last server CharacterId known to match this account's representative.
+  TextColumn get serverRepresentativeCharacterId => text().nullable()();
+
+  DateTimeColumn get representativeReconciledAt => dateTime().nullable()();
+
   IntColumn get displayLimit => integer().withDefault(const Constant(6))();
 
   DateTimeColumn get createdAt => dateTime()();
@@ -179,7 +184,7 @@ class AccountDatabase extends _$AccountDatabase {
     : super(executor ?? driftDatabase(name: 'lost_party'));
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -228,6 +233,16 @@ class AccountDatabase extends _$AccountDatabase {
       }
       if (from < 9) {
         await migrator.createTable(characterWeeklyRaidDisplays);
+      }
+      if (from < 10) {
+        await migrator.addColumn(
+          gameAccounts,
+          gameAccounts.serverRepresentativeCharacterId,
+        );
+        await migrator.addColumn(
+          gameAccounts,
+          gameAccounts.representativeReconciledAt,
+        );
       }
     },
   );
@@ -911,6 +926,34 @@ class AccountDatabase extends _$AccountDatabase {
           ),
         );
 
+    if (updatedRows != 1) {
+      throw ArgumentError.value(accountId, 'accountId', 'Account not found.');
+    }
+  }
+
+  Future<void> markRepresentativeReconciled({
+    required int accountId,
+    required String serverCharacterId,
+    DateTime? now,
+  }) async {
+    final trimmed = serverCharacterId.trim();
+    if (trimmed.isEmpty) {
+      throw ArgumentError.value(
+        serverCharacterId,
+        'serverCharacterId',
+        'Server character id is required.',
+      );
+    }
+    final updatedRows =
+        await (update(
+          gameAccounts,
+        )..where((table) => table.id.equals(accountId))).write(
+          GameAccountsCompanion(
+            serverRepresentativeCharacterId: Value(trimmed),
+            representativeReconciledAt: Value(now ?? DateTime.now()),
+            updatedAt: Value(now ?? DateTime.now()),
+          ),
+        );
     if (updatedRows != 1) {
       throw ArgumentError.value(accountId, 'accountId', 'Account not found.');
     }

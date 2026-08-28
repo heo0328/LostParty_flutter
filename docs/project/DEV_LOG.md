@@ -1805,3 +1805,18 @@
 - 실물 기기의 최초 보강·5분 차단·재실행 유지·운영자 목록·상세·일반 Player 차단 확인은 사용자가 수행한다. AI는 확인 항목만 전달하고 기기 조회·설치·실행을 하지 않는다.
 - Task-084 운영자 기반 구현은 `d31ce01`, 대표 동기화 준비 문서는 `a7ee7ed`에 반영됐다. `a7ee7ed`에서 `codex/task-084-representative-character-sync`를 생성했다.
 - 대표 Character 동기화 구현을 `f15c1b6`으로 작업 브랜치에 커밋했다. 사용자 지시에 따라 브랜치는 실물 기기 테스트와 분리해 `main`에 병합·푸시하고, 해당 테스트는 Task-085 시작 전 필수 게이트로 유지한다.
+
+---
+
+## Task-084b. 대표 초회 보강과 사용자 변경 분리 (2026-08-29)
+
+- 작업 브랜치: `cursor/representative-seed-reconcile`
+- 초회 보강은 `representativeCharacterId`만 쓰고 `updatedAt`을 남기지 않아 5분 제한을 시작하지 않는다.
+- 사용자가 캐릭터 관리에서 대표를 바꿀 때만 `updatedAt`을 기록하고 5분을 적용한다.
+- Drift schema 10에 계정당 서버 대표 맞춤 기록을 추가해, 내 계정 재진입·탭 전환에서 Firestore GET/SET을 생략한다.
+- Rules에 `validRepresentativeCharacterSeed`를 추가했다. 사용자가 Firebase `lost-party`에 재배포했다(2026-08-29).
+- 표적 테스트와 `flutter analyze`를 통과했다.
+- 실기기: 5분 타이머 UI는 정상. 탭 전환 통신은 로그를 보지 않아 화면 확인을 생략하고, 로컬 맞춤 기록 skip 테스트로 대체했다.
+- Git 종료: 기능 브랜치를 `main`에 병합하고 원격과 맞춘다.
+
+---

@@ -75,7 +75,34 @@ void main() {
 
     await viewModel.initialize();
 
-    expect(gateway.savedCharacterIds, ['server-character-1']);
+    expect(gateway.seededCharacterIds, ['server-character-1']);
+    expect(gateway.savedCharacterIds, isEmpty);
+    expect(viewModel.representativeCooldownRemaining, Duration.zero);
+  });
+
+  test('보강 직후에도 사용자 대표 변경은 즉시 가능하다', () async {
+    final now = DateTime.utc(2026, 8, 28, 9);
+    final repository = _FakeAccountRepository(serverBacked: true);
+    final gateway = _FakeRepresentativeSyncGateway(
+      state: const RepresentativeCharacterSyncState(
+        representativeCharacterId: null,
+        updatedAt: null,
+      ),
+      clock: () => now,
+    );
+    final viewModel = CharacterManagementViewModel(
+      accountRepository: repository,
+      representativeSyncGateway: gateway,
+      clock: () => now,
+    );
+    addTearDown(viewModel.dispose);
+    await viewModel.initialize();
+
+    await viewModel.setRepresentative(viewModel.characters.last);
+
+    expect(gateway.seededCharacterIds, ['server-character-1']);
+    expect(gateway.savedCharacterIds, ['server-character-2']);
+    expect(repository.representativeCharacterId, 2);
     expect(
       viewModel.representativeCooldownRemaining,
       const Duration(minutes: 5),
@@ -248,6 +275,12 @@ class _FakeAccountRepository implements AccountRepository {
   }
 
   @override
+  Future<void> markRepresentativeReconciled({
+    required int accountId,
+    required String serverCharacterId,
+  }) async {}
+
+  @override
   Future<void> updateDisplayLimit({
     required int accountId,
     required int displayLimit,
@@ -311,6 +344,7 @@ class _FakeRepresentativeSyncGateway
   RepresentativeCharacterSyncState state;
   final DateTime Function() clock;
   final List<String> savedCharacterIds = [];
+  final List<String> seededCharacterIds = [];
 
   @override
   Future<RepresentativeCharacterSyncState> loadState({
@@ -326,6 +360,19 @@ class _FakeRepresentativeSyncGateway
     state = RepresentativeCharacterSyncState(
       representativeCharacterId: characterId,
       updatedAt: clock(),
+    );
+    return state;
+  }
+
+  @override
+  Future<RepresentativeCharacterSyncState> seedRepresentative({
+    required String gameAccountId,
+    required String characterId,
+  }) async {
+    seededCharacterIds.add(characterId);
+    state = RepresentativeCharacterSyncState(
+      representativeCharacterId: characterId,
+      updatedAt: null,
     );
     return state;
   }

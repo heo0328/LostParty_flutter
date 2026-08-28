@@ -1427,13 +1427,38 @@ service cloud.firestore {
       ]);
     }
 
-    function validRepresentativeCharacterUpdate(oldData, newData) {
+    function representativeCharacterOwned(oldData, newData) {
       let character = get(characterPath(newData.representativeCharacterId)).data;
-      let oldRepresentative = oldData.keys().hasAny([
-          'representativeCharacterId'
-        ])
+      return newData.representativeCharacterId is string
+        && newData.representativeCharacterId.size() > 0
+        && character.ownerPlayerId == oldData.playerId
+        && character.gameAccountId == oldData.gameAccountId
+        && character.status == 'active';
+    }
+
+    function oldRepresentativeCharacterId(oldData) {
+      return oldData.keys().hasAny(['representativeCharacterId'])
         ? oldData.representativeCharacterId
         : null;
+    }
+
+    function validRepresentativeCharacterSeed(oldData, newData) {
+      let oldRepresentative = oldRepresentativeCharacterId(oldData);
+      return hasActiveBinding()
+        && oldData.playerId == currentPlayerId()
+        && oldData.status == 'active'
+        && oldData.gameAccountId is string
+        && oldRepresentative == null
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'representativeCharacterId'
+        ])
+        && representativeCharacterOwned(oldData, newData)
+        && (!newData.keys().hasAny(['representativeCharacterUpdatedAt'])
+          || newData.representativeCharacterUpdatedAt == null);
+    }
+
+    function validRepresentativeCharacterUpdate(oldData, newData) {
+      let oldRepresentative = oldRepresentativeCharacterId(oldData);
       let cooldownPassed = !oldData.keys().hasAny([
           'representativeCharacterUpdatedAt'
         ])
@@ -1444,18 +1469,15 @@ service cloud.firestore {
         && oldData.playerId == currentPlayerId()
         && oldData.status == 'active'
         && oldData.gameAccountId is string
+        && oldRepresentative != null
         && newData.diff(oldData).affectedKeys().hasOnly([
           'representativeCharacterId',
           'representativeCharacterUpdatedAt'
         ])
-        && newData.representativeCharacterId is string
-        && newData.representativeCharacterId.size() > 0
         && newData.representativeCharacterId != oldRepresentative
         && newData.representativeCharacterUpdatedAt == request.time
         && cooldownPassed
-        && character.ownerPlayerId == oldData.playerId
-        && character.gameAccountId == oldData.gameAccountId
-        && character.status == 'active';
+        && representativeCharacterOwned(oldData, newData);
     }
 
     match /authBindings/{authUid} {
@@ -1594,6 +1616,9 @@ service cloud.firestore {
         ]);
       allow update: if signedIn()
         && (!changesRepresentativeCharacter(
+            resource.data,
+            request.resource.data
+          ) || validRepresentativeCharacterSeed(
             resource.data,
             request.resource.data
           ) || validRepresentativeCharacterUpdate(

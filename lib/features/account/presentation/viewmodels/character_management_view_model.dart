@@ -284,6 +284,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
           );
           await _reload();
         }
+        await _markReconciled(account.id, serverRepresentativeId);
         _startCooldownTimer();
         return;
       }
@@ -295,11 +296,12 @@ class CharacterManagementViewModel extends ChangeNotifier {
           .firstOrNull;
       final serverCharacterId = localRepresentative?.serverCharacterId;
       if (serverCharacterId == null) return;
-      state = await _representativeSyncGateway.setRepresentative(
+      state = await _representativeSyncGateway.seedRepresentative(
         gameAccountId: gameAccountId,
         characterId: serverCharacterId,
       );
       _representativeSyncState = state;
+      await _markReconciled(account.id, serverCharacterId);
       _startCooldownTimer();
     } on RepresentativeCharacterSyncException catch (error) {
       _representativeMessage = error.message;
@@ -334,7 +336,15 @@ class CharacterManagementViewModel extends ChangeNotifier {
           gameAccountId: account.serverGameAccountId!,
           characterId: serverCharacterId,
         );
+    await _markReconciled(account.id, serverCharacterId);
     _startCooldownTimer();
+  }
+
+  Future<void> _markReconciled(int accountId, String serverCharacterId) {
+    return _accountRepository.markRepresentativeReconciled(
+      accountId: accountId,
+      serverCharacterId: serverCharacterId,
+    );
   }
 
   void _startCooldownTimer() {

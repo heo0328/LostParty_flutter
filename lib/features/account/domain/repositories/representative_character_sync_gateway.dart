@@ -36,4 +36,10 @@ abstract interface class RepresentativeCharacterSyncGateway {
     required String gameAccountId,
     required String characterId,
   });
+
+  /// First fill when the server representative is empty. Does not start cooldown.
+  Future<RepresentativeCharacterSyncState> seedRepresentative({
+    required String gameAccountId,
+    required String characterId,
+  });
 }

@@ -88,6 +88,28 @@ class $GameAccountsTable extends GameAccounts
         type: DriftSqlType.int,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _serverRepresentativeCharacterIdMeta =
+      const VerificationMeta('serverRepresentativeCharacterId');
+  @override
+  late final GeneratedColumn<String> serverRepresentativeCharacterId =
+      GeneratedColumn<String>(
+        'server_representative_character_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _representativeReconciledAtMeta =
+      const VerificationMeta('representativeReconciledAt');
+  @override
+  late final GeneratedColumn<DateTime> representativeReconciledAt =
+      GeneratedColumn<DateTime>(
+        'representative_reconciled_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _displayLimitMeta = const VerificationMeta(
     'displayLimit',
   );
@@ -131,6 +153,8 @@ class $GameAccountsTable extends GameAccounts
     isMain,
     lookupCharacterName,
     representativeCharacterId,
+    serverRepresentativeCharacterId,
+    representativeReconciledAt,
     displayLimit,
     createdAt,
     updatedAt,
@@ -202,6 +226,24 @@ class $GameAccountsTable extends GameAccounts
         ),
       );
     }
+    if (data.containsKey('server_representative_character_id')) {
+      context.handle(
+        _serverRepresentativeCharacterIdMeta,
+        serverRepresentativeCharacterId.isAcceptableOrUnknown(
+          data['server_representative_character_id']!,
+          _serverRepresentativeCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('representative_reconciled_at')) {
+      context.handle(
+        _representativeReconciledAtMeta,
+        representativeReconciledAt.isAcceptableOrUnknown(
+          data['representative_reconciled_at']!,
+          _representativeReconciledAtMeta,
+        ),
+      );
+    }
     if (data.containsKey('display_limit')) {
       context.handle(
         _displayLimitMeta,
@@ -264,6 +306,14 @@ class $GameAccountsTable extends GameAccounts
         DriftSqlType.int,
         data['${effectivePrefix}representative_character_id'],
       ),
+      serverRepresentativeCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_representative_character_id'],
+      ),
+      representativeReconciledAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}representative_reconciled_at'],
+      ),
       displayLimit: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}display_limit'],
@@ -293,6 +343,10 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
   final bool isMain;
   final String lookupCharacterName;
   final int? representativeCharacterId;
+
+  /// Last server CharacterId known to match this account's representative.
+  final String? serverRepresentativeCharacterId;
+  final DateTime? representativeReconciledAt;
   final int displayLimit;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -304,6 +358,8 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
     required this.isMain,
     required this.lookupCharacterName,
     this.representativeCharacterId,
+    this.serverRepresentativeCharacterId,
+    this.representativeReconciledAt,
     required this.displayLimit,
     required this.createdAt,
     required this.updatedAt,
@@ -324,6 +380,16 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
     if (!nullToAbsent || representativeCharacterId != null) {
       map['representative_character_id'] = Variable<int>(
         representativeCharacterId,
+      );
+    }
+    if (!nullToAbsent || serverRepresentativeCharacterId != null) {
+      map['server_representative_character_id'] = Variable<String>(
+        serverRepresentativeCharacterId,
+      );
+    }
+    if (!nullToAbsent || representativeReconciledAt != null) {
+      map['representative_reconciled_at'] = Variable<DateTime>(
+        representativeReconciledAt,
       );
     }
     map['display_limit'] = Variable<int>(displayLimit);
@@ -348,6 +414,14 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
           representativeCharacterId == null && nullToAbsent
           ? const Value.absent()
           : Value(representativeCharacterId),
+      serverRepresentativeCharacterId:
+          serverRepresentativeCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverRepresentativeCharacterId),
+      representativeReconciledAt:
+          representativeReconciledAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(representativeReconciledAt),
       displayLimit: Value(displayLimit),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -375,6 +449,12 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
       representativeCharacterId: serializer.fromJson<int?>(
         json['representativeCharacterId'],
       ),
+      serverRepresentativeCharacterId: serializer.fromJson<String?>(
+        json['serverRepresentativeCharacterId'],
+      ),
+      representativeReconciledAt: serializer.fromJson<DateTime?>(
+        json['representativeReconciledAt'],
+      ),
       displayLimit: serializer.fromJson<int>(json['displayLimit']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -395,6 +475,12 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
       'representativeCharacterId': serializer.toJson<int?>(
         representativeCharacterId,
       ),
+      'serverRepresentativeCharacterId': serializer.toJson<String?>(
+        serverRepresentativeCharacterId,
+      ),
+      'representativeReconciledAt': serializer.toJson<DateTime?>(
+        representativeReconciledAt,
+      ),
       'displayLimit': serializer.toJson<int>(displayLimit),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -409,6 +495,8 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
     bool? isMain,
     String? lookupCharacterName,
     Value<int?> representativeCharacterId = const Value.absent(),
+    Value<String?> serverRepresentativeCharacterId = const Value.absent(),
+    Value<DateTime?> representativeReconciledAt = const Value.absent(),
     int? displayLimit,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -426,6 +514,12 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
     representativeCharacterId: representativeCharacterId.present
         ? representativeCharacterId.value
         : this.representativeCharacterId,
+    serverRepresentativeCharacterId: serverRepresentativeCharacterId.present
+        ? serverRepresentativeCharacterId.value
+        : this.serverRepresentativeCharacterId,
+    representativeReconciledAt: representativeReconciledAt.present
+        ? representativeReconciledAt.value
+        : this.representativeReconciledAt,
     displayLimit: displayLimit ?? this.displayLimit,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -447,6 +541,13 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
       representativeCharacterId: data.representativeCharacterId.present
           ? data.representativeCharacterId.value
           : this.representativeCharacterId,
+      serverRepresentativeCharacterId:
+          data.serverRepresentativeCharacterId.present
+          ? data.serverRepresentativeCharacterId.value
+          : this.serverRepresentativeCharacterId,
+      representativeReconciledAt: data.representativeReconciledAt.present
+          ? data.representativeReconciledAt.value
+          : this.representativeReconciledAt,
       displayLimit: data.displayLimit.present
           ? data.displayLimit.value
           : this.displayLimit,
@@ -465,6 +566,10 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
           ..write('isMain: $isMain, ')
           ..write('lookupCharacterName: $lookupCharacterName, ')
           ..write('representativeCharacterId: $representativeCharacterId, ')
+          ..write(
+            'serverRepresentativeCharacterId: $serverRepresentativeCharacterId, ',
+          )
+          ..write('representativeReconciledAt: $representativeReconciledAt, ')
           ..write('displayLimit: $displayLimit, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -481,6 +586,8 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
     isMain,
     lookupCharacterName,
     representativeCharacterId,
+    serverRepresentativeCharacterId,
+    representativeReconciledAt,
     displayLimit,
     createdAt,
     updatedAt,
@@ -496,6 +603,9 @@ class GameAccount extends DataClass implements Insertable<GameAccount> {
           other.isMain == this.isMain &&
           other.lookupCharacterName == this.lookupCharacterName &&
           other.representativeCharacterId == this.representativeCharacterId &&
+          other.serverRepresentativeCharacterId ==
+              this.serverRepresentativeCharacterId &&
+          other.representativeReconciledAt == this.representativeReconciledAt &&
           other.displayLimit == this.displayLimit &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
@@ -509,6 +619,8 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
   final Value<bool> isMain;
   final Value<String> lookupCharacterName;
   final Value<int?> representativeCharacterId;
+  final Value<String?> serverRepresentativeCharacterId;
+  final Value<DateTime?> representativeReconciledAt;
   final Value<int> displayLimit;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -520,6 +632,8 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
     this.isMain = const Value.absent(),
     this.lookupCharacterName = const Value.absent(),
     this.representativeCharacterId = const Value.absent(),
+    this.serverRepresentativeCharacterId = const Value.absent(),
+    this.representativeReconciledAt = const Value.absent(),
     this.displayLimit = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -532,6 +646,8 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
     this.isMain = const Value.absent(),
     required String lookupCharacterName,
     this.representativeCharacterId = const Value.absent(),
+    this.serverRepresentativeCharacterId = const Value.absent(),
+    this.representativeReconciledAt = const Value.absent(),
     this.displayLimit = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -547,6 +663,8 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
     Expression<bool>? isMain,
     Expression<String>? lookupCharacterName,
     Expression<int>? representativeCharacterId,
+    Expression<String>? serverRepresentativeCharacterId,
+    Expression<DateTime>? representativeReconciledAt,
     Expression<int>? displayLimit,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -563,6 +681,10 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
         'lookup_character_name': lookupCharacterName,
       if (representativeCharacterId != null)
         'representative_character_id': representativeCharacterId,
+      if (serverRepresentativeCharacterId != null)
+        'server_representative_character_id': serverRepresentativeCharacterId,
+      if (representativeReconciledAt != null)
+        'representative_reconciled_at': representativeReconciledAt,
       if (displayLimit != null) 'display_limit': displayLimit,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -577,6 +699,8 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
     Value<bool>? isMain,
     Value<String>? lookupCharacterName,
     Value<int?>? representativeCharacterId,
+    Value<String?>? serverRepresentativeCharacterId,
+    Value<DateTime?>? representativeReconciledAt,
     Value<int>? displayLimit,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
@@ -591,6 +715,11 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
       lookupCharacterName: lookupCharacterName ?? this.lookupCharacterName,
       representativeCharacterId:
           representativeCharacterId ?? this.representativeCharacterId,
+      serverRepresentativeCharacterId:
+          serverRepresentativeCharacterId ??
+          this.serverRepresentativeCharacterId,
+      representativeReconciledAt:
+          representativeReconciledAt ?? this.representativeReconciledAt,
       displayLimit: displayLimit ?? this.displayLimit,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -629,6 +758,16 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
         representativeCharacterId.value,
       );
     }
+    if (serverRepresentativeCharacterId.present) {
+      map['server_representative_character_id'] = Variable<String>(
+        serverRepresentativeCharacterId.value,
+      );
+    }
+    if (representativeReconciledAt.present) {
+      map['representative_reconciled_at'] = Variable<DateTime>(
+        representativeReconciledAt.value,
+      );
+    }
     if (displayLimit.present) {
       map['display_limit'] = Variable<int>(displayLimit.value);
     }
@@ -651,6 +790,10 @@ class GameAccountsCompanion extends UpdateCompanion<GameAccount> {
           ..write('isMain: $isMain, ')
           ..write('lookupCharacterName: $lookupCharacterName, ')
           ..write('representativeCharacterId: $representativeCharacterId, ')
+          ..write(
+            'serverRepresentativeCharacterId: $serverRepresentativeCharacterId, ',
+          )
+          ..write('representativeReconciledAt: $representativeReconciledAt, ')
           ..write('displayLimit: $displayLimit, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -3996,6 +4139,8 @@ typedef $$GameAccountsTableCreateCompanionBuilder =
       Value<bool> isMain,
       required String lookupCharacterName,
       Value<int?> representativeCharacterId,
+      Value<String?> serverRepresentativeCharacterId,
+      Value<DateTime?> representativeReconciledAt,
       Value<int> displayLimit,
       required DateTime createdAt,
       required DateTime updatedAt,
@@ -4009,6 +4154,8 @@ typedef $$GameAccountsTableUpdateCompanionBuilder =
       Value<bool> isMain,
       Value<String> lookupCharacterName,
       Value<int?> representativeCharacterId,
+      Value<String?> serverRepresentativeCharacterId,
+      Value<DateTime?> representativeReconciledAt,
       Value<int> displayLimit,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
@@ -4081,6 +4228,17 @@ class $$GameAccountsTableFilterComposer
 
   ColumnFilters<int> get representativeCharacterId => $composableBuilder(
     column: $table.representativeCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverRepresentativeCharacterId =>
+      $composableBuilder(
+        column: $table.serverRepresentativeCharacterId,
+        builder: (column) => ColumnFilters(column),
+      );
+
+  ColumnFilters<DateTime> get representativeReconciledAt => $composableBuilder(
+    column: $table.representativeReconciledAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4169,6 +4327,18 @@ class $$GameAccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get serverRepresentativeCharacterId =>
+      $composableBuilder(
+        column: $table.serverRepresentativeCharacterId,
+        builder: (column) => ColumnOrderings(column),
+      );
+
+  ColumnOrderings<DateTime> get representativeReconciledAt =>
+      $composableBuilder(
+        column: $table.representativeReconciledAt,
+        builder: (column) => ColumnOrderings(column),
+      );
+
   ColumnOrderings<int> get displayLimit => $composableBuilder(
     column: $table.displayLimit,
     builder: (column) => ColumnOrderings(column),
@@ -4222,6 +4392,18 @@ class $$GameAccountsTableAnnotationComposer
     column: $table.representativeCharacterId,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get serverRepresentativeCharacterId =>
+      $composableBuilder(
+        column: $table.serverRepresentativeCharacterId,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<DateTime> get representativeReconciledAt =>
+      $composableBuilder(
+        column: $table.representativeReconciledAt,
+        builder: (column) => column,
+      );
 
   GeneratedColumn<int> get displayLimit => $composableBuilder(
     column: $table.displayLimit,
@@ -4298,6 +4480,10 @@ class $$GameAccountsTableTableManager
                 Value<bool> isMain = const Value.absent(),
                 Value<String> lookupCharacterName = const Value.absent(),
                 Value<int?> representativeCharacterId = const Value.absent(),
+                Value<String?> serverRepresentativeCharacterId =
+                    const Value.absent(),
+                Value<DateTime?> representativeReconciledAt =
+                    const Value.absent(),
                 Value<int> displayLimit = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -4309,6 +4495,9 @@ class $$GameAccountsTableTableManager
                 isMain: isMain,
                 lookupCharacterName: lookupCharacterName,
                 representativeCharacterId: representativeCharacterId,
+                serverRepresentativeCharacterId:
+                    serverRepresentativeCharacterId,
+                representativeReconciledAt: representativeReconciledAt,
                 displayLimit: displayLimit,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -4322,6 +4511,10 @@ class $$GameAccountsTableTableManager
                 Value<bool> isMain = const Value.absent(),
                 required String lookupCharacterName,
                 Value<int?> representativeCharacterId = const Value.absent(),
+                Value<String?> serverRepresentativeCharacterId =
+                    const Value.absent(),
+                Value<DateTime?> representativeReconciledAt =
+                    const Value.absent(),
                 Value<int> displayLimit = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
@@ -4333,6 +4526,9 @@ class $$GameAccountsTableTableManager
                 isMain: isMain,
                 lookupCharacterName: lookupCharacterName,
                 representativeCharacterId: representativeCharacterId,
+                serverRepresentativeCharacterId:
+                    serverRepresentativeCharacterId,
+                representativeReconciledAt: representativeReconciledAt,
                 displayLimit: displayLimit,
                 createdAt: createdAt,
                 updatedAt: updatedAt,

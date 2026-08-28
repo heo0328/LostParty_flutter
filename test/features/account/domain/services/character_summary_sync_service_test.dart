@@ -260,6 +260,12 @@ class _FakeAccountRepository implements AccountRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<void> markRepresentativeReconciled({
+    required int accountId,
+    required String serverCharacterId,
+  }) => throw UnimplementedError();
+
+  @override
   Future<void> updateDisplayLimit({
     required int accountId,
     required int displayLimit,

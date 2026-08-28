@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:drift/drift.dart' hide isNull;
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/data/local/account_database.dart';
@@ -31,6 +31,25 @@ void main() {
     expect(account.lookupCharacterName, '이슈아이');
     expect(account.representativeCharacterId, isNull);
     expect(account.displayLimit, 6);
+  });
+
+  test('stores representative reconciliation independently of local id', () async {
+    final accountId = await database.saveMainAccountSnapshot(
+      lookupCharacterName: '본캐',
+      characters: [_snapshot('본캐', DateTime.utc(2026, 8, 29))],
+    );
+    await database.markRepresentativeReconciled(
+      accountId: accountId,
+      serverCharacterId: 'server-character-1',
+      now: DateTime.utc(2026, 8, 29, 1),
+    );
+
+    final account = await (database.select(
+      database.gameAccounts,
+    )..where((table) => table.id.equals(accountId))).getSingle();
+
+    expect(account.serverRepresentativeCharacterId, 'server-character-1');
+    expect(account.representativeReconciledAt, isNotNull);
   });
 
   test('adds a sub account with its own representative character', () async {

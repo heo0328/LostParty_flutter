@@ -28,6 +28,7 @@ void main() {
   });
 
   test('대표 Character 변경은 소유·동일 계정·서버 시각·5분을 검증한다', () {
+    expect(rules, contains('validRepresentativeCharacterSeed'));
     expect(rules, contains('validRepresentativeCharacterUpdate'));
     expect(rules, contains("duration.value(5, 'm')"));
     expect(

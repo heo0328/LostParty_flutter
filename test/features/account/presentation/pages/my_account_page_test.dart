@@ -326,6 +326,12 @@ class _FakeAccountRepository
   }) async {}
 
   @override
+  Future<void> markRepresentativeReconciled({
+    required int accountId,
+    required String serverCharacterId,
+  }) async {}
+
+  @override
   Future<void> updateDisplayLimit({
     required int accountId,
     required int displayLimit,

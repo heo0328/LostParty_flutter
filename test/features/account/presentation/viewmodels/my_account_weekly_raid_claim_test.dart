@@ -513,6 +513,13 @@ class _AccountRepository implements AccountRepository {
     required int accountId,
     required int characterId,
   }) async {}
+
+  @override
+  Future<void> markRepresentativeReconciled({
+    required int accountId,
+    required String serverCharacterId,
+  }) async {}
+
   @override
   Future<void> setPreferredCharacterRole({
     required int characterId,

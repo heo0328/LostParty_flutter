@@ -23,7 +23,34 @@ void main() {
     await service.synchronizeAccounts([account]);
 
     expect(gateway.loadCount, 1);
-    expect(gateway.savedCharacterIds, ['server-character-1']);
+    expect(gateway.seededCharacterIds, ['server-character-1']);
+    expect(gateway.savedCharacterIds, isEmpty);
+    expect(repository.reconciledServerCharacterId, 'server-character-1');
+  });
+
+  test('로컬 맞춤 기록이 있으면 네트워크를 호출하지 않는다', () async {
+    final repository = _RepresentativeOnlyAccountRepository();
+    final gateway = _FakeGateway(
+      const RepresentativeCharacterSyncState(
+        representativeCharacterId: null,
+        updatedAt: null,
+      ),
+    );
+    final service = RepresentativeCharacterSyncService(
+      accountRepository: repository,
+      gateway: gateway,
+    );
+
+    await service.synchronizeAccounts([
+      _account(
+        serverRepresentativeCharacterId: 'server-character-1',
+        representativeReconciledAt: DateTime.utc(2026, 8, 29),
+      ),
+    ]);
+
+    expect(gateway.loadCount, 0);
+    expect(gateway.seededCharacterIds, isEmpty);
+    expect(gateway.savedCharacterIds, isEmpty);
   });
 
   test('서버 대표가 있으면 로컬 대표를 서버 캐릭터에 맞춘다', () async {
@@ -42,12 +69,17 @@ void main() {
     await service.synchronizeAccounts([_account()]);
 
     expect(repository.savedCharacterId, 2);
+    expect(repository.reconciledServerCharacterId, 'server-character-2');
+    expect(gateway.seededCharacterIds, isEmpty);
     expect(gateway.savedCharacterIds, isEmpty);
   });
 }
 
-LocalGameAccount _account() {
-  return const LocalGameAccount(
+LocalGameAccount _account({
+  String? serverRepresentativeCharacterId,
+  DateTime? representativeReconciledAt,
+}) {
+  return LocalGameAccount(
     id: 10,
     serverGameAccountId: 'server-account-1',
     serverOwnershipStatus: 'active',
@@ -55,8 +87,10 @@ LocalGameAccount _account() {
     isMain: true,
     lookupCharacterName: '첫번째',
     representativeCharacterId: 1,
+    serverRepresentativeCharacterId: serverRepresentativeCharacterId,
+    representativeReconciledAt: representativeReconciledAt,
     displayLimit: 2,
-    characters: [
+    characters: const [
       LocalAccountCharacter(
         id: 1,
         serverCharacterId: 'server-character-1',
@@ -87,6 +121,7 @@ LocalGameAccount _account() {
 
 class _RepresentativeOnlyAccountRepository implements AccountRepository {
   int? savedCharacterId;
+  String? reconciledServerCharacterId;
 
   @override
   Future<void> setRepresentativeCharacter({
@@ -94,6 +129,14 @@ class _RepresentativeOnlyAccountRepository implements AccountRepository {
     required int characterId,
   }) async {
     savedCharacterId = characterId;
+  }
+
+  @override
+  Future<void> markRepresentativeReconciled({
+    required int accountId,
+    required String serverCharacterId,
+  }) async {
+    reconciledServerCharacterId = serverCharacterId;
   }
 
   @override
@@ -106,6 +149,7 @@ class _FakeGateway implements RepresentativeCharacterSyncGateway {
   RepresentativeCharacterSyncState state;
   int loadCount = 0;
   final List<String> savedCharacterIds = [];
+  final List<String> seededCharacterIds = [];
 
   @override
   Future<RepresentativeCharacterSyncState> loadState({
@@ -124,6 +168,19 @@ class _FakeGateway implements RepresentativeCharacterSyncGateway {
     state = RepresentativeCharacterSyncState(
       representativeCharacterId: characterId,
       updatedAt: DateTime.utc(2026, 8, 28),
+    );
+    return state;
+  }
+
+  @override
+  Future<RepresentativeCharacterSyncState> seedRepresentative({
+    required String gameAccountId,
+    required String characterId,
+  }) async {
+    seededCharacterIds.add(characterId);
+    state = RepresentativeCharacterSyncState(
+      representativeCharacterId: characterId,
+      updatedAt: null,
     );
     return state;
   }

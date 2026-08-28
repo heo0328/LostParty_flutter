@@ -279,6 +279,17 @@ class AccountRepositoryImpl
   }
 
   @override
+  Future<void> markRepresentativeReconciled({
+    required int accountId,
+    required String serverCharacterId,
+  }) {
+    return _localDataSource.markRepresentativeReconciled(
+      accountId: accountId,
+      serverCharacterId: serverCharacterId,
+    );
+  }
+
+  @override
   Future<void> updateDisplayLimit({
     required int accountId,
     required int displayLimit,
