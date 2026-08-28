@@ -1,8 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key});
+import '../../../operator_access/domain/repositories/operator_access_repository.dart';
+
+class SettingsPage extends StatefulWidget {
+  const SettingsPage({this.operatorAccessRepository, super.key});
+
+  final OperatorAccessRepository? operatorAccessRepository;
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  late final Future<bool> _isOperator =
+      widget.operatorAccessRepository?.isCurrentPlayerOperator() ??
+      Future.value(false);
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +42,29 @@ class SettingsPage extends StatelessWidget {
             subtitle: const Text('계정과 캐릭터 조회에 사용할 토큰을 관리합니다.'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/api-token'),
+          ),
+          FutureBuilder<bool>(
+            future: _isOperator,
+            builder: (context, snapshot) {
+              if (snapshot.data != true) return const SizedBox.shrink();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
+                    child: Text('운영자'),
+                  ),
+                  ListTile(
+                    key: const ValueKey('settingsOperatorUsers'),
+                    leading: const Icon(Icons.admin_panel_settings_outlined),
+                    title: const Text('사용자 확인'),
+                    subtitle: const Text('마지막 접속과 서버 인증 계정을 확인합니다.'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/settings/operator/users'),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),

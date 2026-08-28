@@ -55,7 +55,7 @@
 | 완료 기능 | 멤버십·회차 + 알림 + Claim A~F + 내 계정 표기 + 공개 목록 내 방 제외 | Task-068~082 |
 | Firestore Rules | Claim A~F·다음주 prep·orphan self-heal **배포됨** | Firebase `lost-party` (이번 작업 변경 없음) |
 | 현재 코드 상태 | **`main`** | Task-082 병합 후 |
-| 다음 구현 | **Task-084 운영자 권한·마지막 접속 기반** | Task-083 계약 완료 후 첫 구현 |
+| 다음 구현 | **Task-084 대표 Character 서버 동기화** | 계정별 5분 제한·운영자 표시 보완 |
 
 ### Task-073 확인 완료 사항 (2026-08-27)
 
@@ -88,7 +88,7 @@
 | 8a | 내 계정 주간 레이드 표시 설정 | **Task-081 완료** | 0~5개·선택·원정대 일괄, 접기 없음 |
 | 9 | **레이드 모집에서 내 모집 제외** | **완료 (Task-082)** | 공개 모집과 내 현황 분리 |
 | 10 | **운영자 계정 권한 기반 설계** | **완료 (Task-083)** | 일반 사용자와 분리된 권한 경계 |
-| 10a | **운영자 권한·마지막 접속 기반** | **다음 실행 (Task-084)** | 운영자 진입, lastSeenAt, 사용자 서버 목록 |
+| 10a | **운영자 권한·마지막 접속 기반** | **대표 Character 보완 중 (Task-084)** | 운영자 진입·lastSeenAt 완료, 계정별 대표 동기화 대기 |
 | 11 | 그룹 생성·가입 | 그룹 계약 확정 | 그룹 membership 기반 |
 | 12 | 그룹 전용 모집 | 그룹 membership 안정화 | 생성 드롭다운과 그룹 Rules |
 | 13 | 레이드 모집·현황 공통 필터 | 그룹 공개 범위 확정 | 공통 UX, Firestore/Drift 조회 분리 |
@@ -382,16 +382,17 @@
 
 ```text
 현재 Task: Task-084 운영자 권한·마지막 접속 기반
-현재 단계: 구현 시작 전
-브랜치: 신규 (예: codex/task-084-operator-access-foundation)
-작업 트리: main + Task-083 문서 변경
+현재 단계: 운영자 진입·목록 실기기 확인 완료 / 대표 Character 서버 동기화 구현 전
+브랜치: codex/task-084-operator-access-foundation
+작업 트리: Task-084 변경 미커밋
 ```
 
 ### 목표
 
-Task-083 계약의 첫 구현으로 운영자 진입 경계, 마지막 앱 접속 시각과 사용자 서버 목록을 연결한다.
+운영자 진입 경계, 마지막 앱 접속 시각과 사용자 서버 목록을 Firebase와 실기기에서
+확인하고, 실기기에서 발견된 대표 Character 서버 데이터 부재를 계정별 동기화로 보완한다.
 
-### 포함 범위
+### 구현 완료
 
 - `operatorAssignments/{playerId}` active 지정 읽기와 Rules helper
 - 운영자 전용 라우트·페이지 진입 차단
@@ -399,24 +400,44 @@ Task-083 계약의 첫 구현으로 운영자 진입 경계, 마지막 앱 접�
 - 새 Player는 `lastSeenAt: null`로 만들고 기존 Player는 명시적 보강 후 정렬 쿼리를 사용
 - 운영자 `사용자 확인` 목록을 접속 기록 없음·오래된 접속순으로 페이지 조회
 - 사용자 상세에서 서버에 이미 존재하는 GameAccount·Character·인증 상태만 조회
-- 대표 Character를 서버에서 명확히 정할 수 없으면 `대표 캐릭터 지정 안 됨` 표시
+- 현재 read model은 대표 Character를 서버에서 정하지 못해 `대표 캐릭터 지정 안 됨`으로 표시
+- 운영자 표적 테스트 8건, 라우팅·Player 회귀 테스트와 전체 테스트 456건 통과
+- `flutter analyze` 통과
+
+### 다음 실행 순서
+
+1. [완료] 변경된 `firestore.rules`를 Firebase `lost-party`에 배포한다.
+2. [완료] Firebase Console에서 선택된 AuthUid의 `authBindings/{authUid}.playerId`를 확인한다.
+3. [완료] 잘못 지정한 운영자 문서를 삭제하고 실제 실기기 PlayerId에 `schemaVersion: 1`, 같은 `playerId`, `status: active` 문서를 수동 등록했다. Console에서 이전 문서 부재와 새 문서의 active 상태를 재확인했다.
+4. [완료] 실기기 앱을 다시 실행해 실제 기기 Player의 `players/{playerId}.lastSeenAt`이 서버 시각으로 갱신되는지 확인했다(2026-08-28 17:43:40 KST).
+5. [부분 완료] 설정의 `사용자 확인` 진입과 사용자 목록 표시를 실기기에서 확인했다. 로컬에 대표 Character가 있는 계정도 서버 필드가 없어 `대표 캐릭터 지정 안 됨`으로 표시되는 문제를 확인했다.
+6. `playerGameAccounts`에 서버 CharacterId 기반 대표 Character와 서버 갱신 시각을 동기화하고, Rules에서 GameAccount별 5분 변경 제한을 강제한다.
+7. 운영자 목록은 `Character명 외 N개`, 상세는 계정별 대표 Character를 표시한다.
+8. 실기기에서 최초 보강·정상 변경·5분 차단·재실행 후 유지·목록·상세를 확인한다.
+9. 일반 Player에는 운영자 진입점이 없고 직접 경로 진입도 권한 없음으로 끝나는지 확인한다.
 
 ### 제외 범위
 
 - 수동 인증 요청·승인·24시간 자동 이전 구현(Task-085~086)
 - 사용자 삭제·삭제 대기·강제 삭제
-- 로컬 미인증 계정·대표 Character의 추가 서버 업로드
+- 로컬 미인증 계정·Character의 추가 서버 업로드
 - 그룹·채팅·필터·Claim 변경
 - 유료 플랜·Callable Functions·FCM 전제
 
 ### 완료 조건
 
-- 일반 사용자가 운영자 지정과 사용자 목록을 list할 수 없음
-- active 운영자만 운영자 페이지와 사용자 read model 사용
-- `lastSeenAt`은 본인 Player의 해당 필드만 `request.time`으로 갱신
-- 기존 Player의 필드 없음은 `접속 기록 없음`으로 정상 표시
-- 로컬 전용 정보와 민감 ID를 운영자 목록 때문에 서버에 추가하지 않음
-- 표적 테스트·analyze 통과, Rules 배포는 사용자 승인 후 별도 수행
+- [x] 일반 사용자가 운영자 지정과 사용자 목록을 list할 수 없는 Rules 작성
+- [x] active 운영자만 운영자 페이지와 사용자 read model을 사용하는 앱 경계 작성
+- [x] `lastSeenAt` 본인 Player·`request.time` 전용 Rules 작성
+- [x] 기존 Player 필드 없음의 null 보강과 `접속 기록 없음` UI 구현
+- [x] 로컬 정수 ID와 민감 ID를 추가 업로드하지 않음
+- [x] 표적 테스트·전체 테스트·analyze 통과
+- [x] Rules 배포 (`lost-party`, 2026-08-28)
+- [x] 실기기 Player 기준 운영자 지정 문서 정정 (`lost-party`, 2026-08-28)
+- [x] 실기기 운영자 진입·사용자 목록 확인
+- [ ] 계정별 대표 Character 서버 동기화와 Rules 5분 제한
+- [ ] 운영자 목록·상세 대표 Character 표시
+- [ ] 대표 Character 보완 후 실기기·일반 Player 차단 확인
 
 ### 기준 계약
 

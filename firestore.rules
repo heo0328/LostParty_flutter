@@ -14,6 +14,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/players/$(playerId);
     }
 
+    function operatorAssignmentPath(playerId) {
+      return /databases/$(database)/documents/operatorAssignments/$(playerId);
+    }
+
     function hasActiveBinding() {
       return signedIn()
         && exists(bindingPath(request.auth.uid))
@@ -22,6 +26,14 @@ service cloud.firestore {
 
     function currentPlayerId() {
       return get(bindingPath(request.auth.uid)).data.playerId;
+    }
+
+    function isActiveOperator() {
+      return hasActiveBinding()
+        && exists(playerPath(currentPlayerId()))
+        && get(playerPath(currentPlayerId())).data.status == 'active'
+        && exists(operatorAssignmentPath(currentPlayerId()))
+        && get(operatorAssignmentPath(currentPlayerId())).data.status == 'active';
     }
 
     function recruitmentPath(recruitmentId) {
@@ -1382,13 +1394,30 @@ service cloud.firestore {
       return data.keys().hasOnly([
           'schemaVersion',
           'status',
+          'lastSeenAt',
           'createdAt',
           'updatedAt'
         ])
         && data.schemaVersion == 1
         && data.status == 'active'
+        && data.lastSeenAt == null
         && data.createdAt == request.time
         && data.updatedAt == request.time;
+    }
+
+    function validPlayerLastSeenUpdate(playerId, oldData, newData) {
+      return hasActiveBinding()
+        && currentPlayerId() == playerId
+        && oldData.status == 'active'
+        && newData.diff(oldData).affectedKeys().hasOnly(['lastSeenAt'])
+        && newData.lastSeenAt == request.time;
+    }
+
+    function validLegacyLastSeenBackfill(oldData, newData) {
+      return isActiveOperator()
+        && !oldData.keys().hasAny(['lastSeenAt'])
+        && newData.diff(oldData).affectedKeys().hasOnly(['lastSeenAt'])
+        && newData.lastSeenAt == null;
     }
 
     match /authBindings/{authUid} {
@@ -1404,16 +1433,30 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /operatorAssignments/{playerId} {
+      allow get: if hasActiveBinding() && currentPlayerId() == playerId;
+      allow list, create, update, delete: if false;
+    }
+
     match /players/{playerId} {
       allow get: if signedIn()
         && exists(bindingPath(request.auth.uid))
-        && get(bindingPath(request.auth.uid)).data.playerId == playerId;
-      allow list: if false;
+        && (get(bindingPath(request.auth.uid)).data.playerId == playerId
+          || isActiveOperator());
+      allow list: if isActiveOperator();
       allow create: if signedIn()
         && !exists(bindingPath(request.auth.uid))
         && validActivePlayer(request.resource.data)
         && getAfter(bindingPath(request.auth.uid)).data.playerId == playerId;
-      allow update, delete: if false;
+      allow update: if validPlayerLastSeenUpdate(
+          playerId,
+          resource.data,
+          request.resource.data
+        ) || validLegacyLastSeenBackfill(
+          resource.data,
+          request.resource.data
+        );
+      allow delete: if false;
 
       match /activeRaidAssignments/{assignmentId} {
         // 승인 Transaction이 신청자 점유 문서 존재 여부를 확인해야 한다.

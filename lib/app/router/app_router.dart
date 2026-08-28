@@ -27,6 +27,10 @@ import '../../features/account/domain/repositories/character_weekly_raid_display
 import '../../features/account/domain/repositories/game_account_verification_gateway.dart';
 import '../../features/account/domain/services/character_summary_sync_service.dart';
 import '../../features/player/domain/entities/player_session.dart';
+import '../../features/operator_access/data/repositories/firestore_operator_access_repository.dart';
+import '../../features/operator_access/domain/repositories/operator_access_repository.dart';
+import '../../features/operator_access/presentation/pages/operator_user_detail_page.dart';
+import '../../features/operator_access/presentation/pages/operator_user_list_page.dart';
 import '../../features/raid_status/data/services/firestore_party_event_sync_service.dart';
 import '../../features/raid_status/domain/services/party_event_sync_service.dart';
 import '../../features/raid_status/presentation/pages/party_notifications_page.dart';
@@ -78,7 +82,10 @@ GoRouter createAppRouter({
   CharacterSummarySyncGateway? characterSummarySyncGateway,
   WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository,
   CharacterWeeklyRaidDisplayRepository? weeklyRaidDisplayRepository,
+  OperatorAccessRepository? operatorAccessRepository,
 }) {
+  final operatorAccessRepositoryOrDefault =
+      operatorAccessRepository ?? FirestoreOperatorAccessRepository();
   final partyReadRepositoryOrDefault =
       partyReadRepository ??
       FirestorePartyReadRepository(firestore: FirebaseFirestore.instance);
@@ -358,7 +365,9 @@ GoRouter createAppRouter({
             routes: [
               GoRoute(
                 path: '/settings',
-                builder: (context, state) => const SettingsPage(),
+                builder: (context, state) => SettingsPage(
+                  operatorAccessRepository: operatorAccessRepositoryOrDefault,
+                ),
                 routes: [
                   GoRoute(
                     path: 'game-account-verification',
@@ -373,6 +382,21 @@ GoRouter createAppRouter({
                     path: 'api-token',
                     builder: (context, state) =>
                         ApiTokenSettingsPage(apiTokenStore: apiTokenStore),
+                  ),
+                  GoRoute(
+                    path: 'operator/users',
+                    builder: (context, state) => OperatorUserListPage(
+                      repository: operatorAccessRepositoryOrDefault,
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: ':playerId',
+                        builder: (context, state) => OperatorUserDetailPage(
+                          playerId: state.pathParameters['playerId']!,
+                          repository: operatorAccessRepositoryOrDefault,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

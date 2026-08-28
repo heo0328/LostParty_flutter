@@ -51,9 +51,13 @@ operatorAssignments/{playerId}
   schemaVersion: 1
   playerId: string
   status: active | revoked
-  createdAt: timestamp
-  updatedAt: timestamp
+  createdAt: timestamp (선택, 관리 감사용)
+  updatedAt: timestamp (선택, 관리 감사용)
 ```
+
+초기 Firebase Console 지정에는 `schemaVersion`, 경로와 같은 `playerId`, `status`가
+권한 판정 필수 필드다. `createdAt`과 `updatedAt`은 별도 신뢰 관리 도구를 도입할 때
+기록하는 권장 감사 필드이며, 값이 없다는 이유로 운영 권한을 거절하지 않는다.
 
 운영 권한을 인정하려면 다음을 모두 만족해야 한다.
 
@@ -337,15 +341,46 @@ lastSeenAt: timestamp | null
 
 목록 표시:
 
-- 서버에서 Player의 대표 Character를 명확히 특정할 수 있으면 Character명
-- 그렇지 않으면 `대표 캐릭터 지정 안 됨`
+- 서버에 동기화된 계정별 대표 Character가 하나면 Character명
+- 대표 Character가 여러 계정에 있으면 첫 Character명과 `외 N개`
+- 서버에 동기화된 대표 Character가 없으면 `대표 캐릭터 지정 안 됨`
 - 마지막 앱 접속일 또는 `접속 기록 없음`
 - 서버 인증 GameAccount 보유 여부
 - Player 상태
 
-로컬 Drift에만 있는 대표 Character·미인증 GameAccount 정보를 목록 때문에 새로
-서버에 올리지 않는다. 서버에 여러 GameAccount·Character가 있어도 Player 기준 대표가
-명확하지 않으면 임의로 하나를 대표로 고르지 않는다.
+미인증 GameAccount와 Character는 목록 때문에 새로 서버에 올리지 않는다. 다만 active
+서버 소유 관계가 있는 GameAccount의 대표 Character 선택은 아래 계약에 따라 의도적으로
+서버에 동기화한다. 여러 계정 중 임의의 Character 하나를 Player 전체 대표로 간주하지
+않는다.
+
+#### 12.1.1 계정별 대표 Character 서버 동기화
+
+대표 Character는 GameAccount별 선택이다. 로컬 Drift의 정수 ID를 서버에 올리지 않고,
+이미 서버에 존재하는 Character 문서 ID만 소유 관계 문서에 기록한다.
+
+```text
+playerGameAccounts/{ownershipId}
+  representativeCharacterId: string | null
+  representativeCharacterUpdatedAt: timestamp | null
+```
+
+- `representativeCharacterId`는 active이고 현재 Player가 소유하며 같은 GameAccount에
+  속하는 서버 Character만 허용한다.
+- 최초 서버 동기화와 이후 변경 시각은 클라이언트 시각이 아닌 `request.time`이다.
+- 변경 제한은 Player 전체가 아니라 GameAccount별 5분이다.
+- 최초 지정은 즉시 허용하고, 성공한 지정 또는 변경 뒤 5분 동안 같은 GameAccount의
+  대표 Character를 다시 변경할 수 없다.
+- Rules는 affected keys를 두 대표 필드로 제한하고, 현재 active 소유자, 같은 계정의
+  active Character, 기존 값과 다른 값, 5분 경과를 모두 검증한다.
+- UI 제한은 안내용이며, 재실행·재설치·변조 클라이언트도 우회하지 못하도록 Rules에서
+  같은 제한을 강제한다.
+- 저장 중에는 선택 버튼을 비활성화하고 같은 Character 재선택은 서버 요청을 보내지
+  않는다. 제한 중에는 다음 변경 가능 시각 또는 남은 시간을 표시한다.
+- 대표 Character 변경은 온라인에서만 수행한다. 서버 저장 성공 뒤 로컬 대표 선택을
+  반영하며, 서버 저장이 실패하면 로컬 값도 변경하지 않는다.
+- 기존 로컬 대표는 해당 계정의 서버 필드가 없고 대응하는 active 서버 Character를
+  찾을 수 있을 때 계정당 한 번 보강한다. 보강 성공 시점부터 5분 제한을 적용한다.
+- 운영자 상세는 각 GameAccount의 대표 Character를 따로 표시한다.
 
 기본 정렬:
 
@@ -400,6 +435,8 @@ AuthUid와 원본 PlayerId는 일반 표시 항목으로 노출하지 않는다.
 - 새 Player의 null 초기값과 기존 Player의 null 보강 절차
 - 운영자 전용 라우트·페이지 진입 차단
 - `사용자 확인` 목록·상세의 서버 데이터 read model
+- 계정별 대표 Character 서버 동기화와 서버 강제 5분 변경 제한
+- 운영자 목록의 `Character명 외 N개`와 상세의 계정별 대표 Character 표시
 - 사용자 삭제와 수동 인증 쓰기는 제외
 
 ### Task-085. 수동 인증 요청과 운영자 1차 판정
@@ -432,5 +469,33 @@ Rules 배포와 Emulator 사용은 별도 승인 절차를 따른다.
 - 기존 소유자 방어 성공 시 신규 요청자의 해당 계정 인증이 차단된다.
 - 기한 후 자동 이전은 추가 운영 승인을 요구하지 않고 동시 요청에도 한 번만 적용된다.
 - `lastSeenAt`은 본인 필드만 서버 시각으로 갱신할 수 있다.
+- 대표 Character 변경은 같은 GameAccount에서 서버 기준 5분에 한 번만 성공한다.
+- 대표 Character는 같은 active GameAccount에 속한 본인 active 서버 Character만 가능하다.
 - 운영자 사용자 목록은 오래된 접속순이며 로컬 전용 데이터를 요구하지 않는다.
 - 사용자 삭제 기능이 포함되지 않는다.
+
+## 16. Task-084 구현 상태
+
+2026-08-28 코드 기준 다음이 구현됐다.
+
+- 새 Player 문서의 `lastSeenAt: null` 초기값
+- active binding 부트스트랩 완료 후 앱 실행당 한 번 서버 시각 갱신
+- `operatorAssignments/{playerId}` 본인 단건 확인과 active 운영자 Rules helper
+- 일반 사용자의 Player list 차단과 active 운영자의 Player list 허용
+- 기존 Player의 누락 `lastSeenAt`을 운영자 최초 목록 진입에서 null로 보강
+- 설정의 운영자 전용 `사용자 확인` 진입점
+- 접속 기록 없음·오래된 접속순 사용자 목록과 더 보기
+- 서버 GameAccount·Character·소유 상태만 사용하는 사용자 상세
+- 대표 Character가 서버에서 확정되지 않으면 `대표 캐릭터 지정 안 됨` 표시
+
+외부 적용 상태는 다음과 같다.
+
+- 변경된 Firestore Rules를 Firebase `lost-party`에 배포 — 완료(2026-08-28)
+- Firebase Console에서 실제 실기기 PlayerId의 active `operatorAssignments` 문서 생성 — 완료(2026-08-28, 잘못 지정한 기존 문서 삭제 확인)
+- 실기기 앱 재실행 후 `lastSeenAt` 갱신 — 완료(2026-08-28)
+- 실기기에서 운영자 진입과 사용자 목록 표시 — 완료(2026-08-28)
+- 계정별 대표 Character 서버 동기화·5분 제한과 목록·상세 표시 — 설계 확정, 구현 전
+- 실기기에서 사용자 상세와 일반 Player 차단 확인
+
+Rules 배포 전 새 앱 코드는 `lastSeenAt` update가 거절되어 부트스트랩 재시도 화면을
+표시한다. 따라서 앱 빌드 배포보다 Firestore Rules 배포를 먼저 수행한다.

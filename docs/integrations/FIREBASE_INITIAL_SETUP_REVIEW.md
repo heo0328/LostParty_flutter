@@ -366,7 +366,7 @@ Firestore 컬렉션을 아직 수동 생성하지 않은 것은 현재 단계에
 - Player 최초 생성 시 필요한 최소 프로필 필드
 - Player 표시명과 검색용 ID 제공 여부
 - 서버 Character ID 생성 및 동일 캐릭터 판정 기준
-- 대표 캐릭터 설정의 서버 동기화 여부
+- 대표 캐릭터 설정은 active `playerGameAccounts`에 서버 CharacterId로 동기화하며 GameAccount별 5분 변경 제한을 Rules에서 강제
 - 파티 수명주기와 완료 상태
 - 지원 Snapshot에 포함할 최소 필드와 서버 검증 수준
 - 다중 Player 필터의 대상 선택 방식과 최대 인원

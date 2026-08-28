@@ -22,7 +22,9 @@
 - 2026-08-28 현재 `main`에는 Task-082까지 반영됐다(`6597d7a`). Claim A~F·다음주 prep·orphan self-heal Rules는 `lost-party`에 배포된 상태이며 Task-082는 Rules를 바꾸지 않는다.
 - Task-080 F(Claim-only 게이트·orphan assignment self-heal·다음주 prep 캐릭터 변경·재완료 orphan Claim 정리) 완료. 복잡 꼬임은 BUG-007 보류.
 - Task-083에서 `PlayerId` 기반 운영자 지정, 인게임 채팅 스크린샷 수동 인증, 기존 소유자 24시간 방어·자동 이전, 대상 계정 인증 금지, 사용자 확인과 `lastSeenAt` 계약을 확정했다. 사용자 삭제는 보류한다.
-- 다음 구현은 **Task-084 운영자 권한·마지막 접속 기반**이다.
+- Task-084 운영자 권한·마지막 접속 기반 코드와 Rules·표적 테스트를 구현했다. 전체 테스트 456건과 `flutter analyze`가 통과했고 Rules는 `lost-party`에 배포했다. 실기기 `lastSeenAt`, active 운영자 지정, 설정의 `사용자 확인`과 목록 표시를 확인했다.
+- 실기기에서 로컬 대표 Character가 서버에 없어 목록이 모두 `대표 캐릭터 지정 안 됨`으로 표시되는 것을 확인했다. active `playerGameAccounts`에 서버 CharacterId를 동기화하고 Rules에서 계정별 5분 변경 제한을 강제하는 계약을 확정했다.
+- 다음 단계는 **Task-084 대표 Character 서버 동기화·운영자 표시 보완**이다. 완료 후 Task-085 수동 인증 요청과 운영자 1차 판정으로 이동한다.
 
 ---
 
@@ -123,9 +125,10 @@
 - `representativeCharacterId`: 사용자가 앱 내부에서 선택한 계정 대표 캐릭터
 - Lost Ark API가 공식 대표 캐릭터를 제공한다고 가정하지 않음
 - 계정 최초 등록 시 조회 캐릭터를 로컬 대표 캐릭터 기본값으로 사용할 수 있음
-- 대표 캐릭터는 같은 로컬 계정 그룹의 캐릭터 중 언제든 변경 가능
-- 대표 캐릭터 변경에는 쿨타임이나 API 재호출을 요구하지 않음
-- 대표 캐릭터 변경은 로컬 설정만 갱신
+- 대표 캐릭터는 같은 로컬 계정 그룹의 캐릭터 중 사용자가 선택
+- 미인증 계정은 로컬 설정만 유지하고, active 서버 소유 관계가 있는 계정은 서버 CharacterId를 `playerGameAccounts`에 동기화
+- 서버 동기화 계정의 대표 캐릭터 변경은 GameAccount별 5분 제한이며 Rules에서 서버 시각으로 강제
+- 서버 저장 성공 뒤 로컬 값을 반영하고, 같은 값 재선택과 저장 중 연속 터치는 추가 요청을 보내지 않음
 
 ### 계정 로컬 DB 기반
 - Drift `game_accounts`, `account_characters` 스키마 버전 1 구현
@@ -299,7 +302,7 @@
 ## 다음 작업
 
 현재 작업 순서와 완료 상태의 단일 기준은 `docs/project/NEXT_WORK.md`다.
-Task-082까지 `main`에 반영됐다(`6597d7a`). Task-083 운영자 권한 계약 문서가 준비됐고 다음 실행은 **Task-084 운영자 권한·마지막 접속 기반**이다. 복잡 꼬임은 `BUG_REPORTS.md` BUG-007.
+Task-082까지 `main`에 반영됐다(`6597d7a`). Task-083 계약과 Task-084 기반 구현·Rules 배포·운영자 진입/목록 실기기 확인까지 완료했다. 다음 실행은 **Task-084 대표 Character 서버 동기화·5분 제한·운영자 표시 보완**이다. 복잡 꼬임은 `BUG_REPORTS.md` BUG-007.
 `codex/combat-power-auto-title`에서 전투력 표시 통일과 자동 모집 제목 구현 및 자동 검증을 완료했다.
 `codex/full-recruitment-edit`에서 생성·수정 공용 폼, 전체 모집 수정 흐름과 공통 입력 지우기 동작을 구현하고 Android 실기기 검증을 통과했다.
 완료 결과는 `main`과 `origin/main`에 통합됐다.

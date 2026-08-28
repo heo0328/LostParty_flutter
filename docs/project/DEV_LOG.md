@@ -1785,3 +1785,16 @@
 - 로컬 전용 대표 캐릭터·미인증 계정은 추가 업로드하지 않으며 서버에서 대표를 정할 수 없으면 `대표 캐릭터 지정 안 됨`으로 표시한다.
 - 사용자 삭제·삭제 대기·강제 삭제와 앱 재설치 우회 차단은 보류했다.
 - 다음 구현: Task-084 운영자 권한·마지막 접속 기반.
+
+---
+
+## Task-084 후속 설계. 대표 Character 서버 동기화 (2026-08-28)
+
+- 실기기에서 운영자 `사용자 확인` 진입과 목록 표시를 확인했다.
+- 기존 구현은 운영자 read model의 `representativeCharacterName`을 null로 두고 대표 선택은 Drift에만 저장해, 대표 Character가 있는 사용자도 `대표 캐릭터 지정 안 됨`으로 표시됐다.
+- active 서버 소유 관계가 있는 계정은 `playerGameAccounts`에 서버 `representativeCharacterId`와 서버 갱신 시각을 동기화한다. 로컬 정수 ID와 미인증 계정 데이터는 업로드하지 않는다.
+- 대표 변경은 GameAccount별 5분에 한 번만 성공하며 UI와 Firestore Rules 양쪽에서 제한한다. Rules는 현재 active 소유자, 같은 계정의 active Character, 값 변경, `request.time`을 검증한다.
+- 같은 Character 재선택과 저장 중 연속 터치는 쓰기를 만들지 않고, 서버 저장 성공 뒤에만 로컬 대표 선택을 반영한다. 오프라인 변경은 거절한다.
+- 기존 로컬 대표는 대응하는 active 서버 Character가 있을 때 계정당 한 번 보강하고 그 시점부터 5분 제한을 적용한다.
+- 운영자 목록은 대표가 여러 계정이면 `Character명 외 N개`, 상세는 GameAccount별 대표 Character를 표시한다.
+- 코드는 아직 수정하지 않았으며 다음 작업은 이 계약의 Rules·Repository·UI·테스트 구현이다.

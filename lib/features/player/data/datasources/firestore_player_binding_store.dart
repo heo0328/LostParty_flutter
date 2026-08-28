@@ -30,6 +30,7 @@ class FirestorePlayerBindingStore implements PlayerBindingStore {
       transaction.set(playerRef, {
         'schemaVersion': schemaVersion,
         'status': activeStatus,
+        'lastSeenAt': null,
         'createdAt': now,
         'updatedAt': now,
       });
