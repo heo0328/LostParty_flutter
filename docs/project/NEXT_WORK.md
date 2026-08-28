@@ -55,7 +55,7 @@
 | 완료 기능 | 멤버십·회차 + 알림 + Claim A~F + 내 계정 표기 + 공개 목록 내 방 제외 | Task-068~082 |
 | Firestore Rules | Claim A~F·다음주 prep·orphan self-heal **배포됨** | Firebase `lost-party` (이번 작업 변경 없음) |
 | 현재 코드 상태 | **`main`** | Task-082 병합 후 |
-| 다음 구현 | **Task-083 운영자 계정 권한 기반 설계** | 설계만 |
+| 다음 구현 | **Task-084 운영자 권한·마지막 접속 기반** | Task-083 계약 완료 후 첫 구현 |
 
 ### Task-073 확인 완료 사항 (2026-08-27)
 
@@ -87,7 +87,8 @@
 | 8 | 개인 주간 완료 Claim 구현 A~F | **A~F 완료** | 체크박스·서버 제한·개인/전체 완료 |
 | 8a | 내 계정 주간 레이드 표시 설정 | **Task-081 완료** | 0~5개·선택·원정대 일괄, 접기 없음 |
 | 9 | **레이드 모집에서 내 모집 제외** | **완료 (Task-082)** | 공개 모집과 내 현황 분리 |
-| 10 | **운영자 계정 권한 기반 설계** | **다음 실행 (Task-083)** | 일반 사용자와 분리된 권한 경계 |
+| 10 | **운영자 계정 권한 기반 설계** | **완료 (Task-083)** | 일반 사용자와 분리된 권한 경계 |
+| 10a | **운영자 권한·마지막 접속 기반** | **다음 실행 (Task-084)** | 운영자 진입, lastSeenAt, 사용자 서버 목록 |
 | 11 | 그룹 생성·가입 | 그룹 계약 확정 | 그룹 membership 기반 |
 | 12 | 그룹 전용 모집 | 그룹 membership 안정화 | 생성 드롭다운과 그룹 Rules |
 | 13 | 레이드 모집·현황 공통 필터 | 그룹 공개 범위 확정 | 공통 UX, Firestore/Drift 조회 분리 |
@@ -377,35 +378,68 @@
 - [x] 브랜치 커밋·`main` 반영 (`6597d7a`, fast-forward)
 - origin 푸시는 사용자 지시 시
 
-## 다음 실행 작업 — Task-083 운영자 계정 권한 기반 설계
+## 다음 실행 작업 — Task-084 운영자 권한·마지막 접속 기반
 
 ```text
-현재 Task: Task-083 운영자 계정 권한 기반 설계
-현재 단계: 설계만 / 구현 시작 전
-브랜치: 신규 (예: codex/task-083-operator-authz-design)
-작업 트리: main = Task-082 완료
+현재 Task: Task-084 운영자 권한·마지막 접속 기반
+현재 단계: 구현 시작 전
+브랜치: 신규 (예: codex/task-084-operator-access-foundation)
+작업 트리: main + Task-083 문서 변경
 ```
 
 ### 목표
 
-특정 Player와 운영 기능을 확정하기 전에, 일반 사용자와 분리된 운영자 권한 경계만 문서화한다.
+Task-083 계약의 첫 구현으로 운영자 진입 경계, 마지막 앱 접속 시각과 사용자 서버 목록을 연결한다.
 
 ### 포함 범위
 
-- 운영자 식별 방식(하드코드 PlayerId, 별도 claim, 전용 문서 등)의 후보와 Spark 제약
-- 일반 사용자 Rules·명령이 운영 경로를 타지 않게 하는 불변식
-- 허용할 운영 기능의 최소 목록과 명시적 비범위
+- `operatorAssignments/{playerId}` active 지정 읽기와 Rules helper
+- 운영자 전용 라우트·페이지 진입 차단
+- `players/{playerId}.lastSeenAt`을 부트스트랩 완료 후 새 앱 실행당 한 번 서버 시각으로 갱신
+- 새 Player는 `lastSeenAt: null`로 만들고 기존 Player는 명시적 보강 후 정렬 쿼리를 사용
+- 운영자 `사용자 확인` 목록을 접속 기록 없음·오래된 접속순으로 페이지 조회
+- 사용자 상세에서 서버에 이미 존재하는 GameAccount·Character·인증 상태만 조회
+- 대표 Character를 서버에서 명확히 정할 수 없으면 `대표 캐릭터 지정 안 됨` 표시
 
 ### 제외 범위
 
-- Flutter 화면·Rules 구현·배포
+- 수동 인증 요청·승인·24시간 자동 이전 구현(Task-085~086)
+- 사용자 삭제·삭제 대기·강제 삭제
+- 로컬 미인증 계정·대표 Character의 추가 서버 업로드
 - 그룹·채팅·필터·Claim 변경
-- 유료 플랜·Callable Functions 전제
+- 유료 플랜·Callable Functions·FCM 전제
 
 ### 완료 조건
 
-- 운영자 권한 계약 문서와 `NEXT_WORK`의 다음 구현 단위가 한 작업 크기로 준비됨
-- 코드 변경 없음(설계 전용) 또는 문서만 변경
+- 일반 사용자가 운영자 지정과 사용자 목록을 list할 수 없음
+- active 운영자만 운영자 페이지와 사용자 read model 사용
+- `lastSeenAt`은 본인 Player의 해당 필드만 `request.time`으로 갱신
+- 기존 Player의 필드 없음은 `접속 기록 없음`으로 정상 표시
+- 로컬 전용 정보와 민감 ID를 운영자 목록 때문에 서버에 추가하지 않음
+- 표적 테스트·analyze 통과, Rules 배포는 사용자 승인 후 별도 수행
+
+### 기준 계약
+
+- [`../architecture/OPERATOR_AUTHORIZATION_CONTRACT.md`](../architecture/OPERATOR_AUTHORIZATION_CONTRACT.md)
+
+## 완료 작업 — Task-083 운영자 계정 권한 기반 설계
+
+### 확정 결과
+
+- 운영자는 Firestore `operatorAssignments/{playerId}`의 active 지정과 현재 AuthUid→PlayerId binding을 함께 검증한다.
+- 일반 사용자는 운영자 지정 문서를 쓰거나 운영 명령을 호출할 수 없다.
+- 사용자는 등록 게임 계정별로 24시간 수동 인증 코드를 받고, 인게임 일반 채팅 전체 화면을 오픈카톡으로 운영자에게 전달한다.
+- 운영자는 요청별 승인·취소·인증 금지를 선택하고 Player·대상 GameAccount별 시도 횟수를 확인한다.
+- 기존 active 소유자가 있으면 운영자 1차 승인 뒤 기존 소유자에게 24시간 수동 재인증 기회를 준다.
+- 기존 소유자가 방어하면 소유권을 유지하고 신규 요청자는 해당 GameAccount 인증 금지된다.
+- 무응답이면 추가 운영 승인 없이 신규 요청자에게 자동 이전한다. Spark에서는 기한 후 최초 안전한 앱·운영자 접근이 이전 Transaction을 물리적으로 확정한다.
+- 운영자 사용자 확인은 서버 데이터만 사용하며 마지막 앱 접속은 `players.lastSeenAt` 최신값 하나만 기록한다.
+- 사용자 삭제·삭제 대기·강제 삭제와 재설치 우회 차단은 보류한다.
+
+### 산출물
+
+- [`../architecture/OPERATOR_AUTHORIZATION_CONTRACT.md`](../architecture/OPERATOR_AUTHORIZATION_CONTRACT.md)
+- Task-084~086 구현 분할
 
 ## 완료 작업 — Task-081 내 계정 주간 레이드 표시 설정
 
@@ -445,12 +479,13 @@
 
 ## 참고 문서
 
-Task-083을 시작할 때 먼저 확인할 문서:
+Task-084를 시작할 때 먼저 확인할 문서:
 
-1. [`../product/DETAIL_IMPROVEMENTS.md`](../product/DETAIL_IMPROVEMENTS.md)
-2. [`../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md)
-3. [`../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`](../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md)
-4. [`ai_rules.md`](ai_rules.md)
+1. [`../architecture/OPERATOR_AUTHORIZATION_CONTRACT.md`](../architecture/OPERATOR_AUTHORIZATION_CONTRACT.md)
+2. [`../architecture/FIREBASE_PLAYER_BINDING_CONTRACT.md`](../architecture/FIREBASE_PLAYER_BINDING_CONTRACT.md)
+3. [`../architecture/GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT.md`](../architecture/GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT.md)
+4. [`../product/DETAIL_IMPROVEMENTS.md`](../product/DETAIL_IMPROVEMENTS.md)
+5. [`ai_rules.md`](ai_rules.md)
 
 열린 결함:
 

@@ -21,7 +21,8 @@
 - 현재 저장 브랜치와 커밋은 `NEXT_WORK.md`의 기준 상태를 따른다.
 - 2026-08-28 현재 `main`에는 Task-082까지 반영됐다(`6597d7a`). Claim A~F·다음주 prep·orphan self-heal Rules는 `lost-party`에 배포된 상태이며 Task-082는 Rules를 바꾸지 않는다.
 - Task-080 F(Claim-only 게이트·orphan assignment self-heal·다음주 prep 캐릭터 변경·재완료 orphan Claim 정리) 완료. 복잡 꼬임은 BUG-007 보류.
-- 다음 작업은 **Task-083 운영자 계정 권한 기반 설계**다.
+- Task-083에서 `PlayerId` 기반 운영자 지정, 인게임 채팅 스크린샷 수동 인증, 기존 소유자 24시간 방어·자동 이전, 대상 계정 인증 금지, 사용자 확인과 `lastSeenAt` 계약을 확정했다. 사용자 삭제는 보류한다.
+- 다음 구현은 **Task-084 운영자 권한·마지막 접속 기반**이다.
 
 ---
 
@@ -298,7 +299,7 @@
 ## 다음 작업
 
 현재 작업 순서와 완료 상태의 단일 기준은 `docs/project/NEXT_WORK.md`다.
-Task-082까지 `main`에 반영됐다(`6597d7a`). 다음 실행은 **Task-083 운영자 계정 권한 기반 설계**다. 복잡 꼬임은 `BUG_REPORTS.md` BUG-007.
+Task-082까지 `main`에 반영됐다(`6597d7a`). Task-083 운영자 권한 계약 문서가 준비됐고 다음 실행은 **Task-084 운영자 권한·마지막 접속 기반**이다. 복잡 꼬임은 `BUG_REPORTS.md` BUG-007.
 `codex/combat-power-auto-title`에서 전투력 표시 통일과 자동 모집 제목 구현 및 자동 검증을 완료했다.
 `codex/full-recruitment-edit`에서 생성·수정 공용 폼, 전체 모집 수정 흐름과 공통 입력 지우기 동작을 구현하고 Android 실기기 검증을 통과했다.
 완료 결과는 `main`과 `origin/main`에 통합됐다.
