@@ -3,7 +3,11 @@ import 'recruitment_application.dart';
 import 'party_recruitment.dart';
 
 /// 공개 목록 페이지 크기. Repository·ViewModel이 동일한 값을 사용한다.
+/// 크기는 내 방 제외 전 Firestore 문서 수 기준이다.
 const int publicRecruitmentPageSize = 20;
+
+/// 필터 후 첫 화면이 비고 다음 cursor가 있을 때, 시작·갱신당 자동 보충 한도.
+const int publicRecruitmentEmptyAutoFillMaxPages = 3;
 
 class PartyReadSnapshot<T> {
   const PartyReadSnapshot({required this.items, required this.isFromCache});

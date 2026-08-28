@@ -19,6 +19,23 @@ class PartyReadDocumentMapper {
 
   final DateTime Function(Object? value) toDateTime;
 
+  /// 공개 목록에서 현재 Player의 책임자·확정 멤버 방인지 본다.
+  /// [memberPlayerIds] 원문은 Domain 모델에 올리지 않고 여기서만 소비한다.
+  bool isCurrentPlayerOwnPublicRecruitment(
+    PartyReadDocumentDto document, {
+    required String currentPlayerId,
+  }) {
+    if (currentPlayerId.trim().isEmpty) return false;
+    final data = document.data;
+    final leaderPlayerId = data['leaderPlayerId'];
+    if (leaderPlayerId is String && leaderPlayerId == currentPlayerId) {
+      return true;
+    }
+    final memberPlayerIds = data['memberPlayerIds'];
+    if (memberPlayerIds is! List) return false;
+    return memberPlayerIds.any((id) => id == currentPlayerId);
+  }
+
   PublicRecruitmentSummary toPublicRecruitment(
     PartyReadDocumentDto document,
   ) {

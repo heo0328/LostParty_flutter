@@ -25,7 +25,12 @@ class PublicRecruitmentListState {
   final PartyReadFailureType? appendFailure;
   final bool hasMore;
 
-  bool get isEmpty => !isLoading && failure == null && items.isEmpty;
+  bool get isEmpty =>
+      !isLoading &&
+      !isLoadingMore &&
+      failure == null &&
+      appendFailure == null &&
+      items.isEmpty;
 
   bool get hasFailureWithItems => failure != null && items.isNotEmpty;
 
@@ -38,13 +43,18 @@ class PublicRecruitmentListViewModel extends ChangeNotifier {
   PublicRecruitmentListViewModel({
     required PartyReadRepository repository,
     required String cycleKey,
+    required String currentPlayerId,
     this.pageSize = publicRecruitmentPageSize,
+    this.emptyAutoFillMaxPages = publicRecruitmentEmptyAutoFillMaxPages,
   }) : _repository = repository,
-       _cycleKey = cycleKey;
+       _cycleKey = cycleKey,
+       _currentPlayerId = currentPlayerId;
 
   final PartyReadRepository _repository;
   final String _cycleKey;
+  final String _currentPlayerId;
   final int pageSize;
+  final int emptyAutoFillMaxPages;
 
   StreamSubscription<PublicRecruitmentPage>? _subscription;
   PublicRecruitmentListState _state = const PublicRecruitmentListState();
@@ -53,13 +63,19 @@ class PublicRecruitmentListViewModel extends ChangeNotifier {
   Set<String>? _firstPageIds;
   PublicRecruitmentPageCursor? _nextCursor;
   var _generation = 0;
+  var _autoFillCount = 0;
 
   PublicRecruitmentListState get state => _state;
 
   void start() {
     if (_subscription != null) return;
+    _autoFillCount = 0;
     _subscription = _repository
-        .watchPublicRecruitmentFirstPage(cycleKey: _cycleKey, limit: pageSize)
+        .watchPublicRecruitmentFirstPage(
+          cycleKey: _cycleKey,
+          currentPlayerId: _currentPlayerId,
+          limit: pageSize,
+        )
         .listen(_onFirstPage, onError: _onFirstPageError);
   }
 
@@ -96,6 +112,7 @@ class PublicRecruitmentListViewModel extends ChangeNotifier {
     try {
       final page = await _repository.loadPublicRecruitmentNextPage(
         cycleKey: _cycleKey,
+        currentPlayerId: _currentPlayerId,
         cursor: cursor,
         limit: pageSize,
       );
@@ -111,6 +128,7 @@ class PublicRecruitmentListViewModel extends ChangeNotifier {
         hasMore: page.hasMore,
       );
       notifyListeners();
+      await _maybeAutoFill();
     } catch (error) {
       if (generation != _generation) return;
       _state = PublicRecruitmentListState(
@@ -170,6 +188,17 @@ class PublicRecruitmentListViewModel extends ChangeNotifier {
     _firstPageItems = page.items;
     _firstPageIds = newIds;
     notifyListeners();
+    unawaited(_maybeAutoFill());
+  }
+
+  Future<void> _maybeAutoFill() async {
+    if (_autoFillCount >= emptyAutoFillMaxPages) return;
+    if (_state.items.isNotEmpty) return;
+    if (_state.isLoading || _state.isLoadingMore) return;
+    if (_state.failure != null || _state.appendFailure != null) return;
+    if (!_state.hasMore || _nextCursor == null) return;
+    _autoFillCount += 1;
+    await loadMore();
   }
 
   void _onFirstPageError(Object error) {

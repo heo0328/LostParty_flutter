@@ -51,11 +51,11 @@
 
 | 구분 | 상태 | 비고 |
 | --- | --- | --- |
-| 통합 기준 | **`main` = Task-080 F 완료** | 병합 `c45dba2` |
-| 완료 기능 | 멤버십·회차 + 알림 + Claim A~F + 내 계정 표기 설정 | Task-068~081 |
-| Firestore Rules | Claim A~F·다음주 prep·orphan self-heal **배포됨** | Firebase `lost-party` |
-| 현재 코드 상태 | **`main`** | Task-080 F 병합 후 |
-| 다음 구현 | **Task-082 레이드 모집에서 내 모집 제외** | 공개 목록 UX |
+| 통합 기준 | **`main` = Task-082 완료** | 병합 후 기록 |
+| 완료 기능 | 멤버십·회차 + 알림 + Claim A~F + 내 계정 표기 + 공개 목록 내 방 제외 | Task-068~082 |
+| Firestore Rules | Claim A~F·다음주 prep·orphan self-heal **배포됨** | Firebase `lost-party` (이번 작업 변경 없음) |
+| 현재 코드 상태 | **`main`** | Task-082 병합 후 |
+| 다음 구현 | **Task-083 운영자 계정 권한 기반 설계** | 설계만 |
 
 ### Task-073 확인 완료 사항 (2026-08-27)
 
@@ -86,8 +86,8 @@
 | 7 | **개인 주간 완료 Claim 계약** | **Task-074 완료** | 파티·점유·개인 완료 단일 기준 확정 |
 | 8 | 개인 주간 완료 Claim 구현 A~F | **A~F 완료** | 체크박스·서버 제한·개인/전체 완료 |
 | 8a | 내 계정 주간 레이드 표시 설정 | **Task-081 완료** | 0~5개·선택·원정대 일괄, 접기 없음 |
-| 9 | **레이드 모집에서 내 모집 제외** | **다음 실행 (Task-082)** | 공개 모집과 내 현황 분리 |
-| 10 | 운영자 계정 권한 기반 설계 | 특정 Player와 기능 확정 전 설계만 | 일반 사용자와 분리된 권한 경계 |
+| 9 | **레이드 모집에서 내 모집 제외** | **완료 (Task-082)** | 공개 모집과 내 현황 분리 |
+| 10 | **운영자 계정 권한 기반 설계** | **다음 실행 (Task-083)** | 일반 사용자와 분리된 권한 경계 |
 | 11 | 그룹 생성·가입 | 그룹 계약 확정 | 그룹 membership 기반 |
 | 12 | 그룹 전용 모집 | 그룹 membership 안정화 | 생성 드롭다운과 그룹 Rules |
 | 13 | 레이드 모집·현황 공통 필터 | 그룹 공개 범위 확정 | 공통 UX, Firestore/Drift 조회 분리 |
@@ -350,53 +350,62 @@
 - [x] 브랜치 커밋·`main` 병합 (`3726be8` / `c45dba2`)
 - origin 푸시는 사용자 지시 시
 
-## 다음 실행 작업 — Task-082 레이드 모집에서 내 모집 제외
+## 완료 작업 — Task-082 레이드 모집에서 내 모집 제외
 
 ```text
 현재 Task: Task-082 레이드 모집에서 내 모집 제외
-현재 단계: 정책 확정 / 구현 시작 가능
-브랜치: 신규 (예: cursor/task-082-exclude-own-recruitments)
-작업 트리: main = Task-080 F 완료
+현재 단계: 완료 (main 병합 후 기록)
+브랜치: cursor/task-082-exclude-own-recruitments
+```
+
+### 구현 결과
+
+- 기존 공개 Firestore 쿼리는 유지하고, data 계층에서 `leaderPlayerId`·`memberPlayerIds`로 현재 Player의 책임자·확정 멤버 방을 제외한다.
+- `memberPlayerIds` 전체를 `PublicRecruitmentSummary`에 올리지 않는다. Rules는 변경하지 않는다.
+- 신청만 `pending`인 방은 공개 목록에 남긴다.
+- 필터 전 페이지 크기 20·cursor를 유지하고, 필터 후 빈 첫 화면은 시작·갱신당 최대 3페이지 자동 보충한다.
+- 빈 목록 안내로 공개 탐색과 레이드 현황의 역할을 구분한다.
+
+### 검증
+
+- 표적 테스트(mapper 제외 판정, ViewModel 자동 보충 한도, 빈 안내 UI)·`flutter analyze --no-pub` 통과
+- 실기기(1대): 내가 만든 방 제외, pending 신청 방 유지, 현황 목록 정상
+- 다른 Player 방의 확정 멤버 제외는 2인 환경이 없어 실기기 미실시. 같은 제외 함수의 멤버 분기는 테스트로 고정
+
+### 남은 Git
+
+- [ ] 브랜치 커밋·`main` 병합
+- origin 푸시는 사용자 지시 시
+
+## 다음 실행 작업 — Task-083 운영자 계정 권한 기반 설계
+
+```text
+현재 Task: Task-083 운영자 계정 권한 기반 설계
+현재 단계: 설계만 / 구현 시작 전
+브랜치: 신규 (예: codex/task-083-operator-authz-design)
+작업 트리: main = Task-082 완료
 ```
 
 ### 목표
 
-공개 레이드 모집 목록에서 **내가 책임자이거나 이미 참가 중인 방**을 제외하거나 분리해, 공개 탐색과 내 현황(레이드 현황)의 역할을 분명히 한다.
+특정 Player와 운영 기능을 확정하기 전에, 일반 사용자와 분리된 운영자 권한 경계만 문서화한다.
 
-### 시작 전 확인
+### 포함 범위
 
-- 시작 전 확인: Task-080 F가 `main`에 있는지(Rules는 이미 재배포됨)
-- 공개 목록 쿼리·`PublicRecruitmentSummary`·현황 탭 경계를 [`FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`](../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md)와 대조
-
-### 확정 정책
-
-- 공개 모집 목록에서 `leaderPlayerId == currentPlayerId`이거나 `memberPlayerIds`에 현재 PlayerId가 포함된 `active` 방을 제외한다. 책임자가 멤버 배열에도 들어가는 정상 데이터와 별개로 두 조건을 모두 검사한다.
-- 신청만 `pending`인 방은 공개 목록에 유지한다. 승인되어 실제 멤버가 되는 즉시 제외하며, `rejected`·`withdrawn` 방도 다른 공개 조건을 만족하면 유지한다.
-- Firestore에는 `array-not-contains`가 없으므로 기존 공개 쿼리는 유지하고, **data 계층에서 문서 원문의 책임자·멤버 ID를 검사한 뒤** `PublicRecruitmentSummary`로 변환한다. 전체 `memberPlayerIds`를 Domain·presentation에 새로 노출하지 않는다.
-- 서버 페이지 크기 20과 cursor는 필터 전 원문 기준이다. 화면 항목 수가 20보다 적어도 정상이며, 사용자가 목록 하단 240px에 접근하면 기존처럼 다음 페이지를 자동 로딩한다. 별도 `더 보기` 버튼은 두지 않는다.
-- 필터 결과가 0개이고 다음 cursor가 있어 스크롤이 생기지 않는 경우에만 다음 페이지를 제한적으로 자동 보충한다. 한 번의 시작·갱신에서 최대 3페이지까지만 연속 조회해 무제한 읽기를 막는다.
-- 첫 페이지 실시간 snapshot에서 가입 승인·탈퇴·책임자 승계가 반영될 때마다 필터를 다시 적용한다. 필터 후 첫 페이지 ID 집합이 바뀌면 기존 계약대로 추가 페이지와 cursor를 초기화한다.
-- 공개 결과가 최종적으로 비면 `참여 가능한 공개 모집이 없습니다. 내가 참여 중인 파티는 레이드 현황에서 확인할 수 있습니다.` 취지로 공개 탐색과 내 현황의 역할을 안내한다.
-
-### 구현 확인 지점
-
-- `PartyReadRepository` 공개 목록 API에 현재 Player 식별자를 전달하되, Firestore·PlayerId 타입을 presentation에 노출하지 않는다.
-- 첫 페이지 실시간 구독과 cursor 기반 추가 페이지 모두 동일한 제외 함수를 사용한다.
-- 필터로 인한 빈 첫 화면의 제한적 자동 보충, 하단 스크롤 자동 로딩, 추가 조회 실패 `다시 시도`, pull-to-refresh가 함께 동작하는지 확인한다.
-- 기존 정렬·빈 자리·현재 주차 조건과 레이드 현황 쿼리는 변경하지 않는다.
+- 운영자 식별 방식(하드코드 PlayerId, 별도 claim, 전용 문서 등)의 후보와 Spark 제약
+- 일반 사용자 Rules·명령이 운영 경로를 타지 않게 하는 불변식
+- 허용할 운영 기능의 최소 목록과 명시적 비범위
 
 ### 제외 범위
 
-- 그룹 전용 모집, 공통 필터 확장, Claim 계약 변경
-- 그룹·채팅·운영자 기능
-- BUG-007 심화 hardening
+- Flutter 화면·Rules 구현·배포
+- 그룹·채팅·필터·Claim 변경
+- 유료 플랜·Callable Functions 전제
 
 ### 완료 조건
 
-- 공개 목록과 내 현황의 역할이 문서·UI에서 분리됨
-- 책임자·확정 멤버 제외, 신청 중 유지, 제한적 자동 보충 정책이 Repository·ViewModel 테스트로 고정됨
-- 표적 테스트·analyze·실기기 확인
-- `DEV_LOG`·`AI_CONTEXT`·`NEXT_WORK` 갱신 후 Git 종료
+- 운영자 권한 계약 문서와 `NEXT_WORK`의 다음 구현 단위가 한 작업 크기로 준비됨
+- 코드 변경 없음(설계 전용) 또는 문서만 변경
 
 ## 완료 작업 — Task-081 내 계정 주간 레이드 표시 설정
 
@@ -436,11 +445,11 @@
 
 ## 참고 문서
 
-Task-082를 시작할 때 먼저 확인할 문서:
+Task-083을 시작할 때 먼저 확인할 문서:
 
-1. [`../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`](../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md)
-2. [`../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`](../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md)
-3. [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md) (Claim 경계 유지)
+1. [`../product/DETAIL_IMPROVEMENTS.md`](../product/DETAIL_IMPROVEMENTS.md)
+2. [`../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md)
+3. [`../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`](../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md)
 4. [`ai_rules.md`](ai_rules.md)
 
 열린 결함:

@@ -9,11 +9,13 @@ class RecruitmentListPage extends StatefulWidget {
   const RecruitmentListPage({
     required this.partyReadRepository,
     required this.cycleKey,
+    required this.currentPlayerId,
     super.key,
   });
 
   final PartyReadRepository partyReadRepository;
   final String cycleKey;
+  final String currentPlayerId;
 
   @override
   State<RecruitmentListPage> createState() => _RecruitmentListPageState();
@@ -28,6 +30,7 @@ class _RecruitmentListPageState extends State<RecruitmentListPage> {
     _viewModel = PublicRecruitmentListViewModel(
       repository: widget.partyReadRepository,
       cycleKey: widget.cycleKey,
+      currentPlayerId: widget.currentPlayerId,
     )..addListener(_onChanged);
     _viewModel.start();
   }
@@ -63,7 +66,7 @@ class _RecruitmentListPageState extends State<RecruitmentListPage> {
 
   Widget _buildBody() {
     final state = _viewModel.state;
-    if (state.isLoading) {
+    if (state.isLoading || (state.isLoadingMore && state.items.isEmpty)) {
       return const Center(child: CircularProgressIndicator());
     }
     if (state.failure != null && state.items.isEmpty) {
@@ -96,7 +99,15 @@ class _RecruitmentListPageState extends State<RecruitmentListPage> {
           children: [
             if (state.isFromCache) const _OfflineNotice(),
             const SizedBox(height: 120),
-            const Center(child: Text('현재 모집 중인 파티가 없습니다.')),
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  '참여 가능한 공개 모집이 없습니다. 내가 참여 중인 파티는 레이드 현황에서 확인할 수 있습니다.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
           ],
         ),
       );

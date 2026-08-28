@@ -23,6 +23,7 @@ void main() {
         home: RecruitmentListPage(
           partyReadRepository: repository,
           cycleKey: '2026-08-19',
+          currentPlayerId: 'player-1',
         ),
       ),
     );
@@ -49,6 +50,7 @@ void main() {
         home: RecruitmentListPage(
           partyReadRepository: repository,
           cycleKey: '2026-08-19',
+          currentPlayerId: 'player-1',
         ),
       ),
     );
@@ -62,7 +64,12 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('현재 모집 중인 파티가 없습니다.'), findsOneWidget);
+    expect(
+      find.text(
+        '참여 가능한 공개 모집이 없습니다. 내가 참여 중인 파티는 레이드 현황에서 확인할 수 있습니다.',
+      ),
+      findsOneWidget,
+    );
     expect(find.textContaining('오프라인'), findsOneWidget);
   });
 
@@ -76,6 +83,7 @@ void main() {
       publicFirstPage: firstPage.stream,
       loadNextPage: ({
         required String cycleKey,
+        required String currentPlayerId,
         required PublicRecruitmentPageCursor cursor,
         int limit = publicRecruitmentPageSize,
       }) async {
@@ -99,6 +107,7 @@ void main() {
           builder: (context, state) => RecruitmentListPage(
             partyReadRepository: repository,
             cycleKey: '2026-08-19',
+            currentPlayerId: 'player-1',
           ),
         ),
         GoRoute(

@@ -1759,3 +1759,14 @@
 - 표적 테스트·analyze 통과. Rules는 사용자가 `lost-party`에 재배포했다.
 - `main` 반영: 구현 `3726be8`, 병합 `c45dba2`.
 - 다음 실행: Task-082 레이드 모집에서 내 모집 제외.
+
+---
+
+## Task-082. 레이드 모집에서 내 모집 제외 (2026-08-28)
+
+- 작업 브랜치: `cursor/task-082-exclude-own-recruitments`
+- 공개 Firestore 쿼리는 유지하고, data 계층에서 `leaderPlayerId` 또는 `memberPlayerIds`에 현재 Player가 있는 `active` 방을 제외한다. `memberPlayerIds`는 Domain에 새로 노출하지 않는다.
+- 신청만 `pending`인 방은 공개 목록에 남긴다. 필터 전 페이지 크기 20을 유지하고, 필터 후 빈 첫 화면은 시작·갱신당 최대 3페이지까지 자동 보충한다.
+- 빈 목록 문구로 공개 탐색과 레이드 현황의 역할을 안내한다. Rules는 변경하지 않는다.
+- 표적 테스트·analyze 통과. 실기기(1대)에서 내가 만든 방 제외, pending 신청 유지, 현황 목록 정상을 확인했다. 다른 Player 방의 확정 멤버 제외는 2인 환경이 없어 실기기 미실시(같은 함수 테스트로 고정).
+- 다음 실행: Task-083 운영자 계정 권한 기반 설계.

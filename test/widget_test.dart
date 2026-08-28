@@ -46,7 +46,12 @@ void main() {
 
     expect(find.text('파티 모집'), findsOneWidget);
     expect(find.text('레이드 모집'), findsOneWidget);
-    expect(find.text('현재 모집 중인 파티가 없습니다.'), findsOneWidget);
+    expect(
+      find.text(
+        '참여 가능한 공개 모집이 없습니다. 내가 참여 중인 파티는 레이드 현황에서 확인할 수 있습니다.',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('모집 만들기'), findsOneWidget);
   });
 

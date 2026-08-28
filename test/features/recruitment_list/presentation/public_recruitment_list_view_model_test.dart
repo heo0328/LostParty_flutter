@@ -28,6 +28,7 @@ void main() {
       publicFirstPage: firstPage.stream,
       loadNextPage: ({
         required String cycleKey,
+        required String currentPlayerId,
         required PublicRecruitmentPageCursor cursor,
         int limit = publicRecruitmentPageSize,
       }) async {
@@ -47,6 +48,7 @@ void main() {
     return PublicRecruitmentListViewModel(
       repository: repository,
       cycleKey: '2026-08-19',
+      currentPlayerId: 'player-1',
       pageSize: 2,
     );
   }
@@ -304,6 +306,74 @@ void main() {
 
     expect(viewModel.state.items.map((e) => e.id), ['fresh']);
     expect(viewModel.state.hasMore, isFalse);
+  });
+
+  test('필터 후 첫 화면이 비고 다음 페이지가 있으면 자동 보충한다', () async {
+    final viewModel = createViewModel()..start();
+    addTearDown(viewModel.dispose);
+
+    firstPage.add(
+      PublicRecruitmentPage(
+        items: const [],
+        hasMore: true,
+        nextCursor: const FakePublicRecruitmentPageCursor('page-0'),
+        isFromCache: false,
+      ),
+    );
+    await settle();
+    await settle();
+
+    expect(nextPageCalls, 1);
+    expect(viewModel.state.items.map((e) => e.id), ['next-1']);
+    expect(viewModel.state.isEmpty, isFalse);
+  });
+
+  test('자동 보충은 시작당 최대 3페이지에서 멈춘다', () async {
+    var remaining = 5;
+    final repository = FakePartyReadRepository(
+      publicFirstPage: firstPage.stream,
+      loadNextPage: ({
+        required String cycleKey,
+        required String currentPlayerId,
+        required PublicRecruitmentPageCursor cursor,
+        int limit = publicRecruitmentPageSize,
+      }) async {
+        nextPageCalls += 1;
+        remaining -= 1;
+        return PublicRecruitmentPage(
+          items: const [],
+          nextCursor: FakePublicRecruitmentPageCursor('page-$nextPageCalls'),
+          hasMore: remaining > 0,
+          isFromCache: false,
+        );
+      },
+    );
+    final viewModel = PublicRecruitmentListViewModel(
+      repository: repository,
+      cycleKey: '2026-08-19',
+      currentPlayerId: 'player-1',
+      pageSize: 2,
+      emptyAutoFillMaxPages: 3,
+    )..start();
+    addTearDown(viewModel.dispose);
+
+    firstPage.add(
+      PublicRecruitmentPage(
+        items: const [],
+        hasMore: true,
+        nextCursor: const FakePublicRecruitmentPageCursor('page-0'),
+        isFromCache: false,
+      ),
+    );
+    for (var i = 0; i < 10; i++) {
+      await settle();
+      if (nextPageCalls >= 3 && !viewModel.state.isLoadingMore) break;
+    }
+
+    expect(nextPageCalls, 3);
+    expect(viewModel.state.items, isEmpty);
+    expect(viewModel.state.hasMore, isTrue);
+    expect(viewModel.state.isEmpty, isTrue);
   });
 }
 

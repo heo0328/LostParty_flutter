@@ -38,6 +38,74 @@ void main() {
     expect(summary.cycleEndsAt, DateTime.utc(2026, 8, 26, 21));
   });
 
+  test('excludes leader or confirmed member rooms from the public list', () {
+    final led = PartyReadDocumentDto(id: 'raid-led', data: _recruitmentData());
+    expect(
+      mapper.isCurrentPlayerOwnPublicRecruitment(
+        led,
+        currentPlayerId: 'player-leader',
+      ),
+      isTrue,
+    );
+
+    final memberOnly = PartyReadDocumentDto(
+      id: 'raid-member',
+      data: _recruitmentData()
+        ..['leaderPlayerId'] = 'other-leader'
+        ..['memberPlayerIds'] = <Object?>['player-1', 'player-leader'],
+    );
+    expect(
+      mapper.isCurrentPlayerOwnPublicRecruitment(
+        memberOnly,
+        currentPlayerId: 'player-1',
+      ),
+      isTrue,
+    );
+    expect(
+      mapper.isCurrentPlayerOwnPublicRecruitment(
+        memberOnly,
+        currentPlayerId: 'player-leader',
+      ),
+      isTrue,
+    );
+
+    final pendingOnly = PartyReadDocumentDto(
+      id: 'raid-pending',
+      data: _recruitmentData()
+        ..['leaderPlayerId'] = 'other-leader'
+        ..['memberPlayerIds'] = <Object?>['other-leader', 'other-member'],
+    );
+    expect(
+      mapper.isCurrentPlayerOwnPublicRecruitment(
+        pendingOnly,
+        currentPlayerId: 'player-1',
+      ),
+      isFalse,
+    );
+
+    final leaderMissingFromMembers = PartyReadDocumentDto(
+      id: 'raid-anomaly',
+      data: _recruitmentData()
+        ..['leaderPlayerId'] = 'player-1'
+        ..['memberPlayerIds'] = <Object?>['other-member'],
+    );
+    expect(
+      mapper.isCurrentPlayerOwnPublicRecruitment(
+        leaderMissingFromMembers,
+        currentPlayerId: 'player-1',
+      ),
+      isTrue,
+    );
+
+    expect(
+      mapper.isCurrentPlayerOwnPublicRecruitment(
+        pendingOnly,
+        currentPlayerId: '',
+      ),
+      isFalse,
+    );
+  });
+
   test('marks an owned active raid for the current player', () {
     final summary = mapper.toActiveRaid(
       PartyReadDocumentDto(id: 'raid-1', data: _recruitmentData()),

@@ -319,6 +319,7 @@ GoRouter createAppRouter({
                 builder: (context, state) => RecruitmentListPage(
                   partyReadRepository: partyReadRepositoryOrDefault,
                   cycleKey: currentCycleKey,
+                  currentPlayerId: playerSession.playerId,
                 ),
                 routes: [
                   GoRoute(

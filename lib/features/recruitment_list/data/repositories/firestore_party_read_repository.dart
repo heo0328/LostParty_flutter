@@ -28,18 +28,26 @@ class FirestorePartyReadRepository implements PartyReadRepository {
   @override
   Stream<PublicRecruitmentPage> watchPublicRecruitmentFirstPage({
     required String cycleKey,
+    required String currentPlayerId,
     int limit = publicRecruitmentPageSize,
   }) {
     return _publicRecruitmentsQuery(cycleKey)
         .limit(limit)
         .snapshots(includeMetadataChanges: true)
-        .map((snapshot) => _toPublicPage(snapshot, limit: limit))
+        .map(
+          (snapshot) => _toPublicPage(
+            snapshot,
+            limit: limit,
+            currentPlayerId: currentPlayerId,
+          ),
+        )
         .transform(_errorTransformer());
   }
 
   @override
   Future<PublicRecruitmentPage> loadPublicRecruitmentNextPage({
     required String cycleKey,
+    required String currentPlayerId,
     required PublicRecruitmentPageCursor cursor,
     int limit = publicRecruitmentPageSize,
   }) async {
@@ -51,7 +59,11 @@ class FirestorePartyReadRepository implements PartyReadRepository {
           .startAfterDocument(cursor.snapshot)
           .limit(limit)
           .get();
-      return _toPublicPage(snapshot, limit: limit);
+      return _toPublicPage(
+        snapshot,
+        limit: limit,
+        currentPlayerId: currentPlayerId,
+      );
     } catch (error) {
       throw _mapError(error);
     }
@@ -73,12 +85,19 @@ class FirestorePartyReadRepository implements PartyReadRepository {
   PublicRecruitmentPage _toPublicPage(
     QuerySnapshot<Map<String, dynamic>> snapshot, {
     required int limit,
+    required String currentPlayerId,
   }) {
     final items = snapshot.docs
         .map(_document)
+        .where(
+          (document) => !_mapper.isCurrentPlayerOwnPublicRecruitment(
+            document,
+            currentPlayerId: currentPlayerId,
+          ),
+        )
         .map(_mapper.toPublicRecruitment)
         .toList(growable: false);
-    final hasMore = items.length >= limit;
+    final hasMore = snapshot.docs.length >= limit;
     final lastDocument = snapshot.docs.isEmpty ? null : snapshot.docs.last;
     return PublicRecruitmentPage(
       items: items,

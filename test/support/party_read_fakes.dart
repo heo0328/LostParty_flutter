@@ -44,6 +44,7 @@ class FakePartyReadRepository implements PartyReadRepository {
     Stream<PublicRecruitmentPage>? publicFirstPage,
     Future<PublicRecruitmentPage> Function({
       required String cycleKey,
+      required String currentPlayerId,
       required PublicRecruitmentPageCursor cursor,
       int limit,
     })?
@@ -82,6 +83,7 @@ class FakePartyReadRepository implements PartyReadRepository {
   final Stream<PublicRecruitmentPage> _publicFirstPage;
   final Future<PublicRecruitmentPage> Function({
     required String cycleKey,
+    required String currentPlayerId,
     required PublicRecruitmentPageCursor cursor,
     int limit,
   })?
@@ -97,33 +99,44 @@ class FakePartyReadRepository implements PartyReadRepository {
   String? requestedCycleRecruitmentId;
   String? requestedCycleKey;
   String? requestedPublicFirstPageCycleKey;
+  String? requestedPublicFirstPagePlayerId;
   String? requestedNextPageCycleKey;
+  String? requestedNextPagePlayerId;
   PublicRecruitmentPageCursor? requestedNextPageCursor;
   var nextPageCallCount = 0;
 
   @override
   Stream<PublicRecruitmentPage> watchPublicRecruitmentFirstPage({
     required String cycleKey,
+    required String currentPlayerId,
     int limit = publicRecruitmentPageSize,
   }) {
     requestedPublicFirstPageCycleKey = cycleKey;
+    requestedPublicFirstPagePlayerId = currentPlayerId;
     return _publicFirstPage;
   }
 
   @override
   Future<PublicRecruitmentPage> loadPublicRecruitmentNextPage({
     required String cycleKey,
+    required String currentPlayerId,
     required PublicRecruitmentPageCursor cursor,
     int limit = publicRecruitmentPageSize,
   }) async {
     nextPageCallCount += 1;
     requestedNextPageCycleKey = cycleKey;
+    requestedNextPagePlayerId = currentPlayerId;
     requestedNextPageCursor = cursor;
     final loader = _loadNextPage;
     if (loader == null) {
       return emptyPublicRecruitmentPage;
     }
-    return loader(cycleKey: cycleKey, cursor: cursor, limit: limit);
+    return loader(
+      cycleKey: cycleKey,
+      currentPlayerId: currentPlayerId,
+      cursor: cursor,
+      limit: limit,
+    );
   }
 
   @override

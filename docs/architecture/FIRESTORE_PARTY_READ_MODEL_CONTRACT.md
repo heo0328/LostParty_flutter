@@ -192,8 +192,8 @@ orderBy updatedAt desc
 
 ```text
 PartyReadRepository
-  watchPublicRecruitmentFirstPage(cycleKey, limit = 20)
-  loadPublicRecruitmentNextPage(cycleKey, limit = 20, cursor)
+  watchPublicRecruitmentFirstPage(cycleKey, currentPlayerId, limit = 20)
+  loadPublicRecruitmentNextPage(cycleKey, currentPlayerId, limit = 20, cursor)
   watchActiveRaids(playerId)
   watchApplications(playerId, cycleKey)
   watchRecruitment(recruitmentId)
