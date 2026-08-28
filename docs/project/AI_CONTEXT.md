@@ -19,7 +19,7 @@
 ## 브랜치 기준
 - 통합 기준 브랜치: `main`
 - 현재 저장 브랜치와 커밋은 `NEXT_WORK.md`의 기준 상태를 따른다.
-- 2026-08-28 현재 `main`에는 Task-082까지 반영됐다(`6597d7a`). Claim A~F·다음주 prep·orphan self-heal Rules는 `lost-party`에 배포된 상태이며 Task-082는 Rules를 바꾸지 않는다.
+- 2026-08-28 현재 로컬 `main`에는 Task-084 운영자 기반까지 반영됐다(`d31ce01`). `origin/main`은 별도 푸시 지시 전까지 이전 상태이며, 운영자 권한·`lastSeenAt` Rules는 `lost-party`에 배포됐다.
 - Task-080 F(Claim-only 게이트·orphan assignment self-heal·다음주 prep 캐릭터 변경·재완료 orphan Claim 정리) 완료. 복잡 꼬임은 BUG-007 보류.
 - Task-083에서 `PlayerId` 기반 운영자 지정, 인게임 채팅 스크린샷 수동 인증, 기존 소유자 24시간 방어·자동 이전, 대상 계정 인증 금지, 사용자 확인과 `lastSeenAt` 계약을 확정했다. 사용자 삭제는 보류한다.
 - Task-084 운영자 권한·마지막 접속 기반 코드와 Rules·표적 테스트를 구현했다. 전체 테스트 456건과 `flutter analyze`가 통과했고 Rules는 `lost-party`에 배포했다. 실기기 `lastSeenAt`, active 운영자 지정, 설정의 `사용자 확인`과 목록 표시를 확인했다.
@@ -302,7 +302,7 @@
 ## 다음 작업
 
 현재 작업 순서와 완료 상태의 단일 기준은 `docs/project/NEXT_WORK.md`다.
-Task-082까지 `main`에 반영됐다(`6597d7a`). Task-083 계약과 Task-084 기반 구현·Rules 배포·운영자 진입/목록 실기기 확인까지 완료했다. 다음 실행은 **Task-084 대표 Character 서버 동기화·5분 제한·운영자 표시 보완**이다. 복잡 꼬임은 `BUG_REPORTS.md` BUG-007.
+Task-084 운영자 기반까지 로컬 `main`에 반영됐다(`d31ce01`). 현재 브랜치는 `codex/task-084-representative-character-sync`이며 다음 실행은 **대표 Character 서버 동기화·5분 제한·운영자 표시 보완**이다. `origin/main` 푸시는 별도 지시 전까지 하지 않는다. 복잡 꼬임은 `BUG_REPORTS.md` BUG-007.
 `codex/combat-power-auto-title`에서 전투력 표시 통일과 자동 모집 제목 구현 및 자동 검증을 완료했다.
 `codex/full-recruitment-edit`에서 생성·수정 공용 폼, 전체 모집 수정 흐름과 공통 입력 지우기 동작을 구현하고 Android 실기기 검증을 통과했다.
 완료 결과는 `main`과 `origin/main`에 통합됐다.

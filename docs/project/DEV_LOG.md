@@ -1798,3 +1798,4 @@
 - 기존 로컬 대표는 대응하는 active 서버 Character가 있을 때 계정당 한 번 보강하고 그 시점부터 5분 제한을 적용한다.
 - 운영자 목록은 대표가 여러 계정이면 `Character명 외 N개`, 상세는 GameAccount별 대표 Character를 표시한다.
 - 코드는 아직 수정하지 않았으며 다음 작업은 이 계약의 Rules·Repository·UI·테스트 구현이다.
+- Task-084 기반 구현을 `d31ce01`로 커밋해 로컬 `main`에 fast-forward 반영하고, 다음 구현 브랜치 `codex/task-084-representative-character-sync`를 생성했다. 원격에는 푸시하지 않았다.

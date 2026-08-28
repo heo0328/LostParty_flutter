@@ -52,9 +52,9 @@
 | 구분 | 상태 | 비고 |
 | --- | --- | --- |
 | 통합 기준 | **`main` = Task-082 완료** | `6597d7a` |
-| 완료 기능 | 멤버십·회차 + 알림 + Claim A~F + 내 계정 표기 + 공개 목록 내 방 제외 | Task-068~082 |
-| Firestore Rules | Claim A~F·다음주 prep·orphan self-heal **배포됨** | Firebase `lost-party` (이번 작업 변경 없음) |
-| 현재 코드 상태 | **`main`** | Task-082 병합 후 |
+| 완료 기능 | Task-082까지 + 운영자 권한·lastSeenAt·사용자 확인 기반 | Task-084 기반까지 |
+| Firestore Rules | Claim A~F + 운영자 권한·lastSeenAt **배포됨** | Firebase `lost-party` |
+| 현재 코드 상태 | **`main` `d31ce01`** | Task-084 기반 fast-forward 반영 |
 | 다음 구현 | **Task-084 대표 Character 서버 동기화** | 계정별 5분 제한·운영자 표시 보완 |
 
 ### Task-073 확인 완료 사항 (2026-08-27)
@@ -383,8 +383,8 @@
 ```text
 현재 Task: Task-084 운영자 권한·마지막 접속 기반
 현재 단계: 운영자 진입·목록 실기기 확인 완료 / 대표 Character 서버 동기화 구현 전
-브랜치: codex/task-084-operator-access-foundation
-작업 트리: Task-084 변경 미커밋
+브랜치: codex/task-084-representative-character-sync
+작업 트리: Task-084 기반 `d31ce01`에서 다음 구현 준비
 ```
 
 ### 목표
