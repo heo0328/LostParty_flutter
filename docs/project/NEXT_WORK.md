@@ -354,7 +354,7 @@
 
 ```text
 현재 Task: Task-082 레이드 모집에서 내 모집 제외
-현재 단계: 검토(시작 가능)
+현재 단계: 정책 확정 / 구현 시작 가능
 브랜치: 신규 (예: cursor/task-082-exclude-own-recruitments)
 작업 트리: main = Task-080 F 완료
 ```
@@ -368,11 +368,22 @@
 - 시작 전 확인: Task-080 F가 `main`에 있는지(Rules는 이미 재배포됨)
 - 공개 목록 쿼리·`PublicRecruitmentSummary`·현황 탭 경계를 [`FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`](../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md)와 대조
 
-### 포함 후보(검토에서 확정)
+### 확정 정책
 
-- 공개 모집 목록에서 본인 `leaderPlayerId` 또는 `memberPlayerIds` 포함 문서 클라이언트/쿼리 제외 또는 “내 방” 구분 표시
-- Rules는 결과 필터가 아니므로 **쿼리 조건 또는 클라이언트 필터** 중 Spark 비용·일관성에 맞는 쪽을 계약으로 고정
-- 기존 페이징·정렬·빈 자리 필터와의 충돌 여부
+- 공개 모집 목록에서 `leaderPlayerId == currentPlayerId`이거나 `memberPlayerIds`에 현재 PlayerId가 포함된 `active` 방을 제외한다. 책임자가 멤버 배열에도 들어가는 정상 데이터와 별개로 두 조건을 모두 검사한다.
+- 신청만 `pending`인 방은 공개 목록에 유지한다. 승인되어 실제 멤버가 되는 즉시 제외하며, `rejected`·`withdrawn` 방도 다른 공개 조건을 만족하면 유지한다.
+- Firestore에는 `array-not-contains`가 없으므로 기존 공개 쿼리는 유지하고, **data 계층에서 문서 원문의 책임자·멤버 ID를 검사한 뒤** `PublicRecruitmentSummary`로 변환한다. 전체 `memberPlayerIds`를 Domain·presentation에 새로 노출하지 않는다.
+- 서버 페이지 크기 20과 cursor는 필터 전 원문 기준이다. 화면 항목 수가 20보다 적어도 정상이며, 사용자가 목록 하단 240px에 접근하면 기존처럼 다음 페이지를 자동 로딩한다. 별도 `더 보기` 버튼은 두지 않는다.
+- 필터 결과가 0개이고 다음 cursor가 있어 스크롤이 생기지 않는 경우에만 다음 페이지를 제한적으로 자동 보충한다. 한 번의 시작·갱신에서 최대 3페이지까지만 연속 조회해 무제한 읽기를 막는다.
+- 첫 페이지 실시간 snapshot에서 가입 승인·탈퇴·책임자 승계가 반영될 때마다 필터를 다시 적용한다. 필터 후 첫 페이지 ID 집합이 바뀌면 기존 계약대로 추가 페이지와 cursor를 초기화한다.
+- 공개 결과가 최종적으로 비면 `참여 가능한 공개 모집이 없습니다. 내가 참여 중인 파티는 레이드 현황에서 확인할 수 있습니다.` 취지로 공개 탐색과 내 현황의 역할을 안내한다.
+
+### 구현 확인 지점
+
+- `PartyReadRepository` 공개 목록 API에 현재 Player 식별자를 전달하되, Firestore·PlayerId 타입을 presentation에 노출하지 않는다.
+- 첫 페이지 실시간 구독과 cursor 기반 추가 페이지 모두 동일한 제외 함수를 사용한다.
+- 필터로 인한 빈 첫 화면의 제한적 자동 보충, 하단 스크롤 자동 로딩, 추가 조회 실패 `다시 시도`, pull-to-refresh가 함께 동작하는지 확인한다.
+- 기존 정렬·빈 자리·현재 주차 조건과 레이드 현황 쿼리는 변경하지 않는다.
 
 ### 제외 범위
 
@@ -383,6 +394,7 @@
 ### 완료 조건
 
 - 공개 목록과 내 현황의 역할이 문서·UI에서 분리됨
+- 책임자·확정 멤버 제외, 신청 중 유지, 제한적 자동 보충 정책이 Repository·ViewModel 테스트로 고정됨
 - 표적 테스트·analyze·실기기 확인
 - `DEV_LOG`·`AI_CONTEXT`·`NEXT_WORK` 갱신 후 Git 종료
 
