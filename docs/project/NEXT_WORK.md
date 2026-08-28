@@ -51,7 +51,7 @@
 
 | 구분 | 상태 | 비고 |
 | --- | --- | --- |
-| 통합 기준 | **`main` = Task-082 완료** | 병합 후 기록 |
+| 통합 기준 | **`main` = Task-082 완료** | `6597d7a` |
 | 완료 기능 | 멤버십·회차 + 알림 + Claim A~F + 내 계정 표기 + 공개 목록 내 방 제외 | Task-068~082 |
 | Firestore Rules | Claim A~F·다음주 prep·orphan self-heal **배포됨** | Firebase `lost-party` (이번 작업 변경 없음) |
 | 현재 코드 상태 | **`main`** | Task-082 병합 후 |
@@ -354,7 +354,7 @@
 
 ```text
 현재 Task: Task-082 레이드 모집에서 내 모집 제외
-현재 단계: 완료 (main 병합 후 기록)
+현재 단계: 완료 (`main`, `6597d7a`)
 브랜치: cursor/task-082-exclude-own-recruitments
 ```
 
@@ -374,7 +374,7 @@
 
 ### 남은 Git
 
-- [ ] 브랜치 커밋·`main` 병합
+- [x] 브랜치 커밋·`main` 반영 (`6597d7a`, fast-forward)
 - origin 푸시는 사용자 지시 시
 
 ## 다음 실행 작업 — Task-083 운영자 계정 권한 기반 설계
