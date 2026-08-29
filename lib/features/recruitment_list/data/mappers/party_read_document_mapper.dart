@@ -94,6 +94,8 @@ class PartyReadDocumentMapper {
       updatedAt: _date(data, 'updatedAt'),
       raidStartAt: _nullableDate(data, 'raidStartAt'),
       status: _softString(data, 'status') ?? 'active',
+      currentCycleStatus: _softString(data, 'currentCycleStatus') ?? 'active',
+      continueTogether: _optionalBoolean(data, 'continueTogether') ?? false,
       isOwnedByCurrentPlayer: leaderPlayerId == currentPlayerId,
     );
   }

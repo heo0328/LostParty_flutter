@@ -118,6 +118,8 @@ void main() {
     expect(summary.leaderClassName, '바드');
     expect(summary.raidStartAt, DateTime.utc(2026, 8, 25, 12));
     expect(summary.status, 'active');
+    expect(summary.currentCycleStatus, 'active');
+    expect(summary.continueTogether, isFalse);
     expect(summary.isAwaitingDisband, isFalse);
   });
 

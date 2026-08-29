@@ -344,13 +344,34 @@ class _ActiveRaidCard extends StatelessWidget {
                       style: theme.textTheme.titleMedium,
                     ),
                   ),
-                  if (summary.isAwaitingDisband) ...[
-                    const SizedBox(width: 12),
-                    const _Badge(label: '해산 대기', tone: _BadgeTone.waiting),
-                  ] else if (summary.isOwnedByCurrentPlayer) ...[
-                    const SizedBox(width: 12),
-                    const _Badge(label: '내가 만든 방', tone: _BadgeTone.highlight),
-                  ],
+                  const SizedBox(width: 12),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    alignment: WrapAlignment.end,
+                    children: [
+                      if (summary.isRecurringWaitingForNextWeek)
+                        const _Badge(
+                          label: '다음주 대기',
+                          tone: _BadgeTone.waiting,
+                        )
+                      else if (summary.isRecurringCurrentWeek)
+                        const _Badge(
+                          label: '금주 진행',
+                          tone: _BadgeTone.highlight,
+                        )
+                      else if (summary.isAwaitingDisband)
+                        const _Badge(
+                          label: '해산 대기',
+                          tone: _BadgeTone.waiting,
+                        ),
+                      if (summary.isOwnedByCurrentPlayer)
+                        const _Badge(
+                          label: '내가 만든 방',
+                          tone: _BadgeTone.neutral,
+                        ),
+                    ],
+                  ),
                 ],
               ),
               if (summary.isAwaitingDisband && summary.isOwnedByCurrentPlayer)

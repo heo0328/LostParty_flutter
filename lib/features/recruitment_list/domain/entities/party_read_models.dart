@@ -59,6 +59,8 @@ class ActiveRaidSummary {
     required this.updatedAt,
     required this.isOwnedByCurrentPlayer,
     this.status = 'active',
+    this.currentCycleStatus = 'active',
+    this.continueTogether = false,
     this.leaderCharacterName,
     this.leaderClassName,
     this.raidStartAt,
@@ -78,9 +80,16 @@ class ActiveRaidSummary {
   final bool isOwnedByCurrentPlayer;
   /// Firestore `status`. 1회성 완료 후 해산 전은 `completed`로 진행 중에 남긴다.
   final String status;
+  /// Firestore `currentCycleStatus`. 반복방의 이번 회차 완료 여부를 표시한다.
+  final String currentCycleStatus;
+  final bool continueTogether;
   final DateTime? raidStartAt;
 
   bool get isAwaitingDisband => status == 'completed';
+  bool get isRecurringCurrentWeek =>
+      continueTogether && currentCycleStatus == 'active';
+  bool get isRecurringWaitingForNextWeek =>
+      continueTogether && currentCycleStatus == 'completed';
 }
 
 /// 공개 상세·확정 멤버 상세에 공통으로 쓰는 파티 표시 전용 모델.

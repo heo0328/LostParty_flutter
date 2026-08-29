@@ -107,6 +107,43 @@ void main() {
     expect(find.text('시작 시간 미정'), findsOneWidget);
   });
 
+  testWidgets('반복 레이드의 이번 주 진행 상태를 배지로 표시한다', (tester) async {
+    await pumpPage(
+      tester,
+      activeRaids: Stream.value(
+        PartyReadSnapshot(
+          items: [_activeRaid(continueTogether: true)],
+          isFromCache: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('금주 진행'), findsOneWidget);
+    expect(find.text('다음주 대기'), findsNothing);
+  });
+
+  testWidgets('완료된 반복 레이드는 다음 주 대기 상태를 배지로 표시한다', (tester) async {
+    await pumpPage(
+      tester,
+      activeRaids: Stream.value(
+        PartyReadSnapshot(
+          items: [
+            _activeRaid(
+              continueTogether: true,
+              currentCycleStatus: 'completed',
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('다음주 대기'), findsOneWidget);
+    expect(find.text('금주 진행'), findsNothing);
+  });
+
   testWidgets('신청 중은 승인 대기와 처리 결과를 나누어 표시한다', (tester) async {
     await pumpPage(
       tester,
@@ -264,7 +301,11 @@ void main() {
   });
 }
 
-ActiveRaidSummary _activeRaid({DateTime? raidStartAt}) => ActiveRaidSummary(
+ActiveRaidSummary _activeRaid({
+  DateTime? raidStartAt,
+  bool continueTogether = false,
+  String currentCycleStatus = 'active',
+}) => ActiveRaidSummary(
   id: 'recruitment-1',
   title: '4막 노말 모집',
   leaderPlayerId: 'player-1',
@@ -290,6 +331,8 @@ ActiveRaidSummary _activeRaid({DateTime? raidStartAt}) => ActiveRaidSummary(
   revision: 1,
   updatedAt: DateTime.utc(2026, 8, 20),
   isOwnedByCurrentPlayer: true,
+  continueTogether: continueTogether,
+  currentCycleStatus: currentCycleStatus,
 );
 
 PublicRecruitmentSummary _publicSummary() => PublicRecruitmentSummary(
