@@ -1843,7 +1843,7 @@
 
 ## Task-086. 기존 소유자 방어·자동 이전·강제 인증 (2026-08-29)
 
-- 작업 브랜치: `cursor/task-086-owner-defense` (미커밋)
+- 작업 브랜치: `cursor/task-086-owner-defense`, 기능 커밋 `8c649ad`
 - 구현: 분쟁 상태(`awaitingOwnerResponse`·`defended`·`transferred`), 분쟁 개시, 방어 승인, 기한 후 자동 이전, 운영자 강제 인증, 분쟁 알림 이벤트, 운영자 UI
 - Rules·인덱스: `lost-party`에 여러 차례 배포. 최종 Rules는 `validManualVerificationOperatorWrite` 단일 진입점
 - Rules 차단 원인: 선택 필드 `defenseOfRequestId`가 없는 일반 요청에서 필드를 직접 읽어 Rules 평가 오류가 발생했다. 존재 여부를 먼저 검사하도록 수정했다.

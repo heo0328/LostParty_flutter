@@ -1,7 +1,7 @@
 # Task-086 운영자 쓰기 차단 — 해결 기록 (2026-08-29)
 
 **상태:** 해결됨 — 24시간 무응답 자동 이전만 실기기 미검증  
-**브랜치:** `cursor/task-086-owner-defense` (미커밋)  
+**브랜치:** `cursor/task-086-owner-defense` — 기능 커밋 `8c649ad`  
 **Firebase 프로젝트:** `lost-party`  
 **관련 Task:** Task-086 기존 소유자 24시간 방어·자동 이전·강제 인증
 
