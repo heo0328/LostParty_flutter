@@ -25,6 +25,8 @@
 - Task-084 운영자 권한·마지막 접속 기반 코드와 Rules·표적 테스트를 구현했다. 전체 테스트 456건과 `flutter analyze`가 통과했고 Rules는 `lost-party`에 배포했다. 실기기 `lastSeenAt`, active 운영자 지정, 설정의 `사용자 확인`과 목록 표시를 확인했다.
 - active `playerGameAccounts`의 대표 Character 서버 동기화, 서버 성공 후 로컬 반영, GameAccount별 5분 제한, 운영자 목록·상세 표시를 구현했다. 전체 테스트 464건과 analyze가 통과했고 해당 Rules를 `lost-party`에 배포했다.
 - Task-086 기존 소유자 방어·자동 이전·강제 인증 핵심 구현과 Rules 배포·실기기 검증을 완료했다. BUG-008은 선택 필드 `defenseOfRequestId` 부재 Rules 평가 오류를 수정해 종료했다. 취소·일반 승인·분쟁 개시·운영자 거절·방어 승인·방어 실패·강제 인증과 양쪽 레이드 권한 반영을 확인했다. 실제 24시간 무응답 자동 이전만 미검증이다. 기능 커밋은 `8c649ad`다.
+- 반복 레이드 진행 목록에 `금주 진행`·`다음주 대기` 상태 배지를 추가한 커밋은 `05a441d`다.
+- 그룹 제품 흐름은 [`../product/GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md)에 정리했다. 그룹·일반 공개, 단일 Group ID 연결, 초대·신청·초대코드 즉시 가입, 역할·승계·탈퇴 자격, 목록 필터, 3개월 그룹 이력 보관과 운영자 수동 정리 정책을 포함한다. 알림·공지는 초기 범위에서 제외하며 남은 정책 확정 후 Firestore·Rules 계약을 분리한다.
 
 ---
 

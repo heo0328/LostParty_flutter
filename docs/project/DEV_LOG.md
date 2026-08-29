@@ -1858,3 +1858,10 @@
 - BUG-008은 수정·Rules 배포·실기기 확인 후 종료. 해결 경과는 [`TASK-086-OPERATOR-WRITE-BLOCKER.md`](TASK-086-OPERATOR-WRITE-BLOCKER.md)에 보존한다.
 
 ---
+# 2026-08-30 그룹 제품 흐름 문서화
+
+- 하단 4개 탭을 유지하며 설정 탭을 그룹 탭으로 교체하고, 설정은 내 계정 상단에서 진입하는 방향을 확정했다.
+- 그룹 생성·대표 캐릭터·초대·가입 신청·초대코드 즉시 가입, 그룹장/일반 멤버 권한과 승계, 단일 그룹 레이드와 공개 범위 전환, 복수 그룹 목록 필터를 제품 문서에 정리했다.
+- 그룹 이력은 `groupId + occurredAt + expireAt`으로 3개월 보관하고, 1개월 미활동 표시·soft delete 후 28일·Spark 운영자 수동 정리 방향을 기록했다.
+- 같은 데이터 정리 기반을 일반 레이드와 사용자 데이터에 후속 적용하되 현재 코드·Rules에는 반영하지 않는다.
+- 기준 문서: [`../product/GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md)
