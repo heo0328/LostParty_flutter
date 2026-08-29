@@ -41,6 +41,31 @@
         { "fieldPath": "schemaVersion", "order": "ASCENDING" },
         { "fieldPath": "updatedAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "manualVerificationRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "requesterPlayerId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "manualVerificationRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "manualVerificationRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "requesterPlayerId", "order": "ASCENDING" },
+        { "fieldPath": "targetIdentityKey", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

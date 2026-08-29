@@ -24,7 +24,7 @@
 - Task-083에서 `PlayerId` 기반 운영자 지정, 인게임 채팅 스크린샷 수동 인증, 기존 소유자 24시간 방어·자동 이전, 대상 계정 인증 금지, 사용자 확인과 `lastSeenAt` 계약을 확정했다. 사용자 삭제는 보류한다.
 - Task-084 운영자 권한·마지막 접속 기반 코드와 Rules·표적 테스트를 구현했다. 전체 테스트 456건과 `flutter analyze`가 통과했고 Rules는 `lost-party`에 배포했다. 실기기 `lastSeenAt`, active 운영자 지정, 설정의 `사용자 확인`과 목록 표시를 확인했다.
 - active `playerGameAccounts`의 대표 Character 서버 동기화, 서버 성공 후 로컬 반영, GameAccount별 5분 제한, 운영자 목록·상세 표시를 구현했다. 전체 테스트 464건과 analyze가 통과했고 해당 Rules를 `lost-party`에 배포했다.
-- 다음 단계는 **Task-085 수동 인증 요청과 운영자 1차 판정**이다. 최신 `main`에서 새 작업 브랜치를 만든다. 기존 소유자 24시간 방어는 Task-086이다.
+- Task-086 기존 소유자 방어·자동 이전·강제 인증 핵심 구현과 Rules 배포·실기기 검증을 완료했다. BUG-008은 선택 필드 `defenseOfRequestId` 부재 Rules 평가 오류를 수정해 종료했다. 취소·일반 승인·분쟁 개시·운영자 거절·방어 승인·방어 실패·강제 인증과 양쪽 레이드 권한 반영을 확인했다. 실제 24시간 무응답 자동 이전만 미검증이다. 브랜치 `cursor/task-086-owner-defense` 미커밋.
 
 ---
 
@@ -303,7 +303,7 @@
 ## 다음 작업
 
 현재 작업 순서와 완료 상태의 단일 기준은 `docs/project/NEXT_WORK.md`다.
-Task-084b 초회 보강 UX를 반영했다. 초회 보강은 5분을 시작하지 않으며, 사용자 변경 후에만 제한한다. Rules는 사용자가 `lost-party`에 재배포했다. 다음 실행은 **Task-085**다. 복잡 꼬임은 `BUG_REPORTS.md` BUG-007.
+Task-085 수동 인증 요청·운영자 1차 판정과 Task-086 기존 소유자 방어·즉시 이전 경로를 현재 작업 브랜치에 구현했다. Rules는 사용자가 `lost-party`에 배포했고 핵심 실기기 검증을 통과했다. 문서·Git 종료가 다음 단계이며 24시간 무응답 자동 이전은 미검증으로 남긴다.
 `codex/combat-power-auto-title`에서 전투력 표시 통일과 자동 모집 제목 구현 및 자동 검증을 완료했다.
 `codex/full-recruitment-edit`에서 생성·수정 공용 폼, 전체 모집 수정 흐름과 공통 입력 지우기 동작을 구현하고 Android 실기기 검증을 통과했다.
 완료 결과는 `main`과 `origin/main`에 통합됐다.

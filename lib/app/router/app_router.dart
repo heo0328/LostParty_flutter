@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -30,6 +31,12 @@ import '../../features/account/domain/repositories/representative_character_sync
 import '../../features/account/domain/services/character_summary_sync_service.dart';
 import '../../features/account/domain/services/representative_character_sync_service.dart';
 import '../../features/player/domain/entities/player_session.dart';
+import '../../features/manual_verification/data/firestore_manual_verification_repository.dart';
+import '../../features/manual_verification/domain/entities/manual_verification_request.dart';
+import '../../features/manual_verification/domain/repositories/manual_verification_repository.dart';
+import '../../features/manual_verification/presentation/pages/manual_verification_page.dart';
+import '../../features/manual_verification/presentation/pages/operator_manual_verification_detail_page.dart';
+import '../../features/manual_verification/presentation/pages/operator_manual_verification_queue_page.dart';
 import '../../features/operator_access/data/repositories/firestore_operator_access_repository.dart';
 import '../../features/operator_access/domain/repositories/operator_access_repository.dart';
 import '../../features/operator_access/presentation/pages/operator_user_detail_page.dart';
@@ -87,6 +94,7 @@ GoRouter createAppRouter({
   CharacterWeeklyRaidDisplayRepository? weeklyRaidDisplayRepository,
   RepresentativeCharacterSyncGateway? representativeCharacterSyncGateway,
   OperatorAccessRepository? operatorAccessRepository,
+  ManualVerificationRepository? manualVerificationRepository,
 }) {
   final operatorAccessRepositoryOrDefault =
       operatorAccessRepository ?? FirestoreOperatorAccessRepository();
@@ -171,6 +179,16 @@ GoRouter createAppRouter({
         firestore: FirebaseFirestore.instance,
         firebaseAuth: FirebaseAuth.instance,
       );
+  final manualVerificationRepositoryOrDefault =
+      manualVerificationRepository ??
+      (Firebase.apps.isEmpty
+          ? null
+          : FirestoreManualVerificationRepository(
+              remoteDataSource: remoteDataSource,
+            ));
+  ManualVerificationRepository manualVerificationRepositoryForRoute() =>
+      manualVerificationRepositoryOrDefault ??
+      FirestoreManualVerificationRepository(remoteDataSource: remoteDataSource);
   final raidCatalogRepository = RaidCatalogRepositoryImpl(
     dataSource: AssetRaidCatalogDataSource(),
   );
@@ -220,7 +238,10 @@ GoRouter createAppRouter({
     routes: [
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
-          return AppShell(navigationShell: navigationShell);
+          return AppShell(
+            navigationShell: navigationShell,
+            manualVerificationRepository: manualVerificationRepositoryOrDefault,
+          );
         },
         branches: [
           StatefulShellBranch(
@@ -395,6 +416,14 @@ GoRouter createAppRouter({
                     ),
                   ),
                   GoRoute(
+                    path: 'manual-verification',
+                    builder: (context, state) => ManualVerificationPage(
+                      accountRepository: accountRepository,
+                      mappingRepository: accountRepository,
+                      repository: manualVerificationRepositoryForRoute(),
+                    ),
+                  ),
+                  GoRoute(
                     path: 'api-token',
                     builder: (context, state) =>
                         ApiTokenSettingsPage(apiTokenStore: apiTokenStore),
@@ -410,6 +439,30 @@ GoRouter createAppRouter({
                         builder: (context, state) => OperatorUserDetailPage(
                           playerId: state.pathParameters['playerId']!,
                           repository: operatorAccessRepositoryOrDefault,
+                        ),
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'operator/manual-verification',
+                    builder: (context, state) =>
+                        OperatorManualVerificationQueuePage(
+                      operatorAccessRepository:
+                          operatorAccessRepositoryOrDefault,
+                      repository: manualVerificationRepositoryForRoute(),
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: ':requestId',
+                        builder: (context, state) =>
+                            OperatorManualVerificationDetailPage(
+                          requestId: state.pathParameters['requestId']!,
+                          initialRequest: state.extra is ManualVerificationRequest
+                              ? state.extra as ManualVerificationRequest
+                              : null,
+                          operatorAccessRepository:
+                              operatorAccessRepositoryOrDefault,
+                          repository: manualVerificationRepositoryForRoute(),
                         ),
                       ),
                     ],

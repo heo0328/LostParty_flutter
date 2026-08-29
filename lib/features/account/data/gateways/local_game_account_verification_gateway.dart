@@ -1,5 +1,6 @@
-import 'dart:convert';
 import 'dart:math';
+
+import '../../domain/character_identity_key.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -314,9 +315,8 @@ class LocalGameAccountVerificationGateway
     });
   }
 
-  String _identityKey(String serverName, String characterName) => base64Url
-      .encode(utf8.encode('${serverName.trim()}\u0000${characterName.trim()}'))
-      .replaceAll('=', '');
+  String _identityKey(String serverName, String characterName) =>
+      characterIdentityKey(serverName, characterName);
 }
 
 class _LocalChallenge {

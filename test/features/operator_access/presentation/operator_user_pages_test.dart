@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lost_party/features/operator_access/domain/entities/operator_user.dart';
+import 'package:lost_party/features/operator_access/domain/entities/operator_write_readiness.dart';
 import 'package:lost_party/features/operator_access/domain/repositories/operator_access_repository.dart';
 import 'package:lost_party/features/operator_access/presentation/pages/operator_user_detail_page.dart';
 import 'package:lost_party/features/operator_access/presentation/pages/operator_user_list_page.dart';
@@ -27,6 +28,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('settingsOperatorUsers')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('settingsOperatorManualVerification')),
+      findsNothing,
+    );
   });
 
   testWidgets('운영자 설정에는 사용자 확인 진입점이 표시된다', (tester) async {
@@ -42,6 +47,10 @@ void main() {
               path: 'operator/users',
               builder: (_, _) => const Scaffold(body: Text('운영자 목록')),
             ),
+            GoRoute(
+              path: 'operator/manual-verification',
+              builder: (_, _) => const Scaffold(body: Text('수동 인증 대기')),
+            ),
           ],
         ),
       ],
@@ -53,6 +62,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('운영자 목록'), findsOneWidget);
+  });
+
+  testWidgets('운영자 설정에는 수동 인증 확인 진입점이 표시된다', (tester) async {
+    final router = GoRouter(
+      initialLocation: '/settings',
+      routes: [
+        GoRoute(
+          path: '/settings',
+          builder: (_, _) =>
+              SettingsPage(operatorAccessRepository: _FakeOperatorRepository()),
+          routes: [
+            GoRoute(
+              path: 'operator/manual-verification',
+              builder: (_, _) => const Scaffold(body: Text('수동 인증 대기')),
+            ),
+          ],
+        ),
+      ],
+    );
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('settingsOperatorManualVerification')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('수동 인증 대기'), findsOneWidget);
   });
 
   testWidgets('사용자 목록은 대표 미지정과 마지막 접속을 표시한다', (tester) async {
@@ -157,6 +194,16 @@ class _FakeOperatorRepository implements OperatorAccessRepository {
 
   @override
   Future<bool> isCurrentPlayerOperator() async => isOperator;
+
+  @override
+  Future<OperatorWriteReadiness> loadWriteReadiness() async => OperatorWriteReadiness(
+    authUid: 'auth-1',
+    playerId: 'player-1',
+    bindingActive: isOperator,
+    playerExists: isOperator,
+    playerActive: isOperator,
+    assignmentActive: isOperator,
+  );
 
   @override
   Future<OperatorUserDetail?> loadUserDetail(String playerId) async => detail;

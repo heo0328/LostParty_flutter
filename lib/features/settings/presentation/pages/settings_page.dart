@@ -36,6 +36,14 @@ class _SettingsPageState extends State<SettingsPage> {
             onTap: () => context.push('/settings/game-account-verification'),
           ),
           ListTile(
+            key: const ValueKey('settingsManualVerification'),
+            leading: const Icon(Icons.chat_outlined),
+            title: const Text('수동 인증'),
+            subtitle: const Text('인게임 채팅 코드로 운영자 인증을 요청합니다.'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/manual-verification'),
+          ),
+          ListTile(
             key: const ValueKey('settingsApiToken'),
             leading: const Icon(Icons.key_outlined),
             title: const Text('Lost Ark API 토큰'),
@@ -61,6 +69,15 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: const Text('마지막 접속과 서버 인증 계정을 확인합니다.'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push('/settings/operator/users'),
+                  ),
+                  ListTile(
+                    key: const ValueKey('settingsOperatorManualVerification'),
+                    leading: const Icon(Icons.fact_check_outlined),
+                    title: const Text('수동 인증 확인'),
+                    subtitle: const Text('인게임 채팅 증명을 확인하고 판정합니다.'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () =>
+                        context.push('/settings/operator/manual-verification'),
                   ),
                 ],
               );

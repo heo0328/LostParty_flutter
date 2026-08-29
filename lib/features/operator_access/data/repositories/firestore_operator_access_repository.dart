@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/entities/operator_user.dart';
+import '../../domain/entities/operator_write_readiness.dart';
 import '../../domain/repositories/operator_access_repository.dart';
 
 class FirestoreOperatorAccessRepository implements OperatorAccessRepository {
@@ -29,7 +30,55 @@ class FirestoreOperatorAccessRepository implements OperatorAccessRepository {
         .collection('operatorAssignments')
         .doc(playerId)
         .get();
-    return assignment.exists && assignment.data()?['status'] == 'active';
+    if (!assignment.exists || assignment.data()?['status'] != 'active') {
+      return false;
+    }
+    final player = await _firestore.collection('players').doc(playerId).get();
+    return player.exists && player.data()?['status'] == 'active';
+  }
+
+  @override
+  Future<OperatorWriteReadiness> loadWriteReadiness() async {
+    final authUid = _firebaseAuth.currentUser?.uid;
+    if (authUid == null) {
+      return const OperatorWriteReadiness(
+        authUid: null,
+        playerId: null,
+        bindingActive: false,
+        playerExists: false,
+        playerActive: false,
+        assignmentActive: false,
+      );
+    }
+    final binding = await _firestore.collection('authBindings').doc(authUid).get();
+    final bindingData = binding.data();
+    final playerId = bindingData?['playerId'];
+    final bindingActive =
+        binding.exists && bindingData?['status'] == 'active';
+    if (playerId is! String || playerId.isEmpty) {
+      return OperatorWriteReadiness(
+        authUid: authUid,
+        playerId: null,
+        bindingActive: bindingActive,
+        playerExists: false,
+        playerActive: false,
+        assignmentActive: false,
+      );
+    }
+    final player = await _firestore.collection('players').doc(playerId).get();
+    final assignment = await _firestore
+        .collection('operatorAssignments')
+        .doc(playerId)
+        .get();
+    return OperatorWriteReadiness(
+      authUid: authUid,
+      playerId: playerId,
+      bindingActive: bindingActive,
+      playerExists: player.exists,
+      playerActive: player.exists && player.data()?['status'] == 'active',
+      assignmentActive:
+          assignment.exists && assignment.data()?['status'] == 'active',
+    );
   }
 
   @override

@@ -162,6 +162,40 @@
 
 ---
 
+## BUG-008. Task-086 운영자 승인·분쟁·강제 인증 permission-denied
+
+| 항목 | 내용 |
+| --- | --- |
+| 상태 | **종료 — 수정·Rules 배포·실기기 확인 완료** |
+| 보고일 | 2026-08-29 |
+| 심각도 | 높음 — 해결됨 |
+| 브랜치 | `cursor/task-086-owner-defense` (미커밋) |
+| 상세 문서 | [`TASK-086-OPERATOR-WRITE-BLOCKER.md`](TASK-086-OPERATOR-WRITE-BLOCKER.md) |
+
+### 재현
+
+1. `lost-party`에 Task-086 Rules가 배포된 상태에서 운영자 계정 로그인
+2. `operatorAssignments/{playerId}`·`players/{playerId}`·`authBindings` 모두 active 확인
+3. `수동 인증 확인` → 대기 요청 상세
+4. **취소** → 성공
+5. **승인**(무소유) / **분쟁 개시**(기존 소유자) / **강제 인증** → `PERMISSION_DENIED: Missing or insufficient permissions`
+
+### 기대 결과
+
+운영자가 취소·승인·분쟁 개시·강제 인증을 Rules와 계약대로 처리한다.
+
+### 해결 결과 (2026-08-29)
+
+일반 요청에 없는 선택 필드 `defenseOfRequestId`를 분쟁·강제 인증 Rules가 직접 읽어 평가 오류가 발생했다. 필드 존재 여부를 먼저 검사하도록 수정하고 `lost-party`에 배포한 뒤 일반 승인·분쟁 개시·강제 인증이 실기기에서 통과했다.
+
+### 후속 확인
+
+- 방어 승인·방어 실패·즉시 이전과 양쪽 레이드 권한 반영까지 실기기 확인했다.
+- 실제 24시간 무응답 자동 이전만 미검증으로 남긴다.
+- Java 부재로 Emulator Rules 통합 테스트는 실행하지 않았다.
+
+---
+
 ## 백로그 연결
 
 - 열린 항목은 현재 Task와 **별도**로 추적한다.

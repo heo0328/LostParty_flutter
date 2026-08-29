@@ -1820,3 +1820,41 @@
 - Git 종료: 기능 브랜치를 `main`에 병합하고 원격과 맞춘다.
 
 ---
+
+## Task-085. 수동 인증 요청과 운영자 1차 판정 (2026-08-29)
+
+- 작업 브랜치: `cursor/task-085-manual-verification`
+- 사용자는 설정에서 게임 계정·증명 캐릭터를 고르고 `LP-` 코드를 받아 인게임 일반 채팅 전체 화면을 운영자 오픈카톡으로 보낸다. 스크린샷은 Firestore에 올리지 않는다.
+- 운영자 `수동 인증 확인`에서 대기 요청을 오래된 순으로 보고 승인·취소·인증 금지를 처리한다.
+- 승인 시 Lost Ark API roster를 다시 조회하고, 기존 active 소유자가 없을 때만 GameAccount 전체 소유를 요청자에게 확정한다.
+- 085 결정: 기존 소유자가 있으면 `existingOwner`로 거절하고 `awaitingOwnerResponse`는 열지 않는다.
+- Rules·인덱스를 추가했고, 사용자가 Firebase `lost-party`에 배포했다(2026-08-29).
+- 코드 발급 시 없는 인증 금지 문서 get이 permission-denied로 거절되던 문제를 고쳤다. Rules 재배포가 필요하다.
+- 내 요청 목록이 `createdAt` 복합 인덱스 구독 실패로 코드가 사라지던 문제를, 단일 필드 조회 후 클라이언트 정렬로 고쳤다.
+- 재발급 UI는 제거했다. 새 코드는 요청 취소 후 다시 발급한다.
+- 수동 인증 안내에 운영자 오픈채팅방 링크를 연결했다.
+- 진행 중 요청은 로컬 게임 계정(원정대) 단위로만 하나 허용한다. 같은 계정의 다른 캐릭터 중복 요청은 거절한다.
+- 발급 문서에 null 필드를 넣어 Rules가 거절하던 문제와, 목록 구독이 매 빌드마다 끊기던 문제를 고쳤다. 취소된 요청은 내 요청 목록에 올리지 않는다.
+- 운영자 대기 목록은 복합 인덱스 없이 status만 조회한 뒤 오래된 순으로 정렬한다.
+- 표적 테스트와 `flutter analyze --no-pub`을 통과했다.
+- 커밋은 사용자 지시 시.
+
+---
+
+## Task-086. 기존 소유자 방어·자동 이전·강제 인증 (2026-08-29)
+
+- 작업 브랜치: `cursor/task-086-owner-defense` (미커밋)
+- 구현: 분쟁 상태(`awaitingOwnerResponse`·`defended`·`transferred`), 분쟁 개시, 방어 승인, 기한 후 자동 이전, 운영자 강제 인증, 분쟁 알림 이벤트, 운영자 UI
+- Rules·인덱스: `lost-party`에 여러 차례 배포. 최종 Rules는 `validManualVerificationOperatorWrite` 단일 진입점
+- Rules 차단 원인: 선택 필드 `defenseOfRequestId`가 없는 일반 요청에서 필드를 직접 읽어 Rules 평가 오류가 발생했다. 존재 여부를 먼저 검사하도록 수정했다.
+- 승인 결과를 활성 요청 목록 필터 전에 처리해 요청자 로컬 GameAccount·Character 서버 ID를 연결하고, 같은 GameAccountId의 누락 매핑도 보강한다.
+- 수동 인증 화면에 완료 후 재진입·별도 완료 알림 없음·반복/부정확 요청 제한 가능성을 빨간 경고로 표시한다.
+- `방어 실패`를 추가했다. 방어 요청은 `ownerDefenseFailed`로 종료하고 신규 요청자에게 즉시 이전하며 기존 소유자에게 자동 인증 금지는 적용하지 않는다.
+- 로컬: 전체 `flutter test --no-pub` 488건 통과, `flutter analyze --no-pub` 통과
+- 실기기:
+  - **동작:** 취소, 일반 승인, 분쟁 개시, 운영자 거절, 방어 승인, 방어 실패, 강제 인증
+  - **동작:** 즉시 소유권 이전, 기존 소유자의 레이드 Character 후보 제외, 거절·방어 승인 시 기존 권한 유지
+  - **미검증:** 실제 24시간 무응답 후 자동 이전
+- BUG-008은 수정·Rules 배포·실기기 확인 후 종료. 해결 경과는 [`TASK-086-OPERATOR-WRITE-BLOCKER.md`](TASK-086-OPERATOR-WRITE-BLOCKER.md)에 보존한다.
+
+---

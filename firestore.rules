@@ -1043,7 +1043,37 @@ service cloud.firestore {
             ? validMembershipEvent(playerId, eventId, data)
             : (data.type == 'partyDisbanded'
               ? validLifecycleEvent(playerId, eventId, data)
-              : false)));
+              : (data.type == 'manualVerificationDisputeOpened'
+                ? validManualVerificationDisputeEvent(playerId, eventId, data)
+                : false))));
+    }
+
+    function validManualVerificationDisputeEvent(playerId, eventId, data) {
+      let requestPath = /databases/$(database)/documents/manualVerificationRequests/$(data.requestId);
+      let requestData = get(requestPath).data;
+      return isActiveOperator()
+        && data.keys().hasOnly([
+          'schemaVersion', 'eventId', 'type', 'playerId', 'requestId',
+          'requesterPlayerId', 'targetGameAccountId',
+          'proofCharacterNameSnapshot', 'ownerResponseDeadlineAt',
+          'occurredAt', 'expiresAt'
+        ])
+        && data.schemaVersion == 1
+        && data.eventId == eventId
+        && data.playerId == playerId
+        && data.type == 'manualVerificationDisputeOpened'
+        && data.requestId is string
+        && data.requestId.size() > 0
+        && eventId == 'mvd_' + data.requestId
+        && data.requesterPlayerId is string
+        && data.targetGameAccountId is string
+        && data.proofCharacterNameSnapshot is string
+        && data.ownerResponseDeadlineAt is timestamp
+        && requestData.status == 'awaitingOwnerResponse'
+        && requestData.previousOwnerPlayerId == playerId
+        && requestData.targetGameAccountId == data.targetGameAccountId
+        && requestData.ownerResponseDeadlineAt == data.ownerResponseDeadlineAt
+        && validEventTiming(data);
     }
 
     function validPendingApplication(recruitmentId, playerId, data) {
@@ -1587,12 +1617,353 @@ service cloud.firestore {
       }
     }
 
+    function validManualVerificationCode(value) {
+      return value is string
+        && value.matches('^LP-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$');
+    }
+
+    function manualVerificationActiveOwnerPlayerId(identityKey, gameAccountId) {
+      let claimPath =
+        /databases/$(database)/documents/characterIdentityClaims/$(identityKey);
+      let claimAccountId = exists(claimPath)
+        ? get(claimPath).data.gameAccountId
+        : null;
+      let resolvedAccountId = claimAccountId is string && claimAccountId.size() > 0
+        ? claimAccountId
+        : (gameAccountId is string && gameAccountId.size() > 0
+          ? gameAccountId
+          : null);
+      return resolvedAccountId is string
+        && exists(/databases/$(database)/documents/gameAccounts/$(resolvedAccountId))
+        && get(/databases/$(database)/documents/gameAccounts/$(resolvedAccountId))
+          .data.status == 'active'
+        ? get(/databases/$(database)/documents/gameAccounts/$(resolvedAccountId))
+          .data.ownerPlayerId
+        : null;
+    }
+
+    function manualVerificationDisputeOwnerPlayerId(oldData) {
+      return oldData.status == 'awaitingOwnerResponse'
+        && oldData.previousOwnerPlayerId is string
+        && oldData.previousOwnerPlayerId.size() > 0
+        ? oldData.previousOwnerPlayerId
+        : manualVerificationActiveOwnerPlayerId(
+          oldData.targetIdentityKey,
+          'targetGameAccountId' in oldData ? oldData.targetGameAccountId : null
+        );
+    }
+
+    function manualVerificationRequesterAlreadyOwns(data) {
+      let owner = manualVerificationActiveOwnerPlayerId(
+        data.targetIdentityKey,
+        'targetGameAccountId' in data ? data.targetGameAccountId : null
+      );
+      return owner is string
+        && owner.size() > 0
+        && owner == data.requesterPlayerId;
+    }
+
+    function validManualVerificationCreate(data) {
+      return hasActiveBinding()
+        && data.schemaVersion == 1
+        && data.requesterPlayerId == currentPlayerId()
+        && data.targetIdentityKey is string
+        && data.targetIdentityKey.size() > 0
+        && data.localAccountId is number
+        && data.localAccountId >= 1
+        && data.localAccountLabelSnapshot is string
+        && data.proofServerName is string
+        && data.proofServerName.size() > 0
+        && data.proofCharacterName is string
+        && data.proofCharacterName.size() > 0
+        && validManualVerificationCode(data.verificationCode)
+        && data.status == 'pendingProof'
+        && data.attemptNumberForTarget is number
+        && data.attemptNumberForTarget >= 1
+        && data.totalAttemptNumberForPlayer is number
+        && data.totalAttemptNumberForPlayer >= 1
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && data.expiresAt is timestamp
+        && (!('defenseOfRequestId' in data)
+          ? !manualVerificationRequesterAlreadyOwns(data)
+          : (data.defenseOfRequestId is string
+            && data.defenseOfRequestId.size() > 0
+            && exists(/databases/$(database)/documents/manualVerificationRequests/$(data.defenseOfRequestId))
+            && get(/databases/$(database)/documents/manualVerificationRequests/$(data.defenseOfRequestId))
+              .data.status == 'awaitingOwnerResponse'
+            && get(/databases/$(database)/documents/manualVerificationRequests/$(data.defenseOfRequestId))
+              .data.previousOwnerPlayerId == currentPlayerId()
+            && request.time < get(/databases/$(database)/documents/manualVerificationRequests/$(data.defenseOfRequestId))
+              .data.ownerResponseDeadlineAt));
+    }
+
+    function manualVerificationOperatorContextUnchanged(oldData, newData) {
+      return newData.requesterPlayerId == oldData.requesterPlayerId
+        && newData.targetIdentityKey == oldData.targetIdentityKey;
+    }
+
+    function validManualVerificationOperatorReviewBody(oldData, newData) {
+      return oldData.status == 'pendingProof'
+        && manualVerificationOperatorContextUnchanged(oldData, newData)
+        && (
+          (
+            newData.status == 'cancelled'
+            && newData.reviewReason is string
+            && newData.reviewReason.size() > 0
+            && newData.reviewedAt is timestamp
+            && newData.resolvedAt is timestamp
+            && newData.diff(oldData).affectedKeys().hasOnly([
+              'status', 'reviewedByOperatorPlayerId', 'reviewedAt',
+              'reviewReason', 'resolvedAt', 'updatedAt'
+            ])
+          )
+          || (
+            newData.status == 'blocked'
+            && newData.reviewReason is string
+            && newData.reviewReason.size() > 0
+            && newData.reviewedAt is timestamp
+            && newData.resolvedAt is timestamp
+            && newData.diff(oldData).affectedKeys().hasOnly([
+              'status', 'reviewedByOperatorPlayerId', 'reviewedAt',
+              'reviewReason', 'resolvedAt', 'updatedAt'
+            ])
+          )
+          || (
+            newData.status == 'approved'
+            && newData.targetGameAccountId is string
+            && newData.targetGameAccountId.size() > 0
+            && newData.reviewedAt is timestamp
+            && newData.resolvedAt is timestamp
+            && newData.diff(oldData).affectedKeys().hasOnly([
+              'status', 'targetGameAccountId', 'reviewedByOperatorPlayerId',
+              'reviewedAt', 'resolvedAt', 'updatedAt'
+            ])
+          )
+          || validManualVerificationDefenseApprove(oldData, newData)
+        );
+    }
+
+    function validManualVerificationDisputeOpenBody(oldData, newData) {
+      return oldData.status == 'pendingProof'
+        && !('defenseOfRequestId' in oldData
+          && oldData.defenseOfRequestId is string
+          && oldData.defenseOfRequestId.size() > 0)
+        && manualVerificationOperatorContextUnchanged(oldData, newData)
+        && newData.status == 'awaitingOwnerResponse'
+        && newData.targetGameAccountId is string
+        && newData.targetGameAccountId.size() > 0
+        && newData.previousOwnerPlayerId is string
+        && newData.previousOwnerPlayerId.size() > 0
+        && newData.previousOwnerPlayerId != oldData.requesterPlayerId
+        && newData.disputeOpenedAt is timestamp
+        && newData.ownerResponseDeadlineAt is timestamp
+        && newData.reviewedAt is timestamp
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'targetGameAccountId', 'previousOwnerPlayerId',
+          'disputeOpenedAt', 'ownerResponseDeadlineAt',
+          'reviewedByOperatorPlayerId', 'reviewedAt', 'updatedAt'
+        ]);
+    }
+
+    function validManualVerificationDisputeDefendedBody(oldData, newData) {
+      return oldData.status == 'awaitingOwnerResponse'
+        && newData.status == 'defended'
+        && newData.reviewReason == 'ownerDefended'
+        && newData.reviewedAt is timestamp
+        && newData.resolvedAt is timestamp
+        && request.time < oldData.ownerResponseDeadlineAt
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'reviewedByOperatorPlayerId', 'reviewedAt',
+          'reviewReason', 'resolvedAt', 'updatedAt'
+        ]);
+    }
+
+    function manualVerificationForceOwnerPlayerId(oldData) {
+      return oldData.status == 'awaitingOwnerResponse'
+        && oldData.previousOwnerPlayerId is string
+        && oldData.previousOwnerPlayerId.size() > 0
+        ? oldData.previousOwnerPlayerId
+        : manualVerificationActiveOwnerPlayerId(
+          oldData.targetIdentityKey,
+          'targetGameAccountId' in oldData
+            && oldData.targetGameAccountId is string
+            && oldData.targetGameAccountId.size() > 0
+            ? oldData.targetGameAccountId
+            : ''
+        );
+    }
+
+    function validManualVerificationOperatorForceBody(oldData, newData) {
+      return newData.status == 'transferred'
+        && (newData.reviewReason == 'operatorForced'
+          || newData.reviewReason == 'ownerDefenseFailed')
+        && !('defenseOfRequestId' in oldData
+          && oldData.defenseOfRequestId is string
+          && oldData.defenseOfRequestId.size() > 0)
+        && (oldData.status == 'pendingProof'
+          || oldData.status == 'awaitingOwnerResponse')
+        && newData.targetGameAccountId is string
+        && newData.targetGameAccountId.size() > 0
+        && newData.reviewedAt is timestamp
+        && newData.resolvedAt is timestamp
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'targetGameAccountId', 'reviewReason',
+          'reviewedByOperatorPlayerId', 'reviewedAt', 'resolvedAt', 'updatedAt'
+        ]);
+    }
+
+    function validManualVerificationOperatorWrite(oldData, newData) {
+      return isActiveOperator()
+        && newData.reviewedByOperatorPlayerId == currentPlayerId()
+        && newData.updatedAt == request.time
+        && (
+          (newData.status != 'transferred'
+            && (
+              validManualVerificationOperatorReviewBody(oldData, newData)
+              || validManualVerificationDisputeOpenBody(oldData, newData)
+              || validManualVerificationDisputeDefendedBody(oldData, newData)
+            ))
+          || validManualVerificationOperatorForceBody(oldData, newData)
+        );
+    }
+
+    function unchangedManualVerificationIdentity(oldData, newData) {
+      return newData.schemaVersion == oldData.schemaVersion
+        && newData.requesterPlayerId == oldData.requesterPlayerId
+        && newData.targetIdentityKey == oldData.targetIdentityKey
+        && newData.localAccountId == oldData.localAccountId
+        && newData.proofServerName == oldData.proofServerName
+        && newData.proofCharacterName == oldData.proofCharacterName
+        && newData.localAccountLabelSnapshot == oldData.localAccountLabelSnapshot;
+    }
+
+    function validManualVerificationRequesterCancel(oldData, newData) {
+      return hasActiveBinding()
+        && oldData.requesterPlayerId == currentPlayerId()
+        && oldData.status == 'pendingProof'
+        && newData.status == 'cancelled'
+        && unchangedManualVerificationIdentity(oldData, newData)
+        && newData.verificationCode == oldData.verificationCode
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'resolvedAt', 'updatedAt'
+        ])
+        && newData.resolvedAt == request.time
+        && newData.updatedAt == request.time;
+    }
+
+    function validManualVerificationReissue(oldData, newData) {
+      return hasActiveBinding()
+        && oldData.requesterPlayerId == currentPlayerId()
+        && oldData.status == 'pendingProof'
+        && newData.status == 'pendingProof'
+        && unchangedManualVerificationIdentity(oldData, newData)
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'verificationCode', 'createdAt', 'expiresAt', 'updatedAt',
+          'attemptNumberForTarget', 'totalAttemptNumberForPlayer'
+        ])
+        && validManualVerificationCode(newData.verificationCode)
+        && newData.createdAt == request.time
+        && newData.updatedAt == request.time
+        && newData.expiresAt is timestamp
+        && newData.attemptNumberForTarget == oldData.attemptNumberForTarget + 1
+        && newData.totalAttemptNumberForPlayer
+          == oldData.totalAttemptNumberForPlayer + 1;
+    }
+
+    function validManualVerificationDefenseApprove(oldData, newData) {
+      return newData.status == 'approved'
+        && oldData.defenseOfRequestId is string
+        && oldData.defenseOfRequestId.size() > 0
+        && newData.targetGameAccountId is string
+        && newData.targetGameAccountId.size() > 0
+        && newData.reviewedAt is timestamp
+        && newData.resolvedAt is timestamp
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'targetGameAccountId', 'reviewedByOperatorPlayerId',
+          'reviewedAt', 'resolvedAt', 'updatedAt'
+        ]);
+    }
+
+    function validManualVerificationDisputeTransfer(oldData, newData) {
+      return hasActiveBinding()
+        && oldData.status == 'awaitingOwnerResponse'
+        && newData.status == 'transferred'
+        && request.time >= oldData.ownerResponseDeadlineAt
+        && newData.reviewReason == 'ownerResponseExpired'
+        && newData.resolvedAt == request.time
+        && newData.updatedAt == request.time
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'targetGameAccountId', 'reviewReason', 'resolvedAt', 'updatedAt'
+        ]);
+    }
+
+    function validManualVerificationBlockWrite(data) {
+      return isActiveOperator()
+        && data.schemaVersion == 1
+        && data.playerId is string
+        && data.playerId.size() > 0
+        && data.status == 'active'
+        && data.reason is string
+        && data.reason.size() > 0
+        && data.blockedByOperatorPlayerId == currentPlayerId()
+        && data.blockedAt == request.time
+        && (
+          (data.targetIdentityKey is string && data.targetIdentityKey.size() > 0)
+          || (data.targetGameAccountId is string
+            && data.targetGameAccountId.size() > 0)
+        );
+    }
+
+    function canGetManualVerificationBlock(blockId) {
+      return hasActiveBinding()
+        && (
+          !exists(/databases/$(database)/documents/manualVerificationBlocks/$(blockId))
+          || isActiveOperator()
+          || get(/databases/$(database)/documents/manualVerificationBlocks/$(blockId))
+            .data.playerId == currentPlayerId()
+        );
+    }
+
     match /accountVerificationChallenges/{challengeId} {
       allow read, write: if false;
     }
 
     match /activeAccountVerificationChallenges/{playerId} {
       allow read, write: if false;
+    }
+
+    match /manualVerificationRequests/{requestId} {
+      allow get: if hasActiveBinding()
+        && (resource.data.requesterPlayerId == currentPlayerId()
+          || resource.data.previousOwnerPlayerId == currentPlayerId()
+          || isActiveOperator());
+      allow list: if isActiveOperator()
+        || (hasActiveBinding()
+          && (resource.data.requesterPlayerId == currentPlayerId()
+            || resource.data.previousOwnerPlayerId == currentPlayerId()));
+      allow create: if validManualVerificationCreate(request.resource.data);
+      allow update: if validManualVerificationRequesterCancel(
+          resource.data,
+          request.resource.data
+        ) || validManualVerificationReissue(
+          resource.data,
+          request.resource.data
+        ) || validManualVerificationOperatorWrite(
+          resource.data,
+          request.resource.data
+        ) || validManualVerificationDisputeTransfer(
+          resource.data,
+          request.resource.data
+        );
+      allow delete: if false;
+    }
+
+    match /manualVerificationBlocks/{blockId} {
+      allow get: if canGetManualVerificationBlock(blockId);
+      allow list: if isActiveOperator();
+      allow create: if validManualVerificationBlockWrite(request.resource.data);
+      allow update, delete: if false;
     }
 
     match /gameAccounts/{gameAccountId} {
