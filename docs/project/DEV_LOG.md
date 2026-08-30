@@ -1865,3 +1865,15 @@
 - 그룹 이력은 `groupId + occurredAt + expireAt`으로 3개월 보관하고, 1개월 미활동 표시·soft delete 후 28일·Spark 운영자 수동 정리 방향을 기록했다.
 - 같은 데이터 정리 기반을 일반 레이드와 사용자 데이터에 후속 적용하되 현재 코드·Rules에는 반영하지 않는다.
 - 기준 문서: [`../product/GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md)
+
+---
+
+## Task-11. 그룹 생성·가입 Firestore/Rules 계약 분리 (2026-08-31)
+
+- 확정된 그룹 제품 정책을 [`../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md)로 분리했다.
+- 그룹 membership, 활성 관계 요청, 누적 신청 횟수와 신청 금지를 모두 `groupId + playerId` 단위로 고정했다. Character는 검색·표시 Snapshot과 향후 레이드 선택에만 사용한다.
+- `groups`, 멤버·요청·통계·금지 하위 문서, Player별 membership state·관계 Projection, 정확한 초대코드 조회 경로를 정의했다.
+- 그룹 50명과 Player별 50개 그룹 제한을 그룹 인원·Player 그룹 ID 요약·membership의 같은 Transaction 및 Rules `getAfter()`로 강제한다.
+- 그룹 생성, 초대·신청, 수락·승인·거절·금지, 초대코드 생성·폐기·즉시 가입의 상태 전이와 동시성 실패 조건을 확정했다.
+- Task-11에서 탈퇴·추방·이전·해산·그룹 레이드·알림·공지는 제외하고 해당 쓰기를 Rules가 미리 허용하지 않도록 했다.
+- 다음 실행은 Cursor의 Task-11 구현이며 기반·생성·읽기부터 단계별로 진행한다.
