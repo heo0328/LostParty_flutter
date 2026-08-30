@@ -57,7 +57,7 @@
 | 완료 기능 | Task-083~086 운영자 기능, 반복 레이드 `금주 진행`·`다음주 대기` 표시 | 실제 24시간 경과 시나리오만 보류 검증 |
 | Firestore Rules | Task-086 규칙 **배포됨** | Firebase `lost-party`, 사용자 배포 2026-08-29 |
 | 현재 문서 상태 | 그룹 제품 흐름 초안 최신화 | [`../product/GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md) |
-| 다음 실행 | **그룹 미결정 정책 확정 후 구현 계약 분리** | 알림·공지는 초기 범위 제외 |
+| 다음 실행 | **Task-11 그룹 생성·가입 구현 계약 분리** | Player 단위 membership·신청·금지, 알림·공지는 초기 범위 제외 |
 
 ### Task-073 확인 완료 사항 (2026-08-27)
 
@@ -93,7 +93,7 @@
 | 10a | **운영자 권한·마지막 접속·대표 동기화** | **완료 (Task-084·084b)** | 운영자 목록, 대표 보강, 사용자 변경 5분 |
 | 10b | **수동 인증 요청과 운영자 1차 판정** | **Task-085 완료** | Task-086 브랜치에 포함 |
 | 10c | **기존 소유자 24시간 방어와 자동 이전** | **Task-086 완료** | 실제 24시간 경과 검증은 사용자 결정으로 보류 |
-| 11 | 그룹 생성·가입 | [`GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md)의 필수 미결정 정책 확정 | 그룹 membership 기반 |
+| 11 | 그룹 생성·가입 | [`GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md)의 확정 Player 단위 정책 | 그룹 membership 기반 |
 | 12 | 그룹 전용 모집 | 그룹 membership 안정화 | 생성 드롭다운과 그룹 Rules |
 | 13 | 레이드 모집·현황 공통 필터 | 그룹 공개 범위 확정 | 공통 UX, Firestore/Drift 조회 분리 |
 | 14 | 빈 슬롯 역할·직업·시너지 조건 | 슬롯 명령 안정화 | 가입·승인 조건 서버 검증 |
