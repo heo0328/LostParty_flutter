@@ -26,7 +26,9 @@
 - active `playerGameAccounts`의 대표 Character 서버 동기화, 서버 성공 후 로컬 반영, GameAccount별 5분 제한, 운영자 목록·상세 표시를 구현했다. 전체 테스트 464건과 analyze가 통과했고 해당 Rules를 `lost-party`에 배포했다.
 - Task-086 기존 소유자 방어·자동 이전·강제 인증 핵심 구현과 Rules 배포·실기기 검증을 완료했다. BUG-008은 선택 필드 `defenseOfRequestId` 부재 Rules 평가 오류를 수정해 종료했다. 취소·일반 승인·분쟁 개시·운영자 거절·방어 승인·방어 실패·강제 인증과 양쪽 레이드 권한 반영을 확인했다. 실제 24시간 무응답 자동 이전만 미검증이다. 기능 커밋은 `8c649ad`다.
 - 반복 레이드 진행 목록에 `금주 진행`·`다음주 대기` 상태 배지를 추가한 커밋은 `05a441d`다.
-- 그룹 제품 흐름은 [`../product/GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md), Task-11 기술 계약은 [`../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md)에 정리했다. membership·활성 신청·누적 횟수·신청 금지는 모두 Player 단위이며, 그룹원은 해당 Player가 인증한 본·부계정의 모든 원정대 캐릭터를 기존 레이드 조건 안에서 사용할 수 있다. 그룹 생성·검색·초대·신청·초대코드 가입의 Firestore 경로, Transaction, Rules 불변식과 검증 시나리오까지 확정했으므로 다음 작업은 Cursor의 Task-11 구현이다. 탈퇴·이전·해산과 그룹 레이드는 후속 범위이고 알림·공지는 초기 범위에서 제외한다.
+- 그룹 제품 흐름은 [`../product/GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md), Task-11 기술 계약은 [`../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md)에 정리했다. membership·활성 신청·누적 횟수·신청 금지는 모두 Player 단위다.
+- Task-11 구현은 브랜치 `cursor/task-11-group-membership` 커밋 `b673fdb`에 있다. 4번째 탭을 그룹으로 바꾸고 설정은 내 계정 톱니로 이동했다. 생성·검색·기본 상세·초대·신청·승인/금지·초대코드 생성·폐기·공개 토글·코드 즉시 가입을 포함한다. 자동 검증(그룹 테스트·analyze)은 통과했다.
+- 실기기(2026-08-31): 초대코드 생성·폐기·멤버 공개 토글 동작, 코드로 즉시 가입·인원 2명 표시, 생성·마지막 활동 시각 표시를 확인했다. 멤버 목록 UI는 Task-11에서 만들지 않았고(Rules 읽기만 허용), 탈퇴는 계약상 후속이라 버튼이 없다. 연속 검증을 위해 다음 실행은 멤버 목록 UI와 일반 멤버 탈퇴다. 그룹장 이전·해산·그룹 레이드·알림·공지는 계속 후속이다.
 
 ---
 

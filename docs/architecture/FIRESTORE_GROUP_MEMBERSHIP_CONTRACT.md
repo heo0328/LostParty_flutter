@@ -2,12 +2,13 @@
 
 ## 1. 상태와 범위
 
-- 상태: **Task-11 구현 계약 확정**
+- 상태: **Task-11 구현 완료** (브랜치 `cursor/task-11-group-membership`, 커밋 `b673fdb`). `main` 병합·Codex 재검토 전
 - 제품 기준: [`../product/GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md)
 - 실행 환경: Firebase Spark, Flutter 클라이언트 Transaction, Firestore Security Rules
-- 구현 인계 대상: 그룹 생성·검색·기본 상세·직접 초대·가입 신청·초대코드 즉시 가입과 요청 처리
+- 구현 범위: 그룹 생성·검색·기본 상세·직접 초대·가입 신청·초대코드 즉시 가입과 요청 처리
+- 실기기(2026-08-31): 초대코드 생성·폐기·`joinCodeVisibleToMembers` 토글·코드 즉시 가입(인원 2)·생성/마지막 활동 시각 표시 확인. 멤버 목록 UI는 미구현(§10 읽기 허용만). Emulator §12.4–12.5 동시성은 미실시
 
-이 문서는 제품 정책을 다시 결정하지 않는다. 확정된 Task-11 정책을 Firestore 경로, 명령 Transaction, Rules 불변식과 검증 시나리오로 분리한다. 구현은 이 계약을 통과한 뒤 시작한다.
+이 문서는 제품 정책을 다시 결정하지 않는다. 확정된 Task-11 정책을 Firestore 경로, 명령 Transaction, Rules 불변식과 검증 시나리오로 분리한다.
 
 다음은 Task-11에서 제외한다.
 
