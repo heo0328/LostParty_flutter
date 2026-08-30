@@ -10,6 +10,20 @@ import 'package:lost_party/features/account/data/local/account_database.dart';
 import 'package:lost_party/features/account/domain/entities/game_account_verification.dart';
 import 'package:lost_party/features/account/domain/repositories/account_ownership_status_gateway.dart';
 import 'package:lost_party/features/account/domain/repositories/game_account_verification_gateway.dart';
+import 'package:lost_party/features/group/domain/entities/group_blocked_player.dart';
+import 'package:lost_party/features/group/domain/entities/group_create_command.dart';
+import 'package:lost_party/features/group/domain/entities/group_create_result.dart';
+import 'package:lost_party/features/group/domain/entities/group_join_code_command.dart';
+import 'package:lost_party/features/group/domain/entities/group_join_command.dart';
+import 'package:lost_party/features/group/domain/entities/group_join_relation.dart';
+import 'package:lost_party/features/group/domain/entities/group_member.dart';
+import 'package:lost_party/features/group/domain/entities/group_relation.dart';
+import 'package:lost_party/features/group/domain/entities/group_summary.dart';
+import 'package:lost_party/features/group/domain/repositories/group_application_command_repository.dart';
+import 'package:lost_party/features/group/domain/repositories/group_create_repository.dart';
+import 'package:lost_party/features/group/domain/repositories/group_join_code_command_repository.dart';
+import 'package:lost_party/features/group/domain/repositories/group_join_command_repository.dart';
+import 'package:lost_party/features/group/domain/repositories/group_read_repository.dart';
 import 'package:lost_party/features/player/domain/entities/player_session.dart';
 import 'package:lost_party/main.dart';
 
@@ -29,7 +43,8 @@ void main() {
     expect(find.text('진행 중인 레이드가 없습니다.'), findsOneWidget);
     expect(find.text('내 계정'), findsOneWidget);
     expect(find.text('레이드 모집'), findsOneWidget);
-    expect(find.text('설정'), findsOneWidget);
+    expect(find.text('그룹'), findsOneWidget);
+    expect(find.text('설정'), findsNothing);
   });
 
   testWidgets('Navigation bar opens account and recruitment tabs', (
@@ -77,13 +92,16 @@ void main() {
     expect(find.text('신청 중인 레이드가 없습니다.'), findsOneWidget);
   });
 
-  testWidgets('Settings opens verification and API token pages', (
+  testWidgets('My account gear opens settings and its child pages', (
     WidgetTester tester,
   ) async {
     await _pumpApp(tester);
     await tester.pumpAndSettle();
 
-    await _tapDestination(tester, '설정');
+    await _tapDestination(tester, '내 계정');
+    await tester.tap(find.byKey(const ValueKey('myAccountSettingsButton')));
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationBar), findsNothing);
 
     await tester.tap(
       find.byKey(const ValueKey('settingsGameAccountVerification')),
@@ -102,9 +120,79 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('API 토큰'), findsOneWidget);
 
-    await _tapDestination(tester, '설정');
+    await tester.pageBack();
+    await tester.pumpAndSettle();
     expect(find.text('API 토큰'), findsNothing);
     expect(find.byKey(const ValueKey('settingsApiToken')), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('내 계정'), findsNWidgets(2));
+  });
+
+  testWidgets('Group tab replaces the settings destination', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(tester);
+    await tester.pumpAndSettle();
+
+    await _tapDestination(tester, '그룹');
+
+    expect(find.text('내 그룹'), findsOneWidget);
+    expect(find.text('요청 현황'), findsOneWidget);
+    expect(find.text('그룹 만들기'), findsOneWidget);
+    expect(
+      find.text('가입한 그룹이 없습니다. 그룹을 만들거나 검색해 보세요.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Group tab destinations open create, search, join-by-code', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(tester);
+    await tester.pumpAndSettle();
+    await _tapDestination(tester, '그룹');
+
+    await tester.tap(find.byKey(const ValueKey('groupCreateButton')));
+    await tester.pumpAndSettle();
+    expect(find.byType(AppBar), findsWidgets);
+    expect(find.text('그룹 만들기'), findsWidgets);
+    // 인증 캐릭터가 없으면 제출 대신 안내 문구가 나온다.
+    expect(
+      find.textContaining('인증'),
+      findsWidgets,
+    );
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('groupSearchButton')));
+    await tester.pumpAndSettle();
+    expect(find.text('그룹 검색'), findsOneWidget);
+    expect(find.byKey(const ValueKey('groupSearchField')), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('groupJoinByCodeButton')));
+    await tester.pumpAndSettle();
+    expect(find.text('초대코드로 가입'), findsOneWidget);
+    expect(find.byKey(const ValueKey('groupJoinByCodeField')), findsOneWidget);
+  });
+
+  testWidgets('Group requests tab shows empty request status', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(tester);
+    await tester.pumpAndSettle();
+    await _tapDestination(tester, '그룹');
+
+    await tester.tap(find.byKey(const ValueKey('groupRequestsTab')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('받은 초대와 보낸 신청이 없습니다.'), findsOneWidget);
   });
 
   testWidgets(
@@ -200,8 +288,144 @@ Future<void> _pumpApp(WidgetTester tester) async {
       partyEventSyncService: FakePartyEventSyncService(),
       weeklyRaidClaimRepository: _WeeklyRaidClaimRepository(),
       characterSummarySyncGateway: _CharacterSummarySyncGateway(),
+      groupReadRepository: _GroupReadRepository(),
+      groupCreateRepository: _GroupCreateRepository(),
+      groupJoinCommandRepository: _GroupJoinCommandRepository(),
+      groupApplicationCommandRepository: _GroupApplicationCommandRepository(),
+      groupJoinCodeCommandRepository: _GroupJoinCodeCommandRepository(),
     ),
   );
+}
+
+class _GroupCreateRepository implements GroupCreateRepository {
+  @override
+  Future<GroupCreateResult> create(GroupCreateCommand command) async =>
+      const GroupCreateResult.failure(GroupCreateFailure.unknown);
+}
+
+class _GroupJoinCodeCommandRepository
+    implements GroupJoinCodeCommandRepository {
+  @override
+  Future<GroupJoinCodeCommandResult> createCode(
+    GroupJoinCodeCreateCommand command,
+  ) async => const GroupJoinCodeCommandResult.failure(
+    GroupJoinFailure.unknown,
+  );
+
+  @override
+  Future<GroupJoinCodeCommandResult> revokeCode(
+    GroupJoinCodeRevokeCommand command,
+  ) async => const GroupJoinCodeCommandResult.failure(
+    GroupJoinFailure.unknown,
+  );
+
+  @override
+  Future<GroupJoinCodeCommandResult> setVisibility(
+    GroupJoinCodeVisibilityCommand command,
+  ) async => const GroupJoinCodeCommandResult.success(visibleToMembers: true);
+
+  @override
+  Future<GroupJoinCodeCommandResult> joinByCode(
+    GroupJoinByCodeCommand command,
+  ) async => const GroupJoinCodeCommandResult.failure(
+    GroupJoinFailure.unknown,
+  );
+}
+
+class _GroupApplicationCommandRepository
+    implements GroupApplicationCommandRepository {
+  @override
+  Future<GroupJoinCommandResult> approveApplication(
+    GroupApplicationDecisionCommand command,
+  ) async => const GroupJoinCommandResult.success(GroupRequestStatus.accepted);
+
+  @override
+  Future<GroupJoinCommandResult> rejectApplication(
+    GroupApplicationDecisionCommand command,
+  ) async => const GroupJoinCommandResult.success(GroupRequestStatus.rejected);
+
+  @override
+  Future<GroupJoinCommandResult> blockApplicant(
+    GroupApplicationDecisionCommand command,
+  ) async => const GroupJoinCommandResult.success(GroupRequestStatus.blocked);
+
+  @override
+  Future<GroupJoinCommandResult> releaseBlock(
+    GroupBlockReleaseCommand command,
+  ) async => const GroupJoinCommandResult.completed();
+}
+
+class _GroupJoinCommandRepository implements GroupJoinCommandRepository {
+  @override
+  Future<GroupJoinCommandResult> invite(GroupInviteCommand command) async =>
+      const GroupJoinCommandResult.success(GroupRequestStatus.pending);
+
+  @override
+  Future<GroupJoinCommandResult> apply(GroupApplyCommand command) async =>
+      const GroupJoinCommandResult.success(GroupRequestStatus.pending);
+
+  @override
+  Future<GroupJoinCommandResult> acceptInvitation(
+    GroupInvitationDecisionCommand command,
+  ) async => const GroupJoinCommandResult.success(GroupRequestStatus.accepted);
+
+  @override
+  Future<GroupJoinCommandResult> rejectInvitation(
+    GroupInvitationDecisionCommand command,
+  ) async => const GroupJoinCommandResult.success(GroupRequestStatus.rejected);
+
+  @override
+  Future<GroupJoinCommandResult> cancelInvitation(
+    GroupInvitationCancelCommand command,
+  ) async => const GroupJoinCommandResult.success(GroupRequestStatus.cancelled);
+}
+
+class _GroupReadRepository implements GroupReadRepository {
+  @override
+  Stream<GroupReadSnapshot<GroupRelation>> watchMyGroups(String playerId) =>
+      Stream.value(
+        const GroupReadSnapshot(items: <GroupRelation>[], isFromCache: false),
+      );
+
+  @override
+  Stream<GroupReadSnapshot<GroupRelation>> watchMyRequests(String playerId) =>
+      Stream.value(
+        const GroupReadSnapshot(items: <GroupRelation>[], isFromCache: false),
+      );
+
+  @override
+  Future<List<GroupPublicSummary>> searchGroups({
+    required String query,
+    int limit = groupSearchPageSize,
+  }) async => const [];
+
+  @override
+  Future<GroupPublicSummary?> loadGroup(String groupId) async => null;
+
+  @override
+  Future<GroupRelation?> loadMyRelation({
+    required String playerId,
+    required String groupId,
+  }) async => null;
+
+  @override
+  Future<List<GroupJoinRelation>> loadGroupJoinRelations({
+    required String groupId,
+    required GroupJoinRelationKind kind,
+    int limit = groupSearchPageSize,
+  }) async => const [];
+
+  @override
+  Future<GroupMember?> loadGroupMember({
+    required String groupId,
+    required String playerId,
+  }) async => null;
+
+  @override
+  Future<List<GroupBlockedPlayer>> loadBlockedPlayers({
+    required String groupId,
+    int limit = groupSearchPageSize,
+  }) async => const [];
 }
 
 class _WeeklyRaidClaimRepository implements WeeklyRaidClaimRepository {

@@ -340,7 +340,17 @@ class _MyAccountPageState extends State<MyAccountPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('내 계정')),
+      appBar: AppBar(
+        title: const Text('내 계정'),
+        actions: [
+          IconButton(
+            key: const ValueKey('myAccountSettingsButton'),
+            onPressed: () => context.push('/settings'),
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: '설정',
+          ),
+        ],
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),

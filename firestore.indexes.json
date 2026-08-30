@@ -43,6 +43,62 @@
       ]
     },
     {
+      "collectionGroup": "groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "normalizedName", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        {
+          "fieldPath": "normalizedRepresentativeCharacterName",
+          "order": "ASCENDING"
+        },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "lastActivityAt", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "groupRelations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "relation", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "joinRelations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "kind", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "characters",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "characterName", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "manualVerificationRequests",
       "queryScope": "COLLECTION",
       "fields": [

@@ -89,6 +89,837 @@ service cloud.firestore {
         && character.ownerPlayerId == playerId;
     }
 
+    // Task-11 Unit 1~4: 그룹 생성·공개 읽기, 초대·신청·승인·금지와
+    // 초대코드 생성·폐기·즉시 가입을 연다.
+    // 탈퇴·추방·이전·해산 쓰기는 계속 닫아 둔다.
+    function groupPath(groupId) {
+      return /databases/$(database)/documents/groups/$(groupId);
+    }
+
+    function groupMemberPath(groupId, playerId) {
+      return /databases/$(database)/documents/groups/$(groupId)/members/$(playerId);
+    }
+
+    function groupMembershipStatePath(playerId) {
+      return /databases/$(database)/documents/players/$(playerId)/groupMembershipState/current;
+    }
+
+    function groupRelationPath(playerId, groupId) {
+      return /databases/$(database)/documents/players/$(playerId)/groupRelations/$(groupId);
+    }
+
+    function groupJoinRelationPath(groupId, playerId) {
+      return /databases/$(database)/documents/groups/$(groupId)/joinRelations/$(playerId);
+    }
+
+    function groupApplicantStatsPath(groupId, playerId) {
+      return /databases/$(database)/documents/groups/$(groupId)/applicantStats/$(playerId);
+    }
+
+    function groupBlockPath(groupId, playerId) {
+      return /databases/$(database)/documents/groups/$(groupId)/blockedPlayers/$(playerId);
+    }
+
+    // 금지 목록은 그룹장만 읽지만 exists()는 호출자 읽기 권한과 무관하다.
+    // 본·부계정과 Character 변경은 Player 단위 block을 우회하지 못한다.
+    function hasGroupBlock(groupId, playerId) {
+      return exists(groupBlockPath(groupId, playerId));
+    }
+
+    function isCurrentPlayerActive() {
+      return hasActiveBinding()
+        && get(playerPath(currentPlayerId())).data.status == 'active';
+    }
+
+    function isCurrentGroupMember(groupId) {
+      return hasActiveBinding()
+        && exists(groupMemberPath(groupId, currentPlayerId()));
+    }
+
+    function isCurrentGroupLeader(groupId) {
+      return hasActiveBinding()
+        && get(groupPath(groupId)).data.leaderPlayerId == currentPlayerId();
+    }
+
+    // 직접 입력 그룹명은 trim 후 1~20자이며 줄바꿈·제어문자를 포함하지 않는다.
+    // Rules는 Unicode 정규화 결과를 재계산하지 못하므로 원문 형식만 강제한다.
+    function validGroupDisplayName(name) {
+      return name is string
+        && name.size() >= 1
+        && name.size() <= 20
+        && !name.matches('(?s).*[\\x00-\\x1f\\x7f].*');
+    }
+
+    function validGroupSearchProjection(data) {
+      return data.normalizedName is string
+        && data.normalizedName.size() >= 1
+        && data.normalizedName.size() <= 20
+        && data.normalizedRepresentativeCharacterName is string
+        && data.normalizedRepresentativeCharacterName.size() >= 1
+        && data.normalizedRepresentativeCharacterName.size() <= 40;
+    }
+
+    function validInitialGroup(groupId, data) {
+      let playerId = currentPlayerId();
+      let member = getAfter(groupMemberPath(groupId, playerId)).data;
+      let state = getAfter(groupMembershipStatePath(playerId)).data;
+      return isCurrentPlayerActive()
+        && data.keys().hasOnly([
+          'schemaVersion', 'status', 'name', 'normalizedName',
+          'representativeCharacterId', 'representativeCharacterNameSnapshot',
+          'normalizedRepresentativeCharacterName',
+          'representativeServerNameSnapshot', 'leaderPlayerId',
+          'leaderDisplayCharacterNameSnapshot', 'memberCount', 'revision',
+          'hasActiveJoinCode', 'joinCodeVisibleToMembers', 'lastActivityAt',
+          'createdAt', 'updatedAt', 'deletedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.status == 'active'
+        && validGroupDisplayName(data.name)
+        && validGroupSearchProjection(data)
+        && data.representativeCharacterNameSnapshot is string
+        && data.representativeCharacterNameSnapshot.size() > 0
+        && data.representativeServerNameSnapshot is string
+        && data.representativeServerNameSnapshot.size() > 0
+        && data.leaderPlayerId == playerId
+        && data.leaderDisplayCharacterNameSnapshot
+          == data.representativeCharacterNameSnapshot
+        && data.memberCount == 1
+        && data.revision == 1
+        && data.hasActiveJoinCode == false
+        && data.joinCodeVisibleToMembers == false
+        && data.deletedAt == null
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && data.lastActivityAt == request.time
+        && ownsActiveCharacter(data.representativeCharacterId)
+        && member.playerId == playerId
+        && member.role == 'leader'
+        && member.joinSequence == 1
+        && member.joinedBy == 'created'
+        && member.displayCharacterIdSnapshot == data.representativeCharacterId
+        && groupId in state.activeGroupIds
+        && existsAfter(groupRelationPath(playerId, groupId));
+    }
+
+    function validInitialGroupMember(groupId, playerId, data) {
+      let group = getAfter(groupPath(groupId)).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.keys().hasOnly([
+          'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
+          'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
+          'displayCharacterNameSnapshot', 'revision', 'createdAt', 'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.role == 'leader'
+        && data.joinedBy == 'created'
+        && data.joinSequence == 1
+        && data.revision == 1
+        && data.displayCharacterIdSnapshot is string
+        && data.displayCharacterNameSnapshot is string
+        && data.joinedAt == request.time
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && group.status == 'active'
+        && group.leaderPlayerId == playerId
+        && group.memberCount == 1
+        && group.revision == 1
+        && group.representativeCharacterId == data.displayCharacterIdSnapshot
+        && group.leaderDisplayCharacterNameSnapshot
+          == data.displayCharacterNameSnapshot;
+    }
+
+    // 최초 생성과 Group ID 1개 추가를 같은 검증으로 처리한다.
+    // 생성 시 [oldData]는 null이며 이전 요약은 빈 상태로 취급한다.
+    function validMembershipStateAdd(playerId, docId, oldData, newData) {
+      let previousIds = oldData == null ? [] : oldData.activeGroupIds;
+      let previousRevision = oldData == null ? 0 : oldData.revision;
+      let addedGroupId = newData.activeGroupIds[
+        newData.activeGroupIds.size() - 1
+      ];
+      let member = getAfter(groupMemberPath(addedGroupId, playerId)).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && docId == 'current'
+        && newData.keys().hasOnly([
+          'schemaVersion', 'playerId', 'activeGroupIds', 'activeGroupCount',
+          'revision', 'updatedAt'
+        ])
+        && newData.schemaVersion == 1
+        && newData.playerId == playerId
+        && newData.activeGroupIds is list
+        && newData.activeGroupIds.size() == previousIds.size() + 1
+        && newData.activeGroupIds.size() <= 50
+        && newData.activeGroupIds.toSet().size()
+          == newData.activeGroupIds.size()
+        && newData.activeGroupIds.toSet().difference(previousIds.toSet())
+          == [addedGroupId].toSet()
+        && newData.activeGroupCount == newData.activeGroupIds.size()
+        && newData.revision == previousRevision + 1
+        && newData.updatedAt == request.time
+        && member.playerId == playerId;
+    }
+
+    function validInitialMemberGroupRelation(playerId, groupId, data) {
+      let group = getAfter(groupPath(groupId)).data;
+      let member = getAfter(groupMemberPath(groupId, playerId)).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.keys().hasOnly([
+          'schemaVersion', 'groupId', 'playerId', 'relation', 'requestStatus',
+          'groupNameSnapshot', 'displayCharacterNameSnapshot', 'expiresAt',
+          'sourceRevision', 'createdAt', 'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.relation == 'member'
+        && data.requestStatus == null
+        && data.expiresAt == null
+        && data.groupNameSnapshot == group.name
+        && data.displayCharacterNameSnapshot
+          == member.displayCharacterNameSnapshot
+        && data.sourceRevision == member.revision
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && member.playerId == playerId;
+    }
+
+    // 생성 Transaction은 새 Group ID를 읽지 않는다. 상세 화면이 사라진 ID를 열 때만
+    // 존재 여부를 분기해 없는 문서에서 resource.data를 읽지 않는다.
+    function canGetGroup(groupId) {
+      return hasActiveBinding()
+        && (!exists(groupPath(groupId))
+          || resource.data.status == 'active'
+          || isCurrentGroupMember(groupId));
+    }
+
+    // 계약 §6 초대·신청 원본의 허용 필드 집합.
+    function validGroupJoinRelationKeys(data) {
+      return data.keys().hasOnly([
+        'schemaVersion', 'groupId', 'targetPlayerId', 'kind', 'status',
+        'requestedByPlayerId', 'characterIdSnapshot', 'characterNameSnapshot',
+        'serverNameSnapshot', 'characterClassNameSnapshot', 'itemLevelSnapshot',
+        'combatPowerSnapshot', 'applicationAttempt', 'revision', 'createdAt',
+        'expiresAt', 'decidedAt', 'updatedAt'
+      ]);
+    }
+
+    // 같은 groupId + playerId에 유효 pending 관계가 있으면 종류가 달라도
+    // 새 요청으로 덮어쓰지 못한다. 만료·최종 relation만 재사용한다.
+    function reusableGroupJoinRelation(oldData) {
+      return oldData == null
+        || oldData.status != 'pending'
+        || oldData.expiresAt <= request.time;
+    }
+
+    // 계약 §6은 expiresAt == createdAt + 24시간을 요구하지만 클라이언트는 서버
+    // 시각을 알 수 없다. createdAt은 request.time으로 고정하고 expiresAt은
+    // 기기 시각 오차를 감안한 구간으로만 허용한다.
+    function validGroupRequestExpiry(data) {
+      return data.expiresAt is timestamp
+        && data.expiresAt > request.time + duration.value(23, 'h')
+        && data.expiresAt < request.time + duration.value(25, 'h');
+    }
+
+    function validGroupPendingJoinRelation(groupId, playerId, oldData, data) {
+      return isCurrentPlayerActive()
+        && validGroupJoinRelationKeys(data)
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.targetPlayerId == playerId
+        && data.status == 'pending'
+        && data.requestedByPlayerId is string
+        && data.characterIdSnapshot is string
+        && data.characterNameSnapshot is string
+        && data.serverNameSnapshot is string
+        && data.characterClassNameSnapshot is string
+        && data.applicationAttempt is int
+        && data.revision == (oldData == null ? 1 : oldData.revision + 1)
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && data.decidedAt == null
+        && validGroupRequestExpiry(data)
+        && reusableGroupJoinRelation(oldData)
+        && get(groupPath(groupId)).data.status == 'active'
+        && !exists(groupMemberPath(groupId, playerId))
+        && !hasGroupBlock(groupId, playerId)
+        && existsAfter(groupRelationPath(playerId, groupId));
+    }
+
+    // 계약 §8.3. 현재 그룹원만 초대하며 자기 자신은 초대하지 못한다.
+    // 초대는 누적 신청 횟수를 증가시키지 않는다.
+    function validGroupInvitationCreate(groupId, playerId, oldData, data) {
+      return validGroupPendingJoinRelation(groupId, playerId, oldData, data)
+        && data.kind == 'invitation'
+        && data.requestedByPlayerId == currentPlayerId()
+        && playerId != currentPlayerId()
+        && isCurrentGroupMember(groupId)
+        && data.applicationAttempt
+          == (oldData == null ? 0 : oldData.applicationAttempt);
+    }
+
+    // 계약 §8.5. 신청은 본인만 만들고 applicantStats 증가와 함께 성공한다.
+    function validGroupApplicationCreate(groupId, playerId, oldData, data) {
+      let stats = getAfter(groupApplicantStatsPath(groupId, playerId)).data;
+      return validGroupPendingJoinRelation(groupId, playerId, oldData, data)
+        && data.kind == 'application'
+        && data.requestedByPlayerId == playerId
+        && playerId == currentPlayerId()
+        && data.applicationAttempt >= 1
+        && data.applicationAttempt == stats.applicationCount;
+    }
+
+    // 계약 §8.4. 수락·거절은 대상 Player만, 취소는 발신자 또는 그룹장만 한다.
+    // Unit 2는 pending invitation 전이만 열고 신청 승인·거절은 Unit 3에서 연다.
+    function validGroupJoinRelationDecision(groupId, playerId, oldData, newData) {
+      return isCurrentPlayerActive()
+        && newData.diff(oldData).affectedKeys()
+          .hasOnly(['status', 'revision', 'decidedAt', 'updatedAt'])
+        && oldData.kind == 'invitation'
+        && oldData.status == 'pending'
+        && newData.revision == oldData.revision + 1
+        && newData.decidedAt == request.time
+        && newData.updatedAt == request.time
+        && existsAfter(groupRelationPath(playerId, groupId))
+        && (
+          (newData.status == 'accepted'
+            && playerId == currentPlayerId()
+            && oldData.expiresAt > request.time
+            && !hasGroupBlock(groupId, playerId)
+            && existsAfter(groupMemberPath(groupId, playerId)))
+          || (newData.status == 'rejected'
+            && playerId == currentPlayerId())
+          || (newData.status == 'cancelled'
+            && isCurrentGroupMember(groupId)
+            && (oldData.requestedByPlayerId == currentPlayerId()
+              || isCurrentGroupLeader(groupId)))
+        );
+    }
+
+    // 계약 §8.4 초대 수락 membership. joinSequence는 읽은 memberCount + 1이며
+    // 그룹 인원 갱신 이후 값과 같아야 한다.
+    function validInvitedGroupMember(groupId, playerId, data) {
+      let group = getAfter(groupPath(groupId)).data;
+      let relation = getAfter(groupJoinRelationPath(groupId, playerId)).data;
+      let state = getAfter(groupMembershipStatePath(playerId)).data;
+      return isCurrentPlayerActive()
+        && playerId == currentPlayerId()
+        && data.keys().hasOnly([
+          'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
+          'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
+          'displayCharacterNameSnapshot', 'revision', 'createdAt', 'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.role == 'member'
+        && data.joinedBy == 'invitation'
+        && data.joinSequence == group.memberCount
+        && data.revision == 1
+        && data.displayCharacterIdSnapshot == relation.characterIdSnapshot
+        && data.displayCharacterNameSnapshot == relation.characterNameSnapshot
+        && data.joinedAt == request.time
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && group.status == 'active'
+        && group.memberCount <= 50
+        && group.leaderPlayerId != playerId
+        && relation.kind == 'invitation'
+        && relation.status == 'accepted'
+        && relation.targetPlayerId == playerId
+        && !hasGroupBlock(groupId, playerId)
+        && groupId in state.activeGroupIds;
+    }
+
+    // 계약 §9. Unit 2 상태 변경은 공개 필드를 바꾸지 않고 활동 시각만 갱신한다.
+    function validGroupActivityUpdate(oldData, newData) {
+      return newData.diff(oldData).affectedKeys()
+          .hasOnly(['revision', 'lastActivityAt', 'updatedAt'])
+        && newData.revision == oldData.revision + 1
+        && newData.lastActivityAt == request.time
+        && newData.updatedAt == request.time;
+    }
+
+    function validGroupMemberJoinUpdate(groupId, oldData, newData) {
+      let member = getAfter(groupMemberPath(groupId, currentPlayerId())).data;
+      return newData.diff(oldData).affectedKeys()
+          .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
+        && newData.memberCount == oldData.memberCount + 1
+        && newData.memberCount <= 50
+        && newData.revision == oldData.revision + 1
+        && newData.lastActivityAt == request.time
+        && newData.updatedAt == request.time
+        && member.joinSequence == newData.memberCount;
+    }
+
+    // 초대·신청 명령을 실행할 수 있는 호출자만 그룹 활동 시각을 갱신한다.
+    // 그룹원이 아니면 같은 Transaction에서 자기 요청 Projection이 남아야 한다.
+    function validGroupJoinCommandUpdate(groupId, oldData, newData) {
+      return isCurrentPlayerActive()
+        && oldData.status == 'active'
+        && (isCurrentGroupMember(groupId)
+          || existsAfter(groupRelationPath(currentPlayerId(), groupId)))
+        && (validGroupActivityUpdate(oldData, newData)
+          || validGroupMemberJoinUpdate(groupId, oldData, newData));
+    }
+
+    function validGroupRelationProjectionKeys(data) {
+      return data.keys().hasOnly([
+        'schemaVersion', 'groupId', 'playerId', 'relation', 'requestStatus',
+        'groupNameSnapshot', 'displayCharacterNameSnapshot', 'expiresAt',
+        'sourceRevision', 'createdAt', 'updatedAt'
+      ]);
+    }
+
+    // 계약 §5. 요청 Projection은 원본 join relation과 같은 sourceRevision을 갖는다.
+    // 초대는 발신 그룹원이 대상 Player 경로에 쓰므로 본인 확인만으로 제한하지 않는다.
+    function validGroupRequestRelation(playerId, groupId, data) {
+      let group = getAfter(groupPath(groupId)).data;
+      let relation = getAfter(groupJoinRelationPath(groupId, playerId)).data;
+      return isCurrentPlayerActive()
+        && (playerId == currentPlayerId() || isCurrentGroupMember(groupId))
+        && validGroupRelationProjectionKeys(data)
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.relation
+          == (relation.kind == 'invitation' ? 'invited' : 'applied')
+        && data.requestStatus == relation.status
+        && data.expiresAt == relation.expiresAt
+        && data.groupNameSnapshot == group.name
+        && data.displayCharacterNameSnapshot == relation.characterNameSnapshot
+        && data.sourceRevision == relation.revision
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time
+        && relation.targetPlayerId == playerId;
+    }
+
+    // 초대 수락이 끝난 Projection은 member/accepted로 바뀐다.
+    function validAcceptedGroupRelation(playerId, groupId, data) {
+      let group = getAfter(groupPath(groupId)).data;
+      let member = getAfter(groupMemberPath(groupId, playerId)).data;
+      let relation = getAfter(groupJoinRelationPath(groupId, playerId)).data;
+      return isCurrentPlayerActive()
+        && playerId == currentPlayerId()
+        && validGroupRelationProjectionKeys(data)
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.relation == 'member'
+        && data.requestStatus == 'accepted'
+        && data.expiresAt == null
+        && data.groupNameSnapshot == group.name
+        && data.displayCharacterNameSnapshot
+          == member.displayCharacterNameSnapshot
+        && data.sourceRevision == member.revision
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time
+        && (
+          (member.joinedBy == 'invitation' && relation.kind == 'invitation')
+          || member.joinedBy == 'joinCode'
+        )
+        && relation.status == 'accepted';
+    }
+
+    // 계약 §6.1. 신청 경로에서만 만들고 갱신하며 정확히 1씩 증가시킨다.
+    function validGroupApplicantStatsWrite(groupId, playerId, oldData, data) {
+      let relation = getAfter(groupJoinRelationPath(groupId, playerId)).data;
+      return isCurrentPlayerActive()
+        && playerId == currentPlayerId()
+        && data.keys().hasOnly([
+          'schemaVersion', 'groupId', 'playerId', 'applicationCount',
+          'lastCharacterNameSnapshot', 'lastItemLevelSnapshot',
+          'lastCombatPowerSnapshot', 'createdAt', 'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.applicationCount
+          == (oldData == null ? 1 : oldData.applicationCount + 1)
+        && data.lastCharacterNameSnapshot == relation.characterNameSnapshot
+        && data.lastItemLevelSnapshot == relation.itemLevelSnapshot
+        && data.lastCombatPowerSnapshot == relation.combatPowerSnapshot
+        && data.createdAt
+          == (oldData == null ? request.time : oldData.createdAt)
+        && data.updatedAt == request.time
+        && relation.kind == 'application'
+        && relation.status == 'pending'
+        && relation.applicationAttempt == data.applicationCount;
+    }
+
+    // 계약 §8.6 그룹장 신청 처리(Unit 3).
+    //
+    // 승인 Transaction은 문서 5건을 쓰므로 쓰기마다 접근 수를 줄여야 한다.
+    // 그룹장 판정은 binding·Player·그룹을 한 번씩만 읽는 아래 helper로 모으고,
+    // 하위 문서 규칙은 이미 읽은 getAfter 결과를 재사용한다. 그룹 원본 규칙은
+    // 자기 문서를 다시 읽지 않고 resource.data로 그룹장을 확인한다.
+    //
+    // 승인 Transaction 접근 예산: 서로 다른 문서 8개(authBindings, players/{그룹장},
+    // groups/{g}, joinRelations/{p}, members/{p}, blockedPlayers/{p},
+    // players/{p}/groupMembershipState/current, players/{p}/groupRelations/{g}),
+    // get·getAfter를 따로 세면 접근 12회다. 쓰기별 접근 호출은 그룹 5, 요청 8,
+    // membership 8, 요약 6, Projection 6으로 단일 쓰기 한도 10 이하다.
+    function isActiveGroupLeader(groupId) {
+      let callerId = currentPlayerId();
+      return hasActiveBinding()
+        && get(playerPath(callerId)).data.status == 'active'
+        && get(groupPath(groupId)).data.leaderPlayerId == callerId;
+    }
+
+    // 승인·거절·금지 전이. 호출자가 대상이 아니므로 초대 전이와 분리해
+    // validGroupJoinRelationDecision이 쓰는 초대 경로 접근 수를 늘리지 않는다.
+    function validGroupApplicationDecision(groupId, playerId, oldData, newData) {
+      return isActiveGroupLeader(groupId)
+        && newData.diff(oldData).affectedKeys()
+          .hasOnly(['status', 'revision', 'decidedAt', 'updatedAt'])
+        && oldData.kind == 'application'
+        && oldData.status == 'pending'
+        && oldData.targetPlayerId == playerId
+        && playerId != currentPlayerId()
+        && newData.revision == oldData.revision + 1
+        && newData.decidedAt == request.time
+        && newData.updatedAt == request.time
+        && existsAfter(groupRelationPath(playerId, groupId))
+        && (
+          (newData.status == 'accepted'
+            && oldData.expiresAt > request.time
+            && !hasGroupBlock(groupId, playerId)
+            && existsAfter(groupMemberPath(groupId, playerId)))
+          || newData.status == 'rejected'
+          || (newData.status == 'blocked'
+            && existsAfter(groupBlockPath(groupId, playerId)))
+        );
+    }
+
+    // 계약 §8.6 승인은 초대 수락과 같은 membership 원자 쓰기를 수행한다.
+    // 그룹장이 대상 Player 문서를 만들므로 joinSequence, 정원, 금지 부재와
+    // Player 요약 반영을 모두 getAfter로 다시 확인한다.
+    function validApprovedGroupMember(groupId, playerId, data) {
+      let callerId = currentPlayerId();
+      let group = getAfter(groupPath(groupId)).data;
+      let relation = getAfter(groupJoinRelationPath(groupId, playerId)).data;
+      let state = getAfter(groupMembershipStatePath(playerId)).data;
+      return hasActiveBinding()
+        && get(playerPath(callerId)).data.status == 'active'
+        && group.leaderPlayerId == callerId
+        && playerId != callerId
+        && data.keys().hasOnly([
+          'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
+          'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
+          'displayCharacterNameSnapshot', 'revision', 'createdAt', 'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.role == 'member'
+        && data.joinedBy == 'application'
+        && data.joinSequence == group.memberCount
+        && data.revision == 1
+        && data.displayCharacterIdSnapshot == relation.characterIdSnapshot
+        && data.displayCharacterNameSnapshot == relation.characterNameSnapshot
+        && data.joinedAt == request.time
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && group.status == 'active'
+        && group.memberCount <= 50
+        && relation.kind == 'application'
+        && relation.status == 'accepted'
+        && relation.targetPlayerId == playerId
+        && !hasGroupBlock(groupId, playerId)
+        && groupId in state.activeGroupIds;
+    }
+
+    // 대상 Player 요약은 개인 데이터라 그룹장이 읽지 못한다. 클라이언트는
+    // arrayUnion·increment 병합 쓰기를 보내고 Rules가 결과 문서에서 Group ID
+    // 정확히 1개 추가와 50개 한도를 최종 판정한다.
+    function validLeaderApprovedMembershipStateAdd(
+      playerId,
+      docId,
+      oldData,
+      newData
+    ) {
+      let callerId = currentPlayerId();
+      let previousIds = oldData == null ? [] : oldData.activeGroupIds;
+      let previousRevision = oldData == null ? 0 : oldData.revision;
+      let addedGroupId = newData.activeGroupIds[
+        newData.activeGroupIds.size() - 1
+      ];
+      let member = getAfter(groupMemberPath(addedGroupId, playerId)).data;
+      return hasActiveBinding()
+        && get(playerPath(callerId)).data.status == 'active'
+        && docId == 'current'
+        && playerId != callerId
+        && newData.keys().hasOnly([
+          'schemaVersion', 'playerId', 'activeGroupIds', 'activeGroupCount',
+          'revision', 'updatedAt'
+        ])
+        && newData.schemaVersion == 1
+        && newData.playerId == playerId
+        && newData.activeGroupIds is list
+        && newData.activeGroupIds.size() == previousIds.size() + 1
+        && newData.activeGroupIds.size() <= 50
+        && newData.activeGroupIds.toSet().size()
+          == newData.activeGroupIds.size()
+        && newData.activeGroupIds.toSet().difference(previousIds.toSet())
+          == [addedGroupId].toSet()
+        && newData.activeGroupCount == newData.activeGroupIds.size()
+        && newData.revision == previousRevision + 1
+        && newData.updatedAt == request.time
+        && member.playerId == playerId
+        && member.joinedBy == 'application'
+        && getAfter(groupPath(addedGroupId)).data.leaderPlayerId == callerId;
+    }
+
+    // 승인 이후 대상 Player Projection. 그룹장은 대상 Projection을 읽지 못하므로
+    // createdAt은 병합 쓰기로 보존하고 Rules는 timestamp 여부만 확인한다.
+    function validLeaderApprovedGroupRelation(playerId, groupId, data) {
+      let callerId = currentPlayerId();
+      let group = getAfter(groupPath(groupId)).data;
+      let member = getAfter(groupMemberPath(groupId, playerId)).data;
+      return hasActiveBinding()
+        && get(playerPath(callerId)).data.status == 'active'
+        && group.leaderPlayerId == callerId
+        && playerId != callerId
+        && validGroupRelationProjectionKeys(data)
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.relation == 'member'
+        && data.requestStatus == 'accepted'
+        && data.expiresAt == null
+        && data.groupNameSnapshot == group.name
+        && data.displayCharacterNameSnapshot
+          == member.displayCharacterNameSnapshot
+        && data.sourceRevision == member.revision
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time
+        && member.joinedBy == 'application';
+    }
+
+    // 계약 §8.6 승인은 그룹장이 실행하므로 신규 멤버가 호출자가 아니다.
+    // 그룹 문서 규칙은 대상 Player ID를 알 수 없어 그룹장·정원·필드 집합만
+    // 강제하고, member ↔ memberCount 결합은 membership 쓰기 규칙이 확인한다.
+    function validGroupLeaderApproveUpdate(oldData, newData) {
+      return isCurrentPlayerActive()
+        && oldData.status == 'active'
+        && oldData.leaderPlayerId == currentPlayerId()
+        && newData.diff(oldData).affectedKeys()
+          .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
+        && newData.memberCount == oldData.memberCount + 1
+        && newData.memberCount <= 50
+        && newData.revision == oldData.revision + 1
+        && newData.lastActivityAt == request.time
+        && newData.updatedAt == request.time;
+    }
+
+    // 계약 §6.2·§10. block 생성은 대상 relation의 blocked 전이 또는 이미 끝난
+    // 신청에만 묶는다. 수정은 열지 않고 해제는 문서 삭제로만 한다.
+    function validGroupBlockCreate(groupId, playerId, data) {
+      let relation = getAfter(groupJoinRelationPath(groupId, playerId)).data;
+      let stats = get(groupApplicantStatsPath(groupId, playerId));
+      return isActiveGroupLeader(groupId)
+        && playerId != currentPlayerId()
+        && data.keys().hasOnly([
+          'schemaVersion', 'groupId', 'playerId', 'blockedByPlayerId', 'reason',
+          'characterNameSnapshot', 'applicationCountSnapshot',
+          'itemLevelSnapshot', 'combatPowerSnapshot', 'createdAt', 'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.blockedByPlayerId == currentPlayerId()
+        && data.characterNameSnapshot == relation.characterNameSnapshot
+        && data.itemLevelSnapshot == relation.itemLevelSnapshot
+        && data.combatPowerSnapshot == relation.combatPowerSnapshot
+        && data.applicationCountSnapshot
+          == (stats == null ? 0 : stats.data.applicationCount)
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && relation.targetPlayerId == playerId
+        && relation.kind == 'application'
+        && (
+          (data.reason == 'applicationRejected'
+            && relation.status == 'blocked')
+          || (data.reason == 'manual'
+            && relation.status in ['rejected', 'cancelled', 'expired', 'blocked'])
+        );
+    }
+
+    // 계약 §7 초대코드(Unit 4).
+    //
+    // 코드 생성 접근 예산: authBindings, players/{리더}, groups/{g},
+    // members/{리더}, groupJoinCodes/{code} → get·getAfter 합계 약 8회.
+    // 코드 가입 접근 예산: authBindings, players/{가입자}, groupJoinCodes/{code},
+    // groups/{g}, groupMembershipState, characters/{c}, joinRelations/{선택},
+    // blockedPlayers exists, members getAfter, groupRelations getAfter →
+    // 서로 다른 문서 ≤10, get·getAfter 합계 약 16회(한도 ~20 이하).
+    function groupJoinCodePath(code) {
+      return /databases/$(database)/documents/groupJoinCodes/$(code);
+    }
+
+    function validJoinCodeId(code) {
+      return code is string
+        && code.size() == 20
+        && code.matches('^[2-9A-HJ-NP-Z]{20}$');
+    }
+
+    function validJoinCodeCreate(code, data) {
+      let groupId = data.groupId;
+      let before = get(groupPath(groupId)).data;
+      let after = getAfter(groupPath(groupId)).data;
+      return isActiveGroupLeader(groupId)
+        && validJoinCodeId(code)
+        && data.keys().hasOnly([
+          'schemaVersion', 'groupId', 'status', 'createdByPlayerId',
+          'createdAt', 'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.groupId is string
+        && data.groupId.size() > 0
+        && data.status == 'active'
+        && data.createdByPlayerId == currentPlayerId()
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && before.hasActiveJoinCode == false
+        && after.hasActiveJoinCode == true
+        && after.revision == before.revision + 1;
+    }
+
+    function validJoinCodeDelete(code) {
+      let data = resource.data;
+      let groupId = data.groupId;
+      let before = get(groupPath(groupId)).data;
+      let after = getAfter(groupPath(groupId)).data;
+      return isActiveGroupLeader(groupId)
+        && validJoinCodeId(code)
+        && data.status == 'active'
+        && before.hasActiveJoinCode == true
+        && after.hasActiveJoinCode == false
+        && after.revision == before.revision + 1;
+    }
+
+    // 코드 생성·삭제가 같은 Transaction에서 hasActiveJoinCode만 뒤집는다.
+    function validGroupJoinCodeFlagUpdate(oldData, newData) {
+      return isCurrentPlayerActive()
+        && oldData.status == 'active'
+        && oldData.leaderPlayerId == currentPlayerId()
+        && newData.diff(oldData).affectedKeys()
+          .hasOnly([
+            'hasActiveJoinCode', 'revision', 'lastActivityAt', 'updatedAt'
+          ])
+        && newData.hasActiveJoinCode != oldData.hasActiveJoinCode
+        && newData.revision == oldData.revision + 1
+        && newData.lastActivityAt == request.time
+        && newData.updatedAt == request.time;
+    }
+
+    // 화면 공개 정책만 바꾸며 가입 가능 여부는 건드리지 않는다.
+    function validGroupJoinCodeVisibilityUpdate(oldData, newData) {
+      return isCurrentPlayerActive()
+        && oldData.status == 'active'
+        && oldData.leaderPlayerId == currentPlayerId()
+        && newData.diff(oldData).affectedKeys()
+          .hasOnly([
+            'joinCodeVisibleToMembers', 'revision', 'lastActivityAt', 'updatedAt'
+          ])
+        && newData.joinCodeVisibleToMembers is bool
+        && newData.joinCodeVisibleToMembers != oldData.joinCodeVisibleToMembers
+        && newData.revision == oldData.revision + 1
+        && newData.lastActivityAt == request.time
+        && newData.updatedAt == request.time;
+    }
+
+    // 계약 §8.7. 코드 가입 membership. Character Snapshot은 선택한 인증
+    // Character에서 오며, pending relation이 남으면 안 된다.
+    function validJoinCodeGroupMember(groupId, playerId, data) {
+      let group = getAfter(groupPath(groupId)).data;
+      let state = getAfter(groupMembershipStatePath(playerId)).data;
+      let relationPath = groupJoinRelationPath(groupId, playerId);
+      return isCurrentPlayerActive()
+        && playerId == currentPlayerId()
+        && data.keys().hasOnly([
+          'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
+          'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
+          'displayCharacterNameSnapshot', 'revision', 'createdAt', 'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.role == 'member'
+        && data.joinedBy == 'joinCode'
+        && data.joinSequence == group.memberCount
+        && data.revision == 1
+        && data.displayCharacterIdSnapshot is string
+        && data.displayCharacterNameSnapshot is string
+        && data.joinedAt == request.time
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && ownsActiveCharacter(data.displayCharacterIdSnapshot)
+        && get(characterPath(data.displayCharacterIdSnapshot))
+          .data.characterName == data.displayCharacterNameSnapshot
+        && group.status == 'active'
+        && group.memberCount <= 50
+        && group.leaderPlayerId != playerId
+        && !hasGroupBlock(groupId, playerId)
+        && groupId in state.activeGroupIds
+        && (
+          !existsAfter(relationPath)
+          || getAfter(relationPath).data.status != 'pending'
+        );
+    }
+
+    // 코드 가입이 기존 pending 초대·신청을 accepted로 종료한다.
+    // applicantStats는 이 경로에서 쓰지 않는다.
+    function validJoinCodeRelationAccept(groupId, playerId, oldData, newData) {
+      return isCurrentPlayerActive()
+        && playerId == currentPlayerId()
+        && newData.diff(oldData).affectedKeys()
+          .hasOnly(['status', 'revision', 'decidedAt', 'updatedAt'])
+        && oldData.status == 'pending'
+        && oldData.targetPlayerId == playerId
+        && oldData.expiresAt > request.time
+        && newData.status == 'accepted'
+        && newData.revision == oldData.revision + 1
+        && newData.decidedAt == request.time
+        && newData.updatedAt == request.time
+        && !hasGroupBlock(groupId, playerId)
+        && existsAfter(groupMemberPath(groupId, playerId))
+        && getAfter(groupMemberPath(groupId, playerId)).data.joinedBy
+          == 'joinCode';
+    }
+
+    // pending 없이 코드로만 가입한 Projection. createdAt은 기존 요청
+    // Projection을 덮어쓸 때 병합·보존될 수 있다.
+    function validJoinCodeMemberGroupRelation(playerId, groupId, data) {
+      let group = getAfter(groupPath(groupId)).data;
+      let member = getAfter(groupMemberPath(groupId, playerId)).data;
+      let relationPath = groupJoinRelationPath(groupId, playerId);
+      return isCurrentPlayerActive()
+        && playerId == currentPlayerId()
+        && validGroupRelationProjectionKeys(data)
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.relation == 'member'
+        && data.requestStatus == null
+        && data.expiresAt == null
+        && data.groupNameSnapshot == group.name
+        && data.displayCharacterNameSnapshot
+          == member.displayCharacterNameSnapshot
+        && data.sourceRevision == member.revision
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time
+        && member.joinedBy == 'joinCode'
+        && (
+          !existsAfter(relationPath)
+          || getAfter(relationPath).data.status != 'pending'
+        );
+    }
+
     function canApproveApplications(recruitmentId) {
       let recruitment = get(recruitmentPath(recruitmentId)).data;
       let playerId = currentPlayerId();
@@ -1584,6 +2415,63 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
+      // 요약은 본인만 읽는다. 그룹장 승인 쓰기는 대상 요약을 읽지 않고
+      // 병합 쓰기 결과만 Rules가 판정한다.
+      match /groupMembershipState/{docId} {
+        allow get, list: if hasActiveBinding()
+          && playerId == currentPlayerId();
+        allow create: if validMembershipStateAdd(
+          playerId,
+          docId,
+          null,
+          request.resource.data
+        ) || validLeaderApprovedMembershipStateAdd(
+          playerId,
+          docId,
+          null,
+          request.resource.data
+        );
+        allow update: if validMembershipStateAdd(
+          playerId,
+          docId,
+          resource.data,
+          request.resource.data
+        ) || validLeaderApprovedMembershipStateAdd(
+          playerId,
+          docId,
+          resource.data,
+          request.resource.data
+        );
+        allow delete: if false;
+      }
+
+      match /groupRelations/{groupId} {
+        allow get, list: if hasActiveBinding()
+          && playerId == currentPlayerId();
+        allow create, update: if validInitialMemberGroupRelation(
+          playerId,
+          groupId,
+          request.resource.data
+        ) || validGroupRequestRelation(
+          playerId,
+          groupId,
+          request.resource.data
+        ) || validAcceptedGroupRelation(
+          playerId,
+          groupId,
+          request.resource.data
+        ) || validJoinCodeMemberGroupRelation(
+          playerId,
+          groupId,
+          request.resource.data
+        ) || validLeaderApprovedGroupRelation(
+          playerId,
+          groupId,
+          request.resource.data
+        );
+        allow delete: if false;
+      }
+
       match /weeklyRaidClaims/{claimId} {
         // list는 본인만. get은 assignment와 같이 active binding이면 단건 조회 가능.
         // 파티 전체 완료 Transaction이 멤버 Claim 존재 여부를 멱등으로 확인해야 한다.
@@ -2128,6 +3016,143 @@ service cloud.firestore {
           );
         allow delete: if false;
       }
+    }
+
+    match /groups/{groupId} {
+      allow get: if canGetGroup(groupId);
+      // list는 공개 검색·최신 목록만 허용한다. query에 status == 'active'가 없으면 거절된다.
+      allow list: if hasActiveBinding() && resource.data.status == 'active';
+      allow create: if validInitialGroup(groupId, request.resource.data);
+      // 공개 필드 수정은 계속 열지 않는다. 초대·신청·코드 명령의 활동 시각,
+      // 인원 증가, 초대코드 플래그·표시 정책만 허용한다.
+      // 그룹장 승인·코드 플래그 검증을 먼저 두어 그룹원 확인 문서를
+      // 추가로 읽지 않게 한다.
+      allow update: if validGroupLeaderApproveUpdate(
+        resource.data,
+        request.resource.data
+      ) || validGroupJoinCodeFlagUpdate(
+        resource.data,
+        request.resource.data
+      ) || validGroupJoinCodeVisibilityUpdate(
+        resource.data,
+        request.resource.data
+      ) || validGroupJoinCommandUpdate(
+        groupId,
+        resource.data,
+        request.resource.data
+      );
+      allow delete: if false;
+
+      match /members/{playerId} {
+        allow get, list: if isCurrentGroupMember(groupId);
+        allow create: if validInitialGroupMember(
+          groupId,
+          playerId,
+          request.resource.data
+        ) || validInvitedGroupMember(
+          groupId,
+          playerId,
+          request.resource.data
+        ) || validApprovedGroupMember(
+          groupId,
+          playerId,
+          request.resource.data
+        ) || validJoinCodeGroupMember(
+          groupId,
+          playerId,
+          request.resource.data
+        );
+        allow update, delete: if false;
+      }
+
+      // Unit 4는 초대·신청 처리에 더해 코드 가입이 pending 요청을
+      // accepted로 종료하는 경로를 연다. 신청자 취소·탈퇴는 계속 닫는다.
+      match /joinRelations/{playerId} {
+        allow get: if hasActiveBinding()
+          && (playerId == currentPlayerId() || isCurrentGroupMember(groupId));
+        allow list: if isCurrentGroupMember(groupId);
+        allow create: if validGroupInvitationCreate(
+          groupId,
+          playerId,
+          null,
+          request.resource.data
+        ) || validGroupApplicationCreate(
+          groupId,
+          playerId,
+          null,
+          request.resource.data
+        );
+        allow update: if validGroupInvitationCreate(
+          groupId,
+          playerId,
+          resource.data,
+          request.resource.data
+        ) || validGroupApplicationCreate(
+          groupId,
+          playerId,
+          resource.data,
+          request.resource.data
+        ) || validGroupJoinRelationDecision(
+          groupId,
+          playerId,
+          resource.data,
+          request.resource.data
+        ) || validGroupApplicationDecision(
+          groupId,
+          playerId,
+          resource.data,
+          request.resource.data
+        ) || validJoinCodeRelationAccept(
+          groupId,
+          playerId,
+          resource.data,
+          request.resource.data
+        );
+        allow delete: if false;
+      }
+
+      match /applicantStats/{playerId} {
+        allow get: if hasActiveBinding()
+          && (playerId == currentPlayerId() || isCurrentGroupMember(groupId));
+        allow list: if isCurrentGroupLeader(groupId);
+        allow create: if validGroupApplicantStatsWrite(
+          groupId,
+          playerId,
+          null,
+          request.resource.data
+        );
+        allow update: if validGroupApplicantStatsWrite(
+          groupId,
+          playerId,
+          resource.data,
+          request.resource.data
+        );
+        allow delete: if false;
+      }
+
+      // 계약 §6.2·§10. 금지 목록은 현재 그룹장만 읽고 만들고 지운다.
+      // 금지된 당사자는 자기 문서의 존재 여부도 조회하지 못한다.
+      // 해제는 삭제 한 건이며 이전 relation을 되돌리지 않는다.
+      match /blockedPlayers/{playerId} {
+        allow get, list: if isCurrentGroupLeader(groupId);
+        allow create: if validGroupBlockCreate(
+          groupId,
+          playerId,
+          request.resource.data
+        );
+        allow update: if false;
+        allow delete: if isActiveGroupLeader(groupId);
+      }
+    }
+
+    // 계약 §7·§10. 정확한 코드 단건 get만 허용하고 list는 금지한다.
+    // 생성·삭제는 그룹 hasActiveJoinCode 전이와 같은 Transaction에서만 성공한다.
+    match /groupJoinCodes/{code} {
+      allow get: if hasActiveBinding() && validJoinCodeId(code);
+      allow list: if false;
+      allow create: if validJoinCodeCreate(code, request.resource.data);
+      allow update: if false;
+      allow delete: if validJoinCodeDelete(code);
     }
 
     // 컬렉션 그룹 쿼리는 중첩 경로 규칙이 적용되지 않아 재귀 와일드카드가 필요하다.

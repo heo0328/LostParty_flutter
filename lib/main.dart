@@ -11,6 +11,11 @@ import 'features/account/domain/repositories/character_summary_sync_gateway.dart
 import 'features/account/domain/repositories/game_account_verification_gateway.dart';
 import 'features/account/domain/repositories/weekly_raid_claim_repository.dart';
 import 'features/account/domain/repositories/weekly_raid_claim_command_repository.dart';
+import 'features/group/domain/repositories/group_application_command_repository.dart';
+import 'features/group/domain/repositories/group_create_repository.dart';
+import 'features/group/domain/repositories/group_join_code_command_repository.dart';
+import 'features/group/domain/repositories/group_join_command_repository.dart';
+import 'features/group/domain/repositories/group_read_repository.dart';
 import 'features/player/domain/entities/player_session.dart';
 import 'features/raid_status/domain/services/party_event_sync_service.dart';
 import 'features/recruitment_list/domain/repositories/party_read_repository.dart';
@@ -36,6 +41,11 @@ class MyApp extends StatefulWidget {
     this.weeklyRaidClaimRepository,
     this.characterSummarySyncGateway,
     this.weeklyRaidClaimCommandRepository,
+    this.groupReadRepository,
+    this.groupCreateRepository,
+    this.groupJoinCommandRepository,
+    this.groupApplicationCommandRepository,
+    this.groupJoinCodeCommandRepository,
     super.key,
   });
 
@@ -48,6 +58,11 @@ class MyApp extends StatefulWidget {
   final WeeklyRaidClaimRepository? weeklyRaidClaimRepository;
   final CharacterSummarySyncGateway? characterSummarySyncGateway;
   final WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository;
+  final GroupReadRepository? groupReadRepository;
+  final GroupCreateRepository? groupCreateRepository;
+  final GroupJoinCommandRepository? groupJoinCommandRepository;
+  final GroupApplicationCommandRepository? groupApplicationCommandRepository;
+  final GroupJoinCodeCommandRepository? groupJoinCodeCommandRepository;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -73,6 +88,12 @@ class _MyAppState extends State<MyApp> {
       weeklyRaidClaimRepository: widget.weeklyRaidClaimRepository,
       characterSummarySyncGateway: widget.characterSummarySyncGateway,
       weeklyRaidClaimCommandRepository: widget.weeklyRaidClaimCommandRepository,
+      groupReadRepository: widget.groupReadRepository,
+      groupCreateRepository: widget.groupCreateRepository,
+      groupJoinCommandRepository: widget.groupJoinCommandRepository,
+      groupApplicationCommandRepository:
+          widget.groupApplicationCommandRepository,
+      groupJoinCodeCommandRepository: widget.groupJoinCodeCommandRepository,
     );
   }
 

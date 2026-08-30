@@ -31,6 +31,30 @@ import '../../features/account/domain/repositories/representative_character_sync
 import '../../features/account/domain/services/character_summary_sync_service.dart';
 import '../../features/account/domain/services/representative_character_sync_service.dart';
 import '../../features/player/domain/entities/player_session.dart';
+import '../../features/group/data/repositories/firestore_group_application_command_repository.dart';
+import '../../features/group/data/repositories/firestore_group_character_search_repository.dart';
+import '../../features/group/data/repositories/firestore_group_create_repository.dart';
+import '../../features/group/data/repositories/firestore_group_join_code_command_repository.dart';
+import '../../features/group/data/repositories/firestore_group_join_command_repository.dart';
+import '../../features/group/data/repositories/firestore_group_read_repository.dart';
+import '../../features/group/domain/repositories/group_application_command_repository.dart';
+import '../../features/group/domain/repositories/group_create_repository.dart';
+import '../../features/group/domain/repositories/group_join_code_command_repository.dart';
+import '../../features/group/domain/repositories/group_join_command_repository.dart';
+import '../../features/group/domain/repositories/group_read_repository.dart';
+import '../../features/group/presentation/pages/group_applications_page.dart';
+import '../../features/group/presentation/pages/group_create_page.dart';
+import '../../features/group/presentation/pages/group_detail_page.dart';
+import '../../features/group/presentation/pages/group_invite_page.dart';
+import '../../features/group/presentation/pages/group_join_by_code_page.dart';
+import '../../features/group/presentation/pages/group_join_code_page.dart';
+import '../../features/group/presentation/pages/group_search_page.dart';
+import '../../features/group/presentation/pages/group_tab_page.dart';
+import '../../features/group/presentation/viewmodels/group_application_view_model.dart';
+import '../../features/group/presentation/viewmodels/group_create_view_model.dart';
+import '../../features/group/presentation/viewmodels/group_join_code_view_model.dart';
+import '../../features/group/presentation/viewmodels/group_join_view_model.dart';
+import '../../features/group/presentation/viewmodels/group_read_view_model.dart';
 import '../../features/manual_verification/data/firestore_manual_verification_repository.dart';
 import '../../features/manual_verification/domain/entities/manual_verification_request.dart';
 import '../../features/manual_verification/domain/repositories/manual_verification_repository.dart';
@@ -79,7 +103,7 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _raidStatusNavigatorKey = GlobalKey<NavigatorState>();
 final _accountNavigatorKey = GlobalKey<NavigatorState>();
 final _recruitmentNavigatorKey = GlobalKey<NavigatorState>();
-final _settingsNavigatorKey = GlobalKey<NavigatorState>();
+final _groupNavigatorKey = GlobalKey<NavigatorState>();
 
 GoRouter createAppRouter({
   required AccountDatabase accountDatabase,
@@ -95,9 +119,60 @@ GoRouter createAppRouter({
   RepresentativeCharacterSyncGateway? representativeCharacterSyncGateway,
   OperatorAccessRepository? operatorAccessRepository,
   ManualVerificationRepository? manualVerificationRepository,
+  GroupReadRepository? groupReadRepository,
+  GroupCreateRepository? groupCreateRepository,
+  GroupJoinCommandRepository? groupJoinCommandRepository,
+  GroupApplicationCommandRepository? groupApplicationCommandRepository,
+  GroupJoinCodeCommandRepository? groupJoinCodeCommandRepository,
 }) {
   final operatorAccessRepositoryOrDefault =
       operatorAccessRepository ?? FirestoreOperatorAccessRepository();
+  GroupReadRepository? groupReadRepositoryCache = groupReadRepository;
+  GroupReadRepository groupReadRepositoryForRoute() =>
+      groupReadRepositoryCache ??= FirestoreGroupReadRepository(
+        firestore: FirebaseFirestore.instance,
+      );
+  GroupCreateRepository? groupCreateRepositoryCache = groupCreateRepository;
+  GroupCreateRepository groupCreateRepositoryForRoute() =>
+      groupCreateRepositoryCache ??= FirestoreGroupCreateRepository(
+        firestore: FirebaseFirestore.instance,
+        firebaseAuth: FirebaseAuth.instance,
+      );
+  GroupJoinCommandRepository? groupJoinCommandRepositoryCache =
+      groupJoinCommandRepository;
+  GroupJoinCommandRepository groupJoinCommandRepositoryForRoute() =>
+      groupJoinCommandRepositoryCache ??= FirestoreGroupJoinCommandRepository(
+        firestore: FirebaseFirestore.instance,
+        firebaseAuth: FirebaseAuth.instance,
+      );
+  GroupApplicationCommandRepository? groupApplicationCommandRepositoryCache =
+      groupApplicationCommandRepository;
+  GroupApplicationCommandRepository
+  groupApplicationCommandRepositoryForRoute() =>
+      groupApplicationCommandRepositoryCache ??=
+          FirestoreGroupApplicationCommandRepository(
+            firestore: FirebaseFirestore.instance,
+            firebaseAuth: FirebaseAuth.instance,
+          );
+  GroupJoinCodeCommandRepository? groupJoinCodeCommandRepositoryCache =
+      groupJoinCodeCommandRepository;
+  GroupJoinCodeCommandRepository groupJoinCodeCommandRepositoryForRoute() =>
+      groupJoinCodeCommandRepositoryCache ??=
+          FirestoreGroupJoinCodeCommandRepository(
+            firestore: FirebaseFirestore.instance,
+            firebaseAuth: FirebaseAuth.instance,
+          );
+  GroupJoinCodeManageViewModel? groupJoinCodeManageViewModelCache;
+  GroupJoinCodeManageViewModel groupJoinCodeManageViewModelForRoute() =>
+      groupJoinCodeManageViewModelCache ??= GroupJoinCodeManageViewModel(
+        readRepository: groupReadRepositoryForRoute(),
+        commandRepository: groupJoinCodeCommandRepositoryForRoute(),
+      );
+  GroupApplicationsViewModel groupApplicationsViewModelForRoute() =>
+      GroupApplicationsViewModel(
+        readRepository: groupReadRepositoryForRoute(),
+        commandRepository: groupApplicationCommandRepositoryForRoute(),
+      );
   final partyReadRepositoryOrDefault =
       partyReadRepository ??
       FirestorePartyReadRepository(firestore: FirebaseFirestore.instance);
@@ -398,76 +473,169 @@ GoRouter createAppRouter({
             ],
           ),
           StatefulShellBranch(
-            navigatorKey: _settingsNavigatorKey,
+            navigatorKey: _groupNavigatorKey,
             routes: [
               GoRoute(
-                path: '/settings',
-                builder: (context, state) => SettingsPage(
-                  operatorAccessRepository: operatorAccessRepositoryOrDefault,
+                path: '/groups',
+                builder: (context, state) => GroupTabPage(
+                  readRepository: groupReadRepositoryForRoute(),
+                  requestsViewModel: GroupRequestsViewModel(
+                    readRepository: groupReadRepositoryForRoute(),
+                    commandRepository: groupJoinCommandRepositoryForRoute(),
+                  ),
+                  applicationsViewModel: groupApplicationsViewModelForRoute(),
+                  playerId: playerSession.playerId,
                 ),
                 routes: [
                   GoRoute(
-                    path: 'game-account-verification',
-                    builder: (context, state) => GameAccountVerificationPage(
-                      accountRepository: accountRepository,
-                      accountManagementRepository: accountRepository,
-                      mappingRepository: accountRepository,
-                      gateway: verificationGateway,
+                    path: 'create',
+                    builder: (context, state) => GroupCreatePage(
+                      viewModel: GroupCreateViewModel(
+                        accountRepository: accountRepository,
+                        createRepository: groupCreateRepositoryForRoute(),
+                      ),
                     ),
                   ),
                   GoRoute(
-                    path: 'manual-verification',
-                    builder: (context, state) => ManualVerificationPage(
-                      accountRepository: accountRepository,
-                      mappingRepository: accountRepository,
-                      repository: manualVerificationRepositoryForRoute(),
+                    path: 'search',
+                    builder: (context, state) => GroupSearchPage(
+                      viewModel: GroupSearchViewModel(
+                        readRepository: groupReadRepositoryForRoute(),
+                      ),
                     ),
                   ),
                   GoRoute(
-                    path: 'api-token',
-                    builder: (context, state) =>
-                        ApiTokenSettingsPage(apiTokenStore: apiTokenStore),
+                    path: 'join-by-code',
+                    builder: (context, state) => GroupJoinByCodePage(
+                      viewModel: GroupJoinByCodeViewModel(
+                        accountRepository: accountRepository,
+                        commandRepository:
+                            groupJoinCodeCommandRepositoryForRoute(),
+                      ),
+                    ),
                   ),
                   GoRoute(
-                    path: 'operator/users',
-                    builder: (context, state) => OperatorUserListPage(
-                      repository: operatorAccessRepositoryOrDefault,
+                    path: ':groupId',
+                    builder: (context, state) => GroupDetailPage(
+                      key: ValueKey(state.pathParameters['groupId']),
+                      groupId: state.pathParameters['groupId']!,
+                      playerId: playerSession.playerId,
+                      readRepository: groupReadRepositoryForRoute(),
+                      actionViewModel: GroupMembershipActionViewModel(
+                        accountRepository: accountRepository,
+                        readRepository: groupReadRepositoryForRoute(),
+                        commandRepository:
+                            groupJoinCommandRepositoryForRoute(),
+                      ),
+                      applicationsViewModel:
+                          groupApplicationsViewModelForRoute(),
+                      joinCodeManageViewModel:
+                          groupJoinCodeManageViewModelForRoute(),
                     ),
                     routes: [
                       GoRoute(
-                        path: ':playerId',
-                        builder: (context, state) => OperatorUserDetailPage(
-                          playerId: state.pathParameters['playerId']!,
-                          repository: operatorAccessRepositoryOrDefault,
+                        path: 'invite',
+                        builder: (context, state) => GroupInvitePage(
+                          groupId: state.pathParameters['groupId']!,
+                          viewModel: GroupInviteViewModel(
+                            searchRepository:
+                                FirestoreGroupCharacterSearchRepository(
+                                  firestore: FirebaseFirestore.instance,
+                                ),
+                            commandRepository:
+                                groupJoinCommandRepositoryForRoute(),
+                          ),
                         ),
                       ),
-                    ],
-                  ),
-                  GoRoute(
-                    path: 'operator/manual-verification',
-                    builder: (context, state) =>
-                        OperatorManualVerificationQueuePage(
-                      operatorAccessRepository:
-                          operatorAccessRepositoryOrDefault,
-                      repository: manualVerificationRepositoryForRoute(),
-                    ),
-                    routes: [
                       GoRoute(
-                        path: ':requestId',
-                        builder: (context, state) =>
-                            OperatorManualVerificationDetailPage(
-                          requestId: state.pathParameters['requestId']!,
-                          initialRequest: state.extra is ManualVerificationRequest
-                              ? state.extra as ManualVerificationRequest
-                              : null,
-                          operatorAccessRepository:
-                              operatorAccessRepositoryOrDefault,
-                          repository: manualVerificationRepositoryForRoute(),
+                        path: 'applications',
+                        builder: (context, state) => GroupApplicationsPage(
+                          groupId: state.pathParameters['groupId']!,
+                          viewModel: groupApplicationsViewModelForRoute(),
+                        ),
+                      ),
+                      GoRoute(
+                        path: 'join-code',
+                        builder: (context, state) => GroupJoinCodePage(
+                          groupId: state.pathParameters['groupId']!,
+                          playerId: playerSession.playerId,
+                          readRepository: groupReadRepositoryForRoute(),
+                          viewModel: groupJoinCodeManageViewModelForRoute(),
+                          leadershipViewModel:
+                              groupApplicationsViewModelForRoute(),
                         ),
                       ),
                     ],
                   ),
                 ],
+              ),
+            ],
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => SettingsPage(
+          operatorAccessRepository: operatorAccessRepositoryOrDefault,
+        ),
+        routes: [
+          GoRoute(
+            path: 'game-account-verification',
+            builder: (context, state) => GameAccountVerificationPage(
+              accountRepository: accountRepository,
+              accountManagementRepository: accountRepository,
+              mappingRepository: accountRepository,
+              gateway: verificationGateway,
+            ),
+          ),
+          GoRoute(
+            path: 'manual-verification',
+            builder: (context, state) => ManualVerificationPage(
+              accountRepository: accountRepository,
+              mappingRepository: accountRepository,
+              repository: manualVerificationRepositoryForRoute(),
+            ),
+          ),
+          GoRoute(
+            path: 'api-token',
+            builder: (context, state) =>
+                ApiTokenSettingsPage(apiTokenStore: apiTokenStore),
+          ),
+          GoRoute(
+            path: 'operator/users',
+            builder: (context, state) => OperatorUserListPage(
+              repository: operatorAccessRepositoryOrDefault,
+            ),
+            routes: [
+              GoRoute(
+                path: ':playerId',
+                builder: (context, state) => OperatorUserDetailPage(
+                  playerId: state.pathParameters['playerId']!,
+                  repository: operatorAccessRepositoryOrDefault,
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'operator/manual-verification',
+            builder: (context, state) => OperatorManualVerificationQueuePage(
+              operatorAccessRepository: operatorAccessRepositoryOrDefault,
+              repository: manualVerificationRepositoryForRoute(),
+            ),
+            routes: [
+              GoRoute(
+                path: ':requestId',
+                builder: (context, state) =>
+                    OperatorManualVerificationDetailPage(
+                      requestId: state.pathParameters['requestId']!,
+                      initialRequest:
+                          state.extra is ManualVerificationRequest
+                          ? state.extra as ManualVerificationRequest
+                          : null,
+                      operatorAccessRepository:
+                          operatorAccessRepositoryOrDefault,
+                      repository: manualVerificationRepositoryForRoute(),
+                    ),
               ),
             ],
           ),

@@ -70,9 +70,9 @@ class _AppShellState extends State<AppShell> {
             label: '레이드 모집',
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: '설정',
+            icon: Icon(Icons.diversity_3_outlined),
+            selectedIcon: Icon(Icons.diversity_3),
+            label: '그룹',
           ),
         ],
       ),
