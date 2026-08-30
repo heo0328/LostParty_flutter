@@ -57,7 +57,7 @@
 | 완료 기능 | Task-083~086 운영자 기능, 반복 레이드 `금주 진행`·`다음주 대기` 표시 | 실제 24시간 경과 시나리오만 보류 검증 |
 | Firestore Rules | Task-086 규칙 **배포됨** | Firebase `lost-party`, 사용자 배포 2026-08-29 |
 | 현재 문서 상태 | 그룹 제품 흐름 초안 최신화 | [`../product/GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md) |
-| 다음 실행 | **Task-11 그룹 생성·가입 구현 계약 분리** | Player 단위 membership·신청·금지, 알림·공지는 초기 범위 제외 |
+| 다음 실행 | **Task-11 그룹 생성·가입 Firestore·Rules·흐름 계약 분리** | 제품 정책 확정, 구현은 계약 완료 후 Cursor 인계 |
 
 ### Task-073 확인 완료 사항 (2026-08-27)
 
