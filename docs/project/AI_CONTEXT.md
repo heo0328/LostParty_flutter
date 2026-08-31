@@ -1,13 +1,19 @@
 # AI CONTEXT (2026)
 
-## 최우선 현재 상태 — 모집 생성 UI(A) 통합, 다음은 일반/그룹 연결 (2026-08-31)
+## 최우선 현재 상태 — 그룹 레이드 생성·모집 리스트 실기기 확인 (2026-09-01)
 
-- 사용자는 Firestore Rules 복잡도 부채를 최신 상태에서 해결된 것으로 판단했다. 아래 R0~R6·503 차단 기록은 현재 실행 지시가 아니다.
-- `codex/recruitment-create-layout`에서 A를 구현했고 사용자가 실기기 확인 후 커밋·main 머지 커밋·푸시를 지시했다. 다음 실행은 NEXT_WORK의 B(일반/그룹 선택·groupId 저장·조회·신청 권한)다.
+- 사용자가 그룹만 공개 방을 만들고 그룹원이 레이드 모집 리스트에서 보는 흐름이 동작한다고 확인했다. 브랜치 `codex/recruitment-group-link`. 커밋·푸시는 지시 전에 하지 않는다.
+- 일반 레이드는 `groupId=null`/`public`. 그룹 레이드는 가입 그룹 하나와 `그룹만 공개` 기본값. 생성 트랜잭션이 `groups/{groupId}/raidListings/{recruitmentId}`에 모집 스냅샷을 같이 쓴다.
+- 모집 리스트는 공개 `recruitments` 쿼리를 먼저 내보내고, `players/{id}/groupMembershipState/current`의 `activeGroupIds`별 listing을 합친다. listing·state 오류는 공개 목록을 죽이지 않는다.
+- `recruitments` list는 `canListRecruitment`(공개/리더/멤버 필드)만 사용한다. 그룹 membership `exists`와 `visibility==group` 목록 쿼리는 쓰지 않는다. listing `list`는 경로의 `isCurrentGroupMember`만 본다.
+- 책임자·확정 멤버 본인 방은 모집 리스트에서 제외한다. listing이 없는 생성 이전 그룹 전용 방은 재생성 전까지 안 보일 수 있다.
+- 미구현: 생성 후 공개 전환, listing 갱신, 탈퇴 자격 박탈, 목록 필터 UI. 다음 기능은 사용자 지정을 기다린다.
+
+## 직전 상태 — 모집 생성 UI(A) 통합 (2026-08-31)
+
+- `codex/recruitment-create-layout`에서 A를 구현했고 사용자가 실기기 확인 후 커밋·main 머지 커밋·푸시를 지시했다.
 - A: 제목 유지, 한 줄 배치, 복수 역할만 작은 드롭다운, 선호 포지션 선선택, 역할/캐릭터 높이 맞춤, 항목 간격 확대. 생성 전용 역할 배치는 수정 화면에 넣지 않았다.
 - 모집 상세: 회차 완료 후 해산 전 또는 반복방 다음주 대기에 `이번주 레이드완료`를 상단 모집 제목과 같은 크기·오류색으로 표시. 사용자 실기기에서 모집 완료와 표기 크기를 확인했다.
-- 표적 테스트(배치·생성 흐름·상세 완료 표기)와 변경 파일 analyze 통과. 한정 UI라 전체 테스트는 생략했다. Rules·배포는 변경하지 않았다.
-- 최종 사용자 결정: 한 레이드에 가입 그룹 하나만 매칭. 단일 groupId. 목록 필터의 복수 그룹 선택은 별개다.
 
 ## 최우선 현재 상태 — 그룹 전투력 수정 실기기 확인 완료 (2026-08-31)
 

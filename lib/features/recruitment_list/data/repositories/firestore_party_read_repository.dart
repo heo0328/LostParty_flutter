@@ -31,17 +31,216 @@ class FirestorePartyReadRepository implements PartyReadRepository {
     required String currentPlayerId,
     int limit = publicRecruitmentPageSize,
   }) {
-    return _publicRecruitmentsQuery(cycleKey)
+    return _watchFirstPageWithGroupListings(
+      cycleKey: cycleKey,
+      currentPlayerId: currentPlayerId,
+      limit: limit,
+    ).transform(_errorTransformer());
+  }
+
+  Stream<PublicRecruitmentPage> _watchFirstPageWithGroupListings({
+    required String cycleKey,
+    required String currentPlayerId,
+    required int limit,
+  }) {
+    late StreamController<PublicRecruitmentPage> controller;
+    StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
+        stateSubscription;
+    StreamSubscription<PublicRecruitmentPage>? pagesSubscription;
+
+    void listenPages(List<String> groupIds) {
+      pagesSubscription?.cancel();
+      pagesSubscription = _watchMergedListingPages(
+        cycleKey: cycleKey,
+        currentPlayerId: currentPlayerId,
+        groupIds: groupIds,
+        limit: limit,
+      ).listen(controller.add, onError: controller.addError);
+    }
+
+    controller = StreamController<PublicRecruitmentPage>(
+      onListen: () {
+        if (currentPlayerId.trim().isEmpty) {
+          listenPages(const []);
+          return;
+        }
+        stateSubscription = _firestore
+            .collection('players')
+            .doc(currentPlayerId)
+            .collection('groupMembershipState')
+            .doc('current')
+            .snapshots(includeMetadataChanges: true)
+            .listen(
+              (snapshot) => listenPages(_activeGroupIds(snapshot)),
+              onError: (_) => listenPages(const []),
+            );
+      },
+      onCancel: () async {
+        await stateSubscription?.cancel();
+        await pagesSubscription?.cancel();
+      },
+    );
+    return controller.stream;
+  }
+
+  Stream<PublicRecruitmentPage> _watchMergedListingPages({
+    required String cycleKey,
+    required String currentPlayerId,
+    required List<String> groupIds,
+    required int limit,
+  }) {
+    final public = _publicRecruitmentsQuery(cycleKey)
         .limit(limit)
-        .snapshots(includeMetadataChanges: true)
-        .map(
-          (snapshot) => _toPublicPage(
-            snapshot,
+        .snapshots(includeMetadataChanges: true);
+    if (groupIds.isEmpty) {
+      return public.map(
+        (snapshot) => _toPublicPage(
+          snapshot,
+          limit: limit,
+          currentPlayerId: currentPlayerId,
+        ),
+      );
+    }
+
+    late StreamController<PublicRecruitmentPage> controller;
+    final subscriptions =
+        <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
+    QuerySnapshot<Map<String, dynamic>>? latestPublic;
+    final latestListings = List<QuerySnapshot<Map<String, dynamic>>?>.filled(
+      groupIds.length,
+      null,
+    );
+
+    void emit() {
+      final publicSnapshot = latestPublic;
+      if (publicSnapshot == null) return;
+      try {
+        controller.add(
+          _toMergedPublicPage(
+            publicSnapshot: publicSnapshot,
+            listingSnapshots: [
+              for (final snapshot in latestListings) ?snapshot,
+            ],
+            cycleKey: cycleKey,
             limit: limit,
             currentPlayerId: currentPlayerId,
           ),
-        )
-        .transform(_errorTransformer());
+        );
+      } catch (error, stackTrace) {
+        controller.addError(error, stackTrace);
+      }
+    }
+
+    controller = StreamController<PublicRecruitmentPage>(
+      onListen: () {
+        subscriptions.add(
+          public.listen((snapshot) {
+            latestPublic = snapshot;
+            emit();
+          }, onError: controller.addError),
+        );
+        for (var index = 0; index < groupIds.length; index += 1) {
+          final groupIndex = index;
+          subscriptions.add(
+            _firestore
+                .collection('groups')
+                .doc(groupIds[groupIndex])
+                .collection('raidListings')
+                .snapshots(includeMetadataChanges: true)
+                .listen(
+                  (snapshot) {
+                    latestListings[groupIndex] = snapshot;
+                    emit();
+                  },
+                  onError: (_, _) {},
+                ),
+          );
+        }
+      },
+      onCancel: () async {
+        for (final subscription in subscriptions) {
+          await subscription.cancel();
+        }
+      },
+    );
+    return controller.stream;
+  }
+
+  List<String> _activeGroupIds(
+    DocumentSnapshot<Map<String, dynamic>> snapshot,
+  ) {
+    final ids = snapshot.data()?['activeGroupIds'];
+    if (ids is! List) return const [];
+    return [
+      for (final id in ids)
+        if (id is String && id.isNotEmpty) id,
+    ];
+  }
+
+  PublicRecruitmentPage _toMergedPublicPage({
+    required QuerySnapshot<Map<String, dynamic>> publicSnapshot,
+    required List<QuerySnapshot<Map<String, dynamic>>> listingSnapshots,
+    required String cycleKey,
+    required int limit,
+    required String currentPlayerId,
+  }) {
+    final byId = <String, PublicRecruitmentSummary>{};
+    var isFromCache = publicSnapshot.metadata.isFromCache;
+    for (final doc in publicSnapshot.docs) {
+      final document = _document(doc);
+      if (_mapper.isCurrentPlayerOwnPublicRecruitment(
+        document,
+        currentPlayerId: currentPlayerId,
+      )) {
+        continue;
+      }
+      byId[doc.id] = _mapper.toPublicRecruitment(document);
+    }
+    for (final snapshot in listingSnapshots) {
+      isFromCache = isFromCache || snapshot.metadata.isFromCache;
+      for (final doc in snapshot.docs) {
+        try {
+          final document = _document(doc);
+          if (!_listingIsOpenForCycle(document.data, cycleKey)) continue;
+          if (_mapper.isCurrentPlayerOwnPublicRecruitment(
+            document,
+            currentPlayerId: currentPlayerId,
+          )) {
+            continue;
+          }
+          byId.putIfAbsent(doc.id, () => _mapper.toPublicRecruitment(document));
+        } catch (_) {
+          continue;
+        }
+      }
+    }
+    final items = byId.values.toList(growable: false)
+      ..sort((left, right) {
+        final byTime = right.updatedAt.compareTo(left.updatedAt);
+        if (byTime != 0) return byTime;
+        return right.id.compareTo(left.id);
+      });
+    final hasMore = publicSnapshot.docs.length >= limit;
+    final lastDocument =
+        publicSnapshot.docs.isEmpty ? null : publicSnapshot.docs.last;
+    return PublicRecruitmentPage(
+      items: items,
+      nextCursor: hasMore && lastDocument != null
+          ? _FirestorePublicRecruitmentPageCursor(lastDocument)
+          : null,
+      hasMore: hasMore,
+      isFromCache: isFromCache,
+    );
+  }
+
+  bool _listingIsOpenForCycle(Map<String, Object?> data, String cycleKey) {
+    return data['schemaVersion'] == 1 &&
+        data['visibility'] == 'group' &&
+        data['status'] == 'active' &&
+        data['manualRecruitmentEnabled'] == true &&
+        data['hasAvailableSlot'] == true &&
+        (data['targetCycleKey'] == cycleKey ||
+            data['currentCycleKey'] == cycleKey);
   }
 
   @override

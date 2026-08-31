@@ -19,6 +19,8 @@ void main() {
       verifiedItemLevel: 1715.25,
     );
 
+    expect(plan.recruitment['visibility'], 'public');
+    expect(plan.recruitment['groupId'], isNull);
     expect(plan.recruitment['leaderPlayerId'], 'player-1');
     expect(plan.recruitment['leaderCharacterNameSnapshot'], '검증된캐릭터');
     expect(plan.recruitment['leaderClassNameSnapshot'], '바드');
@@ -66,9 +68,43 @@ void main() {
     expect(plan.recruitment['supportCount'], 1);
     expect(plan.recruitment['dealerCount'], 0);
   });
+
+  test('stores a single group id and group visibility for group raids', () {
+    final plan = PartyCreateWritePlan.fromCommand(
+      command: _command(
+        groupId: 'group-1',
+        visibility: RecruitmentVisibility.group,
+      ),
+      playerId: 'player-1',
+      serverTimestamp: Object(),
+      verifiedCharacterName: '검증된캐릭터',
+      verifiedClassName: '바드',
+      verifiedItemLevel: 1715.25,
+    );
+
+    expect(plan.recruitment['groupId'], 'group-1');
+    expect(plan.recruitment['visibility'], RecruitmentVisibility.group);
+    expect(plan.groupRaidListing, same(plan.recruitment));
+  });
+
+  test('omits a group listing for public raids', () {
+    final plan = PartyCreateWritePlan.fromCommand(
+      command: _command(),
+      playerId: 'player-1',
+      serverTimestamp: Object(),
+      verifiedCharacterName: '검증된캐릭터',
+      verifiedClassName: '바드',
+      verifiedItemLevel: 1715.25,
+    );
+
+    expect(plan.groupRaidListing, isNull);
+  });
 }
 
-PartyCreateCommand _command() => PartyCreateCommand(
+PartyCreateCommand _command({
+  String? groupId,
+  String visibility = RecruitmentVisibility.public,
+}) => PartyCreateCommand(
   recruitmentId: 'recruitment-1',
   title: '4막 노말',
   metadata: RecruitmentMetadata(
@@ -99,4 +135,6 @@ PartyCreateCommand _command() => PartyCreateCommand(
     maxDealersPerClassPerParty: 1,
   ),
   cycleKey: '2026-08-26',
+  groupId: groupId,
+  visibility: visibility,
 );

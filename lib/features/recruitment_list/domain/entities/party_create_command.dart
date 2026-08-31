@@ -17,6 +17,8 @@ class PartyCreateCommand {
     required this.compositionRules,
     required this.cycleKey,
     this.leaderCombatPower,
+    this.groupId,
+    this.visibility = RecruitmentVisibility.public,
   });
 
   final String recruitmentId;
@@ -31,6 +33,10 @@ class PartyCreateCommand {
   final ApprovalPolicy approvalPolicy;
   final RecruitmentPartyRules compositionRules;
   final String cycleKey;
+  /// 일반 레이드는 null. 그룹 레이드는 가입한 그룹 하나.
+  final String? groupId;
+  /// `public` 또는 `group`. 그룹 전용은 `group`이며 groupId가 필요하다.
+  final String visibility;
 }
 
 enum PartyCreateFailure {
@@ -41,6 +47,7 @@ enum PartyCreateFailure {
   weeklyRaidCompleted,
   participationConflict,
   idConflict,
+  notGroupMember,
   permissionDenied,
   temporarilyUnavailable,
   invalidRequest,
@@ -56,4 +63,14 @@ class PartyCreateResult {
   final PartyCreateFailure? failure;
 
   bool get isSuccess => failure == null;
+}
+
+class RecruitmentVisibility {
+  const RecruitmentVisibility._();
+
+  static const public = 'public';
+  static const group = 'group';
+
+  static bool isValid(String value) =>
+      value == public || value == group;
 }

@@ -72,6 +72,16 @@ class FirestorePartyCreateRepository implements PartyCreateRepository {
         final claim = await transaction.get(claimRef);
         final characterData = character.data();
 
+        DocumentSnapshot<Map<String, dynamic>>? group;
+        DocumentSnapshot<Map<String, dynamic>>? membership;
+        final groupId = command.groupId;
+        if (groupId != null) {
+          final groupRef = _firestore.collection('groups').doc(groupId);
+          final membershipRef = groupRef.collection('members').doc(playerId);
+          group = await transaction.get(groupRef);
+          membership = await transaction.get(membershipRef);
+        }
+
         if (!character.exists || characterData?['status'] != 'active') {
           return const PartyCreateResult.failure(
             PartyCreateFailure.invalidCharacter,
@@ -95,6 +105,14 @@ class FirestorePartyCreateRepository implements PartyCreateRepository {
         if (claim.exists) {
           return const PartyCreateResult.failure(
             PartyCreateFailure.weeklyRaidCompleted,
+          );
+        }
+        if (groupId != null &&
+            (group?.data()?['status'] != 'active' ||
+                membership == null ||
+                !membership.exists)) {
+          return const PartyCreateResult.failure(
+            PartyCreateFailure.notGroupMember,
           );
         }
 
@@ -129,6 +147,17 @@ class FirestorePartyCreateRepository implements PartyCreateRepository {
         transaction.set(recruitmentRef, plan.recruitment);
         transaction.set(memberRef, plan.leaderMembership);
         transaction.set(assignmentRef, plan.assignment);
+        final listing = plan.groupRaidListing;
+        if (groupId != null && listing != null) {
+          transaction.set(
+            _firestore
+                .collection('groups')
+                .doc(groupId)
+                .collection('raidListings')
+                .doc(command.recruitmentId),
+            listing,
+          );
+        }
         return PartyCreateResult.success(command.recruitmentId);
       });
     } on FirebaseException catch (error) {

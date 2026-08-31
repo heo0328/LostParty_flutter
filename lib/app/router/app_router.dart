@@ -458,6 +458,8 @@ GoRouter createAppRouter({
                         firestore: FirebaseFirestore.instance,
                         firebaseAuth: FirebaseAuth.instance,
                       ),
+                      groupReadRepository: groupReadRepositoryForRoute(),
+                      playerId: playerSession.playerId,
                       newRecruitmentId: () => FirebaseFirestore.instance
                           .collection('recruitments')
                           .doc()

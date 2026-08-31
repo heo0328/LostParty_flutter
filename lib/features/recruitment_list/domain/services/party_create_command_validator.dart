@@ -10,10 +10,20 @@ class PartyCreateCommandValidator {
         _invalidDocumentId(command.leaderCharacterId) ||
         const PartyCyclePolicy().fromKey(command.cycleKey) == null ||
         command.compositionRules.totalMembers < 1 ||
-        command.leaderItemLevel < command.metadata.minItemLevel) {
+        command.leaderItemLevel < command.metadata.minItemLevel ||
+        !_validGroupLink(command)) {
       return PartyCreateFailure.invalidRequest;
     }
     return null;
+  }
+
+  bool _validGroupLink(PartyCreateCommand command) {
+    if (!RecruitmentVisibility.isValid(command.visibility)) return false;
+    final groupId = command.groupId;
+    if (command.visibility == RecruitmentVisibility.group) {
+      return groupId != null && !_invalidDocumentId(groupId);
+    }
+    return groupId == null || !_invalidDocumentId(groupId);
   }
 
   bool _invalidDocumentId(String value) =>

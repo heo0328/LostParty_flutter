@@ -57,12 +57,14 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 - Character와 GameAccount 소유 관계
 - 대상 `activeRaidAssignment`
 - 사용자가 확인한 동일 레이드 승인 대기 신청
+- 그룹 레이드면 대상 그룹 원본과 생성자의 현재 membership
 
 #### Transaction 쓰기
 
 - `recruitments/{newId}` Current State 생성
 - `members/{currentPlayerId}` 파티장 멤버십 생성
 - `activeRaidAssignments/{characterId_raidId}` 생성
+- `visibility==group`이고 `groupId`가 있으면 같은 스냅샷을 `groups/{groupId}/raidListings/{newId}`에 생성
 - 사용자가 철회를 확인한 신청을 `superseded`로 전환
 
 #### 성공 불변식
@@ -238,7 +240,7 @@ Rules는 적어도 다음을 `getAfter()`를 포함해 검증해야 한다.
 - 모집 수정은 파티장만 허용하고 불변 필드와 revision 증가를 검증
 - 서버 검증이 필요하지만 Rules로 안전하게 표현할 수 없는 변경은 허용하지 않음
 
-생성 Transaction은 신규 `recruitments/{id}` 존재 여부를 `get`으로 확인한다. 문서가 없을 때 `resource.data`를 읽으면 Rules가 `permission-denied`를 내므로, 존재하지 않는 모집의 단건 `get`은 active binding만으로 허용한다. 존재하는 문서의 읽기와 `list`는 기존 `canReadRecruitment`을 유지한다.
+생성 Transaction은 신규 `recruitments/{id}` 존재 여부를 `get`으로 확인한다. 문서가 없을 때 `resource.data`를 읽으면 Rules가 `permission-denied`를 내므로, 존재하지 않는 모집의 단건 `get`은 active binding만으로 허용한다. 존재하는 문서의 단건 읽기는 `canReadRecruitment`, `recruitments` 목록은 `canListRecruitment`를 사용한다. 그룹만 공개 목록은 `groups/{groupId}/raidListings`에서 경로의 그룹원만 `list`하며, `recruitments` list 규칙에 그룹 membership `exists`를 넣지 않는다. 그룹 listing 생성은 같은 Transaction의 모집 문서와 `visibility==group`·`groupId`·리더를 `getAfter`로 맞춘다.
 
 Rules 상세 구현·배포는 명령별 작업 브랜치에서 진행한다. Firestore Emulator는 사용하지 않는다. Rules 배포 전 검증 방법은 별도로 합의한다.
 

@@ -27,11 +27,40 @@ void main() {
       PartyCreateFailure.invalidRequest,
     );
   });
+
+  test('rejects group visibility without a group id', () {
+    expect(
+      validator.validate(
+        _command(visibility: RecruitmentVisibility.group),
+      ),
+      PartyCreateFailure.invalidRequest,
+    );
+  });
+
+  test('accepts a group raid with a group id', () {
+    expect(
+      validator.validate(
+        _command(groupId: 'group-1', visibility: RecruitmentVisibility.group),
+      ),
+      isNull,
+    );
+  });
+
+  test('accepts a public group raid that keeps its group id', () {
+    expect(
+      validator.validate(
+        _command(groupId: 'group-1', visibility: RecruitmentVisibility.public),
+      ),
+      isNull,
+    );
+  });
 }
 
 PartyCreateCommand _command({
   String recruitmentId = 'recruitment-1',
   double leaderItemLevel = 1710,
+  String? groupId,
+  String visibility = RecruitmentVisibility.public,
 }) => PartyCreateCommand(
   recruitmentId: recruitmentId,
   title: '4막 노말',
@@ -61,4 +90,6 @@ PartyCreateCommand _command({
     maxDealersPerClassPerParty: 1,
   ),
   cycleKey: '2026-08-26',
+  groupId: groupId,
+  visibility: visibility,
 );
