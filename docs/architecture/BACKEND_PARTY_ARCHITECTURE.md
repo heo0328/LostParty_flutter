@@ -182,7 +182,7 @@ RecruitmentVisibility
 - 그룹 탈퇴 또는 추방 후에는 새 조회와 신청 권한을 잃음
 - 이미 파티에 가입된 사용자의 처리 정책은 파티 멤버십을 우선하며 자동 퇴장시키지 않음
 
-Firestore Security Rules는 결과 필터가 아니므로 공개 모집글 쿼리와 그룹 전용 쿼리를 분리하고, 쿼리 조건이 읽기 규칙과 일치하도록 설계한다.
+Firestore Security Rules는 결과 필터가 아니므로 공개 모집글은 `recruitments`의 `visibility==public` 쿼리로 읽고, 그룹 전용 목록은 `groups/{groupId}/raidListings`처럼 경로에 그룹 ID가 있는 Projection만 `list`한다. `recruitments` list 규칙에 문서별 그룹 membership `exists`를 넣지 않는다.
 
 ---
 
@@ -327,7 +327,7 @@ targetCycleKey >= currentCycleKey
 - 반복 파티 완료 후에는 `targetCycleKey`를 다음 주차로 설정하고 카드에 `다음 주 레이드 구성 현황입니다.`를 표시한다.
 - 신청, 승인과 참가 Character 변경은 `targetCycleKey`의 구성에만 반영한다.
 
-그룹 전용 목록은 사용자의 현재 그룹 ID별 쿼리 또는 서버가 제공하는 읽기 모델로 조회한다.
+그룹 전용 목록은 현재 가입 그룹의 `groups/{groupId}/raidListings`를 읽어 공개 모집 첫 페이지와 합친다.
 
 아이템 레벨, 역할 자리, 숙련도 및 캐릭터별 지원 가능 여부는 앱에서 표시 필터링할 수 있지만, 신청 성공을 보장하지 않는다. 서버가 신청 시 최신 모집 상태와 검증된 캐릭터 스냅샷으로 다시 판정한다.
 

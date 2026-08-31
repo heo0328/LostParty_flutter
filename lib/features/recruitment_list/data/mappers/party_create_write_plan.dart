@@ -8,6 +8,7 @@ class PartyCreateWritePlan {
     required this.recruitment,
     required this.leaderMembership,
     required this.assignment,
+    this.groupRaidListing,
   });
 
   factory PartyCreateWritePlan.fromCommand({
@@ -22,54 +23,55 @@ class PartyCreateWritePlan {
     final rules = command.compositionRules;
     final cycle = const PartyCyclePolicy().fromKey(command.cycleKey);
     if (cycle == null) throw ArgumentError.value(command.cycleKey, 'cycleKey');
+    final recruitment = <String, Object?>{
+      'schemaVersion': 1,
+      'title': command.title.trim(),
+      'leaderPlayerId': playerId,
+      'leaderCharacterNameSnapshot': verifiedCharacterName,
+      'leaderClassNameSnapshot': verifiedClassName,
+      'memberPlayerIds': [playerId],
+      'raidCatalogVersion': metadata.catalogVersion,
+      'raidId': metadata.raidId,
+      'difficultyId': metadata.difficultyId,
+      'raidNameSnapshot': metadata.raidName,
+      'difficultyNameSnapshot': metadata.difficultyName,
+      'difficultyAliasSnapshot': metadata.difficultyAlias,
+      'gateCount': metadata.gateCount,
+      'minItemLevel': metadata.minItemLevel,
+      'minCombatPower': metadata.minCombatPower,
+      'experienceLevel': metadata.experienceLevel?.name,
+      'maxPlayHours': metadata.maxPlayHours,
+      'raidStartAt': metadata.raidStartAt == null
+          ? null
+          : Timestamp.fromDate(metadata.raidStartAt!.toUtc()),
+      'status': 'active',
+      'visibility': command.visibility,
+      'groupId': command.groupId,
+      'approvalPolicy': _approvalPolicy(command),
+      'continueTogether': false,
+      'manualRecruitmentEnabled': true,
+      'hasAvailableSlot': rules.totalMembers > 1,
+      'currentCycleKey': command.cycleKey,
+      'targetCycleKey': command.cycleKey,
+      'currentCycleStatus': 'active',
+      'cycleStartedAt': Timestamp.fromDate(cycle.startedAt),
+      'cycleEndsAt': Timestamp.fromDate(cycle.endsAt),
+      'partyCount': rules.partyCount,
+      'membersPerParty': rules.membersPerParty,
+      'supportsPerParty': rules.supportsPerParty,
+      'maxDealersPerClassPerParty': rules.maxDealersPerClassPerParty,
+      'memberCount': 1,
+      'maxMemberCount': rules.totalMembers,
+      'dealerCount': command.leaderRole.name == 'dealer' ? 1 : 0,
+      'supportCount': command.leaderRole.name == 'support' ? 1 : 0,
+      'revision': 1,
+      'createdAt': serverTimestamp,
+      'updatedAt': serverTimestamp,
+      'completedAt': null,
+      'completedByPlayerId': null,
+    };
     return PartyCreateWritePlan(
-      recruitment: {
-        'schemaVersion': 1,
-        'title': command.title.trim(),
-        'leaderPlayerId': playerId,
-        'leaderCharacterNameSnapshot': verifiedCharacterName,
-        'leaderClassNameSnapshot': verifiedClassName,
-        'memberPlayerIds': [playerId],
-        'raidCatalogVersion': metadata.catalogVersion,
-        'raidId': metadata.raidId,
-        'difficultyId': metadata.difficultyId,
-        'raidNameSnapshot': metadata.raidName,
-        'difficultyNameSnapshot': metadata.difficultyName,
-        'difficultyAliasSnapshot': metadata.difficultyAlias,
-        'gateCount': metadata.gateCount,
-        'minItemLevel': metadata.minItemLevel,
-        'minCombatPower': metadata.minCombatPower,
-        'experienceLevel': metadata.experienceLevel?.name,
-        'maxPlayHours': metadata.maxPlayHours,
-        'raidStartAt': metadata.raidStartAt == null
-            ? null
-            : Timestamp.fromDate(metadata.raidStartAt!.toUtc()),
-        'status': 'active',
-        'visibility': 'public',
-        'groupId': null,
-        'approvalPolicy': _approvalPolicy(command),
-        'continueTogether': false,
-        'manualRecruitmentEnabled': true,
-        'hasAvailableSlot': rules.totalMembers > 1,
-        'currentCycleKey': command.cycleKey,
-        'targetCycleKey': command.cycleKey,
-        'currentCycleStatus': 'active',
-        'cycleStartedAt': Timestamp.fromDate(cycle.startedAt),
-        'cycleEndsAt': Timestamp.fromDate(cycle.endsAt),
-        'partyCount': rules.partyCount,
-        'membersPerParty': rules.membersPerParty,
-        'supportsPerParty': rules.supportsPerParty,
-        'maxDealersPerClassPerParty': rules.maxDealersPerClassPerParty,
-        'memberCount': 1,
-        'maxMemberCount': rules.totalMembers,
-        'dealerCount': command.leaderRole.name == 'dealer' ? 1 : 0,
-        'supportCount': command.leaderRole.name == 'support' ? 1 : 0,
-        'revision': 1,
-        'createdAt': serverTimestamp,
-        'updatedAt': serverTimestamp,
-        'completedAt': null,
-        'completedByPlayerId': null,
-      },
+      recruitment: recruitment,
       leaderMembership: {
         'schemaVersion': 1,
         'playerId': playerId,
@@ -99,12 +101,18 @@ class PartyCreateWritePlan {
         'createdAt': serverTimestamp,
         'updatedAt': serverTimestamp,
       },
+      groupRaidListing:
+          command.visibility == RecruitmentVisibility.group &&
+              command.groupId != null
+          ? recruitment
+          : null,
     );
   }
 
   final Map<String, Object?> recruitment;
   final Map<String, Object?> leaderMembership;
   final Map<String, Object?> assignment;
+  final Map<String, Object?>? groupRaidListing;
 
   static Map<String, Object?> _approvalPolicy(PartyCreateCommand command) => {
     'mode': command.approvalPolicy.mode.name,

@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../../../../shared/raid_catalog/domain/policies/raid_eligibility_policy.dart';
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
+import '../../../group/domain/entities/group_relation.dart';
+import '../../../group/domain/repositories/group_read_repository.dart';
+import '../../domain/entities/party_create_command.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/entities/recruitment_aggregate.dart';
-import '../../domain/entities/party_create_command.dart';
 import '../../domain/policies/approval_policy.dart';
 import '../../domain/policies/party_composition_policy.dart';
 import '../../domain/policies/party_cycle_policy.dart';
@@ -26,6 +30,8 @@ class RecruitmentCreatePage extends StatefulWidget {
     required this.commandService,
     required this.candidateService,
     this.partyCreateRepository,
+    this.groupReadRepository,
+    this.playerId,
     this.newRecruitmentId,
     this.cycleKey,
     super.key,
@@ -34,11 +40,15 @@ class RecruitmentCreatePage extends StatefulWidget {
   final RecruitmentCommandService commandService;
   final RecruitmentLeaderCandidateService candidateService;
   final PartyCreateRepository? partyCreateRepository;
+  final GroupReadRepository? groupReadRepository;
+  final String? playerId;
   final String Function()? newRecruitmentId;
   final String? cycleKey;
   @override
   State<RecruitmentCreatePage> createState() => _RecruitmentCreatePageState();
 }
+
+enum _RaidAudience { general, group }
 
 class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
   static const _eligibilityPolicy = RaidEligibilityPolicy();
@@ -56,6 +66,13 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
   bool _loading = true;
   bool _saving = false;
   String? _loadError;
+  _RaidAudience _audience = _RaidAudience.general;
+  bool _groupOnly = true;
+  String? _selectedGroupId;
+  List<GroupRelation> _groups = const [];
+  bool _groupsLoading = false;
+  String? _groupsError;
+  StreamSubscription<GroupReadSnapshot<GroupRelation>>? _groupsSubscription;
 
   double? get _selectedItemLevel => _leader?.optionFor(_role)?.itemLevel;
 
@@ -71,11 +88,13 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
   @override
   void initState() {
     super.initState();
+    _listenGroups();
     _load();
   }
 
   @override
   void dispose() {
+    _groupsSubscription?.cancel();
     _title.dispose();
     _combatPower.dispose();
     super.dispose();
@@ -148,6 +167,23 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
               selectedRaid: _raid!,
               selectedDifficulty: _difficulty!,
               beforeFields: [
+                _audienceSelector(),
+                const SizedBox(height: recruitmentFormFieldGap),
+                if (_audience == _RaidAudience.group) ...[
+                  _groupSelector(),
+                  const SizedBox(height: recruitmentFormFieldGap),
+                  CheckboxListTile(
+                    key: const ValueKey('groupOnlyVisibilityCheckbox'),
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('그룹만 공개'),
+                    value: _groupOnly,
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => _groupOnly = value);
+                    },
+                  ),
+                  const SizedBox(height: recruitmentFormFieldGap),
+                ],
                 _leaderSelector(),
                 const SizedBox(height: recruitmentFormFieldGap),
               ],
@@ -205,6 +241,130 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       selection: TextSelection.collapsed(offset: title.length),
     );
     _draft = _draft.copyWith(title: title);
+  }
+
+  void _listenGroups() {
+    final repository = widget.groupReadRepository;
+    final playerId = widget.playerId;
+    if (repository == null || playerId == null || playerId.isEmpty) return;
+    _groupsLoading = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _groupsSubscription = repository.watchMyGroups(playerId).listen(
+        (snapshot) {
+          if (!mounted) return;
+          final groups = snapshot.items
+              .where((item) => item.isMember)
+              .toList(growable: false);
+          setState(() {
+            _groups = groups;
+            _groupsLoading = false;
+            _groupsError = null;
+            if (_selectedGroupId != null &&
+                !groups.any((group) => group.groupId == _selectedGroupId)) {
+              _selectedGroupId = null;
+            }
+            if (_audience == _RaidAudience.group &&
+                _selectedGroupId == null &&
+                groups.length == 1) {
+              _selectedGroupId = groups.first.groupId;
+            }
+          });
+        },
+        onError: (_) {
+          if (!mounted) return;
+          setState(() {
+            _groups = const [];
+            _groupsLoading = false;
+            _groupsError = '가입 그룹을 불러오지 못했습니다.';
+            _selectedGroupId = null;
+          });
+        },
+      );
+    });
+  }
+
+  Widget _audienceSelector() => SegmentedButton<_RaidAudience>(
+    key: const ValueKey('raidAudienceSelector'),
+    segments: const [
+      ButtonSegment(
+        value: _RaidAudience.general,
+        label: Text('일반 레이드'),
+      ),
+      ButtonSegment(
+        value: _RaidAudience.group,
+        label: Text('그룹 레이드'),
+      ),
+    ],
+    selected: {_audience},
+    onSelectionChanged: (selected) {
+      final audience = selected.first;
+      setState(() {
+        _audience = audience;
+        if (audience == _RaidAudience.group &&
+            _selectedGroupId == null &&
+            _groups.length == 1) {
+          _selectedGroupId = _groups.first.groupId;
+        }
+      });
+    },
+  );
+
+  Widget _groupSelector() {
+    if (_groupsLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: LinearProgressIndicator(),
+      );
+    }
+    if (_groupsError != null) {
+      return Text(_groupsError!, key: const ValueKey('groupLoadErrorText'));
+    }
+    if (_groups.isEmpty) {
+      return const Text(
+        '가입한 그룹이 없습니다. 그룹에 가입한 뒤에 그룹 레이드를 만들 수 있습니다.',
+        key: ValueKey('noJoinedGroupsText'),
+      );
+    }
+    return DropdownButtonFormField<String>(
+      key: ValueKey('groupSelect-${_selectedGroupId ?? 'none'}'),
+      isExpanded: true,
+      initialValue: _groups.any((group) => group.groupId == _selectedGroupId)
+          ? _selectedGroupId
+          : null,
+      decoration: const InputDecoration(
+        labelText: '그룹',
+        border: OutlineInputBorder(),
+      ),
+      items: [
+        for (final group in _groups)
+          DropdownMenuItem(
+            value: group.groupId,
+            child: Text(
+              group.groupNameSnapshot,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+      ],
+      onChanged: (value) => setState(() => _selectedGroupId = value),
+    );
+  }
+
+  String? _groupCreateBlockReason() {
+    if (_audience != _RaidAudience.group) return null;
+    if (widget.partyCreateRepository == null) {
+      return '그룹 레이드는 서버에 연결된 뒤에서 만들 수 있습니다.';
+    }
+    if (_groupsLoading) return '가입 그룹을 불러오는 중입니다.';
+    if (_groupsError != null) return _groupsError;
+    if (_groups.isEmpty) {
+      return '가입한 그룹이 없어 그룹 레이드를 만들 수 없습니다.';
+    }
+    if (_selectedGroupId == null ||
+        !_groups.any((group) => group.groupId == _selectedGroupId)) {
+      return '그룹을 선택해주세요.';
+    }
+    return null;
   }
 
   Future<List<RecruitmentLeaderCandidate>> _loadCandidates(
@@ -524,6 +684,11 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    final groupBlock = _groupCreateBlockReason();
+    if (groupBlock != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(groupBlock)));
+      return;
+    }
     final leader = _leader;
     if (leader == null ||
         !leader.canSelect ||
@@ -675,6 +840,10 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
         approvalPolicy: approval,
         compositionRules: RecruitmentPartyRules.fromRaid(raid),
         cycleKey: cycleKey,
+        groupId: _audience == _RaidAudience.group ? _selectedGroupId : null,
+        visibility: _audience == _RaidAudience.group && _groupOnly
+            ? RecruitmentVisibility.group
+            : RecruitmentVisibility.public,
       ),
     );
     if (!mounted) return;
@@ -700,6 +869,8 @@ String _createFailureMessage(PartyCreateFailure failure) => switch (failure) {
   PartyCreateFailure.participationConflict =>
     '이미 확정된 참가 또는 겹치는 일정이 있어 모집을 만들 수 없습니다.',
   PartyCreateFailure.idConflict => '같은 모집이 이미 있습니다. 다시 시도해 주세요.',
+  PartyCreateFailure.notGroupMember =>
+    '선택한 그룹에 가입되어 있지 않아 그룹 레이드를 만들 수 없습니다.',
   PartyCreateFailure.permissionDenied => '모집 생성 권한을 확인하지 못했습니다.',
   PartyCreateFailure.temporarilyUnavailable => '네트워크 연결이 불안정합니다.',
   PartyCreateFailure.invalidRequest => '입력한 모집 정보를 확인하지 못했습니다.',

@@ -7,6 +7,8 @@ import 'package:lost_party/features/account/domain/entities/character_summary.da
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
 import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
+import 'package:lost_party/features/group/domain/entities/group_relation.dart';
+import 'package:lost_party/features/group/domain/repositories/group_read_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/fake_recruitment_runtime.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_active_raid_assignment_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
@@ -84,6 +86,11 @@ void main() {
     expect(createRepository.lastCommand?.leaderCharacterId, 'server-char-1');
     expect(createRepository.lastCommand?.cycleKey, '2026-08-19');
     expect(createRepository.lastCommand?.recruitmentId, 'firestore-recruitment-1');
+    expect(createRepository.lastCommand?.groupId, isNull);
+    expect(
+      createRepository.lastCommand?.visibility,
+      RecruitmentVisibility.public,
+    );
     expect(find.text('read-detail:firestore-recruitment-1'), findsOneWidget);
     expect(
       await recruitmentRepository.getById('firestore-recruitment-1'),
@@ -137,6 +144,186 @@ void main() {
     expect(createRepository.lastCommand, isNull);
     expect(find.text('게임 계정 인증이 완료된 캐릭터만 모집을 만들 수 있습니다.'), findsOneWidget);
   });
+
+  testWidgets('그룹 레이드를 만들면 선택한 그룹과 그룹 전용 공개를 저장한다', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final createRepository = _RecordingPartyCreateRepository();
+    final session = FakeUserSession('player-1');
+    final clock = FakeRecruitmentClock(DateTime.utc(2026, 8, 20));
+    final accountRepository = _VerifiedAccountRepository();
+    final assignmentRepository = InMemoryActiveRaidAssignmentRepository();
+    final weeklyRepository = InMemoryWeeklyRaidClearRepository();
+    final recruitmentRepository = InMemoryRecruitmentStateRepository();
+    final commandService = RecruitmentCommandService(
+      session: session,
+      clock: clock,
+      idGenerator: SequentialRecruitmentIdGenerator(),
+      repository: recruitmentRepository,
+      weeklyClearRepository: weeklyRepository,
+      assignmentRepository: assignmentRepository,
+    );
+    await _pumpCreateRoute(
+      tester,
+      RecruitmentCreatePage(
+        catalogRepository: _CatalogRepository(),
+        commandService: commandService,
+        candidateService: RecruitmentLeaderCandidateService(
+          accountRepository: accountRepository,
+          weeklyClearRepository: weeklyRepository,
+          session: session,
+          clock: clock,
+          assignmentRepository: assignmentRepository,
+          recruitmentRepository: recruitmentRepository,
+        ),
+        partyCreateRepository: createRepository,
+        groupReadRepository: _FakeGroupReadRepository([_memberGroup]),
+        playerId: 'player-1',
+        newRecruitmentId: () => 'group-recruitment-1',
+        cycleKey: '2026-08-19',
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('그룹 레이드'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('saveRecruitmentButton')));
+    await tester.tap(find.byKey(const ValueKey('saveRecruitmentButton')));
+    await tester.pumpAndSettle();
+
+    expect(createRepository.lastCommand?.groupId, 'group-1');
+    expect(
+      createRepository.lastCommand?.visibility,
+      RecruitmentVisibility.group,
+    );
+  });
+
+  testWidgets('그룹 레이드에서 그룹만 공개를 끄면 전체 공개로 저장한다', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final createRepository = _RecordingPartyCreateRepository();
+    final session = FakeUserSession('player-1');
+    final clock = FakeRecruitmentClock(DateTime.utc(2026, 8, 20));
+    final accountRepository = _VerifiedAccountRepository();
+    final assignmentRepository = InMemoryActiveRaidAssignmentRepository();
+    final weeklyRepository = InMemoryWeeklyRaidClearRepository();
+    final recruitmentRepository = InMemoryRecruitmentStateRepository();
+    await _pumpCreateRoute(
+      tester,
+      RecruitmentCreatePage(
+        catalogRepository: _CatalogRepository(),
+        commandService: RecruitmentCommandService(
+          session: session,
+          clock: clock,
+          idGenerator: SequentialRecruitmentIdGenerator(),
+          repository: recruitmentRepository,
+          weeklyClearRepository: weeklyRepository,
+          assignmentRepository: assignmentRepository,
+        ),
+        candidateService: RecruitmentLeaderCandidateService(
+          accountRepository: accountRepository,
+          weeklyClearRepository: weeklyRepository,
+          session: session,
+          clock: clock,
+          assignmentRepository: assignmentRepository,
+          recruitmentRepository: recruitmentRepository,
+        ),
+        partyCreateRepository: createRepository,
+        groupReadRepository: _FakeGroupReadRepository([_memberGroup]),
+        playerId: 'player-1',
+        newRecruitmentId: () => 'group-recruitment-public-1',
+        cycleKey: '2026-08-19',
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('그룹 레이드'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('groupOnlyVisibilityCheckbox')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('saveRecruitmentButton')));
+    await tester.tap(find.byKey(const ValueKey('saveRecruitmentButton')));
+    await tester.pumpAndSettle();
+
+    expect(createRepository.lastCommand?.groupId, 'group-1');
+    expect(
+      createRepository.lastCommand?.visibility,
+      RecruitmentVisibility.public,
+    );
+  });
+
+  testWidgets('가입 그룹이 없으면 그룹 레이드를 만들지 않는다', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final createRepository = _RecordingPartyCreateRepository();
+    final session = FakeUserSession('player-1');
+    final clock = FakeRecruitmentClock(DateTime.utc(2026, 8, 20));
+    final accountRepository = _VerifiedAccountRepository();
+    final assignmentRepository = InMemoryActiveRaidAssignmentRepository();
+    final weeklyRepository = InMemoryWeeklyRaidClearRepository();
+    final recruitmentRepository = InMemoryRecruitmentStateRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RecruitmentCreatePage(
+          catalogRepository: _CatalogRepository(),
+          commandService: RecruitmentCommandService(
+            session: session,
+            clock: clock,
+            idGenerator: SequentialRecruitmentIdGenerator(),
+            repository: recruitmentRepository,
+          ),
+          candidateService: RecruitmentLeaderCandidateService(
+            accountRepository: accountRepository,
+            weeklyClearRepository: weeklyRepository,
+            session: session,
+            clock: clock,
+            assignmentRepository: assignmentRepository,
+            recruitmentRepository: recruitmentRepository,
+          ),
+          partyCreateRepository: createRepository,
+          groupReadRepository: _FakeGroupReadRepository(const []),
+          playerId: 'player-1',
+          newRecruitmentId: () => 'group-recruitment-1',
+          cycleKey: '2026-08-19',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('그룹 레이드'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('noJoinedGroupsText')), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const ValueKey('saveRecruitmentButton')));
+    await tester.tap(find.byKey(const ValueKey('saveRecruitmentButton')));
+    await tester.pumpAndSettle();
+    expect(createRepository.lastCommand, isNull);
+    expect(find.textContaining('가입한 그룹이 없어'), findsOneWidget);
+  });
+}
+
+Future<void> _pumpCreateRoute(WidgetTester tester, Widget page) async {
+  final router = GoRouter(
+    initialLocation: '/create',
+    routes: [
+      GoRoute(path: '/create', builder: (_, __) => page),
+      GoRoute(
+        path: '/raid-status/:recruitmentId',
+        builder: (context, state) => Scaffold(
+          body: Text(
+            'read-detail:${state.pathParameters['recruitmentId']}',
+          ),
+        ),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+  await tester.pumpWidget(MaterialApp.router(routerConfig: router));
 }
 
 class _RecordingPartyCreateRepository implements PartyCreateRepository {
@@ -148,6 +335,27 @@ class _RecordingPartyCreateRepository implements PartyCreateRepository {
     return PartyCreateResult.success(command.recruitmentId);
   }
 }
+
+class _FakeGroupReadRepository extends Fake implements GroupReadRepository {
+  _FakeGroupReadRepository(this.groups);
+
+  final List<GroupRelation> groups;
+
+  @override
+  Stream<GroupReadSnapshot<GroupRelation>> watchMyGroups(String playerId) =>
+      Stream.value(GroupReadSnapshot(items: groups, isFromCache: false));
+}
+
+final _memberGroup = GroupRelation(
+  groupId: 'group-1',
+  playerId: 'player-1',
+  relation: GroupRelationKind.member,
+  groupNameSnapshot: '테스트그룹',
+  displayCharacterNameSnapshot: '대표바드',
+  sourceRevision: 1,
+  createdAt: DateTime.utc(2026, 8, 1),
+  updatedAt: DateTime.utc(2026, 8, 1),
+);
 
 class _CatalogRepository implements RaidCatalogRepository {
   @override

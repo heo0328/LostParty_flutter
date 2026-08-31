@@ -53,6 +53,7 @@ void main() {
       rules,
       contains('function validInitialGroupMember(groupId, playerId, data)'),
     );
+    expect(rules, contains('function validNewGroupMemberCore(groupId, playerId, data)'));
     expect(rules, contains("data.role == 'leader'"));
     expect(rules, contains("data.joinedBy == 'created'"));
     expect(rules, contains('data.joinSequence == 1'));
@@ -105,6 +106,16 @@ void main() {
       contains('allow create: if validInitialGroup(groupId, request.resource.data);'),
     );
     expect(rules, contains('allow update, delete: if false;'));
+  });
+
+  test('그룹 전용 레이드 목록 Projection은 경로의 그룹원만 list한다', () {
+    expect(rules, contains('function validGroupRaidListingCreate('));
+    expect(rules, contains('match /raidListings/{recruitmentId}'));
+    expect(rules, contains('allow get, list: if isCurrentGroupMember(groupId);'));
+    expect(
+      rules,
+      contains('allow create: if validGroupRaidListingCreate('),
+    );
   });
 
   test('Unit 4는 초대코드 생성·폐기·정확한 get을 열고 list·update는 막는다', () {

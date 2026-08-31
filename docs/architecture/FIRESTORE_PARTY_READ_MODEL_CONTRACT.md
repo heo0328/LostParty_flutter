@@ -124,7 +124,7 @@ orderBy documentId desc
 limit 20
 ```
 
-그룹 전용 모집은 공개 쿼리와 합치지 않고 현재 그룹 ID별 쿼리로 분리한다.
+그룹 전용 모집은 `recruitments`에 `visibility==group` 쿼리를 붙이지 않는다. 생성 시 `groups/{groupId}/raidListings/{recruitmentId}`에 같은 스냅샷을 쓰고, 목록은 `players/{playerId}/groupMembershipState/current`의 `activeGroupIds`마다 그 경로만 `list`한다. 공개 첫 페이지는 공개 쿼리가 오면 바로 내보내고, membership state·listing 구독 실패는 삼킨다. listing 문서는 클라이언트에서 현재 주차·active·빈자리 조건을 걸러 공개 카드와 같은 매퍼로 합친다. 책임자·확정 멤버 본인 방은 공개·그룹 listing 모두에서 제외한다. listing은 생성 시점 스냅샷이며 자리·상태 변경에 맞춘 갱신은 후속이다. 복합 인덱스는 listing 전체 `list`에 필요하지 않다.
 
 #### 현재 사용자의 방 제외 — Task-082 확정
 
@@ -234,11 +234,11 @@ PartyReadRepository
 
 - 모든 조회는 유효한 `AuthUid -> PlayerId` binding을 요구한다.
 - `public` 모집은 로그인된 사용자가 계약된 공개 쿼리로 목록·상세를 읽을 수 있다.
-- `groupOnly` 모집은 해당 그룹 멤버만 읽을 수 있다. 그룹 멤버십 계약 전에는 실행 앱에 연결하지 않는다.
+- `group` 모집 단건 `get`·신청은 해당 그룹 현재 멤버만 허용한다. 모집 리스트의 그룹 전용 항목은 `groups/{groupId}/raidListings` 경로의 그룹원 `list`로 읽는다.
 - 비공개 멤버·신청 정보는 해당 방의 현재 멤버 또는 해당 신청자만 읽을 수 있다. 공개 모집의 membership 목록 읽기는 Option 1에 따라 active binding 사용자에게 허용하며, Domain/UI는 표시 Snapshot만 소비한다.
 - 모집 생성·신청·철회·즉시 가입·승인·거절·재신청·단독 모집 삭제·고정 슬롯·참가 캐릭터 변경·탈퇴·추방·회차 완료/취소/전환·다인 해산은 허용된 클라이언트 Transaction과 Rules를 사용한다.
 - `신청 중` collection group 쿼리는 중첩 경로 규칙이 적용되지 않으므로 `match /{path=**}/applications/{applicantPlayerId}` 재귀 와일드카드 규칙이 반드시 필요하다. 이 규칙은 `list`만 허용하고 `resource.data.applicantPlayerId == currentPlayerId()`로 본인 신청에 한정한다. 단건 조회와 방 멤버의 신청 열람은 기존 중첩 경로 규칙이 계속 담당한다.
-- 모집 단건 `get`은 문서가 없으면 active binding만으로 허용하고, 문서가 있으면 `canReadRecruitment`을 적용한다. `list`는 존재하는 문서만 다루므로 기존 공개·멤버 조건을 유지한다. 생성 Transaction과 상세의 문서 누락 상태가 이 분기를 사용한다.
+- 모집 단건 `get`은 문서가 없으면 active binding만으로 허용하고, 문서가 있으면 `canReadRecruitment`을 적용한다. `list`는 `canListRecruitment`만 사용한다. 그룹 멤버십 `exists`는 단건 get/신청에만 두고 목록 규칙에 넣지 않는다. 생성 Transaction과 상세의 문서 누락 상태가 이 분기를 사용한다.
 - Rules와 쿼리는 Emulator Suite에서 공개 목록, 자기 멤버십, 자기 신청, 타인 비공개 데이터 차단을 같이 검증한 후 배포한다.
 
 ## 9. 필요 인덱스

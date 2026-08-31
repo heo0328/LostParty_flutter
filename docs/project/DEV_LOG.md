@@ -1,5 +1,37 @@
 # DEV LOG (2026)
 
+## 2026-09-01 그룹 전용 모집 리스트 실기기 확인
+
+- 사용자가 그룹만 공개 생성 후 그룹원 레이드 모집 리스트 노출이 동작한다고 확인했다. 문서만 최신화한다. 커밋은 지시 후에 한다.
+- 구현: 생성 시 `groups/{groupId}/raidListings/{recruitmentId}` 스냅샷, 공개 첫 페이지와 경로 기반 listing 합치기, listing 실패 격리, 본인 방 제외.
+- 쓰지 않은 방식: `recruitments`에 `visibility==group` 쿼리, 목록 Rules의 문서별 그룹 membership `exists`.
+- 남은 후속: 생성 후 공개 전환, listing 자리·상태 갱신, 기존 방 listing 보완, 탈퇴 자격 박탈, 목록 필터 UI.
+
+## 2026-08-31 그룹 전용 모집 목록(raidListings)
+
+- 그룹만 공개는 공개 `recruitments` 쿼리에 없어 그룹원 모집 리스트에 안 보였다. `visibility==group`을 `recruitments`에 붙이면 목록 전체가 죽을 수 있어 쓰지 않는다.
+- 생성 트랜잭션이 `groups/{groupId}/raidListings/{recruitmentId}`에 모집 스냅샷을 쓴다. 목록은 가입 그룹 경로만 읽고 공개 첫 페이지와 합친다. listing 오류는 공개 목록을 유지한다.
+- listing create/list Rules와 앱 반영 후 2026-09-01 실기기에서 그룹원 모집 리스트 노출을 확인했다. listing이 없는 기존 방은 재생성 전까지 안 보일 수 있다.
+
+## 2026-08-31 Rules 복잡도 축소 (R1·이벤트·미사용 함수)
+
+- 사용자가 업로드 실패를 복잡도 한도로 보고 최적화를 지시했다. 브랜치 `codex/recruitment-group-link`에서 목록 수정을 유지한 채 축소했다.
+- 가입 membership 네 경로의 필드·시각 검사를 `validNewGroupMemberCore`로 모았다. membership state 키 집합을 공통화하고 리더 승인 추가는 기존 add-member 검사를 재사용한다.
+- `validPlayerEvent` 중첩 삼항을 유형별 검증 OR로 바꿨다. 호출되지 않는 joinCode path·수동인증 owner helper 2개를 삭제했다.
+- 생성 시 그룹 exists/get은 `let`이 아니라 일반 레이드에서 단락되는 OR로 두었다. 청중 검사는 `isCurrentGroupMember` 대신 membership `exists`만 쓴다. 배포는 하지 않았다.
+
+## 2026-08-31 모집 목록 Rules list 거부 수정
+
+- Rules 배포 후 레이드 모집·현황이 `조회 권한을 확인하지 못했습니다`로 비었다. 생성은 되고 목록만 실패했다.
+- `canReadRecruitment`에 그룹 membership `exists`가 들어가 공개 목록·내 현황 `list` 쿼리 전체가 거부되었다. 목록은 `canListRecruitment`(공개/리더/멤버 필드)로 분리했다. 재배포 전에는 운영 목록이 복구되지 않는다.
+
+## 2026-08-31 일반/그룹 레이드 생성 연결 (B)
+
+- 전용 브랜치 `codex/recruitment-group-link`. 생성 화면에 일반/그룹 선택을 넣고, 그룹 레이드는 가입 그룹 하나와 visibility를 실제 저장한다.
+- 그룹 전용은 기본값이며 Rules에서 그룹원만 읽기·신청할 수 있다. 생성 트랜잭션은 그룹·membership을 먼저 읽는다.
+- 가입 그룹이 없으면 생성을 막는다. 공개 목록에 그룹 전용 모집을 섞는 일, 생성 후 공개 전환, 탈퇴 시 자격 박탈, Rules 배포는 하지 않았다.
+- 표적 테스트와 변경 파일 analyze를 통과했다. 커밋은 실기기 확인 뒤 사용자 지시로 진행한다.
+
 ## 2026-08-31 모집 생성 UI(A) 실기기 확인 및 Git 종료
 
 - 사용자가 생성 UI·완료 표기 크기를 확인한 뒤 문서 최신화와 기능 커밋·푸시·main 머지 커밋·푸시를 지시했다. 레이드 모집 완료는 정상이다.

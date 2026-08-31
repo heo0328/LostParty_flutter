@@ -141,6 +141,17 @@ service cloud.firestore {
         && get(groupPath(groupId)).data.leaderPlayerId == currentPlayerId();
     }
 
+    function validGroupRaidListingCreate(groupId, recruitmentId, data) {
+      let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
+      return isCurrentGroupMember(groupId)
+        && data.schemaVersion == 1
+        && data.visibility == 'group'
+        && data.groupId == groupId
+        && recruitment.groupId == groupId
+        && recruitment.visibility == 'group'
+        && recruitment.leaderPlayerId == currentPlayerId();
+    }
+
     // 직접 입력 그룹명은 trim 후 1~20자이며 줄바꿈·제어문자를 포함하지 않는다.
     // Rules는 Unicode 정규화 결과를 재계산하지 못하므로 원문 형식만 강제한다.
     function validGroupDisplayName(name) {
@@ -206,23 +217,16 @@ service cloud.firestore {
       let group = getAfter(groupPath(groupId)).data;
       return hasActiveBinding()
         && playerId == currentPlayerId()
-        && validGroupMemberDocumentKeys(data)
+        && validNewGroupMemberCore(groupId, playerId, data)
         && validGroupMemberSnapshotsFromCharacter(
           data,
           data.displayCharacterIdSnapshot
         )
-        && data.schemaVersion == 1
-        && data.groupId == groupId
-        && data.playerId == playerId
         && data.role == 'leader'
         && data.joinedBy == 'created'
         && data.joinSequence == 1
-        && data.revision == 1
         && data.displayCharacterIdSnapshot is string
         && data.displayCharacterNameSnapshot is string
-        && data.joinedAt == request.time
-        && data.createdAt == request.time
-        && data.updatedAt == request.time
         && group.status == 'active'
         && group.leaderPlayerId == playerId
         && group.memberCount == 1
@@ -240,10 +244,7 @@ service cloud.firestore {
       return hasActiveBinding()
         && playerId == currentPlayerId()
         && docId == 'current'
-        && newData.keys().hasOnly([
-          'schemaVersion', 'playerId', 'activeGroupIds', 'activeGroupCount',
-          'revision', 'updatedAt'
-        ])
+        && validMembershipStateDocumentKeys(newData)
         && newData.schemaVersion == 1
         && newData.playerId == playerId
         && newData.activeGroupIds is list
@@ -331,6 +332,24 @@ service cloud.firestore {
         'displayCharacterNameSnapshot', 'displayClassNameSnapshot',
         'itemLevelSnapshot', 'combatPowerSnapshot',
         'revision', 'createdAt', 'updatedAt'
+      ]);
+    }
+
+    function validNewGroupMemberCore(groupId, playerId, data) {
+      return validGroupMemberDocumentKeys(data)
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.revision == 1
+        && data.joinedAt == request.time
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    function validMembershipStateDocumentKeys(data) {
+      return data.keys().hasOnly([
+        'schemaVersion', 'playerId', 'activeGroupIds', 'activeGroupCount',
+        'revision', 'updatedAt'
       ]);
     }
 
@@ -487,20 +506,13 @@ service cloud.firestore {
       let state = getAfter(groupMembershipStatePath(playerId)).data;
       return isCurrentPlayerActive()
         && playerId == currentPlayerId()
-        && validGroupMemberDocumentKeys(data)
+        && validNewGroupMemberCore(groupId, playerId, data)
         && validGroupMemberSnapshotsFromRelation(data, relation)
-        && data.schemaVersion == 1
-        && data.groupId == groupId
-        && data.playerId == playerId
         && data.role == 'member'
         && data.joinedBy == 'invitation'
         && data.joinSequence == group.memberCount
-        && data.revision == 1
         && data.displayCharacterIdSnapshot == relation.characterIdSnapshot
         && data.displayCharacterNameSnapshot == relation.characterNameSnapshot
-        && data.joinedAt == request.time
-        && data.createdAt == request.time
-        && data.updatedAt == request.time
         && group.status == 'active'
         && group.memberCount <= 50
         && group.leaderPlayerId != playerId
@@ -571,10 +583,7 @@ service cloud.firestore {
       return hasActiveBinding()
         && playerId == currentPlayerId()
         && docId == 'current'
-        && newData.keys().hasOnly([
-          'schemaVersion', 'playerId', 'activeGroupIds', 'activeGroupCount',
-          'revision', 'updatedAt'
-        ])
+        && validMembershipStateDocumentKeys(newData)
         && newData.schemaVersion == 1
         && newData.playerId == playerId
         && newData.activeGroupIds is list
@@ -758,20 +767,13 @@ service cloud.firestore {
         && get(playerPath(callerId)).data.status == 'active'
         && group.leaderPlayerId == callerId
         && playerId != callerId
-        && validGroupMemberDocumentKeys(data)
+        && validNewGroupMemberCore(groupId, playerId, data)
         && validGroupMemberSnapshotsFromRelation(data, relation)
-        && data.schemaVersion == 1
-        && data.groupId == groupId
-        && data.playerId == playerId
         && data.role == 'member'
         && data.joinedBy == 'application'
         && data.joinSequence == group.memberCount
-        && data.revision == 1
         && data.displayCharacterIdSnapshot == relation.characterIdSnapshot
         && data.displayCharacterNameSnapshot == relation.characterNameSnapshot
-        && data.joinedAt == request.time
-        && data.createdAt == request.time
-        && data.updatedAt == request.time
         && group.status == 'active'
         && group.memberCount <= 50
         && relation.kind == 'application'
@@ -801,23 +803,16 @@ service cloud.firestore {
         && get(playerPath(callerId)).data.status == 'active'
         && docId == 'current'
         && playerId != callerId
-        && newData.keys().hasOnly([
-          'schemaVersion', 'playerId', 'activeGroupIds', 'activeGroupCount',
-          'revision', 'updatedAt'
-        ])
+        && validMembershipStateDocumentKeys(newData)
         && newData.schemaVersion == 1
         && newData.playerId == playerId
-        && newData.activeGroupIds is list
-        && newData.activeGroupIds.size() == previousIds.size() + 1
-        && newData.activeGroupIds.size() <= 50
-        && newData.activeGroupIds.toSet().size()
-          == newData.activeGroupIds.size()
-        && newData.activeGroupIds.toSet().difference(previousIds.toSet())
-          == [addedGroupId].toSet()
-        && newData.activeGroupCount == newData.activeGroupIds.size()
-        && newData.revision == previousRevision + 1
-        && newData.updatedAt == request.time
-        && member.playerId == playerId
+        && validMembershipStateAddMember(
+          playerId,
+          addedGroupId,
+          newData,
+          previousIds,
+          previousRevision
+        )
         && member.joinedBy == 'application'
         && getAfter(groupPath(addedGroupId)).data.leaderPlayerId == callerId;
     }
@@ -905,10 +900,6 @@ service cloud.firestore {
     // groups/{g}, groupMembershipState, characters/{c}, joinRelations/{선택},
     // blockedPlayers exists, members getAfter, groupRelations getAfter →
     // 서로 다른 문서 ≤10, get·getAfter 합계 약 16회(한도 ~20 이하).
-    function groupJoinCodePath(code) {
-      return /databases/$(database)/documents/groupJoinCodes/$(code);
-    }
-
     function validJoinCodeId(code) {
       return code is string
         && code.size() == 20
@@ -989,23 +980,16 @@ service cloud.firestore {
       let relationPath = groupJoinRelationPath(groupId, playerId);
       return isCurrentPlayerActive()
         && playerId == currentPlayerId()
-        && validGroupMemberDocumentKeys(data)
+        && validNewGroupMemberCore(groupId, playerId, data)
         && validGroupMemberSnapshotsFromCharacter(
           data,
           data.displayCharacterIdSnapshot
         )
-        && data.schemaVersion == 1
-        && data.groupId == groupId
-        && data.playerId == playerId
         && data.role == 'member'
         && data.joinedBy == 'joinCode'
         && data.joinSequence == group.memberCount
-        && data.revision == 1
         && data.displayCharacterIdSnapshot is string
         && data.displayCharacterNameSnapshot is string
-        && data.joinedAt == request.time
-        && data.createdAt == request.time
-        && data.updatedAt == request.time
         && ownsActiveCharacter(data.displayCharacterIdSnapshot)
         && get(characterPath(data.displayCharacterIdSnapshot))
           .data.characterName == data.displayCharacterNameSnapshot
@@ -1077,6 +1061,13 @@ service cloud.firestore {
             .data.canApproveApplications == true);
     }
 
+    function canAccessRecruitmentByAudience(data) {
+      return data.visibility == 'public'
+        || (data.visibility == 'group'
+          && data.groupId is string
+          && exists(groupMemberPath(data.groupId, currentPlayerId())));
+    }
+
     function validInitialRecruitment(recruitmentId, data) {
       let playerId = currentPlayerId();
       let member = getAfter(recruitmentMemberPath(recruitmentId, playerId)).data;
@@ -1089,7 +1080,13 @@ service cloud.firestore {
         && data.maxMemberCount >= 1
         && data.dealerCount + data.supportCount == 1
         && data.status == 'active'
-        && data.visibility == 'public'
+        && (
+          (data.groupId == null && data.visibility == 'public')
+          || (data.groupId is string
+            && data.visibility in ['public', 'group']
+            && exists(groupMemberPath(data.groupId, playerId))
+            && get(groupPath(data.groupId)).data.status == 'active')
+        )
         && data.currentCycleKey == data.targetCycleKey
         && data.currentCycleStatus == 'active'
         && data.cycleEndsAt == data.cycleStartedAt + duration.value(7, 'd')
@@ -1179,6 +1176,10 @@ service cloud.firestore {
         && !(playerId in before.memberPlayerIds)
         && playerId in after.memberPlayerIds
         && (directJoin || approvedJoin)
+        && (before.visibility == 'public'
+          || (before.visibility == 'group'
+            && before.groupId is string
+            && (isCurrentGroupMember(before.groupId) || approvedJoin)))
         && getAfter(assignmentPath(playerId, assignmentId)).data.recruitmentId
           == recruitmentId;
     }
@@ -2000,31 +2001,11 @@ service cloud.firestore {
     }
 
     function validPlayerEvent(playerId, eventId, data) {
-      return data.type in [
-          'partyCompleted',
-          'partyCompletionCancelled',
-          'partyIncompleteEnded'
-        ]
-        ? validCycleEvent(playerId, eventId, data)
-        : (data.type in [
-            'applicationSubmitted',
-            'applicationApproved',
-            'applicationRejected',
-            'applicationWithdrawn'
-          ]
-          ? validApplicationEvent(playerId, eventId, data)
-          : (data.type in [
-              'memberJoined',
-              'memberLeft',
-              'memberKicked',
-              'memberCharacterChanged'
-            ]
-            ? validMembershipEvent(playerId, eventId, data)
-            : (data.type == 'partyDisbanded'
-              ? validLifecycleEvent(playerId, eventId, data)
-              : (data.type == 'manualVerificationDisputeOpened'
-                ? validManualVerificationDisputeEvent(playerId, eventId, data)
-                : false))));
+      return validCycleEvent(playerId, eventId, data)
+        || validApplicationEvent(playerId, eventId, data)
+        || validMembershipEvent(playerId, eventId, data)
+        || validLifecycleEvent(playerId, eventId, data)
+        || validManualVerificationDisputeEvent(playerId, eventId, data);
     }
 
     function validManualVerificationDisputeEvent(playerId, eventId, data) {
@@ -2073,6 +2054,7 @@ service cloud.firestore {
         && recruitment.manualRecruitmentEnabled == true
         && recruitment.hasAvailableSlot == true
         && recruitment.approvalPolicy.mode == 'leaderOnly'
+        && canAccessRecruitmentByAudience(recruitment)
         && !(playerId in recruitment.memberPlayerIds)
         && ownsActiveCharacter(data.characterId)
         && !hasWeeklyRaidClaimAfter(
@@ -2155,6 +2137,7 @@ service cloud.firestore {
         && recruitment.manualRecruitmentEnabled == true
         && recruitment.hasAvailableSlot == true
         && recruitment.approvalPolicy.mode == 'leaderOnly'
+        && canAccessRecruitmentByAudience(recruitment)
         && !(playerId in recruitment.memberPlayerIds)
         && ownsActiveCharacter(newData.characterId)
         && !hasWeeklyRaidClaimAfter(
@@ -2344,9 +2327,18 @@ service cloud.firestore {
         && newData.updatedAt == request.time;
     }
 
-    function canReadRecruitment(data) {
+    // list 규칙은 쿼리 제약만으로 증명되어야 한다. exists/get이 섞이면
+    // 공개 목록·내 현황 쿼리 전체가 permission-denied가 된다.
+    function canListRecruitment(data) {
       return hasActiveBinding()
         && (data.visibility == 'public'
+          || data.leaderPlayerId == currentPlayerId()
+          || currentPlayerId() in data.memberPlayerIds);
+    }
+
+    function canReadRecruitment(data) {
+      return hasActiveBinding()
+        && (canAccessRecruitmentByAudience(data)
           || data.leaderPlayerId == currentPlayerId()
           || currentPlayerId() in data.memberPlayerIds);
     }
@@ -2371,7 +2363,9 @@ service cloud.firestore {
     function canReadPublicRecruitmentMembers(recruitmentId) {
       return hasActiveBinding()
         && exists(recruitmentPath(recruitmentId))
-        && get(recruitmentPath(recruitmentId)).data.visibility == 'public';
+        && canAccessRecruitmentByAudience(
+          get(recruitmentPath(recruitmentId)).data
+        );
     }
 
     // 신청 Transaction은 신규 application get으로 존재 여부를 확인한다.
@@ -2683,17 +2677,6 @@ service cloud.firestore {
         : null;
     }
 
-    function manualVerificationDisputeOwnerPlayerId(oldData) {
-      return oldData.status == 'awaitingOwnerResponse'
-        && oldData.previousOwnerPlayerId is string
-        && oldData.previousOwnerPlayerId.size() > 0
-        ? oldData.previousOwnerPlayerId
-        : manualVerificationActiveOwnerPlayerId(
-          oldData.targetIdentityKey,
-          'targetGameAccountId' in oldData ? oldData.targetGameAccountId : null
-        );
-    }
-
     function manualVerificationRequesterAlreadyOwns(data) {
       let owner = manualVerificationActiveOwnerPlayerId(
         data.targetIdentityKey,
@@ -2818,21 +2801,6 @@ service cloud.firestore {
           'status', 'reviewedByOperatorPlayerId', 'reviewedAt',
           'reviewReason', 'resolvedAt', 'updatedAt'
         ]);
-    }
-
-    function manualVerificationForceOwnerPlayerId(oldData) {
-      return oldData.status == 'awaitingOwnerResponse'
-        && oldData.previousOwnerPlayerId is string
-        && oldData.previousOwnerPlayerId.size() > 0
-        ? oldData.previousOwnerPlayerId
-        : manualVerificationActiveOwnerPlayerId(
-          oldData.targetIdentityKey,
-          'targetGameAccountId' in oldData
-            && oldData.targetGameAccountId is string
-            && oldData.targetGameAccountId.size() > 0
-            ? oldData.targetGameAccountId
-            : ''
-        );
     }
 
     function validManualVerificationOperatorForceBody(oldData, newData) {
@@ -3042,7 +3010,7 @@ service cloud.firestore {
 
     match /recruitments/{recruitmentId} {
       allow get: if canGetRecruitment(recruitmentId);
-      allow list: if canReadRecruitment(resource.data);
+      allow list: if canListRecruitment(resource.data);
       allow create: if validInitialRecruitment(
         recruitmentId,
         request.resource.data
@@ -3231,6 +3199,16 @@ service cloud.firestore {
           playerId,
           resource.data
         );
+      }
+
+      match /raidListings/{recruitmentId} {
+        allow get, list: if isCurrentGroupMember(groupId);
+        allow create: if validGroupRaidListingCreate(
+          groupId,
+          recruitmentId,
+          request.resource.data
+        );
+        allow update, delete: if false;
       }
 
       // Unit 4는 초대·신청 처리에 더해 코드 가입이 pending 요청을
