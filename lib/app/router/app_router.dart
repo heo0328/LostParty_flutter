@@ -11,6 +11,7 @@ import '../../features/account/data/repositories/account_repository_impl.dart';
 import '../../features/account/data/gateways/local_game_account_verification_gateway.dart';
 import '../../features/account/data/gateways/firestore_account_ownership_status_gateway.dart';
 import '../../features/account/data/gateways/firestore_character_summary_sync_gateway.dart';
+import '../../features/account/data/gateways/firestore_character_combat_power_sync_gateway.dart';
 import '../../features/account/data/gateways/firestore_representative_character_sync_gateway.dart';
 import '../../features/account/data/mappers/sibling_character_mapper.dart';
 import '../../features/account/data/repositories/firestore_weekly_raid_claim_repository.dart';
@@ -529,6 +530,10 @@ GoRouter createAppRouter({
                       readRepository: groupReadRepositoryForRoute(),
                       actionViewModel: GroupMembershipActionViewModel(
                         accountRepository: accountRepository,
+                        combatPowerSyncGateway: FirestoreCharacterCombatPowerSyncGateway(
+                          firestore: FirebaseFirestore.instance,
+                          firebaseAuth: FirebaseAuth.instance,
+                        ),
                         readRepository: groupReadRepositoryForRoute(),
                         commandRepository:
                             groupJoinCommandRepositoryForRoute(),

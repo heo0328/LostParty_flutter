@@ -508,7 +508,7 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
     GroupMemberDisplaySnapshotRefreshCommand command,
   ) async {
     final authUid = _firebaseAuth.currentUser?.uid;
-    if (authUid == null) return;
+    if (authUid == null) throw StateError('Signed-in user required.');
 
     try {
       await _firestore.runTransaction((transaction) async {
@@ -519,18 +519,20 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
         if (bindingData?['status'] != 'active' ||
             playerId is! String ||
             playerId.isEmpty) {
-          return;
+          throw StateError('Active player binding required.');
         }
 
         final memberRef = _groupRef(
           command.groupId,
         ).collection('members').doc(playerId);
         final memberSnapshot = await transaction.get(memberRef);
-        if (!memberSnapshot.exists) return;
+        if (!memberSnapshot.exists) throw StateError('Membership required.');
 
         final memberData = memberSnapshot.data();
         final characterId = memberData?['displayCharacterIdSnapshot'];
-        if (characterId is! String || characterId.isEmpty) return;
+        if (characterId is! String || characterId.isEmpty) {
+          throw StateError('Display character required.');
+        }
 
         final characterSnapshot = await transaction.get(
           _firestore.collection('characters').doc(characterId),
@@ -539,7 +541,7 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
         if (!characterSnapshot.exists ||
             characterData?['status'] != 'active' ||
             characterData?['ownerPlayerId'] != playerId) {
-          return;
+          throw StateError('Active character ownership required.');
         }
 
         transaction.update(
@@ -548,12 +550,15 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
             className: command.snapshot.className,
             itemLevel: command.snapshot.itemLevel,
             combatPower: command.snapshot.combatPower,
+            storedItemLevel: parseCharacterItemLevel(memberData?['itemLevelSnapshot']),
+            storedCombatPower: parseCharacterItemLevel(memberData?['combatPowerSnapshot']),
             serverTimestamp: FieldValue.serverTimestamp(),
           ),
         );
       });
     } on Object {
-      // 표시 Snapshot 갱신 실패는 목록 조회를 막지 않는다.
+      // 실패는 ViewModel이 안내하고, 저장된 목록 조회는 계속한다.
+      rethrow;
     }
   }
 
@@ -567,7 +572,7 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
   ) async {
     final localDisplayByCharacterId = _localMemberDisplayLookup == null
         ? const <String, GroupMemberDisplaySnapshot>{}
-        : await _localMemberDisplayLookup!.loadByServerCharacterId();
+        : await _localMemberDisplayLookup.loadByServerCharacterId();
     return GroupCommandRunner(
       firestore: _firestore,
       firebaseAuth: _firebaseAuth,

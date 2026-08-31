@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -45,9 +47,11 @@ class GroupDetailPage extends StatefulWidget {
 class _GroupDetailPageState extends State<GroupDetailPage> {
   late Future<GroupPublicSummary?> _group;
   late Future<GroupRelation?> _relation;
-  Future<List<GroupMemberDisplay>>? _members;
+  Future<GroupMemberDisplayLoadResult>? _members;
   Future<GroupMember?>? _myMembership;
   bool _busy = false;
+  bool _refreshing = false;
+  bool _loadingPlayerCharacters = false;
 
   @override
   void initState() {
@@ -56,6 +60,8 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
   }
 
   void _load() {
+    if (_refreshing) return;
+    _refreshing = true;
     _group = widget.readRepository.loadGroup(widget.groupId);
     _relation = widget.actionViewModel.loadMyRelation(
       playerId: widget.playerId,
@@ -63,11 +69,23 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     );
     _members = null;
     _myMembership = null;
-    _relation.then((relation) {
+    unawaited(_finishLoad());
+  }
+
+  Future<void> _finishLoad() async {
+    try {
+      final relation = await _relation;
       if (relation?.isMember == true && mounted) {
         setState(_loadMemberViews);
       }
-    });
+      await _group;
+      await _members;
+      await _myMembership;
+    } catch (_) {
+      // 개별 FutureBuilder가 읽기 오류를 표시한다.
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
   }
 
   void _loadMemberViews() {
@@ -89,7 +107,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
         actions: [
           IconButton(
             key: const ValueKey('groupDetailRefreshButton'),
-            onPressed: () => setState(_load),
+            onPressed: _refreshing || _busy ? null : () => setState(_load),
             icon: const Icon(Icons.refresh),
             tooltip: '새로고침',
           ),
@@ -116,7 +134,10 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Text(group.name, style: Theme.of(context).textTheme.headlineSmall),
+              Text(
+                group.name,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
               const SizedBox(height: 16),
               _GroupDetailRow(
                 label: '대표 캐릭터',
@@ -128,10 +149,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                 value: group.leaderDisplayCharacterNameSnapshot,
               ),
               _GroupDetailRow(label: '현재 인원', value: '${group.memberCount}명'),
-              _GroupDetailRow(
-                label: '생성',
-                value: _formatDate(group.createdAt),
-              ),
+              _GroupDetailRow(label: '생성', value: _formatDate(group.createdAt)),
               _GroupDetailRow(
                 label: '마지막 활동',
                 value: _formatDate(group.lastActivityAt),
@@ -242,10 +260,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
       _busy = false;
       _load();
     });
-    _report(
-      result.failure,
-      accept ? '초대를 수락했습니다.' : '초대를 거절했습니다.',
-    );
+    _report(result.failure, accept ? '초대를 수락했습니다.' : '초대를 거절했습니다.');
   }
 
   Future<void> _apply() async {
@@ -309,6 +324,8 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
   ).showSnackBar(SnackBar(content: Text(message)));
 
   Future<void> _showPlayerCharacters(GroupMemberDisplay display) async {
+    if (_loadingPlayerCharacters) return;
+    _loadingPlayerCharacters = true;
     List<GroupRequestCharacter> characters;
     try {
       characters = await widget.actionViewModel.loadPlayerCharacters(
@@ -318,6 +335,8 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
       if (!mounted) return;
       _showMessage('캐릭터 목록을 불러오지 못했습니다.');
       return;
+    } finally {
+      _loadingPlayerCharacters = false;
     }
     if (!mounted) return;
     await showModalBottomSheet<void>(
@@ -419,14 +438,14 @@ class _MemberSection extends StatelessWidget {
     required this.onMemberTap,
   });
 
-  final Future<List<GroupMemberDisplay>>? membersFuture;
+  final Future<GroupMemberDisplayLoadResult>? membersFuture;
   final ValueChanged<GroupMemberDisplay> onMemberTap;
 
   @override
   Widget build(BuildContext context) {
     final membersFuture = this.membersFuture;
     if (membersFuture == null) return const SizedBox.shrink();
-    return FutureBuilder<List<GroupMemberDisplay>>(
+    return FutureBuilder<GroupMemberDisplayLoadResult>(
       future: membersFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
@@ -437,11 +456,27 @@ class _MemberSection extends StatelessWidget {
             message: groupReadFailureMessage(snapshot.error!),
           );
         }
-        final members = snapshot.data ?? const [];
+        final result = snapshot.data;
+        final members = result?.members ?? const <GroupMemberDisplay>[];
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text('그룹원', style: Theme.of(context).textTheme.titleMedium),
+            if (result?.syncFailed == true)
+              const Padding(
+                key: ValueKey('groupDisplaySyncWarning'),
+                padding: EdgeInsets.only(top: 8),
+                child: Text(
+                  '내 캐릭터 표시 정보 동기화에 실패했습니다. 저장된 정보를 표시합니다. 잠시 후 새로고침해 주세요.',
+                ),
+              ),
+            if (members.any((member) => member.combatPower == null))
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Text(
+                  '전투력이 없는 캐릭터는 소유자가 내 계정에서 정보를 저장한 뒤 그룹을 새로고침해 주세요.',
+                ),
+              ),
             const SizedBox(height: 12),
             for (final display in members)
               _GroupMemberCard(
@@ -616,8 +651,7 @@ class _LeaderJoinCodeEntryState extends State<_LeaderJoinCodeEntry> {
         padding: const EdgeInsets.only(top: 12),
         child: OutlinedButton.icon(
           key: const ValueKey('groupJoinCodeEntryButton'),
-          onPressed: () =>
-              context.push('/groups/${widget.groupId}/join-code'),
+          onPressed: () => context.push('/groups/${widget.groupId}/join-code'),
           icon: const Icon(Icons.vpn_key_outlined),
           label: const Text('초대코드 관리'),
         ),

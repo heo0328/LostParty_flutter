@@ -1,0 +1,3471 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function bindingPath(authUid) {
+      return /databases/$(database)/documents/authBindings/$(authUid);
+    }
+
+    function playerPath(playerId) {
+      return /databases/$(database)/documents/players/$(playerId);
+    }
+
+    function operatorAssignmentPath(playerId) {
+      return /databases/$(database)/documents/operatorAssignments/$(playerId);
+    }
+
+    function hasActiveBinding() {
+      return signedIn()
+        && exists(bindingPath(request.auth.uid))
+        && get(bindingPath(request.auth.uid)).data.status == 'active';
+    }
+
+    function currentPlayerId() {
+      return get(bindingPath(request.auth.uid)).data.playerId;
+    }
+
+    function isActiveOperator() {
+      return hasActiveBinding()
+        && exists(playerPath(currentPlayerId()))
+        && get(playerPath(currentPlayerId())).data.status == 'active'
+        && exists(operatorAssignmentPath(currentPlayerId()))
+        && get(operatorAssignmentPath(currentPlayerId())).data.status == 'active';
+    }
+
+    function recruitmentPath(recruitmentId) {
+      return /databases/$(database)/documents/recruitments/$(recruitmentId);
+    }
+
+    function recruitmentMemberPath(recruitmentId, playerId) {
+      return /databases/$(database)/documents/recruitments/$(recruitmentId)/members/$(playerId);
+    }
+
+    function recruitmentApplicationPath(recruitmentId, applicantPlayerId) {
+      return /databases/$(database)/documents/recruitments/$(recruitmentId)/applications/$(applicantPlayerId);
+    }
+
+    function recruitmentCyclePath(recruitmentId, cycleKey) {
+      return /databases/$(database)/documents/recruitments/$(recruitmentId)/cycles/$(cycleKey);
+    }
+
+    function assignmentPath(playerId, assignmentId) {
+      return /databases/$(database)/documents/players/$(playerId)/activeRaidAssignments/$(assignmentId);
+    }
+
+    function weeklyRaidClaimId(cycleKey, characterId, raidId) {
+      return cycleKey + '_' + characterId + '_' + raidId;
+    }
+
+    function weeklyRaidClaimPath(playerId, cycleKey, characterId, raidId) {
+      return /databases/$(database)/documents/players/$(playerId)/weeklyRaidClaims/$(weeklyRaidClaimId(cycleKey, characterId, raidId));
+    }
+
+    function hasWeeklyRaidClaimAfter(playerId, cycleKey, characterId, raidId) {
+      return existsAfter(weeklyRaidClaimPath(
+        playerId,
+        cycleKey,
+        characterId,
+        raidId
+      ));
+    }
+
+    function characterPath(characterId) {
+      return /databases/$(database)/documents/characters/$(characterId);
+    }
+
+    function ownsActiveCharacter(characterId) {
+      let character = get(characterPath(characterId)).data;
+      return character.status == 'active'
+        && character.ownerPlayerId == currentPlayerId();
+    }
+
+    function ownsActiveCharacterForPlayer(characterId, playerId) {
+      let character = get(characterPath(characterId)).data;
+      return character.status == 'active'
+        && character.ownerPlayerId == playerId;
+    }
+
+    // Task-11 Unit 1~4: 그룹 생성·공개 읽기, 초대·신청·승인·금지와
+    // 초대코드 생성·폐기·즉시 가입을 연다.
+    // 탈퇴·추방·이전·해산 쓰기는 계속 닫아 둔다.
+    function groupPath(groupId) {
+      return /databases/$(database)/documents/groups/$(groupId);
+    }
+
+    function groupMemberPath(groupId, playerId) {
+      return /databases/$(database)/documents/groups/$(groupId)/members/$(playerId);
+    }
+
+    function groupMembershipStatePath(playerId) {
+      return /databases/$(database)/documents/players/$(playerId)/groupMembershipState/current;
+    }
+
+    function groupRelationPath(playerId, groupId) {
+      return /databases/$(database)/documents/players/$(playerId)/groupRelations/$(groupId);
+    }
+
+    function groupJoinRelationPath(groupId, playerId) {
+      return /databases/$(database)/documents/groups/$(groupId)/joinRelations/$(playerId);
+    }
+
+    function groupApplicantStatsPath(groupId, playerId) {
+      return /databases/$(database)/documents/groups/$(groupId)/applicantStats/$(playerId);
+    }
+
+    function groupBlockPath(groupId, playerId) {
+      return /databases/$(database)/documents/groups/$(groupId)/blockedPlayers/$(playerId);
+    }
+
+    // 금지 목록은 그룹장만 읽지만 exists()는 호출자 읽기 권한과 무관하다.
+    // 본·부계정과 Character 변경은 Player 단위 block을 우회하지 못한다.
+    function hasGroupBlock(groupId, playerId) {
+      return exists(groupBlockPath(groupId, playerId));
+    }
+
+    function isCurrentPlayerActive() {
+      return hasActiveBinding()
+        && get(playerPath(currentPlayerId())).data.status == 'active';
+    }
+
+    function isCurrentGroupMember(groupId) {
+      return hasActiveBinding()
+        && exists(groupMemberPath(groupId, currentPlayerId()));
+    }
+
+    function isCurrentGroupLeader(groupId) {
+      return hasActiveBinding()
+        && get(groupPath(groupId)).data.leaderPlayerId == currentPlayerId();
+    }
+
+    // 직접 입력 그룹명은 trim 후 1~20자이며 줄바꿈·제어문자를 포함하지 않는다.
+    // Rules는 Unicode 정규화 결과를 재계산하지 못하므로 원문 형식만 강제한다.
+    function validGroupDisplayName(name) {
+      return name is string
+        && name.size() >= 1
+        && name.size() <= 20
+        && !name.matches('(?s).*[\\x00-\\x1f\\x7f].*');
+    }
+
+    function validGroupSearchProjection(data) {
+      return data.normalizedName is string
+        && data.normalizedName.size() >= 1
+        && data.normalizedName.size() <= 20
+        && data.normalizedRepresentativeCharacterName is string
+        && data.normalizedRepresentativeCharacterName.size() >= 1
+        && data.normalizedRepresentativeCharacterName.size() <= 40;
+    }
+
+    function validInitialGroup(groupId, data) {
+      let playerId = currentPlayerId();
+      let member = getAfter(groupMemberPath(groupId, playerId)).data;
+      let state = getAfter(groupMembershipStatePath(playerId)).data;
+      return isCurrentPlayerActive()
+        && data.keys().hasOnly([
+          'schemaVersion', 'status', 'name', 'normalizedName',
+          'representativeCharacterId', 'representativeCharacterNameSnapshot',
+          'normalizedRepresentativeCharacterName',
+          'representativeServerNameSnapshot', 'leaderPlayerId',
+          'leaderDisplayCharacterNameSnapshot', 'memberCount', 'revision',
+          'hasActiveJoinCode', 'joinCodeVisibleToMembers', 'lastActivityAt',
+          'createdAt', 'updatedAt', 'deletedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.status == 'active'
+        && validGroupDisplayName(data.name)
+        && validGroupSearchProjection(data)
+        && data.representativeCharacterNameSnapshot is string
+        && data.representativeCharacterNameSnapshot.size() > 0
+        && data.representativeServerNameSnapshot is string
+        && data.representativeServerNameSnapshot.size() > 0
+        && data.leaderPlayerId == playerId
+        && data.leaderDisplayCharacterNameSnapshot
+          == data.representativeCharacterNameSnapshot
+        && data.memberCount == 1
+        && data.revision == 1
+        && data.hasActiveJoinCode == false
+        && data.joinCodeVisibleToMembers == false
+        && data.deletedAt == null
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && data.lastActivityAt == request.time
+        && ownsActiveCharacter(data.representativeCharacterId)
+        && member.playerId == playerId
+        && member.role == 'leader'
+        && member.joinSequence == 1
+        && member.joinedBy == 'created'
+        && member.displayCharacterIdSnapshot == data.representativeCharacterId
+        && groupId in state.activeGroupIds
+        && existsAfter(groupRelationPath(playerId, groupId));
+    }
+
+    function validInitialGroupMember(groupId, playerId, data) {
+      let group = getAfter(groupPath(groupId)).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && validGroupMemberDocumentKeys(data)
+        && validGroupMemberSnapshotsFromCharacter(
+          data,
+          data.displayCharacterIdSnapshot
+        )
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.role == 'leader'
+        && data.joinedBy == 'created'
+        && data.joinSequence == 1
+        && data.revision == 1
+        && data.displayCharacterIdSnapshot is string
+        && data.displayCharacterNameSnapshot is string
+        && data.joinedAt == request.time
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && group.status == 'active'
+        && group.leaderPlayerId == playerId
+        && group.memberCount == 1
+        && group.revision == 1
+        && group.representativeCharacterId == data.displayCharacterIdSnapshot
+        && group.leaderDisplayCharacterNameSnapshot
+          == data.displayCharacterNameSnapshot;
+    }
+
+    // 최초 생성과 Group ID 1개 추가를 같은 검증으로 처리한다.
+    // 생성 시 [oldData]는 null이며 이전 요약은 빈 상태로 취급한다.
+    function validMembershipStateAdd(playerId, docId, oldData, newData) {
+      let previousIds = oldData == null ? [] : oldData.activeGroupIds;
+      let previousRevision = oldData == null ? 0 : oldData.revision;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && docId == 'current'
+        && newData.keys().hasOnly([
+          'schemaVersion', 'playerId', 'activeGroupIds', 'activeGroupCount',
+          'revision', 'updatedAt'
+        ])
+        && newData.schemaVersion == 1
+        && newData.playerId == playerId
+        && newData.activeGroupIds is list
+        && newData.activeGroupIds.size() == previousIds.size() + 1
+        && newData.activeGroupIds.size() > 0
+        && validMembershipStateAddMember(
+          playerId,
+          newData.activeGroupIds[newData.activeGroupIds.size() - 1],
+          newData,
+          previousIds,
+          previousRevision
+        );
+    }
+
+    function validMembershipStateAddMember(
+      playerId,
+      addedGroupId,
+      newData,
+      previousIds,
+      previousRevision
+    ) {
+      let member = getAfter(groupMemberPath(addedGroupId, playerId)).data;
+      return newData.activeGroupIds is list
+        && newData.activeGroupIds.size() == previousIds.size() + 1
+        && newData.activeGroupIds.size() <= 50
+        && newData.activeGroupIds.toSet().size()
+          == newData.activeGroupIds.size()
+        && newData.activeGroupIds.toSet().difference(previousIds.toSet())
+          == [addedGroupId].toSet()
+        && newData.activeGroupCount == newData.activeGroupIds.size()
+        && newData.revision == previousRevision + 1
+        && newData.updatedAt == request.time
+        && member.playerId == playerId;
+    }
+
+    function validInitialMemberGroupRelation(playerId, groupId, data) {
+      let group = getAfter(groupPath(groupId)).data;
+      let member = getAfter(groupMemberPath(groupId, playerId)).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.keys().hasOnly([
+          'schemaVersion', 'groupId', 'playerId', 'relation', 'requestStatus',
+          'groupNameSnapshot', 'displayCharacterNameSnapshot', 'expiresAt',
+          'sourceRevision', 'createdAt', 'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.relation == 'member'
+        && data.requestStatus == null
+        && data.expiresAt == null
+        && data.groupNameSnapshot == group.name
+        && data.displayCharacterNameSnapshot
+          == member.displayCharacterNameSnapshot
+        && data.sourceRevision == member.revision
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && member.playerId == playerId;
+    }
+
+    // 생성 Transaction은 새 Group ID를 읽지 않는다. 상세 화면이 사라진 ID를 열 때만
+    // 존재 여부를 분기해 없는 문서에서 resource.data를 읽지 않는다.
+    function canGetGroup(groupId) {
+      return hasActiveBinding()
+        && (!exists(groupPath(groupId))
+          || resource.data.status == 'active'
+          || isCurrentGroupMember(groupId));
+    }
+
+    // 계약 §6 초대·신청 원본의 허용 필드 집합.
+    function validGroupJoinRelationKeys(data) {
+      return data.keys().hasOnly([
+        'schemaVersion', 'groupId', 'targetPlayerId', 'kind', 'status',
+        'requestedByPlayerId', 'characterIdSnapshot', 'characterNameSnapshot',
+        'serverNameSnapshot', 'characterClassNameSnapshot', 'itemLevelSnapshot',
+        'combatPowerSnapshot', 'applicationAttempt', 'revision', 'createdAt',
+        'expiresAt', 'decidedAt', 'updatedAt'
+      ]);
+    }
+
+    function validGroupMemberDocumentKeys(data) {
+      return data.keys().hasOnly([
+        'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
+        'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
+        'displayCharacterNameSnapshot', 'displayClassNameSnapshot',
+        'itemLevelSnapshot', 'combatPowerSnapshot',
+        'revision', 'createdAt', 'updatedAt'
+      ]);
+    }
+
+    function validGroupMemberOptionalNumberFields(data) {
+      return (data.itemLevelSnapshot == null || data.itemLevelSnapshot is number)
+        && (data.combatPowerSnapshot == null
+          || data.combatPowerSnapshot is number);
+    }
+
+    function validGroupMemberSnapshotsFromRelation(data, relation) {
+      return data.displayClassNameSnapshot == relation.characterClassNameSnapshot
+        && data.itemLevelSnapshot == relation.itemLevelSnapshot
+        && data.combatPowerSnapshot == relation.combatPowerSnapshot
+        && validGroupMemberOptionalNumberFields(data);
+    }
+
+    function validGroupMemberSnapshotsFromCharacter(data, characterId) {
+      let character = get(characterPath(characterId)).data;
+      // 표시 Snapshot은 Transaction 시점 클라이언트 값을 저장한다.
+      // Firestore Character에는 combatPower가 없을 수 있으므로 class·형식만 검증한다.
+      return data.displayClassNameSnapshot == character.characterClassName
+        && validGroupMemberOptionalNumberFields(data);
+    }
+
+    // 본인 membership 표시 Snapshot만 갱신한다. display Character는 바꿀 수 없다.
+    function validGroupMemberSelfSnapshotRefresh(
+      groupId,
+      playerId,
+      oldData,
+      newData
+    ) {
+      let characterId = oldData.displayCharacterIdSnapshot;
+      let character = get(characterPath(characterId)).data;
+      return isCurrentPlayerActive()
+        && playerId == currentPlayerId()
+        && exists(groupMemberPath(groupId, playerId))
+        && oldData.playerId == playerId
+        && oldData.groupId == groupId
+        && newData.schemaVersion == oldData.schemaVersion
+        && newData.groupId == oldData.groupId
+        && newData.playerId == oldData.playerId
+        && newData.role == oldData.role
+        && newData.joinedAt == oldData.joinedAt
+        && newData.joinSequence == oldData.joinSequence
+        && newData.joinedBy == oldData.joinedBy
+        && newData.displayCharacterIdSnapshot
+          == oldData.displayCharacterIdSnapshot
+        && newData.displayCharacterNameSnapshot
+          == oldData.displayCharacterNameSnapshot
+        && newData.revision == oldData.revision
+        && newData.createdAt == oldData.createdAt
+        && newData.displayClassNameSnapshot == character.characterClassName
+        && validGroupMemberOptionalNumberFields(newData)
+        && newData.updatedAt == request.time
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'displayClassNameSnapshot',
+          'itemLevelSnapshot',
+          'combatPowerSnapshot',
+          'updatedAt'
+        ]);
+    }
+
+    // 같은 groupId + playerId에 유효 pending 관계가 있으면 종류가 달라도
+    // 새 요청으로 덮어쓰지 못한다. 만료·최종 relation만 재사용한다.
+    function reusableGroupJoinRelation(oldData) {
+      return oldData == null
+        || oldData.status != 'pending'
+        || oldData.expiresAt <= request.time;
+    }
+
+    // 계약 §6은 expiresAt == createdAt + 24시간을 요구하지만 클라이언트는 서버
+    // 시각을 알 수 없다. createdAt은 request.time으로 고정하고 expiresAt은
+    // 기기 시각 오차를 감안한 구간으로만 허용한다.
+    function validGroupRequestExpiry(data) {
+      return data.expiresAt is timestamp
+        && data.expiresAt > request.time + duration.value(23, 'h')
+        && data.expiresAt < request.time + duration.value(25, 'h');
+    }
+
+    function validGroupPendingJoinRelation(groupId, playerId, oldData, data) {
+      return isCurrentPlayerActive()
+        && validGroupJoinRelationKeys(data)
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.targetPlayerId == playerId
+        && data.status == 'pending'
+        && data.requestedByPlayerId is string
+        && data.characterIdSnapshot is string
+        && data.characterNameSnapshot is string
+        && data.serverNameSnapshot is string
+        && data.characterClassNameSnapshot is string
+        && data.applicationAttempt is int
+        && data.revision == (oldData == null ? 1 : oldData.revision + 1)
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && data.decidedAt == null
+        && validGroupRequestExpiry(data)
+        && reusableGroupJoinRelation(oldData)
+        && get(groupPath(groupId)).data.status == 'active'
+        && !exists(groupMemberPath(groupId, playerId))
+        && !hasGroupBlock(groupId, playerId)
+        && existsAfter(groupRelationPath(playerId, groupId));
+    }
+
+    // 계약 §8.3. 현재 그룹원만 초대하며 자기 자신은 초대하지 못한다.
+    // 초대는 누적 신청 횟수를 증가시키지 않는다.
+    function validGroupInvitationCreate(groupId, playerId, oldData, data) {
+      return validGroupPendingJoinRelation(groupId, playerId, oldData, data)
+        && data.kind == 'invitation'
+        && data.requestedByPlayerId == currentPlayerId()
+        && playerId != currentPlayerId()
+        && isCurrentGroupMember(groupId)
+        && data.applicationAttempt
+          == (oldData == null ? 0 : oldData.applicationAttempt);
+    }
+
+    // 계약 §8.5. 신청은 본인만 만들고 applicantStats 증가와 함께 성공한다.
+    function validGroupApplicationCreate(groupId, playerId, oldData, data) {
+      let stats = getAfter(groupApplicantStatsPath(groupId, playerId)).data;
+      return validGroupPendingJoinRelation(groupId, playerId, oldData, data)
+        && data.kind == 'application'
+        && data.requestedByPlayerId == playerId
+        && playerId == currentPlayerId()
+        && data.applicationAttempt >= 1
+        && data.applicationAttempt == stats.applicationCount;
+    }
+
+    // 계약 §8.4. 수락·거절은 대상 Player만, 취소는 발신자 또는 그룹장만 한다.
+    // Unit 2는 pending invitation 전이만 열고 신청 승인·거절은 Unit 3에서 연다.
+    function validGroupJoinRelationDecision(groupId, playerId, oldData, newData) {
+      return isCurrentPlayerActive()
+        && newData.diff(oldData).affectedKeys()
+          .hasOnly(['status', 'revision', 'decidedAt', 'updatedAt'])
+        && oldData.kind == 'invitation'
+        && oldData.status == 'pending'
+        && newData.revision == oldData.revision + 1
+        && newData.decidedAt == request.time
+        && newData.updatedAt == request.time
+        && existsAfter(groupRelationPath(playerId, groupId))
+        && (
+          (newData.status == 'accepted'
+            && playerId == currentPlayerId()
+            && oldData.expiresAt > request.time
+            && !hasGroupBlock(groupId, playerId)
+            && existsAfter(groupMemberPath(groupId, playerId)))
+          || (newData.status == 'rejected'
+            && playerId == currentPlayerId())
+          || (newData.status == 'cancelled'
+            && isCurrentGroupMember(groupId)
+            && (oldData.requestedByPlayerId == currentPlayerId()
+              || isCurrentGroupLeader(groupId)))
+        );
+    }
+
+    // 계약 §8.4 초대 수락 membership. joinSequence는 읽은 memberCount + 1이며
+    // 그룹 인원 갱신 이후 값과 같아야 한다.
+    function validInvitedGroupMember(groupId, playerId, data) {
+      let group = getAfter(groupPath(groupId)).data;
+      let relation = getAfter(groupJoinRelationPath(groupId, playerId)).data;
+      let state = getAfter(groupMembershipStatePath(playerId)).data;
+      return isCurrentPlayerActive()
+        && playerId == currentPlayerId()
+        && validGroupMemberDocumentKeys(data)
+        && validGroupMemberSnapshotsFromRelation(data, relation)
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.role == 'member'
+        && data.joinedBy == 'invitation'
+        && data.joinSequence == group.memberCount
+        && data.revision == 1
+        && data.displayCharacterIdSnapshot == relation.characterIdSnapshot
+        && data.displayCharacterNameSnapshot == relation.characterNameSnapshot
+        && data.joinedAt == request.time
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && group.status == 'active'
+        && group.memberCount <= 50
+        && group.leaderPlayerId != playerId
+        && relation.kind == 'invitation'
+        && relation.status == 'accepted'
+        && relation.targetPlayerId == playerId
+        && !hasGroupBlock(groupId, playerId)
+        && groupId in state.activeGroupIds;
+    }
+
+    // 계약 §9. Unit 2 상태 변경은 공개 필드를 바꾸지 않고 활동 시각만 갱신한다.
+    function validGroupActivityUpdate(oldData, newData) {
+      return newData.diff(oldData).affectedKeys()
+          .hasOnly(['revision', 'lastActivityAt', 'updatedAt'])
+        && newData.revision == oldData.revision + 1
+        && newData.lastActivityAt == request.time
+        && newData.updatedAt == request.time;
+    }
+
+    function validGroupMemberJoinUpdate(groupId, oldData, newData) {
+      let memberPath = groupMemberPath(groupId, currentPlayerId());
+      return existsAfter(memberPath)
+        && newData.diff(oldData).affectedKeys()
+          .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
+        && newData.memberCount == oldData.memberCount + 1
+        && newData.memberCount <= 50
+        && newData.revision == oldData.revision + 1
+        && newData.lastActivityAt == request.time
+        && newData.updatedAt == request.time
+        && getAfter(memberPath).data.joinSequence == newData.memberCount;
+    }
+
+    function removedActiveGroupId(previousIds, newIds) {
+      let from0 = removedActiveGroupIdChunk0(previousIds, newIds);
+      let from10 = removedActiveGroupIdChunk10(previousIds, newIds);
+      let from20 = removedActiveGroupIdChunk20(previousIds, newIds);
+      let from30 = removedActiveGroupIdChunk30(previousIds, newIds);
+      let from40 = removedActiveGroupIdChunk40(previousIds, newIds);
+      return from0 != '' ? from0
+        : from10 != '' ? from10
+        : from20 != '' ? from20
+        : from30 != '' ? from30
+        : from40 != '' ? from40
+        : '';
+    }
+
+    function removedActiveGroupIdChunk0(previousIds, newIds) {
+      return
+        (previousIds.size() > 0 && !(previousIds[0] in newIds.toSet()))
+          ? previousIds[0]
+        : (previousIds.size() > 1 && (previousIds[0] in newIds.toSet()) && !(previousIds[1] in newIds.toSet()))
+          ? previousIds[1]
+        : (previousIds.size() > 2 && (previousIds[0] in newIds.toSet()) && (previousIds[1] in newIds.toSet()) && !(previousIds[2] in newIds.toSet()))
+          ? previousIds[2]
+        : (previousIds.size() > 3 && (previousIds[0] in newIds.toSet()) && (previousIds[1] in newIds.toSet()) && (previousIds[2] in newIds.toSet()) && !(previousIds[3] in newIds.toSet()))
+          ? previousIds[3]
+        : (previousIds.size() > 4 && (previousIds[0] in newIds.toSet()) && (previousIds[1] in newIds.toSet()) && (previousIds[2] in newIds.toSet()) && (previousIds[3] in newIds.toSet()) && !(previousIds[4] in newIds.toSet()))
+          ? previousIds[4]
+        : (previousIds.size() > 5 && (previousIds[0] in newIds.toSet()) && (previousIds[1] in newIds.toSet()) && (previousIds[2] in newIds.toSet()) && (previousIds[3] in newIds.toSet()) && (previousIds[4] in newIds.toSet()) && !(previousIds[5] in newIds.toSet()))
+          ? previousIds[5]
+        : (previousIds.size() > 6 && (previousIds[0] in newIds.toSet()) && (previousIds[1] in newIds.toSet()) && (previousIds[2] in newIds.toSet()) && (previousIds[3] in newIds.toSet()) && (previousIds[4] in newIds.toSet()) && (previousIds[5] in newIds.toSet()) && !(previousIds[6] in newIds.toSet()))
+          ? previousIds[6]
+        : (previousIds.size() > 7 && (previousIds[0] in newIds.toSet()) && (previousIds[1] in newIds.toSet()) && (previousIds[2] in newIds.toSet()) && (previousIds[3] in newIds.toSet()) && (previousIds[4] in newIds.toSet()) && (previousIds[5] in newIds.toSet()) && (previousIds[6] in newIds.toSet()) && !(previousIds[7] in newIds.toSet()))
+          ? previousIds[7]
+        : (previousIds.size() > 8 && (previousIds[0] in newIds.toSet()) && (previousIds[1] in newIds.toSet()) && (previousIds[2] in newIds.toSet()) && (previousIds[3] in newIds.toSet()) && (previousIds[4] in newIds.toSet()) && (previousIds[5] in newIds.toSet()) && (previousIds[6] in newIds.toSet()) && (previousIds[7] in newIds.toSet()) && !(previousIds[8] in newIds.toSet()))
+          ? previousIds[8]
+        : (previousIds.size() > 9 && (previousIds[0] in newIds.toSet()) && (previousIds[1] in newIds.toSet()) && (previousIds[2] in newIds.toSet()) && (previousIds[3] in newIds.toSet()) && (previousIds[4] in newIds.toSet()) && (previousIds[5] in newIds.toSet()) && (previousIds[6] in newIds.toSet()) && (previousIds[7] in newIds.toSet()) && (previousIds[8] in newIds.toSet()) && !(previousIds[9] in newIds.toSet()))
+          ? previousIds[9]
+        : '';
+    }
+
+    function removedActiveGroupIdChunk10(previousIds, newIds) {
+      return
+        (previousIds.size() > 10 && !(previousIds[10] in newIds.toSet()))
+          ? previousIds[10]
+        : (previousIds.size() > 11 && (previousIds[10] in newIds.toSet()) && !(previousIds[11] in newIds.toSet()))
+          ? previousIds[11]
+        : (previousIds.size() > 12 && (previousIds[10] in newIds.toSet()) && (previousIds[11] in newIds.toSet()) && !(previousIds[12] in newIds.toSet()))
+          ? previousIds[12]
+        : (previousIds.size() > 13 && (previousIds[10] in newIds.toSet()) && (previousIds[11] in newIds.toSet()) && (previousIds[12] in newIds.toSet()) && !(previousIds[13] in newIds.toSet()))
+          ? previousIds[13]
+        : (previousIds.size() > 14 && (previousIds[10] in newIds.toSet()) && (previousIds[11] in newIds.toSet()) && (previousIds[12] in newIds.toSet()) && (previousIds[13] in newIds.toSet()) && !(previousIds[14] in newIds.toSet()))
+          ? previousIds[14]
+        : (previousIds.size() > 15 && (previousIds[10] in newIds.toSet()) && (previousIds[11] in newIds.toSet()) && (previousIds[12] in newIds.toSet()) && (previousIds[13] in newIds.toSet()) && (previousIds[14] in newIds.toSet()) && !(previousIds[15] in newIds.toSet()))
+          ? previousIds[15]
+        : (previousIds.size() > 16 && (previousIds[10] in newIds.toSet()) && (previousIds[11] in newIds.toSet()) && (previousIds[12] in newIds.toSet()) && (previousIds[13] in newIds.toSet()) && (previousIds[14] in newIds.toSet()) && (previousIds[15] in newIds.toSet()) && !(previousIds[16] in newIds.toSet()))
+          ? previousIds[16]
+        : (previousIds.size() > 17 && (previousIds[10] in newIds.toSet()) && (previousIds[11] in newIds.toSet()) && (previousIds[12] in newIds.toSet()) && (previousIds[13] in newIds.toSet()) && (previousIds[14] in newIds.toSet()) && (previousIds[15] in newIds.toSet()) && (previousIds[16] in newIds.toSet()) && !(previousIds[17] in newIds.toSet()))
+          ? previousIds[17]
+        : (previousIds.size() > 18 && (previousIds[10] in newIds.toSet()) && (previousIds[11] in newIds.toSet()) && (previousIds[12] in newIds.toSet()) && (previousIds[13] in newIds.toSet()) && (previousIds[14] in newIds.toSet()) && (previousIds[15] in newIds.toSet()) && (previousIds[16] in newIds.toSet()) && (previousIds[17] in newIds.toSet()) && !(previousIds[18] in newIds.toSet()))
+          ? previousIds[18]
+        : (previousIds.size() > 19 && (previousIds[10] in newIds.toSet()) && (previousIds[11] in newIds.toSet()) && (previousIds[12] in newIds.toSet()) && (previousIds[13] in newIds.toSet()) && (previousIds[14] in newIds.toSet()) && (previousIds[15] in newIds.toSet()) && (previousIds[16] in newIds.toSet()) && (previousIds[17] in newIds.toSet()) && (previousIds[18] in newIds.toSet()) && !(previousIds[19] in newIds.toSet()))
+          ? previousIds[19]
+        : '';
+    }
+
+    function removedActiveGroupIdChunk20(previousIds, newIds) {
+      return
+        (previousIds.size() > 20 && !(previousIds[20] in newIds.toSet()))
+          ? previousIds[20]
+        : (previousIds.size() > 21 && (previousIds[20] in newIds.toSet()) && !(previousIds[21] in newIds.toSet()))
+          ? previousIds[21]
+        : (previousIds.size() > 22 && (previousIds[20] in newIds.toSet()) && (previousIds[21] in newIds.toSet()) && !(previousIds[22] in newIds.toSet()))
+          ? previousIds[22]
+        : (previousIds.size() > 23 && (previousIds[20] in newIds.toSet()) && (previousIds[21] in newIds.toSet()) && (previousIds[22] in newIds.toSet()) && !(previousIds[23] in newIds.toSet()))
+          ? previousIds[23]
+        : (previousIds.size() > 24 && (previousIds[20] in newIds.toSet()) && (previousIds[21] in newIds.toSet()) && (previousIds[22] in newIds.toSet()) && (previousIds[23] in newIds.toSet()) && !(previousIds[24] in newIds.toSet()))
+          ? previousIds[24]
+        : (previousIds.size() > 25 && (previousIds[20] in newIds.toSet()) && (previousIds[21] in newIds.toSet()) && (previousIds[22] in newIds.toSet()) && (previousIds[23] in newIds.toSet()) && (previousIds[24] in newIds.toSet()) && !(previousIds[25] in newIds.toSet()))
+          ? previousIds[25]
+        : (previousIds.size() > 26 && (previousIds[20] in newIds.toSet()) && (previousIds[21] in newIds.toSet()) && (previousIds[22] in newIds.toSet()) && (previousIds[23] in newIds.toSet()) && (previousIds[24] in newIds.toSet()) && (previousIds[25] in newIds.toSet()) && !(previousIds[26] in newIds.toSet()))
+          ? previousIds[26]
+        : (previousIds.size() > 27 && (previousIds[20] in newIds.toSet()) && (previousIds[21] in newIds.toSet()) && (previousIds[22] in newIds.toSet()) && (previousIds[23] in newIds.toSet()) && (previousIds[24] in newIds.toSet()) && (previousIds[25] in newIds.toSet()) && (previousIds[26] in newIds.toSet()) && !(previousIds[27] in newIds.toSet()))
+          ? previousIds[27]
+        : (previousIds.size() > 28 && (previousIds[20] in newIds.toSet()) && (previousIds[21] in newIds.toSet()) && (previousIds[22] in newIds.toSet()) && (previousIds[23] in newIds.toSet()) && (previousIds[24] in newIds.toSet()) && (previousIds[25] in newIds.toSet()) && (previousIds[26] in newIds.toSet()) && (previousIds[27] in newIds.toSet()) && !(previousIds[28] in newIds.toSet()))
+          ? previousIds[28]
+        : (previousIds.size() > 29 && (previousIds[20] in newIds.toSet()) && (previousIds[21] in newIds.toSet()) && (previousIds[22] in newIds.toSet()) && (previousIds[23] in newIds.toSet()) && (previousIds[24] in newIds.toSet()) && (previousIds[25] in newIds.toSet()) && (previousIds[26] in newIds.toSet()) && (previousIds[27] in newIds.toSet()) && (previousIds[28] in newIds.toSet()) && !(previousIds[29] in newIds.toSet()))
+          ? previousIds[29]
+        : '';
+    }
+
+    function removedActiveGroupIdChunk30(previousIds, newIds) {
+      return
+        (previousIds.size() > 30 && !(previousIds[30] in newIds.toSet()))
+          ? previousIds[30]
+        : (previousIds.size() > 31 && (previousIds[30] in newIds.toSet()) && !(previousIds[31] in newIds.toSet()))
+          ? previousIds[31]
+        : (previousIds.size() > 32 && (previousIds[30] in newIds.toSet()) && (previousIds[31] in newIds.toSet()) && !(previousIds[32] in newIds.toSet()))
+          ? previousIds[32]
+        : (previousIds.size() > 33 && (previousIds[30] in newIds.toSet()) && (previousIds[31] in newIds.toSet()) && (previousIds[32] in newIds.toSet()) && !(previousIds[33] in newIds.toSet()))
+          ? previousIds[33]
+        : (previousIds.size() > 34 && (previousIds[30] in newIds.toSet()) && (previousIds[31] in newIds.toSet()) && (previousIds[32] in newIds.toSet()) && (previousIds[33] in newIds.toSet()) && !(previousIds[34] in newIds.toSet()))
+          ? previousIds[34]
+        : (previousIds.size() > 35 && (previousIds[30] in newIds.toSet()) && (previousIds[31] in newIds.toSet()) && (previousIds[32] in newIds.toSet()) && (previousIds[33] in newIds.toSet()) && (previousIds[34] in newIds.toSet()) && !(previousIds[35] in newIds.toSet()))
+          ? previousIds[35]
+        : (previousIds.size() > 36 && (previousIds[30] in newIds.toSet()) && (previousIds[31] in newIds.toSet()) && (previousIds[32] in newIds.toSet()) && (previousIds[33] in newIds.toSet()) && (previousIds[34] in newIds.toSet()) && (previousIds[35] in newIds.toSet()) && !(previousIds[36] in newIds.toSet()))
+          ? previousIds[36]
+        : (previousIds.size() > 37 && (previousIds[30] in newIds.toSet()) && (previousIds[31] in newIds.toSet()) && (previousIds[32] in newIds.toSet()) && (previousIds[33] in newIds.toSet()) && (previousIds[34] in newIds.toSet()) && (previousIds[35] in newIds.toSet()) && (previousIds[36] in newIds.toSet()) && !(previousIds[37] in newIds.toSet()))
+          ? previousIds[37]
+        : (previousIds.size() > 38 && (previousIds[30] in newIds.toSet()) && (previousIds[31] in newIds.toSet()) && (previousIds[32] in newIds.toSet()) && (previousIds[33] in newIds.toSet()) && (previousIds[34] in newIds.toSet()) && (previousIds[35] in newIds.toSet()) && (previousIds[36] in newIds.toSet()) && (previousIds[37] in newIds.toSet()) && !(previousIds[38] in newIds.toSet()))
+          ? previousIds[38]
+        : (previousIds.size() > 39 && (previousIds[30] in newIds.toSet()) && (previousIds[31] in newIds.toSet()) && (previousIds[32] in newIds.toSet()) && (previousIds[33] in newIds.toSet()) && (previousIds[34] in newIds.toSet()) && (previousIds[35] in newIds.toSet()) && (previousIds[36] in newIds.toSet()) && (previousIds[37] in newIds.toSet()) && (previousIds[38] in newIds.toSet()) && !(previousIds[39] in newIds.toSet()))
+          ? previousIds[39]
+        : '';
+    }
+
+    function removedActiveGroupIdChunk40(previousIds, newIds) {
+      return
+        (previousIds.size() > 40 && !(previousIds[40] in newIds.toSet()))
+          ? previousIds[40]
+        : (previousIds.size() > 41 && (previousIds[40] in newIds.toSet()) && !(previousIds[41] in newIds.toSet()))
+          ? previousIds[41]
+        : (previousIds.size() > 42 && (previousIds[40] in newIds.toSet()) && (previousIds[41] in newIds.toSet()) && !(previousIds[42] in newIds.toSet()))
+          ? previousIds[42]
+        : (previousIds.size() > 43 && (previousIds[40] in newIds.toSet()) && (previousIds[41] in newIds.toSet()) && (previousIds[42] in newIds.toSet()) && !(previousIds[43] in newIds.toSet()))
+          ? previousIds[43]
+        : (previousIds.size() > 44 && (previousIds[40] in newIds.toSet()) && (previousIds[41] in newIds.toSet()) && (previousIds[42] in newIds.toSet()) && (previousIds[43] in newIds.toSet()) && !(previousIds[44] in newIds.toSet()))
+          ? previousIds[44]
+        : (previousIds.size() > 45 && (previousIds[40] in newIds.toSet()) && (previousIds[41] in newIds.toSet()) && (previousIds[42] in newIds.toSet()) && (previousIds[43] in newIds.toSet()) && (previousIds[44] in newIds.toSet()) && !(previousIds[45] in newIds.toSet()))
+          ? previousIds[45]
+        : (previousIds.size() > 46 && (previousIds[40] in newIds.toSet()) && (previousIds[41] in newIds.toSet()) && (previousIds[42] in newIds.toSet()) && (previousIds[43] in newIds.toSet()) && (previousIds[44] in newIds.toSet()) && (previousIds[45] in newIds.toSet()) && !(previousIds[46] in newIds.toSet()))
+          ? previousIds[46]
+        : (previousIds.size() > 47 && (previousIds[40] in newIds.toSet()) && (previousIds[41] in newIds.toSet()) && (previousIds[42] in newIds.toSet()) && (previousIds[43] in newIds.toSet()) && (previousIds[44] in newIds.toSet()) && (previousIds[45] in newIds.toSet()) && (previousIds[46] in newIds.toSet()) && !(previousIds[47] in newIds.toSet()))
+          ? previousIds[47]
+        : (previousIds.size() > 48 && (previousIds[40] in newIds.toSet()) && (previousIds[41] in newIds.toSet()) && (previousIds[42] in newIds.toSet()) && (previousIds[43] in newIds.toSet()) && (previousIds[44] in newIds.toSet()) && (previousIds[45] in newIds.toSet()) && (previousIds[46] in newIds.toSet()) && (previousIds[47] in newIds.toSet()) && !(previousIds[48] in newIds.toSet()))
+          ? previousIds[48]
+        : (previousIds.size() > 49 && (previousIds[40] in newIds.toSet()) && (previousIds[41] in newIds.toSet()) && (previousIds[42] in newIds.toSet()) && (previousIds[43] in newIds.toSet()) && (previousIds[44] in newIds.toSet()) && (previousIds[45] in newIds.toSet()) && (previousIds[46] in newIds.toSet()) && (previousIds[47] in newIds.toSet()) && (previousIds[48] in newIds.toSet()) && !(previousIds[49] in newIds.toSet()))
+          ? previousIds[49]
+        : '';
+    }
+
+
+    function validGroupMemberSelfLeaveDelete(groupId, playerId, data) {
+      let group = getAfter(groupPath(groupId)).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.role == 'member'
+        && data.playerId == playerId
+        && group.status == 'active'
+        && group.memberCount == get(groupPath(groupId)).data.memberCount - 1
+        && !existsAfter(groupMemberPath(groupId, playerId))
+        && !existsAfter(groupRelationPath(playerId, groupId));
+    }
+
+    function validGroupMemberLeaveUpdate(groupId, oldData, newData) {
+      return isCurrentPlayerActive()
+        && oldData.status == 'active'
+        && newData.diff(oldData).affectedKeys()
+          .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
+        && newData.memberCount == oldData.memberCount - 1
+        && newData.memberCount >= 1
+        && newData.revision == oldData.revision + 1
+        && newData.lastActivityAt == request.time
+        && newData.updatedAt == request.time
+        && !existsAfter(groupMemberPath(groupId, currentPlayerId()));
+    }
+
+    function validMembershipStateRemove(playerId, docId, oldData, newData) {
+      let previousIds = oldData.activeGroupIds;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && docId == 'current'
+        && newData.keys().hasOnly([
+          'schemaVersion', 'playerId', 'activeGroupIds', 'activeGroupCount',
+          'revision', 'updatedAt'
+        ])
+        && newData.schemaVersion == 1
+        && newData.playerId == playerId
+        && newData.activeGroupIds is list
+        && newData.activeGroupIds.size() == previousIds.size() - 1
+        && previousIds.toSet().difference(newData.activeGroupIds.toSet()).size()
+          == 1
+        && newData.activeGroupCount == newData.activeGroupIds.size()
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time
+        && validRemovedMembershipState(
+          playerId,
+          previousIds,
+          newData.activeGroupIds
+        );
+    }
+
+    function validRemovedMembershipState(playerId, previousIds, newIds) {
+      let removedGroupId = removedActiveGroupId(previousIds, newIds);
+      return removedGroupId != ''
+        && !existsAfter(groupMemberPath(removedGroupId, playerId))
+        && !existsAfter(groupRelationPath(playerId, removedGroupId));
+    }
+
+    function validGroupMemberLeaveRelationDelete(playerId, groupId) {
+      let group = getAfter(groupPath(groupId)).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && group.status == 'active'
+        && group.memberCount == get(groupPath(groupId)).data.memberCount - 1
+        && !existsAfter(groupMemberPath(groupId, playerId));
+    }
+
+    // 초대·신청 명령을 실행할 수 있는 호출자만 그룹 활동 시각을 갱신한다.
+    // 그룹원이 아니면 같은 Transaction에서 자기 요청 Projection이 남아야 한다.
+    function validGroupJoinCommandUpdate(groupId, oldData, newData) {
+      return isCurrentPlayerActive()
+        && oldData.status == 'active'
+        && (isCurrentGroupMember(groupId)
+          || existsAfter(groupRelationPath(currentPlayerId(), groupId)))
+        && (validGroupActivityUpdate(oldData, newData)
+          || validGroupMemberJoinUpdate(groupId, oldData, newData));
+    }
+
+    function validGroupRelationProjectionKeys(data) {
+      return data.keys().hasOnly([
+        'schemaVersion', 'groupId', 'playerId', 'relation', 'requestStatus',
+        'groupNameSnapshot', 'displayCharacterNameSnapshot', 'expiresAt',
+        'sourceRevision', 'createdAt', 'updatedAt'
+      ]);
+    }
+
+    // 계약 §5. 요청 Projection은 원본 join relation과 같은 sourceRevision을 갖는다.
+    // 초대는 발신 그룹원이 대상 Player 경로에 쓰므로 본인 확인만으로 제한하지 않는다.
+    function validGroupRequestRelation(playerId, groupId, data) {
+      let group = getAfter(groupPath(groupId)).data;
+      let relation = getAfter(groupJoinRelationPath(groupId, playerId)).data;
+      return isCurrentPlayerActive()
+        && (playerId == currentPlayerId() || isCurrentGroupMember(groupId))
+        && validGroupRelationProjectionKeys(data)
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.relation
+          == (relation.kind == 'invitation' ? 'invited' : 'applied')
+        && data.requestStatus == relation.status
+        && data.expiresAt == relation.expiresAt
+        && data.groupNameSnapshot == group.name
+        && data.displayCharacterNameSnapshot == relation.characterNameSnapshot
+        && data.sourceRevision == relation.revision
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time
+        && relation.targetPlayerId == playerId;
+    }
+
+    // 초대 수락이 끝난 Projection은 member/accepted로 바뀐다.
+    function validAcceptedGroupRelation(playerId, groupId, data) {
+      let group = getAfter(groupPath(groupId)).data;
+      let member = getAfter(groupMemberPath(groupId, playerId)).data;
+      let relation = getAfter(groupJoinRelationPath(groupId, playerId)).data;
+      return isCurrentPlayerActive()
+        && playerId == currentPlayerId()
+        && validGroupRelationProjectionKeys(data)
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.relation == 'member'
+        && data.requestStatus == 'accepted'
+        && data.expiresAt == null
+        && data.groupNameSnapshot == group.name
+        && data.displayCharacterNameSnapshot
+          == member.displayCharacterNameSnapshot
+        && data.sourceRevision == member.revision
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time
+        && (
+          (member.joinedBy == 'invitation' && relation.kind == 'invitation')
+          || member.joinedBy == 'joinCode'
+        )
+        && relation.status == 'accepted';
+    }
+
+    // 계약 §6.1. 신청 경로에서만 만들고 갱신하며 정확히 1씩 증가시킨다.
+    function validGroupApplicantStatsWrite(groupId, playerId, oldData, data) {
+      let relation = getAfter(groupJoinRelationPath(groupId, playerId)).data;
+      return isCurrentPlayerActive()
+        && playerId == currentPlayerId()
+        && data.keys().hasOnly([
+          'schemaVersion', 'groupId', 'playerId', 'applicationCount',
+          'lastCharacterNameSnapshot', 'lastItemLevelSnapshot',
+          'lastCombatPowerSnapshot', 'createdAt', 'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.applicationCount
+          == (oldData == null ? 1 : oldData.applicationCount + 1)
+        && data.lastCharacterNameSnapshot == relation.characterNameSnapshot
+        && data.lastItemLevelSnapshot == relation.itemLevelSnapshot
+        && data.lastCombatPowerSnapshot == relation.combatPowerSnapshot
+        && data.createdAt
+          == (oldData == null ? request.time : oldData.createdAt)
+        && data.updatedAt == request.time
+        && relation.kind == 'application'
+        && relation.status == 'pending'
+        && relation.applicationAttempt == data.applicationCount;
+    }
+
+    // 계약 §8.6 그룹장 신청 처리(Unit 3).
+    //
+    // 승인 Transaction은 문서 5건을 쓰므로 쓰기마다 접근 수를 줄여야 한다.
+    // 그룹장 판정은 binding·Player·그룹을 한 번씩만 읽는 아래 helper로 모으고,
+    // 하위 문서 규칙은 이미 읽은 getAfter 결과를 재사용한다. 그룹 원본 규칙은
+    // 자기 문서를 다시 읽지 않고 resource.data로 그룹장을 확인한다.
+    //
+    // 승인 Transaction 접근 예산: 서로 다른 문서 8개(authBindings, players/{그룹장},
+    // groups/{g}, joinRelations/{p}, members/{p}, blockedPlayers/{p},
+    // players/{p}/groupMembershipState/current, players/{p}/groupRelations/{g}),
+    // get·getAfter를 따로 세면 접근 12회다. 쓰기별 접근 호출은 그룹 5, 요청 8,
+    // membership 8, 요약 6, Projection 6으로 단일 쓰기 한도 10 이하다.
+    function isActiveGroupLeader(groupId) {
+      let callerId = currentPlayerId();
+      return hasActiveBinding()
+        && get(playerPath(callerId)).data.status == 'active'
+        && get(groupPath(groupId)).data.leaderPlayerId == callerId;
+    }
+
+    // 승인·거절·금지 전이. 호출자가 대상이 아니므로 초대 전이와 분리해
+    // validGroupJoinRelationDecision이 쓰는 초대 경로 접근 수를 늘리지 않는다.
+    function validGroupApplicationDecision(groupId, playerId, oldData, newData) {
+      return isActiveGroupLeader(groupId)
+        && newData.diff(oldData).affectedKeys()
+          .hasOnly(['status', 'revision', 'decidedAt', 'updatedAt'])
+        && oldData.kind == 'application'
+        && oldData.status == 'pending'
+        && oldData.targetPlayerId == playerId
+        && playerId != currentPlayerId()
+        && newData.revision == oldData.revision + 1
+        && newData.decidedAt == request.time
+        && newData.updatedAt == request.time
+        && existsAfter(groupRelationPath(playerId, groupId))
+        && (
+          (newData.status == 'accepted'
+            && oldData.expiresAt > request.time
+            && !hasGroupBlock(groupId, playerId)
+            && existsAfter(groupMemberPath(groupId, playerId)))
+          || newData.status == 'rejected'
+          || (newData.status == 'blocked'
+            && existsAfter(groupBlockPath(groupId, playerId)))
+        );
+    }
+
+    // 계약 §8.6 승인은 초대 수락과 같은 membership 원자 쓰기를 수행한다.
+    // 그룹장이 대상 Player 문서를 만들므로 joinSequence, 정원, 금지 부재와
+    // Player 요약 반영을 모두 getAfter로 다시 확인한다.
+    function validApprovedGroupMember(groupId, playerId, data) {
+      let callerId = currentPlayerId();
+      let group = getAfter(groupPath(groupId)).data;
+      let relation = getAfter(groupJoinRelationPath(groupId, playerId)).data;
+      let state = getAfter(groupMembershipStatePath(playerId)).data;
+      return hasActiveBinding()
+        && get(playerPath(callerId)).data.status == 'active'
+        && group.leaderPlayerId == callerId
+        && playerId != callerId
+        && validGroupMemberDocumentKeys(data)
+        && validGroupMemberSnapshotsFromRelation(data, relation)
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.role == 'member'
+        && data.joinedBy == 'application'
+        && data.joinSequence == group.memberCount
+        && data.revision == 1
+        && data.displayCharacterIdSnapshot == relation.characterIdSnapshot
+        && data.displayCharacterNameSnapshot == relation.characterNameSnapshot
+        && data.joinedAt == request.time
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && group.status == 'active'
+        && group.memberCount <= 50
+        && relation.kind == 'application'
+        && relation.status == 'accepted'
+        && relation.targetPlayerId == playerId
+        && !hasGroupBlock(groupId, playerId)
+        && groupId in state.activeGroupIds;
+    }
+
+    // 대상 Player 요약은 개인 데이터라 그룹장이 읽지 못한다. 클라이언트는
+    // arrayUnion·increment 병합 쓰기를 보내고 Rules가 결과 문서에서 Group ID
+    // 정확히 1개 추가와 50개 한도를 최종 판정한다.
+    function validLeaderApprovedMembershipStateAdd(
+      playerId,
+      docId,
+      oldData,
+      newData
+    ) {
+      let callerId = currentPlayerId();
+      let previousIds = oldData == null ? [] : oldData.activeGroupIds;
+      let previousRevision = oldData == null ? 0 : oldData.revision;
+      let addedGroupId = newData.activeGroupIds[
+        newData.activeGroupIds.size() - 1
+      ];
+      let member = getAfter(groupMemberPath(addedGroupId, playerId)).data;
+      return hasActiveBinding()
+        && get(playerPath(callerId)).data.status == 'active'
+        && docId == 'current'
+        && playerId != callerId
+        && newData.keys().hasOnly([
+          'schemaVersion', 'playerId', 'activeGroupIds', 'activeGroupCount',
+          'revision', 'updatedAt'
+        ])
+        && newData.schemaVersion == 1
+        && newData.playerId == playerId
+        && newData.activeGroupIds is list
+        && newData.activeGroupIds.size() == previousIds.size() + 1
+        && newData.activeGroupIds.size() <= 50
+        && newData.activeGroupIds.toSet().size()
+          == newData.activeGroupIds.size()
+        && newData.activeGroupIds.toSet().difference(previousIds.toSet())
+          == [addedGroupId].toSet()
+        && newData.activeGroupCount == newData.activeGroupIds.size()
+        && newData.revision == previousRevision + 1
+        && newData.updatedAt == request.time
+        && member.playerId == playerId
+        && member.joinedBy == 'application'
+        && getAfter(groupPath(addedGroupId)).data.leaderPlayerId == callerId;
+    }
+
+    // 승인 이후 대상 Player Projection. 그룹장은 대상 Projection을 읽지 못하므로
+    // createdAt은 병합 쓰기로 보존하고 Rules는 timestamp 여부만 확인한다.
+    function validLeaderApprovedGroupRelation(playerId, groupId, data) {
+      let callerId = currentPlayerId();
+      let group = getAfter(groupPath(groupId)).data;
+      let member = getAfter(groupMemberPath(groupId, playerId)).data;
+      return hasActiveBinding()
+        && get(playerPath(callerId)).data.status == 'active'
+        && group.leaderPlayerId == callerId
+        && playerId != callerId
+        && validGroupRelationProjectionKeys(data)
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.relation == 'member'
+        && data.requestStatus == 'accepted'
+        && data.expiresAt == null
+        && data.groupNameSnapshot == group.name
+        && data.displayCharacterNameSnapshot
+          == member.displayCharacterNameSnapshot
+        && data.sourceRevision == member.revision
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time
+        && member.joinedBy == 'application';
+    }
+
+    // 계약 §8.6 승인은 그룹장이 실행하므로 신규 멤버가 호출자가 아니다.
+    // 그룹 문서 규칙은 대상 Player ID를 알 수 없어 그룹장·정원·필드 집합만
+    // 강제하고, member ↔ memberCount 결합은 membership 쓰기 규칙이 확인한다.
+    function validGroupLeaderApproveUpdate(oldData, newData) {
+      return isCurrentPlayerActive()
+        && oldData.status == 'active'
+        && oldData.leaderPlayerId == currentPlayerId()
+        && newData.diff(oldData).affectedKeys()
+          .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
+        && newData.memberCount == oldData.memberCount + 1
+        && newData.memberCount <= 50
+        && newData.revision == oldData.revision + 1
+        && newData.lastActivityAt == request.time
+        && newData.updatedAt == request.time;
+    }
+
+    // 계약 §6.2·§10. block 생성은 대상 relation의 blocked 전이 또는 이미 끝난
+    // 신청에만 묶는다. 수정은 열지 않고 해제는 문서 삭제로만 한다.
+    function validGroupBlockCreate(groupId, playerId, data) {
+      let relation = getAfter(groupJoinRelationPath(groupId, playerId)).data;
+      let stats = get(groupApplicantStatsPath(groupId, playerId));
+      return isActiveGroupLeader(groupId)
+        && playerId != currentPlayerId()
+        && data.keys().hasOnly([
+          'schemaVersion', 'groupId', 'playerId', 'blockedByPlayerId', 'reason',
+          'characterNameSnapshot', 'applicationCountSnapshot',
+          'itemLevelSnapshot', 'combatPowerSnapshot', 'createdAt', 'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.blockedByPlayerId == currentPlayerId()
+        && data.characterNameSnapshot == relation.characterNameSnapshot
+        && data.itemLevelSnapshot == relation.itemLevelSnapshot
+        && data.combatPowerSnapshot == relation.combatPowerSnapshot
+        && data.applicationCountSnapshot
+          == (stats == null ? 0 : stats.data.applicationCount)
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && relation.targetPlayerId == playerId
+        && relation.kind == 'application'
+        && (
+          (data.reason == 'applicationRejected'
+            && relation.status == 'blocked')
+          || (data.reason == 'manual'
+            && relation.status in ['rejected', 'cancelled', 'expired', 'blocked'])
+        );
+    }
+
+    // 계약 §7 초대코드(Unit 4).
+    //
+    // 코드 생성 접근 예산: authBindings, players/{리더}, groups/{g},
+    // members/{리더}, groupJoinCodes/{code} → get·getAfter 합계 약 8회.
+    // 코드 가입 접근 예산: authBindings, players/{가입자}, groupJoinCodes/{code},
+    // groups/{g}, groupMembershipState, characters/{c}, joinRelations/{선택},
+    // blockedPlayers exists, members getAfter, groupRelations getAfter →
+    // 서로 다른 문서 ≤10, get·getAfter 합계 약 16회(한도 ~20 이하).
+    function groupJoinCodePath(code) {
+      return /databases/$(database)/documents/groupJoinCodes/$(code);
+    }
+
+    function validJoinCodeId(code) {
+      return code is string
+        && code.size() == 20
+        && code.matches('^[2-9A-HJ-NP-Z]{20}$');
+    }
+
+    function validJoinCodeCreate(code, data) {
+      let groupId = data.groupId;
+      let before = get(groupPath(groupId)).data;
+      let after = getAfter(groupPath(groupId)).data;
+      return isActiveGroupLeader(groupId)
+        && validJoinCodeId(code)
+        && data.keys().hasOnly([
+          'schemaVersion', 'groupId', 'status', 'createdByPlayerId',
+          'createdAt', 'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.groupId is string
+        && data.groupId.size() > 0
+        && data.status == 'active'
+        && data.createdByPlayerId == currentPlayerId()
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && before.hasActiveJoinCode == false
+        && after.hasActiveJoinCode == true
+        && after.revision == before.revision + 1;
+    }
+
+    function validJoinCodeDelete(code) {
+      let data = resource.data;
+      let groupId = data.groupId;
+      let before = get(groupPath(groupId)).data;
+      let after = getAfter(groupPath(groupId)).data;
+      return isActiveGroupLeader(groupId)
+        && validJoinCodeId(code)
+        && data.status == 'active'
+        && before.hasActiveJoinCode == true
+        && after.hasActiveJoinCode == false
+        && after.revision == before.revision + 1;
+    }
+
+    // 코드 생성·삭제가 같은 Transaction에서 hasActiveJoinCode만 뒤집는다.
+    function validGroupJoinCodeFlagUpdate(oldData, newData) {
+      return isCurrentPlayerActive()
+        && oldData.status == 'active'
+        && oldData.leaderPlayerId == currentPlayerId()
+        && newData.diff(oldData).affectedKeys()
+          .hasOnly([
+            'hasActiveJoinCode', 'revision', 'lastActivityAt', 'updatedAt'
+          ])
+        && newData.hasActiveJoinCode != oldData.hasActiveJoinCode
+        && newData.revision == oldData.revision + 1
+        && newData.lastActivityAt == request.time
+        && newData.updatedAt == request.time;
+    }
+
+    // 화면 공개 정책만 바꾸며 가입 가능 여부는 건드리지 않는다.
+    function validGroupJoinCodeVisibilityUpdate(oldData, newData) {
+      return isCurrentPlayerActive()
+        && oldData.status == 'active'
+        && oldData.leaderPlayerId == currentPlayerId()
+        && newData.diff(oldData).affectedKeys()
+          .hasOnly([
+            'joinCodeVisibleToMembers', 'revision', 'lastActivityAt', 'updatedAt'
+          ])
+        && newData.joinCodeVisibleToMembers is bool
+        && newData.joinCodeVisibleToMembers != oldData.joinCodeVisibleToMembers
+        && newData.revision == oldData.revision + 1
+        && newData.lastActivityAt == request.time
+        && newData.updatedAt == request.time;
+    }
+
+    // 계약 §8.7. 코드 가입 membership. Character Snapshot은 선택한 인증
+    // Character에서 오며, pending relation이 남으면 안 된다.
+    function validJoinCodeGroupMember(groupId, playerId, data) {
+      let group = getAfter(groupPath(groupId)).data;
+      let state = getAfter(groupMembershipStatePath(playerId)).data;
+      let relationPath = groupJoinRelationPath(groupId, playerId);
+      return isCurrentPlayerActive()
+        && playerId == currentPlayerId()
+        && validGroupMemberDocumentKeys(data)
+        && validGroupMemberSnapshotsFromCharacter(
+          data,
+          data.displayCharacterIdSnapshot
+        )
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.role == 'member'
+        && data.joinedBy == 'joinCode'
+        && data.joinSequence == group.memberCount
+        && data.revision == 1
+        && data.displayCharacterIdSnapshot is string
+        && data.displayCharacterNameSnapshot is string
+        && data.joinedAt == request.time
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && ownsActiveCharacter(data.displayCharacterIdSnapshot)
+        && get(characterPath(data.displayCharacterIdSnapshot))
+          .data.characterName == data.displayCharacterNameSnapshot
+        && group.status == 'active'
+        && group.memberCount <= 50
+        && group.leaderPlayerId != playerId
+        && !hasGroupBlock(groupId, playerId)
+        && groupId in state.activeGroupIds
+        && (
+          !existsAfter(relationPath)
+          || getAfter(relationPath).data.status != 'pending'
+        );
+    }
+
+    // 코드 가입이 기존 pending 초대·신청을 accepted로 종료한다.
+    // applicantStats는 이 경로에서 쓰지 않는다.
+    function validJoinCodeRelationAccept(groupId, playerId, oldData, newData) {
+      return isCurrentPlayerActive()
+        && playerId == currentPlayerId()
+        && newData.diff(oldData).affectedKeys()
+          .hasOnly(['status', 'revision', 'decidedAt', 'updatedAt'])
+        && oldData.status == 'pending'
+        && oldData.targetPlayerId == playerId
+        && oldData.expiresAt > request.time
+        && newData.status == 'accepted'
+        && newData.revision == oldData.revision + 1
+        && newData.decidedAt == request.time
+        && newData.updatedAt == request.time
+        && !hasGroupBlock(groupId, playerId)
+        && existsAfter(groupMemberPath(groupId, playerId))
+        && getAfter(groupMemberPath(groupId, playerId)).data.joinedBy
+          == 'joinCode';
+    }
+
+    // pending 없이 코드로만 가입한 Projection. createdAt은 기존 요청
+    // Projection을 덮어쓸 때 병합·보존될 수 있다.
+    function validJoinCodeMemberGroupRelation(playerId, groupId, data) {
+      let group = getAfter(groupPath(groupId)).data;
+      let member = getAfter(groupMemberPath(groupId, playerId)).data;
+      let relationPath = groupJoinRelationPath(groupId, playerId);
+      return isCurrentPlayerActive()
+        && playerId == currentPlayerId()
+        && validGroupRelationProjectionKeys(data)
+        && data.schemaVersion == 1
+        && data.groupId == groupId
+        && data.playerId == playerId
+        && data.relation == 'member'
+        && data.requestStatus == null
+        && data.expiresAt == null
+        && data.groupNameSnapshot == group.name
+        && data.displayCharacterNameSnapshot
+          == member.displayCharacterNameSnapshot
+        && data.sourceRevision == member.revision
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time
+        && member.joinedBy == 'joinCode'
+        && (
+          !existsAfter(relationPath)
+          || getAfter(relationPath).data.status != 'pending'
+        );
+    }
+
+    function canApproveApplications(recruitmentId) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      let playerId = currentPlayerId();
+      return recruitment.leaderPlayerId == playerId
+        || (exists(recruitmentMemberPath(recruitmentId, playerId))
+          && get(recruitmentMemberPath(recruitmentId, playerId))
+            .data.canApproveApplications == true);
+    }
+
+    function validInitialRecruitment(recruitmentId, data) {
+      let playerId = currentPlayerId();
+      let member = getAfter(recruitmentMemberPath(recruitmentId, playerId)).data;
+      let assignmentId = member.characterId + '_' + data.raidId;
+      return hasActiveBinding()
+        && data.schemaVersion == 1
+        && data.leaderPlayerId == playerId
+        && data.memberPlayerIds == [playerId]
+        && data.memberCount == 1
+        && data.maxMemberCount >= 1
+        && data.dealerCount + data.supportCount == 1
+        && data.status == 'active'
+        && data.visibility == 'public'
+        && data.currentCycleKey == data.targetCycleKey
+        && data.currentCycleStatus == 'active'
+        && data.cycleEndsAt == data.cycleStartedAt + duration.value(7, 'd')
+        && request.time >= data.cycleStartedAt
+        && request.time < data.cycleEndsAt
+        && data.revision == 1
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && data.leaderCharacterNameSnapshot == member.characterNameSnapshot
+        && data.leaderClassNameSnapshot == member.classNameSnapshot
+        && member.playerId == playerId
+        && member.joinedBy == playerId
+        && member.partyIndex == 0
+        && member.slotIndex == 0
+        && member.canApproveApplications == true
+        && ownsActiveCharacter(member.characterId)
+        && getAfter(assignmentPath(playerId, assignmentId)).data.recruitmentId
+          == recruitmentId;
+    }
+
+    function validInitialLeaderMembership(recruitmentId, playerId, data) {
+      let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
+      let assignmentId = data.characterId + '_' + recruitment.raidId;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && data.joinedBy == playerId
+        && data.partyIndex == 0
+        && data.slotIndex == 0
+        && data.canApproveApplications == true
+        && data.joinedAt == request.time
+        && data.updatedAt == request.time
+        && recruitment.leaderPlayerId == playerId
+        && recruitment.memberPlayerIds == [playerId]
+        && ownsActiveCharacter(data.characterId)
+        && getAfter(assignmentPath(playerId, assignmentId)).data.recruitmentId
+          == recruitmentId;
+    }
+
+    function validInitialAssignment(playerId, assignmentId, data) {
+      let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
+      let member = getAfter(
+        recruitmentMemberPath(data.recruitmentId, playerId)
+      ).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && assignmentId == data.characterId + '_' + data.raidId
+        && data.cycleKey == recruitment.currentCycleKey
+        && data.raidId == recruitment.raidId
+        && data.characterId == member.characterId
+        && data.role == member.role
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && recruitment.leaderPlayerId == playerId
+        && ownsActiveCharacter(data.characterId)
+        && !hasWeeklyRaidClaimAfter(
+          playerId,
+          data.cycleKey,
+          data.characterId,
+          data.raidId
+        );
+    }
+
+    function validJoinedMembership(recruitmentId, playerId, data) {
+      let before = get(recruitmentPath(recruitmentId)).data;
+      let after = getAfter(recruitmentPath(recruitmentId)).data;
+      let assignmentId = data.characterId + '_' + after.raidId;
+      let directJoin = playerId == currentPlayerId()
+        && before.approvalPolicy.mode == 'directJoin'
+        && data.joinedBy == playerId;
+      let approvedJoin = canApproveApplications(recruitmentId)
+        && data.joinedBy == currentPlayerId();
+      return hasActiveBinding()
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && data.partyIndex >= 0
+        && data.partyIndex < after.partyCount
+        && data.slotIndex >= 0
+        && data.slotIndex < after.membersPerParty
+        && data.canApproveApplications == false
+        && data.joinedAt == request.time
+        && data.updatedAt == request.time
+        && ownsActiveCharacterForPlayer(data.characterId, playerId)
+        && !(playerId in before.memberPlayerIds)
+        && playerId in after.memberPlayerIds
+        && (directJoin || approvedJoin)
+        && getAfter(assignmentPath(playerId, assignmentId)).data.recruitmentId
+          == recruitmentId;
+    }
+
+    function validJoinedAssignment(playerId, assignmentId, data) {
+      let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
+      let member = getAfter(recruitmentMemberPath(data.recruitmentId, playerId)).data;
+      return hasActiveBinding()
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && assignmentId == data.characterId + '_' + data.raidId
+        && data.cycleKey == recruitment.targetCycleKey
+        && data.raidId == recruitment.raidId
+        && data.characterId == member.characterId
+        && data.role == member.role
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && ownsActiveCharacterForPlayer(data.characterId, playerId)
+        && playerId in recruitment.memberPlayerIds
+        && (playerId == currentPlayerId()
+          || canApproveApplications(data.recruitmentId))
+        && !hasWeeklyRaidClaimAfter(
+          playerId,
+          data.cycleKey,
+          data.characterId,
+          data.raidId
+        );
+    }
+
+    function validRecruitmentJoin(recruitmentId, oldData, newData) {
+      let added = newData.memberPlayerIds.toSet().difference(
+        oldData.memberPlayerIds.toSet()
+      );
+      return hasActiveBinding()
+        && oldData.status == 'active'
+        && oldData.manualRecruitmentEnabled == true
+        && oldData.hasAvailableSlot == true
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'memberPlayerIds', 'memberCount', 'dealerCount', 'supportCount',
+          'hasAvailableSlot', 'revision', 'updatedAt'
+        ])
+        && added.size() == 1
+        && newData.memberPlayerIds.size() == oldData.memberPlayerIds.size() + 1
+        && newData.memberCount == oldData.memberCount + 1
+        && newData.dealerCount + newData.supportCount
+          == oldData.dealerCount + oldData.supportCount + 1
+        && newData.memberCount == newData.dealerCount + newData.supportCount
+        && newData.memberCount <= newData.maxMemberCount
+        && newData.hasAvailableSlot
+          == (newData.memberCount < newData.maxMemberCount)
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validMembershipRevisionUpdate(recruitmentId, oldData, newData) {
+      let playerId = currentPlayerId();
+      let memberPath = recruitmentMemberPath(recruitmentId, playerId);
+      let memberBefore = get(memberPath);
+      let memberAfter = getAfter(memberPath);
+      let keys = newData.diff(oldData).affectedKeys();
+      let allowedUpdate = keys.hasOnly([
+        'revision', 'updatedAt',
+        'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot',
+        'dealerCount', 'supportCount'
+      ]);
+      return hasActiveBinding()
+        && oldData.status == 'active'
+        && playerId in oldData.memberPlayerIds
+        && allowedUpdate
+        && exists(memberPath)
+        && existsAfter(memberPath)
+        && (memberBefore.data.characterId != memberAfter.data.characterId
+          || memberBefore.data.role != memberAfter.data.role)
+        && newData.dealerCount == oldData.dealerCount
+          + (memberAfter.data.role == 'dealer' ? 1 : 0)
+          - (memberBefore.data.role == 'dealer' ? 1 : 0)
+        && newData.supportCount == oldData.supportCount
+          + (memberAfter.data.role == 'support' ? 1 : 0)
+          - (memberBefore.data.role == 'support' ? 1 : 0)
+        && newData.memberCount
+          == newData.dealerCount + newData.supportCount
+        && newData.supportCount
+          <= newData.partyCount * newData.supportsPerParty
+        && newData.dealerCount
+          <= newData.partyCount
+            * (newData.membersPerParty - newData.supportsPerParty)
+        && (oldData.leaderPlayerId != playerId
+          || (newData.leaderCharacterNameSnapshot
+            == memberAfter.data.characterNameSnapshot
+            && newData.leaderClassNameSnapshot
+              == memberAfter.data.classNameSnapshot))
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validRecruitmentMemberRemoval(recruitmentId, oldData, newData) {
+      let playerId = currentPlayerId();
+      let removed = oldData.memberPlayerIds.toSet().difference(
+        newData.memberPlayerIds.toSet()
+      );
+      let actorIsLeader = oldData.leaderPlayerId == playerId;
+      let selfLeave = removed.hasAny([playerId]);
+      let empty = newData.memberCount == 0;
+      return hasActiveBinding()
+        && oldData.status == 'active'
+        && removed.size() == 1
+        && newData.memberPlayerIds.size() == oldData.memberPlayerIds.size() - 1
+        && (selfLeave || (actorIsLeader && !selfLeave))
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'memberPlayerIds', 'memberCount', 'dealerCount', 'supportCount',
+          'leaderPlayerId', 'leaderCharacterNameSnapshot',
+          'leaderClassNameSnapshot', 'hasAvailableSlot', 'status',
+          'manualRecruitmentEnabled', 'revision', 'updatedAt'
+        ])
+        && newData.memberCount == oldData.memberCount - 1
+        && ((newData.dealerCount == oldData.dealerCount - 1
+            && newData.supportCount == oldData.supportCount)
+          || (newData.supportCount == oldData.supportCount - 1
+            && newData.dealerCount == oldData.dealerCount))
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time
+        && (empty
+          ? (newData.leaderPlayerId == null
+            && newData.leaderCharacterNameSnapshot == null
+            && newData.leaderClassNameSnapshot == null
+            && newData.status == 'disbanded'
+            && newData.manualRecruitmentEnabled == false
+            && newData.hasAvailableSlot == false)
+          : (newData.status == oldData.status
+            && newData.manualRecruitmentEnabled
+              == oldData.manualRecruitmentEnabled
+            && newData.hasAvailableSlot == true
+            && newData.leaderPlayerId
+              == (!(oldData.leaderPlayerId in newData.memberPlayerIds)
+                ? newData.memberPlayerIds[0]
+                : oldData.leaderPlayerId)
+            && newData.leaderCharacterNameSnapshot
+              == get(recruitmentMemberPath(
+                recruitmentId,
+                newData.leaderPlayerId
+              )).data.characterNameSnapshot
+            && newData.leaderClassNameSnapshot
+              == get(recruitmentMemberPath(
+                recruitmentId,
+                newData.leaderPlayerId
+              )).data.classNameSnapshot));
+    }
+
+    function validRecurrenceChange(oldData, newData) {
+      return hasActiveBinding()
+        && oldData.leaderPlayerId == currentPlayerId()
+        && oldData.status == 'active'
+        && (oldData.currentCycleStatus == 'active'
+          || oldData.currentCycleStatus == 'completed')
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'continueTogether', 'revision', 'updatedAt'
+        ])
+        && newData.continueTogether is bool
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validRecruitmentDisband(oldData, newData) {
+      return hasActiveBinding()
+        && oldData.leaderPlayerId == currentPlayerId()
+        && (oldData.status == 'active' || oldData.status == 'completed')
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'currentCycleStatus', 'manualRecruitmentEnabled',
+          'hasAvailableSlot', 'memberPlayerIds', 'memberCount',
+          'dealerCount', 'supportCount', 'leaderPlayerId',
+          'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot',
+          'revision', 'updatedAt'
+        ])
+        && newData.status == 'disbanded'
+        && newData.currentCycleStatus == 'disbanded'
+        && newData.manualRecruitmentEnabled == false
+        && newData.hasAvailableSlot == false
+        && newData.memberPlayerIds.size() == 0
+        && newData.memberCount == 0
+        && newData.dealerCount == 0
+        && newData.supportCount == 0
+        && newData.leaderPlayerId == null
+        && newData.leaderCharacterNameSnapshot == null
+        && newData.leaderClassNameSnapshot == null
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validCycleCompletion(recruitmentId, oldData, newData) {
+      let cycle = getAfter(recruitmentCyclePath(
+        recruitmentId,
+        oldData.currentCycleKey
+      )).data;
+      let repeating = oldData.continueTogether == true;
+      return hasActiveBinding()
+        && oldData.leaderPlayerId == currentPlayerId()
+        && oldData.status == 'active'
+        && oldData.currentCycleStatus == 'active'
+        && request.time < oldData.cycleEndsAt
+        && cycle.status == 'completed'
+        && cycle.memberPlayerIds == oldData.memberPlayerIds
+        && cycle.completedByPlayerId == currentPlayerId()
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'currentCycleStatus', 'manualRecruitmentEnabled',
+          'completedAt', 'completedByPlayerId', 'revision', 'updatedAt'
+        ])
+        && newData.status == (repeating ? 'active' : 'completed')
+        && newData.currentCycleStatus == 'completed'
+        && newData.manualRecruitmentEnabled == repeating
+        && newData.completedAt == request.time
+        && newData.completedByPlayerId == currentPlayerId()
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validCompletionCancellation(recruitmentId, oldData, newData) {
+      let cycle = getAfter(recruitmentCyclePath(
+        recruitmentId,
+        oldData.currentCycleKey
+      )).data;
+      return hasActiveBinding()
+        && oldData.leaderPlayerId == currentPlayerId()
+        && oldData.continueTogether == true
+        && oldData.status == 'active'
+        && oldData.currentCycleStatus == 'completed'
+        && request.time < oldData.cycleEndsAt - duration.value(8, 'h')
+        && cycle.status == 'completionCancelled'
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'currentCycleStatus', 'manualRecruitmentEnabled',
+          'hasAvailableSlot', 'completedAt', 'completedByPlayerId',
+          'revision', 'updatedAt'
+        ])
+        && newData.status == 'active'
+        && newData.currentCycleStatus == 'active'
+        && newData.manualRecruitmentEnabled == true
+        && newData.hasAvailableSlot
+          == (newData.memberCount < newData.maxMemberCount)
+        && newData.completedAt == null
+        && newData.completedByPlayerId == null
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validCycleAdvance(recruitmentId, oldData, newData) {
+      let cycle = getAfter(recruitmentCyclePath(
+        recruitmentId,
+        oldData.currentCycleKey
+      )).data;
+      let repeating = oldData.continueTogether == true;
+      return hasActiveBinding()
+        && currentPlayerId() in oldData.memberPlayerIds
+        && oldData.status == 'active'
+        && request.time >= oldData.cycleEndsAt
+        && (cycle.status == 'completed'
+          || (cycle.status == 'incompleteEnded'
+            && cycle.memberPlayerIds == oldData.memberPlayerIds))
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time
+        && (repeating
+          ? (newData.diff(oldData).affectedKeys().hasOnly([
+              'status', 'currentCycleStatus', 'currentCycleKey',
+              'targetCycleKey', 'cycleStartedAt', 'cycleEndsAt',
+              'completedAt', 'completedByPlayerId', 'hasAvailableSlot',
+              'revision', 'updatedAt'
+            ])
+            && newData.status == 'active'
+            && newData.currentCycleStatus == 'active'
+            && newData.currentCycleKey == newData.targetCycleKey
+            && newData.cycleStartedAt == oldData.cycleEndsAt
+            && newData.cycleEndsAt
+              == newData.cycleStartedAt + duration.value(7, 'd')
+            && newData.completedAt == null
+            && newData.completedByPlayerId == null
+            && newData.hasAvailableSlot
+              == (newData.memberCount < newData.maxMemberCount))
+          : (newData.diff(oldData).affectedKeys().hasOnly([
+              'status', 'currentCycleStatus', 'manualRecruitmentEnabled',
+              'hasAvailableSlot', 'revision', 'updatedAt'
+            ])
+            && newData.status == 'incompleteEnded'
+            && newData.currentCycleStatus == 'incompleteEnded'
+            && newData.manualRecruitmentEnabled == false
+            && newData.hasAvailableSlot == false));
+    }
+
+    function validInitialCycle(recruitmentId, cycleKey, data) {
+      let before = get(recruitmentPath(recruitmentId)).data;
+      let after = getAfter(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && currentPlayerId() in before.memberPlayerIds
+        && data.schemaVersion == 1
+        && data.recruitmentId == recruitmentId
+        && data.cycleKey == cycleKey
+        && cycleKey == before.currentCycleKey
+        && data.memberPlayerIds == before.memberPlayerIds
+        && data.completedMemberSnapshot.size() == before.memberCount
+        && data.completionRevision == 1
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && ((data.status == 'completed'
+            && before.leaderPlayerId == currentPlayerId()
+            && request.time < before.cycleEndsAt
+            && data.completedAt == request.time
+            && data.completedByPlayerId == currentPlayerId()
+            && after.currentCycleStatus == 'completed')
+          || (data.status == 'incompleteEnded'
+            && currentPlayerId() in before.memberPlayerIds
+            && request.time >= before.cycleEndsAt
+            && data.completedAt == null
+            && data.completedByPlayerId == null));
+    }
+
+    function validCycleCancellation(recruitmentId, oldData, newData) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && recruitment.leaderPlayerId == currentPlayerId()
+        && recruitment.continueTogether == true
+        && request.time < recruitment.cycleEndsAt - duration.value(8, 'h')
+        && oldData.status == 'completed'
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'completionRevision', 'updatedAt'
+        ])
+        && newData.status == 'completionCancelled'
+        && int(newData.completionRevision) == int(oldData.completionRevision) + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validCycleRecompletion(recruitmentId, oldData, newData) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      let recruitmentAfter = getAfter(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && recruitment.leaderPlayerId == currentPlayerId()
+        && oldData.status == 'completionCancelled'
+        && request.time < recruitment.cycleEndsAt
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'completedAt', 'completedByPlayerId',
+          'completionRevision', 'memberPlayerIds',
+          'completedMemberSnapshot', 'updatedAt'
+        ])
+        && newData.status == 'completed'
+        && newData.completedAt == request.time
+        && newData.completedByPlayerId == currentPlayerId()
+        && int(newData.completionRevision) == int(oldData.completionRevision) + 1
+        && newData.memberPlayerIds == recruitment.memberPlayerIds
+        && newData.completedMemberSnapshot.size() == recruitment.memberCount
+        && newData.updatedAt == request.time
+        && recruitmentAfter.currentCycleStatus == 'completed';
+    }
+
+    function validCancelledCycleEnd(recruitmentId, oldData, newData) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && currentPlayerId() in recruitment.memberPlayerIds
+        && oldData.status == 'completionCancelled'
+        && request.time >= recruitment.cycleEndsAt
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'completedAt', 'completedByPlayerId',
+          'completionRevision', 'memberPlayerIds',
+          'completedMemberSnapshot', 'updatedAt'
+        ])
+        && newData.status == 'incompleteEnded'
+        && newData.completedAt == null
+        && newData.completedByPlayerId == null
+        && newData.completionRevision == oldData.completionRevision + 1
+        && newData.memberPlayerIds == recruitment.memberPlayerIds
+        && newData.completedMemberSnapshot.size() == recruitment.memberCount
+        && newData.updatedAt == request.time;
+    }
+
+    function validMemberCharacterChange(recruitmentId, playerId, oldData, newData) {
+      let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
+      let oldAssignmentId = oldData.characterId + '_' + recruitment.raidId;
+      let newAssignmentId = newData.characterId + '_' + recruitment.raidId;
+      // 반복 완료 후: 다음 회차 준비 membership만 변경. Claim·새 assignment는 유지/생성하지 않는다.
+      let nextWeekPrep = recruitment.status == 'active'
+        && recruitment.continueTogether == true
+        && recruitment.currentCycleStatus == 'completed';
+      let membershipFieldsOk = hasActiveBinding()
+        && playerId == currentPlayerId()
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'characterId', 'characterNameSnapshot', 'classNameSnapshot',
+          'itemLevelSnapshot', 'combatPowerSnapshot', 'role',
+          'characterChangedAt', 'updatedAt'
+        ])
+        && (newData.characterId != oldData.characterId
+          || newData.role != oldData.role)
+        && newData.role in ['dealer', 'support']
+        && newData.partyIndex == oldData.partyIndex
+        && newData.get('slotIndex', -1) == oldData.get('slotIndex', -1)
+        && newData.canApproveApplications == oldData.canApproveApplications
+        && ownsActiveCharacter(newData.characterId)
+        && newData.characterChangedAt == request.time
+        && newData.updatedAt == request.time;
+      let activeAssignmentChange = oldAssignmentId == newAssignmentId
+        ? (existsAfter(assignmentPath(playerId, newAssignmentId))
+          && getAfter(assignmentPath(playerId, newAssignmentId)).data.role
+            == newData.role)
+        : (!existsAfter(assignmentPath(playerId, oldAssignmentId))
+          && getAfter(assignmentPath(playerId, newAssignmentId)).data.characterId
+            == newData.characterId
+          && getAfter(assignmentPath(playerId, newAssignmentId)).data.role
+            == newData.role);
+      let nextWeekPrepAssignmentOk =
+        !existsAfter(assignmentPath(playerId, oldAssignmentId))
+        && !existsAfter(assignmentPath(playerId, newAssignmentId));
+      return membershipFieldsOk
+        && (nextWeekPrep
+          ? nextWeekPrepAssignmentOk
+          : (activeAssignmentChange
+            && !hasWeeklyRaidClaimAfter(
+              playerId,
+              recruitment.currentCycleKey,
+              newData.characterId,
+              recruitment.raidId
+            )));
+    }
+
+    function validAssignmentRoleChange(playerId, data, newData) {
+      let member = getAfter(recruitmentMemberPath(
+        data.recruitmentId,
+        playerId
+      )).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && newData.diff(data).affectedKeys().hasOnly(['role', 'updatedAt'])
+        && newData.role in ['dealer', 'support']
+        && newData.role == member.role
+        && newData.characterId == member.characterId
+        && newData.updatedAt == request.time;
+    }
+
+    function validApprovalPermissionChange(recruitmentId, playerId, oldData, newData) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && recruitment.leaderPlayerId == currentPlayerId()
+        && playerId != currentPlayerId()
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'canApproveApplications', 'updatedAt'
+        ])
+        && newData.canApproveApplications is bool
+        && newData.updatedAt == request.time;
+    }
+
+    function validMemberRemoval(recruitmentId, playerId, data) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      let after = getAfter(recruitmentPath(recruitmentId)).data;
+      let assignmentId = data.characterId + '_' + recruitment.raidId;
+      return hasActiveBinding()
+        && (playerId == currentPlayerId()
+          || recruitment.leaderPlayerId == currentPlayerId())
+        && !(playerId in after.memberPlayerIds)
+        && !existsAfter(assignmentPath(playerId, assignmentId));
+    }
+
+    function validAssignmentRemoval(playerId, data) {
+      let recruitment = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
+      let memberPath = recruitmentMemberPath(data.recruitmentId, playerId);
+      let cyclePath = recruitmentCyclePath(
+        data.recruitmentId,
+        recruitment.currentCycleKey
+      );
+      // 파티 전체 완료: membership은 유지한 채 assignment만 제거한다.
+      // cycle.memberPlayerIds 순서/타입에 의존하지 않고 완료 전 membership을 기준으로 본다.
+      let partyCompleteRemoval = hasActiveBinding()
+        && recruitment.leaderPlayerId == currentPlayerId()
+        && after.currentCycleStatus == 'completed'
+        && existsAfter(cyclePath)
+        && getAfter(cyclePath).data.status == 'completed'
+        && playerId in recruitment.memberPlayerIds
+        && exists(memberPath)
+        && get(memberPath).data.characterId == data.characterId
+        && data.raidId == recruitment.raidId;
+      // E 이전 completed·해산 대기 orphan: 본인 점유만 정리. Claim은 만들지 않는다.
+      let staleCompletedRemoval = hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.raidId == recruitment.raidId
+        && (recruitment.status == 'completed'
+          || recruitment.status == 'disbanded'
+          || recruitment.currentCycleStatus == 'completed');
+      return hasActiveBinding()
+        && (playerId == currentPlayerId()
+          || recruitment.leaderPlayerId == currentPlayerId()
+          || after.status == 'disbanded')
+        && (partyCompleteRemoval
+          || staleCompletedRemoval
+          || !existsAfter(memberPath)
+          || (existsAfter(memberPath)
+            && getAfter(memberPath).data.characterId != data.characterId)
+          || after.status == 'disbanded');
+    }
+
+    function validCompletionCancelAssignmentRestore(
+      playerId,
+      assignmentId,
+      data
+    ) {
+      let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
+      let cycle = getAfter(recruitmentCyclePath(
+        data.recruitmentId,
+        data.cycleKey
+      )).data;
+      let member = get(recruitmentMemberPath(data.recruitmentId, playerId)).data;
+      return hasActiveBinding()
+        && recruitment.leaderPlayerId == currentPlayerId()
+        && recruitment.status == 'active'
+        && recruitment.currentCycleStatus == 'active'
+        && recruitment.currentCycleKey == data.cycleKey
+        && cycle.status == 'completionCancelled'
+        && playerId in cycle.memberPlayerIds
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && assignmentId == data.characterId + '_' + data.raidId
+        && data.raidId == recruitment.raidId
+        && data.characterId == member.characterId
+        && data.role == member.role
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && !hasWeeklyRaidClaimAfter(
+          playerId,
+          data.cycleKey,
+          data.characterId,
+          data.raidId
+        );
+    }
+
+    function validEventTiming(data) {
+      return data.occurredAt == request.time
+        && data.expiresAt >= request.time + duration.value(27, 'd')
+        && data.expiresAt <= request.time + duration.value(29, 'd');
+    }
+
+    function validCycleEvent(playerId, eventId, data) {
+      let cycle = getAfter(recruitmentCyclePath(
+        data.recruitmentId,
+        data.cycleKey
+      )).data;
+      let expectedStatus = data.type == 'partyCompleted'
+        ? 'completed'
+        : (data.type == 'partyCompletionCancelled'
+          ? 'completionCancelled'
+          : 'incompleteEnded');
+      return hasActiveBinding()
+        && data.keys().hasOnly([
+          'schemaVersion', 'eventId', 'type', 'playerId', 'recruitmentId',
+          'cycleKey', 'raidId', 'difficultyId', 'eventRevision', 'characterId',
+          'characterNameSnapshot', 'classNameSnapshot', 'role', 'partyIndex',
+          'occurredAt', 'expiresAt'
+        ])
+        && data.schemaVersion == 1
+        && data.eventId == eventId
+        && data.playerId == playerId
+        && data.type in [
+          'partyCompleted',
+          'partyCompletionCancelled',
+          'partyIncompleteEnded'
+        ]
+        && cycle.status == expectedStatus
+        && cycle.updatedAt == request.time
+        && playerId in cycle.memberPlayerIds
+        && data.eventRevision == cycle.completionRevision
+        && data.raidId is string
+        && data.difficultyId is string
+        && data.characterId is string
+        && validEventTiming(data);
+    }
+
+    // 신청 계열: 같은 Transaction의 application 상태 전이와 수신자만 허용.
+    // 명령 Repository가 이벤트를 쓰지 않으면 orphan create는 전이 검증에서 거절된다.
+    function validApplicationEvent(playerId, eventId, data) {
+      return data.type == 'applicationSubmitted'
+        ? validApplicationSubmittedEvent(playerId, eventId, data)
+        : (data.type == 'applicationApproved'
+          ? validApplicationApprovedEvent(playerId, eventId, data)
+          : (data.type == 'applicationRejected'
+            ? validApplicationRejectedEvent(playerId, eventId, data)
+            : (data.type == 'applicationWithdrawn'
+              ? validApplicationWithdrawnEvent(playerId, eventId, data)
+              : false)));
+    }
+
+    function validApplicationEventBase(playerId, eventId, data) {
+      return hasActiveBinding()
+        && data.keys().hasOnly([
+          'schemaVersion', 'eventId', 'type', 'playerId', 'recruitmentId',
+          'eventRevision', 'actorPlayerId', 'characterNameSnapshot',
+          'classNameSnapshot', 'role', 'raidId', 'difficultyId',
+          'rejectionCount', 'occurredAt', 'expiresAt'
+        ])
+        && data.schemaVersion == 1
+        && data.eventId == eventId
+        && data.playerId == playerId
+        && data.recruitmentId is string
+        && data.eventRevision is int
+        && data.actorPlayerId is string
+        && data.characterNameSnapshot is string
+        && validEventTiming(data);
+    }
+
+    function validApplicationSubmittedEvent(playerId, eventId, data) {
+      let recruitment = get(recruitmentPath(data.recruitmentId)).data;
+      let application = getAfter(recruitmentApplicationPath(
+        data.recruitmentId,
+        data.actorPlayerId
+      )).data;
+      return validApplicationEventBase(playerId, eventId, data)
+        && data.type == 'applicationSubmitted'
+        && currentPlayerId() == data.actorPlayerId
+        && playerId == recruitment.leaderPlayerId
+        && playerId != data.actorPlayerId
+        && application.status == 'pending'
+        && application.applicantPlayerId == data.actorPlayerId
+        && application.revision == data.eventRevision
+        && application.updatedAt == request.time
+        && application.characterNameSnapshot == data.characterNameSnapshot;
+    }
+
+    function validApplicationApprovedEvent(playerId, eventId, data) {
+      let application = getAfter(recruitmentApplicationPath(
+        data.recruitmentId,
+        playerId
+      )).data;
+      return validApplicationEventBase(playerId, eventId, data)
+        && data.type == 'applicationApproved'
+        && canApproveApplications(data.recruitmentId)
+        && currentPlayerId() == data.actorPlayerId
+        && playerId == application.applicantPlayerId
+        && playerId != data.actorPlayerId
+        && application.status == 'approved'
+        && application.revision == data.eventRevision
+        && application.updatedAt == request.time
+        && application.characterNameSnapshot == data.characterNameSnapshot;
+    }
+
+    function validApplicationRejectedEvent(playerId, eventId, data) {
+      let application = getAfter(recruitmentApplicationPath(
+        data.recruitmentId,
+        playerId
+      )).data;
+      return validApplicationEventBase(playerId, eventId, data)
+        && data.type == 'applicationRejected'
+        && canApproveApplications(data.recruitmentId)
+        && currentPlayerId() == data.actorPlayerId
+        && playerId == application.applicantPlayerId
+        && playerId != data.actorPlayerId
+        && application.status == 'rejected'
+        && application.revision == data.eventRevision
+        && application.updatedAt == request.time
+        && application.characterNameSnapshot == data.characterNameSnapshot
+        && (!('rejectionCount' in data)
+          || data.rejectionCount == application.rejectionCount);
+    }
+
+    function validApplicationWithdrawnEvent(playerId, eventId, data) {
+      let recruitment = get(recruitmentPath(data.recruitmentId)).data;
+      let application = getAfter(recruitmentApplicationPath(
+        data.recruitmentId,
+        data.actorPlayerId
+      )).data;
+      return validApplicationEventBase(playerId, eventId, data)
+        && data.type == 'applicationWithdrawn'
+        && currentPlayerId() == data.actorPlayerId
+        && playerId == recruitment.leaderPlayerId
+        && playerId != data.actorPlayerId
+        && application.status == 'withdrawn'
+        && application.applicantPlayerId == data.actorPlayerId
+        && application.revision == data.eventRevision
+        && application.updatedAt == request.time
+        && application.characterNameSnapshot == data.characterNameSnapshot;
+    }
+
+    // 멤버십 계열: 모집 revision·멤버 전후 집합과 수신자를 검증한다.
+    function validMembershipEvent(playerId, eventId, data) {
+      return data.type == 'memberJoined'
+        ? validMemberJoinedEvent(playerId, eventId, data)
+        : (data.type == 'memberLeft'
+          ? validMemberLeftEvent(playerId, eventId, data)
+          : (data.type == 'memberKicked'
+            ? validMemberKickedEvent(playerId, eventId, data)
+            : (data.type == 'memberCharacterChanged'
+              ? validMemberCharacterChangedEvent(playerId, eventId, data)
+              : false)));
+    }
+
+    function validMembershipEventBase(playerId, eventId, data) {
+      return hasActiveBinding()
+        && data.keys().hasOnly([
+          'schemaVersion', 'eventId', 'type', 'playerId', 'recruitmentId',
+          'eventRevision', 'actorPlayerId', 'targetPlayerId',
+          'characterNameSnapshot', 'classNameSnapshot', 'role',
+          'previousCharacterNameSnapshot', 'targetCharacterNameSnapshot',
+          'raidId', 'difficultyId', 'partyIndex', 'slotIndex',
+          'previousPartyIndex', 'previousSlotIndex', 'reason', 'occurredAt',
+          'expiresAt'
+        ])
+        && data.schemaVersion == 1
+        && data.eventId == eventId
+        && data.playerId == playerId
+        && data.recruitmentId is string
+        && data.eventRevision is int
+        && data.actorPlayerId is string
+        && validEventTiming(data);
+    }
+
+    function validMemberJoinedEvent(playerId, eventId, data) {
+      let before = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
+      return validMembershipEventBase(playerId, eventId, data)
+        && data.type == 'memberJoined'
+        && currentPlayerId() == data.actorPlayerId
+        && data.eventRevision == after.revision
+        && data.eventRevision == before.revision + 1
+        && !(data.actorPlayerId in before.memberPlayerIds)
+        && data.actorPlayerId in after.memberPlayerIds
+        && playerId in before.memberPlayerIds
+        && playerId != data.actorPlayerId
+        && data.characterNameSnapshot is string
+        && existsAfter(recruitmentMemberPath(
+          data.recruitmentId,
+          data.actorPlayerId
+        ));
+    }
+
+    function validMemberLeftEvent(playerId, eventId, data) {
+      let before = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
+      return validMembershipEventBase(playerId, eventId, data)
+        && data.type == 'memberLeft'
+        && currentPlayerId() == data.actorPlayerId
+        && data.eventRevision == after.revision
+        && data.eventRevision == before.revision + 1
+        && data.actorPlayerId in before.memberPlayerIds
+        && !(data.actorPlayerId in after.memberPlayerIds)
+        && playerId in before.memberPlayerIds
+        && playerId != data.actorPlayerId
+        && data.characterNameSnapshot is string
+        && (!('reason' in data) || data.reason == 'weeklyRaidCompleted');
+    }
+
+    function validMemberKickedEvent(playerId, eventId, data) {
+      let before = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
+      return validMembershipEventBase(playerId, eventId, data)
+        && data.type == 'memberKicked'
+        && currentPlayerId() == data.actorPlayerId
+        && before.leaderPlayerId == data.actorPlayerId
+        && data.targetPlayerId is string
+        && data.eventRevision == after.revision
+        && data.eventRevision == before.revision + 1
+        && data.targetPlayerId in before.memberPlayerIds
+        && !(data.targetPlayerId in after.memberPlayerIds)
+        && playerId != data.actorPlayerId
+        && (playerId == data.targetPlayerId
+          || playerId in after.memberPlayerIds)
+        && data.targetCharacterNameSnapshot is string;
+    }
+
+    function validMemberCharacterChangedEvent(playerId, eventId, data) {
+      let before = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
+      let memberAfter = getAfter(recruitmentMemberPath(
+        data.recruitmentId,
+        data.actorPlayerId
+      )).data;
+      return validMembershipEventBase(playerId, eventId, data)
+        && data.type == 'memberCharacterChanged'
+        && currentPlayerId() == data.actorPlayerId
+        && data.eventRevision == after.revision
+        && data.eventRevision == before.revision + 1
+        && data.actorPlayerId in before.memberPlayerIds
+        && data.actorPlayerId in after.memberPlayerIds
+        && playerId in before.memberPlayerIds
+        && playerId != data.actorPlayerId
+        && memberAfter.updatedAt == request.time
+        && data.characterNameSnapshot is string
+        && data.previousCharacterNameSnapshot is string;
+    }
+
+    function validLifecycleEvent(playerId, eventId, data) {
+      return data.type == 'partyDisbanded'
+        ? validPartyDisbandedEvent(playerId, eventId, data)
+        : false;
+    }
+
+    function validPartyDisbandedEvent(playerId, eventId, data) {
+      let before = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
+      let applicationPath = recruitmentApplicationPath(
+        data.recruitmentId,
+        playerId
+      );
+      let isFormerMember = playerId in before.memberPlayerIds;
+      let isPendingApplicant = exists(applicationPath)
+        && get(applicationPath).data.status == 'pending'
+        && get(applicationPath).data.applicantPlayerId == playerId;
+      return hasActiveBinding()
+        && data.keys().hasOnly([
+          'schemaVersion', 'eventId', 'type', 'playerId', 'recruitmentId',
+          'cycleKey', 'eventRevision', 'actorPlayerId', 'raidId',
+          'difficultyId', 'characterNameSnapshot', 'endReason',
+          'occurredAt', 'expiresAt'
+        ])
+        && data.schemaVersion == 1
+        && data.eventId == eventId
+        && data.playerId == playerId
+        && data.type == 'partyDisbanded'
+        && data.recruitmentId is string
+        && data.cycleKey == before.currentCycleKey
+        && data.eventRevision is int
+        && data.actorPlayerId is string
+        && currentPlayerId() == data.actorPlayerId
+        && data.actorPlayerId == before.leaderPlayerId
+        && playerId != data.actorPlayerId
+        && after.status == 'disbanded'
+        && after.revision == before.revision + 1
+        && data.eventRevision == after.revision
+        && (isFormerMember || isPendingApplicant)
+        && validEventTiming(data);
+    }
+
+    function validPlayerEvent(playerId, eventId, data) {
+      return data.type in [
+          'partyCompleted',
+          'partyCompletionCancelled',
+          'partyIncompleteEnded'
+        ]
+        ? validCycleEvent(playerId, eventId, data)
+        : (data.type in [
+            'applicationSubmitted',
+            'applicationApproved',
+            'applicationRejected',
+            'applicationWithdrawn'
+          ]
+          ? validApplicationEvent(playerId, eventId, data)
+          : (data.type in [
+              'memberJoined',
+              'memberLeft',
+              'memberKicked',
+              'memberCharacterChanged'
+            ]
+            ? validMembershipEvent(playerId, eventId, data)
+            : (data.type == 'partyDisbanded'
+              ? validLifecycleEvent(playerId, eventId, data)
+              : (data.type == 'manualVerificationDisputeOpened'
+                ? validManualVerificationDisputeEvent(playerId, eventId, data)
+                : false))));
+    }
+
+    function validManualVerificationDisputeEvent(playerId, eventId, data) {
+      let requestPath = /databases/$(database)/documents/manualVerificationRequests/$(data.requestId);
+      let requestData = get(requestPath).data;
+      return isActiveOperator()
+        && data.keys().hasOnly([
+          'schemaVersion', 'eventId', 'type', 'playerId', 'requestId',
+          'requesterPlayerId', 'targetGameAccountId',
+          'proofCharacterNameSnapshot', 'ownerResponseDeadlineAt',
+          'occurredAt', 'expiresAt'
+        ])
+        && data.schemaVersion == 1
+        && data.eventId == eventId
+        && data.playerId == playerId
+        && data.type == 'manualVerificationDisputeOpened'
+        && data.requestId is string
+        && data.requestId.size() > 0
+        && eventId == 'mvd_' + data.requestId
+        && data.requesterPlayerId is string
+        && data.targetGameAccountId is string
+        && data.proofCharacterNameSnapshot is string
+        && data.ownerResponseDeadlineAt is timestamp
+        && requestData.status == 'awaitingOwnerResponse'
+        && requestData.previousOwnerPlayerId == playerId
+        && requestData.targetGameAccountId == data.targetGameAccountId
+        && requestData.ownerResponseDeadlineAt == data.ownerResponseDeadlineAt
+        && validEventTiming(data);
+    }
+
+    function validPendingApplication(recruitmentId, playerId, data) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.schemaVersion == 1
+        && data.recruitmentId == recruitmentId
+        && data.applicantPlayerId == playerId
+        && data.cycleKey == recruitment.targetCycleKey
+        && data.status == 'pending'
+        && data.revision == 1
+        && data.approvalCount == 0
+        && data.rejectionCount == 0
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && recruitment.status == 'active'
+        && recruitment.manualRecruitmentEnabled == true
+        && recruitment.hasAvailableSlot == true
+        && recruitment.approvalPolicy.mode == 'leaderOnly'
+        && !(playerId in recruitment.memberPlayerIds)
+        && ownsActiveCharacter(data.characterId)
+        && !hasWeeklyRaidClaimAfter(
+          playerId,
+          data.cycleKey,
+          data.characterId,
+          recruitment.raidId
+        );
+    }
+
+    function validApplicantWithdrawal(playerId, oldData, newData) {
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && oldData.applicantPlayerId == playerId
+        && oldData.status == 'pending'
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'resolutionReason', 'revision', 'decidedAt', 'updatedAt'
+        ])
+        && newData.status == 'withdrawn'
+        && newData.resolutionReason == 'withdrawnByApplicant'
+        && newData.revision == oldData.revision + 1
+        && newData.decidedAt == request.time
+        && newData.updatedAt == request.time;
+    }
+
+    function validApplicationWeeklyCompletion(playerId, oldData, newData) {
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && oldData.applicantPlayerId == playerId
+        && oldData.status == 'pending'
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'resolutionReason', 'revision', 'decidedAt', 'updatedAt'
+        ])
+        && newData.status == 'superseded'
+        && newData.resolutionReason == 'weeklyRaidCompleted'
+        && newData.revision == oldData.revision + 1
+        && newData.decidedAt == request.time
+        && newData.updatedAt == request.time
+        && hasWeeklyRaidClaimAfter(
+          playerId,
+          oldData.cycleKey,
+          oldData.characterId,
+          get(recruitmentPath(oldData.recruitmentId)).data.raidId
+        );
+    }
+
+    // 거절·철회·superseded 후 같은 방 재신청. rejectionCount는 유지한다.
+    function validApplicationReapply(recruitmentId, playerId, oldData, newData) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && oldData.applicantPlayerId == playerId
+        && (oldData.status == 'rejected'
+          || oldData.status == 'withdrawn'
+          || oldData.status == 'superseded'
+          || oldData.status == 'approved')
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'cycleKey', 'characterId', 'characterNameSnapshot', 'classNameSnapshot',
+          'requestedRole', 'submittedBuildSnapshot', 'status', 'resolutionReason',
+          'approvalCount', 'revision', 'decidedAt', 'updatedAt'
+        ])
+        && newData.status == 'pending'
+        && newData.resolutionReason == null
+        && newData.approvalCount == 0
+        && newData.rejectionCount == oldData.rejectionCount
+        && newData.revision == oldData.revision + 1
+        && newData.decidedAt == null
+        && newData.updatedAt == request.time
+        && newData.schemaVersion == oldData.schemaVersion
+        && newData.recruitmentId == recruitmentId
+        && newData.applicantPlayerId == playerId
+        && newData.cycleKey == recruitment.targetCycleKey
+        && newData.characterId is string
+        && newData.characterId.size() > 0
+        && newData.characterNameSnapshot is string
+        && newData.classNameSnapshot is string
+        && (newData.requestedRole == 'dealer'
+          || newData.requestedRole == 'support')
+        && recruitment.status == 'active'
+        && recruitment.manualRecruitmentEnabled == true
+        && recruitment.hasAvailableSlot == true
+        && recruitment.approvalPolicy.mode == 'leaderOnly'
+        && !(playerId in recruitment.memberPlayerIds)
+        && ownsActiveCharacter(newData.characterId)
+        && !hasWeeklyRaidClaimAfter(
+          playerId,
+          newData.cycleKey,
+          newData.characterId,
+          recruitment.raidId
+        );
+    }
+
+    function validPartyOwnerWeeklyRaidClaimCreate(playerId, claimId, data) {
+      let recruitmentAfter = getAfter(recruitmentPath(data.sourceRecruitmentId)).data;
+      let cycle = getAfter(recruitmentCyclePath(
+        data.sourceRecruitmentId,
+        data.cycleKey
+      )).data;
+      let memberPath = recruitmentMemberPath(data.sourceRecruitmentId, playerId);
+      let assignmentId = data.characterId + '_' + data.raidId;
+      return hasActiveBinding()
+        && recruitmentAfter.leaderPlayerId == currentPlayerId()
+        && recruitmentAfter.currentCycleStatus == 'completed'
+        && data.keys().hasOnly([
+          'schemaVersion', 'playerId', 'characterId', 'raidId', 'cycleKey',
+          'difficultyId', 'source', 'sourceRecruitmentId',
+          'sourceCompletionRevision', 'cycleStartedAt', 'cycleEndsAt',
+          'completedAt', 'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && data.characterId is string
+        && data.raidId is string
+        && data.difficultyId is string
+        && data.cycleKey is string
+        && data.sourceRecruitmentId is string
+        && (data.sourceCompletionRevision is int
+          || data.sourceCompletionRevision is float)
+        && data.cycleStartedAt is timestamp
+        && data.cycleEndsAt is timestamp
+        && data.completedAt is timestamp
+        && data.updatedAt is timestamp
+        && claimId == weeklyRaidClaimId(
+          data.cycleKey,
+          data.characterId,
+          data.raidId
+        )
+        && data.source == 'partyOwner'
+        && data.cycleKey == recruitmentAfter.currentCycleKey
+        && data.raidId == recruitmentAfter.raidId
+        && data.difficultyId == recruitmentAfter.difficultyId
+        && data.cycleStartedAt == recruitmentAfter.cycleStartedAt
+        && data.cycleEndsAt == recruitmentAfter.cycleEndsAt
+        && data.completedAt == request.time
+        && data.updatedAt == request.time
+        && cycle.status == 'completed'
+        && int(cycle.completionRevision) == int(data.sourceCompletionRevision)
+        && cycle.completedByPlayerId == currentPlayerId()
+        && playerId in recruitmentAfter.memberPlayerIds
+        && exists(memberPath)
+        && data.characterId == getAfter(memberPath).data.characterId
+        && !existsAfter(assignmentPath(playerId, assignmentId));
+    }
+
+    function validPartyOwnerWeeklyRaidClaimDelete(playerId, claimId, data) {
+      let recruitmentAfter = getAfter(recruitmentPath(data.sourceRecruitmentId)).data;
+      let cycle = getAfter(recruitmentCyclePath(
+        data.sourceRecruitmentId,
+        data.cycleKey
+      )).data;
+      let cancelDelete = cycle.status == 'completionCancelled'
+        && recruitmentAfter.currentCycleStatus == 'active'
+        && int(cycle.completionRevision) == int(data.sourceCompletionRevision) + 1;
+      // 취소 후 재완료 때 이전 partyOwner Claim을 새 completionRevision으로 교체
+      let recompleteReplace = cycle.status == 'completed'
+        && recruitmentAfter.currentCycleStatus == 'completed'
+        && cycle.completedByPlayerId == currentPlayerId()
+        && int(cycle.completionRevision) > int(data.sourceCompletionRevision);
+      return hasActiveBinding()
+        && recruitmentAfter.leaderPlayerId == currentPlayerId()
+        && data.playerId == playerId
+        && data.characterId is string
+        && data.raidId is string
+        && data.cycleKey is string
+        && data.sourceRecruitmentId is string
+        && (data.sourceCompletionRevision is int
+          || data.sourceCompletionRevision is float)
+        && claimId == weeklyRaidClaimId(
+          data.cycleKey,
+          data.characterId,
+          data.raidId
+        )
+        && data.source == 'partyOwner'
+        && data.cycleKey == recruitmentAfter.currentCycleKey
+        && data.raidId == recruitmentAfter.raidId
+        && (cancelDelete || recompleteReplace);
+    }
+
+    function validPartyOwnerWeeklyRaidClaimUpdate(playerId, claimId, data, newData) {
+      return validPartyOwnerWeeklyRaidClaimCreate(playerId, claimId, newData)
+        && data.source == 'partyOwner'
+        && data.sourceRecruitmentId == newData.sourceRecruitmentId
+        && data.playerId == newData.playerId
+        && data.characterId == newData.characterId
+        && data.raidId == newData.raidId
+        && data.cycleKey == newData.cycleKey
+        && int(newData.sourceCompletionRevision) > int(data.sourceCompletionRevision);
+    }
+
+    function validManualWeeklyRaidClaimCreate(playerId, claimId, data) {
+      let assignmentId = data.characterId + '_' + data.raidId;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.keys().hasOnly([
+          'schemaVersion', 'playerId', 'characterId', 'raidId', 'cycleKey',
+          'difficultyId', 'source', 'cycleStartedAt', 'cycleEndsAt',
+          'completedAt', 'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && data.characterId is string
+        && data.raidId is string
+        && data.difficultyId is string
+        && data.cycleKey is string
+        && data.cycleStartedAt is timestamp
+        && data.cycleEndsAt is timestamp
+        && data.completedAt is timestamp
+        && data.updatedAt is timestamp
+        && data.characterId.matches('^[A-Za-z0-9]{20}$')
+        && data.raidId.matches('^[a-z0-9_]+$')
+        && data.difficultyId.matches('^[a-z0-9_]+$')
+        && data.cycleKey.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && claimId == weeklyRaidClaimId(
+          data.cycleKey,
+          data.characterId,
+          data.raidId
+        )
+        && data.source == 'manual'
+        && data.cycleEndsAt == data.cycleStartedAt + duration.value(7, 'd')
+        && request.time >= data.cycleStartedAt
+        && request.time < data.cycleEndsAt
+        && data.completedAt == request.time
+        && data.updatedAt == request.time
+        && ownsActiveCharacter(data.characterId)
+        && !existsAfter(assignmentPath(playerId, assignmentId));
+    }
+
+    function validManualWeeklyRaidClaimDelete(playerId, claimId, data) {
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.playerId == playerId
+        && data.characterId is string
+        && data.raidId is string
+        && data.cycleKey is string
+        && data.cycleStartedAt is timestamp
+        && data.cycleEndsAt is timestamp
+        && claimId == weeklyRaidClaimId(
+          data.cycleKey,
+          data.characterId,
+          data.raidId
+        )
+        && data.cycleEndsAt == data.cycleStartedAt + duration.value(7, 'd')
+        && request.time >= data.cycleStartedAt
+        && request.time < data.cycleEndsAt;
+    }
+
+    function validApplicationDecision(recruitmentId, oldData, newData) {
+      let approved = newData.status == 'approved'
+        && newData.approvalCount == oldData.approvalCount + 1
+        && newData.rejectionCount == oldData.rejectionCount
+        && existsAfter(recruitmentMemberPath(
+          recruitmentId,
+          oldData.applicantPlayerId
+        ));
+      let rejected = newData.status == 'rejected'
+        && newData.rejectionCount == oldData.rejectionCount + 1
+        && newData.approvalCount == oldData.approvalCount;
+      return hasActiveBinding()
+        && canApproveApplications(recruitmentId)
+        && oldData.status == 'pending'
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'resolutionReason', 'approvalCount', 'rejectionCount',
+          'revision', 'decidedAt', 'updatedAt'
+        ])
+        && ((approved && newData.resolutionReason == 'approvedByApprover')
+          || (rejected && newData.resolutionReason == 'rejectedByApprover'))
+        && newData.revision == oldData.revision + 1
+        && newData.decidedAt == request.time
+        && newData.updatedAt == request.time;
+    }
+
+    function canReadRecruitment(data) {
+      return hasActiveBinding()
+        && (data.visibility == 'public'
+          || data.leaderPlayerId == currentPlayerId()
+          || currentPlayerId() in data.memberPlayerIds);
+    }
+
+    // 생성 Transaction은 신규 ID의 존재 여부를 get으로 확인한다.
+    // 없는 문서에서 resource.data를 읽으면 규칙이 거부되므로 단건 get만 분기한다.
+    function canGetRecruitment(recruitmentId) {
+      return hasActiveBinding()
+        && (!exists(recruitmentPath(recruitmentId))
+          || canReadRecruitment(resource.data));
+    }
+
+    function canReadPrivateRecruitmentData(recruitmentId) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && (recruitment.leaderPlayerId == currentPlayerId()
+          || currentPlayerId() in recruitment.memberPlayerIds);
+    }
+
+    // Option 1: 공개 모집 membership 목록은 로그인 사용자에게 허용하고
+    // Domain/UI는 표시 Snapshot만 소비한다.
+    function canReadPublicRecruitmentMembers(recruitmentId) {
+      return hasActiveBinding()
+        && exists(recruitmentPath(recruitmentId))
+        && get(recruitmentPath(recruitmentId)).data.visibility == 'public';
+    }
+
+    // 신청 Transaction은 신규 application get으로 존재 여부를 확인한다.
+    // 없는 문서에서 resource.data를 읽으면 규칙이 거부되므로 단건 get만 분기한다.
+    function canGetRecruitmentApplication(recruitmentId, applicantPlayerId) {
+      return hasActiveBinding()
+        && (!exists(recruitmentApplicationPath(recruitmentId, applicantPlayerId))
+          || canReadPrivateRecruitmentData(recruitmentId)
+          || resource.data.applicantPlayerId == currentPlayerId());
+    }
+
+    function validActiveBinding(data) {
+      return data.keys().hasOnly([
+          'schemaVersion',
+          'playerId',
+          'status',
+          'linkedAt',
+          'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.playerId is string
+        && data.playerId.size() > 0
+        && data.status == 'active'
+        && data.linkedAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    function validActivePlayer(data) {
+      return data.keys().hasOnly([
+          'schemaVersion',
+          'status',
+          'lastSeenAt',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.status == 'active'
+        && data.lastSeenAt == null
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    function validPlayerLastSeenUpdate(playerId, oldData, newData) {
+      return hasActiveBinding()
+        && currentPlayerId() == playerId
+        && oldData.status == 'active'
+        && newData.diff(oldData).affectedKeys().hasOnly(['lastSeenAt'])
+        && newData.lastSeenAt == request.time;
+    }
+
+    function validLegacyLastSeenBackfill(oldData, newData) {
+      return isActiveOperator()
+        && !oldData.keys().hasAny(['lastSeenAt'])
+        && newData.diff(oldData).affectedKeys().hasOnly(['lastSeenAt'])
+        && newData.lastSeenAt == null;
+    }
+
+    function changesRepresentativeCharacter(oldData, newData) {
+      return newData.diff(oldData).affectedKeys().hasAny([
+        'representativeCharacterId',
+        'representativeCharacterUpdatedAt'
+      ]);
+    }
+
+    function representativeCharacterOwned(oldData, newData) {
+      let character = get(characterPath(newData.representativeCharacterId)).data;
+      return newData.representativeCharacterId is string
+        && newData.representativeCharacterId.size() > 0
+        && character.ownerPlayerId == oldData.playerId
+        && character.gameAccountId == oldData.gameAccountId
+        && character.status == 'active';
+    }
+
+    function oldRepresentativeCharacterId(oldData) {
+      return oldData.keys().hasAny(['representativeCharacterId'])
+        ? oldData.representativeCharacterId
+        : null;
+    }
+
+    function validRepresentativeCharacterSeed(oldData, newData) {
+      let oldRepresentative = oldRepresentativeCharacterId(oldData);
+      return hasActiveBinding()
+        && oldData.playerId == currentPlayerId()
+        && oldData.status == 'active'
+        && oldData.gameAccountId is string
+        && oldRepresentative == null
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'representativeCharacterId'
+        ])
+        && representativeCharacterOwned(oldData, newData)
+        && (!newData.keys().hasAny(['representativeCharacterUpdatedAt'])
+          || newData.representativeCharacterUpdatedAt == null);
+    }
+
+    function validRepresentativeCharacterUpdate(oldData, newData) {
+      let oldRepresentative = oldRepresentativeCharacterId(oldData);
+      let cooldownPassed = !oldData.keys().hasAny([
+          'representativeCharacterUpdatedAt'
+        ])
+        || oldData.representativeCharacterUpdatedAt == null
+        || request.time >= oldData.representativeCharacterUpdatedAt
+          + duration.value(5, 'm');
+      return hasActiveBinding()
+        && oldData.playerId == currentPlayerId()
+        && oldData.status == 'active'
+        && oldData.gameAccountId is string
+        && oldRepresentative != null
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'representativeCharacterId',
+          'representativeCharacterUpdatedAt'
+        ])
+        && newData.representativeCharacterId != oldRepresentative
+        && newData.representativeCharacterUpdatedAt == request.time
+        && cooldownPassed
+        && representativeCharacterOwned(oldData, newData);
+    }
+
+    match /authBindings/{authUid} {
+      allow get: if signedIn() && request.auth.uid == authUid;
+      allow list: if false;
+      allow create: if signedIn()
+        && request.auth.uid == authUid
+        && !exists(bindingPath(authUid))
+        && validActiveBinding(request.resource.data)
+        && !exists(playerPath(request.resource.data.playerId))
+        && getAfter(playerPath(request.resource.data.playerId)).data.status
+          == 'active';
+      allow update, delete: if false;
+    }
+
+    match /operatorAssignments/{playerId} {
+      allow get: if hasActiveBinding() && currentPlayerId() == playerId;
+      allow list, create, update, delete: if false;
+    }
+
+    match /players/{playerId} {
+      allow get: if signedIn()
+        && exists(bindingPath(request.auth.uid))
+        && (get(bindingPath(request.auth.uid)).data.playerId == playerId
+          || isActiveOperator());
+      allow list: if isActiveOperator();
+      allow create: if signedIn()
+        && !exists(bindingPath(request.auth.uid))
+        && validActivePlayer(request.resource.data)
+        && getAfter(bindingPath(request.auth.uid)).data.playerId == playerId;
+      allow update: if validPlayerLastSeenUpdate(
+          playerId,
+          resource.data,
+          request.resource.data
+        ) || validLegacyLastSeenBackfill(
+          resource.data,
+          request.resource.data
+        );
+      allow delete: if false;
+
+      match /activeRaidAssignments/{assignmentId} {
+        // 승인 Transaction이 신청자 점유 문서 존재 여부를 확인해야 한다.
+        // AuthUid·JWT는 없고 레이드 점유 식별만 담으므로 active binding 사용자에게 get만 허용한다.
+        allow get: if hasActiveBinding();
+        allow list: if false;
+      allow create: if validInitialAssignment(
+          playerId,
+          assignmentId,
+          request.resource.data
+        ) || validJoinedAssignment(playerId, assignmentId, request.resource.data)
+        || validCompletionCancelAssignmentRestore(
+          playerId,
+          assignmentId,
+          request.resource.data
+        );
+        allow update: if validAssignmentRoleChange(
+          playerId,
+          resource.data,
+          request.resource.data
+        );
+        allow delete: if resource != null
+          && validAssignmentRemoval(playerId, resource.data);
+      }
+
+      match /events/{eventId} {
+        allow get, list: if hasActiveBinding()
+          && playerId == currentPlayerId();
+        // 일반 create를 열지 않는다. type별 상태 전이·수신자·필드만 허용.
+        allow create: if validPlayerEvent(
+          playerId,
+          eventId,
+          request.resource.data
+        );
+        allow update, delete: if false;
+      }
+
+      // 요약은 본인만 읽는다. 그룹장 승인 쓰기는 대상 요약을 읽지 않고
+      // 병합 쓰기 결과만 Rules가 판정한다.
+      match /groupMembershipState/{docId} {
+        allow get, list: if hasActiveBinding()
+          && playerId == currentPlayerId();
+        allow create: if validMembershipStateAdd(
+          playerId,
+          docId,
+          null,
+          request.resource.data
+        ) || validLeaderApprovedMembershipStateAdd(
+          playerId,
+          docId,
+          null,
+          request.resource.data
+        );
+        allow update: if validMembershipStateRemove(
+          playerId,
+          docId,
+          resource.data,
+          request.resource.data
+        ) || validMembershipStateAdd(
+          playerId,
+          docId,
+          resource.data,
+          request.resource.data
+        ) || validLeaderApprovedMembershipStateAdd(
+          playerId,
+          docId,
+          resource.data,
+          request.resource.data
+        );
+        allow delete: if false;
+      }
+
+      match /groupRelations/{groupId} {
+        allow get, list: if hasActiveBinding()
+          && playerId == currentPlayerId();
+        allow create, update: if validInitialMemberGroupRelation(
+          playerId,
+          groupId,
+          request.resource.data
+        ) || validGroupRequestRelation(
+          playerId,
+          groupId,
+          request.resource.data
+        ) || validAcceptedGroupRelation(
+          playerId,
+          groupId,
+          request.resource.data
+        ) || validJoinCodeMemberGroupRelation(
+          playerId,
+          groupId,
+          request.resource.data
+        ) || validLeaderApprovedGroupRelation(
+          playerId,
+          groupId,
+          request.resource.data
+        );
+        allow delete: if validGroupMemberLeaveRelationDelete(playerId, groupId);
+      }
+
+      match /weeklyRaidClaims/{claimId} {
+        // list는 본인만. get은 assignment와 같이 active binding이면 단건 조회 가능.
+        // 파티 전체 완료 Transaction이 멤버 Claim 존재 여부를 멱등으로 확인해야 한다.
+        allow get: if hasActiveBinding();
+        allow list: if hasActiveBinding()
+          && playerId == currentPlayerId();
+        allow create: if validManualWeeklyRaidClaimCreate(
+          playerId,
+          claimId,
+          request.resource.data
+        ) || validPartyOwnerWeeklyRaidClaimCreate(
+          playerId,
+          claimId,
+          request.resource.data
+        );
+        allow update: if validPartyOwnerWeeklyRaidClaimUpdate(
+          playerId,
+          claimId,
+          resource.data,
+          request.resource.data
+        );
+        allow delete: if validManualWeeklyRaidClaimDelete(
+          playerId,
+          claimId,
+          resource.data
+        ) || validPartyOwnerWeeklyRaidClaimDelete(
+          playerId,
+          claimId,
+          resource.data
+        );
+      }
+    }
+
+    function validManualVerificationCode(value) {
+      return value is string
+        && value.matches('^LP-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$');
+    }
+
+    function manualVerificationActiveOwnerPlayerId(identityKey, gameAccountId) {
+      let claimPath =
+        /databases/$(database)/documents/characterIdentityClaims/$(identityKey);
+      let claimAccountId = exists(claimPath)
+        ? get(claimPath).data.gameAccountId
+        : null;
+      let resolvedAccountId = claimAccountId is string && claimAccountId.size() > 0
+        ? claimAccountId
+        : (gameAccountId is string && gameAccountId.size() > 0
+          ? gameAccountId
+          : null);
+      return resolvedAccountId is string
+        && exists(/databases/$(database)/documents/gameAccounts/$(resolvedAccountId))
+        && get(/databases/$(database)/documents/gameAccounts/$(resolvedAccountId))
+          .data.status == 'active'
+        ? get(/databases/$(database)/documents/gameAccounts/$(resolvedAccountId))
+          .data.ownerPlayerId
+        : null;
+    }
+
+    function manualVerificationDisputeOwnerPlayerId(oldData) {
+      return oldData.status == 'awaitingOwnerResponse'
+        && oldData.previousOwnerPlayerId is string
+        && oldData.previousOwnerPlayerId.size() > 0
+        ? oldData.previousOwnerPlayerId
+        : manualVerificationActiveOwnerPlayerId(
+          oldData.targetIdentityKey,
+          'targetGameAccountId' in oldData ? oldData.targetGameAccountId : null
+        );
+    }
+
+    function manualVerificationRequesterAlreadyOwns(data) {
+      let owner = manualVerificationActiveOwnerPlayerId(
+        data.targetIdentityKey,
+        'targetGameAccountId' in data ? data.targetGameAccountId : null
+      );
+      return owner is string
+        && owner.size() > 0
+        && owner == data.requesterPlayerId;
+    }
+
+    function validManualVerificationCreate(data) {
+      return hasActiveBinding()
+        && data.schemaVersion == 1
+        && data.requesterPlayerId == currentPlayerId()
+        && data.targetIdentityKey is string
+        && data.targetIdentityKey.size() > 0
+        && data.localAccountId is number
+        && data.localAccountId >= 1
+        && data.localAccountLabelSnapshot is string
+        && data.proofServerName is string
+        && data.proofServerName.size() > 0
+        && data.proofCharacterName is string
+        && data.proofCharacterName.size() > 0
+        && validManualVerificationCode(data.verificationCode)
+        && data.status == 'pendingProof'
+        && data.attemptNumberForTarget is number
+        && data.attemptNumberForTarget >= 1
+        && data.totalAttemptNumberForPlayer is number
+        && data.totalAttemptNumberForPlayer >= 1
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && data.expiresAt is timestamp
+        && (!('defenseOfRequestId' in data)
+          ? !manualVerificationRequesterAlreadyOwns(data)
+          : (data.defenseOfRequestId is string
+            && data.defenseOfRequestId.size() > 0
+            && exists(/databases/$(database)/documents/manualVerificationRequests/$(data.defenseOfRequestId))
+            && get(/databases/$(database)/documents/manualVerificationRequests/$(data.defenseOfRequestId))
+              .data.status == 'awaitingOwnerResponse'
+            && get(/databases/$(database)/documents/manualVerificationRequests/$(data.defenseOfRequestId))
+              .data.previousOwnerPlayerId == currentPlayerId()
+            && request.time < get(/databases/$(database)/documents/manualVerificationRequests/$(data.defenseOfRequestId))
+              .data.ownerResponseDeadlineAt));
+    }
+
+    function manualVerificationOperatorContextUnchanged(oldData, newData) {
+      return newData.requesterPlayerId == oldData.requesterPlayerId
+        && newData.targetIdentityKey == oldData.targetIdentityKey;
+    }
+
+    function validManualVerificationOperatorReviewBody(oldData, newData) {
+      return oldData.status == 'pendingProof'
+        && manualVerificationOperatorContextUnchanged(oldData, newData)
+        && (
+          (
+            newData.status == 'cancelled'
+            && newData.reviewReason is string
+            && newData.reviewReason.size() > 0
+            && newData.reviewedAt is timestamp
+            && newData.resolvedAt is timestamp
+            && newData.diff(oldData).affectedKeys().hasOnly([
+              'status', 'reviewedByOperatorPlayerId', 'reviewedAt',
+              'reviewReason', 'resolvedAt', 'updatedAt'
+            ])
+          )
+          || (
+            newData.status == 'blocked'
+            && newData.reviewReason is string
+            && newData.reviewReason.size() > 0
+            && newData.reviewedAt is timestamp
+            && newData.resolvedAt is timestamp
+            && newData.diff(oldData).affectedKeys().hasOnly([
+              'status', 'reviewedByOperatorPlayerId', 'reviewedAt',
+              'reviewReason', 'resolvedAt', 'updatedAt'
+            ])
+          )
+          || (
+            newData.status == 'approved'
+            && newData.targetGameAccountId is string
+            && newData.targetGameAccountId.size() > 0
+            && newData.reviewedAt is timestamp
+            && newData.resolvedAt is timestamp
+            && newData.diff(oldData).affectedKeys().hasOnly([
+              'status', 'targetGameAccountId', 'reviewedByOperatorPlayerId',
+              'reviewedAt', 'resolvedAt', 'updatedAt'
+            ])
+          )
+          || validManualVerificationDefenseApprove(oldData, newData)
+        );
+    }
+
+    function validManualVerificationDisputeOpenBody(oldData, newData) {
+      return oldData.status == 'pendingProof'
+        && !('defenseOfRequestId' in oldData
+          && oldData.defenseOfRequestId is string
+          && oldData.defenseOfRequestId.size() > 0)
+        && manualVerificationOperatorContextUnchanged(oldData, newData)
+        && newData.status == 'awaitingOwnerResponse'
+        && newData.targetGameAccountId is string
+        && newData.targetGameAccountId.size() > 0
+        && newData.previousOwnerPlayerId is string
+        && newData.previousOwnerPlayerId.size() > 0
+        && newData.previousOwnerPlayerId != oldData.requesterPlayerId
+        && newData.disputeOpenedAt is timestamp
+        && newData.ownerResponseDeadlineAt is timestamp
+        && newData.reviewedAt is timestamp
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'targetGameAccountId', 'previousOwnerPlayerId',
+          'disputeOpenedAt', 'ownerResponseDeadlineAt',
+          'reviewedByOperatorPlayerId', 'reviewedAt', 'updatedAt'
+        ]);
+    }
+
+    function validManualVerificationDisputeDefendedBody(oldData, newData) {
+      return oldData.status == 'awaitingOwnerResponse'
+        && newData.status == 'defended'
+        && newData.reviewReason == 'ownerDefended'
+        && newData.reviewedAt is timestamp
+        && newData.resolvedAt is timestamp
+        && request.time < oldData.ownerResponseDeadlineAt
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'reviewedByOperatorPlayerId', 'reviewedAt',
+          'reviewReason', 'resolvedAt', 'updatedAt'
+        ]);
+    }
+
+    function manualVerificationForceOwnerPlayerId(oldData) {
+      return oldData.status == 'awaitingOwnerResponse'
+        && oldData.previousOwnerPlayerId is string
+        && oldData.previousOwnerPlayerId.size() > 0
+        ? oldData.previousOwnerPlayerId
+        : manualVerificationActiveOwnerPlayerId(
+          oldData.targetIdentityKey,
+          'targetGameAccountId' in oldData
+            && oldData.targetGameAccountId is string
+            && oldData.targetGameAccountId.size() > 0
+            ? oldData.targetGameAccountId
+            : ''
+        );
+    }
+
+    function validManualVerificationOperatorForceBody(oldData, newData) {
+      return newData.status == 'transferred'
+        && (newData.reviewReason == 'operatorForced'
+          || newData.reviewReason == 'ownerDefenseFailed')
+        && !('defenseOfRequestId' in oldData
+          && oldData.defenseOfRequestId is string
+          && oldData.defenseOfRequestId.size() > 0)
+        && (oldData.status == 'pendingProof'
+          || oldData.status == 'awaitingOwnerResponse')
+        && newData.targetGameAccountId is string
+        && newData.targetGameAccountId.size() > 0
+        && newData.reviewedAt is timestamp
+        && newData.resolvedAt is timestamp
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'targetGameAccountId', 'reviewReason',
+          'reviewedByOperatorPlayerId', 'reviewedAt', 'resolvedAt', 'updatedAt'
+        ]);
+    }
+
+    function validManualVerificationOperatorWrite(oldData, newData) {
+      return isActiveOperator()
+        && newData.reviewedByOperatorPlayerId == currentPlayerId()
+        && newData.updatedAt == request.time
+        && (
+          (newData.status != 'transferred'
+            && (
+              validManualVerificationOperatorReviewBody(oldData, newData)
+              || validManualVerificationDisputeOpenBody(oldData, newData)
+              || validManualVerificationDisputeDefendedBody(oldData, newData)
+            ))
+          || validManualVerificationOperatorForceBody(oldData, newData)
+        );
+    }
+
+    function unchangedManualVerificationIdentity(oldData, newData) {
+      return newData.schemaVersion == oldData.schemaVersion
+        && newData.requesterPlayerId == oldData.requesterPlayerId
+        && newData.targetIdentityKey == oldData.targetIdentityKey
+        && newData.localAccountId == oldData.localAccountId
+        && newData.proofServerName == oldData.proofServerName
+        && newData.proofCharacterName == oldData.proofCharacterName
+        && newData.localAccountLabelSnapshot == oldData.localAccountLabelSnapshot;
+    }
+
+    function validManualVerificationRequesterCancel(oldData, newData) {
+      return hasActiveBinding()
+        && oldData.requesterPlayerId == currentPlayerId()
+        && oldData.status == 'pendingProof'
+        && newData.status == 'cancelled'
+        && unchangedManualVerificationIdentity(oldData, newData)
+        && newData.verificationCode == oldData.verificationCode
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'resolvedAt', 'updatedAt'
+        ])
+        && newData.resolvedAt == request.time
+        && newData.updatedAt == request.time;
+    }
+
+    function validManualVerificationReissue(oldData, newData) {
+      return hasActiveBinding()
+        && oldData.requesterPlayerId == currentPlayerId()
+        && oldData.status == 'pendingProof'
+        && newData.status == 'pendingProof'
+        && unchangedManualVerificationIdentity(oldData, newData)
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'verificationCode', 'createdAt', 'expiresAt', 'updatedAt',
+          'attemptNumberForTarget', 'totalAttemptNumberForPlayer'
+        ])
+        && validManualVerificationCode(newData.verificationCode)
+        && newData.createdAt == request.time
+        && newData.updatedAt == request.time
+        && newData.expiresAt is timestamp
+        && newData.attemptNumberForTarget == oldData.attemptNumberForTarget + 1
+        && newData.totalAttemptNumberForPlayer
+          == oldData.totalAttemptNumberForPlayer + 1;
+    }
+
+    function validManualVerificationDefenseApprove(oldData, newData) {
+      return newData.status == 'approved'
+        && oldData.defenseOfRequestId is string
+        && oldData.defenseOfRequestId.size() > 0
+        && newData.targetGameAccountId is string
+        && newData.targetGameAccountId.size() > 0
+        && newData.reviewedAt is timestamp
+        && newData.resolvedAt is timestamp
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'targetGameAccountId', 'reviewedByOperatorPlayerId',
+          'reviewedAt', 'resolvedAt', 'updatedAt'
+        ]);
+    }
+
+    function validManualVerificationDisputeTransfer(oldData, newData) {
+      return hasActiveBinding()
+        && oldData.status == 'awaitingOwnerResponse'
+        && newData.status == 'transferred'
+        && request.time >= oldData.ownerResponseDeadlineAt
+        && newData.reviewReason == 'ownerResponseExpired'
+        && newData.resolvedAt == request.time
+        && newData.updatedAt == request.time
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'targetGameAccountId', 'reviewReason', 'resolvedAt', 'updatedAt'
+        ]);
+    }
+
+    function validManualVerificationBlockWrite(data) {
+      return isActiveOperator()
+        && data.schemaVersion == 1
+        && data.playerId is string
+        && data.playerId.size() > 0
+        && data.status == 'active'
+        && data.reason is string
+        && data.reason.size() > 0
+        && data.blockedByOperatorPlayerId == currentPlayerId()
+        && data.blockedAt == request.time
+        && (
+          (data.targetIdentityKey is string && data.targetIdentityKey.size() > 0)
+          || (data.targetGameAccountId is string
+            && data.targetGameAccountId.size() > 0)
+        );
+    }
+
+    function canGetManualVerificationBlock(blockId) {
+      return hasActiveBinding()
+        && (
+          !exists(/databases/$(database)/documents/manualVerificationBlocks/$(blockId))
+          || isActiveOperator()
+          || get(/databases/$(database)/documents/manualVerificationBlocks/$(blockId))
+            .data.playerId == currentPlayerId()
+        );
+    }
+
+    match /accountVerificationChallenges/{challengeId} {
+      allow read, write: if false;
+    }
+
+    match /activeAccountVerificationChallenges/{playerId} {
+      allow read, write: if false;
+    }
+
+    match /manualVerificationRequests/{requestId} {
+      allow get: if hasActiveBinding()
+        && (resource.data.requesterPlayerId == currentPlayerId()
+          || resource.data.previousOwnerPlayerId == currentPlayerId()
+          || isActiveOperator());
+      allow list: if isActiveOperator()
+        || (hasActiveBinding()
+          && (resource.data.requesterPlayerId == currentPlayerId()
+            || resource.data.previousOwnerPlayerId == currentPlayerId()));
+      allow create: if validManualVerificationCreate(request.resource.data);
+      allow update: if validManualVerificationRequesterCancel(
+          resource.data,
+          request.resource.data
+        ) || validManualVerificationReissue(
+          resource.data,
+          request.resource.data
+        ) || validManualVerificationOperatorWrite(
+          resource.data,
+          request.resource.data
+        ) || validManualVerificationDisputeTransfer(
+          resource.data,
+          request.resource.data
+        );
+      allow delete: if false;
+    }
+
+    match /manualVerificationBlocks/{blockId} {
+      allow get: if canGetManualVerificationBlock(blockId);
+      allow list: if isActiveOperator();
+      allow create: if validManualVerificationBlockWrite(request.resource.data);
+      allow update, delete: if false;
+    }
+
+    match /gameAccounts/{gameAccountId} {
+      allow read, write: if signedIn();
+    }
+
+    match /characters/{characterId} {
+      allow read, write: if signedIn();
+    }
+
+    match /characterIdentityClaims/{claimId} {
+      allow read, write: if signedIn();
+    }
+
+    match /playerGameAccounts/{ownershipId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && !request.resource.data.keys().hasAny([
+          'representativeCharacterId',
+          'representativeCharacterUpdatedAt'
+        ]);
+      allow update: if signedIn()
+        && (!changesRepresentativeCharacter(
+            resource.data,
+            request.resource.data
+          ) || validRepresentativeCharacterSeed(
+            resource.data,
+            request.resource.data
+          ) || validRepresentativeCharacterUpdate(
+            resource.data,
+            request.resource.data
+          ));
+      allow delete: if signedIn();
+    }
+
+    match /recruitments/{recruitmentId} {
+      allow get: if canGetRecruitment(recruitmentId);
+      allow list: if canReadRecruitment(resource.data);
+      allow create: if validInitialRecruitment(
+        recruitmentId,
+        request.resource.data
+      );
+      allow update: if validRecruitmentJoin(
+          recruitmentId,
+          resource.data,
+          request.resource.data
+        ) || validMembershipRevisionUpdate(
+          recruitmentId,
+          resource.data,
+          request.resource.data
+        ) || validRecruitmentMemberRemoval(
+          recruitmentId,
+          resource.data,
+          request.resource.data
+        ) || validRecurrenceChange(
+          resource.data,
+          request.resource.data
+        ) || validCycleCompletion(
+          recruitmentId,
+          resource.data,
+          request.resource.data
+        ) || validCompletionCancellation(
+          recruitmentId,
+          resource.data,
+          request.resource.data
+        ) || validCycleAdvance(
+          recruitmentId,
+          resource.data,
+          request.resource.data
+        ) || validRecruitmentDisband(
+          resource.data,
+          request.resource.data
+        );
+      allow delete: if false;
+
+      match /members/{playerId} {
+        allow get, list: if canReadPrivateRecruitmentData(recruitmentId)
+          || canReadPublicRecruitmentMembers(recruitmentId)
+          || (hasActiveBinding() && playerId == currentPlayerId());
+        allow create: if validInitialLeaderMembership(
+          recruitmentId,
+          playerId,
+          request.resource.data
+        ) || validJoinedMembership(
+          recruitmentId,
+          playerId,
+          request.resource.data
+        );
+        allow update: if validMemberCharacterChange(
+            recruitmentId,
+            playerId,
+            resource.data,
+            request.resource.data
+          ) || validApprovalPermissionChange(
+            recruitmentId,
+            playerId,
+            resource.data,
+            request.resource.data
+          );
+        allow delete: if validMemberRemoval(
+          recruitmentId,
+          playerId,
+          resource.data
+        );
+      }
+
+      match /applications/{playerId} {
+        allow get: if canGetRecruitmentApplication(recruitmentId, playerId);
+        allow list: if canReadPrivateRecruitmentData(recruitmentId)
+          || (hasActiveBinding()
+            && resource.data.applicantPlayerId == currentPlayerId());
+        allow create: if validPendingApplication(
+          recruitmentId,
+          playerId,
+          request.resource.data
+        );
+        allow update: if validApplicantWithdrawal(
+            playerId,
+            resource.data,
+            request.resource.data
+          ) || validApplicationDecision(
+            recruitmentId,
+            resource.data,
+            request.resource.data
+          ) || validApplicationReapply(
+            recruitmentId,
+            playerId,
+            resource.data,
+            request.resource.data
+          ) || validApplicationWeeklyCompletion(
+            playerId,
+            resource.data,
+            request.resource.data
+          );
+        allow delete: if false;
+
+        match /votes/{voterPlayerId} {
+          allow get, list: if canReadPrivateRecruitmentData(recruitmentId);
+          allow create, update, delete: if false;
+        }
+      }
+
+      match /cycles/{cycleKey} {
+        allow get, list: if canReadPrivateRecruitmentData(recruitmentId);
+        allow create: if validInitialCycle(
+          recruitmentId,
+          cycleKey,
+          request.resource.data
+        );
+        allow update: if validCycleCancellation(
+            recruitmentId,
+            resource.data,
+            request.resource.data
+          ) || validCycleRecompletion(
+            recruitmentId,
+            resource.data,
+            request.resource.data
+          ) || validCancelledCycleEnd(
+            recruitmentId,
+            resource.data,
+            request.resource.data
+          );
+        allow delete: if false;
+      }
+    }
+
+    match /groups/{groupId} {
+      allow get: if canGetGroup(groupId);
+      // list는 공개 검색·최신 목록만 허용한다. query에 status == 'active'가 없으면 거절된다.
+      allow list: if hasActiveBinding() && resource.data.status == 'active';
+      allow create: if validInitialGroup(groupId, request.resource.data);
+      // 공개 필드 수정은 계속 열지 않는다. 초대·신청·코드 명령의 활동 시각,
+      // 인원 증가, 초대코드 플래그·표시 정책만 허용한다.
+      // 그룹장 승인·코드 플래그 검증을 먼저 두어 그룹원 확인 문서를
+      // 추가로 읽지 않게 한다.
+      // 일반 멤버 탈퇴는 join·승인 경로보다 먼저 판정한다.
+      allow update: if validGroupMemberLeaveUpdate(
+        groupId,
+        resource.data,
+        request.resource.data
+      ) || validGroupLeaderApproveUpdate(
+        resource.data,
+        request.resource.data
+      ) || validGroupJoinCodeFlagUpdate(
+        resource.data,
+        request.resource.data
+      ) || validGroupJoinCodeVisibilityUpdate(
+        resource.data,
+        request.resource.data
+      ) || validGroupJoinCommandUpdate(
+        groupId,
+        resource.data,
+        request.resource.data
+      );
+      allow delete: if false;
+
+      match /members/{playerId} {
+        allow get, list: if isCurrentGroupMember(groupId);
+        allow create: if validInitialGroupMember(
+          groupId,
+          playerId,
+          request.resource.data
+        ) || validInvitedGroupMember(
+          groupId,
+          playerId,
+          request.resource.data
+        ) || validApprovedGroupMember(
+          groupId,
+          playerId,
+          request.resource.data
+        ) || validJoinCodeGroupMember(
+          groupId,
+          playerId,
+          request.resource.data
+        );
+        allow update: if validGroupMemberSelfSnapshotRefresh(
+          groupId,
+          playerId,
+          resource.data,
+          request.resource.data
+        );
+        allow delete: if validGroupMemberSelfLeaveDelete(
+          groupId,
+          playerId,
+          resource.data
+        );
+      }
+
+      // Unit 4는 초대·신청 처리에 더해 코드 가입이 pending 요청을
+      // accepted로 종료하는 경로를 연다. 신청자 취소·탈퇴는 계속 닫는다.
+      match /joinRelations/{playerId} {
+        allow get: if hasActiveBinding()
+          && (playerId == currentPlayerId() || isCurrentGroupMember(groupId));
+        allow list: if isCurrentGroupMember(groupId);
+        allow create: if validGroupInvitationCreate(
+          groupId,
+          playerId,
+          null,
+          request.resource.data
+        ) || validGroupApplicationCreate(
+          groupId,
+          playerId,
+          null,
+          request.resource.data
+        );
+        allow update: if validGroupInvitationCreate(
+          groupId,
+          playerId,
+          resource.data,
+          request.resource.data
+        ) || validGroupApplicationCreate(
+          groupId,
+          playerId,
+          resource.data,
+          request.resource.data
+        ) || validGroupJoinRelationDecision(
+          groupId,
+          playerId,
+          resource.data,
+          request.resource.data
+        ) || validGroupApplicationDecision(
+          groupId,
+          playerId,
+          resource.data,
+          request.resource.data
+        ) || validJoinCodeRelationAccept(
+          groupId,
+          playerId,
+          resource.data,
+          request.resource.data
+        );
+        allow delete: if false;
+      }
+
+      match /applicantStats/{playerId} {
+        allow get: if hasActiveBinding()
+          && (playerId == currentPlayerId() || isCurrentGroupMember(groupId));
+        allow list: if isCurrentGroupLeader(groupId);
+        allow create: if validGroupApplicantStatsWrite(
+          groupId,
+          playerId,
+          null,
+          request.resource.data
+        );
+        allow update: if validGroupApplicantStatsWrite(
+          groupId,
+          playerId,
+          resource.data,
+          request.resource.data
+        );
+        allow delete: if false;
+      }
+
+      // 계약 §6.2·§10. 금지 목록은 현재 그룹장만 읽고 만들고 지운다.
+      // 금지된 당사자는 자기 문서의 존재 여부도 조회하지 못한다.
+      // 해제는 삭제 한 건이며 이전 relation을 되돌리지 않는다.
+      match /blockedPlayers/{playerId} {
+        allow get, list: if isCurrentGroupLeader(groupId);
+        allow create: if validGroupBlockCreate(
+          groupId,
+          playerId,
+          request.resource.data
+        );
+        allow update: if false;
+        allow delete: if isActiveGroupLeader(groupId);
+      }
+    }
+
+    // 계약 §7·§10. 정확한 코드 단건 get만 허용하고 list는 금지한다.
+    // 생성·삭제는 그룹 hasActiveJoinCode 전이와 같은 Transaction에서만 성공한다.
+    match /groupJoinCodes/{code} {
+      allow get: if hasActiveBinding() && validJoinCodeId(code);
+      allow list: if false;
+      allow create: if validJoinCodeCreate(code, request.resource.data);
+      allow update: if false;
+      allow delete: if validJoinCodeDelete(code);
+    }
+
+    // 컬렉션 그룹 쿼리는 중첩 경로 규칙이 적용되지 않아 재귀 와일드카드가 필요하다.
+    // 신청 중 화면이 본인 신청만 회차 단위로 조회하는 용도로만 연다.
+    match /{path=**}/applications/{applicantPlayerId} {
+      allow list: if hasActiveBinding()
+        && resource.data.applicantPlayerId == currentPlayerId();
+    }
+  }
+}

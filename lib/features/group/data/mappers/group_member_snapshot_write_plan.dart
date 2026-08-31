@@ -6,12 +6,14 @@ abstract final class GroupMemberSnapshotWritePlan {
     required String className,
     double? itemLevel,
     double? combatPower,
+    double? storedItemLevel,
+    double? storedCombatPower,
     required Object serverTimestamp,
   }) => {
     ...GroupMemberWriteFields.displaySnapshots(
       className: className,
-      itemLevel: itemLevel,
-      combatPower: combatPower,
+      itemLevel: itemLevel ?? storedItemLevel,
+      combatPower: combatPower ?? storedCombatPower,
     ),
     'updatedAt': serverTimestamp,
   };

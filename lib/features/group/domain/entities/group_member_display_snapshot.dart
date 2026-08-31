@@ -16,7 +16,7 @@ class GroupMemberDisplaySnapshot {
     double? storedCombatPower,
   }) {
     return storedClassName == className &&
-        storedItemLevel == itemLevel &&
-        storedCombatPower == combatPower;
+        (itemLevel == null || storedItemLevel == itemLevel) &&
+        (combatPower == null || storedCombatPower == combatPower);
   }
 }
