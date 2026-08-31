@@ -139,6 +139,7 @@ void main() {
     expect(find.text('4막 노말 모집'), findsOneWidget);
     expect(find.textContaining('이슈아이 · 기상술사'), findsWidgets);
     expect(find.text('파티 구성'), findsOneWidget);
+    expect(find.text('이번주 레이드완료'), findsNothing);
     expect(
       find.text('2/8명 · 모집 중 (딜러 1/6, 서포터 1/2)'),
       findsOneWidget,
@@ -888,6 +889,69 @@ void main() {
     expect(repository.requestedRecruitmentIds, ['room-a', 'room-b']);
   });
 
+  testWidgets('1회성 완료 후 해산 전이면 파티 구성 옆에 이번주 레이드완료를 표시한다', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(
+            status: 'completed',
+            currentCycleStatus: 'completed',
+          ),
+          isFromCache: false,
+        ),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(items: [], isFromCache: false),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('파티 구성'), findsOneWidget);
+    expect(find.byKey(const ValueKey('thisWeekRaidCompleteLabel')), findsOneWidget);
+    final completeLabel = tester.widget<Text>(
+      find.byKey(const ValueKey('thisWeekRaidCompleteLabel')),
+    );
+    final recruitmentTitle = tester.widget<Text>(find.text('4막 노말 모집'));
+    final theme = Theme.of(tester.element(find.text('4막 노말 모집')));
+    expect(completeLabel.style?.fontSize, recruitmentTitle.style?.fontSize);
+    expect(completeLabel.style?.color, theme.colorScheme.error);
+  });
+
+  testWidgets('반복방 다음주 대기에서도 파티 구성 옆에 이번주 레이드완료를 표시한다', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(
+            continueTogether: true,
+            currentCycleStatus: 'completed',
+          ),
+          isFromCache: false,
+        ),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(items: [], isFromCache: false),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('thisWeekRaidCompleteLabel')), findsOneWidget);
+    final label = tester.widget<Text>(
+      find.byKey(const ValueKey('thisWeekRaidCompleteLabel')),
+    );
+    final recruitmentTitle = tester.widget<Text>(find.text('4막 노말 모집'));
+    expect(label.style?.fontSize, recruitmentTitle.style?.fontSize);
+    expect(
+      label.style?.color,
+      Theme.of(tester.element(find.text('4막 노말 모집'))).colorScheme.error,
+    );
+  });
+
   group('파티 구성판 반응형 그룹 배치', () {
     void setSurface(WidgetTester tester, Size size) {
       tester.view.physicalSize = size;
@@ -1193,6 +1257,7 @@ void main() {
       final partyLabels = find.textContaining('파티');
       // titleMedium '파티 구성' 다음에 titleSmall '1파티', '2파티'
       expect(find.text('파티 구성'), findsOneWidget);
+      expect(find.text('이번주 레이드완료'), findsNothing);
       final partyOne = find.textContaining('1파티 · 딜러');
       final partyTwo = find.textContaining('2파티 · 딜러');
       expect(partyOne, findsOneWidget);
@@ -1217,6 +1282,9 @@ PublicRecruitmentSummary _summary({
   int supportsPerParty = 1,
   int dealerCount = 1,
   int supportCount = 1,
+  String status = 'active',
+  String currentCycleStatus = 'active',
+  bool continueTogether = false,
 }) => PublicRecruitmentSummary(
   id: id,
   title: title,
@@ -1248,6 +1316,9 @@ PublicRecruitmentSummary _summary({
   updatedAt: DateTime.utc(2026, 8, 20),
   currentCycleKey: '2026-08-19',
   approvalMode: approvalMode,
+  status: status,
+  currentCycleStatus: currentCycleStatus,
+  continueTogether: continueTogether,
 );
 
 PartyApplicationSummary _pendingApplication() => PartyApplicationSummary(

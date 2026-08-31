@@ -546,6 +546,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                 membersPerParty: summary.membersPerParty,
                 supportsPerParty: summary.supportsPerParty,
                 maxMemberCount: summary.maxMemberCount,
+                showThisWeekRaidComplete: summary.showsThisWeekRaidCompleteMark,
                 loading: _membersLoading,
                 failure: _membersFailure,
                 isFromCache: _membersFromCache,
@@ -1290,6 +1291,7 @@ class _PartyCompositionSection extends StatelessWidget {
     required this.loading,
     required this.failure,
     required this.isFromCache,
+    this.showThisWeekRaidComplete = false,
   });
 
   /// 파티 그룹 2열 후보 breakpoint. 기기 종류가 아니라 가용 폭만 본다.
@@ -1300,6 +1302,7 @@ class _PartyCompositionSection extends StatelessWidget {
   final int membersPerParty;
   final int supportsPerParty;
   final int maxMemberCount;
+  final bool showThisWeekRaidComplete;
   final bool loading;
   final PartyReadFailureType? failure;
   final bool isFromCache;
@@ -1317,7 +1320,25 @@ class _PartyCompositionSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('파티 구성', style: theme.textTheme.titleMedium),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text('파티 구성', style: theme.textTheme.titleMedium),
+              if (showThisWeekRaidComplete) ...[
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    '이번주 레이드완료',
+                    key: const ValueKey('thisWeekRaidCompleteLabel'),
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
           const SizedBox(height: AppSpacing.xs),
           if (isFromCache)
             Padding(

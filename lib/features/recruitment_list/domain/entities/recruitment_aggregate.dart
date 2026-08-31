@@ -167,4 +167,7 @@ class PublicRecruitmentSummary {
   bool get isCycleCompleted => currentCycleStatus == 'completed';
   bool get isOneShotCompleted =>
       status == 'completed' && currentCycleStatus == 'completed';
+  /// 이번 회차 레이드를 끝냈고 아직 해산되지 않은 상태(1회성 해산 대기·반복방 다음주 대기).
+  bool get showsThisWeekRaidCompleteMark =>
+      isCycleCompleted && status != 'disbanded';
 }

@@ -62,6 +62,27 @@ class RecruitmentLeaderCandidate {
 
   RecruitmentLeaderRoleOption? optionFor(PartyRole role) =>
       roles.where((option) => option.role == role).firstOrNull;
+
+  List<PartyRole> get selectableRoles => roles
+      .where((option) => option.canSelect)
+      .map((option) => option.role)
+      .toList(growable: false);
+
+  PartyRole resolveSelectedRole({
+    PartyRole? current,
+    bool Function(RecruitmentLeaderRoleOption option)? usable,
+  }) {
+    bool matches(RecruitmentLeaderRoleOption option) =>
+        usable?.call(option) ?? option.canSelect;
+    final usableRoles = roles.where(matches);
+    if (current != null && usableRoles.any((option) => option.role == current)) {
+      return current;
+    }
+    return usableRoles.firstOrNull?.role ??
+        selectableRoles.firstOrNull ??
+        current ??
+        PartyRole.dealer;
+  }
 }
 
 class RecruitmentLeaderCandidateQuery {
