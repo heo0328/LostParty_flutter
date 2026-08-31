@@ -23,12 +23,12 @@ abstract final class GroupMemberDisplayBuilder {
       itemLevel:
           member.itemLevelSnapshot ??
           (isActiveCharacter
-              ? _parseNumeric(characterData?['itemAvgLevel'])
+              ? _parseNumeric(characterData['itemAvgLevel'])
               : null),
       combatPower:
           member.combatPowerSnapshot ??
           (isActiveCharacter
-              ? _parseNumeric(characterData?['combatPower'])
+              ? _parseNumeric(characterData['combatPower'])
               : null),
     );
   }

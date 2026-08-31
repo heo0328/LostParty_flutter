@@ -25,6 +25,7 @@ abstract interface class GroupJoinCommandRepository {
   Future<GroupJoinCommandResult> leave(GroupLeaveCommand command);
 
   /// 본인 membership 표시 Snapshot만 갱신한다. 다른 필드는 바꾸지 않는다.
+  /// 실패하면 예외를 전달하며, UI는 저장된 목록과 갱신 실패 안내를 함께 표시한다.
   Future<void> refreshMyDisplaySnapshot(
     GroupMemberDisplaySnapshotRefreshCommand command,
   );

@@ -171,7 +171,7 @@ class FirestoreGroupJoinCodeCommandRepository
     final code = GroupJoinCode.tryParse(command.code)!;
     final localDisplayByCharacterId = _localMemberDisplayLookup == null
         ? const <String, GroupMemberDisplaySnapshot>{}
-        : await _localMemberDisplayLookup!.loadByServerCharacterId();
+        : await _localMemberDisplayLookup.loadByServerCharacterId();
     return _run((transaction, playerId) async {
       final codeRef = _codeRef(code.value);
       final codeSnap = await transaction.get(codeRef);
