@@ -27,10 +27,11 @@
 - Task-086 기존 소유자 방어·자동 이전·강제 인증 핵심 구현과 Rules 배포·실기기 검증을 완료했다. BUG-008은 선택 필드 `defenseOfRequestId` 부재 Rules 평가 오류를 수정해 종료했다. 취소·일반 승인·분쟁 개시·운영자 거절·방어 승인·방어 실패·강제 인증과 양쪽 레이드 권한 반영을 확인했다. 실제 24시간 무응답 자동 이전만 미검증이다. 기능 커밋은 `8c649ad`다.
 - 반복 레이드 진행 목록에 `금주 진행`·`다음주 대기` 상태 배지를 추가한 커밋은 `05a441d`다.
 - 그룹 제품 흐름은 [`../product/GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md), Task-11 기술 계약은 [`../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md)에 정리했다. membership·활성 신청·누적 횟수·신청 금지는 모두 Player 단위다.
-- Task-11 구현은 브랜치 `cursor/task-11-group-membership` 커밋 `b673fdb`에 있다. 4번째 탭을 그룹으로 바꾸고 설정은 내 계정 톱니로 이동했다. 생성·검색·기본 상세·초대·신청·승인/금지·초대코드 생성·폐기·공개 토글·코드 즉시 가입을 포함한다. 자동 검증(그룹 테스트·analyze)은 통과했다.
-- Task-11a(멤버 목록·일반 탈퇴·표시 Snapshot)는 같은 브랜치에 코드 구현됐다. membership `combatPowerSnapshot` 등은 가입·생성 시 저장하고, 그룹 상세 진입 시 본인 membership만 self-refresh한다. 타 그룹원 표시는 서버 Snapshot을 읽는다(로컬-only UI 보강 없음).
-- **Firestore Rules 복잡도 차단(2026-08-31):** 전체 `firestore.rules` (~159KB) deploy가 503으로 실패한다. 함수 본문을 약 48%로 스텁한 프로브는 deploy 성공. Task-11a·`main` 병합보다 Rules 축소·재배포가 선행한다. [`TASK-11-FIRESTORE-RULES-COMPLEXITY.md`](TASK-11-FIRESTORE-RULES-COMPLEXITY.md)
-- 실기기(2026-08-31, Task-11): 초대코드 생성·폐기·멤버 공개 토글, 코드 즉시 가입·인원 2명, 생성·마지막 활동 시각 확인. Task-11a(멤버 UI·탈퇴·전투력 Snapshot)는 Rules 정상 배포 후 재검증.
+- Task-11 구현은 `main`에 병합됐다(기능 커밋 `b673fdb`). 4번째 탭을 그룹으로 바꾸고 설정은 내 계정 톱니로 이동했다. 생성·검색·기본 상세·초대·신청·승인/금지·초대코드 생성·폐기·공개 토글·코드 즉시 가입을 포함한다.
+- Task-11a(멤버 목록·일반 탈퇴·표시 Snapshot)도 `main`에 병합됐다(커밋 `3df755b`). membership `combatPowerSnapshot` 등은 가입·생성 시 저장하고, 그룹 상세 진입 시 본인 membership만 self-refresh한다. 타 그룹원 표시는 서버 Snapshot을 읽는다.
+- **1차 마무리(2026-08-31):** 사용자는 Task-11·11a 1차를 종료하고 **전체 기획·설계를 재검토**한다. 새 지시 전 추가 구현은 중단한다.
+- **열린 부채 — Firestore Rules 복잡도:** 전체 `firestore.rules` (~159KB) deploy가 503으로 실패한다. 절반 축소 프로브만 deploy 성공. 재설계에 반드시 반영. [`TASK-11-FIRESTORE-RULES-COMPLEXITY.md`](TASK-11-FIRESTORE-RULES-COMPLEXITY.md)
+- 실기기(2026-08-31, Task-11): 초대코드·즉시 가입·인원·시각 확인. Task-11a(멤버 UI·탈퇴·전투력 Snapshot)는 Rules 정상 배포 후 재검증.
 
 ---
 
