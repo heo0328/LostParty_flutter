@@ -492,6 +492,31 @@ void main() {
     expect(blocked, contains('allow delete: if isActiveGroupLeader(groupId);'));
   });
 
+  test('탈퇴 대상은 native list 차집합으로 찾고 빈 결과 접근을 막는다', () {
+    expect(rules, contains('let removedIds = previousIds.removeAll(newIds);'));
+    expect(rules, contains("return removedIds.size() == 1 ? removedIds[0] : '';"));
+    expect(rules, isNot(contains('removedActiveGroupIdChunk')));
+  });
+
+  test('표시 갱신은 필수 필드를 유지하고 네 필드 외 변경을 차단한다', () {
+    final start = rules.indexOf('    function validGroupMemberSelfSnapshotRefresh(');
+    final end = rules.indexOf('    function reusableGroupJoinRelation(', start);
+    final refresh = rules.substring(start, end);
+    expect(refresh, contains('oldData.keys().hasAll(['));
+    for (final field in [
+      'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
+      'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
+      'displayCharacterNameSnapshot', 'revision', 'createdAt',
+    ]) {
+      expect(refresh, contains("'$field'"));
+    }
+    expect(refresh, contains('newData.diff(oldData).affectedKeys().hasOnly(['));
+    expect(refresh, contains('playerId == currentPlayerId()'));
+    expect(refresh, contains('oldData.groupId == groupId'));
+    expect(refresh, contains('validGroupMemberOptionalNumberFields(newData)'));
+    expect(refresh, isNot(contains('newData.role == oldData.role')));
+  });
+
   test('일반 멤버 탈퇴 Rules helper와 삭제 경로를 고정한다', () {
     expect(
       rules,
