@@ -92,9 +92,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
             (candidate) => candidate.isRepresentative && candidate.canSelect,
           )
           .firstOrNull;
-      final role =
-          leader?.roles.where((role) => role.canSelect).firstOrNull?.role ??
-          PartyRole.dealer;
+      final role = leader?.resolveSelectedRole() ?? PartyRole.dealer;
       final eligible = _eligibilityPolicy.eligibleRaids(
         catalog: catalog,
         itemLevel: leader?.optionFor(role)?.itemLevel,
@@ -149,14 +147,10 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
               raidOptions: _eligibleRaidOptions,
               selectedRaid: _raid!,
               selectedDifficulty: _difficulty!,
-              beforeFields: [_leaderSelector(), const SizedBox(height: 16)],
-              selectedRole: _role,
-              roleOptions:
-                  _leader?.roles
-                      .where((option) => option.canSelect)
-                      .map((option) => option.role)
-                      .toList(growable: false) ??
-                  const [],
+              beforeFields: [
+                _leaderSelector(),
+                const SizedBox(height: recruitmentFormFieldGap),
+              ],
               raidErrorText: _leader != null && _eligibleRaidOptions.isEmpty
                   ? '선택 캐릭터가 입장 가능한 레이드가 없습니다.'
                   : null,
@@ -169,7 +163,6 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
               },
               onRaidChanged: _changeRaid,
               onDifficultyChanged: _changeDifficulty,
-              onRoleChanged: _changeRole,
               onCombatPowerChanged: (value) {
                 _draft = _draft.copyWith(
                   minCombatPower: RecruitmentFormDraft.normalizeMinCombatPower(
@@ -295,20 +288,14 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     setState(() {
       _candidates = candidates;
       _leader = selected;
-      if (selected?.optionFor(_role)?.canSelect != true) {
-        _role =
-            selected?.roles
-                .where((option) => option.canSelect)
-                .firstOrNull
-                ?.role ??
-            _role;
-      }
+      _role = selected?.resolveSelectedRole(current: _role) ?? _role;
     });
   }
 
   Widget _leaderSelector() {
     final leader = _leader;
-    return InkWell(
+    final selectableRoles = leader?.selectableRoles ?? const <PartyRole>[];
+    final characterField = InkWell(
       key: const ValueKey('leaderCandidateSelector'),
       onTap: _showLeaderCandidates,
       borderRadius: BorderRadius.circular(12),
@@ -327,10 +314,44 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
           leader == null
               ? '캐릭터 선택'
               : '${leader.accountLabel} · ${leader.characterId} (${leader.className})',
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+    if (selectableRoles.length < 2) return characterField;
+    return RecruitmentFormPairRow(
+      startFlex: 7,
+      endFlex: 3,
+      wrapBelow: 300,
+      start: characterField,
+      end: Semantics(
+        label: '파티장 역할',
+        child: DropdownButtonFormField<PartyRole>(
+          key: ValueKey('leaderRole-${_role.name}'),
+          isExpanded: true,
+          initialValue: selectableRoles.contains(_role) ? _role : null,
+          decoration: const InputDecoration(
+            // 캐릭터 칸과 같은 플로팅 라벨 높이를 맞춘다. 화면에는 보이지 않는다.
+            labelText: '\u200B',
+            border: OutlineInputBorder(),
+          ),
+          items: [
+            for (final role in selectableRoles)
+              DropdownMenuItem(
+                value: role,
+                child: Text(_roleLabel(role), overflow: TextOverflow.ellipsis),
+              ),
+          ],
+          onChanged: (value) {
+            if (value != null) _changeRole(value);
+          },
         ),
       ),
     );
   }
+
+  static String _roleLabel(PartyRole role) =>
+      role == PartyRole.support ? '서포터' : '딜러';
 
   Future<void> _showLeaderCandidates() async {
     final selected = await showModalBottomSheet<RecruitmentLeaderCandidate>(
@@ -356,13 +377,11 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       ),
     );
     if (selected == null || !mounted) return;
-    final role = selected.roles
-        .where((option) => _hasEligibleRaid(option.itemLevel))
-        .first
-        .role;
     setState(() {
       _leader = selected;
-      _role = role;
+      _role = selected.resolveSelectedRole(
+        usable: (option) => _hasEligibleRaid(option.itemLevel),
+      );
     });
     await _refreshRaidSelectionForLeader();
   }

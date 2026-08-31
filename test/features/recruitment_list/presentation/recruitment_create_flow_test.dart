@@ -101,6 +101,7 @@ void main() {
 
     expect(find.text('파티원 승인'), findsNothing);
     expect(find.text('정족수 승인'), findsNothing);
+    expect(find.text('파티장 역할'), findsNothing);
     await tester.ensureVisible(find.text('파티장 승인'));
     await tester.tap(find.text('파티장 승인'));
     await tester.pumpAndSettle();

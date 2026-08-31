@@ -42,6 +42,74 @@ void main() {
     expect(representative.canSelect, isTrue);
   });
 
+  test('선호 포지션이 선택 가능하면 먼저 고르고 아니면 기존 유효 역할을 유지한다', () {
+    const preferredSupport = RecruitmentLeaderCandidate(
+      characterId: '바드',
+      localCharacterId: 1,
+      accountId: 1,
+      accountLabel: '계정',
+      isMainAccount: true,
+      isRepresentative: true,
+      serverName: '루페온',
+      className: '바드',
+      roles: [
+        RecruitmentLeaderRoleOption(
+          role: PartyRole.support,
+          itemLevel: 1750,
+          combatPower: 1,
+          rejectionReasons: [],
+        ),
+        RecruitmentLeaderRoleOption(
+          role: PartyRole.dealer,
+          itemLevel: 1750,
+          combatPower: 1,
+          rejectionReasons: [],
+        ),
+      ],
+      participationStatuses: [],
+      rejectionReasons: [],
+    );
+    expect(preferredSupport.resolveSelectedRole(), PartyRole.support);
+    expect(
+      preferredSupport.resolveSelectedRole(current: PartyRole.dealer),
+      PartyRole.dealer,
+    );
+
+    const preferredBlocked = RecruitmentLeaderCandidate(
+      characterId: '바드',
+      localCharacterId: 1,
+      accountId: 1,
+      accountLabel: '계정',
+      isMainAccount: true,
+      isRepresentative: true,
+      serverName: '루페온',
+      className: '바드',
+      roles: [
+        RecruitmentLeaderRoleOption(
+          role: PartyRole.support,
+          itemLevel: 1700,
+          combatPower: 1,
+          rejectionReasons: ['입장 레벨 미달'],
+        ),
+        RecruitmentLeaderRoleOption(
+          role: PartyRole.dealer,
+          itemLevel: 1750,
+          combatPower: 1,
+          rejectionReasons: [],
+        ),
+      ],
+      participationStatuses: [],
+      rejectionReasons: [],
+    );
+    expect(preferredBlocked.resolveSelectedRole(), PartyRole.dealer);
+    expect(
+      preferredBlocked.resolveSelectedRole(
+        usable: (option) => option.role == PartyRole.dealer,
+      ),
+      PartyRole.dealer,
+    );
+  });
+
   test('역할별 입장 레벨을 판정하고 저장 역할이 없으면 차단한다', () async {
     final service = RecruitmentLeaderCandidateService(
       accountRepository: _AccountRepository(includeSubBuild: false),
