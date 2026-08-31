@@ -1,5 +1,14 @@
 # DEV LOG (2026)
 
+## 2026-08-31 그룹 전투력 수정 전 보존·작업 준비
+
+- 사용자 최신 확인을 기준으로 레이드 모집·탈퇴·완료 체크, 그룹 생성·초대·탈퇴·초대코드 생성·가입, Rules 배포를 정상 상태로 정정했다. 과거 503 기록은 보존하되 현재 차단으로 취급하지 않는다.
+- git status/diff/staged diff/stash 및 이력을 확인했다. 미커밋 앱 코드는 없었고 미추적 Rules 사본 2개만 있었다. 전투력 membership Snapshot·self-refresh는 3df755b에 포함되며 이후 75bedb9까지 lib 변경은 없다.
+- 사본 2개의 SHA-256은 동일: 46F2B03DE4DA51FA57068CBC00429C4E15948EFCCBF335746B5FBE9ECB1A672C. 원본 파일명·내용을 유지해 ed02b31에 커밋하고 codex/rules-complexity-reduction을 origin에 푸시했다.
+- 수정 준비 브랜치 codex/group-combat-power-display를 ed02b31에서 생성했다. main ea2019a는 수정·병합하지 않는다. 기능 코드·운영 Rules·Firebase 배포 설정 변경 없이 NEXT_WORK를 전투력 단일 작업으로 교체했다.
+- 그룹원 목록과 상세 캐릭터 목록의 데이터 경로 불일치, self-refresh 오류 은폐를 조사 대상으로 기록했다. 실제 누락 원인은 아직 확정하지 않았다.
+- 이번은 백업·문서 준비 작업이므로 Flutter analyze/test 및 실기기·배포는 실행하지 않는다. 문서 검토와 git diff --check, 최종 원격 커밋 일치 확인으로 검증한다.
+
 ## 📌 1. 프로젝트 초기 설계
 
 - Flutter 기반 앱 생성
