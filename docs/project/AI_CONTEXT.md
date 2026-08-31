@@ -1,5 +1,12 @@
 # AI CONTEXT (2026)
 
+## 최신 작업 상태 — Rules 복잡도 개선 계획 (2026-08-31)
+
+- 기준 코드 `25f88ff`, 전용 브랜치 `codex/rules-complexity-reduction`. Rules 소스 143,799 bytes, 표적 테스트 33개 통과이나 이후 사용자 지시의 전체 Rules 배포도 컴파일 검사 503으로 실패했다.
+- 현재는 추가 코드 변경 전에 시작점·단계별 작업 계획을 문서 커밋으로 고정한다. 다음은 R0 검증 환경 확인 → R1 그룹 가입 검증 공통화이며 나머지는 순차 후속이다.
+- 전체/최소 Rules 모두 로컬 Emulator 로딩 오류가 있어 실제 Rules 검증은 미완료다. 정책·UX를 보존하고 스키마 변경은 별도 설계 검토한다. 과거의 전체 재설계 대기 기록보다 NEXT_WORK의 현재 실행이 우선한다.
+- 상세: [`TASK-11-FIRESTORE-RULES-COMPLEXITY.md`](TASK-11-FIRESTORE-RULES-COMPLEXITY.md).
+
 ## 프로젝트
 - LOSTPARTY
 - Flutter 기반 로스트아크 레이드 모집 앱
