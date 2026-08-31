@@ -42,6 +42,7 @@ import '../../features/group/domain/repositories/group_create_repository.dart';
 import '../../features/group/domain/repositories/group_join_code_command_repository.dart';
 import '../../features/group/domain/repositories/group_join_command_repository.dart';
 import '../../features/group/domain/repositories/group_read_repository.dart';
+import '../../features/group/domain/services/group_local_member_display_lookup.dart';
 import '../../features/group/presentation/pages/group_applications_page.dart';
 import '../../features/group/presentation/pages/group_create_page.dart';
 import '../../features/group/presentation/pages/group_detail_page.dart';
@@ -133,18 +134,8 @@ GoRouter createAppRouter({
         firestore: FirebaseFirestore.instance,
       );
   GroupCreateRepository? groupCreateRepositoryCache = groupCreateRepository;
-  GroupCreateRepository groupCreateRepositoryForRoute() =>
-      groupCreateRepositoryCache ??= FirestoreGroupCreateRepository(
-        firestore: FirebaseFirestore.instance,
-        firebaseAuth: FirebaseAuth.instance,
-      );
   GroupJoinCommandRepository? groupJoinCommandRepositoryCache =
       groupJoinCommandRepository;
-  GroupJoinCommandRepository groupJoinCommandRepositoryForRoute() =>
-      groupJoinCommandRepositoryCache ??= FirestoreGroupJoinCommandRepository(
-        firestore: FirebaseFirestore.instance,
-        firebaseAuth: FirebaseAuth.instance,
-      );
   GroupApplicationCommandRepository? groupApplicationCommandRepositoryCache =
       groupApplicationCommandRepository;
   GroupApplicationCommandRepository
@@ -156,18 +147,7 @@ GoRouter createAppRouter({
           );
   GroupJoinCodeCommandRepository? groupJoinCodeCommandRepositoryCache =
       groupJoinCodeCommandRepository;
-  GroupJoinCodeCommandRepository groupJoinCodeCommandRepositoryForRoute() =>
-      groupJoinCodeCommandRepositoryCache ??=
-          FirestoreGroupJoinCodeCommandRepository(
-            firestore: FirebaseFirestore.instance,
-            firebaseAuth: FirebaseAuth.instance,
-          );
   GroupJoinCodeManageViewModel? groupJoinCodeManageViewModelCache;
-  GroupJoinCodeManageViewModel groupJoinCodeManageViewModelForRoute() =>
-      groupJoinCodeManageViewModelCache ??= GroupJoinCodeManageViewModel(
-        readRepository: groupReadRepositoryForRoute(),
-        commandRepository: groupJoinCodeCommandRepositoryForRoute(),
-      );
   GroupApplicationsViewModel groupApplicationsViewModelForRoute() =>
       GroupApplicationsViewModel(
         readRepository: groupReadRepositoryForRoute(),
@@ -225,6 +205,32 @@ GoRouter createAppRouter({
           firebaseAuth: FirebaseAuth.instance,
         ),
   );
+  GroupLocalMemberDisplayLookup groupLocalMemberDisplayLookupForRoute() =>
+      GroupLocalMemberDisplayLookup(accountRepository: accountRepository);
+  GroupCreateRepository groupCreateRepositoryForRoute() =>
+      groupCreateRepositoryCache ??= FirestoreGroupCreateRepository(
+        firestore: FirebaseFirestore.instance,
+        firebaseAuth: FirebaseAuth.instance,
+        localMemberDisplayLookup: groupLocalMemberDisplayLookupForRoute(),
+      );
+  GroupJoinCommandRepository groupJoinCommandRepositoryForRoute() =>
+      groupJoinCommandRepositoryCache ??= FirestoreGroupJoinCommandRepository(
+        firestore: FirebaseFirestore.instance,
+        firebaseAuth: FirebaseAuth.instance,
+        localMemberDisplayLookup: groupLocalMemberDisplayLookupForRoute(),
+      );
+  GroupJoinCodeCommandRepository groupJoinCodeCommandRepositoryForRoute() =>
+      groupJoinCodeCommandRepositoryCache ??=
+          FirestoreGroupJoinCodeCommandRepository(
+            firestore: FirebaseFirestore.instance,
+            firebaseAuth: FirebaseAuth.instance,
+            localMemberDisplayLookup: groupLocalMemberDisplayLookupForRoute(),
+          );
+  GroupJoinCodeManageViewModel groupJoinCodeManageViewModelForRoute() =>
+      groupJoinCodeManageViewModelCache ??= GroupJoinCodeManageViewModel(
+        readRepository: groupReadRepositoryForRoute(),
+        commandRepository: groupJoinCodeCommandRepositoryForRoute(),
+      );
   final representativeSyncGatewayOrDefault =
       representativeCharacterSyncGateway ??
       FirestoreRepresentativeCharacterSyncGateway(
@@ -526,6 +532,10 @@ GoRouter createAppRouter({
                         readRepository: groupReadRepositoryForRoute(),
                         commandRepository:
                             groupJoinCommandRepositoryForRoute(),
+                        characterSearchRepository:
+                            FirestoreGroupCharacterSearchRepository(
+                              firestore: FirebaseFirestore.instance,
+                            ),
                       ),
                       applicationsViewModel:
                           groupApplicationsViewModelForRoute(),

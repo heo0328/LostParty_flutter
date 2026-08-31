@@ -1,5 +1,21 @@
 # NEXT WORK
 
+## 현재 실행 작업
+
+**Task-11-R: Firestore Rules 복잡도 축소와 정상 배포**
+
+- [`TASK-11-FIRESTORE-RULES-COMPLEXITY.md`](TASK-11-FIRESTORE-RULES-COMPLEXITY.md)를 기준으로 한다.
+- Task-11a 실기기 종료·`main` 병합·Task-12 착수는 **전체 Rules deploy 성공 후**에만 진행한다.
+- 사용자: 백업 원본 Rules 재배포 → 503 재현 시 Rules 리팩터링을 Cursor/Codex가 이어감.
+
+## 후속 작업 큐 (순서)
+
+1. Task-11a 실기기 (멤버 목록·전투력 Snapshot·탈퇴·재가입)
+2. Codex 재검토·`main` 병합
+3. Task-12 그룹 전용 모집
+
+---
+
 ## 문서의 역할
 
 이 문서는 Codex와 Cursor가 번갈아 작업하더라도 같은 범위와 판단 기준으로 이어갈 수 있게 하는 단일 실행 지시서다.
@@ -53,14 +69,51 @@
 
 | 구분 | 상태 | 비고 |
 | --- | --- | --- |
-| 통합 기준 | **`main`** (Task-11 미병합) | Task-086·그룹 제품·계약까지 `main`. 구현은 작업 브랜치 |
-| 작업 브랜치 | **`cursor/task-11-group-membership`** | 기능 커밋 `b673fdb` |
-| 완료 기능 | Task-083~086, Task-11 생성·가입 구현 | 초대코드 실기기 일부 확인. 탈퇴·멤버 목록 UI는 Task-11 제외 |
-| Firestore Rules | Task-11 규칙 **브랜치 포함**, 실기기 초대코드 경로 동작 확인 | 인덱스·Rules 배포 완료 여부는 사용자 환경 기준. Emulator 동시성 미실시 |
-| 현재 문서 상태 | Task-11 구현·부분 실기기 결과 반영 | 계약·제품 흐름·본 문서 |
-| 다음 실행 | **그룹 멤버 목록 UI·일반 멤버 탈퇴** | 실기기 연속 검증을 위해 사용자 요청. 이후 Codex 재검토·`main` 병합 |
+| 통합 기준 | **`main`** (Task-11·11a 미병합) | Task-086·그룹 제품·계약까지 `main` |
+| 작업 브랜치 | **`cursor/task-11-group-membership`** | Task-11 `b673fdb` + Task-11a 미커밋 구현 |
+| **최우선 차단** | **Firestore Rules 복잡도** | 전체 deploy 503. 절반 축소 프로브는 deploy 성공. [`TASK-11-FIRESTORE-RULES-COMPLEXITY.md`](TASK-11-FIRESTORE-RULES-COMPLEXITY.md) |
+| 완료 기능 | Task-083~086, Task-11 생성·가입, **Task-11a 코드 구현** | 멤버 목록·탈퇴·표시 Snapshot·전투력 표기. **Rules 정상 배포 전** |
+| Firestore Rules | Task-11+11a 규칙 **로컬 반영**, **전체 deploy 실패(503)** | 2026-08-31 저녁 절반 프로브가 운영에 올라갔을 수 있음 → **원본 재배포 필요** |
+| 현재 문서 상태 | Task-11a·Rules 복잡도 차단 반영 | 본 문서·`DEV_LOG`·`AI_CONTEXT` |
+| 다음 실행 | **① Rules 축소·배포 성공 → ② Task-11a 실기기 → ③ Codex 재검토·`main` 병합** | Task-12는 membership·Rules 안정화 후 |
 
-### Task-11 구현·실기기 요약 (2026-08-31)
+### Rules 복잡도 차단 (2026-08-31) — **다음에 할 일**
+
+```text
+현재 Task: Firestore Rules 복잡도 축소 (Task-11a·병합보다 선행)
+현재 단계: 원인 확인 완료 / 리팩터·재배포 대기
+원인: 단일 firestore.rules (~159KB) compile·upload 한도 → 전체 deploy 503, ~48% 축소 프로브는 성공
+운영: 절반 프로브 Rules가 배포됐을 수 있음 → 사용자 백업 원본으로 즉시 재배포 권장
+다음 구현: helper 단순화·OR 체인 정리·removedActiveGroupId chunk 축소 후 전체 Rules deploy 반복 확인
+완료 전 금지: Task-11a 실기기 종료·main 병합을 Rules deploy 성공 없이 진행하지 않음
+상세: docs/project/TASK-11-FIRESTORE-RULES-COMPLEXITY.md
+```
+
+### Task-11a 구현·실기기 요약 (2026-08-31)
+
+```text
+현재 Task: Task-11a 그룹 멤버 목록·일반 멤버 탈퇴·표시 Snapshot
+현재 단계: 코드·표적 테스트 완료 / Rules deploy·실기기 대기 (Rules 차단)
+브랜치: cursor/task-11-group-membership (Task-11 b673fdb 위 미커밋)
+완료한 범위:
+  - 그룹원 목록 UI (그룹장 우선·joinSequence, 카드: 직업·IL·전투력)
+  - 멤버 탭 → 인증 캐릭터 bottom sheet
+  - 일반 멤버 탈퇴 명령·WritePlan·Repository·Rules(로컬)
+  - membership 표시 Snapshot (displayClassName/itemLevel/combatPowerSnapshot) 가입·생성 경로
+  - 본인 membership Snapshot self-refresh (그룹 상세 진입 시 로컬→서버, 타 그룹원이 읽음)
+  - 전투력: 서버 membership Snapshot 표시 (로컬-only UI 보강 제거)
+  - 표적 테스트: 그룹 ~150건+ 통과 (구현 시점)
+실기기 (Task-11 이전): 생성·코드 가입·탈퇴·초대코드 일부 OK
+실기기 (Task-11a): Rules deploy 후 재검증 필요 — 멤버 전투력·타인 Snapshot·탈퇴·재가입
+남은 작업:
+  1. Rules 축소·전체 deploy 성공
+  2. Task-11a 실기기 (멤버 리스트·전투력·탈퇴·재가입)
+  3. Codex 재검토·main 병합
+  4. Task-12 그룹 전용 모집
+금지·제외 재확인: 그룹장 이전·해산·추방·그룹 레이드·알림·공지
+```
+
+### Task-11 구현·실기기 요약 (2026-08-31, b673fdb)
 
 ```text
 현재 Task: Task-11 그룹 생성·가입
@@ -107,9 +160,10 @@
 | 10a | **운영자 권한·마지막 접속·대표 동기화** | **완료 (Task-084·084b)** | 운영자 목록, 대표 보강, 사용자 변경 5분 |
 | 10b | **수동 인증 요청과 운영자 1차 판정** | **Task-085 완료** | Task-086 브랜치에 포함 |
 | 10c | **기존 소유자 24시간 방어와 자동 이전** | **Task-086 완료** | 실제 24시간 경과 검증은 사용자 결정으로 보류 |
-| 11 | 그룹 생성·가입 | **구현 완료** (`b673fdb`), 부분 실기기 | membership·초대·신청·코드 가입. 탈퇴·멤버 목록 UI 제외 |
-| 11a | 그룹 멤버 목록·일반 멤버 탈퇴 | Task-11 구현 브랜치, 실기기 연속 검증 | 상세 멤버 카드·캐릭터 목록·일반 멤버 탈퇴 |
-| 12 | 그룹 전용 모집 | 그룹 membership 안정화·탈퇴 경로 | 생성 드롭다운과 그룹 Rules |
+| 11 | 그룹 생성·가입 | **구현 완료** (`b673fdb`), 부분 실기기 | membership·초대·신청·코드 가입 |
+| **11-R** | **Firestore Rules 복잡도 축소·재배포** | **Task-11a·병합 선행 필수** | 전체 deploy 503. [`TASK-11-FIRESTORE-RULES-COMPLEXITY.md`](TASK-11-FIRESTORE-RULES-COMPLEXITY.md) |
+| 11a | 그룹 멤버 목록·일반 멤버 탈퇴·표시 Snapshot | **코드 완료**, Rules deploy·실기기 대기 | 멤버 카드·탈퇴·combatPower Snapshot·self-refresh |
+| 12 | 그룹 전용 모집 | **11-R deploy + 11a 실기기 + `main` 병합 후** | 생성 드롭다운과 그룹 Rules |
 | 13 | 레이드 모집·현황 공통 필터 | 그룹 공개 범위 확정 | 공통 UX, Firestore/Drift 조회 분리 |
 | 14 | 빈 슬롯 역할·직업·시너지 조건 | 슬롯 명령 안정화 | 가입·승인 조건 서버 검증 |
 | 15 | 조건 필터 확장 | 슬롯 조건 구현 | 역할·직업·시너지 탐색 |

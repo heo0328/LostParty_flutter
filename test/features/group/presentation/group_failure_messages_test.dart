@@ -41,6 +41,24 @@ void main() {
       );
     });
 
+    test('그룹장 탈퇴는 이전·해산 안내를 보여 준다', () {
+      expect(
+        groupJoinFailureMessage(GroupJoinFailure.leaderCannotLeave),
+        contains('그룹장'),
+      );
+    });
+
+    test('탈퇴 permission-denied는 가입 문구가 아닌 탈퇴 안내를 보여 준다', () {
+      expect(
+        groupLeaveFailureMessage(GroupJoinFailure.permissionDenied),
+        contains('탈퇴'),
+      );
+      expect(
+        groupLeaveFailureMessage(GroupJoinFailure.permissionDenied),
+        isNot(contains('가입할 수 없습니다')),
+      );
+    });
+
     test('초대코드 전용 메시지는 공통 매핑을 재사용한다', () {
       expect(
         groupJoinCodeFailureMessage(GroupJoinFailure.joinCodeMissing),

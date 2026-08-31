@@ -99,6 +99,15 @@
       ]
     },
     {
+      "collectionGroup": "characters",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "ownerPlayerId", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "manualVerificationRequests",
       "queryScope": "COLLECTION",
       "fields": [

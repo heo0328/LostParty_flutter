@@ -3,6 +3,7 @@ import '../../domain/entities/group_join_relation.dart';
 import '../../domain/entities/group_member.dart';
 import '../../domain/entities/group_relation.dart';
 import '../../domain/entities/group_request_character.dart';
+import 'group_member_write_fields.dart';
 
 /// 계약 §7·§8.7 초대코드 명령의 쓰기 계획.
 ///
@@ -132,6 +133,7 @@ class GroupJoinCodeWritePlan {
         'joinedBy': GroupJoinedBy.joinCode.name,
         'displayCharacterIdSnapshot': character.characterId,
         'displayCharacterNameSnapshot': character.characterName,
+        ...GroupMemberWriteFields.fromCharacter(character),
         'revision': 1,
         'createdAt': serverTimestamp,
         'updatedAt': serverTimestamp,

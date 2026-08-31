@@ -206,11 +206,11 @@ service cloud.firestore {
       let group = getAfter(groupPath(groupId)).data;
       return hasActiveBinding()
         && playerId == currentPlayerId()
-        && data.keys().hasOnly([
-          'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
-          'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
-          'displayCharacterNameSnapshot', 'revision', 'createdAt', 'updatedAt'
-        ])
+        && validGroupMemberDocumentKeys(data)
+        && validGroupMemberSnapshotsFromCharacter(
+          data,
+          data.displayCharacterIdSnapshot
+        )
         && data.schemaVersion == 1
         && data.groupId == groupId
         && data.playerId == playerId
@@ -237,10 +237,6 @@ service cloud.firestore {
     function validMembershipStateAdd(playerId, docId, oldData, newData) {
       let previousIds = oldData == null ? [] : oldData.activeGroupIds;
       let previousRevision = oldData == null ? 0 : oldData.revision;
-      let addedGroupId = newData.activeGroupIds[
-        newData.activeGroupIds.size() - 1
-      ];
-      let member = getAfter(groupMemberPath(addedGroupId, playerId)).data;
       return hasActiveBinding()
         && playerId == currentPlayerId()
         && docId == 'current'
@@ -251,6 +247,26 @@ service cloud.firestore {
         && newData.schemaVersion == 1
         && newData.playerId == playerId
         && newData.activeGroupIds is list
+        && newData.activeGroupIds.size() == previousIds.size() + 1
+        && newData.activeGroupIds.size() > 0
+        && validMembershipStateAddMember(
+          playerId,
+          newData.activeGroupIds[newData.activeGroupIds.size() - 1],
+          newData,
+          previousIds,
+          previousRevision
+        );
+    }
+
+    function validMembershipStateAddMember(
+      playerId,
+      addedGroupId,
+      newData,
+      previousIds,
+      previousRevision
+    ) {
+      let member = getAfter(groupMemberPath(addedGroupId, playerId)).data;
+      return newData.activeGroupIds is list
         && newData.activeGroupIds.size() == previousIds.size() + 1
         && newData.activeGroupIds.size() <= 50
         && newData.activeGroupIds.toSet().size()
@@ -306,6 +322,75 @@ service cloud.firestore {
         'combatPowerSnapshot', 'applicationAttempt', 'revision', 'createdAt',
         'expiresAt', 'decidedAt', 'updatedAt'
       ]);
+    }
+
+    function validGroupMemberDocumentKeys(data) {
+      return data.keys().hasOnly([
+        'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
+        'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
+        'displayCharacterNameSnapshot', 'displayClassNameSnapshot',
+        'itemLevelSnapshot', 'combatPowerSnapshot',
+        'revision', 'createdAt', 'updatedAt'
+      ]);
+    }
+
+    function validGroupMemberOptionalNumberFields(data) {
+      return (data.itemLevelSnapshot == null || data.itemLevelSnapshot is number)
+        && (data.combatPowerSnapshot == null
+          || data.combatPowerSnapshot is number);
+    }
+
+    function validGroupMemberSnapshotsFromRelation(data, relation) {
+      return data.displayClassNameSnapshot == relation.characterClassNameSnapshot
+        && data.itemLevelSnapshot == relation.itemLevelSnapshot
+        && data.combatPowerSnapshot == relation.combatPowerSnapshot
+        && validGroupMemberOptionalNumberFields(data);
+    }
+
+    function validGroupMemberSnapshotsFromCharacter(data, characterId) {
+      let character = get(characterPath(characterId)).data;
+      // 표시 Snapshot은 Transaction 시점 클라이언트 값을 저장한다.
+      // Firestore Character에는 combatPower가 없을 수 있으므로 class·형식만 검증한다.
+      return data.displayClassNameSnapshot == character.characterClassName
+        && validGroupMemberOptionalNumberFields(data);
+    }
+
+    // 본인 membership 표시 Snapshot만 갱신한다. display Character는 바꿀 수 없다.
+    function validGroupMemberSelfSnapshotRefresh(
+      groupId,
+      playerId,
+      oldData,
+      newData
+    ) {
+      let characterId = oldData.displayCharacterIdSnapshot;
+      let character = get(characterPath(characterId)).data;
+      return isCurrentPlayerActive()
+        && playerId == currentPlayerId()
+        && exists(groupMemberPath(groupId, playerId))
+        && oldData.playerId == playerId
+        && oldData.groupId == groupId
+        && newData.schemaVersion == oldData.schemaVersion
+        && newData.groupId == oldData.groupId
+        && newData.playerId == oldData.playerId
+        && newData.role == oldData.role
+        && newData.joinedAt == oldData.joinedAt
+        && newData.joinSequence == oldData.joinSequence
+        && newData.joinedBy == oldData.joinedBy
+        && newData.displayCharacterIdSnapshot
+          == oldData.displayCharacterIdSnapshot
+        && newData.displayCharacterNameSnapshot
+          == oldData.displayCharacterNameSnapshot
+        && newData.revision == oldData.revision
+        && newData.createdAt == oldData.createdAt
+        && newData.displayClassNameSnapshot == character.characterClassName
+        && validGroupMemberOptionalNumberFields(newData)
+        && newData.updatedAt == request.time
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'displayClassNameSnapshot',
+          'itemLevelSnapshot',
+          'combatPowerSnapshot',
+          'updatedAt'
+        ]);
     }
 
     // 같은 groupId + playerId에 유효 pending 관계가 있으면 종류가 달라도
@@ -408,11 +493,8 @@ service cloud.firestore {
       let state = getAfter(groupMembershipStatePath(playerId)).data;
       return isCurrentPlayerActive()
         && playerId == currentPlayerId()
-        && data.keys().hasOnly([
-          'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
-          'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
-          'displayCharacterNameSnapshot', 'revision', 'createdAt', 'updatedAt'
-        ])
+        && validGroupMemberDocumentKeys(data)
+        && validGroupMemberSnapshotsFromRelation(data, relation)
         && data.schemaVersion == 1
         && data.groupId == groupId
         && data.playerId == playerId
@@ -445,15 +527,222 @@ service cloud.firestore {
     }
 
     function validGroupMemberJoinUpdate(groupId, oldData, newData) {
-      let member = getAfter(groupMemberPath(groupId, currentPlayerId())).data;
-      return newData.diff(oldData).affectedKeys()
+      let memberPath = groupMemberPath(groupId, currentPlayerId());
+      return existsAfter(memberPath)
+        && newData.diff(oldData).affectedKeys()
           .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
         && newData.memberCount == oldData.memberCount + 1
         && newData.memberCount <= 50
         && newData.revision == oldData.revision + 1
         && newData.lastActivityAt == request.time
         && newData.updatedAt == request.time
-        && member.joinSequence == newData.memberCount;
+        && getAfter(memberPath).data.joinSequence == newData.memberCount;
+    }
+
+    function removedActiveGroupId(previousIds, newIds) {
+      let from0 = removedActiveGroupIdChunk0(previousIds, newIds);
+      let from10 = removedActiveGroupIdChunk10(previousIds, newIds);
+      let from20 = removedActiveGroupIdChunk20(previousIds, newIds);
+      let from30 = removedActiveGroupIdChunk30(previousIds, newIds);
+      let from40 = removedActiveGroupIdChunk40(previousIds, newIds);
+      return from0 != '' ? from0
+        : from10 != '' ? from10
+        : from20 != '' ? from20
+        : from30 != '' ? from30
+        : from40 != '' ? from40
+        : '';
+    }
+
+    function removedActiveGroupIdChunk0(previousIds, newIds) {
+      return
+        (previousIds.size() > 0 && !(previousIds[0] in newIds.toSet()))
+          ? previousIds[0]
+        : (previousIds.size() > 1 && (previousIds[0] in newIds.toSet()) && !(previousIds[1] in newIds.toSet()))
+          ? previousIds[1]
+        : (previousIds.size() > 2 && (previousIds[0] in newIds.toSet()) && (previousIds[1] in newIds.toSet()) && !(previousIds[2] in newIds.toSet()))
+          ? previousIds[2]
+        : (previousIds.size() > 3 && (previousIds[0] in newIds.toSet()) && (previousIds[1] in newIds.toSet()) && (previousIds[2] in newIds.toSet()) && !(previousIds[3] in newIds.toSet()))
+          ? previousIds[3]
+        : (previousIds.size() > 4 && (previousIds[0] in newIds.toSet()) && (previousIds[1] in newIds.toSet()) && (previousIds[2] in newIds.toSet()) && (previousIds[3] in newIds.toSet()) && !(previousIds[4] in newIds.toSet()))
+          ? previousIds[4]
+        : (previousIds.size() > 5 && (previousIds[0] in newIds.toSet()) && (previousIds[1] in newIds.toSet()) && (previousIds[2] in newIds.toSet()) && (previousIds[3] in newIds.toSet()) && (previousIds[4] in newIds.toSet()) && !(previousIds[5] in newIds.toSet()))
+          ? previousIds[5]
+        : (previousIds.size() > 6 && (previousIds[0] in newIds.toSet()) && (previousIds[1] in newIds.toSet()) && (previousIds[2] in newIds.toSet()) && (previousIds[3] in newIds.toSet()) && (previousIds[4] in newIds.toSet()) && (previousIds[5] in newIds.toSet()) && !(previousIds[6] in newIds.toSet()))
+          ? previousIds[6]
+        : (previousIds.size() > 7 && (previousIds[0] in newIds.toSet()) && (previousIds[1] in newIds.toSet()) && (previousIds[2] in newIds.toSet()) && (previousIds[3] in newIds.toSet()) && (previousIds[4] in newIds.toSet()) && (previousIds[5] in newIds.toSet()) && (previousIds[6] in newIds.toSet()) && !(previousIds[7] in newIds.toSet()))
+          ? previousIds[7]
+        : (previousIds.size() > 8 && (previousIds[0] in newIds.toSet()) && (previousIds[1] in newIds.toSet()) && (previousIds[2] in newIds.toSet()) && (previousIds[3] in newIds.toSet()) && (previousIds[4] in newIds.toSet()) && (previousIds[5] in newIds.toSet()) && (previousIds[6] in newIds.toSet()) && (previousIds[7] in newIds.toSet()) && !(previousIds[8] in newIds.toSet()))
+          ? previousIds[8]
+        : (previousIds.size() > 9 && (previousIds[0] in newIds.toSet()) && (previousIds[1] in newIds.toSet()) && (previousIds[2] in newIds.toSet()) && (previousIds[3] in newIds.toSet()) && (previousIds[4] in newIds.toSet()) && (previousIds[5] in newIds.toSet()) && (previousIds[6] in newIds.toSet()) && (previousIds[7] in newIds.toSet()) && (previousIds[8] in newIds.toSet()) && !(previousIds[9] in newIds.toSet()))
+          ? previousIds[9]
+        : '';
+    }
+
+    function removedActiveGroupIdChunk10(previousIds, newIds) {
+      return
+        (previousIds.size() > 10 && !(previousIds[10] in newIds.toSet()))
+          ? previousIds[10]
+        : (previousIds.size() > 11 && (previousIds[10] in newIds.toSet()) && !(previousIds[11] in newIds.toSet()))
+          ? previousIds[11]
+        : (previousIds.size() > 12 && (previousIds[10] in newIds.toSet()) && (previousIds[11] in newIds.toSet()) && !(previousIds[12] in newIds.toSet()))
+          ? previousIds[12]
+        : (previousIds.size() > 13 && (previousIds[10] in newIds.toSet()) && (previousIds[11] in newIds.toSet()) && (previousIds[12] in newIds.toSet()) && !(previousIds[13] in newIds.toSet()))
+          ? previousIds[13]
+        : (previousIds.size() > 14 && (previousIds[10] in newIds.toSet()) && (previousIds[11] in newIds.toSet()) && (previousIds[12] in newIds.toSet()) && (previousIds[13] in newIds.toSet()) && !(previousIds[14] in newIds.toSet()))
+          ? previousIds[14]
+        : (previousIds.size() > 15 && (previousIds[10] in newIds.toSet()) && (previousIds[11] in newIds.toSet()) && (previousIds[12] in newIds.toSet()) && (previousIds[13] in newIds.toSet()) && (previousIds[14] in newIds.toSet()) && !(previousIds[15] in newIds.toSet()))
+          ? previousIds[15]
+        : (previousIds.size() > 16 && (previousIds[10] in newIds.toSet()) && (previousIds[11] in newIds.toSet()) && (previousIds[12] in newIds.toSet()) && (previousIds[13] in newIds.toSet()) && (previousIds[14] in newIds.toSet()) && (previousIds[15] in newIds.toSet()) && !(previousIds[16] in newIds.toSet()))
+          ? previousIds[16]
+        : (previousIds.size() > 17 && (previousIds[10] in newIds.toSet()) && (previousIds[11] in newIds.toSet()) && (previousIds[12] in newIds.toSet()) && (previousIds[13] in newIds.toSet()) && (previousIds[14] in newIds.toSet()) && (previousIds[15] in newIds.toSet()) && (previousIds[16] in newIds.toSet()) && !(previousIds[17] in newIds.toSet()))
+          ? previousIds[17]
+        : (previousIds.size() > 18 && (previousIds[10] in newIds.toSet()) && (previousIds[11] in newIds.toSet()) && (previousIds[12] in newIds.toSet()) && (previousIds[13] in newIds.toSet()) && (previousIds[14] in newIds.toSet()) && (previousIds[15] in newIds.toSet()) && (previousIds[16] in newIds.toSet()) && (previousIds[17] in newIds.toSet()) && !(previousIds[18] in newIds.toSet()))
+          ? previousIds[18]
+        : (previousIds.size() > 19 && (previousIds[10] in newIds.toSet()) && (previousIds[11] in newIds.toSet()) && (previousIds[12] in newIds.toSet()) && (previousIds[13] in newIds.toSet()) && (previousIds[14] in newIds.toSet()) && (previousIds[15] in newIds.toSet()) && (previousIds[16] in newIds.toSet()) && (previousIds[17] in newIds.toSet()) && (previousIds[18] in newIds.toSet()) && !(previousIds[19] in newIds.toSet()))
+          ? previousIds[19]
+        : '';
+    }
+
+    function removedActiveGroupIdChunk20(previousIds, newIds) {
+      return
+        (previousIds.size() > 20 && !(previousIds[20] in newIds.toSet()))
+          ? previousIds[20]
+        : (previousIds.size() > 21 && (previousIds[20] in newIds.toSet()) && !(previousIds[21] in newIds.toSet()))
+          ? previousIds[21]
+        : (previousIds.size() > 22 && (previousIds[20] in newIds.toSet()) && (previousIds[21] in newIds.toSet()) && !(previousIds[22] in newIds.toSet()))
+          ? previousIds[22]
+        : (previousIds.size() > 23 && (previousIds[20] in newIds.toSet()) && (previousIds[21] in newIds.toSet()) && (previousIds[22] in newIds.toSet()) && !(previousIds[23] in newIds.toSet()))
+          ? previousIds[23]
+        : (previousIds.size() > 24 && (previousIds[20] in newIds.toSet()) && (previousIds[21] in newIds.toSet()) && (previousIds[22] in newIds.toSet()) && (previousIds[23] in newIds.toSet()) && !(previousIds[24] in newIds.toSet()))
+          ? previousIds[24]
+        : (previousIds.size() > 25 && (previousIds[20] in newIds.toSet()) && (previousIds[21] in newIds.toSet()) && (previousIds[22] in newIds.toSet()) && (previousIds[23] in newIds.toSet()) && (previousIds[24] in newIds.toSet()) && !(previousIds[25] in newIds.toSet()))
+          ? previousIds[25]
+        : (previousIds.size() > 26 && (previousIds[20] in newIds.toSet()) && (previousIds[21] in newIds.toSet()) && (previousIds[22] in newIds.toSet()) && (previousIds[23] in newIds.toSet()) && (previousIds[24] in newIds.toSet()) && (previousIds[25] in newIds.toSet()) && !(previousIds[26] in newIds.toSet()))
+          ? previousIds[26]
+        : (previousIds.size() > 27 && (previousIds[20] in newIds.toSet()) && (previousIds[21] in newIds.toSet()) && (previousIds[22] in newIds.toSet()) && (previousIds[23] in newIds.toSet()) && (previousIds[24] in newIds.toSet()) && (previousIds[25] in newIds.toSet()) && (previousIds[26] in newIds.toSet()) && !(previousIds[27] in newIds.toSet()))
+          ? previousIds[27]
+        : (previousIds.size() > 28 && (previousIds[20] in newIds.toSet()) && (previousIds[21] in newIds.toSet()) && (previousIds[22] in newIds.toSet()) && (previousIds[23] in newIds.toSet()) && (previousIds[24] in newIds.toSet()) && (previousIds[25] in newIds.toSet()) && (previousIds[26] in newIds.toSet()) && (previousIds[27] in newIds.toSet()) && !(previousIds[28] in newIds.toSet()))
+          ? previousIds[28]
+        : (previousIds.size() > 29 && (previousIds[20] in newIds.toSet()) && (previousIds[21] in newIds.toSet()) && (previousIds[22] in newIds.toSet()) && (previousIds[23] in newIds.toSet()) && (previousIds[24] in newIds.toSet()) && (previousIds[25] in newIds.toSet()) && (previousIds[26] in newIds.toSet()) && (previousIds[27] in newIds.toSet()) && (previousIds[28] in newIds.toSet()) && !(previousIds[29] in newIds.toSet()))
+          ? previousIds[29]
+        : '';
+    }
+
+    function removedActiveGroupIdChunk30(previousIds, newIds) {
+      return
+        (previousIds.size() > 30 && !(previousIds[30] in newIds.toSet()))
+          ? previousIds[30]
+        : (previousIds.size() > 31 && (previousIds[30] in newIds.toSet()) && !(previousIds[31] in newIds.toSet()))
+          ? previousIds[31]
+        : (previousIds.size() > 32 && (previousIds[30] in newIds.toSet()) && (previousIds[31] in newIds.toSet()) && !(previousIds[32] in newIds.toSet()))
+          ? previousIds[32]
+        : (previousIds.size() > 33 && (previousIds[30] in newIds.toSet()) && (previousIds[31] in newIds.toSet()) && (previousIds[32] in newIds.toSet()) && !(previousIds[33] in newIds.toSet()))
+          ? previousIds[33]
+        : (previousIds.size() > 34 && (previousIds[30] in newIds.toSet()) && (previousIds[31] in newIds.toSet()) && (previousIds[32] in newIds.toSet()) && (previousIds[33] in newIds.toSet()) && !(previousIds[34] in newIds.toSet()))
+          ? previousIds[34]
+        : (previousIds.size() > 35 && (previousIds[30] in newIds.toSet()) && (previousIds[31] in newIds.toSet()) && (previousIds[32] in newIds.toSet()) && (previousIds[33] in newIds.toSet()) && (previousIds[34] in newIds.toSet()) && !(previousIds[35] in newIds.toSet()))
+          ? previousIds[35]
+        : (previousIds.size() > 36 && (previousIds[30] in newIds.toSet()) && (previousIds[31] in newIds.toSet()) && (previousIds[32] in newIds.toSet()) && (previousIds[33] in newIds.toSet()) && (previousIds[34] in newIds.toSet()) && (previousIds[35] in newIds.toSet()) && !(previousIds[36] in newIds.toSet()))
+          ? previousIds[36]
+        : (previousIds.size() > 37 && (previousIds[30] in newIds.toSet()) && (previousIds[31] in newIds.toSet()) && (previousIds[32] in newIds.toSet()) && (previousIds[33] in newIds.toSet()) && (previousIds[34] in newIds.toSet()) && (previousIds[35] in newIds.toSet()) && (previousIds[36] in newIds.toSet()) && !(previousIds[37] in newIds.toSet()))
+          ? previousIds[37]
+        : (previousIds.size() > 38 && (previousIds[30] in newIds.toSet()) && (previousIds[31] in newIds.toSet()) && (previousIds[32] in newIds.toSet()) && (previousIds[33] in newIds.toSet()) && (previousIds[34] in newIds.toSet()) && (previousIds[35] in newIds.toSet()) && (previousIds[36] in newIds.toSet()) && (previousIds[37] in newIds.toSet()) && !(previousIds[38] in newIds.toSet()))
+          ? previousIds[38]
+        : (previousIds.size() > 39 && (previousIds[30] in newIds.toSet()) && (previousIds[31] in newIds.toSet()) && (previousIds[32] in newIds.toSet()) && (previousIds[33] in newIds.toSet()) && (previousIds[34] in newIds.toSet()) && (previousIds[35] in newIds.toSet()) && (previousIds[36] in newIds.toSet()) && (previousIds[37] in newIds.toSet()) && (previousIds[38] in newIds.toSet()) && !(previousIds[39] in newIds.toSet()))
+          ? previousIds[39]
+        : '';
+    }
+
+    function removedActiveGroupIdChunk40(previousIds, newIds) {
+      return
+        (previousIds.size() > 40 && !(previousIds[40] in newIds.toSet()))
+          ? previousIds[40]
+        : (previousIds.size() > 41 && (previousIds[40] in newIds.toSet()) && !(previousIds[41] in newIds.toSet()))
+          ? previousIds[41]
+        : (previousIds.size() > 42 && (previousIds[40] in newIds.toSet()) && (previousIds[41] in newIds.toSet()) && !(previousIds[42] in newIds.toSet()))
+          ? previousIds[42]
+        : (previousIds.size() > 43 && (previousIds[40] in newIds.toSet()) && (previousIds[41] in newIds.toSet()) && (previousIds[42] in newIds.toSet()) && !(previousIds[43] in newIds.toSet()))
+          ? previousIds[43]
+        : (previousIds.size() > 44 && (previousIds[40] in newIds.toSet()) && (previousIds[41] in newIds.toSet()) && (previousIds[42] in newIds.toSet()) && (previousIds[43] in newIds.toSet()) && !(previousIds[44] in newIds.toSet()))
+          ? previousIds[44]
+        : (previousIds.size() > 45 && (previousIds[40] in newIds.toSet()) && (previousIds[41] in newIds.toSet()) && (previousIds[42] in newIds.toSet()) && (previousIds[43] in newIds.toSet()) && (previousIds[44] in newIds.toSet()) && !(previousIds[45] in newIds.toSet()))
+          ? previousIds[45]
+        : (previousIds.size() > 46 && (previousIds[40] in newIds.toSet()) && (previousIds[41] in newIds.toSet()) && (previousIds[42] in newIds.toSet()) && (previousIds[43] in newIds.toSet()) && (previousIds[44] in newIds.toSet()) && (previousIds[45] in newIds.toSet()) && !(previousIds[46] in newIds.toSet()))
+          ? previousIds[46]
+        : (previousIds.size() > 47 && (previousIds[40] in newIds.toSet()) && (previousIds[41] in newIds.toSet()) && (previousIds[42] in newIds.toSet()) && (previousIds[43] in newIds.toSet()) && (previousIds[44] in newIds.toSet()) && (previousIds[45] in newIds.toSet()) && (previousIds[46] in newIds.toSet()) && !(previousIds[47] in newIds.toSet()))
+          ? previousIds[47]
+        : (previousIds.size() > 48 && (previousIds[40] in newIds.toSet()) && (previousIds[41] in newIds.toSet()) && (previousIds[42] in newIds.toSet()) && (previousIds[43] in newIds.toSet()) && (previousIds[44] in newIds.toSet()) && (previousIds[45] in newIds.toSet()) && (previousIds[46] in newIds.toSet()) && (previousIds[47] in newIds.toSet()) && !(previousIds[48] in newIds.toSet()))
+          ? previousIds[48]
+        : (previousIds.size() > 49 && (previousIds[40] in newIds.toSet()) && (previousIds[41] in newIds.toSet()) && (previousIds[42] in newIds.toSet()) && (previousIds[43] in newIds.toSet()) && (previousIds[44] in newIds.toSet()) && (previousIds[45] in newIds.toSet()) && (previousIds[46] in newIds.toSet()) && (previousIds[47] in newIds.toSet()) && (previousIds[48] in newIds.toSet()) && !(previousIds[49] in newIds.toSet()))
+          ? previousIds[49]
+        : '';
+    }
+
+
+    function validGroupMemberSelfLeaveDelete(groupId, playerId, data) {
+      let group = getAfter(groupPath(groupId)).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.role == 'member'
+        && data.playerId == playerId
+        && group.status == 'active'
+        && group.memberCount == get(groupPath(groupId)).data.memberCount - 1
+        && !existsAfter(groupMemberPath(groupId, playerId))
+        && !existsAfter(groupRelationPath(playerId, groupId));
+    }
+
+    function validGroupMemberLeaveUpdate(groupId, oldData, newData) {
+      return isCurrentPlayerActive()
+        && oldData.status == 'active'
+        && newData.diff(oldData).affectedKeys()
+          .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
+        && newData.memberCount == oldData.memberCount - 1
+        && newData.memberCount >= 1
+        && newData.revision == oldData.revision + 1
+        && newData.lastActivityAt == request.time
+        && newData.updatedAt == request.time
+        && !existsAfter(groupMemberPath(groupId, currentPlayerId()));
+    }
+
+    function validMembershipStateRemove(playerId, docId, oldData, newData) {
+      let previousIds = oldData.activeGroupIds;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && docId == 'current'
+        && newData.keys().hasOnly([
+          'schemaVersion', 'playerId', 'activeGroupIds', 'activeGroupCount',
+          'revision', 'updatedAt'
+        ])
+        && newData.schemaVersion == 1
+        && newData.playerId == playerId
+        && newData.activeGroupIds is list
+        && newData.activeGroupIds.size() == previousIds.size() - 1
+        && previousIds.toSet().difference(newData.activeGroupIds.toSet()).size()
+          == 1
+        && newData.activeGroupCount == newData.activeGroupIds.size()
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time
+        && validRemovedMembershipState(
+          playerId,
+          previousIds,
+          newData.activeGroupIds
+        );
+    }
+
+    function validRemovedMembershipState(playerId, previousIds, newIds) {
+      let removedGroupId = removedActiveGroupId(previousIds, newIds);
+      return removedGroupId != ''
+        && !existsAfter(groupMemberPath(removedGroupId, playerId))
+        && !existsAfter(groupRelationPath(playerId, removedGroupId));
+    }
+
+    function validGroupMemberLeaveRelationDelete(playerId, groupId) {
+      let group = getAfter(groupPath(groupId)).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && group.status == 'active'
+        && group.memberCount == get(groupPath(groupId)).data.memberCount - 1
+        && !existsAfter(groupMemberPath(groupId, playerId));
     }
 
     // 초대·신청 명령을 실행할 수 있는 호출자만 그룹 활동 시각을 갱신한다.
@@ -607,11 +896,8 @@ service cloud.firestore {
         && get(playerPath(callerId)).data.status == 'active'
         && group.leaderPlayerId == callerId
         && playerId != callerId
-        && data.keys().hasOnly([
-          'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
-          'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
-          'displayCharacterNameSnapshot', 'revision', 'createdAt', 'updatedAt'
-        ])
+        && validGroupMemberDocumentKeys(data)
+        && validGroupMemberSnapshotsFromRelation(data, relation)
         && data.schemaVersion == 1
         && data.groupId == groupId
         && data.playerId == playerId
@@ -841,11 +1127,11 @@ service cloud.firestore {
       let relationPath = groupJoinRelationPath(groupId, playerId);
       return isCurrentPlayerActive()
         && playerId == currentPlayerId()
-        && data.keys().hasOnly([
-          'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
-          'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
-          'displayCharacterNameSnapshot', 'revision', 'createdAt', 'updatedAt'
-        ])
+        && validGroupMemberDocumentKeys(data)
+        && validGroupMemberSnapshotsFromCharacter(
+          data,
+          data.displayCharacterIdSnapshot
+        )
         && data.schemaVersion == 1
         && data.groupId == groupId
         && data.playerId == playerId
@@ -2431,7 +2717,12 @@ service cloud.firestore {
           null,
           request.resource.data
         );
-        allow update: if validMembershipStateAdd(
+        allow update: if validMembershipStateRemove(
+          playerId,
+          docId,
+          resource.data,
+          request.resource.data
+        ) || validMembershipStateAdd(
           playerId,
           docId,
           resource.data,
@@ -2469,7 +2760,7 @@ service cloud.firestore {
           groupId,
           request.resource.data
         );
-        allow delete: if false;
+        allow delete: if validGroupMemberLeaveRelationDelete(playerId, groupId);
       }
 
       match /weeklyRaidClaims/{claimId} {
@@ -3027,7 +3318,12 @@ service cloud.firestore {
       // 인원 증가, 초대코드 플래그·표시 정책만 허용한다.
       // 그룹장 승인·코드 플래그 검증을 먼저 두어 그룹원 확인 문서를
       // 추가로 읽지 않게 한다.
-      allow update: if validGroupLeaderApproveUpdate(
+      // 일반 멤버 탈퇴는 join·승인 경로보다 먼저 판정한다.
+      allow update: if validGroupMemberLeaveUpdate(
+        groupId,
+        resource.data,
+        request.resource.data
+      ) || validGroupLeaderApproveUpdate(
         resource.data,
         request.resource.data
       ) || validGroupJoinCodeFlagUpdate(
@@ -3062,7 +3358,17 @@ service cloud.firestore {
           playerId,
           request.resource.data
         );
-        allow update, delete: if false;
+        allow update: if validGroupMemberSelfSnapshotRefresh(
+          groupId,
+          playerId,
+          resource.data,
+          request.resource.data
+        );
+        allow delete: if validGroupMemberSelfLeaveDelete(
+          groupId,
+          playerId,
+          resource.data
+        );
       }
 
       // Unit 4는 초대·신청 처리에 더해 코드 가입이 pending 요청을

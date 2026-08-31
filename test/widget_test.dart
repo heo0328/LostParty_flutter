@@ -15,8 +15,11 @@ import 'package:lost_party/features/group/domain/entities/group_create_command.d
 import 'package:lost_party/features/group/domain/entities/group_create_result.dart';
 import 'package:lost_party/features/group/domain/entities/group_join_code_command.dart';
 import 'package:lost_party/features/group/domain/entities/group_join_command.dart';
+import 'package:lost_party/features/group/domain/entities/group_leave_command.dart';
+import 'package:lost_party/features/group/domain/entities/group_member_display_snapshot_refresh_command.dart';
 import 'package:lost_party/features/group/domain/entities/group_join_relation.dart';
 import 'package:lost_party/features/group/domain/entities/group_member.dart';
+import 'package:lost_party/features/group/domain/entities/group_member_display.dart';
 import 'package:lost_party/features/group/domain/entities/group_relation.dart';
 import 'package:lost_party/features/group/domain/entities/group_summary.dart';
 import 'package:lost_party/features/group/domain/repositories/group_application_command_repository.dart';
@@ -378,6 +381,15 @@ class _GroupJoinCommandRepository implements GroupJoinCommandRepository {
   Future<GroupJoinCommandResult> cancelInvitation(
     GroupInvitationCancelCommand command,
   ) async => const GroupJoinCommandResult.success(GroupRequestStatus.cancelled);
+
+  @override
+  Future<GroupJoinCommandResult> leave(GroupLeaveCommand command) async =>
+      const GroupJoinCommandResult.completed();
+
+  @override
+  Future<void> refreshMyDisplaySnapshot(
+    GroupMemberDisplaySnapshotRefreshCommand command,
+  ) async {}
 }
 
 class _GroupReadRepository implements GroupReadRepository {
@@ -420,6 +432,15 @@ class _GroupReadRepository implements GroupReadRepository {
     required String groupId,
     required String playerId,
   }) async => null;
+
+  @override
+  Future<List<GroupMember>> loadGroupMembers(String groupId) async =>
+      const [];
+
+  @override
+  Future<List<GroupMemberDisplay>> loadGroupMemberDisplays(
+    String groupId,
+  ) async => const [];
 
   @override
   Future<List<GroupBlockedPlayer>> loadBlockedPlayers({

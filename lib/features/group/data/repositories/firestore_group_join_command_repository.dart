@@ -2,6 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/entities/group_join_command.dart';
+import '../../domain/entities/group_leave_command.dart';
+import '../../domain/entities/group_member_display_snapshot_refresh_command.dart';
+import '../../domain/entities/group_member_display_snapshot.dart';
 import '../../domain/entities/group_join_relation.dart';
 import '../../domain/entities/group_member.dart';
 import '../../domain/entities/group_relation.dart';
@@ -9,9 +12,12 @@ import '../../domain/entities/group_request_character.dart';
 import '../../domain/entities/group_summary.dart';
 import '../../domain/repositories/group_join_command_repository.dart';
 import '../../domain/services/group_join_command_validator.dart';
+import '../../domain/services/group_local_member_display_lookup.dart';
 import '../mappers/group_create_write_plan.dart';
 import '../mappers/group_document_mapper.dart';
 import '../mappers/group_join_write_plan.dart';
+import '../mappers/group_leave_write_plan.dart';
+import '../mappers/group_member_snapshot_write_plan.dart';
 import 'firestore_group_character_search_repository.dart';
 import 'group_command_runner.dart';
 
@@ -24,22 +30,25 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
   FirestoreGroupJoinCommandRepository({
     required FirebaseFirestore firestore,
     required FirebaseAuth firebaseAuth,
+    GroupLocalMemberDisplayLookup? localMemberDisplayLookup,
     DateTime Function() clock = DateTime.now,
   }) : _firestore = firestore,
        _firebaseAuth = firebaseAuth,
+       _localMemberDisplayLookup = localMemberDisplayLookup,
        _clock = clock;
 
   static const _validator = GroupJoinCommandValidator();
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _firebaseAuth;
+  final GroupLocalMemberDisplayLookup? _localMemberDisplayLookup;
   final DateTime Function() _clock;
 
   @override
   Future<GroupJoinCommandResult> invite(GroupInviteCommand command) async {
     final invalid = _validator.validateInvite(command);
     if (invalid != null) return GroupJoinCommandResult.failure(invalid);
-    return _run((transaction, playerId) async {
+    return _run((transaction, playerId, localDisplayByCharacterId) async {
       final groupRef = _groupRef(command.groupId);
       final group = _group(await transaction.get(groupRef));
       if (group == null) {
@@ -66,6 +75,7 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
         await transaction.get(
           _firestore.collection('characters').doc(command.targetCharacterId),
         ),
+        localDisplayByCharacterId: localDisplayByCharacterId,
       );
       if (character == null) {
         return const GroupJoinCommandResult.failure(
@@ -123,7 +133,7 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
   Future<GroupJoinCommandResult> apply(GroupApplyCommand command) async {
     final invalid = _validator.validateApply(command);
     if (invalid != null) return GroupJoinCommandResult.failure(invalid);
-    return _run((transaction, playerId) async {
+    return _run((transaction, playerId, localDisplayByCharacterId) async {
       final groupRef = _groupRef(command.groupId);
       final group = _group(await transaction.get(groupRef));
       if (group == null) {
@@ -152,6 +162,7 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
         await transaction.get(
           _firestore.collection('characters').doc(command.characterId),
         ),
+        localDisplayByCharacterId: localDisplayByCharacterId,
       );
       if (character == null) {
         return const GroupJoinCommandResult.failure(
@@ -210,7 +221,7 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
   ) async {
     final invalid = _validator.validateDecision(command);
     if (invalid != null) return GroupJoinCommandResult.failure(invalid);
-    return _run((transaction, playerId) async {
+    return _run((transaction, playerId, localDisplayByCharacterId) async {
       final groupRef = _groupRef(command.groupId);
       final group = _group(await transaction.get(groupRef));
       if (group == null) {
@@ -286,7 +297,7 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
   ) async {
     final invalid = _validator.validateDecision(command);
     if (invalid != null) return GroupJoinCommandResult.failure(invalid);
-    return _run((transaction, playerId) async {
+    return _run((transaction, playerId, localDisplayByCharacterId) async {
       final groupRef = _groupRef(command.groupId);
       final group = _group(await transaction.get(groupRef));
       if (group == null) {
@@ -339,7 +350,7 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
   ) async {
     final invalid = _validator.validateCancel(command);
     if (invalid != null) return GroupJoinCommandResult.failure(invalid);
-    return _run((transaction, playerId) async {
+    return _run((transaction, playerId, localDisplayByCharacterId) async {
       final groupRef = _groupRef(command.groupId);
       final group = _group(await transaction.get(groupRef));
       if (group == null) {
@@ -401,6 +412,63 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
     });
   }
 
+  @override
+  Future<GroupJoinCommandResult> leave(GroupLeaveCommand command) async {
+    final invalid = _validator.validateLeave(command);
+    if (invalid != null) return GroupJoinCommandResult.failure(invalid);
+    return _run((transaction, playerId, localDisplayByCharacterId) async {
+      final groupRef = _groupRef(command.groupId);
+      final group = _group(await transaction.get(groupRef));
+      if (group == null) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.groupNotFound,
+        );
+      }
+      if (group.status != GroupStatus.active) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.groupClosed,
+        );
+      }
+
+      final memberRef = groupRef.collection('members').doc(playerId);
+      final memberSnapshot = await transaction.get(memberRef);
+      if (!memberSnapshot.exists) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.notGroupMember,
+        );
+      }
+      final memberData = memberSnapshot.data();
+      if (memberData?['role'] == GroupMemberRole.leader.name) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.leaderCannotLeave,
+        );
+      }
+
+      final membershipState = _mapper.toMembershipState(
+        playerId: playerId,
+        data: _data(await transaction.get(_membershipStateRef(playerId))),
+      );
+      if (!membershipState.contains(command.groupId)) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.invalidRequest,
+        );
+      }
+
+      final plan = GroupLeaveWritePlan.regularMember(
+        groupId: command.groupId,
+        groupRevision: group.revision,
+        groupMemberCount: group.memberCount,
+        membershipState: membershipState,
+        serverTimestamp: FieldValue.serverTimestamp(),
+      );
+      transaction.delete(memberRef);
+      transaction.update(groupRef, plan.groupPatch);
+      transaction.update(_membershipStateRef(playerId), plan.membershipState);
+      transaction.delete(_playerRelationRef(playerId, command.groupId));
+      return const GroupJoinCommandResult.completed();
+    });
+  }
+
   GroupJoinCommandResult? _invitationGuard(
     GroupJoinRelation? relation,
     int expectedRevision, {
@@ -435,12 +503,79 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
     return null;
   }
 
+  @override
+  Future<void> refreshMyDisplaySnapshot(
+    GroupMemberDisplaySnapshotRefreshCommand command,
+  ) async {
+    final authUid = _firebaseAuth.currentUser?.uid;
+    if (authUid == null) return;
+
+    try {
+      await _firestore.runTransaction((transaction) async {
+        final bindingRef = _firestore.collection('authBindings').doc(authUid);
+        final binding = await transaction.get(bindingRef);
+        final bindingData = binding.data();
+        final playerId = bindingData?['playerId'];
+        if (bindingData?['status'] != 'active' ||
+            playerId is! String ||
+            playerId.isEmpty) {
+          return;
+        }
+
+        final memberRef = _groupRef(
+          command.groupId,
+        ).collection('members').doc(playerId);
+        final memberSnapshot = await transaction.get(memberRef);
+        if (!memberSnapshot.exists) return;
+
+        final memberData = memberSnapshot.data();
+        final characterId = memberData?['displayCharacterIdSnapshot'];
+        if (characterId is! String || characterId.isEmpty) return;
+
+        final characterSnapshot = await transaction.get(
+          _firestore.collection('characters').doc(characterId),
+        );
+        final characterData = characterSnapshot.data();
+        if (!characterSnapshot.exists ||
+            characterData?['status'] != 'active' ||
+            characterData?['ownerPlayerId'] != playerId) {
+          return;
+        }
+
+        transaction.update(
+          memberRef,
+          GroupMemberSnapshotWritePlan.selfRefresh(
+            className: command.snapshot.className,
+            itemLevel: command.snapshot.itemLevel,
+            combatPower: command.snapshot.combatPower,
+            serverTimestamp: FieldValue.serverTimestamp(),
+          ),
+        );
+      });
+    } on Object {
+      // 표시 Snapshot 갱신 실패는 목록 조회를 막지 않는다.
+    }
+  }
+
   Future<GroupJoinCommandResult> _run(
-    Future<GroupJoinCommandResult> Function(Transaction, String) action,
-  ) => GroupCommandRunner(
-    firestore: _firestore,
-    firebaseAuth: _firebaseAuth,
-  ).run(action);
+    Future<GroupJoinCommandResult> Function(
+      Transaction transaction,
+      String playerId,
+      Map<String, GroupMemberDisplaySnapshot> localDisplayByCharacterId,
+    )
+    action,
+  ) async {
+    final localDisplayByCharacterId = _localMemberDisplayLookup == null
+        ? const <String, GroupMemberDisplaySnapshot>{}
+        : await _localMemberDisplayLookup!.loadByServerCharacterId();
+    return GroupCommandRunner(
+      firestore: _firestore,
+      firebaseAuth: _firebaseAuth,
+    ).run(
+      (transaction, playerId) =>
+          action(transaction, playerId, localDisplayByCharacterId),
+    );
+  }
 
   DocumentReference<Map<String, dynamic>> _groupRef(String groupId) =>
       _firestore.collection('groups').doc(groupId);
@@ -485,8 +620,10 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
   }
 
   GroupRequestCharacter? _character(
-    DocumentSnapshot<Map<String, dynamic>> snapshot,
-  ) {
+    DocumentSnapshot<Map<String, dynamic>> snapshot, {
+    Map<String, GroupMemberDisplaySnapshot> localDisplayByCharacterId =
+        const {},
+  }) {
     final data = snapshot.data();
     if (!snapshot.exists || data == null) return null;
     final ownerPlayerId = data['ownerPlayerId'];
@@ -504,14 +641,19 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
         className.isEmpty) {
       return null;
     }
+    final localDisplay = localDisplayByCharacterId[snapshot.id];
     return GroupRequestCharacter(
       characterId: snapshot.id,
       ownerPlayerId: ownerPlayerId,
       characterName: name,
       serverName: serverName,
       characterClassName: className,
-      itemLevel: parseCharacterItemLevel(data['itemAvgLevel']),
-      combatPower: parseCharacterItemLevel(data['combatPower']),
+      itemLevel:
+          parseCharacterItemLevel(data['itemAvgLevel']) ??
+          localDisplay?.itemLevel,
+      combatPower:
+          parseCharacterItemLevel(data['combatPower']) ??
+          localDisplay?.combatPower,
     );
   }
 

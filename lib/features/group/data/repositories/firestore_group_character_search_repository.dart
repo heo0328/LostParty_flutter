@@ -37,6 +37,34 @@ class FirestoreGroupCharacterSearchRepository
     }
   }
 
+  @override
+  Future<List<GroupRequestCharacter>> loadActiveCharactersForPlayer(
+    String ownerPlayerId, {
+    int limit = groupCharacterSearchPageSize,
+  }) async {
+    if (ownerPlayerId.trim().isEmpty) return const [];
+    try {
+      final snapshot = await _firestore
+          .collection('characters')
+          .where('status', isEqualTo: 'active')
+          .where('ownerPlayerId', isEqualTo: ownerPlayerId)
+          .limit(limit)
+          .get();
+      final characters = snapshot.docs
+          .map(_toCandidate)
+          .whereType<GroupRequestCharacter>()
+          .toList(growable: true)
+        ..sort((left, right) {
+          final leftLevel = left.itemLevel ?? 0;
+          final rightLevel = right.itemLevel ?? 0;
+          return rightLevel.compareTo(leftLevel);
+        });
+      return characters;
+    } catch (error) {
+      throw _mapCharacterSearchError(error);
+    }
+  }
+
   GroupRequestCharacter? _toCandidate(
     QueryDocumentSnapshot<Map<String, dynamic>> document,
   ) {

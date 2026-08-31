@@ -23,6 +23,9 @@ void main() {
     serverTimestamp: serverTimestamp ?? Object(),
     verifiedCharacterName: '검증된캐릭터',
     verifiedServerName: '루페온',
+    verifiedClassName: '버서커',
+    verifiedItemLevel: 1700,
+    verifiedCombatPower: 320,
     membershipState:
         membershipState ?? const GroupMembershipState.empty('player-1'),
   );
@@ -74,6 +77,9 @@ void main() {
     expect(created.leaderMember['joinedBy'], 'created');
     expect(created.leaderMember['displayCharacterIdSnapshot'], 'character-1');
     expect(created.leaderMember['displayCharacterNameSnapshot'], '검증된캐릭터');
+    expect(created.leaderMember['displayClassNameSnapshot'], '버서커');
+    expect(created.leaderMember['itemLevelSnapshot'], 1700);
+    expect(created.leaderMember['combatPowerSnapshot'], 320);
     expect(created.leaderMember['revision'], 1);
   });
 
@@ -152,6 +158,7 @@ void main() {
         serverTimestamp: Object(),
         verifiedCharacterName: '검증된캐릭터',
         verifiedServerName: '루페온',
+        verifiedClassName: '버서커',
         membershipState: const GroupMembershipState.empty('player-1'),
       ),
       throwsArgumentError,
@@ -164,6 +171,7 @@ void main() {
         serverTimestamp: Object(),
         verifiedCharacterName: '검증된캐릭터',
         verifiedServerName: '루페온',
+        verifiedClassName: '버서커',
         membershipState: const GroupMembershipState.empty('  '),
       ),
       throwsArgumentError,

@@ -1,5 +1,10 @@
 import '../../../account/domain/repositories/account_repository.dart';
 import '../../domain/entities/group_join_command.dart';
+import '../../domain/entities/group_leave_command.dart';
+import '../../domain/entities/group_member.dart';
+import '../../domain/entities/group_member_display.dart';
+import '../../domain/entities/group_member_display_snapshot_refresh_command.dart';
+import '../../domain/services/group_local_member_display_lookup.dart';
 import '../../domain/entities/group_relation.dart';
 import '../../domain/entities/group_request_character.dart';
 import '../../domain/repositories/group_character_search_repository.dart';
@@ -40,9 +45,28 @@ String groupJoinFailureMessage(GroupJoinFailure failure) => switch (failure) {
   GroupJoinFailure.joinCodeMissing =>
     '초대코드가 없거나 폐기되었습니다. 코드를 확인하거나 새로고침한 뒤 다시 시도해 주세요.',
   GroupJoinFailure.joinCodeInvalid => '초대코드 형식이 올바르지 않습니다.',
+  GroupJoinFailure.leaderCannotLeave =>
+    '그룹장은 지금 탈퇴할 수 없습니다. 그룹장 이전 또는 해산이 필요합니다.',
   GroupJoinFailure.temporarilyUnavailable =>
     '일시적으로 처리할 수 없습니다. 새로고침한 뒤 다시 시도해 주세요.',
   GroupJoinFailure.unknown => '요청을 처리하지 못했습니다.',
+};
+
+/// 탈퇴 명령 전용 안내. 가입 실패 문구와 구분한다.
+String groupLeaveFailureMessage(GroupJoinFailure failure) => switch (failure) {
+  GroupJoinFailure.leaderCannotLeave =>
+    groupJoinFailureMessage(GroupJoinFailure.leaderCannotLeave),
+  GroupJoinFailure.notGroupMember => '그룹원만 탈퇴할 수 있습니다.',
+  GroupJoinFailure.permissionDenied =>
+    '그룹 탈퇴를 처리하지 못했습니다. Firestore Rules 배포 후 다시 시도해 주세요.',
+  GroupJoinFailure.revisionConflict ||
+  GroupJoinFailure.temporarilyUnavailable =>
+    groupJoinFailureMessage(failure),
+  GroupJoinFailure.groupNotFound => '그룹을 찾을 수 없습니다.',
+  GroupJoinFailure.groupClosed => '종료된 그룹입니다.',
+  GroupJoinFailure.unauthenticated ||
+  GroupJoinFailure.playerBindingMissing => '계정 연결을 준비하지 못했습니다.',
+  _ => '그룹 탈퇴를 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.',
 };
 
 /// 계약 §8.3. 정확한 캐릭터명 검색 결과에서 대상 Player를 확정한다.
@@ -104,16 +128,75 @@ class GroupMembershipActionViewModel {
     required this.accountRepository,
     required this.readRepository,
     required this.commandRepository,
+    required this.characterSearchRepository,
   });
 
   final AccountRepository accountRepository;
   final GroupReadRepository readRepository;
   final GroupJoinCommandRepository commandRepository;
+  final GroupCharacterSearchRepository characterSearchRepository;
 
   Future<GroupRelation?> loadMyRelation({
     required String playerId,
     required String groupId,
   }) => readRepository.loadMyRelation(playerId: playerId, groupId: groupId);
+
+  Future<GroupMember?> loadMyMembership({
+    required String playerId,
+    required String groupId,
+  }) => readRepository.loadGroupMember(groupId: groupId, playerId: playerId);
+
+  Future<List<GroupMemberDisplay>> loadMemberDisplays({
+    required String groupId,
+    required String playerId,
+  }) async {
+    await _refreshMyDisplaySnapshotIfNeeded(
+      groupId: groupId,
+      playerId: playerId,
+    );
+    final displays = await readRepository.loadGroupMemberDisplays(groupId);
+    return displays.toList(growable: false)
+      ..sort((left, right) {
+        if (left.isLeader != right.isLeader) {
+          return left.isLeader ? -1 : 1;
+        }
+        return left.member.joinSequence.compareTo(right.member.joinSequence);
+      });
+  }
+
+  Future<void> _refreshMyDisplaySnapshotIfNeeded({
+    required String groupId,
+    required String playerId,
+  }) async {
+    final member = await readRepository.loadGroupMember(
+      groupId: groupId,
+      playerId: playerId,
+    );
+    if (member == null) return;
+
+    final localDisplay = await GroupLocalMemberDisplayLookup(
+      accountRepository: accountRepository,
+    ).forServerCharacterId(member.displayCharacterIdSnapshot);
+    if (localDisplay == null) return;
+    if (localDisplay.matchesStored(
+      storedClassName: member.displayClassNameSnapshot,
+      storedItemLevel: member.itemLevelSnapshot,
+      storedCombatPower: member.combatPowerSnapshot,
+    )) {
+      return;
+    }
+
+    await commandRepository.refreshMyDisplaySnapshot(
+      GroupMemberDisplaySnapshotRefreshCommand(
+        groupId: groupId,
+        snapshot: localDisplay,
+      ),
+    );
+  }
+
+  Future<List<GroupRequestCharacter>> loadPlayerCharacters(
+    String ownerPlayerId,
+  ) => characterSearchRepository.loadActiveCharactersForPlayer(ownerPlayerId);
 
   Future<List<GroupCharacterOption>> loadAuthenticatedCharacters() =>
       GroupCharacterOptionLoader(accountRepository: accountRepository).load();
@@ -143,4 +226,7 @@ class GroupMembershipActionViewModel {
           expectedRelationRevision: relation.sourceRevision,
         ),
       );
+
+  Future<GroupJoinCommandResult> leave({required String groupId}) =>
+      commandRepository.leave(GroupLeaveCommand(groupId: groupId));
 }

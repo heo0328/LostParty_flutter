@@ -1893,3 +1893,37 @@
   - **계약 제외:** 탈퇴 버튼 없음 → 연속 시나리오 검증이 막힘
 - Emulator §12.4–12.5 동시성·Codex 재검토·`main` 병합은 미실시
 - 다음 실행: 멤버 목록 UI + 일반 멤버 탈퇴(실기기 연속 검증용), 이후 재검토·병합
+
+---
+
+## Task-11a. 그룹 멤버 목록·탈퇴·표시 Snapshot (2026-08-31)
+
+- 작업 브랜치: `cursor/task-11-group-membership` (Task-11 `b673fdb` 위, 문서·커밋 시점 미병합)
+- 구현 범위:
+  - 그룹 상세 **멤버 목록 UI**: 그룹장 우선·`joinSequence` 정렬, 카드에 직업·아이템 레벨·전투력
+  - 멤버 탭 → 인증 캐릭터 bottom sheet
+  - **일반 멤버 탈퇴**: `GroupLeaveWritePlan`, Repository leave 명령, Rules(로컬)
+  - **표시 Snapshot**: `displayClassNameSnapshot`, `itemLevelSnapshot`, `combatPowerSnapshot` — 생성·가입·코드 가입 시 저장
+  - **본인 Snapshot self-refresh**: 그룹 상세 진입 시 로컬 캐릭터와 비교해 membership만 갱신 (`validGroupMemberSelfSnapshotRefresh`)
+  - **전투력 표시**: 타 그룹원은 서버 membership Snapshot을 읽음. 로컬 roster만으로 UI 보강하던 경로 제거
+  - Read: `GroupMemberDisplayBuilder`, `loadGroupMembers` + character doc batch get
+  - Write lookup: `GroupLocalMemberDisplayLookup` (가입·refresh 쓰기 전용)
+- 자동 검증: 그룹 표적 테스트·widget 테스트 포함 ~159건 통과 (구현 시점), `flutter analyze` 통과
+- **미완 / 차단:**
+  - Firestore Rules **전체 deploy 실패(503)** — leave·self-refresh Rules가 운영에 없을 수 있음
+  - Task-11a 실기기(멤버 전투력·타인 Snapshot·탈퇴·재가입) 미실시
+  - Codex 재검토·`main` 병합 미실시
+- 제외 유지: 그룹장 이전·해산·추방·그룹 레이드·알림·공지
+
+---
+
+## Task-11-R. Firestore Rules 복잡도 차단 (2026-08-31)
+
+- 증상: `firebase deploy --only firestore:rules --project lost-party` 시 전체 Rules (~159KB, ~3470줄)에서 **503/409** 등 API 실패 반복
+- 프로브: 검증 함수 본문 ~101개를 `return false` 스텁, `match`·경로 helper 유지 → **~76KB(47.9%)에서 compile·release 성공** (~13초)
+- 결론: 문법 오류가 아니라 **단일 Rules 파일 컴파일·업로드 복잡도 한도**에 가깝다. Task-11 leave·Snapshot refresh 추가분도 동일 제약
+- 운영 주의: 2026-08-31 저녁 **절반 프로브 Rules가 `lost-party`에 배포됐을 수 있음** → 대부분 쓰기 거부. 사용자 백업 원본으로 재배포 필요(503 재현 시 Rules 리팩터 선행)
+- 다음 작업(**최우선**): helper 단순화·OR 체인·`removedActiveGroupIdChunk*` 축소 → 전체 기능 유지한 채 deploy 성공 반복 확인
+- 상세: [`TASK-11-FIRESTORE-RULES-COMPLEXITY.md`](TASK-11-FIRESTORE-RULES-COMPLEXITY.md)
+- Task-11a 실기기·`main` 병합·Task-12는 **Rules 정상 deploy 성공 후**에만 진행
+

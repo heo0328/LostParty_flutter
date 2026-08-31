@@ -5,19 +5,24 @@ import '../../domain/entities/group_create_command.dart';
 import '../../domain/entities/group_create_result.dart';
 import '../../domain/repositories/group_create_repository.dart';
 import '../../domain/services/group_create_command_validator.dart';
+import '../../domain/services/group_local_member_display_lookup.dart';
 import '../mappers/group_create_write_plan.dart';
 import '../mappers/group_document_mapper.dart';
+import 'firestore_group_character_search_repository.dart';
 
 /// 계약 §8.1. authBinding을 먼저 읽고 모든 검증 읽기를 끝낸 뒤에만 네 문서를 쓴다.
 class FirestoreGroupCreateRepository implements GroupCreateRepository {
   const FirestoreGroupCreateRepository({
     required FirebaseFirestore firestore,
     required FirebaseAuth firebaseAuth,
+    GroupLocalMemberDisplayLookup? localMemberDisplayLookup,
   }) : _firestore = firestore,
-       _firebaseAuth = firebaseAuth;
+       _firebaseAuth = firebaseAuth,
+       _localMemberDisplayLookup = localMemberDisplayLookup;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _firebaseAuth;
+  final GroupLocalMemberDisplayLookup? _localMemberDisplayLookup;
 
   @override
   Future<GroupCreateResult> create(GroupCreateCommand command) async {
@@ -32,6 +37,9 @@ class FirestoreGroupCreateRepository implements GroupCreateRepository {
     }
 
     try {
+      final localDisplay = await _localMemberDisplayLookup?.forServerCharacterId(
+        command.representativeCharacterId,
+      );
       return await _firestore.runTransaction((transaction) async {
         final bindingRef = _firestore.collection('authBindings').doc(authUid);
         final binding = await transaction.get(bindingRef);
@@ -87,10 +95,13 @@ class FirestoreGroupCreateRepository implements GroupCreateRepository {
 
         final characterName = characterData?['characterName'];
         final serverName = characterData?['serverName'];
+        final className = characterData?['characterClassName'];
         if (characterName is! String ||
             characterName.isEmpty ||
             serverName is! String ||
-            serverName.isEmpty) {
+            serverName.isEmpty ||
+            className is! String ||
+            className.isEmpty) {
           return const GroupCreateResult.failure(
             GroupCreateFailure.invalidCharacter,
           );
@@ -124,6 +135,13 @@ class FirestoreGroupCreateRepository implements GroupCreateRepository {
           serverTimestamp: FieldValue.serverTimestamp(),
           verifiedCharacterName: characterName,
           verifiedServerName: serverName,
+          verifiedClassName: className,
+          verifiedItemLevel:
+              parseCharacterItemLevel(characterData?['itemAvgLevel']) ??
+              localDisplay?.itemLevel,
+          verifiedCombatPower:
+              parseCharacterItemLevel(characterData?['combatPower']) ??
+              localDisplay?.combatPower,
           membershipState: membershipState,
         );
         transaction.set(groupRef, plan.group);

@@ -3,6 +3,8 @@ import '../../domain/entities/group_member.dart';
 import '../../domain/entities/group_relation.dart';
 import '../../domain/entities/group_request_character.dart';
 
+import 'group_member_write_fields.dart';
+
 /// 계약 §8.3~8.5 초대·신청 명령의 쓰기 계획.
 ///
 /// 요청 원본([joinRelationDocument] 또는 [joinRelationPatch]), 대상 Player의
@@ -179,6 +181,7 @@ class GroupJoinWritePlan {
         'joinedBy': GroupJoinedBy.invitation.name,
         'displayCharacterIdSnapshot': relation.characterIdSnapshot,
         'displayCharacterNameSnapshot': relation.characterNameSnapshot,
+        ...GroupMemberWriteFields.fromJoinRelation(relation),
         'revision': 1,
         'createdAt': serverTimestamp,
         'updatedAt': serverTimestamp,

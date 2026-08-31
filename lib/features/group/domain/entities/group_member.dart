@@ -13,6 +13,9 @@ class GroupMember {
     required this.joinedBy,
     required this.displayCharacterIdSnapshot,
     required this.displayCharacterNameSnapshot,
+    this.displayClassNameSnapshot,
+    this.itemLevelSnapshot,
+    this.combatPowerSnapshot,
     required this.revision,
   });
 
@@ -27,6 +30,9 @@ class GroupMember {
   final GroupJoinedBy joinedBy;
   final String displayCharacterIdSnapshot;
   final String displayCharacterNameSnapshot;
+  final String? displayClassNameSnapshot;
+  final double? itemLevelSnapshot;
+  final double? combatPowerSnapshot;
   final int revision;
 
   bool get isLeader => role == GroupMemberRole.leader;

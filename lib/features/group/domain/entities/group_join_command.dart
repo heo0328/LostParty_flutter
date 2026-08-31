@@ -93,6 +93,8 @@ enum GroupJoinFailure {
   joinCodeMissing,
   /// 입력 형식이 아니거나 정규화 후에도 문서 ID로 쓸 수 없다.
   joinCodeInvalid,
+  /// 그룹장은 이전·해산 없이 탈퇴할 수 없다.
+  leaderCannotLeave,
   permissionDenied,
   temporarilyUnavailable,
   unknown,

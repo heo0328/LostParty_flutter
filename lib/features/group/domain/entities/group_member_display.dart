@@ -1,0 +1,20 @@
+import 'group_member.dart';
+
+/// 그룹원 카드 표시용 Snapshot. membership 주체는 Player이며 캐릭터 필드는 표시값이다.
+class GroupMemberDisplay {
+  const GroupMemberDisplay({
+    required this.member,
+    required this.characterName,
+    required this.className,
+    this.itemLevel,
+    this.combatPower,
+  });
+
+  final GroupMember member;
+  final String characterName;
+  final String className;
+  final double? itemLevel;
+  final double? combatPower;
+
+  bool get isLeader => member.isLeader;
+}

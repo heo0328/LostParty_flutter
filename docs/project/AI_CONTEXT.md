@@ -28,7 +28,9 @@
 - 반복 레이드 진행 목록에 `금주 진행`·`다음주 대기` 상태 배지를 추가한 커밋은 `05a441d`다.
 - 그룹 제품 흐름은 [`../product/GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md), Task-11 기술 계약은 [`../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md)에 정리했다. membership·활성 신청·누적 횟수·신청 금지는 모두 Player 단위다.
 - Task-11 구현은 브랜치 `cursor/task-11-group-membership` 커밋 `b673fdb`에 있다. 4번째 탭을 그룹으로 바꾸고 설정은 내 계정 톱니로 이동했다. 생성·검색·기본 상세·초대·신청·승인/금지·초대코드 생성·폐기·공개 토글·코드 즉시 가입을 포함한다. 자동 검증(그룹 테스트·analyze)은 통과했다.
-- 실기기(2026-08-31): 초대코드 생성·폐기·멤버 공개 토글 동작, 코드로 즉시 가입·인원 2명 표시, 생성·마지막 활동 시각 표시를 확인했다. 멤버 목록 UI는 Task-11에서 만들지 않았고(Rules 읽기만 허용), 탈퇴는 계약상 후속이라 버튼이 없다. 연속 검증을 위해 다음 실행은 멤버 목록 UI와 일반 멤버 탈퇴다. 그룹장 이전·해산·그룹 레이드·알림·공지는 계속 후속이다.
+- Task-11a(멤버 목록·일반 탈퇴·표시 Snapshot)는 같은 브랜치에 코드 구현됐다. membership `combatPowerSnapshot` 등은 가입·생성 시 저장하고, 그룹 상세 진입 시 본인 membership만 self-refresh한다. 타 그룹원 표시는 서버 Snapshot을 읽는다(로컬-only UI 보강 없음).
+- **Firestore Rules 복잡도 차단(2026-08-31):** 전체 `firestore.rules` (~159KB) deploy가 503으로 실패한다. 함수 본문을 약 48%로 스텁한 프로브는 deploy 성공. Task-11a·`main` 병합보다 Rules 축소·재배포가 선행한다. [`TASK-11-FIRESTORE-RULES-COMPLEXITY.md`](TASK-11-FIRESTORE-RULES-COMPLEXITY.md)
+- 실기기(2026-08-31, Task-11): 초대코드 생성·폐기·멤버 공개 토글, 코드 즉시 가입·인원 2명, 생성·마지막 활동 시각 확인. Task-11a(멤버 UI·탈퇴·전투력 Snapshot)는 Rules 정상 배포 후 재검증.
 
 ---
 

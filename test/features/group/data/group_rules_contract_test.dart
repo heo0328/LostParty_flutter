@@ -309,7 +309,10 @@ void main() {
     );
     expect(rules, contains('newData.memberCount == oldData.memberCount + 1'));
     expect(rules, contains('newData.memberCount <= 50'));
-    expect(rules, contains('member.joinSequence == newData.memberCount'));
+    expect(
+      rules,
+      contains('getAfter(memberPath).data.joinSequence == newData.memberCount'),
+    );
     expect(
       rules,
       contains(
@@ -349,14 +352,17 @@ void main() {
     expect(rules, contains('allow list: if isCurrentGroupLeader(groupId);'));
   });
 
-  test('Player 하위 그룹 Projection은 본인만 읽고 삭제를 막는다', () {
+  test('Player 하위 그룹 Projection은 본인만 읽고 탈퇴 시에만 삭제한다', () {
     expect(rules, contains('match /groupMembershipState/{docId}'));
     expect(rules, contains('match /groupRelations/{groupId}'));
     expect(
       rules,
       contains('allow create, update: if validInitialMemberGroupRelation('),
     );
-    expect(rules, contains('allow delete: if false;'));
+    expect(
+      rules,
+      contains('allow delete: if validGroupMemberLeaveRelationDelete(playerId, groupId);'),
+    );
   });
 
   test('그룹장 판정 helper는 binding·Player·그룹을 한 번씩만 읽는다', () {
@@ -447,8 +453,12 @@ void main() {
     expect(rules, contains('newData.memberCount == oldData.memberCount + 1'));
     expect(
       rules,
-      contains('allow update: if validGroupLeaderApproveUpdate('),
-      reason: '승인 검증을 먼저 두어 그룹원 확인 문서를 추가로 읽지 않는다.',
+      contains(') || validGroupLeaderApproveUpdate('),
+    );
+    expect(
+      rules,
+      contains('allow update: if validGroupMemberLeaveUpdate('),
+      reason: '탈퇴 Transaction은 join·승인 검증보다 먼저 판정해야 한다.',
     );
   });
 
@@ -480,6 +490,43 @@ void main() {
     expect(blocked, contains('allow create: if validGroupBlockCreate('));
     expect(blocked, contains('allow update: if false;'));
     expect(blocked, contains('allow delete: if isActiveGroupLeader(groupId);'));
+  });
+
+  test('일반 멤버 탈퇴 Rules helper와 삭제 경로를 고정한다', () {
+    expect(
+      rules,
+      contains('function validGroupMemberSelfLeaveDelete(groupId, playerId, data)'),
+    );
+    expect(rules, contains('function validGroupMemberLeaveUpdate(groupId, oldData, newData)'));
+    expect(rules, contains('function validMembershipStateRemove(playerId, docId, oldData, newData)'));
+    expect(
+      rules,
+      contains('function validGroupMemberLeaveRelationDelete(playerId, groupId)'),
+    );
+    expect(rules, contains('allow delete: if validGroupMemberSelfLeaveDelete('));
+    expect(rules, contains('allow delete: if validGroupMemberLeaveRelationDelete(playerId, groupId);'));
+    expect(
+      rules,
+      contains('allow update: if validGroupMemberLeaveUpdate('),
+    );
+    expect(
+      rules,
+      contains('allow update: if validMembershipStateRemove('),
+    );
+    expect(
+      rules,
+      contains('function validGroupMemberDocumentKeys(data)'),
+    );
+    expect(rules, contains('displayClassNameSnapshot'));
+    expect(rules, contains('function validGroupMemberSnapshotsFromRelation'));
+    expect(
+      rules,
+      contains('function validGroupMemberSelfSnapshotRefresh('),
+    );
+    expect(
+      rules,
+      contains('allow update: if validGroupMemberSelfSnapshotRefresh('),
+    );
   });
 
   test('그룹 쿼리에 필요한 복합 인덱스를 고정한다', () {
@@ -529,6 +576,14 @@ void main() {
         '|__name__:ASCENDING',
       ),
       reason: '초대 대상 정확한 캐릭터명 검색은 상태·이름 조합 인덱스를 고정한다.',
+    );
+    expect(
+      entries,
+      contains(
+        'characters|COLLECTION|status:ASCENDING|ownerPlayerId:ASCENDING'
+        '|__name__:ASCENDING',
+      ),
+      reason: '그룹원 카드 터치 시 Player별 active 캐릭터 조회 인덱스를 고정한다.',
     );
   });
 }

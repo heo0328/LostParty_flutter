@@ -72,6 +72,9 @@ class GroupDocumentMapper {
         data,
         'displayCharacterNameSnapshot',
       ),
+      displayClassNameSnapshot: _optionalString(data, 'displayClassNameSnapshot'),
+      itemLevelSnapshot: _nullableDouble(data, 'itemLevelSnapshot'),
+      combatPowerSnapshot: _nullableDouble(data, 'combatPowerSnapshot'),
       revision: _integer(data, 'revision'),
     );
   }
@@ -237,6 +240,15 @@ class GroupDocumentMapper {
     final value = data[field];
     if (value is! String || value.isEmpty) {
       throw GroupContractException('$field must be a non-empty string.');
+    }
+    return value;
+  }
+
+  String? _optionalString(Map<String, Object?> data, String field) {
+    final value = data[field];
+    if (value == null) return null;
+    if (value is! String || value.isEmpty) {
+      throw GroupContractException('$field must be a non-empty string or null.');
     }
     return value;
   }

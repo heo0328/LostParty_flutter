@@ -5,9 +5,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/group_blocked_player.dart';
 import '../../domain/entities/group_join_relation.dart';
 import '../../domain/entities/group_member.dart';
+import '../../domain/entities/group_member_display.dart';
 import '../../domain/entities/group_relation.dart';
 import '../../domain/entities/group_summary.dart';
 import '../../domain/repositories/group_read_repository.dart';
+import '../../domain/services/group_member_display_builder.dart';
 import '../../domain/services/group_name_normalizer.dart';
 import '../mappers/group_document_mapper.dart';
 
@@ -145,6 +147,45 @@ class FirestoreGroupReadRepository implements GroupReadRepository {
   }
 
   @override
+  Future<List<GroupMember>> loadGroupMembers(String groupId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('groups')
+          .doc(groupId)
+          .collection('members')
+          .get();
+      return snapshot.docs
+          .map(_document)
+          .map(_mapper.toMember)
+          .toList(growable: false);
+    } catch (error) {
+      throw _mapError(error);
+    }
+  }
+
+  @override
+  Future<List<GroupMemberDisplay>> loadGroupMemberDisplays(
+    String groupId,
+  ) async {
+    try {
+      final members = await loadGroupMembers(groupId);
+      final characterDataById = await _loadCharacterDataById(
+        members.map((member) => member.displayCharacterIdSnapshot),
+      );
+      return members
+          .map(
+            (member) => GroupMemberDisplayBuilder.fromMember(
+              member: member,
+              characterData: characterDataById[member.displayCharacterIdSnapshot],
+            ),
+          )
+          .toList(growable: false);
+    } catch (error) {
+      throw _mapError(error);
+    }
+  }
+
+  @override
   Future<List<GroupBlockedPlayer>> loadBlockedPlayers({
     required String groupId,
     int limit = groupSearchPageSize,
@@ -242,6 +283,29 @@ class FirestoreGroupReadRepository implements GroupReadRepository {
     id: snapshot.id,
     data: Map<String, Object?>.from(snapshot.data() ?? const {}),
   );
+
+  Future<Map<String, Map<String, Object?>>> _loadCharacterDataById(
+    Iterable<String> characterIds,
+  ) async {
+    final uniqueIds = characterIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    if (uniqueIds.isEmpty) return const {};
+
+    final snapshots = await Future.wait(
+      uniqueIds.map(
+        (id) => _firestore.collection('characters').doc(id).get(),
+      ),
+    );
+    final byId = <String, Map<String, Object?>>{};
+    for (final snapshot in snapshots) {
+      final data = snapshot.data();
+      if (!snapshot.exists || data == null) continue;
+      byId[snapshot.id] = Map<String, Object?>.from(data);
+    }
+    return byId;
+  }
 
   StreamTransformer<T, T> _errorTransformer<T>() =>
       StreamTransformer<T, T>.fromHandlers(

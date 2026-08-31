@@ -9,4 +9,10 @@ abstract interface class GroupCharacterSearchRepository {
     String characterName, {
     int limit,
   });
+
+  /// 그룹원 카드 터치 시 해당 Player의 active 인증 캐릭터 목록을 읽는다.
+  Future<List<GroupRequestCharacter>> loadActiveCharactersForPlayer(
+    String ownerPlayerId, {
+    int limit = groupCharacterSearchPageSize,
+  });
 }

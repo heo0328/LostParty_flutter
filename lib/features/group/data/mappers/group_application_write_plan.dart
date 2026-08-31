@@ -2,6 +2,7 @@ import '../../domain/entities/group_blocked_player.dart';
 import '../../domain/entities/group_join_relation.dart';
 import '../../domain/entities/group_member.dart';
 import '../../domain/entities/group_relation.dart';
+import 'group_member_write_fields.dart';
 
 /// 계약 §8.6 그룹장 신청 처리(승인·거절·금지·해제)의 쓰기 계획.
 ///
@@ -58,6 +59,7 @@ class GroupApplicationWritePlan {
         'joinedBy': GroupJoinedBy.application.name,
         'displayCharacterIdSnapshot': relation.characterIdSnapshot,
         'displayCharacterNameSnapshot': relation.characterNameSnapshot,
+        ...GroupMemberWriteFields.fromJoinRelation(relation),
         'revision': 1,
         'createdAt': serverTimestamp,
         'updatedAt': serverTimestamp,

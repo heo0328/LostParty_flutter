@@ -7,12 +7,15 @@ import '../../domain/entities/group_join_command.dart';
 import '../../domain/entities/group_join_relation.dart';
 import '../../domain/entities/group_member.dart';
 import '../../domain/entities/group_request_character.dart';
+import '../../domain/entities/group_member_display_snapshot.dart';
 import '../../domain/entities/group_summary.dart';
 import '../../domain/repositories/group_join_code_command_repository.dart';
 import '../../domain/services/group_join_command_validator.dart';
+import '../../domain/services/group_local_member_display_lookup.dart';
 import '../mappers/group_create_write_plan.dart';
 import '../mappers/group_document_mapper.dart';
 import '../mappers/group_join_code_write_plan.dart';
+import 'firestore_group_character_search_repository.dart';
 import 'group_command_runner.dart';
 
 /// 계약 §7·§8.7. 초대코드 생성·폐기·표시·즉시 가입을 한 Transaction으로 실행한다.
@@ -24,6 +27,7 @@ class FirestoreGroupJoinCodeCommandRepository
   FirestoreGroupJoinCodeCommandRepository({
     required FirebaseFirestore firestore,
     required FirebaseAuth firebaseAuth,
+    GroupLocalMemberDisplayLookup? localMemberDisplayLookup,
     DateTime Function() clock = DateTime.now,
     GroupJoinCode Function()? codeGenerator,
   }) : _firestore = firestore,
@@ -31,6 +35,7 @@ class FirestoreGroupJoinCodeCommandRepository
          firestore: firestore,
          firebaseAuth: firebaseAuth,
        ),
+       _localMemberDisplayLookup = localMemberDisplayLookup,
        _clock = clock,
        _codeGenerator = codeGenerator ?? GroupJoinCode.generate;
 
@@ -39,6 +44,7 @@ class FirestoreGroupJoinCodeCommandRepository
 
   final FirebaseFirestore _firestore;
   final GroupCommandRunner _runner;
+  final GroupLocalMemberDisplayLookup? _localMemberDisplayLookup;
   final DateTime Function() _clock;
   final GroupJoinCode Function() _codeGenerator;
 
@@ -163,6 +169,9 @@ class FirestoreGroupJoinCodeCommandRepository
     final invalid = _validator.validateJoinByCode(command);
     if (invalid != null) return GroupJoinCodeCommandResult.failure(invalid);
     final code = GroupJoinCode.tryParse(command.code)!;
+    final localDisplayByCharacterId = _localMemberDisplayLookup == null
+        ? const <String, GroupMemberDisplaySnapshot>{}
+        : await _localMemberDisplayLookup!.loadByServerCharacterId();
     return _run((transaction, playerId) async {
       final codeRef = _codeRef(code.value);
       final codeSnap = await transaction.get(codeRef);
@@ -217,6 +226,7 @@ class FirestoreGroupJoinCodeCommandRepository
         await transaction.get(
           _firestore.collection('characters').doc(command.characterId),
         ),
+        localDisplayByCharacterId: localDisplayByCharacterId,
       );
       if (character == null) {
         return const GroupJoinCodeCommandResult.failure(
@@ -353,8 +363,10 @@ class FirestoreGroupJoinCodeCommandRepository
   }
 
   GroupRequestCharacter? _character(
-    DocumentSnapshot<Map<String, dynamic>> snapshot,
-  ) {
+    DocumentSnapshot<Map<String, dynamic>> snapshot, {
+    Map<String, GroupMemberDisplaySnapshot> localDisplayByCharacterId =
+        const {},
+  }) {
     final data = snapshot.data();
     if (!snapshot.exists || data == null) return null;
     final ownerPlayerId = data['ownerPlayerId'];
@@ -372,14 +384,19 @@ class FirestoreGroupJoinCodeCommandRepository
         className.isEmpty) {
       return null;
     }
+    final localDisplay = localDisplayByCharacterId[snapshot.id];
     return GroupRequestCharacter(
       characterId: snapshot.id,
       ownerPlayerId: ownerPlayerId,
       characterName: name,
       serverName: serverName,
       characterClassName: className,
-      itemLevel: (data['itemLevel'] as num?)?.toDouble(),
-      combatPower: (data['combatPower'] as num?)?.toDouble(),
+      itemLevel:
+          parseCharacterItemLevel(data['itemAvgLevel']) ??
+          localDisplay?.itemLevel,
+      combatPower:
+          parseCharacterItemLevel(data['combatPower']) ??
+          localDisplay?.combatPower,
     );
   }
 

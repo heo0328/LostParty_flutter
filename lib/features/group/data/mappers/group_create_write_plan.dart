@@ -1,6 +1,7 @@
 import '../../domain/entities/group_create_command.dart';
 import '../../domain/entities/group_member.dart';
 import '../../domain/services/group_name_normalizer.dart';
+import 'group_member_write_fields.dart';
 
 /// 계약 §8.1 그룹 생성 Transaction의 쓰기 계획. 네 문서를 한 Transaction에서만 만든다.
 class GroupCreateWritePlan {
@@ -19,6 +20,9 @@ class GroupCreateWritePlan {
     required Object serverTimestamp,
     required String verifiedCharacterName,
     required String verifiedServerName,
+    required String verifiedClassName,
+    double? verifiedItemLevel,
+    double? verifiedCombatPower,
     required GroupMembershipState membershipState,
     GroupNameNormalizer normalizer = const GroupNameNormalizer(),
   }) {
@@ -75,6 +79,11 @@ class GroupCreateWritePlan {
         'joinedBy': GroupJoinedBy.created.name,
         'displayCharacterIdSnapshot': command.representativeCharacterId,
         'displayCharacterNameSnapshot': characterName,
+        ...GroupMemberWriteFields.displaySnapshots(
+          className: verifiedClassName,
+          itemLevel: verifiedItemLevel,
+          combatPower: verifiedCombatPower,
+        ),
         'revision': 1,
         'createdAt': serverTimestamp,
         'updatedAt': serverTimestamp,

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/group_join_command.dart';
+import '../../domain/entities/group_member.dart';
+import '../../domain/entities/group_member_display.dart';
 import '../../domain/entities/group_relation.dart';
+import '../../domain/entities/group_request_character.dart';
 import '../../domain/entities/group_summary.dart';
 import '../../domain/repositories/group_read_repository.dart';
 import '../viewmodels/group_application_view_model.dart';
@@ -42,6 +45,8 @@ class GroupDetailPage extends StatefulWidget {
 class _GroupDetailPageState extends State<GroupDetailPage> {
   late Future<GroupPublicSummary?> _group;
   late Future<GroupRelation?> _relation;
+  Future<List<GroupMemberDisplay>>? _members;
+  Future<GroupMember?>? _myMembership;
   bool _busy = false;
 
   @override
@@ -53,6 +58,24 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
   void _load() {
     _group = widget.readRepository.loadGroup(widget.groupId);
     _relation = widget.actionViewModel.loadMyRelation(
+      playerId: widget.playerId,
+      groupId: widget.groupId,
+    );
+    _members = null;
+    _myMembership = null;
+    _relation.then((relation) {
+      if (relation?.isMember == true && mounted) {
+        setState(_loadMemberViews);
+      }
+    });
+  }
+
+  void _loadMemberViews() {
+    _members = widget.actionViewModel.loadMemberDisplays(
+      groupId: widget.groupId,
+      playerId: widget.playerId,
+    );
+    _myMembership = widget.actionViewModel.loadMyMembership(
       playerId: widget.playerId,
       groupId: widget.groupId,
     );
@@ -114,6 +137,11 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                 value: _formatDate(group.lastActivityAt),
               ),
               const SizedBox(height: 24),
+              _MemberSection(
+                membersFuture: _members,
+                onMemberTap: _showPlayerCharacters,
+              ),
+              const SizedBox(height: 24),
               _actions(),
             ],
           );
@@ -145,6 +173,11 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                     context.push('/groups/${widget.groupId}/invite'),
                 icon: const Icon(Icons.person_add_alt),
                 label: const Text('멤버 초대'),
+              ),
+              _LeaveGroupEntry(
+                membershipFuture: _myMembership,
+                busy: _busy,
+                onLeave: _leaveGroup,
               ),
               if (widget.applicationsViewModel != null)
                 _LeaderApplicationsEntry(
@@ -274,6 +307,95 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
   void _showMessage(String message) => ScaffoldMessenger.of(
     context,
   ).showSnackBar(SnackBar(content: Text(message)));
+
+  Future<void> _showPlayerCharacters(GroupMemberDisplay display) async {
+    List<GroupRequestCharacter> characters;
+    try {
+      characters = await widget.actionViewModel.loadPlayerCharacters(
+        display.member.playerId,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      _showMessage('캐릭터 목록을 불러오지 못했습니다.');
+      return;
+    }
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                '${display.characterName}의 인증 캐릭터',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            if (characters.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 24),
+                child: Text('표시할 인증 캐릭터가 없습니다.'),
+              )
+            else
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final character in characters)
+                      ListTile(
+                        key: ValueKey(
+                          'memberCharacter-${character.characterId}',
+                        ),
+                        title: Text(character.characterName),
+                        subtitle: Text(
+                          '${character.serverName} · ${character.characterClassName}'
+                          ' · ${_formatLevel(character.itemLevel)}'
+                          ' · ${_formatCombatPower(character.combatPower)}',
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _leaveGroup() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('그룹 탈퇴'),
+        content: const Text('이 그룹에서 탈퇴하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const ValueKey('groupLeaveConfirmButton'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('탈퇴'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _busy = true);
+    final result = await widget.actionViewModel.leave(groupId: widget.groupId);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (result.failure != null) {
+      _showMessage(groupLeaveFailureMessage(result.failure!));
+      return;
+    }
+    _showMessage('그룹에서 탈퇴했습니다.');
+    context.go('/groups');
+  }
 }
 
 String _formatDate(DateTime value) {
@@ -283,6 +405,142 @@ String _formatDate(DateTime value) {
   final hour = local.hour.toString().padLeft(2, '0');
   final minute = local.minute.toString().padLeft(2, '0');
   return '${local.year}.$month.$day $hour:$minute';
+}
+
+String _formatLevel(double? value) =>
+    value == null ? '아이템 레벨 -' : '아이템 ${value.toStringAsFixed(0)}';
+
+String _formatCombatPower(double? value) =>
+    value == null ? '전투력 -' : '전투력 ${value.toStringAsFixed(0)}';
+
+class _MemberSection extends StatelessWidget {
+  const _MemberSection({
+    required this.membersFuture,
+    required this.onMemberTap,
+  });
+
+  final Future<List<GroupMemberDisplay>>? membersFuture;
+  final ValueChanged<GroupMemberDisplay> onMemberTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final membersFuture = this.membersFuture;
+    if (membersFuture == null) return const SizedBox.shrink();
+    return FutureBuilder<List<GroupMemberDisplay>>(
+      future: membersFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return _GroupDetailMessage(
+            message: groupReadFailureMessage(snapshot.error!),
+          );
+        }
+        final members = snapshot.data ?? const [];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('그룹원', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            for (final display in members)
+              _GroupMemberCard(
+                display: display,
+                onTap: () => onMemberTap(display),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _GroupMemberCard extends StatelessWidget {
+  const _GroupMemberCard({required this.display, required this.onTap});
+
+  final GroupMemberDisplay display;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      key: ValueKey('groupMemberCard-${display.member.playerId}'),
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      display.characterName,
+                      style: theme.textTheme.titleMedium,
+                    ),
+                  ),
+                  if (display.isLeader)
+                    Chip(
+                      label: const Text('그룹장'),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text('${display.className} · ${_formatLevel(display.itemLevel)}'),
+              Text(_formatCombatPower(display.combatPower)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LeaveGroupEntry extends StatelessWidget {
+  const _LeaveGroupEntry({
+    required this.membershipFuture,
+    required this.busy,
+    required this.onLeave,
+  });
+
+  final Future<GroupMember?>? membershipFuture;
+  final bool busy;
+  final VoidCallback onLeave;
+
+  @override
+  Widget build(BuildContext context) {
+    final membershipFuture = this.membershipFuture;
+    if (membershipFuture == null) return const SizedBox.shrink();
+    return FutureBuilder<GroupMember?>(
+      future: membershipFuture,
+      builder: (context, snapshot) {
+        final member = snapshot.data;
+        if (member == null) return const SizedBox.shrink();
+        if (member.isLeader) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(
+              '그룹장은 이전 또는 해산 없이 탈퇴할 수 없습니다.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          );
+        }
+        return Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: OutlinedButton.icon(
+            key: const ValueKey('groupLeaveButton'),
+            onPressed: busy ? null : onLeave,
+            icon: const Icon(Icons.logout),
+            label: const Text('그룹 탈퇴'),
+          ),
+        );
+      },
+    );
+  }
 }
 
 /// membership 확인 뒤에만 그룹장 여부를 읽는다. 실패하면 진입을 감추고
