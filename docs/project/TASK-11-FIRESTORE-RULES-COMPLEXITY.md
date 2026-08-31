@@ -1,4 +1,4 @@
-# Task-11 Firestore Rules 복잡도 차단 — 최우선 수정
+# Task-11 Firestore Rules 복잡도 차단 — 열린 기술 부채
 
 ## 상태
 
@@ -7,15 +7,17 @@
 | 발견일 | 2026-08-31 |
 | 차단 범위 | **전체 `firestore.rules` 정상 배포** |
 | 현재 단계 | 원인 확인 완료, 축소·분할 리팩터링 **미착수** |
-| 운영 영향 | 2026-08-31 저녁 **절반 축소 프로브 Rules**가 `lost-party`에 일시 배포됨. 앱 대부분 쓰기가 거부될 수 있음 |
+| Task-11·11a 코드 | **`main`에 1차 병합 완료** (Rules 운영 반영과는 별개) |
+| 운영 영향 | 2026-08-31 저녁 **절반 축소 프로브 Rules**가 `lost-party`에 일시 배포됨. 전체 원본 재배포는 **503으로 실패** 확인. 앱 대부분 쓰기가 거부될 수 있음 |
+| 다음 | **전체 기획·설계 재검토**에 반드시 포함. 구현은 재설계 지시 후 |
 
 ## 요약
 
-Task-11a(멤버 목록·탈퇴·표시 Snapshot)와 그룹 기능 실기기 재검증은 **Rules를 정상 배포할 수 있을 때까지 진행을 멈춘다.**
+Task-11a(멤버 목록·탈퇴·표시 Snapshot) 코드는 `main`에 보존됐다. 다만 **Rules를 정상 배포할 수 있을 때까지** 해당 Rules·실기기 검증은 열린 부채다.
 
 원인은 Rules 문법 오류가 아니라 **단일 `firestore.rules` 파일의 컴파일/업로드 복잡도 한도**에 가깝다.
 
-- 전체 Rules (~159KB, ~3470줄): `firebase deploy --only firestore:rules` 시 **503/409** 등 API 실패가 반복됨
+- 전체 Rules (~159KB, ~3470줄): `firebase deploy --only firestore:rules` 시 **503** (사용자 재확인)
 - 약 **47.9%**로 함수 본문을 `return false` 스텁으로 줄인 프로브 (~76KB): **compile + release 성공** (~13초)
 
 즉, Task-11 leave·Snapshot refresh 등 **최근 Rules 추가분이 문법만 맞다고 배포가 보장되지 않는다.**
@@ -29,15 +31,15 @@ Task-11a(멤버 목록·탈퇴·표시 Snapshot)와 그룹 기능 실기기 재�
 
 프로브는 **운영에 그대로 두면 안 됨**. 정상 Rules 복구 배포 전까지 그룹·파티·Claim 등 쓰기가 대부분 막힌다.
 
-## 정상 복구 (사용자)
+## 정상 복구 시도 (사용자)
 
-로컬에 백업해 둔 **전체 원본** `firestore.rules`로 되돌린 뒤:
+로컬 **전체 원본** `firestore.rules`로 되돌린 뒤:
 
 ```powershell
 firebase deploy --only firestore:rules --project lost-party
 ```
 
-503이 다시 나오면 Rules 축소 작업이 선행되어야 한다.
+→ **503 재현**. 업로드 대상은 복원된 전체 파일이 맞으나, 복잡도 한도로 release 실패. 운영은 직전 성공분(프로브)이 유지된다.
 
 ## 추정 원인
 
@@ -45,9 +47,7 @@ firebase deploy --only firestore:rules --project lost-party
 - 그룹 leave 경로의 `removedActiveGroupId` chunk helper 등 **중첩·분기·OR 평가**가 컴파일 비용을 키움
 - Firebase Rules API는 파일 크기·식 복잡도 한도를 공개하지 않으나, **절반 축소 시 성공**으로 복잡도 병목이 거의 확실함
 
-## 수정 방향 (다음 구현 작업)
-
-아래는 **Task-11a 마무리·`main` 병합보다 앞**에 수행한다.
+## 수정 방향 (재설계 후 구현)
 
 1. **Rules 분할·중복 제거**
    - 그룹 전용 helper를 최소화하고 OR 체인 순서·중복 `get()` 제거
@@ -61,15 +61,13 @@ firebase deploy --only firestore:rules --project lost-party
 
 ## Task-11a와의 관계
 
-다음 클라이언트·Rules 변경은 **코드에만 존재**하고 운영 배포는 막혀 있을 수 있다.
-
-| 항목 | 코드 | Rules 배포 |
+| 항목 | 코드 (`main`) | Rules 배포 |
 | --- | --- | --- |
-| 일반 멤버 탈퇴 | 구현됨 | leave Rules 포함, **전체 deploy 실패 시 미반영** |
-| 멤버 표시 Snapshot (`combatPowerSnapshot` 등) | 구현됨 | create/join + **self refresh update** 포함 |
+| 일반 멤버 탈퇴 | 구현됨 | leave Rules 포함, **전체 deploy 실패로 미반영** |
+| 멤버 표시 Snapshot | 구현됨 | create/join + **self refresh update** 포함, 미반영 |
 | 그룹원 목록·상세 UI | 구현됨 | 읽기 Rules는 기존 Task-11과 동일 전제 |
 
-**Rules 축소·배포 성공 → 사용자 전체 Rules 재배포 → Task-11a 실기기 재검증** 순서를 지킨다.
+재설계 후: **Rules 축소·배포 성공 → Task-11a 실기기 재검증** 순서를 권장한다.
 
 ## 참고
 
