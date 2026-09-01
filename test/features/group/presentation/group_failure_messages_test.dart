@@ -48,6 +48,25 @@ void main() {
       );
     });
 
+    test('해산 차단은 정리할 항목을 안내한다', () {
+      expect(
+        groupJoinFailureMessage(GroupJoinFailure.disbandRequiresSoloGroup),
+        contains('해산'),
+      );
+      expect(
+        groupJoinFailureMessage(GroupJoinFailure.pendingGroupRequests),
+        contains('초대'),
+      );
+      expect(
+        groupJoinFailureMessage(GroupJoinFailure.activeGroupRaidExists),
+        contains('그룹만 공개'),
+      );
+      expect(
+        groupDisbandFailureMessage(GroupJoinFailure.joinCodeActive),
+        contains('기간 만료가 아닙니다'),
+      );
+    });
+
     test('탈퇴 permission-denied는 가입 문구가 아닌 탈퇴 안내를 보여 준다', () {
       expect(
         groupLeaveFailureMessage(GroupJoinFailure.permissionDenied),

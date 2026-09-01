@@ -1,6 +1,7 @@
 import '../entities/group_join_code.dart';
 import '../entities/group_join_code_command.dart';
 import '../entities/group_join_command.dart';
+import '../entities/group_leader_exit_command.dart';
 import '../entities/group_leave_command.dart';
 
 /// Transaction 이전에 확인할 수 있는 형식 오류만 걸러 낸다. 권한·상태 전이는
@@ -75,6 +76,19 @@ class GroupJoinCommandValidator {
 
   GroupJoinFailure? validateLeave(GroupLeaveCommand command) =>
       _invalidDocumentId(command.groupId)
+      ? GroupJoinFailure.invalidRequest
+      : null;
+
+  GroupJoinFailure? validateTransfer(GroupLeaderTransferCommand command) =>
+      _invalidDocumentId(command.groupId) ||
+          _invalidDocumentId(command.targetPlayerId) ||
+          _invalidRevision(command.expectedGroupRevision)
+      ? GroupJoinFailure.invalidRequest
+      : null;
+
+  GroupJoinFailure? validateDisband(GroupDisbandCommand command) =>
+      _invalidDocumentId(command.groupId) ||
+          _invalidRevision(command.expectedGroupRevision)
       ? GroupJoinFailure.invalidRequest
       : null;
 

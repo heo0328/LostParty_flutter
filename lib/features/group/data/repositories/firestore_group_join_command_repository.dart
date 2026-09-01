@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/entities/group_join_command.dart';
+import '../../domain/entities/group_leader_exit_command.dart';
 import '../../domain/entities/group_leave_command.dart';
 import '../../domain/entities/group_member_display_snapshot_refresh_command.dart';
 import '../../domain/entities/group_member_display_snapshot.dart';
@@ -11,11 +12,13 @@ import '../../domain/entities/group_relation.dart';
 import '../../domain/entities/group_request_character.dart';
 import '../../domain/entities/group_summary.dart';
 import '../../domain/repositories/group_join_command_repository.dart';
+import '../../domain/services/group_disband_active_raid_check.dart';
 import '../../domain/services/group_join_command_validator.dart';
 import '../../domain/services/group_local_member_display_lookup.dart';
 import '../mappers/group_create_write_plan.dart';
 import '../mappers/group_document_mapper.dart';
 import '../mappers/group_join_write_plan.dart';
+import '../mappers/group_leader_exit_write_plan.dart';
 import '../mappers/group_leave_write_plan.dart';
 import '../mappers/group_member_snapshot_write_plan.dart';
 import 'firestore_group_character_search_repository.dart';
@@ -469,6 +472,202 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
     });
   }
 
+  @override
+  Future<GroupJoinCommandResult> transferLeadership(
+    GroupLeaderTransferCommand command,
+  ) async {
+    final invalid = _validator.validateTransfer(command);
+    if (invalid != null) return GroupJoinCommandResult.failure(invalid);
+    return _run((transaction, playerId, localDisplayByCharacterId) async {
+      if (command.targetPlayerId == playerId) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.transferTargetInvalid,
+        );
+      }
+      final groupRef = _groupRef(command.groupId);
+      final groupSnapshot = await transaction.get(groupRef);
+      final group = _group(groupSnapshot);
+      if (group == null) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.groupNotFound,
+        );
+      }
+      if (group.status != GroupStatus.active) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.groupClosed,
+        );
+      }
+      if (group.revision != command.expectedGroupRevision) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.revisionConflict,
+        );
+      }
+      final leaderPlayerId = groupSnapshot.data()?['leaderPlayerId'];
+      if (leaderPlayerId != playerId) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.notGroupLeader,
+        );
+      }
+
+      final outgoingRef = groupRef.collection('members').doc(playerId);
+      final incomingRef = groupRef
+          .collection('members')
+          .doc(command.targetPlayerId);
+      final outgoingSnapshot = await transaction.get(outgoingRef);
+      final incomingSnapshot = await transaction.get(incomingRef);
+      if (!outgoingSnapshot.exists) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.notGroupMember,
+        );
+      }
+      if (!incomingSnapshot.exists) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.transferTargetInvalid,
+        );
+      }
+      final outgoing = _member(outgoingSnapshot);
+      final incoming = _member(incomingSnapshot);
+      if (outgoing == null || !outgoing.isLeader) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.notGroupLeader,
+        );
+      }
+      if (incoming == null || incoming.isLeader) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.transferTargetInvalid,
+        );
+      }
+
+      final plan = GroupLeaderTransferWritePlan.fromMembers(
+        incomingLeaderPlayerId: incoming.playerId,
+        incomingLeaderDisplayName: incoming.displayCharacterNameSnapshot,
+        groupRevision: group.revision,
+        outgoingLeaderRevision: outgoing.revision,
+        incomingLeaderRevision: incoming.revision,
+        serverTimestamp: FieldValue.serverTimestamp(),
+      );
+      transaction.update(groupRef, plan.groupPatch);
+      transaction.update(outgoingRef, plan.outgoingLeaderPatch);
+      transaction.update(incomingRef, plan.incomingLeaderPatch);
+      return const GroupJoinCommandResult.completed();
+    });
+  }
+
+  @override
+  Future<GroupJoinCommandResult> disband(GroupDisbandCommand command) async {
+    final invalid = _validator.validateDisband(command);
+    if (invalid != null) return GroupJoinCommandResult.failure(invalid);
+    final groupRef = _groupRef(command.groupId);
+    try {
+      final pending = await groupRef
+          .collection('joinRelations')
+          .where('status', isEqualTo: GroupRequestStatus.pending.name)
+          .limit(1)
+          .get();
+      if (pending.docs.isNotEmpty) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.pendingGroupRequests,
+        );
+      }
+      final listings = await groupRef.collection('raidListings').limit(20).get();
+      var hasActiveGroupRaid = false;
+      for (final listing in listings.docs) {
+        final listingData = listing.data();
+        if (listingData['visibility'] != 'group') continue;
+        final recruitment = await _firestore
+            .collection('recruitments')
+            .doc(listing.id)
+            .get();
+        if (isBlockingActiveGroupRaid(
+          groupId: command.groupId,
+          listing: listingData,
+          recruitment: recruitment.data(),
+        )) {
+          hasActiveGroupRaid = true;
+          break;
+        }
+      }
+      if (hasActiveGroupRaid) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.activeGroupRaidExists,
+        );
+      }
+    } on FirebaseException catch (error) {
+      return GroupJoinCommandResult.failure(groupFirebaseFailure(error.code));
+    }
+
+    return _run((transaction, playerId, localDisplayByCharacterId) async {
+      final groupSnapshot = await transaction.get(groupRef);
+      final group = _group(groupSnapshot);
+      if (group == null) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.groupNotFound,
+        );
+      }
+      if (group.status != GroupStatus.active) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.groupClosed,
+        );
+      }
+      if (group.revision != command.expectedGroupRevision) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.revisionConflict,
+        );
+      }
+      if (groupSnapshot.data()?['leaderPlayerId'] != playerId) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.notGroupLeader,
+        );
+      }
+      if (group.memberCount != 1) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.disbandRequiresSoloGroup,
+        );
+      }
+      if (group.hasActiveJoinCode) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.joinCodeActive,
+        );
+      }
+
+      final memberRef = groupRef.collection('members').doc(playerId);
+      final memberSnapshot = await transaction.get(memberRef);
+      final member = _member(memberSnapshot);
+      if (member == null) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.notGroupMember,
+        );
+      }
+      if (!member.isLeader) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.notGroupLeader,
+        );
+      }
+
+      final membershipState = _mapper.toMembershipState(
+        playerId: playerId,
+        data: _data(await transaction.get(_membershipStateRef(playerId))),
+      );
+      if (!membershipState.contains(command.groupId)) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.invalidRequest,
+        );
+      }
+
+      final plan = GroupDisbandWritePlan.soloLeader(
+        groupId: command.groupId,
+        groupRevision: group.revision,
+        membershipState: membershipState,
+        serverTimestamp: FieldValue.serverTimestamp(),
+      );
+      transaction.update(groupRef, plan.groupPatch);
+      transaction.delete(memberRef);
+      transaction.update(_membershipStateRef(playerId), plan.membershipState);
+      transaction.delete(_playerRelationRef(playerId, command.groupId));
+      return const GroupJoinCommandResult.completed();
+    });
+  }
+
   GroupJoinCommandResult? _invitationGuard(
     GroupJoinRelation? relation,
     int expectedRevision, {
@@ -617,6 +816,16 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
   ) {
     if (!snapshot.exists) return null;
     return _mapper.toJoinRelation(
+      GroupDocumentDto(
+        id: snapshot.id,
+        data: Map<String, Object?>.from(snapshot.data() ?? const {}),
+      ),
+    );
+  }
+
+  GroupMember? _member(DocumentSnapshot<Map<String, dynamic>> snapshot) {
+    if (!snapshot.exists) return null;
+    return _mapper.toMember(
       GroupDocumentDto(
         id: snapshot.id,
         data: Map<String, Object?>.from(snapshot.data() ?? const {}),

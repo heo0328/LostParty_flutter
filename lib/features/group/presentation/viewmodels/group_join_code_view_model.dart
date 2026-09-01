@@ -12,8 +12,8 @@ String groupJoinCodeFailureMessage(GroupJoinFailure failure) =>
 
 /// 계약 §7. 그룹장이 코드를 만들고 복사·폐기·표시 정책을 관리한다.
 ///
-/// 생성 직후 코드는 ViewModel 메모리에만 둔다. 앱을 다시 열면 폐기 시
-/// 코드를 다시 입력해야 한다.
+/// 생성 직후 코드는 ViewModel 메모리에만 둔다. 앱을 다시 열면 원문이 보이지
+/// 않는다. 기간 만료가 아니므로 복사해 둔 코드를 다시 입력해야 폐기할 수 있다.
 class GroupJoinCodeManageViewModel {
   GroupJoinCodeManageViewModel({
     required this.readRepository,

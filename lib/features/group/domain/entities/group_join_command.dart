@@ -95,6 +95,14 @@ enum GroupJoinFailure {
   joinCodeInvalid,
   /// 그룹장은 이전·해산 없이 탈퇴할 수 없다.
   leaderCannotLeave,
+  /// 후임자가 같은 그룹의 일반 멤버가 아니다.
+  transferTargetInvalid,
+  /// 1차 해산은 마지막 1인 그룹만 허용한다.
+  disbandRequiresSoloGroup,
+  /// 대기 중인 초대나 가입 신청이 있어 해산할 수 없다.
+  pendingGroupRequests,
+  /// 활성 그룹 전용 레이드가 있어 해산할 수 없다.
+  activeGroupRaidExists,
   permissionDenied,
   temporarilyUnavailable,
   unknown,

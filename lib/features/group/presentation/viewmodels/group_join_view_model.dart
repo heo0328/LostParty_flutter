@@ -1,6 +1,7 @@
 import '../../../account/domain/repositories/account_repository.dart';
 import '../../../account/domain/repositories/character_combat_power_sync_gateway.dart';
 import '../../domain/entities/group_join_command.dart';
+import '../../domain/entities/group_leader_exit_command.dart';
 import '../../domain/entities/group_leave_command.dart';
 import '../../domain/entities/group_member.dart';
 import '../../domain/entities/group_member_display.dart';
@@ -46,9 +47,24 @@ String groupJoinFailureMessage(GroupJoinFailure failure) => switch (failure) {
   GroupJoinFailure.joinCodeInvalid => '초대코드 형식이 올바르지 않습니다.',
   GroupJoinFailure.leaderCannotLeave =>
     '그룹장은 지금 탈퇴할 수 없습니다. 그룹장 이전 또는 해산이 필요합니다.',
+  GroupJoinFailure.transferTargetInvalid =>
+    '그룹장을 넘길 수 있는 일반 그룹원이 아닙니다. 목록을 새로고침한 뒤 다시 선택해 주세요.',
+  GroupJoinFailure.disbandRequiresSoloGroup =>
+    '다른 그룹원이 있으면 해산할 수 없습니다. 그룹장을 이전하거나 멤버가 탈퇴한 뒤 다시 시도해 주세요.',
+  GroupJoinFailure.pendingGroupRequests =>
+    '대기 중인 초대나 가입 신청이 있습니다. 취소하거나 거절한 뒤 해산해 주세요.',
+  GroupJoinFailure.activeGroupRaidExists =>
+    '아직 끝나지 않은 그룹만 공개 레이드가 있습니다. 해당 방을 해산한 뒤 다시 시도해 주세요.',
   GroupJoinFailure.temporarilyUnavailable =>
     '일시적으로 처리할 수 없습니다. 새로고침한 뒤 다시 시도해 주세요.',
   GroupJoinFailure.unknown => '요청을 처리하지 못했습니다.',
+};
+
+/// 해산 차단 안내. 초대코드는 기간 만료가 아니라 원문을 다시 입력해야 폐기된다.
+String groupDisbandFailureMessage(GroupJoinFailure failure) => switch (failure) {
+  GroupJoinFailure.joinCodeActive =>
+    '활성 초대코드가 있습니다. 기간 만료가 아닙니다. 초대코드 화면에서 복사해 둔 코드를 입력해 폐기한 뒤 다시 해산하세요.',
+  _ => groupJoinFailureMessage(failure),
 };
 
 /// 탈퇴 명령 전용 안내. 가입 실패 문구와 구분한다.
@@ -252,4 +268,26 @@ class GroupMembershipActionViewModel {
 
   Future<GroupJoinCommandResult> leave({required String groupId}) =>
       commandRepository.leave(GroupLeaveCommand(groupId: groupId));
+
+  Future<GroupJoinCommandResult> transferLeadership({
+    required String groupId,
+    required String targetPlayerId,
+    required int expectedGroupRevision,
+  }) => commandRepository.transferLeadership(
+    GroupLeaderTransferCommand(
+      groupId: groupId,
+      targetPlayerId: targetPlayerId,
+      expectedGroupRevision: expectedGroupRevision,
+    ),
+  );
+
+  Future<GroupJoinCommandResult> disband({
+    required String groupId,
+    required int expectedGroupRevision,
+  }) => commandRepository.disband(
+    GroupDisbandCommand(
+      groupId: groupId,
+      expectedGroupRevision: expectedGroupRevision,
+    ),
+  );
 }

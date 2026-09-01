@@ -1,16 +1,25 @@
 # AI CONTEXT (2026)
 
-## 최우선 현재 상태 — 그룹 레이드 생성·모집 리스트 실기기 확인 (2026-09-01)
+## 최우선 현재 상태 — 생성 후 그룹 공개 범위 전환 (2026-09-01)
+
+- 다음 우선 작업은 파티장이 그룹 레이드의 `그룹만 공개 ↔ 전체 공개`를 생성 이후에 바꾸는 기능이다. 제품 기준 `GROUP_PRODUCT_FLOW.md` §9. `groupId`는 유지한다. 전체 공개→그룹 전용은 비그룹 멤버·유효 신청이 있으면 거절한다.
+- listing은 그룹 전용일 때만 존재해야 하므로 전환 Transaction에서 생성·삭제가 필요하다. 현재 listing `update, delete`는 Rules가 거부한다. `recruitments` list에 그룹 membership `exists`나 `visibility==group` 쿼리를 쓰지 않는다.
+- 직전 완료: 그룹장 즉시 이전·1차 해산. 브랜치 `codex/group-leader-exit`. 실기기에서 1인 해산, 즉시 이전, 이전 후 기존 그룹장 탈퇴, 후임 그룹장 해산을 확인했다. 활성 그룹 레이드는 모집 원본 status로 판정한다. 커밋 SHA는 로그로 확인한다. Rules 배포는 별도 지시.
 
 - 사용자가 그룹만 공개 방을 만들고 그룹원이 레이드 모집 리스트에서 보는 흐름이 동작한다고 확인했다. 기능 커밋 `61fd464`는 병합 커밋 `25c3b44`로 `main`에 통합·푸시됐고, 로컬 `main`과 `origin/main`이 일치한다.
 - 일반 레이드는 `groupId=null`/`public`. 그룹 레이드는 가입 그룹 하나와 `그룹만 공개` 기본값. 생성 트랜잭션이 `groups/{groupId}/raidListings/{recruitmentId}`에 모집 스냅샷을 같이 쓴다.
 - 모집 리스트는 공개 `recruitments` 쿼리를 먼저 내보내고, `players/{id}/groupMembershipState/current`의 `activeGroupIds`별 listing을 합친다. listing·state 오류는 공개 목록을 죽이지 않는다.
 - `recruitments` list는 `canListRecruitment`(공개/리더/멤버 필드)만 사용한다. 그룹 membership `exists`와 `visibility==group` 목록 쿼리는 쓰지 않는다. listing `list`는 경로의 `isCurrentGroupMember`만 본다.
 - 책임자·확정 멤버 본인 방은 모집 리스트에서 제외한다. listing이 없는 생성 이전 그룹 전용 방은 재생성 전까지 안 보일 수 있다.
-- 다음 우선 작업은 그룹장 즉시 지정 이전·후속 탈퇴·해산 구현이다. 그룹장은 유효한 일반 그룹원을 선택해 수락 없이 즉시 그룹장을 넘기고 일반 멤버로 남은 뒤 기존 탈퇴를 별도로 실행한다. 이전 요청 문서와 수락·거절·취소·만료 상태는 만들지 않는다.
-- 기술 기준은 `GROUP_LEADER_EXIT_DISBAND_CONTRACT.md`다. 그룹 대표 Character는 유지하고 그룹장 표시 Snapshot만 바꾼다. 1차 해산은 마지막 1인·pending 관계 없음·활성 그룹 전용 레이드 없음 조건에서 soft delete로 처리한다.
-- 이후 공개 전환, listing 갱신, 기존 listing 보완, 그룹 전용 자격 박탈을 완료하고 마지막에 레이드 모집·현황 그룹 필터를 구현한다.
+- 이후 listing 갱신, 기존 listing 보완, 그룹 전용 자격 박탈을 완료하고 마지막에 레이드 모집·현황 그룹 필터를 구현한다.
 - 필터 제품 기획은 `GROUP_PRODUCT_FLOW.md` §8·§15에 이미 있다. 필터 구현 직전 정의·적용 화면·포함/제외 범위·상태 보존·무효 선택 정리·완료 조건을 사용자와 반드시 재확인하며, 검토와 문서 보완이 끝나기 전에는 필터 코드를 수정하지 않는다.
+
+## 직전 상태 — 그룹장 즉시 지정 이전·해산 (2026-09-01)
+
+- 브랜치 `codex/group-leader-exit`. 기술 기준 `GROUP_LEADER_EXIT_DISBAND_CONTRACT.md`.
+- 그룹장은 유효한 일반 그룹원을 선택해 수락 없이 즉시 그룹장을 넘기고 일반 멤버로 남은 뒤 기존 탈퇴를 별도로 실행한다. 이전 요청 문서는 만들지 않는다.
+- 1차 해산은 마지막 1인·pending 관계 없음·활성 그룹 전용 레이드 없음·활성 초대코드 없음에서 soft delete한다.
+- 초대코드는 기간 만료가 없다. 원문은 그룹에 없어 앱 재시작 후 화면에 다시 보이지 않으며, 복사해 둔 코드를 입력해야 폐기할 수 있다.
 
 ## 직전 상태 — 모집 생성 UI(A) 통합 (2026-08-31)
 

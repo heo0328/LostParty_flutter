@@ -15,6 +15,7 @@ import 'package:lost_party/features/group/domain/entities/group_create_command.d
 import 'package:lost_party/features/group/domain/entities/group_create_result.dart';
 import 'package:lost_party/features/group/domain/entities/group_join_code_command.dart';
 import 'package:lost_party/features/group/domain/entities/group_join_command.dart';
+import 'package:lost_party/features/group/domain/entities/group_leader_exit_command.dart';
 import 'package:lost_party/features/group/domain/entities/group_leave_command.dart';
 import 'package:lost_party/features/group/domain/entities/group_member_display_snapshot_refresh_command.dart';
 import 'package:lost_party/features/group/domain/entities/group_join_relation.dart';
@@ -384,6 +385,15 @@ class _GroupJoinCommandRepository implements GroupJoinCommandRepository {
 
   @override
   Future<GroupJoinCommandResult> leave(GroupLeaveCommand command) async =>
+      const GroupJoinCommandResult.completed();
+
+  @override
+  Future<GroupJoinCommandResult> transferLeadership(
+    GroupLeaderTransferCommand command,
+  ) async => const GroupJoinCommandResult.completed();
+
+  @override
+  Future<GroupJoinCommandResult> disband(GroupDisbandCommand command) async =>
       const GroupJoinCommandResult.completed();
 
   @override

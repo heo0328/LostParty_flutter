@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lost_party/features/group/domain/entities/group_join_code_command.dart';
 import 'package:lost_party/features/group/domain/entities/group_join_command.dart';
+import 'package:lost_party/features/group/domain/entities/group_leader_exit_command.dart';
 import 'package:lost_party/features/group/domain/services/group_join_command_validator.dart';
 
 void main() {
@@ -217,6 +218,44 @@ void main() {
         const GroupJoinByCodeCommand(code: '0O1I', characterId: 'character-1'),
       ),
       GroupJoinFailure.joinCodeInvalid,
+    );
+  });
+
+  test('그룹장 이전·해산 명령은 그룹 revision 1 이상을 요구한다', () {
+    expect(
+      validator.validateTransfer(
+        const GroupLeaderTransferCommand(
+          groupId: 'group-1',
+          targetPlayerId: 'player-2',
+          expectedGroupRevision: 1,
+        ),
+      ),
+      isNull,
+    );
+    expect(
+      validator.validateTransfer(
+        const GroupLeaderTransferCommand(
+          groupId: 'group-1',
+          targetPlayerId: 'player-2',
+          expectedGroupRevision: 0,
+        ),
+      ),
+      GroupJoinFailure.invalidRequest,
+    );
+    expect(
+      validator.validateDisband(
+        const GroupDisbandCommand(groupId: 'group-1', expectedGroupRevision: 3),
+      ),
+      isNull,
+    );
+    expect(
+      validator.validateDisband(
+        const GroupDisbandCommand(
+          groupId: 'groups/group-1',
+          expectedGroupRevision: 1,
+        ),
+      ),
+      GroupJoinFailure.invalidRequest,
     );
   });
 }

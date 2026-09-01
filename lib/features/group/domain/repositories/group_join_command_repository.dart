@@ -1,4 +1,5 @@
 import '../entities/group_join_command.dart';
+import '../entities/group_leader_exit_command.dart';
 import '../entities/group_leave_command.dart';
 import '../entities/group_member_display_snapshot_refresh_command.dart';
 
@@ -23,6 +24,14 @@ abstract interface class GroupJoinCommandRepository {
 
   /// 계약 §11a. 일반 멤버 본인 탈퇴만 허용한다.
   Future<GroupJoinCommandResult> leave(GroupLeaveCommand command);
+
+  /// 현재 그룹장이 대상 일반 멤버에게 권한을 즉시 지정한다.
+  Future<GroupJoinCommandResult> transferLeadership(
+    GroupLeaderTransferCommand command,
+  );
+
+  /// 마지막 1인 그룹장의 1차 해산.
+  Future<GroupJoinCommandResult> disband(GroupDisbandCommand command);
 
   /// 본인 membership 표시 Snapshot만 갱신한다. 다른 필드는 바꾸지 않는다.
   /// 실패하면 예외를 전달하며, UI는 저장된 목록과 갱신 실패 안내를 함께 표시한다.

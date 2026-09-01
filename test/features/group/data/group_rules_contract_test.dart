@@ -372,7 +372,7 @@ void main() {
     );
     expect(
       rules,
-      contains('allow delete: if validGroupMemberLeaveRelationDelete(playerId, groupId);'),
+      contains('validGroupMemberLeaveRelationDelete(playerId, groupId)'),
     );
   });
 
@@ -540,11 +540,16 @@ void main() {
       contains('function validGroupMemberLeaveRelationDelete(playerId, groupId)'),
     );
     expect(rules, contains('allow delete: if validGroupMemberSelfLeaveDelete('));
-    expect(rules, contains('allow delete: if validGroupMemberLeaveRelationDelete(playerId, groupId);'));
+    expect(rules, contains('validGroupMemberLeaveRelationDelete(playerId, groupId)'));
+    expect(rules, contains('validGroupDisbandRelationDelete(playerId, groupId)'));
     expect(
       rules,
       contains('allow update: if validGroupMemberLeaveUpdate('),
     );
+    expect(rules, contains('function validGroupLeaderTransferUpdate('));
+    expect(rules, contains('function validGroupMemberRoleTransferUpdate('));
+    expect(rules, contains('function validGroupDisbandUpdate('));
+    expect(rules, contains('function validGroupMemberDisbandDelete('));
     expect(
       rules,
       contains('allow update: if validMembershipStateRemove('),

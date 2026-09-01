@@ -267,4 +267,20 @@ void main() {
     expect(tester.widget<IconButton>(button).onPressed, isNotNull);
     expect(find.byKey(const ValueKey('groupDisplaySyncWarning')), findsNothing);
   });
+
+  testWidgets('그룹장은 바로 탈퇴 버튼 대신 나가기를 본다', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GroupDetailPage(
+          groupId: 'group-1',
+          playerId: 'player-1',
+          readRepository: reads,
+          actionViewModel: model(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('groupLeaveButton')), findsNothing);
+    expect(find.byKey(const ValueKey('groupLeaderExitButton')), findsOneWidget);
+  });
 }
