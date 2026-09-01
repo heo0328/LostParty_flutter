@@ -9,6 +9,7 @@ import '../../domain/repositories/party_membership_command_repository.dart';
 import '../../domain/services/party_membership_command_validator.dart';
 import '../mappers/party_membership_event_writer.dart';
 import '../mappers/party_membership_write_plan.dart';
+import '../mappers/party_raid_listing_sync.dart';
 
 class FirestorePartyMembershipCommandRepository implements PartyMembershipCommandRepository {
   const FirestorePartyMembershipCommandRepository({required FirebaseFirestore firestore, required FirebaseAuth firebaseAuth}) : _firestore = firestore, _firebaseAuth = firebaseAuth;
@@ -101,6 +102,12 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
           PartyMembershipFailure.unknown,
         );
       }
+      final listing = await PartyRaidListingTx.read(
+        transaction: transaction,
+        firestore: _firestore,
+        groupId: r['groupId'],
+        recruitmentId: command.recruitmentId,
+      );
       final now = FieldValue.serverTimestamp();
       final nextRevision = command.expectedRecruitmentRevision + 1;
       final beforeMembers = List<String>.from(r['memberPlayerIds'] as List);
@@ -144,24 +151,33 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
         });
       }
       if (r['leaderPlayerId'] == playerId) {
-        transaction.update(
-          recruitmentRef,
-          PartyMembershipWritePlan.leaderDisplaySnapshots(
-            characterName: name,
-            className: className,
-            revision: command.expectedRecruitmentRevision,
-            serverTimestamp: now,
-            dealerCount: dealerCount,
-            supportCount: supportCount,
-          ),
+        final patch = PartyMembershipWritePlan.leaderDisplaySnapshots(
+          characterName: name,
+          className: className,
+          revision: command.expectedRecruitmentRevision,
+          serverTimestamp: now,
+          dealerCount: dealerCount,
+          supportCount: supportCount,
+        );
+        transaction.update(recruitmentRef, patch);
+        listing.write(
+          transaction: transaction,
+          currentRecruitment: partyRecruitmentMap(r),
+          recruitmentPatch: patch,
         );
       } else {
-        transaction.update(recruitmentRef, {
+        final patch = <String, Object?>{
           'dealerCount': dealerCount,
           'supportCount': supportCount,
           'revision': nextRevision,
           'updatedAt': now,
-        });
+        };
+        transaction.update(recruitmentRef, patch);
+        listing.write(
+          transaction: transaction,
+          currentRecruitment: partyRecruitmentMap(r),
+          recruitmentPatch: patch,
+        );
       }
       PartyMembershipEventWriter.writeToRecipients(
         transaction: transaction,
@@ -246,9 +262,13 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
             leaderData?['characterNameSnapshot'] as String?;
         nextLeaderClassName = leaderData?['classNameSnapshot'] as String?;
       }
-      transaction.update(
-        recruitmentRef,
-        PartyMembershipWritePlan.removeFromRecruitment(
+      final listing = await PartyRaidListingTx.read(
+        transaction: transaction,
+        firestore: _firestore,
+        groupId: r?['groupId'],
+        recruitmentId: command.recruitmentId,
+      );
+      final recruitmentPatch = PartyMembershipWritePlan.removeFromRecruitment(
           memberPlayerIds: List<String>.from(r?['memberPlayerIds'] as List),
           targetPlayerId: command.targetPlayerId,
           memberCount: r?['memberCount'] as int,
@@ -261,7 +281,12 @@ class FirestorePartyMembershipCommandRepository implements PartyMembershipComman
           nextLeaderCharacterName: nextLeaderCharacterName,
           nextLeaderClassName: nextLeaderClassName,
           serverTimestamp: now,
-        ),
+        );
+      transaction.update(recruitmentRef, recruitmentPatch);
+      listing.write(
+        transaction: transaction,
+        currentRecruitment: partyRecruitmentMap(r),
+        recruitmentPatch: recruitmentPatch,
       );
       transaction.delete(targetRef);
       transaction.delete(
