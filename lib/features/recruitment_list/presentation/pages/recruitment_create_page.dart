@@ -683,6 +683,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
   }
 
   Future<void> _save() async {
+    if (_saving) return;
     if (!_formKey.currentState!.validate()) return;
     final groupBlock = _groupCreateBlockReason();
     if (groupBlock != null) {

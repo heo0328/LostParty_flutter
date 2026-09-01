@@ -79,6 +79,7 @@ import '../../features/recruitment_list/data/repositories/firestore_party_visibi
 import '../../features/recruitment_list/data/repositories/firestore_party_join_command_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_membership_command_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_read_repository.dart';
+import '../../features/recruitment_list/data/repositories/firestore_party_raid_listing_backfill.dart';
 import '../../features/recruitment_list/domain/repositories/party_read_repository.dart';
 import '../../features/recruitment_list/domain/policies/party_cycle_policy.dart';
 import '../../features/recruitment_list/presentation/pages/recruitment_list_page.dart';
@@ -158,6 +159,11 @@ GoRouter createAppRouter({
   final partyReadRepositoryOrDefault =
       partyReadRepository ??
       FirestorePartyReadRepository(firestore: FirebaseFirestore.instance);
+  final backfillOwnGroupListings = partyReadRepository == null
+      ? FirestorePartyRaidListingBackfill(
+          firestore: FirebaseFirestore.instance,
+        ).backfillOwnGroupListings
+      : null;
   final partyEventSyncServiceOrDefault =
       partyEventSyncService ??
       FirestorePartyEventSyncService(
@@ -452,6 +458,11 @@ GoRouter createAppRouter({
                   partyReadRepository: partyReadRepositoryOrDefault,
                   cycleKey: currentCycleKey,
                   currentPlayerId: playerSession.playerId,
+                  backfillOwnGroupListings: backfillOwnGroupListings == null
+                      ? null
+                      : () => backfillOwnGroupListings(
+                          playerId: playerSession.playerId,
+                        ),
                 ),
                 routes: [
                   GoRoute(

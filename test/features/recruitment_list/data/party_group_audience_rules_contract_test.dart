@@ -24,6 +24,7 @@ void main() {
     expect(rules, contains('function validGroupRaidListingCreate('));
     expect(rules, contains('data.diff(recruitment).affectedKeys().size() == 0'));
     expect(rules, contains("after.status == 'disbanded'"));
+    expect(rules, contains('function validGroupRaidListingBackfill('));
     expect(rules, contains('function validGroupRaidListingDelete('));
     expect(rules, contains('allow update: if validGroupRaidListingCreate('));
     expect(rules, contains('function validRecruitmentVisibilityChange('));

@@ -8,11 +8,21 @@
 - 구현 전 즉시 가입·승인, 탈퇴·추방, 자리 변경, 완료·취소·회차 전환, 반복 여부, 해산, 카드 정보·공개 범위 변경 경로를 대조한다. Rules는 `getAfter()` 원본과 listing 핵심 필드 일치를 강제하도록 설계한다.
 - 제품 문서, 쓰기·읽기 계약, NEXT_WORK와 AI_CONTEXT에 같은 기준을 기록했다. 이번 단계에서는 Dart 코드, Firestore Rules, 인덱스, 배포 설정을 수정하지 않았다.
 
+## 2026-09-01 기존 그룹 listing 보완 착수
+
+- 브랜치 `codex/raid-listings-backfill`. 모집 탭 시작 시 참가 중인 그룹 전용 방의 빠진 listing을 원본 Snapshot으로 만든다.
+- listing 전용 create Rules를 열어 모집 revision은 올리지 않는다. 그룹 전용 `recruitments` 목록 쿼리는 쓰지 않는다.
+
 ## 2026-09-01 raidListings 원자 동기화 커밋 — 실기기 보류
 
 - 브랜치 `codex/raid-listings-sync`. 그룹 전용 모집을 바꾸는 명령이 같은 Transaction에서 listing을 생성·덮어쓰기·삭제한다.
 - 만석·회차 완료·다음 주 대기는 listing을 유지하고, 전체 공개 전환과 방 해산만 삭제한다. Rules는 `getAfter` 원본과 listing `diff` 일치를 강제한다.
 - 사용자가 디바이스 미연결로 실기기 확인을 보류하고 커밋 후 기존 listing 보완으로 넘어가라고 지시했다. Rules 배포는 하지 않는다.
+
+## 2026-09-01 listing 동기화 실기기 확인 및 생성 충돌 알림 수정
+
+- listing 동기화·보완은 참가 충돌 알림 외 이상이 없다고 확인했다.
+- 같은 레이드 조건으로 생성·해산·재생성할 때, 방은 만들어졌는데 이미 참가 중 알림이 간헐적으로 났다. 생성 Transaction 재시도와 해산 후 남은 점유를 성공/교체로 처리한다.
 
 ## 2026-09-01 생성 후 그룹 공개 범위 전환 완료
 - 같은 Transaction에서 모집 visibility를 패치하고, 그룹 전용이면 listing을 만들거나 덮어쓰며 전체 공개면 listing을 삭제한다. 전체 공개→그룹 전용은 비그룹 멤버·pending 신청을 거절한다.

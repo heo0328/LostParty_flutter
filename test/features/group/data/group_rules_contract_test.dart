@@ -117,6 +117,8 @@ void main() {
       rules,
       contains('allow create: if validGroupRaidListingCreate('),
     );
+    expect(rules, contains('function validGroupRaidListingBackfill('));
+    expect(rules, contains('|| validGroupRaidListingBackfill('));
     expect(rules, contains('function validGroupRaidListingDelete('));
     expect(
       rules,

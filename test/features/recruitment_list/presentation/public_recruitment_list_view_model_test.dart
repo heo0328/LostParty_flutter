@@ -63,6 +63,24 @@ void main() {
     expect(viewModel.state.isEmpty, isFalse);
   });
 
+  test('목록 시작 시 기존 그룹 listing 보완을 한 번 호출한다', () async {
+    var calls = 0;
+    final repository = FakePartyReadRepository(
+      publicFirstPage: firstPage.stream,
+    );
+    final viewModel = PublicRecruitmentListViewModel(
+      repository: repository,
+      cycleKey: '2026-08-19',
+      currentPlayerId: 'player-1',
+      backfillOwnGroupListings: () async {
+        calls += 1;
+      },
+    )..start();
+    addTearDown(viewModel.dispose);
+    await settle();
+    expect(calls, 1);
+  });
+
   test('첫 snapshot이 비어 있으면 빈 목록이다', () async {
     final viewModel = createViewModel()..start();
     addTearDown(viewModel.dispose);

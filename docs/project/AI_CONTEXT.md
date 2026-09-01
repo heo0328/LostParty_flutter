@@ -1,26 +1,15 @@
 # AI CONTEXT (2026)
 
-## 최우선 현재 상태 — 기존 그룹 레이드 listing 보완 (2026-09-01)
+## 최우선 현재 상태 — 모집·현황 리스트 카드 밀도 (2026-09-01)
 
-- 다음 우선 작업은 listing이 없는 기존 그룹 전용 모집을 일괄 보완하는 것이다. 방을 바꾸는 동안의 자연 복구는 `codex/raid-listings-sync`에 있다.
-- 직전 완료: listing 원자 동기화. 브랜치 `codex/raid-listings-sync`. 만석·완료·다음 주 대기는 listing을 유지하고 전체 공개 전환·방 해산만 삭제한다. 표적 테스트 통과. 디바이스 미연결로 실기기 확인은 보류. Rules 배포는 별도 지시.
-- `recruitments` list에 그룹 membership `exists`나 `visibility==group` 쿼리를 쓰지 않는다. 자격 박탈·필터는 그다음이다.
+- listing 동기화·보완은 실기기에서 참가 충돌 알림 외 이상이 없었다. 생성 Transaction 재시도와 해산 잔여 점유를 고쳐 `main`에 통합한다. 다음 작업은 리스트 카드 밀도·그룹 배지다.
+- `recruitments` list에 그룹 membership `exists`나 `visibility==group` 쿼리를 쓰지 않는다.
 
 - 파티장이 그룹 레이드 상세에서 `그룹만 공개`를 끄면 전체 공개, 다시 켜면 그룹 전용이 된다. `groupId`는 유지한다. 전체 공개→그룹 전용은 비그룹 멤버·pending 신청이 있으면 거절한다.
-- 전환 Transaction이 모집 `visibility`/`revision`만 패치하고, 그룹 전용이면 listing을 만들거나 덮어쓰며 전체 공개면 listing을 삭제한다. `recruitments` list에 그룹 membership `exists`나 `visibility==group` 쿼리를 쓰지 않는다.
-- 사용자가 Rules를 배포했다. 비그룹 계정 모집에서 그룹 전용 숨김, 해제 후 표시, 재활성 후 숨김을 확인했다. Git SHA는 로그로 확인한다.
-- 다음 우선 작업은 자리·인원·상태에 맞춘 `raidListings` 갱신이다. listing이 없는 기존 방 보완과 그룹 전용 자격 박탈이 그다음이다.
-- 2026-09-01 사용자는 다음 구현 원칙에 동의했다. 모집 원본과 listing은 동일 Transaction에서 원자 동기화하고, 현재 모집 Snapshot 구조를 유지한다. 만석·완료 취소 가능·다음 주 대기처럼 재노출 가능한 상태는 최신 값으로 유지하며 전체 공개 전환·방 해산 같은 되돌릴 수 없는 종료는 삭제한다. 그룹 전용 모집의 listing이 없으면 변경 시 자연 복구한다. 과거 방 일괄 보완은 다음 단계다.
-- 구현 전 실제 모집 변경 Repository와 공개 카드 매퍼를 대조하고, 상태별 생성·덮어쓰기·삭제 및 동기화 필드를 write plan·Rules 테스트로 고정한다. Rules는 `getAfter()` 원본과 listing 핵심 값의 일치를 강제한다. 상세 기준은 `FIRESTORE_PARTY_COMMAND_CONTRACT.md` §4.2.1과 `NEXT_WORK.md`를 따른다.
-- 직전 완료: 그룹장 즉시 이전·1차 해산. 브랜치 `codex/group-leader-exit`, 커밋 `e7ce461`. 활성 그룹 레이드는 모집 원본 status로 판정한다.
-
-- 사용자가 그룹만 공개 방을 만들고 그룹원이 레이드 모집 리스트에서 보는 흐름이 동작한다고 확인했다. 기능 커밋 `61fd464`는 병합 커밋 `25c3b44`로 `main`에 통합·푸시됐고, 로컬 `main`과 `origin/main`이 일치한다.
-- 일반 레이드는 `groupId=null`/`public`. 그룹 레이드는 가입 그룹 하나와 `그룹만 공개` 기본값. 생성 트랜잭션이 `groups/{groupId}/raidListings/{recruitmentId}`에 모집 스냅샷을 같이 쓴다.
-- 모집 리스트는 공개 `recruitments` 쿼리를 먼저 내보내고, `players/{id}/groupMembershipState/current`의 `activeGroupIds`별 listing을 합친다. listing·state 오류는 공개 목록을 죽이지 않는다.
-- `recruitments` list는 `canListRecruitment`(공개/리더/멤버 필드)만 사용한다. 그룹 membership `exists`와 `visibility==group` 목록 쿼리는 쓰지 않는다. listing `list`는 경로의 `isCurrentGroupMember`만 본다.
-- 책임자·확정 멤버 본인 방은 모집 리스트에서 제외한다. listing이 없는 생성 이전 그룹 전용 방은 변경 시 자연 복구하고, 손대지 않은 방은 일괄 보완 전까지 안 보일 수 있다.
-- 이후 listing 갱신, 기존 listing 보완, 그룹 전용 자격 박탈을 완료하고 마지막에 레이드 모집·현황 그룹 필터를 구현한다.
-- 필터 제품 기획은 `GROUP_PRODUCT_FLOW.md` §8·§15에 이미 있다. 필터 구현 직전 정의·적용 화면·포함/제외 범위·상태 보존·무효 선택 정리·완료 조건을 사용자와 반드시 재확인하며, 검토와 문서 보완이 끝나기 전에는 필터 코드를 수정하지 않는다.
+- 전환 Transaction이 모집 `visibility`/`revision`만 패치하고, 그룹 전용이면 listing을 만들거나 덮어쓰며 전체 공개면 listing을 삭제한다.
+- 사용자가 Rules를 배포했다. 비그룹 계정 모집에서 그룹 전용 숨김, 해제 후 표시, 재활성 후 숨김을 확인했다.
+- 직전 완료: listing 원자 동기화와 참가 중인 방 listing 보완. 손대지 않은 비참가 그룹 전용 방은 변경 시 자연 복구한다.
+- 이후 그룹 전용 자격 박탈을 완료하고 마지막에 레이드 모집·현황 그룹 필터를 구현한다. 필터는 구현 직전 재확인이 끝나기 전에 코드를 수정하지 않는다.
 
 ## 직전 상태 — 그룹장 즉시 지정 이전·해산 (2026-09-01)
 
