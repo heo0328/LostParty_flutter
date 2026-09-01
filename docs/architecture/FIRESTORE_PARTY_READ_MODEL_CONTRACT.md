@@ -124,7 +124,7 @@ orderBy documentId desc
 limit 20
 ```
 
-그룹 전용 모집은 `recruitments`에 `visibility==group` 쿼리를 붙이지 않는다. 생성 시 `groups/{groupId}/raidListings/{recruitmentId}`에 같은 스냅샷을 쓰고, 목록은 `players/{playerId}/groupMembershipState/current`의 `activeGroupIds`마다 그 경로만 `list`한다. 공개 첫 페이지는 공개 쿼리가 오면 바로 내보내고, membership state·listing 구독 실패는 삼킨다. listing 문서는 클라이언트에서 현재 주차·active·빈자리 조건을 걸러 공개 카드와 같은 매퍼로 합친다. 책임자·확정 멤버 본인 방은 공개·그룹 listing 모두에서 제외한다. listing은 생성 시점 스냅샷이며 자리·상태 변경에 맞춘 갱신은 후속이다. 복합 인덱스는 listing 전체 `list`에 필요하지 않다.
+그룹 전용 모집은 `recruitments`에 `visibility==group` 쿼리를 붙이지 않는다. 생성 시 `groups/{groupId}/raidListings/{recruitmentId}`에 같은 스냅샷을 쓴다. 파티장이 전체 공개로 바꾸면 listing을 삭제하고, 다시 그룹 전용으로 바꾸면 현재 모집 스냅샷으로 만들거나 덮어쓴다. 목록은 `players/{playerId}/groupMembershipState/current`의 `activeGroupIds`마다 그 경로만 `list`한다. 공개 첫 페이지는 공개 쿼리가 오면 바로 내보내고, membership state·listing 구독 실패는 삼킨다. listing 문서는 클라이언트에서 현재 주차·active·빈자리 조건을 걸러 공개 카드와 같은 매퍼로 합친다. 책임자·확정 멤버 본인 방은 공개·그룹 listing 모두에서 제외한다. listing의 자리·상태 변경 동기화는 후속이다. 복합 인덱스는 listing 전체 `list`에 필요하지 않다.
 
 #### 현재 사용자의 방 제외 — Task-082 확정
 

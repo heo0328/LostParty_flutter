@@ -11,7 +11,9 @@ void main() {
 
   test('group raid create and audience read helpers are in Rules', () {
     expect(rules, contains('function canAccessRecruitmentByAudience(data)'));
+    expect(rules, contains("data.visibility == 'public'"));
     expect(rules, contains("data.visibility == 'group'"));
+    expect(rules, contains("&& (data.visibility == 'public'"));
     expect(rules, contains('&& exists(groupMemberPath(data.groupId, playerId))'));
     expect(rules, contains('canAccessRecruitmentByAudience(recruitment)'));
     expect(rules, contains('canAccessRecruitmentByAudience(data)'));
@@ -20,6 +22,10 @@ void main() {
     expect(rules, contains('allow get: if canGetRecruitment(recruitmentId)'));
     expect(rules, contains('match /raidListings/{recruitmentId}'));
     expect(rules, contains('function validGroupRaidListingCreate('));
+    expect(rules, contains('function validGroupRaidListingDelete('));
+    expect(rules, contains('allow update: if validGroupRaidListingCreate('));
+    expect(rules, contains('function validRecruitmentVisibilityChange('));
+    expect(rules, contains('allow delete: if validGroupRaidListingDelete(groupId, recruitmentId);'));
     expect(rules, contains('allow get, list: if isCurrentGroupMember(groupId);'));
   });
 }

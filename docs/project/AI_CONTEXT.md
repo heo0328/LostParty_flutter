@@ -1,10 +1,12 @@
 # AI CONTEXT (2026)
 
-## 최우선 현재 상태 — 생성 후 그룹 공개 범위 전환 (2026-09-01)
+## 최우선 현재 상태 — 생성 후 그룹 공개 범위 전환 완료 (2026-09-01)
 
-- 다음 우선 작업은 파티장이 그룹 레이드의 `그룹만 공개 ↔ 전체 공개`를 생성 이후에 바꾸는 기능이다. 제품 기준 `GROUP_PRODUCT_FLOW.md` §9. `groupId`는 유지한다. 전체 공개→그룹 전용은 비그룹 멤버·유효 신청이 있으면 거절한다.
-- listing은 그룹 전용일 때만 존재해야 하므로 전환 Transaction에서 생성·삭제가 필요하다. 현재 listing `update, delete`는 Rules가 거부한다. `recruitments` list에 그룹 membership `exists`나 `visibility==group` 쿼리를 쓰지 않는다.
-- 직전 완료: 그룹장 즉시 이전·1차 해산. 브랜치 `codex/group-leader-exit`. 실기기에서 1인 해산, 즉시 이전, 이전 후 기존 그룹장 탈퇴, 후임 그룹장 해산을 확인했다. 활성 그룹 레이드는 모집 원본 status로 판정한다. 커밋 SHA는 로그로 확인한다. Rules 배포는 별도 지시.
+- 파티장이 그룹 레이드 상세에서 `그룹만 공개`를 끄면 전체 공개, 다시 켜면 그룹 전용이 된다. `groupId`는 유지한다. 전체 공개→그룹 전용은 비그룹 멤버·pending 신청이 있으면 거절한다.
+- 전환 Transaction이 모집 `visibility`/`revision`만 패치하고, 그룹 전용이면 listing을 만들거나 덮어쓰며 전체 공개면 listing을 삭제한다. `recruitments` list에 그룹 membership `exists`나 `visibility==group` 쿼리를 쓰지 않는다.
+- 사용자가 Rules를 배포했다. 비그룹 계정 모집에서 그룹 전용 숨김, 해제 후 표시, 재활성 후 숨김을 확인했다. Git SHA는 로그로 확인한다.
+- 다음 우선 작업은 자리·인원·상태에 맞춘 `raidListings` 갱신이다. listing이 없는 기존 방 보완과 그룹 전용 자격 박탈이 그다음이다.
+- 직전 완료: 그룹장 즉시 이전·1차 해산. 브랜치 `codex/group-leader-exit`, 커밋 `e7ce461`. 활성 그룹 레이드는 모집 원본 status로 판정한다.
 
 - 사용자가 그룹만 공개 방을 만들고 그룹원이 레이드 모집 리스트에서 보는 흐름이 동작한다고 확인했다. 기능 커밋 `61fd464`는 병합 커밋 `25c3b44`로 `main`에 통합·푸시됐고, 로컬 `main`과 `origin/main`이 일치한다.
 - 일반 레이드는 `groupId=null`/`public`. 그룹 레이드는 가입 그룹 하나와 `그룹만 공개` 기본값. 생성 트랜잭션이 `groups/{groupId}/raidListings/{recruitmentId}`에 모집 스냅샷을 같이 쓴다.

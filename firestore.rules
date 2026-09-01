@@ -1459,6 +1459,30 @@ service cloud.firestore {
         && newData.updatedAt == request.time;
     }
 
+    function validRecruitmentVisibilityChange(oldData, newData) {
+      return hasActiveBinding()
+        && oldData.leaderPlayerId == currentPlayerId()
+        && oldData.status == 'active'
+        && oldData.groupId is string
+        && newData.groupId == oldData.groupId
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'visibility', 'revision', 'updatedAt'
+        ])
+        && oldData.visibility in ['public', 'group']
+        && newData.visibility in ['public', 'group']
+        && oldData.visibility != newData.visibility
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validGroupRaidListingDelete(groupId, recruitmentId) {
+      let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && recruitment.leaderPlayerId == currentPlayerId()
+        && recruitment.groupId == groupId
+        && recruitment.visibility == 'public';
+    }
+
     function validCycleCompletion(recruitmentId, oldData, newData) {
       let cycle = getAfter(recruitmentCyclePath(
         recruitmentId,
@@ -3137,6 +3161,9 @@ service cloud.firestore {
         ) || validRecruitmentDisband(
           resource.data,
           request.resource.data
+        ) || validRecruitmentVisibilityChange(
+          resource.data,
+          request.resource.data
         );
       allow delete: if false;
 
@@ -3317,7 +3344,12 @@ service cloud.firestore {
           recruitmentId,
           request.resource.data
         );
-        allow update, delete: if false;
+        allow update: if validGroupRaidListingCreate(
+          groupId,
+          recruitmentId,
+          request.resource.data
+        );
+        allow delete: if validGroupRaidListingDelete(groupId, recruitmentId);
       }
 
       // Unit 4는 초대·신청 처리에 더해 코드 가입이 pending 요청을

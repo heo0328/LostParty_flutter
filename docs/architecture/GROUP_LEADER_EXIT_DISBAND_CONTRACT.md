@@ -2,7 +2,7 @@
 
 ## 1. 상태와 목적
 
-- 상태: 실기기 확인됨. 브랜치 `codex/group-leader-exit`. 커밋은 사용자 지시로 진행한다. Rules 배포는 아직이다.
+- 상태: 실기기 확인됨. 브랜치 `codex/group-leader-exit`. 커밋 `e7ce461`. 관련 Rules는 사용자가 배포했다.
 - 제품 기준: [`../product/GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md) §10·§13·§14·§17·§18.6
 - 실행 환경: Firebase Spark, Flutter 클라이언트 Transaction, Firestore Security Rules
 - 목적: 그룹장이 그룹원을 후임자로 즉시 지정한 뒤 기존 일반 멤버 탈퇴를 사용하거나, 안전 조건을 충족한 그룹을 해산하는 흐름을 정의한다.

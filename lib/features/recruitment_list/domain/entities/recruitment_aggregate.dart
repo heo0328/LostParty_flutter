@@ -94,6 +94,8 @@ class PublicRecruitmentSummary {
     this.dealerCount = 0,
     this.supportCount = 0,
     this.approvalMode = ApprovalMode.leaderOnly,
+    this.visibility = 'public',
+    this.groupId,
   });
 
   factory PublicRecruitmentSummary.fromAggregate(
@@ -161,6 +163,14 @@ class PublicRecruitmentSummary {
   final bool continueTogether;
   final DateTime? cycleEndsAt;
   final ApprovalMode approvalMode;
+  /// `public` 또는 `group`. 일반 레이드는 public.
+  final String visibility;
+  /// 그룹 레이드의 연결 그룹. 일반 레이드는 null.
+  final String? groupId;
+
+  bool get isGroupLinked => groupId != null && groupId!.isNotEmpty;
+  bool get isGroupOnly =>
+      isGroupLinked && visibility == 'group';
 
   bool get isActiveRecruitment => status == 'active';
   bool get isCycleActive => currentCycleStatus == 'active';

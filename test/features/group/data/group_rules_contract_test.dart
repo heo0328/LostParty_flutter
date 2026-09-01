@@ -116,6 +116,12 @@ void main() {
       rules,
       contains('allow create: if validGroupRaidListingCreate('),
     );
+    expect(rules, contains('function validGroupRaidListingDelete('));
+    expect(
+      rules,
+      contains('allow delete: if validGroupRaidListingDelete(groupId, recruitmentId);'),
+    );
+    expect(rules, contains('allow update: if validGroupRaidListingCreate('));
   });
 
   test('Unit 4는 초대코드 생성·폐기·정확한 get을 열고 list·update는 막는다', () {
