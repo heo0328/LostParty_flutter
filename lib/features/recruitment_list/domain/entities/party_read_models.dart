@@ -64,6 +64,8 @@ class ActiveRaidSummary {
     this.leaderCharacterName,
     this.leaderClassName,
     this.raidStartAt,
+    this.visibility = 'public',
+    this.groupId,
   });
 
   final String id;
@@ -84,6 +86,13 @@ class ActiveRaidSummary {
   final String currentCycleStatus;
   final bool continueTogether;
   final DateTime? raidStartAt;
+  /// `public` 또는 `group`. 일반 레이드는 public.
+  final String visibility;
+  /// 그룹 레이드의 연결 그룹. 일반 레이드는 null.
+  final String? groupId;
+
+  bool get isGroupLinked => groupId != null && groupId!.isNotEmpty;
+  bool get isGroupOnly => isGroupLinked && visibility == 'group';
 
   bool get isAwaitingDisband => status == 'completed';
   bool get isRecurringCurrentWeek =>
