@@ -2,10 +2,12 @@
 
 ## 2026-09-01 그룹 전용 모집 리스트 실기기 확인
 
-- 사용자가 그룹만 공개 생성 후 그룹원 레이드 모집 리스트 노출이 동작한다고 확인했다. 문서만 최신화한다. 커밋은 지시 후에 한다.
+- 사용자가 그룹만 공개 생성 후 그룹원 레이드 모집 리스트 노출이 동작한다고 확인했다.
 - 구현: 생성 시 `groups/{groupId}/raidListings/{recruitmentId}` 스냅샷, 공개 첫 페이지와 경로 기반 listing 합치기, listing 실패 격리, 본인 방 제외.
 - 쓰지 않은 방식: `recruitments`에 `visibility==group` 쿼리, 목록 Rules의 문서별 그룹 membership `exists`.
 - 남은 후속: 생성 후 공개 전환, listing 자리·상태 갱신, 기존 방 listing 보완, 탈퇴 자격 박탈, 목록 필터 UI.
+- Git 종료: 기능 커밋 `61fd464`, `main` 병합 커밋 `25c3b44`. 로컬 `main`과 `origin/main`이 일치한다.
+- 실기기 성공으로 현재 앱 흐름은 확인했지만 배포된 Firestore Rules release의 정확한 소스 버전은 이번 문서 최신화에서 별도 조회하지 않았다.
 
 ## 2026-08-31 그룹 전용 모집 목록(raidListings)
 

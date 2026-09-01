@@ -2,12 +2,13 @@
 
 ## 최우선 현재 상태 — 그룹 레이드 생성·모집 리스트 실기기 확인 (2026-09-01)
 
-- 사용자가 그룹만 공개 방을 만들고 그룹원이 레이드 모집 리스트에서 보는 흐름이 동작한다고 확인했다. 브랜치 `codex/recruitment-group-link`. 커밋·푸시는 지시 전에 하지 않는다.
+- 사용자가 그룹만 공개 방을 만들고 그룹원이 레이드 모집 리스트에서 보는 흐름이 동작한다고 확인했다. 기능 커밋 `61fd464`는 병합 커밋 `25c3b44`로 `main`에 통합·푸시됐고, 로컬 `main`과 `origin/main`이 일치한다.
 - 일반 레이드는 `groupId=null`/`public`. 그룹 레이드는 가입 그룹 하나와 `그룹만 공개` 기본값. 생성 트랜잭션이 `groups/{groupId}/raidListings/{recruitmentId}`에 모집 스냅샷을 같이 쓴다.
 - 모집 리스트는 공개 `recruitments` 쿼리를 먼저 내보내고, `players/{id}/groupMembershipState/current`의 `activeGroupIds`별 listing을 합친다. listing·state 오류는 공개 목록을 죽이지 않는다.
 - `recruitments` list는 `canListRecruitment`(공개/리더/멤버 필드)만 사용한다. 그룹 membership `exists`와 `visibility==group` 목록 쿼리는 쓰지 않는다. listing `list`는 경로의 `isCurrentGroupMember`만 본다.
 - 책임자·확정 멤버 본인 방은 모집 리스트에서 제외한다. listing이 없는 생성 이전 그룹 전용 방은 재생성 전까지 안 보일 수 있다.
 - 미구현: 생성 후 공개 전환, listing 갱신, 탈퇴 자격 박탈, 목록 필터 UI. 다음 기능은 사용자 지정을 기다린다.
+- 실기기 성공으로 앱의 현재 운영 흐름은 확인했지만, 배포된 Firestore Rules release의 정확한 소스 버전은 이번 문서 최신화에서 별도 조회하지 않았다. 다음 Rules 변경·배포 전에 운영 버전을 확인한다.
 
 ## 직전 상태 — 모집 생성 UI(A) 통합 (2026-08-31)
 
