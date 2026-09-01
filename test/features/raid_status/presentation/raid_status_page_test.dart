@@ -74,11 +74,12 @@ void main() {
     expect(find.text('4막 노말 모집'), findsOneWidget);
     expect(find.textContaining('4막 - 노말'), findsOneWidget);
     expect(find.text('내가 만든 방'), findsOneWidget);
-    expect(find.text('파티장 이슈아이 · 기상술사'), findsOneWidget);
+    expect(find.text('이슈아이'), findsOneWidget);
+    expect(find.text('파티장 이슈아이 · 기상술사'), findsNothing);
     expect(find.text('진행 중인 레이드가 없습니다.'), findsNothing);
   });
 
-  testWidgets('진행 중 카드에 한국 시간 일정과 남은 자리를 표시한다', (tester) async {
+  testWidgets('진행 중 카드에 남은 자리와 제한을 한 줄로 표시한다', (tester) async {
     await pumpPage(
       tester,
       activeRaids: Stream.value(
@@ -90,21 +91,26 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('8/26(수) 21:00'), findsOneWidget);
-    expect(find.text('멤버 2/8 · 남은 자리 6'), findsOneWidget);
-    expect(find.textContaining('최소 아이템 레벨 1,680'), findsOneWidget);
+    expect(find.text('8/26(수) 21:00'), findsNothing);
+    expect(
+      find.text('멤버 2/8 · 남은 자리 6 · 전투력 제한 없음 · 숙련도 제한 없음'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('시작 시간이 없으면 미정으로 표시한다', (tester) async {
+  testWidgets('그룹 전용 진행 중 카드에 그룹 배지를 표시한다', (tester) async {
     await pumpPage(
       tester,
       activeRaids: Stream.value(
-        PartyReadSnapshot(items: [_activeRaid()], isFromCache: false),
+        PartyReadSnapshot(
+          items: [_activeRaid(visibility: 'group', groupId: 'group-1')],
+          isFromCache: false,
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('시작 시간 미정'), findsOneWidget);
+    expect(find.text('그룹'), findsOneWidget);
   });
 
   testWidgets('반복 레이드의 이번 주 진행 상태를 배지로 표시한다', (tester) async {
@@ -305,6 +311,8 @@ ActiveRaidSummary _activeRaid({
   DateTime? raidStartAt,
   bool continueTogether = false,
   String currentCycleStatus = 'active',
+  String visibility = 'public',
+  String? groupId,
 }) => ActiveRaidSummary(
   id: 'recruitment-1',
   title: '4막 노말 모집',
@@ -333,6 +341,8 @@ ActiveRaidSummary _activeRaid({
   isOwnedByCurrentPlayer: true,
   continueTogether: continueTogether,
   currentCycleStatus: currentCycleStatus,
+  visibility: visibility,
+  groupId: groupId,
 );
 
 PublicRecruitmentSummary _publicSummary() => PublicRecruitmentSummary(

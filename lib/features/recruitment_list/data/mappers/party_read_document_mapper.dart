@@ -99,6 +99,8 @@ class PartyReadDocumentMapper {
       currentCycleStatus: _softString(data, 'currentCycleStatus') ?? 'active',
       continueTogether: _optionalBoolean(data, 'continueTogether') ?? false,
       isOwnedByCurrentPlayer: leaderPlayerId == currentPlayerId,
+      visibility: _softString(data, 'visibility') ?? 'public',
+      groupId: _softString(data, 'groupId'),
     );
   }
 

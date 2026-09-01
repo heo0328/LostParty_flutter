@@ -123,6 +123,8 @@ void main() {
     expect(summary.currentCycleStatus, 'active');
     expect(summary.continueTogether, isFalse);
     expect(summary.isAwaitingDisband, isFalse);
+    expect(summary.visibility, 'public');
+    expect(summary.isGroupOnly, isFalse);
   });
 
   test('maps a member display document with opaque player and character ids', () {

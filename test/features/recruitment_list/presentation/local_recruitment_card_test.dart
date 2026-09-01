@@ -24,19 +24,45 @@ void main() {
 
     expect(find.text('4막 하드 모집'), findsOneWidget);
     expect(find.text('모집 중'), findsOneWidget);
+    expect(find.text('그룹'), findsNothing);
     expect(find.text('하드'), findsOneWidget);
     expect(find.text('카제로스 4막 · 1-2관문'), findsOneWidget);
-    expect(find.text('파티장 이슈아이 · 기상술사'), findsOneWidget);
-    expect(find.text('시작 시간 미정'), findsOneWidget);
-    expect(find.text('멤버 6/8 · 남은 자리 2'), findsOneWidget);
-    expect(find.text('최소 전투력 250,000 · 숙련도 클경'), findsOneWidget);
+    expect(find.text('이슈아이'), findsOneWidget);
+    expect(find.text('파티장 이슈아이 · 기상술사'), findsNothing);
+    expect(find.text('시작 시간 미정'), findsNothing);
+    expect(
+      find.text('멤버 6/8 · 남은 자리 2 · 최소 전투력 250,000 · 숙련도 클경'),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byType(LocalRecruitmentCard));
     expect(tapped, isTrue);
   });
+
+  testWidgets('shows a group badge for group-only recruitments', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: LocalRecruitmentCard(
+            recruitment: _summary(visibility: 'group', groupId: 'group-1'),
+            onTap: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('그룹'), findsOneWidget);
+    expect(find.text('모집 중'), findsOneWidget);
+  });
 }
 
-PublicRecruitmentSummary _summary() => PublicRecruitmentSummary(
+PublicRecruitmentSummary _summary({
+  String visibility = 'public',
+  String? groupId,
+}) => PublicRecruitmentSummary(
   id: 'raid-1',
   title: '4막 하드 모집',
   leaderUserId: 'player-1',
@@ -60,4 +86,6 @@ PublicRecruitmentSummary _summary() => PublicRecruitmentSummary(
   isRecruiting: true,
   revision: 1,
   updatedAt: DateTime.utc(2026, 8, 26),
+  visibility: visibility,
+  groupId: groupId,
 );

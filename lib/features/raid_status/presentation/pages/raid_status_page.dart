@@ -324,14 +324,13 @@ class _ActiveRaidCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final startAt = summary.raidStartAt;
     return Card(
       key: ValueKey(summary.id),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: InkWell(
         onTap: onOpen,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -350,6 +349,11 @@ class _ActiveRaidCard extends StatelessWidget {
                     runSpacing: 6,
                     alignment: WrapAlignment.end,
                     children: [
+                      if (summary.isGroupOnly)
+                        const _Badge(
+                          label: '그룹',
+                          tone: _BadgeTone.highlight,
+                        ),
                       if (summary.isRecurringWaitingForNextWeek)
                         const _Badge(
                           label: '다음주 대기',
@@ -376,7 +380,7 @@ class _ActiveRaidCard extends StatelessWidget {
               ),
               if (summary.isAwaitingDisband && summary.isOwnedByCurrentPlayer)
                 Padding(
-                  padding: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.only(top: 6),
                   child: Text(
                     '회차 완료됨. 상세에서 해산하면 방이 닫힙니다.',
                     style: theme.textTheme.bodySmall?.copyWith(
@@ -384,31 +388,33 @@ class _ActiveRaidCard extends StatelessWidget {
                     ),
                   ),
                 ),
-              const SizedBox(height: 12),
-              Text(
-                _raidLabel(summary.metadata),
-                style: theme.textTheme.bodyMedium,
-              ),
               const SizedBox(height: 8),
-              _IconLine(
-                icon: Icons.person_outline,
-                text: _leaderLabel(summary),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _raidLabel(summary.metadata),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _leaderName(summary),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 6),
-              _IconLine(
-                icon: Icons.schedule_outlined,
-                text: startAt == null
-                    ? '시작 시간 미정'
-                    : KoreaTimeFormatter.dayAndTime(startAt),
-              ),
-              const SizedBox(height: 6),
-              _IconLine(
-                icon: Icons.groups_outlined,
-                text: _memberLabel(summary),
-              ),
-              const SizedBox(height: 8),
               Text(
-                _requirementLabel(summary.metadata),
+                '${_memberLabel(summary)} · ${_requirementLabel(summary.metadata)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall,
               ),
             ],
@@ -820,27 +826,17 @@ String _memberLabel(ActiveRaidSummary summary) {
   return '멤버 ${summary.memberCount}/${summary.maxMemberCount} · $slot';
 }
 
-String _leaderLabel(ActiveRaidSummary summary) {
+String _leaderName(ActiveRaidSummary summary) {
   final name = summary.leaderCharacterName?.trim();
-  final className = summary.leaderClassName?.trim();
   if (name == null || name.isEmpty) {
     return '파티장 정보 없음';
   }
-  if (className == null || className.isEmpty) {
-    return '파티장 $name';
-  }
-  return '파티장 $name · $className';
+  return name;
 }
 
 String _requirementLabel(RecruitmentMetadata metadata) {
-  final parts = [
-    '최소 아이템 레벨 ${DisplayNumberFormatter.integer(metadata.minItemLevel)}',
-    if (metadata.minCombatPower != null)
-      '최소 전투력 ${DisplayNumberFormatter.integer(metadata.minCombatPower!)}',
-    if (metadata.experienceLevel != null)
-      '숙련도 ${_experienceLabel(metadata.experienceLevel!)}',
-  ];
-  return parts.join(' · ');
+  return '${metadata.minCombatPower == null ? '전투력 제한 없음' : '최소 전투력 ${DisplayNumberFormatter.integer(metadata.minCombatPower!)}'} · '
+      '${metadata.experienceLevel == null ? '숙련도 제한 없음' : '숙련도 ${_experienceLabel(metadata.experienceLevel!)}'}';
 }
 
 String _experienceLabel(ExperienceLevel level) => switch (level) {
