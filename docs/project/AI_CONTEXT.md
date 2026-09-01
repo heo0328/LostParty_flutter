@@ -8,7 +8,6 @@
 - `recruitments` list는 `canListRecruitment`(공개/리더/멤버 필드)만 사용한다. 그룹 membership `exists`와 `visibility==group` 목록 쿼리는 쓰지 않는다. listing `list`는 경로의 `isCurrentGroupMember`만 본다.
 - 책임자·확정 멤버 본인 방은 모집 리스트에서 제외한다. listing이 없는 생성 이전 그룹 전용 방은 재생성 전까지 안 보일 수 있다.
 - 미구현: 생성 후 공개 전환, listing 갱신, 탈퇴 자격 박탈, 목록 필터 UI. 다음 기능은 사용자 지정을 기다린다.
-- 실기기 성공으로 앱의 현재 운영 흐름은 확인했지만, 배포된 Firestore Rules release의 정확한 소스 버전은 이번 문서 최신화에서 별도 조회하지 않았다. 다음 Rules 변경·배포 전에 운영 버전을 확인한다.
 
 ## 직전 상태 — 모집 생성 UI(A) 통합 (2026-08-31)
 
@@ -36,7 +35,7 @@
 - 다음 작업 브랜치 `codex/group-combat-power-display`는 보존 지점에서 분기한다. 현재 작업 준비만 수행하며 기능 코드·Rules·배포 설정은 변경하지 않는다. 상세 범위는 `NEXT_WORK.md`를 따른다.
 - 이후 문서·규칙에서 과거 상태와 충돌하면 본 절 및 NEXT_WORK의 최신 사용자 보고를 우선한다.
 
-## 최신 작업 상태 — Rules 복잡도 개선 계획 (2026-08-31)
+## 과거 작업 기록 — Rules 복잡도 개선 계획 (2026-08-31, 현재 실행 지시 아님)
 
 - 기준 코드 `25f88ff`, 전용 브랜치 `codex/rules-complexity-reduction`. Rules 소스 143,799 bytes, 표적 테스트 33개 통과이나 이후 사용자 지시의 전체 Rules 배포도 컴파일 검사 503으로 실패했다.
 - 현재는 추가 코드 변경 전에 시작점·단계별 작업 계획을 문서 커밋으로 고정한다. 다음은 R0 검증 환경 확인 → R1 그룹 가입 검증 공통화이며 나머지는 순차 후속이다.
@@ -73,8 +72,8 @@
 - Task-11 구현은 `main`에 병합됐다(기능 커밋 `b673fdb`). 4번째 탭을 그룹으로 바꾸고 설정은 내 계정 톱니로 이동했다. 생성·검색·기본 상세·초대·신청·승인/금지·초대코드 생성·폐기·공개 토글·코드 즉시 가입을 포함한다.
 - Task-11a(멤버 목록·일반 탈퇴·표시 Snapshot)도 `main`에 병합됐다(커밋 `3df755b`). membership `combatPowerSnapshot` 등은 가입·생성 시 저장하고, 그룹 상세 진입 시 본인 membership만 self-refresh한다. 타 그룹원 표시는 서버 Snapshot을 읽는다.
 - **1차 마무리(2026-08-31):** 사용자는 Task-11·11a 1차를 종료하고 **전체 기획·설계를 재검토**한다. 새 지시 전 추가 구현은 중단한다.
-- **열린 부채 — Firestore Rules 복잡도:** 전체 `firestore.rules` (~159KB) deploy가 503으로 실패한다. 절반 축소 프로브만 deploy 성공. 재설계에 반드시 반영. [`TASK-11-FIRESTORE-RULES-COMPLEXITY.md`](TASK-11-FIRESTORE-RULES-COMPLEXITY.md)
-- 실기기(2026-08-31, Task-11): 초대코드·즉시 가입·인원·시각 확인. Task-11a(멤버 UI·탈퇴·전투력 Snapshot)는 Rules 정상 배포 후 재검증.
+- **과거 진단 기록 — Firestore Rules 복잡도:** 503 원인 확인을 위해 절반 축소 프로브를 1회 배포했으며 이후 원복·추가 수정·정상 배포와 실기기 확인을 완료했다. 프로브 잔존이나 현재 운영 차단으로 취급하지 않는다. 당시 경과는 [`TASK-11-FIRESTORE-RULES-COMPLEXITY.md`](TASK-11-FIRESTORE-RULES-COMPLEXITY.md)에 보존한다.
+- 실기기(2026-08-31): Rules 정상 배포 후 레이드 모집·탈퇴·완료 체크, 그룹 생성·초대·탈퇴·초대코드 생성·가입과 그룹원 전투력 표시를 확인했다.
 
 ---
 

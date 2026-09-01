@@ -7,7 +7,6 @@
 - 쓰지 않은 방식: `recruitments`에 `visibility==group` 쿼리, 목록 Rules의 문서별 그룹 membership `exists`.
 - 남은 후속: 생성 후 공개 전환, listing 자리·상태 갱신, 기존 방 listing 보완, 탈퇴 자격 박탈, 목록 필터 UI.
 - Git 종료: 기능 커밋 `61fd464`, `main` 병합 커밋 `25c3b44`. 로컬 `main`과 `origin/main`이 일치한다.
-- 실기기 성공으로 현재 앱 흐름은 확인했지만 배포된 Firestore Rules release의 정확한 소스 버전은 이번 문서 최신화에서 별도 조회하지 않았다.
 
 ## 2026-08-31 그룹 전용 모집 목록(raidListings)
 
