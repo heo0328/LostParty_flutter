@@ -6,6 +6,8 @@
 - 전환 Transaction이 모집 `visibility`/`revision`만 패치하고, 그룹 전용이면 listing을 만들거나 덮어쓰며 전체 공개면 listing을 삭제한다. `recruitments` list에 그룹 membership `exists`나 `visibility==group` 쿼리를 쓰지 않는다.
 - 사용자가 Rules를 배포했다. 비그룹 계정 모집에서 그룹 전용 숨김, 해제 후 표시, 재활성 후 숨김을 확인했다. Git SHA는 로그로 확인한다.
 - 다음 우선 작업은 자리·인원·상태에 맞춘 `raidListings` 갱신이다. listing이 없는 기존 방 보완과 그룹 전용 자격 박탈이 그다음이다.
+- 2026-09-01 사용자는 다음 구현 원칙에 동의했다. 모집 원본과 listing은 동일 Transaction에서 원자 동기화하고, 현재 모집 Snapshot 구조를 유지한다. 만석·완료 취소 가능·다음 주 대기처럼 재노출 가능한 상태는 최신 값으로 유지하며 전체 공개 전환·방 해산 같은 되돌릴 수 없는 종료는 삭제한다. 그룹 전용 모집의 listing이 없으면 변경 시 자연 복구한다. 과거 방 일괄 보완은 다음 단계다.
+- 구현 전 실제 모집 변경 Repository와 공개 카드 매퍼를 대조하고, 상태별 생성·덮어쓰기·삭제 및 동기화 필드를 write plan·Rules 테스트로 고정한다. Rules는 `getAfter()` 원본과 listing 핵심 값의 일치를 강제한다. 상세 기준은 `FIRESTORE_PARTY_COMMAND_CONTRACT.md` §4.2.1과 `NEXT_WORK.md`를 따른다.
 - 직전 완료: 그룹장 즉시 이전·1차 해산. 브랜치 `codex/group-leader-exit`, 커밋 `e7ce461`. 활성 그룹 레이드는 모집 원본 status로 판정한다.
 
 - 사용자가 그룹만 공개 방을 만들고 그룹원이 레이드 모집 리스트에서 보는 흐름이 동작한다고 확인했다. 기능 커밋 `61fd464`는 병합 커밋 `25c3b44`로 `main`에 통합·푸시됐고, 로컬 `main`과 `origin/main`이 일치한다.

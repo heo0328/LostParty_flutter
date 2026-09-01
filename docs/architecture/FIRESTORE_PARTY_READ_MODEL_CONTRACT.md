@@ -124,7 +124,9 @@ orderBy documentId desc
 limit 20
 ```
 
-그룹 전용 모집은 `recruitments`에 `visibility==group` 쿼리를 붙이지 않는다. 생성 시 `groups/{groupId}/raidListings/{recruitmentId}`에 같은 스냅샷을 쓴다. 파티장이 전체 공개로 바꾸면 listing을 삭제하고, 다시 그룹 전용으로 바꾸면 현재 모집 스냅샷으로 만들거나 덮어쓴다. 목록은 `players/{playerId}/groupMembershipState/current`의 `activeGroupIds`마다 그 경로만 `list`한다. 공개 첫 페이지는 공개 쿼리가 오면 바로 내보내고, membership state·listing 구독 실패는 삼킨다. listing 문서는 클라이언트에서 현재 주차·active·빈자리 조건을 걸러 공개 카드와 같은 매퍼로 합친다. 책임자·확정 멤버 본인 방은 공개·그룹 listing 모두에서 제외한다. listing의 자리·상태 변경 동기화는 후속이다. 복합 인덱스는 listing 전체 `list`에 필요하지 않다.
+그룹 전용 모집은 `recruitments`에 `visibility==group` 쿼리를 붙이지 않는다. 생성 시 `groups/{groupId}/raidListings/{recruitmentId}`에 같은 스냅샷을 쓴다. 파티장이 전체 공개로 바꾸면 listing을 삭제하고, 다시 그룹 전용으로 바꾸면 현재 모집 스냅샷으로 만들거나 덮어쓴다. 목록은 `players/{playerId}/groupMembershipState/current`의 `activeGroupIds`마다 그 경로만 `list`한다. 공개 첫 페이지는 공개 쿼리가 오면 바로 내보내고, membership state·listing 구독 실패는 삼킨다. listing 문서는 클라이언트에서 현재 주차·active·빈자리 조건을 걸러 공개 카드와 같은 매퍼로 합친다. 책임자·확정 멤버 본인 방은 공개·그룹 listing 모두에서 제외한다. 복합 인덱스는 listing 전체 `list`에 필요하지 않다.
+
+2026-09-01 합의에 따라 listing은 원본 모집의 목록 Projection으로 계속 동기화한다. 원본의 목록 관련 변경과 같은 Transaction에서 전체 현재 Snapshot으로 생성 또는 덮어쓰며, 누락돼 있으면 변경 시 생성한다. 만석·회차 완료·다음 주 대기처럼 다시 노출 가능한 상태는 최신 `hasAvailableSlot`·인원·자리·회차·상태를 가진 채 유지하고 클라이언트 노출 조건으로 숨긴다. 전체 공개 전환과 방 해산처럼 되돌릴 수 없는 종료는 삭제한다. 따라서 구현 완료 뒤 listing은 생성 시점 Snapshot으로 취급하지 않지만, 권한·그룹 해산 게이트 등 중요한 판정은 계속 `recruitments` 원본을 단일 기준으로 사용한다. 상세 쓰기 계약은 `FIRESTORE_PARTY_COMMAND_CONTRACT.md` §4.2.1을 따른다.
 
 #### 현재 사용자의 방 제외 — Task-082 확정
 

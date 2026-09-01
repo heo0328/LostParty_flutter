@@ -96,6 +96,47 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 
 레이드 ID가 바뀌는 수정은 모든 멤버의 점유 문서를 원자적으로 이전해야 한다. Security Rules로 전체 멤버의 소유권·카탈로그 조건을 충분히 강제하기 어려우므로 Spark 초기 서버 전환에서는 **레이드·난이도 변경을 제외**한다. 기존 로컬 기능은 서버 모드에서 비활성 안내를 표시한다.
 
+### 4.2.1 그룹 전용 raidListings 동기화 계약
+
+2026-09-01 사용자 합의에 따라 `groups/{groupId}/raidListings/{recruitmentId}`는 생성·공개 범위 전환 시점에만 쓰는 임시 Snapshot이 아니라, 그룹 전용 모집 목록을 위한 동기화 Projection으로 관리한다.
+
+#### 원자성 및 단일 기준
+
+- `recruitments/{recruitmentId}`가 원본이며 listing은 독립적인 제품 상태나 권한 기준이 아니다.
+- 원본의 목록 노출 관련 필드를 변경하는 명령은 같은 Firestore Transaction에서 listing도 생성·덮어쓰기·삭제한다. 원본 커밋 후 별도 후처리, 화면 진입 시 보정, 실패를 삼키는 비동기 동기화는 사용하지 않는다.
+- 그룹 전용 모집인데 listing이 없으면 해당 모집을 변경하는 Transaction에서 현재 원본의 Transaction 후 상태로 listing을 생성한다. 이것은 변경된 방의 자연 복구이며, 변경되지 않은 기존 방의 일괄 보완을 대신하지 않는다.
+- Rules는 `getAfter(recruitmentPath(recruitmentId))`를 기준으로 경로의 `groupId`, `visibility`, 책임자뿐 아니라 아래 동기화 필드가 원본과 일치하는지 검증한다. 현재의 생성·덮어쓰기 검증은 이 구현에서 강화한다.
+
+#### 동기화 필드
+
+이번 작업은 listing을 축약 스키마로 마이그레이션하지 않고 현재 모집 스냅샷 구조를 유지한다. 최소한 다음 값은 원본의 Transaction 후 상태와 같아야 한다.
+
+- 노출 상태: `status`, `currentCycleStatus`, `manualRecruitmentEnabled`, `visibility`, `groupId`
+- 인원과 자리: `memberCount`, `maxMemberCount`, `hasAvailableSlot`, 목록 매퍼가 사용하는 멤버·자리 Snapshot
+- 회차: `currentCycleKey`, 대상 회차 키, 회차 시작·종료 시각
+- 카드 표시: 제목, 레이드·난이도, 시작 일정, 최소 조건 등 수정 가능한 공개 카드 필드
+- 충돌과 정렬: `revision`, `updatedAt`
+
+구현 시 실제 모집 스키마와 `PublicRecruitmentSummary` 매퍼를 대조해 정확한 필드 목록을 write plan 및 Rules 테스트에 고정한다. 일부 필드만 수동 패치해 나머지 Snapshot을 오래된 값으로 남기지 않는다.
+
+#### 상태별 동작
+
+| 원본의 Transaction 후 상태 | listing 동작 | 이유 |
+|---|---|---|
+| `visibility == group`이고 되돌릴 수 있는 모집 수명 안에 있음 | 현재 원본 Snapshot으로 생성 또는 전체 덮어쓰기 | 변경 시 누락 listing 자연 복구 및 stale 필드 방지 |
+| 만석, `hasAvailableSlot == false` | 유지·갱신 | 탈퇴나 다음 회차에서 다시 노출될 수 있음 |
+| 회차 완료, 완료 취소 가능 상태, 반복 모집의 다음 주 대기 | 유지·갱신 | 이후 취소·회차 전환으로 다시 열릴 수 있음 |
+| 전체 공개로 전환 | 삭제 | 공개 `recruitments` 쿼리가 단일 목록 경로가 됨 |
+| 방 해산 등 되돌릴 수 없는 종료 | 삭제 | 다시 노출될 수 없고 stale active 오인을 제거함 |
+
+`completed`라는 문자열만으로 삭제하지 않는다. 완료 취소·반복 모집 등 실제 상태 머신에서 재노출 가능한지를 함께 판정한다.
+
+#### 영향 명령과 제외 범위
+
+최소 점검 대상은 즉시 가입·신청 승인, 파티원 탈퇴·추방, 캐릭터·자리 변경, 모집 완료·완료 취소, 다음 회차 전환, 반복 여부 변경, 모집 해산, 카드 표시 정보 수정, 공개 범위 변경이다. 승인 권한 토글처럼 listing의 노출·정렬·카드 값에 영향을 주지 않는 변경은 원본 revision 정책을 확인한 뒤 동기화 대상에서 제외할 수 있다.
+
+과거 그룹 전용 모집 전체를 검색하여 listing을 만드는 일괄 보완, 그룹 탈퇴·추방·해산 시 모집 참가 자격 박탈, 그룹 필터 UI는 이 작업에 포함하지 않는다.
+
 ### 4.3 승인 대기 신청
 
 #### 호출 주체

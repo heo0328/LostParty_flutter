@@ -230,6 +230,9 @@
 - 한 레이드에 연결하는 그룹은 최대 하나다. 그룹 모드에서 선택은 필수이며 현재 가입한 유효 그룹만 지정한다.
 - 생성 write plan은 일반 레이드 `visibility=public`/`groupId=null`, 그룹 레이드 선택 그룹 ID 하나와 생성 시 `그룹만 공개`면 `visibility=group`을 저장한다. 그룹만 공개 목록은 `groups/{groupId}/raidListings/{recruitmentId}` Projection으로 공개 모집 리스트에 합친다. 단건 get·신청은 그룹 멤버십으로 제한한다. 2026-09-01 실기기에서 그룹원 모집 리스트 노출을 확인했다.
 - 생성 후 파티장의 `그룹만 공개` 전환은 구현되어 2026-09-01 실기기에서 확인했다. listing 자리·상태 스냅샷 갱신, 탈퇴 시 그룹 전용 자격 박탈은 아직 구현하지 않는다.
+- 2026-09-01 사용자 합의: `raidListings`는 원본 모집과 별도로 뒤늦게 맞추지 않고, 원본을 바꾸는 같은 Firestore Transaction에서 원자적으로 동기화한다. 그룹 전용 모집이 목록에 다시 나타날 수 있는 만석·회차 완료·다음 주 대기 상태라면 listing을 삭제하지 않고 최신 인원·자리·회차·상태 스냅샷을 유지한다. 방 해산처럼 되돌릴 수 없는 종료 또는 전체 공개 전환이면 listing을 삭제한다.
+- listing은 이번 작업에서 새 축약 스키마로 바꾸지 않고 현재와 같은 모집 스냅샷 Projection을 유지한다. 목록 카드와 노출 판정에 영향을 주는 `status`, `currentCycleStatus`, `manualRecruitmentEnabled`, `memberCount`, `maxMemberCount`, `hasAvailableSlot`, 자리·멤버 Snapshot, `currentCycleKey`, 회차 시각, 수정 가능한 카드 표시 필드, `revision`, `updatedAt`을 원본의 Transaction 후 상태와 일치시킨다.
+- 유효한 그룹 전용 모집을 변경하는 시점에 listing이 없으면 같은 Transaction에서 생성해 자연 복구한다. 생성 이후 한 번도 변경되지 않은 과거 방을 일괄 보완하는 작업은 별도 후속 단계로 유지한다.
 - groupIds 배열, 다중 선택 체크박스, 여러 그룹으로 모집 복제는 이번 범위에서 제외한다.
 - 목록 필터의 복수 그룹 선택은 별개 기능이므로 기존 기획을 유지한다. ‘여러 그룹의 모집을 모아 보기’와 ‘하나의 모집을 여러 그룹에 배정하기’를 혼동하지 않는다.
 
