@@ -7,7 +7,9 @@
 - 모집 리스트는 공개 `recruitments` 쿼리를 먼저 내보내고, `players/{id}/groupMembershipState/current`의 `activeGroupIds`별 listing을 합친다. listing·state 오류는 공개 목록을 죽이지 않는다.
 - `recruitments` list는 `canListRecruitment`(공개/리더/멤버 필드)만 사용한다. 그룹 membership `exists`와 `visibility==group` 목록 쿼리는 쓰지 않는다. listing `list`는 경로의 `isCurrentGroupMember`만 본다.
 - 책임자·확정 멤버 본인 방은 모집 리스트에서 제외한다. listing이 없는 생성 이전 그룹 전용 방은 재생성 전까지 안 보일 수 있다.
-- 미구현: 생성 후 공개 전환, listing 갱신, 탈퇴 자격 박탈, 목록 필터 UI. 다음 기능은 사용자 지정을 기다린다.
+- 다음 우선 작업은 그룹장의 정상 탈퇴 시스템이다. 정상 그룹장은 다른 유효 그룹원에게 이전을 완료한 뒤 탈퇴하거나 그룹을 해산한다. 구현 전에 이전·탈퇴·해산의 Firestore Transaction·Rules·동시성 계약을 분리한다.
+- 이후 공개 전환, listing 갱신, 기존 listing 보완, 그룹 전용 자격 박탈을 완료하고 마지막에 레이드 모집·현황 그룹 필터를 구현한다.
+- 필터 제품 기획은 `GROUP_PRODUCT_FLOW.md` §8·§15에 이미 있다. 필터 구현 직전 정의·적용 화면·포함/제외 범위·상태 보존·무효 선택 정리·완료 조건을 사용자와 반드시 재확인하며, 검토와 문서 보완이 끝나기 전에는 필터 코드를 수정하지 않는다.
 
 ## 직전 상태 — 모집 생성 UI(A) 통합 (2026-08-31)
 
