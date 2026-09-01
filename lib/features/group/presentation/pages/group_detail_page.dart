@@ -196,6 +196,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                 membershipFuture: _myMembership,
                 busy: _busy,
                 onLeave: _leaveGroup,
+                onLeaderExit: _leaderExit,
               ),
               if (widget.applicationsViewModel != null)
                 _LeaderApplicationsEntry(
@@ -415,6 +416,145 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     _showMessage('그룹에서 탈퇴했습니다.');
     context.go('/groups');
   }
+
+  Future<void> _leaderExit() async {
+    final group = await _group;
+    if (!mounted || group == null) return;
+    final membersResult = await _members;
+    if (!mounted) return;
+    final candidates = [
+      for (final display in membersResult?.members ?? const <GroupMemberDisplay>[])
+        if (!display.isLeader && display.member.playerId != widget.playerId)
+          display,
+    ];
+    final choice = await showDialog<_LeaderExitChoice>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('그룹장 나가기'),
+        content: Text(
+          candidates.isEmpty
+              ? '그룹장이 한 명이면 그룹을 해산할 수 있습니다. 대기 중인 초대·신청, 그룹만 공개 레이드, 활성 초대코드가 없어야 합니다.'
+              : '바로 탈퇴할 수 없습니다. 다른 그룹원에게 그룹장을 넘기거나 조건을 갖춘 뒤 해산하세요.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('취소'),
+          ),
+          if (candidates.isNotEmpty)
+            TextButton(
+              key: const ValueKey('groupLeaderTransferChoiceButton'),
+              onPressed: () => Navigator.of(context).pop(_LeaderExitChoice.transfer),
+              child: const Text('그룹장 이전'),
+            ),
+          FilledButton(
+            key: const ValueKey('groupDisbandChoiceButton'),
+            onPressed: () => Navigator.of(context).pop(_LeaderExitChoice.disband),
+            child: const Text('그룹 해산'),
+          ),
+        ],
+      ),
+    );
+    if (choice == null || !mounted) return;
+    if (choice == _LeaderExitChoice.transfer) {
+      await _transferLeadership(group, candidates);
+      return;
+    }
+    await _disbandGroup(group);
+  }
+
+  Future<void> _transferLeadership(
+    GroupPublicSummary group,
+    List<GroupMemberDisplay> candidates,
+  ) async {
+    final target = await showDialog<GroupMemberDisplay>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('후임 그룹장 선택'),
+        children: [
+          for (final candidate in candidates)
+            SimpleDialogOption(
+              key: ValueKey('groupTransferTarget-${candidate.member.playerId}'),
+              onPressed: () => Navigator.of(context).pop(candidate),
+              child: Text(candidate.characterName),
+            ),
+        ],
+      ),
+    );
+    if (target == null || !mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('그룹장 이전'),
+        content: Text(
+          '${target.characterName}에게 그룹장을 즉시 이전합니다. 이전 즉시 그룹 관리 권한이 넘어가며 자동으로 되돌릴 수 없습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const ValueKey('groupTransferConfirmButton'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('이전'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _busy = true);
+    final result = await widget.actionViewModel.transferLeadership(
+      groupId: widget.groupId,
+      targetPlayerId: target.member.playerId,
+      expectedGroupRevision: group.revision,
+    );
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (result.failure != null) {
+      _showMessage(groupJoinFailureMessage(result.failure!));
+      return;
+    }
+    _showMessage('그룹장이 이전되었습니다. 이제 그룹에서 탈퇴할 수 있습니다.');
+    _load();
+  }
+
+  Future<void> _disbandGroup(GroupPublicSummary group) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('그룹 해산'),
+        content: const Text(
+          '그룹을 해산하면 목록과 검색에서 바로 사라집니다. 연결된 레이드방은 자동으로 없어지지 않습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const ValueKey('groupDisbandConfirmButton'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('해산'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _busy = true);
+    final result = await widget.actionViewModel.disband(
+      groupId: widget.groupId,
+      expectedGroupRevision: group.revision,
+    );
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (result.failure != null) {
+      _showMessage(groupDisbandFailureMessage(result.failure!));
+      return;
+    }
+    _showMessage('그룹을 해산했습니다.');
+    context.go('/groups');
+  }
 }
 
 String _formatDate(DateTime value) {
@@ -535,16 +675,20 @@ class _GroupMemberCard extends StatelessWidget {
   }
 }
 
+enum _LeaderExitChoice { transfer, disband }
+
 class _LeaveGroupEntry extends StatelessWidget {
   const _LeaveGroupEntry({
     required this.membershipFuture,
     required this.busy,
     required this.onLeave,
+    required this.onLeaderExit,
   });
 
   final Future<GroupMember?>? membershipFuture;
   final bool busy;
   final VoidCallback onLeave;
+  final VoidCallback onLeaderExit;
 
   @override
   Widget build(BuildContext context) {
@@ -558,9 +702,11 @@ class _LeaveGroupEntry extends StatelessWidget {
         if (member.isLeader) {
           return Padding(
             padding: const EdgeInsets.only(top: 12),
-            child: Text(
-              '그룹장은 이전 또는 해산 없이 탈퇴할 수 없습니다.',
-              style: Theme.of(context).textTheme.bodySmall,
+            child: OutlinedButton.icon(
+              key: const ValueKey('groupLeaderExitButton'),
+              onPressed: busy ? null : onLeaderExit,
+              icon: const Icon(Icons.logout),
+              label: const Text('그룹 나가기'),
             ),
           );
         }

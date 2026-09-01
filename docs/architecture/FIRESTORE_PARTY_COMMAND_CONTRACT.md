@@ -85,6 +85,7 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 - 제목, 레이드·난이도, 숙련도, 최소 전투력, 최대 진행 시간
 - 승인 방식 `manualApproval <-> directJoin`
 - 모집 수동 활성 상태
+- 그룹 레이드의 `visibility` `group <-> public`. `groupId`는 유지한다. 그룹 전용이면 현재 모집 스냅샷으로 `raidListings`를 만들거나 덮어쓰고, 전체 공개면 listing을 삭제한다. 전체 공개→그룹 전용은 비그룹 멤버나 비그룹 pending 신청이 있으면 거절한다.
 
 #### 거절 조건
 
@@ -240,7 +241,7 @@ Rules는 적어도 다음을 `getAfter()`를 포함해 검증해야 한다.
 - 모집 수정은 파티장만 허용하고 불변 필드와 revision 증가를 검증
 - 서버 검증이 필요하지만 Rules로 안전하게 표현할 수 없는 변경은 허용하지 않음
 
-생성 Transaction은 신규 `recruitments/{id}` 존재 여부를 `get`으로 확인한다. 문서가 없을 때 `resource.data`를 읽으면 Rules가 `permission-denied`를 내므로, 존재하지 않는 모집의 단건 `get`은 active binding만으로 허용한다. 존재하는 문서의 단건 읽기는 `canReadRecruitment`, `recruitments` 목록은 `canListRecruitment`를 사용한다. 그룹만 공개 목록은 `groups/{groupId}/raidListings`에서 경로의 그룹원만 `list`하며, `recruitments` list 규칙에 그룹 membership `exists`를 넣지 않는다. 그룹 listing 생성은 같은 Transaction의 모집 문서와 `visibility==group`·`groupId`·리더를 `getAfter`로 맞춘다.
+생성 Transaction은 신규 `recruitments/{id}` 존재 여부를 `get`으로 확인한다. 문서가 없을 때 `resource.data`를 읽으면 Rules가 `permission-denied`를 내므로, 존재하지 않는 모집의 단건 `get`은 active binding만으로 허용한다. 존재하는 문서의 단건 읽기는 `canReadRecruitment`, `recruitments` 목록은 `canListRecruitment`를 사용한다. 그룹만 공개 목록은 `groups/{groupId}/raidListings`에서 경로의 그룹원만 `list`하며, `recruitments` list 규칙에 그룹 membership `exists`를 넣지 않는다. 그룹 listing 생성·덮어쓰기는 같은 Transaction의 모집 문서와 `visibility==group`·`groupId`·리더를 `getAfter`로 맞춘다. listing 삭제는 전환 후 모집이 `visibility==public`일 때만 허용한다.
 
 Rules 상세 구현·배포는 명령별 작업 브랜치에서 진행한다. Firestore Emulator는 사용하지 않는다. Rules 배포 전 검증 방법은 별도로 합의한다.
 

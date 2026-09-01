@@ -2,7 +2,7 @@
 
 ## 1. 상태와 목적
 
-- 상태: 제품 결정 완료, 구현 전 계약
+- 상태: 실기기 확인됨. 브랜치 `codex/group-leader-exit`. 커밋 `e7ce461`. 관련 Rules는 사용자가 배포했다.
 - 제품 기준: [`../product/GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md) §10·§13·§14·§17·§18.6
 - 실행 환경: Firebase Spark, Flutter 클라이언트 Transaction, Firestore Security Rules
 - 목적: 그룹장이 그룹원을 후임자로 즉시 지정한 뒤 기존 일반 멤버 탈퇴를 사용하거나, 안전 조건을 충족한 그룹을 해산하는 흐름을 정의한다.
@@ -78,7 +78,7 @@
 - `memberCount == 1`이고 호출자만 membership으로 존재
 - pending 초대·가입 신청이 없음
 - pending 그룹장 이전은 구조상 존재하지 않음
-- 활성 그룹 전용 레이드가 없음
+- 활성 그룹 전용 레이드가 없음. 판정은 `raidListings` 후보를 모집 원본(`recruitments`)의 `visibility==group`·같은 `groupId`·`status==active`로 확인한다. listing은 생성 스냅샷이라 레이드방 해산 후에도 `status==active`가 남을 수 있다.
 - 활성 초대코드는 없거나 해산 Transaction에서 함께 폐기 가능
 
 조건을 충족하지 않으면 정리할 항목을 안내한다. 다른 멤버는 먼저 탈퇴하거나 후속 추방 기능으로 정리하고, pending 초대·신청은 취소·거절하며, 그룹 전용 레이드는 전체 공개 전환 또는 종료 후 해산한다.
@@ -86,7 +86,7 @@
 ## 8. 연결된 레이드 처리
 
 - 그룹 해산은 일반·반복 레이드방을 자동 해산하지 않는다.
-- 활성 그룹 전용 레이드가 있으면 그룹 해산을 거절한다.
+- 활성 그룹 전용 레이드가 있으면 그룹 해산을 거절한다. 레이드 현황에 방이 없어도 listing 스냅샷만으로 거절하지 않는다.
 - 전체 공개로 전환된 연결 레이드는 유지하며 `groupId`는 생성 당시 소속 이력으로 남길 수 있다.
 - softDeleted 그룹은 현재 그룹 목록, 검색과 필터 선택 대상에서 제외한다.
 - 그룹 전용 레이드의 공개 전환·listing 동기화·자격 박탈 계약은 `NEXT_WORK.md`의 후속 작업에서 별도로 확정한다.

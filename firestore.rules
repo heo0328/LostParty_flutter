@@ -578,6 +578,87 @@ service cloud.firestore {
         && !existsAfter(groupMemberPath(groupId, currentPlayerId()));
     }
 
+    function validGroupLeaderTransferUpdate(groupId, oldData, newData) {
+      let outgoing = getAfter(groupMemberPath(groupId, currentPlayerId())).data;
+      let incoming = getAfter(groupMemberPath(groupId, newData.leaderPlayerId)).data;
+      return isCurrentPlayerActive()
+        && oldData.status == 'active'
+        && oldData.leaderPlayerId == currentPlayerId()
+        && newData.leaderPlayerId is string
+        && newData.leaderPlayerId != oldData.leaderPlayerId
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'leaderPlayerId', 'leaderDisplayCharacterNameSnapshot',
+          'revision', 'lastActivityAt', 'updatedAt'
+        ])
+        && newData.leaderDisplayCharacterNameSnapshot
+          == incoming.displayCharacterNameSnapshot
+        && newData.revision == oldData.revision + 1
+        && newData.lastActivityAt == request.time
+        && newData.updatedAt == request.time
+        && outgoing.role == 'member'
+        && incoming.role == 'leader'
+        && incoming.playerId == newData.leaderPlayerId;
+    }
+
+    function validGroupMemberRoleTransferUpdate(
+      groupId,
+      playerId,
+      oldData,
+      newData
+    ) {
+      let before = get(groupPath(groupId)).data;
+      let after = getAfter(groupPath(groupId)).data;
+      return isCurrentPlayerActive()
+        && before.status == 'active'
+        && before.leaderPlayerId == currentPlayerId()
+        && after.leaderPlayerId != before.leaderPlayerId
+        && after.status == 'active'
+        && newData.diff(oldData).affectedKeys()
+          .hasOnly(['role', 'revision', 'updatedAt'])
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time
+        && (
+          (playerId == currentPlayerId()
+            && oldData.role == 'leader'
+            && newData.role == 'member')
+          || (playerId == after.leaderPlayerId
+            && oldData.role == 'member'
+            && newData.role == 'leader')
+        );
+    }
+
+    function validGroupDisbandUpdate(groupId, oldData, newData) {
+      return isCurrentPlayerActive()
+        && oldData.status == 'active'
+        && oldData.leaderPlayerId == currentPlayerId()
+        && oldData.memberCount == 1
+        && oldData.hasActiveJoinCode == false
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'memberCount', 'deletedAt',
+          'revision', 'lastActivityAt', 'updatedAt'
+        ])
+        && newData.status == 'softDeleted'
+        && newData.memberCount == 0
+        && newData.deletedAt == request.time
+        && newData.revision == oldData.revision + 1
+        && newData.lastActivityAt == request.time
+        && newData.updatedAt == request.time
+        && !existsAfter(groupMemberPath(groupId, currentPlayerId()));
+    }
+
+    function validGroupMemberDisbandDelete(groupId, playerId, data) {
+      let group = getAfter(groupPath(groupId)).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.role == 'leader'
+        && data.playerId == playerId
+        && group.status == 'softDeleted'
+        && group.memberCount == 0
+        && group.leaderPlayerId == playerId
+        && !existsAfter(groupMemberPath(groupId, playerId))
+        && !existsAfter(groupRelationPath(playerId, groupId));
+    }
+
     function validMembershipStateRemove(playerId, docId, oldData, newData) {
       let previousIds = oldData.activeGroupIds;
       return hasActiveBinding()
@@ -613,6 +694,16 @@ service cloud.firestore {
         && playerId == currentPlayerId()
         && group.status == 'active'
         && group.memberCount == get(groupPath(groupId)).data.memberCount - 1
+        && !existsAfter(groupMemberPath(groupId, playerId));
+    }
+
+    function validGroupDisbandRelationDelete(playerId, groupId) {
+      let group = getAfter(groupPath(groupId)).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && group.status == 'softDeleted'
+        && group.memberCount == 0
+        && group.leaderPlayerId == playerId
         && !existsAfter(groupMemberPath(groupId, playerId));
     }
 
@@ -1366,6 +1457,30 @@ service cloud.firestore {
         && newData.leaderClassNameSnapshot == null
         && newData.revision == oldData.revision + 1
         && newData.updatedAt == request.time;
+    }
+
+    function validRecruitmentVisibilityChange(oldData, newData) {
+      return hasActiveBinding()
+        && oldData.leaderPlayerId == currentPlayerId()
+        && oldData.status == 'active'
+        && oldData.groupId is string
+        && newData.groupId == oldData.groupId
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'visibility', 'revision', 'updatedAt'
+        ])
+        && oldData.visibility in ['public', 'group']
+        && newData.visibility in ['public', 'group']
+        && oldData.visibility != newData.visibility
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validGroupRaidListingDelete(groupId, recruitmentId) {
+      let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && recruitment.leaderPlayerId == currentPlayerId()
+        && recruitment.groupId == groupId
+        && recruitment.visibility == 'public';
     }
 
     function validCycleCompletion(recruitmentId, oldData, newData) {
@@ -2616,7 +2731,8 @@ service cloud.firestore {
           groupId,
           request.resource.data
         );
-        allow delete: if validGroupMemberLeaveRelationDelete(playerId, groupId);
+        allow delete: if validGroupMemberLeaveRelationDelete(playerId, groupId)
+          || validGroupDisbandRelationDelete(playerId, groupId);
       }
 
       match /weeklyRaidClaims/{claimId} {
@@ -3045,6 +3161,9 @@ service cloud.firestore {
         ) || validRecruitmentDisband(
           resource.data,
           request.resource.data
+        ) || validRecruitmentVisibilityChange(
+          resource.data,
+          request.resource.data
         );
       allow delete: if false;
 
@@ -3153,6 +3272,14 @@ service cloud.firestore {
         groupId,
         resource.data,
         request.resource.data
+      ) || validGroupLeaderTransferUpdate(
+        groupId,
+        resource.data,
+        request.resource.data
+      ) || validGroupDisbandUpdate(
+        groupId,
+        resource.data,
+        request.resource.data
       ) || validGroupLeaderApproveUpdate(
         resource.data,
         request.resource.data
@@ -3193,8 +3320,17 @@ service cloud.firestore {
           playerId,
           resource.data,
           request.resource.data
+        ) || validGroupMemberRoleTransferUpdate(
+          groupId,
+          playerId,
+          resource.data,
+          request.resource.data
         );
         allow delete: if validGroupMemberSelfLeaveDelete(
+          groupId,
+          playerId,
+          resource.data
+        ) || validGroupMemberDisbandDelete(
           groupId,
           playerId,
           resource.data
@@ -3208,7 +3344,12 @@ service cloud.firestore {
           recruitmentId,
           request.resource.data
         );
-        allow update, delete: if false;
+        allow update: if validGroupRaidListingCreate(
+          groupId,
+          recruitmentId,
+          request.resource.data
+        );
+        allow delete: if validGroupRaidListingDelete(groupId, recruitmentId);
       }
 
       // Unit 4는 초대·신청 처리에 더해 코드 가입이 pending 요청을

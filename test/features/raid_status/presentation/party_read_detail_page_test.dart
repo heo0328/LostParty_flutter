@@ -16,7 +16,9 @@ import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_active
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_application_command.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_create_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_cycle_command.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_visibility_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_join_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_read_models.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
@@ -26,6 +28,7 @@ import 'package:lost_party/features/recruitment_list/domain/policies/approval_po
 import 'package:lost_party/features/recruitment_list/domain/entities/party_membership_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_application_command_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_cycle_command_repository.dart';
+import 'package:lost_party/features/recruitment_list/domain/repositories/party_visibility_command_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_join_command_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_membership_command_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_read_repository.dart';
@@ -45,6 +48,7 @@ void main() {
     PartyJoinCommandRepository? joinCommandRepository,
     PartyMembershipCommandRepository? membershipCommandRepository,
     PartyCycleCommandRepository? cycleCommandRepository,
+    PartyVisibilityCommandRepository? visibilityCommandRepository,
     RecruitmentLeaderCandidateService? candidateService,
     String? playerId,
   }) async {
@@ -62,6 +66,7 @@ void main() {
           joinCommandRepository: joinCommandRepository,
           membershipCommandRepository: membershipCommandRepository,
           cycleCommandRepository: cycleCommandRepository,
+          visibilityCommandRepository: visibilityCommandRepository,
           candidateService: candidateService,
           playerId: playerId,
         ),
@@ -1269,6 +1274,59 @@ void main() {
       expect(partyLabels, findsWidgets);
     });
   });
+
+  testWidgets('그룹 레이드 파티장에게 그룹만 공개 스위치를 보여 준다', (tester) async {
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(
+            groupId: 'group-1',
+            visibility: RecruitmentVisibility.group,
+          ),
+          isFromCache: false,
+        ),
+      ),
+      visibilityCommandRepository: _RecordingVisibilityRepository(),
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('groupOnlyVisibilitySwitch')), findsOneWidget);
+    expect(find.text('그룹만 공개'), findsWidgets);
+  });
+
+  testWidgets('파티장이 전체 공개로 바꾸면 확인 후 명령을 보낸다', (tester) async {
+    final visibility = _RecordingVisibilityRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(
+            groupId: 'group-1',
+            visibility: RecruitmentVisibility.group,
+          ),
+          isFromCache: false,
+        ),
+      ),
+      visibilityCommandRepository: visibility,
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('groupOnlyVisibilitySwitch')),
+    );
+    await tester.tap(find.byKey(const ValueKey('groupOnlyVisibilitySwitch')));
+    await tester.pumpAndSettle();
+    expect(find.text('전체 공개로 바꿀까요?'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('confirmVisibilityChangeButton')));
+    await tester.pumpAndSettle();
+
+    expect(visibility.commands, hasLength(1));
+    expect(visibility.commands.single.visibility, RecruitmentVisibility.public);
+    expect(find.text('전체 공개로 바꿨습니다.'), findsOneWidget);
+  });
 }
 
 PublicRecruitmentSummary _summary({
@@ -1285,6 +1343,8 @@ PublicRecruitmentSummary _summary({
   String status = 'active',
   String currentCycleStatus = 'active',
   bool continueTogether = false,
+  String visibility = 'public',
+  String? groupId,
 }) => PublicRecruitmentSummary(
   id: id,
   title: title,
@@ -1319,6 +1379,8 @@ PublicRecruitmentSummary _summary({
   status: status,
   currentCycleStatus: currentCycleStatus,
   continueTogether: continueTogether,
+  visibility: visibility,
+  groupId: groupId,
 );
 
 PartyApplicationSummary _pendingApplication() => PartyApplicationSummary(
@@ -1693,4 +1755,16 @@ class _RecordingCycleRepository implements PartyCycleCommandRepository {
   Future<PartyCycleResult> purgeStaleOwnAssignment(
     PartyPurgeStaleAssignmentCommand command,
   ) async => const PartyCycleResult.success();
+}
+
+class _RecordingVisibilityRepository implements PartyVisibilityCommandRepository {
+  final commands = <PartyVisibilityCommand>[];
+
+  @override
+  Future<PartyVisibilityResult> setVisibility(
+    PartyVisibilityCommand command,
+  ) async {
+    commands.add(command);
+    return const PartyVisibilityResult.success();
+  }
 }

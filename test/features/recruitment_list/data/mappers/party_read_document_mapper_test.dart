@@ -36,6 +36,8 @@ void main() {
     expect(summary.currentCycleStatus, 'active');
     expect(summary.continueTogether, isFalse);
     expect(summary.cycleEndsAt, DateTime.utc(2026, 8, 26, 21));
+    expect(summary.visibility, 'public');
+    expect(summary.groupId, isNull);
   });
 
   test('excludes leader or confirmed member rooms from the public list', () {

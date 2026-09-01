@@ -7,12 +7,14 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../../shared/formatters/korea_time_formatter.dart';
 import '../../../recruitment_list/domain/entities/party_application_command.dart';
+import '../../../recruitment_list/domain/entities/party_create_command.dart';
 import '../../../recruitment_list/domain/entities/party_cycle_command.dart';
 import '../../../recruitment_list/domain/entities/party_join_command.dart';
 import '../../../recruitment_list/domain/entities/party_read_models.dart';
 import '../../../recruitment_list/domain/entities/party_recruitment.dart';
 import '../../../recruitment_list/domain/entities/recruitment_aggregate.dart';
 import '../../../recruitment_list/domain/entities/recruitment_application.dart';
+import '../../../recruitment_list/domain/entities/party_visibility_command.dart';
 import '../../../recruitment_list/domain/policies/approval_policy.dart';
 import '../../../recruitment_list/domain/policies/party_cycle_policy.dart';
 import '../../../recruitment_list/domain/repositories/party_application_command_repository.dart';
@@ -20,6 +22,7 @@ import '../../../recruitment_list/domain/repositories/party_cycle_command_reposi
 import '../../../recruitment_list/domain/repositories/party_join_command_repository.dart';
 import '../../../recruitment_list/domain/repositories/party_membership_command_repository.dart';
 import '../../../recruitment_list/domain/repositories/party_read_repository.dart';
+import '../../../recruitment_list/domain/repositories/party_visibility_command_repository.dart';
 import '../../../recruitment_list/domain/entities/party_membership_command.dart';
 import '../../../recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
 import '../../domain/services/party_event_sync_service.dart';
@@ -33,6 +36,7 @@ class PartyReadDetailPage extends StatefulWidget {
     this.joinCommandRepository,
     this.membershipCommandRepository,
     this.cycleCommandRepository,
+    this.visibilityCommandRepository,
     this.eventSyncService,
     this.candidateService,
     this.playerId,
@@ -45,6 +49,7 @@ class PartyReadDetailPage extends StatefulWidget {
   final PartyJoinCommandRepository? joinCommandRepository;
   final PartyMembershipCommandRepository? membershipCommandRepository;
   final PartyCycleCommandRepository? cycleCommandRepository;
+  final PartyVisibilityCommandRepository? visibilityCommandRepository;
   final PartyEventSyncService? eventSyncService;
   final RecruitmentLeaderCandidateService? candidateService;
   final String? playerId;
@@ -541,6 +546,31 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                 label: '가입',
                 value: _approvalModeLabel(summary.approvalMode),
               ),
+              if (summary.isGroupLinked)
+                _DetailLine(
+                  label: '공개',
+                  value: summary.isGroupOnly
+                      ? '그룹만 공개'
+                      : '전체 공개 · 그룹 연결 유지',
+                ),
+              if (_isLeader(summary) &&
+                  summary.isGroupLinked &&
+                  summary.isActiveRecruitment &&
+                  widget.visibilityCommandRepository != null)
+                SwitchListTile(
+                  key: const ValueKey('groupOnlyVisibilitySwitch'),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  title: const Text('그룹만 공개'),
+                  subtitle: Text(
+                    summary.isGroupOnly
+                        ? '그룹원만 모집 목록에서 보고 신청할 수 있습니다.'
+                        : '전체 공개입니다. 연결 그룹은 유지됩니다.',
+                  ),
+                  value: summary.isGroupOnly,
+                  onChanged: _submitting
+                      ? null
+                      : (value) => _setGroupOnly(summary, value),
+                ),
               _PartyCompositionSection(
                 members: _members,
                 membersPerParty: summary.membersPerParty,
@@ -1265,6 +1295,59 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(_cycleFailureMessage(result.failure!))),
+    );
+  }
+
+  Future<void> _setGroupOnly(
+    PublicRecruitmentSummary summary,
+    bool groupOnly,
+  ) async {
+    final repository = widget.visibilityCommandRepository;
+    if (repository == null) return;
+    final visibility = groupOnly
+        ? RecruitmentVisibility.group
+        : RecruitmentVisibility.public;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(groupOnly ? '그룹만 공개로 바꿀까요?' : '전체 공개로 바꿀까요?'),
+        content: Text(
+          groupOnly
+              ? '그룹원만 모집 목록에서 보고 신청할 수 있습니다. 그룹에 없는 참가자나 신청이 있으면 바꿀 수 없습니다.'
+              : '그룹 밖 사용자도 모집 목록에서 보고 신청할 수 있습니다. 연결 그룹은 유지됩니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirmVisibilityChangeButton'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(groupOnly ? '그룹만 공개' : '전체 공개'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _submitting = true);
+    final result = await repository.setVisibility(
+      PartyVisibilityCommand(
+        recruitmentId: widget.recruitmentId,
+        visibility: visibility,
+        expectedRecruitmentRevision: summary.revision,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result.failure == null
+              ? (groupOnly ? '그룹만 공개로 바꿨습니다.' : '전체 공개로 바꿨습니다.')
+              : partyVisibilityFailureMessage(result.failure!),
+        ),
+      ),
     );
   }
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../domain/entities/group_join_code.dart';
+import '../../domain/entities/group_join_command.dart';
 import '../../domain/entities/group_summary.dart';
 import '../../domain/repositories/group_read_repository.dart';
 import '../viewmodels/group_application_view_model.dart';
@@ -89,13 +91,19 @@ class _GroupJoinCodePageState extends State<GroupJoinCodePage> {
       padding: const EdgeInsets.all(16),
       children: [
         Text(
-          group.hasActiveJoinCode ? '활성 초대코드가 있습니다.' : '활성 초대코드가 없습니다.',
+          group.hasActiveJoinCode
+              ? '활성 초대코드가 있습니다. 기간이 지나 만료되지 않으며, 폐기하기 전까지 유효합니다.'
+              : '활성 초대코드가 없습니다.',
+          key: const ValueKey('groupJoinCodeStatus'),
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 8),
         Text(
-          '코드는 그룹 문서에 저장되지 않습니다. 생성 직후 한 번 복사해 두고, '
-          '폐기할 때 같은 코드를 입력하세요.',
+          group.hasActiveJoinCode && remembered == null
+              ? '코드 원문은 그룹에 저장되지 않아 이 화면에서 다시 보이지 않습니다. '
+                    '만료된 것이 아닙니다. 생성 직후 복사해 둔 20자 코드를 입력해야 폐기할 수 있습니다.'
+              : '코드는 그룹 문서에 저장되지 않습니다. 생성 직후 한 번 복사해 두고, '
+                    '폐기할 때 같은 코드를 입력하세요.',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         if (remembered != null) ...[
@@ -162,34 +170,10 @@ class _GroupJoinCodePageState extends State<GroupJoinCodePage> {
   }
 
   Future<void> _revoke(String? remembered) async {
-    final controller = TextEditingController(text: remembered ?? '');
     final entered = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('초대코드 폐기'),
-        content: TextField(
-          key: const ValueKey('groupJoinCodeRevokeField'),
-          controller: controller,
-          autofocus: remembered == null,
-          decoration: const InputDecoration(
-            labelText: '폐기할 초대코드',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('취소'),
-          ),
-          FilledButton(
-            key: const ValueKey('groupJoinCodeRevokeConfirm'),
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('폐기'),
-          ),
-        ],
-      ),
+      builder: (context) => _RevokeJoinCodeDialog(initialCode: remembered),
     );
-    controller.dispose();
     if (entered == null || !mounted) return;
 
     setState(() => _busy = true);
@@ -230,4 +214,91 @@ class _GroupJoinCodePageState extends State<GroupJoinCodePage> {
   void _showMessage(String message) => ScaffoldMessenger.of(
     context,
   ).showSnackBar(SnackBar(content: Text(message)));
+}
+
+/// 폐기 입력란의 컨트롤러는 대화상자가 닫힌 뒤에만 해제한다.
+/// 대화상자를 연 쪽에서 바로 dispose하면 키보드가 내려가는 중 오류 화면이 난다.
+class _RevokeJoinCodeDialog extends StatefulWidget {
+  const _RevokeJoinCodeDialog({this.initialCode});
+
+  final String? initialCode;
+
+  @override
+  State<_RevokeJoinCodeDialog> createState() => _RevokeJoinCodeDialogState();
+}
+
+class _RevokeJoinCodeDialogState extends State<_RevokeJoinCodeDialog> {
+  late final TextEditingController _controller;
+  String? _fieldError;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialCode ?? '');
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _confirm() {
+    final parsed = GroupJoinCode.tryParse(_controller.text);
+    if (parsed == null) {
+      setState(() {
+        _fieldError = widget.initialCode == null
+            ? '복사해 둔 20자 초대코드를 입력하세요. 이 화면에는 원문이 없습니다.'
+            : groupJoinCodeFailureMessage(GroupJoinFailure.joinCodeInvalid);
+      });
+      return;
+    }
+    Navigator.of(context).pop(parsed.value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('초대코드 폐기'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (widget.initialCode == null) ...[
+            const Text(
+              '활성 코드는 만료되지 않습니다. 생성 직후 복사해 둔 코드를 입력하세요.',
+            ),
+            const SizedBox(height: 12),
+          ],
+          TextField(
+            key: const ValueKey('groupJoinCodeRevokeField'),
+            controller: _controller,
+            autofocus: widget.initialCode == null,
+            textCapitalization: TextCapitalization.characters,
+            decoration: InputDecoration(
+              labelText: '폐기할 초대코드',
+              border: const OutlineInputBorder(),
+              errorText: _fieldError,
+            ),
+            onChanged: (_) {
+              if (_fieldError != null) {
+                setState(() => _fieldError = null);
+              }
+            },
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          key: const ValueKey('groupJoinCodeRevokeConfirm'),
+          onPressed: _confirm,
+          child: const Text('폐기'),
+        ),
+      ],
+    );
+  }
 }

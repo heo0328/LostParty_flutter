@@ -1,32 +1,35 @@
 # NEXT WORK
 
-## 현재 우선 작업 — 그룹장 즉시 지정 이전·후속 탈퇴·해산 구현
+## 현재 우선 작업 — 자리·인원·상태에 맞춘 raidListings 갱신
 
-현재 단계: 제품·기술 계약 확정. [`../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md`](../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md)를 기준으로 그룹장이 그룹원을 후임자로 즉시 지정하고, 일반 멤버가 된 뒤 기존 탈퇴를 실행하거나 안전 조건에서 그룹을 해산하는 시스템을 구현한다.
+현재 단계: **다음 작업 대기**. 직전 완료는 생성 후 `그룹만 공개 ↔ 전체 공개` 전환. 브랜치 `codex/raid-visibility-toggle`. Git SHA는 로그로 확인한다. 제품 기준은 [`../product/GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md) §9.
 
-- 그룹 레이드 생성(일반/그룹, 가입 그룹 하나, `그룹만 공개` 기본값)과 그룹원 레이드 모집 리스트 노출이 동작한다.
-- 그룹만 공개는 `groups/{groupId}/raidListings/{recruitmentId}` Projection으로 모집 리스트에 합친다. `recruitments` list에 그룹 membership `exists`나 `visibility==group` 쿼리를 쓰지 않는다.
-- 책임자·확정 멤버 본인 방은 모집 리스트에서 제외하고 레이드 현황에서 본다.
-- 사용자 실기기에서 그룹만 공개 방 생성과 다른 그룹원의 레이드 모집 리스트 노출을 확인했다.
+- listing은 생성·공개 범위 전환 시점 스냅샷이다. 자리·인원·방 해산 후에도 listing `status`가 남을 수 있다.
+- 그룹 해산 게이트는 listing만 보지 않고 `recruitments` 원본의 그룹 전용·active 여부를 확인한다.
+- `recruitments` list에 `visibility==group` 쿼리나 문서별 그룹 membership `exists`를 넣지 않는다.
 
-### 확정 범위
+### 직전 완료 — 생성 후 그룹만 공개 ↔ 전체 공개 전환
 
-- 제품 정책은 [`../product/GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md) §10·§13·§14를 따른다.
-- 정상 그룹장은 바로 탈퇴할 수 없다. 다른 유효 그룹원을 선택해 그룹장을 즉시 이전한 뒤 일반 멤버 탈퇴를 별도로 실행하거나 그룹을 해산한다.
-- 대상의 수락·거절·취소·만료, 이전 요청 문서, 알림과 역방향 Projection은 만들지 않는다.
-- 이전 Transaction은 group의 leader와 기존·신규 그룹장 membership 역할만 원자적으로 교체한다. 탈퇴는 기존 일반 멤버 명령을 재사용한다.
-- 그룹 대표 캐릭터는 유지하고 그룹장 표시 캐릭터만 후임자 Snapshot으로 바꾼다.
-- 1차 해산은 마지막 1인, pending 초대·신청 없음, 활성 그룹 전용 레이드 없음 조건에서 soft delete로 처리한다.
-- 그룹 해산은 연결된 레이드방을 자동 해산하지 않는다. 그룹 전용 레이드의 조회·신청·기존 참가 자격 처리는 후속 그룹-레이드 자격 작업과 연결한다.
+- 파티장 상세의 `그룹만 공개` 스위치로 `group <-> public`을 바꾼다. `groupId`는 유지한다.
+- 전체 공개면 listing을 삭제하고, 다시 그룹 전용이면 현재 모집 스냅샷으로 listing을 만들거나 덮어쓴다.
+- 전체 공개 → 그룹 전용은 비그룹 참가자나 유효한 비그룹 신청이 있으면 거절한다.
+- 사용자 Rules 배포 후 비그룹 계정 모집에서 숨김·표시·재숨김을 확인했다. 방장 본인 방은 모집 리스트가 아니라 레이드 현황에 있다.
 
-### 후속 구현 순서
+### 직전 완료 — 그룹장 즉시 지정 이전·후속 탈퇴·1차 해산
 
-1. 그룹장 정상 탈퇴·그룹장 이전·그룹 해산
-2. 생성 후 `그룹만 공개 ↔ 전체 공개` 전환
-3. 자리·인원·상태 변경에 맞춘 `raidListings` 갱신
-4. listing이 없는 기존 그룹 레이드 보완
-5. 그룹 탈퇴·추방·해산 시 그룹 전용 레이드 자격 박탈과 제한적 정리
-6. 위 기능과 실기기 확인을 완료한 뒤 레이드 모집·현황 그룹 필터
+브랜치 `codex/group-leader-exit`. 계약 [`../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md`](../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md).
+
+- 실기기: 1인 해산, 즉시 이전, 이전 후 기존 그룹장 탈퇴, 후임 그룹장의 그룹 해산.
+- 초대코드는 기간 만료가 없고 원문은 세션 메모리에만 있다. 폐기 대화상자는 컨트롤러를 대화상자 수명에 맞춘다.
+- 활성 그룹 레이드 해산 차단은 listing 스냅샷이 아니라 `recruitments` 원본 status로 판정한다.
+- 그룹 해산은 레이드방을 자동 해산하지 않는다. 관련 Rules는 사용자가 배포했다.
+
+### 이후 구현 순서
+
+1. 자리·인원·상태 변경에 맞춘 `raidListings` 갱신
+2. listing이 없는 기존 그룹 레이드 보완
+3. 그룹 탈퇴·추방·해산 시 그룹 전용 레이드 자격 박탈과 제한적 정리
+4. 위 기능과 실기기 확인을 완료한 뒤 레이드 모집·현황 그룹 필터
 
 ### 필터 착수 게이트
 

@@ -70,6 +70,8 @@ class PartyReadDocumentMapper {
       continueTogether: _optionalBoolean(data, 'continueTogether') ?? false,
       cycleEndsAt: _nullableDate(data, 'cycleEndsAt'),
       approvalMode: _approvalMode(data),
+      visibility: _softString(data, 'visibility') ?? 'public',
+      groupId: _softString(data, 'groupId'),
     );
   }
 

@@ -116,6 +116,12 @@ void main() {
       rules,
       contains('allow create: if validGroupRaidListingCreate('),
     );
+    expect(rules, contains('function validGroupRaidListingDelete('));
+    expect(
+      rules,
+      contains('allow delete: if validGroupRaidListingDelete(groupId, recruitmentId);'),
+    );
+    expect(rules, contains('allow update: if validGroupRaidListingCreate('));
   });
 
   test('Unit 4는 초대코드 생성·폐기·정확한 get을 열고 list·update는 막는다', () {
@@ -372,7 +378,7 @@ void main() {
     );
     expect(
       rules,
-      contains('allow delete: if validGroupMemberLeaveRelationDelete(playerId, groupId);'),
+      contains('validGroupMemberLeaveRelationDelete(playerId, groupId)'),
     );
   });
 
@@ -540,11 +546,16 @@ void main() {
       contains('function validGroupMemberLeaveRelationDelete(playerId, groupId)'),
     );
     expect(rules, contains('allow delete: if validGroupMemberSelfLeaveDelete('));
-    expect(rules, contains('allow delete: if validGroupMemberLeaveRelationDelete(playerId, groupId);'));
+    expect(rules, contains('validGroupMemberLeaveRelationDelete(playerId, groupId)'));
+    expect(rules, contains('validGroupDisbandRelationDelete(playerId, groupId)'));
     expect(
       rules,
       contains('allow update: if validGroupMemberLeaveUpdate('),
     );
+    expect(rules, contains('function validGroupLeaderTransferUpdate('));
+    expect(rules, contains('function validGroupMemberRoleTransferUpdate('));
+    expect(rules, contains('function validGroupDisbandUpdate('));
+    expect(rules, contains('function validGroupMemberDisbandDelete('));
     expect(
       rules,
       contains('allow update: if validMembershipStateRemove('),
