@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../domain/entities/party_create_command.dart';
 import '../../domain/repositories/party_create_repository.dart';
 import '../../domain/services/party_create_command_validator.dart';
+import '../../domain/services/party_create_occupancy_gate.dart';
 import '../../../account/data/mappers/weekly_raid_claim_document_id.dart';
 import '../mappers/party_create_write_plan.dart';
 
@@ -71,6 +72,16 @@ class FirestorePartyCreateRepository implements PartyCreateRepository {
         final assignment = await transaction.get(assignmentRef);
         final claim = await transaction.get(claimRef);
         final characterData = character.data();
+        final assignmentRecruitmentId = assignment.data()?['recruitmentId'];
+        DocumentSnapshot<Map<String, dynamic>>? assignedRecruitment;
+        if (assignment.exists &&
+            assignmentRecruitmentId is String &&
+            assignmentRecruitmentId.isNotEmpty &&
+            assignmentRecruitmentId != command.recruitmentId) {
+          assignedRecruitment = await transaction.get(
+            _firestore.collection('recruitments').doc(assignmentRecruitmentId),
+          );
+        }
 
         DocumentSnapshot<Map<String, dynamic>>? group;
         DocumentSnapshot<Map<String, dynamic>>? membership;
@@ -92,15 +103,34 @@ class FirestorePartyCreateRepository implements PartyCreateRepository {
             PartyCreateFailure.ownershipLost,
           );
         }
-        if (recruitment.exists) {
-          return const PartyCreateResult.failure(
-            PartyCreateFailure.idConflict,
-          );
-        }
-        if (assignment.exists) {
-          return const PartyCreateResult.failure(
-            PartyCreateFailure.participationConflict,
-          );
+        final occupancy = PartyCreateOccupancyGate.decide(
+          newRecruitmentId: command.recruitmentId,
+          playerId: playerId,
+          newRecruitmentExists: recruitment.exists,
+          newRecruitmentLeaderId:
+              recruitment.data()?['leaderPlayerId'] as String?,
+          assignmentExists: assignment.exists,
+          assignmentRecruitmentId: assignmentRecruitmentId is String
+              ? assignmentRecruitmentId
+              : null,
+          assignedRecruitmentExists: assignedRecruitment?.exists == true,
+          assignedRecruitmentStatus:
+              assignedRecruitment?.data()?['status'] as String?,
+        );
+        switch (occupancy) {
+          case PartyCreateOccupancyDecision.alreadyCreated:
+            return PartyCreateResult.success(command.recruitmentId);
+          case PartyCreateOccupancyDecision.idConflict:
+            return const PartyCreateResult.failure(
+              PartyCreateFailure.idConflict,
+            );
+          case PartyCreateOccupancyDecision.participationConflict:
+            return const PartyCreateResult.failure(
+              PartyCreateFailure.participationConflict,
+            );
+          case PartyCreateOccupancyDecision.proceed:
+          case PartyCreateOccupancyDecision.replaceStaleAssignment:
+            break;
         }
         if (claim.exists) {
           return const PartyCreateResult.failure(
@@ -146,6 +176,9 @@ class FirestorePartyCreateRepository implements PartyCreateRepository {
             .doc(playerId);
         transaction.set(recruitmentRef, plan.recruitment);
         transaction.set(memberRef, plan.leaderMembership);
+        if (occupancy == PartyCreateOccupancyDecision.replaceStaleAssignment) {
+          transaction.delete(assignmentRef);
+        }
         transaction.set(assignmentRef, plan.assignment);
         final listing = plan.groupRaidListing;
         if (groupId != null && listing != null) {

@@ -11,6 +11,7 @@ import '../../domain/services/party_join_command_validator.dart';
 import '../mappers/party_application_event_writer.dart';
 import '../mappers/party_join_write_plan.dart';
 import '../mappers/party_membership_event_writer.dart';
+import '../mappers/party_raid_listing_sync.dart';
 
 class FirestorePartyJoinCommandRepository
     implements PartyJoinCommandRepository {
@@ -256,6 +257,12 @@ class FirestorePartyJoinCommandRepository
         return PartyJoinResult.failure(_placementFailure(placement.failure));
       }
 
+      final listing = await PartyRaidListingTx.read(
+        transaction: transaction,
+        firestore: _firestore,
+        groupId: r?['groupId'],
+        recruitmentId: recruitmentId,
+      );
       final now = FieldValue.serverTimestamp();
       final plan = PartyJoinWritePlan.create(
         recruitmentId: recruitmentId, playerId: playerId, characterId: characterId,
@@ -269,6 +276,11 @@ class FirestorePartyJoinCommandRepository
       );
       final memberRef = recruitmentRef.collection('members').doc(playerId);
       transaction.update(recruitmentRef, plan.recruitmentUpdate);
+      listing.write(
+        transaction: transaction,
+        currentRecruitment: partyRecruitmentMap(r),
+        recruitmentPatch: plan.recruitmentUpdate,
+      );
       transaction.set(memberRef, plan.membership);
       transaction.set(assignmentRef, plan.assignment);
       final nextRecruitmentRevision = expectedRecruitmentRevision + 1;

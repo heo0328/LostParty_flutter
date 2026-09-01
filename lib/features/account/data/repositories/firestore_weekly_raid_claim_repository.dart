@@ -12,6 +12,7 @@ import '../mappers/weekly_raid_claim_mapper.dart';
 import '../mappers/weekly_raid_claim_document_id.dart';
 import '../../../recruitment_list/data/mappers/party_membership_event_writer.dart';
 import '../../../recruitment_list/data/mappers/party_membership_write_plan.dart';
+import '../../../recruitment_list/data/mappers/party_raid_listing_sync.dart';
 import '../../../recruitment_list/domain/entities/party_event.dart';
 
 class FirestoreWeeklyRaidClaimRepository
@@ -278,6 +279,15 @@ class FirestoreWeeklyRaidClaimRepository
             pendingApplications.add(candidate);
           }
         }
+        PartyRaidListingTx? listing;
+        if (assignment.exists) {
+          listing = await PartyRaidListingTx.read(
+            transaction: transaction,
+            firestore: _firestore,
+            groupId: recruitmentData?['groupId'],
+            recruitmentId: recruitmentRef!.id,
+          );
+        }
         final now = FieldValue.serverTimestamp();
         if (assignment.exists) {
           final r = recruitmentData!;
@@ -295,22 +305,25 @@ class FirestoreWeeklyRaidClaimRepository
           final nextLeaderClassName = nextLeaderId == oldLeader
               ? r['leaderClassNameSnapshot'] as String?
               : nextLeaderData?['classNameSnapshot'] as String?;
-          transaction.update(
-            recruitmentRef!,
-            PartyMembershipWritePlan.removeFromRecruitment(
-              memberPlayerIds: beforeMembers,
-              targetPlayerId: command.playerId,
-              memberCount: r['memberCount'] as int,
-              dealerCount: r['dealerCount'] as int,
-              supportCount: r['supportCount'] as int,
-              targetRole: m['role'] as String,
-              maxMemberCount: r['maxMemberCount'] as int,
-              revision: r['revision'] as int,
-              nextLeaderPlayerId: nextLeaderId,
-              nextLeaderCharacterName: nextLeaderCharacterName,
-              nextLeaderClassName: nextLeaderClassName,
-              serverTimestamp: now,
-            ),
+          final recruitmentPatch = PartyMembershipWritePlan.removeFromRecruitment(
+            memberPlayerIds: beforeMembers,
+            targetPlayerId: command.playerId,
+            memberCount: r['memberCount'] as int,
+            dealerCount: r['dealerCount'] as int,
+            supportCount: r['supportCount'] as int,
+            targetRole: m['role'] as String,
+            maxMemberCount: r['maxMemberCount'] as int,
+            revision: r['revision'] as int,
+            nextLeaderPlayerId: nextLeaderId,
+            nextLeaderCharacterName: nextLeaderCharacterName,
+            nextLeaderClassName: nextLeaderClassName,
+            serverTimestamp: now,
+          );
+          transaction.update(recruitmentRef!, recruitmentPatch);
+          listing?.write(
+            transaction: transaction,
+            currentRecruitment: partyRecruitmentMap(r),
+            recruitmentPatch: recruitmentPatch,
           );
           transaction.delete(memberRef!);
           transaction.delete(assignmentRef);

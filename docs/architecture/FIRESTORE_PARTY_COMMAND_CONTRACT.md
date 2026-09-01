@@ -105,7 +105,7 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 - `recruitments/{recruitmentId}`가 원본이며 listing은 독립적인 제품 상태나 권한 기준이 아니다.
 - 원본의 목록 노출 관련 필드를 변경하는 명령은 같은 Firestore Transaction에서 listing도 생성·덮어쓰기·삭제한다. 원본 커밋 후 별도 후처리, 화면 진입 시 보정, 실패를 삼키는 비동기 동기화는 사용하지 않는다.
 - 그룹 전용 모집인데 listing이 없으면 해당 모집을 변경하는 Transaction에서 현재 원본의 Transaction 후 상태로 listing을 생성한다. 이것은 변경된 방의 자연 복구이며, 변경되지 않은 기존 방의 일괄 보완을 대신하지 않는다.
-- Rules는 `getAfter(recruitmentPath(recruitmentId))`를 기준으로 경로의 `groupId`, `visibility`, 책임자뿐 아니라 아래 동기화 필드가 원본과 일치하는지 검증한다. 현재의 생성·덮어쓰기 검증은 이 구현에서 강화한다.
+- Rules는 `getAfter(recruitmentPath(recruitmentId))`를 기준으로 listing 문서가 원본 Snapshot과 `diff` 없이 일치하는지 검증한다. 생성 직후 listing은 revision 1과 파티장만 허용하고, 이후 덮어쓰기는 원본 revision +1과 같은 Transaction의 `updatedAt`을 요구한다. 리더가 아닌 즉시 가입·승인·탈퇴도 원본을 바꾸는 같은 Transaction에서 listing을 쓸 수 있다.
 
 #### 동기화 필드
 
@@ -135,7 +135,7 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 
 최소 점검 대상은 즉시 가입·신청 승인, 파티원 탈퇴·추방, 캐릭터·자리 변경, 모집 완료·완료 취소, 다음 회차 전환, 반복 여부 변경, 모집 해산, 카드 표시 정보 수정, 공개 범위 변경이다. 승인 권한 토글처럼 listing의 노출·정렬·카드 값에 영향을 주지 않는 변경은 원본 revision 정책을 확인한 뒤 동기화 대상에서 제외할 수 있다.
 
-과거 그룹 전용 모집 전체를 검색하여 listing을 만드는 일괄 보완, 그룹 탈퇴·추방·해산 시 모집 참가 자격 박탈, 그룹 필터 UI는 이 작업에 포함하지 않는다.
+- 과거 그룹 전용 모집 전체를 `recruitments`에서 검색해 listing을 만드는 일괄 보완은 이 동기화 작업에 포함하지 않는다. 참가 중인 방의 listing 누락 보완은 별도 작업에서 모집 revision을 올리지 않는 listing create로 처리한다.
 
 ### 4.3 승인 대기 신청
 
@@ -282,7 +282,7 @@ Rules는 적어도 다음을 `getAfter()`를 포함해 검증해야 한다.
 - 모집 수정은 파티장만 허용하고 불변 필드와 revision 증가를 검증
 - 서버 검증이 필요하지만 Rules로 안전하게 표현할 수 없는 변경은 허용하지 않음
 
-생성 Transaction은 신규 `recruitments/{id}` 존재 여부를 `get`으로 확인한다. 문서가 없을 때 `resource.data`를 읽으면 Rules가 `permission-denied`를 내므로, 존재하지 않는 모집의 단건 `get`은 active binding만으로 허용한다. 존재하는 문서의 단건 읽기는 `canReadRecruitment`, `recruitments` 목록은 `canListRecruitment`를 사용한다. 그룹만 공개 목록은 `groups/{groupId}/raidListings`에서 경로의 그룹원만 `list`하며, `recruitments` list 규칙에 그룹 membership `exists`를 넣지 않는다. 그룹 listing 생성·덮어쓰기는 같은 Transaction의 모집 문서와 `visibility==group`·`groupId`·리더를 `getAfter`로 맞춘다. listing 삭제는 전환 후 모집이 `visibility==public`일 때만 허용한다.
+생성 Transaction은 신규 `recruitments/{id}` 존재 여부를 `get`으로 확인한다. 문서가 없을 때 `resource.data`를 읽으면 Rules가 `permission-denied`를 내므로, 존재하지 않는 모집의 단건 `get`은 active binding만으로 허용한다. 존재하는 문서의 단건 읽기는 `canReadRecruitment`, `recruitments` 목록은 `canListRecruitment`를 사용한다. 그룹만 공개 목록은 `groups/{groupId}/raidListings`에서 경로의 그룹원만 `list`하며, `recruitments` list 규칙에 그룹 membership `exists`를 넣지 않는다. 그룹 listing 생성·덮어쓰기는 같은 Transaction의 `getAfter` 모집 Snapshot과 문서 `diff`가 없어야 한다. listing 삭제는 전체 공개 전환 또는 방 해산처럼 되돌릴 수 없는 종료에서만 허용한다.
 
 Rules 상세 구현·배포는 명령별 작업 브랜치에서 진행한다. Firestore Emulator는 사용하지 않는다. Rules 배포 전 검증 방법은 별도로 합의한다.
 

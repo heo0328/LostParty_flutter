@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../domain/entities/party_create_command.dart';
 import '../../domain/entities/party_visibility_command.dart';
 import '../../domain/repositories/party_visibility_command_repository.dart';
+import '../mappers/party_raid_listing_sync.dart';
 import '../mappers/party_visibility_write_plan.dart';
 
 class FirestorePartyVisibilityCommandRepository
@@ -112,12 +113,12 @@ class FirestorePartyVisibilityCommandRepository
         }
       }
 
-      final listingRef = _firestore
-          .collection('groups')
-          .doc(groupId)
-          .collection('raidListings')
-          .doc(command.recruitmentId);
-      final listing = await transaction.get(listingRef);
+      final listing = await PartyRaidListingTx.read(
+        transaction: transaction,
+        firestore: _firestore,
+        groupId: groupId,
+        recruitmentId: command.recruitmentId,
+      );
       final plan = PartyVisibilityWritePlan.change(
         visibility: command.visibility,
         recruitmentRevision: command.expectedRecruitmentRevision,
@@ -125,12 +126,11 @@ class FirestorePartyVisibilityCommandRepository
         currentRecruitment: Map<String, Object?>.from(data),
       );
       transaction.update(recruitmentRef, plan.recruitmentPatch);
-      if (plan.listingDocument != null) {
-        transaction.set(listingRef, plan.listingDocument!);
-      }
-      if (plan.deleteListing && listing.exists) {
-        transaction.delete(listingRef);
-      }
+      listing.write(
+        transaction: transaction,
+        currentRecruitment: Map<String, Object?>.from(data),
+        recruitmentPatch: plan.recruitmentPatch,
+      );
       return const PartyVisibilityResult.success();
     });
   }

@@ -110,12 +110,15 @@ void main() {
 
   test('그룹 전용 레이드 목록 Projection은 경로의 그룹원만 list한다', () {
     expect(rules, contains('function validGroupRaidListingCreate('));
+    expect(rules, contains('data.diff(recruitment).affectedKeys().size() == 0'));
     expect(rules, contains('match /raidListings/{recruitmentId}'));
     expect(rules, contains('allow get, list: if isCurrentGroupMember(groupId);'));
     expect(
       rules,
       contains('allow create: if validGroupRaidListingCreate('),
     );
+    expect(rules, contains('function validGroupRaidListingBackfill('));
+    expect(rules, contains('|| validGroupRaidListingBackfill('));
     expect(rules, contains('function validGroupRaidListingDelete('));
     expect(
       rules,

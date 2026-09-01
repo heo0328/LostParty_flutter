@@ -46,15 +46,18 @@ class PublicRecruitmentListViewModel extends ChangeNotifier {
     required String currentPlayerId,
     this.pageSize = publicRecruitmentPageSize,
     this.emptyAutoFillMaxPages = publicRecruitmentEmptyAutoFillMaxPages,
+    Future<void> Function()? backfillOwnGroupListings,
   }) : _repository = repository,
        _cycleKey = cycleKey,
-       _currentPlayerId = currentPlayerId;
+       _currentPlayerId = currentPlayerId,
+       _backfillOwnGroupListings = backfillOwnGroupListings;
 
   final PartyReadRepository _repository;
   final String _cycleKey;
   final String _currentPlayerId;
   final int pageSize;
   final int emptyAutoFillMaxPages;
+  final Future<void> Function()? _backfillOwnGroupListings;
 
   StreamSubscription<PublicRecruitmentPage>? _subscription;
   PublicRecruitmentListState _state = const PublicRecruitmentListState();
@@ -77,6 +80,14 @@ class PublicRecruitmentListViewModel extends ChangeNotifier {
           limit: pageSize,
         )
         .listen(_onFirstPage, onError: _onFirstPageError);
+    final backfill = _backfillOwnGroupListings;
+    if (backfill != null) {
+      unawaited(() async {
+        try {
+          await backfill();
+        } catch (_) {}
+      }());
+    }
   }
 
   Future<void> refresh() async {

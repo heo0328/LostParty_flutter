@@ -1,35 +1,18 @@
 # NEXT WORK
 
-## 현재 우선 작업 — 자리·인원·상태에 맞춘 raidListings 갱신
+## 현재 우선 작업 — 모집·현황 리스트 카드 밀도
 
-현재 단계: **다음 작업 대기**. 직전 완료는 생성 후 `그룹만 공개 ↔ 전체 공개` 전환. 브랜치 `codex/raid-visibility-toggle`. Git SHA는 로그로 확인한다. 제품 기준은 [`../product/GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md) §9.
+현재 단계: **다음 작업**. listing 동기화·보완과 생성 점유 알림 수정을 `main`에 통합한 뒤 카드 UI만 다룬다.
 
-- listing은 생성·공개 범위 전환 시점 스냅샷이다. 자리·인원·방 해산 후에도 listing `status`가 남을 수 있다.
-- 그룹 해산 게이트는 listing만 보지 않고 `recruitments` 원본의 그룹 전용·active 여부를 확인한다.
-- `recruitments` list에 `visibility==group` 쿼리나 문서별 그룹 membership `exists`를 넣지 않는다.
+- 레이드 모집 리스트 우상단 상태 배지에 그룹 전용이면 `그룹`을 추가한다.
+- 제목과 우측 배지는 유지한다. 그 다음 줄은 난이도·레이드 종류를 왼쪽에 두고 맨 오른쪽에 파티장 이름만 둔다.
+- 모집 인원과 전투력·숙련도 제한을 한 줄로 합친다.
 
-### 2026-09-01 확정한 구현 기준
+### 직전 완료 — listing 동기화·보완 및 생성 점유 알림
 
-- 원본 모집 변경과 listing 변경은 반드시 같은 Firestore Transaction에서 원자적으로 처리한다.
-- 이번 작업은 현재의 모집 Snapshot Projection 구조를 유지한다. 새 축약 listing 스키마로 마이그레이션하지 않는다.
-- 그룹 전용 모집은 목록 관련 값이 바뀔 때 현재 Transaction 후 모집 Snapshot으로 listing을 생성 또는 전체 덮어쓴다. listing이 없으면 이 변경 시점에 생성해 자연 복구한다.
-- 만석, 완료 취소 가능 상태, 반복 모집의 다음 주 대기처럼 다시 노출될 수 있는 상태는 listing을 유지하면서 인원·자리·회차·상태를 최신화한다.
-- 전체 공개 전환과 방 해산처럼 되돌릴 수 없는 종료는 listing을 삭제한다. `completed` 문자열만으로 삭제 여부를 정하지 않는다.
-- 동기화 필드는 `status`, `currentCycleStatus`, `manualRecruitmentEnabled`, `memberCount`, `maxMemberCount`, `hasAvailableSlot`, 멤버·자리 Snapshot, 회차 키·시각, 수정 가능한 카드 표시 필드, `revision`, `updatedAt`을 포함한다. 구현 시 실제 모집 스키마와 공개 카드 매퍼를 대조해 정확한 목록을 테스트로 고정한다.
-- Rules는 `getAfter()`의 모집 원본과 listing 핵심 필드의 일치를 검증하도록 강화한다. 원본 이후 별도 후처리나 화면 진입 보정은 사용하지 않는다.
-- 상세 계약은 [`../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md) §4.2.1을 따른다.
-
-### 구현 전 영향 범위 점검
-
-- 즉시 가입·신청 승인
-- 파티원 탈퇴·추방
-- 캐릭터·자리 변경
-- 모집 완료·완료 취소·다음 회차 전환
-- 반복 여부와 모집 활성 상태 변경
-- 모집 해산
-- 카드 표시 정보 수정과 공개 범위 변경
-
-승인 권한처럼 목록 결과에 영향을 주지 않는 변경은 제외할 수 있다. 기존 방 전체 일괄 보완, 그룹 전용 자격 박탈, 그룹 필터는 이번 작업에 포함하지 않는다.
+- 자리·인원·상태 변경은 같은 Transaction에서 listing을 맞춘다. 참가 중인 방의 빠진 listing은 모집 탭 진입 시 원본 Snapshot으로 만든다.
+- 실기기: 참가 충돌 알림 외 이상 없음. 생성·해산·동일 조건 재생성 시 방은 만들어졌는데 이미 참가 중 알림이 간헐적으로 나던 문제를 생성 Transaction 재시도·해산 잔여 점유 처리로 고쳤다.
+- Rules 배포는 별도 지시.
 
 ### 직전 완료 — 생성 후 그룹만 공개 ↔ 전체 공개 전환
 
@@ -49,10 +32,8 @@
 
 ### 이후 구현 순서
 
-1. 자리·인원·상태 변경에 맞춘 `raidListings` 갱신
-2. listing이 없는 기존 그룹 레이드 보완
-3. 그룹 탈퇴·추방·해산 시 그룹 전용 레이드 자격 박탈과 제한적 정리
-4. 위 기능과 실기기 확인을 완료한 뒤 레이드 모집·현황 그룹 필터
+1. 그룹 탈퇴·추방·해산 시 그룹 전용 레이드 자격 박탈과 제한적 정리
+2. 위 기능과 실기기 확인을 완료한 뒤 레이드 모집·현황 그룹 필터
 
 ### 필터 착수 게이트
 

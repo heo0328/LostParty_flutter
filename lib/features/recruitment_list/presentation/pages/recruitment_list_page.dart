@@ -10,12 +10,14 @@ class RecruitmentListPage extends StatefulWidget {
     required this.partyReadRepository,
     required this.cycleKey,
     required this.currentPlayerId,
+    this.backfillOwnGroupListings,
     super.key,
   });
 
   final PartyReadRepository partyReadRepository;
   final String cycleKey;
   final String currentPlayerId;
+  final Future<void> Function()? backfillOwnGroupListings;
 
   @override
   State<RecruitmentListPage> createState() => _RecruitmentListPageState();
@@ -31,6 +33,7 @@ class _RecruitmentListPageState extends State<RecruitmentListPage> {
       repository: widget.partyReadRepository,
       cycleKey: widget.cycleKey,
       currentPlayerId: widget.currentPlayerId,
+      backfillOwnGroupListings: widget.backfillOwnGroupListings,
     )..addListener(_onChanged);
     _viewModel.start();
   }

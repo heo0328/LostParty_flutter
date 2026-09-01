@@ -143,13 +143,34 @@ service cloud.firestore {
 
     function validGroupRaidListingCreate(groupId, recruitmentId, data) {
       let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
+      let created = !exists(recruitmentPath(recruitmentId));
       return isCurrentGroupMember(groupId)
-        && data.schemaVersion == 1
-        && data.visibility == 'group'
-        && data.groupId == groupId
         && recruitment.groupId == groupId
         && recruitment.visibility == 'group'
-        && recruitment.leaderPlayerId == currentPlayerId();
+        && data.diff(recruitment).affectedKeys().size() == 0
+        && (
+          created
+            ? recruitment.revision == 1
+              && recruitment.leaderPlayerId == currentPlayerId()
+              && recruitment.updatedAt == request.time
+            : recruitment.revision
+              == get(recruitmentPath(recruitmentId)).data.revision + 1
+              && recruitment.updatedAt == request.time
+        );
+    }
+
+    function validGroupRaidListingBackfill(groupId, recruitmentId, data) {
+      let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
+      return exists(recruitmentPath(recruitmentId))
+        && isCurrentGroupMember(groupId)
+        && recruitment.groupId == groupId
+        && recruitment.visibility == 'group'
+        && recruitment.status != 'disbanded'
+        && recruitment.currentCycleStatus != 'disbanded'
+        && data.diff(recruitment).affectedKeys().size() == 0
+        && recruitment.revision
+          == get(recruitmentPath(recruitmentId)).data.revision
+        && currentPlayerId() in recruitment.memberPlayerIds;
     }
 
     // 직접 입력 그룹명은 trim 후 1~20자이며 줄바꿈·제어문자를 포함하지 않는다.
@@ -1476,11 +1497,18 @@ service cloud.firestore {
     }
 
     function validGroupRaidListingDelete(groupId, recruitmentId) {
-      let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
+      let after = getAfter(recruitmentPath(recruitmentId)).data;
+      let beforeLeader = exists(recruitmentPath(recruitmentId))
+        ? get(recruitmentPath(recruitmentId)).data.leaderPlayerId
+        : after.leaderPlayerId;
+      let publicToggle = after.visibility == 'public'
+        && after.leaderPlayerId == currentPlayerId();
+      let disbanded = after.status == 'disbanded'
+        || after.currentCycleStatus == 'disbanded';
       return hasActiveBinding()
-        && recruitment.leaderPlayerId == currentPlayerId()
-        && recruitment.groupId == groupId
-        && recruitment.visibility == 'public';
+        && after.groupId == groupId
+        && after.updatedAt == request.time
+        && (publicToggle || (disbanded && beforeLeader == currentPlayerId()));
     }
 
     function validCycleCompletion(recruitmentId, oldData, newData) {
@@ -1750,6 +1778,15 @@ service cloud.firestore {
     }
 
     function validAssignmentRemoval(playerId, data) {
+      return hasActiveBinding()
+        && (
+          (playerId == currentPlayerId()
+            && !exists(recruitmentPath(data.recruitmentId)))
+          || validAssignmentRemovalForExistingRecruitment(playerId, data)
+        );
+    }
+
+    function validAssignmentRemovalForExistingRecruitment(playerId, data) {
       let recruitment = get(recruitmentPath(data.recruitmentId)).data;
       let after = getAfter(recruitmentPath(data.recruitmentId)).data;
       let memberPath = recruitmentMemberPath(data.recruitmentId, playerId);
@@ -1775,8 +1812,7 @@ service cloud.firestore {
         && (recruitment.status == 'completed'
           || recruitment.status == 'disbanded'
           || recruitment.currentCycleStatus == 'completed');
-      return hasActiveBinding()
-        && (playerId == currentPlayerId()
+      return (playerId == currentPlayerId()
           || recruitment.leaderPlayerId == currentPlayerId()
           || after.status == 'disbanded')
         && (partyCompleteRemoval
@@ -3340,6 +3376,10 @@ service cloud.firestore {
       match /raidListings/{recruitmentId} {
         allow get, list: if isCurrentGroupMember(groupId);
         allow create: if validGroupRaidListingCreate(
+          groupId,
+          recruitmentId,
+          request.resource.data
+        ) || validGroupRaidListingBackfill(
           groupId,
           recruitmentId,
           request.resource.data

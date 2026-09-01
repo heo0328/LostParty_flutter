@@ -1,4 +1,5 @@
 import '../../domain/entities/party_create_command.dart';
+import 'party_raid_listing_sync.dart';
 
 class PartyVisibilityWritePlan {
   const PartyVisibilityWritePlan({
@@ -21,16 +22,14 @@ class PartyVisibilityWritePlan {
       'revision': recruitmentRevision + 1,
       'updatedAt': serverTimestamp,
     };
-    final goingGroup = visibility == RecruitmentVisibility.group;
+    final listing = PartyRaidListingSyncPlan.afterRecruitmentChange(
+      currentRecruitment: currentRecruitment,
+      recruitmentPatch: patch,
+    );
     return PartyVisibilityWritePlan(
       recruitmentPatch: patch,
-      listingDocument: goingGroup
-          ? {
-              ...currentRecruitment,
-              ...patch,
-            }
-          : null,
-      deleteListing: !goingGroup,
+      listingDocument: listing.listingDocument,
+      deleteListing: listing.deleteListing,
     );
   }
 

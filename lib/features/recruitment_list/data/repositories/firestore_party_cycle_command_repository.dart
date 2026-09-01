@@ -11,6 +11,7 @@ import '../mappers/party_complete_claim_write_plan.dart';
 import '../mappers/party_cycle_write_plan.dart';
 import '../mappers/party_event_write_plan.dart';
 import '../mappers/party_lifecycle_event_writer.dart';
+import '../mappers/party_raid_listing_sync.dart';
 
 class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepository {
   const FirestorePartyCycleCommandRepository({required FirebaseFirestore firestore, required FirebaseAuth firebaseAuth, DateTime Function()? now}) : _firestore = firestore, _firebaseAuth = firebaseAuth, _now = now;
@@ -126,6 +127,12 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
           ),
         );
       }
+      final listing = await PartyRaidListingTx.read(
+        transaction: transaction,
+        firestore: _firestore,
+        groupId: r['groupId'],
+        recruitmentId: command.recruitmentId,
+      );
       final now = FieldValue.serverTimestamp();
       if (cycle.exists) {
         transaction.update(
@@ -141,7 +148,13 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
         transaction.set(cycleRef, PartyCycleWritePlan.completedCycle(recruitmentId: command.recruitmentId, cycleKey: command.cycleKey, completedByPlayerId: playerId, memberSnapshot: orderedSnapshot, serverTimestamp: now));
       }
       _writeEvents(transaction, command.recruitmentId, orderedSnapshot, r, type: 'partyCompleted', eventRevision: sourceCompletionRevision, serverTimestamp: now);
-      transaction.update(recruitmentRef, PartyCycleWritePlan.completeRecruitment(continueTogether: r['continueTogether'] == true, completedByPlayerId: playerId, revision: command.expectedRecruitmentRevision, serverTimestamp: now));
+      final completePatch = PartyCycleWritePlan.completeRecruitment(continueTogether: r['continueTogether'] == true, completedByPlayerId: playerId, revision: command.expectedRecruitmentRevision, serverTimestamp: now);
+      transaction.update(recruitmentRef, completePatch);
+      listing.write(
+        transaction: transaction,
+        currentRecruitment: partyRecruitmentMap(r),
+        recruitmentPatch: completePatch,
+      );
       for (final orphan in orphanClaimReads) {
         if (!orphan.exists) continue;
         if (!PartyCompleteClaimWritePlan.isOrphanPartyOwnerClaim(
@@ -255,10 +268,22 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
           return const PartyCycleResult.failure(PartyCycleFailure.revisionConflict);
         }
       }
+      final listing = await PartyRaidListingTx.read(
+        transaction: transaction,
+        firestore: _firestore,
+        groupId: r['groupId'],
+        recruitmentId: command.recruitmentId,
+      );
       final now = FieldValue.serverTimestamp();
       transaction.update(cycleRef, PartyCycleWritePlan.cancelCycle(completionRevision: command.expectedCompletionRevision, serverTimestamp: now));
       _writeEvents(transaction, command.recruitmentId, completedSnapshot, r, type: 'partyCompletionCancelled', eventRevision: command.expectedCompletionRevision + 1, serverTimestamp: now);
-      transaction.update(recruitmentRef, PartyCycleWritePlan.cancelRecruitment(revision: command.expectedRecruitmentRevision, hasAvailableSlot: (r['memberCount'] as int) < (r['maxMemberCount'] as int), serverTimestamp: now));
+      final cancelPatch = PartyCycleWritePlan.cancelRecruitment(revision: command.expectedRecruitmentRevision, hasAvailableSlot: (r['memberCount'] as int) < (r['maxMemberCount'] as int), serverTimestamp: now);
+      transaction.update(recruitmentRef, cancelPatch);
+      listing.write(
+        transaction: transaction,
+        currentRecruitment: partyRecruitmentMap(r),
+        recruitmentPatch: cancelPatch,
+      );
       for (var index = 0; index < completedSnapshot.length; index++) {
         final snapshotMember = completedSnapshot[index];
         final memberPlayerId = snapshotMember['playerId'] as String;
@@ -301,7 +326,19 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
       if (cycleStatus != 'active' && cycleStatus != 'completed') {
         return const PartyCycleResult.failure(PartyCycleFailure.recruitmentClosed);
       }
-      transaction.update(ref, PartyCycleWritePlan.recurrence(continueTogether: command.continueTogether, revision: command.expectedRecruitmentRevision, serverTimestamp: FieldValue.serverTimestamp()));
+      final listing = await PartyRaidListingTx.read(
+        transaction: transaction,
+        firestore: _firestore,
+        groupId: r['groupId'],
+        recruitmentId: command.recruitmentId,
+      );
+      final recurrencePatch = PartyCycleWritePlan.recurrence(continueTogether: command.continueTogether, revision: command.expectedRecruitmentRevision, serverTimestamp: FieldValue.serverTimestamp());
+      transaction.update(ref, recurrencePatch);
+      listing.write(
+        transaction: transaction,
+        currentRecruitment: partyRecruitmentMap(r),
+        recruitmentPatch: recurrencePatch,
+      );
       return const PartyCycleResult.success();
     });
   }
@@ -326,6 +363,12 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
       if (nextWindow.startedAt != currentWindow.endsAt || (_now ?? DateTime.now)().toUtc().isBefore(currentWindow.endsAt)) return const PartyCycleResult.failure(PartyCycleFailure.notReadyForAdvance);
       final snapshot = await _memberSnapshot(transaction, members);
       if (snapshot == null || snapshot.length != r?['memberCount']) return const PartyCycleResult.failure(PartyCycleFailure.revisionConflict);
+      final listing = await PartyRaidListingTx.read(
+        transaction: transaction,
+        firestore: _firestore,
+        groupId: r?['groupId'],
+        recruitmentId: command.recruitmentId,
+      );
       final now = FieldValue.serverTimestamp();
       if (!cycle.exists) {
         transaction.set(cycleRef, PartyCycleWritePlan.incompleteCycle(recruitmentId: command.recruitmentId, cycleKey: command.expectedCycleKey, memberSnapshot: snapshot, serverTimestamp: now));
@@ -334,7 +377,13 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
         transaction.update(cycleRef, PartyCycleWritePlan.endCancelledCycle(completionRevision: cycle.data()?['completionRevision'] as int, memberSnapshot: snapshot, serverTimestamp: now));
         _writeEvents(transaction, command.recruitmentId, snapshot, r!, type: 'partyIncompleteEnded', eventRevision: (cycle.data()?['completionRevision'] as int) + 1, serverTimestamp: now);
       }
-      transaction.update(recruitmentRef, PartyCycleWritePlan.advanceRecruitment(continueTogether: r?['continueTogether'] == true, nextCycleKey: command.nextCycleKey, nextStartedAt: nextWindow.startedAt, nextEndsAt: nextWindow.endsAt, revision: command.expectedRecruitmentRevision, hasAvailableSlot: (r?['memberCount'] as int) < (r?['maxMemberCount'] as int), serverTimestamp: now, timestamp: (date) => Timestamp.fromDate(date)));
+      final advancePatch = PartyCycleWritePlan.advanceRecruitment(continueTogether: r?['continueTogether'] == true, nextCycleKey: command.nextCycleKey, nextStartedAt: nextWindow.startedAt, nextEndsAt: nextWindow.endsAt, revision: command.expectedRecruitmentRevision, hasAvailableSlot: (r?['memberCount'] as int) < (r?['maxMemberCount'] as int), serverTimestamp: now, timestamp: (date) => Timestamp.fromDate(date));
+      transaction.update(recruitmentRef, advancePatch);
+      listing.write(
+        transaction: transaction,
+        currentRecruitment: partyRecruitmentMap(r),
+        recruitmentPatch: advancePatch,
+      );
       return const PartyCycleResult.success();
     });
   }
@@ -429,6 +478,12 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
             : characterNames[applicantId];
       }
 
+      final listing = await PartyRaidListingTx.read(
+        transaction: transaction,
+        firestore: _firestore,
+        groupId: r['groupId'],
+        recruitmentId: command.recruitmentId,
+      );
       final now = FieldValue.serverTimestamp();
       final nextRevision = command.expectedRecruitmentRevision + 1;
       for (final current in memberSnapshots) {
@@ -440,12 +495,15 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
           transaction.delete(assignment.reference);
         }
       }
-      transaction.update(
-        recruitmentRef,
-        PartyCycleWritePlan.disbandRecruitment(
-          revision: command.expectedRecruitmentRevision,
-          serverTimestamp: now,
-        ),
+      final disbandPatch = PartyCycleWritePlan.disbandRecruitment(
+        revision: command.expectedRecruitmentRevision,
+        serverTimestamp: now,
+      );
+      transaction.update(recruitmentRef, disbandPatch);
+      listing.write(
+        transaction: transaction,
+        currentRecruitment: partyRecruitmentMap(r),
+        recruitmentPatch: disbandPatch,
       );
       PartyLifecycleEventWriter.writeToRecipients(
         transaction: transaction,
