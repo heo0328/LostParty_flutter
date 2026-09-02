@@ -48,7 +48,7 @@
 
 현재 작업 상태, 개발 이력과 작업 규칙을 관리한다.
 
-- [`project/NEXT_WORK.md`](project/NEXT_WORK.md): 다음 작업의 단일 기준
+- [`project/NEXT_WORK.md`](project/NEXT_WORK.md): 다음 작업의 단일 기준. 작업 순서, 구현 방식, 단위별 포함·제외·완료 조건을 여기서 관리한다
 - [`project/AI_CONTEXT.md`](project/AI_CONTEXT.md): 프로젝트 전체 현재 상태
 - [`project/DEV_LOG.md`](project/DEV_LOG.md): 완료 작업 누적 이력
 - [`project/BUG_REPORTS.md`](project/BUG_REPORTS.md): 실기기·사용 중 발견 버그와 조사 메모
