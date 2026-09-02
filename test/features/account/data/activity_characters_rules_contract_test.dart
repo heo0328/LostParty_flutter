@@ -16,8 +16,11 @@ void main() {
     expect(rules, contains('ownedActiveCharacterMatches'));
     expect(rules, contains('ownedActiveGameAccount'));
     expect(rules, contains('representativeActivityCovered'));
-    expect(rules, contains('get(path).data.ownerPlayerId == playerId'));
-    expect(rules, contains('get(path).data.gameAccountId == gameAccountId'));
+    expect(rules, contains('get(characterDoc).data.ownerPlayerId == playerId'));
+    expect(
+      rules,
+      contains('get(characterDoc).data.gameAccountId == gameAccountId'),
+    );
     expect(
       rules,
       contains('ownership.representativeCharacterId != characterId'),
@@ -29,7 +32,10 @@ void main() {
       ),
     );
     expect(rules, contains('!(representativeId is string)'));
-    expect(rules, contains('exists(path)'));
+    expect(rules, contains('exists(characterDoc)'));
+    expect(rules, contains('exists(ownershipDoc)'));
+    expect(rules, contains('function removedMemberIdLow(oldIds, kept)'));
+    expect(rules, contains('function removedMemberIdHigh(oldIds, kept)'));
     expect(rules, isNot(contains('activityIdListHasStrings')));
     expect(rules, isNot(contains('activityCoversDeclaredAccounts')));
   });

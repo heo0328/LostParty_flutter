@@ -153,8 +153,14 @@ service cloud.firestore {
         && !exists(groupMemberPath(recruitment.groupId, targetPlayerId));
     }
 
+    // 삼항을 한 함수에 16단 중첩하면 컴파일러가 괄호를 닫지 못한다.
     function removedMemberId(oldIds, newIds) {
       let kept = newIds.toSet();
+      let low = removedMemberIdLow(oldIds, kept);
+      return low.size() > 0 ? low : removedMemberIdHigh(oldIds, kept);
+    }
+
+    function removedMemberIdLow(oldIds, kept) {
       return oldIds.size() > 0 && !kept.hasAny([oldIds[0]]) ? oldIds[0]
         : (oldIds.size() > 1 && !kept.hasAny([oldIds[1]]) ? oldIds[1]
         : (oldIds.size() > 2 && !kept.hasAny([oldIds[2]]) ? oldIds[2]
@@ -163,7 +169,11 @@ service cloud.firestore {
         : (oldIds.size() > 5 && !kept.hasAny([oldIds[5]]) ? oldIds[5]
         : (oldIds.size() > 6 && !kept.hasAny([oldIds[6]]) ? oldIds[6]
         : (oldIds.size() > 7 && !kept.hasAny([oldIds[7]]) ? oldIds[7]
-        : (oldIds.size() > 8 && !kept.hasAny([oldIds[8]]) ? oldIds[8]
+        : '')))))));
+    }
+
+    function removedMemberIdHigh(oldIds, kept) {
+      return oldIds.size() > 8 && !kept.hasAny([oldIds[8]]) ? oldIds[8]
         : (oldIds.size() > 9 && !kept.hasAny([oldIds[9]]) ? oldIds[9]
         : (oldIds.size() > 10 && !kept.hasAny([oldIds[10]]) ? oldIds[10]
         : (oldIds.size() > 11 && !kept.hasAny([oldIds[11]]) ? oldIds[11]
@@ -171,7 +181,7 @@ service cloud.firestore {
         : (oldIds.size() > 13 && !kept.hasAny([oldIds[13]]) ? oldIds[13]
         : (oldIds.size() > 14 && !kept.hasAny([oldIds[14]]) ? oldIds[14]
         : (oldIds.size() > 15 && !kept.hasAny([oldIds[15]]) ? oldIds[15]
-        : ''))))))))))))))));
+        : '')))))));
     }
 
     function isCurrentGroupLeader(groupId) {
@@ -2707,25 +2717,25 @@ service cloud.firestore {
     }
 
     function ownedActiveCharacterMatches(playerId, characterId, gameAccountId) {
-      let path = characterPath(characterId);
-      return exists(path)
-        && get(path).data.status == 'active'
-        && get(path).data.ownerPlayerId == playerId
-        && get(path).data.gameAccountId == gameAccountId;
+      let characterDoc = characterPath(characterId);
+      return exists(characterDoc)
+        && get(characterDoc).data.status == 'active'
+        && get(characterDoc).data.ownerPlayerId == playerId
+        && get(characterDoc).data.gameAccountId == gameAccountId;
     }
 
     function ownedActiveGameAccount(playerId, gameAccountId) {
-      let path = playerGameAccountPath(playerId, gameAccountId);
-      return exists(path)
-        && get(path).data.playerId == playerId
-        && get(path).data.gameAccountId == gameAccountId
-        && get(path).data.status == 'active';
+      let ownershipDoc = playerGameAccountPath(playerId, gameAccountId);
+      return exists(ownershipDoc)
+        && get(ownershipDoc).data.playerId == playerId
+        && get(ownershipDoc).data.gameAccountId == gameAccountId
+        && get(ownershipDoc).data.status == 'active';
     }
 
     function representativeActivityCovered(playerId, gameAccountId, characterId) {
-      let path = playerGameAccountPath(playerId, gameAccountId);
-      let representativeId = exists(path)
-        ? get(path).data.representativeCharacterId
+      let ownershipDoc = playerGameAccountPath(playerId, gameAccountId);
+      let representativeId = exists(ownershipDoc)
+        ? get(ownershipDoc).data.representativeCharacterId
         : null;
       return !(representativeId is string)
         || representativeId.size() == 0

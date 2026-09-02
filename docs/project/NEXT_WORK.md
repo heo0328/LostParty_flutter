@@ -4,7 +4,7 @@
 
 A 저장·Domain·Rules부터 D3 그룹원·Character 필터까지 구현했고, E 자동 회귀(`flutter analyze`·전체 `flutter test` 792개)를 통과했다.
 
-현재 실행 단위는 **E 실기기 확인** 이다. 실기기에서 저장이 `캐릭터 설정을 서버에 반영하지 못했습니다`로 실패한 경우, 운영 Firestore에 이 스택의 `characterActivity` Rules가 없으면 `permission-denied`가 난다. 저장 실패 안내는 이제 권한/네트워크를 구분한다. 이 단계에서는 Rules를 배포하지 않는다.
+자동 회귀는 통과했다. 실기기에서 저장이 실패한 경우 운영 Firestore에 이 스택의 `characterActivity` Rules가 없으면 `permission-denied`가 난다. 저장 실패 안내는 권한/네트워크를 구분한다. D1의 `removedMemberId` 16단 삼항은 컴파일러가 닫는 괄호를 거부해 0~7 / 8~15로 나눴다. 이 단계에서는 Rules를 배포하지 않는다.
 
 전체 계약은 [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md)를 따른다.
 

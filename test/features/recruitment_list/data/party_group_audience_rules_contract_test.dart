@@ -46,5 +46,13 @@ void main() {
     );
     expect(rules, contains('function isLostGroupQualificationCleanup('));
     expect(rules, contains('function removedMemberId(oldIds, newIds)'));
+    expect(rules, contains('function removedMemberIdLow(oldIds, kept)'));
+    expect(rules, contains('function removedMemberIdHigh(oldIds, kept)'));
+  });
+
+  test('firestore.rules 괄호와 중괄호 수가 맞다', () {
+    expect('('.allMatches(rules).length, ')'.allMatches(rules).length);
+    expect('{'.allMatches(rules).length, '}'.allMatches(rules).length);
+    expect(rules, isNot(contains(')))))))))))))))')));
   });
 }
