@@ -16,8 +16,8 @@ void main() {
     expect(rules, contains('ownedActiveCharacterMatches'));
     expect(rules, contains('ownedActiveGameAccount'));
     expect(rules, contains('representativeActivityCovered'));
-    expect(rules, contains('character.ownerPlayerId == playerId'));
-    expect(rules, contains('character.gameAccountId == gameAccountId'));
+    expect(rules, contains('get(path).data.ownerPlayerId == playerId'));
+    expect(rules, contains('get(path).data.gameAccountId == gameAccountId'));
     expect(
       rules,
       contains('ownership.representativeCharacterId != characterId'),
