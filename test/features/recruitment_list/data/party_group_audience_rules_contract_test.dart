@@ -14,7 +14,10 @@ void main() {
     expect(rules, contains("data.visibility == 'public'"));
     expect(rules, contains("data.visibility == 'group'"));
     expect(rules, contains("&& (data.visibility == 'public'"));
-    expect(rules, contains('&& exists(groupMemberPath(data.groupId, playerId))'));
+    expect(
+      rules,
+      contains('&& exists(groupMemberPath(data.groupId, playerId))'),
+    );
     expect(rules, contains('canAccessRecruitmentByAudience(recruitment)'));
     expect(rules, contains('canAccessRecruitmentByAudience(data)'));
     expect(rules, contains('function canListRecruitment(data)'));
@@ -22,13 +25,26 @@ void main() {
     expect(rules, contains('allow get: if canGetRecruitment(recruitmentId)'));
     expect(rules, contains('match /raidListings/{recruitmentId}'));
     expect(rules, contains('function validGroupRaidListingCreate('));
-    expect(rules, contains('data.diff(recruitment).affectedKeys().size() == 0'));
+    expect(
+      rules,
+      contains('data.diff(recruitment).affectedKeys().size() == 0'),
+    );
     expect(rules, contains("after.status == 'disbanded'"));
     expect(rules, contains('function validGroupRaidListingBackfill('));
     expect(rules, contains('function validGroupRaidListingDelete('));
     expect(rules, contains('allow update: if validGroupRaidListingCreate('));
     expect(rules, contains('function validRecruitmentVisibilityChange('));
-    expect(rules, contains('allow delete: if validGroupRaidListingDelete(groupId, recruitmentId);'));
-    expect(rules, contains('allow get, list: if isCurrentGroupMember(groupId);'));
+    expect(
+      rules,
+      contains(
+        'allow delete: if validGroupRaidListingDelete(groupId, recruitmentId);',
+      ),
+    );
+    expect(
+      rules,
+      contains('allow get, list: if isCurrentGroupMember(groupId);'),
+    );
+    expect(rules, contains('function isLostGroupQualificationCleanup('));
+    expect(rules, contains('function removedMemberId(oldIds, newIds)'));
   });
 }

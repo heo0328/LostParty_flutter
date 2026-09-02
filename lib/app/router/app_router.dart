@@ -406,6 +406,7 @@ GoRouter createAppRouter({
                             ),
                         eventSyncService: partyEventSyncServiceOrDefault,
                         candidateService: recruitmentLeaderCandidateService,
+                        groupReadRepository: groupReadRepositoryForRoute(),
                         playerId: playerSession.playerId,
                       );
                     },

@@ -2,9 +2,9 @@
 
 ## 현재 단계
 
-A 저장·Domain·Rules, B 캐릭터 관리 UI, C1 레이드 후보 적용, C2 그룹 후보·전투력 적용을 완료했다. 그룹 생성·가입 후보와 일반 전투력 보강은 활동 Character만 사용한다.
+A 저장·Domain·Rules, B 캐릭터 관리 UI, C1 레이드 후보 적용, C2 그룹 후보·전투력 적용, D1 그룹 전용 자격 박탈을 완료했다. 그룹 전용 레이드는 그룹 탈퇴 후 제한적 정리로 참가 자격을 정리한다.
 
-현재 실행 단위는 **D1 그룹 전용 자격 박탈** 이다. 그룹 탈퇴·추방·해산 시 그룹 전용 레이드 참가 자격을 정리한다.
+현재 실행 단위는 **D2 진행 중 기본 필터·페이징** 이다. 레이드 현황 진행 중 필터의 공개 조건·레이드·난이도와 20개 페이징 안전을 구현한다.
 
 전체 계약은 [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md)를 따른다.
 
@@ -15,20 +15,24 @@ A 저장·Domain·Rules (완료)
 → B 캐릭터 관리 UI (완료)
 → C1 레이드 후보 적용 (완료)
 → C2 그룹 후보·전투력 적용 (완료)
-→ D1 그룹 전용 자격 박탈 (현재)
-→ D2 진행 중 기본 필터·페이징
+→ D1 그룹 전용 자격 박탈 (완료)
+→ D2 진행 중 기본 필터·페이징 (현재)
 → D3 그룹원·Character 필터
 → E 실기기·회귀 확인
 ```
 
-## 현재 작업 단위 D1 — 그룹 전용 자격 박탈
+## 현재 작업 단위 D2 — 진행 중 기본 필터·페이징
 
-그룹 탈퇴·추방·해산 시 그룹 전용 레이드 참가 자격을 정리한다. 활동 Character 해제는 그룹 자격 상실과 동일하게 취급하지 않는다.
+레이드 현황 `진행 중`에 공개 조건·레이드·난이도 필터와 서버 20개 페이징 안전을 적용한다. 그룹원·Character 필터는 D3에서 다룬다.
 
 제외:
 
-- 레이드 현황 필터
+- 그룹원·Character 필터
 - Rules 배포와 테스트 데이터 실제 삭제
+
+## 완료한 작업 단위 D1 — 그룹 전용 자격 박탈
+
+그룹 전용 레이드에서 그룹을 떠난 참가자는 레이드 membership을 즉시 지우지 않고 `그룹 탈퇴`로 표시한다. 같은 방에 남은 유효 그룹원이 제한적 정리를 요청하면 Transaction이 요청자 자격과 대상의 그룹 자격 상실을 다시 확인한 뒤 방에서 제외한다. 전체 공개 그룹 연결 레이드와 활동 Character 해제는 자격 상실이 아니다. 활성 그룹 전용 레이드가 있으면 그룹 해산은 기존처럼 거절한다.
 
 ## 완료한 작업 단위 C2 — 그룹 후보·전투력 적용
 
@@ -84,6 +88,7 @@ A 저장·Domain·Rules (완료)
 - B 캐릭터 관리 UI 브랜치: `cursor/activity-character-ui-801c`.
 - C1 레이드 후보 브랜치: `cursor/activity-character-raid-candidates-801c`.
 - C2 그룹 후보·전투력 브랜치: `cursor/activity-character-group-candidates-801c`.
+- D1 그룹 전용 자격 박탈 브랜치: `cursor/group-raid-qualification-801c`.
 - 문서 설계 시작 기준: `main` `9a58457`, 브랜치 `codex/activity-character-contract`.
 - 기존 보존 브랜치 `codex/rules-complexity-reduction` / `ed02b31` 및 Rules 사본 2개는 유지한다.
 - 그룹 전투력 수정 `4e4ab37` / 통합 `eeba05f`, 모집 UI 준비 문서 `15eaf4a`, 그룹 레이드 연결 `61fd464` / 통합 `25c3b44`를 유지한다.
