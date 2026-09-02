@@ -2191,3 +2191,23 @@
 - 구현보다 설계를 먼저 고정했으며 Flutter 코드는 변경하지 않았다. 상세: [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md).
 
 ---
+
+# 2026-09-02 첫 릴리즈 전 Git 작업 방식 확정
+
+- 첫 릴리즈 전 통합 기준 브랜치를 `dev`로 정했다.
+- 모든 작업은 원격과 동기화한 최신 `dev`에서 작업 단위별 브랜치를 만들어 시작한다.
+- 첫 릴리즈 전에는 PR을 사용하지 않고, 검증된 작업 브랜치를 `dev`에 직접 병합한 뒤 `origin/dev`에 푸시한다.
+- `main`은 첫 릴리즈 준비 전까지 안정 기준선으로 유지하며, 릴리즈 시점의 반영 절차는 별도로 결정한다.
+
+---
+
+# 2026-09-03 활동 Character 실기기 확인과 후속 보완 범위
+
+- Android 실기기에서 활동 Character 선택·저장과 선택 Character만 레이드 모집 생성 후보로 노출되는 흐름을 확인했다.
+- 기존 Character 순서 변경·대표 Character 변경과 완료 처리 표시 체크가 정상 작동했고, 전체 활동 Character 흐름을 정상으로 판단했다.
+- 그룹 정보에서 본인은 활동 Character만 보이지만 다른 그룹원은 인증 Character 전체가 보이는 문제를 확인했다.
+- 코드 대조 결과 다른 Player의 owner-only `characterActivity`를 읽지 못해 인증 활성 Character 전체를 반환하는 현재 대체 경로가 원인이다. 활동 Character 최소 표시 Projection을 완성하는 후속 작업으로 분리했다.
+- 레이드 현황 필터 후속 요구사항으로 초기화 버튼, `그룹 공개만` 상태의 조건부 참여 그룹원 UI, 긴 목록에서도 잡기 쉬운 상단 드래그 닫기 영역을 기록했다.
+- 기존 자동 검증 결과 `flutter analyze --no-pub`와 전체 `flutter test --no-pub` 792개 통과는 유지한다. 이번 변경은 문서뿐이므로 Flutter 검증을 반복하지 않는다.
+
+---
