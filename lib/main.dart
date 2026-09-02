@@ -11,7 +11,9 @@ import 'features/account/domain/repositories/character_summary_sync_gateway.dart
 import 'features/account/domain/repositories/game_account_verification_gateway.dart';
 import 'features/account/domain/repositories/weekly_raid_claim_repository.dart';
 import 'features/account/domain/repositories/weekly_raid_claim_command_repository.dart';
+import 'features/account/domain/repositories/activity_characters_repository.dart';
 import 'features/group/domain/repositories/group_application_command_repository.dart';
+import 'features/group/domain/repositories/group_character_search_repository.dart';
 import 'features/group/domain/repositories/group_create_repository.dart';
 import 'features/group/domain/repositories/group_join_code_command_repository.dart';
 import 'features/group/domain/repositories/group_join_command_repository.dart';
@@ -41,7 +43,9 @@ class MyApp extends StatefulWidget {
     this.weeklyRaidClaimRepository,
     this.characterSummarySyncGateway,
     this.weeklyRaidClaimCommandRepository,
+    this.activityCharactersRepository,
     this.groupReadRepository,
+    this.characterSearchRepository,
     this.groupCreateRepository,
     this.groupJoinCommandRepository,
     this.groupApplicationCommandRepository,
@@ -58,7 +62,9 @@ class MyApp extends StatefulWidget {
   final WeeklyRaidClaimRepository? weeklyRaidClaimRepository;
   final CharacterSummarySyncGateway? characterSummarySyncGateway;
   final WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository;
+  final ActivityCharactersRepository? activityCharactersRepository;
   final GroupReadRepository? groupReadRepository;
+  final GroupCharacterSearchRepository? characterSearchRepository;
   final GroupCreateRepository? groupCreateRepository;
   final GroupJoinCommandRepository? groupJoinCommandRepository;
   final GroupApplicationCommandRepository? groupApplicationCommandRepository;
@@ -88,7 +94,9 @@ class _MyAppState extends State<MyApp> {
       weeklyRaidClaimRepository: widget.weeklyRaidClaimRepository,
       characterSummarySyncGateway: widget.characterSummarySyncGateway,
       weeklyRaidClaimCommandRepository: widget.weeklyRaidClaimCommandRepository,
+      activityCharactersRepository: widget.activityCharactersRepository,
       groupReadRepository: widget.groupReadRepository,
+      characterSearchRepository: widget.characterSearchRepository,
       groupCreateRepository: widget.groupCreateRepository,
       groupJoinCommandRepository: widget.groupJoinCommandRepository,
       groupApplicationCommandRepository:

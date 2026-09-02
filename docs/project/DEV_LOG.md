@@ -1,3 +1,70 @@
+## 2026-09-02 활동 Character Rules 컴파일 오류
+
+- 사용자가 `firebase deploy --only firestore:rules --project lost-party`에서 `removedMemberId` 16단 삼항의 닫는 괄호 불일치(174:28)와 파일 끝 `Unexpected '}'`로 컴파일이 실패했다.
+- 멤버 제거 ID 조회를 0~7 / 8~15 두 함수로 나눠 중첩을 낮추고 괄호를 맞췄다. Rules 배포는 하지 않는다.
+
+## 2026-09-02 활동 Character 저장 permission-denied 안내
+
+- 실기기에서 캐릭터 관리 저장이 공통 문구 `캐릭터 설정을 서버에 반영하지 못했습니다`로 떨어졌다. 정책 거절이 아니라 Firestore `permission-denied`·연결 실패, 또는 로컬 표시 순서 저장 실패가 원인이다.
+- Drift는 원정대 전체 Character ID의 표시 순서를 요구한다. 활동 선택만 넘기면 ArgumentError가 나므로 선택 순서를 앞에 두고 비선택 Character를 이어 붙인다.
+- Repository가 Firebase 오류 코드를 매핑한다. 권한이 없으면 Rules 배포 확인을 안내하고, 연결 실패는 재시도를 안내한다.
+- Rules는 대표 Character 필드가 없는 기존 `playerGameAccounts`에서도 소유 Character 쓰기를 막지 않도록 맞췄다. Rules 배포는 하지 않는다.
+
+## 2026-09-02 활동 Character 자동 회귀 (E)
+
+- 계약 최종 단계로 전체 `flutter test --no-pub` 792개를 실행해 통과했다. 변경 파일 `flutter analyze --no-pub`는 문제 없다.
+- 앱 셸 테스트가 레이드 현황 초기 탭에서 Firebase에 닿아 실패하던 경로를 고쳤다. 활동 Character Repository와 Character 검색 Repository를 테스트에서 주입한다.
+- Rules는 배포하지 않는다. 실기기 확인은 사용자 단계다.
+
+## 2026-09-02 진행 중 그룹원·Character 필터 (D3)
+
+- 레이드 현황 `진행 중` 필터에 가입 그룹·그룹원 대표명·Character 칩을 추가한다. 현재 Player는 후보에서 제외한다.
+- 그룹원 선택은 사용자 사이 AND, 한 사용자의 Character는 OR다. Character 칩이 없으면 그 사용자의 참가만 요구한다. 이미 참가 중인 비활동 Character는 판정에서 인식하고 새 칩으로는 제시하지 않는다.
+- 다른 그룹원의 `characterActivity`는 owner만 읽을 수 있어 Character 칩 후보는 그룹원이 이미 읽는 인증 활성 Character다. 칩 조작은 서버 조회를 만들지 않는다.
+- 저장된 그룹 선택이 모두 무효이거나 JSON이 손상되면 전체 보기로 초기화한다. 다음 단위는 E 실기기·회귀 확인이다.
+
+## 2026-09-02 진행 중 기본 필터와 페이징 안전 (D2)
+
+- 레이드 현황 `진행 중` 탭과 목록 사이에 `레이드 필터: 모든 레이드`를 두고 공개 조건·레이드·난이도를 로컬 원본에 적용한다. 칩 조작은 서버 조회를 만들지 않는다.
+- 기본 공개 조건은 전체·일반 공개·그룹 공개가 모두 선택된 상태다. 일반과 그룹을 모두 해제하려 하면 전체로 복귀한다. 그룹 공개는 `visibility`가 아니라 `groupId` 기준이다.
+- 진행 중 원본은 기존 `watchActiveRaids` membership 스트림이다. 20개 cursor는 공개 모집 목록 계약으로 유지하고, §8 페이징 안전은 `FilteredPageSession` 단위 테스트로 고정했다.
+- 필터 선택은 Player별 Drift 테이블에 보존하며 카탈로그에 없는 레이드·난이도는 복원 시 제거한다. 그룹원·Character 필터는 D3다.
+
+## 2026-09-02 그룹 전용 레이드 자격 상실과 제한적 정리 (D1)
+
+- 그룹 탈퇴는 레이드 membership을 자동 삭제하지 않는다. 그룹 전용 레이드에서만 참가 자격 상실로 표시한다.
+- 같은 방의 유효 그룹원이 정리 요청을 보내면 Transaction이 요청자의 레이드·그룹 membership과 대상의 그룹 자격 상실을 다시 확인한 뒤 방에서 제외한다.
+- 전체 공개 그룹 연결 레이드와 활동 Character 해제는 자격 상실이 아니다. 활성 그룹 전용 레이드가 있으면 그룹 해산은 거절한다.
+- Rules는 배포하지 않는다. 다음 단위는 D2 진행 중 기본 필터·페이징이다.
+
+## 2026-09-02 그룹 후보·전투력 보강을 활동 Character로 제한 (C2)
+
+- 그룹 생성·가입 신청·초대코드 가입 후보는 `characterActivity`에 있는 Character만 사용한다.
+- 그룹 상세 진입 시 전투력 서버 보강과 본인 인증 Character 목록도 활동 Character만 담는다. 다른 그룹원 목록은 소유 인증 Character를 그대로 읽는다.
+- 비활동 Character의 기존 그룹 membership Snapshot은 활동 해제만으로 지우거나 null로 덮지 않는다.
+- 다음 단위는 D1 그룹 전용 자격 박탈이다.
+
+## 2026-09-02 레이드 후보를 활동 Character로 제한 (C1)
+
+- 모집 생성 파티장 후보, 신청·참가 후보, 참가 Character 변경 후보는 `characterActivity`에 있는 Character만 사용한다. 메인 화면 표시 개수는 후보 범위를 줄이지 않는다.
+- 비활동 Character는 새 후보에서 빠지고 기존 레이드 membership·Claim은 유지한다.
+- 다음 단위는 C2 그룹 후보·전투력 적용이다.
+
+## 2026-09-02 캐릭터 관리 UI 초안 저장 (B)
+
+- 캐릭터 관리 화면을 전체 원정대 선택 카드 → 선택된 Character의 대표·순서 → 메인 표시 개수 → 취소·저장 순서로 바꿨다.
+- 선택 변경은 로컬 초안에만 반영하고 `저장`에서 `ActivityCharactersRepository`와 로컬 표시 설정을 한 번 쓴다. 실패하면 로컬 영구 상태를 바꾸지 않는다.
+- 대표 Character와 마지막 1명은 해제할 수 없고, 0명 저장 요청은 나가지 않는다. 기존 표시 여부 체크박스는 제거했다.
+- 레이드·그룹 후보 소비 경로는 바꾸지 않았다. 다음 단위는 C1 레이드 후보 적용이다.
+
+## 2026-09-02 활동 Character 저장 경계를 캐릭터별 문서로 재설계 (A)
+
+- 저장 위치: `players/{playerId}/characterActivity/{characterId}`. 문서가 있으면 활동, 없으면 비활동이다. 가변 ID 목록 한 문서는 Rules가 순회·재귀할 수 없어 사용하지 않는다.
+- Domain 명령 `SaveActivityCharactersCommand`, Policy, Firestore Repository를 추가했다. 최소 1명, 대표 Character 포함, active 소유권을 거절한다.
+- 이 명령은 Character·playerGameAccounts 인증·소유권 필드를 쓰지 않는다. Rules는 각 쓰기에서 `characters/{characterId}`와 소유권 문서를 확인하고, 같은 계정 대표 활동 문서가 있어야 하며 대표 활동 문서는 삭제할 수 없다. 배포는 하지 않는다.
+- 테스트 데이터는 활동 문서를 다시 저장하면 재설정된다. 기존 Character 문서는 삭제하지 않는다.
+- 다음 단위는 B 캐릭터 관리 UI다.
+
 ## 2026-09-02 모집·현황 리스트 카드 밀도 완료
 
 - 브랜치 `codex/raid-list-card-density`. 모집 리스트와 레이드 현황 진행 중 카드 우상단에 그룹 전용 `그룹` 배지를 추가했다.

@@ -28,6 +28,8 @@ import '../../features/account/domain/repositories/account_ownership_status_gate
 import '../../features/account/domain/repositories/character_summary_sync_gateway.dart';
 import '../../features/account/domain/repositories/character_weekly_raid_display_repository.dart';
 import '../../features/account/domain/repositories/game_account_verification_gateway.dart';
+import '../../features/account/data/repositories/firestore_activity_characters_repository.dart';
+import '../../features/account/domain/repositories/activity_characters_repository.dart';
 import '../../features/account/domain/repositories/representative_character_sync_gateway.dart';
 import '../../features/account/domain/services/character_summary_sync_service.dart';
 import '../../features/account/domain/services/representative_character_sync_service.dart';
@@ -39,6 +41,7 @@ import '../../features/group/data/repositories/firestore_group_join_code_command
 import '../../features/group/data/repositories/firestore_group_join_command_repository.dart';
 import '../../features/group/data/repositories/firestore_group_read_repository.dart';
 import '../../features/group/domain/repositories/group_application_command_repository.dart';
+import '../../features/group/domain/repositories/group_character_search_repository.dart';
 import '../../features/group/domain/repositories/group_create_repository.dart';
 import '../../features/group/domain/repositories/group_join_code_command_repository.dart';
 import '../../features/group/domain/repositories/group_join_command_repository.dart';
@@ -121,9 +124,11 @@ GoRouter createAppRouter({
   WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository,
   CharacterWeeklyRaidDisplayRepository? weeklyRaidDisplayRepository,
   RepresentativeCharacterSyncGateway? representativeCharacterSyncGateway,
+  ActivityCharactersRepository? activityCharactersRepository,
   OperatorAccessRepository? operatorAccessRepository,
   ManualVerificationRepository? manualVerificationRepository,
   GroupReadRepository? groupReadRepository,
+  GroupCharacterSearchRepository? characterSearchRepository,
   GroupCreateRepository? groupCreateRepository,
   GroupJoinCommandRepository? groupJoinCommandRepository,
   GroupApplicationCommandRepository? groupApplicationCommandRepository,
@@ -136,6 +141,13 @@ GoRouter createAppRouter({
       groupReadRepositoryCache ??= FirestoreGroupReadRepository(
         firestore: FirebaseFirestore.instance,
       );
+  GroupCharacterSearchRepository? characterSearchRepositoryCache =
+      characterSearchRepository;
+  GroupCharacterSearchRepository characterSearchRepositoryForRoute() =>
+      characterSearchRepositoryCache ??=
+          FirestoreGroupCharacterSearchRepository(
+            firestore: FirebaseFirestore.instance,
+          );
   GroupCreateRepository? groupCreateRepositoryCache = groupCreateRepository;
   GroupJoinCommandRepository? groupJoinCommandRepositoryCache =
       groupJoinCommandRepository;
@@ -213,8 +225,18 @@ GoRouter createAppRouter({
           firebaseAuth: FirebaseAuth.instance,
         ),
   );
+  final activityCharactersRepositoryOrDefault =
+      activityCharactersRepository ??
+      FirestoreActivityCharactersRepository(
+        firestore: FirebaseFirestore.instance,
+        firebaseAuth: FirebaseAuth.instance,
+      );
   GroupLocalMemberDisplayLookup groupLocalMemberDisplayLookupForRoute() =>
-      GroupLocalMemberDisplayLookup(accountRepository: accountRepository);
+      GroupLocalMemberDisplayLookup(
+        accountRepository: accountRepository,
+        activityCharactersRepository: activityCharactersRepositoryOrDefault,
+        playerId: playerSession.playerId,
+      );
   GroupCreateRepository groupCreateRepositoryForRoute() =>
       groupCreateRepositoryCache ??= FirestoreGroupCreateRepository(
         firestore: FirebaseFirestore.instance,
@@ -307,6 +329,7 @@ GoRouter createAppRouter({
     recruitmentRepository: recruitmentRepository,
     weeklyRaidClaimRepository: weeklyRaidClaimRepositoryOrDefault,
     claimPlayerId: playerSession.playerId,
+    activityCharactersRepository: activityCharactersRepositoryOrDefault,
     conflictPolicy: participationConflictPolicy,
   );
   final recruitmentLeaderCandidateService = RecruitmentLeaderCandidateService(
@@ -318,6 +341,7 @@ GoRouter createAppRouter({
     recruitmentRepository: recruitmentRepository,
     weeklyRaidClaimRepository: weeklyRaidClaimRepositoryOrDefault,
     claimPlayerId: playerSession.playerId,
+    activityCharactersRepository: activityCharactersRepositoryOrDefault,
     conflictPolicy: participationConflictPolicy,
   );
 
@@ -345,6 +369,9 @@ GoRouter createAppRouter({
                   playerId: playerSession.playerId,
                   cycleKey: currentCycleKey,
                   raidCatalogRepository: raidCatalogRepository,
+                  groupReadRepository: groupReadRepositoryForRoute(),
+                  characterSearchRepository:
+                      characterSearchRepositoryForRoute(),
                 ),
                 routes: [
                   GoRoute(
@@ -391,6 +418,7 @@ GoRouter createAppRouter({
                             ),
                         eventSyncService: partyEventSyncServiceOrDefault,
                         candidateService: recruitmentLeaderCandidateService,
+                        groupReadRepository: groupReadRepositoryForRoute(),
                         playerId: playerSession.playerId,
                       );
                     },
@@ -427,6 +455,9 @@ GoRouter createAppRouter({
                       accountRepository: accountRepository,
                       representativeSyncGateway:
                           representativeSyncGatewayOrDefault,
+                      activityCharactersRepository:
+                          activityCharactersRepositoryOrDefault,
+                      playerId: playerSession.playerId,
                       accountId: state.extra as int?,
                     ),
                   ),
@@ -519,6 +550,9 @@ GoRouter createAppRouter({
                       viewModel: GroupCreateViewModel(
                         accountRepository: accountRepository,
                         createRepository: groupCreateRepositoryForRoute(),
+                        activityCharactersRepository:
+                            activityCharactersRepositoryOrDefault,
+                        playerId: playerSession.playerId,
                       ),
                     ),
                   ),
@@ -537,6 +571,9 @@ GoRouter createAppRouter({
                         accountRepository: accountRepository,
                         commandRepository:
                             groupJoinCodeCommandRepositoryForRoute(),
+                        activityCharactersRepository:
+                            activityCharactersRepositoryOrDefault,
+                        playerId: playerSession.playerId,
                       ),
                     ),
                   ),
@@ -549,13 +586,16 @@ GoRouter createAppRouter({
                       readRepository: groupReadRepositoryForRoute(),
                       actionViewModel: GroupMembershipActionViewModel(
                         accountRepository: accountRepository,
-                        combatPowerSyncGateway: FirestoreCharacterCombatPowerSyncGateway(
-                          firestore: FirebaseFirestore.instance,
-                          firebaseAuth: FirebaseAuth.instance,
-                        ),
+                        combatPowerSyncGateway:
+                            FirestoreCharacterCombatPowerSyncGateway(
+                              firestore: FirebaseFirestore.instance,
+                              firebaseAuth: FirebaseAuth.instance,
+                            ),
+                        activityCharactersRepository:
+                            activityCharactersRepositoryOrDefault,
+                        playerId: playerSession.playerId,
                         readRepository: groupReadRepositoryForRoute(),
-                        commandRepository:
-                            groupJoinCommandRepositoryForRoute(),
+                        commandRepository: groupJoinCommandRepositoryForRoute(),
                         characterSearchRepository:
                             FirestoreGroupCharacterSearchRepository(
                               firestore: FirebaseFirestore.instance,
@@ -662,8 +702,7 @@ GoRouter createAppRouter({
                 builder: (context, state) =>
                     OperatorManualVerificationDetailPage(
                       requestId: state.pathParameters['requestId']!,
-                      initialRequest:
-                          state.extra is ManualVerificationRequest
+                      initialRequest: state.extra is ManualVerificationRequest
                           ? state.extra as ManualVerificationRequest
                           : null,
                       operatorAccessRepository:

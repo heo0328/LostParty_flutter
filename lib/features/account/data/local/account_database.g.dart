@@ -4074,6 +4074,287 @@ class CharacterWeeklyRaidDisplaysCompanion
   }
 }
 
+class $RaidStatusFilterSettingsTable extends RaidStatusFilterSettings
+    with TableInfo<$RaidStatusFilterSettingsTable, RaidStatusFilterSetting> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RaidStatusFilterSettingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _playerIdMeta = const VerificationMeta(
+    'playerId',
+  );
+  @override
+  late final GeneratedColumn<String> playerId = GeneratedColumn<String>(
+    'player_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _selectionJsonMeta = const VerificationMeta(
+    'selectionJson',
+  );
+  @override
+  late final GeneratedColumn<String> selectionJson = GeneratedColumn<String>(
+    'selection_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [playerId, selectionJson, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'raid_status_filter_settings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RaidStatusFilterSetting> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('player_id')) {
+      context.handle(
+        _playerIdMeta,
+        playerId.isAcceptableOrUnknown(data['player_id']!, _playerIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_playerIdMeta);
+    }
+    if (data.containsKey('selection_json')) {
+      context.handle(
+        _selectionJsonMeta,
+        selectionJson.isAcceptableOrUnknown(
+          data['selection_json']!,
+          _selectionJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_selectionJsonMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {playerId};
+  @override
+  RaidStatusFilterSetting map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RaidStatusFilterSetting(
+      playerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}player_id'],
+      )!,
+      selectionJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}selection_json'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $RaidStatusFilterSettingsTable createAlias(String alias) {
+    return $RaidStatusFilterSettingsTable(attachedDatabase, alias);
+  }
+}
+
+class RaidStatusFilterSetting extends DataClass
+    implements Insertable<RaidStatusFilterSetting> {
+  final String playerId;
+  final String selectionJson;
+  final DateTime updatedAt;
+  const RaidStatusFilterSetting({
+    required this.playerId,
+    required this.selectionJson,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['player_id'] = Variable<String>(playerId);
+    map['selection_json'] = Variable<String>(selectionJson);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  RaidStatusFilterSettingsCompanion toCompanion(bool nullToAbsent) {
+    return RaidStatusFilterSettingsCompanion(
+      playerId: Value(playerId),
+      selectionJson: Value(selectionJson),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory RaidStatusFilterSetting.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RaidStatusFilterSetting(
+      playerId: serializer.fromJson<String>(json['playerId']),
+      selectionJson: serializer.fromJson<String>(json['selectionJson']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'playerId': serializer.toJson<String>(playerId),
+      'selectionJson': serializer.toJson<String>(selectionJson),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  RaidStatusFilterSetting copyWith({
+    String? playerId,
+    String? selectionJson,
+    DateTime? updatedAt,
+  }) => RaidStatusFilterSetting(
+    playerId: playerId ?? this.playerId,
+    selectionJson: selectionJson ?? this.selectionJson,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  RaidStatusFilterSetting copyWithCompanion(
+    RaidStatusFilterSettingsCompanion data,
+  ) {
+    return RaidStatusFilterSetting(
+      playerId: data.playerId.present ? data.playerId.value : this.playerId,
+      selectionJson: data.selectionJson.present
+          ? data.selectionJson.value
+          : this.selectionJson,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RaidStatusFilterSetting(')
+          ..write('playerId: $playerId, ')
+          ..write('selectionJson: $selectionJson, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(playerId, selectionJson, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RaidStatusFilterSetting &&
+          other.playerId == this.playerId &&
+          other.selectionJson == this.selectionJson &&
+          other.updatedAt == this.updatedAt);
+}
+
+class RaidStatusFilterSettingsCompanion
+    extends UpdateCompanion<RaidStatusFilterSetting> {
+  final Value<String> playerId;
+  final Value<String> selectionJson;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const RaidStatusFilterSettingsCompanion({
+    this.playerId = const Value.absent(),
+    this.selectionJson = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RaidStatusFilterSettingsCompanion.insert({
+    required String playerId,
+    required String selectionJson,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : playerId = Value(playerId),
+       selectionJson = Value(selectionJson),
+       updatedAt = Value(updatedAt);
+  static Insertable<RaidStatusFilterSetting> custom({
+    Expression<String>? playerId,
+    Expression<String>? selectionJson,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (playerId != null) 'player_id': playerId,
+      if (selectionJson != null) 'selection_json': selectionJson,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RaidStatusFilterSettingsCompanion copyWith({
+    Value<String>? playerId,
+    Value<String>? selectionJson,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return RaidStatusFilterSettingsCompanion(
+      playerId: playerId ?? this.playerId,
+      selectionJson: selectionJson ?? this.selectionJson,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (playerId.present) {
+      map['player_id'] = Variable<String>(playerId.value);
+    }
+    if (selectionJson.present) {
+      map['selection_json'] = Variable<String>(selectionJson.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RaidStatusFilterSettingsCompanion(')
+          ..write('playerId: $playerId, ')
+          ..write('selectionJson: $selectionJson, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AccountDatabase extends GeneratedDatabase {
   _$AccountDatabase(QueryExecutor e) : super(e);
   $AccountDatabaseManager get managers => $AccountDatabaseManager(this);
@@ -4088,6 +4369,8 @@ abstract class _$AccountDatabase extends GeneratedDatabase {
       $PartyNotificationReceiptsTable(this);
   late final $CharacterWeeklyRaidDisplaysTable characterWeeklyRaidDisplays =
       $CharacterWeeklyRaidDisplaysTable(this);
+  late final $RaidStatusFilterSettingsTable raidStatusFilterSettings =
+      $RaidStatusFilterSettingsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4099,6 +4382,7 @@ abstract class _$AccountDatabase extends GeneratedDatabase {
     raidHistoryEntries,
     partyNotificationReceipts,
     characterWeeklyRaidDisplays,
+    raidStatusFilterSettings,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -6803,6 +7087,189 @@ typedef $$CharacterWeeklyRaidDisplaysTableProcessedTableManager =
       CharacterWeeklyRaidDisplay,
       PrefetchHooks Function({bool characterId})
     >;
+typedef $$RaidStatusFilterSettingsTableCreateCompanionBuilder =
+    RaidStatusFilterSettingsCompanion Function({
+      required String playerId,
+      required String selectionJson,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$RaidStatusFilterSettingsTableUpdateCompanionBuilder =
+    RaidStatusFilterSettingsCompanion Function({
+      Value<String> playerId,
+      Value<String> selectionJson,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$RaidStatusFilterSettingsTableFilterComposer
+    extends Composer<_$AccountDatabase, $RaidStatusFilterSettingsTable> {
+  $$RaidStatusFilterSettingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get playerId => $composableBuilder(
+    column: $table.playerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get selectionJson => $composableBuilder(
+    column: $table.selectionJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$RaidStatusFilterSettingsTableOrderingComposer
+    extends Composer<_$AccountDatabase, $RaidStatusFilterSettingsTable> {
+  $$RaidStatusFilterSettingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get playerId => $composableBuilder(
+    column: $table.playerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get selectionJson => $composableBuilder(
+    column: $table.selectionJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$RaidStatusFilterSettingsTableAnnotationComposer
+    extends Composer<_$AccountDatabase, $RaidStatusFilterSettingsTable> {
+  $$RaidStatusFilterSettingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get playerId =>
+      $composableBuilder(column: $table.playerId, builder: (column) => column);
+
+  GeneratedColumn<String> get selectionJson => $composableBuilder(
+    column: $table.selectionJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$RaidStatusFilterSettingsTableTableManager
+    extends
+        RootTableManager<
+          _$AccountDatabase,
+          $RaidStatusFilterSettingsTable,
+          RaidStatusFilterSetting,
+          $$RaidStatusFilterSettingsTableFilterComposer,
+          $$RaidStatusFilterSettingsTableOrderingComposer,
+          $$RaidStatusFilterSettingsTableAnnotationComposer,
+          $$RaidStatusFilterSettingsTableCreateCompanionBuilder,
+          $$RaidStatusFilterSettingsTableUpdateCompanionBuilder,
+          (
+            RaidStatusFilterSetting,
+            BaseReferences<
+              _$AccountDatabase,
+              $RaidStatusFilterSettingsTable,
+              RaidStatusFilterSetting
+            >,
+          ),
+          RaidStatusFilterSetting,
+          PrefetchHooks Function()
+        > {
+  $$RaidStatusFilterSettingsTableTableManager(
+    _$AccountDatabase db,
+    $RaidStatusFilterSettingsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RaidStatusFilterSettingsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$RaidStatusFilterSettingsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$RaidStatusFilterSettingsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> playerId = const Value.absent(),
+                Value<String> selectionJson = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RaidStatusFilterSettingsCompanion(
+                playerId: playerId,
+                selectionJson: selectionJson,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String playerId,
+                required String selectionJson,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => RaidStatusFilterSettingsCompanion.insert(
+                playerId: playerId,
+                selectionJson: selectionJson,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$RaidStatusFilterSettingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AccountDatabase,
+      $RaidStatusFilterSettingsTable,
+      RaidStatusFilterSetting,
+      $$RaidStatusFilterSettingsTableFilterComposer,
+      $$RaidStatusFilterSettingsTableOrderingComposer,
+      $$RaidStatusFilterSettingsTableAnnotationComposer,
+      $$RaidStatusFilterSettingsTableCreateCompanionBuilder,
+      $$RaidStatusFilterSettingsTableUpdateCompanionBuilder,
+      (
+        RaidStatusFilterSetting,
+        BaseReferences<
+          _$AccountDatabase,
+          $RaidStatusFilterSettingsTable,
+          RaidStatusFilterSetting
+        >,
+      ),
+      RaidStatusFilterSetting,
+      PrefetchHooks Function()
+    >;
 
 class $AccountDatabaseManager {
   final _$AccountDatabase _db;
@@ -6828,5 +7295,10 @@ class $AccountDatabaseManager {
       $$CharacterWeeklyRaidDisplaysTableTableManager(
         _db,
         _db.characterWeeklyRaidDisplays,
+      );
+  $$RaidStatusFilterSettingsTableTableManager get raidStatusFilterSettings =>
+      $$RaidStatusFilterSettingsTableTableManager(
+        _db,
+        _db.raidStatusFilterSettings,
       );
 }

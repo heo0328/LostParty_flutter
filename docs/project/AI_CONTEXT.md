@@ -8,6 +8,14 @@
 - 활동 해제는 기존 레이드 membership·Claim·완료 Snapshot을 바꾸지 않고 새 생성·신청·변경 후보에서만 제외한다.
 - 진행 중 레이드 필터는 공개 조건·레이드·난이도·그룹원·Character를 로컬 조합하며 사용자 내부 Character는 OR, 사용자 사이는 AND다. 서버 20개 페이징과 원본 목록을 유지하고 실시간 일치 개수를 표시한다.
 - 상세 계약과 작업 분해는 [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md)를 따른다. 기존 그룹 전용 자격 박탈과 필터 구현보다 이 구조를 먼저 완료한다.
+- A 저장 단위: 활동 Character는 `players/{playerId}/characterActivity/{characterId}` 문서로 저장한다. 각 쓰기는 Character·playerGameAccounts 소유권을 확인하고 대표 활동 문서 삭제를 거절한다. 빈 선택·대표 누락은 Repository가 거절한다. Character 인증·소유권 필드는 이 명령으로 쓰지 않는다.
+- B 캐릭터 관리 UI: 선택·대표·순서·표시 개수는 로컬 초안에 즉시 반영하고 `저장`에서 한 번만 서버에 쓴다. 대표와 마지막 1명 해제는 UI에서 막는다.
+- C1 레이드 후보: 새 레이드 생성·신청·참가 Character 변경 후보는 활동 Character만 사용한다. 기존 membership은 활동 해제만으로 바뀌지 않는다.
+- C2 그룹 후보·전투력: 그룹 생성·가입 후보와 일반 전투력 보강은 활동 Character만 사용한다. 기존 그룹 membership Snapshot은 활동 해제만으로 지우지 않는다.
+- D1 그룹 전용 자격 박탈: 그룹 전용 레이드는 그룹 탈퇴 후 membership을 즉시 지우지 않고 `그룹 탈퇴`로 표시한다. 남은 유효 그룹원이 제한적 정리를 요청하면 서버가 재검증한다.
+- D2 진행 중 기본 필터·페이징: 레이드 현황 `진행 중`에 공개 조건·레이드·난이도 로컬 필터와 원본/결과 분리, 20개 페이징 안전 세션, Player별 선택 보존을 적용했다.
+- D3 그룹원·Character 필터: 진행 중 필터에 가입 그룹·그룹원·Character 계층 선택을 추가했다. 현재 Player는 후보에서 제외하고, 사용자 내부 Character는 OR, 사용자 사이는 AND다.
+- E 자동 회귀: 전체 `flutter test --no-pub` 792개를 통과했다. 앱 셸 테스트가 Firebase 없이 초기 탭을 열도록 활동 Character·Character 검색 Repository를 주입했다. 실기기 확인은 사용자 단계다. 저장 공통 실패 문구는 Firestore `permission-denied`를 숨기고 있어, 권한 오류는 Rules 배포 확인 안내로 구분한다.
 
 ## 최우선 현재 상태 — 그룹 전용 레이드 자격 박탈 (2026-09-02)
 
@@ -19,7 +27,7 @@
 - 전환 Transaction이 모집 `visibility`/`revision`만 패치하고, 그룹 전용이면 listing을 만들거나 덮어쓰며 전체 공개면 listing을 삭제한다.
 - 사용자가 Rules를 배포했다. 비그룹 계정 모집에서 그룹 전용 숨김, 해제 후 표시, 재활성 후 숨김을 확인했다.
 - 직전 완료: 모집·현황 리스트 카드 밀도. listing 원자 동기화와 참가 중인 방 listing 보완은 그전이다. 손대지 않은 비참가 그룹 전용 방은 변경 시 자연 복구한다.
-- 이후 그룹 전용 자격 박탈을 완료하고 마지막에 레이드 모집·현황 그룹 필터를 구현한다. 필터는 구현 직전 재확인이 끝나기 전에 코드를 수정하지 않는다.
+- D1~D3와 E 자동 회귀를 완료했다. 남은 것은 사용자 실기기 확인이다.
 
 ## 직전 상태 — 그룹장 즉시 지정 이전·해산 (2026-09-01)
 

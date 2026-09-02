@@ -24,7 +24,9 @@ import '../../../recruitment_list/domain/repositories/party_membership_command_r
 import '../../../recruitment_list/domain/repositories/party_read_repository.dart';
 import '../../../recruitment_list/domain/repositories/party_visibility_command_repository.dart';
 import '../../../recruitment_list/domain/entities/party_membership_command.dart';
+import '../../../recruitment_list/domain/services/group_raid_qualification.dart';
 import '../../../recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
+import '../../../group/domain/repositories/group_read_repository.dart';
 import '../../domain/services/party_event_sync_service.dart';
 import '../viewmodels/party_read_detail_view_model.dart';
 
@@ -39,6 +41,7 @@ class PartyReadDetailPage extends StatefulWidget {
     this.visibilityCommandRepository,
     this.eventSyncService,
     this.candidateService,
+    this.groupReadRepository,
     this.playerId,
     super.key,
   });
@@ -52,6 +55,7 @@ class PartyReadDetailPage extends StatefulWidget {
   final PartyVisibilityCommandRepository? visibilityCommandRepository;
   final PartyEventSyncService? eventSyncService;
   final RecruitmentLeaderCandidateService? candidateService;
+  final GroupReadRepository? groupReadRepository;
   final String? playerId;
 
   @override
@@ -80,8 +84,10 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
   bool _membersFromCache = false;
   bool _myApplicationLoading = false;
   bool _submitting = false;
-
   bool _staleAssignmentHealAttempted = false;
+  Set<String> _lostGroupQualificationPlayerIds = const {};
+  String? _qualificationLookupKey;
+  int _qualificationLookupGeneration = 0;
 
   bool get _canApplicantAction =>
       widget.candidateService != null &&
@@ -108,15 +114,16 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
   @override
   void didUpdateWidget(covariant PartyReadDetailPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final recruitmentChanged =
-        oldWidget.recruitmentId != widget.recruitmentId;
+    final recruitmentChanged = oldWidget.recruitmentId != widget.recruitmentId;
     final playerChanged = oldWidget.playerId != widget.playerId;
     final repositoryChanged =
         oldWidget.partyReadRepository != widget.partyReadRepository;
     if (!recruitmentChanged && !playerChanged && !repositoryChanged) {
       return;
     }
-    _bindDetailSubscriptions(restartRecruitment: recruitmentChanged || repositoryChanged);
+    _bindDetailSubscriptions(
+      restartRecruitment: recruitmentChanged || repositoryChanged,
+    );
   }
 
   void _bindDetailSubscriptions({bool restartRecruitment = false}) {
@@ -144,6 +151,8 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     _members = const [];
     _membersFailure = null;
     _membersFromCache = false;
+    _lostGroupQualificationPlayerIds = const {};
+    _qualificationLookupKey = null;
     _myApplication = null;
     _myApplicationLoading = false;
     _applications = const [];
@@ -160,10 +169,13 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
             recruitmentId: widget.recruitmentId,
             playerId: widget.playerId!,
           )
-          .listen(_onMyApplication, onError: (_) {
-            if (!mounted) return;
-            setState(() => _myApplicationLoading = false);
-          });
+          .listen(
+            _onMyApplication,
+            onError: (_) {
+              if (!mounted) return;
+              setState(() => _myApplicationLoading = false);
+            },
+          );
     }
     if (_canManageApplications) {
       _applicationsLoading = true;
@@ -324,9 +336,9 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       final message = !hasVerified
           ? '서버에 연결된 인증 캐릭터가 없습니다. 설정에서 게임계정 인증을 완료한 뒤 다시 시도해 주세요.'
           : '신청 가능한 역할·조건에 맞는 캐릭터가 없습니다. 캐릭터 역할 세팅과 입장 레벨을 확인해 주세요.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
       return;
     }
 
@@ -445,9 +457,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     setState(() => _submitting = false);
     if (result.isSuccess) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(approve ? '가입 신청을 승인했습니다.' : '가입 신청을 거절했습니다.'),
-        ),
+        SnackBar(content: Text(approve ? '가입 신청을 승인했습니다.' : '가입 신청을 거절했습니다.')),
       );
       return;
     }
@@ -499,172 +509,187 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
             if (mounted) {
               _ensureCycleSubscription(summary.currentCycleKey);
               _purgeStaleOwnAssignmentIfNeeded(summary);
+              _refreshLostGroupQualification(summary);
             }
           });
           return SingleChildScrollView(
             padding: const EdgeInsets.only(bottom: 24),
             child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (state.isFromCache)
-                const _Notice(
-                  icon: Icons.cloud_off_outlined,
-                  message: '오프라인 상태입니다. 마지막으로 받은 내용을 표시합니다.',
-                ),
-              if (state.hasFailureWithItem)
-                _Notice(
-                  icon: Icons.error_outline,
-                  message: _failureMessage(state.failure!),
-                ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Text(
-                  summary.title,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _DetailLine(
-                label: '파티장',
-                value: _leaderDetailLabel(summary),
-              ),
-              _DetailLine(label: '레이드', value: _raidLabel(summary.metadata)),
-              _DetailLine(label: '일정', value: _scheduleLabel(summary.metadata)),
-              _DetailLine(
-                label: '인원',
-                value:
-                    '${summary.memberCount}/${summary.maxMemberCount}명'
-                    '${summary.isRecruiting ? ' · 모집 중' : ' · 모집 마감'} '
-                    '(딜러 ${summary.dealerCount}/${summary.maxDealerCount}, '
-                    '서포터 ${summary.supportCount}/${summary.maxSupportCount})',
-              ),
-              _DetailLine(
-                label: '조건',
-                value: _requirementLabel(summary.metadata),
-              ),
-              _DetailLine(
-                label: '가입',
-                value: _approvalModeLabel(summary.approvalMode),
-              ),
-              if (summary.isGroupLinked)
-                _DetailLine(
-                  label: '공개',
-                  value: summary.isGroupOnly
-                      ? '그룹만 공개'
-                      : '전체 공개 · 그룹 연결 유지',
-                ),
-              if (_isLeader(summary) &&
-                  summary.isGroupLinked &&
-                  summary.isActiveRecruitment &&
-                  widget.visibilityCommandRepository != null)
-                SwitchListTile(
-                  key: const ValueKey('groupOnlyVisibilitySwitch'),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                  title: const Text('그룹만 공개'),
-                  subtitle: Text(
-                    summary.isGroupOnly
-                        ? '그룹원만 모집 목록에서 보고 신청할 수 있습니다.'
-                        : '전체 공개입니다. 연결 그룹은 유지됩니다.',
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (state.isFromCache)
+                  const _Notice(
+                    icon: Icons.cloud_off_outlined,
+                    message: '오프라인 상태입니다. 마지막으로 받은 내용을 표시합니다.',
                   ),
-                  value: summary.isGroupOnly,
-                  onChanged: _submitting
-                      ? null
-                      : (value) => _setGroupOnly(summary, value),
-                ),
-              _PartyCompositionSection(
-                members: _members,
-                membersPerParty: summary.membersPerParty,
-                supportsPerParty: summary.supportsPerParty,
-                maxMemberCount: summary.maxMemberCount,
-                showThisWeekRaidComplete: summary.showsThisWeekRaidCompleteMark,
-                loading: _membersLoading,
-                failure: _membersFailure,
-                isFromCache: _membersFromCache,
-              ),
-              if (_isLeader(summary))
-                _PendingApplicationsSection(
-                  applications: _applications,
-                  loading: _applicationsLoading,
-                  failure: _applicationsFailure,
-                  submitting: _submitting,
-                  canDecide:
-                      summary.approvalMode != ApprovalMode.directJoin &&
-                      widget.joinCommandRepository != null,
-                  onApprove: (application) => _decideApplication(
-                    summary: summary,
-                    application: application,
-                    approve: true,
+                if (state.hasFailureWithItem)
+                  _Notice(
+                    icon: Icons.error_outline,
+                    message: _failureMessage(state.failure!),
                   ),
-                  onReject: (application) => _decideApplication(
-                    summary: summary,
-                    application: application,
-                    approve: false,
-                  ),
-                ),
-              if (_canApplicantAction && !_isLeader(summary) && !_isConfirmedMember)
-                _ApplicationActions(
-                  summary: summary,
-                  myApplication: _myApplication,
-                  loadingApplication: _myApplicationLoading,
-                  submitting: _submitting,
-                  onApply: () => _openApplySheet(summary),
-                  onWithdraw: _withdraw,
-                )
-              else if (!_canApplicantAction &&
-                  !_canManageApplications &&
-                  !_canUseMembershipCommands)
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 24, 16, 0),
-                  child: Text(
-                    '이 화면은 조회 전용입니다. 신청과 수정은 아직 연결되지 않았습니다.',
-                  ),
-                ),
-              if (_isConfirmedMember &&
-                  _canUseMembershipCommands &&
-                  _membershipActionsAllowed(summary))
-                _MembershipSelfActions(
-                  canLeave: summary.memberCount > 1,
-                  submitting: _submitting,
-                  onChangeCharacter: () => _openChangeCharacterSheet(summary),
-                  onLeave: () => _confirmLeave(summary),
-                ),
-              if (_isLeader(summary) &&
-                  _canUseMembershipCommands &&
-                  _membershipActionsAllowed(summary) &&
-                  summary.memberCount > 1)
-                _KickMembersSection(
-                  members: _members
-                      .where((member) => member.playerId != widget.playerId)
-                      .toList(growable: false),
-                  submitting: _submitting,
-                  onKick: (member) => _confirmKick(summary, member),
-                ),
-              if (_canUseCycleCommands && _isConfirmedMember)
-                _CycleLifecycleSection(
-                  summary: summary,
-                  cycle: _cycle,
-                  isLeader: _isLeader(summary),
-                  submitting: _submitting,
-                  onComplete: () => _confirmComplete(summary),
-                  onCancelCompletion: () => _confirmCancelCompletion(summary),
-                  onAdvance: () => _confirmAdvance(summary),
-                  onToggleRecurrence: (value) =>
-                      _confirmSetRecurrence(summary, value),
-                  onDisband: () => _confirmDisband(summary),
-                ),
-              if (_canDeleteRecruitment(summary))
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
-                  child: OutlinedButton.icon(
-                    key: const ValueKey('deleteOwnRecruitmentButton'),
-                    onPressed: _submitting
-                        ? null
-                        : () => _confirmDeleteRecruitment(summary),
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('모집 삭제'),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Text(
+                    summary.title,
+                    style: Theme.of(context).textTheme.headlineSmall,
                   ),
                 ),
-            ],
+                const SizedBox(height: 12),
+                _DetailLine(label: '파티장', value: _leaderDetailLabel(summary)),
+                _DetailLine(label: '레이드', value: _raidLabel(summary.metadata)),
+                _DetailLine(
+                  label: '일정',
+                  value: _scheduleLabel(summary.metadata),
+                ),
+                _DetailLine(
+                  label: '인원',
+                  value:
+                      '${summary.memberCount}/${summary.maxMemberCount}명'
+                      '${summary.isRecruiting ? ' · 모집 중' : ' · 모집 마감'} '
+                      '(딜러 ${summary.dealerCount}/${summary.maxDealerCount}, '
+                      '서포터 ${summary.supportCount}/${summary.maxSupportCount})',
+                ),
+                _DetailLine(
+                  label: '조건',
+                  value: _requirementLabel(summary.metadata),
+                ),
+                _DetailLine(
+                  label: '가입',
+                  value: _approvalModeLabel(summary.approvalMode),
+                ),
+                if (summary.isGroupLinked)
+                  _DetailLine(
+                    label: '공개',
+                    value: summary.isGroupOnly ? '그룹만 공개' : '전체 공개 · 그룹 연결 유지',
+                  ),
+                if (_isLeader(summary) &&
+                    summary.isGroupLinked &&
+                    summary.isActiveRecruitment &&
+                    widget.visibilityCommandRepository != null)
+                  SwitchListTile(
+                    key: const ValueKey('groupOnlyVisibilitySwitch'),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                    title: const Text('그룹만 공개'),
+                    subtitle: Text(
+                      summary.isGroupOnly
+                          ? '그룹원만 모집 목록에서 보고 신청할 수 있습니다.'
+                          : '전체 공개입니다. 연결 그룹은 유지됩니다.',
+                    ),
+                    value: summary.isGroupOnly,
+                    onChanged: _submitting
+                        ? null
+                        : (value) => _setGroupOnly(summary, value),
+                  ),
+                _PartyCompositionSection(
+                  members: _members,
+                  membersPerParty: summary.membersPerParty,
+                  supportsPerParty: summary.supportsPerParty,
+                  maxMemberCount: summary.maxMemberCount,
+                  lostGroupQualificationPlayerIds:
+                      _lostGroupQualificationPlayerIds,
+                  showThisWeekRaidComplete:
+                      summary.showsThisWeekRaidCompleteMark,
+                  loading: _membersLoading,
+                  failure: _membersFailure,
+                  isFromCache: _membersFromCache,
+                ),
+                if (_isLeader(summary))
+                  _PendingApplicationsSection(
+                    applications: _applications,
+                    loading: _applicationsLoading,
+                    failure: _applicationsFailure,
+                    submitting: _submitting,
+                    canDecide:
+                        summary.approvalMode != ApprovalMode.directJoin &&
+                        widget.joinCommandRepository != null,
+                    onApprove: (application) => _decideApplication(
+                      summary: summary,
+                      application: application,
+                      approve: true,
+                    ),
+                    onReject: (application) => _decideApplication(
+                      summary: summary,
+                      application: application,
+                      approve: false,
+                    ),
+                  ),
+                if (_canApplicantAction &&
+                    !_isLeader(summary) &&
+                    !_isConfirmedMember)
+                  _ApplicationActions(
+                    summary: summary,
+                    myApplication: _myApplication,
+                    loadingApplication: _myApplicationLoading,
+                    submitting: _submitting,
+                    onApply: () => _openApplySheet(summary),
+                    onWithdraw: _withdraw,
+                  )
+                else if (!_canApplicantAction &&
+                    !_canManageApplications &&
+                    !_canUseMembershipCommands)
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 24, 16, 0),
+                    child: Text('이 화면은 조회 전용입니다. 신청과 수정은 아직 연결되지 않았습니다.'),
+                  ),
+                if (_isConfirmedMember &&
+                    _canUseMembershipCommands &&
+                    _membershipActionsAllowed(summary))
+                  _MembershipSelfActions(
+                    canLeave: summary.memberCount > 1,
+                    submitting: _submitting,
+                    onChangeCharacter: () => _openChangeCharacterSheet(summary),
+                    onLeave: () => _confirmLeave(summary),
+                  ),
+                if (_isLeader(summary) &&
+                    _canUseMembershipCommands &&
+                    _membershipActionsAllowed(summary) &&
+                    summary.memberCount > 1)
+                  _KickMembersSection(
+                    members: _members
+                        .where((member) => member.playerId != widget.playerId)
+                        .toList(growable: false),
+                    submitting: _submitting,
+                    onKick: (member) => _confirmKick(summary, member),
+                  ),
+                if (_canCleanLostGroupQualification(summary))
+                  _LostGroupQualificationSection(
+                    members: _members
+                        .where(
+                          (member) => _lostGroupQualificationPlayerIds.contains(
+                            member.playerId,
+                          ),
+                        )
+                        .toList(growable: false),
+                    submitting: _submitting,
+                    onRemove: (member) =>
+                        _confirmRemoveLostGroupQualification(summary, member),
+                  ),
+                if (_canUseCycleCommands && _isConfirmedMember)
+                  _CycleLifecycleSection(
+                    summary: summary,
+                    cycle: _cycle,
+                    isLeader: _isLeader(summary),
+                    submitting: _submitting,
+                    onComplete: () => _confirmComplete(summary),
+                    onCancelCompletion: () => _confirmCancelCompletion(summary),
+                    onAdvance: () => _confirmAdvance(summary),
+                    onToggleRecurrence: (value) =>
+                        _confirmSetRecurrence(summary, value),
+                    onDisband: () => _confirmDisband(summary),
+                  ),
+                if (_canDeleteRecruitment(summary))
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
+                    child: OutlinedButton.icon(
+                      key: const ValueKey('deleteOwnRecruitmentButton'),
+                      onPressed: _submitting
+                          ? null
+                          : () => _confirmDeleteRecruitment(summary),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('모집 삭제'),
+                    ),
+                  ),
+              ],
             ),
           );
         },
@@ -723,8 +748,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     );
     if (!mounted) return;
 
-    final isNextWeekPrep =
-        summary.continueTogether && summary.isCycleCompleted;
+    final isNextWeekPrep = summary.continueTogether && summary.isCycleCompleted;
     final eligible =
         <
           ({
@@ -735,12 +759,15 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     for (final candidate in candidates) {
       final serverId = candidate.serverCharacterId;
       if (serverId == null || serverId.isEmpty) continue;
-      final claimOnlyBlocked = candidate.rejectionReasons.length == 1 &&
+      final claimOnlyBlocked =
+          candidate.rejectionReasons.length == 1 &&
           candidate.rejectionReasons.single == '이번 주 동일 레이드 완료';
       if (!candidate.canSelect && !(isNextWeekPrep && claimOnlyBlocked)) {
         continue;
       }
-      for (final option in candidate.roles.where((option) => option.canSelect)) {
+      for (final option in candidate.roles.where(
+        (option) => option.canSelect,
+      )) {
         if (me.characterId == serverId && option.role == me.role) continue;
         eligible.add((candidate: candidate, option: option));
       }
@@ -748,9 +775,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     if (eligible.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            '변경할 수 있는 인증 캐릭터가 없습니다. 역할 세팅과 파티 구성을 확인해 주세요.',
-          ),
+          content: Text('변경할 수 있는 인증 캐릭터가 없습니다. 역할 세팅과 파티 구성을 확인해 주세요.'),
         ),
       );
       return;
@@ -759,9 +784,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     final selected = await showModalBottomSheet<_ApplySelection>(
       context: context,
       showDragHandle: true,
-      builder: (context) => _ChangeCharacterCandidateSheet(
-        entries: eligible,
-      ),
+      builder: (context) => _ChangeCharacterCandidateSheet(entries: eligible),
     );
     if (selected == null || !mounted) return;
 
@@ -801,14 +824,10 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     if (!mounted) return;
     setState(() => _submitting = false);
     if (result.isSuccess) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isNextWeekPrep
-                ? '다음 주 참가 캐릭터를 변경했습니다.'
-                : '참가 캐릭터를 변경했습니다.',
+            isNextWeekPrep ? '다음 주 참가 캐릭터를 변경했습니다.' : '참가 캐릭터를 변경했습니다.',
           ),
         ),
       );
@@ -889,9 +908,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('파티원을 추방할까요?'),
-        content: Text(
-          '$name 님을 추방합니다. 자리는 비워 두고 남은 멤버를 앞으로 당기지 않습니다.',
-        ),
+        content: Text('$name 님을 추방합니다. 자리는 비워 두고 남은 멤버를 앞으로 당기지 않습니다.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -936,9 +953,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('모집을 삭제할까요?'),
-        content: const Text(
-          '방이 모집 목록에서 사라지고 해산 처리됩니다. 이 동작은 되돌릴 수 없습니다.',
-        ),
+        content: const Text('방이 모집 목록에서 사라지고 해산 처리됩니다. 이 동작은 되돌릴 수 없습니다.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -989,9 +1004,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     if (endsAt != null && !DateTime.now().toUtc().isBefore(endsAt)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            '이 회차 기간이 끝나 완료할 수 없습니다. 다음 회차 전환을 사용해 주세요.',
-          ),
+          content: Text('이 회차 기간이 끝나 완료할 수 없습니다. 다음 회차 전환을 사용해 주세요.'),
         ),
       );
       return;
@@ -1197,9 +1210,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(
-          continueTogether ? '다음 주도 함께할까요?' : '다음 주 함께하기를 끌까요?',
-        ),
+        title: Text(continueTogether ? '다음 주도 함께할까요?' : '다음 주 함께하기를 끌까요?'),
         content: Text(
           continueTogether
               ? '완료 후에도 방과 참가자가 유지되고 다음 회차 준비를 이어갑니다.'
@@ -1234,9 +1245,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            continueTogether
-                ? '다음 주도 함께하기로 설정했습니다.'
-                : '다음 주 함께하기를 껐습니다.',
+            continueTogether ? '다음 주도 함께하기로 설정했습니다.' : '다음 주 함께하기를 껐습니다.',
           ),
         ),
       );
@@ -1259,9 +1268,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('파티를 해산할까요?'),
-        content: const Text(
-          '모든 참가가 해제되고 방은 목록에서 사라집니다. 이 동작은 되돌릴 수 없습니다.',
-        ),
+        content: const Text('모든 참가가 해제되고 방은 목록에서 사라집니다. 이 동작은 되돌릴 수 없습니다.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -1354,6 +1361,119 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
   bool _isLeader(PublicRecruitmentSummary summary) =>
       widget.playerId != null && widget.playerId == summary.leaderUserId;
 
+  bool _canCleanLostGroupQualification(PublicRecruitmentSummary summary) {
+    if (!_canUseMembershipCommands || !_membershipActionsAllowed(summary)) {
+      return false;
+    }
+    if (!summary.isGroupOnly || !_isConfirmedMember) return false;
+    if (_lostGroupQualificationPlayerIds.contains(widget.playerId)) {
+      return false;
+    }
+    return _members.any(
+      (member) =>
+          member.playerId != widget.playerId &&
+          _lostGroupQualificationPlayerIds.contains(member.playerId),
+    );
+  }
+
+  Future<void> _refreshLostGroupQualification(
+    PublicRecruitmentSummary summary,
+  ) async {
+    final memberKey = _members.map((member) => member.playerId).join(',');
+    final key =
+        '${summary.visibility}|${summary.groupId ?? ''}|$memberKey|${widget.playerId ?? ''}';
+    if (key == _qualificationLookupKey) return;
+    _qualificationLookupKey = key;
+    final generation = ++_qualificationLookupGeneration;
+    final isGroupOnly = GroupRaidQualification.isGroupOnlyRaid(
+      visibility: summary.visibility,
+      groupId: summary.groupId,
+    );
+    if (!isGroupOnly ||
+        widget.groupReadRepository == null ||
+        summary.groupId == null) {
+      if (!mounted || generation != _qualificationLookupGeneration) return;
+      setState(() => _lostGroupQualificationPlayerIds = const {});
+      return;
+    }
+    Set<String> lostIds;
+    try {
+      final groupMembers = await widget.groupReadRepository!.loadGroupMembers(
+        summary.groupId!,
+      );
+      lostIds = GroupRaidQualification.lostPlayerIds(
+        isGroupOnlyRaid: true,
+        raidMemberPlayerIds: _members.map((member) => member.playerId),
+        currentGroupMemberPlayerIds: {
+          for (final member in groupMembers) member.playerId,
+        },
+      );
+    } on GroupReadException catch (error) {
+      lostIds = error.type == GroupReadFailureType.permissionDenied
+          ? GroupRaidQualification.lostPlayerIdsWhenGroupUnreadable(
+              isGroupOnlyRaid: true,
+              currentPlayerId: widget.playerId,
+            )
+          : const {};
+    } catch (_) {
+      lostIds = const {};
+    }
+    if (!mounted || generation != _qualificationLookupGeneration) return;
+    setState(() => _lostGroupQualificationPlayerIds = lostIds);
+  }
+
+  Future<void> _confirmRemoveLostGroupQualification(
+    PublicRecruitmentSummary summary,
+    PartyMemberDisplay member,
+  ) async {
+    if (!_canCleanLostGroupQualification(summary) || _submitting) return;
+    final name = member.characterName?.trim().isNotEmpty == true
+        ? member.characterName!.trim()
+        : '선택한 파티원';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('그룹 자격을 잃은 파티원을 정리할까요?'),
+        content: Text(
+          '$name 님은 그룹을 떠나 그룹 전용 레이드 참가 자격을 잃었습니다. 방에서 제외합니다. 이 동작은 일반 추방이 아닙니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirmRemoveLostGroupQualificationButton'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('정리'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _submitting = true);
+    final result = await widget.membershipCommandRepository!
+        .removeLostGroupQualification(
+          PartyRemoveMemberCommand(
+            recruitmentId: widget.recruitmentId,
+            targetPlayerId: member.playerId,
+            expectedRecruitmentRevision: summary.revision,
+          ),
+        );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (result.isSuccess) {
+      _qualificationLookupKey = null;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('그룹 자격을 잃은 파티원을 정리했습니다.')));
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_membershipFailureMessage(result.failure!))),
+    );
+  }
+
   Future<void> _syncPartyEventsAfterCycleChange() async {
     final sync = widget.eventSyncService;
     if (sync == null) return;
@@ -1374,6 +1494,7 @@ class _PartyCompositionSection extends StatelessWidget {
     required this.loading,
     required this.failure,
     required this.isFromCache,
+    this.lostGroupQualificationPlayerIds = const {},
     this.showThisWeekRaidComplete = false,
   });
 
@@ -1386,6 +1507,7 @@ class _PartyCompositionSection extends StatelessWidget {
   final int supportsPerParty;
   final int maxMemberCount;
   final bool showThisWeekRaidComplete;
+  final Set<String> lostGroupQualificationPlayerIds;
   final bool loading;
   final PartyReadFailureType? failure;
   final bool isFromCache;
@@ -1445,8 +1567,7 @@ class _PartyCompositionSection extends StatelessWidget {
               builder: (context, constraints) {
                 final useWidePartyGroups =
                     constraints.maxWidth >= partyGroupBreakpoint;
-                final raidLeaderLabel =
-                    board.partyCount > 1 ? '공대장' : '파티장';
+                final raidLeaderLabel = board.partyCount > 1 ? '공대장' : '파티장';
                 return Column(
                   key: const ValueKey('partyCompositionBoard'),
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1456,6 +1577,8 @@ class _PartyCompositionSection extends StatelessWidget {
                         board: board,
                         raidLeaderLabel: raidLeaderLabel,
                         supportsPerParty: supportsPerParty,
+                        lostGroupQualificationPlayerIds:
+                            lostGroupQualificationPlayerIds,
                       )
                     else
                       for (
@@ -1469,6 +1592,8 @@ class _PartyCompositionSection extends StatelessWidget {
                           cells: board.cellsForParty(partyIndex),
                           raidLeaderLabel: raidLeaderLabel,
                           supportsPerParty: supportsPerParty,
+                          lostGroupQualificationPlayerIds:
+                              lostGroupQualificationPlayerIds,
                         ),
                     if (board.unassignedMembers.isNotEmpty) ...[
                       Padding(
@@ -1476,15 +1601,18 @@ class _PartyCompositionSection extends StatelessWidget {
                           top: AppSpacing.sm,
                           bottom: AppSpacing.xxs,
                         ),
-                        child: Text(
-                          '자리 미정',
-                          style: theme.textTheme.titleSmall,
-                        ),
+                        child: Text('자리 미정', style: theme.textTheme.titleSmall),
                       ),
                       for (final member in board.unassignedMembers)
                         Padding(
                           padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                          child: _UnassignedMemberCard(member: member),
+                          child: _UnassignedMemberCard(
+                            member: member,
+                            lostGroupQualification:
+                                lostGroupQualificationPlayerIds.contains(
+                                  member.playerId,
+                                ),
+                          ),
                         ),
                     ],
                   ],
@@ -1496,6 +1624,14 @@ class _PartyCompositionSection extends StatelessWidget {
       ),
     );
   }
+}
+
+bool _slotLostGroupQualification(
+  PartySlotCell cell,
+  Set<String> lostGroupQualificationPlayerIds,
+) {
+  final playerId = cell.member?.playerId;
+  return playerId != null && lostGroupQualificationPlayerIds.contains(playerId);
 }
 
 String _partyGroupLabel(
@@ -1521,18 +1657,21 @@ class _WidePartyGroups extends StatelessWidget {
     required this.board,
     required this.raidLeaderLabel,
     required this.supportsPerParty,
+    this.lostGroupQualificationPlayerIds = const {},
   });
 
   final PartySlotBoard board;
   final String raidLeaderLabel;
   final int supportsPerParty;
+  final Set<String> lostGroupQualificationPlayerIds;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final leftCells = board.cellsForParty(0);
-    final rightCells =
-        board.partyCount > 1 ? board.cellsForParty(1) : const <PartySlotCell>[];
+    final rightCells = board.partyCount > 1
+        ? board.cellsForParty(1)
+        : const <PartySlotCell>[];
     final slotCount = leftCells.length;
 
     return Column(
@@ -1584,6 +1723,10 @@ class _WidePartyGroups extends StatelessWidget {
                     child: _SlotCard(
                       cell: leftCells[slotIndex],
                       raidLeaderLabel: raidLeaderLabel,
+                      lostGroupQualification: _slotLostGroupQualification(
+                        leftCells[slotIndex],
+                        lostGroupQualificationPlayerIds,
+                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -1592,6 +1735,10 @@ class _WidePartyGroups extends StatelessWidget {
                         ? _SlotCard(
                             cell: rightCells[slotIndex],
                             raidLeaderLabel: raidLeaderLabel,
+                            lostGroupQualification: _slotLostGroupQualification(
+                              rightCells[slotIndex],
+                              lostGroupQualificationPlayerIds,
+                            ),
                           )
                         : const SizedBox.shrink(),
                   ),
@@ -1611,12 +1758,14 @@ class _PartyGroupColumn extends StatelessWidget {
     required this.cells,
     required this.raidLeaderLabel,
     required this.supportsPerParty,
+    this.lostGroupQualificationPlayerIds = const {},
   });
 
   final int partyIndex;
   final List<PartySlotCell> cells;
   final String raidLeaderLabel;
   final int supportsPerParty;
+  final Set<String> lostGroupQualificationPlayerIds;
 
   @override
   Widget build(BuildContext context) {
@@ -1634,7 +1783,11 @@ class _PartyGroupColumn extends StatelessWidget {
             style: theme.textTheme.titleSmall,
           ),
         ),
-        _SlotCardGrid(cells: cells, raidLeaderLabel: raidLeaderLabel),
+        _SlotCardGrid(
+          cells: cells,
+          raidLeaderLabel: raidLeaderLabel,
+          lostGroupQualificationPlayerIds: lostGroupQualificationPlayerIds,
+        ),
       ],
     );
   }
@@ -1644,10 +1797,12 @@ class _SlotCardGrid extends StatelessWidget {
   const _SlotCardGrid({
     required this.cells,
     required this.raidLeaderLabel,
+    this.lostGroupQualificationPlayerIds = const {},
   });
 
   final List<PartySlotCell> cells;
   final String raidLeaderLabel;
+  final Set<String> lostGroupQualificationPlayerIds;
 
   @override
   Widget build(BuildContext context) {
@@ -1657,7 +1812,14 @@ class _SlotCardGrid extends StatelessWidget {
         for (final cell in cells)
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-            child: _SlotCard(cell: cell, raidLeaderLabel: raidLeaderLabel),
+            child: _SlotCard(
+              cell: cell,
+              raidLeaderLabel: raidLeaderLabel,
+              lostGroupQualification: _slotLostGroupQualification(
+                cell,
+                lostGroupQualificationPlayerIds,
+              ),
+            ),
           ),
       ],
     );
@@ -1665,10 +1827,15 @@ class _SlotCardGrid extends StatelessWidget {
 }
 
 class _SlotCard extends StatelessWidget {
-  const _SlotCard({required this.cell, required this.raidLeaderLabel});
+  const _SlotCard({
+    required this.cell,
+    required this.raidLeaderLabel,
+    this.lostGroupQualification = false,
+  });
 
   final PartySlotCell cell;
   final String raidLeaderLabel;
+  final bool lostGroupQualification;
 
   @override
   Widget build(BuildContext context) {
@@ -1691,10 +1858,7 @@ class _SlotCard extends StatelessWidget {
                     const SizedBox(height: AppSpacing.xxs),
                     Text('빈자리', style: theme.textTheme.bodyMedium),
                     const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      '현재 별도 참가 조건 없음',
-                      style: theme.textTheme.bodySmall,
-                    ),
+                    Text('현재 별도 참가 조건 없음', style: theme.textTheme.bodySmall),
                   ],
                 )
               : Column(
@@ -1709,6 +1873,8 @@ class _SlotCard extends StatelessWidget {
                         if (cell.isLeaderSeat)
                           _RoleBadge(label: raidLeaderLabel),
                         _RoleBadge(label: _roleLabel(member.role)),
+                        if (lostGroupQualification)
+                          const _RoleBadge(label: '그룹 탈퇴'),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.xxs),
@@ -1741,9 +1907,13 @@ class _SlotCard extends StatelessWidget {
 }
 
 class _UnassignedMemberCard extends StatelessWidget {
-  const _UnassignedMemberCard({required this.member});
+  const _UnassignedMemberCard({
+    required this.member,
+    this.lostGroupQualification = false,
+  });
 
   final PartyMemberDisplay member;
+  final bool lostGroupQualification;
 
   @override
   Widget build(BuildContext context) {
@@ -1758,6 +1928,13 @@ class _UnassignedMemberCard extends StatelessWidget {
             Text('자리 정보 없음', style: theme.textTheme.titleSmall),
             const SizedBox(height: AppSpacing.xxs),
             _CharacterNameText(name: member.characterName),
+            if (lostGroupQualification) ...[
+              const SizedBox(height: AppSpacing.xxs),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: _RoleBadge(label: '그룹 탈퇴'),
+              ),
+            ],
             Text(
               [
                 member.className?.trim().isNotEmpty == true
@@ -2037,9 +2214,7 @@ class _CycleLifecycleSection extends StatelessWidget {
     final window = const PartyCyclePolicy().fromKey(summary.currentCycleKey);
     final cancelDeadline = window?.completionCancelDeadline;
     final canAdvance =
-        summary.isActiveRecruitment &&
-        endsAt != null &&
-        !now.isBefore(endsAt);
+        summary.isActiveRecruitment && endsAt != null && !now.isBefore(endsAt);
     final canCancel =
         isLeader &&
         summary.continueTogether &&
@@ -2050,9 +2225,7 @@ class _CycleLifecycleSection extends StatelessWidget {
         cancelDeadline != null &&
         now.isBefore(cancelDeadline);
     final canComplete =
-        isLeader &&
-        summary.isActiveRecruitment &&
-        summary.isCycleActive;
+        isLeader && summary.isActiveRecruitment && summary.isCycleActive;
     final showDisband =
         isLeader &&
         (summary.isOneShotCompleted ||
@@ -2127,9 +2300,7 @@ class _CycleLifecycleSection extends StatelessWidget {
               key: const ValueKey('disbandPartyButton'),
               onPressed: submitting ? null : onDisband,
               icon: const Icon(Icons.meeting_room_outlined),
-              label: Text(
-                summary.isOneShotCompleted ? '해산' : '파티 해산',
-              ),
+              label: Text(summary.isOneShotCompleted ? '해산' : '파티 해산'),
             ),
           ],
         ],
@@ -2234,12 +2405,66 @@ class _KickMembersSection extends StatelessWidget {
   }
 }
 
-class _ChangeCharacterCandidateSheet extends StatelessWidget {
-  const _ChangeCharacterCandidateSheet({
-    required this.entries,
+class _LostGroupQualificationSection extends StatelessWidget {
+  const _LostGroupQualificationSection({
+    required this.members,
+    required this.submitting,
+    required this.onRemove,
   });
 
-  final List<({RecruitmentLeaderCandidate candidate, RecruitmentLeaderRoleOption option})> entries;
+  final List<PartyMemberDisplay> members;
+  final bool submitting;
+  final ValueChanged<PartyMemberDisplay> onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    if (members.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('그룹 자격 상실', style: theme.textTheme.titleMedium),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            '그룹을 떠난 파티원은 그룹 전용 레이드 참가 자격을 잃었습니다. 정상 참가 그룹원만 정리할 수 있습니다.',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          for (final member in members)
+            Card(
+              key: ValueKey('lostGroupQualificationCard-${member.playerId}'),
+              margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: ListTile(
+                title: Text(
+                  member.characterName?.trim().isNotEmpty == true
+                      ? member.characterName!.trim()
+                      : '정보 없음',
+                ),
+                subtitle: const Text('그룹 탈퇴'),
+                trailing: TextButton(
+                  key: ValueKey(
+                    'removeLostGroupQualificationButton-${member.playerId}',
+                  ),
+                  onPressed: submitting ? null : () => onRemove(member),
+                  child: const Text('정리'),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChangeCharacterCandidateSheet extends StatelessWidget {
+  const _ChangeCharacterCandidateSheet({required this.entries});
+
+  final List<
+    ({RecruitmentLeaderCandidate candidate, RecruitmentLeaderRoleOption option})
+  >
+  entries;
 
   @override
   Widget build(BuildContext context) {
@@ -2290,7 +2515,9 @@ class _ApplyCandidateSheet extends StatelessWidget {
         children: [
           ListTile(title: Text(isDirectJoin ? '참가할 캐릭터' : '신청할 캐릭터')),
           for (final candidate in candidates)
-            for (final option in candidate.roles.where((role) => role.canSelect))
+            for (final option in candidate.roles.where(
+              (role) => role.canSelect,
+            ))
               ListTile(
                 key: ValueKey(
                   'apply-candidate-${candidate.localCharacterId}-${option.role.name}',
@@ -2426,8 +2653,7 @@ String _applicationFailureMessage(PartyApplicationFailure failure) =>
       PartyApplicationFailure.alreadyMember => '이미 이 방의 멤버입니다.',
       PartyApplicationFailure.applicationAlreadyExists => '이미 이 방에 신청했습니다.',
       PartyApplicationFailure.applicationNotPending => '철회할 수 있는 신청이 아닙니다.',
-      PartyApplicationFailure.revisionConflict =>
-        '신청 상태가 바뀌었습니다. 다시 확인해 주세요.',
+      PartyApplicationFailure.revisionConflict => '신청 상태가 바뀌었습니다. 다시 확인해 주세요.',
       PartyApplicationFailure.permissionDenied =>
         '신청 권한을 확인하지 못했습니다. 앱을 최신으로 켠 뒤 다시 시도해 주세요.',
       PartyApplicationFailure.temporarilyUnavailable => '네트워크 연결이 불안정합니다.',
@@ -2444,8 +2670,7 @@ String _joinFailureMessage(PartyJoinFailure failure) => switch (failure) {
   PartyJoinFailure.ownershipLost => '캐릭터 소유권을 확인하지 못했습니다.',
   PartyJoinFailure.invalidCharacter =>
     '참가할 수 없는 캐릭터입니다. 내 계정에서 정보를 새로고침한 뒤 다시 시도해 주세요.',
-  PartyJoinFailure.weeklyRaidCompleted =>
-    '이 캐릭터는 이번 주 동일 레이드를 이미 완료했습니다.',
+  PartyJoinFailure.weeklyRaidCompleted => '이 캐릭터는 이번 주 동일 레이드를 이미 완료했습니다.',
   PartyJoinFailure.recruitmentClosed => '모집이 마감되어 참가할 수 없습니다.',
   PartyJoinFailure.approvalModeMismatch => '이 방은 가입 방식이 다릅니다.',
   PartyJoinFailure.capacityFull ||
@@ -2478,10 +2703,8 @@ String _membershipFailureMessage(PartyMembershipFailure failure) =>
       PartyMembershipFailure.participationConflict =>
         '다른 확정 참가와 충돌합니다. 캐릭터를 다시 선택해 주세요.',
       PartyMembershipFailure.roleMismatch ||
-      PartyMembershipFailure.invalidComposition =>
-        '현재 파티 구성과 맞지 않는 캐릭터입니다.',
-      PartyMembershipFailure.revisionConflict =>
-        '모집 상태가 바뀌었습니다. 다시 확인해 주세요.',
+      PartyMembershipFailure.invalidComposition => '현재 파티 구성과 맞지 않는 캐릭터입니다.',
+      PartyMembershipFailure.revisionConflict => '모집 상태가 바뀌었습니다. 다시 확인해 주세요.',
       PartyMembershipFailure.unsupportedOnSpark => '현재 환경에서 지원하지 않는 동작입니다.',
       PartyMembershipFailure.permissionDenied => '권한을 확인하지 못했습니다.',
       PartyMembershipFailure.temporarilyUnavailable => '네트워크 연결이 불안정합니다.',

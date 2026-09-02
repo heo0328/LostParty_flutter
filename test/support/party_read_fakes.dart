@@ -54,7 +54,7 @@ class FakePartyReadRepository implements PartyReadRepository {
        _recruitment = recruitment,
        _recruitmentForId = recruitmentForId,
        _myApplication = myApplication,
-       _members = members ?? Stream.value(emptyMembers),
+       _members = members,
        _membersForId = membersForId,
        _recruitmentApplications =
            recruitmentApplications ?? Stream.value(emptyApplications),
@@ -72,7 +72,7 @@ class FakePartyReadRepository implements PartyReadRepository {
   _recruitmentForId;
   final Stream<PartyReadDetailSnapshot<PartyApplicationSummary?>>?
   _myApplication;
-  final Stream<PartyReadSnapshot<PartyMemberDisplay>> _members;
+  final Stream<PartyReadSnapshot<PartyMemberDisplay>>? _members;
   final Stream<PartyReadSnapshot<PartyMemberDisplay>> Function(
     String recruitmentId,
   )?
@@ -95,6 +95,7 @@ class FakePartyReadRepository implements PartyReadRepository {
   String? requestedRecruitmentId;
   final requestedRecruitmentIds = <String>[];
   String? requestedMembersRecruitmentId;
+  final requestedMembersRecruitmentIds = <String>[];
   String? requestedRecruitmentApplicationsId;
   String? requestedCycleRecruitmentId;
   String? requestedCycleKey;
@@ -176,15 +177,17 @@ class FakePartyReadRepository implements PartyReadRepository {
     String recruitmentId,
   ) {
     requestedMembersRecruitmentId = recruitmentId;
+    requestedMembersRecruitmentIds.add(recruitmentId);
     final byId = _membersForId;
     if (byId != null) return byId(recruitmentId);
-    return _members;
+    final members = _members;
+    if (members != null) return members;
+    return Stream.value(emptyMembers);
   }
 
   @override
-  Stream<PartyReadSnapshot<PartyApplicationSummary>> watchRecruitmentApplications(
-    String recruitmentId,
-  ) {
+  Stream<PartyReadSnapshot<PartyApplicationSummary>>
+  watchRecruitmentApplications(String recruitmentId) {
     requestedRecruitmentApplicationsId = recruitmentId;
     return _recruitmentApplications;
   }

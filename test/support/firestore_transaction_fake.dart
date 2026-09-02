@@ -7,9 +7,10 @@ import 'package:flutter_test/flutter_test.dart';
 class TransactionFirestoreFake extends Fake implements FirebaseFirestore {
   final documents = <String, Map<String, dynamic>>{};
   final writes = <String>[];
+  Object? commitError;
   @override
   CollectionReference<Map<String, dynamic>> collection(String path) =>
-      _Collection(path);
+      _Collection(path, this);
 
   @override
   Future<T> runTransaction<T>(
@@ -19,8 +20,20 @@ class TransactionFirestoreFake extends Fake implements FirebaseFirestore {
   }) async {
     final transaction = _Transaction(this);
     final result = await transactionHandler(transaction);
+    if (commitError != null) {
+      throw commitError!;
+    }
+    for (final path in transaction.deleted) {
+      documents.remove(path);
+      writes.add(path);
+    }
     for (final entry in transaction.pending.entries) {
-      documents[entry.key] = {...documents[entry.key]!, ...entry.value};
+      final existing = documents[entry.key];
+      if (existing == null || transaction.replaced.contains(entry.key)) {
+        documents[entry.key] = Map<String, dynamic>.from(entry.value);
+      } else {
+        documents[entry.key] = {...existing, ...entry.value};
+      }
       writes.add(entry.key);
     }
     return result;
@@ -41,25 +54,52 @@ class _User extends Fake implements User {
 // ignore: subtype_of_sealed_class
 class _Collection extends Fake
     implements CollectionReference<Map<String, dynamic>> {
-  _Collection(this.path);
+  _Collection(this.path, this.firestore);
   @override
   final String path;
   @override
+  final TransactionFirestoreFake firestore;
+  @override
   DocumentReference<Map<String, dynamic>> doc([String? path]) =>
-      _Document('${this.path}/$path');
+      _Document('${this.path}/$path', firestore);
+
+  @override
+  Future<QuerySnapshot<Map<String, dynamic>>> get([GetOptions? options]) async {
+    final prefix = '$path/';
+    final docs = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+    for (final entry in firestore.documents.entries) {
+      if (!entry.key.startsWith(prefix)) continue;
+      final rest = entry.key.substring(prefix.length);
+      if (rest.isEmpty || rest.contains('/')) continue;
+      docs.add(_QueryDoc(rest, Map<String, dynamic>.from(entry.value)));
+    }
+    return _QuerySnapshot(docs);
+  }
 }
 
 // ignore: subtype_of_sealed_class
 class _Document extends Fake
     implements DocumentReference<Map<String, dynamic>> {
-  _Document(this.path);
+  _Document(this.path, this.firestore);
   @override
   final String path;
+  @override
+  final TransactionFirestoreFake firestore;
   @override
   String get id => path.split('/').last;
   @override
   CollectionReference<Map<String, dynamic>> collection(String collectionPath) =>
-      _Collection('$path/$collectionPath');
+      _Collection('$path/$collectionPath', firestore);
+
+  @override
+  Future<DocumentSnapshot<Map<String, dynamic>>> get([
+    GetOptions? options,
+  ]) async {
+    final data = firestore.documents[path];
+    return _Snapshot<Map<String, dynamic>>(
+      data == null ? null : Map<String, dynamic>.from(data),
+    );
+  }
 }
 
 // ignore: subtype_of_sealed_class
@@ -72,15 +112,40 @@ class _Snapshot<T extends Object?> extends Fake implements DocumentSnapshot<T> {
   T? data() => value;
 }
 
+// ignore: subtype_of_sealed_class
+class _QueryDoc extends Fake
+    implements QueryDocumentSnapshot<Map<String, dynamic>> {
+  _QueryDoc(this.id, this.value);
+  @override
+  final String id;
+  final Map<String, dynamic> value;
+  @override
+  bool get exists => true;
+  @override
+  Map<String, dynamic> data() => value;
+}
+
+// ignore: subtype_of_sealed_class
+class _QuerySnapshot extends Fake
+    implements QuerySnapshot<Map<String, dynamic>> {
+  _QuerySnapshot(this.docs);
+  @override
+  final List<QueryDocumentSnapshot<Map<String, dynamic>>> docs;
+}
+
 class _Transaction extends Fake implements Transaction {
   _Transaction(this.firestore);
   final TransactionFirestoreFake firestore;
   final pending = <String, Map<String, dynamic>>{};
+  final replaced = <String>{};
+  final deleted = <String>{};
   @override
   Future<DocumentSnapshot<T>> get<T extends Object?>(
     DocumentReference<T> documentReference,
   ) async {
-    if (pending.isNotEmpty) throw StateError('Read after write.');
+    if (pending.isNotEmpty || deleted.isNotEmpty) {
+      throw StateError('Read after write.');
+    }
     final data = firestore.documents[documentReference.path];
     return _Snapshot<T>(
       data == null ? null : Map<String, dynamic>.from(data) as T,
@@ -96,6 +161,23 @@ class _Transaction extends Fake implements Transaction {
       throw StateError('Missing document.');
     }
     pending[documentReference.path] = Map<String, dynamic>.from(data);
+    return this;
+  }
+
+  @override
+  Transaction set<T>(
+    DocumentReference<T> documentReference,
+    T data, [
+    SetOptions? options,
+  ]) {
+    pending[documentReference.path] = Map<String, dynamic>.from(data as Map);
+    replaced.add(documentReference.path);
+    return this;
+  }
+
+  @override
+  Transaction delete(DocumentReference documentReference) {
+    deleted.add(documentReference.path);
     return this;
   }
 }

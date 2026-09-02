@@ -66,6 +66,7 @@ class ActiveRaidSummary {
     this.raidStartAt,
     this.visibility = 'public',
     this.groupId,
+    this.memberPlayerIds = const {},
   });
 
   final String id;
@@ -80,16 +81,23 @@ class ActiveRaidSummary {
   final int revision;
   final DateTime updatedAt;
   final bool isOwnedByCurrentPlayer;
+
   /// Firestore `status`. 1회성 완료 후 해산 전은 `completed`로 진행 중에 남긴다.
   final String status;
+
   /// Firestore `currentCycleStatus`. 반복방의 이번 회차 완료 여부를 표시한다.
   final String currentCycleStatus;
   final bool continueTogether;
   final DateTime? raidStartAt;
+
   /// `public` 또는 `group`. 일반 레이드는 public.
   final String visibility;
+
   /// 그룹 레이드의 연결 그룹. 일반 레이드는 null.
   final String? groupId;
+
+  /// 진행 중 필터 매청용. 카드 UI에는 올리지 않는다.
+  final Set<String> memberPlayerIds;
 
   bool get isGroupLinked => groupId != null && groupId!.isNotEmpty;
   bool get isGroupOnly => isGroupLinked && visibility == 'group';
@@ -118,6 +126,7 @@ class PartyMemberDisplay {
 
   /// 명령 대상용. UI 문구에는 노출하지 않는다.
   final String playerId;
+
   /// 캐릭터 변경 후보 필터용. UI 문구에는 노출하지 않는다.
   final String? characterId;
   final String? characterName;

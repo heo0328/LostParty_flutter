@@ -1,5 +1,7 @@
 import '../../../account/domain/repositories/account_repository.dart';
+import '../../../account/domain/repositories/activity_characters_repository.dart';
 import '../../../account/domain/repositories/character_combat_power_sync_gateway.dart';
+import '../../../account/domain/services/activity_character_source.dart';
 import '../../domain/entities/group_join_command.dart';
 import '../../domain/entities/group_leader_exit_command.dart';
 import '../../domain/entities/group_leave_command.dart';
@@ -61,11 +63,12 @@ String groupJoinFailureMessage(GroupJoinFailure failure) => switch (failure) {
 };
 
 /// 해산 차단 안내. 초대코드는 기간 만료가 아니라 원문을 다시 입력해야 폐기된다.
-String groupDisbandFailureMessage(GroupJoinFailure failure) => switch (failure) {
-  GroupJoinFailure.joinCodeActive =>
-    '활성 초대코드가 있습니다. 기간 만료가 아닙니다. 초대코드 화면에서 복사해 둔 코드를 입력해 폐기한 뒤 다시 해산하세요.',
-  _ => groupJoinFailureMessage(failure),
-};
+String groupDisbandFailureMessage(GroupJoinFailure failure) =>
+    switch (failure) {
+      GroupJoinFailure.joinCodeActive =>
+        '활성 초대코드가 있습니다. 기간 만료가 아닙니다. 초대코드 화면에서 복사해 둔 코드를 입력해 폐기한 뒤 다시 해산하세요.',
+      _ => groupJoinFailureMessage(failure),
+    };
 
 /// 탈퇴 명령 전용 안내. 가입 실패 문구와 구분한다.
 String groupLeaveFailureMessage(GroupJoinFailure failure) => switch (failure) {
@@ -145,6 +148,8 @@ class GroupMembershipActionViewModel {
     required this.commandRepository,
     required this.characterSearchRepository,
     this.combatPowerSyncGateway,
+    this.activityCharactersRepository,
+    this.playerId,
   });
 
   final AccountRepository accountRepository;
@@ -152,6 +157,8 @@ class GroupMembershipActionViewModel {
   final GroupJoinCommandRepository commandRepository;
   final GroupCharacterSearchRepository characterSearchRepository;
   final CharacterCombatPowerSyncGateway? combatPowerSyncGateway;
+  final ActivityCharactersRepository? activityCharactersRepository;
+  final String? playerId;
 
   Future<GroupRelation?> loadMyRelation({
     required String playerId,
@@ -171,6 +178,8 @@ class GroupMembershipActionViewModel {
     try {
       final localDisplays = await GroupLocalMemberDisplayLookup(
         accountRepository: accountRepository,
+        activityCharactersRepository: activityCharactersRepository,
+        playerId: playerId,
       ).loadByServerCharacterId();
       // 각 캐릭터 자신의 값만 공유한다. 대표 전투력을 다른 캐릭터에 복사하지 않는다.
       try {
@@ -216,6 +225,7 @@ class GroupMembershipActionViewModel {
     if (member == null) return;
 
     final localDisplay = localDisplays[member.displayCharacterIdSnapshot];
+    // 활동에서 빠진 Character는 보강 후보가 아니다. 기존 Snapshot은 유지한다.
     if (localDisplay == null) return;
     if (localDisplay.matchesStored(
       storedClassName: member.displayClassNameSnapshot,
@@ -235,10 +245,32 @@ class GroupMembershipActionViewModel {
 
   Future<List<GroupRequestCharacter>> loadPlayerCharacters(
     String ownerPlayerId,
-  ) => characterSearchRepository.loadActiveCharactersForPlayer(ownerPlayerId);
+  ) async {
+    final characters = await characterSearchRepository
+        .loadActiveCharactersForPlayer(ownerPlayerId);
+    // 다른 그룹원의 characterActivity는 읽을 수 없다. 본인 목록만 활동 집합으로 좁힌다.
+    if (playerId == null || ownerPlayerId != playerId) {
+      return characters;
+    }
+    final activityCharacterIds = await loadActivityCharacterIds(
+      repository: activityCharactersRepository,
+      playerId: playerId,
+    );
+    if (activityCharacterIds == null) {
+      return characters;
+    }
+    return [
+      for (final character in characters)
+        if (activityCharacterIds.contains(character.characterId)) character,
+    ];
+  }
 
   Future<List<GroupCharacterOption>> loadAuthenticatedCharacters() =>
-      GroupCharacterOptionLoader(accountRepository: accountRepository).load();
+      GroupCharacterOptionLoader(
+        accountRepository: accountRepository,
+        activityCharactersRepository: activityCharactersRepository,
+        playerId: playerId,
+      ).load();
 
   Future<GroupJoinCommandResult> apply({
     required String groupId,

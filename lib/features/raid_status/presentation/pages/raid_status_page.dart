@@ -7,14 +7,20 @@ import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../../shared/formatters/korea_time_formatter.dart';
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 import '../../../account/data/local/account_database.dart';
+import '../../../group/domain/repositories/group_character_search_repository.dart';
+import '../../../group/domain/repositories/group_read_repository.dart';
 import '../../../recruitment_list/domain/entities/party_read_models.dart';
 import '../../../recruitment_list/domain/entities/party_recruitment.dart';
 import '../../../recruitment_list/domain/entities/recruitment_aggregate.dart';
 import '../../../recruitment_list/domain/entities/recruitment_application.dart';
 import '../../../recruitment_list/domain/repositories/party_read_repository.dart';
+import '../../data/repositories/drift_raid_status_filter_store.dart';
+import '../../domain/repositories/raid_status_filter_store.dart';
 import '../../domain/services/party_event_sync_service.dart';
+import '../viewmodels/active_raid_filter_view_model.dart';
 import '../viewmodels/party_read_stream_view_model.dart';
 import '../viewmodels/raid_history_view_model.dart';
+import '../widgets/raid_status_filter_sheet.dart';
 
 class RaidStatusPage extends StatefulWidget {
   const RaidStatusPage({
@@ -24,6 +30,9 @@ class RaidStatusPage extends StatefulWidget {
     required this.playerId,
     required this.cycleKey,
     this.raidCatalogRepository,
+    this.filterStore,
+    this.groupReadRepository,
+    this.characterSearchRepository,
     super.key,
   });
 
@@ -33,6 +42,9 @@ class RaidStatusPage extends StatefulWidget {
   final String playerId;
   final String cycleKey;
   final RaidCatalogRepository? raidCatalogRepository;
+  final RaidStatusFilterStore? filterStore;
+  final GroupReadRepository? groupReadRepository;
+  final GroupCharacterSearchRepository? characterSearchRepository;
 
   @override
   State<RaidStatusPage> createState() => _RaidStatusPageState();
@@ -40,7 +52,7 @@ class RaidStatusPage extends StatefulWidget {
 
 class _RaidStatusPageState extends State<RaidStatusPage>
     with SingleTickerProviderStateMixin {
-  late final PartyReadStreamViewModel<ActiveRaidSummary> _activeRaids;
+  late final ActiveRaidFilterViewModel _activeRaids;
   late final PartyReadStreamViewModel<PartyApplicationSummary> _applications;
   late final RaidHistoryViewModel _history;
   late final TabController _tabController;
@@ -49,10 +61,19 @@ class _RaidStatusPageState extends State<RaidStatusPage>
   @override
   void initState() {
     super.initState();
-    _activeRaids = PartyReadStreamViewModel<ActiveRaidSummary>(
+    _activeRaids = ActiveRaidFilterViewModel(
       streamFactory: () => widget.partyReadRepository.watchActiveRaids(
         playerId: widget.playerId,
       ),
+      playerId: widget.playerId,
+      filterStore:
+          widget.filterStore ??
+          DriftRaidStatusFilterStore(widget.accountDatabase),
+      catalogRepository: widget.raidCatalogRepository,
+      membersStreamFactory: (recruitmentId) =>
+          widget.partyReadRepository.watchRecruitmentMembers(recruitmentId),
+      groupReadRepository: widget.groupReadRepository,
+      characterSearchRepository: widget.characterSearchRepository,
     )..start();
     _applications = PartyReadStreamViewModel<PartyApplicationSummary>(
       streamFactory: () => widget.partyReadRepository.watchApplications(
@@ -134,38 +155,126 @@ class _RaidStatusPageState extends State<RaidStatusPage>
       body: TabBarView(
         controller: _tabController,
         children: [
-            _PartyReadTab<ActiveRaidSummary>(
-              key: const ValueKey('activeRaidsPage'),
+          _ActiveRaidsTab(
+            key: const ValueKey('activeRaidsPage'),
+            viewModel: _activeRaids,
+            onOpenFilter: () => showRaidStatusFilterSheet(
+              context: context,
               viewModel: _activeRaids,
-              icon: Icons.event_available_outlined,
-              emptyTitle: '진행 중인 레이드가 없습니다.',
-              emptyDescription: '생성하거나 가입이 확정된 레이드가 여기에 표시됩니다.',
-              rowsBuilder: (items) => [
-                for (final item in items)
-                  _ActiveRaidCard(
-                    summary: item,
-                    onOpen: () => context.push('/raid-status/${item.id}'),
-                  ),
-              ],
             ),
-            _PartyReadTab<PartyApplicationSummary>(
-              key: const ValueKey('pendingRaidsPage'),
-              viewModel: _applications,
-              icon: Icons.hourglass_empty_outlined,
-              emptyTitle: '신청 중인 레이드가 없습니다.',
-              emptyDescription: '승인 대기 신청과 처리 결과가 여기에 표시됩니다.',
-              rowsBuilder: (items) => _applicationRows(
-                items,
-                onOpen: (recruitmentId) =>
-                    context.push('/raid-status/$recruitmentId'),
-              ),
+            onOpenRaid: (id) => context.push('/raid-status/$id'),
+          ),
+          _PartyReadTab<PartyApplicationSummary>(
+            key: const ValueKey('pendingRaidsPage'),
+            viewModel: _applications,
+            icon: Icons.hourglass_empty_outlined,
+            emptyTitle: '신청 중인 레이드가 없습니다.',
+            emptyDescription: '승인 대기 신청과 처리 결과가 여기에 표시됩니다.',
+            rowsBuilder: (items) => _applicationRows(
+              items,
+              onOpen: (recruitmentId) =>
+                  context.push('/raid-status/$recruitmentId'),
             ),
-            _RaidHistoryTab(
-              key: const ValueKey('raidHistoryPage'),
-              viewModel: _history,
-            ),
+          ),
+          _RaidHistoryTab(
+            key: const ValueKey('raidHistoryPage'),
+            viewModel: _history,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActiveRaidsTab extends StatelessWidget {
+  const _ActiveRaidsTab({
+    required this.viewModel,
+    required this.onOpenFilter,
+    required this.onOpenRaid,
+    super.key,
+  });
+
+  final ActiveRaidFilterViewModel viewModel;
+  final VoidCallback onOpenFilter;
+  final ValueChanged<String> onOpenRaid;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: viewModel,
+      builder: (context, _) {
+        final state = viewModel.state;
+        return Column(
+          children: [
+            RaidStatusFilterBar(label: state.barLabel, onOpen: onOpenFilter),
+            Expanded(child: _buildBody(state)),
           ],
+        );
+      },
+    );
+  }
+
+  Widget _buildBody(ActiveRaidFilterViewState state) {
+    if (state.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (state.failure != null && state.originalItems.isEmpty) {
+      return _RaidStatusMessageView(
+        icon: Icons.error_outline,
+        title: _failureMessage(state.failure!),
+        description: '연결 상태를 확인한 뒤 다시 시도해 주세요.',
+      );
+    }
+    if (state.isEmptyOriginal) {
+      return Column(
+        children: [
+          if (state.isFromCache) const _OfflineNotice(),
+          const Expanded(
+            child: _RaidStatusMessageView(
+              icon: Icons.event_available_outlined,
+              title: '진행 중인 레이드가 없습니다.',
+              description: '생성하거나 가입이 확정된 레이드가 여기에 표시됩니다.',
+            ),
+          ),
+        ],
+      );
+    }
+    if (state.isEmptyFiltered) {
+      return Column(
+        children: [
+          if (state.isFromCache) const _OfflineNotice(),
+          const Expanded(
+            child: _RaidStatusMessageView(
+              icon: Icons.filter_list_off,
+              title: '조건에 맞는 레이드가 없습니다.',
+              description: '필터를 바꾸면 진행 중인 레이드를 다시 볼 수 있습니다.',
+            ),
+          ),
+        ],
+      );
+    }
+    return Column(
+      children: [
+        if (state.isFromCache) const _OfflineNotice(),
+        if (state.hasFailureWithItems)
+          _InlineNotice(
+            icon: Icons.error_outline,
+            message: _failureMessage(state.failure!),
+          ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.only(bottom: 16),
+            itemCount: state.items.length,
+            itemBuilder: (context, index) {
+              final item = state.items[index];
+              return _ActiveRaidCard(
+                summary: item,
+                onOpen: () => onOpenRaid(item.id),
+              );
+            },
+          ),
         ),
+      ],
     );
   }
 }
@@ -350,25 +459,13 @@ class _ActiveRaidCard extends StatelessWidget {
                     alignment: WrapAlignment.end,
                     children: [
                       if (summary.isGroupOnly)
-                        const _Badge(
-                          label: '그룹',
-                          tone: _BadgeTone.highlight,
-                        ),
+                        const _Badge(label: '그룹', tone: _BadgeTone.highlight),
                       if (summary.isRecurringWaitingForNextWeek)
-                        const _Badge(
-                          label: '다음주 대기',
-                          tone: _BadgeTone.waiting,
-                        )
+                        const _Badge(label: '다음주 대기', tone: _BadgeTone.waiting)
                       else if (summary.isRecurringCurrentWeek)
-                        const _Badge(
-                          label: '금주 진행',
-                          tone: _BadgeTone.highlight,
-                        )
+                        const _Badge(label: '금주 진행', tone: _BadgeTone.highlight)
                       else if (summary.isAwaitingDisband)
-                        const _Badge(
-                          label: '해산 대기',
-                          tone: _BadgeTone.waiting,
-                        ),
+                        const _Badge(label: '해산 대기', tone: _BadgeTone.waiting),
                       if (summary.isOwnedByCurrentPlayer)
                         const _Badge(
                           label: '내가 만든 방',

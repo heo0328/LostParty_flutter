@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
+import 'package:lost_party/features/account/domain/entities/save_activity_characters_command.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
+import 'package:lost_party/features/account/domain/repositories/activity_characters_repository.dart';
 import 'package:lost_party/features/group/domain/services/group_local_member_display_lookup.dart';
 
 class _Build extends Fake implements CharacterBuildSnapshot {
@@ -12,11 +14,32 @@ class _Build extends Fake implements CharacterBuildSnapshot {
   final DateTime capturedAt;
 }
 
+class _Activity implements ActivityCharactersRepository {
+  _Activity(this.characterIds);
+  final Set<String> characterIds;
+
+  @override
+  Future<ActivityCharacters> load({required String playerId}) async {
+    return ActivityCharacters(playerId: playerId, characterIds: characterIds);
+  }
+
+  @override
+  Future<ActivityCharacters> save(SaveActivityCharactersCommand command) {
+    throw UnimplementedError();
+  }
+}
+
 class _Accounts extends Fake implements AccountRepository {
-  _Accounts({this.power, this.status = 'active', this.builds = const []});
+  _Accounts({
+    this.power,
+    this.status = 'active',
+    this.builds = const [],
+    this.extraInactive = false,
+  });
   final double? power;
   final String status;
   final List<CharacterBuildSnapshot> builds;
+  final bool extraInactive;
   int buildReads = 0;
   @override
   Future<List<LocalGameAccount>> loadAccounts() async => [
@@ -41,6 +64,19 @@ class _Accounts extends Fake implements AccountRepository {
           isVisible: true,
           displayOrder: 0,
         ),
+        if (extraInactive)
+          const LocalAccountCharacter(
+            id: 2,
+            serverCharacterId: 'character-2',
+            serverName: '서버',
+            characterName: '비활동',
+            characterLevel: 70,
+            characterClassName: '워로드',
+            itemLevel: 1700,
+            combatPower: 2200,
+            isVisible: true,
+            displayOrder: 1,
+          ),
       ],
     ),
   ];
@@ -81,5 +117,14 @@ void main() {
       accountRepository: repository,
     ).loadByServerCharacterId();
     expect(values, isEmpty);
+  });
+  test('활동 Character만 전투력 보강 후보에 담는다', () async {
+    final values = await GroupLocalMemberDisplayLookup(
+      accountRepository: _Accounts(power: 3100, extraInactive: true),
+      activityCharactersRepository: _Activity({'character-1'}),
+      playerId: 'player-1',
+    ).loadByServerCharacterId();
+    expect(values.keys, ['character-1']);
+    expect(values['character-1']?.combatPower, 3100);
   });
 }

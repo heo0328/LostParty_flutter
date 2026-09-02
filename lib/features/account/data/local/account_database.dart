@@ -152,6 +152,16 @@ class PartyNotificationReceipts extends Table {
   Set<Column<Object>> get primaryKey => {eventId};
 }
 
+/// 레이드 현황 진행 중 필터 선택. 앱 재실행 후에도 Player별로 유지한다.
+class RaidStatusFilterSettings extends Table {
+  TextColumn get playerId => text()();
+  TextColumn get selectionJson => text()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {playerId};
+}
+
 /// 캐릭터 카드 주간 레이드 표기 설정. 없으면 기본 3개 추천.
 class CharacterWeeklyRaidDisplays extends Table {
   IntColumn get characterId => integer().references(
@@ -177,6 +187,7 @@ class CharacterWeeklyRaidDisplays extends Table {
     RaidHistoryEntries,
     PartyNotificationReceipts,
     CharacterWeeklyRaidDisplays,
+    RaidStatusFilterSettings,
   ],
 )
 class AccountDatabase extends _$AccountDatabase {
@@ -184,7 +195,7 @@ class AccountDatabase extends _$AccountDatabase {
     : super(executor ?? driftDatabase(name: 'lost_party'));
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -243,6 +254,9 @@ class AccountDatabase extends _$AccountDatabase {
           gameAccounts,
           gameAccounts.representativeReconciledAt,
         );
+      }
+      if (from < 11) {
+        await migrator.createTable(raidStatusFilterSettings);
       }
     },
   );
@@ -313,26 +327,21 @@ class AccountDatabase extends _$AccountDatabase {
   }
 
   Future<void> setRaidHistoryVisibility(String eventId, bool visible) =>
-      (update(raidHistoryEntries)
-            ..where((table) => table.eventId.equals(eventId)))
-          .write(
-            RaidHistoryEntriesCompanion(
-              visibility: Value(visible ? 'visible' : 'hidden'),
-            ),
-          );
+      (update(
+        raidHistoryEntries,
+      )..where((table) => table.eventId.equals(eventId))).write(
+        RaidHistoryEntriesCompanion(
+          visibility: Value(visible ? 'visible' : 'hidden'),
+        ),
+      );
 
-  Future<void> setRaidHistoryLocalOverride(
-    String eventId,
-    String? status,
-  ) {
+  Future<void> setRaidHistoryLocalOverride(String eventId, String? status) {
     if (status != null && status != 'completed' && status != 'incomplete') {
       throw ArgumentError.value(status, 'status');
     }
     return (update(raidHistoryEntries)
           ..where((table) => table.eventId.equals(eventId)))
-        .write(
-          RaidHistoryEntriesCompanion(localStatusOverride: Value(status)),
-        );
+        .write(RaidHistoryEntriesCompanion(localStatusOverride: Value(status)));
   }
 
   /// 알림 receipt를 멱등 반영한다. 기존 [readAt]은 유지한다.
@@ -350,10 +359,9 @@ class AccountDatabase extends _$AccountDatabase {
     DateTime? syncedAt,
   }) async {
     final timestamp = syncedAt ?? DateTime.now().toUtc();
-    final existing =
-        await (select(partyNotificationReceipts)
-              ..where((table) => table.eventId.equals(eventId)))
-            .getSingleOrNull();
+    final existing = await (select(
+      partyNotificationReceipts,
+    )..where((table) => table.eventId.equals(eventId))).getSingleOrNull();
     if (existing == null) {
       await into(partyNotificationReceipts).insert(
         PartyNotificationReceiptsCompanion.insert(
@@ -373,21 +381,21 @@ class AccountDatabase extends _$AccountDatabase {
       );
       return;
     }
-    await (update(partyNotificationReceipts)
-          ..where((table) => table.eventId.equals(eventId)))
-        .write(
-          PartyNotificationReceiptsCompanion(
-            type: Value(type),
-            recruitmentId: Value(recruitmentId),
-            cycleKey: Value(cycleKey),
-            raidId: Value(raidId),
-            difficultyId: Value(difficultyId),
-            characterNameSnapshot: Value(characterNameSnapshot),
-            occurredAt: Value(occurredAt),
-            expiresAt: Value(expiresAt),
-            lastSyncedAt: Value(timestamp),
-          ),
-        );
+    await (update(
+      partyNotificationReceipts,
+    )..where((table) => table.eventId.equals(eventId))).write(
+      PartyNotificationReceiptsCompanion(
+        type: Value(type),
+        recruitmentId: Value(recruitmentId),
+        cycleKey: Value(cycleKey),
+        raidId: Value(raidId),
+        difficultyId: Value(difficultyId),
+        characterNameSnapshot: Value(characterNameSnapshot),
+        occurredAt: Value(occurredAt),
+        expiresAt: Value(expiresAt),
+        lastSyncedAt: Value(timestamp),
+      ),
+    );
   }
 
   Future<List<PartyNotificationReceipt>> loadRecentPartyNotifications(
@@ -423,17 +431,14 @@ class AccountDatabase extends _$AccountDatabase {
     return rows.length;
   }
 
-  Future<void> markPartyNotificationRead(
-    String eventId, {
-    DateTime? readAt,
-  }) {
-    return (update(partyNotificationReceipts)
-          ..where((table) => table.eventId.equals(eventId)))
-        .write(
-          PartyNotificationReceiptsCompanion(
-            readAt: Value(readAt ?? DateTime.now().toUtc()),
-          ),
-        );
+  Future<void> markPartyNotificationRead(String eventId, {DateTime? readAt}) {
+    return (update(
+      partyNotificationReceipts,
+    )..where((table) => table.eventId.equals(eventId))).write(
+      PartyNotificationReceiptsCompanion(
+        readAt: Value(readAt ?? DateTime.now().toUtc()),
+      ),
+    );
   }
 
   Future<void> _createServerIdIndexes() async {
@@ -1222,38 +1227,40 @@ class AccountDatabase extends _$AccountDatabase {
     required DateTime fetchedAt,
   }) {
     return transaction(() async {
-      final account =
-          await (select(gameAccounts)
-                ..where((table) => table.id.equals(accountId)))
-              .getSingleOrNull();
+      final account = await (select(
+        gameAccounts,
+      )..where((table) => table.id.equals(accountId))).getSingleOrNull();
       if (account == null) {
         throw ArgumentError.value(accountId, 'accountId', 'Account not found.');
       }
 
-      final existingCharacters =
-          await (select(accountCharacters)
-                ..where((table) => table.accountId.equals(accountId)))
-              .get();
+      final existingCharacters = await (select(
+        accountCharacters,
+      )..where((table) => table.accountId.equals(accountId))).get();
       final existingByKey = {
         for (final character in existingCharacters)
           _characterKey(character.serverName, character.characterName):
               character,
       };
 
-      await (update(gameAccounts)..where((table) => table.id.equals(accountId)))
-          .write(
-            GameAccountsCompanion(
-              lookupCharacterName: Value(lookupCharacterName),
-              updatedAt: Value(fetchedAt),
-            ),
-          );
+      await (update(
+        gameAccounts,
+      )..where((table) => table.id.equals(accountId))).write(
+        GameAccountsCompanion(
+          lookupCharacterName: Value(lookupCharacterName),
+          updatedAt: Value(fetchedAt),
+        ),
+      );
 
       var updatedLocalCount = 0;
       final changedBound = <AccountCharacter>[];
       final incomingKeys = <String>{};
 
       for (final character in characters) {
-        final key = _characterKey(character.serverName, character.characterName);
+        final key = _characterKey(
+          character.serverName,
+          character.characterName,
+        );
         incomingKeys.add(key);
         final existing = existingByKey[key];
         if (existing != null &&
@@ -1382,6 +1389,27 @@ class AccountDatabase extends _$AccountDatabase {
     await (delete(
       characterWeeklyRaidDisplays,
     )..where((table) => table.characterId.equals(characterId))).go();
+  }
+
+  Future<String?> loadRaidStatusFilterSelection(String playerId) async {
+    final row = await (select(
+      raidStatusFilterSettings,
+    )..where((table) => table.playerId.equals(playerId))).getSingleOrNull();
+    return row?.selectionJson;
+  }
+
+  Future<void> saveRaidStatusFilterSelection({
+    required String playerId,
+    required String selectionJson,
+    DateTime? now,
+  }) async {
+    await into(raidStatusFilterSettings).insertOnConflictUpdate(
+      RaidStatusFilterSettingsCompanion.insert(
+        playerId: playerId,
+        selectionJson: selectionJson,
+        updatedAt: now ?? DateTime.now().toUtc(),
+      ),
+    );
   }
 
   String _characterKey(String serverName, String characterName) {

@@ -3,7 +3,7 @@
 ## 2026-08-31 그룹 표시 전투력 연결
 
 - Character 문서의 선택 필드 `combatPower: number`는 소유자가 로컬에 저장한 표시 전투력이다. 없으면 미확인으로 표시하며 0을 임의로 채우지 않는다. API 검증값·소유권·레이드 참가 자격의 근거로 사용하지 않는다.
-- 그룹 상세 진입/새로고침에서 소유 계정의 active·서버 ID 연결·원정대 누락 아님인 캐릭터를 대상으로 동기화한다. 기존 프로필 값이 없으면 가장 최근 유효한 저장 역할 세팅의 전투력을 사용한다. 추가 Lost Ark API 조회는 하지 않는다.
+- 그룹 상세 진입/새로고침에서 소유 계정의 활동 Character만 전투력 서버 보강 대상으로 쓴다. active 소유권·서버 ID 연결·원정대 누락 아님도 함께 적용한다. 기존 프로필 값이 없으면 가장 최근 유효한 저장 역할 세팅의 전투력을 사용한다. 추가 Lost Ark API 조회는 하지 않는다. 활동에서 빠진 Character의 기존 membership Snapshot은 지우지 않는다.
 - CharacterCombatPowerSyncGateway는 캐릭터별 Transaction에서 active Auth binding·Player·Character 소유자·playerGameAccounts 소유 관계를 읽어 확인하고 `combatPower`와 `updatedAt`만 갱신한다. 값이 같으면 쓰지 않고 값 없는 캐릭터는 보내지 않는다. Character 생성, 식별자·소유권 변경, 일괄 데이터 이행은 하지 않는다.
 - 기존 원정대 최소 정보 동기화와 분리하여 요약 정보가 변하지 않았어도 전투력을 보강한다. `lastSummaryFetchedAt`은 바꾸지 않는다. 전투력은 현재 기기에 저장된 표시값이며 서버가 최신 API 값임을 보증하는 것은 아니다.
 - 소유자의 갱신된 앱이 그룹에 진입해야 해당 캐릭터 정보가 공유된다. 타인의 기기에서 타인 로컬 DB를 읽거나 타인 Character를 대신 갱신하지 않는다. 조회 화면은 재진입/새로고침으로 갱신한다.
@@ -44,6 +44,18 @@
 - `characterLevel: number`
 - `itemLevel`, `combatPower`: nullable number
 - `lastSummaryFetchedAt`, `createdAt`, `updatedAt`: server timestamp
+
+`players/{playerId}/characterActivity/{characterId}`:
+
+- `schemaVersion: 1`
+- `playerId: string`
+- `characterId: string` — 문서 ID와 같아야 한다
+- `gameAccountId: string` — 해당 Character의 active 소유 GameAccount
+- `updatedAt`: server timestamp
+- 문서가 있으면 해당 Character는 활동 상태다. 가변 ID 목록을 한 문서에 저장하지 않는다
+- 활동 설정은 이 하위 컬렉션만 쓰며 Character 인증·소유권 필드는 변경하지 않는다
+- 각 쓰기는 `characters/{characterId}`와 `playerGameAccounts/{playerId}_{gameAccountId}` 소유권을 확인하고, 같은 계정의 대표 Character 활동 문서가 있어야 한다
+- 대표 Character의 활동 문서는 삭제할 수 없다
 
 ## 명령과 검증 경계
 

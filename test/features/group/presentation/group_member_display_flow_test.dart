@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
+import 'package:lost_party/features/account/domain/entities/save_activity_characters_command.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
+import 'package:lost_party/features/account/domain/repositories/activity_characters_repository.dart';
 import 'package:lost_party/features/account/domain/repositories/character_combat_power_sync_gateway.dart';
 import 'package:lost_party/features/group/domain/entities/group_member.dart';
 import 'package:lost_party/features/group/domain/entities/group_member_display.dart';
@@ -171,6 +173,21 @@ class _Search extends Fake implements GroupCharacterSearchRepository {
   ];
 }
 
+class _Activity implements ActivityCharactersRepository {
+  _Activity(this.characterIds);
+  final Set<String> characterIds;
+
+  @override
+  Future<ActivityCharacters> load({required String playerId}) async {
+    return ActivityCharacters(playerId: playerId, characterIds: characterIds);
+  }
+
+  @override
+  Future<ActivityCharacters> save(SaveActivityCharactersCommand command) {
+    throw UnimplementedError();
+  }
+}
+
 void main() {
   late _Reads reads;
   late _Commands commands;
@@ -180,14 +197,20 @@ void main() {
     commands = _Commands(reads);
     powers = _Powers();
   });
-  GroupMembershipActionViewModel model({double? power = 3100}) =>
-      GroupMembershipActionViewModel(
-        accountRepository: _Accounts(power: power),
-        readRepository: reads,
-        commandRepository: commands,
-        characterSearchRepository: _Search(powers),
-        combatPowerSyncGateway: powers,
-      );
+  GroupMembershipActionViewModel model({
+    double? power = 3100,
+    Set<String>? activityCharacterIds,
+  }) => GroupMembershipActionViewModel(
+    accountRepository: _Accounts(power: power),
+    readRepository: reads,
+    commandRepository: commands,
+    characterSearchRepository: _Search(powers),
+    combatPowerSyncGateway: powers,
+    activityCharactersRepository: activityCharacterIds == null
+        ? null
+        : _Activity(activityCharacterIds),
+    playerId: 'player-1',
+  );
   for (final joinedBy in GroupJoinedBy.values) {
     test('$joinedBy: 전투력 없는 membership을 복구하고 상세 캐릭터별로 동기화한다', () async {
       reads.member = _member(joinedBy: joinedBy);
@@ -268,6 +291,34 @@ void main() {
     expect(find.byKey(const ValueKey('groupDisplaySyncWarning')), findsNothing);
   });
 
+  test('전투력 보강과 본인 Character 목록은 활동 Character만 담는다', () async {
+    final vm = model(activityCharacterIds: {'character-1'});
+    final result = await vm.loadMemberDisplays(
+      groupId: 'group-1',
+      playerId: 'player-1',
+    );
+    expect(result.syncFailed, isFalse);
+    expect(powers.saved.keys, ['character-1']);
+    expect(powers.saved.containsKey('character-2'), isFalse);
+    final mine = await vm.loadPlayerCharacters('player-1');
+    expect(mine.map((character) => character.characterId), ['character-1']);
+    final others = await vm.loadPlayerCharacters('player-2');
+    expect(others.map((character) => character.characterId), [
+      'character-1',
+      'character-2',
+    ]);
+  });
+  test('비활동 Character membership Snapshot은 활동 해제만으로 지우지 않는다', () async {
+    reads.member = _member(power: 2800);
+    final result = await model(
+      power: 3100,
+      activityCharacterIds: {'character-2'},
+    ).loadMemberDisplays(groupId: 'group-1', playerId: 'player-1');
+    expect(result.members.single.combatPower, 2800);
+    expect(commands.calls, 0);
+    expect(powers.saved.containsKey('character-1'), isFalse);
+    expect(powers.saved['character-2'], 2200);
+  });
   testWidgets('그룹장은 바로 탈퇴 버튼 대신 나가기를 본다', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
