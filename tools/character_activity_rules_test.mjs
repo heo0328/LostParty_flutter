@@ -8,7 +8,6 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   doc,
-  getFirestore,
   setDoc,
   deleteDoc,
   writeBatch,
@@ -48,7 +47,7 @@ async function seed(
 ) {
   const now = Timestamp.now();
   await testEnv.withSecurityRulesDisabled(async (context) => {
-    const db = getFirestore(context);
+    const db = context.firestore();
     await setDoc(doc(db, 'authBindings', ownerAuthUid), {
       schemaVersion: 1,
       playerId: ownerPlayerId,
@@ -129,7 +128,7 @@ async function seed(
 
 async function seedActivity(testEnv, characterIds) {
   await testEnv.withSecurityRulesDisabled(async (context) => {
-    const db = getFirestore(context);
+    const db = context.firestore();
     for (const characterId of characterIds) {
       await setDoc(activityRef(db, characterId), {
         schemaVersion: 1,
@@ -150,8 +149,8 @@ const testEnv = await initializeTestEnvironment({
 console.log('rules compile: succeeded');
 
 try {
-  const ownerDb = () => getFirestore(testEnv.authenticatedContext(ownerAuthUid));
-  const otherDb = () => getFirestore(testEnv.authenticatedContext(otherAuthUid));
+  const ownerDb = () => testEnv.authenticatedContext(ownerAuthUid).firestore();
+  const otherDb = () => testEnv.authenticatedContext(otherAuthUid).firestore();
 
   await testEnv.clearFirestore();
   await seed(testEnv);
