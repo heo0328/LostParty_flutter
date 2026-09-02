@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lost_party/features/account/data/local/account_database.dart';
+import 'package:lost_party/features/raid_status/data/repositories/drift_raid_status_filter_store.dart';
+import 'package:lost_party/features/raid_status/domain/repositories/raid_status_filter_store.dart';
 import 'package:lost_party/features/raid_status/presentation/pages/party_read_detail_page.dart';
 import 'package:lost_party/features/raid_status/presentation/pages/raid_status_page.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_read_models.dart';
@@ -12,6 +14,8 @@ import 'package:lost_party/features/recruitment_list/domain/entities/party_recru
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_aggregate.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_application.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_read_repository.dart';
+import 'package:lost_party/shared/raid_catalog/domain/entities/raid_catalog.dart';
+import 'package:lost_party/shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 
 import '../../../support/party_read_fakes.dart';
 
@@ -21,6 +25,8 @@ void main() {
     Stream<PartyReadSnapshot<ActiveRaidSummary>>? activeRaids,
     Stream<PartyReadSnapshot<PartyApplicationSummary>>? applications,
     AccountDatabase? database,
+    RaidCatalogRepository? raidCatalogRepository,
+    RaidStatusFilterStore? filterStore,
   }) async {
     final activeDatabase = database ?? AccountDatabase(NativeDatabase.memory());
     if (database == null) addTearDown(activeDatabase.close);
@@ -37,6 +43,8 @@ void main() {
           eventSyncService: syncService,
           playerId: 'player-1',
           cycleKey: '2026-08-19',
+          raidCatalogRepository: raidCatalogRepository,
+          filterStore: filterStore,
         ),
       ),
     );
@@ -305,28 +313,172 @@ void main() {
     expect(find.text('모집 수정'), findsNothing);
     expect(repository.requestedRecruitmentId, 'recruitment-1');
   });
+
+  testWidgets('진행 중 탭에 레이드 필터 영역을 두고 신청 중에는 두지 않는다', (tester) async {
+    await pumpPage(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('레이드 필터: 모든 레이드'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('pendingRaidsTab')));
+    await tester.pumpAndSettle();
+    expect(find.text('레이드 필터: 모든 레이드'), findsNothing);
+  });
+
+  testWidgets('공개 조건 필터는 로컬 원본만 좁히고 둘 다 해제하면 전체로 돌아간다', (tester) async {
+    await pumpPage(
+      tester,
+      activeRaids: Stream.value(
+        PartyReadSnapshot(
+          items: [
+            _activeRaid(),
+            _activeRaid(
+              id: 'group-raid',
+              title: '그룹 세르카',
+              raidId: 'serca',
+              groupId: 'group-1',
+              visibility: 'group',
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('4막 노말 모집'), findsOneWidget);
+    expect(find.text('그룹 세르카'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('raidStatusFilterBar')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('raidStatusFilterCount')), findsOneWidget);
+    expect(find.text('2개'), findsWidgets);
+
+    await tester.tap(find.byKey(const ValueKey('raidStatusFilterPublicOpen')));
+    await tester.pumpAndSettle();
+    expect(find.text('4막 노말 모집'), findsNothing);
+    expect(find.text('그룹 세르카'), findsOneWidget);
+    expect(find.text('레이드 필터: 그룹 공개'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('raidStatusFilterPublicGroup')));
+    await tester.pumpAndSettle();
+    expect(find.text('4막 노말 모집'), findsOneWidget);
+    expect(find.text('그룹 세르카'), findsOneWidget);
+    expect(find.text('레이드 필터: 모든 레이드'), findsOneWidget);
+  });
+
+  testWidgets('레이드 칩은 차원 AND로 목록을 좁히고 개수를 즉시 갱신한다', (tester) async {
+    await pumpPage(
+      tester,
+      raidCatalogRepository: _FilterCatalogRepository(),
+      activeRaids: Stream.value(
+        PartyReadSnapshot(
+          items: [
+            _activeRaid(),
+            _activeRaid(
+              id: 'serca-raid',
+              title: '세르카 하드',
+              raidId: 'serca',
+              difficultyId: 'hard',
+              groupId: 'group-1',
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('raidStatusFilterBar')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('raidStatusFilterRaidChip-act4')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('4막 노말 모집'), findsOneWidget);
+    expect(find.text('세르카 하드'), findsNothing);
+    expect(find.text('1개'), findsWidgets);
+
+    await tester.tap(
+      find.byKey(const ValueKey('raidStatusFilterDifficultyChip-hard')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('조건에 맞는 레이드가 없습니다.'), findsOneWidget);
+    expect(find.text('0개'), findsWidgets);
+  });
+
+  testWidgets('필터 선택은 앱 재진입 후에도 로컬에 남는다', (tester) async {
+    final database = AccountDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    final store = DriftRaidStatusFilterStore(database);
+    final snapshot = PartyReadSnapshot(
+      items: [
+        _activeRaid(),
+        _activeRaid(
+          id: 'group-raid',
+          title: '그룹 세르카',
+          raidId: 'serca',
+          groupId: 'group-1',
+          visibility: 'group',
+        ),
+      ],
+      isFromCache: false,
+    );
+
+    await pumpPage(
+      tester,
+      activeRaids: Stream.value(snapshot),
+      database: database,
+      filterStore: store,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('raidStatusFilterBar')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('raidStatusFilterPublicOpen')));
+    await tester.pumpAndSettle();
+    expect(find.text('그룹 세르카'), findsOneWidget);
+    expect(find.text('4막 노말 모집'), findsNothing);
+    expect((await store.load('player-1')).includeGroup, isTrue);
+    expect((await store.load('player-1')).includePublic, isFalse);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await pumpPage(
+      tester,
+      activeRaids: Stream.value(snapshot),
+      database: database,
+      filterStore: store,
+    );
+    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('레이드 필터: 그룹 공개'), findsOneWidget);
+    expect(find.text('그룹 세르카'), findsOneWidget);
+    expect(find.text('4막 노말 모집'), findsNothing);
+  });
 }
 
 ActiveRaidSummary _activeRaid({
+  String id = 'recruitment-1',
+  String title = '4막 노말 모집',
+  String raidId = 'act4',
+  String difficultyId = 'normal',
   DateTime? raidStartAt,
   bool continueTogether = false,
   String currentCycleStatus = 'active',
   String visibility = 'public',
   String? groupId,
 }) => ActiveRaidSummary(
-  id: 'recruitment-1',
-  title: '4막 노말 모집',
+  id: id,
+  title: title,
   leaderPlayerId: 'player-1',
   leaderCharacterName: '이슈아이',
   leaderClassName: '기상술사',
   raidStartAt: raidStartAt,
-  metadata: const RecruitmentMetadata(
+  metadata: RecruitmentMetadata(
     catalogVersion: '2026-08-01',
-    raidId: 'act4',
-    difficultyId: 'normal',
-    raidName: '4막',
-    difficultyName: '노말',
-    difficultyAlias: '노말',
+    raidId: raidId,
+    difficultyId: difficultyId,
+    raidName: raidId == 'serca' ? '세르카' : '4막',
+    difficultyName: difficultyId == 'hard' ? '하드' : '노말',
+    difficultyAlias: difficultyId == 'hard' ? '하드' : '노말',
     gateCount: 2,
     minItemLevel: 1680,
     minCombatPower: null,
@@ -388,3 +540,72 @@ PartyApplicationSummary _application({
   createdAt: DateTime.utc(2026, 8, 20),
   updatedAt: DateTime.utc(2026, 8, 21),
 );
+
+class _FilterCatalogRepository implements RaidCatalogRepository {
+  @override
+  Future<RaidCatalog> loadCatalog() async => RaidCatalog(
+    schemaVersion: 1,
+    catalogVersion: 'test',
+    updatedAt: DateTime.utc(2026, 8, 20),
+    raids: const [
+      RaidDefinition(
+        raidId: 'act4',
+        officialName: '4막',
+        displayName: '4막',
+        aliases: [],
+        partySize: 8,
+        partyCount: 2,
+        requiredSupportCount: 2,
+        maxDealerCountPerClass: 2,
+        gateCount: 2,
+        isActive: true,
+        difficulties: [
+          RaidDifficultyDefinition(
+            difficultyId: 'normal',
+            name: '노말',
+            displayAlias: '노말',
+            displayOrder: 1,
+            minItemLevel: 1680,
+            clearGold: 0,
+            boundGold: 0,
+            isActive: true,
+          ),
+          RaidDifficultyDefinition(
+            difficultyId: 'hard',
+            name: '하드',
+            displayAlias: '하드',
+            displayOrder: 2,
+            minItemLevel: 1700,
+            clearGold: 0,
+            boundGold: 0,
+            isActive: true,
+          ),
+        ],
+      ),
+      RaidDefinition(
+        raidId: 'serca',
+        officialName: '세르카',
+        displayName: '세르카',
+        aliases: [],
+        partySize: 4,
+        partyCount: 1,
+        requiredSupportCount: 1,
+        maxDealerCountPerClass: 1,
+        gateCount: 2,
+        isActive: true,
+        difficulties: [
+          RaidDifficultyDefinition(
+            difficultyId: 'hard',
+            name: '하드',
+            displayAlias: '하드',
+            displayOrder: 2,
+            minItemLevel: 1730,
+            clearGold: 0,
+            boundGold: 0,
+            isActive: true,
+          ),
+        ],
+      ),
+    ],
+  );
+}

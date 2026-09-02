@@ -33,24 +33,27 @@ void main() {
     expect(account.displayLimit, 6);
   });
 
-  test('stores representative reconciliation independently of local id', () async {
-    final accountId = await database.saveMainAccountSnapshot(
-      lookupCharacterName: '본캐',
-      characters: [_snapshot('본캐', DateTime.utc(2026, 8, 29))],
-    );
-    await database.markRepresentativeReconciled(
-      accountId: accountId,
-      serverCharacterId: 'server-character-1',
-      now: DateTime.utc(2026, 8, 29, 1),
-    );
+  test(
+    'stores representative reconciliation independently of local id',
+    () async {
+      final accountId = await database.saveMainAccountSnapshot(
+        lookupCharacterName: '본캐',
+        characters: [_snapshot('본캐', DateTime.utc(2026, 8, 29))],
+      );
+      await database.markRepresentativeReconciled(
+        accountId: accountId,
+        serverCharacterId: 'server-character-1',
+        now: DateTime.utc(2026, 8, 29, 1),
+      );
 
-    final account = await (database.select(
-      database.gameAccounts,
-    )..where((table) => table.id.equals(accountId))).getSingle();
+      final account = await (database.select(
+        database.gameAccounts,
+      )..where((table) => table.id.equals(accountId))).getSingle();
 
-    expect(account.serverRepresentativeCharacterId, 'server-character-1');
-    expect(account.representativeReconciledAt, isNotNull);
-  });
+      expect(account.serverRepresentativeCharacterId, 'server-character-1');
+      expect(account.representativeReconciledAt, isNotNull);
+    },
+  );
 
   test('adds a sub account with its own representative character', () async {
     await database.saveMainAccountSnapshot(
@@ -852,17 +855,27 @@ void main() {
   test('party event sync is idempotent and preserves local choices', () async {
     final occurredAt = DateTime.utc(2026, 8, 25);
     await database.syncPartyHistoryEvent(
-      eventId: 'event-1', playerId: 'player', characterId: 'character',
-      recruitmentId: 'party', raidId: 'serca', difficultyId: 'hard',
-      cycleKey: '2026-08-26', serverStatus: 'completed',
+      eventId: 'event-1',
+      playerId: 'player',
+      characterId: 'character',
+      recruitmentId: 'party',
+      raidId: 'serca',
+      difficultyId: 'hard',
+      cycleKey: '2026-08-26',
+      serverStatus: 'completed',
       occurredAt: occurredAt,
     );
     await database.setRaidHistoryVisibility('event-1', false);
     await database.setRaidHistoryLocalOverride('event-1', 'incomplete');
     await database.syncPartyHistoryEvent(
-      eventId: 'event-1', playerId: 'player', characterId: 'character',
-      recruitmentId: 'party', raidId: 'serca', difficultyId: 'hard',
-      cycleKey: '2026-08-26', serverStatus: 'completionCancelled',
+      eventId: 'event-1',
+      playerId: 'player',
+      characterId: 'character',
+      recruitmentId: 'party',
+      raidId: 'serca',
+      difficultyId: 'hard',
+      cycleKey: '2026-08-26',
+      serverStatus: 'completionCancelled',
       occurredAt: occurredAt.add(const Duration(minutes: 1)),
     );
 
@@ -871,6 +884,32 @@ void main() {
     expect(rows.single.serverStatus, 'completionCancelled');
     expect(rows.single.visibility, 'hidden');
     expect(rows.single.localStatusOverride, 'incomplete');
+  });
+
+  test('persists raid status filter selection per player', () async {
+    await database.saveRaidStatusFilterSelection(
+      playerId: 'player-1',
+      selectionJson:
+          '{"schemaVersion":1,"includePublic":false,"includeGroup":true,"raidIds":["act4"],"difficultyIds":[]}',
+      now: DateTime.utc(2026, 9, 2),
+    );
+
+    expect(
+      await database.loadRaidStatusFilterSelection('player-1'),
+      contains('"includeGroup":true'),
+    );
+    expect(await database.loadRaidStatusFilterSelection('player-2'), isNull);
+
+    await database.saveRaidStatusFilterSelection(
+      playerId: 'player-1',
+      selectionJson:
+          '{"schemaVersion":1,"includePublic":true,"includeGroup":true,"raidIds":[],"difficultyIds":[]}',
+      now: DateTime.utc(2026, 9, 2, 1),
+    );
+    expect(
+      await database.loadRaidStatusFilterSelection('player-1'),
+      contains('"includePublic":true'),
+    );
   });
 }
 

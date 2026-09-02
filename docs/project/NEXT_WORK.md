@@ -2,9 +2,9 @@
 
 ## 현재 단계
 
-A 저장·Domain·Rules, B 캐릭터 관리 UI, C1 레이드 후보 적용, C2 그룹 후보·전투력 적용, D1 그룹 전용 자격 박탈을 완료했다. 그룹 전용 레이드는 그룹 탈퇴 후 제한적 정리로 참가 자격을 정리한다.
+A 저장·Domain·Rules, B 캐릭터 관리 UI, C1 레이드 후보 적용, C2 그룹 후보·전투력 적용, D1 그룹 전용 자격 박탈, D2 진행 중 기본 필터·페이징을 완료했다.
 
-현재 실행 단위는 **D2 진행 중 기본 필터·페이징** 이다. 레이드 현황 진행 중 필터의 공개 조건·레이드·난이도와 20개 페이징 안전을 구현한다.
+현재 실행 단위는 **D3 그룹원·Character 필터** 이다. 진행 중 필터에 그룹원과 활동 Character 계층 선택을 추가한다.
 
 전체 계약은 [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md)를 따른다.
 
@@ -16,19 +16,23 @@ A 저장·Domain·Rules (완료)
 → C1 레이드 후보 적용 (완료)
 → C2 그룹 후보·전투력 적용 (완료)
 → D1 그룹 전용 자격 박탈 (완료)
-→ D2 진행 중 기본 필터·페이징 (현재)
-→ D3 그룹원·Character 필터
+→ D2 진행 중 기본 필터·페이징 (완료)
+→ D3 그룹원·Character 필터 (현재)
 → E 실기기·회귀 확인
 ```
 
-## 현재 작업 단위 D2 — 진행 중 기본 필터·페이징
+## 현재 작업 단위 D3 — 그룹원·Character 필터
 
-레이드 현황 `진행 중`에 공개 조건·레이드·난이도 필터와 서버 20개 페이징 안전을 적용한다. 그룹원·Character 필터는 D3에서 다룬다.
+레이드 현황 `진행 중` 필터에 그룹원과 활동 Character 계층 선택을 추가한다. 현재 Player는 후보에서 제외하고, 한 사용자 안은 OR, 사용자 사이는 AND다. 공개 조건·레이드·난이도와 로컬 원본 분리는 D2를 유지한다.
 
 제외:
 
-- 그룹원·Character 필터
+- 모집 목록·신청 중·완료 기록 필터
 - Rules 배포와 테스트 데이터 실제 삭제
+
+## 완료한 작업 단위 D2 — 진행 중 기본 필터·페이징
+
+레이드 현황 `진행 중`에 공개 조건·레이드·난이도 필터를 로컬 원본에 적용한다. 기본 공개 조건은 전체·일반·그룹이 모두 선택된 상태이며, 둘 다 해제되면 전체로 복귀한다. 진행 중 원본은 `watchActiveRaids` membership 스트림이고 필터는 조회 권한을 바꾸지 않는다. §8 페이징 안전은 `FilteredPageSession`으로 고정했다. 선택 상태는 Player별 Drift에 보존한다.
 
 ## 완료한 작업 단위 D1 — 그룹 전용 자격 박탈
 
@@ -89,6 +93,7 @@ A 저장·Domain·Rules (완료)
 - C1 레이드 후보 브랜치: `cursor/activity-character-raid-candidates-801c`.
 - C2 그룹 후보·전투력 브랜치: `cursor/activity-character-group-candidates-801c`.
 - D1 그룹 전용 자격 박탈 브랜치: `cursor/group-raid-qualification-801c`.
+- D2 진행 중 기본 필터 브랜치: `cursor/raid-status-in-progress-filter-801c`.
 - 문서 설계 시작 기준: `main` `9a58457`, 브랜치 `codex/activity-character-contract`.
 - 기존 보존 브랜치 `codex/rules-complexity-reduction` / `ed02b31` 및 Rules 사본 2개는 유지한다.
 - 그룹 전투력 수정 `4e4ab37` / 통합 `eeba05f`, 모집 UI 준비 문서 `15eaf4a`, 그룹 레이드 연결 `61fd464` / 통합 `25c3b44`를 유지한다.
