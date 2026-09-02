@@ -2,9 +2,9 @@
 
 ## 현재 단계
 
-A 저장·Domain·Rules와 B 캐릭터 관리 UI를 완료했다. 활동 Character는 `players/{playerId}/characterActivity/{characterId}` 문서로 저장하고, 캐릭터 관리 화면에서 초안 선택 후 `저장` 한 번에 반영한다.
+A 저장·Domain·Rules, B 캐릭터 관리 UI, C1 레이드 후보 적용을 완료했다. 새 레이드 생성·신청·참가 Character 변경 후보는 활동 Character만 사용한다.
 
-현재 실행 단위는 **C1 레이드 후보 적용** 이다. C2 이전에 레이드 생성·신청·참가 Character 변경 후보만 활동 Character로 바꾼다.
+현재 실행 단위는 **C2 그룹 후보·전투력 적용** 이다. 그룹 Snapshot과 일반 전투력 보강 범위를 활동 Character로 바꾼다.
 
 전체 계약은 [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md)를 따른다.
 
@@ -13,36 +13,39 @@ A 저장·Domain·Rules와 B 캐릭터 관리 UI를 완료했다. 활동 Charact
 ```text
 A 저장·Domain·Rules (완료)
 → B 캐릭터 관리 UI (완료)
-→ C1 레이드 후보 적용 (현재)
-→ C2 그룹 후보·전투력 적용
+→ C1 레이드 후보 적용 (완료)
+→ C2 그룹 후보·전투력 적용 (현재)
 → D1 그룹 전용 자격 박탈
 → D2 진행 중 기본 필터·페이징
 → D3 그룹원·Character 필터
 → E 실기기·회귀 확인
 ```
 
-## 현재 작업 단위 C1 — 레이드 후보 적용
+## 현재 작업 단위 C2 — 그룹 후보·전투력 적용
 
-B에서 저장한 활동 Character만 새 레이드 생성·신청·참가 Character 변경 후보로 쓴다. 그룹 Snapshot·전투력 보강은 C2에서 바꾼다.
+그룹 생성·가입 Snapshot, 그룹원 Character 목록, 일반 전투력 보강 대상을 활동 Character로 제한한다. 레이드 현황 필터는 아직 바꾸지 않는다.
 
 포함:
 
-- 레이드 생성의 파티장 Character 후보
-- 레이드 신청·참가와 참가 Character 변경 후보
-- 비활동 Character는 새 후보에서 제외하고 기존 membership·Claim은 유지
-- 관련 Domain 서비스와 테스트
+- 그룹 생성·가입 시 표시 Snapshot 후보
+- 그룹 상세의 그룹원 Character 목록
+- 내 계정 진입 등의 일반 전투력 상세 조회와 서버 보강 대상
+- 관련 테스트
 
 제외:
 
-- 그룹 생성·가입 Snapshot과 그룹원 Character 목록
-- 전투력 보강 범위
 - 레이드 현황 필터
+- 그룹 전용 자격 박탈
 - Rules 배포와 테스트 데이터 실제 삭제
 
 완료 조건:
 
-- 새 레이드 후보에 비활동 Character가 나타나지 않는다.
-- 이미 참가 중인 Character를 비활성화해도 해당 방 membership이 바뀌지 않는다.
+- 그룹 후보와 일반 전투력 보강에 비활동 Character가 나타나지 않는다.
+- 기존 그룹 membership Snapshot은 활동 해제만으로 삭제되지 않는다.
+
+## 완료한 작업 단위 C1 — 레이드 후보 적용
+
+새 레이드 생성·신청·참가 Character 변경 후보는 활동 Character만 사용한다. 비활동 Character는 새 후보에서 빠지고 기존 membership·Claim은 유지된다.
 
 ## 완료한 작업 단위 B — 캐릭터 관리 UI
 
@@ -88,6 +91,7 @@ B에서 저장한 활동 Character만 새 레이드 생성·신청·참가 Chara
 
 - A 저장 구현 브랜치: `cursor/activity-character-storage-801c`.
 - B 캐릭터 관리 UI 브랜치: `cursor/activity-character-ui-801c`.
+- C1 레이드 후보 브랜치: `cursor/activity-character-raid-candidates-801c`.
 - 문서 설계 시작 기준: `main` `9a58457`, 브랜치 `codex/activity-character-contract`.
 - 기존 보존 브랜치 `codex/rules-complexity-reduction` / `ed02b31` 및 Rules 사본 2개는 유지한다.
 - 그룹 전투력 수정 `4e4ab37` / 통합 `eeba05f`, 모집 UI 준비 문서 `15eaf4a`, 그룹 레이드 연결 `61fd464` / 통합 `25c3b44`를 유지한다.

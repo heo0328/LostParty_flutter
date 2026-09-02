@@ -316,6 +316,7 @@ GoRouter createAppRouter({
     recruitmentRepository: recruitmentRepository,
     weeklyRaidClaimRepository: weeklyRaidClaimRepositoryOrDefault,
     claimPlayerId: playerSession.playerId,
+    activityCharactersRepository: activityCharactersRepositoryOrDefault,
     conflictPolicy: participationConflictPolicy,
   );
   final recruitmentLeaderCandidateService = RecruitmentLeaderCandidateService(
@@ -327,6 +328,7 @@ GoRouter createAppRouter({
     recruitmentRepository: recruitmentRepository,
     weeklyRaidClaimRepository: weeklyRaidClaimRepositoryOrDefault,
     claimPlayerId: playerSession.playerId,
+    activityCharactersRepository: activityCharactersRepositoryOrDefault,
     conflictPolicy: participationConflictPolicy,
   );
 

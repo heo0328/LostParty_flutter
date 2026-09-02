@@ -1,5 +1,6 @@
 import '../../../account/domain/entities/character_build_role.dart';
 import '../../../account/domain/repositories/account_repository.dart';
+import '../../../account/domain/repositories/activity_characters_repository.dart';
 import '../../../account/domain/entities/weekly_raid_claim.dart';
 import '../../../account/domain/repositories/weekly_raid_claim_repository.dart';
 import '../../../../shared/formatters/display_number_formatter.dart';
@@ -15,6 +16,7 @@ import '../repositories/recruitment_state_repository.dart';
 import '../repositories/weekly_raid_clear_repository.dart';
 import 'recruitment_runtime.dart';
 import 'candidate_participation_status.dart';
+import 'raid_activity_character_source.dart';
 
 export 'candidate_participation_status.dart';
 
@@ -56,6 +58,7 @@ class RecruitmentApplicationCandidateService {
     this.recruitmentRepository,
     this.weeklyRaidClaimRepository,
     this.claimPlayerId,
+    this.activityCharactersRepository,
     this.conflictPolicy = const ParticipationConflictPolicy(),
     this.resetPolicy = const WeeklyRaidResetPolicy(),
   });
@@ -68,6 +71,7 @@ class RecruitmentApplicationCandidateService {
   final RecruitmentStateRepository? recruitmentRepository;
   final WeeklyRaidClaimRepository? weeklyRaidClaimRepository;
   final String? claimPlayerId;
+  final ActivityCharactersRepository? activityCharactersRepository;
   final ParticipationConflictPolicy conflictPolicy;
   final WeeklyRaidResetPolicy resetPolicy;
 
@@ -97,13 +101,20 @@ class RecruitmentApplicationCandidateService {
     if (accounts.isEmpty || userId == null) return const [];
     final weekKey = resetPolicy.weekFor(clock.now()).key;
     final serverClaims = await _loadServerClaims(weekKey);
+    final activityCharacterIds = await loadRaidActivityCharacterIds(
+      repository: activityCharactersRepository,
+      playerId: claimPlayerId,
+    );
     final activeAssignments =
         await assignmentRepository?.getByUser(userId) ?? const [];
     final candidates = <RecruitmentApplicationCandidate>[];
     final seenCharacters = <String>{};
     for (final account in accounts) {
       if (account.hasLostOwnership) continue;
-      for (final character in account.visibleCharacters) {
+      for (final character in raidCandidateCharacters(
+        account,
+        activityCharacterIds,
+      )) {
         final characterKey =
             '${character.serverName.trim().toLowerCase()}::${character.characterName.trim().toLowerCase()}';
         if (!seenCharacters.add(characterKey)) continue;
@@ -137,7 +148,8 @@ class RecruitmentApplicationCandidateService {
               '최소 전투력 ${DisplayNumberFormatter.integer(minimumCombatPower)} 미달',
             );
           }
-          final hasServerClaim = character.serverCharacterId != null &&
+          final hasServerClaim =
+              character.serverCharacterId != null &&
               serverClaims.any(
                 (claim) =>
                     claim.characterId == character.serverCharacterId &&
