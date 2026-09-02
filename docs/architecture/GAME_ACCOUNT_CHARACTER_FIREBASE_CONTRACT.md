@@ -45,14 +45,17 @@
 - `itemLevel`, `combatPower`: nullable number
 - `lastSummaryFetchedAt`, `createdAt`, `updatedAt`: server timestamp
 
-`players/{playerId}/characterActivity/current`:
+`players/{playerId}/characterActivity/{characterId}`:
 
 - `schemaVersion: 1`
 - `playerId: string`
-- `activityCharacterIds: string[]` — 현재 Player가 앱에서 사용할 Character ID 전체 최종 목록
-- `gameAccountIds: string[]` — 이번 저장에서 검증한 active 소유 GameAccount ID
+- `characterId: string` — 문서 ID와 같아야 한다
+- `gameAccountId: string` — 해당 Character의 active 소유 GameAccount
 - `updatedAt`: server timestamp
-- 활동 설정은 이 문서만 쓰며 Character 인증·소유권 필드는 변경하지 않는다
+- 문서가 있으면 해당 Character는 활동 상태다. 가변 ID 목록을 한 문서에 저장하지 않는다
+- 활동 설정은 이 하위 컬렉션만 쓰며 Character 인증·소유권 필드는 변경하지 않는다
+- 각 쓰기는 `characters/{characterId}`와 `playerGameAccounts/{playerId}_{gameAccountId}` 소유권을 확인하고, 같은 계정의 대표 Character 활동 문서가 있어야 한다
+- 대표 Character의 활동 문서는 삭제할 수 없다
 
 ## 명령과 검증 경계
 

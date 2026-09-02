@@ -6,17 +6,16 @@ class CharacterActivityWritePlan {
   const CharacterActivityWritePlan({
     required this.playerId,
     required this.activityCharacterIds,
-    required this.gameAccountIds,
-    required this.document,
+    required this.documentsByCharacterId,
+    required this.characterIdsToRemove,
   });
 
   final String playerId;
   final List<String> activityCharacterIds;
-  final List<String> gameAccountIds;
-  final Map<String, Object?> document;
+  final Map<String, Map<String, Object?>> documentsByCharacterId;
+  final List<String> characterIdsToRemove;
 
   static const schemaVersion = 1;
-  static const documentId = 'current';
 
   factory CharacterActivityWritePlan.fromValidated({
     required String playerId,
@@ -34,26 +33,30 @@ class CharacterActivityWritePlan {
       throw ActivityCharactersSaveException(failure, _message(failure));
     }
 
+    final byId = {
+      for (final character in ownedCharacters) character.characterId: character,
+    };
     final activityCharacterIds = (command.activityCharacterIds.toList()
       ..sort());
-    final gameAccountIds =
-        ownedCharacters
-            .map((character) => character.gameAccountId)
-            .toSet()
-            .toList()
-          ..sort();
+    final ownedIds = command.ownedCharacterIds.toSet();
+    final characterIdsToRemove =
+        (ownedIds.difference(command.activityCharacterIds).toList()..sort());
+    final documentsByCharacterId = <String, Map<String, Object?>>{
+      for (final characterId in activityCharacterIds)
+        characterId: {
+          'schemaVersion': schemaVersion,
+          'playerId': playerId,
+          'characterId': characterId,
+          'gameAccountId': byId[characterId]!.gameAccountId,
+          'updatedAt': serverTimestamp,
+        },
+    };
 
     return CharacterActivityWritePlan(
       playerId: playerId,
       activityCharacterIds: activityCharacterIds,
-      gameAccountIds: gameAccountIds,
-      document: {
-        'schemaVersion': schemaVersion,
-        'playerId': playerId,
-        'activityCharacterIds': activityCharacterIds,
-        'gameAccountIds': gameAccountIds,
-        'updatedAt': serverTimestamp,
-      },
+      documentsByCharacterId: documentsByCharacterId,
+      characterIdsToRemove: characterIdsToRemove,
     );
   }
 

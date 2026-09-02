@@ -2,7 +2,7 @@
 
 ## 현재 단계
 
-A 저장·Domain·Rules를 완료했다. 활동 Character 최종 목록은 `players/{playerId}/characterActivity/current`에 원자 저장한다. Character 인증·소유권 문서는 이 명령으로 쓰지 않는다.
+A 저장·Domain·Rules를 완료했다. 활동 Character는 `players/{playerId}/characterActivity/{characterId}` 문서로 저장한다. Character 인증·소유권 문서는 이 명령으로 쓰지 않는다.
 
 현재 실행 단위는 **B 캐릭터 관리 UI** 다. A가 `main`에 통합된 뒤 시작한다. B 완료 전에 C 이후 코드를 수정하지 않는다.
 

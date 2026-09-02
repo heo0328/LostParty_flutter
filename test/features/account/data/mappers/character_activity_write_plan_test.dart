@@ -5,13 +5,13 @@ import 'package:lost_party/features/account/domain/entities/save_activity_charac
 
 void main() {
   test(
-    'writes the complete activity set without character identity fields',
+    'writes one activity document per owned character without identity fields',
     () {
       const timestamp = Object();
       final plan = CharacterActivityWritePlan.fromValidated(
         playerId: 'player-1',
         command: SaveActivityCharactersCommand(
-          activityCharacterIds: {'char-2', 'char-1'},
+          activityCharacterIds: {'char-1'},
           ownedCharacterIds: {'char-1', 'char-2'},
         ),
         ownedCharacters: const [
@@ -25,29 +25,34 @@ void main() {
           ),
           OwnedActivityCharacter(
             characterId: 'char-2',
-            gameAccountId: 'account-2',
+            gameAccountId: 'account-1',
             ownerPlayerId: 'player-1',
             status: 'active',
             ownershipStatus: 'active',
+            representativeCharacterId: 'char-1',
           ),
         ],
         serverTimestamp: timestamp,
       );
 
-      expect(plan.document.keys, {
-        'schemaVersion',
-        'playerId',
-        'activityCharacterIds',
-        'gameAccountIds',
-        'updatedAt',
+      expect(plan.activityCharacterIds, ['char-1']);
+      expect(plan.characterIdsToRemove, ['char-2']);
+      expect(plan.documentsByCharacterId.keys, {'char-1'});
+      expect(plan.documentsByCharacterId['char-1'], {
+        'schemaVersion': 1,
+        'playerId': 'player-1',
+        'characterId': 'char-1',
+        'gameAccountId': 'account-1',
+        'updatedAt': timestamp,
       });
-      expect(plan.document['schemaVersion'], 1);
-      expect(plan.document['playerId'], 'player-1');
-      expect(plan.document['activityCharacterIds'], ['char-1', 'char-2']);
-      expect(plan.document['gameAccountIds'], ['account-1', 'account-2']);
-      expect(plan.document['updatedAt'], same(timestamp));
-      expect(plan.document.containsKey('ownerPlayerId'), isFalse);
-      expect(plan.document.containsKey('status'), isFalse);
+      expect(
+        plan.documentsByCharacterId['char-1']!.containsKey('ownerPlayerId'),
+        isFalse,
+      );
+      expect(
+        plan.documentsByCharacterId['char-1']!.containsKey('status'),
+        isFalse,
+      );
     },
   );
 

@@ -1,8 +1,8 @@
-## 2026-09-02 활동 Character 저장·Domain·Rules (A)
+## 2026-09-02 활동 Character 저장 경계를 캐릭터별 문서로 재설계 (A)
 
-- 저장 위치: `players/{playerId}/characterActivity/current`. 활동 Character 전체 최종 ID 목록을 한 문서에 원자 저장한다.
+- 저장 위치: `players/{playerId}/characterActivity/{characterId}`. 문서가 있으면 활동, 없으면 비활동이다. 가변 ID 목록 한 문서는 Rules가 순회·재귀할 수 없어 사용하지 않는다.
 - Domain 명령 `SaveActivityCharactersCommand`, Policy, Firestore Repository를 추가했다. 최소 1명, 대표 Character 포함, active 소유권을 거절한다.
-- 이 명령은 Character·playerGameAccounts 인증·소유권 필드를 쓰지 않는다. Rules는 같은 문서의 최소 1명과 선언된 계정의 대표 포함을 강제한다. 배포는 하지 않는다.
+- 이 명령은 Character·playerGameAccounts 인증·소유권 필드를 쓰지 않는다. Rules는 각 쓰기에서 `characters/{characterId}`와 소유권 문서를 확인하고, 같은 계정 대표 활동 문서가 있어야 하며 대표 활동 문서는 삭제할 수 없다. 배포는 하지 않는다.
 - 테스트 데이터는 활동 문서를 다시 저장하면 재설정된다. 기존 Character 문서는 삭제하지 않는다.
 - 다음 단위는 B 캐릭터 관리 UI다.
 

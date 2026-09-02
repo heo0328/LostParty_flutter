@@ -26,19 +26,20 @@ class FirestoreActivityCharactersRepository
         '로그인한 사용자만 활동 캐릭터를 조회할 수 있습니다.',
       );
     }
-    final snapshot = await _activityRef(playerId).get();
-    if (!snapshot.exists) {
-      return ActivityCharacters(playerId: playerId, characterIds: const {});
+    final snapshot = await _activityCollection(playerId).get();
+    final characterIds = <String>{};
+    for (final document in snapshot.docs) {
+      final dto = CharacterActivityDocumentDto.fromMap(
+        document.data(),
+        documentId: document.id,
+      );
+      if (dto.schemaVersion != CharacterActivityWritePlan.schemaVersion ||
+          dto.playerId != playerId) {
+        throw const FormatException('Invalid character activity document.');
+      }
+      characterIds.add(dto.characterId);
     }
-    final dto = CharacterActivityDocumentDto.fromMap(snapshot.data()!);
-    if (dto.schemaVersion != CharacterActivityWritePlan.schemaVersion ||
-        dto.playerId != playerId) {
-      throw const FormatException('Invalid character activity document.');
-    }
-    return ActivityCharacters(
-      playerId: playerId,
-      characterIds: dto.activityCharacterIds.toSet(),
-    );
+    return ActivityCharacters(playerId: playerId, characterIds: characterIds);
   }
 
   @override
@@ -56,7 +57,21 @@ class FirestoreActivityCharactersRepository
         ownedCharacters: ownedCharacters,
         serverTimestamp: FieldValue.serverTimestamp(),
       );
-      transaction.set(_activityRef(playerId), plan.document);
+      final existingToRemove = <String, bool>{};
+      for (final characterId in plan.characterIdsToRemove) {
+        final snapshot = await transaction.get(
+          _activityRef(playerId, characterId),
+        );
+        existingToRemove[characterId] = snapshot.exists;
+      }
+      for (final entry in plan.documentsByCharacterId.entries) {
+        transaction.set(_activityRef(playerId, entry.key), entry.value);
+      }
+      for (final entry in existingToRemove.entries) {
+        if (entry.value) {
+          transaction.delete(_activityRef(playerId, entry.key));
+        }
+      }
       return ActivityCharacters(
         playerId: playerId,
         characterIds: plan.activityCharacterIds.toSet(),
@@ -147,11 +162,19 @@ class FirestoreActivityCharactersRepository
     return characters;
   }
 
-  DocumentReference<Map<String, dynamic>> _activityRef(String playerId) {
+  CollectionReference<Map<String, dynamic>> _activityCollection(
+    String playerId,
+  ) {
     return _firestore
         .collection('players')
         .doc(playerId)
-        .collection('characterActivity')
-        .doc(CharacterActivityWritePlan.documentId);
+        .collection('characterActivity');
+  }
+
+  DocumentReference<Map<String, dynamic>> _activityRef(
+    String playerId,
+    String characterId,
+  ) {
+    return _activityCollection(playerId).doc(characterId);
   }
 }

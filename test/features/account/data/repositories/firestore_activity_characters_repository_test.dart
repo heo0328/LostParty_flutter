@@ -41,7 +41,7 @@ void main() {
   });
 
   test(
-    'saves the complete activity set without changing character identity',
+    'saves one activity document per character without changing identity',
     () async {
       final saved = await repository.save(
         SaveActivityCharactersCommand(
@@ -51,28 +51,61 @@ void main() {
       );
 
       expect(saved.characterIds, {'char-1', 'char-2'});
-    final loaded = await repository.load(playerId: 'player-1');
-    expect(loaded.characterIds, {'char-1', 'char-2'});
-      final activity =
-          firestore.documents['players/player-1/characterActivity/current']!;
-      expect(activity['playerId'], 'player-1');
-      expect(activity['activityCharacterIds'], ['char-1', 'char-2']);
-      expect(activity['gameAccountIds'], ['account-1']);
-      expect(activity.containsKey('ownerPlayerId'), isFalse);
+      final loaded = await repository.load(playerId: 'player-1');
+      expect(loaded.characterIds, {'char-1', 'char-2'});
+      expect(
+        firestore.documents['players/player-1/characterActivity/char-1'],
+        containsPair('characterId', 'char-1'),
+      );
+      expect(
+        firestore.documents['players/player-1/characterActivity/char-2'],
+        containsPair('gameAccountId', 'account-1'),
+      );
+      expect(
+        firestore.documents.containsKey(
+          'players/player-1/characterActivity/current',
+        ),
+        isFalse,
+      );
       expect(
         firestore.documents['characters/char-1']!['ownerPlayerId'],
         'player-1',
       );
       expect(firestore.documents['characters/char-1']!['status'], 'active');
       expect(firestore.documents['characters/char-1']!['characterName'], '대표');
-      expect(
-        firestore.documents['playerGameAccounts/player-1_account-1']!['status'],
-        'active',
-      );
     },
   );
 
-  test('loads an empty set when the activity document is missing', () async {
+  test('removes activity documents for characters that left the set', () async {
+    firestore.documents['players/player-1/characterActivity/char-2'] = {
+      'schemaVersion': 1,
+      'playerId': 'player-1',
+      'characterId': 'char-2',
+      'gameAccountId': 'account-1',
+    };
+
+    await repository.save(
+      const SaveActivityCharactersCommand(
+        activityCharacterIds: {'char-1'},
+        ownedCharacterIds: {'char-1', 'char-2'},
+      ),
+    );
+
+    expect(
+      firestore.documents.containsKey(
+        'players/player-1/characterActivity/char-1',
+      ),
+      isTrue,
+    );
+    expect(
+      firestore.documents.containsKey(
+        'players/player-1/characterActivity/char-2',
+      ),
+      isFalse,
+    );
+  });
+
+  test('loads an empty set when no activity documents exist', () async {
     final loaded = await repository.load(playerId: 'player-1');
     expect(loaded.characterIds, isEmpty);
   });
@@ -94,10 +127,10 @@ void main() {
       ),
     );
     expect(
-      firestore.documents.containsKey(
-        'players/player-1/characterActivity/current',
+      firestore.documents.keys.where(
+        (path) => path.startsWith('players/player-1/characterActivity/'),
       ),
-      isFalse,
+      isEmpty,
     );
   });
 
