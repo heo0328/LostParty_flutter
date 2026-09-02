@@ -157,11 +157,15 @@ bool Function(T item) raidStatusFilterMatcher<T>({
   required String? Function(T item) groupIdOf,
   required String Function(T item) raidIdOf,
   required String Function(T item) difficultyIdOf,
+  Set<String> Function(T item)? memberPlayerIdsOf,
+  Map<String, String>? Function(T item)? characterIdByPlayerOf,
 }) {
   return (item) => matchesRaidStatusFilter(
     selection: selection,
     groupId: groupIdOf(item),
     raidId: raidIdOf(item),
     difficultyId: difficultyIdOf(item),
+    raidMemberPlayerIds: memberPlayerIdsOf?.call(item) ?? const {},
+    raidCharacterIdByPlayer: characterIdByPlayerOf?.call(item),
   );
 }

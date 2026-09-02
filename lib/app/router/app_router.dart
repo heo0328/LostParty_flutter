@@ -360,6 +360,11 @@ GoRouter createAppRouter({
                   playerId: playerSession.playerId,
                   cycleKey: currentCycleKey,
                   raidCatalogRepository: raidCatalogRepository,
+                  groupReadRepository: groupReadRepositoryForRoute(),
+                  characterSearchRepository:
+                      FirestoreGroupCharacterSearchRepository(
+                        firestore: FirebaseFirestore.instance,
+                      ),
                 ),
                 routes: [
                   GoRoute(

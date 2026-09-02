@@ -2,9 +2,9 @@
 
 ## 현재 단계
 
-A 저장·Domain·Rules, B 캐릭터 관리 UI, C1 레이드 후보 적용, C2 그룹 후보·전투력 적용, D1 그룹 전용 자격 박탈, D2 진행 중 기본 필터·페이징을 완료했다.
+A 저장·Domain·Rules, B 캐릭터 관리 UI, C1 레이드 후보 적용, C2 그룹 후보·전투력 적용, D1 그룹 전용 자격 박탈, D2 진행 중 기본 필터·페이징, D3 그룹원·Character 필터를 완료했다.
 
-현재 실행 단위는 **D3 그룹원·Character 필터** 이다. 진행 중 필터에 그룹원과 활동 Character 계층 선택을 추가한다.
+현재 실행 단위는 **E 실기기·회귀 확인** 이다. 활동 Character 저장부터 진행 중 그룹원 필터까지 실기기에서 확인한다.
 
 전체 계약은 [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md)를 따른다.
 
@@ -17,18 +17,22 @@ A 저장·Domain·Rules (완료)
 → C2 그룹 후보·전투력 적용 (완료)
 → D1 그룹 전용 자격 박탈 (완료)
 → D2 진행 중 기본 필터·페이징 (완료)
-→ D3 그룹원·Character 필터 (현재)
-→ E 실기기·회귀 확인
+→ D3 그룹원·Character 필터 (완료)
+→ E 실기기·회귀 확인 (현재)
 ```
 
-## 현재 작업 단위 D3 — 그룹원·Character 필터
+## 현재 작업 단위 E — 실기기·회귀 확인
 
-레이드 현황 `진행 중` 필터에 그룹원과 활동 Character 계층 선택을 추가한다. 현재 Player는 후보에서 제외하고, 한 사용자 안은 OR, 사용자 사이는 AND다. 공개 조건·레이드·난이도와 로컬 원본 분리는 D2를 유지한다.
+캐릭터 관리 저장·재진입, 레이드·그룹 후보 제한, 그룹 전용 자격 정리, 진행 중 공개 조건·레이드·난이도·그룹원·Character 필터와 결과 개수를 실기기에서 확인한다.
 
 제외:
 
 - 모집 목록·신청 중·완료 기록 필터
 - Rules 배포와 테스트 데이터 실제 삭제
+
+## 완료한 작업 단위 D3 — 그룹원·Character 필터
+
+레이드 현황 `진행 중` 필터에 가입 그룹·그룹원·Character 계층 선택을 추가했다. 현재 Player는 후보에서 제외하고, 한 사용자 안은 OR, 사용자 사이는 AND다. 다른 그룹원의 `characterActivity`는 읽을 수 없어 Character 칩은 인증 활성 Character를 쓰고, 판정은 레이드 membership `characterId`를 쓴다.
 
 ## 완료한 작업 단위 D2 — 진행 중 기본 필터·페이징
 
@@ -94,6 +98,7 @@ A 저장·Domain·Rules (완료)
 - C2 그룹 후보·전투력 브랜치: `cursor/activity-character-group-candidates-801c`.
 - D1 그룹 전용 자격 박탈 브랜치: `cursor/group-raid-qualification-801c`.
 - D2 진행 중 기본 필터 브랜치: `cursor/raid-status-in-progress-filter-801c`.
+- D3 그룹원·Character 필터 브랜치: `cursor/raid-status-member-character-filter-801c`.
 - 문서 설계 시작 기준: `main` `9a58457`, 브랜치 `codex/activity-character-contract`.
 - 기존 보존 브랜치 `codex/rules-complexity-reduction` / `ed02b31` 및 Rules 사본 2개는 유지한다.
 - 그룹 전투력 수정 `4e4ab37` / 통합 `eeba05f`, 모집 UI 준비 문서 `15eaf4a`, 그룹 레이드 연결 `61fd464` / 통합 `25c3b44`를 유지한다.

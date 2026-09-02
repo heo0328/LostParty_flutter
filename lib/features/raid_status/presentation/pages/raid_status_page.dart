@@ -7,6 +7,8 @@ import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../../shared/formatters/korea_time_formatter.dart';
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 import '../../../account/data/local/account_database.dart';
+import '../../../group/domain/repositories/group_character_search_repository.dart';
+import '../../../group/domain/repositories/group_read_repository.dart';
 import '../../../recruitment_list/domain/entities/party_read_models.dart';
 import '../../../recruitment_list/domain/entities/party_recruitment.dart';
 import '../../../recruitment_list/domain/entities/recruitment_aggregate.dart';
@@ -29,6 +31,8 @@ class RaidStatusPage extends StatefulWidget {
     required this.cycleKey,
     this.raidCatalogRepository,
     this.filterStore,
+    this.groupReadRepository,
+    this.characterSearchRepository,
     super.key,
   });
 
@@ -39,6 +43,8 @@ class RaidStatusPage extends StatefulWidget {
   final String cycleKey;
   final RaidCatalogRepository? raidCatalogRepository;
   final RaidStatusFilterStore? filterStore;
+  final GroupReadRepository? groupReadRepository;
+  final GroupCharacterSearchRepository? characterSearchRepository;
 
   @override
   State<RaidStatusPage> createState() => _RaidStatusPageState();
@@ -64,6 +70,10 @@ class _RaidStatusPageState extends State<RaidStatusPage>
           widget.filterStore ??
           DriftRaidStatusFilterStore(widget.accountDatabase),
       catalogRepository: widget.raidCatalogRepository,
+      membersStreamFactory: (recruitmentId) =>
+          widget.partyReadRepository.watchRecruitmentMembers(recruitmentId),
+      groupReadRepository: widget.groupReadRepository,
+      characterSearchRepository: widget.characterSearchRepository,
     )..start();
     _applications = PartyReadStreamViewModel<PartyApplicationSummary>(
       streamFactory: () => widget.partyReadRepository.watchApplications(

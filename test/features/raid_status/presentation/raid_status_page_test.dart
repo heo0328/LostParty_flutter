@@ -5,6 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lost_party/features/account/data/local/account_database.dart';
+import 'package:lost_party/features/group/domain/entities/group_member.dart';
+import 'package:lost_party/features/group/domain/entities/group_relation.dart';
+import 'package:lost_party/features/group/domain/entities/group_request_character.dart';
+import 'package:lost_party/features/group/domain/repositories/group_character_search_repository.dart';
+import 'package:lost_party/features/group/domain/repositories/group_read_repository.dart';
 import 'package:lost_party/features/raid_status/data/repositories/drift_raid_status_filter_store.dart';
 import 'package:lost_party/features/raid_status/domain/repositories/raid_status_filter_store.dart';
 import 'package:lost_party/features/raid_status/presentation/pages/party_read_detail_page.dart';
@@ -27,6 +32,12 @@ void main() {
     AccountDatabase? database,
     RaidCatalogRepository? raidCatalogRepository,
     RaidStatusFilterStore? filterStore,
+    GroupReadRepository? groupReadRepository,
+    GroupCharacterSearchRepository? characterSearchRepository,
+    Stream<PartyReadSnapshot<PartyMemberDisplay>> Function(
+      String recruitmentId,
+    )?
+    membersForId,
   }) async {
     final activeDatabase = database ?? AccountDatabase(NativeDatabase.memory());
     if (database == null) addTearDown(activeDatabase.close);
@@ -38,6 +49,7 @@ void main() {
           partyReadRepository: FakePartyReadRepository(
             activeRaids: activeRaids,
             applications: applications,
+            membersForId: membersForId,
           ),
           accountDatabase: activeDatabase,
           eventSyncService: syncService,
@@ -45,6 +57,8 @@ void main() {
           cycleKey: '2026-08-19',
           raidCatalogRepository: raidCatalogRepository,
           filterStore: filterStore,
+          groupReadRepository: groupReadRepository,
+          characterSearchRepository: characterSearchRepository,
         ),
       ),
     );
@@ -351,6 +365,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('raidStatusFilterCount')), findsOneWidget);
     expect(find.text('2개'), findsWidgets);
+    expect(find.text('그룹원'), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('raidStatusFilterPublicOpen')));
     await tester.pumpAndSettle();
@@ -453,6 +468,153 @@ void main() {
     expect(find.text('그룹 세르카'), findsOneWidget);
     expect(find.text('4막 노말 모집'), findsNothing);
   });
+
+  testWidgets('그룹원 칩은 현재 Player를 제외하고 AND로 목록과 개수를 갱신한다', (tester) async {
+    await pumpPage(
+      tester,
+      groupReadRepository: _PageGroupReadRepository(
+        groups: [_pageGroupRelation()],
+        membersByGroup: {
+          'group-1': [
+            _pageGroupMember(playerId: 'player-1', name: '내캐릭'),
+            _pageGroupMember(playerId: 'player-2', name: '친구딜러'),
+            _pageGroupMember(playerId: 'player-3', name: '친구서폿'),
+          ],
+        },
+      ),
+      characterSearchRepository: _PageCharacterSearchRepository({
+        'player-2': [
+          _pageCharacter(
+            playerId: 'player-2',
+            characterId: 'char-21',
+            name: '딜러A',
+          ),
+        ],
+        'player-3': [
+          _pageCharacter(
+            playerId: 'player-3',
+            characterId: 'char-33',
+            name: '서폿A',
+          ),
+        ],
+      }),
+      membersForId: (id) => Stream.value(
+        PartyReadSnapshot(
+          items: [
+            _pageMemberDisplay(playerId: 'player-2', characterId: 'char-21'),
+            _pageMemberDisplay(playerId: 'player-3', characterId: 'char-33'),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      activeRaids: Stream.value(
+        PartyReadSnapshot(
+          items: [
+            _activeRaid(memberPlayerIds: {'player-1', 'player-2', 'player-3'}),
+            _activeRaid(
+              id: 'only-two',
+              title: '그룹 세르카',
+              raidId: 'serca',
+              groupId: 'group-1',
+              memberPlayerIds: {'player-1', 'player-2'},
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('raidStatusFilterBar')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('raidStatusFilterMemberChip-player-1')),
+      findsNothing,
+    );
+    expect(find.text('내캐릭'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('raidStatusFilterMemberChip-player-2')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('raidStatusFilterMemberChip-player-2')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('raidStatusFilterMemberChip-player-3')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('4막 노말 모집'), findsOneWidget);
+    expect(find.text('그룹 세르카'), findsNothing);
+    expect(find.text('1개'), findsWidgets);
+
+    await tester.tap(
+      find.byKey(
+        const ValueKey('raidStatusFilterCharacterChip-player-2-char-21'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('4막 노말 모집'), findsOneWidget);
+    expect(find.text('1개'), findsWidgets);
+  });
+
+  testWidgets('그룹원 선택은 앱 재진입 후에도 로컬에 남는다', (tester) async {
+    final database = AccountDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    final store = DriftRaidStatusFilterStore(database);
+    final groups = _PageGroupReadRepository(
+      groups: [_pageGroupRelation()],
+      membersByGroup: {
+        'group-1': [_pageGroupMember(playerId: 'player-2', name: '친구딜러')],
+      },
+    );
+    final snapshot = PartyReadSnapshot(
+      items: [
+        _activeRaid(memberPlayerIds: {'player-1', 'player-2'}),
+        _activeRaid(
+          id: 'solo',
+          title: '혼자 진행',
+          raidId: 'serca',
+          memberPlayerIds: {'player-1'},
+        ),
+      ],
+      isFromCache: false,
+    );
+
+    await pumpPage(
+      tester,
+      activeRaids: Stream.value(snapshot),
+      database: database,
+      filterStore: store,
+      groupReadRepository: groups,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('raidStatusFilterBar')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('raidStatusFilterMemberChip-player-2')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('4막 노말 모집'), findsOneWidget);
+    expect(find.text('혼자 진행'), findsNothing);
+    expect((await store.load('player-1')).memberPlayerIds, {'player-2'});
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await pumpPage(
+      tester,
+      activeRaids: Stream.value(snapshot),
+      database: database,
+      filterStore: store,
+      groupReadRepository: groups,
+    );
+    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('레이드 필터: 친구딜러'), findsOneWidget);
+    expect(find.text('4막 노말 모집'), findsOneWidget);
+    expect(find.text('혼자 진행'), findsNothing);
+  });
 }
 
 ActiveRaidSummary _activeRaid({
@@ -465,6 +627,7 @@ ActiveRaidSummary _activeRaid({
   String currentCycleStatus = 'active',
   String visibility = 'public',
   String? groupId,
+  Set<String> memberPlayerIds = const {},
 }) => ActiveRaidSummary(
   id: id,
   title: title,
@@ -495,6 +658,7 @@ ActiveRaidSummary _activeRaid({
   currentCycleStatus: currentCycleStatus,
   visibility: visibility,
   groupId: groupId,
+  memberPlayerIds: memberPlayerIds,
 );
 
 PublicRecruitmentSummary _publicSummary() => PublicRecruitmentSummary(
@@ -608,4 +772,85 @@ class _FilterCatalogRepository implements RaidCatalogRepository {
       ),
     ],
   );
+}
+
+GroupRelation _pageGroupRelation() => GroupRelation(
+  groupId: 'group-1',
+  playerId: 'player-1',
+  relation: GroupRelationKind.member,
+  groupNameSnapshot: '테스트그룹',
+  displayCharacterNameSnapshot: '내캐릭',
+  sourceRevision: 1,
+  createdAt: DateTime.utc(2026, 8, 1),
+  updatedAt: DateTime.utc(2026, 8, 1),
+);
+
+GroupMember _pageGroupMember({
+  required String playerId,
+  required String name,
+}) => GroupMember(
+  groupId: 'group-1',
+  playerId: playerId,
+  role: GroupMemberRole.member,
+  joinedAt: DateTime.utc(2026, 8, 1),
+  joinSequence: 1,
+  joinedBy: GroupJoinedBy.created,
+  displayCharacterIdSnapshot: 'char-$playerId',
+  displayCharacterNameSnapshot: name,
+  revision: 1,
+);
+
+PartyMemberDisplay _pageMemberDisplay({
+  required String playerId,
+  required String characterId,
+}) => PartyMemberDisplay(
+  playerId: playerId,
+  characterName: characterId,
+  className: '블레이드',
+  role: PartyRole.dealer,
+  partyIndex: 0,
+  characterId: characterId,
+);
+
+GroupRequestCharacter _pageCharacter({
+  required String playerId,
+  required String characterId,
+  required String name,
+}) => GroupRequestCharacter(
+  characterId: characterId,
+  ownerPlayerId: playerId,
+  characterName: name,
+  serverName: '루페온',
+  characterClassName: '블레이드',
+);
+
+class _PageGroupReadRepository extends Fake implements GroupReadRepository {
+  _PageGroupReadRepository({
+    required this.groups,
+    required this.membersByGroup,
+  });
+
+  final List<GroupRelation> groups;
+  final Map<String, List<GroupMember>> membersByGroup;
+
+  @override
+  Stream<GroupReadSnapshot<GroupRelation>> watchMyGroups(String playerId) =>
+      Stream.value(GroupReadSnapshot(items: groups, isFromCache: false));
+
+  @override
+  Future<List<GroupMember>> loadGroupMembers(String groupId) async =>
+      membersByGroup[groupId] ?? const [];
+}
+
+class _PageCharacterSearchRepository extends Fake
+    implements GroupCharacterSearchRepository {
+  _PageCharacterSearchRepository(this.charactersByPlayer);
+
+  final Map<String, List<GroupRequestCharacter>> charactersByPlayer;
+
+  @override
+  Future<List<GroupRequestCharacter>> loadActiveCharactersForPlayer(
+    String ownerPlayerId, {
+    int limit = groupCharacterSearchPageSize,
+  }) async => charactersByPlayer[ownerPlayerId] ?? const [];
 }

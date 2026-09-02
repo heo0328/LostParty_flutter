@@ -1,15 +1,19 @@
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../entities/raid_status_filter_selection.dart';
 
-/// 진행 중 원본 한 건이 공개 조건·레이드·난이도 선택을 만족하는지 판정한다.
+/// 진행 중 원본 한 건이 공개 조건·레이드·난이도·그룹·그룹원·Character 선택을
+/// 만족하는지 판정한다.
 ///
-/// 차원 사이는 AND, 같은 차원의 복수 선택은 OR다. 그룹원·Character 조건은
-/// D3에서 이 판정 위에 추가한다.
+/// 차원 사이는 AND다. 레이드·난이도·그룹 ID는 차원 내부 OR, 그룹원은 사용자
+/// 사이 AND, 한 사용자의 Character는 OR다. [raidCharacterIdByPlayer]가 아직
+/// 없으면 Character 칩 조건은 건너뛰어 목록이 비었다가 채워지지 않게 한다.
 bool matchesRaidStatusFilter({
   required RaidStatusFilterSelection selection,
   required String? groupId,
   required String raidId,
   required String difficultyId,
+  Set<String> raidMemberPlayerIds = const {},
+  Map<String, String>? raidCharacterIdByPlayer,
 }) {
   final isGroupLinked = groupId != null && groupId.trim().isNotEmpty;
   if (isGroupLinked) {
@@ -24,6 +28,25 @@ bool matchesRaidStatusFilter({
       !selection.difficultyIds.contains(difficultyId)) {
     return false;
   }
+  if (selection.includeGroup &&
+      selection.groupIds.isNotEmpty &&
+      (groupId == null ||
+          groupId.trim().isEmpty ||
+          !selection.groupIds.contains(groupId))) {
+    return false;
+  }
+  for (final playerId in selection.memberPlayerIds) {
+    if (!raidMemberPlayerIds.contains(playerId)) return false;
+    final selectedCharacters = selection.characterIdsByPlayer[playerId];
+    if (selectedCharacters == null || selectedCharacters.isEmpty) {
+      continue;
+    }
+    if (raidCharacterIdByPlayer == null) continue;
+    final characterId = raidCharacterIdByPlayer[playerId];
+    if (characterId == null || !selectedCharacters.contains(characterId)) {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -33,6 +56,20 @@ class RaidStatusFilterOption {
 
   final String id;
   final String label;
+}
+
+class RaidStatusFilterMemberOption {
+  const RaidStatusFilterMemberOption({
+    required this.playerId,
+    required this.label,
+    this.groupIds = const {},
+    this.characters = const [],
+  });
+
+  final String playerId;
+  final String label;
+  final Set<String> groupIds;
+  final List<RaidStatusFilterOption> characters;
 }
 
 class RaidStatusFilterCatalogOptions {
@@ -101,6 +138,8 @@ String raidStatusFilterBarLabel(
   RaidStatusFilterSelection selection, {
   Map<String, String> raidNames = const {},
   Map<String, String> difficultyNames = const {},
+  Map<String, String> groupNames = const {},
+  Map<String, String> memberNames = const {},
 }) {
   if (selection.isUnrestricted) return '레이드 필터: 모든 레이드';
   final parts = <String>[];
@@ -119,6 +158,23 @@ String raidStatusFilterBarLabel(
     parts.add(difficultyNames[id] ?? id);
   } else if (selection.difficultyIds.length > 1) {
     parts.add('난이도 ${selection.difficultyIds.length}개');
+  }
+  if (selection.groupIds.length == 1) {
+    final id = selection.groupIds.single;
+    parts.add(groupNames[id] ?? id);
+  } else if (selection.groupIds.length > 1) {
+    parts.add('그룹 ${selection.groupIds.length}개');
+  }
+  if (selection.memberPlayerIds.length == 1) {
+    final id = selection.memberPlayerIds.single;
+    parts.add(memberNames[id] ?? id);
+  } else if (selection.memberPlayerIds.length > 1) {
+    parts.add('그룹원 ${selection.memberPlayerIds.length}명');
+  }
+  if (selection.selectedCharacterCount == 1) {
+    parts.add('캐릭터 1개');
+  } else if (selection.selectedCharacterCount > 1) {
+    parts.add('캐릭터 ${selection.selectedCharacterCount}개');
   }
   if (parts.isEmpty) return '레이드 필터: 모든 레이드';
   return '레이드 필터: ${parts.join(' · ')}';

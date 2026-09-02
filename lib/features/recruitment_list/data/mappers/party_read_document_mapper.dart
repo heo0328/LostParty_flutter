@@ -36,9 +36,7 @@ class PartyReadDocumentMapper {
     return memberPlayerIds.any((id) => id == currentPlayerId);
   }
 
-  PublicRecruitmentSummary toPublicRecruitment(
-    PartyReadDocumentDto document,
-  ) {
+  PublicRecruitmentSummary toPublicRecruitment(PartyReadDocumentDto document) {
     final data = document.data;
     _requireSchema(data);
     return PublicRecruitmentSummary(
@@ -52,8 +50,7 @@ class PartyReadDocumentMapper {
       maxMemberCount: _integer(data, 'maxMemberCount'),
       membersPerParty: _optionalPositiveInteger(data, 'membersPerParty') ?? 4,
       partyCount: _optionalPositiveInteger(data, 'partyCount') ?? 1,
-      supportsPerParty:
-          _optionalPositiveInteger(data, 'supportsPerParty') ?? 1,
+      supportsPerParty: _optionalPositiveInteger(data, 'supportsPerParty') ?? 1,
       dealerCount: _integer(data, 'dealerCount'),
       supportCount: _integer(data, 'supportCount'),
       isRecruiting:
@@ -63,7 +60,8 @@ class PartyReadDocumentMapper {
       revision: _integer(data, 'revision'),
       updatedAt: _date(data, 'updatedAt'),
       currentCycleKey: _string(data, 'currentCycleKey'),
-      targetCycleKey: _softString(data, 'targetCycleKey') ??
+      targetCycleKey:
+          _softString(data, 'targetCycleKey') ??
           _string(data, 'currentCycleKey'),
       status: _softString(data, 'status') ?? 'active',
       currentCycleStatus: _softString(data, 'currentCycleStatus') ?? 'active',
@@ -101,6 +99,7 @@ class PartyReadDocumentMapper {
       isOwnedByCurrentPlayer: leaderPlayerId == currentPlayerId,
       visibility: _softString(data, 'visibility') ?? 'public',
       groupId: _softString(data, 'groupId'),
+      memberPlayerIds: _stringIdSet(data, 'memberPlayerIds'),
     );
   }
 
@@ -181,6 +180,15 @@ class PartyReadDocumentMapper {
     if (_integer(data, 'schemaVersion') != 1) {
       throw const PartyReadContractException('Unsupported schemaVersion.');
     }
+  }
+
+  Set<String> _stringIdSet(Map<String, Object?> data, String field) {
+    final value = data[field];
+    if (value is! List) return const {};
+    return {
+      for (final id in value)
+        if (id is String && id.trim().isNotEmpty) id,
+    };
   }
 
   String _string(Map<String, Object?> data, String field) {
@@ -267,11 +275,7 @@ class PartyReadDocumentMapper {
     return _date(data, field);
   }
 
-  T _enumValue<T extends Enum>(
-    List<T> values,
-    String name,
-    String field,
-  ) {
+  T _enumValue<T extends Enum>(List<T> values, String name, String field) {
     for (final value in values) {
       if (value.name == name) return value;
     }

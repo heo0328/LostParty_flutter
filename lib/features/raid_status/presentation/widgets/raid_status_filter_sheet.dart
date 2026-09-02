@@ -146,6 +146,79 @@ class RaidStatusFilterSheet extends StatelessWidget {
                         viewModel.setSelection(selection.toggleGroup()),
                       ),
                     ),
+                    if (state.showGroupMemberFilters) ...[
+                      const SizedBox(height: 8),
+                      Text('그룹', style: Theme.of(context).textTheme.titleSmall),
+                      const SizedBox(height: 8),
+                      _OptionChips(
+                        options: state.groups,
+                        selectedIds: selection.groupIds,
+                        keyPrefix: 'raidStatusFilterGroupChip',
+                        onToggle: (id) => unawaited(
+                          viewModel.setSelection(selection.toggleGroupId(id)),
+                        ),
+                      ),
+                      if (state.visibleMembers.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          '그룹원',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: 8),
+                        for (final member in state.visibleMembers) ...[
+                          FilterChip(
+                            key: ValueKey(
+                              'raidStatusFilterMemberChip-${member.playerId}',
+                            ),
+                            label: Text(member.label),
+                            selected: selection.memberPlayerIds.contains(
+                              member.playerId,
+                            ),
+                            showCheckmark: false,
+                            selectedColor: AppColors.primarySoft,
+                            backgroundColor: AppColors.surface,
+                            side: BorderSide(
+                              color:
+                                  selection.memberPlayerIds.contains(
+                                    member.playerId,
+                                  )
+                                  ? AppColors.primary
+                                  : AppColors.outline,
+                            ),
+                            shape: const StadiumBorder(),
+                            onSelected: (_) => unawaited(
+                              viewModel.setSelection(
+                                selection.toggleMember(member.playerId),
+                              ),
+                            ),
+                          ),
+                          if (member.characters.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 16),
+                              child: _OptionChips(
+                                options: member.characters,
+                                selectedIds:
+                                    selection.characterIdsByPlayer[member
+                                        .playerId] ??
+                                    const {},
+                                keyPrefix:
+                                    'raidStatusFilterCharacterChip-${member.playerId}',
+                                onToggle: (id) => unawaited(
+                                  viewModel.setSelection(
+                                    selection.toggleCharacter(
+                                      playerId: member.playerId,
+                                      characterId: id,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        ],
+                      ],
+                    ],
                     if (state.catalog.raids.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
