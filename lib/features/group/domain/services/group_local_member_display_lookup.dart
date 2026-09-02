@@ -1,22 +1,35 @@
 import '../../../account/domain/repositories/account_repository.dart';
+import '../../../account/domain/repositories/activity_characters_repository.dart';
+import '../../../account/domain/services/activity_character_source.dart';
 import '../entities/group_member_display_snapshot.dart';
 
 /// 로컬 계정에만 있는 표시 Snapshot을 서버 Character ID로 조회한다.
 class GroupLocalMemberDisplayLookup {
   const GroupLocalMemberDisplayLookup({
     required AccountRepository accountRepository,
+    this.activityCharactersRepository,
+    this.playerId,
   }) : _accountRepository = accountRepository;
 
   final AccountRepository _accountRepository;
+  final ActivityCharactersRepository? activityCharactersRepository;
+  final String? playerId;
 
   Future<Map<String, GroupMemberDisplaySnapshot>>
   loadByServerCharacterId() async {
     final accounts = await _accountRepository.loadAccounts();
+    final activityCharacterIds = await loadActivityCharacterIds(
+      repository: activityCharactersRepository,
+      playerId: playerId,
+    );
     final byId = <String, GroupMemberDisplaySnapshot>{};
     for (final account in accounts.where(
       (account) => account.hasActiveOwnership,
     )) {
-      for (final character in account.characters) {
+      for (final character in charactersMatchingActivity(
+        account,
+        activityCharacterIds,
+      )) {
         final serverCharacterId = character.serverCharacterId;
         if (serverCharacterId == null ||
             serverCharacterId.isEmpty ||

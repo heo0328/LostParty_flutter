@@ -1,4 +1,5 @@
 import '../../../account/domain/repositories/account_repository.dart';
+import '../../../account/domain/repositories/activity_characters_repository.dart';
 import '../../domain/entities/group_join_code_command.dart';
 import '../../domain/entities/group_join_command.dart';
 import '../../domain/repositories/group_join_code_command_repository.dart';
@@ -68,13 +69,21 @@ class GroupJoinByCodeViewModel {
   const GroupJoinByCodeViewModel({
     required this.accountRepository,
     required this.commandRepository,
+    this.activityCharactersRepository,
+    this.playerId,
   });
 
   final AccountRepository accountRepository;
   final GroupJoinCodeCommandRepository commandRepository;
+  final ActivityCharactersRepository? activityCharactersRepository;
+  final String? playerId;
 
   Future<List<GroupCharacterOption>> loadAuthenticatedCharacters() =>
-      GroupCharacterOptionLoader(accountRepository: accountRepository).load();
+      GroupCharacterOptionLoader(
+        accountRepository: accountRepository,
+        activityCharactersRepository: activityCharactersRepository,
+        playerId: playerId,
+      ).load();
 
   Future<GroupJoinCodeCommandResult> join({
     required String code,

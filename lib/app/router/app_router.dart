@@ -216,8 +216,18 @@ GoRouter createAppRouter({
           firebaseAuth: FirebaseAuth.instance,
         ),
   );
+  final activityCharactersRepositoryOrDefault =
+      activityCharactersRepository ??
+      FirestoreActivityCharactersRepository(
+        firestore: FirebaseFirestore.instance,
+        firebaseAuth: FirebaseAuth.instance,
+      );
   GroupLocalMemberDisplayLookup groupLocalMemberDisplayLookupForRoute() =>
-      GroupLocalMemberDisplayLookup(accountRepository: accountRepository);
+      GroupLocalMemberDisplayLookup(
+        accountRepository: accountRepository,
+        activityCharactersRepository: activityCharactersRepositoryOrDefault,
+        playerId: playerSession.playerId,
+      );
   GroupCreateRepository groupCreateRepositoryForRoute() =>
       groupCreateRepositoryCache ??= FirestoreGroupCreateRepository(
         firestore: FirebaseFirestore.instance,
@@ -246,12 +256,6 @@ GoRouter createAppRouter({
       representativeCharacterSyncGateway ??
       FirestoreRepresentativeCharacterSyncGateway(
         playerId: playerSession.playerId,
-      );
-  final activityCharactersRepositoryOrDefault =
-      activityCharactersRepository ??
-      FirestoreActivityCharactersRepository(
-        firestore: FirebaseFirestore.instance,
-        firebaseAuth: FirebaseAuth.instance,
       );
   final representativeSyncService = RepresentativeCharacterSyncService(
     accountRepository: accountRepository,
@@ -533,6 +537,9 @@ GoRouter createAppRouter({
                       viewModel: GroupCreateViewModel(
                         accountRepository: accountRepository,
                         createRepository: groupCreateRepositoryForRoute(),
+                        activityCharactersRepository:
+                            activityCharactersRepositoryOrDefault,
+                        playerId: playerSession.playerId,
                       ),
                     ),
                   ),
@@ -551,6 +558,9 @@ GoRouter createAppRouter({
                         accountRepository: accountRepository,
                         commandRepository:
                             groupJoinCodeCommandRepositoryForRoute(),
+                        activityCharactersRepository:
+                            activityCharactersRepositoryOrDefault,
+                        playerId: playerSession.playerId,
                       ),
                     ),
                   ),
@@ -568,6 +578,9 @@ GoRouter createAppRouter({
                               firestore: FirebaseFirestore.instance,
                               firebaseAuth: FirebaseAuth.instance,
                             ),
+                        activityCharactersRepository:
+                            activityCharactersRepositoryOrDefault,
+                        playerId: playerSession.playerId,
                         readRepository: groupReadRepositoryForRoute(),
                         commandRepository: groupJoinCommandRepositoryForRoute(),
                         characterSearchRepository:

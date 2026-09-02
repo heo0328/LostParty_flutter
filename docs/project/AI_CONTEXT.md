@@ -10,7 +10,8 @@
 - 상세 계약과 작업 분해는 [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md)를 따른다. 기존 그룹 전용 자격 박탈과 필터 구현보다 이 구조를 먼저 완료한다.
 - A 저장 단위: 활동 Character는 `players/{playerId}/characterActivity/{characterId}` 문서로 저장한다. 각 쓰기는 Character·playerGameAccounts 소유권을 확인하고 대표 활동 문서 삭제를 거절한다. 빈 선택·대표 누락은 Repository가 거절한다. Character 인증·소유권 필드는 이 명령으로 쓰지 않는다.
 - B 캐릭터 관리 UI: 선택·대표·순서·표시 개수는 로컬 초안에 즉시 반영하고 `저장`에서 한 번만 서버에 쓴다. 대표와 마지막 1명 해제는 UI에서 막는다.
-- C1 레이드 후보: 새 레이드 생성·신청·참가 Character 변경 후보는 활동 Character만 사용한다. 기존 membership은 활동 해제만으로 바뀌지 않는다. 다음 단위는 C2 그룹 후보·전투력 적용이다.
+- C1 레이드 후보: 새 레이드 생성·신청·참가 Character 변경 후보는 활동 Character만 사용한다. 기존 membership은 활동 해제만으로 바뀌지 않는다.
+- C2 그룹 후보·전투력: 그룹 생성·가입 후보와 일반 전투력 보강은 활동 Character만 사용한다. 기존 그룹 membership Snapshot은 활동 해제만으로 지우지 않는다. 다음 단위는 D1 그룹 전용 자격 박탈이다.
 
 ## 최우선 현재 상태 — 그룹 전용 레이드 자격 박탈 (2026-09-02)
 

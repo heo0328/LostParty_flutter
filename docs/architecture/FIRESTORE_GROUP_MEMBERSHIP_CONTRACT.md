@@ -3,7 +3,7 @@
 ## 최신 보완 — 그룹 전투력 표시 (2026-08-31)
 
 - Task-11a 멤버 목록·탈퇴·Snapshot은 main에 포함되어 있다. 아래 Task-11 당시 미구현/제외 기록은 과거 범위다. 사용자 확인 기준 현재 생성·초대·탈퇴·코드 가입·Rules 배포는 정상이다.
-- 그룹원 목록은 membership Snapshot과 Character fallback, 상세 인증 캐릭터 목록은 각 Character의 전투력을 읽는다. 그룹 상세 진입 시 본인 로컬 표시 전투력을 Character에 먼저 보강하고 본인 membership Snapshot을 갱신한다.
+- 그룹원 목록은 membership Snapshot과 Character fallback, 상세 인증 캐릭터 목록은 각 Character의 전투력을 읽는다. 그룹 상세 진입 시 본인 활동 Character의 로컬 표시 전투력을 Character에 먼저 보강하고, 그 Character가 현재 표시 Snapshot이면 membership을 갱신한다. 활동에서 빠진 Character의 기존 Snapshot은 유지한다.
 - 로컬 프로필에 전투력이 없으면 가장 최근 유효한 저장 세팅에서 복구한다. 소유권 상실·서버 ID 없음·원정대 누락 캐릭터는 후보에서 제외한다. 프로필 값이 있으면 세팅을 추가 조회하지 않는다.
 - 로컬 null은 기존 membership 숫자를 삭제하지 않는다. 실제 Transaction에서 읽은 기존 숫자를 보존하며, 없는 값만으로 불필요한 갱신을 요청하지 않는다.
 - 동기화 실패는 더 이상 삼키지 않는다. 목록은 저장값으로 계속 표시하고 새로고침 안내를 노출한다. Character 보강 실패와 membership 갱신은 독립 처리한다. 새로고침·멤버 상세 요청의 연타를 막는다.

@@ -1,4 +1,5 @@
 import '../../../account/domain/repositories/account_repository.dart';
+import '../../../account/domain/repositories/activity_characters_repository.dart';
 import '../../domain/entities/group_create_command.dart';
 import '../../domain/entities/group_create_result.dart';
 import '../../domain/repositories/group_create_repository.dart';
@@ -11,15 +12,23 @@ class GroupCreateViewModel {
   const GroupCreateViewModel({
     required this.accountRepository,
     required this.createRepository,
+    this.activityCharactersRepository,
+    this.playerId,
     this.normalizer = const GroupNameNormalizer(),
   });
 
   final AccountRepository accountRepository;
   final GroupCreateRepository createRepository;
+  final ActivityCharactersRepository? activityCharactersRepository;
+  final String? playerId;
   final GroupNameNormalizer normalizer;
 
   Future<List<GroupCharacterOption>> loadAuthenticatedCharacters() =>
-      GroupCharacterOptionLoader(accountRepository: accountRepository).load();
+      GroupCharacterOptionLoader(
+        accountRepository: accountRepository,
+        activityCharactersRepository: activityCharactersRepository,
+        playerId: playerId,
+      ).load();
 
   String defaultNameFor(GroupCharacterOption option) =>
       normalizer.defaultName(option.characterName);

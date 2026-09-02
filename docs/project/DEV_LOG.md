@@ -1,3 +1,10 @@
+## 2026-09-02 그룹 후보·전투력 보강을 활동 Character로 제한 (C2)
+
+- 그룹 생성·가입 신청·초대코드 가입 후보는 `characterActivity`에 있는 Character만 사용한다.
+- 그룹 상세 진입 시 전투력 서버 보강과 본인 인증 Character 목록도 활동 Character만 담는다. 다른 그룹원 목록은 소유 인증 Character를 그대로 읽는다.
+- 비활동 Character의 기존 그룹 membership Snapshot은 활동 해제만으로 지우거나 null로 덮지 않는다.
+- 다음 단위는 D1 그룹 전용 자격 박탈이다.
+
 ## 2026-09-02 레이드 후보를 활동 Character로 제한 (C1)
 
 - 모집 생성 파티장 후보, 신청·참가 후보, 참가 Character 변경 후보는 `characterActivity`에 있는 Character만 사용한다. 메인 화면 표시 개수는 후보 범위를 줄이지 않는다.
