@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/data/repositories/firestore_activity_characters_repository.dart';
 import 'package:lost_party/features/account/domain/entities/save_activity_characters_command.dart';
@@ -148,6 +149,37 @@ void main() {
           'failure',
           ActivityCharactersSaveFailure.representativeRequired,
         ),
+      ),
+    );
+    expect(firestore.writes, isEmpty);
+  });
+
+  test('maps permission-denied to a rules-deploy guidance message', () async {
+    firestore.commitError = FirebaseException(
+      plugin: 'cloud_firestore',
+      code: 'permission-denied',
+      message: 'Missing or insufficient permissions.',
+    );
+
+    await expectLater(
+      repository.save(
+        const SaveActivityCharactersCommand(
+          activityCharacterIds: {'char-1'},
+          ownedCharacterIds: {'char-1', 'char-2'},
+        ),
+      ),
+      throwsA(
+        isA<ActivityCharactersSaveException>()
+            .having(
+              (error) => error.failure,
+              'failure',
+              ActivityCharactersSaveFailure.permissionDenied,
+            )
+            .having(
+              (error) => error.message,
+              'message',
+              contains('Firestore Rules'),
+            ),
       ),
     );
     expect(firestore.writes, isEmpty);

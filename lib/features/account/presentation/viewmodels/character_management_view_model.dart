@@ -279,7 +279,10 @@ class CharacterManagementViewModel extends ChangeNotifier {
       _message = error.message;
     } on RepresentativeCharacterSyncException catch (error) {
       _message = error.message;
-    } on Object {
+    } on Object catch (error, stackTrace) {
+      debugPrint(
+        'CharacterManagementViewModel.save failed: $error\n$stackTrace',
+      );
       _message = '캐릭터 설정을 서버에 반영하지 못했습니다.';
     } finally {
       _isSaving = false;
@@ -323,7 +326,10 @@ class CharacterManagementViewModel extends ChangeNotifier {
     } on ActivityCharactersSaveException catch (error) {
       _message = error.message;
       _loadedActivityIds = {};
-    } on Object {
+    } on Object catch (error, stackTrace) {
+      debugPrint(
+        'CharacterManagementViewModel.loadActivity failed: $error\n$stackTrace',
+      );
       _message = '활동 캐릭터 설정을 불러오지 못했습니다.';
       _loadedActivityIds = {};
     }

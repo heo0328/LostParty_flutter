@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 class TransactionFirestoreFake extends Fake implements FirebaseFirestore {
   final documents = <String, Map<String, dynamic>>{};
   final writes = <String>[];
+  Object? commitError;
   @override
   CollectionReference<Map<String, dynamic>> collection(String path) =>
       _Collection(path, this);
@@ -19,6 +20,9 @@ class TransactionFirestoreFake extends Fake implements FirebaseFirestore {
   }) async {
     final transaction = _Transaction(this);
     final result = await transactionHandler(transaction);
+    if (commitError != null) {
+      throw commitError!;
+    }
     for (final path in transaction.deleted) {
       documents.remove(path);
       writes.add(path);

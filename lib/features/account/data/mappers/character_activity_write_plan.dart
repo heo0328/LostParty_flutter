@@ -76,6 +76,10 @@ class CharacterActivityWritePlan {
         '활성 인증 계정의 캐릭터만 앱에서 사용할 수 있습니다.',
       ActivityCharactersSaveFailure.representativeRequired =>
         '대표 캐릭터는 앱에서 사용할 캐릭터에 포함되어야 합니다.',
+      ActivityCharactersSaveFailure.permissionDenied =>
+        '캐릭터 활동 설정을 저장할 권한이 없습니다. 최신 Firestore Rules가 배포됐는지 확인해 주세요.',
+      ActivityCharactersSaveFailure.unavailable =>
+        '서버에 연결하지 못했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.',
     };
   }
 }

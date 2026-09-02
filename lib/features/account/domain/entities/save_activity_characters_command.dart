@@ -32,6 +32,8 @@ enum ActivityCharactersSaveFailure {
   inactiveCharacter,
   inactiveOwnership,
   representativeRequired,
+  permissionDenied,
+  unavailable,
 }
 
 class ActivityCharactersSaveException implements Exception {

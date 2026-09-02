@@ -28,6 +28,8 @@ void main() {
         'existsAfter(characterActivityPath(playerId, representativeId))',
       ),
     );
+    expect(rules, contains('!(representativeId is string)'));
+    expect(rules, contains('exists(path)'));
     expect(rules, isNot(contains('activityIdListHasStrings')));
     expect(rules, isNot(contains('activityCoversDeclaredAccounts')));
   });

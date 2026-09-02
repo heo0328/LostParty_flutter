@@ -15,7 +15,7 @@
 - D1 그룹 전용 자격 박탈: 그룹 전용 레이드는 그룹 탈퇴 후 membership을 즉시 지우지 않고 `그룹 탈퇴`로 표시한다. 남은 유효 그룹원이 제한적 정리를 요청하면 서버가 재검증한다.
 - D2 진행 중 기본 필터·페이징: 레이드 현황 `진행 중`에 공개 조건·레이드·난이도 로컬 필터와 원본/결과 분리, 20개 페이징 안전 세션, Player별 선택 보존을 적용했다.
 - D3 그룹원·Character 필터: 진행 중 필터에 가입 그룹·그룹원·Character 계층 선택을 추가했다. 현재 Player는 후보에서 제외하고, 사용자 내부 Character는 OR, 사용자 사이는 AND다.
-- E 자동 회귀: 전체 `flutter test --no-pub` 792개를 통과했다. 앱 셸 테스트가 Firebase 없이 초기 탭을 열도록 활동 Character·Character 검색 Repository를 주입했다. 실기기 확인은 사용자 단계다.
+- E 자동 회귀: 전체 `flutter test --no-pub` 792개를 통과했다. 앱 셸 테스트가 Firebase 없이 초기 탭을 열도록 활동 Character·Character 검색 Repository를 주입했다. 실기기 확인은 사용자 단계다. 저장 공통 실패 문구는 Firestore `permission-denied`를 숨기고 있어, 권한 오류는 Rules 배포 확인 안내로 구분한다.
 
 ## 최우선 현재 상태 — 그룹 전용 레이드 자격 박탈 (2026-09-02)
 

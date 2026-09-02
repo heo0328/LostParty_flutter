@@ -185,6 +185,29 @@ void main() {
     expect(viewModel.hasUnsavedChanges, isTrue);
   });
 
+  test('permission-denied 저장 실패는 Rules 배포 안내를 보여 준다', () async {
+    final repository = _FakeAccountRepository();
+    final activity = _FakeActivityCharactersRepository()
+      ..saveError = const ActivityCharactersSaveException(
+        ActivityCharactersSaveFailure.permissionDenied,
+        '캐릭터 활동 설정을 저장할 권한이 없습니다. 최신 Firestore Rules가 배포됐는지 확인해 주세요.',
+      );
+    final viewModel = CharacterManagementViewModel(
+      accountRepository: repository,
+      activityCharactersRepository: activity,
+      playerId: 'player-1',
+    );
+    addTearDown(viewModel.dispose);
+    await viewModel.initialize();
+    viewModel.toggleActivity(viewModel.rosterCharacters.last);
+
+    await viewModel.save();
+
+    expect(repository.visibilityUpdates, isEmpty);
+    expect(viewModel.message, contains('Firestore Rules'));
+    expect(viewModel.hasUnsavedChanges, isTrue);
+  });
+
   test('blocks a second save while the first request is in flight', () async {
     final activity = _FakeActivityCharactersRepository()
       ..saveDelay = const Duration(milliseconds: 20);

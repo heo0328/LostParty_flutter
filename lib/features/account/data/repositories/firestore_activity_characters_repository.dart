@@ -5,6 +5,7 @@ import '../../domain/entities/owned_activity_character.dart';
 import '../../domain/entities/save_activity_characters_command.dart';
 import '../../domain/repositories/activity_characters_repository.dart';
 import '../dtos/character_activity_document_dto.dart';
+import '../mappers/activity_characters_firebase_mapper.dart';
 import '../mappers/character_activity_write_plan.dart';
 
 class FirestoreActivityCharactersRepository
@@ -26,57 +27,69 @@ class FirestoreActivityCharactersRepository
         '로그인한 사용자만 활동 캐릭터를 조회할 수 있습니다.',
       );
     }
-    final snapshot = await _activityCollection(playerId).get();
-    final characterIds = <String>{};
-    for (final document in snapshot.docs) {
-      final dto = CharacterActivityDocumentDto.fromMap(
-        document.data(),
-        documentId: document.id,
-      );
-      if (dto.schemaVersion != CharacterActivityWritePlan.schemaVersion ||
-          dto.playerId != playerId) {
-        throw const FormatException('Invalid character activity document.');
+    try {
+      final snapshot = await _activityCollection(playerId).get();
+      final characterIds = <String>{};
+      for (final document in snapshot.docs) {
+        final dto = CharacterActivityDocumentDto.fromMap(
+          document.data(),
+          documentId: document.id,
+        );
+        if (dto.schemaVersion != CharacterActivityWritePlan.schemaVersion ||
+            dto.playerId != playerId) {
+          throw const FormatException('Invalid character activity document.');
+        }
+        characterIds.add(dto.characterId);
       }
-      characterIds.add(dto.characterId);
+      return ActivityCharacters(playerId: playerId, characterIds: characterIds);
+    } on ActivityCharactersSaveException {
+      rethrow;
+    } on FirebaseException catch (error) {
+      throw mapActivityCharactersFirebaseException(error);
     }
-    return ActivityCharacters(playerId: playerId, characterIds: characterIds);
   }
 
   @override
-  Future<ActivityCharacters> save(SaveActivityCharactersCommand command) {
-    return _firestore.runTransaction((transaction) async {
-      final playerId = await _requirePlayerId(transaction);
-      final ownedCharacters = await _loadOwnedCharacters(
-        transaction,
-        playerId: playerId,
-        ownedCharacterIds: command.ownedCharacterIds,
-      );
-      final plan = CharacterActivityWritePlan.fromValidated(
-        playerId: playerId,
-        command: command,
-        ownedCharacters: ownedCharacters,
-        serverTimestamp: FieldValue.serverTimestamp(),
-      );
-      final existingToRemove = <String, bool>{};
-      for (final characterId in plan.characterIdsToRemove) {
-        final snapshot = await transaction.get(
-          _activityRef(playerId, characterId),
+  Future<ActivityCharacters> save(SaveActivityCharactersCommand command) async {
+    try {
+      return await _firestore.runTransaction((transaction) async {
+        final playerId = await _requirePlayerId(transaction);
+        final ownedCharacters = await _loadOwnedCharacters(
+          transaction,
+          playerId: playerId,
+          ownedCharacterIds: command.ownedCharacterIds,
         );
-        existingToRemove[characterId] = snapshot.exists;
-      }
-      for (final entry in plan.documentsByCharacterId.entries) {
-        transaction.set(_activityRef(playerId, entry.key), entry.value);
-      }
-      for (final entry in existingToRemove.entries) {
-        if (entry.value) {
-          transaction.delete(_activityRef(playerId, entry.key));
+        final plan = CharacterActivityWritePlan.fromValidated(
+          playerId: playerId,
+          command: command,
+          ownedCharacters: ownedCharacters,
+          serverTimestamp: FieldValue.serverTimestamp(),
+        );
+        final existingToRemove = <String, bool>{};
+        for (final characterId in plan.characterIdsToRemove) {
+          final snapshot = await transaction.get(
+            _activityRef(playerId, characterId),
+          );
+          existingToRemove[characterId] = snapshot.exists;
         }
-      }
-      return ActivityCharacters(
-        playerId: playerId,
-        characterIds: plan.activityCharacterIds.toSet(),
-      );
-    });
+        for (final entry in plan.documentsByCharacterId.entries) {
+          transaction.set(_activityRef(playerId, entry.key), entry.value);
+        }
+        for (final entry in existingToRemove.entries) {
+          if (entry.value) {
+            transaction.delete(_activityRef(playerId, entry.key));
+          }
+        }
+        return ActivityCharacters(
+          playerId: playerId,
+          characterIds: plan.activityCharacterIds.toSet(),
+        );
+      });
+    } on ActivityCharactersSaveException {
+      rethrow;
+    } on FirebaseException catch (error) {
+      throw mapActivityCharactersFirebaseException(error);
+    }
   }
 
   Future<String> _requirePlayerId(Transaction transaction) async {

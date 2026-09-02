@@ -230,6 +230,22 @@ try {
 
   await testEnv.clearFirestore();
   await seed(testEnv);
+  console.log('test: missing representative still allows owned activity create');
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, 'playerGameAccounts', `${ownerPlayerId}_account-1`), {
+      schemaVersion: 1,
+      playerId: ownerPlayerId,
+      gameAccountId: 'account-1',
+      status: 'active',
+    });
+  });
+  await assertSucceeds(
+    setDoc(activityRef(ownerDb(), 'char-1'), activityDoc('char-1')),
+  );
+
+  await testEnv.clearFirestore();
+  await seed(testEnv);
   console.log('test: mismatched gameAccountId write is rejected');
   await assertFails(
     setDoc(

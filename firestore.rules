@@ -2707,28 +2707,30 @@ service cloud.firestore {
     }
 
     function ownedActiveCharacterMatches(playerId, characterId, gameAccountId) {
-      let character = get(characterPath(characterId)).data;
-      return character.status == 'active'
-        && character.ownerPlayerId == playerId
-        && character.gameAccountId == gameAccountId;
+      let path = characterPath(characterId);
+      return exists(path)
+        && get(path).data.status == 'active'
+        && get(path).data.ownerPlayerId == playerId
+        && get(path).data.gameAccountId == gameAccountId;
     }
 
     function ownedActiveGameAccount(playerId, gameAccountId) {
-      let ownership = get(playerGameAccountPath(playerId, gameAccountId)).data;
-      return ownership.playerId == playerId
-        && ownership.gameAccountId == gameAccountId
-        && ownership.status == 'active';
+      let path = playerGameAccountPath(playerId, gameAccountId);
+      return exists(path)
+        && get(path).data.playerId == playerId
+        && get(path).data.gameAccountId == gameAccountId
+        && get(path).data.status == 'active';
     }
 
     function representativeActivityCovered(playerId, gameAccountId, characterId) {
-      let ownership = get(playerGameAccountPath(playerId, gameAccountId)).data;
-      let representativeId = ownership.representativeCharacterId;
-      return representativeId is string
-        && representativeId.size() > 0
-        && (
-          characterId == representativeId
-          || existsAfter(characterActivityPath(playerId, representativeId))
-        );
+      let path = playerGameAccountPath(playerId, gameAccountId);
+      let representativeId = exists(path)
+        ? get(path).data.representativeCharacterId
+        : null;
+      return !(representativeId is string)
+        || representativeId.size() == 0
+        || characterId == representativeId
+        || existsAfter(characterActivityPath(playerId, representativeId));
     }
 
     function validCharacterActivityWrite(playerId, characterId, data) {
