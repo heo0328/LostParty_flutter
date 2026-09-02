@@ -28,6 +28,8 @@ import '../../features/account/domain/repositories/account_ownership_status_gate
 import '../../features/account/domain/repositories/character_summary_sync_gateway.dart';
 import '../../features/account/domain/repositories/character_weekly_raid_display_repository.dart';
 import '../../features/account/domain/repositories/game_account_verification_gateway.dart';
+import '../../features/account/data/repositories/firestore_activity_characters_repository.dart';
+import '../../features/account/domain/repositories/activity_characters_repository.dart';
 import '../../features/account/domain/repositories/representative_character_sync_gateway.dart';
 import '../../features/account/domain/services/character_summary_sync_service.dart';
 import '../../features/account/domain/services/representative_character_sync_service.dart';
@@ -121,6 +123,7 @@ GoRouter createAppRouter({
   WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository,
   CharacterWeeklyRaidDisplayRepository? weeklyRaidDisplayRepository,
   RepresentativeCharacterSyncGateway? representativeCharacterSyncGateway,
+  ActivityCharactersRepository? activityCharactersRepository,
   OperatorAccessRepository? operatorAccessRepository,
   ManualVerificationRepository? manualVerificationRepository,
   GroupReadRepository? groupReadRepository,
@@ -243,6 +246,12 @@ GoRouter createAppRouter({
       representativeCharacterSyncGateway ??
       FirestoreRepresentativeCharacterSyncGateway(
         playerId: playerSession.playerId,
+      );
+  final activityCharactersRepositoryOrDefault =
+      activityCharactersRepository ??
+      FirestoreActivityCharactersRepository(
+        firestore: FirebaseFirestore.instance,
+        firebaseAuth: FirebaseAuth.instance,
       );
   final representativeSyncService = RepresentativeCharacterSyncService(
     accountRepository: accountRepository,
@@ -427,6 +436,9 @@ GoRouter createAppRouter({
                       accountRepository: accountRepository,
                       representativeSyncGateway:
                           representativeSyncGatewayOrDefault,
+                      activityCharactersRepository:
+                          activityCharactersRepositoryOrDefault,
+                      playerId: playerSession.playerId,
                       accountId: state.extra as int?,
                     ),
                   ),
@@ -549,13 +561,13 @@ GoRouter createAppRouter({
                       readRepository: groupReadRepositoryForRoute(),
                       actionViewModel: GroupMembershipActionViewModel(
                         accountRepository: accountRepository,
-                        combatPowerSyncGateway: FirestoreCharacterCombatPowerSyncGateway(
-                          firestore: FirebaseFirestore.instance,
-                          firebaseAuth: FirebaseAuth.instance,
-                        ),
+                        combatPowerSyncGateway:
+                            FirestoreCharacterCombatPowerSyncGateway(
+                              firestore: FirebaseFirestore.instance,
+                              firebaseAuth: FirebaseAuth.instance,
+                            ),
                         readRepository: groupReadRepositoryForRoute(),
-                        commandRepository:
-                            groupJoinCommandRepositoryForRoute(),
+                        commandRepository: groupJoinCommandRepositoryForRoute(),
                         characterSearchRepository:
                             FirestoreGroupCharacterSearchRepository(
                               firestore: FirebaseFirestore.instance,
@@ -662,8 +674,7 @@ GoRouter createAppRouter({
                 builder: (context, state) =>
                     OperatorManualVerificationDetailPage(
                       requestId: state.pathParameters['requestId']!,
-                      initialRequest:
-                          state.extra is ManualVerificationRequest
+                      initialRequest: state.extra is ManualVerificationRequest
                           ? state.extra as ManualVerificationRequest
                           : null,
                       operatorAccessRepository:

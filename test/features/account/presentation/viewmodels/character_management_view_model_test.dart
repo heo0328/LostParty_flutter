@@ -5,56 +5,231 @@ import 'package:lost_party/features/account/domain/entities/character_profile.da
 import 'package:lost_party/features/account/domain/entities/character_summary.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
 import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
+import 'package:lost_party/features/account/domain/entities/save_activity_characters_command.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
+import 'package:lost_party/features/account/domain/repositories/activity_characters_repository.dart';
 import 'package:lost_party/features/account/domain/repositories/representative_character_sync_gateway.dart';
 import 'package:lost_party/features/account/presentation/viewmodels/character_management_view_model.dart';
 
 void main() {
-  test('selecting a hidden representative makes it visible', () async {
-    final repository = _FakeAccountRepository();
+  test(
+    'keeps activity, order, and display limit in a local draft until save',
+    () async {
+      final repository = _FakeAccountRepository();
+      final activity = _FakeActivityCharactersRepository();
+      final viewModel = CharacterManagementViewModel(
+        accountRepository: repository,
+        activityCharactersRepository: activity,
+        playerId: 'player-1',
+      );
+      addTearDown(viewModel.dispose);
+      await viewModel.initialize();
+
+      viewModel.toggleActivity(viewModel.rosterCharacters.last);
+      viewModel.reorder(0, 1);
+
+      expect(activity.saveCount, 0);
+      expect(repository.displayLimit, 2);
+      expect(repository.savedOrder, [1, 2]);
+      expect(viewModel.hasUnsavedChanges, isTrue);
+      expect(viewModel.draftDisplayLimit, 1);
+
+      await viewModel.save();
+
+      expect(activity.saveCount, 1);
+      expect(activity.lastCommand?.activityCharacterIds, {
+        'server-character-1',
+      });
+      expect(activity.lastCommand?.ownedCharacterIds, {
+        'server-character-1',
+        'server-character-2',
+      });
+      expect(repository.visibilityUpdates, [(2, false)]);
+      expect(repository.displayLimit, 1);
+      expect(repository.savedOrder, [1]);
+      expect(viewModel.hasUnsavedChanges, isFalse);
+    },
+  );
+
+  test(
+    'does not deselect the representative or the last activity character',
+    () async {
+      final viewModel = CharacterManagementViewModel(
+        accountRepository: _FakeAccountRepository(),
+        activityCharactersRepository: _FakeActivityCharactersRepository(),
+        playerId: 'player-1',
+      );
+      addTearDown(viewModel.dispose);
+      await viewModel.initialize();
+
+      viewModel.toggleActivity(viewModel.rosterCharacters.first);
+      expect(viewModel.selectedCount, 2);
+
+      viewModel.toggleActivity(viewModel.rosterCharacters.last);
+      expect(viewModel.selectedCount, 1);
+      viewModel.toggleActivity(viewModel.rosterCharacters.first);
+      expect(viewModel.selectedCount, 1);
+    },
+  );
+
+  test(
+    'rejects an empty save without calling the activity repository',
+    () async {
+      final activity = _FakeActivityCharactersRepository();
+      final viewModel = CharacterManagementViewModel(
+        accountRepository: _FakeAccountRepository(),
+        activityCharactersRepository: activity,
+        playerId: 'player-1',
+      );
+      addTearDown(viewModel.dispose);
+      await viewModel.initialize();
+      viewModel.debugClearActivitySelection();
+
+      await viewModel.save();
+
+      expect(activity.saveCount, 0);
+      expect(viewModel.message, '앱에서 사용할 캐릭터를 최소 1명 선택해 주세요.');
+    },
+  );
+
+  test('cancel restores the last saved draft', () async {
     final viewModel = CharacterManagementViewModel(
-      accountRepository: repository,
+      accountRepository: _FakeAccountRepository(),
+      activityCharactersRepository: _FakeActivityCharactersRepository(),
+      playerId: 'player-1',
     );
+    addTearDown(viewModel.dispose);
     await viewModel.initialize();
 
-    await viewModel.setRepresentative(viewModel.characters.last);
+    viewModel.toggleActivity(viewModel.rosterCharacters.last);
+    expect(viewModel.selectedCount, 1);
+    viewModel.discardChanges();
+    expect(viewModel.selectedCount, 2);
+    expect(viewModel.hasUnsavedChanges, isFalse);
+  });
 
-    expect(repository.visibilityUpdates, [(2, true)]);
+  test(
+    'restores a remembered order when a character is selected again',
+    () async {
+      final viewModel = CharacterManagementViewModel(
+        accountRepository: _FakeAccountRepository(),
+        activityCharactersRepository: _FakeActivityCharactersRepository(),
+        playerId: 'player-1',
+      );
+      addTearDown(viewModel.dispose);
+      await viewModel.initialize();
+
+      final second = viewModel.rosterCharacters.last;
+      viewModel.toggleActivity(second);
+      viewModel.toggleActivity(second);
+      expect(viewModel.selectedCharacters.map((character) => character.id), [
+        1,
+        2,
+      ]);
+    },
+  );
+
+  test('changes representative only after a successful save', () async {
+    final now = DateTime.utc(2026, 8, 28, 9);
+    final repository = _FakeAccountRepository(serverBacked: true);
+    final gateway = _FakeRepresentativeSyncGateway(
+      state: RepresentativeCharacterSyncState(
+        representativeCharacterId: 'server-character-1',
+        updatedAt: now.subtract(const Duration(minutes: 6)),
+      ),
+      clock: () => now,
+    );
+    final activity = _FakeActivityCharactersRepository();
+    final viewModel = CharacterManagementViewModel(
+      accountRepository: repository,
+      representativeSyncGateway: gateway,
+      activityCharactersRepository: activity,
+      playerId: 'player-1',
+      clock: () => now,
+    );
+    addTearDown(viewModel.dispose);
+    await viewModel.initialize();
+
+    viewModel.setRepresentative(viewModel.rosterCharacters.last);
+    expect(repository.representativeCharacterId, 1);
+    expect(gateway.savedCharacterIds, isEmpty);
+
+    await viewModel.save();
+
+    expect(gateway.savedCharacterIds, ['server-character-2']);
     expect(repository.representativeCharacterId, 2);
-    expect(viewModel.account?.representativeCharacterId, 2);
-    expect(viewModel.characters.first.id, 2);
-    expect(viewModel.characters.first.isVisible, isTrue);
+    expect(activity.saveCount, 1);
   });
 
-  test('updates the display limit and character order', () async {
+  test('does not save local state when activity save fails', () async {
     final repository = _FakeAccountRepository();
+    final activity = _FakeActivityCharactersRepository()
+      ..saveError = const ActivityCharactersSaveException(
+        ActivityCharactersSaveFailure.notOwned,
+        '현재 Player가 active 소유한 캐릭터만 선택할 수 있습니다.',
+      );
     final viewModel = CharacterManagementViewModel(
       accountRepository: repository,
+      activityCharactersRepository: activity,
+      playerId: 'player-1',
     );
+    addTearDown(viewModel.dispose);
     await viewModel.initialize();
+    viewModel.toggleActivity(viewModel.rosterCharacters.last);
 
-    await viewModel.changeDisplayLimit(-1);
-    await viewModel.reorder(0, 2);
+    await viewModel.save();
 
-    expect(repository.displayLimit, 1);
-    expect(repository.savedOrder, [2, 1]);
-    expect(viewModel.characters.map((character) => character.id), [1, 2]);
+    expect(repository.visibilityUpdates, isEmpty);
+    expect(repository.displayLimit, 2);
+    expect(viewModel.message, contains('active 소유한 캐릭터'));
+    expect(viewModel.hasUnsavedChanges, isTrue);
   });
 
-  test('hiding the representative selects the highest item level', () async {
-    final repository = _FakeAccountRepository();
+  test('blocks a second save while the first request is in flight', () async {
+    final activity = _FakeActivityCharactersRepository()
+      ..saveDelay = const Duration(milliseconds: 20);
     final viewModel = CharacterManagementViewModel(
-      accountRepository: repository,
+      accountRepository: _FakeAccountRepository(),
+      activityCharactersRepository: activity,
+      playerId: 'player-1',
     );
+    addTearDown(viewModel.dispose);
     await viewModel.initialize();
+    viewModel.toggleActivity(viewModel.rosterCharacters.last);
 
-    await viewModel.setCharacterVisibility(viewModel.characters.first, false);
+    final first = viewModel.save();
+    final second = viewModel.save();
+    await Future.wait([first, second]);
 
-    expect(repository.visibilityUpdates, [(1, false), (2, true)]);
-    expect(repository.representativeCharacterId, 2);
-    expect(viewModel.characters.first.id, 2);
-    expect(viewModel.characters.first.isVisible, isTrue);
+    expect(activity.saveCount, 1);
   });
+
+  test(
+    'includes every owned account character id in the save command',
+    () async {
+      final repository = _FakeAccountRepository(includeSecondaryAccount: true);
+      final activity = _FakeActivityCharactersRepository();
+      final viewModel = CharacterManagementViewModel(
+        accountRepository: repository,
+        activityCharactersRepository: activity,
+        playerId: 'player-1',
+      );
+      addTearDown(viewModel.dispose);
+      await viewModel.initialize();
+
+      await viewModel.save();
+
+      expect(activity.lastCommand?.ownedCharacterIds, {
+        'server-character-1',
+        'server-character-2',
+        'server-character-3',
+      });
+      expect(
+        activity.lastCommand?.activityCharacterIds,
+        containsAll(['server-character-1', 'server-character-3']),
+      );
+    },
+  );
 
   test('active 인증 계정은 기존 로컬 대표를 서버에 한 번 보강한다', () async {
     final now = DateTime.utc(2026, 8, 28, 9);
@@ -69,6 +244,8 @@ void main() {
     final viewModel = CharacterManagementViewModel(
       accountRepository: repository,
       representativeSyncGateway: gateway,
+      activityCharactersRepository: _FakeActivityCharactersRepository(),
+      playerId: 'player-1',
       clock: () => now,
     );
     addTearDown(viewModel.dispose);
@@ -78,35 +255,6 @@ void main() {
     expect(gateway.seededCharacterIds, ['server-character-1']);
     expect(gateway.savedCharacterIds, isEmpty);
     expect(viewModel.representativeCooldownRemaining, Duration.zero);
-  });
-
-  test('보강 직후에도 사용자 대표 변경은 즉시 가능하다', () async {
-    final now = DateTime.utc(2026, 8, 28, 9);
-    final repository = _FakeAccountRepository(serverBacked: true);
-    final gateway = _FakeRepresentativeSyncGateway(
-      state: const RepresentativeCharacterSyncState(
-        representativeCharacterId: null,
-        updatedAt: null,
-      ),
-      clock: () => now,
-    );
-    final viewModel = CharacterManagementViewModel(
-      accountRepository: repository,
-      representativeSyncGateway: gateway,
-      clock: () => now,
-    );
-    addTearDown(viewModel.dispose);
-    await viewModel.initialize();
-
-    await viewModel.setRepresentative(viewModel.characters.last);
-
-    expect(gateway.seededCharacterIds, ['server-character-1']);
-    expect(gateway.savedCharacterIds, ['server-character-2']);
-    expect(repository.representativeCharacterId, 2);
-    expect(
-      viewModel.representativeCooldownRemaining,
-      const Duration(minutes: 5),
-    );
   });
 
   test('서버 대표가 있으면 로컬 선택을 서버 값으로 맞춘다', () async {
@@ -122,6 +270,8 @@ void main() {
     final viewModel = CharacterManagementViewModel(
       accountRepository: repository,
       representativeSyncGateway: gateway,
+      activityCharactersRepository: _FakeActivityCharactersRepository(),
+      playerId: 'player-1',
       clock: () => now,
     );
     addTearDown(viewModel.dispose);
@@ -130,9 +280,10 @@ void main() {
 
     expect(repository.representativeCharacterId, 2);
     expect(gateway.savedCharacterIds, isEmpty);
+    expect(viewModel.draftRepresentativeId, 2);
   });
 
-  test('서버 기준 5분 안에는 대표 변경과 로컬 변경을 모두 막는다', () async {
+  test('서버 기준 5분 안에는 대표 변경을 막는다', () async {
     final now = DateTime.utc(2026, 8, 28, 9);
     final repository = _FakeAccountRepository(serverBacked: true);
     final gateway = _FakeRepresentativeSyncGateway(
@@ -145,47 +296,37 @@ void main() {
     final viewModel = CharacterManagementViewModel(
       accountRepository: repository,
       representativeSyncGateway: gateway,
+      activityCharactersRepository: _FakeActivityCharactersRepository(),
+      playerId: 'player-1',
       clock: () => now,
     );
     addTearDown(viewModel.dispose);
     await viewModel.initialize();
 
-    await viewModel.setRepresentative(viewModel.characters.last);
+    viewModel.setRepresentative(viewModel.rosterCharacters.last);
+    await viewModel.save();
 
     expect(repository.representativeCharacterId, 1);
     expect(gateway.savedCharacterIds, isEmpty);
-    expect(viewModel.representativeMessage, contains('5분'));
-  });
-
-  test('5분 경과 후 서버 저장 성공 뒤 로컬 대표를 변경한다', () async {
-    final now = DateTime.utc(2026, 8, 28, 9);
-    final repository = _FakeAccountRepository(serverBacked: true);
-    final gateway = _FakeRepresentativeSyncGateway(
-      state: RepresentativeCharacterSyncState(
-        representativeCharacterId: 'server-character-1',
-        updatedAt: now.subtract(const Duration(minutes: 6)),
-      ),
-      clock: () => now,
-    );
-    final viewModel = CharacterManagementViewModel(
-      accountRepository: repository,
-      representativeSyncGateway: gateway,
-      clock: () => now,
-    );
-    addTearDown(viewModel.dispose);
-    await viewModel.initialize();
-
-    await viewModel.setRepresentative(viewModel.characters.last);
-
-    expect(gateway.savedCharacterIds, ['server-character-2']);
-    expect(repository.representativeCharacterId, 2);
+    expect(viewModel.draftRepresentativeId, 1);
   });
 }
 
 class _FakeAccountRepository implements AccountRepository {
-  _FakeAccountRepository({this.serverBacked = false});
+  _FakeAccountRepository({
+    this.serverBacked = false,
+    this.includeSecondaryAccount = false,
+  });
 
   final bool serverBacked;
+  final bool includeSecondaryAccount;
+
+  int representativeCharacterId = 1;
+  int displayLimit = 2;
+  List<int> savedOrder = [1, 2];
+  final List<(int, bool)> visibilityUpdates = [];
+  final Map<int, bool> _visibility = {1: true, 2: true, 3: true};
+
   @override
   Future<void> setPreferredCharacterRole({
     required int characterId,
@@ -203,8 +344,25 @@ class _FakeAccountRepository implements AccountRepository {
 
   @override
   Future<List<LocalGameAccount>> loadAccounts() async {
-    final account = await loadMainAccount();
-    return account == null ? const [] : [account];
+    final main = await loadMainAccount();
+    if (main == null) return const [];
+    if (!includeSecondaryAccount) return [main];
+    return [
+      main,
+      LocalGameAccount(
+        id: 20,
+        serverGameAccountId: serverBacked
+            ? 'server-account-2'
+            : 'server-account-2',
+        serverOwnershipStatus: 'active',
+        label: '부계정',
+        isMain: false,
+        lookupCharacterName: '세번째',
+        representativeCharacterId: 3,
+        displayLimit: 1,
+        characters: [_character(3, '세번째', true, 0)],
+      ),
+    ];
   }
 
   @override
@@ -218,12 +376,6 @@ class _FakeAccountRepository implements AccountRepository {
     required CharacterBuildDraft draft,
     required CharacterBuildRole role,
   }) => throw UnimplementedError();
-
-  int representativeCharacterId = 1;
-  int displayLimit = 2;
-  List<int> savedOrder = [1, 2];
-  final List<(int, bool)> visibilityUpdates = [];
-  final Map<int, bool> _visibility = {1: true, 2: false};
 
   @override
   Future<CharacterBuildSnapshot> refreshCharacterBuildSnapshot({
@@ -335,6 +487,34 @@ LocalAccountCharacter _character(
     displayOrder: displayOrder,
     serverCharacterId: 'server-character-$id',
   );
+}
+
+class _FakeActivityCharactersRepository
+    implements ActivityCharactersRepository {
+  Set<String> characterIds = {};
+  SaveActivityCharactersCommand? lastCommand;
+  int saveCount = 0;
+  Duration? saveDelay;
+  ActivityCharactersSaveException? saveError;
+
+  @override
+  Future<ActivityCharacters> load({required String playerId}) async {
+    return ActivityCharacters(playerId: playerId, characterIds: characterIds);
+  }
+
+  @override
+  Future<ActivityCharacters> save(SaveActivityCharactersCommand command) async {
+    saveCount += 1;
+    lastCommand = command;
+    if (saveDelay != null) {
+      await Future<void>.delayed(saveDelay!);
+    }
+    if (saveError != null) {
+      throw saveError!;
+    }
+    characterIds = Set.of(command.activityCharacterIds);
+    return ActivityCharacters(playerId: 'player-1', characterIds: characterIds);
+  }
 }
 
 class _FakeRepresentativeSyncGateway
