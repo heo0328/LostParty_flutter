@@ -260,7 +260,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
       }
       await _accountRepository.updateCharacterDisplayOrder(
         accountId: account.id,
-        characterIds: _draftOrderedIds,
+        characterIds: _fullDisplayOrderIdsForSave(account),
       );
       await _accountRepository.updateDisplayLimit(
         accountId: account.id,
@@ -283,7 +283,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
       debugPrint(
         'CharacterManagementViewModel.save failed: $error\n$stackTrace',
       );
-      _message = '캐릭터 설정을 서버에 반영하지 못했습니다.';
+      _message = '캐릭터 설정을 서버에 반영하지 못했습니다. (${error.runtimeType})';
     } finally {
       _isSaving = false;
       notifyListeners();
@@ -395,6 +395,19 @@ class CharacterManagementViewModel extends ChangeNotifier {
         for (final character in account.characters)
           ?character.serverCharacterId,
     };
+  }
+
+  List<int> _fullDisplayOrderIdsForSave(LocalGameAccount account) {
+    final selected = [
+      for (final id in _draftOrderedIds)
+        if (account.characters.any((character) => character.id == id)) id,
+    ];
+    final selectedSet = selected.toSet();
+    return [
+      ...selected,
+      for (final character in _roster)
+        if (!selectedSet.contains(character.id)) character.id,
+    ];
   }
 
   Set<String> _activityCharacterIdsForSave() {

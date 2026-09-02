@@ -46,7 +46,7 @@ void main() {
       });
       expect(repository.visibilityUpdates, [(2, false)]);
       expect(repository.displayLimit, 1);
-      expect(repository.savedOrder, [1]);
+      expect(repository.savedOrder, [1, 2]);
       expect(viewModel.hasUnsavedChanges, isFalse);
     },
   );
@@ -478,6 +478,16 @@ class _FakeAccountRepository implements AccountRepository {
     required int accountId,
     required List<int> characterIds,
   }) async {
+    final expected = accountId == 20 ? {3} : {1, 2};
+    if (characterIds.length != expected.length ||
+        !expected.containsAll(characterIds)) {
+      throw ArgumentError.value(
+        characterIds,
+        'characterIds',
+        'Display order must contain every character in the account once. '
+            'accountId=$accountId expected=$expected actual=$characterIds',
+      );
+    }
     savedOrder = List.of(characterIds);
   }
 

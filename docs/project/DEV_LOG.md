@@ -5,8 +5,8 @@
 
 ## 2026-09-02 활동 Character 저장 permission-denied 안내
 
-
-- 실기기에서 캐릭터 관리 저장이 공통 문구 `캐릭터 설정을 서버에 반영하지 못했습니다`로 떨어졌다. 정책 거절이 아니라 Firestore `permission-denied`·연결 실패가 원인이다.
+- 실기기에서 캐릭터 관리 저장이 공통 문구 `캐릭터 설정을 서버에 반영하지 못했습니다`로 떨어졌다. 정책 거절이 아니라 Firestore `permission-denied`·연결 실패, 또는 로컬 표시 순서 저장 실패가 원인이다.
+- Drift는 원정대 전체 Character ID의 표시 순서를 요구한다. 활동 선택만 넘기면 ArgumentError가 나므로 선택 순서를 앞에 두고 비선택 Character를 이어 붙인다.
 - Repository가 Firebase 오류 코드를 매핑한다. 권한이 없으면 Rules 배포 확인을 안내하고, 연결 실패는 재시도를 안내한다.
 - Rules는 대표 Character 필드가 없는 기존 `playerGameAccounts`에서도 소유 Character 쓰기를 막지 않도록 맞췄다. Rules 배포는 하지 않는다.
 
