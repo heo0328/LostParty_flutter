@@ -1,52 +1,54 @@
 # NEXT WORK
 
-## 현재 우선 작업 — 활동 Character 계약과 저장 기반
+## 현재 단계
 
-현재 단계: **구현 전 검토 완료, 첫 작업 단위 준비**.
+A 저장·Domain·Rules를 완료했다. 활동 Character 최종 목록은 `players/{playerId}/characterActivity/current`에 원자 저장한다. Character 인증·소유권 문서는 이 명령으로 쓰지 않는다.
 
-그룹원·Character 필터와 남은 그룹 전용 레이드 정리 기능을 안정적으로 구현하기 전에 인증 원정대 전체와 앱 활동 Character를 분리한다. 전체 계약은 [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md)를 따른다.
+현재 실행 단위는 **B 캐릭터 관리 UI** 다. A가 `main`에 통합된 뒤 시작한다. B 완료 전에 C 이후 코드를 수정하지 않는다.
 
-### 첫 작업 단위 A — 저장 위치·Domain·Rules 계약 확정
+전체 계약은 [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md)를 따른다.
 
-구현 시작 전 최신 Character DTO·Firestore 경로·Rules와 대표 Character 동기화 코드를 대조한다.
+## 작업 순서
+
+```text
+A 저장·Domain·Rules (완료)
+→ B 캐릭터 관리 UI (현재)
+→ C1 레이드 후보 적용
+→ C2 그룹 후보·전투력 적용
+→ D1 그룹 전용 자격 박탈
+→ D2 진행 중 기본 필터·페이징
+→ D3 그룹원·Character 필터
+→ E 실기기·회귀 확인
+```
+
+## 현재 작업 단위 B — 캐릭터 관리 UI
+
+A의 `ActivityCharactersRepository`만 사용한다. 레이드·그룹 후보 소비 경로는 바꾸지 않는다.
 
 포함:
 
-- 현재 Player가 active 소유한 Character의 `activityEnabled` 저장 위치 확정
-- 활동 Character 전체 최종 상태를 저장하는 Domain 명령·DTO·Repository 경계
-- 최소 1명, 대표 Character 포함, active 소유권과 허용 필드 검증
-- 복수 변경 중 잘못된 중간 상태를 만들지 않는 원자 저장 방식
-- 현재 사용자 단독 테스트 데이터 재설정 방식
-- Repository·Rules 계약 테스트
+- 인증 원정대 전체의 Character명 중심 선택 카드와 `선택 수 / 전체 수`
+- 선택·해제·대표·순서·표시 개수를 로컬 초안에 즉시 반영하고 `저장`에서 한 번만 서버에 쓴다
+- 대표 Character 선택 비활성화, 마지막 1명 해제 차단, 0명 저장 요청 거부
+- 선택된 Character만 대표 지정·드래그 순서 목록에 표시
+- 기존 표시 여부 체크박스 제거
+- 메인 화면 표시 개수를 1~활동 Character 수로 제한하고, 활동 수가 줄어들면 표시 개수를 자동 축소
+- 저장 중 중복 요청 차단, 실패 시 서버 미반영 안내
+- `SaveActivityCharactersCommand.ownedCharacterIds`에 본·부계정의 서버 Character ID를 모두 넣는다
+- ViewModel·관련 Widget 테스트
 
 제외:
 
-- 캐릭터 관리 UI
-- 레이드·그룹 후보 필터링
-- 전투력 동기화 변경
-- 그룹 전용 레이드 자격 박탈
+- 레이드 생성·신청·참가 Character 변경 후보 교체
+- 그룹 Snapshot·그룹원 목록·전투력 보강 범위 변경
 - 레이드 현황 필터
-- Rules 배포와 테스트 데이터 실제 삭제·초기화
+- Rules 배포와 테스트 데이터 실제 삭제
 
 완료 조건:
 
-- 실제 코드와 Rules를 근거로 저장 경로와 쓰기 단위를 확정한다.
-- 활동 Character 0명과 비활동 대표 Character를 Repository와 Rules가 거절한다.
-- 인증·소유권 필드는 활동 설정 명령으로 변경되지 않는다.
-- 표적 테스트와 `flutter analyze --no-pub`이 통과한다.
-
-## 이후 작업 순서
-
-1. A: 활동 Character 저장·Domain·Rules 기반
-2. B: 캐릭터 관리 UI — 전체 선택 카드, 대표·순서, 표시 개수, 일괄 저장
-3. C1: 레이드 생성·신청·참가 Character 변경 후보 적용
-4. C2: 그룹 생성·가입 Snapshot, 그룹원 Character 목록과 전투력 보강 적용
-5. 기존 그룹 탈퇴·추방·해산 시 그룹 전용 레이드 자격 박탈과 제한적 정리
-6. 레이드 현황 `진행 중` 공개 조건·레이드·난이도 필터와 20개 페이징 안전성
-7. 그룹원·Character 필터, 실시간 일치 개수와 필터 상태 보존
-8. 자동 회귀·다중 디바이스·실기기 검증
-
-각 작업은 독립 검증 가능한 단위로 나눈다. 앞 단계 완료 전에 다음 단계 코드를 미리 수정하지 않는다.
+- 캐릭터 관리 화면이 전체 선택 → 대표·순서 → 표시 개수 → 취소·저장 흐름을 따른다.
+- 대표 해제와 마지막 1명 해제가 UI에서 막히고, 0명 저장은 요청 자체가 나가지 않는다.
+- 저장 성공 후에만 서버·재진입 상태가 바뀐다.
 
 ## 확정된 제품 기준
 
@@ -59,6 +61,7 @@
 - 0명 상태는 저장 요청 전, Repository와 Rules에서 다시 거절한다.
 - 기존 참가 Character를 비활성화해도 membership·Claim·완료 기록은 유지한다.
 - 과거 사용자 데이터 자동 마이그레이션은 하지 않는다.
+- 테스트 데이터는 캐릭터 관리에서 다시 저장하면 활동 문서가 만들어진다. 기존 Character·소유권 문서는 삭제하지 않는다.
 
 ### 캐릭터 관리 화면
 
@@ -85,6 +88,7 @@
 
 ## 보존 지점
 
+- A 저장 구현 브랜치: `cursor/activity-character-storage-801c`.
 - 문서 설계 시작 기준: `main` `9a58457`, 브랜치 `codex/activity-character-contract`.
 - 기존 보존 브랜치 `codex/rules-complexity-reduction` / `ed02b31` 및 Rules 사본 2개는 유지한다.
 - 그룹 전투력 수정 `4e4ab37` / 통합 `eeba05f`, 모집 UI 준비 문서 `15eaf4a`, 그룹 레이드 연결 `61fd464` / 통합 `25c3b44`를 유지한다.

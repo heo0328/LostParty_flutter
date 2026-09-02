@@ -2634,6 +2634,68 @@ service cloud.firestore {
         && representativeCharacterOwned(oldData, newData);
     }
 
+    function playerGameAccountPath(playerId, gameAccountId) {
+      return /databases/$(database)/documents/playerGameAccounts/$(playerId + '_' + gameAccountId);
+    }
+
+    function activityIdListHasStrings(ids, index) {
+      return index >= ids.size()
+        || (
+          ids[index] is string
+          && ids[index].size() > 0
+          && activityIdListHasStrings(ids, index + 1)
+        );
+    }
+
+    function activityIncludesAccountRepresentative(playerId, gameAccountId, activityIds) {
+      let ownership = get(playerGameAccountPath(playerId, gameAccountId)).data;
+      return ownership.playerId == playerId
+        && ownership.gameAccountId == gameAccountId
+        && ownership.status == 'active'
+        && (
+          !ownership.keys().hasAny(['representativeCharacterId'])
+          || ownership.representativeCharacterId == null
+          || activityIds.hasAny([ownership.representativeCharacterId])
+        );
+    }
+
+    function activityCoversDeclaredAccounts(playerId, data, index) {
+      return index >= data.gameAccountIds.size()
+        || (
+          data.gameAccountIds[index] is string
+          && data.gameAccountIds[index].size() > 0
+          && activityIncludesAccountRepresentative(
+            playerId,
+            data.gameAccountIds[index],
+            data.activityCharacterIds
+          )
+          && activityCoversDeclaredAccounts(playerId, data, index + 1)
+        );
+    }
+
+    function validCharacterActivityDocument(playerId, data) {
+      return hasActiveBinding()
+        && currentPlayerId() == playerId
+        && data.keys().hasOnly([
+          'schemaVersion',
+          'playerId',
+          'activityCharacterIds',
+          'gameAccountIds',
+          'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && data.activityCharacterIds is list
+        && data.activityCharacterIds.size() >= 1
+        && data.gameAccountIds is list
+        && data.gameAccountIds.size() >= 1
+        && data.gameAccountIds.size() <= 8
+        && data.updatedAt == request.time
+        && activityIdListHasStrings(data.activityCharacterIds, 0)
+        && activityIdListHasStrings(data.gameAccountIds, 0)
+        && activityCoversDeclaredAccounts(playerId, data, 0);
+    }
+
     match /authBindings/{authUid} {
       allow get: if signedIn() && request.auth.uid == authUid;
       allow list: if false;
@@ -2801,6 +2863,17 @@ service cloud.firestore {
           claimId,
           resource.data
         );
+      }
+
+      match /characterActivity/{docId} {
+        allow get, list: if hasActiveBinding()
+          && playerId == currentPlayerId();
+        allow create, update: if docId == 'current'
+          && validCharacterActivityDocument(
+            playerId,
+            request.resource.data
+          );
+        allow delete: if false;
       }
     }
 

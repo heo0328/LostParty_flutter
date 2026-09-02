@@ -45,6 +45,15 @@
 - `itemLevel`, `combatPower`: nullable number
 - `lastSummaryFetchedAt`, `createdAt`, `updatedAt`: server timestamp
 
+`players/{playerId}/characterActivity/current`:
+
+- `schemaVersion: 1`
+- `playerId: string`
+- `activityCharacterIds: string[]` — 현재 Player가 앱에서 사용할 Character ID 전체 최종 목록
+- `gameAccountIds: string[]` — 이번 저장에서 검증한 active 소유 GameAccount ID
+- `updatedAt`: server timestamp
+- 활동 설정은 이 문서만 쓰며 Character 인증·소유권 필드는 변경하지 않는다
+
 ## 명령과 검증 경계
 
 - 현재 초기 구현은 Flutter Firestore transaction에서 Auth binding의 `PlayerId`를

@@ -8,6 +8,7 @@
 - 활동 해제는 기존 레이드 membership·Claim·완료 Snapshot을 바꾸지 않고 새 생성·신청·변경 후보에서만 제외한다.
 - 진행 중 레이드 필터는 공개 조건·레이드·난이도·그룹원·Character를 로컬 조합하며 사용자 내부 Character는 OR, 사용자 사이는 AND다. 서버 20개 페이징과 원본 목록을 유지하고 실시간 일치 개수를 표시한다.
 - 상세 계약과 작업 분해는 [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md)를 따른다. 기존 그룹 전용 자격 박탈과 필터 구현보다 이 구조를 먼저 완료한다.
+- A 저장 단위: 활동 목록은 `players/{playerId}/characterActivity/current`에 원자 저장한다. 최소 1명·대표 포함·active 소유권을 Repository와 Rules가 거절한다. Character 인증·소유권 필드는 이 명령으로 쓰지 않는다. 다음 단위는 B 캐릭터 관리 UI다.
 
 ## 최우선 현재 상태 — 그룹 전용 레이드 자격 박탈 (2026-09-02)
 

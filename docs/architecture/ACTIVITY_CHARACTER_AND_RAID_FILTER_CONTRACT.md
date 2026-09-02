@@ -29,7 +29,7 @@
 ### 3.2 활동 캐릭터
 
 - 사용자가 LOSTPARTY의 레이드·그룹 기능에서 실제로 사용할 Character다.
-- 서버 Player-Character 관계에 `activityEnabled: bool`로 저장하는 것을 기준으로 한다.
+- 서버 Player 소유 관계의 활동 설정으로 저장한다. 쓰기 단위는 `players/{playerId}/characterActivity/current`의 `activityCharacterIds` 전체 최종 목록이다. 목록에 있으면 `activityEnabled=true`와 같다.
 - `true`인 Character만 새로운 레이드 생성·신청·참가·참가 Character 변경 후보, 그룹원 Character 후보와 일반 전투력 동기화 대상이 된다.
 - 필드명은 구현 전 기존 Character 문서 소유 경계와 대조하되 의미를 `표시 여부`가 아닌 `앱 활동 허용`으로 유지한다.
 
@@ -48,7 +48,11 @@
 ### 4.1 저장 위치와 소유 경계
 
 - `activityEnabled`는 전역 Character 정체성이 아니라 현재 Player가 소유한 Character의 앱 사용 설정이다.
-- 현재 서버 Character 스키마에서 Player 소유 관계와 함께 안전하게 검증할 수 있는 위치에 저장한다.
+- 확정 저장 위치는 `players/{playerId}/characterActivity/current` 한 문서다. 활동 Character 전체 최종 ID 목록을 이 문서에 원자적으로 저장한다.
+- 문서 필드: `schemaVersion`, `playerId`, `activityCharacterIds`, `gameAccountIds`, `updatedAt`. Character의 `ownerPlayerId`·`status`·인증 필드는 이 명령으로 쓰지 않는다.
+- `activityCharacterIds`에 포함된 Character만 활동 상태다. 목록에 없으면 비활동이며, 문서가 없으면 아직 설정되지 않은 상태다.
+- `gameAccountIds`는 이번 저장에서 검증한 active 소유 GameAccount다. 각 계정의 서버 대표 Character는 `activityCharacterIds`에 있어야 한다.
+- 현재 서버 Character 스키마에서 Player 소유 관계(`characters.ownerPlayerId`, `playerGameAccounts`)와 함께 검증한다.
 - active 소유자인 Player 본인만 값을 변경할 수 있다.
 - 다른 그룹원에게는 그룹 기능에 필요한 활동 Character의 최소 표시 Projection만 공개하고 인증·소유권 내부 값은 노출하지 않는다.
 
@@ -63,8 +67,10 @@
 ### 4.3 기존 데이터 처리
 
 - 현재 운영 데이터는 사용자 단독 테스트 데이터이므로 과거 사용자 자동 마이그레이션과 호환 배치는 구현하지 않는다.
-- 새 계약 적용 시 테스트 데이터를 새 기준으로 다시 설정할 수 있다.
-- 신규 계정의 최초 활동 Character 선택 흐름과 기본값은 구현 단위에서 명시하되, 서버 저장 전 최소 1명과 대표 포함을 반드시 만족한다.
+- `characterActivity/current` 문서가 없으면 활동 Character는 아직 설정되지 않은 상태다. 누락 필드를 true로 간주하지 않는다.
+- 새 계약 적용 시 테스트 데이터 재설정: 앱에서 사용할 캐릭터를 다시 저장하면 문서가 만들어진다. 기존 Character·소유권·membership·Claim 문서는 삭제하지 않는다.
+- 실제 테스트 데이터 삭제와 Rules 배포는 이 저장 단위에서 하지 않는다.
+- 신규 계정의 최초 활동 Character 선택 흐름과 기본값은 캐릭터 관리 UI 단위에서 명시하되, 서버 저장 전 최소 1명과 대표 포함을 반드시 만족한다.
 
 ## 5. 캐릭터 관리 UI 계약
 
@@ -230,10 +236,10 @@ AND
 
 ### A. 계약·저장 기반
 
-- 실제 Character 문서와 Rules를 대조해 `activityEnabled` 저장 위치 확정
+- 실제 Character 문서와 Rules를 대조해 `players/{playerId}/characterActivity/current`에 활동 목록을 저장한다
 - Domain·DTO·Repository 명령과 원자 저장 계약
 - 최소 1명·대표 포함·active 소유권 Rules와 테스트
-- 테스트 데이터 초기화 또는 재설정 절차
+- 테스트 데이터 재설정 절차 문서화. 실제 삭제·Rules 배포는 이 단계에서 하지 않는다
 
 ### B. 캐릭터 관리 UI
 

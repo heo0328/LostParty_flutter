@@ -9,7 +9,7 @@ class TransactionFirestoreFake extends Fake implements FirebaseFirestore {
   final writes = <String>[];
   @override
   CollectionReference<Map<String, dynamic>> collection(String path) =>
-      _Collection(path);
+      _Collection(path, this);
 
   @override
   Future<T> runTransaction<T>(
@@ -20,7 +20,12 @@ class TransactionFirestoreFake extends Fake implements FirebaseFirestore {
     final transaction = _Transaction(this);
     final result = await transactionHandler(transaction);
     for (final entry in transaction.pending.entries) {
-      documents[entry.key] = {...documents[entry.key]!, ...entry.value};
+      final existing = documents[entry.key];
+      if (existing == null || transaction.replaced.contains(entry.key)) {
+        documents[entry.key] = Map<String, dynamic>.from(entry.value);
+      } else {
+        documents[entry.key] = {...existing, ...entry.value};
+      }
       writes.add(entry.key);
     }
     return result;
@@ -41,25 +46,39 @@ class _User extends Fake implements User {
 // ignore: subtype_of_sealed_class
 class _Collection extends Fake
     implements CollectionReference<Map<String, dynamic>> {
-  _Collection(this.path);
+  _Collection(this.path, this.firestore);
   @override
   final String path;
   @override
+  final TransactionFirestoreFake firestore;
+  @override
   DocumentReference<Map<String, dynamic>> doc([String? path]) =>
-      _Document('${this.path}/$path');
+      _Document('${this.path}/$path', firestore);
 }
 
 // ignore: subtype_of_sealed_class
 class _Document extends Fake
     implements DocumentReference<Map<String, dynamic>> {
-  _Document(this.path);
+  _Document(this.path, this.firestore);
   @override
   final String path;
+  @override
+  final TransactionFirestoreFake firestore;
   @override
   String get id => path.split('/').last;
   @override
   CollectionReference<Map<String, dynamic>> collection(String collectionPath) =>
-      _Collection('$path/$collectionPath');
+      _Collection('$path/$collectionPath', firestore);
+
+  @override
+  Future<DocumentSnapshot<Map<String, dynamic>>> get([
+    GetOptions? options,
+  ]) async {
+    final data = firestore.documents[path];
+    return _Snapshot<Map<String, dynamic>>(
+      data == null ? null : Map<String, dynamic>.from(data),
+    );
+  }
 }
 
 // ignore: subtype_of_sealed_class
@@ -76,6 +95,7 @@ class _Transaction extends Fake implements Transaction {
   _Transaction(this.firestore);
   final TransactionFirestoreFake firestore;
   final pending = <String, Map<String, dynamic>>{};
+  final replaced = <String>{};
   @override
   Future<DocumentSnapshot<T>> get<T extends Object?>(
     DocumentReference<T> documentReference,
@@ -96,6 +116,17 @@ class _Transaction extends Fake implements Transaction {
       throw StateError('Missing document.');
     }
     pending[documentReference.path] = Map<String, dynamic>.from(data);
+    return this;
+  }
+
+  @override
+  Transaction set<T>(
+    DocumentReference<T> documentReference,
+    T data, [
+    SetOptions? options,
+  ]) {
+    pending[documentReference.path] = Map<String, dynamic>.from(data as Map);
+    replaced.add(documentReference.path);
     return this;
   }
 }
