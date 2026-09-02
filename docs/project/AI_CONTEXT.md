@@ -1,5 +1,14 @@
 # AI CONTEXT (2026)
 
+## 최우선 현재 상태 — 활동 Character 기반 구조 선행 (2026-09-02)
+
+- 그룹원·Character 필터와 이후 레이드 후보·전투력 동기화의 기반으로 인증 원정대 전체와 앱 활동 Character를 분리하기로 확정했다.
+- 서버 Player-Character 관계의 `activityEnabled` 의미를 기준으로 하며 최소 1명, 대표 Character 포함, active 소유권을 UI·Repository·Rules에서 함께 검증한다. 현재 데이터는 사용자 단독 테스트 데이터이므로 과거 사용자 자동 마이그레이션은 하지 않는다.
+- 캐릭터 관리 화면은 전체 원정대의 간략 선택 카드 → 선택된 Character의 대표·순서 → 메인 표시 개수 → 일괄 저장 순서로 바꾼다. 대표 선택은 해제 불가, 마지막 1명 해제 차단과 저장 전 0명 방어를 적용한다.
+- 활동 해제는 기존 레이드 membership·Claim·완료 Snapshot을 바꾸지 않고 새 생성·신청·변경 후보에서만 제외한다.
+- 진행 중 레이드 필터는 공개 조건·레이드·난이도·그룹원·Character를 로컬 조합하며 사용자 내부 Character는 OR, 사용자 사이는 AND다. 서버 20개 페이징과 원본 목록을 유지하고 실시간 일치 개수를 표시한다.
+- 상세 계약과 작업 분해는 [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md)를 따른다. 기존 그룹 전용 자격 박탈과 필터 구현보다 이 구조를 먼저 완료한다.
+
 ## 최우선 현재 상태 — 그룹 전용 레이드 자격 박탈 (2026-09-02)
 
 - 모집 리스트와 레이드 현황 진행 중 카드 높이를 줄였다. 그룹 전용이면 우상단에 `그룹`을 두고, 난이도·레이드 줄 오른쪽에 파티장 이름만 두며, 인원과 전투력·숙련도 제한을 한 줄로 합친다.
