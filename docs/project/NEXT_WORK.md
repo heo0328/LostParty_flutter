@@ -2,9 +2,11 @@
 
 ## 현재 단계
 
-A 저장·Domain·Rules, B 캐릭터 관리 UI, C1 레이드 후보 적용, C2 그룹 후보·전투력 적용, D1 그룹 전용 자격 박탈, D2 진행 중 기본 필터·페이징, D3 그룹원·Character 필터를 완료했다.
+A 저장·Domain·Rules부터 D3 그룹원·Character 필터까지 구현했고, E 자동 회귀(`flutter analyze`·전체 `flutter test` 792개)를 통과했다.
 
-현재 실행 단위는 **E 실기기·회귀 확인** 이다. 활동 Character 저장부터 진행 중 그룹원 필터까지 실기기에서 확인한다.
+현재 실행 단위는 **E 실기기 확인** 이다. 활동 Character 저장부터 진행 중 그룹원 필터까지 실기기에서 확인한다. 이 단계는 사용자 실기기이며 여기서 자동으로 완료 처리하지 않는다.
+
+전체 계약은 [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md)를 따른다.
 
 전체 계약은 [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md)를 따른다.
 
@@ -18,17 +20,29 @@ A 저장·Domain·Rules (완료)
 → D1 그룹 전용 자격 박탈 (완료)
 → D2 진행 중 기본 필터·페이징 (완료)
 → D3 그룹원·Character 필터 (완료)
-→ E 실기기·회귀 확인 (현재)
+→ E 자동 회귀 (완료) · 실기기 확인 (현재)
 ```
 
-## 현재 작업 단위 E — 실기기·회귀 확인
+## 현재 작업 단위 E — 실기기 확인
 
-캐릭터 관리 저장·재진입, 레이드·그룹 후보 제한, 그룹 전용 자격 정리, 진행 중 공개 조건·레이드·난이도·그룹원·Character 필터와 결과 개수를 실기기에서 확인한다.
+자동 회귀는 통과했다. 실기기에서 아래를 확인한다. 활동 Character 저장·후보·D1 정리는 **Rules를 배포한 뒤**에만 서버 경로가 열린다. 이 단계에서는 Rules를 배포하지 않는다.
+
+확인:
+
+- 캐릭터 관리 저장과 재진입 유지. 대표·마지막 1명 해제 차단
+- 새 레이드 생성·신청 후보가 활동 Character만 보임. 기존 참가 Character 비활성화 후에도 membership 유지
+- 그룹 생성·가입 후보와 본인 전투력 보강이 활동 Character만 사용
+- 그룹 전용 레이드에서 탈퇴 후 `그룹 탈퇴` 표시와 제한적 정리. 전체 공개 그룹 연결 레이드는 탈퇴만으로 자격 상실이 아님
+- 진행 중 필터: 공개 조건·레이드·난이도·그룹원·Character, 실시간 개수, 재실행 후 선택 유지
 
 제외:
 
 - 모집 목록·신청 중·완료 기록 필터
 - Rules 배포와 테스트 데이터 실제 삭제
+
+## 완료한 작업 단위 E — 자동 회귀
+
+계약 §10 최종 단계로 전체 `flutter test --no-pub` 792개와 변경 파일 `flutter analyze --no-pub`를 실행했다. 앱 셸 테스트가 초기 탭에서 Firebase에 닿지 않도록 활동 Character·Character 검색 Repository를 주입했다.
 
 ## 완료한 작업 단위 D3 — 그룹원·Character 필터
 
@@ -99,6 +113,7 @@ A 저장·Domain·Rules (완료)
 - D1 그룹 전용 자격 박탈 브랜치: `cursor/group-raid-qualification-801c`.
 - D2 진행 중 기본 필터 브랜치: `cursor/raid-status-in-progress-filter-801c`.
 - D3 그룹원·Character 필터 브랜치: `cursor/raid-status-member-character-filter-801c`.
+- E 자동 회귀 브랜치: `cursor/activity-character-regression-801c`.
 - 문서 설계 시작 기준: `main` `9a58457`, 브랜치 `codex/activity-character-contract`.
 - 기존 보존 브랜치 `codex/rules-complexity-reduction` / `ed02b31` 및 Rules 사본 2개는 유지한다.
 - 그룹 전투력 수정 `4e4ab37` / 통합 `eeba05f`, 모집 UI 준비 문서 `15eaf4a`, 그룹 레이드 연결 `61fd464` / 통합 `25c3b44`를 유지한다.

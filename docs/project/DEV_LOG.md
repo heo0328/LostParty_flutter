@@ -1,3 +1,9 @@
+## 2026-09-02 활동 Character 자동 회귀 (E)
+
+- 계약 최종 단계로 전체 `flutter test --no-pub` 792개를 실행해 통과했다. 변경 파일 `flutter analyze --no-pub`는 문제 없다.
+- 앱 셸 테스트가 레이드 현황 초기 탭에서 Firebase에 닿아 실패하던 경로를 고쳤다. 활동 Character Repository와 Character 검색 Repository를 테스트에서 주입한다.
+- Rules는 배포하지 않는다. 실기기 확인은 사용자 단계다.
+
 ## 2026-09-02 진행 중 그룹원·Character 필터 (D3)
 
 - 레이드 현황 `진행 중` 필터에 가입 그룹·그룹원 대표명·Character 칩을 추가한다. 현재 Player는 후보에서 제외한다.

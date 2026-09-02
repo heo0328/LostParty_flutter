@@ -41,6 +41,7 @@ import '../../features/group/data/repositories/firestore_group_join_code_command
 import '../../features/group/data/repositories/firestore_group_join_command_repository.dart';
 import '../../features/group/data/repositories/firestore_group_read_repository.dart';
 import '../../features/group/domain/repositories/group_application_command_repository.dart';
+import '../../features/group/domain/repositories/group_character_search_repository.dart';
 import '../../features/group/domain/repositories/group_create_repository.dart';
 import '../../features/group/domain/repositories/group_join_code_command_repository.dart';
 import '../../features/group/domain/repositories/group_join_command_repository.dart';
@@ -127,6 +128,7 @@ GoRouter createAppRouter({
   OperatorAccessRepository? operatorAccessRepository,
   ManualVerificationRepository? manualVerificationRepository,
   GroupReadRepository? groupReadRepository,
+  GroupCharacterSearchRepository? characterSearchRepository,
   GroupCreateRepository? groupCreateRepository,
   GroupJoinCommandRepository? groupJoinCommandRepository,
   GroupApplicationCommandRepository? groupApplicationCommandRepository,
@@ -139,6 +141,13 @@ GoRouter createAppRouter({
       groupReadRepositoryCache ??= FirestoreGroupReadRepository(
         firestore: FirebaseFirestore.instance,
       );
+  GroupCharacterSearchRepository? characterSearchRepositoryCache =
+      characterSearchRepository;
+  GroupCharacterSearchRepository characterSearchRepositoryForRoute() =>
+      characterSearchRepositoryCache ??=
+          FirestoreGroupCharacterSearchRepository(
+            firestore: FirebaseFirestore.instance,
+          );
   GroupCreateRepository? groupCreateRepositoryCache = groupCreateRepository;
   GroupJoinCommandRepository? groupJoinCommandRepositoryCache =
       groupJoinCommandRepository;
@@ -362,9 +371,7 @@ GoRouter createAppRouter({
                   raidCatalogRepository: raidCatalogRepository,
                   groupReadRepository: groupReadRepositoryForRoute(),
                   characterSearchRepository:
-                      FirestoreGroupCharacterSearchRepository(
-                        firestore: FirebaseFirestore.instance,
-                      ),
+                      characterSearchRepositoryForRoute(),
                 ),
                 routes: [
                   GoRoute(
