@@ -57,6 +57,19 @@
 - 각 쓰기는 `characters/{characterId}`와 `playerGameAccounts/{playerId}_{gameAccountId}` 소유권을 확인하고, 같은 계정의 대표 Character 활동 문서가 있어야 한다
 - 대표 Character의 활동 문서는 삭제할 수 없다
 
+`players/{playerId}/activityCharacterProjections/{characterId}`:
+
+- `schemaVersion: 1`
+- `playerId`, `characterId` — 문서 ID와 `characterId`가 같아야 한다
+- `characterName`, `serverName`, `characterClassName`: 표시용 문자열. 같은 Transaction의 Character 문서와 일치
+- `itemLevel`, `combatPower`: number 또는 null
+- `displayOrder`: 활동 Character 집합 안의 0부터 시작하는 표시 순서
+- `isRepresentative`: 해당 GameAccount 서버 대표 Character이면 true
+- `updatedAt`: server timestamp
+- `gameAccountId`·소유권·인증 필드는 저장하지 않는다
+- 활동 Character 저장과 같은 Transaction에서 추가·갱신·삭제한다
+- 읽기는 본인과 `groupMembershipState.current.activeGroupIds`가 겹치는 그룹원만 허용한다
+
 ## 명령과 검증 경계
 
 - 현재 초기 구현은 Flutter Firestore transaction에서 Auth binding의 `PlayerId`를

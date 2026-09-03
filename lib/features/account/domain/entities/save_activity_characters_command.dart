@@ -2,6 +2,7 @@ class SaveActivityCharactersCommand {
   const SaveActivityCharactersCommand({
     required this.activityCharacterIds,
     required this.ownedCharacterIds,
+    this.orderedActivityCharacterIds = const [],
   });
 
   /// 저장할 활동 Character의 최종 전체 집합.
@@ -10,6 +11,10 @@ class SaveActivityCharactersCommand {
   /// 이번 저장에서 소유권을 검증할 인증 Character 전체.
   /// 본·부계정 서버 Character ID를 빠짐없이 넣는다.
   final Set<String> ownedCharacterIds;
+
+  /// 활동 Character 표시 순서. 비어 있으면 ID 정렬을 사용한다.
+  /// 값이 있으면 [activityCharacterIds]와 같은 집합이어야 한다.
+  final List<String> orderedActivityCharacterIds;
 }
 
 class ActivityCharacters {
@@ -32,6 +37,7 @@ enum ActivityCharactersSaveFailure {
   inactiveCharacter,
   inactiveOwnership,
   representativeRequired,
+  incompleteDisplay,
   permissionDenied,
   unavailable,
 }

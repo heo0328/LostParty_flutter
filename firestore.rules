@@ -2716,6 +2716,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/players/$(playerId)/characterActivity/$(characterId);
     }
 
+    function activityCharacterProjectionPath(playerId, characterId) {
+      return /databases/$(database)/documents/players/$(playerId)/activityCharacterProjections/$(characterId);
+    }
+
     function ownedActiveCharacterMatches(playerId, characterId, gameAccountId) {
       let characterDoc = characterPath(characterId);
       return exists(characterDoc)
@@ -2763,7 +2767,8 @@ service cloud.firestore {
         && data.updatedAt == request.time
         && ownedActiveCharacterMatches(playerId, characterId, data.gameAccountId)
         && ownedActiveGameAccount(playerId, data.gameAccountId)
-        && representativeActivityCovered(playerId, data.gameAccountId, characterId);
+        && representativeActivityCovered(playerId, data.gameAccountId, characterId)
+        && existsAfter(activityCharacterProjectionPath(playerId, characterId));
     }
 
     function validCharacterActivityDelete(playerId, characterId, oldData) {
@@ -2778,7 +2783,97 @@ service cloud.firestore {
           !ownership.keys().hasAny(['representativeCharacterId'])
           || ownership.representativeCharacterId == null
           || ownership.representativeCharacterId != characterId
+        )
+        && !existsAfter(activityCharacterProjectionPath(playerId, characterId));
+    }
+
+    function sharesActiveGroupWith(ownerPlayerId) {
+      let readerStatePath = groupMembershipStatePath(currentPlayerId());
+      let ownerStatePath = groupMembershipStatePath(ownerPlayerId);
+      return exists(readerStatePath)
+        && exists(ownerStatePath)
+        && get(readerStatePath).data.activeGroupIds is list
+        && get(ownerStatePath).data.activeGroupIds is list
+        && get(readerStatePath).data.activeGroupIds.size() > 0
+        && get(ownerStatePath).data.activeGroupIds.size() > 0
+        && get(readerStatePath).data.activeGroupIds.hasAny(
+          get(ownerStatePath).data.activeGroupIds
         );
+    }
+
+    function canReadActivityCharacterProjection(ownerPlayerId) {
+      return hasActiveBinding()
+        && (currentPlayerId() == ownerPlayerId
+          || sharesActiveGroupWith(ownerPlayerId));
+    }
+
+    function projectionMatchesCharacterDisplay(characterId, data) {
+      let character = get(characterPath(characterId)).data;
+      return data.characterName == character.characterName
+        && data.serverName == character.serverName
+        && data.characterClassName == character.characterClassName
+        && (data.itemLevel == null || data.itemLevel is number)
+        && (data.combatPower == null || data.combatPower is number);
+    }
+
+    function projectionRepresentativeMatches(playerId, characterId, data) {
+      let character = get(characterPath(characterId)).data;
+      let ownership = get(
+        playerGameAccountPath(playerId, character.gameAccountId)
+      ).data;
+      let representativeId = ownership.keys().hasAny(['representativeCharacterId'])
+        ? ownership.representativeCharacterId
+        : null;
+      return data.isRepresentative == (
+        representativeId is string
+        && representativeId.size() > 0
+        && representativeId == characterId
+      );
+    }
+
+    function validActivityCharacterProjectionWrite(playerId, characterId, data) {
+      return hasActiveBinding()
+        && currentPlayerId() == playerId
+        && characterId == data.characterId
+        && existsAfter(characterActivityPath(playerId, characterId))
+        && data.keys().hasOnly([
+          'schemaVersion',
+          'playerId',
+          'characterId',
+          'characterName',
+          'serverName',
+          'characterClassName',
+          'itemLevel',
+          'combatPower',
+          'displayOrder',
+          'isRepresentative',
+          'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && data.characterName is string
+        && data.characterName.size() > 0
+        && data.serverName is string
+        && data.serverName.size() > 0
+        && data.characterClassName is string
+        && data.characterClassName.size() > 0
+        && data.displayOrder is int
+        && data.displayOrder >= 0
+        && data.isRepresentative is bool
+        && data.updatedAt == request.time
+        && projectionMatchesCharacterDisplay(characterId, data)
+        && projectionRepresentativeMatches(playerId, characterId, data)
+        && ownedActiveCharacterMatches(
+          playerId,
+          characterId,
+          get(characterPath(characterId)).data.gameAccountId
+        );
+    }
+
+    function validActivityCharacterProjectionDelete(playerId, characterId) {
+      return hasActiveBinding()
+        && currentPlayerId() == playerId
+        && !existsAfter(characterActivityPath(playerId, characterId));
     }
 
     match /authBindings/{authUid} {
@@ -2962,6 +3057,19 @@ service cloud.firestore {
           playerId,
           characterId,
           resource.data
+        );
+      }
+
+      match /activityCharacterProjections/{characterId} {
+        allow get, list: if canReadActivityCharacterProjection(playerId);
+        allow create, update: if validActivityCharacterProjectionWrite(
+          playerId,
+          characterId,
+          request.resource.data
+        );
+        allow delete: if validActivityCharacterProjectionDelete(
+          playerId,
+          characterId
         );
       }
     }

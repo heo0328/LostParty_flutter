@@ -27,6 +27,15 @@ class ActivityCharactersPolicy {
     if (ownedIds.isEmpty || !ownedIds.containsAll(activityIds)) {
       return ActivityCharactersSaveFailure.notOwned;
     }
+    final orderedIds = command.orderedActivityCharacterIds;
+    if (orderedIds.isNotEmpty) {
+      if (orderedIds.length != activityIds.length ||
+          orderedIds.toSet().length != orderedIds.length ||
+          !activityIds.containsAll(orderedIds) ||
+          orderedIds.any((id) => id.trim() != id || id.isEmpty)) {
+        return ActivityCharactersSaveFailure.invalidCharacterId;
+      }
+    }
 
     final byId = <String, OwnedActivityCharacter>{};
     for (final character in ownedCharacters) {
@@ -62,6 +71,12 @@ class ActivityCharactersPolicy {
 
     if (!activityIds.containsAll(requiredRepresentatives)) {
       return ActivityCharactersSaveFailure.representativeRequired;
+    }
+
+    for (final characterId in activityIds) {
+      if (!byId[characterId]!.hasDisplayFields) {
+        return ActivityCharactersSaveFailure.incompleteDisplay;
+      }
     }
     return null;
   }

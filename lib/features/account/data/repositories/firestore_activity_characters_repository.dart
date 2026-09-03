@@ -1,15 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../domain/entities/activity_character_projection.dart';
 import '../../domain/entities/owned_activity_character.dart';
 import '../../domain/entities/save_activity_characters_command.dart';
 import '../../domain/repositories/activity_characters_repository.dart';
+import '../dtos/activity_character_projection_dto.dart';
 import '../dtos/character_activity_document_dto.dart';
 import '../mappers/activity_characters_firebase_mapper.dart';
 import '../mappers/character_activity_write_plan.dart';
 
 class FirestoreActivityCharactersRepository
-    implements ActivityCharactersRepository {
+    implements
+        ActivityCharactersRepository,
+        ActivityCharacterProjectionRepository {
   FirestoreActivityCharactersRepository({
     required FirebaseFirestore firestore,
     required FirebaseAuth firebaseAuth,
@@ -65,19 +69,34 @@ class FirestoreActivityCharactersRepository
           ownedCharacters: ownedCharacters,
           serverTimestamp: FieldValue.serverTimestamp(),
         );
-        final existingToRemove = <String, bool>{};
+        final existingActivityToRemove = <String, bool>{};
+        final existingProjectionsToRemove = <String, bool>{};
         for (final characterId in plan.characterIdsToRemove) {
           final snapshot = await transaction.get(
             _activityRef(playerId, characterId),
           );
-          existingToRemove[characterId] = snapshot.exists;
+          existingActivityToRemove[characterId] = snapshot.exists;
+        }
+        for (final characterId in plan.characterIdsToRemove) {
+          final snapshot = await transaction.get(
+            _projectionRef(playerId, characterId),
+          );
+          existingProjectionsToRemove[characterId] = snapshot.exists;
         }
         for (final entry in plan.documentsByCharacterId.entries) {
           transaction.set(_activityRef(playerId, entry.key), entry.value);
         }
-        for (final entry in existingToRemove.entries) {
+        for (final entry in plan.projectionDocumentsByCharacterId.entries) {
+          transaction.set(_projectionRef(playerId, entry.key), entry.value);
+        }
+        for (final entry in existingActivityToRemove.entries) {
           if (entry.value) {
             transaction.delete(_activityRef(playerId, entry.key));
+          }
+        }
+        for (final entry in existingProjectionsToRemove.entries) {
+          if (entry.value) {
+            transaction.delete(_projectionRef(playerId, entry.key));
           }
         }
         return ActivityCharacters(
@@ -85,6 +104,58 @@ class FirestoreActivityCharactersRepository
           characterIds: plan.activityCharacterIds.toSet(),
         );
       });
+    } on ActivityCharactersSaveException {
+      rethrow;
+    } on FirebaseException catch (error) {
+      throw mapActivityCharactersFirebaseException(error);
+    }
+  }
+
+  @override
+  Future<List<ActivityCharacterProjection>> loadProjections({
+    required String playerId,
+  }) async {
+    if (playerId.trim().isEmpty) {
+      throw const ActivityCharactersSaveException(
+        ActivityCharactersSaveFailure.unauthenticated,
+        '로그인한 사용자만 활동 캐릭터를 조회할 수 있습니다.',
+      );
+    }
+    try {
+      final snapshot = await _projectionCollection(playerId).get();
+      final projections = <ActivityCharacterProjection>[];
+      for (final document in snapshot.docs) {
+        final dto = ActivityCharacterProjectionDto.fromMap(
+          document.data(),
+          documentId: document.id,
+        );
+        if (dto.schemaVersion !=
+                CharacterActivityWritePlan.projectionSchemaVersion ||
+            dto.playerId != playerId) {
+          throw const FormatException(
+            'Invalid activity character projection document.',
+          );
+        }
+        projections.add(
+          ActivityCharacterProjection(
+            playerId: dto.playerId,
+            characterId: dto.characterId,
+            characterName: dto.characterName,
+            serverName: dto.serverName,
+            characterClassName: dto.characterClassName,
+            displayOrder: dto.displayOrder,
+            isRepresentative: dto.isRepresentative,
+            itemLevel: dto.itemLevel,
+            combatPower: dto.combatPower,
+          ),
+        );
+      }
+      projections.sort((left, right) {
+        final byOrder = left.displayOrder.compareTo(right.displayOrder);
+        if (byOrder != 0) return byOrder;
+        return left.characterId.compareTo(right.characterId);
+      });
+      return projections;
     } on ActivityCharactersSaveException {
       rethrow;
     } on FirebaseException catch (error) {
@@ -169,6 +240,11 @@ class FirestoreActivityCharactersRepository
               representative is String && representative.isNotEmpty
               ? representative
               : null,
+          characterName: data['characterName'] as String? ?? '',
+          serverName: data['serverName'] as String? ?? '',
+          characterClassName: data['characterClassName'] as String? ?? '',
+          itemLevel: _optionalNumber(data['itemLevel'] ?? data['itemAvgLevel']),
+          combatPower: _optionalNumber(data['combatPower']),
         ),
       );
     }
@@ -184,10 +260,34 @@ class FirestoreActivityCharactersRepository
         .collection('characterActivity');
   }
 
+  CollectionReference<Map<String, dynamic>> _projectionCollection(
+    String playerId,
+  ) {
+    return _firestore
+        .collection('players')
+        .doc(playerId)
+        .collection('activityCharacterProjections');
+  }
+
+  DocumentReference<Map<String, dynamic>> _projectionRef(
+    String playerId,
+    String characterId,
+  ) {
+    return _projectionCollection(playerId).doc(characterId);
+  }
+
   DocumentReference<Map<String, dynamic>> _activityRef(
     String playerId,
     String characterId,
   ) {
     return _activityCollection(playerId).doc(characterId);
+  }
+
+  static double? _optionalNumber(Object? value) {
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value.replaceAll(',', '').trim());
+    }
+    return null;
   }
 }

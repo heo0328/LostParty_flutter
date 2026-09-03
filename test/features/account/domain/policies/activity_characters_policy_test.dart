@@ -122,6 +122,43 @@ void main() {
       ),
       ActivityCharactersSaveFailure.notOwned,
     );
+    expect(
+      policy.validate(
+        playerId: 'player-1',
+        command: SaveActivityCharactersCommand(
+          activityCharacterIds: {'char-1'},
+          ownedCharacterIds: {'char-1'},
+          orderedActivityCharacterIds: const ['char-1', 'char-1'],
+        ),
+        ownedCharacters: [
+          _character('char-1', representativeCharacterId: 'char-1'),
+        ],
+      ),
+      ActivityCharactersSaveFailure.invalidCharacterId,
+    );
+  });
+
+  test('rejects activity characters missing display fields', () {
+    expect(
+      policy.validate(
+        playerId: 'player-1',
+        command: const SaveActivityCharactersCommand(
+          activityCharacterIds: {'char-1'},
+          ownedCharacterIds: {'char-1'},
+        ),
+        ownedCharacters: [
+          OwnedActivityCharacter(
+            characterId: 'char-1',
+            gameAccountId: 'account-1',
+            ownerPlayerId: 'player-1',
+            status: 'active',
+            ownershipStatus: 'active',
+            representativeCharacterId: 'char-1',
+          ),
+        ],
+      ),
+      ActivityCharactersSaveFailure.incompleteDisplay,
+    );
   });
 }
 
@@ -139,5 +176,8 @@ OwnedActivityCharacter _character(
     status: status,
     ownershipStatus: ownershipStatus,
     representativeCharacterId: representativeCharacterId,
+    characterName: id,
+    serverName: '루페온',
+    characterClassName: '바드',
   );
 }

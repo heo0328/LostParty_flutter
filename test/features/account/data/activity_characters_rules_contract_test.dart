@@ -53,4 +53,44 @@ void main() {
     expect(activityRules, isNot(contains("'status'")));
     expect(activityRules, isNot(contains("'activityCharacterIds'")));
   });
+
+  test('활동 Character Projection은 그룹원 읽기와 활동 문서 동기 쓰기를 강제한다', () {
+    expect(
+      rules,
+      contains('match /activityCharacterProjections/{characterId}'),
+    );
+    expect(rules, contains('validActivityCharacterProjectionWrite'));
+    expect(rules, contains('validActivityCharacterProjectionDelete'));
+    expect(rules, contains('canReadActivityCharacterProjection'));
+    expect(rules, contains('sharesActiveGroupWith'));
+    expect(
+      rules,
+      contains(
+        'existsAfter(activityCharacterProjectionPath(playerId, characterId))',
+      ),
+    );
+    expect(
+      rules,
+      contains(
+        '!existsAfter(activityCharacterProjectionPath(playerId, characterId))',
+      ),
+    );
+    expect(
+      rules,
+      contains('existsAfter(characterActivityPath(playerId, characterId))'),
+    );
+    final start = rules.indexOf(
+      'function validActivityCharacterProjectionWrite',
+    );
+    final end = rules.indexOf(
+      'function validActivityCharacterProjectionDelete',
+    );
+    final projectionRules = rules.substring(start, end);
+    expect(projectionRules, contains("'characterName'"));
+    expect(projectionRules, contains("'displayOrder'"));
+    expect(projectionRules, contains("'isRepresentative'"));
+    expect(projectionRules, isNot(contains("'gameAccountId'")));
+    expect(projectionRules, isNot(contains("'ownerPlayerId'")));
+    expect(projectionRules, isNot(contains("'status'")));
+  });
 }

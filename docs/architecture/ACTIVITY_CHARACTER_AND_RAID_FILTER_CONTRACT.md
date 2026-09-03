@@ -55,7 +55,12 @@
 - Repository 저장은 최종 선택 전체를 한 Transaction에서 검증한 뒤 활성 문서를 쓰고 해제된 문서를 삭제한다. 클라이언트 Repository는 보안 경계가 아니다.
 - active 소유자인 Player 본인만 값을 변경할 수 있다.
 - 다른 그룹원에게는 그룹 기능에 필요한 활동 Character의 최소 표시 Projection만 공개하고 인증·소유권 내부 값은 노출하지 않는다.
-- 이 Projection은 활동 Character 저장과 같은 완료 단위에서 추가·갱신·삭제되어야 한다. 다른 그룹원 화면에서 인증 활성 Character 전체를 대체 자료로 노출하지 않는다.
+- 공개 Projection 경로: `players/{playerId}/activityCharacterProjections/{characterId}`. 활동 Character마다 문서 하나이며 가변 ID 목록을 한 문서에 넣지 않는다.
+- Projection 필드: `schemaVersion`, `playerId`, `characterId`, `characterName`, `serverName`, `characterClassName`, `itemLevel`, `combatPower`, `displayOrder`, `isRepresentative`, `updatedAt`. `gameAccountId`·`ownerPlayerId`·`status`와 인증 필드는 넣지 않는다.
+- 표시명·서버·직업은 같은 시점 `characters/{characterId}` 값과 일치해야 한다. `isRepresentative`는 해당 Character 계정의 서버 대표 여부와 일치해야 한다.
+- 이 Projection은 활동 Character 저장과 같은 Transaction에서 추가·갱신·삭제한다. `characterActivity` 쓰기 결과는 대응 Projection이 있어야 하고, 활동 문서 삭제는 Projection 삭제를 함께 요구한다.
+- 본인과 공통 가입 그룹이 있는 그룹원만 Projection을 `get`/`list`할 수 있다. `characterActivity`는 계속 owner만 읽는다.
+- 다른 그룹원 화면에서 인증 활성 Character 전체를 대체 자료로 노출하지 않는다. Projection이 없으면 아직 재저장되지 않은 상태로 취급한다.
 
 ### 4.2 서버 불변조건
 
@@ -69,7 +74,7 @@
 
 - 현재 운영 데이터는 사용자 단독 테스트 데이터이므로 과거 사용자 자동 마이그레이션과 호환 배치는 구현하지 않는다.
 - `characterActivity` 하위 문서가 없으면 활동 Character는 아직 설정되지 않은 상태다. 누락 필드를 true로 간주하지 않는다.
-- 새 계약 적용 시 테스트 데이터 재설정: 앱에서 사용할 캐릭터를 다시 저장하면 캐릭터별 활동 문서가 만들어진다. 기존 Character·소유권·membership·Claim 문서는 삭제하지 않는다.
+- 새 계약 적용 시 테스트 데이터 재설정: 앱에서 사용할 캐릭터를 다시 저장하면 캐릭터별 활동 문서와 그룹원용 Projection이 만들어진다. 기존 Character·소유권·membership·Claim 문서는 삭제하지 않는다.
 - 실제 테스트 데이터 삭제와 Rules 배포는 이 저장 단위에서 하지 않는다.
 - 신규 계정의 최초 활동 Character 선택 흐름과 기본값은 캐릭터 관리 UI 단위에서 명시하되, 서버 저장 전 최소 1명과 대표 포함을 반드시 만족한다.
 

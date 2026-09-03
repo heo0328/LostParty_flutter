@@ -40,6 +40,9 @@ void main() {
       expect(activity.lastCommand?.activityCharacterIds, {
         'server-character-1',
       });
+      expect(activity.lastCommand?.orderedActivityCharacterIds, [
+        'server-character-1',
+      ]);
       expect(activity.lastCommand?.ownedCharacterIds, {
         'server-character-1',
         'server-character-2',

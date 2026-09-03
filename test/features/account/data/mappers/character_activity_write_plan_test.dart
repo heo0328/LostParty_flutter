@@ -22,6 +22,11 @@ void main() {
             status: 'active',
             ownershipStatus: 'active',
             representativeCharacterId: 'char-1',
+            characterName: '대표',
+            serverName: '루페온',
+            characterClassName: '바드',
+            itemLevel: 1680,
+            combatPower: 2100,
           ),
           OwnedActivityCharacter(
             characterId: 'char-2',
@@ -30,6 +35,9 @@ void main() {
             status: 'active',
             ownershipStatus: 'active',
             representativeCharacterId: 'char-1',
+            characterName: '부캐',
+            serverName: '루페온',
+            characterClassName: '바드',
           ),
         ],
         serverTimestamp: timestamp,
@@ -45,6 +53,25 @@ void main() {
         'gameAccountId': 'account-1',
         'updatedAt': timestamp,
       });
+      expect(plan.projectionDocumentsByCharacterId['char-1'], {
+        'schemaVersion': 1,
+        'playerId': 'player-1',
+        'characterId': 'char-1',
+        'characterName': '대표',
+        'serverName': '루페온',
+        'characterClassName': '바드',
+        'itemLevel': 1680,
+        'combatPower': 2100,
+        'displayOrder': 0,
+        'isRepresentative': true,
+        'updatedAt': timestamp,
+      });
+      expect(
+        plan.projectionDocumentsByCharacterId['char-1']!.containsKey(
+          'gameAccountId',
+        ),
+        isFalse,
+      );
       expect(
         plan.documentsByCharacterId['char-1']!.containsKey('ownerPlayerId'),
         isFalse,
@@ -85,4 +112,58 @@ void main() {
       ),
     );
   });
+
+  test(
+    'keeps caller display order and representative flags on projections',
+    () {
+      const timestamp = Object();
+      final plan = CharacterActivityWritePlan.fromValidated(
+        playerId: 'player-1',
+        command: SaveActivityCharactersCommand(
+          activityCharacterIds: {'char-1', 'char-2'},
+          ownedCharacterIds: {'char-1', 'char-2'},
+          orderedActivityCharacterIds: const ['char-2', 'char-1'],
+        ),
+        ownedCharacters: const [
+          OwnedActivityCharacter(
+            characterId: 'char-1',
+            gameAccountId: 'account-1',
+            ownerPlayerId: 'player-1',
+            status: 'active',
+            ownershipStatus: 'active',
+            representativeCharacterId: 'char-1',
+            characterName: '대표',
+            serverName: '루페온',
+            characterClassName: '바드',
+          ),
+          OwnedActivityCharacter(
+            characterId: 'char-2',
+            gameAccountId: 'account-1',
+            ownerPlayerId: 'player-1',
+            status: 'active',
+            ownershipStatus: 'active',
+            representativeCharacterId: 'char-1',
+            characterName: '부캐',
+            serverName: '루페온',
+            characterClassName: '바드',
+          ),
+        ],
+        serverTimestamp: timestamp,
+      );
+
+      expect(plan.activityCharacterIds, ['char-2', 'char-1']);
+      expect(
+        plan.projectionDocumentsByCharacterId['char-2']!['displayOrder'],
+        0,
+      );
+      expect(
+        plan.projectionDocumentsByCharacterId['char-1']!['displayOrder'],
+        1,
+      );
+      expect(
+        plan.projectionDocumentsByCharacterId['char-2']!['isRepresentative'],
+        isFalse,
+      );
+    },
+  );
 }

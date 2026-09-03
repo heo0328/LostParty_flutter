@@ -243,6 +243,9 @@ class CharacterManagementViewModel extends ChangeNotifier {
           SaveActivityCharactersCommand(
             activityCharacterIds: activityIds,
             ownedCharacterIds: ownedIds,
+            orderedActivityCharacterIds: _orderedActivityCharacterIdsForSave(
+              activityIds,
+            ),
           ),
         );
         _loadedActivityIds = saved.characterIds;
@@ -444,6 +447,46 @@ class CharacterManagementViewModel extends ChangeNotifier {
       }
     }
     return activityIds;
+  }
+
+  List<String> _orderedActivityCharacterIdsForSave(Set<String> activityIds) {
+    final ordered = <String>[];
+    final seen = <String>{};
+    void addServerId(String? serverId) {
+      if (serverId == null ||
+          seen.contains(serverId) ||
+          !activityIds.contains(serverId)) {
+        return;
+      }
+      seen.add(serverId);
+      ordered.add(serverId);
+    }
+
+    for (final character in selectedCharacters) {
+      addServerId(character.serverCharacterId);
+    }
+
+    final currentAccount = _account;
+    final otherCharacters = [
+      for (final account in _allAccounts)
+        if (currentAccount == null || account.id != currentAccount.id)
+          ...List<LocalAccountCharacter>.of(account.characters)
+            ..sort((left, right) {
+              final leftOrder = left.displayOrder ?? 1 << 30;
+              final rightOrder = right.displayOrder ?? 1 << 30;
+              final byOrder = leftOrder.compareTo(rightOrder);
+              if (byOrder != 0) return byOrder;
+              return left.characterName.compareTo(right.characterName);
+            }),
+    ];
+    for (final character in otherCharacters) {
+      addServerId(character.serverCharacterId);
+    }
+
+    for (final characterId in (activityIds.toList()..sort())) {
+      addServerId(characterId);
+    }
+    return ordered;
   }
 
   List<int> _insertRestoredOrder(int characterId) {
