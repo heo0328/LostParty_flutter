@@ -910,6 +910,25 @@ void main() {
       await database.loadRaidStatusFilterSelection('player-1'),
       contains('"includePublic":true'),
     );
+
+    await database.saveRaidStatusFilterSelection(
+      playerId: 'player-1',
+      screenKind: 'recruitmentList',
+      selectionJson:
+          '{"schemaVersion":1,"includePublic":false,"includeGroup":true,"raidIds":[],"difficultyIds":[]}',
+      now: DateTime.utc(2026, 9, 3),
+    );
+    expect(
+      await database.loadRaidStatusFilterSelection('player-1'),
+      contains('"includePublic":true'),
+    );
+    expect(
+      await database.loadRaidStatusFilterSelection(
+        'player-1',
+        screenKind: 'recruitmentList',
+      ),
+      contains('"includeGroup":true'),
+    );
   });
 }
 

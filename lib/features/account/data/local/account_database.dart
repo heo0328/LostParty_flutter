@@ -152,14 +152,15 @@ class PartyNotificationReceipts extends Table {
   Set<Column<Object>> get primaryKey => {eventId};
 }
 
-/// 레이드 현황 진행 중 필터 선택. 앱 재실행 후에도 Player별로 유지한다.
+/// 레이드 현황·모집 목록 필터 선택. Player와 화면 단위로 유지한다.
 class RaidStatusFilterSettings extends Table {
   TextColumn get playerId => text()();
+  TextColumn get screenKind => text()();
   TextColumn get selectionJson => text()();
   DateTimeColumn get updatedAt => dateTime()();
 
   @override
-  Set<Column<Object>> get primaryKey => {playerId};
+  Set<Column<Object>> get primaryKey => {playerId, screenKind};
 }
 
 /// 캐릭터 카드 주간 레이드 표기 설정. 없으면 기본 3개 추천.
@@ -195,7 +196,7 @@ class AccountDatabase extends _$AccountDatabase {
     : super(executor ?? driftDatabase(name: 'lost_party'));
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -257,6 +258,9 @@ class AccountDatabase extends _$AccountDatabase {
       }
       if (from < 11) {
         await migrator.createTable(raidStatusFilterSettings);
+      }
+      if (from < 12) {
+        await _migrateRaidStatusFilterSettingsToScreenKind();
       }
     },
   );
@@ -1391,21 +1395,53 @@ class AccountDatabase extends _$AccountDatabase {
     )..where((table) => table.characterId.equals(characterId))).go();
   }
 
-  Future<String?> loadRaidStatusFilterSelection(String playerId) async {
-    final row = await (select(
-      raidStatusFilterSettings,
-    )..where((table) => table.playerId.equals(playerId))).getSingleOrNull();
+  Future<void> _migrateRaidStatusFilterSettingsToScreenKind() async {
+    await customStatement('''
+CREATE TABLE IF NOT EXISTS raid_status_filter_settings_v12 (
+  player_id TEXT NOT NULL,
+  screen_kind TEXT NOT NULL,
+  selection_json TEXT NOT NULL,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (player_id, screen_kind)
+);
+''');
+    await customStatement('''
+INSERT OR IGNORE INTO raid_status_filter_settings_v12
+  (player_id, screen_kind, selection_json, updated_at)
+SELECT player_id, 'activeRaids', selection_json, updated_at
+FROM raid_status_filter_settings;
+''');
+    await customStatement('DROP TABLE raid_status_filter_settings');
+    await customStatement(
+      'ALTER TABLE raid_status_filter_settings_v12 '
+      'RENAME TO raid_status_filter_settings',
+    );
+  }
+
+  Future<String?> loadRaidStatusFilterSelection(
+    String playerId, {
+    String screenKind = 'activeRaids',
+  }) async {
+    final row =
+        await (select(raidStatusFilterSettings)..where(
+              (table) =>
+                  table.playerId.equals(playerId) &
+                  table.screenKind.equals(screenKind),
+            ))
+            .getSingleOrNull();
     return row?.selectionJson;
   }
 
   Future<void> saveRaidStatusFilterSelection({
     required String playerId,
     required String selectionJson,
+    String screenKind = 'activeRaids',
     DateTime? now,
   }) async {
     await into(raidStatusFilterSettings).insertOnConflictUpdate(
       RaidStatusFilterSettingsCompanion.insert(
         playerId: playerId,
+        screenKind: screenKind,
         selectionJson: selectionJson,
         updatedAt: now ?? DateTime.now().toUtc(),
       ),

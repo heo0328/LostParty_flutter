@@ -1,7 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lost_party/features/raid_status/data/repositories/drift_raid_status_filter_store.dart';
+import 'package:lost_party/features/raid_status/domain/entities/raid_filter_screen.dart';
+import 'package:lost_party/features/raid_status/domain/entities/raid_status_filter_selection.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_read_models.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_aggregate.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_read_repository.dart';
 import 'package:lost_party/features/recruitment_list/presentation/viewmodels/public_recruitment_list_view_model.dart';
@@ -26,24 +30,25 @@ void main() {
   PublicRecruitmentListViewModel createViewModel() {
     final repository = FakePartyReadRepository(
       publicFirstPage: firstPage.stream,
-      loadNextPage: ({
-        required String cycleKey,
-        required String currentPlayerId,
-        required PublicRecruitmentPageCursor cursor,
-        int limit = publicRecruitmentPageSize,
-      }) async {
-        nextPageCalls += 1;
-        final completer = nextPageCompleter;
-        if (completer != null) {
-          return completer.future;
-        }
-        return PublicRecruitmentPage(
-          items: [_summary('next-$nextPageCalls')],
-          nextCursor: const FakePublicRecruitmentPageCursor('next'),
-          hasMore: false,
-          isFromCache: false,
-        );
-      },
+      loadNextPage:
+          ({
+            required String cycleKey,
+            required String currentPlayerId,
+            required PublicRecruitmentPageCursor cursor,
+            int limit = publicRecruitmentPageSize,
+          }) async {
+            nextPageCalls += 1;
+            final completer = nextPageCompleter;
+            if (completer != null) {
+              return completer.future;
+            }
+            return PublicRecruitmentPage(
+              items: [_summary('next-$nextPageCalls')],
+              nextCursor: const FakePublicRecruitmentPageCursor('next'),
+              hasMore: false,
+              isFromCache: false,
+            );
+          },
     );
     return PublicRecruitmentListViewModel(
       repository: repository,
@@ -236,7 +241,10 @@ void main() {
 
     firstPage.add(
       PublicRecruitmentPage(
-        items: [_summary('a', title: 'old'), _summary('b')],
+        items: [
+          _summary('a', title: 'old'),
+          _summary('b'),
+        ],
         hasMore: true,
         nextCursor: const FakePublicRecruitmentPageCursor('b'),
         isFromCache: false,
@@ -248,7 +256,10 @@ void main() {
 
     firstPage.add(
       PublicRecruitmentPage(
-        items: [_summary('a', title: 'new'), _summary('b')],
+        items: [
+          _summary('a', title: 'new'),
+          _summary('b'),
+        ],
         hasMore: true,
         nextCursor: const FakePublicRecruitmentPageCursor('b'),
         isFromCache: false,
@@ -350,21 +361,24 @@ void main() {
     var remaining = 5;
     final repository = FakePartyReadRepository(
       publicFirstPage: firstPage.stream,
-      loadNextPage: ({
-        required String cycleKey,
-        required String currentPlayerId,
-        required PublicRecruitmentPageCursor cursor,
-        int limit = publicRecruitmentPageSize,
-      }) async {
-        nextPageCalls += 1;
-        remaining -= 1;
-        return PublicRecruitmentPage(
-          items: const [],
-          nextCursor: FakePublicRecruitmentPageCursor('page-$nextPageCalls'),
-          hasMore: remaining > 0,
-          isFromCache: false,
-        );
-      },
+      loadNextPage:
+          ({
+            required String cycleKey,
+            required String currentPlayerId,
+            required PublicRecruitmentPageCursor cursor,
+            int limit = publicRecruitmentPageSize,
+          }) async {
+            nextPageCalls += 1;
+            remaining -= 1;
+            return PublicRecruitmentPage(
+              items: const [],
+              nextCursor: FakePublicRecruitmentPageCursor(
+                'page-$nextPageCalls',
+              ),
+              hasMore: remaining > 0,
+              isFromCache: false,
+            );
+          },
     );
     final viewModel = PublicRecruitmentListViewModel(
       repository: repository,
@@ -393,17 +407,198 @@ void main() {
     expect(viewModel.state.hasMore, isTrue);
     expect(viewModel.state.isEmpty, isTrue);
   });
+
+  test('공개 조건 필터는 원본을 유지하고 일치 항목만 보여 준다', () async {
+    final viewModel = createViewModel()..start();
+    addTearDown(viewModel.dispose);
+    firstPage.add(
+      PublicRecruitmentPage(
+        items: [
+          _summary('public'),
+          _summary('group', groupId: 'group-1'),
+        ],
+        hasMore: false,
+        isFromCache: false,
+      ),
+    );
+    await settle();
+
+    await viewModel.setSelection(
+      RaidStatusFilterSelection.unrestricted.toggleGroup(),
+    );
+    await settle();
+
+    expect(viewModel.state.originalItems.map((item) => item.id), [
+      'public',
+      'group',
+    ]);
+    expect(viewModel.state.items.map((item) => item.id), ['public']);
+    expect(viewModel.state.isEmptyFiltered, isFalse);
+  });
+
+  test('필터 결과가 비고 다음 페이지가 있으면 자동 보충한다', () async {
+    final repository = FakePartyReadRepository(
+      publicFirstPage: firstPage.stream,
+      loadNextPage:
+          ({
+            required String cycleKey,
+            required String currentPlayerId,
+            required PublicRecruitmentPageCursor cursor,
+            int limit = publicRecruitmentPageSize,
+          }) async {
+            nextPageCalls += 1;
+            return PublicRecruitmentPage(
+              items: [_summary('group-next', groupId: 'group-1')],
+              nextCursor: const FakePublicRecruitmentPageCursor('next'),
+              hasMore: false,
+              isFromCache: false,
+            );
+          },
+    );
+    final viewModel = PublicRecruitmentListViewModel(
+      repository: repository,
+      cycleKey: '2026-08-19',
+      currentPlayerId: 'player-1',
+    )..start();
+    addTearDown(viewModel.dispose);
+    firstPage.add(
+      PublicRecruitmentPage(
+        items: [_summary('public')],
+        hasMore: true,
+        nextCursor: const FakePublicRecruitmentPageCursor('page-0'),
+        isFromCache: false,
+      ),
+    );
+    await settle();
+
+    await viewModel.setSelection(
+      RaidStatusFilterSelection.unrestricted.togglePublic(),
+    );
+    await settle();
+    await settle();
+
+    expect(nextPageCalls, 1);
+    expect(viewModel.state.items.map((item) => item.id), ['group-next']);
+    expect(viewModel.state.originalItems.map((item) => item.id), [
+      'public',
+      'group-next',
+    ]);
+  });
+
+  test('화면별 저장은 모집 목록 키만 갱신한다', () async {
+    final store = MemoryRaidStatusFilterStore({
+      'player-1': RaidStatusFilterSelection.unrestricted.toggleGroup(),
+    });
+    final viewModel = PublicRecruitmentListViewModel(
+      repository: FakePartyReadRepository(publicFirstPage: firstPage.stream),
+      cycleKey: '2026-08-19',
+      currentPlayerId: 'player-1',
+      filterStore: store,
+    )..start();
+    addTearDown(viewModel.dispose);
+
+    firstPage.add(
+      const PublicRecruitmentPage(
+        items: [],
+        hasMore: false,
+        isFromCache: false,
+      ),
+    );
+    await settle();
+    await viewModel.setSelection(
+      RaidStatusFilterSelection.unrestricted.togglePublic(),
+    );
+    await settle();
+
+    expect(
+      (await store.load('player-1', RaidFilterScreen.activeRaids)).includeGroup,
+      isFalse,
+    );
+    expect(
+      (await store.load(
+        'player-1',
+        RaidFilterScreen.recruitmentList,
+      )).includePublic,
+      isFalse,
+    );
+  });
+
+  test('미확인 참가 Character는 일치 결과에 섞지 않는다', () async {
+    final members = Completer<PartyReadSnapshot<PartyMemberDisplay>>();
+    final repository = FakePartyReadRepository(
+      publicFirstPage: firstPage.stream,
+      membersForId: (_) => Stream.fromFuture(members.future),
+    );
+    final viewModel = PublicRecruitmentListViewModel(
+      repository: repository,
+      cycleKey: '2026-08-19',
+      currentPlayerId: 'player-1',
+    )..start();
+    addTearDown(viewModel.dispose);
+
+    firstPage.add(
+      PublicRecruitmentPage(
+        items: [
+          _summary('group', groupId: 'group-1', memberPlayerIds: {'player-2'}),
+        ],
+        hasMore: false,
+        isFromCache: false,
+      ),
+    );
+    await settle();
+    await viewModel.setSelection(
+      const RaidStatusFilterSelection(
+        includePublic: false,
+        includeGroup: true,
+        memberPlayerIds: {'player-2'},
+        characterIdsByPlayer: {
+          'player-2': {'char-21'},
+        },
+      ),
+    );
+    await settle();
+
+    expect(viewModel.state.items, isEmpty);
+    expect(viewModel.state.pendingCharacterCheckCount, 1);
+
+    members.complete(
+      const PartyReadSnapshot(
+        items: [
+          PartyMemberDisplay(
+            playerId: 'player-2',
+            characterId: 'char-21',
+            characterName: '멤버',
+            className: '바드',
+            role: PartyRole.support,
+            partyIndex: 0,
+          ),
+        ],
+        isFromCache: false,
+      ),
+    );
+    await settle();
+
+    expect(viewModel.state.items.map((item) => item.id), ['group']);
+    expect(viewModel.state.pendingCharacterCheckCount, 0);
+  });
 }
 
-PublicRecruitmentSummary _summary(String id, {String title = 'title'}) {
+PublicRecruitmentSummary _summary(
+  String id, {
+  String title = 'title',
+  String raidId = 'raid',
+  String difficultyId = 'normal',
+  String? groupId,
+  Set<String>? memberPlayerIds,
+}) {
   return PublicRecruitmentSummary(
     id: id,
     title: title,
     leaderUserId: 'leader',
-    metadata: const RecruitmentMetadata(
+    metadata: RecruitmentMetadata(
       catalogVersion: 'v1',
-      raidId: 'raid',
-      difficultyId: 'normal',
+      raidId: raidId,
+      difficultyId: difficultyId,
       raidName: '레이드',
       difficultyName: '노말',
       difficultyAlias: '노말',
@@ -418,5 +613,7 @@ PublicRecruitmentSummary _summary(String id, {String title = 'title'}) {
     isRecruiting: true,
     revision: 1,
     updatedAt: DateTime.utc(2026, 8, 20),
+    groupId: groupId,
+    memberPlayerIds: memberPlayerIds,
   );
 }

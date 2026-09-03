@@ -5,15 +5,20 @@ import '../entities/raid_status_filter_selection.dart';
 /// 만족하는지 판정한다.
 ///
 /// 차원 사이는 AND다. 레이드·난이도·그룹 ID는 차원 내부 OR, 그룹원은 사용자
-/// 사이 AND, 한 사용자의 Character는 OR다. [raidCharacterIdByPlayer]가 아직
-/// 없으면 Character 칩 조건은 건너뛰어 목록이 비었다가 채워지지 않게 한다.
+/// 사이 AND, 한 사용자의 Character는 OR다.
+///
+/// 진행 중 목록은 [skipIncompleteCharacterLookup]이 기본 true라서
+/// [raidCharacterIdByPlayer]가 아직 없으면 Character 칩을 건너뛴다.
+/// 모집 목록은 false로 두어 미확인 방을 일치 결과에 넣지 않는다.
+/// [raidMemberPlayerIds]가 null이면 그룹원 조건이 있을 때 일치로 보지 않는다.
 bool matchesRaidStatusFilter({
   required RaidStatusFilterSelection selection,
   required String? groupId,
   required String raidId,
   required String difficultyId,
-  Set<String> raidMemberPlayerIds = const {},
+  Set<String>? raidMemberPlayerIds = const {},
   Map<String, String>? raidCharacterIdByPlayer,
+  bool skipIncompleteCharacterLookup = true,
 }) {
   final isGroupLinked = groupId != null && groupId.trim().isNotEmpty;
   if (isGroupLinked) {
@@ -36,13 +41,18 @@ bool matchesRaidStatusFilter({
     return false;
   }
   if (!selection.isGroupPublicOnly) return true;
+  final knownMemberIds = raidMemberPlayerIds;
   for (final playerId in selection.memberPlayerIds) {
-    if (!raidMemberPlayerIds.contains(playerId)) return false;
+    if (knownMemberIds == null) return false;
+    if (!knownMemberIds.contains(playerId)) return false;
     final selectedCharacters = selection.characterIdsByPlayer[playerId];
     if (selectedCharacters == null || selectedCharacters.isEmpty) {
       continue;
     }
-    if (raidCharacterIdByPlayer == null) continue;
+    if (raidCharacterIdByPlayer == null) {
+      if (skipIncompleteCharacterLookup) continue;
+      return false;
+    }
     final characterId = raidCharacterIdByPlayer[playerId];
     if (characterId == null || !selectedCharacters.contains(characterId)) {
       return false;

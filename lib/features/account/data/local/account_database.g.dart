@@ -4091,6 +4091,17 @@ class $RaidStatusFilterSettingsTable extends RaidStatusFilterSettings
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _screenKindMeta = const VerificationMeta(
+    'screenKind',
+  );
+  @override
+  late final GeneratedColumn<String> screenKind = GeneratedColumn<String>(
+    'screen_kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _selectionJsonMeta = const VerificationMeta(
     'selectionJson',
   );
@@ -4114,7 +4125,12 @@ class $RaidStatusFilterSettingsTable extends RaidStatusFilterSettings
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [playerId, selectionJson, updatedAt];
+  List<GeneratedColumn> get $columns => [
+    playerId,
+    screenKind,
+    selectionJson,
+    updatedAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -4134,6 +4150,14 @@ class $RaidStatusFilterSettingsTable extends RaidStatusFilterSettings
       );
     } else if (isInserting) {
       context.missing(_playerIdMeta);
+    }
+    if (data.containsKey('screen_kind')) {
+      context.handle(
+        _screenKindMeta,
+        screenKind.isAcceptableOrUnknown(data['screen_kind']!, _screenKindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_screenKindMeta);
     }
     if (data.containsKey('selection_json')) {
       context.handle(
@@ -4158,7 +4182,7 @@ class $RaidStatusFilterSettingsTable extends RaidStatusFilterSettings
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {playerId};
+  Set<GeneratedColumn> get $primaryKey => {playerId, screenKind};
   @override
   RaidStatusFilterSetting map(
     Map<String, dynamic> data, {
@@ -4169,6 +4193,10 @@ class $RaidStatusFilterSettingsTable extends RaidStatusFilterSettings
       playerId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}player_id'],
+      )!,
+      screenKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}screen_kind'],
       )!,
       selectionJson: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -4190,10 +4218,12 @@ class $RaidStatusFilterSettingsTable extends RaidStatusFilterSettings
 class RaidStatusFilterSetting extends DataClass
     implements Insertable<RaidStatusFilterSetting> {
   final String playerId;
+  final String screenKind;
   final String selectionJson;
   final DateTime updatedAt;
   const RaidStatusFilterSetting({
     required this.playerId,
+    required this.screenKind,
     required this.selectionJson,
     required this.updatedAt,
   });
@@ -4201,6 +4231,7 @@ class RaidStatusFilterSetting extends DataClass
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['player_id'] = Variable<String>(playerId);
+    map['screen_kind'] = Variable<String>(screenKind);
     map['selection_json'] = Variable<String>(selectionJson);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -4209,6 +4240,7 @@ class RaidStatusFilterSetting extends DataClass
   RaidStatusFilterSettingsCompanion toCompanion(bool nullToAbsent) {
     return RaidStatusFilterSettingsCompanion(
       playerId: Value(playerId),
+      screenKind: Value(screenKind),
       selectionJson: Value(selectionJson),
       updatedAt: Value(updatedAt),
     );
@@ -4221,6 +4253,7 @@ class RaidStatusFilterSetting extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return RaidStatusFilterSetting(
       playerId: serializer.fromJson<String>(json['playerId']),
+      screenKind: serializer.fromJson<String>(json['screenKind']),
       selectionJson: serializer.fromJson<String>(json['selectionJson']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -4230,6 +4263,7 @@ class RaidStatusFilterSetting extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'playerId': serializer.toJson<String>(playerId),
+      'screenKind': serializer.toJson<String>(screenKind),
       'selectionJson': serializer.toJson<String>(selectionJson),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -4237,10 +4271,12 @@ class RaidStatusFilterSetting extends DataClass
 
   RaidStatusFilterSetting copyWith({
     String? playerId,
+    String? screenKind,
     String? selectionJson,
     DateTime? updatedAt,
   }) => RaidStatusFilterSetting(
     playerId: playerId ?? this.playerId,
+    screenKind: screenKind ?? this.screenKind,
     selectionJson: selectionJson ?? this.selectionJson,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -4249,6 +4285,9 @@ class RaidStatusFilterSetting extends DataClass
   ) {
     return RaidStatusFilterSetting(
       playerId: data.playerId.present ? data.playerId.value : this.playerId,
+      screenKind: data.screenKind.present
+          ? data.screenKind.value
+          : this.screenKind,
       selectionJson: data.selectionJson.present
           ? data.selectionJson.value
           : this.selectionJson,
@@ -4260,6 +4299,7 @@ class RaidStatusFilterSetting extends DataClass
   String toString() {
     return (StringBuffer('RaidStatusFilterSetting(')
           ..write('playerId: $playerId, ')
+          ..write('screenKind: $screenKind, ')
           ..write('selectionJson: $selectionJson, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -4267,12 +4307,14 @@ class RaidStatusFilterSetting extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(playerId, selectionJson, updatedAt);
+  int get hashCode =>
+      Object.hash(playerId, screenKind, selectionJson, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is RaidStatusFilterSetting &&
           other.playerId == this.playerId &&
+          other.screenKind == this.screenKind &&
           other.selectionJson == this.selectionJson &&
           other.updatedAt == this.updatedAt);
 }
@@ -4280,31 +4322,37 @@ class RaidStatusFilterSetting extends DataClass
 class RaidStatusFilterSettingsCompanion
     extends UpdateCompanion<RaidStatusFilterSetting> {
   final Value<String> playerId;
+  final Value<String> screenKind;
   final Value<String> selectionJson;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
   const RaidStatusFilterSettingsCompanion({
     this.playerId = const Value.absent(),
+    this.screenKind = const Value.absent(),
     this.selectionJson = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RaidStatusFilterSettingsCompanion.insert({
     required String playerId,
+    required String screenKind,
     required String selectionJson,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
   }) : playerId = Value(playerId),
+       screenKind = Value(screenKind),
        selectionJson = Value(selectionJson),
        updatedAt = Value(updatedAt);
   static Insertable<RaidStatusFilterSetting> custom({
     Expression<String>? playerId,
+    Expression<String>? screenKind,
     Expression<String>? selectionJson,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (playerId != null) 'player_id': playerId,
+      if (screenKind != null) 'screen_kind': screenKind,
       if (selectionJson != null) 'selection_json': selectionJson,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -4313,12 +4361,14 @@ class RaidStatusFilterSettingsCompanion
 
   RaidStatusFilterSettingsCompanion copyWith({
     Value<String>? playerId,
+    Value<String>? screenKind,
     Value<String>? selectionJson,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
   }) {
     return RaidStatusFilterSettingsCompanion(
       playerId: playerId ?? this.playerId,
+      screenKind: screenKind ?? this.screenKind,
       selectionJson: selectionJson ?? this.selectionJson,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -4330,6 +4380,9 @@ class RaidStatusFilterSettingsCompanion
     final map = <String, Expression>{};
     if (playerId.present) {
       map['player_id'] = Variable<String>(playerId.value);
+    }
+    if (screenKind.present) {
+      map['screen_kind'] = Variable<String>(screenKind.value);
     }
     if (selectionJson.present) {
       map['selection_json'] = Variable<String>(selectionJson.value);
@@ -4347,6 +4400,7 @@ class RaidStatusFilterSettingsCompanion
   String toString() {
     return (StringBuffer('RaidStatusFilterSettingsCompanion(')
           ..write('playerId: $playerId, ')
+          ..write('screenKind: $screenKind, ')
           ..write('selectionJson: $selectionJson, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -7090,6 +7144,7 @@ typedef $$CharacterWeeklyRaidDisplaysTableProcessedTableManager =
 typedef $$RaidStatusFilterSettingsTableCreateCompanionBuilder =
     RaidStatusFilterSettingsCompanion Function({
       required String playerId,
+      required String screenKind,
       required String selectionJson,
       required DateTime updatedAt,
       Value<int> rowid,
@@ -7097,6 +7152,7 @@ typedef $$RaidStatusFilterSettingsTableCreateCompanionBuilder =
 typedef $$RaidStatusFilterSettingsTableUpdateCompanionBuilder =
     RaidStatusFilterSettingsCompanion Function({
       Value<String> playerId,
+      Value<String> screenKind,
       Value<String> selectionJson,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -7113,6 +7169,11 @@ class $$RaidStatusFilterSettingsTableFilterComposer
   });
   ColumnFilters<String> get playerId => $composableBuilder(
     column: $table.playerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get screenKind => $composableBuilder(
+    column: $table.screenKind,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7141,6 +7202,11 @@ class $$RaidStatusFilterSettingsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get screenKind => $composableBuilder(
+    column: $table.screenKind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get selectionJson => $composableBuilder(
     column: $table.selectionJson,
     builder: (column) => ColumnOrderings(column),
@@ -7163,6 +7229,11 @@ class $$RaidStatusFilterSettingsTableAnnotationComposer
   });
   GeneratedColumn<String> get playerId =>
       $composableBuilder(column: $table.playerId, builder: (column) => column);
+
+  GeneratedColumn<String> get screenKind => $composableBuilder(
+    column: $table.screenKind,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get selectionJson => $composableBuilder(
     column: $table.selectionJson,
@@ -7220,11 +7291,13 @@ class $$RaidStatusFilterSettingsTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> playerId = const Value.absent(),
+                Value<String> screenKind = const Value.absent(),
                 Value<String> selectionJson = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RaidStatusFilterSettingsCompanion(
                 playerId: playerId,
+                screenKind: screenKind,
                 selectionJson: selectionJson,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -7232,11 +7305,13 @@ class $$RaidStatusFilterSettingsTableTableManager
           createCompanionCallback:
               ({
                 required String playerId,
+                required String screenKind,
                 required String selectionJson,
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
               }) => RaidStatusFilterSettingsCompanion.insert(
                 playerId: playerId,
+                screenKind: screenKind,
                 selectionJson: selectionJson,
                 updatedAt: updatedAt,
                 rowid: rowid,

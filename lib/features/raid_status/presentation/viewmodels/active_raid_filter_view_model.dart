@@ -7,13 +7,15 @@ import '../../../account/domain/repositories/activity_characters_repository.dart
 import '../../../group/domain/entities/group_relation.dart';
 import '../../../group/domain/repositories/group_character_search_repository.dart';
 import '../../../group/domain/repositories/group_read_repository.dart';
-import '../../../group/domain/services/activity_display_characters.dart';
 import '../../../recruitment_list/domain/entities/party_read_models.dart';
 import '../../../recruitment_list/domain/repositories/party_read_repository.dart';
+import '../../domain/entities/raid_filter_screen.dart';
 import '../../domain/entities/raid_status_filter_selection.dart';
 import '../../domain/repositories/raid_status_filter_store.dart';
 import '../../domain/services/filtered_page_session.dart';
+import '../../domain/services/raid_filter_candidates.dart';
 import '../../domain/services/raid_status_filter.dart';
+import 'raid_filter_sheet_host.dart';
 
 class ActiveRaidFilterViewState {
   const ActiveRaidFilterViewState({
@@ -83,12 +85,14 @@ class ActiveRaidFilterViewState {
 /// 문서를 조합한다. 누락 시 인증 활성 Character 전체로 대체하지 않는다.
 /// 필터 판정은 레이드 membership `characterId`를 쓰므로 참가 중인 비활동
 /// Character도 인식한다.
-class ActiveRaidFilterViewModel extends ChangeNotifier {
+class ActiveRaidFilterViewModel extends ChangeNotifier
+    implements RaidFilterSheetHost {
   ActiveRaidFilterViewModel({
     required Stream<PartyReadSnapshot<ActiveRaidSummary>> Function()
     streamFactory,
     required String playerId,
     required RaidStatusFilterStore filterStore,
+    this.filterScreen = RaidFilterScreen.activeRaids,
     RaidCatalogRepository? catalogRepository,
     Stream<PartyReadSnapshot<PartyMemberDisplay>> Function(
       String recruitmentId,
@@ -115,6 +119,7 @@ class ActiveRaidFilterViewModel extends ChangeNotifier {
   final Stream<PartyReadSnapshot<ActiveRaidSummary>> Function() _streamFactory;
   final String _playerId;
   final RaidStatusFilterStore _filterStore;
+  final RaidFilterScreen filterScreen;
   final RaidCatalogRepository? _catalogRepository;
   final Stream<PartyReadSnapshot<PartyMemberDisplay>> Function(
     String recruitmentId,
@@ -140,6 +145,45 @@ class ActiveRaidFilterViewModel extends ChangeNotifier {
 
   ActiveRaidFilterViewState get state => _state;
 
+  @override
+  RaidStatusFilterSelection get filterSelection => _state.selection;
+
+  @override
+  RaidStatusFilterCatalogOptions get filterCatalog => _state.catalog;
+
+  @override
+  List<RaidStatusFilterOption> get filterGroups => _state.groups;
+
+  @override
+  List<RaidStatusFilterMemberOption> get filterVisibleMembers =>
+      _state.visibleMembers;
+
+  @override
+  bool get showGroupMemberFilters => _state.showGroupMemberFilters;
+
+  @override
+  String get filterCountLabel => _state.countLabel;
+
+  @override
+  String get filterBarLabel => _state.barLabel;
+
+  @override
+  Future<void> resetSelection() =>
+      setSelection(RaidStatusFilterSelection.unrestricted);
+
+  @override
+  Future<void> setSelection(RaidStatusFilterSelection selection) async {
+    final pruned = _prune(selection);
+    _session.updateMatcher(_matcherFor(pruned));
+    _emit(selection: pruned);
+    try {
+      await _filterStore.save(_playerId, filterScreen, pruned);
+    } catch (error, stackTrace) {
+      debugPrint('진행 중 필터 저장 실패: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
   void start() {
     if (_started) return;
     _started = true;
@@ -149,30 +193,15 @@ class ActiveRaidFilterViewModel extends ChangeNotifier {
     _subscription = _streamFactory().listen(_onSnapshot, onError: _onError);
   }
 
-  Future<void> resetSelection() =>
-      setSelection(RaidStatusFilterSelection.unrestricted);
-
-  Future<void> setSelection(RaidStatusFilterSelection selection) async {
-    final pruned = _prune(selection);
-    _session.updateMatcher(_matcherFor(pruned));
-    _emit(selection: pruned);
-    try {
-      await _filterStore.save(_playerId, pruned);
-    } catch (error, stackTrace) {
-      debugPrint('진행 중 필터 저장 실패: $error');
-      debugPrintStack(stackTrace: stackTrace);
-    }
-  }
-
   Future<void> _restoreSelection() async {
     try {
-      final loaded = await _filterStore.load(_playerId);
+      final loaded = await _filterStore.load(_playerId, filterScreen);
       final pruned = _prune(loaded);
       if (_disposed) return;
       _session.updateMatcher(_matcherFor(pruned));
       _emit(selection: pruned);
       if (pruned != loaded) {
-        await _filterStore.save(_playerId, pruned);
+        await _filterStore.save(_playerId, filterScreen, pruned);
       }
     } catch (error, stackTrace) {
       debugPrint('진행 중 필터 복원 실패: $error');
@@ -200,7 +229,7 @@ class ActiveRaidFilterViewModel extends ChangeNotifier {
       final next = _prune(pruned);
       if (next != _state.selection) {
         _session.updateMatcher(_matcherFor(next));
-        unawaited(_filterStore.save(_playerId, next));
+        unawaited(_filterStore.save(_playerId, filterScreen, next));
       }
       _emit(catalog: catalog, selection: next);
     } catch (error, stackTrace) {
@@ -227,84 +256,23 @@ class ActiveRaidFilterViewModel extends ChangeNotifier {
     final repository = _groupReadRepository;
     if (repository == null) return;
     final generation = ++_candidateGeneration;
-    final joined = [
-      for (final relation in relations)
-        if (relation.isMember) relation,
-    ];
-    final groups = [
-      for (final relation in joined)
-        RaidStatusFilterOption(
-          id: relation.groupId,
-          label: relation.groupNameSnapshot,
-        ),
-    ];
-    final memberByPlayer = <String, String>{};
-    final memberGroupIds = <String, Set<String>>{};
-    for (final relation in joined) {
-      try {
-        final members = await repository.loadGroupMembers(relation.groupId);
-        if (_disposed || generation != _candidateGeneration) return;
-        for (final member in members) {
-          if (member.playerId == _playerId) continue;
-          memberByPlayer.putIfAbsent(
-            member.playerId,
-            () => member.displayCharacterNameSnapshot,
-          );
-          memberGroupIds
-              .putIfAbsent(member.playerId, () => {})
-              .add(relation.groupId);
-        }
-      } catch (error, stackTrace) {
-        debugPrint('진행 중 필터 그룹원 조회 실패: $error');
-        debugPrintStack(stackTrace: stackTrace);
-      }
-    }
-
-    final charactersByPlayer = <String, List<RaidStatusFilterOption>>{};
-    final search = _characterSearchRepository;
-    if (search != null) {
-      for (final playerId in memberByPlayer.keys) {
-        try {
-          final loaded = await loadActivityDisplayCharacters(
-            searchRepository: search,
-            ownerPlayerId: playerId,
-            activityRepository: _activityCharactersRepository,
-          );
-          if (_disposed || generation != _candidateGeneration) return;
-          charactersByPlayer[playerId] = [
-            for (final character in loaded)
-              RaidStatusFilterOption(
-                id: character.characterId,
-                label: character.characterName,
-              ),
-          ];
-        } catch (error, stackTrace) {
-          debugPrint('진행 중 필터 Character 후보 조회 실패: $error');
-          debugPrintStack(stackTrace: stackTrace);
-          if (_disposed || generation != _candidateGeneration) return;
-          charactersByPlayer[playerId] = const [];
-        }
-      }
-    }
-
+    final snapshot = await loadRaidFilterCandidates(
+      repository: repository,
+      playerId: _playerId,
+      relations: relations,
+      activityCharactersRepository: _activityCharactersRepository,
+      characterSearchRepository: _characterSearchRepository,
+      isStale: () => _disposed || generation != _candidateGeneration,
+    );
     if (_disposed || generation != _candidateGeneration) return;
-    _joinedGroupIds = {for (final group in groups) group.id};
-    _allGroups = groups;
-    final members = [
-      for (final entry in memberByPlayer.entries)
-        RaidStatusFilterMemberOption(
-          playerId: entry.key,
-          label: entry.value,
-          groupIds: memberGroupIds[entry.key] ?? const {},
-          characters: charactersByPlayer[entry.key] ?? const [],
-        ),
-    ]..sort((left, right) => left.label.compareTo(right.label));
-    _allMembers = members;
+    _joinedGroupIds = snapshot.joinedGroupIds;
+    _allGroups = snapshot.groups;
+    _allMembers = snapshot.members;
     _groupsLoaded = true;
     final pruned = _prune(_state.selection);
     if (pruned != _state.selection) {
       _session.updateMatcher(_matcherFor(pruned));
-      unawaited(_filterStore.save(_playerId, pruned));
+      unawaited(_filterStore.save(_playerId, filterScreen, pruned));
     }
     _emit(selection: pruned, groups: _allGroups, members: _allMembers);
   }
@@ -383,31 +351,14 @@ class ActiveRaidFilterViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  RaidStatusFilterSelection _prune(RaidStatusFilterSelection selection) {
-    var next = selection;
-    final catalog = _state.catalog;
-    if (catalog.raids.isNotEmpty || catalog.difficulties.isNotEmpty) {
-      next = next.prune(
-        catalogRaidIds: catalog.raidIds,
-        catalogDifficultyIds: catalog.difficultyIds,
-      );
-    }
-    if (_groupsLoaded) {
-      next = next.pruneMembership(
+  RaidStatusFilterSelection _prune(RaidStatusFilterSelection selection) =>
+      pruneRaidFilterSelection(
+        selection: selection,
+        catalog: _state.catalog,
+        groupsLoaded: _groupsLoaded,
         joinedGroupIds: _joinedGroupIds,
-        candidateMemberPlayerIds: {
-          for (final member in _allMembers) member.playerId,
-        },
-        candidateCharacterIdsByPlayer: {
-          for (final member in _allMembers)
-            member.playerId: {
-              for (final character in member.characters) character.id,
-            },
-        },
+        members: _allMembers,
       );
-    }
-    return next.withoutHiddenGroupFilters();
-  }
 
   bool Function(ActiveRaidSummary item) _matcherFor(
     RaidStatusFilterSelection selection,

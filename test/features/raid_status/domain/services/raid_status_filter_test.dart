@@ -357,6 +357,35 @@ void main() {
         ),
         isTrue,
       );
+      expect(
+        matchesRaidStatusFilter(
+          selection: selection,
+          groupId: groupRaid.groupId,
+          raidId: groupRaid.raidId,
+          difficultyId: groupRaid.difficultyId,
+          raidMemberPlayerIds: {'player-2'},
+          skipIncompleteCharacterLookup: false,
+        ),
+        isFalse,
+      );
+    });
+
+    test('그룹원 ID가 없으면 그룹원 조건을 일치로 보지 않는다', () {
+      const selection = RaidStatusFilterSelection(
+        includePublic: false,
+        includeGroup: true,
+        memberPlayerIds: {'player-2'},
+      );
+      expect(
+        matchesRaidStatusFilter(
+          selection: selection,
+          groupId: groupRaid.groupId,
+          raidId: groupRaid.raidId,
+          difficultyId: groupRaid.difficultyId,
+          raidMemberPlayerIds: null,
+        ),
+        isFalse,
+      );
     });
   });
 

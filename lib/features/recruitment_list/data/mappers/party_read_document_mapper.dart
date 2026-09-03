@@ -20,7 +20,6 @@ class PartyReadDocumentMapper {
   final DateTime Function(Object? value) toDateTime;
 
   /// 공개 목록에서 현재 Player의 책임자·확정 멤버 방인지 본다.
-  /// [memberPlayerIds] 원문은 Domain 모델에 올리지 않고 여기서만 소비한다.
   bool isCurrentPlayerOwnPublicRecruitment(
     PartyReadDocumentDto document, {
     required String currentPlayerId,
@@ -70,6 +69,7 @@ class PartyReadDocumentMapper {
       approvalMode: _approvalMode(data),
       visibility: _softString(data, 'visibility') ?? 'public',
       groupId: _softString(data, 'groupId'),
+      memberPlayerIds: _optionalStringIdSet(data, 'memberPlayerIds'),
     );
   }
 
@@ -180,6 +180,15 @@ class PartyReadDocumentMapper {
     if (_integer(data, 'schemaVersion') != 1) {
       throw const PartyReadContractException('Unsupported schemaVersion.');
     }
+  }
+
+  Set<String>? _optionalStringIdSet(Map<String, Object?> data, String field) {
+    final value = data[field];
+    if (value is! List) return null;
+    return {
+      for (final id in value)
+        if (id is String && id.trim().isNotEmpty) id,
+    };
   }
 
   Set<String> _stringIdSet(Map<String, Object?> data, String field) {

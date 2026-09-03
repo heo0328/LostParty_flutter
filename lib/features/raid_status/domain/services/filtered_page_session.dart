@@ -157,8 +157,9 @@ bool Function(T item) raidStatusFilterMatcher<T>({
   required String? Function(T item) groupIdOf,
   required String Function(T item) raidIdOf,
   required String Function(T item) difficultyIdOf,
-  Set<String> Function(T item)? memberPlayerIdsOf,
+  Set<String>? Function(T item)? memberPlayerIdsOf,
   Map<String, String>? Function(T item)? characterIdByPlayerOf,
+  bool skipIncompleteCharacterLookup = true,
 }) {
   return (item) => matchesRaidStatusFilter(
     selection: selection,
@@ -167,5 +168,6 @@ bool Function(T item) raidStatusFilterMatcher<T>({
     difficultyId: difficultyIdOf(item),
     raidMemberPlayerIds: memberPlayerIdsOf?.call(item) ?? const {},
     raidCharacterIdByPlayer: characterIdByPlayerOf?.call(item),
+    skipIncompleteCharacterLookup: skipIncompleteCharacterLookup,
   );
 }

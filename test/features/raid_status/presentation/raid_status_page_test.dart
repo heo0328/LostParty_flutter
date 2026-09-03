@@ -13,6 +13,7 @@ import 'package:lost_party/features/group/domain/entities/group_request_characte
 import 'package:lost_party/features/group/domain/repositories/group_character_search_repository.dart';
 import 'package:lost_party/features/group/domain/repositories/group_read_repository.dart';
 import 'package:lost_party/features/raid_status/data/repositories/drift_raid_status_filter_store.dart';
+import 'package:lost_party/features/raid_status/domain/entities/raid_filter_screen.dart';
 import 'package:lost_party/features/raid_status/domain/repositories/raid_status_filter_store.dart';
 import 'package:lost_party/features/raid_status/presentation/pages/party_read_detail_page.dart';
 import 'package:lost_party/features/raid_status/presentation/pages/raid_status_page.dart';
@@ -455,8 +456,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('그룹 세르카'), findsOneWidget);
     expect(find.text('4막 노말 모집'), findsNothing);
-    expect((await store.load('player-1')).includeGroup, isTrue);
-    expect((await store.load('player-1')).includePublic, isFalse);
+    expect(
+      (await store.load('player-1', RaidFilterScreen.activeRaids)).includeGroup,
+      isTrue,
+    );
+    expect(
+      (await store.load(
+        'player-1',
+        RaidFilterScreen.activeRaids,
+      )).includePublic,
+      isFalse,
+    );
 
     await tester.pumpWidget(const SizedBox.shrink());
     await pumpPage(
@@ -630,7 +640,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('4막 노말 모집'), findsOneWidget);
     expect(find.text('혼자 진행'), findsNothing);
-    expect((await store.load('player-1')).memberPlayerIds, {'player-2'});
+    expect(
+      (await store.load(
+        'player-1',
+        RaidFilterScreen.activeRaids,
+      )).memberPlayerIds,
+      {'player-2'},
+    );
 
     await tester.pumpWidget(const SizedBox.shrink());
     await pumpPage(
@@ -684,7 +700,13 @@ void main() {
     expect(find.text('4막 노말 모집'), findsOneWidget);
     expect(find.text('그룹 세르카'), findsOneWidget);
     expect(find.text('레이드 필터: 모든 레이드'), findsOneWidget);
-    expect((await store.load('player-1')).isUnrestricted, isTrue);
+    expect(
+      (await store.load(
+        'player-1',
+        RaidFilterScreen.activeRaids,
+      )).isUnrestricted,
+      isTrue,
+    );
   });
 
   testWidgets('상단 드래그 영역으로 필터 창을 닫는다', (tester) async {

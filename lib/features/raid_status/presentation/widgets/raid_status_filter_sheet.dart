@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../domain/services/raid_status_filter.dart';
-import '../viewmodels/active_raid_filter_view_model.dart';
+import '../viewmodels/raid_filter_sheet_host.dart';
 
 class RaidStatusFilterBar extends StatelessWidget {
   const RaidStatusFilterBar({
@@ -58,7 +58,7 @@ class RaidStatusFilterBar extends StatelessWidget {
 
 Future<void> showRaidStatusFilterSheet({
   required BuildContext context,
-  required ActiveRaidFilterViewModel viewModel,
+  required RaidFilterSheetHost viewModel,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -72,7 +72,7 @@ Future<void> showRaidStatusFilterSheet({
 class RaidStatusFilterSheet extends StatelessWidget {
   const RaidStatusFilterSheet({required this.viewModel, super.key});
 
-  final ActiveRaidFilterViewModel viewModel;
+  final RaidFilterSheetHost viewModel;
 
   @override
   Widget build(BuildContext context) {
@@ -80,8 +80,7 @@ class RaidStatusFilterSheet extends StatelessWidget {
     return AnimatedBuilder(
       animation: viewModel,
       builder: (context, _) {
-        final state = viewModel.state;
-        final selection = state.selection;
+        final selection = viewModel.filterSelection;
         return SafeArea(
           child: SizedBox(
             height: media.size.height * 0.85,
@@ -89,7 +88,7 @@ class RaidStatusFilterSheet extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _FilterSheetHeader(
-                  countLabel: state.countLabel,
+                  countLabel: viewModel.filterCountLabel,
                   onReset: selection.isUnrestricted
                       ? null
                       : () => unawaited(viewModel.resetSelection()),
@@ -140,7 +139,7 @@ class RaidStatusFilterSheet extends StatelessWidget {
                             viewModel.setSelection(selection.toggleGroup()),
                           ),
                         ),
-                        if (state.showGroupMemberFilters) ...[
+                        if (viewModel.showGroupMemberFilters) ...[
                           const SizedBox(height: 8),
                           Text(
                             '그룹',
@@ -148,7 +147,7 @@ class RaidStatusFilterSheet extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           _OptionChips(
-                            options: state.groups,
+                            options: viewModel.filterGroups,
                             selectedIds: selection.groupIds,
                             keyPrefix: 'raidStatusFilterGroupChip',
                             onToggle: (id) => unawaited(
@@ -157,14 +156,15 @@ class RaidStatusFilterSheet extends StatelessWidget {
                               ),
                             ),
                           ),
-                          if (state.visibleMembers.isNotEmpty) ...[
+                          if (viewModel.filterVisibleMembers.isNotEmpty) ...[
                             const SizedBox(height: 16),
                             Text(
                               '그룹원',
                               style: Theme.of(context).textTheme.titleSmall,
                             ),
                             const SizedBox(height: 8),
-                            for (final member in state.visibleMembers) ...[
+                            for (final member
+                                in viewModel.filterVisibleMembers) ...[
                               FilterChip(
                                 key: ValueKey(
                                   'raidStatusFilterMemberChip-${member.playerId}',
@@ -218,7 +218,7 @@ class RaidStatusFilterSheet extends StatelessWidget {
                             ],
                           ],
                         ],
-                        if (state.catalog.raids.isNotEmpty) ...[
+                        if (viewModel.filterCatalog.raids.isNotEmpty) ...[
                           const SizedBox(height: 8),
                           Text(
                             '레이드',
@@ -226,7 +226,7 @@ class RaidStatusFilterSheet extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           _OptionChips(
-                            options: state.catalog.raids,
+                            options: viewModel.filterCatalog.raids,
                             selectedIds: selection.raidIds,
                             keyPrefix: 'raidStatusFilterRaidChip',
                             onToggle: (id) => unawaited(
@@ -234,7 +234,10 @@ class RaidStatusFilterSheet extends StatelessWidget {
                             ),
                           ),
                         ],
-                        if (state.catalog.difficulties.isNotEmpty) ...[
+                        if (viewModel
+                            .filterCatalog
+                            .difficulties
+                            .isNotEmpty) ...[
                           const SizedBox(height: 16),
                           Text(
                             '난이도',
@@ -242,7 +245,7 @@ class RaidStatusFilterSheet extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           _OptionChips(
-                            options: state.catalog.difficulties,
+                            options: viewModel.filterCatalog.difficulties,
                             selectedIds: selection.difficultyIds,
                             keyPrefix: 'raidStatusFilterDifficultyChip',
                             onToggle: (id) => unawaited(

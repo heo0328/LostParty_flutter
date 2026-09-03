@@ -70,6 +70,7 @@ import '../../features/operator_access/data/repositories/firestore_operator_acce
 import '../../features/operator_access/domain/repositories/operator_access_repository.dart';
 import '../../features/operator_access/presentation/pages/operator_user_detail_page.dart';
 import '../../features/operator_access/presentation/pages/operator_user_list_page.dart';
+import '../../features/raid_status/data/repositories/drift_raid_status_filter_store.dart';
 import '../../features/raid_status/data/services/firestore_party_event_sync_service.dart';
 import '../../features/raid_status/domain/services/party_event_sync_service.dart';
 import '../../features/raid_status/presentation/pages/party_notifications_page.dart';
@@ -491,6 +492,14 @@ GoRouter createAppRouter({
                   partyReadRepository: partyReadRepositoryOrDefault,
                   cycleKey: currentCycleKey,
                   currentPlayerId: playerSession.playerId,
+                  accountDatabase: accountDatabase,
+                  filterStore: DriftRaidStatusFilterStore(accountDatabase),
+                  raidCatalogRepository: raidCatalogRepository,
+                  groupReadRepository: groupReadRepositoryForRoute(),
+                  activityCharactersRepository:
+                      activityCharactersRepositoryOrDefault,
+                  characterSearchRepository:
+                      characterSearchRepositoryForRoute(),
                   backfillOwnGroupListings: backfillOwnGroupListings == null
                       ? null
                       : () => backfillOwnGroupListings(

@@ -38,6 +38,7 @@ void main() {
     expect(summary.cycleEndsAt, DateTime.utc(2026, 8, 26, 21));
     expect(summary.visibility, 'public');
     expect(summary.groupId, isNull);
+    expect(summary.memberPlayerIds, {'player-leader', 'player-member'});
   });
 
   test('excludes leader or confirmed member rooms from the public list', () {
@@ -185,6 +186,14 @@ void main() {
     expect(member.slotIndex, isNull);
     expect(member.itemLevel, isNull);
     expect(member.combatPower, isNull);
+  });
+
+  test('public mapper keeps unknown memberPlayerIds distinct from empty', () {
+    final data = _recruitmentData()..remove('memberPlayerIds');
+    final summary = mapper.toPublicRecruitment(
+      PartyReadDocumentDto(id: 'raid-1', data: data),
+    );
+    expect(summary.memberPlayerIds, isNull);
   });
 
   test('maps slotIndex when present and ignores invalid values', () {
