@@ -1,75 +1,83 @@
 # NEXT WORK
 
-## 현재 기준
+## 현재 기준과 이번 범위
 
-- 활동 Character 저장·그룹원 목록·레이드 현황 필터 UX(C)까지 구현하고 Android 실기기에서 확인했다.
-- 그룹원 활동 Character는 Projection 컬렉션 없이 `characterActivity` 목록과 Character 표시 문서를 쓴다.
-- 첫 릴리즈 전에는 최신 `dev`에서 작업 브랜치를 만들고, PR 없이 검증된 브랜치를 `dev`에 직접 병합해 `origin/dev`에 푸시한다.
+- 직전 활동 Character 공개 경로와 레이드 현황 필터 UX는 구현·Android 실기기 확인까지 완료했다. 별도 Projection 없이 활동 ID 목록과 Character 표시 문서를 조합하는 구현을 유지한다.
+- 이번 준비 시작점은 `dev` `22ae54b`다. 실제 구현 시작 시 원격과 동기화한 최신 `dev`에서 새 작업 브랜치를 만든다.
+- 다음 작업은 **레이드 모집 탭의 파티 모집 목록 필터**다. `모집 만들기` 입력 화면은 대상이 아니다.
+- 현재는 분석·계약·실행 계획만 문서화했다. 아래 필터 확장은 아직 구현하거나 테스트하지 않았다.
+- 상세 기준: [활동 Character와 필터 계약 §13](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md#13-레이드-모집-탭-목록-필터-확장).
+- 첫 릴리즈 전에는 PR 없이 검증한 작업 브랜치를 `dev`에 직접 병합·푸시한다. `main`은 변경하지 않는다.
 
-전체 기준 계약은 [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md)를 따른다.
+## 목표
 
-## 다음 목표
+가입 전 조회 가능한 파티를 레이드 현황과 같은 필터 UX로 좁혀 본다. 기존 내 방·확정 참가 방 제외, 신청 대기 방 유지, 공개/그룹 조회 권한과 모집 가능 조건을 유지한다.
 
-이 단위(활동 Character 공개 경로 + 필터 UX)는 실기기 확인까지 완료됐다. 다음 작업은 별도 지시가 있으면 그때 잡는다.
+## 포함 범위
 
-## 작업 순서
+- 전체·일반·그룹, 레이드·난이도 복수 선택
+- 그룹만 선택했을 때 가입 그룹·참여 그룹원·활동 Character 선택
+- 초기화, 조건 요약, 현재 결과 개수, 선택 복원, 고정 상단 드래그 닫기
+- 모집 목록/레이드 현황의 선택값을 Player와 화면 단위로 분리
+- 공개 모집 페이징과 그룹 listing 병합 결과를 원본으로 유지하며 로컬 필터 적용
+- 참가 Character 확인 중·실패를 구분하고 결과에 미확인 파티를 일치로 섞지 않음
+- 조건 때문에 비었을 때도 추가 페이지 로딩·재시도·초기화 경로 제공
 
-```text
-완료
-```
+## 실행 순서와 완료 조건
 
-## A·B 완료 메모 (Projection 대신 활동 목록)
+### A. 공통 필터 구조와 화면별 저장
 
-별도 Projection 컬렉션은 Rules 복잡도 때문에 채택하지 않는다. 그룹 상세·필터는 `characterActivity` ID와 `characters` 표시 문서를 조합하고, 활동 문서가 없으면 빈 목록을 둔다. 그룹원 목록이 동작하려면 `characterActivity` `get`/`list`가 `hasActiveBinding()`인 Rules가 실제로 배포되어야 한다. CLI 503이면 콘솔 표시와 무관하게 새 Rules는 적용되지 않은 것으로 본다.
+- 선택 모델·순수 판정·카탈로그 옵션·라벨·후보 로딩·필터 UI의 재사용 경계를 분리한다.
+- `ActiveRaidFilterViewModel`은 현황 데이터에 종속되므로 모집 화면에 직접 연결하지 않는다.
+- 기존 현황 선택값을 보존하면서 화면별 저장 키 또는 스키마를 도입한다. 모집 목록은 기본 전체로 시작한다.
+- 완료: 동일한 UX를 공유하고 화면 간 선택/초기화가 서로 영향을 주지 않는다. 현황 회귀 테스트 통과.
 
-## C. 레이드 현황 필터 UX 개선
+### B. 모집 목록 기본 필터와 페이징
 
-포함:
+- `PublicRecruitmentListViewModel`의 원본·필터 결과·cursor·오류·세대 관리를 분리한다.
+- 기존 공개 쿼리와 가입 그룹 listing 읽기 구조를 유지하고 공개 조건·레이드·난이도·그룹 조건을 연결한다.
+- 첫 페이지 갱신, 추가 페이지, 중복 ID, 늦은 응답을 안전하게 처리한다.
+- 빈 결과 자동 보충은 기존 3회 상한을 기준으로 제한하고 이후 명시적 더 불러오기를 제공한다. 재빌드로 상한을 초기화하지 않는다.
+- 완료: 첫 페이지에 일치 항목이 없어도 후속 페이지의 일치 모집을 찾을 수 있고 무한 조회가 없다.
 
-- 필터 창 상단에 `초기화` 동작 제공
-- 초기화 시 공개 조건은 전체, 레이드·난이도·그룹·그룹원·Character 선택은 해제하고 저장 상태에도 반영
-- 그룹 관련 선택 UI는 공개 조건이 `그룹 공개만` 선택된 경우에만 표시
-- `전체` 또는 `일반 공개`가 포함된 상태에서는 그룹·그룹원·Character 선택 UI를 숨김
-- 숨겨진 그룹 관련 선택값이 실제 필터 조건으로 남지 않도록 선택 상태 정규화
-- 긴 필터 목록에서도 상단 드래그 영역을 쉽게 잡아 아래로 끌어 닫을 수 있도록 고정된 헤더/드래그 영역 확보
-- 스크롤과 닫기 제스처가 충돌하지 않도록 위젯 테스트 추가
+### C. 그룹원·Character 참가 조건
 
-완료 조건:
+- 공개 목록 모델에 참가 Player ID를 전달하고 public/listing 두 매핑 경로를 대조한다.
+- 그룹원 후보는 내가 가입한 그룹의 정상 멤버이며 본인은 제외한다. Character 후보는 기존 활동 목록 읽기를 재사용한다.
+- 선택한 그룹원들이 실제 해당 레이드에 확정 참가했는지 판정한다. pending 신청자는 참가자로 취급하지 않는다.
+- Character 조건이 있을 때 필요한 파티의 membership 표시 정보를 제한적으로 조회한다.
+- 조회 대기·실패·재시도·방 revision 변경·갱신에 따른 캐시 무효화 및 오래된 응답 무시를 구현한다.
+- 완료: 사용자 내부 Character OR, 사용자 간 AND가 정확하며 정보가 미확인인 방을 일치 결과로 보여주지 않는다.
 
-- 초기화 한 번으로 모든 필터가 기본값으로 돌아가고 재진입 후에도 기본값이 유지된다.
-- 그룹 공개만 선택했을 때만 참여 그룹원 선택 영역이 보인다.
-- 필터 내용이 화면 상단까지 길어져도 상단의 충분한 영역을 아래로 드래그해 닫을 수 있다.
+### D. 최종 검증과 사용자 실기기
 
-## D. 검증
-
-자동 검증:
-
-- 활동 Character 저장·목록 Rules 계약 테스트
-- 그룹원 Character 읽기와 후보 제한 테스트
-- 필터 초기화·조건부 표시·선택 정규화·드래그 닫기 위젯 테스트
-- 변경 범위 표적 테스트
-- `flutter analyze --no-pub`
-- 저장 스키마와 여러 feature가 함께 변경되므로 최종 `flutter test --no-pub` 1회
-
-실기기 확인 (2026-09-03 Android):
-
-- 사용자 A가 활동 Character를 저장한 뒤 사용자 B의 그룹 정보 페이지에 선택 Character만 표시 — 통과
-- 내 계정 활동 Character 저장 — 통과
-- 레이드 현황 필터 초기화와 재진입 유지 — 통과
-- 그룹 공개만 선택했을 때만 그룹원 선택 표시 — 통과
-- 긴 필터 목록의 상단 드래그 닫기 — 통과
+- 공통 필터, 저장 분리, public/listing mapper, 모집 ViewModel·위젯과 기존 현황 회귀 테스트
+- 첫 페이지 불일치/후속 일치, 원본 빈 목록/필터 빈 목록, 중복·늦은 응답·새로고침·권한 상실·재시도 테스트
+- 그룹원 참가/미참가, Character 조건 확인 중/실패, 참가 Character 변경, 활동 해제 후 기존 membership 보존 테스트
+- 공개 필터의 그룹 분류는 `visibility`가 아니라 `groupId`임을 회귀로 고정
+- 공유 구조와 여러 feature를 변경하므로 최종 코드에서 `flutter analyze --no-pub`와 전체 `flutter test --no-pub` 각 1회
+- 실제 실행한 결과·테스트 수·실패/제약을 DEV_LOG에 기록한다. 과거 792개 통과를 이번 변경의 검증 결과로 재사용하지 않는다.
+- 사용자 실기기: 모집/현황 선택 독립, 초기화·재진입·드래그 닫기, 가입 전 그룹원·Character 검색, 빈 결과 이후 추가 로딩
+- 검증 완료 후 결과 문서화·커밋·dev 직접 병합·푸시하고 다음 작업을 갱신한다.
 
 ## 제외 범위
 
-- 모집 목록·신청 중·완료 기록 필터 추가
-- 활동 Character 해제에 따른 기존 레이드 자동 탈퇴
-- 기존 Claim·assignment·완료 Snapshot 변경
-- 인증 원정대·소유권 계약 변경
-- 전체 과거 사용자 자동 마이그레이션
-- 첫 릴리즈 전 PR 생성
+- 모집 생성·수정 폼, 필터를 생성값으로 자동 전달
+- 신청 중·완료 기록 필터
+- 서버 전체 검색·집계·새 인덱스 및 Rules 권한 확대
+- 다른 그룹의 비공개 파티 조회
+- 실제 가입 가능성 전체 판정(주간 Claim·전투력·역할 등 추가 필터)
+- 기존 membership·Claim·assignment·완료 Snapshot 변경, 자동 탈퇴
+- 기존 legacy/Rules 보존 파일 정리 또는 삭제
 
-## 시작 전 확인
+## 구현 시 참고 파일
 
-- 현재 문서 브랜치의 변경을 먼저 커밋·`dev` 직접 병합·푸시해 기준 문서를 확정한다.
-- 새 구현은 최신 `dev`와 `origin/dev`가 같은지 확인한 뒤 별도 작업 브랜치에서 시작한다.
-- 기존 보존 브랜치와 Rules 사본은 삭제하지 않는다.
+- `lib/features/recruitment_list/presentation/pages/recruitment_list_page.dart`
+- `lib/features/recruitment_list/presentation/viewmodels/public_recruitment_list_view_model.dart`
+- `lib/features/recruitment_list/data/repositories/firestore_party_read_repository.dart`
+- `lib/features/recruitment_list/data/mappers/party_read_document_mapper.dart`
+- `lib/features/raid_status/presentation/viewmodels/active_raid_filter_view_model.dart`
+- `lib/features/raid_status/presentation/widgets/raid_status_filter_sheet.dart`
+- `lib/features/raid_status/domain/services/raid_status_filter.dart`
+- `lib/features/raid_status/domain/services/filtered_page_session.dart`
+- `lib/features/raid_status/data/repositories/drift_raid_status_filter_store.dart`
