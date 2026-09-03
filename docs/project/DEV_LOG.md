@@ -1,3 +1,11 @@
+## 2026-09-04 신청자 목록 가벼운 표시 구현
+
+- `PartyApplicationSummary`에 `itemLevel?`·`combatPower?` 추가. Mapper `toApplication`에서 `submittedBuildSnapshot` 맵을 읽어 연결. 비정상 snapshot·누락은 null 처리.
+- `ClassSynergyService` 신설(`shared/game_catalog/domain/services`). `alwaysPrimaryLabels()`로 항상채용 주요 시너지 레이블만 반환. 서포터 → 빈 목록, 선택채용 제외.
+- `_PendingApplicationsSection`을 `_ApplicationCard`로 분리. 신청 카드에 아이템 레벨·전투력·주요 시너지 표시 추가.
+- Mapper 테스트 3건 추가, `ClassSynergyService` 표적 테스트 8건 신규. 신규 파일 `flutter analyze --no-pub` 통과.
+- Android 실기기 정상 확인. `dev` 병합·푸시 완료(머지 커밋 `a5c39ed`).
+
 ## 2026-09-03 신청자 표시 정책 결정 기록
 
 - 사용자가 §11 결정 항목을 문서에 기록하고 커밋하도록 지시했다. 권장안을 1단계 표시 정책·2단계 목록 구현 승인으로 확정한다.

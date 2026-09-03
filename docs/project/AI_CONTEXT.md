@@ -1,11 +1,18 @@
 # AI CONTEXT (2026)
 
-## 최우선 현재 상태 — 신청자 표시 정책 확정 (2026-09-03)
+## 최우선 현재 상태 — 신청자 목록 가벼운 표시 완료 (2026-09-04)
+
+- 신청자 목록 가벼운 표시(2단계)를 구현하고 Android 실기기에서 확인했다.
+- `PartyApplicationSummary`에 `itemLevel?`·`combatPower?` 추가. `toApplication` Mapper에서 `submittedBuildSnapshot` 읽기 연결. 과거 신청·비정상 snapshot은 null이며 0으로 채우지 않는다.
+- `ClassSynergyService` 신설. 직업명·역할을 받아 로컬 카탈로그에서 항상채용 주요 시너지 레이블을 반환한다. 서포터는 빈 목록, 선택채용은 제외.
+- `_PendingApplicationsSection`을 `_ApplicationCard`로 분리하고 아이템 레벨·전투력·주요 시너지 표시를 추가했다.
+- 표적 테스트 21개(mapper 3건 추가)·서비스 테스트 8개 신규 통과. 신규 파일 `flutter analyze --no-pub` 문제 없음.
+- 특성 요약, 전체 상세 업로드, 신규 Rules, 시너지 슬롯, 전 직업 빌드 판별은 미승인. 단일 기준은 `../product/CLASS_SYNERGY_CATALOG.md` §11이다.
+
+## 직전 상태 — 신청자 표시 정책 확정 (2026-09-03)
 
 - 직전 모집 목록 필터와 30개 직업 시너지 카탈로그는 완료했다. 카탈로그 표적 21개·전체 테스트 831개를 통과했다.
 - 표시 정책(1단계)을 사용자 결정으로 기록했다. 목록을 우선하고, 수치·시너지는 신청 당시 Snapshot과 로컬 카탈로그를 쓴다. 최신 세팅은 별도 표시이며 신청 값을 덮어쓰지 않는다.
-- 다음 구현은 가벼운 목록 표시(2단계)다. itemLevel·combatPower 읽기/UI 연결과 주요 시너지 표시가 포함된다. 누락은 미확인으로 두고 0으로 채우지 않는다.
-- 특성 요약, 전체 상세 업로드, 신규 Rules, 시너지 슬롯, 전 직업 빌드 판별은 미승인이다. 단일 기준은 `../product/CLASS_SYNERGY_CATALOG.md` §11이다.
 
 ## 직전 상태 — 직업 시너지 카탈로그와 신청자 스펙 검토 (2026-09-03)
 
