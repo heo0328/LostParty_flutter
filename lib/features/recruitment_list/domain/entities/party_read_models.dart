@@ -249,6 +249,8 @@ class PartyApplicationSummary {
     this.rejectionCount = 0,
     this.resolutionReason,
     this.decidedAt,
+    this.itemLevel,
+    this.combatPower,
   });
 
   final String recruitmentId;
@@ -265,6 +267,10 @@ class PartyApplicationSummary {
   final DateTime createdAt;
   final DateTime? decidedAt;
   final DateTime updatedAt;
+
+  /// 신청 당시 Snapshot 수치. 없는 과거 신청은 null이며 0으로 채우지 않는다.
+  final double? itemLevel;
+  final double? combatPower;
 }
 
 /// 상세의 완료 취소 등에 쓰는 회차 Snapshot. 민감 ID를 UI에 노출하지 않는다.

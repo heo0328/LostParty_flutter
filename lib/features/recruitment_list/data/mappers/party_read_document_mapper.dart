@@ -122,6 +122,9 @@ class PartyReadDocumentMapper {
   PartyApplicationSummary toApplication(PartyReadDocumentDto document) {
     final data = document.data;
     _requireSchema(data);
+    final buildSnapshot = data['submittedBuildSnapshot'];
+    final buildData =
+        buildSnapshot is Map ? buildSnapshot.cast<String, Object?>() : null;
     return PartyApplicationSummary(
       recruitmentId: _string(data, 'recruitmentId'),
       applicantPlayerId: _string(data, 'applicantPlayerId'),
@@ -145,6 +148,10 @@ class PartyReadDocumentMapper {
       createdAt: _date(data, 'createdAt'),
       decidedAt: _nullableDate(data, 'decidedAt'),
       updatedAt: _date(data, 'updatedAt'),
+      itemLevel:
+          buildData != null ? _softNumber(buildData, 'itemLevel') : null,
+      combatPower:
+          buildData != null ? _softNumber(buildData, 'combatPower') : null,
     );
   }
 

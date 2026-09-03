@@ -6,6 +6,8 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../../shared/formatters/korea_time_formatter.dart';
+import '../../../../shared/game_catalog/domain/entities/game_catalog.dart';
+import '../../../../shared/game_catalog/domain/services/class_synergy_service.dart';
 import '../../../recruitment_list/domain/entities/party_application_command.dart';
 import '../../../recruitment_list/domain/entities/party_create_command.dart';
 import '../../../recruitment_list/domain/entities/party_cycle_command.dart';
@@ -602,6 +604,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                     canDecide:
                         summary.approvalMode != ApprovalMode.directJoin &&
                         widget.joinCommandRepository != null,
+                    synergyService: const ClassSynergyService(),
                     onApprove: (application) => _decideApplication(
                       summary: summary,
                       application: application,
@@ -2004,6 +2007,7 @@ class _PendingApplicationsSection extends StatelessWidget {
     required this.canDecide,
     required this.onApprove,
     required this.onReject,
+    this.synergyService,
   });
 
   final List<PartyApplicationSummary> applications;
@@ -2011,6 +2015,7 @@ class _PendingApplicationsSection extends StatelessWidget {
   final PartyReadFailureType? failure;
   final bool submitting;
   final bool canDecide;
+  final ClassSynergyService? synergyService;
   final ValueChanged<PartyApplicationSummary> onApprove;
   final ValueChanged<PartyApplicationSummary> onReject;
 
@@ -2040,57 +2045,127 @@ class _PendingApplicationsSection extends StatelessWidget {
                 child: Text(_failureMessage(failure!)),
               ),
             for (final application in pending)
-              Card(
+              _ApplicationCard(
                 key: ValueKey(
                   'pendingApplication-${application.applicantPlayerId}',
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        '${application.characterName} · ${application.className} · '
-                        '${_roleLabel(application.requestedRole)}',
-                      ),
-                      const SizedBox(height: 4),
-                      const Text('파티장 승인 대기'),
-                      if (canDecide) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                key: ValueKey(
-                                  'rejectApplication-${application.applicantPlayerId}',
-                                ),
-                                onPressed: submitting
-                                    ? null
-                                    : () => onReject(application),
-                                child: const Text('거절'),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: FilledButton(
-                                key: ValueKey(
-                                  'approveApplication-${application.applicantPlayerId}',
-                                ),
-                                onPressed: submitting
-                                    ? null
-                                    : () => onApprove(application),
-                                child: const Text('승인'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+                application: application,
+                canDecide: canDecide,
+                submitting: submitting,
+                synergyService: synergyService,
+                onApprove: onApprove,
+                onReject: onReject,
               ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _ApplicationCard extends StatelessWidget {
+  const _ApplicationCard({
+    super.key,
+    required this.application,
+    required this.canDecide,
+    required this.submitting,
+    required this.onApprove,
+    required this.onReject,
+    this.synergyService,
+  });
+
+  final PartyApplicationSummary application;
+  final bool canDecide;
+  final bool submitting;
+  final ClassSynergyService? synergyService;
+  final ValueChanged<PartyApplicationSummary> onApprove;
+  final ValueChanged<PartyApplicationSummary> onReject;
+
+  List<String> _synergyLabels() {
+    final service = synergyService;
+    if (service == null) return const [];
+    final role = application.requestedRole == PartyRole.support
+        ? GameCatalogRole.support
+        : GameCatalogRole.dealer;
+    return service.alwaysPrimaryLabels(
+      className: application.className,
+      role: role,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final itemLevel = application.itemLevel;
+    final combatPower = application.combatPower;
+    final synergies = _synergyLabels();
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              '${application.characterName} · ${application.className} · '
+              '${_roleLabel(application.requestedRole)}',
+            ),
+            const SizedBox(height: 4),
+            Text(
+              [
+                if (itemLevel != null)
+                  '아이템 Lv. ${DisplayNumberFormatter.integer(itemLevel)}'
+                else
+                  '아이템 레벨 미확인',
+                if (combatPower != null)
+                  '전투력 ${DisplayNumberFormatter.integer(combatPower)}',
+              ].join(' · '),
+              style: theme.textTheme.bodySmall,
+            ),
+            if (synergies.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(
+                '시너지 ${synergies.join(' · ')}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+            const SizedBox(height: 4),
+            const Text('파티장 승인 대기'),
+            if (canDecide) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      key: ValueKey(
+                        'rejectApplication-${application.applicantPlayerId}',
+                      ),
+                      onPressed: submitting
+                          ? null
+                          : () => onReject(application),
+                      child: const Text('거절'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton(
+                      key: ValueKey(
+                        'approveApplication-${application.applicantPlayerId}',
+                      ),
+                      onPressed: submitting
+                          ? null
+                          : () => onApprove(application),
+                      child: const Text('승인'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
