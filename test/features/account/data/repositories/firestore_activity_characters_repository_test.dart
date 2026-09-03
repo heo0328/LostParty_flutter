@@ -69,34 +69,9 @@ void main() {
         containsPair('gameAccountId', 'account-1'),
       );
       expect(
-        firestore
-            .documents['players/player-1/activityCharacterProjections/char-1'],
-        containsPair('characterName', '대표'),
-      );
-      expect(
-        firestore
-            .documents['players/player-1/activityCharacterProjections/char-1'],
-        containsPair('itemLevel', 1680.0),
-      );
-      expect(
-        firestore
-            .documents['players/player-1/activityCharacterProjections/char-1'],
-        containsPair('isRepresentative', true),
-      );
-      expect(
-        firestore
-            .documents['players/player-1/activityCharacterProjections/char-1'],
-        containsPair('displayOrder', 0),
-      );
-      expect(
-        firestore
-            .documents['players/player-1/activityCharacterProjections/char-2'],
-        containsPair('isRepresentative', false),
-      );
-      expect(
-        firestore
-            .documents['players/player-1/activityCharacterProjections/char-1']!
-            .containsKey('gameAccountId'),
+        firestore.documents.containsKey(
+          'players/player-1/activityCharacterProjections/char-1',
+        ),
         isFalse,
       );
       expect(
@@ -121,19 +96,6 @@ void main() {
       'characterId': 'char-2',
       'gameAccountId': 'account-1',
     };
-    firestore
-        .documents['players/player-1/activityCharacterProjections/char-2'] = {
-      'schemaVersion': 1,
-      'playerId': 'player-1',
-      'characterId': 'char-2',
-      'characterName': '부캐',
-      'serverName': '루페온',
-      'characterClassName': '바드',
-      'itemLevel': null,
-      'combatPower': null,
-      'displayOrder': 1,
-      'isRepresentative': false,
-    };
 
     await repository.save(
       const SaveActivityCharactersCommand(
@@ -151,12 +113,6 @@ void main() {
     expect(
       firestore.documents.containsKey(
         'players/player-1/characterActivity/char-2',
-      ),
-      isFalse,
-    );
-    expect(
-      firestore.documents.containsKey(
-        'players/player-1/activityCharacterProjections/char-2',
       ),
       isFalse,
     );
@@ -261,7 +217,7 @@ void main() {
     expect(firestore.writes, isEmpty);
   });
 
-  test('loads group-readable projections in display order', () async {
+  test('loads activity documents without writing a projection collection', () async {
     await repository.save(
       const SaveActivityCharactersCommand(
         activityCharacterIds: {'char-1', 'char-2'},
@@ -270,13 +226,14 @@ void main() {
       ),
     );
 
-    final projections = await repository.loadProjections(playerId: 'player-1');
-    expect(projections.map((item) => item.characterId), ['char-2', 'char-1']);
-    expect(projections.first.characterName, '부캐');
-    expect(projections.first.isRepresentative, isFalse);
-    expect(projections.last.isRepresentative, isTrue);
-    expect(projections.last.itemLevel, 1680);
-    expect(projections.last.combatPower, 2100);
+    final loaded = await repository.load(playerId: 'player-1');
+    expect(loaded.characterIds, {'char-1', 'char-2'});
+    expect(
+      firestore.documents.keys.where(
+        (path) => path.contains('activityCharacterProjections'),
+      ),
+      isEmpty,
+    );
   });
 
   test('loads an empty projection list when none are saved', () async {

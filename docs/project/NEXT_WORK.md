@@ -2,60 +2,25 @@
 
 ## 현재 기준
 
-- 기준 브랜치: `dev` `b44eaed`
-- A 저장·Domain·Rules부터 D3 그룹원·Character 필터까지 구현 완료
-- 자동 검증: `flutter analyze --no-pub`, 전체 `flutter test --no-pub` 792개 통과
-- Android 실기기에서 활동 Character 선택·저장, 선택 Character만 레이드 모집 생성 후보로 노출, 기존 순서 변경·대표 Character 변경, 완료 처리 표시 체크와 전체 흐름이 정상임을 확인했다.
+- 활동 Character 저장·그룹원 목록·레이드 현황 필터 UX(C)까지 구현하고 Android 실기기에서 확인했다.
+- 그룹원 활동 Character는 Projection 컬렉션 없이 `characterActivity` 목록과 Character 표시 문서를 쓴다.
 - 첫 릴리즈 전에는 최신 `dev`에서 작업 브랜치를 만들고, PR 없이 검증된 브랜치를 `dev`에 직접 병합해 `origin/dev`에 푸시한다.
 
 전체 기준 계약은 [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md)를 따른다.
 
 ## 다음 목표
 
-다른 그룹원의 활동 Character가 그룹 기능에 정확히 보이도록 최소 표시 Projection을 완성하고, 레이드 현황 필터의 초기화·조건부 그룹원 선택·닫기 제스처를 개선한다.
-
-현재 본인의 Character 목록은 활동 선택으로 좁혀지지만, 다른 그룹원은 `characterActivity` owner-only 읽기 제약 때문에 인증 활성 Character 전체가 표시된다. 이는 업로드 실패로 단정하지 않고, 그룹원에게 공개할 활동 Character 최소 Projection과 읽기 경로가 아직 연결되지 않은 문제로 취급한다.
+이 단위(활동 Character 공개 경로 + 필터 UX)는 실기기 확인까지 완료됐다. 다음 작업은 별도 지시가 있으면 그때 잡는다.
 
 ## 작업 순서
 
 ```text
-A. 다른 그룹원 활동 Character Projection 계약·저장·읽기
-→ B. 그룹 상세와 레이드 필터 후보 적용
-→ C. 레이드 필터 UX 개선
-→ D. 자동 검증과 실기기 확인
+완료
 ```
 
-## A. 활동 Character 최소 Projection
+## A·B 완료 메모 (Projection 대신 활동 목록)
 
-포함:
-
-- 다른 그룹원에게 공개 가능한 활동 Character의 최소 필드와 저장 위치 확정
-- 활동 Character 저장 시 Projection을 같은 완료 단위로 동기화
-- 현재 Player의 소유권 내부 정보와 인증 전용 데이터는 공개하지 않음
-- 활동 해제·대표 변경·순서 변경 후 Projection의 추가·갱신·삭제 일관성 보장
-- 기존 테스트 데이터는 캐릭터 관리에서 다시 저장하거나 명시적인 보강 경로를 거쳐 Projection 생성
-- Firestore Rules와 Repository 테스트 추가
-
-완료 조건:
-
-- 그룹원이 다른 그룹원의 활동 Character 최소 목록만 읽을 수 있다.
-- 비활동 Character는 새 Projection 후보에서 제거된다.
-- 대표, 순서와 표시용 최소 정보가 활동 Character 저장 결과와 일치한다.
-
-## B. 그룹 상세와 필터 후보 적용
-
-포함:
-
-- 그룹 정보 페이지의 본인·다른 그룹원 Character 목록을 활동 Character로 통일
-- 레이드 현황 필터의 그룹원별 Character 후보도 같은 Projection 사용
-- 기존 레이드 membership에 이미 참가한 비활동 Character는 기존 참가 기록과 필터 판정에서 유지
-- Projection 누락을 인증 Character 전체 공개로 조용히 대체하지 않고, 빈 상태 또는 재저장 안내로 구분
-
-완료 조건:
-
-- 본인과 다른 그룹원 모두 선택한 활동 Character만 그룹 상세에 표시된다.
-- 레이드 필터에서도 다른 그룹원의 활동 Character만 후보로 표시된다.
-- 기존 참가·Claim·완료 Snapshot은 변경되지 않는다.
+별도 Projection 컬렉션은 Rules 복잡도 때문에 채택하지 않는다. 그룹 상세·필터는 `characterActivity` ID와 `characters` 표시 문서를 조합하고, 활동 문서가 없으면 빈 목록을 둔다. 그룹원 목록이 동작하려면 `characterActivity` `get`/`list`가 `hasActiveBinding()`인 Rules가 실제로 배포되어야 한다. CLI 503이면 콘솔 표시와 무관하게 새 Rules는 적용되지 않은 것으로 본다.
 
 ## C. 레이드 현황 필터 UX 개선
 
@@ -79,20 +44,20 @@ A. 다른 그룹원 활동 Character Projection 계약·저장·읽기
 
 자동 검증:
 
-- 활동 Character Projection Repository·Rules 계약 테스트
+- 활동 Character 저장·목록 Rules 계약 테스트
 - 그룹원 Character 읽기와 후보 제한 테스트
 - 필터 초기화·조건부 표시·선택 정규화·드래그 닫기 위젯 테스트
 - 변경 범위 표적 테스트
 - `flutter analyze --no-pub`
 - 저장 스키마와 여러 feature가 함께 변경되므로 최종 `flutter test --no-pub` 1회
 
-실기기 확인:
+실기기 확인 (2026-09-03 Android):
 
-- 사용자 A가 활동 Character를 저장한 뒤 사용자 B의 그룹 정보 페이지에 선택 Character만 표시
-- 활동 Character 변경 후 다른 그룹원 화면에 추가·삭제·순서가 반영
-- 레이드 현황 필터 초기화와 재진입 유지
-- 그룹 공개만 선택했을 때만 그룹원 선택 표시
-- 긴 필터 목록의 상단 드래그 닫기
+- 사용자 A가 활동 Character를 저장한 뒤 사용자 B의 그룹 정보 페이지에 선택 Character만 표시 — 통과
+- 내 계정 활동 Character 저장 — 통과
+- 레이드 현황 필터 초기화와 재진입 유지 — 통과
+- 그룹 공개만 선택했을 때만 그룹원 선택 표시 — 통과
+- 긴 필터 목록의 상단 드래그 닫기 — 통과
 
 ## 제외 범위
 

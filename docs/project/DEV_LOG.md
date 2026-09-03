@@ -1,3 +1,8 @@
+## 2026-09-03 활동 Character 공개 경로와 필터 UX 실기기 확인
+
+- 그룹원 목록은 Projection 컬렉션 없이 `characterActivity` 목록과 Character 표시 문서를 쓴다. 캐릭터 관리 저장과 다른 그룹원의 선택 Character만 보이기가 실기기에서 통과했다.
+- 레이드 현황 필터는 초기화, `그룹 공개만`일 때만 그룹원 UI, 상단 드래그 닫기가 실기기에서 통과했다.
+
 ## 2026-09-02 활동 Character Rules 컴파일 오류
 
 - 사용자가 `firebase deploy --only firestore:rules --project lost-party`에서 `removedMemberId` 16단 삼항의 닫는 괄호 불일치(174:28)와 파일 끝 `Unexpected '}'`로 컴파일이 실패했다.

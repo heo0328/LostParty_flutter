@@ -1,7 +1,6 @@
 import '../../../account/domain/repositories/account_repository.dart';
 import '../../../account/domain/repositories/activity_characters_repository.dart';
 import '../../../account/domain/repositories/character_combat_power_sync_gateway.dart';
-import '../../../account/domain/services/activity_character_source.dart';
 import '../../domain/entities/group_join_command.dart';
 import '../../domain/entities/group_leader_exit_command.dart';
 import '../../domain/entities/group_leave_command.dart';
@@ -15,6 +14,7 @@ import '../../domain/entities/group_request_character.dart';
 import '../../domain/repositories/group_character_search_repository.dart';
 import '../../domain/repositories/group_join_command_repository.dart';
 import '../../domain/repositories/group_read_repository.dart';
+import '../../domain/services/activity_display_characters.dart';
 import '../../domain/services/group_join_command_validator.dart';
 import 'group_character_options.dart';
 
@@ -245,25 +245,11 @@ class GroupMembershipActionViewModel {
 
   Future<List<GroupRequestCharacter>> loadPlayerCharacters(
     String ownerPlayerId,
-  ) async {
-    final characters = await characterSearchRepository
-        .loadActiveCharactersForPlayer(ownerPlayerId);
-    // 다른 그룹원의 characterActivity는 읽을 수 없다. 본인 목록만 활동 집합으로 좁힌다.
-    if (playerId == null || ownerPlayerId != playerId) {
-      return characters;
-    }
-    final activityCharacterIds = await loadActivityCharacterIds(
-      repository: activityCharactersRepository,
-      playerId: playerId,
-    );
-    if (activityCharacterIds == null) {
-      return characters;
-    }
-    return [
-      for (final character in characters)
-        if (activityCharacterIds.contains(character.characterId)) character,
-    ];
-  }
+  ) => loadActivityDisplayCharacters(
+    searchRepository: characterSearchRepository,
+    ownerPlayerId: ownerPlayerId,
+    activityRepository: activityCharactersRepository,
+  );
 
   Future<List<GroupCharacterOption>> loadAuthenticatedCharacters() =>
       GroupCharacterOptionLoader(

@@ -370,6 +370,8 @@ GoRouter createAppRouter({
                   cycleKey: currentCycleKey,
                   raidCatalogRepository: raidCatalogRepository,
                   groupReadRepository: groupReadRepositoryForRoute(),
+                  activityCharactersRepository:
+                      activityCharactersRepositoryOrDefault,
                   characterSearchRepository:
                       characterSearchRepositoryForRoute(),
                 ),
@@ -597,9 +599,7 @@ GoRouter createAppRouter({
                         readRepository: groupReadRepositoryForRoute(),
                         commandRepository: groupJoinCommandRepositoryForRoute(),
                         characterSearchRepository:
-                            FirestoreGroupCharacterSearchRepository(
-                              firestore: FirebaseFirestore.instance,
-                            ),
+                            characterSearchRepositoryForRoute(),
                       ),
                       applicationsViewModel:
                           groupApplicationsViewModelForRoute(),
@@ -613,9 +613,7 @@ GoRouter createAppRouter({
                           groupId: state.pathParameters['groupId']!,
                           viewModel: GroupInviteViewModel(
                             searchRepository:
-                                FirestoreGroupCharacterSearchRepository(
-                                  firestore: FirebaseFirestore.instance,
-                                ),
+                                characterSearchRepositoryForRoute(),
                             commandRepository:
                                 groupJoinCommandRepositoryForRoute(),
                           ),

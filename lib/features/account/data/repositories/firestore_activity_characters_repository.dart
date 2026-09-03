@@ -70,33 +70,18 @@ class FirestoreActivityCharactersRepository
           serverTimestamp: FieldValue.serverTimestamp(),
         );
         final existingActivityToRemove = <String, bool>{};
-        final existingProjectionsToRemove = <String, bool>{};
         for (final characterId in plan.characterIdsToRemove) {
           final snapshot = await transaction.get(
             _activityRef(playerId, characterId),
           );
           existingActivityToRemove[characterId] = snapshot.exists;
         }
-        for (final characterId in plan.characterIdsToRemove) {
-          final snapshot = await transaction.get(
-            _projectionRef(playerId, characterId),
-          );
-          existingProjectionsToRemove[characterId] = snapshot.exists;
-        }
         for (final entry in plan.documentsByCharacterId.entries) {
           transaction.set(_activityRef(playerId, entry.key), entry.value);
-        }
-        for (final entry in plan.projectionDocumentsByCharacterId.entries) {
-          transaction.set(_projectionRef(playerId, entry.key), entry.value);
         }
         for (final entry in existingActivityToRemove.entries) {
           if (entry.value) {
             transaction.delete(_activityRef(playerId, entry.key));
-          }
-        }
-        for (final entry in existingProjectionsToRemove.entries) {
-          if (entry.value) {
-            transaction.delete(_projectionRef(playerId, entry.key));
           }
         }
         return ActivityCharacters(
@@ -267,13 +252,6 @@ class FirestoreActivityCharactersRepository
         .collection('players')
         .doc(playerId)
         .collection('activityCharacterProjections');
-  }
-
-  DocumentReference<Map<String, dynamic>> _projectionRef(
-    String playerId,
-    String characterId,
-  ) {
-    return _projectionCollection(playerId).doc(characterId);
   }
 
   DocumentReference<Map<String, dynamic>> _activityRef(

@@ -120,7 +120,7 @@ void main() {
 
     test('일부 그룹만 유효하면 그 선택과 남은 그룹원을 유지한다', () {
       const stored = RaidStatusFilterSelection(
-        includePublic: true,
+        includePublic: false,
         includeGroup: true,
         groupIds: {'group-1', 'gone'},
         memberPlayerIds: {'player-2', 'player-gone'},
@@ -139,6 +139,43 @@ void main() {
       expect(pruned.groupIds, {'group-1'});
       expect(pruned.memberPlayerIds, {'player-2'});
       expect(pruned.characterIdsByPlayer['player-2'], {'char-21'});
+    });
+
+    test('전체 또는 일반 공개가 포함되면 그룹 관련 선택을 제거한다', () {
+      const stored = RaidStatusFilterSelection(
+        includePublic: true,
+        includeGroup: true,
+        raidIds: {'act4'},
+        groupIds: {'group-1'},
+        memberPlayerIds: {'player-2'},
+        characterIdsByPlayer: {
+          'player-2': {'char-21'},
+        },
+      );
+      final cleared = stored.withoutHiddenGroupFilters();
+      expect(cleared.raidIds, {'act4'});
+      expect(cleared.groupIds, isEmpty);
+      expect(cleared.memberPlayerIds, isEmpty);
+      expect(cleared.characterIdsByPlayer, isEmpty);
+      expect(
+        RaidStatusFilterSelection.fromJson({
+          'includePublic': true,
+          'includeGroup': true,
+          'groupIds': ['group-1'],
+          'memberPlayerIds': ['player-2'],
+        }).groupIds,
+        isEmpty,
+      );
+    });
+
+    test('그룹 공개만일 때는 그룹 관련 선택을 유지한다', () {
+      const stored = RaidStatusFilterSelection(
+        includePublic: false,
+        includeGroup: true,
+        groupIds: {'group-1'},
+        memberPlayerIds: {'player-2'},
+      );
+      expect(stored.withoutHiddenGroupFilters(), stored);
     });
   });
 
@@ -208,9 +245,9 @@ void main() {
       expect(_matches(groupRaid, selection: raidOnly), isFalse);
     });
 
-    test('그룹 ID는 차원 내부 OR이고 공개 조건과 AND다', () {
+    test('그룹 ID는 그룹 공개만일 때만 적용되고 차원 내부 OR다', () {
       const selection = RaidStatusFilterSelection(
-        includePublic: true,
+        includePublic: false,
         includeGroup: true,
         groupIds: {'group-1'},
       );
@@ -229,9 +266,19 @@ void main() {
       );
     });
 
-    test('그룹원은 사용자 사이 AND, Character는 사용자 내부 OR다', () {
+    test('전체가 포함되면 그룹 ID 선택을 판정에 쓰지 않는다', () {
       const selection = RaidStatusFilterSelection(
         includePublic: true,
+        includeGroup: true,
+        groupIds: {'group-1'},
+      );
+      expect(_matches(publicRaid, selection: selection), isTrue);
+      expect(_matches(groupRaid, selection: selection), isTrue);
+    });
+
+    test('그룹원은 사용자 사이 AND, Character는 사용자 내부 OR다', () {
+      const selection = RaidStatusFilterSelection(
+        includePublic: false,
         includeGroup: true,
         memberPlayerIds: {'player-2', 'player-3'},
         characterIdsByPlayer: {
@@ -270,7 +317,7 @@ void main() {
 
     test('그룹원만 고르고 Character 칩이 없으면 참가 사실만 요구한다', () {
       const selection = RaidStatusFilterSelection(
-        includePublic: true,
+        includePublic: false,
         includeGroup: true,
         memberPlayerIds: {'player-2'},
       );
@@ -295,7 +342,7 @@ void main() {
 
     test('Character 칩이 있어도 membership이 아직 없으면 Character 조건을 건너뛴다', () {
       const selection = RaidStatusFilterSelection(
-        includePublic: true,
+        includePublic: false,
         includeGroup: true,
         memberPlayerIds: {'player-2'},
         characterIdsByPlayer: {

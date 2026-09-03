@@ -48,6 +48,9 @@ class RaidStatusFilterSelection {
 
   bool get includeAllPublicScopes => includePublic && includeGroup;
 
+  /// 그룹·그룹원·Character 선택 UI와 판정은 그룹 공개만일 때만 쓴다.
+  bool get isGroupPublicOnly => includeGroup && !includePublic;
+
   bool get isUnrestricted =>
       includeAllPublicScopes &&
       raidIds.isEmpty &&
@@ -167,6 +170,21 @@ class RaidStatusFilterSelection {
     );
   }
 
+  /// 전체 또는 일반 공개가 포함되면 숨긴 그룹 관련 선택을 제거한다.
+  RaidStatusFilterSelection withoutHiddenGroupFilters() {
+    if (isGroupPublicOnly) return this;
+    if (groupIds.isEmpty &&
+        memberPlayerIds.isEmpty &&
+        characterIdsByPlayer.isEmpty) {
+      return this;
+    }
+    return copyWith(
+      groupIds: const {},
+      memberPlayerIds: const {},
+      characterIdsByPlayer: const {},
+    );
+  }
+
   /// 카탈로그에 없는 레이드·난이도 선택은 제거하고 나머지는 유지한다.
   RaidStatusFilterSelection prune({
     required Set<String> catalogRaidIds,
@@ -255,7 +273,7 @@ class RaidStatusFilterSelection {
       groupIds: _stringSet(raw['groupIds']),
       memberPlayerIds: _stringSet(raw['memberPlayerIds']),
       characterIdsByPlayer: _stringSetMap(raw['characterIdsByPlayer']),
-    );
+    ).withoutHiddenGroupFilters();
   }
 
   static Set<String> _stringSet(Object? raw) {

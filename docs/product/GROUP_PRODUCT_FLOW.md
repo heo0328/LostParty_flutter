@@ -182,7 +182,8 @@
 ### 8.2 그룹원·Character 선택
 
 - 그룹 공개에서 그룹을 선택하면 현재 Player를 제외한 정상 그룹원을 대표 Character명으로 표시한다.
-- 그룹원 아래 Character 칩 후보는 그룹원이 읽을 수 있는 인증 활성 Character다. 다른 Player의 `characterActivity`는 owner만 읽을 수 있다.
+- 그룹원 아래 Character 칩 후보는 해당 Player의 활동 Character ID와 공개 Character 표시 문서다. 활동 문서가 없으면 인증 활성 Character 전체로 대체하지 않는다.
+- 그룹·그룹원·Character 선택 UI는 공개 조건이 `그룹 공개만`일 때만 보인다. 전체 또는 일반 공개가 포함되면 숨기고 그 선택값은 필터 판정과 저장에서 지운다.
 - 한 사용자 안에서 선택한 여러 Character는 OR, 선택한 사용자 사이는 AND다.
 - 그룹원·Character 선택이 없으면 해당 차원의 전체를 허용한다.
 - 이미 레이드에 참가 중인 비활동 Character는 필터 판정에서 인식하고 새 칩으로는 제시하지 않는다.

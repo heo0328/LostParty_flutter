@@ -7,6 +7,7 @@ import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../../shared/formatters/korea_time_formatter.dart';
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 import '../../../account/data/local/account_database.dart';
+import '../../../account/domain/repositories/activity_characters_repository.dart';
 import '../../../group/domain/repositories/group_character_search_repository.dart';
 import '../../../group/domain/repositories/group_read_repository.dart';
 import '../../../recruitment_list/domain/entities/party_read_models.dart';
@@ -32,6 +33,7 @@ class RaidStatusPage extends StatefulWidget {
     this.raidCatalogRepository,
     this.filterStore,
     this.groupReadRepository,
+    this.activityCharactersRepository,
     this.characterSearchRepository,
     super.key,
   });
@@ -44,6 +46,7 @@ class RaidStatusPage extends StatefulWidget {
   final RaidCatalogRepository? raidCatalogRepository;
   final RaidStatusFilterStore? filterStore;
   final GroupReadRepository? groupReadRepository;
+  final ActivityCharactersRepository? activityCharactersRepository;
   final GroupCharacterSearchRepository? characterSearchRepository;
 
   @override
@@ -73,6 +76,7 @@ class _RaidStatusPageState extends State<RaidStatusPage>
       membersStreamFactory: (recruitmentId) =>
           widget.partyReadRepository.watchRecruitmentMembers(recruitmentId),
       groupReadRepository: widget.groupReadRepository,
+      activityCharactersRepository: widget.activityCharactersRepository,
       characterSearchRepository: widget.characterSearchRepository,
     )..start();
     _applications = PartyReadStreamViewModel<PartyApplicationSummary>(

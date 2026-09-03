@@ -174,12 +174,15 @@ class _Search extends Fake implements GroupCharacterSearchRepository {
 }
 
 class _Activity implements ActivityCharactersRepository {
-  _Activity(this.characterIds);
-  final Set<String> characterIds;
+  _Activity(this.byPlayer);
+  final Map<String, Set<String>> byPlayer;
 
   @override
   Future<ActivityCharacters> load({required String playerId}) async {
-    return ActivityCharacters(playerId: playerId, characterIds: characterIds);
+    return ActivityCharacters(
+      playerId: playerId,
+      characterIds: byPlayer[playerId] ?? const {},
+    );
   }
 
   @override
@@ -199,16 +202,19 @@ void main() {
   });
   GroupMembershipActionViewModel model({
     double? power = 3100,
-    Set<String>? activityCharacterIds,
+    Map<String, Set<String>>? activityByPlayer,
   }) => GroupMembershipActionViewModel(
     accountRepository: _Accounts(power: power),
     readRepository: reads,
     commandRepository: commands,
     characterSearchRepository: _Search(powers),
     combatPowerSyncGateway: powers,
-    activityCharactersRepository: activityCharacterIds == null
-        ? null
-        : _Activity(activityCharacterIds),
+    activityCharactersRepository: _Activity(
+      activityByPlayer ??
+          {
+            'player-1': {'character-1', 'character-2'},
+          },
+    ),
     playerId: 'player-1',
   );
   for (final joinedBy in GroupJoinedBy.values) {
@@ -292,7 +298,11 @@ void main() {
   });
 
   test('전투력 보강과 본인 Character 목록은 활동 Character만 담는다', () async {
-    final vm = model(activityCharacterIds: {'character-1'});
+    final vm = model(
+      activityByPlayer: {
+        'player-1': {'character-1'},
+      },
+    );
     final result = await vm.loadMemberDisplays(
       groupId: 'group-1',
       playerId: 'player-1',
@@ -303,7 +313,16 @@ void main() {
     final mine = await vm.loadPlayerCharacters('player-1');
     expect(mine.map((character) => character.characterId), ['character-1']);
     final others = await vm.loadPlayerCharacters('player-2');
-    expect(others.map((character) => character.characterId), [
+    expect(others, isEmpty);
+  });
+
+  test('다른 그룹원 활동 목록 누락을 인증 Character 전체로 대체하지 않는다', () async {
+    final vm = model(activityByPlayer: const {});
+    final others = await vm.loadPlayerCharacters('player-2');
+    expect(others, isEmpty);
+    final search = await vm.characterSearchRepository
+        .loadActiveCharactersForPlayer('player-2');
+    expect(search.map((character) => character.characterId), [
       'character-1',
       'character-2',
     ]);
@@ -312,7 +331,9 @@ void main() {
     reads.member = _member(power: 2800);
     final result = await model(
       power: 3100,
-      activityCharacterIds: {'character-2'},
+      activityByPlayer: {
+        'player-1': {'character-2'},
+      },
     ).loadMemberDisplays(groupId: 'group-1', playerId: 'player-1');
     expect(result.members.single.combatPower, 2800);
     expect(commands.calls, 0);

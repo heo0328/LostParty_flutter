@@ -54,43 +54,16 @@ void main() {
     expect(activityRules, isNot(contains("'activityCharacterIds'")));
   });
 
-  test('활동 Character Projection은 그룹원 읽기와 활동 문서 동기 쓰기를 강제한다', () {
+  test('활동 Character 목록은 바인딩된 사용자가 읽고 별도 Projection 컬렉션은 두지 않는다', () {
+    expect(rules, contains('match /characterActivity/{characterId}'));
+    expect(rules, contains('allow get, list: if hasActiveBinding();'));
+    expect(rules, isNot(contains('match /activityCharacterProjections/{characterId}')));
+    expect(rules, isNot(contains('validActivityCharacterProjectionWrite')));
+    expect(rules, isNot(contains('canReadActivityCharacterProjection')));
+    expect(rules, isNot(contains('sharesActiveGroupWith')));
     expect(
       rules,
-      contains('match /activityCharacterProjections/{characterId}'),
+      isNot(contains('activityCharacterProjectionPath')),
     );
-    expect(rules, contains('validActivityCharacterProjectionWrite'));
-    expect(rules, contains('validActivityCharacterProjectionDelete'));
-    expect(rules, contains('canReadActivityCharacterProjection'));
-    expect(rules, contains('sharesActiveGroupWith'));
-    expect(
-      rules,
-      contains(
-        'existsAfter(activityCharacterProjectionPath(playerId, characterId))',
-      ),
-    );
-    expect(
-      rules,
-      contains(
-        '!existsAfter(activityCharacterProjectionPath(playerId, characterId))',
-      ),
-    );
-    expect(
-      rules,
-      contains('existsAfter(characterActivityPath(playerId, characterId))'),
-    );
-    final start = rules.indexOf(
-      'function validActivityCharacterProjectionWrite',
-    );
-    final end = rules.indexOf(
-      'function validActivityCharacterProjectionDelete',
-    );
-    final projectionRules = rules.substring(start, end);
-    expect(projectionRules, contains("'characterName'"));
-    expect(projectionRules, contains("'displayOrder'"));
-    expect(projectionRules, contains("'isRepresentative'"));
-    expect(projectionRules, isNot(contains("'gameAccountId'")));
-    expect(projectionRules, isNot(contains("'ownerPlayerId'")));
-    expect(projectionRules, isNot(contains("'status'")));
   });
 }

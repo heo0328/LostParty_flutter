@@ -28,13 +28,14 @@ bool matchesRaidStatusFilter({
       !selection.difficultyIds.contains(difficultyId)) {
     return false;
   }
-  if (selection.includeGroup &&
+  if (selection.isGroupPublicOnly &&
       selection.groupIds.isNotEmpty &&
       (groupId == null ||
           groupId.trim().isEmpty ||
           !selection.groupIds.contains(groupId))) {
     return false;
   }
+  if (!selection.isGroupPublicOnly) return true;
   for (final playerId in selection.memberPlayerIds) {
     if (!raidMemberPlayerIds.contains(playerId)) return false;
     final selectedCharacters = selection.characterIdsByPlayer[playerId];

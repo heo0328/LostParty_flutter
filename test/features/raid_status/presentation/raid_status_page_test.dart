@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lost_party/features/account/data/local/account_database.dart';
+import 'package:lost_party/features/account/domain/entities/save_activity_characters_command.dart';
+import 'package:lost_party/features/account/domain/repositories/activity_characters_repository.dart';
 import 'package:lost_party/features/group/domain/entities/group_member.dart';
 import 'package:lost_party/features/group/domain/entities/group_relation.dart';
 import 'package:lost_party/features/group/domain/entities/group_request_character.dart';
@@ -33,6 +35,7 @@ void main() {
     RaidCatalogRepository? raidCatalogRepository,
     RaidStatusFilterStore? filterStore,
     GroupReadRepository? groupReadRepository,
+    ActivityCharactersRepository? activityCharactersRepository,
     GroupCharacterSearchRepository? characterSearchRepository,
     Stream<PartyReadSnapshot<PartyMemberDisplay>> Function(
       String recruitmentId,
@@ -58,6 +61,7 @@ void main() {
           raidCatalogRepository: raidCatalogRepository,
           filterStore: filterStore,
           groupReadRepository: groupReadRepository,
+          activityCharactersRepository: activityCharactersRepository,
           characterSearchRepository: characterSearchRepository,
         ),
       ),
@@ -482,20 +486,16 @@ void main() {
           ],
         },
       ),
-      characterSearchRepository: _PageCharacterSearchRepository({
+      activityCharactersRepository: _PageActivity({
+        'player-2': {'char-21'},
+        'player-3': {'char-33'},
+      }),
+      characterSearchRepository: _PageSearch({
         'player-2': [
-          _pageCharacter(
-            playerId: 'player-2',
-            characterId: 'char-21',
-            name: '딜러A',
-          ),
+          _pageSearchChar(playerId: 'player-2', id: 'char-21', name: '딜러A'),
         ],
         'player-3': [
-          _pageCharacter(
-            playerId: 'player-3',
-            characterId: 'char-33',
-            name: '서폿A',
-          ),
+          _pageSearchChar(playerId: 'player-3', id: 'char-33', name: '서폿A'),
         ],
       }),
       membersForId: (id) => Stream.value(
@@ -510,7 +510,10 @@ void main() {
       activeRaids: Stream.value(
         PartyReadSnapshot(
           items: [
-            _activeRaid(memberPlayerIds: {'player-1', 'player-2', 'player-3'}),
+            _activeRaid(
+              groupId: 'group-1',
+              memberPlayerIds: {'player-1', 'player-2', 'player-3'},
+            ),
             _activeRaid(
               id: 'only-two',
               title: '그룹 세르카',
@@ -528,6 +531,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
+      find.byKey(const ValueKey('raidStatusFilterMemberChip-player-2')),
+      findsNothing,
+    );
+    expect(find.text('그룹원'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('raidStatusFilterPublicOpen')));
+    await tester.pumpAndSettle();
+
+    expect(
       find.byKey(const ValueKey('raidStatusFilterMemberChip-player-1')),
       findsNothing,
     );
@@ -537,10 +549,16 @@ void main() {
       findsOneWidget,
     );
 
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('raidStatusFilterMemberChip-player-2')),
+    );
     await tester.tap(
       find.byKey(const ValueKey('raidStatusFilterMemberChip-player-2')),
     );
     await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('raidStatusFilterMemberChip-player-3')),
+    );
     await tester.tap(
       find.byKey(const ValueKey('raidStatusFilterMemberChip-player-3')),
     );
@@ -549,6 +567,11 @@ void main() {
     expect(find.text('그룹 세르카'), findsNothing);
     expect(find.text('1개'), findsWidgets);
 
+    await tester.ensureVisible(
+      find.byKey(
+        const ValueKey('raidStatusFilterCharacterChip-player-2-char-21'),
+      ),
+    );
     await tester.tap(
       find.byKey(
         const ValueKey('raidStatusFilterCharacterChip-player-2-char-21'),
@@ -571,11 +594,15 @@ void main() {
     );
     final snapshot = PartyReadSnapshot(
       items: [
-        _activeRaid(memberPlayerIds: {'player-1', 'player-2'}),
+        _activeRaid(
+          groupId: 'group-1',
+          memberPlayerIds: {'player-1', 'player-2'},
+        ),
         _activeRaid(
           id: 'solo',
           title: '혼자 진행',
           raidId: 'serca',
+          groupId: 'group-1',
           memberPlayerIds: {'player-1'},
         ),
       ],
@@ -592,6 +619,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('raidStatusFilterBar')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('raidStatusFilterPublicOpen')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('raidStatusFilterMemberChip-player-2')),
+    );
     await tester.tap(
       find.byKey(const ValueKey('raidStatusFilterMemberChip-player-2')),
     );
@@ -611,9 +643,69 @@ void main() {
     await tester.pumpAndSettle();
     await tester.pump();
     await tester.pump();
-    expect(find.text('레이드 필터: 친구딜러'), findsOneWidget);
+    expect(find.text('레이드 필터: 그룹 공개 · 친구딜러'), findsOneWidget);
     expect(find.text('4막 노말 모집'), findsOneWidget);
     expect(find.text('혼자 진행'), findsNothing);
+  });
+
+  testWidgets('초기화는 필터를 전체 보기로 되돌리고 저장한다', (tester) async {
+    final database = AccountDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    final store = DriftRaidStatusFilterStore(database);
+    await pumpPage(
+      tester,
+      database: database,
+      filterStore: store,
+      activeRaids: Stream.value(
+        PartyReadSnapshot(
+          items: [
+            _activeRaid(),
+            _activeRaid(
+              id: 'group-raid',
+              title: '그룹 세르카',
+              raidId: 'serca',
+              groupId: 'group-1',
+              visibility: 'group',
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('raidStatusFilterBar')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('raidStatusFilterPublicOpen')));
+    await tester.pumpAndSettle();
+    expect(find.text('4막 노말 모집'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('raidStatusFilterReset')));
+    await tester.pumpAndSettle();
+    expect(find.text('4막 노말 모집'), findsOneWidget);
+    expect(find.text('그룹 세르카'), findsOneWidget);
+    expect(find.text('레이드 필터: 모든 레이드'), findsOneWidget);
+    expect((await store.load('player-1')).isUnrestricted, isTrue);
+  });
+
+  testWidgets('상단 드래그 영역으로 필터 창을 닫는다', (tester) async {
+    await pumpPage(
+      tester,
+      raidCatalogRepository: _FilterCatalogRepository(),
+      activeRaids: Stream.value(
+        PartyReadSnapshot(items: [_activeRaid()], isFromCache: false),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('raidStatusFilterBar')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('raidStatusFilterCount')), findsOneWidget);
+
+    await tester.drag(
+      find.byKey(const ValueKey('raidStatusFilterSheetDragHandle')),
+      const Offset(0, 120),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('raidStatusFilterCount')), findsNothing);
   });
 }
 
@@ -812,12 +904,12 @@ PartyMemberDisplay _pageMemberDisplay({
   characterId: characterId,
 );
 
-GroupRequestCharacter _pageCharacter({
+GroupRequestCharacter _pageSearchChar({
   required String playerId,
-  required String characterId,
+  required String id,
   required String name,
 }) => GroupRequestCharacter(
-  characterId: characterId,
+  characterId: id,
   ownerPlayerId: playerId,
   characterName: name,
   serverName: '루페온',
@@ -842,9 +934,26 @@ class _PageGroupReadRepository extends Fake implements GroupReadRepository {
       membersByGroup[groupId] ?? const [];
 }
 
-class _PageCharacterSearchRepository extends Fake
-    implements GroupCharacterSearchRepository {
-  _PageCharacterSearchRepository(this.charactersByPlayer);
+class _PageActivity implements ActivityCharactersRepository {
+  _PageActivity(this.idsByPlayer);
+
+  final Map<String, Set<String>> idsByPlayer;
+
+  @override
+  Future<ActivityCharacters> load({required String playerId}) async =>
+      ActivityCharacters(
+        playerId: playerId,
+        characterIds: idsByPlayer[playerId] ?? const {},
+      );
+
+  @override
+  Future<ActivityCharacters> save(SaveActivityCharactersCommand command) {
+    throw UnimplementedError();
+  }
+}
+
+class _PageSearch extends Fake implements GroupCharacterSearchRepository {
+  _PageSearch(this.charactersByPlayer);
 
   final Map<String, List<GroupRequestCharacter>> charactersByPlayer;
 

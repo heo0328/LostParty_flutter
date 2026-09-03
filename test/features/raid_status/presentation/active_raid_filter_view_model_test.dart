@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lost_party/features/account/domain/entities/save_activity_characters_command.dart';
+import 'package:lost_party/features/account/domain/repositories/activity_characters_repository.dart';
 import 'package:lost_party/features/group/domain/entities/group_member.dart';
 import 'package:lost_party/features/group/domain/entities/group_relation.dart';
 import 'package:lost_party/features/group/domain/entities/group_request_character.dart';
@@ -188,13 +190,17 @@ void main() {
         );
       },
       groupReadRepository: groups,
-      characterSearchRepository: _FakeCharacterSearchRepository({
+      activityCharactersRepository: _FakeActivity({
+        'player-2': {'char-21', 'char-24'},
+        'player-3': {'char-33'},
+      }),
+      characterSearchRepository: _FakeSearch({
         'player-2': [
-          _character(playerId: 'player-2', characterId: 'char-21', name: '딜러A'),
-          _character(playerId: 'player-2', characterId: 'char-24', name: '딜러B'),
+          _searchChar(playerId: 'player-2', id: 'char-21', name: '딜러A'),
+          _searchChar(playerId: 'player-2', id: 'char-24', name: '딜러B'),
         ],
         'player-3': [
-          _character(playerId: 'player-3', characterId: 'char-33', name: '서폿A'),
+          _searchChar(playerId: 'player-3', id: 'char-33', name: '서폿A'),
         ],
       }),
     )..start();
@@ -214,12 +220,168 @@ void main() {
     final afterMembers = memberLoads;
     await viewModel.setSelection(
       RaidStatusFilterSelection.unrestricted
+          .togglePublic()
           .toggleMember('player-2')
           .toggleMember('player-3'),
     );
     expect(viewModel.state.items.map((item) => item.id), ['both']);
     expect(memberLoads, afterMembers);
     expect(groups.loadMembersCount, 1);
+    expect(
+      viewModel.state.members
+          .firstWhere((member) => member.playerId == 'player-2')
+          .characters
+          .map((character) => character.id),
+      ['char-21', 'char-24'],
+    );
+    expect(viewModel.state.showGroupMemberFilters, isTrue);
+  });
+
+  test('초기화는 전체 보기로 되돌리고 저장한다', () async {
+    final store = MemoryRaidStatusFilterStore();
+    final viewModel = ActiveRaidFilterViewModel(
+      streamFactory: () => Stream.value(
+        PartyReadSnapshot(
+          items: [raid(id: 'public'), raid(id: 'group', groupId: 'group-1')],
+          isFromCache: false,
+        ),
+      ),
+      playerId: 'player-1',
+      filterStore: store,
+    )..start();
+    addTearDown(viewModel.dispose);
+    await Future<void>.delayed(Duration.zero);
+
+    await viewModel.setSelection(
+      RaidStatusFilterSelection.unrestricted.togglePublic(),
+    );
+    expect(viewModel.state.selection.isUnrestricted, isFalse);
+    await viewModel.resetSelection();
+    expect(viewModel.state.selection.isUnrestricted, isTrue);
+    expect(store.values['player-1']?.isUnrestricted, isTrue);
+    expect(viewModel.state.items, hasLength(2));
+  });
+
+  test('전체를 선택하면 그룹원 선택을 지우고 그룹원 UI를 숨긴다', () async {
+    final viewModel = ActiveRaidFilterViewModel(
+      streamFactory: () => Stream.value(
+        PartyReadSnapshot(
+          items: [
+            raid(
+              id: 'both',
+              groupId: 'group-1',
+              memberPlayerIds: {'player-1', 'player-2'},
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      playerId: 'player-1',
+      filterStore: MemoryRaidStatusFilterStore(),
+      groupReadRepository: _FakeGroupReadRepository(
+        groups: [_groupRelation()],
+        membersByGroup: {
+          'group-1': [_groupMember(playerId: 'player-2', name: '친구딜러')],
+        },
+      ),
+    )..start();
+    addTearDown(viewModel.dispose);
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    await viewModel.setSelection(
+      RaidStatusFilterSelection.unrestricted
+          .togglePublic()
+          .toggleMember('player-2'),
+    );
+    expect(viewModel.state.showGroupMemberFilters, isTrue);
+    expect(viewModel.state.selection.memberPlayerIds, {'player-2'});
+
+    await viewModel.setSelection(
+      viewModel.state.selection.selectAllPublicScopes(),
+    );
+    expect(viewModel.state.showGroupMemberFilters, isFalse);
+    expect(viewModel.state.selection.memberPlayerIds, isEmpty);
+  });
+
+  test('그룹원 Character 후보는 활동 ID만 쓰고 인증 Character 전체로 대체하지 않는다', () async {
+    final viewModel = ActiveRaidFilterViewModel(
+      streamFactory: () => Stream.value(
+        PartyReadSnapshot(
+          items: [
+            raid(
+              id: 'both',
+              groupId: 'group-1',
+              memberPlayerIds: {'player-1', 'player-2'},
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      playerId: 'player-1',
+      filterStore: MemoryRaidStatusFilterStore(),
+      groupReadRepository: _FakeGroupReadRepository(
+        groups: [_groupRelation()],
+        membersByGroup: {
+          'group-1': [_groupMember(playerId: 'player-2', name: '친구딜러')],
+        },
+      ),
+      activityCharactersRepository: _FakeActivity({
+        'player-2': {'char-21'},
+      }),
+      characterSearchRepository: _FakeSearch({
+        'player-2': [
+          _searchChar(playerId: 'player-2', id: 'char-21', name: '딜러A'),
+          _searchChar(playerId: 'player-2', id: 'char-99', name: '인증만'),
+        ],
+      }),
+    )..start();
+    addTearDown(viewModel.dispose);
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(
+      viewModel.state.members.single.characters.map(
+        (character) => character.id,
+      ),
+      ['char-21'],
+    );
+  });
+
+  test('활동 Character가 없으면 그룹원 Character 칩을 비운다', () async {
+    final viewModel = ActiveRaidFilterViewModel(
+      streamFactory: () => Stream.value(
+        PartyReadSnapshot(
+          items: [
+            raid(
+              id: 'both',
+              groupId: 'group-1',
+              memberPlayerIds: {'player-1', 'player-2'},
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      playerId: 'player-1',
+      filterStore: MemoryRaidStatusFilterStore(),
+      groupReadRepository: _FakeGroupReadRepository(
+        groups: [_groupRelation()],
+        membersByGroup: {
+          'group-1': [_groupMember(playerId: 'player-2', name: '친구딜러')],
+        },
+      ),
+      activityCharactersRepository: _FakeActivity({}),
+      characterSearchRepository: _FakeSearch({
+        'player-2': [
+          _searchChar(playerId: 'player-2', id: 'char-21', name: '딜러A'),
+        ],
+      }),
+    )..start();
+    addTearDown(viewModel.dispose);
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(viewModel.state.members.single.characters, isEmpty);
   });
 
   test('저장된 그룹이 모두 무효면 전체 보기로 되돌린다', () async {
@@ -365,12 +527,12 @@ PartyMemberDisplay _memberDisplay({
   characterId: characterId,
 );
 
-GroupRequestCharacter _character({
+GroupRequestCharacter _searchChar({
   required String playerId,
-  required String characterId,
+  required String id,
   required String name,
 }) => GroupRequestCharacter(
-  characterId: characterId,
+  characterId: id,
   ownerPlayerId: playerId,
   characterName: name,
   serverName: '루페온',
@@ -398,19 +560,32 @@ class _FakeGroupReadRepository extends Fake implements GroupReadRepository {
   }
 }
 
-class _FakeCharacterSearchRepository extends Fake
-    implements GroupCharacterSearchRepository {
-  _FakeCharacterSearchRepository(this.charactersByPlayer);
+class _FakeActivity implements ActivityCharactersRepository {
+  _FakeActivity(this.idsByPlayer);
+
+  final Map<String, Set<String>> idsByPlayer;
+
+  @override
+  Future<ActivityCharacters> load({required String playerId}) async =>
+      ActivityCharacters(
+        playerId: playerId,
+        characterIds: idsByPlayer[playerId] ?? const {},
+      );
+
+  @override
+  Future<ActivityCharacters> save(SaveActivityCharactersCommand command) {
+    throw UnimplementedError();
+  }
+}
+
+class _FakeSearch extends Fake implements GroupCharacterSearchRepository {
+  _FakeSearch(this.charactersByPlayer);
 
   final Map<String, List<GroupRequestCharacter>> charactersByPlayer;
-  var loadCount = 0;
 
   @override
   Future<List<GroupRequestCharacter>> loadActiveCharactersForPlayer(
     String ownerPlayerId, {
     int limit = groupCharacterSearchPageSize,
-  }) async {
-    loadCount += 1;
-    return charactersByPlayer[ownerPlayerId] ?? const [];
-  }
+  }) async => charactersByPlayer[ownerPlayerId] ?? const [];
 }

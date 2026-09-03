@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
+import '../../../account/domain/repositories/activity_characters_repository.dart';
 import '../../../group/domain/entities/group_relation.dart';
 import '../../../group/domain/repositories/group_character_search_repository.dart';
 import '../../../group/domain/repositories/group_read_repository.dart';
+import '../../../group/domain/services/activity_display_characters.dart';
 import '../../../recruitment_list/domain/entities/party_read_models.dart';
 import '../../../recruitment_list/domain/repositories/party_read_repository.dart';
 import '../../domain/entities/raid_status_filter_selection.dart';
@@ -52,7 +54,7 @@ class ActiveRaidFilterViewState {
   bool get hasFailureWithItems => failure != null && originalItems.isNotEmpty;
 
   bool get showGroupMemberFilters =>
-      selection.includeGroup && groups.isNotEmpty;
+      selection.isGroupPublicOnly && groups.isNotEmpty;
 
   List<RaidStatusFilterMemberOption> get visibleMembers {
     if (selection.groupIds.isEmpty) return members;
@@ -77,9 +79,10 @@ class ActiveRaidFilterViewState {
 /// 진행 중 membership 스트림을 원본으로 두고 공개 조건·레이드·난이도·그룹원·
 /// Character를 로컬 적용한다. 칩 조작은 서버 조회를 만들지 않는다.
 ///
-/// 다른 그룹원의 `characterActivity`는 Rules가 owner만 허용하므로 Character 칩
-/// 후보는 그룹원이 이미 읽을 수 있는 인증 활성 Character다. 필터 판정은 레이드
-/// membership `characterId`를 쓰므로 참가 중인 비활동 Character도 인식한다.
+/// 그룹원 Character 칩 후보는 활동 Character ID와 공개 Character 표시
+/// 문서를 조합한다. 누락 시 인증 활성 Character 전체로 대체하지 않는다.
+/// 필터 판정은 레이드 membership `characterId`를 쓰므로 참가 중인 비활동
+/// Character도 인식한다.
 class ActiveRaidFilterViewModel extends ChangeNotifier {
   ActiveRaidFilterViewModel({
     required Stream<PartyReadSnapshot<ActiveRaidSummary>> Function()
@@ -92,6 +95,7 @@ class ActiveRaidFilterViewModel extends ChangeNotifier {
     )?
     membersStreamFactory,
     GroupReadRepository? groupReadRepository,
+    ActivityCharactersRepository? activityCharactersRepository,
     GroupCharacterSearchRepository? characterSearchRepository,
   }) : _streamFactory = streamFactory,
        _playerId = playerId,
@@ -99,6 +103,7 @@ class ActiveRaidFilterViewModel extends ChangeNotifier {
        _catalogRepository = catalogRepository,
        _membersStreamFactory = membersStreamFactory,
        _groupReadRepository = groupReadRepository,
+       _activityCharactersRepository = activityCharactersRepository,
        _characterSearchRepository = characterSearchRepository,
        _session = FilteredPageSession<ActiveRaidSummary>(
          idOf: (item) => item.id,
@@ -116,6 +121,7 @@ class ActiveRaidFilterViewModel extends ChangeNotifier {
   )?
   _membersStreamFactory;
   final GroupReadRepository? _groupReadRepository;
+  final ActivityCharactersRepository? _activityCharactersRepository;
   final GroupCharacterSearchRepository? _characterSearchRepository;
   final FilteredPageSession<ActiveRaidSummary> _session;
 
@@ -143,6 +149,9 @@ class ActiveRaidFilterViewModel extends ChangeNotifier {
     _subscription = _streamFactory().listen(_onSnapshot, onError: _onError);
   }
 
+  Future<void> resetSelection() =>
+      setSelection(RaidStatusFilterSelection.unrestricted);
+
   Future<void> setSelection(RaidStatusFilterSelection selection) async {
     final pruned = _prune(selection);
     _session.updateMatcher(_matcherFor(pruned));
@@ -157,10 +166,14 @@ class ActiveRaidFilterViewModel extends ChangeNotifier {
 
   Future<void> _restoreSelection() async {
     try {
-      final loaded = _prune(await _filterStore.load(_playerId));
+      final loaded = await _filterStore.load(_playerId);
+      final pruned = _prune(loaded);
       if (_disposed) return;
-      _session.updateMatcher(_matcherFor(loaded));
-      _emit(selection: loaded);
+      _session.updateMatcher(_matcherFor(pruned));
+      _emit(selection: pruned);
+      if (pruned != loaded) {
+        await _filterStore.save(_playerId, pruned);
+      }
     } catch (error, stackTrace) {
       debugPrint('진행 중 필터 복원 실패: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -252,12 +265,14 @@ class ActiveRaidFilterViewModel extends ChangeNotifier {
     if (search != null) {
       for (final playerId in memberByPlayer.keys) {
         try {
-          final characters = await search.loadActiveCharactersForPlayer(
-            playerId,
+          final loaded = await loadActivityDisplayCharacters(
+            searchRepository: search,
+            ownerPlayerId: playerId,
+            activityRepository: _activityCharactersRepository,
           );
           if (_disposed || generation != _candidateGeneration) return;
           charactersByPlayer[playerId] = [
-            for (final character in characters)
+            for (final character in loaded)
               RaidStatusFilterOption(
                 id: character.characterId,
                 label: character.characterName,
@@ -266,6 +281,8 @@ class ActiveRaidFilterViewModel extends ChangeNotifier {
         } catch (error, stackTrace) {
           debugPrint('진행 중 필터 Character 후보 조회 실패: $error');
           debugPrintStack(stackTrace: stackTrace);
+          if (_disposed || generation != _candidateGeneration) return;
+          charactersByPlayer[playerId] = const [];
         }
       }
     }
@@ -389,7 +406,7 @@ class ActiveRaidFilterViewModel extends ChangeNotifier {
         },
       );
     }
-    return next;
+    return next.withoutHiddenGroupFilters();
   }
 
   bool Function(ActiveRaidSummary item) _matcherFor(

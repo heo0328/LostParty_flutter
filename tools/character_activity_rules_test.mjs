@@ -33,16 +33,6 @@ function activityRef(db, characterId, playerId = ownerPlayerId) {
   return doc(db, 'players', playerId, 'characterActivity', characterId);
 }
 
-function projectionRef(db, characterId, playerId = ownerPlayerId) {
-  return doc(
-    db,
-    'players',
-    playerId,
-    'activityCharacterProjections',
-    characterId,
-  );
-}
-
 function activityDoc(characterId, gameAccountId = 'account-1') {
   return {
     schemaVersion: 1,
@@ -53,36 +43,11 @@ function activityDoc(characterId, gameAccountId = 'account-1') {
   };
 }
 
-function projectionDoc(characterId, extras = {}) {
-  const names = {
-    'char-1': '대표',
-    'char-2': '부캐',
-    'char-3': '다른계정대표',
-    'char-other': '타인',
-  };
-  return {
-    schemaVersion: 1,
-    playerId: extras.playerId ?? ownerPlayerId,
-    characterId,
-    characterName: extras.characterName ?? names[characterId] ?? characterId,
-    serverName: extras.serverName ?? '루페온',
-    characterClassName: extras.characterClassName ?? '바드',
-    itemLevel: extras.itemLevel ?? null,
-    combatPower: extras.combatPower ?? null,
-    displayOrder: extras.displayOrder ?? 0,
-    isRepresentative: extras.isRepresentative ?? characterId === 'char-1',
-    updatedAt: serverTimestamp(),
-  };
-}
-
-async function writeActivityAndProjection(db, characterId, extras = {}) {
-  const batch = writeBatch(db);
-  batch.set(
+async function writeActivity(db, characterId, gameAccountId) {
+  return setDoc(
     activityRef(db, characterId),
-    activityDoc(characterId, extras.gameAccountId),
+    activityDoc(characterId, gameAccountId),
   );
-  batch.set(projectionRef(db, characterId), projectionDoc(characterId, extras));
-  return batch.commit();
 }
 
 async function seed(
@@ -189,12 +154,6 @@ async function seedActivity(testEnv, characterIds) {
         gameAccountId: 'account-1',
         updatedAt: Timestamp.now(),
       });
-      await setDoc(projectionRef(db, characterId), {
-        ...projectionDoc(characterId, {
-          displayOrder: characterIds.indexOf(characterId),
-        }),
-        updatedAt: Timestamp.now(),
-      });
     }
   });
 }
@@ -213,7 +172,7 @@ try {
   await testEnv.clearFirestore();
   await seed(testEnv);
   console.log('test: owned representative activity create succeeds');
-  await assertSucceeds(writeActivityAndProjection(ownerDb(), 'char-1'));
+  await assertSucceeds(writeActivity(ownerDb(), 'char-1'));
 
   await testEnv.clearFirestore();
   await seed(testEnv);
@@ -222,12 +181,7 @@ try {
     const db = ownerDb();
     const batch = writeBatch(db);
     batch.set(activityRef(db, 'char-1'), activityDoc('char-1'));
-    batch.set(projectionRef(db, 'char-1'), projectionDoc('char-1'));
     batch.set(activityRef(db, 'char-2'), activityDoc('char-2'));
-    batch.set(
-      projectionRef(db, 'char-2'),
-      projectionDoc('char-2', { displayOrder: 1, isRepresentative: false }),
-    );
     await assertSucceeds(batch.commit());
   }
 
@@ -267,14 +221,8 @@ try {
   await seedActivity(testEnv, ['char-1', 'char-2']);
   console.log('test: representative activity delete is rejected');
   await assertFails(deleteDoc(activityRef(ownerDb(), 'char-1')));
-  console.log('test: non-representative activity and projection delete succeeds');
-  {
-    const db = ownerDb();
-    const batch = writeBatch(db);
-    batch.delete(activityRef(db, 'char-2'));
-    batch.delete(projectionRef(db, 'char-2'));
-    await assertSucceeds(batch.commit());
-  }
+  console.log('test: non-representative activity delete succeeds');
+  await assertSucceeds(deleteDoc(activityRef(ownerDb(), 'char-2')));
 
   await testEnv.clearFirestore();
   await seed(testEnv);
@@ -284,19 +232,14 @@ try {
     const db = ownerDb();
     const batch = writeBatch(db);
     batch.delete(activityRef(db, 'char-1'));
-    batch.delete(projectionRef(db, 'char-1'));
     batch.delete(activityRef(db, 'char-2'));
-    batch.delete(projectionRef(db, 'char-2'));
     await assertFails(batch.commit());
   }
 
   await testEnv.clearFirestore();
   await seed(testEnv);
   console.log('test: missing representative sub-character create is rejected');
-  await assertFails(writeActivityAndProjection(ownerDb(), 'char-2', {
-    displayOrder: 0,
-    isRepresentative: false,
-  }));
+  await assertFails(writeActivity(ownerDb(), 'char-2'));
 
   await testEnv.clearFirestore();
   await seed(testEnv);
@@ -311,7 +254,7 @@ try {
     });
   });
   await assertSucceeds(
-    writeActivityAndProjection(ownerDb(), 'char-1', { isRepresentative: false }),
+    writeActivity(ownerDb(), 'char-1'),
   );
 
   await testEnv.clearFirestore();
@@ -346,65 +289,25 @@ try {
 
   await testEnv.clearFirestore();
   await seed(testEnv);
-  console.log('test: activity write without projection is rejected');
-  await assertFails(
+  console.log('test: activity write without extra documents succeeds');
+  await assertSucceeds(
     setDoc(activityRef(ownerDb(), 'char-1'), activityDoc('char-1')),
   );
 
   await testEnv.clearFirestore();
   await seed(testEnv);
   await seedActivity(testEnv, ['char-1']);
-  console.log('test: owner can list activity projections');
+  console.log('test: owner can list activity documents');
   await assertSucceeds(
-    getDocs(
-      collection(ownerDb(), 'players', ownerPlayerId, 'activityCharacterProjections'),
-    ),
+    getDocs(collection(ownerDb(), 'players', ownerPlayerId, 'characterActivity')),
   );
 
   await testEnv.clearFirestore();
   await seed(testEnv);
   await seedActivity(testEnv, ['char-1']);
-  console.log('test: other player cannot list projections without a shared group');
-  await assertFails(
-    getDocs(
-      collection(otherDb(), 'players', ownerPlayerId, 'activityCharacterProjections'),
-    ),
-  );
-
-  await testEnv.clearFirestore();
-  await seed(testEnv);
-  await seedActivity(testEnv, ['char-1']);
-  await testEnv.withSecurityRulesDisabled(async (context) => {
-    const db = context.firestore();
-    const now = Timestamp.now();
-    await setDoc(
-      doc(db, 'players', ownerPlayerId, 'groupMembershipState', 'current'),
-      {
-        schemaVersion: 1,
-        playerId: ownerPlayerId,
-        activeGroupIds: ['group-1'],
-        activeGroupCount: 1,
-        revision: 1,
-        updatedAt: now,
-      },
-    );
-    await setDoc(
-      doc(db, 'players', otherPlayerId, 'groupMembershipState', 'current'),
-      {
-        schemaVersion: 1,
-        playerId: otherPlayerId,
-        activeGroupIds: ['group-1'],
-        activeGroupCount: 1,
-        revision: 1,
-        updatedAt: now,
-      },
-    );
-  });
-  console.log('test: shared group member can list activity projections');
+  console.log('test: other bound player can list owner activity documents');
   await assertSucceeds(
-    getDocs(
-      collection(otherDb(), 'players', ownerPlayerId, 'activityCharacterProjections'),
-    ),
+    getDocs(collection(otherDb(), 'players', ownerPlayerId, 'characterActivity')),
   );
 
   console.log('all character activity rules checks finished');
