@@ -291,6 +291,65 @@ void main() {
     expect(summary.recruitmentId, 'raid-1');
     expect(summary.revision, 1);
     expect(summary.rejectionCount, 0);
+    // submittedBuildSnapshot 없으면 null
+    expect(summary.itemLevel, isNull);
+    expect(summary.combatPower, isNull);
+  });
+
+  test('maps submittedBuildSnapshot itemLevel and combatPower', () {
+    final summary = mapper.toApplication(
+      PartyReadDocumentDto(
+        id: 'player-applicant',
+        data: {
+          'schemaVersion': 1,
+          'recruitmentId': 'raid-1',
+          'applicantPlayerId': 'player-applicant',
+          'cycleKey': '2026-08-19',
+          'characterId': 'character-1',
+          'characterNameSnapshot': '아르카나',
+          'classNameSnapshot': '아르카나',
+          'requestedRole': 'dealer',
+          'status': 'pending',
+          'revision': 1,
+          'createdAt': DateTime.utc(2026, 8, 24),
+          'updatedAt': DateTime.utc(2026, 8, 25),
+          'submittedBuildSnapshot': {
+            'itemLevel': 1780.83,
+            'combatPower': 123456789,
+          },
+        },
+      ),
+    );
+
+    expect(summary.itemLevel, closeTo(1780.83, 0.01));
+    expect(summary.combatPower, closeTo(123456789, 1));
+  });
+
+  test('ignores malformed submittedBuildSnapshot gracefully', () {
+    final summary = mapper.toApplication(
+      PartyReadDocumentDto(
+        id: 'player-applicant',
+        data: {
+          'schemaVersion': 1,
+          'recruitmentId': 'raid-1',
+          'applicantPlayerId': 'player-applicant',
+          'cycleKey': '2026-08-19',
+          'characterId': 'character-1',
+          'characterNameSnapshot': '아르카나',
+          'classNameSnapshot': '아르카나',
+          'requestedRole': 'dealer',
+          'status': 'pending',
+          'revision': 1,
+          'createdAt': DateTime.utc(2026, 8, 24),
+          'updatedAt': DateTime.utc(2026, 8, 25),
+          'submittedBuildSnapshot': 'not-a-map',
+        },
+      ),
+    );
+
+    // 비정상 snapshot은 null로 처리하며 예외를 던지지 않는다
+    expect(summary.itemLevel, isNull);
+    expect(summary.combatPower, isNull);
   });
 
   test('rejects an unsupported schema version', () {
