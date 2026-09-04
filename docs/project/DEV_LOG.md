@@ -1,3 +1,12 @@
+## 2026-09-04 Character 자동 갱신 A — 4직업 Build 카탈로그 기반
+
+- 사용자 제공 계약값을 기준으로 바드·홀리나이트·발키리·도화가의 support/dealer 깨달음 1티어 역할과 4티어 교차 검증 노드를 Build 카탈로그에 고정했다.
+- 네 직업의 `ArmorySkills` 비노출 아이덴티티·아크패시브 보석 대상과 바드 세레나데 복합 대상을 등록했다. 확인되지 않은 별칭은 추정해 추가하지 않았다.
+- 4직업 8역할 최소 Armory fixture를 추가하고 `measuredAgainstLiveApi: false`로 사용자 제공 기준이며 실API 미실측임을 명시했다. 실제 반환 문자열·공백·별칭은 G 실기기 검증 전 최종 대조한다.
+- 알려진 직업에서는 `ark_passive` 아이콘만으로 카탈로그 미등록 보석을 정상 판정하지 않도록 Mapper를 강화했다. 카탈로그가 없는 기존 호출의 아이콘 fallback은 유지한다.
+- 카탈로그 Mapper/Validator와 Build 분석 표적 테스트 26개, 전체 `flutter test --no-pub` 843개가 통과했다. 변경 Dart 파일 `flutter analyze --no-pub`도 문제 없다.
+- 기능 UI·로컬 DB·Firestore 스키마·Rules는 변경하지 않았다. 다음 작업은 B 나이스단 정책과 로컬 설정 모델이다.
+
 ## 2026-09-04 교류 행동 기반 Character 자동 갱신 작업 구간 설계
 
 - 일반 Character는 그룹·파티 후보 화면에서 사전 갱신하고 명령 직전에 선택 Character의 최신화를 보장하며, 나이스단은 기존 수동 Snapshot을 유지하는 방향을 확정했다.

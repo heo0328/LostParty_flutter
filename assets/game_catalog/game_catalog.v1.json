@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "catalogVersion": "2026.08.20",
-  "updatedAt": "2026-08-20T00:00:00Z",
+  "catalogVersion": "2026.09.04",
+  "updatedAt": "2026-09-04T00:00:00Z",
   "classes": [
     {
       "classId": "bard",
@@ -53,6 +53,66 @@
             "serenade_of_salvation"
           ]
         }
+      ],
+      "arkGridPresets": []
+    },
+    {
+      "classId": "paladin",
+      "apiClassName": "홀리나이트",
+      "aliases": [],
+      "supportedRoles": ["dealer", "support"],
+      "defaultRole": "support",
+      "enlightenmentBranches": [
+        {"branchId":"divine_protection","tier1NodeName":"신성 보호","displayName":"서폿 홀리나이트","aliases":[],"inferredRole":"support","relatedPassiveNodes":["신성 해방"]},
+        {"branchId":"god_knight","tier1NodeName":"신의 기사","displayName":"딜홀나","aliases":[],"inferredRole":"dealer","relatedPassiveNodes":["심판자"]}
+      ],
+      "specialSkills": [
+        {"skillId":"faith","name":"신앙","aliases":[],"category":"identity","relatedBranchIds":["divine_protection"]},
+        {"skillId":"judgment","name":"심판자","aliases":[],"category":"arkPassive","relatedBranchIds":["god_knight"]}
+      ],
+      "gemSkillTargets": [
+        {"targetId":"faith_gem_target","name":"신앙","aliases":[],"relatedSpecialSkillIds":["faith"]},
+        {"targetId":"judgment_gem_target","name":"심판자","aliases":[],"relatedSpecialSkillIds":["judgment"]}
+      ],
+      "arkGridPresets": []
+    },
+    {
+      "classId": "valkyrie",
+      "apiClassName": "발키리",
+      "aliases": [],
+      "supportedRoles": ["dealer", "support"],
+      "defaultRole": "support",
+      "enlightenmentBranches": [
+        {"branchId":"liberator","tier1NodeName":"해방자","displayName":"서폿 발키리","aliases":[],"inferredRole":"support","relatedPassiveNodes":["해방의 날개"]},
+        {"branchId":"knight_of_light","tier1NodeName":"빛의 기사","displayName":"딜발키리","aliases":[],"inferredRole":"dealer","relatedPassiveNodes":["삼위일체"]}
+      ],
+      "specialSkills": [
+        {"skillId":"faith","name":"신앙","aliases":[],"category":"identity","relatedBranchIds":["liberator"]},
+        {"skillId":"light_of_the_end","name":"종언의 빛","aliases":[],"category":"arkPassive","relatedBranchIds":["knight_of_light"]}
+      ],
+      "gemSkillTargets": [
+        {"targetId":"faith_gem_target","name":"신앙","aliases":[],"relatedSpecialSkillIds":["faith"]},
+        {"targetId":"light_of_the_end_gem_target","name":"종언의 빛","aliases":[],"relatedSpecialSkillIds":["light_of_the_end"]}
+      ],
+      "arkGridPresets": []
+    },
+    {
+      "classId": "artist",
+      "apiClassName": "도화가",
+      "aliases": [],
+      "supportedRoles": ["dealer", "support"],
+      "defaultRole": "support",
+      "enlightenmentBranches": [
+        {"branchId":"waning_moon","tier1NodeName":"저물어가는 달","displayName":"서폿 도화가","aliases":[],"inferredRole":"support","relatedPassiveNodes":["묵법 : 접무"]},
+        {"branchId":"recurrence","tier1NodeName":"회귀","displayName":"딜도화가","aliases":[],"inferredRole":"dealer","relatedPassiveNodes":["묵법 : 파죽"]}
+      ],
+      "specialSkills": [
+        {"skillId":"yin_yang","name":"음양","aliases":[],"category":"identity","relatedBranchIds":["waning_moon"]},
+        {"skillId":"rising_moon","name":"떠오르는 달","aliases":[],"category":"identity","relatedBranchIds":["recurrence"]}
+      ],
+      "gemSkillTargets": [
+        {"targetId":"yin_yang_gem_target","name":"음양","aliases":[],"relatedSpecialSkillIds":["yin_yang"]},
+        {"targetId":"rising_moon_gem_target","name":"떠오르는 달","aliases":[],"relatedSpecialSkillIds":["rising_moon"]}
       ],
       "arkGridPresets": []
     }

@@ -36,6 +36,7 @@ class CharacterBuildAnalysisMapper {
       json['ArmoryGem'],
       skillNames: skillNames,
       catalogSkillNames: _catalogGemSkillNames(classDefinition),
+      allowPassiveIconFallback: classDefinition == null,
       notices: notices,
     );
     final activePassiveNames = _parseActivePassiveNames(json['ArkPassive']);
@@ -231,6 +232,7 @@ class CharacterBuildAnalysisMapper {
     Object? armoryGem, {
     required Set<String> skillNames,
     required Set<String> catalogSkillNames,
+    required bool allowPassiveIconFallback,
     required List<BuildNotice> notices,
   }) {
     final gemMap = _map(armoryGem);
@@ -257,7 +259,9 @@ class CharacterBuildAnalysisMapper {
       final category = skillNames.contains(name)
           ? GemSkillCategory.normal
           : catalogSkillNames.contains(name) ||
-                icon is String && icon.contains('ark_passive')
+                allowPassiveIconFallback &&
+                    icon is String &&
+                    icon.contains('ark_passive')
           ? GemSkillCategory.passiveOrIdentity
           : GemSkillCategory.unknown;
       final descriptions = _stringList(skill['Description']);
