@@ -49,6 +49,7 @@ import '../../features/group/domain/repositories/group_join_code_command_reposit
 import '../../features/group/domain/repositories/group_join_command_repository.dart';
 import '../../features/group/domain/repositories/group_read_repository.dart';
 import '../../features/group/domain/services/group_local_member_display_lookup.dart';
+import '../../features/group/domain/services/group_character_refresh_service.dart';
 import '../../features/group/presentation/pages/group_applications_page.dart';
 import '../../features/group/presentation/pages/group_create_page.dart';
 import '../../features/group/presentation/pages/group_detail_page.dart';
@@ -231,10 +232,17 @@ GoRouter createAppRouter({
           firebaseAuth: FirebaseAuth.instance,
         ),
   );
+  final characterAutoRefreshCoordinator = CharacterAutoRefreshCoordinator(
+    accountRepository: accountRepository,
+  );
   final partyCharacterRefreshService = PartyCharacterRefreshService(
-    coordinator: CharacterAutoRefreshCoordinator(
-      accountRepository: accountRepository,
-    ),
+    coordinator: characterAutoRefreshCoordinator,
+    accountRepository: accountRepository,
+    settingsRepository: niceGroupSettingsRepository,
+    playerId: playerSession.playerId,
+  );
+  final groupCharacterRefreshService = GroupCharacterRefreshService(
+    coordinator: characterAutoRefreshCoordinator,
     accountRepository: accountRepository,
     settingsRepository: niceGroupSettingsRepository,
     playerId: playerSession.playerId,
@@ -568,6 +576,11 @@ GoRouter createAppRouter({
                   requestsViewModel: GroupRequestsViewModel(
                     readRepository: groupReadRepositoryForRoute(),
                     commandRepository: groupJoinCommandRepositoryForRoute(),
+                    accountRepository: accountRepository,
+                    activityCharactersRepository:
+                        activityCharactersRepositoryOrDefault,
+                    playerId: playerSession.playerId,
+                    characterRefreshService: groupCharacterRefreshService,
                   ),
                   applicationsViewModel: groupApplicationsViewModelForRoute(),
                   playerId: playerSession.playerId,
@@ -582,6 +595,7 @@ GoRouter createAppRouter({
                         activityCharactersRepository:
                             activityCharactersRepositoryOrDefault,
                         playerId: playerSession.playerId,
+                        characterRefreshService: groupCharacterRefreshService,
                       ),
                     ),
                   ),
@@ -603,6 +617,7 @@ GoRouter createAppRouter({
                         activityCharactersRepository:
                             activityCharactersRepositoryOrDefault,
                         playerId: playerSession.playerId,
+                        characterRefreshService: groupCharacterRefreshService,
                       ),
                     ),
                   ),
@@ -623,6 +638,7 @@ GoRouter createAppRouter({
                         activityCharactersRepository:
                             activityCharactersRepositoryOrDefault,
                         playerId: playerSession.playerId,
+                        characterRefreshService: groupCharacterRefreshService,
                         readRepository: groupReadRepositoryForRoute(),
                         commandRepository: groupJoinCommandRepositoryForRoute(),
                         characterSearchRepository:

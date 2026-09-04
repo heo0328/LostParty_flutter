@@ -2,7 +2,7 @@
 
 ## 최우선 현재 상태 — 교류 행동 기반 Character 자동 갱신 설계 (2026-09-04)
 
-- A~D 완료. 파티 생성·지원·즉시 참가·참가 Character 변경(반복 파티 다음 회차 포함)에 후보 사전 갱신과 명령 직전 최신화/재검증을 연결했다. 다음은 E 그룹 교류 적용이다.
+- A~E 완료. 파티와 그룹 교류에 본인 Character 후보 사전 갱신·명령 직전 최신화/재검증을 연결했고 그룹 상세 self-refresh는 타 그룹원을 조회하지 않는다. 다음은 F 서버 최소 Snapshot 정합성·비용 제어다.
 
 - 큰 구조 변경의 다음 방향을 그룹·파티 교류 행동 시점의 자동 갱신으로 정리했다. 기존 로컬 Build Snapshot, Firestore Character 최소 표시값, 그룹 membership과 파티 신청·참가 시점 Snapshot은 유지한다.
 - 일반 Character는 후보 화면에서 사전 갱신하고 실제 명령 직전에 선택 Character의 최신화를 보장한다. 갱신 완료 후 명령을 다시 만들며 single-flight·generation 보호로 빠른 실행과 응답 뒤바뀜을 막는다.
