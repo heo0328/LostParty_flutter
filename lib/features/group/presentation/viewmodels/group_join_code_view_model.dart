@@ -5,6 +5,8 @@ import '../../domain/entities/group_join_command.dart';
 import '../../domain/repositories/group_join_code_command_repository.dart';
 import '../../domain/repositories/group_read_repository.dart';
 import 'group_character_options.dart';
+import '../../domain/services/group_character_refresh_service.dart';
+import '../../../account/domain/entities/character_auto_refresh_result.dart';
 import 'group_join_view_model.dart';
 
 /// 초대코드 전용 실패 안내. 공통 가입 실패는 [groupJoinFailureMessage]를 재사용한다.
@@ -71,19 +73,35 @@ class GroupJoinByCodeViewModel {
     required this.commandRepository,
     this.activityCharactersRepository,
     this.playerId,
+    this.characterRefreshService,
   });
 
   final AccountRepository accountRepository;
   final GroupJoinCodeCommandRepository commandRepository;
   final ActivityCharactersRepository? activityCharactersRepository;
   final String? playerId;
+  final GroupCharacterRefreshService? characterRefreshService;
 
   Future<List<GroupCharacterOption>> loadAuthenticatedCharacters() =>
       GroupCharacterOptionLoader(
         accountRepository: accountRepository,
         activityCharactersRepository: activityCharactersRepository,
         playerId: playerId,
+        characterRefreshService: characterRefreshService,
       ).load();
+
+  Future<CharacterAutoRefreshResult?> ensureFresh(
+    GroupCharacterOption character, {
+    required int generation,
+  }) async => characterRefreshService?.ensureFresh(
+    GroupCharacterRefreshTarget(
+      localCharacterId: character.localCharacterId,
+      characterName: character.characterName,
+      className: character.className,
+      role: character.preferredRole,
+      generation: generation,
+    ),
+  ) ?? Future.value(null);
 
   Future<GroupJoinCodeCommandResult> join({
     required String code,

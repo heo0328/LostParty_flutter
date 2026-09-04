@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/group_create_command.dart';
 import '../viewmodels/group_create_view_model.dart';
+import '../widgets/group_character_refresh_guard.dart';
 
 class GroupCreatePage extends StatefulWidget {
   const GroupCreatePage({required this.viewModel, super.key});
@@ -21,6 +22,7 @@ class _GroupCreatePageState extends State<GroupCreatePage> {
   bool _loading = true;
   bool _saving = false;
   String? _loadError;
+  int _selectionGeneration = 0;
 
   @override
   void initState() {
@@ -174,6 +176,21 @@ class _GroupCreatePageState extends State<GroupCreatePage> {
     final selected = _selected;
     if (selected == null) return;
     setState(() => _saving = true);
+    final generation = ++_selectionGeneration;
+    final refresh = await widget.viewModel.ensureFresh(
+      selected,
+      generation: generation,
+    );
+    if (!mounted ||
+        !await confirmGroupCharacterRefresh(
+          context,
+          refresh,
+          characterId: selected.localCharacterId,
+          generation: _selectionGeneration,
+        )) {
+      if (mounted) setState(() => _saving = false);
+      return;
+    }
     final result = await widget.viewModel.create(
       character: selected,
       name: _name.text,
