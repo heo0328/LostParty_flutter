@@ -1,8 +1,14 @@
 # AI CONTEXT (2026)
 
+## 최우선 현재 상태 — 교류 행동 기반 Character 자동 갱신 F 완료 (2026-09-04)
+
+- A~F 완료. F에서 서버 Character 최소 표시값(`itemAvgLevel`·`combatPower`)을 값 변경 시에만 동기화하고, 명령 직전 동기화 실패는 차단한다. Rules·스키마는 변경하지 않았다.
+- 그룹 표시·생성·가입은 선호 역할 Snapshot을 우선하고 서버 단일 전투력은 참고값이다. 파티는 선택 역할 Snapshot을 유지한다.
+- 다음은 G 회귀·실기기 검증이다.
+
 ## 최우선 현재 상태 — 교류 행동 기반 Character 자동 갱신 설계 (2026-09-04)
 
-- A~E 완료. 파티와 그룹 교류에 본인 Character 후보 사전 갱신·명령 직전 최신화/재검증을 연결했고 그룹 상세 self-refresh는 타 그룹원을 조회하지 않는다. 다음은 F 서버 최소 Snapshot 정합성·비용 제어다.
+- A~E 완료. 파티와 그룹 교류에 본인 Character 후보 사전 갱신·명령 직전 최신화/재검증을 연결했고 그룹 상세 self-refresh는 타 그룹원을 조회하지 않는다. F 서버 최소 Snapshot 정합성·비용 제어도 완료했다.
 
 - 큰 구조 변경의 다음 방향을 그룹·파티 교류 행동 시점의 자동 갱신으로 정리했다. 기존 로컬 Build Snapshot, Firestore Character 최소 표시값, 그룹 membership과 파티 신청·참가 시점 Snapshot은 유지한다.
 - 일반 Character는 후보 화면에서 사전 갱신하고 실제 명령 직전에 선택 Character의 최신화를 보장한다. 갱신 완료 후 명령을 다시 만들며 single-flight·generation 보호로 빠른 실행과 응답 뒤바뀜을 막는다.
@@ -13,7 +19,7 @@
 - 공개 목록·타 사용자 상세는 상대 Character API를 조회하지 않고 서버 Snapshot을 유지한다. 목적은 Firestore 조회 절감보다 수동 정보 가져오기 반복 제거와 교류 시점 정확도 향상이다.
 - 사전 갱신 TTL 5분·최대 동시 요청 3개를 초기값으로 확정했다. 기존 정상 Snapshot은 만료시키지 않고 실패 시 마지막 정상 저장 시각만 알린다. 나이스단 조건이 사라져도 로컬 허용 설정은 휴면 보존한다.
 - A~F는 각 단계별 브랜치·표적 테스트·analyze·필요 시 전체 회귀·문서 갱신·dev 병합을 끝낸 뒤 다음 단계로 진행한다. G는 전체 통합과 실기기 최종 확인이며 앞 단계 검증을 대신하지 않는다.
-- 작업 구간 A~G와 단계별 실행 규칙은 [`../architecture/CHARACTER_INTERACTION_AUTO_REFRESH_CONTRACT.md`](../architecture/CHARACTER_INTERACTION_AUTO_REFRESH_CONTRACT.md)를 단일 기준으로 따른다. 현재 제품 구조 미결정은 없고 다음은 A 구현·검증이다. 기능 코드·스키마·Rules는 아직 변경하지 않았다.
+- 작업 구간 A~G와 단계별 실행 규칙은 [`../architecture/CHARACTER_INTERACTION_AUTO_REFRESH_CONTRACT.md`](../architecture/CHARACTER_INTERACTION_AUTO_REFRESH_CONTRACT.md)를 단일 기준으로 따른다. A~F 구현·자동 검증을 마쳤고 다음은 G다. Rules·스키마는 F에서도 변경하지 않았다.
 
 ## 최우선 현재 상태 — 신청자 목록 가벼운 표시 완료 (2026-09-04)
 

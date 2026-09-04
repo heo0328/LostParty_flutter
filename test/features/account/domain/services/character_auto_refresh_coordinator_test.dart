@@ -7,8 +7,11 @@ import 'package:lost_party/features/account/domain/entities/character_build_cata
 import 'package:lost_party/features/account/domain/entities/character_build_draft.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
 import 'package:lost_party/features/account/domain/entities/character_profile.dart';
+import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
+import 'package:lost_party/features/account/domain/repositories/character_minimum_display_sync_gateway.dart';
 import 'package:lost_party/features/account/domain/services/character_auto_refresh_coordinator.dart';
+import 'package:lost_party/features/account/domain/services/character_minimum_display_sync_service.dart';
 
 void main() {
   test(
@@ -197,6 +200,85 @@ void main() {
       expect(repository.committedRoles, [CharacterBuildRole.support]);
     },
   );
+
+  test('command path blocks when server minimum sync fails', () async {
+    final repository = _FakeAccountRepository()..accounts = [_linkedAccount()];
+    final sync = _FakeMinimumSync()..fail = true;
+    final coordinator = CharacterAutoRefreshCoordinator(
+      accountRepository: repository,
+      minimumDisplaySync: CharacterMinimumDisplaySyncService(
+        accountRepository: repository,
+        gateway: sync,
+      ),
+    );
+
+    final result = await coordinator.ensureFresh(_request(1));
+    expect(result.status, CharacterAutoRefreshStatus.blocked);
+    expect(result.message, contains('서버 최소 표시값'));
+    expect(sync.calls, 1);
+  });
+
+  test('prefetch keeps local refresh when server sync fails', () async {
+    final repository = _FakeAccountRepository()..accounts = [_linkedAccount()];
+    final sync = _FakeMinimumSync()..fail = true;
+    final coordinator = CharacterAutoRefreshCoordinator(
+      accountRepository: repository,
+      minimumDisplaySync: CharacterMinimumDisplaySyncService(
+        accountRepository: repository,
+        gateway: sync,
+      ),
+    );
+
+    final prefetch = await coordinator.prefetch(_request(1));
+    expect(prefetch.status, CharacterAutoRefreshStatus.refreshed);
+
+    final command = await coordinator.ensureFresh(_request(1));
+    expect(command.status, CharacterAutoRefreshStatus.blocked);
+    expect(sync.calls, 2);
+  });
+
+  test('identical server values still allow the command to proceed', () async {
+    final repository = _FakeAccountRepository()..accounts = [_linkedAccount()];
+    final sync = _FakeMinimumSync()..wrote = false;
+    final coordinator = CharacterAutoRefreshCoordinator(
+      accountRepository: repository,
+      minimumDisplaySync: CharacterMinimumDisplaySyncService(
+        accountRepository: repository,
+        gateway: sync,
+      ),
+    );
+
+    final result = await coordinator.ensureFresh(_request(1));
+    expect(result.status, CharacterAutoRefreshStatus.refreshed);
+    expect(result.canProceed, isTrue);
+    expect(sync.calls, 1);
+  });
+}
+
+LocalGameAccount _linkedAccount() {
+  return LocalGameAccount(
+    id: 1,
+    label: '계정',
+    isMain: true,
+    lookupCharacterName: '캐릭터1',
+    representativeCharacterId: 1,
+    displayLimit: 5,
+    serverOwnershipStatus: 'active',
+    characters: const [
+      LocalAccountCharacter(
+        id: 1,
+        serverCharacterId: 'character-1',
+        serverName: '루페온',
+        characterName: '캐릭터1',
+        characterLevel: 70,
+        characterClassName: '바드',
+        itemLevel: 1700,
+        combatPower: 100000,
+        isVisible: true,
+        displayOrder: 0,
+      ),
+    ],
+  );
 }
 
 CharacterAutoRefreshRequest _request(
@@ -288,12 +370,16 @@ class _FakeAccountRepository implements AccountRepository {
   bool manualCompletion = false;
   Object? createError;
   CharacterBuildDraft Function(int id) draftFactory = _draft;
+  List<LocalGameAccount> accounts = const [];
   final Map<int, Completer<CharacterBuildDraft>> _completers = {};
   final Map<int, List<CharacterBuildSnapshot>> snapshots = {};
   final List<int> startedIds = [];
   final List<CharacterBuildRole> committedRoles = [];
   int createCount = 0;
   int commitCount = 0;
+
+  @override
+  Future<List<LocalGameAccount>> loadAccounts() async => accounts;
 
   @override
   Future<CharacterBuildDraft> createCharacterBuildDraft({
@@ -332,4 +418,17 @@ class _FakeAccountRepository implements AccountRepository {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeMinimumSync implements CharacterMinimumDisplaySyncGateway {
+  int calls = 0;
+  bool fail = false;
+  bool wrote = true;
+
+  @override
+  Future<bool> syncMinimumDisplay(CharacterMinimumDisplayPatch patch) async {
+    calls++;
+    if (fail) throw StateError('sync failed');
+    return wrote;
+  }
 }
