@@ -7,13 +7,16 @@ import 'package:lost_party/shared/game_catalog/domain/entities/game_catalog.dart
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('loads and validates the bundled Bard catalog', () async {
+  test('loads and validates the four support-hybrid class catalog', () async {
     final repository = GameCatalogRepositoryImpl(
       dataSource: AssetGameCatalogDataSource(),
     );
 
     final catalog = await repository.loadCatalog();
-    final bard = catalog.classes.single;
+    expect(catalog.classes, hasLength(4));
+    final bard = catalog.classes.singleWhere(
+      (definition) => definition.classId == 'bard',
+    );
 
     expect(bard.apiClassName, '바드');
     expect(bard.aliases, contains('BARD'));
@@ -38,6 +41,19 @@ void main() {
       'serenade_of_salvation',
     ]);
     expect(bard.arkGridPresets, isEmpty);
+    expect(
+      catalog.classes.map((definition) => definition.apiClassName),
+      containsAll(['바드', '홀리나이트', '발키리', '도화가']),
+    );
+    expect(
+      catalog.classes.every(
+        (definition) =>
+            definition.supportedRoles.contains(GameCatalogRole.dealer) &&
+            definition.supportedRoles.contains(GameCatalogRole.support) &&
+            definition.enlightenmentBranches.length == 2,
+      ),
+      isTrue,
+    );
   });
 
   test('rejects a catalog that fails domain validation', () async {

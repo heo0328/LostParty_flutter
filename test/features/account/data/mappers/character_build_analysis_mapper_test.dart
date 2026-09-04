@@ -74,6 +74,49 @@ void main() {
     expect(detection.matchedRelatedNodes, ['세레나데 코드']);
   });
 
+  test(
+    'detects both roles, tier-four nodes, and special gem targets for four classes',
+    () async {
+      final reference = Map<String, dynamic>.from(
+        jsonDecode(
+              await File(
+                'test/fixtures/lost_ark/support_hybrid_builds_user_reference.json',
+              ).readAsString(),
+            )
+            as Map,
+      );
+      expect(reference['measuredAgainstLiveApi'], isFalse);
+      final cases = (reference['cases'] as List<dynamic>)
+          .cast<Map<String, dynamic>>();
+      expect(cases, hasLength(8));
+
+      for (final buildCase in cases) {
+        final result = const CharacterBuildAnalysisMapper().fromJson(
+          _hybridBuildFixture(buildCase),
+          catalog: catalog,
+        );
+        final detection = result.catalogDetection!;
+        expect(detection.status, CharacterBuildDetectionStatus.detected);
+        expect(detection.classId, buildCase['classId']);
+        expect(detection.branchId, buildCase['branchId']);
+        expect(detection.detectedRole?.name, buildCase['role']);
+        expect(detection.matchedTier1Node, buildCase['tier1']);
+        expect(detection.matchedRelatedNodes, [buildCase['tier4']]);
+        expect(result.arkGridConditions.single.isSatisfied, isTrue);
+        expect(
+          result.gemEffects.single.category,
+          GemSkillCategory.passiveOrIdentity,
+        );
+        expect(
+          result.notices.where(
+            (notice) => notice.code.startsWith('unknown_gem'),
+          ),
+          isEmpty,
+        );
+      }
+    },
+  );
+
   test('returns unsupported class and branch not found states', () {
     final unsupported = _deepCopy(fixture);
     (unsupported['ArmoryProfile']
@@ -228,6 +271,28 @@ void main() {
     );
   });
 
+  test('does not let an Ark Passive icon bypass a known class catalog', () {
+    final modified = _withGemTarget(
+      fixture,
+      name: '다른 직업의 특수 스킬',
+      icon: 'https://example.com/ark_passive/foreign.png',
+    );
+
+    final result = const CharacterBuildAnalysisMapper().fromJson(
+      modified,
+      catalog: catalog,
+    );
+
+    expect(
+      result.gemEffects.singleWhere((effect) => effect.gemSlot == 4).category,
+      GemSkillCategory.unknown,
+    );
+    expect(
+      result.notices.where((notice) => notice.code == 'unknown_gem_skill_4'),
+      hasLength(1),
+    );
+  });
+
   test('warns when fewer than eight runes are equipped', () {
     final modified = _deepCopy(fixture);
     final skills = modified['ArmorySkills'] as List<dynamic>;
@@ -355,4 +420,54 @@ Map<String, dynamic> _withGemTarget(
   target['Name'] = name;
   target['Icon'] = icon;
   return modified;
+}
+
+Map<String, dynamic> _hybridBuildFixture(Map<String, dynamic> buildCase) {
+  final tier1 = buildCase['tier1'] as String;
+  final tier4 = buildCase['tier4'] as String;
+  final conditionTooltip = jsonEncode({
+    'Element_000': {
+      'type': 'ItemPartBox',
+      'value': {
+        'Element_000': '코어 옵션 발동 조건',
+        'Element_001': '1티어 $tier1 활성화 필요 4티어 $tier4 활성화 필요',
+      },
+    },
+  });
+
+  return {
+    'ArmoryProfile': {'CharacterClassName': buildCase['className']},
+    'ArmorySkills': <dynamic>[],
+    'ArmoryGem': {
+      'Gems': [
+        {'Slot': 0, 'Level': 10},
+      ],
+      'Effects': {
+        'Skills': [
+          {
+            'GemSlot': 0,
+            'Name': buildCase['gemTarget'],
+            'Icon': 'https://example.com/special.png',
+            'Description': <String>[],
+          },
+        ],
+      },
+    },
+    'ArkPassive': {
+      'Effects': [
+        {'Description': '깨달음 1티어 $tier1 Lv.1'},
+        {'Description': '깨달음 4티어 $tier4 Lv.1'},
+      ],
+    },
+    'ArkGrid': {
+      'Slots': [
+        {
+          'Name': '질서의 해 : 계약 fixture',
+          'Grade': '유물',
+          'Point': 17,
+          'Tooltip': conditionTooltip,
+        },
+      ],
+    },
+  };
 }
