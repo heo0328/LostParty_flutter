@@ -33,6 +33,7 @@ import '../../features/account/data/repositories/firestore_activity_characters_r
 import '../../features/account/domain/repositories/activity_characters_repository.dart';
 import '../../features/account/domain/repositories/representative_character_sync_gateway.dart';
 import '../../features/account/domain/services/character_summary_sync_service.dart';
+import '../../features/account/domain/services/character_auto_refresh_coordinator.dart';
 import '../../features/account/domain/services/representative_character_sync_service.dart';
 import '../../features/player/domain/entities/player_session.dart';
 import '../../features/group/data/repositories/firestore_group_application_command_repository.dart';
@@ -78,6 +79,7 @@ import '../../features/raid_status/presentation/pages/party_notifications_page.d
 import '../../features/raid_status/presentation/pages/party_read_detail_page.dart';
 import '../../features/raid_status/presentation/pages/raid_status_page.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_application_command_repository.dart';
+import '../../features/recruitment_list/domain/services/party_character_refresh_service.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_create_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_cycle_command_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_visibility_command_repository.dart';
@@ -229,6 +231,14 @@ GoRouter createAppRouter({
           firebaseAuth: FirebaseAuth.instance,
         ),
   );
+  final partyCharacterRefreshService = PartyCharacterRefreshService(
+    coordinator: CharacterAutoRefreshCoordinator(
+      accountRepository: accountRepository,
+    ),
+    accountRepository: accountRepository,
+    settingsRepository: niceGroupSettingsRepository,
+    playerId: playerSession.playerId,
+  );
   final activityCharactersRepositoryOrDefault =
       activityCharactersRepository ??
       FirestoreActivityCharactersRepository(
@@ -335,6 +345,7 @@ GoRouter createAppRouter({
     claimPlayerId: playerSession.playerId,
     activityCharactersRepository: activityCharactersRepositoryOrDefault,
     conflictPolicy: participationConflictPolicy,
+    characterRefreshService: partyCharacterRefreshService,
   );
   final recruitmentLeaderCandidateService = RecruitmentLeaderCandidateService(
     accountRepository: accountRepository,
@@ -347,6 +358,7 @@ GoRouter createAppRouter({
     claimPlayerId: playerSession.playerId,
     activityCharactersRepository: activityCharactersRepositoryOrDefault,
     conflictPolicy: participationConflictPolicy,
+    characterRefreshService: partyCharacterRefreshService,
   );
 
   return GoRouter(
@@ -426,6 +438,7 @@ GoRouter createAppRouter({
                         candidateService: recruitmentLeaderCandidateService,
                         groupReadRepository: groupReadRepositoryForRoute(),
                         playerId: playerSession.playerId,
+                        characterRefreshService: partyCharacterRefreshService,
                       );
                     },
                   ),
@@ -528,6 +541,7 @@ GoRouter createAppRouter({
                           .doc()
                           .id,
                       cycleKey: currentCycleKey,
+                      characterRefreshService: partyCharacterRefreshService,
                     ),
                   ),
                   GoRoute(

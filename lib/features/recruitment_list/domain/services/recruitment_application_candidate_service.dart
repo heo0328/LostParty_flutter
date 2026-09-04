@@ -1,4 +1,5 @@
 import '../../../account/domain/entities/character_build_role.dart';
+import '../../../account/domain/entities/local_game_account.dart';
 import '../../../account/domain/repositories/account_repository.dart';
 import '../../../account/domain/repositories/activity_characters_repository.dart';
 import '../../../account/domain/entities/weekly_raid_claim.dart';
@@ -17,6 +18,7 @@ import '../repositories/weekly_raid_clear_repository.dart';
 import 'recruitment_runtime.dart';
 import 'candidate_participation_status.dart';
 import 'raid_activity_character_source.dart';
+import 'party_character_refresh_service.dart';
 
 export 'candidate_participation_status.dart';
 
@@ -59,6 +61,7 @@ class RecruitmentApplicationCandidateService {
     this.weeklyRaidClaimRepository,
     this.claimPlayerId,
     this.activityCharactersRepository,
+    this.characterRefreshService,
     this.conflictPolicy = const ParticipationConflictPolicy(),
     this.resetPolicy = const WeeklyRaidResetPolicy(),
   });
@@ -72,6 +75,7 @@ class RecruitmentApplicationCandidateService {
   final WeeklyRaidClaimRepository? weeklyRaidClaimRepository;
   final String? claimPlayerId;
   final ActivityCharactersRepository? activityCharactersRepository;
+  final PartyCharacterRefreshService? characterRefreshService;
   final ParticipationConflictPolicy conflictPolicy;
   final WeeklyRaidResetPolicy resetPolicy;
 
@@ -105,6 +109,7 @@ class RecruitmentApplicationCandidateService {
       repository: activityCharactersRepository,
       playerId: claimPlayerId,
     );
+    await _prefetchBuilds(accounts, activityCharacterIds);
     final activeAssignments =
         await assignmentRepository?.getByUser(userId) ?? const [];
     final candidates = <RecruitmentApplicationCandidate>[];
@@ -287,6 +292,40 @@ class RecruitmentApplicationCandidateService {
     return repository
         .watchCurrentCycleClaims(playerId: playerId, cycleKey: cycleKey)
         .first;
+  }
+
+  Future<void> _prefetchBuilds(
+    List<LocalGameAccount> accounts,
+    Set<String>? activityCharacterIds,
+  ) async {
+    final refreshService = characterRefreshService;
+    if (refreshService == null) return;
+    final targets = <PartyCharacterRefreshTarget>[];
+    for (final account in accounts) {
+      if (account.hasLostOwnership) continue;
+      for (final character in raidCandidateCharacters(
+        account,
+        activityCharacterIds,
+      )) {
+        final snapshots = await accountRepository.loadCharacterBuildSnapshots(
+          character.id,
+        );
+        final role = character.preferredRole ?? snapshots.firstOrNull?.role;
+        if (role == null) continue;
+        targets.add(
+          PartyCharacterRefreshTarget(
+            localCharacterId: character.id,
+            characterName: character.characterName,
+            className: character.characterClassName,
+            role: role == CharacterBuildRole.support
+                ? PartyRole.support
+                : PartyRole.dealer,
+            generation: 0,
+          ),
+        );
+      }
+    }
+    await refreshService.prefetch(targets);
   }
 
   String _compositionReason(PartyCompositionFailure failure) =>
