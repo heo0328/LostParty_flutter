@@ -143,6 +143,8 @@ LOSTPARTY에서 사용하는 활동 Character가 그룹·파티 등 다른 사�
 
 ### C — 공통 자동 갱신 조정기
 
+상태: 2026-09-04 구현·자동 검증 완료. 파티·그룹 화면은 D/E에서 공통 조정기를 주입해 사용하며, 서버 최소 표시값 동기화는 F에서 연결한다.
+
 - Character ID 기반 single-flight와 generation 보호
 - 백그라운드 사전 갱신과 명령 직전 `ensureFresh`
 - 역할별 로컬 Snapshot 저장과 기존 정상값 보존
