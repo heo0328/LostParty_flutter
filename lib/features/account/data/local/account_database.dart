@@ -163,6 +163,16 @@ class RaidStatusFilterSettings extends Table {
   Set<Column<Object>> get primaryKey => {playerId, screenKind};
 }
 
+/// Player별 나이스단 전체 자동 갱신 허용 설정. 조건 해제 중에도 행을 보존한다.
+class NiceGroupAutoRefreshSettings extends Table {
+  TextColumn get playerId => text()();
+  BoolColumn get enabled => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {playerId};
+}
+
 /// 캐릭터 카드 주간 레이드 표기 설정. 없으면 기본 3개 추천.
 class CharacterWeeklyRaidDisplays extends Table {
   IntColumn get characterId => integer().references(
@@ -189,6 +199,7 @@ class CharacterWeeklyRaidDisplays extends Table {
     PartyNotificationReceipts,
     CharacterWeeklyRaidDisplays,
     RaidStatusFilterSettings,
+    NiceGroupAutoRefreshSettings,
   ],
 )
 class AccountDatabase extends _$AccountDatabase {
@@ -196,7 +207,7 @@ class AccountDatabase extends _$AccountDatabase {
     : super(executor ?? driftDatabase(name: 'lost_party'));
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -262,8 +273,34 @@ class AccountDatabase extends _$AccountDatabase {
       if (from < 12) {
         await _migrateRaidStatusFilterSettingsToScreenKind();
       }
+      if (from < 13) {
+        await migrator.createTable(niceGroupAutoRefreshSettings);
+      }
     },
   );
+
+  Future<bool> loadNiceGroupAutoRefreshEnabled(String playerId) async {
+    final normalized = _requireServerId(playerId, 'playerId');
+    final row = await (select(
+      niceGroupAutoRefreshSettings,
+    )..where((table) => table.playerId.equals(normalized))).getSingleOrNull();
+    return row?.enabled ?? false;
+  }
+
+  Future<void> saveNiceGroupAutoRefreshEnabled({
+    required String playerId,
+    required bool enabled,
+    DateTime? updatedAt,
+  }) {
+    final normalized = _requireServerId(playerId, 'playerId');
+    return into(niceGroupAutoRefreshSettings).insertOnConflictUpdate(
+      NiceGroupAutoRefreshSettingsCompanion.insert(
+        playerId: normalized,
+        enabled: Value(enabled),
+        updatedAt: (updatedAt ?? DateTime.now()).toUtc(),
+      ),
+    );
+  }
 
   Future<void> syncPartyHistoryEvent({
     required String eventId,

@@ -8,6 +8,7 @@ import 'package:lost_party/features/account/domain/entities/roster_summary_apply
 import 'package:lost_party/features/account/domain/entities/save_activity_characters_command.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/account/domain/repositories/activity_characters_repository.dart';
+import 'package:lost_party/features/account/domain/repositories/nice_group_auto_refresh_settings_repository.dart';
 import 'package:lost_party/features/account/domain/repositories/representative_character_sync_gateway.dart';
 import 'package:lost_party/features/account/presentation/viewmodels/character_management_view_model.dart';
 
@@ -336,16 +337,43 @@ void main() {
     expect(gateway.savedCharacterIds, isEmpty);
     expect(viewModel.draftRepresentativeId, 1);
   });
+  test(
+    'loads and saves one auto-refresh override for all nice groups',
+    () async {
+      final settings = _FakeNiceGroupSettingsRepository()..enabled = true;
+      final viewModel = CharacterManagementViewModel(
+        accountRepository: _FakeAccountRepository(niceGroup: true),
+        activityCharactersRepository: _FakeActivityCharactersRepository(),
+        niceGroupSettingsRepository: settings,
+        playerId: 'player-1',
+      );
+      addTearDown(viewModel.dispose);
+
+      await viewModel.initialize();
+
+      expect(viewModel.niceGroupResult.classNames, {'바드'});
+      expect(viewModel.draftNiceGroupAutoRefreshEnabled, isTrue);
+      viewModel.setNiceGroupAutoRefreshEnabled(false);
+      expect(viewModel.hasUnsavedChanges, isTrue);
+
+      await viewModel.save();
+
+      expect(settings.savedValues, [false]);
+      expect(viewModel.hasUnsavedChanges, isFalse);
+    },
+  );
 }
 
 class _FakeAccountRepository implements AccountRepository {
   _FakeAccountRepository({
     this.serverBacked = false,
     this.includeSecondaryAccount = false,
+    this.niceGroup = false,
   });
 
   final bool serverBacked;
   final bool includeSecondaryAccount;
+  final bool niceGroup;
 
   int representativeCharacterId = 1;
   int displayLimit = 2;
@@ -428,8 +456,20 @@ class _FakeAccountRepository implements AccountRepository {
   @override
   Future<LocalGameAccount?> loadMainAccount() async {
     final characters = {
-      1: _character(1, '첫번째', _visibility[1]!, savedOrder.indexOf(1)),
-      2: _character(2, '두번째', _visibility[2]!, savedOrder.indexOf(2)),
+      1: _character(
+        1,
+        '첫번째',
+        _visibility[1]!,
+        savedOrder.indexOf(1),
+        itemLevel: niceGroup ? 1700 : null,
+      ),
+      2: _character(
+        2,
+        '두번째',
+        _visibility[2]!,
+        savedOrder.indexOf(2),
+        itemLevel: niceGroup ? 1701 : null,
+      ),
     };
     return LocalGameAccount(
       id: 10,
@@ -509,20 +549,39 @@ LocalAccountCharacter _character(
   int id,
   String name,
   bool isVisible,
-  int displayOrder,
-) {
+  int displayOrder, {
+  double? itemLevel,
+}) {
   return LocalAccountCharacter(
     id: id,
     serverName: '루페온',
     characterName: name,
     characterLevel: 70,
     characterClassName: '바드',
-    itemLevel: 1700 - id.toDouble(),
+    itemLevel: itemLevel ?? 1700 - id.toDouble(),
     combatPower: null,
     isVisible: isVisible,
     displayOrder: displayOrder,
     serverCharacterId: 'server-character-$id',
   );
+}
+
+class _FakeNiceGroupSettingsRepository
+    implements NiceGroupAutoRefreshSettingsRepository {
+  bool enabled = false;
+  final List<bool> savedValues = [];
+
+  @override
+  Future<bool> loadEnabled({required String playerId}) async => enabled;
+
+  @override
+  Future<void> saveEnabled({
+    required String playerId,
+    required bool enabled,
+  }) async {
+    this.enabled = enabled;
+    savedValues.add(enabled);
+  }
 }
 
 class _FakeActivityCharactersRepository

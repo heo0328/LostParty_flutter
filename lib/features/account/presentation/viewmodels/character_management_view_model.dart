@@ -4,28 +4,37 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/local_game_account.dart';
+import '../../domain/entities/nice_group_policy_result.dart';
 import '../../domain/entities/save_activity_characters_command.dart';
 import '../../domain/repositories/account_repository.dart';
 import '../../domain/repositories/activity_characters_repository.dart';
+import '../../domain/repositories/nice_group_auto_refresh_settings_repository.dart';
 import '../../domain/repositories/representative_character_sync_gateway.dart';
+import '../../domain/services/nice_group_policy.dart';
 
 class CharacterManagementViewModel extends ChangeNotifier {
   CharacterManagementViewModel({
     required AccountRepository accountRepository,
     RepresentativeCharacterSyncGateway? representativeSyncGateway,
     ActivityCharactersRepository? activityCharactersRepository,
+    NiceGroupAutoRefreshSettingsRepository? niceGroupSettingsRepository,
+    NiceGroupPolicy niceGroupPolicy = const NiceGroupPolicy(),
     String? playerId,
     DateTime Function()? clock,
     this.accountId,
   }) : _accountRepository = accountRepository,
        _representativeSyncGateway = representativeSyncGateway,
        _activityCharactersRepository = activityCharactersRepository,
+       _niceGroupSettingsRepository = niceGroupSettingsRepository,
+       _niceGroupPolicy = niceGroupPolicy,
        _playerId = playerId?.trim() ?? '',
        _clock = clock ?? DateTime.now;
 
   final AccountRepository _accountRepository;
   final RepresentativeCharacterSyncGateway? _representativeSyncGateway;
   final ActivityCharactersRepository? _activityCharactersRepository;
+  final NiceGroupAutoRefreshSettingsRepository? _niceGroupSettingsRepository;
+  final NiceGroupPolicy _niceGroupPolicy;
   final String _playerId;
   final DateTime Function() _clock;
   final int? accountId;
@@ -41,6 +50,10 @@ class CharacterManagementViewModel extends ChangeNotifier {
   int _draftDisplayLimit = 1;
   Map<int, int> _rememberedOrder = {};
   Set<String> _loadedActivityIds = {};
+  NiceGroupPolicyResult _niceGroupResult = const NiceGroupPolicyResult(
+    classNames: {},
+  );
+  bool _draftNiceGroupAutoRefreshEnabled = false;
   _DraftSnapshot? _baseline;
   RepresentativeCharacterSyncState? _representativeSyncState;
   bool _representativeSyncLoaded = false;
@@ -57,6 +70,10 @@ class CharacterManagementViewModel extends ChangeNotifier {
   int get maxDisplayLimit => math.max(1, _draftSelectedIds.length);
   int get draftDisplayLimit => _draftDisplayLimit;
   int? get draftRepresentativeId => _draftRepresentativeId;
+  NiceGroupPolicyResult get niceGroupResult => _niceGroupResult;
+  bool get hasNiceGroupCharacters => !_niceGroupResult.isEmpty;
+  bool get draftNiceGroupAutoRefreshEnabled =>
+      _draftNiceGroupAutoRefreshEnabled;
 
   List<LocalAccountCharacter> get selectedCharacters {
     final byId = {for (final character in _roster) character.id: character};
@@ -69,7 +86,9 @@ class CharacterManagementViewModel extends ChangeNotifier {
     return !_setEquals(baseline.selectedIds, _draftSelectedIds) ||
         !listEquals(baseline.orderedIds, _draftOrderedIds) ||
         baseline.representativeId != _draftRepresentativeId ||
-        baseline.displayLimit != _draftDisplayLimit;
+        baseline.displayLimit != _draftDisplayLimit ||
+        baseline.niceGroupAutoRefreshEnabled !=
+            _draftNiceGroupAutoRefreshEnabled;
   }
 
   Duration get representativeCooldownRemaining {
@@ -123,6 +142,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     await _reloadAccounts();
+    await _loadNiceGroupSetting();
     await _synchronizeRepresentative();
     await _loadActivity();
     _resetDraftFromLoaded();
@@ -169,6 +189,13 @@ class CharacterManagementViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setNiceGroupAutoRefreshEnabled(bool enabled) {
+    if (_isSaving || !hasNiceGroupCharacters) return;
+    _draftNiceGroupAutoRefreshEnabled = enabled;
+    _message = null;
+    notifyListeners();
+  }
+
   void reorder(int oldIndex, int newIndex) {
     if (_isSaving || oldIndex == newIndex) {
       return;
@@ -202,6 +229,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
     _draftOrderedIds = List<int>.of(baseline.orderedIds);
     _draftRepresentativeId = baseline.representativeId;
     _draftDisplayLimit = baseline.displayLimit;
+    _draftNiceGroupAutoRefreshEnabled = baseline.niceGroupAutoRefreshEnabled;
     _message = null;
     notifyListeners();
   }
@@ -269,6 +297,16 @@ class CharacterManagementViewModel extends ChangeNotifier {
         accountId: account.id,
         displayLimit: _draftDisplayLimit,
       );
+      final settingsRepository = _niceGroupSettingsRepository;
+      if (settingsRepository != null &&
+          _playerId.isNotEmpty &&
+          _baseline?.niceGroupAutoRefreshEnabled !=
+              _draftNiceGroupAutoRefreshEnabled) {
+        await settingsRepository.saveEnabled(
+          playerId: _playerId,
+          enabled: _draftNiceGroupAutoRefreshEnabled,
+        );
+      }
       if (representative != null &&
           account.representativeCharacterId != representative.id) {
         await _accountRepository.setRepresentativeCharacter(
@@ -295,6 +333,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
 
   Future<void> _reloadAccounts() async {
     _allAccounts = await _accountRepository.loadAccounts();
+    _niceGroupResult = _niceGroupPolicy.evaluate(_allAccounts);
     if (accountId == null) {
       _account = await _accountRepository.loadMainAccount();
     } else {
@@ -314,6 +353,17 @@ class CharacterManagementViewModel extends ChangeNotifier {
     _roster = _sortedRoster(
       account.characters,
       account.representativeCharacterId,
+    );
+  }
+
+  Future<void> _loadNiceGroupSetting() async {
+    final repository = _niceGroupSettingsRepository;
+    if (repository == null || _playerId.isEmpty) {
+      _draftNiceGroupAutoRefreshEnabled = false;
+      return;
+    }
+    _draftNiceGroupAutoRefreshEnabled = await repository.loadEnabled(
+      playerId: _playerId,
     );
   }
 
@@ -520,6 +570,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
       orderedIds: List<int>.of(_draftOrderedIds),
       representativeId: _draftRepresentativeId,
       displayLimit: _draftDisplayLimit,
+      niceGroupAutoRefreshEnabled: _draftNiceGroupAutoRefreshEnabled,
     );
   }
 
@@ -652,12 +703,14 @@ class _DraftSnapshot {
     required this.orderedIds,
     required this.representativeId,
     required this.displayLimit,
+    required this.niceGroupAutoRefreshEnabled,
   });
 
   final Set<int> selectedIds;
   final List<int> orderedIds;
   final int? representativeId;
   final int displayLimit;
+  final bool niceGroupAutoRefreshEnabled;
 }
 
 bool _setEquals<T>(Set<T> left, Set<T> right) {

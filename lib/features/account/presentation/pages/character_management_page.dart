@@ -8,6 +8,7 @@ import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/repositories/account_repository.dart';
 import '../../domain/repositories/activity_characters_repository.dart';
+import '../../domain/repositories/nice_group_auto_refresh_settings_repository.dart';
 import '../../domain/repositories/representative_character_sync_gateway.dart';
 import '../viewmodels/character_management_view_model.dart';
 
@@ -16,6 +17,7 @@ class CharacterManagementPage extends StatefulWidget {
     required this.accountRepository,
     this.representativeSyncGateway,
     this.activityCharactersRepository,
+    this.niceGroupSettingsRepository,
     this.playerId,
     this.accountId,
     super.key,
@@ -24,6 +26,7 @@ class CharacterManagementPage extends StatefulWidget {
   final AccountRepository accountRepository;
   final RepresentativeCharacterSyncGateway? representativeSyncGateway;
   final ActivityCharactersRepository? activityCharactersRepository;
+  final NiceGroupAutoRefreshSettingsRepository? niceGroupSettingsRepository;
   final String? playerId;
   final int? accountId;
 
@@ -42,6 +45,7 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
       accountRepository: widget.accountRepository,
       representativeSyncGateway: widget.representativeSyncGateway,
       activityCharactersRepository: widget.activityCharactersRepository,
+      niceGroupSettingsRepository: widget.niceGroupSettingsRepository,
       playerId: widget.playerId,
       accountId: widget.accountId,
     )..addListener(_onChanged);
@@ -140,6 +144,31 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
                 ),
               ),
               const SliverToBoxAdapter(child: Divider(height: 1)),
+              if (_viewModel.hasNiceGroupCharacters) ...[
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.sm,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: SwitchListTile(
+                      key: const ValueKey('niceGroupAutoRefreshSwitch'),
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('나이스단 자동 갱신'),
+                      subtitle: Text(
+                        '${_viewModel.niceGroupResult.classNames.join(', ')} 직업군 전체에 적용됩니다. 설정을 끄면 기존 수동 스냅샷을 사용합니다.',
+                      ),
+                      value: _viewModel.draftNiceGroupAutoRefreshEnabled,
+                      onChanged: _viewModel.isSaving
+                          ? null
+                          : _viewModel.setNiceGroupAutoRefreshEnabled,
+                    ),
+                  ),
+                ),
+                const SliverToBoxAdapter(child: Divider(height: 1)),
+              ],
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.md,

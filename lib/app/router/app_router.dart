@@ -16,6 +16,7 @@ import '../../features/account/data/gateways/firestore_representative_character_
 import '../../features/account/data/mappers/sibling_character_mapper.dart';
 import '../../features/account/data/repositories/firestore_weekly_raid_claim_repository.dart';
 import '../../features/account/data/repositories/local_character_weekly_raid_display_repository.dart';
+import '../../features/account/data/repositories/local_nice_group_auto_refresh_settings_repository.dart';
 import '../../features/account/presentation/pages/api_token_settings_page.dart';
 import '../../features/account/presentation/pages/character_management_page.dart';
 import '../../features/account/presentation/pages/character_detail_page.dart';
@@ -201,6 +202,8 @@ GoRouter createAppRouter({
   final weeklyRaidDisplayRepositoryOrDefault =
       weeklyRaidDisplayRepository ??
       LocalCharacterWeeklyRaidDisplayRepository(database: accountDatabase);
+  final niceGroupSettingsRepository =
+      LocalNiceGroupAutoRefreshSettingsRepository(database: accountDatabase);
   const cyclePolicy = PartyCyclePolicy();
   final currentCycleKey = cyclePolicy.keyFor(DateTime.now());
   final currentCycle = cyclePolicy.fromKey(currentCycleKey)!;
@@ -460,6 +463,7 @@ GoRouter createAppRouter({
                           representativeSyncGatewayOrDefault,
                       activityCharactersRepository:
                           activityCharactersRepositoryOrDefault,
+                      niceGroupSettingsRepository: niceGroupSettingsRepository,
                       playerId: playerSession.playerId,
                       accountId: state.extra as int?,
                     ),
