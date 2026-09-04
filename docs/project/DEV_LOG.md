@@ -1,3 +1,11 @@
+## 2026-09-04 Character 자동 갱신 F — 서버 최소 Snapshot 정합성·비용 제어
+
+- `CharacterMinimumDisplaySyncGateway`와 Service를 추가해 교류 갱신 후 Firestore Character의 `itemAvgLevel`·`combatPower`만 값이 달라졌을 때 갱신한다. null로는 기존 서버 값을 지우지 않는다.
+- 캐릭터별 Transaction은 binding·Player·Character·소유관계 4회 읽기, 변경 시 1회 쓰기다. 동일값이면 쓰기를 생략한다. Rules·스키마·신규 서버 필드는 변경하지 않았다.
+- `CharacterAutoRefreshCoordinator`의 명령 경로(`ensureFresh`)는 동기화 성공 후에만 진행하고 실패 시 blocked다. prefetch 실패는 로컬 갱신을 유지하되 TTL 캐시에 넣지 않아 이후 명령에서 재시도한다.
+- 그룹 로컬 표시·생성·가입은 선호 역할 Snapshot을 서버 단일 `combatPower`보다 우선한다. 파티 명령의 선택 역할 Snapshot 사용은 유지한다.
+- F 표적 테스트 28개와 변경 파일 analyze가 통과했다. 그룹·account 서비스 회귀 227개와 전체 `flutter test --no-pub` 875개가 통과했다. 다음은 G 회귀·실기기 검증이다.
+
 ## 2026-09-04 Character 자동 갱신 C — 공통 조정기
 
 - `CharacterAutoRefreshCoordinator`를 추가해 후보 사전 갱신과 명령 직전 `ensureFresh`가 같은 Character ID single-flight를 공유하도록 했다.

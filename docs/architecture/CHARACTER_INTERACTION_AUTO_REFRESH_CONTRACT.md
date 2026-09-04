@@ -179,6 +179,8 @@ LOSTPARTY에서 사용하는 활동 Character가 그룹·파티 등 다른 사�
 
 ### F — 서버 최소 Snapshot 정합성·비용 제어
 
+상태: 2026-09-04 구현·자동 검증 완료. 명령 직전 동기화 실패는 차단하고, 동일값 쓰기는 생략한다. Rules·스키마는 변경하지 않았다.
+
 - 값이 실제로 달라졌을 때만 Firestore Character 최소 필드 갱신
 - 서버 Character의 단일 `combatPower`는 참고값으로 두고, 파티 명령은 선택 역할 Snapshot, 그룹 표시는 선호 역할 Snapshot을 우선
 - 기존 Character·membership·application 최소 필드를 우선 재사용하고 역할·출처·마지막 성공 시각을 위한 신규 서버 필드나 Rules 변경을 기본 전제로 두지 않음

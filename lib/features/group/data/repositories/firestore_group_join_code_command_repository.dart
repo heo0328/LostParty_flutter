@@ -392,11 +392,11 @@ class FirestoreGroupJoinCodeCommandRepository
       serverName: serverName,
       characterClassName: className,
       itemLevel:
-          parseCharacterItemLevel(data['itemAvgLevel']) ??
-          localDisplay?.itemLevel,
+          localDisplay?.itemLevel ??
+          parseCharacterItemLevel(data['itemAvgLevel']),
       combatPower:
-          parseCharacterItemLevel(data['combatPower']) ??
-          localDisplay?.combatPower,
+          localDisplay?.combatPower ??
+          parseCharacterItemLevel(data['combatPower']),
     );
   }
 

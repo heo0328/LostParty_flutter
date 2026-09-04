@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_role.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
 import 'package:lost_party/features/account/domain/entities/save_activity_characters_command.dart';
@@ -7,11 +8,20 @@ import 'package:lost_party/features/account/domain/repositories/activity_charact
 import 'package:lost_party/features/group/domain/services/group_local_member_display_lookup.dart';
 
 class _Build extends Fake implements CharacterBuildSnapshot {
-  _Build(this.combatPower, this.capturedAt);
+  _Build(
+    this.combatPower,
+    this.capturedAt, {
+    this.itemLevel,
+    this.role = CharacterBuildRole.dealer,
+  });
   @override
   final double? combatPower;
   @override
+  final double? itemLevel;
+  @override
   final DateTime capturedAt;
+  @override
+  final CharacterBuildRole role;
 }
 
 class _Activity implements ActivityCharactersRepository {
@@ -35,11 +45,13 @@ class _Accounts extends Fake implements AccountRepository {
     this.status = 'active',
     this.builds = const [],
     this.extraInactive = false,
+    this.preferredRole,
   });
   final double? power;
   final String status;
   final List<CharacterBuildSnapshot> builds;
   final bool extraInactive;
+  final CharacterBuildRole? preferredRole;
   int buildReads = 0;
   @override
   Future<List<LocalGameAccount>> loadAccounts() async => [
@@ -63,6 +75,7 @@ class _Accounts extends Fake implements AccountRepository {
           combatPower: power,
           isVisible: true,
           displayOrder: 0,
+          preferredRole: preferredRole,
         ),
         if (extraInactive)
           const LocalAccountCharacter(
@@ -110,6 +123,29 @@ void main() {
     ).forServerCharacterId('character-1');
     expect(value?.combatPower, 3100);
     expect(repository.buildReads, 0);
+  });
+  test('선호 역할 Snapshot 전투력을 프로필·최근 세팅보다 우선한다', () async {
+    final repository = _Accounts(
+      power: 3100,
+      preferredRole: CharacterBuildRole.support,
+      builds: [
+        _Build(
+          2500,
+          DateTime(2026, 8, 31),
+          role: CharacterBuildRole.dealer,
+        ),
+        _Build(
+          2800,
+          DateTime(2026, 8, 30),
+          role: CharacterBuildRole.support,
+        ),
+      ],
+    );
+    final value = await GroupLocalMemberDisplayLookup(
+      accountRepository: repository,
+    ).forServerCharacterId('character-1');
+    expect(value?.combatPower, 2800);
+    expect(repository.buildReads, 1);
   });
   test('소유권 상실 계정은 서버 표시 동기화 후보에서 제외한다', () async {
     final repository = _Accounts(power: 3100, status: 'ownershipLost');

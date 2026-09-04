@@ -12,6 +12,7 @@ import '../../features/account/data/gateways/local_game_account_verification_gat
 import '../../features/account/data/gateways/firestore_account_ownership_status_gateway.dart';
 import '../../features/account/data/gateways/firestore_character_summary_sync_gateway.dart';
 import '../../features/account/data/gateways/firestore_character_combat_power_sync_gateway.dart';
+import '../../features/account/data/gateways/firestore_character_minimum_display_sync_gateway.dart';
 import '../../features/account/data/gateways/firestore_representative_character_sync_gateway.dart';
 import '../../features/account/data/mappers/sibling_character_mapper.dart';
 import '../../features/account/data/repositories/firestore_weekly_raid_claim_repository.dart';
@@ -34,6 +35,7 @@ import '../../features/account/domain/repositories/activity_characters_repositor
 import '../../features/account/domain/repositories/representative_character_sync_gateway.dart';
 import '../../features/account/domain/services/character_summary_sync_service.dart';
 import '../../features/account/domain/services/character_auto_refresh_coordinator.dart';
+import '../../features/account/domain/services/character_minimum_display_sync_service.dart';
 import '../../features/account/domain/services/representative_character_sync_service.dart';
 import '../../features/player/domain/entities/player_session.dart';
 import '../../features/group/data/repositories/firestore_group_application_command_repository.dart';
@@ -234,6 +236,15 @@ GoRouter createAppRouter({
   );
   final characterAutoRefreshCoordinator = CharacterAutoRefreshCoordinator(
     accountRepository: accountRepository,
+    minimumDisplaySync: Firebase.apps.isEmpty
+        ? null
+        : CharacterMinimumDisplaySyncService(
+            accountRepository: accountRepository,
+            gateway: FirestoreCharacterMinimumDisplaySyncGateway(
+              firestore: FirebaseFirestore.instance,
+              firebaseAuth: FirebaseAuth.instance,
+            ),
+          ),
   );
   final partyCharacterRefreshService = PartyCharacterRefreshService(
     coordinator: characterAutoRefreshCoordinator,

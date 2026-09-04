@@ -137,11 +137,11 @@ class FirestoreGroupCreateRepository implements GroupCreateRepository {
           verifiedServerName: serverName,
           verifiedClassName: className,
           verifiedItemLevel:
-              parseCharacterItemLevel(characterData?['itemAvgLevel']) ??
-              localDisplay?.itemLevel,
+              localDisplay?.itemLevel ??
+              parseCharacterItemLevel(characterData?['itemAvgLevel']),
           verifiedCombatPower:
-              parseCharacterItemLevel(characterData?['combatPower']) ??
-              localDisplay?.combatPower,
+              localDisplay?.combatPower ??
+              parseCharacterItemLevel(characterData?['combatPower']),
           membershipState: membershipState,
         );
         transaction.set(groupRef, plan.group);
