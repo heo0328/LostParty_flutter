@@ -10,6 +10,7 @@ import 'package:lost_party/features/account/domain/entities/roster_summary_apply
 import 'package:lost_party/features/account/domain/entities/save_activity_characters_command.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/account/domain/repositories/activity_characters_repository.dart';
+import 'package:lost_party/features/account/domain/repositories/nice_group_auto_refresh_settings_repository.dart';
 import 'package:lost_party/features/account/presentation/pages/character_management_page.dart';
 
 void main() {
@@ -83,6 +84,37 @@ void main() {
     await tester.pump();
     expect(find.text('2 / 2'), findsOneWidget);
   });
+
+  testWidgets('shows and saves the nice-group-wide auto-refresh switch', (
+    tester,
+  ) async {
+    final settings = _FakeNiceGroupSettingsRepository();
+    await tester.pumpWidget(
+      _wrap(
+        CharacterManagementPage(
+          accountRepository: _FakeAccountRepository(niceGroup: true),
+          activityCharactersRepository: _FakeActivityCharactersRepository(),
+          niceGroupSettingsRepository: settings,
+          playerId: 'player-1',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final switchFinder = find.byKey(
+      const ValueKey('niceGroupAutoRefreshSwitch'),
+    );
+    expect(switchFinder, findsOneWidget);
+    expect(find.textContaining('바드 직업군 전체'), findsOneWidget);
+
+    await tester.tap(switchFinder);
+    await tester.tap(
+      find.byKey(const ValueKey('characterManagementSaveButton')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(settings.enabled, isTrue);
+  });
 }
 
 Widget _wrap(Widget child) {
@@ -90,6 +122,9 @@ Widget _wrap(Widget child) {
 }
 
 class _FakeAccountRepository implements AccountRepository {
+  _FakeAccountRepository({this.niceGroup = false});
+
+  final bool niceGroup;
   int representativeCharacterId = 1;
   int displayLimit = 2;
   List<int> savedOrder = [1, 2];
@@ -153,8 +188,20 @@ class _FakeAccountRepository implements AccountRepository {
   @override
   Future<LocalGameAccount?> loadMainAccount() async {
     final characters = {
-      1: _character(1, '첫번째', _visibility[1]!, savedOrder.indexOf(1)),
-      2: _character(2, '두번째', _visibility[2]!, savedOrder.indexOf(2)),
+      1: _character(
+        1,
+        '첫번째',
+        _visibility[1]!,
+        savedOrder.indexOf(1),
+        itemLevel: niceGroup ? 1700 : null,
+      ),
+      2: _character(
+        2,
+        '두번째',
+        _visibility[2]!,
+        savedOrder.indexOf(2),
+        itemLevel: niceGroup ? 1701 : null,
+      ),
     };
     return LocalGameAccount(
       id: 10,
@@ -230,20 +277,37 @@ LocalAccountCharacter _character(
   int id,
   String name,
   bool isVisible,
-  int displayOrder,
-) {
+  int displayOrder, {
+  double? itemLevel,
+}) {
   return LocalAccountCharacter(
     id: id,
     serverName: '루페온',
     characterName: name,
     characterLevel: 70,
     characterClassName: '바드',
-    itemLevel: 1700 - id.toDouble(),
+    itemLevel: itemLevel ?? 1700 - id.toDouble(),
     combatPower: null,
     isVisible: isVisible,
     displayOrder: displayOrder,
     serverCharacterId: 'server-character-$id',
   );
+}
+
+class _FakeNiceGroupSettingsRepository
+    implements NiceGroupAutoRefreshSettingsRepository {
+  bool enabled = false;
+
+  @override
+  Future<bool> loadEnabled({required String playerId}) async => enabled;
+
+  @override
+  Future<void> saveEnabled({
+    required String playerId,
+    required bool enabled,
+  }) async {
+    this.enabled = enabled;
+  }
 }
 
 class _FakeActivityCharactersRepository

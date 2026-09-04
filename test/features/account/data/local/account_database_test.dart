@@ -33,6 +33,49 @@ void main() {
     expect(account.displayLimit, 6);
   });
 
+  test('stores one nice-group auto-refresh setting per player', () async {
+    expect(await database.loadNiceGroupAutoRefreshEnabled('player-1'), isFalse);
+
+    await database.saveNiceGroupAutoRefreshEnabled(
+      playerId: 'player-1',
+      enabled: true,
+      updatedAt: DateTime.utc(2026, 9, 4),
+    );
+    await database.saveNiceGroupAutoRefreshEnabled(
+      playerId: 'player-2',
+      enabled: false,
+      updatedAt: DateTime.utc(2026, 9, 4),
+    );
+
+    expect(await database.loadNiceGroupAutoRefreshEnabled('player-1'), isTrue);
+    expect(await database.loadNiceGroupAutoRefreshEnabled('player-2'), isFalse);
+  });
+
+  test(
+    'restores the nice-group setting after a local database restart',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'lost_party_nice_group_',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final file = File('${directory.path}/account.sqlite');
+      final first = AccountDatabase(NativeDatabase(file));
+      await first.saveNiceGroupAutoRefreshEnabled(
+        playerId: 'player-1',
+        enabled: true,
+      );
+      await first.close();
+
+      final reopened = AccountDatabase(NativeDatabase(file));
+      addTearDown(reopened.close);
+
+      expect(
+        await reopened.loadNiceGroupAutoRefreshEnabled('player-1'),
+        isTrue,
+      );
+    },
+  );
+
   test(
     'stores representative reconciliation independently of local id',
     () async {
