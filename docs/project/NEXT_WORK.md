@@ -1,45 +1,41 @@
 # NEXT WORK
 
-
-
 ## 현재 기준과 이번 범위
 
+- 교류 행동 기반 Character 자동 갱신 A~F는 `dev`에 병합됐다(머지 `185c699`).
+- G 자동 회귀: 표적(조정기·최소 Snapshot·나이스단·그룹 표시·Build 분석·그룹/파티 도메인)과 영향 범위 analyze, 전체 `flutter test --no-pub`를 이 단계에서 재확인한다.
+- Rules·스키마·신규 서버 필드는 변경하지 않는다. CLASS_SYNERGY_CATALOG §11 3~5단계와 별도 기능은 제외한다.
 
+## 지금 사용자가 할 테스트 (Android 실기기)
 
-- 교류 행동 기반 Character 자동 갱신 A~F를 구현했다. F는 서버 최소 Snapshot 정합성·비용 제어다.
+앱은 최신 `dev` 기준이다. 아래를 확인한 뒤 통과/실패와 직업·화면을 짧게 보고한다.
 
-- `CharacterMinimumDisplaySyncService`와 Firestore Gateway로 `itemAvgLevel`·`combatPower`를 값이 달라졌을 때만 갱신한다. 캐릭터별 Transaction은 기존 전투력 보강과 같이 binding·Player·Character·소유관계 4회 읽기, 변경 시 1회 쓰기다. Rules·스키마는 변경하지 않았다.
+### 1. 일반 Character 교류 갱신
+- [ ] 모집 생성: 후보 진입 후 바로 생성해도 최신 전투력·아이템 레벨이 반영된다
+- [ ] 신청·즉시 참가·참가 Character 변경도 동일하게 갱신 후 진행된다
+- [ ] 그룹 생성·가입 신청·초대 수락·초대코드 가입에서 본인만 갱신되고 타 그룹원 API는 호출되지 않는다
+- [ ] 그룹 상세 진입 시 본인 표시 Snapshot만 보강된다
 
-- 명령 직전(`ensureFresh`) 동기화 실패는 명령을 차단한다. prefetch 실패는 로컬 갱신을 유지하되 TTL 캐시에 넣지 않아 이후 명령 경로에서 재시도한다.
+### 2. 나이스단
+- [ ] 1700 이상 동일 직업 2명 이상이면 나이스단으로 보이고, 기본은 자동 갱신하지 않는다
+- [ ] 캐릭터 관리의 `나이스단 자동 갱신`을 켜면 해당 직업군이 자동 갱신된다
+- [ ] 끄면 다시 수동 Snapshot을 쓰고, 조건이 사라져도 설정은 유지된다
 
-- 그룹 표시·생성·가입은 선호 역할 Snapshot을 서버 단일 `combatPower`보다 우선한다. 파티 명령은 기존처럼 선택 역할 Snapshot을 쓴다.
+### 3. 서포터 겸용 4직업 (가능하면 실세팅)
+- [ ] 바드·홀리나이트·발키리·도화가: 현재 역할 Snapshot만 갱신되고 반대 역할은 유지된다
+- [ ] Armory 반환 문자열(깨달음 1·4티어, 아이덴티티/아크패시브 보석 대상)이 fixture와 다르면 실제 문자열을 보고한다 (`measuredAgainstLiveApi` 대조)
 
-- F 표적 테스트 28개(조정기·서비스·Gateway·그룹 표시)와 변경 파일 analyze가 통과했다. 그룹·account 서비스 회귀 227개와 전체 `flutter test --no-pub` 875개가 통과했다.
+### 4. 실패·경쟁·서버 동기화
+- [ ] 빠른 연타·Character 전환 시 이전 응답이 다른 Character에 붙지 않는다
+- [ ] API 실패 시 정상 Snapshot이 있으면 저장 시각 안내 후 계속/취소가 된다
+- [ ] 정상 Snapshot이 없으면 명령이 막힌다
+- [ ] 서버 최소값 동기화 실패(네트워크 등) 시 명령이 차단되고 기존 서버 값은 유지된다
 
+### 5. 비용 관찰(대략)
+- [ ] 동일 세팅 재실행 시 Character 문서 불필요 쓰기가 반복되지 않는지(동일값 skip)
+- [ ] 한 명령당 Armory 재조회가 TTL(5분) 안에서 과도하지 않은지
 
+## 자동 검증 상태
 
-## 다음 작업
-
-
-
-다음은 자동 갱신 계약의 **G — 회귀·실기기 검증과 문서 종료**다.
-
-
-
-- Domain, Mapper, 로컬 DB, Coordinator, 파티·그룹 Repository/UI 표적 테스트와 영향 범위 analyze·전체 test
-
-- Android 실기기에서 일반/나이스단, 4개 서포터 겸용 직업, 빠른 실행, 실패·재시도 확인
-
-- 요청 횟수와 Firestore read/write 변화 기록
-
-- 완료 후 `DEV_LOG.md`에 실기기 결과를 남기고 `NEXT_WORK.md`를 다음 단일 작업으로 교체
-
-
-
-나이스단·TTL·최대 동시 요청·역할 Snapshot 우선 등 확정 정책은 유지한다. 단계별 공통 실행·테스트·병합 규칙은 계약 §8을 따른다. CLASS_SYNERGY_CATALOG §11의 3~5단계와 별도 기능 전환은 범위에서 제외한다.
-
-
-
-F 완료 브랜치를 `dev`에 병합·푸시한 뒤 최신 `dev`에서 G를 시작한다. `main`은 변경하지 않는다.
-
-
+- 표적·영향 범위 analyze 통과, 전체 `flutter test --no-pub` **875**개 통과.
+- 실기기 보고를 받으면 DEV_LOG·NEXT_WORK를 마감하고 `dev`에 병합한다.

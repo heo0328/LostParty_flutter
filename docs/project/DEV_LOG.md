@@ -1,3 +1,11 @@
+## 2026-09-04 Character 자동 갱신 G — 자동 회귀와 실기기 대기
+
+- F를 `dev`에 병합했다(기능 `2aeccf5`, 머지 `185c699`). G 브랜치 `cursor/character-refresh-g-regression`에서 통합 회귀를 실행했다.
+- 표적: 조정기·최소 Snapshot Gateway/Service·나이스단·그룹 표시·Build 분석·그룹 Character refresh/options와 그룹·모집 도메인 회귀가 통과했다. 영향 범위 analyze 문제 없음.
+- 전체 `flutter test --no-pub` 875개가 통과했다.
+- Android 실기기 체크리스트는 `NEXT_WORK.md`에 두었다. 일반/나이스단·서포터 겸용 4직업·빠른 실행·실패·서버 동기화·비용 관찰 보고를 기다린다.
+- A fixture `measuredAgainstLiveApi: false`는 실기기 Armory 문자열 대조 전까지 유지한다.
+
 ## 2026-09-04 Character 자동 갱신 F — 서버 최소 Snapshot 정합성·비용 제어
 
 - `CharacterMinimumDisplaySyncGateway`와 Service를 추가해 교류 갱신 후 Firestore Character의 `itemAvgLevel`·`combatPower`만 값이 달라졌을 때 갱신한다. null로는 기존 서버 값을 지우지 않는다.

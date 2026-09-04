@@ -193,6 +193,8 @@ LOSTPARTY에서 사용하는 활동 Character가 그룹·파티 등 다른 사�
 
 ### G — 회귀·실기기 검증과 문서 종료
 
+상태: 2026-09-04 자동 회귀 완료, Android 실기기 확인 대기. 체크리스트는 `../project/NEXT_WORK.md`다.
+
 - Domain, Mapper, 로컬 DB, Coordinator, 파티·그룹 Repository/UI 표적 테스트
 - 영향 범위 analyze와 전체 test
 - Android 실기기에서 일반/나이스단, 4개 서포터 겸용 직업, 빠른 실행, 실패·재시도 확인

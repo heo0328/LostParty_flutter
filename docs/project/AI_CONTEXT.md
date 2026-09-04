@@ -1,5 +1,10 @@
 # AI CONTEXT (2026)
 
+## 최우선 현재 상태 — 교류 행동 기반 Character 자동 갱신 G 자동 회귀 (2026-09-04)
+
+- A~F는 `dev`에 병합됐다. G 자동 회귀(표적·analyze·전체 test)를 진행했고 Android 실기기 확인을 기다린다. 체크리스트는 `NEXT_WORK.md`다.
+- A fixture의 실API 문자열 대조와 요청·Firestore 비용 관찰도 G 실기기 보고에 포함한다.
+
 ## 최우선 현재 상태 — 교류 행동 기반 Character 자동 갱신 F 완료 (2026-09-04)
 
 - A~F 완료. F에서 서버 Character 최소 표시값(`itemAvgLevel`·`combatPower`)을 값 변경 시에만 동기화하고, 명령 직전 동기화 실패는 차단한다. Rules·스키마는 변경하지 않았다.
