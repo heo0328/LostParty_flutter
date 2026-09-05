@@ -189,6 +189,30 @@ void main() {
     },
   );
 
+  test('dealer-only class refreshes as dealer without role detection', () async {
+    final repository = _FakeAccountRepository()
+      ..draftFactory = (id) => _draft(
+        id,
+        characterClassName: '블레이드',
+        analysis: _analysis(
+          detectionStatus: CharacterBuildDetectionStatus.unsupportedClass,
+          includeTierFour: false,
+        ),
+      );
+    final coordinator = CharacterAutoRefreshCoordinator(
+      accountRepository: repository,
+    );
+
+    final result = await coordinator.ensureFresh(
+      _request(1, role: CharacterBuildRole.support),
+    );
+
+    expect(result.status, CharacterAutoRefreshStatus.refreshed);
+    expect(result.detectedRole, CharacterBuildRole.dealer);
+    expect(result.expectedRoleChanged, isTrue);
+    expect(repository.committedRoles, [CharacterBuildRole.dealer]);
+  });
+
   test(
     'saves only the detected role and reports an expected-role change',
     () async {
@@ -303,7 +327,11 @@ CharacterAutoRefreshRequest _request(
   );
 }
 
-CharacterBuildDraft _draft(int id, {CharacterBuildAnalysis? analysis}) {
+CharacterBuildDraft _draft(
+  int id, {
+  CharacterBuildAnalysis? analysis,
+  String characterClassName = '바드',
+}) {
   return CharacterBuildDraft(
     characterId: id,
     rawJson: '{}',
@@ -311,7 +339,7 @@ CharacterBuildDraft _draft(int id, {CharacterBuildAnalysis? analysis}) {
       serverName: '루페온',
       characterName: '캐릭터$id',
       characterLevel: 70,
-      characterClassName: '바드',
+      characterClassName: characterClassName,
       itemLevel: 1700,
       combatPower: 100000,
     ),

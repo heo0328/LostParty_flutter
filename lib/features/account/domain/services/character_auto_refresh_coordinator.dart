@@ -5,6 +5,7 @@ import '../entities/character_build_catalog_detection.dart';
 import '../entities/character_build_draft.dart';
 import '../entities/character_build_snapshot.dart';
 import '../repositories/account_repository.dart';
+import 'character_build_role_policy.dart';
 import 'character_minimum_display_sync_service.dart';
 
 enum CharacterRefreshPriority { prefetch, command }
@@ -256,6 +257,12 @@ class CharacterAutoRefreshCoordinator implements CharacterAutoRefreshGateway {
     CharacterBuildDraft draft,
     CharacterBuildRole? expectedRole,
   ) {
+    final fixedRole = const CharacterBuildRolePolicy().fixedRole(
+      draft.profile.characterClassName,
+    );
+    if (fixedRole != null) {
+      return _DraftValidation(role: fixedRole);
+    }
     final analysis = draft.analysis;
     final detection = analysis.catalogDetection;
     if (detection == null ||
