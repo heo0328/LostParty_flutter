@@ -63,7 +63,6 @@ class GroupCreateWritePlan {
         'memberCount': 1,
         'revision': 1,
         'hasActiveJoinCode': false,
-        'activeJoinCode': null,
         'joinCodeVisibleToMembers': false,
         'lastActivityAt': serverTimestamp,
         'createdAt': serverTimestamp,

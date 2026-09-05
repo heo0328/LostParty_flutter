@@ -267,7 +267,7 @@ service cloud.firestore {
         && data.memberCount == 1
         && data.revision == 1
         && data.hasActiveJoinCode == false
-        && data.activeJoinCode == null
+        && (!('activeJoinCode' in data) || data.activeJoinCode == null)
         && data.joinCodeVisibleToMembers == false
         && data.deletedAt == null
         && data.createdAt == request.time

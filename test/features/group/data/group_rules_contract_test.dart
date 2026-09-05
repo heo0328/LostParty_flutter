@@ -30,6 +30,10 @@ void main() {
     expect(rules, contains('data.memberCount == 1'));
     expect(rules, contains('data.revision == 1'));
     expect(rules, contains('data.hasActiveJoinCode == false'));
+    expect(
+      rules,
+      contains("!('activeJoinCode' in data) || data.activeJoinCode == null"),
+    );
     expect(rules, contains('data.deletedAt == null'));
     expect(rules, contains('data.lastActivityAt == request.time'));
     expect(

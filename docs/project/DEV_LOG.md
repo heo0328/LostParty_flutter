@@ -2436,3 +2436,10 @@
 - Character 상세 UI의 역할 선택 여부도 같은 정책을 사용하도록 중복 직업 목록을 제거했다.
 - 딜러 전용 직업의 탐지 결과가 `unsupportedClass`이고 관련 4티어 노드가 없어도 dealer 갱신이 성공하는 회귀 테스트를 추가했다.
 - 역할 정책·Coordinator·Character 상세 ViewModel 표적 테스트 22개와 전체 자동 회귀 899개가 통과했다. analyze는 신규 문제 없이 기존 21개 항목만 보고한다. 수정본 실기기 재검증은 계속 필요하다.
+
+## 2026-09-06 그룹 생성 payload 하위 호환 복구
+
+- `firebase-debug.log`에서 최신 Rules 배포가 두 차례 모두 HTTP 503으로 종료돼 운영 Rules가 갱신되지 않은 사실을 확인했다.
+- J 작업이 최초 그룹 문서에 추가한 `activeJoinCode: null`이 기존 운영 Rules allowlist에 막혀 그룹 생성 전체가 `permission-denied`가 되는 직접 원인이었다.
+- 최초 생성 payload에서 불필요한 `activeJoinCode`를 제거하고 최신 Rules는 해당 필드의 미존재/null을 모두 허용하도록 최소 변경했다. 레이드 생성 및 다른 그룹 생성 계약은 수정하지 않았다.
+- 그룹 생성·Rules 표적 테스트 41개와 전체 자동 회귀 899개가 통과했다. analyze는 신규 문제 없이 기존 21개 항목만 보고한다.
