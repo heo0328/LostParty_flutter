@@ -19,6 +19,15 @@
 
 아래 §1~§9는 A~G 교류 직전 설계·구현 이력이다. 제품 방향과 충돌하면 **본 절과 NEXT_WORK가 우선**한다.
 
+### 0.1 방향 전환 구현 구간
+
+- A 공통 기준: `CharacterUsageLevelPolicy`의 단일 1700 경계를 나이스단과 앱 실행 갱신 대상 판정이 공유한다. `StartupCharacterRefreshEligibilityPolicy`는 active 소유권·서버 Character ID·원정대 소속·레벨 조건을 만족하는 본·부계정 등록 Character만 고른다.
+- B 교류 제거: 파티·그룹 후보 prefetch, 명령 직전 갱신과 확인 다이얼로그만 제거하고 기존 명령 검증은 보존한다.
+- C 시작 갱신: 앱 수명당 한 번 실행하는 조정기와 캐릭터별 실패 격리를 구현한다.
+- D 로딩·상태: 내 레이드 현황 초기 로딩 완료 장벽과 내 계정 탭 인디케이터를 연결한다.
+- E 내 계정 UI: 인증·조회·부계정 추가 영역을 압축한다.
+- F 통합 검증: 자동 회귀 후 여러 실제 사용자 계정과 직업 Character로 표기를 확인한다.
+
 ## 1. 목적과 현재 결정
 
 LOSTPARTY에서 사용하는 활동 Character가 그룹·파티 등 다른 사용자와 교류하기 직전에 최신 Lost Ark Armory 정보를 확보한다. 기존 로컬 Build Snapshot, Firestore Character 최소 표시값, 그룹 membership Snapshot, 파티 신청·참가 Snapshot 구조는 유지한다.

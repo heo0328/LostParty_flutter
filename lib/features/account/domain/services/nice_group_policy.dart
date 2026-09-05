@@ -1,10 +1,13 @@
 import '../entities/local_game_account.dart';
 import '../entities/nice_group_policy_result.dart';
+import 'character_usage_level_policy.dart';
 
 class NiceGroupPolicy {
-  const NiceGroupPolicy();
+  const NiceGroupPolicy({
+    this.usageLevelPolicy = const CharacterUsageLevelPolicy(),
+  });
 
-  static const minimumItemLevel = 1700.0;
+  final CharacterUsageLevelPolicy usageLevelPolicy;
   static const minimumCharacterCount = 2;
 
   NiceGroupPolicyResult evaluate(Iterable<LocalGameAccount> accounts) {
@@ -12,7 +15,7 @@ class NiceGroupPolicy {
     for (final account in accounts) {
       for (final character in account.characters) {
         if (character.isRosterMissing ||
-            (character.itemLevel ?? -1) < minimumItemLevel) {
+            !usageLevelPolicy.isInUsageRange(character.itemLevel)) {
           continue;
         }
         final className = character.characterClassName.trim().toLowerCase();
