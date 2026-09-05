@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:drift/native.dart';
+import 'package:lost_party/features/account/data/local/account_database.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_draft.dart';
@@ -18,6 +20,8 @@ import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_active
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_application_command.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_event.dart';
+import 'package:lost_party/features/raid_status/domain/services/party_event_sync_service.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_create_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_cycle_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_visibility_command.dart';
@@ -54,6 +58,8 @@ void main() {
     RecruitmentLeaderCandidateService? candidateService,
     GroupReadRepository? groupReadRepository,
     String? playerId,
+    AccountDatabase? accountDatabase,
+    PartyEventSyncService? eventSyncService,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -73,6 +79,8 @@ void main() {
           candidateService: candidateService,
           groupReadRepository: groupReadRepository,
           playerId: playerId,
+          accountDatabase: accountDatabase,
+          eventSyncService: eventSyncService,
         ),
       ),
     );
@@ -164,6 +172,39 @@ void main() {
     expect(find.textContaining('전투력 300,000'), findsOneWidget);
     expect(find.textContaining('조회 전용'), findsOneWidget);
     expect(find.byKey(const ValueKey('openApplicationButton')), findsNothing);
+  });
+
+  testWidgets('방 진입 즉시 이벤트를 읽음 처리하고 구성 옆 팝업에 표시한다', (tester) async {
+    final database = AccountDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    await database.syncPartyNotificationReceipt(
+      eventId: 'event-room',
+      playerId: 'player-1',
+      type: PartyEventType.memberJoined.wireName,
+      recruitmentId: 'recruitment-1',
+      characterNameSnapshot: '새멤버',
+      occurredAt: DateTime.utc(2026, 8, 26, 12),
+      expiresAt: DateTime.utc(2026, 9, 23),
+    );
+
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      members: Stream.value(const PartyReadSnapshot(items: [], isFromCache: false)),
+      playerId: 'player-1',
+      accountDatabase: database,
+      eventSyncService: const _NoopEventSyncService(),
+    );
+    await tester.pumpAndSettle();
+
+    final rows = await database.loadRecentPartyNotifications('player-1');
+    expect(rows.single.readAt, isNotNull);
+    await tester.tap(find.byKey(const ValueKey('roomEventHistoryButton')));
+    await tester.pumpAndSettle();
+    expect(find.text('이벤트 히스토리'), findsOneWidget);
+    expect(find.text('새멤버님이 파티에 참가했습니다.'), findsOneWidget);
   });
 
   testWidgets('모집 중이면 지원하기를 표시한다', (tester) async {
@@ -1953,4 +1994,12 @@ class _GroupMembers extends Fake implements GroupReadRepository {
         revision: 1,
       ),
   ];
+}
+
+class _NoopEventSyncService implements PartyEventSyncService {
+  const _NoopEventSyncService();
+
+  @override
+  Future<PartyEventSyncResult> sync() async =>
+      const PartyEventSyncResult.success(0);
 }

@@ -9,6 +9,8 @@ import '../../../../shared/formatters/korea_time_formatter.dart';
 import '../../../../shared/game_catalog/domain/entities/game_catalog.dart';
 import '../../../../shared/game_catalog/domain/services/class_synergy_service.dart';
 import '../../../recruitment_list/domain/entities/party_application_command.dart';
+import '../../../account/data/local/account_database.dart';
+import '../../../recruitment_list/domain/entities/party_event.dart';
 import '../../../recruitment_list/domain/entities/party_create_command.dart';
 import '../../../recruitment_list/domain/entities/party_cycle_command.dart';
 import '../../../recruitment_list/domain/entities/party_join_command.dart';
@@ -30,6 +32,8 @@ import '../../../recruitment_list/domain/services/group_raid_qualification.dart'
 import '../../../recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
 import '../../../group/domain/repositories/group_read_repository.dart';
 import '../../domain/services/party_event_sync_service.dart';
+import '../party_notification_message.dart';
+import '../viewmodels/party_notification_view_model.dart';
 import '../viewmodels/party_read_detail_view_model.dart';
 
 class PartyReadDetailPage extends StatefulWidget {
@@ -42,6 +46,7 @@ class PartyReadDetailPage extends StatefulWidget {
     this.cycleCommandRepository,
     this.visibilityCommandRepository,
     this.eventSyncService,
+    this.accountDatabase,
     this.candidateService,
     this.groupReadRepository,
     this.playerId,
@@ -56,6 +61,7 @@ class PartyReadDetailPage extends StatefulWidget {
   final PartyCycleCommandRepository? cycleCommandRepository;
   final PartyVisibilityCommandRepository? visibilityCommandRepository;
   final PartyEventSyncService? eventSyncService;
+  final AccountDatabase? accountDatabase;
   final RecruitmentLeaderCandidateService? candidateService;
   final GroupReadRepository? groupReadRepository;
   final String? playerId;
@@ -90,6 +96,8 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
   Set<String> _lostGroupQualificationPlayerIds = const {};
   String? _qualificationLookupKey;
   int _qualificationLookupGeneration = 0;
+  List<PartyNotificationItem> _roomEvents = const [];
+  bool _roomEventsLoading = false;
 
   bool get _canApplicantAction =>
       widget.candidateService != null &&
@@ -111,6 +119,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
           widget.partyReadRepository.watchRecruitment(widget.recruitmentId),
     );
     _bindDetailSubscriptions();
+    unawaited(_initializeRoomEvents());
   }
 
   @override
@@ -125,6 +134,88 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     }
     _bindDetailSubscriptions(
       restartRecruitment: recruitmentChanged || repositoryChanged,
+    );
+    if (recruitmentChanged || playerChanged) {
+      unawaited(_initializeRoomEvents());
+    }
+  }
+
+  static final List<String> _roomEventTypes = PartyEventType.values
+      .where((type) => type.isRoomAttentionEvent)
+      .map((type) => type.wireName)
+      .toList(growable: false);
+
+  Future<void> _initializeRoomEvents() async {
+    final database = widget.accountDatabase;
+    final playerId = widget.playerId;
+    if (database == null || playerId == null || playerId.isEmpty) return;
+    if (mounted) setState(() => _roomEventsLoading = true);
+    await widget.eventSyncService?.sync();
+    await database.markPartyRoomNotificationsRead(
+      playerId: playerId,
+      recruitmentId: widget.recruitmentId,
+      types: _roomEventTypes,
+    );
+    final rows = await database.loadRecentPartyNotifications(
+      playerId,
+      limit: null,
+    );
+    if (!mounted) return;
+    setState(() {
+      _roomEvents = [
+        for (final row in rows)
+          if (row.recruitmentId == widget.recruitmentId &&
+              PartyEventType.tryParse(row.type)?.isRoomAttentionEvent == true)
+            PartyNotificationItem(
+              eventId: row.eventId,
+              type: row.type,
+              recruitmentId: row.recruitmentId,
+              message: PartyNotificationMessage.format(
+                type: row.type,
+                characterNameSnapshot: row.characterNameSnapshot,
+              ),
+              occurredAt: row.occurredAt,
+              isRead: true,
+              route: '',
+            ),
+      ];
+      _roomEventsLoading = false;
+    });
+  }
+
+  Future<void> _showRoomEvents() {
+    return showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('이벤트 히스토리'),
+        content: SizedBox(
+          width: 420,
+          child: _roomEventsLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _roomEvents.isEmpty
+              ? const Text('이 방에서 확인할 이벤트가 없습니다.')
+              : ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: _roomEvents.length,
+                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final item = _roomEvents[index];
+                    return ListTile(
+                      key: ValueKey('roomEvent_${item.eventId}'),
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(item.message),
+                      subtitle: Text(_roomEventOccurredAt(item.occurredAt)),
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -594,6 +685,9 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                   loading: _membersLoading,
                   failure: _membersFailure,
                   isFromCache: _membersFromCache,
+                  onOpenNotifications: widget.accountDatabase == null
+                      ? null
+                      : _showRoomEvents,
                 ),
                 if (_isLeader(summary))
                   _PendingApplicationsSection(
@@ -1499,6 +1593,7 @@ class _PartyCompositionSection extends StatelessWidget {
     required this.isFromCache,
     this.lostGroupQualificationPlayerIds = const {},
     this.showThisWeekRaidComplete = false,
+    this.onOpenNotifications,
   });
 
   /// 파티 그룹 2열 후보 breakpoint. 기기 종류가 아니라 가용 폭만 본다.
@@ -1514,6 +1609,7 @@ class _PartyCompositionSection extends StatelessWidget {
   final bool loading;
   final PartyReadFailureType? failure;
   final bool isFromCache;
+  final VoidCallback? onOpenNotifications;
 
   @override
   Widget build(BuildContext context) {
@@ -1529,8 +1625,7 @@ class _PartyCompositionSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text('파티 구성', style: theme.textTheme.titleMedium),
               if (showThisWeekRaidComplete) ...[
@@ -1545,6 +1640,15 @@ class _PartyCompositionSection extends StatelessWidget {
                   ),
                 ),
               ],
+              const Spacer(),
+              if (onOpenNotifications != null)
+                IconButton(
+                  key: const ValueKey('roomEventHistoryButton'),
+                  tooltip: '이벤트 히스토리',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onOpenNotifications,
+                  icon: const Icon(Icons.notifications_outlined),
+                ),
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -1627,6 +1731,15 @@ class _PartyCompositionSection extends StatelessWidget {
       ),
     );
   }
+}
+
+String _roomEventOccurredAt(DateTime value) {
+  final local = value.toLocal();
+  final month = local.month.toString().padLeft(2, '0');
+  final day = local.day.toString().padLeft(2, '0');
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+  return '${local.year}-$month-$day $hour:$minute';
 }
 
 bool _slotLostGroupQualification(

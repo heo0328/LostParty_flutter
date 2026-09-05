@@ -454,6 +454,7 @@ GoRouter createAppRouter({
                               firebaseAuth: FirebaseAuth.instance,
                             ),
                         eventSyncService: partyEventSyncServiceOrDefault,
+                        accountDatabase: accountDatabase,
                         candidateService: recruitmentLeaderCandidateService,
                         groupReadRepository: groupReadRepositoryForRoute(),
                         playerId: playerSession.playerId,

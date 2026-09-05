@@ -441,19 +441,19 @@ class AccountDatabase extends _$AccountDatabase {
 
   Future<List<PartyNotificationReceipt>> loadRecentPartyNotifications(
     String playerId, {
-    int limit = 20,
+    int? limit = 20,
     DateTime? now,
-  }) {
+  }) async {
     final cutoff = (now ?? DateTime.now()).toUtc();
-    return (select(partyNotificationReceipts)
-          ..where(
-            (table) =>
-                table.playerId.equals(playerId) &
-                table.expiresAt.isBiggerThanValue(cutoff),
-          )
-          ..orderBy([(table) => OrderingTerm.desc(table.occurredAt)])
-          ..limit(limit))
-        .get();
+    final query = select(partyNotificationReceipts)
+      ..where(
+        (table) =>
+            table.playerId.equals(playerId) &
+            table.expiresAt.isBiggerThanValue(cutoff),
+      )
+      ..orderBy([(table) => OrderingTerm.desc(table.occurredAt)]);
+    if (limit != null) query.limit(limit);
+    return query.get();
   }
 
   Future<int> countUnreadPartyNotifications(
@@ -480,6 +480,28 @@ class AccountDatabase extends _$AccountDatabase {
         readAt: Value(readAt ?? DateTime.now().toUtc()),
       ),
     );
+  }
+
+  /// 모집방 상세 진입 시 방 단위 확인 대상 이벤트를 한 번에 읽음 처리한다.
+  Future<int> markPartyRoomNotificationsRead({
+    required String playerId,
+    required String recruitmentId,
+    required List<String> types,
+    DateTime? readAt,
+  }) {
+    if (types.isEmpty) return Future.value(0);
+    return (update(partyNotificationReceipts)..where(
+          (table) =>
+              table.playerId.equals(playerId) &
+              table.recruitmentId.equals(recruitmentId) &
+              table.type.isIn(types) &
+              table.readAt.isNull(),
+        ))
+        .write(
+          PartyNotificationReceiptsCompanion(
+            readAt: Value(readAt ?? DateTime.now().toUtc()),
+          ),
+        );
   }
 
   Future<void> _createServerIdIndexes() async {

@@ -31,6 +31,13 @@ enum PartyEventType {
   bool get isNotificationCandidate =>
       this != PartyEventType.memberMoved && this != PartyEventType.partyEnded;
 
+  /// 레이드 현황 카드와 모집 상세에서 방 단위로 확인하는 이벤트다.
+  bool get isRoomAttentionEvent =>
+      this == PartyEventType.applicationSubmitted ||
+      this == PartyEventType.memberJoined ||
+      this == PartyEventType.memberKicked ||
+      this == PartyEventType.memberCharacterChanged;
+
   static PartyEventType? tryParse(String? value) {
     if (value == null || value.isEmpty) return null;
     for (final type in PartyEventType.values) {

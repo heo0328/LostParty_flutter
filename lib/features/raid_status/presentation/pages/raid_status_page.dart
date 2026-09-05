@@ -11,6 +11,7 @@ import '../../../account/domain/repositories/activity_characters_repository.dart
 import '../../../group/domain/repositories/group_character_search_repository.dart';
 import '../../../group/domain/repositories/group_read_repository.dart';
 import '../../../recruitment_list/domain/entities/party_read_models.dart';
+import '../../../recruitment_list/domain/entities/party_event.dart';
 import '../../../recruitment_list/domain/entities/party_recruitment.dart';
 import '../../../recruitment_list/domain/entities/recruitment_aggregate.dart';
 import '../../../recruitment_list/domain/entities/recruitment_application.dart';
@@ -62,6 +63,7 @@ class _RaidStatusPageState extends State<RaidStatusPage>
   late final RaidHistoryViewModel _history;
   late final TabController _tabController;
   var _unreadCount = 0;
+  Map<String, int> _roomUnreadCounts = const {};
   var _supplementalInitialLoadComplete = false;
   var _firstFrameRendered = false;
   var _initialLoadReported = false;
@@ -125,11 +127,30 @@ class _RaidStatusPageState extends State<RaidStatusPage>
 
   Future<void> _refreshUnread() async {
     try {
-      final count = await widget.accountDatabase.countUnreadPartyNotifications(
+      final rows = await widget.accountDatabase.loadRecentPartyNotifications(
         widget.playerId,
+        limit: null,
       );
+      var count = 0;
+      final roomCounts = <String, int>{};
+      for (final row in rows) {
+        if (row.readAt != null) continue;
+        final type = PartyEventType.tryParse(row.type);
+        if (type?.isRoomAttentionEvent == true) {
+          roomCounts.update(
+            row.recruitmentId,
+            (value) => value + 1,
+            ifAbsent: () => 1,
+          );
+        } else {
+          count++;
+        }
+      }
       if (!mounted) return;
-      setState(() => _unreadCount = count);
+      setState(() {
+        _unreadCount = count;
+        _roomUnreadCounts = roomCounts;
+      });
     } catch (error, stackTrace) {
       debugPrint('읽지 않은 알림 수 조회 실패: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -207,7 +228,11 @@ class _RaidStatusPageState extends State<RaidStatusPage>
               context: context,
               viewModel: _activeRaids,
             ),
-            onOpenRaid: (id) => context.push('/raid-status/$id'),
+            onOpenRaid: (id) async {
+              await context.push('/raid-status/$id');
+              await _refreshUnread();
+            },
+            unreadCounts: _roomUnreadCounts,
           ),
           _PartyReadTab<PartyApplicationSummary>(
             key: const ValueKey('pendingRaidsPage'),
@@ -236,12 +261,14 @@ class _ActiveRaidsTab extends StatelessWidget {
     required this.viewModel,
     required this.onOpenFilter,
     required this.onOpenRaid,
+    required this.unreadCounts,
     super.key,
   });
 
   final ActiveRaidFilterViewModel viewModel;
   final VoidCallback onOpenFilter;
   final ValueChanged<String> onOpenRaid;
+  final Map<String, int> unreadCounts;
 
   @override
   Widget build(BuildContext context) {
@@ -314,6 +341,7 @@ class _ActiveRaidsTab extends StatelessWidget {
               final item = state.items[index];
               return _ActiveRaidCard(
                 summary: item,
+                unreadCount: unreadCounts[item.id] ?? 0,
                 onOpen: () => onOpenRaid(item.id),
               );
             },
@@ -470,24 +498,35 @@ class _RaidHistoryTab extends StatelessWidget {
 }
 
 class _ActiveRaidCard extends StatelessWidget {
-  const _ActiveRaidCard({required this.summary, required this.onOpen});
+  const _ActiveRaidCard({
+    required this.summary,
+    required this.unreadCount,
+    required this.onOpen,
+  });
 
   final ActiveRaidSummary summary;
+  final int unreadCount;
   final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      key: ValueKey(summary.id),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: InkWell(
-        onTap: onOpen,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Card(
+          key: ValueKey(summary.id),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: InkWell(
+            onTap: onOpen,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -559,10 +598,21 @@ class _ActiveRaidCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall,
               ),
-            ],
+                ],
+              ),
+            ),
           ),
         ),
-      ),
+        if (unreadCount > 0)
+          Positioned(
+            left: 10,
+            top: 0,
+            child: Badge(
+              key: ValueKey('raidRoomUnreadBadge_${summary.id}'),
+              label: Text(unreadCount > 99 ? '99+' : '$unreadCount'),
+            ),
+          ),
+      ],
     );
   }
 }

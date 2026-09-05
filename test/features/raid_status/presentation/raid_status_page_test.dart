@@ -18,6 +18,7 @@ import 'package:lost_party/features/raid_status/domain/repositories/raid_status_
 import 'package:lost_party/features/raid_status/presentation/pages/party_read_detail_page.dart';
 import 'package:lost_party/features/raid_status/presentation/pages/raid_status_page.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_read_models.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_event.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_aggregate.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_application.dart';
@@ -153,6 +154,36 @@ void main() {
     expect(find.text('이슈아이'), findsOneWidget);
     expect(find.text('파티장 이슈아이 · 기상술사'), findsNothing);
     expect(find.text('진행 중인 레이드가 없습니다.'), findsNothing);
+  });
+
+  testWidgets('진행 중 카드에 방별 읽지 않은 이벤트 수를 표시한다', (tester) async {
+    final database = AccountDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    for (var index = 0; index < 2; index++) {
+      await database.syncPartyNotificationReceipt(
+        eventId: 'room-event-$index',
+        playerId: 'player-1',
+        type: PartyEventType.applicationSubmitted.wireName,
+        recruitmentId: 'recruitment-1',
+        occurredAt: DateTime.utc(2026, 8, 26, 12, index),
+        expiresAt: DateTime.utc(2026, 9, 23),
+      );
+    }
+
+    await pumpPage(
+      tester,
+      database: database,
+      activeRaids: Stream.value(
+        PartyReadSnapshot(items: [_activeRaid()], isFromCache: false),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final badge = find.byKey(
+      const ValueKey('raidRoomUnreadBadge_recruitment-1'),
+    );
+    expect(badge, findsOneWidget);
+    expect(find.descendant(of: badge, matching: find.text('2')), findsOneWidget);
   });
 
   testWidgets('진행 중 카드에 남은 자리와 제한을 한 줄로 표시한다', (tester) async {
