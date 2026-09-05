@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import '../viewmodels/group_character_options.dart';
 import '../viewmodels/group_join_code_view_model.dart';
-import '../widgets/group_character_refresh_guard.dart';
 
 /// 계약 §8.7. 정확한 초대코드와 인증 Character로 즉시 가입한다.
 class GroupJoinByCodePage extends StatefulWidget {
@@ -24,7 +23,6 @@ class _GroupJoinByCodePageState extends State<GroupJoinByCodePage> {
   List<GroupCharacterOption>? _options;
   bool _busy = false;
   String? _message;
-  int _selectionGeneration = 0;
 
   @override
   void initState() {
@@ -123,21 +121,6 @@ class _GroupJoinByCodePageState extends State<GroupJoinByCodePage> {
       _busy = true;
       _message = null;
     });
-    final generation = ++_selectionGeneration;
-    final refresh = await widget.viewModel.ensureFresh(
-      character,
-      generation: generation,
-    );
-    if (!mounted ||
-        !await confirmGroupCharacterRefresh(
-          context,
-          refresh,
-          characterId: character.localCharacterId,
-          generation: _selectionGeneration,
-        )) {
-      if (mounted) setState(() => _busy = false);
-      return;
-    }
     final result = await widget.viewModel.join(
       code: _codeController.text,
       character: character,

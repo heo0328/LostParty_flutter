@@ -17,8 +17,6 @@ import '../../domain/repositories/group_read_repository.dart';
 import '../../domain/services/activity_display_characters.dart';
 import '../../domain/services/group_join_command_validator.dart';
 import 'group_character_options.dart';
-import '../../domain/services/group_character_refresh_service.dart';
-import '../../../account/domain/entities/character_auto_refresh_result.dart';
 
 const _validator = GroupJoinCommandValidator();
 
@@ -121,53 +119,10 @@ class GroupRequestsViewModel {
   const GroupRequestsViewModel({
     required this.readRepository,
     required this.commandRepository,
-    this.accountRepository,
-    this.activityCharactersRepository,
-    this.playerId,
-    this.characterRefreshService,
   });
 
   final GroupReadRepository readRepository;
   final GroupJoinCommandRepository commandRepository;
-  final AccountRepository? accountRepository;
-  final ActivityCharactersRepository? activityCharactersRepository;
-  final String? playerId;
-  final GroupCharacterRefreshService? characterRefreshService;
-
-  Future<({CharacterAutoRefreshResult? result, int characterId, bool found})>
-  ensureInvitationFresh(
-    GroupRelation relation, {
-    required int generation,
-  }) async {
-    if (accountRepository == null || characterRefreshService == null) {
-      return (result: null, characterId: -1, found: true);
-    }
-    final options = await GroupCharacterOptionLoader(
-      accountRepository: accountRepository!,
-      activityCharactersRepository: activityCharactersRepository,
-      playerId: playerId,
-      characterRefreshService: characterRefreshService,
-    ).load();
-    final character = options.where(
-      (option) => option.characterName == relation.displayCharacterNameSnapshot,
-    ).firstOrNull;
-    if (character == null) {
-      return (result: null, characterId: -1, found: false);
-    }
-    return (
-      result: await characterRefreshService!.ensureFresh(
-        GroupCharacterRefreshTarget(
-          localCharacterId: character.localCharacterId,
-          characterName: character.characterName,
-          className: character.className,
-          role: character.preferredRole,
-          generation: generation,
-        ),
-      ),
-      characterId: character.localCharacterId,
-      found: true,
-    );
-  }
 
   Stream<GroupReadSnapshot<GroupRelation>> watchMyRequests(String playerId) =>
       readRepository.watchMyRequests(playerId);
@@ -195,7 +150,6 @@ class GroupMembershipActionViewModel {
     this.combatPowerSyncGateway,
     this.activityCharactersRepository,
     this.playerId,
-    this.characterRefreshService,
   });
 
   final AccountRepository accountRepository;
@@ -205,7 +159,6 @@ class GroupMembershipActionViewModel {
   final CharacterCombatPowerSyncGateway? combatPowerSyncGateway;
   final ActivityCharactersRepository? activityCharactersRepository;
   final String? playerId;
-  final GroupCharacterRefreshService? characterRefreshService;
 
   Future<GroupRelation?> loadMyRelation({
     required String playerId,
@@ -223,7 +176,6 @@ class GroupMembershipActionViewModel {
   }) async {
     var syncFailed = false;
     try {
-      await loadAuthenticatedCharacters();
       final localDisplays = await GroupLocalMemberDisplayLookup(
         accountRepository: accountRepository,
         activityCharactersRepository: activityCharactersRepository,
@@ -304,37 +256,7 @@ class GroupMembershipActionViewModel {
         accountRepository: accountRepository,
         activityCharactersRepository: activityCharactersRepository,
         playerId: playerId,
-        characterRefreshService: characterRefreshService,
       ).load();
-
-  Future<CharacterAutoRefreshResult?> ensureFresh(
-    GroupCharacterOption character, {
-    required int generation,
-  }) async => characterRefreshService?.ensureFresh(
-    GroupCharacterRefreshTarget(
-      localCharacterId: character.localCharacterId,
-      characterName: character.characterName,
-      className: character.className,
-      role: character.preferredRole,
-      generation: generation,
-    ),
-  ) ?? Future.value(null);
-
-  Future<({CharacterAutoRefreshResult? result, int characterId, bool found})>
-  ensureInvitationFresh(GroupRelation relation, {required int generation}) async {
-    final options = await loadAuthenticatedCharacters();
-    final character = options.where(
-      (option) => option.characterName == relation.displayCharacterNameSnapshot,
-    ).firstOrNull;
-    if (character == null) {
-      return (result: null, characterId: -1, found: characterRefreshService == null);
-    }
-    return (
-      result: await ensureFresh(character, generation: generation),
-      characterId: character.localCharacterId,
-      found: true,
-    );
-  }
 
   Future<GroupJoinCommandResult> apply({
     required String groupId,
