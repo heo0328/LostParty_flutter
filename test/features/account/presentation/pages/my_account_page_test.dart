@@ -12,6 +12,65 @@ import 'package:lost_party/shared/lost_ark_api/auth/api_token.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token_store.dart';
 
 void main() {
+  testWidgets('모바일 폭에서 인증과 조회 액션을 두 개의 compact 행으로 배치한다', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MyAccountPage(
+          apiTokenStore: _InMemoryApiTokenStore(),
+          accountRepository: _FakeAccountRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final setupActions = find.byKey(const ValueKey('accountSetupActions'));
+    expect(
+      find.descendant(
+        of: setupActions,
+        matching: find.byKey(const ValueKey('apiTokenSettingsButton')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: setupActions,
+        matching: find.byKey(const ValueKey('gameAccountVerificationButton')),
+      ),
+      findsOneWidget,
+    );
+
+    final lookupActions = find.byKey(const ValueKey('accountLookupActions'));
+    expect(
+      find.descendant(
+        of: lookupActions,
+        matching: find.byKey(
+          const ValueKey('representativeCharacterNameField'),
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: lookupActions,
+        matching: find.byKey(const ValueKey('loadAccountDataButton')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: lookupActions,
+        matching: find.byKey(const ValueKey('addSubAccountButton')),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shows a verification badge for a server-bound account', (
     WidgetTester tester,
   ) async {
