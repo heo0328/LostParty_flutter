@@ -8,7 +8,6 @@ import '../../../../shared/raid_catalog/domain/policies/raid_eligibility_policy.
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 import '../../../group/domain/entities/group_relation.dart';
 import '../../../group/domain/repositories/group_read_repository.dart';
-import '../../../account/domain/entities/character_auto_refresh_result.dart';
 import '../../domain/entities/party_create_command.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/entities/recruitment_aggregate.dart';
@@ -20,7 +19,6 @@ import '../../domain/repositories/party_create_repository.dart';
 import '../../domain/services/recruitment_command_service.dart';
 import '../../domain/services/recruitment_application_candidate_service.dart';
 import '../../domain/services/recruitment_leader_candidate_service.dart';
-import '../../domain/services/party_character_refresh_service.dart';
 import '../../domain/state/recruitment_state_machine.dart';
 import '../models/candidate_build_display_model.dart';
 import '../models/recruitment_form_draft.dart';
@@ -36,7 +34,6 @@ class RecruitmentCreatePage extends StatefulWidget {
     this.playerId,
     this.newRecruitmentId,
     this.cycleKey,
-    this.characterRefreshService,
     super.key,
   });
   final RaidCatalogRepository catalogRepository;
@@ -47,7 +44,6 @@ class RecruitmentCreatePage extends StatefulWidget {
   final String? playerId;
   final String Function()? newRecruitmentId;
   final String? cycleKey;
-  final PartyCharacterRefreshService? characterRefreshService;
   @override
   State<RecruitmentCreatePage> createState() => _RecruitmentCreatePageState();
 }
@@ -69,7 +65,6 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
   RecruitmentFormDraft _draft = const RecruitmentFormDraft.empty();
   bool _loading = true;
   bool _saving = false;
-  int _selectionGeneration = 0;
   String? _loadError;
   _RaidAudience _audience = _RaidAudience.general;
   bool _groupOnly = true;
@@ -687,84 +682,6 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     ].where((value) => value.isNotEmpty).join('\n');
   }
 
-  Future<RecruitmentLeaderRoleOption?> _ensureFreshLeader(
-    RecruitmentLeaderCandidate leader,
-    RaidDifficultyDefinition difficulty,
-  ) async {
-    final service = widget.characterRefreshService;
-    final current = leader.optionFor(_role);
-    if (service == null || current == null) return current;
-    final generation = ++_selectionGeneration;
-    final result = await service.ensureFresh(
-      PartyCharacterRefreshTarget(
-        localCharacterId: leader.localCharacterId,
-        characterName: leader.characterId,
-        className: leader.className,
-        role: _role,
-        generation: generation,
-      ),
-    );
-    if (!mounted ||
-        !result.matchesSelection(
-          selectedCharacterId: leader.localCharacterId,
-          currentGeneration: _selectionGeneration,
-        )) {
-      return null;
-    }
-    if (result.expectedRoleChanged) {
-      _showRefreshMessage('새 세팅의 역할이 선택한 역할과 달라 다시 선택해야 합니다.');
-      return null;
-    }
-    if (result.status == CharacterAutoRefreshStatus.blocked) {
-      _showRefreshMessage(result.message ?? '캐릭터 정보를 갱신하지 못했습니다.');
-      return null;
-    }
-    if (result.requiresConfirmation) {
-      final proceed = await _confirmStaleSnapshot(result.lastSuccessfulAt);
-      if (proceed != true || !mounted) return null;
-    }
-    final snapshot = result.snapshot;
-    final option = RecruitmentLeaderRoleOption(
-      role: _role,
-      itemLevel: snapshot?.itemLevel ?? current.itemLevel,
-      combatPower: snapshot?.combatPower ?? current.combatPower,
-      rejectionReasons: current.rejectionReasons,
-    );
-    if ((option.itemLevel ?? 0) < difficulty.minItemLevel ||
-        (_normalizedMinCombatPower != null &&
-            (option.combatPower ?? 0) < _normalizedMinCombatPower!)) {
-      _showRefreshMessage('갱신된 캐릭터 정보가 모집 최소 조건을 충족하지 않습니다.');
-      return null;
-    }
-    return option;
-  }
-
-  Future<bool?> _confirmStaleSnapshot(DateTime? capturedAt) => showDialog<bool>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: const Text('최근 저장 정보로 계속할까요?'),
-      content: Text(
-        capturedAt == null
-            ? '현재 정보를 갱신하지 못했습니다. 저장된 정보로 계속할 수 있습니다.'
-            : '현재 정보를 갱신하지 못했습니다. ${capturedAt.toLocal()}에 저장된 정보로 계속할 수 있습니다.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext, false),
-          child: const Text('취소'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(dialogContext, true),
-          child: const Text('계속'),
-        ),
-      ],
-    ),
-  );
-
-  void _showRefreshMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
-
   Future<void> _save() async {
     if (_saving) return;
     if (!_formKey.currentState!.validate()) return;
@@ -784,6 +701,15 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     }
     final raid = _raid!;
     final difficulty = _difficulty!;
+    final selectedOption = leader.optionFor(_role)!;
+    if ((selectedOption.itemLevel ?? 0) < difficulty.minItemLevel ||
+        (_normalizedMinCombatPower != null &&
+            (selectedOption.combatPower ?? 0) < _normalizedMinCombatPower!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('선택한 캐릭터가 모집 최소 조건을 충족하지 않습니다.')),
+      );
+      return;
+    }
     var cancelPendingApplications = false;
     if (widget.partyCreateRepository == null) {
       final pendingCount = await widget.commandService.countPendingApplications(
@@ -819,11 +745,6 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       }
     }
     setState(() => _saving = true);
-    final refreshedOption = await _ensureFreshLeader(leader, difficulty);
-    if (refreshedOption == null) {
-      if (mounted) setState(() => _saving = false);
-      return;
-    }
     final approval = switch (_draft.approvalMode) {
       ApprovalMode.leaderOnly => const ApprovalPolicy.leaderOnly(),
       ApprovalMode.directJoin => const ApprovalPolicy.directJoin(),
@@ -855,7 +776,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
         leader: leader,
         approval: approval,
         raid: raid,
-        refreshedOption: refreshedOption,
+        selectedOption: selectedOption,
       );
       return;
     }
@@ -865,8 +786,8 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       leaderCharacterId: leader.characterId,
       leaderClassName: leader.className,
       leaderRole: _role,
-      leaderItemLevel: refreshedOption.itemLevel,
-      leaderCombatPower: refreshedOption.combatPower,
+      leaderItemLevel: selectedOption.itemLevel,
+      leaderCombatPower: selectedOption.combatPower,
       approvalPolicy: approval,
       compositionPolicy: PartyCompositionPolicy(
         RecruitmentPartyRules.fromRaid(raid),
@@ -898,10 +819,10 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     required RecruitmentLeaderCandidate leader,
     required ApprovalPolicy approval,
     required RaidDefinition raid,
-    required RecruitmentLeaderRoleOption refreshedOption,
+    required RecruitmentLeaderRoleOption selectedOption,
   }) async {
     final serverCharacterId = leader.serverCharacterId;
-    final itemLevel = refreshedOption.itemLevel;
+    final itemLevel = selectedOption.itemLevel;
     if (serverCharacterId == null ||
         serverCharacterId.isEmpty ||
         itemLevel == null) {
@@ -927,7 +848,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
         leaderClassName: leader.className,
         leaderRole: _role,
         leaderItemLevel: itemLevel,
-        leaderCombatPower: refreshedOption.combatPower,
+        leaderCombatPower: selectedOption.combatPower,
         approvalPolicy: approval,
         compositionRules: RecruitmentPartyRules.fromRaid(raid),
         cycleKey: cycleKey,

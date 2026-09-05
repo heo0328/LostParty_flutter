@@ -15,7 +15,6 @@ import '../viewmodels/group_character_options.dart';
 import '../viewmodels/group_join_code_view_model.dart';
 import '../viewmodels/group_join_view_model.dart';
 import '../viewmodels/group_read_view_model.dart';
-import '../widgets/group_character_refresh_guard.dart';
 
 /// 기본 상세는 계약 §4.2 공개 필드만 읽는다. 멤버·요청 관리 읽기는 후속 단위다.
 /// 행동 버튼은 내 `groupRelations` Projection 한 건으로만 결정한다.
@@ -53,7 +52,6 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
   bool _busy = false;
   bool _refreshing = false;
   bool _loadingPlayerCharacters = false;
-  int _selectionGeneration = 0;
 
   @override
   void initState() {
@@ -255,30 +253,6 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
 
   Future<void> _decide(GroupRelation relation, bool accept) async {
     setState(() => _busy = true);
-    if (accept) {
-      final generation = ++_selectionGeneration;
-      final refresh = await widget.actionViewModel.ensureInvitationFresh(
-        relation,
-        generation: generation,
-      );
-      if (!refresh.found) {
-        if (mounted) {
-          setState(() => _busy = false);
-          _showMessage('초대에 사용된 본인 캐릭터를 확인할 수 없습니다.');
-        }
-        return;
-      }
-      if (!mounted ||
-          !await confirmGroupCharacterRefresh(
-            context,
-            refresh.result,
-            characterId: refresh.characterId,
-            generation: _selectionGeneration,
-          )) {
-        if (mounted) setState(() => _busy = false);
-        return;
-      }
-    }
     final result = accept
         ? await widget.actionViewModel.acceptInvitation(relation)
         : await widget.actionViewModel.rejectInvitation(relation);
@@ -330,21 +304,6 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     );
     if (character == null || !mounted) return;
     setState(() => _busy = true);
-    final generation = ++_selectionGeneration;
-    final refresh = await widget.actionViewModel.ensureFresh(
-      character,
-      generation: generation,
-    );
-    if (!mounted ||
-        !await confirmGroupCharacterRefresh(
-          context,
-          refresh,
-          characterId: character.localCharacterId,
-          generation: _selectionGeneration,
-        )) {
-      if (mounted) setState(() => _busy = false);
-      return;
-    }
     final result = await widget.actionViewModel.apply(
       groupId: widget.groupId,
       character: character,

@@ -12,7 +12,6 @@ import '../../features/account/data/gateways/local_game_account_verification_gat
 import '../../features/account/data/gateways/firestore_account_ownership_status_gateway.dart';
 import '../../features/account/data/gateways/firestore_character_summary_sync_gateway.dart';
 import '../../features/account/data/gateways/firestore_character_combat_power_sync_gateway.dart';
-import '../../features/account/data/gateways/firestore_character_minimum_display_sync_gateway.dart';
 import '../../features/account/data/gateways/firestore_representative_character_sync_gateway.dart';
 import '../../features/account/data/mappers/sibling_character_mapper.dart';
 import '../../features/account/data/repositories/firestore_weekly_raid_claim_repository.dart';
@@ -34,8 +33,6 @@ import '../../features/account/data/repositories/firestore_activity_characters_r
 import '../../features/account/domain/repositories/activity_characters_repository.dart';
 import '../../features/account/domain/repositories/representative_character_sync_gateway.dart';
 import '../../features/account/domain/services/character_summary_sync_service.dart';
-import '../../features/account/domain/services/character_auto_refresh_coordinator.dart';
-import '../../features/account/domain/services/character_minimum_display_sync_service.dart';
 import '../../features/account/domain/services/representative_character_sync_service.dart';
 import '../../features/player/domain/entities/player_session.dart';
 import '../../features/group/data/repositories/firestore_group_application_command_repository.dart';
@@ -51,7 +48,6 @@ import '../../features/group/domain/repositories/group_join_code_command_reposit
 import '../../features/group/domain/repositories/group_join_command_repository.dart';
 import '../../features/group/domain/repositories/group_read_repository.dart';
 import '../../features/group/domain/services/group_local_member_display_lookup.dart';
-import '../../features/group/domain/services/group_character_refresh_service.dart';
 import '../../features/group/presentation/pages/group_applications_page.dart';
 import '../../features/group/presentation/pages/group_create_page.dart';
 import '../../features/group/presentation/pages/group_detail_page.dart';
@@ -82,7 +78,6 @@ import '../../features/raid_status/presentation/pages/party_notifications_page.d
 import '../../features/raid_status/presentation/pages/party_read_detail_page.dart';
 import '../../features/raid_status/presentation/pages/raid_status_page.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_application_command_repository.dart';
-import '../../features/recruitment_list/domain/services/party_character_refresh_service.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_create_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_cycle_command_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_visibility_command_repository.dart';
@@ -234,30 +229,6 @@ GoRouter createAppRouter({
           firebaseAuth: FirebaseAuth.instance,
         ),
   );
-  final characterAutoRefreshCoordinator = CharacterAutoRefreshCoordinator(
-    accountRepository: accountRepository,
-    minimumDisplaySync: Firebase.apps.isEmpty
-        ? null
-        : CharacterMinimumDisplaySyncService(
-            accountRepository: accountRepository,
-            gateway: FirestoreCharacterMinimumDisplaySyncGateway(
-              firestore: FirebaseFirestore.instance,
-              firebaseAuth: FirebaseAuth.instance,
-            ),
-          ),
-  );
-  final partyCharacterRefreshService = PartyCharacterRefreshService(
-    coordinator: characterAutoRefreshCoordinator,
-    accountRepository: accountRepository,
-    settingsRepository: niceGroupSettingsRepository,
-    playerId: playerSession.playerId,
-  );
-  final groupCharacterRefreshService = GroupCharacterRefreshService(
-    coordinator: characterAutoRefreshCoordinator,
-    accountRepository: accountRepository,
-    settingsRepository: niceGroupSettingsRepository,
-    playerId: playerSession.playerId,
-  );
   final activityCharactersRepositoryOrDefault =
       activityCharactersRepository ??
       FirestoreActivityCharactersRepository(
@@ -364,7 +335,6 @@ GoRouter createAppRouter({
     claimPlayerId: playerSession.playerId,
     activityCharactersRepository: activityCharactersRepositoryOrDefault,
     conflictPolicy: participationConflictPolicy,
-    characterRefreshService: partyCharacterRefreshService,
   );
   final recruitmentLeaderCandidateService = RecruitmentLeaderCandidateService(
     accountRepository: accountRepository,
@@ -377,7 +347,6 @@ GoRouter createAppRouter({
     claimPlayerId: playerSession.playerId,
     activityCharactersRepository: activityCharactersRepositoryOrDefault,
     conflictPolicy: participationConflictPolicy,
-    characterRefreshService: partyCharacterRefreshService,
   );
 
   return GoRouter(
@@ -457,7 +426,6 @@ GoRouter createAppRouter({
                         candidateService: recruitmentLeaderCandidateService,
                         groupReadRepository: groupReadRepositoryForRoute(),
                         playerId: playerSession.playerId,
-                        characterRefreshService: partyCharacterRefreshService,
                       );
                     },
                   ),
@@ -560,7 +528,6 @@ GoRouter createAppRouter({
                           .doc()
                           .id,
                       cycleKey: currentCycleKey,
-                      characterRefreshService: partyCharacterRefreshService,
                     ),
                   ),
                   GoRoute(
@@ -587,11 +554,6 @@ GoRouter createAppRouter({
                   requestsViewModel: GroupRequestsViewModel(
                     readRepository: groupReadRepositoryForRoute(),
                     commandRepository: groupJoinCommandRepositoryForRoute(),
-                    accountRepository: accountRepository,
-                    activityCharactersRepository:
-                        activityCharactersRepositoryOrDefault,
-                    playerId: playerSession.playerId,
-                    characterRefreshService: groupCharacterRefreshService,
                   ),
                   applicationsViewModel: groupApplicationsViewModelForRoute(),
                   playerId: playerSession.playerId,
@@ -606,7 +568,6 @@ GoRouter createAppRouter({
                         activityCharactersRepository:
                             activityCharactersRepositoryOrDefault,
                         playerId: playerSession.playerId,
-                        characterRefreshService: groupCharacterRefreshService,
                       ),
                     ),
                   ),
@@ -628,7 +589,6 @@ GoRouter createAppRouter({
                         activityCharactersRepository:
                             activityCharactersRepositoryOrDefault,
                         playerId: playerSession.playerId,
-                        characterRefreshService: groupCharacterRefreshService,
                       ),
                     ),
                   ),
@@ -649,7 +609,6 @@ GoRouter createAppRouter({
                         activityCharactersRepository:
                             activityCharactersRepositoryOrDefault,
                         playerId: playerSession.playerId,
-                        characterRefreshService: groupCharacterRefreshService,
                         readRepository: groupReadRepositoryForRoute(),
                         commandRepository: groupJoinCommandRepositoryForRoute(),
                         characterSearchRepository:

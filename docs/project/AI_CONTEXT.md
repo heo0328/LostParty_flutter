@@ -8,7 +8,8 @@
 - 앱 실행 갱신 대상은 인증·active 소유권·원정대 소속을 만족하는 등록 Character 중 공통 사용 레벨 이상이며 현재 기준은 1700이다. 이 값은 나이스단 판정과 공유하고 중복 하드 코딩하지 않는다.
 - 내 레이드 현황 초기 로딩과 첫 렌더링 이후 비차단으로 한 번 실행하며, 하단 두 번째 내 계정 탭에 통신 중 인디케이터를 표시한다. 내 계정 첫 화면의 토큰/인증, Character 조회, 부계정 추가 UI도 실제 Character 현황 중심으로 압축한다.
 - 자동 테스트와 별도로 다양한 실제 사용자 계정에서 직업별 역할·아이템 레벨·전투력·보석 표기를 확인해야 한다.
-- 방향 전환 A 완료: 공통 `CharacterUsageLevelPolicy`와 순수 `StartupCharacterRefreshEligibilityPolicy`를 추가했고 나이스단이 같은 레벨 정책을 사용한다. 아직 교류 갱신 제거와 앱 시작 연결은 하지 않았다. 다음은 B다.
+- 방향 전환 A 완료: 공통 `CharacterUsageLevelPolicy`와 순수 `StartupCharacterRefreshEligibilityPolicy`를 추가했고 나이스단이 같은 레벨 정책을 사용한다.
+- 방향 전환 B 완료: 파티·그룹 교류 시점의 후보 prefetch, 명령 직전 갱신, 확인 다이얼로그와 전용 서비스 주입을 제거했다. 기존 명령 조건·revision·중복 실행 방지, Coordinator와 서버 최소 Snapshot 자산은 유지했다. 다음은 C 앱 실행 1회 조정기다.
 
 ## 최우선 현재 상태 — 교류 행동 기반 Character 자동 갱신 G 자동 회귀 (2026-09-04)
 

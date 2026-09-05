@@ -28,8 +28,6 @@ import '../../../recruitment_list/domain/repositories/party_visibility_command_r
 import '../../../recruitment_list/domain/entities/party_membership_command.dart';
 import '../../../recruitment_list/domain/services/group_raid_qualification.dart';
 import '../../../recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
-import '../../../recruitment_list/domain/services/party_character_refresh_service.dart';
-import '../../../account/domain/entities/character_auto_refresh_result.dart';
 import '../../../group/domain/repositories/group_read_repository.dart';
 import '../../domain/services/party_event_sync_service.dart';
 import '../viewmodels/party_read_detail_view_model.dart';
@@ -47,7 +45,6 @@ class PartyReadDetailPage extends StatefulWidget {
     this.candidateService,
     this.groupReadRepository,
     this.playerId,
-    this.characterRefreshService,
     super.key,
   });
 
@@ -62,7 +59,6 @@ class PartyReadDetailPage extends StatefulWidget {
   final RecruitmentLeaderCandidateService? candidateService;
   final GroupReadRepository? groupReadRepository;
   final String? playerId;
-  final PartyCharacterRefreshService? characterRefreshService;
 
   @override
   State<PartyReadDetailPage> createState() => _PartyReadDetailPageState();
@@ -94,7 +90,6 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
   Set<String> _lostGroupQualificationPlayerIds = const {};
   String? _qualificationLookupKey;
   int _qualificationLookupGeneration = 0;
-  int _selectionGeneration = 0;
 
   bool get _canApplicantAction =>
       widget.candidateService != null &&
@@ -360,22 +355,17 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     if (selected == null || !mounted) return;
 
     setState(() => _submitting = true);
-    final refreshed = await _ensureFreshSelection(selected, summary);
-    if (refreshed == null) {
-      if (mounted) setState(() => _submitting = false);
-      return;
-    }
     if (isDirectJoin) {
       final result = await widget.joinCommandRepository!.joinDirectly(
         PartyDirectJoinCommand(
           recruitmentId: widget.recruitmentId,
-          characterId: refreshed.serverCharacterId,
-          role: refreshed.role,
+          characterId: selected.serverCharacterId,
+          role: selected.role,
           cycleKey: summary.targetCycleKey.isNotEmpty
               ? summary.targetCycleKey
               : summary.currentCycleKey,
           expectedRecruitmentRevision: summary.revision,
-          combatPower: refreshed.combatPower,
+          combatPower: selected.combatPower,
         ),
       );
       if (!mounted) return;
@@ -395,12 +385,12 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     final result = await widget.applicationCommandRepository!.apply(
       PartyApplyCommand(
         recruitmentId: widget.recruitmentId,
-        characterId: refreshed.serverCharacterId,
-        requestedRole: refreshed.role,
+        characterId: selected.serverCharacterId,
+        requestedRole: selected.role,
         cycleKey: summary.targetCycleKey.isNotEmpty
             ? summary.targetCycleKey
             : summary.currentCycleKey,
-        combatPower: refreshed.combatPower,
+        combatPower: selected.combatPower,
       ),
     );
     if (!mounted) return;
@@ -736,77 +726,6 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       (summary.isCycleActive ||
           (summary.continueTogether && summary.isCycleCompleted));
 
-  Future<_ApplySelection?> _ensureFreshSelection(
-    _ApplySelection selected,
-    PublicRecruitmentSummary summary,
-  ) async {
-    final service = widget.characterRefreshService;
-    if (service == null) return selected;
-    final generation = ++_selectionGeneration;
-    final result = await service.ensureFresh(
-      PartyCharacterRefreshTarget(
-        localCharacterId: selected.localCharacterId,
-        characterName: selected.characterName,
-        className: selected.className,
-        role: selected.role,
-        generation: generation,
-      ),
-    );
-    if (!mounted ||
-        !result.matchesSelection(
-          selectedCharacterId: selected.localCharacterId,
-          currentGeneration: _selectionGeneration,
-        )) {
-      return null;
-    }
-    if (result.expectedRoleChanged) {
-      _showRefreshMessage('새 세팅의 역할이 선택한 역할과 달라 다시 선택해야 합니다.');
-      return null;
-    }
-    if (result.status == CharacterAutoRefreshStatus.blocked) {
-      _showRefreshMessage(result.message ?? '캐릭터 정보를 갱신하지 못했습니다.');
-      return null;
-    }
-    if (result.requiresConfirmation) {
-      final proceed = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('최근 저장 정보로 계속할까요?'),
-          content: const Text(
-            '현재 정보를 갱신하지 못했습니다. 마지막으로 저장된 캐릭터 정보로 계속할 수 있습니다.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('취소'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('계속'),
-            ),
-          ],
-        ),
-      );
-      if (proceed != true || !mounted) return null;
-    }
-    final snapshot = result.snapshot;
-    final refreshed = selected.copyWith(
-      itemLevel: snapshot?.itemLevel,
-      combatPower: snapshot?.combatPower,
-    );
-    if ((refreshed.itemLevel ?? 0) < summary.metadata.minItemLevel ||
-        (summary.metadata.minCombatPower != null &&
-            (refreshed.combatPower ?? 0) < summary.metadata.minCombatPower!)) {
-      _showRefreshMessage('갱신된 캐릭터 정보가 모집 최소 조건을 충족하지 않습니다.');
-      return null;
-    }
-    return refreshed;
-  }
-
-  void _showRefreshMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
-
   Future<void> _openChangeCharacterSheet(
     PublicRecruitmentSummary summary,
   ) async {
@@ -896,18 +815,13 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     }
 
     setState(() => _submitting = true);
-    final refreshed = await _ensureFreshSelection(selected, summary);
-    if (refreshed == null) {
-      if (mounted) setState(() => _submitting = false);
-      return;
-    }
     final result = await repository.changeCharacter(
       PartyChangeCharacterCommand(
         recruitmentId: widget.recruitmentId,
-        newCharacterId: refreshed.serverCharacterId,
-        newRole: refreshed.role,
+        newCharacterId: selected.serverCharacterId,
+        newRole: selected.role,
         expectedRecruitmentRevision: summary.revision,
-        combatPower: refreshed.combatPower,
+        combatPower: selected.combatPower,
       ),
     );
     if (!mounted) return;
@@ -2335,33 +2249,14 @@ class _ApplicationActions extends StatelessWidget {
 
 class _ApplySelection {
   const _ApplySelection({
-    required this.localCharacterId,
-    required this.characterName,
-    required this.className,
     required this.serverCharacterId,
     required this.role,
-    this.itemLevel,
     this.combatPower,
   });
 
-  final int localCharacterId;
-  final String characterName;
-  final String className;
   final String serverCharacterId;
   final PartyRole role;
-  final double? itemLevel;
   final double? combatPower;
-
-  _ApplySelection copyWith({double? itemLevel, double? combatPower}) =>
-      _ApplySelection(
-        localCharacterId: localCharacterId,
-        characterName: characterName,
-        className: className,
-        serverCharacterId: serverCharacterId,
-        role: role,
-        itemLevel: itemLevel ?? this.itemLevel,
-        combatPower: combatPower ?? this.combatPower,
-      );
 }
 
 class _CycleLifecycleSection extends StatelessWidget {
@@ -2666,12 +2561,8 @@ class _ChangeCharacterCandidateSheet extends StatelessWidget {
               onTap: () => Navigator.pop(
                 context,
                 _ApplySelection(
-                  localCharacterId: entry.candidate.localCharacterId,
-                  characterName: entry.candidate.characterId,
-                  className: entry.candidate.className,
                   serverCharacterId: entry.candidate.serverCharacterId!,
                   role: entry.option.role,
-                  itemLevel: entry.option.itemLevel,
                   combatPower: entry.option.combatPower,
                 ),
               ),
@@ -2715,12 +2606,8 @@ class _ApplyCandidateSheet extends StatelessWidget {
                 onTap: () => Navigator.pop(
                   context,
                   _ApplySelection(
-                    localCharacterId: candidate.localCharacterId,
-                    characterName: candidate.characterId,
-                    className: candidate.className,
                     serverCharacterId: candidate.serverCharacterId!,
                     role: option.role,
-                    itemLevel: option.itemLevel,
                     combatPower: option.combatPower,
                   ),
                 ),

@@ -8,7 +8,6 @@ import '../../domain/repositories/group_read_repository.dart';
 import '../viewmodels/group_application_view_model.dart';
 import '../viewmodels/group_join_view_model.dart';
 import '../viewmodels/group_read_view_model.dart';
-import '../widgets/group_character_refresh_guard.dart';
 
 /// 그룹 첫 화면. 계약 §11에 따라 `내 그룹`이 기본이며 `요청 현황`을 별도 탭으로 둔다.
 class GroupTabPage extends StatelessWidget {
@@ -155,7 +154,6 @@ class _GroupRequestsTabState extends State<_GroupRequestsTab> {
   late final Stream<GroupReadSnapshot<GroupRelation>> _requests = widget
       .viewModel
       .watchMyRequests(widget.playerId);
-  int _selectionGeneration = 0;
   bool _busy = false;
 
   @override
@@ -227,32 +225,6 @@ class _GroupRequestsTabState extends State<_GroupRequestsTab> {
   Future<void> _decide(GroupRelation relation, {required bool accept}) async {
     if (_busy) return;
     setState(() => _busy = true);
-    if (accept) {
-      final generation = ++_selectionGeneration;
-      final refresh = await widget.viewModel.ensureInvitationFresh(
-        relation,
-        generation: generation,
-      );
-      if (!refresh.found) {
-        if (mounted) {
-          setState(() => _busy = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('초대에 사용된 본인 캐릭터를 확인할 수 없습니다.')),
-          );
-        }
-        return;
-      }
-      if (!mounted ||
-          !await confirmGroupCharacterRefresh(
-            context,
-            refresh.result,
-            characterId: refresh.characterId,
-            generation: _selectionGeneration,
-          )) {
-        if (mounted) setState(() => _busy = false);
-        return;
-      }
-    }
     final result = accept
         ? await widget.viewModel.acceptInvitation(relation)
         : await widget.viewModel.rejectInvitation(relation);

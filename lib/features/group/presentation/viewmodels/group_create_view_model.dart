@@ -5,8 +5,6 @@ import '../../domain/entities/group_create_result.dart';
 import '../../domain/repositories/group_create_repository.dart';
 import '../../domain/services/group_name_normalizer.dart';
 import 'group_character_options.dart';
-import '../../domain/services/group_character_refresh_service.dart';
-import '../../../account/domain/entities/character_auto_refresh_result.dart';
 
 export 'group_character_options.dart' show GroupCharacterOption;
 
@@ -16,7 +14,6 @@ class GroupCreateViewModel {
     required this.createRepository,
     this.activityCharactersRepository,
     this.playerId,
-    this.characterRefreshService,
     this.normalizer = const GroupNameNormalizer(),
   });
 
@@ -24,7 +21,6 @@ class GroupCreateViewModel {
   final GroupCreateRepository createRepository;
   final ActivityCharactersRepository? activityCharactersRepository;
   final String? playerId;
-  final GroupCharacterRefreshService? characterRefreshService;
   final GroupNameNormalizer normalizer;
 
   Future<List<GroupCharacterOption>> loadAuthenticatedCharacters() =>
@@ -32,21 +28,7 @@ class GroupCreateViewModel {
         accountRepository: accountRepository,
         activityCharactersRepository: activityCharactersRepository,
         playerId: playerId,
-        characterRefreshService: characterRefreshService,
       ).load();
-
-  Future<CharacterAutoRefreshResult?> ensureFresh(
-    GroupCharacterOption character, {
-    required int generation,
-  }) async => characterRefreshService?.ensureFresh(
-    GroupCharacterRefreshTarget(
-      localCharacterId: character.localCharacterId,
-      characterName: character.characterName,
-      className: character.className,
-      role: character.preferredRole,
-      generation: generation,
-    ),
-  ) ?? Future.value(null);
 
   String defaultNameFor(GroupCharacterOption option) =>
       normalizer.defaultName(option.characterName);
