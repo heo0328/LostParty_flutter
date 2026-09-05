@@ -46,6 +46,9 @@ class StartupCharacterRefreshItemResult {
   final Object? error;
 
   bool get isSuccess => error == null && result?.canProceed == true;
+
+  String get failureReason =>
+      result?.message ?? error?.toString() ?? '알 수 없는 갱신 오류';
 }
 
 class StartupCharacterRefreshReport {
@@ -188,7 +191,16 @@ class StartupCharacterRefreshOrchestrator
                 !niceGroupRefreshEnabled,
           ).then((item) {
             completedCount++;
-            if (!item.isSuccess) failedCount++;
+            if (!item.isSuccess) {
+              failedCount++;
+              // 자동 갱신은 화면을 막지 않으므로 기기 로그에 Character별 원인을 남긴다.
+              // 수동 갱신은 같은 값을 완료 안내에도 표시한다.
+              // ignore: avoid_print
+              print(
+                'Character refresh failed: '
+                '${item.character.characterName} - ${item.failureReason}',
+              );
+            }
             _emit(
               StartupCharacterRefreshState(
                 phase: StartupCharacterRefreshPhase.running,

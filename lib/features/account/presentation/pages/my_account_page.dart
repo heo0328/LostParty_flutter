@@ -318,12 +318,21 @@ class _MyAccountPageState extends State<MyAccountPage> {
     await _viewModel.loadStoredAccount();
     if (!mounted) return;
     setState(() => _manualRefreshRunning = false);
+    final failures = report.items.where((item) => !item.isSuccess).toList();
+    final failureDetails = failures
+        .take(3)
+        .map(
+          (item) =>
+              '${item.character.characterName}: ${item.failureReason}',
+        )
+        .join('\n');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           report.failedCount == 0
               ? '${report.totalCount}개 캐릭터 정보를 갱신했습니다.'
-              : '${report.totalCount}개 중 ${report.failedCount}개를 갱신하지 못했습니다.',
+              : '${report.totalCount}개 중 ${report.failedCount}개를 갱신하지 못했습니다.'
+                    '${failureDetails.isEmpty ? '' : '\n$failureDetails'}',
         ),
       ),
     );

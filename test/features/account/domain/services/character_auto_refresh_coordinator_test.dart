@@ -148,7 +148,7 @@ void main() {
   );
 
   test(
-    'does not save an invalid role, gem target, or tier-four match',
+    'blocks an invalid role or tier-four match but keeps analysis warnings',
     () async {
       final repository = _FakeAccountRepository()
         ..draftFactory = (id) => _draft(
@@ -169,7 +169,14 @@ void main() {
           _draft(id, analysis: _analysis(unknownGem: true));
       expect(
         (await coordinator.ensureFresh(_request(2))).status,
-        CharacterAutoRefreshStatus.blocked,
+        CharacterAutoRefreshStatus.refreshed,
+      );
+
+      repository.draftFactory = (id) =>
+          _draft(id, analysis: _analysis(inactiveArkGrid: true));
+      expect(
+        (await coordinator.ensureFresh(_request(4))).status,
+        CharacterAutoRefreshStatus.refreshed,
       );
 
       repository.draftFactory = (id) =>
@@ -178,7 +185,7 @@ void main() {
         (await coordinator.ensureFresh(_request(3))).status,
         CharacterAutoRefreshStatus.blocked,
       );
-      expect(repository.commitCount, 0);
+      expect(repository.commitCount, 2);
     },
   );
 
@@ -317,6 +324,7 @@ CharacterBuildAnalysis _analysis({
   CharacterBuildDetectionStatus detectionStatus =
       CharacterBuildDetectionStatus.detected,
   bool unknownGem = false,
+  bool inactiveArkGrid = false,
   bool includeTierFour = true,
 }) {
   return CharacterBuildAnalysis(
@@ -332,7 +340,16 @@ CharacterBuildAnalysis _analysis({
             : GemSkillCategory.passiveOrIdentity,
       ),
     ],
-    arkGridConditions: const [],
+    arkGridConditions: inactiveArkGrid
+        ? const [
+            ArkGridConditionCheck(
+              coreName: '코어',
+              conditionText: '조건',
+              requiredPassiveNames: ['패시브'],
+              missingPassiveNames: ['패시브'],
+            ),
+          ]
+        : const [],
     arkGridCorePoints: const [],
     notices: const [],
     catalogDetection: CharacterBuildCatalogDetection(

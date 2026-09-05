@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import '../entities/character_auto_refresh_result.dart';
-import '../entities/character_build_analysis.dart';
 import '../entities/character_build_catalog_detection.dart';
 import '../entities/character_build_draft.dart';
 import '../entities/character_build_snapshot.dart';
@@ -258,14 +257,6 @@ class CharacterAutoRefreshCoordinator implements CharacterAutoRefreshGateway {
     CharacterBuildRole? expectedRole,
   ) {
     final analysis = draft.analysis;
-    if (analysis.gemEffects.any(
-      (effect) => effect.category == GemSkillCategory.unknown,
-    )) {
-      return const _DraftValidation(message: '확인되지 않은 보석 대상이 있습니다.');
-    }
-    if (analysis.arkGridConditions.any((condition) => !condition.isSatisfied)) {
-      return const _DraftValidation(message: '아크그리드 발동 조건이 현재 세팅과 다릅니다.');
-    }
     final detection = analysis.catalogDetection;
     if (detection == null ||
         detection.status == CharacterBuildDetectionStatus.unsupportedClass) {
