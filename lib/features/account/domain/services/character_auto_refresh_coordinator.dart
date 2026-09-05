@@ -28,7 +28,13 @@ class CharacterAutoRefreshRequest {
   final bool force;
 }
 
-class CharacterAutoRefreshCoordinator {
+abstract interface class CharacterAutoRefreshGateway {
+  Future<CharacterAutoRefreshResult> prefetch(
+    CharacterAutoRefreshRequest request,
+  );
+}
+
+class CharacterAutoRefreshCoordinator implements CharacterAutoRefreshGateway {
   CharacterAutoRefreshCoordinator({
     required AccountRepository accountRepository,
     CharacterMinimumDisplaySyncService? minimumDisplaySync,
@@ -55,6 +61,7 @@ class CharacterAutoRefreshCoordinator {
   final List<_RefreshJob> _prefetchQueue = [];
   int _running = 0;
 
+  @override
   Future<CharacterAutoRefreshResult> prefetch(
     CharacterAutoRefreshRequest request,
   ) => _schedule(request, CharacterRefreshPriority.prefetch);
