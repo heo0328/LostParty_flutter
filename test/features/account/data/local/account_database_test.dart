@@ -544,6 +544,50 @@ void main() {
     expect(snapshots.map((snapshot) => snapshot.role), ['dealer', 'support']);
   });
 
+  test('다른 역할 갱신이 선호 역할의 대표 전투력을 덮어쓰지 않는다', () async {
+    final fetchedAt = DateTime.utc(2026, 9, 5);
+    await database.saveMainAccountSnapshot(
+      lookupCharacterName: '조회캐릭터',
+      characters: [_snapshot('조회캐릭터', fetchedAt)],
+    );
+    final character = await database
+        .select(database.accountCharacters)
+        .getSingle();
+    await database.setPreferredCharacterRole(
+      characterId: character.id,
+      role: 'support',
+    );
+    await database.commitCharacterBuildSnapshot(
+      characterId: character.id,
+      characterName: character.characterName,
+      serverName: character.serverName,
+      characterLevel: character.characterLevel,
+      characterClassName: character.characterClassName,
+      role: 'support',
+      rawJson: '{"role":"support"}',
+      itemLevel: 1766.66,
+      combatPower: 250000,
+      capturedAt: fetchedAt,
+    );
+    await database.commitCharacterBuildSnapshot(
+      characterId: character.id,
+      characterName: character.characterName,
+      serverName: character.serverName,
+      characterLevel: character.characterLevel,
+      characterClassName: character.characterClassName,
+      role: 'dealer',
+      rawJson: '{"role":"dealer"}',
+      itemLevel: 1766.66,
+      combatPower: 400000,
+      capturedAt: fetchedAt.add(const Duration(minutes: 1)),
+    );
+
+    final stored = await database
+        .select(database.accountCharacters)
+        .getSingle();
+    expect(stored.combatPower, 250000);
+  });
+
   test('replaces only the snapshot for the same role', () async {
     final fetchedAt = DateTime.utc(2026, 8, 20);
     await database.saveMainAccountSnapshot(

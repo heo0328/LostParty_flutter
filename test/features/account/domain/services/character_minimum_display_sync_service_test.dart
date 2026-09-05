@@ -17,10 +17,7 @@ void main() {
       localCharacterId: 1,
       snapshot: _snapshot(),
     );
-    expect(
-      result.status,
-      CharacterMinimumDisplaySyncStatus.skippedUnlinked,
-    );
+    expect(result.status, CharacterMinimumDisplaySyncStatus.skippedUnlinked);
   });
 
   test('값이 없으면 게이트 요청을 보내지 않는다', () async {
@@ -75,16 +72,35 @@ void main() {
     expect(result.status, CharacterMinimumDisplaySyncStatus.failed);
     expect(result.isSuccess, isFalse);
   });
+
+  test('최근 갱신 역할 대신 선호 역할 Snapshot 전투력을 서버 대표값으로 보낸다', () async {
+    final gateway = _Gateway();
+    final service = CharacterMinimumDisplaySyncService(
+      accountRepository: _Accounts(
+        preferredRole: CharacterBuildRole.support,
+        builds: [_snapshot(combatPower: 250000)],
+      ),
+      gateway: gateway,
+    );
+
+    await service.syncSnapshot(
+      localCharacterId: 1,
+      snapshot: _snapshot(role: CharacterBuildRole.dealer, combatPower: 400000),
+    );
+
+    expect(gateway.calls.single.combatPower, 250000);
+  });
 }
 
 CharacterBuildSnapshot _snapshot({
   double? itemLevel = 1700,
   double? combatPower = 300000,
+  CharacterBuildRole role = CharacterBuildRole.support,
 }) {
   return CharacterBuildSnapshot(
     id: 1,
     characterId: 1,
-    role: CharacterBuildRole.support,
+    role: role,
     rawJson: '{}',
     itemLevel: itemLevel,
     combatPower: combatPower,
@@ -101,8 +117,14 @@ CharacterBuildSnapshot _snapshot({
 }
 
 class _Accounts extends Fake implements AccountRepository {
-  _Accounts({this.serverCharacterId = 'character-1'});
+  _Accounts({
+    this.serverCharacterId = 'character-1',
+    this.preferredRole,
+    this.builds = const [],
+  });
   final String? serverCharacterId;
+  final CharacterBuildRole? preferredRole;
+  final List<CharacterBuildSnapshot> builds;
 
   @override
   Future<List<LocalGameAccount>> loadAccounts() async => [
@@ -126,10 +148,16 @@ class _Accounts extends Fake implements AccountRepository {
           combatPower: 300000,
           isVisible: true,
           displayOrder: 0,
+          preferredRole: preferredRole,
         ),
       ],
     ),
   ];
+
+  @override
+  Future<List<CharacterBuildSnapshot>> loadCharacterBuildSnapshots(
+    int characterId,
+  ) async => builds;
 }
 
 class _Gateway implements CharacterMinimumDisplaySyncGateway {

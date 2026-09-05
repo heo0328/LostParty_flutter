@@ -10,7 +10,12 @@ import 'package:lost_party/features/account/domain/services/startup_character_re
 void main() {
   test('앱 수명 동안 같은 실행 Future를 재사용하고 각 Character를 한 번만 요청한다', () async {
     final repository = _FakeAccountRepository([
-      _account(characters: [_character(1), _character(2, className: '도화가')]),
+      _account(
+        characters: [
+          _character(1),
+          _character(2, className: '도화가'),
+        ],
+      ),
     ]);
     final gateway = _FakeRefreshGateway();
     final orchestrator = _orchestrator(
@@ -84,7 +89,8 @@ void main() {
       isTrue,
     );
     expect(
-      gateway.requests.singleWhere((request) => request.characterId == 3)
+      gateway.requests
+          .singleWhere((request) => request.characterId == 3)
           .excludedFromAutoRefresh,
       isFalse,
     );
@@ -109,9 +115,7 @@ void main() {
     await orchestrator.runOnce();
 
     expect(
-      gateway.requests.every(
-        (request) => !request.excludedFromAutoRefresh,
-      ),
+      gateway.requests.every((request) => !request.excludedFromAutoRefresh),
       isTrue,
     );
     await orchestrator.dispose();
@@ -181,6 +185,30 @@ void main() {
     expect(report.fatalError, isA<StateError>());
     expect(orchestrator.state.phase, StartupCharacterRefreshPhase.completed);
     expect(orchestrator.state.failedCount, 1);
+    await orchestrator.dispose();
+  });
+
+  test('수동 갱신은 나이스단을 제외하고 TTL을 우회하는 강제 요청을 보낸다', () async {
+    final gateway = _FakeRefreshGateway();
+    final orchestrator = _orchestrator(
+      repository: _FakeAccountRepository([
+        _account(
+          characters: [
+            _character(1, className: '바드'),
+            _character(2, className: '바드'),
+            _character(3, className: '도화가'),
+          ],
+        ),
+      ]),
+      gateway: gateway,
+    );
+
+    final report = await orchestrator.runManualExcludingNiceGroup();
+
+    expect(report.totalCount, 1);
+    expect(gateway.requests.single.characterId, 3);
+    expect(gateway.requests.single.force, isTrue);
+    expect(gateway.requests.single.excludedFromAutoRefresh, isFalse);
     await orchestrator.dispose();
   });
 }

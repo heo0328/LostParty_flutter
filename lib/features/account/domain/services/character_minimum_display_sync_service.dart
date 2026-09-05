@@ -18,15 +18,18 @@ class CharacterMinimumDisplaySyncService {
     required int localCharacterId,
     required CharacterBuildSnapshot snapshot,
   }) async {
-    final itemLevel = snapshot.itemLevel;
-    final combatPower = snapshot.combatPower;
+    final context = await _displayContext(localCharacterId, snapshot);
+    final itemLevel = context.snapshot.itemLevel;
+    final combatPower = context.useCombatPower
+        ? context.snapshot.combatPower
+        : null;
     if (itemLevel == null && combatPower == null) {
       return const CharacterMinimumDisplaySyncResult(
         status: CharacterMinimumDisplaySyncStatus.skippedNoValues,
       );
     }
 
-    final serverCharacterId = await _serverCharacterId(localCharacterId);
+    final serverCharacterId = context.serverCharacterId;
     if (serverCharacterId == null) {
       return const CharacterMinimumDisplaySyncResult(
         status: CharacterMinimumDisplaySyncStatus.skippedUnlinked,
@@ -55,17 +58,54 @@ class CharacterMinimumDisplaySyncService {
     }
   }
 
-  Future<String?> _serverCharacterId(int localCharacterId) async {
+  Future<
+    ({
+      String? serverCharacterId,
+      CharacterBuildSnapshot snapshot,
+      bool useCombatPower,
+    })
+  >
+  _displayContext(
+    int localCharacterId,
+    CharacterBuildSnapshot refreshedSnapshot,
+  ) async {
     for (final account in await _accountRepository.loadAccounts()) {
       for (final character in account.characters) {
         if (character.id != localCharacterId) continue;
         final serverCharacterId = character.serverCharacterId?.trim();
-        if (serverCharacterId == null || serverCharacterId.isEmpty) {
-          return null;
+        var displaySnapshot = refreshedSnapshot;
+        var useCombatPower = true;
+        final preferredRole = character.preferredRole;
+        if (preferredRole != null && refreshedSnapshot.role != preferredRole) {
+          final preferredSnapshots =
+              (await _accountRepository.loadCharacterBuildSnapshots(
+                    localCharacterId,
+                  ))
+                  .where((candidate) => candidate.role == preferredRole)
+                  .toList()
+                ..sort(
+                  (left, right) => right.capturedAt.compareTo(left.capturedAt),
+                );
+          if (preferredSnapshots.isNotEmpty) {
+            displaySnapshot = preferredSnapshots.first;
+          } else {
+            useCombatPower = false;
+          }
         }
-        return serverCharacterId;
+        return (
+          serverCharacterId:
+              serverCharacterId == null || serverCharacterId.isEmpty
+              ? null
+              : serverCharacterId,
+          snapshot: displaySnapshot,
+          useCombatPower: useCombatPower,
+        );
       }
     }
-    return null;
+    return (
+      serverCharacterId: null,
+      snapshot: refreshedSnapshot,
+      useCombatPower: true,
+    );
   }
 }

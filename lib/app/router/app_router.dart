@@ -484,6 +484,12 @@ GoRouter createAppRouter({
                   cycleEndsAt: currentCycle.endsAt,
                   weeklyRaidClaimCommandRepository:
                       weeklyRaidClaimCommandRepositoryOrDefault,
+                  manualCharacterRefreshRunner:
+                      startupCharacterRefreshRunnerOrDefault
+                              is ManualCharacterRefreshRunner
+                          ? startupCharacterRefreshRunnerOrDefault
+                                as ManualCharacterRefreshRunner
+                          : null,
                 ),
                 routes: [
                   GoRoute(

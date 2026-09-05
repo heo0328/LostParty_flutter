@@ -677,7 +677,10 @@ class AccountDatabase extends _$AccountDatabase {
           characterLevel: Value(characterLevel),
           characterClassName: Value(characterClassName),
           itemLevel: Value(itemLevel),
-          combatPower: Value(combatPower),
+          combatPower:
+              character.preferredRole == null || character.preferredRole == role
+              ? Value(combatPower)
+              : const Value.absent(),
         ),
       );
     });

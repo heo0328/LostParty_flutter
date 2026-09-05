@@ -79,6 +79,7 @@ class MyAccountViewModel extends ChangeNotifier {
   final Set<String> _busyClaimKeys = <String>{};
   Map<int, CharacterWeeklyRaidDisplayPreference> _weeklyRaidDisplayPreferences =
       const {};
+  Map<int, double?> _preferredCombatPowers = const {};
 
   bool get isLoadingTokenStatus => _isLoadingTokenStatus;
   bool get isFetchingCharacters => _isFetchingCharacters;
@@ -95,6 +96,13 @@ class MyAccountViewModel extends ChangeNotifier {
       if (account.isMain) return account;
     }
     return null;
+  }
+
+  double? representativeCombatPowerFor(LocalAccountCharacter character) {
+    if (character.preferredRole == null) return character.combatPower;
+    return _preferredCombatPowers.containsKey(character.id)
+        ? _preferredCombatPowers[character.id]
+        : null;
   }
 
   LostArkApiErrorType? get errorType => _errorType;
@@ -394,7 +402,34 @@ class MyAccountViewModel extends ChangeNotifier {
     if (_representativeSyncService != null) {
       _accounts = await _accountRepository.loadAccounts();
     }
+    await _loadPreferredCombatPowers();
     notifyListeners();
+  }
+
+  Future<void> _loadPreferredCombatPowers() async {
+    final values = <int, double?>{};
+    for (final account in _accounts) {
+      for (final character in account.characters) {
+        final preferredRole = character.preferredRole;
+        if (preferredRole == null) continue;
+        final snapshots = await _accountRepository.loadCharacterBuildSnapshots(
+          character.id,
+        );
+        final preferred = snapshots
+            .where((snapshot) => snapshot.role == preferredRole)
+            .where(
+              (snapshot) =>
+                  snapshot.combatPower != null &&
+                  snapshot.combatPower!.isFinite &&
+                  snapshot.combatPower! >= 0,
+            )
+            .toList()
+          ..sort((left, right) => right.capturedAt.compareTo(left.capturedAt));
+        values[character.id] =
+            preferred.isEmpty ? null : preferred.first.combatPower;
+      }
+    }
+    _preferredCombatPowers = Map.unmodifiable(values);
   }
 
   Future<void> fetchCharacters(String characterName) async {

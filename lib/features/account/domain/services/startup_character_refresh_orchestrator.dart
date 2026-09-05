@@ -70,8 +70,14 @@ abstract interface class StartupCharacterRefreshRunner {
   Future<void> dispose();
 }
 
+abstract interface class ManualCharacterRefreshRunner {
+  StartupCharacterRefreshState get state;
+  Stream<StartupCharacterRefreshState> get states;
+  Future<StartupCharacterRefreshReport> runManualExcludingNiceGroup();
+}
+
 class StartupCharacterRefreshOrchestrator
-    implements StartupCharacterRefreshRunner {
+    implements StartupCharacterRefreshRunner, ManualCharacterRefreshRunner {
   StartupCharacterRefreshOrchestrator({
     required String playerId,
     required AccountRepository accountRepository,
@@ -102,6 +108,7 @@ class StartupCharacterRefreshOrchestrator
   StartupCharacterRefreshState _state =
       const StartupCharacterRefreshState.idle();
   Future<StartupCharacterRefreshReport>? _runFuture;
+  Future<StartupCharacterRefreshReport>? _activeRunFuture;
 
   @override
   StartupCharacterRefreshState get state => _state;
@@ -111,9 +118,31 @@ class StartupCharacterRefreshOrchestrator
 
   @override
   Future<StartupCharacterRefreshReport> runOnce() =>
-      _runFuture ??= _run();
+      _runFuture ??= _runShared(excludeNiceGroup: false, force: false);
 
-  Future<StartupCharacterRefreshReport> _run() async {
+  @override
+  Future<StartupCharacterRefreshReport> runManualExcludingNiceGroup() =>
+      _runShared(excludeNiceGroup: true, force: true);
+
+  Future<StartupCharacterRefreshReport> _runShared({
+    required bool excludeNiceGroup,
+    required bool force,
+  }) {
+    final active = _activeRunFuture;
+    if (active != null) return active;
+    late final Future<StartupCharacterRefreshReport> future;
+    future = _run(excludeNiceGroup: excludeNiceGroup, force: force).whenComplete(
+      () {
+        if (identical(_activeRunFuture, future)) _activeRunFuture = null;
+      },
+    );
+    return _activeRunFuture = future;
+  }
+
+  Future<StartupCharacterRefreshReport> _run({
+    required bool excludeNiceGroup,
+    required bool force,
+  }) async {
     if (_playerId.isEmpty) {
       return _complete(const StartupCharacterRefreshReport(items: []));
     }
@@ -122,17 +151,26 @@ class StartupCharacterRefreshOrchestrator
       final accounts = await _accountRepository.loadAccounts();
       final eligible = _eligibilityPolicy.eligibleCharacters(accounts);
       final niceGroupClassNames = _niceGroupPolicy.evaluate(accounts).classNames;
-      final hasEligibleNiceGroupCharacter = eligible.any(
+      final targets = excludeNiceGroup
+          ? eligible
+                .where(
+                  (character) =>
+                      !niceGroupClassNames.contains(_classKey(character)),
+                )
+                .toList(growable: false)
+          : eligible;
+      final hasEligibleNiceGroupCharacter = targets.any(
         (character) => niceGroupClassNames.contains(_classKey(character)),
       );
-      final niceGroupRefreshEnabled = hasEligibleNiceGroupCharacter
+      final niceGroupRefreshEnabled = !excludeNiceGroup &&
+              hasEligibleNiceGroupCharacter
           ? await _loadNiceGroupRefreshEnabled()
           : false;
 
       _emit(
         StartupCharacterRefreshState(
           phase: StartupCharacterRefreshPhase.running,
-          totalCount: eligible.length,
+          totalCount: targets.length,
           completedCount: 0,
           failedCount: 0,
         ),
@@ -141,9 +179,10 @@ class StartupCharacterRefreshOrchestrator
       var completedCount = 0;
       var failedCount = 0;
       final items = await Future.wait([
-        for (final character in eligible)
+        for (final character in targets)
           _refresh(
             character,
+            force: force,
             excludedFromAutoRefresh:
                 niceGroupClassNames.contains(_classKey(character)) &&
                 !niceGroupRefreshEnabled,
@@ -153,7 +192,7 @@ class StartupCharacterRefreshOrchestrator
             _emit(
               StartupCharacterRefreshState(
                 phase: StartupCharacterRefreshPhase.running,
-                totalCount: eligible.length,
+                totalCount: targets.length,
                 completedCount: completedCount,
                 failedCount: failedCount,
               ),
@@ -182,6 +221,7 @@ class StartupCharacterRefreshOrchestrator
   Future<StartupCharacterRefreshItemResult> _refresh(
     LocalAccountCharacter character, {
     required bool excludedFromAutoRefresh,
+    required bool force,
   }) async {
     try {
       final result = await _refreshGateway.prefetch(
@@ -191,6 +231,7 @@ class StartupCharacterRefreshOrchestrator
           generation: 0,
           expectedRole: character.preferredRole,
           excludedFromAutoRefresh: excludedFromAutoRefresh,
+          force: force,
         ),
       );
       return StartupCharacterRefreshItemResult(
