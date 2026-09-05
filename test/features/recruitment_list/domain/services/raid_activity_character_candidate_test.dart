@@ -141,7 +141,7 @@ void main() {
     expect(_memberAggregate.state.members.single.characterId, '대표바드');
   });
 
-  test('활동 설정이 없으면 새 레이드 후보를 만들지 않는다', () async {
+  test('활동 문서가 비어 있으면 표시 Character를 레이드 후보로 복구한다', () async {
     final leader = RecruitmentLeaderCandidateService(
       accountRepository: _AccountRepository(),
       weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
@@ -153,18 +153,17 @@ void main() {
       claimPlayerId: 'player-1',
     );
 
-    expect(
-      await leader.load(
-        RecruitmentLeaderCandidateQuery(
-          raidId: 'serca',
-          difficultyId: 'normal',
-          minItemLevel: 1700,
-          startAt: DateTime.utc(2026, 8, 23, 10),
-          maxPlayHours: 3,
-        ),
+    final candidates = await leader.load(
+      RecruitmentLeaderCandidateQuery(
+        raidId: 'serca',
+        difficultyId: 'normal',
+        minItemLevel: 1700,
+        startAt: DateTime.utc(2026, 8, 23, 10),
+        maxPlayHours: 3,
       ),
-      isEmpty,
     );
+
+    expect(candidates.map((candidate) => candidate.characterId), ['대표바드']);
   });
 }
 

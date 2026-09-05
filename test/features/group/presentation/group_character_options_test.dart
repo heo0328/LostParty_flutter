@@ -31,14 +31,17 @@ void main() {
     ]);
   });
 
-  test('활동 Character가 없으면 그룹 후보를 만들지 않는다', () async {
+  test('활동 문서가 비어 있으면 인증 Character fallback을 사용한다', () async {
     final options = await GroupCharacterOptionLoader(
       accountRepository: _Accounts(),
       activityCharactersRepository: _Activity({}),
       playerId: 'player-1',
     ).load();
 
-    expect(options, isEmpty);
+    expect(options.map((option) => option.serverCharacterId), [
+      'character-1',
+      'character-2',
+    ]);
   });
 }
 

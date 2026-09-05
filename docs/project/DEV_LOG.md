@@ -2443,3 +2443,11 @@
 - J 작업이 최초 그룹 문서에 추가한 `activeJoinCode: null`이 기존 운영 Rules allowlist에 막혀 그룹 생성 전체가 `permission-denied`가 되는 직접 원인이었다.
 - 최초 생성 payload에서 불필요한 `activeJoinCode`를 제거하고 최신 Rules는 해당 필드의 미존재/null을 모두 허용하도록 최소 변경했다. 레이드 생성 및 다른 그룹 생성 계약은 수정하지 않았다.
 - 그룹 생성·Rules 표적 테스트 41개와 전체 자동 회귀 899개가 통과했다. analyze는 신규 문제 없이 기존 21개 항목만 보고한다.
+
+## 2026-09-06 실기기 Player/활동 Character 복구 진단
+
+- 연결된 SM-F956N의 Drift DB를 개인정보 값 없이 집계했다. active 서버 계정 1개, 서버 ID가 있는 Character 18개, 원정대 이탈 0개로 로컬 인증 바인딩은 정상이다.
+- 그룹·레이드 후보는 현재 Player의 `characterActivity`가 빈 집합이면 인증 Character를 모두 제외하고 있었다. 빈 선택은 저장 정책이 금지하므로 빈 집합을 미초기화로 판정해 기존 fallback을 사용하도록 수정했다.
+- 로그에서 일반 사용자 화면의 `syncExpiredDisputes()`가 운영자 전용 전체 쿼리를 실행해 반복 `permission-denied` 미처리 예외를 발생시키는 것을 확인했다. 일반 요청/분쟁 watch의 호출을 제거하고 운영자 큐 경로만 유지했다.
+- 운영자 권한은 기존 Player에 남아 있을 수 있으며 새 익명 Player로 자동 이전하지 않는다.
+- 관련 표적 테스트 24개와 전체 자동 회귀 899개가 통과했다. 병렬 전체 회귀에서 변경된 기존 기대값 1건을 확인해 미초기화 fallback 기준으로 정정한 뒤 단독 전체 회귀 통과를 재확인했다. analyze 신규 문제는 없다.
