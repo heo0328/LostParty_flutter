@@ -12,6 +12,7 @@ import 'features/account/domain/repositories/game_account_verification_gateway.d
 import 'features/account/domain/repositories/weekly_raid_claim_repository.dart';
 import 'features/account/domain/repositories/weekly_raid_claim_command_repository.dart';
 import 'features/account/domain/repositories/activity_characters_repository.dart';
+import 'features/account/domain/services/startup_character_refresh_orchestrator.dart';
 import 'features/group/domain/repositories/group_application_command_repository.dart';
 import 'features/group/domain/repositories/group_character_search_repository.dart';
 import 'features/group/domain/repositories/group_create_repository.dart';
@@ -50,6 +51,7 @@ class MyApp extends StatefulWidget {
     this.groupJoinCommandRepository,
     this.groupApplicationCommandRepository,
     this.groupJoinCodeCommandRepository,
+    this.startupCharacterRefreshRunner,
     super.key,
   });
 
@@ -69,6 +71,7 @@ class MyApp extends StatefulWidget {
   final GroupJoinCommandRepository? groupJoinCommandRepository;
   final GroupApplicationCommandRepository? groupApplicationCommandRepository;
   final GroupJoinCodeCommandRepository? groupJoinCodeCommandRepository;
+  final StartupCharacterRefreshRunner? startupCharacterRefreshRunner;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -102,6 +105,7 @@ class _MyAppState extends State<MyApp> {
       groupApplicationCommandRepository:
           widget.groupApplicationCommandRepository,
       groupJoinCodeCommandRepository: widget.groupJoinCodeCommandRepository,
+      startupCharacterRefreshRunner: widget.startupCharacterRefreshRunner,
     );
   }
 

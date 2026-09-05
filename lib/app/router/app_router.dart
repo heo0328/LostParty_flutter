@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -12,6 +14,7 @@ import '../../features/account/data/gateways/local_game_account_verification_gat
 import '../../features/account/data/gateways/firestore_account_ownership_status_gateway.dart';
 import '../../features/account/data/gateways/firestore_character_summary_sync_gateway.dart';
 import '../../features/account/data/gateways/firestore_character_combat_power_sync_gateway.dart';
+import '../../features/account/data/gateways/firestore_character_minimum_display_sync_gateway.dart';
 import '../../features/account/data/gateways/firestore_representative_character_sync_gateway.dart';
 import '../../features/account/data/mappers/sibling_character_mapper.dart';
 import '../../features/account/data/repositories/firestore_weekly_raid_claim_repository.dart';
@@ -33,7 +36,10 @@ import '../../features/account/data/repositories/firestore_activity_characters_r
 import '../../features/account/domain/repositories/activity_characters_repository.dart';
 import '../../features/account/domain/repositories/representative_character_sync_gateway.dart';
 import '../../features/account/domain/services/character_summary_sync_service.dart';
+import '../../features/account/domain/services/character_auto_refresh_coordinator.dart';
+import '../../features/account/domain/services/character_minimum_display_sync_service.dart';
 import '../../features/account/domain/services/representative_character_sync_service.dart';
+import '../../features/account/domain/services/startup_character_refresh_orchestrator.dart';
 import '../../features/player/domain/entities/player_session.dart';
 import '../../features/group/data/repositories/firestore_group_application_command_repository.dart';
 import '../../features/group/data/repositories/firestore_group_character_search_repository.dart';
@@ -135,6 +141,7 @@ GoRouter createAppRouter({
   GroupJoinCommandRepository? groupJoinCommandRepository,
   GroupApplicationCommandRepository? groupApplicationCommandRepository,
   GroupJoinCodeCommandRepository? groupJoinCodeCommandRepository,
+  StartupCharacterRefreshRunner? startupCharacterRefreshRunner,
 }) {
   final operatorAccessRepositoryOrDefault =
       operatorAccessRepository ?? FirestoreOperatorAccessRepository();
@@ -229,6 +236,23 @@ GoRouter createAppRouter({
           firebaseAuth: FirebaseAuth.instance,
         ),
   );
+  final startupCharacterRefreshRunnerOrDefault =
+      startupCharacterRefreshRunner ??
+      StartupCharacterRefreshOrchestrator(
+        playerId: playerSession.playerId,
+        accountRepository: accountRepository,
+        niceGroupAutoRefreshSettingsRepository: niceGroupSettingsRepository,
+        refreshGateway: CharacterAutoRefreshCoordinator(
+          accountRepository: accountRepository,
+          minimumDisplaySync: CharacterMinimumDisplaySyncService(
+            accountRepository: accountRepository,
+            gateway: FirestoreCharacterMinimumDisplaySyncGateway(
+              firestore: FirebaseFirestore.instance,
+              firebaseAuth: FirebaseAuth.instance,
+            ),
+          ),
+        ),
+      );
   final activityCharactersRepositoryOrDefault =
       activityCharactersRepository ??
       FirestoreActivityCharactersRepository(
@@ -358,6 +382,8 @@ GoRouter createAppRouter({
           return AppShell(
             navigationShell: navigationShell,
             manualVerificationRepository: manualVerificationRepositoryOrDefault,
+            startupCharacterRefreshRunner:
+                startupCharacterRefreshRunnerOrDefault,
           );
         },
         branches: [
@@ -378,6 +404,11 @@ GoRouter createAppRouter({
                       activityCharactersRepositoryOrDefault,
                   characterSearchRepository:
                       characterSearchRepositoryForRoute(),
+                  onInitialLoadComplete: () {
+                    unawaited(
+                      startupCharacterRefreshRunnerOrDefault.runOnce(),
+                    );
+                  },
                 ),
                 routes: [
                   GoRoute(

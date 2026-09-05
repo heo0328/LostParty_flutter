@@ -7,6 +7,7 @@ import 'package:lost_party/features/account/domain/entities/save_activity_charac
 import 'package:lost_party/features/account/domain/repositories/weekly_raid_claim_repository.dart';
 import 'package:lost_party/features/account/domain/repositories/activity_characters_repository.dart';
 import 'package:lost_party/features/account/domain/repositories/character_summary_sync_gateway.dart';
+import 'package:lost_party/features/account/domain/services/startup_character_refresh_orchestrator.dart';
 
 import 'package:lost_party/features/account/data/local/account_database.dart';
 import 'package:lost_party/features/account/domain/entities/game_account_verification.dart';
@@ -272,7 +273,10 @@ void main() {
   });
 }
 
-Future<void> _pumpApp(WidgetTester tester) async {
+Future<void> _pumpApp(
+  WidgetTester tester, {
+  StartupCharacterRefreshRunner? startupCharacterRefreshRunner,
+}) async {
   final database = AccountDatabase(NativeDatabase.memory());
   addTearDown(database.close);
   await tester.pumpWidget(
@@ -295,8 +299,32 @@ Future<void> _pumpApp(WidgetTester tester) async {
       groupJoinCommandRepository: _GroupJoinCommandRepository(),
       groupApplicationCommandRepository: _GroupApplicationCommandRepository(),
       groupJoinCodeCommandRepository: _GroupJoinCodeCommandRepository(),
+      startupCharacterRefreshRunner:
+          startupCharacterRefreshRunner ??
+          _NoopStartupCharacterRefreshRunner(),
     ),
   );
+}
+
+class _NoopStartupCharacterRefreshRunner
+    implements StartupCharacterRefreshRunner {
+  @override
+  StartupCharacterRefreshState get state => StartupCharacterRefreshState(
+    phase: StartupCharacterRefreshPhase.completed,
+    totalCount: 0,
+    completedCount: 0,
+    failedCount: 0,
+  );
+
+  @override
+  Stream<StartupCharacterRefreshState> get states => const Stream.empty();
+
+  @override
+  Future<StartupCharacterRefreshReport> runOnce() async =>
+      const StartupCharacterRefreshReport(items: []);
+
+  @override
+  Future<void> dispose() async {}
 }
 
 class _ActivityCharactersRepository implements ActivityCharactersRepository {

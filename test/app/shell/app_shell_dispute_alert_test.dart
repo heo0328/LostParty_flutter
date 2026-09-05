@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lost_party/app/shell/app_shell.dart';
 import 'package:lost_party/features/account/domain/entities/game_account_verification.dart';
+import 'package:lost_party/features/account/domain/services/startup_character_refresh_orchestrator.dart';
 import 'package:lost_party/features/manual_verification/domain/entities/manual_verification_request.dart';
 import 'package:lost_party/features/manual_verification/domain/repositories/manual_verification_repository.dart';
 import 'package:lost_party/features/manual_verification/presentation/manual_verification_dispute_alert.dart';
@@ -102,6 +105,88 @@ void main() {
 
     expect(find.text('수동 인증으로 이동'), findsOneWidget);
   });
+
+  testWidgets('시작 Character 갱신 중에만 내 계정 탭 인디케이터를 표시한다', (
+    tester,
+  ) async {
+    final refreshRunner = _FakeStartupCharacterRefreshRunner();
+    final router = GoRouter(
+      routes: [
+        StatefulShellRoute.indexedStack(
+          builder: (context, state, navigationShell) => AppShell(
+            navigationShell: navigationShell,
+            startupCharacterRefreshRunner: refreshRunner,
+          ),
+          branches: [
+            for (var index = 0; index < 4; index++)
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    path: index == 0 ? '/' : '/tab-$index',
+                    builder: (context, state) => Scaffold(
+                      body: Text('tab $index'),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('startupCharacterRefreshIndicator')),
+      findsNothing,
+    );
+
+    refreshRunner.emit(StartupCharacterRefreshPhase.running);
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('startupCharacterRefreshIndicator')),
+      findsWidgets,
+    );
+
+    refreshRunner.emit(StartupCharacterRefreshPhase.completed);
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('startupCharacterRefreshIndicator')),
+      findsNothing,
+    );
+  });
+}
+
+class _FakeStartupCharacterRefreshRunner
+    implements StartupCharacterRefreshRunner {
+  final StreamController<StartupCharacterRefreshState> _states =
+      StreamController.broadcast(sync: true);
+  StartupCharacterRefreshState _state =
+      const StartupCharacterRefreshState.idle();
+
+  @override
+  StartupCharacterRefreshState get state => _state;
+
+  @override
+  Stream<StartupCharacterRefreshState> get states => _states.stream;
+
+  void emit(StartupCharacterRefreshPhase phase) {
+    _state = StartupCharacterRefreshState(
+      phase: phase,
+      totalCount: phase == StartupCharacterRefreshPhase.idle ? 0 : 1,
+      completedCount: phase == StartupCharacterRefreshPhase.completed ? 1 : 0,
+      failedCount: 0,
+    );
+    _states.add(_state);
+  }
+
+  @override
+  Future<StartupCharacterRefreshReport> runOnce() async =>
+      const StartupCharacterRefreshReport(items: []);
+
+  @override
+  Future<void> dispose() => _states.close();
 }
 
 class _FakeManualRepository implements ManualVerificationRepository {
