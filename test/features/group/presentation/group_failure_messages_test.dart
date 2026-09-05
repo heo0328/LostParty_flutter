@@ -63,7 +63,7 @@ void main() {
       );
       expect(
         groupDisbandFailureMessage(GroupJoinFailure.joinCodeActive),
-        contains('기간 만료가 아닙니다'),
+        contains('초대코드 화면에서 폐기'),
       );
     });
 
