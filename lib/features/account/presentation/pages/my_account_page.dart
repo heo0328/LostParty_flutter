@@ -360,55 +360,64 @@ class _MyAccountPageState extends State<MyAccountPage> {
               if (_viewModel.isLoadingTokenStatus)
                 const LinearProgressIndicator(),
               _buildTokenStatusPanel(context),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                key: const ValueKey('gameAccountVerificationButton'),
-                onPressed: _openGameAccountVerification,
-                icon: const Icon(Icons.verified_user_outlined),
-                label: const Text('내 게임계정 인증'),
-              ),
-              const SizedBox(height: 16),
-              ClearableTextFormField(
-                fieldKey: const ValueKey('representativeCharacterNameField'),
-                controller: _characterNameController,
-                enabled: !_viewModel.isNetworkBusy,
-                textInputAction: TextInputAction.search,
-                labelText: '조회 캐릭터명',
-                errorText: _characterNameError,
-                border: const OutlineInputBorder(),
-                onSubmitted: (_) {
-                  if (!_viewModel.isNetworkBusy) {
-                    _requestAccountData();
-                  }
-                },
-              ),
               const SizedBox(height: 12),
-              FilledButton.icon(
-                key: const ValueKey('loadAccountDataButton'),
-                onPressed: _viewModel.isNetworkBusy
-                    ? null
-                    : _requestAccountData,
-                icon: _viewModel.isNetworkBusy
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.cloud_download_outlined),
-                label: Text(
-                  _viewModel.isFetchingCharacters ? '불러오는 중...' : '계정 데이터 불러오기',
-                ),
+              Row(
+                key: const ValueKey('accountLookupActions'),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: ClearableTextFormField(
+                      fieldKey: const ValueKey(
+                        'representativeCharacterNameField',
+                      ),
+                      controller: _characterNameController,
+                      enabled: !_viewModel.isNetworkBusy,
+                      textInputAction: TextInputAction.search,
+                      labelText: '조회 캐릭터명',
+                      errorText: _characterNameError,
+                      border: const OutlineInputBorder(),
+                      onSubmitted: (_) {
+                        if (!_viewModel.isNetworkBusy) {
+                          _requestAccountData();
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    height: 56,
+                    child: FilledButton.icon(
+                      key: const ValueKey('loadAccountDataButton'),
+                      onPressed: _viewModel.isNetworkBusy
+                          ? null
+                          : _requestAccountData,
+                      icon: _viewModel.isNetworkBusy
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.cloud_download_outlined),
+                      label: Text(
+                        _viewModel.isFetchingCharacters ? '불러오는 중' : '불러오기',
+                      ),
+                    ),
+                  ),
+                  if (_viewModel.accounts.isNotEmpty) ...[
+                    const SizedBox(width: 4),
+                    SizedBox(
+                      height: 56,
+                      child: IconButton.outlined(
+                        key: const ValueKey('addSubAccountButton'),
+                        tooltip: '부계정 추가',
+                        onPressed: _viewModel.isNetworkBusy
+                            ? null
+                            : _showAddAccountDialog,
+                        icon: const Icon(Icons.person_add_alt_1_outlined),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              if (_viewModel.accounts.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  key: const ValueKey('addSubAccountButton'),
-                  onPressed: _viewModel.isNetworkBusy
-                      ? null
-                      : _showAddAccountDialog,
-                  icon: const Icon(Icons.person_add_alt_1_outlined),
-                  label: const Text('부계정 추가'),
-                ),
-              ],
               if (_viewModel.hasFetchedCharacters) ...[
                 const SizedBox(height: 24),
                 if (_viewModel.lookupProfile case final profile?) ...[
@@ -542,31 +551,43 @@ class _MyAccountPageState extends State<MyAccountPage> {
       color: Theme.of(context).colorScheme.surfaceContainerLow,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         child: Row(
+          key: const ValueKey('accountSetupActions'),
           children: [
             Icon(
               _viewModel.hasApiToken
                   ? Icons.verified_user_outlined
                   : Icons.key_off_outlined,
+              size: 20,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Lost Ark API 토큰',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  Text(_viewModel.hasApiToken ? '등록됨' : '등록 필요'),
-                ],
+              child: Text(
+                _viewModel.hasApiToken ? 'API 토큰 등록됨' : 'API 토큰 등록 필요',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
-            IconButton(
-              tooltip: 'API 토큰 설정',
-              onPressed: _openTokenSettings,
-              icon: const Icon(Icons.settings_outlined),
+            Tooltip(
+              message: 'API 토큰 설정',
+              child: TextButton(
+                key: const ValueKey('apiTokenSettingsButton'),
+                onPressed: _openTokenSettings,
+                child: Text(_viewModel.hasApiToken ? '관리' : '등록'),
+              ),
+            ),
+            const SizedBox(width: 2),
+            OutlinedButton.icon(
+              key: const ValueKey('gameAccountVerificationButton'),
+              onPressed: _openGameAccountVerification,
+              icon: const Icon(Icons.verified_user_outlined, size: 18),
+              label: const Text('계정 인증'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                visualDensity: VisualDensity.compact,
+              ),
             ),
           ],
         ),
