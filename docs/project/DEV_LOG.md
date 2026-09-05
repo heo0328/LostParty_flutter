@@ -2363,3 +2363,12 @@
 - 파티·그룹 전용 갱신 래퍼와 UI guard를 삭제하고 Router 주입을 제거했다. 공통 Coordinator, 나이스단 정책, 역할별 로컬 Snapshot과 서버 최소 Snapshot 동기화 구현은 C에서 재사용할 자산으로 보존했다.
 - 모집 생성은 저장된 선택 역할 Snapshot으로 최소 아이템 레벨·전투력을 명령 직전에 다시 검사한다. 기존 인증·소유권·파티 구성·revision·중복 실행 방지는 유지했다.
 - 교류·명령 표적 회귀 79개와 전체 `flutter test --no-pub` 877개가 통과했다. analyze에는 이번 변경의 신규 문제가 없다.
+
+## 2026-09-05 앱 실행 1회 갱신 C — 앱 수명당 1회 조정기
+
+- `StartupCharacterRefreshOrchestrator`를 추가했다. 동일 인스턴스의 `runOnce()`는 최초 Future를 계속 재사용하므로 중복 호출되어도 계정 로드와 Character 갱신은 앱 수명당 한 번만 실행된다.
+- 인증 Player 세션이 있고 A 정책을 통과한 active 소유권·서버 인증·원정대 소속·1700 이상 본·부계정 Character만 대상으로 삼는다. 인증 세션이 없으면 로컬 계정과 설정도 읽지 않고 종료한다.
+- 기존 `NiceGroupPolicy`와 Player별 로컬 허용 설정을 적용한다. 나이스단 OFF 요청은 Coordinator의 제외 경로로 전달해 Armory 통신 없이 기존 수동 Snapshot을 유지하고, ON이면 일반 prefetch를 실행한다.
+- 기존 `CharacterAutoRefreshCoordinator`를 `CharacterAutoRefreshGateway` 계약으로 노출해 최대 동시 요청 3개, 역할 판별·역할별 Snapshot, 서버 최소 Snapshot 동기화 구현을 그대로 재사용한다.
+- Character별 결과·예외를 독립 수집하고 실행 상태에 전체·완료·실패 수를 발행한다. 일부 실패나 계정 로드 실패는 호출자에게 던져 앱 진입을 막지 않으며 확인 팝업도 만들지 않는다.
+- C 조정기·기존 Coordinator·대상·나이스단 정책 표적 테스트 22개와 전체 `flutter test` 884개가 통과했다. `flutter analyze`에는 이번 변경의 신규 문제가 없고 기존 21개 항목만 남아 있다.
