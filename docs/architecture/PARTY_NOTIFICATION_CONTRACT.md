@@ -111,12 +111,13 @@ expiresAt
 
 ## 6. 이벤트별 수신 대상과 표시
 
-### 2026-09-05 알림 Projection 후속 변경
+### 2026-09-05 방별 알림 Projection 후속 변경
 
-- `applicationSubmitted`와 `memberCharacterChanged` 이벤트 생성·보관 계약은 유지하되 레이드 현황 상단 알림 목록과 unread count의 후보에서는 제외한다.
-- 가입 신청 확인은 알림 목록 대신 내가 만든 활성 모집방 카드의 pending 신청 수 red badge로 제공한다.
-- 신청 데이터는 이미 `recruitments/{recruitmentId}/applications`에 연결되어 있고 방 단위 조회 스트림이 있으므로 신규 서버 필드 없이 구현 가능하다. 현재 `ActiveRaidSummary`에는 건수가 없으므로 소유 방별 클라이언트 구독·pending 집계·해제 및 읽기 비용 검증은 필요하다.
-- 구현 과정에서 신규 Rules·인덱스·서버 집계 필드가 필요하다고 확인되면 배지 작업을 중단하고 별도 승인을 받는다.
+- 진행 중 레이드 카드 좌상단에는 현재 사용자가 읽지 않은 `applicationSubmitted`, `memberKicked`, `memberJoined`, `memberCharacterChanged` 이벤트 수를 숫자 red badge로 표시한다. pending 신청 수가 아니라 사용자별 unread event 수다.
+- 해당 모집방 상세에 진입하는 즉시 위 네 유형의 방별 이벤트를 읽음 처리한다. 이벤트 히스토리 팝업을 열었는지는 읽음 처리 조건이 아니다.
+- 상세의 첫 `파티 구성` 제목 행 우측 알림 아이콘은 해당 `recruitmentId`의 사용자 수신 이벤트 히스토리를 팝업으로 표시한다. 항목 터치 이동은 제공하지 않는다.
+- 이벤트는 `players/{playerId}/events`에 있고 각 문서가 이미 `recruitmentId`를 가진다. 기존 조회 결과와 로컬 receipt를 방별로 분류하므로 서버 저장 구조·Rules·인덱스를 변경하지 않는다.
+- 팝업은 방 전체 감사 로그가 아니라 현재 사용자에게 전달된 이벤트 이력이다. 구현 중 서버 변경이 필요하면 리스트업 범위를 중단하고 별도 승인을 받는다.
 
 문구의 `{행위 캐릭터}`, `{대상 캐릭터}`는 이벤트에 고정된 표시 Snapshot이다. 권한은 Snapshot이 아니라 PlayerId, application, membership과 명령 상태 전이로 판정한다.
 
