@@ -111,6 +111,13 @@ expiresAt
 
 ## 6. 이벤트별 수신 대상과 표시
 
+### 2026-09-05 알림 Projection 후속 변경
+
+- `applicationSubmitted`와 `memberCharacterChanged` 이벤트 생성·보관 계약은 유지하되 레이드 현황 상단 알림 목록과 unread count의 후보에서는 제외한다.
+- 가입 신청 확인은 알림 목록 대신 내가 만든 활성 모집방 카드의 pending 신청 수 red badge로 제공한다.
+- 신청 데이터는 이미 `recruitments/{recruitmentId}/applications`에 연결되어 있고 방 단위 조회 스트림이 있으므로 신규 서버 필드 없이 구현 가능하다. 현재 `ActiveRaidSummary`에는 건수가 없으므로 소유 방별 클라이언트 구독·pending 집계·해제 및 읽기 비용 검증은 필요하다.
+- 구현 과정에서 신규 Rules·인덱스·서버 집계 필드가 필요하다고 확인되면 배지 작업을 중단하고 별도 승인을 받는다.
+
 문구의 `{행위 캐릭터}`, `{대상 캐릭터}`는 이벤트에 고정된 표시 Snapshot이다. 권한은 Snapshot이 아니라 PlayerId, application, membership과 명령 상태 전이로 판정한다.
 
 | 이벤트 | 행위자 | 수신 대상 | 앱 내부 표시 문구 | 이동 목적지 | 제외 대상 | 필요한 Snapshot | 중복 방지 기준 |
