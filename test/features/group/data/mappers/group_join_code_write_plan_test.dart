@@ -61,7 +61,8 @@ void main() {
       expect(plan.joinCodeDocument!['status'], 'active');
       expect(plan.joinCodeDocument!['createdByPlayerId'], 'player-1');
       expect(plan.joinCodeDocument!['createdAt'], same(timestamp));
-      expect(plan.groupPatch['hasActiveJoinCode'], isTrue);
+    expect(plan.groupPatch['hasActiveJoinCode'], isTrue);
+    expect(plan.groupPatch['activeJoinCode'], code.value);
       expect(plan.groupPatch['revision'], 8);
       expect(plan.member, isNull);
     });
@@ -75,7 +76,8 @@ void main() {
         serverTimestamp: timestamp,
       );
 
-      expect(plan.groupPatch['hasActiveJoinCode'], isFalse);
+    expect(plan.groupPatch['hasActiveJoinCode'], isFalse);
+    expect(plan.groupPatch['activeJoinCode'], isNull);
       expect(plan.groupPatch['revision'], 8);
       expect(plan.groupPatch['lastActivityAt'], same(timestamp));
       expect(plan.joinCodeDocument, isNull);

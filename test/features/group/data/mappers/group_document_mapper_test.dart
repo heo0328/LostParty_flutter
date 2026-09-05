@@ -52,6 +52,7 @@ void main() {
     expect(summary.memberCount, 3);
     expect(summary.revision, 7);
     expect(summary.hasActiveJoinCode, isFalse);
+    expect(summary.activeJoinCode, isNull);
     expect(summary.joinCodeVisibleToMembers, isFalse);
     expect(summary.createdAt, createdAt);
     expect(summary.lastActivityAt, lastActivityAt);
@@ -64,12 +65,14 @@ void main() {
         data: {
           ...groupData(),
           'hasActiveJoinCode': true,
+          'activeJoinCode': 'ABC234',
           'joinCodeVisibleToMembers': true,
         },
       ),
     );
 
     expect(summary.hasActiveJoinCode, isTrue);
+    expect(summary.activeJoinCode, 'ABC234');
     expect(summary.joinCodeVisibleToMembers, isTrue);
   });
 

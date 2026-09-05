@@ -2,7 +2,7 @@
 
 ## 2026-09-05 초대코드 단순화·복원·폐기 UX 후속 결정
 
-- 현재 초대코드 원문은 생성 직후 ViewModel 메모리에만 남고 그룹 문서에는 `hasActiveJoinCode`만 저장된다. 따라서 앱 재실행 또는 방장 위임 뒤 코드를 표시할 수 없고, 폐기에도 사용자가 원문을 재입력해야 한다.
+- 변경 전에는 초대코드 원문이 생성 직후 ViewModel 메모리에만 남아 앱 재실행·방장 위임 뒤 표시와 재입력 없는 폐기가 불가능했다. 현재는 그룹의 선택 필드 `activeJoinCode`로 복원한다.
 - 초대코드는 민감한 인증 비밀이 아니라 잘못 가입한 사용자를 추방하고 폐기·재생성할 수 있는 단순 가입 수단으로 취급한다. 신규 생성 코드는 혼동되는 `0/O`, `1/I`를 제외한 영문 대문자·숫자 6자리로 줄이고 기존 20자리 활성 코드는 계속 허용한다.
 - 앱 재실행과 방장 위임 뒤 현재 활성 코드를 다시 표시·복사할 수 있는 가장 단순한 저장·조회 계약을 적용한다. 불필요하게 복잡한 보안 계층을 추가하지 않는다.
 - 폐기 UI는 코드 재입력을 없애고 확인 Alert만 사용한다. Repository가 그룹의 활성 코드 식별자를 확인해 코드 문서 삭제와 `hasActiveJoinCode` 갱신을 한 Transaction에서 처리한다.
@@ -70,7 +70,7 @@ groupJoinCodes/{normalizedCode}
 - join relation은 `groupId + playerId`당 문서 하나만 사용한다. 초대와 신청을 별도 문서로 동시에 만들지 않는다.
 - Player 하위 `groupRelations/{groupId}`는 내 그룹·요청 현황을 조회하기 위한 역방향 Projection이다. 그룹 하위 원본과 같은 Transaction에서만 변경한다.
 - `groupMembershipState/current`는 가입 그룹 ID 배열을 보유하며 Player별 최대 50개를 Rules에서 강제하기 위한 요약 문서다.
-- 초대코드는 그룹 ID와 분리된 고엔트로피 무작위 값이며 정규화된 코드 자체를 `groupJoinCodes` 문서 ID로 사용한다. 목록 읽기는 금지하고 사용자가 입력한 정확한 코드의 단건 조회만 허용한다.
+- 초대코드는 그룹 ID와 분리된 무작위 6자리 값이며 정규화된 코드 자체를 `groupJoinCodes` 문서 ID로 사용한다. 기존 20자리 코드는 호환한다. 목록 읽기는 금지하고 사용자가 입력한 정확한 코드의 단건 조회만 허용한다.
 
 ## 4. 그룹 Current State
 
@@ -268,11 +268,11 @@ groupJoinCodes/{normalizedCode}
 ```
 
 - 그룹당 활성 코드는 최대 하나지만 코드가 없는 그룹도 정상이다.
-- 코드는 최소 96비트 이상의 암호학적 난수로 생성하고 사람이 입력할 때 혼동되는 문자를 제외한 고정 길이 표기를 사용한다.
-- 공백·대소문자를 정규화한 값이 문서 ID다. 코드 원문을 그룹 공개 문서에 저장하지 않는다.
-- 그룹장은 `groupJoinCodes/{code}` 생성과 함께 그룹의 `hasActiveJoinCode`를 false→true로 변경한다.
+- 신규 코드는 전달하기 쉬운 6자리로 생성하며 사람이 입력할 때 혼동되는 `0/O`, `1/I`를 제외한다. 기존 20자리 코드는 폐기 전까지 파싱·가입을 허용한다.
+- 공백·대소문자를 정규화한 값이 문서 ID다. 현재 활성 코드는 그룹의 `activeJoinCode`에도 저장해 앱 재실행과 그룹장 위임 뒤 조회·복사·폐기할 수 있게 한다.
+- 그룹장은 `groupJoinCodes/{code}` 생성과 함께 그룹의 `hasActiveJoinCode`를 false→true, `activeJoinCode`를 생성 코드로 변경한다.
 - 기존 코드가 있으면 먼저 폐기해야 하며 새 코드 생성과 기존 코드 삭제를 같은 Transaction에 넣어 교체하지 않는다. 제품 흐름은 명시적인 `코드 폐기` 후 `코드 생성` 두 동작이다.
-- 코드 폐기는 정확한 코드 문서 삭제와 그룹의 `hasActiveJoinCode` true→false를 같은 Transaction에서 수행한다.
+- 코드 폐기는 확인 Alert만 거친다. 정확한 코드 문서 삭제와 그룹의 `hasActiveJoinCode` true→false, `activeJoinCode` null 변경을 같은 Transaction에서 수행한다.
 - Task-11에는 그룹 해산이 없지만 후속 해산 Transaction은 활성 코드도 반드시 삭제한다.
 - `joinCodeVisibleToMembers`는 화면 공개 정책만 제어한다. 직접 코드를 알고 있는 active Player의 가입 가능 여부를 바꾸지 않는다.
 - 코드 문서의 list는 항상 금지한다. 단건 get은 active Player의 정확한 코드 입력에만 사용하며 응답에는 공개 그룹 기본 정보 이상을 노출하지 않는다.

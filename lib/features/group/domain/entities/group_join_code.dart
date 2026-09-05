@@ -2,15 +2,14 @@ import 'dart:math';
 
 /// 계약 §7. 초대코드 값 객체. 문서 ID는 정규화된 코드 자체다.
 ///
-/// 원문은 그룹 공개 문서에 저장하지 않는다. 생성 직후 결과로만 한 번 전달한다.
 class GroupJoinCode {
   const GroupJoinCode._(this.value);
 
   /// Crockford 계열에서 혼동 문자 `0O1Il`을 뺀 32자 알파벳(5비트/문자).
   static const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 
-  /// 20자 × 5비트 = 100비트 ≥ 계약 최소 96비트.
-  static const length = 20;
+  static const length = 6;
+  static const legacyLength = 20;
 
   final String value;
 
@@ -35,7 +34,7 @@ class GroupJoinCode {
   }
 
   static bool _isValidNormalized(String value) {
-    if (value.length != length) return false;
+    if (value.length != length && value.length != legacyLength) return false;
     for (final unit in value.codeUnits) {
       final char = String.fromCharCode(unit);
       if (!alphabet.contains(char)) return false;

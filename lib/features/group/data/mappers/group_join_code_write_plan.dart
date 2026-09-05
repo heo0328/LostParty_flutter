@@ -41,6 +41,7 @@ class GroupJoinCodeWritePlan {
       },
       groupPatch: {
         'hasActiveJoinCode': true,
+        'activeJoinCode': code.value,
         'revision': groupRevision + 1,
         'lastActivityAt': serverTimestamp,
         'updatedAt': serverTimestamp,
@@ -57,6 +58,7 @@ class GroupJoinCodeWritePlan {
   }) => GroupJoinCodeWritePlan(
     groupPatch: {
       'hasActiveJoinCode': false,
+      'activeJoinCode': null,
       'revision': groupRevision + 1,
       'lastActivityAt': serverTimestamp,
       'updatedAt': serverTimestamp,
@@ -111,8 +113,8 @@ class GroupJoinCodeWritePlan {
     }
 
     final activeGroupIds = [...membershipState.activeGroupIds, groupId];
-    final pending = existingRelation != null &&
-        existingRelation.isPendingAt(now);
+    final pending =
+        existingRelation != null && existingRelation.isPendingAt(now);
 
     return GroupJoinCodeWritePlan(
       joinRelationPatch: pending
@@ -151,9 +153,7 @@ class GroupJoinCodeWritePlan {
         'groupId': groupId,
         'playerId': playerId,
         'relation': GroupRelationKind.member.name,
-        'requestStatus': pending
-            ? GroupRequestStatus.accepted.name
-            : null,
+        'requestStatus': pending ? GroupRequestStatus.accepted.name : null,
         'groupNameSnapshot': groupName,
         'displayCharacterNameSnapshot': character.characterName,
         'expiresAt': null,

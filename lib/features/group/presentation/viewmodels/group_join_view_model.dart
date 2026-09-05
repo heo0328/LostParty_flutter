@@ -62,11 +62,11 @@ String groupJoinFailureMessage(GroupJoinFailure failure) => switch (failure) {
   GroupJoinFailure.unknown => '요청을 처리하지 못했습니다.',
 };
 
-/// 해산 차단 안내. 초대코드는 기간 만료가 아니라 원문을 다시 입력해야 폐기된다.
+/// 해산 차단 안내. 활성 초대코드는 관리 화면에서 먼저 폐기한다.
 String groupDisbandFailureMessage(GroupJoinFailure failure) =>
     switch (failure) {
       GroupJoinFailure.joinCodeActive =>
-        '활성 초대코드가 있습니다. 기간 만료가 아닙니다. 초대코드 화면에서 복사해 둔 코드를 입력해 폐기한 뒤 다시 해산하세요.',
+        '활성 초대코드가 있습니다. 초대코드 화면에서 폐기한 뒤 다시 해산하세요.',
       _ => groupJoinFailureMessage(failure),
     };
 

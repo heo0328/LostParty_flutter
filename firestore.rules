@@ -250,7 +250,7 @@ service cloud.firestore {
           'normalizedRepresentativeCharacterName',
           'representativeServerNameSnapshot', 'leaderPlayerId',
           'leaderDisplayCharacterNameSnapshot', 'memberCount', 'revision',
-          'hasActiveJoinCode', 'joinCodeVisibleToMembers', 'lastActivityAt',
+          'hasActiveJoinCode', 'activeJoinCode', 'joinCodeVisibleToMembers', 'lastActivityAt',
           'createdAt', 'updatedAt', 'deletedAt'
         ])
         && data.schemaVersion == 1
@@ -267,6 +267,7 @@ service cloud.firestore {
         && data.memberCount == 1
         && data.revision == 1
         && data.hasActiveJoinCode == false
+        && data.activeJoinCode == null
         && data.joinCodeVisibleToMembers == false
         && data.deletedAt == null
         && data.createdAt == request.time
@@ -1062,8 +1063,7 @@ service cloud.firestore {
     // 서로 다른 문서 ≤10, get·getAfter 합계 약 16회(한도 ~20 이하).
     function validJoinCodeId(code) {
       return code is string
-        && code.size() == 20
-        && code.matches('^[2-9A-HJ-NP-Z]{20}$');
+        && code.matches('^([2-9A-HJ-NP-Z]{6}|[2-9A-HJ-NP-Z]{20})$');
     }
 
     function validJoinCodeCreate(code, data) {
@@ -1085,6 +1085,7 @@ service cloud.firestore {
         && data.updatedAt == request.time
         && before.hasActiveJoinCode == false
         && after.hasActiveJoinCode == true
+        && after.activeJoinCode == code
         && after.revision == before.revision + 1;
     }
 
@@ -1098,6 +1099,8 @@ service cloud.firestore {
         && data.status == 'active'
         && before.hasActiveJoinCode == true
         && after.hasActiveJoinCode == false
+        && before.activeJoinCode == code
+        && after.activeJoinCode == null
         && after.revision == before.revision + 1;
     }
 
@@ -1108,9 +1111,15 @@ service cloud.firestore {
         && oldData.leaderPlayerId == currentPlayerId()
         && newData.diff(oldData).affectedKeys()
           .hasOnly([
-            'hasActiveJoinCode', 'revision', 'lastActivityAt', 'updatedAt'
+            'hasActiveJoinCode', 'activeJoinCode', 'revision', 'lastActivityAt', 'updatedAt'
           ])
         && newData.hasActiveJoinCode != oldData.hasActiveJoinCode
+        && (
+          (newData.hasActiveJoinCode == true
+            && validJoinCodeId(newData.activeJoinCode))
+          || (newData.hasActiveJoinCode == false
+            && newData.activeJoinCode == null)
+        )
         && newData.revision == oldData.revision + 1
         && newData.lastActivityAt == request.time
         && newData.updatedAt == request.time;

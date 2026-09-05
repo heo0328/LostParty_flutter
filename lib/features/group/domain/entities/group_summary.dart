@@ -1,6 +1,6 @@
 enum GroupStatus { active, softDeleted }
 
-/// 계약 §4.2 공개 읽기 범위. 멤버 Player ID 배열·초대코드·금지 정보는 담지 않는다.
+/// 계약 §4.2 공개 읽기 범위. 멤버 Player ID 배열과 금지 정보는 담지 않는다.
 class GroupPublicSummary {
   const GroupPublicSummary({
     required this.groupId,
@@ -13,6 +13,7 @@ class GroupPublicSummary {
     required this.revision,
     required this.hasActiveJoinCode,
     required this.joinCodeVisibleToMembers,
+    this.activeJoinCode,
     required this.createdAt,
     required this.lastActivityAt,
   });
@@ -26,11 +27,14 @@ class GroupPublicSummary {
   final int memberCount;
   final int revision;
 
-  /// 계약 §7. 활성 코드 존재 여부만 공개한다. 코드 원문은 담지 않는다.
+  /// 계약 §7. 활성 코드 존재 여부다.
   final bool hasActiveJoinCode;
 
   /// 멤버 화면 공개 정책. 코드를 아는 Player의 가입 가능 여부는 바꾸지 않는다.
   final bool joinCodeVisibleToMembers;
+
+  /// 단순 초대 수단인 현재 코드. 이전 문서에는 없을 수 있다.
+  final String? activeJoinCode;
 
   final DateTime createdAt;
   final DateTime lastActivityAt;
