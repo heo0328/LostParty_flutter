@@ -42,6 +42,7 @@ void main() {
       String recruitmentId,
     )?
     membersForId,
+    VoidCallback? onInitialLoadComplete,
   }) async {
     final activeDatabase = database ?? AccountDatabase(NativeDatabase.memory());
     if (database == null) addTearDown(activeDatabase.close);
@@ -64,6 +65,7 @@ void main() {
           groupReadRepository: groupReadRepository,
           activityCharactersRepository: activityCharactersRepository,
           characterSearchRepository: characterSearchRepository,
+          onInitialLoadComplete: onInitialLoadComplete,
         ),
       ),
     );
@@ -79,6 +81,53 @@ void main() {
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     expect(find.text('진행 중인 레이드가 없습니다.'), findsNothing);
+  });
+
+  testWidgets('두 목록과 부가 로딩 및 첫 렌더링 뒤 초기 완료를 한 번 알린다', (
+    tester,
+  ) async {
+    final active = StreamController<PartyReadSnapshot<ActiveRaidSummary>>();
+    final applications =
+        StreamController<PartyReadSnapshot<PartyApplicationSummary>>();
+    addTearDown(active.close);
+    addTearDown(applications.close);
+    var completedCount = 0;
+
+    await pumpPage(
+      tester,
+      activeRaids: active.stream,
+      applications: applications.stream,
+      onInitialLoadComplete: () => completedCount++,
+    );
+    await tester.pump();
+    expect(completedCount, 0);
+
+    active.add(const PartyReadSnapshot(items: [], isFromCache: false));
+    await tester.pump();
+    expect(completedCount, 0);
+
+    applications.add(const PartyReadSnapshot(items: [], isFromCache: false));
+    await tester.pumpAndSettle();
+    expect(completedCount, 1);
+
+    active.add(const PartyReadSnapshot(items: [], isFromCache: false));
+    applications.add(const PartyReadSnapshot(items: [], isFromCache: false));
+    await tester.pump();
+    expect(completedCount, 1);
+  });
+
+  testWidgets('두 목록의 첫 오류도 초기 로딩 완료 조건으로 처리한다', (tester) async {
+    var completedCount = 0;
+
+    await pumpPage(
+      tester,
+      activeRaids: Stream.error(StateError('active failed')),
+      applications: Stream.error(StateError('applications failed')),
+      onInitialLoadComplete: () => completedCount++,
+    );
+    await tester.pumpAndSettle();
+
+    expect(completedCount, 1);
   });
 
   testWidgets('빈 목록은 빈 상태로 표시한다', (tester) async {

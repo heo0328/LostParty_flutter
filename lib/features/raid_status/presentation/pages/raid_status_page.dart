@@ -35,6 +35,7 @@ class RaidStatusPage extends StatefulWidget {
     this.groupReadRepository,
     this.activityCharactersRepository,
     this.characterSearchRepository,
+    this.onInitialLoadComplete,
     super.key,
   });
 
@@ -48,6 +49,7 @@ class RaidStatusPage extends StatefulWidget {
   final GroupReadRepository? groupReadRepository;
   final ActivityCharactersRepository? activityCharactersRepository;
   final GroupCharacterSearchRepository? characterSearchRepository;
+  final VoidCallback? onInitialLoadComplete;
 
   @override
   State<RaidStatusPage> createState() => _RaidStatusPageState();
@@ -60,6 +62,9 @@ class _RaidStatusPageState extends State<RaidStatusPage>
   late final RaidHistoryViewModel _history;
   late final TabController _tabController;
   var _unreadCount = 0;
+  var _supplementalInitialLoadComplete = false;
+  var _firstFrameRendered = false;
+  var _initialLoadReported = false;
 
   @override
   void initState() {
@@ -78,35 +83,69 @@ class _RaidStatusPageState extends State<RaidStatusPage>
       groupReadRepository: widget.groupReadRepository,
       activityCharactersRepository: widget.activityCharactersRepository,
       characterSearchRepository: widget.characterSearchRepository,
-    )..start();
+    );
     _applications = PartyReadStreamViewModel<PartyApplicationSummary>(
       streamFactory: () => widget.partyReadRepository.watchApplications(
         playerId: widget.playerId,
         cycleKey: widget.cycleKey,
       ),
-    )..start();
+    );
     _history = RaidHistoryViewModel(
       database: widget.accountDatabase,
       playerId: widget.playerId,
       syncService: widget.eventSyncService,
       catalogRepository: widget.raidCatalogRepository,
     );
+    _activeRaids.addListener(_checkInitialLoadComplete);
+    _applications.addListener(_checkInitialLoadComplete);
+    _activeRaids.start();
+    _applications.start();
     unawaited(_initializeStatus());
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_onTabChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _firstFrameRendered = true;
+      _checkInitialLoadComplete();
+    });
   }
 
   Future<void> _initializeStatus() async {
-    await _history.initialize();
+    try {
+      await _history.initialize();
+    } catch (error, stackTrace) {
+      debugPrint('완료 기록 초기화 실패: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
     await _refreshUnread();
+    if (!mounted) return;
+    _supplementalInitialLoadComplete = true;
+    _checkInitialLoadComplete();
   }
 
   Future<void> _refreshUnread() async {
-    final count = await widget.accountDatabase.countUnreadPartyNotifications(
-      widget.playerId,
-    );
-    if (!mounted) return;
-    setState(() => _unreadCount = count);
+    try {
+      final count = await widget.accountDatabase.countUnreadPartyNotifications(
+        widget.playerId,
+      );
+      if (!mounted) return;
+      setState(() => _unreadCount = count);
+    } catch (error, stackTrace) {
+      debugPrint('읽지 않은 알림 수 조회 실패: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  void _checkInitialLoadComplete() {
+    if (_initialLoadReported ||
+        !_firstFrameRendered ||
+        !_supplementalInitialLoadComplete ||
+        _activeRaids.state.isLoading ||
+        _applications.state.isLoading) {
+      return;
+    }
+    _initialLoadReported = true;
+    widget.onInitialLoadComplete?.call();
   }
 
   void _onTabChanged() {
@@ -119,6 +158,8 @@ class _RaidStatusPageState extends State<RaidStatusPage>
 
   @override
   void dispose() {
+    _activeRaids.removeListener(_checkInitialLoadComplete);
+    _applications.removeListener(_checkInitialLoadComplete);
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _activeRaids.dispose();

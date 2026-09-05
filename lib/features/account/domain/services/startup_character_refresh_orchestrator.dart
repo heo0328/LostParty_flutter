@@ -63,7 +63,15 @@ class StartupCharacterRefreshReport {
       items.where((item) => !item.isSuccess).length + (fatalError == null ? 0 : 1);
 }
 
-class StartupCharacterRefreshOrchestrator {
+abstract interface class StartupCharacterRefreshRunner {
+  StartupCharacterRefreshState get state;
+  Stream<StartupCharacterRefreshState> get states;
+  Future<StartupCharacterRefreshReport> runOnce();
+  Future<void> dispose();
+}
+
+class StartupCharacterRefreshOrchestrator
+    implements StartupCharacterRefreshRunner {
   StartupCharacterRefreshOrchestrator({
     required String playerId,
     required AccountRepository accountRepository,
@@ -95,9 +103,13 @@ class StartupCharacterRefreshOrchestrator {
       const StartupCharacterRefreshState.idle();
   Future<StartupCharacterRefreshReport>? _runFuture;
 
+  @override
   StartupCharacterRefreshState get state => _state;
+
+  @override
   Stream<StartupCharacterRefreshState> get states => _stateController.stream;
 
+  @override
   Future<StartupCharacterRefreshReport> runOnce() =>
       _runFuture ??= _run();
 
@@ -215,5 +227,6 @@ class StartupCharacterRefreshOrchestrator {
     if (!_stateController.isClosed) _stateController.add(state);
   }
 
+  @override
   Future<void> dispose() => _stateController.close();
 }
