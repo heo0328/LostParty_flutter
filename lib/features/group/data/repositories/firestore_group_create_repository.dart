@@ -66,7 +66,12 @@ class FirestoreGroupCreateRepository implements GroupCreateRepository {
         }
 
         final characterData = character.data();
-        if (!character.exists || characterData?['status'] != 'active') {
+        if (!character.exists) {
+          return const GroupCreateResult.failure(
+            GroupCreateFailure.serverDataMissing,
+          );
+        }
+        if (characterData?['status'] != 'active') {
           return const GroupCreateResult.failure(
             GroupCreateFailure.invalidCharacter,
           );

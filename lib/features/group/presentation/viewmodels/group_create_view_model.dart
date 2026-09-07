@@ -53,6 +53,7 @@ String groupCreateFailureMessage(GroupCreateFailure failure) =>
     switch (failure) {
       GroupCreateFailure.unauthenticated ||
       GroupCreateFailure.playerBindingMissing => '계정 연결을 준비하지 못했습니다.',
+      GroupCreateFailure.serverDataMissing => '서버에서 캐릭터 정보를 찾지 못했습니다.',
       GroupCreateFailure.invalidCharacter =>
         '그룹을 만들 수 없는 캐릭터입니다. 내 계정에서 정보를 새로고침한 뒤 다시 시도해 주세요.',
       GroupCreateFailure.ownershipLost => '캐릭터 소유권을 확인하지 못했습니다.',

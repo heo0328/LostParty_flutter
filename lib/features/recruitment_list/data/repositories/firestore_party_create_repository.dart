@@ -93,7 +93,12 @@ class FirestorePartyCreateRepository implements PartyCreateRepository {
           membership = await transaction.get(membershipRef);
         }
 
-        if (!character.exists || characterData?['status'] != 'active') {
+        if (!character.exists) {
+          return const PartyCreateResult.failure(
+            PartyCreateFailure.serverDataMissing,
+          );
+        }
+        if (characterData?['status'] != 'active') {
           return const PartyCreateResult.failure(
             PartyCreateFailure.invalidCharacter,
           );

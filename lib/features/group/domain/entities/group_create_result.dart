@@ -1,6 +1,7 @@
 enum GroupCreateFailure {
   unauthenticated,
   playerBindingMissing,
+  serverDataMissing,
   invalidCharacter,
   ownershipLost,
   activeGroupLimitReached,

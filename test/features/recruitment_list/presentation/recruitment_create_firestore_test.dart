@@ -145,6 +145,58 @@ void main() {
     expect(find.text('게임 계정 인증이 완료된 캐릭터만 모집을 만들 수 있습니다.'), findsOneWidget);
   });
 
+  testWidgets('서버 계정 연결이 사라진 생성 실패는 앱 데이터 초기화 안내를 표시한다', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final createRepository = _RecordingPartyCreateRepository(
+      result: const PartyCreateResult.failure(
+        PartyCreateFailure.playerBindingMissing,
+      ),
+    );
+    final session = FakeUserSession('player-1');
+    final clock = FakeRecruitmentClock(DateTime.utc(2026, 8, 20));
+    final accountRepository = _VerifiedAccountRepository();
+    final assignmentRepository = InMemoryActiveRaidAssignmentRepository();
+    final weeklyRepository = InMemoryWeeklyRaidClearRepository();
+    final recruitmentRepository = InMemoryRecruitmentStateRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RecruitmentCreatePage(
+          catalogRepository: _CatalogRepository(),
+          commandService: RecruitmentCommandService(
+            session: session,
+            clock: clock,
+            idGenerator: SequentialRecruitmentIdGenerator(),
+            repository: recruitmentRepository,
+          ),
+          candidateService: RecruitmentLeaderCandidateService(
+            accountRepository: accountRepository,
+            weeklyClearRepository: weeklyRepository,
+            session: session,
+            clock: clock,
+            assignmentRepository: assignmentRepository,
+            recruitmentRepository: recruitmentRepository,
+          ),
+          partyCreateRepository: createRepository,
+          newRecruitmentId: () => 'firestore-recruitment-1',
+          cycleKey: '2026-08-19',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('saveRecruitmentButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('계정 정보를 확인해 주세요'), findsOneWidget);
+    expect(find.textContaining('앱을 재설치하거나 앱 데이터를 삭제한 뒤'), findsOneWidget);
+  });
+
   testWidgets('그룹 레이드를 만들면 선택한 그룹과 그룹 전용 공개를 저장한다', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -327,12 +379,15 @@ Future<void> _pumpCreateRoute(WidgetTester tester, Widget page) async {
 }
 
 class _RecordingPartyCreateRepository implements PartyCreateRepository {
+  _RecordingPartyCreateRepository({this.result});
+
+  final PartyCreateResult? result;
   PartyCreateCommand? lastCommand;
 
   @override
   Future<PartyCreateResult> create(PartyCreateCommand command) async {
     lastCommand = command;
-    return PartyCreateResult.success(command.recruitmentId);
+    return result ?? PartyCreateResult.success(command.recruitmentId);
   }
 }
 

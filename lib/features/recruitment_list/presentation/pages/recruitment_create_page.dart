@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../shared/presentation/server_account_mismatch_alert.dart';
+
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../../../../shared/raid_catalog/domain/policies/raid_eligibility_policy.dart';
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
@@ -864,8 +866,13 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       context.go('/raid-status/${result.recruitmentId}');
       return;
     }
+    final failure = result.failure!;
+    if (_isServerAccountMismatch(failure)) {
+      await showServerAccountMismatchAlert(context);
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_createFailureMessage(result.failure!))),
+      SnackBar(content: Text(_createFailureMessage(failure))),
     );
   }
 }
@@ -873,6 +880,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
 String _createFailureMessage(PartyCreateFailure failure) => switch (failure) {
   PartyCreateFailure.unauthenticated ||
   PartyCreateFailure.playerBindingMissing => '계정 연결을 준비하지 못했습니다.',
+  PartyCreateFailure.serverDataMissing => '서버에서 캐릭터 정보를 찾지 못했습니다.',
   PartyCreateFailure.ownershipLost => '캐릭터 소유권을 확인하지 못했습니다.',
   PartyCreateFailure.invalidCharacter =>
     '참가할 수 없는 캐릭터입니다. 내 계정에서 정보를 새로고침한 뒤 다시 시도해 주세요.',
@@ -887,4 +895,12 @@ String _createFailureMessage(PartyCreateFailure failure) => switch (failure) {
   PartyCreateFailure.temporarilyUnavailable => '네트워크 연결이 불안정합니다.',
   PartyCreateFailure.invalidRequest => '입력한 모집 정보를 확인하지 못했습니다.',
   PartyCreateFailure.unknown => '모집을 생성하지 못했습니다.',
+};
+
+bool _isServerAccountMismatch(PartyCreateFailure failure) => switch (failure) {
+  PartyCreateFailure.unauthenticated ||
+  PartyCreateFailure.playerBindingMissing ||
+  PartyCreateFailure.serverDataMissing ||
+  PartyCreateFailure.ownershipLost => true,
+  _ => false,
 };

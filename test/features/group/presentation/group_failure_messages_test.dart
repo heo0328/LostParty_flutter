@@ -112,6 +112,13 @@ void main() {
   });
 
   group('groupCreateFailureMessage', () {
+    test('서버 Character 문서 소실을 일반 캐릭터 검증 실패와 구분한다', () {
+      expect(
+        groupCreateFailureMessage(GroupCreateFailure.serverDataMissing),
+        '서버에서 캐릭터 정보를 찾지 못했습니다.',
+      );
+    });
+
     test('권한 거부와 일시 불가를 구분한다', () {
       expect(
         groupCreateFailureMessage(GroupCreateFailure.permissionDenied),
