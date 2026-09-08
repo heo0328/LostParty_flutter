@@ -459,7 +459,7 @@ H 대표 전투력, I 내 계정/수동 갱신, J 초대코드, K 방별 알림�
 - 서버 원본 조회에서 authBinding·Player·gameAccount·playerGameAccount 관계가 없거나 비정상인 경우에만 로컬 계정을 `serverMismatch`로 갱신한다. 오프라인 캐시와 통신 오류는 기존 로컬 상태를 유지한다.
 - 내 계정은 인증 완료 대신 `서버 데이터 불일치 · 앱 재실행 또는 재인증 필요`를 표시하고, 수동 인증 화면은 등록된 원정대 Character를 그대로 선택해 요청할 수 있게 했다.
 - 일반 장비 인증과 운영자 승인 수동 인증은 Character Claim이 가리키는 `gameAccount`만 삭제된 고아 상태에서도 같은 ID로 계정·Character·소유관계를 재생성한다. 정상 소유와 타인 소유 흐름은 유지한다.
-- 관련 화면·Repository·로컬 DB 표적 테스트 59개가 통과했고 analyze 신규 문제는 없다. 실제 Firestore의 완전 삭제·계정만 삭제·소유관계만 삭제 사례는 실기기 또는 Emulator 검증 후 완료 판정한다.
+- 관련 화면·Repository·로컬 DB 표적 테스트 59개와 전체 테스트 926개가 통과했고 analyze 신규 문제는 없다. 실제 Firestore의 완전 삭제·계정만 삭제·소유관계만 삭제 사례는 실기기 또는 Emulator 검증 후 완료 판정한다.
 
 ### 2. 레이드 현황 새로고침
 

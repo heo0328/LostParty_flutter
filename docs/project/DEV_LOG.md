@@ -2582,5 +2582,5 @@
 - `codex/account-server-mismatch-recovery`에서 서버 원본 조회에 성공한 경우만 authBinding·Player·gameAccount·playerGameAccount 관계를 확인하고, 부재·비정상을 로컬 `serverMismatch`로 구분했다. 오프라인·503·permission-denied는 기존 로컬 상태를 유지한다.
 - 내 계정의 인증 완료 Chip을 서버 불일치 안내로 교체하고, 수동 인증 화면에서 등록된 원정대 Character로 재요청할 수 있게 했다.
 - Character Claim은 남았지만 대상 gameAccount가 삭제된 경우 일반 장비 인증과 운영자 승인 수동 인증이 같은 서버 ID로 계정·Character·소유관계를 재생성하도록 기존 중단 조건을 제거했다.
-- 관련 화면·Repository·로컬 DB 표적 테스트 59개가 통과했다. 전체 analyze는 신규 문제 없이 기존 21개만 보고했다. Rules·스키마·자동 로컬 삭제는 변경하지 않았다.
+- 관련 화면·Repository·로컬 DB 표적 테스트 59개와 전체 테스트 926개가 통과했다. 전체 analyze는 신규 문제 없이 기존 21개만 보고했다. Rules·스키마·자동 로컬 삭제는 변경하지 않았다.
 - 실제 Firestore 부분 삭제 상태의 실기기/Emulator 검증은 남아 있으며, 검증 전 현재 구간을 `dev`에 병합하지 않는다.
