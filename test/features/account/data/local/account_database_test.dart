@@ -836,6 +836,22 @@ void main() {
     expect(account.serverOwnershipStatus, 'ownershipLost');
   });
 
+  test('stores a confirmed server mismatch separately from ownership loss', () async {
+    final fetchedAt = DateTime.utc(2026, 8, 25);
+    await database.saveMainAccountSnapshot(
+      lookupCharacterName: '대표캐릭터',
+      characters: [_snapshot('대표캐릭터', fetchedAt)],
+    );
+    final account = await database.select(database.gameAccounts).getSingle();
+
+    await database.updateServerOwnershipStatuses({
+      account.id: 'serverMismatch',
+    });
+
+    final updated = await database.select(database.gameAccounts).getSingle();
+    expect(updated.serverOwnershipStatus, 'serverMismatch');
+  });
+
   test('rejects server ID remapping without partial writes', () async {
     final fetchedAt = DateTime.utc(2026, 8, 25);
     await database.saveMainAccountSnapshot(

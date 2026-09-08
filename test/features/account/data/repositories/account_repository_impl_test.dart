@@ -12,6 +12,7 @@ import 'package:lost_party/features/account/data/local/account_database.dart';
 import 'package:lost_party/features/account/data/repositories/account_repository_impl.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_catalog_detection.dart';
+import 'package:lost_party/features/account/domain/repositories/account_ownership_status_gateway.dart';
 import 'package:lost_party/shared/game_catalog/data/mappers/game_catalog_mapper.dart';
 import 'package:lost_party/shared/game_catalog/domain/entities/game_catalog.dart';
 import 'package:lost_party/shared/game_catalog/domain/repositories/game_catalog_repository.dart';
@@ -140,6 +141,52 @@ void main() {
       expect(accounts.last.characters.single.characterName, '부계정소서');
     },
   );
+
+  test('persists a confirmed missing server relationship as a mismatch', () async {
+    final now = DateTime.utc(2026, 9, 8);
+    final accountId = await database.createAccount(
+      label: '메인 계정',
+      isMain: true,
+      lookupCharacterName: lookupCharacterName,
+      now: now,
+    );
+    final characterId = await database.into(database.accountCharacters).insert(
+      AccountCharactersCompanion.insert(
+        accountId: accountId,
+        serverName: '루페온',
+        characterName: lookupCharacterName,
+        characterLevel: 70,
+        characterClassName: '바드',
+        itemLevel: const Value(1750),
+        lastSummaryFetchedAt: now,
+      ),
+    );
+    await database.bindServerIdentity(
+      localAccountId: accountId,
+      serverGameAccountId: 'game-account-1',
+      serverCharacterIdsByLocalId: {characterId: 'character-1'},
+    );
+    final checkedRepository = AccountRepositoryImpl(
+      remoteDataSource: LostArkCharacterRemoteDataSource(
+        apiClient: LostArkApiClient(
+          apiTokenStore: _InMemoryApiTokenStore(),
+          dio: dio,
+        ),
+      ),
+      localDataSource: LocalAccountDataSource(
+        database: database,
+        gameCatalogRepository: _FakeGameCatalogRepository(catalog),
+      ),
+      ownershipStatusGateway: const _OwnershipStatusGateway(
+        {'game-account-1': 'serverMismatch'},
+      ),
+    );
+
+    final account = (await checkedRepository.loadAccounts()).single;
+
+    expect(account.hasServerMismatch, isTrue);
+    expect(account.hasActiveOwnership, isFalse);
+  });
 
   test('creates an analyzed draft without changing local data', () async {
     dioAdapter.onGet(
@@ -320,4 +367,15 @@ class _InMemoryApiTokenStore implements ApiTokenStore {
   Future<void> delete() async {
     _token = null;
   }
+}
+
+class _OwnershipStatusGateway implements AccountOwnershipStatusGateway {
+  const _OwnershipStatusGateway(this.statuses);
+
+  final Map<String, String> statuses;
+
+  @override
+  Future<Map<String, String>> loadStatuses(
+    Iterable<String> gameAccountIds,
+  ) async => statuses;
 }

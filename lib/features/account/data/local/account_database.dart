@@ -601,7 +601,9 @@ class AccountDatabase extends _$AccountDatabase {
   ) {
     return transaction(() async {
       for (final entry in statusesByLocalAccountId.entries) {
-        if (entry.value != 'active' && entry.value != 'ownershipLost') {
+        if (entry.value != 'active' &&
+            entry.value != 'ownershipLost' &&
+            entry.value != 'serverMismatch') {
           throw ArgumentError.value(entry.value, 'status');
         }
         await (update(

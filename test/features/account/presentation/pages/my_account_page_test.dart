@@ -112,6 +112,27 @@ void main() {
     expect(find.text('계정 인증 완료'), findsNothing);
   });
 
+  testWidgets('shows a server mismatch instead of a verification badge', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MyAccountPage(
+          apiTokenStore: _InMemoryApiTokenStore(),
+          accountRepository: _FakeAccountRepository(serverMismatch: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('계정 인증 완료'), findsNothing);
+    expect(find.text('서버 데이터 불일치 · 앱 재실행 또는 재인증 필요'), findsOneWidget);
+    expect(find.byKey(const ValueKey('serverMismatchChip')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('warns about and manually deletes a missing roster character', (
     WidgetTester tester,
   ) async {
@@ -385,11 +406,13 @@ class _FakeAccountRepository
     this.serverBound = false,
     this.missingRoster = false,
     this.lostOwnership = false,
+    this.serverMismatch = false,
   });
 
   final bool serverBound;
   final bool missingRoster;
   final bool lostOwnership;
+  final bool serverMismatch;
   int? deletedMissingCharacterId;
   LocalGameAccount? _subAccount;
 
@@ -556,11 +579,13 @@ class _FakeAccountRepository
   Future<LocalGameAccount?> loadMainAccount() async {
     return LocalGameAccount(
       id: 1,
-      serverGameAccountId: serverBound || lostOwnership
+      serverGameAccountId: serverBound || lostOwnership || serverMismatch
           ? 'game-account-1'
           : null,
       serverOwnershipStatus: lostOwnership
           ? 'ownershipLost'
+          : serverMismatch
+          ? 'serverMismatch'
           : serverBound
           ? 'active'
           : null,

@@ -235,6 +235,31 @@ void main() {
     expect(create.onPressed, isNull);
   });
 
+  testWidgets('서버 불일치 계정은 등록된 원정대 캐릭터로 수동 인증할 수 있다', (
+    tester,
+  ) async {
+    final repository = _FakeManualRepository(requests: [request]);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManualVerificationPage(
+          accountRepository: _ServerMismatchAccountRepository(),
+          mappingRepository: _FakeMappingRepository(),
+          repository: repository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('이 원정대로 재인증할 수 있습니다'), findsOneWidget);
+    final create = tester.widget<FilledButton>(
+      find.byKey(const ValueKey('manualVerificationCreate')),
+    );
+    expect(create.onPressed, isNotNull);
+    await tester.tap(find.byKey(const ValueKey('manualVerificationCreate')));
+    await tester.pumpAndSettle();
+    expect(repository.created, isTrue);
+  });
+
   testWidgets('기존 소유자가 있으면 분쟁 개시와 강제 인증을 제공한다', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -364,6 +389,35 @@ class _VerifiedAccountRepository extends _FakeAccountRepository {
       displayLimit: 1,
       serverGameAccountId: 'ga-1',
       serverOwnershipStatus: 'active',
+      characters: const [
+        LocalAccountCharacter(
+          id: 11,
+          serverName: '루페온',
+          characterName: '이슈아이',
+          characterLevel: 60,
+          characterClassName: '도화가',
+          itemLevel: 1700,
+          combatPower: 100,
+          isVisible: true,
+          displayOrder: 1,
+        ),
+      ],
+    ),
+  ];
+}
+
+class _ServerMismatchAccountRepository extends _FakeAccountRepository {
+  @override
+  Future<List<LocalGameAccount>> loadAccounts() async => [
+    LocalGameAccount(
+      id: 1,
+      label: '메인 계정',
+      isMain: true,
+      lookupCharacterName: '이슈아이',
+      representativeCharacterId: 11,
+      displayLimit: 1,
+      serverGameAccountId: 'ga-1',
+      serverOwnershipStatus: 'serverMismatch',
       characters: const [
         LocalAccountCharacter(
           id: 11,

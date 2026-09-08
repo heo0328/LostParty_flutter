@@ -391,6 +391,11 @@ class _ManualVerificationPageState extends State<ManualVerificationPage> {
                   const Text(
                     '이미 인증한 게임 계정입니다. 수동 인증을 다시 요청할 수 없습니다.',
                   ),
+                ] else if (_selectedAccount?.hasServerMismatch == true) ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    '서버 데이터가 로컬 계정과 일치하지 않습니다. 이 원정대로 재인증할 수 있습니다.',
+                  ),
                 ],
                 const SizedBox(height: 16),
                 FilledButton(
