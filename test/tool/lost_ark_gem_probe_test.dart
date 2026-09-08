@@ -48,6 +48,10 @@ void main() {
     expect(report.gems.single.tooltipClassNames, ['발키리']);
     expect(report.gems.single.tooltipClassMatchesCharacter, isTrue);
     expect(report.gems.single.currentCategory, 'unknown');
+    expect(
+      report.gems.single.currentValidationStatus,
+      'sameClassTargetUnverified',
+    );
     expect(report.gems.single.currentWarnings, hasLength(1));
   });
 
@@ -63,6 +67,7 @@ void main() {
 
     expect(report.gems.single.tooltipClassNames, ['홀리나이트']);
     expect(report.gems.single.tooltipClassMatchesCharacter, isFalse);
+    expect(report.gems.single.currentValidationStatus, 'foreignClass');
   });
 
   test('exposes current Bard Tempest catalog gap', () {

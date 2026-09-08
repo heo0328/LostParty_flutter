@@ -4,6 +4,13 @@ enum BuildNoticeLevel { info, warning }
 
 enum GemSkillCategory { normal, passiveOrIdentity, unknown }
 
+enum GemValidationStatus {
+  verified,
+  sameClassTargetUnverified,
+  foreignClass,
+  unavailable,
+}
+
 class BuildNotice {
   const BuildNotice({
     required this.code,
@@ -23,6 +30,8 @@ class GemSkillEffect {
     required this.skillName,
     required this.descriptions,
     required this.category,
+    this.tooltipClassNames = const [],
+    this.validationStatus = GemValidationStatus.unavailable,
   });
 
   final int gemSlot;
@@ -30,6 +39,8 @@ class GemSkillEffect {
   final String skillName;
   final List<String> descriptions;
   final GemSkillCategory category;
+  final List<String> tooltipClassNames;
+  final GemValidationStatus validationStatus;
 }
 
 class ArkGridConditionCheck {

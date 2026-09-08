@@ -138,6 +138,7 @@ void _printReport(LostArkGemProbeReport report) {
     stdout.writeln('[슬롯 ${gem.slot}] Lv.${gem.level} ${gem.targetName}');
     stdout.writeln('  Tooltip 직업: $tooltipClasses ($classMatch)');
     stdout.writeln('  현재 앱 분류: ${gem.currentCategory}');
+    stdout.writeln('  현재 검증 상태: ${gem.currentValidationStatus}');
     for (final warning in gem.currentWarnings) {
       stdout.writeln('  경고: $warning');
     }

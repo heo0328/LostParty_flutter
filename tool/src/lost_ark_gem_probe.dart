@@ -1,7 +1,9 @@
-import 'dart:convert';
-
 import 'package:lost_party/features/account/data/mappers/character_build_analysis_mapper.dart';
+import 'package:lost_party/features/account/data/mappers/gem_tooltip_class_extractor.dart';
 import 'package:lost_party/shared/game_catalog/domain/entities/game_catalog.dart';
+
+export 'package:lost_party/features/account/data/mappers/gem_tooltip_class_extractor.dart'
+    show extractGemTooltipClassNames;
 
 class LostArkGemProbeReport {
   const LostArkGemProbeReport({
@@ -92,6 +94,7 @@ class LostArkGemProbeFinding {
     required this.tooltipClassNames,
     required this.tooltipClassMatchesCharacter,
     required this.currentCategory,
+    required this.currentValidationStatus,
     required this.currentWarnings,
   });
 
@@ -101,6 +104,7 @@ class LostArkGemProbeFinding {
   final List<String> tooltipClassNames;
   final bool? tooltipClassMatchesCharacter;
   final String currentCategory;
+  final String currentValidationStatus;
   final List<String> currentWarnings;
 }
 
@@ -175,7 +179,6 @@ LostArkGemProbeReport buildLostArkGemProbeReport(
         : tooltipClassNames.any(
             (name) => _normalize(name) == normalizedCharacterClass,
           );
-    final warningCode = 'unknown_gem_skill_${effect.gemSlot}';
     findings.add(
       LostArkGemProbeFinding(
         slot: effect.gemSlot,
@@ -184,10 +187,13 @@ LostArkGemProbeReport buildLostArkGemProbeReport(
         tooltipClassNames: tooltipClassNames,
         tooltipClassMatchesCharacter: matches,
         currentCategory: effect.category.name,
+        currentValidationStatus: effect.validationStatus.name,
         currentWarnings: analysis.notices
             .where(
               (notice) =>
-                  notice.code == warningCode ||
+                  notice.code ==
+                      'unverified_same_class_gem_${effect.gemSlot}' ||
+                  notice.code == 'foreign_class_gem_${effect.gemSlot}' ||
                   notice.code == 'unmapped_gem_${effect.gemSlot}',
             )
             .map((notice) => notice.message)
@@ -248,6 +254,13 @@ List<LostArkPassiveNodeFinding> _parseEnlightenmentNodes(Object? arkPassive) {
   return result;
 }
 
+String _stripMarkup(String value) => value
+    .replaceAll(RegExp(r'<[^>]*>', caseSensitive: false), '')
+    .replaceAll('&nbsp;', ' ')
+    .replaceAll('|', ' ')
+    .replaceAll(RegExp(r'\s+'), ' ')
+    .trim();
+
 List<LostArkGridCoreFinding> _parseOrderArkGridCores(Object? arkGrid) {
   final gridMap = _asMap(arkGrid);
   final result = <LostArkGridCoreFinding>[];
@@ -278,65 +291,6 @@ List<LostArkGridCoreFinding> _parseOrderArkGridCores(Object? arkGrid) {
   result.sort((left, right) => left.slot.index.compareTo(right.slot.index));
   return result;
 }
-
-List<String> extractGemTooltipClassNames(
-  Iterable<Object?> tooltipValues,
-  Map<String, String> knownClassNames,
-) {
-  final result = <String>{};
-  for (final tooltip in tooltipValues) {
-    for (final text in _tooltipStrings(tooltip)) {
-      final plainText = _stripMarkup(text);
-      for (final match in RegExp(r'\[([^\[\]]+)\]').allMatches(plainText)) {
-        final candidate = match.group(1)?.trim();
-        if (candidate == null) {
-          continue;
-        }
-        final canonical = knownClassNames[_normalize(candidate)];
-        if (canonical != null) {
-          result.add(canonical);
-        }
-      }
-    }
-  }
-  return result.toList(growable: false)..sort();
-}
-
-Iterable<String> _tooltipStrings(Object? value) sync* {
-  if (value is String) {
-    final trimmed = value.trim();
-    if (trimmed.isEmpty) {
-      return;
-    }
-    try {
-      final decoded = jsonDecode(trimmed);
-      if (decoded is Map || decoded is List) {
-        yield* _tooltipStrings(decoded);
-        return;
-      }
-    } on FormatException {
-      // Plain tooltip text is expected for some API fields.
-    }
-    yield trimmed;
-    return;
-  }
-  if (value is Map) {
-    for (final child in value.values) {
-      yield* _tooltipStrings(child);
-    }
-    return;
-  }
-  if (value is Iterable) {
-    for (final child in value) {
-      yield* _tooltipStrings(child);
-    }
-  }
-}
-
-String _stripMarkup(String value) => value
-    .replaceAll(RegExp(r'<[^>]*>', caseSensitive: false), '')
-    .replaceAll('&nbsp;', ' ')
-    .trim();
 
 String _normalize(String value) => value.trim().toLowerCase();
 

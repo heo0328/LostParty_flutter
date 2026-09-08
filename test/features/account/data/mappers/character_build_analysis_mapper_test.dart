@@ -249,7 +249,7 @@ void main() {
     },
   );
 
-  test('keeps an unknown gem warning without catalog or icon evidence', () {
+  test('marks an unknown target from the same class as unverified', () {
     final modified = _withGemTarget(
       fixture,
       name: '알 수 없는 스킬',
@@ -266,8 +266,22 @@ void main() {
       GemSkillCategory.unknown,
     );
     expect(
-      result.notices.where((notice) => notice.code == 'unknown_gem_skill_4'),
+      result.gemEffects
+          .singleWhere((effect) => effect.gemSlot == 4)
+          .validationStatus,
+      GemValidationStatus.sameClassTargetUnverified,
+    );
+    expect(
+      result.notices.where(
+        (notice) => notice.code == 'unverified_same_class_gem_4',
+      ),
       hasLength(1),
+    );
+    expect(
+      result.notices
+          .singleWhere((notice) => notice.code == 'unverified_same_class_gem_4')
+          .level,
+      BuildNoticeLevel.info,
     );
   });
 
@@ -288,8 +302,50 @@ void main() {
       GemSkillCategory.unknown,
     );
     expect(
-      result.notices.where((notice) => notice.code == 'unknown_gem_skill_4'),
-      hasLength(1),
+      result.gemEffects
+          .singleWhere((effect) => effect.gemSlot == 4)
+          .validationStatus,
+      GemValidationStatus.sameClassTargetUnverified,
+    );
+  });
+
+  test('warns only when the gem tooltip names a different class', () {
+    final modified = _withGemTooltipClass(fixture, slot: 4, className: '발키리');
+
+    final result = const CharacterBuildAnalysisMapper().fromJson(
+      modified,
+      catalog: catalog,
+    );
+    final effect = result.gemEffects.singleWhere(
+      (effect) => effect.gemSlot == 4,
+    );
+
+    expect(effect.tooltipClassNames, ['발키리']);
+    expect(effect.validationStatus, GemValidationStatus.foreignClass);
+    expect(
+      result.notices
+          .singleWhere((notice) => notice.code == 'foreign_class_gem_4')
+          .level,
+      BuildNoticeLevel.warning,
+    );
+  });
+
+  test('does not treat rune brackets as a gem class', () {
+    final modified = _withGemTooltipClass(fixture, slot: 4, className: '풍요');
+
+    final result = const CharacterBuildAnalysisMapper().fromJson(
+      modified,
+      catalog: catalog,
+    );
+    final effect = result.gemEffects.singleWhere(
+      (effect) => effect.gemSlot == 4,
+    );
+
+    expect(effect.tooltipClassNames, isEmpty);
+    expect(effect.validationStatus, GemValidationStatus.unavailable);
+    expect(
+      result.notices.where((notice) => notice.code == 'foreign_class_gem_4'),
+      isEmpty,
     );
   });
 
@@ -419,6 +475,29 @@ Map<String, dynamic> _withGemTarget(
   );
   target['Name'] = name;
   target['Icon'] = icon;
+  return modified;
+}
+
+Map<String, dynamic> _withGemTooltipClass(
+  Map<String, dynamic> value, {
+  required int slot,
+  required String className,
+}) {
+  final modified = _deepCopy(value);
+  final armoryGem = modified['ArmoryGem'] as Map<String, dynamic>;
+  final gems = armoryGem['Gems'] as List<dynamic>;
+  final gem = gems.cast<Map<String, dynamic>>().singleWhere(
+    (gem) => gem['Slot'] == slot,
+  );
+  gem['Tooltip'] = jsonEncode({
+    'Element_006': {
+      'type': 'ItemPartBox',
+      'value': {
+        'Element_000': '효과',
+        'Element_001': '[$className] 테스트 스킬 피해 증가',
+      },
+    },
+  });
   return modified;
 }
 
