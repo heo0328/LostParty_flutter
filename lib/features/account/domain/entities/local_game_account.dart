@@ -20,6 +20,7 @@ class LocalGameAccount {
   final String? serverOwnershipStatus;
   bool get hasActiveOwnership => serverOwnershipStatus == 'active';
   bool get hasLostOwnership => serverOwnershipStatus == 'ownershipLost';
+  bool get hasServerMismatch => serverOwnershipStatus == 'serverMismatch';
   final String label;
   final bool isMain;
   final String lookupCharacterName;

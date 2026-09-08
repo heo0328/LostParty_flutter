@@ -148,6 +148,52 @@ void main() {
     expect(find.text('LP-7K4M2Q'), findsNothing);
   });
 
+  testWidgets('승인 결과의 로컬 연결 실패를 사용자에게 알린다', (tester) async {
+    final approved = ManualVerificationRequest(
+      id: request.id,
+      requesterPlayerId: request.requesterPlayerId,
+      targetIdentityKey: request.targetIdentityKey,
+      localAccountLabelSnapshot: request.localAccountLabelSnapshot,
+      proofServerName: request.proofServerName,
+      proofCharacterName: request.proofCharacterName,
+      verificationCode: request.verificationCode,
+      status: ManualVerificationStatus.approved,
+      attemptNumberForTarget: request.attemptNumberForTarget,
+      totalAttemptNumberForPlayer: request.totalAttemptNumberForPlayer,
+      createdAt: request.createdAt,
+      expiresAt: request.expiresAt,
+      targetGameAccountId: 'ga-1',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManualVerificationPage(
+          accountRepository: _FakeAccountRepository(),
+          mappingRepository: _FakeMappingRepository(throwOnBind: true),
+          repository: _FakeManualRepository(
+            requests: [approved],
+            approvedResult: const GameAccountVerificationResult(
+              status: 'verified',
+              serverGameAccountId: 'ga-1',
+              serverCharacters: [
+                VerifiedServerCharacter(
+                  serverName: '루페온',
+                  characterName: '이슈아이',
+                  serverCharacterId: 'character-11',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('승인된 인증 결과를 이 기기의 원정대에 연결하지 못했습니다. 다시 시도해 주세요.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('오픈채팅방 링크는 안내된 주소로 연다', (tester) async {
     Uri? opened;
     await tester.pumpWidget(
@@ -233,6 +279,31 @@ void main() {
       find.byKey(const ValueKey('manualVerificationCreate')),
     );
     expect(create.onPressed, isNull);
+  });
+
+  testWidgets('서버 불일치 계정은 등록된 원정대 캐릭터로 수동 인증할 수 있다', (
+    tester,
+  ) async {
+    final repository = _FakeManualRepository(requests: [request]);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManualVerificationPage(
+          accountRepository: _ServerMismatchAccountRepository(),
+          mappingRepository: _FakeMappingRepository(),
+          repository: repository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('이 원정대로 재인증할 수 있습니다'), findsOneWidget);
+    final create = tester.widget<FilledButton>(
+      find.byKey(const ValueKey('manualVerificationCreate')),
+    );
+    expect(create.onPressed, isNotNull);
+    await tester.tap(find.byKey(const ValueKey('manualVerificationCreate')));
+    await tester.pumpAndSettle();
+    expect(repository.created, isTrue);
   });
 
   testWidgets('기존 소유자가 있으면 분쟁 개시와 강제 인증을 제공한다', (tester) async {
@@ -381,12 +452,47 @@ class _VerifiedAccountRepository extends _FakeAccountRepository {
   ];
 }
 
+class _ServerMismatchAccountRepository extends _FakeAccountRepository {
+  @override
+  Future<List<LocalGameAccount>> loadAccounts() async => [
+    LocalGameAccount(
+      id: 1,
+      label: '메인 계정',
+      isMain: true,
+      lookupCharacterName: '이슈아이',
+      representativeCharacterId: 11,
+      displayLimit: 1,
+      serverGameAccountId: 'ga-1',
+      serverOwnershipStatus: 'serverMismatch',
+      characters: const [
+        LocalAccountCharacter(
+          id: 11,
+          serverName: '루페온',
+          characterName: '이슈아이',
+          characterLevel: 60,
+          characterClassName: '도화가',
+          itemLevel: 1700,
+          combatPower: 100,
+          isVisible: true,
+          displayOrder: 1,
+        ),
+      ],
+    ),
+  ];
+}
+
 class _FakeMappingRepository extends Fake
     implements AccountIdentityMappingRepository {
+  _FakeMappingRepository({this.throwOnBind = false});
+
+  final bool throwOnBind;
   ServerAccountIdentityBinding? binding;
 
   @override
   Future<void> bindServerIdentity(ServerAccountIdentityBinding binding) async {
+    if (throwOnBind) {
+      throw StateError('bind failed');
+    }
     this.binding = binding;
   }
 }

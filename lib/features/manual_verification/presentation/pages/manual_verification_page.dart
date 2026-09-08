@@ -152,7 +152,11 @@ class _ManualVerificationPageState extends State<ManualVerificationPage> {
         final result = await widget.repository.loadApprovedResult(request.id);
         await _saveBinding(result, request);
       } catch (_) {
-        _boundRequestIds.remove(request.id);
+        if (mounted) {
+          setState(() {
+            _message = '승인된 인증 결과를 이 기기의 원정대에 연결하지 못했습니다. 다시 시도해 주세요.';
+          });
+        }
       }
     }
   }
@@ -390,6 +394,11 @@ class _ManualVerificationPageState extends State<ManualVerificationPage> {
                   const SizedBox(height: 12),
                   const Text(
                     '이미 인증한 게임 계정입니다. 수동 인증을 다시 요청할 수 없습니다.',
+                  ),
+                ] else if (_selectedAccount?.hasServerMismatch == true) ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    '서버 데이터가 로컬 계정과 일치하지 않습니다. 이 원정대로 재인증할 수 있습니다.',
                   ),
                 ],
                 const SizedBox(height: 16),

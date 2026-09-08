@@ -836,6 +836,22 @@ void main() {
     expect(account.serverOwnershipStatus, 'ownershipLost');
   });
 
+  test('stores a confirmed server mismatch separately from ownership loss', () async {
+    final fetchedAt = DateTime.utc(2026, 8, 25);
+    await database.saveMainAccountSnapshot(
+      lookupCharacterName: '대표캐릭터',
+      characters: [_snapshot('대표캐릭터', fetchedAt)],
+    );
+    final account = await database.select(database.gameAccounts).getSingle();
+
+    await database.updateServerOwnershipStatuses({
+      account.id: 'serverMismatch',
+    });
+
+    final updated = await database.select(database.gameAccounts).getSingle();
+    expect(updated.serverOwnershipStatus, 'serverMismatch');
+  });
+
   test('rejects server ID remapping without partial writes', () async {
     final fetchedAt = DateTime.utc(2026, 8, 25);
     await database.saveMainAccountSnapshot(
@@ -868,6 +884,42 @@ void main() {
         .getSingle();
     expect(storedAccount.serverGameAccountId, 'game-account-1');
     expect(storedCharacter.serverCharacterId, 'character-1');
+  });
+
+  test('repairs server IDs only after a server mismatch is confirmed', () async {
+    final fetchedAt = DateTime.utc(2026, 8, 25);
+    await database.saveMainAccountSnapshot(
+      lookupCharacterName: '조회캐릭터',
+      characters: [_snapshot('조회캐릭터', fetchedAt)],
+    );
+    final account = await database.select(database.gameAccounts).getSingle();
+    final character = await database
+        .select(database.accountCharacters)
+        .getSingle();
+    await database.bindServerIdentity(
+      localAccountId: account.id,
+      serverGameAccountId: 'old-game-account',
+      serverCharacterIdsByLocalId: {character.id: 'old-character'},
+    );
+    await database.updateServerOwnershipStatuses({
+      account.id: 'serverMismatch',
+    });
+
+    await database.bindServerIdentity(
+      localAccountId: account.id,
+      serverGameAccountId: 'new-game-account',
+      serverCharacterIdsByLocalId: {character.id: 'new-character'},
+    );
+
+    final repairedAccount = await database
+        .select(database.gameAccounts)
+        .getSingle();
+    final repairedCharacter = await database
+        .select(database.accountCharacters)
+        .getSingle();
+    expect(repairedAccount.serverGameAccountId, 'new-game-account');
+    expect(repairedAccount.serverOwnershipStatus, 'active');
+    expect(repairedCharacter.serverCharacterId, 'new-character');
   });
 
   test('rejects a character that belongs to another local account', () async {

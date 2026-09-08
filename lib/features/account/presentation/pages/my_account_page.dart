@@ -574,6 +574,19 @@ class _MyAccountPageState extends State<MyAccountPage> {
                                 color: Theme.of(context).colorScheme.error,
                               ),
                               label: const Text('인증 상실'),
+                            )
+                          else if (account.hasServerMismatch)
+                            Chip(
+                              key: const ValueKey('serverMismatchChip'),
+                              visualDensity: VisualDensity.compact,
+                              avatar: Icon(
+                                Icons.sync_problem_outlined,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                              label: const Text(
+                                '서버 데이터 불일치 · 앱 재실행 또는 재인증 필요',
+                              ),
                             ),
                         ],
                       ),
