@@ -57,9 +57,6 @@ class _GroupJoinCodePageState extends State<GroupJoinCodePage> {
           if (leaderSnap.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (leaderSnap.data != true) {
-            return const Center(child: Text('그룹장만 초대코드를 관리할 수 있습니다.'));
-          }
           return FutureBuilder<GroupPublicSummary?>(
             future: _group,
             builder: (context, snapshot) {
@@ -75,7 +72,7 @@ class _GroupJoinCodePageState extends State<GroupJoinCodePage> {
               if (group == null || !group.isActive) {
                 return const Center(child: Text('그룹을 찾을 수 없습니다.'));
               }
-              return _body(group);
+              return _body(group, isLeader: leaderSnap.data == true);
             },
           );
         },
@@ -83,8 +80,11 @@ class _GroupJoinCodePageState extends State<GroupJoinCodePage> {
     );
   }
 
-  Widget _body(GroupPublicSummary group) {
+  Widget _body(GroupPublicSummary group, {required bool isLeader}) {
     final activeCode = widget.viewModel.activeCode(group);
+    if (!isLeader && (!group.joinCodeVisibleToMembers || activeCode == null)) {
+      return const Center(child: Text('그룹장이 초대코드를 공개하지 않았습니다.'));
+    }
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -121,15 +121,15 @@ class _GroupJoinCodePageState extends State<GroupJoinCodePage> {
             label: const Text('코드 복사'),
           ),
         ],
-        const SizedBox(height: 24),
-        if (!group.hasActiveJoinCode)
+        if (isLeader) const SizedBox(height: 24),
+        if (isLeader && !group.hasActiveJoinCode)
           FilledButton.icon(
             key: const ValueKey('groupJoinCodeCreateButton'),
             onPressed: _busy ? null : _create,
             icon: const Icon(Icons.add_link),
             label: const Text('초대코드 만들기'),
           )
-        else
+        else if (isLeader)
           OutlinedButton.icon(
             key: const ValueKey('groupJoinCodeRevokeButton'),
             onPressed: _busy || activeCode == null
@@ -138,14 +138,16 @@ class _GroupJoinCodePageState extends State<GroupJoinCodePage> {
             icon: const Icon(Icons.link_off),
             label: const Text('코드 폐기'),
           ),
-        const SizedBox(height: 16),
-        SwitchListTile(
-          key: const ValueKey('groupJoinCodeVisibilitySwitch'),
-          title: const Text('멤버에게 코드 표시'),
-          subtitle: const Text('화면 공개 정책만 바꿉니다. 가입 가능 여부는 그대로입니다.'),
-          value: group.joinCodeVisibleToMembers,
-          onChanged: _busy ? null : (value) => _setVisibility(value),
-        ),
+        if (isLeader) ...[
+          const SizedBox(height: 16),
+          SwitchListTile(
+            key: const ValueKey('groupJoinCodeVisibilitySwitch'),
+            title: const Text('멤버에게 코드 표시'),
+            subtitle: const Text('화면 공개 정책만 바꿉니다. 가입 가능 여부는 그대로입니다.'),
+            value: group.joinCodeVisibleToMembers,
+            onChanged: _busy ? null : (value) => _setVisibility(value),
+          ),
+        ],
       ],
     );
   }

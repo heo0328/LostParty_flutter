@@ -3483,6 +3483,10 @@ service cloud.firestore {
       ) || validGroupJoinCodeVisibilityUpdate(
         resource.data,
         request.resource.data
+      ) || validGroupJoinCommandUpdate(
+        groupId,
+        resource.data,
+        request.resource.data
       ) || validGroupLeaderApproveUpdate(
         resource.data,
         request.resource.data
@@ -3495,10 +3499,6 @@ service cloud.firestore {
         resource.data,
         request.resource.data
       ) || validGroupDisbandUpdate(
-        groupId,
-        resource.data,
-        request.resource.data
-      ) || validGroupJoinCommandUpdate(
         groupId,
         resource.data,
         request.resource.data

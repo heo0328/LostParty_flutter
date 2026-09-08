@@ -185,13 +185,19 @@ void main() {
       rules,
       contains('function validGroupJoinCodeVisibilityUpdate(oldData, newData)'),
     );
-    final groupMatch = rules.substring(rules.indexOf('match /groups/{groupId}'));
+    final groupMatch = rules.substring(
+      rules.indexOf('match /groups/{groupId}'),
+    );
     expect(
       groupMatch.indexOf('validGroupJoinCodeFlagUpdate('),
       lessThan(groupMatch.indexOf('validGroupMemberLeaveUpdate(')),
     );
     expect(
       groupMatch.indexOf('validGroupJoinCodeVisibilityUpdate('),
+      lessThan(groupMatch.indexOf('validGroupMemberLeaveUpdate(')),
+    );
+    expect(
+      groupMatch.indexOf('validGroupJoinCommandUpdate('),
       lessThan(groupMatch.indexOf('validGroupMemberLeaveUpdate(')),
     );
     expect(
