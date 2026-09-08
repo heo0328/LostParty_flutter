@@ -34,7 +34,7 @@ void main() {
     expect(result, ['발키리']);
   });
 
-  test('reports matching Valkyrie class scope and current unknown target', () {
+  test('reports matching Valkyrie class scope and verified live target', () {
     final report = buildLostArkGemProbeReport(
       _fixture(
         characterClassName: '발키리',
@@ -47,12 +47,9 @@ void main() {
     expect(report.characterClassName, '발키리');
     expect(report.gems.single.tooltipClassNames, ['발키리']);
     expect(report.gems.single.tooltipClassMatchesCharacter, isTrue);
-    expect(report.gems.single.currentCategory, 'unknown');
-    expect(
-      report.gems.single.currentValidationStatus,
-      'sameClassTargetUnverified',
-    );
-    expect(report.gems.single.currentWarnings, hasLength(1));
+    expect(report.gems.single.currentCategory, 'passiveOrIdentity');
+    expect(report.gems.single.currentValidationStatus, 'verified');
+    expect(report.gems.single.currentWarnings, isEmpty);
   });
 
   test('distinguishes Paladin faith gem from a Valkyrie character', () {
@@ -70,7 +67,7 @@ void main() {
     expect(report.gems.single.currentValidationStatus, 'foreignClass');
   });
 
-  test('exposes current Bard Tempest catalog gap', () {
+  test('recognizes the live Bard Tempest target', () {
     final report = buildLostArkGemProbeReport(
       _fixture(
         characterClassName: '바드',
@@ -81,8 +78,9 @@ void main() {
     );
 
     expect(report.gems.single.tooltipClassMatchesCharacter, isTrue);
-    expect(report.gems.single.currentCategory, 'unknown');
-    expect(report.gems.single.currentWarnings, hasLength(1));
+    expect(report.gems.single.currentCategory, 'passiveOrIdentity');
+    expect(report.gems.single.currentValidationStatus, 'verified');
+    expect(report.gems.single.currentWarnings, isEmpty);
   });
 
   test('reports build branch, enlightenment and order grid minimums', () {

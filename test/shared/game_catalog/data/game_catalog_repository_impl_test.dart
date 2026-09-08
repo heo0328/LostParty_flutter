@@ -28,17 +28,15 @@ void main() {
     expect(bard.specialSkills.map((skill) => skill.name), [
       '용맹의 세레나데',
       '구원의 세레나데',
+      '템페스트 필드',
     ]);
     expect(
-      bard.specialSkills.every(
-        (skill) => skill.category == ClassSpecialSkillCategory.identity,
-      ),
-      isTrue,
+      bard.specialSkills.last.category,
+      ClassSpecialSkillCategory.arkPassive,
     );
-    expect(bard.gemSkillTargets.single.name, '세레나데 스킬');
-    expect(bard.gemSkillTargets.single.relatedSpecialSkillIds, [
-      'serenade_of_courage',
-      'serenade_of_salvation',
+    expect(bard.gemSkillTargets.map((target) => target.name), [
+      '세레나데 스킬',
+      '템페스트 스킬',
     ]);
     expect(bard.arkGridPresets, isEmpty);
     expect(

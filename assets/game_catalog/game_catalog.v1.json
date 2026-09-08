@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "catalogVersion": "2026.09.04",
-  "updatedAt": "2026-09-04T00:00:00Z",
+  "catalogVersion": "2026.09.08",
+  "updatedAt": "2026-09-08T00:00:00Z",
   "classes": [
     {
       "classId": "bard",
@@ -33,14 +33,21 @@
           "name": "용맹의 세레나데",
           "aliases": ["용맹"],
           "category": "identity",
-          "relatedBranchIds": ["perfect_harmony", "true_courage"]
+          "relatedBranchIds": ["perfect_harmony"]
         },
         {
           "skillId": "serenade_of_salvation",
           "name": "구원의 세레나데",
           "aliases": ["절구"],
           "category": "identity",
-          "relatedBranchIds": ["perfect_harmony", "true_courage"]
+          "relatedBranchIds": ["perfect_harmony"]
+        },
+        {
+          "skillId": "tempest_field",
+          "name": "템페스트 필드",
+          "aliases": [],
+          "category": "arkPassive",
+          "relatedBranchIds": ["true_courage"]
         }
       ],
       "gemSkillTargets": [
@@ -49,9 +56,14 @@
           "name": "세레나데 스킬",
           "aliases": [],
           "relatedSpecialSkillIds": [
-            "serenade_of_courage",
             "serenade_of_salvation"
           ]
+        },
+        {
+          "targetId": "tempest_dealer_effect",
+          "name": "템페스트 스킬",
+          "aliases": [],
+          "relatedSpecialSkillIds": ["tempest_field"]
         }
       ],
       "arkGridPresets": []
@@ -71,8 +83,8 @@
         {"skillId":"judgment","name":"심판자","aliases":[],"category":"arkPassive","relatedBranchIds":["god_knight"]}
       ],
       "gemSkillTargets": [
-        {"targetId":"faith_gem_target","name":"신앙","aliases":[],"relatedSpecialSkillIds":["faith"]},
-        {"targetId":"judgment_gem_target","name":"심판자","aliases":[],"relatedSpecialSkillIds":["judgment"]}
+        {"targetId":"faith_gem_target","name":"신앙 스킬","aliases":[],"relatedSpecialSkillIds":["faith"]},
+        {"targetId":"judgment_gem_target","name":"심판자 스킬","aliases":[],"relatedSpecialSkillIds":["judgment"]}
       ],
       "arkGridPresets": []
     },
@@ -91,7 +103,7 @@
         {"skillId":"light_of_the_end","name":"종언의 빛","aliases":[],"category":"arkPassive","relatedBranchIds":["knight_of_light"]}
       ],
       "gemSkillTargets": [
-        {"targetId":"faith_gem_target","name":"신앙","aliases":[],"relatedSpecialSkillIds":["faith"]},
+        {"targetId":"faith_gem_target","name":"신앙 스킬","aliases":[],"relatedSpecialSkillIds":["faith"]},
         {"targetId":"light_of_the_end_gem_target","name":"종언의 빛","aliases":[],"relatedSpecialSkillIds":["light_of_the_end"]}
       ],
       "arkGridPresets": []
@@ -111,7 +123,7 @@
         {"skillId":"rising_moon","name":"떠오르는 달","aliases":[],"category":"identity","relatedBranchIds":["recurrence"]}
       ],
       "gemSkillTargets": [
-        {"targetId":"yin_yang_gem_target","name":"음양","aliases":[],"relatedSpecialSkillIds":["yin_yang"]},
+        {"targetId":"yin_yang_gem_target","name":"음양 스킬","aliases":[],"relatedSpecialSkillIds":["yin_yang"]},
         {"targetId":"rising_moon_gem_target","name":"떠오르는 달","aliases":[],"relatedSpecialSkillIds":["rising_moon"]}
       ],
       "arkGridPresets": []

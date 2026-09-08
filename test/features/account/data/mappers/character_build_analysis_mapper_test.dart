@@ -85,7 +85,7 @@ void main() {
             )
             as Map,
       );
-      expect(reference['measuredAgainstLiveApi'], isFalse);
+      expect(reference['measuredAgainstLiveApi'], isTrue);
       final cases = (reference['cases'] as List<dynamic>)
           .cast<Map<String, dynamic>>();
       expect(cases, hasLength(8));
@@ -204,7 +204,7 @@ void main() {
 
   test('classifies a catalog special skill without relying on its icon', () {
     final modified = _withGemTarget(
-      fixture,
+      _asBardSupport(fixture),
       name: '용맹의 세레나데',
       icon: 'https://example.com/identity.png',
     );
@@ -228,7 +228,7 @@ void main() {
     'classifies the Bard composite Serenade gem target from catalog data',
     () {
       final modified = _withGemTarget(
-        fixture,
+        _asBardSupport(fixture),
         name: '세레나데 스킬',
         icon: 'https://example.com/serenade.png',
       );
@@ -245,6 +245,33 @@ void main() {
       expect(
         result.notices.where((notice) => notice.code == 'unknown_gem_skill_4'),
         isEmpty,
+      );
+    },
+  );
+
+  test(
+    'does not accept a support-only gem target for the Bard dealer branch',
+    () {
+      final modified = _withGemTarget(
+        fixture,
+        name: '세레나데 스킬',
+        icon: 'https://example.com/serenade.png',
+      );
+
+      final result = const CharacterBuildAnalysisMapper().fromJson(
+        modified,
+        catalog: catalog,
+      );
+
+      expect(
+        result.gemEffects.singleWhere((effect) => effect.gemSlot == 4).category,
+        GemSkillCategory.unknown,
+      );
+      expect(
+        result.gemEffects
+            .singleWhere((effect) => effect.gemSlot == 4)
+            .validationStatus,
+        GemValidationStatus.sameClassTargetUnverified,
       );
     },
   );
@@ -475,6 +502,20 @@ Map<String, dynamic> _withGemTarget(
   );
   target['Name'] = name;
   target['Icon'] = icon;
+  return modified;
+}
+
+Map<String, dynamic> _asBardSupport(Map<String, dynamic> value) {
+  final modified = _deepCopy(value);
+  final effects =
+      (modified['ArkPassive'] as Map<String, dynamic>)['Effects']
+          as List<dynamic>;
+  for (final effect in effects.cast<Map<String, dynamic>>()) {
+    final description = effect['Description'].toString();
+    effect['Description'] = description
+        .replaceAll('진실된 용맹', '완벽한 화음')
+        .replaceAll('템페스트 필드', '세레나데 코드');
+  }
   return modified;
 }
 
