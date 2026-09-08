@@ -13,7 +13,7 @@
 - 최신 판정 방향은 깨달음·아크그리드 Tooltip 조건, 질서의 해·달 존재와 각 14P 이상, 보석 Tooltip 직업을 공통 검사하는 것이다. 질서의 별·혼돈 코어는 필수 판정에서 제외한다.
 - 동일 직업이나 API 스킬·최소 특수 스킬 카탈로그에서 대상을 찾지 못하면 중립적인 `동일 직업·대상 미확인`, Tooltip 직업이 다를 때만 보석 영역의 빨간 경고로 분리한다.
 - 단일 기준은 [`../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md)다. 로컬 기본 무결성 1~6단계와 최소 서버 Snapshot·Rules, 파티 신청자 카드 구간을 완료했다. 신청 당시 선택 역할 Snapshot의 5개 최소 검증 필드만 게시하며 원문·보석명은 올리지 않는다. 다음은 기능 확장이 아니라 Rules 배포 성공 → 앱 배포 → 두 계정 디바이스 검증이다. 이를 통과한 뒤 파티 membership, 그다음 그룹 Snapshot을 별도 구간으로 검토한다.
-- 2026-09-08 Rules 배포는 Firebase CLI 15.28.1과 15.29.0 모두 원격 `projects/lost-party:test` 검사에서 HTTP 503 `UNAVAILABLE`로 실패했다. 인증·IAM·프로젝트·Firestore 조회는 성공했고 릴리스 단계에는 도달하지 못했다. 중복 배포 문제로 보지 않으며 Rules 배포 전 신규 앱 배포와 신청 테스트를 진행하지 않는다.
+- 2026-09-08 첫 Rules 완화 후 `projects/lost-party:test` 컴파일은 성공했지만 신규 Ruleset 저장 API가 503을 반환했다. Console Rules 타임라인에는 15:18과 15:48 기록이 생겼고 15:48이 현재 버전으로 표시된다. 503만으로 미배포를 단정하거나 반복 배포하지 않는다. 현재 Rules는 보석 작업 직전 `036d28a`와 동일하며, Console 활성 소스 확인 후 다계정 신청 테스트를 진행한다.
 - 차후 독립 제품으로 직업·깨달음·질서 해·달·별 계층 메모, `망소빙` 같은 점진적 Build 별칭과 사용자 간 MemoPack 공유를 기록했다. 제품 기준은 [`../product/BUILD_MEMO_SHARING.md`](../product/BUILD_MEMO_SHARING.md)다. JSON export/import를 1차로 검토하고 서버 공유는 팩을 한 번 내려받아 로컬에서 매칭하는 2차 후보로 둔다.
 
 ## 최우선 현재 상태 — 후속 개선 H~K 구현 완료, 통합 디바이스 검증 대기 (2026-09-05)
@@ -181,7 +181,9 @@
 - 첫 릴리즈 전 통합 기준 브랜치: `dev`
 - 작업 시작 때 `dev`와 `origin/dev`를 최신화하고, 모든 작업 브랜치는 최신 `dev`에서 분기한다.
 - 첫 릴리즈 전에는 PR을 사용하지 않는다. 검증된 기능 브랜치를 `dev`에 직접 병합하고 `origin/dev`에 푸시한다.
-- `main`은 첫 릴리즈 준비 전까지 안정 기준선으로 유지한다.
+- 간단한 UI·소규모 수정·기획은 로컬 기능 브랜치에서 검증한 뒤 기능 브랜치 푸시 없이 `dev`에 병합·푸시할 수 있다. 여러 스텝 작업은 완료한 피처 단위마다 작업 브랜치를 원격에 푸시해 복구 지점을 남기고, 구간 최종 테스트·문서 정리 후 `dev`에 병합·푸시한다.
+- 하나의 페이지 또는 큰 기능 단위가 완료되면 검증된 `dev`를 `main`에 병합하고 `origin/main`도 최신화한다. 진행 중이거나 회귀 수정이 남은 구간은 `main`에 넣지 않는다.
+- 현재 `main`/`origin/main`은 `dev`보다 79커밋 뒤다. 현재 Rules 구간을 디바이스 확인하고 `dev`에 병합한 뒤 Character Build 큰 기능 종료 여부를 확인해 `main`을 최신화한다.
 - 현재 저장 브랜치와 커밋은 `NEXT_WORK.md`의 기준 상태와 실제 Git 상태를 함께 따른다.
 - 2026-08-28 Task-084 대표 Character 동기화 구현 `f15c1b6`과 후속 문서를 `main`에 통합했다.
 - Task-080 F(Claim-only 게이트·orphan assignment self-heal·다음주 prep 캐릭터 변경·재완료 orphan Claim 정리) 완료. 복잡 꼬임은 BUG-007 보류.
