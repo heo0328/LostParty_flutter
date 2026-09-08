@@ -1,6 +1,7 @@
 import 'recruitment_aggregate.dart';
 import 'recruitment_application.dart';
 import 'party_recruitment.dart';
+import 'party_gem_validation_snapshot.dart';
 
 /// 공개 목록 페이지 크기. Repository·ViewModel이 동일한 값을 사용한다.
 /// 크기는 내 방 제외 전 Firestore 문서 수 기준이다.
@@ -251,6 +252,7 @@ class PartyApplicationSummary {
     this.decidedAt,
     this.itemLevel,
     this.combatPower,
+    this.gemValidation,
   });
 
   final String recruitmentId;
@@ -271,6 +273,7 @@ class PartyApplicationSummary {
   /// 신청 당시 Snapshot 수치. 없는 과거 신청은 null이며 0으로 채우지 않는다.
   final double? itemLevel;
   final double? combatPower;
+  final PartyGemValidationSnapshot? gemValidation;
 }
 
 /// 상세의 완료 취소 등에 쓰는 회차 Snapshot. 민감 ID를 UI에 노출하지 않는다.

@@ -1,4 +1,5 @@
 import '../../domain/entities/party_read_models.dart';
+import '../../domain/entities/party_gem_validation_snapshot.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/entities/recruitment_aggregate.dart';
 import '../../domain/entities/recruitment_application.dart';
@@ -123,8 +124,9 @@ class PartyReadDocumentMapper {
     final data = document.data;
     _requireSchema(data);
     final buildSnapshot = data['submittedBuildSnapshot'];
-    final buildData =
-        buildSnapshot is Map ? buildSnapshot.cast<String, Object?>() : null;
+    final buildData = buildSnapshot is Map
+        ? buildSnapshot.cast<String, Object?>()
+        : null;
     return PartyApplicationSummary(
       recruitmentId: _string(data, 'recruitmentId'),
       applicantPlayerId: _string(data, 'applicantPlayerId'),
@@ -148,11 +150,50 @@ class PartyReadDocumentMapper {
       createdAt: _date(data, 'createdAt'),
       decidedAt: _nullableDate(data, 'decidedAt'),
       updatedAt: _date(data, 'updatedAt'),
-      itemLevel:
-          buildData != null ? _softNumber(buildData, 'itemLevel') : null,
-      combatPower:
-          buildData != null ? _softNumber(buildData, 'combatPower') : null,
+      itemLevel: buildData != null ? _softNumber(buildData, 'itemLevel') : null,
+      combatPower: buildData != null
+          ? _softNumber(buildData, 'combatPower')
+          : null,
+      gemValidation: buildData == null ? null : _softGemValidation(buildData),
     );
+  }
+
+  PartyGemValidationSnapshot? _softGemValidation(Map<String, Object?> data) {
+    final statusName = data['gemValidationStatus'];
+    final foreignCount = data['foreignClassGemCount'];
+    final unverifiedCount = data['unverifiedSameClassGemCount'];
+    final catalogVersion = data['catalogVersion'];
+    if (statusName is! String ||
+        foreignCount is! int ||
+        unverifiedCount is! int ||
+        catalogVersion is! String ||
+        catalogVersion.trim().isEmpty ||
+        foreignCount < 0 ||
+        unverifiedCount < 0) {
+      return null;
+    }
+    final status = PartyGemValidationStatus.values
+        .where((value) => value.name == statusName)
+        .firstOrNull;
+    if (status == null) return null;
+    final validatedAt = _softDate(data['gemValidatedAt']);
+    if (validatedAt == null) return null;
+    return PartyGemValidationSnapshot(
+      status: status,
+      foreignClassGemCount: foreignCount,
+      unverifiedSameClassGemCount: unverifiedCount,
+      validatedAt: validatedAt,
+      catalogVersion: catalogVersion,
+    );
+  }
+
+  DateTime? _softDate(Object? value) {
+    if (value is DateTime) return value;
+    try {
+      return toDateTime(value);
+    } catch (_) {
+      return null;
+    }
   }
 
   RecruitmentMetadata _metadata(Map<String, Object?> data) =>

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 import 'package:lost_party/features/account/data/local/account_database.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_catalog_detection.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_draft.dart';
 import 'package:lost_party/features/account/domain/entities/character_profile.dart';
@@ -20,6 +21,7 @@ import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_active
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_application_command.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_gem_validation_snapshot.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_event.dart';
 import 'package:lost_party/features/raid_status/domain/services/party_event_sync_service.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_create_command.dart';
@@ -192,7 +194,9 @@ void main() {
       recruitment: Stream.value(
         PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
       ),
-      members: Stream.value(const PartyReadSnapshot(items: [], isFromCache: false)),
+      members: Stream.value(
+        const PartyReadSnapshot(items: [], isFromCache: false),
+      ),
       playerId: 'player-1',
       accountDatabase: database,
       eventSyncService: const _NoopEventSyncService(),
@@ -281,7 +285,46 @@ void main() {
     expect(repository.lastApply?.characterId, 'server-character-1');
     expect(repository.lastApply?.requestedRole, PartyRole.dealer);
     expect(repository.lastApply?.cycleKey, '2026-08-19');
+    expect(
+      repository.lastApply?.gemValidation?.status,
+      PartyGemValidationStatus.foreignClass,
+    );
     expect(find.text('가입을 신청했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('지원자 카드에서 타 직업 보석만 빨간 경고로 표시한다', (tester) async {
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      recruitmentApplications: Stream.value(
+        PartyReadSnapshot(
+          items: [
+            _pendingApplication(
+              gemValidation: PartyGemValidationSnapshot(
+                status: PartyGemValidationStatus.foreignClass,
+                foreignClassGemCount: 1,
+                unverifiedSameClassGemCount: 0,
+                validatedAt: DateTime.utc(2026, 9, 8),
+                catalogVersion: '2026.09.04',
+              ),
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      joinCommandRepository: _FakeJoinCommandRepository(),
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('보석 확인 요망 · 타 직업 보석 1개'), findsOneWidget);
+    final text = tester.widget<Text>(find.text('보석 확인 요망 · 타 직업 보석 1개'));
+    expect(
+      text.style?.color,
+      Theme.of(tester.element(find.byType(Card).first)).colorScheme.error,
+    );
   });
 
   testWidgets('철회 버튼이 pending 신청 revision으로 명령을 보낸다', (tester) async {
@@ -1576,7 +1619,9 @@ PublicRecruitmentSummary _summary({
   groupId: groupId,
 );
 
-PartyApplicationSummary _pendingApplication() => PartyApplicationSummary(
+PartyApplicationSummary _pendingApplication({
+  PartyGemValidationSnapshot? gemValidation,
+}) => PartyApplicationSummary(
   recruitmentId: 'recruitment-1',
   applicantPlayerId: 'player-applicant',
   cycleKey: '2026-08-19',
@@ -1588,6 +1633,7 @@ PartyApplicationSummary _pendingApplication() => PartyApplicationSummary(
   revision: 3,
   createdAt: DateTime.utc(2026, 8, 20),
   updatedAt: DateTime.utc(2026, 8, 21),
+  gemValidation: gemValidation,
 );
 
 PartyApplicationSummary _rejectedApplication({required int rejectionCount}) =>
@@ -1719,10 +1765,29 @@ class _AccountRepository implements AccountRepository {
       dataVersion: 1,
       analysis: const CharacterBuildAnalysis(
         runeCount: 0,
-        gemEffects: [],
+        gemEffects: [
+          GemSkillEffect(
+            gemSlot: 0,
+            gemLevel: 10,
+            skillName: '타 직업 스킬',
+            descriptions: [],
+            category: GemSkillCategory.normal,
+            validationStatus: GemValidationStatus.foreignClass,
+          ),
+        ],
         arkGridConditions: [],
         arkGridCorePoints: [],
         notices: [],
+        catalogDetection: CharacterBuildCatalogDetection(
+          catalogVersion: '2026.09.04',
+          status: CharacterBuildDetectionStatus.detected,
+          classId: 'bard',
+          branchId: 'dealer',
+          branchDisplayName: '딜러',
+          detectedRole: CharacterBuildRole.dealer,
+          matchedTier1Node: '진실된 용맹',
+          matchedRelatedNodes: [],
+        ),
       ),
     ),
   ];

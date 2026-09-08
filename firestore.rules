@@ -2270,6 +2270,49 @@ service cloud.firestore {
         && validEventTiming(data);
     }
 
+    function validSubmittedBuildSnapshot(data) {
+      return data is map
+        && data.keys().hasOnly([
+          'itemLevel', 'combatPower', 'gemValidationStatus',
+          'foreignClassGemCount', 'unverifiedSameClassGemCount',
+          'gemValidatedAt', 'catalogVersion'
+        ])
+        && data.itemLevel is number
+        && (data.combatPower == null || data.combatPower is number)
+        && ((!(('gemValidationStatus' in data)
+              || ('foreignClassGemCount' in data)
+              || ('unverifiedSameClassGemCount' in data)
+              || ('gemValidatedAt' in data)
+              || ('catalogVersion' in data)))
+          || validGemValidationSnapshot(data));
+    }
+
+    function validGemValidationSnapshot(data) {
+      return data.keys().hasAll([
+          'gemValidationStatus', 'foreignClassGemCount',
+          'unverifiedSameClassGemCount', 'gemValidatedAt', 'catalogVersion'
+        ])
+        && (data.gemValidationStatus == 'verified'
+          || data.gemValidationStatus == 'sameClassTargetUnverified'
+          || data.gemValidationStatus == 'foreignClass'
+          || data.gemValidationStatus == 'unavailable')
+        && data.foreignClassGemCount is int
+        && data.foreignClassGemCount >= 0
+        && data.foreignClassGemCount <= 20
+        && data.unverifiedSameClassGemCount is int
+        && data.unverifiedSameClassGemCount >= 0
+        && data.unverifiedSameClassGemCount <= 20
+        && data.gemValidatedAt is timestamp
+        && data.catalogVersion is string
+        && data.catalogVersion.size() > 0
+        && data.catalogVersion.size() <= 64
+        && (data.gemValidationStatus != 'foreignClass'
+          || data.foreignClassGemCount > 0)
+        && (data.gemValidationStatus != 'sameClassTargetUnverified'
+          || (data.foreignClassGemCount == 0
+            && data.unverifiedSameClassGemCount > 0));
+    }
+
     function validPendingApplication(recruitmentId, playerId, data) {
       let recruitment = get(recruitmentPath(recruitmentId)).data;
       return hasActiveBinding()
@@ -2284,6 +2327,7 @@ service cloud.firestore {
         && data.rejectionCount == 0
         && data.createdAt == request.time
         && data.updatedAt == request.time
+        && validSubmittedBuildSnapshot(data.submittedBuildSnapshot)
         && recruitment.status == 'active'
         && recruitment.manualRecruitmentEnabled == true
         && recruitment.hasAvailableSlot == true
@@ -2357,6 +2401,7 @@ service cloud.firestore {
         && newData.revision == oldData.revision + 1
         && newData.decidedAt == null
         && newData.updatedAt == request.time
+        && validSubmittedBuildSnapshot(newData.submittedBuildSnapshot)
         && newData.schemaVersion == oldData.schemaVersion
         && newData.recruitmentId == recruitmentId
         && newData.applicantPlayerId == playerId

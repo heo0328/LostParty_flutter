@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_catalog_detection.dart';
 import 'package:lost_party/features/account/domain/entities/character_summary.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
 import 'package:lost_party/features/account/domain/entities/weekly_raid_claim.dart';
@@ -40,6 +41,10 @@ void main() {
       PartyRole.support,
     });
     expect(representative.canSelect, isTrue);
+    expect(
+      representative.roles.first.gemValidation?.catalogVersion,
+      '2026.09.04',
+    );
   });
 
   test('선호 포지션이 선택 가능하면 먼저 고르고 아니면 기존 유효 역할을 유지한다', () {
@@ -319,7 +324,6 @@ class _AccountRepository implements AccountRepository {
 }
 
 class _LostOwnershipAccountRepository extends _AccountRepository {
-
   @override
   Future<RosterSummaryApplyResult> applyRosterSummarySync({
     required int accountId,
@@ -367,11 +371,21 @@ CharacterBuildSnapshot _snapshot(int characterId, CharacterBuildRole role) =>
       combatPower: 300000,
       capturedAt: DateTime.utc(2026, 8, 23),
       dataVersion: 1,
-      analysis: const CharacterBuildAnalysis(
+      analysis: CharacterBuildAnalysis(
         runeCount: 8,
         gemEffects: [],
         arkGridConditions: [],
         arkGridCorePoints: [],
         notices: [],
+        catalogDetection: CharacterBuildCatalogDetection(
+          catalogVersion: '2026.09.04',
+          status: CharacterBuildDetectionStatus.detected,
+          classId: 'bard',
+          branchId: 'support',
+          branchDisplayName: '서포터',
+          detectedRole: role,
+          matchedTier1Node: '절실한 구원',
+          matchedRelatedNodes: [],
+        ),
       ),
     );

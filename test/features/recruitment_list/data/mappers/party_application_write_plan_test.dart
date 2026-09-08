@@ -2,13 +2,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_application_write_plan.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_application_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_gem_validation_snapshot.dart';
 
 void main() {
   test('pending application does not create membership or assignment data', () {
     final timestamp = Object();
     final data = PartyApplicationWritePlan.create(
-      command: const PartyApplyCommand(recruitmentId: 'raid-1', characterId: 'char-1', requestedRole: PartyRole.dealer, cycleKey: '2026-08-26', combatPower: 100),
-      playerId: 'player-1', characterName: '캐릭터', className: '아르카나', itemLevel: 1710, serverTimestamp: timestamp,
+      command: const PartyApplyCommand(
+        recruitmentId: 'raid-1',
+        characterId: 'char-1',
+        requestedRole: PartyRole.dealer,
+        cycleKey: '2026-08-26',
+        combatPower: 100,
+      ),
+      playerId: 'player-1',
+      characterName: '캐릭터',
+      className: '아르카나',
+      itemLevel: 1710,
+      serverTimestamp: timestamp,
     );
     expect(data['status'], 'pending');
     expect(data['revision'], 1);
@@ -35,6 +46,40 @@ void main() {
     );
     expect(data['status'], 'withdrawn');
     expect(data['revision'], 2);
+  });
+
+  test('신청 Snapshot에는 원문 없이 최소 보석 검증 필드만 저장한다', () {
+    final validatedAt = DateTime.utc(2026, 9, 8);
+    final data = PartyApplicationWritePlan.create(
+      command: PartyApplyCommand(
+        recruitmentId: 'raid-1',
+        characterId: 'char-1',
+        requestedRole: PartyRole.dealer,
+        cycleKey: '2026-09-02',
+        gemValidation: PartyGemValidationSnapshot(
+          status: PartyGemValidationStatus.foreignClass,
+          foreignClassGemCount: 1,
+          unverifiedSameClassGemCount: 2,
+          validatedAt: validatedAt,
+          catalogVersion: '2026.09.04',
+        ),
+      ),
+      playerId: 'player-1',
+      characterName: '캐릭터',
+      className: '아르카나',
+      itemLevel: 1710,
+      serverTimestamp: Object(),
+    );
+
+    final snapshot = data['submittedBuildSnapshot']! as Map<String, Object?>;
+    expect(snapshot['gemValidationStatus'], 'foreignClass');
+    expect(snapshot['foreignClassGemCount'], 1);
+    expect(snapshot['unverifiedSameClassGemCount'], 2);
+    expect(snapshot['gemValidatedAt'], validatedAt);
+    expect(snapshot['catalogVersion'], '2026.09.04');
+    expect(snapshot.keys, isNot(contains('tooltip')));
+    expect(snapshot.keys, isNot(contains('gems')));
+    expect(snapshot.keys, isNot(contains('rawJson')));
   });
 
   test('reapply resets pending fields without touching rejectionCount', () {

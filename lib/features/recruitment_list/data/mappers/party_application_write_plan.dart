@@ -22,6 +22,7 @@ class PartyApplicationWritePlan {
     'submittedBuildSnapshot': {
       'itemLevel': itemLevel,
       'combatPower': command.combatPower,
+      ...?command.gemValidation?.toFields(),
     },
     'status': 'pending',
     'resolutionReason': null,
@@ -49,6 +50,7 @@ class PartyApplicationWritePlan {
     'submittedBuildSnapshot': {
       'itemLevel': itemLevel,
       'combatPower': command.combatPower,
+      ...?command.gemValidation?.toFields(),
     },
     'status': 'pending',
     'resolutionReason': null,

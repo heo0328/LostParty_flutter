@@ -325,6 +325,74 @@ void main() {
     expect(summary.combatPower, closeTo(123456789, 1));
   });
 
+  test('maps optional gem validation snapshot', () {
+    final summary = mapper.toApplication(
+      PartyReadDocumentDto(
+        id: 'player-applicant',
+        data: {
+          'schemaVersion': 1,
+          'recruitmentId': 'raid-1',
+          'applicantPlayerId': 'player-applicant',
+          'cycleKey': '2026-09-02',
+          'characterId': 'character-1',
+          'characterNameSnapshot': '데모닉',
+          'classNameSnapshot': '데모닉',
+          'requestedRole': 'dealer',
+          'status': 'pending',
+          'revision': 1,
+          'createdAt': DateTime.utc(2026, 9, 8),
+          'updatedAt': DateTime.utc(2026, 9, 8),
+          'submittedBuildSnapshot': {
+            'itemLevel': 1780,
+            'combatPower': 123456,
+            'gemValidationStatus': 'foreignClass',
+            'foreignClassGemCount': 1,
+            'unverifiedSameClassGemCount': 0,
+            'gemValidatedAt': DateTime.utc(2026, 9, 7),
+            'catalogVersion': '2026.09.04',
+          },
+        },
+      ),
+    );
+
+    expect(summary.gemValidation?.status.name, 'foreignClass');
+    expect(summary.gemValidation?.foreignClassGemCount, 1);
+    expect(summary.gemValidation?.catalogVersion, '2026.09.04');
+  });
+
+  test(
+    'ignores incomplete gem validation fields while keeping build values',
+    () {
+      final summary = mapper.toApplication(
+        PartyReadDocumentDto(
+          id: 'player-applicant',
+          data: {
+            'schemaVersion': 1,
+            'recruitmentId': 'raid-1',
+            'applicantPlayerId': 'player-applicant',
+            'cycleKey': '2026-09-02',
+            'characterId': 'character-1',
+            'characterNameSnapshot': '데모닉',
+            'classNameSnapshot': '데모닉',
+            'requestedRole': 'dealer',
+            'status': 'pending',
+            'revision': 1,
+            'createdAt': DateTime.utc(2026, 9, 8),
+            'updatedAt': DateTime.utc(2026, 9, 8),
+            'submittedBuildSnapshot': {
+              'itemLevel': 1780,
+              'combatPower': 123456,
+              'gemValidationStatus': 'foreignClass',
+            },
+          },
+        ),
+      );
+
+      expect(summary.itemLevel, 1780);
+      expect(summary.gemValidation, isNull);
+    },
+  );
+
   test('ignores malformed submittedBuildSnapshot gracefully', () {
     final summary = mapper.toApplication(
       PartyReadDocumentDto(
