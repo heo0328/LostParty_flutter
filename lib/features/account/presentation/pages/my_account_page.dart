@@ -321,10 +321,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
     final failures = report.items.where((item) => !item.isSuccess).toList();
     final failureDetails = failures
         .take(3)
-        .map(
-          (item) =>
-              '${item.character.characterName}: ${item.failureReason}',
-        )
+        .map((item) => '${item.character.characterName}: ${item.failureReason}')
         .join('\n');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -713,6 +710,9 @@ class _MyAccountPageState extends State<MyAccountPage> {
                       .representativeCombatPowerFor(character),
                   overrideRepresentativeCombatPower:
                       character.preferredRole != null,
+                  gemValidationSummary: _viewModel.gemValidationSummaryFor(
+                    character,
+                  ),
                   isRepresentative:
                       account.representativeCharacterId == character.id,
                   weeklyRaids: _viewModel.weeklyRaidStatusesFor(character),

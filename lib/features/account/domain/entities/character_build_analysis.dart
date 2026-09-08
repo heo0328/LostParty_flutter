@@ -11,6 +11,42 @@ enum GemValidationStatus {
   unavailable,
 }
 
+enum GemValidationSummaryStatus {
+  verified,
+  sameClassTargetUnverified,
+  foreignClass,
+  unavailable,
+}
+
+class GemValidationSummary {
+  const GemValidationSummary({
+    required this.totalCount,
+    required this.verifiedCount,
+    required this.unverifiedSameClassCount,
+    required this.foreignClassCount,
+    required this.unavailableCount,
+  });
+
+  final int totalCount;
+  final int verifiedCount;
+  final int unverifiedSameClassCount;
+  final int foreignClassCount;
+  final int unavailableCount;
+
+  GemValidationSummaryStatus get status {
+    if (foreignClassCount > 0) {
+      return GemValidationSummaryStatus.foreignClass;
+    }
+    if (unverifiedSameClassCount > 0) {
+      return GemValidationSummaryStatus.sameClassTargetUnverified;
+    }
+    if (totalCount == 0 || unavailableCount > 0) {
+      return GemValidationSummaryStatus.unavailable;
+    }
+    return GemValidationSummaryStatus.verified;
+  }
+}
+
 class BuildNotice {
   const BuildNotice({
     required this.code,
@@ -118,4 +154,32 @@ class CharacterBuildAnalysis {
   final List<BuildNotice> notices;
   final CharacterBuildCatalogDetection? catalogDetection;
   final ArkGridMinimumIntegrity? arkGridMinimumIntegrity;
+
+  GemValidationSummary get gemValidationSummary => GemValidationSummary(
+    totalCount: gemEffects.length,
+    verifiedCount: gemEffects
+        .where(
+          (effect) => effect.validationStatus == GemValidationStatus.verified,
+        )
+        .length,
+    unverifiedSameClassCount: gemEffects
+        .where(
+          (effect) =>
+              effect.validationStatus ==
+              GemValidationStatus.sameClassTargetUnverified,
+        )
+        .length,
+    foreignClassCount: gemEffects
+        .where(
+          (effect) =>
+              effect.validationStatus == GemValidationStatus.foreignClass,
+        )
+        .length,
+    unavailableCount: gemEffects
+        .where(
+          (effect) =>
+              effect.validationStatus == GemValidationStatus.unavailable,
+        )
+        .length,
+  );
 }
