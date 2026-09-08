@@ -148,6 +148,52 @@ void main() {
     expect(find.text('LP-7K4M2Q'), findsNothing);
   });
 
+  testWidgets('승인 결과의 로컬 연결 실패를 사용자에게 알린다', (tester) async {
+    final approved = ManualVerificationRequest(
+      id: request.id,
+      requesterPlayerId: request.requesterPlayerId,
+      targetIdentityKey: request.targetIdentityKey,
+      localAccountLabelSnapshot: request.localAccountLabelSnapshot,
+      proofServerName: request.proofServerName,
+      proofCharacterName: request.proofCharacterName,
+      verificationCode: request.verificationCode,
+      status: ManualVerificationStatus.approved,
+      attemptNumberForTarget: request.attemptNumberForTarget,
+      totalAttemptNumberForPlayer: request.totalAttemptNumberForPlayer,
+      createdAt: request.createdAt,
+      expiresAt: request.expiresAt,
+      targetGameAccountId: 'ga-1',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManualVerificationPage(
+          accountRepository: _FakeAccountRepository(),
+          mappingRepository: _FakeMappingRepository(throwOnBind: true),
+          repository: _FakeManualRepository(
+            requests: [approved],
+            approvedResult: const GameAccountVerificationResult(
+              status: 'verified',
+              serverGameAccountId: 'ga-1',
+              serverCharacters: [
+                VerifiedServerCharacter(
+                  serverName: '루페온',
+                  characterName: '이슈아이',
+                  serverCharacterId: 'character-11',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('승인된 인증 결과를 이 기기의 원정대에 연결하지 못했습니다. 다시 시도해 주세요.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('오픈채팅방 링크는 안내된 주소로 연다', (tester) async {
     Uri? opened;
     await tester.pumpWidget(
@@ -437,10 +483,16 @@ class _ServerMismatchAccountRepository extends _FakeAccountRepository {
 
 class _FakeMappingRepository extends Fake
     implements AccountIdentityMappingRepository {
+  _FakeMappingRepository({this.throwOnBind = false});
+
+  final bool throwOnBind;
   ServerAccountIdentityBinding? binding;
 
   @override
   Future<void> bindServerIdentity(ServerAccountIdentityBinding binding) async {
+    if (throwOnBind) {
+      throw StateError('bind failed');
+    }
     this.binding = binding;
   }
 }

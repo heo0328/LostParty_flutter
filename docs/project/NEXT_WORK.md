@@ -460,6 +460,12 @@ H 대표 전투력, I 내 계정/수동 갱신, J 초대코드, K 방별 알림�
 - 내 계정은 인증 완료 대신 `서버 데이터 불일치 · 앱 재실행 또는 재인증 필요`를 표시하고, 수동 인증 화면은 등록된 원정대 Character를 그대로 선택해 요청할 수 있게 했다.
 - 일반 장비 인증과 운영자 승인 수동 인증은 Character Claim이 가리키는 `gameAccount`만 삭제된 고아 상태에서도 같은 ID로 계정·Character·소유관계를 재생성한다. 정상 소유와 타인 소유 흐름은 유지한다.
 - 관련 화면·Repository·로컬 DB 표적 테스트 59개와 전체 테스트 926개가 통과했고 analyze 신규 문제는 없다. 실제 Firestore의 완전 삭제·계정만 삭제·소유관계만 삭제 사례는 실기기 또는 Emulator 검증 후 완료 판정한다.
+- 지정 Player를 운영 Firestore에서 읽기 전용으로 대조한 결과 authBinding, active Player, gameAccount, playerGameAccount, 13개 Character 및 승인된 수동 인증 요청은 모두 같은 현재 계정으로 정상 연결돼 있었다. Authentication-Player 연결 문제가 아니라 기기에 남은 과거 서버 ID의 로컬 교체 실패가 직접 원인이었다.
+- 로컬 DB의 서버 ID 재매핑 방지는 정상 계정 보호를 위해 유지하되, 서버 원본 조회로 `serverMismatch`가 확인된 계정에만 승인 결과의 새 gameAccount/Character ID 재연결을 허용한다. 성공하면 상태를 다시 `active`로 저장한다.
+- 수동 인증 승인 뒤 로컬 연결이 실패해도 조용히 삼키던 오류는 사용자 안내로 노출한다. 수정 빌드에서는 온라인으로 내 계정 상태를 확인한 뒤 수동 인증 화면에 진입하면 기존 승인 결과를 다시 연결할 수 있는지 실기기 검증한다.
+- 로컬 연결 실패는 같은 화면 재빌드에서 무한 반복하지 않고 한 번만 안내하며, 화면을 다시 열었을 때 재시도한다. 관련 표적 테스트 46개와 전체 테스트 928개, 변경 파일 정적 분석이 통과했다.
+- `authBindings`는 게임 원정대 소유권이 아니라 Firebase 익명 UID와 Player의 고정 연결이다. 수동 인증 요청은 현재 UID의 binding에서 얻은 `requesterPlayerId`로 생성되고, 승인·이전은 그 Player의 `gameAccounts.ownerPlayerId`와 `playerGameAccounts`를 갱신하므로 미인증 임시등록 사용자 A에게 실제 인증 사용자 B의 원정대가 귀속되지는 않는다.
+- Firebase Authentication 사용자를 콘솔에서 삭제해도 기존 Firestore `authBindings`는 Rules상 자동 삭제·재연결되지 않는 고아 기록으로 남을 수 있다. 새 UID는 자기 문서 ID의 새 binding을 만들며 과거 binding을 사용할 수 없다. 이 예외는 이번 로컬 서버 ID 복구와 별개이며, 현재 정책대로 앱 데이터 삭제 후 새 익명 사용자 생성 및 필요 시 소유권 이전 인증으로 복구한다.
 
 ### 2. 레이드 현황 새로고침
 

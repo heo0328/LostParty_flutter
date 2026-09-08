@@ -152,7 +152,11 @@ class _ManualVerificationPageState extends State<ManualVerificationPage> {
         final result = await widget.repository.loadApprovedResult(request.id);
         await _saveBinding(result, request);
       } catch (_) {
-        _boundRequestIds.remove(request.id);
+        if (mounted) {
+          setState(() {
+            _message = '승인된 인증 결과를 이 기기의 원정대에 연결하지 못했습니다. 다시 시도해 주세요.';
+          });
+        }
       }
     }
   }
