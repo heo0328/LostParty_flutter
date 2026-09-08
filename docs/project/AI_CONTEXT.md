@@ -12,7 +12,8 @@
 - 사용자와 4개 서포터 겸용 직업의 dealer/support 8개 실제 Build, 보석 88개를 조회했다. 바드 `템페스트 스킬`, 발키리·홀리나이트 `신앙 스킬`, 홀리나이트 `심판자 스킬`, 도화가 `음양 스킬`이 교정 전 카탈로그에서 미확인이었으며 C에서 반영했다. 같은 `신앙 스킬`은 Tooltip의 `[발키리]`·`[홀리나이트]`를 함께 비교해야 한다.
 - 최신 판정 방향은 깨달음·아크그리드 Tooltip 조건, 질서의 해·달 존재와 각 14P 이상, 보석 Tooltip 직업을 공통 검사하는 것이다. 질서의 별·혼돈 코어는 필수 판정에서 제외한다.
 - 동일 직업이나 API 스킬·최소 특수 스킬 카탈로그에서 대상을 찾지 못하면 중립적인 `동일 직업·대상 미확인`, Tooltip 직업이 다를 때만 보석 영역의 빨간 경고로 분리한다.
-- 단일 기준은 [`../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md)다. 로컬 기본 무결성 1~6단계와 최소 서버 Snapshot·Rules, 파티 신청자 카드 구간을 완료했다. 신청 당시 선택 역할 Snapshot의 5개 최소 검증 필드만 게시하며 원문·보석명은 올리지 않는다. 다음은 파티 membership 전파, 그다음 그룹 Snapshot을 별도 구간으로 검토한다.
+- 단일 기준은 [`../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md)다. 로컬 기본 무결성 1~6단계와 최소 서버 Snapshot·Rules, 파티 신청자 카드 구간을 완료했다. 신청 당시 선택 역할 Snapshot의 5개 최소 검증 필드만 게시하며 원문·보석명은 올리지 않는다. 다음은 기능 확장이 아니라 Rules 배포 성공 → 앱 배포 → 두 계정 디바이스 검증이다. 이를 통과한 뒤 파티 membership, 그다음 그룹 Snapshot을 별도 구간으로 검토한다.
+- 2026-09-08 Rules 배포는 Firebase CLI 15.28.1과 15.29.0 모두 원격 `projects/lost-party:test` 검사에서 HTTP 503 `UNAVAILABLE`로 실패했다. 인증·IAM·프로젝트·Firestore 조회는 성공했고 릴리스 단계에는 도달하지 못했다. 중복 배포 문제로 보지 않으며 Rules 배포 전 신규 앱 배포와 신청 테스트를 진행하지 않는다.
 - 차후 독립 제품으로 직업·깨달음·질서 해·달·별 계층 메모, `망소빙` 같은 점진적 Build 별칭과 사용자 간 MemoPack 공유를 기록했다. 제품 기준은 [`../product/BUILD_MEMO_SHARING.md`](../product/BUILD_MEMO_SHARING.md)다. JSON export/import를 1차로 검토하고 서버 공유는 팩을 한 번 내려받아 로컬에서 매칭하는 2차 후보로 둔다.
 
 ## 최우선 현재 상태 — 후속 개선 H~K 구현 완료, 통합 디바이스 검증 대기 (2026-09-05)
