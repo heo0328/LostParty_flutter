@@ -124,6 +124,8 @@ LOSTPARTY에서 사용하는 활동 Character가 그룹·파티 등 다른 사�
 
 ## 6. 서포터 겸용 직업과 보석 대상
 
+> 2026-09-08 이후 보석 무결성, 미확인/타 직업 구분과 표시 정책은 [`CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](CHARACTER_BUILD_INTEGRITY_CONTRACT.md)를 우선한다. 이 절의 기존 자동 저장 기준은 당시 구현 배경으로만 유지한다.
+
 대상 직업은 바드·홀리나이트·발키리·도화가다. 아주 드문 dealer 세팅을 기본 support로 덮어쓰지 않도록 현재 Armory의 깨달음 1티어 노드로 역할을 감지한다.
 
 - 바드의 기존 `완벽한 화음`/`진실된 용맹` 판별과 세레나데 복합 보석 대상 구조를 일반화한다.

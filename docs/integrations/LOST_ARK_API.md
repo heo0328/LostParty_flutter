@@ -114,6 +114,8 @@ Collectibles
 캐릭터 스킬 슬롯은 일반 스킬 8개, 초각성 스킬 1개, 각성기 1개로 구성한다.
 각성기와 초각성 스킬은 일반 스킬 레벨 기준을 적용할 수 없으므로 스킬 레벨만으로 장착 여부를 판정하지 않는다.
 
+> 2026-09-08 이후 깨달음·아크그리드 최소 조건과 보석의 동일 직업 미확인/타 직업 판정은 [`../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md)를 기준으로 한다.
+
 - 일반 스킬에 장착할 수 있는 룬은 최대 8개
 - 룬이 8개가 아니면 세팅 확인 경고를 표시
 - 경고는 정보 제공 목적이며 파티 지원 제한에는 사용하지 않음
