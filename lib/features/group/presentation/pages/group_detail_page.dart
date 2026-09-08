@@ -206,11 +206,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                 ),
               if (widget.joinCodeManageViewModel != null &&
                   widget.applicationsViewModel != null)
-                _LeaderJoinCodeEntry(
-                  groupId: widget.groupId,
-                  playerId: widget.playerId,
-                  leadershipViewModel: widget.applicationsViewModel!,
-                ),
+                _JoinCodeEntry(groupId: widget.groupId),
             ],
           );
         }
@@ -775,42 +771,20 @@ class _LeaderApplicationsEntryState extends State<_LeaderApplicationsEntry> {
   );
 }
 
-class _LeaderJoinCodeEntry extends StatefulWidget {
-  const _LeaderJoinCodeEntry({
-    required this.groupId,
-    required this.playerId,
-    required this.leadershipViewModel,
-  });
+class _JoinCodeEntry extends StatelessWidget {
+  const _JoinCodeEntry({required this.groupId});
 
   final String groupId;
-  final String playerId;
-  final GroupApplicationsViewModel leadershipViewModel;
 
   @override
-  State<_LeaderJoinCodeEntry> createState() => _LeaderJoinCodeEntryState();
-}
-
-class _LeaderJoinCodeEntryState extends State<_LeaderJoinCodeEntry> {
-  late final Future<bool> _isLeader = widget.leadershipViewModel.isLeader(
-    groupId: widget.groupId,
-    playerId: widget.playerId,
-  );
-
-  @override
-  Widget build(BuildContext context) => FutureBuilder<bool>(
-    future: _isLeader,
-    builder: (context, snapshot) {
-      if (snapshot.data != true) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.only(top: 12),
-        child: OutlinedButton.icon(
-          key: const ValueKey('groupJoinCodeEntryButton'),
-          onPressed: () => context.push('/groups/${widget.groupId}/join-code'),
-          icon: const Icon(Icons.vpn_key_outlined),
-          label: const Text('초대코드 관리'),
-        ),
-      );
-    },
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 12),
+    child: OutlinedButton.icon(
+      key: const ValueKey('groupJoinCodeEntryButton'),
+      onPressed: () => context.push('/groups/$groupId/join-code'),
+      icon: const Icon(Icons.vpn_key_outlined),
+      label: const Text('초대코드'),
+    ),
   );
 }
 

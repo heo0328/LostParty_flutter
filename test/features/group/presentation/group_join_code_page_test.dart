@@ -17,6 +17,7 @@ final _now = DateTime(2026, 9, 1);
 GroupPublicSummary _group({
   required bool hasActiveJoinCode,
   String? activeJoinCode,
+  bool joinCodeVisibleToMembers = false,
 }) => GroupPublicSummary(
   groupId: 'group-1',
   name: '그룹',
@@ -28,15 +29,16 @@ GroupPublicSummary _group({
   revision: 1,
   hasActiveJoinCode: hasActiveJoinCode,
   activeJoinCode: activeJoinCode,
-  joinCodeVisibleToMembers: false,
+  joinCodeVisibleToMembers: joinCodeVisibleToMembers,
   createdAt: _now,
   lastActivityAt: _now,
 );
 
 class _Reads extends Fake implements GroupReadRepository {
-  _Reads(this.group);
+  _Reads(this.group, {this.isLeader = true});
 
   final GroupPublicSummary group;
+  final bool isLeader;
 
   @override
   Future<GroupPublicSummary?> loadGroup(String groupId) async => group;
@@ -48,7 +50,7 @@ class _Reads extends Fake implements GroupReadRepository {
   }) async => GroupMember(
     groupId: groupId,
     playerId: playerId,
-    role: GroupMemberRole.leader,
+    role: isLeader ? GroupMemberRole.leader : GroupMemberRole.member,
     joinedAt: _now,
     joinSequence: 1,
     joinedBy: GroupJoinedBy.created,
@@ -89,8 +91,9 @@ class _Apps extends Fake implements GroupApplicationCommandRepository {}
 Widget _page({
   required GroupPublicSummary group,
   required GroupJoinCodeManageViewModel viewModel,
+  bool isLeader = true,
 }) {
-  final reads = _Reads(group);
+  final reads = _Reads(group, isLeader: isLeader);
   return MaterialApp(
     home: GroupJoinCodePage(
       groupId: group.groupId,
@@ -140,6 +143,55 @@ void main() {
 
     expect(find.byKey(const ValueKey('groupJoinCodeValue')), findsOneWidget);
     expect(find.text(remembered), findsOneWidget);
+  });
+
+  testWidgets('공개된 활성 코드는 일반 멤버도 보고 복사할 수 있다', (tester) async {
+    await tester.pumpWidget(
+      _page(
+        group: _group(
+          hasActiveJoinCode: true,
+          activeJoinCode: '234567',
+          joinCodeVisibleToMembers: true,
+        ),
+        viewModel: GroupJoinCodeManageViewModel(
+          readRepository: _Reads(_group(hasActiveJoinCode: true)),
+          commandRepository: _Codes(),
+        ),
+        isLeader: false,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('234567'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('groupJoinCodeCopyButton')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('groupJoinCodeRevokeButton')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('groupJoinCodeVisibilitySwitch')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('비공개 초대코드는 일반 멤버에게 원문을 숨긴다', (tester) async {
+    await tester.pumpWidget(
+      _page(
+        group: _group(hasActiveJoinCode: true, activeJoinCode: '234567'),
+        viewModel: GroupJoinCodeManageViewModel(
+          readRepository: _Reads(_group(hasActiveJoinCode: true)),
+          commandRepository: _Codes(),
+        ),
+        isLeader: false,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('그룹장이 초대코드를 공개하지 않았습니다.'), findsOneWidget);
+    expect(find.text('234567'), findsNothing);
   });
 
   testWidgets('코드 재입력 없이 확인만으로 활성 코드를 폐기한다', (tester) async {

@@ -185,6 +185,21 @@ void main() {
       rules,
       contains('function validGroupJoinCodeVisibilityUpdate(oldData, newData)'),
     );
+    final groupMatch = rules.substring(
+      rules.indexOf('match /groups/{groupId}'),
+    );
+    expect(
+      groupMatch.indexOf('validGroupJoinCodeFlagUpdate('),
+      lessThan(groupMatch.indexOf('validGroupMemberLeaveUpdate(')),
+    );
+    expect(
+      groupMatch.indexOf('validGroupJoinCodeVisibilityUpdate('),
+      lessThan(groupMatch.indexOf('validGroupMemberLeaveUpdate(')),
+    );
+    expect(
+      groupMatch.indexOf('validGroupJoinCommandUpdate('),
+      lessThan(groupMatch.indexOf('validGroupMemberLeaveUpdate(')),
+    );
     expect(
       rules,
       contains(
@@ -218,7 +233,7 @@ void main() {
     );
     expect(rules, contains(') || validJoinCodeGroupMember('));
     expect(rules, contains(') || validJoinCodeRelationAccept('));
-    expect(rules, contains(') || validGroupJoinCodeFlagUpdate('));
+    expect(rules, contains('allow update: if validGroupJoinCodeFlagUpdate('));
     expect(rules, contains(') || validGroupJoinCodeVisibilityUpdate('));
     expect(rules, contains("|| member.joinedBy == 'joinCode'"));
   });
@@ -510,11 +525,7 @@ void main() {
     expect(rules, contains('oldData.leaderPlayerId == currentPlayerId()'));
     expect(rules, contains('newData.memberCount == oldData.memberCount + 1'));
     expect(rules, contains(') || validGroupLeaderApproveUpdate('));
-    expect(
-      rules,
-      contains('allow update: if validGroupMemberLeaveUpdate('),
-      reason: '탈퇴 Transaction은 join·승인 검증보다 먼저 판정해야 한다.',
-    );
+    expect(rules, contains(') || validGroupMemberLeaveUpdate('));
   });
 
   test('금지 문서는 그룹장만 읽고 만들고 지우며 수정할 수 없다', () {
@@ -623,7 +634,7 @@ void main() {
       rules,
       contains('validGroupDisbandRelationDelete(playerId, groupId)'),
     );
-    expect(rules, contains('allow update: if validGroupMemberLeaveUpdate('));
+    expect(rules, contains(') || validGroupMemberLeaveUpdate('));
     expect(rules, contains('function validGroupLeaderTransferUpdate('));
     expect(rules, contains('function validGroupMemberRoleTransferUpdate('));
     expect(rules, contains('function validGroupDisbandUpdate('));
