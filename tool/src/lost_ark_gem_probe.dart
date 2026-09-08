@@ -8,13 +8,80 @@ class LostArkGemProbeReport {
     required this.characterName,
     required this.characterClassName,
     required this.catalogVersion,
+    required this.detectionStatus,
+    required this.branchId,
+    required this.branchDisplayName,
+    required this.detectedRole,
+    required this.enlightenmentNodes,
+    required this.armorySkillNames,
+    required this.arkGridCores,
+    required this.hasValidOrderSun,
+    required this.hasValidOrderMoon,
+    required this.arkGridConditions,
     required this.gems,
   });
 
   final String characterName;
   final String characterClassName;
   final String catalogVersion;
+  final String detectionStatus;
+  final String? branchId;
+  final String? branchDisplayName;
+  final String? detectedRole;
+  final List<LostArkPassiveNodeFinding> enlightenmentNodes;
+  final List<String> armorySkillNames;
+  final List<LostArkGridCoreFinding> arkGridCores;
+  final bool hasValidOrderSun;
+  final bool hasValidOrderMoon;
+  final List<LostArkGridConditionFinding> arkGridConditions;
   final List<LostArkGemProbeFinding> gems;
+}
+
+class LostArkPassiveNodeFinding {
+  const LostArkPassiveNodeFinding({
+    required this.tier,
+    required this.name,
+    required this.level,
+  });
+
+  final int tier;
+  final String name;
+  final int level;
+}
+
+enum LostArkGridCoreSlot { sun, moon, star }
+
+class LostArkGridCoreFinding {
+  const LostArkGridCoreFinding({
+    required this.slot,
+    required this.coreName,
+    required this.grade,
+    required this.point,
+  });
+
+  final LostArkGridCoreSlot slot;
+  final String coreName;
+  final String grade;
+  final int point;
+
+  bool get meetsRequiredMinimum =>
+      slot == LostArkGridCoreSlot.star || point >= 14;
+}
+
+class LostArkGridConditionFinding {
+  const LostArkGridConditionFinding({
+    required this.coreName,
+    required this.conditionText,
+    required this.requiredPassiveNames,
+    required this.missingPassiveNames,
+  });
+
+  final String coreName;
+  final String conditionText;
+  final List<String> requiredPassiveNames;
+  final List<String> missingPassiveNames;
+
+  bool get isSatisfied => missingPassiveNames.isEmpty;
 }
 
 class LostArkGemProbeFinding {
@@ -49,6 +116,26 @@ LostArkGemProbeReport buildLostArkGemProbeReport(
     response,
     catalog: catalog,
   );
+  final detection = analysis.catalogDetection;
+  final enlightenmentNodes = _parseEnlightenmentNodes(response['ArkPassive']);
+  final armorySkillNames =
+      _asMapList(response['ArmorySkills'])
+          .map((skill) => skill['Name'])
+          .whereType<String>()
+          .toSet()
+          .toList(growable: false)
+        ..sort();
+  final arkGridCores = _parseOrderArkGridCores(response['ArkGrid']);
+  final arkGridConditions = analysis.arkGridConditions
+      .map(
+        (condition) => LostArkGridConditionFinding(
+          coreName: condition.coreName,
+          conditionText: condition.conditionText,
+          requiredPassiveNames: condition.requiredPassiveNames,
+          missingPassiveNames: condition.missingPassiveNames,
+        ),
+      )
+      .toList(growable: false);
   final armoryGem = _asMap(response['ArmoryGem']);
   final gemsBySlot = <int, Map<String, dynamic>>{};
   for (final gem in _asMapList(armoryGem?['Gems'])) {
@@ -77,14 +164,11 @@ LostArkGemProbeReport buildLostArkGemProbeReport(
   for (final effect in analysis.gemEffects) {
     final sourceGem = gemsBySlot[effect.gemSlot];
     final sourceEffect = effectsBySlot[effect.gemSlot];
-    final tooltipClassNames = extractGemTooltipClassNames(
-      [
-        sourceGem?['Tooltip'],
-        sourceEffect?['Tooltip'],
-        sourceEffect?['Description'],
-      ],
-      knownClassNames,
-    );
+    final tooltipClassNames = extractGemTooltipClassNames([
+      sourceGem?['Tooltip'],
+      sourceEffect?['Tooltip'],
+      sourceEffect?['Description'],
+    ], knownClassNames);
     final normalizedCharacterClass = _normalize(characterClassName);
     final matches = tooltipClassNames.isEmpty
         ? null
@@ -117,8 +201,82 @@ LostArkGemProbeReport buildLostArkGemProbeReport(
     characterName: characterName,
     characterClassName: characterClassName,
     catalogVersion: catalog.catalogVersion,
+    detectionStatus: detection?.status.name ?? 'notAnalyzed',
+    branchId: detection?.branchId,
+    branchDisplayName: detection?.branchDisplayName,
+    detectedRole: detection?.detectedRole?.name,
+    enlightenmentNodes: enlightenmentNodes,
+    armorySkillNames: armorySkillNames,
+    arkGridCores: arkGridCores,
+    hasValidOrderSun: arkGridCores.any(
+      (core) => core.slot == LostArkGridCoreSlot.sun && core.point >= 14,
+    ),
+    hasValidOrderMoon: arkGridCores.any(
+      (core) => core.slot == LostArkGridCoreSlot.moon && core.point >= 14,
+    ),
+    arkGridConditions: arkGridConditions,
     gems: findings,
   );
+}
+
+List<LostArkPassiveNodeFinding> _parseEnlightenmentNodes(Object? arkPassive) {
+  final passiveMap = _asMap(arkPassive);
+  final result = <LostArkPassiveNodeFinding>[];
+  final pattern = RegExp(r'깨달음\s+(\d+)티어\s+(.+?)\s+Lv\.(\d+)');
+  for (final effect in _asMapList(passiveMap?['Effects'])) {
+    final description = effect['Description'];
+    if (description is! String) {
+      continue;
+    }
+    final match = pattern.firstMatch(_stripMarkup(description));
+    final tier = int.tryParse(match?.group(1) ?? '');
+    final name = match?.group(2)?.trim();
+    final level = int.tryParse(match?.group(3) ?? '');
+    if (tier == null || name == null || name.isEmpty || level == null) {
+      continue;
+    }
+    if (tier == 1 || tier == 4) {
+      result.add(
+        LostArkPassiveNodeFinding(tier: tier, name: name, level: level),
+      );
+    }
+  }
+  result.sort((left, right) {
+    final byTier = left.tier.compareTo(right.tier);
+    return byTier != 0 ? byTier : left.name.compareTo(right.name);
+  });
+  return result;
+}
+
+List<LostArkGridCoreFinding> _parseOrderArkGridCores(Object? arkGrid) {
+  final gridMap = _asMap(arkGrid);
+  final result = <LostArkGridCoreFinding>[];
+  for (final core in _asMapList(gridMap?['Slots'])) {
+    final name = core['Name'];
+    final grade = core['Grade'];
+    final point = core['Point'];
+    if (name is! String || grade is! String || point is! int) {
+      continue;
+    }
+    final slot = switch (name) {
+      String value when value.startsWith('질서의 해') => LostArkGridCoreSlot.sun,
+      String value when value.startsWith('질서의 달') => LostArkGridCoreSlot.moon,
+      String value when value.startsWith('질서의 별') => LostArkGridCoreSlot.star,
+      _ => null,
+    };
+    if (slot != null) {
+      result.add(
+        LostArkGridCoreFinding(
+          slot: slot,
+          coreName: name,
+          grade: grade,
+          point: point,
+        ),
+      );
+    }
+  }
+  result.sort((left, right) => left.slot.index.compareTo(right.slot.index));
+  return result;
 }
 
 List<String> extractGemTooltipClassNames(
