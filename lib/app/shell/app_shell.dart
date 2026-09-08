@@ -13,12 +13,14 @@ class AppShell extends StatefulWidget {
     required this.navigationShell,
     this.manualVerificationRepository,
     this.startupCharacterRefreshRunner,
+    this.onRaidStatusSelected,
     super.key,
   });
 
   final StatefulNavigationShell navigationShell;
   final ManualVerificationRepository? manualVerificationRepository;
   final StartupCharacterRefreshRunner? startupCharacterRefreshRunner;
+  final VoidCallback? onRaidStatusSelected;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -120,6 +122,7 @@ class _AppShellState extends State<AppShell> {
 
   void _selectBranch(int index) {
     widget.navigationShell.goBranch(index, initialLocation: true);
+    if (index == 0) widget.onRaidStatusSelected?.call();
     unawaited(_maybeShowDisputeAlert());
   }
 

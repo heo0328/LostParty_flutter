@@ -373,6 +373,8 @@ GoRouter createAppRouter({
     conflictPolicy: participationConflictPolicy,
   );
 
+  final raidStatusRefreshSignal = ValueNotifier<int>(0);
+
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/raid-status',
@@ -384,6 +386,7 @@ GoRouter createAppRouter({
             manualVerificationRepository: manualVerificationRepositoryOrDefault,
             startupCharacterRefreshRunner:
                 startupCharacterRefreshRunnerOrDefault,
+            onRaidStatusSelected: () => raidStatusRefreshSignal.value++,
           );
         },
         branches: [
@@ -409,6 +412,7 @@ GoRouter createAppRouter({
                       startupCharacterRefreshRunnerOrDefault.runOnce(),
                     );
                   },
+                  refreshSignal: raidStatusRefreshSignal,
                 ),
                 routes: [
                   GoRoute(
