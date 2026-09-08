@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../../../shared/lost_ark_api/auth/api_token_store.dart';
 import '../../../../shared/lost_ark_api/client/lost_ark_api_exception.dart';
 import '../../domain/entities/character_profile.dart';
+import '../../domain/entities/character_build_analysis.dart';
 import '../../domain/entities/character_summary.dart';
 import '../../domain/entities/character_summary_sync_result.dart';
 import '../../domain/entities/character_weekly_raid_display_preference.dart';
@@ -79,6 +80,8 @@ class MyAccountViewModel extends ChangeNotifier {
   final Set<String> _busyClaimKeys = <String>{};
   Map<int, CharacterWeeklyRaidDisplayPreference> _weeklyRaidDisplayPreferences =
       const {};
+  Map<int, double?> _preferredCombatPowers = const {};
+  Map<int, GemValidationSummary> _preferredGemValidationSummaries = const {};
 
   bool get isLoadingTokenStatus => _isLoadingTokenStatus;
   bool get isFetchingCharacters => _isFetchingCharacters;
@@ -96,6 +99,17 @@ class MyAccountViewModel extends ChangeNotifier {
     }
     return null;
   }
+
+  double? representativeCombatPowerFor(LocalAccountCharacter character) {
+    if (character.preferredRole == null) return character.combatPower;
+    return _preferredCombatPowers.containsKey(character.id)
+        ? _preferredCombatPowers[character.id]
+        : null;
+  }
+
+  GemValidationSummary? gemValidationSummaryFor(
+    LocalAccountCharacter character,
+  ) => _preferredGemValidationSummaries[character.id];
 
   LostArkApiErrorType? get errorType => _errorType;
   WeeklyRaidClaimReadFailureType? get claimReadFailure => _claimReadFailure;
@@ -394,7 +408,46 @@ class MyAccountViewModel extends ChangeNotifier {
     if (_representativeSyncService != null) {
       _accounts = await _accountRepository.loadAccounts();
     }
+    await _loadPreferredCombatPowers();
     notifyListeners();
+  }
+
+  Future<void> _loadPreferredCombatPowers() async {
+    final values = <int, double?>{};
+    final gemSummaries = <int, GemValidationSummary>{};
+    for (final account in _accounts) {
+      for (final character in account.characters) {
+        final preferredRole = character.preferredRole;
+        if (preferredRole == null) continue;
+        final snapshots = await _accountRepository.loadCharacterBuildSnapshots(
+          character.id,
+        );
+        final preferredSnapshots =
+            snapshots
+                .where((snapshot) => snapshot.role == preferredRole)
+                .toList()
+              ..sort(
+                (left, right) => right.capturedAt.compareTo(left.capturedAt),
+              );
+        final preferredWithCombatPower = preferredSnapshots
+            .where(
+              (snapshot) =>
+                  snapshot.combatPower != null &&
+                  snapshot.combatPower!.isFinite &&
+                  snapshot.combatPower! >= 0,
+            )
+            .toList(growable: false);
+        values[character.id] = preferredWithCombatPower.isEmpty
+            ? null
+            : preferredWithCombatPower.first.combatPower;
+        if (preferredSnapshots.isNotEmpty) {
+          gemSummaries[character.id] =
+              preferredSnapshots.first.analysis.gemValidationSummary;
+        }
+      }
+    }
+    _preferredCombatPowers = Map.unmodifiable(values);
+    _preferredGemValidationSummaries = Map.unmodifiable(gemSummaries);
   }
 
   Future<void> fetchCharacters(String characterName) async {

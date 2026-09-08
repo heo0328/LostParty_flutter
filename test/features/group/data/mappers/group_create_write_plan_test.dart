@@ -40,6 +40,7 @@ void main() {
     expect(created.group['memberCount'], 1);
     expect(created.group['revision'], 1);
     expect(created.group['hasActiveJoinCode'], isFalse);
+    expect(created.group.containsKey('activeJoinCode'), isFalse);
     expect(created.group['joinCodeVisibleToMembers'], isFalse);
     expect(created.group['deletedAt'], isNull);
     expect(created.group['createdAt'], same(timestamp));

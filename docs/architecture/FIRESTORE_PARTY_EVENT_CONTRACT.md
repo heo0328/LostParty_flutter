@@ -27,6 +27,8 @@
 - 권장 필드: `eventId`, `playerId`, `type`, `recruitmentId`, `occurredAt`, `expiresAt`, `readAt`, `firstSyncedAt`, `lastSyncedAt`와 표시용 Snapshot.
 - 같은 이벤트를 재동기화해도 `readAt`은 유지하고 서버 표시 필드·`lastSyncedAt`만 갱신한다.
 - unread는 만료되지 않았고 `readAt`이 null인 receipt 수로 계산한다.
+- 가입 신청·추방·참가·참가 Character 변경은 전역 알림 목록에서 제외하고 `recruitmentId`별 unread로 계산해 진행 중 레이드 카드에 표시한다.
+- 모집 상세 진입은 해당 방의 위 네 유형 receipt만 일괄 읽음 처리한다. 상세의 히스토리는 현재 Player에게 전달된 로컬 receipt만 표시한다.
 - 완료 히스토리의 숨김·로컬 정정과 알림 읽음은 서로 다른 Projection이며 재사용하지 않는다.
 
 ## 동기화

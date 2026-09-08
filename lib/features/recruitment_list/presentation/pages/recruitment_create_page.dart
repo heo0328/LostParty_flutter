@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../shared/presentation/server_account_mismatch_alert.dart';
+
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../../../../shared/raid_catalog/domain/policies/raid_eligibility_policy.dart';
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
@@ -701,6 +703,15 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     }
     final raid = _raid!;
     final difficulty = _difficulty!;
+    final selectedOption = leader.optionFor(_role)!;
+    if ((selectedOption.itemLevel ?? 0) < difficulty.minItemLevel ||
+        (_normalizedMinCombatPower != null &&
+            (selectedOption.combatPower ?? 0) < _normalizedMinCombatPower!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('선택한 캐릭터가 모집 최소 조건을 충족하지 않습니다.')),
+      );
+      return;
+    }
     var cancelPendingApplications = false;
     if (widget.partyCreateRepository == null) {
       final pendingCount = await widget.commandService.countPendingApplications(
@@ -767,6 +778,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
         leader: leader,
         approval: approval,
         raid: raid,
+        selectedOption: selectedOption,
       );
       return;
     }
@@ -776,8 +788,8 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       leaderCharacterId: leader.characterId,
       leaderClassName: leader.className,
       leaderRole: _role,
-      leaderItemLevel: leader.optionFor(_role)?.itemLevel,
-      leaderCombatPower: leader.optionFor(_role)?.combatPower,
+      leaderItemLevel: selectedOption.itemLevel,
+      leaderCombatPower: selectedOption.combatPower,
       approvalPolicy: approval,
       compositionPolicy: PartyCompositionPolicy(
         RecruitmentPartyRules.fromRaid(raid),
@@ -809,9 +821,10 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     required RecruitmentLeaderCandidate leader,
     required ApprovalPolicy approval,
     required RaidDefinition raid,
+    required RecruitmentLeaderRoleOption selectedOption,
   }) async {
     final serverCharacterId = leader.serverCharacterId;
-    final itemLevel = leader.optionFor(_role)?.itemLevel;
+    final itemLevel = selectedOption.itemLevel;
     if (serverCharacterId == null ||
         serverCharacterId.isEmpty ||
         itemLevel == null) {
@@ -837,7 +850,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
         leaderClassName: leader.className,
         leaderRole: _role,
         leaderItemLevel: itemLevel,
-        leaderCombatPower: leader.optionFor(_role)?.combatPower,
+        leaderCombatPower: selectedOption.combatPower,
         approvalPolicy: approval,
         compositionRules: RecruitmentPartyRules.fromRaid(raid),
         cycleKey: cycleKey,
@@ -853,8 +866,13 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       context.go('/raid-status/${result.recruitmentId}');
       return;
     }
+    final failure = result.failure!;
+    if (_isServerAccountMismatch(failure)) {
+      await showServerAccountMismatchAlert(context);
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_createFailureMessage(result.failure!))),
+      SnackBar(content: Text(_createFailureMessage(failure))),
     );
   }
 }
@@ -862,6 +880,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
 String _createFailureMessage(PartyCreateFailure failure) => switch (failure) {
   PartyCreateFailure.unauthenticated ||
   PartyCreateFailure.playerBindingMissing => '계정 연결을 준비하지 못했습니다.',
+  PartyCreateFailure.serverDataMissing => '서버에서 캐릭터 정보를 찾지 못했습니다.',
   PartyCreateFailure.ownershipLost => '캐릭터 소유권을 확인하지 못했습니다.',
   PartyCreateFailure.invalidCharacter =>
     '참가할 수 없는 캐릭터입니다. 내 계정에서 정보를 새로고침한 뒤 다시 시도해 주세요.',
@@ -876,4 +895,12 @@ String _createFailureMessage(PartyCreateFailure failure) => switch (failure) {
   PartyCreateFailure.temporarilyUnavailable => '네트워크 연결이 불안정합니다.',
   PartyCreateFailure.invalidRequest => '입력한 모집 정보를 확인하지 못했습니다.',
   PartyCreateFailure.unknown => '모집을 생성하지 못했습니다.',
+};
+
+bool _isServerAccountMismatch(PartyCreateFailure failure) => switch (failure) {
+  PartyCreateFailure.unauthenticated ||
+  PartyCreateFailure.playerBindingMissing ||
+  PartyCreateFailure.serverDataMissing ||
+  PartyCreateFailure.ownershipLost => true,
+  _ => false,
 };

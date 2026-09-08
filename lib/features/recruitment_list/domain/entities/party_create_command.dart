@@ -42,6 +42,7 @@ class PartyCreateCommand {
 enum PartyCreateFailure {
   unauthenticated,
   playerBindingMissing,
+  serverDataMissing,
   ownershipLost,
   invalidCharacter,
   weeklyRaidCompleted,

@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
+import '../../../account/data/local/account_database.dart';
+import '../../../account/domain/repositories/activity_characters_repository.dart';
+import '../../../group/domain/repositories/group_character_search_repository.dart';
+import '../../../group/domain/repositories/group_read_repository.dart';
+import '../../../raid_status/data/repositories/drift_raid_status_filter_store.dart';
+import '../../../raid_status/domain/repositories/raid_status_filter_store.dart';
+import '../../../raid_status/presentation/widgets/raid_status_filter_sheet.dart';
 import '../../domain/repositories/party_read_repository.dart';
 import '../viewmodels/public_recruitment_list_view_model.dart';
 import '../widgets/local_recruitment_card.dart';
@@ -11,6 +19,12 @@ class RecruitmentListPage extends StatefulWidget {
     required this.cycleKey,
     required this.currentPlayerId,
     this.backfillOwnGroupListings,
+    this.accountDatabase,
+    this.filterStore,
+    this.raidCatalogRepository,
+    this.groupReadRepository,
+    this.activityCharactersRepository,
+    this.characterSearchRepository,
     super.key,
   });
 
@@ -18,6 +32,12 @@ class RecruitmentListPage extends StatefulWidget {
   final String cycleKey;
   final String currentPlayerId;
   final Future<void> Function()? backfillOwnGroupListings;
+  final AccountDatabase? accountDatabase;
+  final RaidStatusFilterStore? filterStore;
+  final RaidCatalogRepository? raidCatalogRepository;
+  final GroupReadRepository? groupReadRepository;
+  final ActivityCharactersRepository? activityCharactersRepository;
+  final GroupCharacterSearchRepository? characterSearchRepository;
 
   @override
   State<RecruitmentListPage> createState() => _RecruitmentListPageState();
@@ -29,11 +49,19 @@ class _RecruitmentListPageState extends State<RecruitmentListPage> {
   @override
   void initState() {
     super.initState();
+    final database = widget.accountDatabase;
     _viewModel = PublicRecruitmentListViewModel(
       repository: widget.partyReadRepository,
       cycleKey: widget.cycleKey,
       currentPlayerId: widget.currentPlayerId,
       backfillOwnGroupListings: widget.backfillOwnGroupListings,
+      filterStore:
+          widget.filterStore ??
+          (database == null ? null : DriftRaidStatusFilterStore(database)),
+      catalogRepository: widget.raidCatalogRepository,
+      groupReadRepository: widget.groupReadRepository,
+      activityCharactersRepository: widget.activityCharactersRepository,
+      characterSearchRepository: widget.characterSearchRepository,
     )..addListener(_onChanged);
     _viewModel.start();
   }
@@ -55,10 +83,22 @@ class _RecruitmentListPageState extends State<RecruitmentListPage> {
     _viewModel.loadMore();
   }
 
+  Future<void> _openFilter() {
+    return showRaidStatusFilterSheet(context: context, viewModel: _viewModel);
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('파티 모집')),
-    body: _buildBody(),
+    body: Column(
+      children: [
+        RaidStatusFilterBar(
+          label: _viewModel.filterBarLabel,
+          onOpen: _openFilter,
+        ),
+        Expanded(child: _buildBody()),
+      ],
+    ),
     floatingActionButton: FloatingActionButton.extended(
       key: const ValueKey('createRecruitmentButton'),
       onPressed: () => context.push('/recruitments/create'),
@@ -69,10 +109,11 @@ class _RecruitmentListPageState extends State<RecruitmentListPage> {
 
   Widget _buildBody() {
     final state = _viewModel.state;
-    if (state.isLoading || (state.isLoadingMore && state.items.isEmpty)) {
+    if (state.isLoading ||
+        (state.isLoadingMore && state.originalItems.isEmpty)) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (state.failure != null && state.items.isEmpty) {
+    if (state.failure != null && state.originalItems.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -94,7 +135,7 @@ class _RecruitmentListPageState extends State<RecruitmentListPage> {
         ),
       );
     }
-    if (state.isEmpty) {
+    if (state.isEmptyOriginal) {
       return RefreshIndicator(
         onRefresh: _viewModel.refresh,
         child: ListView(
@@ -115,6 +156,49 @@ class _RecruitmentListPageState extends State<RecruitmentListPage> {
         ),
       );
     }
+    if (state.isEmptyFiltered) {
+      return RefreshIndicator(
+        onRefresh: _viewModel.refresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            if (state.isFromCache) const _OfflineNotice(),
+            if (state.pendingCharacterCheckCount > 0)
+              const _InlineNotice(message: '참가 캐릭터를 확인하는 중입니다.'),
+            if (state.characterCheckFailed)
+              _CharacterCheckFailure(onRetry: _viewModel.retryCharacterChecks),
+            const SizedBox(height: 80),
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  '조건에 맞는 모집이 없습니다. 필터를 바꾸거나 다음 페이지를 불러올 수 있습니다.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+            if (state.canLoadMore || state.appendFailure != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+                child: state.appendFailure != null
+                    ? _AppendErrorFooter(
+                        message: _failureMessage(state.appendFailure!),
+                        onRetry: state.isLoadingMore
+                            ? null
+                            : _viewModel.retryAppend,
+                      )
+                    : OutlinedButton(
+                        key: const ValueKey('publicListLoadMoreButton'),
+                        onPressed: state.isLoadingMore
+                            ? null
+                            : _viewModel.loadMore,
+                        child: const Text('더 불러오기'),
+                      ),
+              ),
+          ],
+        ),
+      );
+    }
 
     final footerCount = state.isLoadingMore || state.appendFailure != null
         ? 1
@@ -124,6 +208,10 @@ class _RecruitmentListPageState extends State<RecruitmentListPage> {
         if (state.isFromCache) const _OfflineNotice(),
         if (state.hasFailureWithItems)
           _InlineNotice(message: _failureMessage(state.failure!)),
+        if (state.pendingCharacterCheckCount > 0)
+          const _InlineNotice(message: '참가 캐릭터를 확인하는 중입니다.'),
+        if (state.characterCheckFailed)
+          _CharacterCheckFailure(onRetry: _viewModel.retryCharacterChecks),
         Expanded(
           child: RefreshIndicator(
             onRefresh: _viewModel.refresh,
@@ -171,9 +259,7 @@ class _OfflineNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _InlineNotice(
-      message: '오프라인 상태입니다. 마지막으로 받은 내용을 표시합니다.',
-    );
+    return const _InlineNotice(message: '오프라인 상태입니다. 마지막으로 받은 내용을 표시합니다.');
   }
 }
 
@@ -189,6 +275,32 @@ class _InlineNotice extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Text(message),
+      ),
+    );
+  }
+}
+
+class _CharacterCheckFailure extends StatelessWidget {
+  const _CharacterCheckFailure({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            const Expanded(child: Text('참가 캐릭터를 확인하지 못했습니다.')),
+            TextButton(
+              key: const ValueKey('publicListCharacterCheckRetry'),
+              onPressed: onRetry,
+              child: const Text('다시 시도'),
+            ),
+          ],
+        ),
       ),
     );
   }

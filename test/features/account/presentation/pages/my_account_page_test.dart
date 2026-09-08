@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
@@ -6,12 +8,73 @@ import 'package:lost_party/features/account/domain/entities/character_profile.da
 import 'package:lost_party/features/account/domain/entities/character_summary.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
 import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
+import 'package:lost_party/features/account/domain/entities/character_auto_refresh_result.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/account/presentation/pages/my_account_page.dart';
+import 'package:lost_party/features/account/domain/services/startup_character_refresh_orchestrator.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token_store.dart';
 
 void main() {
+  testWidgets('모바일 폭에서 인증과 조회 액션을 두 개의 compact 행으로 배치한다', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MyAccountPage(
+          apiTokenStore: _InMemoryApiTokenStore(),
+          accountRepository: _FakeAccountRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final setupActions = find.byKey(const ValueKey('accountSetupActions'));
+    expect(
+      find.descendant(
+        of: setupActions,
+        matching: find.byKey(const ValueKey('apiTokenSettingsButton')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: setupActions,
+        matching: find.byKey(const ValueKey('gameAccountVerificationButton')),
+      ),
+      findsOneWidget,
+    );
+
+    final lookupActions = find.byKey(const ValueKey('accountLookupActions'));
+    expect(
+      find.descendant(
+        of: lookupActions,
+        matching: find.byKey(
+          const ValueKey('representativeCharacterNameField'),
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: lookupActions,
+        matching: find.byKey(const ValueKey('loadAccountDataButton')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: lookupActions,
+        matching: find.byKey(const ValueKey('addSubAccountButton')),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shows a verification badge for a server-bound account', (
     WidgetTester tester,
   ) async {
@@ -90,7 +153,9 @@ void main() {
       tester
           .widget<TextField>(
             find.descendant(
-              of: find.byKey(const ValueKey('representativeCharacterNameField')),
+              of: find.byKey(
+                const ValueKey('representativeCharacterNameField'),
+              ),
               matching: find.byType(TextField),
             ),
           )
@@ -200,6 +265,118 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('부계정1'), findsNothing);
   });
+
+  testWidgets('메인 계정 새로고침은 확인 후 실행하고 완료 뒤 10초 제한을 표시한다', (
+    WidgetTester tester,
+  ) async {
+    final runner = _ManualRefreshRunner();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MyAccountPage(
+          apiTokenStore: _InMemoryApiTokenStore(),
+          accountRepository: _FakeAccountRepository(),
+          manualCharacterRefreshRunner: runner,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('manualCharacterRefreshButton')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('캐릭터 정보 전체 갱신'), findsOneWidget);
+    expect(runner.runCount, 0);
+
+    await tester.tap(
+      find.byKey(const ValueKey('confirmManualCharacterRefreshButton')),
+    );
+    await tester.pump();
+    for (var i = 0; i < 50; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+      if (find
+          .byKey(const ValueKey('manualCharacterRefreshButton'))
+          .evaluate()
+          .isNotEmpty) {
+        break;
+      }
+    }
+    expect(runner.runCount, 1);
+
+    await tester.tap(
+      find.byKey(const ValueKey('manualCharacterRefreshButton')),
+    );
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('manualCharacterRefreshCooldown')),
+      findsOneWidget,
+    );
+    final confirm = tester.widget<FilledButton>(
+      find.byKey(const ValueKey('confirmManualCharacterRefreshButton')).last,
+    );
+    expect(confirm.onPressed, isNull);
+    await tester.tap(find.widgetWithText(TextButton, '취소').last);
+    await tester.pumpAndSettle();
+  });
+}
+
+class _ManualRefreshRunner implements ManualCharacterRefreshRunner {
+  final _states = StreamController<StartupCharacterRefreshState>.broadcast(
+    sync: true,
+  );
+  var _state = const StartupCharacterRefreshState.idle();
+  int runCount = 0;
+
+  @override
+  StartupCharacterRefreshState get state => _state;
+
+  @override
+  Stream<StartupCharacterRefreshState> get states => _states.stream;
+
+  @override
+  Future<StartupCharacterRefreshReport> runManualExcludingNiceGroup() async {
+    runCount++;
+    _state = const StartupCharacterRefreshState(
+      phase: StartupCharacterRefreshPhase.running,
+      totalCount: 1,
+      completedCount: 0,
+      failedCount: 0,
+    );
+    _states.add(_state);
+    _state = const StartupCharacterRefreshState(
+      phase: StartupCharacterRefreshPhase.completed,
+      totalCount: 1,
+      completedCount: 1,
+      failedCount: 0,
+    );
+    _states.add(_state);
+    return const StartupCharacterRefreshReport(
+      items: [
+        StartupCharacterRefreshItemResult(
+          character: LocalAccountCharacter(
+            id: 1,
+            serverName: '루페온',
+            characterName: '이슈아이',
+            characterLevel: 70,
+            characterClassName: '바드',
+            itemLevel: 1766.66,
+            combatPower: 338229.42,
+            isVisible: true,
+            displayOrder: 0,
+          ),
+          result: CharacterAutoRefreshResult(
+            status: CharacterAutoRefreshStatus.refreshed,
+            characterId: 1,
+            generation: 0,
+            snapshot: null,
+            detectedRole: null,
+            expectedRoleChanged: false,
+            message: null,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _FakeAccountRepository

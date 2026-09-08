@@ -33,24 +33,70 @@ void main() {
     expect(account.displayLimit, 6);
   });
 
-  test('stores representative reconciliation independently of local id', () async {
-    final accountId = await database.saveMainAccountSnapshot(
-      lookupCharacterName: '본캐',
-      characters: [_snapshot('본캐', DateTime.utc(2026, 8, 29))],
+  test('stores one nice-group auto-refresh setting per player', () async {
+    expect(await database.loadNiceGroupAutoRefreshEnabled('player-1'), isFalse);
+
+    await database.saveNiceGroupAutoRefreshEnabled(
+      playerId: 'player-1',
+      enabled: true,
+      updatedAt: DateTime.utc(2026, 9, 4),
     );
-    await database.markRepresentativeReconciled(
-      accountId: accountId,
-      serverCharacterId: 'server-character-1',
-      now: DateTime.utc(2026, 8, 29, 1),
+    await database.saveNiceGroupAutoRefreshEnabled(
+      playerId: 'player-2',
+      enabled: false,
+      updatedAt: DateTime.utc(2026, 9, 4),
     );
 
-    final account = await (database.select(
-      database.gameAccounts,
-    )..where((table) => table.id.equals(accountId))).getSingle();
-
-    expect(account.serverRepresentativeCharacterId, 'server-character-1');
-    expect(account.representativeReconciledAt, isNotNull);
+    expect(await database.loadNiceGroupAutoRefreshEnabled('player-1'), isTrue);
+    expect(await database.loadNiceGroupAutoRefreshEnabled('player-2'), isFalse);
   });
+
+  test(
+    'restores the nice-group setting after a local database restart',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'lost_party_nice_group_',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final file = File('${directory.path}/account.sqlite');
+      final first = AccountDatabase(NativeDatabase(file));
+      await first.saveNiceGroupAutoRefreshEnabled(
+        playerId: 'player-1',
+        enabled: true,
+      );
+      await first.close();
+
+      final reopened = AccountDatabase(NativeDatabase(file));
+      addTearDown(reopened.close);
+
+      expect(
+        await reopened.loadNiceGroupAutoRefreshEnabled('player-1'),
+        isTrue,
+      );
+    },
+  );
+
+  test(
+    'stores representative reconciliation independently of local id',
+    () async {
+      final accountId = await database.saveMainAccountSnapshot(
+        lookupCharacterName: '본캐',
+        characters: [_snapshot('본캐', DateTime.utc(2026, 8, 29))],
+      );
+      await database.markRepresentativeReconciled(
+        accountId: accountId,
+        serverCharacterId: 'server-character-1',
+        now: DateTime.utc(2026, 8, 29, 1),
+      );
+
+      final account = await (database.select(
+        database.gameAccounts,
+      )..where((table) => table.id.equals(accountId))).getSingle();
+
+      expect(account.serverRepresentativeCharacterId, 'server-character-1');
+      expect(account.representativeReconciledAt, isNotNull);
+    },
+  );
 
   test('adds a sub account with its own representative character', () async {
     await database.saveMainAccountSnapshot(
@@ -498,6 +544,50 @@ void main() {
     expect(snapshots.map((snapshot) => snapshot.role), ['dealer', 'support']);
   });
 
+  test('다른 역할 갱신이 선호 역할의 대표 전투력을 덮어쓰지 않는다', () async {
+    final fetchedAt = DateTime.utc(2026, 9, 5);
+    await database.saveMainAccountSnapshot(
+      lookupCharacterName: '조회캐릭터',
+      characters: [_snapshot('조회캐릭터', fetchedAt)],
+    );
+    final character = await database
+        .select(database.accountCharacters)
+        .getSingle();
+    await database.setPreferredCharacterRole(
+      characterId: character.id,
+      role: 'support',
+    );
+    await database.commitCharacterBuildSnapshot(
+      characterId: character.id,
+      characterName: character.characterName,
+      serverName: character.serverName,
+      characterLevel: character.characterLevel,
+      characterClassName: character.characterClassName,
+      role: 'support',
+      rawJson: '{"role":"support"}',
+      itemLevel: 1766.66,
+      combatPower: 250000,
+      capturedAt: fetchedAt,
+    );
+    await database.commitCharacterBuildSnapshot(
+      characterId: character.id,
+      characterName: character.characterName,
+      serverName: character.serverName,
+      characterLevel: character.characterLevel,
+      characterClassName: character.characterClassName,
+      role: 'dealer',
+      rawJson: '{"role":"dealer"}',
+      itemLevel: 1766.66,
+      combatPower: 400000,
+      capturedAt: fetchedAt.add(const Duration(minutes: 1)),
+    );
+
+    final stored = await database
+        .select(database.accountCharacters)
+        .getSingle();
+    expect(stored.combatPower, 250000);
+  });
+
   test('replaces only the snapshot for the same role', () async {
     final fetchedAt = DateTime.utc(2026, 8, 20);
     await database.saveMainAccountSnapshot(
@@ -852,17 +942,27 @@ void main() {
   test('party event sync is idempotent and preserves local choices', () async {
     final occurredAt = DateTime.utc(2026, 8, 25);
     await database.syncPartyHistoryEvent(
-      eventId: 'event-1', playerId: 'player', characterId: 'character',
-      recruitmentId: 'party', raidId: 'serca', difficultyId: 'hard',
-      cycleKey: '2026-08-26', serverStatus: 'completed',
+      eventId: 'event-1',
+      playerId: 'player',
+      characterId: 'character',
+      recruitmentId: 'party',
+      raidId: 'serca',
+      difficultyId: 'hard',
+      cycleKey: '2026-08-26',
+      serverStatus: 'completed',
       occurredAt: occurredAt,
     );
     await database.setRaidHistoryVisibility('event-1', false);
     await database.setRaidHistoryLocalOverride('event-1', 'incomplete');
     await database.syncPartyHistoryEvent(
-      eventId: 'event-1', playerId: 'player', characterId: 'character',
-      recruitmentId: 'party', raidId: 'serca', difficultyId: 'hard',
-      cycleKey: '2026-08-26', serverStatus: 'completionCancelled',
+      eventId: 'event-1',
+      playerId: 'player',
+      characterId: 'character',
+      recruitmentId: 'party',
+      raidId: 'serca',
+      difficultyId: 'hard',
+      cycleKey: '2026-08-26',
+      serverStatus: 'completionCancelled',
       occurredAt: occurredAt.add(const Duration(minutes: 1)),
     );
 
@@ -871,6 +971,51 @@ void main() {
     expect(rows.single.serverStatus, 'completionCancelled');
     expect(rows.single.visibility, 'hidden');
     expect(rows.single.localStatusOverride, 'incomplete');
+  });
+
+  test('persists raid status filter selection per player', () async {
+    await database.saveRaidStatusFilterSelection(
+      playerId: 'player-1',
+      selectionJson:
+          '{"schemaVersion":1,"includePublic":false,"includeGroup":true,"raidIds":["act4"],"difficultyIds":[]}',
+      now: DateTime.utc(2026, 9, 2),
+    );
+
+    expect(
+      await database.loadRaidStatusFilterSelection('player-1'),
+      contains('"includeGroup":true'),
+    );
+    expect(await database.loadRaidStatusFilterSelection('player-2'), isNull);
+
+    await database.saveRaidStatusFilterSelection(
+      playerId: 'player-1',
+      selectionJson:
+          '{"schemaVersion":1,"includePublic":true,"includeGroup":true,"raidIds":[],"difficultyIds":[]}',
+      now: DateTime.utc(2026, 9, 2, 1),
+    );
+    expect(
+      await database.loadRaidStatusFilterSelection('player-1'),
+      contains('"includePublic":true'),
+    );
+
+    await database.saveRaidStatusFilterSelection(
+      playerId: 'player-1',
+      screenKind: 'recruitmentList',
+      selectionJson:
+          '{"schemaVersion":1,"includePublic":false,"includeGroup":true,"raidIds":[],"difficultyIds":[]}',
+      now: DateTime.utc(2026, 9, 3),
+    );
+    expect(
+      await database.loadRaidStatusFilterSelection('player-1'),
+      contains('"includePublic":true'),
+    );
+    expect(
+      await database.loadRaidStatusFilterSelection(
+        'player-1',
+        screenKind: 'recruitmentList',
+      ),
+      contains('"includeGroup":true'),
+    );
   });
 }
 

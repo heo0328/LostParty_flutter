@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_radius.dart';
+import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/formatters/display_number_formatter.dart';
 
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/repositories/account_repository.dart';
+import '../../domain/repositories/activity_characters_repository.dart';
+import '../../domain/repositories/nice_group_auto_refresh_settings_repository.dart';
 import '../../domain/repositories/representative_character_sync_gateway.dart';
 import '../viewmodels/character_management_view_model.dart';
 
@@ -11,12 +16,18 @@ class CharacterManagementPage extends StatefulWidget {
   const CharacterManagementPage({
     required this.accountRepository,
     this.representativeSyncGateway,
+    this.activityCharactersRepository,
+    this.niceGroupSettingsRepository,
+    this.playerId,
     this.accountId,
     super.key,
   });
 
   final AccountRepository accountRepository;
   final RepresentativeCharacterSyncGateway? representativeSyncGateway;
+  final ActivityCharactersRepository? activityCharactersRepository;
+  final NiceGroupAutoRefreshSettingsRepository? niceGroupSettingsRepository;
+  final String? playerId;
   final int? accountId;
 
   @override
@@ -33,6 +44,9 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
     _viewModel = CharacterManagementViewModel(
       accountRepository: widget.accountRepository,
       representativeSyncGateway: widget.representativeSyncGateway,
+      activityCharactersRepository: widget.activityCharactersRepository,
+      niceGroupSettingsRepository: widget.niceGroupSettingsRepository,
+      playerId: widget.playerId,
       accountId: widget.accountId,
     )..addListener(_onChanged);
     _viewModel.initialize();
@@ -60,83 +74,241 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
         child: switch ((_viewModel.isLoading, account)) {
           (true, _) => const Center(child: CircularProgressIndicator()),
           (false, null) => const Center(child: Text('저장된 계정이 없습니다.')),
-          (false, final account?) => _buildContent(account),
+          (false, final _) => _buildContent(),
         },
       ),
     );
   }
 
-  Widget _buildContent(LocalGameAccount account) {
+  Widget _buildContent() {
+    final selected = _viewModel.selectedCharacters;
     return Column(
       children: [
         if (_viewModel.isSaving) const LinearProgressIndicator(),
-        if (_viewModel.representativeMessage case final message?)
-          _RepresentativeNotice(icon: Icons.error_outline, message: message)
+        if (_viewModel.message case final message?)
+          _Notice(icon: Icons.error_outline, message: message)
         else if (_viewModel.representativeCooldownLabel case final label?)
-          _RepresentativeNotice(icon: Icons.schedule, message: label),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: Row(
-            children: [
-              const Expanded(child: Text('메인 화면 표시 개수')),
-              IconButton(
-                tooltip: '표시 개수 줄이기',
-                onPressed: _viewModel.isSaving || account.displayLimit <= 1
-                    ? null
-                    : () => _viewModel.changeDisplayLimit(-1),
-                icon: const Icon(Icons.remove_circle_outline),
-              ),
-              SizedBox(
-                width: 32,
-                child: Text(
-                  '${account.displayLimit}',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium,
+          _Notice(icon: Icons.schedule, message: label),
+        Expanded(
+          child: CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                  AppSpacing.md,
+                  AppSpacing.xs,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: _SectionHeader(
+                    title: '앱에서 사용할 캐릭터',
+                    trailing:
+                        '${_viewModel.selectedCount} / ${_viewModel.rosterCount}',
+                  ),
                 ),
               ),
-              IconButton(
-                tooltip: '표시 개수 늘리기',
-                onPressed:
-                    _viewModel.isSaving ||
-                        account.displayLimit >= account.characters.length
-                    ? null
-                    : () => _viewModel.changeDisplayLimit(1),
-                icon: const Icon(Icons.add_circle_outline),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                sliver: SliverToBoxAdapter(
+                  child: Text(
+                    '선택한 캐릭터만 레이드, 그룹 및 전투력 동기화에 사용됩니다.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: Wrap(
+                    spacing: AppSpacing.xs,
+                    runSpacing: AppSpacing.xs,
+                    children: [
+                      for (final character in _viewModel.rosterCharacters)
+                        _ActivitySelectCard(
+                          character: character,
+                          isSelected: _viewModel.isActivitySelected(character),
+                          isRepresentative:
+                              _viewModel.draftRepresentativeId == character.id,
+                          enabled: _viewModel.canToggleActivity(character),
+                          onTap: () => _viewModel.toggleActivity(character),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(child: Divider(height: 1)),
+              if (_viewModel.hasNiceGroupCharacters) ...[
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.sm,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: SwitchListTile(
+                      key: const ValueKey('niceGroupAutoRefreshSwitch'),
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('나이스단 자동 갱신'),
+                      subtitle: Text(
+                        '${_viewModel.niceGroupResult.classNames.join(', ')} 직업군 전체에 적용됩니다. 설정을 끄면 기존 수동 스냅샷을 사용합니다.',
+                      ),
+                      value: _viewModel.draftNiceGroupAutoRefreshEnabled,
+                      onChanged: _viewModel.isSaving
+                          ? null
+                          : _viewModel.setNiceGroupAutoRefreshEnabled,
+                    ),
+                  ),
+                ),
+                const SliverToBoxAdapter(child: Divider(height: 1)),
+              ],
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.xs,
+                ),
+                sliver: const SliverToBoxAdapter(
+                  child: _SectionHeader(title: '대표 캐릭터와 표시 순서'),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  0,
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: Text(
+                    '현재 참가 중인 레이드에서는 유지되며 새로운 레이드 선택에서 제외됩니다.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+              if (selected.isEmpty)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    child: Text('앱에서 사용할 캐릭터를 최소 1명 선택해 주세요.'),
+                  ),
+                )
+              else
+                SliverReorderableList(
+                  itemCount: selected.length,
+                  onReorder: _viewModel.isSaving
+                      ? (_, _) {}
+                      : _viewModel.reorder,
+                  itemBuilder: (context, index) {
+                    final character = selected[index];
+                    return _SelectedCharacterTile(
+                      key: ValueKey(character.id),
+                      character: character,
+                      isRepresentative:
+                          _viewModel.draftRepresentativeId == character.id,
+                      isEnabled: !_viewModel.isSaving,
+                      isRepresentativeEnabled: _viewModel.canSetRepresentative(
+                        character,
+                      ),
+                      onSetRepresentative: () =>
+                          _viewModel.setRepresentative(character),
+                      dragHandle: ReorderableDragStartListener(
+                        index: index,
+                        child: const Padding(
+                          padding: EdgeInsets.all(AppSpacing.sm),
+                          child: Icon(Icons.drag_handle),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              const SliverToBoxAdapter(child: Divider(height: 1)),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.xl,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: Row(
+                    children: [
+                      const Expanded(child: Text('메인 화면 표시 개수')),
+                      IconButton(
+                        tooltip: '표시 개수 줄이기',
+                        onPressed:
+                            _viewModel.isSaving ||
+                                _viewModel.draftDisplayLimit <= 1
+                            ? null
+                            : () => _viewModel.changeDisplayLimit(-1),
+                        icon: const Icon(Icons.remove_circle_outline),
+                      ),
+                      SizedBox(
+                        width: 32,
+                        child: Text(
+                          '${_viewModel.draftDisplayLimit}',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: '표시 개수 늘리기',
+                        onPressed:
+                            _viewModel.isSaving ||
+                                _viewModel.draftDisplayLimit >=
+                                    _viewModel.maxDisplayLimit
+                            ? null
+                            : () => _viewModel.changeDisplayLimit(1),
+                        icon: const Icon(Icons.add_circle_outline),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
         ),
         const Divider(height: 1),
-        Expanded(
-          child: ReorderableListView.builder(
-            buildDefaultDragHandles: false,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: _viewModel.characters.length,
-            onReorder: _viewModel.isSaving ? (_, _) {} : _viewModel.reorder,
-            itemBuilder: (context, index) {
-              final character = _viewModel.characters[index];
-              return _CharacterManagementTile(
-                key: ValueKey(character.id),
-                character: character,
-                isRepresentative:
-                    account.representativeCharacterId == character.id,
-                isEnabled: !_viewModel.isSaving,
-                isRepresentativeEnabled: _viewModel.canSetRepresentative(
-                  character,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+            AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed:
+                      _viewModel.isSaving || !_viewModel.hasUnsavedChanges
+                      ? null
+                      : _viewModel.discardChanges,
+                  child: const Text('취소'),
                 ),
-                onVisibilityChanged: (value) => _viewModel
-                    .setCharacterVisibility(character, value ?? false),
-                onSetRepresentative: () =>
-                    _viewModel.setRepresentative(character),
-                dragHandle: ReorderableDragStartListener(
-                  index: index,
-                  child: const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Icon(Icons.drag_handle),
-                  ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: FilledButton(
+                  key: const ValueKey('characterManagementSaveButton'),
+                  onPressed: _viewModel.isSaving ? null : _viewModel.save,
+                  child: const Text('저장'),
                 ),
-              );
-            },
+              ),
+            ],
           ),
         ),
       ],
@@ -144,13 +316,110 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
   }
 }
 
-class _CharacterManagementTile extends StatelessWidget {
-  const _CharacterManagementTile({
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, this.trailing});
+
+  final String title;
+  final String? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Expanded(child: Text(title, style: theme.textTheme.titleMedium)),
+        if (trailing case final value?)
+          Text(value, style: theme.textTheme.titleSmall),
+      ],
+    );
+  }
+}
+
+class _ActivitySelectCard extends StatelessWidget {
+  const _ActivitySelectCard({
+    required this.character,
+    required this.isSelected,
+    required this.isRepresentative,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final LocalAccountCharacter character;
+  final bool isSelected;
+  final bool isRepresentative;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final borderColor = isSelected ? AppColors.primary : AppColors.outline;
+    final background = isSelected ? AppColors.primarySubtle : AppColors.surface;
+    return Material(
+      color: background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.medium),
+        side: BorderSide(color: borderColor, width: isSelected ? 2 : 1),
+      ),
+      child: InkWell(
+        key: ValueKey('activityCard-${character.id}'),
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(AppRadius.medium),
+        child: SizedBox(
+          width: 108,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.xs,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        character.characterName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: isSelected
+                              ? AppColors.primaryStrong
+                              : AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    if (isRepresentative)
+                      const Icon(
+                        Icons.star,
+                        size: 14,
+                        color: AppColors.primary,
+                      ),
+                  ],
+                ),
+                Text(
+                  character.characterClassName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectedCharacterTile extends StatelessWidget {
+  const _SelectedCharacterTile({
     required this.character,
     required this.isRepresentative,
     required this.isEnabled,
     required this.isRepresentativeEnabled,
-    required this.onVisibilityChanged,
     required this.onSetRepresentative,
     required this.dragHandle,
     super.key,
@@ -160,31 +429,31 @@ class _CharacterManagementTile extends StatelessWidget {
   final bool isRepresentative;
   final bool isEnabled;
   final bool isRepresentativeEnabled;
-  final ValueChanged<bool?> onVisibilityChanged;
   final VoidCallback onSetRepresentative;
   final Widget dragHandle;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Checkbox(
-        value: character.isVisible,
-        onChanged: isEnabled ? onVisibilityChanged : null,
-      ),
-      title: Text(character.characterName),
-      subtitle: Text(
-        '${character.characterClassName} · ${_formatItemLevel(character.itemLevel)}',
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            tooltip: isRepresentative ? '현재 대표 캐릭터' : '대표 캐릭터로 설정',
-            onPressed: isRepresentativeEnabled ? onSetRepresentative : null,
-            icon: Icon(isRepresentative ? Icons.star : Icons.star_border),
-          ),
-          dragHandle,
-        ],
+    return Material(
+      color: AppColors.surface,
+      child: ListTile(
+        title: Text(character.characterName),
+        subtitle: Text(
+          '${character.characterClassName} · ${_formatItemLevel(character.itemLevel)}',
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: isRepresentative ? '현재 대표 캐릭터' : '대표 캐릭터로 설정',
+              onPressed: isEnabled && isRepresentativeEnabled
+                  ? onSetRepresentative
+                  : null,
+              icon: Icon(isRepresentative ? Icons.star : Icons.star_border),
+            ),
+            dragHandle,
+          ],
+        ),
       ),
     );
   }
@@ -196,8 +465,8 @@ class _CharacterManagementTile extends StatelessWidget {
   }
 }
 
-class _RepresentativeNotice extends StatelessWidget {
-  const _RepresentativeNotice({required this.icon, required this.message});
+class _Notice extends StatelessWidget {
+  const _Notice({required this.icon, required this.message});
 
   final IconData icon;
   final String message;
@@ -205,11 +474,16 @@ class _RepresentativeNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.md,
+        0,
+      ),
       child: Row(
         children: [
           Icon(icon, size: 18),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.xs),
           Expanded(child: Text(message)),
         ],
       ),

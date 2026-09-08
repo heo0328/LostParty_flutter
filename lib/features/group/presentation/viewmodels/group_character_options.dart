@@ -1,5 +1,7 @@
 import '../../../account/domain/entities/local_game_account.dart';
 import '../../../account/domain/repositories/account_repository.dart';
+import '../../../account/domain/repositories/activity_characters_repository.dart';
+import '../../../account/domain/services/activity_character_source.dart';
 
 /// 그룹 생성·가입 신청에 쓸 수 있는 인증 Character. 서버 Character ID와 active
 /// 소유 계정만 담는다.
@@ -27,17 +29,30 @@ class GroupCharacterOption {
 
 /// 그룹 생성과 가입 신청이 같은 인증 Character 목록을 사용한다.
 class GroupCharacterOptionLoader {
-  const GroupCharacterOptionLoader({required this.accountRepository});
+  const GroupCharacterOptionLoader({
+    required this.accountRepository,
+    this.activityCharactersRepository,
+    this.playerId,
+  });
 
   final AccountRepository accountRepository;
+  final ActivityCharactersRepository? activityCharactersRepository;
+  final String? playerId;
 
   Future<List<GroupCharacterOption>> load() async {
     final accounts = await accountRepository.loadAccounts();
+    final activityCharacterIds = await loadActivityCharacterIds(
+      repository: activityCharactersRepository,
+      playerId: playerId,
+    );
     final options = <GroupCharacterOption>[];
     for (final account in accounts.where(
       (account) => account.hasActiveOwnership,
     )) {
-      for (final character in account.characters) {
+      for (final character in charactersMatchingActivity(
+        account,
+        activityCharacterIds,
+      )) {
         if (!_isAuthenticated(character)) continue;
         options.add(
           GroupCharacterOption(

@@ -1,6 +1,7 @@
 import 'recruitment_aggregate.dart';
 import 'recruitment_application.dart';
 import 'party_recruitment.dart';
+import 'party_gem_validation_snapshot.dart';
 
 /// 공개 목록 페이지 크기. Repository·ViewModel이 동일한 값을 사용한다.
 /// 크기는 내 방 제외 전 Firestore 문서 수 기준이다.
@@ -66,6 +67,7 @@ class ActiveRaidSummary {
     this.raidStartAt,
     this.visibility = 'public',
     this.groupId,
+    this.memberPlayerIds = const {},
   });
 
   final String id;
@@ -80,16 +82,23 @@ class ActiveRaidSummary {
   final int revision;
   final DateTime updatedAt;
   final bool isOwnedByCurrentPlayer;
+
   /// Firestore `status`. 1회성 완료 후 해산 전은 `completed`로 진행 중에 남긴다.
   final String status;
+
   /// Firestore `currentCycleStatus`. 반복방의 이번 회차 완료 여부를 표시한다.
   final String currentCycleStatus;
   final bool continueTogether;
   final DateTime? raidStartAt;
+
   /// `public` 또는 `group`. 일반 레이드는 public.
   final String visibility;
+
   /// 그룹 레이드의 연결 그룹. 일반 레이드는 null.
   final String? groupId;
+
+  /// 진행 중 필터 매청용. 카드 UI에는 올리지 않는다.
+  final Set<String> memberPlayerIds;
 
   bool get isGroupLinked => groupId != null && groupId!.isNotEmpty;
   bool get isGroupOnly => isGroupLinked && visibility == 'group';
@@ -118,6 +127,7 @@ class PartyMemberDisplay {
 
   /// 명령 대상용. UI 문구에는 노출하지 않는다.
   final String playerId;
+
   /// 캐릭터 변경 후보 필터용. UI 문구에는 노출하지 않는다.
   final String? characterId;
   final String? characterName;
@@ -240,6 +250,9 @@ class PartyApplicationSummary {
     this.rejectionCount = 0,
     this.resolutionReason,
     this.decidedAt,
+    this.itemLevel,
+    this.combatPower,
+    this.gemValidation,
   });
 
   final String recruitmentId;
@@ -256,6 +269,11 @@ class PartyApplicationSummary {
   final DateTime createdAt;
   final DateTime? decidedAt;
   final DateTime updatedAt;
+
+  /// 신청 당시 Snapshot 수치. 없는 과거 신청은 null이며 0으로 채우지 않는다.
+  final double? itemLevel;
+  final double? combatPower;
+  final PartyGemValidationSnapshot? gemValidation;
 }
 
 /// 상세의 완료 취소 등에 쓰는 회차 Snapshot. 민감 ID를 UI에 노출하지 않는다.

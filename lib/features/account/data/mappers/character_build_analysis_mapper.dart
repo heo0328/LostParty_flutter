@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../../../../shared/game_catalog/domain/entities/game_catalog.dart';
 import '../../domain/entities/character_build_analysis.dart';
 import '../../domain/entities/character_build_catalog_detection.dart';
+import 'gem_tooltip_class_extractor.dart';
 
 class CharacterBuildAnalysisMapper {
   const CharacterBuildAnalysisMapper();
@@ -21,6 +22,14 @@ class CharacterBuildAnalysisMapper {
     final classDefinition = catalog == null
         ? null
         : _findClassForBuild(json, catalog);
+    final activePassiveNames = _parseActivePassiveNames(json['ArkPassive']);
+    final catalogDetection = catalog == null
+        ? null
+        : _detectCatalogBuild(
+            json,
+            catalog: catalog,
+            activePassiveNames: activePassiveNames,
+          );
 
     if (runeCount != CharacterBuildAnalysis.expectedRuneCount) {
       notices.add(
@@ -35,23 +44,31 @@ class CharacterBuildAnalysisMapper {
     final gemEffects = _parseGemEffects(
       json['ArmoryGem'],
       skillNames: skillNames,
-      catalogSkillNames: _catalogGemSkillNames(classDefinition),
+      catalogSkillNames: _catalogGemSkillNames(
+        classDefinition,
+        branchId: catalogDetection?.branchId,
+      ),
+      characterClassName:
+          _map(json['ArmoryProfile'])?['CharacterClassName'] as String?,
+      knownClassNames: catalog == null
+          ? const {}
+          : buildKnownGemClassNames(
+              catalog.classes.map(
+                (definition) => (
+                  apiClassName: definition.apiClassName,
+                  aliases: definition.aliases,
+                ),
+              ),
+            ),
+      allowPassiveIconFallback: classDefinition == null,
       notices: notices,
     );
-    final activePassiveNames = _parseActivePassiveNames(json['ArkPassive']);
-    final catalogDetection = catalog == null
-        ? null
-        : _detectCatalogBuild(
-            json,
-            catalog: catalog,
-            activePassiveNames: activePassiveNames,
-          );
     final arkGridConditions = _parseArkGridConditions(
       json['ArkGrid'],
       activePassiveNames: activePassiveNames,
       notices: notices,
     );
-    final arkGridCorePoints = _parseRequiredArkGridCorePoints(
+    final arkGridMinimumResult = _parseRequiredArkGridCorePoints(
       json['ArkGrid'],
       notices: notices,
     );
@@ -60,7 +77,8 @@ class CharacterBuildAnalysisMapper {
       runeCount: runeCount,
       gemEffects: gemEffects,
       arkGridConditions: arkGridConditions,
-      arkGridCorePoints: arkGridCorePoints,
+      arkGridCorePoints: arkGridMinimumResult.checks,
+      arkGridMinimumIntegrity: arkGridMinimumResult.integrity,
       notices: notices,
       catalogDetection: catalogDetection,
     );
@@ -77,16 +95,42 @@ class CharacterBuildAnalysisMapper {
         : null;
   }
 
-  Set<String> _catalogGemSkillNames(GameClassDefinition? definition) {
+  Set<String> _catalogGemSkillNames(
+    GameClassDefinition? definition, {
+    required String? branchId,
+  }) {
     if (definition == null) {
       return const {};
     }
     return {
-      for (final skill in definition.specialSkills) skill.name,
-      for (final skill in definition.specialSkills) ...skill.aliases,
-      for (final target in definition.gemSkillTargets) target.name,
-      for (final target in definition.gemSkillTargets) ...target.aliases,
+      for (final skill in definition.specialSkills)
+        if (branchId == null || skill.relatedBranchIds.contains(branchId))
+          skill.name,
+      for (final skill in definition.specialSkills)
+        if (branchId == null || skill.relatedBranchIds.contains(branchId))
+          ...skill.aliases,
+      for (final target in definition.gemSkillTargets)
+        if (_targetMatchesBranch(definition, target, branchId)) target.name,
+      for (final target in definition.gemSkillTargets)
+        if (_targetMatchesBranch(definition, target, branchId))
+          ...target.aliases,
     };
+  }
+
+  bool _targetMatchesBranch(
+    GameClassDefinition definition,
+    ClassGemSkillTarget target,
+    String? branchId,
+  ) {
+    if (branchId == null) {
+      return true;
+    }
+    final relatedSkills = definition.specialSkills.where(
+      (skill) => target.relatedSpecialSkillIds.contains(skill.skillId),
+    );
+    return relatedSkills.any(
+      (skill) => skill.relatedBranchIds.contains(branchId),
+    );
   }
 
   CharacterBuildCatalogDetection _detectCatalogBuild(
@@ -174,12 +218,15 @@ class CharacterBuildAnalysisMapper {
     return null;
   }
 
-  List<ArkGridCorePointCheck> _parseRequiredArkGridCorePoints(
+  ({List<ArkGridCorePointCheck> checks, ArkGridMinimumIntegrity integrity})
+  _parseRequiredArkGridCorePoints(
     Object? arkGrid, {
     required List<BuildNotice> notices,
   }) {
     final gridMap = _map(arkGrid);
     final checks = <ArkGridCorePointCheck>[];
+    int? orderSunPoint;
+    int? orderMoonPoint;
     for (final slot in _mapList(gridMap?['Slots'])) {
       final coreName = slot['Name'];
       final grade = slot['Grade'];
@@ -189,6 +236,12 @@ class CharacterBuildAnalysisMapper {
       }
       if (!coreName.startsWith('질서의 해') && !coreName.startsWith('질서의 달')) {
         continue;
+      }
+
+      if (coreName.startsWith('질서의 해')) {
+        orderSunPoint = _higherPoint(orderSunPoint, point);
+      } else {
+        orderMoonPoint = _higherPoint(orderMoonPoint, point);
       }
 
       const minimumPoint = 14;
@@ -220,7 +273,39 @@ class CharacterBuildAnalysisMapper {
         );
       }
     }
-    return checks;
+    if (orderSunPoint == null) {
+      notices.add(
+        const BuildNotice(
+          code: 'ark_grid_missing_order_sun',
+          level: BuildNoticeLevel.warning,
+          message: '질서의 해 코어가 없습니다. 필수 14P 효과를 확인해 주세요.',
+        ),
+      );
+    }
+    if (orderMoonPoint == null) {
+      notices.add(
+        const BuildNotice(
+          code: 'ark_grid_missing_order_moon',
+          level: BuildNoticeLevel.warning,
+          message: '질서의 달 코어가 없습니다. 필수 14P 효과를 확인해 주세요.',
+        ),
+      );
+    }
+
+    return (
+      checks: checks,
+      integrity: ArkGridMinimumIntegrity(
+        orderSunPoint: orderSunPoint,
+        orderMoonPoint: orderMoonPoint,
+      ),
+    );
+  }
+
+  int _higherPoint(int? current, int candidate) {
+    if (current == null || candidate > current) {
+      return candidate;
+    }
+    return current;
   }
 
   bool _isRelicOrHigher(String grade) {
@@ -231,15 +316,20 @@ class CharacterBuildAnalysisMapper {
     Object? armoryGem, {
     required Set<String> skillNames,
     required Set<String> catalogSkillNames,
+    required String? characterClassName,
+    required Map<String, String> knownClassNames,
+    required bool allowPassiveIconFallback,
     required List<BuildNotice> notices,
   }) {
     final gemMap = _map(armoryGem);
     final levelsBySlot = <int, int>{};
+    final gemsBySlot = <int, Map<String, dynamic>>{};
     for (final gem in _mapList(gemMap?['Gems'])) {
       final slot = gem['Slot'];
       final level = gem['Level'];
       if (slot is int && level is int) {
         levelsBySlot[slot] = level;
+        gemsBySlot[slot] = gem;
       }
     }
 
@@ -257,10 +347,30 @@ class CharacterBuildAnalysisMapper {
       final category = skillNames.contains(name)
           ? GemSkillCategory.normal
           : catalogSkillNames.contains(name) ||
-                icon is String && icon.contains('ark_passive')
+                allowPassiveIconFallback &&
+                    icon is String &&
+                    icon.contains('ark_passive')
           ? GemSkillCategory.passiveOrIdentity
           : GemSkillCategory.unknown;
       final descriptions = _stringList(skill['Description']);
+      final tooltipClassNames = extractGemTooltipClassNames([
+        gemsBySlot[slot]?['Tooltip'],
+        skill['Tooltip'],
+        skill['Description'],
+      ], knownClassNames);
+      final normalizedCharacterClass = characterClassName?.trim().toLowerCase();
+      final hasMatchingClass =
+          normalizedCharacterClass != null &&
+          tooltipClassNames.any(
+            (name) => name.trim().toLowerCase() == normalizedCharacterClass,
+          );
+      final validationStatus = tooltipClassNames.isEmpty
+          ? GemValidationStatus.unavailable
+          : !hasMatchingClass
+          ? GemValidationStatus.foreignClass
+          : category == GemSkillCategory.unknown
+          ? GemValidationStatus.sameClassTargetUnverified
+          : GemValidationStatus.verified;
       effects.add(
         GemSkillEffect(
           gemSlot: slot,
@@ -268,15 +378,26 @@ class CharacterBuildAnalysisMapper {
           skillName: name,
           descriptions: descriptions,
           category: category,
+          tooltipClassNames: tooltipClassNames,
+          validationStatus: validationStatus,
         ),
       );
 
-      if (category == GemSkillCategory.unknown) {
+      if (validationStatus == GemValidationStatus.foreignClass) {
         notices.add(
           BuildNotice(
-            code: 'unknown_gem_skill_$slot',
+            code: 'foreign_class_gem_$slot',
             level: BuildNoticeLevel.warning,
-            message: '$name 보석의 대상 스킬을 확인할 수 없습니다.',
+            message: '$name 보석은 다른 직업 보석입니다: ${tooltipClassNames.join(', ')}',
+          ),
+        );
+      } else if (validationStatus ==
+          GemValidationStatus.sameClassTargetUnverified) {
+        notices.add(
+          BuildNotice(
+            code: 'unverified_same_class_gem_$slot',
+            level: BuildNoticeLevel.info,
+            message: '$name 보석은 해당 직업 보석이지만 현재 스킬 또는 등록 특수 스킬에서 확인되지 않습니다.',
           ),
         );
       }

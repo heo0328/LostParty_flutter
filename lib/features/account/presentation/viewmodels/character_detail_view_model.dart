@@ -5,17 +5,16 @@ import '../../domain/entities/character_build_draft.dart';
 import '../../domain/entities/character_build_snapshot.dart';
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/repositories/account_repository.dart';
+import '../../domain/services/character_build_role_policy.dart';
 
 class CharacterDetailViewModel extends ChangeNotifier {
   CharacterDetailViewModel({
     required this.character,
     required AccountRepository accountRepository,
   }) : _accountRepository = accountRepository,
-       _selectedRole = _supportClasses.contains(character.characterClassName)
-           ? null
-           : CharacterBuildRole.dealer;
-
-  static const _supportClasses = {'바드', '발키리', '도화가', '홀리나이트'};
+       _selectedRole = const CharacterBuildRolePolicy().fixedRole(
+         character.characterClassName,
+       );
 
   final LocalAccountCharacter character;
   final AccountRepository _accountRepository;
@@ -34,7 +33,9 @@ class CharacterDetailViewModel extends ChangeNotifier {
   bool get isFetchingDraft => _isFetchingDraft;
   bool get isCommittingDraft => _isCommittingDraft;
   bool get supportsMultipleRoles =>
-      _supportClasses.contains(character.characterClassName);
+      const CharacterBuildRolePolicy().supportsMultipleRoles(
+        character.characterClassName,
+      );
   CharacterBuildRole? get selectedRole => _selectedRole;
   CharacterBuildDraft? get draft => _draft;
   CharacterBuildRole? get draftRole => _draftRole;

@@ -1,10 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
 import 'package:lost_party/features/account/presentation/models/weekly_raid_status_item.dart';
 import 'package:lost_party/features/account/presentation/widgets/account_character_card.dart';
 
 void main() {
+  testWidgets('shows only foreign gems as a red account-card warning', (
+    tester,
+  ) async {
+    const summary = GemValidationSummary(
+      totalCount: 11,
+      verifiedCount: 10,
+      unverifiedSameClassCount: 0,
+      foreignClassCount: 1,
+      unavailableCount: 0,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AccountCharacterCard(
+            character: _character,
+            isRepresentative: false,
+            gemValidationSummary: summary,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('다른 직업 보석 1개 · 확인 필요'), findsOneWidget);
+    final text = tester.widget<Text>(find.text('다른 직업 보석 1개 · 확인 필요'));
+    final context = tester.element(find.byType(AccountCharacterCard));
+    expect(text.style?.color, Theme.of(context).colorScheme.error);
+  });
+
+  testWidgets('shows same-class unverified gems as neutral information', (
+    tester,
+  ) async {
+    const summary = GemValidationSummary(
+      totalCount: 11,
+      verifiedCount: 10,
+      unverifiedSameClassCount: 1,
+      foreignClassCount: 0,
+      unavailableCount: 0,
+    );
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: AccountCharacterCard(
+            character: _character,
+            isRepresentative: false,
+            gemValidationSummary: summary,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('동일 직업 보석 · 현재 스킬에서 미확인 1개'), findsOneWidget);
+    expect(find.byIcon(Icons.info_outline), findsOneWidget);
+  });
+
   testWidgets('shows weekly claim state as a disabled checkbox', (
     tester,
   ) async {
@@ -101,3 +156,16 @@ void main() {
     expect(changedValue, isTrue);
   });
 }
+
+const _character = LocalAccountCharacter(
+  id: 1,
+  serverCharacterId: 'character-1',
+  serverName: '루페온',
+  characterName: '캐릭터',
+  characterLevel: 70,
+  characterClassName: '바드',
+  itemLevel: 1760,
+  combatPower: 1,
+  isVisible: true,
+  displayOrder: 0,
+);

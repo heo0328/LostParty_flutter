@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_draft.dart';
 import 'package:lost_party/features/account/domain/entities/character_profile.dart';
 import 'package:lost_party/features/account/domain/entities/character_summary.dart';
@@ -65,7 +66,68 @@ void main() {
     expect(viewModel.hasFetchedCharacters, isFalse);
     expect(viewModel.isFetchingCharacters, isFalse);
   });
+
+  test('uses the preferred-role snapshot for account gem validation', () async {
+    final repository = _FakeAccountRepository(
+      preferredRole: CharacterBuildRole.support,
+      snapshots: [
+        _snapshot(
+          role: CharacterBuildRole.dealer,
+          status: GemValidationStatus.verified,
+          capturedAt: DateTime.utc(2026, 9, 8, 1),
+        ),
+        _snapshot(
+          role: CharacterBuildRole.support,
+          status: GemValidationStatus.foreignClass,
+          capturedAt: DateTime.utc(2026, 9, 8, 2),
+        ),
+      ],
+    );
+    final viewModel = MyAccountViewModel(
+      apiTokenStore: tokenStore,
+      accountRepository: repository,
+    );
+
+    await viewModel.loadStoredAccount();
+    final character = viewModel.mainAccount!.characters.single;
+
+    expect(
+      viewModel.gemValidationSummaryFor(character)?.status,
+      GemValidationSummaryStatus.foreignClass,
+    );
+  });
 }
+
+CharacterBuildSnapshot _snapshot({
+  required CharacterBuildRole role,
+  required GemValidationStatus status,
+  required DateTime capturedAt,
+}) => CharacterBuildSnapshot(
+  id: role.index + 1,
+  characterId: 1,
+  role: role,
+  rawJson: '{}',
+  itemLevel: 1760,
+  combatPower: 1,
+  capturedAt: capturedAt,
+  dataVersion: 1,
+  analysis: CharacterBuildAnalysis(
+    runeCount: 8,
+    gemEffects: [
+      GemSkillEffect(
+        gemSlot: 0,
+        gemLevel: 10,
+        skillName: '테스트',
+        descriptions: const [],
+        category: GemSkillCategory.normal,
+        validationStatus: status,
+      ),
+    ],
+    arkGridConditions: const [],
+    arkGridCorePoints: const [],
+    notices: const [],
+  ),
+);
 
 CharacterSummary _createCharacterSummary() {
   return const CharacterSummary(
@@ -111,10 +173,17 @@ class _FakeAccountRepository implements AccountRepository {
     required CharacterBuildRole role,
   }) => throw UnimplementedError();
 
-  _FakeAccountRepository({this.characters = const [], this.error});
+  _FakeAccountRepository({
+    this.characters = const [],
+    this.error,
+    this.preferredRole,
+    this.snapshots = const [],
+  });
 
   final List<CharacterSummary> characters;
   final LostArkApiException? error;
+  final CharacterBuildRole? preferredRole;
+  final List<CharacterBuildSnapshot> snapshots;
 
   @override
   Future<CharacterBuildSnapshot> refreshCharacterBuildSnapshot({
@@ -136,7 +205,7 @@ class _FakeAccountRepository implements AccountRepository {
   @override
   Future<List<CharacterBuildSnapshot>> loadCharacterBuildSnapshots(
     int characterId,
-  ) async => const [];
+  ) async => snapshots;
 
   @override
   Future<void> setRepresentativeCharacter({
@@ -217,6 +286,7 @@ class _FakeAccountRepository implements AccountRepository {
           combatPower: 338229.42,
           isVisible: true,
           displayOrder: 0,
+          preferredRole: preferredRole,
         ),
       ],
     );

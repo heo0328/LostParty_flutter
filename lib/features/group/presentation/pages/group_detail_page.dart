@@ -350,14 +350,19 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                '${display.characterName}의 인증 캐릭터',
+                '${display.characterName}의 활동 캐릭터',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
             if (characters.isEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 0, 16, 24),
-                child: Text('표시할 인증 캐릭터가 없습니다.'),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                child: Text(
+                  key: const ValueKey('groupMemberActivityCharactersEmpty'),
+                  display.member.playerId == widget.playerId
+                      ? '선택한 활동 캐릭터가 없습니다. 캐릭터 관리에서 사용할 캐릭터를 저장해 주세요.'
+                      : '선택한 활동 캐릭터가 없습니다. 상대가 캐릭터 관리에서 다시 저장하면 표시됩니다.',
+                ),
               )
             else
               Flexible(
@@ -423,7 +428,8 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     final membersResult = await _members;
     if (!mounted) return;
     final candidates = [
-      for (final display in membersResult?.members ?? const <GroupMemberDisplay>[])
+      for (final display
+          in membersResult?.members ?? const <GroupMemberDisplay>[])
         if (!display.isLeader && display.member.playerId != widget.playerId)
           display,
     ];
@@ -444,12 +450,14 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
           if (candidates.isNotEmpty)
             TextButton(
               key: const ValueKey('groupLeaderTransferChoiceButton'),
-              onPressed: () => Navigator.of(context).pop(_LeaderExitChoice.transfer),
+              onPressed: () =>
+                  Navigator.of(context).pop(_LeaderExitChoice.transfer),
               child: const Text('그룹장 이전'),
             ),
           FilledButton(
             key: const ValueKey('groupDisbandChoiceButton'),
-            onPressed: () => Navigator.of(context).pop(_LeaderExitChoice.disband),
+            onPressed: () =>
+                Navigator.of(context).pop(_LeaderExitChoice.disband),
             child: const Text('그룹 해산'),
           ),
         ],

@@ -16,18 +16,17 @@ void main() {
       expect(GroupJoinCode.tryParse(''), isNull);
     });
 
-    test('유효한 20자 코드는 정규화해 파싱한다', () {
+    test('유효한 기존 20자 코드는 호환 파싱한다', () {
       const raw = '23456789abcdefghjkmn';
       final code = GroupJoinCode.tryParse('  $raw  ');
       expect(code, isNotNull);
       expect(code!.value, '23456789ABCDEFGHJKMN');
-      expect(code.value.length, GroupJoinCode.length);
+      expect(code.value.length, GroupJoinCode.legacyLength);
     });
 
-    test('생성기는 고정 길이·허용 알파벳·≥96비트를 만족한다', () {
+    test('생성기는 신규 6자리와 허용 알파벳을 사용한다', () {
       final code = GroupJoinCode.generate(random: Random(42));
-      expect(code.value.length, 20);
-      expect(code.value.length * 5, greaterThanOrEqualTo(96));
+      expect(code.value.length, 6);
       for (final char in code.value.split('')) {
         expect(GroupJoinCode.alphabet.contains(char), isTrue);
       }

@@ -38,6 +38,7 @@ void main() {
     expect(summary.cycleEndsAt, DateTime.utc(2026, 8, 26, 21));
     expect(summary.visibility, 'public');
     expect(summary.groupId, isNull);
+    expect(summary.memberPlayerIds, {'player-leader', 'player-member'});
   });
 
   test('excludes leader or confirmed member rooms from the public list', () {
@@ -125,38 +126,42 @@ void main() {
     expect(summary.isAwaitingDisband, isFalse);
     expect(summary.visibility, 'public');
     expect(summary.isGroupOnly, isFalse);
+    expect(summary.memberPlayerIds, {'player-leader', 'player-member'});
   });
 
-  test('maps a member display document with opaque player and character ids', () {
-    final member = mapper.toMemberDisplay(
-      PartyReadDocumentDto(
-        id: 'player-member',
-        data: {
-          'schemaVersion': 1,
-          'playerId': 'player-member',
-          'characterId': 'character-2',
-          'characterNameSnapshot': '딜러캐릭',
-          'classNameSnapshot': '블레이드',
-          'role': 'dealer',
-          'partyIndex': 1,
-          'slotIndex': 2,
-          'itemLevelSnapshot': 1710.5,
-          'combatPowerSnapshot': 250000,
-          'canApproveApplications': false,
-        },
-      ),
-    );
+  test(
+    'maps a member display document with opaque player and character ids',
+    () {
+      final member = mapper.toMemberDisplay(
+        PartyReadDocumentDto(
+          id: 'player-member',
+          data: {
+            'schemaVersion': 1,
+            'playerId': 'player-member',
+            'characterId': 'character-2',
+            'characterNameSnapshot': '딜러캐릭',
+            'classNameSnapshot': '블레이드',
+            'role': 'dealer',
+            'partyIndex': 1,
+            'slotIndex': 2,
+            'itemLevelSnapshot': 1710.5,
+            'combatPowerSnapshot': 250000,
+            'canApproveApplications': false,
+          },
+        ),
+      );
 
-    expect(member.playerId, 'player-member');
-    expect(member.characterId, 'character-2');
-    expect(member.characterName, '딜러캐릭');
-    expect(member.className, '블레이드');
-    expect(member.role, PartyRole.dealer);
-    expect(member.partyIndex, 1);
-    expect(member.slotIndex, 2);
-    expect(member.itemLevel, 1710.5);
-    expect(member.combatPower, 250000);
-  });
+      expect(member.playerId, 'player-member');
+      expect(member.characterId, 'character-2');
+      expect(member.characterName, '딜러캐릭');
+      expect(member.className, '블레이드');
+      expect(member.role, PartyRole.dealer);
+      expect(member.partyIndex, 1);
+      expect(member.slotIndex, 2);
+      expect(member.itemLevel, 1710.5);
+      expect(member.combatPower, 250000);
+    },
+  );
 
   test('tolerates missing leader and member display snapshots', () {
     final data = _recruitmentData()
@@ -171,11 +176,7 @@ void main() {
     final member = mapper.toMemberDisplay(
       PartyReadDocumentDto(
         id: 'player-member',
-        data: {
-          'schemaVersion': 1,
-          'role': 'support',
-          'partyIndex': 0,
-        },
+        data: {'schemaVersion': 1, 'role': 'support', 'partyIndex': 0},
       ),
     );
     expect(member.characterName, isNull);
@@ -187,15 +188,19 @@ void main() {
     expect(member.combatPower, isNull);
   });
 
+  test('public mapper keeps unknown memberPlayerIds distinct from empty', () {
+    final data = _recruitmentData()..remove('memberPlayerIds');
+    final summary = mapper.toPublicRecruitment(
+      PartyReadDocumentDto(id: 'raid-1', data: data),
+    );
+    expect(summary.memberPlayerIds, isNull);
+  });
+
   test('maps slotIndex when present and ignores invalid values', () {
     final missing = mapper.toMemberDisplay(
       PartyReadDocumentDto(
         id: 'player-member',
-        data: {
-          'schemaVersion': 1,
-          'role': 'dealer',
-          'partyIndex': 0,
-        },
+        data: {'schemaVersion': 1, 'role': 'dealer', 'partyIndex': 0},
       ),
     );
     expect(missing.slotIndex, isNull);
@@ -286,6 +291,133 @@ void main() {
     expect(summary.recruitmentId, 'raid-1');
     expect(summary.revision, 1);
     expect(summary.rejectionCount, 0);
+    // submittedBuildSnapshot 없으면 null
+    expect(summary.itemLevel, isNull);
+    expect(summary.combatPower, isNull);
+  });
+
+  test('maps submittedBuildSnapshot itemLevel and combatPower', () {
+    final summary = mapper.toApplication(
+      PartyReadDocumentDto(
+        id: 'player-applicant',
+        data: {
+          'schemaVersion': 1,
+          'recruitmentId': 'raid-1',
+          'applicantPlayerId': 'player-applicant',
+          'cycleKey': '2026-08-19',
+          'characterId': 'character-1',
+          'characterNameSnapshot': '아르카나',
+          'classNameSnapshot': '아르카나',
+          'requestedRole': 'dealer',
+          'status': 'pending',
+          'revision': 1,
+          'createdAt': DateTime.utc(2026, 8, 24),
+          'updatedAt': DateTime.utc(2026, 8, 25),
+          'submittedBuildSnapshot': {
+            'itemLevel': 1780.83,
+            'combatPower': 123456789,
+          },
+        },
+      ),
+    );
+
+    expect(summary.itemLevel, closeTo(1780.83, 0.01));
+    expect(summary.combatPower, closeTo(123456789, 1));
+  });
+
+  test('maps optional gem validation snapshot', () {
+    final summary = mapper.toApplication(
+      PartyReadDocumentDto(
+        id: 'player-applicant',
+        data: {
+          'schemaVersion': 1,
+          'recruitmentId': 'raid-1',
+          'applicantPlayerId': 'player-applicant',
+          'cycleKey': '2026-09-02',
+          'characterId': 'character-1',
+          'characterNameSnapshot': '데모닉',
+          'classNameSnapshot': '데모닉',
+          'requestedRole': 'dealer',
+          'status': 'pending',
+          'revision': 1,
+          'createdAt': DateTime.utc(2026, 9, 8),
+          'updatedAt': DateTime.utc(2026, 9, 8),
+          'submittedBuildSnapshot': {
+            'itemLevel': 1780,
+            'combatPower': 123456,
+            'gemValidationStatus': 'foreignClass',
+            'foreignClassGemCount': 1,
+            'unverifiedSameClassGemCount': 0,
+            'gemValidatedAt': DateTime.utc(2026, 9, 7),
+            'catalogVersion': '2026.09.04',
+          },
+        },
+      ),
+    );
+
+    expect(summary.gemValidation?.status.name, 'foreignClass');
+    expect(summary.gemValidation?.foreignClassGemCount, 1);
+    expect(summary.gemValidation?.catalogVersion, '2026.09.04');
+  });
+
+  test(
+    'ignores incomplete gem validation fields while keeping build values',
+    () {
+      final summary = mapper.toApplication(
+        PartyReadDocumentDto(
+          id: 'player-applicant',
+          data: {
+            'schemaVersion': 1,
+            'recruitmentId': 'raid-1',
+            'applicantPlayerId': 'player-applicant',
+            'cycleKey': '2026-09-02',
+            'characterId': 'character-1',
+            'characterNameSnapshot': '데모닉',
+            'classNameSnapshot': '데모닉',
+            'requestedRole': 'dealer',
+            'status': 'pending',
+            'revision': 1,
+            'createdAt': DateTime.utc(2026, 9, 8),
+            'updatedAt': DateTime.utc(2026, 9, 8),
+            'submittedBuildSnapshot': {
+              'itemLevel': 1780,
+              'combatPower': 123456,
+              'gemValidationStatus': 'foreignClass',
+            },
+          },
+        ),
+      );
+
+      expect(summary.itemLevel, 1780);
+      expect(summary.gemValidation, isNull);
+    },
+  );
+
+  test('ignores malformed submittedBuildSnapshot gracefully', () {
+    final summary = mapper.toApplication(
+      PartyReadDocumentDto(
+        id: 'player-applicant',
+        data: {
+          'schemaVersion': 1,
+          'recruitmentId': 'raid-1',
+          'applicantPlayerId': 'player-applicant',
+          'cycleKey': '2026-08-19',
+          'characterId': 'character-1',
+          'characterNameSnapshot': '아르카나',
+          'classNameSnapshot': '아르카나',
+          'requestedRole': 'dealer',
+          'status': 'pending',
+          'revision': 1,
+          'createdAt': DateTime.utc(2026, 8, 24),
+          'updatedAt': DateTime.utc(2026, 8, 25),
+          'submittedBuildSnapshot': 'not-a-map',
+        },
+      ),
+    );
+
+    // 비정상 snapshot은 null로 처리하며 예외를 던지지 않는다
+    expect(summary.itemLevel, isNull);
+    expect(summary.combatPower, isNull);
   });
 
   test('rejects an unsupported schema version', () {
@@ -357,6 +489,7 @@ Map<String, Object?> _recruitmentData() => {
   'supportsPerParty': 1,
   'dealerCount': 3,
   'supportCount': 1,
+  'memberPlayerIds': <Object?>['player-leader', 'player-member'],
   'approvalPolicy': {
     'mode': 'leaderOnly',
     'requiredApprovals': 1,

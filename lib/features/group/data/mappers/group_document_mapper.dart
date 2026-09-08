@@ -48,6 +48,7 @@ class GroupDocumentMapper {
       revision: _integer(data, 'revision'),
       hasActiveJoinCode: _boolean(data, 'hasActiveJoinCode'),
       joinCodeVisibleToMembers: _boolean(data, 'joinCodeVisibleToMembers'),
+      activeJoinCode: _optionalString(data, 'activeJoinCode'),
       createdAt: _date(data, 'createdAt'),
       lastActivityAt: _date(data, 'lastActivityAt'),
     );
@@ -72,7 +73,10 @@ class GroupDocumentMapper {
         data,
         'displayCharacterNameSnapshot',
       ),
-      displayClassNameSnapshot: _optionalString(data, 'displayClassNameSnapshot'),
+      displayClassNameSnapshot: _optionalString(
+        data,
+        'displayClassNameSnapshot',
+      ),
       itemLevelSnapshot: _nullableDouble(data, 'itemLevelSnapshot'),
       combatPowerSnapshot: _nullableDouble(data, 'combatPowerSnapshot'),
       revision: _integer(data, 'revision'),
@@ -248,7 +252,9 @@ class GroupDocumentMapper {
     final value = data[field];
     if (value == null) return null;
     if (value is! String || value.isEmpty) {
-      throw GroupContractException('$field must be a non-empty string or null.');
+      throw GroupContractException(
+        '$field must be a non-empty string or null.',
+      );
     }
     return value;
   }

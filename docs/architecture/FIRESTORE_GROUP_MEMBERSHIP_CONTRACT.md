@@ -1,13 +1,22 @@
 # Task-11 Firestore 그룹 생성·가입 계약
 
+## 2026-09-05 초대코드 단순화·복원·폐기 UX 후속 결정
+
+- 변경 전에는 초대코드 원문이 생성 직후 ViewModel 메모리에만 남아 앱 재실행·방장 위임 뒤 표시와 재입력 없는 폐기가 불가능했다. 현재는 그룹의 선택 필드 `activeJoinCode`로 복원한다.
+- 초대코드는 민감한 인증 비밀이 아니라 잘못 가입한 사용자를 추방하고 폐기·재생성할 수 있는 단순 가입 수단으로 취급한다. 신규 생성 코드는 혼동되는 `0/O`, `1/I`를 제외한 영문 대문자·숫자 6자리로 줄이고 기존 20자리 활성 코드는 계속 허용한다.
+- 앱 재실행과 방장 위임 뒤 현재 활성 코드를 다시 표시·복사할 수 있는 가장 단순한 저장·조회 계약을 적용한다. 불필요하게 복잡한 보안 계층을 추가하지 않는다.
+- 폐기 UI는 코드 재입력을 없애고 확인 Alert만 사용한다. Repository가 그룹의 활성 코드 식별자를 확인해 코드 문서 삭제와 `hasActiveJoinCode` 갱신을 한 Transaction에서 처리한다.
+- 6자리 충돌 시 새 코드를 다시 생성한다. 기존 코드 호환, 재실행·방장 위임 복원, 확인만으로 폐기, 폐기 후 가입 불가를 검증한다.
+
 ## 최신 보완 — 그룹 전투력 표시 (2026-08-31)
 
 - Task-11a 멤버 목록·탈퇴·Snapshot은 main에 포함되어 있다. 아래 Task-11 당시 미구현/제외 기록은 과거 범위다. 사용자 확인 기준 현재 생성·초대·탈퇴·코드 가입·Rules 배포는 정상이다.
-- 그룹원 목록은 membership Snapshot과 Character fallback, 상세 인증 캐릭터 목록은 각 Character의 전투력을 읽는다. 그룹 상세 진입 시 본인 로컬 표시 전투력을 Character에 먼저 보강하고 본인 membership Snapshot을 갱신한다.
+- 그룹원 목록은 membership Snapshot과 Character fallback, 상세 인증 캐릭터 목록은 각 Character의 전투력을 읽는다. 그룹 상세 진입 시 본인 활동 Character의 로컬 표시 전투력을 Character에 먼저 보강하고, 그 Character가 현재 표시 Snapshot이면 membership을 갱신한다. 활동에서 빠진 Character의 기존 Snapshot은 유지한다.
 - 로컬 프로필에 전투력이 없으면 가장 최근 유효한 저장 세팅에서 복구한다. 소유권 상실·서버 ID 없음·원정대 누락 캐릭터는 후보에서 제외한다. 프로필 값이 있으면 세팅을 추가 조회하지 않는다.
 - 로컬 null은 기존 membership 숫자를 삭제하지 않는다. 실제 Transaction에서 읽은 기존 숫자를 보존하며, 없는 값만으로 불필요한 갱신을 요청하지 않는다.
 - 동기화 실패는 더 이상 삼키지 않는다. 목록은 저장값으로 계속 표시하고 새로고침 안내를 노출한다. Character 보강 실패와 membership 갱신은 독립 처리한다. 새로고침·멤버 상세 요청의 연타를 막는다.
 - 전투력은 캐릭터별로 저장한다. 대표 전투력을 다른 인증 캐릭터에 대입하지 않는다. 로컬 데이터 자체가 없으면 소유자가 내 계정에서 캐릭터 정보를 저장해야 한다.
+- 복수 역할 Character의 대표 전투력은 마지막으로 갱신된 역할이 아니라 사용자가 선택한 선호 포지션의 역할별 Snapshot을 사용한다. 내 계정과 그룹 표시는 같은 선택 기준을 공유하고, 파티 신청·참가에서는 선택 역할 Snapshot을 그대로 유지한다. 이 수정은 후속 H 작업이며 아직 구현·검증되지 않았다.
 - Character 보강의 데이터/권한/비용 범위는 GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT의 최신 보완을 따른다. 이번 작업은 Rules 변경·배포를 포함하지 않는다. 실기기 검증 결과는 NEXT_WORK를 따른다.
 
 ## 1. 상태와 범위
@@ -61,7 +70,7 @@ groupJoinCodes/{normalizedCode}
 - join relation은 `groupId + playerId`당 문서 하나만 사용한다. 초대와 신청을 별도 문서로 동시에 만들지 않는다.
 - Player 하위 `groupRelations/{groupId}`는 내 그룹·요청 현황을 조회하기 위한 역방향 Projection이다. 그룹 하위 원본과 같은 Transaction에서만 변경한다.
 - `groupMembershipState/current`는 가입 그룹 ID 배열을 보유하며 Player별 최대 50개를 Rules에서 강제하기 위한 요약 문서다.
-- 초대코드는 그룹 ID와 분리된 고엔트로피 무작위 값이며 정규화된 코드 자체를 `groupJoinCodes` 문서 ID로 사용한다. 목록 읽기는 금지하고 사용자가 입력한 정확한 코드의 단건 조회만 허용한다.
+- 초대코드는 그룹 ID와 분리된 무작위 6자리 값이며 정규화된 코드 자체를 `groupJoinCodes` 문서 ID로 사용한다. 기존 20자리 코드는 호환한다. 목록 읽기는 금지하고 사용자가 입력한 정확한 코드의 단건 조회만 허용한다.
 
 ## 4. 그룹 Current State
 
@@ -259,11 +268,11 @@ groupJoinCodes/{normalizedCode}
 ```
 
 - 그룹당 활성 코드는 최대 하나지만 코드가 없는 그룹도 정상이다.
-- 코드는 최소 96비트 이상의 암호학적 난수로 생성하고 사람이 입력할 때 혼동되는 문자를 제외한 고정 길이 표기를 사용한다.
-- 공백·대소문자를 정규화한 값이 문서 ID다. 코드 원문을 그룹 공개 문서에 저장하지 않는다.
-- 그룹장은 `groupJoinCodes/{code}` 생성과 함께 그룹의 `hasActiveJoinCode`를 false→true로 변경한다.
+- 신규 코드는 전달하기 쉬운 6자리로 생성하며 사람이 입력할 때 혼동되는 `0/O`, `1/I`를 제외한다. 기존 20자리 코드는 폐기 전까지 파싱·가입을 허용한다.
+- 공백·대소문자를 정규화한 값이 문서 ID다. 현재 활성 코드는 그룹의 `activeJoinCode`에도 저장해 앱 재실행과 그룹장 위임 뒤 조회·복사·폐기할 수 있게 한다.
+- 그룹장은 `groupJoinCodes/{code}` 생성과 함께 그룹의 `hasActiveJoinCode`를 false→true, `activeJoinCode`를 생성 코드로 변경한다.
 - 기존 코드가 있으면 먼저 폐기해야 하며 새 코드 생성과 기존 코드 삭제를 같은 Transaction에 넣어 교체하지 않는다. 제품 흐름은 명시적인 `코드 폐기` 후 `코드 생성` 두 동작이다.
-- 코드 폐기는 정확한 코드 문서 삭제와 그룹의 `hasActiveJoinCode` true→false를 같은 Transaction에서 수행한다.
+- 코드 폐기는 확인 Alert만 거친다. 정확한 코드 문서 삭제와 그룹의 `hasActiveJoinCode` true→false, `activeJoinCode` null 변경을 같은 Transaction에서 수행한다.
 - Task-11에는 그룹 해산이 없지만 후속 해산 Transaction은 활성 코드도 반드시 삭제한다.
 - `joinCodeVisibleToMembers`는 화면 공개 정책만 제어한다. 직접 코드를 알고 있는 active Player의 가입 가능 여부를 바꾸지 않는다.
 - 코드 문서의 list는 항상 금지한다. 단건 get은 active Player의 정확한 코드 입력에만 사용하며 응답에는 공개 그룹 기본 정보 이상을 노출하지 않는다.

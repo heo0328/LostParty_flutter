@@ -4074,6 +4074,622 @@ class CharacterWeeklyRaidDisplaysCompanion
   }
 }
 
+class $RaidStatusFilterSettingsTable extends RaidStatusFilterSettings
+    with TableInfo<$RaidStatusFilterSettingsTable, RaidStatusFilterSetting> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RaidStatusFilterSettingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _playerIdMeta = const VerificationMeta(
+    'playerId',
+  );
+  @override
+  late final GeneratedColumn<String> playerId = GeneratedColumn<String>(
+    'player_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _screenKindMeta = const VerificationMeta(
+    'screenKind',
+  );
+  @override
+  late final GeneratedColumn<String> screenKind = GeneratedColumn<String>(
+    'screen_kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _selectionJsonMeta = const VerificationMeta(
+    'selectionJson',
+  );
+  @override
+  late final GeneratedColumn<String> selectionJson = GeneratedColumn<String>(
+    'selection_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    playerId,
+    screenKind,
+    selectionJson,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'raid_status_filter_settings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RaidStatusFilterSetting> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('player_id')) {
+      context.handle(
+        _playerIdMeta,
+        playerId.isAcceptableOrUnknown(data['player_id']!, _playerIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_playerIdMeta);
+    }
+    if (data.containsKey('screen_kind')) {
+      context.handle(
+        _screenKindMeta,
+        screenKind.isAcceptableOrUnknown(data['screen_kind']!, _screenKindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_screenKindMeta);
+    }
+    if (data.containsKey('selection_json')) {
+      context.handle(
+        _selectionJsonMeta,
+        selectionJson.isAcceptableOrUnknown(
+          data['selection_json']!,
+          _selectionJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_selectionJsonMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {playerId, screenKind};
+  @override
+  RaidStatusFilterSetting map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RaidStatusFilterSetting(
+      playerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}player_id'],
+      )!,
+      screenKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}screen_kind'],
+      )!,
+      selectionJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}selection_json'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $RaidStatusFilterSettingsTable createAlias(String alias) {
+    return $RaidStatusFilterSettingsTable(attachedDatabase, alias);
+  }
+}
+
+class RaidStatusFilterSetting extends DataClass
+    implements Insertable<RaidStatusFilterSetting> {
+  final String playerId;
+  final String screenKind;
+  final String selectionJson;
+  final DateTime updatedAt;
+  const RaidStatusFilterSetting({
+    required this.playerId,
+    required this.screenKind,
+    required this.selectionJson,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['player_id'] = Variable<String>(playerId);
+    map['screen_kind'] = Variable<String>(screenKind);
+    map['selection_json'] = Variable<String>(selectionJson);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  RaidStatusFilterSettingsCompanion toCompanion(bool nullToAbsent) {
+    return RaidStatusFilterSettingsCompanion(
+      playerId: Value(playerId),
+      screenKind: Value(screenKind),
+      selectionJson: Value(selectionJson),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory RaidStatusFilterSetting.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RaidStatusFilterSetting(
+      playerId: serializer.fromJson<String>(json['playerId']),
+      screenKind: serializer.fromJson<String>(json['screenKind']),
+      selectionJson: serializer.fromJson<String>(json['selectionJson']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'playerId': serializer.toJson<String>(playerId),
+      'screenKind': serializer.toJson<String>(screenKind),
+      'selectionJson': serializer.toJson<String>(selectionJson),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  RaidStatusFilterSetting copyWith({
+    String? playerId,
+    String? screenKind,
+    String? selectionJson,
+    DateTime? updatedAt,
+  }) => RaidStatusFilterSetting(
+    playerId: playerId ?? this.playerId,
+    screenKind: screenKind ?? this.screenKind,
+    selectionJson: selectionJson ?? this.selectionJson,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  RaidStatusFilterSetting copyWithCompanion(
+    RaidStatusFilterSettingsCompanion data,
+  ) {
+    return RaidStatusFilterSetting(
+      playerId: data.playerId.present ? data.playerId.value : this.playerId,
+      screenKind: data.screenKind.present
+          ? data.screenKind.value
+          : this.screenKind,
+      selectionJson: data.selectionJson.present
+          ? data.selectionJson.value
+          : this.selectionJson,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RaidStatusFilterSetting(')
+          ..write('playerId: $playerId, ')
+          ..write('screenKind: $screenKind, ')
+          ..write('selectionJson: $selectionJson, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(playerId, screenKind, selectionJson, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RaidStatusFilterSetting &&
+          other.playerId == this.playerId &&
+          other.screenKind == this.screenKind &&
+          other.selectionJson == this.selectionJson &&
+          other.updatedAt == this.updatedAt);
+}
+
+class RaidStatusFilterSettingsCompanion
+    extends UpdateCompanion<RaidStatusFilterSetting> {
+  final Value<String> playerId;
+  final Value<String> screenKind;
+  final Value<String> selectionJson;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const RaidStatusFilterSettingsCompanion({
+    this.playerId = const Value.absent(),
+    this.screenKind = const Value.absent(),
+    this.selectionJson = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RaidStatusFilterSettingsCompanion.insert({
+    required String playerId,
+    required String screenKind,
+    required String selectionJson,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : playerId = Value(playerId),
+       screenKind = Value(screenKind),
+       selectionJson = Value(selectionJson),
+       updatedAt = Value(updatedAt);
+  static Insertable<RaidStatusFilterSetting> custom({
+    Expression<String>? playerId,
+    Expression<String>? screenKind,
+    Expression<String>? selectionJson,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (playerId != null) 'player_id': playerId,
+      if (screenKind != null) 'screen_kind': screenKind,
+      if (selectionJson != null) 'selection_json': selectionJson,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RaidStatusFilterSettingsCompanion copyWith({
+    Value<String>? playerId,
+    Value<String>? screenKind,
+    Value<String>? selectionJson,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return RaidStatusFilterSettingsCompanion(
+      playerId: playerId ?? this.playerId,
+      screenKind: screenKind ?? this.screenKind,
+      selectionJson: selectionJson ?? this.selectionJson,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (playerId.present) {
+      map['player_id'] = Variable<String>(playerId.value);
+    }
+    if (screenKind.present) {
+      map['screen_kind'] = Variable<String>(screenKind.value);
+    }
+    if (selectionJson.present) {
+      map['selection_json'] = Variable<String>(selectionJson.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RaidStatusFilterSettingsCompanion(')
+          ..write('playerId: $playerId, ')
+          ..write('screenKind: $screenKind, ')
+          ..write('selectionJson: $selectionJson, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $NiceGroupAutoRefreshSettingsTable extends NiceGroupAutoRefreshSettings
+    with
+        TableInfo<
+          $NiceGroupAutoRefreshSettingsTable,
+          NiceGroupAutoRefreshSetting
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $NiceGroupAutoRefreshSettingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _playerIdMeta = const VerificationMeta(
+    'playerId',
+  );
+  @override
+  late final GeneratedColumn<String> playerId = GeneratedColumn<String>(
+    'player_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _enabledMeta = const VerificationMeta(
+    'enabled',
+  );
+  @override
+  late final GeneratedColumn<bool> enabled = GeneratedColumn<bool>(
+    'enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [playerId, enabled, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'nice_group_auto_refresh_settings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<NiceGroupAutoRefreshSetting> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('player_id')) {
+      context.handle(
+        _playerIdMeta,
+        playerId.isAcceptableOrUnknown(data['player_id']!, _playerIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_playerIdMeta);
+    }
+    if (data.containsKey('enabled')) {
+      context.handle(
+        _enabledMeta,
+        enabled.isAcceptableOrUnknown(data['enabled']!, _enabledMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {playerId};
+  @override
+  NiceGroupAutoRefreshSetting map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return NiceGroupAutoRefreshSetting(
+      playerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}player_id'],
+      )!,
+      enabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}enabled'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $NiceGroupAutoRefreshSettingsTable createAlias(String alias) {
+    return $NiceGroupAutoRefreshSettingsTable(attachedDatabase, alias);
+  }
+}
+
+class NiceGroupAutoRefreshSetting extends DataClass
+    implements Insertable<NiceGroupAutoRefreshSetting> {
+  final String playerId;
+  final bool enabled;
+  final DateTime updatedAt;
+  const NiceGroupAutoRefreshSetting({
+    required this.playerId,
+    required this.enabled,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['player_id'] = Variable<String>(playerId);
+    map['enabled'] = Variable<bool>(enabled);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  NiceGroupAutoRefreshSettingsCompanion toCompanion(bool nullToAbsent) {
+    return NiceGroupAutoRefreshSettingsCompanion(
+      playerId: Value(playerId),
+      enabled: Value(enabled),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory NiceGroupAutoRefreshSetting.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return NiceGroupAutoRefreshSetting(
+      playerId: serializer.fromJson<String>(json['playerId']),
+      enabled: serializer.fromJson<bool>(json['enabled']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'playerId': serializer.toJson<String>(playerId),
+      'enabled': serializer.toJson<bool>(enabled),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  NiceGroupAutoRefreshSetting copyWith({
+    String? playerId,
+    bool? enabled,
+    DateTime? updatedAt,
+  }) => NiceGroupAutoRefreshSetting(
+    playerId: playerId ?? this.playerId,
+    enabled: enabled ?? this.enabled,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  NiceGroupAutoRefreshSetting copyWithCompanion(
+    NiceGroupAutoRefreshSettingsCompanion data,
+  ) {
+    return NiceGroupAutoRefreshSetting(
+      playerId: data.playerId.present ? data.playerId.value : this.playerId,
+      enabled: data.enabled.present ? data.enabled.value : this.enabled,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NiceGroupAutoRefreshSetting(')
+          ..write('playerId: $playerId, ')
+          ..write('enabled: $enabled, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(playerId, enabled, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is NiceGroupAutoRefreshSetting &&
+          other.playerId == this.playerId &&
+          other.enabled == this.enabled &&
+          other.updatedAt == this.updatedAt);
+}
+
+class NiceGroupAutoRefreshSettingsCompanion
+    extends UpdateCompanion<NiceGroupAutoRefreshSetting> {
+  final Value<String> playerId;
+  final Value<bool> enabled;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const NiceGroupAutoRefreshSettingsCompanion({
+    this.playerId = const Value.absent(),
+    this.enabled = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  NiceGroupAutoRefreshSettingsCompanion.insert({
+    required String playerId,
+    this.enabled = const Value.absent(),
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : playerId = Value(playerId),
+       updatedAt = Value(updatedAt);
+  static Insertable<NiceGroupAutoRefreshSetting> custom({
+    Expression<String>? playerId,
+    Expression<bool>? enabled,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (playerId != null) 'player_id': playerId,
+      if (enabled != null) 'enabled': enabled,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  NiceGroupAutoRefreshSettingsCompanion copyWith({
+    Value<String>? playerId,
+    Value<bool>? enabled,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return NiceGroupAutoRefreshSettingsCompanion(
+      playerId: playerId ?? this.playerId,
+      enabled: enabled ?? this.enabled,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (playerId.present) {
+      map['player_id'] = Variable<String>(playerId.value);
+    }
+    if (enabled.present) {
+      map['enabled'] = Variable<bool>(enabled.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NiceGroupAutoRefreshSettingsCompanion(')
+          ..write('playerId: $playerId, ')
+          ..write('enabled: $enabled, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AccountDatabase extends GeneratedDatabase {
   _$AccountDatabase(QueryExecutor e) : super(e);
   $AccountDatabaseManager get managers => $AccountDatabaseManager(this);
@@ -4088,6 +4704,10 @@ abstract class _$AccountDatabase extends GeneratedDatabase {
       $PartyNotificationReceiptsTable(this);
   late final $CharacterWeeklyRaidDisplaysTable characterWeeklyRaidDisplays =
       $CharacterWeeklyRaidDisplaysTable(this);
+  late final $RaidStatusFilterSettingsTable raidStatusFilterSettings =
+      $RaidStatusFilterSettingsTable(this);
+  late final $NiceGroupAutoRefreshSettingsTable niceGroupAutoRefreshSettings =
+      $NiceGroupAutoRefreshSettingsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4099,6 +4719,8 @@ abstract class _$AccountDatabase extends GeneratedDatabase {
     raidHistoryEntries,
     partyNotificationReceipts,
     characterWeeklyRaidDisplays,
+    raidStatusFilterSettings,
+    niceGroupAutoRefreshSettings,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -6803,6 +7425,391 @@ typedef $$CharacterWeeklyRaidDisplaysTableProcessedTableManager =
       CharacterWeeklyRaidDisplay,
       PrefetchHooks Function({bool characterId})
     >;
+typedef $$RaidStatusFilterSettingsTableCreateCompanionBuilder =
+    RaidStatusFilterSettingsCompanion Function({
+      required String playerId,
+      required String screenKind,
+      required String selectionJson,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$RaidStatusFilterSettingsTableUpdateCompanionBuilder =
+    RaidStatusFilterSettingsCompanion Function({
+      Value<String> playerId,
+      Value<String> screenKind,
+      Value<String> selectionJson,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$RaidStatusFilterSettingsTableFilterComposer
+    extends Composer<_$AccountDatabase, $RaidStatusFilterSettingsTable> {
+  $$RaidStatusFilterSettingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get playerId => $composableBuilder(
+    column: $table.playerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get screenKind => $composableBuilder(
+    column: $table.screenKind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get selectionJson => $composableBuilder(
+    column: $table.selectionJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$RaidStatusFilterSettingsTableOrderingComposer
+    extends Composer<_$AccountDatabase, $RaidStatusFilterSettingsTable> {
+  $$RaidStatusFilterSettingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get playerId => $composableBuilder(
+    column: $table.playerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get screenKind => $composableBuilder(
+    column: $table.screenKind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get selectionJson => $composableBuilder(
+    column: $table.selectionJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$RaidStatusFilterSettingsTableAnnotationComposer
+    extends Composer<_$AccountDatabase, $RaidStatusFilterSettingsTable> {
+  $$RaidStatusFilterSettingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get playerId =>
+      $composableBuilder(column: $table.playerId, builder: (column) => column);
+
+  GeneratedColumn<String> get screenKind => $composableBuilder(
+    column: $table.screenKind,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get selectionJson => $composableBuilder(
+    column: $table.selectionJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$RaidStatusFilterSettingsTableTableManager
+    extends
+        RootTableManager<
+          _$AccountDatabase,
+          $RaidStatusFilterSettingsTable,
+          RaidStatusFilterSetting,
+          $$RaidStatusFilterSettingsTableFilterComposer,
+          $$RaidStatusFilterSettingsTableOrderingComposer,
+          $$RaidStatusFilterSettingsTableAnnotationComposer,
+          $$RaidStatusFilterSettingsTableCreateCompanionBuilder,
+          $$RaidStatusFilterSettingsTableUpdateCompanionBuilder,
+          (
+            RaidStatusFilterSetting,
+            BaseReferences<
+              _$AccountDatabase,
+              $RaidStatusFilterSettingsTable,
+              RaidStatusFilterSetting
+            >,
+          ),
+          RaidStatusFilterSetting,
+          PrefetchHooks Function()
+        > {
+  $$RaidStatusFilterSettingsTableTableManager(
+    _$AccountDatabase db,
+    $RaidStatusFilterSettingsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RaidStatusFilterSettingsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$RaidStatusFilterSettingsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$RaidStatusFilterSettingsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> playerId = const Value.absent(),
+                Value<String> screenKind = const Value.absent(),
+                Value<String> selectionJson = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RaidStatusFilterSettingsCompanion(
+                playerId: playerId,
+                screenKind: screenKind,
+                selectionJson: selectionJson,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String playerId,
+                required String screenKind,
+                required String selectionJson,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => RaidStatusFilterSettingsCompanion.insert(
+                playerId: playerId,
+                screenKind: screenKind,
+                selectionJson: selectionJson,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$RaidStatusFilterSettingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AccountDatabase,
+      $RaidStatusFilterSettingsTable,
+      RaidStatusFilterSetting,
+      $$RaidStatusFilterSettingsTableFilterComposer,
+      $$RaidStatusFilterSettingsTableOrderingComposer,
+      $$RaidStatusFilterSettingsTableAnnotationComposer,
+      $$RaidStatusFilterSettingsTableCreateCompanionBuilder,
+      $$RaidStatusFilterSettingsTableUpdateCompanionBuilder,
+      (
+        RaidStatusFilterSetting,
+        BaseReferences<
+          _$AccountDatabase,
+          $RaidStatusFilterSettingsTable,
+          RaidStatusFilterSetting
+        >,
+      ),
+      RaidStatusFilterSetting,
+      PrefetchHooks Function()
+    >;
+typedef $$NiceGroupAutoRefreshSettingsTableCreateCompanionBuilder =
+    NiceGroupAutoRefreshSettingsCompanion Function({
+      required String playerId,
+      Value<bool> enabled,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$NiceGroupAutoRefreshSettingsTableUpdateCompanionBuilder =
+    NiceGroupAutoRefreshSettingsCompanion Function({
+      Value<String> playerId,
+      Value<bool> enabled,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$NiceGroupAutoRefreshSettingsTableFilterComposer
+    extends Composer<_$AccountDatabase, $NiceGroupAutoRefreshSettingsTable> {
+  $$NiceGroupAutoRefreshSettingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get playerId => $composableBuilder(
+    column: $table.playerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$NiceGroupAutoRefreshSettingsTableOrderingComposer
+    extends Composer<_$AccountDatabase, $NiceGroupAutoRefreshSettingsTable> {
+  $$NiceGroupAutoRefreshSettingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get playerId => $composableBuilder(
+    column: $table.playerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$NiceGroupAutoRefreshSettingsTableAnnotationComposer
+    extends Composer<_$AccountDatabase, $NiceGroupAutoRefreshSettingsTable> {
+  $$NiceGroupAutoRefreshSettingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get playerId =>
+      $composableBuilder(column: $table.playerId, builder: (column) => column);
+
+  GeneratedColumn<bool> get enabled =>
+      $composableBuilder(column: $table.enabled, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$NiceGroupAutoRefreshSettingsTableTableManager
+    extends
+        RootTableManager<
+          _$AccountDatabase,
+          $NiceGroupAutoRefreshSettingsTable,
+          NiceGroupAutoRefreshSetting,
+          $$NiceGroupAutoRefreshSettingsTableFilterComposer,
+          $$NiceGroupAutoRefreshSettingsTableOrderingComposer,
+          $$NiceGroupAutoRefreshSettingsTableAnnotationComposer,
+          $$NiceGroupAutoRefreshSettingsTableCreateCompanionBuilder,
+          $$NiceGroupAutoRefreshSettingsTableUpdateCompanionBuilder,
+          (
+            NiceGroupAutoRefreshSetting,
+            BaseReferences<
+              _$AccountDatabase,
+              $NiceGroupAutoRefreshSettingsTable,
+              NiceGroupAutoRefreshSetting
+            >,
+          ),
+          NiceGroupAutoRefreshSetting,
+          PrefetchHooks Function()
+        > {
+  $$NiceGroupAutoRefreshSettingsTableTableManager(
+    _$AccountDatabase db,
+    $NiceGroupAutoRefreshSettingsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$NiceGroupAutoRefreshSettingsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$NiceGroupAutoRefreshSettingsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$NiceGroupAutoRefreshSettingsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> playerId = const Value.absent(),
+                Value<bool> enabled = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => NiceGroupAutoRefreshSettingsCompanion(
+                playerId: playerId,
+                enabled: enabled,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String playerId,
+                Value<bool> enabled = const Value.absent(),
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => NiceGroupAutoRefreshSettingsCompanion.insert(
+                playerId: playerId,
+                enabled: enabled,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$NiceGroupAutoRefreshSettingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AccountDatabase,
+      $NiceGroupAutoRefreshSettingsTable,
+      NiceGroupAutoRefreshSetting,
+      $$NiceGroupAutoRefreshSettingsTableFilterComposer,
+      $$NiceGroupAutoRefreshSettingsTableOrderingComposer,
+      $$NiceGroupAutoRefreshSettingsTableAnnotationComposer,
+      $$NiceGroupAutoRefreshSettingsTableCreateCompanionBuilder,
+      $$NiceGroupAutoRefreshSettingsTableUpdateCompanionBuilder,
+      (
+        NiceGroupAutoRefreshSetting,
+        BaseReferences<
+          _$AccountDatabase,
+          $NiceGroupAutoRefreshSettingsTable,
+          NiceGroupAutoRefreshSetting
+        >,
+      ),
+      NiceGroupAutoRefreshSetting,
+      PrefetchHooks Function()
+    >;
 
 class $AccountDatabaseManager {
   final _$AccountDatabase _db;
@@ -6828,5 +7835,16 @@ class $AccountDatabaseManager {
       $$CharacterWeeklyRaidDisplaysTableTableManager(
         _db,
         _db.characterWeeklyRaidDisplays,
+      );
+  $$RaidStatusFilterSettingsTableTableManager get raidStatusFilterSettings =>
+      $$RaidStatusFilterSettingsTableTableManager(
+        _db,
+        _db.raidStatusFilterSettings,
+      );
+  $$NiceGroupAutoRefreshSettingsTableTableManager
+  get niceGroupAutoRefreshSettings =>
+      $$NiceGroupAutoRefreshSettingsTableTableManager(
+        _db,
+        _db.niceGroupAutoRefreshSettings,
       );
 }

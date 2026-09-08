@@ -74,6 +74,49 @@ void main() {
     expect(detection.matchedRelatedNodes, ['세레나데 코드']);
   });
 
+  test(
+    'detects both roles, tier-four nodes, and special gem targets for four classes',
+    () async {
+      final reference = Map<String, dynamic>.from(
+        jsonDecode(
+              await File(
+                'test/fixtures/lost_ark/support_hybrid_builds_user_reference.json',
+              ).readAsString(),
+            )
+            as Map,
+      );
+      expect(reference['measuredAgainstLiveApi'], isTrue);
+      final cases = (reference['cases'] as List<dynamic>)
+          .cast<Map<String, dynamic>>();
+      expect(cases, hasLength(8));
+
+      for (final buildCase in cases) {
+        final result = const CharacterBuildAnalysisMapper().fromJson(
+          _hybridBuildFixture(buildCase),
+          catalog: catalog,
+        );
+        final detection = result.catalogDetection!;
+        expect(detection.status, CharacterBuildDetectionStatus.detected);
+        expect(detection.classId, buildCase['classId']);
+        expect(detection.branchId, buildCase['branchId']);
+        expect(detection.detectedRole?.name, buildCase['role']);
+        expect(detection.matchedTier1Node, buildCase['tier1']);
+        expect(detection.matchedRelatedNodes, [buildCase['tier4']]);
+        expect(result.arkGridConditions.single.isSatisfied, isTrue);
+        expect(
+          result.gemEffects.single.category,
+          GemSkillCategory.passiveOrIdentity,
+        );
+        expect(
+          result.notices.where(
+            (notice) => notice.code.startsWith('unknown_gem'),
+          ),
+          isEmpty,
+        );
+      }
+    },
+  );
+
   test('returns unsupported class and branch not found states', () {
     final unsupported = _deepCopy(fixture);
     (unsupported['ArmoryProfile']
@@ -161,7 +204,7 @@ void main() {
 
   test('classifies a catalog special skill without relying on its icon', () {
     final modified = _withGemTarget(
-      fixture,
+      _asBardSupport(fixture),
       name: '용맹의 세레나데',
       icon: 'https://example.com/identity.png',
     );
@@ -185,7 +228,7 @@ void main() {
     'classifies the Bard composite Serenade gem target from catalog data',
     () {
       final modified = _withGemTarget(
-        fixture,
+        _asBardSupport(fixture),
         name: '세레나데 스킬',
         icon: 'https://example.com/serenade.png',
       );
@@ -206,7 +249,34 @@ void main() {
     },
   );
 
-  test('keeps an unknown gem warning without catalog or icon evidence', () {
+  test(
+    'does not accept a support-only gem target for the Bard dealer branch',
+    () {
+      final modified = _withGemTarget(
+        fixture,
+        name: '세레나데 스킬',
+        icon: 'https://example.com/serenade.png',
+      );
+
+      final result = const CharacterBuildAnalysisMapper().fromJson(
+        modified,
+        catalog: catalog,
+      );
+
+      expect(
+        result.gemEffects.singleWhere((effect) => effect.gemSlot == 4).category,
+        GemSkillCategory.unknown,
+      );
+      expect(
+        result.gemEffects
+            .singleWhere((effect) => effect.gemSlot == 4)
+            .validationStatus,
+        GemValidationStatus.sameClassTargetUnverified,
+      );
+    },
+  );
+
+  test('marks an unknown target from the same class as unverified', () {
     final modified = _withGemTarget(
       fixture,
       name: '알 수 없는 스킬',
@@ -223,8 +293,86 @@ void main() {
       GemSkillCategory.unknown,
     );
     expect(
-      result.notices.where((notice) => notice.code == 'unknown_gem_skill_4'),
+      result.gemEffects
+          .singleWhere((effect) => effect.gemSlot == 4)
+          .validationStatus,
+      GemValidationStatus.sameClassTargetUnverified,
+    );
+    expect(
+      result.notices.where(
+        (notice) => notice.code == 'unverified_same_class_gem_4',
+      ),
       hasLength(1),
+    );
+    expect(
+      result.notices
+          .singleWhere((notice) => notice.code == 'unverified_same_class_gem_4')
+          .level,
+      BuildNoticeLevel.info,
+    );
+  });
+
+  test('does not let an Ark Passive icon bypass a known class catalog', () {
+    final modified = _withGemTarget(
+      fixture,
+      name: '다른 직업의 특수 스킬',
+      icon: 'https://example.com/ark_passive/foreign.png',
+    );
+
+    final result = const CharacterBuildAnalysisMapper().fromJson(
+      modified,
+      catalog: catalog,
+    );
+
+    expect(
+      result.gemEffects.singleWhere((effect) => effect.gemSlot == 4).category,
+      GemSkillCategory.unknown,
+    );
+    expect(
+      result.gemEffects
+          .singleWhere((effect) => effect.gemSlot == 4)
+          .validationStatus,
+      GemValidationStatus.sameClassTargetUnverified,
+    );
+  });
+
+  test('warns only when the gem tooltip names a different class', () {
+    final modified = _withGemTooltipClass(fixture, slot: 4, className: '발키리');
+
+    final result = const CharacterBuildAnalysisMapper().fromJson(
+      modified,
+      catalog: catalog,
+    );
+    final effect = result.gemEffects.singleWhere(
+      (effect) => effect.gemSlot == 4,
+    );
+
+    expect(effect.tooltipClassNames, ['발키리']);
+    expect(effect.validationStatus, GemValidationStatus.foreignClass);
+    expect(
+      result.notices
+          .singleWhere((notice) => notice.code == 'foreign_class_gem_4')
+          .level,
+      BuildNoticeLevel.warning,
+    );
+  });
+
+  test('does not treat rune brackets as a gem class', () {
+    final modified = _withGemTooltipClass(fixture, slot: 4, className: '풍요');
+
+    final result = const CharacterBuildAnalysisMapper().fromJson(
+      modified,
+      catalog: catalog,
+    );
+    final effect = result.gemEffects.singleWhere(
+      (effect) => effect.gemSlot == 4,
+    );
+
+    expect(effect.tooltipClassNames, isEmpty);
+    expect(effect.validationStatus, GemValidationStatus.unavailable);
+    expect(
+      result.notices.where((notice) => notice.code == 'foreign_class_gem_4'),
+      isEmpty,
     );
   });
 
@@ -303,11 +451,60 @@ void main() {
     );
     expect(check.minimumPoint, 14);
     expect(check.meetsMinimum, isFalse);
+    expect(result.arkGridMinimumIntegrity!.orderSunPoint, 13);
+    expect(result.arkGridMinimumIntegrity!.orderSunMeetsMinimum, isFalse);
+    expect(result.arkGridMinimumIntegrity!.orderMoonMeetsMinimum, isTrue);
+    expect(result.arkGridMinimumIntegrity!.isSatisfied, isFalse);
     expect(
       result.notices.where(
         (notice) => notice.code == 'ark_grid_required_point',
       ),
       hasLength(1),
+    );
+  });
+
+  test('requires both order sun and moon while ignoring chaos cores', () {
+    final modified = _deepCopy(fixture);
+    final arkGrid = modified['ArkGrid'] as Map<String, dynamic>;
+    final slots = arkGrid['Slots'] as List<dynamic>;
+    slots.removeWhere(
+      (slot) =>
+          (slot as Map<String, dynamic>)['Name'].toString().startsWith('질서의 해'),
+    );
+
+    final result = const CharacterBuildAnalysisMapper().fromJson(modified);
+    final integrity = result.arkGridMinimumIntegrity!;
+
+    expect(integrity.hasOrderSun, isFalse);
+    expect(integrity.hasOrderMoon, isTrue);
+    expect(integrity.orderMoonPoint, 20);
+    expect(integrity.isSatisfied, isFalse);
+    expect(
+      result.notices.where(
+        (notice) => notice.code == 'ark_grid_missing_order_sun',
+      ),
+      hasLength(1),
+    );
+    expect(
+      result.notices.where(
+        (notice) => notice.code == 'ark_grid_missing_order_moon',
+      ),
+      isEmpty,
+    );
+  });
+
+  test('reports a valid minimum when both order cores reach 14 points', () {
+    final result = const CharacterBuildAnalysisMapper().fromJson(fixture);
+    final integrity = result.arkGridMinimumIntegrity!;
+
+    expect(integrity.orderSunPoint, 20);
+    expect(integrity.orderMoonPoint, 20);
+    expect(integrity.isSatisfied, isTrue);
+    expect(
+      result.notices.where(
+        (notice) => notice.code.startsWith('ark_grid_missing_order_'),
+      ),
+      isEmpty,
     );
   });
 
@@ -355,4 +552,91 @@ Map<String, dynamic> _withGemTarget(
   target['Name'] = name;
   target['Icon'] = icon;
   return modified;
+}
+
+Map<String, dynamic> _asBardSupport(Map<String, dynamic> value) {
+  final modified = _deepCopy(value);
+  final effects =
+      (modified['ArkPassive'] as Map<String, dynamic>)['Effects']
+          as List<dynamic>;
+  for (final effect in effects.cast<Map<String, dynamic>>()) {
+    final description = effect['Description'].toString();
+    effect['Description'] = description
+        .replaceAll('진실된 용맹', '완벽한 화음')
+        .replaceAll('템페스트 필드', '세레나데 코드');
+  }
+  return modified;
+}
+
+Map<String, dynamic> _withGemTooltipClass(
+  Map<String, dynamic> value, {
+  required int slot,
+  required String className,
+}) {
+  final modified = _deepCopy(value);
+  final armoryGem = modified['ArmoryGem'] as Map<String, dynamic>;
+  final gems = armoryGem['Gems'] as List<dynamic>;
+  final gem = gems.cast<Map<String, dynamic>>().singleWhere(
+    (gem) => gem['Slot'] == slot,
+  );
+  gem['Tooltip'] = jsonEncode({
+    'Element_006': {
+      'type': 'ItemPartBox',
+      'value': {
+        'Element_000': '효과',
+        'Element_001': '[$className] 테스트 스킬 피해 증가',
+      },
+    },
+  });
+  return modified;
+}
+
+Map<String, dynamic> _hybridBuildFixture(Map<String, dynamic> buildCase) {
+  final tier1 = buildCase['tier1'] as String;
+  final tier4 = buildCase['tier4'] as String;
+  final conditionTooltip = jsonEncode({
+    'Element_000': {
+      'type': 'ItemPartBox',
+      'value': {
+        'Element_000': '코어 옵션 발동 조건',
+        'Element_001': '1티어 $tier1 활성화 필요 4티어 $tier4 활성화 필요',
+      },
+    },
+  });
+
+  return {
+    'ArmoryProfile': {'CharacterClassName': buildCase['className']},
+    'ArmorySkills': <dynamic>[],
+    'ArmoryGem': {
+      'Gems': [
+        {'Slot': 0, 'Level': 10},
+      ],
+      'Effects': {
+        'Skills': [
+          {
+            'GemSlot': 0,
+            'Name': buildCase['gemTarget'],
+            'Icon': 'https://example.com/special.png',
+            'Description': <String>[],
+          },
+        ],
+      },
+    },
+    'ArkPassive': {
+      'Effects': [
+        {'Description': '깨달음 1티어 $tier1 Lv.1'},
+        {'Description': '깨달음 4티어 $tier4 Lv.1'},
+      ],
+    },
+    'ArkGrid': {
+      'Slots': [
+        {
+          'Name': '질서의 해 : 계약 fixture',
+          'Grade': '유물',
+          'Point': 17,
+          'Tooltip': conditionTooltip,
+        },
+      ],
+    },
+  };
 }

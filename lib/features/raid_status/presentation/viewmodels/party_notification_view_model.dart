@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../account/data/local/account_database.dart';
+import '../../../recruitment_list/domain/entities/party_event.dart';
 import '../../domain/services/party_event_sync_service.dart';
 import '../party_notification_message.dart';
 
@@ -112,30 +113,37 @@ class PartyNotificationViewModel extends ChangeNotifier {
     PartyEventSyncFailure? syncFailure,
   }) async {
     try {
-      final rows = await _database.loadRecentPartyNotifications(_playerId);
-      final unread = await _database.countUnreadPartyNotifications(_playerId);
+      final rows = await _database.loadRecentPartyNotifications(
+        _playerId,
+        limit: null,
+      );
+      final visibleRows = rows.where((row) {
+        final type = PartyEventType.tryParse(row.type);
+        return type?.isRoomAttentionEvent != true;
+      }).toList(growable: false);
       if (_disposed) return;
+      final items = [
+        for (final row in visibleRows.take(20))
+          PartyNotificationItem(
+            eventId: row.eventId,
+            type: row.type,
+            recruitmentId: row.recruitmentId,
+            message: PartyNotificationMessage.format(
+              type: row.type,
+              characterNameSnapshot: row.characterNameSnapshot,
+            ),
+            occurredAt: row.occurredAt,
+            isRead: row.readAt != null,
+            route: PartyNotificationMessage.routeFor(
+              type: row.type,
+              recruitmentId: row.recruitmentId,
+            ),
+          ),
+      ];
       _emit(
         PartyNotificationViewState(
-          items: [
-            for (final row in rows)
-              PartyNotificationItem(
-                eventId: row.eventId,
-                type: row.type,
-                recruitmentId: row.recruitmentId,
-                message: PartyNotificationMessage.format(
-                  type: row.type,
-                  characterNameSnapshot: row.characterNameSnapshot,
-                ),
-                occurredAt: row.occurredAt,
-                isRead: row.readAt != null,
-                route: PartyNotificationMessage.routeFor(
-                  type: row.type,
-                  recruitmentId: row.recruitmentId,
-                ),
-              ),
-          ],
-          unreadCount: unread,
+          items: items,
+          unreadCount: visibleRows.where((row) => row.readAt == null).length,
           isLoading: false,
           isSyncing: isSyncing,
           syncFailure: syncFailure,

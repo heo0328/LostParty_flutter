@@ -2,7 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:drift/native.dart';
+import 'package:lost_party/features/account/data/local/account_database.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_catalog_detection.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_draft.dart';
 import 'package:lost_party/features/account/domain/entities/character_profile.dart';
@@ -11,11 +14,16 @@ import 'package:lost_party/features/account/domain/entities/local_game_account.d
 import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/raid_status/presentation/pages/party_read_detail_page.dart';
+import 'package:lost_party/features/group/domain/entities/group_member.dart';
+import 'package:lost_party/features/group/domain/repositories/group_read_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/fake_recruitment_runtime.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_active_raid_assignment_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_application_command.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_gem_validation_snapshot.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_event.dart';
+import 'package:lost_party/features/raid_status/domain/services/party_event_sync_service.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_create_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_cycle_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_visibility_command.dart';
@@ -50,7 +58,10 @@ void main() {
     PartyCycleCommandRepository? cycleCommandRepository,
     PartyVisibilityCommandRepository? visibilityCommandRepository,
     RecruitmentLeaderCandidateService? candidateService,
+    GroupReadRepository? groupReadRepository,
     String? playerId,
+    AccountDatabase? accountDatabase,
+    PartyEventSyncService? eventSyncService,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -68,7 +79,10 @@ void main() {
           cycleCommandRepository: cycleCommandRepository,
           visibilityCommandRepository: visibilityCommandRepository,
           candidateService: candidateService,
+          groupReadRepository: groupReadRepository,
           playerId: playerId,
+          accountDatabase: accountDatabase,
+          eventSyncService: eventSyncService,
         ),
       ),
     );
@@ -145,10 +159,7 @@ void main() {
     expect(find.textContaining('이슈아이 · 기상술사'), findsWidgets);
     expect(find.text('파티 구성'), findsOneWidget);
     expect(find.text('이번주 레이드완료'), findsNothing);
-    expect(
-      find.text('2/8명 · 모집 중 (딜러 1/6, 서포터 1/2)'),
-      findsOneWidget,
-    );
+    expect(find.text('2/8명 · 모집 중 (딜러 1/6, 서포터 1/2)'), findsOneWidget);
     expect(find.text('1파티 · 딜러 1/3 · 서포터 0/1'), findsOneWidget);
     expect(find.text('2파티 · 딜러 0/3 · 서포터 1/1'), findsOneWidget);
     expect(find.textContaining('1파티 · 딜러'), findsOneWidget);
@@ -163,6 +174,41 @@ void main() {
     expect(find.textContaining('전투력 300,000'), findsOneWidget);
     expect(find.textContaining('조회 전용'), findsOneWidget);
     expect(find.byKey(const ValueKey('openApplicationButton')), findsNothing);
+  });
+
+  testWidgets('방 진입 즉시 이벤트를 읽음 처리하고 구성 옆 팝업에 표시한다', (tester) async {
+    final database = AccountDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    await database.syncPartyNotificationReceipt(
+      eventId: 'event-room',
+      playerId: 'player-1',
+      type: PartyEventType.memberJoined.wireName,
+      recruitmentId: 'recruitment-1',
+      characterNameSnapshot: '새멤버',
+      occurredAt: DateTime.utc(2026, 8, 26, 12),
+      expiresAt: DateTime.utc(2026, 9, 23),
+    );
+
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(items: [], isFromCache: false),
+      ),
+      playerId: 'player-1',
+      accountDatabase: database,
+      eventSyncService: const _NoopEventSyncService(),
+    );
+    await tester.pumpAndSettle();
+
+    final rows = await database.loadRecentPartyNotifications('player-1');
+    expect(rows.single.readAt, isNotNull);
+    await tester.tap(find.byKey(const ValueKey('roomEventHistoryButton')));
+    await tester.pumpAndSettle();
+    expect(find.text('이벤트 히스토리'), findsOneWidget);
+    expect(find.text('새멤버님이 파티에 참가했습니다.'), findsOneWidget);
   });
 
   testWidgets('모집 중이면 지원하기를 표시한다', (tester) async {
@@ -191,7 +237,10 @@ void main() {
         PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
       ),
       myApplication: Stream.value(
-        PartyReadDetailSnapshot(item: _pendingApplication(), isFromCache: false),
+        PartyReadDetailSnapshot(
+          item: _pendingApplication(),
+          isFromCache: false,
+        ),
       ),
       applicationCommandRepository: _FakeApplicationCommandRepository(),
       candidateService: _candidateService(),
@@ -199,7 +248,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('withdrawApplicationButton')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('withdrawApplicationButton')),
+      findsOneWidget,
+    );
     expect(find.textContaining('승인 대기'), findsOneWidget);
   });
 
@@ -219,15 +271,60 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tapVisible(tester, find.byKey(const ValueKey('openApplicationButton')));
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('openApplicationButton')),
+    );
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.byKey(const ValueKey('apply-candidate-1-dealer')));
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('apply-candidate-1-dealer')),
+    );
     await tester.pumpAndSettle();
 
     expect(repository.lastApply?.characterId, 'server-character-1');
     expect(repository.lastApply?.requestedRole, PartyRole.dealer);
     expect(repository.lastApply?.cycleKey, '2026-08-19');
+    expect(
+      repository.lastApply?.gemValidation?.status,
+      PartyGemValidationStatus.foreignClass,
+    );
     expect(find.text('가입을 신청했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('지원자 카드에서 타 직업 보석만 빨간 경고로 표시한다', (tester) async {
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      recruitmentApplications: Stream.value(
+        PartyReadSnapshot(
+          items: [
+            _pendingApplication(
+              gemValidation: PartyGemValidationSnapshot(
+                status: PartyGemValidationStatus.foreignClass,
+                foreignClassGemCount: 1,
+                unverifiedSameClassGemCount: 0,
+                validatedAt: DateTime.utc(2026, 9, 8),
+                catalogVersion: '2026.09.04',
+              ),
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      joinCommandRepository: _FakeJoinCommandRepository(),
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('보석 확인 요망 · 타 직업 보석 1개'), findsOneWidget);
+    final text = tester.widget<Text>(find.text('보석 확인 요망 · 타 직업 보석 1개'));
+    expect(
+      text.style?.color,
+      Theme.of(tester.element(find.byType(Card).first)).colorScheme.error,
+    );
   });
 
   testWidgets('철회 버튼이 pending 신청 revision으로 명령을 보낸다', (tester) async {
@@ -238,7 +335,10 @@ void main() {
         PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
       ),
       myApplication: Stream.value(
-        PartyReadDetailSnapshot(item: _pendingApplication(), isFromCache: false),
+        PartyReadDetailSnapshot(
+          item: _pendingApplication(),
+          isFromCache: false,
+        ),
       ),
       applicationCommandRepository: repository,
       candidateService: _candidateService(),
@@ -246,7 +346,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tapVisible(tester, find.byKey(const ValueKey('withdrawApplicationButton')));
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('withdrawApplicationButton')),
+    );
     await tester.pumpAndSettle();
 
     expect(repository.lastWithdraw?.expectedRevision, 3);
@@ -297,9 +400,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('바로 가입'), findsOneWidget);
-    await tapVisible(tester, find.byKey(const ValueKey('openApplicationButton')));
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('openApplicationButton')),
+    );
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.byKey(const ValueKey('apply-candidate-1-dealer')));
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('apply-candidate-1-dealer')),
+    );
     await tester.pumpAndSettle();
 
     expect(repository.lastDirectJoin?.characterId, 'server-character-1');
@@ -315,10 +424,7 @@ void main() {
         PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
       ),
       recruitmentApplications: Stream.value(
-        PartyReadSnapshot(
-          items: [_pendingApplication()],
-          isFromCache: false,
-        ),
+        PartyReadSnapshot(items: [_pendingApplication()], isFromCache: false),
       ),
       joinCommandRepository: repository,
       playerId: 'player-1',
@@ -343,10 +449,7 @@ void main() {
         PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
       ),
       recruitmentApplications: Stream.value(
-        PartyReadSnapshot(
-          items: [_pendingApplication()],
-          isFromCache: false,
-        ),
+        PartyReadSnapshot(items: [_pendingApplication()], isFromCache: false),
       ),
       joinCommandRepository: repository,
       playerId: 'player-1',
@@ -406,7 +509,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tapVisible(tester, find.byKey(const ValueKey('deleteOwnRecruitmentButton')));
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('deleteOwnRecruitmentButton')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey('confirmDeleteOwnRecruitmentButton')),
@@ -589,13 +695,19 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('deleteOwnRecruitmentButton')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('deleteOwnRecruitmentButton')),
+      findsNothing,
+    );
     expect(find.byKey(const ValueKey('leavePartyButton')), findsOneWidget);
     expect(
       find.byKey(const ValueKey('changeParticipatingCharacterButton')),
       findsOneWidget,
     );
-    expect(find.byKey(const ValueKey('kickMemberButton-player-2')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('kickMemberButton-player-2')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('확정 멤버가 탈퇴하면 leave 명령을 보낸다', (tester) async {
@@ -734,9 +846,7 @@ void main() {
       find.byKey(const ValueKey('changeParticipatingCharacterButton')),
     );
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.byKey(const ValueKey('change-candidate-2-dealer')),
-    );
+    await tester.tap(find.byKey(const ValueKey('change-candidate-2-dealer')));
     await tester.pumpAndSettle();
 
     expect(membership.changeCommands, hasLength(1));
@@ -785,9 +895,7 @@ void main() {
       find.byKey(const ValueKey('changeParticipatingCharacterButton')),
     );
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.byKey(const ValueKey('change-candidate-2-support')),
-    );
+    await tester.tap(find.byKey(const ValueKey('change-candidate-2-support')));
     await tester.pumpAndSettle();
 
     expect(membership.changeCommands.single.newRole, PartyRole.support);
@@ -797,9 +905,7 @@ void main() {
     );
   });
 
-  testWidgets('같은 참가 캐릭터의 반대 역할 설정으로 바로 변경할 수 있다', (
-    tester,
-  ) async {
+  testWidgets('같은 참가 캐릭터의 반대 역할 설정으로 바로 변경할 수 있다', (tester) async {
     final membership = _RecordingMembershipRepository();
     await pumpPage(
       tester,
@@ -836,9 +942,7 @@ void main() {
       find.byKey(const ValueKey('changeParticipatingCharacterButton')),
     );
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.byKey(const ValueKey('change-candidate-1-support')),
-    );
+    await tester.tap(find.byKey(const ValueKey('change-candidate-1-support')));
     await tester.pumpAndSettle();
 
     expect(membership.changeCommands.single.newRole, PartyRole.support);
@@ -848,9 +952,7 @@ void main() {
     );
   });
 
-  testWidgets('같은 State에서 recruitmentId가 바뀌면 새 방 제목을 구독한다', (
-    tester,
-  ) async {
+  testWidgets('같은 State에서 recruitmentId가 바뀌면 새 방 제목을 구독한다', (tester) async {
     final repository = FakePartyReadRepository(
       recruitmentForId: (recruitmentId) => Stream.value(
         PartyReadDetailSnapshot(
@@ -861,9 +963,8 @@ void main() {
           isFromCache: false,
         ),
       ),
-      membersForId: (_) => Stream.value(
-        const PartyReadSnapshot(items: [], isFromCache: false),
-      ),
+      membersForId: (_) =>
+          Stream.value(const PartyReadSnapshot(items: [], isFromCache: false)),
     );
 
     await tester.pumpWidget(
@@ -894,17 +995,12 @@ void main() {
     expect(repository.requestedRecruitmentIds, ['room-a', 'room-b']);
   });
 
-  testWidgets('1회성 완료 후 해산 전이면 파티 구성 옆에 이번주 레이드완료를 표시한다', (
-    tester,
-  ) async {
+  testWidgets('1회성 완료 후 해산 전이면 파티 구성 옆에 이번주 레이드완료를 표시한다', (tester) async {
     await pumpPage(
       tester,
       recruitment: Stream.value(
         PartyReadDetailSnapshot(
-          item: _summary(
-            status: 'completed',
-            currentCycleStatus: 'completed',
-          ),
+          item: _summary(status: 'completed', currentCycleStatus: 'completed'),
           isFromCache: false,
         ),
       ),
@@ -915,7 +1011,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('파티 구성'), findsOneWidget);
-    expect(find.byKey(const ValueKey('thisWeekRaidCompleteLabel')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('thisWeekRaidCompleteLabel')),
+      findsOneWidget,
+    );
     final completeLabel = tester.widget<Text>(
       find.byKey(const ValueKey('thisWeekRaidCompleteLabel')),
     );
@@ -925,9 +1024,7 @@ void main() {
     expect(completeLabel.style?.color, theme.colorScheme.error);
   });
 
-  testWidgets('반복방 다음주 대기에서도 파티 구성 옆에 이번주 레이드완료를 표시한다', (
-    tester,
-  ) async {
+  testWidgets('반복방 다음주 대기에서도 파티 구성 옆에 이번주 레이드완료를 표시한다', (tester) async {
     await pumpPage(
       tester,
       recruitment: Stream.value(
@@ -945,7 +1042,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('thisWeekRaidCompleteLabel')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('thisWeekRaidCompleteLabel')),
+      findsOneWidget,
+    );
     final label = tester.widget<Text>(
       find.byKey(const ValueKey('thisWeekRaidCompleteLabel')),
     );
@@ -967,9 +1067,7 @@ void main() {
 
     Stream<PartyReadSnapshot<PartyMemberDisplay>> membersStream(
       List<PartyMemberDisplay> members,
-    ) => Stream.value(
-      PartyReadSnapshot(items: members, isFromCache: false),
-    );
+    ) => Stream.value(PartyReadSnapshot(items: members, isFromCache: false));
 
     Future<void> pumpComposition(
       WidgetTester tester, {
@@ -986,13 +1084,13 @@ void main() {
         members: membersStream(members),
       );
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const ValueKey('partyCompositionBoard')));
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('partyCompositionBoard')),
+      );
       await tester.pumpAndSettle();
     }
 
-    testWidgets('좁은 4인: 파티 1열이며 Slot Card가 구성판 전체 폭을 쓴다', (
-      tester,
-    ) async {
+    testWidgets('좁은 4인: 파티 1열이며 Slot Card가 구성판 전체 폭을 쓴다', (tester) async {
       await pumpComposition(
         tester,
         surface: const Size(400, 1400),
@@ -1014,14 +1112,18 @@ void main() {
       expect(find.byKey(const ValueKey('partyGroup-1')), findsNothing);
       expect(find.textContaining('2파티 · 딜러'), findsNothing);
 
-      final boardWidth =
-          tester.getSize(find.byKey(const ValueKey('partyCompositionBoard'))).width;
-      final cardWidth =
-          tester.getSize(find.byKey(const ValueKey('slotCard-0-0'))).width;
+      final boardWidth = tester
+          .getSize(find.byKey(const ValueKey('partyCompositionBoard')))
+          .width;
+      final cardWidth = tester
+          .getSize(find.byKey(const ValueKey('slotCard-0-0')))
+          .width;
       expect(cardWidth, closeTo(boardWidth, 0.5));
       expect(
         tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-1'))).dy,
-        greaterThan(tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-0'))).dy),
+        greaterThan(
+          tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-0'))).dy,
+        ),
       );
     });
 
@@ -1053,7 +1155,9 @@ void main() {
       expect(find.byKey(const ValueKey('partyGroupRow')), findsNothing);
       expect(
         tester.getTopLeft(find.byKey(const ValueKey('partyGroup-1'))).dy,
-        greaterThan(tester.getTopLeft(find.byKey(const ValueKey('partyGroup-0'))).dy),
+        greaterThan(
+          tester.getTopLeft(find.byKey(const ValueKey('partyGroup-0'))).dy,
+        ),
       );
       expect(
         tester.getTopLeft(find.byKey(const ValueKey('partyGroup-0'))).dx,
@@ -1064,9 +1168,7 @@ void main() {
       );
     });
 
-    testWidgets('넓은 4인: 1파티가 왼쪽 절반이고 Slot Card는 파티 내부 1열이다', (
-      tester,
-    ) async {
+    testWidgets('넓은 4인: 1파티가 왼쪽 절반이고 Slot Card는 파티 내부 1열이다', (tester) async {
       await pumpComposition(
         tester,
         surface: const Size(800, 1400),
@@ -1086,18 +1188,23 @@ void main() {
       expect(find.byKey(const ValueKey('partyGroupRow')), findsOneWidget);
       expect(find.byKey(const ValueKey('partyGroup-1')), findsNothing);
 
-      final boardWidth =
-          tester.getSize(find.byKey(const ValueKey('partyCompositionBoard'))).width;
-      final groupWidth =
-          tester.getSize(find.byKey(const ValueKey('partyGroup-0'))).width;
-      final cardWidth =
-          tester.getSize(find.byKey(const ValueKey('slotCard-0-0'))).width;
+      final boardWidth = tester
+          .getSize(find.byKey(const ValueKey('partyCompositionBoard')))
+          .width;
+      final groupWidth = tester
+          .getSize(find.byKey(const ValueKey('partyGroup-0')))
+          .width;
+      final cardWidth = tester
+          .getSize(find.byKey(const ValueKey('slotCard-0-0')))
+          .width;
 
       expect(groupWidth, lessThan(boardWidth * 0.6));
       expect(cardWidth, closeTo(groupWidth, 0.5));
       expect(
         tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-1'))).dy,
-        greaterThan(tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-0'))).dy),
+        greaterThan(
+          tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-0'))).dy,
+        ),
       );
       expect(
         tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-0'))).dx,
@@ -1136,7 +1243,10 @@ void main() {
       expect(find.byKey(const ValueKey('partyGroupRow')), findsOneWidget);
       final left = find.byKey(const ValueKey('partyGroup-0'));
       final right = find.byKey(const ValueKey('partyGroup-1'));
-      expect(tester.getSize(left).width, closeTo(tester.getSize(right).width, 0.5));
+      expect(
+        tester.getSize(left).width,
+        closeTo(tester.getSize(right).width, 0.5),
+      );
       expect(
         tester.getTopLeft(right).dx,
         greaterThan(tester.getTopLeft(left).dx),
@@ -1147,11 +1257,15 @@ void main() {
       );
       expect(
         tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-1'))).dy,
-        greaterThan(tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-0'))).dy),
+        greaterThan(
+          tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-0'))).dy,
+        ),
       );
       expect(
         tester.getTopLeft(find.byKey(const ValueKey('slotCard-1-0'))).dx,
-        greaterThan(tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-0'))).dx),
+        greaterThan(
+          tester.getTopLeft(find.byKey(const ValueKey('slotCard-0-0'))).dx,
+        ),
       );
     });
 
@@ -1210,10 +1324,12 @@ void main() {
         ],
       );
 
-      final leftHeight =
-          tester.getSize(find.byKey(const ValueKey('slotCard-0-0'))).height;
-      final rightHeight =
-          tester.getSize(find.byKey(const ValueKey('slotCard-1-0'))).height;
+      final leftHeight = tester
+          .getSize(find.byKey(const ValueKey('slotCard-0-0')))
+          .height;
+      final rightHeight = tester
+          .getSize(find.byKey(const ValueKey('slotCard-1-0')))
+          .height;
       expect(leftHeight, greaterThan(0));
       expect(rightHeight, closeTo(leftHeight, 0.5));
     });
@@ -1238,7 +1354,9 @@ void main() {
       expect(find.byKey(const ValueKey('partyGroupRow')), findsOneWidget);
       expect(
         tester.getTopLeft(find.byKey(const ValueKey('partyGroup-1'))).dx,
-        greaterThan(tester.getTopLeft(find.byKey(const ValueKey('partyGroup-0'))).dx),
+        greaterThan(
+          tester.getTopLeft(find.byKey(const ValueKey('partyGroup-0'))).dx,
+        ),
       );
     });
 
@@ -1292,8 +1410,124 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('groupOnlyVisibilitySwitch')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('groupOnlyVisibilitySwitch')),
+      findsOneWidget,
+    );
     expect(find.text('그룹만 공개'), findsWidgets);
+  });
+
+  testWidgets('그룹 전용 레이드에서 그룹을 떠난 파티원에 그룹 탈퇴와 정리를 보여 준다', (tester) async {
+    final membership = _RecordingMembershipRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(
+            memberCount: 2,
+            groupId: 'group-1',
+            visibility: RecruitmentVisibility.group,
+          ),
+          isFromCache: false,
+        ),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(
+          items: [
+            PartyMemberDisplay(
+              playerId: 'player-1',
+              characterName: '이슈아이',
+              className: '기상술사',
+              role: PartyRole.dealer,
+              partyIndex: 0,
+              slotIndex: 0,
+            ),
+            PartyMemberDisplay(
+              playerId: 'player-2',
+              characterName: '서폿캐릭',
+              className: '바드',
+              role: PartyRole.support,
+              partyIndex: 0,
+              slotIndex: 1,
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      membershipCommandRepository: membership,
+      groupReadRepository: _GroupMembers({'player-1'}),
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('그룹 탈퇴'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('removeLostGroupQualificationButton-player-2')),
+      findsOneWidget,
+    );
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('removeLostGroupQualificationButton-player-2')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('confirmRemoveLostGroupQualificationButton')),
+    );
+    await tester.pumpAndSettle();
+    expect(membership.lostQualificationCommands, hasLength(1));
+    expect(
+      membership.lostQualificationCommands.single.targetPlayerId,
+      'player-2',
+    );
+  });
+
+  testWidgets('전체 공개 그룹 연결 레이드는 그룹 탈퇴만으로 정리 대상이 되지 않는다', (tester) async {
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(
+            memberCount: 2,
+            groupId: 'group-1',
+            visibility: 'public',
+          ),
+          isFromCache: false,
+        ),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(
+          items: [
+            PartyMemberDisplay(
+              playerId: 'player-1',
+              characterName: '이슈아이',
+              className: '기상술사',
+              role: PartyRole.dealer,
+              partyIndex: 0,
+              slotIndex: 0,
+            ),
+            PartyMemberDisplay(
+              playerId: 'player-2',
+              characterName: '서폿캐릭',
+              className: '바드',
+              role: PartyRole.support,
+              partyIndex: 0,
+              slotIndex: 1,
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      membershipCommandRepository: _RecordingMembershipRepository(),
+      groupReadRepository: _GroupMembers({'player-1'}),
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('그룹 탈퇴'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('removeLostGroupQualificationButton-player-2')),
+      findsNothing,
+    );
   });
 
   testWidgets('파티장이 전체 공개로 바꾸면 확인 후 명령을 보낸다', (tester) async {
@@ -1320,7 +1554,9 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('groupOnlyVisibilitySwitch')));
     await tester.pumpAndSettle();
     expect(find.text('전체 공개로 바꿀까요?'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('confirmVisibilityChangeButton')));
+    await tester.tap(
+      find.byKey(const ValueKey('confirmVisibilityChangeButton')),
+    );
     await tester.pumpAndSettle();
 
     expect(visibility.commands, hasLength(1));
@@ -1383,7 +1619,9 @@ PublicRecruitmentSummary _summary({
   groupId: groupId,
 );
 
-PartyApplicationSummary _pendingApplication() => PartyApplicationSummary(
+PartyApplicationSummary _pendingApplication({
+  PartyGemValidationSnapshot? gemValidation,
+}) => PartyApplicationSummary(
   recruitmentId: 'recruitment-1',
   applicantPlayerId: 'player-applicant',
   cycleKey: '2026-08-19',
@@ -1395,6 +1633,7 @@ PartyApplicationSummary _pendingApplication() => PartyApplicationSummary(
   revision: 3,
   createdAt: DateTime.utc(2026, 8, 20),
   updatedAt: DateTime.utc(2026, 8, 21),
+  gemValidation: gemValidation,
 );
 
 PartyApplicationSummary _rejectedApplication({required int rejectionCount}) =>
@@ -1526,10 +1765,29 @@ class _AccountRepository implements AccountRepository {
       dataVersion: 1,
       analysis: const CharacterBuildAnalysis(
         runeCount: 0,
-        gemEffects: [],
+        gemEffects: [
+          GemSkillEffect(
+            gemSlot: 0,
+            gemLevel: 10,
+            skillName: '타 직업 스킬',
+            descriptions: [],
+            category: GemSkillCategory.normal,
+            validationStatus: GemValidationStatus.foreignClass,
+          ),
+        ],
         arkGridConditions: [],
         arkGridCorePoints: [],
         notices: [],
+        catalogDetection: CharacterBuildCatalogDetection(
+          catalogVersion: '2026.09.04',
+          status: CharacterBuildDetectionStatus.detected,
+          classId: 'bard',
+          branchId: 'dealer',
+          branchDisplayName: '딜러',
+          detectedRole: CharacterBuildRole.dealer,
+          matchedTier1Node: '진실된 용맹',
+          matchedRelatedNodes: [],
+        ),
       ),
     ),
   ];
@@ -1691,9 +1949,11 @@ class _MultiDealerAccountRepository extends _AccountRepository {
   ];
 }
 
-class _RecordingMembershipRepository implements PartyMembershipCommandRepository {
+class _RecordingMembershipRepository
+    implements PartyMembershipCommandRepository {
   final leaveCommands = <PartyRemoveMemberCommand>[];
   final kickCommands = <PartyRemoveMemberCommand>[];
+  final lostQualificationCommands = <PartyRemoveMemberCommand>[];
   final changeCommands = <PartyChangeCharacterCommand>[];
 
   @override
@@ -1713,6 +1973,14 @@ class _RecordingMembershipRepository implements PartyMembershipCommandRepository
   @override
   Future<PartyMembershipResult> kick(PartyRemoveMemberCommand command) async {
     kickCommands.add(command);
+    return const PartyMembershipResult.success();
+  }
+
+  @override
+  Future<PartyMembershipResult> removeLostGroupQualification(
+    PartyRemoveMemberCommand command,
+  ) async {
+    lostQualificationCommands.add(command);
     return const PartyMembershipResult.success();
   }
 
@@ -1757,7 +2025,8 @@ class _RecordingCycleRepository implements PartyCycleCommandRepository {
   ) async => const PartyCycleResult.success();
 }
 
-class _RecordingVisibilityRepository implements PartyVisibilityCommandRepository {
+class _RecordingVisibilityRepository
+    implements PartyVisibilityCommandRepository {
   final commands = <PartyVisibilityCommand>[];
 
   @override
@@ -1767,4 +2036,35 @@ class _RecordingVisibilityRepository implements PartyVisibilityCommandRepository
     commands.add(command);
     return const PartyVisibilityResult.success();
   }
+}
+
+class _GroupMembers extends Fake implements GroupReadRepository {
+  _GroupMembers(this.memberPlayerIds);
+  final Set<String> memberPlayerIds;
+
+  @override
+  Future<List<GroupMember>> loadGroupMembers(String groupId) async => [
+    for (final playerId in memberPlayerIds)
+      GroupMember(
+        groupId: groupId,
+        playerId: playerId,
+        role: playerId == 'player-1'
+            ? GroupMemberRole.leader
+            : GroupMemberRole.member,
+        joinedAt: DateTime.utc(2026, 8, 20),
+        joinSequence: 1,
+        joinedBy: GroupJoinedBy.created,
+        displayCharacterIdSnapshot: 'character-$playerId',
+        displayCharacterNameSnapshot: playerId,
+        revision: 1,
+      ),
+  ];
+}
+
+class _NoopEventSyncService implements PartyEventSyncService {
+  const _NoopEventSyncService();
+
+  @override
+  Future<PartyEventSyncResult> sync() async =>
+      const PartyEventSyncResult.success(0);
 }

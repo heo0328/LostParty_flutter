@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../shared/presentation/server_account_mismatch_alert.dart';
 import '../../domain/entities/group_create_command.dart';
+import '../../domain/entities/group_create_result.dart';
 import '../viewmodels/group_create_view_model.dart';
 
 class GroupCreatePage extends StatefulWidget {
@@ -184,8 +186,21 @@ class _GroupCreatePageState extends State<GroupCreatePage> {
       context.pushReplacement('/groups/${result.groupId}');
       return;
     }
+    final failure = result.failure!;
+    if (_isServerAccountMismatch(failure)) {
+      await showServerAccountMismatchAlert(context);
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(groupCreateFailureMessage(result.failure!))),
+      SnackBar(content: Text(groupCreateFailureMessage(failure))),
     );
   }
 }
+
+bool _isServerAccountMismatch(GroupCreateFailure failure) => switch (failure) {
+  GroupCreateFailure.unauthenticated ||
+  GroupCreateFailure.playerBindingMissing ||
+  GroupCreateFailure.serverDataMissing ||
+  GroupCreateFailure.ownershipLost => true,
+  _ => false,
+};

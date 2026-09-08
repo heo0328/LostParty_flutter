@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -13,6 +15,7 @@ import '../../domain/repositories/weekly_raid_claim_repository.dart';
 import '../../domain/repositories/weekly_raid_claim_command_repository.dart';
 import '../../domain/services/character_summary_sync_service.dart';
 import '../../domain/services/representative_character_sync_service.dart';
+import '../../domain/services/startup_character_refresh_orchestrator.dart';
 import '../../domain/services/weekly_raid_display_projector.dart';
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 import '../models/weekly_raid_status_item.dart';
@@ -33,6 +36,7 @@ class MyAccountPage extends StatefulWidget {
     this.cycleStartedAt,
     this.cycleEndsAt,
     this.weeklyRaidClaimCommandRepository,
+    this.manualCharacterRefreshRunner,
     super.key,
   });
 
@@ -48,6 +52,7 @@ class MyAccountPage extends StatefulWidget {
   final DateTime? cycleStartedAt;
   final DateTime? cycleEndsAt;
   final WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository;
+  final ManualCharacterRefreshRunner? manualCharacterRefreshRunner;
 
   @override
   State<MyAccountPage> createState() => _MyAccountPageState();
@@ -58,6 +63,11 @@ class _MyAccountPageState extends State<MyAccountPage> {
   late final MyAccountViewModel _viewModel;
 
   String? _characterNameError;
+  bool _manualRefreshRunning = false;
+  StartupCharacterRefreshState _manualRefreshState =
+      const StartupCharacterRefreshState.idle();
+  DateTime? _manualRefreshAvailableAt;
+  StreamSubscription<StartupCharacterRefreshState>? _manualRefreshSubscription;
 
   @override
   void initState() {
@@ -77,6 +87,12 @@ class _MyAccountPageState extends State<MyAccountPage> {
       weeklyRaidClaimCommandRepository: widget.weeklyRaidClaimCommandRepository,
     );
     _viewModel.addListener(_onViewModelChanged);
+    _manualRefreshSubscription = widget.manualCharacterRefreshRunner?.states
+        .listen((state) {
+          if (mounted && _manualRefreshRunning) {
+            setState(() => _manualRefreshState = state);
+          }
+        });
     _viewModel.initialize();
   }
 
@@ -85,6 +101,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
     _characterNameController.dispose();
     _viewModel.removeListener(_onViewModelChanged);
     _viewModel.dispose();
+    unawaited(_manualRefreshSubscription?.cancel());
     super.dispose();
   }
 
@@ -281,6 +298,43 @@ class _MyAccountPageState extends State<MyAccountPage> {
     }
   }
 
+  Future<void> _requestManualRefresh() async {
+    final runner = widget.manualCharacterRefreshRunner;
+    if (runner == null || _manualRefreshRunning) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) =>
+          _ManualRefreshConfirmDialog(availableAt: _manualRefreshAvailableAt),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _manualRefreshRunning = true;
+      _manualRefreshState = const StartupCharacterRefreshState.idle();
+    });
+    final report = await runner.runManualExcludingNiceGroup();
+    if (!mounted) return;
+    _manualRefreshAvailableAt = DateTime.now().add(const Duration(seconds: 10));
+    await _viewModel.loadStoredAccount();
+    if (!mounted) return;
+    setState(() => _manualRefreshRunning = false);
+    final failures = report.items.where((item) => !item.isSuccess).toList();
+    final failureDetails = failures
+        .take(3)
+        .map((item) => '${item.character.characterName}: ${item.failureReason}')
+        .join('\n');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          report.failedCount == 0
+              ? '${report.totalCount}개 캐릭터 정보를 갱신했습니다.'
+              : '${report.totalCount}개 중 ${report.failedCount}개를 갱신하지 못했습니다.'
+                    '${failureDetails.isEmpty ? '' : '\n$failureDetails'}',
+        ),
+      ),
+    );
+  }
+
   Future<void> _showMissingTokenDialog() async {
     final shouldRegister = await showDialog<bool>(
       context: context,
@@ -360,55 +414,64 @@ class _MyAccountPageState extends State<MyAccountPage> {
               if (_viewModel.isLoadingTokenStatus)
                 const LinearProgressIndicator(),
               _buildTokenStatusPanel(context),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                key: const ValueKey('gameAccountVerificationButton'),
-                onPressed: _openGameAccountVerification,
-                icon: const Icon(Icons.verified_user_outlined),
-                label: const Text('내 게임계정 인증'),
-              ),
-              const SizedBox(height: 16),
-              ClearableTextFormField(
-                fieldKey: const ValueKey('representativeCharacterNameField'),
-                controller: _characterNameController,
-                enabled: !_viewModel.isNetworkBusy,
-                textInputAction: TextInputAction.search,
-                labelText: '조회 캐릭터명',
-                errorText: _characterNameError,
-                border: const OutlineInputBorder(),
-                onSubmitted: (_) {
-                  if (!_viewModel.isNetworkBusy) {
-                    _requestAccountData();
-                  }
-                },
-              ),
               const SizedBox(height: 12),
-              FilledButton.icon(
-                key: const ValueKey('loadAccountDataButton'),
-                onPressed: _viewModel.isNetworkBusy
-                    ? null
-                    : _requestAccountData,
-                icon: _viewModel.isNetworkBusy
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.cloud_download_outlined),
-                label: Text(
-                  _viewModel.isFetchingCharacters ? '불러오는 중...' : '계정 데이터 불러오기',
-                ),
+              Row(
+                key: const ValueKey('accountLookupActions'),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: ClearableTextFormField(
+                      fieldKey: const ValueKey(
+                        'representativeCharacterNameField',
+                      ),
+                      controller: _characterNameController,
+                      enabled: !_viewModel.isNetworkBusy,
+                      textInputAction: TextInputAction.search,
+                      labelText: '조회 캐릭터명',
+                      errorText: _characterNameError,
+                      border: const OutlineInputBorder(),
+                      onSubmitted: (_) {
+                        if (!_viewModel.isNetworkBusy) {
+                          _requestAccountData();
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    height: 56,
+                    child: FilledButton.icon(
+                      key: const ValueKey('loadAccountDataButton'),
+                      onPressed: _viewModel.isNetworkBusy
+                          ? null
+                          : _requestAccountData,
+                      icon: _viewModel.isNetworkBusy
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.cloud_download_outlined),
+                      label: Text(
+                        _viewModel.isFetchingCharacters ? '불러오는 중' : '불러오기',
+                      ),
+                    ),
+                  ),
+                  if (_viewModel.accounts.isNotEmpty) ...[
+                    const SizedBox(width: 4),
+                    SizedBox(
+                      height: 56,
+                      child: IconButton.outlined(
+                        key: const ValueKey('addSubAccountButton'),
+                        tooltip: '부계정 추가',
+                        onPressed: _viewModel.isNetworkBusy
+                            ? null
+                            : _showAddAccountDialog,
+                        icon: const Icon(Icons.person_add_alt_1_outlined),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              if (_viewModel.accounts.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  key: const ValueKey('addSubAccountButton'),
-                  onPressed: _viewModel.isNetworkBusy
-                      ? null
-                      : _showAddAccountDialog,
-                  icon: const Icon(Icons.person_add_alt_1_outlined),
-                  label: const Text('부계정 추가'),
-                ),
-              ],
               if (_viewModel.hasFetchedCharacters) ...[
                 const SizedBox(height: 24),
                 if (_viewModel.lookupProfile case final profile?) ...[
@@ -443,12 +506,43 @@ class _MyAccountPageState extends State<MyAccountPage> {
                 ],
               ],
               for (final account in _viewModel.accounts) ...[
-                const SizedBox(height: 24),
-                Text(
-                  account.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleLarge,
+                SizedBox(height: account.isMain ? 36 : 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        account.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    if (account.isMain &&
+                        widget.manualCharacterRefreshRunner != null)
+                      if (_manualRefreshRunning)
+                        Row(
+                          key: const ValueKey('manualCharacterRefreshProgress'),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '갱신 중 ${_manualRefreshState.completedCount}/${_manualRefreshState.totalCount}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        )
+                      else
+                        IconButton.filledTonal(
+                          key: const ValueKey('manualCharacterRefreshButton'),
+                          tooltip: '사용 캐릭터 전체 갱신',
+                          onPressed: _requestManualRefresh,
+                          icon: const Icon(Icons.refresh),
+                        ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Row(
@@ -542,31 +636,43 @@ class _MyAccountPageState extends State<MyAccountPage> {
       color: Theme.of(context).colorScheme.surfaceContainerLow,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         child: Row(
+          key: const ValueKey('accountSetupActions'),
           children: [
             Icon(
               _viewModel.hasApiToken
                   ? Icons.verified_user_outlined
                   : Icons.key_off_outlined,
+              size: 20,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Lost Ark API 토큰',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  Text(_viewModel.hasApiToken ? '등록됨' : '등록 필요'),
-                ],
+              child: Text(
+                _viewModel.hasApiToken ? 'API 토큰 등록됨' : 'API 토큰 등록 필요',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
-            IconButton(
-              tooltip: 'API 토큰 설정',
-              onPressed: _openTokenSettings,
-              icon: const Icon(Icons.settings_outlined),
+            Tooltip(
+              message: 'API 토큰 설정',
+              child: TextButton(
+                key: const ValueKey('apiTokenSettingsButton'),
+                onPressed: _openTokenSettings,
+                child: Text(_viewModel.hasApiToken ? '관리' : '등록'),
+              ),
+            ),
+            const SizedBox(width: 2),
+            OutlinedButton.icon(
+              key: const ValueKey('gameAccountVerificationButton'),
+              onPressed: _openGameAccountVerification,
+              icon: const Icon(Icons.verified_user_outlined, size: 18),
+              label: const Text('계정 인증'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                visualDensity: VisualDensity.compact,
+              ),
             ),
           ],
         ),
@@ -600,6 +706,13 @@ class _MyAccountPageState extends State<MyAccountPage> {
                 width: itemWidth,
                 child: AccountCharacterCard(
                   character: character,
+                  representativeCombatPower: _viewModel
+                      .representativeCombatPowerFor(character),
+                  overrideRepresentativeCombatPower:
+                      character.preferredRole != null,
+                  gemValidationSummary: _viewModel.gemValidationSummaryFor(
+                    character,
+                  ),
                   isRepresentative:
                       account.representativeCharacterId == character.id,
                   weeklyRaids: _viewModel.weeklyRaidStatusesFor(character),
@@ -1139,4 +1252,84 @@ class _EditAccountDialogState extends State<_EditAccountDialog> {
       ),
     ],
   );
+}
+
+class _ManualRefreshConfirmDialog extends StatefulWidget {
+  const _ManualRefreshConfirmDialog({this.availableAt});
+
+  final DateTime? availableAt;
+
+  @override
+  State<_ManualRefreshConfirmDialog> createState() =>
+      _ManualRefreshConfirmDialogState();
+}
+
+class _ManualRefreshConfirmDialogState
+    extends State<_ManualRefreshConfirmDialog> {
+  Timer? _timer;
+
+  int get _remainingSeconds {
+    final availableAt = widget.availableAt;
+    if (availableAt == null) return 0;
+    final milliseconds = availableAt.difference(DateTime.now()).inMilliseconds;
+    if (milliseconds <= 0) return 0;
+    return (milliseconds / 1000).ceil();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (_remainingSeconds > 0) {
+      _timer = Timer.periodic(const Duration(milliseconds: 200), (_) {
+        if (!mounted) return;
+        setState(() {});
+        if (_remainingSeconds == 0) {
+          _timer?.cancel();
+          _timer = null;
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = _remainingSeconds;
+    return AlertDialog(
+      title: const Text('캐릭터 정보 전체 갱신'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('나이스단 캐릭터를 제외한 사용 캐릭터 정보를 최신화할까요?'),
+          if (remaining > 0) ...[
+            const SizedBox(height: 12),
+            Text(
+              '$remaining초 후 다시 갱신할 수 있습니다.',
+              key: const ValueKey('manualCharacterRefreshCooldown'),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          key: const ValueKey('confirmManualCharacterRefreshButton'),
+          onPressed: remaining == 0
+              ? () => Navigator.of(context).pop(true)
+              : null,
+          child: const Text('확인'),
+        ),
+      ],
+    );
+  }
 }

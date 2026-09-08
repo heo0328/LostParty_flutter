@@ -195,7 +195,6 @@ class FirestoreManualVerificationRepository
   @override
   Stream<List<ManualVerificationRequest>> watchMyRequests() async* {
     final playerId = await _requirePlayerId();
-    unawaited(syncExpiredDisputes());
     yield* _requests
         .where('requesterPlayerId', isEqualTo: playerId)
         .snapshots()
@@ -211,7 +210,6 @@ class FirestoreManualVerificationRepository
   @override
   Stream<List<ManualVerificationRequest>> watchIncomingDisputes() async* {
     final playerId = await _requirePlayerId();
-    unawaited(syncExpiredDisputes());
     yield* _requests
         .where('previousOwnerPlayerId', isEqualTo: playerId)
         .snapshots()

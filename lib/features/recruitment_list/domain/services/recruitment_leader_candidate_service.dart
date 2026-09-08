@@ -1,15 +1,19 @@
-import '../../../account/domain/entities/character_build_role.dart';
+import '../../../account/domain/entities/character_build_analysis.dart';
+import '../../../account/domain/entities/character_build_snapshot.dart';
 import '../../../account/domain/repositories/account_repository.dart';
+import '../../../account/domain/repositories/activity_characters_repository.dart';
 import '../../../account/domain/entities/weekly_raid_claim.dart';
 import '../../../account/domain/repositories/weekly_raid_claim_repository.dart';
 import '../entities/active_raid_assignment.dart';
 import '../entities/party_recruitment.dart';
+import '../entities/party_gem_validation_snapshot.dart';
 import '../policies/participation_conflict_policy.dart';
 import '../policies/weekly_raid_reset_policy.dart';
 import '../repositories/active_raid_assignment_repository.dart';
 import '../repositories/recruitment_state_repository.dart';
 import '../repositories/weekly_raid_clear_repository.dart';
 import 'candidate_participation_status.dart';
+import 'raid_activity_character_source.dart';
 import 'recruitment_runtime.dart';
 
 class RecruitmentLeaderRoleOption {
@@ -18,12 +22,14 @@ class RecruitmentLeaderRoleOption {
     required this.itemLevel,
     required this.combatPower,
     required this.rejectionReasons,
+    this.gemValidation,
   });
 
   final PartyRole role;
   final double? itemLevel;
   final double? combatPower;
   final List<String> rejectionReasons;
+  final PartyGemValidationSnapshot? gemValidation;
 
   bool get canSelect => rejectionReasons.isEmpty;
 }
@@ -75,7 +81,8 @@ class RecruitmentLeaderCandidate {
     bool matches(RecruitmentLeaderRoleOption option) =>
         usable?.call(option) ?? option.canSelect;
     final usableRoles = roles.where(matches);
-    if (current != null && usableRoles.any((option) => option.role == current)) {
+    if (current != null &&
+        usableRoles.any((option) => option.role == current)) {
       return current;
     }
     return usableRoles.firstOrNull?.role ??
@@ -111,6 +118,7 @@ class RecruitmentLeaderCandidateService {
     required this.recruitmentRepository,
     this.weeklyRaidClaimRepository,
     this.claimPlayerId,
+    this.activityCharactersRepository,
     this.conflictPolicy = const ParticipationConflictPolicy(),
     this.resetPolicy = const WeeklyRaidResetPolicy(),
   });
@@ -123,6 +131,7 @@ class RecruitmentLeaderCandidateService {
   final RecruitmentStateRepository recruitmentRepository;
   final WeeklyRaidClaimRepository? weeklyRaidClaimRepository;
   final String? claimPlayerId;
+  final ActivityCharactersRepository? activityCharactersRepository;
   final ParticipationConflictPolicy conflictPolicy;
   final WeeklyRaidResetPolicy resetPolicy;
 
@@ -135,12 +144,19 @@ class RecruitmentLeaderCandidateService {
     final activeAssignments = await assignmentRepository.getByUser(userId);
     final weekKey = resetPolicy.weekFor(clock.now()).key;
     final serverClaims = await _loadServerClaims(weekKey);
+    final activityCharacterIds = await loadRaidActivityCharacterIds(
+      repository: activityCharactersRepository,
+      playerId: claimPlayerId,
+    );
     final candidates = <RecruitmentLeaderCandidate>[];
     final seenCharacters = <String>{};
 
     for (final account in accounts) {
       if (account.hasLostOwnership) continue;
-      for (final character in account.visibleCharacters) {
+      for (final character in raidCandidateCharacters(
+        account,
+        activityCharacterIds,
+      )) {
         final key =
             '${character.serverName.trim().toLowerCase()}::${character.characterName.trim().toLowerCase()}';
         if (!seenCharacters.add(key)) continue;
@@ -164,6 +180,7 @@ class RecruitmentLeaderCandidateService {
               itemLevel: itemLevel,
               combatPower: snapshot.combatPower ?? character.combatPower,
               rejectionReasons: List.unmodifiable(reasons),
+              gemValidation: _gemValidationFor(snapshot),
             ),
           );
         }
@@ -182,7 +199,8 @@ class RecruitmentLeaderCandidateService {
         final statuses = <CandidateParticipationStatus>[];
         final rejectionReasons = <String>[];
         if (roles.isEmpty) rejectionReasons.add('저장된 역할 세팅이 없습니다.');
-        final hasServerClaim = character.serverCharacterId != null &&
+        final hasServerClaim =
+            character.serverCharacterId != null &&
             serverClaims.any(
               (claim) =>
                   claim.characterId == character.serverCharacterId &&
@@ -268,6 +286,30 @@ class RecruitmentLeaderCandidateService {
       }
     }
     return List.unmodifiable(candidates);
+  }
+
+  PartyGemValidationSnapshot? _gemValidationFor(
+    CharacterBuildSnapshot snapshot,
+  ) {
+    final catalogVersion = snapshot.analysis.catalogDetection?.catalogVersion;
+    if (catalogVersion == null || catalogVersion.trim().isEmpty) return null;
+    final summary = snapshot.analysis.gemValidationSummary;
+    return PartyGemValidationSnapshot(
+      status: switch (summary.status) {
+        GemValidationSummaryStatus.verified =>
+          PartyGemValidationStatus.verified,
+        GemValidationSummaryStatus.sameClassTargetUnverified =>
+          PartyGemValidationStatus.sameClassTargetUnverified,
+        GemValidationSummaryStatus.foreignClass =>
+          PartyGemValidationStatus.foreignClass,
+        GemValidationSummaryStatus.unavailable =>
+          PartyGemValidationStatus.unavailable,
+      },
+      foreignClassGemCount: summary.foreignClassCount,
+      unverifiedSameClassGemCount: summary.unverifiedSameClassCount,
+      validatedAt: snapshot.capturedAt,
+      catalogVersion: catalogVersion,
+    );
   }
 
   Future<List<WeeklyRaidClaim>> _loadServerClaims(String cycleKey) async {

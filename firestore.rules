@@ -136,6 +136,54 @@ service cloud.firestore {
         && exists(groupMemberPath(groupId, currentPlayerId()));
     }
 
+    function isGroupOnlyRecruitment(data) {
+      return data.visibility == 'group'
+        && data.groupId is string
+        && data.groupId.size() > 0;
+    }
+
+    // 그룹 전용 레이드에서 대상이 그룹 membership을 잃었고,
+    // 요청자는 같은 레이드·그룹의 현재 멤버일 때만 제한적 정리를 허용한다.
+    function isLostGroupQualificationCleanup(recruitment, actorPlayerId, targetPlayerId) {
+      return isGroupOnlyRecruitment(recruitment)
+        && actorPlayerId != targetPlayerId
+        && actorPlayerId in recruitment.memberPlayerIds
+        && targetPlayerId in recruitment.memberPlayerIds
+        && exists(groupMemberPath(recruitment.groupId, actorPlayerId))
+        && !exists(groupMemberPath(recruitment.groupId, targetPlayerId));
+    }
+
+    // 삼항을 한 함수에 16단 중첩하면 컴파일러가 괄호를 닫지 못한다.
+    function removedMemberId(oldIds, newIds) {
+      let kept = newIds.toSet();
+      let low = removedMemberIdLow(oldIds, kept);
+      return low.size() > 0 ? low : removedMemberIdHigh(oldIds, kept);
+    }
+
+    function removedMemberIdLow(oldIds, kept) {
+      return oldIds.size() > 0 && !kept.hasAny([oldIds[0]]) ? oldIds[0]
+        : (oldIds.size() > 1 && !kept.hasAny([oldIds[1]]) ? oldIds[1]
+        : (oldIds.size() > 2 && !kept.hasAny([oldIds[2]]) ? oldIds[2]
+        : (oldIds.size() > 3 && !kept.hasAny([oldIds[3]]) ? oldIds[3]
+        : (oldIds.size() > 4 && !kept.hasAny([oldIds[4]]) ? oldIds[4]
+        : (oldIds.size() > 5 && !kept.hasAny([oldIds[5]]) ? oldIds[5]
+        : (oldIds.size() > 6 && !kept.hasAny([oldIds[6]]) ? oldIds[6]
+        : (oldIds.size() > 7 && !kept.hasAny([oldIds[7]]) ? oldIds[7]
+        : '')))))));
+    }
+
+    function removedMemberIdHigh(oldIds, kept) {
+      return oldIds.size() > 8 && !kept.hasAny([oldIds[8]]) ? oldIds[8]
+        : (oldIds.size() > 9 && !kept.hasAny([oldIds[9]]) ? oldIds[9]
+        : (oldIds.size() > 10 && !kept.hasAny([oldIds[10]]) ? oldIds[10]
+        : (oldIds.size() > 11 && !kept.hasAny([oldIds[11]]) ? oldIds[11]
+        : (oldIds.size() > 12 && !kept.hasAny([oldIds[12]]) ? oldIds[12]
+        : (oldIds.size() > 13 && !kept.hasAny([oldIds[13]]) ? oldIds[13]
+        : (oldIds.size() > 14 && !kept.hasAny([oldIds[14]]) ? oldIds[14]
+        : (oldIds.size() > 15 && !kept.hasAny([oldIds[15]]) ? oldIds[15]
+        : '')))))));
+    }
+
     function isCurrentGroupLeader(groupId) {
       return hasActiveBinding()
         && get(groupPath(groupId)).data.leaderPlayerId == currentPlayerId();
@@ -202,7 +250,7 @@ service cloud.firestore {
           'normalizedRepresentativeCharacterName',
           'representativeServerNameSnapshot', 'leaderPlayerId',
           'leaderDisplayCharacterNameSnapshot', 'memberCount', 'revision',
-          'hasActiveJoinCode', 'joinCodeVisibleToMembers', 'lastActivityAt',
+          'hasActiveJoinCode', 'activeJoinCode', 'joinCodeVisibleToMembers', 'lastActivityAt',
           'createdAt', 'updatedAt', 'deletedAt'
         ])
         && data.schemaVersion == 1
@@ -219,6 +267,7 @@ service cloud.firestore {
         && data.memberCount == 1
         && data.revision == 1
         && data.hasActiveJoinCode == false
+        && (!('activeJoinCode' in data) || data.activeJoinCode == null)
         && data.joinCodeVisibleToMembers == false
         && data.deletedAt == null
         && data.createdAt == request.time
@@ -1014,8 +1063,7 @@ service cloud.firestore {
     // 서로 다른 문서 ≤10, get·getAfter 합계 약 16회(한도 ~20 이하).
     function validJoinCodeId(code) {
       return code is string
-        && code.size() == 20
-        && code.matches('^[2-9A-HJ-NP-Z]{20}$');
+        && code.matches('^([2-9A-HJ-NP-Z]{6}|[2-9A-HJ-NP-Z]{20})$');
     }
 
     function validJoinCodeCreate(code, data) {
@@ -1037,6 +1085,7 @@ service cloud.firestore {
         && data.updatedAt == request.time
         && before.hasActiveJoinCode == false
         && after.hasActiveJoinCode == true
+        && after.activeJoinCode == code
         && after.revision == before.revision + 1;
     }
 
@@ -1050,6 +1099,8 @@ service cloud.firestore {
         && data.status == 'active'
         && before.hasActiveJoinCode == true
         && after.hasActiveJoinCode == false
+        && before.activeJoinCode == code
+        && after.activeJoinCode == null
         && after.revision == before.revision + 1;
     }
 
@@ -1060,9 +1111,15 @@ service cloud.firestore {
         && oldData.leaderPlayerId == currentPlayerId()
         && newData.diff(oldData).affectedKeys()
           .hasOnly([
-            'hasActiveJoinCode', 'revision', 'lastActivityAt', 'updatedAt'
+            'hasActiveJoinCode', 'activeJoinCode', 'revision', 'lastActivityAt', 'updatedAt'
           ])
         && newData.hasActiveJoinCode != oldData.hasActiveJoinCode
+        && (
+          (newData.hasActiveJoinCode == true
+            && validJoinCodeId(newData.activeJoinCode))
+          || (newData.hasActiveJoinCode == false
+            && newData.activeJoinCode == null)
+        )
         && newData.revision == oldData.revision + 1
         && newData.lastActivityAt == request.time
         && newData.updatedAt == request.time;
@@ -1395,11 +1452,22 @@ service cloud.firestore {
       let actorIsLeader = oldData.leaderPlayerId == playerId;
       let selfLeave = removed.hasAny([playerId]);
       let empty = newData.memberCount == 0;
+      let lostQualificationTarget = removedMemberId(
+        oldData.memberPlayerIds,
+        newData.memberPlayerIds
+      );
+      let lostQualificationCleanup = !selfLeave
+        && lostQualificationTarget.size() > 0
+        && isLostGroupQualificationCleanup(
+          oldData,
+          playerId,
+          lostQualificationTarget
+        );
       return hasActiveBinding()
         && oldData.status == 'active'
         && removed.size() == 1
         && newData.memberPlayerIds.size() == oldData.memberPlayerIds.size() - 1
-        && (selfLeave || (actorIsLeader && !selfLeave))
+        && (selfLeave || (actorIsLeader && !selfLeave) || lostQualificationCleanup)
         && newData.diff(oldData).affectedKeys().hasOnly([
           'memberPlayerIds', 'memberCount', 'dealerCount', 'supportCount',
           'leaderPlayerId', 'leaderCharacterNameSnapshot',
@@ -1772,7 +1840,12 @@ service cloud.firestore {
       let assignmentId = data.characterId + '_' + recruitment.raidId;
       return hasActiveBinding()
         && (playerId == currentPlayerId()
-          || recruitment.leaderPlayerId == currentPlayerId())
+          || recruitment.leaderPlayerId == currentPlayerId()
+          || isLostGroupQualificationCleanup(
+            recruitment,
+            currentPlayerId(),
+            playerId
+          ))
         && !(playerId in after.memberPlayerIds)
         && !existsAfter(assignmentPath(playerId, assignmentId));
     }
@@ -1814,7 +1887,12 @@ service cloud.firestore {
           || recruitment.currentCycleStatus == 'completed');
       return (playerId == currentPlayerId()
           || recruitment.leaderPlayerId == currentPlayerId()
-          || after.status == 'disbanded')
+          || after.status == 'disbanded'
+          || isLostGroupQualificationCleanup(
+            recruitment,
+            currentPlayerId(),
+            playerId
+          ))
         && (partyCompleteRemoval
           || staleCompletedRemoval
           || !existsAfter(memberPath)
@@ -2076,7 +2154,12 @@ service cloud.firestore {
       return validMembershipEventBase(playerId, eventId, data)
         && data.type == 'memberKicked'
         && currentPlayerId() == data.actorPlayerId
-        && before.leaderPlayerId == data.actorPlayerId
+        && (before.leaderPlayerId == data.actorPlayerId
+          || isLostGroupQualificationCleanup(
+            before,
+            data.actorPlayerId,
+            data.targetPlayerId
+          ))
         && data.targetPlayerId is string
         && data.eventRevision == after.revision
         && data.eventRevision == before.revision + 1
@@ -2634,6 +2717,79 @@ service cloud.firestore {
         && representativeCharacterOwned(oldData, newData);
     }
 
+    function playerGameAccountPath(playerId, gameAccountId) {
+      return /databases/$(database)/documents/playerGameAccounts/$(playerId + '_' + gameAccountId);
+    }
+
+    function characterActivityPath(playerId, characterId) {
+      return /databases/$(database)/documents/players/$(playerId)/characterActivity/$(characterId);
+    }
+
+    function ownedActiveCharacterMatches(playerId, characterId, gameAccountId) {
+      let characterDoc = characterPath(characterId);
+      return exists(characterDoc)
+        && get(characterDoc).data.status == 'active'
+        && get(characterDoc).data.ownerPlayerId == playerId
+        && get(characterDoc).data.gameAccountId == gameAccountId;
+    }
+
+    function ownedActiveGameAccount(playerId, gameAccountId) {
+      let ownershipDoc = playerGameAccountPath(playerId, gameAccountId);
+      return exists(ownershipDoc)
+        && get(ownershipDoc).data.playerId == playerId
+        && get(ownershipDoc).data.gameAccountId == gameAccountId
+        && get(ownershipDoc).data.status == 'active';
+    }
+
+    function representativeActivityCovered(playerId, gameAccountId, characterId) {
+      let ownershipDoc = playerGameAccountPath(playerId, gameAccountId);
+      let representativeId = exists(ownershipDoc)
+        ? get(ownershipDoc).data.representativeCharacterId
+        : null;
+      return !(representativeId is string)
+        || representativeId.size() == 0
+        || characterId == representativeId
+        || existsAfter(characterActivityPath(playerId, representativeId));
+    }
+
+    function validCharacterActivityWrite(playerId, characterId, data) {
+      return hasActiveBinding()
+        && currentPlayerId() == playerId
+        && characterId == data.characterId
+        && data.keys().hasOnly([
+          'schemaVersion',
+          'playerId',
+          'characterId',
+          'gameAccountId',
+          'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && data.characterId is string
+        && data.characterId.size() > 0
+        && data.gameAccountId is string
+        && data.gameAccountId.size() > 0
+        && data.updatedAt == request.time
+        && ownedActiveCharacterMatches(playerId, characterId, data.gameAccountId)
+        && ownedActiveGameAccount(playerId, data.gameAccountId)
+        && representativeActivityCovered(playerId, data.gameAccountId, characterId);
+    }
+
+    function validCharacterActivityDelete(playerId, characterId, oldData) {
+      let ownership = get(playerGameAccountPath(playerId, oldData.gameAccountId)).data;
+      return hasActiveBinding()
+        && currentPlayerId() == playerId
+        && oldData.playerId == playerId
+        && oldData.characterId == characterId
+        && ownership.playerId == playerId
+        && ownership.gameAccountId == oldData.gameAccountId
+        && (
+          !ownership.keys().hasAny(['representativeCharacterId'])
+          || ownership.representativeCharacterId == null
+          || ownership.representativeCharacterId != characterId
+        );
+    }
+
     match /authBindings/{authUid} {
       allow get: if signedIn() && request.auth.uid == authUid;
       allow list: if false;
@@ -2799,6 +2955,22 @@ service cloud.firestore {
         ) || validPartyOwnerWeeklyRaidClaimDelete(
           playerId,
           claimId,
+          resource.data
+        );
+      }
+
+      match /characterActivity/{characterId} {
+        // 그룹 상세·필터 후보는 활동 ID만 읽고 Character 표시 문서를 따로 조회한다.
+        // 별도 Projection 컬렉션과 그룹 교집합 검사는 Rules 컴파일 한도를 넘긴다.
+        allow get, list: if hasActiveBinding();
+        allow create, update: if validCharacterActivityWrite(
+          playerId,
+          characterId,
+          request.resource.data
+        );
+        allow delete: if validCharacterActivityDelete(
+          playerId,
+          characterId,
           resource.data
         );
       }

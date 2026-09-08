@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../shared/formatters/display_number_formatter.dart';
 
 import '../../domain/entities/local_game_account.dart';
+import '../../domain/entities/character_build_analysis.dart';
 import '../models/weekly_raid_status_item.dart';
 
 class AccountCharacterCard extends StatelessWidget {
@@ -10,6 +11,9 @@ class AccountCharacterCard extends StatelessWidget {
     required this.character,
     required this.isRepresentative,
     this.weeklyRaids = const [],
+    this.representativeCombatPower,
+    this.overrideRepresentativeCombatPower = false,
+    this.gemValidationSummary,
     this.showWeeklyRaidEditor = false,
     this.weeklyRaidHiddenByPreference = false,
     this.onTap,
@@ -22,6 +26,9 @@ class AccountCharacterCard extends StatelessWidget {
   final LocalAccountCharacter character;
   final bool isRepresentative;
   final List<WeeklyRaidStatusItem> weeklyRaids;
+  final double? representativeCombatPower;
+  final bool overrideRepresentativeCombatPower;
+  final GemValidationSummary? gemValidationSummary;
   final bool showWeeklyRaidEditor;
   final bool weeklyRaidHiddenByPreference;
   final VoidCallback? onTap;
@@ -80,11 +87,35 @@ class AccountCharacterCard extends StatelessWidget {
                 style: theme.textTheme.bodySmall,
               ),
               Text(
-                '전투력 ${_formatNumber(character.combatPower)}',
+                '전투력 ${_formatNumber(overrideRepresentativeCombatPower ? representativeCombatPower : character.combatPower)}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall,
               ),
+              if (_gemValidationLabel case final label?) ...[
+                const SizedBox(height: 4),
+                Row(
+                  key: ValueKey('gemValidation-${character.id}'),
+                  children: [
+                    Icon(
+                      _gemValidationIcon,
+                      size: 14,
+                      color: _gemValidationColor(theme),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: _gemValidationColor(theme),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               if (showRaidChrome) ...[
                 const SizedBox(height: 8),
                 const Divider(height: 1),
@@ -92,10 +123,7 @@ class AccountCharacterCard extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        '주간 레이드',
-                        style: theme.textTheme.labelSmall,
-                      ),
+                      child: Text('주간 레이드', style: theme.textTheme.labelSmall),
                     ),
                     if (showWeeklyRaidEditor && onEditWeeklyRaids != null)
                       IconButton(
@@ -130,10 +158,7 @@ class AccountCharacterCard extends StatelessWidget {
                           onWeeklyRaidChanged == null ||
                               busyRaidIds.contains(raid.raidId)
                           ? null
-                          : () => onWeeklyRaidChanged!(
-                              raid,
-                              !raid.isCompleted,
-                            ),
+                          : () => onWeeklyRaidChanged!(raid, !raid.isCompleted),
                       child: Row(
                         children: [
                           SizedBox(
@@ -183,4 +208,30 @@ class AccountCharacterCard extends StatelessWidget {
     }
     return DisplayNumberFormatter.fixed(value);
   }
+
+  String? get _gemValidationLabel {
+    final summary = gemValidationSummary;
+    if (summary == null ||
+        summary.status == GemValidationSummaryStatus.verified) {
+      return null;
+    }
+    return switch (summary.status) {
+      GemValidationSummaryStatus.foreignClass =>
+        '다른 직업 보석 ${summary.foreignClassCount}개 · 확인 필요',
+      GemValidationSummaryStatus.sameClassTargetUnverified =>
+        '동일 직업 보석 · 현재 스킬에서 미확인 ${summary.unverifiedSameClassCount}개',
+      GemValidationSummaryStatus.unavailable => '보석 검증 정보 없음',
+      GemValidationSummaryStatus.verified => null,
+    };
+  }
+
+  IconData get _gemValidationIcon =>
+      gemValidationSummary?.status == GemValidationSummaryStatus.foreignClass
+      ? Icons.error_outline
+      : Icons.info_outline;
+
+  Color _gemValidationColor(ThemeData theme) =>
+      gemValidationSummary?.status == GemValidationSummaryStatus.foreignClass
+      ? theme.colorScheme.error
+      : theme.colorScheme.onSurfaceVariant;
 }

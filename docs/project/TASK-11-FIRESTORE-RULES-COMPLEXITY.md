@@ -25,7 +25,7 @@
 - 운영의 마지막 성공 Rules 내용은 별도로 조회 확인하지 않았다. 로컬 복원과 운영 복원을 같은 상태로 기록하지 않는다.
 - 로컬 Emulator는 전체 Rules뿐 아니라 최소 deny-all Rules 로딩도 `503 / Network closed for unknown reason`으로 실패했다. 운영 API 실패와 로컬 검증 환경 실패를 구분한다.
 - 기준 검증: 표적 Flutter 테스트 33개, 변경 테스트 파일 analyze, JS 문법 검사 통과. 실제 Rules 허용/거절 동작과 배포 성공은 미확인이다.
-- `firestore - 복사본.rules`, `firestore.before-complexity-20260831.rules.bak`는 로컬 백업으로 보존하며 커밋·배포 대상에 넣지 않는다.
+- `legacy/firestore - 복사본.rules`, `legacy/firestore.before-complexity-20260831.rules.bak`는 로컬 백업으로 보존하며 배포 대상에 넣지 않는다.
 
 ## 단계별 추가 개선 계획
 
@@ -90,7 +90,7 @@ Task-11a(멤버 목록·탈퇴·표시 Snapshot) 코드는 `main`에 보존됐�
 
 ## 2026-08-31 검증 절차 (재현)
 
-1. 원본 `firestore.rules` 백업 (`firestore - 복사본.rules` 등 사용자 로컬 사본 권장)
+1. 원본 `firestore.rules` 백업 (`legacy/firestore - 복사본.rules` 등 사용자 로컬 사본 권장)
 2. 경로 helper·`match` 블록은 유지, 검증 함수 본문 약 **101개**를 `return false` 스텁으로 축소
 3. `firebase deploy --only firestore:rules --project lost-party`
 4. **Deploy complete** 확인
@@ -137,7 +137,7 @@ firebase deploy --only firestore:rules --project lost-party
 
 ## 2026-08-31 후속 — Rules만 1차 축소, 배포 미실행
 
-- 사용자 지시로 원본을 `firestore.before-complexity-20260831.rules.bak`에 별도 복사하고 SHA-256 일치를 확인했다. 기존 사용자 사본은 수정하지 않았다.
+- 사용자 지시로 원본을 `legacy/firestore.before-complexity-20260831.rules.bak`에 별도 복사하고 SHA-256 일치를 확인했다. 기존 사용자 사본은 수정하지 않았다.
 - `removedActiveGroupId`의 5개 chunk 및 50개 위치 탐색을 Firebase Rules 기본 `List.removeAll()`로 대체했다. 제거 결과가 정확히 하나일 때만 `[0]`에 접근한다.
 - 앱 요청·Firestore 저장 스키마·나머지 권한 검사는 변경하지 않았다. 오래된 생성 스크립트와 템플릿도 같은 native helper로 맞춰 재생성 시 복잡도가 돌아오지 않게 했다.
 - 실제 파일 크기: 158,836 → 144,042 bytes (약 9.3% 감소). 컴파일 결과 크기 감소를 측정한 값은 아니다.

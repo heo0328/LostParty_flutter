@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -12,10 +14,12 @@ import '../../features/account/data/gateways/local_game_account_verification_gat
 import '../../features/account/data/gateways/firestore_account_ownership_status_gateway.dart';
 import '../../features/account/data/gateways/firestore_character_summary_sync_gateway.dart';
 import '../../features/account/data/gateways/firestore_character_combat_power_sync_gateway.dart';
+import '../../features/account/data/gateways/firestore_character_minimum_display_sync_gateway.dart';
 import '../../features/account/data/gateways/firestore_representative_character_sync_gateway.dart';
 import '../../features/account/data/mappers/sibling_character_mapper.dart';
 import '../../features/account/data/repositories/firestore_weekly_raid_claim_repository.dart';
 import '../../features/account/data/repositories/local_character_weekly_raid_display_repository.dart';
+import '../../features/account/data/repositories/local_nice_group_auto_refresh_settings_repository.dart';
 import '../../features/account/presentation/pages/api_token_settings_page.dart';
 import '../../features/account/presentation/pages/character_management_page.dart';
 import '../../features/account/presentation/pages/character_detail_page.dart';
@@ -28,9 +32,14 @@ import '../../features/account/domain/repositories/account_ownership_status_gate
 import '../../features/account/domain/repositories/character_summary_sync_gateway.dart';
 import '../../features/account/domain/repositories/character_weekly_raid_display_repository.dart';
 import '../../features/account/domain/repositories/game_account_verification_gateway.dart';
+import '../../features/account/data/repositories/firestore_activity_characters_repository.dart';
+import '../../features/account/domain/repositories/activity_characters_repository.dart';
 import '../../features/account/domain/repositories/representative_character_sync_gateway.dart';
 import '../../features/account/domain/services/character_summary_sync_service.dart';
+import '../../features/account/domain/services/character_auto_refresh_coordinator.dart';
+import '../../features/account/domain/services/character_minimum_display_sync_service.dart';
 import '../../features/account/domain/services/representative_character_sync_service.dart';
+import '../../features/account/domain/services/startup_character_refresh_orchestrator.dart';
 import '../../features/player/domain/entities/player_session.dart';
 import '../../features/group/data/repositories/firestore_group_application_command_repository.dart';
 import '../../features/group/data/repositories/firestore_group_character_search_repository.dart';
@@ -39,6 +48,7 @@ import '../../features/group/data/repositories/firestore_group_join_code_command
 import '../../features/group/data/repositories/firestore_group_join_command_repository.dart';
 import '../../features/group/data/repositories/firestore_group_read_repository.dart';
 import '../../features/group/domain/repositories/group_application_command_repository.dart';
+import '../../features/group/domain/repositories/group_character_search_repository.dart';
 import '../../features/group/domain/repositories/group_create_repository.dart';
 import '../../features/group/domain/repositories/group_join_code_command_repository.dart';
 import '../../features/group/domain/repositories/group_join_command_repository.dart';
@@ -67,6 +77,7 @@ import '../../features/operator_access/data/repositories/firestore_operator_acce
 import '../../features/operator_access/domain/repositories/operator_access_repository.dart';
 import '../../features/operator_access/presentation/pages/operator_user_detail_page.dart';
 import '../../features/operator_access/presentation/pages/operator_user_list_page.dart';
+import '../../features/raid_status/data/repositories/drift_raid_status_filter_store.dart';
 import '../../features/raid_status/data/services/firestore_party_event_sync_service.dart';
 import '../../features/raid_status/domain/services/party_event_sync_service.dart';
 import '../../features/raid_status/presentation/pages/party_notifications_page.dart';
@@ -121,13 +132,16 @@ GoRouter createAppRouter({
   WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository,
   CharacterWeeklyRaidDisplayRepository? weeklyRaidDisplayRepository,
   RepresentativeCharacterSyncGateway? representativeCharacterSyncGateway,
+  ActivityCharactersRepository? activityCharactersRepository,
   OperatorAccessRepository? operatorAccessRepository,
   ManualVerificationRepository? manualVerificationRepository,
   GroupReadRepository? groupReadRepository,
+  GroupCharacterSearchRepository? characterSearchRepository,
   GroupCreateRepository? groupCreateRepository,
   GroupJoinCommandRepository? groupJoinCommandRepository,
   GroupApplicationCommandRepository? groupApplicationCommandRepository,
   GroupJoinCodeCommandRepository? groupJoinCodeCommandRepository,
+  StartupCharacterRefreshRunner? startupCharacterRefreshRunner,
 }) {
   final operatorAccessRepositoryOrDefault =
       operatorAccessRepository ?? FirestoreOperatorAccessRepository();
@@ -136,6 +150,13 @@ GoRouter createAppRouter({
       groupReadRepositoryCache ??= FirestoreGroupReadRepository(
         firestore: FirebaseFirestore.instance,
       );
+  GroupCharacterSearchRepository? characterSearchRepositoryCache =
+      characterSearchRepository;
+  GroupCharacterSearchRepository characterSearchRepositoryForRoute() =>
+      characterSearchRepositoryCache ??=
+          FirestoreGroupCharacterSearchRepository(
+            firestore: FirebaseFirestore.instance,
+          );
   GroupCreateRepository? groupCreateRepositoryCache = groupCreateRepository;
   GroupJoinCommandRepository? groupJoinCommandRepositoryCache =
       groupJoinCommandRepository;
@@ -188,6 +209,8 @@ GoRouter createAppRouter({
   final weeklyRaidDisplayRepositoryOrDefault =
       weeklyRaidDisplayRepository ??
       LocalCharacterWeeklyRaidDisplayRepository(database: accountDatabase);
+  final niceGroupSettingsRepository =
+      LocalNiceGroupAutoRefreshSettingsRepository(database: accountDatabase);
   const cyclePolicy = PartyCyclePolicy();
   final currentCycleKey = cyclePolicy.keyFor(DateTime.now());
   final currentCycle = cyclePolicy.fromKey(currentCycleKey)!;
@@ -213,8 +236,35 @@ GoRouter createAppRouter({
           firebaseAuth: FirebaseAuth.instance,
         ),
   );
+  final startupCharacterRefreshRunnerOrDefault =
+      startupCharacterRefreshRunner ??
+      StartupCharacterRefreshOrchestrator(
+        playerId: playerSession.playerId,
+        accountRepository: accountRepository,
+        niceGroupAutoRefreshSettingsRepository: niceGroupSettingsRepository,
+        refreshGateway: CharacterAutoRefreshCoordinator(
+          accountRepository: accountRepository,
+          minimumDisplaySync: CharacterMinimumDisplaySyncService(
+            accountRepository: accountRepository,
+            gateway: FirestoreCharacterMinimumDisplaySyncGateway(
+              firestore: FirebaseFirestore.instance,
+              firebaseAuth: FirebaseAuth.instance,
+            ),
+          ),
+        ),
+      );
+  final activityCharactersRepositoryOrDefault =
+      activityCharactersRepository ??
+      FirestoreActivityCharactersRepository(
+        firestore: FirebaseFirestore.instance,
+        firebaseAuth: FirebaseAuth.instance,
+      );
   GroupLocalMemberDisplayLookup groupLocalMemberDisplayLookupForRoute() =>
-      GroupLocalMemberDisplayLookup(accountRepository: accountRepository);
+      GroupLocalMemberDisplayLookup(
+        accountRepository: accountRepository,
+        activityCharactersRepository: activityCharactersRepositoryOrDefault,
+        playerId: playerSession.playerId,
+      );
   GroupCreateRepository groupCreateRepositoryForRoute() =>
       groupCreateRepositoryCache ??= FirestoreGroupCreateRepository(
         firestore: FirebaseFirestore.instance,
@@ -307,6 +357,7 @@ GoRouter createAppRouter({
     recruitmentRepository: recruitmentRepository,
     weeklyRaidClaimRepository: weeklyRaidClaimRepositoryOrDefault,
     claimPlayerId: playerSession.playerId,
+    activityCharactersRepository: activityCharactersRepositoryOrDefault,
     conflictPolicy: participationConflictPolicy,
   );
   final recruitmentLeaderCandidateService = RecruitmentLeaderCandidateService(
@@ -318,6 +369,7 @@ GoRouter createAppRouter({
     recruitmentRepository: recruitmentRepository,
     weeklyRaidClaimRepository: weeklyRaidClaimRepositoryOrDefault,
     claimPlayerId: playerSession.playerId,
+    activityCharactersRepository: activityCharactersRepositoryOrDefault,
     conflictPolicy: participationConflictPolicy,
   );
 
@@ -330,6 +382,8 @@ GoRouter createAppRouter({
           return AppShell(
             navigationShell: navigationShell,
             manualVerificationRepository: manualVerificationRepositoryOrDefault,
+            startupCharacterRefreshRunner:
+                startupCharacterRefreshRunnerOrDefault,
           );
         },
         branches: [
@@ -345,6 +399,16 @@ GoRouter createAppRouter({
                   playerId: playerSession.playerId,
                   cycleKey: currentCycleKey,
                   raidCatalogRepository: raidCatalogRepository,
+                  groupReadRepository: groupReadRepositoryForRoute(),
+                  activityCharactersRepository:
+                      activityCharactersRepositoryOrDefault,
+                  characterSearchRepository:
+                      characterSearchRepositoryForRoute(),
+                  onInitialLoadComplete: () {
+                    unawaited(
+                      startupCharacterRefreshRunnerOrDefault.runOnce(),
+                    );
+                  },
                 ),
                 routes: [
                   GoRoute(
@@ -390,7 +454,9 @@ GoRouter createAppRouter({
                               firebaseAuth: FirebaseAuth.instance,
                             ),
                         eventSyncService: partyEventSyncServiceOrDefault,
+                        accountDatabase: accountDatabase,
                         candidateService: recruitmentLeaderCandidateService,
+                        groupReadRepository: groupReadRepositoryForRoute(),
                         playerId: playerSession.playerId,
                       );
                     },
@@ -419,6 +485,12 @@ GoRouter createAppRouter({
                   cycleEndsAt: currentCycle.endsAt,
                   weeklyRaidClaimCommandRepository:
                       weeklyRaidClaimCommandRepositoryOrDefault,
+                  manualCharacterRefreshRunner:
+                      startupCharacterRefreshRunnerOrDefault
+                              is ManualCharacterRefreshRunner
+                          ? startupCharacterRefreshRunnerOrDefault
+                                as ManualCharacterRefreshRunner
+                          : null,
                 ),
                 routes: [
                   GoRoute(
@@ -427,6 +499,10 @@ GoRouter createAppRouter({
                       accountRepository: accountRepository,
                       representativeSyncGateway:
                           representativeSyncGatewayOrDefault,
+                      activityCharactersRepository:
+                          activityCharactersRepositoryOrDefault,
+                      niceGroupSettingsRepository: niceGroupSettingsRepository,
+                      playerId: playerSession.playerId,
                       accountId: state.extra as int?,
                     ),
                   ),
@@ -458,6 +534,14 @@ GoRouter createAppRouter({
                   partyReadRepository: partyReadRepositoryOrDefault,
                   cycleKey: currentCycleKey,
                   currentPlayerId: playerSession.playerId,
+                  accountDatabase: accountDatabase,
+                  filterStore: DriftRaidStatusFilterStore(accountDatabase),
+                  raidCatalogRepository: raidCatalogRepository,
+                  groupReadRepository: groupReadRepositoryForRoute(),
+                  activityCharactersRepository:
+                      activityCharactersRepositoryOrDefault,
+                  characterSearchRepository:
+                      characterSearchRepositoryForRoute(),
                   backfillOwnGroupListings: backfillOwnGroupListings == null
                       ? null
                       : () => backfillOwnGroupListings(
@@ -519,6 +603,9 @@ GoRouter createAppRouter({
                       viewModel: GroupCreateViewModel(
                         accountRepository: accountRepository,
                         createRepository: groupCreateRepositoryForRoute(),
+                        activityCharactersRepository:
+                            activityCharactersRepositoryOrDefault,
+                        playerId: playerSession.playerId,
                       ),
                     ),
                   ),
@@ -537,6 +624,9 @@ GoRouter createAppRouter({
                         accountRepository: accountRepository,
                         commandRepository:
                             groupJoinCodeCommandRepositoryForRoute(),
+                        activityCharactersRepository:
+                            activityCharactersRepositoryOrDefault,
+                        playerId: playerSession.playerId,
                       ),
                     ),
                   ),
@@ -549,17 +639,18 @@ GoRouter createAppRouter({
                       readRepository: groupReadRepositoryForRoute(),
                       actionViewModel: GroupMembershipActionViewModel(
                         accountRepository: accountRepository,
-                        combatPowerSyncGateway: FirestoreCharacterCombatPowerSyncGateway(
-                          firestore: FirebaseFirestore.instance,
-                          firebaseAuth: FirebaseAuth.instance,
-                        ),
-                        readRepository: groupReadRepositoryForRoute(),
-                        commandRepository:
-                            groupJoinCommandRepositoryForRoute(),
-                        characterSearchRepository:
-                            FirestoreGroupCharacterSearchRepository(
+                        combatPowerSyncGateway:
+                            FirestoreCharacterCombatPowerSyncGateway(
                               firestore: FirebaseFirestore.instance,
+                              firebaseAuth: FirebaseAuth.instance,
                             ),
+                        activityCharactersRepository:
+                            activityCharactersRepositoryOrDefault,
+                        playerId: playerSession.playerId,
+                        readRepository: groupReadRepositoryForRoute(),
+                        commandRepository: groupJoinCommandRepositoryForRoute(),
+                        characterSearchRepository:
+                            characterSearchRepositoryForRoute(),
                       ),
                       applicationsViewModel:
                           groupApplicationsViewModelForRoute(),
@@ -573,9 +664,7 @@ GoRouter createAppRouter({
                           groupId: state.pathParameters['groupId']!,
                           viewModel: GroupInviteViewModel(
                             searchRepository:
-                                FirestoreGroupCharacterSearchRepository(
-                                  firestore: FirebaseFirestore.instance,
-                                ),
+                                characterSearchRepositoryForRoute(),
                             commandRepository:
                                 groupJoinCommandRepositoryForRoute(),
                           ),
@@ -662,8 +751,7 @@ GoRouter createAppRouter({
                 builder: (context, state) =>
                     OperatorManualVerificationDetailPage(
                       requestId: state.pathParameters['requestId']!,
-                      initialRequest:
-                          state.extra is ManualVerificationRequest
+                      initialRequest: state.extra is ManualVerificationRequest
                           ? state.extra as ManualVerificationRequest
                           : null,
                       operatorAccessRepository:

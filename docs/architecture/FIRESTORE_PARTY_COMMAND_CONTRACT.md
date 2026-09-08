@@ -227,6 +227,15 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 - 일반 참가자는 본인만 탈퇴할 수 있고 현재 책임자만 다른 참가자를 추방할 수 있다.
 - membership과 확정 점유를 삭제하고 모집의 멤버 목록·역할별 인원·빈자리·revision을 함께 갱신한다.
 - 책임자가 탈퇴하면 Transaction으로 직렬화된 `memberPlayerIds` 가입 순서의 첫 잔여 Player에게 책임자를 승계하고 가입 승인 권한을 부여한다.
+
+#### 그룹 전용 자격 상실 정리
+
+- 그룹 탈퇴·추방은 레이드 membership을 자동 삭제하지 않는다.
+- 현재 `visibility==group`인 레이드에서만 그룹 membership이 없는 참가자를 자격 상실로 본다.
+- 전체 공개 상태인 그룹 연결 레이드는 그룹 탈퇴만으로 참가 자격을 잃지 않는다.
+- 활동 Character 해제는 이 자격 상실과 같지 않다.
+- 같은 방에 남은 유효 그룹원(그룹장 포함)이 제한적 정리를 요청할 수 있다. 일반 추방 권한을 모든 멤버에게 주지 않는다.
+- Transaction은 요청자의 현재 레이드·그룹 membership과 대상의 그룹 membership 부재, 모집 revision을 같은 작업에서 재검증한 뒤에만 membership·점유를 삭제한다.
 - 마지막 책임자가 탈퇴하면 모집을 삭제하지 않고 `disbanded`로 종료하며 수동 모집을 비활성화한다.
 
 #### 가입 승인 권한

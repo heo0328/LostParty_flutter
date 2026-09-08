@@ -30,13 +30,23 @@ void main() {
     expect(rules, contains('data.memberCount == 1'));
     expect(rules, contains('data.revision == 1'));
     expect(rules, contains('data.hasActiveJoinCode == false'));
+    expect(
+      rules,
+      contains("!('activeJoinCode' in data) || data.activeJoinCode == null"),
+    );
     expect(rules, contains('data.deletedAt == null'));
     expect(rules, contains('data.lastActivityAt == request.time'));
-    expect(rules, contains('ownsActiveCharacter(data.representativeCharacterId)'));
+    expect(
+      rules,
+      contains('ownsActiveCharacter(data.representativeCharacterId)'),
+    );
   });
 
   test('그룹 생성은 leader member·membership state·relation을 함께 확인한다', () {
-    expect(rules, contains('getAfter(groupMemberPath(groupId, playerId)).data'));
+    expect(
+      rules,
+      contains('getAfter(groupMemberPath(groupId, playerId)).data'),
+    );
     expect(
       rules,
       contains('getAfter(groupMembershipStatePath(playerId)).data'),
@@ -53,7 +63,10 @@ void main() {
       rules,
       contains('function validInitialGroupMember(groupId, playerId, data)'),
     );
-    expect(rules, contains('function validNewGroupMemberCore(groupId, playerId, data)'));
+    expect(
+      rules,
+      contains('function validNewGroupMemberCore(groupId, playerId, data)'),
+    );
     expect(rules, contains("data.role == 'leader'"));
     expect(rules, contains("data.joinedBy == 'created'"));
     expect(rules, contains('data.joinSequence == 1'));
@@ -103,26 +116,33 @@ void main() {
     );
     expect(
       rules,
-      contains('allow create: if validInitialGroup(groupId, request.resource.data);'),
+      contains(
+        'allow create: if validInitialGroup(groupId, request.resource.data);',
+      ),
     );
     expect(rules, contains('allow update, delete: if false;'));
   });
 
   test('그룹 전용 레이드 목록 Projection은 경로의 그룹원만 list한다', () {
     expect(rules, contains('function validGroupRaidListingCreate('));
-    expect(rules, contains('data.diff(recruitment).affectedKeys().size() == 0'));
-    expect(rules, contains('match /raidListings/{recruitmentId}'));
-    expect(rules, contains('allow get, list: if isCurrentGroupMember(groupId);'));
     expect(
       rules,
-      contains('allow create: if validGroupRaidListingCreate('),
+      contains('data.diff(recruitment).affectedKeys().size() == 0'),
     );
+    expect(rules, contains('match /raidListings/{recruitmentId}'));
+    expect(
+      rules,
+      contains('allow get, list: if isCurrentGroupMember(groupId);'),
+    );
+    expect(rules, contains('allow create: if validGroupRaidListingCreate('));
     expect(rules, contains('function validGroupRaidListingBackfill('));
     expect(rules, contains('|| validGroupRaidListingBackfill('));
     expect(rules, contains('function validGroupRaidListingDelete('));
     expect(
       rules,
-      contains('allow delete: if validGroupRaidListingDelete(groupId, recruitmentId);'),
+      contains(
+        'allow delete: if validGroupRaidListingDelete(groupId, recruitmentId);',
+      ),
     );
     expect(rules, contains('allow update: if validGroupRaidListingCreate('));
   });
@@ -131,7 +151,10 @@ void main() {
     final joinCodes = rules.substring(rules.indexOf('match /groupJoinCodes/'));
     expect(rules, contains('match /groupJoinCodes/{code}'));
     expect(rules, contains('function validJoinCodeId(code)'));
-    expect(rules, contains("code.matches('^[2-9A-HJ-NP-Z]{20}\$')"));
+    expect(
+      rules,
+      contains("code.matches('^([2-9A-HJ-NP-Z]{6}|[2-9A-HJ-NP-Z]{20})\$')"),
+    );
     expect(rules, contains('function validJoinCodeCreate(code, data)'));
     expect(rules, contains('function validJoinCodeDelete(code)'));
     expect(rules, contains('before.hasActiveJoinCode == false'));
@@ -145,19 +168,29 @@ void main() {
     expect(joinCodes, contains('allow list: if false;'));
     expect(
       joinCodes,
-      contains('allow create: if validJoinCodeCreate(code, request.resource.data);'),
+      contains(
+        'allow create: if validJoinCodeCreate(code, request.resource.data);',
+      ),
     );
     expect(joinCodes, contains('allow update: if false;'));
     expect(joinCodes, contains('allow delete: if validJoinCodeDelete(code);'));
   });
 
   test('초대코드 플래그·표시 정책 그룹 update와 코드 가입 membership을 연다', () {
-    expect(rules, contains('function validGroupJoinCodeFlagUpdate(oldData, newData)'));
+    expect(
+      rules,
+      contains('function validGroupJoinCodeFlagUpdate(oldData, newData)'),
+    );
     expect(
       rules,
       contains('function validGroupJoinCodeVisibilityUpdate(oldData, newData)'),
     );
-    expect(rules, contains("'hasActiveJoinCode', 'revision', 'lastActivityAt'"));
+    expect(
+      rules,
+      contains(
+        "'hasActiveJoinCode', 'activeJoinCode', 'revision', 'lastActivityAt'",
+      ),
+    );
     expect(
       rules,
       contains("'joinCodeVisibleToMembers', 'revision', 'lastActivityAt'"),
@@ -167,7 +200,10 @@ void main() {
       contains('function validJoinCodeGroupMember(groupId, playerId, data)'),
     );
     expect(rules, contains("data.joinedBy == 'joinCode'"));
-    expect(rules, contains('ownsActiveCharacter(data.displayCharacterIdSnapshot)'));
+    expect(
+      rules,
+      contains('ownsActiveCharacter(data.displayCharacterIdSnapshot)'),
+    );
     expect(
       rules,
       contains(
@@ -188,8 +224,14 @@ void main() {
   });
 
   test('초대·신청 경로 helper와 금지 판정을 제공한다', () {
-    expect(rules, contains('function groupJoinRelationPath(groupId, playerId)'));
-    expect(rules, contains('function groupApplicantStatsPath(groupId, playerId)'));
+    expect(
+      rules,
+      contains('function groupJoinRelationPath(groupId, playerId)'),
+    );
+    expect(
+      rules,
+      contains('function groupApplicantStatsPath(groupId, playerId)'),
+    );
     expect(rules, contains('function groupBlockPath(groupId, playerId)'));
     expect(rules, contains('function hasGroupBlock(groupId, playerId)'));
   });
@@ -216,7 +258,10 @@ void main() {
     );
     expect(rules, contains('!exists(groupMemberPath(groupId, playerId))'));
     expect(rules, contains('!hasGroupBlock(groupId, playerId)'));
-    expect(rules, contains('existsAfter(groupRelationPath(playerId, groupId))'));
+    expect(
+      rules,
+      contains('existsAfter(groupRelationPath(playerId, groupId))'),
+    );
   });
 
   test('유효 pending 관계는 종류가 달라도 새 요청으로 덮어쓰지 못한다', () {
@@ -255,7 +300,10 @@ void main() {
     );
     expect(rules, contains("data.kind == 'application'"));
     expect(rules, contains('data.requestedByPlayerId == playerId'));
-    expect(rules, contains('data.applicationAttempt == stats.applicationCount'));
+    expect(
+      rules,
+      contains('data.applicationAttempt == stats.applicationCount'),
+    );
     expect(
       rules,
       contains(
@@ -267,7 +315,10 @@ void main() {
       contains('== (oldData == null ? 1 : oldData.applicationCount + 1)'),
     );
     expect(rules, contains("relation.kind == 'application'"));
-    expect(rules, contains('relation.applicationAttempt == data.applicationCount'));
+    expect(
+      rules,
+      contains('relation.applicationAttempt == data.applicationCount'),
+    );
   });
 
   test('수락·거절은 대상 Player만, 취소는 발신자 또는 그룹장만 한다', () {
@@ -279,22 +330,14 @@ void main() {
     );
     expect(
       rules,
-      contains(
-        "hasOnly(['status', 'revision', 'decidedAt', 'updatedAt'])",
-      ),
+      contains("hasOnly(['status', 'revision', 'decidedAt', 'updatedAt'])"),
     );
     expect(rules, contains("oldData.kind == 'invitation'"));
     expect(rules, contains("oldData.status == 'pending'"));
     expect(rules, contains('newData.revision == oldData.revision + 1'));
     expect(rules, contains('oldData.expiresAt > request.time'));
-    expect(
-      rules,
-      contains('existsAfter(groupMemberPath(groupId, playerId))'),
-    );
-    expect(
-      rules,
-      contains('oldData.requestedByPlayerId == currentPlayerId()'),
-    );
+    expect(rules, contains('existsAfter(groupMemberPath(groupId, playerId))'));
+    expect(rules, contains('oldData.requestedByPlayerId == currentPlayerId()'));
     expect(rules, contains('isCurrentGroupLeader(groupId)'));
   });
 
@@ -316,16 +359,19 @@ void main() {
   });
 
   test('그룹 원본 update는 활동 시각과 초대 수락 인원 증가만 허용한다', () {
-    expect(rules, contains('function validGroupActivityUpdate(oldData, newData)'));
     expect(
       rules,
-      contains(
-        "hasOnly(['revision', 'lastActivityAt', 'updatedAt'])",
-      ),
+      contains('function validGroupActivityUpdate(oldData, newData)'),
     );
     expect(
       rules,
-      contains('function validGroupMemberJoinUpdate(groupId, oldData, newData)'),
+      contains("hasOnly(['revision', 'lastActivityAt', 'updatedAt'])"),
+    );
+    expect(
+      rules,
+      contains(
+        'function validGroupMemberJoinUpdate(groupId, oldData, newData)',
+      ),
     );
     expect(rules, contains('newData.memberCount == oldData.memberCount + 1'));
     expect(rules, contains('newData.memberCount <= 50'));
@@ -390,9 +436,7 @@ void main() {
     expect(rules, contains('let callerId = currentPlayerId();'));
     expect(
       rules,
-      contains(
-        "get(groupPath(groupId)).data.leaderPlayerId == callerId",
-      ),
+      contains("get(groupPath(groupId)).data.leaderPlayerId == callerId"),
       reason: '그룹장 판정과 Player active 검사를 한 helper에 모아 중복 get을 줄인다.',
     );
   });
@@ -440,10 +484,7 @@ void main() {
   });
 
   test('그룹장 승인의 대상 요약 병합은 Group ID 1개 추가와 50개 한도를 지킨다', () {
-    expect(
-      rules,
-      contains('function validLeaderApprovedMembershipStateAdd('),
-    );
+    expect(rules, contains('function validLeaderApprovedMembershipStateAdd('));
     expect(rules, contains("member.joinedBy == 'application'"));
     expect(
       rules,
@@ -451,10 +492,7 @@ void main() {
         'getAfter(groupPath(addedGroupId)).data.leaderPlayerId == callerId',
       ),
     );
-    expect(
-      rules,
-      contains(') || validLeaderApprovedMembershipStateAdd('),
-    );
+    expect(rules, contains(') || validLeaderApprovedMembershipStateAdd('));
   });
 
   test('승인 이후 대상 Projection과 그룹 인원 증가는 그룹장에게만 열린다', () {
@@ -471,10 +509,7 @@ void main() {
     );
     expect(rules, contains('oldData.leaderPlayerId == currentPlayerId()'));
     expect(rules, contains('newData.memberCount == oldData.memberCount + 1'));
-    expect(
-      rules,
-      contains(') || validGroupLeaderApproveUpdate('),
-    );
+    expect(rules, contains(') || validGroupLeaderApproveUpdate('));
     expect(
       rules,
       contains('allow update: if validGroupMemberLeaveUpdate('),
@@ -493,9 +528,7 @@ void main() {
     expect(rules, contains("data.blockedByPlayerId == currentPlayerId()"));
     expect(
       rules,
-      contains(
-        '== (stats == null ? 0 : stats.data.applicationCount)',
-      ),
+      contains('== (stats == null ? 0 : stats.data.applicationCount)'),
     );
     expect(rules, contains("(data.reason == 'applicationRejected'"));
     expect(rules, contains("&& relation.status == 'blocked')"));
@@ -506,7 +539,10 @@ void main() {
       ),
       reason: '계약 §10은 block 생성을 blocked 전이 또는 끝난 신청에만 묶는다.',
     );
-    expect(blocked, contains('allow get, list: if isCurrentGroupLeader(groupId);'));
+    expect(
+      blocked,
+      contains('allow get, list: if isCurrentGroupLeader(groupId);'),
+    );
     expect(blocked, contains('allow create: if validGroupBlockCreate('));
     expect(blocked, contains('allow update: if false;'));
     expect(blocked, contains('allow delete: if isActiveGroupLeader(groupId);'));
@@ -514,19 +550,32 @@ void main() {
 
   test('탈퇴 대상은 native list 차집합으로 찾고 빈 결과 접근을 막는다', () {
     expect(rules, contains('let removedIds = previousIds.removeAll(newIds);'));
-    expect(rules, contains("return removedIds.size() == 1 ? removedIds[0] : '';"));
+    expect(
+      rules,
+      contains("return removedIds.size() == 1 ? removedIds[0] : '';"),
+    );
     expect(rules, isNot(contains('removedActiveGroupIdChunk')));
   });
 
   test('표시 갱신은 필수 필드를 유지하고 네 필드 외 변경을 차단한다', () {
-    final start = rules.indexOf('    function validGroupMemberSelfSnapshotRefresh(');
+    final start = rules.indexOf(
+      '    function validGroupMemberSelfSnapshotRefresh(',
+    );
     final end = rules.indexOf('    function reusableGroupJoinRelation(', start);
     final refresh = rules.substring(start, end);
     expect(refresh, contains('oldData.keys().hasAll(['));
     for (final field in [
-      'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
-      'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
-      'displayCharacterNameSnapshot', 'revision', 'createdAt',
+      'schemaVersion',
+      'groupId',
+      'playerId',
+      'role',
+      'joinedAt',
+      'joinSequence',
+      'joinedBy',
+      'displayCharacterIdSnapshot',
+      'displayCharacterNameSnapshot',
+      'revision',
+      'createdAt',
     ]) {
       expect(refresh, contains("'$field'"));
     }
@@ -540,39 +589,50 @@ void main() {
   test('일반 멤버 탈퇴 Rules helper와 삭제 경로를 고정한다', () {
     expect(
       rules,
-      contains('function validGroupMemberSelfLeaveDelete(groupId, playerId, data)'),
+      contains(
+        'function validGroupMemberSelfLeaveDelete(groupId, playerId, data)',
+      ),
     );
-    expect(rules, contains('function validGroupMemberLeaveUpdate(groupId, oldData, newData)'));
-    expect(rules, contains('function validMembershipStateRemove(playerId, docId, oldData, newData)'));
     expect(
       rules,
-      contains('function validGroupMemberLeaveRelationDelete(playerId, groupId)'),
+      contains(
+        'function validGroupMemberLeaveUpdate(groupId, oldData, newData)',
+      ),
     );
-    expect(rules, contains('allow delete: if validGroupMemberSelfLeaveDelete('));
-    expect(rules, contains('validGroupMemberLeaveRelationDelete(playerId, groupId)'));
-    expect(rules, contains('validGroupDisbandRelationDelete(playerId, groupId)'));
     expect(
       rules,
-      contains('allow update: if validGroupMemberLeaveUpdate('),
+      contains(
+        'function validMembershipStateRemove(playerId, docId, oldData, newData)',
+      ),
     );
+    expect(
+      rules,
+      contains(
+        'function validGroupMemberLeaveRelationDelete(playerId, groupId)',
+      ),
+    );
+    expect(
+      rules,
+      contains('allow delete: if validGroupMemberSelfLeaveDelete('),
+    );
+    expect(
+      rules,
+      contains('validGroupMemberLeaveRelationDelete(playerId, groupId)'),
+    );
+    expect(
+      rules,
+      contains('validGroupDisbandRelationDelete(playerId, groupId)'),
+    );
+    expect(rules, contains('allow update: if validGroupMemberLeaveUpdate('));
     expect(rules, contains('function validGroupLeaderTransferUpdate('));
     expect(rules, contains('function validGroupMemberRoleTransferUpdate('));
     expect(rules, contains('function validGroupDisbandUpdate('));
     expect(rules, contains('function validGroupMemberDisbandDelete('));
-    expect(
-      rules,
-      contains('allow update: if validMembershipStateRemove('),
-    );
-    expect(
-      rules,
-      contains('function validGroupMemberDocumentKeys(data)'),
-    );
+    expect(rules, contains('allow update: if validMembershipStateRemove('));
+    expect(rules, contains('function validGroupMemberDocumentKeys(data)'));
     expect(rules, contains('displayClassNameSnapshot'));
     expect(rules, contains('function validGroupMemberSnapshotsFromRelation'));
-    expect(
-      rules,
-      contains('function validGroupMemberSelfSnapshotRefresh('),
-    );
+    expect(rules, contains('function validGroupMemberSelfSnapshotRefresh('));
     expect(
       rules,
       contains('allow update: if validGroupMemberSelfSnapshotRefresh('),
@@ -600,25 +660,40 @@ void main() {
         )
         .toList(growable: false);
 
-    expect(entries, contains(
-      'groups|COLLECTION|status:ASCENDING|normalizedName:ASCENDING'
-      '|__name__:ASCENDING',
-    ));
-    expect(entries, contains(
-      'groups|COLLECTION|status:ASCENDING'
-      '|normalizedRepresentativeCharacterName:ASCENDING|__name__:ASCENDING',
-    ));
-    expect(entries, contains(
-      'groups|COLLECTION|status:ASCENDING|lastActivityAt:DESCENDING'
-      '|__name__:DESCENDING',
-    ));
-    expect(entries, contains(
-      'groupRelations|COLLECTION|relation:ASCENDING|updatedAt:DESCENDING',
-    ));
-    expect(entries, contains(
-      'joinRelations|COLLECTION|kind:ASCENDING|status:ASCENDING'
-      '|createdAt:ASCENDING',
-    ));
+    expect(
+      entries,
+      contains(
+        'groups|COLLECTION|status:ASCENDING|normalizedName:ASCENDING'
+        '|__name__:ASCENDING',
+      ),
+    );
+    expect(
+      entries,
+      contains(
+        'groups|COLLECTION|status:ASCENDING'
+        '|normalizedRepresentativeCharacterName:ASCENDING|__name__:ASCENDING',
+      ),
+    );
+    expect(
+      entries,
+      contains(
+        'groups|COLLECTION|status:ASCENDING|lastActivityAt:DESCENDING'
+        '|__name__:DESCENDING',
+      ),
+    );
+    expect(
+      entries,
+      contains(
+        'groupRelations|COLLECTION|relation:ASCENDING|updatedAt:DESCENDING',
+      ),
+    );
+    expect(
+      entries,
+      contains(
+        'joinRelations|COLLECTION|kind:ASCENDING|status:ASCENDING'
+        '|createdAt:ASCENDING',
+      ),
+    );
     expect(
       entries,
       contains(

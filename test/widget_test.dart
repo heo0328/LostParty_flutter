@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/entities/weekly_raid_claim.dart';
+import 'package:lost_party/features/account/domain/entities/save_activity_characters_command.dart';
 import 'package:lost_party/features/account/domain/repositories/weekly_raid_claim_repository.dart';
+import 'package:lost_party/features/account/domain/repositories/activity_characters_repository.dart';
 import 'package:lost_party/features/account/domain/repositories/character_summary_sync_gateway.dart';
+import 'package:lost_party/features/account/domain/services/startup_character_refresh_orchestrator.dart';
 
 import 'package:lost_party/features/account/data/local/account_database.dart';
 import 'package:lost_party/features/account/domain/entities/game_account_verification.dart';
@@ -23,7 +26,9 @@ import 'package:lost_party/features/group/domain/entities/group_member.dart';
 import 'package:lost_party/features/group/domain/entities/group_member_display.dart';
 import 'package:lost_party/features/group/domain/entities/group_relation.dart';
 import 'package:lost_party/features/group/domain/entities/group_summary.dart';
+import 'package:lost_party/features/group/domain/entities/group_request_character.dart';
 import 'package:lost_party/features/group/domain/repositories/group_application_command_repository.dart';
+import 'package:lost_party/features/group/domain/repositories/group_character_search_repository.dart';
 import 'package:lost_party/features/group/domain/repositories/group_create_repository.dart';
 import 'package:lost_party/features/group/domain/repositories/group_join_code_command_repository.dart';
 import 'package:lost_party/features/group/domain/repositories/group_join_command_repository.dart';
@@ -66,9 +71,7 @@ void main() {
     expect(find.text('파티 모집'), findsOneWidget);
     expect(find.text('레이드 모집'), findsOneWidget);
     expect(
-      find.text(
-        '참여 가능한 공개 모집이 없습니다. 내가 참여 중인 파티는 레이드 현황에서 확인할 수 있습니다.',
-      ),
+      find.text('참여 가능한 공개 모집이 없습니다. 내가 참여 중인 파티는 레이드 현황에서 확인할 수 있습니다.'),
       findsOneWidget,
     );
     expect(find.text('모집 만들기'), findsOneWidget);
@@ -146,10 +149,7 @@ void main() {
     expect(find.text('내 그룹'), findsOneWidget);
     expect(find.text('요청 현황'), findsOneWidget);
     expect(find.text('그룹 만들기'), findsOneWidget);
-    expect(
-      find.text('가입한 그룹이 없습니다. 그룹을 만들거나 검색해 보세요.'),
-      findsOneWidget,
-    );
+    expect(find.text('가입한 그룹이 없습니다. 그룹을 만들거나 검색해 보세요.'), findsOneWidget);
   });
 
   testWidgets('Group tab destinations open create, search, join-by-code', (
@@ -164,10 +164,7 @@ void main() {
     expect(find.byType(AppBar), findsWidgets);
     expect(find.text('그룹 만들기'), findsWidgets);
     // 인증 캐릭터가 없으면 제출 대신 안내 문구가 나온다.
-    expect(
-      find.textContaining('인증'),
-      findsWidgets,
-    );
+    expect(find.textContaining('인증'), findsWidgets);
 
     await tester.pageBack();
     await tester.pumpAndSettle();
@@ -276,7 +273,10 @@ void main() {
   });
 }
 
-Future<void> _pumpApp(WidgetTester tester) async {
+Future<void> _pumpApp(
+  WidgetTester tester, {
+  StartupCharacterRefreshRunner? startupCharacterRefreshRunner,
+}) async {
   final database = AccountDatabase(NativeDatabase.memory());
   addTearDown(database.close);
   await tester.pumpWidget(
@@ -292,13 +292,68 @@ Future<void> _pumpApp(WidgetTester tester) async {
       partyEventSyncService: FakePartyEventSyncService(),
       weeklyRaidClaimRepository: _WeeklyRaidClaimRepository(),
       characterSummarySyncGateway: _CharacterSummarySyncGateway(),
+      activityCharactersRepository: _ActivityCharactersRepository(),
       groupReadRepository: _GroupReadRepository(),
+      characterSearchRepository: _GroupCharacterSearchRepository(),
       groupCreateRepository: _GroupCreateRepository(),
       groupJoinCommandRepository: _GroupJoinCommandRepository(),
       groupApplicationCommandRepository: _GroupApplicationCommandRepository(),
       groupJoinCodeCommandRepository: _GroupJoinCodeCommandRepository(),
+      startupCharacterRefreshRunner:
+          startupCharacterRefreshRunner ??
+          _NoopStartupCharacterRefreshRunner(),
     ),
   );
+}
+
+class _NoopStartupCharacterRefreshRunner
+    implements StartupCharacterRefreshRunner {
+  @override
+  StartupCharacterRefreshState get state => StartupCharacterRefreshState(
+    phase: StartupCharacterRefreshPhase.completed,
+    totalCount: 0,
+    completedCount: 0,
+    failedCount: 0,
+  );
+
+  @override
+  Stream<StartupCharacterRefreshState> get states => const Stream.empty();
+
+  @override
+  Future<StartupCharacterRefreshReport> runOnce() async =>
+      const StartupCharacterRefreshReport(items: []);
+
+  @override
+  Future<void> dispose() async {}
+}
+
+class _ActivityCharactersRepository implements ActivityCharactersRepository {
+  @override
+  Future<ActivityCharacters> load({required String playerId}) async =>
+      ActivityCharacters(playerId: playerId, characterIds: const {});
+
+  @override
+  Future<ActivityCharacters> save(
+    SaveActivityCharactersCommand command,
+  ) async => ActivityCharacters(
+    playerId: 'test-player',
+    characterIds: command.activityCharacterIds,
+  );
+}
+
+class _GroupCharacterSearchRepository
+    implements GroupCharacterSearchRepository {
+  @override
+  Future<List<GroupRequestCharacter>> searchActiveCharactersByExactName(
+    String characterName, {
+    int limit = groupCharacterSearchPageSize,
+  }) async => const [];
+
+  @override
+  Future<List<GroupRequestCharacter>> loadActiveCharactersForPlayer(
+    String ownerPlayerId, {
+    int limit = groupCharacterSearchPageSize,
+  }) async => const [];
 }
 
 class _GroupCreateRepository implements GroupCreateRepository {
@@ -312,16 +367,12 @@ class _GroupJoinCodeCommandRepository
   @override
   Future<GroupJoinCodeCommandResult> createCode(
     GroupJoinCodeCreateCommand command,
-  ) async => const GroupJoinCodeCommandResult.failure(
-    GroupJoinFailure.unknown,
-  );
+  ) async => const GroupJoinCodeCommandResult.failure(GroupJoinFailure.unknown);
 
   @override
   Future<GroupJoinCodeCommandResult> revokeCode(
     GroupJoinCodeRevokeCommand command,
-  ) async => const GroupJoinCodeCommandResult.failure(
-    GroupJoinFailure.unknown,
-  );
+  ) async => const GroupJoinCodeCommandResult.failure(GroupJoinFailure.unknown);
 
   @override
   Future<GroupJoinCodeCommandResult> setVisibility(
@@ -331,9 +382,7 @@ class _GroupJoinCodeCommandRepository
   @override
   Future<GroupJoinCodeCommandResult> joinByCode(
     GroupJoinByCodeCommand command,
-  ) async => const GroupJoinCodeCommandResult.failure(
-    GroupJoinFailure.unknown,
-  );
+  ) async => const GroupJoinCodeCommandResult.failure(GroupJoinFailure.unknown);
 }
 
 class _GroupApplicationCommandRepository
@@ -444,8 +493,7 @@ class _GroupReadRepository implements GroupReadRepository {
   }) async => null;
 
   @override
-  Future<List<GroupMember>> loadGroupMembers(String groupId) async =>
-      const [];
+  Future<List<GroupMember>> loadGroupMembers(String groupId) async => const [];
 
   @override
   Future<List<GroupMemberDisplay>> loadGroupMemberDisplays(

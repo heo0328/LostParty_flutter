@@ -96,6 +96,7 @@ class PublicRecruitmentSummary {
     this.approvalMode = ApprovalMode.leaderOnly,
     this.visibility = 'public',
     this.groupId,
+    this.memberPlayerIds,
   });
 
   factory PublicRecruitmentSummary.fromAggregate(
@@ -131,6 +132,9 @@ class PublicRecruitmentSummary {
       revision: aggregate.revision,
       updatedAt: aggregate.updatedAt,
       approvalMode: aggregate.state.approvalPolicy.mode,
+      memberPlayerIds: {
+        for (final member in aggregate.state.members) member.userId,
+      },
     );
   }
 
@@ -154,29 +158,38 @@ class PublicRecruitmentSummary {
   final int revision;
   final DateTime updatedAt;
   final String currentCycleKey;
+
   /// 신청·가입 Rules가 요구하는 주차. 없으면 [currentCycleKey]와 동일하다.
   final String targetCycleKey;
+
   /// Firestore `status` (active / completed / incompleteEnded / disbanded).
   final String status;
+
   /// Firestore `currentCycleStatus`.
   final String currentCycleStatus;
   final bool continueTogether;
   final DateTime? cycleEndsAt;
   final ApprovalMode approvalMode;
+
   /// `public` 또는 `group`. 일반 레이드는 public.
   final String visibility;
+
   /// 그룹 레이드의 연결 그룹. 일반 레이드는 null.
   final String? groupId;
 
+  /// 필터 매칭용 확정 참가 Player ID. 카드 UI에는 올리지 않는다.
+  /// null이면 문서에 필드가 없어 그룹원 조건을 확인할 수 없다.
+  final Set<String>? memberPlayerIds;
+
   bool get isGroupLinked => groupId != null && groupId!.isNotEmpty;
-  bool get isGroupOnly =>
-      isGroupLinked && visibility == 'group';
+  bool get isGroupOnly => isGroupLinked && visibility == 'group';
 
   bool get isActiveRecruitment => status == 'active';
   bool get isCycleActive => currentCycleStatus == 'active';
   bool get isCycleCompleted => currentCycleStatus == 'completed';
   bool get isOneShotCompleted =>
       status == 'completed' && currentCycleStatus == 'completed';
+
   /// 이번 회차 레이드를 끝냈고 아직 해산되지 않은 상태(1회성 해산 대기·반복방 다음주 대기).
   bool get showsThisWeekRaidCompleteMark =>
       isCycleCompleted && status != 'disbanded';

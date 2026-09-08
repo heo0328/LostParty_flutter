@@ -43,6 +43,65 @@ void main() {
     expect(viewModel.state.items.single.isRead, isTrue);
     viewModel.dispose();
   });
+
+  test('방 단위 네 이벤트는 전체 알림 목록과 unread에서 제외한다', () async {
+    for (final type in PartyEventType.values.where(
+      (type) => type.isRoomAttentionEvent,
+    )) {
+      await database.syncPartyNotificationReceipt(
+        eventId: 'event-${type.name}',
+        playerId: 'player',
+        type: type.wireName,
+        recruitmentId: 'party',
+        characterNameSnapshot: '곰곰',
+        occurredAt: DateTime.utc(2026, 8, 26, 12),
+        expiresAt: DateTime.utc(2026, 9, 23),
+      );
+    }
+    final viewModel = PartyNotificationViewModel(
+      database: database,
+      playerId: 'player',
+      syncService: const _NoopSyncService(),
+    );
+
+    await viewModel.load();
+
+    expect(viewModel.state.items, isEmpty);
+    expect(viewModel.state.unreadCount, 0);
+    viewModel.dispose();
+  });
+
+  test('방 진입 읽음은 해당 방의 네 이벤트만 변경한다', () async {
+    for (final entry in [
+      ('room-event', 'room-a', PartyEventType.memberJoined),
+      ('other-room', 'room-b', PartyEventType.memberJoined),
+      ('other-type', 'room-a', PartyEventType.memberLeft),
+    ]) {
+      await database.syncPartyNotificationReceipt(
+        eventId: entry.$1,
+        playerId: 'player',
+        type: entry.$3.wireName,
+        recruitmentId: entry.$2,
+        occurredAt: DateTime.utc(2026, 8, 26, 12),
+        expiresAt: DateTime.utc(2026, 9, 23),
+      );
+    }
+
+    final updated = await database.markPartyRoomNotificationsRead(
+      playerId: 'player',
+      recruitmentId: 'room-a',
+      types: PartyEventType.values
+          .where((type) => type.isRoomAttentionEvent)
+          .map((type) => type.wireName)
+          .toList(),
+    );
+    final rows = await database.loadRecentPartyNotifications('player');
+
+    expect(updated, 1);
+    expect(rows.singleWhere((row) => row.eventId == 'room-event').readAt, isNotNull);
+    expect(rows.singleWhere((row) => row.eventId == 'other-room').readAt, isNull);
+    expect(rows.singleWhere((row) => row.eventId == 'other-type').readAt, isNull);
+  });
 }
 
 class _NoopSyncService implements PartyEventSyncService {

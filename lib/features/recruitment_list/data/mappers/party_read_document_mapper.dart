@@ -1,4 +1,5 @@
 import '../../domain/entities/party_read_models.dart';
+import '../../domain/entities/party_gem_validation_snapshot.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/entities/recruitment_aggregate.dart';
 import '../../domain/entities/recruitment_application.dart';
@@ -20,7 +21,6 @@ class PartyReadDocumentMapper {
   final DateTime Function(Object? value) toDateTime;
 
   /// 공개 목록에서 현재 Player의 책임자·확정 멤버 방인지 본다.
-  /// [memberPlayerIds] 원문은 Domain 모델에 올리지 않고 여기서만 소비한다.
   bool isCurrentPlayerOwnPublicRecruitment(
     PartyReadDocumentDto document, {
     required String currentPlayerId,
@@ -36,9 +36,7 @@ class PartyReadDocumentMapper {
     return memberPlayerIds.any((id) => id == currentPlayerId);
   }
 
-  PublicRecruitmentSummary toPublicRecruitment(
-    PartyReadDocumentDto document,
-  ) {
+  PublicRecruitmentSummary toPublicRecruitment(PartyReadDocumentDto document) {
     final data = document.data;
     _requireSchema(data);
     return PublicRecruitmentSummary(
@@ -52,8 +50,7 @@ class PartyReadDocumentMapper {
       maxMemberCount: _integer(data, 'maxMemberCount'),
       membersPerParty: _optionalPositiveInteger(data, 'membersPerParty') ?? 4,
       partyCount: _optionalPositiveInteger(data, 'partyCount') ?? 1,
-      supportsPerParty:
-          _optionalPositiveInteger(data, 'supportsPerParty') ?? 1,
+      supportsPerParty: _optionalPositiveInteger(data, 'supportsPerParty') ?? 1,
       dealerCount: _integer(data, 'dealerCount'),
       supportCount: _integer(data, 'supportCount'),
       isRecruiting:
@@ -63,7 +60,8 @@ class PartyReadDocumentMapper {
       revision: _integer(data, 'revision'),
       updatedAt: _date(data, 'updatedAt'),
       currentCycleKey: _string(data, 'currentCycleKey'),
-      targetCycleKey: _softString(data, 'targetCycleKey') ??
+      targetCycleKey:
+          _softString(data, 'targetCycleKey') ??
           _string(data, 'currentCycleKey'),
       status: _softString(data, 'status') ?? 'active',
       currentCycleStatus: _softString(data, 'currentCycleStatus') ?? 'active',
@@ -72,6 +70,7 @@ class PartyReadDocumentMapper {
       approvalMode: _approvalMode(data),
       visibility: _softString(data, 'visibility') ?? 'public',
       groupId: _softString(data, 'groupId'),
+      memberPlayerIds: _optionalStringIdSet(data, 'memberPlayerIds'),
     );
   }
 
@@ -101,6 +100,7 @@ class PartyReadDocumentMapper {
       isOwnedByCurrentPlayer: leaderPlayerId == currentPlayerId,
       visibility: _softString(data, 'visibility') ?? 'public',
       groupId: _softString(data, 'groupId'),
+      memberPlayerIds: _stringIdSet(data, 'memberPlayerIds'),
     );
   }
 
@@ -123,6 +123,10 @@ class PartyReadDocumentMapper {
   PartyApplicationSummary toApplication(PartyReadDocumentDto document) {
     final data = document.data;
     _requireSchema(data);
+    final buildSnapshot = data['submittedBuildSnapshot'];
+    final buildData = buildSnapshot is Map
+        ? buildSnapshot.cast<String, Object?>()
+        : null;
     return PartyApplicationSummary(
       recruitmentId: _string(data, 'recruitmentId'),
       applicantPlayerId: _string(data, 'applicantPlayerId'),
@@ -146,7 +150,50 @@ class PartyReadDocumentMapper {
       createdAt: _date(data, 'createdAt'),
       decidedAt: _nullableDate(data, 'decidedAt'),
       updatedAt: _date(data, 'updatedAt'),
+      itemLevel: buildData != null ? _softNumber(buildData, 'itemLevel') : null,
+      combatPower: buildData != null
+          ? _softNumber(buildData, 'combatPower')
+          : null,
+      gemValidation: buildData == null ? null : _softGemValidation(buildData),
     );
+  }
+
+  PartyGemValidationSnapshot? _softGemValidation(Map<String, Object?> data) {
+    final statusName = data['gemValidationStatus'];
+    final foreignCount = data['foreignClassGemCount'];
+    final unverifiedCount = data['unverifiedSameClassGemCount'];
+    final catalogVersion = data['catalogVersion'];
+    if (statusName is! String ||
+        foreignCount is! int ||
+        unverifiedCount is! int ||
+        catalogVersion is! String ||
+        catalogVersion.trim().isEmpty ||
+        foreignCount < 0 ||
+        unverifiedCount < 0) {
+      return null;
+    }
+    final status = PartyGemValidationStatus.values
+        .where((value) => value.name == statusName)
+        .firstOrNull;
+    if (status == null) return null;
+    final validatedAt = _softDate(data['gemValidatedAt']);
+    if (validatedAt == null) return null;
+    return PartyGemValidationSnapshot(
+      status: status,
+      foreignClassGemCount: foreignCount,
+      unverifiedSameClassGemCount: unverifiedCount,
+      validatedAt: validatedAt,
+      catalogVersion: catalogVersion,
+    );
+  }
+
+  DateTime? _softDate(Object? value) {
+    if (value is DateTime) return value;
+    try {
+      return toDateTime(value);
+    } catch (_) {
+      return null;
+    }
   }
 
   RecruitmentMetadata _metadata(Map<String, Object?> data) =>
@@ -181,6 +228,24 @@ class PartyReadDocumentMapper {
     if (_integer(data, 'schemaVersion') != 1) {
       throw const PartyReadContractException('Unsupported schemaVersion.');
     }
+  }
+
+  Set<String>? _optionalStringIdSet(Map<String, Object?> data, String field) {
+    final value = data[field];
+    if (value is! List) return null;
+    return {
+      for (final id in value)
+        if (id is String && id.trim().isNotEmpty) id,
+    };
+  }
+
+  Set<String> _stringIdSet(Map<String, Object?> data, String field) {
+    final value = data[field];
+    if (value is! List) return const {};
+    return {
+      for (final id in value)
+        if (id is String && id.trim().isNotEmpty) id,
+    };
   }
 
   String _string(Map<String, Object?> data, String field) {
@@ -267,11 +332,7 @@ class PartyReadDocumentMapper {
     return _date(data, field);
   }
 
-  T _enumValue<T extends Enum>(
-    List<T> values,
-    String name,
-    String field,
-  ) {
+  T _enumValue<T extends Enum>(List<T> values, String name, String field) {
     for (final value in values) {
       if (value.name == name) return value;
     }
