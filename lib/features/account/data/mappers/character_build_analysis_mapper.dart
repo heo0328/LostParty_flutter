@@ -68,7 +68,7 @@ class CharacterBuildAnalysisMapper {
       activePassiveNames: activePassiveNames,
       notices: notices,
     );
-    final arkGridCorePoints = _parseRequiredArkGridCorePoints(
+    final arkGridMinimumResult = _parseRequiredArkGridCorePoints(
       json['ArkGrid'],
       notices: notices,
     );
@@ -77,7 +77,8 @@ class CharacterBuildAnalysisMapper {
       runeCount: runeCount,
       gemEffects: gemEffects,
       arkGridConditions: arkGridConditions,
-      arkGridCorePoints: arkGridCorePoints,
+      arkGridCorePoints: arkGridMinimumResult.checks,
+      arkGridMinimumIntegrity: arkGridMinimumResult.integrity,
       notices: notices,
       catalogDetection: catalogDetection,
     );
@@ -217,12 +218,15 @@ class CharacterBuildAnalysisMapper {
     return null;
   }
 
-  List<ArkGridCorePointCheck> _parseRequiredArkGridCorePoints(
+  ({List<ArkGridCorePointCheck> checks, ArkGridMinimumIntegrity integrity})
+  _parseRequiredArkGridCorePoints(
     Object? arkGrid, {
     required List<BuildNotice> notices,
   }) {
     final gridMap = _map(arkGrid);
     final checks = <ArkGridCorePointCheck>[];
+    int? orderSunPoint;
+    int? orderMoonPoint;
     for (final slot in _mapList(gridMap?['Slots'])) {
       final coreName = slot['Name'];
       final grade = slot['Grade'];
@@ -232,6 +236,12 @@ class CharacterBuildAnalysisMapper {
       }
       if (!coreName.startsWith('질서의 해') && !coreName.startsWith('질서의 달')) {
         continue;
+      }
+
+      if (coreName.startsWith('질서의 해')) {
+        orderSunPoint = _higherPoint(orderSunPoint, point);
+      } else {
+        orderMoonPoint = _higherPoint(orderMoonPoint, point);
       }
 
       const minimumPoint = 14;
@@ -263,7 +273,39 @@ class CharacterBuildAnalysisMapper {
         );
       }
     }
-    return checks;
+    if (orderSunPoint == null) {
+      notices.add(
+        const BuildNotice(
+          code: 'ark_grid_missing_order_sun',
+          level: BuildNoticeLevel.warning,
+          message: '질서의 해 코어가 없습니다. 필수 14P 효과를 확인해 주세요.',
+        ),
+      );
+    }
+    if (orderMoonPoint == null) {
+      notices.add(
+        const BuildNotice(
+          code: 'ark_grid_missing_order_moon',
+          level: BuildNoticeLevel.warning,
+          message: '질서의 달 코어가 없습니다. 필수 14P 효과를 확인해 주세요.',
+        ),
+      );
+    }
+
+    return (
+      checks: checks,
+      integrity: ArkGridMinimumIntegrity(
+        orderSunPoint: orderSunPoint,
+        orderMoonPoint: orderMoonPoint,
+      ),
+    );
+  }
+
+  int _higherPoint(int? current, int candidate) {
+    if (current == null || candidate > current) {
+      return candidate;
+    }
+    return current;
   }
 
   bool _isRelicOrHigher(String grade) {

@@ -7,10 +7,11 @@
 - 기본 무결성 A에서 진단 도구를 확장했다. Build 감지 branch/역할, 깨달음 1·4티어, API 스킬, 질서 해·달·별 코어와 해·달 14P, 코어별 아크패시브 요구 조건을 한 번에 출력한다. 표적 테스트 5개와 추가 파일 analyze가 통과했다.
 - 기본 무결성 B에서 Tooltip 직업 추출과 보석 슬롯 연결을 운영 분석기로 옮겼다. 보석별 `verified / sameClassTargetUnverified / foreignClass / unavailable`을 보존하며 다른 직업만 warning, 같은 직업 대상 미확인은 info다. UI와 서버 Snapshot은 아직 변경하지 않았다.
 - 기본 무결성 C에서 실제 API로 확인한 4직업 8개 Build의 특수 보석 대상명을 `2026.09.08` 카탈로그와 fixture에 분기별로 교정했다. fixture는 `measuredAgainstLiveApi: true`다.
+- 기본 무결성 D에서 질서의 해·달 존재와 각 14P 충족을 운영 분석 결과로 추가했다. 별·혼돈은 필수 판정에서 제외하고 기존 유물 이상 17P 안내는 권장 정보로 유지한다. UI와 서버 Snapshot은 아직 변경하지 않았다.
 - 사용자와 4개 서포터 겸용 직업의 dealer/support 8개 실제 Build, 보석 88개를 조회했다. 바드 `템페스트 스킬`, 발키리·홀리나이트 `신앙 스킬`, 홀리나이트 `심판자 스킬`, 도화가 `음양 스킬`이 교정 전 카탈로그에서 미확인이었으며 C에서 반영했다. 같은 `신앙 스킬`은 Tooltip의 `[발키리]`·`[홀리나이트]`를 함께 비교해야 한다.
 - 최신 판정 방향은 깨달음·아크그리드 Tooltip 조건, 질서의 해·달 존재와 각 14P 이상, 보석 Tooltip 직업을 공통 검사하는 것이다. 질서의 별·혼돈 코어는 필수 판정에서 제외한다.
 - 동일 직업이나 API 스킬·최소 특수 스킬 카탈로그에서 대상을 찾지 못하면 중립적인 `동일 직업·대상 미확인`, Tooltip 직업이 다를 때만 보석 영역의 빨간 경고로 분리한다.
-- 단일 기준은 [`../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md)다. 진단 도구·운영 보석 판정·실제 명칭 교정은 완료했으며 다음 구현은 해·달 최소 조건 → 내 계정 표시 순서다. 타인 카드 Snapshot·Rules는 별도 승인 구간이다.
+- 단일 기준은 [`../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md)다. 진단 도구·운영 보석 판정·실제 명칭 교정·해달 최소 조건은 완료했다. 다음은 보석 집계 결과와 내 계정 표시이며 타인 카드 Snapshot·Rules는 별도 승인 구간이다.
 - 차후 독립 제품으로 직업·깨달음·질서 해·달·별 계층 메모, `망소빙` 같은 점진적 Build 별칭과 사용자 간 MemoPack 공유를 기록했다. 제품 기준은 [`../product/BUILD_MEMO_SHARING.md`](../product/BUILD_MEMO_SHARING.md)다. JSON export/import를 1차로 검토하고 서버 공유는 팩을 한 번 내려받아 로컬에서 매칭하는 2차 후보로 둔다.
 
 ## 최우선 현재 상태 — 후속 개선 H~K 구현 완료, 통합 디바이스 검증 대기 (2026-09-05)

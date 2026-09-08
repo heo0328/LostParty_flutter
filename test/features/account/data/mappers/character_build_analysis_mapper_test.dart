@@ -451,11 +451,60 @@ void main() {
     );
     expect(check.minimumPoint, 14);
     expect(check.meetsMinimum, isFalse);
+    expect(result.arkGridMinimumIntegrity!.orderSunPoint, 13);
+    expect(result.arkGridMinimumIntegrity!.orderSunMeetsMinimum, isFalse);
+    expect(result.arkGridMinimumIntegrity!.orderMoonMeetsMinimum, isTrue);
+    expect(result.arkGridMinimumIntegrity!.isSatisfied, isFalse);
     expect(
       result.notices.where(
         (notice) => notice.code == 'ark_grid_required_point',
       ),
       hasLength(1),
+    );
+  });
+
+  test('requires both order sun and moon while ignoring chaos cores', () {
+    final modified = _deepCopy(fixture);
+    final arkGrid = modified['ArkGrid'] as Map<String, dynamic>;
+    final slots = arkGrid['Slots'] as List<dynamic>;
+    slots.removeWhere(
+      (slot) =>
+          (slot as Map<String, dynamic>)['Name'].toString().startsWith('질서의 해'),
+    );
+
+    final result = const CharacterBuildAnalysisMapper().fromJson(modified);
+    final integrity = result.arkGridMinimumIntegrity!;
+
+    expect(integrity.hasOrderSun, isFalse);
+    expect(integrity.hasOrderMoon, isTrue);
+    expect(integrity.orderMoonPoint, 20);
+    expect(integrity.isSatisfied, isFalse);
+    expect(
+      result.notices.where(
+        (notice) => notice.code == 'ark_grid_missing_order_sun',
+      ),
+      hasLength(1),
+    );
+    expect(
+      result.notices.where(
+        (notice) => notice.code == 'ark_grid_missing_order_moon',
+      ),
+      isEmpty,
+    );
+  });
+
+  test('reports a valid minimum when both order cores reach 14 points', () {
+    final result = const CharacterBuildAnalysisMapper().fromJson(fixture);
+    final integrity = result.arkGridMinimumIntegrity!;
+
+    expect(integrity.orderSunPoint, 20);
+    expect(integrity.orderMoonPoint, 20);
+    expect(integrity.isSatisfied, isTrue);
+    expect(
+      result.notices.where(
+        (notice) => notice.code.startsWith('ark_grid_missing_order_'),
+      ),
+      isEmpty,
     );
   });
 

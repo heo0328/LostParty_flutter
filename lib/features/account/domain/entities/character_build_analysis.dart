@@ -78,6 +78,26 @@ class ArkGridCorePointCheck {
   bool get meetsRecommendation => point >= recommendedPoint;
 }
 
+class ArkGridMinimumIntegrity {
+  const ArkGridMinimumIntegrity({
+    required this.orderSunPoint,
+    required this.orderMoonPoint,
+  });
+
+  static const requiredPoint = 14;
+
+  final int? orderSunPoint;
+  final int? orderMoonPoint;
+
+  bool get hasOrderSun => orderSunPoint != null;
+  bool get hasOrderMoon => orderMoonPoint != null;
+  bool get orderSunMeetsMinimum =>
+      orderSunPoint != null && orderSunPoint! >= requiredPoint;
+  bool get orderMoonMeetsMinimum =>
+      orderMoonPoint != null && orderMoonPoint! >= requiredPoint;
+  bool get isSatisfied => orderSunMeetsMinimum && orderMoonMeetsMinimum;
+}
+
 class CharacterBuildAnalysis {
   const CharacterBuildAnalysis({
     required this.runeCount,
@@ -86,6 +106,7 @@ class CharacterBuildAnalysis {
     required this.arkGridCorePoints,
     required this.notices,
     this.catalogDetection,
+    this.arkGridMinimumIntegrity,
   });
 
   static const expectedRuneCount = 8;
@@ -96,4 +117,5 @@ class CharacterBuildAnalysis {
   final List<ArkGridCorePointCheck> arkGridCorePoints;
   final List<BuildNotice> notices;
   final CharacterBuildCatalogDetection? catalogDetection;
+  final ArkGridMinimumIntegrity? arkGridMinimumIntegrity;
 }
