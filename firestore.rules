@@ -3475,8 +3475,18 @@ service cloud.firestore {
       // 인원 증가, 초대코드 플래그·표시 정책만 허용한다.
       // 그룹장 승인·코드 플래그 검증을 먼저 두어 그룹원 확인 문서를
       // 추가로 읽지 않게 한다.
-      // 일반 멤버 탈퇴는 join·승인 경로보다 먼저 판정한다.
-      allow update: if validGroupMemberLeaveUpdate(
+      // 초대코드와 표시 정책은 필드 차이만으로 빠르게 판정해 뒤의 복합 명령이
+      // 불필요한 문서를 읽기 전에 종료한다.
+      allow update: if validGroupJoinCodeFlagUpdate(
+        resource.data,
+        request.resource.data
+      ) || validGroupJoinCodeVisibilityUpdate(
+        resource.data,
+        request.resource.data
+      ) || validGroupLeaderApproveUpdate(
+        resource.data,
+        request.resource.data
+      ) || validGroupMemberLeaveUpdate(
         groupId,
         resource.data,
         request.resource.data
@@ -3486,15 +3496,6 @@ service cloud.firestore {
         request.resource.data
       ) || validGroupDisbandUpdate(
         groupId,
-        resource.data,
-        request.resource.data
-      ) || validGroupLeaderApproveUpdate(
-        resource.data,
-        request.resource.data
-      ) || validGroupJoinCodeFlagUpdate(
-        resource.data,
-        request.resource.data
-      ) || validGroupJoinCodeVisibilityUpdate(
         resource.data,
         request.resource.data
       ) || validGroupJoinCommandUpdate(
