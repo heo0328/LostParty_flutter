@@ -639,6 +639,10 @@ void main() {
     expect(rules, contains('function validGroupMemberRoleTransferUpdate('));
     expect(rules, contains('function validGroupDisbandUpdate('));
     expect(rules, contains('function validGroupMemberDisbandDelete('));
+    expect(
+      rules.indexOf(') || validGroupDisbandUpdate('),
+      lessThan(rules.indexOf(') || validGroupJoinCommandUpdate(')),
+    );
     expect(rules, contains('allow update: if validMembershipStateRemove('));
     expect(rules, contains('function validGroupMemberDocumentKeys(data)'));
     expect(rules, contains('displayClassNameSnapshot'));
