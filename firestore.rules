@@ -1322,6 +1322,38 @@ service cloud.firestore {
         );
     }
 
+    function validCycleAdvanceAssignmentCreate(playerId, assignmentId, data) {
+      let before = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
+      let member = getAfter(
+        recruitmentMemberPath(data.recruitmentId, playerId)
+      ).data;
+      return hasActiveBinding()
+        && currentPlayerId() in before.memberPlayerIds
+        && playerId in before.memberPlayerIds
+        && before.status == 'active'
+        && before.continueTogether == true
+        && request.time >= before.cycleEndsAt
+        && after.status == 'active'
+        && after.currentCycleStatus == 'active'
+        && after.currentCycleKey != before.currentCycleKey
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && assignmentId == data.characterId + '_' + data.raidId
+        && data.cycleKey == after.currentCycleKey
+        && data.raidId == before.raidId
+        && data.characterId == member.characterId
+        && data.role == member.role
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && !hasWeeklyRaidClaimAfter(
+          playerId,
+          data.cycleKey,
+          data.characterId,
+          data.raidId
+        );
+    }
+
     function validJoinedMembership(recruitmentId, playerId, data) {
       let before = get(recruitmentPath(recruitmentId)).data;
       let after = getAfter(recruitmentPath(recruitmentId)).data;
@@ -1659,9 +1691,11 @@ service cloud.firestore {
             && newData.status == 'active'
             && newData.currentCycleStatus == 'active'
             && newData.currentCycleKey == newData.targetCycleKey
-            && newData.cycleStartedAt == oldData.cycleEndsAt
+            && newData.cycleStartedAt >= oldData.cycleEndsAt
             && newData.cycleEndsAt
               == newData.cycleStartedAt + duration.value(7, 'd')
+            && request.time >= newData.cycleStartedAt
+            && request.time < newData.cycleEndsAt
             && newData.completedAt == null
             && newData.completedByPlayerId == null
             && newData.hasAvailableSlot
@@ -1822,6 +1856,44 @@ service cloud.firestore {
         && newData.updatedAt == request.time;
     }
 
+    function validCycleAdvanceAssignmentUpdate(
+      playerId,
+      assignmentId,
+      data,
+      newData
+    ) {
+      let before = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
+      let member = getAfter(
+        recruitmentMemberPath(data.recruitmentId, playerId)
+      ).data;
+      return hasActiveBinding()
+        && currentPlayerId() in before.memberPlayerIds
+        && playerId in before.memberPlayerIds
+        && before.status == 'active'
+        && before.continueTogether == true
+        && request.time >= before.cycleEndsAt
+        && after.status == 'active'
+        && after.currentCycleStatus == 'active'
+        && after.currentCycleKey != before.currentCycleKey
+        && assignmentId == data.characterId + '_' + data.raidId
+        && data.cycleKey == before.currentCycleKey
+        && data.raidId == before.raidId
+        && data.characterId == member.characterId
+        && data.role == member.role
+        && newData.diff(data).affectedKeys().hasOnly([
+          'cycleKey', 'updatedAt'
+        ])
+        && newData.cycleKey == after.currentCycleKey
+        && newData.updatedAt == request.time
+        && !hasWeeklyRaidClaimAfter(
+          playerId,
+          newData.cycleKey,
+          newData.characterId,
+          newData.raidId
+        );
+    }
+
     function validApprovalPermissionChange(recruitmentId, playerId, oldData, newData) {
       let recruitment = get(recruitmentPath(recruitmentId)).data;
       return hasActiveBinding()
@@ -1885,9 +1957,20 @@ service cloud.firestore {
         && (recruitment.status == 'completed'
           || recruitment.status == 'disbanded'
           || recruitment.currentCycleStatus == 'completed');
+      let oneShotCycleAdvanceRemoval = hasActiveBinding()
+        && currentPlayerId() in recruitment.memberPlayerIds
+        && playerId in recruitment.memberPlayerIds
+        && recruitment.status == 'active'
+        && recruitment.continueTogether == false
+        && request.time >= recruitment.cycleEndsAt
+        && data.cycleKey == recruitment.currentCycleKey
+        && data.raidId == recruitment.raidId
+        && after.status == 'incompleteEnded'
+        && after.currentCycleStatus == 'incompleteEnded';
       return (playerId == currentPlayerId()
           || recruitment.leaderPlayerId == currentPlayerId()
           || after.status == 'disbanded'
+          || oneShotCycleAdvanceRemoval
           || isLostGroupQualificationCleanup(
             recruitment,
             currentPlayerId(),
@@ -1895,6 +1978,7 @@ service cloud.firestore {
           ))
         && (partyCompleteRemoval
           || staleCompletedRemoval
+          || oneShotCycleAdvanceRemoval
           || !existsAfter(memberPath)
           || (existsAfter(memberPath)
             && getAfter(memberPath).data.characterId != data.characterId)
@@ -2833,7 +2917,7 @@ service cloud.firestore {
         // AuthUid·JWT는 없고 레이드 점유 식별만 담으므로 active binding 사용자에게 get만 허용한다.
         allow get: if hasActiveBinding();
         allow list: if false;
-      allow create: if validInitialAssignment(
+        allow create: if validInitialAssignment(
           playerId,
           assignmentId,
           request.resource.data
@@ -2842,9 +2926,18 @@ service cloud.firestore {
           playerId,
           assignmentId,
           request.resource.data
+        ) || validCycleAdvanceAssignmentCreate(
+          playerId,
+          assignmentId,
+          request.resource.data
         );
         allow update: if validAssignmentRoleChange(
           playerId,
+          resource.data,
+          request.resource.data
+        ) || validCycleAdvanceAssignmentUpdate(
+          playerId,
+          assignmentId,
           resource.data,
           request.resource.data
         );

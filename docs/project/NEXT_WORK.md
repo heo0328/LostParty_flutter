@@ -566,6 +566,8 @@ H 대표 전투력, I 내 계정/수동 갱신, J 초대코드, K 방별 알림�
 - 2026-09-09 C 구간: `FirestoreLazyCycleReconciliationGateway`와 회차 assignment 쓰기 계획을 추가했다. 1회성은 해당 이전 방 점유만 삭제하고, 반복방은 기존 점유를 목표 주차로 갱신하거나 없는 점유를 복원하며, 다른 새 방 점유가 있으면 덮어쓰지 않고 충돌로 종료한다.
 - 여러 주 미접속 반복방은 현재 목표 주차로 직접 이동할 수 있게 Repository 경계를 확장했다. 동시 revision 충돌은 서버 문서를 재조회해 실제 전환 완료일 때만 no-op로 인정한다.
 - C 구간은 Gateway와 Transaction 쓰기 구현까지이며 앱 진입점에는 아직 연결하지 않았다. assignment 갱신/생성/삭제와 다주차 직접 승계를 허용하는 Firestore Rules 수정·검증이 다음 D 구간의 필수 선행 조건이다.
+- 2026-09-09 D 구간: 반복방 다주차 직접 승계 시간 범위, 반복방 assignment 생성/회차 필드 갱신, 1회성 이전 점유 삭제를 기존 `validCycleAdvance` 주변 Rules에만 최소 확장했다. 현재 주차 Claim 검사와 `characterId + raidId` canonical 점유 키는 유지한다.
+- D 구간 Rules 계약 테스트 코드는 작성했으며 공통 테스트 정책에 따라 실행은 기능 섹션 종료까지 대기한다. Rules dry-run과 실제 배포도 화면·명령 연결 및 버튼 제거가 끝난 최종본에서 각 1회 수행한다.
 
 ### 예상 회귀와 대응
 
