@@ -559,6 +559,8 @@ H 대표 전투력, I 내 계정/수동 갱신, J 초대코드, K 방별 알림�
 - 이전 방 보정은 assignment가 여전히 해당 `recruitmentId + oldCycleKey`를 가리킬 때만 삭제·갱신한다. 이미 새 방을 가리키는 assignment를 늦게 도착한 보정 요청이 지우면 안 된다.
 - 생성뿐 아니라 신청·즉시 참가·승인·참가 Character 변경에도 동일한 점유 정책을 적용한다. 한 경로만 예외 처리하지 않는다.
 - 완료 Claim은 기존대로 동일 `characterId + raidId + currentCycleKey`의 모든 난이도를 차단한다. 미완료 종료 점유 해제가 완료 Claim까지 삭제하거나 무시하면 안 된다.
+- 2026-09-09 B 구간: 생성 점유 판정에 assignment/recruitment 회차 일치, 만료 시각, 반복 여부와 목표 회차를 추가했다. 현재 주차 활성 방과 만료 반복방은 충돌로 유지하고, 회차 정보가 어긋난 점유는 안전하게 차단하며, 만료된 1회성 이전 주차 점유만 교체 대상으로 판정한다.
+- 같은 `recruitmentId + targetCycleKey` 동시 요청을 하나로 합치고 방별 실패를 결과로 격리하는 `LazyCycleReconciler` 도메인 계약을 추가했다. 실제 Firestore 전환 Gateway·Rules와 화면/명령 연결은 다음 구간이다.
 
 ### 예상 회귀와 대응
 
