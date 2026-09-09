@@ -1894,6 +1894,27 @@ service cloud.firestore {
         );
     }
 
+    function validLegacyIncompleteAssignmentReplacement(
+      playerId,
+      assignmentId,
+      data,
+      newData
+    ) {
+      let oldRecruitment = get(
+        recruitmentPath(data.recruitmentId)
+      ).data;
+      return data.recruitmentId != newData.recruitmentId
+        && data.raidId == oldRecruitment.raidId
+        && data.cycleKey == oldRecruitment.currentCycleKey
+        && data.cycleKey != newData.cycleKey
+        && oldRecruitment.status == 'incompleteEnded'
+        && oldRecruitment.currentCycleStatus == 'incompleteEnded'
+        && oldRecruitment.continueTogether == false
+        && request.time >= oldRecruitment.cycleEndsAt
+        && (validInitialAssignment(playerId, assignmentId, newData)
+          || validJoinedAssignment(playerId, assignmentId, newData));
+    }
+
     function validApprovalPermissionChange(recruitmentId, playerId, oldData, newData) {
       let recruitment = get(recruitmentPath(recruitmentId)).data;
       return hasActiveBinding()
@@ -2936,6 +2957,11 @@ service cloud.firestore {
           resource.data,
           request.resource.data
         ) || validCycleAdvanceAssignmentUpdate(
+          playerId,
+          assignmentId,
+          resource.data,
+          request.resource.data
+        ) || validLegacyIncompleteAssignmentReplacement(
           playerId,
           assignmentId,
           resource.data,

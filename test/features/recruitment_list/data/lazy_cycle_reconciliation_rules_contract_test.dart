@@ -41,4 +41,26 @@ void main() {
       greaterThanOrEqualTo(3),
     );
   });
+
+  test('기존 1회성 미완료 종료 점유만 가입 시 교체할 수 있다', () {
+    expect(
+      rules,
+      contains('function validLegacyIncompleteAssignmentReplacement('),
+    );
+    expect(rules, contains("oldRecruitment.status == 'incompleteEnded'"));
+    expect(
+      rules,
+      contains("oldRecruitment.currentCycleStatus == 'incompleteEnded'"),
+    );
+    expect(rules, contains('oldRecruitment.continueTogether == false'));
+    expect(rules, contains('data.cycleKey != newData.cycleKey'));
+    expect(
+      rules,
+      contains('validJoinedAssignment(playerId, assignmentId, newData)'),
+    );
+    expect(
+      rules,
+      contains('validInitialAssignment(playerId, assignmentId, newData)'),
+    );
+  });
 }
