@@ -778,7 +778,6 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                     submitting: _submitting,
                     onComplete: () => _confirmComplete(summary),
                     onCancelCompletion: () => _confirmCancelCompletion(summary),
-                    onAdvance: () => _confirmAdvance(summary),
                     onToggleRecurrence: (value) =>
                         _confirmSetRecurrence(summary, value),
                     onDisband: () => _confirmDisband(summary),
@@ -1110,7 +1109,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     if (endsAt != null && !DateTime.now().toUtc().isBefore(endsAt)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('이 회차 기간이 끝나 완료할 수 없습니다. 다음 회차 전환을 사용해 주세요.'),
+          content: Text('이 회차 기간이 종료되었습니다. 잠시 후 화면을 새로고침해 주세요.'),
         ),
       );
       return;
@@ -1237,68 +1236,6 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
               : _cycleFailureMessage(failure),
         ),
       ),
-    );
-  }
-
-  Future<void> _confirmAdvance(PublicRecruitmentSummary summary) async {
-    final repository = widget.cycleCommandRepository;
-    final window = const PartyCyclePolicy().fromKey(summary.currentCycleKey);
-    if (repository == null ||
-        !_isConfirmedMember ||
-        !summary.isActiveRecruitment ||
-        window == null ||
-        _submitting) {
-      return;
-    }
-    final nextKey = const PartyCyclePolicy().keyFor(window.endsAt);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('다음 회차로 전환할까요?'),
-        content: Text(
-          summary.continueTogether
-              ? '만료된 회차를 마치고 현재 구성으로 다음 주차를 시작합니다.'
-              : '만료된 회차를 미완료로 종료하고 방을 닫습니다.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('취소'),
-          ),
-          FilledButton(
-            key: const ValueKey('confirmAdvanceCycleButton'),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('전환'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    setState(() => _submitting = true);
-    final result = await repository.advance(
-      PartyAdvanceCycleCommand(
-        recruitmentId: widget.recruitmentId,
-        expectedCycleKey: summary.currentCycleKey,
-        nextCycleKey: nextKey,
-        expectedRecruitmentRevision: summary.revision,
-      ),
-    );
-    if (!mounted) return;
-    setState(() => _submitting = false);
-    if (result.isSuccess) {
-      await _syncPartyEventsAfterCycleChange();
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('회차를 전환했습니다.')));
-      if (!summary.continueTogether) {
-        Navigator.of(context).maybePop();
-      }
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_cycleFailureMessage(result.failure!))),
     );
   }
 
@@ -2437,7 +2374,6 @@ class _CycleLifecycleSection extends StatelessWidget {
     required this.submitting,
     required this.onComplete,
     required this.onCancelCompletion,
-    required this.onAdvance,
     required this.onToggleRecurrence,
     required this.onDisband,
   });
@@ -2448,18 +2384,14 @@ class _CycleLifecycleSection extends StatelessWidget {
   final bool submitting;
   final VoidCallback onComplete;
   final VoidCallback onCancelCompletion;
-  final VoidCallback onAdvance;
   final ValueChanged<bool> onToggleRecurrence;
   final VoidCallback onDisband;
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now().toUtc();
-    final endsAt = summary.cycleEndsAt;
     final window = const PartyCyclePolicy().fromKey(summary.currentCycleKey);
     final cancelDeadline = window?.completionCancelDeadline;
-    final canAdvance =
-        summary.isActiveRecruitment && endsAt != null && !now.isBefore(endsAt);
     final canCancel =
         isLeader &&
         summary.continueTogether &&
@@ -2483,7 +2415,6 @@ class _CycleLifecycleSection extends StatelessWidget {
 
     if (!canComplete &&
         !canCancel &&
-        !canAdvance &&
         !showDisband &&
         !canToggleRecurrence) {
       return const SizedBox.shrink();
@@ -2529,17 +2460,8 @@ class _CycleLifecycleSection extends StatelessWidget {
               label: const Text('전체 완료 취소'),
             ),
           ],
-          if (canAdvance) ...[
-            if (canComplete || canCancel) const SizedBox(height: AppSpacing.xs),
-            FilledButton.tonalIcon(
-              key: const ValueKey('advanceCycleButton'),
-              onPressed: submitting ? null : onAdvance,
-              icon: const Icon(Icons.skip_next),
-              label: const Text('다음 회차 전환'),
-            ),
-          ],
           if (showDisband) ...[
-            if (canComplete || canCancel || canAdvance)
+            if (canComplete || canCancel)
               const SizedBox(height: AppSpacing.xs),
             OutlinedButton.icon(
               key: const ValueKey('disbandPartyButton'),

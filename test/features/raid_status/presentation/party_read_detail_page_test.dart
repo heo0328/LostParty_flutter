@@ -572,6 +572,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('파티 전체 완료'), findsOneWidget);
+    expect(find.byKey(const ValueKey('advanceCycleButton')), findsNothing);
+    expect(find.text('다음 회차 전환'), findsNothing);
     await tapVisible(tester, find.byKey(const ValueKey('completeCycleButton')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('confirmCompleteCycleButton')));
