@@ -59,6 +59,58 @@ void main() {
     expect(result.failure, LazyCycleReconciliationFailure.invalidData);
     expect(gateway.calls, isEmpty);
   });
+
+  test('성공한 방과 목표 회차는 같은 앱 세션에서 다시 조회하지 않는다', () async {
+    final gateway = _ImmediateGateway();
+    final reconciler = LazyCycleReconciler(
+      gateway: gateway,
+      clock: () => DateTime.utc(2026, 9, 8, 21),
+    );
+
+    await reconciler.reconcile('room-1');
+    final repeated = await reconciler.reconcile('room-1');
+
+    expect(repeated.status, LazyCycleReconciliationStatus.noChange);
+    expect(gateway.calls, {('room-1', '2026-09-09')});
+  });
+
+  test('실패한 방은 다음 화면 신호에서 다시 시도할 수 있다', () async {
+    final gateway = _FailOnceGateway();
+    final reconciler = LazyCycleReconciler(
+      gateway: gateway,
+      clock: () => DateTime.utc(2026, 9, 8, 21),
+    );
+
+    expect(
+      (await reconciler.reconcile('room-1')).status,
+      LazyCycleReconciliationStatus.failed,
+    );
+    expect(
+      (await reconciler.reconcile('room-1')).status,
+      LazyCycleReconciliationStatus.noChange,
+    );
+    expect(gateway.callCount, 2);
+  });
+
+  test('목록 보정은 중복 ID를 제거하고 각 방을 독립 처리한다', () async {
+    final gateway = _ImmediateGateway();
+    final reconciler = LazyCycleReconciler(
+      gateway: gateway,
+      clock: () => DateTime.utc(2026, 9, 8, 21),
+    );
+
+    final results = await reconciler.reconcileAll([
+      'room-1',
+      'room-1',
+      'room-2',
+    ]);
+
+    expect(results, hasLength(2));
+    expect(gateway.calls, {
+      ('room-1', '2026-09-09'),
+      ('room-2', '2026-09-09'),
+    });
+  });
 }
 
 class _ControlledGateway implements LazyCycleReconciliationGateway {
@@ -98,4 +150,22 @@ class _ThrowingGateway implements LazyCycleReconciliationGateway {
     required String recruitmentId,
     required String targetCycleKey,
   }) => throw StateError('failed');
+}
+
+class _FailOnceGateway implements LazyCycleReconciliationGateway {
+  var callCount = 0;
+
+  @override
+  Future<LazyCycleReconciliationResult> reconcile({
+    required String recruitmentId,
+    required String targetCycleKey,
+  }) async {
+    callCount++;
+    if (callCount == 1) {
+      return const LazyCycleReconciliationResult.failed(
+        LazyCycleReconciliationFailure.temporarilyUnavailable,
+      );
+    }
+    return const LazyCycleReconciliationResult.noChange();
+  }
 }

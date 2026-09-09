@@ -17,6 +17,7 @@ import '../../../recruitment_list/domain/entities/party_recruitment.dart';
 import '../../../recruitment_list/domain/entities/recruitment_aggregate.dart';
 import '../../../recruitment_list/domain/entities/recruitment_application.dart';
 import '../../../recruitment_list/domain/repositories/party_read_repository.dart';
+import '../../../recruitment_list/domain/services/lazy_cycle_reconciler.dart';
 import '../../data/repositories/drift_raid_status_filter_store.dart';
 import '../../domain/repositories/raid_status_filter_store.dart';
 import '../../domain/services/party_event_sync_service.dart';
@@ -40,6 +41,7 @@ class RaidStatusPage extends StatefulWidget {
     this.characterSearchRepository,
     this.onInitialLoadComplete,
     this.refreshSignal,
+    this.cycleReconciler,
     super.key,
   });
 
@@ -55,6 +57,7 @@ class RaidStatusPage extends StatefulWidget {
   final GroupCharacterSearchRepository? characterSearchRepository;
   final VoidCallback? onInitialLoadComplete;
   final ValueListenable<int>? refreshSignal;
+  final LazyCycleReconciler? cycleReconciler;
 
   @override
   State<RaidStatusPage> createState() => _RaidStatusPageState();
@@ -107,6 +110,7 @@ class _RaidStatusPageState extends State<RaidStatusPage>
       catalogRepository: widget.raidCatalogRepository,
     );
     _activeRaids.addListener(_checkInitialLoadComplete);
+    _activeRaids.addListener(_reconcileVisibleRaids);
     _applications.addListener(_checkInitialLoadComplete);
     _activeRaids.start();
     _applications.start();
@@ -167,11 +171,20 @@ class _RaidStatusPageState extends State<RaidStatusPage>
   }
 
   Future<void> _refreshStatus() async {
+    await _reconcileVisibleRaids();
     await _history.syncNow();
     await _refreshUnread();
   }
 
   void _onRefreshSignal() => unawaited(_refreshStatus());
+
+  Future<void> _reconcileVisibleRaids() async {
+    final reconciler = widget.cycleReconciler;
+    if (reconciler == null || _activeRaids.state.isLoading) return;
+    await reconciler.reconcileAll(
+      _activeRaids.state.originalItems.map((item) => item.id),
+    );
+  }
 
   void _checkInitialLoadComplete() {
     if (_initialLoadReported ||
@@ -196,6 +209,7 @@ class _RaidStatusPageState extends State<RaidStatusPage>
   @override
   void dispose() {
     _activeRaids.removeListener(_checkInitialLoadComplete);
+    _activeRaids.removeListener(_reconcileVisibleRaids);
     _applications.removeListener(_checkInitialLoadComplete);
     _tabController.removeListener(_onTabChanged);
     widget.refreshSignal?.removeListener(_onRefreshSignal);

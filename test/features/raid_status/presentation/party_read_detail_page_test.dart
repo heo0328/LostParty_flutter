@@ -41,6 +41,7 @@ import 'package:lost_party/features/recruitment_list/domain/repositories/party_j
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_membership_command_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_read_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
+import 'package:lost_party/features/recruitment_list/domain/services/lazy_cycle_reconciler.dart';
 
 import '../../../support/party_read_fakes.dart';
 
@@ -62,6 +63,7 @@ void main() {
     String? playerId,
     AccountDatabase? accountDatabase,
     PartyEventSyncService? eventSyncService,
+    LazyCycleReconciler? cycleReconciler,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -83,6 +85,7 @@ void main() {
           playerId: playerId,
           accountDatabase: accountDatabase,
           eventSyncService: eventSyncService,
+          cycleReconciler: cycleReconciler,
         ),
       ),
     );
@@ -104,6 +107,21 @@ void main() {
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     expect(find.text('모집 정보를 찾을 수 없습니다.'), findsNothing);
+  });
+
+  testWidgets('상세 직접 진입 시 해당 방의 회차 보정을 요청한다', (tester) async {
+    final gateway = _RecordingLazyCycleGateway();
+    await pumpPage(
+      tester,
+      recruitment: const Stream.empty(),
+      cycleReconciler: LazyCycleReconciler(
+        gateway: gateway,
+        clock: () => DateTime.utc(2026, 9, 8, 21),
+      ),
+    );
+    await tester.pump();
+
+    expect(gateway.calls, [('recruitment-1', '2026-09-09')]);
   });
 
   testWidgets('문서가 없으면 누락 안내를 표시한다', (tester) async {
@@ -1563,6 +1581,19 @@ void main() {
     expect(visibility.commands.single.visibility, RecruitmentVisibility.public);
     expect(find.text('전체 공개로 바꿨습니다.'), findsOneWidget);
   });
+}
+
+class _RecordingLazyCycleGateway implements LazyCycleReconciliationGateway {
+  final calls = <(String, String)>[];
+
+  @override
+  Future<LazyCycleReconciliationResult> reconcile({
+    required String recruitmentId,
+    required String targetCycleKey,
+  }) async {
+    calls.add((recruitmentId, targetCycleKey));
+    return const LazyCycleReconciliationResult.noChange();
+  }
 }
 
 PublicRecruitmentSummary _summary({

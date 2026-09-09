@@ -53,6 +53,7 @@ class LazyCycleReconciler {
   final PartyCyclePolicy _cyclePolicy;
   final LazyCycleClock _clock;
   final Map<String, Future<LazyCycleReconciliationResult>> _inFlight = {};
+  final Set<String> _completed = {};
 
   Future<LazyCycleReconciliationResult> reconcile(String recruitmentId) {
     final normalizedId = recruitmentId.trim();
@@ -65,10 +66,16 @@ class LazyCycleReconciler {
     }
     final targetCycleKey = _cyclePolicy.keyFor(_clock());
     final requestKey = '$normalizedId::$targetCycleKey';
+    if (_completed.contains(requestKey)) {
+      return Future.value(const LazyCycleReconciliationResult.noChange());
+    }
     final running = _inFlight[requestKey];
     if (running != null) return running;
 
-    final future = _run(normalizedId, targetCycleKey);
+    final future = _run(normalizedId, targetCycleKey).then((result) {
+      if (result.isSuccess) _completed.add(requestKey);
+      return result;
+    });
     _inFlight[requestKey] = future;
     future.whenComplete(() {
       if (identical(_inFlight[requestKey], future)) {
@@ -76,6 +83,14 @@ class LazyCycleReconciler {
       }
     });
     return future;
+  }
+
+  /// 여러 화면 항목을 서로 독립적으로 보정한다. 한 방의 실패가 다른 방의
+  /// 전환을 막지 않으며, 실패한 방은 다음 화면 신호에서 다시 시도된다.
+  Future<List<LazyCycleReconciliationResult>> reconcileAll(
+    Iterable<String> recruitmentIds,
+  ) {
+    return Future.wait(recruitmentIds.toSet().map(reconcile));
   }
 
   Future<LazyCycleReconciliationResult> _run(

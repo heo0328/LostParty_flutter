@@ -31,6 +31,7 @@ import '../../../recruitment_list/domain/repositories/party_visibility_command_r
 import '../../../recruitment_list/domain/entities/party_membership_command.dart';
 import '../../../recruitment_list/domain/services/group_raid_qualification.dart';
 import '../../../recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
+import '../../../recruitment_list/domain/services/lazy_cycle_reconciler.dart';
 import '../../../group/domain/repositories/group_read_repository.dart';
 import '../../domain/services/party_event_sync_service.dart';
 import '../party_notification_message.dart';
@@ -51,6 +52,7 @@ class PartyReadDetailPage extends StatefulWidget {
     this.candidateService,
     this.groupReadRepository,
     this.playerId,
+    this.cycleReconciler,
     super.key,
   });
 
@@ -66,6 +68,7 @@ class PartyReadDetailPage extends StatefulWidget {
   final RecruitmentLeaderCandidateService? candidateService;
   final GroupReadRepository? groupReadRepository;
   final String? playerId;
+  final LazyCycleReconciler? cycleReconciler;
 
   @override
   State<PartyReadDetailPage> createState() => _PartyReadDetailPageState();
@@ -119,6 +122,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       streamFactory: () =>
           widget.partyReadRepository.watchRecruitment(widget.recruitmentId),
     );
+    unawaited(widget.cycleReconciler?.reconcile(widget.recruitmentId));
     _bindDetailSubscriptions();
     unawaited(_initializeRoomEvents());
   }
@@ -137,6 +141,9 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       restartRecruitment: recruitmentChanged || repositoryChanged,
     );
     if (recruitmentChanged || playerChanged) {
+      if (recruitmentChanged) {
+        unawaited(widget.cycleReconciler?.reconcile(widget.recruitmentId));
+      }
       unawaited(_initializeRoomEvents());
     }
   }
