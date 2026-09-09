@@ -561,6 +561,9 @@ H 대표 전투력, I 내 계정/수동 갱신, J 초대코드, K 방별 알림�
 - 완료 Claim은 기존대로 동일 `characterId + raidId + currentCycleKey`의 모든 난이도를 차단한다. 미완료 종료 점유 해제가 완료 Claim까지 삭제하거나 무시하면 안 된다.
 - 2026-09-09 B 구간: 생성 점유 판정에 assignment/recruitment 회차 일치, 만료 시각, 반복 여부와 목표 회차를 추가했다. 현재 주차 활성 방과 만료 반복방은 충돌로 유지하고, 회차 정보가 어긋난 점유는 안전하게 차단하며, 만료된 1회성 이전 주차 점유만 교체 대상으로 판정한다.
 - 같은 `recruitmentId + targetCycleKey` 동시 요청을 하나로 합치고 방별 실패를 결과로 격리하는 `LazyCycleReconciler` 도메인 계약을 추가했다. 실제 Firestore 전환 Gateway·Rules와 화면/명령 연결은 다음 구간이다.
+- 2026-09-09 C 구간: `FirestoreLazyCycleReconciliationGateway`와 회차 assignment 쓰기 계획을 추가했다. 1회성은 해당 이전 방 점유만 삭제하고, 반복방은 기존 점유를 목표 주차로 갱신하거나 없는 점유를 복원하며, 다른 새 방 점유가 있으면 덮어쓰지 않고 충돌로 종료한다.
+- 여러 주 미접속 반복방은 현재 목표 주차로 직접 이동할 수 있게 Repository 경계를 확장했다. 동시 revision 충돌은 서버 문서를 재조회해 실제 전환 완료일 때만 no-op로 인정한다.
+- C 구간은 Gateway와 Transaction 쓰기 구현까지이며 앱 진입점에는 아직 연결하지 않았다. assignment 갱신/생성/삭제와 다주차 직접 승계를 허용하는 Firestore Rules 수정·검증이 다음 D 구간의 필수 선행 조건이다.
 
 ### 예상 회귀와 대응
 
