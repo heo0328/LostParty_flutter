@@ -9,6 +9,8 @@
 3. [`project/AI_CONTEXT.md`](project/AI_CONTEXT.md): 프로젝트 전체 지도와 상태 요약
 4. 작업 영역에 해당하는 제품 또는 아키텍처 문서
 
+위 문서는 선택 참고가 아니라 수정 전 필수 확인 순서다. Firestore Rules 변경 시에는 `project/TASK-11-FIRESTORE-RULES-COMPLEXITY.md`와 관련 Rules 계약 테스트까지 확인하고, 실제 기능 브랜치가 생성됐는지 `git branch --show-current`로 검증한 뒤 작업한다.
+
 ## Product
 
 사용자가 경험하는 기능과 제품 정책을 관리한다.
