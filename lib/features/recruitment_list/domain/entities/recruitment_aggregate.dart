@@ -1,5 +1,6 @@
 import '../state/recruitment_state_machine.dart';
 import '../policies/approval_policy.dart';
+import '../policies/party_composition_policy.dart';
 import 'party_recruitment.dart';
 import 'recruitment_application.dart';
 
@@ -91,6 +92,7 @@ class PublicRecruitmentSummary {
     this.membersPerParty = 4,
     this.partyCount = 1,
     this.supportsPerParty = 1,
+    this.maxDealersPerClassPerParty = 1,
     this.dealerCount = 0,
     this.supportCount = 0,
     this.approvalMode = ApprovalMode.leaderOnly,
@@ -122,6 +124,8 @@ class PublicRecruitmentSummary {
       partyCount: aggregate.state.compositionPolicy.rules.partyCount,
       supportsPerParty:
           aggregate.state.compositionPolicy.rules.supportsPerParty,
+      maxDealersPerClassPerParty:
+          aggregate.state.compositionPolicy.rules.maxDealersPerClassPerParty,
       dealerCount: aggregate.state.members
           .where((member) => member.role == PartyRole.dealer)
           .length,
@@ -149,11 +153,19 @@ class PublicRecruitmentSummary {
   final int membersPerParty;
   final int partyCount;
   final int supportsPerParty;
+  final int maxDealersPerClassPerParty;
   final int dealerCount;
   final int supportCount;
 
   int get maxSupportCount => partyCount * supportsPerParty;
   int get maxDealerCount => maxMemberCount - maxSupportCount;
+
+  RecruitmentPartyRules get partyRules => RecruitmentPartyRules(
+    partyCount: partyCount,
+    membersPerParty: membersPerParty,
+    supportsPerParty: supportsPerParty,
+    maxDealersPerClassPerParty: maxDealersPerClassPerParty,
+  );
   final bool isRecruiting;
   final int revision;
   final DateTime updatedAt;

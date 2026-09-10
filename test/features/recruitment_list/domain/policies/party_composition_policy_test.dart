@@ -80,6 +80,19 @@ void main() {
       expect(decision.failure, PartyCompositionFailure.duplicateDealerClass);
     });
 
+    test('8인에서 이미 같은 직업 딜러 2명이면 세 번째 가입을 거절한다', () {
+      final decision = _eightPlayerPolicy.assignEmptySlot(
+        joining: _occupied('d3', '발키리'),
+        existing: [
+          _occupied('d1', '발키리', partyIndex: 0, slotIndex: 0, isLeader: true),
+          _occupied('d2', '발키리', partyIndex: 1, slotIndex: 0),
+        ],
+      );
+
+      expect(decision.canJoin, isFalse);
+      expect(decision.failure, PartyCompositionFailure.duplicateDealerClass);
+    });
+
     test('8인은 서포터 2명을 각각 다른 파티에 배치한다', () {
       final decision = _eightPlayerPolicy.arrange([
         _member('s1', '바드', role: PartyRole.support),
@@ -152,11 +165,7 @@ void main() {
 
     test('slotIndex가 없는 기존 멤버는 리더·가입 시각·ID 순으로 자리를 채운다', () {
       final occupancy = _fourPlayerPolicy.resolveOccupancy([
-        _occupied(
-          'member-b',
-          '소서리스',
-          joinedAt: DateTime.utc(2026, 8, 26, 10),
-        ),
+        _occupied('member-b', '소서리스', joinedAt: DateTime.utc(2026, 8, 26, 10)),
         _occupied(
           'leader',
           '블레이드',
@@ -171,10 +180,7 @@ void main() {
         ),
       ]);
 
-      expect(
-        occupancy['leader'],
-        const PartySlot(partyIndex: 0, slotIndex: 0),
-      );
+      expect(occupancy['leader'], const PartySlot(partyIndex: 0, slotIndex: 0));
       expect(
         occupancy['member-a'],
         const PartySlot(partyIndex: 0, slotIndex: 1),
@@ -198,27 +204,15 @@ void main() {
         _occupied('alpha', '워로드', joinedAt: joinedAt),
       ]);
 
-      expect(
-        occupancy['alpha'],
-        const PartySlot(partyIndex: 0, slotIndex: 1),
-      );
-      expect(
-        occupancy['zeta'],
-        const PartySlot(partyIndex: 0, slotIndex: 2),
-      );
+      expect(occupancy['alpha'], const PartySlot(partyIndex: 0, slotIndex: 1));
+      expect(occupancy['zeta'], const PartySlot(partyIndex: 0, slotIndex: 2));
     });
 
     test('8인에서 같은 직업 딜러는 다른 파티의 빈 슬롯으로 보낸다', () {
       final decision = _eightPlayerPolicy.assignEmptySlot(
         joining: _occupied('d2', '발키리'),
         existing: [
-          _occupied(
-            'd1',
-            '발키리',
-            partyIndex: 0,
-            slotIndex: 0,
-            isLeader: true,
-          ),
+          _occupied('d1', '발키리', partyIndex: 0, slotIndex: 0, isLeader: true),
         ],
       );
 
@@ -247,9 +241,11 @@ void main() {
       expect(occupancy['leader']!.partyIndex, 0);
       expect(occupancy['leader']!.slotIndex, 0);
       expect(
-        {occupancy['a'], occupancy['b'], occupancy['c']}.every(
-          (slot) => slot?.partyIndex == 0,
-        ),
+        {
+          occupancy['a'],
+          occupancy['b'],
+          occupancy['c'],
+        }.every((slot) => slot?.partyIndex == 0),
         isTrue,
       );
       expect(occupancy['d'], const PartySlot(partyIndex: 1, slotIndex: 0));
@@ -306,6 +302,48 @@ void main() {
         _fourPlayerPolicy.resolveOccupancy(existing)['leader'],
         const PartySlot(partyIndex: 0, slotIndex: 0),
       );
+    });
+  });
+
+  group('PartyCompositionPolicy 자리 유지 교체', () {
+    test('같은 파티의 동일 딜러 직업 교체는 거절한다', () {
+      final failure = _fourPlayerPolicy.failureForInPlaceReplacement(
+        replaceMemberId: 'member',
+        className: '발키리',
+        role: PartyRole.dealer,
+        existing: [
+          _occupied(
+            'leader',
+            '발키리',
+            partyIndex: 0,
+            slotIndex: 0,
+            isLeader: true,
+          ),
+          _occupied('member', '소서리스', partyIndex: 0, slotIndex: 1),
+        ],
+      );
+
+      expect(failure, PartyCompositionFailure.duplicateDealerClass);
+    });
+
+    test('다른 파티에 같은 딜러 직업이 있어도 자리 유지 교체는 허용한다', () {
+      final failure = _eightPlayerPolicy.failureForInPlaceReplacement(
+        replaceMemberId: 'member',
+        className: '발키리',
+        role: PartyRole.dealer,
+        existing: [
+          _occupied(
+            'leader',
+            '발키리',
+            partyIndex: 0,
+            slotIndex: 0,
+            isLeader: true,
+          ),
+          _occupied('member', '소서리스', partyIndex: 1, slotIndex: 0),
+        ],
+      );
+
+      expect(failure, isNull);
     });
   });
 }

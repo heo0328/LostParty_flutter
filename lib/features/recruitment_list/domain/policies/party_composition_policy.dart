@@ -83,11 +83,8 @@ class OccupiedPartyMember {
   final DateTime? joinedAt;
   final bool isLeader;
 
-  PartyCompositionMember toCompositionMember() => PartyCompositionMember(
-    id: id,
-    className: className,
-    role: role,
-  );
+  PartyCompositionMember toCompositionMember() =>
+      PartyCompositionMember(id: id, className: className, role: role);
 }
 
 class PartySlotDecision {
@@ -109,12 +106,7 @@ class PartySlotDecision {
        );
 
   const PartySlotDecision.rejected(PartyCompositionFailure failure)
-    : this._(
-        canJoin: false,
-        slot: null,
-        occupancy: const {},
-        failure: failure,
-      );
+    : this._(canJoin: false, slot: null, occupancy: const {}, failure: failure);
 
   final bool canJoin;
   final PartySlot? slot;
@@ -218,8 +210,7 @@ class PartyCompositionPolicy {
 
     for (final member in members) {
       final slotIndex = member.slotIndex;
-      if (slotIndex == null ||
-          !_isValidSlot(member.partyIndex, slotIndex)) {
+      if (slotIndex == null || !_isValidSlot(member.partyIndex, slotIndex)) {
         pending.add(member);
         continue;
       }
@@ -262,7 +253,9 @@ class PartyCompositionPolicy {
       );
     }
     if (existing.length + 1 > rules.totalMembers) {
-      return const PartySlotDecision.rejected(PartyCompositionFailure.partyFull);
+      return const PartySlotDecision.rejected(
+        PartyCompositionFailure.partyFull,
+      );
     }
 
     final allMembers = [
@@ -300,10 +293,7 @@ class PartyCompositionPolicy {
     for (final slot in _allSlots()) {
       if (occupancy.values.contains(slot)) continue;
       if (!_canPlace(joiner, parties[slot.partyIndex])) continue;
-      return PartySlotDecision.accepted(
-        slot: slot,
-        occupancy: occupancy,
-      );
+      return PartySlotDecision.accepted(slot: slot, occupancy: occupancy);
     }
 
     return PartySlotDecision.rejected(
@@ -311,6 +301,51 @@ class PartyCompositionPolicy {
           ? PartyCompositionFailure.duplicateDealerClass
           : PartyCompositionFailure.noValidPlacement,
     );
+  }
+
+  /// 캐릭터 변경처럼 기존 partyIndex·slotIndex를 유지한 채 직업·역할만 바꿀 때 사용한다.
+  PartyCompositionFailure? failureForInPlaceReplacement({
+    required String replaceMemberId,
+    required String className,
+    required PartyRole role,
+    required List<OccupiedPartyMember> existing,
+  }) {
+    OccupiedPartyMember? target;
+    for (final member in existing) {
+      if (member.id == replaceMemberId) {
+        target = member;
+        break;
+      }
+    }
+    if (target == null) return PartyCompositionFailure.noValidPlacement;
+
+    var supportCount = 0;
+    var dealerCount = 0;
+    var sameClassDealerCount = 0;
+    for (final member in existing) {
+      if (member.partyIndex != target.partyIndex) continue;
+      final effectiveRole = member.id == replaceMemberId ? role : member.role;
+      final effectiveClass = member.id == replaceMemberId
+          ? className
+          : member.className;
+      if (effectiveRole == PartyRole.support) {
+        supportCount++;
+        continue;
+      }
+      dealerCount++;
+      if (effectiveClass == className) sameClassDealerCount++;
+    }
+    if (supportCount > rules.supportsPerParty) {
+      return PartyCompositionFailure.supportSlotsFull;
+    }
+    if (dealerCount > rules.dealersPerParty) {
+      return PartyCompositionFailure.dealerSlotsFull;
+    }
+    if (role == PartyRole.support) return null;
+    if (sameClassDealerCount > rules.maxDealersPerClassPerParty) {
+      return PartyCompositionFailure.duplicateDealerClass;
+    }
+    return null;
   }
 
   bool _place(

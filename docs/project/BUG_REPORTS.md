@@ -309,7 +309,7 @@
 
 | 항목 | 내용 |
 | --- | --- |
-| 상태 | **원인 확인·수정 대기** |
+| 상태 | **실기기 확인 완료 · Git 반영 대기** |
 | 보고일 | 2026-09-10 |
 | 심각도 | 높음 — 파티별 동일 딜러 직업 제한의 신청 사전 차단 누락 |
 | 기준 문서 | [`../product/PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md) |
@@ -320,10 +320,18 @@
 - 모집 상세 신청 팝업은 현재 membership·파티 구성 없이 생성용 `RecruitmentLeaderCandidateService`를 호출해 방장과 신청 Character의 직업 중복을 판정할 수 없다.
 - 최종 즉시 가입·승인 배치는 다시 검증하지만 승인 대기 신청 후보 단계에는 누락돼 있다. 이 경로는 최근 assignment 수정에서 제한을 제거한 것이 아니라 기존 신청 화면 연결의 검증 공백이다.
 
-### 다음 조치
+### 수정
 
-- 신청 후보 Query에 현재 membership과 파티 구성 규칙을 전달하거나 신청 전용 후보 서비스로 교체한다.
-- `4인 차원술사 방장 → 차원술사 신청 후보 제외`와 8인 파티별 배치 가능 사례를 함께 회귀한다.
+- 상세 읽기 모델의 membership과 `PublicRecruitmentSummary.partyRules`를 신청·캐릭터 변경 후보 Query에 전달한다.
+- 신청·즉시 가입 후보는 최종 가입과 같은 `PartyCompositionPolicy.assignEmptySlot`으로 판정한다.
+- 캐릭터 변경은 자리 유지 `failureForInPlaceReplacement`로 membership 명령과 같은 파티 단위 제한을 적용한다.
+- 모집 생성 후보는 membership을 넘기지 않아 기존 생성 흐름을 유지한다.
+
+### 검증
+
+- 표적·영향 자동 테스트와 변경 파일 analyze가 통과했다.
+- 실기기: 4인 동일 딜러 직업 후보 미노출, 8인 동일 직업 2명 신청 허용을 확인했다.
+- 8인 동일 직업 3번째 차단과 변경 가능 캐릭터 없음 알림은 자동 테스트로 고정했고 실기기 재확인을 남긴다.
 
 ---
 

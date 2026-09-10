@@ -8,6 +8,7 @@ import '../entities/active_raid_assignment.dart';
 import '../entities/party_recruitment.dart';
 import '../entities/party_gem_validation_snapshot.dart';
 import '../policies/participation_conflict_policy.dart';
+import '../policies/party_composition_policy.dart';
 import '../policies/weekly_raid_reset_policy.dart';
 import '../repositories/active_raid_assignment_repository.dart';
 import '../repositories/recruitment_state_repository.dart';
@@ -99,6 +100,9 @@ class RecruitmentLeaderCandidateQuery {
     required this.minItemLevel,
     required this.startAt,
     required this.maxPlayHours,
+    this.partyRules,
+    this.occupiedMembers = const [],
+    this.replacingMemberId,
   });
 
   final String raidId;
@@ -106,6 +110,15 @@ class RecruitmentLeaderCandidateQuery {
   final int minItemLevel;
   final DateTime startAt;
   final int? maxPlayHours;
+
+  /// 신청·참가 후보 구성 판정용. 모집 생성 후보에서는 null이다.
+  final RecruitmentPartyRules? partyRules;
+
+  /// 현재 확정 membership. [partyRules]가 있을 때만 사용한다.
+  final List<OccupiedPartyMember> occupiedMembers;
+
+  /// 캐릭터 변경 시 교체 대상 PlayerId. 신청·즉시 가입에서는 null이다.
+  final String? replacingMemberId;
 }
 
 class RecruitmentLeaderCandidateService {
@@ -176,6 +189,10 @@ class RecruitmentLeaderCandidateService {
           character.id,
         );
         final roles = <RecruitmentLeaderRoleOption>[];
+        final partyRules = query.partyRules;
+        final compositionPolicy = partyRules == null
+            ? null
+            : PartyCompositionPolicy(partyRules);
         for (final snapshot in snapshots) {
           final role = switch (snapshot.role) {
             CharacterBuildRole.dealer => PartyRole.dealer,
@@ -185,6 +202,19 @@ class RecruitmentLeaderCandidateService {
           final reasons = <String>[];
           if (itemLevel == null || itemLevel < query.minItemLevel) {
             reasons.add('입장 레벨 ${query.minItemLevel} 미달');
+          }
+          if (compositionPolicy != null) {
+            final compositionFailure = _compositionFailure(
+              policy: compositionPolicy,
+              userId: userId,
+              className: character.characterClassName,
+              role: role,
+              occupiedMembers: query.occupiedMembers,
+              replacingMemberId: query.replacingMemberId,
+            );
+            if (compositionFailure != null) {
+              reasons.add(_compositionReason(compositionFailure));
+            }
           }
           roles.add(
             RecruitmentLeaderRoleOption(
@@ -331,6 +361,44 @@ class RecruitmentLeaderCandidateService {
       catalogVersion: catalogVersion,
     );
   }
+
+  PartyCompositionFailure? _compositionFailure({
+    required PartyCompositionPolicy policy,
+    required String userId,
+    required String className,
+    required PartyRole role,
+    required List<OccupiedPartyMember> occupiedMembers,
+    required String? replacingMemberId,
+  }) {
+    if (replacingMemberId != null) {
+      return policy.failureForInPlaceReplacement(
+        replaceMemberId: replacingMemberId,
+        className: className,
+        role: role,
+        existing: occupiedMembers,
+      );
+    }
+    final placement = policy.assignEmptySlot(
+      joining: OccupiedPartyMember(
+        id: userId,
+        className: className,
+        role: role,
+        partyIndex: 0,
+      ),
+      existing: occupiedMembers,
+    );
+    if (placement.canJoin) return null;
+    return placement.failure;
+  }
+
+  String _compositionReason(PartyCompositionFailure failure) =>
+      switch (failure) {
+        PartyCompositionFailure.dealerSlotsFull ||
+        PartyCompositionFailure.supportSlotsFull => '해당 역할 자리가 없습니다.',
+        PartyCompositionFailure.duplicateDealerClass => '동일 딜러 직업 자리가 없습니다.',
+        PartyCompositionFailure.partyFull => '파티 정원이 가득 찼습니다.',
+        _ => '현재 파티 구성에 배치할 수 없습니다.',
+      };
 
   Future<List<WeeklyRaidClaim>> _loadServerClaims(String cycleKey) async {
     final repository = weeklyRaidClaimRepository;
