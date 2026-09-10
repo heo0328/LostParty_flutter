@@ -48,4 +48,4 @@
 
 ## 다음 작업
 
-현재 단일 작업은 [`NEXT_WORK.md`](NEXT_WORK.md)를 따르며, §14 필터·정렬 구간 완료 후 다음 그룹은 사용자 지시를 기다린다.
+현재 단일 작업은 [`NEXT_WORK.md`](NEXT_WORK.md)의 그룹 membership 보석 검증 Snapshot 전파다. 파티 신청·membership에서 검증된 다섯 필드 계약을 그룹 생성·가입·본인 표시 갱신과 그룹원 카드까지 확장하되, Build 별칭·개인 메모·공유는 포함하지 않는다.
