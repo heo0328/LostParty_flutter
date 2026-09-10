@@ -65,6 +65,7 @@
 ## 차후 대기
 
 - 수동 인증 실기기 확인: 다음 통합 디바이스 테스트에 포함
+- **바로 착수 가능한 다음 대기 작업 — 레이드 목록 로컬 필터·정렬:** 진행 중 필터 최하단의 내 Character 다중 선택과, 진행 중/레이드 모집의 참가 인원·남은 자리 적은 순/많은 순 정렬을 구현한다. 서버 스키마·Rules·Indexes 없이 받은 원본을 병합한 뒤 필터·안정 정렬하며 상세 계약과 A~E 순서는 `ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md` §14를 따른다.
 - 그룹 membership Build Snapshot: 파티 membership 안정화 후 별도 산정
 - Build 별칭·직업 메모·공유: `BUILD_MEMO_SHARING.md`
 - 서버 데이터 무결성·복구 절차: 반복 사례가 확인될 때 별도 착수
