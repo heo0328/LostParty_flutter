@@ -4,9 +4,9 @@
 
 현재 작업을 시작할 때는 다음 순서로 확인한다.
 
-1. [`project/NEXT_WORK.md`](project/NEXT_WORK.md): 현재 기준 상태와 다음 작업
-2. [`project/AI_CONTEXT.md`](project/AI_CONTEXT.md): 프로젝트 전체 현재 상태
-3. [`project/ai_rules.md`](project/ai_rules.md): 작업 및 문서 관리 규칙
+1. [`project/ai_rules.md`](project/ai_rules.md): 모든 작업에 우선하는 행동·Git·검증 규칙
+2. [`project/NEXT_WORK.md`](project/NEXT_WORK.md): 바로 진행할 단일 작업 그룹
+3. [`project/AI_CONTEXT.md`](project/AI_CONTEXT.md): 프로젝트 전체 지도와 상태 요약
 4. 작업 영역에 해당하는 제품 또는 아키텍처 문서
 
 ## Product
@@ -68,6 +68,7 @@ UI 방향, 디자인 시스템과 시각적 적용 기준을 관리한다.
 ## 관리 원칙
 
 - 새 문서를 만들기 전에 기존 기준 문서에 포함할 수 있는지 확인한다.
+- 기록 우선순위는 사용자 최신 지시 → `ai_rules.md` → `NEXT_WORK.md` → `AI_CONTEXT.md` → 기능별 계약 문서 → `DEV_LOG.md`의 과거 이력 순이다. 최신 지시가 행동 규칙과 충돌하면 예외 범위를 확인한 뒤 진행한다.
 - 현재 상태와 다음 작업은 각각 `AI_CONTEXT.md`와 `NEXT_WORK.md`에서 관리한다.
 - 작업 구간 완료 시 `NEXT_WORK.md`와 `AI_CONTEXT.md`의 완료 상세를 `DEV_LOG.md`로 이동한다.
 - `AI_CONTEXT.md`에는 전체 작업의 제목·핵심 상태·상세 문서 연결만 남기고, `NEXT_WORK.md`에는 바로 진행할 작업의 상세 근거와 순서만 둔다.
