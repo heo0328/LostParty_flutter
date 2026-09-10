@@ -67,6 +67,8 @@ String groupDisbandFailureMessage(GroupJoinFailure failure) =>
     switch (failure) {
       GroupJoinFailure.joinCodeActive =>
         '활성 초대코드가 있습니다. 초대코드 화면에서 폐기한 뒤 다시 해산하세요.',
+      GroupJoinFailure.permissionDenied =>
+        '그룹 해산 권한을 확인하지 못했습니다. 최신 Firestore Rules 적용 상태를 확인해 주세요.',
       _ => groupJoinFailureMessage(failure),
     };
 

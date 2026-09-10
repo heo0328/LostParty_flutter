@@ -77,7 +77,12 @@ void main() {
     expect(
       rules,
       contains(
-        'function validMembershipStateAdd(playerId, docId, oldData, newData)',
+        'function validMembershipStateAdd(\n'
+        '      playerId,\n'
+        '      docId,\n'
+        '      previousIds,\n'
+        '      previousRevision,\n'
+        '      newData',
       ),
     );
     expect(rules, contains('newData.activeGroupIds.size() <= 50'));
@@ -233,7 +238,7 @@ void main() {
     );
     expect(rules, contains(') || validJoinCodeGroupMember('));
     expect(rules, contains(') || validJoinCodeRelationAccept('));
-    expect(rules, contains('allow update: if validGroupJoinCodeFlagUpdate('));
+    expect(rules, contains(') || validGroupJoinCodeFlagUpdate('));
     expect(rules, contains(') || validGroupJoinCodeVisibilityUpdate('));
     expect(rules, contains("|| member.joinedBy == 'joinCode'"));
   });
@@ -256,7 +261,12 @@ void main() {
     expect(
       rules,
       contains(
-        'function validGroupPendingJoinRelation(groupId, playerId, oldData, data)',
+        'function validGroupPendingJoinRelation(\n'
+        '      groupId,\n'
+        '      playerId,\n'
+        '      previousRevision,\n'
+        '      reusable,\n'
+        '      data',
       ),
     );
     expect(rules, contains("data.status == 'pending'"));
@@ -283,34 +293,39 @@ void main() {
     expect(rules, contains('function reusableGroupJoinRelation(oldData)'));
     expect(rules, contains("oldData.status != 'pending'"));
     expect(rules, contains('oldData.expiresAt <= request.time'));
-    expect(
-      rules,
-      contains('data.revision == (oldData == null ? 1 : oldData.revision + 1)'),
-    );
+    expect(rules, contains('data.revision == previousRevision + 1'));
   });
 
   test('직접 초대는 현재 그룹원만 만들고 신청 횟수를 늘리지 않는다', () {
     expect(
       rules,
       contains(
-        'function validGroupInvitationCreate(groupId, playerId, oldData, data)',
+        'function validGroupInvitationCreate(\n'
+        '      groupId,\n'
+        '      playerId,\n'
+        '      previousRevision,\n'
+        '      previousApplicationAttempt,\n'
+        '      reusable,\n'
+        '      data',
       ),
     );
     expect(rules, contains("data.kind == 'invitation'"));
     expect(rules, contains('data.requestedByPlayerId == currentPlayerId()'));
     expect(rules, contains('playerId != currentPlayerId()'));
     expect(rules, contains('isCurrentGroupMember(groupId)'));
-    expect(
-      rules,
-      contains('== (oldData == null ? 0 : oldData.applicationAttempt)'),
-    );
+    expect(rules, contains('data.applicationAttempt == previousApplicationAttempt'));
   });
 
   test('가입 신청은 본인만 만들고 applicantStats 횟수와 함께 맞춘다', () {
     expect(
       rules,
       contains(
-        'function validGroupApplicationCreate(groupId, playerId, oldData, data)',
+        'function validGroupApplicationCreate(\n'
+        '      groupId,\n'
+        '      playerId,\n'
+        '      previousRevision,\n'
+        '      reusable,\n'
+        '      data',
       ),
     );
     expect(rules, contains("data.kind == 'application'"));
@@ -322,13 +337,15 @@ void main() {
     expect(
       rules,
       contains(
-        'function validGroupApplicantStatsWrite(groupId, playerId, oldData, data)',
+        'function validGroupApplicantStatsWrite(\n'
+        '      groupId,\n'
+        '      playerId,\n'
+        '      previousApplicationCount,\n'
+        '      previousCreatedAt,\n'
+        '      data',
       ),
     );
-    expect(
-      rules,
-      contains('== (oldData == null ? 1 : oldData.applicationCount + 1)'),
-    );
+    expect(rules, contains('data.applicationCount == previousApplicationCount + 1'));
     expect(rules, contains("relation.kind == 'application'"));
     expect(
       rules,
@@ -639,6 +656,18 @@ void main() {
     expect(rules, contains('function validGroupMemberRoleTransferUpdate('));
     expect(rules, contains('function validGroupDisbandUpdate('));
     expect(rules, contains('function validGroupMemberDisbandDelete('));
+    final groupUpdateStart = rules.indexOf(
+      'allow update: if validGroupDisbandUpdate(',
+    );
+    expect(groupUpdateStart, greaterThanOrEqualTo(0));
+    expect(
+      groupUpdateStart,
+      lessThan(rules.indexOf(') || validGroupJoinCodeFlagUpdate(')),
+    );
+    expect(
+      groupUpdateStart,
+      lessThan(rules.indexOf(') || validGroupJoinCommandUpdate(')),
+    );
     expect(rules, contains('allow update: if validMembershipStateRemove('));
     expect(rules, contains('function validGroupMemberDocumentKeys(data)'));
     expect(rules, contains('displayClassNameSnapshot'));

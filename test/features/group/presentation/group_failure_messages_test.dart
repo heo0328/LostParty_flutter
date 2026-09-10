@@ -65,6 +65,10 @@ void main() {
         groupDisbandFailureMessage(GroupJoinFailure.joinCodeActive),
         contains('초대코드 화면에서 폐기'),
       );
+      expect(
+        groupDisbandFailureMessage(GroupJoinFailure.permissionDenied),
+        contains('그룹 해산 권한'),
+      );
     });
 
     test('탈퇴 permission-denied는 가입 문구가 아닌 탈퇴 안내를 보여 준다', () {

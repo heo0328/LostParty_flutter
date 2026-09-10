@@ -8,6 +8,7 @@ import '../../domain/entities/party_recruitment.dart';
 import '../../domain/policies/party_composition_policy.dart';
 import '../../domain/repositories/party_join_command_repository.dart';
 import '../../domain/services/party_join_command_validator.dart';
+import '../../domain/services/legacy_ended_assignment_replacement_policy.dart';
 import '../mappers/party_application_event_writer.dart';
 import '../mappers/party_join_write_plan.dart';
 import '../mappers/party_membership_event_writer.dart';
@@ -166,6 +167,17 @@ class FirestorePartyJoinCommandRepository
       final assignmentRef = _firestore.collection('players').doc(playerId).collection('activeRaidAssignments').doc('${characterId}_${r?['raidId']}');
       final character = await transaction.get(characterRef);
       final assignment = await transaction.get(assignmentRef);
+      final assignmentData = assignment.data();
+      DocumentSnapshot<Map<String, dynamic>>? assignedRecruitment;
+      final assignmentRecruitmentId = assignmentData?['recruitmentId'];
+      if (assignment.exists &&
+          assignmentRecruitmentId is String &&
+          assignmentRecruitmentId.isNotEmpty &&
+          assignmentRecruitmentId != recruitmentId) {
+        assignedRecruitment = await transaction.get(
+          _firestore.collection('recruitments').doc(assignmentRecruitmentId),
+        );
+      }
       DocumentSnapshot<Map<String, dynamic>>? claim;
       if (requiresDirectJoin) {
         final raidId = r?['raidId'];
@@ -191,7 +203,32 @@ class FirestorePartyJoinCommandRepository
       final c = character.data();
       if (!character.exists || c?['status'] != 'active') return const PartyJoinResult.failure(PartyJoinFailure.invalidCharacter);
       if (c?['ownerPlayerId'] != playerId) return const PartyJoinResult.failure(PartyJoinFailure.ownershipLost);
-      if (assignment.exists) return const PartyJoinResult.failure(PartyJoinFailure.participationConflict);
+      final canReplaceLegacyAssignment =
+          const LegacyEndedAssignmentReplacementPolicy().canReplace(
+            assignmentExists: assignment.exists,
+            assignmentRecruitmentId: assignmentRecruitmentId is String
+                ? assignmentRecruitmentId
+                : null,
+            assignmentCycleKey: assignmentData?['cycleKey'] as String?,
+            assignmentRaidId: assignmentData?['raidId'] as String?,
+            assignedRecruitmentExists: assignedRecruitment?.exists == true,
+            assignedRecruitmentStatus:
+                assignedRecruitment?.data()?['status'] as String?,
+            assignedRecruitmentCycleStatus:
+                assignedRecruitment?.data()?['currentCycleStatus'] as String?,
+            assignedRecruitmentCycleKey:
+                assignedRecruitment?.data()?['currentCycleKey'] as String?,
+            assignedRecruitmentContinuesTogether:
+                assignedRecruitment?.data()?['continueTogether'] as bool?,
+            newRecruitmentId: recruitmentId,
+            newCycleKey: cycleKey,
+            newRaidId: r?['raidId'] as String? ?? '',
+          );
+      if (assignment.exists && !canReplaceLegacyAssignment) {
+        return const PartyJoinResult.failure(
+          PartyJoinFailure.participationConflict,
+        );
+      }
       if (claim?.exists == true) {
         return const PartyJoinResult.failure(
           PartyJoinFailure.weeklyRaidCompleted,

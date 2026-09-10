@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/domain/policies/weekly_raid_reset_policy.dart';
+import 'package:lost_party/features/recruitment_list/domain/policies/raid_cycle_schedule.dart';
 
 void main() {
   const policy = WeeklyRaidResetPolicy();
@@ -24,5 +25,20 @@ void main() {
 
     expect(offset.key, utc.key);
     expect(offset.startedAt, utc.startedAt);
+  });
+
+  test('회차 정책과 같은 테스트용 수요일 13시 경계를 사용한다', () {
+    const testPolicy = WeeklyRaidResetPolicy(
+      schedule: RaidCycleSchedule(resetHour: 13),
+    );
+
+    expect(
+      testPolicy.weekFor(DateTime.utc(2026, 8, 26, 3, 59)).key,
+      '2026-08-19',
+    );
+    expect(
+      testPolicy.weekFor(DateTime.utc(2026, 8, 26, 4)).key,
+      '2026-08-26',
+    );
   });
 }

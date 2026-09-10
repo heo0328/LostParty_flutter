@@ -15,6 +15,9 @@ migrate_working_dir/
 # Local Notion working documents (never publish)
 /docs/notion/
 
+# Local snapshot copied from the Firebase console (comparison only, never deploy)
+/firestore-web.rules
+
 # IntelliJ related
 *.iml
 *.ipr

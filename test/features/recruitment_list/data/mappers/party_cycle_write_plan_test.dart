@@ -16,6 +16,20 @@ void main() {
     expect(plan['currentCycleStatus'], 'active');
     expect(plan['revision'], 5);
   });
+  test('여러 주 미접속 반복 파티는 목표 현재 회차로 직접 이동한다', () {
+    final plan = PartyCycleWritePlan.advanceRecruitment(
+      continueTogether: true,
+      nextCycleKey: '2026-09-23',
+      nextStartedAt: DateTime.utc(2026, 9, 22, 21),
+      nextEndsAt: DateTime.utc(2026, 9, 29, 21),
+      revision: 4,
+      hasAvailableSlot: true,
+      serverTimestamp: Object(),
+      timestamp: (date) => date,
+    );
+    expect(plan['currentCycleKey'], '2026-09-23');
+    expect(plan['cycleStartedAt'], DateTime.utc(2026, 9, 22, 21));
+  });
   test('해산은 멤버와 책임자를 비우고 disbanded로 둔다', () {
     final plan = PartyCycleWritePlan.disbandRecruitment(
       revision: 2,

@@ -11,8 +11,14 @@ class PartyCreateOccupancyGate {
     required String? newRecruitmentLeaderId,
     required bool assignmentExists,
     required String? assignmentRecruitmentId,
+    required String? assignmentCycleKey,
     required bool assignedRecruitmentExists,
     required String? assignedRecruitmentStatus,
+    required String? assignedRecruitmentCycleKey,
+    required bool assignedRecruitmentContinuesTogether,
+    required DateTime? assignedRecruitmentCycleEndsAt,
+    required String newCycleKey,
+    required DateTime now,
   }) {
     if (newRecruitmentExists) {
       if (newRecruitmentLeaderId == playerId) {
@@ -28,6 +34,16 @@ class PartyCreateOccupancyGate {
     }
     if (!assignedRecruitmentExists ||
         _staleStatuses.contains(assignedRecruitmentStatus)) {
+      return PartyCreateOccupancyDecision.replaceStaleAssignment;
+    }
+    final expiredOneShot = assignedRecruitmentStatus == 'active' &&
+        !assignedRecruitmentContinuesTogether &&
+        assignedRecruitmentCycleKey != null &&
+        assignmentCycleKey == assignedRecruitmentCycleKey &&
+        assignedRecruitmentCycleKey != newCycleKey &&
+        assignedRecruitmentCycleEndsAt != null &&
+        !now.toUtc().isBefore(assignedRecruitmentCycleEndsAt.toUtc());
+    if (expiredOneShot) {
       return PartyCreateOccupancyDecision.replaceStaleAssignment;
     }
     return PartyCreateOccupancyDecision.participationConflict;
