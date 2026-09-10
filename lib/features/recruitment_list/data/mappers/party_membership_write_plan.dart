@@ -1,3 +1,5 @@
+import '../../domain/entities/party_gem_validation_snapshot.dart';
+
 class PartyMembershipWritePlan {
   const PartyMembershipWritePlan._();
 
@@ -8,6 +10,7 @@ class PartyMembershipWritePlan {
     required String role,
     required double itemLevel,
     required double? combatPower,
+    PartyGemValidationSnapshot? gemValidation,
     required Object serverTimestamp,
   }) => {
     'characterId': characterId,
@@ -16,6 +19,7 @@ class PartyMembershipWritePlan {
     'role': role,
     'itemLevelSnapshot': itemLevel,
     'combatPowerSnapshot': combatPower,
+    'gemValidationSnapshot': gemValidation?.toFields(),
     'characterChangedAt': serverTimestamp,
     'updatedAt': serverTimestamp,
   };

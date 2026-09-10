@@ -13,5 +13,6 @@ void main() {
     expect(rules, isNot(contains('function validSubmittedBuildSnapshot')));
     expect(rules, isNot(contains('function validGemValidationSnapshot')));
     expect(rules, isNot(contains('gemValidationStatus')));
+    expect(rules, contains('gemValidationSnapshot'));
   });
 }

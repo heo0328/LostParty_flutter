@@ -1,30 +1,67 @@
+import 'party_gem_validation_snapshot.dart';
 import 'party_recruitment.dart';
 
 class PartyChangeCharacterCommand {
-  const PartyChangeCharacterCommand({required this.recruitmentId, required this.newCharacterId, required this.newRole, required this.expectedRecruitmentRevision, this.combatPower});
+  const PartyChangeCharacterCommand({
+    required this.recruitmentId,
+    required this.newCharacterId,
+    required this.newRole,
+    required this.expectedRecruitmentRevision,
+    this.combatPower,
+    this.gemValidation,
+  });
   final String recruitmentId;
   final String newCharacterId;
   final PartyRole newRole;
   final int expectedRecruitmentRevision;
   final double? combatPower;
+  final PartyGemValidationSnapshot? gemValidation;
 }
 
 class PartyRemoveMemberCommand {
-  const PartyRemoveMemberCommand({required this.recruitmentId, required this.targetPlayerId, required this.expectedRecruitmentRevision});
+  const PartyRemoveMemberCommand({
+    required this.recruitmentId,
+    required this.targetPlayerId,
+    required this.expectedRecruitmentRevision,
+  });
   final String recruitmentId;
   final String targetPlayerId;
   final int expectedRecruitmentRevision;
 }
 
 class PartySetApprovalPermissionCommand {
-  const PartySetApprovalPermissionCommand({required this.recruitmentId, required this.targetPlayerId, required this.enabled, required this.expectedRecruitmentRevision});
+  const PartySetApprovalPermissionCommand({
+    required this.recruitmentId,
+    required this.targetPlayerId,
+    required this.enabled,
+    required this.expectedRecruitmentRevision,
+  });
   final String recruitmentId;
   final String targetPlayerId;
   final bool enabled;
   final int expectedRecruitmentRevision;
 }
 
-enum PartyMembershipFailure { unauthenticated, playerBindingMissing, notFound, unauthorized, ownershipLost, invalidCharacter, weeklyRaidCompleted, recruitmentClosed, alreadyCurrentCharacter, participationConflict, roleMismatch, invalidComposition, revisionConflict, unsupportedOnSpark, permissionDenied, temporarilyUnavailable, invalidRequest, unknown }
+enum PartyMembershipFailure {
+  unauthenticated,
+  playerBindingMissing,
+  notFound,
+  unauthorized,
+  ownershipLost,
+  invalidCharacter,
+  weeklyRaidCompleted,
+  recruitmentClosed,
+  alreadyCurrentCharacter,
+  participationConflict,
+  roleMismatch,
+  invalidComposition,
+  revisionConflict,
+  unsupportedOnSpark,
+  permissionDenied,
+  temporarilyUnavailable,
+  invalidRequest,
+  unknown,
+}
 
 class PartyMembershipResult {
   const PartyMembershipResult.success() : failure = null;

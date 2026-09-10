@@ -1,3 +1,4 @@
+import 'party_gem_validation_snapshot.dart';
 import 'party_recruitment.dart';
 
 class PartyDirectJoinCommand {
@@ -8,6 +9,7 @@ class PartyDirectJoinCommand {
     required this.cycleKey,
     required this.expectedRecruitmentRevision,
     this.combatPower,
+    this.gemValidation,
   });
 
   final String recruitmentId;
@@ -16,6 +18,7 @@ class PartyDirectJoinCommand {
   final String cycleKey;
   final int expectedRecruitmentRevision;
   final double? combatPower;
+  final PartyGemValidationSnapshot? gemValidation;
 }
 
 class PartyDecideApplicationCommand {

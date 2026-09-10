@@ -147,6 +147,13 @@ void main() {
             'itemLevelSnapshot': 1710.5,
             'combatPowerSnapshot': 250000,
             'canApproveApplications': false,
+            'gemValidationSnapshot': {
+              'gemValidationStatus': 'foreignClass',
+              'foreignClassGemCount': 1,
+              'unverifiedSameClassGemCount': 0,
+              'gemValidatedAt': DateTime.utc(2026, 9, 7),
+              'catalogVersion': '2026.09.08',
+            },
           },
         ),
       );
@@ -160,8 +167,29 @@ void main() {
       expect(member.slotIndex, 2);
       expect(member.itemLevel, 1710.5);
       expect(member.combatPower, 250000);
+      expect(member.gemValidation?.status.name, 'foreignClass');
+      expect(member.gemValidation?.foreignClassGemCount, 1);
     },
   );
+
+  test('tolerates missing member gem validation without blocking display', () {
+    final member = mapper.toMemberDisplay(
+      PartyReadDocumentDto(
+        id: 'player-member',
+        data: {
+          'schemaVersion': 1,
+          'role': 'support',
+          'partyIndex': 0,
+          'itemLevelSnapshot': 1700,
+          'combatPowerSnapshot': 100000,
+          'gemValidationSnapshot': {'gemValidationStatus': 'foreignClass'},
+        },
+      ),
+    );
+    expect(member.itemLevel, 1700);
+    expect(member.combatPower, 100000);
+    expect(member.gemValidation, isNull);
+  });
 
   test('tolerates missing leader and member display snapshots', () {
     final data = _recruitmentData()

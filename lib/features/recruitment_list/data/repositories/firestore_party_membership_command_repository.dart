@@ -190,6 +190,7 @@ class FirestorePartyMembershipCommandRepository
           role: newRole.name,
           itemLevel: itemLevel,
           combatPower: command.combatPower,
+          gemValidation: command.gemValidation,
           serverTimestamp: now,
         ),
       );
