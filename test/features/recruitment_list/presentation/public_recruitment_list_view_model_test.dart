@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/raid_status/data/repositories/drift_raid_status_filter_store.dart';
 import 'package:lost_party/features/raid_status/domain/entities/raid_filter_screen.dart';
+import 'package:lost_party/features/raid_status/domain/entities/raid_list_sort_selection.dart';
 import 'package:lost_party/features/raid_status/domain/entities/raid_status_filter_selection.dart';
+import 'package:lost_party/features/raid_status/domain/entities/remaining_slots_filter_selection.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_read_models.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_aggregate.dart';
@@ -581,6 +583,238 @@ void main() {
     expect(viewModel.state.items.map((item) => item.id), ['group']);
     expect(viewModel.state.pendingCharacterCheckCount, 0);
   });
+
+  test('기본 정렬은 참가 인원 많은 순이다', () async {
+    final viewModel = createViewModel()..start();
+    addTearDown(viewModel.dispose);
+
+    firstPage.add(
+      PublicRecruitmentPage(
+        items: [
+          _summary('few', memberCount: 2, maxMemberCount: 8),
+          _summary('many', memberCount: 7, maxMemberCount: 8),
+          _summary('mid', memberCount: 4, maxMemberCount: 8),
+        ],
+        hasMore: false,
+        isFromCache: false,
+      ),
+    );
+    await settle();
+
+    expect(viewModel.state.items.map((item) => item.id), [
+      'many',
+      'mid',
+      'few',
+    ]);
+    expect(viewModel.state.sortSelection.isDefault, isTrue);
+    expect(viewModel.showOwnCharacterFilters, isFalse);
+  });
+
+  test('toggleMemberCountSort는 방향을 뒤집는다', () async {
+    final store = MemoryRaidStatusFilterStore();
+    final viewModel = PublicRecruitmentListViewModel(
+      repository: FakePartyReadRepository(publicFirstPage: firstPage.stream),
+      cycleKey: '2026-08-19',
+      currentPlayerId: 'player-1',
+      filterStore: store,
+    )..start();
+    addTearDown(viewModel.dispose);
+
+    firstPage.add(
+      PublicRecruitmentPage(
+        items: [
+          _summary('few', memberCount: 2, maxMemberCount: 8),
+          _summary('many', memberCount: 7, maxMemberCount: 8),
+        ],
+        hasMore: false,
+        isFromCache: false,
+      ),
+    );
+    await settle();
+
+    await viewModel.toggleMemberCountSort();
+    expect(viewModel.state.items.map((item) => item.id), ['few', 'many']);
+    expect(
+      await store.loadSort('player-1', RaidFilterScreen.recruitmentList),
+      const RaidListSortSelection(
+        direction: RaidListSortDirection.ascending,
+      ),
+    );
+  });
+
+  test('남은 자리 2+3 필터는 OR 일치만 보여 준다', () async {
+    final viewModel = createViewModel()..start();
+    addTearDown(viewModel.dispose);
+
+    firstPage.add(
+      PublicRecruitmentPage(
+        items: [
+          _summary('two', memberCount: 6, maxMemberCount: 8),
+          _summary('three', memberCount: 5, maxMemberCount: 8),
+          _summary('one', memberCount: 7, maxMemberCount: 8),
+        ],
+        hasMore: false,
+        isFromCache: false,
+      ),
+    );
+    await settle();
+
+    await viewModel.setRemainingSlotsSelection(
+      const RemainingSlotsFilterSelection(slotCounts: {2, 3}),
+    );
+    expect(viewModel.state.items.map((item) => item.id), ['two', 'three']);
+    expect(viewModel.state.originalItems, hasLength(3));
+  });
+
+  test('남은 자리 선택이 비면 전체를 보여 준다', () async {
+    final viewModel = createViewModel()..start();
+    addTearDown(viewModel.dispose);
+
+    firstPage.add(
+      PublicRecruitmentPage(
+        items: [
+          _summary('two', memberCount: 6, maxMemberCount: 8),
+          _summary('one', memberCount: 7, maxMemberCount: 8),
+        ],
+        hasMore: false,
+        isFromCache: false,
+      ),
+    );
+    await settle();
+
+    await viewModel.setRemainingSlotsSelection(
+      const RemainingSlotsFilterSelection(slotCounts: {2}),
+    );
+    expect(viewModel.state.items.map((item) => item.id), ['two']);
+
+    await viewModel.setRemainingSlotsSelection(
+      RemainingSlotsFilterSelection.unrestricted,
+    );
+    expect(viewModel.state.items.map((item) => item.id), ['one', 'two']);
+  });
+
+  test('남은 자리 초기화는 메인 필터와 독립이다', () async {
+    final store = MemoryRaidStatusFilterStore();
+    final viewModel = PublicRecruitmentListViewModel(
+      repository: FakePartyReadRepository(publicFirstPage: firstPage.stream),
+      cycleKey: '2026-08-19',
+      currentPlayerId: 'player-1',
+      filterStore: store,
+    )..start();
+    addTearDown(viewModel.dispose);
+
+    firstPage.add(
+      PublicRecruitmentPage(
+        items: [
+          _summary('public'),
+          _summary('group', groupId: 'group-1'),
+          _summary('open', memberCount: 2, maxMemberCount: 8),
+        ],
+        hasMore: false,
+        isFromCache: false,
+      ),
+    );
+    await settle();
+
+    await viewModel.setSelection(
+      RaidStatusFilterSelection.unrestricted.toggleGroup(),
+    );
+    await viewModel.setRemainingSlotsSelection(
+      const RemainingSlotsFilterSelection(slotCounts: {6}),
+    );
+    expect(viewModel.state.items.map((item) => item.id), ['open']);
+    expect(viewModel.state.selection.includeGroup, isFalse);
+
+    await viewModel.setRemainingSlotsSelection(
+      RemainingSlotsFilterSelection.unrestricted,
+    );
+    expect(viewModel.state.items.map((item) => item.id), ['open', 'public']);
+    expect(viewModel.state.selection.includeGroup, isFalse);
+    expect(
+      await store.load('player-1', RaidFilterScreen.recruitmentList),
+      isNot(RaidStatusFilterSelection.unrestricted),
+    );
+    expect(
+      await store.loadRemainingSlotsFilter(
+        'player-1',
+        RaidFilterScreen.recruitmentList,
+      ),
+      RemainingSlotsFilterSelection.unrestricted,
+    );
+  });
+
+  test('정렬을 적용·저장하고 추가 페이지 뒤에도 다시 정렬한다', () async {
+    final store = MemoryRaidStatusFilterStore();
+    final viewModel = PublicRecruitmentListViewModel(
+      repository: FakePartyReadRepository(
+        publicFirstPage: firstPage.stream,
+        loadNextPage:
+            ({
+              required String cycleKey,
+              required String currentPlayerId,
+              required PublicRecruitmentPageCursor cursor,
+              int limit = publicRecruitmentPageSize,
+            }) async {
+              nextPageCalls += 1;
+              return PublicRecruitmentPage(
+                items: [_summary('next', memberCount: 1, maxMemberCount: 8)],
+                nextCursor: null,
+                hasMore: false,
+                isFromCache: false,
+              );
+            },
+      ),
+      cycleKey: '2026-08-19',
+      currentPlayerId: 'player-1',
+      pageSize: 2,
+      filterStore: store,
+    )..start();
+    addTearDown(viewModel.dispose);
+
+    firstPage.add(
+      PublicRecruitmentPage(
+        items: [
+          _summary('full', memberCount: 8, maxMemberCount: 8),
+          _summary('open', memberCount: 2, maxMemberCount: 8),
+        ],
+        nextCursor: const FakePublicRecruitmentPageCursor('c1'),
+        hasMore: true,
+        isFromCache: false,
+      ),
+    );
+    await settle();
+
+    await viewModel.toggleMemberCountSort();
+    expect(viewModel.state.items.map((item) => item.id), ['open', 'full']);
+    expect(
+      await store.loadSort('player-1', RaidFilterScreen.recruitmentList),
+      const RaidListSortSelection(
+        direction: RaidListSortDirection.ascending,
+      ),
+    );
+
+    await viewModel.loadMore();
+    await settle();
+    expect(viewModel.state.items.map((item) => item.id), [
+      'next',
+      'open',
+      'full',
+    ]);
+
+    await viewModel.resetSelection();
+    expect(viewModel.state.sortSelection.isDefault, isTrue);
+    expect(
+      await store.loadSort('player-1', RaidFilterScreen.recruitmentList),
+      RaidListSortSelection.defaults,
+    );
+    expect(
+      await store.loadRemainingSlotsFilter(
+        'player-1',
+        RaidFilterScreen.recruitmentList,
+      ),
+      RemainingSlotsFilterSelection.unrestricted,
+    );
+  });
 }
 
 PublicRecruitmentSummary _summary(
@@ -590,6 +824,8 @@ PublicRecruitmentSummary _summary(
   String difficultyId = 'normal',
   String? groupId,
   Set<String>? memberPlayerIds,
+  int memberCount = 1,
+  int maxMemberCount = 8,
 }) {
   return PublicRecruitmentSummary(
     id: id,
@@ -608,8 +844,8 @@ PublicRecruitmentSummary _summary(
       experienceLevel: null,
       maxPlayHours: null,
     ),
-    memberCount: 1,
-    maxMemberCount: 8,
+    memberCount: memberCount,
+    maxMemberCount: maxMemberCount,
     isRecruiting: true,
     revision: 1,
     updatedAt: DateTime.utc(2026, 8, 20),

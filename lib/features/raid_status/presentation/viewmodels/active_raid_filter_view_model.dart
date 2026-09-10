@@ -7,13 +7,17 @@ import '../../../account/domain/repositories/activity_characters_repository.dart
 import '../../../group/domain/entities/group_relation.dart';
 import '../../../group/domain/repositories/group_character_search_repository.dart';
 import '../../../group/domain/repositories/group_read_repository.dart';
+import '../../../group/domain/services/activity_display_characters.dart';
 import '../../../recruitment_list/domain/entities/party_read_models.dart';
 import '../../../recruitment_list/domain/repositories/party_read_repository.dart';
 import '../../domain/entities/raid_filter_screen.dart';
+import '../../domain/entities/raid_list_sort_selection.dart';
 import '../../domain/entities/raid_status_filter_selection.dart';
+import '../../domain/entities/remaining_slots_filter_selection.dart';
 import '../../domain/repositories/raid_status_filter_store.dart';
 import '../../domain/services/filtered_page_session.dart';
 import '../../domain/services/raid_filter_candidates.dart';
+import '../../domain/services/raid_list_sort.dart';
 import '../../domain/services/raid_status_filter.dart';
 import 'raid_filter_sheet_host.dart';
 
@@ -22,9 +26,12 @@ class ActiveRaidFilterViewState {
     this.originalItems = const [],
     this.items = const [],
     this.selection = RaidStatusFilterSelection.unrestricted,
+    this.sortSelection = RaidListSortSelection.defaults,
+    this.remainingSlotsSelection = RemainingSlotsFilterSelection.unrestricted,
     this.catalog = const RaidStatusFilterCatalogOptions(),
     this.groups = const [],
     this.members = const [],
+    this.ownCharacters = const [],
     this.isLoading = true,
     this.isFromCache = false,
     this.hasMore = false,
@@ -34,9 +41,12 @@ class ActiveRaidFilterViewState {
   final List<ActiveRaidSummary> originalItems;
   final List<ActiveRaidSummary> items;
   final RaidStatusFilterSelection selection;
+  final RaidListSortSelection sortSelection;
+  final RemainingSlotsFilterSelection remainingSlotsSelection;
   final RaidStatusFilterCatalogOptions catalog;
   final List<RaidStatusFilterOption> groups;
   final List<RaidStatusFilterMemberOption> members;
+  final List<RaidStatusFilterOption> ownCharacters;
   final bool isLoading;
   final bool isFromCache;
   final bool hasMore;
@@ -74,12 +84,17 @@ class ActiveRaidFilterViewState {
     memberNames: {for (final member in members) member.playerId: member.label},
   );
 
+  String get sortBarLabel => raidListMemberCountSortLabel(sortSelection);
+
+  String get remainingSlotsBarLabel =>
+      remainingSlotsFilterBarLabel(remainingSlotsSelection);
+
   String get countLabel =>
       raidStatusFilterCountLabel(count: items.length, hasMore: hasMore);
 }
 
 /// 진행 중 membership 스트림을 원본으로 두고 공개 조건·레이드·난이도·그룹원·
-/// Character를 로컬 적용한다. 칩 조작은 서버 조회를 만들지 않는다.
+/// Character·내 Character를 로컬 적용한 뒤 인원/자리 정렬을 붙인다.
 ///
 /// 그룹원 Character 칩 후보는 활동 Character ID와 공개 Character 표시
 /// 문서를 조합한다. 누락 시 인증 활성 Character 전체로 대체하지 않는다.
@@ -136,10 +151,13 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
   var _disposed = false;
   var _started = false;
   var _groupsLoaded = false;
+  var _ownCharactersLoaded = false;
   var _candidateGeneration = 0;
+  var _ownCharacterGeneration = 0;
   var _joinedGroupIds = <String>{};
   var _allGroups = const <RaidStatusFilterOption>[];
   var _allMembers = const <RaidStatusFilterMemberOption>[];
+  var _ownCharacters = const <RaidStatusFilterOption>[];
   final _raidCharacterIds = <String, Map<String, String>>{};
   final _characterPrefetchAttempted = <String>{};
 
@@ -162,14 +180,62 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
   bool get showGroupMemberFilters => _state.showGroupMemberFilters;
 
   @override
+  bool get showOwnCharacterFilters => true;
+
+  @override
+  List<RaidStatusFilterOption> get ownCharacters => _state.ownCharacters;
+
+  @override
+  RaidListSortSelection get sortSelection => _state.sortSelection;
+
+  @override
+  String get sortBarLabel => _state.sortBarLabel;
+
+  @override
+  RemainingSlotsFilterSelection get remainingSlotsSelection =>
+      _state.remainingSlotsSelection;
+
+  @override
+  String get remainingSlotsBarLabel => _state.remainingSlotsBarLabel;
+
+  @override
   String get filterCountLabel => _state.countLabel;
 
   @override
   String get filterBarLabel => _state.barLabel;
 
   @override
-  Future<void> resetSelection() =>
-      setSelection(RaidStatusFilterSelection.unrestricted);
+  bool get canResetFilters =>
+      !_state.selection.isUnrestricted ||
+      !_state.sortSelection.isDefault ||
+      !_state.remainingSlotsSelection.isUnrestricted;
+
+  @override
+  Future<void> resetSelection() async {
+    final pruned = _prune(RaidStatusFilterSelection.unrestricted);
+    _session.updateMatcher(_matcherFor(pruned));
+    _emit(
+      selection: pruned,
+      sortSelection: RaidListSortSelection.defaults,
+      remainingSlotsSelection: RemainingSlotsFilterSelection.unrestricted,
+    );
+    try {
+      await _filterStore.save(_playerId, filterScreen, pruned);
+      await _filterStore.saveSort(
+        _playerId,
+        filterScreen,
+        RaidListSortSelection.defaults,
+      );
+      await _filterStore.saveRemainingSlotsFilter(
+        _playerId,
+        filterScreen,
+        RemainingSlotsFilterSelection.unrestricted,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('진행 중 필터·정렬 초기화 저장 실패: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
 
   @override
   Future<void> setSelection(RaidStatusFilterSelection selection) async {
@@ -184,11 +250,48 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
     }
   }
 
+  @override
+  Future<void> setSortSelection(RaidListSortSelection selection) async {
+    _emit(sortSelection: selection);
+    try {
+      await _filterStore.saveSort(_playerId, filterScreen, selection);
+    } catch (error, stackTrace) {
+      debugPrint('진행 중 정렬 저장 실패: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  @override
+  Future<void> toggleMemberCountSort() =>
+      setSortSelection(_state.sortSelection.toggled());
+
+  @override
+  Future<void> setRemainingSlotsSelection(
+    RemainingSlotsFilterSelection selection,
+  ) async {
+    _emit(remainingSlotsSelection: selection);
+    try {
+      await _filterStore.saveRemainingSlotsFilter(
+        _playerId,
+        filterScreen,
+        selection,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('진행 중 남은 자리 필터 저장 실패: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  @override
+  Future<void> toggleOwnCharacter(String characterId) =>
+      setSelection(_state.selection.toggleOwnCharacter(characterId));
+
   void start() {
     if (_started) return;
     _started = true;
     unawaited(_restoreSelection());
     unawaited(_loadCatalog());
+    unawaited(_loadOwnCharacters());
     _listenGroups();
     _subscription = _streamFactory().listen(_onSnapshot, onError: _onError);
   }
@@ -196,10 +299,19 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
   Future<void> _restoreSelection() async {
     try {
       final loaded = await _filterStore.load(_playerId, filterScreen);
+      final loadedSort = await _filterStore.loadSort(_playerId, filterScreen);
+      final loadedRemaining = await _filterStore.loadRemainingSlotsFilter(
+        _playerId,
+        filterScreen,
+      );
       final pruned = _prune(loaded);
       if (_disposed) return;
       _session.updateMatcher(_matcherFor(pruned));
-      _emit(selection: pruned);
+      _emit(
+        selection: pruned,
+        sortSelection: loadedSort,
+        remainingSlotsSelection: loadedRemaining,
+      );
       if (pruned != loaded) {
         await _filterStore.save(_playerId, filterScreen, pruned);
       }
@@ -210,7 +322,11 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
       _session.updateMatcher(
         _matcherFor(RaidStatusFilterSelection.unrestricted),
       );
-      _emit(selection: RaidStatusFilterSelection.unrestricted);
+      _emit(
+        selection: RaidStatusFilterSelection.unrestricted,
+        sortSelection: RaidListSortSelection.defaults,
+        remainingSlotsSelection: RemainingSlotsFilterSelection.unrestricted,
+      );
     }
   }
 
@@ -235,6 +351,44 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
     } catch (error, stackTrace) {
       debugPrint('진행 중 필터 카탈로그 조회 실패: $error');
       debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  Future<void> _loadOwnCharacters() async {
+    final activity = _activityCharactersRepository;
+    final search = _characterSearchRepository;
+    if (activity == null || search == null) {
+      _ownCharactersLoaded = true;
+      return;
+    }
+    final generation = ++_ownCharacterGeneration;
+    try {
+      final loaded = await loadActivityDisplayCharacters(
+        searchRepository: search,
+        ownerPlayerId: _playerId,
+        activityRepository: activity,
+      );
+      if (_disposed || generation != _ownCharacterGeneration) return;
+      _ownCharacters = [
+        for (final character in loaded)
+          RaidStatusFilterOption(
+            id: character.characterId,
+            label: character.characterName,
+          ),
+      ];
+      _ownCharactersLoaded = true;
+      final pruned = _prune(_state.selection);
+      if (pruned != _state.selection) {
+        _session.updateMatcher(_matcherFor(pruned));
+        unawaited(_filterStore.save(_playerId, filterScreen, pruned));
+      }
+      _emit(selection: pruned, ownCharacters: _ownCharacters);
+    } catch (error, stackTrace) {
+      debugPrint('진행 중 내 Character 후보 조회 실패: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (_disposed || generation != _ownCharacterGeneration) return;
+      _ownCharactersLoaded = true;
+      _emit(ownCharacters: const []);
     }
   }
 
@@ -327,22 +481,43 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
 
   void _emit({
     RaidStatusFilterSelection? selection,
+    RaidListSortSelection? sortSelection,
+    RemainingSlotsFilterSelection? remainingSlotsSelection,
     RaidStatusFilterCatalogOptions? catalog,
     List<RaidStatusFilterOption>? groups,
     List<RaidStatusFilterMemberOption>? members,
+    List<RaidStatusFilterOption>? ownCharacters,
     bool? isLoading,
     bool? isFromCache,
     PartyReadFailureType? failure,
     bool clearFailure = false,
   }) {
     if (_disposed) return;
+    final nextSort = sortSelection ?? _state.sortSelection;
+    final nextRemaining =
+        remainingSlotsSelection ?? _state.remainingSlotsSelection;
+    final afterSlots = applyRemainingSlotsFilter(
+      items: _session.filteredItems,
+      selection: nextRemaining,
+      memberCountOf: (item) => item.memberCount,
+      maxMemberCountOf: (item) => item.maxMemberCount,
+    );
+    final filtered = applyRaidListSort(
+      items: afterSlots,
+      selection: nextSort,
+      memberCountOf: (item) => item.memberCount,
+      maxMemberCountOf: (item) => item.maxMemberCount,
+    );
     _state = ActiveRaidFilterViewState(
       originalItems: _session.originalItems,
-      items: _session.filteredItems,
+      items: filtered,
       selection: selection ?? _state.selection,
+      sortSelection: nextSort,
+      remainingSlotsSelection: nextRemaining,
       catalog: catalog ?? _state.catalog,
       groups: groups ?? _state.groups,
       members: members ?? _state.members,
+      ownCharacters: ownCharacters ?? _state.ownCharacters,
       isLoading: isLoading ?? _state.isLoading,
       isFromCache: isFromCache ?? _state.isFromCache,
       hasMore: _session.hasMore,
@@ -351,14 +526,23 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
     notifyListeners();
   }
 
-  RaidStatusFilterSelection _prune(RaidStatusFilterSelection selection) =>
-      pruneRaidFilterSelection(
-        selection: selection,
-        catalog: _state.catalog,
-        groupsLoaded: _groupsLoaded,
-        joinedGroupIds: _joinedGroupIds,
-        members: _allMembers,
-      );
+  RaidStatusFilterSelection _prune(RaidStatusFilterSelection selection) {
+    var next = pruneRaidFilterSelection(
+      selection: selection,
+      catalog: _state.catalog,
+      groupsLoaded: _groupsLoaded,
+      joinedGroupIds: _joinedGroupIds,
+      members: _allMembers,
+    );
+    if (_ownCharactersLoaded && next.ownCharacterIds.isNotEmpty) {
+      final allowed = {for (final character in _ownCharacters) character.id};
+      final kept = next.ownCharacterIds.intersection(allowed);
+      if (kept.length != next.ownCharacterIds.length) {
+        next = next.copyWith(ownCharacterIds: kept);
+      }
+    }
+    return next;
+  }
 
   bool Function(ActiveRaidSummary item) _matcherFor(
     RaidStatusFilterSelection selection,
@@ -369,6 +553,7 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
     difficultyIdOf: (item) => item.metadata.difficultyId,
     memberPlayerIdsOf: (item) => item.memberPlayerIds,
     characterIdByPlayerOf: (item) => _raidCharacterIds[item.id],
+    currentPlayerId: _playerId,
   );
 
   @override

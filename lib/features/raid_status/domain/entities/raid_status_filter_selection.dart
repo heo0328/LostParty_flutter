@@ -13,6 +13,7 @@ class RaidStatusFilterSelection {
     this.groupIds = const {},
     this.memberPlayerIds = const {},
     this.characterIdsByPlayer = const {},
+    this.ownCharacterIds = const {},
   }) : assert(
          includePublic || includeGroup,
          '공개 조건은 일반 공개와 그룹 공개 중 하나 이상이어야 한다.',
@@ -46,6 +47,10 @@ class RaidStatusFilterSelection {
   /// 값이 있으면 해당 사용자 내부 OR.
   final Map<String, Set<String>> characterIdsByPlayer;
 
+  /// 진행 중 전용. 현재 사용자의 Character 다중 선택.
+  /// 비어 있으면 내 Character 조건을 적용하지 않는다. 값이 있으면 OR.
+  final Set<String> ownCharacterIds;
+
   bool get includeAllPublicScopes => includePublic && includeGroup;
 
   /// 그룹·그룹원·Character 선택 UI와 판정은 그룹 공개만일 때만 쓴다.
@@ -57,7 +62,8 @@ class RaidStatusFilterSelection {
       difficultyIds.isEmpty &&
       groupIds.isEmpty &&
       memberPlayerIds.isEmpty &&
-      characterIdsByPlayer.isEmpty;
+      characterIdsByPlayer.isEmpty &&
+      ownCharacterIds.isEmpty;
 
   int get selectedCharacterCount => characterIdsByPlayer.values.fold<int>(
     0,
@@ -72,6 +78,7 @@ class RaidStatusFilterSelection {
     Set<String>? groupIds,
     Set<String>? memberPlayerIds,
     Map<String, Set<String>>? characterIdsByPlayer,
+    Set<String>? ownCharacterIds,
   }) => RaidStatusFilterSelection(
     includePublic: includePublic ?? this.includePublic,
     includeGroup: includeGroup ?? this.includeGroup,
@@ -80,6 +87,7 @@ class RaidStatusFilterSelection {
     groupIds: groupIds ?? this.groupIds,
     memberPlayerIds: memberPlayerIds ?? this.memberPlayerIds,
     characterIdsByPlayer: characterIdsByPlayer ?? this.characterIdsByPlayer,
+    ownCharacterIds: ownCharacterIds ?? this.ownCharacterIds,
   );
 
   /// `전체`는 파생 상태다. 선택하면 일반·그룹 공개를 함께 켠다.
@@ -170,7 +178,17 @@ class RaidStatusFilterSelection {
     );
   }
 
+  /// 진행 중 전용 내 Character 칩. 그룹원 Character 선택과 독립이다.
+  RaidStatusFilterSelection toggleOwnCharacter(String characterId) {
+    final next = {...ownCharacterIds};
+    if (!next.add(characterId)) {
+      next.remove(characterId);
+    }
+    return copyWith(ownCharacterIds: next);
+  }
+
   /// 전체 또는 일반 공개가 포함되면 숨긴 그룹 관련 선택을 제거한다.
+  /// 내 Character 선택은 그룹 공개 여부와 무관하게 유지한다.
   RaidStatusFilterSelection withoutHiddenGroupFilters() {
     if (isGroupPublicOnly) return this;
     if (groupIds.isEmpty &&
@@ -245,7 +263,7 @@ class RaidStatusFilterSelection {
         ..sort());
     }
     return {
-      'schemaVersion': 1,
+      'schemaVersion': 2,
       'includePublic': includePublic,
       'includeGroup': includeGroup,
       'raidIds': (raidIds.toList()..sort()),
@@ -253,10 +271,12 @@ class RaidStatusFilterSelection {
       'groupIds': (groupIds.toList()..sort()),
       'memberPlayerIds': (memberPlayerIds.toList()..sort()),
       'characterIdsByPlayer': characterJson,
+      'ownCharacterIds': (ownCharacterIds.toList()..sort()),
     };
   }
 
   /// 손상된 저장값은 전체 보기로 초기화한다. D2 JSON은 그룹원 필드 없이 복원한다.
+  /// schemaVersion 1은 `ownCharacterIds` 없이 복원한다.
   static RaidStatusFilterSelection fromJson(Object? raw) {
     if (raw is! Map) return unrestricted;
     final includePublic = raw['includePublic'];
@@ -273,6 +293,7 @@ class RaidStatusFilterSelection {
       groupIds: _stringSet(raw['groupIds']),
       memberPlayerIds: _stringSet(raw['memberPlayerIds']),
       characterIdsByPlayer: _stringSetMap(raw['characterIdsByPlayer']),
+      ownCharacterIds: _stringSet(raw['ownCharacterIds']),
     ).withoutHiddenGroupFilters();
   }
 
@@ -304,7 +325,8 @@ class RaidStatusFilterSelection {
       _sameSet(difficultyIds, other.difficultyIds) &&
       _sameSet(groupIds, other.groupIds) &&
       _sameSet(memberPlayerIds, other.memberPlayerIds) &&
-      _sameStringSetMap(characterIdsByPlayer, other.characterIdsByPlayer);
+      _sameStringSetMap(characterIdsByPlayer, other.characterIdsByPlayer) &&
+      _sameSet(ownCharacterIds, other.ownCharacterIds);
 
   @override
   int get hashCode => Object.hash(
@@ -322,6 +344,7 @@ class RaidStatusFilterSelection {
         ],
       ),
     ),
+    Object.hashAll(ownCharacterIds.toList()..sort()),
   );
 }
 

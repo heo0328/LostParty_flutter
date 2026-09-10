@@ -89,9 +89,9 @@ class RaidStatusFilterSheet extends StatelessWidget {
               children: [
                 _FilterSheetHeader(
                   countLabel: viewModel.filterCountLabel,
-                  onReset: selection.isUnrestricted
-                      ? null
-                      : () => unawaited(viewModel.resetSelection()),
+                  onReset: viewModel.canResetFilters
+                      ? () => unawaited(viewModel.resetSelection())
+                      : null,
                 ),
                 Expanded(
                   child: SingleChildScrollView(
@@ -254,6 +254,34 @@ class RaidStatusFilterSheet extends StatelessWidget {
                               ),
                             ),
                           ),
+                        ],
+                        if (viewModel.showOwnCharacterFilters) ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            '내 캐릭터',
+                            key: const ValueKey('raidStatusFilterOwnCharacters'),
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          const SizedBox(height: 8),
+                          if (viewModel.ownCharacters.isEmpty)
+                            Text(
+                              '활동 캐릭터가 없습니다',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                            )
+                          else
+                            _OptionChips(
+                              options: viewModel.ownCharacters,
+                              selectedIds: selection.ownCharacterIds,
+                              keyPrefix: 'raidStatusFilterOwnCharacterChip',
+                              onToggle: (id) => unawaited(
+                                viewModel.toggleOwnCharacter(id),
+                              ),
+                            ),
                         ],
                       ],
                     ),

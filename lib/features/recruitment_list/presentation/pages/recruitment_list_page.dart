@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,6 +10,7 @@ import '../../../group/domain/repositories/group_character_search_repository.dar
 import '../../../group/domain/repositories/group_read_repository.dart';
 import '../../../raid_status/data/repositories/drift_raid_status_filter_store.dart';
 import '../../../raid_status/domain/repositories/raid_status_filter_store.dart';
+import '../../../raid_status/presentation/widgets/raid_list_sort_row.dart';
 import '../../../raid_status/presentation/widgets/raid_status_filter_sheet.dart';
 import '../../domain/repositories/party_read_repository.dart';
 import '../viewmodels/public_recruitment_list_view_model.dart';
@@ -95,6 +98,16 @@ class _RecruitmentListPageState extends State<RecruitmentListPage> {
         RaidStatusFilterBar(
           label: _viewModel.filterBarLabel,
           onOpen: _openFilter,
+        ),
+        RaidListSortRow(
+          sortSelection: _viewModel.sortSelection,
+          remainingSlotsSelection: _viewModel.remainingSlotsSelection,
+          onToggleMemberCountSort: () {
+            unawaited(_viewModel.toggleMemberCountSort());
+          },
+          onRemainingSlotsChanged: (selection) {
+            unawaited(_viewModel.setRemainingSlotsSelection(selection));
+          },
         ),
         Expanded(child: _buildBody()),
       ],

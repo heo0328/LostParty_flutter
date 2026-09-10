@@ -25,6 +25,7 @@ import '../../domain/services/throttled_party_event_sync_service.dart';
 import '../viewmodels/active_raid_filter_view_model.dart';
 import '../viewmodels/party_read_stream_view_model.dart';
 import '../viewmodels/raid_history_view_model.dart';
+import '../widgets/raid_list_sort_row.dart';
 import '../widgets/raid_status_filter_sheet.dart';
 
 class RaidStatusPage extends StatefulWidget {
@@ -317,6 +318,16 @@ class _ActiveRaidsTab extends StatelessWidget {
         return Column(
           children: [
             RaidStatusFilterBar(label: state.barLabel, onOpen: onOpenFilter),
+            RaidListSortRow(
+              sortSelection: state.sortSelection,
+              remainingSlotsSelection: state.remainingSlotsSelection,
+              onToggleMemberCountSort: () {
+                unawaited(viewModel.toggleMemberCountSort());
+              },
+              onRemainingSlotsChanged: (selection) {
+                unawaited(viewModel.setRemainingSlotsSelection(selection));
+              },
+            ),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: onRefresh,

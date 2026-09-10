@@ -387,6 +387,71 @@ void main() {
         isFalse,
       );
     });
+
+    test('내 Character는 현재 사용자 membership Character ID로 OR 판정한다', () {
+      const selection = RaidStatusFilterSelection(
+        includePublic: true,
+        includeGroup: true,
+        ownCharacterIds: {'char-me'},
+      );
+      expect(
+        matchesRaidStatusFilter(
+          selection: selection,
+          groupId: publicRaid.groupId,
+          raidId: publicRaid.raidId,
+          difficultyId: publicRaid.difficultyId,
+          raidCharacterIdByPlayer: {'player-1': 'char-me'},
+          currentPlayerId: 'player-1',
+        ),
+        isTrue,
+      );
+      expect(
+        matchesRaidStatusFilter(
+          selection: selection,
+          groupId: publicRaid.groupId,
+          raidId: publicRaid.raidId,
+          difficultyId: publicRaid.difficultyId,
+          raidCharacterIdByPlayer: {'player-1': 'other'},
+          currentPlayerId: 'player-1',
+        ),
+        isFalse,
+      );
+    });
+
+    test('내 Character 선택이 없으면 기존처럼 모두 허용한다', () {
+      expect(
+        matchesRaidStatusFilter(
+          selection: RaidStatusFilterSelection.unrestricted,
+          groupId: publicRaid.groupId,
+          raidId: publicRaid.raidId,
+          difficultyId: publicRaid.difficultyId,
+          currentPlayerId: 'player-1',
+        ),
+        isTrue,
+      );
+    });
+  });
+
+  group('RaidStatusFilterSelection ownCharacterIds', () {
+    test('토글과 JSON schema v2를 왕복한다', () {
+      final selected = RaidStatusFilterSelection.unrestricted
+          .toggleOwnCharacter('char-1')
+          .toggleOwnCharacter('char-2');
+      expect(selected.ownCharacterIds, {'char-1', 'char-2'});
+      expect(selected.isUnrestricted, isFalse);
+      final json = selected.toJson();
+      expect(json['schemaVersion'], 2);
+      expect(json['ownCharacterIds'], ['char-1', 'char-2']);
+      expect(RaidStatusFilterSelection.fromJson(json), selected);
+    });
+
+    test('그룹 공개 해제와 무관하게 내 Character 선택을 유지한다', () {
+      final selected = RaidStatusFilterSelection.unrestricted
+          .toggleOwnCharacter('char-1')
+          .togglePublic();
+      expect(selected.ownCharacterIds, {'char-1'});
+      expect(selected.withoutHiddenGroupFilters().ownCharacterIds, {'char-1'});
+    });
   });
 
   test('결과 개수는 다음 페이지가 있으면 현재 N개, 없으면 N개다', () {

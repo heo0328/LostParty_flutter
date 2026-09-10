@@ -35,7 +35,7 @@
 
 - 직업·깨달음·질서 해/달/별 계층 메모, `망소빙` 같은 Build 별칭과 버전형 JSON 공유: [`../product/BUILD_MEMO_SHARING.md`](../product/BUILD_MEMO_SHARING.md)
 - 직업 시너지 선택·필터: [`../product/CLASS_SYNERGY_CATALOG.md`](../product/CLASS_SYNERGY_CATALOG.md)
-- 진행 중 내 Character 필터와 진행 중/레이드 모집의 참가 인원·남은 자리 로컬 정렬은 서버 변경 없이 구현할 확정 대기 작업이다. 계약: [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md) §14
+- 진행 중 내 Character 필터와 진행 중/레이드 모집의 참가 인원 로컬 정렬·남은 자리 2차 필터는 구현·실기기 확인했다. 계약: [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md) §14
 - 서버 데이터 무결성·복구 절차와 고아 binding/claim 점검은 재현 빈도가 높아질 때 별도 착수한다.
 - FCM, 유료 서비스, 서버 상시 스케줄러는 별도 승인 전까지 제외한다.
 
@@ -48,4 +48,4 @@
 
 ## 다음 작업
 
-현재 단일 작업과 완료 조건은 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다. 신청 후보 동일 딜러 직업 차단은 자동 검증까지 완료했고 실기기 확인은 차후 대기다.
+현재 단일 작업은 [`NEXT_WORK.md`](NEXT_WORK.md)를 따르며, §14 필터·정렬 구간 완료 후 다음 그룹은 사용자 지시를 기다린다.

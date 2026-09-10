@@ -8,9 +8,12 @@ import '../../../group/domain/entities/group_relation.dart';
 import '../../../group/domain/repositories/group_character_search_repository.dart';
 import '../../../group/domain/repositories/group_read_repository.dart';
 import '../../../raid_status/domain/entities/raid_filter_screen.dart';
+import '../../../raid_status/domain/entities/raid_list_sort_selection.dart';
 import '../../../raid_status/domain/entities/raid_status_filter_selection.dart';
+import '../../../raid_status/domain/entities/remaining_slots_filter_selection.dart';
 import '../../../raid_status/domain/repositories/raid_status_filter_store.dart';
 import '../../../raid_status/domain/services/raid_filter_candidates.dart';
+import '../../../raid_status/domain/services/raid_list_sort.dart';
 import '../../../raid_status/domain/services/raid_status_filter.dart';
 import '../../../raid_status/presentation/viewmodels/raid_filter_sheet_host.dart';
 import '../../domain/entities/party_read_models.dart';
@@ -22,6 +25,8 @@ class PublicRecruitmentListState {
     this.originalItems = const [],
     this.items = const [],
     this.selection = RaidStatusFilterSelection.unrestricted,
+    this.sortSelection = RaidListSortSelection.defaults,
+    this.remainingSlotsSelection = RemainingSlotsFilterSelection.unrestricted,
     this.catalog = const RaidStatusFilterCatalogOptions(),
     this.groups = const [],
     this.members = const [],
@@ -38,6 +43,8 @@ class PublicRecruitmentListState {
   final List<PublicRecruitmentSummary> originalItems;
   final List<PublicRecruitmentSummary> items;
   final RaidStatusFilterSelection selection;
+  final RaidListSortSelection sortSelection;
+  final RemainingSlotsFilterSelection remainingSlotsSelection;
   final RaidStatusFilterCatalogOptions catalog;
   final List<RaidStatusFilterOption> groups;
   final List<RaidStatusFilterMemberOption> members;
@@ -94,6 +101,11 @@ class PublicRecruitmentListState {
     groupNames: {for (final group in groups) group.id: group.label},
     memberNames: {for (final member in members) member.playerId: member.label},
   );
+
+  String get sortBarLabel => raidListMemberCountSortLabel(sortSelection);
+
+  String get remainingSlotsBarLabel =>
+      remainingSlotsFilterBarLabel(remainingSlotsSelection);
 
   String get countLabel =>
       raidStatusFilterCountLabel(count: items.length, hasMore: hasMore);
@@ -178,10 +190,35 @@ class PublicRecruitmentListViewModel extends ChangeNotifier
   bool get showGroupMemberFilters => _state.showGroupMemberFilters;
 
   @override
+  bool get showOwnCharacterFilters => false;
+
+  @override
+  List<RaidStatusFilterOption> get ownCharacters => const [];
+
+  @override
+  RaidListSortSelection get sortSelection => _state.sortSelection;
+
+  @override
+  String get sortBarLabel => _state.sortBarLabel;
+
+  @override
+  RemainingSlotsFilterSelection get remainingSlotsSelection =>
+      _state.remainingSlotsSelection;
+
+  @override
+  String get remainingSlotsBarLabel => _state.remainingSlotsBarLabel;
+
+  @override
   String get filterCountLabel => _state.countLabel;
 
   @override
   String get filterBarLabel => _state.barLabel;
+
+  @override
+  bool get canResetFilters =>
+      !_state.selection.isUnrestricted ||
+      !_state.sortSelection.isDefault ||
+      !_state.remainingSlotsSelection.isUnrestricted;
 
   void start() {
     if (_subscription != null) return;
@@ -207,8 +244,35 @@ class PublicRecruitmentListViewModel extends ChangeNotifier
   }
 
   @override
-  Future<void> resetSelection() =>
-      setSelection(RaidStatusFilterSelection.unrestricted);
+  Future<void> resetSelection() async {
+    final pruned = _prune(RaidStatusFilterSelection.unrestricted);
+    _autoFillCount = 0;
+    _emit(
+      selection: pruned,
+      sortSelection: RaidListSortSelection.defaults,
+      remainingSlotsSelection: RemainingSlotsFilterSelection.unrestricted,
+    );
+    unawaited(_prefetchNeededCharacters());
+    unawaited(_maybeAutoFill());
+    final store = _filterStore;
+    if (store == null) return;
+    try {
+      await store.save(_currentPlayerId, filterScreen, pruned);
+      await store.saveSort(
+        _currentPlayerId,
+        filterScreen,
+        RaidListSortSelection.defaults,
+      );
+      await store.saveRemainingSlotsFilter(
+        _currentPlayerId,
+        filterScreen,
+        RemainingSlotsFilterSelection.unrestricted,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('모집 목록 필터·정렬 초기화 저장 실패: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
 
   @override
   Future<void> setSelection(RaidStatusFilterSelection selection) async {
@@ -226,6 +290,45 @@ class PublicRecruitmentListViewModel extends ChangeNotifier
       debugPrintStack(stackTrace: stackTrace);
     }
   }
+
+  @override
+  Future<void> setSortSelection(RaidListSortSelection selection) async {
+    _emit(sortSelection: selection);
+    final store = _filterStore;
+    if (store == null) return;
+    try {
+      await store.saveSort(_currentPlayerId, filterScreen, selection);
+    } catch (error, stackTrace) {
+      debugPrint('모집 목록 정렬 저장 실패: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  @override
+  Future<void> toggleMemberCountSort() =>
+      setSortSelection(_state.sortSelection.toggled());
+
+  @override
+  Future<void> setRemainingSlotsSelection(
+    RemainingSlotsFilterSelection selection,
+  ) async {
+    _emit(remainingSlotsSelection: selection);
+    final store = _filterStore;
+    if (store == null) return;
+    try {
+      await store.saveRemainingSlotsFilter(
+        _currentPlayerId,
+        filterScreen,
+        selection,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('모집 목록 남은 자리 필터 저장 실패: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  @override
+  Future<void> toggleOwnCharacter(String characterId) async {}
 
   void retryCharacterChecks() {
     _failedCharacterLookups.clear();
@@ -247,6 +350,8 @@ class PublicRecruitmentListViewModel extends ChangeNotifier
     _inFlightCharacterLookups.clear();
     _state = PublicRecruitmentListState(
       selection: _state.selection,
+      sortSelection: _state.sortSelection,
+      remainingSlotsSelection: _state.remainingSlotsSelection,
       catalog: _state.catalog,
       groups: _state.groups,
       members: _state.members,
@@ -296,9 +401,18 @@ class PublicRecruitmentListViewModel extends ChangeNotifier
     if (store == null) return;
     try {
       final loaded = await store.load(_currentPlayerId, filterScreen);
+      final loadedSort = await store.loadSort(_currentPlayerId, filterScreen);
+      final loadedRemaining = await store.loadRemainingSlotsFilter(
+        _currentPlayerId,
+        filterScreen,
+      );
       final pruned = _prune(loaded);
       if (_disposed) return;
-      _emit(selection: pruned);
+      _emit(
+        selection: pruned,
+        sortSelection: loadedSort,
+        remainingSlotsSelection: loadedRemaining,
+      );
       if (pruned != loaded) {
         await store.save(_currentPlayerId, filterScreen, pruned);
       }
@@ -307,7 +421,11 @@ class PublicRecruitmentListViewModel extends ChangeNotifier
       debugPrint('모집 목록 필터 복원 실패: $error');
       debugPrintStack(stackTrace: stackTrace);
       if (_disposed) return;
-      _emit(selection: RaidStatusFilterSelection.unrestricted);
+      _emit(
+        selection: RaidStatusFilterSelection.unrestricted,
+        sortSelection: RaidListSortSelection.defaults,
+        remainingSlotsSelection: RemainingSlotsFilterSelection.unrestricted,
+      );
     }
   }
 
@@ -519,6 +637,8 @@ class PublicRecruitmentListViewModel extends ChangeNotifier
 
   void _emit({
     RaidStatusFilterSelection? selection,
+    RaidListSortSelection? sortSelection,
+    RemainingSlotsFilterSelection? remainingSlotsSelection,
     RaidStatusFilterCatalogOptions? catalog,
     List<RaidStatusFilterOption>? groups,
     List<RaidStatusFilterMemberOption>? members,
@@ -538,6 +658,9 @@ class PublicRecruitmentListViewModel extends ChangeNotifier
     }
     final original = _mergedItems();
     final nextSelection = selection ?? _state.selection;
+    final nextSort = sortSelection ?? _state.sortSelection;
+    final nextRemaining =
+        remainingSlotsSelection ?? _state.remainingSlotsSelection;
     final needsCharacters =
         nextSelection.isGroupPublicOnly &&
         nextSelection.selectedCharacterCount > 0;
@@ -548,6 +671,18 @@ class PublicRecruitmentListViewModel extends ChangeNotifier
       for (final item in original)
         if (_isConfirmedMatchFor(item, nextSelection)) item,
     ];
+    final afterSlots = applyRemainingSlotsFilter(
+      items: matches,
+      selection: nextRemaining,
+      memberCountOf: (item) => item.memberCount,
+      maxMemberCountOf: (item) => item.maxMemberCount,
+    );
+    final sorted = applyRaidListSort(
+      items: afterSlots,
+      selection: nextSort,
+      memberCountOf: (item) => item.memberCount,
+      maxMemberCountOf: (item) => item.maxMemberCount,
+    );
     var pending = 0;
     var failed = false;
     if (needsCharacters) {
@@ -563,8 +698,10 @@ class PublicRecruitmentListViewModel extends ChangeNotifier
     }
     _state = PublicRecruitmentListState(
       originalItems: original,
-      items: matches,
+      items: sorted,
       selection: nextSelection,
+      sortSelection: nextSort,
+      remainingSlotsSelection: nextRemaining,
       catalog: catalog ?? _state.catalog,
       groups: groups ?? _state.groups,
       members: members ?? _state.members,

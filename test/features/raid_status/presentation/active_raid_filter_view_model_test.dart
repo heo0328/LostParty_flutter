@@ -9,7 +9,10 @@ import 'package:lost_party/features/group/domain/entities/group_request_characte
 import 'package:lost_party/features/group/domain/repositories/group_character_search_repository.dart';
 import 'package:lost_party/features/group/domain/repositories/group_read_repository.dart';
 import 'package:lost_party/features/raid_status/data/repositories/drift_raid_status_filter_store.dart';
+import 'package:lost_party/features/raid_status/domain/entities/raid_filter_screen.dart';
+import 'package:lost_party/features/raid_status/domain/entities/raid_list_sort_selection.dart';
 import 'package:lost_party/features/raid_status/domain/entities/raid_status_filter_selection.dart';
+import 'package:lost_party/features/raid_status/domain/entities/remaining_slots_filter_selection.dart';
 import 'package:lost_party/features/raid_status/presentation/viewmodels/active_raid_filter_view_model.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_read_models.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
@@ -24,6 +27,8 @@ void main() {
     String difficultyId = 'normal',
     String? groupId,
     Set<String> memberPlayerIds = const {},
+    int memberCount = 1,
+    int maxMemberCount = 8,
   }) => ActiveRaidSummary(
     id: id,
     title: id,
@@ -42,8 +47,8 @@ void main() {
       maxPlayHours: null,
     ),
     currentCycleKey: '2026-08-19',
-    memberCount: 1,
-    maxMemberCount: 8,
+    memberCount: memberCount,
+    maxMemberCount: maxMemberCount,
     revision: 1,
     updatedAt: DateTime.utc(2026, 8, 20),
     isOwnedByCurrentPlayer: true,
@@ -413,6 +418,215 @@ void main() {
     expect(viewModel.state.selection, RaidStatusFilterSelection.unrestricted);
     expect(viewModel.state.items.map((item) => item.id), ['public']);
     expect(store.values['player-1']?.isUnrestricted, isTrue);
+  });
+
+  test('기본 정렬은 참가 인원 많은 순이다', () async {
+    final viewModel = ActiveRaidFilterViewModel(
+      streamFactory: () => Stream.value(
+        PartyReadSnapshot(
+          items: [
+            raid(id: 'few', memberCount: 2, maxMemberCount: 8),
+            raid(id: 'many', memberCount: 7, maxMemberCount: 8),
+            raid(id: 'mid', memberCount: 4, maxMemberCount: 8),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      playerId: 'player-1',
+      filterStore: MemoryRaidStatusFilterStore(),
+    )..start();
+    addTearDown(viewModel.dispose);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(viewModel.state.items.map((item) => item.id), [
+      'many',
+      'mid',
+      'few',
+    ]);
+    expect(viewModel.state.sortSelection.isDefault, isTrue);
+  });
+
+  test('toggleMemberCountSort는 방향을 뒤집는다', () async {
+    final store = MemoryRaidStatusFilterStore();
+    final viewModel = ActiveRaidFilterViewModel(
+      streamFactory: () => Stream.value(
+        PartyReadSnapshot(
+          items: [
+            raid(id: 'few', memberCount: 2, maxMemberCount: 8),
+            raid(id: 'many', memberCount: 7, maxMemberCount: 8),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      playerId: 'player-1',
+      filterStore: store,
+    )..start();
+    addTearDown(viewModel.dispose);
+    await Future<void>.delayed(Duration.zero);
+
+    await viewModel.toggleMemberCountSort();
+    expect(viewModel.state.items.map((item) => item.id), ['few', 'many']);
+    expect(
+      await store.loadSort('player-1', RaidFilterScreen.activeRaids),
+      const RaidListSortSelection(
+        direction: RaidListSortDirection.ascending,
+      ),
+    );
+
+    await viewModel.toggleMemberCountSort();
+    expect(viewModel.state.items.map((item) => item.id), ['many', 'few']);
+    expect(
+      await store.loadSort('player-1', RaidFilterScreen.activeRaids),
+      RaidListSortSelection.defaults,
+    );
+  });
+
+  test('남은 자리 2+3 필터는 OR 일치만 보여 준다', () async {
+    final viewModel = ActiveRaidFilterViewModel(
+      streamFactory: () => Stream.value(
+        PartyReadSnapshot(
+          items: [
+            raid(id: 'two', memberCount: 6, maxMemberCount: 8),
+            raid(id: 'three', memberCount: 5, maxMemberCount: 8),
+            raid(id: 'one', memberCount: 7, maxMemberCount: 8),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      playerId: 'player-1',
+      filterStore: MemoryRaidStatusFilterStore(),
+    )..start();
+    addTearDown(viewModel.dispose);
+    await Future<void>.delayed(Duration.zero);
+
+    await viewModel.setRemainingSlotsSelection(
+      const RemainingSlotsFilterSelection(slotCounts: {2, 3}),
+    );
+    expect(viewModel.state.items.map((item) => item.id), ['two', 'three']);
+    expect(viewModel.state.originalItems, hasLength(3));
+  });
+
+  test('남은 자리 초기화는 메인 필터와 독립이다', () async {
+    final store = MemoryRaidStatusFilterStore();
+    final viewModel = ActiveRaidFilterViewModel(
+      streamFactory: () => Stream.value(
+        PartyReadSnapshot(
+          items: [
+            raid(id: 'public'),
+            raid(id: 'group', groupId: 'group-1'),
+            raid(id: 'open', memberCount: 2, maxMemberCount: 8),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      playerId: 'player-1',
+      filterStore: store,
+    )..start();
+    addTearDown(viewModel.dispose);
+    await Future<void>.delayed(Duration.zero);
+
+    await viewModel.setSelection(
+      RaidStatusFilterSelection.unrestricted.toggleGroup(),
+    );
+    await viewModel.setRemainingSlotsSelection(
+      const RemainingSlotsFilterSelection(slotCounts: {6}),
+    );
+    expect(viewModel.state.items.map((item) => item.id), ['open']);
+    expect(viewModel.state.selection.includeGroup, isFalse);
+
+    await viewModel.setRemainingSlotsSelection(
+      RemainingSlotsFilterSelection.unrestricted,
+    );
+    expect(viewModel.state.items.map((item) => item.id), ['open', 'public']);
+    expect(viewModel.state.selection.includeGroup, isFalse);
+    expect(
+      await store.load('player-1', RaidFilterScreen.activeRaids),
+      isNot(RaidStatusFilterSelection.unrestricted),
+    );
+    expect(
+      await store.loadRemainingSlotsFilter(
+        'player-1',
+        RaidFilterScreen.activeRaids,
+      ),
+      RemainingSlotsFilterSelection.unrestricted,
+    );
+  });
+
+  test('내 Character 필터와 정렬을 적용·저장하고 초기화한다', () async {
+    final store = MemoryRaidStatusFilterStore();
+    final viewModel = ActiveRaidFilterViewModel(
+      streamFactory: () => Stream.value(
+        PartyReadSnapshot(
+          items: [
+            raid(id: 'few', memberCount: 2, maxMemberCount: 8),
+            raid(id: 'many', memberCount: 7, maxMemberCount: 8),
+            raid(id: 'mid', memberCount: 4, maxMemberCount: 8),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      playerId: 'player-1',
+      filterStore: store,
+      membersStreamFactory: (recruitmentId) => Stream.value(
+        PartyReadSnapshot(
+          items: [
+            _memberDisplay(
+              playerId: 'player-1',
+              characterId: recruitmentId == 'many' ? 'char-me' : 'other',
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      activityCharactersRepository: _FakeActivity({
+        'player-1': {'char-me', 'char-alt'},
+      }),
+      characterSearchRepository: _FakeSearch({
+        'player-1': [
+          _searchChar(playerId: 'player-1', id: 'char-me', name: '메인'),
+          _searchChar(playerId: 'player-1', id: 'char-alt', name: '부캐'),
+        ],
+      }),
+    )..start();
+    addTearDown(viewModel.dispose);
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(
+      viewModel.state.ownCharacters.map((character) => character.id),
+      ['char-me', 'char-alt'],
+    );
+    expect(viewModel.showOwnCharacterFilters, isTrue);
+    expect(viewModel.state.sortBarLabel, '참가 인원수');
+
+    await viewModel.toggleMemberCountSort();
+    expect(viewModel.state.items.map((item) => item.id), [
+      'few',
+      'mid',
+      'many',
+    ]);
+    expect(
+      await store.loadSort('player-1', RaidFilterScreen.activeRaids),
+      const RaidListSortSelection(
+        direction: RaidListSortDirection.ascending,
+      ),
+    );
+
+    await viewModel.toggleOwnCharacter('char-me');
+    await Future<void>.delayed(Duration.zero);
+    expect(viewModel.state.selection.ownCharacterIds, {'char-me'});
+    expect(viewModel.state.items.map((item) => item.id), ['many']);
+    expect(viewModel.state.barLabel, contains('내 캐릭터'));
+    expect(viewModel.canResetFilters, isTrue);
+
+    await viewModel.resetSelection();
+    expect(viewModel.state.selection.isUnrestricted, isTrue);
+    expect(viewModel.state.sortSelection.isDefault, isTrue);
+    expect(viewModel.state.items, hasLength(3));
+    expect(
+      await store.loadSort('player-1', RaidFilterScreen.activeRaids),
+      RaidListSortSelection.defaults,
+    );
   });
 }
 

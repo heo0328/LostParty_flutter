@@ -18,6 +18,7 @@ bool matchesRaidStatusFilter({
   required String difficultyId,
   Set<String>? raidMemberPlayerIds = const {},
   Map<String, String>? raidCharacterIdByPlayer,
+  String? currentPlayerId,
   bool skipIncompleteCharacterLookup = true,
 }) {
   final isGroupLinked = groupId != null && groupId.trim().isNotEmpty;
@@ -32,6 +33,21 @@ bool matchesRaidStatusFilter({
   if (selection.difficultyIds.isNotEmpty &&
       !selection.difficultyIds.contains(difficultyId)) {
     return false;
+  }
+  if (selection.ownCharacterIds.isNotEmpty) {
+    final playerId = currentPlayerId?.trim();
+    if (playerId == null || playerId.isEmpty) {
+      if (!skipIncompleteCharacterLookup) return false;
+    } else if (raidCharacterIdByPlayer == null) {
+      if (!skipIncompleteCharacterLookup) return false;
+    } else {
+      final myCharacterId = raidCharacterIdByPlayer[playerId];
+      if (myCharacterId == null) {
+        if (!skipIncompleteCharacterLookup) return false;
+      } else if (!selection.ownCharacterIds.contains(myCharacterId)) {
+        return false;
+      }
+    }
   }
   if (selection.isGroupPublicOnly &&
       selection.groupIds.isNotEmpty &&
@@ -186,6 +202,11 @@ String raidStatusFilterBarLabel(
     parts.add('캐릭터 1개');
   } else if (selection.selectedCharacterCount > 1) {
     parts.add('캐릭터 ${selection.selectedCharacterCount}개');
+  }
+  if (selection.ownCharacterIds.length == 1) {
+    parts.add('내 캐릭터 1개');
+  } else if (selection.ownCharacterIds.length > 1) {
+    parts.add('내 캐릭터 ${selection.ownCharacterIds.length}개');
   }
   if (parts.isEmpty) return '레이드 필터: 모든 레이드';
   return '레이드 필터: ${parts.join(' · ')}';
