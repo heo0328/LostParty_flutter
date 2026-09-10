@@ -44,3 +44,12 @@ abstract class ActiveRaidAssignmentRepository {
     required String recruitmentId,
   });
 }
+
+abstract class ActiveRaidAssignmentLookup {
+  Future<bool> blocksCandidate({
+    required String playerId,
+    required String characterId,
+    required String raidId,
+    required String cycleKey,
+  });
+}

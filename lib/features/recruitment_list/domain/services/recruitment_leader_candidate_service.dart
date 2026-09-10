@@ -115,6 +115,7 @@ class RecruitmentLeaderCandidateService {
     required this.session,
     required this.clock,
     required this.assignmentRepository,
+    this.assignmentLookup,
     required this.recruitmentRepository,
     this.weeklyRaidClaimRepository,
     this.claimPlayerId,
@@ -128,6 +129,7 @@ class RecruitmentLeaderCandidateService {
   final UserSession session;
   final RecruitmentClock clock;
   final ActiveRaidAssignmentRepository assignmentRepository;
+  final ActiveRaidAssignmentLookup? assignmentLookup;
   final RecruitmentStateRepository recruitmentRepository;
   final WeeklyRaidClaimRepository? weeklyRaidClaimRepository;
   final String? claimPlayerId;
@@ -160,6 +162,16 @@ class RecruitmentLeaderCandidateService {
         final key =
             '${character.serverName.trim().toLowerCase()}::${character.characterName.trim().toLowerCase()}';
         if (!seenCharacters.add(key)) continue;
+        final serverCharacterId = character.serverCharacterId;
+        final hasServerAssignmentForSameRaid =
+            serverCharacterId != null &&
+            assignmentLookup != null &&
+            await assignmentLookup!.blocksCandidate(
+              playerId: userId,
+              characterId: serverCharacterId,
+              raidId: query.raidId,
+              cycleKey: weekKey,
+            );
         final snapshots = await accountRepository.loadCharacterBuildSnapshots(
           character.id,
         );
@@ -244,6 +256,14 @@ class RecruitmentLeaderCandidateService {
           ),
           activeAssignments: activeAssignments,
         );
+        if (hasServerAssignmentForSameRaid) {
+          statuses.add(
+            const CandidateParticipationStatus(
+              type: CandidateParticipationStatusType.activeSameRaid,
+            ),
+          );
+          rejectionReasons.add('동일 레이드 참가 중');
+        }
         for (final conflict in decision.conflicts) {
           final (type, reason) = switch (conflict.type) {
             ParticipationConflictType.sameCharacterAndRaid => (

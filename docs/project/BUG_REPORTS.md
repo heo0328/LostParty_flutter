@@ -273,6 +273,60 @@
 
 ---
 
+## BUG-012. 동일 레이드 다른 난이도 신청 후보에 확정 참가 Character가 노출됨
+
+| 항목 | 내용 |
+| --- | --- |
+| 상태 | **수정·실기기 검증 완료** |
+| 보고일 | 2026-09-10 |
+| 심각도 | 높음 — 동일 Character·raidId 확정 참가 계약의 사전 안내 누락 |
+| 기준 문서 | [`../product/PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md) |
+
+### 재현
+
+- Character로 4막 하드 모집을 생성해 확정 참가한다.
+- 같은 Character로 4막 노말 등 동일 `raidId`의 다른 모집에 신청한다.
+- 기존에는 신청 Character 선택 목록에서 제외됐지만 서버 점유가 있어도 다시 노출됐다.
+
+### 원인과 수정
+
+- 동일 레이드 충돌 정책은 난이도를 제외한 `characterId + raidId`로 정상 판정하고 있었다.
+- 실제 앱 라우터가 후보 서비스에 Firestore의 `players/{playerId}/activeRaidAssignments` 대신 실행 중 비어 있는 인메모리 저장소와 `local-user` 세션을 연결해 서버 확정 점유를 읽지 못했다.
+- 최초 수정에서 컬렉션 목록 조회를 연결했으나 Rules가 `get`만 허용하고 `list`를 금지해 모집 생성 정보 로딩이 `permission-denied`로 중단되는 후속 회귀가 발생했다.
+- 목록 조회를 폐기하고 기존 canonical 문서 ID인 `{serverCharacterId}_{raidId}`를 이용한 정확한 문서 `get`으로 교정했다.
+- 첫 개별 조회는 문서 존재만으로 차단해 과거 1회성 `incompleteEnded` assignment까지 현재 참가로 오판했다. 최종 생성·가입 명령과 같은 `LegacyEndedAssignmentReplacementPolicy`를 적용해 현재 주차·반복방 점유만 차단하고 교체 가능한 과거 미완료 종료 점유는 후보에서 허용하도록 다시 교정했다.
+- 실제 `PlayerId`, 서버 Character ID와 `raidId`로 충돌을 판정하며 생성·신청 Transaction, Rules와 서버 스키마는 변경하지 않았다.
+
+### 검증
+
+- 동일 서버 Character ID가 하드에 점유된 상태에서 노말 신청 후보가 `동일 레이드 참가 중`으로 차단되는 회귀 테스트를 추가했다.
+- 후보·과거 미완료 점유 정책 표적 테스트 10건과 변경 파일 정적 분석이 통과했다.
+- 실기기에서 과거 1회성 미완료 종료 assignment가 남은 Character로 4막 하드 모집을 정상 생성했다. 동일 레이드 다른 난이도 신청 후보 차단은 다음 통합 확인에도 포함한다.
+
+---
+
+## BUG-013. 4인 파티에서 방장과 동일한 딜러 직업이 신청 후보에 노출됨
+
+| 항목 | 내용 |
+| --- | --- |
+| 상태 | **원인 확인·수정 대기** |
+| 보고일 | 2026-09-10 |
+| 심각도 | 높음 — 파티별 동일 딜러 직업 제한의 신청 사전 차단 누락 |
+| 기준 문서 | [`../product/PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md) |
+
+### 원인
+
+- 카탈로그와 `PartyCompositionPolicy`는 4인 1파티의 동일 딜러 직업 상한을 1명으로 올바르게 정의한다.
+- 모집 상세 신청 팝업은 현재 membership·파티 구성 없이 생성용 `RecruitmentLeaderCandidateService`를 호출해 방장과 신청 Character의 직업 중복을 판정할 수 없다.
+- 최종 즉시 가입·승인 배치는 다시 검증하지만 승인 대기 신청 후보 단계에는 누락돼 있다. 이 경로는 최근 assignment 수정에서 제한을 제거한 것이 아니라 기존 신청 화면 연결의 검증 공백이다.
+
+### 다음 조치
+
+- 신청 후보 Query에 현재 membership과 파티 구성 규칙을 전달하거나 신청 전용 후보 서비스로 교체한다.
+- `4인 차원술사 방장 → 차원술사 신청 후보 제외`와 8인 파티별 배치 가능 사례를 함께 회귀한다.
+
+---
+
 ## 백로그 연결
 
 - 열린 항목은 현재 Task와 **별도**로 추적한다.
