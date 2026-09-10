@@ -2628,3 +2628,12 @@
 - 1인 그룹 해산은 허용 함수 내용이 과거 통과본과 같았지만 `groups` update에서 다른 판정 뒤에 놓인 상태였다. `validGroupDisbandUpdate`를 첫 분기로 이동하고 그룹 표적 테스트 43건을 통과시킨 뒤, 사용자 승인 범위에서 Rules 배포를 재시도해 `released rules`와 `Deploy complete`를 확인했다.
 - 운영 반영 후 그룹 생성·가입 신청·일반 탈퇴·그룹장 양도·초대코드 파티원 확인·코드 가입·마지막 1인 해산이 모두 실기기에서 정상 동작했다. 수동 인증은 다음 통합 디바이스 테스트에서 필요할 때 함께 확인한다.
 - 상세 Rules 장애·경고 기록은 `TASK-11-FIRESTORE-RULES-COMPLEXITY.md`에 보존하고, 현재 실행 문서에는 다음 Character Build membership 구간만 남겼다.
+
+## 2026-09-10 동일 레이드 다른 난이도 신청 후보 회귀 수정
+
+- 동일 `raidId`의 다른 난이도에 이미 확정 참가한 Character가 신청 팝업에 다시 노출되는 실기기 회귀를 조사했다.
+- 충돌 Domain 정책은 정상이었지만 앱 라우터의 후보 서비스가 서버 assignment가 아닌 빈 인메모리 저장소와 `local-user`를 사용해 확정 점유를 읽지 못한 것이 원인이었다.
+- 최초 Firestore 목록 Reader는 Rules의 `allow list: false`와 충돌해 모집 생성 정보 로딩을 막았다. 이를 즉시 철회하고 canonical assignment 문서 ID를 이용한 개별 `get` Lookup으로 교정했다.
+- 개별 문서 존재만 보던 1차 교정은 과거 1회성 미완료 종료 점유까지 현재 참가로 오판했다. 최종 명령과 같은 legacy replacement 정책을 적용해 교체 가능한 stale assignment는 후보 차단에서 제외하고, 현재 주차·반복방 점유만 차단하도록 보완했다.
+- 서버 쓰기, Firestore Rules·스키마는 변경하지 않았다. 후보·과거 미완료 점유 정책 표적 테스트 10건과 변경 파일 analyze가 통과했고 실기기 재현 확인을 남겼다.
+- 수정 빌드에서 과거 미완료 종료 점유가 남았던 `로리캐남캐안해요` Character로 4막 하드 모집 생성이 정상 동작해 stale assignment 후보 오판 회귀를 실기기 통과로 확정했다.

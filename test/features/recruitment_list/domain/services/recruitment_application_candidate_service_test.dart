@@ -17,6 +17,7 @@ import 'package:lost_party/features/recruitment_list/domain/entities/recruitment
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_application.dart';
 import 'package:lost_party/features/recruitment_list/domain/policies/approval_policy.dart';
 import 'package:lost_party/features/recruitment_list/domain/policies/party_composition_policy.dart';
+import 'package:lost_party/features/recruitment_list/domain/repositories/active_raid_assignment_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/services/recruitment_application_candidate_service.dart';
 import 'package:lost_party/features/recruitment_list/domain/state/recruitment_state_machine.dart';
 
@@ -141,6 +142,30 @@ void main() {
     expect(await service.load(_aggregate), isEmpty);
   });
 
+  test('서버 Character ID 점유는 동일 레이드의 다른 난이도 신청을 차단한다', () async {
+    final service = RecruitmentApplicationCandidateService(
+      accountRepository: _AccountRepository(),
+      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+      session: FakeUserSession('user-b'),
+      clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 20)),
+      assignmentLookup: const _AssignmentLookup(
+        characterId: 'AbCdEfGhIjKlMnOpQrSt',
+        raidId: 'serca',
+      ),
+    );
+
+    final candidate = (await service.load(_aggregate)).singleWhere(
+      (item) => item.accountId == 1 && item.role == PartyRole.dealer,
+    );
+
+    expect(candidate.canApply, isFalse);
+    expect(candidate.rejectionReasons, contains('동일 레이드 참가 중'));
+    expect(
+      candidate.participationStatuses.map((status) => status.type),
+      contains(CandidateParticipationStatusType.activeSameRaid),
+    );
+  });
+
   test('서버 Claim이 있는 캐릭터는 신청과 캐릭터 변경 후보에서 차단한다', () async {
     final service = RecruitmentApplicationCandidateService(
       accountRepository: _AccountRepository(),
@@ -160,6 +185,21 @@ void main() {
     expect(completed, isNotEmpty);
     expect(completed.every((candidate) => !candidate.canApply), isTrue);
   });
+}
+
+class _AssignmentLookup implements ActiveRaidAssignmentLookup {
+  const _AssignmentLookup({required this.characterId, required this.raidId});
+
+  final String characterId;
+  final String raidId;
+
+  @override
+  Future<bool> blocksCandidate({
+    required String playerId,
+    required String characterId,
+    required String raidId,
+    required String cycleKey,
+  }) async => this.characterId == characterId && this.raidId == raidId;
 }
 
 class _ClearedBardClaimRepository implements WeeklyRaidClaimRepository {

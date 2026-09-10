@@ -84,6 +84,7 @@ import '../../features/raid_status/presentation/pages/party_notifications_page.d
 import '../../features/raid_status/presentation/pages/party_read_detail_page.dart';
 import '../../features/raid_status/presentation/pages/raid_status_page.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_application_command_repository.dart';
+import '../../features/recruitment_list/data/repositories/firestore_active_raid_assignment_lookup.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_create_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_cycle_command_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_visibility_command_repository.dart';
@@ -353,8 +354,11 @@ GoRouter createAppRouter({
   final activeRaidAssignmentRepository = InMemoryActiveRaidAssignmentRepository(
     conflictPolicy: participationConflictPolicy,
   );
+  final serverActiveRaidAssignmentLookup = FirestoreActiveRaidAssignmentLookup(
+    firestore: FirebaseFirestore.instance,
+  );
   final recruitmentCommandService = RecruitmentCommandService(
-    session: FakeUserSession('local-user'),
+    session: FakeUserSession(playerSession.playerId),
     clock: FakeRecruitmentClock(DateTime.now()),
     idGenerator: SequentialRecruitmentIdGenerator(),
     repository: recruitmentRepository,
@@ -367,6 +371,7 @@ GoRouter createAppRouter({
     session: recruitmentCommandService.session,
     clock: recruitmentCommandService.clock,
     assignmentRepository: activeRaidAssignmentRepository,
+    assignmentLookup: serverActiveRaidAssignmentLookup,
     recruitmentRepository: recruitmentRepository,
     weeklyRaidClaimRepository: weeklyRaidClaimRepositoryOrDefault,
     claimPlayerId: playerSession.playerId,
@@ -379,6 +384,7 @@ GoRouter createAppRouter({
     session: recruitmentCommandService.session,
     clock: recruitmentCommandService.clock,
     assignmentRepository: activeRaidAssignmentRepository,
+    assignmentLookup: serverActiveRaidAssignmentLookup,
     recruitmentRepository: recruitmentRepository,
     weeklyRaidClaimRepository: weeklyRaidClaimRepositoryOrDefault,
     claimPlayerId: playerSession.playerId,

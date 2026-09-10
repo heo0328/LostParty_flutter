@@ -55,6 +55,7 @@ class RecruitmentApplicationCandidateService {
     required this.session,
     required this.clock,
     this.assignmentRepository,
+    this.assignmentLookup,
     this.recruitmentRepository,
     this.weeklyRaidClaimRepository,
     this.claimPlayerId,
@@ -68,6 +69,7 @@ class RecruitmentApplicationCandidateService {
   final UserSession session;
   final RecruitmentClock clock;
   final ActiveRaidAssignmentRepository? assignmentRepository;
+  final ActiveRaidAssignmentLookup? assignmentLookup;
   final RecruitmentStateRepository? recruitmentRepository;
   final WeeklyRaidClaimRepository? weeklyRaidClaimRepository;
   final String? claimPlayerId;
@@ -118,6 +120,16 @@ class RecruitmentApplicationCandidateService {
         final characterKey =
             '${character.serverName.trim().toLowerCase()}::${character.characterName.trim().toLowerCase()}';
         if (!seenCharacters.add(characterKey)) continue;
+        final serverCharacterId = character.serverCharacterId;
+        final hasServerAssignmentForSameRaid =
+            serverCharacterId != null &&
+            assignmentLookup != null &&
+            await assignmentLookup!.blocksCandidate(
+              playerId: userId,
+              characterId: serverCharacterId,
+              raidId: aggregate.metadata.raidId,
+              cycleKey: weekKey,
+            );
         final snapshots = await accountRepository.loadCharacterBuildSnapshots(
           character.id,
         );
@@ -202,6 +214,14 @@ class RecruitmentApplicationCandidateService {
                       )
                       .toList(growable: false),
           );
+          if (hasServerAssignmentForSameRaid) {
+            statuses.add(
+              const CandidateParticipationStatus(
+                type: CandidateParticipationStatusType.activeSameRaid,
+              ),
+            );
+            reasons.add('동일 레이드 참가 중');
+          }
           for (final conflict in participationDecision.conflicts) {
             final statusType = switch (conflict.type) {
               ParticipationConflictType.sameCharacterAndRaid =>
