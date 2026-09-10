@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../account/data/mappers/weekly_raid_claim_document_id.dart';
 import '../../domain/entities/party_event.dart';
+import '../../domain/entities/party_gem_validation_snapshot.dart';
 import '../../domain/entities/party_join_command.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/policies/party_composition_policy.dart';
@@ -27,7 +28,9 @@ class FirestorePartyJoinCommandRepository
 
   @override
   Future<PartyJoinResult> joinDirectly(PartyDirectJoinCommand command) async {
-    final invalid = const PartyJoinCommandValidator().validateDirectJoin(command);
+    final invalid = const PartyJoinCommandValidator().validateDirectJoin(
+      command,
+    );
     if (invalid != null) return PartyJoinResult.failure(invalid);
     return _join(
       recruitmentId: command.recruitmentId,
@@ -37,6 +40,7 @@ class FirestorePartyJoinCommandRepository
       requestedRole: command.role,
       requestedCycleKey: command.cycleKey,
       combatPower: command.combatPower,
+      gemValidation: command.gemValidation,
       requiresDirectJoin: true,
     );
   }
@@ -59,16 +63,32 @@ class FirestorePartyJoinCommandRepository
     final invalid = const PartyJoinCommandValidator().validateDecision(command);
     if (invalid != null) return PartyJoinResult.failure(invalid);
     return _run((transaction, actorPlayerId) async {
-      final recruitmentRef = _firestore.collection('recruitments').doc(command.recruitmentId);
-      final applicationRef = recruitmentRef.collection('applications').doc(command.applicantPlayerId);
+      final recruitmentRef = _firestore
+          .collection('recruitments')
+          .doc(command.recruitmentId);
+      final applicationRef = recruitmentRef
+          .collection('applications')
+          .doc(command.applicantPlayerId);
       final recruitment = await transaction.get(recruitmentRef);
       final application = await transaction.get(applicationRef);
       final r = recruitment.data();
       final a = application.data();
-      if (!recruitment.exists || !application.exists) return const PartyJoinResult.failure(PartyJoinFailure.notFound);
-      if (!await _canApprove(transaction, command.recruitmentId, r, actorPlayerId)) return const PartyJoinResult.failure(PartyJoinFailure.unauthorized);
-      if (r?['revision'] != command.expectedRecruitmentRevision || a?['revision'] != command.expectedApplicationRevision) return const PartyJoinResult.failure(PartyJoinFailure.revisionConflict);
-      if (a?['status'] != 'pending') return const PartyJoinResult.failure(PartyJoinFailure.applicationNotPending);
+      if (!recruitment.exists || !application.exists)
+        return const PartyJoinResult.failure(PartyJoinFailure.notFound);
+      if (!await _canApprove(
+        transaction,
+        command.recruitmentId,
+        r,
+        actorPlayerId,
+      ))
+        return const PartyJoinResult.failure(PartyJoinFailure.unauthorized);
+      if (r?['revision'] != command.expectedRecruitmentRevision ||
+          a?['revision'] != command.expectedApplicationRevision)
+        return const PartyJoinResult.failure(PartyJoinFailure.revisionConflict);
+      if (a?['status'] != 'pending')
+        return const PartyJoinResult.failure(
+          PartyJoinFailure.applicationNotPending,
+        );
       final now = FieldValue.serverTimestamp();
       final nextRevision = command.expectedApplicationRevision + 1;
       final rejectionCount = (a?['rejectionCount'] as int? ?? 0) + 1;
@@ -120,11 +140,14 @@ class FirestorePartyJoinCommandRepository
     PartyRole? requestedRole,
     String? requestedCycleKey,
     double? combatPower,
+    PartyGemValidationSnapshot? gemValidation,
   }) async {
     if (_firebaseAuth.currentUser == null) {
       return const PartyJoinResult.failure(PartyJoinFailure.unauthenticated);
     }
-    final recruitmentRef = _firestore.collection('recruitments').doc(recruitmentId);
+    final recruitmentRef = _firestore
+        .collection('recruitments')
+        .doc(recruitmentId);
     late final QuerySnapshot<Map<String, dynamic>> knownMembers;
     try {
       knownMembers = await recruitmentRef.collection('members').get();
@@ -134,37 +157,71 @@ class FirestorePartyJoinCommandRepository
     return _run((transaction, actorPlayerId) async {
       final recruitment = await transaction.get(recruitmentRef);
       final r = recruitment.data();
-      if (!recruitment.exists) return const PartyJoinResult.failure(PartyJoinFailure.notFound);
-      if (r?['revision'] != expectedRecruitmentRevision) return const PartyJoinResult.failure(PartyJoinFailure.revisionConflict);
-      if (r?['status'] != 'active' || r?['manualRecruitmentEnabled'] != true) return const PartyJoinResult.failure(PartyJoinFailure.recruitmentClosed);
-      if (r?['hasAvailableSlot'] != true) return const PartyJoinResult.failure(PartyJoinFailure.capacityFull);
+      if (!recruitment.exists)
+        return const PartyJoinResult.failure(PartyJoinFailure.notFound);
+      if (r?['revision'] != expectedRecruitmentRevision)
+        return const PartyJoinResult.failure(PartyJoinFailure.revisionConflict);
+      if (r?['status'] != 'active' || r?['manualRecruitmentEnabled'] != true)
+        return const PartyJoinResult.failure(
+          PartyJoinFailure.recruitmentClosed,
+        );
+      if (r?['hasAvailableSlot'] != true)
+        return const PartyJoinResult.failure(PartyJoinFailure.capacityFull);
 
       final playerId = applicantPlayerId ?? actorPlayerId;
       Map<String, dynamic>? applicationData;
       DocumentReference<Map<String, dynamic>>? applicationRef;
+      Map<String, Object?>? gemValidationFields = gemValidation?.toFields();
       if (requiresDirectJoin) {
-        if ((r?['approvalPolicy'] as Map?)?['mode'] != 'directJoin') return const PartyJoinResult.failure(PartyJoinFailure.approvalModeMismatch);
+        if ((r?['approvalPolicy'] as Map?)?['mode'] != 'directJoin')
+          return const PartyJoinResult.failure(
+            PartyJoinFailure.approvalModeMismatch,
+          );
       } else {
-        if (!await _canApprove(transaction, recruitmentId, r, actorPlayerId)) return const PartyJoinResult.failure(PartyJoinFailure.unauthorized);
-        applicationRef = recruitmentRef.collection('applications').doc(playerId);
+        if (!await _canApprove(transaction, recruitmentId, r, actorPlayerId))
+          return const PartyJoinResult.failure(PartyJoinFailure.unauthorized);
+        applicationRef = recruitmentRef
+            .collection('applications')
+            .doc(playerId);
         final application = await transaction.get(applicationRef);
         applicationData = application.data();
-        if (!application.exists) return const PartyJoinResult.failure(PartyJoinFailure.notFound);
-        if (applicationData?['status'] != 'pending') return const PartyJoinResult.failure(PartyJoinFailure.applicationNotPending);
-        if (applicationData?['revision'] != expectedApplicationRevision) return const PartyJoinResult.failure(PartyJoinFailure.revisionConflict);
+        if (!application.exists)
+          return const PartyJoinResult.failure(PartyJoinFailure.notFound);
+        if (applicationData?['status'] != 'pending')
+          return const PartyJoinResult.failure(
+            PartyJoinFailure.applicationNotPending,
+          );
+        if (applicationData?['revision'] != expectedApplicationRevision)
+          return const PartyJoinResult.failure(
+            PartyJoinFailure.revisionConflict,
+          );
         requestedCharacterId = applicationData?['characterId'] as String?;
         requestedRole = _role(applicationData?['requestedRole']);
         requestedCycleKey = applicationData?['cycleKey'] as String?;
-        combatPower = ((applicationData?['submittedBuildSnapshot'] as Map?)?['combatPower'] as num?)?.toDouble();
+        final submitted = applicationData?['submittedBuildSnapshot'];
+        if (submitted is Map) {
+          combatPower = (submitted['combatPower'] as num?)?.toDouble();
+          gemValidationFields = PartyGemValidationSnapshot.copyFieldsIfComplete(
+            Map<Object?, Object?>.from(submitted),
+          );
+        }
       }
-      if ((r?['memberPlayerIds'] as List?)?.contains(playerId) == true) return const PartyJoinResult.failure(PartyJoinFailure.alreadyMember);
-      if (requestedCharacterId == null || requestedRole == null || requestedCycleKey != r?['targetCycleKey']) return const PartyJoinResult.failure(PartyJoinFailure.invalidRequest);
+      if ((r?['memberPlayerIds'] as List?)?.contains(playerId) == true)
+        return const PartyJoinResult.failure(PartyJoinFailure.alreadyMember);
+      if (requestedCharacterId == null ||
+          requestedRole == null ||
+          requestedCycleKey != r?['targetCycleKey'])
+        return const PartyJoinResult.failure(PartyJoinFailure.invalidRequest);
       final characterId = requestedCharacterId!;
       final role = requestedRole!;
       final cycleKey = requestedCycleKey!;
 
       final characterRef = _firestore.collection('characters').doc(characterId);
-      final assignmentRef = _firestore.collection('players').doc(playerId).collection('activeRaidAssignments').doc('${characterId}_${r?['raidId']}');
+      final assignmentRef = _firestore
+          .collection('players')
+          .doc(playerId)
+          .collection('activeRaidAssignments')
+          .doc('${characterId}_${r?['raidId']}');
       final character = await transaction.get(characterRef);
       final assignment = await transaction.get(assignmentRef);
       final assignmentData = assignment.data();
@@ -182,9 +239,7 @@ class FirestorePartyJoinCommandRepository
       if (requiresDirectJoin) {
         final raidId = r?['raidId'];
         if (raidId is! String) {
-          return const PartyJoinResult.failure(
-            PartyJoinFailure.invalidRequest,
-          );
+          return const PartyJoinResult.failure(PartyJoinFailure.invalidRequest);
         }
         claim = await transaction.get(
           _firestore
@@ -201,8 +256,10 @@ class FirestorePartyJoinCommandRepository
         );
       }
       final c = character.data();
-      if (!character.exists || c?['status'] != 'active') return const PartyJoinResult.failure(PartyJoinFailure.invalidCharacter);
-      if (c?['ownerPlayerId'] != playerId) return const PartyJoinResult.failure(PartyJoinFailure.ownershipLost);
+      if (!character.exists || c?['status'] != 'active')
+        return const PartyJoinResult.failure(PartyJoinFailure.invalidCharacter);
+      if (c?['ownerPlayerId'] != playerId)
+        return const PartyJoinResult.failure(PartyJoinFailure.ownershipLost);
       final canReplaceLegacyAssignment =
           const LegacyEndedAssignmentReplacementPolicy().canReplace(
             assignmentExists: assignment.exists,
@@ -237,7 +294,11 @@ class FirestorePartyJoinCommandRepository
       final itemLevel = _parseItemLevel(c?['itemAvgLevel']);
       final name = c?['characterName'];
       final className = c?['characterClassName'];
-      if (itemLevel == null || itemLevel < (r?['minItemLevel'] as num? ?? double.infinity) || name is! String || className is! String) return const PartyJoinResult.failure(PartyJoinFailure.invalidCharacter);
+      if (itemLevel == null ||
+          itemLevel < (r?['minItemLevel'] as num? ?? double.infinity) ||
+          name is! String ||
+          className is! String)
+        return const PartyJoinResult.failure(PartyJoinFailure.invalidCharacter);
 
       final existing = <OccupiedPartyMember>[];
       for (final known in knownMembers.docs) {
@@ -256,7 +317,9 @@ class FirestorePartyJoinCommandRepository
       final partyCount = _asInt(r?['partyCount']);
       final membersPerParty = _asInt(r?['membersPerParty']);
       final supportsPerParty = _asInt(r?['supportsPerParty']);
-      final maxDealersPerClassPerParty = _asInt(r?['maxDealersPerClassPerParty']);
+      final maxDealersPerClassPerParty = _asInt(
+        r?['maxDealersPerClassPerParty'],
+      );
       final memberCount = _asInt(r?['memberCount']);
       final maxMemberCount = _asInt(r?['maxMemberCount']);
       final dealerCount = _asInt(r?['dealerCount']);
@@ -302,14 +365,27 @@ class FirestorePartyJoinCommandRepository
       );
       final now = FieldValue.serverTimestamp();
       final plan = PartyJoinWritePlan.create(
-        recruitmentId: recruitmentId, playerId: playerId, characterId: characterId,
-        characterName: name, className: className, itemLevel: itemLevel, combatPower: combatPower,
-        role: role, partyIndex: placement.slot!.partyIndex, slotIndex: placement.slot!.slotIndex,
+        recruitmentId: recruitmentId,
+        playerId: playerId,
+        characterId: characterId,
+        characterName: name,
+        className: className,
+        itemLevel: itemLevel,
+        combatPower: combatPower,
+        gemValidationFields: gemValidationFields,
+        role: role,
+        partyIndex: placement.slot!.partyIndex,
+        slotIndex: placement.slot!.slotIndex,
         joinedBy: actorPlayerId,
-        raidId: raidId, cycleKey: cycleKey, memberCount: memberCount,
+        raidId: raidId,
+        cycleKey: cycleKey,
+        memberCount: memberCount,
         memberPlayerIds: List<String>.from(memberPlayerIds),
-        maxMemberCount: maxMemberCount, dealerCount: dealerCount,
-        supportCount: supportCount, revision: expectedRecruitmentRevision, serverTimestamp: now,
+        maxMemberCount: maxMemberCount,
+        dealerCount: dealerCount,
+        supportCount: supportCount,
+        revision: expectedRecruitmentRevision,
+        serverTimestamp: now,
       );
       final memberRef = recruitmentRef.collection('members').doc(playerId);
       transaction.update(recruitmentRef, plan.recruitmentUpdate);
@@ -354,8 +430,7 @@ class FirestorePartyJoinCommandRepository
         transaction.update(applicationRef, {
           'status': 'approved',
           'resolutionReason': 'approvedByApprover',
-          'approvalCount':
-              (applicationData?['approvalCount'] as int? ?? 0) + 1,
+          'approvalCount': (applicationData?['approvalCount'] as int? ?? 0) + 1,
           'revision': nextApplicationRevision,
           'decidedAt': now,
           'updatedAt': now,
@@ -369,8 +444,7 @@ class FirestorePartyJoinCommandRepository
           applicationRevision: nextApplicationRevision,
           actorPlayerId: actorPlayerId,
           characterNameSnapshot: approvedCharacterName,
-          classNameSnapshot:
-              applicationData?['classNameSnapshot'] is String
+          classNameSnapshot: applicationData?['classNameSnapshot'] is String
               ? applicationData!['classNameSnapshot'] as String
               : className,
           role: role.name,
@@ -383,15 +457,25 @@ class FirestorePartyJoinCommandRepository
     });
   }
 
-  Future<PartyJoinResult> _run(Future<PartyJoinResult> Function(Transaction, String) action) async {
+  Future<PartyJoinResult> _run(
+    Future<PartyJoinResult> Function(Transaction, String) action,
+  ) async {
     final uid = _firebaseAuth.currentUser?.uid;
-    if (uid == null) return const PartyJoinResult.failure(PartyJoinFailure.unauthenticated);
+    if (uid == null)
+      return const PartyJoinResult.failure(PartyJoinFailure.unauthenticated);
     try {
       return await _firestore.runTransaction((transaction) async {
-        final binding = await transaction.get(_firestore.collection('authBindings').doc(uid));
+        final binding = await transaction.get(
+          _firestore.collection('authBindings').doc(uid),
+        );
         final data = binding.data();
         final playerId = data?['playerId'];
-        if (data?['status'] != 'active' || playerId is! String || playerId.isEmpty) return const PartyJoinResult.failure(PartyJoinFailure.playerBindingMissing);
+        if (data?['status'] != 'active' ||
+            playerId is! String ||
+            playerId.isEmpty)
+          return const PartyJoinResult.failure(
+            PartyJoinFailure.playerBindingMissing,
+          );
         return action(transaction, playerId);
       });
     } on FirebaseException catch (error) {
@@ -458,18 +542,27 @@ int? _asInt(Object? value) {
   return null;
 }
 
-double? _parseItemLevel(Object? value) => value is num ? value.toDouble() : value is String ? double.tryParse(value.replaceAll(',', '').trim()) : null;
+double? _parseItemLevel(Object? value) => value is num
+    ? value.toDouble()
+    : value is String
+    ? double.tryParse(value.replaceAll(',', '').trim())
+    : null;
 
-PartyJoinFailure _placementFailure(PartyCompositionFailure failure) => switch (failure) {
-  PartyCompositionFailure.partyFull => PartyJoinFailure.capacityFull,
-  PartyCompositionFailure.dealerSlotsFull || PartyCompositionFailure.supportSlotsFull => PartyJoinFailure.roleCapacityFull,
-  PartyCompositionFailure.duplicateDealerClass => PartyJoinFailure.duplicateDealerClass,
-  _ => PartyJoinFailure.invalidRequest,
-};
+PartyJoinFailure _placementFailure(PartyCompositionFailure failure) =>
+    switch (failure) {
+      PartyCompositionFailure.partyFull => PartyJoinFailure.capacityFull,
+      PartyCompositionFailure.dealerSlotsFull ||
+      PartyCompositionFailure.supportSlotsFull =>
+        PartyJoinFailure.roleCapacityFull,
+      PartyCompositionFailure.duplicateDealerClass =>
+        PartyJoinFailure.duplicateDealerClass,
+      _ => PartyJoinFailure.invalidRequest,
+    };
 
 PartyJoinFailure _firebaseFailure(String code) => switch (code) {
   'permission-denied' => PartyJoinFailure.permissionDenied,
-  'unavailable' || 'deadline-exceeded' || 'aborted' =>
-    PartyJoinFailure.temporarilyUnavailable,
+  'unavailable' ||
+  'deadline-exceeded' ||
+  'aborted' => PartyJoinFailure.temporarilyUnavailable,
   _ => PartyJoinFailure.unknown,
 };

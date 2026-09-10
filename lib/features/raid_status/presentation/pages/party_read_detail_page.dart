@@ -465,6 +465,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
               : summary.currentCycleKey,
           expectedRecruitmentRevision: summary.revision,
           combatPower: selected.combatPower,
+          gemValidation: selected.gemValidation,
         ),
       );
       if (!mounted) return;
@@ -924,6 +925,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
         newRole: selected.role,
         expectedRecruitmentRevision: summary.revision,
         combatPower: selected.combatPower,
+        gemValidation: selected.gemValidation,
       ),
     );
     if (!mounted) return;
@@ -1108,9 +1110,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     final endsAt = summary.cycleEndsAt;
     if (endsAt != null && !DateTime.now().toUtc().isBefore(endsAt)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('이 회차 기간이 종료되었습니다. 잠시 후 화면을 새로고침해 주세요.'),
-        ),
+        const SnackBar(content: Text('이 회차 기간이 종료되었습니다. 잠시 후 화면을 새로고침해 주세요.')),
       );
       return;
     }
@@ -1960,6 +1960,13 @@ class _SlotCard extends StatelessWidget {
                           : '아이템 레벨 정보 없음',
                       style: theme.textTheme.bodySmall,
                     ),
+                    if (member.gemValidation case final validation?) ...[
+                      const SizedBox(height: AppSpacing.xxs),
+                      _GemValidationLine(
+                        validation: validation,
+                        keyName: 'memberGemValidation',
+                      ),
+                    ],
                   ],
                 ),
         ),
@@ -2008,6 +2015,13 @@ class _UnassignedMemberCard extends StatelessWidget {
               ].join(' · '),
               style: theme.textTheme.bodySmall,
             ),
+            if (member.gemValidation case final validation?) ...[
+              const SizedBox(height: AppSpacing.xxs),
+              _GemValidationLine(
+                validation: validation,
+                keyName: 'unassignedMemberGemValidation',
+              ),
+            ],
           ],
         ),
       ),
@@ -2193,7 +2207,10 @@ class _ApplicationCard extends StatelessWidget {
             ],
             if (application.gemValidation case final validation?) ...[
               const SizedBox(height: 2),
-              _ApplicationGemValidationLine(validation: validation),
+              _GemValidationLine(
+                validation: validation,
+                keyName: 'applicationGemValidation',
+              ),
             ],
             const SizedBox(height: 4),
             const Text('파티장 승인 대기'),
@@ -2234,10 +2251,11 @@ class _ApplicationCard extends StatelessWidget {
   }
 }
 
-class _ApplicationGemValidationLine extends StatelessWidget {
-  const _ApplicationGemValidationLine({required this.validation});
+class _GemValidationLine extends StatelessWidget {
+  const _GemValidationLine({required this.validation, required this.keyName});
 
   final PartyGemValidationSnapshot validation;
+  final String keyName;
 
   @override
   Widget build(BuildContext context) {
@@ -2257,7 +2275,7 @@ class _ApplicationGemValidationLine extends StatelessWidget {
         ? theme.colorScheme.error
         : theme.colorScheme.onSurfaceVariant;
     return Row(
-      key: const ValueKey('applicationGemValidation'),
+      key: ValueKey(keyName),
       children: [
         Icon(
           isForeign ? Icons.error_outline : Icons.info_outline,
@@ -2413,10 +2431,7 @@ class _CycleLifecycleSection extends StatelessWidget {
         summary.isActiveRecruitment &&
         (summary.isCycleActive || summary.isCycleCompleted);
 
-    if (!canComplete &&
-        !canCancel &&
-        !showDisband &&
-        !canToggleRecurrence) {
+    if (!canComplete && !canCancel && !showDisband && !canToggleRecurrence) {
       return const SizedBox.shrink();
     }
 
@@ -2461,8 +2476,7 @@ class _CycleLifecycleSection extends StatelessWidget {
             ),
           ],
           if (showDisband) ...[
-            if (canComplete || canCancel)
-              const SizedBox(height: AppSpacing.xs),
+            if (canComplete || canCancel) const SizedBox(height: AppSpacing.xs),
             OutlinedButton.icon(
               key: const ValueKey('disbandPartyButton'),
               onPressed: submitting ? null : onDisband,

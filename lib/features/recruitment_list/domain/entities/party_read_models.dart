@@ -123,6 +123,7 @@ class PartyMemberDisplay {
     this.slotIndex,
     this.itemLevel,
     this.combatPower,
+    this.gemValidation,
   });
 
   /// 명령 대상용. UI 문구에는 노출하지 않는다.
@@ -137,6 +138,7 @@ class PartyMemberDisplay {
   final int? slotIndex;
   final double? itemLevel;
   final double? combatPower;
+  final PartyGemValidationSnapshot? gemValidation;
 
   int compareByPartySlot(PartyMemberDisplay other) {
     final byParty = partyIndex.compareTo(other.partyIndex);

@@ -4,68 +4,55 @@
 
 ## 현재 인계 상태
 
-- `codex/lazy-weekly-cycle-reconciliation`에서 주차 자동 보정, 과거 미완료 종료 점유 호환, Rules 경고 제거와 1인 그룹 해산 우선순위 수정까지 완료했다.
-- 관련 자동 검증과 운영 Rules 배포가 완료됐고, 그룹·레이드 주요 명령 및 과거 주차 점유 Character의 새 방 생성·참가를 실기기에서 확인했다.
-- 수동 인증은 이번 섹션의 미해결 결함이 아니다. 다음 통합 디바이스 테스트에서 필요할 때 함께 확인한다.
-- 완료 상세와 503/409 배포 타임라인은 `DEV_LOG.md` 및 `TASK-11-FIRESTORE-RULES-COMPLEXITY.md`로 이동했다.
+- `codex/party-membership-build-snapshot`에서 승인·직접 참가·참가 Character 변경의 Build 무결성 Snapshot을 파티 membership과 구성원 카드까지 전파했다.
+- 표적·영향 자동 검증 69건과 변경 파일 analyze(기존 info lint만)가 통과했다.
+- Character 변경 Rules allowlist에 `gemValidationSnapshot`을 추가했다. **사용자 Rules 배포 대기**이며, 배포 후 다음 통합 디바이스 테스트에서 수동 인증과 함께 확인한다.
+- 완료 상세는 `DEV_LOG.md`와 `CHARACTER_BUILD_INTEGRITY_CONTRACT.md`로 이동했다.
 
-## 다음 작업 그룹 — Character Build 무결성의 파티 membership 전파
+## 다음 작업 그룹 — 레이드 목록 로컬 필터·정렬
 
 ### 목표
 
-신청 시 저장된 최소 Build 무결성 Snapshot을 승인·직접 참가·참가 Character 변경 이후 파티 membership과 참가자 카드에서도 일관되게 유지한다.
+진행 중 필터 최하단에 내 Character 다중 선택을 두고, 진행 중/레이드 모집 목록을 참가 인원·남은 자리 적은 순/많은 순으로 로컬 정렬한다. 서버 스키마·Rules·Indexes는 변경하지 않는다.
 
 ### 선행 확인
 
-- 현재 신청/재신청의 `submittedBuildSnapshot` 다섯 필드와 membership 생성·변경 쓰기 계획을 대조한다.
-- 승인, 직접 참가, 참가 Character 변경 중 어떤 경로가 신청 Snapshot을 재사용하고 어떤 경로가 선택 Character의 최신 로컬 Snapshot을 요구하는지 구분한다.
-- 기존 membership 문서, Rules 허용 필드, 과거 데이터 호환과 추가 서버 저장량을 먼저 산정한다.
+- `ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md` §14와 현재 레이드 현황·모집 목록 필터 UI를 대조한다.
+- 받은 원본 목록 병합 지점과 기존 공개 조건·레이드·난이도 필터 순서를 확인한다.
 
 ### 포함 범위
 
-- 파티 membership의 최소 필드: 검증 상태, 타 직업 보석 수, 동일 직업 대상 미확인 수, 검증 시각, 카탈로그 버전
-- 승인·직접 참가·참가 Character 변경의 쓰기 계획과 방어적 읽기
-- 파티 구성원 간략 카드의 중립 안내 및 타 직업 보석 빨간 경고
-- 과거 membership에 새 필드가 없어도 기존 아이템 레벨·전투력 카드는 정상 표시
-- 필요한 Rules allowlist·타입 계약과 표적 테스트
+- 진행 중: 내 Character 다중 선택 필터(최하단)
+- 진행 중/레이드 모집: 참가 인원·남은 자리 적은 순/많은 순 로컬 안정 정렬
+- 원본 병합 후 클라이언트 필터·정렬만 적용
+- 표적 테스트와 문서 정리
 
 ### 제외 범위
 
-- 그룹 membership 및 그룹 Character 카드
-- 보석명·Tooltip·Armory 원문 저장
-- 모든 직업 Build 조합 선행 입력, AI 분석 기능
-- Build 별칭·개인 메모·JSON 공유
-- 시너지 선택 및 필터 UI
+- Firestore 스키마·Rules·Indexes·쿼리 변경
+- 그룹 membership Build Snapshot
+- Build 별칭·시너지 UI
 
 ### 작업 순서
 
-1. A — 현재 신청/참가 Snapshot 경로와 Rules 비용을 대조하고 변경 계약을 확정한다.
-2. B — membership DTO·mapper·쓰기 계획을 최소 필드로 확장하고 과거 데이터 호환 테스트를 작성한다.
-3. C — 승인·직접 참가·Character 변경 명령에 Snapshot 전파를 연결한다.
-4. D — 참가자 카드 표시와 반응형 UI를 연결한다.
-5. E — 기능 섹션 표적 테스트·영향 테스트·정적 분석을 한 번 수행하고 문서를 정리한다.
-6. 사용자가 Rules를 배포한 뒤 다음 통합 디바이스 테스트에서 수동 인증과 함께 확인한다.
+상세 A~E는 `ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md` §14.5를 따른다.
 
 ### 중단 조건
 
-- raw Build 데이터나 보석명을 서버에 저장해야만 구현 가능한 경우
-- 기존 신청·가입 Rules의 허용 범위를 광범위하게 다시 설계해야 하는 경우
-- 카드 표시를 위해 참가방별 추가 실시간 구독이 필요한 경우
+- 서버 쿼리·Index 없이는 목록 순서를 맞출 수 없다고 판정되는 경우
+- 기존 필터·페이징 계약을 깨야만 구현 가능한 경우
 
 위 조건이 확인되면 구현 범위를 넓히지 않고 변경량과 대안을 사용자에게 다시 제시한다.
 
 ### 완료 조건
 
-- 세 참가 경로가 동일한 최소 Snapshot 계약을 사용한다.
-- 과거 membership과 검증 정보가 없는 Character가 차단되지 않는다.
-- 같은 직업 미확인은 중립, 다른 직업 보석만 빨간 경고로 표시된다.
-- 기존 역할별 전투력·슬롯·점유·주차 처리 계약이 유지된다.
-- 자동 검증, 사용자 Rules 배포 결과와 통합 디바이스 결과가 기록된다.
+- 내 Character 필터와 인원·자리 정렬이 로컬에서만 동작한다.
+- 기존 공개 조건·레이드·난이도 필터와 페이징 계약이 유지된다.
+- 자동 검증과 문서가 갱신된다. 실기기 확인은 다음 통합 디바이스 테스트에 묶을 수 있다.
 
 ## 차후 대기
 
-- 수동 인증 실기기 확인: 다음 통합 디바이스 테스트에 포함
-- **바로 착수 가능한 다음 대기 작업 — 레이드 목록 로컬 필터·정렬:** 진행 중 필터 최하단의 내 Character 다중 선택과, 진행 중/레이드 모집의 참가 인원·남은 자리 적은 순/많은 순 정렬을 구현한다. 서버 스키마·Rules·Indexes 없이 받은 원본을 병합한 뒤 필터·안정 정렬하며 상세 계약과 A~E 순서는 `ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md` §14를 따른다.
+- 수동 인증·membership Build Snapshot 실기기 확인: Rules 배포 후 다음 통합 디바이스 테스트에 포함
 - 그룹 membership Build Snapshot: 파티 membership 안정화 후 별도 산정
 - Build 별칭·직업 메모·공유: `BUILD_MEMO_SHARING.md`
 - 서버 데이터 무결성·복구 절차: 반복 사례가 확인될 때 별도 착수

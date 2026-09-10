@@ -1,9 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_membership_write_plan.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_gem_validation_snapshot.dart';
 
 void main() {
-  test('캐릭터 변경 맵에 선택한 새 역할을 포함한다', () {
+  test('캐릭터 변경 맵에 선택한 새 역할과 보석 Snapshot을 포함한다', () {
     final timestamp = Object();
+    final validatedAt = DateTime.utc(2026, 9, 8);
     final plan = PartyMembershipWritePlan.changeCharacter(
       characterId: 'character-2',
       characterName: '교체캐릭터',
@@ -11,11 +13,35 @@ void main() {
       role: 'support',
       itemLevel: 1700,
       combatPower: 300000,
+      gemValidation: PartyGemValidationSnapshot(
+        status: PartyGemValidationStatus.sameClassTargetUnverified,
+        foreignClassGemCount: 0,
+        unverifiedSameClassGemCount: 2,
+        validatedAt: validatedAt,
+        catalogVersion: '2026.09.08',
+      ),
       serverTimestamp: timestamp,
     );
 
     expect(plan['role'], 'support');
     expect(plan['characterChangedAt'], same(timestamp));
+    final gem = plan['gemValidationSnapshot']! as Map<String, Object?>;
+    expect(gem['gemValidationStatus'], 'sameClassTargetUnverified');
+    expect(gem['unverifiedSameClassGemCount'], 2);
+  });
+
+  test('캐릭터 변경 시 보석 Snapshot이 없으면 null로 지운다', () {
+    final plan = PartyMembershipWritePlan.changeCharacter(
+      characterId: 'character-2',
+      characterName: '교체캐릭터',
+      className: '바드',
+      role: 'support',
+      itemLevel: 1700,
+      combatPower: 300000,
+      serverTimestamp: Object(),
+    );
+    expect(plan.containsKey('gemValidationSnapshot'), isTrue);
+    expect(plan['gemValidationSnapshot'], isNull);
   });
 
   test('일반 탈퇴는 자리와 역할 카운트를 되돌리고 모집 자리를 연다', () {

@@ -1,3 +1,4 @@
+import '../../domain/entities/party_gem_validation_snapshot.dart';
 import '../../domain/entities/party_recruitment.dart';
 
 class PartyJoinWritePlan {
@@ -15,6 +16,8 @@ class PartyJoinWritePlan {
     required String className,
     required double itemLevel,
     required double? combatPower,
+    PartyGemValidationSnapshot? gemValidation,
+    Map<String, Object?>? gemValidationFields,
     required PartyRole role,
     required int partyIndex,
     required int slotIndex,
@@ -52,6 +55,7 @@ class PartyJoinWritePlan {
       'submittedBuildSnapshotId': null,
       'itemLevelSnapshot': itemLevel,
       'combatPowerSnapshot': combatPower,
+      'gemValidationSnapshot': gemValidationFields ?? gemValidation?.toFields(),
       'characterChangedAt': null,
       'canApproveApplications': false,
       'updatedAt': serverTimestamp,

@@ -1,3 +1,13 @@
+# 2026-09-10 Character Build 무결성 — 파티 membership 전파
+
+- 브랜치 `codex/party-membership-build-snapshot`에서 신청 Snapshot의 최소 보석 검증 요약을 파티 membership까지 전파했다.
+- 승인: 신청 `submittedBuildSnapshot`의 다섯 필드를 `gemValidationSnapshot`으로 재사용. 직접 참가·참가 Character 변경: 선택 역할의 최신 로컬 Build Snapshot을 명령에 실어 기록한다.
+- membership DTO·쓰기 계획·방어적 읽기와 구성원 카드 UI를 연결했다. 정상은 숨기고 동일 직업 미확인은 중립, 다른 직업 보석만 빨간 경고다. 과거 membership·불완전 필드는 null로 읽고 아이템 레벨·전투력 표시는 유지한다.
+- Character 변경 Rules `affectedKeys`에 `gemValidationSnapshot`만 추가했다. 다섯 필드 스키마 검증 함수는 넣지 않았다.
+- 표적·영향 자동 테스트 69건 통과. 변경 파일 analyze는 기존 if 중괄호 info만 남았고 신규 error는 없다.
+- **사용자 Rules 배포 대기.** 배포 후 통합 디바이스 테스트에서 승인·직접 참가·Character 변경 카드 표시를 확인한다.
+- 다음 작업은 레이드 목록 로컬 필터·정렬이다.
+
 # 2026-09-08 보석 Snapshot Rules 503 복잡도 완화
 
 - Rules 배포의 `projects/lost-party:test` HTTP 503을 외부 서비스 장애가 아니라 코드 복잡도 우선으로 재진단했다. 188~189개 함수 호출 그래프에는 직접·간접 재귀가 없고 최대 호출 깊이는 6이었다.

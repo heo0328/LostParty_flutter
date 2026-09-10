@@ -107,6 +107,10 @@ class PartyReadDocumentMapper {
   PartyMemberDisplay toMemberDisplay(PartyReadDocumentDto document) {
     final data = document.data;
     _requireSchema(data);
+    final gemSnapshot = data['gemValidationSnapshot'];
+    final gemData = gemSnapshot is Map
+        ? gemSnapshot.cast<String, Object?>()
+        : null;
     return PartyMemberDisplay(
       playerId: document.id,
       characterId: _softString(data, 'characterId'),
@@ -117,6 +121,7 @@ class PartyReadDocumentMapper {
       slotIndex: _optionalSlotIndex(data),
       itemLevel: _softNumber(data, 'itemLevelSnapshot'),
       combatPower: _softNumber(data, 'combatPowerSnapshot'),
+      gemValidation: gemData == null ? null : _softGemValidation(gemData),
     );
   }
 
@@ -158,34 +163,8 @@ class PartyReadDocumentMapper {
     );
   }
 
-  PartyGemValidationSnapshot? _softGemValidation(Map<String, Object?> data) {
-    final statusName = data['gemValidationStatus'];
-    final foreignCount = data['foreignClassGemCount'];
-    final unverifiedCount = data['unverifiedSameClassGemCount'];
-    final catalogVersion = data['catalogVersion'];
-    if (statusName is! String ||
-        foreignCount is! int ||
-        unverifiedCount is! int ||
-        catalogVersion is! String ||
-        catalogVersion.trim().isEmpty ||
-        foreignCount < 0 ||
-        unverifiedCount < 0) {
-      return null;
-    }
-    final status = PartyGemValidationStatus.values
-        .where((value) => value.name == statusName)
-        .firstOrNull;
-    if (status == null) return null;
-    final validatedAt = _softDate(data['gemValidatedAt']);
-    if (validatedAt == null) return null;
-    return PartyGemValidationSnapshot(
-      status: status,
-      foreignClassGemCount: foreignCount,
-      unverifiedSameClassGemCount: unverifiedCount,
-      validatedAt: validatedAt,
-      catalogVersion: catalogVersion,
-    );
-  }
+  PartyGemValidationSnapshot? _softGemValidation(Map<String, Object?> data) =>
+      PartyGemValidationSnapshot.tryFromFields(data, parseDate: _softDate);
 
   DateTime? _softDate(Object? value) {
     if (value is DateTime) return value;
