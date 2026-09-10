@@ -21,6 +21,7 @@ import '../../../recruitment_list/domain/entities/recruitment_aggregate.dart';
 import '../../../recruitment_list/domain/entities/recruitment_application.dart';
 import '../../../recruitment_list/domain/entities/party_visibility_command.dart';
 import '../../../recruitment_list/domain/policies/approval_policy.dart';
+import '../../../recruitment_list/domain/policies/party_composition_policy.dart';
 import '../../../recruitment_list/domain/policies/party_cycle_policy.dart';
 import '../../../recruitment_list/domain/repositories/party_application_command_repository.dart';
 import '../../../recruitment_list/domain/repositories/party_cycle_command_repository.dart';
@@ -407,6 +408,21 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     final isDirectJoin = summary.approvalMode == ApprovalMode.directJoin;
     if (isDirectJoin && widget.joinCommandRepository == null) return;
     if (!isDirectJoin && widget.applicationCommandRepository == null) return;
+    if (_membersLoading) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('파티원 정보를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.')),
+      );
+      return;
+    }
+    final occupiedMembers = _occupiedMembersForComposition(summary);
+    if (occupiedMembers == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('파티 구성 정보가 불완전합니다. 상세를 새로고침한 뒤 다시 시도해 주세요.'),
+        ),
+      );
+      return;
+    }
 
     final startAt = summary.metadata.raidStartAt ?? DateTime.now();
     final candidates = await candidateService.load(
@@ -416,6 +432,8 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
         minItemLevel: summary.metadata.minItemLevel,
         startAt: startAt,
         maxPlayHours: summary.metadata.maxPlayHours,
+        partyRules: summary.partyRules,
+        occupiedMembers: occupiedMembers,
       ),
     );
     if (!mounted) return;
@@ -829,30 +847,84 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       (summary.isCycleActive ||
           (summary.continueTogether && summary.isCycleCompleted));
 
+  List<OccupiedPartyMember>? _occupiedMembersForComposition(
+    PublicRecruitmentSummary summary,
+  ) {
+    final occupied = <OccupiedPartyMember>[];
+    for (final member in _members) {
+      final className = member.className?.trim();
+      if (className == null || className.isEmpty) return null;
+      occupied.add(
+        OccupiedPartyMember(
+          id: member.playerId,
+          className: className,
+          role: member.role,
+          partyIndex: member.partyIndex,
+          slotIndex: member.slotIndex,
+          isLeader: member.playerId == summary.leaderUserId,
+        ),
+      );
+    }
+    return occupied;
+  }
+
   Future<void> _openChangeCharacterSheet(
     PublicRecruitmentSummary summary,
   ) async {
     final candidateService = widget.candidateService;
     final repository = widget.membershipCommandRepository;
-    if (candidateService == null ||
-        repository == null ||
-        !_isConfirmedMember ||
-        _submitting) {
+    if (repository == null || !_isConfirmedMember || _submitting) {
+      return;
+    }
+    if (candidateService == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('참가 캐릭터 변경을 준비하지 못했습니다. 앱을 다시 실행해 주세요.')),
+      );
+      return;
+    }
+    if (_membersLoading) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('파티원 정보를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.')),
+      );
+      return;
+    }
+    final occupiedMembers = _occupiedMembersForComposition(summary);
+    if (occupiedMembers == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('파티 구성 정보가 불완전합니다. 상세를 새로고침한 뒤 다시 시도해 주세요.'),
+        ),
+      );
       return;
     }
     final me = _members.firstWhere(
       (member) => member.playerId == widget.playerId,
     );
-    final candidates = await candidateService.load(
-      RecruitmentLeaderCandidateQuery(
-        raidId: summary.metadata.raidId,
-        difficultyId: summary.metadata.difficultyId,
-        minItemLevel: summary.metadata.minItemLevel,
-        startAt: summary.metadata.raidStartAt ?? DateTime.now(),
-        maxPlayHours: summary.metadata.maxPlayHours,
-      ),
-    );
+    setState(() => _submitting = true);
+    final List<RecruitmentLeaderCandidate> candidates;
+    try {
+      candidates = await candidateService.load(
+        RecruitmentLeaderCandidateQuery(
+          raidId: summary.metadata.raidId,
+          difficultyId: summary.metadata.difficultyId,
+          minItemLevel: summary.metadata.minItemLevel,
+          startAt: summary.metadata.raidStartAt ?? DateTime.now(),
+          maxPlayHours: summary.metadata.maxPlayHours,
+          partyRules: summary.partyRules,
+          occupiedMembers: occupiedMembers,
+          replacingMemberId: widget.playerId,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('변경 가능한 캐릭터를 불러오지 못했습니다. 다시 시도해 주세요.')),
+      );
+      return;
+    }
     if (!mounted) return;
+    setState(() => _submitting = false);
 
     final isNextWeekPrep = summary.continueTogether && summary.isCycleCompleted;
     final eligible =
@@ -879,11 +951,14 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       }
     }
     if (eligible.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('변경할 수 있는 인증 캐릭터가 없습니다. 역할 세팅과 파티 구성을 확인해 주세요.'),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('변경 가능한 캐릭터가 없습니다. 역할 세팅과 파티 구성을 확인해 주세요.'),
+            duration: Duration(seconds: 4),
+          ),
+        );
       return;
     }
 

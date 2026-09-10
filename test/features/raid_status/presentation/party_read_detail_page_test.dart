@@ -878,6 +878,47 @@ void main() {
     expect(find.text('참가 캐릭터를 변경했습니다.'), findsOneWidget);
   });
 
+  testWidgets('변경 가능한 캐릭터가 없으면 안내 알림을 표시한다', (tester) async {
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(memberCount: 1, maxMemberCount: 4),
+          isFromCache: false,
+        ),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(
+          items: [
+            PartyMemberDisplay(
+              playerId: 'player-1',
+              characterId: 'server-character-1',
+              characterName: '지원바드',
+              className: '바드',
+              role: PartyRole.dealer,
+              partyIndex: 0,
+              slotIndex: 0,
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      membershipCommandRepository: _RecordingMembershipRepository(),
+      candidateService: _candidateService(),
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('changeParticipatingCharacterButton')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('변경 가능한 캐릭터가 없습니다'), findsOneWidget);
+    expect(find.byType(BottomSheet), findsNothing);
+  });
+
   testWidgets('참가 캐릭터를 반대 역할 설정으로 변경할 수 있다', (tester) async {
     final membership = _RecordingMembershipRepository();
     await pumpPage(

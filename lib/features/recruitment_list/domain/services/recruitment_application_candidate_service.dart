@@ -247,31 +247,26 @@ class RecruitmentApplicationCandidateService {
               reasons.add(reason);
             }
           }
-          final composition = aggregate.state.compositionPolicy.arrange([
-            ...aggregate.state.members.map(
-              (member) => PartyCompositionMember(
+          final occupiedMembers = [
+            for (final member in aggregate.state.members)
+              OccupiedPartyMember(
                 id: member.userId,
-                className:
-                    replacingMember != null &&
-                        member.userId == replacingMember.userId
-                    ? character.characterClassName
-                    : member.className,
-                role:
-                    replacingMember != null &&
-                        member.userId == replacingMember.userId
-                    ? role
-                    : member.role,
+                className: member.className,
+                role: member.role,
+                partyIndex: member.partyIndex,
+                isLeader: member.userId == aggregate.state.leaderUserId,
               ),
-            ),
-            if (replacingMember == null)
-              PartyCompositionMember(
-                id: userId,
-                className: character.characterClassName,
-                role: role,
-              ),
-          ]);
-          if (!composition.canJoin) {
-            reasons.add(_compositionReason(composition.failure));
+          ];
+          final compositionFailure = _compositionFailure(
+            policy: aggregate.state.compositionPolicy,
+            userId: userId,
+            className: character.characterClassName,
+            role: role,
+            occupiedMembers: occupiedMembers,
+            replacingMemberId: replacingMember?.userId,
+          );
+          if (compositionFailure != null) {
+            reasons.add(_compositionReason(compositionFailure));
           }
           candidates.add(
             RecruitmentApplicationCandidate(
@@ -307,6 +302,35 @@ class RecruitmentApplicationCandidateService {
     return repository
         .watchCurrentCycleClaims(playerId: playerId, cycleKey: cycleKey)
         .first;
+  }
+
+  PartyCompositionFailure? _compositionFailure({
+    required PartyCompositionPolicy policy,
+    required String userId,
+    required String className,
+    required PartyRole role,
+    required List<OccupiedPartyMember> occupiedMembers,
+    required String? replacingMemberId,
+  }) {
+    if (replacingMemberId != null) {
+      return policy.failureForInPlaceReplacement(
+        replaceMemberId: replacingMemberId,
+        className: className,
+        role: role,
+        existing: occupiedMembers,
+      );
+    }
+    final placement = policy.assignEmptySlot(
+      joining: OccupiedPartyMember(
+        id: userId,
+        className: className,
+        role: role,
+        partyIndex: 0,
+      ),
+      existing: occupiedMembers,
+    );
+    if (placement.canJoin) return null;
+    return placement.failure;
   }
 
   String _compositionReason(PartyCompositionFailure failure) =>

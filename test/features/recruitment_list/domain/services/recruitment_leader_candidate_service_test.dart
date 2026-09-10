@@ -14,6 +14,7 @@ import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_recrui
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/active_raid_assignment.dart';
+import 'package:lost_party/features/recruitment_list/domain/policies/party_composition_policy.dart';
 import 'package:lost_party/features/recruitment_list/domain/services/candidate_participation_status.dart';
 import 'package:lost_party/features/recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
 
@@ -203,6 +204,153 @@ void main() {
       contains(CandidateParticipationStatusType.weeklyRaidClear),
     );
   });
+
+  test('4인 파티에서 방장과 같은 딜러 직업 신청 후보를 차단한다', () async {
+    final service = RecruitmentLeaderCandidateService(
+      accountRepository: _AccountRepository(),
+      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+      session: FakeUserSession('applicant'),
+      clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 23)),
+      assignmentRepository: InMemoryActiveRaidAssignmentRepository(),
+      recruitmentRepository: InMemoryRecruitmentStateRepository(),
+    );
+
+    final candidates = await service.load(
+      _query(
+        partyRules: const RecruitmentPartyRules(
+          partyCount: 1,
+          membersPerParty: 4,
+          supportsPerParty: 1,
+          maxDealersPerClassPerParty: 1,
+        ),
+        occupiedMembers: const [
+          OccupiedPartyMember(
+            id: 'leader',
+            className: '바드',
+            role: PartyRole.dealer,
+            partyIndex: 0,
+            slotIndex: 0,
+            isLeader: true,
+          ),
+        ],
+      ),
+    );
+
+    final bard = candidates.singleWhere(
+      (candidate) => candidate.characterId == '대표바드',
+    );
+    expect(
+      bard.optionFor(PartyRole.dealer)?.rejectionReasons,
+      contains('동일 딜러 직업 자리가 없습니다.'),
+    );
+    expect(bard.optionFor(PartyRole.support)?.canSelect, isTrue);
+    expect(bard.canSelect, isTrue);
+
+    final sorceress = candidates.singleWhere(
+      (candidate) => candidate.characterId == '부계정소서',
+    );
+    expect(sorceress.optionFor(PartyRole.dealer)?.canSelect, isTrue);
+  });
+
+  test('8인 파티에서는 다른 파티에 배치 가능한 동일 딜러 직업을 허용한다', () async {
+    final service = RecruitmentLeaderCandidateService(
+      accountRepository: _AccountRepository(),
+      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+      session: FakeUserSession('applicant'),
+      clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 23)),
+      assignmentRepository: InMemoryActiveRaidAssignmentRepository(),
+      recruitmentRepository: InMemoryRecruitmentStateRepository(),
+    );
+
+    final candidates = await service.load(
+      _query(
+        partyRules: const RecruitmentPartyRules(
+          partyCount: 2,
+          membersPerParty: 4,
+          supportsPerParty: 1,
+          maxDealersPerClassPerParty: 1,
+        ),
+        occupiedMembers: const [
+          OccupiedPartyMember(
+            id: 'leader',
+            className: '바드',
+            role: PartyRole.dealer,
+            partyIndex: 0,
+            slotIndex: 0,
+            isLeader: true,
+          ),
+        ],
+      ),
+    );
+
+    final bard = candidates.singleWhere(
+      (candidate) => candidate.characterId == '대표바드',
+    );
+    expect(bard.optionFor(PartyRole.dealer)?.canSelect, isTrue);
+  });
+
+  test('8인에서 같은 딜러 직업이 이미 2명이면 세 번째 신청 후보를 차단한다', () async {
+    final service = RecruitmentLeaderCandidateService(
+      accountRepository: _AccountRepository(),
+      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+      session: FakeUserSession('applicant'),
+      clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 23)),
+      assignmentRepository: InMemoryActiveRaidAssignmentRepository(),
+      recruitmentRepository: InMemoryRecruitmentStateRepository(),
+    );
+
+    final candidates = await service.load(
+      _query(
+        partyRules: const RecruitmentPartyRules(
+          partyCount: 2,
+          membersPerParty: 4,
+          supportsPerParty: 1,
+          maxDealersPerClassPerParty: 1,
+        ),
+        occupiedMembers: const [
+          OccupiedPartyMember(
+            id: 'leader',
+            className: '바드',
+            role: PartyRole.dealer,
+            partyIndex: 0,
+            slotIndex: 0,
+            isLeader: true,
+          ),
+          OccupiedPartyMember(
+            id: 'member-2',
+            className: '바드',
+            role: PartyRole.dealer,
+            partyIndex: 1,
+            slotIndex: 0,
+          ),
+        ],
+      ),
+    );
+
+    final bard = candidates.singleWhere(
+      (candidate) => candidate.characterId == '대표바드',
+    );
+    expect(
+      bard.optionFor(PartyRole.dealer)?.rejectionReasons,
+      contains('동일 딜러 직업 자리가 없습니다.'),
+    );
+  });
+
+  test('모집 생성 후보는 membership 구성 없이 기존처럼 통과한다', () async {
+    final service = RecruitmentLeaderCandidateService(
+      accountRepository: _AccountRepository(),
+      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+      session: FakeUserSession('local-user'),
+      clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 23)),
+      assignmentRepository: InMemoryActiveRaidAssignmentRepository(),
+      recruitmentRepository: InMemoryRecruitmentStateRepository(),
+    );
+
+    final candidates = await service.load(_query());
+
+    expect(candidates.first.canSelect, isTrue);
+    expect(candidates.first.roles.every((option) => option.canSelect), isTrue);
+  });
 }
 
 class _ClaimRepository implements WeeklyRaidClaimRepository {
@@ -227,14 +375,21 @@ class _ClaimRepository implements WeeklyRaidClaimRepository {
   ]);
 }
 
-RecruitmentLeaderCandidateQuery _query({int minItemLevel = 1700}) =>
-    RecruitmentLeaderCandidateQuery(
-      raidId: 'serca',
-      difficultyId: 'normal',
-      minItemLevel: minItemLevel,
-      startAt: DateTime.utc(2026, 8, 23, 10),
-      maxPlayHours: 3,
-    );
+RecruitmentLeaderCandidateQuery _query({
+  int minItemLevel = 1700,
+  RecruitmentPartyRules? partyRules,
+  List<OccupiedPartyMember> occupiedMembers = const [],
+  String? replacingMemberId,
+}) => RecruitmentLeaderCandidateQuery(
+  raidId: 'serca',
+  difficultyId: 'normal',
+  minItemLevel: minItemLevel,
+  startAt: DateTime.utc(2026, 8, 23, 10),
+  maxPlayHours: 3,
+  partyRules: partyRules,
+  occupiedMembers: occupiedMembers,
+  replacingMemberId: replacingMemberId,
+);
 
 class _AccountRepository implements AccountRepository {
   _AccountRepository({this.includeSubBuild = true});

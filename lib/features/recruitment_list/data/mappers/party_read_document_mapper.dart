@@ -51,6 +51,8 @@ class PartyReadDocumentMapper {
       membersPerParty: _optionalPositiveInteger(data, 'membersPerParty') ?? 4,
       partyCount: _optionalPositiveInteger(data, 'partyCount') ?? 1,
       supportsPerParty: _optionalPositiveInteger(data, 'supportsPerParty') ?? 1,
+      maxDealersPerClassPerParty:
+          _optionalPositiveInteger(data, 'maxDealersPerClassPerParty') ?? 1,
       dealerCount: _integer(data, 'dealerCount'),
       supportCount: _integer(data, 'supportCount'),
       isRecruiting:

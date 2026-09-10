@@ -24,6 +24,7 @@ void main() {
     expect(summary.membersPerParty, 4);
     expect(summary.partyCount, 2);
     expect(summary.supportsPerParty, 1);
+    expect(summary.maxDealersPerClassPerParty, 1);
     expect(summary.dealerCount, 3);
     expect(summary.supportCount, 1);
     expect(summary.maxDealerCount, 6);
