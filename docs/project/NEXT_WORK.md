@@ -6,7 +6,7 @@
 
 - `codex/party-membership-build-snapshot`에서 승인·직접 참가·참가 Character 변경의 Build 무결성 Snapshot을 파티 membership과 구성원 카드까지 전파했다.
 - 표적·영향 자동 검증 69건과 변경 파일 analyze(기존 info lint만)가 통과했다.
-- Character 변경 Rules allowlist에 `gemValidationSnapshot`을 추가했다. **사용자 Rules 배포 대기**이며, 배포 후 다음 통합 디바이스 테스트에서 수동 인증과 함께 확인한다.
+- Character 변경 Rules allowlist에 `gemValidationSnapshot`을 추가했다. 2026-09-10 최신 Rules 실제 배포에서 원격 컴파일·Ruleset 업로드·Release와 `Deploy complete`를 확인했다. 다음 통합 디바이스 테스트에서 수동 인증과 함께 확인한다.
 - 완료 상세는 `DEV_LOG.md`와 `CHARACTER_BUILD_INTEGRITY_CONTRACT.md`로 이동했다.
 
 ## 다음 작업 그룹 — 레이드 목록 로컬 필터·정렬
@@ -52,7 +52,7 @@
 
 ## 차후 대기
 
-- 수동 인증·membership Build Snapshot 실기기 확인: Rules 배포 후 다음 통합 디바이스 테스트에 포함
+- 수동 인증·membership Build Snapshot 실기기 확인: 다음 통합 디바이스 테스트에 포함
 - 그룹 membership Build Snapshot: 파티 membership 안정화 후 별도 산정
 - Build 별칭·직업 메모·공유: `BUILD_MEMO_SHARING.md`
 - 서버 데이터 무결성·복구 절차: 반복 사례가 확인될 때 별도 착수

@@ -5,7 +5,8 @@
 - membership DTO·쓰기 계획·방어적 읽기와 구성원 카드 UI를 연결했다. 정상은 숨기고 동일 직업 미확인은 중립, 다른 직업 보석만 빨간 경고다. 과거 membership·불완전 필드는 null로 읽고 아이템 레벨·전투력 표시는 유지한다.
 - Character 변경 Rules `affectedKeys`에 `gemValidationSnapshot`만 추가했다. 다섯 필드 스키마 검증 함수는 넣지 않았다.
 - 표적·영향 자동 테스트 69건 통과. 변경 파일 analyze는 기존 if 중괄호 info만 남았고 신규 error는 없다.
-- **사용자 Rules 배포 대기.** 배포 후 통합 디바이스 테스트에서 승인·직접 참가·Character 변경 카드 표시를 확인한다.
+- 최초 dry-run은 `/projects/lost-party:test`에서 HTTP 503으로 종료됐지만, 동일 최신 Rules의 실제 배포 재시도는 컴파일·Ruleset 업로드·Cloud Firestore Release와 `Deploy complete`까지 모두 성공했다. 동일 소스의 후속 성공으로 직전 503은 일시적인 원격 실패로 판정한다.
+- 통합 디바이스 테스트에서 승인·직접 참가·Character 변경 카드 표시를 확인한다.
 - 다음 작업은 레이드 목록 로컬 필터·정렬이다.
 
 # 2026-09-08 보석 Snapshot Rules 503 복잡도 완화
