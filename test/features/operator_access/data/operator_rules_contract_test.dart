@@ -44,7 +44,7 @@ void main() {
     expect(rules, contains('match /manualVerificationRequests/{requestId}'));
     expect(rules, contains('match /manualVerificationBlocks/{blockId}'));
     expect(rules, contains('manualVerificationRequesterAlreadyOwns'));
-    expect(rules, contains('manualVerificationActiveOwnerPlayerId'));
+    expect(rules, contains('manualVerificationAccountOwnedBy'));
     expect(rules, contains('manualVerificationOperatorContextUnchanged'));
     expect(rules, contains('validManualVerificationOperatorForceBody'));
     expect(rules, contains("newData.reviewReason == 'ownerDefenseFailed'"));

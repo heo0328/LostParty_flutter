@@ -823,15 +823,6 @@ class FirestoreManualVerificationRepository
         ? _firestore.collection('gameAccounts').doc()
         : _firestore.collection('gameAccounts').doc(accountIds.single);
     final account = await transaction.get(accountRef);
-    if ((resolvedGameAccountId != null && resolvedGameAccountId.isNotEmpty) ||
-        accountIds.isNotEmpty) {
-      if (!account.exists) {
-        throw const ManualVerificationException(
-          'conflict',
-          '게임 계정 문서가 없습니다.',
-        );
-      }
-    }
     String? previousOwner;
     if (account.exists) {
       previousOwner = account.data()?['ownerPlayerId'] as String?;

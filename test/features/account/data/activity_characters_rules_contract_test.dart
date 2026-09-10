@@ -28,10 +28,15 @@ void main() {
     expect(
       rules,
       contains(
-        'existsAfter(characterActivityPath(playerId, representativeId))',
+        'get(ownershipDoc).data.representativeCharacterId',
       ),
     );
-    expect(rules, contains('!(representativeId is string)'));
+    expect(
+      rules,
+      contains(
+        '!(get(ownershipDoc).data.representativeCharacterId is string)',
+      ),
+    );
     expect(rules, contains('exists(characterDoc)'));
     expect(rules, contains('exists(ownershipDoc)'));
     expect(rules, contains('function removedMemberIdLow(oldIds, kept)'));

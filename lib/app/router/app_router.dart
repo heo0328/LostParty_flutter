@@ -88,6 +88,7 @@ import '../../features/recruitment_list/data/repositories/firestore_party_create
 import '../../features/recruitment_list/data/repositories/firestore_party_cycle_command_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_visibility_command_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_join_command_repository.dart';
+import '../../features/recruitment_list/data/repositories/firestore_lazy_cycle_reconciliation_gateway.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_membership_command_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_read_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_raid_listing_backfill.dart';
@@ -104,6 +105,7 @@ import '../../features/recruitment_list/data/fakes/local_recruitment_demo_seed.d
 import '../../features/recruitment_list/domain/services/recruitment_command_service.dart';
 import '../../features/recruitment_list/domain/services/recruitment_application_candidate_service.dart';
 import '../../features/recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
+import '../../features/recruitment_list/domain/services/lazy_cycle_reconciler.dart';
 import '../../features/recruitment_list/domain/policies/participation_conflict_policy.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../shared/game_catalog/data/datasources/asset_game_catalog_data_source.dart';
@@ -214,6 +216,17 @@ GoRouter createAppRouter({
   const cyclePolicy = PartyCyclePolicy();
   final currentCycleKey = cyclePolicy.keyFor(DateTime.now());
   final currentCycle = cyclePolicy.fromKey(currentCycleKey)!;
+  final partyCycleCommandRepository = FirestorePartyCycleCommandRepository(
+    firestore: FirebaseFirestore.instance,
+    firebaseAuth: FirebaseAuth.instance,
+  );
+  final lazyCycleReconciler = LazyCycleReconciler(
+    gateway: FirestoreLazyCycleReconciliationGateway(
+      firestore: FirebaseFirestore.instance,
+      cycleRepository: partyCycleCommandRepository,
+    ),
+    cyclePolicy: cyclePolicy,
+  );
   final apiTokenStore = SecureApiTokenStore();
   final apiClient = LostArkApiClient(apiTokenStore: apiTokenStore);
   final gameCatalogRepository = GameCatalogRepositoryImpl(
@@ -373,6 +386,8 @@ GoRouter createAppRouter({
     conflictPolicy: participationConflictPolicy,
   );
 
+  final raidStatusRefreshSignal = ValueNotifier<int>(0);
+
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/raid-status',
@@ -384,6 +399,7 @@ GoRouter createAppRouter({
             manualVerificationRepository: manualVerificationRepositoryOrDefault,
             startupCharacterRefreshRunner:
                 startupCharacterRefreshRunnerOrDefault,
+            onRaidStatusSelected: () => raidStatusRefreshSignal.value++,
           );
         },
         branches: [
@@ -409,6 +425,8 @@ GoRouter createAppRouter({
                       startupCharacterRefreshRunnerOrDefault.runOnce(),
                     );
                   },
+                  refreshSignal: raidStatusRefreshSignal,
+                  cycleReconciler: lazyCycleReconciler,
                 ),
                 routes: [
                   GoRoute(
@@ -444,10 +462,8 @@ GoRouter createAppRouter({
                               firebaseAuth: FirebaseAuth.instance,
                             ),
                         cycleCommandRepository:
-                            FirestorePartyCycleCommandRepository(
-                              firestore: FirebaseFirestore.instance,
-                              firebaseAuth: FirebaseAuth.instance,
-                            ),
+                            partyCycleCommandRepository,
+                        cycleReconciler: lazyCycleReconciler,
                         visibilityCommandRepository:
                             FirestorePartyVisibilityCommandRepository(
                               firestore: FirebaseFirestore.instance,

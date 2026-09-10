@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/domain/policies/party_cycle_policy.dart';
+import 'package:lost_party/features/recruitment_list/domain/policies/raid_cycle_schedule.dart';
 
 void main() {
   const policy = PartyCyclePolicy();
@@ -15,5 +16,24 @@ void main() {
   test('KST 수요일 6시 직전과 이후의 회차 키를 구분한다', () {
     expect(policy.keyFor(DateTime.utc(2026, 8, 25, 20, 59)), '2026-08-19');
     expect(policy.keyFor(DateTime.utc(2026, 8, 25, 21)), '2026-08-26');
+  });
+
+  test('테스트 설정으로 초기화 시각을 수요일 13시로 변경한다', () {
+    const testPolicy = PartyCyclePolicy(
+      schedule: RaidCycleSchedule(resetHour: 13),
+    );
+
+    expect(
+      testPolicy.keyFor(DateTime.utc(2026, 8, 26, 3, 59)),
+      '2026-08-19',
+    );
+    expect(
+      testPolicy.keyFor(DateTime.utc(2026, 8, 26, 4)),
+      '2026-08-26',
+    );
+    expect(
+      testPolicy.fromKey('2026-08-26')!.startedAt,
+      DateTime.utc(2026, 8, 26, 4),
+    );
   });
 }

@@ -8,6 +8,7 @@ import '../../domain/policies/party_cycle_policy.dart';
 import '../../domain/repositories/party_cycle_command_repository.dart';
 import '../../domain/services/party_cycle_command_validator.dart';
 import '../mappers/party_complete_claim_write_plan.dart';
+import '../mappers/party_cycle_assignment_write_plan.dart';
 import '../mappers/party_cycle_write_plan.dart';
 import '../mappers/party_event_write_plan.dart';
 import '../mappers/party_lifecycle_event_writer.dart';
@@ -360,9 +361,57 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
       if (!(r?['memberPlayerIds'] as List).contains(playerId)) return const PartyCycleResult.failure(PartyCycleFailure.unauthorized);
       final currentWindow = const PartyCyclePolicy().fromKey(command.expectedCycleKey)!;
       final nextWindow = const PartyCyclePolicy().fromKey(command.nextCycleKey)!;
-      if (nextWindow.startedAt != currentWindow.endsAt || (_now ?? DateTime.now)().toUtc().isBefore(currentWindow.endsAt)) return const PartyCycleResult.failure(PartyCycleFailure.notReadyForAdvance);
+      if (nextWindow.startedAt.isBefore(currentWindow.endsAt) || (_now ?? DateTime.now)().toUtc().isBefore(currentWindow.endsAt)) return const PartyCycleResult.failure(PartyCycleFailure.notReadyForAdvance);
       final snapshot = await _memberSnapshot(transaction, members);
       if (snapshot == null || snapshot.length != r?['memberCount']) return const PartyCycleResult.failure(PartyCycleFailure.revisionConflict);
+      final continueTogether = r?['continueTogether'] == true;
+      final raidId = r?['raidId'] as String?;
+      if (raidId == null || raidId.isEmpty) {
+        return const PartyCycleResult.failure(PartyCycleFailure.invalidRequest);
+      }
+      final assignmentReads = <({
+        Map<String, Object?> member,
+        DocumentReference<Map<String, dynamic>> ref,
+        DocumentSnapshot<Map<String, dynamic>> snapshot,
+        PartyCycleAssignmentAction action,
+      })>[];
+      for (final member in snapshot) {
+        final memberPlayerId = member['playerId'] as String?;
+        final characterId = member['characterId'] as String?;
+        final role = member['role'] as String?;
+        if (memberPlayerId == null ||
+            characterId == null ||
+            role == null ||
+            memberPlayerId.isEmpty ||
+            characterId.isEmpty) {
+          return const PartyCycleResult.failure(
+            PartyCycleFailure.invalidRequest,
+          );
+        }
+        final ref = _assignmentRef(memberPlayerId, characterId, raidId);
+        final assignment = await transaction.get(ref);
+        final action = PartyCycleAssignmentWritePlan.decide(
+          continueTogether: continueTogether,
+          assignmentExists: assignment.exists,
+          assignmentRecruitmentId:
+              assignment.data()?['recruitmentId'] as String?,
+          assignmentCycleKey: assignment.data()?['cycleKey'] as String?,
+          recruitmentId: command.recruitmentId,
+          oldCycleKey: command.expectedCycleKey,
+          targetCycleKey: command.nextCycleKey,
+        );
+        if (action == PartyCycleAssignmentAction.conflict) {
+          return const PartyCycleResult.failure(
+            PartyCycleFailure.revisionConflict,
+          );
+        }
+        assignmentReads.add((
+          member: member,
+          ref: ref,
+          snapshot: assignment,
+          action: action,
+        ));
+      }
       final listing = await PartyRaidListingTx.read(
         transaction: transaction,
         firestore: _firestore,
@@ -377,13 +426,44 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
         transaction.update(cycleRef, PartyCycleWritePlan.endCancelledCycle(completionRevision: cycle.data()?['completionRevision'] as int, memberSnapshot: snapshot, serverTimestamp: now));
         _writeEvents(transaction, command.recruitmentId, snapshot, r!, type: 'partyIncompleteEnded', eventRevision: (cycle.data()?['completionRevision'] as int) + 1, serverTimestamp: now);
       }
-      final advancePatch = PartyCycleWritePlan.advanceRecruitment(continueTogether: r?['continueTogether'] == true, nextCycleKey: command.nextCycleKey, nextStartedAt: nextWindow.startedAt, nextEndsAt: nextWindow.endsAt, revision: command.expectedRecruitmentRevision, hasAvailableSlot: (r?['memberCount'] as int) < (r?['maxMemberCount'] as int), serverTimestamp: now, timestamp: (date) => Timestamp.fromDate(date));
+      final advancePatch = PartyCycleWritePlan.advanceRecruitment(continueTogether: continueTogether, nextCycleKey: command.nextCycleKey, nextStartedAt: nextWindow.startedAt, nextEndsAt: nextWindow.endsAt, revision: command.expectedRecruitmentRevision, hasAvailableSlot: (r?['memberCount'] as int) < (r?['maxMemberCount'] as int), serverTimestamp: now, timestamp: (date) => Timestamp.fromDate(date));
       transaction.update(recruitmentRef, advancePatch);
       listing.write(
         transaction: transaction,
         currentRecruitment: partyRecruitmentMap(r),
         recruitmentPatch: advancePatch,
       );
+      for (final assignment in assignmentReads) {
+        switch (assignment.action) {
+          case PartyCycleAssignmentAction.create:
+            final member = assignment.member;
+            transaction.set(
+              assignment.ref,
+              PartyCycleAssignmentWritePlan.recurringAssignment(
+                playerId: member['playerId']! as String,
+                characterId: member['characterId']! as String,
+                raidId: raidId,
+                recruitmentId: command.recruitmentId,
+                targetCycleKey: command.nextCycleKey,
+                role: member['role']! as String,
+                serverTimestamp: now,
+              ),
+            );
+            break;
+          case PartyCycleAssignmentAction.update:
+            transaction.update(assignment.ref, {
+              'cycleKey': command.nextCycleKey,
+              'updatedAt': now,
+            });
+            break;
+          case PartyCycleAssignmentAction.delete:
+            transaction.delete(assignment.ref);
+            break;
+          case PartyCycleAssignmentAction.skip:
+          case PartyCycleAssignmentAction.conflict:
+            break;
+        }
+      }
       return const PartyCycleResult.success();
     });
   }

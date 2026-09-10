@@ -12,11 +12,13 @@ class FirestorePartyCreateRepository implements PartyCreateRepository {
   const FirestorePartyCreateRepository({
     required FirebaseFirestore firestore,
     required FirebaseAuth firebaseAuth,
+    this.clock = DateTime.now,
   }) : _firestore = firestore,
        _firebaseAuth = firebaseAuth;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _firebaseAuth;
+  final DateTime Function() clock;
 
   @override
   Future<PartyCreateResult> create(PartyCreateCommand command) async {
@@ -73,6 +75,7 @@ class FirestorePartyCreateRepository implements PartyCreateRepository {
         final claim = await transaction.get(claimRef);
         final characterData = character.data();
         final assignmentRecruitmentId = assignment.data()?['recruitmentId'];
+        final assignmentCycleKey = assignment.data()?['cycleKey'];
         DocumentSnapshot<Map<String, dynamic>>? assignedRecruitment;
         if (assignment.exists &&
             assignmentRecruitmentId is String &&
@@ -118,9 +121,21 @@ class FirestorePartyCreateRepository implements PartyCreateRepository {
           assignmentRecruitmentId: assignmentRecruitmentId is String
               ? assignmentRecruitmentId
               : null,
+          assignmentCycleKey: assignmentCycleKey is String
+              ? assignmentCycleKey
+              : null,
           assignedRecruitmentExists: assignedRecruitment?.exists == true,
           assignedRecruitmentStatus:
               assignedRecruitment?.data()?['status'] as String?,
+          assignedRecruitmentCycleKey:
+              assignedRecruitment?.data()?['currentCycleKey'] as String?,
+          assignedRecruitmentContinuesTogether:
+              assignedRecruitment?.data()?['continueTogether'] == true,
+          assignedRecruitmentCycleEndsAt:
+              (assignedRecruitment?.data()?['cycleEndsAt'] as Timestamp?)
+                  ?.toDate(),
+          newCycleKey: command.cycleKey,
+          now: clock(),
         );
         switch (occupancy) {
           case PartyCreateOccupancyDecision.alreadyCreated:

@@ -193,9 +193,6 @@ class LocalGameAccountVerificationGateway
       final account = accountIds.isEmpty
           ? null
           : await transaction.get(accountRef);
-      if (account != null && !account.exists) {
-        throw StateError('Claimed game account does not exist.');
-      }
       final previousOwner = account?.data()?['ownerPlayerId'];
       final storedCharacterIds =
           (account?.data()?['characterIds'] as List?)

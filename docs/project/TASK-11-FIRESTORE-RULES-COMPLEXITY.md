@@ -1,5 +1,22 @@
 # Task-11 Firestore Rules 복잡도 차단 — 종료된 진단 이력
 
+## 2026-09-10 Rules 게시 경고 재점검
+
+- 사용자가 Firebase 콘솔에 게시된 소스를 `firestore-web.rules`로 복사해 로컬 원본과 대조했다. 두 파일은 모두 3,785행이며 차이는 `groups/{groupId}` update에서 `validGroupDisbandUpdate`의 평가 순서 8행뿐이다. 콘솔본은 해산 판정이 마지막인 이전 게시본이고, 로컬 원본은 실제 1인 그룹 해산 오류를 보완해 가입·승인보다 앞에 둔 버전이다.
+- 콘솔과 CLI에 표시된 경고 9개는 두 소스에 공통으로 존재한다. 따라서 최근 해산 순서 변경이나 주차 전환 기능이 새로 만든 경고가 아니다.
+- 경고 원인은 미사용 `validRecruitmentJoin` 인자 1개, `null`과 string을 섞은 대표 Character·수동 인증 판정 3개, 생성 시 map 인자에 `null`을 전달한 membership·그룹 join relation·applicant stats 경로 5개다.
+- 동일 소스가 원격 `projects/lost-party:test`에서 503을 반환하다가 컴파일에 성공했고, 콘솔 게시도 장시간 뒤 성공했다. 그러므로 이 사건에서 503을 경고의 직접 결과나 특정 기능의 오류로 확정하지 않는다. `compiled successfully`와 게시 성공은 문법 유효성을 뜻하지만, 경고를 방치할 근거로도 사용하지 않는다.
+- 수정 원칙은 기능·스키마·허용/거절 조건을 삭제하지 않는 타입 명확화다. 생성 경로는 빈 목록·0·`request.time`을, 수정 경로는 기존 문서 값을 전달한다. nullable 계정 ID 반환은 존재·활성·소유 여부의 boolean 판정으로 바꾸고, 미사용 인자는 호출부와 함께 제거한다.
+- `firestore-web.rules`는 게시본 증거로 수정하지 않고 Git 제외한다. 유일한 배포 원본은 `firebase.json`의 `firestore.rules`다.
+- 로컬 검증: 그룹·활동 Character·운영자 인증·주차 전환 계약 테스트 43개와 경고 재발 방지 테스트 3개가 통과했다. 게시본 Snapshot의 정규화 SHA-256 `F9F3792E692DCC8E5DE5063E25842629E1CBFF58805FB815C74173E7C799538A`가 대조 전후 동일함을 확인했다.
+- 원격 검증: 2026-09-10 사용자가 `firebase deploy --only firestore:rules --project lost-party --dry-run`을 실행해 `rules file firestore.rules compiled successfully`와 `Dry run complete`를 확인했다. 기존 미사용 인자·nullable string/map 경고 9개는 다시 출력되지 않았고 503도 재현되지 않았다. 실제 Ruleset 업로드·Release 반영은 아직 수행하지 않았다.
+- 완료 조건은 관련 계약 테스트 통과, `git diff --check`, 원격 컴파일 경고 0개, 사용자가 수행한 Rules 배포의 `released rules ... to cloud.firestore`와 `Deploy complete` 확인이다. 배포 전에는 운영 반영 또는 503 해결 완료로 기록하지 않는다.
+- 2026-09-10 운영 반영 후 실기기에서 그룹·레이드의 주요 쓰기와 이전 주차 점유 교체가 통과해 게시본이 실제 적용된 것을 기능 동작으로도 확인했다. 단, 1인 그룹 해산은 판정 순서를 앞당긴 뒤에도 permission-denied가 재현됐다. 따라서 이 실패를 Rules 전체 게시 실패나 503의 결과로 취급하지 않으며, 해산 전용 네 문서 Transaction의 조건 불일치로 별도 진단한다.
+- 같은 날 현재 Rules 재배포를 한 번 실행했을 때 CLI는 컴파일 성공 후 Ruleset 생성 API에서 503으로 종료됐으나, Firebase 콘솔 최신 게시 시각은 요청 시각인 14:20으로 갱신됐다. Ruleset 생성이 서버에서 완료된 뒤 CLI 응답만 실패한 사례로 기록한다. 이후 동일 현상은 즉시 반복 배포하지 않고 콘솔의 활성 게시 시각과 소스 일치 여부를 먼저 확인한다.
+- 후속 1인 해산 수정본은 해산 판정을 `groups` update의 첫 분기로 이동했고 표적 테스트 43건이 통과했다. 이 수정본의 배포 시도는 Ruleset 생성이 아니라 원격 컴파일 `/test` 단계에서 503으로 끝났으므로 운영 반영되지 않은 상태로 분리 기록한다. 503의 발생 위치를 무시하고 콘솔 시각만으로 동일하게 판정하지 않는다.
+- 콘솔에 새 게시 기록이 없음을 확인한 뒤 동일 수정본을 재시도했고, 이번에는 원격 컴파일·Ruleset 업로드·Cloud Firestore Release가 모두 성공해 `Deploy complete`로 종료됐다. 1인 해산 우선순위 수정본의 운영 반영은 이 성공 로그를 기준으로 확정한다.
+- 운영 반영 후 신규 1인 그룹 해산이 실기기에서 정상 완료됐다. 해산 update를 첫 분기로 평가한 수정의 운영 회귀 검증을 통과했으며, 이 해산 permission-denied 이슈는 종료한다.
+
 > 현재 상태 정정(2026-09-01): 아래 프로브는 503 원인 확인을 위한 1회성 테스트였다. 이후 원복한 Rules에 추가 수정 작업을 진행해 정상 배포했고, 레이드 모집·탈퇴·완료 체크와 그룹 생성·초대·탈퇴·초대코드·가입·그룹 전용 모집 목록을 실기기에서 확인했다. 프로브 Rules가 현재 운영에 남아 있거나 Rules 배포가 현재 차단된 것으로 취급하지 않는다. 아래 내용은 당시 진단 이력으로만 보존한다.
 
 > 2026-08-31 사용자 지시: 그룹 레이드 Rules 업로드가 복잡도 한도로 막히는 것으로 보고 최적화를 재개한다. 운영 프로브 배포는 하지 않는다. 원격 보존 브랜치: codex/rules-complexity-reduction @ ed02b31.

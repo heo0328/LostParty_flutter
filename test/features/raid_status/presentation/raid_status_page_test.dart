@@ -186,6 +186,45 @@ void main() {
     expect(find.descendant(of: badge, matching: find.text('2')), findsOneWidget);
   });
 
+  testWidgets('진행 중 목록을 아래로 당기면 방별 읽지 않은 수를 다시 읽는다', (
+    tester,
+  ) async {
+    final database = AccountDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    await pumpPage(
+      tester,
+      database: database,
+      activeRaids: Stream.value(
+        PartyReadSnapshot(items: [_activeRaid()], isFromCache: false),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('raidRoomUnreadBadge_recruitment-1')),
+      findsNothing,
+    );
+
+    await database.syncPartyNotificationReceipt(
+      eventId: 'new-room-event',
+      playerId: 'player-1',
+      type: PartyEventType.applicationSubmitted.wireName,
+      recruitmentId: 'recruitment-1',
+      occurredAt: DateTime.utc(2026, 9, 8, 6),
+      expiresAt: DateTime.utc(2026, 10, 6),
+    );
+    await tester.drag(
+      find.byType(ListView).first,
+      const Offset(0, 400),
+    );
+    await tester.pumpAndSettle();
+
+    final badge = find.byKey(
+      const ValueKey('raidRoomUnreadBadge_recruitment-1'),
+    );
+    expect(badge, findsOneWidget);
+    expect(find.descendant(of: badge, matching: find.text('1')), findsOneWidget);
+  });
+
   testWidgets('진행 중 카드에 남은 자리와 제한을 한 줄로 표시한다', (tester) async {
     await pumpPage(
       tester,

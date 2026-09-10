@@ -548,11 +548,15 @@ class AccountDatabase extends _$AccountDatabase {
           'Local game account does not exist.',
         );
       }
-      _rejectRemap(
-        currentId: account.serverGameAccountId,
-        requestedId: normalizedAccountId,
-        argumentName: 'serverGameAccountId',
-      );
+      final repairsConfirmedMismatch =
+          account.serverOwnershipStatus == 'serverMismatch';
+      if (!repairsConfirmedMismatch) {
+        _rejectRemap(
+          currentId: account.serverGameAccountId,
+          requestedId: normalizedAccountId,
+          argumentName: 'serverGameAccountId',
+        );
+      }
 
       final localCharacterIds = normalizedCharacterIds.keys.toList();
       final characters = localCharacterIds.isEmpty
@@ -570,12 +574,14 @@ class AccountDatabase extends _$AccountDatabase {
           'Every local character must belong to the selected account.',
         );
       }
-      for (final character in characters) {
-        _rejectRemap(
-          currentId: character.serverCharacterId,
-          requestedId: normalizedCharacterIds[character.id]!,
-          argumentName: 'serverCharacterId',
-        );
+      if (!repairsConfirmedMismatch) {
+        for (final character in characters) {
+          _rejectRemap(
+            currentId: character.serverCharacterId,
+            requestedId: normalizedCharacterIds[character.id]!,
+            argumentName: 'serverCharacterId',
+          );
+        }
       }
 
       await (update(
@@ -601,7 +607,9 @@ class AccountDatabase extends _$AccountDatabase {
   ) {
     return transaction(() async {
       for (final entry in statusesByLocalAccountId.entries) {
-        if (entry.value != 'active' && entry.value != 'ownershipLost') {
+        if (entry.value != 'active' &&
+            entry.value != 'ownershipLost' &&
+            entry.value != 'serverMismatch') {
           throw ArgumentError.value(entry.value, 'status');
         }
         await (update(
