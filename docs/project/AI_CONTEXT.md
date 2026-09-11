@@ -33,6 +33,7 @@
 
 ## 차후 제품 후보
 
+- 그룹원 탭 후 활동 Character 목록에 보석 경고를 표시하는 요구가 있다. **반드시 제품·아키텍처 정의를 먼저** 하고, 정의 없이 구현하지 않는다. 현재 그룹 membership은 표시 Character 한 명만 Snapshot한다. 상세는 [`NEXT_WORK.md`](NEXT_WORK.md) 차후 대기.
 - 직업·깨달음·질서 해/달/별 계층 메모, `망소빙` 같은 Build 별칭과 버전형 JSON 공유: [`../product/BUILD_MEMO_SHARING.md`](../product/BUILD_MEMO_SHARING.md)
 - 직업 시너지 선택·필터: [`../product/CLASS_SYNERGY_CATALOG.md`](../product/CLASS_SYNERGY_CATALOG.md)
 - 진행 중 내 Character 필터와 진행 중/레이드 모집의 참가 인원 로컬 정렬·남은 자리 2차 필터는 구현·실기기 확인했다. 계약: [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md) §14

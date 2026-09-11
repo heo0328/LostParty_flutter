@@ -1,3 +1,9 @@
+# 2026-09-11 그룹 활동 Character 목록 보석 표시 — 정의 대기 기록
+
+- 실기기에서 그룹원 탭 후 활동 Character 팝업에는 보석 경고가 없고, 파티 모집 경로에만 보인다는 피드백을 받았다.
+- 요구: 신청/표시 Character가 A여도 같은 원정대의 B 보석 이상을 그 팝업 리스트에서 확인하고 싶다. 자동 갱신·그룹 데이터 갱신만으로 현재 계약이 이를 보장하지 않는다.
+- **구현 전에 제품·아키텍처 정의를 반드시 먼저** 한다. 정의 없이 코드를 넣지 않는다. 대기 항목은 `NEXT_WORK.md` 차후 대기와 `CHARACTER_BUILD_INTEGRITY_CONTRACT.md` §5에 기록했다.
+
 # 2026-09-11 그룹 membership 보석 Snapshot — Rules 콘솔 게시
 
 - 브랜치 `cursor/group-membership-gem-snapshot`에서 그룹 membership·join relation·본인 Snapshot 갱신에 파티와 같은 `gemValidationSnapshot` 다섯 필드를 전파했다.
