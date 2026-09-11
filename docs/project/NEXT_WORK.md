@@ -7,7 +7,7 @@
 - 통합 기준은 로컬·원격이 같은 `dev`의 `637828a`다.
 - 신청 후보 동일 딜러 직업 차단과 §14 레이드 목록 Character 필터·참가 인원 정렬·남은 자리 필터는 구현·자동 검증·실기기 확인 후 `dev`에 반영됐다.
 - 파티 신청 `submittedBuildSnapshot`과 파티 membership `gemValidationSnapshot`에는 보석 검증 최소 요약이 전파된다.
-- 그룹 membership 전파는 `cursor/group-membership-gem-snapshot`에서 구현·표적 자동 검증·브랜치 푸시까지 완료했다. 남은 것은 Rules 실제 배포 1회와 두 기기 실기기 확인이다.
+- 그룹 membership 전파는 `cursor/group-membership-gem-snapshot`에서 구현·표적 자동 검증·브랜치 푸시까지 완료했다. CLI `firebase deploy`는 `/projects/lost-party:test` HTTP 503으로 두 번 실패했고 Ruleset/Release에 도달하지 않았다. 동일 `firestore.rules`를 Firebase 콘솔 편집기에 붙여 넣어 바로 게시하는 우회로 운영 반영했다. 남은 것은 두 기기 실기기 확인과 `dev` 병합이다.
 
 ## 다음 작업 그룹 — 그룹 membership 보석 검증 Snapshot 전파
 

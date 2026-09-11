@@ -1,3 +1,10 @@
+# 2026-09-11 그룹 membership 보석 Snapshot — Rules 콘솔 게시
+
+- 브랜치 `cursor/group-membership-gem-snapshot`에서 그룹 membership·join relation·본인 Snapshot 갱신에 파티와 같은 `gemValidationSnapshot` 다섯 필드를 전파했다.
+- CLI `firebase deploy --only firestore:rules --project lost-party`는 두 번 모두 `/projects/lost-party:test` HTTP 503으로 종료돼 Ruleset/Release에 도달하지 않았고, 콘솔에도 해당 시도의 새 게시 이력이 생기지 않았다.
+- 사용자가 동일 로컬 `firestore.rules`를 Firebase 콘솔 편집기에 붙여 넣어 즉시 게시에 성공했다. CLI `/test` 503과 콘솔 게시 성공이 같은 소스에서 갈라진 사례로 기록한다.
+- 다음 완료 조건은 두 기기 실기기 체크리스트와 `dev` 병합이다.
+
 # 2026-09-10 Character Build 무결성 — 파티 membership 전파
 
 - 브랜치 `codex/party-membership-build-snapshot`에서 신청 Snapshot의 최소 보석 검증 요약을 파티 membership까지 전파했다.
