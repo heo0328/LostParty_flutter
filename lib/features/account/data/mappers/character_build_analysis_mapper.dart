@@ -63,6 +63,12 @@ class CharacterBuildAnalysisMapper {
       allowPassiveIconFallback: classDefinition == null,
       notices: notices,
     );
+    final armoryGem = _map(json['ArmoryGem']);
+    final equippedGemCount = armoryGem?['Gems'] is List
+        ? (armoryGem!['Gems'] as List).length
+        : null;
+    final gemEffectsSourceAvailable =
+        _map(armoryGem?['Effects'])?['Skills'] is List;
     final arkGridConditions = _parseArkGridConditions(
       json['ArkGrid'],
       activePassiveNames: activePassiveNames,
@@ -81,6 +87,8 @@ class CharacterBuildAnalysisMapper {
       arkGridMinimumIntegrity: arkGridMinimumResult.integrity,
       notices: notices,
       catalogDetection: catalogDetection,
+      equippedGemCount: equippedGemCount,
+      gemEffectsSourceAvailable: gemEffectsSourceAvailable,
     );
   }
 

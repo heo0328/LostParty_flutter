@@ -10,7 +10,9 @@ enum BuildIntegrityStatus {
 
 /// 고정 우선순위 순서의 이슈 코드. 직렬화 문자열과 동일하다.
 enum BuildIntegrityIssueCode {
+  gemSlotCount,
   foreignClassGem,
+  unmatchedSkillGem,
   sameClassGemUnverified,
   gemUnavailable,
   arkGridMinimum,
@@ -23,7 +25,7 @@ enum BuildIntegrityRole {
 }
 
 class BuildIntegritySnapshot {
-  static const int schemaVersion = 1;
+  static const int schemaVersion = 2;
 
   const BuildIntegritySnapshot({
     required this.status,
@@ -31,6 +33,7 @@ class BuildIntegritySnapshot {
     required this.role,
     required this.checkedAt,
     required this.catalogVersion,
+    this.storedSchemaVersion = schemaVersion,
   });
 
   final BuildIntegrityStatus status;
@@ -38,6 +41,8 @@ class BuildIntegritySnapshot {
   final BuildIntegrityRole role;
   final DateTime checkedAt;
   final String? catalogVersion;
+  /// 읽은 과거 Snapshot 의미를 보존한다. 새 Snapshot은 항상 v2다.
+  final int storedSchemaVersion;
 
   bool get isClean => status == BuildIntegrityStatus.clean;
 
@@ -60,7 +65,9 @@ class BuildIntegritySnapshot {
         final labels = <String>[];
         final hasGemError = issueCodes.any(
           (code) =>
+              code == BuildIntegrityIssueCode.gemSlotCount ||
               code == BuildIntegrityIssueCode.foreignClassGem ||
+              code == BuildIntegrityIssueCode.unmatchedSkillGem ||
               code == BuildIntegrityIssueCode.sameClassGemUnverified ||
               code == BuildIntegrityIssueCode.gemUnavailable,
         );
@@ -81,7 +88,7 @@ class BuildIntegritySnapshot {
 
   Map<String, Object?> toFields() {
     return <String, Object?>{
-      'schemaVersion': schemaVersion,
+      'schemaVersion': storedSchemaVersion,
       'status': status.name,
       'issueCodes': issueCodes.map((code) => code.name).toList(growable: false),
       'role': role.name,
@@ -101,7 +108,7 @@ class BuildIntegritySnapshot {
     try {
       final map = Map<Object?, Object?>.from(raw);
       final schema = map['schemaVersion'];
-      if (schema is! int || schema != schemaVersion) {
+      if (schema is! int || (schema != 1 && schema != schemaVersion)) {
         return null;
       }
 
@@ -116,6 +123,14 @@ class BuildIntegritySnapshot {
 
       final issueCodes = _parseIssueCodes(map['issueCodes']);
       if (issueCodes == null) {
+        return null;
+      }
+      if (schema == 1 &&
+          issueCodes.any(
+            (code) =>
+                code == BuildIntegrityIssueCode.gemSlotCount ||
+                code == BuildIntegrityIssueCode.unmatchedSkillGem,
+          )) {
         return null;
       }
 
@@ -135,6 +150,7 @@ class BuildIntegritySnapshot {
         role: role,
         checkedAt: checkedAt,
         catalogVersion: catalogVersion,
+        storedSchemaVersion: schema,
       );
     } catch (_) {
       return null;
@@ -142,7 +158,8 @@ class BuildIntegritySnapshot {
   }
 
   bool hasSameValues(BuildIntegritySnapshot other) {
-    if (status != other.status ||
+    if (storedSchemaVersion != other.storedSchemaVersion ||
+        status != other.status ||
         role != other.role ||
         catalogVersion != other.catalogVersion ||
         !checkedAt.isAtSameMomentAs(other.checkedAt) ||

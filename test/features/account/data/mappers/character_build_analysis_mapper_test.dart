@@ -531,6 +531,39 @@ void main() {
       hasLength(1),
     );
   });
+
+  test('keeps equipped gem count separate from mapped effects', () {
+    final modified = _deepCopy(fixture);
+    final armoryGem = modified['ArmoryGem'] as Map<String, dynamic>;
+    final gems = armoryGem['Gems'] as List<dynamic>;
+    final skills = (armoryGem['Effects'] as Map<String, dynamic>)['Skills']
+        as List<dynamic>;
+    skills.removeLast();
+
+    final result = const CharacterBuildAnalysisMapper().fromJson(modified);
+
+    expect(result.equippedGemCount, gems.length);
+    expect(result.gemEffects.length, skills.length);
+    expect(result.gemEffectsSourceAvailable, isTrue);
+  });
+
+  test('distinguishes missing gem source from an explicitly empty list', () {
+    final missing = _deepCopy(fixture)..remove('ArmoryGem');
+    final empty = _deepCopy(fixture);
+    final emptyGem = empty['ArmoryGem'] as Map<String, dynamic>;
+    emptyGem['Gems'] = <dynamic>[];
+    (emptyGem['Effects'] as Map<String, dynamic>)['Skills'] = <dynamic>[];
+
+    final missingResult = const CharacterBuildAnalysisMapper().fromJson(
+      missing,
+    );
+    final emptyResult = const CharacterBuildAnalysisMapper().fromJson(empty);
+
+    expect(missingResult.equippedGemCount, isNull);
+    expect(missingResult.gemEffectsSourceAvailable, isFalse);
+    expect(emptyResult.equippedGemCount, 0);
+    expect(emptyResult.gemEffectsSourceAvailable, isTrue);
+  });
 }
 
 Map<String, dynamic> _deepCopy(Map<String, dynamic> value) {

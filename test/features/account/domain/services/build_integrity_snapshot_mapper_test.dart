@@ -220,6 +220,34 @@ void main() {
 
       expect(parsed, isNotNull);
       expect(parsed!.hasSameValues(original), isTrue);
+      expect(parsed.storedSchemaVersion, 2);
+      expect(original.toFields()['schemaVersion'], 2);
+    });
+
+    test('reads v1 with its legacy meaning and rejects v2-only codes in v1', () {
+      final legacy = BuildIntegritySnapshot.tryFromFields(<String, Object?>{
+        'schemaVersion': 1,
+        'status': 'review',
+        'issueCodes': const ['sameClassGemUnverified'],
+        'role': 'dealer',
+        'checkedAt': checkedAt,
+        'catalogVersion': 'v1',
+      });
+      final invalidLegacy = BuildIntegritySnapshot.tryFromFields(
+        <String, Object?>{
+          'schemaVersion': 1,
+          'status': 'error',
+          'issueCodes': const ['unmatchedSkillGem'],
+          'role': 'dealer',
+          'checkedAt': checkedAt,
+          'catalogVersion': 'v1',
+        },
+      );
+
+      expect(legacy, isNotNull);
+      expect(legacy!.storedSchemaVersion, 1);
+      expect(legacy.displayLabels, ['보석 확인 필요']);
+      expect(invalidLegacy, isNull);
     });
 
     test('returns null for missing, unknown, or broken maps', () {
@@ -227,7 +255,7 @@ void main() {
       expect(BuildIntegritySnapshot.tryFromFields(<String, Object?>{}), isNull);
       expect(
         BuildIntegritySnapshot.tryFromFields(<String, Object?>{
-          'schemaVersion': 2,
+          'schemaVersion': 3,
           'status': 'clean',
           'issueCodes': const <String>[],
           'role': 'dealer',

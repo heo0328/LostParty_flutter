@@ -143,6 +143,8 @@ class CharacterBuildAnalysis {
     required this.notices,
     this.catalogDetection,
     this.arkGridMinimumIntegrity,
+    this.equippedGemCount,
+    this.gemEffectsSourceAvailable = true,
   });
 
   static const expectedRuneCount = 8;
@@ -154,6 +156,11 @@ class CharacterBuildAnalysis {
   final List<BuildNotice> notices;
   final CharacterBuildCatalogDetection? catalogDetection;
   final ArkGridMinimumIntegrity? arkGridMinimumIntegrity;
+  /// `ArmoryGem.Gems` 목록을 정상적으로 읽은 경우의 실제 장착 개수.
+  /// null은 0개가 아니라 원본 부재·형식 오류로 개수를 확정할 수 없다는 뜻이다.
+  final int? equippedGemCount;
+  /// `ArmoryGem.Effects.Skills`를 목록으로 정상적으로 읽었는지 여부.
+  final bool gemEffectsSourceAvailable;
 
   GemValidationSummary get gemValidationSummary => GemValidationSummary(
     totalCount: gemEffects.length,
