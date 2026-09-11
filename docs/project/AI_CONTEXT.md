@@ -21,8 +21,8 @@
 ### Character Build 무결성
 
 - 깨달음·아크그리드 질서 해/달 14P·보석 Tooltip 직업을 기본 검사한다. 별과 혼돈은 필수 판정에서 제외한다.
-- 같은 직업의 대상 미확인은 중립 안내, 다른 직업 보석만 빨간 경고다. 모든 직업의 최적 Build를 선행 수기 입력하거나 AI 분석을 앱에 탑재하지 않는다.
-- 신청자 Snapshot과 카드, 파티·그룹 membership·구성원/그룹원 목록 행까지 보석 요약을 반영했다. 계정 갱신이 Character 최소 표시 문서에 `buildIntegritySnapshot`을 저장하고, 그룹원 활동 Character 목록은 기존 활동 ID 교집합을 유지한 채 그 상태를 표시한다. 실기기 확인은 통과했으며, 오류·검토 표기 문구와 심각도의 재정의는 협의 대기다.
+- 2026-09-12 제품 합의에서 빨간 확정 오류를 `보석 11개 미만`, `타 직업 보석`, `API 스킬·등록 특수 스킬 양쪽에 없는 보석`, `질서 해·달 누락/각 14P 미만`, `아크그리드 요구 아크패시브 불충족`으로 고정했다. 카탈로그 미등록은 중립 사유가 아니며 사용자가 정상 특수 스킬을 점진적으로 추가한다. API·Tooltip 자체의 정보 부족만 중립이다.
+- 기존 구현은 같은 직업 대상 미확인을 중립 처리하고 보석 11개 기준을 별도 판정하지 않으므로 다음 작업에서 개편한다. 신청자·membership·Character 통합 Snapshot과 모든 표시 화면의 의미를 맞추되 기존 파티·그룹 명령·Rules·활동 ID 교집합을 보존한다.
 - 계약: [`../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md)
 
 ### 그룹과 레이드
@@ -33,7 +33,7 @@
 
 ## 차후 제품 후보
 
-- Character Build 오류·상태 표기 재정의는 [`NEXT_WORK.md`](NEXT_WORK.md) 제1 작업(협의 우선)이다. 구현은 합의 후다.
+- Character Build 오류·상태 정의 협의는 완료됐다. 구현 준비가 끝난 판정·표기 개편은 [`NEXT_WORK.md`](NEXT_WORK.md)의 제1 작업이다.
 - 기존 membership 보석 Snapshot을 통합 Build 상태로 이행할지 여부는 별도 후보다.
 - 직업·깨달음·질서 해/달/별 계층 메모, `망소빙` 같은 Build 별칭과 버전형 JSON 공유: [`../product/BUILD_MEMO_SHARING.md`](../product/BUILD_MEMO_SHARING.md)
 - 직업 시너지 선택·필터: [`../product/CLASS_SYNERGY_CATALOG.md`](../product/CLASS_SYNERGY_CATALOG.md)
@@ -50,4 +50,4 @@
 
 ## 다음 작업
 
-제1 작업은 Character Build 오류·상태 표기 재정의 **협의**다. 구현 코드는 합의 확정 전에 바꾸지 않는다. 상세는 [`NEXT_WORK.md`](NEXT_WORK.md).
+제1 작업은 합의된 Character Build 확정 오류 판정·표기 개편이다. 구현 순서와 회귀 보호 목록은 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.

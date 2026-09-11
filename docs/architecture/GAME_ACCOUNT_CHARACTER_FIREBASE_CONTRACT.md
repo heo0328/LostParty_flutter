@@ -3,6 +3,7 @@
 ## 2026-09-11 Character Build 무결성 최소 표시 계약
 
 - Character 문서의 선택 필드 `buildIntegritySnapshot: map`은 성공한 계정 데이터 갱신의 로컬 Build Snapshot에서 만든 최소 통합 상태다. `clean/review/error/unavailable`, 복수 issue code, 역할, 원본 시각과 카탈로그 버전만 포함하며 전체 Armory·보석명·Tooltip·스킬·상세 포인트는 포함하지 않는다.
+- 2026-09-12 이후 새 분석 결과는 schema v2로 저장한다. 빨간 오류 코드는 `gemSlotCount`, `foreignClassGem`, `unmatchedSkillGem`, `arkGridMinimum`, `arkGridCondition`이며 장착 개수·오류 개수처럼 UI에 필요한 최소 수치만 함께 둔다. 새 앱은 v1을 과거 의미로 읽고 구버전 앱은 모르는 v2를 만나도 무결성 표시만 생략한다.
 - 보석과 아크그리드가 동시에 잘못될 수 있으므로 `ERRORCHECK: GEM | ARKGRID` 같은 단일 값으로 축약하지 않는다. UI는 짧은 상태를 표시하되 서버는 `issueCodes` 목록으로 두 오류를 함께 보존한다.
 - 기존 `CharacterMinimumDisplaySyncService`가 성공한 앱 실행 1회 갱신·내 계정 수동 갱신 결과를 아이템 레벨·전투력과 같은 Character별 Transaction으로 반영한다. 그룹 상세 진입이나 타인 조회는 쓰기와 API 호출을 만들지 않는다.
 - Transaction은 active Auth binding·Player·Character 소유자·GameAccount 관계를 기존대로 확인한다. null·동기화 실패·더 오래된 `checkedAt`은 기존 상태를 덮지 않고, 전체 값이 같으면 `updatedAt`도 쓰지 않는다.
