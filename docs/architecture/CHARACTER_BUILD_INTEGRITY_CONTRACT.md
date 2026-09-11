@@ -86,7 +86,7 @@
 - Tooltip 직업이 현재 Character 직업과 다르다.
 - 본인의 내 계정 화면에 빨간색 `다른 직업 보석 N개 · 확인 필요`를 표시한다.
 - 타인이 보는 신청자·파티 구성원·그룹 Character 간략 카드에도 보석 확인 경고를 표시한다.
-- 그룹 membership 표시 Character Snapshot과 그룹 상세 **그룹원 목록 행**은 구현됐다. 다음 작업은 그룹원을 탭해 여는 **활동 Character 목록**에 원정대 다른 Character(예: 신청 A, 이상 보석 B)의 보석·아크그리드 상태를 붙인다. 현재 `characterActivity` ID와 `characters` 조회 결과의 교집합은 유지하고, 계정 갱신이 Character 최소 표시 문서에 저장한 선택 `buildIntegritySnapshot`만 방어적으로 결합한다.
+- 그룹 membership 표시 Character Snapshot과 그룹 상세 **그룹원 목록 행**의 보석 요약, 그리고 그룹원을 탭해 여는 **활동 Character 목록**의 `buildIntegritySnapshot` 표시는 구현됐다. 활동 목록은 `characterActivity` ID와 `characters` 조회 결과의 교집합을 유지하고, 계정 갱신이 Character 최소 표시 문서에 저장한 선택 필드만 방어적으로 결합한다.
 - 동일한 대상명인 홀리나이트와 발키리의 `신앙 스킬`은 Tooltip 직업으로 구분한다.
 
 Tooltip 직업 자체를 읽을 수 없는 응답은 다른 직업으로 단정하지 않고 별도 `검증 정보 없음`으로 처리한다.
@@ -148,7 +148,7 @@ catalogVersion
 
 ## 9. 구현 순서
 
-진행 상태: 2026-09-08 1~7단계와 8단계의 파티 신청자 카드 구간을 구현하고 자동·실기기 검증했다. 이후 Rules 경고 제거본도 2026-09-10 정상 배포했다. 2026-09-10 파티 membership·구성원 카드 전파를 구현하고 최신 Rules를 정상 배포했다. 그룹 membership 전파는 2026-09-11 Rules 콘솔 게시·실기기 회귀 후 `dev`에 병합됐다. 그룹원 활동 Character 목록은 계정 갱신 시 저장하는 통합 Build 무결성 상태를 읽는 별도 작업으로 계획했다.
+진행 상태: 2026-09-08 1~7단계와 8단계의 파티 신청자 카드 구간을 구현하고 자동·실기기 검증했다. 이후 Rules 경고 제거본도 2026-09-10 정상 배포했다. 2026-09-10 파티 membership·구성원 카드 전파를 구현하고 최신 Rules를 정상 배포했다. 그룹 membership 전파는 2026-09-11 Rules 콘솔 게시·실기기 회귀 후 `dev`에 병합됐다. 그룹원 활동 Character 목록의 통합 Build 무결성 상태(`buildIntegritySnapshot`)는 2026-09-11 구현·자동 검증 후 `dev`에 병합됐다. 실기기 확인은 병합 후 별도로 남긴다.
 
 1. 실제 API 진단 도구에 깨달음 1·4티어, 아크그리드 해·달 존재/포인트·조건, API 스킬과 보석 종합 결과를 추가한다.
 2. Tooltip 직업 추출과 슬롯 연결을 운영 분석기로 옮긴다.

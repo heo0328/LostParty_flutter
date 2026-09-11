@@ -2,6 +2,7 @@ import '../entities/character_build_snapshot.dart';
 import '../entities/character_minimum_display_sync_result.dart';
 import '../repositories/account_repository.dart';
 import '../repositories/character_minimum_display_sync_gateway.dart';
+import 'build_integrity_snapshot_mapper.dart';
 
 /// 로컬 Build Snapshot의 최소 표시값을 Firestore Character에 맞춘다.
 class CharacterMinimumDisplaySyncService {
@@ -37,12 +38,17 @@ class CharacterMinimumDisplaySyncService {
       );
     }
 
+    final buildIntegritySnapshot = context.useCombatPower
+        ? buildIntegritySnapshotFromBuild(context.snapshot)
+        : null;
+
     try {
       final wrote = await _gateway.syncMinimumDisplay(
         CharacterMinimumDisplayPatch(
           serverCharacterId: serverCharacterId,
           itemLevel: itemLevel,
           combatPower: combatPower,
+          buildIntegritySnapshot: buildIntegritySnapshot,
         ),
       );
       return CharacterMinimumDisplaySyncResult(

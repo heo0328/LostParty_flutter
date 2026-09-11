@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lost_party/shared/character_build/character_optional_display_preservation.dart';
 
 import '../../account/data/datasources/lost_ark_character_remote_data_source.dart';
 import '../../account/data/dtos/sibling_character_dto.dart';
@@ -907,6 +908,7 @@ class FirestoreManualVerificationRepository
         'itemAvgLevel': sibling.itemAvgLevel,
         'createdAt': storedCharacter?.data()?['createdAt'] ?? now,
         'updatedAt': now,
+        ...preservedOptionalCharacterDisplayFields(storedCharacter?.data()),
       });
       transaction.set(claimRefs[index], {
         'schemaVersion': 1,

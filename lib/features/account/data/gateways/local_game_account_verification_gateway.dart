@@ -4,6 +4,7 @@ import '../../domain/character_identity_key.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lost_party/shared/character_build/character_optional_display_preservation.dart';
 
 import '../../domain/entities/game_account_verification.dart';
 import '../../domain/repositories/game_account_verification_gateway.dart';
@@ -259,6 +260,7 @@ class LocalGameAccountVerificationGateway
           'itemAvgLevel': sibling.itemAvgLevel,
           'createdAt': storedCharacter?.data()?['createdAt'] ?? now,
           'updatedAt': now,
+          ...preservedOptionalCharacterDisplayFields(storedCharacter?.data()),
         });
         transaction.set(claimRefs[index], {
           'schemaVersion': 1,

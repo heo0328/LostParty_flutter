@@ -1,4 +1,12 @@
+# 2026-09-11 Character Build 무결성 상태 — 구현·자동 검증·dev 병합
+
+- 브랜치 `cursor/character-build-integrity-status`에서 계정 갱신 최소 표시 Transaction에 `buildIntegritySnapshot`을 동반하고, 그룹원 활동 Character bottom sheet에 상태 라벨을 표시했다.
+- 구현: 공용 Snapshot·mapper, 최소 표시 Patch/Sync/Gateway, 일반·수동 재인증 `set`의 `combatPower`·무결성 보존, `GroupRequestCharacter` 방어적 읽기, 활동 목록 Chip UI. Rules·쿼리·DI 추가는 없다.
+- 자동 검증: mapper/parser, 최소 표시 Sync·Gateway, 재인증 보존 helper, 그룹 검색 mapper, 그룹원 활동 UI, 자동 갱신 Coordinator 관련 테스트를 통과했다. 전체 `flutter test`의 `widget_test` Firebase 미초기화 9건은 base `5fc0353`에서도 동일해 이번 변경과 무관하다.
+- 실기기 체크리스트(정상/보석/아크그리드/복수 오류·재인증 보존·그룹·파티 회귀)는 병합 후 사용자 확인이 남는다.
+
 # 2026-09-11 AI 작업 자동 진입점 — AGENTS.md
+
 
 - 사용자가 새 AI 작업마다 개별 문서를 다시 나열하지 않아도 되도록 저장소 루트에 `AGENTS.md`를 추가했다.
 - 핵심 실행 게이트로 문서 확인 순서, 구현 전 설계, 기존 완성 기능 회귀 보호, 작업 브랜치 생성·병합·푸시, 검증 완료 판정과 Firestore Rules 1회 배포·실패 후 재시도 제한을 명시했다.
