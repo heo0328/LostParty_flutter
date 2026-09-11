@@ -22,7 +22,7 @@
 
 - 깨달음·아크그리드 질서 해/달 14P·보석 Tooltip 직업을 기본 검사한다. 별과 혼돈은 필수 판정에서 제외한다.
 - 2026-09-12 제품 합의에서 빨간 확정 오류를 `보석 11개 미만`, `타 직업 보석`, `API 스킬·등록 특수 스킬 양쪽에 없는 보석`, `질서 해·달 누락/각 14P 미만`, `아크그리드 요구 아크패시브 불충족`으로 고정했다. 카탈로그 미등록은 중립 사유가 아니며 사용자가 정상 특수 스킬을 점진적으로 추가한다. API·Tooltip 자체의 정보 부족만 중립이다.
-- 확정 오류 개편은 `codex/implement-build-error-policy`에서 구현·자동 검증을 완료했다. Character 통합 Snapshot과 파티·그룹 보석 Snapshot은 v2를 쓰고 과거 v1 의미는 방어적으로 유지한다. 기존 파티·그룹 명령·Rules·활동 ID 교집합은 변경하지 않았으며 실기기 확인을 기다린다.
+- 확정 오류 v2 구현 후 실기기에서 카탈로그 미등록 직업을 아이콘 URL의 `ark_passive` 문자열로 정상 처리하는 fallback을 발견했다. 다음 보정은 URL 근거를 완전히 제거하고 정상 근거를 `ArmorySkills OR 승인 카탈로그`로 제한한다. 화면은 정상·판정 불능을 모두 비표기하고 확정 오류만 빨간색으로 표시한다. v1/v2 내부 호환과 기존 파티·그룹 명령·Rules·활동 ID 교집합은 유지한다.
 - 계약: [`../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md)
 
 ### 그룹과 레이드
@@ -50,4 +50,4 @@
 
 ## 다음 작업
 
-제1 작업은 합의된 Character Build 확정 오류 판정·표기 개편의 실기기 회귀 확인이다. 체크리스트와 완료 조건은 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.
+제1 작업은 Character Build 아이콘 fallback 제거와 오류 전용 표시 보정이다. 구현 순서와 회귀 표본은 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.
