@@ -8,7 +8,7 @@ void main() {
   late Map<String, Object?> indexes;
 
   setUpAll(() {
-    rules = File('firestore.rules').readAsStringSync();
+    rules = File('firestore.rules').readAsStringSync().replaceAll('\r\n', '\n');
     indexes =
         jsonDecode(File('firestore.indexes.json').readAsStringSync())
             as Map<String, Object?>;

@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
-import 'package:lost_party/features/account/domain/entities/character_build_role.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
 import 'package:lost_party/features/account/domain/entities/save_activity_characters_command.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/account/domain/repositories/activity_characters_repository.dart';
 import 'package:lost_party/features/group/domain/services/group_local_member_display_lookup.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_role.dart';
 
 class _Build extends Fake implements CharacterBuildSnapshot {
   _Build(

@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_catalog_detection.dart';
-import 'package:lost_party/features/account/domain/entities/character_build_role.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
 import 'package:lost_party/features/account/domain/services/gem_validation_snapshot_mapper.dart';
 import 'package:lost_party/shared/character_build/party_gem_validation_snapshot.dart';

@@ -6,7 +6,7 @@ void main() {
   late String rules;
 
   setUpAll(() {
-    rules = File('firestore.rules').readAsStringSync();
+    rules = File('firestore.rules').readAsStringSync().replaceAll('\r\n', '\n');
   });
 
   test('반복방 직접 승계는 현재 주차 시간 범위만 허용한다', () {
