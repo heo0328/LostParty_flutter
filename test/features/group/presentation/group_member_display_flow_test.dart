@@ -19,6 +19,7 @@ import 'package:lost_party/features/group/domain/repositories/group_read_reposit
 import 'package:lost_party/features/group/domain/services/group_member_display_builder.dart';
 import 'package:lost_party/features/group/presentation/pages/group_detail_page.dart';
 import 'package:lost_party/features/group/presentation/viewmodels/group_join_view_model.dart';
+import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
 
 final _now = DateTime(2026, 8, 31);
 GroupMember _member({
@@ -153,8 +154,9 @@ class _Powers extends Fake implements CharacterCombatPowerSyncGateway {
 }
 
 class _Search extends Fake implements GroupCharacterSearchRepository {
-  _Search(this.powers);
+  _Search(this.powers, {this.integrityByCharacterId = const {}});
   final _Powers powers;
+  final Map<String, BuildIntegritySnapshot?> integrityByCharacterId;
   @override
   Future<List<GroupRequestCharacter>> loadActiveCharactersForPlayer(
     String ownerPlayerId, {
@@ -169,6 +171,7 @@ class _Search extends Fake implements GroupCharacterSearchRepository {
         characterClassName: '바드',
         itemLevel: 1700,
         combatPower: powers.saved['character-$id'],
+        buildIntegritySnapshot: integrityByCharacterId['character-$id'],
       ),
   ];
 }
@@ -203,11 +206,15 @@ void main() {
   GroupMembershipActionViewModel model({
     double? power = 3100,
     Map<String, Set<String>>? activityByPlayer,
+    Map<String, BuildIntegritySnapshot?> integrityByCharacterId = const {},
   }) => GroupMembershipActionViewModel(
     accountRepository: _Accounts(power: power),
     readRepository: reads,
     commandRepository: commands,
-    characterSearchRepository: _Search(powers),
+    characterSearchRepository: _Search(
+      powers,
+      integrityByCharacterId: integrityByCharacterId,
+    ),
     combatPowerSyncGateway: powers,
     activityCharactersRepository: _Activity(
       activityByPlayer ??
@@ -354,5 +361,92 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('groupLeaveButton')), findsNothing);
     expect(find.byKey(const ValueKey('groupLeaderExitButton')), findsOneWidget);
+  });
+
+  testWidgets('활동 Character 무결성 상태를 별도 라벨로 표시한다', (tester) async {
+    final checkedAt = DateTime.utc(2026, 9, 11);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(360, 800)),
+          child: GroupDetailPage(
+            groupId: 'group-1',
+            playerId: 'player-1',
+            readRepository: reads,
+            actionViewModel: model(
+              integrityByCharacterId: {
+                'character-1': BuildIntegritySnapshot(
+                  status: BuildIntegrityStatus.error,
+                  issueCodes: const [
+                    BuildIntegrityIssueCode.foreignClassGem,
+                    BuildIntegrityIssueCode.arkGridCondition,
+                  ],
+                  role: BuildIntegrityRole.dealer,
+                  checkedAt: checkedAt,
+                  catalogVersion: null,
+                ),
+                'character-2': BuildIntegritySnapshot(
+                  status: BuildIntegrityStatus.review,
+                  issueCodes: const [
+                    BuildIntegrityIssueCode.sameClassGemUnverified,
+                  ],
+                  role: BuildIntegrityRole.support,
+                  checkedAt: checkedAt,
+                  catalogVersion: null,
+                ),
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('groupMemberCard-player-1')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('memberCharacter-character-1')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('memberCharacterIntegrity-character-1')),
+      findsOneWidget,
+    );
+    expect(find.text('보석'), findsOneWidget);
+    expect(find.text('아크그리드'), findsOneWidget);
+    expect(find.text('보석 확인 필요'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('clean 무결성은 활동 목록에 추가 라벨을 만들지 않는다', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GroupDetailPage(
+          groupId: 'group-1',
+          playerId: 'player-1',
+          readRepository: reads,
+          actionViewModel: model(
+            integrityByCharacterId: {
+              'character-1': BuildIntegritySnapshot(
+                status: BuildIntegrityStatus.clean,
+                issueCodes: const [],
+                role: BuildIntegrityRole.dealer,
+                checkedAt: DateTime.utc(2026, 9, 11),
+                catalogVersion: null,
+              ),
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('groupMemberCard-player-1')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('memberCharacterIntegrity-character-1')),
+      findsNothing,
+    );
+    expect(find.text('보석'), findsNothing);
   });
 }

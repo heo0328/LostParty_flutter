@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
 
 import '../../domain/repositories/character_minimum_display_sync_gateway.dart';
 
@@ -80,11 +81,54 @@ class FirestoreCharacterMinimumDisplaySyncGateway
       if (combatPower != null && data?['combatPower'] != combatPower) {
         updates['combatPower'] = combatPower;
       }
+      final integrityUpdate = _integrityUpdate(
+        existingRaw: data?['buildIntegritySnapshot'],
+        next: patch.buildIntegritySnapshot,
+      );
+      if (integrityUpdate != null) {
+        updates['buildIntegritySnapshot'] = integrityUpdate;
+      }
       if (updates.isEmpty) return false;
       updates['updatedAt'] = FieldValue.serverTimestamp();
       transaction.update(ref, updates);
       return true;
     });
+  }
+
+  static Map<String, Object?>? _integrityUpdate({
+    required Object? existingRaw,
+    required BuildIntegritySnapshot? next,
+  }) {
+    if (next == null) {
+      return null;
+    }
+    try {
+      final existing = BuildIntegritySnapshot.tryFromFields(
+        existingRaw,
+        parseDate: _parseDate,
+      );
+      if (existing != null &&
+          existing.checkedAt.isAfter(next.checkedAt)) {
+        return null;
+      }
+      if (existing != null && existing.hasSameValues(next)) {
+        return null;
+      }
+      final fields = next.toFields();
+      fields['checkedAt'] = Timestamp.fromDate(next.checkedAt.toUtc());
+      return fields;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static DateTime? _parseDate(Object? value) {
+    return switch (value) {
+      Timestamp timestamp => timestamp.toDate().toUtc(),
+      DateTime dateTime => dateTime.toUtc(),
+      String text => DateTime.tryParse(text)?.toUtc(),
+      _ => null,
+    };
   }
 
   static bool _sameItemLevel(Object? existing, double next) {

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lost_party/shared/character_build/build_integrity_status_line.dart';
 import 'package:lost_party/shared/character_build/gem_validation_line.dart';
 
 import '../../domain/entities/group_join_command.dart';
@@ -372,11 +373,31 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                           'memberCharacter-${character.characterId}',
                         ),
                         title: Text(character.characterName),
-                        subtitle: Text(
-                          '${character.serverName} · ${character.characterClassName}'
-                          ' · ${_formatLevel(character.itemLevel)}'
-                          ' · ${_formatCombatPower(character.combatPower)}',
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${character.serverName} · ${character.characterClassName}'
+                              ' · ${_formatLevel(character.itemLevel)}'
+                              ' · ${_formatCombatPower(character.combatPower)}',
+                            ),
+                            if (character.buildIntegritySnapshot
+                                case final integrity?
+                                  when integrity.displayLabels.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              BuildIntegrityStatusLine(
+                                snapshot: integrity,
+                                keyName:
+                                    'memberCharacterIntegrity-${character.characterId}',
+                              ),
+                            ],
+                          ],
                         ),
+                        isThreeLine:
+                            character.buildIntegritySnapshot
+                                ?.displayLabels
+                                .isNotEmpty ??
+                            false,
                       ),
                   ],
                 ),

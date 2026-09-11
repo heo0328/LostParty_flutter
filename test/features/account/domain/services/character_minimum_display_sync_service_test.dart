@@ -90,6 +90,44 @@ void main() {
 
     expect(gateway.calls.single.combatPower, 250000);
   });
+
+  test('숫자 표시 갱신에 같은 역할 Build 무결성 요약을 동반한다', () async {
+    final gateway = _Gateway();
+    final service = CharacterMinimumDisplaySyncService(
+      accountRepository: _Accounts(),
+      gateway: gateway,
+    );
+
+    await service.syncSnapshot(
+      localCharacterId: 1,
+      snapshot: _snapshot(),
+    );
+
+    final integrity = gateway.calls.single.buildIntegritySnapshot;
+    expect(integrity, isNotNull);
+    expect(integrity!.role.name, 'support');
+    expect(integrity.checkedAt, DateTime.utc(2026, 9, 4));
+  });
+
+  test('선호 역할 Snapshot이 없으면 전투력과 무결성 요약을 보내지 않는다', () async {
+    final gateway = _Gateway();
+    final service = CharacterMinimumDisplaySyncService(
+      accountRepository: _Accounts(
+        preferredRole: CharacterBuildRole.support,
+        builds: const [],
+      ),
+      gateway: gateway,
+    );
+
+    await service.syncSnapshot(
+      localCharacterId: 1,
+      snapshot: _snapshot(role: CharacterBuildRole.dealer, combatPower: 400000),
+    );
+
+    expect(gateway.calls.single.combatPower, isNull);
+    expect(gateway.calls.single.itemLevel, 1700);
+    expect(gateway.calls.single.buildIntegritySnapshot, isNull);
+  });
 }
 
 CharacterBuildSnapshot _snapshot({
