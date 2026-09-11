@@ -22,7 +22,7 @@
 
 - 깨달음·아크그리드 질서 해/달 14P·보석 Tooltip 직업을 기본 검사한다. 별과 혼돈은 필수 판정에서 제외한다.
 - 2026-09-12 제품 합의에서 빨간 확정 오류를 `보석 11개 미만`, `타 직업 보석`, `API 스킬·등록 특수 스킬 양쪽에 없는 보석`, `질서 해·달 누락/각 14P 미만`, `아크그리드 요구 아크패시브 불충족`으로 고정했다. 카탈로그 미등록은 중립 사유가 아니며 사용자가 정상 특수 스킬을 점진적으로 추가한다. API·Tooltip 자체의 정보 부족만 중립이다.
-- 기존 구현은 같은 직업 대상 미확인을 중립 처리하고 보석 11개 기준을 별도 판정하지 않으므로 다음 작업에서 개편한다. 신청자·membership·Character 통합 Snapshot과 모든 표시 화면의 의미를 맞추되 기존 파티·그룹 명령·Rules·활동 ID 교집합을 보존한다.
+- 확정 오류 개편은 `codex/implement-build-error-policy`에서 구현·자동 검증을 완료했다. Character 통합 Snapshot과 파티·그룹 보석 Snapshot은 v2를 쓰고 과거 v1 의미는 방어적으로 유지한다. 기존 파티·그룹 명령·Rules·활동 ID 교집합은 변경하지 않았으며 실기기 확인을 기다린다.
 - 계약: [`../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md)
 
 ### 그룹과 레이드
@@ -50,4 +50,4 @@
 
 ## 다음 작업
 
-제1 작업은 합의된 Character Build 확정 오류 판정·표기 개편이다. 구현 순서와 회귀 보호 목록은 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.
+제1 작업은 합의된 Character Build 확정 오류 판정·표기 개편의 실기기 회귀 확인이다. 체크리스트와 완료 조건은 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.

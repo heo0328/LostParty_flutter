@@ -6,19 +6,17 @@ import 'package:lost_party/features/account/domain/entities/save_activity_charac
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/account/domain/repositories/activity_characters_repository.dart';
 import 'package:lost_party/features/group/domain/services/group_local_member_display_lookup.dart';
-import 'package:lost_party/features/account/domain/entities/character_build_role.dart';
 
 class _Build extends Fake implements CharacterBuildSnapshot {
   _Build(
     this.combatPower,
     this.capturedAt, {
-    this.itemLevel,
     this.role = CharacterBuildRole.dealer,
   });
   @override
   final double? combatPower;
   @override
-  final double? itemLevel;
+  double? get itemLevel => null;
   @override
   final DateTime capturedAt;
   @override

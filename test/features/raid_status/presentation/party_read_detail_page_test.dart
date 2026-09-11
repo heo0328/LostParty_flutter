@@ -305,8 +305,9 @@ void main() {
     expect(repository.lastApply?.cycleKey, '2026-08-19');
     expect(
       repository.lastApply?.gemValidation?.status,
-      PartyGemValidationStatus.foreignClass,
+      PartyGemValidationStatus.error,
     );
+    expect(repository.lastApply?.gemValidation?.schemaVersion, 2);
     expect(find.text('가입을 신청했습니다.'), findsOneWidget);
   });
 

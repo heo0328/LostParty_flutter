@@ -1,7 +1,6 @@
 import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
 
 import '../entities/character_build_analysis.dart';
-import '../entities/character_build_role.dart';
 import '../entities/character_build_snapshot.dart';
 
 /// 로컬 Build Snapshot에서 Character 최소 표시용 통합 무결성 요약을 만든다.

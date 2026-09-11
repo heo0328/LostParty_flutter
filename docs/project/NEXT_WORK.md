@@ -4,14 +4,14 @@
 
 ## 현재 인계 상태
 
-- 통합 기준은 로컬·원격이 같은 `dev`의 `21943e0`이다. Character `buildIntegritySnapshot` 저장과 그룹 활동 Character 목록 표시는 구현·자동 검증·실기기 확인까지 완료됐다.
-- 현재 코드는 타 직업 보석과 아크그리드 최소/조건 불충족만 확정 오류로 취급한다. 같은 직업이지만 API 스킬 슬롯·특수 스킬 카탈로그에서 찾지 못한 보석은 중립 `sameClassTargetUnverified`이고, 장착 보석 11개 기준은 별도 오류로 판정하지 않는다.
-- 현재 보석 파서는 `ArmoryGem` 또는 `Gems` 누락을 빈 목록과 같은 결과로 낮출 수 있다. 새 개수 오류를 넣기 전에 `확정 11개 미만`과 `응답/파싱 불가`를 구분해야 한다.
+- 작업 분기 기준은 로컬·원격이 같았던 `dev`의 `c4879ed`이며 현재 구현 브랜치는 `codex/implement-build-error-policy`다. Character `buildIntegritySnapshot` 저장과 그룹 활동 Character 목록의 기존 표시는 앞선 작업에서 실기기 확인까지 완료됐다.
+- 이번 브랜치는 같은 직업이지만 API 스킬 슬롯·특수 스킬 카탈로그에서 찾지 못한 보석과 장착 보석 11개 미만을 확정 오류로 구현했다.
+- 보석 파서는 `ArmoryGem` 또는 `Gems` 누락과 명시적 빈 목록을 구분해 `확정 11개 미만`과 `응답/파싱 불가`를 서로 다른 상태로 보존한다.
 - 파티·그룹 membership의 `gemValidationSnapshot`과 Character의 `buildIntegritySnapshot`은 서로 다른 공개 요약이다. 기존 가입·승인·직접 참가·Character 변경·그룹 명령과 Rules 순서는 그대로 보호한다.
 
 ## 다음 작업 그룹 — Character Build 확정 오류 판정·표기 개편
 
-### 진행 상태 — A·B·C·D 완료, E 대기
+### 진행 상태 — A·B·C·D 완료, E 자동 검증 완료·실기기 대기
 
 - `CharacterBuildAnalysis`가 실제 `ArmoryGem.Gems` 장착 개수와 `Effects.Skills` 원본 가용성을 별도로 보존한다. API 원본 부재는 null/false, 명시적 빈 목록은 0/true로 구분한다.
 - `BuildIntegritySnapshot` 새 쓰기 schema는 v2이며 `gemSlotCount`, `unmatchedSkillGem` 코드 공간을 추가했다. 새 parser는 v1을 기존 의미로 읽고 v1에 v2 전용 코드가 섞이면 손상 문서로 거절한다.
@@ -23,7 +23,19 @@
 - C단계 계정·통합 Snapshot·그룹 활동 UI 표적 테스트 31건이 통과했다.
 - 새 `PartyGemValidationSnapshot`은 v2에서 장착 수·타 직업 수·스킬 불일치 수와 `verified/error/unavailable`을 저장한다. v1 parser·복사 경로는 유지하며 공용 카드가 v2 오류 원인을 표시한다.
 - 신청·가입·membership·그룹 mapper 회귀 56건과 v2 신청 저장 4건이 통과했고 변경 파일 analyze도 통과했다. `firestore.rules`는 변경하지 않았다.
-- 다음은 E 최종 영향 회귀, 전체 analyze/test, 문서와 실기기 체크리스트 정리다.
+- E 최종 영향 회귀에서 신규 실패는 0건이다. 전체 테스트는 1,029건 통과했고 기존 `widget_test.dart`의 Firebase 기본 앱 미초기화 9건만 실패했다. 실행 중 발견한 파티 신청 v2 기대값 1건은 수정 후 `party_read_detail_page_test.dart` 42건이 통과했다.
+- 전체 analyze는 기존 파일 40건으로 exit 1이며, 이번 변경 파일 4개 표적 analyze는 문제 없이 통과했다. `firestore.rules` diff가 없어 Rules 검증·배포는 수행하지 않았다.
+- 다음은 아래 실기기 체크리스트 확인 후 완료 이력을 확정하고 이 문서를 다음 단일 작업으로 교체하는 것이다.
+
+### 실기기 체크리스트
+
+1. 정상 11보석 Character는 내 계정·그룹 활동 목록·파티/그룹 카드에 경고가 없다.
+2. 10보석 이하 Character는 내 계정에 `보석 부족 N/11`, 간략 카드에 빨간 보석 오류가 표시된다.
+3. 타 직업 보석과 카탈로그/스킬 슬롯 양쪽에 없는 보석은 각각 빨간 오류로 표시된다.
+4. API·Tooltip 정보가 없는 경우는 빨간 오류가 아니라 중립 `정보 확인 불가`로 표시된다.
+5. 질서 해·달 14P 미만 또는 요구 아크패시브 불충족은 빨간 아크그리드 오류로 표시된다.
+6. 계정 수동 갱신 후 그룹 활동 Character 목록과 새 파티 신청/참가 Snapshot에 최신 결과가 반영된다.
+7. 기존 파티 신청·승인·직접 참가·Character 변경과 그룹 생성·가입·양도·해산 흐름이 정상이다.
 
 ### 1. 확정 제품 목표
 

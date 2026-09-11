@@ -133,20 +133,14 @@ Tooltip 직업 자체를 읽을 수 없는 응답은 다른 직업으로 단정�
 
 아크그리드 질서의 해·달 누락/각 14P 미만과 장착 코어 요구 아크패시브 불충족은 각각 빨간 확정 오류다. 보석과 아크그리드 문제는 별도 issue code로 모두 보존한다. 좁은 목록에서는 `보석 오류`, `아크그리드 오류`로 영역을 묶을 수 있지만 단순 `보석`, `아크그리드`라고 쓰지 않는다. 정보 부족 라벨은 다른 확정 오류가 함께 있어도 중립색을 유지한다.
 
-## 8. 서버 Snapshot 후보와 경계
+## 8. 서버 Snapshot과 경계
 
 타인이 보는 카드에 결과를 표시하려면 전체 Armory JSON 대신 최소 검증 요약만 역할별 Build Snapshot 또는 신청 시점 불변 Snapshot에 포함한다.
 
-```text
-gemValidationStatus
-foreignClassGemCount
-unverifiedSameClassGemCount
-gemValidatedAt
-catalogVersion
-```
+새 쓰기는 v2의 `gemValidationSchemaVersion`, `gemValidationStatus`, `equippedGemCount`, `foreignClassGemCount`, `unmatchedSkillGemCount`, `gemValidatedAt`, `catalogVersion`을 사용한다. v1의 `unverifiedSameClassGemCount`는 과거 읽기 호환에만 사용한다.
 
 - 보석 전용 요약의 실제 저장 위치는 파티 신청 문서의 `submittedBuildSnapshot` 내부와 파티·그룹 membership 문서의 `gemValidationSnapshot` 맵이다. 활동 Character 목록은 보석과 아크그리드 복수 오류를 함께 보존하는 `characters/{characterId}.buildIntegritySnapshot`을 별도로 사용한다.
-- 승인 경로는 신청 Snapshot을 재사용하고, 직접 참가·참가 Character 변경·그룹 생성·초대코드 가입·그룹 본인 표시 갱신은 선택 Character의 최신 로컬 Build Snapshot에서 같은 다섯 필드를 만든다.
+- 승인 경로는 신청 Snapshot을 재사용하고, 직접 참가·참가 Character 변경·그룹 생성·초대코드 가입·그룹 본인 표시 갱신은 선택 Character의 최신 로컬 Build Snapshot에서 같은 v2 최소 필드를 만든다.
 - 기존 문서에 필드가 없으면 검증 요약을 `null`로 읽어 기존 UI와 호환한다.
 - 보석 이름, Tooltip 원문과 전체 장비 JSON은 서버에 올리지 않는다.
 - 보석 요약은 클라이언트가 산출한 표시 정보라 Firestore Rules가 진위를 보장할 수 없다. Rules 복잡도와 Ruleset 저장 실패를 피하기 위해 이 다섯 필드의 스키마 검증을 추가하지 않고, 공식 앱의 쓰기 생성기와 방어적 읽기에서 완결성·타입·상태를 처리한다. 파티 Character 변경과 그룹 본인 Snapshot 갱신 Rules의 `affectedKeys` allowlist에 `gemValidationSnapshot`만 추가한다. 신청 권한·Character 소유권 등 기존 서버 경계는 그대로 유지한다.
@@ -159,16 +153,16 @@ catalogVersion
 
 ## 9. 구현 순서
 
-진행 상태: 2026-09-08 1~7단계와 8단계의 파티 신청자 카드 구간을 구현하고 자동·실기기 검증했다. 이후 Rules 경고 제거본도 2026-09-10 정상 배포했다. 2026-09-10 파티 membership·구성원 카드 전파를 구현하고 최신 Rules를 정상 배포했다. 그룹 membership 전파는 2026-09-11 Rules 콘솔 게시·실기기 회귀 후 `dev`에 병합됐다. 그룹원 활동 Character 목록의 통합 Build 무결성 상태(`buildIntegritySnapshot`)는 2026-09-11 구현·자동 검증·실기기 확인 후 `dev`에 병합됐다. 2026-09-12 오류 의미 재정의 협의를 완료했으며, 다음 작업은 `NEXT_WORK.md`의 확정 판정·표기 개편이다.
+진행 상태: 2026-09-08 1~7단계와 8단계의 파티 신청자 카드 구간을 구현하고 자동·실기기 검증했다. 이후 Rules 경고 제거본도 2026-09-10 정상 배포했다. 2026-09-10 파티 membership·구성원 카드 전파를 구현하고 최신 Rules를 정상 배포했다. 그룹 membership 전파는 2026-09-11 Rules 콘솔 게시·실기기 회귀 후 `dev`에 병합됐다. 그룹원 활동 Character 목록의 통합 Build 무결성 상태(`buildIntegritySnapshot`)는 2026-09-11 구현·자동 검증·실기기 확인 후 `dev`에 병합됐다. 2026-09-12 확정 오류 의미와 v2 Snapshot 개편은 구현·자동 검증을 완료했으며 실기기 회귀 확인을 기다린다. 이번 개편은 Rules를 변경하거나 배포하지 않았다.
 
 1. 실제 API 진단 도구에 깨달음 1·4티어, 아크그리드 해·달 존재/포인트·조건, API 스킬과 보석 종합 결과를 추가한다.
 2. Tooltip 직업 추출과 슬롯 연결을 운영 분석기로 옮긴다.
 3. 해·달 존재 및 각 14P 이상 조건을 보강한다.
 4. 2026-09-08 실제 결과로 4직업 특수 대상명과 회귀 fixture를 교정한다.
-5. 정상, 같은 직업·대상 불일치, 다른 직업 보석과 정보 부족 상태를 분리한다. (기존 구현 완료, 2026-09-12 의미 개편 예정)
+5. 정상, 같은 직업·대상 불일치, 다른 직업 보석과 정보 부족 상태를 분리한다. (2026-09-12 확정 오류 의미 개편 완료)
 6. 내 계정 화면에 본인용 검증 결과를 적용한다.
 7. 최소 서버 Snapshot과 Rules 변경안을 별도 검토한다. (완료)
-8. 승인된 경우 신청자·파티 구성원·그룹 Character 간략 카드에 요약 경고를 적용한다. (신청자·파티·그룹 membership 목록 행과 그룹 활동 Character 목록의 기존 통합 상태 표시 완료. 2026-09-12 확정 오류 의미 개편 예정)
+8. 승인된 경우 신청자·파티 구성원·그룹 Character 간략 카드에 요약 경고를 적용한다. (신청자·파티·그룹 membership 목록 행과 그룹 활동 Character 목록에 v2 확정 오류 의미 적용 완료)
 9. 여러 일반 딜러 직업으로 같은 기준을 실계정 검증한다.
 
 2단계 구현 결과 운영 분석기의 각 보석은 `verified`, `sameClassTargetUnverified`, `foreignClass`, `unavailable`을 보존한다. 대괄호 값은 게임 카탈로그 직업명과 일치할 때만 직업으로 인정하며, 진단 도구도 운영 분석기와 같은 공용 추출기를 사용한다.
@@ -177,11 +171,11 @@ catalogVersion
 
 3단계 구현 결과 운영 분석은 질서의 해·달 각각의 최고 포인트를 보존하고, 존재 여부와 각 14P 충족 여부 및 전체 충족 결과를 제공한다. 해·달 누락은 개별 warning이며 질서의 별과 혼돈 코어는 이 결과에 포함하지 않는다. 기존 유물 이상 17P 미만 안내는 권장 정보로 유지한다.
 
-5~6단계의 기존 구현은 같은 직업 대상 미확인을 중립으로 표시했다. 2026-09-12 합의에 따라 새 분석에서는 API 스킬과 등록 특수 스킬 모두에 없는 대상은 빨간 오류로 바꾸고, 원본·Tooltip 자체를 읽지 못한 경우만 중립으로 남긴다. 추가 네트워크 호출과 전체 Armory 서버 저장은 하지 않는다.
+5~6단계는 2026-09-12 합의에 따라 새 분석에서 API 스킬과 등록 특수 스킬 모두에 없는 대상을 빨간 오류로 바꾸고, 원본·Tooltip 자체를 읽지 못한 경우만 중립으로 남기도록 구현했다. 추가 네트워크 호출과 전체 Armory 서버 저장은 하지 않는다.
 
-7단계 및 8단계 신청자 구간 구현 결과 지원 시 선택 역할의 로컬 Build Snapshot에서 최소 검증 요약을 생성해 `submittedBuildSnapshot`에 함께 저장한다. 신청자 카드에서는 정상은 숨기고 동일 직업 대상 미확인·검증 불가는 중립, 다른 직업 보석만 빨간 경고로 표시한다. 과거 신청과 불완전한 선택 필드는 검증 요약 없음으로 읽으며 신청 수치 자체는 유지한다.
+7단계 및 8단계 신청자 구간은 지원 시 선택 역할의 로컬 Build Snapshot에서 v2 최소 검증 요약을 생성해 `submittedBuildSnapshot`에 함께 저장한다. 신청자 카드는 정상은 숨기고 보석 부족·타 직업·스킬 불일치는 빨간 오류, 원본 검증 불가는 중립으로 표시한다. 과거 v1 신청과 불완전한 선택 필드는 방어적으로 읽으며 신청 수치 자체는 유지한다.
 
-8단계 membership 구간 구현 결과 승인·직접 참가·참가 Character 변경이 membership의 `gemValidationSnapshot`에 같은 다섯 필드를 기록한다. 파티 구성원 카드도 신청자와 같은 중립/빨간 경고 정책을 사용하며, 과거 membership과 검증 없는 Character는 아이템 레벨·전투력만으로 표시한다. 그룹 Snapshot은 이 구간에서 변경하지 않았다.
+8단계 membership 구간은 승인·직접 참가·참가 Character 변경이 membership의 `gemValidationSnapshot`에 같은 v2 최소 필드를 기록한다. 파티·그룹 구성원 카드도 신청자와 같은 중립/빨간 경고 정책을 사용하며, 과거 membership과 검증 없는 Character는 기존 최소 표시를 유지한다.
 
 시너지 필터/슬롯 구현은 이 계약의 1~5단계 판정 경계를 고정한 뒤 진행한다.
 
