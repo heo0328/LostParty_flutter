@@ -7,8 +7,7 @@
 - 통합 기준은 로컬·원격이 같은 `dev`의 `637828a`다.
 - 신청 후보 동일 딜러 직업 차단과 §14 레이드 목록 Character 필터·참가 인원 정렬·남은 자리 필터는 구현·자동 검증·실기기 확인 후 `dev`에 반영됐다.
 - 파티 신청 `submittedBuildSnapshot`과 파티 membership `gemValidationSnapshot`에는 보석 검증 최소 요약이 전파된다.
-- 그룹 membership은 아직 직업·아이템 레벨·전투력만 저장하고 그룹원 카드도 보석 검증 상태를 표시하지 않는다.
-- 다음 구현은 아래 한 그룹만 다룬다. Build 별칭·개인 메모·공유 기능은 이 작업에 섞지 않는다.
+- 그룹 membership 전파는 `cursor/group-membership-gem-snapshot`에서 구현·표적 자동 검증·브랜치 푸시까지 완료했다. 남은 것은 Rules 실제 배포 1회와 두 기기 실기기 확인이다.
 
 ## 다음 작업 그룹 — 그룹 membership 보석 검증 Snapshot 전파
 

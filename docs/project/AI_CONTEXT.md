@@ -22,7 +22,7 @@
 
 - 깨달음·아크그리드 질서 해/달 14P·보석 Tooltip 직업을 기본 검사한다. 별과 혼돈은 필수 판정에서 제외한다.
 - 같은 직업의 대상 미확인은 중립 안내, 다른 직업 보석만 빨간 경고다. 모든 직업의 최적 Build를 선행 수기 입력하거나 AI 분석을 앱에 탑재하지 않는다.
-- 신청자 Snapshot과 카드, 파티 membership·구성원 카드까지 최소 무결성 필드를 반영했다. 그룹 membership 전파는 별도 산정이다.
+- 신청자 Snapshot과 카드, 파티 membership·구성원 카드까지 최소 무결성 필드를 반영했다. 그룹 membership 전파는 구현 완료 후 Rules 배포·실기기 확인 대기 중이다.
 - 계약: [`../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md)
 
 ### 그룹과 레이드
