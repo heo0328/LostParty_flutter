@@ -1,3 +1,10 @@
+# 2026-09-11 AI 작업 자동 진입점 — AGENTS.md
+
+- 사용자가 새 AI 작업마다 개별 문서를 다시 나열하지 않아도 되도록 저장소 루트에 `AGENTS.md`를 추가했다.
+- 핵심 실행 게이트로 문서 확인 순서, 구현 전 설계, 기존 완성 기능 회귀 보호, 작업 브랜치 생성·병합·푸시, 검증 완료 판정과 Firestore Rules 1회 배포·실패 후 재시도 제한을 명시했다.
+- `docs/README.md`는 문서 설명과 탐색 지도, `ai_rules.md`는 상세 협업 정책으로 유지하고 두 문서의 우선순위와 링크를 새 진입점에 맞게 갱신했다.
+- 순수 문서 작업이므로 Flutter 코드·Rules·배포는 변경하지 않으며 `git diff --check`와 문서 링크·내용 검토로 검증한다.
+
 # 2026-09-11 그룹 활동 Character Build 상태 — 사전 설계·회귀 점검
 
 - 그룹원 탭의 활동 Character 목록에는 보석 전용 `gemValidationSnapshot`을 복제하지 않고, Character 문서의 선택 항목 `buildIntegritySnapshot`을 읽는 방향으로 확정했다. 기존 파티·그룹 membership의 `gemValidationSnapshot`은 가입·승인 시점 증거이므로 그대로 유지한다.

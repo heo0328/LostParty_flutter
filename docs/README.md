@@ -4,12 +4,13 @@
 
 현재 작업을 시작할 때는 다음 순서로 확인한다.
 
-1. [`project/ai_rules.md`](project/ai_rules.md): 모든 작업에 우선하는 행동·Git·검증 규칙
-2. [`project/NEXT_WORK.md`](project/NEXT_WORK.md): 바로 진행할 단일 작업 그룹
-3. [`project/AI_CONTEXT.md`](project/AI_CONTEXT.md): 프로젝트 전체 지도와 상태 요약
-4. 작업 영역에 해당하는 제품 또는 아키텍처 문서
+1. [`../AGENTS.md`](../AGENTS.md): AI가 자동 적용할 작업 시작·설계·회귀·Git·배포 게이트
+2. [`project/ai_rules.md`](project/ai_rules.md): 협업·아키텍처·검증의 상세 규칙
+3. [`project/NEXT_WORK.md`](project/NEXT_WORK.md): 바로 진행할 단일 작업 그룹
+4. [`project/AI_CONTEXT.md`](project/AI_CONTEXT.md): 프로젝트 전체 지도와 상태 요약
+5. 작업 영역에 해당하는 제품 또는 아키텍처 문서
 
-위 문서는 선택 참고가 아니라 수정 전 필수 확인 순서다. Firestore Rules 변경 시에는 `project/TASK-11-FIRESTORE-RULES-COMPLEXITY.md`와 관련 Rules 계약 테스트까지 확인하고, 실제 기능 브랜치가 생성됐는지 `git branch --show-current`로 검증한 뒤 작업한다.
+위 문서는 선택 참고가 아니라 수정 전 필수 확인 순서다. 저장소 루트의 `AGENTS.md`가 이 순서를 자동 작업 절차로 규정한다. Firestore Rules 변경 시에는 `project/TASK-11-FIRESTORE-RULES-COMPLEXITY.md`와 관련 Rules 계약 테스트까지 확인하고, 실제 기능 브랜치가 생성됐는지 `git branch --show-current`로 검증한 뒤 작업한다.
 
 ## Product
 
@@ -69,8 +70,9 @@ UI 방향, 디자인 시스템과 시각적 적용 기준을 관리한다.
 
 ## 관리 원칙
 
+- AI의 핵심 실행 게이트는 루트 `AGENTS.md`, 상세 행동 정책은 `project/ai_rules.md`에서 관리한다. 두 문서가 다르면 더 안전한 규칙을 우선 적용하고 같은 작업에서 정합성을 바로잡는다.
 - 새 문서를 만들기 전에 기존 기준 문서에 포함할 수 있는지 확인한다.
-- 기록 우선순위는 사용자 최신 지시 → `ai_rules.md` → `NEXT_WORK.md` → `AI_CONTEXT.md` → 기능별 계약 문서 → `DEV_LOG.md`의 과거 이력 순이다. 최신 지시가 행동 규칙과 충돌하면 예외 범위를 확인한 뒤 진행한다.
+- 기록 우선순위는 사용자 최신 지시 → `AGENTS.md` → `ai_rules.md` → `NEXT_WORK.md` → `AI_CONTEXT.md` → 기능별 계약 문서 → `DEV_LOG.md`의 과거 이력 순이다. 최신 지시가 안전·권한·배포 규칙과 충돌하면 예외 범위를 확인한 뒤 진행한다.
 - 현재 상태와 다음 작업은 각각 `AI_CONTEXT.md`와 `NEXT_WORK.md`에서 관리한다.
 - 작업 구간 완료 시 `NEXT_WORK.md`와 `AI_CONTEXT.md`의 완료 상세를 `DEV_LOG.md`로 이동한다.
 - `AI_CONTEXT.md`에는 전체 작업의 제목·핵심 상태·상세 문서 연결만 남기고, `NEXT_WORK.md`에는 바로 진행할 작업의 상세 근거와 순서만 둔다.
