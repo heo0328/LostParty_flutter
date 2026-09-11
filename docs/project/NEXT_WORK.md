@@ -4,12 +4,19 @@
 
 ## 현재 인계 상태
 
-- 현재 브랜치는 `codex/implement-build-error-policy`, 최신 체크포인트는 `4d1b129`다. 확정 Build 오류 판정과 오류 전용 표시는 구현·자동 검증됐고 실기기에서 내 계정과 신청자 카드의 스킬 불일치 오류를 확인했다.
+- 현재 브랜치는 `codex/implement-build-error-policy`, 이번 후속 작업의 설계 체크포인트는 `0fa0cdc`다. 확정 Build 오류 판정과 오류 전용 표시는 구현·자동 검증됐고 실기기에서 내 계정과 신청자 카드의 스킬 불일치 오류를 확인했다.
 - 그룹원의 활동 Character 목록 팝업은 Character 문서의 로컬 `buildIntegritySnapshot`을 사용해 보석과 아크그리드 오류를 함께 표시한다.
 - 실기기에서 새 모집의 파티장 본인 카드에는 같은 보석 오류가 표시되지 않았다. 구성원 카드에 소유자 예외가 있는 것이 아니라, 파티 생성 경로가 파티장 membership에 `gemValidationSnapshot`을 쓰지 않는 것이 원인이다.
 - 신청은 `submittedBuildSnapshot`, 승인·직접 참가·참가 Character 변경은 membership의 `gemValidationSnapshot`을 정상 전달한다. 이 경로와 파티·그룹 권한 및 명령 순서는 회귀 보호 대상이다.
 
 ## 다음 작업 그룹 — 파티장 오류 Snapshot 보완과 참가 Character 변경 목록 표시
+
+### 진행 상태 — 구현·자동 검증 완료, 실기기 대기
+
+- 생성 화면이 선택 역할의 `PartyGemValidationSnapshot`을 `PartyCreateCommand`로 전달하고, Write Plan이 파티장 membership의 `gemValidationSnapshot`에만 기록하도록 구현했다.
+- 역할 후보가 같은 로컬 Build에서 표시 전용 `BuildIntegritySnapshot`을 함께 만들고, 참가 Character 변경 Sheet가 공용 `BuildIntegrityStatusLine`으로 보석·아크그리드 오류를 표시한다. 기존 보석 최소 요약의 변경 명령 전달은 유지했다.
+- 생성 Write Plan, 후보 서비스, 생성 화면과 파티 상세 표적 테스트 63건이 통과했다. 변경 파일 정적 분석도 통과했다.
+- `firestore.rules`는 변경하지 않았고 배포하지 않는다. 다음은 §7 실기기 체크리스트 확인이다.
 
 ### 1. 목표
 

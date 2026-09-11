@@ -4,6 +4,8 @@ import '../../../account/domain/repositories/activity_characters_repository.dart
 import '../../../account/domain/entities/weekly_raid_claim.dart';
 import '../../../account/domain/repositories/weekly_raid_claim_repository.dart';
 import '../../../account/domain/services/gem_validation_snapshot_mapper.dart';
+import '../../../account/domain/services/build_integrity_snapshot_mapper.dart';
+import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
 import 'package:lost_party/shared/character_build/party_gem_validation_snapshot.dart';
 import '../entities/active_raid_assignment.dart';
 import '../entities/party_recruitment.dart';
@@ -24,6 +26,7 @@ class RecruitmentLeaderRoleOption {
     required this.combatPower,
     required this.rejectionReasons,
     this.gemValidation,
+    this.buildIntegrity,
   });
 
   final PartyRole role;
@@ -31,6 +34,7 @@ class RecruitmentLeaderRoleOption {
   final double? combatPower;
   final List<String> rejectionReasons;
   final PartyGemValidationSnapshot? gemValidation;
+  final BuildIntegritySnapshot? buildIntegrity;
 
   bool get canSelect => rejectionReasons.isEmpty;
 }
@@ -223,6 +227,7 @@ class RecruitmentLeaderCandidateService {
               combatPower: snapshot.combatPower ?? character.combatPower,
               rejectionReasons: List.unmodifiable(reasons),
               gemValidation: _gemValidationFor(snapshot),
+              buildIntegrity: buildIntegritySnapshotFromBuild(snapshot),
             ),
           );
         }

@@ -2757,3 +2757,10 @@
 - 새 파티장 Snapshot 저장, 변경 후보의 로컬 통합 상태 표시, 과거 null 호환과 본인/타인 동일 표시를 다음 작업으로 고정했다. 기존 파티 이행, 아크그리드 서버 저장, 후보 차단과 다른 신청 Sheet 확대는 제외했다.
 - 생성 소유권·점유·Claim·Transaction 순서, 가입·승인·변경 흐름, 동일 직업/역할 후보 정책, 그룹 활동 교집합을 회귀 보호 목록으로 정했다. 현재 Rules는 초기 파티장 membership의 추가 map을 필드 allowlist로 제한하지 않고 Character 변경에는 이미 `gemValidationSnapshot`을 허용하므로 Rules 수정·배포를 계획하지 않는다.
 - 이번 구간은 설계 문서만 변경하며 Flutter 테스트는 실행하지 않고 `git diff --check`와 문서 diff로 검증한다.
+
+### 구현·자동 검증
+
+- 생성 화면 → `PartyCreateCommand` → `PartyCreateWritePlan`에 선택 역할의 보석 최소 요약을 연결하고 파티장 membership에만 저장했다. 모집 원본·assignment·group listing과 Transaction Repository 순서는 바꾸지 않았다.
+- 후보 역할 옵션은 같은 로컬 Build에서 `PartyGemValidationSnapshot`과 표시 전용 `BuildIntegritySnapshot`을 함께 만든다. 참가 Character 변경 Sheet는 공용 상태 행으로 보석·아크그리드 복합 오류를 표시하고, 실제 변경 명령에는 기존 보석 요약만 전달한다.
+- Write Plan의 v2 map 위치, 생성 화면 명령 전달, 후보 통합 상태, 변경 Sheet 복합 표시와 실제 명령 전송을 테스트로 고정했다. 생성·후보·상세 표적 테스트 63건과 변경 파일 정적 분석이 통과했다.
+- `firestore.rules` diff가 없어 Rules 검사·배포는 수행하지 않는다. 신규 파티장 본인/타인 카드, 과거 파티 호환과 실제 Character 변경은 실기기 확인 대기다.

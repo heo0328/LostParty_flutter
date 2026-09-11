@@ -851,6 +851,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
         leaderRole: _role,
         leaderItemLevel: itemLevel,
         leaderCombatPower: selectedOption.combatPower,
+        leaderGemValidation: selectedOption.gemValidation,
         approvalPolicy: approval,
         compositionRules: RecruitmentPartyRules.fromRaid(raid),
         cycleKey: cycleKey,

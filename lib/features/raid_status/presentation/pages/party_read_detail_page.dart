@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/character_build/gem_validation_line.dart';
+import '../../../../shared/character_build/build_integrity_status_line.dart';
 import '../../../../shared/character_build/party_gem_validation_snapshot.dart';
 import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../../shared/formatters/korea_time_formatter.dart';
@@ -2693,9 +2694,22 @@ class _ChangeCharacterCandidateSheet extends StatelessWidget {
                 'change-candidate-${entry.candidate.localCharacterId}-${entry.option.role.name}',
               ),
               title: Text(entry.candidate.characterId),
-              subtitle: Text(
-                '${entry.candidate.accountLabel} · ${entry.candidate.className} · '
-                '${_roleLabel(entry.option.role)}',
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${entry.candidate.accountLabel} · ${entry.candidate.className} · '
+                    '${_roleLabel(entry.option.role)}',
+                  ),
+                  if (entry.option.buildIntegrity case final integrity?) ...[
+                    const SizedBox(height: AppSpacing.xxs),
+                    BuildIntegrityStatusLine(
+                      snapshot: integrity,
+                      keyName:
+                          'changeCandidateBuildIntegrity-${entry.candidate.localCharacterId}-${entry.option.role.name}',
+                    ),
+                  ],
+                ],
               ),
               onTap: () => Navigator.pop(
                 context,

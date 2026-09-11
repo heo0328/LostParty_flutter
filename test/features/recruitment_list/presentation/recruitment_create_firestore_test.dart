@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_catalog_detection.dart';
 import 'package:lost_party/features/account/domain/entities/character_summary.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
 import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
@@ -22,9 +23,7 @@ import 'package:lost_party/shared/raid_catalog/domain/entities/raid_catalog.dart
 import 'package:lost_party/shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 
 void main() {
-  testWidgets('인증된 캐릭터로 모집을 만들면 Firestore 명령을 보내고 현황 상세로 이동한다', (
-    tester,
-  ) async {
+  testWidgets('인증된 캐릭터로 모집을 만들면 Firestore 명령을 보내고 현황 상세로 이동한다', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -69,9 +68,7 @@ void main() {
         GoRoute(
           path: '/raid-status/:recruitmentId',
           builder: (context, state) => Scaffold(
-            body: Text(
-              'read-detail:${state.pathParameters['recruitmentId']}',
-            ),
+            body: Text('read-detail:${state.pathParameters['recruitmentId']}'),
           ),
         ),
       ],
@@ -85,8 +82,15 @@ void main() {
 
     expect(createRepository.lastCommand?.leaderCharacterId, 'server-char-1');
     expect(createRepository.lastCommand?.cycleKey, '2026-08-19');
-    expect(createRepository.lastCommand?.recruitmentId, 'firestore-recruitment-1');
+    expect(
+      createRepository.lastCommand?.recruitmentId,
+      'firestore-recruitment-1',
+    );
     expect(createRepository.lastCommand?.groupId, isNull);
+    expect(
+      createRepository.lastCommand?.leaderGemValidation?.catalogVersion,
+      '2026.09.08',
+    );
     expect(
       createRepository.lastCommand?.visibility,
       RecruitmentVisibility.public,
@@ -145,9 +149,7 @@ void main() {
     expect(find.text('게임 계정 인증이 완료된 캐릭터만 모집을 만들 수 있습니다.'), findsOneWidget);
   });
 
-  testWidgets('서버 계정 연결이 사라진 생성 실패는 앱 데이터 초기화 안내를 표시한다', (
-    tester,
-  ) async {
+  testWidgets('서버 계정 연결이 사라진 생성 실패는 앱 데이터 초기화 안내를 표시한다', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -241,7 +243,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('그룹 레이드'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const ValueKey('saveRecruitmentButton')));
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('saveRecruitmentButton')),
+    );
     await tester.tap(find.byKey(const ValueKey('saveRecruitmentButton')));
     await tester.pumpAndSettle();
 
@@ -297,7 +301,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('groupOnlyVisibilityCheckbox')));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const ValueKey('saveRecruitmentButton')));
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('saveRecruitmentButton')),
+    );
     await tester.tap(find.byKey(const ValueKey('saveRecruitmentButton')));
     await tester.pumpAndSettle();
 
@@ -351,7 +357,9 @@ void main() {
     await tester.tap(find.text('그룹 레이드'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('noJoinedGroupsText')), findsOneWidget);
-    await tester.ensureVisible(find.byKey(const ValueKey('saveRecruitmentButton')));
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('saveRecruitmentButton')),
+    );
     await tester.tap(find.byKey(const ValueKey('saveRecruitmentButton')));
     await tester.pumpAndSettle();
     expect(createRepository.lastCommand, isNull);
@@ -363,13 +371,11 @@ Future<void> _pumpCreateRoute(WidgetTester tester, Widget page) async {
   final router = GoRouter(
     initialLocation: '/create',
     routes: [
-      GoRoute(path: '/create', builder: (_, __) => page),
+      GoRoute(path: '/create', builder: (_, _) => page),
       GoRoute(
         path: '/raid-status/:recruitmentId',
         builder: (context, state) => Scaffold(
-          body: Text(
-            'read-detail:${state.pathParameters['recruitmentId']}',
-          ),
+          body: Text('read-detail:${state.pathParameters['recruitmentId']}'),
         ),
       ),
     ],
@@ -448,7 +454,6 @@ class _CatalogRepository implements RaidCatalogRepository {
 }
 
 class _VerifiedAccountRepository implements AccountRepository {
-
   @override
   Future<RosterSummaryApplyResult> applyRosterSummarySync({
     required int accountId,
@@ -537,5 +542,15 @@ CharacterBuildSnapshot _snapshot(int characterId) => CharacterBuildSnapshot(
     arkGridConditions: [],
     arkGridCorePoints: [],
     notices: [],
+    catalogDetection: CharacterBuildCatalogDetection(
+      catalogVersion: '2026.09.08',
+      status: CharacterBuildDetectionStatus.detected,
+      classId: 'bard',
+      branchId: 'dealer',
+      branchDisplayName: '딜러',
+      detectedRole: CharacterBuildRole.dealer,
+      matchedTier1Node: '진실된 용맹',
+      matchedRelatedNodes: [],
+    ),
   ),
 );

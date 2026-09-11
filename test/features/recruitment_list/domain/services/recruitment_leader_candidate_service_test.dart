@@ -46,6 +46,10 @@ void main() {
       representative.roles.first.gemValidation?.catalogVersion,
       '2026.09.04',
     );
+    expect(
+      representative.roles.first.buildIntegrity?.catalogVersion,
+      '2026.09.04',
+    );
   });
 
   test('선호 포지션이 선택 가능하면 먼저 고르고 아니면 기존 유효 역할을 유지한다', () {

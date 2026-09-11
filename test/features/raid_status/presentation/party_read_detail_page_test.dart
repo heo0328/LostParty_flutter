@@ -867,6 +867,9 @@ void main() {
       find.byKey(const ValueKey('changeParticipatingCharacterButton')),
     );
     await tester.pumpAndSettle();
+
+    expect(find.text('보석 오류'), findsWidgets);
+    expect(find.text('아크그리드 오류'), findsWidgets);
     await tester.tap(find.byKey(const ValueKey('change-candidate-2-dealer')));
     await tester.pumpAndSettle();
 
@@ -1840,6 +1843,7 @@ class _AccountRepository implements AccountRepository {
       dataVersion: 1,
       analysis: const CharacterBuildAnalysis(
         runeCount: 0,
+        equippedGemCount: 11,
         gemEffects: [
           GemSkillEffect(
             gemSlot: 0,
@@ -1852,6 +1856,10 @@ class _AccountRepository implements AccountRepository {
         ],
         arkGridConditions: [],
         arkGridCorePoints: [],
+        arkGridMinimumIntegrity: ArkGridMinimumIntegrity(
+          orderSunPoint: 13,
+          orderMoonPoint: 14,
+        ),
         notices: [],
         catalogDetection: CharacterBuildCatalogDetection(
           catalogVersion: '2026.09.04',

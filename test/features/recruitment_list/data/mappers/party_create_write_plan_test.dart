@@ -6,6 +6,7 @@ import 'package:lost_party/features/recruitment_list/domain/entities/party_recru
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_aggregate.dart';
 import 'package:lost_party/features/recruitment_list/domain/policies/approval_policy.dart';
 import 'package:lost_party/features/recruitment_list/domain/policies/party_composition_policy.dart';
+import 'package:lost_party/shared/character_build/party_gem_validation_snapshot.dart';
 
 void main() {
   test('creates matching recruitment, leader membership and assignment maps', () {
@@ -69,6 +70,41 @@ void main() {
     expect(plan.recruitment['dealerCount'], 0);
   });
 
+  test('stores the selected leader gem validation in membership only', () {
+    final validatedAt = DateTime.utc(2026, 9, 12);
+    final plan = PartyCreateWritePlan.fromCommand(
+      command: _command(
+        leaderGemValidation: PartyGemValidationSnapshot(
+          status: PartyGemValidationStatus.error,
+          foreignClassGemCount: 0,
+          unverifiedSameClassGemCount: 0,
+          validatedAt: validatedAt,
+          catalogVersion: '2026.09.08',
+          schemaVersion: 2,
+          equippedGemCount: 11,
+          unmatchedSkillGemCount: 1,
+        ),
+      ),
+      playerId: 'player-1',
+      serverTimestamp: Object(),
+      verifiedCharacterName: '검증된캐릭터',
+      verifiedClassName: '바드',
+      verifiedItemLevel: 1715.25,
+    );
+
+    expect(plan.leaderMembership['gemValidationSnapshot'], {
+      'gemValidationSchemaVersion': 2,
+      'gemValidationStatus': 'error',
+      'equippedGemCount': 11,
+      'foreignClassGemCount': 0,
+      'unmatchedSkillGemCount': 1,
+      'gemValidatedAt': validatedAt,
+      'catalogVersion': '2026.09.08',
+    });
+    expect(plan.recruitment, isNot(contains('gemValidationSnapshot')));
+    expect(plan.assignment, isNot(contains('gemValidationSnapshot')));
+  });
+
   test('stores a single group id and group visibility for group raids', () {
     final plan = PartyCreateWritePlan.fromCommand(
       command: _command(
@@ -104,6 +140,7 @@ void main() {
 PartyCreateCommand _command({
   String? groupId,
   String visibility = RecruitmentVisibility.public,
+  PartyGemValidationSnapshot? leaderGemValidation,
 }) => PartyCreateCommand(
   recruitmentId: 'recruitment-1',
   title: '4막 노말',
@@ -127,6 +164,7 @@ PartyCreateCommand _command({
   leaderRole: PartyRole.support,
   leaderItemLevel: 1715.25,
   leaderCombatPower: 120000000,
+  leaderGemValidation: leaderGemValidation,
   approvalPolicy: const ApprovalPolicy.leaderOnly(),
   compositionRules: const RecruitmentPartyRules(
     partyCount: 2,

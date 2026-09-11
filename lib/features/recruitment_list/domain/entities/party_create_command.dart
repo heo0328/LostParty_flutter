@@ -1,5 +1,6 @@
 import '../policies/approval_policy.dart';
 import '../policies/party_composition_policy.dart';
+import '../../../../shared/character_build/party_gem_validation_snapshot.dart';
 import 'party_recruitment.dart';
 import 'recruitment_aggregate.dart';
 
@@ -17,6 +18,7 @@ class PartyCreateCommand {
     required this.compositionRules,
     required this.cycleKey,
     this.leaderCombatPower,
+    this.leaderGemValidation,
     this.groupId,
     this.visibility = RecruitmentVisibility.public,
   });
@@ -30,6 +32,7 @@ class PartyCreateCommand {
   final PartyRole leaderRole;
   final double leaderItemLevel;
   final double? leaderCombatPower;
+  final PartyGemValidationSnapshot? leaderGemValidation;
   final ApprovalPolicy approvalPolicy;
   final RecruitmentPartyRules compositionRules;
   final String cycleKey;
