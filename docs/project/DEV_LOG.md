@@ -1,9 +1,15 @@
+# 2026-09-11 Character Build 오류 표기 재정의 — 협의 우선 기록
+
+- 실기기에서 Build 무결성 상태 표시·관련 회귀 체크리스트는 통과했다.
+- Character에 대한 오류·검토 표기(`보석`, `아크그리드`, `보석 확인 필요`, `보석 정보 없음` 등)의 의미와 명확성을 재정의하는 토의가 필요하다.
+- 다음 문서 정리의 **제1 작업**은 구현이 아니라 이 표기 계약 협의다. 코드 변경은 합의 확정 후에만 한다. 상세는 `NEXT_WORK.md`.
+
 # 2026-09-11 Character Build 무결성 상태 — 구현·자동 검증·dev 병합
 
 - 브랜치 `cursor/character-build-integrity-status`에서 계정 갱신 최소 표시 Transaction에 `buildIntegritySnapshot`을 동반하고, 그룹원 활동 Character bottom sheet에 상태 라벨을 표시했다.
 - 구현: 공용 Snapshot·mapper, 최소 표시 Patch/Sync/Gateway, 일반·수동 재인증 `set`의 `combatPower`·무결성 보존, `GroupRequestCharacter` 방어적 읽기, 활동 목록 Chip UI. Rules·쿼리·DI 추가는 없다.
 - 자동 검증: mapper/parser, 최소 표시 Sync·Gateway, 재인증 보존 helper, 그룹 검색 mapper, 그룹원 활동 UI, 자동 갱신 Coordinator 관련 테스트를 통과했다. 전체 `flutter test`의 `widget_test` Firebase 미초기화 9건은 base `5fc0353`에서도 동일해 이번 변경과 무관하다.
-- 실기기 체크리스트(정상/보석/아크그리드/복수 오류·재인증 보존·그룹·파티 회귀)는 병합 후 사용자 확인이 남는다.
+- 실기기 체크리스트는 2026-09-11 사용자 확인으로 통과했다. 표기 의미 재정의는 별도 협의 작업으로 남긴다.
 
 # 2026-09-11 AI 작업 자동 진입점 — AGENTS.md
 

@@ -22,7 +22,7 @@
 
 - 깨달음·아크그리드 질서 해/달 14P·보석 Tooltip 직업을 기본 검사한다. 별과 혼돈은 필수 판정에서 제외한다.
 - 같은 직업의 대상 미확인은 중립 안내, 다른 직업 보석만 빨간 경고다. 모든 직업의 최적 Build를 선행 수기 입력하거나 AI 분석을 앱에 탑재하지 않는다.
-- 신청자 Snapshot과 카드, 파티·그룹 membership·구성원/그룹원 목록 행까지 보석 요약을 반영했다. 계정 갱신이 Character 최소 표시 문서에 `buildIntegritySnapshot`을 저장하고, 그룹원 활동 Character 목록은 기존 활동 ID 교집합을 유지한 채 그 상태를 표시한다.
+- 신청자 Snapshot과 카드, 파티·그룹 membership·구성원/그룹원 목록 행까지 보석 요약을 반영했다. 계정 갱신이 Character 최소 표시 문서에 `buildIntegritySnapshot`을 저장하고, 그룹원 활동 Character 목록은 기존 활동 ID 교집합을 유지한 채 그 상태를 표시한다. 실기기 확인은 통과했으며, 오류·검토 표기 문구와 심각도의 재정의는 협의 대기다.
 - 계약: [`../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md)
 
 ### 그룹과 레이드
@@ -33,7 +33,8 @@
 
 ## 차후 제품 후보
 
-- 그룹원 활동 Character 목록의 Build 상태 표시는 구현됐다. 실기기 확인과 membership 보석 Snapshot의 통합 상태 이행 여부는 별도 후보다.
+- Character Build 오류·상태 표기 재정의는 [`NEXT_WORK.md`](NEXT_WORK.md) 제1 작업(협의 우선)이다. 구현은 합의 후다.
+- 기존 membership 보석 Snapshot을 통합 Build 상태로 이행할지 여부는 별도 후보다.
 - 직업·깨달음·질서 해/달/별 계층 메모, `망소빙` 같은 Build 별칭과 버전형 JSON 공유: [`../product/BUILD_MEMO_SHARING.md`](../product/BUILD_MEMO_SHARING.md)
 - 직업 시너지 선택·필터: [`../product/CLASS_SYNERGY_CATALOG.md`](../product/CLASS_SYNERGY_CATALOG.md)
 - 진행 중 내 Character 필터와 진행 중/레이드 모집의 참가 인원 로컬 정렬·남은 자리 2차 필터는 구현·실기기 확인했다. 계약: [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md) §14
@@ -49,4 +50,4 @@
 
 ## 다음 작업
 
-현재 고정된 단일 구현 작업은 없다. 다음 후보는 [`NEXT_WORK.md`](NEXT_WORK.md)의 차후 대기에서 고른다. Build 무결성 실기기 확인이 남아 있다.
+제1 작업은 Character Build 오류·상태 표기 재정의 **협의**다. 구현 코드는 합의 확정 전에 바꾸지 않는다. 상세는 [`NEXT_WORK.md`](NEXT_WORK.md).
