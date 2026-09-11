@@ -1,3 +1,10 @@
+# 2026-09-11 그룹 membership 보석 Snapshot — dev 병합
+
+- 브랜치 `cursor/group-membership-gem-snapshot`을 `dev`에 병합한다.
+- 구현: 그룹 생성·신청·승인·코드 가입·본인 Snapshot 갱신에 `gemValidationSnapshot` 전파, 그룹원 목록 행 경고, 공용 Snapshot 모델 승격, Rules allowlist(콘솔 게시).
+- 실기기: 파티 지원/가입 후 보석 표기, 그룹 초대 수락·그룹장 양도·해산 회귀를 확인했다. 그룹원 탭 후 활동 Character 목록 보석 표시는 이번 범위가 아니며 정의 대기로 남긴다.
+- CLI Rules `/test` 503은 콘솔 붙여넣기 게시로 우회해 운영에 반영했다.
+
 # 2026-09-11 그룹 활동 Character 목록 보석 표시 — 정의 대기 기록
 
 - 실기기에서 그룹원 탭 후 활동 Character 팝업에는 보석 경고가 없고, 파티 모집 경로에만 보인다는 피드백을 받았다.
@@ -9,7 +16,7 @@
 - 브랜치 `cursor/group-membership-gem-snapshot`에서 그룹 membership·join relation·본인 Snapshot 갱신에 파티와 같은 `gemValidationSnapshot` 다섯 필드를 전파했다.
 - CLI `firebase deploy --only firestore:rules --project lost-party`는 두 번 모두 `/projects/lost-party:test` HTTP 503으로 종료돼 Ruleset/Release에 도달하지 않았고, 콘솔에도 해당 시도의 새 게시 이력이 생기지 않았다.
 - 사용자가 동일 로컬 `firestore.rules`를 Firebase 콘솔 편집기에 붙여 넣어 즉시 게시에 성공했다. CLI `/test` 503과 콘솔 게시 성공이 같은 소스에서 갈라진 사례로 기록한다.
-- 다음 완료 조건은 두 기기 실기기 체크리스트와 `dev` 병합이다.
+- 다음 완료 조건은 두 기기 실기기 체크리스트와 `dev` 병합이다. → 파티·그룹 회귀 확인 후 `dev` 병합으로 구간을 닫는다. 활동 Character 목록 보석 UI는 별도 정의 대기.
 
 # 2026-09-10 Character Build 무결성 — 파티 membership 전파
 

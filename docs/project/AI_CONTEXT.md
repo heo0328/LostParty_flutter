@@ -22,7 +22,7 @@
 
 - 깨달음·아크그리드 질서 해/달 14P·보석 Tooltip 직업을 기본 검사한다. 별과 혼돈은 필수 판정에서 제외한다.
 - 같은 직업의 대상 미확인은 중립 안내, 다른 직업 보석만 빨간 경고다. 모든 직업의 최적 Build를 선행 수기 입력하거나 AI 분석을 앱에 탑재하지 않는다.
-- 신청자 Snapshot과 카드, 파티 membership·구성원 카드까지 최소 무결성 필드를 반영했다. 그룹 membership 전파는 구현·콘솔 Rules 게시까지 완료했고 실기기 확인 대기 중이다.
+- 신청자 Snapshot과 카드, 파티·그룹 membership·구성원/그룹원 목록 행까지 최소 무결성 필드를 반영했다. 그룹원 탭 후 활동 Character 목록 보석 표시는 정의 대기이다.
 - 계약: [`../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md)
 
 ### 그룹과 레이드
@@ -49,4 +49,4 @@
 
 ## 다음 작업
 
-현재 단일 작업은 [`NEXT_WORK.md`](NEXT_WORK.md)의 그룹 membership 보석 검증 Snapshot 전파다. 파티 신청·membership에서 검증된 다섯 필드 계약을 그룹 생성·가입·본인 표시 갱신과 그룹원 카드까지 확장하되, Build 별칭·개인 메모·공유는 포함하지 않는다.
+현재 단일 작업은 [`NEXT_WORK.md`](NEXT_WORK.md)를 따르며, 그룹 membership 보석 Snapshot 구간 완료 후 다음 그룹은 사용자 지시를 기다린다. 그룹 활동 Character 목록 보석 UI는 정의 선행이다.
