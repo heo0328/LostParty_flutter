@@ -32,7 +32,7 @@ void main() {
       expect(snapshot.displayLabels, isEmpty);
     });
 
-    test('maps review for same-class unverified gems', () {
+    test('maps error for same-class unmatched skill gems', () {
       final snapshot = buildIntegritySnapshotFromAnalysis(
         analysis: _analysis(
           gemStatuses: const [GemValidationStatus.sameClassTargetUnverified],
@@ -45,19 +45,20 @@ void main() {
         checkedAt: checkedAt,
       );
 
-      expect(snapshot!.status, BuildIntegrityStatus.review);
+      expect(snapshot!.status, BuildIntegrityStatus.error);
       expect(
         snapshot.issueCodes,
-        [BuildIntegrityIssueCode.sameClassGemUnverified],
+        [BuildIntegrityIssueCode.unmatchedSkillGem],
       );
       expect(snapshot.role, BuildIntegrityRole.support);
-      expect(snapshot.displayLabels, ['보석 확인 필요']);
+      expect(snapshot.displayLabels, ['보석']);
     });
 
     test('maps review for empty or unavailable gems', () {
       final empty = buildIntegritySnapshotFromAnalysis(
         analysis: _analysis(
           gemStatuses: const [],
+          equippedGemCount: 0,
           minimum: const ArkGridMinimumIntegrity(
             orderSunPoint: 14,
             orderMoonPoint: 14,
@@ -78,9 +79,9 @@ void main() {
         checkedAt: checkedAt,
       );
 
-      expect(empty!.status, BuildIntegrityStatus.review);
-      expect(empty.issueCodes, [BuildIntegrityIssueCode.gemUnavailable]);
-      expect(empty.displayLabels, ['보석 정보 없음']);
+      expect(empty!.status, BuildIntegrityStatus.error);
+      expect(empty.issueCodes, [BuildIntegrityIssueCode.gemSlotCount]);
+      expect(empty.displayLabels, ['보석']);
       expect(unavailable!.status, BuildIntegrityStatus.review);
       expect(unavailable.issueCodes, [BuildIntegrityIssueCode.gemUnavailable]);
     });
@@ -113,7 +114,7 @@ void main() {
       expect(snapshot!.status, BuildIntegrityStatus.error);
       expect(snapshot.issueCodes, [
         BuildIntegrityIssueCode.foreignClassGem,
-        BuildIntegrityIssueCode.sameClassGemUnverified,
+        BuildIntegrityIssueCode.unmatchedSkillGem,
         BuildIntegrityIssueCode.gemUnavailable,
         BuildIntegrityIssueCode.arkGridMinimum,
         BuildIntegrityIssueCode.arkGridCondition,
@@ -136,7 +137,7 @@ void main() {
       expect(snapshot.displayLabels, ['확인 불가']);
     });
 
-    test('prefers error over review when both gem review and ark error exist', () {
+    test('keeps unmatched gem and ark errors together', () {
       final snapshot = buildIntegritySnapshotFromAnalysis(
         analysis: _analysis(
           gemStatuses: const [GemValidationStatus.sameClassTargetUnverified],
@@ -151,7 +152,7 @@ void main() {
 
       expect(snapshot!.status, BuildIntegrityStatus.error);
       expect(snapshot.issueCodes, [
-        BuildIntegrityIssueCode.sameClassGemUnverified,
+        BuildIntegrityIssueCode.unmatchedSkillGem,
         BuildIntegrityIssueCode.arkGridMinimum,
       ]);
     });
@@ -326,6 +327,8 @@ CharacterBuildAnalysis _analysis({
   ArkGridMinimumIntegrity? minimum,
   List<ArkGridConditionCheck> conditions = const [],
   bool includeCatalog = true,
+  int? equippedGemCount = 11,
+  bool gemEffectsSourceAvailable = true,
 }) {
   return CharacterBuildAnalysis(
     runeCount: 8,
@@ -356,5 +359,7 @@ CharacterBuildAnalysis _analysis({
           )
         : null,
     arkGridMinimumIntegrity: minimum,
+    equippedGemCount: equippedGemCount,
+    gemEffectsSourceAvailable: gemEffectsSourceAvailable,
   );
 }

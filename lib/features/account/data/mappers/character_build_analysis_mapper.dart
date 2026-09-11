@@ -403,9 +403,9 @@ class CharacterBuildAnalysisMapper {
           GemValidationStatus.sameClassTargetUnverified) {
         notices.add(
           BuildNotice(
-            code: 'unverified_same_class_gem_$slot',
-            level: BuildNoticeLevel.info,
-            message: '$name 보석은 해당 직업 보석이지만 현재 스킬 또는 등록 특수 스킬에서 확인되지 않습니다.',
+            code: 'unmatched_skill_gem_$slot',
+            level: BuildNoticeLevel.warning,
+            message: '$name 보석은 현재 스킬 또는 등록 특수 스킬에 없습니다.',
           ),
         );
       }

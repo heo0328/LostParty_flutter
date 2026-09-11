@@ -57,13 +57,19 @@ List<BuildIntegrityIssueCode> _collectIssueCodes(
   final codes = <BuildIntegrityIssueCode>[];
   final gem = analysis.gemValidationSummary;
 
+  final equippedGemCount = analysis.equippedGemCount;
+  if (equippedGemCount != null && equippedGemCount < 11) {
+    codes.add(BuildIntegrityIssueCode.gemSlotCount);
+  }
   if (gem.foreignClassCount > 0) {
     codes.add(BuildIntegrityIssueCode.foreignClassGem);
   }
   if (gem.unverifiedSameClassCount > 0) {
-    codes.add(BuildIntegrityIssueCode.sameClassGemUnverified);
+    codes.add(BuildIntegrityIssueCode.unmatchedSkillGem);
   }
-  if (gem.totalCount == 0 || gem.unavailableCount > 0) {
+  if (equippedGemCount == null ||
+      !analysis.gemEffectsSourceAvailable ||
+      gem.unavailableCount > 0) {
     codes.add(BuildIntegrityIssueCode.gemUnavailable);
   }
 
@@ -87,7 +93,9 @@ BuildIntegrityStatus _resolveStatus({
   required bool canVerifyArkGridMinimum,
 }) {
   const errorCodes = <BuildIntegrityIssueCode>{
+    BuildIntegrityIssueCode.gemSlotCount,
     BuildIntegrityIssueCode.foreignClassGem,
+    BuildIntegrityIssueCode.unmatchedSkillGem,
     BuildIntegrityIssueCode.arkGridMinimum,
     BuildIntegrityIssueCode.arkGridCondition,
   };

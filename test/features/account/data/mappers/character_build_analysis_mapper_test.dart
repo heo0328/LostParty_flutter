@@ -276,7 +276,7 @@ void main() {
     },
   );
 
-  test('marks an unknown target from the same class as unverified', () {
+  test('marks an unknown target from the same class as an error notice', () {
     final modified = _withGemTarget(
       fixture,
       name: '알 수 없는 스킬',
@@ -300,15 +300,15 @@ void main() {
     );
     expect(
       result.notices.where(
-        (notice) => notice.code == 'unverified_same_class_gem_4',
+        (notice) => notice.code == 'unmatched_skill_gem_4',
       ),
       hasLength(1),
     );
     expect(
       result.notices
-          .singleWhere((notice) => notice.code == 'unverified_same_class_gem_4')
+          .singleWhere((notice) => notice.code == 'unmatched_skill_gem_4')
           .level,
-      BuildNoticeLevel.info,
+      BuildNoticeLevel.warning,
     );
   });
 

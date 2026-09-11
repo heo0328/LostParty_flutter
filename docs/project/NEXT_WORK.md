@@ -11,12 +11,14 @@
 
 ## 다음 작업 그룹 — Character Build 확정 오류 판정·표기 개편
 
-### 진행 상태 — A 완료, B 대기
+### 진행 상태 — A·B 완료, C 대기
 
 - `CharacterBuildAnalysis`가 실제 `ArmoryGem.Gems` 장착 개수와 `Effects.Skills` 원본 가용성을 별도로 보존한다. API 원본 부재는 null/false, 명시적 빈 목록은 0/true로 구분한다.
 - `BuildIntegritySnapshot` 새 쓰기 schema는 v2이며 `gemSlotCount`, `unmatchedSkillGem` 코드 공간을 추가했다. 새 parser는 v1을 기존 의미로 읽고 v1에 v2 전용 코드가 섞이면 손상 문서로 거절한다.
 - mapper와 Snapshot 표적 테스트 36건이 통과했다. UI·기존 중립 판정·Party Snapshot·Rules는 아직 변경하지 않았다.
-- 다음 구현은 B의 `API 스킬 OR 특수 카탈로그` 불일치 빨간 오류와 11개 미만 판정이다.
+- 새 분석은 확정 장착 개수가 11개 미만이면 `gemSlotCount`, 같은 직업이지만 `API 스킬 OR 특수 카탈로그` 양쪽에 없는 대상이면 `unmatchedSkillGem`을 기록하고 둘 다 `error`로 판정한다.
+- 미등록 대상 notice도 warning으로 승격했다. 현재 등록된 특수 스킬과 일반 스킬 정상 판정은 유지되며 mapper·Snapshot 표적 테스트 36건이 통과했다.
+- 다음 구현은 C의 내 계정 상세 오류와 Character 통합 상태 라벨별 심각도 표시다.
 
 ### 1. 확정 제품 목표
 
