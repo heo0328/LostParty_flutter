@@ -11,8 +11,15 @@ const _catalogPath = 'assets/game_catalog/game_catalog.v1.json';
 const _baseUrl = 'https://developer-lostark.game.onstove.com';
 
 Future<void> main(List<String> arguments) async {
-  if (arguments.length != 1 || arguments.single.trim().isEmpty) {
-    stderr.writeln('사용법: dart run tool/lost_ark_gem_probe.dart "캐릭터명"');
+  final characterNames = arguments
+      .map((value) => value.trim())
+      .where((value) => value.isNotEmpty)
+      .toSet()
+      .toList(growable: false);
+  if (characterNames.isEmpty) {
+    stderr.writeln(
+      '사용법: dart run tool/lost_ark_gem_probe.dart "캐릭터명1" ["캐릭터명2" ...]',
+    );
     exitCode = 64;
     return;
   }
@@ -37,24 +44,45 @@ Future<void> main(List<String> arguments) async {
         responseType: ResponseType.json,
       ),
     );
-    final characterName = arguments.single.trim();
-    final response = await dio.get<Object?>(
-      '/armories/characters/${Uri.encodeComponent(characterName)}',
-      options: Options(
-        headers: {
-          Headers.acceptHeader: Headers.jsonContentType,
-          'Authorization': 'bearer $token',
-        },
-      ),
+    final outputDirectory = await Directory.systemTemp.createTemp(
+      'lost_party_api_probe_',
     );
-    if (response.data is! Map) {
-      throw const FormatException('캐릭터 상세 응답이 JSON 객체가 아닙니다.');
+    stdout.writeln('임시 원본 저장 위치: ${outputDirectory.path}');
+    var hasFailure = false;
+    for (final characterName in characterNames) {
+      try {
+        final response = await dio.get<Object?>(
+          '/armories/characters/${Uri.encodeComponent(characterName)}',
+          options: Options(
+            headers: {
+              Headers.acceptHeader: Headers.jsonContentType,
+              'Authorization': 'bearer $token',
+            },
+          ),
+        );
+        if (response.data is! Map) {
+          throw const FormatException('캐릭터 상세 응답이 JSON 객체가 아닙니다.');
+        }
+        final raw = Map<String, dynamic>.from(response.data! as Map);
+        final rawFile = File(
+          '${outputDirectory.path}${Platform.pathSeparator}'
+          '${_safeFileName(characterName)}.raw.json',
+        );
+        await rawFile.writeAsString(
+          const JsonEncoder.withIndent('  ').convert(raw),
+        );
+        _printReport(buildLostArkGemProbeReport(raw, catalog));
+      } on DioException catch (error) {
+        stderr.writeln(
+          '$characterName 조회 실패: HTTP ${error.response?.statusCode ?? '-'}',
+        );
+        hasFailure = true;
+      } on Object catch (error) {
+        stderr.writeln('$characterName 진단 실패: $error');
+        hasFailure = true;
+      }
     }
-    final report = buildLostArkGemProbeReport(
-      Map<String, dynamic>.from(response.data! as Map),
-      catalog,
-    );
-    _printReport(report);
+    if (hasFailure) exitCode = 1;
   } on DioException catch (error) {
     stderr.writeln(
       'Lost Ark API 요청 실패: HTTP ${error.response?.statusCode ?? '-'}',
@@ -65,6 +93,9 @@ Future<void> main(List<String> arguments) async {
     exitCode = 1;
   }
 }
+
+String _safeFileName(String value) =>
+    value.replaceAll(RegExp(r'[<>:"/\\|?*\x00-\x1F]'), '_');
 
 void _printReport(LostArkGemProbeReport report) {
   stdout.writeln('캐릭터: ${report.characterName}');
@@ -143,4 +174,14 @@ void _printReport(LostArkGemProbeReport report) {
       stdout.writeln('  경고: $warning');
     }
   }
+  stdout.writeln('');
+  stdout.writeln('[카탈로그 판단 후보]');
+  if (report.catalogCandidateNames.isEmpty) {
+    stdout.writeln('  없음');
+  } else {
+    for (final name in report.catalogCandidateNames) {
+      stdout.writeln('  $name');
+    }
+  }
+  stdout.writeln('');
 }

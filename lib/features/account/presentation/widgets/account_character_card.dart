@@ -92,7 +92,8 @@ class AccountCharacterCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall,
               ),
-              if (_gemValidationItems case final items when items.isNotEmpty) ...[
+              if (_gemValidationItems case final items
+                  when items.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Column(
                   key: ValueKey('gemValidation-${character.id}'),
@@ -242,8 +243,6 @@ class AccountCharacterCard extends StatelessWidget {
           '스킬 불일치 보석 ${summary.unverifiedSameClassCount}개',
           isError: true,
         ),
-      if (!summary.sourceAvailable || summary.unavailableCount > 0)
-        const _GemValidationDisplayItem('보석 정보 확인 불가', isError: false),
     ];
   }
 }

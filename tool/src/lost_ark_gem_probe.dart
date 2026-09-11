@@ -37,6 +37,16 @@ class LostArkGemProbeReport {
   final bool hasValidOrderMoon;
   final List<LostArkGridConditionFinding> arkGridConditions;
   final List<LostArkGemProbeFinding> gems;
+
+  List<String> get catalogCandidateNames =>
+      gems
+          .where(
+            (gem) => gem.currentValidationStatus == 'sameClassTargetUnverified',
+          )
+          .map((gem) => gem.targetName)
+          .toSet()
+          .toList(growable: false)
+        ..sort();
 }
 
 class LostArkPassiveNodeFinding {
@@ -163,6 +173,9 @@ LostArkGemProbeReport buildLostArkGemProbeReport(
       knownClassNames[_normalize(name)] = definition.apiClassName;
     }
   }
+  if (characterClassName != '(직업 미확인)') {
+    knownClassNames[_normalize(characterClassName)] = characterClassName;
+  }
 
   final findings = <LostArkGemProbeFinding>[];
   for (final effect in analysis.gemEffects) {
@@ -191,8 +204,7 @@ LostArkGemProbeReport buildLostArkGemProbeReport(
         currentWarnings: analysis.notices
             .where(
               (notice) =>
-                  notice.code ==
-                      'unverified_same_class_gem_${effect.gemSlot}' ||
+                  notice.code == 'unmatched_skill_gem_${effect.gemSlot}' ||
                   notice.code == 'foreign_class_gem_${effect.gemSlot}' ||
                   notice.code == 'unmapped_gem_${effect.gemSlot}',
             )

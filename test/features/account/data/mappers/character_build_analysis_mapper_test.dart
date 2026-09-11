@@ -170,7 +170,10 @@ void main() {
   });
 
   test('maps gem effects and passive skills from the full fixture', () {
-    final result = const CharacterBuildAnalysisMapper().fromJson(fixture);
+    final result = const CharacterBuildAnalysisMapper().fromJson(
+      fixture,
+      catalog: catalog,
+    );
 
     expect(result.gemEffects, hasLength(11));
     expect(
@@ -299,9 +302,7 @@ void main() {
       GemValidationStatus.sameClassTargetUnverified,
     );
     expect(
-      result.notices.where(
-        (notice) => notice.code == 'unmatched_skill_gem_4',
-      ),
+      result.notices.where((notice) => notice.code == 'unmatched_skill_gem_4'),
       hasLength(1),
     );
     expect(
@@ -532,12 +533,53 @@ void main() {
     );
   });
 
+  test('does not use an Ark Passive icon for an uncataloged class', () {
+    const cases = <(String, String)>[
+      ('환수사', '둔갑 금술 스킬'),
+      ('가디언나이트', '가디언 피어'),
+      ('데모닉', '블러드 제노사이드'),
+    ];
+
+    for (final (className, targetName) in cases) {
+      var modified = _withGemTarget(
+        fixture,
+        name: targetName,
+        icon: 'https://example.com/ark_passive/test.png',
+      );
+      modified = _withGemTooltipClass(modified, slot: 4, className: className);
+      (modified['ArmoryProfile']
+              as Map<String, dynamic>)['CharacterClassName'] =
+          className;
+
+      final result = const CharacterBuildAnalysisMapper().fromJson(
+        modified,
+        catalog: catalog,
+      );
+      final effect = result.gemEffects.singleWhere(
+        (effect) => effect.gemSlot == 4,
+      );
+
+      expect(effect.category, GemSkillCategory.unknown, reason: targetName);
+      expect(
+        effect.validationStatus,
+        GemValidationStatus.sameClassTargetUnverified,
+        reason: targetName,
+      );
+      expect(
+        result.notices.any((notice) => notice.code == 'unmatched_skill_gem_4'),
+        isTrue,
+        reason: targetName,
+      );
+    }
+  });
+
   test('keeps equipped gem count separate from mapped effects', () {
     final modified = _deepCopy(fixture);
     final armoryGem = modified['ArmoryGem'] as Map<String, dynamic>;
     final gems = armoryGem['Gems'] as List<dynamic>;
-    final skills = (armoryGem['Effects'] as Map<String, dynamic>)['Skills']
-        as List<dynamic>;
+    final skills =
+        (armoryGem['Effects'] as Map<String, dynamic>)['Skills']
+            as List<dynamic>;
     skills.removeLast();
 
     final result = const CharacterBuildAnalysisMapper().fromJson(modified);

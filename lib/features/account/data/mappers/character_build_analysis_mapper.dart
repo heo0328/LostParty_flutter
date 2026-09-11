@@ -23,6 +23,8 @@ class CharacterBuildAnalysisMapper {
         ? null
         : _findClassForBuild(json, catalog);
     final activePassiveNames = _parseActivePassiveNames(json['ArkPassive']);
+    final characterClassName =
+        _map(json['ArmoryProfile'])?['CharacterClassName'] as String?;
     final catalogDetection = catalog == null
         ? null
         : _detectCatalogBuild(
@@ -48,19 +50,20 @@ class CharacterBuildAnalysisMapper {
         classDefinition,
         branchId: catalogDetection?.branchId,
       ),
-      characterClassName:
-          _map(json['ArmoryProfile'])?['CharacterClassName'] as String?,
-      knownClassNames: catalog == null
-          ? const {}
-          : buildKnownGemClassNames(
-              catalog.classes.map(
-                (definition) => (
-                  apiClassName: definition.apiClassName,
-                  aliases: definition.aliases,
-                ),
+      characterClassName: characterClassName,
+      knownClassNames: {
+        if (catalog != null)
+          ...buildKnownGemClassNames(
+            catalog.classes.map(
+              (definition) => (
+                apiClassName: definition.apiClassName,
+                aliases: definition.aliases,
               ),
             ),
-      allowPassiveIconFallback: classDefinition == null,
+          ),
+        if (characterClassName != null && characterClassName.trim().isNotEmpty)
+          characterClassName.trim().toLowerCase(): characterClassName.trim(),
+      },
       notices: notices,
     );
     final armoryGem = _map(json['ArmoryGem']);
@@ -326,7 +329,6 @@ class CharacterBuildAnalysisMapper {
     required Set<String> catalogSkillNames,
     required String? characterClassName,
     required Map<String, String> knownClassNames,
-    required bool allowPassiveIconFallback,
     required List<BuildNotice> notices,
   }) {
     final gemMap = _map(armoryGem);
@@ -351,13 +353,9 @@ class CharacterBuildAnalysisMapper {
         continue;
       }
       mappedSlots.add(slot);
-      final icon = skill['Icon'];
       final category = skillNames.contains(name)
           ? GemSkillCategory.normal
-          : catalogSkillNames.contains(name) ||
-                allowPassiveIconFallback &&
-                    icon is String &&
-                    icon.contains('ark_passive')
+          : catalogSkillNames.contains(name)
           ? GemSkillCategory.passiveOrIdentity
           : GemSkillCategory.unknown;
       final descriptions = _stringList(skill['Description']);

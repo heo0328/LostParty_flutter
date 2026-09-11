@@ -56,7 +56,7 @@ void main() {
     expect(find.byIcon(Icons.error_outline), findsOneWidget);
   });
 
-  testWidgets('keeps gem source information neutral beside a count error', (
+  testWidgets('hides gem source information beside a count error', (
     tester,
   ) async {
     const summary = GemValidationSummary(
@@ -80,9 +80,9 @@ void main() {
     );
 
     expect(find.text('보석 부족 9/11'), findsOneWidget);
-    expect(find.text('보석 정보 확인 불가'), findsOneWidget);
+    expect(find.text('보석 정보 확인 불가'), findsNothing);
     expect(find.byIcon(Icons.error_outline), findsOneWidget);
-    expect(find.byIcon(Icons.info_outline), findsOneWidget);
+    expect(find.byIcon(Icons.info_outline), findsNothing);
   });
 
   testWidgets('shows weekly claim state as a disabled checkbox', (

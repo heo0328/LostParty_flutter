@@ -11,7 +11,7 @@
 
 ## 다음 작업 그룹 — Character Build 확정 오류 판정·표기 개편
 
-### 진행 상태 — 실기기 정책 불일치 확인, 보정 구현 준비 완료
+### 진행 상태 — 보정 구현·자동 검증 완료, 실기기 대기
 
 - `CharacterBuildAnalysis`가 실제 `ArmoryGem.Gems` 장착 개수와 `Effects.Skills` 원본 가용성을 별도로 보존한다. API 원본 부재는 null/false, 명시적 빈 목록은 0/true로 구분한다.
 - `BuildIntegritySnapshot` 새 쓰기 schema는 v2이며 `gemSlotCount`, `unmatchedSkillGem` 코드 공간을 추가했다. 새 parser는 v1을 기존 의미로 읽고 v1에 v2 전용 코드가 섞이면 손상 문서로 거절한다.
@@ -28,6 +28,11 @@
 - 사용자 화면은 `문제 없음 = 비표기`, `확정 오류 = 빨간 표시`만 사용한다. API·Tooltip 누락 같은 판정 불능은 Domain/Snapshot 내부에 보존하되 중립 라벨을 표시하지 않는다.
 - 환수사 `둔갑 금술 스킬`, 가디언나이트 `가디언 피어`, 데모닉 `블러드 제노사이드`는 카탈로그에 등록하지 않고 빨간 오류 검증 표본으로 유지한다.
 - 다음 구현은 아래 보정 순서와 회귀 보호 목록을 따른다. `firestore.rules`와 저장 schema는 변경하지 않는다.
+- 보정 구현에서 아이콘 fallback을 제거하고 미등록 직업의 현재 직업명을 Tooltip 비교 기준에 포함했다. 세 오류 표본은 카탈로그에 추가하지 않은 채 `unmatchedSkillGem` 경로로 고정했다.
+- 공용 Character/Party 상태와 내 계정에서 review/unavailable 중립 문구를 숨겼다. 내부 상태, v1/v2 parser와 저장 필드는 유지했다.
+- 진단 도구는 복수 캐릭터 조회, OS 임시 원본 저장과 미등록 후보 목록을 지원한다. 실제 두 캐릭터 조회로 저장·후보 출력을 확인했고 토큰은 저장하지 않았다.
+- 표적 묶음 103건 중 새 계약과 충돌한 과거 아이콘 fallback 기대값 1건을 정정한 뒤 mapper 25건과 진단 도구 6건이 통과했다. 최종 전체 테스트는 1,032건 통과, 기존 Firebase 미초기화 `widget_test.dart` 9건만 실패했다. 변경 파일 analyze는 통과했고 전체 analyze는 기존 39건만 남았다.
+- `firestore.rules` diff가 없어 Rules 검사·배포는 수행하지 않는다. 다음은 아래 실기기 체크리스트 확인이다.
 
 ### 실기기 체크리스트
 

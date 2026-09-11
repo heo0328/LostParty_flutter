@@ -23,9 +23,8 @@ class GemValidationLine extends StatelessWidget {
       PartyGemValidationStatus.error => _v2ErrorLabel(validation),
       PartyGemValidationStatus.foreignClass =>
         '보석 확인 요망 · 타 직업 보석 ${validation.foreignClassGemCount}개',
-      PartyGemValidationStatus.sameClassTargetUnverified =>
-        '동일 직업 보석 · 대상 스킬 미확인 ${validation.unverifiedSameClassGemCount}개',
-      PartyGemValidationStatus.unavailable => '보석 검증 정보 없음',
+      PartyGemValidationStatus.sameClassTargetUnverified => null,
+      PartyGemValidationStatus.unavailable => null,
       PartyGemValidationStatus.verified => null,
     };
     if (label == null) return const SizedBox.shrink();

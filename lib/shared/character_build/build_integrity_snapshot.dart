@@ -1,12 +1,7 @@
 /// Character 최소 표시 문서에 저장하는 Build 무결성 요약.
 ///
 /// schemaVersion 1. 알 수 없는 값·깨진 맵은 [tryFromFields]가 null을 반환한다.
-enum BuildIntegrityStatus {
-  clean,
-  review,
-  error,
-  unavailable,
-}
+enum BuildIntegrityStatus { clean, review, error, unavailable }
 
 /// 고정 우선순위 순서의 이슈 코드. 직렬화 문자열과 동일하다.
 enum BuildIntegrityIssueCode {
@@ -19,10 +14,7 @@ enum BuildIntegrityIssueCode {
   arkGridCondition,
 }
 
-enum BuildIntegrityRole {
-  dealer,
-  support,
-}
+enum BuildIntegrityRole { dealer, support }
 
 class BuildIntegritySnapshot {
   static const int schemaVersion = 2;
@@ -41,6 +33,7 @@ class BuildIntegritySnapshot {
   final BuildIntegrityRole role;
   final DateTime checkedAt;
   final String? catalogVersion;
+
   /// 읽은 과거 Snapshot 의미를 보존한다. 새 Snapshot은 항상 v2다.
   final int storedSchemaVersion;
 
@@ -49,26 +42,16 @@ class BuildIntegritySnapshot {
   List<BuildIntegrityDisplayItem> get displayItems {
     switch (status) {
       case BuildIntegrityStatus.clean:
-        return const <BuildIntegrityDisplayItem>[];
       case BuildIntegrityStatus.unavailable:
-        return const [BuildIntegrityDisplayItem('확인 불가', isError: false)];
       case BuildIntegrityStatus.review:
-        if (issueCodes.contains(BuildIntegrityIssueCode.sameClassGemUnverified)) {
-          return const [BuildIntegrityDisplayItem('보석 확인 필요', isError: false)];
-        }
-        if (issueCodes.contains(BuildIntegrityIssueCode.gemUnavailable)) {
-          return const [BuildIntegrityDisplayItem('보석 정보 확인 불가', isError: false)];
-        }
-        return const [BuildIntegrityDisplayItem('확인 필요', isError: false)];
+        return const <BuildIntegrityDisplayItem>[];
       case BuildIntegrityStatus.error:
         final items = <BuildIntegrityDisplayItem>[];
         final hasGemError = issueCodes.any(
           (code) =>
               code == BuildIntegrityIssueCode.gemSlotCount ||
               code == BuildIntegrityIssueCode.foreignClassGem ||
-              code == BuildIntegrityIssueCode.unmatchedSkillGem ||
-              code == BuildIntegrityIssueCode.sameClassGemUnverified ||
-              code == BuildIntegrityIssueCode.gemUnavailable,
+              code == BuildIntegrityIssueCode.unmatchedSkillGem,
         );
         final hasArkGridError = issueCodes.any(
           (code) =>
@@ -80,9 +63,6 @@ class BuildIntegritySnapshot {
         }
         if (hasArkGridError) {
           items.add(const BuildIntegrityDisplayItem('아크그리드 오류', isError: true));
-        }
-        if (issueCodes.contains(BuildIntegrityIssueCode.gemUnavailable)) {
-          items.add(const BuildIntegrityDisplayItem('보석 정보 확인 불가', isError: false));
         }
         return items.isEmpty
             ? const [BuildIntegrityDisplayItem('오류', isError: true)]

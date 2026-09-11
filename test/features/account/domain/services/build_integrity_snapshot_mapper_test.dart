@@ -45,10 +45,7 @@ void main() {
       );
 
       expect(snapshot!.status, BuildIntegrityStatus.error);
-      expect(
-        snapshot.issueCodes,
-        [BuildIntegrityIssueCode.unmatchedSkillGem],
-      );
+      expect(snapshot.issueCodes, [BuildIntegrityIssueCode.unmatchedSkillGem]);
       expect(snapshot.role, BuildIntegrityRole.support);
       expect(snapshot.displayLabels, ['보석 오류']);
     });
@@ -118,16 +115,8 @@ void main() {
         BuildIntegrityIssueCode.arkGridMinimum,
         BuildIntegrityIssueCode.arkGridCondition,
       ]);
-      expect(snapshot.displayLabels, [
-        '보석 오류',
-        '아크그리드 오류',
-        '보석 정보 확인 불가',
-      ]);
-      expect(snapshot.displayItems.map((item) => item.isError), [
-        true,
-        true,
-        false,
-      ]);
+      expect(snapshot.displayLabels, ['보석 오류', '아크그리드 오류']);
+      expect(snapshot.displayItems.map((item) => item.isError), [true, true]);
     });
 
     test('maps unavailable when ark grid minimum cannot be verified', () {
@@ -142,7 +131,7 @@ void main() {
 
       expect(snapshot!.status, BuildIntegrityStatus.unavailable);
       expect(snapshot.issueCodes, isEmpty);
-      expect(snapshot.displayLabels, ['확인 불가']);
+      expect(snapshot.displayLabels, isEmpty);
     });
 
     test('keeps unmatched gem and ark errors together', () {
@@ -233,31 +222,34 @@ void main() {
       expect(original.toFields()['schemaVersion'], 2);
     });
 
-    test('reads v1 with its legacy meaning and rejects v2-only codes in v1', () {
-      final legacy = BuildIntegritySnapshot.tryFromFields(<String, Object?>{
-        'schemaVersion': 1,
-        'status': 'review',
-        'issueCodes': const ['sameClassGemUnverified'],
-        'role': 'dealer',
-        'checkedAt': checkedAt,
-        'catalogVersion': 'v1',
-      });
-      final invalidLegacy = BuildIntegritySnapshot.tryFromFields(
-        <String, Object?>{
+    test(
+      'reads v1 with its legacy meaning and rejects v2-only codes in v1',
+      () {
+        final legacy = BuildIntegritySnapshot.tryFromFields(<String, Object?>{
           'schemaVersion': 1,
-          'status': 'error',
-          'issueCodes': const ['unmatchedSkillGem'],
+          'status': 'review',
+          'issueCodes': const ['sameClassGemUnverified'],
           'role': 'dealer',
           'checkedAt': checkedAt,
           'catalogVersion': 'v1',
-        },
-      );
+        });
+        final invalidLegacy = BuildIntegritySnapshot.tryFromFields(
+          <String, Object?>{
+            'schemaVersion': 1,
+            'status': 'error',
+            'issueCodes': const ['unmatchedSkillGem'],
+            'role': 'dealer',
+            'checkedAt': checkedAt,
+            'catalogVersion': 'v1',
+          },
+        );
 
-      expect(legacy, isNotNull);
-      expect(legacy!.storedSchemaVersion, 1);
-      expect(legacy.displayLabels, ['보석 확인 필요']);
-      expect(invalidLegacy, isNull);
-    });
+        expect(legacy, isNotNull);
+        expect(legacy!.storedSchemaVersion, 1);
+        expect(legacy.displayLabels, isEmpty);
+        expect(invalidLegacy, isNull);
+      },
+    );
 
     test('returns null for missing, unknown, or broken maps', () {
       expect(BuildIntegritySnapshot.tryFromFields(null), isNull);
