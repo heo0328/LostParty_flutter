@@ -147,6 +147,7 @@ class FirestoreGroupCreateRepository implements GroupCreateRepository {
           verifiedCombatPower:
               localDisplay?.combatPower ??
               parseCharacterItemLevel(characterData?['combatPower']),
+          verifiedGemValidation: localDisplay?.gemValidation,
           membershipState: membershipState,
         );
         transaction.set(groupRef, plan.group);

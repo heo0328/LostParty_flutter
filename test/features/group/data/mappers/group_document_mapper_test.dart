@@ -164,6 +164,7 @@ void main() {
     expect(member.isLeader, isTrue);
     expect(member.joinedBy, GroupJoinedBy.created);
     expect(member.joinSequence, 1);
+    expect(member.gemValidationSnapshot, isNull);
   });
 
   test('relation Projection은 Group ID를 문서 ID에서 읽고 선택 필드를 허용한다', () {
@@ -234,8 +235,77 @@ void main() {
     expect(relation.requestedByPlayerId, 'player-1');
     expect(relation.itemLevelSnapshot, 1700.5);
     expect(relation.combatPowerSnapshot, isNull);
+    expect(relation.gemValidationSnapshot, isNull);
     expect(relation.decidedAt, isNull);
     expect(relation.revision, 2);
+  });
+
+  test('membership·join relation의 보석 맵은 방어적으로 읽는다', () {
+    final gem = {
+      'gemValidationStatus': 'foreignClass',
+      'foreignClassGemCount': 2,
+      'unverifiedSameClassGemCount': 0,
+      'gemValidatedAt': createdAt,
+      'catalogVersion': '2026.09.08',
+    };
+    final member = mapper.toMember(
+      GroupDocumentDto(
+        id: 'player-1',
+        data: {
+          'schemaVersion': 1,
+          'groupId': 'group-1',
+          'playerId': 'player-1',
+          'role': 'member',
+          'joinedAt': createdAt,
+          'joinSequence': 2,
+          'joinedBy': 'application',
+          'displayCharacterIdSnapshot': 'character-1',
+          'displayCharacterNameSnapshot': '검증된캐릭터',
+          'displayClassNameSnapshot': '바드',
+          'itemLevelSnapshot': 1700,
+          'combatPowerSnapshot': 2500,
+          'gemValidationSnapshot': gem,
+          'revision': 1,
+          'createdAt': createdAt,
+          'updatedAt': createdAt,
+        },
+      ),
+    );
+    expect(member.gemValidationSnapshot?.status.name, 'foreignClass');
+    expect(member.gemValidationSnapshot?.foreignClassGemCount, 2);
+
+    final incomplete = mapper.toMember(
+      GroupDocumentDto(
+        id: 'player-2',
+        data: {
+          'schemaVersion': 1,
+          'groupId': 'group-1',
+          'playerId': 'player-2',
+          'role': 'member',
+          'joinedAt': createdAt,
+          'joinSequence': 3,
+          'joinedBy': 'joinCode',
+          'displayCharacterIdSnapshot': 'character-2',
+          'displayCharacterNameSnapshot': '다른캐릭터',
+          'gemValidationSnapshot': {
+            'gemValidationStatus': 'foreignClass',
+            'foreignClassGemCount': 1,
+          },
+          'revision': 1,
+          'createdAt': createdAt,
+          'updatedAt': createdAt,
+        },
+      ),
+    );
+    expect(incomplete.gemValidationSnapshot, isNull);
+
+    final relation = mapper.toJoinRelation(
+      GroupDocumentDto(
+        id: 'player-9',
+        data: {...joinRelationData(), 'gemValidationSnapshot': gem},
+      ),
+    );
+    expect(relation.gemValidationSnapshot?.catalogVersion, '2026.09.08');
   });
 
   test('만료 시각이 지난 pending relation은 유효 요청으로 취급하지 않는다', () {

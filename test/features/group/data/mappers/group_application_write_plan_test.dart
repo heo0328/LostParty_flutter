@@ -72,6 +72,10 @@ void main() {
       expect(member['playerId'], 'player-2');
       expect(member['displayCharacterIdSnapshot'], 'character-2');
       expect(member['displayCharacterNameSnapshot'], '신청캐릭터');
+      expect(member['displayClassNameSnapshot'], '바드');
+      expect(member['itemLevelSnapshot'], 1680.0);
+      expect(member['combatPowerSnapshot'], 310.5);
+      expect(member['gemValidationSnapshot'], isNull);
     });
 
     test('대상 요약은 배열 합집합과 증가 연산으로만 병합한다', () {

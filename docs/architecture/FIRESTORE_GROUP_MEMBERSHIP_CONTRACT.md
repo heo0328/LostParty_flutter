@@ -135,6 +135,10 @@ groups/{groupId}/members/{playerId}
   joinedBy: created | invitation | application | joinCode
   displayCharacterIdSnapshot: string
   displayCharacterNameSnapshot: string
+  displayClassNameSnapshot: string | null
+  itemLevelSnapshot: number | null
+  combatPowerSnapshot: number | null
+  gemValidationSnapshot: map | null
   revision: number
   createdAt: timestamp
   updatedAt: timestamp
@@ -144,6 +148,7 @@ groups/{groupId}/members/{playerId}
 - 신규 멤버는 가입 Transaction 시작 시 읽은 그룹의 `memberCount + 1`을 `joinSequence`로 저장한다.
 - Task-11에서는 탈퇴가 없어 sequence 재사용이 발생하지 않는다. 후속 탈퇴·재가입 계약에서는 별도 단조 증가 카운터가 필요하면 그룹 문서에 추가한다.
 - `displayCharacter*Snapshot`은 가입 경로에서 사용한 인증 Character의 표시 정보다. membership과 권한의 주체는 여전히 Player다.
+- `gemValidationSnapshot`은 파티 membership과 같은 다섯 필드 최소 보석 검증 요약이다. 없으면 null로 읽고 이름·직업·아이템 레벨·전투력 표시는 유지한다. Rules는 map/null만 허용하고 내부 진위는 검증하지 않는다.
 - Character Snapshot이 오래되거나 Character 소유권이 이후 변경돼도 membership을 다른 Player로 이전하지 않는다.
 
 ```text
@@ -195,6 +200,7 @@ groups/{groupId}/joinRelations/{playerId}
   characterClassNameSnapshot: string
   itemLevelSnapshot: number | null
   combatPowerSnapshot: number | null
+  gemValidationSnapshot: map | null
   applicationAttempt: number
   revision: number
   createdAt: timestamp
@@ -211,6 +217,7 @@ groups/{groupId}/joinRelations/{playerId}
 - invitation의 `requestedByPlayerId`는 현재 그룹원이다. application은 대상 Player 본인이다.
 - 직접 초대는 active 인증 Character의 정확한 이름 검색 결과에서 Player를 확정한다. 동명이인은 캐릭터명·서버·직업·아이템 레벨·전투력을 표시하고 Character ID로 선택한다.
 - 초대와 신청의 Character Snapshot은 표시·이력용이며 Player 단위 차단을 우회하는 키로 사용하지 않는다.
+- 신청 경로의 `gemValidationSnapshot`은 신청자 로컬 Build 요약이며 승인 시 membership으로 복사한다. 직접 초대 relation은 타인의 로컬 Build를 추정하지 않으므로 null을 허용하고, 가입자 본인 Snapshot 새로고침에서 보강한다.
 
 ### 6.1 신청 누적 횟수
 

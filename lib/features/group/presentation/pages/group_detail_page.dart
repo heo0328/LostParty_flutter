@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lost_party/shared/character_build/gem_validation_line.dart';
 
 import '../../domain/entities/group_join_command.dart';
 import '../../domain/entities/group_member.dart';
@@ -671,6 +672,13 @@ class _GroupMemberCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text('${display.className} · ${_formatLevel(display.itemLevel)}'),
               Text(_formatCombatPower(display.combatPower)),
+              if (display.gemValidation case final gem?) ...[
+                const SizedBox(height: 4),
+                GemValidationLine(
+                  validation: gem,
+                  keyName: 'groupMemberGem-${display.member.playerId}',
+                ),
+              ],
             ],
           ),
         ),

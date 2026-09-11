@@ -81,6 +81,7 @@ void main() {
     expect(created.leaderMember['displayClassNameSnapshot'], '버서커');
     expect(created.leaderMember['itemLevelSnapshot'], 1700);
     expect(created.leaderMember['combatPowerSnapshot'], 320);
+    expect(created.leaderMember['gemValidationSnapshot'], isNull);
     expect(created.leaderMember['revision'], 1);
   });
 

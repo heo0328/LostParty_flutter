@@ -393,8 +393,8 @@ service cloud.firestore {
         'schemaVersion', 'groupId', 'targetPlayerId', 'kind', 'status',
         'requestedByPlayerId', 'characterIdSnapshot', 'characterNameSnapshot',
         'serverNameSnapshot', 'characterClassNameSnapshot', 'itemLevelSnapshot',
-        'combatPowerSnapshot', 'applicationAttempt', 'revision', 'createdAt',
-        'expiresAt', 'decidedAt', 'updatedAt'
+        'combatPowerSnapshot', 'gemValidationSnapshot', 'applicationAttempt',
+        'revision', 'createdAt', 'expiresAt', 'decidedAt', 'updatedAt'
       ]);
     }
 
@@ -403,7 +403,7 @@ service cloud.firestore {
         'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
         'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
         'displayCharacterNameSnapshot', 'displayClassNameSnapshot',
-        'itemLevelSnapshot', 'combatPowerSnapshot',
+        'itemLevelSnapshot', 'combatPowerSnapshot', 'gemValidationSnapshot',
         'revision', 'createdAt', 'updatedAt'
       ]);
     }
@@ -429,7 +429,9 @@ service cloud.firestore {
     function validGroupMemberOptionalNumberFields(data) {
       return (data.itemLevelSnapshot == null || data.itemLevelSnapshot is number)
         && (data.combatPowerSnapshot == null
-          || data.combatPowerSnapshot is number);
+          || data.combatPowerSnapshot is number)
+        && (data.gemValidationSnapshot == null
+          || data.gemValidationSnapshot is map);
     }
 
     function validGroupMemberSnapshotsFromRelation(data, relation) {
@@ -475,6 +477,7 @@ service cloud.firestore {
           'displayClassNameSnapshot',
           'itemLevelSnapshot',
           'combatPowerSnapshot',
+          'gemValidationSnapshot',
           'updatedAt'
         ]);
     }

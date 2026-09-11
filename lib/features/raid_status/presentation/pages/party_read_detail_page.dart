@@ -4,12 +4,13 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/character_build/gem_validation_line.dart';
+import '../../../../shared/character_build/party_gem_validation_snapshot.dart';
 import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../../shared/formatters/korea_time_formatter.dart';
 import '../../../../shared/game_catalog/domain/entities/game_catalog.dart';
 import '../../../../shared/game_catalog/domain/services/class_synergy_service.dart';
 import '../../../recruitment_list/domain/entities/party_application_command.dart';
-import '../../../recruitment_list/domain/entities/party_gem_validation_snapshot.dart';
 import '../../../account/data/local/account_database.dart';
 import '../../../recruitment_list/domain/entities/party_event.dart';
 import '../../../recruitment_list/domain/entities/party_create_command.dart';
@@ -2037,7 +2038,7 @@ class _SlotCard extends StatelessWidget {
                     ),
                     if (member.gemValidation case final validation?) ...[
                       const SizedBox(height: AppSpacing.xxs),
-                      _GemValidationLine(
+                      GemValidationLine(
                         validation: validation,
                         keyName: 'memberGemValidation',
                       ),
@@ -2092,7 +2093,7 @@ class _UnassignedMemberCard extends StatelessWidget {
             ),
             if (member.gemValidation case final validation?) ...[
               const SizedBox(height: AppSpacing.xxs),
-              _GemValidationLine(
+              GemValidationLine(
                 validation: validation,
                 keyName: 'unassignedMemberGemValidation',
               ),
@@ -2282,7 +2283,7 @@ class _ApplicationCard extends StatelessWidget {
             ],
             if (application.gemValidation case final validation?) ...[
               const SizedBox(height: 2),
-              _GemValidationLine(
+              GemValidationLine(
                 validation: validation,
                 keyName: 'applicationGemValidation',
               ),
@@ -2322,49 +2323,6 @@ class _ApplicationCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _GemValidationLine extends StatelessWidget {
-  const _GemValidationLine({required this.validation, required this.keyName});
-
-  final PartyGemValidationSnapshot validation;
-  final String keyName;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isForeign =
-        validation.status == PartyGemValidationStatus.foreignClass;
-    final label = switch (validation.status) {
-      PartyGemValidationStatus.foreignClass =>
-        '보석 확인 요망 · 타 직업 보석 ${validation.foreignClassGemCount}개',
-      PartyGemValidationStatus.sameClassTargetUnverified =>
-        '동일 직업 보석 · 대상 스킬 미확인 ${validation.unverifiedSameClassGemCount}개',
-      PartyGemValidationStatus.unavailable => '보석 검증 정보 없음',
-      PartyGemValidationStatus.verified => null,
-    };
-    if (label == null) return const SizedBox.shrink();
-    final color = isForeign
-        ? theme.colorScheme.error
-        : theme.colorScheme.onSurfaceVariant;
-    return Row(
-      key: ValueKey(keyName),
-      children: [
-        Icon(
-          isForeign ? Icons.error_outline : Icons.info_outline,
-          size: 16,
-          color: color,
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith(color: color),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lost_party/shared/character_build/party_gem_validation_snapshot.dart';
 
 import '../../domain/entities/group_join_command.dart';
 import '../../domain/entities/group_leader_exit_command.dart';
@@ -749,8 +750,10 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
             className: command.snapshot.className,
             itemLevel: command.snapshot.itemLevel,
             combatPower: command.snapshot.combatPower,
+            gemValidation: command.snapshot.gemValidation,
             storedItemLevel: parseCharacterItemLevel(memberData?['itemLevelSnapshot']),
             storedCombatPower: parseCharacterItemLevel(memberData?['combatPowerSnapshot']),
+            storedGemValidation: _storedGemValidation(memberData?['gemValidationSnapshot']),
             serverTimestamp: FieldValue.serverTimestamp(),
           ),
         );
@@ -868,6 +871,7 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
       combatPower:
           localDisplay?.combatPower ??
           parseCharacterItemLevel(data['combatPower']),
+      gemValidation: localDisplay?.gemValidation,
     );
   }
 
@@ -875,6 +879,22 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
       snapshot.exists
       ? Map<String, Object?>.from(snapshot.data() ?? const {})
       : null;
+
+  static PartyGemValidationSnapshot? _storedGemValidation(Object? raw) {
+    if (raw is! Map) return null;
+    final data = <String, Object?>{
+      for (final entry in raw.entries)
+        if (entry.key is String) entry.key as String: entry.value,
+    };
+    return PartyGemValidationSnapshot.tryFromFields(
+      data,
+      parseDate: (value) => switch (value) {
+        Timestamp timestamp => timestamp.toDate(),
+        DateTime dateTime => dateTime,
+        _ => null,
+      },
+    );
+  }
 
   static final _mapper = groupFirestoreMapper;
 }

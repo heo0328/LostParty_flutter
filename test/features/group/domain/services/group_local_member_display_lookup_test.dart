@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_role.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
@@ -22,6 +23,14 @@ class _Build extends Fake implements CharacterBuildSnapshot {
   final DateTime capturedAt;
   @override
   final CharacterBuildRole role;
+  @override
+  CharacterBuildAnalysis get analysis => const CharacterBuildAnalysis(
+    runeCount: 0,
+    gemEffects: [],
+    arkGridConditions: [],
+    arkGridCorePoints: [],
+    notices: [],
+  );
 }
 
 class _Activity implements ActivityCharactersRepository {

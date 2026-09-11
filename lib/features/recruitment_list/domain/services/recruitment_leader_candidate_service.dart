@@ -1,12 +1,12 @@
-import '../../../account/domain/entities/character_build_analysis.dart';
 import '../../../account/domain/entities/character_build_snapshot.dart';
 import '../../../account/domain/repositories/account_repository.dart';
 import '../../../account/domain/repositories/activity_characters_repository.dart';
 import '../../../account/domain/entities/weekly_raid_claim.dart';
 import '../../../account/domain/repositories/weekly_raid_claim_repository.dart';
+import '../../../account/domain/services/gem_validation_snapshot_mapper.dart';
+import 'package:lost_party/shared/character_build/party_gem_validation_snapshot.dart';
 import '../entities/active_raid_assignment.dart';
 import '../entities/party_recruitment.dart';
-import '../entities/party_gem_validation_snapshot.dart';
 import '../policies/participation_conflict_policy.dart';
 import '../policies/party_composition_policy.dart';
 import '../policies/weekly_raid_reset_policy.dart';
@@ -340,27 +340,7 @@ class RecruitmentLeaderCandidateService {
 
   PartyGemValidationSnapshot? _gemValidationFor(
     CharacterBuildSnapshot snapshot,
-  ) {
-    final catalogVersion = snapshot.analysis.catalogDetection?.catalogVersion;
-    if (catalogVersion == null || catalogVersion.trim().isEmpty) return null;
-    final summary = snapshot.analysis.gemValidationSummary;
-    return PartyGemValidationSnapshot(
-      status: switch (summary.status) {
-        GemValidationSummaryStatus.verified =>
-          PartyGemValidationStatus.verified,
-        GemValidationSummaryStatus.sameClassTargetUnverified =>
-          PartyGemValidationStatus.sameClassTargetUnverified,
-        GemValidationSummaryStatus.foreignClass =>
-          PartyGemValidationStatus.foreignClass,
-        GemValidationSummaryStatus.unavailable =>
-          PartyGemValidationStatus.unavailable,
-      },
-      foreignClassGemCount: summary.foreignClassCount,
-      unverifiedSameClassGemCount: summary.unverifiedSameClassCount,
-      validatedAt: snapshot.capturedAt,
-      catalogVersion: catalogVersion,
-    );
-  }
+  ) => gemValidationSnapshotFromBuild(snapshot);
 
   PartyCompositionFailure? _compositionFailure({
     required PartyCompositionPolicy policy,

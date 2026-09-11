@@ -233,6 +233,7 @@ class GroupMembershipActionViewModel {
       storedClassName: member.displayClassNameSnapshot,
       storedItemLevel: member.itemLevelSnapshot,
       storedCombatPower: member.combatPowerSnapshot,
+      storedGemValidation: member.gemValidationSnapshot,
     )) {
       return;
     }

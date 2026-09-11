@@ -671,8 +671,10 @@ void main() {
     expect(rules, contains('allow update: if validMembershipStateRemove('));
     expect(rules, contains('function validGroupMemberDocumentKeys(data)'));
     expect(rules, contains('displayClassNameSnapshot'));
+    expect(rules, contains("'gemValidationSnapshot'"));
     expect(rules, contains('function validGroupMemberSnapshotsFromRelation'));
     expect(rules, contains('function validGroupMemberSelfSnapshotRefresh('));
+    expect(rules, contains("'combatPowerSnapshot'"));
     expect(
       rules,
       contains('allow update: if validGroupMemberSelfSnapshotRefresh('),

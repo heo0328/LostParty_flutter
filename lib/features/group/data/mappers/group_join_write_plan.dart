@@ -289,6 +289,7 @@ class GroupJoinWritePlan {
     'characterClassNameSnapshot': character.characterClassName,
     'itemLevelSnapshot': character.itemLevel,
     'combatPowerSnapshot': character.combatPower,
+    'gemValidationSnapshot': character.gemValidation?.toFields(),
     'applicationAttempt': applicationAttempt,
     'revision': revision,
     'createdAt': serverTimestamp,

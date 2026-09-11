@@ -135,16 +135,16 @@ gemValidatedAt
 catalogVersion
 ```
 
-- 실제 저장 위치는 파티 신청 문서의 `submittedBuildSnapshot` 내부와, 파티 membership 문서의 `gemValidationSnapshot` 맵으로 확정했다.
-- 승인 경로는 신청 Snapshot을 재사용하고, 직접 참가·참가 Character 변경은 선택 Character의 최신 로컬 Build Snapshot에서 같은 다섯 필드를 만든다.
+- 실제 저장 위치는 파티 신청 문서의 `submittedBuildSnapshot` 내부와, 파티·그룹 membership 문서의 `gemValidationSnapshot` 맵으로 확정했다.
+- 승인 경로는 신청 Snapshot을 재사용하고, 직접 참가·참가 Character 변경·그룹 생성·초대코드 가입·그룹 본인 표시 갱신은 선택 Character의 최신 로컬 Build Snapshot에서 같은 다섯 필드를 만든다.
 - 기존 문서에 필드가 없으면 검증 요약을 `null`로 읽어 기존 UI와 호환한다.
 - 보석 이름, Tooltip 원문과 전체 장비 JSON은 서버에 올리지 않는다.
-- 보석 요약은 클라이언트가 산출한 표시 정보라 Firestore Rules가 진위를 보장할 수 없다. Rules 복잡도와 Ruleset 저장 실패를 피하기 위해 이 다섯 필드의 스키마 검증을 추가하지 않고, 공식 앱의 쓰기 생성기와 방어적 읽기에서 완결성·타입·상태를 처리한다. Character 변경 Rules의 `affectedKeys` allowlist에 `gemValidationSnapshot`만 추가한다. 신청 권한·Character 소유권 등 기존 서버 경계는 그대로 유지한다.
+- 보석 요약은 클라이언트가 산출한 표시 정보라 Firestore Rules가 진위를 보장할 수 없다. Rules 복잡도와 Ruleset 저장 실패를 피하기 위해 이 다섯 필드의 스키마 검증을 추가하지 않고, 공식 앱의 쓰기 생성기와 방어적 읽기에서 완결성·타입·상태를 처리한다. 파티 Character 변경과 그룹 본인 Snapshot 갱신 Rules의 `affectedKeys` allowlist에 `gemValidationSnapshot`만 추가한다. 신청 권한·Character 소유권 등 기존 서버 경계는 그대로 유지한다.
 - 앱 시작 갱신 결과와 파티 신청 시점 Snapshot의 시각이 다를 수 있으므로 검증 시각을 함께 보존한다.
 
 ## 9. 구현 순서
 
-진행 상태: 2026-09-08 1~7단계와 8단계의 파티 신청자 카드 구간을 구현하고 자동·실기기 검증했다. 이후 Rules 경고 제거본도 2026-09-10 정상 배포했다. 2026-09-10 파티 membership·구성원 카드 전파를 구현하고 최신 Rules를 정상 배포했다. 그룹 Character 전파는 통합 디바이스 결과를 확인한 뒤 별도 산정한다.
+진행 상태: 2026-09-08 1~7단계와 8단계의 파티 신청자 카드 구간을 구현하고 자동·실기기 검증했다. 이후 Rules 경고 제거본도 2026-09-10 정상 배포했다. 2026-09-10 파티 membership·구성원 카드 전파를 구현하고 최신 Rules를 정상 배포했다. 그룹 membership 전파는 `cursor/group-membership-gem-snapshot`에서 구현·표적 자동 검증까지 완료했으며 Rules 실제 배포와 두 기기 실기기 확인이 남았다.
 
 1. 실제 API 진단 도구에 깨달음 1·4티어, 아크그리드 해·달 존재/포인트·조건, API 스킬과 보석 종합 결과를 추가한다.
 2. Tooltip 직업 추출과 슬롯 연결을 운영 분석기로 옮긴다.
@@ -153,7 +153,7 @@ catalogVersion
 5. 정상, 동일 직업·대상 미확인, 다른 직업 보석 상태를 분리한다.
 6. 내 계정 화면에 본인용 검증 결과를 적용한다.
 7. 최소 서버 Snapshot과 Rules 변경안을 별도 검토한다. (완료)
-8. 승인된 경우 신청자·파티 구성원·그룹 Character 간략 카드에 요약 경고를 적용한다. (신청자·파티 membership 완료, 그룹 대기)
+8. 승인된 경우 신청자·파티 구성원·그룹 Character 간략 카드에 요약 경고를 적용한다. (신청자·파티·그룹 membership 구현 완료, 그룹 Rules 배포·실기기 대기)
 9. 여러 일반 딜러 직업으로 같은 기준을 실계정 검증한다.
 
 2단계 구현 결과 운영 분석기의 각 보석은 `verified`, `sameClassTargetUnverified`, `foreignClass`, `unavailable`을 보존한다. 대괄호 값은 게임 카탈로그 직업명과 일치할 때만 직업으로 인정하며, 진단 도구도 운영 분석기와 같은 공용 추출기를 사용한다.

@@ -397,6 +397,7 @@ class FirestoreGroupJoinCodeCommandRepository
       combatPower:
           localDisplay?.combatPower ??
           parseCharacterItemLevel(data['combatPower']),
+      gemValidation: localDisplay?.gemValidation,
     );
   }
 

@@ -30,6 +30,7 @@ abstract final class GroupMemberDisplayBuilder {
           (isActiveCharacter
               ? _parseNumeric(characterData['combatPower'])
               : null),
+      gemValidation: member.gemValidationSnapshot,
     );
   }
 

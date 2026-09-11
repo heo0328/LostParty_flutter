@@ -77,6 +77,7 @@ void main() {
       expect(created['characterClassNameSnapshot'], '버서커');
       expect(created['itemLevelSnapshot'], 1700.5);
       expect(created['combatPowerSnapshot'], 320.25);
+      expect(created['gemValidationSnapshot'], isNull);
       expect(created['revision'], 1);
       expect(created['decidedAt'], isNull);
       expect(created['createdAt'], same(timestamp));

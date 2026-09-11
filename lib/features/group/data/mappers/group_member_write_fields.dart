@@ -1,3 +1,5 @@
+import 'package:lost_party/shared/character_build/party_gem_validation_snapshot.dart';
+
 import '../../domain/entities/group_join_relation.dart';
 import '../../domain/entities/group_request_character.dart';
 
@@ -7,10 +9,12 @@ abstract final class GroupMemberWriteFields {
     required String className,
     double? itemLevel,
     double? combatPower,
+    PartyGemValidationSnapshot? gemValidation,
   }) => {
     'displayClassNameSnapshot': className,
     'itemLevelSnapshot': itemLevel,
     'combatPowerSnapshot': combatPower,
+    'gemValidationSnapshot': gemValidation?.toFields(),
   };
 
   static Map<String, Object?> fromJoinRelation(GroupJoinRelation relation) =>
@@ -18,6 +22,7 @@ abstract final class GroupMemberWriteFields {
         className: relation.characterClassNameSnapshot,
         itemLevel: relation.itemLevelSnapshot,
         combatPower: relation.combatPowerSnapshot,
+        gemValidation: relation.gemValidationSnapshot,
       );
 
   static Map<String, Object?> fromCharacter(GroupRequestCharacter character) =>
@@ -25,5 +30,6 @@ abstract final class GroupMemberWriteFields {
         className: character.characterClassName,
         itemLevel: character.itemLevel,
         combatPower: character.combatPower,
+        gemValidation: character.gemValidation,
       );
 }

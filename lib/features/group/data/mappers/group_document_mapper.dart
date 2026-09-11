@@ -1,3 +1,5 @@
+import 'package:lost_party/shared/character_build/party_gem_validation_snapshot.dart';
+
 import '../../domain/entities/group_blocked_player.dart';
 import '../../domain/entities/group_join_relation.dart';
 import '../../domain/entities/group_member.dart';
@@ -79,6 +81,7 @@ class GroupDocumentMapper {
       ),
       itemLevelSnapshot: _nullableDouble(data, 'itemLevelSnapshot'),
       combatPowerSnapshot: _nullableDouble(data, 'combatPowerSnapshot'),
+      gemValidationSnapshot: _softGemValidation(data['gemValidationSnapshot']),
       revision: _integer(data, 'revision'),
     );
   }
@@ -144,6 +147,7 @@ class GroupDocumentMapper {
       characterClassNameSnapshot: _string(data, 'characterClassNameSnapshot'),
       itemLevelSnapshot: _nullableDouble(data, 'itemLevelSnapshot'),
       combatPowerSnapshot: _nullableDouble(data, 'combatPowerSnapshot'),
+      gemValidationSnapshot: _softGemValidation(data['gemValidationSnapshot']),
       applicationAttempt: _integer(data, 'applicationAttempt'),
       revision: _integer(data, 'revision'),
       createdAt: _date(data, 'createdAt'),
@@ -277,6 +281,27 @@ class GroupDocumentMapper {
     if (value == null) return null;
     if (value is num) return value.toDouble();
     throw GroupContractException('$field must be a number or null.');
+  }
+
+  PartyGemValidationSnapshot? _softGemValidation(Object? raw) {
+    if (raw == null) return null;
+    if (raw is! Map) return null;
+    final data = <String, Object?>{
+      for (final entry in raw.entries)
+        if (entry.key is String) entry.key as String: entry.value,
+    };
+    return PartyGemValidationSnapshot.tryFromFields(
+      data,
+      parseDate: (value) {
+        try {
+          return toDateTime(value);
+        } on FormatException {
+          return null;
+        } on GroupContractException {
+          return null;
+        }
+      },
+    );
   }
 
   DateTime _date(Map<String, Object?> data, String field) {

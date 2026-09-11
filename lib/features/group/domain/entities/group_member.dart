@@ -1,3 +1,5 @@
+import 'package:lost_party/shared/character_build/party_gem_validation_snapshot.dart';
+
 enum GroupMemberRole { leader, member }
 
 enum GroupJoinedBy { created, invitation, application, joinCode }
@@ -16,6 +18,7 @@ class GroupMember {
     this.displayClassNameSnapshot,
     this.itemLevelSnapshot,
     this.combatPowerSnapshot,
+    this.gemValidationSnapshot,
     required this.revision,
   });
 
@@ -33,6 +36,7 @@ class GroupMember {
   final String? displayClassNameSnapshot;
   final double? itemLevelSnapshot;
   final double? combatPowerSnapshot;
+  final PartyGemValidationSnapshot? gemValidationSnapshot;
   final int revision;
 
   bool get isLeader => role == GroupMemberRole.leader;

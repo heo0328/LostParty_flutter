@@ -1,3 +1,5 @@
+import 'package:lost_party/shared/character_build/party_gem_validation_snapshot.dart';
+
 import '../../domain/entities/group_create_command.dart';
 import '../../domain/entities/group_member.dart';
 import '../../domain/services/group_name_normalizer.dart';
@@ -23,6 +25,7 @@ class GroupCreateWritePlan {
     required String verifiedClassName,
     double? verifiedItemLevel,
     double? verifiedCombatPower,
+    PartyGemValidationSnapshot? verifiedGemValidation,
     required GroupMembershipState membershipState,
     GroupNameNormalizer normalizer = const GroupNameNormalizer(),
   }) {
@@ -83,6 +86,7 @@ class GroupCreateWritePlan {
           className: verifiedClassName,
           itemLevel: verifiedItemLevel,
           combatPower: verifiedCombatPower,
+          gemValidation: verifiedGemValidation,
         ),
         'revision': 1,
         'createdAt': serverTimestamp,

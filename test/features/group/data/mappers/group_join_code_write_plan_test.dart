@@ -122,6 +122,7 @@ void main() {
       expect(plan.member!['joinSequence'], 4);
       expect(plan.member!['displayCharacterIdSnapshot'], 'character-9');
       expect(plan.member!['displayCharacterNameSnapshot'], '코드가입자');
+      expect(plan.member!['gemValidationSnapshot'], isNull);
       expect(plan.playerRelation!['relation'], 'member');
       expect(plan.playerRelation!['requestStatus'], isNull);
       expect(plan.joinRelationPatch, isNull);
