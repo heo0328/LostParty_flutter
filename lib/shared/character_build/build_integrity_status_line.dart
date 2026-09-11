@@ -14,30 +14,35 @@ class BuildIntegrityStatusLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final labels = snapshot.displayLabels;
-    if (labels.isEmpty) {
+    final items = snapshot.displayItems;
+    if (items.isEmpty) {
       return const SizedBox.shrink();
     }
     final theme = Theme.of(context);
-    final isError = snapshot.status == BuildIntegrityStatus.error;
-    final color = isError
-        ? theme.colorScheme.error
-        : theme.colorScheme.onSurfaceVariant;
     return Wrap(
       key: ValueKey(keyName),
       spacing: 6,
       runSpacing: 4,
       children: [
-        for (final label in labels)
+        for (final item in items)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              border: Border.all(color: color.withValues(alpha: 0.5)),
+              border: Border.all(
+                color: (item.isError
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.onSurfaceVariant)
+                    .withValues(alpha: 0.5),
+              ),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              label,
-              style: theme.textTheme.labelSmall?.copyWith(color: color),
+              item.label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: item.isError
+                    ? theme.colorScheme.error
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
       ],

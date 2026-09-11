@@ -25,6 +25,8 @@ class GemValidationSummary {
     required this.unverifiedSameClassCount,
     required this.foreignClassCount,
     required this.unavailableCount,
+    this.equippedGemCount,
+    this.sourceAvailable = true,
   });
 
   final int totalCount;
@@ -32,6 +34,12 @@ class GemValidationSummary {
   final int unverifiedSameClassCount;
   final int foreignClassCount;
   final int unavailableCount;
+  final int? equippedGemCount;
+  final bool sourceAvailable;
+
+  bool get hasGemSlotCountError =>
+      equippedGemCount != null && equippedGemCount! < 11;
+  bool get hasUnmatchedSkillError => unverifiedSameClassCount > 0;
 
   GemValidationSummaryStatus get status {
     if (foreignClassCount > 0) {
@@ -188,5 +196,7 @@ class CharacterBuildAnalysis {
               effect.validationStatus == GemValidationStatus.unavailable,
         )
         .length,
+    equippedGemCount: equippedGemCount,
+    sourceAvailable: gemEffectsSourceAvailable && equippedGemCount != null,
   );
 }

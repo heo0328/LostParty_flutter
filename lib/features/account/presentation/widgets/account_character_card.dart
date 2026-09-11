@@ -92,27 +92,39 @@ class AccountCharacterCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall,
               ),
-              if (_gemValidationLabel case final label?) ...[
+              if (_gemValidationItems case final items when items.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                Row(
+                Column(
                   key: ValueKey('gemValidation-${character.id}'),
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      _gemValidationIcon,
-                      size: 14,
-                      color: _gemValidationColor(theme),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: _gemValidationColor(theme),
-                        ),
+                    for (final item in items)
+                      Row(
+                        children: [
+                          Icon(
+                            item.isError
+                                ? Icons.error_outline
+                                : Icons.info_outline,
+                            size: 14,
+                            color: item.isError
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              item.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: item.isError
+                                    ? theme.colorScheme.error
+                                    : theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
                   ],
                 ),
               ],
@@ -209,29 +221,36 @@ class AccountCharacterCard extends StatelessWidget {
     return DisplayNumberFormatter.fixed(value);
   }
 
-  String? get _gemValidationLabel {
+  List<_GemValidationDisplayItem> get _gemValidationItems {
     final summary = gemValidationSummary;
-    if (summary == null ||
-        summary.status == GemValidationSummaryStatus.verified) {
-      return null;
+    if (summary == null) {
+      return const [];
     }
-    return switch (summary.status) {
-      GemValidationSummaryStatus.foreignClass =>
-        '다른 직업 보석 ${summary.foreignClassCount}개 · 확인 필요',
-      GemValidationSummaryStatus.sameClassTargetUnverified =>
-        '동일 직업 보석 · 현재 스킬에서 미확인 ${summary.unverifiedSameClassCount}개',
-      GemValidationSummaryStatus.unavailable => '보석 검증 정보 없음',
-      GemValidationSummaryStatus.verified => null,
-    };
+    return [
+      if (summary.hasGemSlotCountError)
+        _GemValidationDisplayItem(
+          '보석 부족 ${summary.equippedGemCount}/11',
+          isError: true,
+        ),
+      if (summary.foreignClassCount > 0)
+        _GemValidationDisplayItem(
+          '타 직업 보석 ${summary.foreignClassCount}개',
+          isError: true,
+        ),
+      if (summary.hasUnmatchedSkillError)
+        _GemValidationDisplayItem(
+          '스킬 불일치 보석 ${summary.unverifiedSameClassCount}개',
+          isError: true,
+        ),
+      if (!summary.sourceAvailable || summary.unavailableCount > 0)
+        const _GemValidationDisplayItem('보석 정보 확인 불가', isError: false),
+    ];
   }
+}
 
-  IconData get _gemValidationIcon =>
-      gemValidationSummary?.status == GemValidationSummaryStatus.foreignClass
-      ? Icons.error_outline
-      : Icons.info_outline;
+class _GemValidationDisplayItem {
+  const _GemValidationDisplayItem(this.label, {required this.isError});
 
-  Color _gemValidationColor(ThemeData theme) =>
-      gemValidationSummary?.status == GemValidationSummaryStatus.foreignClass
-      ? theme.colorScheme.error
-      : theme.colorScheme.onSurfaceVariant;
+  final String label;
+  final bool isError;
 }

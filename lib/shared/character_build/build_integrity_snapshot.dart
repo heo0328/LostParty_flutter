@@ -46,23 +46,22 @@ class BuildIntegritySnapshot {
 
   bool get isClean => status == BuildIntegrityStatus.clean;
 
-  /// 활동 Character 목록용 표시 라벨. 우선순위는 상태·코드 순이다.
-  List<String> get displayLabels {
+  List<BuildIntegrityDisplayItem> get displayItems {
     switch (status) {
       case BuildIntegrityStatus.clean:
-        return const <String>[];
+        return const <BuildIntegrityDisplayItem>[];
       case BuildIntegrityStatus.unavailable:
-        return const <String>['확인 불가'];
+        return const [BuildIntegrityDisplayItem('확인 불가', isError: false)];
       case BuildIntegrityStatus.review:
         if (issueCodes.contains(BuildIntegrityIssueCode.sameClassGemUnverified)) {
-          return const <String>['보석 확인 필요'];
+          return const [BuildIntegrityDisplayItem('보석 확인 필요', isError: false)];
         }
         if (issueCodes.contains(BuildIntegrityIssueCode.gemUnavailable)) {
-          return const <String>['보석 정보 없음'];
+          return const [BuildIntegrityDisplayItem('보석 정보 확인 불가', isError: false)];
         }
-        return const <String>['확인 필요'];
+        return const [BuildIntegrityDisplayItem('확인 필요', isError: false)];
       case BuildIntegrityStatus.error:
-        final labels = <String>[];
+        final items = <BuildIntegrityDisplayItem>[];
         final hasGemError = issueCodes.any(
           (code) =>
               code == BuildIntegrityIssueCode.gemSlotCount ||
@@ -77,14 +76,22 @@ class BuildIntegritySnapshot {
               code == BuildIntegrityIssueCode.arkGridCondition,
         );
         if (hasGemError) {
-          labels.add('보석');
+          items.add(const BuildIntegrityDisplayItem('보석 오류', isError: true));
         }
         if (hasArkGridError) {
-          labels.add('아크그리드');
+          items.add(const BuildIntegrityDisplayItem('아크그리드 오류', isError: true));
         }
-        return labels.isEmpty ? const <String>['오류'] : labels;
+        if (issueCodes.contains(BuildIntegrityIssueCode.gemUnavailable)) {
+          items.add(const BuildIntegrityDisplayItem('보석 정보 확인 불가', isError: false));
+        }
+        return items.isEmpty
+            ? const [BuildIntegrityDisplayItem('오류', isError: true)]
+            : items;
     }
   }
+
+  List<String> get displayLabels =>
+      displayItems.map((item) => item.label).toList(growable: false);
 
   Map<String, Object?> toFields() {
     return <String, Object?>{
@@ -237,4 +244,11 @@ class BuildIntegritySnapshot {
     }
     return null;
   }
+}
+
+class BuildIntegrityDisplayItem {
+  const BuildIntegrityDisplayItem(this.label, {required this.isError});
+
+  final String label;
+  final bool isError;
 }

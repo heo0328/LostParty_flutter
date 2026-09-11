@@ -6,9 +6,7 @@ import 'package:lost_party/features/account/presentation/models/weekly_raid_stat
 import 'package:lost_party/features/account/presentation/widgets/account_character_card.dart';
 
 void main() {
-  testWidgets('shows only foreign gems as a red account-card warning', (
-    tester,
-  ) async {
+  testWidgets('shows foreign gems as a red account-card error', (tester) async {
     const summary = GemValidationSummary(
       totalCount: 11,
       verifiedCount: 10,
@@ -28,15 +26,13 @@ void main() {
       ),
     );
 
-    expect(find.text('다른 직업 보석 1개 · 확인 필요'), findsOneWidget);
-    final text = tester.widget<Text>(find.text('다른 직업 보석 1개 · 확인 필요'));
+    expect(find.text('타 직업 보석 1개'), findsOneWidget);
+    final text = tester.widget<Text>(find.text('타 직업 보석 1개'));
     final context = tester.element(find.byType(AccountCharacterCard));
     expect(text.style?.color, Theme.of(context).colorScheme.error);
   });
 
-  testWidgets('shows same-class unverified gems as neutral information', (
-    tester,
-  ) async {
+  testWidgets('shows same-class unmatched gems as a red error', (tester) async {
     const summary = GemValidationSummary(
       totalCount: 11,
       verifiedCount: 10,
@@ -56,7 +52,36 @@ void main() {
       ),
     );
 
-    expect(find.text('동일 직업 보석 · 현재 스킬에서 미확인 1개'), findsOneWidget);
+    expect(find.text('스킬 불일치 보석 1개'), findsOneWidget);
+    expect(find.byIcon(Icons.error_outline), findsOneWidget);
+  });
+
+  testWidgets('keeps gem source information neutral beside a count error', (
+    tester,
+  ) async {
+    const summary = GemValidationSummary(
+      totalCount: 9,
+      verifiedCount: 8,
+      unverifiedSameClassCount: 0,
+      foreignClassCount: 0,
+      unavailableCount: 1,
+      equippedGemCount: 9,
+    );
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: AccountCharacterCard(
+            character: _character,
+            isRepresentative: false,
+            gemValidationSummary: summary,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('보석 부족 9/11'), findsOneWidget);
+    expect(find.text('보석 정보 확인 불가'), findsOneWidget);
+    expect(find.byIcon(Icons.error_outline), findsOneWidget);
     expect(find.byIcon(Icons.info_outline), findsOneWidget);
   });
 

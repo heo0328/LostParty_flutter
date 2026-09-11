@@ -51,7 +51,7 @@ void main() {
         [BuildIntegrityIssueCode.unmatchedSkillGem],
       );
       expect(snapshot.role, BuildIntegrityRole.support);
-      expect(snapshot.displayLabels, ['보석']);
+      expect(snapshot.displayLabels, ['보석 오류']);
     });
 
     test('maps review for empty or unavailable gems', () {
@@ -81,7 +81,7 @@ void main() {
 
       expect(empty!.status, BuildIntegrityStatus.error);
       expect(empty.issueCodes, [BuildIntegrityIssueCode.gemSlotCount]);
-      expect(empty.displayLabels, ['보석']);
+      expect(empty.displayLabels, ['보석 오류']);
       expect(unavailable!.status, BuildIntegrityStatus.review);
       expect(unavailable.issueCodes, [BuildIntegrityIssueCode.gemUnavailable]);
     });
@@ -119,7 +119,16 @@ void main() {
         BuildIntegrityIssueCode.arkGridMinimum,
         BuildIntegrityIssueCode.arkGridCondition,
       ]);
-      expect(snapshot.displayLabels, ['보석', '아크그리드']);
+      expect(snapshot.displayLabels, [
+        '보석 오류',
+        '아크그리드 오류',
+        '보석 정보 확인 불가',
+      ]);
+      expect(snapshot.displayItems.map((item) => item.isError), [
+        true,
+        true,
+        false,
+      ]);
     });
 
     test('maps unavailable when ark grid minimum cannot be verified', () {

@@ -412,8 +412,8 @@ void main() {
       find.byKey(const ValueKey('memberCharacterIntegrity-character-1')),
       findsOneWidget,
     );
-    expect(find.text('보석'), findsOneWidget);
-    expect(find.text('아크그리드'), findsOneWidget);
+    expect(find.text('보석 오류'), findsOneWidget);
+    expect(find.text('아크그리드 오류'), findsOneWidget);
     expect(find.text('보석 확인 필요'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
