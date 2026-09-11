@@ -4,192 +4,115 @@
 
 ## 현재 인계 상태
 
-- 작업 분기 기준은 로컬·원격이 같았던 `dev`의 `c4879ed`이며 현재 구현 브랜치는 `codex/implement-build-error-policy`다. Character `buildIntegritySnapshot` 저장과 그룹 활동 Character 목록의 기존 표시는 앞선 작업에서 실기기 확인까지 완료됐다.
-- 이번 브랜치는 같은 직업이지만 API 스킬 슬롯·특수 스킬 카탈로그에서 찾지 못한 보석과 장착 보석 11개 미만을 확정 오류로 구현했다.
-- 보석 파서는 `ArmoryGem` 또는 `Gems` 누락과 명시적 빈 목록을 구분해 `확정 11개 미만`과 `응답/파싱 불가`를 서로 다른 상태로 보존한다.
-- 파티·그룹 membership의 `gemValidationSnapshot`과 Character의 `buildIntegritySnapshot`은 서로 다른 공개 요약이다. 기존 가입·승인·직접 참가·Character 변경·그룹 명령과 Rules 순서는 그대로 보호한다.
+- 현재 브랜치는 `codex/implement-build-error-policy`, 최신 체크포인트는 `4d1b129`다. 확정 Build 오류 판정과 오류 전용 표시는 구현·자동 검증됐고 실기기에서 내 계정과 신청자 카드의 스킬 불일치 오류를 확인했다.
+- 그룹원의 활동 Character 목록 팝업은 Character 문서의 로컬 `buildIntegritySnapshot`을 사용해 보석과 아크그리드 오류를 함께 표시한다.
+- 실기기에서 새 모집의 파티장 본인 카드에는 같은 보석 오류가 표시되지 않았다. 구성원 카드에 소유자 예외가 있는 것이 아니라, 파티 생성 경로가 파티장 membership에 `gemValidationSnapshot`을 쓰지 않는 것이 원인이다.
+- 신청은 `submittedBuildSnapshot`, 승인·직접 참가·참가 Character 변경은 membership의 `gemValidationSnapshot`을 정상 전달한다. 이 경로와 파티·그룹 권한 및 명령 순서는 회귀 보호 대상이다.
 
-## 다음 작업 그룹 — Character Build 확정 오류 판정·표기 개편
+## 다음 작업 그룹 — 파티장 오류 Snapshot 보완과 참가 Character 변경 목록 표시
 
-### 진행 상태 — 보정 구현·자동 검증 완료, 실기기 대기
+### 1. 목표
 
-- `CharacterBuildAnalysis`가 실제 `ArmoryGem.Gems` 장착 개수와 `Effects.Skills` 원본 가용성을 별도로 보존한다. API 원본 부재는 null/false, 명시적 빈 목록은 0/true로 구분한다.
-- `BuildIntegritySnapshot` 새 쓰기 schema는 v2이며 `gemSlotCount`, `unmatchedSkillGem` 코드 공간을 추가했다. 새 parser는 v1을 기존 의미로 읽고 v1에 v2 전용 코드가 섞이면 손상 문서로 거절한다.
-- 앞선 A단계에서 mapper와 Snapshot 표적 테스트 36건이 통과했다.
-- 새 분석은 확정 장착 개수가 11개 미만이면 `gemSlotCount`, 같은 직업이지만 `API 스킬 OR 특수 카탈로그` 양쪽에 없는 대상이면 `unmatchedSkillGem`을 기록하고 둘 다 `error`로 판정한다.
-- 미등록 대상 notice도 warning으로 승격했다. 현재 등록된 특수 스킬과 일반 스킬 정상 판정은 유지되며 mapper·Snapshot 표적 테스트 36건이 통과했다.
-- 앞선 구현에서 내 계정은 확정 보석 오류를 빨간색, 원본 정보 부족을 중립 행으로 표시했다. 이번 보정에서 중립 행은 제거한다.
-- 그룹 활동 Character 목록의 `보석 오류`, `아크그리드 오류`는 유지하고 정보 부족 라벨만 제거한다.
-- C단계 계정·통합 Snapshot·그룹 활동 UI 표적 테스트 31건이 통과했다.
-- 새 `PartyGemValidationSnapshot`은 v2에서 장착 수·타 직업 수·스킬 불일치 수와 `verified/error/unavailable`을 저장한다. v1 parser·복사 경로는 유지하며 공용 카드가 v2 오류 원인을 표시한다.
-- 신청·가입·membership·그룹 mapper 회귀 56건과 v2 신청 저장 4건이 통과했고 변경 파일 analyze도 통과했다. `firestore.rules`는 변경하지 않았다.
-- E 자동 검증 뒤 실기기에서 카탈로그 미등록 직업의 특수 보석이 오류 없이 보이는 정책 불일치를 확인했다. 원인은 미등록 직업에 한해 보석 효과 아이콘 URL의 `ark_passive` 문자열을 정상 근거로 사용하는 fallback이다.
-- 실제 API 표본에서 특수 보석이더라도 `ark_passive` 경로가 없는 사례가 확인됐다. URL은 정상·오류·후보 추출 근거에서 완전히 제외한다.
-- 사용자 화면은 `문제 없음 = 비표기`, `확정 오류 = 빨간 표시`만 사용한다. API·Tooltip 누락 같은 판정 불능은 Domain/Snapshot 내부에 보존하되 중립 라벨을 표시하지 않는다.
-- 환수사 `둔갑 금술 스킬`, 가디언나이트 `가디언 피어`, 데모닉 `블러드 제노사이드`는 카탈로그에 등록하지 않고 빨간 오류 검증 표본으로 유지한다.
-- 다음 구현은 아래 보정 순서와 회귀 보호 목록을 따른다. `firestore.rules`와 저장 schema는 변경하지 않는다.
-- 보정 구현에서 아이콘 fallback을 제거하고 미등록 직업의 현재 직업명을 Tooltip 비교 기준에 포함했다. 세 오류 표본은 카탈로그에 추가하지 않은 채 `unmatchedSkillGem` 경로로 고정했다.
-- 공용 Character/Party 상태와 내 계정에서 review/unavailable 중립 문구를 숨겼다. 내부 상태, v1/v2 parser와 저장 필드는 유지했다.
-- 진단 도구는 복수 캐릭터 조회, OS 임시 원본 저장과 미등록 후보 목록을 지원한다. 실제 두 캐릭터 조회로 저장·후보 출력을 확인했고 토큰은 저장하지 않았다.
-- 표적 묶음 103건 중 새 계약과 충돌한 과거 아이콘 fallback 기대값 1건을 정정한 뒤 mapper 25건과 진단 도구 6건이 통과했다. 최종 전체 테스트는 1,032건 통과, 기존 Firebase 미초기화 `widget_test.dart` 9건만 실패했다. 변경 파일 analyze는 통과했고 전체 analyze는 기존 39건만 남았다.
-- `firestore.rules` diff가 없어 Rules 검사·배포는 수행하지 않는다. 다음은 아래 실기기 체크리스트 확인이다.
+1. 새 파티를 만들 때 파티장 membership에도 선택한 역할의 보석 최소 요약을 저장해, 본인과 다른 사용자가 보는 파티 구성 카드에 동일한 빨간 보석 오류가 표시되게 한다.
+2. 파티 상세의 `내 참가 Character 변경` 목록에서 그룹 활동 Character 팝업과 같은 기준으로 보석 및 아크그리드 확정 오류를 빨간색으로 표시한다.
+3. 정상과 API·파싱 불능은 계속 비표기하고, 오류 상태를 가입 자격이나 Character 선택 차단에 사용하지 않는다.
 
-### 실기기 체크리스트
+### 2. 데이터 흐름과 경계
 
-1. 정상 11보석 Character는 내 계정·그룹 활동 목록·파티/그룹 카드에 경고가 없다.
-2. 10보석 이하 Character는 내 계정에 `보석 부족 N/11`, 간략 카드에 빨간 보석 오류가 표시된다.
-3. 타 직업 보석과 카탈로그/스킬 슬롯 양쪽에 없는 보석은 각각 빨간 오류로 표시된다.
-4. API·Tooltip 정보가 없는 경우는 빨간 오류로 오판하지 않고 화면에도 별도 상태를 표시하지 않는다.
-5. 질서 해·달 14P 미만 또는 요구 아크패시브 불충족은 빨간 아크그리드 오류로 표시된다.
-6. 계정 수동 갱신 후 그룹 활동 Character 목록과 새 파티 신청/참가 Snapshot에 최신 결과가 반영된다.
-7. 기존 파티 신청·승인·직접 참가·Character 변경과 그룹 생성·가입·양도·해산 흐름이 정상이다.
+#### 파티 생성 리더
 
-### 1. 확정 제품 목표
+- `RecruitmentLeaderCandidateService`가 선택 역할에서 만든 기존 `PartyGemValidationSnapshot`을 모집 생성 화면이 `PartyCreateCommand`로 전달한다.
+- `PartyCreateWritePlan`은 그 값을 새 파티장 membership의 `gemValidationSnapshot`에 기록한다. 모집 원본, assignment, group raid listing에는 중복 저장하지 않는다.
+- 파티 상세 Reader와 구성원 카드의 기존 방어적 parser·`GemValidationLine`을 그대로 사용한다. 본인/타인 분기 코드는 추가하지 않는다.
+- 기존 membership에 필드가 없으면 현재처럼 `null`로 읽고 카드 자체는 정상 표시한다. 이번 작업에서 기존 파티 일괄 이행이나 화면 진입 시 자동 쓰기는 하지 않는다.
 
-사용자가 직접 특수 스킬 카탈로그를 점진적으로 완성한다. 현재 API 스킬 슬롯과 해당 직업·깨달음 분기의 등록 특수 스킬 목록 양쪽에서 찾지 못한 보석은 카탈로그 완성 여부와 무관하게 **빨간 확정 오류**로 표시한다. 이후 정상 특수 스킬을 카탈로그에 추가하면 해당 보석은 정상으로 바뀐다.
+#### 참가 Character 변경 목록
 
-정상 Character와 API·Tooltip 자체를 읽지 못한 Character에는 추가 문구를 표시하지 않는다. 판정 불능 상태는 오판 방지를 위해 내부에만 남긴다.
+- 후보 조회·역할 판정·점유 및 파티 구성 필터는 현재 `RecruitmentLeaderCandidateService` 결과를 그대로 사용한다.
+- 역할 후보에 서버 전송용 `PartyGemValidationSnapshot`과 별도로, 같은 로컬 `CharacterBuildSnapshot`에서 계산한 표시 전용 `BuildIntegritySnapshot`을 선택 필드로 제공한다.
+- 변경 Sheet는 그룹 활동 Character 팝업과 같은 `BuildIntegrityStatusLine`을 재사용한다. 따라서 보석과 아크그리드 오류가 동시에 있으면 둘 다 보존·표시되고, 정상·review·unavailable은 빈 표시가 된다.
+- 실제 변경 명령에는 지금과 같이 보석 최소 요약만 전달한다. 파티 membership에 통합 `buildIntegritySnapshot`을 추가하지 않으며 아크그리드 상태를 서버에 새로 저장하지 않는다.
 
-### 2. 확정 판정 계약
+### 3. 포함 범위
 
-#### 빨간 오류
+- 파티 생성 명령의 선택적 파티장 보석 요약과 생성 화면 연결
+- 파티장 membership Write Plan 저장 및 방어적 읽기 회귀
+- 로컬 참가 Character 역할 후보의 선택적 통합 Build 상태
+- 참가 Character 변경 Sheet의 보석·아크그리드 오류 전용 표시
+- 생성·후보 서비스·파티 상세 UI·Reader/Write Plan의 직접 영향 테스트
+- 신규 파티의 본인/타인 표시와 Character 변경 실제 실행에 대한 실기기 확인
 
-1. **보석 개수 부족**: 장착 보석 목록을 정상적으로 읽었고 개수가 11개 미만이다.
-2. **타 직업 보석**: Tooltip에서 확인한 직업이 현재 Character 직업과 다르다.
-3. **스킬 불일치 보석**: Tooltip 직업은 현재 Character와 같고 대상 스킬명도 읽었지만, 현재 API 스킬 슬롯과 현재 분기의 특수 스킬 카탈로그 어디에도 없다.
-4. **아크그리드 최소 조건 미충족**: 질서의 해 또는 질서의 달이 없거나 각각 14P 미만이다.
-5. **아크그리드 조건 충돌**: 장착 코어 Tooltip이 요구하는 아크패시브 조건을 현재 Character가 충족하지 않는다.
+### 4. 제외 범위
 
-#### 정상
+- 기존 파티 membership 일괄 마이그레이션 또는 화면 진입 보정 쓰기
+- 파티 membership에 `buildIntegritySnapshot` 또는 아크그리드 요약 저장
+- 신청 Character 선택 Sheet 등 사용자가 요청하지 않은 다른 후보 목록 UI 확대
+- 오류에 따른 모집 생성·신청·참가·Character 변경 차단
+- 특수 스킬 카탈로그 추가, 판정 issue code 또는 v2 schema 변경
+- Firestore 쿼리·인덱스·컬렉션·Rules 변경과 배포
+- 그룹 팝업 데이터 흐름·활동 ID 교집합·표시 변경
 
-- 장착 보석이 11개다.
-- 각 보석의 Tooltip 직업이 현재 Character와 같다.
-- 각 대상 스킬이 현재 API 스킬 슬롯 또는 현재 직업·깨달음 분기의 특수 스킬 카탈로그에 있다.
-- 질서의 해·달이 각각 14P 이상이고 장착 코어의 아크패시브 조건을 충족한다.
-- 아이덴티티, Character 고유, 아크패시브 생성 스킬은 특수 스킬 카탈로그에 등록돼 있으면 정상이다.
+### 5. 작업 순서
 
-#### 내부 판정 불능 — 화면 비표기
+#### A. 계약 테스트 선행
 
-- `ArmoryGem`, `Gems`, `Effects.Skills`, Tooltip 직업 또는 대상 스킬명처럼 판정에 필요한 원본을 API·파서에서 얻지 못했다.
-- 아크그리드 원본을 읽지 못해 최소 포인트 또는 Tooltip 조건을 판정할 수 없다.
-- 정보 부족을 장착 0개, 타 직업 또는 스킬 불일치로 추정하지 않는다.
-- **카탈로그 미등록은 중립 사유가 아니다.** 스킬명은 읽었지만 두 정상 목록에 없으면 빨간 스킬 불일치다.
+- `PartyCreateCommand`의 선택 필드가 없을 때 기존 생성 결과가 같고, 있을 때 파티장 membership에 v2 보석 map이 생성되는 테스트를 추가한다.
+- 후보 역할별 `BuildIntegritySnapshot`이 같은 역할의 기존 보석 요약과 동일한 로컬 분석에서 생성되는지 고정한다.
+- 변경 Sheet에서 보석·아크그리드 복합 오류, 보석만, 아크그리드만, 정상·판정 불능 비표기를 고정한다.
 
-### 3. 목표 issue code와 표기
+#### B. 파티 생성 리더 전파
 
-Character 통합 요약의 목표 확정 오류 코드는 다음과 같다.
+- 생성 화면 → `PartyCreateCommand` → `PartyCreateWritePlan.leaderMembership`만 최소 변경한다.
+- Repository의 Character 소유권·입장 레벨·점유·신청 철회 확인과 Transaction 읽기/쓰기 순서를 변경하지 않는다.
 
-```text
-gemSlotCount       // 장착 보석 11개 미만
-foreignClassGem    // 타 직업 보석
-unmatchedSkillGem  // API 스킬·특수 카탈로그 모두 불일치
-arkGridMinimum     // 질서 해·달 누락 또는 14P 미만
-arkGridCondition   // 아크그리드 요구 아크패시브 불충족
-```
+#### C. 참가 Character 변경 목록 표시
 
-정보 부족은 확정 오류 코드와 분리해 내부에 보존한다. 기존 `gemUnavailable`과 아크그리드 원본 상태는 과거 Snapshot 호환과 오판 방지에 사용하되 사용자 화면에는 표시하지 않는다.
+- 후보 역할 옵션에 선택적 통합 상태를 추가하고 기존 `gemValidation` 전달을 유지한다.
+- `_ChangeCharacterCandidateSheet`의 기존 이름·원정대·직업·역할 정보 아래에 공용 오류 행을 추가한다. 같은 오류를 보석 전용 행과 중복 표시하지 않는다.
+- 선택, 취소, 로딩, 변경 가능 후보 없음 및 실제 Character 변경 명령은 기존 동작을 유지한다.
 
-- 전체 `status`는 확정 오류가 하나라도 있으면 `error`, 정보 부족만 있으면 `review` 또는 `unavailable`, 아무 문제 없이 모든 필수 판정이 가능하면 `clean`이다.
-- 여러 오류는 `issueCodes`에 모두 보존한다. 보석과 아크그리드, 또는 보석 부족과 스킬 불일치를 하나로 축약하지 않는다.
-- 빨간 표시 후보: `보석 부족 N/11`, `타 직업 보석 N개`, `스킬 불일치 보석 N개`, `아크그리드 최소 조건 미충족`, `아크패시브 조건 불일치`.
-- 좁은 활동 Character 행은 `보석 오류`, `아크그리드 오류`로 묶을 수 있지만 단순 `보석`, `아크그리드`라고 쓰지 않는다.
-- 정보 부족은 `보석 정보 확인 불가`, `아크그리드 정보 확인 불가` 등의 중립 라벨로도 표시하지 않는다.
+#### D. 회귀 검증과 문서
 
-### 4. Snapshot 호환 전략
+- 포맷·`git diff --check` 후 생성/Write Plan, 후보 서비스, 파티 상세, Reader와 직접 영향 테스트를 한 번 묶어 실행한다.
+- 변경 파일 `flutter analyze`를 실행한다. 공용 Domain 영향이 예상보다 넓으면 전체 `flutter test`를 한 번 실행하고 기존 기준 실패와 신규 실패를 분리한다.
+- `firestore.rules` diff가 없음을 확인한다. 예상 밖 Rules 변경이 필요하면 구현을 멈추고 별도 설계·배포 승인을 받는다.
+- 자동 검증 후 아래 실기기 체크리스트를 한 번 수행하고 결과를 `DEV_LOG.md`에 기록한다.
 
-- `buildIntegritySnapshot`은 새 issue code와 판정 의미가 추가되므로 새 분석 결과부터 schema v2로 올린다.
-- 새 앱은 기존 v1을 방어적으로 읽어 `sameClassGemUnverified`를 과거 중립 상태로 유지하고, 새 분석 결과를 만들 때만 v2 `unmatchedSkillGem` 확정 오류를 쓴다. 과거 서버 값을 읽는 순간 의미를 소급 변경하지 않는다.
-- 구버전 앱이 알 수 없는 v2 코드를 만나면 현재 parser 계약처럼 무결성 표시만 생략하고 Character 행은 유지해야 한다.
-- 같은 `checkedAt`의 v1→v2 재산출이 서버에서 no-op으로 막히지 않는지 확인한다. 서버의 더 최신 실제 Snapshot을 오래된 분석이 덮지 않는 기존 보호는 유지한다.
-- 파티 신청의 flat `submittedBuildSnapshot`과 파티·그룹 membership map에는 `gemValidationSchemaVersion: 2`, `gemValidationStatus: verified | error | unavailable`, `equippedGemCount`, `foreignClassGemCount`, `unmatchedSkillGemCount`, `gemValidatedAt`, `catalogVersion`을 최소 보석 요약으로 사용한다. v1의 `unverifiedSameClassGemCount`는 과거 읽기 호환에만 사용한다.
-- 중첩 map 내부 필드를 Rules가 직접 검사하지 않더라도 기존 write plan, 신청→승인 복사, 완전성 parser와 구버전 null 호환을 모두 검증한다.
+### 6. 회귀 보호 목록
 
-### 5. 포함 범위
+1. 파티 생성의 소유 Character 확인, active assignment/Claim 충돌, 동일 레이드 신청 철회 확인과 생성 Transaction 원자성을 유지한다.
+2. 파티장 `partyIndex 0`, `slotIndex 0`, 승인권과 모집 인원·역할 집계를 유지한다.
+3. 공개/그룹 모집 생성 및 group raid listing Projection은 기존과 동일하다.
+4. 신청자 Snapshot, 신청 승인 복사, 직접 참가와 참가 Character 변경의 기존 `gemValidationSnapshot` 전달을 유지한다.
+5. 구성원 카드에는 본인/타인 예외 없이 Snapshot이 있으면 오류를 표시하고, 과거·누락·손상 map은 카드 전체를 깨뜨리지 않는다.
+6. Character 변경 후보의 소유권, 레벨, 점유, 같은 직업 딜러 제한, 역할 여유, 같은 Character 반대 역할과 다음 주차 준비 규칙을 유지한다.
+7. 변경 목록의 오류는 안내만 하며 후보 필터·정렬·선택 결과에 영향을 주지 않는다.
+8. 그룹원 목록과 활동 Character 팝업의 조회 횟수, 활동 ID 교집합 및 기존 보석·아크그리드 표시를 변경하지 않는다.
+9. 정상·review·unavailable은 추가 문구 없이 유지하고 확정 오류만 빨간색으로 표시한다.
+10. 보석과 아크그리드가 동시에 오류면 변경 목록에 두 영역을 모두 표시하며 같은 보석 오류를 중복 표시하지 않는다.
 
-- Armory 보석 원본의 `정상 빈 목록/확정 개수`와 `응답·파싱 불가` 구분
-- 11개 미만 판정과 실제 장착 개수 보존
-- 기존 `sameClassTargetUnverified` 경로를 새 분석에서는 확정 `unmatchedSkillGem`으로 전환
-- 현재 API 스킬 슬롯 또는 분기별 특수 스킬 카탈로그 일치 시 정상 유지
-- 보석 효과 아이콘 URL의 `ark_passive` fallback 완전 제거
-- 보석·아크그리드 확정 오류만 빨간 표시하고 정보 부족 UI 제거
-- 내 계정, 그룹 활동 Character 목록, 파티 신청자·파티원, 그룹원 목록의 표시 계약 통일
-- v1/v2 Snapshot, 과거 신청·membership·Character 문서 방어적 읽기
-- 관련 mapper, 로컬 분석, 서버 최소 요약, UI와 직접 영향 회귀 테스트
-- 최종 문서·실기기 체크리스트 정리
-- 복수 캐릭터명으로 전체 응답을 OS 임시 저장하고 `ArmorySkills` 밖의 후보를 추출하는 재사용 진단 도구·테스트
+### 7. 실기기 체크리스트
 
-### 6. 제외 범위
+1. 스킬 불일치 또는 보석 부족 Character로 새 파티를 만들면 파티장 본인 카드에 빨간 보석 오류가 보인다.
+2. 다른 계정이 같은 파티 상세를 열어도 파티장 카드의 같은 오류가 보인다.
+3. 기존 `gemValidationSnapshot` 없는 파티를 열어도 카드와 파티 기능은 정상이다.
+4. 참가 Character 변경 목록에서 보석 오류와 아크그리드 오류가 각 조건에 맞게 표시되고, 복합 오류는 둘 다 보인다.
+5. 정상 Character와 원본 정보 부족 Character에는 상태 문구가 없다.
+6. 오류가 있는 Character도 선택 가능하고 실제 변경이 성공하며, 변경 후 구성원 카드에는 기존 보석 최소 요약이 반영된다.
+7. 공개/그룹 파티 생성, 신청·승인·직접 참가·Character 변경·탈퇴 및 그룹 팝업의 기존 정상 흐름을 확인한다.
 
-- 이번 구현에서 모든 딜러 특수 스킬 카탈로그를 한 번에 완성하는 작업
-- 사용자가 차후 추가할 특수 스킬명을 추정하거나 임의 생성
-- 룬·각인·카드·엘릭서 판정 추가
-- 최적 빌드·스킬트리·보석 레벨 또는 배분 평가
-- 전체 Armory·Tooltip·보석명 서버 저장
-- 실제 캐릭터명 또는 전체 API 원본을 Git fixture로 커밋하는 작업
-- 그룹 조회 방식, 활동 ID 교집합, 새 쿼리·인덱스·컬렉션 추가
-- 상태를 인증·가입·승인·레이드 참가 자격으로 사용하는 변경
-- Character Rules의 넓은 `signedIn()` 권한 재설계
+### 8. 완료 조건
 
-### 7. 구현 순서
-
-#### A. 판정 fallback 제거와 회귀 표본
-
-- `allowPassiveIconFallback`과 `icon.contains('ark_passive')`를 정상 판정 경로에서 제거한다.
-- 정상 근거를 `ArmorySkills 대상명 OR 현재 직업·분기의 승인 카탈로그 대상명`으로 단일화한다.
-- 환수사 `둔갑 금술 스킬`, 가디언나이트 `가디언 피어`, 데모닉 `블러드 제노사이드`를 미등록 오류 fixture로 고정한다. 실제 원본과 캐릭터명은 커밋하지 않고 최소 비식별 입력만 사용한다.
-- 기존 등록 바드 dealer/support와 API 스킬 안에 모든 보석 대상이 있는 일반 Character는 정상 회귀로 고정한다.
-
-#### B. 오류 전용 화면 표시
-
-- 내 계정, Character 상세, 그룹 활동 Character, 파티 신청자·파티원, 그룹원 공용 표시에서 review/unavailable 중립 문구를 숨긴다.
-- 확정 오류가 있으면 기존 구체 오류 또는 축약 오류만 빨간색으로 표시한다.
-- 판정 불능과 확정 오류가 함께 있어도 확정 오류만 표시한다. 내부 issue code와 Snapshot parser는 삭제하지 않는다.
-
-#### C. 캐릭터명 기반 API 조사 도구
-
-- 진단 도구가 복수 캐릭터명을 받아 각 전체 Armory 응답을 OS 임시 폴더에 저장할 수 있게 한다.
-- 토큰은 `LOST_ARK_API_TOKEN` 환경 변수에서만 읽고 출력·파일 저장하지 않는다.
-- 후보 보고는 `ArmorySkills` 밖이면서 승인 카탈로그에도 없는 보석 대상만 제공한다. 아이콘 URL은 후보 판정에 사용하지 않는다.
-- 사용자가 `등록/오류/보류`를 결정한 뒤 승인된 대상만 카탈로그와 회귀 테스트에 추가한다.
-
-#### D. Snapshot·파티·그룹 회귀
-
-- Character·Party v1/v2 parser와 unavailable 내부 상태를 그대로 유지한다.
-- 계정 갱신, 신청→승인→membership 복사와 그룹 활동 ID 교집합에는 데이터 흐름 변경이 없는지 확인한다.
-- Rules·필드·쓰기 계획 diff가 없어야 한다. 예상 밖 변경이 생기면 구현을 멈추고 별도 설계를 요청한다.
-
-#### E. 최종 회귀·실기기·문서
-
-- 신규 표적 테스트와 영향받는 계정 갱신·재인증·파티·그룹 테스트를 한 번 묶어 실행한다.
-- 변경 파일 analyze 후 영향이 넓으므로 최종 `flutter test`와 `flutter analyze`를 각각 한 번 실행한다. 기존 기준 실패는 신규 실패와 분리한다.
-- 실기기 체크리스트 완료 후 결과를 `DEV_LOG.md`에 기록하고 `NEXT_WORK.md`를 다음 단일 작업으로 교체한다.
-
-### 8. 회귀 보호 목록
-
-1. 현재 등록된 바드·발키리·홀리나이트·도화가 dealer/support 특수 스킬은 정상이다.
-2. 카탈로그에 없는 특수 스킬은 정책상 빨간 오류이며, 카탈로그 추가 후 정상으로 바뀐다.
-3. API/Tooltip 파싱 불가는 보석 0개·타 직업·불일치로 오판하지 않는다.
-4. 타 직업 보석과 질서 해·달 14P, 아크그리드 조건 검사는 기존 결과를 유지한다.
-5. 복합 확정 오류를 모두 보존하고 정보 부족은 내부에만 유지해 화면에 표시하지 않는다.
-6. 정상 Character에는 추가 상태 문구가 없다.
-7. 오래된 v1/필드 누락/손상 Snapshot은 Character·신청·membership 행 전체를 깨뜨리지 않는다.
-8. 계정 자동·수동 갱신, 재인증 선택 필드 보존과 stale `checkedAt` 보호를 유지한다.
-9. 그룹 활동 ID 교집합, 검색·정렬·레이드 필터와 기존 읽기 횟수를 바꾸지 않는다.
-10. 파티 생성·신청·승인·직접 참가·Character 변경·탈퇴와 그룹 생성·가입·양도·해산 명령 및 Rules OR 순서를 바꾸지 않는다.
-11. 보석 효과 아이콘 URL과 `ark_passive` 문자열은 정상·오류·후보 추출 어디에도 사용하지 않는다.
-12. 환수사 `둔갑 금술 스킬`, 가디언나이트 `가디언 피어`, 데모닉 `블러드 제노사이드`는 미등록 상태에서 빨간 오류다.
-
-### 9. 완료 조건
-
-- 합의된 다섯 확정 오류만 빨간색으로 표시되고 정상·API/파싱 불가는 화면에 아무 상태도 표시하지 않는다.
-- 스킬 슬롯과 특수 카탈로그 양쪽에 없는 보석은 카탈로그 완성 여부와 무관하게 확정 오류다.
-- 등록 특수 스킬 추가만으로 해당 보석이 정상으로 전환된다.
-- 과거 Snapshot과 구버전 앱이 오류 없이 방어적으로 동작한다.
-- 새 표시가 기존 계정·파티·그룹·레이드 기능과 권한 흐름을 변경하지 않는다.
-- 자동 검증·실기기 결과·Rules 변경 및 배포 여부가 문서에 기록된다.
+- 새 파티장 membership에 선택 역할의 보석 v2 최소 요약이 저장되고 본인·타인 카드에 동일하게 표시된다.
+- 참가 Character 변경 목록이 로컬 통합 상태로 보석·아크그리드 확정 오류만 표시한다.
+- 과거 누락 데이터, 정상 및 판정 불능 Character가 회귀 없이 방어적으로 동작한다.
+- 기존 파티/그룹 권한, 명령 순서, 점유·구성 정책과 Rules가 변경되지 않는다.
+- 자동 검증과 실기기 결과, Rules 변경·배포 없음이 문서에 기록된다.
 
 ## 차후 대기
 
+- 기존 파티 membership 보석 Snapshot 이행 여부
+- 신청 Character 선택 Sheet 등 다른 로컬 후보 목록의 통합 Build 표시 확대 여부
 - 딜러 직업·깨달음 분기별 특수 보석 대상의 점진적 카탈로그 추가
 - 룬·각인·카드·엘릭서 등 통합 무결성 상태 확장
 - Build 별칭·직업 메모·JSON 공유: `BUILD_MEMO_SHARING.md`

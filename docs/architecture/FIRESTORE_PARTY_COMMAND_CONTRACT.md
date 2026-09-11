@@ -67,6 +67,8 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 - `visibility==group`이고 `groupId`가 있으면 같은 스냅샷을 `groups/{groupId}/raidListings/{newId}`에 생성
 - 사용자가 철회를 확인한 신청을 `superseded`로 전환
 
+파티장 membership은 생성 화면에서 선택한 역할의 `gemValidationSnapshot`이 있으면 함께 기록한다. 이는 기존 가입·승인·Character 변경 경로와 같은 보석 최소 요약이며, 모집 원본·점유·그룹 listing에는 복제하지 않는다. 과거 membership의 필드 부재는 허용하고 자동 이행 쓰기는 하지 않는다.
+
 #### 성공 불변식
 
 - `leaderPlayerId == currentPlayerId`
@@ -217,6 +219,7 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 - `partyIndex`와 `slotIndex`는 유지한다. 역할은 유지하거나 해당 파티의 역할 여유와 전체 구성 조건을 만족할 때 dealer↔support로 변경할 수 있다.
 - 다른 Character뿐 아니라 같은 Character의 저장된 반대 역할 설정도 허용한다.
 - 새 Character의 소유권, 입장 레벨, 확정 점유, 역할별 자리와 현재 파티의 동일 직업 딜러 제한을 다시 검증한다.
+- 변경 후보 목록은 소유자 기기의 로컬 통합 Build 상태로 보석·아크그리드 확정 오류를 안내할 수 있다. 이 표시는 선택을 차단하지 않고 서버 계약에는 기존 보석 최소 요약만 전달한다.
 - 다른 Character 변경은 기존 확정 점유 삭제와 새 점유 생성을, 같은 Character 역할 변경은 기존 점유의 역할 갱신을 사용한다. membership Snapshot·role, 모집 역할별 집계와 revision을 같은 Transaction에서 갱신한다.
 - 다른 확정 파티에 참가 중인 Character의 이동·스왑은 로컬 최신 Projection으로 결과를 미리 계산하되, 양쪽 모집·membership·점유와 revision을 서버 Transaction에서 다시 검증하는 별도 후속 명령으로 구현한다.
 - 완전 스왑 조건을 만족하지 못해 한쪽 파티 탈퇴가 동반되는 경우 예상 결과를 먼저 표시하고 사용자가 명시적으로 확인한 때에만 실행한다.

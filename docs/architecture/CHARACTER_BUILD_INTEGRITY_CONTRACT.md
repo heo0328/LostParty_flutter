@@ -150,11 +150,13 @@ Tooltip 직업 자체를 읽을 수 없는 응답은 다른 직업으로 단정�
 - `buildIntegritySnapshot`은 `clean/review/error/unavailable`, 역할, 원본 Snapshot 시각, 카탈로그 버전과 복수 issue code를 보존한다. 초기 오류 영역은 다른 직업 보석과 아크그리드 최소/조건 불충족이며, 둘이 동시에 있으면 두 코드를 모두 저장한다.
 - 2026-09-12 확정 계약은 `gemSlotCount`, `foreignClassGem`, `unmatchedSkillGem`, `arkGridMinimum`, `arkGridCondition`을 빨간 오류 코드로 사용한다. 새 의미와 코드를 쓰는 Character Snapshot은 schema v2로 올리고, 새 앱은 v1의 `sameClassGemUnverified`를 과거 중립 의미로 읽어 소급 오판하지 않는다. 구버전 앱은 알 수 없는 v2를 만나도 무결성 표시만 생략하고 Character 행을 유지한다.
 - 파티 신청 flat Snapshot과 파티·그룹 membership 보석 map의 v2 최소 필드는 `gemValidationSchemaVersion`, `gemValidationStatus(verified/error/unavailable)`, `equippedGemCount`, `foreignClassGemCount`, `unmatchedSkillGemCount`, `gemValidatedAt`, `catalogVersion`이다. v1의 `unverifiedSameClassGemCount`는 과거 읽기 호환에만 사용한다.
+- 새 파티 생성은 선택한 파티장 역할의 같은 보석 최소 요약을 파티장 membership에도 기록한다. 구성원 카드의 표시는 소유자 여부로 나누지 않으며, 기존 membership에 필드가 없으면 경고만 생략한다. 기존 파티를 화면 진입 시 자동 갱신하거나 일괄 이행하지 않는다.
+- 파티 상세의 참가 Character 변경 후보는 소유자 기기의 로컬 `CharacterBuildSnapshot`에서 `buildIntegritySnapshot`을 계산해 보석·아크그리드 오류를 함께 안내한다. 이 값은 후보 목록 표시 전용이며, 실제 변경 명령과 membership에는 기존 보석 최소 요약만 전달한다. 오류는 선택 또는 참가 자격을 차단하지 않는다.
 - 활동 Character 목록의 필드 부재·불완전 맵·알 수 없는 값은 무결성 정보만 `null`로 낮춘다. Character명·직업·아이템 레벨·전투력과 목록 전체는 계속 표시한다. 활동 해제는 기존 교집합에서만 제외하며 Character 문서와 기존 레이드·membership Snapshot을 삭제하지 않는다.
 
 ## 9. 구현 순서
 
-진행 상태: 2026-09-08 1~7단계와 8단계의 파티 신청자 카드 구간을 구현하고 자동·실기기 검증했다. 이후 Rules 경고 제거본도 2026-09-10 정상 배포했다. 2026-09-10 파티 membership·구성원 카드 전파를 구현하고 최신 Rules를 정상 배포했다. 그룹 membership 전파는 2026-09-11 Rules 콘솔 게시·실기기 회귀 후 `dev`에 병합됐다. 그룹원 활동 Character 목록의 통합 Build 무결성 상태(`buildIntegritySnapshot`)는 2026-09-11 구현·자동 검증·실기기 확인 후 `dev`에 병합됐다. 2026-09-12 확정 오류 v2의 아이콘 fallback 제거·오류 전용 표시와 복수 캐릭터 진단 도구를 구현·자동 검증했으며 실기기 확인을 기다린다. Rules 변경·배포는 없다.
+진행 상태: 2026-09-08 1~7단계와 8단계의 파티 신청자 카드 구간을 구현하고 자동·실기기 검증했다. 이후 Rules 경고 제거본도 2026-09-10 정상 배포했다. 2026-09-10 파티 membership·구성원 카드 전파를 구현하고 최신 Rules를 정상 배포했다. 그룹 membership 전파는 2026-09-11 Rules 콘솔 게시·실기기 회귀 후 `dev`에 병합됐다. 그룹원 활동 Character 목록의 통합 Build 무결성 상태(`buildIntegritySnapshot`)는 2026-09-11 구현·자동 검증·실기기 확인 후 `dev`에 병합됐다. 2026-09-12 확정 오류 v2의 아이콘 fallback 제거·오류 전용 표시와 복수 캐릭터 진단 도구를 구현·자동 검증했다. 실기기에서 파티 생성 리더의 보석 Snapshot 누락과 참가 Character 변경 목록의 통합 오류 표시 누락을 확인해, 기존 Rules·권한 순서를 바꾸지 않는 후속 구현을 계획했다.
 
 1. 실제 API 진단 도구에 깨달음 1·4티어, 아크그리드 해·달 존재/포인트·조건, API 스킬과 보석 종합 결과를 추가한다.
 2. Tooltip 직업 추출과 슬롯 연결을 운영 분석기로 옮긴다.

@@ -22,7 +22,8 @@
 
 - 깨달음·아크그리드 질서 해/달 14P·보석 Tooltip 직업을 기본 검사한다. 별과 혼돈은 필수 판정에서 제외한다.
 - 2026-09-12 제품 합의에서 빨간 확정 오류를 `보석 11개 미만`, `타 직업 보석`, `API 스킬·등록 특수 스킬 양쪽에 없는 보석`, `질서 해·달 누락/각 14P 미만`, `아크그리드 요구 아크패시브 불충족`으로 고정했다. 카탈로그 미등록은 중립 사유가 아니며 사용자가 정상 특수 스킬을 점진적으로 추가한다. API·Tooltip 자체의 정보 부족만 중립이다.
-- 확정 오류 v2의 아이콘 fallback 제거와 오류 전용 표시 보정을 구현·자동 검증했다. 정상 근거는 `ArmorySkills OR 승인 카탈로그`로 제한하고 정상·판정 불능은 비표기, 확정 오류만 빨간색으로 표시한다. 복수 캐릭터 진단 도구도 OS 임시 원본 저장과 미등록 후보 추출을 지원한다. v1/v2 내부 호환과 기존 파티·그룹 명령·Rules·활동 ID 교집합은 유지했으며 실기기 확인을 기다린다.
+- 확정 오류 v2의 아이콘 fallback 제거와 오류 전용 표시 보정을 구현·자동 검증했다. 정상 근거는 `ArmorySkills OR 승인 카탈로그`로 제한하고 정상·판정 불능은 비표기, 확정 오류만 빨간색으로 표시한다. 복수 캐릭터 진단 도구도 OS 임시 원본 저장과 미등록 후보 추출을 지원한다.
+- 실기기에서 내 계정과 신청자 오류 표시는 정상이나 새 파티장 membership의 보석 Snapshot이 생성 경로에서 누락되고, 참가 Character 변경 목록에는 그룹 활동 목록과 같은 보석·아크그리드 통합 표시가 없는 것을 확인했다. Rules·권한·점유 순서를 바꾸지 않는 보완 계획은 `NEXT_WORK.md`를 따른다.
 - 계약: [`../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md)
 
 ### 그룹과 레이드
@@ -33,7 +34,7 @@
 
 ## 차후 제품 후보
 
-- Character Build 오류·상태 정의 협의는 완료됐다. 구현 준비가 끝난 판정·표기 개편은 [`NEXT_WORK.md`](NEXT_WORK.md)의 제1 작업이다.
+- Character Build 오류·상태 정의와 기본 판정 구현은 완료됐다. 파티 생성 리더 Snapshot 및 참가 Character 변경 목록 표시 보완은 [`NEXT_WORK.md`](NEXT_WORK.md)의 제1 작업이다.
 - 기존 membership 보석 Snapshot을 통합 Build 상태로 이행할지 여부는 별도 후보다.
 - 직업·깨달음·질서 해/달/별 계층 메모, `망소빙` 같은 Build 별칭과 버전형 JSON 공유: [`../product/BUILD_MEMO_SHARING.md`](../product/BUILD_MEMO_SHARING.md)
 - 직업 시너지 선택·필터: [`../product/CLASS_SYNERGY_CATALOG.md`](../product/CLASS_SYNERGY_CATALOG.md)
@@ -50,4 +51,4 @@
 
 ## 다음 작업
 
-제1 작업은 Character Build 아이콘 fallback 제거와 오류 전용 표시 보정의 실기기 확인이다. 체크리스트는 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.
+제1 작업은 파티 생성 리더의 보석 Snapshot 누락 보완과 참가 Character 변경 목록의 보석·아크그리드 오류 표시다. 체크리스트는 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.
