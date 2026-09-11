@@ -1,5 +1,16 @@
 # GameAccountId · CharacterId Firebase 계약
 
+## 2026-09-11 Character Build 무결성 최소 표시 계약
+
+- Character 문서의 선택 필드 `buildIntegritySnapshot: map`은 성공한 계정 데이터 갱신의 로컬 Build Snapshot에서 만든 최소 통합 상태다. `clean/review/error/unavailable`, 복수 issue code, 역할, 원본 시각과 카탈로그 버전만 포함하며 전체 Armory·보석명·Tooltip·스킬·상세 포인트는 포함하지 않는다.
+- 보석과 아크그리드가 동시에 잘못될 수 있으므로 `ERRORCHECK: GEM | ARKGRID` 같은 단일 값으로 축약하지 않는다. UI는 짧은 상태를 표시하되 서버는 `issueCodes` 목록으로 두 오류를 함께 보존한다.
+- 기존 `CharacterMinimumDisplaySyncService`가 성공한 앱 실행 1회 갱신·내 계정 수동 갱신 결과를 아이템 레벨·전투력과 같은 Character별 Transaction으로 반영한다. 그룹 상세 진입이나 타인 조회는 쓰기와 API 호출을 만들지 않는다.
+- Transaction은 active Auth binding·Player·Character 소유자·GameAccount 관계를 기존대로 확인한다. null·동기화 실패·더 오래된 `checkedAt`은 기존 상태를 덮지 않고, 전체 값이 같으면 `updatedAt`도 쓰지 않는다.
+- 그룹원 활동 Character 목록은 기존대로 대상 Player의 `characterActivity` ID와 `characters` owner/status query 결과의 교집합만 표시한다. 통합 상태의 유무가 활동 여부를 바꾸거나 비활동 Character를 노출하지 않는다.
+- 필드 부재·null·불완전 map·알 수 없는 값은 무결성 정보 없음으로 읽고 기존 Character 표시를 유지한다. 별도 projection 컬렉션·새 쿼리·인덱스·백필은 추가하지 않는다.
+- 일반 인증과 수동 인증의 Character 전체 `set`은 재인증 시 기존 `combatPower`와 유효한 `buildIntegritySnapshot`을 보존해야 한다. 신규 문서와 손상된 선택 필드는 정상적으로 분리 처리한다.
+- 이 상태는 표시 정보이며 소유권·인증·가입·참가 자격의 근거가 아니다. 현재 Character Rules의 광범위한 `signedIn()` 권한은 기존 기술 부채로 남기고 이번 기능과 섞지 않는다.
+
 ## 2026-08-31 그룹 표시 전투력 연결
 
 - Character 문서의 선택 필드 `combatPower: number`는 소유자가 로컬에 저장한 표시 전투력이다. 없으면 미확인으로 표시하며 0을 임의로 채우지 않는다. API 검증값·소유권·레이드 참가 자격의 근거로 사용하지 않는다.

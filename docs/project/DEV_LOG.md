@@ -1,3 +1,14 @@
+# 2026-09-11 그룹 활동 Character Build 상태 — 사전 설계·회귀 점검
+
+- 그룹원 탭의 활동 Character 목록에는 보석 전용 `gemValidationSnapshot`을 복제하지 않고, Character 문서의 선택 항목 `buildIntegritySnapshot`을 읽는 방향으로 확정했다. 기존 파티·그룹 membership의 `gemValidationSnapshot`은 가입·승인 시점 증거이므로 그대로 유지한다.
+- 상태는 `clean/review/error/unavailable`로 단순화하되, 보석과 아크그리드 문제가 동시에 발생할 수 있으므로 `issueCodes`를 함께 저장한다. 최초 코드는 `foreignClassGem`, `sameClassGemUnverified`, `gemUnavailable`, `arkGridMinimum`, `arkGridCondition`이며 우선순위는 `error > review > clean`이다.
+- `schemaVersion`, 판정 역할 `role`, `checkedAt`, `catalogVersion`을 포함해 구버전 읽기, 역할 변경, 늦게 도착한 갱신, 카탈로그 변경에 대비한다. 알 수 없는 값과 불완전 필드는 예외를 던지지 않고 상태 표시만 생략한다.
+- 계정 자동·수동 갱신이 이미 사용하는 Character 최소 표시 Transaction에 상태를 같이 갱신한다. 그룹 화면은 기존 `characters` 조회와 활동 Character ID 교집합을 유지하며 별도 API·조회·인덱스·쓰기·권한 검사를 추가하지 않는다.
+- 그룹·파티 Rules와 명령 검증 순서는 변경하지 않는다. 상태는 표시용이며 가입·승인·초대·양도·해산·Character 선택 가능 여부를 판정하지 않는다. 따라서 이번 구현 계획에는 Rules 배포가 없다.
+- 재인증 경로 두 곳의 `transaction.set(characterRef, ...)` 전체 덮어쓰기가 선택 필드인 `combatPower`와 신규 상태를 지울 수 있음을 확인했다. 구현 시 저장된 유효 값을 보존하고 회귀 테스트를 추가한다. 구버전 앱이 지운 값은 새 버전의 다음 성공 갱신에서 복구된다.
+- `GroupRequestCharacter`에는 nullable 상태를 방어적으로 추가하고 그룹 활동 Character 행에서만 소비한다. 그룹 검색, 초대, 레이드 상태 필터, 정렬, 동등성 비교에는 영향을 주지 않으며 작은 화면에서는 기존 부제 문자열 결합 대신 보조 행 또는 칩으로 표시한다.
+- 기준선 회귀로 계정 갱신·최소 표시 Transaction·시작 갱신·활동 Character Rules·그룹 Rules·그룹원 표시 흐름의 7개 테스트 파일, 79건이 모두 통과했다. 이번 구간은 문서와 구현 계획만 변경하며 앱 코드·Firestore Rules·배포는 수행하지 않는다.
+
 # 2026-09-11 그룹 membership 보석 Snapshot — dev 병합
 
 - 브랜치 `cursor/group-membership-gem-snapshot`을 `dev`에 병합한다.
