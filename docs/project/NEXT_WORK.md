@@ -11,7 +11,7 @@
 
 ## 다음 작업 그룹 — Character Build 확정 오류 판정·표기 개편
 
-### 진행 상태 — A·B·C 완료, D 대기
+### 진행 상태 — A·B·C·D 완료, E 대기
 
 - `CharacterBuildAnalysis`가 실제 `ArmoryGem.Gems` 장착 개수와 `Effects.Skills` 원본 가용성을 별도로 보존한다. API 원본 부재는 null/false, 명시적 빈 목록은 0/true로 구분한다.
 - `BuildIntegritySnapshot` 새 쓰기 schema는 v2이며 `gemSlotCount`, `unmatchedSkillGem` 코드 공간을 추가했다. 새 parser는 v1을 기존 의미로 읽고 v1에 v2 전용 코드가 섞이면 손상 문서로 거절한다.
@@ -20,7 +20,10 @@
 - 미등록 대상 notice도 warning으로 승격했다. 현재 등록된 특수 스킬과 일반 스킬 정상 판정은 유지되며 mapper·Snapshot 표적 테스트 36건이 통과했다.
 - 내 계정은 `보석 부족 N/11`, `타 직업 보석 N개`, `스킬 불일치 보석 N개`를 각각 빨간 오류로 표시하고 원본 정보 부족은 별도 중립 행으로 표시한다.
 - 그룹 활동 Character 목록은 `보석 오류`, `아크그리드 오류`로 명확히 표시한다. 통합 Snapshot에 확정 오류와 정보 부족이 함께 있어도 라벨별 색상을 유지한다.
-- C단계 계정·통합 Snapshot·그룹 활동 UI 표적 테스트 31건이 통과했다. 다음 구현은 D의 신청·membership 보석 요약 v2와 공용 카드 표시다.
+- C단계 계정·통합 Snapshot·그룹 활동 UI 표적 테스트 31건이 통과했다.
+- 새 `PartyGemValidationSnapshot`은 v2에서 장착 수·타 직업 수·스킬 불일치 수와 `verified/error/unavailable`을 저장한다. v1 parser·복사 경로는 유지하며 공용 카드가 v2 오류 원인을 표시한다.
+- 신청·가입·membership·그룹 mapper 회귀 56건과 v2 신청 저장 4건이 통과했고 변경 파일 analyze도 통과했다. `firestore.rules`는 변경하지 않았다.
+- 다음은 E 최종 영향 회귀, 전체 analyze/test, 문서와 실기기 체크리스트 정리다.
 
 ### 1. 확정 제품 목표
 

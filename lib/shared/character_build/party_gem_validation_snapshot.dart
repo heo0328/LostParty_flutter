@@ -1,5 +1,6 @@
 enum PartyGemValidationStatus {
   verified,
+  error,
   sameClassTargetUnverified,
   foreignClass,
   unavailable,
@@ -14,6 +15,9 @@ class PartyGemValidationSnapshot {
     required this.unverifiedSameClassGemCount,
     required this.validatedAt,
     required this.catalogVersion,
+    this.schemaVersion = 1,
+    this.equippedGemCount,
+    this.unmatchedSkillGemCount = 0,
   });
 
   final PartyGemValidationStatus status;
@@ -21,18 +25,34 @@ class PartyGemValidationSnapshot {
   final int unverifiedSameClassGemCount;
   final DateTime validatedAt;
   final String catalogVersion;
+  final int schemaVersion;
+  final int? equippedGemCount;
+  final int unmatchedSkillGemCount;
 
-  Map<String, Object?> toFields() => {
-    'gemValidationStatus': status.name,
-    'foreignClassGemCount': foreignClassGemCount,
-    'unverifiedSameClassGemCount': unverifiedSameClassGemCount,
-    'gemValidatedAt': validatedAt,
-    'catalogVersion': catalogVersion,
-  };
+  Map<String, Object?> toFields() => schemaVersion >= 2
+      ? {
+          'gemValidationSchemaVersion': 2,
+          'gemValidationStatus': status.name,
+          'equippedGemCount': equippedGemCount,
+          'foreignClassGemCount': foreignClassGemCount,
+          'unmatchedSkillGemCount': unmatchedSkillGemCount,
+          'gemValidatedAt': validatedAt,
+          'catalogVersion': catalogVersion,
+        }
+      : {
+          'gemValidationStatus': status.name,
+          'foreignClassGemCount': foreignClassGemCount,
+          'unverifiedSameClassGemCount': unverifiedSameClassGemCount,
+          'gemValidatedAt': validatedAt,
+          'catalogVersion': catalogVersion,
+        };
 
   bool hasSameValues(PartyGemValidationSnapshot? other) {
     if (other == null) return false;
-    return status == other.status &&
+    return schemaVersion == other.schemaVersion &&
+        status == other.status &&
+        equippedGemCount == other.equippedGemCount &&
+        unmatchedSkillGemCount == other.unmatchedSkillGemCount &&
         foreignClassGemCount == other.foreignClassGemCount &&
         unverifiedSameClassGemCount == other.unverifiedSameClassGemCount &&
         validatedAt == other.validatedAt &&
@@ -44,6 +64,9 @@ class PartyGemValidationSnapshot {
     Map<String, Object?> data, {
     required DateTime? Function(Object? value) parseDate,
   }) {
+    if (data['gemValidationSchemaVersion'] == 2) {
+      return _tryFromV2(data, parseDate: parseDate);
+    }
     final statusName = data['gemValidationStatus'];
     final foreignCount = data['foreignClassGemCount'];
     final unverifiedCount = data['unverifiedSameClassGemCount'];
@@ -69,6 +92,47 @@ class PartyGemValidationSnapshot {
       unverifiedSameClassGemCount: unverifiedCount,
       validatedAt: validatedAt,
       catalogVersion: catalogVersion,
+      schemaVersion: 1,
+    );
+  }
+
+  static PartyGemValidationSnapshot? _tryFromV2(
+    Map<String, Object?> data, {
+    required DateTime? Function(Object? value) parseDate,
+  }) {
+    final statusName = data['gemValidationStatus'];
+    final equippedCount = data['equippedGemCount'];
+    final foreignCount = data['foreignClassGemCount'];
+    final unmatchedCount = data['unmatchedSkillGemCount'];
+    final catalogVersion = data['catalogVersion'];
+    final status = PartyGemValidationStatus.values
+        .where((value) => value.name == statusName)
+        .firstOrNull;
+    final validatedAt = parseDate(data['gemValidatedAt']);
+    if (statusName is! String ||
+        status == null ||
+        status == PartyGemValidationStatus.sameClassTargetUnverified ||
+        status == PartyGemValidationStatus.foreignClass ||
+        (equippedCount != null &&
+            (equippedCount is! int || equippedCount < 0)) ||
+        foreignCount is! int ||
+        foreignCount < 0 ||
+        unmatchedCount is! int ||
+        unmatchedCount < 0 ||
+        catalogVersion is! String ||
+        catalogVersion.trim().isEmpty ||
+        validatedAt == null) {
+      return null;
+    }
+    return PartyGemValidationSnapshot(
+      status: status,
+      foreignClassGemCount: foreignCount,
+      unverifiedSameClassGemCount: 0,
+      validatedAt: validatedAt,
+      catalogVersion: catalogVersion,
+      schemaVersion: 2,
+      equippedGemCount: equippedCount as int?,
+      unmatchedSkillGemCount: unmatchedCount,
     );
   }
 
@@ -76,6 +140,37 @@ class PartyGemValidationSnapshot {
   static Map<String, Object?>? copyFieldsIfComplete(
     Map<Object?, Object?> data,
   ) {
+    if (data['gemValidationSchemaVersion'] == 2) {
+      final statusName = data['gemValidationStatus'];
+      final equippedCount = data['equippedGemCount'];
+      final foreignCount = data['foreignClassGemCount'];
+      final unmatchedCount = data['unmatchedSkillGemCount'];
+      final catalogVersion = data['catalogVersion'];
+      final validatedAt = data['gemValidatedAt'];
+      if ((statusName != 'verified' &&
+              statusName != 'error' &&
+              statusName != 'unavailable') ||
+          (equippedCount != null &&
+              (equippedCount is! int || equippedCount < 0)) ||
+          foreignCount is! int ||
+          foreignCount < 0 ||
+          unmatchedCount is! int ||
+          unmatchedCount < 0 ||
+          catalogVersion is! String ||
+          catalogVersion.trim().isEmpty ||
+          validatedAt == null) {
+        return null;
+      }
+      return {
+        'gemValidationSchemaVersion': 2,
+        'gemValidationStatus': statusName,
+        'equippedGemCount': equippedCount,
+        'foreignClassGemCount': foreignCount,
+        'unmatchedSkillGemCount': unmatchedCount,
+        'gemValidatedAt': validatedAt,
+        'catalogVersion': catalogVersion,
+      };
+    }
     final statusName = data['gemValidationStatus'];
     final foreignCount = data['foreignClassGemCount'];
     final unverifiedCount = data['unverifiedSameClassGemCount'];

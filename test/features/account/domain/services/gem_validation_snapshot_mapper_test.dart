@@ -39,6 +39,7 @@ void main() {
         arkGridConditions: const [],
         arkGridCorePoints: const [],
         notices: const [],
+        equippedGemCount: 10,
         catalogDetection: const CharacterBuildCatalogDetection(
           catalogVersion: '2026.09.08',
           status: CharacterBuildDetectionStatus.detected,
@@ -53,9 +54,13 @@ void main() {
     );
 
     final gem = gemValidationSnapshotFromBuild(snapshot);
-    expect(gem?.status, PartyGemValidationStatus.foreignClass);
+    expect(gem?.schemaVersion, 2);
+    expect(gem?.status, PartyGemValidationStatus.error);
+    expect(gem?.equippedGemCount, 10);
     expect(gem?.foreignClassGemCount, 2);
+    expect(gem?.unmatchedSkillGemCount, 0);
     expect(gem?.catalogVersion, '2026.09.08');
+    expect(gem?.toFields()['gemValidationSchemaVersion'], 2);
   });
 
   test('카탈로그 버전이 없으면 null이다', () {
@@ -77,5 +82,29 @@ void main() {
       ),
     );
     expect(gemValidationSnapshotFromBuild(snapshot), isNull);
+  });
+
+  test('v2 보석 요약을 읽고 Firestore 시각을 손실 없이 복사한다', () {
+    final validatedAt = DateTime.utc(2026, 9, 12);
+    final fields = <String, Object?>{
+      'gemValidationSchemaVersion': 2,
+      'gemValidationStatus': 'error',
+      'equippedGemCount': 9,
+      'foreignClassGemCount': 1,
+      'unmatchedSkillGemCount': 2,
+      'gemValidatedAt': validatedAt,
+      'catalogVersion': '2026.09.12',
+    };
+
+    final parsed = PartyGemValidationSnapshot.tryFromFields(
+      fields,
+      parseDate: (value) => value as DateTime?,
+    );
+    final copied = PartyGemValidationSnapshot.copyFieldsIfComplete(fields);
+
+    expect(parsed?.schemaVersion, 2);
+    expect(parsed?.equippedGemCount, 9);
+    expect(parsed?.unmatchedSkillGemCount, 2);
+    expect(copied, fields);
   });
 }

@@ -17,8 +17,10 @@ class GemValidationLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isForeign =
-        validation.status == PartyGemValidationStatus.foreignClass;
+        validation.status == PartyGemValidationStatus.foreignClass ||
+        validation.status == PartyGemValidationStatus.error;
     final label = switch (validation.status) {
+      PartyGemValidationStatus.error => _v2ErrorLabel(validation),
       PartyGemValidationStatus.foreignClass =>
         '보석 확인 요망 · 타 직업 보석 ${validation.foreignClassGemCount}개',
       PartyGemValidationStatus.sameClassTargetUnverified =>
@@ -47,5 +49,18 @@ class GemValidationLine extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  static String _v2ErrorLabel(PartyGemValidationSnapshot validation) {
+    final labels = <String>[];
+    final count = validation.equippedGemCount;
+    if (count != null && count < 11) labels.add('보석 부족 $count/11');
+    if (validation.foreignClassGemCount > 0) {
+      labels.add('타 직업 보석 ${validation.foreignClassGemCount}개');
+    }
+    if (validation.unmatchedSkillGemCount > 0) {
+      labels.add('스킬 불일치 보석 ${validation.unmatchedSkillGemCount}개');
+    }
+    return labels.isEmpty ? '보석 오류' : labels.join(' · ');
   }
 }

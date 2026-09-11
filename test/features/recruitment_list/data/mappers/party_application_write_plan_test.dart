@@ -57,11 +57,14 @@ void main() {
         requestedRole: PartyRole.dealer,
         cycleKey: '2026-09-02',
         gemValidation: PartyGemValidationSnapshot(
-          status: PartyGemValidationStatus.foreignClass,
+          status: PartyGemValidationStatus.error,
           foreignClassGemCount: 1,
-          unverifiedSameClassGemCount: 2,
+          unverifiedSameClassGemCount: 0,
           validatedAt: validatedAt,
           catalogVersion: '2026.09.04',
+          schemaVersion: 2,
+          equippedGemCount: 9,
+          unmatchedSkillGemCount: 2,
         ),
       ),
       playerId: 'player-1',
@@ -72,9 +75,11 @@ void main() {
     );
 
     final snapshot = data['submittedBuildSnapshot']! as Map<String, Object?>;
-    expect(snapshot['gemValidationStatus'], 'foreignClass');
+    expect(snapshot['gemValidationSchemaVersion'], 2);
+    expect(snapshot['gemValidationStatus'], 'error');
+    expect(snapshot['equippedGemCount'], 9);
     expect(snapshot['foreignClassGemCount'], 1);
-    expect(snapshot['unverifiedSameClassGemCount'], 2);
+    expect(snapshot['unmatchedSkillGemCount'], 2);
     expect(snapshot['gemValidatedAt'], validatedAt);
     expect(snapshot['catalogVersion'], '2026.09.04');
     expect(snapshot.keys, isNot(contains('tooltip')));
