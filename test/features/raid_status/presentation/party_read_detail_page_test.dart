@@ -294,6 +294,8 @@ void main() {
       find.byKey(const ValueKey('openApplicationButton')),
     );
     await tester.pumpAndSettle();
+    expect(find.text('보석 오류'), findsWidgets);
+    expect(find.text('아크그리드 오류'), findsWidgets);
     await tapVisible(
       tester,
       find.byKey(const ValueKey('apply-candidate-1-dealer')),

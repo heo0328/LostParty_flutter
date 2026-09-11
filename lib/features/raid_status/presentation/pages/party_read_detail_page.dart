@@ -2752,10 +2752,23 @@ class _ApplyCandidateSheet extends StatelessWidget {
                   'apply-candidate-${candidate.localCharacterId}-${option.role.name}',
                 ),
                 title: Text(candidate.characterId),
-                subtitle: Text(
-                  '${candidate.accountLabel} · ${candidate.className} · '
-                  '${_roleLabel(option.role)} · 아이템 Lv. '
-                  '${DisplayNumberFormatter.integer(option.itemLevel ?? 0)}',
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${candidate.accountLabel} · ${candidate.className} · '
+                      '${_roleLabel(option.role)} · 아이템 Lv. '
+                      '${DisplayNumberFormatter.integer(option.itemLevel ?? 0)}',
+                    ),
+                    if (option.buildIntegrity case final integrity?) ...[
+                      const SizedBox(height: AppSpacing.xxs),
+                      BuildIntegrityStatusLine(
+                        snapshot: integrity,
+                        keyName:
+                            'applyCandidateBuildIntegrity-${candidate.localCharacterId}-${option.role.name}',
+                      ),
+                    ],
+                  ],
                 ),
                 onTap: () => Navigator.pop(
                   context,
