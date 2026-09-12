@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "catalogVersion": "2026.09.08",
-  "updatedAt": "2026-09-08T00:00:00Z",
+  "catalogVersion": "2026.09.12",
+  "updatedAt": "2026-09-12T00:00:00Z",
   "classes": [
     {
       "classId": "bard",
@@ -125,6 +125,57 @@
       "gemSkillTargets": [
         {"targetId":"yin_yang_gem_target","name":"음양 스킬","aliases":[],"relatedSpecialSkillIds":["yin_yang"]},
         {"targetId":"rising_moon_gem_target","name":"떠오르는 달","aliases":[],"relatedSpecialSkillIds":["rising_moon"]}
+      ],
+      "arkGridPresets": []
+    },
+    {
+      "classId": "wildsoul",
+      "apiClassName": "환수사",
+      "aliases": [],
+      "supportedRoles": ["dealer"],
+      "defaultRole": "dealer",
+      "enlightenmentBranches": [
+        {"branchId":"wild_instinct","tier1NodeName":"야성","displayName":"야성 환수사","aliases":[],"inferredRole":"dealer","relatedPassiveNodes":[]}
+      ],
+      "specialSkills": [
+        {"skillId":"transformation_secret_art","name":"둔갑 금술","aliases":[],"category":"arkPassive","relatedBranchIds":["wild_instinct"]}
+      ],
+      "gemSkillTargets": [
+        {"targetId":"transformation_secret_art_gem_target","name":"둔갑 금술 스킬","aliases":[],"relatedSpecialSkillIds":["transformation_secret_art"]}
+      ],
+      "arkGridPresets": []
+    },
+    {
+      "classId": "guardian_knight",
+      "apiClassName": "가디언나이트",
+      "aliases": [],
+      "supportedRoles": ["dealer"],
+      "defaultRole": "dealer",
+      "enlightenmentBranches": [
+        {"branchId":"dread_roar","tier1NodeName":"드레드 로어","displayName":"드레드 로어 가디언나이트","aliases":[],"inferredRole":"dealer","relatedPassiveNodes":[]}
+      ],
+      "specialSkills": [
+        {"skillId":"guardian_fear","name":"가디언 피어","aliases":[],"category":"arkPassive","relatedBranchIds":["dread_roar"]}
+      ],
+      "gemSkillTargets": [
+        {"targetId":"guardian_fear_gem_target","name":"가디언 피어","aliases":[],"relatedSpecialSkillIds":["guardian_fear"]}
+      ],
+      "arkGridPresets": []
+    },
+    {
+      "classId": "demonic",
+      "apiClassName": "데모닉",
+      "aliases": [],
+      "supportedRoles": ["dealer"],
+      "defaultRole": "dealer",
+      "enlightenmentBranches": [
+        {"branchId":"unstoppable_impulse","tier1NodeName":"멈출 수 없는 충동","displayName":"멈출 수 없는 충동 데모닉","aliases":[],"inferredRole":"dealer","relatedPassiveNodes":[]}
+      ],
+      "specialSkills": [
+        {"skillId":"blood_genocide","name":"블러드 제노사이드","aliases":[],"category":"arkPassive","relatedBranchIds":["unstoppable_impulse"]}
+      ],
+      "gemSkillTargets": [
+        {"targetId":"blood_genocide_gem_target","name":"블러드 제노사이드","aliases":[],"relatedSpecialSkillIds":["blood_genocide"]}
       ],
       "arkGridPresets": []
     }

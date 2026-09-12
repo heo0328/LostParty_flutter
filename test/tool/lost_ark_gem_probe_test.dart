@@ -112,25 +112,28 @@ void main() {
     );
   });
 
-  test('reports an uncataloged same-class target as a catalog candidate', () {
-    final report = buildLostArkGemProbeReport(
-      _fixture(
-        characterClassName: '환수사',
-        targetName: '둔갑 금술 스킬',
-        tooltipClassName: '환수사',
-      ),
-      catalog,
-    );
+  test('reports the three user-approved targets as verified', () {
+    const cases = <(String, String)>[
+      ('환수사', '둔갑 금술 스킬'),
+      ('가디언나이트', '가디언 피어'),
+      ('데모닉', '블러드 제노사이드'),
+    ];
 
-    expect(report.gems.single.currentCategory, 'unknown');
-    expect(
-      report.gems.single.currentValidationStatus,
-      'sameClassTargetUnverified',
-    );
-    expect(report.catalogCandidateNames, ['둔갑 금술 스킬']);
-    expect(report.gems.single.currentWarnings, [
-      '둔갑 금술 스킬 보석은 현재 스킬 또는 등록 특수 스킬에 없습니다.',
-    ]);
+    for (final (className, targetName) in cases) {
+      final report = buildLostArkGemProbeReport(
+        _fixture(
+          characterClassName: className,
+          targetName: targetName,
+          tooltipClassName: className,
+        ),
+        catalog,
+      );
+
+      expect(report.gems.single.currentCategory, 'passiveOrIdentity');
+      expect(report.gems.single.currentValidationStatus, 'verified');
+      expect(report.catalogCandidateNames, isEmpty);
+      expect(report.gems.single.currentWarnings, isEmpty);
+    }
   });
 }
 

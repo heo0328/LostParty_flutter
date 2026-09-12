@@ -533,14 +533,14 @@ void main() {
     );
   });
 
-  test('does not use an Ark Passive icon for an uncataloged class', () {
-    const cases = <(String, String)>[
-      ('환수사', '둔갑 금술 스킬'),
-      ('가디언나이트', '가디언 피어'),
-      ('데모닉', '블러드 제노사이드'),
+  test('verifies user-approved special gem targets in their branches', () {
+    const cases = <(String, String, String, String)>[
+      ('환수사', '야성', 'wild_instinct', '둔갑 금술 스킬'),
+      ('가디언나이트', '드레드 로어', 'dread_roar', '가디언 피어'),
+      ('데모닉', '멈출 수 없는 충동', 'unstoppable_impulse', '블러드 제노사이드'),
     ];
 
-    for (final (className, targetName) in cases) {
+    for (final (className, tier1Node, branchId, targetName) in cases) {
       var modified = _withGemTarget(
         fixture,
         name: targetName,
@@ -550,6 +550,9 @@ void main() {
       (modified['ArmoryProfile']
               as Map<String, dynamic>)['CharacterClassName'] =
           className;
+      (modified['ArkPassive'] as Map<String, dynamic>)['Effects'] = [
+        {'Description': '깨달음 1티어 $tier1Node Lv.1'},
+      ];
 
       final result = const CharacterBuildAnalysisMapper().fromJson(
         modified,
@@ -559,15 +562,20 @@ void main() {
         (effect) => effect.gemSlot == 4,
       );
 
-      expect(effect.category, GemSkillCategory.unknown, reason: targetName);
+      expect(result.catalogDetection?.branchId, branchId, reason: targetName);
+      expect(
+        effect.category,
+        GemSkillCategory.passiveOrIdentity,
+        reason: targetName,
+      );
       expect(
         effect.validationStatus,
-        GemValidationStatus.sameClassTargetUnverified,
+        GemValidationStatus.verified,
         reason: targetName,
       );
       expect(
         result.notices.any((notice) => notice.code == 'unmatched_skill_gem_4'),
-        isTrue,
+        isFalse,
         reason: targetName,
       );
     }

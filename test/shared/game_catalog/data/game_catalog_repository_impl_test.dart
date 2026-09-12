@@ -7,13 +7,13 @@ import 'package:lost_party/shared/game_catalog/domain/entities/game_catalog.dart
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('loads and validates the four support-hybrid class catalog', () async {
+  test('loads and validates the supported class catalog', () async {
     final repository = GameCatalogRepositoryImpl(
       dataSource: AssetGameCatalogDataSource(),
     );
 
     final catalog = await repository.loadCatalog();
-    expect(catalog.classes, hasLength(4));
+    expect(catalog.classes, hasLength(7));
     final bard = catalog.classes.singleWhere(
       (definition) => definition.classId == 'bard',
     );
@@ -41,10 +41,22 @@ void main() {
     expect(bard.arkGridPresets, isEmpty);
     expect(
       catalog.classes.map((definition) => definition.apiClassName),
-      containsAll(['바드', '홀리나이트', '발키리', '도화가']),
+      containsAll([
+        '바드',
+        '홀리나이트',
+        '발키리',
+        '도화가',
+        '환수사',
+        '가디언나이트',
+        '데모닉',
+      ]),
+    );
+    final supportHybridClasses = catalog.classes.where(
+      (definition) =>
+          definition.supportedRoles.contains(GameCatalogRole.support),
     );
     expect(
-      catalog.classes.every(
+      supportHybridClasses.every(
         (definition) =>
             definition.supportedRoles.contains(GameCatalogRole.dealer) &&
             definition.supportedRoles.contains(GameCatalogRole.support) &&
@@ -52,6 +64,20 @@ void main() {
       ),
       isTrue,
     );
+    expect(supportHybridClasses, hasLength(4));
+
+    for (final expected in const [
+      ('환수사', '야성', '둔갑 금술 스킬'),
+      ('가디언나이트', '드레드 로어', '가디언 피어'),
+      ('데모닉', '멈출 수 없는 충동', '블러드 제노사이드'),
+    ]) {
+      final definition = catalog.classes.singleWhere(
+        (candidate) => candidate.apiClassName == expected.$1,
+      );
+      expect(definition.supportedRoles, [GameCatalogRole.dealer]);
+      expect(definition.enlightenmentBranches.single.tier1NodeName, expected.$2);
+      expect(definition.gemSkillTargets.single.name, expected.$3);
+    }
   });
 
   test('rejects a catalog that fails domain validation', () async {
