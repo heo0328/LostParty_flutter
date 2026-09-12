@@ -335,6 +335,74 @@
 
 ---
 
+## BUG-014. 장비 인증의 앱 종료 정책 안내 누락
+
+| 항목 | 내용 |
+| --- | --- |
+| 상태 | **정책 확정·안내 보완 대기** |
+| 보고일 | 2026-09-13 |
+| 심각도 | 낮음 — 의도된 로컬 수명 정책을 사용자가 인증 전에 알기 어려움 |
+| 기준 문서 | [`NEXT_WORK.md`](NEXT_WORK.md) |
+
+### 확정 정책
+
+- 인증 화면은 Gateway의 동기 `activeChallenge`를 읽어 같은 앱 수명 안의 화면 재진입만 복원한다.
+- 실제 Challenge의 기준 장비·지정 부위·siblings·만료 시각은 `LocalGameAccountVerificationGateway._activeChallenge` 메모리에만 있다. 현재 Firestore에는 Challenge 문서가 없고 앱 프로세스가 종료되면 실제 데이터가 사라진다.
+- 이는 현재 로컬 인증 방식의 의도된 수명 정책으로 유지한다. 앱 재시작 복원과 기기 보안 저장소 저장은 구현하지 않는다.
+
+### 보완 방향
+
+- challenge 진행 카드에 앱이 종료되면 남은 시간과 관계없이 현재 인증 시도가 종료된다고 알린다.
+- 원정대 인증은 인게임에서 장비를 즉시 조작할 수 있는 상황에 진행하도록 권장한다.
+- 같은 프로세스의 화면 재진입 복원과 다시 인증해 새 challenge를 만드는 기존 흐름은 유지한다.
+
+---
+
+## BUG-015. 후보의 아크그리드 오류가 신청자·파티원 카드에서 사라짐
+
+| 항목 | 내용 |
+| --- | --- |
+| 상태 | **조사·설계 완료 — 구현 대기** |
+| 보고일 | 2026-09-13 |
+| 심각도 | 높음 — 신청 전 경고와 타인이 보는 신청·참가 정보가 불일치 |
+| 기준 문서 | [`../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md) |
+
+### 원인
+
+- 후보 목록은 로컬 `BuildIntegritySnapshot`으로 보석과 아크그리드 복합 오류를 표시한다.
+- 선택 결과와 신청·직접 참가·Character 변경 명령은 `PartyGemValidationSnapshot`만 전달한다.
+- 서버 신청 `submittedBuildSnapshot`과 membership도 보석 전용 Snapshot만 저장·읽으므로 아크그리드·아크패시브 오류를 재구성할 데이터가 없다.
+
+### 해결 방향
+
+- 기존 보석 요약은 유지하면서 통합 `buildIntegritySnapshot`을 신청·membership에 함께 저장한다.
+- 생성 리더·신청·직접 참가·승인·Character 변경의 모든 쓰기와 방어적 읽기를 같은 계약으로 맞춘다.
+- 오류는 표시 정보이며 참가 차단으로 바꾸지 않는다. 과거 null 문서는 계속 경고 없이 읽는다.
+
+---
+
+## BUG-016. 인증 시작 장비 미착용이 일반 정보 실패로 표시됨
+
+| 항목 | 내용 |
+| --- | --- |
+| 상태 | **조사·설계 완료 — 구현 대기** |
+| 보고일 | 2026-09-13 |
+| 심각도 | 낮음 — 사용자가 필요한 조치를 알 수 없음 |
+| 기준 문서 | [`../architecture/GAME_ACCOUNT_VERIFICATION_CONTRACT.md`](../architecture/GAME_ACCOUNT_VERIFICATION_CONTRACT.md) |
+
+### 원인
+
+- 인증 시작은 무기와 방어구 5부위 중 하나라도 미장착이면 Gateway에서 `FormatException`을 발생시킨다.
+- 화면의 공통 실행기는 장비 누락, Character 불일치와 실제 응답 파싱 실패를 모두 같은 `FormatException`으로 받아 `캐릭터 또는 장비 정보를 처리할 수 없습니다.`로 표시한다.
+
+### 해결 방향
+
+- 6부위 미착용을 식별 가능한 인증 시작 오류로 분리하고 `인증을 시작하려면 무기와 방어구 5부위를 모두 착용한 뒤 다시 시도해 주세요.`를 표시한다.
+- 실제 API 오류·응답 누락·파싱 실패의 일반 안내는 유지한다.
+- challenge 생성, 무작위 부위 선택과 인증 성공 판정은 변경하지 않는다.
+
+---
+
 ## 백로그 연결
 
 - 열린 항목은 현재 Task와 **별도**로 추적한다.

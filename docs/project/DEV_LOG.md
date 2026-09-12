@@ -1,3 +1,11 @@
+# 2026-09-13 릴리즈 인증 UX·파티 통합 오류 전파 — 사전 조사와 설계
+
+- 장비 인증 Challenge는 `LocalGameAccountVerificationGateway` 메모리에만 두고 앱 프로세스 종료 시 인증 시도도 종료하는 현재 방식을 유지하기로 확정했다. 인증 진행 카드에 앱 종료 시도 종료와 인게임에서 즉시 장비를 조작할 수 있을 때 진행하라는 안내를 추가한다.
+- 시작 시 무기·방어구 5부위 중 하나라도 미장착이면 Gateway는 이미 `FormatException`을 던지지만 화면이 모든 형식 오류를 일반 정보 실패로 합치는 원인을 확인했다. 6부위 누락만 식별 가능한 시작 오류와 전용 착용 안내로 분리하고 실제 API/응답 오류의 일반 안내는 유지한다.
+- 신청·즉시 참가·Character 변경 후보는 로컬 통합 Build 오류를 표시하지만 선택 결과와 파티 명령·서버 신청·membership은 보석 전용 Snapshot만 전달한다. 이 때문에 아크그리드·아크패시브 오류가 신청자·구성원 카드에서 사라지는 구조적 누락을 확인했다.
+- 기존 보석 요약을 유지하면서 신청과 membership에 `buildIntegritySnapshot`을 dual-write하고 생성 리더·신청·직접 참가·승인·Character 변경을 모두 같은 경계로 맞춘다. 과거 null 호환과 오류 Character 선택 허용은 보존한다.
+- 구현 전 데이터 수명, Router/DI, 명령·Write Plan·읽기 모델과 Rules의 Character 변경 allowlist를 대조했다. 상세 작업 순서와 회귀 보호 범위는 `NEXT_WORK.md`, 장기 계약은 관련 인증·Build 무결성 문서에 기록한다. 이번 단계에서는 기능 코드를 수정하지 않는다.
+
 # 2026-09-13 다수 활동 Character 저장 권한 한도 — 구현·자동 검증
 
 - 실기기에서 기존 활동 Character 8명은 저장되지만 15명 활성화 시 `permission-denied`가 발생했다. 현재 Repository가 최종 선택 전체를 단일 Transaction에서 다시 쓰고 Rules가 각 Character 소유권 문서를 조회해 원자 작업당 문서 접근 20회 한도를 넘는 것이 원인이다.
