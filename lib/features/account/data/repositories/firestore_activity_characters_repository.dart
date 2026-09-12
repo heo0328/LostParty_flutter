@@ -23,6 +23,10 @@ class FirestoreActivityCharactersRepository
   final FirebaseFirestore _firestore;
   final FirebaseAuth _firebaseAuth;
 
+  // 각 쓰기는 Rules에서 binding, Character, GameAccount와 대표 활동 문서를
+  // 확인한다. 여러 계정에서도 원자 작업당 문서 접근 20회보다 여유 있게 둔다.
+  static const int _maxWritesPerAtomicOperation = 4;
+
   @override
   Future<ActivityCharacters> load({required String playerId}) async {
     if (playerId.trim().isEmpty) {
@@ -56,7 +60,7 @@ class FirestoreActivityCharactersRepository
   @override
   Future<ActivityCharacters> save(SaveActivityCharactersCommand command) async {
     try {
-      return await _firestore.runTransaction((transaction) async {
+      final preparation = await _firestore.runTransaction((transaction) async {
         final playerId = await _requirePlayerId(transaction);
         final ownedCharacters = await _loadOwnedCharacters(
           transaction,
@@ -69,30 +73,106 @@ class FirestoreActivityCharactersRepository
           ownedCharacters: ownedCharacters,
           serverTimestamp: FieldValue.serverTimestamp(),
         );
-        final existingActivityToRemove = <String, bool>{};
-        for (final characterId in plan.characterIdsToRemove) {
-          final snapshot = await transaction.get(
-            _activityRef(playerId, characterId),
-          );
-          existingActivityToRemove[characterId] = snapshot.exists;
-        }
-        for (final entry in plan.documentsByCharacterId.entries) {
-          transaction.set(_activityRef(playerId, entry.key), entry.value);
-        }
-        for (final entry in existingActivityToRemove.entries) {
-          if (entry.value) {
-            transaction.delete(_activityRef(playerId, entry.key));
-          }
-        }
-        return ActivityCharacters(
-          playerId: playerId,
-          characterIds: plan.activityCharacterIds.toSet(),
+        return _ActivitySavePreparation(
+          plan: plan,
+          representativeCharacterIds: {
+            for (final character in ownedCharacters)
+              if (character.isAccountRepresentative) character.characterId,
+          },
         );
       });
+
+      final plan = preparation.plan;
+      final existingSnapshot = await _activityCollection(plan.playerId).get();
+      final existingByCharacterId = {
+        for (final document in existingSnapshot.docs)
+          document.id: document.data(),
+      };
+
+      final documentsToWrite = plan.documentsByCharacterId.entries
+          .where(
+            (entry) => !_activityDocumentMatches(
+              existingByCharacterId[entry.key],
+              entry.value,
+            ),
+          )
+          .toList();
+      documentsToWrite.sort((left, right) {
+        final leftRepresentative = preparation.representativeCharacterIds
+            .contains(left.key);
+        final rightRepresentative = preparation.representativeCharacterIds
+            .contains(right.key);
+        if (leftRepresentative != rightRepresentative) {
+          return leftRepresentative ? -1 : 1;
+        }
+        return plan.activityCharacterIds
+            .indexOf(left.key)
+            .compareTo(plan.activityCharacterIds.indexOf(right.key));
+      });
+
+      for (final chunk in _chunks(documentsToWrite)) {
+        await _firestore.runTransaction((transaction) async {
+          for (final entry in chunk) {
+            transaction.set(
+              _activityRef(plan.playerId, entry.key),
+              entry.value,
+            );
+          }
+        });
+      }
+
+      final characterIdsToDelete = plan.characterIdsToRemove
+          .where(existingByCharacterId.containsKey)
+          .toList();
+      for (final chunk in _chunks(characterIdsToDelete)) {
+        await _firestore.runTransaction((transaction) async {
+          final existing = <String>[];
+          for (final characterId in chunk) {
+            final snapshot = await transaction.get(
+              _activityRef(plan.playerId, characterId),
+            );
+            if (snapshot.exists) {
+              existing.add(characterId);
+            }
+          }
+          for (final characterId in existing) {
+            transaction.delete(_activityRef(plan.playerId, characterId));
+          }
+        });
+      }
+
+      return ActivityCharacters(
+        playerId: plan.playerId,
+        characterIds: plan.activityCharacterIds.toSet(),
+      );
     } on ActivityCharactersSaveException {
       rethrow;
     } on FirebaseException catch (error) {
       throw mapActivityCharactersFirebaseException(error);
+    }
+  }
+
+  bool _activityDocumentMatches(
+    Map<String, dynamic>? existing,
+    Map<String, Object?> target,
+  ) {
+    if (existing == null) return false;
+    return existing['schemaVersion'] == target['schemaVersion'] &&
+        existing['playerId'] == target['playerId'] &&
+        existing['characterId'] == target['characterId'] &&
+        existing['gameAccountId'] == target['gameAccountId'] &&
+        existing['updatedAt'] is Timestamp;
+  }
+
+  Iterable<List<T>> _chunks<T>(List<T> values) sync* {
+    for (
+      var start = 0;
+      start < values.length;
+      start += _maxWritesPerAtomicOperation
+    ) {
+      final candidateEnd = start + _maxWritesPerAtomicOperation;
+      final end = candidateEnd < values.length ? candidateEnd : values.length;
+      yield values.sublist(start, end);
     }
   }
 
@@ -268,4 +348,14 @@ class FirestoreActivityCharactersRepository
     }
     return null;
   }
+}
+
+class _ActivitySavePreparation {
+  const _ActivitySavePreparation({
+    required this.plan,
+    required this.representativeCharacterIds,
+  });
+
+  final CharacterActivityWritePlan plan;
+  final Set<String> representativeCharacterIds;
 }

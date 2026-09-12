@@ -123,6 +123,203 @@ void main() {
     expect(loaded.characterIds, isEmpty);
   });
 
+  test('writes every account representative before ordinary characters', () async {
+    firestore.documents['playerGameAccounts/player-1_account-2'] = {
+      'playerId': 'player-1',
+      'gameAccountId': 'account-2',
+      'status': 'active',
+      'representativeCharacterId': 'char-3',
+    };
+    firestore.documents['characters/char-3'] = {
+      'schemaVersion': 1,
+      'ownerPlayerId': 'player-1',
+      'gameAccountId': 'account-2',
+      'status': 'active',
+      'characterName': '부계정대표',
+      'serverName': '루페온',
+      'characterClassName': '바드',
+    };
+    final saved = await repository.save(
+      const SaveActivityCharactersCommand(
+        activityCharacterIds: {'char-1', 'char-2', 'char-3'},
+        ownedCharacterIds: {'char-1', 'char-2', 'char-3'},
+        orderedActivityCharacterIds: ['char-2', 'char-1', 'char-3'],
+      ),
+    );
+
+    expect(saved.characterIds, {'char-1', 'char-2', 'char-3'});
+    expect(
+      firestore.writes.take(2),
+      [
+        'players/player-1/characterActivity/char-1',
+        'players/player-1/characterActivity/char-3',
+      ],
+    );
+  });
+
+  test('expands eight activity characters to fifteen in bounded writes', () async {
+    for (var index = 3; index <= 15; index++) {
+      firestore.documents['characters/char-$index'] = {
+        'schemaVersion': 1,
+        'ownerPlayerId': 'player-1',
+        'gameAccountId': 'account-1',
+        'status': 'active',
+        'characterName': '캐릭터$index',
+        'serverName': '루페온',
+        'characterClassName': '바드',
+      };
+    }
+    for (var index = 1; index <= 8; index++) {
+      firestore.documents[
+          'players/player-1/characterActivity/char-$index'] = {
+        'schemaVersion': 1,
+        'playerId': 'player-1',
+        'characterId': 'char-$index',
+        'gameAccountId': 'account-1',
+        'updatedAt': Timestamp.fromDate(DateTime(2026)),
+      };
+    }
+    final characterIds = {
+      for (var index = 1; index <= 15; index++) 'char-$index',
+    };
+
+    final saved = await repository.save(
+      SaveActivityCharactersCommand(
+        activityCharacterIds: characterIds,
+        ownedCharacterIds: characterIds,
+      ),
+    );
+
+    expect(saved.characterIds, characterIds);
+    expect(firestore.writes.length, 7);
+    expect(firestore.writesPerCommit, [4, 3]);
+    expect(
+      firestore.documents.keys.where(
+        (path) => path.startsWith(
+          'players/player-1/characterActivity/char-',
+        ),
+      ),
+      hasLength(15),
+    );
+  });
+
+  test('shrinks fifteen activity characters after bounded upserts', () async {
+    for (var index = 3; index <= 15; index++) {
+      firestore.documents['characters/char-$index'] = {
+        'schemaVersion': 1,
+        'ownerPlayerId': 'player-1',
+        'gameAccountId': 'account-1',
+        'status': 'active',
+        'characterName': '캐릭터$index',
+        'serverName': '루페온',
+        'characterClassName': '바드',
+      };
+    }
+    for (var index = 1; index <= 15; index++) {
+      firestore.documents[
+          'players/player-1/characterActivity/char-$index'] = {
+        'schemaVersion': 1,
+        'playerId': 'player-1',
+        'characterId': 'char-$index',
+        'gameAccountId': 'account-1',
+        'updatedAt': Timestamp.fromDate(DateTime(2026)),
+      };
+    }
+    final ownedIds = {
+      for (var index = 1; index <= 15; index++) 'char-$index',
+    };
+    final activityIds = {
+      for (var index = 1; index <= 8; index++) 'char-$index',
+    };
+
+    final saved = await repository.save(
+      SaveActivityCharactersCommand(
+        activityCharacterIds: activityIds,
+        ownedCharacterIds: ownedIds,
+      ),
+    );
+
+    expect(saved.characterIds, activityIds);
+    expect(firestore.writes.length, 7);
+    expect(firestore.writesPerCommit, [4, 3]);
+    expect(
+      firestore.documents.keys.where(
+        (path) => path.startsWith(
+          'players/player-1/characterActivity/char-',
+        ),
+      ),
+      hasLength(8),
+    );
+  });
+
+  test('a partial bounded write converges when the same save is retried', () async {
+    for (var index = 3; index <= 15; index++) {
+      firestore.documents['characters/char-$index'] = {
+        'schemaVersion': 1,
+        'ownerPlayerId': 'player-1',
+        'gameAccountId': 'account-1',
+        'status': 'active',
+        'characterName': '캐릭터$index',
+        'serverName': '루페온',
+        'characterClassName': '바드',
+      };
+    }
+    for (var index = 1; index <= 8; index++) {
+      firestore.documents[
+          'players/player-1/characterActivity/char-$index'] = {
+        'schemaVersion': 1,
+        'playerId': 'player-1',
+        'characterId': 'char-$index',
+        'gameAccountId': 'account-1',
+        'updatedAt': Timestamp.fromDate(DateTime(2026)),
+      };
+    }
+    final characterIds = {
+      for (var index = 1; index <= 15; index++) 'char-$index',
+    };
+    final command = SaveActivityCharactersCommand(
+      activityCharacterIds: characterIds,
+      ownedCharacterIds: characterIds,
+    );
+    firestore.failOnWriteCommit = 2;
+    firestore.writeCommitError = FirebaseException(
+      plugin: 'cloud_firestore',
+      code: 'unavailable',
+    );
+
+    await expectLater(
+      repository.save(command),
+      throwsA(
+        isA<ActivityCharactersSaveException>().having(
+          (error) => error.failure,
+          'failure',
+          ActivityCharactersSaveFailure.unavailable,
+        ),
+      ),
+    );
+    expect(
+      firestore.documents.keys.where(
+        (path) => path.startsWith(
+          'players/player-1/characterActivity/char-',
+        ),
+      ),
+      hasLength(12),
+    );
+
+    firestore.failOnWriteCommit = null;
+    final saved = await repository.save(command);
+
+    expect(saved.characterIds, characterIds);
+    expect(
+      firestore.documents.keys.where(
+        (path) => path.startsWith(
+          'players/player-1/characterActivity/char-',
+        ),
+      ),
+      hasLength(15),
+    );
+  });
+
   test('rejects zero activity characters before writing', () async {
     await expectLater(
       repository.save(

@@ -158,6 +158,35 @@ async function seedActivity(testEnv, characterIds) {
   });
 }
 
+async function seedAdditionalCharacters(testEnv, lastIndex) {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    const now = Timestamp.now();
+    for (let index = 3; index <= lastIndex; index += 1) {
+      await setDoc(doc(db, 'characters', `char-${index}`), {
+        schemaVersion: 1,
+        ownerPlayerId,
+        gameAccountId: 'account-1',
+        status: 'active',
+        characterName: `캐릭터${index}`,
+        serverName: '루페온',
+        characterClassName: '바드',
+        updatedAt: now,
+      });
+    }
+  });
+}
+
+async function writeActivityInBoundedBatches(db, characterIds) {
+  for (let start = 0; start < characterIds.length; start += 4) {
+    const batch = writeBatch(db);
+    for (const characterId of characterIds.slice(start, start + 4)) {
+      batch.set(activityRef(db, characterId), activityDoc(characterId));
+    }
+    await batch.commit();
+  }
+}
+
 console.log('rules compile: loading production firestore.rules');
 const testEnv = await initializeTestEnvironment({
   projectId: PROJECT_ID,
@@ -183,6 +212,19 @@ try {
     batch.set(activityRef(db, 'char-1'), activityDoc('char-1'));
     batch.set(activityRef(db, 'char-2'), activityDoc('char-2'));
     await assertSucceeds(batch.commit());
+  }
+
+  await testEnv.clearFirestore();
+  await seed(testEnv);
+  await seedAdditionalCharacters(testEnv, 15);
+  console.log('test: fifteen activity characters succeed in bounded batches');
+  {
+    const db = ownerDb();
+    const characterIds = Array.from(
+      { length: 15 },
+      (_, index) => `char-${index + 1}`,
+    );
+    await assertSucceeds(writeActivityInBoundedBatches(db, characterIds));
   }
 
   await testEnv.clearFirestore();

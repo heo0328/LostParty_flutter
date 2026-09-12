@@ -16,6 +16,7 @@
 
 - 앱 실행 후 내 레이드 현황 초기 로딩과 충돌하지 않게 적격 Character를 앱 수명당 한 번 갱신한다. 공통 사용 레벨 정책은 현재 1700이며 나이스단 판정과 공유한다.
 - 서버 관계가 없고 로컬 인증 표시만 남은 경우 서버 불일치로 안내한다. 자동 재귀속이나 자동 로컬 삭제는 하지 않으며 앱 데이터 초기화·재인증을 기본 복구 절차로 유지한다.
+- 활동 Character 8→15 저장에서 Rules 문서 접근 한도로 `permission-denied`가 발생한 문제를 작은 묶음의 차이 저장으로 보완했다. 대표 추가를 우선하고 삭제를 마지막에 처리해 부분 실패 후 재시도로 수렴하며, 자동 검증은 통과했고 실기기 재확인이 남았다. 상세는 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.
 - 계약: [`../architecture/GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT.md`](../architecture/GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT.md), [`../architecture/GAME_ACCOUNT_VERIFICATION_CONTRACT.md`](../architecture/GAME_ACCOUNT_VERIFICATION_CONTRACT.md), [`../architecture/CHARACTER_INTERACTION_AUTO_REFRESH_CONTRACT.md`](../architecture/CHARACTER_INTERACTION_AUTO_REFRESH_CONTRACT.md)
 
 ### Character Build 무결성

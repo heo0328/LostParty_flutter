@@ -52,7 +52,7 @@
 - 문서 필드: `schemaVersion`, `playerId`, `characterId`, `gameAccountId`, `updatedAt`. Character의 `ownerPlayerId`·`status`·인증 필드는 이 명령으로 쓰지 않는다.
 - `characterActivity/{characterId}` 문서가 있는 Character만 활동 상태다. 문서가 없으면 비활동이다. 하위 컬렉션이 비어 있으면 아직 설정되지 않은 상태다.
 - 각 쓰기는 `characters/{characterId}`의 소유자·상태·`gameAccountId`와 `playerGameAccounts/{playerId}_{gameAccountId}` 소유권을 확인한다. 같은 계정의 서버 대표 Character 활동 문서가 같이 있어야 한다.
-- Repository 저장은 최종 선택 전체를 한 Transaction에서 검증한 뒤 활성 문서를 쓰고 해제된 문서를 삭제한다. 클라이언트 Repository는 보안 경계가 아니다.
+- Repository는 최종 선택 전체를 먼저 검증한 뒤 Firestore Rules 문서 접근 한도보다 작은 묶음으로 차이만 저장한다. 대표 포함 추가, 나머지 추가·갱신, 비활성 삭제 순서를 지켜 부분 실패가 기존 활동·대표 상태를 먼저 훼손하지 않게 하며, 재시도로 같은 최종 상태에 수렴한다. 클라이언트 Repository는 보안 경계가 아니므로 각 묶음의 Rules 소유권 검증은 유지한다.
 - active 소유자인 Player 본인만 값을 변경할 수 있다.
 - 다른 그룹원 화면의 활동 Character 후보는 `characterActivity` ID 목록과 기존 `characters/{characterId}` 표시 필드를 조합한다. Rules 복잡도 한도 때문에 별도 Projection 컬렉션과 그룹 교집합 검사는 쓰지 않는다.
 - `characterActivity`의 `get`/`list`는 활성 Auth binding이 있는 사용자에게 허용한다. 쓰기는 계속 본인만 가능하다.
@@ -65,7 +65,7 @@
 - 서버 대표 Character는 활동 캐릭터여야 한다.
 - 각 활동 Character ID는 현재 Player가 active 소유한 GameAccount에 속해야 하며 본·부계정 Character를 함께 선택할 수 있다.
 - 허용 필드 외 Character 인증·소유권 필드는 활동 설정 명령으로 바꿀 수 없다.
-- 복수 선택 저장은 최종 상태 전체를 검증한 뒤 원자적으로 반영한다. 중간 상태에서 0명이나 비활동 대표가 관찰되면 안 된다.
+- 복수 선택 저장은 최종 상태 전체를 먼저 검증한다. 임의 개수 전체를 단일 Transaction으로 쓰면 Rules 접근 20회 한도를 넘으므로 작은 묶음으로 반영하며, 추가를 삭제보다 먼저 수행해 중간 상태에서도 0명이나 비활동 대표가 관찰되지 않게 한다. 일부 묶음 실패 시 성공으로 확정하지 않고 재시도로 수렴한다.
 
 ### 4.3 기존 데이터 처리
 
