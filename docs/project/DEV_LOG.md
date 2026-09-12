@@ -7,6 +7,7 @@
 - Repository·Write Plan·Domain·ViewModel 표적 37건, 계정 기능 전체 256건, 그룹·모집·레이드 소비 경로 26건과 변경 파일 `flutter analyze`, `git diff --check`, Node 진단 도구 문법 검사가 통과했다.
 - 실제 Rules Emulator용 15명 분할 저장 검증도 추가했으나 전체 운영 Rules 로딩 단계에서 기존 `503 Network closed for unknown reason`가 재현돼 요청 실행 전 차단됐다. 이를 통과로 기록하지 않으며 실기기 8→15·재진입·15→8 확인이 남았다.
 - `firestore.rules`, 그룹·파티·Claim 계약은 변경하지 않았고 Firebase 배포도 수행하지 않았다.
+- 사용자가 수정 빌드에서 Character 수 변경 저장과 앱 재실행 후 유지가 정상임을 확인했다. 그룹·레이드 후보 반영과 기존 파티·그룹·주간 완료 기록 보존도 정상으로 확인해 실기기 완료 조건을 통과했다.
 
 # 2026-09-12 Character Build 아이콘 fallback·중립 표시 보정 — 구현·자동 검증
 
