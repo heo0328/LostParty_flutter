@@ -178,6 +178,23 @@
         {"targetId":"blood_genocide_gem_target","name":"블러드 제노사이드","aliases":[],"relatedSpecialSkillIds":["blood_genocide"]}
       ],
       "arkGridPresets": []
+    },
+    {
+      "classId": "dimensionist",
+      "apiClassName": "차원술사",
+      "aliases": [],
+      "supportedRoles": ["dealer"],
+      "defaultRole": "dealer",
+      "enlightenmentBranches": [
+        {"branchId":"time_manager","tier1NodeName":"시간 관리자","displayName":"시간 관리자 차원술사","aliases":[],"inferredRole":"dealer","relatedPassiveNodes":[]}
+      ],
+      "specialSkills": [
+        {"skillId":"timeline","name":"시간선","aliases":[],"category":"arkPassive","relatedBranchIds":["time_manager"]}
+      ],
+      "gemSkillTargets": [
+        {"targetId":"timeline_gem_target","name":"시간선 스킬","aliases":[],"relatedSpecialSkillIds":["timeline"]}
+      ],
+      "arkGridPresets": []
     }
   ]
 }

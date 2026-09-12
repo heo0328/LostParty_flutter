@@ -13,7 +13,7 @@ void main() {
     );
 
     final catalog = await repository.loadCatalog();
-    expect(catalog.classes, hasLength(7));
+    expect(catalog.classes, hasLength(8));
     final bard = catalog.classes.singleWhere(
       (definition) => definition.classId == 'bard',
     );
@@ -49,6 +49,7 @@ void main() {
         '환수사',
         '가디언나이트',
         '데모닉',
+        '차원술사',
       ]),
     );
     final supportHybridClasses = catalog.classes.where(
@@ -70,6 +71,7 @@ void main() {
       ('환수사', '야성', '둔갑 금술 스킬'),
       ('가디언나이트', '드레드 로어', '가디언 피어'),
       ('데모닉', '멈출 수 없는 충동', '블러드 제노사이드'),
+      ('차원술사', '시간 관리자', '시간선 스킬'),
     ]) {
       final definition = catalog.classes.singleWhere(
         (candidate) => candidate.apiClassName == expected.$1,

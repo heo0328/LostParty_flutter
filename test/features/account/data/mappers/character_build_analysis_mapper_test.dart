@@ -538,6 +538,7 @@ void main() {
       ('환수사', '야성', 'wild_instinct', '둔갑 금술 스킬'),
       ('가디언나이트', '드레드 로어', 'dread_roar', '가디언 피어'),
       ('데모닉', '멈출 수 없는 충동', 'unstoppable_impulse', '블러드 제노사이드'),
+      ('차원술사', '시간 관리자', 'time_manager', '시간선 스킬'),
     ];
 
     for (final (className, tier1Node, branchId, targetName) in cases) {
