@@ -121,7 +121,7 @@ void main() {
     final unsupported = _deepCopy(fixture);
     (unsupported['ArmoryProfile']
             as Map<String, dynamic>)['CharacterClassName'] =
-        '슬레이어';
+        '미등록직업';
     final unsupportedDetection = const CharacterBuildAnalysisMapper()
         .fromJson(unsupported, catalog: catalog)
         .catalogDetection!;
@@ -539,6 +539,30 @@ void main() {
       ('가디언나이트', '드레드 로어', 'dread_roar', '가디언 피어'),
       ('데모닉', '멈출 수 없는 충동', 'unstoppable_impulse', '블러드 제노사이드'),
       ('차원술사', '시간 관리자', 'time_manager', '시간선 스킬'),
+      ('디스트로이어', '중력 충격', 'gravity_impact', '중력 가중 스킬'),
+      ('워로드', '고독한 기사', 'lone_knight', '전장의 창'),
+      ('워로드', '철옹성', 'iron_fortress', '전장의 방패'),
+      ('버서커', '강인한 육체', 'strong_body', '블러디 러쉬'),
+      ('버서커', '광기', 'mayhem', '다크 러쉬'),
+      ('슬레이어', '지치지 않는 힘', 'tireless_power', '블러드러스트'),
+      ('기공사', '무상신공', 'musang_shingong', '무상신공'),
+      ('브레이커', '권왕파천무', 'brawl_king_storm', '권왕십이식'),
+      ('브레이커', '수라의 길', 'asura_path', '수라결 기본 공격'),
+      ('블래스터', '포격 강화', 'barrage_enhancement', '포격 스킬'),
+      ('호크아이', '두 번째 동료', 'loyal_companion', '실버호크 스킬'),
+      ('호크아이', '죽음의 습격', 'death_strike', '실버호크 스킬'),
+      ('스카우터', '진화의 유산', 'evolutionary_legacy', '소닉 임팩트'),
+      ('스카우터', '진화의 유산', 'evolutionary_legacy', '퀀텀 어셈블리 빔'),
+      ('스카우터', '진화의 유산', 'evolutionary_legacy', 'EX - 제로 포인트'),
+      ('건슬링어', '사냥의 시간', 'time_to_hunt', '로즈 블로섬'),
+      ('아르카나', '황제의 칙령', 'emperors_edict', '황제'),
+      ('블레이드', '버스트 강화', 'burst_enhancement', '블레이드 버스트'),
+      ('블레이드', '신속한 일격', 'swift_strike', '블레이드 버스트'),
+      ('리퍼', '달의 소리', 'lunar_voice', '나이트메어'),
+      ('기상술사', '이슬비', 'drizzle', '여우비 스킬'),
+      ('기상술사', '질풍노도', 'wind_fury', '여우비 스킬'),
+      ('차원술사', '공간 검사', 'space_swordsman', '간섭'),
+      ('가디언나이트', '업화의 계승자', 'inheritor_of_hellfire', '인페르노 버스트'),
     ];
 
     for (final (className, tier1Node, branchId, targetName) in cases) {
@@ -577,6 +601,52 @@ void main() {
       expect(
         result.notices.any((notice) => notice.code == 'unmatched_skill_gem_4'),
         isFalse,
+        reason: targetName,
+      );
+    }
+  });
+
+  test('keeps the two live foreign-class samples as errors', () {
+    const cases = <(String, String, String, String)>[
+      ('인파이터', '속도 강화', '브레이커', '수라결 기본 공격'),
+      ('데빌헌터', '전술 탄환', '바드', '천상의 연주'),
+    ];
+
+    for (final (className, tier1Node, foreignClass, targetName) in cases) {
+      var modified = _withGemTarget(
+        fixture,
+        name: targetName,
+        icon: 'https://example.com/foreign.png',
+      );
+      modified = _withGemTooltipClass(
+        modified,
+        slot: 4,
+        className: foreignClass,
+      );
+      (modified['ArmoryProfile']
+              as Map<String, dynamic>)['CharacterClassName'] =
+          className;
+      (modified['ArkPassive'] as Map<String, dynamic>)['Effects'] = [
+        {'Description': '깨달음 1티어 $tier1Node Lv.1'},
+      ];
+
+      final result = const CharacterBuildAnalysisMapper().fromJson(
+        modified,
+        catalog: catalog,
+      );
+      final effect = result.gemEffects.singleWhere(
+        (candidate) => candidate.gemSlot == 4,
+      );
+
+      expect(effect.tooltipClassNames, [foreignClass], reason: targetName);
+      expect(
+        effect.validationStatus,
+        GemValidationStatus.foreignClass,
+        reason: targetName,
+      );
+      expect(
+        result.notices.any((notice) => notice.code == 'foreign_class_gem_4'),
+        isTrue,
         reason: targetName,
       );
     }

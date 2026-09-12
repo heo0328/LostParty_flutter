@@ -13,7 +13,8 @@ void main() {
     );
 
     final catalog = await repository.loadCatalog();
-    expect(catalog.classes, hasLength(8));
+    expect(catalog.catalogVersion, '2026.09.12.2');
+    expect(catalog.classes, hasLength(30));
     final bard = catalog.classes.singleWhere(
       (definition) => definition.classId == 'bard',
     );
@@ -50,6 +51,28 @@ void main() {
         '가디언나이트',
         '데모닉',
         '차원술사',
+        '디스트로이어',
+        '워로드',
+        '버서커',
+        '슬레이어',
+        '배틀마스터',
+        '인파이터',
+        '기공사',
+        '창술사',
+        '스트라이커',
+        '브레이커',
+        '데빌헌터',
+        '블래스터',
+        '호크아이',
+        '스카우터',
+        '건슬링어',
+        '서머너',
+        '아르카나',
+        '소서리스',
+        '블레이드',
+        '리퍼',
+        '소울이터',
+        '기상술사',
       ]),
     );
     final supportHybridClasses = catalog.classes.where(
@@ -67,18 +90,31 @@ void main() {
     );
     expect(supportHybridClasses, hasLength(4));
 
-    for (final expected in const [
-      ('환수사', '야성', '둔갑 금술 스킬'),
-      ('가디언나이트', '드레드 로어', '가디언 피어'),
-      ('데모닉', '멈출 수 없는 충동', '블러드 제노사이드'),
-      ('차원술사', '시간 관리자', '시간선 스킬'),
+    for (final expected in const <(String, List<String>, List<String>)>[
+      ('환수사', ['야성', '환수 각성'], ['둔갑 금술 스킬']),
+      (
+        '가디언나이트',
+        ['드레드 로어', '업화의 계승자'],
+        ['가디언 피어', '인페르노 버스트'],
+      ),
+      ('데모닉', ['멈출 수 없는 충동', '완벽한 억제'], ['블러드 제노사이드']),
+      ('차원술사', ['공간 검사', '시간 관리자'], ['간섭', '시간선 스킬']),
+      ('버서커', ['강인한 육체', '광기'], ['블러디 러쉬', '다크 러쉬']),
+      ('브레이커', ['권왕파천무', '수라의 길'], ['권왕십이식', '수라결 기본 공격']),
+      ('스카우터', ['아르데타인의 기술', '진화의 유산'], ['소닉 임팩트', '퀀텀 어셈블리 빔', 'EX - 제로 포인트']),
     ]) {
       final definition = catalog.classes.singleWhere(
         (candidate) => candidate.apiClassName == expected.$1,
       );
       expect(definition.supportedRoles, [GameCatalogRole.dealer]);
-      expect(definition.enlightenmentBranches.single.tier1NodeName, expected.$2);
-      expect(definition.gemSkillTargets.single.name, expected.$3);
+      expect(
+        definition.enlightenmentBranches.map((branch) => branch.tier1NodeName),
+        expected.$2,
+      );
+      expect(
+        definition.gemSkillTargets.map((target) => target.name),
+        expected.$3,
+      );
     }
   });
 
