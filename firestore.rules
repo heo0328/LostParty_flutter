@@ -1846,6 +1846,7 @@ service cloud.firestore {
         && newData.diff(oldData).affectedKeys().hasOnly([
           'characterId', 'characterNameSnapshot', 'classNameSnapshot',
           'itemLevelSnapshot', 'combatPowerSnapshot', 'gemValidationSnapshot',
+          'buildIntegritySnapshot',
           'role', 'characterChangedAt', 'updatedAt'
         ])
         && (newData.characterId != oldData.characterId

@@ -14,5 +14,16 @@ void main() {
     expect(rules, isNot(contains('function validGemValidationSnapshot')));
     expect(rules, isNot(contains('gemValidationStatus')));
     expect(rules, contains('gemValidationSnapshot'));
+    expect(rules, contains('buildIntegritySnapshot'));
+  });
+
+  test('파티 캐릭터 변경은 통합 오류 Snapshot만 추가 변경할 수 있다', () {
+    final start = rules.indexOf('function validMemberCharacterChange');
+    final end = rules.indexOf('\n    function ', start + 1);
+    final function = rules.substring(start, end);
+
+    expect(function, contains("'gemValidationSnapshot'"));
+    expect(function, contains("'buildIntegritySnapshot'"));
+    expect(function, isNot(contains('gemValidationStatus')));
   });
 }
