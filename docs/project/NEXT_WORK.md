@@ -8,7 +8,7 @@
 - 사용자가 실기기에서 인증 문구와 신청·참가 이후 오류 지속 표시를 확인했다.
 - Firebase Rules는 CLI에서 `/test` 또는 `/rulesets` 503이 간헐적으로 발생했지만 동일 조건 테스트 프로젝트 게시가 성공했고, 운영 콘솔로 돌아온 뒤 오류가 사라졌다. 로컬 파일을 다시 붙여 넣었을 때 변경점이 없어 게시 버튼이 비활성화된 것으로 운영 활성 소스와 로컬 소스가 같은 상태임을 확인했다.
 - 이 503에는 앱·Rules 축소 같은 1차 대응을 하지 않는다. 다시 발생하면 동일 조건 테스트 프로젝트 게시 여부를 먼저 대조하고 실패 단계를 구분한다.
-- 현재 브랜치는 `codex/plan-release-stabilization-fixes`다. `release/1.0.0`, `dev`, `main` 병합과 버전 확정은 별도 사용자 지시 전까지 수행하지 않는다.
+- 현재 구현 브랜치는 `codex/feat-raid-party-reposition`다. `release/1.0.0`, `dev`, `main` 병합과 버전 확정은 별도 사용자 지시 전까지 수행하지 않는다.
 
 ## 다음 작업 그룹 — 8인 공격대 캐릭터 변경 배치와 공대 자리 조정
 
@@ -73,6 +73,15 @@
 - `PartyMembershipWritePlan`은 Character 변경+빈자리 이동과 순수 이동/교환을 구분해 허용 필드만 생성한다.
 
 ### Firestore Transaction과 Rules
+
+#### 슬롯 점유 원장 확정
+
+- 서버가 8개 membership을 한 요청에서 모두 비교하면 Rules 문서 접근 한도를 넘길 수 있으므로 `recruitments/{recruitmentId}/slots/{partyIndex}_{slotIndex}` 슬롯 점유 원장을 사용한다.
+- 슬롯 문서는 `playerId`, `partyIndex`, `slotIndex`, `role`, `classNameSnapshot`, `updatedAt`만 가지며 membership의 위치·역할·구성 직업과 항상 같은 원자적 쓰기에서 생성·이동·삭제한다. 목적 슬롯 문서 존재 여부가 서버의 빈자리 판정 근거이고, `role`과 `classNameSnapshot`은 Rules가 대상 파티의 역할 상한과 딜러 직업 중복을 검증하는 최소 Projection이다.
+- 신규 모집은 리더의 `0_0` 슬롯을 생성하고, 참가·승인은 목적 슬롯 생성, 탈퇴·추방은 기존 슬롯 삭제를 동반한다. 캐릭터 자동 이동은 기존 슬롯 삭제와 목적 슬롯 생성을 함께 수행한다. 자리 교환은 두 슬롯의 `playerId`만 서로 교환한다.
+- 일반 클라이언트가 기존 membership 전체를 근거로 슬롯 원장을 사후 생성하는 bootstrap은 허용하지 않는다. 일부 점유를 누락해 사용 중인 자리를 빈자리로 위조할 수 있기 때문이다.
+- 따라서 원장 도입 전 생성된 모집은 조회·완료·탈퇴 등 기존 기능을 유지하되 캐릭터 자동 이동과 자리 조정만 `unsupportedOnSpark`로 차단한다. 현재 출시 전 테스트 방은 필요하면 새 모집으로 재생성하며, 운영 이관이 필요해질 때만 관리자 권한의 별도 일괄 migration을 설계한다.
+- 신규 모집 문서에는 `slotLedgerVersion: 1`을 저장한다. 위치 변경 명령과 Rules는 이 버전을 요구하고, 버전이 없는 과거 방에 대해 Rules를 완화하지 않는다.
 
 - 모든 Character 변경·자리 조정은 `expectedRecruitmentRevision`으로 직렬화한다. 경쟁 변경은 전체 실패 후 최신 상태를 다시 보여 준다.
 - 빈자리 이동 Character 변경은 자기 membership의 Character/role/Build 필드와 `partyIndex`·`slotIndex`, 기존 assignment 교체, 모집 역할 집계·revision과 필요 listing을 기존 Transaction 안에서 함께 갱신한다.

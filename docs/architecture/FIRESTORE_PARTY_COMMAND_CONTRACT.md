@@ -267,6 +267,13 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 - 구성 안내는 membership 현재 값에서 파생하며 별도 boolean으로 저장하지 않는다. 빨간 Build 오류와 동시에 표시할 수 있고 공대장 조정 후 자동으로 사라진다.
 - `leaderPlayerId`만 자리 조정 명령을 실행한다. 공대장 고정석 `0:0`은 이동·교환하지 않는다. 빈 슬롯이면 한 membership을 이동하고 점유 슬롯이면 두 membership의 위치만 원자적으로 교환한다.
 - 순수 자리 조정은 Character·role·Build Snapshot·assignment·Claim을 변경하지 않는다. recruitment revision과 필요 group listing을 함께 갱신하고 기존 알림 계약대로 `memberMoved` 이벤트를 명령 직전 확정 멤버에게 기록한다.
+
+#### 슬롯 점유 원장
+
+- 신규 모집부터 `slotLedgerVersion: 1`과 `recruitments/{recruitmentId}/slots/{partyIndex}_{slotIndex}`를 필수로 사용한다.
+- 슬롯 문서는 `{playerId, partyIndex, slotIndex, role, classNameSnapshot, updatedAt}` 최소 Projection만 저장한다. 문서 ID와 두 index가 일치해야 하고, 같은 원자적 명령의 membership 위치·`playerId`·역할·구성 직업이 일치해야 한다. `role`과 `classNameSnapshot`은 Rules의 파티별 역할 상한·딜러 직업 중복 검증에만 사용한다.
+- 생성은 리더 슬롯 생성, 가입은 빈 슬롯 생성, 탈퇴는 점유 슬롯 삭제, 이동은 이전 슬롯 삭제+새 슬롯 생성, 교환은 두 슬롯 점유자 교환으로 구성한다.
+- 슬롯 원장이 없는 과거 모집을 일반 사용자 요청으로 부분 bootstrap하지 않는다. 해당 모집의 기존 명령은 보존하되 위치 변경만 거절한다. 관리자 migration은 실제 운영 데이터 이관이 필요해질 때 별도 승인·백업·검증 단위로 수행한다.
 - Character 변경과 빈자리 이동이 함께 일어나면 기존 `memberCharacterChanged` 이벤트에 이전/새 파티·슬롯을 포함하고 별도 이동 이벤트를 중복 생성하지 않는다.
 - Rules는 본인 Character 변경과 공대장 자리 조정을 별도 경로로 구분한다. 한 명 이동 또는 두 명의 정확한 슬롯 교환, 제한된 affected keys와 recruitment revision을 검증하며 기존 소유권·Player 중복·점유·Claim 조건을 완화하지 않는다.
 - 16인, 연쇄 이동, 자동 시너지 최적화와 파티별 별도 파티장 권한은 현재 범위가 아니다. 향후 실제 레이드가 추가될 때 `partyCount` 기반 확장을 다시 검증한다.
