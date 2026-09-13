@@ -12,6 +12,13 @@ void main() {
   test('신규 모집과 슬롯 문서는 점유 원장 버전 및 membership 일치를 요구한다', () {
     expect(rules, contains('data.slotLedgerVersion == 1'));
     expect(rules, contains('match /slots/{slotId}'));
+    expect(rules, isNot(contains(r'$(partyIndex)_$(slotIndex)')));
+    expect(
+      rules,
+      contains(
+        r'/documents/recruitments/$(recruitmentId)/slots/1_3',
+      ),
+    );
     expect(rules, contains('member.partyIndex == data.partyIndex'));
     expect(rules, contains('member.slotIndex == data.slotIndex'));
     expect(rules, contains('member.role == data.role'));

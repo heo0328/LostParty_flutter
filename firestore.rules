@@ -45,7 +45,23 @@ service cloud.firestore {
     }
 
     function recruitmentSlotPath(recruitmentId, partyIndex, slotIndex) {
-      return /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/$(partyIndex)_$(slotIndex);
+      return partyIndex == 0 && slotIndex == 0
+        ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/0_0
+        : partyIndex == 0 && slotIndex == 1
+          ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/0_1
+          : partyIndex == 0 && slotIndex == 2
+            ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/0_2
+            : partyIndex == 0 && slotIndex == 3
+              ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/0_3
+              : partyIndex == 1 && slotIndex == 0
+                ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/1_0
+                : partyIndex == 1 && slotIndex == 1
+                  ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/1_1
+                  : partyIndex == 1 && slotIndex == 2
+                    ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/1_2
+                    : partyIndex == 1 && slotIndex == 3
+                      ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/1_3
+                      : /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/invalid;
     }
 
     function partySlotIsSupport(recruitmentId, partyIndex, slotIndex) {
