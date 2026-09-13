@@ -42,6 +42,7 @@ import 'package:lost_party/features/recruitment_list/domain/repositories/party_m
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_read_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
 import 'package:lost_party/features/recruitment_list/domain/services/lazy_cycle_reconciler.dart';
+import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
 
 import '../../../support/party_read_fakes.dart';
 
@@ -310,6 +311,10 @@ void main() {
       PartyGemValidationStatus.error,
     );
     expect(repository.lastApply?.gemValidation?.schemaVersion, 2);
+    expect(repository.lastApply?.buildIntegrity?.displayLabels, [
+      '보석 오류',
+      '아크그리드 오류',
+    ]);
     expect(find.text('가입을 신청했습니다.'), findsOneWidget);
   });
 
@@ -346,6 +351,68 @@ void main() {
       text.style?.color,
       Theme.of(tester.element(find.byType(Card).first)).colorScheme.error,
     );
+  });
+
+  testWidgets('지원자 카드에서 신청 당시 통합 오류를 표시한다', (tester) async {
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      recruitmentApplications: Stream.value(
+        PartyReadSnapshot(
+          items: [
+            _pendingApplication(
+              buildIntegrity: _buildIntegrity(const [
+                BuildIntegrityIssueCode.unmatchedSkillGem,
+                BuildIntegrityIssueCode.arkGridMinimum,
+              ]),
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      joinCommandRepository: _FakeJoinCommandRepository(),
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('보석 오류'), findsOneWidget);
+    expect(find.text('아크그리드 오류'), findsOneWidget);
+  });
+
+  testWidgets('파티원 카드에서 참가 당시 통합 오류를 표시한다', (tester) async {
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      members: Stream.value(
+        PartyReadSnapshot(
+          items: [
+            PartyMemberDisplay(
+              playerId: 'player-1',
+              characterId: 'char-leader',
+              characterName: '오류캐릭터',
+              className: '가디언나이트',
+              role: PartyRole.dealer,
+              partyIndex: 0,
+              slotIndex: 0,
+              buildIntegrity: _buildIntegrity(const [
+                BuildIntegrityIssueCode.unmatchedSkillGem,
+                BuildIntegrityIssueCode.arkGridCondition,
+              ]),
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('보석 오류'), findsOneWidget);
+    expect(find.text('아크그리드 오류'), findsOneWidget);
   });
 
   testWidgets('철회 버튼이 pending 신청 revision으로 명령을 보낸다', (tester) async {
@@ -434,6 +501,10 @@ void main() {
 
     expect(repository.lastDirectJoin?.characterId, 'server-character-1');
     expect(repository.lastDirectJoin?.expectedRecruitmentRevision, 1);
+    expect(repository.lastDirectJoin?.buildIntegrity?.displayLabels, [
+      '보석 오류',
+      '아크그리드 오류',
+    ]);
     expect(find.text('파티에 참가했습니다.'), findsOneWidget);
   });
 
@@ -881,6 +952,10 @@ void main() {
       'server-character-2',
     );
     expect(membership.changeCommands.single.newRole, PartyRole.dealer);
+    expect(membership.changeCommands.single.buildIntegrity?.displayLabels, [
+      '보석 오류',
+      '아크그리드 오류',
+    ]);
     expect(find.text('참가 캐릭터를 변경했습니다.'), findsOneWidget);
   });
 
@@ -1701,6 +1776,7 @@ PublicRecruitmentSummary _summary({
 
 PartyApplicationSummary _pendingApplication({
   PartyGemValidationSnapshot? gemValidation,
+  BuildIntegritySnapshot? buildIntegrity,
 }) => PartyApplicationSummary(
   recruitmentId: 'recruitment-1',
   applicantPlayerId: 'player-applicant',
@@ -1714,6 +1790,17 @@ PartyApplicationSummary _pendingApplication({
   createdAt: DateTime.utc(2026, 8, 20),
   updatedAt: DateTime.utc(2026, 8, 21),
   gemValidation: gemValidation,
+  buildIntegrity: buildIntegrity,
+);
+
+BuildIntegritySnapshot _buildIntegrity(
+  List<BuildIntegrityIssueCode> issueCodes,
+) => BuildIntegritySnapshot(
+  status: BuildIntegrityStatus.error,
+  issueCodes: issueCodes,
+  role: BuildIntegrityRole.dealer,
+  checkedAt: DateTime.utc(2026, 9, 13),
+  catalogVersion: '2026.09.12.2',
 );
 
 PartyApplicationSummary _rejectedApplication({required int rejectionCount}) =>

@@ -91,6 +91,10 @@ void main() {
       createRepository.lastCommand?.leaderGemValidation?.catalogVersion,
       '2026.09.08',
     );
+    expect(createRepository.lastCommand?.leaderBuildIntegrity?.displayLabels, [
+      '보석 오류',
+      '아크그리드 오류',
+    ]);
     expect(
       createRepository.lastCommand?.visibility,
       RecruitmentVisibility.public,
@@ -542,6 +546,11 @@ CharacterBuildSnapshot _snapshot(int characterId) => CharacterBuildSnapshot(
     arkGridConditions: [],
     arkGridCorePoints: [],
     notices: [],
+    equippedGemCount: 10,
+    arkGridMinimumIntegrity: ArkGridMinimumIntegrity(
+      orderSunPoint: 13,
+      orderMoonPoint: 14,
+    ),
     catalogDetection: CharacterBuildCatalogDetection(
       catalogVersion: '2026.09.08',
       status: CharacterBuildDetectionStatus.detected,

@@ -191,6 +191,7 @@ class FirestorePartyMembershipCommandRepository
           itemLevel: itemLevel,
           combatPower: command.combatPower,
           gemValidation: command.gemValidation,
+          buildIntegrity: command.buildIntegrity,
           serverTimestamp: now,
         ),
       );

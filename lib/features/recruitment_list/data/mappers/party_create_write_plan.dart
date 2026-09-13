@@ -87,6 +87,7 @@ class PartyCreateWritePlan {
         'itemLevelSnapshot': verifiedItemLevel,
         'combatPowerSnapshot': command.leaderCombatPower,
         'gemValidationSnapshot': command.leaderGemValidation?.toFields(),
+        'buildIntegritySnapshot': command.leaderBuildIntegrity?.toFields(),
         'characterChangedAt': null,
         'canApproveApplications': true,
         'updatedAt': serverTimestamp,

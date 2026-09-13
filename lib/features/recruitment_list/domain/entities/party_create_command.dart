@@ -1,5 +1,6 @@
 import '../policies/approval_policy.dart';
 import '../policies/party_composition_policy.dart';
+import '../../../../shared/character_build/build_integrity_snapshot.dart';
 import '../../../../shared/character_build/party_gem_validation_snapshot.dart';
 import 'party_recruitment.dart';
 import 'recruitment_aggregate.dart';
@@ -19,6 +20,7 @@ class PartyCreateCommand {
     required this.cycleKey,
     this.leaderCombatPower,
     this.leaderGemValidation,
+    this.leaderBuildIntegrity,
     this.groupId,
     this.visibility = RecruitmentVisibility.public,
   });
@@ -33,11 +35,14 @@ class PartyCreateCommand {
   final double leaderItemLevel;
   final double? leaderCombatPower;
   final PartyGemValidationSnapshot? leaderGemValidation;
+  final BuildIntegritySnapshot? leaderBuildIntegrity;
   final ApprovalPolicy approvalPolicy;
   final RecruitmentPartyRules compositionRules;
   final String cycleKey;
+
   /// 일반 레이드는 null. 그룹 레이드는 가입한 그룹 하나.
   final String? groupId;
+
   /// `public` 또는 `group`. 그룹 전용은 `group`이며 groupId가 필요하다.
   final String visibility;
 }
@@ -75,6 +80,5 @@ class RecruitmentVisibility {
   static const public = 'public';
   static const group = 'group';
 
-  static bool isValid(String value) =>
-      value == public || value == group;
+  static bool isValid(String value) => value == public || value == group;
 }

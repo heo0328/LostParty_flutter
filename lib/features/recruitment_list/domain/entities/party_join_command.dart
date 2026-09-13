@@ -1,3 +1,5 @@
+import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
+
 import 'party_gem_validation_snapshot.dart';
 import 'party_recruitment.dart';
 
@@ -10,6 +12,7 @@ class PartyDirectJoinCommand {
     required this.expectedRecruitmentRevision,
     this.combatPower,
     this.gemValidation,
+    this.buildIntegrity,
   });
 
   final String recruitmentId;
@@ -19,6 +22,7 @@ class PartyDirectJoinCommand {
   final int expectedRecruitmentRevision;
   final double? combatPower;
   final PartyGemValidationSnapshot? gemValidation;
+  final BuildIntegritySnapshot? buildIntegrity;
 }
 
 class PartyDecideApplicationCommand {

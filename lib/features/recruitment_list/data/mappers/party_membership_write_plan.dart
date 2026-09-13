@@ -1,4 +1,5 @@
 import '../../domain/entities/party_gem_validation_snapshot.dart';
+import '../../../../shared/character_build/build_integrity_snapshot.dart';
 
 class PartyMembershipWritePlan {
   const PartyMembershipWritePlan._();
@@ -11,6 +12,7 @@ class PartyMembershipWritePlan {
     required double itemLevel,
     required double? combatPower,
     PartyGemValidationSnapshot? gemValidation,
+    BuildIntegritySnapshot? buildIntegrity,
     required Object serverTimestamp,
   }) => {
     'characterId': characterId,
@@ -20,6 +22,7 @@ class PartyMembershipWritePlan {
     'itemLevelSnapshot': itemLevel,
     'combatPowerSnapshot': combatPower,
     'gemValidationSnapshot': gemValidation?.toFields(),
+    'buildIntegritySnapshot': buildIntegrity?.toFields(),
     'characterChangedAt': serverTimestamp,
     'updatedAt': serverTimestamp,
   };

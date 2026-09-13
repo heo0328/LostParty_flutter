@@ -1,3 +1,5 @@
+import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
+
 import 'recruitment_aggregate.dart';
 import 'recruitment_application.dart';
 import 'party_recruitment.dart';
@@ -124,6 +126,7 @@ class PartyMemberDisplay {
     this.itemLevel,
     this.combatPower,
     this.gemValidation,
+    this.buildIntegrity,
   });
 
   /// 명령 대상용. UI 문구에는 노출하지 않는다.
@@ -139,6 +142,7 @@ class PartyMemberDisplay {
   final double? itemLevel;
   final double? combatPower;
   final PartyGemValidationSnapshot? gemValidation;
+  final BuildIntegritySnapshot? buildIntegrity;
 
   int compareByPartySlot(PartyMemberDisplay other) {
     final byParty = partyIndex.compareTo(other.partyIndex);
@@ -255,6 +259,7 @@ class PartyApplicationSummary {
     this.itemLevel,
     this.combatPower,
     this.gemValidation,
+    this.buildIntegrity,
   });
 
   final String recruitmentId;
@@ -276,6 +281,7 @@ class PartyApplicationSummary {
   final double? itemLevel;
   final double? combatPower;
   final PartyGemValidationSnapshot? gemValidation;
+  final BuildIntegritySnapshot? buildIntegrity;
 }
 
 /// 상세의 완료 취소 등에 쓰는 회차 Snapshot. 민감 ID를 UI에 노출하지 않는다.

@@ -6,6 +6,7 @@ import 'package:lost_party/features/recruitment_list/domain/entities/party_read_
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_application.dart';
 import 'package:lost_party/features/recruitment_list/domain/policies/approval_policy.dart';
+import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
 
 void main() {
   final mapper = PartyReadDocumentMapper(
@@ -155,6 +156,14 @@ void main() {
               'gemValidatedAt': DateTime.utc(2026, 9, 7),
               'catalogVersion': '2026.09.08',
             },
+            'buildIntegritySnapshot': {
+              'schemaVersion': 2,
+              'status': 'error',
+              'issueCodes': ['arkGridMinimum'],
+              'role': 'dealer',
+              'checkedAt': DateTime.utc(2026, 9, 7),
+              'catalogVersion': '2026.09.08',
+            },
           },
         ),
       );
@@ -170,6 +179,10 @@ void main() {
       expect(member.combatPower, 250000);
       expect(member.gemValidation?.status.name, 'foreignClass');
       expect(member.gemValidation?.foreignClassGemCount, 1);
+      expect(member.buildIntegrity?.status, BuildIntegrityStatus.error);
+      expect(member.buildIntegrity?.issueCodes, [
+        BuildIntegrityIssueCode.arkGridMinimum,
+      ]);
     },
   );
 
@@ -379,6 +392,14 @@ void main() {
             'unverifiedSameClassGemCount': 0,
             'gemValidatedAt': DateTime.utc(2026, 9, 7),
             'catalogVersion': '2026.09.04',
+            'buildIntegritySnapshot': {
+              'schemaVersion': 2,
+              'status': 'error',
+              'issueCodes': ['foreignClassGem', 'arkGridCondition'],
+              'role': 'dealer',
+              'checkedAt': DateTime.utc(2026, 9, 7),
+              'catalogVersion': '2026.09.04',
+            },
           },
         },
       ),
@@ -387,6 +408,10 @@ void main() {
     expect(summary.gemValidation?.status.name, 'foreignClass');
     expect(summary.gemValidation?.foreignClassGemCount, 1);
     expect(summary.gemValidation?.catalogVersion, '2026.09.04');
+    expect(summary.buildIntegrity?.issueCodes, [
+      BuildIntegrityIssueCode.foreignClassGem,
+      BuildIntegrityIssueCode.arkGridCondition,
+    ]);
   });
 
   test(
@@ -412,6 +437,10 @@ void main() {
               'itemLevel': 1780,
               'combatPower': 123456,
               'gemValidationStatus': 'foreignClass',
+              'buildIntegritySnapshot': {
+                'schemaVersion': 999,
+                'status': 'error',
+              },
             },
           },
         ),
@@ -419,6 +448,7 @@ void main() {
 
       expect(summary.itemLevel, 1780);
       expect(summary.gemValidation, isNull);
+      expect(summary.buildIntegrity, isNull);
     },
   );
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/character_build/build_integrity_snapshot.dart';
 import '../../../../shared/character_build/gem_validation_line.dart';
 import '../../../../shared/character_build/build_integrity_status_line.dart';
 import '../../../../shared/character_build/party_gem_validation_snapshot.dart';
@@ -486,6 +487,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
           expectedRecruitmentRevision: summary.revision,
           combatPower: selected.combatPower,
           gemValidation: selected.gemValidation,
+          buildIntegrity: selected.buildIntegrity,
         ),
       );
       if (!mounted) return;
@@ -512,6 +514,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
             : summary.currentCycleKey,
         combatPower: selected.combatPower,
         gemValidation: selected.gemValidation,
+        buildIntegrity: selected.buildIntegrity,
       ),
     );
     if (!mounted) return;
@@ -1003,6 +1006,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
         expectedRecruitmentRevision: summary.revision,
         combatPower: selected.combatPower,
         gemValidation: selected.gemValidation,
+        buildIntegrity: selected.buildIntegrity,
       ),
     );
     if (!mounted) return;
@@ -2037,7 +2041,13 @@ class _SlotCard extends StatelessWidget {
                           : '아이템 레벨 정보 없음',
                       style: theme.textTheme.bodySmall,
                     ),
-                    if (member.gemValidation case final validation?) ...[
+                    if (member.buildIntegrity case final integrity?) ...[
+                      const SizedBox(height: AppSpacing.xxs),
+                      BuildIntegrityStatusLine(
+                        snapshot: integrity,
+                        keyName: 'memberBuildIntegrity-${member.playerId}',
+                      ),
+                    ] else if (member.gemValidation case final validation?) ...[
                       const SizedBox(height: AppSpacing.xxs),
                       GemValidationLine(
                         validation: validation,
@@ -2092,7 +2102,13 @@ class _UnassignedMemberCard extends StatelessWidget {
               ].join(' · '),
               style: theme.textTheme.bodySmall,
             ),
-            if (member.gemValidation case final validation?) ...[
+            if (member.buildIntegrity case final integrity?) ...[
+              const SizedBox(height: AppSpacing.xxs),
+              BuildIntegrityStatusLine(
+                snapshot: integrity,
+                keyName: 'unassignedMemberBuildIntegrity-${member.playerId}',
+              ),
+            ] else if (member.gemValidation case final validation?) ...[
               const SizedBox(height: AppSpacing.xxs),
               GemValidationLine(
                 validation: validation,
@@ -2282,7 +2298,14 @@ class _ApplicationCard extends StatelessWidget {
                 ),
               ),
             ],
-            if (application.gemValidation case final validation?) ...[
+            if (application.buildIntegrity case final integrity?) ...[
+              const SizedBox(height: 2),
+              BuildIntegrityStatusLine(
+                snapshot: integrity,
+                keyName:
+                    'applicationBuildIntegrity-${application.applicantPlayerId}',
+              ),
+            ] else if (application.gemValidation case final validation?) ...[
               const SizedBox(height: 2),
               GemValidationLine(
                 validation: validation,
@@ -2410,12 +2433,14 @@ class _ApplySelection {
     required this.role,
     this.combatPower,
     this.gemValidation,
+    this.buildIntegrity,
   });
 
   final String serverCharacterId;
   final PartyRole role;
   final double? combatPower;
   final PartyGemValidationSnapshot? gemValidation;
+  final BuildIntegritySnapshot? buildIntegrity;
 }
 
 class _CycleLifecycleSection extends StatelessWidget {
@@ -2718,6 +2743,7 @@ class _ChangeCharacterCandidateSheet extends StatelessWidget {
                   role: entry.option.role,
                   combatPower: entry.option.combatPower,
                   gemValidation: entry.option.gemValidation,
+                  buildIntegrity: entry.option.buildIntegrity,
                 ),
               ),
             ),
@@ -2777,6 +2803,7 @@ class _ApplyCandidateSheet extends StatelessWidget {
                     role: option.role,
                     combatPower: option.combatPower,
                     gemValidation: option.gemValidation,
+                    buildIntegrity: option.buildIntegrity,
                   ),
                 ),
               ),

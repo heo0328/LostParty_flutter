@@ -7,44 +7,48 @@ import 'package:lost_party/features/recruitment_list/domain/entities/recruitment
 import 'package:lost_party/features/recruitment_list/domain/policies/approval_policy.dart';
 import 'package:lost_party/features/recruitment_list/domain/policies/party_composition_policy.dart';
 import 'package:lost_party/shared/character_build/party_gem_validation_snapshot.dart';
+import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
 
 void main() {
-  test('creates matching recruitment, leader membership and assignment maps', () {
-    final timestamp = Object();
-    final plan = PartyCreateWritePlan.fromCommand(
-      command: _command(),
-      playerId: 'player-1',
-      serverTimestamp: timestamp,
-      verifiedCharacterName: '검증된캐릭터',
-      verifiedClassName: '바드',
-      verifiedItemLevel: 1715.25,
-    );
+  test(
+    'creates matching recruitment, leader membership and assignment maps',
+    () {
+      final timestamp = Object();
+      final plan = PartyCreateWritePlan.fromCommand(
+        command: _command(),
+        playerId: 'player-1',
+        serverTimestamp: timestamp,
+        verifiedCharacterName: '검증된캐릭터',
+        verifiedClassName: '바드',
+        verifiedItemLevel: 1715.25,
+      );
 
-    expect(plan.recruitment['visibility'], 'public');
-    expect(plan.recruitment['groupId'], isNull);
-    expect(plan.recruitment['leaderPlayerId'], 'player-1');
-    expect(plan.recruitment['leaderCharacterNameSnapshot'], '검증된캐릭터');
-    expect(plan.recruitment['leaderClassNameSnapshot'], '바드');
-    expect(plan.recruitment['memberPlayerIds'], ['player-1']);
-    expect(plan.recruitment['memberCount'], 1);
-    expect(plan.recruitment['revision'], 1);
-    expect(plan.recruitment['createdAt'], same(timestamp));
+      expect(plan.recruitment['visibility'], 'public');
+      expect(plan.recruitment['groupId'], isNull);
+      expect(plan.recruitment['leaderPlayerId'], 'player-1');
+      expect(plan.recruitment['leaderCharacterNameSnapshot'], '검증된캐릭터');
+      expect(plan.recruitment['leaderClassNameSnapshot'], '바드');
+      expect(plan.recruitment['memberPlayerIds'], ['player-1']);
+      expect(plan.recruitment['memberCount'], 1);
+      expect(plan.recruitment['revision'], 1);
+      expect(plan.recruitment['createdAt'], same(timestamp));
 
-    expect(plan.leaderMembership['playerId'], 'player-1');
-    expect(plan.leaderMembership['characterId'], 'character-1');
-    expect(plan.leaderMembership['characterNameSnapshot'], '검증된캐릭터');
-    expect(plan.leaderMembership['classNameSnapshot'], '바드');
-    expect(plan.leaderMembership['itemLevelSnapshot'], 1715.25);
-    expect(plan.leaderMembership['canApproveApplications'], isTrue);
-    expect(plan.leaderMembership['partyIndex'], 0);
-    expect(plan.leaderMembership['slotIndex'], 0);
+      expect(plan.leaderMembership['playerId'], 'player-1');
+      expect(plan.leaderMembership['characterId'], 'character-1');
+      expect(plan.leaderMembership['characterNameSnapshot'], '검증된캐릭터');
+      expect(plan.leaderMembership['classNameSnapshot'], '바드');
+      expect(plan.leaderMembership['itemLevelSnapshot'], 1715.25);
+      expect(plan.leaderMembership['canApproveApplications'], isTrue);
+      expect(plan.leaderMembership['partyIndex'], 0);
+      expect(plan.leaderMembership['slotIndex'], 0);
 
-    expect(plan.assignment['playerId'], 'player-1');
-    expect(plan.assignment['characterId'], 'character-1');
-    expect(plan.assignment['raidId'], 'act4');
-    expect(plan.assignment['recruitmentId'], 'recruitment-1');
-    expect(plan.assignment['role'], 'support');
-  });
+      expect(plan.assignment['playerId'], 'player-1');
+      expect(plan.assignment['characterId'], 'character-1');
+      expect(plan.assignment['raidId'], 'act4');
+      expect(plan.assignment['recruitmentId'], 'recruitment-1');
+      expect(plan.assignment['role'], 'support');
+    },
+  );
 
   test('uses the requested approval and party composition policies', () {
     final plan = PartyCreateWritePlan.fromCommand(
@@ -84,6 +88,13 @@ void main() {
           equippedGemCount: 11,
           unmatchedSkillGemCount: 1,
         ),
+        leaderBuildIntegrity: BuildIntegritySnapshot(
+          status: BuildIntegrityStatus.error,
+          issueCodes: const [BuildIntegrityIssueCode.arkGridMinimum],
+          role: BuildIntegrityRole.support,
+          checkedAt: validatedAt,
+          catalogVersion: '2026.09.08',
+        ),
       ),
       playerId: 'player-1',
       serverTimestamp: Object(),
@@ -103,6 +114,10 @@ void main() {
     });
     expect(plan.recruitment, isNot(contains('gemValidationSnapshot')));
     expect(plan.assignment, isNot(contains('gemValidationSnapshot')));
+    final integrity =
+        plan.leaderMembership['buildIntegritySnapshot']!
+            as Map<String, Object?>;
+    expect(integrity['issueCodes'], ['arkGridMinimum']);
   });
 
   test('stores a single group id and group visibility for group raids', () {
@@ -141,6 +156,7 @@ PartyCreateCommand _command({
   String? groupId,
   String visibility = RecruitmentVisibility.public,
   PartyGemValidationSnapshot? leaderGemValidation,
+  BuildIntegritySnapshot? leaderBuildIntegrity,
 }) => PartyCreateCommand(
   recruitmentId: 'recruitment-1',
   title: '4막 노말',
@@ -165,6 +181,7 @@ PartyCreateCommand _command({
   leaderItemLevel: 1715.25,
   leaderCombatPower: 120000000,
   leaderGemValidation: leaderGemValidation,
+  leaderBuildIntegrity: leaderBuildIntegrity,
   approvalPolicy: const ApprovalPolicy.leaderOnly(),
   compositionRules: const RecruitmentPartyRules(
     partyCount: 2,

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_membership_write_plan.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_gem_validation_snapshot.dart';
+import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
 
 void main() {
   test('캐릭터 변경 맵에 선택한 새 역할과 보석 Snapshot을 포함한다', () {
@@ -20,6 +21,13 @@ void main() {
         validatedAt: validatedAt,
         catalogVersion: '2026.09.08',
       ),
+      buildIntegrity: BuildIntegritySnapshot(
+        status: BuildIntegrityStatus.error,
+        issueCodes: const [BuildIntegrityIssueCode.arkGridCondition],
+        role: BuildIntegrityRole.support,
+        checkedAt: validatedAt,
+        catalogVersion: '2026.09.08',
+      ),
       serverTimestamp: timestamp,
     );
 
@@ -28,6 +36,8 @@ void main() {
     final gem = plan['gemValidationSnapshot']! as Map<String, Object?>;
     expect(gem['gemValidationStatus'], 'sameClassTargetUnverified');
     expect(gem['unverifiedSameClassGemCount'], 2);
+    final integrity = plan['buildIntegritySnapshot']! as Map<String, Object?>;
+    expect(integrity['issueCodes'], ['arkGridCondition']);
   });
 
   test('캐릭터 변경 시 보석 Snapshot이 없으면 null로 지운다', () {
@@ -42,6 +52,7 @@ void main() {
     );
     expect(plan.containsKey('gemValidationSnapshot'), isTrue);
     expect(plan['gemValidationSnapshot'], isNull);
+    expect(plan['buildIntegritySnapshot'], isNull);
   });
 
   test('일반 탈퇴는 자리와 역할 카운트를 되돌리고 모집 자리를 연다', () {

@@ -1,3 +1,5 @@
+import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
+
 import 'party_recruitment.dart';
 import 'party_gem_validation_snapshot.dart';
 
@@ -9,6 +11,7 @@ class PartyApplyCommand {
     required this.cycleKey,
     this.combatPower,
     this.gemValidation,
+    this.buildIntegrity,
   });
   final String recruitmentId;
   final String characterId;
@@ -16,6 +19,7 @@ class PartyApplyCommand {
   final String cycleKey;
   final double? combatPower;
   final PartyGemValidationSnapshot? gemValidation;
+  final BuildIntegritySnapshot? buildIntegrity;
 }
 
 class PartyWithdrawApplicationCommand {

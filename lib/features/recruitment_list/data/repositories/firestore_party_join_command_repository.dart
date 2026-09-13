@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
 
 import '../../../account/data/mappers/weekly_raid_claim_document_id.dart';
 import '../../domain/entities/party_event.dart';
@@ -41,6 +42,7 @@ class FirestorePartyJoinCommandRepository
       requestedCycleKey: command.cycleKey,
       combatPower: command.combatPower,
       gemValidation: command.gemValidation,
+      buildIntegrity: command.buildIntegrity,
       requiresDirectJoin: true,
     );
   }
@@ -141,6 +143,7 @@ class FirestorePartyJoinCommandRepository
     String? requestedCycleKey,
     double? combatPower,
     PartyGemValidationSnapshot? gemValidation,
+    BuildIntegritySnapshot? buildIntegrity,
   }) async {
     if (_firebaseAuth.currentUser == null) {
       return const PartyJoinResult.failure(PartyJoinFailure.unauthenticated);
@@ -172,6 +175,7 @@ class FirestorePartyJoinCommandRepository
       Map<String, dynamic>? applicationData;
       DocumentReference<Map<String, dynamic>>? applicationRef;
       Map<String, Object?>? gemValidationFields = gemValidation?.toFields();
+      Map<String, Object?>? buildIntegrityFields = buildIntegrity?.toFields();
       if (requiresDirectJoin) {
         if ((r?['approvalPolicy'] as Map?)?['mode'] != 'directJoin')
           return const PartyJoinResult.failure(
@@ -204,6 +208,11 @@ class FirestorePartyJoinCommandRepository
           gemValidationFields = PartyGemValidationSnapshot.copyFieldsIfComplete(
             Map<Object?, Object?>.from(submitted),
           );
+          buildIntegrityFields =
+              PartyJoinWritePlan.copyBuildIntegrityFieldsIfComplete(
+                submitted['buildIntegritySnapshot'],
+                parseDate: _snapshotDate,
+              );
         }
       }
       if ((r?['memberPlayerIds'] as List?)?.contains(playerId) == true)
@@ -373,6 +382,7 @@ class FirestorePartyJoinCommandRepository
         itemLevel: itemLevel,
         combatPower: combatPower,
         gemValidationFields: gemValidationFields,
+        buildIntegrityFields: buildIntegrityFields,
         role: role,
         partyIndex: placement.slot!.partyIndex,
         slotIndex: placement.slot!.slotIndex,
@@ -533,6 +543,13 @@ OccupiedPartyMember? _occupiedMember({
 DateTime? _joinedAt(Object? value) {
   if (value is Timestamp) return value.toDate();
   if (value is DateTime) return value;
+  return null;
+}
+
+DateTime? _snapshotDate(Object? value) {
+  if (value is Timestamp) return value.toDate();
+  if (value is DateTime) return value;
+  if (value is String) return DateTime.tryParse(value);
   return null;
 }
 

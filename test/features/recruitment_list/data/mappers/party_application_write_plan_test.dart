@@ -3,6 +3,7 @@ import 'package:lost_party/features/recruitment_list/data/mappers/party_applicat
 import 'package:lost_party/features/recruitment_list/domain/entities/party_application_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_gem_validation_snapshot.dart';
+import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
 
 void main() {
   test('pending application does not create membership or assignment data', () {
@@ -66,6 +67,7 @@ void main() {
           equippedGemCount: 9,
           unmatchedSkillGemCount: 2,
         ),
+        buildIntegrity: _integrity(validatedAt),
       ),
       playerId: 'player-1',
       characterName: '캐릭터',
@@ -82,6 +84,10 @@ void main() {
     expect(snapshot['unmatchedSkillGemCount'], 2);
     expect(snapshot['gemValidatedAt'], validatedAt);
     expect(snapshot['catalogVersion'], '2026.09.04');
+    final integrity =
+        snapshot['buildIntegritySnapshot']! as Map<String, Object?>;
+    expect(integrity['status'], 'error');
+    expect(integrity['issueCodes'], ['arkGridMinimum']);
     expect(snapshot.keys, isNot(contains('tooltip')));
     expect(snapshot.keys, isNot(contains('gems')));
     expect(snapshot.keys, isNot(contains('rawJson')));
@@ -111,3 +117,11 @@ void main() {
     expect(data.containsKey('createdAt'), isFalse);
   });
 }
+
+BuildIntegritySnapshot _integrity(DateTime checkedAt) => BuildIntegritySnapshot(
+  status: BuildIntegrityStatus.error,
+  issueCodes: const [BuildIntegrityIssueCode.arkGridMinimum],
+  role: BuildIntegrityRole.dealer,
+  checkedAt: checkedAt,
+  catalogVersion: '2026.09.04',
+);

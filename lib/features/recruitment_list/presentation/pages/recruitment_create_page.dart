@@ -252,51 +252,47 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     _groupsLoading = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _groupsSubscription = repository.watchMyGroups(playerId).listen(
-        (snapshot) {
-          if (!mounted) return;
-          final groups = snapshot.items
-              .where((item) => item.isMember)
-              .toList(growable: false);
-          setState(() {
-            _groups = groups;
-            _groupsLoading = false;
-            _groupsError = null;
-            if (_selectedGroupId != null &&
-                !groups.any((group) => group.groupId == _selectedGroupId)) {
-              _selectedGroupId = null;
-            }
-            if (_audience == _RaidAudience.group &&
-                _selectedGroupId == null &&
-                groups.length == 1) {
-              _selectedGroupId = groups.first.groupId;
-            }
-          });
-        },
-        onError: (_) {
-          if (!mounted) return;
-          setState(() {
-            _groups = const [];
-            _groupsLoading = false;
-            _groupsError = '가입 그룹을 불러오지 못했습니다.';
-            _selectedGroupId = null;
-          });
-        },
-      );
+      _groupsSubscription = repository
+          .watchMyGroups(playerId)
+          .listen(
+            (snapshot) {
+              if (!mounted) return;
+              final groups = snapshot.items
+                  .where((item) => item.isMember)
+                  .toList(growable: false);
+              setState(() {
+                _groups = groups;
+                _groupsLoading = false;
+                _groupsError = null;
+                if (_selectedGroupId != null &&
+                    !groups.any((group) => group.groupId == _selectedGroupId)) {
+                  _selectedGroupId = null;
+                }
+                if (_audience == _RaidAudience.group &&
+                    _selectedGroupId == null &&
+                    groups.length == 1) {
+                  _selectedGroupId = groups.first.groupId;
+                }
+              });
+            },
+            onError: (_) {
+              if (!mounted) return;
+              setState(() {
+                _groups = const [];
+                _groupsLoading = false;
+                _groupsError = '가입 그룹을 불러오지 못했습니다.';
+                _selectedGroupId = null;
+              });
+            },
+          );
     });
   }
 
   Widget _audienceSelector() => SegmentedButton<_RaidAudience>(
     key: const ValueKey('raidAudienceSelector'),
     segments: const [
-      ButtonSegment(
-        value: _RaidAudience.general,
-        label: Text('일반 레이드'),
-      ),
-      ButtonSegment(
-        value: _RaidAudience.group,
-        label: Text('그룹 레이드'),
-      ),
+      ButtonSegment(value: _RaidAudience.general, label: Text('일반 레이드')),
+      ButtonSegment(value: _RaidAudience.group, label: Text('그룹 레이드')),
     ],
     selected: {_audience},
     onSelectionChanged: (selected) {
@@ -689,7 +685,9 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     if (!_formKey.currentState!.validate()) return;
     final groupBlock = _groupCreateBlockReason();
     if (groupBlock != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(groupBlock)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(groupBlock)));
       return;
     }
     final leader = _leader;
@@ -852,6 +850,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
         leaderItemLevel: itemLevel,
         leaderCombatPower: selectedOption.combatPower,
         leaderGemValidation: selectedOption.gemValidation,
+        leaderBuildIntegrity: selectedOption.buildIntegrity,
         approvalPolicy: approval,
         compositionRules: RecruitmentPartyRules.fromRaid(raid),
         cycleKey: cycleKey,
@@ -872,9 +871,9 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       await showServerAccountMismatchAlert(context);
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_createFailureMessage(failure))),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(_createFailureMessage(failure))));
   }
 }
 
@@ -885,13 +884,11 @@ String _createFailureMessage(PartyCreateFailure failure) => switch (failure) {
   PartyCreateFailure.ownershipLost => '캐릭터 소유권을 확인하지 못했습니다.',
   PartyCreateFailure.invalidCharacter =>
     '참가할 수 없는 캐릭터입니다. 내 계정에서 정보를 새로고침한 뒤 다시 시도해 주세요.',
-  PartyCreateFailure.weeklyRaidCompleted =>
-    '이 캐릭터는 이번 주 동일 레이드를 이미 완료했습니다.',
+  PartyCreateFailure.weeklyRaidCompleted => '이 캐릭터는 이번 주 동일 레이드를 이미 완료했습니다.',
   PartyCreateFailure.participationConflict =>
     '이미 확정된 참가 또는 겹치는 일정이 있어 모집을 만들 수 없습니다.',
   PartyCreateFailure.idConflict => '같은 모집이 이미 있습니다. 다시 시도해 주세요.',
-  PartyCreateFailure.notGroupMember =>
-    '선택한 그룹에 가입되어 있지 않아 그룹 레이드를 만들 수 없습니다.',
+  PartyCreateFailure.notGroupMember => '선택한 그룹에 가입되어 있지 않아 그룹 레이드를 만들 수 없습니다.',
   PartyCreateFailure.permissionDenied => '모집 생성 권한을 확인하지 못했습니다.',
   PartyCreateFailure.temporarilyUnavailable => '네트워크 연결이 불안정합니다.',
   PartyCreateFailure.invalidRequest => '입력한 모집 정보를 확인하지 못했습니다.',

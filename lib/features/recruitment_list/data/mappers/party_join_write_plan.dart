@@ -1,5 +1,6 @@
 import '../../domain/entities/party_gem_validation_snapshot.dart';
 import '../../domain/entities/party_recruitment.dart';
+import '../../../../shared/character_build/build_integrity_snapshot.dart';
 
 class PartyJoinWritePlan {
   const PartyJoinWritePlan({
@@ -18,6 +19,8 @@ class PartyJoinWritePlan {
     required double? combatPower,
     PartyGemValidationSnapshot? gemValidation,
     Map<String, Object?>? gemValidationFields,
+    BuildIntegritySnapshot? buildIntegrity,
+    Map<String, Object?>? buildIntegrityFields,
     required PartyRole role,
     required int partyIndex,
     required int slotIndex,
@@ -56,6 +59,8 @@ class PartyJoinWritePlan {
       'itemLevelSnapshot': itemLevel,
       'combatPowerSnapshot': combatPower,
       'gemValidationSnapshot': gemValidationFields ?? gemValidation?.toFields(),
+      'buildIntegritySnapshot':
+          buildIntegrityFields ?? buildIntegrity?.toFields(),
       'characterChangedAt': null,
       'canApproveApplications': false,
       'updatedAt': serverTimestamp,
@@ -76,4 +81,14 @@ class PartyJoinWritePlan {
   final Map<String, Object?> recruitmentUpdate;
   final Map<String, Object?> membership;
   final Map<String, Object?> assignment;
+
+  static Map<String, Object?>? copyBuildIntegrityFieldsIfComplete(
+    Object? raw, {
+    required DateTime? Function(Object? value) parseDate,
+  }) {
+    return BuildIntegritySnapshot.tryFromFields(
+      raw,
+      parseDate: parseDate,
+    )?.toFields();
+  }
 }

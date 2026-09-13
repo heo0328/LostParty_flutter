@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_join_write_plan.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_gem_validation_snapshot.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
+import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
 
 void main() {
   test('가입 저장 계획은 모집·멤버십·확정 점유를 함께 갱신한다', () {
@@ -22,6 +23,7 @@ void main() {
         validatedAt: validatedAt,
         catalogVersion: '2026.09.08',
       ),
+      buildIntegrity: _integrity(validatedAt),
       role: PartyRole.support,
       partyIndex: 1,
       slotIndex: 0,
@@ -52,6 +54,10 @@ void main() {
     expect(gem['foreignClassGemCount'], 1);
     expect(gem['catalogVersion'], '2026.09.08');
     expect(gem.keys, isNot(contains('tooltip')));
+    final integrity =
+        plan.membership['buildIntegritySnapshot']! as Map<String, Object?>;
+    expect(integrity['status'], 'error');
+    expect(integrity['issueCodes'], ['arkGridMinimum']);
   });
 
   test('과거 membership처럼 보석 Snapshot이 없어도 기본 필드는 유지한다', () {
@@ -80,5 +86,45 @@ void main() {
     expect(plan.membership['itemLevelSnapshot'], 1700);
     expect(plan.membership['combatPowerSnapshot'], 100000);
     expect(plan.membership['gemValidationSnapshot'], isNull);
+    expect(plan.membership['buildIntegritySnapshot'], isNull);
+  });
+
+  test('승인은 신청 당시의 완전한 통합 오류 Snapshot만 membership으로 복사한다', () {
+    final checkedAt = DateTime.utc(2026, 9, 8);
+    final copied = PartyJoinWritePlan.copyBuildIntegrityFieldsIfComplete(
+      _integrity(checkedAt).toFields(),
+      parseDate: (value) => value is DateTime ? value : null,
+    );
+
+    expect(copied?['status'], 'error');
+    expect(copied?['issueCodes'], ['arkGridMinimum']);
+    expect(copied?['checkedAt'], checkedAt);
+
+    final copiedFromSerializedDate =
+        PartyJoinWritePlan.copyBuildIntegrityFieldsIfComplete(
+          {
+            ..._integrity(checkedAt).toFields(),
+            'checkedAt': checkedAt.toIso8601String(),
+          },
+          parseDate: (value) =>
+              value is String ? DateTime.tryParse(value) : null,
+        );
+    expect(copiedFromSerializedDate?['checkedAt'], checkedAt);
+
+    final malformed = PartyJoinWritePlan.copyBuildIntegrityFieldsIfComplete({
+      'schemaVersion': 2,
+      'status': 'error',
+      'issueCodes': ['arkGridMinimum'],
+      'role': 'support',
+    }, parseDate: (value) => value is DateTime ? value : null);
+    expect(malformed, isNull);
   });
 }
+
+BuildIntegritySnapshot _integrity(DateTime checkedAt) => BuildIntegritySnapshot(
+  status: BuildIntegrityStatus.error,
+  issueCodes: const [BuildIntegrityIssueCode.arkGridMinimum],
+  role: BuildIntegrityRole.support,
+  checkedAt: checkedAt,
+  catalogVersion: '2026.09.08',
+);

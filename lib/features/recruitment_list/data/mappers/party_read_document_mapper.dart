@@ -1,4 +1,5 @@
 import '../../domain/entities/party_read_models.dart';
+import '../../../../shared/character_build/build_integrity_snapshot.dart';
 import '../../domain/entities/party_gem_validation_snapshot.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/entities/recruitment_aggregate.dart';
@@ -124,6 +125,10 @@ class PartyReadDocumentMapper {
       itemLevel: _softNumber(data, 'itemLevelSnapshot'),
       combatPower: _softNumber(data, 'combatPowerSnapshot'),
       gemValidation: gemData == null ? null : _softGemValidation(gemData),
+      buildIntegrity: BuildIntegritySnapshot.tryFromFields(
+        data['buildIntegritySnapshot'],
+        parseDate: _softDate,
+      ),
     );
   }
 
@@ -162,6 +167,10 @@ class PartyReadDocumentMapper {
           ? _softNumber(buildData, 'combatPower')
           : null,
       gemValidation: buildData == null ? null : _softGemValidation(buildData),
+      buildIntegrity: BuildIntegritySnapshot.tryFromFields(
+        buildData?['buildIntegritySnapshot'],
+        parseDate: _softDate,
+      ),
     );
   }
 
