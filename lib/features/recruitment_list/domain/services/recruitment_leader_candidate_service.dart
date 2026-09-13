@@ -107,6 +107,7 @@ class RecruitmentLeaderCandidateQuery {
     this.partyRules,
     this.occupiedMembers = const [],
     this.replacingMemberId,
+    this.allowPositionChanges = false,
   });
 
   final String raidId;
@@ -123,6 +124,7 @@ class RecruitmentLeaderCandidateQuery {
 
   /// 캐릭터 변경 시 교체 대상 PlayerId. 신청·즉시 가입에서는 null이다.
   final String? replacingMemberId;
+  final bool allowPositionChanges;
 }
 
 class RecruitmentLeaderCandidateService {
@@ -215,6 +217,7 @@ class RecruitmentLeaderCandidateService {
               role: role,
               occupiedMembers: query.occupiedMembers,
               replacingMemberId: query.replacingMemberId,
+              allowPositionChanges: query.allowPositionChanges,
             );
             if (compositionFailure != null) {
               reasons.add(_compositionReason(compositionFailure));
@@ -354,8 +357,17 @@ class RecruitmentLeaderCandidateService {
     required PartyRole role,
     required List<OccupiedPartyMember> occupiedMembers,
     required String? replacingMemberId,
+    required bool allowPositionChanges,
   }) {
     if (replacingMemberId != null) {
+      if (!allowPositionChanges) {
+        return policy.failureForInPlaceReplacement(
+          replaceMemberId: replacingMemberId,
+          className: className,
+          role: role,
+          existing: occupiedMembers,
+        );
+      }
       final plan = policy.planReplacement(
         replaceMemberId: replacingMemberId,
         className: className,

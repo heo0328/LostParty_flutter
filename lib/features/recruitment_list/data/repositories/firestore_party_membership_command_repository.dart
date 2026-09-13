@@ -5,6 +5,7 @@ import '../../../account/data/mappers/weekly_raid_claim_document_id.dart';
 import '../../domain/entities/party_event.dart';
 import '../../domain/entities/party_membership_command.dart';
 import '../../domain/entities/party_recruitment.dart';
+import '../../domain/policies/party_composition_policy.dart';
 import '../../domain/repositories/party_membership_command_repository.dart';
 import '../../domain/services/party_membership_command_validator.dart';
 import '../mappers/party_membership_event_writer.dart';
@@ -144,7 +145,7 @@ class FirestorePartyMembershipCommandRepository
         return const PartyMembershipResult.failure(
           PartyMembershipFailure.invalidCharacter,
         );
-      final composition = await _composition(
+      final replacementPlan = await _replacementPlan(
         transaction,
         knownMembers,
         replacePlayerId: playerId,
@@ -152,10 +153,16 @@ class FirestorePartyMembershipCommandRepository
         replacementRole: newRole,
         recruitment: r!,
       );
-      if (!composition)
+      if (replacementPlan == null || !replacementPlan.canChange)
         return const PartyMembershipResult.failure(
           PartyMembershipFailure.invalidComposition,
         );
+      final destination = replacementPlan.destination;
+      if (destination != null && r['slotLedgerVersion'] != 1) {
+        return const PartyMembershipResult.failure(
+          PartyMembershipFailure.unsupportedOnSpark,
+        );
+      }
       final previousCharacterName = m?['characterNameSnapshot'];
       if (previousCharacterName is! String) {
         return const PartyMembershipResult.failure(
@@ -181,6 +188,14 @@ class FirestorePartyMembershipCommandRepository
           oldSupportCount +
           (newRole == PartyRole.support ? 1 : 0) -
           (oldRole == PartyRole.support ? 1 : 0);
+      final oldPartyIndex = m?['partyIndex'];
+      final oldSlotIndex = m?['slotIndex'];
+      if (destination != null &&
+          (oldPartyIndex is! int || oldSlotIndex is! int)) {
+        return const PartyMembershipResult.failure(
+          PartyMembershipFailure.invalidComposition,
+        );
+      }
       transaction.update(
         memberRef,
         PartyMembershipWritePlan.changeCharacter(
@@ -192,9 +207,29 @@ class FirestorePartyMembershipCommandRepository
           combatPower: command.combatPower,
           gemValidation: command.gemValidation,
           buildIntegrity: command.buildIntegrity,
+          partyIndex: destination?.partyIndex,
+          slotIndex: destination?.slotIndex,
           serverTimestamp: now,
         ),
       );
+      if (destination != null) {
+        transaction.delete(
+          recruitmentRef
+              .collection('slots')
+              .doc('${oldPartyIndex as int}_${oldSlotIndex as int}'),
+        );
+        transaction.set(
+          recruitmentRef.collection('slots').doc(destination.documentId),
+          {
+            'playerId': playerId,
+            'partyIndex': destination.partyIndex,
+            'slotIndex': destination.slotIndex,
+            'role': newRole.name,
+            'classNameSnapshot': className,
+            'updatedAt': now,
+          },
+        );
+      }
       if (isNextWeekPrep) {
         if (oldAssignment.exists) {
           transaction.delete(oldAssignmentRef);
@@ -260,8 +295,14 @@ class FirestorePartyMembershipCommandRepository
         difficultyId: r['difficultyId'] is String
             ? r['difficultyId'] as String
             : null,
-        partyIndex: m?['partyIndex'] is int ? m!['partyIndex'] as int : null,
-        slotIndex: m?['slotIndex'] is int ? m!['slotIndex'] as int : null,
+        partyIndex:
+            destination?.partyIndex ??
+            (m?['partyIndex'] is int ? m!['partyIndex'] as int : null),
+        slotIndex:
+            destination?.slotIndex ??
+            (m?['slotIndex'] is int ? m!['slotIndex'] as int : null),
+        previousPartyIndex: destination == null ? null : oldPartyIndex as int,
+        previousSlotIndex: destination == null ? null : oldSlotIndex as int,
         serverTimestamp: now,
       );
       return const PartyMembershipResult.success();
@@ -422,6 +463,17 @@ class FirestorePartyMembershipCommandRepository
         recruitmentPatch: recruitmentPatch,
       );
       transaction.delete(targetRef);
+      final targetPartyIndex = m?['partyIndex'];
+      final targetSlotIndex = m?['slotIndex'];
+      if (r?['slotLedgerVersion'] == 1 &&
+          targetPartyIndex is int &&
+          targetSlotIndex is int) {
+        transaction.delete(
+          recruitmentRef
+              .collection('slots')
+              .doc('${targetPartyIndex}_$targetSlotIndex'),
+        );
+      }
       transaction.delete(
         _assignment(
           command.targetPlayerId,
@@ -537,6 +589,260 @@ class FirestorePartyMembershipCommandRepository
     });
   }
 
+  @override
+  Future<PartyMembershipResult> repositionMembers(
+    PartyRepositionMembersCommand command,
+  ) async {
+    final invalid = const PartyMembershipCommandValidator().validateReposition(
+      command,
+    );
+    if (invalid != null) return PartyMembershipResult.failure(invalid);
+    final knownMembers = await _members(command.recruitmentId);
+    if (knownMembers == null) {
+      return const PartyMembershipResult.failure(
+        PartyMembershipFailure.temporarilyUnavailable,
+      );
+    }
+    return _run((transaction, actorPlayerId) async {
+      final recruitmentRef = _firestore
+          .collection('recruitments')
+          .doc(command.recruitmentId);
+      final recruitmentSnapshot = await transaction.get(recruitmentRef);
+      final recruitment = recruitmentSnapshot.data();
+      final common = _validateActive(
+        recruitment,
+        command.expectedRecruitmentRevision,
+      );
+      if (common != null) return PartyMembershipResult.failure(common);
+      if (recruitment?['leaderPlayerId'] != actorPlayerId) {
+        return const PartyMembershipResult.failure(
+          PartyMembershipFailure.unauthorized,
+        );
+      }
+      if (recruitment?['slotLedgerVersion'] != 1) {
+        return const PartyMembershipResult.failure(
+          PartyMembershipFailure.unsupportedOnSpark,
+        );
+      }
+      if (command.sourcePlayerId == actorPlayerId ||
+          (command.destinationPartyIndex == 0 &&
+              command.destinationSlotIndex == 0)) {
+        return const PartyMembershipResult.failure(
+          PartyMembershipFailure.invalidRequest,
+        );
+      }
+      final partyCount = recruitment?['partyCount'];
+      final membersPerParty = recruitment?['membersPerParty'];
+      final supportsPerParty = recruitment?['supportsPerParty'];
+      final classLimit = recruitment?['maxDealersPerClassPerParty'];
+      if (partyCount is! int ||
+          membersPerParty is! int ||
+          supportsPerParty is! int ||
+          classLimit is! int ||
+          command.destinationPartyIndex >= partyCount ||
+          command.destinationSlotIndex >= membersPerParty) {
+        return const PartyMembershipResult.failure(
+          PartyMembershipFailure.invalidRequest,
+        );
+      }
+
+      final memberData = <String, Map<String, dynamic>>{};
+      for (final known in knownMembers.docs) {
+        final snapshot = await transaction.get(known.reference);
+        final data = snapshot.data();
+        if (snapshot.exists && data != null) memberData[known.id] = data;
+      }
+      final source = memberData[command.sourcePlayerId];
+      if (source == null) {
+        return const PartyMembershipResult.failure(
+          PartyMembershipFailure.notFound,
+        );
+      }
+      final sourcePartyIndex = source['partyIndex'];
+      final sourceSlotIndex = source['slotIndex'];
+      if (sourcePartyIndex is! int || sourceSlotIndex is! int) {
+        return const PartyMembershipResult.failure(
+          PartyMembershipFailure.invalidComposition,
+        );
+      }
+      if (sourcePartyIndex == command.destinationPartyIndex &&
+          sourceSlotIndex == command.destinationSlotIndex) {
+        return const PartyMembershipResult.failure(
+          PartyMembershipFailure.invalidRequest,
+        );
+      }
+      String? destinationPlayerId;
+      for (final entry in memberData.entries) {
+        if (entry.value['partyIndex'] == command.destinationPartyIndex &&
+            entry.value['slotIndex'] == command.destinationSlotIndex) {
+          destinationPlayerId = entry.key;
+          break;
+        }
+      }
+
+      final occupied = <OccupiedPartyMember>[];
+      for (final entry in memberData.entries) {
+        final data = entry.value;
+        final role = _role(data['role']);
+        final className = data['classNameSnapshot'];
+        final currentParty = data['partyIndex'];
+        final currentSlot = data['slotIndex'];
+        if (role == null ||
+            className is! String ||
+            currentParty is! int ||
+            currentSlot is! int) {
+          return const PartyMembershipResult.failure(
+            PartyMembershipFailure.invalidComposition,
+          );
+        }
+        final isSource = entry.key == command.sourcePlayerId;
+        final isDestination = entry.key == destinationPlayerId;
+        occupied.add(
+          OccupiedPartyMember(
+            id: entry.key,
+            className: className,
+            role: role,
+            partyIndex: isSource
+                ? command.destinationPartyIndex
+                : isDestination
+                ? sourcePartyIndex
+                : currentParty,
+            slotIndex: isSource
+                ? command.destinationSlotIndex
+                : isDestination
+                ? sourceSlotIndex
+                : currentSlot,
+            isLeader: entry.key == actorPlayerId,
+          ),
+        );
+      }
+      final policy = PartyCompositionPolicy(
+        RecruitmentPartyRules(
+          partyCount: partyCount,
+          membersPerParty: membersPerParty,
+          supportsPerParty: supportsPerParty,
+          maxDealersPerClassPerParty: classLimit,
+        ),
+      );
+      if (policy.failureForArrangement(occupied) != null) {
+        return const PartyMembershipResult.failure(
+          PartyMembershipFailure.invalidComposition,
+        );
+      }
+      final listing = await PartyRaidListingTx.read(
+        transaction: transaction,
+        firestore: _firestore,
+        groupId: recruitment?['groupId'],
+        recruitmentId: command.recruitmentId,
+      );
+      final now = FieldValue.serverTimestamp();
+      final nextRevision = command.expectedRecruitmentRevision + 1;
+      final patch = <String, Object?>{
+        'revision': nextRevision,
+        'updatedAt': now,
+      };
+      transaction.update(recruitmentRef, patch);
+      listing.write(
+        transaction: transaction,
+        currentRecruitment: partyRecruitmentMap(recruitment),
+        recruitmentPatch: patch,
+      );
+      transaction.update(
+        recruitmentRef.collection('members').doc(command.sourcePlayerId),
+        {
+          'partyIndex': command.destinationPartyIndex,
+          'slotIndex': command.destinationSlotIndex,
+          'updatedAt': now,
+        },
+      );
+      final sourceSlotRef = recruitmentRef
+          .collection('slots')
+          .doc('${sourcePartyIndex}_$sourceSlotIndex');
+      final destinationSlotRef = recruitmentRef
+          .collection('slots')
+          .doc(
+            '${command.destinationPartyIndex}_${command.destinationSlotIndex}',
+          );
+      if (destinationPlayerId == null) {
+        transaction.delete(sourceSlotRef);
+        transaction.set(destinationSlotRef, {
+          'playerId': command.sourcePlayerId,
+          'partyIndex': command.destinationPartyIndex,
+          'slotIndex': command.destinationSlotIndex,
+          'role': source['role'],
+          'classNameSnapshot': source['classNameSnapshot'],
+          'updatedAt': now,
+        });
+      } else {
+        transaction.update(
+          recruitmentRef.collection('members').doc(destinationPlayerId),
+          {
+            'partyIndex': sourcePartyIndex,
+            'slotIndex': sourceSlotIndex,
+            'updatedAt': now,
+          },
+        );
+        transaction.update(sourceSlotRef, {
+          'playerId': destinationPlayerId,
+          'role': memberData[destinationPlayerId]!['role'],
+          'classNameSnapshot':
+              memberData[destinationPlayerId]!['classNameSnapshot'],
+          'updatedAt': now,
+        });
+        transaction.update(destinationSlotRef, {
+          'playerId': command.sourcePlayerId,
+          'role': source['role'],
+          'classNameSnapshot': source['classNameSnapshot'],
+          'updatedAt': now,
+        });
+      }
+      final recipients = List<String>.from(
+        recruitment?['memberPlayerIds'] as List,
+      );
+      PartyMembershipEventWriter.writeToRecipients(
+        transaction: transaction,
+        firestore: _firestore,
+        type: PartyEventType.memberMoved,
+        recipientPlayerIds: recipients,
+        recruitmentId: command.recruitmentId,
+        recruitmentRevision: nextRevision,
+        actorPlayerId: actorPlayerId,
+        targetPlayerId: command.sourcePlayerId,
+        characterNameSnapshot: source['characterNameSnapshot'] as String?,
+        classNameSnapshot: source['classNameSnapshot'] as String?,
+        role: source['role'] as String?,
+        partyIndex: command.destinationPartyIndex,
+        slotIndex: command.destinationSlotIndex,
+        previousPartyIndex: sourcePartyIndex,
+        previousSlotIndex: sourceSlotIndex,
+        serverTimestamp: now,
+      );
+      if (destinationPlayerId != null) {
+        final destination = memberData[destinationPlayerId]!;
+        PartyMembershipEventWriter.writeToRecipients(
+          transaction: transaction,
+          firestore: _firestore,
+          type: PartyEventType.memberMoved,
+          recipientPlayerIds: recipients,
+          recruitmentId: command.recruitmentId,
+          recruitmentRevision: nextRevision,
+          actorPlayerId: actorPlayerId,
+          targetPlayerId: destinationPlayerId,
+          characterNameSnapshot:
+              destination['characterNameSnapshot'] as String?,
+          classNameSnapshot: destination['classNameSnapshot'] as String?,
+          role: destination['role'] as String?,
+          partyIndex: sourcePartyIndex,
+          slotIndex: sourceSlotIndex,
+          previousPartyIndex: command.destinationPartyIndex,
+          previousSlotIndex: command.destinationSlotIndex,
+          serverTimestamp: now,
+        );
+      }
+      return const PartyMembershipResult.success();
+    });
+  }
+
   Future<QuerySnapshot<Map<String, dynamic>>?> _members(
     String recruitmentId,
   ) async {
@@ -552,7 +858,7 @@ class FirestorePartyMembershipCommandRepository
     }
   }
 
-  Future<bool> _composition(
+  Future<PartyReplacementPlan?> _replacementPlan(
     Transaction transaction,
     QuerySnapshot<Map<String, dynamic>> known, {
     required String replacePlayerId,
@@ -560,47 +866,52 @@ class FirestorePartyMembershipCommandRepository
     required PartyRole replacementRole,
     required Map<String, dynamic> recruitment,
   }) async {
-    int? targetPartyIndex;
-    final dealerClassesByParty = <int, List<String>>{};
-    final dealerCountsByParty = <int, int>{};
-    final supportCountsByParty = <int, int>{};
+    final occupied = <OccupiedPartyMember>[];
     for (final item in known.docs) {
       final snapshot = await transaction.get(item.reference);
       if (!snapshot.exists) continue;
       final data = snapshot.data();
-      final role = item.id == replacePlayerId
-          ? replacementRole
-          : _role(data?['role']);
-      final className = item.id == replacePlayerId
-          ? replacementClassName
-          : data?['classNameSnapshot'];
+      final role = _role(data?['role']);
+      final className = data?['classNameSnapshot'];
       final partyIndex = data?['partyIndex'];
-      if (role == null || className is! String || partyIndex is! int)
-        return false;
-      if (item.id == replacePlayerId) targetPartyIndex = partyIndex;
-      if (role == PartyRole.dealer) {
-        dealerClassesByParty.putIfAbsent(partyIndex, () => []).add(className);
-        dealerCountsByParty[partyIndex] =
-            (dealerCountsByParty[partyIndex] ?? 0) + 1;
-      } else {
-        supportCountsByParty[partyIndex] =
-            (supportCountsByParty[partyIndex] ?? 0) + 1;
+      final slotIndex = data?['slotIndex'];
+      if (role == null || className is! String || partyIndex is! int) {
+        return null;
       }
+      occupied.add(
+        OccupiedPartyMember(
+          id: item.id,
+          className: className,
+          role: role,
+          partyIndex: partyIndex,
+          slotIndex: slotIndex is int ? slotIndex : null,
+          isLeader: recruitment['leaderPlayerId'] == item.id,
+        ),
+      );
     }
-    if (targetPartyIndex == null) return false;
-    final membersPerParty = recruitment['membersPerParty'] as int;
-    final supportsPerParty = recruitment['supportsPerParty'] as int;
-    if ((supportCountsByParty[targetPartyIndex] ?? 0) > supportsPerParty ||
-        (dealerCountsByParty[targetPartyIndex] ?? 0) >
-            membersPerParty - supportsPerParty) {
-      return false;
+    final partyCount = recruitment['partyCount'];
+    final membersPerParty = recruitment['membersPerParty'];
+    final supportsPerParty = recruitment['supportsPerParty'];
+    final classLimit = recruitment['maxDealersPerClassPerParty'];
+    if (partyCount is! int ||
+        membersPerParty is! int ||
+        supportsPerParty is! int ||
+        classLimit is! int) {
+      return null;
     }
-    if (replacementRole == PartyRole.support) return true;
-    final sameClassCount = dealerClassesByParty[targetPartyIndex]!
-        .where((name) => name == replacementClassName)
-        .length;
-    final classLimit = recruitment['maxDealersPerClassPerParty'] as int;
-    return sameClassCount <= classLimit;
+    return PartyCompositionPolicy(
+      RecruitmentPartyRules(
+        partyCount: partyCount,
+        membersPerParty: membersPerParty,
+        supportsPerParty: supportsPerParty,
+        maxDealersPerClassPerParty: classLimit,
+      ),
+    ).planReplacement(
+      replaceMemberId: replacePlayerId,
+      className: replacementClassName,
+      role: replacementRole,
+      existing: occupied,
+    );
   }
 
   Future<PartyMembershipResult> _run(

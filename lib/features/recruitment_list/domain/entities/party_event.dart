@@ -28,15 +28,15 @@ enum PartyEventType {
       this == PartyEventType.partyIncompleteEnded;
 
   /// 앱 내부 알림 목록 후보. UI 문구는 type별 템플릿으로 만든다.
-  bool get isNotificationCandidate =>
-      this != PartyEventType.memberMoved && this != PartyEventType.partyEnded;
+  bool get isNotificationCandidate => this != PartyEventType.partyEnded;
 
   /// 레이드 현황 카드와 모집 상세에서 방 단위로 확인하는 이벤트다.
   bool get isRoomAttentionEvent =>
       this == PartyEventType.applicationSubmitted ||
       this == PartyEventType.memberJoined ||
       this == PartyEventType.memberKicked ||
-      this == PartyEventType.memberCharacterChanged;
+      this == PartyEventType.memberCharacterChanged ||
+      this == PartyEventType.memberMoved;
 
   static PartyEventType? tryParse(String? value) {
     if (value == null || value.isEmpty) return null;

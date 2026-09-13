@@ -46,6 +46,22 @@ class PartySetApprovalPermissionCommand {
   final int expectedRecruitmentRevision;
 }
 
+class PartyRepositionMembersCommand {
+  const PartyRepositionMembersCommand({
+    required this.recruitmentId,
+    required this.sourcePlayerId,
+    required this.destinationPartyIndex,
+    required this.destinationSlotIndex,
+    required this.expectedRecruitmentRevision,
+  });
+
+  final String recruitmentId;
+  final String sourcePlayerId;
+  final int destinationPartyIndex;
+  final int destinationSlotIndex;
+  final int expectedRecruitmentRevision;
+}
+
 enum PartyMembershipFailure {
   unauthenticated,
   playerBindingMissing,

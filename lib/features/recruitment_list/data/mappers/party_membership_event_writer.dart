@@ -26,6 +26,8 @@ class PartyMembershipEventWriter {
     String? difficultyId,
     int? partyIndex,
     int? slotIndex,
+    int? previousPartyIndex,
+    int? previousSlotIndex,
     String? reason,
     DateTime Function()? now,
   }) {
@@ -48,6 +50,8 @@ class PartyMembershipEventWriter {
         difficultyId: difficultyId,
         partyIndex: partyIndex,
         slotIndex: slotIndex,
+        previousPartyIndex: previousPartyIndex,
+        previousSlotIndex: previousSlotIndex,
         reason: reason,
         serverTimestamp: serverTimestamp,
         now: now,
@@ -74,6 +78,8 @@ class PartyMembershipEventWriter {
     String? difficultyId,
     int? partyIndex,
     int? slotIndex,
+    int? previousPartyIndex,
+    int? previousSlotIndex,
     String? reason,
     DateTime Function()? now,
   }) {
@@ -81,7 +87,8 @@ class PartyMembershipEventWriter {
       type == PartyEventType.memberJoined ||
           type == PartyEventType.memberLeft ||
           type == PartyEventType.memberKicked ||
-          type == PartyEventType.memberCharacterChanged,
+          type == PartyEventType.memberCharacterChanged ||
+          type == PartyEventType.memberMoved,
       'membership event writer requires a membership type',
     );
     // 행위자 본인에게는 쓰지 않는다. Rules도 recipient != actor를 요구한다.
@@ -120,6 +127,8 @@ class PartyMembershipEventWriter {
         difficultyId: difficultyId,
         partyIndex: partyIndex,
         slotIndex: slotIndex,
+        previousPartyIndex: previousPartyIndex,
+        previousSlotIndex: previousSlotIndex,
         reason: reason,
         serverTimestamp: serverTimestamp,
         expiresAt: expiresAt,

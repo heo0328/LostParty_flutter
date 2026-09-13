@@ -54,6 +54,8 @@ class PartySlot {
   final int partyIndex;
   final int slotIndex;
 
+  String get documentId => '${partyIndex}_$slotIndex';
+
   @override
   bool operator ==(Object other) =>
       other is PartySlot &&
@@ -439,7 +441,8 @@ class PartyCompositionPolicy {
                 id: member.id,
                 className: member.className,
                 role: member.role,
-                partyIndex: occupancy[member.id]?.partyIndex ?? member.partyIndex,
+                partyIndex:
+                    occupancy[member.id]?.partyIndex ?? member.partyIndex,
                 slotIndex: occupancy[member.id]?.slotIndex ?? member.slotIndex,
                 joinedAt: member.joinedAt,
                 isLeader: member.isLeader,
@@ -455,9 +458,7 @@ class PartyCompositionPolicy {
         if (used.contains(slot)) continue;
         final moved = [
           for (final member in effective)
-            member.id == replaceMemberId
-                ? _atSlot(member, slot)
-                : member,
+            member.id == replaceMemberId ? _atSlot(member, slot) : member,
         ];
         if (_failureForArrangement(moved) == null) {
           return PartyReplacementPlan.moveToEmpty(slot);
@@ -478,17 +479,11 @@ class PartyCompositionPolicy {
         final swapped = [...effective];
         swapped[leftIndex] = _atSlot(
           left,
-          PartySlot(
-            partyIndex: right.partyIndex,
-            slotIndex: right.slotIndex!,
-          ),
+          PartySlot(partyIndex: right.partyIndex, slotIndex: right.slotIndex!),
         );
         swapped[rightIndex] = _atSlot(
           right,
-          PartySlot(
-            partyIndex: left.partyIndex,
-            slotIndex: left.slotIndex!,
-          ),
+          PartySlot(partyIndex: left.partyIndex, slotIndex: left.slotIndex!),
         );
         if (_failureForArrangement(swapped) == null) {
           return PartyReplacementPlan.inPlaceNeedsRebalance([
@@ -517,9 +512,7 @@ class PartyCompositionPolicy {
     List<OccupiedPartyMember> members,
   ) {
     for (var partyIndex = 0; partyIndex < rules.partyCount; partyIndex++) {
-      final party = members.where(
-        (member) => member.partyIndex == partyIndex,
-      );
+      final party = members.where((member) => member.partyIndex == partyIndex);
       final supports = party
           .where((member) => member.role == PartyRole.support)
           .length;
@@ -548,6 +541,10 @@ class PartyCompositionPolicy {
     }
     return null;
   }
+
+  PartyCompositionFailure? failureForArrangement(
+    List<OccupiedPartyMember> members,
+  ) => _failureForArrangement(members);
 
   bool _place(
     List<PartyCompositionMember> members,

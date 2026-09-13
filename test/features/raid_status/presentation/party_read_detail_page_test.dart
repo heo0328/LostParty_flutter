@@ -1310,6 +1310,46 @@ void main() {
       );
     });
 
+    testWidgets('같은 파티의 동일 딜러 직업 두 카드에 파란 자리 조정 안내를 표시한다', (tester) async {
+      await pumpComposition(
+        tester,
+        surface: const Size(400, 1800),
+        summary: _summary(maxMemberCount: 8, memberCount: 3),
+        members: const [
+          PartyMemberDisplay(
+            playerId: 'leader',
+            characterName: '리더',
+            className: '발키리',
+            role: PartyRole.dealer,
+            partyIndex: 0,
+            slotIndex: 0,
+          ),
+          PartyMemberDisplay(
+            playerId: 'duplicate',
+            characterName: '중복',
+            className: '발키리',
+            role: PartyRole.dealer,
+            partyIndex: 0,
+            slotIndex: 1,
+          ),
+          PartyMemberDisplay(
+            playerId: 'other-party',
+            characterName: '다른파티',
+            className: '발키리',
+            role: PartyRole.dealer,
+            partyIndex: 1,
+            slotIndex: 0,
+          ),
+        ],
+      );
+
+      expect(find.text('동일 직업 · 자리 조정 필요'), findsNWidgets(2));
+      expect(
+        find.byKey(const ValueKey('memberCompositionWarning-other-party')),
+        findsNothing,
+      );
+    });
+
     testWidgets('넓은 4인: 1파티가 왼쪽 절반이고 Slot Card는 파티 내부 1열이다', (tester) async {
       await pumpComposition(
         tester,
@@ -2160,6 +2200,11 @@ class _RecordingMembershipRepository
   Future<PartyMembershipResult> setApprovalPermission(
     PartySetApprovalPermissionCommand command,
   ) => throw UnimplementedError();
+
+  @override
+  Future<PartyMembershipResult> repositionMembers(
+    PartyRepositionMembersCommand command,
+  ) async => const PartyMembershipResult.success();
 }
 
 class _RecordingCycleRepository implements PartyCycleCommandRepository {

@@ -14,4 +14,7 @@ abstract interface class PartyMembershipCommandRepository {
   Future<PartyMembershipResult> setApprovalPermission(
     PartySetApprovalPermissionCommand command,
   );
+  Future<PartyMembershipResult> repositionMembers(
+    PartyRepositionMembersCommand command,
+  );
 }

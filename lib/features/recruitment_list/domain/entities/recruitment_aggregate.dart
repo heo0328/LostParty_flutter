@@ -99,6 +99,7 @@ class PublicRecruitmentSummary {
     this.visibility = 'public',
     this.groupId,
     this.memberPlayerIds,
+    this.supportsPositionChanges = false,
   });
 
   factory PublicRecruitmentSummary.fromAggregate(
@@ -192,6 +193,7 @@ class PublicRecruitmentSummary {
   /// 필터 매칭용 확정 참가 Player ID. 카드 UI에는 올리지 않는다.
   /// null이면 문서에 필드가 없어 그룹원 조건을 확인할 수 없다.
   final Set<String>? memberPlayerIds;
+  final bool supportsPositionChanges;
 
   bool get isGroupLinked => groupId != null && groupId!.isNotEmpty;
   bool get isGroupOnly => isGroupLinked && visibility == 'group';

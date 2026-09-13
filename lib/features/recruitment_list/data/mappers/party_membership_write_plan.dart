@@ -13,6 +13,8 @@ class PartyMembershipWritePlan {
     required double? combatPower,
     PartyGemValidationSnapshot? gemValidation,
     BuildIntegritySnapshot? buildIntegrity,
+    int? partyIndex,
+    int? slotIndex,
     required Object serverTimestamp,
   }) => {
     'characterId': characterId,
@@ -23,6 +25,8 @@ class PartyMembershipWritePlan {
     'combatPowerSnapshot': combatPower,
     'gemValidationSnapshot': gemValidation?.toFields(),
     'buildIntegritySnapshot': buildIntegrity?.toFields(),
+    'partyIndex': ?partyIndex,
+    'slotIndex': ?slotIndex,
     'characterChangedAt': serverTimestamp,
     'updatedAt': serverTimestamp,
   };

@@ -31,6 +31,7 @@ void main() {
       expect(plan.recruitment['memberPlayerIds'], ['player-1']);
       expect(plan.recruitment['memberCount'], 1);
       expect(plan.recruitment['revision'], 1);
+      expect(plan.recruitment['slotLedgerVersion'], 1);
       expect(plan.recruitment['createdAt'], same(timestamp));
 
       expect(plan.leaderMembership['playerId'], 'player-1');

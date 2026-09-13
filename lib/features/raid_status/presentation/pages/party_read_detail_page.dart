@@ -721,6 +721,13 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                   onOpenNotifications: widget.accountDatabase == null
                       ? null
                       : _showRoomEvents,
+                  onReposition:
+                      _isLeader(summary) &&
+                          summary.maxMemberCount > summary.membersPerParty &&
+                          summary.supportsPositionChanges &&
+                          _canUseMembershipCommands
+                      ? () => _openRepositionFlow(summary)
+                      : null,
                 ),
                 if (_isLeader(summary))
                   _PendingApplicationsSection(
@@ -918,6 +925,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
           partyRules: summary.partyRules,
           occupiedMembers: occupiedMembers,
           replacingMemberId: widget.playerId,
+          allowPositionChanges: summary.supportsPositionChanges,
         ),
       );
     } catch (_) {
@@ -1023,6 +1031,104 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(_membershipFailureMessage(result.failure!))),
+    );
+  }
+
+  Future<void> _openRepositionFlow(PublicRecruitmentSummary summary) async {
+    final repository = widget.membershipCommandRepository;
+    if (repository == null || _submitting || _membersLoading) return;
+    final source = await showModalBottomSheet<PartyMemberDisplay>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => ListView(
+        shrinkWrap: true,
+        children: [
+          const ListTile(title: Text('이동할 파티원 선택')),
+          for (final member in _members.where(
+            (member) => member.playerId != summary.leaderUserId,
+          ))
+            ListTile(
+              title: Text(member.characterName ?? '정보 없음'),
+              subtitle: Text(
+                '${member.partyIndex + 1}파티 ${((member.slotIndex ?? 0) + 1)}번 · ${member.className ?? '정보 없음'}',
+              ),
+              onTap: () => Navigator.of(context).pop(member),
+            ),
+        ],
+      ),
+    );
+    if (source == null || !mounted) return;
+    final board = PartySlotBoard.fromMembers(
+      members: _members,
+      membersPerParty: summary.membersPerParty,
+      maxMemberCount: summary.maxMemberCount,
+    );
+    final destination = await showModalBottomSheet<PartySlotCell>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => ListView(
+        shrinkWrap: true,
+        children: [
+          const ListTile(title: Text('이동할 자리 선택')),
+          for (final cell in board.cells.where(
+            (cell) =>
+                !cell.isLeaderSeat && cell.member?.playerId != source.playerId,
+          ))
+            ListTile(
+              title: Text('${cell.partyIndex + 1}파티 ${cell.slotIndex + 1}번'),
+              subtitle: Text(
+                cell.member == null
+                    ? '빈자리로 이동'
+                    : '${cell.member!.characterName ?? '정보 없음'}님과 자리 교환',
+              ),
+              onTap: () => Navigator.of(context).pop(cell),
+            ),
+        ],
+      ),
+    );
+    if (destination == null || !mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('자리를 조정할까요?'),
+        content: Text(
+          destination.member == null
+              ? '${source.characterName ?? '파티원'}님을 ${destination.partyIndex + 1}파티 ${destination.slotIndex + 1}번 빈자리로 이동합니다.'
+              : '${source.characterName ?? '파티원'}님과 ${destination.member!.characterName ?? '파티원'}님의 자리를 교환합니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _submitting = true);
+    final result = await repository.repositionMembers(
+      PartyRepositionMembersCommand(
+        recruitmentId: widget.recruitmentId,
+        sourcePlayerId: source.playerId,
+        destinationPartyIndex: destination.partyIndex,
+        destinationSlotIndex: destination.slotIndex,
+        expectedRecruitmentRevision: summary.revision,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result.isSuccess
+              ? '파티원 자리를 조정했습니다.'
+              : _membershipFailureMessage(result.failure!),
+        ),
+      ),
     );
   }
 
@@ -1621,6 +1727,7 @@ class _PartyCompositionSection extends StatelessWidget {
     this.lostGroupQualificationPlayerIds = const {},
     this.showThisWeekRaidComplete = false,
     this.onOpenNotifications,
+    this.onReposition,
   });
 
   /// 파티 그룹 2열 후보 breakpoint. 기기 종류가 아니라 가용 폭만 본다.
@@ -1637,6 +1744,7 @@ class _PartyCompositionSection extends StatelessWidget {
   final PartyReadFailureType? failure;
   final bool isFromCache;
   final VoidCallback? onOpenNotifications;
+  final VoidCallback? onReposition;
 
   @override
   Widget build(BuildContext context) {
@@ -1646,6 +1754,7 @@ class _PartyCompositionSection extends StatelessWidget {
       membersPerParty: membersPerParty,
       maxMemberCount: maxMemberCount,
     );
+    final compositionWarningPlayerIds = _compositionWarningPlayerIds(board);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
       child: Column(
@@ -1668,6 +1777,13 @@ class _PartyCompositionSection extends StatelessWidget {
                 ),
               ],
               const Spacer(),
+              if (onReposition != null)
+                TextButton.icon(
+                  key: const ValueKey('repositionMembersButton'),
+                  onPressed: onReposition,
+                  icon: const Icon(Icons.swap_horiz),
+                  label: const Text('자리 조정'),
+                ),
               if (onOpenNotifications != null)
                 IconButton(
                   key: const ValueKey('roomEventHistoryButton'),
@@ -1713,6 +1829,8 @@ class _PartyCompositionSection extends StatelessWidget {
                         supportsPerParty: supportsPerParty,
                         lostGroupQualificationPlayerIds:
                             lostGroupQualificationPlayerIds,
+                        compositionWarningPlayerIds:
+                            compositionWarningPlayerIds,
                       )
                     else
                       for (
@@ -1728,6 +1846,8 @@ class _PartyCompositionSection extends StatelessWidget {
                           supportsPerParty: supportsPerParty,
                           lostGroupQualificationPlayerIds:
                               lostGroupQualificationPlayerIds,
+                          compositionWarningPlayerIds:
+                              compositionWarningPlayerIds,
                         ),
                     if (board.unassignedMembers.isNotEmpty) ...[
                       Padding(
@@ -1777,6 +1897,27 @@ bool _slotLostGroupQualification(
   return playerId != null && lostGroupQualificationPlayerIds.contains(playerId);
 }
 
+Set<String> _compositionWarningPlayerIds(PartySlotBoard board) {
+  final idsByKey = <String, List<String>>{};
+  for (final cell in board.cells) {
+    final member = cell.member;
+    final className = member?.className?.trim();
+    if (member == null ||
+        member.role != PartyRole.dealer ||
+        className == null ||
+        className.isEmpty) {
+      continue;
+    }
+    idsByKey
+        .putIfAbsent('${cell.partyIndex}::$className', () => <String>[])
+        .add(member.playerId);
+  }
+  return {
+    for (final ids in idsByKey.values)
+      if (ids.length > 1) ...ids,
+  };
+}
+
 String _partyGroupLabel(
   int partyIndex,
   List<PartySlotCell> cells,
@@ -1800,6 +1941,7 @@ class _WidePartyGroups extends StatelessWidget {
     required this.board,
     required this.raidLeaderLabel,
     required this.supportsPerParty,
+    required this.compositionWarningPlayerIds,
     this.lostGroupQualificationPlayerIds = const {},
   });
 
@@ -1807,6 +1949,7 @@ class _WidePartyGroups extends StatelessWidget {
   final String raidLeaderLabel;
   final int supportsPerParty;
   final Set<String> lostGroupQualificationPlayerIds;
+  final Set<String> compositionWarningPlayerIds;
 
   @override
   Widget build(BuildContext context) {
@@ -1870,6 +2013,9 @@ class _WidePartyGroups extends StatelessWidget {
                         leftCells[slotIndex],
                         lostGroupQualificationPlayerIds,
                       ),
+                      compositionWarning: compositionWarningPlayerIds.contains(
+                        leftCells[slotIndex].member?.playerId,
+                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -1882,6 +2028,10 @@ class _WidePartyGroups extends StatelessWidget {
                               rightCells[slotIndex],
                               lostGroupQualificationPlayerIds,
                             ),
+                            compositionWarning: compositionWarningPlayerIds
+                                .contains(
+                                  rightCells[slotIndex].member?.playerId,
+                                ),
                           )
                         : const SizedBox.shrink(),
                   ),
@@ -1901,6 +2051,7 @@ class _PartyGroupColumn extends StatelessWidget {
     required this.cells,
     required this.raidLeaderLabel,
     required this.supportsPerParty,
+    required this.compositionWarningPlayerIds,
     this.lostGroupQualificationPlayerIds = const {},
   });
 
@@ -1909,6 +2060,7 @@ class _PartyGroupColumn extends StatelessWidget {
   final String raidLeaderLabel;
   final int supportsPerParty;
   final Set<String> lostGroupQualificationPlayerIds;
+  final Set<String> compositionWarningPlayerIds;
 
   @override
   Widget build(BuildContext context) {
@@ -1930,6 +2082,7 @@ class _PartyGroupColumn extends StatelessWidget {
           cells: cells,
           raidLeaderLabel: raidLeaderLabel,
           lostGroupQualificationPlayerIds: lostGroupQualificationPlayerIds,
+          compositionWarningPlayerIds: compositionWarningPlayerIds,
         ),
       ],
     );
@@ -1940,12 +2093,14 @@ class _SlotCardGrid extends StatelessWidget {
   const _SlotCardGrid({
     required this.cells,
     required this.raidLeaderLabel,
+    required this.compositionWarningPlayerIds,
     this.lostGroupQualificationPlayerIds = const {},
   });
 
   final List<PartySlotCell> cells;
   final String raidLeaderLabel;
   final Set<String> lostGroupQualificationPlayerIds;
+  final Set<String> compositionWarningPlayerIds;
 
   @override
   Widget build(BuildContext context) {
@@ -1962,6 +2117,9 @@ class _SlotCardGrid extends StatelessWidget {
                 cell,
                 lostGroupQualificationPlayerIds,
               ),
+              compositionWarning: compositionWarningPlayerIds.contains(
+                cell.member?.playerId,
+              ),
             ),
           ),
       ],
@@ -1974,11 +2132,13 @@ class _SlotCard extends StatelessWidget {
     required this.cell,
     required this.raidLeaderLabel,
     this.lostGroupQualification = false,
+    this.compositionWarning = false,
   });
 
   final PartySlotCell cell;
   final String raidLeaderLabel;
   final bool lostGroupQualification;
+  final bool compositionWarning;
 
   @override
   Widget build(BuildContext context) {
@@ -2052,6 +2212,19 @@ class _SlotCard extends StatelessWidget {
                       GemValidationLine(
                         validation: validation,
                         keyName: 'memberGemValidation',
+                      ),
+                    ],
+                    if (compositionWarning) ...[
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        '동일 직업 · 자리 조정 필요',
+                        key: ValueKey(
+                          'memberCompositionWarning-${member.playerId}',
+                        ),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ],

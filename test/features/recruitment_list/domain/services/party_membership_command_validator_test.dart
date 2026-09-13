@@ -6,15 +6,66 @@ import 'package:lost_party/features/recruitment_list/domain/services/party_membe
 void main() {
   const validator = PartyMembershipCommandValidator();
   test('캐릭터 변경은 유효한 ID와 revision을 요구한다', () {
-    const command = PartyChangeCharacterCommand(recruitmentId: 'party', newCharacterId: 'new/character', newRole: PartyRole.dealer, expectedRecruitmentRevision: 1);
-    expect(validator.validateChange(command), PartyMembershipFailure.invalidRequest);
+    const command = PartyChangeCharacterCommand(
+      recruitmentId: 'party',
+      newCharacterId: 'new/character',
+      newRole: PartyRole.dealer,
+      expectedRecruitmentRevision: 1,
+    );
+    expect(
+      validator.validateChange(command),
+      PartyMembershipFailure.invalidRequest,
+    );
   });
   test('탈퇴·추방 대상 Player ID를 검증한다', () {
-    const command = PartyRemoveMemberCommand(recruitmentId: 'party', targetPlayerId: '', expectedRecruitmentRevision: 1);
-    expect(validator.validateRemove(command), PartyMembershipFailure.invalidRequest);
+    const command = PartyRemoveMemberCommand(
+      recruitmentId: 'party',
+      targetPlayerId: '',
+      expectedRecruitmentRevision: 1,
+    );
+    expect(
+      validator.validateRemove(command),
+      PartyMembershipFailure.invalidRequest,
+    );
   });
   test('승인권 변경은 양수 revision을 요구한다', () {
-    const command = PartySetApprovalPermissionCommand(recruitmentId: 'party', targetPlayerId: 'member', enabled: true, expectedRecruitmentRevision: 0);
-    expect(validator.validatePermission(command), PartyMembershipFailure.invalidRequest);
+    const command = PartySetApprovalPermissionCommand(
+      recruitmentId: 'party',
+      targetPlayerId: 'member',
+      enabled: true,
+      expectedRecruitmentRevision: 0,
+    );
+    expect(
+      validator.validatePermission(command),
+      PartyMembershipFailure.invalidRequest,
+    );
+  });
+
+  test('자리 조정은 유효한 대상·목적 슬롯·revision을 요구한다', () {
+    const validator = PartyMembershipCommandValidator();
+    expect(
+      validator.validateReposition(
+        const PartyRepositionMembersCommand(
+          recruitmentId: 'party',
+          sourcePlayerId: 'member',
+          destinationPartyIndex: 1,
+          destinationSlotIndex: 2,
+          expectedRecruitmentRevision: 3,
+        ),
+      ),
+      isNull,
+    );
+    expect(
+      validator.validateReposition(
+        const PartyRepositionMembersCommand(
+          recruitmentId: 'party',
+          sourcePlayerId: 'member',
+          destinationPartyIndex: -1,
+          destinationSlotIndex: 0,
+          expectedRecruitmentRevision: 3,
+        ),
+      ),
+      PartyMembershipFailure.invalidRequest,
+    );
   });
 }

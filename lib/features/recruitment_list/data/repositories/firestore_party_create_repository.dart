@@ -24,7 +24,8 @@ class FirestorePartyCreateRepository implements PartyCreateRepository {
   Future<PartyCreateResult> create(PartyCreateCommand command) async {
     const validator = PartyCreateCommandValidator();
     final requestFailure = validator.validate(command);
-    if (requestFailure != null) return PartyCreateResult.failure(requestFailure);
+    if (requestFailure != null)
+      return PartyCreateResult.failure(requestFailure);
     final authUid = _firebaseAuth.currentUser?.uid;
     if (authUid == null) {
       return const PartyCreateResult.failure(
@@ -191,11 +192,17 @@ class FirestorePartyCreateRepository implements PartyCreateRepository {
           verifiedClassName: verifiedClass,
           verifiedItemLevel: verifiedItemLevel,
         );
-        final memberRef = recruitmentRef
-            .collection('members')
-            .doc(playerId);
+        final memberRef = recruitmentRef.collection('members').doc(playerId);
         transaction.set(recruitmentRef, plan.recruitment);
         transaction.set(memberRef, plan.leaderMembership);
+        transaction.set(recruitmentRef.collection('slots').doc('0_0'), {
+          'playerId': playerId,
+          'partyIndex': 0,
+          'slotIndex': 0,
+          'role': plan.leaderMembership['role'],
+          'classNameSnapshot': plan.leaderMembership['classNameSnapshot'],
+          'updatedAt': now,
+        });
         if (occupancy == PartyCreateOccupancyDecision.replaceStaleAssignment) {
           transaction.delete(assignmentRef);
         }
@@ -231,7 +238,8 @@ double? _parseItemLevel(Object? value) {
 
 PartyCreateFailure _firebaseFailure(String code) => switch (code) {
   'permission-denied' => PartyCreateFailure.permissionDenied,
-  'unavailable' || 'deadline-exceeded' || 'aborted' =>
-    PartyCreateFailure.temporarilyUnavailable,
+  'unavailable' ||
+  'deadline-exceeded' ||
+  'aborted' => PartyCreateFailure.temporarilyUnavailable,
   _ => PartyCreateFailure.unknown,
 };

@@ -65,7 +65,7 @@ void main() {
       }
       expect(PartyEventType.partyDisbanded.isNotificationCandidate, isTrue);
       expect(PartyEventType.partyEnded.isNotificationCandidate, isFalse);
-      expect(PartyEventType.memberMoved.isNotificationCandidate, isFalse);
+      expect(PartyEventType.memberMoved.isNotificationCandidate, isTrue);
     });
   });
 }

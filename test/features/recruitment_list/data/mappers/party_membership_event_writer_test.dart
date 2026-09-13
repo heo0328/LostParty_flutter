@@ -90,5 +90,25 @@ void main() {
         isNot(PartyEventType.applicationApproved.wireName),
       );
     });
+
+    test('자리 조정은 기존 memberMoved 이벤트 유형과 목적 슬롯을 사용한다', () {
+      final payload = PartyEventWritePlan.membership(
+        eventId: 'party_member_8_memberMoved',
+        type: PartyEventType.memberMoved,
+        recipientPlayerId: 'member',
+        recruitmentId: 'party',
+        recruitmentRevision: 8,
+        actorPlayerId: 'leader',
+        targetPlayerId: 'member',
+        partyIndex: 1,
+        slotIndex: 2,
+        serverTimestamp: Object(),
+        expiresAt: Object(),
+      );
+
+      expect(payload['type'], 'memberMoved');
+      expect(payload['partyIndex'], 1);
+      expect(payload['slotIndex'], 2);
+    });
   });
 }

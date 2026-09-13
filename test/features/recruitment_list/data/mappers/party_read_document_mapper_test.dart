@@ -41,6 +41,18 @@ void main() {
     expect(summary.visibility, 'public');
     expect(summary.groupId, isNull);
     expect(summary.memberPlayerIds, {'player-leader', 'player-member'});
+    expect(summary.supportsPositionChanges, isFalse);
+  });
+
+  test('enables position changes only for slot-ledger recruitments', () {
+    final summary = mapper.toPublicRecruitment(
+      PartyReadDocumentDto(
+        id: 'raid-ledger',
+        data: _recruitmentData()..['slotLedgerVersion'] = 1,
+      ),
+    );
+
+    expect(summary.supportsPositionChanges, isTrue);
   });
 
   test('excludes leader or confirmed member rooms from the public list', () {
