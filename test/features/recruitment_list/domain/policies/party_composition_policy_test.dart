@@ -346,7 +346,111 @@ void main() {
       expect(failure, isNull);
     });
   });
+
+  group('PartyCompositionPolicy 캐릭터 변경 배치 계획', () {
+    test('현재 파티가 중복이면 다른 파티의 첫 유효 빈자리로 이동한다', () {
+      final plan = _eightPlayerPolicy.planReplacement(
+        replaceMemberId: 'member',
+        className: '발키리',
+        role: PartyRole.dealer,
+        existing: [
+          _occupied(
+            'leader',
+            '발키리',
+            partyIndex: 0,
+            slotIndex: 0,
+            isLeader: true,
+          ),
+          _occupied('member', '소서리스', partyIndex: 0, slotIndex: 1),
+          _occupied('other', '브레이커', partyIndex: 1, slotIndex: 0),
+        ],
+      );
+
+      expect(plan.disposition, PartyReplacementDisposition.moveToEmpty);
+      expect(plan.destination, const PartySlot(partyIndex: 1, slotIndex: 1));
+    });
+
+    test('빈자리가 없고 한 번의 교환으로 해결되면 변경을 허용하고 안내한다', () {
+      final plan = _eightPlayerPolicy.planReplacement(
+        replaceMemberId: 'member',
+        className: '발키리',
+        role: PartyRole.dealer,
+        existing: _fullRaidMembers(),
+      );
+
+      expect(
+        plan.disposition,
+        PartyReplacementDisposition.inPlaceNeedsRebalance,
+      );
+      expect(plan.suggestedSwapMemberIds, containsAll(['member', 'd4']));
+    });
+
+    test('공대장은 고정한 채 일반 멤버 한 쌍 교환으로 해결 가능한 변경을 허용한다', () {
+      final plan = _eightPlayerPolicy.planReplacement(
+        replaceMemberId: 'leader',
+        className: '소서리스',
+        role: PartyRole.dealer,
+        existing: _fullRaidMembers(),
+      );
+
+      expect(
+        plan.disposition,
+        PartyReplacementDisposition.inPlaceNeedsRebalance,
+      );
+      expect(plan.suggestedSwapMemberIds, isNot(contains('leader')));
+    });
+
+    test('다른 파티가 없는 4인 파티의 동일 직업 변경은 거절한다', () {
+      final plan = _fourPlayerPolicy.planReplacement(
+        replaceMemberId: 'member',
+        className: '발키리',
+        role: PartyRole.dealer,
+        existing: [
+          _occupied(
+            'leader',
+            '발키리',
+            partyIndex: 0,
+            slotIndex: 0,
+            isLeader: true,
+          ),
+          _occupied('member', '소서리스', partyIndex: 0, slotIndex: 1),
+        ],
+      );
+
+      expect(plan.canChange, isFalse);
+      expect(plan.failure, PartyCompositionFailure.duplicateDealerClass);
+    });
+  });
 }
+
+List<OccupiedPartyMember> _fullRaidMembers() => [
+  _occupied(
+    'leader',
+    '발키리',
+    partyIndex: 0,
+    slotIndex: 0,
+    isLeader: true,
+  ),
+  _occupied('member', '소서리스', partyIndex: 0, slotIndex: 1),
+  _occupied('d2', '아르카나', partyIndex: 0, slotIndex: 2),
+  _occupied(
+    's1',
+    '바드',
+    role: PartyRole.support,
+    partyIndex: 0,
+    slotIndex: 3,
+  ),
+  _occupied('d4', '브레이커', partyIndex: 1, slotIndex: 0),
+  _occupied('d5', '디스트로이어', partyIndex: 1, slotIndex: 1),
+  _occupied('d6', '서머너', partyIndex: 1, slotIndex: 2),
+  _occupied(
+    's2',
+    '도화가',
+    role: PartyRole.support,
+    partyIndex: 1,
+    slotIndex: 3,
+  ),
+];
 
 final _fourPlayerPolicy = PartyCompositionPolicy(
   RecruitmentPartyRules.fromRaid(_raid(partySize: 4)),

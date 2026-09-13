@@ -114,6 +114,58 @@ class PartySlotDecision {
   final PartyCompositionFailure failure;
 }
 
+enum PartyReplacementDisposition {
+  inPlace,
+  moveToEmpty,
+  inPlaceNeedsRebalance,
+  rejected,
+}
+
+class PartyReplacementPlan {
+  const PartyReplacementPlan._({
+    required this.disposition,
+    required this.failure,
+    this.destination,
+    this.suggestedSwapMemberIds = const [],
+  });
+
+  const PartyReplacementPlan.inPlace()
+    : this._(
+        disposition: PartyReplacementDisposition.inPlace,
+        failure: PartyCompositionFailure.none,
+      );
+
+  const PartyReplacementPlan.moveToEmpty(PartySlot destination)
+    : this._(
+        disposition: PartyReplacementDisposition.moveToEmpty,
+        destination: destination,
+        failure: PartyCompositionFailure.none,
+      );
+
+  const PartyReplacementPlan.inPlaceNeedsRebalance(
+    List<String> suggestedSwapMemberIds,
+  ) : this._(
+        disposition: PartyReplacementDisposition.inPlaceNeedsRebalance,
+        suggestedSwapMemberIds: suggestedSwapMemberIds,
+        failure: PartyCompositionFailure.none,
+      );
+
+  const PartyReplacementPlan.rejected(PartyCompositionFailure failure)
+    : this._(
+        disposition: PartyReplacementDisposition.rejected,
+        failure: failure,
+      );
+
+  final PartyReplacementDisposition disposition;
+  final PartyCompositionFailure failure;
+  final PartySlot? destination;
+  final List<String> suggestedSwapMemberIds;
+
+  bool get canChange => disposition != PartyReplacementDisposition.rejected;
+  bool get needsRebalance =>
+      disposition == PartyReplacementDisposition.inPlaceNeedsRebalance;
+}
+
 enum PartyCompositionFailure {
   none,
   duplicateMember,
@@ -344,6 +396,155 @@ class PartyCompositionPolicy {
     if (role == PartyRole.support) return null;
     if (sameClassDealerCount > rules.maxDealersPerClassPerParty) {
       return PartyCompositionFailure.duplicateDealerClass;
+    }
+    return null;
+  }
+
+  /// 캐릭터 변경 시 전체 공대를 재배치하지 않고 확정된 우선순서로 배치를 계획한다.
+  PartyReplacementPlan planReplacement({
+    required String replaceMemberId,
+    required String className,
+    required PartyRole role,
+    required List<OccupiedPartyMember> existing,
+  }) {
+    final target = existing
+        .where((member) => member.id == replaceMemberId)
+        .firstOrNull;
+    if (target == null) {
+      return const PartyReplacementPlan.rejected(
+        PartyCompositionFailure.noValidPlacement,
+      );
+    }
+
+    final occupancy = resolveOccupancy(existing);
+    final targetSlot = occupancy[replaceMemberId];
+    if (targetSlot == null) {
+      return const PartyReplacementPlan.rejected(
+        PartyCompositionFailure.noValidPlacement,
+      );
+    }
+    final effective = [
+      for (final member in existing)
+        member.id == replaceMemberId
+            ? OccupiedPartyMember(
+                id: member.id,
+                className: className,
+                role: role,
+                partyIndex: targetSlot.partyIndex,
+                slotIndex: targetSlot.slotIndex,
+                joinedAt: member.joinedAt,
+                isLeader: member.isLeader,
+              )
+            : OccupiedPartyMember(
+                id: member.id,
+                className: member.className,
+                role: member.role,
+                partyIndex: occupancy[member.id]?.partyIndex ?? member.partyIndex,
+                slotIndex: occupancy[member.id]?.slotIndex ?? member.slotIndex,
+                joinedAt: member.joinedAt,
+                isLeader: member.isLeader,
+              ),
+    ];
+
+    final inPlaceFailure = _failureForArrangement(effective);
+    if (inPlaceFailure == null) return const PartyReplacementPlan.inPlace();
+
+    if (!target.isLeader) {
+      final used = occupancy.values.toSet();
+      for (final slot in _allSlots()) {
+        if (used.contains(slot)) continue;
+        final moved = [
+          for (final member in effective)
+            member.id == replaceMemberId
+                ? _atSlot(member, slot)
+                : member,
+        ];
+        if (_failureForArrangement(moved) == null) {
+          return PartyReplacementPlan.moveToEmpty(slot);
+        }
+      }
+    }
+
+    for (var leftIndex = 0; leftIndex < effective.length; leftIndex++) {
+      final left = effective[leftIndex];
+      if (left.isLeader) continue;
+      for (
+        var rightIndex = leftIndex + 1;
+        rightIndex < effective.length;
+        rightIndex++
+      ) {
+        final right = effective[rightIndex];
+        if (right.isLeader || left.partyIndex == right.partyIndex) continue;
+        final swapped = [...effective];
+        swapped[leftIndex] = _atSlot(
+          left,
+          PartySlot(
+            partyIndex: right.partyIndex,
+            slotIndex: right.slotIndex!,
+          ),
+        );
+        swapped[rightIndex] = _atSlot(
+          right,
+          PartySlot(
+            partyIndex: left.partyIndex,
+            slotIndex: left.slotIndex!,
+          ),
+        );
+        if (_failureForArrangement(swapped) == null) {
+          return PartyReplacementPlan.inPlaceNeedsRebalance([
+            left.id,
+            right.id,
+          ]);
+        }
+      }
+    }
+
+    return PartyReplacementPlan.rejected(inPlaceFailure);
+  }
+
+  OccupiedPartyMember _atSlot(OccupiedPartyMember member, PartySlot slot) =>
+      OccupiedPartyMember(
+        id: member.id,
+        className: member.className,
+        role: member.role,
+        partyIndex: slot.partyIndex,
+        slotIndex: slot.slotIndex,
+        joinedAt: member.joinedAt,
+        isLeader: member.isLeader,
+      );
+
+  PartyCompositionFailure? _failureForArrangement(
+    List<OccupiedPartyMember> members,
+  ) {
+    for (var partyIndex = 0; partyIndex < rules.partyCount; partyIndex++) {
+      final party = members.where(
+        (member) => member.partyIndex == partyIndex,
+      );
+      final supports = party
+          .where((member) => member.role == PartyRole.support)
+          .length;
+      final dealers = party.length - supports;
+      if (supports > rules.supportsPerParty) {
+        return PartyCompositionFailure.supportSlotsFull;
+      }
+      if (dealers > rules.dealersPerParty) {
+        return PartyCompositionFailure.dealerSlotsFull;
+      }
+      final dealerClasses = <String, int>{};
+      for (final member in party.where(
+        (member) => member.role == PartyRole.dealer,
+      )) {
+        dealerClasses.update(
+          member.className,
+          (count) => count + 1,
+          ifAbsent: () => 1,
+        );
+      }
+      if (dealerClasses.values.any(
+        (count) => count > rules.maxDealersPerClassPerParty,
+      )) {
+        return PartyCompositionFailure.duplicateDealerClass;
+      }
     }
     return null;
   }

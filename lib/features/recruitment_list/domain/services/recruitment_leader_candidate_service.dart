@@ -356,12 +356,13 @@ class RecruitmentLeaderCandidateService {
     required String? replacingMemberId,
   }) {
     if (replacingMemberId != null) {
-      return policy.failureForInPlaceReplacement(
+      final plan = policy.planReplacement(
         replaceMemberId: replacingMemberId,
         className: className,
         role: role,
         existing: occupiedMembers,
       );
+      return plan.canChange ? null : plan.failure;
     }
     final placement = policy.assignEmptySlot(
       joining: OccupiedPartyMember(
