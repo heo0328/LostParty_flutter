@@ -10,7 +10,14 @@ void main() {
   });
 
   test('신규 모집과 슬롯 문서는 점유 원장 버전 및 membership 일치를 요구한다', () {
-    expect(rules, contains('data.slotLedgerVersion == 1'));
+    final recruitmentStart = rules.indexOf(
+      'function validInitialRecruitment',
+    );
+    final recruitmentEnd = rules.indexOf(
+      'function validInitialLeaderMembership',
+    );
+    final recruitmentRule = rules.substring(recruitmentStart, recruitmentEnd);
+    expect(recruitmentRule, contains('data.slotLedgerVersion == 1'));
     expect(rules, contains('match /slots/{slotId}'));
     expect(rules, isNot(contains(r'$(partyIndex)_$(slotIndex)')));
     expect(

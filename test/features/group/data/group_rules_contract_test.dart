@@ -24,7 +24,12 @@ void main() {
   });
 
   test('그룹 생성은 active Player와 인원 1·revision 1을 강제한다', () {
+    final start = rules.indexOf('function validInitialGroup(');
+    final end = rules.indexOf('function validInitialGroupMember(');
+    final initialGroupRule = rules.substring(start, end);
+
     expect(rules, contains('function validInitialGroup(groupId, data)'));
+    expect(initialGroupRule, isNot(contains('slotLedgerVersion')));
     expect(rules, contains('isCurrentPlayerActive()'));
     expect(rules, contains("data.status == 'active'"));
     expect(rules, contains('data.memberCount == 1'));

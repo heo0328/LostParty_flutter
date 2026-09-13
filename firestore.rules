@@ -341,7 +341,6 @@ service cloud.firestore {
           == data.representativeCharacterNameSnapshot
         && data.memberCount == 1
         && data.revision == 1
-        && data.slotLedgerVersion == 1
         && data.hasActiveJoinCode == false
         && (!('activeJoinCode' in data) || data.activeJoinCode == null)
         && data.joinCodeVisibleToMembers == false
@@ -1377,6 +1376,7 @@ service cloud.firestore {
         && request.time >= data.cycleStartedAt
         && request.time < data.cycleEndsAt
         && data.revision == 1
+        && data.slotLedgerVersion == 1
         && data.createdAt == request.time
         && data.updatedAt == request.time
         && data.leaderCharacterNameSnapshot == member.characterNameSnapshot
