@@ -152,14 +152,14 @@ Tooltip 직업 자체를 읽을 수 없는 응답은 다른 직업으로 단정�
 - 파티 신청 flat Snapshot과 파티·그룹 membership 보석 map의 v2 최소 필드는 `gemValidationSchemaVersion`, `gemValidationStatus(verified/error/unavailable)`, `equippedGemCount`, `foreignClassGemCount`, `unmatchedSkillGemCount`, `gemValidatedAt`, `catalogVersion`이다. v1의 `unverifiedSameClassGemCount`는 과거 읽기 호환에만 사용한다.
 - 새 파티 생성은 선택한 파티장 역할의 같은 보석 최소 요약을 파티장 membership에도 기록한다. 구성원 카드의 표시는 소유자 여부로 나누지 않으며, 기존 membership에 필드가 없으면 경고만 생략한다. 기존 파티를 화면 진입 시 자동 갱신하거나 일괄 이행하지 않는다.
 - 파티 상세의 참가 Character 변경 후보는 소유자 기기의 로컬 `CharacterBuildSnapshot`에서 `buildIntegritySnapshot`을 계산해 보석·아크그리드 오류를 함께 안내한다. 오류는 선택 또는 참가 자격을 차단하지 않는다.
-- 2026-09-13 릴리즈 테스트에서 후보 표시 전용 경계 때문에 아크그리드·아크패시브 오류가 신청자와 참가 후 구성원 카드에서 사라지는 문제가 확인됐다. 다음 보완은 기존 보석 최소 요약을 구버전 호환용으로 유지하면서 신청의 `submittedBuildSnapshot.buildIntegritySnapshot`과 membership의 `buildIntegritySnapshot`에 같은 통합 최소 map을 함께 저장한다.
+- 2026-09-13 릴리즈 테스트에서 후보 표시 전용 경계 때문에 아크그리드·아크패시브 오류가 신청자와 참가 후 구성원 카드에서 사라지는 문제가 확인됐다. 기존 보석 최소 요약을 구버전 호환용으로 유지하면서 신청의 `submittedBuildSnapshot.buildIntegritySnapshot`과 membership의 `buildIntegritySnapshot`에 같은 통합 최소 map을 함께 저장하도록 보완했다.
 - 파티 생성 리더·신청·직접 참가·신청 승인·참가 Character 변경의 모든 신규 쓰기가 통합 Snapshot을 전달한다. 신청자·구성원 읽기는 누락·불완전·알 수 없는 schema를 `null`로 낮춰 과거 카드의 이름·직업·수치와 명령을 유지한다. 기존 문서 일괄 이행은 하지 않는다.
 - Character 변경 Rules는 허용 변경 필드에 `buildIntegritySnapshot`만 추가한다. 생성·신청·승인 경로의 기존 소유권, 활동 Character, 역할, 점유, Claim과 파티 구성 조건은 완화하지 않고 Rules 계약 테스트로 보존한다.
 - 활동 Character 목록의 필드 부재·불완전 맵·알 수 없는 값은 무결성 정보만 `null`로 낮춘다. Character명·직업·아이템 레벨·전투력과 목록 전체는 계속 표시한다. 활동 해제는 기존 교집합에서만 제외하며 Character 문서와 기존 레이드·membership Snapshot을 삭제하지 않는다.
 
 ## 9. 구현 순서
 
-진행 상태: 2026-09-08 1~7단계와 8단계의 파티 신청자 카드 구간을 구현하고 자동·실기기 검증했다. 이후 Rules 경고 제거본도 2026-09-10 정상 배포했다. 2026-09-10 파티 membership·구성원 카드 전파를 구현하고 최신 Rules를 정상 배포했다. 그룹 membership 전파는 2026-09-11 Rules 콘솔 게시·실기기 회귀 후 `dev`에 병합됐다. 그룹원 활동 Character 목록의 통합 Build 무결성 상태(`buildIntegritySnapshot`)는 2026-09-11 구현·자동 검증·실기기 확인 후 `dev`에 병합됐다. 2026-09-12 확정 오류 v2의 아이콘 fallback 제거·오류 전용 표시와 복수 캐릭터 진단 도구를 구현·자동 검증했다. 파티 생성 리더의 보석 Snapshot과 참가 Character 변경 목록의 통합 오류 표시를 보완했고, 사용자가 그룹 레이드 생성 파티장 오류 표시를 실기기에서 확인해 완료 판정했다. Rules 변경·배포는 없다.
+진행 상태: 2026-09-08 1~7단계와 8단계의 파티 신청자 카드 구간을 구현하고 자동·실기기 검증했다. 이후 Rules 경고 제거본도 2026-09-10 정상 배포했다. 2026-09-10 파티 membership·구성원 카드 전파를 구현하고 최신 Rules를 정상 배포했다. 그룹 membership 전파는 2026-09-11 Rules 콘솔 게시·실기기 회귀 후 `dev`에 병합됐다. 그룹원 활동 Character 목록의 통합 Build 무결성 상태(`buildIntegritySnapshot`)는 2026-09-11 구현·자동 검증·실기기 확인 후 `dev`에 병합됐다. 2026-09-12 확정 오류 v2의 아이콘 fallback 제거·오류 전용 표시와 복수 캐릭터 진단 도구를 구현·자동 검증했다. 파티 생성 리더의 보석 Snapshot과 참가 Character 변경 목록의 통합 오류 표시를 보완했고, 사용자가 그룹 레이드 생성 파티장 오류 표시를 실기기에서 확인해 완료 판정했다. 2026-09-13에는 신청·직접 참가·승인·Character 변경 이후에도 통합 오류가 유지되도록 신청·membership dual-write와 방어적 읽기를 구현해 자동 검증했다. 이 마지막 Rules 변경의 운영 배포와 실기기 확인은 남아 있다.
 
 1. 실제 API 진단 도구에 깨달음 1·4티어, 아크그리드 해·달 존재/포인트·조건, API 스킬과 보석 종합 결과를 추가한다.
 2. Tooltip 직업 추출과 슬롯 연결을 운영 분석기로 옮긴다.

@@ -17,7 +17,7 @@
 - 앱 실행 후 내 레이드 현황 초기 로딩과 충돌하지 않게 적격 Character를 앱 수명당 한 번 갱신한다. 공통 사용 레벨 정책은 현재 1700이며 나이스단 판정과 공유한다.
 - 서버 관계가 없고 로컬 인증 표시만 남은 경우 서버 불일치로 안내한다. 자동 재귀속이나 자동 로컬 삭제는 하지 않으며 앱 데이터 초기화·재인증을 기본 복구 절차로 유지한다.
 - 활동 Character 8→15 저장에서 Rules 문서 접근 한도로 `permission-denied`가 발생한 문제를 작은 묶음의 차이 저장으로 보완했고, 저장·재실행·후보 반영·기존 관계 보존을 실기기에서 확인했다.
-- 장비 인증 Challenge는 의도적으로 Gateway 메모리에만 두고 앱 프로세스 종료 시 함께 종료한다. 인증 진행 카드에 앱 종료 시도 종료와 인게임 즉시 조작 권장을 안내한다. 시작 시 무기·방어구 5부위 중 하나라도 미장착이면 일반 정보 실패가 아니라 전용 착용 안내를 표시하는 보완이 다음 작업이다.
+- 장비 인증 Challenge는 의도적으로 Gateway 메모리에만 두고 앱 프로세스 종료 시 함께 종료한다. 인증 진행 카드에 앱 종료 시도 종료와 인게임 즉시 조작 권장을 안내하며, 시작 시 무기·방어구 5부위 중 하나라도 미장착이면 일반 정보 실패와 구분한 전용 착용 안내를 표시한다. 자동 검증은 완료했고 실기기 확인은 남아 있다.
 - 계약: [`../architecture/GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT.md`](../architecture/GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT.md), [`../architecture/GAME_ACCOUNT_VERIFICATION_CONTRACT.md`](../architecture/GAME_ACCOUNT_VERIFICATION_CONTRACT.md), [`../architecture/CHARACTER_INTERACTION_AUTO_REFRESH_CONTRACT.md`](../architecture/CHARACTER_INTERACTION_AUTO_REFRESH_CONTRACT.md)
 
 ### Character Build 무결성
@@ -30,7 +30,7 @@
 - 27직업 108캐릭터의 실제 API 표본을 추가 교차검증해 카탈로그 `2026.09.12.2`를 30직업의 현재 깨달음 1티어 분기로 확장했다. `ArmorySkills`에 없고 Tooltip 직업이 일치한 특수 보석만 등록했으며, 인파이터의 브레이커 보석과 데빌헌터의 바드 보석 표본은 타 직업 오류로 유지한다.
 - 실기기에서 확인한 새 파티장 membership의 보석 Snapshot 누락과 참가 Character 변경 목록의 통합 표시 누락을 보완했다. 새 파티장에는 기존 보석 최소 요약을 저장하고 변경 목록은 로컬 통합 상태로 보석·아크그리드 오류를 함께 표시한다. 표적 테스트 63건과 변경 파일 분석이 통과했고 Rules·권한·점유 순서는 변경하지 않았다. 사용자가 그룹 레이드 생성 파티장의 오류 표시를 실기기에서 확인해 기능 구현을 완료 판정했다.
 - 신청·즉시 참가 Character 선택 목록에도 같은 로컬 통합 오류 표시를 적용했다. 과거 파티 마이그레이션은 현재 단독 테스트 단계에서 불필요하다는 사용자 결정으로 제외했다.
-- 릴리즈 실기기에서 후보의 아크그리드·아크패시브 오류가 신청자와 참가 후 membership 카드에 전달되지 않는 것을 확인했다. 현재 파티 명령은 보석 전용 Snapshot만 저장하므로 통합 `buildIntegritySnapshot`을 신청·membership에 dual-write하는 보완이 다음 작업이다.
+- 릴리즈 실기기에서 확인한 후보의 아크그리드·아크패시브 오류 전달 누락을 보완했다. 기존 보석 전용 Snapshot을 유지하면서 통합 `buildIntegritySnapshot`을 신청·membership에 dual-write하고, 승인 시 신청 당시 값을 복사하며 과거 문서는 기존 보석 경고로 호환한다. 자동 검증은 완료했고 Rules 운영 배포·실기기 확인은 남아 있다.
 - 계약: [`../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md)
 
 ### 그룹과 레이드
