@@ -20,7 +20,7 @@
 - 파티 생성 리더, 신청·재신청, 직접 참가, 신청 승인, 참가 Character 변경의 신규 쓰기와 신청자·배정/미배정 구성원 읽기·표시를 연결했다. 과거 통합 Snapshot이 없으면 기존 보석 경고로 fallback한다.
 - 표적 테스트 93건과 `test/app`, `test/features` 전체 957건이 통과했다. 전체 `flutter test`는 기존 최상위 `test/widget_test.dart`가 Firebase 기본 앱 미초기화로 9건 실패했으며, 이번 변경 경로와 분리해 기록한다.
 - 전체 정적 분석은 새 오류 없이 완료됐다. 기존 저장소의 스타일 info 37건과 변경하지 않은 `party_visibility_write_plan_test.dart` 경고 1건은 이번 범위에서 수정하지 않는다.
-- Rules 변경은 Character 변경 allowlist의 `buildIntegritySnapshot` 1개 추가뿐이다. 문자열 계약 검사는 통과했지만 Emulator·원격 컴파일·운영 배포와 실기기 검증은 아직 수행하지 않았다.
+- Rules 변경은 Character 변경 allowlist의 `buildIntegritySnapshot` 1개 추가뿐이다. 문자열 계약 검사는 통과했다. 2026-09-13 운영 배포를 한 번 시도했지만 원격 컴파일 `/test` 단계에서 HTTP 503으로 종료돼 새 Ruleset·Release는 생성되지 않았고 운영 반영은 미완료다. 즉시 재시도하지 않으며 Emulator·원격 컴파일 경고 0개·운영 배포와 실기기 검증이 남아 있다.
 - 현재 브랜치의 커밋·원격 복구 지점 생성까지만 진행한다. `release/1.0.0`, `dev`, `main` 병합과 버전 확정은 별도 사용자 지시 전까지 금지한다.
 
 ### 실기기 증상과 원인

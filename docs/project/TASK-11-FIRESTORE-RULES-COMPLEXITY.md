@@ -1,5 +1,12 @@
 # Task-11 Firestore Rules 복잡도 차단 — 종료된 진단 이력
 
+## 2026-09-13 파티 통합 오류 Snapshot allowlist 배포 시도
+
+- 작업 브랜치 `codex/plan-release-stabilization-fixes`의 추적 커밋 `8b4d5ce`는 파티 Character 변경의 `affectedKeys`에 표시용 `buildIntegritySnapshot` 1개만 추가한다. 관련 문자열 계약 테스트 2건은 통과했다.
+- `firebase.json`의 배포 원본 `firestore.rules`와 대상 `lost-party`를 확인한 뒤 실제 배포를 한 번 실행했다.
+- Firebase Rules 원격 컴파일 `projects/lost-party:test` 단계에서 HTTP 503이 발생했다. `/rulesets` 업로드와 `/releases` 반영에는 도달하지 않았으므로 운영 Rules는 갱신되지 않은 상태로 판정한다.
+- 컴파일 성공과 경고 0개도 확인하지 못했다. 기존 장애 대응 원칙에 따라 같은 명령을 즉시 재시도하지 않으며, 사용자에게 실패 단계를 공유한 뒤 새 지시가 있을 때만 재시도한다.
+
 ## 2026-09-10 Rules 게시 경고 재점검
 
 - 사용자가 Firebase 콘솔에 게시된 소스를 `firestore-web.rules`로 복사해 로컬 원본과 대조했다. 두 파일은 모두 3,785행이며 차이는 `groups/{groupId}` update에서 `validGroupDisbandUpdate`의 평가 순서 8행뿐이다. 콘솔본은 해산 판정이 마지막인 이전 게시본이고, 로컬 원본은 실제 1인 그룹 해산 오류를 보완해 가입·승인보다 앞에 둔 버전이다.

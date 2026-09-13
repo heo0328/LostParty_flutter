@@ -368,7 +368,7 @@
 
 | 항목 | 내용 |
 | --- | --- |
-| 상태 | **자동 수정 완료 — Rules 배포·실기기 확인 대기** |
+| 상태 | **자동 수정 완료 — Rules `/test` 503, 배포·실기기 확인 대기** |
 | 보고일 | 2026-09-13 |
 | 심각도 | 높음 — 신청 전 경고와 타인이 보는 신청·참가 정보가 불일치 |
 | 기준 문서 | [`../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md) |
@@ -391,6 +391,7 @@
 - 신청은 `submittedBuildSnapshot` 내부, membership은 최상위 map에 저장하며 승인 시 신청 당시 값을 방어적으로 복사한다.
 - 신청자와 배정/미배정 파티원 카드가 통합 오류를 우선 표시하고, 과거 문서는 기존 보석 오류 표시를 유지한다.
 - Rules allowlist와 계약 테스트를 갱신했다. 운영 Rules 배포와 실제 공개/그룹 파티 흐름 확인은 남아 있다.
+- 2026-09-13 `lost-party` 운영 배포를 한 번 시도했으나 원격 컴파일 `/test`에서 HTTP 503으로 종료됐다. Ruleset 업로드와 Release에는 도달하지 않았으므로 운영 미반영이며 즉시 재시도하지 않았다.
 
 ---
 
