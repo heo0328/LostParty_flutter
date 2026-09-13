@@ -17,7 +17,7 @@ void main() {
       'function validInitialLeaderMembership',
     );
     final recruitmentRule = rules.substring(recruitmentStart, recruitmentEnd);
-    expect(recruitmentRule, contains('data.slotLedgerVersion == 1'));
+    expect(recruitmentRule, contains('data.slotLedgerVersion == 2'));
     expect(rules, contains('match /slots/{slotId}'));
     expect(rules, isNot(contains(r'$(partyIndex)_$(slotIndex)')));
     expect(
@@ -28,18 +28,18 @@ void main() {
     );
     expect(rules, contains('member.partyIndex == data.partyIndex'));
     expect(rules, contains('member.slotIndex == data.slotIndex'));
-    expect(rules, contains('member.role == data.role'));
-    expect(
-      rules,
-      contains('member.classNameSnapshot == data.classNameSnapshot'),
-    );
+    expect(rules, isNot(contains("'role', 'classNameSnapshot', 'updatedAt'")));
   });
 
-  test('자리 변경은 공대장·revision·서버 파티 구성 검사를 함께 요구한다', () {
+  test('자리 변경은 공대장·revision·최소 슬롯 Claim을 함께 요구한다', () {
     expect(rules, contains('function validPositionRevisionUpdate'));
     expect(rules, contains('function validMemberPositionChange'));
-    expect(rules, contains('function validPartyCompositionForMember'));
+    expect(rules, isNot(contains('function validPartyCompositionForMember')));
     expect(rules, contains('recruitment.leaderPlayerId == currentPlayerId()'));
-    expect(rules, contains("get('slotLedgerVersion', 0) != 1"));
+    expect(rules, contains("get('slotLedgerVersion', 0) != 2"));
+    expect(
+      rules,
+      contains('previousMember.partyIndex != oldData.partyIndex'),
+    );
   });
 }

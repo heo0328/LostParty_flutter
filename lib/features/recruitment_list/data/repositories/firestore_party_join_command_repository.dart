@@ -405,15 +405,13 @@ class FirestorePartyJoinCommandRepository
         recruitmentPatch: plan.recruitmentUpdate,
       );
       transaction.set(memberRef, plan.membership);
-      if (r?['slotLedgerVersion'] == 1) {
+      if (r?['slotLedgerVersion'] == 2) {
         transaction.set(
           recruitmentRef.collection('slots').doc(placement.slot!.documentId),
           {
             'playerId': playerId,
             'partyIndex': placement.slot!.partyIndex,
             'slotIndex': placement.slot!.slotIndex,
-            'role': role.name,
-            'classNameSnapshot': className,
             'updatedAt': now,
           },
         );

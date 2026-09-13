@@ -270,8 +270,9 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 
 #### 슬롯 점유 원장
 
-- 신규 모집부터 `slotLedgerVersion: 1`과 `recruitments/{recruitmentId}/slots/{partyIndex}_{slotIndex}`를 필수로 사용한다.
-- 슬롯 문서는 `{playerId, partyIndex, slotIndex, role, classNameSnapshot, updatedAt}` 최소 Projection만 저장한다. 문서 ID와 두 index가 일치해야 하고, 같은 원자적 명령의 membership 위치·`playerId`·역할·구성 직업이 일치해야 한다. `role`과 `classNameSnapshot`은 Rules의 파티별 역할 상한·딜러 직업 중복 검증에만 사용한다.
+- 신규 모집부터 `slotLedgerVersion: 2`와 `recruitments/{recruitmentId}/slots/{partyIndex}_{slotIndex}` 최소 Claim을 필수로 사용한다.
+- 슬롯 문서는 `{playerId, partyIndex, slotIndex, updatedAt}`만 저장한다. 문서 ID와 두 index가 일치해야 하고, 같은 원자적 명령의 membership 위치와 `playerId`가 일치해야 한다.
+- 역할 정원·동일 딜러 직업·변경 배치는 Transaction이 다시 읽은 최신 membership을 앱의 공용 Domain 정책으로 계산한다. Rules는 전체 파티 조합을 재계산하지 않고 권한·revision·변경 필드·Claim 연결만 검증한다.
 - 생성은 리더 슬롯 생성, 가입은 빈 슬롯 생성, 탈퇴는 점유 슬롯 삭제, 이동은 이전 슬롯 삭제+새 슬롯 생성, 교환은 두 슬롯 점유자 교환으로 구성한다.
 - 슬롯 원장이 없는 과거 모집을 일반 사용자 요청으로 부분 bootstrap하지 않는다. 해당 모집의 기존 명령은 보존하되 위치 변경만 거절한다. 관리자 migration은 실제 운영 데이터 이관이 필요해질 때 별도 승인·백업·검증 단위로 수행한다.
 - Character 변경과 빈자리 이동이 함께 일어나면 기존 `memberCharacterChanged` 이벤트에 이전/새 파티·슬롯을 포함하고 별도 이동 이벤트를 중복 생성하지 않는다.

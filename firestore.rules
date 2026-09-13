@@ -45,78 +45,29 @@ service cloud.firestore {
     }
 
     function recruitmentSlotPath(recruitmentId, partyIndex, slotIndex) {
-      return partyIndex == 0 && slotIndex == 0
+      return partyIndex == 0
+        ? recruitmentFirstPartySlotPath(recruitmentId, slotIndex)
+        : recruitmentSecondPartySlotPath(recruitmentId, slotIndex);
+    }
+
+    function recruitmentFirstPartySlotPath(recruitmentId, slotIndex) {
+      return slotIndex == 0
         ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/0_0
-        : partyIndex == 0 && slotIndex == 1
+        : slotIndex == 1
           ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/0_1
-          : partyIndex == 0 && slotIndex == 2
+          : slotIndex == 2
             ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/0_2
-            : partyIndex == 0 && slotIndex == 3
-              ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/0_3
-              : partyIndex == 1 && slotIndex == 0
-                ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/1_0
-                : partyIndex == 1 && slotIndex == 1
-                  ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/1_1
-                  : partyIndex == 1 && slotIndex == 2
-                    ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/1_2
-                    : partyIndex == 1 && slotIndex == 3
-                      ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/1_3
-                      : /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/invalid;
+            : /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/0_3;
     }
 
-    function partySlotIsSupport(recruitmentId, partyIndex, slotIndex) {
-      let slot = recruitmentSlotPath(recruitmentId, partyIndex, slotIndex);
-      return existsAfter(slot) && getAfter(slot).data.role == 'support';
-    }
-
-    function partySlotIsSameDealerClass(
-      recruitmentId,
-      partyIndex,
-      slotIndex,
-      className
-    ) {
-      let slot = recruitmentSlotPath(recruitmentId, partyIndex, slotIndex);
-      return existsAfter(slot)
-        && getAfter(slot).data.role == 'dealer'
-        && getAfter(slot).data.classNameSnapshot == className;
-    }
-
-    function validPartyCompositionForMember(recruitmentId, member) {
-      let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
-      let supportCount =
-        (partySlotIsSupport(recruitmentId, member.partyIndex, 0) ? 1 : 0)
-        + (partySlotIsSupport(recruitmentId, member.partyIndex, 1) ? 1 : 0)
-        + (partySlotIsSupport(recruitmentId, member.partyIndex, 2) ? 1 : 0)
-        + (partySlotIsSupport(recruitmentId, member.partyIndex, 3) ? 1 : 0);
-      let sameDealerClassCount =
-        (partySlotIsSameDealerClass(
-          recruitmentId,
-          member.partyIndex,
-          0,
-          member.classNameSnapshot
-        ) ? 1 : 0)
-        + (partySlotIsSameDealerClass(
-          recruitmentId,
-          member.partyIndex,
-          1,
-          member.classNameSnapshot
-        ) ? 1 : 0)
-        + (partySlotIsSameDealerClass(
-          recruitmentId,
-          member.partyIndex,
-          2,
-          member.classNameSnapshot
-        ) ? 1 : 0)
-        + (partySlotIsSameDealerClass(
-          recruitmentId,
-          member.partyIndex,
-          3,
-          member.classNameSnapshot
-        ) ? 1 : 0);
-      return supportCount <= recruitment.supportsPerParty
-        && (member.role != 'dealer'
-          || sameDealerClassCount
-            <= recruitment.maxDealersPerClassPerParty);
+    function recruitmentSecondPartySlotPath(recruitmentId, slotIndex) {
+      return slotIndex == 0
+        ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/1_0
+        : slotIndex == 1
+          ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/1_1
+          : slotIndex == 2
+            ? /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/1_2
+            : /databases/$(database)/documents/recruitments/$(recruitmentId)/slots/1_3;
     }
 
     function recruitmentApplicationPath(recruitmentId, applicantPlayerId) {
@@ -1376,7 +1327,7 @@ service cloud.firestore {
         && request.time >= data.cycleStartedAt
         && request.time < data.cycleEndsAt
         && data.revision == 1
-        && data.slotLedgerVersion == 1
+        && data.slotLedgerVersion == 2
         && data.createdAt == request.time
         && data.updatedAt == request.time
         && data.leaderCharacterNameSnapshot == member.characterNameSnapshot
@@ -1487,7 +1438,7 @@ service cloud.firestore {
         && data.partyIndex < after.partyCount
         && data.slotIndex >= 0
         && data.slotIndex < after.membersPerParty
-        && (after.get('slotLedgerVersion', 0) != 1
+        && (after.get('slotLedgerVersion', 0) != 2
           || getAfter(recruitmentSlotPath(
             recruitmentId,
             data.partyIndex,
@@ -1504,8 +1455,6 @@ service cloud.firestore {
           || (before.visibility == 'group'
             && before.groupId is string
             && (isCurrentGroupMember(before.groupId) || approvedJoin)))
-        && (after.get('slotLedgerVersion', 0) != 1
-          || validPartyCompositionForMember(recruitmentId, data))
         && getAfter(assignmentPath(playerId, assignmentId)).data.recruitmentId
           == recruitmentId;
     }
@@ -1605,7 +1554,7 @@ service cloud.firestore {
       return hasActiveBinding()
         && oldData.status == 'active'
         && oldData.leaderPlayerId == currentPlayerId()
-        && oldData.slotLedgerVersion == 1
+        && oldData.slotLedgerVersion == 2
         && newData.diff(oldData).affectedKeys().hasOnly([
           'revision', 'updatedAt'
         ])
@@ -1941,7 +1890,7 @@ service cloud.firestore {
         && recruitment.currentCycleStatus == 'completed';
       let locationUnchanged = newData.partyIndex == oldData.partyIndex
         && newData.get('slotIndex', -1) == oldData.get('slotIndex', -1);
-      let locationMoved = recruitment.slotLedgerVersion == 1
+      let locationMoved = recruitment.slotLedgerVersion == 2
         && newData.partyIndex >= 0
         && newData.partyIndex < recruitment.partyCount
         && newData.slotIndex >= 0
@@ -1968,8 +1917,6 @@ service cloud.firestore {
           || newData.role != oldData.role)
         && newData.role in ['dealer', 'support']
         && (locationUnchanged || locationMoved)
-        && (locationUnchanged
-          || validPartyCompositionForMember(recruitmentId, newData))
         && newData.canApproveApplications == oldData.canApproveApplications
         && ownsActiveCharacter(newData.characterId)
         && newData.characterChangedAt == request.time
@@ -2088,7 +2035,7 @@ service cloud.firestore {
       return hasActiveBinding()
         && recruitment.leaderPlayerId == currentPlayerId()
         && playerId != currentPlayerId()
-        && recruitment.slotLedgerVersion == 1
+        && recruitment.slotLedgerVersion == 2
         && newData.diff(oldData).affectedKeys().hasOnly([
           'partyIndex', 'slotIndex', 'updatedAt'
         ])
@@ -2113,8 +2060,7 @@ service cloud.firestore {
           recruitmentId,
           newData.partyIndex,
           newData.slotIndex
-        )).data.playerId == playerId
-        && validPartyCompositionForMember(recruitmentId, newData);
+        )).data.playerId == playerId;
     }
 
     function validMemberRemoval(recruitmentId, playerId, data) {
@@ -2139,10 +2085,9 @@ service cloud.firestore {
         recruitmentMemberPath(recruitmentId, data.playerId)
       ).data;
       return hasActiveBinding()
-        && recruitment.slotLedgerVersion == 1
+        && recruitment.slotLedgerVersion == 2
         && data.keys().hasOnly([
-          'playerId', 'partyIndex', 'slotIndex', 'role',
-          'classNameSnapshot', 'updatedAt'
+          'playerId', 'partyIndex', 'slotIndex', 'updatedAt'
         ])
         && (
           (data.partyIndex == 0 && data.slotIndex == 0 && slotId == '0_0')
@@ -2160,9 +2105,7 @@ service cloud.firestore {
         && data.slotIndex < recruitment.membersPerParty
         && data.updatedAt == request.time
         && member.partyIndex == data.partyIndex
-        && member.slotIndex == data.slotIndex
-        && member.role == data.role
-        && member.classNameSnapshot == data.classNameSnapshot;
+        && member.slotIndex == data.slotIndex;
     }
 
     function validPartySlotDelete(recruitmentId, data) {
@@ -2186,18 +2129,21 @@ service cloud.firestore {
       let member = getAfter(
         recruitmentMemberPath(recruitmentId, newData.playerId)
       ).data;
+      let previousMember = getAfter(
+        recruitmentMemberPath(recruitmentId, oldData.playerId)
+      ).data;
       return hasActiveBinding()
         && recruitment.leaderPlayerId == currentPlayerId()
-        && recruitment.slotLedgerVersion == 1
+        && recruitment.slotLedgerVersion == 2
         && newData.diff(oldData).affectedKeys().hasOnly([
-          'playerId', 'role', 'classNameSnapshot', 'updatedAt'
+          'playerId', 'updatedAt'
         ])
         && newData.playerId != oldData.playerId
         && newData.updatedAt == request.time
         && member.partyIndex == newData.partyIndex
         && member.slotIndex == newData.slotIndex
-        && member.role == newData.role
-        && member.classNameSnapshot == newData.classNameSnapshot;
+        && (previousMember.partyIndex != oldData.partyIndex
+          || previousMember.slotIndex != oldData.slotIndex);
     }
 
     function validAssignmentRemoval(playerId, data) {

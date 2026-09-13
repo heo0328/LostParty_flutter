@@ -158,7 +158,7 @@ class FirestorePartyMembershipCommandRepository
           PartyMembershipFailure.invalidComposition,
         );
       final destination = replacementPlan.destination;
-      if (destination != null && r['slotLedgerVersion'] != 1) {
+      if (destination != null && r['slotLedgerVersion'] != 2) {
         return const PartyMembershipResult.failure(
           PartyMembershipFailure.unsupportedOnSpark,
         );
@@ -224,8 +224,6 @@ class FirestorePartyMembershipCommandRepository
             'playerId': playerId,
             'partyIndex': destination.partyIndex,
             'slotIndex': destination.slotIndex,
-            'role': newRole.name,
-            'classNameSnapshot': className,
             'updatedAt': now,
           },
         );
@@ -465,7 +463,7 @@ class FirestorePartyMembershipCommandRepository
       transaction.delete(targetRef);
       final targetPartyIndex = m?['partyIndex'];
       final targetSlotIndex = m?['slotIndex'];
-      if (r?['slotLedgerVersion'] == 1 &&
+      if (r?['slotLedgerVersion'] == 2 &&
           targetPartyIndex is int &&
           targetSlotIndex is int) {
         transaction.delete(
@@ -619,7 +617,7 @@ class FirestorePartyMembershipCommandRepository
           PartyMembershipFailure.unauthorized,
         );
       }
-      if (recruitment?['slotLedgerVersion'] != 1) {
+      if (recruitment?['slotLedgerVersion'] != 2) {
         return const PartyMembershipResult.failure(
           PartyMembershipFailure.unsupportedOnSpark,
         );
@@ -769,8 +767,6 @@ class FirestorePartyMembershipCommandRepository
           'playerId': command.sourcePlayerId,
           'partyIndex': command.destinationPartyIndex,
           'slotIndex': command.destinationSlotIndex,
-          'role': source['role'],
-          'classNameSnapshot': source['classNameSnapshot'],
           'updatedAt': now,
         });
       } else {
@@ -784,15 +780,10 @@ class FirestorePartyMembershipCommandRepository
         );
         transaction.update(sourceSlotRef, {
           'playerId': destinationPlayerId,
-          'role': memberData[destinationPlayerId]!['role'],
-          'classNameSnapshot':
-              memberData[destinationPlayerId]!['classNameSnapshot'],
           'updatedAt': now,
         });
         transaction.update(destinationSlotRef, {
           'playerId': command.sourcePlayerId,
-          'role': source['role'],
-          'classNameSnapshot': source['classNameSnapshot'],
           'updatedAt': now,
         });
       }

@@ -60,7 +60,7 @@ class PartyCreateWritePlan {
       'membersPerParty': rules.membersPerParty,
       'supportsPerParty': rules.supportsPerParty,
       'maxDealersPerClassPerParty': rules.maxDealersPerClassPerParty,
-      'slotLedgerVersion': 1,
+      'slotLedgerVersion': 2,
       'memberCount': 1,
       'maxMemberCount': rules.totalMembers,
       'dealerCount': command.leaderRole.name == 'dealer' ? 1 : 0,

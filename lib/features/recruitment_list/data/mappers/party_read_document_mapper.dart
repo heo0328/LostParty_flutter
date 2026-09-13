@@ -74,7 +74,7 @@ class PartyReadDocumentMapper {
       visibility: _softString(data, 'visibility') ?? 'public',
       groupId: _softString(data, 'groupId'),
       memberPlayerIds: _optionalStringIdSet(data, 'memberPlayerIds'),
-      supportsPositionChanges: data['slotLedgerVersion'] == 1,
+      supportsPositionChanges: data['slotLedgerVersion'] == 2,
     );
   }
 

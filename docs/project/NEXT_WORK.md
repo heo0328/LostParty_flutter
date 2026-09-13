@@ -74,22 +74,24 @@
 
 ### Firestore Transaction과 Rules
 
-#### 슬롯 점유 원장 확정
+#### 최소 슬롯 Claim과 로컬 구성 검증 확정
 
-- 서버가 8개 membership을 한 요청에서 모두 비교하면 Rules 문서 접근 한도를 넘길 수 있으므로 `recruitments/{recruitmentId}/slots/{partyIndex}_{slotIndex}` 슬롯 점유 원장을 사용한다.
-- 슬롯 문서는 `playerId`, `partyIndex`, `slotIndex`, `role`, `classNameSnapshot`, `updatedAt`만 가지며 membership의 위치·역할·구성 직업과 항상 같은 원자적 쓰기에서 생성·이동·삭제한다. 목적 슬롯 문서 존재 여부가 서버의 빈자리 판정 근거이고, `role`과 `classNameSnapshot`은 Rules가 대상 파티의 역할 상한과 딜러 직업 중복을 검증하는 최소 Projection이다.
+- 역할 정원·동일 딜러 직업·변경 배치 검사는 최신 membership을 Transaction에서 읽은 뒤 앱의 `PartyCompositionPolicy`로 다시 계산한다. Rules는 파티 전체 슬롯을 순회하거나 역할·직업 정책을 중복 구현하지 않는다.
+- 서버에는 동시 요청의 동일 자리 점유만 막는 `recruitments/{recruitmentId}/slots/{partyIndex}_{slotIndex}` 최소 Claim을 둔다.
+- 슬롯 Claim은 `playerId`, `partyIndex`, `slotIndex`, `updatedAt`만 저장한다. membership 위치와 같은 원자적 쓰기에서 생성·이동·삭제하고, Rules는 권한·index 범위·membership 연결만 확인한다.
 - 신규 모집은 리더의 `0_0` 슬롯을 생성하고, 참가·승인은 목적 슬롯 생성, 탈퇴·추방은 기존 슬롯 삭제를 동반한다. 캐릭터 자동 이동은 기존 슬롯 삭제와 목적 슬롯 생성을 함께 수행한다. 자리 교환은 두 슬롯의 `playerId`만 서로 교환한다.
 - 일반 클라이언트가 기존 membership 전체를 근거로 슬롯 원장을 사후 생성하는 bootstrap은 허용하지 않는다. 일부 점유를 누락해 사용 중인 자리를 빈자리로 위조할 수 있기 때문이다.
 - 따라서 원장 도입 전 생성된 모집은 조회·완료·탈퇴 등 기존 기능을 유지하되 캐릭터 자동 이동과 자리 조정만 `unsupportedOnSpark`로 차단한다. 현재 출시 전 테스트 방은 필요하면 새 모집으로 재생성하며, 운영 이관이 필요해질 때만 관리자 권한의 별도 일괄 migration을 설계한다.
-- 신규 모집 문서에는 `slotLedgerVersion: 1`을 저장한다. 위치 변경 명령과 Rules는 이 버전을 요구하고, 버전이 없는 과거 방에 대해 Rules를 완화하지 않는다.
+- 단순화된 신규 모집 문서에는 `slotLedgerVersion: 2`를 저장한다. 위치 변경 명령과 Rules는 정확히 이 버전을 요구한다. 버전이 없거나 실험 단계의 버전 1인 과거 방은 기존 조회·완료·탈퇴를 유지하되 자동 이동과 자리 조정만 차단한다.
 
 - 모든 Character 변경·자리 조정은 `expectedRecruitmentRevision`으로 직렬화한다. 경쟁 변경은 전체 실패 후 최신 상태를 다시 보여 준다.
 - 빈자리 이동 Character 변경은 자기 membership의 Character/role/Build 필드와 `partyIndex`·`slotIndex`, 기존 assignment 교체, 모집 역할 집계·revision과 필요 listing을 기존 Transaction 안에서 함께 갱신한다.
 - 자리 조정은 한 개 또는 두 개 membership의 위치와 모집 revision·updatedAt, 그룹 listing이 있으면 listing revision을 같은 Transaction에서 갱신한다.
 - 순수 자리 조정은 assignment·weekly Claim·Character Snapshot을 쓰지 않는다.
-- Rules는 Character 변경의 기존 본인 소유권·활동 Character·점유·Claim 검사를 유지하면서 서버가 허용한 목적 슬롯만 위치 변경을 허용해야 한다.
-- 자리 조정 Rules는 현재 `leaderPlayerId`만 허용하고, 변경 가능한 membership 문서 수와 필드를 한 명 이동 또는 두 명 교환으로 제한한다. 두 멤버가 서로의 정확한 이전 슬롯을 교환하는지 `getAfter()`와 recruitment revision으로 확인한다.
-- 기존 Rules 복잡도 이력이 있으므로 새 범용 OR 체인을 늘리지 않는다. 구현 전 현재 Rules가 빈 슬롯의 전역 유일성을 어떻게 보장하는지 다시 조사하고, 부족하면 별도 슬롯 점유 Projection 도입 여부를 설계 검토한다. 이 결정 전에는 Rules를 수정하지 않는다.
+- 모든 위치 명령은 화면에서 읽은 `expectedRecruitmentRevision`과 Transaction이 다시 읽은 현재 revision이 다르면 저장하지 않는다. `updatedAt`은 감사 기록이며 동시성 기준으로 사용하지 않는다.
+- Rules는 Character 변경의 기존 본인 소유권·활동 Character·점유·Claim 검사를 유지하고, 목적 슬롯 Claim과 membership 위치가 일치하는지만 확인한다.
+- 자리 조정 Rules는 현재 `leaderPlayerId`만 허용하고 위치·시각 외 필드 변경을 막으며, 이전 Claim 해제와 새 Claim 점유를 확인한다. 역할·직업 조합은 Rules에서 재계산하지 않는다.
+- 이 구조는 정상 앱의 경쟁 요청과 슬롯 중복을 막지만 변조된 클라이언트가 역할·직업 정책을 의도적으로 우회하는 것까지 서버에서 완전 검증하지 않는 절충이다. Rules 복잡도와 운영 안정성을 우선한 결정으로 기록한다.
 
 ### 알림
 

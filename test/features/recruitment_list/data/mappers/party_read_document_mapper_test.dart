@@ -48,7 +48,7 @@ void main() {
     final summary = mapper.toPublicRecruitment(
       PartyReadDocumentDto(
         id: 'raid-ledger',
-        data: _recruitmentData()..['slotLedgerVersion'] = 1,
+        data: _recruitmentData()..['slotLedgerVersion'] = 2,
       ),
     );
 

@@ -199,8 +199,6 @@ class FirestorePartyCreateRepository implements PartyCreateRepository {
           'playerId': playerId,
           'partyIndex': 0,
           'slotIndex': 0,
-          'role': plan.leaderMembership['role'],
-          'classNameSnapshot': plan.leaderMembership['classNameSnapshot'],
           'updatedAt': now,
         });
         if (occupancy == PartyCreateOccupancyDecision.replaceStaleAssignment) {
