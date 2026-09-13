@@ -174,6 +174,15 @@ class _GameAccountVerificationPageState
     setState(() => _busy = true);
     try {
       await action();
+    } on GameAccountVerificationStartException catch (error) {
+      if (mounted) {
+        setState(
+          () => _message = switch (error.failure) {
+            GameAccountVerificationStartFailure.incompleteEquipment =>
+              '인증을 시작하려면 무기와 방어구 5부위를 모두 착용한 뒤 다시 시도해 주세요.',
+          },
+        );
+      }
     } on LostArkApiException catch (error) {
       if (mounted) {
         setState(() => _message = _apiErrorMessage(error.type));
@@ -329,6 +338,11 @@ class _GameAccountVerificationPageState
                     const SizedBox(height: 8),
                     const Text(
                       '장비 변경 후 캐릭터 선택 화면으로 이동하거나 접속을 한 번 종료해야 API 정보가 갱신됩니다.',
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('앱이 종료되면 남은 시간과 관계없이 현재 인증 시도가 종료됩니다.'),
+                    const Text(
+                      '원정대 인증은 인게임에서 장비를 바로 조작할 수 있는 상황에서 진행하는 것을 권장합니다.',
                     ),
                     const SizedBox(height: 12),
                     FilledButton.icon(

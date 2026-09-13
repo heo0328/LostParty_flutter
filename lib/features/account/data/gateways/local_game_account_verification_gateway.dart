@@ -67,9 +67,14 @@ class LocalGameAccountVerificationGateway
     if (!siblings.any((item) => item.characterName == normalizedName)) {
       throw const FormatException('Requested character is not in the roster.');
     }
-    final baseline = _equipment(responses[1] as Map<String, dynamic>);
+    final baseline = _equipment(
+      responses[1] as Map<String, dynamic>,
+      requireComplete: false,
+    );
     if (baseline.length != _slots.length) {
-      throw const FormatException('All six verification items are required.');
+      throw const GameAccountVerificationStartException(
+        GameAccountVerificationStartFailure.incompleteEquipment,
+      );
     }
 
     final candidates = _slots.keys.toList()..shuffle(_random);

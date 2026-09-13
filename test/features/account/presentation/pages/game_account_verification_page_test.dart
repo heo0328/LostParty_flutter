@@ -36,6 +36,8 @@ void main() {
     expect(gateway.lastLocalAccountId, 1);
     expect(find.textContaining('머리, 무기'), findsOneWidget);
     expect(find.textContaining('접속을 한 번 종료'), findsOneWidget);
+    expect(find.textContaining('앱이 종료되면 남은 시간과 관계없이'), findsOneWidget);
+    expect(find.textContaining('인게임에서 장비를 바로 조작'), findsOneWidget);
 
     await tester.enterText(
       find.byKey(const ValueKey('verificationDirectCharacterField')),
@@ -116,6 +118,61 @@ void main() {
     expect(find.textContaining('인증 진행 중'), findsOneWidget);
     expect(find.textContaining('머리, 무기'), findsOneWidget);
   });
+
+  testWidgets(
+    'shows an actionable message when verification equipment is incomplete',
+    (tester) async {
+      final gateway = _FakeVerificationGateway(
+        startError: const GameAccountVerificationStartException(
+          GameAccountVerificationStartFailure.incompleteEquipment,
+        ),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GameAccountVerificationPage(
+            accountRepository: _FakeAccountRepository(),
+            accountManagementRepository: _FakeAccountManagementRepository(),
+            mappingRepository: _FakeMappingRepository(),
+            gateway: gateway,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(FilledButton, '선택한 캐릭터로 인증'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('인증을 시작하려면 무기와 방어구 5부위를 모두 착용한 뒤 다시 시도해 주세요.'),
+        findsOneWidget,
+      );
+      expect(find.text('캐릭터 또는 장비 정보를 처리할 수 없습니다.'), findsNothing);
+    },
+  );
+
+  testWidgets('keeps the generic message for malformed verification data', (
+    tester,
+  ) async {
+    final gateway = _FakeVerificationGateway(
+      startError: const FormatException('Invalid equipment.'),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameAccountVerificationPage(
+          accountRepository: _FakeAccountRepository(),
+          accountManagementRepository: _FakeAccountManagementRepository(),
+          mappingRepository: _FakeMappingRepository(),
+          gateway: gateway,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, '선택한 캐릭터로 인증'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('캐릭터 또는 장비 정보를 처리할 수 없습니다.'), findsOneWidget);
+  });
 }
 
 class _FakeMappingRepository extends Fake
@@ -129,7 +186,6 @@ class _FakeMappingRepository extends Fake
 }
 
 class _EmptyAccountRepository extends Fake implements AccountRepository {
-
   @override
   Future<RosterSummaryApplyResult> applyRosterSummarySync({
     required int accountId,
@@ -184,7 +240,6 @@ class _FakeAccountManagementRepository extends Fake
 }
 
 class _FakeAccountRepository extends Fake implements AccountRepository {
-
   @override
   Future<RosterSummaryApplyResult> applyRosterSummarySync({
     required int accountId,
@@ -221,6 +276,9 @@ class _FakeAccountRepository extends Fake implements AccountRepository {
 }
 
 class _FakeVerificationGateway implements GameAccountVerificationGateway {
+  _FakeVerificationGateway({this.startError});
+
+  final Object? startError;
   String? lastCharacterName;
   String? lastSource;
   int? lastLocalAccountId;
@@ -235,6 +293,9 @@ class _FakeVerificationGateway implements GameAccountVerificationGateway {
     required String source,
     int? localAccountId,
   }) async {
+    if (startError case final error?) {
+      Error.throwWithStackTrace(error, StackTrace.current);
+    }
     lastCharacterName = characterName;
     lastSource = source;
     lastLocalAccountId = localAccountId;
