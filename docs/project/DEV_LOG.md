@@ -2915,4 +2915,4 @@
 - 그룹 전용 1회성 모집 완료가 `activeRecruitmentCount`를 유지하고 listing만 completed로 갱신하던 비연결 Repository 계약 오류를 발견했다. 완료 순간 활성 수를 감소시키고 listing을 삭제하도록 수정했다.
 - 활성 상태 해산도 같은 종료 경로를 사용하고, 이미 1회성 완료로 집계가 닫힌 뒤 실행하는 마무리 해산은 그룹 수와 listing을 다시 변경하지 않는다. 반복 모집의 회차 완료·취소·전환은 활성 수와 listing을 유지한다.
 - 8인 쓰기 상한은 비그룹 완료 10건, 그룹 일반 수명주기 11건, 그룹 모집 종료 12건, 완료 후 해산 2건으로 다시 계산했다. 이는 Firestore Transaction 문서 쓰기 수이며 Rules의 전체 20회·개별 쓰기 10회 문서 접근 제한과 구분한다.
-- 격리 Rules와 Emulator 시나리오에도 1회성 완료 종료 및 완료 후 해산의 이중 감소 방지를 반영했다. 관련 Dart 계약·Repository·Rules 정적 테스트 30건과 변경 파일 정적 분석이 통과했으며, GitHub Actions Emulator 재검증은 푸시 후 확인한다.
+- 격리 Rules와 Emulator 시나리오에도 1회성 완료 종료 및 완료 후 해산의 이중 감소 방지를 반영했다. 관련 Dart 계약·Repository·Rules 정적 테스트 30건과 변경 파일 정적 분석이 통과했고, GitHub Actions 실행 `34857997972`의 1·2·4·8인 Emulator 증명도 통과했다.
