@@ -38,7 +38,7 @@
 - 그룹 membership·초대코드·그룹장 이전/해산 계약과 레이드 명령·읽기·주간 Claim 계약이 구현돼 있다.
 - 진행 중 레이드 카드의 방별 unread 배지는 레이드 현황 탭 재선택 갱신으로 보완했다. 모든 방의 실시간 Listener는 추가하지 않았다.
 - 8인 공격대 자리 이동과 점유 자리 교환, 동일 파티 중복 직업 교환 차단은 구현됐고 실기기에서 확인했다. Character 변경 자동 이동·파란 안내 제거와 알림의 일부 실기기 확인은 남아 있다.
-- 현재 우선 작업은 리더 외 확정 참가자가 있는 모집 해산의 `permission-denied` 회귀인 `BUG-018`이다. v2 슬롯 Claim 원자 삭제와 lifecycle event type 선분기 수정·자동 검증을 완료했고 운영 Rules 배포와 공개·그룹 다인 해산 실기기 확인이 남아 있다.
+- 기존 `release/1.0.0` 후보는 다인 명령 확장성 결함으로 폐기하고 이력용으로만 보존한다. 현재 우선 작업은 `BUG-018` 단일 보정이 아니라 파티·그룹 Firestore 명령, Player별 이벤트 fan-out과 Rules 접근 구조의 재설계다. 서버 후처리 단계는 사용하지 않고 현재 최대 8인의 핵심 상태를 제한된 원자 명령으로 확정하며, assignment·주간 Claim은 통합 `raidState`로 교체하는 방향이다. 종료 하위 문서 정리는 정확성과 분리한다. 기준: [`../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md)
 - 계약: [`../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md), [`../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md`](../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md), [`../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)
 
 ## 차후 제품 후보
@@ -61,4 +61,4 @@
 
 ## 다음 작업
 
-현재 작업은 `BUG-018` 수정본의 운영 Rules 반영과 실기기 검증이다. 상세 결과와 체크 범위는 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.
+현재 작업은 파티·그룹 명령 확장성 재설계의 1단계 접근량 조사와 새 계약 확정이다. 상세 범위는 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.

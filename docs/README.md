@@ -43,6 +43,7 @@
 - [`architecture/OPERATOR_AUTHORIZATION_CONTRACT.md`](architecture/OPERATOR_AUTHORIZATION_CONTRACT.md): 운영자 권한, 수동 게임 계정 인증, 사용자 확인과 마지막 접속 계약
 - [`architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md): Task-11 그룹 생성·Player 단위 가입·초대코드와 Rules 계약
 - [`architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md`](architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md): 그룹장 즉시 지정 이전·후속 탈퇴·1인 해산과 보관 계약
+- [`architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md): 인원수 비례 파티·그룹 명령, 공용 이벤트·Aggregate·단계 처리 재설계
 
 ## Integrations
 

@@ -459,10 +459,10 @@
 
 | 항목 | 내용 |
 | --- | --- |
-| 상태 | **수정·자동 검증 완료 — 운영 배포·실기기 확인 대기** |
+| 상태 | **재현 유지 — 단독 수정 중단, 파티·그룹 명령 확장성 재설계로 전환** |
 | 보고일 | 2026-09-14 |
 | 심각도 | 높음 — 기존 다인 모집 해산 기능 회귀 |
-| 기준 문서 | [`../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md) |
+| 기준 문서 | [`../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md) |
 
 ### 증상과 경계
 
@@ -473,7 +473,7 @@
 ### 작업 게이트
 
 - 과거 실기기에서 정상 확인된 다인 해산의 회귀로 취급한다.
-- 사용자가 원인 분석과 수정 기획을 승인했다. 이번 단계에서는 코드·Rules 수정과 배포를 진행하지 않는다.
+- compact Rules 게시와 최신 앱 재빌드 뒤에도 재현되어 해산만의 추가 보정은 중단했다. 현재 단계에서는 전체 명령 접근량과 새 계약을 문서로 확정하며 코드·Rules 수정과 배포를 진행하지 않는다.
 - `validRecruitmentDisband`의 본문은 과거 다인 해산 통과 이후 바뀌지 않았으므로 이 함수의 조건을 추측으로 완화하지 않는다.
 
 ### 조사 결과와 우선 가설
@@ -503,6 +503,7 @@
 - 직전 게시 성공본 `c4344e6`과 현재 Rules의 유일한 기능 차이는 5개 OR 호출을 type guard 목록으로 확장한 `validPlayerEvent`다. `/test`는 성공하므로 문법이 아니라 Ruleset 저장 산출물의 복잡도 경계 또는 해당 식을 처리하는 Firebase 내부 오류 가능성을 1순위로 둔다.
 - 다음 수정은 dispatcher를 `lifecycle → application → membership → guarded manual verification → cycle`의 짧은 OR로 축소하는 것뿐이다. 해산 이벤트의 cycle 선조회는 계속 방지하며 권한 조건은 완화하지 않는다. 테스트 프로젝트 compact 게시 실패 시에는 직전 `c4344e6` 기준도 같은 시점에 대조하고, 둘 다 실패하면 서비스 장애로 분류해 추가 코드 축소를 중단한다.
 - 위 compact dispatcher 구현을 완료했다. 관련 표적 18건, Rules 경고 계약 3건과 전체 Rules 로컬 Emulator 컴파일·기동이 통과했다. 원격 게시 성공은 아직 확인하지 않았으므로 BUG-018은 닫지 않으며, 운영 배포 전에 테스트 프로젝트 콘솔 게시 결과를 확인한다.
+- compact Rules 운영 게시와 최신 앱 재빌드 후 새 다인 방에서도 같은 `permission-denied`가 재현됐다. 해산 버튼을 숨기는 임시 변경은 완료 후 마무리 흐름까지 훼손하므로 철회하고 기존 UI를 복원했다. `BUG-018`을 단독 보정하지 않고 인원수 비례 명령 전체 재설계로 승격하며 상세 기준은 `PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`에서 관리한다.
 
 ---
 

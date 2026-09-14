@@ -1,5 +1,7 @@
 # Firestore 파티 이벤트와 로컬 히스토리 계약
 
+> 2026-09-14 확장성 재설계 착수: 아래 Player별 event는 현재 구현 설명이다. 신규 기준은 사건당 공용 이벤트 한 건과 audience·개인 cursor 분리이며, 상세 설계는 [`PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md)를 따른다.
+
 파티 이벤트 전체를 앱 내부 알림과 향후 FCM의 공통 원본으로 확장하는 기준은 [`PARTY_NOTIFICATION_CONTRACT.md`](PARTY_NOTIFICATION_CONTRACT.md)를 따른다. 이 문서는 현재 구현된 완료 계열 이벤트와 Drift 완료 히스토리 Projection의 세부 계약이다.
 
 ## 서버 이벤트

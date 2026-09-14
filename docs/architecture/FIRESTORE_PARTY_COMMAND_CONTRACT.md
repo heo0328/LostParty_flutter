@@ -1,5 +1,7 @@
 # Spark Firestore 파티 명령 계약
 
+> 2026-09-14 확장성 재설계 착수: 이 문서는 현재 구현 계약의 근거로 유지하지만, 인원수에 비례하는 Transaction·개인 event fan-out은 [`PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md)의 단계별 새 계약으로 교체한다. 새 구현에서 이 문서의 대규모 원자 처리 방식을 그대로 복제하지 않는다.
+
 ## 1. 운영 제약과 신뢰 경계
 
 - 사용자가 별도로 지시하기 전까지 Firebase Spark 무료 요금제만 사용한다.

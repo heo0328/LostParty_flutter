@@ -1,3 +1,14 @@
+# 2026-09-14 release/1.0.0 후보 폐기와 파티·그룹 명령 재설계 전환
+
+- 사용자 결정으로 기존 `release/1.0.0` 후보를 폐기했다. 브랜치는 삭제하지 않고 이력·비교용으로 보존하며 출시·`main` 병합 기준에서 제외한다.
+- 최신 앱·운영 Rules·새 다인 모집에서도 해산 `permission-denied`가 재현됐다. 모집 중 해산 버튼을 숨기는 임시 UI는 완료 후 방 마무리까지 막아 기존 상태로 복원했다.
+- 코드 감사에서 전체 완료·취소·주차 전환·해산, 즉시 가입, Character 변경, 탈퇴·추방, 자리 이동·교환과 일부 그룹 연결 명령이 인원수에 따라 membership·Claim·assignment·slot·개인 event 읽기·쓰기를 늘리는 구조임을 확인했다.
+- UI·제품 전체 재개발 대신 Firestore 명령 Repository, Rules, 공용 이벤트와 모집 Aggregate를 재설계한다. Spark에서 앱 종료 후 서버 후처리 완료를 보장할 수 없는 단계형 Projection 방식은 채택하지 않는다.
+- 현재 최대 8인 범위의 완료·취소·주차 전환·해산은 통합 `raidState`를 포함한 한 번의 제한 원자 명령으로 확정한다. 종료된 membership·slot·application은 부모 모집 상태로 기능에서 제외하고, 지연 정리는 정확성·사용자 행동과 분리한다. 앱 종료 또는 응답 유실 뒤에는 `status`·`revision`·`lastCommandId` 재조회로 결과를 자동 판정한다.
+- 장기 기준은 `docs/architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`, 첫 단계는 `NEXT_WORK.md`에 기록했다.
+- 사용자 결정으로 현재 기능 상태와 알려진 결함 기록을 `dev`의 새 재작업 기준점으로 올린다. 이는 릴리즈 가능 판정이 아니며, `main`과 폐기된 `release/1.0.0`은 구조개선·회귀 검증 완료 전 유지한다.
+- 이 기록 시점에는 새 데이터 구조·Repository·Rules 구현과 배포를 시작하지 않았다.
+
 # 2026-09-13 릴리즈 인증 UX·파티 통합 오류 전파 — 사전 조사와 설계
 
 - 장비 인증 Challenge는 `LocalGameAccountVerificationGateway` 메모리에만 두고 앱 프로세스 종료 시 인증 시도도 종료하는 현재 방식을 유지하기로 확정했다. 인증 진행 카드에 앱 종료 시도 종료와 인게임에서 즉시 장비를 조작할 수 있을 때 진행하라는 안내를 추가한다.
