@@ -31,10 +31,13 @@ function stateRef(db, target) {
   return db.doc(`players/${target.playerId}/raidStates/${target.stateId}`);
 }
 
-async function seed(testEnv, memberCount, status = 'active') {
+async function seed(
+  testEnv,
+  memberCount,
+  { status = 'active', cycleStatus = 'active', continueTogether = true } = {},
+) {
   await testEnv.clearFirestore();
   const now = firebase.firestore.Timestamp.now();
-  const cycleStatus = status === 'completed' ? 'completed' : 'active';
   const stateStatus = cycleStatus;
   const memberTargets = targets(memberCount);
   await testEnv.withSecurityRulesDisabled(async (context) => {
@@ -54,6 +57,7 @@ async function seed(testEnv, memberCount, status = 'active') {
       leaderPlayerId,
       groupId,
       status,
+      continueTogether,
       currentCycleStatus: cycleStatus,
       currentCycleKey: '2026-09-09',
       raidStateTargets: memberTargets,
@@ -91,9 +95,13 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
   const listingRef = db.doc(`groups/${groupId}/raidListings/${recruitmentId}`);
   const groupRef = db.doc(`groups/${groupId}`);
   const memberTargets = targets(memberCount);
+  const commandTargets = type === 'disband'
+      && recruitmentStatusRequiresPreservedStates(options)
+    ? []
+    : memberTargets;
   const writtenTargets = options.omitLast
     ? memberTargets.slice(0, memberTargets.length - 1)
-    : memberTargets;
+    : commandTargets;
 
   await db.runTransaction(async (transaction) => {
     const recruitmentSnapshot = await transaction.get(recruitmentRef);
@@ -103,7 +111,7 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
       ? '2026-09-16'
       : recruitment.currentCycleKey;
     const nextStatus = type === 'complete'
-      ? 'completed'
+      ? (recruitment.continueTogether ? 'active' : 'completed')
       : type === 'disband'
         ? 'disbanded'
         : 'active';
@@ -118,7 +126,7 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
       status: nextStatus,
       currentCycleStatus: nextCycleStatus,
       currentCycleKey: nextCycleKey,
-      commandTargets: memberTargets,
+      commandTargets,
       groupActiveRecruitmentCountAfter: type === 'disband' ? 0 : 1,
       revision: options.staleRevision ? nextRevision + 1 : nextRevision,
       lastCommandId: commandId,
@@ -148,7 +156,7 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
           status: 'completed',
           cycleKey: nextCycleKey,
           revision: 2,
-          updatedAt: serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         },
       );
     }
@@ -177,9 +185,14 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
       commandId,
       commandRevision: nextRevision,
       audiencePlayerIds: memberTargets.map((target) => target.playerId),
+      actorPlayerId: leaderPlayerId,
       occurredAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
   });
+}
+
+function recruitmentStatusRequiresPreservedStates(options) {
+  return options.completedDisband === true;
 }
 
 async function main() {
@@ -191,7 +204,7 @@ async function main() {
     const leaderDb = testEnv.authenticatedContext(leaderUid).firestore();
 
     for (const memberCount of [1, 2, 4, 8]) {
-      await seed(testEnv, memberCount, 'active');
+      await seed(testEnv, memberCount);
       await assertSucceeds(
         lifecycleTransaction(leaderDb, memberCount, 'complete'),
       );
@@ -206,26 +219,39 @@ async function main() {
       );
       console.log(`PASS: ${memberCount}-member lifecycle commands`);
 
-      await seed(testEnv, memberCount, 'active');
+      await seed(testEnv, memberCount);
       await assertSucceeds(
         lifecycleTransaction(leaderDb, memberCount, 'disband'),
       );
       console.log(`PASS: ${memberCount}-member group disband`);
     }
 
-    await seed(testEnv, 8, 'active');
+    await seed(testEnv, 8, { continueTogether: false });
+    await assertSucceeds(lifecycleTransaction(leaderDb, 8, 'complete'));
+    await assertSucceeds(
+      lifecycleTransaction(leaderDb, 8, 'disband', {
+        completedDisband: true,
+      }),
+    );
+    console.log('PASS: one-shot completion and completed disband');
+
+    await seed(testEnv, 8);
+    await assertSucceeds(lifecycleTransaction(leaderDb, 8, 'advanceCycle'));
+    console.log('PASS: missed active cycle advances without stale state');
+
+    await seed(testEnv, 8);
     await assertFails(
       lifecycleTransaction(leaderDb, 8, 'complete', { omitLast: true }),
     );
     console.log('PASS: omitted raidState denied');
 
-    await seed(testEnv, 8, 'active');
+    await seed(testEnv, 8);
     await assertFails(
       lifecycleTransaction(leaderDb, 8, 'complete', { staleRevision: true }),
     );
     console.log('PASS: stale revision denied');
 
-    await seed(testEnv, 8, 'active');
+    await seed(testEnv, 8);
     const outsiderDb = testEnv.authenticatedContext('outsider-auth').firestore();
     await assertFails(lifecycleTransaction(outsiderDb, 8, 'complete'));
     console.log('PASS: non-leader denied');

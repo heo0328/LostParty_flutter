@@ -25,6 +25,7 @@ void main() {
     nonGroupMemberCount: 0,
     pendingApplicationCount: 0,
     pendingNonGroupApplicantCount: 0,
+    continueTogether: true,
   );
 
   PartyCommandEnvelope command(PartyAtomicCommandType type) =>
@@ -54,9 +55,32 @@ void main() {
     );
 
     expect(plan.recruitmentPatch['currentCycleStatus'], 'completed');
+    expect(plan.recruitmentPatch['status'], 'active');
     expect(plan.recruitmentPatch['revision'], 5);
     expect(plan.raidStateWrites.single.patch?['status'], 'completed');
     expect(plan.raidStateWrites.single.patch?['revision'], 5);
+  });
+
+  test('1회성 모집 완료는 반복방과 달리 모집 자체도 completed가 된다', () {
+    final oneShot = PartyCommandAggregate(
+      recruitmentId: 'recruitment-1',
+      leaderPlayerId: 'player-0',
+      currentCycleKey: '2026-09-09',
+      currentCycleStatus: PartyRaidStateStatus.active,
+      revision: 4,
+      partySlots: aggregate().partySlots,
+      nonGroupMemberCount: 0,
+      pendingApplicationCount: 0,
+      pendingNonGroupApplicantCount: 0,
+    );
+    final plan = PartyAtomicWritePlan(
+      command: command(PartyAtomicCommandType.complete),
+      aggregate: oneShot,
+      serverTimestamp: timestamp,
+    );
+
+    expect(plan.recruitmentPatch['status'], 'completed');
+    expect(plan.listingPatch['status'], 'completed');
   });
 
   test('전환은 모집과 모든 raidState의 회차 키를 함께 바꾼다', () {

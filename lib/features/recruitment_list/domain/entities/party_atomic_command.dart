@@ -4,6 +4,8 @@ enum PartyRaidStateStatus { active, completed }
 
 enum PartyRaidStateSource { party, manual }
 
+enum PartyRecruitmentStatus { active, completed, disbanded, incompleteEnded }
+
 class PartyRaidState {
   PartyRaidState({
     required this.playerId,
@@ -150,6 +152,9 @@ class PartyCommandAggregate {
     required this.nonGroupMemberCount,
     required this.pendingApplicationCount,
     required this.pendingNonGroupApplicantCount,
+    this.status = PartyRecruitmentStatus.active,
+    this.continueTogether = false,
+    this.groupId,
     this.lastCommandId,
     this.lastCommandType,
   }) : partySlots = List.unmodifiable(partySlots) {
@@ -181,6 +186,9 @@ class PartyCommandAggregate {
     if (lastCommandId != null && lastCommandId!.isEmpty) {
       throw ArgumentError('마지막 명령 ID는 비어 있을 수 없습니다.');
     }
+    if (groupId != null && groupId!.isEmpty) {
+      throw ArgumentError('그룹 ID는 비어 있을 수 없습니다.');
+    }
   }
 
   final String recruitmentId;
@@ -192,6 +200,9 @@ class PartyCommandAggregate {
   final int nonGroupMemberCount;
   final int pendingApplicationCount;
   final int pendingNonGroupApplicantCount;
+  final PartyRecruitmentStatus status;
+  final bool continueTogether;
+  final String? groupId;
   final String? lastCommandId;
   final PartyAtomicCommandType? lastCommandType;
 

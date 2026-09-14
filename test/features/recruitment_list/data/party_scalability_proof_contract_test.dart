@@ -9,9 +9,7 @@ void main() {
   late String workflow;
 
   setUpAll(() {
-    proofRules = File(
-      'tools/party_scalability_proof.rules',
-    ).readAsStringSync();
+    proofRules = File('tools/party_scalability_proof.rules').readAsStringSync();
     emulatorTest = File(
       'tools/party_scalability_rules_test.mjs',
     ).readAsStringSync();
@@ -41,10 +39,7 @@ void main() {
   });
 
   test('각 대상 검증은 실행 경로당 문서 접근 한 번만 사용한다', () {
-    final source = functionSource(
-      'targetMatchesTransition',
-      'allTargetsMatch',
-    );
+    final source = functionSource('targetMatchesTransition', 'allTargetsMatch');
 
     expect(source.split('getAfter(').length - 1, 1);
     expect(source.split('existsAfter(').length - 1, 1);
@@ -72,6 +67,11 @@ void main() {
     expect(emulatorTest, contains('{ omitLast: true }'));
     expect(emulatorTest, contains('{ staleRevision: true }'));
     expect(emulatorTest, contains("authenticatedContext('outsider-auth')"));
+    expect(emulatorTest, contains('completedDisband: true'));
+    expect(
+      emulatorTest,
+      contains('missed active cycle advances without stale state'),
+    );
   });
 
   test('증명 단계는 운영 Rules와 Router를 변경하지 않는다', () {

@@ -7,6 +7,8 @@ void main() {
     'leaderPlayerId': 'player-0',
     'currentCycleKey': '2026-09-09',
     'currentCycleStatus': 'active',
+    'status': 'active',
+    'continueTogether': true,
     'revision': 4,
     'partySlots': [
       {

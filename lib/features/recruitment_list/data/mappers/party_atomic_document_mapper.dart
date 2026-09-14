@@ -19,6 +19,9 @@ class PartyAtomicDocumentMapper {
         data,
         'pendingNonGroupApplicantCount',
       ),
+      status: _recruitmentStatus(data['status']),
+      continueTogether: data['continueTogether'] == true,
+      groupId: data['groupId'] as String?,
       lastCommandId: data['lastCommandId'] as String?,
       lastCommandType: _commandTypeOrNull(data['lastCommandType']),
     );
@@ -52,6 +55,15 @@ class PartyAtomicDocumentMapper {
     'completed' => PartyRaidStateStatus.completed,
     _ => throw const FormatException('지원하지 않는 회차 상태입니다.'),
   };
+
+  static PartyRecruitmentStatus _recruitmentStatus(Object? value) =>
+      switch (value) {
+        'active' => PartyRecruitmentStatus.active,
+        'completed' => PartyRecruitmentStatus.completed,
+        'disbanded' => PartyRecruitmentStatus.disbanded,
+        'incompleteEnded' => PartyRecruitmentStatus.incompleteEnded,
+        _ => throw const FormatException('지원하지 않는 모집 상태입니다.'),
+      };
 
   static PartyAtomicCommandType? _commandTypeOrNull(Object? value) {
     if (value == null) return null;

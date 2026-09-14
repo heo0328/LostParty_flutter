@@ -35,8 +35,16 @@ class PartyAtomicWritePlan {
     if ((command.type == PartyAtomicCommandType.complete &&
             aggregate.currentCycleStatus != PartyRaidStateStatus.active) ||
         (command.type == PartyAtomicCommandType.cancelCompletion &&
-            aggregate.currentCycleStatus != PartyRaidStateStatus.completed)) {
+            (aggregate.currentCycleStatus != PartyRaidStateStatus.completed ||
+                !aggregate.continueTogether)) ||
+        (command.type == PartyAtomicCommandType.advanceCycle &&
+            !aggregate.continueTogether)) {
       throw StateError('현재 회차 상태에서 실행할 수 없는 명령입니다.');
+    }
+    if (aggregate.status != PartyRecruitmentStatus.active &&
+        !(command.type == PartyAtomicCommandType.disband &&
+            aggregate.status == PartyRecruitmentStatus.completed)) {
+      throw StateError('종료된 모집에는 실행할 수 없는 명령입니다.');
     }
   }
 
@@ -67,9 +75,14 @@ class PartyAtomicWritePlan {
     return {
       if (command.type == PartyAtomicCommandType.complete)
         'currentCycleStatus': 'completed',
+      if (command.type == PartyAtomicCommandType.complete)
+        'status': aggregate.continueTogether ? 'active' : 'completed',
       if (command.type == PartyAtomicCommandType.cancelCompletion ||
           command.type == PartyAtomicCommandType.advanceCycle)
         'currentCycleStatus': 'active',
+      if (command.type == PartyAtomicCommandType.cancelCompletion ||
+          command.type == PartyAtomicCommandType.advanceCycle)
+        'status': 'active',
       if (command.type == PartyAtomicCommandType.advanceCycle)
         'currentCycleKey': command.nextCycleKey,
       if (command.type == PartyAtomicCommandType.disband) ...{
@@ -128,10 +141,9 @@ class PartyAtomicWritePlan {
   };
 
   Map<String, Object?> get listingPatch => {
+    'recruitmentId': command.recruitmentId,
     'sourceRevision': command.expectedRevision + 1,
-    'status': command.type == PartyAtomicCommandType.disband
-        ? 'disbanded'
-        : 'active',
+    'status': recruitmentPatch['status'] ?? aggregate.status.name,
     'updatedAt': serverTimestamp,
   };
 }

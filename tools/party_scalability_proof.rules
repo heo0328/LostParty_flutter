@@ -47,8 +47,10 @@ service cloud.firestore {
     }
 
     function allTargetsMatch(data) {
-      return data.commandTargets.size() >= 1
-        && data.commandTargets.size() <= 8
+      return data.commandTargets.size() <= 8
+        && (data.commandTargets.size() >= 1
+          || (data.lastCommandType == 'disband'
+            && data.currentCycleStatus == 'completed'))
         && targetMatchesTransition(data, 0)
         && targetMatchesTransition(data, 1)
         && targetMatchesTransition(data, 2)
@@ -64,7 +66,10 @@ service cloud.firestore {
         && newData.leaderPlayerId == oldData.leaderPlayerId
         && newData.groupId == oldData.groupId
         && newData.raidStateTargets == oldData.raidStateTargets
-        && newData.commandTargets == oldData.raidStateTargets
+        && (newData.commandTargets == oldData.raidStateTargets
+          || (newData.lastCommandType == 'disband'
+            && oldData.currentCycleStatus == 'completed'
+            && newData.commandTargets.size() == 0))
         && newData.revision == oldData.revision + 1
         && newData.lastCommandActorPlayerId == oldData.leaderPlayerId
         && newData.groupActiveRecruitmentCountAfter is int
@@ -76,23 +81,27 @@ service cloud.firestore {
       return (newData.lastCommandType == 'complete'
           && oldData.status == 'active'
           && oldData.currentCycleStatus == 'active'
-          && newData.status == 'completed'
+          && newData.status
+            == (oldData.continueTogether ? 'active' : 'completed')
           && newData.currentCycleStatus == 'completed'
           && newData.currentCycleKey == oldData.currentCycleKey)
         || (newData.lastCommandType == 'cancelCompletion'
-          && oldData.status == 'completed'
+          && oldData.status == 'active'
+          && oldData.continueTogether == true
           && oldData.currentCycleStatus == 'completed'
           && newData.status == 'active'
           && newData.currentCycleStatus == 'active'
           && newData.currentCycleKey == oldData.currentCycleKey)
         || (newData.lastCommandType == 'advanceCycle'
-          && oldData.status == 'completed'
-          && oldData.currentCycleStatus == 'completed'
+          && oldData.status == 'active'
+          && oldData.continueTogether == true
+          && (oldData.currentCycleStatus == 'active'
+            || oldData.currentCycleStatus == 'completed')
           && newData.status == 'active'
           && newData.currentCycleStatus == 'active'
           && newData.currentCycleKey != oldData.currentCycleKey)
         || (newData.lastCommandType == 'disband'
-          && oldData.status == 'active'
+          && (oldData.status == 'active' || oldData.status == 'completed')
           && newData.status == 'disbanded'
           && newData.currentCycleStatus == oldData.currentCycleStatus
           && newData.currentCycleKey == oldData.currentCycleKey);
@@ -148,7 +157,7 @@ service cloud.firestore {
             && newData.status == 'active'
             && newData.cycleKey == oldData.cycleKey)
           || (recruitment.lastCommandType == 'advanceCycle'
-            && oldData.status == 'completed'
+            && (oldData.status == 'active' || oldData.status == 'completed')
             && newData.status == 'active'
             && newData.cycleKey == recruitment.currentCycleKey));
     }
@@ -157,6 +166,7 @@ service cloud.firestore {
       let recruitment = getAfter(recruitmentPath(oldData.recruitmentId)).data;
       return recruitment.lastCommandType == 'disband'
         && recruitment.status == 'disbanded'
+        && oldData.status == 'active'
         && commandIncludes(recruitment, playerId, stateId);
     }
 
@@ -164,7 +174,7 @@ service cloud.firestore {
       let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
       return data.keys().hasOnly([
           'schemaVersion', 'eventId', 'recruitmentId', 'type', 'commandId',
-          'commandRevision', 'audiencePlayerIds', 'occurredAt'
+          'commandRevision', 'audiencePlayerIds', 'actorPlayerId', 'occurredAt'
         ])
         && data.schemaVersion == 1
         && data.eventId is string
@@ -173,6 +183,7 @@ service cloud.firestore {
         && data.commandRevision == recruitment.revision
         && data.audiencePlayerIds is list
         && data.audiencePlayerIds.size() <= 8
+        && data.actorPlayerId == recruitment.lastCommandActorPlayerId
         && data.occurredAt == request.time;
     }
 
