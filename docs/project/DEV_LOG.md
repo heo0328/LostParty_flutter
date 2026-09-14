@@ -2860,3 +2860,4 @@
 - 기존 `validRecruitmentDisband`, 리더·revision·assignment·listing·이벤트 수신자 검증은 완화하지 않았다.
 - 해산·슬롯·이벤트 표적 계약 18건과 모집·파티 상세·그룹 영향 회귀 549건이 통과했고 변경 파일 정적 분석은 문제 0건이었다. 전체 Rules는 로컬 Emulator 시작 단계에서 정상 컴파일됐다.
 - 실제 Transaction Emulator 실행은 기존 전체 Rules 재업로드 503과 Node SDK gRPC 전송 오류로 완료하지 못했으며 통과로 기록하지 않는다. 최신 추적본 운영 배포와 공개·그룹 다인 해산 실기기 확인이 남았다.
+- 커밋 `a5a28d6`에서 `firebase.json`의 `firestore.rules`와 대상 `lost-party`를 재확인하고 운영 배포를 한 번 시도했다. `/test`는 HTTP 200으로 컴파일 성공·경고 0건이었지만 `/rulesets` POST가 HTTP 503으로 실패해 `/releases` 갱신에는 도달하지 않았다. 운영 활성 Rules는 이전 ruleset을 유지하며 같은 명령을 반복하지 않았다.
