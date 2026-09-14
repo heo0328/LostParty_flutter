@@ -2,6 +2,7 @@ import '../entities/party_atomic_command.dart';
 
 enum PartyAtomicCommandFailure {
   unauthenticated,
+  playerBindingMissing,
   unauthorized,
   notFound,
   recruitmentClosed,

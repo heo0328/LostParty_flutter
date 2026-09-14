@@ -208,6 +208,31 @@ void main() {
     );
   });
 
+  test('raidState는 같은 모집 회차 revision의 허용 상태만 받는다', () {
+    final plan = PartyAtomicWritePlan(
+      command: command(PartyAtomicCommandType.complete),
+      aggregate: aggregate(),
+      serverTimestamp: timestamp,
+    );
+    final valid = {
+      'player-0/character-0_raid-1': <String, Object?>{
+        'recruitmentId': 'recruitment-1',
+        'cycleKey': '2026-09-09',
+        'revision': 4,
+        'status': 'active',
+      },
+    };
+
+    expect(plan.raidStateDocumentsAllow(valid), isTrue);
+    expect(
+      plan.raidStateDocumentsAllow({
+        for (final entry in valid.entries)
+          entry.key: {...entry.value, 'revision': 3},
+      }),
+      isFalse,
+    );
+  });
+
   test('완료 후 해산은 completed raidState 보존을 위해 대상이 없어야 한다', () {
     final completed = PartyCommandAggregate(
       recruitmentId: 'recruitment-1',

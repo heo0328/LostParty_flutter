@@ -15,6 +15,7 @@
 - 운영 연결 없이 새 Domain 계약을 추가했다. 통합 `raidState`의 결정적 ID, 최대 8칸 구성 Aggregate와 집계 불변식, 최대 8개 직접 대상 명령 봉투, `expectedRevision`·`lastCommandId` 기반 응답 유실 판정 및 새 Repository 인터페이스를 정의했다. 운영 Repository·Rules·Router/DI는 변경하지 않았고 신규 Domain 6건과 기존 증명 계약 6건, 영향 정적 분석이 통과했다.
 - 비연결 Firestore Aggregate 매퍼와 원자 Write Plan을 추가했다. 알 수 없거나 누락된 새 스키마는 추측하지 않고 거절하며, 명령 대상은 현재 고정 슬롯의 Player·Character와 일치해야 한다. 완료·취소·전환은 모집과 모든 `raidState`를 같은 다음 revision으로 만들고 활성 해산은 대상 상태를 삭제하며 완료 후 해산은 대상을 0건으로 제한해 완료 상태를 보존한다. 공용 이벤트는 한 건만 계획하고 8인 최대 쓰기 11건·완료 후 해산 3건을 테스트로 확인했다. 신규·기존 표적 테스트 21건과 정적 분석이 통과했으며 운영 연결은 변경하지 않았다.
 - 새 Repository 초안을 운영 연결 없이 작성하던 중 최초 증명이 반복방과 1회성 상태를 충분히 구분하지 않은 것을 발견해 초안을 폐기하고 계약 게이트로 돌아갔다. 반복방 완료는 모집 `active`·회차 `completed`, 완료 취소는 반복방에서만 허용, 미완료 `active` 회차도 다음 주차로 전환 가능, 1회성 완료는 모집 `completed`, 완료 후 해산은 `raidState`를 보존하도록 Rules·Write Plan·Emulator 시나리오를 맞췄다. 공용 이벤트의 actor 필드도 Rules allowlist와 일치시켰다. 운영 Repository·Rules·DI는 변경하지 않았으며 보강된 격리 Actions 재검증 전 Repository 구현을 진행하지 않는다.
+- 보강된 GitHub Actions 실행 `34851122346`이 38초에 통과한 뒤 새 Firestore 원자 Repository를 비연결 상태로 구현했다. 한 Transaction에서 인증 바인딩·리더·revision·회차·직접 대상 `raidState`만 검증하고, 모집 Aggregate·최대 8개 상태·그룹 listing 또는 집계·공용 이벤트 한 건을 Write Plan대로 기록한다. 동일 `commandId` 재조회는 이미 적용된 revision을 성공으로 판정한다. 기존 assignment·Claim·개인 event·members·slots 순회는 사용하지 않으며 Router/DI와 운영 Rules는 변경하지 않았다. 관련 Domain·매퍼·Repository 계약 26건과 정적 분석이 통과했다.
 
 # 2026-09-14 release/1.0.0 후보 폐기와 파티·그룹 명령 재설계 전환
 

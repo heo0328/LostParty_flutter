@@ -20,9 +20,9 @@ class PartyAtomicDocumentMapper {
         'pendingNonGroupApplicantCount',
       ),
       status: _recruitmentStatus(data['status']),
-      continueTogether: data['continueTogether'] == true,
-      groupId: data['groupId'] as String?,
-      lastCommandId: data['lastCommandId'] as String?,
+      continueTogether: _bool(data, 'continueTogether'),
+      groupId: _optionalString(data, 'groupId'),
+      lastCommandId: _optionalString(data, 'lastCommandId'),
       lastCommandType: _commandTypeOrNull(data['lastCommandType']),
     );
   }
@@ -82,6 +82,19 @@ class PartyAtomicDocumentMapper {
   static int _int(Map<String, Object?> data, String key) {
     final value = data[key];
     if (value is int) return value;
+    throw FormatException('$key 값이 올바르지 않습니다.');
+  }
+
+  static bool _bool(Map<String, Object?> data, String key) {
+    final value = data[key];
+    if (value is bool) return value;
+    throw FormatException('$key 값이 올바르지 않습니다.');
+  }
+
+  static String? _optionalString(Map<String, Object?> data, String key) {
+    final value = data[key];
+    if (value == null) return null;
+    if (value is String && value.isNotEmpty) return value;
     throw FormatException('$key 값이 올바르지 않습니다.');
   }
 

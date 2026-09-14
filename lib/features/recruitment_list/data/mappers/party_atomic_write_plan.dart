@@ -70,6 +70,29 @@ class PartyAtomicWritePlan {
 
   int get maximumWriteCount => 1 + command.targets.length + 1 + 1;
 
+  bool raidStateDocumentsAllow(Map<String, Map<String, Object?>> documents) {
+    if (documents.length != command.targets.length) return false;
+    for (final target in command.targets) {
+      final data = documents[target.pathKey];
+      if (data == null ||
+          data['recruitmentId'] != command.recruitmentId ||
+          data['cycleKey'] != command.expectedCycleKey ||
+          data['revision'] != command.expectedRevision) {
+        return false;
+      }
+      final status = data['status'];
+      final allowed = switch (command.type) {
+        PartyAtomicCommandType.complete => status == 'active',
+        PartyAtomicCommandType.cancelCompletion => status == 'completed',
+        PartyAtomicCommandType.advanceCycle =>
+          status == 'active' || status == 'completed',
+        PartyAtomicCommandType.disband => status == 'active',
+      };
+      if (!allowed) return false;
+    }
+    return true;
+  }
+
   Map<String, Object?> get recruitmentPatch {
     final nextRevision = command.expectedRevision + 1;
     return {
