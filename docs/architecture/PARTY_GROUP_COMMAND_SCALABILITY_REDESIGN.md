@@ -111,6 +111,7 @@ revision
 - 기존 `activeRaidAssignment`와 `weeklyRaidClaim`은 Character·레이드별 통합 `raidState`로 교체하는 방향을 기준으로 한다. `active`, `completed`, 문서 없음으로 참가 점유와 이번 주 완료를 한 문서에서 표현한다.
 - 모집 원본에는 `revision`, `lastCommandId`, 명령 종류·행위자·대상 `raidState` ID를 담은 제한 크기 명령 검증 정보를 둔다. Rules는 전원 membership을 다시 조립하지 않고 Transaction 후 모집 원본과 직접 대상 문서만 검증한다.
 - 완료·취소·주차 전환은 현재 회차 상태를 포함한 모집 원본·최대 8개 `raidState`·필요 listing·공용 이벤트 1건을 같은 원자 명령으로 처리한다. 활성 모집 해산은 최대 8개 `raidState` 점유를 해제하고, 완료 후 해산은 `completed` 상태를 보존한다.
+- 그룹 전용 1회성 모집은 완료 순간 그룹 `activeRecruitmentCount`를 감소시키고 listing을 삭제한다. 이후 완료 화면의 마무리 해산은 이미 닫힌 그룹 집계와 listing을 다시 변경하지 않는다. 반복 모집의 이번 회차 완료는 모집이 계속 활성 상태이므로 집계를 유지한다.
 - 새 명령은 별도 `cycles` 문서를 현재 상태의 권한 원장으로 쓰지 않는다. `currentCycleKey`, `currentCycleStatus`, 완료 시각·revision·완료 구성은 모집 원본에 고정하고, 과거 회차 표시는 공용 이벤트 Snapshot과 로컬 이력 Projection에서 만든다.
 - 8인 최악 조건에서도 Rules 문서 접근 호출이 Transaction 전체 20회, 개별 쓰기 10회를 넘지 않는다는 Emulator 계약 테스트를 구현 전에 먼저 고정한다. 같은 경로가 캐시될 것이라고 가정해 한도를 계산하지 않는다.
 

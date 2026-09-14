@@ -115,7 +115,7 @@ void main() {
     expect(plan.eventDocument['audiencePlayerIds'], ['player-0']);
   });
 
-  test('8인 최악 조건도 쓰기 계획은 최대 11건이다', () {
+  test('8인 그룹 1회성 완료도 12건의 제한된 쓰기로 끝난다', () {
     final targets = List.generate(
       8,
       (index) => PartyCommandTarget(
@@ -157,13 +157,17 @@ void main() {
         nonGroupMemberCount: 0,
         pendingApplicationCount: 0,
         pendingNonGroupApplicantCount: 0,
+        groupId: 'group-1',
+        visibility: 'group',
       ),
       serverTimestamp: timestamp,
       incrementOne: incrementOne,
     );
 
-    expect(plan.maximumWriteCount, 11);
+    expect(plan.maximumWriteCount, 12);
     expect(plan.raidStateWrites, hasLength(8));
+    expect(plan.closesActiveGroupRecruitment, isTrue);
+    expect(plan.groupListingAction, PartyGroupListingWriteAction.delete);
   });
 
   test('오래된 revision 또는 다른 모집 Aggregate는 계획 전에 거절한다', () {
@@ -281,6 +285,6 @@ void main() {
       incrementOne: incrementOne,
     );
     expect(completedDisband.raidStateWrites, isEmpty);
-    expect(completedDisband.maximumWriteCount, 3);
+    expect(completedDisband.maximumWriteCount, 2);
   });
 }

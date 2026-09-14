@@ -121,13 +121,18 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
         ? recruitment.currentCycleStatus
         : 'active';
     const commandId = `${type}-${memberCount}-${nextRevision}`;
+    const closesActiveRecruitment =
+      (type === 'complete' && recruitment.continueTogether === false)
+      || (type === 'disband' && recruitment.status === 'active');
 
     transaction.update(recruitmentRef, {
       status: nextStatus,
       currentCycleStatus: nextCycleStatus,
       currentCycleKey: nextCycleKey,
       commandTargets,
-      groupActiveRecruitmentCountAfter: type === 'disband' ? 0 : 1,
+      groupActiveRecruitmentCountAfter: closesActiveRecruitment
+        ? recruitment.groupActiveRecruitmentCountAfter - 1
+        : recruitment.groupActiveRecruitmentCountAfter,
       revision: options.staleRevision ? nextRevision + 1 : nextRevision,
       lastCommandId: commandId,
       lastCommandType: type,
@@ -161,14 +166,15 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
       );
     }
 
-    if (type === 'disband') {
+    if (closesActiveRecruitment) {
       transaction.update(groupRef, {
         activeRecruitmentCount: 0,
         lastRecruitmentId: recruitmentId,
         revision: 2,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
-    } else {
+      transaction.delete(listingRef);
+    } else if (!(type === 'disband' && recruitment.status === 'completed')) {
       transaction.update(listingRef, {
         recruitmentId,
         sourceRevision: nextRevision,

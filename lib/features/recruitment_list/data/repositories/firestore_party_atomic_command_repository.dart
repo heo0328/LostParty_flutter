@@ -105,7 +105,7 @@ class FirestorePartyAtomicCommandRepository
         );
         final groupId = aggregate.groupId;
         if (groupId != null) {
-          if (command.type == PartyAtomicCommandType.disband) {
+          if (plan.closesActiveGroupRecruitment) {
             final groupRef = _firestore.collection('groups').doc(groupId);
             final group = await transaction.get(groupRef);
             final count = group.data()?['activeRecruitmentCount'];
@@ -122,13 +122,19 @@ class FirestorePartyAtomicCommandRepository
               'revision': FieldValue.increment(1),
               'updatedAt': FieldValue.serverTimestamp(),
             });
-          } else {
+          }
+          final listingRef = _firestore
+              .collection('groups')
+              .doc(groupId)
+              .collection('raidListings')
+              .doc(command.recruitmentId);
+          if (plan.groupListingAction ==
+              PartyGroupListingWriteAction.delete) {
+            transaction.delete(listingRef);
+          } else if (plan.groupListingAction ==
+              PartyGroupListingWriteAction.update) {
             transaction.update(
-              _firestore
-                  .collection('groups')
-                  .doc(groupId)
-                  .collection('raidListings')
-                  .doc(command.recruitmentId),
+              listingRef,
               plan.listingPatch,
             );
           }

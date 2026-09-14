@@ -107,13 +107,23 @@ service cloud.firestore {
           && newData.currentCycleKey == oldData.currentCycleKey);
     }
 
-    function validGroupAfterDisband(oldData, newData) {
-      return newData.lastCommandType != 'disband'
+    function closesActiveGroupRecruitment(oldData, newData) {
+      return (newData.lastCommandType == 'complete'
+          && oldData.continueTogether == false)
+        || (newData.lastCommandType == 'disband'
+          && oldData.status == 'active');
+    }
+
+    function validGroupLifecycleCount(oldData, newData) {
+      return oldData.groupId == ''
+        || (!closesActiveGroupRecruitment(oldData, newData)
           && newData.groupActiveRecruitmentCountAfter
-            == oldData.groupActiveRecruitmentCountAfter
-        || oldData.groupId == ''
-        || getAfter(groupPath(oldData.groupId)).data.activeRecruitmentCount
-          == newData.groupActiveRecruitmentCountAfter;
+            == oldData.groupActiveRecruitmentCountAfter)
+        || (closesActiveGroupRecruitment(oldData, newData)
+          && getAfter(groupPath(oldData.groupId)).data.activeRecruitmentCount
+            == newData.groupActiveRecruitmentCountAfter
+          && newData.groupActiveRecruitmentCountAfter
+            == oldData.groupActiveRecruitmentCountAfter - 1);
     }
 
     function validLifecycleUpdate(oldData, newData) {
@@ -121,7 +131,7 @@ service cloud.firestore {
         && validLifecycleShape(oldData, newData)
         && validLifecycleState(oldData, newData)
         && allTargetsMatch(newData)
-        && validGroupAfterDisband(oldData, newData);
+        && validGroupLifecycleCount(oldData, newData);
     }
 
     function targetAt(data, index, playerId, stateId) {
@@ -196,11 +206,23 @@ service cloud.firestore {
         && data.updatedAt == request.time;
     }
 
-    function validGroupDisbandUpdate(groupId, oldData, newData) {
+    function validListingDelete(recruitmentId) {
+      let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
+      return recruitment.recruitmentId == recruitmentId
+        && (recruitment.status == 'completed'
+          || recruitment.status == 'disbanded')
+        && (recruitment.lastCommandType == 'complete'
+          || recruitment.lastCommandType == 'disband');
+    }
+
+    function validGroupRecruitmentClose(groupId, oldData, newData) {
       let recruitment = getAfter(recruitmentPath(newData.lastRecruitmentId)).data;
       return recruitment.groupId == groupId
-        && recruitment.lastCommandType == 'disband'
-        && recruitment.status == 'disbanded'
+        && ((recruitment.lastCommandType == 'disband'
+            && recruitment.status == 'disbanded')
+          || (recruitment.lastCommandType == 'complete'
+            && recruitment.status == 'completed'
+            && recruitment.continueTogether == false))
         && newData.activeRecruitmentCount == oldData.activeRecruitmentCount - 1
         && recruitment.groupActiveRecruitmentCountAfter
           == newData.activeRecruitmentCount
@@ -235,7 +257,7 @@ service cloud.firestore {
 
     match /groups/{groupId} {
       allow get: if signedIn();
-      allow update: if validGroupDisbandUpdate(
+      allow update: if validGroupRecruitmentClose(
         groupId,
         resource.data,
         request.resource.data
@@ -247,6 +269,7 @@ service cloud.firestore {
           recruitmentId,
           request.resource.data
         );
+        allow delete: if validListingDelete(recruitmentId);
       }
     }
   }

@@ -48,9 +48,9 @@ void main() {
     expect(source, isNot(contains('/slots/')));
   });
 
-  test('그룹 해산 모집 검증은 변경 후 그룹 원본만 한 번 읽는다', () {
+  test('그룹 모집 종료 검증은 변경 후 그룹 원본만 한 번 읽는다', () {
     final source = functionSource(
-      'validGroupAfterDisband',
+      'validGroupLifecycleCount',
       'validLifecycleUpdate',
     );
 
@@ -68,6 +68,8 @@ void main() {
     expect(emulatorTest, contains('{ staleRevision: true }'));
     expect(emulatorTest, contains("authenticatedContext('outsider-auth')"));
     expect(emulatorTest, contains('completedDisband: true'));
+    expect(emulatorTest, contains('closesActiveRecruitment'));
+    expect(emulatorTest, contains('transaction.delete(listingRef)'));
     expect(
       emulatorTest,
       contains('missed active cycle advances without stale state'),
