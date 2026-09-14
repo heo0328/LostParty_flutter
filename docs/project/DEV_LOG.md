@@ -12,6 +12,7 @@
 - 증명 스크립트가 Rules Test Context와 modular `getFirestore`를 혼용하던 부분을 compat context API로 통일했다. 이는 정상 Emulator 환경에서 실행 자체가 SDK 타입 오류로 막히지 않게 하는 테스트 하네스 수정이며 운영 코드는 변경하지 않는다.
 - Windows 호스트 장애를 우회하는 첫 엔진 검증용 GitHub Actions를 추가했다. 기능 브랜치의 증명 파일 변경과 수동 실행에만 반응하고 Ubuntu·JDK 21·`demo-party-scalability` Emulator·전용 Rules 설정만 사용한다. 운영 Firebase 프로젝트 인증이나 배포 단계는 포함하지 않는다.
 - GitHub Actions 실행 `34848336222`에서 의존성 설치와 격리 Firestore Emulator Rules 증명이 1분 13초에 모두 통과했다. 1·2·4·8인 lifecycle·그룹 해산과 누락 대상·stale revision·비권한 actor 거절 계약이 실제 Rules 엔진에서 확인되어 첫 구현 게이트를 통과했다. Actions 런타임의 action 버전 사용 중단 예고 두 건은 Rules 컴파일 경고가 아니며 증명 결과에는 영향을 주지 않는다.
+- 운영 연결 없이 새 Domain 계약을 추가했다. 통합 `raidState`의 결정적 ID, 최대 8칸 구성 Aggregate와 집계 불변식, 최대 8개 직접 대상 명령 봉투, `expectedRevision`·`lastCommandId` 기반 응답 유실 판정 및 새 Repository 인터페이스를 정의했다. 운영 Repository·Rules·Router/DI는 변경하지 않았고 신규 Domain 6건과 기존 증명 계약 6건, 영향 정적 분석이 통과했다.
 
 # 2026-09-14 release/1.0.0 후보 폐기와 파티·그룹 명령 재설계 전환
 
