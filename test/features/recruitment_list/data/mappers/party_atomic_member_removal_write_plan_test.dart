@@ -21,14 +21,13 @@ void main() {
       actorPlayerId: 'third',
       type: PartyAtomicMemberRemovalType.leave,
       raidId: 'raid-1',
-      targetIsGroupMember: false,
       serverTimestamp: timestamp,
     );
 
     expect(plan.successorPlayerId, isNull);
     expect(plan.targetRaidStateId, 'third-character_raid-1');
     expect(plan.recruitmentPatch['memberPlayerIds'], ['leader', 'second']);
-    expect(plan.recruitmentPatch['nonGroupMemberCount'], 1);
+    expect(plan.recruitmentPatch['nonGroupMemberCount'], 0);
     expect(plan.event['audiencePlayerIds'], ['leader', 'second', 'third']);
     expect(plan.maximumWriteCount, 4);
   });
@@ -41,7 +40,6 @@ void main() {
       actorPlayerId: 'leader',
       type: PartyAtomicMemberRemovalType.leave,
       raidId: 'raid-1',
-      targetIsGroupMember: true,
       successorSnapshot: const PartyLeaderSuccessorSnapshot(
         playerId: 'second',
         characterName: '두번째',
@@ -60,6 +58,20 @@ void main() {
     expect(plan.maximumWriteCount, 5);
   });
 
+  test('참가 뒤 그룹을 탈퇴한 멤버도 참가 당시 집계 Snapshot으로 제거한다', () {
+    final plan = PartyAtomicMemberRemovalWritePlan(
+      aggregate: _aggregate(),
+      rules: rules,
+      targetPlayerId: 'second',
+      actorPlayerId: 'second',
+      type: PartyAtomicMemberRemovalType.leave,
+      raidId: 'raid-1',
+      serverTimestamp: timestamp,
+    );
+
+    expect(plan.recruitmentPatch['nonGroupMemberCount'], 1);
+  });
+
   test('추방 권한과 마지막 한 명의 일반 탈퇴를 거절한다', () {
     expect(
       () => PartyAtomicMemberRemovalWritePlan(
@@ -69,7 +81,6 @@ void main() {
         actorPlayerId: 'second',
         type: PartyAtomicMemberRemovalType.kick,
         raidId: 'raid-1',
-        targetIsGroupMember: false,
         serverTimestamp: timestamp,
       ),
       throwsStateError,
@@ -82,7 +93,6 @@ void main() {
         actorPlayerId: 'leader',
         type: PartyAtomicMemberRemovalType.leave,
         raidId: 'raid-1',
-        targetIsGroupMember: true,
         serverTimestamp: timestamp,
       ),
       throwsStateError,
@@ -101,7 +111,7 @@ PartyCommandAggregate _aggregate() => PartyCommandAggregate(
     _slot('second', 'second-character', PartyRole.dealer, 1),
     _slot('third', 'third-character', PartyRole.dealer, 2),
   ],
-  nonGroupMemberCount: 2,
+  nonGroupMemberCount: 1,
   pendingApplicationCount: 0,
   pendingNonGroupApplicantCount: 0,
   groupId: 'group-1',
@@ -132,4 +142,5 @@ PartyAggregateSlot _slot(
   classKey: role == PartyRole.support ? '바드:지원' : '버서커',
   partyIndex: 0,
   slotIndex: slotIndex,
+  countedAsNonGroupMember: playerId == 'third',
 );

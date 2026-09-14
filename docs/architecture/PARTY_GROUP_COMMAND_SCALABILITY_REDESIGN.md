@@ -83,7 +83,7 @@ memberCount
 dealerCount
 supporterCount
 leaderPlayerId
-partySlots[8]                // playerId, characterId, role, classKey, partyIndex, slotIndex
+partySlots[8]                // playerId, characterId, role, classKey, partyIndex, slotIndex, countedAsNonGroupMember
 nonGroupMemberCount
 pendingApplicationCount
 pendingNonGroupApplicantCount
@@ -97,6 +97,8 @@ revision
 - `partySlots`는 화면 전체 상세의 영구 대체물이 아니라 명령 판정용 고정 상한 Aggregate다. 상세 화면은 필요하면 `members`를 계속 읽는다.
 - 새 명령에서 별도 `slots` 문서를 점유 원장으로 쓰지 않는다. `partySlots`가 유일한 활성 자리 원장이고 membership의 자리 필드는 화면용 Projection이다.
 - 각 파티의 동일 구성 직업 제한과 딜러/서포터형 분리는 기존 `PartyCompositionPolicy`가 계산한 `classKey`를 사용한다.
+- `countedAsNonGroupMember`는 현재 그룹 조회 결과가 아니라 참가 당시 `nonGroupMemberCount`에 포함했는지를 기록한다. 이후 그룹을 탈퇴한 멤버를 제거해도 과거 집계를 이중 감소시키지 않는다.
+- 신청 문서도 `countedAsNonGroupApplicant`를 신청 당시 저장하고 철회·승인에서 그 값을 사용한다. 명령 시점의 새 그룹 조회 결과로 과거 pending 집계를 되돌리지 않는다.
 - 가입·승인·탈퇴·추방·캐릭터 변경·자리 이동이 요약과 직접 대상 Projection을 같은 Transaction에서 함께 갱신한다.
 - 공개→그룹 전환은 `nonGroupMemberCount == 0 && pendingNonGroupApplicantCount == 0`일 때만 허용한다.
 - 그룹 원본에는 `activeRecruitmentCount`를 두고 그룹 모집 생성 시 증가, 종료·공개 전환 시 감소시킨다. 그룹 해산은 이 값이 0인지 검증한다.

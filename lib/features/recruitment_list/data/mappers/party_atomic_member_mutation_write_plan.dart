@@ -71,6 +71,7 @@ class PartyAtomicCharacterChangeWritePlan {
       classKey: newClassKey,
       partyIndex: partyIndex,
       slotIndex: slotIndex,
+      countedAsNonGroupMember: old.countedAsNonGroupMember,
     );
     final nextSlots = [...aggregate.partySlots]..[oldIndex] = replacement;
     _validateComposition(nextSlots, aggregate.leaderPlayerId, rules);
@@ -214,6 +215,7 @@ class PartyAtomicRepositionWritePlan {
       classKey: source.classKey,
       partyIndex: destinationPartyIndex,
       slotIndex: destinationSlotIndex,
+      countedAsNonGroupMember: source.countedAsNonGroupMember,
     );
     final nextSlots = [...aggregate.partySlots]..[sourceIndex] = moved;
     if (destination != null) {
@@ -224,6 +226,7 @@ class PartyAtomicRepositionWritePlan {
         classKey: destination.classKey,
         partyIndex: source.partyIndex,
         slotIndex: source.slotIndex,
+        countedAsNonGroupMember: destination.countedAsNonGroupMember,
       );
     }
     _validateComposition(nextSlots, aggregate.leaderPlayerId, rules);

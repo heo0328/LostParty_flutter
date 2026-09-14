@@ -11,6 +11,7 @@ void main() {
         classKey: role == PartyRole.support ? '바드:지원' : '버서커',
         partyIndex: index ~/ 4,
         slotIndex: index % 4,
+        countedAsNonGroupMember: false,
       );
 
   PartyCommandAggregate aggregate({

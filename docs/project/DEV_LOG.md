@@ -2902,3 +2902,10 @@
 - 마지막 한 명의 탈퇴는 일반 제거 계획에서 거절하고 기존 원자 해산 명령으로 분리해 모집 종료와 점유 해제가 갈라지지 않게 했다. 그룹 자격 여부는 직접 대상 문서에서 확인한 boolean으로 `nonGroupMemberCount`만 고정 크기로 조정한다.
 - 그룹 원본 `activeRecruitmentCount`의 생성·종료 증감과 0일 때만 해산하는 검증 계획을 추가했다. 연결 모집 최대 20개 순회는 신규 구조에서 사용하지 않는다.
 - 신규 및 직접 영향 회귀 14건과 변경 파일 정적 분석이 통과했다. 이 단계는 비연결 Write Plan이며 운영 Repository·Router/DI·Rules와 실제 Firebase는 변경하지 않았다.
+
+# 2026-09-14 그룹 자격 집계 Snapshot과 공개 범위 전환 계획
+
+- 참가·신청 이후 그룹 탈퇴 여부를 현재 시점에서 다시 조회해 과거 집계를 감소시키면 값이 어긋나는 위험을 확인했다. 슬롯에는 `countedAsNonGroupMember`, 신청에는 `countedAsNonGroupApplicant`를 생성 당시 고정해 제거·철회·승인이 동일한 집계를 정확히 되돌리도록 보완했다.
+- Aggregate 생성자는 슬롯 Snapshot 합과 `nonGroupMemberCount`가 다르면 거절한다. 캐릭터 변경과 자리 이동·교환은 이 Snapshot을 그대로 보존한다.
+- 공개→그룹 전환은 `nonGroupMemberCount`와 `pendingNonGroupApplicantCount`가 모두 0인지 확인하고, 그룹→공개 전환은 listing 삭제와 그룹 `activeRecruitmentCount` 감소를 같은 계획으로 묶었다. 멤버·신청 전체 순회는 사용하지 않는다.
+- 신규 및 직접 영향 테스트 37건과 변경 파일 정적 분석이 통과했다. 기존 운영 공개 범위 Repository·Router/DI·Rules 및 Firebase 데이터는 아직 변경하지 않았다.

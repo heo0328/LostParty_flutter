@@ -108,6 +108,7 @@ PartyCommandAggregate _aggregate() => PartyCommandAggregate(
       classKey: '바드:지원',
       partyIndex: 0,
       slotIndex: 0,
+      countedAsNonGroupMember: false,
     ),
     PartyAggregateSlot(
       playerId: 'member',
@@ -116,6 +117,7 @@ PartyCommandAggregate _aggregate() => PartyCommandAggregate(
       classKey: '버서커',
       partyIndex: 0,
       slotIndex: 1,
+      countedAsNonGroupMember: false,
     ),
     PartyAggregateSlot(
       playerId: 'other',
@@ -124,6 +126,7 @@ PartyCommandAggregate _aggregate() => PartyCommandAggregate(
       classKey: '디스트로이어',
       partyIndex: 1,
       slotIndex: 0,
+      countedAsNonGroupMember: false,
     ),
   ],
   nonGroupMemberCount: 0,

@@ -3,14 +3,20 @@ import 'party_atomic_membership_write_plan.dart';
 
 class PartyAtomicApplicationWritePlan {
   PartyAtomicApplicationWritePlan.apply({
-    required this.application,
+    required Map<String, Object?> application,
     required PartyCommandAggregate aggregate,
     required String applicantPlayerId,
     required bool applicantIsGroupMember,
     required Object serverTimestamp,
-  }) : recruitmentPatch = _pendingPatch(
+  }) : application = Map.unmodifiable({
+         ...application,
+         'countedAsNonGroupApplicant':
+             aggregate.groupId != null && !applicantIsGroupMember,
+       }),
+       recruitmentPatch = _pendingPatch(
          aggregate: aggregate,
-         applicantIsGroupMember: applicantIsGroupMember,
+         countedAsNonGroupApplicant:
+             aggregate.groupId != null && !applicantIsGroupMember,
          delta: 1,
          serverTimestamp: serverTimestamp,
        ),
@@ -32,11 +38,10 @@ class PartyAtomicApplicationWritePlan {
     required this.application,
     required PartyCommandAggregate aggregate,
     required String applicantPlayerId,
-    required bool applicantIsGroupMember,
     required Object serverTimestamp,
   }) : recruitmentPatch = _pendingPatch(
          aggregate: aggregate,
-         applicantIsGroupMember: applicantIsGroupMember,
+         countedAsNonGroupApplicant: _countedAsNonGroup(application),
          delta: -1,
          serverTimestamp: serverTimestamp,
        ),
@@ -66,16 +71,14 @@ class PartyAtomicApplicationWritePlan {
 
   static Map<String, Object?> _pendingPatch({
     required PartyCommandAggregate aggregate,
-    required bool applicantIsGroupMember,
+    required bool countedAsNonGroupApplicant,
     required int delta,
     required Object serverTimestamp,
   }) {
-    final countsAsNonGroup =
-        aggregate.groupId != null && !applicantIsGroupMember;
     final pending = aggregate.pendingApplicationCount + delta;
     final pendingNonGroup =
         aggregate.pendingNonGroupApplicantCount +
-        (countsAsNonGroup ? delta : 0);
+        (countedAsNonGroupApplicant ? delta : 0);
     if (pending < 0 || pendingNonGroup < 0 || pendingNonGroup > pending) {
       throw StateError('신청 Aggregate 집계가 올바르지 않습니다.');
     }
@@ -85,6 +88,14 @@ class PartyAtomicApplicationWritePlan {
       'revision': aggregate.revision + 1,
       'updatedAt': serverTimestamp,
     });
+  }
+
+  static bool _countedAsNonGroup(Map<String, Object?> application) {
+    final value = application['countedAsNonGroupApplicant'];
+    if (value is! bool) {
+      throw const FormatException('신청 당시 그룹 집계 Snapshot이 없습니다.');
+    }
+    return value;
   }
 
   static Map<String, Object?> _event({
@@ -116,7 +127,7 @@ class PartyAtomicApprovalWritePlan {
   PartyAtomicApprovalWritePlan({
     required PartyAtomicJoinWritePlan join,
     required PartyCommandAggregate aggregate,
-    required bool applicantIsGroupMember,
+    required bool applicantCountedAsNonGroup,
     required int applicationRevision,
     required Object serverTimestamp,
   }) : membership = join.membership,
@@ -126,7 +137,7 @@ class PartyAtomicApprovalWritePlan {
        recruitmentPatch = _recruitmentPatch(
          join: join,
          aggregate: aggregate,
-         applicantIsGroupMember: applicantIsGroupMember,
+         applicantCountedAsNonGroup: applicantCountedAsNonGroup,
        ),
        applicationPatch = Map.unmodifiable({
          'status': 'approved',
@@ -150,12 +161,11 @@ class PartyAtomicApprovalWritePlan {
   static Map<String, Object?> _recruitmentPatch({
     required PartyAtomicJoinWritePlan join,
     required PartyCommandAggregate aggregate,
-    required bool applicantIsGroupMember,
+    required bool applicantCountedAsNonGroup,
   }) {
-    final countsAsNonGroup =
-        aggregate.groupId != null && !applicantIsGroupMember;
     final pendingNonGroup =
-        aggregate.pendingNonGroupApplicantCount - (countsAsNonGroup ? 1 : 0);
+        aggregate.pendingNonGroupApplicantCount -
+        (applicantCountedAsNonGroup ? 1 : 0);
     if (pendingNonGroup < 0) {
       throw StateError('비그룹 신청 집계가 올바르지 않습니다.');
     }

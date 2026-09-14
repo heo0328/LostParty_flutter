@@ -57,6 +57,7 @@ class PartyAtomicCreateWritePlan {
       classKey: classKey,
       partyIndex: 0,
       slotIndex: 0,
+      countedAsNonGroupMember: false,
     );
     final raidStateId = PartyRaidState.documentIdFor(
       characterId: command.leaderCharacterId,
@@ -191,6 +192,8 @@ class PartyAtomicJoinWritePlan {
       classKey: classKey,
       partyIndex: partyIndex,
       slotIndex: slotIndex,
+      countedAsNonGroupMember:
+          aggregate.groupId != null && !joiningIsGroupMember,
     );
     final nextSlots = [...aggregate.partySlots, joiningSlot];
     final arrangement = [

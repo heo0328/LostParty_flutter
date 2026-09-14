@@ -115,6 +115,7 @@ PartyCommandAggregate _aggregate() => PartyCommandAggregate(
       classKey: '버서커',
       partyIndex: 0,
       slotIndex: 0,
+      countedAsNonGroupMember: false,
     ),
   ],
   nonGroupMemberCount: 0,

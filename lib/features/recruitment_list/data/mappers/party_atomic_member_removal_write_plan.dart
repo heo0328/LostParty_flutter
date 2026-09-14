@@ -30,7 +30,6 @@ class PartyAtomicMemberRemovalWritePlan {
     required String actorPlayerId,
     required PartyAtomicMemberRemovalType type,
     required String raidId,
-    required bool targetIsGroupMember,
     required Object serverTimestamp,
     PartyLeaderSuccessorSnapshot? successorSnapshot,
   }) : _values = _build(
@@ -40,7 +39,6 @@ class PartyAtomicMemberRemovalWritePlan {
          actorPlayerId: actorPlayerId,
          type: type,
          raidId: raidId,
-         targetIsGroupMember: targetIsGroupMember,
          serverTimestamp: serverTimestamp,
          successorSnapshot: successorSnapshot,
        );
@@ -64,7 +62,6 @@ class PartyAtomicMemberRemovalWritePlan {
     required String actorPlayerId,
     required PartyAtomicMemberRemovalType type,
     required String raidId,
-    required bool targetIsGroupMember,
     required Object serverTimestamp,
     required PartyLeaderSuccessorSnapshot? successorSnapshot,
   }) {
@@ -88,11 +85,11 @@ class PartyAtomicMemberRemovalWritePlan {
     if (aggregate.memberCount == 1) {
       throw StateError('마지막 파티원은 원자 해산 명령을 사용해야 합니다.');
     }
-    if (!targetIsGroupMember && aggregate.nonGroupMemberCount == 0) {
+    final target = aggregate.partySlots[targetIndex];
+    if (target.countedAsNonGroupMember &&
+        aggregate.nonGroupMemberCount == 0) {
       throw StateError('비그룹 파티원 집계가 일치하지 않습니다.');
     }
-
-    final target = aggregate.partySlots[targetIndex];
     final remaining = [...aggregate.partySlots]..removeAt(targetIndex);
     final leaderLeaves = targetPlayerId == aggregate.leaderPlayerId;
     final successor = leaderLeaves ? remaining.first : null;
@@ -111,7 +108,8 @@ class PartyAtomicMemberRemovalWritePlan {
         : 'memberKicked';
     final eventId = '${eventType}_${aggregate.recruitmentId}_$nextRevision';
     final nextNonGroupMemberCount =
-        aggregate.nonGroupMemberCount - (targetIsGroupMember ? 0 : 1);
+        aggregate.nonGroupMemberCount -
+        (target.countedAsNonGroupMember ? 1 : 0);
     final patch = <String, Object?>{
       'memberPlayerIds': [for (final slot in remaining) slot.playerId],
       'memberCount': remaining.length,

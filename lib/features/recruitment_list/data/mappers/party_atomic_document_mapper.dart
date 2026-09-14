@@ -20,6 +20,7 @@ class PartyAtomicDocumentMapper {
         'pendingNonGroupApplicantCount',
       ),
       status: _recruitmentStatus(data['status']),
+      visibility: _string(data, 'visibility'),
       continueTogether: _bool(data, 'continueTogether'),
       groupId: _optionalString(data, 'groupId'),
       lastCommandId: _optionalString(data, 'lastCommandId'),
@@ -34,6 +35,7 @@ class PartyAtomicDocumentMapper {
     'classKey': value.classKey,
     'partyIndex': value.partyIndex,
     'slotIndex': value.slotIndex,
+    'countedAsNonGroupMember': value.countedAsNonGroupMember,
   };
 
   static PartyAggregateSlot _slot(Map<String, Object?> data) =>
@@ -48,6 +50,7 @@ class PartyAtomicDocumentMapper {
         classKey: _string(data, 'classKey'),
         partyIndex: _int(data, 'partyIndex'),
         slotIndex: _int(data, 'slotIndex'),
+        countedAsNonGroupMember: _bool(data, 'countedAsNonGroupMember'),
       );
 
   static PartyRaidStateStatus _raidStatus(Object? value) => switch (value) {

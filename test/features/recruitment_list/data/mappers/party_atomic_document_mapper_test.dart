@@ -8,6 +8,7 @@ void main() {
     'currentCycleKey': '2026-09-09',
     'currentCycleStatus': 'active',
     'status': 'active',
+    'visibility': 'public',
     'continueTogether': true,
     'revision': 4,
     'partySlots': [
@@ -18,6 +19,7 @@ void main() {
         'classKey': '버서커',
         'partyIndex': 0,
         'slotIndex': 0,
+        'countedAsNonGroupMember': false,
       },
     ],
     'nonGroupMemberCount': 0,

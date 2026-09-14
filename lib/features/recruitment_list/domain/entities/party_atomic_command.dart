@@ -1,4 +1,5 @@
 import 'party_recruitment.dart';
+import 'party_create_command.dart';
 
 enum PartyRaidStateStatus { active, completed }
 
@@ -59,6 +60,7 @@ class PartyAggregateSlot {
     required this.classKey,
     required this.partyIndex,
     required this.slotIndex,
+    required this.countedAsNonGroupMember,
   }) {
     if (playerId.isEmpty || characterId.isEmpty || classKey.isEmpty) {
       throw ArgumentError('파티 슬롯 식별자는 비어 있을 수 없습니다.');
@@ -74,6 +76,7 @@ class PartyAggregateSlot {
   final String classKey;
   final int partyIndex;
   final int slotIndex;
+  final bool countedAsNonGroupMember;
 
   String get positionKey => '${partyIndex}_$slotIndex';
 }
@@ -153,6 +156,7 @@ class PartyCommandAggregate {
     required this.pendingApplicationCount,
     required this.pendingNonGroupApplicantCount,
     this.status = PartyRecruitmentStatus.active,
+    this.visibility = RecruitmentVisibility.public,
     this.continueTogether = false,
     this.groupId,
     this.lastCommandId,
@@ -177,6 +181,10 @@ class PartyCommandAggregate {
         pendingApplicationCount < 0 ||
         pendingNonGroupApplicantCount < 0 ||
         nonGroupMemberCount > partySlots.length ||
+        nonGroupMemberCount !=
+            partySlots
+                .where((slot) => slot.countedAsNonGroupMember)
+                .length ||
         pendingNonGroupApplicantCount > pendingApplicationCount) {
       throw ArgumentError('모집 Aggregate 집계가 올바르지 않습니다.');
     }
@@ -188,6 +196,10 @@ class PartyCommandAggregate {
     }
     if (groupId != null && groupId!.isEmpty) {
       throw ArgumentError('그룹 ID는 비어 있을 수 없습니다.');
+    }
+    if (!RecruitmentVisibility.isValid(visibility) ||
+        (visibility == RecruitmentVisibility.group && groupId == null)) {
+      throw ArgumentError('모집 공개 범위가 올바르지 않습니다.');
     }
   }
 
@@ -201,6 +213,7 @@ class PartyCommandAggregate {
   final int pendingApplicationCount;
   final int pendingNonGroupApplicantCount;
   final PartyRecruitmentStatus status;
+  final String visibility;
   final bool continueTogether;
   final String? groupId;
   final String? lastCommandId;

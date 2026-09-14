@@ -24,6 +24,7 @@ void main() {
             classKey: '바드:지원',
             partyIndex: 0,
             slotIndex: 0,
+            countedAsNonGroupMember: false,
           ),
         ],
         nonGroupMemberCount: 0,
@@ -43,6 +44,7 @@ void main() {
 
     expect(plan.recruitmentPatch['pendingApplicationCount'], 1);
     expect(plan.recruitmentPatch['pendingNonGroupApplicantCount'], 1);
+    expect(plan.application['countedAsNonGroupApplicant'], isTrue);
     expect(plan.application, isNot(contains('raidState')));
     expect(
       plan.event['audiencePlayerIds'],
@@ -52,10 +54,12 @@ void main() {
 
   test('철회는 해당 신청자의 그룹 자격에 맞춰 집계를 되돌린다', () {
     final plan = PartyAtomicApplicationWritePlan.withdraw(
-      application: {'status': 'withdrawn'},
+      application: {
+        'status': 'withdrawn',
+        'countedAsNonGroupApplicant': true,
+      },
       aggregate: aggregate(pending: 2, pendingNonGroup: 1),
       applicantPlayerId: 'applicant',
-      applicantIsGroupMember: false,
       serverTimestamp: timestamp,
     );
 
@@ -66,10 +70,9 @@ void main() {
   test('집계가 없는 철회와 참가 중인 Player 신청은 거절한다', () {
     expect(
       () => PartyAtomicApplicationWritePlan.withdraw(
-        application: const {},
+        application: const {'countedAsNonGroupApplicant': false},
         aggregate: aggregate(),
         applicantPlayerId: 'applicant',
-        applicantIsGroupMember: true,
         serverTimestamp: timestamp,
       ),
       throwsStateError,
@@ -123,7 +126,7 @@ void main() {
     final plan = PartyAtomicApprovalWritePlan(
       join: join,
       aggregate: current,
-      applicantIsGroupMember: false,
+      applicantCountedAsNonGroup: true,
       applicationRevision: 2,
       serverTimestamp: timestamp,
     );
