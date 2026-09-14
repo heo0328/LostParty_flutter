@@ -2894,3 +2894,11 @@
 - 해산·슬롯·이벤트 표적 계약 18건과 모집·파티 상세·그룹 영향 회귀 549건이 통과했고 변경 파일 정적 분석은 문제 0건이었다. 전체 Rules는 로컬 Emulator 시작 단계에서 정상 컴파일됐다.
 - 실제 Transaction Emulator 실행은 기존 전체 Rules 재업로드 503과 Node SDK gRPC 전송 오류로 완료하지 못했으며 통과로 기록하지 않는다. 최신 추적본 운영 배포와 공개·그룹 다인 해산 실기기 확인이 남았다.
 - 커밋 `a5a28d6`에서 `firebase.json`의 `firestore.rules`와 대상 `lost-party`를 재확인하고 운영 배포를 한 번 시도했다. `/test`는 HTTP 200으로 컴파일 성공·경고 0건이었지만 `/rulesets` POST가 HTTP 503으로 실패해 `/releases` 갱신에는 도달하지 않았다. 운영 활성 Rules는 이전 ruleset을 유지하며 같은 명령을 반복하지 않았다.
+
+# 2026-09-14 파티 원자 탈퇴·승계와 그룹 활성 모집 집계 계획
+
+- 기존 `memberPlayerIds`와 신규 Aggregate `partySlots`의 생성·가입 순서가 동일함을 확인하고, 파티장 탈퇴 시 탈퇴자를 제외한 첫 번째 잔류 Player를 후임으로 삼는 기존 제품 정책을 유지했다.
+- 일반 탈퇴·추방은 모집 Aggregate, 대상 membership 삭제, 대상 `raidState` 삭제와 공용 이벤트 한 건만 쓰도록 계획했다. 파티장 탈퇴만 후임 membership 한 건을 추가 갱신하며 최대 쓰기는 5건이다.
+- 마지막 한 명의 탈퇴는 일반 제거 계획에서 거절하고 기존 원자 해산 명령으로 분리해 모집 종료와 점유 해제가 갈라지지 않게 했다. 그룹 자격 여부는 직접 대상 문서에서 확인한 boolean으로 `nonGroupMemberCount`만 고정 크기로 조정한다.
+- 그룹 원본 `activeRecruitmentCount`의 생성·종료 증감과 0일 때만 해산하는 검증 계획을 추가했다. 연결 모집 최대 20개 순회는 신규 구조에서 사용하지 않는다.
+- 신규 및 직접 영향 회귀 14건과 변경 파일 정적 분석이 통과했다. 이 단계는 비연결 Write Plan이며 운영 Repository·Router/DI·Rules와 실제 Firebase는 변경하지 않았다.
