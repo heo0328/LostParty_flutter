@@ -6,9 +6,10 @@
 - 코드 감사 결과 전체 완료·취소는 고정 3 + `3N`, 주차 전환은 고정 3 + `2N`, 활성 해산은 member/application/assignment/slot과 event가 `N+A`로 증가함을 기록했다. 공개→그룹 전환과 그룹 해산의 20건 절단 순회도 Aggregate로 교체한다.
 - 통합 `raidState`, 모집 8칸 구성 요약, 그룹 `activeRecruitmentCount`, 공용 이벤트, 명령 검증 봉투와 최대 8인 목표 예산을 설계 문서에 고정했다. 이 시점에는 앱 코드·Rules·배포를 변경하지 않았다.
 - 구·신 스키마를 병행하지 않는 결정 때문에 부분 전환을 `dev`에 순차 병합하지 않는다. 단일 `feature/party-group-command-redesign`에서 Rules 예산 증명, 비연결 구현, 전체 Router/DI 전환, 테스트 자료 초기화와 회귀 검증을 마친 뒤 한 번에 `dev`로 통합한다.
-- 설계 커밋 `b595b68`을 로컬 `dev`에 fast-forward 통합했다. `origin/dev` 푸시는 권한 검토에서 거절되어 원격은 아직 `aab6b41`이며, 우회하거나 재시도하지 않았다.
+- 설계 커밋 `b595b68`을 로컬 `dev`에 fast-forward 통합했고 사용자 승인 후 `origin/dev`도 같은 시점으로 푸시했다.
 - 기능 브랜치에서 운영 `firestore.rules`와 분리된 `tools/party_scalability_proof.rules`, 1·2·4·8인 lifecycle·그룹 해산 및 누락·stale revision·비권한 거절 Emulator 시나리오를 추가했다. 정적 계약 테스트 5건과 JS 문법 검사는 통과했다.
-- 실제 Emulator는 Rules 로딩 전에 `Could not spawn java -version`으로 중단됐다. Rules 성공·실패 결과가 아니며 첫 엔진 검증 게이트는 미통과다. Java 환경이 확보되기 전 운영 Rules·Repository·Router 전환은 진행하지 않는다.
+- Android Studio 번들 JBR 21(`D:\dev\android\jbr`)로 Firestore Emulator 자체 기동은 확인했다. 그러나 Rules 로딩, 최소 deny-all 대조군, 단순 REST·클라이언트 쓰기가 모두 `503 Network closed for unknown reason` 또는 HTTP/2 protocol error로 끊겨 Rules 평가까지 도달하지 못했다. Docker는 없고 WSL 배포판도 설치되어 있지 않다. 첫 엔진 검증 게이트는 미통과이며 정상 격리 환경에서 통과하기 전 운영 Rules·Repository·Router 전환은 진행하지 않는다.
+- 증명 스크립트가 Rules Test Context와 modular `getFirestore`를 혼용하던 부분을 compat context API로 통일했다. 이는 정상 Emulator 환경에서 실행 자체가 SDK 타입 오류로 막히지 않게 하는 테스트 하네스 수정이며 운영 코드는 변경하지 않는다.
 
 # 2026-09-14 release/1.0.0 후보 폐기와 파티·그룹 명령 재설계 전환
 

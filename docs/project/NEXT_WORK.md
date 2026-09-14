@@ -6,7 +6,7 @@
 - 최신 앱과 운영 Rules에서도 다인 모집 해산이 `permission-denied`로 실패했다.
 - 해산 버튼을 숨기는 임시 UI 변경은 철회했고 기존 화면을 복원했다. 해산 한 곳을 다시 보정하지 않고 인원수에 비례해 커지는 파티·그룹 명령 전체를 재설계한다.
 - 장기 설계와 영향·회귀 목록은 [`../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md)를 기준으로 한다.
-- `feature/party-group-command-redesign`에서 운영 Rules와 분리된 8인 접근 예산 증명 Rules·Emulator 시나리오를 작성했다. 정적 계약 테스트 5건은 통과했지만 로컬 Java 부재로 Firestore Emulator가 시작되지 않아 실제 Rules 허용·거절 게이트는 아직 미통과다.
+- `feature/party-group-command-redesign`에서 운영 Rules와 분리된 8인 접근 예산 증명 Rules·Emulator 시나리오를 작성했다. 정적 계약 테스트 5건은 통과했다. Android Studio 번들 JBR 21로 Emulator 기동은 확인했지만, 이 PC에서는 최소 deny-all Rules와 단순 REST 쓰기도 동일한 `503 Network closed for unknown reason`으로 끊겨 실제 Rules 허용·거절 게이트는 아직 미통과다.
 
 ## 이번 작업 목표
 
@@ -67,7 +67,7 @@
 5. 기능별 전환 순서와 자동·실기기 검증표를 확정한다.
 6. 문서 승인 후 단일 구조개선 기능 브랜치에서 Rules 예산 증명부터 시작하고, 전체 전환 전에는 `dev`에 부분 병합하지 않는다.
 
-현재 실행 위치는 6번의 첫 Rules 예산 증명이다. Java가 사용 가능한 환경에서 다음을 실행해 1·2·4·8인 성공과 누락 대상·stale revision·비권한 actor 거절을 모두 확인해야 다음 구현으로 이동한다.
+현재 실행 위치는 6번의 첫 Rules 예산 증명이다. 운영 프로젝트가 아닌 정상 동작하는 격리 Emulator 환경에서 다음을 실행해 1·2·4·8인 성공과 누락 대상·stale revision·비권한 actor 거절을 모두 확인해야 다음 구현으로 이동한다. 현재 Windows 호스트에서는 JBR 21로 Emulator가 시작되지만 Firestore 쓰기 전송이 503으로 끊긴다. Docker는 설치되어 있지 않고 WSL 배포판도 없으므로 동일 호스트 재시도는 검증으로 인정하지 않는다.
 
 ```powershell
 firebase emulators:exec --only firestore --project demo-party-scalability "node tools/party_scalability_rules_test.mjs"

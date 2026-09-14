@@ -6,14 +6,8 @@ import {
   assertFails,
   assertSucceeds,
 } from '@firebase/rules-unit-testing';
-import {
-  doc,
-  getFirestore,
-  runTransaction,
-  serverTimestamp,
-  setDoc,
-  Timestamp,
-} from 'firebase/firestore';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/firestore';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const rules = fs.readFileSync(
@@ -34,34 +28,28 @@ function targets(memberCount) {
 }
 
 function stateRef(db, target) {
-  return doc(
-    db,
-    'players',
-    target.playerId,
-    'raidStates',
-    target.stateId,
-  );
+  return db.doc(`players/${target.playerId}/raidStates/${target.stateId}`);
 }
 
 async function seed(testEnv, memberCount, status = 'active') {
   await testEnv.clearFirestore();
-  const now = Timestamp.now();
+  const now = firebase.firestore.Timestamp.now();
   const cycleStatus = status === 'completed' ? 'completed' : 'active';
   const stateStatus = cycleStatus;
   const memberTargets = targets(memberCount);
   await testEnv.withSecurityRulesDisabled(async (context) => {
-    const db = getFirestore(context);
-    await setDoc(doc(db, 'authBindings', leaderUid), {
+    const db = context.firestore();
+    await db.doc(`authBindings/${leaderUid}`).set({
       playerId: leaderPlayerId,
       status: 'active',
     });
-    await setDoc(doc(db, 'groups', groupId), {
+    await db.doc(`groups/${groupId}`).set({
       activeRecruitmentCount: 1,
       lastRecruitmentId: recruitmentId,
       revision: 1,
       updatedAt: now,
     });
-    await setDoc(doc(db, 'recruitments', recruitmentId), {
+    await db.doc(`recruitments/${recruitmentId}`).set({
       recruitmentId,
       leaderPlayerId,
       groupId,
@@ -77,17 +65,14 @@ async function seed(testEnv, memberCount, status = 'active') {
       lastCommandActorPlayerId: leaderPlayerId,
       lastCommandAt: now,
     });
-    await setDoc(
-      doc(db, 'groups', groupId, 'raidListings', recruitmentId),
-      {
-        recruitmentId,
-        sourceRevision: 1,
-        status,
-        updatedAt: now,
-      },
-    );
+    await db.doc(`groups/${groupId}/raidListings/${recruitmentId}`).set({
+      recruitmentId,
+      sourceRevision: 1,
+      status,
+      updatedAt: now,
+    });
     for (const target of memberTargets) {
-      await setDoc(stateRef(db, target), {
+      await stateRef(db, target).set({
         playerId: target.playerId,
         characterId: target.stateId.split('_raid-1')[0],
         raidId: 'raid-1',
@@ -102,15 +87,15 @@ async function seed(testEnv, memberCount, status = 'active') {
 }
 
 async function lifecycleTransaction(db, memberCount, type, options = {}) {
-  const recruitmentRef = doc(db, 'recruitments', recruitmentId);
-  const listingRef = doc(db, 'groups', groupId, 'raidListings', recruitmentId);
-  const groupRef = doc(db, 'groups', groupId);
+  const recruitmentRef = db.doc(`recruitments/${recruitmentId}`);
+  const listingRef = db.doc(`groups/${groupId}/raidListings/${recruitmentId}`);
+  const groupRef = db.doc(`groups/${groupId}`);
   const memberTargets = targets(memberCount);
   const writtenTargets = options.omitLast
     ? memberTargets.slice(0, memberTargets.length - 1)
     : memberTargets;
 
-  await runTransaction(db, async (transaction) => {
+  await db.runTransaction(async (transaction) => {
     const recruitmentSnapshot = await transaction.get(recruitmentRef);
     const recruitment = recruitmentSnapshot.data();
     const nextRevision = recruitment.revision + 1;
@@ -139,7 +124,7 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
       lastCommandId: commandId,
       lastCommandType: type,
       lastCommandActorPlayerId: leaderPlayerId,
-      lastCommandAt: serverTimestamp(),
+      lastCommandAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
 
     for (const target of writtenTargets) {
@@ -151,7 +136,7 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
           status: type === 'complete' ? 'completed' : 'active',
           cycleKey: nextCycleKey,
           revision: nextRevision,
-          updatedAt: serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         });
       }
     }
@@ -173,18 +158,18 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
         activeRecruitmentCount: 0,
         lastRecruitmentId: recruitmentId,
         revision: 2,
-        updatedAt: serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
     } else {
       transaction.update(listingRef, {
         recruitmentId,
         sourceRevision: nextRevision,
         status: nextStatus,
-        updatedAt: serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
     }
 
-    transaction.set(doc(db, 'partyEvents', commandId), {
+    transaction.set(db.doc(`partyEvents/${commandId}`), {
       schemaVersion: 1,
       eventId: commandId,
       recruitmentId,
@@ -192,7 +177,7 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
       commandId,
       commandRevision: nextRevision,
       audiencePlayerIds: memberTargets.map((target) => target.playerId),
-      occurredAt: serverTimestamp(),
+      occurredAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
   });
 }
@@ -203,7 +188,7 @@ async function main() {
     firestore: { rules },
   });
   try {
-    const leaderDb = getFirestore(testEnv.authenticatedContext(leaderUid));
+    const leaderDb = testEnv.authenticatedContext(leaderUid).firestore();
 
     for (const memberCount of [1, 2, 4, 8]) {
       await seed(testEnv, memberCount, 'active');
@@ -241,9 +226,7 @@ async function main() {
     console.log('PASS: stale revision denied');
 
     await seed(testEnv, 8, 'active');
-    const outsiderDb = getFirestore(
-      testEnv.authenticatedContext('outsider-auth'),
-    );
+    const outsiderDb = testEnv.authenticatedContext('outsider-auth').firestore();
     await assertFails(lifecycleTransaction(outsiderDb, 8, 'complete'));
     console.log('PASS: non-leader denied');
   } finally {
