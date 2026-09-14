@@ -2916,3 +2916,10 @@
 - 활성 상태 해산도 같은 종료 경로를 사용하고, 이미 1회성 완료로 집계가 닫힌 뒤 실행하는 마무리 해산은 그룹 수와 listing을 다시 변경하지 않는다. 반복 모집의 회차 완료·취소·전환은 활성 수와 listing을 유지한다.
 - 8인 쓰기 상한은 비그룹 완료 10건, 그룹 일반 수명주기 11건, 그룹 모집 종료 12건, 완료 후 해산 2건으로 다시 계산했다. 이는 Firestore Transaction 문서 쓰기 수이며 Rules의 전체 20회·개별 쓰기 10회 문서 접근 제한과 구분한다.
 - 격리 Rules와 Emulator 시나리오에도 1회성 완료 종료 및 완료 후 해산의 이중 감소 방지를 반영했다. 관련 Dart 계약·Repository·Rules 정적 테스트 30건과 변경 파일 정적 분석이 통과했고, GitHub Actions 실행 `34857997972`의 1·2·4·8인 Emulator 증명도 통과했다.
+
+# 2026-09-15 파티 원자 탈퇴·추방 Firestore Repository
+
+- 새 Aggregate 전용 탈퇴·추방 Repository와 Domain 인터페이스를 추가했다. 한 Transaction에서 인증 binding, 모집 원본, 대상 membership·`raidState`, 필요 시 후임 membership만 직접 읽고 모집·대상 삭제·후임 권한·그룹 listing·공용 이벤트를 갱신한다.
+- 그룹 자격 상실 정리는 실행자가 현재 파티원 및 그룹원이고 대상이 현재 그룹원이 아닌 경우만 허용한다. 대상이 파티장이면 기존 구현의 누락과 달리 가입 순서 후임의 승인 권한도 함께 승계한다.
+- 일반 제거는 공용 모집에서 최대 4건, 그룹 listing 포함 최대 5건이며 파티장 승계는 각각 최대 5·6건이다. 전원 membership 조회, 별도 slot, 기존 assignment·Claim과 Player별 event fan-out은 사용하지 않는다.
+- 관련 Write Plan·수명주기 회귀 18건과 변경 파일 정적 분석이 통과했다. 새 Repository는 운영 Router/DI와 Rules에 연결하지 않았고 실제 Firebase에는 접근하지 않았다.

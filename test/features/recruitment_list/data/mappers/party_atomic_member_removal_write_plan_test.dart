@@ -72,6 +72,22 @@ void main() {
     expect(plan.recruitmentPatch['nonGroupMemberCount'], 1);
   });
 
+  test('그룹 자격 상실 정리는 현재 자격과 무관하게 참가 당시 집계를 보존한다', () {
+    final plan = PartyAtomicMemberRemovalWritePlan(
+      aggregate: _aggregate(visibility: 'group', nonGroupMemberCount: 0),
+      rules: rules,
+      targetPlayerId: 'second',
+      actorPlayerId: 'leader',
+      type: PartyAtomicMemberRemovalType.lostGroupQualification,
+      raidId: 'raid-1',
+      serverTimestamp: timestamp,
+      actorCanResolveLostGroupQualification: true,
+    );
+
+    expect(plan.recruitmentPatch['nonGroupMemberCount'], 0);
+    expect(plan.maximumWriteCount, 5);
+  });
+
   test('추방 권한과 마지막 한 명의 일반 탈퇴를 거절한다', () {
     expect(
       () => PartyAtomicMemberRemovalWritePlan(
@@ -100,7 +116,10 @@ void main() {
   });
 }
 
-PartyCommandAggregate _aggregate() => PartyCommandAggregate(
+PartyCommandAggregate _aggregate({
+  String visibility = 'public',
+  int nonGroupMemberCount = 1,
+}) => PartyCommandAggregate(
   recruitmentId: 'recruitment-1',
   leaderPlayerId: 'leader',
   currentCycleKey: '2026-09-09',
@@ -109,12 +128,19 @@ PartyCommandAggregate _aggregate() => PartyCommandAggregate(
   partySlots: [
     _slot('leader', 'leader-character', PartyRole.support, 0),
     _slot('second', 'second-character', PartyRole.dealer, 1),
-    _slot('third', 'third-character', PartyRole.dealer, 2),
+    _slot(
+      'third',
+      'third-character',
+      PartyRole.dealer,
+      2,
+      countedAsNonGroupMember: nonGroupMemberCount == 1,
+    ),
   ],
-  nonGroupMemberCount: 1,
+  nonGroupMemberCount: nonGroupMemberCount,
   pendingApplicationCount: 0,
   pendingNonGroupApplicantCount: 0,
   groupId: 'group-1',
+  visibility: visibility,
 );
 
 PartyCommandAggregate _soloAggregate() => PartyCommandAggregate(
@@ -134,7 +160,9 @@ PartyAggregateSlot _slot(
   String playerId,
   String characterId,
   PartyRole role,
-  int slotIndex,
+  int slotIndex, {
+  bool countedAsNonGroupMember = false,
+}
 ) => PartyAggregateSlot(
   playerId: playerId,
   characterId: characterId,
@@ -142,5 +170,5 @@ PartyAggregateSlot _slot(
   classKey: role == PartyRole.support ? '바드:지원' : '버서커',
   partyIndex: 0,
   slotIndex: slotIndex,
-  countedAsNonGroupMember: playerId == 'third',
+  countedAsNonGroupMember: countedAsNonGroupMember,
 );

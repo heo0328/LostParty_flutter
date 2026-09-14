@@ -88,6 +88,8 @@ enum PartyAtomicCommandType {
   disband,
 }
 
+enum PartyAtomicMemberRemovalType { leave, kick, lostGroupQualification }
+
 class PartyCommandTarget {
   PartyCommandTarget({required this.playerId, required this.raidStateId}) {
     if (playerId.isEmpty || raidStateId.isEmpty) {

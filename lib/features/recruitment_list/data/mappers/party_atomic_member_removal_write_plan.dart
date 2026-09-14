@@ -1,9 +1,8 @@
 import '../../domain/entities/party_atomic_command.dart';
+import '../../domain/entities/party_create_command.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/policies/party_composition_policy.dart';
 import 'party_atomic_document_mapper.dart';
-
-enum PartyAtomicMemberRemovalType { leave, kick }
 
 class PartyLeaderSuccessorSnapshot {
   const PartyLeaderSuccessorSnapshot({
@@ -31,6 +30,7 @@ class PartyAtomicMemberRemovalWritePlan {
     required PartyAtomicMemberRemovalType type,
     required String raidId,
     required Object serverTimestamp,
+    bool actorCanResolveLostGroupQualification = false,
     PartyLeaderSuccessorSnapshot? successorSnapshot,
   }) : _values = _build(
          aggregate: aggregate,
@@ -40,6 +40,8 @@ class PartyAtomicMemberRemovalWritePlan {
          type: type,
          raidId: raidId,
          serverTimestamp: serverTimestamp,
+         actorCanResolveLostGroupQualification:
+             actorCanResolveLostGroupQualification,
          successorSnapshot: successorSnapshot,
        );
 
@@ -53,7 +55,10 @@ class PartyAtomicMemberRemovalWritePlan {
   Map<String, Object?>? get successorMembershipPatch =>
       _values.successorMembershipPatch;
 
-  int get maximumWriteCount => successorPlayerId == null ? 4 : 5;
+  int get maximumWriteCount =>
+      4 +
+      (successorPlayerId == null ? 0 : 1) +
+      (_values.updatesGroupListing ? 1 : 0);
 
   static _PartyAtomicMemberRemovalValues _build({
     required PartyCommandAggregate aggregate,
@@ -63,6 +68,7 @@ class PartyAtomicMemberRemovalWritePlan {
     required PartyAtomicMemberRemovalType type,
     required String raidId,
     required Object serverTimestamp,
+    required bool actorCanResolveLostGroupQualification,
     required PartyLeaderSuccessorSnapshot? successorSnapshot,
   }) {
     if (aggregate.status != PartyRecruitmentStatus.active ||
@@ -77,6 +83,12 @@ class PartyAtomicMemberRemovalWritePlan {
         (actorPlayerId != aggregate.leaderPlayerId ||
             targetPlayerId == aggregate.leaderPlayerId)) {
       throw StateError('파티장만 다른 파티원을 추방할 수 있습니다.');
+    }
+    if (type == PartyAtomicMemberRemovalType.lostGroupQualification &&
+        (aggregate.visibility != RecruitmentVisibility.group ||
+            actorPlayerId == targetPlayerId ||
+            !actorCanResolveLostGroupQualification)) {
+      throw StateError('그룹 자격 상실 파티원을 정리할 권한이 없습니다.');
     }
     final targetIndex = aggregate.partySlots.indexWhere(
       (slot) => slot.playerId == targetPlayerId,
@@ -159,6 +171,7 @@ class PartyAtomicMemberRemovalWritePlan {
               'canApproveApplications': true,
               'updatedAt': serverTimestamp,
             }),
+      updatesGroupListing: aggregate.visibility == RecruitmentVisibility.group,
       event: Map.unmodifiable({
         'schemaVersion': 1,
         'eventId': eventId,
@@ -184,6 +197,7 @@ class _PartyAtomicMemberRemovalValues {
     required this.targetRaidStateId,
     required this.successorPlayerId,
     required this.successorMembershipPatch,
+    required this.updatesGroupListing,
     required this.event,
   });
 
@@ -192,5 +206,6 @@ class _PartyAtomicMemberRemovalValues {
   final String targetRaidStateId;
   final String? successorPlayerId;
   final Map<String, Object?>? successorMembershipPatch;
+  final bool updatesGroupListing;
   final Map<String, Object?> event;
 }
