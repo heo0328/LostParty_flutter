@@ -545,6 +545,29 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
       for (final assignmentRef in assignmentRefs) {
         assignmentSnapshots.add(await transaction.get(assignmentRef));
       }
+      final slotSnapshots = <DocumentSnapshot<Map<String, dynamic>>>[];
+      if (r['slotLedgerVersion'] == 2) {
+        for (final current in memberSnapshots) {
+          if (!current.exists) continue;
+          final data = current.data()!;
+          final partyIndex = data['partyIndex'];
+          final slotIndex = data['slotIndex'];
+          if (partyIndex is! int || slotIndex is! int) {
+            return const PartyCycleResult.failure(
+              PartyCycleFailure.revisionConflict,
+            );
+          }
+          final slot = await transaction.get(
+            recruitmentRef.collection('slots').doc('${partyIndex}_$slotIndex'),
+          );
+          if (!slot.exists || slot.data()?['playerId'] != current.id) {
+            return const PartyCycleResult.failure(
+              PartyCycleFailure.revisionConflict,
+            );
+          }
+          slotSnapshots.add(slot);
+        }
+      }
       final pendingApplicantIds = <String>[];
       for (final current in applicationSnapshots) {
         if (!current.exists) continue;
@@ -574,6 +597,9 @@ class FirestorePartyCycleCommandRepository implements PartyCycleCommandRepositor
         if (assignment.exists) {
           transaction.delete(assignment.reference);
         }
+      }
+      for (final slot in slotSnapshots) {
+        transaction.delete(slot.reference);
       }
       final disbandPatch = PartyCycleWritePlan.disbandRecruitment(
         revision: command.expectedRecruitmentRevision,

@@ -37,7 +37,8 @@
 
 - 그룹 membership·초대코드·그룹장 이전/해산 계약과 레이드 명령·읽기·주간 Claim 계약이 구현돼 있다.
 - 진행 중 레이드 카드의 방별 unread 배지는 레이드 현황 탭 재선택 갱신으로 보완했다. 모든 방의 실시간 Listener는 추가하지 않았다.
-- 다음 작업은 8인 공격대 Character 변경의 다른 파티 빈자리 이동, 교환 가능 시 비차단 파란 안내와 공대장 자리 이동·교환이다. 파티별 구성 직업 제한을 유지하고 전체 공대 자동 재배치·16인·시너지 최적화는 제외한다.
+- 8인 공격대 자리 이동과 점유 자리 교환, 동일 파티 중복 직업 교환 차단은 구현됐고 실기기에서 확인했다. Character 변경 자동 이동·파란 안내 제거와 알림의 일부 실기기 확인은 남아 있다.
+- 현재 우선 작업은 리더 외 확정 참가자가 있는 모집 해산의 `permission-denied` 회귀인 `BUG-018`이다. v2 슬롯 Claim 원자 삭제와 lifecycle event type 선분기 수정·자동 검증을 완료했고 운영 Rules 배포와 공개·그룹 다인 해산 실기기 확인이 남아 있다.
 - 계약: [`../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md), [`../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md`](../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md), [`../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)
 
 ## 차후 제품 후보
@@ -60,4 +61,4 @@
 
 ## 다음 작업
 
-현재 승인된 구현 작업은 없으며 다음 사용자 협의를 기다린다. 후보와 인계 상태는 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.
+현재 작업은 `BUG-018` 수정본의 운영 Rules 반영과 실기기 검증이다. 상세 결과와 체크 범위는 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.

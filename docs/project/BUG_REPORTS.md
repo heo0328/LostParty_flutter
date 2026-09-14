@@ -459,7 +459,7 @@
 
 | 항목 | 내용 |
 | --- | --- |
-| 상태 | **재현 확인 — 수정 지시 대기** |
+| 상태 | **수정·자동 검증 완료 — 운영 배포·실기기 확인 대기** |
 | 보고일 | 2026-09-14 |
 | 심각도 | 높음 — 기존 다인 모집 해산 기능 회귀 |
 | 기준 문서 | [`../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md) |
@@ -473,8 +473,31 @@
 ### 작업 게이트
 
 - 과거 실기기에서 정상 확인된 다인 해산의 회귀로 취급한다.
-- 사용자가 수정 시작을 별도로 지시하기 전에는 원인 조사, 코드·Rules 수정, 배포를 진행하지 않는다.
-- 수정 단계에서는 다인 해산 Transaction의 membership·assignment·slot Claim·listing·알림 삭제 묶음과 `validRecruitmentDisband` 판정 순서를 먼저 대조하고, 단독 해산·완료 후 해산·그룹 연결 모집을 회귀 보호한다.
+- 사용자가 원인 분석과 수정 기획을 승인했다. 이번 단계에서는 코드·Rules 수정과 배포를 진행하지 않는다.
+- `validRecruitmentDisband`의 본문은 과거 다인 해산 통과 이후 바뀌지 않았으므로 이 함수의 조건을 추측으로 완화하지 않는다.
+
+### 조사 결과와 우선 가설
+
+- v2 모집은 membership별 슬롯 Claim을 생성하지만 현재 해산 Repository는 membership과 assignment만 삭제하고 `slots` 문서를 읽거나 삭제하지 않는다. 해산 뒤 고아 Claim이 남는 수명 계약 누락은 확정이다.
+- 리더 외 확정 멤버가 있을 때는 그 멤버에게 `partyDisbanded` 이벤트를 생성한다. 단독 해산에는 이 write가 없으므로 단독 성공·다인 실패를 가르는 가장 좁은 실행 차이다.
+- 이벤트 Rules의 `validPlayerEvent`는 type 선분기 없이 여러 validator를 OR로 연결하고, `validCycleEvent`는 type 검사 전에 cycle을 읽는다. 무관한 경로 접근 또는 복합 Transaction 문서 접근 예산 초과 가능성을 Emulator 평가 로그로 먼저 확인한다.
+- 현재 테스트는 화면에서 다인 해산 명령 전송과 개별 Write Plan만 확인하며 실제 다인 Transaction+Rules 계약을 실행하지 않는다. 이 공백 때문에 회귀가 자동 검증을 통과했다.
+
+### 확정 전 수정 계획
+
+- 실제 운영 Rules로 단독/2인, 공개/그룹, 과거/v2, active/completed와 이벤트·슬롯 삭제 유무를 분리한 Emulator 최소 재현을 만든다.
+- v2 해산은 모든 슬롯 Claim을 membership·assignment·listing과 같은 Transaction에서 삭제하도록 수명 계약을 보완한다.
+- 이벤트가 직접 실패 지점이면 이벤트 type별 dispatcher로 바꿔 `partyDisbanded` 검증에서 무관한 cycle/application/membership validator를 실행하지 않는다.
+- Rules 검증 완화나 알림 제거는 첫 수정안으로 사용하지 않는다. 8인과 pending 신청 포함 상태의 접근 한도가 dispatcher 정리 후에도 초과할 때만 이벤트 fan-out 분리를 별도 협의한다.
+
+### 수정 결과
+
+- v2 해산 Transaction이 모든 membership의 대응 슬롯 Claim을 읽어 소유자를 확인한 뒤 membership·assignment와 함께 삭제하도록 보완했다. 슬롯 불일치는 부분 정리 없이 `revisionConflict`로 중단한다.
+- 슬롯 삭제 Rules는 기존처럼 Claim 소유자와 membership 제거를 연결한다. membership 삭제마다 슬롯 부재를 역으로 조회하면 8인 복합 쓰기의 Rules 문서 접근 한도를 넘을 위험이 있어 추가하지 않았다.
+- `validPlayerEvent`는 이벤트 type을 먼저 분기하고 해당 validator만 평가하도록 바꿨다. 다인 해산 이벤트가 무관한 cycle/application/membership Rules 조회를 실행하지 않는다.
+- 리더 권한·revision·모집 해산 필드·assignment·group listing·이벤트 수신자 검증은 완화하지 않았다.
+- 표적 계약 18건과 모집·파티 상세·그룹 영향 회귀 549건, 변경 파일 정적 분석이 통과했다. 전체 Rules는 로컬 Emulator 시작 단계에서 컴파일됐다.
+- 실제 다인 Transaction Emulator 실행은 기존 전체 Rules 재업로드 503 및 SDK gRPC 전송 오류로 검증하지 못했다. 운영 배포와 공개·그룹 다인 해산 실기기 확인 전에는 종료하지 않는다.
 
 ---
 

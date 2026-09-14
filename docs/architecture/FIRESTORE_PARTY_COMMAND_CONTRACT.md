@@ -253,6 +253,7 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 - 파티 생성 시 책임자를 `partyIndex == 0`, `slotIndex == 0`에 배치한다. 8인 레이드에서도 이 자리가 파티장 겸 공대장이다.
 - 가입·승인은 현재 멤버의 자리를 재배치하지 않고 역할·직업 구성 조건을 만족하는 빈 슬롯 하나를 결정해 membership에 기록한다.
 - 탈퇴·추방으로 빈자리가 생겨도 남은 멤버를 자동 이동하지 않는다. 자리 이동과 스왑은 별도 명령과 revision 검증으로 처리한다.
+- `slotLedgerVersion: 2` 모집을 해산할 때는 모든 membership에 대응하는 슬롯 Claim을 membership·assignment·필요 group listing과 같은 Transaction에서 삭제한다. 해산된 모집 아래에 점유 Claim을 남기지 않는다. 슬롯 원장 도입 전 모집은 Claim 부재를 정상으로 취급한다.
 - 현재 배포된 `partyIndex` 전용 membership은 신규 가입 명령을 전환하기 전에 결정적인 규칙으로 `slotIndex`를 채워야 한다. 문서 순회 순서처럼 실행마다 달라질 수 있는 값은 이행 기준으로 사용하지 않는다.
 - 향후 빈 슬롯의 역할·직업군·시너지 요청 조건은 membership과 분리한 슬롯 요구조건으로 저장하고 가입 시 Transaction과 Rules가 함께 검증한다.
 

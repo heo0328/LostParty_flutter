@@ -2852,3 +2852,11 @@
 - 그룹 생성·그룹장 이전·일반 그룹원 탈퇴·마지막 1인 그룹 해산과 파티 탈퇴 후 재신청도 정상 작동했다.
 - 리더 외 확정 참가자가 있는 모집의 해산은 권한 확인 안내와 함께 실패했다. 과거 정상 동작했던 다인 해산의 신규 회귀 `BUG-018`로 기록했으며 사용자 지시 전에는 원인 조사·코드·Rules 수정과 배포를 시작하지 않는다.
 - Character 변경 자동 이동·파란 안내 제거, 그룹 listing, 추방·완료와 `memberMoved` 알림은 아직 별도 실기기 결과가 없으므로 전체 기능 완료로 닫지 않는다.
+
+# 2026-09-14 BUG-018 다인 모집 해산 권한 회귀 수정
+
+- 단독 해산과 달리 다인 해산은 파티장 외 멤버에게 `partyDisbanded` 이벤트를 생성한다. 기존 Player event Rules가 type 선분기 없이 모든 계열 validator를 OR로 평가해 무관한 cycle 조회까지 수행하던 경로를 type 선분기로 제한했다.
+- v2 모집 해산 Transaction이 슬롯 Claim을 삭제하지 않아 고아 점유가 남는 수명 누락도 확인했다. 모든 membership의 대응 Claim을 먼저 읽어 `playerId`를 검증하고 membership·assignment·listing과 원자적으로 삭제한다. membership 삭제에서 슬롯 부재를 역조회하는 Rules는 8인 문서 접근 한도를 침범할 수 있어 추가하지 않고 기존 슬롯 삭제 권한 검증을 유지했다.
+- 기존 `validRecruitmentDisband`, 리더·revision·assignment·listing·이벤트 수신자 검증은 완화하지 않았다.
+- 해산·슬롯·이벤트 표적 계약 18건과 모집·파티 상세·그룹 영향 회귀 549건이 통과했고 변경 파일 정적 분석은 문제 0건이었다. 전체 Rules는 로컬 Emulator 시작 단계에서 정상 컴파일됐다.
+- 실제 Transaction Emulator 실행은 기존 전체 Rules 재업로드 503과 Node SDK gRPC 전송 오류로 완료하지 못했으며 통과로 기록하지 않는다. 최신 추적본 운영 배포와 공개·그룹 다인 해산 실기기 확인이 남았다.

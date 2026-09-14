@@ -1,160 +1,92 @@
-# NEXT WORK
+# NEXT WORK — BUG-018 다인 모집 해산 권한 회귀 실기기 확인
 
-> 다음에 바로 진행할 단일 작업 그룹의 근거·범위·순서·완료 조건만 관리한다. 완료 경과는 `DEV_LOG.md`로 이동한다.
+## 현재 상태
 
-## 현재 인계 상태
+- 현재 브랜치는 `codex/feat-raid-party-reposition`이며 작업 트리는 문서 계획 작성 전 깨끗했다.
+- 수정 Rules 게시 후 모집 생성·가입·빈자리 이동·점유 자리 교환과 동일 파티 중복 직업 교환 차단이 실기기에서 정상 작동했다.
+- 그룹 생성·그룹장 이전·일반 탈퇴·마지막 1인 해산과 파티 탈퇴 후 재신청도 정상 작동했다.
+- 리더 혼자 남은 모집은 해산되지만, 리더 외 확정 참가자가 있는 모집은 파티장이 해산할 때 `permission-denied`로 실패한다. 화면에는 Rules 배포 상태를 확인하라는 권한 안내가 표시된다.
+- 해산 Repository와 Firestore Rules의 최소 수정 및 자동 검증을 완료했다. 운영 Rules 배포와 실기기 확인 전까지 완료로 닫지 않는다.
 
-- 릴리즈 안정화 인증 안내·장비 미착용 전용 문구와 파티 통합 Build 오류 Snapshot 전파를 구현했다.
-- 사용자가 실기기에서 인증 문구와 신청·참가 이후 오류 지속 표시를 확인했다.
-- Firebase Rules는 CLI에서 `/test` 또는 `/rulesets` 503이 간헐적으로 발생했지만 동일 조건 테스트 프로젝트 게시가 성공했고, 운영 콘솔로 돌아온 뒤 오류가 사라졌다. 로컬 파일을 다시 붙여 넣었을 때 변경점이 없어 게시 버튼이 비활성화된 것으로 운영 활성 소스와 로컬 소스가 같은 상태임을 확인했다.
-- 이 503에는 앱·Rules 축소 같은 1차 대응을 하지 않는다. 다시 발생하면 동일 조건 테스트 프로젝트 게시 여부를 먼저 대조하고 실패 단계를 구분한다.
-- 현재 구현 브랜치는 `codex/feat-raid-party-reposition`다. `release/1.0.0`, `dev`, `main` 병합과 버전 확정은 별도 사용자 지시 전까지 수행하지 않는다.
+## 구현 결과
 
-## 다음 작업 그룹 — 8인 공격대 캐릭터 변경 배치와 공대 자리 조정
+- v2 모집 해산은 각 membership의 `partyIndex`·`slotIndex`로 슬롯 Claim을 다시 읽고 `playerId` 일치를 확인한다. 누락·불일치는 `revisionConflict`로 전체 쓰기를 중단한다.
+- 검증된 슬롯 Claim은 membership·assignment·group listing과 같은 Transaction에서 삭제한다. 과거 모집은 슬롯 Claim을 요구하지 않는다.
+- 슬롯 삭제 Rules는 각 Claim의 소유자와 membership 제거를 연결한다. membership 삭제마다 슬롯 부재를 추가 조회하는 역방향 강제는 8인 복합 쓰기의 Rules 문서 접근 한도를 침범할 수 있어 추가하지 않았다.
+- Player event Rules는 `data.type`을 먼저 확인한 뒤 해당 계열 validator만 실행한다. `partyDisbanded`는 무관한 cycle/application/membership validator를 거치지 않는다.
+- `validRecruitmentDisband`, 리더 권한, revision, assignment·listing과 lifecycle event 수신자 조건은 완화하지 않았다.
 
-### 문제와 확정 용어
+## 확인한 기존 계약과 실제 흐름
 
-- **파티**는 시너지·구성 직업 중복을 판정하는 4인 단위다.
-- **공격대**는 여러 파티로 이루어진 하나의 레이드 참가 단위다. 현재 범위는 4인 `1파티 × 4명`과 8인 `2파티 × 4명`이다.
-- 동일 구성 직업 제한은 공격대 전체가 아니라 각 파티에 적용한다. 8인 공격대에는 같은 구성 직업이 서로 다른 파티에 한 명씩 있을 수 있다.
-- 현재 캐릭터 변경은 `partyIndex`·`slotIndex`를 유지하는 `failureForInPlaceReplacement()`만 사용한다. 그래서 현재 파티에서는 중복이지만 다른 파티 빈자리 또는 한 번의 자리 교환으로 해결 가능한 변경도 후보에서 거절된다.
-- 공격대 전체 자동 재배치는 요구하지 않는다. 앱의 파티 배치는 인게임 구성 강제가 아니라 공대장이 시너지 조합을 정리하기 위한 보조 정보다.
+- 다인 해산은 파티장만 실행하며 모집을 `disbanded`로 바꾸고, 모든 membership과 존재하는 assignment를 삭제하고, 그룹 listing이 있으면 삭제하며, 파티장 외 기존 멤버와 대기 신청자에게 `partyDisbanded` 이벤트를 같은 Transaction에서 기록한다.
+- 기존 Repository는 Firestore의 `모든 읽기 후 쓰기` 제약을 지키기 위해 membership·application·assignment와 listing을 먼저 읽은 뒤 삭제·갱신·이벤트 생성을 수행한다.
+- `validRecruitmentDisband` 자체의 필드 allowlist와 리더·revision 조건은 2026-08-26 이후 바뀌지 않았다. 따라서 모집 원본 update만을 직접 원인으로 단정하지 않는다.
+- 신규 `slotLedgerVersion: 2` 모집은 membership 자리마다 `recruitments/{id}/slots/{partyIndex}_{slotIndex}` Claim을 만들지만, 현재 해산 Transaction은 이 Claim을 읽거나 삭제하지 않는다. 해산 후 고아 슬롯 Claim이 남는 계약 누락은 확정적이다.
+- 다인 해산은 단독 해산과 달리 파티장 외 수신자에게 `partyDisbanded` 이벤트를 생성한다. 현재 `validPlayerEvent`는 이벤트 종류를 먼저 분기하지 않고 cycle·application·membership·lifecycle 검사들을 OR로 평가하며, `validCycleEvent`는 type 확인 전에 cycle 문서를 읽는다. 다인일 때만 추가되는 Rules 경로이므로 우선 조사 대상이다.
+- 현재 Widget 테스트는 다인 해산 버튼이 명령을 보냈는지만 확인한다. 실제 Repository Transaction과 Rules를 함께 실행하는 다인 해산 계약 테스트가 없어 이번 회귀를 잡지 못했다.
 
-### 구성 직업 식별 규칙
+## 원인 가설과 판정 순서
 
-- 구성 중복 키는 Character의 일반 깨달음 분기명이 아니라 `정규 직업 + 역할`을 기준으로 한다.
-- 같은 역할 안의 깨달음 차이는 같은 구성 직업이다. 예: 전투 태세 워로드와 고독한 기사 워로드는 모두 딜러 워로드다.
-- 서포터 가능 직업의 딜러형과 서포터형은 다른 구성 직업이다. 예: 딜러 발키리와 서포터 발키리, 딜러 바드와 서포터 바드는 서로 중복되지 않는다.
-- 신규 신청·직접 참가·승인 배치는 현재처럼 각 파티에 같은 구성 직업이 없도록 해야 한다. 일시적 중복 허용은 이미 확정된 파티원의 캐릭터 변경에만 적용한다.
-- 한 Player가 등록한 본계정·부계정은 같은 플레이 주체다. membership 문서 키와 Player 점유 정책을 유지해 같은 공격대에 두 원정대 Character로 중복 참가할 수 없다.
+1. **해산 이벤트 Rules 경로**: 리더 외 멤버에게 생성되는 `partyDisbanded` 이벤트가 불필요한 이벤트 validator 평가, 존재하지 않는 cycle/application 경로 접근 또는 문서 접근 예산 때문에 거절되는지 확인한다.
+2. **슬롯 Claim 수명 누락**: v2 모집 해산 시 membership만 삭제하고 슬롯 Claim을 남기는 현재 Transaction을 확인하고, Claim 동시 삭제를 포함한 완전한 해산 Write Plan을 고정한다.
+3. **복합 Transaction의 Rules 접근 예산**: recruitment, 각 membership·assignment·slot, group listing과 수신자 event 검증이 4인·8인 및 대기 신청 포함 상태에서 Firestore 다중 문서 요청 한도를 넘는지 Emulator 로그로 계산한다.
+4. **그룹 listing 분기**: 공개 모집과 그룹 모집을 분리해 listing 삭제 Rules가 원인인지 확인한다. 공개 모집에서도 재현되면 listing은 주원인에서 제외한다.
+5. **기존/신규 방 호환**: `slotLedgerVersion`이 없는 과거 방과 v2 신규 방을 분리해, 최근 슬롯 원장 변경과의 인과를 확인한다.
 
-### 캐릭터 변경 배치 정책
+권한 안내 문구만으로 특정 함수가 원인이라고 확정하지 않는다. 최소 재현 Transaction에서 실패한 write와 Rules 평가 로그를 확보한 뒤 수정 지점을 결정한다.
 
-캐릭터 변경 후보와 최종 Transaction은 같은 순서로 배치 가능성을 계산한다.
+## 구현 준비안
 
-1. **제자리 변경**: 현재 파티의 역할 정원과 구성 직업 중복을 만족하면 `partyIndex`·`slotIndex`를 유지한다.
-2. **빈자리 이동 변경**: 제자리 변경이 중복으로 막히고 다른 파티에 역할·구성 조건을 만족하는 빈자리가 있으면 변경 대상 한 명만 그 자리로 이동한다. 다른 멤버는 이동하지 않는다.
-3. **자리 조정 필요 변경**: 유효한 빈자리가 없지만 다른 파티의 한 멤버와 자리를 한 번 교환하면 양쪽 파티가 정상 구성이 되는 경우, 캐릭터 변경은 현재 자리에서 먼저 허용한다. 자동 교환은 하지 않는다.
-4. **거절**: 제자리·빈자리 이동이 불가능하고 한 명과의 단순 교환으로도 정상 구성을 만들 수 없으면 후보를 차단하고 변경 명령도 거절한다.
+### 1. 재현 계약 테스트
 
-공통 조건:
+- `tools/party_disband_rules_test.mjs`를 추가해 Firebase Emulator에서 운영 Rules와 실제 해산 Write Plan에 해당하는 Transaction을 실행한다.
+- 최소 표본은 `단독`, `2인 공개 v2`, `2인 그룹 v2`, `2인 과거 방`, `8인 v2`, `완료 후 해산`, `대기 신청 포함`이다.
+- 2인 공개 v2를 기준으로 이벤트 생성 유무를 분리해 lifecycle event가 직접 거절 지점인지 확인한다. 슬롯 Claim 삭제 유무도 별도 대조해 원인과 데이터 정합성 보완을 구분한다.
+- 성공 후 모든 membership·assignment·slot·group listing의 부재, recruitment의 `disbanded` 상태·빈 멤버 목록·revision 증가와 수신자 event 존재를 검증한다. 실패 Transaction에는 부분 삭제가 없어야 한다.
 
-- 4인 레이드는 다른 파티가 없으므로 기존과 같이 제자리 구성 조건만 사용한다.
-- 빈자리가 여러 개면 `partyIndex`, `slotIndex` 오름차순의 첫 유효 슬롯을 결정적으로 선택한다.
-- 공격대 전체 딜러·서포터 상한은 항상 지킨다. 빈자리 이동 후 각 파티도 3딜러·1서포터 상한을 지켜야 한다.
-- 자리 교환 가능성은 한 명과의 1:1 교환까지만 검사한다. 연쇄 이동과 3명 이상 순환 배치는 하지 않는다.
-- 공대장 자리 `partyIndex == 0 && slotIndex == 0`은 이동 대상에서 제외한다. 공대장 자신의 캐릭터 변경이 제자리 중복을 만들더라도 다른 일반 멤버와의 교환으로 해결 가능한 경우에만 안내 상태로 허용한다.
+### 2. 최소 수정 원칙
 
-### 파란 구성 안내
+- 해산 Repository가 v2 모집의 슬롯 Claim을 membership·assignment와 함께 먼저 읽고 같은 Transaction에서 삭제하도록 한다. 과거 방은 슬롯 Claim 부재를 허용한다.
+- 이벤트가 원인이면 `validPlayerEvent`를 `data.type` 기반 dispatcher로 바꿔 해당 유형 validator만 평가한다. `partyDisbanded`에서 무관한 cycle/application/membership 조회를 하지 않는다.
+- 실제 실패 근거 없이 `validRecruitmentDisband`, membership·assignment 소유권, revision, listing 동기화 또는 이벤트 수신자 검증을 완화하지 않는다.
+- Rules 문서 접근 한도가 원인이면 검증을 삭제하는 방식이 아니라 동일 문서 접근의 중복 제거와 type 선분기를 우선한다. 그래도 8인+대기 신청에서 한도를 넘으면 이벤트 fan-out만 해산 상태 변경과 분리할지 별도 제품 결정을 요청한다.
 
-- 자리 조정 필요 상태는 빨간 Build 오류와 다른 파란 안내다. 문구는 `동일 직업 · 자리 조정 필요`를 사용한다.
-- 별도 Firestore boolean을 저장하지 않는다. 현재 membership의 `classNameSnapshot`, `role`, `partyIndex`를 구성 직업 키로 변환해 화면에서 계산한다.
-- 같은 파티에서 중복된 구성 직업의 두 Character 카드 모두에 표시한다. 파티 헤더에도 조정 필요 여부를 요약할 수 있다.
-- 이 안내는 신청·완료·알림·다른 파티 기능을 차단하지 않는다. 공대장이 유효한 자리 이동 또는 교환을 완료하면 다음 Snapshot에서 자동으로 사라진다.
-- Build 오류의 빨간 `보석 오류`, `아크그리드 오류`와 동시에 존재할 수 있으며 서로 덮어쓰지 않는다.
+## 회귀 보호 목록
 
-### 공대장 자리 조정
+- 단독 공개 모집 해산과 리더 외 멤버가 있는 공개 모집 해산
+- 그룹 전용 모집 해산 및 `raidListings` 원자 삭제
+- 활성 모집 해산과 1회성 완료 후 해산 대기 방 해산
+- membership·assignment·v2 slot Claim 완전 삭제, 과거 방의 slot 부재 호환
+- 파티장 외 기존 멤버와 pending 신청자 `partyDisbanded` 이벤트, 행위자 이벤트 제외
+- 파티 탈퇴 후 재신청, 일반 탈퇴·추방·책임자 승계
+- 모집 생성·신청·직접 참가·승인과 자리 이동·교환
+- 그룹 생성·그룹장 이전·일반 탈퇴·마지막 1인 그룹 해산
+- revision 충돌·비리더 해산·이미 종료된 방 거절과 Transaction 원자성
 
-- 현재 단일 `leaderPlayerId`를 4인에서는 파티장, 8인에서는 공대장 권한으로 사용한다. 파티별 별도 파티장 역할은 이번 범위에 추가하지 않는다.
-- 일반 멤버는 자기 Character 변경만 할 수 있고 다른 멤버의 자리를 바꿀 수 없다.
-- 공대장은 파티 상세의 `자리 조정`에서 출발 카드를 선택하고 도착 슬롯을 선택한다.
-- 도착 슬롯이 비어 있으면 한 명을 이동하고, 점유 중이면 두 멤버의 `partyIndex`·`slotIndex`를 교환한다.
-- 자리 조정 명령은 Character·role·itemLevel·Build Snapshot과 assignment·Claim을 변경하지 않는다.
-- 조정 후 모든 파티의 역할 상한, 슬롯 유일성과 구성 직업 중복이 정상이어야 한다. 새로운 중복을 만드는 임의 이동은 거절한다.
-- 자동 drag-and-drop보다 선택 → 결과 미리보기 → 확인 흐름을 먼저 구현해 좁은 화면·접근성과 오동작을 보호한다.
+## 수행한 검증과 남은 순서
 
-### Domain·명령 설계
+1. 해산·슬롯·이벤트 표적 계약 18건이 통과했다.
+2. 모집 전체·파티 상세·그룹 영향 회귀 549건이 통과했다.
+3. 변경 Dart 파일 정적 분석은 문제 0건이며 전체 Rules는 로컬 Emulator 시작 단계에서 정상 컴파일됐다.
+4. 실제 다인 Transaction Emulator 테스트는 전체 Rules 재업로드 503과 Node SDK gRPC 전송 오류로 실행되지 않았다. 이를 통과로 기록하지 않는다.
+5. 최신 추적본을 커밋한 뒤 운영 Rules를 정확히 한 번 배포 시도한다.
+6. 공개/그룹 2인 이상 모집 해산과 기존 정상 흐름을 실기기에서 확인한 뒤 완료 여부를 기록한다.
 
-- `PartyCompositionPolicy`에 현재 자리를 보존하는 기존 함수와 별도로 캐릭터 변경 배치 계획을 반환하는 함수를 둔다.
-- 결과는 `inPlace`, `moveToEmpty`, `inPlaceNeedsRebalance`, `rejected`와 선택된 목적 슬롯, 가능한 단순 교환 상대를 표현한다.
-- 후보 서비스는 `inPlace`만 보지 않고 유효한 계획이 하나라도 있으면 Character를 노출한다. 표시용 사전 계산은 최종 권한 근거가 아니다.
-- `PartyChangeCharacterCommand`에는 기대 revision과 필요할 때 목적 `partyIndex`·`slotIndex`를 포함한다. Repository Transaction은 서버 membership을 다시 읽어 같은 계획을 재계산하고 클라이언트 목적지와 일치할 때만 쓴다.
-- 자리 조정은 별도 `PartyRepositionMembersCommand`로 둔다. 출발 Player·슬롯, 도착 슬롯과 점유 Player, 기대 recruitment revision을 포함한다.
-- `PartyMembershipWritePlan`은 Character 변경+빈자리 이동과 순수 이동/교환을 구분해 허용 필드만 생성한다.
+## 완료 조건
 
-### Firestore Transaction과 Rules
+- 파티장이 리더 외 확정 참가자가 있는 공개·그룹 모집을 해산할 수 있다.
+- 해산 성공 후 recruitment 외 membership·assignment·v2 slot Claim과 group listing이 계약대로 정리되고 부분 상태가 남지 않는다.
+- 해산 이벤트가 지정 수신자에게 한 번 기록되고 행위자에게는 생성되지 않는다.
+- 단독·완료 후·과거 모집 해산과 기존 생성·가입·탈퇴·재신청·자리 조정·그룹 명령이 회귀하지 않는다.
+- Rules 변경 시 Emulator 계약, 정적 Rules 계약, 원격 컴파일 경고 0개와 허가된 운영 배포 결과를 기록한다.
 
-#### 최소 슬롯 Claim과 로컬 구성 검증 확정
+## 제외 범위
 
-- 역할 정원·동일 딜러 직업·변경 배치 검사는 최신 membership을 Transaction에서 읽은 뒤 앱의 `PartyCompositionPolicy`로 다시 계산한다. Rules는 파티 전체 슬롯을 순회하거나 역할·직업 정책을 중복 구현하지 않는다.
-- 서버에는 동시 요청의 동일 자리 점유만 막는 `recruitments/{recruitmentId}/slots/{partyIndex}_{slotIndex}` 최소 Claim을 둔다.
-- 슬롯 Claim은 `playerId`, `partyIndex`, `slotIndex`, `updatedAt`만 저장한다. membership 위치와 같은 원자적 쓰기에서 생성·이동·삭제하고, Rules는 권한·index 범위·membership 연결만 확인한다.
-- 신규 모집은 리더의 `0_0` 슬롯을 생성하고, 참가·승인은 목적 슬롯 생성, 탈퇴·추방은 기존 슬롯 삭제를 동반한다. 캐릭터 자동 이동은 기존 슬롯 삭제와 목적 슬롯 생성을 함께 수행한다. 자리 교환은 두 슬롯의 `playerId`만 서로 교환한다.
-- 일반 클라이언트가 기존 membership 전체를 근거로 슬롯 원장을 사후 생성하는 bootstrap은 허용하지 않는다. 일부 점유를 누락해 사용 중인 자리를 빈자리로 위조할 수 있기 때문이다.
-- 따라서 원장 도입 전 생성된 모집은 조회·완료·탈퇴 등 기존 기능을 유지하되 캐릭터 자동 이동과 자리 조정만 `unsupportedOnSpark`로 차단한다. 현재 출시 전 테스트 방은 필요하면 새 모집으로 재생성하며, 운영 이관이 필요해질 때만 관리자 권한의 별도 일괄 migration을 설계한다.
-- 단순화된 신규 모집 문서에는 `slotLedgerVersion: 2`를 저장한다. 위치 변경 명령과 Rules는 정확히 이 버전을 요구한다. 버전이 없거나 실험 단계의 버전 1인 과거 방은 기존 조회·완료·탈퇴를 유지하되 자동 이동과 자리 조정만 차단한다.
-
-- 모든 Character 변경·자리 조정은 `expectedRecruitmentRevision`으로 직렬화한다. 경쟁 변경은 전체 실패 후 최신 상태를 다시 보여 준다.
-- 빈자리 이동 Character 변경은 자기 membership의 Character/role/Build 필드와 `partyIndex`·`slotIndex`, 기존 assignment 교체, 모집 역할 집계·revision과 필요 listing을 기존 Transaction 안에서 함께 갱신한다.
-- 자리 조정은 한 개 또는 두 개 membership의 위치와 모집 revision·updatedAt, 그룹 listing이 있으면 listing revision을 같은 Transaction에서 갱신한다.
-- 순수 자리 조정은 assignment·weekly Claim·Character Snapshot을 쓰지 않는다.
-- 모든 위치 명령은 화면에서 읽은 `expectedRecruitmentRevision`과 Transaction이 다시 읽은 현재 revision이 다르면 저장하지 않는다. `updatedAt`은 감사 기록이며 동시성 기준으로 사용하지 않는다.
-- Rules는 Character 변경의 기존 본인 소유권·활동 Character·점유·Claim 검사를 유지하고, 목적 슬롯 Claim과 membership 위치가 일치하는지만 확인한다.
-- 자리 조정 Rules는 현재 `leaderPlayerId`만 허용하고 위치·시각 외 필드 변경을 막으며, 이전 Claim 해제와 새 Claim 점유를 확인한다. 역할·직업 조합은 Rules에서 재계산하지 않는다.
-- 이 구조는 정상 앱의 경쟁 요청과 슬롯 중복을 막지만 변조된 클라이언트가 역할·직업 정책을 의도적으로 우회하는 것까지 서버에서 완전 검증하지 않는 절충이다. Rules 복잡도와 운영 안정성을 우선한 결정으로 기록한다.
-
-### 알림
-
-- 기존 알림 계약에 예약된 `memberMoved` 유형을 구현한다. 같은 의미의 새 이벤트 이름을 중복 추가하지 않는다.
-- 기존 알림 계약대로 명령 직전 확정 멤버에게 이전/새 파티·자리 정보를 알린다. 행위자는 제외하되 이동·교환 대상이면 반드시 수신한다.
-- 파티 상세의 방별 unread와 구성 옆 히스토리 팝업에서 확인한다. FCM·외부 푸시는 이번 범위가 아니다.
-- Character 변경과 자동 빈자리 이동이 함께 일어나면 Character 변경 이벤트 하나에 이전/새 슬롯을 포함해 중복 알림을 만들지 않는다.
-
-### 완료 후 반복방 정책
-
-- 반복방 완료 후 다음 회차 준비 상태의 Character 변경·자리 조정은 기존 정책처럼 허용한다.
-- 완료 Snapshot과 현재 membership 위치가 달라지므로 이번 주 `전체 완료 취소`가 더는 가능하지 않을 수 있다는 기존 경고와 검증을 유지한다.
-- 1회성 완료·해산된 모집과 현재 회차 변경 금지 시간대에는 기존 명령 차단을 유지한다.
-
-### 구현 순서와 커밋 경계
-
-1. `docs: define party placement adjustment contract` — 현재 문서 설계만 기록한다.
-2. `feat: plan character replacement placement` — 구성 직업 키와 제자리/빈자리/단순 교환 가능성 Domain 정책 및 단위 테스트.
-3. `feat: move character change to valid empty slot` — 후보·명령·Transaction·화면 연결과 4인/8인 회귀.
-4. `feat: add leader party position adjustment` — 공대장 이동·교환 UI, 명령, 이벤트와 알림.
-5. `test: authorize atomic party position changes` — Rules 최소 변경과 허용/거절 계약 검증. Rules diff는 앱 코드와 분리한다.
-6. `docs: record party placement verification` — 자동·Rules·실기기 결과와 남은 항목 기록.
-
-### 회귀 보호 목록
-
-- 4인: 같은 파티 동일 구성 직업 변경 거절, 정상 제자리 변경, 3딜러·1서포터 상한
-- 8인 신규 참가: 동일 구성 직업을 서로 다른 파티에 배치, 세 번째 동일 구성 직업 거절
-- 8인 변경: 정상 제자리, 다른 파티 빈자리 자동 이동, 빈자리 없음+단순 교환 가능 안내 허용, 단순 교환 불가능 거절
-- 역할 분류: 딜러/서포터 발키리·바드는 서로 다른 키, 워로드의 딜러 깨달음 분기는 같은 키
-- 권한: 자기 Character 변경, 공대장만 타인 이동/교환, 공대장 고정석, 타인·비회원·오래된 revision 거절
-- 원자성: 한 명 이동, 두 명 교환, 중도 충돌 시 부분 membership·revision·event 쓰기 없음
-- 기존 흐름: 공개/그룹 파티 생성·신청·재신청·직접 참가·승인·거절·탈퇴·추방·책임자 승계
-- 데이터: 본/부계정 Player 중복 참가 차단, assignment·Claim, 주차 전환·완료·완료 취소, group listing 동기화
-- 표시: 파란 구성 안내와 빨간 Build 오류 동시 표시, 자리 조정 후 파란 안내 제거, 과거 null `slotIndex` 방어적 읽기
-
-### 제외 범위
-
-- 공격대 전체 자동 재배치와 최적 시너지 자동 추천
-- 3명 이상 연쇄 이동·순환 교환
-- 16인 `4파티 × 4명` 구현과 테스트. 실제 레이드가 추가될 때 현재 `partyCount` 확장점을 다시 검증한다.
-- 파티별 별도 파티장 권한과 공대장 위임 구조
-- 인게임 파티 구성 강제 또는 Lost Ark 파티 상태 동기화
-- 시너지 선호 조건의 Firestore 저장. 이번에는 향후 hard constraint와 preference를 분리할 Domain 확장점만 훼손하지 않는다.
-- 기존 membership 일괄 마이그레이션. 현재 `partyIndex`·`slotIndex`가 있는 문서를 그대로 사용하고 과거 null은 기존 결정적 표시 보정만 유지한다.
-
-### 완료 조건
-
-- 4인의 기존 제한을 유지하면서 8인 Character 변경이 제자리·빈자리·단순 교환 가능성에 따라 확정 정책대로 판정된다.
-- 자동 이동은 변경 대상 한 명만 움직이고 전체 공대를 재배치하지 않는다.
-- 빈자리 없이 교환 가능한 변경은 허용되고 파란 안내가 표시되며, 공대장 이동·교환 후 안내가 사라진다.
-- 자리 이동·교환 알림이 대상자에게 전달되고 기존 방별 unread·히스토리 흐름을 보존한다.
-- 권한·Player 중복·역할·직업·슬롯·revision·assignment·Claim·listing 불변식을 자동 테스트와 Rules 계약으로 확인한다.
-- Rules 변경 시 원격 컴파일 경고 0개, 허가된 운영 배포와 공개/그룹 8인 실기기 검증을 완료한다.
-
-### 2026-09-14 구현·실기기 검증 현황
-
-- 역할 정원과 동일 구성 직업 판정은 최신 membership을 다시 읽은 로컬 공용 정책이 담당하고, Rules는 인증·소유권·revision·허용 필드·최소 슬롯 Claim 연결만 검증하도록 단순화했다. 신규 모집은 `slotLedgerVersion: 2`를 사용한다.
-- 수정 Rules를 Firebase 콘솔에 게시한 뒤, 이전에 모든 모집 명령에서 권한 확인 오류가 발생하던 동일 계정이 **추가 인증 없이** 모집 생성, 가입과 자리 이동을 정상 수행했다.
-- 이 결과로 해당 계정·기기의 인증 상태가 주원인이 아니라 이전 Rules 회귀가 원인이었음을 확인했다. 신규 버전 2 모집의 기본 생성·가입·자리 이동 권한 경로는 실기기 통과로 판정한다.
-- 점유된 두 자리의 인원 교환이 정상 작동하고, 교환 결과 같은 파티에 동일 구성 직업이 생기는 경우 저장하지 않고 안내하는 것을 확인했다.
-- 그룹 생성, 그룹장 이전, 일반 그룹원 탈퇴와 마지막 1인 그룹 해산이 정상 작동했다. 파티 탈퇴 후 같은 모집에 재신청하는 흐름도 정상 작동했다.
-- **새 회귀:** 리더 외 확정 참가자가 있는 모집에서 파티 해산을 시도하면 권한 확인 안내가 표시되고 해산되지 않는다. 과거 다인 해산 정상 기능의 회귀로 분리하며, 사용자가 수정 시작을 지시하기 전까지 원인 조사·앱 코드·Rules 변경과 배포를 하지 않는다.
-- 아직 별도로 확인하지 않은 Character 변경 시 다른 파티 빈자리 자동 이동, 교환 가능 상태의 파란 안내와 조정 후 제거, 그룹 모집 listing 동기화, 추방·완료 및 `memberMoved` 알림은 완료로 판정하지 않는다.
+- 해산 UX와 안내 문구 변경
+- 알림 시스템 전체 재설계 또는 FCM 추가
+- 과거 해산 방에 남은 고아 slot Claim의 일괄 마이그레이션·삭제
+- 역할·직업 구성 정책과 자리 조정 알고리즘 변경
+- Firestore Rules 전면 재작성과 다른 collection 권한 재설계
 
 ## 차후 후보
 
