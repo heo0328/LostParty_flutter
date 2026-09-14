@@ -43,22 +43,16 @@ void main() {
     final dispatcher = rules.substring(start, end);
 
     expect(
-      dispatcher,
-      contains("data.type == 'partyDisbanded'\n"
-          '          && validLifecycleEvent(playerId, eventId, data)'),
-    );
-    expect(
-      dispatcher.indexOf("data.type == 'partyDisbanded'"),
-      lessThan(dispatcher.indexOf('validLifecycleEvent(')),
+      dispatcher.indexOf('validLifecycleEvent('),
+      lessThan(dispatcher.indexOf('validCycleEvent(')),
     );
     expect(
       dispatcher,
-      isNot(
-        contains(
-          'return validCycleEvent(playerId, eventId, data)\n'
-          '        || validApplicationEvent(playerId, eventId, data)',
-        ),
+      contains(
+        "data.type == 'manualVerificationDisputeOpened'\n"
+        '          && validManualVerificationDisputeEvent(',
       ),
     );
+    expect(dispatcher.split('\n').length, lessThan(12));
   });
 }

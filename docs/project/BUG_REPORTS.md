@@ -499,6 +499,10 @@
 - 표적 계약 18건과 모집·파티 상세·그룹 영향 회귀 549건, 변경 파일 정적 분석이 통과했다. 전체 Rules는 로컬 Emulator 시작 단계에서 컴파일됐다.
 - 실제 다인 Transaction Emulator 실행은 기존 전체 Rules 재업로드 503 및 SDK gRPC 전송 오류로 검증하지 못했다. 운영 배포와 공개·그룹 다인 해산 실기기 확인 전에는 종료하지 않는다.
 - 커밋 `a5a28d6` 추적본으로 운영 배포를 정확히 한 번 시도했다. `projects/lost-party:test` 원격 컴파일은 성공하고 경고가 없었으나 `projects/lost-party/rulesets` 생성이 HTTP 503으로 실패했다. Release 갱신은 수행되지 않았고 즉시 재시도하지 않는다.
+- 사용자가 같은 현재 Rules를 별도 테스트 프로젝트 콘솔에서도 반복 게시했으나 동일한 503이 발생했다. 특정 운영 프로젝트 권한·데이터 문제는 우선순위에서 제외한다.
+- 직전 게시 성공본 `c4344e6`과 현재 Rules의 유일한 기능 차이는 5개 OR 호출을 type guard 목록으로 확장한 `validPlayerEvent`다. `/test`는 성공하므로 문법이 아니라 Ruleset 저장 산출물의 복잡도 경계 또는 해당 식을 처리하는 Firebase 내부 오류 가능성을 1순위로 둔다.
+- 다음 수정은 dispatcher를 `lifecycle → application → membership → guarded manual verification → cycle`의 짧은 OR로 축소하는 것뿐이다. 해산 이벤트의 cycle 선조회는 계속 방지하며 권한 조건은 완화하지 않는다. 테스트 프로젝트 compact 게시 실패 시에는 직전 `c4344e6` 기준도 같은 시점에 대조하고, 둘 다 실패하면 서비스 장애로 분류해 추가 코드 축소를 중단한다.
+- 위 compact dispatcher 구현을 완료했다. 관련 표적 18건, Rules 경고 계약 3건과 전체 Rules 로컬 Emulator 컴파일·기동이 통과했다. 원격 게시 성공은 아직 확인하지 않았으므로 BUG-018은 닫지 않으며, 운영 배포 전에 테스트 프로젝트 콘솔 게시 결과를 확인한다.
 
 ---
 

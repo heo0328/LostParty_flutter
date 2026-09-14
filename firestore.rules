@@ -2574,28 +2574,12 @@ service cloud.firestore {
     }
 
     function validPlayerEvent(playerId, eventId, data) {
-      return (data.type in [
-            'partyCompleted',
-            'partyCompletionCancelled',
-            'partyIncompleteEnded'
-          ] && validCycleEvent(playerId, eventId, data))
-        || (data.type in [
-            'applicationSubmitted',
-            'applicationApproved',
-            'applicationRejected',
-            'applicationWithdrawn'
-          ] && validApplicationEvent(playerId, eventId, data))
-        || (data.type in [
-            'memberJoined',
-            'memberLeft',
-            'memberKicked',
-            'memberCharacterChanged',
-            'memberMoved'
-          ] && validMembershipEvent(playerId, eventId, data))
-        || (data.type == 'partyDisbanded'
-          && validLifecycleEvent(playerId, eventId, data))
+      return validLifecycleEvent(playerId, eventId, data)
+        || validApplicationEvent(playerId, eventId, data)
+        || validMembershipEvent(playerId, eventId, data)
         || (data.type == 'manualVerificationDisputeOpened'
-          && validManualVerificationDisputeEvent(playerId, eventId, data));
+          && validManualVerificationDisputeEvent(playerId, eventId, data))
+        || validCycleEvent(playerId, eventId, data);
     }
 
     function validManualVerificationDisputeEvent(playerId, eventId, data) {

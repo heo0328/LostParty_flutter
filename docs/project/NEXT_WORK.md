@@ -7,6 +7,7 @@
 - 그룹 생성·그룹장 이전·일반 탈퇴·마지막 1인 해산과 파티 탈퇴 후 재신청도 정상 작동했다.
 - 리더 혼자 남은 모집은 해산되지만, 리더 외 확정 참가자가 있는 모집은 파티장이 해산할 때 `permission-denied`로 실패한다. 화면에는 Rules 배포 상태를 확인하라는 권한 안내가 표시된다.
 - 해산 Repository와 Firestore Rules의 최소 수정 및 자동 검증을 완료했다. 운영 Rules 배포와 실기기 확인 전까지 완료로 닫지 않는다.
+- 운영 CLI는 `/test` 컴파일 성공·경고 0건 뒤 `/rulesets`에서 503이 발생했고, 사용자가 별도 테스트 프로젝트의 콘솔에서도 같은 현재 Rules 게시가 반복적으로 503 실패함을 확인했다. 단일 프로젝트 권한·데이터·요금제 문제보다 현재 Rules 소스 형태가 Ruleset 저장 단계의 내부 복잡도 경계 또는 서비스 결함을 유발할 가능성을 우선한다.
 
 ## 구현 결과
 
@@ -15,6 +16,41 @@
 - 슬롯 삭제 Rules는 각 Claim의 소유자와 membership 제거를 연결한다. membership 삭제마다 슬롯 부재를 추가 조회하는 역방향 강제는 8인 복합 쓰기의 Rules 문서 접근 한도를 침범할 수 있어 추가하지 않았다.
 - Player event Rules는 `data.type`을 먼저 확인한 뒤 해당 계열 validator만 실행한다. `partyDisbanded`는 무관한 cycle/application/membership validator를 거치지 않는다.
 - `validRecruitmentDisband`, 리더 권한, revision, assignment·listing과 lifecycle event 수신자 조건은 완화하지 않았다.
+
+## Rules 게시 503 원인 예상과 최소 축소 계획
+
+### 근거
+
+- `/test`가 HTTP 200으로 성공했으므로 문법 오류나 정적 컴파일 경고는 현재 직접 원인이 아니다.
+- `/rulesets` 저장과 테스트 프로젝트 콘솔 게시가 모두 실패하므로 앱 Transaction, 운영 데이터, 특정 Auth 계정 상태는 원인에서 제외한다.
+- 직전 콘솔 게시에 성공한 자리 조정 Rules `c4344e6`과 현재 Rules의 유일한 기능 diff는 `validPlayerEvent` dispatcher다. 현재 변경은 5개 OR 호출을 27행의 type 목록·guard 식으로 확장했고 소스가 약 578자 증가했다. 함수 수는 199개로 같다.
+- Firebase가 Ruleset의 실제 컴파일 산출물 한계나 내부 오류 기준을 명확히 반환하지 않고 503으로 종료한 과거 사례가 있다. 따라서 파일 크기 자체로 단정하지 않되, 이번 diff를 가장 작은 A/B 경계로 사용한다.
+
+### 1차 수정안
+
+- 현재 27행 dispatcher를 짧은 우선순위 OR로 되돌린다.
+- `validLifecycleEvent`를 `validCycleEvent`보다 먼저 평가해 `partyDisbanded`가 성공하면 무관한 cycle 문서를 읽지 않도록 한다.
+- 수동 인증 이벤트는 명시적인 `data.type == 'manualVerificationDisputeOpened'` guard 뒤에 validator를 호출하고 cycle보다 먼저 둔다. 나머지 application·membership wrapper는 기존 type 분기를 그대로 재사용한다.
+- 예상 형태는 `lifecycle → application → membership → guarded manual verification → cycle`이다. 허용 type·필드·수신자·revision 조건은 바꾸지 않고 dispatcher 표현만 축소한다.
+
+### 게시 판정 순서
+
+1. compact dispatcher의 정적 계약·관련 이벤트 회귀와 전체 Rules 로컬 컴파일을 확인한다.
+2. 변경 전후 bytes·행·함수 수와 `c4344e6` 대비 diff를 기록한다.
+3. 사용자가 테스트 프로젝트 콘솔에 compact Rules를 먼저 게시한다.
+4. compact가 게시되면 현재 dispatcher 표현이 Ruleset 저장 경계를 건드린 것으로 판정하고 운영 게시 후 다인 해산을 확인한다.
+5. compact도 실패하면 **코드를 더 삭제하지 않고** 테스트 프로젝트에 직전 성공 기준 `c4344e6` Rules를 게시해 외부 서비스 장애와 현재 소스 요인을 분리한다.
+6. 같은 시점에 `c4344e6`도 실패하면 Firebase Rules 서비스 장애로 판정하고 대기한다. `c4344e6`만 성공하면 R4 이벤트 dispatcher·validator의 추가 중복 축소를 별도 설계한다.
+
+이 진단에서 deny-all, 기능 stub, 권한 완화 Rules는 테스트 프로젝트에도 게시하지 않는다. 운영 Rules는 compact 테스트 프로젝트 게시 성공 전에는 변경하지 않는다.
+
+### compact dispatcher 구현·로컬 검증 결과
+
+- `validPlayerEvent`를 `lifecycle → application → membership → guarded manual verification → cycle` 순서의 6행 dispatcher로 축약했다.
+- 직전 게시 성공 기준 `c4344e6` 대비 Rules 기능 diff는 이 dispatcher의 평가 순서 변경과 수동 인증 type guard 추가뿐이며, 함수 수는 양쪽 모두 199개다. 작업 트리 줄바꿈 형식이 기준 blob과 달라 단순 byte 수는 진단 지표로 사용하지 않는다.
+- 파티 해산·슬롯 원장·이벤트·회차·listing 표적 회귀 18건과 Rules 경고 계약 3건이 통과했다.
+- 전체 `firestore.rules`는 로컬 Firestore Emulator에서 컴파일되고 정상 기동됐다.
+- 원격 `/rulesets` 저장 성공 여부는 아직 확인하지 않았다. 다음 단계는 사용자가 이 추적본을 별도 테스트 프로젝트 콘솔에 먼저 게시하는 것이다.
 
 ## 확인한 기존 계약과 실제 흐름
 

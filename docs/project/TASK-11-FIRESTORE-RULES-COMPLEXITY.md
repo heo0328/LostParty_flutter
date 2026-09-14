@@ -11,6 +11,15 @@
 
 ## 2026-09-10 Rules 게시 경고 재점검
 
+### 2026-09-14 다인 해산 수정본의 교차 프로젝트 `/rulesets` 503
+
+- 커밋 `a5a28d6`의 Rules는 운영 `/test`에서 HTTP 200·컴파일 성공·경고 0건을 확인했지만 `/rulesets` POST가 HTTP 503으로 실패했다. Release 갱신에는 도달하지 않았다.
+- 동일 소스를 별도 테스트 프로젝트 Firebase 콘솔에 게시해도 반복적으로 503이 발생했다. 운영 프로젝트 IAM·데이터·Auth 상태보다 현재 Rules 소스 형태 또는 Firebase Ruleset 저장 서비스의 공통 처리 문제를 우선한다.
+- 직전 콘솔 게시 성공 기준 `c4344e6`과 현재 Rules의 기능 diff는 `validPlayerEvent` 한 곳이다. 함수 수는 199개로 같고, dispatcher의 type guard 목록 확장으로 소스가 약 578자 증가했다. 공개되지 않은 컴파일 산출물 크기를 측정한 값은 아니므로 단순 파일 용량 한계로 확정하지 않는다.
+- 1차 대응은 권한·validator를 제거하지 않고 dispatcher를 짧은 우선순위 OR로 축소한다. `partyDisbanded` lifecycle을 cycle보다 먼저 두고 수동 인증 validator는 명시 type guard 뒤에 호출해 무관한 문서 조회를 막는다.
+- compact 소스는 테스트 프로젝트에 먼저 게시한다. 실패하면 같은 시점에 직전 성공 기준 `c4344e6`을 A/B 대조한다. 둘 다 실패하면 외부 서비스 장애로 분류하고 추가 축소·반복 게시를 멈춘다. 기준본만 성공하면 R4 이벤트 Rules 중복 축소를 별도 작업으로 연다.
+- compact dispatcher는 6행으로 구현했고 함수 수 199개를 유지했다. 직전 성공 기준과의 기능 diff는 dispatcher 1곳의 4행 추가·3행 삭제뿐이다. 표적 18건, 경고 계약 3건과 전체 Rules 로컬 Emulator 컴파일·기동이 통과했으며 원격 Ruleset 저장은 테스트 프로젝트 게시 전이라 미확인이다.
+
 - 사용자가 Firebase 콘솔에 게시된 소스를 `firestore-web.rules`로 복사해 로컬 원본과 대조했다. 두 파일은 모두 3,785행이며 차이는 `groups/{groupId}` update에서 `validGroupDisbandUpdate`의 평가 순서 8행뿐이다. 콘솔본은 해산 판정이 마지막인 이전 게시본이고, 로컬 원본은 실제 1인 그룹 해산 오류를 보완해 가입·승인보다 앞에 둔 버전이다.
 - 콘솔과 CLI에 표시된 경고 9개는 두 소스에 공통으로 존재한다. 따라서 최근 해산 순서 변경이나 주차 전환 기능이 새로 만든 경고가 아니다.
 - 경고 원인은 미사용 `validRecruitmentJoin` 인자 1개, `null`과 string을 섞은 대표 Character·수동 인증 판정 3개, 생성 시 map 인자에 `null`을 전달한 membership·그룹 join relation·applicant stats 경로 5개다.
