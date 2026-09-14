@@ -1,0 +1,242 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function bindingPath(uid) {
+      return /databases/$(database)/documents/authBindings/$(uid);
+    }
+
+    function recruitmentPath(recruitmentId) {
+      return /databases/$(database)/documents/recruitments/$(recruitmentId);
+    }
+
+    function groupPath(groupId) {
+      return /databases/$(database)/documents/groups/$(groupId);
+    }
+
+    function raidStatePath(target) {
+      return /databases/$(database)/documents/players/$(target.playerId)/raidStates/$(target.stateId);
+    }
+
+    function actorOwns(oldData) {
+      return signedIn()
+        && get(bindingPath(request.auth.uid)).data.playerId == oldData.leaderPlayerId;
+    }
+
+    function targetStateMatches(data, state) {
+      return state.recruitmentId == data.recruitmentId
+        && state.cycleKey == data.currentCycleKey
+        && ((data.lastCommandType == 'complete' && state.status == 'completed')
+          || (data.lastCommandType == 'cancelCompletion' && state.status == 'active')
+          || (data.lastCommandType == 'advanceCycle' && state.status == 'active'));
+    }
+
+    function targetMatchesTransition(data, index) {
+      return index >= data.commandTargets.size()
+        || (data.lastCommandType == 'disband'
+          && !existsAfter(raidStatePath(data.commandTargets[index])))
+        || (data.lastCommandType != 'disband'
+          && targetStateMatches(
+            data,
+            getAfter(raidStatePath(data.commandTargets[index])).data
+          ));
+    }
+
+    function allTargetsMatch(data) {
+      return data.commandTargets.size() >= 1
+        && data.commandTargets.size() <= 8
+        && targetMatchesTransition(data, 0)
+        && targetMatchesTransition(data, 1)
+        && targetMatchesTransition(data, 2)
+        && targetMatchesTransition(data, 3)
+        && targetMatchesTransition(data, 4)
+        && targetMatchesTransition(data, 5)
+        && targetMatchesTransition(data, 6)
+        && targetMatchesTransition(data, 7);
+    }
+
+    function validLifecycleShape(oldData, newData) {
+      return newData.recruitmentId == oldData.recruitmentId
+        && newData.leaderPlayerId == oldData.leaderPlayerId
+        && newData.groupId == oldData.groupId
+        && newData.raidStateTargets == oldData.raidStateTargets
+        && newData.commandTargets == oldData.raidStateTargets
+        && newData.revision == oldData.revision + 1
+        && newData.lastCommandActorPlayerId == oldData.leaderPlayerId
+        && newData.groupActiveRecruitmentCountAfter is int
+        && newData.lastCommandId is string
+        && newData.lastCommandAt == request.time;
+    }
+
+    function validLifecycleState(oldData, newData) {
+      return (newData.lastCommandType == 'complete'
+          && oldData.status == 'active'
+          && oldData.currentCycleStatus == 'active'
+          && newData.status == 'completed'
+          && newData.currentCycleStatus == 'completed'
+          && newData.currentCycleKey == oldData.currentCycleKey)
+        || (newData.lastCommandType == 'cancelCompletion'
+          && oldData.status == 'completed'
+          && oldData.currentCycleStatus == 'completed'
+          && newData.status == 'active'
+          && newData.currentCycleStatus == 'active'
+          && newData.currentCycleKey == oldData.currentCycleKey)
+        || (newData.lastCommandType == 'advanceCycle'
+          && oldData.status == 'completed'
+          && oldData.currentCycleStatus == 'completed'
+          && newData.status == 'active'
+          && newData.currentCycleStatus == 'active'
+          && newData.currentCycleKey != oldData.currentCycleKey)
+        || (newData.lastCommandType == 'disband'
+          && oldData.status == 'active'
+          && newData.status == 'disbanded'
+          && newData.currentCycleStatus == oldData.currentCycleStatus
+          && newData.currentCycleKey == oldData.currentCycleKey);
+    }
+
+    function validGroupAfterDisband(oldData, newData) {
+      return newData.lastCommandType != 'disband'
+          && newData.groupActiveRecruitmentCountAfter
+            == oldData.groupActiveRecruitmentCountAfter
+        || oldData.groupId == ''
+        || getAfter(groupPath(oldData.groupId)).data.activeRecruitmentCount
+          == newData.groupActiveRecruitmentCountAfter;
+    }
+
+    function validLifecycleUpdate(oldData, newData) {
+      return actorOwns(oldData)
+        && validLifecycleShape(oldData, newData)
+        && validLifecycleState(oldData, newData)
+        && allTargetsMatch(newData)
+        && validGroupAfterDisband(oldData, newData);
+    }
+
+    function targetAt(data, index, playerId, stateId) {
+      return index < data.commandTargets.size()
+        && data.commandTargets[index].playerId == playerId
+        && data.commandTargets[index].stateId == stateId;
+    }
+
+    function commandIncludes(data, playerId, stateId) {
+      return targetAt(data, 0, playerId, stateId)
+        || targetAt(data, 1, playerId, stateId)
+        || targetAt(data, 2, playerId, stateId)
+        || targetAt(data, 3, playerId, stateId)
+        || targetAt(data, 4, playerId, stateId)
+        || targetAt(data, 5, playerId, stateId)
+        || targetAt(data, 6, playerId, stateId)
+        || targetAt(data, 7, playerId, stateId);
+    }
+
+    function validRaidStateUpdate(playerId, stateId, oldData, newData) {
+      let recruitment = getAfter(recruitmentPath(oldData.recruitmentId)).data;
+      return newData.playerId == playerId
+        && oldData.playerId == playerId
+        && newData.recruitmentId == oldData.recruitmentId
+        && commandIncludes(recruitment, playerId, stateId)
+        && newData.revision == oldData.revision + 1
+        && ((recruitment.lastCommandType == 'complete'
+            && oldData.status == 'active'
+            && newData.status == 'completed'
+            && newData.cycleKey == oldData.cycleKey)
+          || (recruitment.lastCommandType == 'cancelCompletion'
+            && oldData.status == 'completed'
+            && newData.status == 'active'
+            && newData.cycleKey == oldData.cycleKey)
+          || (recruitment.lastCommandType == 'advanceCycle'
+            && oldData.status == 'completed'
+            && newData.status == 'active'
+            && newData.cycleKey == recruitment.currentCycleKey));
+    }
+
+    function validRaidStateDelete(playerId, stateId, oldData) {
+      let recruitment = getAfter(recruitmentPath(oldData.recruitmentId)).data;
+      return recruitment.lastCommandType == 'disband'
+        && recruitment.status == 'disbanded'
+        && commandIncludes(recruitment, playerId, stateId);
+    }
+
+    function validEvent(data) {
+      let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
+      return data.keys().hasOnly([
+          'schemaVersion', 'eventId', 'recruitmentId', 'type', 'commandId',
+          'commandRevision', 'audiencePlayerIds', 'occurredAt'
+        ])
+        && data.schemaVersion == 1
+        && data.eventId is string
+        && data.type == recruitment.lastCommandType
+        && data.commandId == recruitment.lastCommandId
+        && data.commandRevision == recruitment.revision
+        && data.audiencePlayerIds is list
+        && data.audiencePlayerIds.size() <= 8
+        && data.occurredAt == request.time;
+    }
+
+    function validListingUpdate(recruitmentId, data) {
+      let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
+      return recruitment.lastCommandType != 'disband'
+        && data.recruitmentId == recruitmentId
+        && data.sourceRevision == recruitment.revision
+        && data.status == recruitment.status
+        && data.updatedAt == request.time;
+    }
+
+    function validGroupDisbandUpdate(groupId, oldData, newData) {
+      let recruitment = getAfter(recruitmentPath(newData.lastRecruitmentId)).data;
+      return recruitment.groupId == groupId
+        && recruitment.lastCommandType == 'disband'
+        && recruitment.status == 'disbanded'
+        && newData.activeRecruitmentCount == oldData.activeRecruitmentCount - 1
+        && recruitment.groupActiveRecruitmentCountAfter
+          == newData.activeRecruitmentCount
+        && newData.lastRecruitmentId == recruitment.recruitmentId
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    match /authBindings/{uid} {
+      allow read, write: if false;
+    }
+
+    match /recruitments/{recruitmentId} {
+      allow get: if signedIn();
+      allow update: if validLifecycleUpdate(resource.data, request.resource.data);
+    }
+
+    match /players/{playerId}/raidStates/{stateId} {
+      allow get: if signedIn();
+      allow update: if validRaidStateUpdate(
+        playerId,
+        stateId,
+        resource.data,
+        request.resource.data
+      );
+      allow delete: if validRaidStateDelete(playerId, stateId, resource.data);
+    }
+
+    match /partyEvents/{eventId} {
+      allow create: if validEvent(request.resource.data);
+    }
+
+    match /groups/{groupId} {
+      allow get: if signedIn();
+      allow update: if validGroupDisbandUpdate(
+        groupId,
+        resource.data,
+        request.resource.data
+      );
+
+      match /raidListings/{recruitmentId} {
+        allow get: if signedIn();
+        allow update: if validListingUpdate(
+          recruitmentId,
+          request.resource.data
+        );
+      }
+    }
+  }
+}
