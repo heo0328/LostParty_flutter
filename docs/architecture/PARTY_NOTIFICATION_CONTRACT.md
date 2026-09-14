@@ -1,5 +1,17 @@
 # 파티 이벤트 기반 알림 계약
 
+> 2026-09-14 확장성 재설계 결정: 신규 구조는 Player별 이벤트 fan-out 대신 `audiencePlayerIds`를 가진 공용 이벤트 원본을 사용한다. 해산 당시 확정 멤버는 공용 이벤트 수신 대상이 될 수 있지만 pending 신청자별 서버 이벤트는 만들지 않는다. 신청자는 모집 원본의 종료 상태로 항목을 숨기고 기기에서 한 번만 안내한다. 아래 Player별 투영본 내용은 현재 구현 근거이며 신규 구현 계약보다 우선하지 않는다.
+
+## 신규 구조 확정 요약
+
+- 파티 사건은 `partyEvents/{eventId}` 한 건으로 저장하고 `audiencePlayerIds`로 수신자와 읽기 권한을 고정한다.
+- 사용자별 `players/{playerId}/events/{eventId}` 복제는 신규 명령에서 만들지 않는다.
+- 읽음은 기기 로컬 receipt/cursor로 관리하며 공용 이벤트 원본을 수정하지 않는다.
+- 해산·종료의 pending 신청자는 공용 이벤트 수신자가 아니다. 참조 모집의 `terminalStatus`와 `terminalRevision`으로 신청을 숨기고 `recruitmentId + terminalRevision + terminalStatus` 키의 로컬 안내를 한 번 표시한다.
+- 첫 출시에서 이벤트·receipt 자동 만료 정리를 완료 조건으로 두지 않는다. 작은 limit과 cursor로 읽기량을 제한하고, 서버 정리는 추후 운영 작업으로 분리한다.
+
+이하의 사용자별 Player Event 경로·28일 만료·단계별 구현 내용은 현재 구현의 역사적 계약이다. 신규 구현을 설계하거나 검증할 때는 위 요약과 [`PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md)를 우선한다.
+
 ## 1. 목적과 단계
 
 LOSTPARTY 알림은 파티 명령이 성공했음을 보여 주는 파생 정보다. 알림이 파티 상태 변경의 근거나 명령 자체가 되어서는 안 된다.
@@ -134,8 +146,8 @@ expiresAt
 | 파티 또는 슬롯 이동 | 파티장 또는 권한 있는 이동 주체 | 이동 대상과 현재 확정 멤버 | `{대상 캐릭터}님의 위치가 변경되었습니다.` | 파티 상세 | 행위자 본인만 제외하되 대상이면 수신 | 대상 캐릭터명·이전/새 파티·슬롯 | recruitment revision + `memberMoved` |
 | 회차 완료 | 파티장 | 완료 Snapshot의 전 멤버 | `파티 회차가 완료되었습니다.` | 해당 완료 기록 | 없음 | raid/difficulty·cycle·수신자 캐릭터·완료 구성 | completion revision + `partyCompleted` |
 | 완료 취소 | 파티장 | 취소 대상 회차 Snapshot의 전 멤버 | `파티 완료가 취소되었습니다. 기록을 확인해주세요.` | 해당 완료 기록 정정 화면 | 없음 | raid/difficulty·cycle·수신자 캐릭터 | completion revision + `partyCompletionCancelled` |
-| 파티 종료 | 시스템 또는 파티장 | 종료 직전 확정 멤버와 필요 시 pending 신청자 | `파티 모집이 종료되었습니다.` | 파티 상세 또는 현황 루트 | 시스템 actor | raid/difficulty·cycle·종료 사유 | recruitment/completion revision + `partyEnded` |
-| 모집 해산 | 파티장 | 해산 직전 멤버와 pending 신청자 | `파티 모집이 해산되었습니다.` | 레이드 현황 또는 모집 목록 | 파티장 본인 | raid/difficulty·cycle·대상 캐릭터(신청자) | recruitment revision + `partyDisbanded` |
+| 파티 종료 | 시스템 또는 파티장 | 종료 직전 확정 멤버 | `파티 모집이 종료되었습니다.` | 파티 상세 또는 현황 루트 | 시스템 actor, pending 신청자는 로컬 파생 안내 | raid/difficulty·cycle·종료 사유 | recruitment/completion revision + `partyEnded` |
+| 모집 해산 | 파티장 | 해산 직전 확정 멤버 | `파티 모집이 해산되었습니다.` | 레이드 현황 또는 모집 목록 | 파티장 본인, pending 신청자는 로컬 파생 안내 | raid/difficulty·cycle | recruitment revision + `partyDisbanded` |
 
 `partyIncompleteEnded`는 회차 완료 히스토리 동기화에는 유지하지만 초기 알림 노출 여부는 미확정이다. 수요일 자동 전환을 신뢰 서버 없이 보장할 수 없으므로 Spark 클라이언트 명령에서 임의 생성하지 않는다.
 
@@ -145,7 +157,7 @@ expiresAt
 - 탈퇴는 명령 직전 멤버 집합에서 탈퇴자를 제외한다.
 - 추방은 추방 대상과 명령 후 남은 멤버가 받는다.
 - 완료·완료 취소는 mutable 현재 membership이 아니라 해당 회차 Snapshot을 기준으로 한다.
-- 해산·종료는 상태 변경 직전 멤버와 아직 결과를 기다리는 pending 신청자를 기준으로 한다.
+- 해산·종료 공용 이벤트는 상태 변경 직전 확정 멤버를 기준으로 한다. pending 신청자는 참조 모집의 종료 상태를 읽어 신청 항목을 숨기고 로컬 1회 안내를 만든다.
 - 알림 생성 뒤 membership이 바뀌어도 해당 Player Event는 28일 동안 자기 경로에서 읽을 수 있다.
 
 ## 7. 읽음 상태
@@ -251,13 +263,13 @@ Task-072 이후 실제 구현은 한 작업에 묶지 않고 다음 순서로 �
 1. 가입 신청을 파티장만 받을지 모든 `canApproveApplications` 멤버가 받을지
 2. 거절 알림에 누적 거절 횟수를 표시할지
 3. 추방 알림 선택 시 삭제된 상세의 읽기 전용 Snapshot을 제공할지 목록으로 보낼지
-4. 해산·종료 시 pending 신청자에게 남길 최소 Snapshot과 상세 접근 방식
+4. ~~해산·종료 pending 신청자 처리~~ — 모집 원본 종료 확인, 자동 숨김, 로컬 1회 안내로 확정
 5. `partyIncompleteEnded`를 사용자 알림으로 노출할지 완료 기록에만 반영할지
 6. 알림 목록 초기 limit과 추가 페이지 제공 여부
 7. 항목 선택 시 읽음, 화면 노출 시 읽음, 전체 읽음 중 최소 UX
-8. 로컬 이벤트/receipt를 28일 뒤 자동 정리할 시점
+8. 로컬 이벤트/receipt 자동 정리 시점 — 첫 출시 완료 조건에서 제외, 추후 운영 결정
 9. 필수 결과 이벤트와 선택 가능한 방별 알림의 구분
-10. 클라이언트 Transaction의 수신자 이벤트 완전성 한계를 수용할 기간과 서버 전환 조건
+10. 공용 이벤트 이후 향후 FCM 서버 전환 조건
 11. 향후 Cloud Functions와 별도 서버의 비용·운영·재시도 비교
 
 ## 14. 다른 작업과의 우선순위

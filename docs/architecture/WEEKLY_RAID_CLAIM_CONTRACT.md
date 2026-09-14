@@ -1,5 +1,7 @@
 # 캐릭터 주간 레이드 귀속 계약
 
+> 2026-09-14 확장성 재설계 결정: 이 문서의 제품 정책은 유지하지만 신규 저장 계약은 별도 `activeRaidAssignments`와 `weeklyRaidClaims` 대신 통합 `raidState`를 사용한다. 상세 전환과 8인 원자 명령은 [`PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md)가 우선한다.
+
 ## 1. 목적
 
 이 문서는 LOSTPARTY에서 다음 세 상태를 분리하고 다시 연결하는 단일 기준이다.
