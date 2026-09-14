@@ -67,7 +67,7 @@
 5. 기능별 전환 순서와 자동·실기기 검증표를 확정한다.
 6. 문서 승인 후 단일 구조개선 기능 브랜치에서 Rules 예산 증명부터 시작하고, 전체 전환 전에는 `dev`에 부분 병합하지 않는다.
 
-6번의 첫 Rules 예산 증명은 GitHub Actions 실행 `34848336222`에서 통과했다. 비연결 Domain·Repository 계약으로 통합 `raidState`, 최대 8칸 Aggregate, 제한 명령 봉투, 응답 유실 판정과 Repository 인터페이스를 추가했다. Firestore Aggregate 매퍼와 완료·취소·주차 전환·해산 Write Plan도 추가해 8인 최대 11건, 완료 후 해산 3건과 대상·revision 불변식을 표적 테스트로 고정했다. 반복방 완료·취소, 미완료 주차 전환, 1회성 완료와 완료 후 해산을 구분한 보강 Rules도 Actions 실행 `34851122346`에서 재통과했다. 비연결 Firestore Repository와 생성·가입 시 기존 Build Snapshot을 보존하면서 고정 슬롯 Aggregate·신규 `raidState`·공용 이벤트를 만드는 확장 Write Plan까지 완료했다. 다음은 신청·승인 처리와 캐릭터 변경·자리 이동의 고정 크기 계획이다. 운영 Rules와 Router/DI 전환은 모든 쓰기 경로와 테스트가 준비된 뒤 별도 연결 단계에서 수행한다.
+6번의 첫 Rules 예산 증명은 GitHub Actions 실행 `34848336222`에서 통과했다. 비연결 Domain·Repository 계약으로 통합 `raidState`, 최대 8칸 Aggregate, 제한 명령 봉투, 응답 유실 판정과 Repository 인터페이스를 추가했다. Firestore Aggregate 매퍼와 완료·취소·주차 전환·해산 Write Plan도 추가해 8인 최대 11건, 완료 후 해산 3건과 대상·revision 불변식을 표적 테스트로 고정했다. 반복방 완료·취소, 미완료 주차 전환, 1회성 완료와 완료 후 해산을 구분한 보강 Rules도 Actions 실행 `34851122346`에서 재통과했다. 비연결 Firestore Repository와 생성·가입·신청·재신청·철회·승인, 캐릭터 변경·빈자리 이동·점유 자리 교환의 고정 크기 Write Plan까지 완료했다. 다음은 탈퇴·추방·파티장 승계와 그룹 자격·활성 모집 집계 계획이다. 운영 Rules와 Router/DI 전환은 모든 쓰기 경로와 테스트가 준비된 뒤 별도 연결 단계에서 수행한다.
 
 `party-scalability-proof.yml`은 기능 브랜치의 관련 증명 파일 push와 수동 실행에만 연결한다. Ubuntu·JDK 21·demo 프로젝트 Emulator와 전용 설정·Rules만 사용하며 운영 Firebase 인증·배포는 수행하지 않는다.
 
