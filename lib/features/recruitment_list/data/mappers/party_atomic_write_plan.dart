@@ -19,6 +19,7 @@ class PartyAtomicWritePlan {
     required this.command,
     required this.aggregate,
     required this.serverTimestamp,
+    required this.incrementOne,
   }) {
     if (aggregate.recruitmentId != command.recruitmentId ||
         aggregate.revision != command.expectedRevision ||
@@ -51,6 +52,7 @@ class PartyAtomicWritePlan {
   final PartyCommandEnvelope command;
   final PartyCommandAggregate aggregate;
   final Object serverTimestamp;
+  final Object incrementOne;
 
   bool _targetsMatchSlots() {
     if (command.targets.length != aggregate.partySlots.length) return false;
@@ -77,7 +79,7 @@ class PartyAtomicWritePlan {
       if (data == null ||
           data['recruitmentId'] != command.recruitmentId ||
           data['cycleKey'] != command.expectedCycleKey ||
-          data['revision'] != command.expectedRevision) {
+          data['revision'] is! int) {
         return false;
       }
       final status = data['status'];
@@ -143,7 +145,7 @@ class PartyAtomicWritePlan {
                 : 'active',
             if (command.type == PartyAtomicCommandType.advanceCycle)
               'cycleKey': command.nextCycleKey,
-            'revision': command.expectedRevision + 1,
+            'revision': incrementOne,
             'updatedAt': serverTimestamp,
           },
         ),

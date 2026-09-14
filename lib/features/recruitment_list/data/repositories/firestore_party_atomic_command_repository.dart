@@ -77,6 +77,7 @@ class FirestorePartyAtomicCommandRepository
           command: command,
           aggregate: aggregate,
           serverTimestamp: FieldValue.serverTimestamp(),
+          incrementOne: FieldValue.increment(1),
         );
         final stateRefs = <String, DocumentReference<Map<String, dynamic>>>{};
         final stateDocuments = <String, Map<String, Object?>>{};

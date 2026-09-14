@@ -5,6 +5,7 @@ import 'package:lost_party/features/recruitment_list/domain/entities/party_recru
 
 void main() {
   final timestamp = Object();
+  final incrementOne = Object();
 
   PartyCommandAggregate aggregate() => PartyCommandAggregate(
     recruitmentId: 'recruitment-1',
@@ -52,13 +53,14 @@ void main() {
       command: command(PartyAtomicCommandType.complete),
       aggregate: aggregate(),
       serverTimestamp: timestamp,
+      incrementOne: incrementOne,
     );
 
     expect(plan.recruitmentPatch['currentCycleStatus'], 'completed');
     expect(plan.recruitmentPatch['status'], 'active');
     expect(plan.recruitmentPatch['revision'], 5);
     expect(plan.raidStateWrites.single.patch?['status'], 'completed');
-    expect(plan.raidStateWrites.single.patch?['revision'], 5);
+    expect(plan.raidStateWrites.single.patch?['revision'], same(incrementOne));
   });
 
   test('1회성 모집 완료는 반복방과 달리 모집 자체도 completed가 된다', () {
@@ -77,6 +79,7 @@ void main() {
       command: command(PartyAtomicCommandType.complete),
       aggregate: oneShot,
       serverTimestamp: timestamp,
+      incrementOne: incrementOne,
     );
 
     expect(plan.recruitmentPatch['status'], 'completed');
@@ -88,6 +91,7 @@ void main() {
       command: command(PartyAtomicCommandType.advanceCycle),
       aggregate: aggregate(),
       serverTimestamp: timestamp,
+      incrementOne: incrementOne,
     );
 
     expect(plan.recruitmentPatch['currentCycleKey'], '2026-09-16');
@@ -99,6 +103,7 @@ void main() {
       command: command(PartyAtomicCommandType.disband),
       aggregate: aggregate(),
       serverTimestamp: timestamp,
+      incrementOne: incrementOne,
     );
 
     expect(plan.recruitmentPatch['status'], 'disbanded');
@@ -152,6 +157,7 @@ void main() {
         pendingNonGroupApplicantCount: 0,
       ),
       serverTimestamp: timestamp,
+      incrementOne: incrementOne,
     );
 
     expect(plan.maximumWriteCount, 11);
@@ -177,6 +183,7 @@ void main() {
         command: stale,
         aggregate: current,
         serverTimestamp: timestamp,
+        incrementOne: incrementOne,
       ),
       throwsStateError,
     );
@@ -203,6 +210,7 @@ void main() {
         command: wrongTarget,
         aggregate: aggregate(),
         serverTimestamp: timestamp,
+        incrementOne: incrementOne,
       ),
       throwsStateError,
     );
@@ -213,6 +221,7 @@ void main() {
       command: command(PartyAtomicCommandType.complete),
       aggregate: aggregate(),
       serverTimestamp: timestamp,
+      incrementOne: incrementOne,
     );
     final valid = {
       'player-0/character-0_raid-1': <String, Object?>{
@@ -227,7 +236,7 @@ void main() {
     expect(
       plan.raidStateDocumentsAllow({
         for (final entry in valid.entries)
-          entry.key: {...entry.value, 'revision': 3},
+          entry.key: {...entry.value, 'revision': 'invalid'},
       }),
       isFalse,
     );
@@ -251,6 +260,7 @@ void main() {
         command: command(PartyAtomicCommandType.disband),
         aggregate: completed,
         serverTimestamp: timestamp,
+        incrementOne: incrementOne,
       ),
       throwsStateError,
     );
@@ -266,6 +276,7 @@ void main() {
       ),
       aggregate: completed,
       serverTimestamp: timestamp,
+      incrementOne: incrementOne,
     );
     expect(completedDisband.raidStateWrites, isEmpty);
     expect(completedDisband.maximumWriteCount, 3);
