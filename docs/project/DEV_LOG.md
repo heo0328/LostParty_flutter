@@ -10,6 +10,7 @@
 - 기능 브랜치에서 운영 `firestore.rules`와 분리된 `tools/party_scalability_proof.rules`, 1·2·4·8인 lifecycle·그룹 해산 및 누락·stale revision·비권한 거절 Emulator 시나리오를 추가했다. 정적 계약 테스트 5건과 JS 문법 검사는 통과했다.
 - Android Studio 번들 JBR 21(`D:\dev\android\jbr`)로 Firestore Emulator 자체 기동은 확인했다. 그러나 Rules 로딩, 최소 deny-all 대조군, 단순 REST·클라이언트 쓰기가 모두 `503 Network closed for unknown reason` 또는 HTTP/2 protocol error로 끊겨 Rules 평가까지 도달하지 못했다. Docker는 없고 WSL 배포판도 설치되어 있지 않다. 첫 엔진 검증 게이트는 미통과이며 정상 격리 환경에서 통과하기 전 운영 Rules·Repository·Router 전환은 진행하지 않는다.
 - 증명 스크립트가 Rules Test Context와 modular `getFirestore`를 혼용하던 부분을 compat context API로 통일했다. 이는 정상 Emulator 환경에서 실행 자체가 SDK 타입 오류로 막히지 않게 하는 테스트 하네스 수정이며 운영 코드는 변경하지 않는다.
+- Windows 호스트 장애를 우회하는 첫 엔진 검증용 GitHub Actions를 추가했다. 기능 브랜치의 증명 파일 변경과 수동 실행에만 반응하고 Ubuntu·JDK 21·`demo-party-scalability` Emulator·전용 Rules 설정만 사용한다. 운영 Firebase 프로젝트 인증이나 배포 단계는 포함하지 않는다.
 
 # 2026-09-14 release/1.0.0 후보 폐기와 파티·그룹 명령 재설계 전환
 

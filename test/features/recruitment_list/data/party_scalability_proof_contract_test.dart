@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   late String proofRules;
   late String emulatorTest;
+  late String emulatorConfig;
+  late String workflow;
 
   setUpAll(() {
     proofRules = File(
@@ -12,6 +14,12 @@ void main() {
     ).readAsStringSync();
     emulatorTest = File(
       'tools/party_scalability_rules_test.mjs',
+    ).readAsStringSync();
+    emulatorConfig = File(
+      'tools/party_scalability_firebase.json',
+    ).readAsStringSync();
+    workflow = File(
+      '.github/workflows/party-scalability-proof.yml',
     ).readAsStringSync();
   });
 
@@ -71,5 +79,13 @@ void main() {
 
     expect(productionRules, isNot(contains('match /partyEvents/{eventId}')));
     expect(productionRules, isNot(contains('match /raidStates/{stateId}')));
+  });
+
+  test('CI 증명은 운영 프로젝트와 운영 Rules를 참조하지 않는다', () {
+    expect(emulatorConfig, contains('party_scalability_proof.rules'));
+    expect(workflow, contains('--project demo-party-scalability'));
+    expect(workflow, contains('workflow_dispatch:'));
+    expect(workflow, isNot(contains('--project lost-party')));
+    expect(emulatorConfig, isNot(contains('firestore.rules"')));
   });
 }

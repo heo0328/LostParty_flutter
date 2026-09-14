@@ -69,6 +69,8 @@
 
 현재 실행 위치는 6번의 첫 Rules 예산 증명이다. 운영 프로젝트가 아닌 정상 동작하는 격리 Emulator 환경에서 다음을 실행해 1·2·4·8인 성공과 누락 대상·stale revision·비권한 actor 거절을 모두 확인해야 다음 구현으로 이동한다. 현재 Windows 호스트에서는 JBR 21로 Emulator가 시작되지만 Firestore 쓰기 전송이 503으로 끊긴다. Docker는 설치되어 있지 않고 WSL 배포판도 없으므로 동일 호스트 재시도는 검증으로 인정하지 않는다.
 
+이를 대체하기 위해 `party-scalability-proof.yml`을 기능 브랜치의 관련 증명 파일 push와 수동 실행에만 연결한다. Ubuntu·JDK 21·demo 프로젝트 Emulator와 전용 설정·Rules만 사용하며 운영 Firebase 인증·배포는 수행하지 않는다. 이 실행이 모두 통과해야 운영 구조 구현으로 이동한다.
+
 ```powershell
 firebase emulators:exec --only firestore --project demo-party-scalability "node tools/party_scalability_rules_test.mjs"
 ```
