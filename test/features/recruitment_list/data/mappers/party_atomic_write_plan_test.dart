@@ -1,0 +1,224 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lost_party/features/recruitment_list/data/mappers/party_atomic_write_plan.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_atomic_command.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
+
+void main() {
+  final timestamp = Object();
+
+  PartyCommandAggregate aggregate() => PartyCommandAggregate(
+    recruitmentId: 'recruitment-1',
+    leaderPlayerId: 'player-0',
+    currentCycleKey: '2026-09-09',
+    currentCycleStatus: PartyRaidStateStatus.active,
+    revision: 4,
+    partySlots: [
+      PartyAggregateSlot(
+        playerId: 'player-0',
+        characterId: 'character-0',
+        role: PartyRole.dealer,
+        classKey: '버서커',
+        partyIndex: 0,
+        slotIndex: 0,
+      ),
+    ],
+    nonGroupMemberCount: 0,
+    pendingApplicationCount: 0,
+    pendingNonGroupApplicantCount: 0,
+  );
+
+  PartyCommandEnvelope command(PartyAtomicCommandType type) =>
+      PartyCommandEnvelope(
+        commandId: 'command-1',
+        recruitmentId: 'recruitment-1',
+        type: type,
+        actorPlayerId: 'player-0',
+        expectedRevision: 4,
+        expectedCycleKey: '2026-09-09',
+        nextCycleKey: type == PartyAtomicCommandType.advanceCycle
+            ? '2026-09-16'
+            : null,
+        targets: [
+          PartyCommandTarget(
+            playerId: 'player-0',
+            raidStateId: 'character-0_raid-1',
+          ),
+        ],
+      );
+
+  test('완료는 모집과 raidState를 같은 다음 revision으로 만든다', () {
+    final plan = PartyAtomicWritePlan(
+      command: command(PartyAtomicCommandType.complete),
+      aggregate: aggregate(),
+      serverTimestamp: timestamp,
+    );
+
+    expect(plan.recruitmentPatch['currentCycleStatus'], 'completed');
+    expect(plan.recruitmentPatch['revision'], 5);
+    expect(plan.raidStateWrites.single.patch?['status'], 'completed');
+    expect(plan.raidStateWrites.single.patch?['revision'], 5);
+  });
+
+  test('전환은 모집과 모든 raidState의 회차 키를 함께 바꾼다', () {
+    final plan = PartyAtomicWritePlan(
+      command: command(PartyAtomicCommandType.advanceCycle),
+      aggregate: aggregate(),
+      serverTimestamp: timestamp,
+    );
+
+    expect(plan.recruitmentPatch['currentCycleKey'], '2026-09-16');
+    expect(plan.raidStateWrites.single.patch?['cycleKey'], '2026-09-16');
+  });
+
+  test('활성 해산은 raidState를 삭제하고 개인 이벤트를 복제하지 않는다', () {
+    final plan = PartyAtomicWritePlan(
+      command: command(PartyAtomicCommandType.disband),
+      aggregate: aggregate(),
+      serverTimestamp: timestamp,
+    );
+
+    expect(plan.recruitmentPatch['status'], 'disbanded');
+    expect(
+      plan.raidStateWrites.single.action,
+      PartyRaidStateWriteAction.delete,
+    );
+    expect(plan.eventDocument['audiencePlayerIds'], ['player-0']);
+  });
+
+  test('8인 최악 조건도 쓰기 계획은 최대 11건이다', () {
+    final targets = List.generate(
+      8,
+      (index) => PartyCommandTarget(
+        playerId: 'player-$index',
+        raidStateId: 'character-${index}_raid-1',
+      ),
+    );
+    final eightPlayerCommand = PartyCommandEnvelope(
+      commandId: 'command-8',
+      recruitmentId: 'recruitment-1',
+      type: PartyAtomicCommandType.complete,
+      actorPlayerId: 'player-0',
+      expectedRevision: 4,
+      expectedCycleKey: '2026-09-09',
+      targets: targets,
+    );
+    final plan = PartyAtomicWritePlan(
+      command: eightPlayerCommand,
+      aggregate: PartyCommandAggregate(
+        recruitmentId: 'recruitment-1',
+        leaderPlayerId: 'player-0',
+        currentCycleKey: '2026-09-09',
+        currentCycleStatus: PartyRaidStateStatus.active,
+        revision: 4,
+        partySlots: List.generate(
+          8,
+          (index) => PartyAggregateSlot(
+            playerId: 'player-$index',
+            characterId: 'character-$index',
+            role: index == 3 || index == 7
+                ? PartyRole.support
+                : PartyRole.dealer,
+            classKey: 'class-$index',
+            partyIndex: index ~/ 4,
+            slotIndex: index % 4,
+          ),
+        ),
+        nonGroupMemberCount: 0,
+        pendingApplicationCount: 0,
+        pendingNonGroupApplicantCount: 0,
+      ),
+      serverTimestamp: timestamp,
+    );
+
+    expect(plan.maximumWriteCount, 11);
+    expect(plan.raidStateWrites, hasLength(8));
+  });
+
+  test('오래된 revision 또는 다른 모집 Aggregate는 계획 전에 거절한다', () {
+    final stale = command(PartyAtomicCommandType.complete);
+    final current = PartyCommandAggregate(
+      recruitmentId: 'recruitment-1',
+      leaderPlayerId: 'player-0',
+      currentCycleKey: '2026-09-09',
+      currentCycleStatus: PartyRaidStateStatus.active,
+      revision: 5,
+      partySlots: aggregate().partySlots,
+      nonGroupMemberCount: 0,
+      pendingApplicationCount: 0,
+      pendingNonGroupApplicantCount: 0,
+    );
+
+    expect(
+      () => PartyAtomicWritePlan(
+        command: stale,
+        aggregate: current,
+        serverTimestamp: timestamp,
+      ),
+      throwsStateError,
+    );
+  });
+
+  test('현재 슬롯과 다른 raidState 대상은 계획 전에 거절한다', () {
+    final wrongTarget = PartyCommandEnvelope(
+      commandId: 'command-wrong',
+      recruitmentId: 'recruitment-1',
+      type: PartyAtomicCommandType.complete,
+      actorPlayerId: 'player-0',
+      expectedRevision: 4,
+      expectedCycleKey: '2026-09-09',
+      targets: [
+        PartyCommandTarget(
+          playerId: 'player-0',
+          raidStateId: 'other-character_raid-1',
+        ),
+      ],
+    );
+
+    expect(
+      () => PartyAtomicWritePlan(
+        command: wrongTarget,
+        aggregate: aggregate(),
+        serverTimestamp: timestamp,
+      ),
+      throwsStateError,
+    );
+  });
+
+  test('완료 후 해산은 completed raidState 보존을 위해 대상이 없어야 한다', () {
+    final completed = PartyCommandAggregate(
+      recruitmentId: 'recruitment-1',
+      leaderPlayerId: 'player-0',
+      currentCycleKey: '2026-09-09',
+      currentCycleStatus: PartyRaidStateStatus.completed,
+      revision: 4,
+      partySlots: aggregate().partySlots,
+      nonGroupMemberCount: 0,
+      pendingApplicationCount: 0,
+      pendingNonGroupApplicantCount: 0,
+    );
+
+    expect(
+      () => PartyAtomicWritePlan(
+        command: command(PartyAtomicCommandType.disband),
+        aggregate: completed,
+        serverTimestamp: timestamp,
+      ),
+      throwsStateError,
+    );
+    final completedDisband = PartyAtomicWritePlan(
+      command: PartyCommandEnvelope(
+        commandId: 'command-completed-disband',
+        recruitmentId: 'recruitment-1',
+        type: PartyAtomicCommandType.disband,
+        actorPlayerId: 'player-0',
+        expectedRevision: 4,
+        expectedCycleKey: '2026-09-09',
+        targets: const [],
+      ),
+      aggregate: completed,
+      serverTimestamp: timestamp,
+    );
+    expect(completedDisband.raidStateWrites, isEmpty);
+    expect(completedDisband.maximumWriteCount, 3);
+  });
+}
