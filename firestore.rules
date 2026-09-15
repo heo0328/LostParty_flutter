@@ -1922,6 +1922,82 @@ service cloud.firestore {
         && newData.updatedAt == request.time;
     }
 
+    function atomicInitialPartySlotMatches(slot, playerId, member) {
+      return slot.playerId == playerId
+        && slot.characterId == member.characterId
+        && slot.role == member.role
+        && slot.partyIndex == 0
+        && slot.slotIndex == 0
+        && slot.classKey is string
+        && slot.classKey.size() > 0
+        && slot.countedAsNonGroupMember == false;
+    }
+
+    function validAtomicInitialRecruitment(recruitmentId, data) {
+      let playerId = currentPlayerId();
+      let member = getAfter(recruitmentMemberPath(recruitmentId, playerId)).data;
+      let slot = data.partySlots[0];
+      let target = data.raidStateTargets[0];
+      let stateId = member.characterId + '_' + data.raidId;
+      let state = getAfter(atomicRaidStatePath(target)).data;
+      return hasActiveBinding()
+        && data.schemaVersion == 2
+        && data.recruitmentId == recruitmentId
+        && data.leaderPlayerId == playerId
+        && data.memberPlayerIds == [playerId]
+        && data.memberCount == 1
+        && data.maxMemberCount >= 1
+        && data.dealerCount + data.supportCount == 1
+        && data.status == 'active'
+        && (
+          (data.groupId == null && data.visibility == 'public')
+          || (data.groupId is string
+            && data.visibility in ['public', 'group']
+            && exists(groupMemberPath(data.groupId, playerId))
+            && get(groupPath(data.groupId)).data.status == 'active')
+        )
+        && data.currentCycleKey == data.targetCycleKey
+        && data.currentCycleStatus == 'active'
+        && data.cycleEndsAt == data.cycleStartedAt + duration.value(7, 'd')
+        && request.time >= data.cycleStartedAt
+        && request.time < data.cycleEndsAt
+        && data.revision == 1
+        && data.slotLedgerVersion == 2
+        && data.partySlots.size() == 1
+        && data.raidStateTargets.size() == 1
+        && data.commandTargets.size() == 0
+        && data.pendingApplicationCount == 0
+        && data.pendingNonGroupApplicantCount == 0
+        && data.nonGroupMemberCount == (data.groupId == null ? 1 : 0)
+        && data.groupActiveRecruitmentCountAfter
+          == (data.groupId == null ? 0 : 1)
+        && data.lastCommandId == null
+        && data.lastCommandType == null
+        && data.lastCommandActorPlayerId == null
+        && data.lastCommandAt == null
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && data.leaderCharacterNameSnapshot == member.characterNameSnapshot
+        && data.leaderClassNameSnapshot == member.classNameSnapshot
+        && member.playerId == playerId
+        && member.joinedBy == playerId
+        && member.partyIndex == 0
+        && member.slotIndex == 0
+        && member.canApproveApplications == true
+        && ownsActiveCharacter(member.characterId)
+        && atomicInitialPartySlotMatches(slot, playerId, member)
+        && target.playerId == playerId
+        && target.stateId == stateId
+        && state.recruitmentId == recruitmentId
+        && state.playerId == playerId
+        && state.characterId == member.characterId
+        && state.raidId == data.raidId
+        && state.cycleKey == data.currentCycleKey
+        && state.status == 'active'
+        && state.source == 'party'
+        && state.revision == 1;
+    }
+
     function validGroupRaidListingDelete(groupId, recruitmentId) {
       let after = getAfter(recruitmentPath(recruitmentId)).data;
       let beforeLeader = exists(recruitmentPath(recruitmentId))
@@ -3959,6 +4035,9 @@ service cloud.firestore {
       allow get: if canGetRecruitment(recruitmentId);
       allow list: if canListRecruitment(resource.data);
       allow create: if validInitialRecruitment(
+        recruitmentId,
+        request.resource.data
+      ) || validAtomicInitialRecruitment(
         recruitmentId,
         request.resource.data
       );

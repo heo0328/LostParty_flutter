@@ -61,4 +61,4 @@
 
 ## 다음 작업
 
-현재 작업은 파티·그룹 명령 확장성 재설계의 운영 Rules 복구 슬라이스다. R1~R3까지 반영됐고 다음은 R4 schemaVersion 2 모집 생성 분기다. Router/DI 연결은 C* 묶음에서만 수행한다. 상세는 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.
+현재 작업은 파티·그룹 명령 확장성 재설계의 운영 Rules 복구 슬라이스다. R1~R4까지 반영됐고 다음은 R5 비lifecycle raidState create·partyEvents다. Router/DI 연결은 C* 묶음에서만 수행한다. 상세는 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.

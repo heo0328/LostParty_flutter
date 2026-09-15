@@ -1,3 +1,9 @@
+# 2026-09-15 파티·그룹 명령 재설계 — 운영 Rules R4 schemaVersion 2 모집 생성
+
+- `validAtomicInitialRecruitment`를 추가해 schemaVersion 2 모집 생성 OR를 `validInitialRecruitment`와 병행했다. v1 생성·slot·assignment 검증은 유지한다.
+- 원자 생성은 `partySlots`·`raidStateTargets`·집계 초기값·명령 봉투 null과 leader membership·`raidState` `getAfter`를 검증하고 slot·assignment 경로는 쓰지 않는다.
+- R4 계약 테스트를 추가했고 운영 Firebase 배포는 수행하지 않았다. 다음은 R5다.
+
 # 2026-09-15 파티·그룹 명령 재설계 — 운영 Rules R3 그룹 activeRecruitmentCount
 
 - `validInitialGroup`에 `activeRecruitmentCount` 키를 허용하고 생성 시 0을 강제해 Write Plan과 맞췄다.
