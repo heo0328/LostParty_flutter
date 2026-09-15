@@ -33,6 +33,8 @@ void main() {
     expect(rules, contains('isCurrentPlayerActive()'));
     expect(rules, contains("data.status == 'active'"));
     expect(rules, contains('data.memberCount == 1'));
+    expect(initialGroupRule, contains("'activeRecruitmentCount'"));
+    expect(rules, contains('data.activeRecruitmentCount == 0'));
     expect(rules, contains('data.revision == 1'));
     expect(rules, contains('data.hasActiveJoinCode == false'));
     expect(

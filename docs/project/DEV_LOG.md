@@ -1,3 +1,9 @@
+# 2026-09-15 파티·그룹 명령 재설계 — 운영 Rules R3 그룹 activeRecruitmentCount
+
+- `validInitialGroup`에 `activeRecruitmentCount` 키를 허용하고 생성 시 0을 강제해 Write Plan과 맞췄다.
+- `validAtomicGroupRecruitmentClose`에 활성 수 감소·`lastRecruitmentId`·revision·updatedAt만 바꾸는 affectedKeys와 양의 정수 검사를 보강했다.
+- R3 계약 테스트를 추가했고 운영 Firebase 배포는 수행하지 않았다. 다음은 R4다.
+
 # 2026-09-15 파티·그룹 명령 재설계 — 운영 Rules R2 lifecycle OR
 
 - 증명 Rules의 lifecycle 검증을 `atomic*` 접두사로 운영 `firestore.rules`에 이식하고, 모집 update·raidState update/delete·partyEvents create·group close·listing update/delete에 OR로 연결했다.

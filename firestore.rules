@@ -275,7 +275,8 @@ service cloud.firestore {
           'representativeCharacterId', 'representativeCharacterNameSnapshot',
           'normalizedRepresentativeCharacterName',
           'representativeServerNameSnapshot', 'leaderPlayerId',
-          'leaderDisplayCharacterNameSnapshot', 'memberCount', 'revision',
+          'leaderDisplayCharacterNameSnapshot', 'memberCount',
+          'activeRecruitmentCount', 'revision',
           'hasActiveJoinCode', 'activeJoinCode', 'joinCodeVisibleToMembers', 'lastActivityAt',
           'createdAt', 'updatedAt', 'deletedAt'
         ])
@@ -291,6 +292,7 @@ service cloud.firestore {
         && data.leaderDisplayCharacterNameSnapshot
           == data.representativeCharacterNameSnapshot
         && data.memberCount == 1
+        && data.activeRecruitmentCount == 0
         && data.revision == 1
         && data.hasActiveJoinCode == false
         && (!('activeJoinCode' in data) || data.activeJoinCode == null)
@@ -1906,6 +1908,12 @@ service cloud.firestore {
           || (recruitment.lastCommandType == 'complete'
             && recruitment.status == 'completed'
             && recruitment.continueTogether == false))
+        && oldData.activeRecruitmentCount is int
+        && oldData.activeRecruitmentCount > 0
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'activeRecruitmentCount', 'lastRecruitmentId',
+          'revision', 'updatedAt'
+        ])
         && newData.activeRecruitmentCount == oldData.activeRecruitmentCount - 1
         && recruitment.groupActiveRecruitmentCountAfter
           == newData.activeRecruitmentCount

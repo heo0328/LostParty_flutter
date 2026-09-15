@@ -9,7 +9,7 @@
 - `feature/party-group-command-redesign`에서 운영 Rules와 분리된 8인 접근 예산 증명 Rules·Emulator 시나리오를 작성했다. 로컬 정적 계약 테스트와 GitHub Actions의 Ubuntu·JDK 21 격리 Emulator에서 1·2·4·8인 lifecycle 및 핵심 거절 시나리오가 통과했다.
 - 비연결 Domain·Write Plan과 Firestore 원자 Repository까지 생성·신청·재신청·철회·거절·가입·승인, 캐릭터 변경·자리 이동, 탈퇴·추방·승계, 완료·취소·주차 전환·해산, 공개↔그룹 전환을 구현했다. 그룹 해산은 `activeRecruitmentCount` 게이트로 바꿨다. 운영 Router/DI는 아직 전환하지 않았다.
 - 운영 Rules는 복구 가능한 커밋 단위로만 추가한다. 구 경로를 닫거나 Router/DI를 바꾸는 단계는 같은 연결 묶음에서만 수행하며 `dev`에 부분 병합하지 않는다.
-- R1 닫힌 경로 스캐폴드와 R2 lifecycle OR 검증까지 운영 Rules에 반영했다. 다음은 R3 그룹 `activeRecruitmentCount` 생성·종료 허용이다.
+- R1~R3까지 운영 Rules에 반영했다. 그룹 생성은 `activeRecruitmentCount: 0`을 허용하고, lifecycle close 분기는 활성 수 감소 키만 바꾼다. 다음은 R4 schemaVersion 2 모집 생성 분기다.
 
 ## 운영 Rules 복구 커밋 슬라이스
 
@@ -19,8 +19,8 @@
 | --- | --- | --- | --- | --- |
 | R1 | `raidStates`·`partyEvents` 경로 스캐폴드 | match 추가, 쓰기는 닫힘 | 미사용 경로만 제거 | 완료 |
 | R2 | lifecycle envelope·raidState 검증 OR 추가 | 증명 Rules 이식, 구 cycle/disband 유지 | 미사용 OR만 제거 | 완료 |
-| R3 | 그룹 `activeRecruitmentCount` 생성·종료 | `validInitialGroup` 키 허용, close 분기 | 구 그룹 생성 키 복원 | 다음 |
-| R4 | schemaVersion 2 모집 생성 분기 | v1 생성 유지 + 원자 생성 OR | v2 생성 문만 제거 | 대기 |
+| R3 | 그룹 `activeRecruitmentCount` 생성·종료 | `validInitialGroup` 키 허용, close 분기 | 구 그룹 생성 키 복원 | 완료 |
+| R4 | schemaVersion 2 모집 생성 분기 | v1 생성 유지 + 원자 생성 OR | v2 생성 문만 제거 | 다음 |
 | R5 | 비lifecycle raidState create·partyEvents | 가입·신청·탈퇴 등 이벤트 유형 | 미사용 create 검증 제거 | 대기 |
 | R6 | Aggregate 멤버십 갱신 분기 | 가입·승인·캐릭터·자리·탈퇴·visibility OR | 미사용 update 분기 제거 | 대기 |
 | C* | Router/DI·읽기·구 경로 차단·자료 초기화 | 앱 연결과 함께만 | 부분 배포·`dev` 병합 금지 | 대기 |
