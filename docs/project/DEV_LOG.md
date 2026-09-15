@@ -1,3 +1,9 @@
+# 2026-09-15 파티·그룹 명령 재설계 — C* Rules 게시 실패·R7 착수
+
+- `firestore.rules-backup`으로 C* Rules 원본을 로컬 보존했다. `firebase deploy --only firestore --project lost-party` 1회는 `/test` 503으로 실패했고 Indexes 업로드에는 도달하지 않았다.
+- Firebase 콘솔 게시는 legacy 미사용 validator·`validPlayerEvent` fan-out 등 약 55개 함수가 남아 `Unused function`과 `getAfter`/`request` 문맥 오류로 저장 불가했다. 인덱스 미배포와 무관하다.
+- R7로 `allow`에서 떼어낸 legacy 함수 본문을 제거한 뒤 Rules·Indexes 1회 배포, wipe, 디바이스 회귀 순으로 운영 반영한다.
+
 # 2026-09-15 파티·그룹 명령 재설계 — C* Router/DI·읽기·구 경로 차단
 
 - 운영 Router에 원자 create/application/join/visibility/command와 membership·cycle 어댑터를 연결했다. `setRecurrence`는 모집 원본만 갱신하고 `purgeStale`은 `raidState`를 정리한다.
