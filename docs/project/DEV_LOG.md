@@ -1,8 +1,13 @@
+# 2026-09-15 파티·그룹 명령 재설계 — Rules·Indexes 게시 완료·wipe 경로 문서화
+
+- 사용자가 운영 `lost-party`에 R7 Rules와 Indexes를 게시했다. 구현·Rules·Indexes 구간은 완료로 본다.
+- `NEXT_WORK`에 wipe 보존·삭제 Firebase 경로를 상세히 적었다. 남은 작업은 필요 시 wipe와 디바이스 전체 흐름 회귀다.
+
 # 2026-09-15 파티·그룹 명령 재설계 — R7 legacy Rules 정리
 
 - C* `allow`에서 떼어낸 legacy validator·`validPlayerEvent` fan-out 등 55개 미사용 함수를 제거했다. `validAtomicStaleRaidStateDelete`는 `stateId` 검증을 추가했다.
 - `tools/prune_r7_unused_rules_functions.mjs`로 도달 가능성 기준 정리를 재현할 수 있게 했다. Rules 계약 테스트 35건 통과.
-- CLI `/test`는 503으로 컴파일 성공 여부를 확정하지 못했다. 콘솔 게시·1회 배포는 사용자 지시 후 진행한다.
+- CLI `/test`는 503으로 컴파일 성공 여부를 확정하지 못했다. 이후 사용자가 콘솔에서 Rules·Indexes 게시를 완료했다.
 
 # 2026-09-15 파티·그룹 명령 재설계 — C* Rules 게시 실패·R7 착수
 

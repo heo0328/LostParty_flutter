@@ -61,4 +61,4 @@
 
 ## 다음 작업
 
-현재 작업은 파티·그룹 명령 확장성 재설계의 C* 연결 묶음까지 반영했다. 운영 Router는 원자 Repository를 쓰고 Rules는 구 파티 명령 쓰기를 닫았다. 운영 Rules 게시는 legacy 미사용 함수 정리(R7) 후 wipe·1회 배포·디바이스 회귀 순으로 진행한다. 상세는 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.
+현재 작업은 파티·그룹 명령 확장성 재설계의 R1~R7·C*와 운영 Rules·Indexes 게시까지 완료했다. 남은 것은 `NEXT_WORK`의 wipe 경로에 따른 거래 자료 초기화(필요 시)와 디바이스 전체 흐름 회귀다. 상세는 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.

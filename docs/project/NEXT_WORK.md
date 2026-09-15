@@ -9,9 +9,8 @@
 - `feature/party-group-command-redesign`에서 운영 Rules와 분리된 8인 접근 예산 증명 Rules·Emulator 시나리오를 작성했다. 로컬 정적 계약 테스트와 GitHub Actions의 Ubuntu·JDK 21 격리 Emulator에서 1·2·4·8인 lifecycle 및 핵심 거절 시나리오가 통과했다.
 - 비연결 Domain·Write Plan과 Firestore 원자 Repository까지 생성·신청·재신청·철회·거절·가입·승인, 캐릭터 변경·자리 이동, 탈퇴·추방·승계, 완료·취소·주차 전환·해산, 공개↔그룹 전환을 구현했다. 그룹 해산은 `activeRecruitmentCount` 게이트로 바꿨다. 운영 Router/DI는 C*에서 원자 Repository로 전환했다.
 - 운영 Rules는 복구 가능한 커밋 단위로만 추가한다. 구 경로를 닫거나 Router/DI를 바꾸는 단계는 같은 연결 묶음에서만 수행하며 `dev`에 부분 병합하지 않는다.
-- R1~R6와 C*까지 반영했다. 운영 Router/DI는 원자 Repository·어댑터로 연결했고, `partyEvents` audience 읽기와 구 assignment·slot·cycle·파티 Claim·개인 event 쓰기를 닫았다.
-- C* 이후 운영 Rules 게시는 아직 성공하지 않았다. 콘솔 컴파일은 C*에서 `allow`에서 떼어낸 legacy validator·event fan-out 함수가 남아 `Unused function`과 `getAfter`/`request` 문맥 오류로 실패한다. CLI `/test`는 503으로 같은 소스의 문법 여부를 확정하지 못했다.
-- 다음은 legacy 미사용 함수 정리(R7) 후 Rules·Indexes 1회 배포, 거래 자료 wipe, 디바이스 회귀 순으로 운영 반영한다.
+- R1~R7·C* 구현과 운영 Rules·Indexes 게시는 완료했다. 운영 Router는 원자 Repository·어댑터를 쓰고, 구 assignment·slot·cycle·파티 Claim·개인 party event 쓰기는 닫혀 있다.
+- **남은 작업은 거래 자료 wipe(필요 시)와 디바이스 전체 흐름 회귀뿐**이다. 통과 후 `dev` 병합은 별도 지시로 한다.
 
 ## 운영 Rules 복구 커밋 슬라이스
 
@@ -30,22 +29,59 @@
 
 ### 운영 반영 순서 (C* 이후)
 
-1. R7로 `firestore.rules`를 콘솔 컴파일 가능 상태로 만든다.
-2. 거래 자료 wipe(아래 목록).
-3. Rules·Indexes를 `lost-party`에 1회 배포한다.
-4. 디바이스에서 공개/그룹 모집 생성부터 회귀한다.
+1. R7로 `firestore.rules`를 콘솔 컴파일 가능 상태로 만든다. — **완료**
+2. Rules·Indexes를 `lost-party`에 게시한다. — **완료**
+3. 거래 자료 wipe(아래 경로). — **디바이스 테스트 전 필요 시**
+4. 디바이스에서 공개/그룹 모집 생성부터 회귀한다. — **남은 작업**
 
-### C* 테스트 자료 초기화 절차
+### C* 테스트 자료 초기화(wipe) — Firebase 경로
 
-계정·게임 계정·캐릭터·Auth·`authBindings`·수동 주간 Claim은 보존한다. 아래 거래성 자료만 삭제한다.
+프로젝트: `lost-party`. Auth·계정·캐릭터는 보존하고 **파티·그룹 거래성 자료만** 삭제한다.
 
-1. `recruitments`와 하위 `members`·`applications`·`slots`·`cycles`
-2. `partyEvents`
-3. `players/*/raidStates`, `players/*/activeRaidAssignments`, 파티 출처 `players/*/events`
-4. 그룹 `raidListings`와 그룹 문서의 `activeRecruitmentCount`/`lastRecruitmentId`(또는 그룹 문서 자체 재생성)
-5. wipe 직후 앱을 재실행한다. **운영 Firebase 테스트는 신 Rules·Indexes 배포가 선행**되어야 한다.
+#### 보존 (삭제하지 않음)
 
-Rules·Indexes 배포는 R7 반영과 wipe 뒤 사용자 지시가 있을 때 1회만 수행한다.
+- Firebase Authentication 사용자
+- `authBindings/{authUid}`
+- `players/{playerId}` 본문(상태·lastSeen 등)
+- `players/{playerId}/weeklyRaidClaims/{claimId}` 중 `source == 'manual'`인 문서
+- `players/{playerId}/characterActivity/{characterId}`
+- `gameAccounts/{gameAccountId}`
+- `characters/{characterId}`
+- `characterIdentityClaims/{claimId}`
+- `playerGameAccounts/{ownershipId}`
+- `operatorAssignments/{playerId}`
+- `accountVerificationChallenges/{challengeId}`, `activeAccountVerificationChallenges/{playerId}`
+- `manualVerificationRequests/{requestId}`, `manualVerificationBlocks/{blockId}`
+- `groups/{groupId}` 본문·`members`·가입 관계 등(그룹 자체는 유지). 다만 아래 listing·카운트 필드는 정리한다.
+
+#### 삭제 대상 (경로)
+
+1. **모집 Aggregate와 하위 문서**
+   - `recruitments/{recruitmentId}`
+   - `recruitments/{recruitmentId}/members/{playerId}`
+   - `recruitments/{recruitmentId}/applications/{applicantPlayerId}`
+   - `recruitments/{recruitmentId}/applications/{applicantPlayerId}/votes/{voterPlayerId}`
+   - `recruitments/{recruitmentId}/slots/{slotId}` (예: `0_0`)
+   - `recruitments/{recruitmentId}/cycles/{cycleKey}`
+
+2. **공용 파티 이벤트**
+   - `partyEvents/{eventId}`
+
+3. **플레이어별 점유·구 스키마·파티 출처 이벤트**
+   - `players/{playerId}/raidStates/{stateId}`
+   - `players/{playerId}/activeRaidAssignments/{assignmentId}`
+   - `players/{playerId}/events/{eventId}` — 파티 명령 fan-out 출처만. `type == 'manualVerificationDisputeOpened'` 등 수동 인증 분쟁 이벤트는 보존해도 된다.
+   - `players/{playerId}/weeklyRaidClaims/{claimId}` — `source == 'partyOwner'`인 파티 완료 Claim만 삭제. `source == 'manual'`은 보존.
+
+4. **그룹 모집 listing·카운트**
+   - `groups/{groupId}/raidListings/{recruitmentId}`
+   - `groups/{groupId}` 문서 필드: `activeRecruitmentCount`를 `0`으로, `lastRecruitmentId`는 제거하거나 null로 맞춘다(그룹 문서를 통째로 지우지 않는다).
+
+5. **wipe 후**
+   - 앱을 재실행하고 공개/그룹 모집 **신규 생성**부터 회귀한다.
+   - Indexes 빌드가 `Enabled`인지 콘솔에서 확인한 뒤 `partyEvents` audience 조회를 본다.
+
+콘솔에서 컬렉션 단위로 비우거나, 테스트용 스크립트·수동 삭제로 위 경로만 처리한다. Auth·캐릭터·수동 Claim을 포함한 전체 프로젝트 삭제는 하지 않는다.
 
 ## 이번 작업 목표
 
