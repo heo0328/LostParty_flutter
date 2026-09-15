@@ -3319,6 +3319,14 @@ service cloud.firestore {
         );
       }
 
+      // R1 scaffold: 통합 raidState 경로만 예약한다. 쓰기는 R2·R5에서 연다.
+      match /raidStates/{stateId} {
+        allow get: if hasActiveBinding()
+          && playerId == currentPlayerId();
+        allow list: if false;
+        allow create, update, delete: if false;
+      }
+
       match /characterActivity/{characterId} {
         // 그룹 상세·필터 후보는 활동 ID만 읽고 Character 표시 문서를 따로 조회한다.
         // 별도 Projection 컬렉션과 그룹 교집합 검사는 Rules 컴파일 한도를 넘긴다.
@@ -3688,6 +3696,11 @@ service cloud.firestore {
             request.resource.data
           ));
       allow delete: if signedIn();
+    }
+
+    // R1 scaffold: 공용 파티 이벤트 경로만 예약한다. create/read는 R2·R5에서 연다.
+    match /partyEvents/{eventId} {
+      allow get, list, create, update, delete: if false;
     }
 
     match /recruitments/{recruitmentId} {

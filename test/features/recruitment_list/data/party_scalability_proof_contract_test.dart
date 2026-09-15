@@ -76,11 +76,21 @@ void main() {
     );
   });
 
-  test('증명 단계는 운영 Rules와 Router를 변경하지 않는다', () {
+  test('운영 Rules R1 scaffold는 raidStates·partyEvents 경로만 닫힌 채로 둔다', () {
     final productionRules = File('firestore.rules').readAsStringSync();
 
-    expect(productionRules, isNot(contains('match /partyEvents/{eventId}')));
-    expect(productionRules, isNot(contains('match /raidStates/{stateId}')));
+    expect(productionRules, contains('match /partyEvents/{eventId}'));
+    expect(productionRules, contains('match /raidStates/{stateId}'));
+    expect(
+      productionRules,
+      contains('// R1 scaffold: 통합 raidState 경로만 예약한다'),
+    );
+    expect(
+      productionRules,
+      contains('// R1 scaffold: 공용 파티 이벤트 경로만 예약한다'),
+    );
+    expect(productionRules, isNot(contains('function validLifecycleUpdate(')));
+    expect(productionRules, isNot(contains('function validRaidStateUpdate(')));
   });
 
   test('CI 증명은 운영 프로젝트와 운영 Rules를 참조하지 않는다', () {
