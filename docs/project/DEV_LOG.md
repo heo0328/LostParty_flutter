@@ -1,3 +1,12 @@
+# 2026-09-15 파티·그룹 명령 재설계 — 생성·신청·가입·승인·캐릭터·자리 원자 Repository
+
+- 생성·신청·재신청·철회, 즉시 가입·승인·거절, 캐릭터 변경·자리 이동의 비연결 Firestore 원자 Repository를 추가했다.
+- 신청 거절 Write Plan을 보완해 pending·비그룹 신청 집계를 줄이고 공용 `applicationRejected` 이벤트 한 건만 남긴다. 재신청은 기존 apply 계획으로 pending을 다시 올린다.
+- 생성·가입은 `raidState`로 점유·주간 완료를 판정하고 assignment·Claim·slots·개인 event·전원 membership 재조회를 쓰지 않는다. 그룹 생성 시 `activeRecruitmentCount`를 증가시킨다.
+- 캐릭터 변경은 이전 `raidState` 삭제와 신규 상태 생성, 자리 이동은 대상 membership 1~2건만 갱신한다.
+- 계약 테스트로 운영 Router 미연결과 구 경로 금지를 고정했다. 표적 Write Plan·계약 테스트 16건과 변경 파일 정적 분석이 통과했다.
+- 운영 `firestore.rules`·Router/DI·`partyEvents` 읽기 전환은 수행하지 않았다. 다음은 공개↔그룹 전환 Repository와 그룹 해산 `activeRecruitmentCount` 게이트다.
+
 # 2026-09-14 파티·그룹 명령 재설계 — 권장안 확정과 접근량 감사
 
 - 계정·게임 계정·캐릭터 인증 자료는 보존하고, 새 스키마 전환 때 기존 파티·그룹·신청·회차·이벤트 테스트 자료를 초기화하며 구·신 스키마 호환 계층은 만들지 않기로 확정했다.

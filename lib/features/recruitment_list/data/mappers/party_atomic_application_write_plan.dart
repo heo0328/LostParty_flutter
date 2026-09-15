@@ -123,6 +123,70 @@ class PartyAtomicApplicationWritePlan {
   }
 }
 
+class PartyAtomicApplicationRejectWritePlan {
+  PartyAtomicApplicationRejectWritePlan({
+    required Map<String, Object?> application,
+    required PartyCommandAggregate aggregate,
+    required String applicantPlayerId,
+    required String actorPlayerId,
+    required int applicationRevision,
+    required Object serverTimestamp,
+  }) : recruitmentPatch = PartyAtomicApplicationWritePlan._pendingPatch(
+         aggregate: aggregate,
+         countedAsNonGroupApplicant:
+             PartyAtomicApplicationWritePlan._countedAsNonGroup(application),
+         delta: -1,
+         serverTimestamp: serverTimestamp,
+       ),
+       applicationPatch = Map.unmodifiable({
+         'status': 'rejected',
+         'resolutionReason': 'rejectedByApprover',
+         'rejectionCount': (application['rejectionCount'] as int? ?? 0) + 1,
+         'revision': applicationRevision + 1,
+         'decidedAt': serverTimestamp,
+         'updatedAt': serverTimestamp,
+       }),
+       event = _rejectEvent(
+         aggregate: aggregate,
+         applicantPlayerId: applicantPlayerId,
+         actorPlayerId: actorPlayerId,
+         serverTimestamp: serverTimestamp,
+       ) {
+    PartyAtomicApplicationWritePlan._validateActive(aggregate);
+    if (aggregate.pendingApplicationCount <= 0) {
+      throw StateError('거절할 pending 신청 집계가 없습니다.');
+    }
+  }
+
+  final Map<String, Object?> recruitmentPatch;
+  final Map<String, Object?> applicationPatch;
+  final Map<String, Object?> event;
+
+  static Map<String, Object?> _rejectEvent({
+    required PartyCommandAggregate aggregate,
+    required String applicantPlayerId,
+    required String actorPlayerId,
+    required Object serverTimestamp,
+  }) {
+    final revision = aggregate.revision + 1;
+    final eventId = 'applicationRejected_${aggregate.recruitmentId}_$revision';
+    return Map.unmodifiable({
+      'schemaVersion': 1,
+      'eventId': eventId,
+      'recruitmentId': aggregate.recruitmentId,
+      'type': 'applicationRejected',
+      'commandId': eventId,
+      'commandRevision': revision,
+      'audiencePlayerIds': {
+        aggregate.leaderPlayerId,
+        applicantPlayerId,
+      }.toList(growable: false),
+      'actorPlayerId': actorPlayerId,
+      'occurredAt': serverTimestamp,
+    });
+  }
+}
+
 class PartyAtomicApprovalWritePlan {
   PartyAtomicApprovalWritePlan({
     required PartyAtomicJoinWritePlan join,

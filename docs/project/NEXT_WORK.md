@@ -6,7 +6,9 @@
 - 최신 앱과 운영 Rules에서도 다인 모집 해산이 `permission-denied`로 실패했다.
 - 해산 버튼을 숨기는 임시 UI 변경은 철회했고 기존 화면을 복원했다. 해산 한 곳을 다시 보정하지 않고 인원수에 비례해 커지는 파티·그룹 명령 전체를 재설계한다.
 - 장기 설계와 영향·회귀 목록은 [`../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md)를 기준으로 한다.
-- `feature/party-group-command-redesign`에서 운영 Rules와 분리된 8인 접근 예산 증명 Rules·Emulator 시나리오를 작성했다. 로컬 정적 계약 테스트 6건과 GitHub Actions의 Ubuntu·JDK 21 격리 Emulator에서 1·2·4·8인 성공 및 핵심 거절 시나리오가 모두 통과했다. 첫 Rules 엔진 검증 게이트는 통과했으며 다음 비연결 구조 구현을 시작할 수 있다.
+- `feature/party-group-command-redesign`에서 운영 Rules와 분리된 8인 접근 예산 증명 Rules·Emulator 시나리오를 작성했다. 로컬 정적 계약 테스트와 GitHub Actions의 Ubuntu·JDK 21 격리 Emulator에서 1·2·4·8인 lifecycle 및 핵심 거절 시나리오가 통과했다.
+- 비연결 Domain·Write Plan과 Firestore 원자 Repository까지 생성·신청·재신청·철회·거절·가입·승인, 캐릭터 변경·자리 이동, 탈퇴·추방·승계, 완료·취소·주차 전환·해산을 구현했다. 운영 Router/DI와 `firestore.rules`는 아직 전환하지 않았다.
+- 다음은 공개↔그룹 전환 원자 Repository와 그룹 해산의 `activeRecruitmentCount` 게이트를 마친 뒤, 모든 쓰기 경로가 준비된 상태에서 운영 Rules·Router/DI·`partyEvents` 읽기를 한 번에 연결한다.
 
 ## 이번 작업 목표
 
@@ -67,7 +69,9 @@
 5. 기능별 전환 순서와 자동·실기기 검증표를 확정한다.
 6. 문서 승인 후 단일 구조개선 기능 브랜치에서 Rules 예산 증명부터 시작하고, 전체 전환 전에는 `dev`에 부분 병합하지 않는다.
 
-6번의 첫 Rules 예산 증명은 GitHub Actions 실행 `34848336222`에서 통과했다. 비연결 Domain·Repository 계약으로 통합 `raidState`, 최대 8칸 Aggregate, 제한 명령 봉투, 응답 유실 판정과 Repository 인터페이스를 추가했다. Firestore Aggregate 매퍼와 완료·취소·주차 전환·해산 Write Plan도 추가해 비그룹 8인 완료 10건, 그룹 8인 일반 수명주기 11건, 그룹 모집을 닫는 1회성 완료·활성 해산 12건과 완료 후 해산 2건의 제한된 쓰기 및 대상·revision 불변식을 표적 테스트로 고정했다. 반복방 완료·취소, 미완료 주차 전환, 1회성 완료와 완료 후 해산을 구분한 보강 Rules도 Actions 실행 `34851122346`에서 재통과했다. 비연결 Firestore Repository와 생성·가입·신청·재신청·철회·승인, 캐릭터 변경·빈자리 이동·점유 자리 교환, 탈퇴·추방·가입 순서 기반 파티장 승계의 고정 크기 Write Plan까지 완료했다. 그룹 자격 집계는 슬롯과 신청 문서에 각각 집계 당시 Snapshot을 저장해 이후 그룹 탈퇴가 과거 집계를 훼손하지 않게 했고, 공개↔그룹 전환을 Aggregate 집계와 그룹 `activeRecruitmentCount`만으로 계획한다. 1회성 그룹 모집은 완료 순간 활성 수와 listing을 닫고 이후 화면 마무리 해산에서는 이중 감소하지 않도록 Repository와 격리 Rules 증명을 보완했으며 Actions 실행 `34857997972`에서 1·2·4·8인 시나리오가 통과했다. 탈퇴·추방·그룹 자격 상실 정리는 전원 조회 없이 대상·필요 후임·`raidState`·그룹 membership 직접 문서만 읽는 비연결 Firestore Repository까지 추가했다. 다음은 생성·신청·가입·승인과 캐릭터 변경·자리 이동 Repository 전환 준비다. 운영 Rules와 Router/DI 전환은 모든 쓰기 경로와 테스트가 준비된 뒤 별도 연결 단계에서 수행한다.
+6번의 첫 Rules 예산 증명은 GitHub Actions 실행 `34848336222`에서 통과했다. 비연결 Domain·Repository 계약으로 통합 `raidState`, 최대 8칸 Aggregate, 제한 명령 봉투, 응답 유실 판정과 Repository 인터페이스를 추가했다. Firestore Aggregate 매퍼와 완료·취소·주차 전환·해산 Write Plan도 추가해 비그룹 8인 완료 10건, 그룹 8인 일반 수명주기 11건, 그룹 모집을 닫는 1회성 완료·활성 해산 12건과 완료 후 해산 2건의 제한된 쓰기 및 대상·revision 불변식을 표적 테스트로 고정했다. 반복방 완료·취소, 미완료 주차 전환, 1회성 완료와 완료 후 해산을 구분한 보강 Rules도 Actions 실행 `34851122346`에서 재통과했다. 비연결 Firestore Repository와 생성·가입·신청·재신청·철회·승인, 캐릭터 변경·빈자리 이동·점유 자리 교환, 탈퇴·추방·가입 순서 기반 파티장 승계의 고정 크기 Write Plan까지 완료했다. 그룹 자격 집계는 슬롯과 신청 문서에 각각 집계 당시 Snapshot을 저장해 이후 그룹 탈퇴가 과거 집계를 훼손하지 않게 했고, 공개↔그룹 전환을 Aggregate 집계와 그룹 `activeRecruitmentCount`만으로 계획한다. 1회성 그룹 모집은 완료 순간 활성 수와 listing을 닫고 이후 화면 마무리 해산에서는 이중 감소하지 않도록 Repository와 격리 Rules 증명을 보완했으며 Actions 실행 `34857997972`에서 1·2·4·8인 시나리오가 통과했다. 탈퇴·추방·그룹 자격 상실 정리는 전원 조회 없이 대상·필요 후임·`raidState`·그룹 membership 직접 문서만 읽는 비연결 Firestore Repository까지 추가했다.
+
+생성·신청·재신청·철회, 즉시 가입·승인·거절, 캐릭터 변경·자리 이동의 비연결 Firestore 원자 Repository도 추가했다. 신청 거절은 pending 집계를 줄이는 `PartyAtomicApplicationRejectWritePlan`을 쓰고, 재신청은 기존 `.apply` 계획으로 pending을 다시 올린다. 생성·가입은 `raidState` 점유와 주간 완료를 확인하며 assignment·Claim·slots·개인 event·전원 `members.get`을 사용하지 않는다. 계약 테스트는 운영 Router 미연결을 고정한다. 운영 Rules와 Router/DI 전환은 공개↔그룹·그룹 해산 게이트를 포함한 모든 쓰기 경로가 준비된 뒤 별도 연결 단계에서 수행한다.
 
 `party-scalability-proof.yml`은 기능 브랜치의 관련 증명 파일 push와 수동 실행에만 연결한다. Ubuntu·JDK 21·demo 프로젝트 Emulator와 전용 설정·Rules만 사용하며 운영 Firebase 인증·배포는 수행하지 않는다.
 

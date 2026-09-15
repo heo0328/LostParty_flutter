@@ -137,4 +137,26 @@ void main() {
     expect(plan.applicationPatch['revision'], 3);
     expect(plan.raidStateId, 'character-1_raid-1');
   });
+
+  test('거절은 pending 집계를 줄이고 공용 거절 이벤트 한 건을 만든다', () {
+    final plan = PartyAtomicApplicationRejectWritePlan(
+      application: const {
+        'status': 'pending',
+        'countedAsNonGroupApplicant': true,
+        'rejectionCount': 0,
+      },
+      aggregate: aggregate(pending: 1, pendingNonGroup: 1),
+      applicantPlayerId: 'applicant',
+      actorPlayerId: 'leader',
+      applicationRevision: 2,
+      serverTimestamp: timestamp,
+    );
+
+    expect(plan.recruitmentPatch['pendingApplicationCount'], 0);
+    expect(plan.recruitmentPatch['pendingNonGroupApplicantCount'], 0);
+    expect(plan.applicationPatch['status'], 'rejected');
+    expect(plan.applicationPatch['rejectionCount'], 1);
+    expect(plan.event['type'], 'applicationRejected');
+    expect(plan.event['actorPlayerId'], 'leader');
+  });
 }
