@@ -1682,6 +1682,238 @@ service cloud.firestore {
         && newData.updatedAt == request.time;
     }
 
+    // R2: 원자 lifecycle 명령 검증(증명 Rules 이식). 구 cycle/disband 분기는 유지한다.
+    function atomicRaidStatePath(target) {
+      return /databases/$(database)/documents/players/$(target.playerId)/raidStates/$(target.stateId);
+    }
+
+    function atomicHasGroupId(data) {
+      return data.groupId is string && data.groupId.size() > 0;
+    }
+
+    function atomicLifecycleActorOwns(oldData) {
+      return hasActiveBinding()
+        && currentPlayerId() == oldData.leaderPlayerId;
+    }
+
+    function atomicIsLifecycleCommand(newData) {
+      return newData.lastCommandType is string
+        && (newData.lastCommandType == 'complete'
+          || newData.lastCommandType == 'cancelCompletion'
+          || newData.lastCommandType == 'advanceCycle'
+          || newData.lastCommandType == 'disband');
+    }
+
+    function atomicTargetStateMatches(data, state) {
+      return state.recruitmentId == data.recruitmentId
+        && state.cycleKey == data.currentCycleKey
+        && ((data.lastCommandType == 'complete' && state.status == 'completed')
+          || (data.lastCommandType == 'cancelCompletion'
+            && state.status == 'active')
+          || (data.lastCommandType == 'advanceCycle'
+            && state.status == 'active'));
+    }
+
+    function atomicTargetMatchesTransition(data, index) {
+      return index >= data.commandTargets.size()
+        || (data.lastCommandType == 'disband'
+          && !existsAfter(atomicRaidStatePath(data.commandTargets[index])))
+        || (data.lastCommandType != 'disband'
+          && atomicTargetStateMatches(
+            data,
+            getAfter(atomicRaidStatePath(data.commandTargets[index])).data
+          ));
+    }
+
+    function atomicAllTargetsMatch(data) {
+      return data.commandTargets.size() <= 8
+        && (data.commandTargets.size() >= 1
+          || (data.lastCommandType == 'disband'
+            && data.currentCycleStatus == 'completed'))
+        && atomicTargetMatchesTransition(data, 0)
+        && atomicTargetMatchesTransition(data, 1)
+        && atomicTargetMatchesTransition(data, 2)
+        && atomicTargetMatchesTransition(data, 3)
+        && atomicTargetMatchesTransition(data, 4)
+        && atomicTargetMatchesTransition(data, 5)
+        && atomicTargetMatchesTransition(data, 6)
+        && atomicTargetMatchesTransition(data, 7);
+    }
+
+    function atomicValidLifecycleShape(oldData, newData) {
+      return newData.leaderPlayerId == oldData.leaderPlayerId
+        && newData.groupId == oldData.groupId
+        && newData.raidStateTargets == oldData.raidStateTargets
+        && (newData.commandTargets == oldData.raidStateTargets
+          || (newData.lastCommandType == 'disband'
+            && oldData.currentCycleStatus == 'completed'
+            && newData.commandTargets.size() == 0))
+        && newData.revision == oldData.revision + 1
+        && newData.lastCommandActorPlayerId == oldData.leaderPlayerId
+        && newData.groupActiveRecruitmentCountAfter is int
+        && newData.lastCommandId is string
+        && newData.lastCommandAt == request.time;
+    }
+
+    function atomicValidLifecycleState(oldData, newData) {
+      return (newData.lastCommandType == 'complete'
+          && oldData.status == 'active'
+          && oldData.currentCycleStatus == 'active'
+          && newData.status
+            == (oldData.continueTogether ? 'active' : 'completed')
+          && newData.currentCycleStatus == 'completed'
+          && newData.currentCycleKey == oldData.currentCycleKey)
+        || (newData.lastCommandType == 'cancelCompletion'
+          && oldData.status == 'active'
+          && oldData.continueTogether == true
+          && oldData.currentCycleStatus == 'completed'
+          && newData.status == 'active'
+          && newData.currentCycleStatus == 'active'
+          && newData.currentCycleKey == oldData.currentCycleKey)
+        || (newData.lastCommandType == 'advanceCycle'
+          && oldData.status == 'active'
+          && oldData.continueTogether == true
+          && (oldData.currentCycleStatus == 'active'
+            || oldData.currentCycleStatus == 'completed')
+          && newData.status == 'active'
+          && newData.currentCycleStatus == 'active'
+          && newData.currentCycleKey != oldData.currentCycleKey)
+        || (newData.lastCommandType == 'disband'
+          && (oldData.status == 'active' || oldData.status == 'completed')
+          && newData.status == 'disbanded'
+          && newData.currentCycleStatus == oldData.currentCycleStatus
+          && newData.currentCycleKey == oldData.currentCycleKey);
+    }
+
+    function atomicClosesActiveGroupRecruitment(oldData, newData) {
+      return (newData.lastCommandType == 'complete'
+          && oldData.continueTogether == false)
+        || (newData.lastCommandType == 'disband'
+          && oldData.status == 'active');
+    }
+
+    function atomicValidGroupLifecycleCount(oldData, newData) {
+      return !atomicHasGroupId(oldData)
+        || (!atomicClosesActiveGroupRecruitment(oldData, newData)
+          && newData.groupActiveRecruitmentCountAfter
+            == oldData.groupActiveRecruitmentCountAfter)
+        || (atomicClosesActiveGroupRecruitment(oldData, newData)
+          && getAfter(groupPath(oldData.groupId)).data.activeRecruitmentCount
+            == newData.groupActiveRecruitmentCountAfter
+          && newData.groupActiveRecruitmentCountAfter
+            == oldData.groupActiveRecruitmentCountAfter - 1);
+    }
+
+    function validAtomicLifecycleUpdate(oldData, newData) {
+      return atomicIsLifecycleCommand(newData)
+        && atomicLifecycleActorOwns(oldData)
+        && atomicValidLifecycleShape(oldData, newData)
+        && atomicValidLifecycleState(oldData, newData)
+        && atomicAllTargetsMatch(newData)
+        && atomicValidGroupLifecycleCount(oldData, newData);
+    }
+
+    function atomicTargetAt(data, index, playerId, stateId) {
+      return index < data.commandTargets.size()
+        && data.commandTargets[index].playerId == playerId
+        && data.commandTargets[index].stateId == stateId;
+    }
+
+    function atomicCommandIncludes(data, playerId, stateId) {
+      return atomicTargetAt(data, 0, playerId, stateId)
+        || atomicTargetAt(data, 1, playerId, stateId)
+        || atomicTargetAt(data, 2, playerId, stateId)
+        || atomicTargetAt(data, 3, playerId, stateId)
+        || atomicTargetAt(data, 4, playerId, stateId)
+        || atomicTargetAt(data, 5, playerId, stateId)
+        || atomicTargetAt(data, 6, playerId, stateId)
+        || atomicTargetAt(data, 7, playerId, stateId);
+    }
+
+    function validAtomicRaidStateUpdate(playerId, stateId, oldData, newData) {
+      let recruitment = getAfter(recruitmentPath(oldData.recruitmentId)).data;
+      return atomicIsLifecycleCommand(recruitment)
+        && newData.playerId == playerId
+        && oldData.playerId == playerId
+        && newData.recruitmentId == oldData.recruitmentId
+        && atomicCommandIncludes(recruitment, playerId, stateId)
+        && newData.revision == oldData.revision + 1
+        && ((recruitment.lastCommandType == 'complete'
+            && oldData.status == 'active'
+            && newData.status == 'completed'
+            && newData.cycleKey == oldData.cycleKey)
+          || (recruitment.lastCommandType == 'cancelCompletion'
+            && oldData.status == 'completed'
+            && newData.status == 'active'
+            && newData.cycleKey == oldData.cycleKey)
+          || (recruitment.lastCommandType == 'advanceCycle'
+            && (oldData.status == 'active' || oldData.status == 'completed')
+            && newData.status == 'active'
+            && newData.cycleKey == recruitment.currentCycleKey));
+    }
+
+    function validAtomicRaidStateDelete(playerId, stateId, oldData) {
+      let recruitment = getAfter(recruitmentPath(oldData.recruitmentId)).data;
+      return recruitment.lastCommandType == 'disband'
+        && recruitment.status == 'disbanded'
+        && oldData.status == 'active'
+        && atomicCommandIncludes(recruitment, playerId, stateId);
+    }
+
+    function validAtomicLifecyclePartyEvent(data) {
+      let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
+      return atomicIsLifecycleCommand(recruitment)
+        && data.keys().hasOnly([
+          'schemaVersion', 'eventId', 'recruitmentId', 'type', 'commandId',
+          'commandRevision', 'audiencePlayerIds', 'actorPlayerId', 'occurredAt'
+        ])
+        && data.schemaVersion == 1
+        && data.eventId is string
+        && data.type == recruitment.lastCommandType
+        && data.commandId == recruitment.lastCommandId
+        && data.commandRevision == recruitment.revision
+        && data.audiencePlayerIds is list
+        && data.audiencePlayerIds.size() <= 8
+        && data.actorPlayerId == recruitment.lastCommandActorPlayerId
+        && data.occurredAt == request.time;
+    }
+
+    function validAtomicLifecycleListingUpdate(recruitmentId, data) {
+      let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
+      return atomicIsLifecycleCommand(recruitment)
+        && recruitment.lastCommandType != 'disband'
+        && data.recruitmentId == recruitmentId
+        && data.sourceRevision == recruitment.revision
+        && data.status == recruitment.status
+        && data.updatedAt == request.time;
+    }
+
+    function validAtomicLifecycleListingDelete(recruitmentId) {
+      let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
+      return atomicIsLifecycleCommand(recruitment)
+        && (recruitment.status == 'completed'
+          || recruitment.status == 'disbanded')
+        && (recruitment.lastCommandType == 'complete'
+          || recruitment.lastCommandType == 'disband');
+    }
+
+    function validAtomicGroupRecruitmentClose(groupId, oldData, newData) {
+      let recruitment = getAfter(recruitmentPath(newData.lastRecruitmentId)).data;
+      return atomicIsLifecycleCommand(recruitment)
+        && recruitment.groupId == groupId
+        && ((recruitment.lastCommandType == 'disband'
+            && recruitment.status == 'disbanded')
+          || (recruitment.lastCommandType == 'complete'
+            && recruitment.status == 'completed'
+            && recruitment.continueTogether == false))
+        && newData.activeRecruitmentCount == oldData.activeRecruitmentCount - 1
+        && recruitment.groupActiveRecruitmentCountAfter
+          == newData.activeRecruitmentCount
+        && newData.lastRecruitmentId == recruitment.recruitmentId
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
     function validGroupRaidListingDelete(groupId, recruitmentId) {
       let after = getAfter(recruitmentPath(recruitmentId)).data;
       let beforeLeader = exists(recruitmentPath(recruitmentId))
@@ -3319,12 +3551,23 @@ service cloud.firestore {
         );
       }
 
-      // R1 scaffold: 통합 raidState 경로만 예약한다. 쓰기는 R2·R5에서 연다.
+      // R1/R2: raidState 경로. create는 R5, lifecycle update/delete는 R2에서 연다.
       match /raidStates/{stateId} {
         allow get: if hasActiveBinding()
           && playerId == currentPlayerId();
         allow list: if false;
-        allow create, update, delete: if false;
+        allow create: if false;
+        allow update: if validAtomicRaidStateUpdate(
+          playerId,
+          stateId,
+          resource.data,
+          request.resource.data
+        );
+        allow delete: if validAtomicRaidStateDelete(
+          playerId,
+          stateId,
+          resource.data
+        );
       }
 
       match /characterActivity/{characterId} {
@@ -3698,9 +3941,10 @@ service cloud.firestore {
       allow delete: if signedIn();
     }
 
-    // R1 scaffold: 공용 파티 이벤트 경로만 예약한다. create/read는 R2·R5에서 연다.
+    // R1/R2: 공용 파티 이벤트. lifecycle create만 열고 get/list는 이후 읽기 슬라이스에서 연다.
     match /partyEvents/{eventId} {
-      allow get, list, create, update, delete: if false;
+      allow get, list, update, delete: if false;
+      allow create: if validAtomicLifecyclePartyEvent(request.resource.data);
     }
 
     match /recruitments/{recruitmentId} {
@@ -3743,6 +3987,9 @@ service cloud.firestore {
           resource.data,
           request.resource.data
         ) || validRecruitmentVisibilityChange(
+          resource.data,
+          request.resource.data
+        ) || validAtomicLifecycleUpdate(
           resource.data,
           request.resource.data
         );
@@ -3875,6 +4122,10 @@ service cloud.firestore {
         groupId,
         resource.data,
         request.resource.data
+      ) || validAtomicGroupRecruitmentClose(
+        groupId,
+        resource.data,
+        request.resource.data
       ) || validGroupJoinCodeFlagUpdate(
         resource.data,
         request.resource.data
@@ -3955,8 +4206,12 @@ service cloud.firestore {
           groupId,
           recruitmentId,
           request.resource.data
+        ) || validAtomicLifecycleListingUpdate(
+          recruitmentId,
+          request.resource.data
         );
-        allow delete: if validGroupRaidListingDelete(groupId, recruitmentId);
+        allow delete: if validGroupRaidListingDelete(groupId, recruitmentId)
+          || validAtomicLifecycleListingDelete(recruitmentId);
       }
 
       // Unit 4는 초대·신청 처리에 더해 코드 가입이 pending 요청을

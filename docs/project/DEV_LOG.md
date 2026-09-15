@@ -1,3 +1,10 @@
+# 2026-09-15 파티·그룹 명령 재설계 — 운영 Rules R2 lifecycle OR
+
+- 증명 Rules의 lifecycle 검증을 `atomic*` 접두사로 운영 `firestore.rules`에 이식하고, 모집 update·raidState update/delete·partyEvents create·group close·listing update/delete에 OR로 연결했다.
+- 구 `validCycleCompletion`·`validRecruitmentDisband`·assignment·Claim·개인 event 경로는 유지했다. raidState create는 계속 닫아 R5에 남긴다.
+- `groupId`는 빈 문자열이 아니라 문자열 존재 여부로 판정해 운영 문서의 null/생략과 맞췄다.
+- R2 계약 테스트를 추가했고 운영 Firebase 배포는 수행하지 않았다. 다음은 R3다.
+
 # 2026-09-15 파티·그룹 명령 재설계 — 운영 Rules 복구 슬라이스 시작
 
 - 운영 Rules를 R1~R6 추가형 복구 커밋과 C* 연결 묶음으로 구분했다. 구 경로를 닫거나 Router/DI를 바꾸는 단계는 연결 묶음에서만 수행한다.

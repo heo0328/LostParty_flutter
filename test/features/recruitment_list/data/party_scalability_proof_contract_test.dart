@@ -76,19 +76,13 @@ void main() {
     );
   });
 
-  test('운영 Rules R1 scaffold는 raidStates·partyEvents 경로만 닫힌 채로 둔다', () {
+  test('운영 Rules R2는 atomic lifecycle 검증을 추가하고 증명 Rules는 분리 유지한다', () {
     final productionRules = File('firestore.rules').readAsStringSync();
 
     expect(productionRules, contains('match /partyEvents/{eventId}'));
     expect(productionRules, contains('match /raidStates/{stateId}'));
-    expect(
-      productionRules,
-      contains('// R1 scaffold: 통합 raidState 경로만 예약한다'),
-    );
-    expect(
-      productionRules,
-      contains('// R1 scaffold: 공용 파티 이벤트 경로만 예약한다'),
-    );
+    expect(productionRules, contains('function validAtomicLifecycleUpdate('));
+    expect(productionRules, contains('function validAtomicRaidStateUpdate('));
     expect(productionRules, isNot(contains('function validLifecycleUpdate(')));
     expect(productionRules, isNot(contains('function validRaidStateUpdate(')));
   });

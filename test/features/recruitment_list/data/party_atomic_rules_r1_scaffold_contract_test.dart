@@ -9,33 +9,18 @@ void main() {
     rules = File('firestore.rules').readAsStringSync().replaceAll('\r\n', '\n');
   });
 
-  test('R1 scaffold는 raidStates·partyEvents 경로를 열고 쓰기는 닫는다', () {
+  test('R1 경로는 유지되고 raidStates create는 계속 닫혀 있다', () {
     final raidStatesStart = rules.indexOf('match /raidStates/{stateId}');
     final raidStatesEnd = rules.indexOf(
       'match /characterActivity/{characterId}',
       raidStatesStart,
     );
     final partyEventsStart = rules.indexOf('match /partyEvents/{eventId}');
-    final partyEventsEnd = rules.indexOf(
-      'match /recruitments/{recruitmentId}',
-      partyEventsStart,
-    );
     expect(raidStatesStart, greaterThanOrEqualTo(0));
-    expect(raidStatesEnd, greaterThan(raidStatesStart));
     expect(partyEventsStart, greaterThanOrEqualTo(0));
-    expect(partyEventsEnd, greaterThan(partyEventsStart));
-
     final raidStates = rules.substring(raidStatesStart, raidStatesEnd);
-    final partyEvents = rules.substring(partyEventsStart, partyEventsEnd);
-
-    expect(raidStates, contains('allow create, update, delete: if false'));
+    expect(raidStates, contains('allow create: if false'));
     expect(raidStates, contains('playerId == currentPlayerId()'));
-    expect(raidStates, isNot(contains('validRaidStateUpdate')));
-    expect(
-      partyEvents,
-      contains('allow get, list, create, update, delete: if false'),
-    );
-    expect(partyEvents, isNot(contains('validEvent')));
   });
 
   test('R1은 구 assignment·Claim·개인 event 경로를 유지한다', () {
