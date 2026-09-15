@@ -42,9 +42,13 @@ class GroupCreateWritePlan {
       throw StateError('Active group limit reached.');
     }
     final characterName = normalizer.displayName(verifiedCharacterName);
-    final name = command.usesDefaultName
+    final rawName = command.usesDefaultName
         ? normalizer.defaultName(characterName)
         : normalizer.displayName(command.name!);
+    // Rules validGroupDisplayName 상한 20자에 맞춘다.
+    final name = rawName.length <= GroupCreateCommand.maxNameLength
+        ? rawName
+        : rawName.substring(0, GroupCreateCommand.maxNameLength);
     final activeGroupIds = [...membershipState.activeGroupIds, groupId];
     return GroupCreateWritePlan(
       groupId: groupId,

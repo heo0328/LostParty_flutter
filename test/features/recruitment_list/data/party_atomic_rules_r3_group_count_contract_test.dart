@@ -26,6 +26,8 @@ void main() {
 
     expect(close, contains('oldData.activeRecruitmentCount is int'));
     expect(close, contains('oldData.activeRecruitmentCount > 0'));
+    expect(close, contains('newData.lastRecruitmentId is string'));
+    expect(close, contains('existsAfter(recruitmentPath(newData.lastRecruitmentId))'));
     expect(
       close,
       contains(
@@ -40,6 +42,12 @@ void main() {
       contains(
         'newData.activeRecruitmentCount == oldData.activeRecruitmentCount - 1',
       ),
+    );
+    expect(rules, contains('function validAtomicGroupRecruitmentCloseBody('));
+    expect(rules, contains('function validAtomicGroupRecruitmentOpenBody('));
+    expect(
+      rules,
+      contains('existsAfter(recruitmentPath(newData.lastRecruitmentId))'),
     );
   });
 

@@ -13,13 +13,13 @@
 - 인증은 `AuthUid`, 파티 조회와 권한 판정은 binding으로 확정한 `PlayerId`를 사용한다.
 - `cycleKey`는 `Asia/Seoul` 매주 수요일 06:00 기준 시작일을 `yyyy-MM-dd`로 저장한다.
 - 서버 공유 시간은 Firestore Timestamp로 저장하고 서버 시간을 기준으로 한다.
-- 모든 읽기 모델은 `schemaVersion == 1`을 요구하고 알 수 없는 버전을 정상 데이터로 유출하지 않는다.
+- 모집 Aggregate 읽기 모델은 `schemaVersion == 2`를 요구한다. membership·application 하위 문서는 계속 `schemaVersion == 1`이다. 알 수 없는 버전을 정상 데이터로 유출하지 않는다.
 
 ## 3. 모집 Current State
 
 ```text
 recruitments/{recruitmentId}
-  schemaVersion: 1
+  schemaVersion: 2
   title
   leaderPlayerId
   leaderCharacterNameSnapshot
@@ -113,7 +113,7 @@ recruitments/{recruitmentId}/applications/{playerId}
 
 ```text
 collection: recruitments
-where schemaVersion == 1
+where schemaVersion == 2
 where visibility == public
 where status == active
 where manualRecruitmentEnabled == true
@@ -154,7 +154,7 @@ limit 20
 
 ### 레이드 현황—진행 중
 
-다음 두 실시간 쿼리를 ID로 합친다.
+다음 두 실시간 쿼리를 ID로 합친다. 둘 다 `schemaVersion == 2`를 요구한다.
 
 1. `leaderPlayerId == currentPlayerId`, `status in [active, completed]`
 2. `memberPlayerIds array-contains currentPlayerId`, `status in [active, completed]`

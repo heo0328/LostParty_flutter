@@ -26,11 +26,13 @@ void main() {
     expect(rules, contains('function validAtomicJoinedMembership('));
     expect(rules, contains('function validAtomicMemberRemoval('));
     expect(rules, contains('function validAtomicMembershipRaidStateDelete('));
+    expect(rules, contains('function validAtomicMemberCharacterChange('));
     expect(rules, contains('function validAtomicGroupRecruitmentOpen('));
     expect(rules, contains('function validAtomicVisibilityListingWrite('));
     expect(rules, contains('|| validAtomicJoinedMembership('));
     expect(rules, contains('validAtomicMemberRemoval('));
     expect(rules, contains('|| validAtomicMembershipRaidStateDelete('));
+    expect(rules, contains('validAtomicMemberCharacterChange('));
     expect(rules, contains('|| validAtomicGroupRecruitmentOpen('));
     expect(rules, contains('|| validAtomicVisibilityListingWrite('));
   });

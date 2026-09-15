@@ -53,6 +53,9 @@ class PartyRaidListingSyncPlan {
 class PartyRaidListingTx {
   const PartyRaidListingTx._(this.ref, this.snapshot);
 
+  /// 그룹 listing을 읽지 않을 때 쓰기 no-op용.
+  static const empty = PartyRaidListingTx._(null, null);
+
   final DocumentReference<Map<String, dynamic>>? ref;
   final DocumentSnapshot<Map<String, dynamic>>? snapshot;
 

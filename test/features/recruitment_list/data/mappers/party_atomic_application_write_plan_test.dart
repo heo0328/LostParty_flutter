@@ -128,12 +128,15 @@ void main() {
       aggregate: current,
       applicantCountedAsNonGroup: true,
       applicationRevision: 2,
+      currentApprovalCount: 0,
       serverTimestamp: timestamp,
     );
 
     expect(plan.recruitmentPatch['pendingApplicationCount'], 0);
     expect(plan.recruitmentPatch['pendingNonGroupApplicantCount'], 0);
     expect(plan.applicationPatch['status'], 'approved');
+    expect(plan.applicationPatch['resolutionReason'], 'approvedByApprover');
+    expect(plan.applicationPatch['approvalCount'], 1);
     expect(plan.applicationPatch['revision'], 3);
     expect(plan.raidStateId, 'character-1_raid-1');
   });

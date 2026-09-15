@@ -114,10 +114,14 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       (widget.applicationCommandRepository != null ||
           widget.joinCommandRepository != null);
 
-  bool get _canManageApplications =>
+  /// 즉시가입·승인 명령 repo 연결 여부. 신청 목록 Listen은 리더만 연다.
+  bool get _hasJoinCommands =>
       widget.joinCommandRepository != null &&
       widget.playerId != null &&
       widget.playerId!.isNotEmpty;
+
+  bool _canManageApplications(PublicRecruitmentSummary summary) =>
+      _hasJoinCommands && _isLeader(summary);
 
   @override
   void initState() {
@@ -282,12 +286,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
             },
           );
     }
-    if (_canManageApplications) {
-      _applicationsLoading = true;
-      _applicationsSubscription = widget.partyReadRepository
-          .watchRecruitmentApplications(widget.recruitmentId)
-          .listen(_onApplications, onError: _onApplicationsError);
-    }
+    // 신청 목록·구 cycles는 리더/멤버 확인 후 summary 기준으로 연다.
     if (mounted) setState(() {});
   }
 
@@ -324,8 +323,41 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     );
   }
 
-  void _ensureCycleSubscription(String cycleKey) {
-    if (cycleKey.isEmpty || _subscribedCycleKey == cycleKey) return;
+  void _ensureApplicationsSubscription(PublicRecruitmentSummary summary) {
+    if (!_canManageApplications(summary)) {
+      if (_applicationsSubscription == null) return;
+      _applicationsSubscription?.cancel();
+      _applicationsSubscription = null;
+      if (!mounted) return;
+      setState(() {
+        _applications = const [];
+        _applicationsLoading = false;
+        _applicationsFailure = null;
+      });
+      return;
+    }
+    if (_applicationsSubscription != null) return;
+    setState(() => _applicationsLoading = true);
+    _applicationsSubscription = widget.partyReadRepository
+        .watchRecruitmentApplications(widget.recruitmentId)
+        .listen(_onApplications, onError: _onApplicationsError);
+  }
+
+  void _ensureCycleSubscription(
+    PublicRecruitmentSummary summary,
+    String cycleKey,
+  ) {
+    // C*: cycles 쓰기는 닫혀 있고 읽기는 리더·멤버만. 비멤버 구독은 Listen deny만 남긴다.
+    final canReadPrivate = _isLeader(summary) || _isConfirmedMember;
+    if (!canReadPrivate || cycleKey.isEmpty) {
+      if (_cycleSubscription == null && _subscribedCycleKey == null) return;
+      _cycleSubscription?.cancel();
+      _cycleSubscription = null;
+      _subscribedCycleKey = null;
+      if (_cycle != null && mounted) setState(() => _cycle = null);
+      return;
+    }
+    if (_subscribedCycleKey == cycleKey) return;
     _cycleSubscription?.cancel();
     _subscribedCycleKey = cycleKey;
     _cycle = null;
@@ -633,7 +665,8 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
           }
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
-              _ensureCycleSubscription(summary.currentCycleKey);
+              _ensureApplicationsSubscription(summary);
+              _ensureCycleSubscription(summary, summary.currentCycleKey);
               _purgeStaleOwnAssignmentIfNeeded(summary);
               _refreshLostGroupQualification(summary);
             }
@@ -762,7 +795,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                     onWithdraw: _withdraw,
                   )
                 else if (!_canApplicantAction &&
-                    !_canManageApplications &&
+                    !_hasJoinCommands &&
                     !_canUseMembershipCommands)
                   const Padding(
                     padding: EdgeInsets.fromLTRB(16, 24, 16, 0),
@@ -1264,10 +1297,17 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     if (confirmed != true || !mounted) return;
 
     setState(() => _submitting = true);
-    final result = await widget.membershipCommandRepository!.leave(
-      PartyRemoveMemberCommand(
+    final cycleRepository = widget.cycleCommandRepository;
+    if (cycleRepository == null) {
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('모집 삭제를 처리할 수 없습니다.')),
+      );
+      return;
+    }
+    final result = await cycleRepository.disband(
+      PartyDisbandCommand(
         recruitmentId: widget.recruitmentId,
-        targetPlayerId: widget.playerId!,
         expectedRecruitmentRevision: summary.revision,
       ),
     );
@@ -1281,7 +1321,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_membershipFailureMessage(result.failure!))),
+      SnackBar(content: Text(_cycleFailureMessage(result.failure!))),
     );
   }
 

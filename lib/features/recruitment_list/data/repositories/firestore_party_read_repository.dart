@@ -234,7 +234,7 @@ class FirestorePartyReadRepository implements PartyReadRepository {
   }
 
   bool _listingIsOpenForCycle(Map<String, Object?> data, String cycleKey) {
-    return data['schemaVersion'] == 1 &&
+    return data['schemaVersion'] == 2 &&
         data['visibility'] == 'group' &&
         data['status'] == 'active' &&
         data['manualRecruitmentEnabled'] == true &&
@@ -271,7 +271,7 @@ class FirestorePartyReadRepository implements PartyReadRepository {
   Query<Map<String, dynamic>> _publicRecruitmentsQuery(String cycleKey) {
     return _firestore
         .collection('recruitments')
-        .where('schemaVersion', isEqualTo: 1)
+        .where('schemaVersion', isEqualTo: 2)
         .where('visibility', isEqualTo: 'public')
         .where('status', isEqualTo: 'active')
         .where('manualRecruitmentEnabled', isEqualTo: true)
@@ -317,13 +317,13 @@ class FirestorePartyReadRepository implements PartyReadRepository {
     const openStatuses = ['active', 'completed'];
     final owned = _firestore
         .collection('recruitments')
-        .where('schemaVersion', isEqualTo: 1)
+        .where('schemaVersion', isEqualTo: 2)
         .where('leaderPlayerId', isEqualTo: playerId)
         .where('status', whereIn: openStatuses)
         .snapshots(includeMetadataChanges: true);
     final joined = _firestore
         .collection('recruitments')
-        .where('schemaVersion', isEqualTo: 1)
+        .where('schemaVersion', isEqualTo: 2)
         .where('memberPlayerIds', arrayContains: playerId)
         .where('status', whereIn: openStatuses)
         .snapshots(includeMetadataChanges: true);

@@ -13,6 +13,7 @@ import '../mappers/party_atomic_application_write_plan.dart';
 import '../mappers/party_atomic_document_mapper.dart';
 import '../mappers/party_atomic_membership_write_plan.dart';
 import '../mappers/party_join_write_plan.dart';
+import '../mappers/party_raid_listing_sync.dart';
 
 /// 새 Aggregate·raidState 구조용 즉시 가입·승인·거절 Repository.
 ///
@@ -274,10 +275,26 @@ class FirestorePartyAtomicJoinCommandRepository
               PartyJoinFailure.participationConflict,
             );
           }
-          transaction.delete(raidStateRef);
+          // Rules: stale delete는 본인 playerId만 허용. 승인자가 타 유저 state를
+          // 지우면 전체 Transaction이 deny되므로 본인 즉시가입에서만 정리한다.
+          if (playerId == actorPlayerId) {
+            transaction.delete(raidStateRef);
+          } else {
+            return const PartyJoinResult.failure(
+              PartyJoinFailure.participationConflict,
+            );
+          }
         }
       }
 
+      final listingGroupId =
+          raw['visibility'] == 'group' ? raw['groupId'] : null;
+      final listing = await PartyRaidListingTx.read(
+        transaction: transaction,
+        firestore: _firestore,
+        groupId: listingGroupId,
+        recruitmentId: recruitmentId,
+      );
       final itemLevel = _parseItemLevel(characterData?['itemAvgLevel']);
       final name = characterData?['characterName'];
       final className = characterData?['characterClassName'];
@@ -366,11 +383,14 @@ class FirestorePartyAtomicJoinCommandRepository
       if (applicationRef != null) {
         final countedAsNonGroup =
             applicationData?['countedAsNonGroupApplicant'] == true;
+        final currentApprovalCount =
+            (applicationData?['approvalCount'] as num?)?.toInt() ?? 0;
         final approvalPlan = PartyAtomicApprovalWritePlan(
           join: joinPlan,
           aggregate: aggregate,
           applicantCountedAsNonGroup: countedAsNonGroup,
           applicationRevision: expectedApplicationRevision!,
+          currentApprovalCount: currentApprovalCount,
           serverTimestamp: now,
         );
         transaction.update(recruitmentRef, approvalPlan.recruitmentPatch);
@@ -380,20 +400,11 @@ class FirestorePartyAtomicJoinCommandRepository
           approvalPlan.membership,
         );
         transaction.set(raidStateRef, approvalPlan.raidState);
-        if (aggregate.visibility == 'group' && groupId != null) {
-          transaction.update(
-            _firestore
-                .collection('groups')
-                .doc(groupId)
-                .collection('raidListings')
-                .doc(recruitmentId),
-            {
-              'memberCount': aggregate.memberCount + 1,
-              'sourceRevision': expectedRecruitmentRevision + 1,
-              'updatedAt': now,
-            },
-          );
-        }
+        listing.write(
+          transaction: transaction,
+          currentRecruitment: partyRecruitmentMap(raw),
+          recruitmentPatch: approvalPlan.recruitmentPatch,
+        );
         transaction.set(
           _firestore
               .collection('partyEvents')
@@ -409,20 +420,11 @@ class FirestorePartyAtomicJoinCommandRepository
         joinPlan.membership,
       );
       transaction.set(raidStateRef, joinPlan.raidState);
-      if (aggregate.visibility == 'group' && groupId != null) {
-        transaction.update(
-          _firestore
-              .collection('groups')
-              .doc(groupId)
-              .collection('raidListings')
-              .doc(recruitmentId),
-          {
-            'memberCount': aggregate.memberCount + 1,
-            'sourceRevision': expectedRecruitmentRevision + 1,
-            'updatedAt': now,
-          },
-        );
-      }
+      listing.write(
+        transaction: transaction,
+        currentRecruitment: partyRecruitmentMap(raw),
+        recruitmentPatch: joinPlan.recruitmentPatch,
+      );
       transaction.set(
         _firestore.collection('partyEvents').doc(joinPlan.event['eventId']! as String),
         joinPlan.event,

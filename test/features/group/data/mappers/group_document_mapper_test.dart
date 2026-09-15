@@ -489,34 +489,45 @@ void main() {
     expect(state.isAtLimit, isTrue);
   });
 
-  test('activeGroupIds 형식 오류를 계약 오류로 올린다', () {
-    expect(
-      () => mapper.toMembershipState(
-        playerId: 'player-1',
-        data: {
-          'schemaVersion': 1,
-          'playerId': 'player-1',
-          'activeGroupIds': 'group-1',
-          'activeGroupCount': 1,
-          'revision': 1,
-          'updatedAt': lastActivityAt,
-        },
-      ),
-      throwsA(isA<GroupContractException>()),
+  test('activeGroupIds 형식 오류는 빈 상태로 복구한다', () {
+    final brokenType = mapper.toMembershipState(
+      playerId: 'player-1',
+      data: {
+        'schemaVersion': 1,
+        'playerId': 'player-1',
+        'activeGroupIds': 'group-1',
+        'activeGroupCount': 1,
+        'revision': 1,
+        'updatedAt': lastActivityAt,
+      },
     );
-    expect(
-      () => mapper.toMembershipState(
-        playerId: 'player-1',
-        data: {
-          'schemaVersion': 1,
-          'playerId': 'player-1',
-          'activeGroupIds': ['group-1', 2],
-          'activeGroupCount': 2,
-          'revision': 1,
-          'updatedAt': lastActivityAt,
-        },
-      ),
-      throwsA(isA<GroupContractException>()),
+    expect(brokenType.activeGroupIds, isEmpty);
+    expect(brokenType.revision, 0);
+
+    final mixed = mapper.toMembershipState(
+      playerId: 'player-1',
+      data: {
+        'schemaVersion': 1,
+        'playerId': 'player-1',
+        'activeGroupIds': ['group-1', 2],
+        'activeGroupCount': 2,
+        'revision': 1,
+        'updatedAt': lastActivityAt,
+      },
     );
+    expect(mixed.activeGroupIds, isEmpty);
+    expect(mixed.revision, 0);
+
+    final missingRevision = mapper.toMembershipState(
+      playerId: 'player-1',
+      data: {
+        'schemaVersion': 1,
+        'playerId': 'player-1',
+        'activeGroupIds': <String>[],
+        'updatedAt': lastActivityAt,
+      },
+    );
+    expect(missingRevision.activeGroupIds, isEmpty);
+    expect(missingRevision.revision, 0);
   });
 }

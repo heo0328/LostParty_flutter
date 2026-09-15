@@ -200,13 +200,37 @@ class FirestorePartyAtomicCreateRepository implements PartyCreateRepository {
           verifiedClassName: verifiedClass,
           verifiedItemLevel: verifiedItemLevel,
         );
+        final groupActiveRecruitmentCountAfter = groupId == null
+            ? 0
+            : ((group?.data()?['activeRecruitmentCount'] as int?) ?? -1) + 1;
+        if (groupId != null && groupActiveRecruitmentCountAfter < 1) {
+          return const PartyCreateResult.failure(
+            PartyCreateFailure.serverDataMissing,
+          );
+        }
         final plan = PartyAtomicCreateWritePlan.fromBase(
           base: base,
           command: command,
           playerId: playerId,
           classKey: verifiedClass,
           serverTimestamp: now,
+          groupActiveRecruitmentCountAfter: groupActiveRecruitmentCountAfter,
         );
+
+        final claimId =
+            '${command.cycleKey}_${command.leaderCharacterId}_${command.metadata.raidId}';
+        final claim = await transaction.get(
+          _firestore
+              .collection('players')
+              .doc(playerId)
+              .collection('weeklyRaidClaims')
+              .doc(claimId),
+        );
+        if (claim.exists) {
+          return const PartyCreateResult.failure(
+            PartyCreateFailure.weeklyRaidCompleted,
+          );
+        }
 
         if (occupancy == PartyCreateOccupancyDecision.replaceStaleAssignment) {
           transaction.delete(raidStateRef);

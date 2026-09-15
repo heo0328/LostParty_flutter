@@ -12,7 +12,7 @@ class FirestorePartyRaidListingBackfill {
     if (playerId.trim().isEmpty) return;
     final snapshot = await _firestore
         .collection('recruitments')
-        .where('schemaVersion', isEqualTo: 1)
+        .where('schemaVersion', isEqualTo: 2)
         .where('memberPlayerIds', arrayContains: playerId)
         .where('status', whereIn: const ['active', 'completed'])
         .limit(50)

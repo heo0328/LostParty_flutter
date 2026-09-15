@@ -491,8 +491,8 @@ void main() {
     expect(summary.combatPower, isNull);
   });
 
-  test('rejects an unsupported schema version', () {
-    final data = _recruitmentData()..['schemaVersion'] = 2;
+  test('rejects an unsupported recruitment schema version', () {
+    final data = _recruitmentData()..['schemaVersion'] = 1;
 
     expect(
       () => mapper.toPublicRecruitment(
@@ -529,7 +529,7 @@ void main() {
 }
 
 Map<String, Object?> _recruitmentData() => {
-  'schemaVersion': 1,
+  'schemaVersion': 2,
   'title': '4막 노말',
   'leaderPlayerId': 'player-leader',
   'leaderCharacterNameSnapshot': '리더캐릭',

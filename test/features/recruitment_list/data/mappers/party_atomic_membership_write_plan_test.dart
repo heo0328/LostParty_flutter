@@ -61,6 +61,45 @@ void main() {
       'status': 'error',
     });
     expect(plan.event['audiencePlayerIds'], ['player-0']);
+    expect(plan.recruitment['groupActiveRecruitmentCountAfter'], 0);
+  });
+
+  test('그룹 모집 생성은 전달된 activeRecruitmentCountAfter를 기록한다', () {
+    final base = PartyCreateWritePlan(
+      recruitment: {
+        'status': 'active',
+        'visibility': 'group',
+        'groupId': 'group-1',
+        'continueTogether': false,
+        'currentCycleKey': '2026-09-09',
+        'currentCycleStatus': 'active',
+        'revision': 1,
+      },
+      leaderMembership: {
+        'playerId': 'player-0',
+        'characterId': 'character-0',
+      },
+      assignment: {
+        'playerId': 'player-0',
+        'characterId': 'character-0',
+        'raidId': 'raid-1',
+        'recruitmentId': 'recruitment-1',
+        'cycleKey': '2026-09-09',
+        'createdAt': timestamp,
+        'updatedAt': timestamp,
+      },
+    );
+    final plan = PartyAtomicCreateWritePlan.fromBase(
+      base: base,
+      command: _createCommand(rules, groupId: 'group-1'),
+      playerId: 'player-0',
+      classKey: '바드:지원',
+      serverTimestamp: timestamp,
+      groupActiveRecruitmentCountAfter: 2,
+    );
+
+    expect(plan.recruitment['groupActiveRecruitmentCountAfter'], 2);
+    expect(plan.groupActiveRecruitmentDelta, 1);
   });
 
   test('가입은 고정 슬롯과 raidState를 추가하고 공용 이벤트 한 건을 만든다', () {
@@ -156,8 +195,10 @@ PartyJoinWritePlan _joinBase({
   },
 );
 
-PartyCreateCommand _createCommand(RecruitmentPartyRules rules) =>
-    PartyCreateCommand(
+PartyCreateCommand _createCommand(
+  RecruitmentPartyRules rules, {
+  String? groupId,
+}) => PartyCreateCommand(
       recruitmentId: 'recruitment-1',
       title: '테스트',
       metadata: const RecruitmentMetadata(
@@ -181,4 +222,8 @@ PartyCreateCommand _createCommand(RecruitmentPartyRules rules) =>
       approvalPolicy: const ApprovalPolicy.leaderOnly(),
       compositionRules: rules,
       cycleKey: '2026-09-09',
+      visibility: groupId == null
+          ? RecruitmentVisibility.public
+          : RecruitmentVisibility.group,
+      groupId: groupId,
     );

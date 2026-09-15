@@ -1491,7 +1491,29 @@ service cloud.firestore {
     }
 
     function validAtomicGroupRecruitmentClose(groupId, oldData, newData) {
-      let recruitment = getAfter(recruitmentPath(newData.lastRecruitmentId)).data;
+      // transfer·leave 등 다른 group update OR보다 먼저 평가되므로,
+      // lastRecruitmentId가 없거나 문서가 없으면 clean false를 반환한다.
+      return newData.diff(oldData).affectedKeys().hasOnly([
+          'activeRecruitmentCount', 'lastRecruitmentId',
+          'revision', 'updatedAt'
+        ])
+        && newData.lastRecruitmentId is string
+        && newData.lastRecruitmentId.size() > 0
+        && existsAfter(recruitmentPath(newData.lastRecruitmentId))
+        && validAtomicGroupRecruitmentCloseBody(
+          groupId,
+          oldData,
+          newData,
+          getAfter(recruitmentPath(newData.lastRecruitmentId)).data
+        );
+    }
+
+    function validAtomicGroupRecruitmentCloseBody(
+      groupId,
+      oldData,
+      newData,
+      recruitment
+    ) {
       return atomicIsLifecycleCommand(recruitment)
         && recruitment.groupId == groupId
         && ((recruitment.lastCommandType == 'disband'
@@ -1501,10 +1523,6 @@ service cloud.firestore {
             && recruitment.continueTogether == false))
         && oldData.activeRecruitmentCount is int
         && oldData.activeRecruitmentCount > 0
-        && newData.diff(oldData).affectedKeys().hasOnly([
-          'activeRecruitmentCount', 'lastRecruitmentId',
-          'revision', 'updatedAt'
-        ])
         && newData.activeRecruitmentCount == oldData.activeRecruitmentCount - 1
         && recruitment.groupActiveRecruitmentCountAfter
           == newData.activeRecruitmentCount
@@ -1560,8 +1578,13 @@ service cloud.firestore {
         && data.pendingApplicationCount == 0
         && data.pendingNonGroupApplicantCount == 0
         && data.nonGroupMemberCount == (data.groupId == null ? 1 : 0)
-        && data.groupActiveRecruitmentCountAfter
-          == (data.groupId == null ? 0 : 1)
+        && (
+          data.groupId == null
+            ? data.groupActiveRecruitmentCountAfter == 0
+            : (existsAfter(groupPath(data.groupId))
+              && data.groupActiveRecruitmentCountAfter
+                == getAfter(groupPath(data.groupId)).data.activeRecruitmentCount)
+        )
         && data.lastCommandId == null
         && data.lastCommandType == null
         && data.lastCommandActorPlayerId == null
@@ -1911,17 +1934,30 @@ service cloud.firestore {
     }
 
     function validAtomicStaleRaidStateDelete(playerId, stateId, oldData) {
-      let recruitment = get(recruitmentPath(oldData.recruitmentId)).data;
+      let path = recruitmentPath(oldData.recruitmentId);
       return hasActiveBinding()
         && stateId == oldData.characterId + '_' + oldData.raidId
         && playerId == currentPlayerId()
         && oldData.playerId == playerId
         && oldData.status == 'active'
         && oldData.source == 'party'
-        && recruitment.schemaVersion == 2
-        && (recruitment.status == 'completed'
-          || recruitment.status == 'disbanded'
-          || recruitment.currentCycleStatus == 'completed');
+        && (
+          !exists(path)
+          || validAtomicStaleRaidStateRecruitment(get(path).data)
+        );
+    }
+
+    // 생성 replace와 OccupancyGate의 stale 판정을 맞춘다.
+    // wipe로 모집만 지운 orphan raidState와 incompleteEnded·만료 1회성도 허용한다.
+    function validAtomicStaleRaidStateRecruitment(recruitment) {
+      return recruitment.status == 'completed'
+        || recruitment.status == 'disbanded'
+        || recruitment.status == 'incompleteEnded'
+        || recruitment.currentCycleStatus == 'completed'
+        || (recruitment.status == 'active'
+          && recruitment.continueTogether == false
+          && recruitment.cycleEndsAt is timestamp
+          && request.time >= recruitment.cycleEndsAt);
     }
 
     function validAtomicInitialLeaderMembership(recruitmentId, playerId, data) {
@@ -1947,7 +1983,29 @@ service cloud.firestore {
     }
 
     function validAtomicGroupRecruitmentOpen(groupId, oldData, newData) {
-      let recruitment = getAfter(recruitmentPath(newData.lastRecruitmentId)).data;
+      // transfer·leave 등 다른 group update OR보다 먼저 평가되므로,
+      // lastRecruitmentId가 없거나 문서가 없으면 clean false를 반환한다.
+      return newData.diff(oldData).affectedKeys().hasOnly([
+          'activeRecruitmentCount', 'lastRecruitmentId',
+          'revision', 'updatedAt'
+        ])
+        && newData.lastRecruitmentId is string
+        && newData.lastRecruitmentId.size() > 0
+        && existsAfter(recruitmentPath(newData.lastRecruitmentId))
+        && validAtomicGroupRecruitmentOpenBody(
+          groupId,
+          oldData,
+          newData,
+          getAfter(recruitmentPath(newData.lastRecruitmentId)).data
+        );
+    }
+
+    function validAtomicGroupRecruitmentOpenBody(
+      groupId,
+      oldData,
+      newData,
+      recruitment
+    ) {
       return recruitment.groupId == groupId
         && recruitment.schemaVersion == 2
         && recruitment.visibility == 'group'
@@ -1958,10 +2016,6 @@ service cloud.firestore {
             && recruitment.visibility == 'group'))
         && oldData.activeRecruitmentCount is int
         && oldData.activeRecruitmentCount >= 0
-        && newData.diff(oldData).affectedKeys().hasOnly([
-          'activeRecruitmentCount', 'lastRecruitmentId',
-          'revision', 'updatedAt'
-        ])
         && newData.activeRecruitmentCount == oldData.activeRecruitmentCount + 1
         && recruitment.groupActiveRecruitmentCountAfter
           == newData.activeRecruitmentCount
@@ -2002,6 +2056,52 @@ service cloud.firestore {
         && after.groupId == groupId
         && after.updatedAt == request.time
         && (publicToggle || (disbanded && beforeLeader == currentPlayerId()));
+    }
+
+    function validAtomicMemberCharacterChange(
+      recruitmentId,
+      playerId,
+      oldData,
+      newData
+    ) {
+      let before = get(recruitmentPath(recruitmentId)).data;
+      let after = getAfter(recruitmentPath(recruitmentId)).data;
+      let oldStateId = oldData.characterId + '_' + before.raidId;
+      let newStateId = newData.characterId + '_' + after.raidId;
+      let locationUnchanged = newData.partyIndex == oldData.partyIndex
+        && newData.get('slotIndex', -1) == oldData.get('slotIndex', -1);
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && before.schemaVersion == 2
+        && after.schemaVersion == 2
+        && after.status == 'active'
+        && after.currentCycleStatus == 'active'
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'characterId', 'characterNameSnapshot', 'classNameSnapshot',
+          'itemLevelSnapshot', 'combatPowerSnapshot', 'gemValidationSnapshot',
+          'buildIntegritySnapshot',
+          'role', 'partyIndex', 'slotIndex', 'characterChangedAt', 'updatedAt'
+        ])
+        && (newData.characterId != oldData.characterId
+          || newData.role != oldData.role)
+        && newData.role in ['dealer', 'support']
+        && locationUnchanged
+        && newData.canApproveApplications == oldData.canApproveApplications
+        && ownsActiveCharacter(newData.characterId)
+        && newData.characterChangedAt == request.time
+        && newData.updatedAt == request.time
+        && !existsAfter(atomicRaidStateDocPath(playerId, oldStateId))
+        && existsAfter(atomicRaidStateDocPath(playerId, newStateId))
+        && getAfter(atomicRaidStateDocPath(playerId, newStateId)).data
+          .recruitmentId == recruitmentId
+        && atomicRaidStateListedInTargets(after, playerId, newStateId)
+        && !atomicRaidStateListedInTargets(after, playerId, oldStateId)
+        && !hasWeeklyRaidClaimAfter(
+          playerId,
+          after.currentCycleKey,
+          newData.characterId,
+          after.raidId
+        );
     }
 
     function validMemberCharacterChange(recruitmentId, playerId, oldData, newData) {
@@ -2662,14 +2762,18 @@ service cloud.firestore {
         ) || validMembershipStateAdd(
           playerId,
           docId,
-          resource.data.activeGroupIds,
-          resource.data.revision,
+          resource.data.activeGroupIds is list
+            ? resource.data.activeGroupIds
+            : [],
+          resource.data.revision is int ? resource.data.revision : 0,
           request.resource.data
         ) || validLeaderApprovedMembershipStateAdd(
           playerId,
           docId,
-          resource.data.activeGroupIds,
-          resource.data.revision,
+          resource.data.activeGroupIds is list
+            ? resource.data.activeGroupIds
+            : [],
+          resource.data.revision is int ? resource.data.revision : 0,
           request.resource.data
         );
         allow delete: if false;
@@ -3180,7 +3284,12 @@ service cloud.firestore {
           playerId,
           request.resource.data
         );
-        allow update: if validMemberCharacterChange(
+        allow update: if validAtomicMemberCharacterChange(
+            recruitmentId,
+            playerId,
+            resource.data,
+            request.resource.data
+          ) || validMemberCharacterChange(
             recruitmentId,
             playerId,
             resource.data,

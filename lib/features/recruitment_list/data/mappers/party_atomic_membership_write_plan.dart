@@ -13,11 +13,13 @@ class PartyAtomicCreateWritePlan {
     required String playerId,
     required String classKey,
     required Object serverTimestamp,
+    int groupActiveRecruitmentCountAfter = 0,
   }) : recruitment = _recruitment(
          base: base,
          command: command,
          playerId: playerId,
          classKey: classKey,
+         groupActiveRecruitmentCountAfter: groupActiveRecruitmentCountAfter,
        ),
        leaderMembership = Map.unmodifiable(base.leaderMembership),
        raidState = _raidState(base: base, command: command, playerId: playerId),
@@ -49,6 +51,7 @@ class PartyAtomicCreateWritePlan {
     required PartyCreateCommand command,
     required String playerId,
     required String classKey,
+    required int groupActiveRecruitmentCountAfter,
   }) {
     final slot = PartyAggregateSlot(
       playerId: playerId,
@@ -75,7 +78,7 @@ class PartyAtomicCreateWritePlan {
         {'playerId': playerId, 'stateId': raidStateId},
       ],
       'commandTargets': const <Map<String, Object?>>[],
-      'groupActiveRecruitmentCountAfter': command.groupId == null ? 0 : 1,
+      'groupActiveRecruitmentCountAfter': groupActiveRecruitmentCountAfter,
       'lastCommandId': null,
       'lastCommandType': null,
       'lastCommandActorPlayerId': null,

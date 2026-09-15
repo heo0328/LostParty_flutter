@@ -82,6 +82,32 @@ void main() {
       );
     });
 
+    test('그룹 전용방 파티장 탈퇴는 공개 전환·해산 안내를 보여 준다', () {
+      expect(
+        groupLeaveFailureMessage(GroupJoinFailure.activeGroupRaidExists),
+        contains('그룹만 공개'),
+      );
+      expect(
+        groupLeaveFailureMessage(GroupJoinFailure.activeGroupRaidExists),
+        contains('탈퇴'),
+      );
+    });
+
+    test('그룹장 이전 permission-denied는 가입 문구가 아닌 이전 안내를 보여 준다', () {
+      expect(
+        groupTransferFailureMessage(GroupJoinFailure.permissionDenied),
+        contains('그룹장 이전'),
+      );
+      expect(
+        groupTransferFailureMessage(GroupJoinFailure.permissionDenied),
+        isNot(contains('가입할 수 없습니다')),
+      );
+      expect(
+        groupTransferFailureMessage(GroupJoinFailure.transferTargetInvalid),
+        groupJoinFailureMessage(GroupJoinFailure.transferTargetInvalid),
+      );
+    });
+
     test('초대코드 전용 메시지는 공통 매핑을 재사용한다', () {
       expect(
         groupJoinCodeFailureMessage(GroupJoinFailure.joinCodeMissing),

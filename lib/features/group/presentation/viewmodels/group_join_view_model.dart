@@ -77,6 +77,8 @@ String groupLeaveFailureMessage(GroupJoinFailure failure) => switch (failure) {
   GroupJoinFailure.leaderCannotLeave => groupJoinFailureMessage(
     GroupJoinFailure.leaderCannotLeave,
   ),
+  GroupJoinFailure.activeGroupRaidExists =>
+    '아직 그룹만 공개인 레이드 방의 파티장입니다. 전체 공개로 바꾸거나 해산한 뒤 탈퇴해 주세요.',
   GroupJoinFailure.notGroupMember => '그룹원만 탈퇴할 수 있습니다.',
   GroupJoinFailure.permissionDenied =>
     '그룹 탈퇴를 처리하지 못했습니다. Firestore Rules 배포 후 다시 시도해 주세요.',
@@ -88,6 +90,24 @@ String groupLeaveFailureMessage(GroupJoinFailure failure) => switch (failure) {
   GroupJoinFailure.playerBindingMissing => '계정 연결을 준비하지 못했습니다.',
   _ => '그룹 탈퇴를 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.',
 };
+
+/// 그룹장 이전 전용 안내. 가입 실패 문구와 구분한다.
+String groupTransferFailureMessage(GroupJoinFailure failure) =>
+    switch (failure) {
+      GroupJoinFailure.notGroupLeader => '그룹장만 그룹장을 이전할 수 있습니다.',
+      GroupJoinFailure.transferTargetInvalid => groupJoinFailureMessage(
+        GroupJoinFailure.transferTargetInvalid,
+      ),
+      GroupJoinFailure.permissionDenied =>
+        '그룹장 이전 권한을 확인하지 못했습니다. 최신 Firestore Rules 적용 상태를 확인해 주세요.',
+      GroupJoinFailure.revisionConflict ||
+      GroupJoinFailure.temporarilyUnavailable => groupJoinFailureMessage(failure),
+      GroupJoinFailure.groupNotFound => '그룹을 찾을 수 없습니다.',
+      GroupJoinFailure.groupClosed => '종료된 그룹입니다.',
+      GroupJoinFailure.unauthenticated ||
+      GroupJoinFailure.playerBindingMissing => '계정 연결을 준비하지 못했습니다.',
+      _ => '그룹장 이전을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+    };
 
 /// 계약 §8.3. 정확한 캐릭터명 검색 결과에서 대상 Player를 확정한다.
 class GroupInviteViewModel {

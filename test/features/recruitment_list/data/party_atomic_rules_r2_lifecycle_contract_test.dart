@@ -42,4 +42,14 @@ void main() {
     expect(rules, contains('|| validAtomicGroupRecruitmentClose('));
     expect(rules, contains('function validGroupRaidListingDelete('));
   });
+
+  test('Close/Open은 lastRecruitmentId 가드 뒤에만 getAfter.data를 본다', () {
+    expect(rules, contains('function validAtomicGroupRecruitmentCloseBody('));
+    expect(rules, contains('function validAtomicGroupRecruitmentOpenBody('));
+    expect(
+      rules,
+      contains('existsAfter(recruitmentPath(newData.lastRecruitmentId))'),
+    );
+    expect(rules, contains('newData.lastRecruitmentId is string'));
+  });
 }

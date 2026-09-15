@@ -211,19 +211,24 @@ class GroupDocumentMapper {
     if (data == null || data.isEmpty) {
       return GroupMembershipState.empty(playerId);
     }
-    _requireSchema(data);
     final groupIds = data['activeGroupIds'];
-    if (groupIds is! List) {
-      throw const GroupContractException('activeGroupIds must be a list.');
+    final revision = data['revision'];
+    // wipe·수동 편집으로 깨진 요약은 빈 상태로 보고 생성 Transaction이
+    // revision 1부터 다시 쓰게 한다. Rules update도 list/int 기본값을 허용한다.
+    if (groupIds is! List || (revision is! int && revision is! num)) {
+      return GroupMembershipState.empty(playerId);
     }
     final ids = groupIds.whereType<String>().toList(growable: false);
     if (ids.length != groupIds.length) {
-      throw const GroupContractException('activeGroupIds must hold strings.');
+      return GroupMembershipState.empty(playerId);
     }
+    final revisionValue = revision is int
+        ? revision
+        : (revision as num).toInt();
     return GroupMembershipState(
       playerId: playerId,
       activeGroupIds: ids,
-      revision: _integer(data, 'revision'),
+      revision: revisionValue,
     );
   }
 

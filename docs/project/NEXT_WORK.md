@@ -3,14 +3,48 @@
 ## 현재 상태
 
 - 기존 `release/1.0.0` 후보는 폐기했다. 브랜치는 이력용으로 보존하되 출시·`main` 병합 기준으로 사용하지 않는다.
-- 최신 앱과 운영 Rules에서도 다인 모집 해산이 `permission-denied`로 실패했다.
-- 해산 버튼을 숨기는 임시 UI 변경은 철회했고 기존 화면을 복원했다. 해산 한 곳을 다시 보정하지 않고 인원수에 비례해 커지는 파티·그룹 명령 전체를 재설계한다.
-- 장기 설계와 영향·회귀 목록은 [`../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md)를 기준으로 한다.
-- `feature/party-group-command-redesign`에서 운영 Rules와 분리된 8인 접근 예산 증명 Rules·Emulator 시나리오를 작성했다. 로컬 정적 계약 테스트와 GitHub Actions의 Ubuntu·JDK 21 격리 Emulator에서 1·2·4·8인 lifecycle 및 핵심 거절 시나리오가 통과했다.
-- 비연결 Domain·Write Plan과 Firestore 원자 Repository까지 생성·신청·재신청·철회·거절·가입·승인, 캐릭터 변경·자리 이동, 탈퇴·추방·승계, 완료·취소·주차 전환·해산, 공개↔그룹 전환을 구현했다. 그룹 해산은 `activeRecruitmentCount` 게이트로 바꿨다. 운영 Router/DI는 C*에서 원자 Repository로 전환했다.
-- 운영 Rules는 복구 가능한 커밋 단위로만 추가한다. 구 경로를 닫거나 Router/DI를 바꾸는 단계는 같은 연결 묶음에서만 수행하며 `dev`에 부분 병합하지 않는다.
-- R1~R7·C* 구현과 운영 Rules·Indexes 게시는 완료했다. 운영 Router는 원자 Repository·어댑터를 쓰고, 구 assignment·slot·cycle·파티 Claim·개인 party event 쓰기는 닫혀 있다.
-- **남은 작업은 거래 자료 wipe(필요 시)와 디바이스 전체 흐름 회귀뿐**이다. 통과 후 `dev` 병합은 별도 지시로 한다.
+- R1~R7·C* 구현과 운영 Rules·Indexes 게시는 완료했다. 운영 Router는 원자 Repository·어댑터를 쓴다.
+- 로컬에는 생성·읽기 v2·이전 Close/Open 가드·승인 패치·listing sync·Listen 가드·orphan 공개 전환·모집 삭제→disband·캐릭터 변경 atomic OR·그룹 전용방 파티장 탈퇴 차단 등이 **코드로 들어가 있다**.
+- **실기기 판정(2026-09-16 사용자 확인):** Rules 게시 이후에도 아래 **실기기 확인됨**만 고쳤고, 그 밖의 보고 실패는 **아직 고쳐지지 않았다**. 로컬 수정·자동 테스트 통과만으로 완료로 쓰지 않는다.
+
+### 실기기 확인됨 (고쳐진 것)
+
+1. 레이드 모집방 생성
+2. 그룹 생성
+3. 공개 목록·레이드 현황·상세에 schemaVersion 2 모집이 보임
+
+### 실기기 미해결 (고쳐나갈 목록)
+
+우선순위는 재현 빈도와 차단 범위다. 한 번에 하나의 승인된 묶음만 고친다.
+
+| ID | 증상 | 비고 / 로컬에 있는 후보 수정 |
+| --- | --- | --- |
+| D1 | 그룹장 이전 permission-denied | Close/Open `lastRecruitmentId` 가드가 Rules에 있음. 실기기에서 재확인 |
+| D2 | 즉시 가입방 참가 실패 | 승인 필드·listing sync 등 앱 패치 있음. 실기기 미확인 |
+| D3 | 신청 승인(수락) 실패 | `approvedByApprover`+`approvalCount` 패치 있음. 실기기 미확인 |
+| D4 | 신청 자체 중구난방 / 전부 실패처럼 보임 | Listen 가드·Rules/앱 불일치 혼재 가능. 원인 재분리 필요 |
+| D5 | orphan: 그룹 탈퇴 후 그룹 전용방 해산 실패 | 해산 경로·문구 재확인 |
+| D6 | orphan: 전체 공개(공개범위) 변경 실패 | 비멤버 파티장 그룹→공개 허용 앱 패치 있음. 실기기 미확인 |
+| D7 | orphan: 참가 캐릭터 변경 권한 실패 | `validAtomicMemberCharacterChange`는 로컬 Rules에 있음. **캐릭터 OR 포함 재게시 503으로 미반영 가능** |
+| D8 | orphan: 모집 삭제 → 「이 동작을 할 권한이 없습니다」 | UI를 leave→disband로 바꾼 패치 있음. 실기기 미확인 |
+| D9 | 상세 `applications`/`cycles` Listen PERMISSION_DENIED 로그 | 리더·멤버만 구독하도록 가드 있음. 로그 재현 여부 재확인 |
+
+### orphan 재현 시나리오 (D5~D8)
+
+1. A 계정 그룹 생성  
+2. B 계정 그룹 가입  
+3. B 계정 그룹 전용 모집방 생성  
+4. B 계정 그룹 탈퇴  
+5. B가 해당 모집에서 해산 / 전체 공개 / 캐릭터 변경 / 모집 삭제 시도 → 실패
+
+예방: 로컬은 그룹 전용방 파티장 탈퇴를 `activeGroupRaidExists`로 막도록 바꿨다. 이미 orphan인 방의 D5~D8 복구와 별개다.
+
+### 운영 반영·배포
+
+1. R7·초기 Rules·Indexes 게시 — **완료**
+2. 생성·이전 등 Rules 재게시 — 사용자 확인으로 **게시됨**
+3. 캐릭터 변경 OR 포함 Rules 재게시 — `/test` **503** 실패, 업로드·release 미도달. **지시 후 1회만** 재시도
+4. 실기기 회귀 — 위 **실기기 미해결** 목록을 기준으로 진행. 로컬 패치만으로 완료 표기하지 않음
 
 ## 운영 Rules 복구 커밋 슬라이스
 
@@ -26,13 +60,6 @@
 | R6 | Aggregate 멤버십 갱신 분기 | 가입·승인·캐릭터·자리·탈퇴·visibility OR | 미사용 update 분기 제거 | 완료 |
 | C* | Router/DI·읽기·구 경로 차단·자료 초기화 | 앱 연결과 함께만 | 부분 배포·`dev` 병합 금지 | 완료 |
 | R7 | legacy 미사용 validator·event 제거 | C* `allow`에서 떼어낸 함수 본문 삭제 | R7 revert | 완료 |
-
-### 운영 반영 순서 (C* 이후)
-
-1. R7로 `firestore.rules`를 콘솔 컴파일 가능 상태로 만든다. — **완료**
-2. Rules·Indexes를 `lost-party`에 게시한다. — **완료**
-3. 거래 자료 wipe(아래 경로). — **디바이스 테스트 전 필요 시**
-4. 디바이스에서 공개/그룹 모집 생성부터 회귀한다. — **남은 작업**
 
 ### C* 테스트 자료 초기화(wipe) — Firebase 경로
 
@@ -67,11 +94,13 @@
 2. **공용 파티 이벤트**
    - `partyEvents/{eventId}`
 
-3. **플레이어별 점유·구 스키마·파티 출처 이벤트**
-   - `players/{playerId}/raidStates/{stateId}`
+3. **플레이어별 점유·구 스키마·파티 출처 이벤트·그룹 요약**
+   - `players/{playerId}/raidStates/{stateId}` — **모집만 지우고 남기면 생성 시 stale delete가 필요해진다. 반드시 함께 삭제.**
    - `players/{playerId}/activeRaidAssignments/{assignmentId}`
    - `players/{playerId}/events/{eventId}` — 파티 명령 fan-out 출처만. `type == 'manualVerificationDisputeOpened'` 등 수동 인증 분쟁 이벤트는 보존해도 된다.
-   - `players/{playerId}/weeklyRaidClaims/{claimId}` — `source == 'partyOwner'`인 파티 완료 Claim만 삭제. `source == 'manual'`은 보존.
+   - `players/{playerId}/weeklyRaidClaims/{claimId}` — 생성 테스트 레이드·주차와 겹치면 `raidState` create가 거절된다. `source == 'manual'`도 해당 캐릭터·레이드·주차면 삭제하거나 다른 레이드로 테스트한다.
+   - `players/{playerId}/groupMembershipState/current` — 깨진 `activeGroupIds`/`revision`이면 그룹 생성이 deny될 수 있다. 문서 삭제 또는 `activeGroupIds: []`, `activeGroupCount: 0`, `revision: 0`으로 재작성.
+   - `players/{playerId}/groupRelations/{groupId}` — 삭제된 그룹 ID 잔여는 정리한다.
 
 4. **그룹 모집 listing·카운트**
    - `groups/{groupId}/raidListings/{recruitmentId}`

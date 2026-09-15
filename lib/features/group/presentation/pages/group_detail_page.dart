@@ -538,7 +538,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (result.failure != null) {
-      _showMessage(groupJoinFailureMessage(result.failure!));
+      _showMessage(groupTransferFailureMessage(result.failure!));
       return;
     }
     _showMessage('그룹장이 이전되었습니다. 이제 그룹에서 탈퇴할 수 있습니다.');

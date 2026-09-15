@@ -112,7 +112,10 @@ class FirestorePartyAtomicVisibilityCommandRepository
         final leaderMember = await transaction.get(
           groupRef.collection('members').doc(playerId),
         );
-        if (!leaderMember.exists) {
+        // 그룹→공개는 탈퇴한 파티장도 허용(Rules도 membership 불필요).
+        // 공개→그룹만 현재 그룹 멤버십을 요구한다.
+        if (command.visibility == RecruitmentVisibility.group &&
+            !leaderMember.exists) {
           return const PartyVisibilityResult.failure(
             PartyVisibilityFailure.notGroupMember,
           );

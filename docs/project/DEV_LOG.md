@@ -1,3 +1,37 @@
+# 2026-09-16 실기기 판정 — 생성·가시성만 확인, 나머지 미해결
+
+- 사용자 확인: Rules 게시 이후 **고쳐진 것**은 (1) 레이드 모집방 생성 (2) 그룹 생성 (3) 목록·레이드 현황·상세에 모집이 보이는 것뿐이다.
+- 그 외 보고했던 실패(그룹장 이전, 즉시가입, 신청 승인, 신청 불안정, orphan 방의 해산·공개전환·캐릭터변경·모집삭제, Listen deny 등)는 **실기기에서 아직 고쳐지지 않았다**.
+- 로컬 코드·계약 테스트에 올라간 후보 수정은 있으나 실기기 완료로 쓰지 않는다. 미해결 목록·orphan 시나리오는 `NEXT_WORK.md` 「실기기 미해결」을 단일 기준으로 한다.
+- 캐릭터 변경 OR 포함 Rules 재게시는 503으로 실패해 두었다.
+
+# 2026-09-15 orphan 그룹 전용방·캐릭터 변경·모집 삭제 수정
+
+- 원인: 그룹 탈퇴 후에도 그룹 전용 모집 파티장이 남아 orphan이 되고, 공개 전환 앱이 멤버십을 강제했으며, 모집 삭제가 leave를 호출해 unauthorized가 났다. 캐릭터 변경은 구 assignment Rules를 타고 listing 부분 패치도 deny됐다.
+- 수정: 그룹→공개는 비멤버 파티장 허용, 모집 삭제→disband, `validAtomicMemberCharacterChange` OR, listing은 멤버일 때만 전체 sync, 그룹 전용방 파티장 탈퇴는 `activeGroupRaidExists`로 차단.
+- Rules 재게시 시도 1회는 `projects/lost-party:test` **503**으로 실패. 즉시 재시도하지 않았다. 앱 재설치로 공개 전환·모집 삭제·승인/가입은 확인 가능하고, 캐릭터 변경은 Rules 재게시 후 확인한다.
+
+# 2026-09-15 가입·승인·Listen deny 수정
+
+- 승인: 원자 `PartyAtomicApprovalWritePlan`이 `resolutionReason: approved`와 `approvalCount` 미증가로 `validApplicationDecision`과 불일치했다. `approvedByApprover` + `approvalCount+1`로 맞췄다.
+- 그룹 방 가입/승인: listing `memberCount` 부분 update는 Rules가 거부한다. `PartyRaidListingTx` 전체 Snapshot sync로 바꿨다.
+- Listen: 상세가 비리더에게도 applications 전체 list·전원 cycles를 구독해 PERMISSION_DENIED가 났다. 신청 목록은 리더만, cycles는 리더·확정 멤버만 구독한다.
+- 승인 경로에서 타 유저 stale `raidState` delete는 Rules상 본인만 가능하므로 본인 즉시가입에서만 삭제한다.
+- Rules: `firebase deploy --only firestore:rules --project lost-party` 1회 성공(`compiled successfully`). CLI는 `already up to date, skipping upload`를 표시했으나 `released rules`·`Deploy complete`까지 확인했다. Indexes는 배포하지 않았다. **앱 재설치 후** 신청→승인·즉시가입·그룹 listing·이전을 확인한다.
+
+# 2026-09-15 그룹장 이전·모집 비가시성 수정
+
+- 그룹장 이전: `validAtomicGroupRecruitmentClose`/`Open`이 `lastRecruitmentId` 검사 전에 `getAfter(...).data`를 호출해 OR 평가 오류가 나고 transfer 분기에 도달하지 못했다. 키·string·`existsAfter` 가드 후 Body로 분리했다. UI는 `groupTransferFailureMessage`로 가입 문구 재사용을 끊었다.
+- 모집 비가시성: 원자 생성은 `schemaVersion: 2`인데 공개 목록·내 레이드 현황·listing 필터·공개/현황 매퍼가 `1`만 허용했다. 읽기를 v2로 전환하고 membership·application은 v1을 유지했다. 계약 문서·표적 테스트를 갱신했다.
+- Indexes 재배포는 불필요. **Close/Open 가드 포함 Rules 재게시와 앱 재설치 후** 실기기에서 이전·목록·현황을 확인한다.
+
+# 2026-09-15 파티·그룹 생성 permission-denied 진단
+
+- 증상: wipe 후 그룹·모집 생성이 `권한을 확인하지 못했습니다`로 실패, 활동 Character 조절은 성공.
+- Rules: stale `raidState` delete에 orphan·`incompleteEnded`·만료 1회성을 허용하고, 원자 생성의 `groupActiveRecruitmentCountAfter`를 그룹 `getAfter` 카운트와 맞추며, `groupMembershipState` update의 깨진 list/revision 기본값을 허용했다.
+- 앱: 깨진 membership 요약을 빈 상태로 복구, 생성 시 수동 Claim을 먼저 검사, 그룹 카운트 after를 현재+1로 기록, 기본 그룹명 20자 상한을 적용했다.
+- 로컬 Firestore Emulator는 Java 미설치로 미실행. 계약·매퍼 테스트로 회귀한다. **수정 Rules 재게시와 최신 앱 재설치가 필요**하다.
+
 # 2026-09-15 파티·그룹 명령 재설계 — Rules·Indexes 게시 완료·wipe 경로 문서화
 
 - 사용자가 운영 `lost-party`에 R7 Rules와 Indexes를 게시했다. 구현·Rules·Indexes 구간은 완료로 본다.

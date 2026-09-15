@@ -193,6 +193,7 @@ class PartyAtomicApprovalWritePlan {
     required PartyCommandAggregate aggregate,
     required bool applicantCountedAsNonGroup,
     required int applicationRevision,
+    required int currentApprovalCount,
     required Object serverTimestamp,
   }) : membership = join.membership,
        raidState = join.raidState,
@@ -205,13 +206,17 @@ class PartyAtomicApprovalWritePlan {
        ),
        applicationPatch = Map.unmodifiable({
          'status': 'approved',
-         'resolutionReason': 'approved',
+         'resolutionReason': 'approvedByApprover',
+         'approvalCount': currentApprovalCount + 1,
          'revision': applicationRevision + 1,
          'decidedAt': serverTimestamp,
          'updatedAt': serverTimestamp,
        }) {
     if (aggregate.pendingApplicationCount <= 0) {
       throw StateError('승인할 pending 신청 집계가 없습니다.');
+    }
+    if (currentApprovalCount < 0) {
+      throw StateError('신청 승인 집계가 올바르지 않습니다.');
     }
   }
 

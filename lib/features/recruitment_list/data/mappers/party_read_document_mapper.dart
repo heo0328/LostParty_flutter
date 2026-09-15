@@ -39,7 +39,7 @@ class PartyReadDocumentMapper {
 
   PublicRecruitmentSummary toPublicRecruitment(PartyReadDocumentDto document) {
     final data = document.data;
-    _requireSchema(data);
+    _requireRecruitmentSchema(data);
     return PublicRecruitmentSummary(
       id: document.id,
       title: _string(data, 'title'),
@@ -83,7 +83,7 @@ class PartyReadDocumentMapper {
     required String currentPlayerId,
   }) {
     final data = document.data;
-    _requireSchema(data);
+    _requireRecruitmentSchema(data);
     final leaderPlayerId = _string(data, 'leaderPlayerId');
     return ActiveRaidSummary(
       id: document.id,
@@ -213,6 +213,12 @@ class PartyReadDocumentMapper {
     final mode = policy['mode'];
     if (mode is! String || mode.trim().isEmpty) return ApprovalMode.leaderOnly;
     return _enumValue(ApprovalMode.values, mode, 'approvalPolicy.mode');
+  }
+
+  void _requireRecruitmentSchema(Map<String, Object?> data) {
+    if (_integer(data, 'schemaVersion') != 2) {
+      throw const PartyReadContractException('Unsupported schemaVersion.');
+    }
   }
 
   void _requireSchema(Map<String, Object?> data) {

@@ -421,6 +421,24 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
     final invalid = _validator.validateLeave(command);
     if (invalid != null) return GroupJoinCommandResult.failure(invalid);
     return _run((transaction, playerId, localDisplayByCharacterId) async {
+      // 그룹 전용 모집 파티장 탈퇴는 orphan 방을 만들므로 차단한다.
+      final ownedGroupRaids = await _firestore
+          .collection('recruitments')
+          .where('leaderPlayerId', isEqualTo: playerId)
+          .where('groupId', isEqualTo: command.groupId)
+          .where('status', whereIn: const ['active', 'completed'])
+          .limit(20)
+          .get();
+      final leadsGroupOnlyRaid = ownedGroupRaids.docs.any((doc) {
+        final data = doc.data();
+        return data['visibility'] == 'group' && data['schemaVersion'] == 2;
+      });
+      if (leadsGroupOnlyRaid) {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.activeGroupRaidExists,
+        );
+      }
+
       final groupRef = _groupRef(command.groupId);
       final group = _group(await transaction.get(groupRef));
       if (group == null) {

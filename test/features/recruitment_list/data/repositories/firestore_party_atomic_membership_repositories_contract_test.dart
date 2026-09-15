@@ -35,7 +35,9 @@ void main() {
     expect(createRepo, contains(".collection('partyEvents')"));
     expect(createRepo, contains('GroupActiveRecruitmentWritePlan.open'));
     expect(createRepo, isNot(contains('activeRaidAssignments')));
-    expect(createRepo, isNot(contains('weeklyRaidClaims')));
+    // 수동 Claim은 get으로만 검사하고 쓰지 않는다.
+    expect(createRepo, contains(".collection('weeklyRaidClaims')"));
+    expect(createRepo, isNot(contains("transaction.set(claim")));
     expect(createRepo, isNot(contains(".collection('slots')")));
     expect(createRepo, isNot(contains(".collection('events')")));
   });
@@ -55,12 +57,18 @@ void main() {
     expect(joinRepo, contains('PartyAtomicJoinWritePlan.fromBase'));
     expect(joinRepo, contains('PartyAtomicApprovalWritePlan'));
     expect(joinRepo, contains('PartyAtomicApplicationRejectWritePlan'));
+    expect(joinRepo, contains('PartyRaidListingTx'));
+    expect(joinRepo, contains('currentApprovalCount'));
     expect(joinRepo, contains(".collection('raidStates')"));
     expect(joinRepo, contains(".collection('partyEvents')"));
     expect(joinRepo, isNot(contains("collection('members').get(")));
     expect(joinRepo, isNot(contains('activeRaidAssignments')));
     expect(joinRepo, isNot(contains('weeklyRaidClaims')));
     expect(joinRepo, isNot(contains(".collection('events')")));
+    expect(
+      joinRepo,
+      isNot(contains("'memberCount': aggregate.memberCount + 1")),
+    );
   });
 
   test('캐릭터 변경·자리 이동은 대상 문서만 읽고 개인 event fan-out을 쓰지 않는다', () {
