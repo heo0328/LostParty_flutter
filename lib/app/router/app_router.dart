@@ -83,14 +83,17 @@ import '../../features/raid_status/domain/services/party_event_sync_service.dart
 import '../../features/raid_status/presentation/pages/party_notifications_page.dart';
 import '../../features/raid_status/presentation/pages/party_read_detail_page.dart';
 import '../../features/raid_status/presentation/pages/raid_status_page.dart';
-import '../../features/recruitment_list/data/repositories/firestore_party_application_command_repository.dart';
+import '../../features/recruitment_list/data/repositories/firestore_party_atomic_application_command_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_active_raid_assignment_lookup.dart';
-import '../../features/recruitment_list/data/repositories/firestore_party_create_repository.dart';
-import '../../features/recruitment_list/data/repositories/firestore_party_cycle_command_repository.dart';
-import '../../features/recruitment_list/data/repositories/firestore_party_visibility_command_repository.dart';
-import '../../features/recruitment_list/data/repositories/firestore_party_join_command_repository.dart';
+import '../../features/recruitment_list/data/repositories/firestore_party_atomic_command_repository.dart';
+import '../../features/recruitment_list/data/repositories/firestore_party_atomic_create_repository.dart';
+import '../../features/recruitment_list/data/repositories/firestore_party_atomic_join_command_repository.dart';
+import '../../features/recruitment_list/data/repositories/firestore_party_atomic_member_mutation_repository.dart';
+import '../../features/recruitment_list/data/repositories/firestore_party_atomic_member_removal_repository.dart';
+import '../../features/recruitment_list/data/repositories/firestore_party_atomic_visibility_command_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_lazy_cycle_reconciliation_gateway.dart';
-import '../../features/recruitment_list/data/repositories/firestore_party_membership_command_repository.dart';
+import '../../features/recruitment_list/data/repositories/party_atomic_cycle_command_adapter.dart';
+import '../../features/recruitment_list/data/repositories/party_atomic_membership_command_adapter.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_read_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_raid_listing_backfill.dart';
 import '../../features/recruitment_list/domain/repositories/party_read_repository.dart';
@@ -217,9 +220,14 @@ GoRouter createAppRouter({
   const cyclePolicy = PartyCyclePolicy();
   final currentCycleKey = cyclePolicy.keyFor(DateTime.now());
   final currentCycle = cyclePolicy.fromKey(currentCycleKey)!;
-  final partyCycleCommandRepository = FirestorePartyCycleCommandRepository(
+  final partyAtomicCommandRepository = FirestorePartyAtomicCommandRepository(
     firestore: FirebaseFirestore.instance,
     firebaseAuth: FirebaseAuth.instance,
+  );
+  final partyCycleCommandRepository = PartyAtomicCycleCommandAdapter(
+    firestore: FirebaseFirestore.instance,
+    firebaseAuth: FirebaseAuth.instance,
+    atomicCommandRepository: partyAtomicCommandRepository,
   );
   final lazyCycleReconciler = LazyCycleReconciler(
     gateway: FirestoreLazyCycleReconciliationGateway(
@@ -453,25 +461,33 @@ GoRouter createAppRouter({
                         recruitmentId: recruitmentId,
                         partyReadRepository: partyReadRepositoryOrDefault,
                         applicationCommandRepository:
-                            FirestorePartyApplicationCommandRepository(
+                            FirestorePartyAtomicApplicationCommandRepository(
                               firestore: FirebaseFirestore.instance,
                               firebaseAuth: FirebaseAuth.instance,
                             ),
                         joinCommandRepository:
-                            FirestorePartyJoinCommandRepository(
+                            FirestorePartyAtomicJoinCommandRepository(
                               firestore: FirebaseFirestore.instance,
                               firebaseAuth: FirebaseAuth.instance,
                             ),
                         membershipCommandRepository:
-                            FirestorePartyMembershipCommandRepository(
-                              firestore: FirebaseFirestore.instance,
-                              firebaseAuth: FirebaseAuth.instance,
+                            PartyAtomicMembershipCommandAdapter(
+                              mutationRepository:
+                                  FirestorePartyAtomicMemberMutationRepository(
+                                    firestore: FirebaseFirestore.instance,
+                                    firebaseAuth: FirebaseAuth.instance,
+                                  ),
+                              removalRepository:
+                                  FirestorePartyAtomicMemberRemovalRepository(
+                                    firestore: FirebaseFirestore.instance,
+                                    firebaseAuth: FirebaseAuth.instance,
+                                  ),
                             ),
                         cycleCommandRepository:
                             partyCycleCommandRepository,
                         cycleReconciler: lazyCycleReconciler,
                         visibilityCommandRepository:
-                            FirestorePartyVisibilityCommandRepository(
+                            FirestorePartyAtomicVisibilityCommandRepository(
                               firestore: FirebaseFirestore.instance,
                               firebaseAuth: FirebaseAuth.instance,
                             ),
@@ -577,7 +593,7 @@ GoRouter createAppRouter({
                       catalogRepository: raidCatalogRepository,
                       commandService: recruitmentCommandService,
                       candidateService: recruitmentLeaderCandidateService,
-                      partyCreateRepository: FirestorePartyCreateRepository(
+                      partyCreateRepository: FirestorePartyAtomicCreateRepository(
                         firestore: FirebaseFirestore.instance,
                         firebaseAuth: FirebaseAuth.instance,
                       ),

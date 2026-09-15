@@ -31,24 +31,19 @@ class FirestorePartyEventReadRepository implements PartyEventReadRepository {
     }
     try {
       final snapshot = await _firestore
-          .collection('players')
-          .doc(playerId)
-          .collection('events')
+          .collection('partyEvents')
+          .where('audiencePlayerIds', arrayContains: playerId)
           .orderBy('occurredAt', descending: true)
           .limit(limit)
           .get();
       final events = <PartyEvent>[];
       for (final doc in snapshot.docs) {
-        final mapped = _mapper.map(
+        final mapped = _mapper.mapShared(
           Map<String, Object?>.from(doc.data()),
+          recipientPlayerId: playerId,
           documentId: doc.id,
         );
         if (mapped == null) {
-          throw const PartyEventReadException(
-            PartyEventReadFailureType.contract,
-          );
-        }
-        if (mapped.playerId != playerId) {
           throw const PartyEventReadException(
             PartyEventReadFailureType.contract,
           );

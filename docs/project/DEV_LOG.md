@@ -1,3 +1,9 @@
+# 2026-09-15 파티·그룹 명령 재설계 — C* Router/DI·읽기·구 경로 차단
+
+- 운영 Router에 원자 create/application/join/visibility/command와 membership·cycle 어댑터를 연결했다. `setRecurrence`는 모집 원본만 갱신하고 `purgeStale`은 `raidState`를 정리한다.
+- `partyEvents` audience get/list와 sync/read를 전환했고, 구 assignment·slot·cycle 쓰기·파티 Claim·개인 party event create를 닫았다. 수동 Claim과 분쟁 이벤트는 유지한다.
+- 리더 membership·stale raidState delete Rules를 보완했다. 테스트 자료 초기화 절차를 `NEXT_WORK`에 기록했고 운영 배포는 수행하지 않았다.
+
 # 2026-09-15 파티·그룹 명령 재설계 — 운영 Rules R6 Aggregate 멤버십 갱신
 
 - 모집 update에 신청 집계·가입·캐릭터·자리·탈퇴·visibility Aggregate OR를 추가하고 구 join/revision/visibility/removal 분기는 유지했다.

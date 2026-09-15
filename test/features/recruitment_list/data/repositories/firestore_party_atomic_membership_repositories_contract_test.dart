@@ -75,19 +75,11 @@ void main() {
     expect(mutationRepo, isNot(contains(".collection('events')")));
   });
 
-  test('검증 단계에서는 운영 Router에 새 Repository를 연결하지 않는다', () {
-    expect(router, isNot(contains('FirestorePartyAtomicCreateRepository')));
-    expect(
-      router,
-      isNot(contains('FirestorePartyAtomicApplicationCommandRepository')),
-    );
-    expect(
-      router,
-      isNot(contains('FirestorePartyAtomicJoinCommandRepository')),
-    );
-    expect(
-      router,
-      isNot(contains('FirestorePartyAtomicMemberMutationRepository')),
-    );
+  test('운영 Router에 원자 생성·신청·가입·mutation Repository를 연결한다', () {
+    expect(router, contains('FirestorePartyAtomicCreateRepository'));
+    expect(router, contains('FirestorePartyAtomicApplicationCommandRepository'));
+    expect(router, contains('FirestorePartyAtomicJoinCommandRepository'));
+    expect(router, contains('FirestorePartyAtomicMemberMutationRepository'));
+    expect(router, contains('PartyAtomicMembershipCommandAdapter'));
   });
 }

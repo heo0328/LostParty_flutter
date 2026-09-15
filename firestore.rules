@@ -2323,6 +2323,41 @@ service cloud.firestore {
         && !atomicRaidStateListedInTargets(recruitment, playerId, stateId);
     }
 
+    function validAtomicStaleRaidStateDelete(playerId, stateId, oldData) {
+      let recruitment = get(recruitmentPath(oldData.recruitmentId)).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && oldData.playerId == playerId
+        && oldData.status == 'active'
+        && oldData.source == 'party'
+        && recruitment.schemaVersion == 2
+        && (recruitment.status == 'completed'
+          || recruitment.status == 'disbanded'
+          || recruitment.currentCycleStatus == 'completed');
+    }
+
+    function validAtomicInitialLeaderMembership(recruitmentId, playerId, data) {
+      let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
+      let stateId = data.characterId + '_' + recruitment.raidId;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && recruitment.schemaVersion == 2
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && data.joinedBy == playerId
+        && data.partyIndex == 0
+        && data.slotIndex == 0
+        && data.canApproveApplications == true
+        && data.joinedAt == request.time
+        && data.updatedAt == request.time
+        && recruitment.leaderPlayerId == playerId
+        && recruitment.memberPlayerIds == [playerId]
+        && ownsActiveCharacter(data.characterId)
+        && atomicRaidStateListedInTargets(recruitment, playerId, stateId)
+        && getAfter(atomicRaidStateDocPath(playerId, stateId)).data.recruitmentId
+          == recruitmentId;
+    }
+
     function validAtomicGroupRecruitmentOpen(groupId, oldData, newData) {
       let recruitment = getAfter(recruitmentPath(newData.lastRecruitmentId)).data;
       return recruitment.groupId == groupId
@@ -3855,52 +3890,22 @@ service cloud.firestore {
       allow delete: if false;
 
       match /activeRaidAssignments/{assignmentId} {
-        // 승인 Transaction이 신청자 점유 문서 존재 여부를 확인해야 한다.
-        // AuthUid·JWT는 없고 레이드 점유 식별만 담으므로 active binding 사용자에게 get만 허용한다.
+        // C*: 원자 raidState로 대체. 구 assignment 쓰기는 닫고 get만 유지한다.
         allow get: if hasActiveBinding();
-        allow list: if false;
-        allow create: if validInitialAssignment(
-          playerId,
-          assignmentId,
-          request.resource.data
-        ) || validJoinedAssignment(playerId, assignmentId, request.resource.data)
-        || validCompletionCancelAssignmentRestore(
-          playerId,
-          assignmentId,
-          request.resource.data
-        ) || validCycleAdvanceAssignmentCreate(
-          playerId,
-          assignmentId,
-          request.resource.data
-        );
-        allow update: if validAssignmentRoleChange(
-          playerId,
-          resource.data,
-          request.resource.data
-        ) || validCycleAdvanceAssignmentUpdate(
-          playerId,
-          assignmentId,
-          resource.data,
-          request.resource.data
-        ) || validLegacyIncompleteAssignmentReplacement(
-          playerId,
-          assignmentId,
-          resource.data,
-          request.resource.data
-        );
-        allow delete: if resource != null
-          && validAssignmentRemoval(playerId, resource.data);
+        allow list, create, update, delete: if false;
       }
 
       match /events/{eventId} {
         allow get, list: if hasActiveBinding()
           && playerId == currentPlayerId();
-        // 일반 create를 열지 않는다. type별 상태 전이·수신자·필드만 허용.
-        allow create: if validPlayerEvent(
-          playerId,
-          eventId,
-          request.resource.data
-        );
+        // C*: 파티 fan-out create는 닫고 운영자 분쟁 이벤트만 허용한다.
+        allow create: if request.resource.data.type
+            == 'manualVerificationDisputeOpened'
+          && validManualVerificationDisputeEvent(
+            playerId,
+            eventId,
+            request.resource.data
+          );
         allow update, delete: if false;
       }
 
@@ -3981,22 +3986,9 @@ service cloud.firestore {
           playerId,
           claimId,
           request.resource.data
-        ) || validPartyOwnerWeeklyRaidClaimCreate(
-          playerId,
-          claimId,
-          request.resource.data
         );
-        allow update: if validPartyOwnerWeeklyRaidClaimUpdate(
-          playerId,
-          claimId,
-          resource.data,
-          request.resource.data
-        );
+        allow update: if false;
         allow delete: if validManualWeeklyRaidClaimDelete(
-          playerId,
-          claimId,
-          resource.data
-        ) || validPartyOwnerWeeklyRaidClaimDelete(
           playerId,
           claimId,
           resource.data
@@ -4024,6 +4016,10 @@ service cloud.firestore {
           stateId,
           resource.data
         ) || validAtomicMembershipRaidStateDelete(
+          playerId,
+          stateId,
+          resource.data
+        ) || validAtomicStaleRaidStateDelete(
           playerId,
           stateId,
           resource.data
@@ -4401,9 +4397,11 @@ service cloud.firestore {
       allow delete: if signedIn();
     }
 
-    // R1/R2/R5: 공용 파티 이벤트. lifecycle·membership create만 열고 get/list는 C*에서 연다.
+    // C*: 공용 파티 이벤트. audience 기반 읽기와 atomic create만 연다.
     match /partyEvents/{eventId} {
-      allow get, list, update, delete: if false;
+      allow get, list: if hasActiveBinding()
+        && resource.data.audiencePlayerIds.hasAny([currentPlayerId()]);
+      allow update, delete: if false;
       allow create: if validAtomicLifecyclePartyEvent(request.resource.data)
         || validAtomicMembershipPartyEvent(request.resource.data);
     }
@@ -4411,46 +4409,11 @@ service cloud.firestore {
     match /recruitments/{recruitmentId} {
       allow get: if canGetRecruitment(recruitmentId);
       allow list: if canListRecruitment(resource.data);
-      allow create: if validInitialRecruitment(
-        recruitmentId,
-        request.resource.data
-      ) || validAtomicInitialRecruitment(
+      allow create: if validAtomicInitialRecruitment(
         recruitmentId,
         request.resource.data
       );
-      allow update: if validRecruitmentJoin(
-          resource.data,
-          request.resource.data
-        ) || validMembershipRevisionUpdate(
-          recruitmentId,
-          resource.data,
-          request.resource.data
-        ) || validPositionRevisionUpdate(
-          resource.data,
-          request.resource.data
-        ) || validRecruitmentMemberRemoval(
-          recruitmentId,
-          resource.data,
-          request.resource.data
-        ) || validRecurrenceChange(
-          resource.data,
-          request.resource.data
-        ) || validCycleCompletion(
-          recruitmentId,
-          resource.data,
-          request.resource.data
-        ) || validCompletionCancellation(
-          recruitmentId,
-          resource.data,
-          request.resource.data
-        ) || validCycleAdvance(
-          recruitmentId,
-          resource.data,
-          request.resource.data
-        ) || validRecruitmentDisband(
-          resource.data,
-          request.resource.data
-        ) || validRecruitmentVisibilityChange(
+      allow update: if validRecurrenceChange(
           resource.data,
           request.resource.data
         ) || validAtomicLifecycleUpdate(
@@ -4481,11 +4444,7 @@ service cloud.firestore {
         allow get, list: if canReadPrivateRecruitmentData(recruitmentId)
           || canReadPublicRecruitmentMembers(recruitmentId)
           || (hasActiveBinding() && playerId == currentPlayerId());
-        allow create: if validInitialLeaderMembership(
-          recruitmentId,
-          playerId,
-          request.resource.data
-        ) || validJoinedMembership(
+        allow create: if validAtomicInitialLeaderMembership(
           recruitmentId,
           playerId,
           request.resource.data
@@ -4510,11 +4469,7 @@ service cloud.firestore {
             resource.data,
             request.resource.data
           );
-        allow delete: if validMemberRemoval(
-          recruitmentId,
-          playerId,
-          resource.data
-        ) || validAtomicMemberRemoval(
+        allow delete: if validAtomicMemberRemoval(
           recruitmentId,
           playerId,
           resource.data
@@ -4522,19 +4477,10 @@ service cloud.firestore {
       }
 
       match /slots/{slotId} {
+        // C*: 점유 원장은 Aggregate partySlots다. 구 slot 문서는 읽기만 허용한다.
         allow get, list: if canReadPrivateRecruitmentData(recruitmentId)
           || canReadPublicRecruitmentMembers(recruitmentId);
-        allow create: if validPartySlotCreate(
-          recruitmentId,
-          slotId,
-          request.resource.data
-        );
-        allow update: if validPartySlotUpdate(
-          recruitmentId,
-          resource.data,
-          request.resource.data
-        );
-        allow delete: if validPartySlotDelete(recruitmentId, resource.data);
+        allow create, update, delete: if false;
       }
 
       match /applications/{playerId} {
@@ -4574,26 +4520,9 @@ service cloud.firestore {
       }
 
       match /cycles/{cycleKey} {
+        // C*: 회차 상태는 모집 Aggregate에 둔다. 구 cycles 쓰기는 닫는다.
         allow get, list: if canReadPrivateRecruitmentData(recruitmentId);
-        allow create: if validInitialCycle(
-          recruitmentId,
-          cycleKey,
-          request.resource.data
-        );
-        allow update: if validCycleCancellation(
-            recruitmentId,
-            resource.data,
-            request.resource.data
-          ) || validCycleRecompletion(
-            recruitmentId,
-            resource.data,
-            request.resource.data
-          ) || validCancelledCycleEnd(
-            recruitmentId,
-            resource.data,
-            request.resource.data
-          );
-        allow delete: if false;
+        allow create, update, delete: if false;
       }
     }
 

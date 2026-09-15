@@ -61,4 +61,4 @@
 
 ## 다음 작업
 
-현재 작업은 파티·그룹 명령 확장성 재설계의 운영 Rules 복구 슬라이스다. R1~R6까지 반영됐고 다음은 C* Router/DI·구 경로 차단·자료 초기화 묶음이다. 부분 `dev` 병합은 하지 않는다. 상세는 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.
+현재 작업은 파티·그룹 명령 확장성 재설계의 C* 연결 묶음까지 반영했다. 운영 Router는 원자 Repository를 쓰고 Rules는 구 파티 명령 쓰기를 닫았다. 테스트 자료 초기화와 Rules/Indexes 배포는 사용자 지시 후 수행한다. 상세는 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.

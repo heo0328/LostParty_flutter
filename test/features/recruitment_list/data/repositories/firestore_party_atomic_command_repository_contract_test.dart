@@ -34,7 +34,8 @@ void main() {
     expect(repository, isNot(contains(".collection('slots')")));
   });
 
-  test('검증 단계에서는 운영 Router에 새 Repository를 연결하지 않는다', () {
-    expect(router, isNot(contains('FirestorePartyAtomicCommandRepository')));
+  test('운영 Router에 원자 lifecycle Repository를 연결한다', () {
+    expect(router, contains('FirestorePartyAtomicCommandRepository'));
+    expect(router, contains('PartyAtomicCycleCommandAdapter'));
   });
 }

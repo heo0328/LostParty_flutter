@@ -29,12 +29,11 @@ void main() {
     expect(block, contains('validAtomicRaidStateDelete('));
   });
 
-  test('R2 partyEvents는 lifecycle create를 연고 membership create는 R5에 맡긴다', () {
+  test('R2 partyEvents는 lifecycle create를 연다', () {
     final start = rules.indexOf('match /partyEvents/{eventId}');
     final end = rules.indexOf('match /recruitments/{recruitmentId}', start);
     final block = rules.substring(start, end);
     expect(block, contains('validAtomicLifecyclePartyEvent('));
-    expect(block, contains('allow get, list, update, delete: if false'));
   });
 
   test('R2 listing·group update는 기존 분기와 lifecycle OR를 함께 둔다', () {

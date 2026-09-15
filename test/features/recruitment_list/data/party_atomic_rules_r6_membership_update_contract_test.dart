@@ -29,7 +29,7 @@ void main() {
     expect(rules, contains('function validAtomicGroupRecruitmentOpen('));
     expect(rules, contains('function validAtomicVisibilityListingWrite('));
     expect(rules, contains('|| validAtomicJoinedMembership('));
-    expect(rules, contains('|| validAtomicMemberRemoval('));
+    expect(rules, contains('validAtomicMemberRemoval('));
     expect(rules, contains('|| validAtomicMembershipRaidStateDelete('));
     expect(rules, contains('|| validAtomicGroupRecruitmentOpen('));
     expect(rules, contains('|| validAtomicVisibilityListingWrite('));

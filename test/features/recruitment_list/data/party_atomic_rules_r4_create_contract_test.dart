@@ -9,11 +9,8 @@ void main() {
     rules = File('firestore.rules').readAsStringSync().replaceAll('\r\n', '\n');
   });
 
-  test('R4는 schemaVersion 2 원자 생성 검증을 추가하고 v1 생성을 유지한다', () {
+  test('R4는 schemaVersion 2 원자 생성 검증을 제공한다', () {
     expect(rules, contains('function validAtomicInitialRecruitment('));
-    expect(rules, contains('function validInitialRecruitment('));
-    expect(rules, contains('|| validAtomicInitialRecruitment('));
-    expect(rules, contains('data.schemaVersion == 1'));
     expect(rules, contains('data.schemaVersion == 2'));
   });
 

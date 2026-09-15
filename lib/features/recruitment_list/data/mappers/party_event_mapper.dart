@@ -1,6 +1,6 @@
 import '../../domain/entities/party_event.dart';
 
-/// Firestore Player Event 문서를 Domain [PartyEvent]로 변환한다.
+/// Firestore Player Event·공용 partyEvents 문서를 Domain [PartyEvent]로 변환한다.
 class PartyEventMapper {
   const PartyEventMapper({required DateTime Function(Object? value) toDateTime})
     : _toDateTime = toDateTime;
@@ -66,6 +66,81 @@ class PartyEventMapper {
       return null;
     }
   }
+
+  /// 공용 `partyEvents` 문서를 수신자 기준으로 변환한다.
+  PartyEvent? mapShared(
+    Map<String, Object?> data, {
+    required String recipientPlayerId,
+    String? documentId,
+  }) {
+    final eventId = data['eventId'];
+    final type = data['type'];
+    final recruitmentId = data['recruitmentId'];
+    final commandRevision = data['commandRevision'];
+    final occurredAt = data['occurredAt'];
+    final audience = data['audiencePlayerIds'];
+    if (eventId is! String ||
+        eventId.isEmpty ||
+        type is! String ||
+        type.isEmpty ||
+        recruitmentId is! String ||
+        recruitmentId.isEmpty ||
+        commandRevision is! int ||
+        occurredAt == null ||
+        audience is! List ||
+        !audience.contains(recipientPlayerId)) {
+      return null;
+    }
+    if (documentId != null && documentId != eventId) {
+      return null;
+    }
+    final occurred = _toDateTime(occurredAt);
+    final expiresAt = data['expiresAt'] == null
+        ? occurred.add(const Duration(days: 30))
+        : _toDateTime(data['expiresAt']);
+    final wireType = _sharedWireType(type);
+    try {
+      return PartyEvent(
+        eventId: eventId,
+        type: wireType,
+        knownType: PartyEventType.tryParse(wireType),
+        playerId: recipientPlayerId,
+        recruitmentId: recruitmentId,
+        eventRevision: commandRevision,
+        occurredAt: occurred,
+        expiresAt: expiresAt,
+        cycleKey: _string(data['cycleKey']),
+        raidId: _string(data['raidId']),
+        difficultyId: _string(data['difficultyId']),
+        actorPlayerId: _string(data['actorPlayerId']),
+        targetPlayerId: _string(data['targetPlayerId']),
+        characterId: _string(data['characterId']),
+        characterNameSnapshot: _string(data['characterNameSnapshot']),
+        classNameSnapshot: _string(data['classNameSnapshot']),
+        role: _string(data['role']),
+        partyIndex: _int(data['partyIndex']),
+        slotIndex: _int(data['slotIndex']),
+        actorCharacterNameSnapshot: _string(data['actorCharacterNameSnapshot']),
+        targetCharacterNameSnapshot: _string(
+          data['targetCharacterNameSnapshot'],
+        ),
+        previousCharacterNameSnapshot: _string(
+          data['previousCharacterNameSnapshot'],
+        ),
+      );
+    } on FormatException {
+      return null;
+    }
+  }
+
+  static String _sharedWireType(String type) => switch (type) {
+    'complete' => PartyEventType.partyCompleted.wireName,
+    'cancelCompletion' => PartyEventType.partyCompletionCancelled.wireName,
+    'disband' => PartyEventType.partyDisbanded.wireName,
+    'characterChanged' => PartyEventType.memberCharacterChanged.wireName,
+    'membersRepositioned' => PartyEventType.memberMoved.wireName,
+    _ => type,
+  };
 
   static String? _string(Object? value) => value is String ? value : null;
 

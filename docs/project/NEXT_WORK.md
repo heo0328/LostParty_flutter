@@ -7,9 +7,9 @@
 - 해산 버튼을 숨기는 임시 UI 변경은 철회했고 기존 화면을 복원했다. 해산 한 곳을 다시 보정하지 않고 인원수에 비례해 커지는 파티·그룹 명령 전체를 재설계한다.
 - 장기 설계와 영향·회귀 목록은 [`../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md)를 기준으로 한다.
 - `feature/party-group-command-redesign`에서 운영 Rules와 분리된 8인 접근 예산 증명 Rules·Emulator 시나리오를 작성했다. 로컬 정적 계약 테스트와 GitHub Actions의 Ubuntu·JDK 21 격리 Emulator에서 1·2·4·8인 lifecycle 및 핵심 거절 시나리오가 통과했다.
-- 비연결 Domain·Write Plan과 Firestore 원자 Repository까지 생성·신청·재신청·철회·거절·가입·승인, 캐릭터 변경·자리 이동, 탈퇴·추방·승계, 완료·취소·주차 전환·해산, 공개↔그룹 전환을 구현했다. 그룹 해산은 `activeRecruitmentCount` 게이트로 바꿨다. 운영 Router/DI는 아직 전환하지 않았다.
+- 비연결 Domain·Write Plan과 Firestore 원자 Repository까지 생성·신청·재신청·철회·거절·가입·승인, 캐릭터 변경·자리 이동, 탈퇴·추방·승계, 완료·취소·주차 전환·해산, 공개↔그룹 전환을 구현했다. 그룹 해산은 `activeRecruitmentCount` 게이트로 바꿨다. 운영 Router/DI는 C*에서 원자 Repository로 전환했다.
 - 운영 Rules는 복구 가능한 커밋 단위로만 추가한다. 구 경로를 닫거나 Router/DI를 바꾸는 단계는 같은 연결 묶음에서만 수행하며 `dev`에 부분 병합하지 않는다.
-- R1~R6까지 운영 Rules에 반영했다. Aggregate 멤버십 갱신·가입 membership·raidState 삭제·그룹 open·visibility listing OR를 추가했다. 다음은 C* Router/DI·구 경로 차단·자료 초기화 묶음이다.
+- R1~R6와 C*까지 반영했다. 운영 Router/DI는 원자 Repository·어댑터로 연결했고, `partyEvents` audience 읽기와 구 assignment·slot·cycle·파티 Claim·개인 event 쓰기를 닫았다. 파티·그룹 테스트 자료 초기화 후 Rules·Indexes 배포는 사용자 지시가 있을 때만 한 번 수행한다.
 
 ## 운영 Rules 복구 커밋 슬라이스
 
@@ -23,9 +23,19 @@
 | R4 | schemaVersion 2 모집 생성 분기 | v1 생성 유지 + 원자 생성 OR | v2 생성 문만 제거 | 완료 |
 | R5 | 비lifecycle raidState create·partyEvents | 가입·신청·탈퇴 등 이벤트 유형 | 미사용 create 검증 제거 | 완료 |
 | R6 | Aggregate 멤버십 갱신 분기 | 가입·승인·캐릭터·자리·탈퇴·visibility OR | 미사용 update 분기 제거 | 완료 |
-| C* | Router/DI·읽기·구 경로 차단·자료 초기화 | 앱 연결과 함께만 | 부분 배포·`dev` 병합 금지 | 다음 |
+| C* | Router/DI·읽기·구 경로 차단·자료 초기화 | 앱 연결과 함께만 | 부분 배포·`dev` 병합 금지 | 완료 |
 
-증명용 `tools/party_scalability_proof.rules`는 R2까지 엔진 예산 오라클로 유지한다. 운영 Firebase 배포는 연결 묶음 검증 후 사용자 지시가 있을 때만 한 번 수행한다.
+### C* 테스트 자료 초기화 절차
+
+계정·게임 계정·캐릭터·Auth·`authBindings`·수동 주간 Claim은 보존한다. 아래 거래성 자료만 삭제한다.
+
+1. `recruitments`와 하위 `members`·`applications`·`slots`·`cycles`
+2. `partyEvents`
+3. `players/*/raidStates`, `players/*/activeRaidAssignments`, 파티 출처 `players/*/events`
+4. 그룹 `raidListings`와 그룹 문서의 `activeRecruitmentCount`/`lastRecruitmentId`(또는 그룹 문서 자체 재생성)
+5. 초기화 후 앱을 재실행하고 공개/그룹 모집 생성부터 회귀한다
+
+운영 Firebase Rules·Indexes 배포는 초기화와 로컬 검증 뒤 사용자 지시가 있을 때만 한 번 수행한다.
 
 ## 이번 작업 목표
 

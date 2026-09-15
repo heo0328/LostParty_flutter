@@ -30,10 +30,7 @@ void main() {
     expect(repository, isNot(contains(".collection('events')")));
   });
 
-  test('부분 전환 단계에서는 운영 Router에 연결하지 않는다', () {
-    expect(
-      router,
-      isNot(contains('FirestorePartyAtomicMemberRemovalRepository')),
-    );
+  test('운영 Router에 원자 탈퇴 Repository를 연결한다', () {
+    expect(router, contains('FirestorePartyAtomicMemberRemovalRepository'));
   });
 }

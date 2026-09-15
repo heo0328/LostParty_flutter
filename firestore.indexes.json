@@ -108,6 +108,22 @@
       ]
     },
     {
+      "collectionGroup": "partyEvents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "audiencePlayerIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "occurredAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "partyEvents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "audiencePlayerIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "occurredAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "manualVerificationRequests",
       "queryScope": "COLLECTION",
       "fields": [

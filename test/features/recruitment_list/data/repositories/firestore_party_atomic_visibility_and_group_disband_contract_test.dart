@@ -44,10 +44,10 @@ void main() {
     expect(groupCreatePlan, contains("'activeRecruitmentCount': 0"));
   });
 
-  test('검증 단계에서는 운영 Router에 원자 visibility Repository를 연결하지 않는다', () {
+  test('운영 Router에 원자 visibility Repository를 연결한다', () {
     expect(
       router,
-      isNot(contains('FirestorePartyAtomicVisibilityCommandRepository')),
+      contains('FirestorePartyAtomicVisibilityCommandRepository'),
     );
   });
 }
