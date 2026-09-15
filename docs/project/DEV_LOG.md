@@ -1,3 +1,9 @@
+# 2026-09-15 파티·그룹 명령 재설계 — 운영 Rules 복구 슬라이스 시작
+
+- 운영 Rules를 R1~R6 추가형 복구 커밋과 C* 연결 묶음으로 구분했다. 구 경로를 닫거나 Router/DI를 바꾸는 단계는 연결 묶음에서만 수행한다.
+- R1로 `players/.../raidStates`와 `partyEvents` match 스캐폴드를 추가하고 쓰기는 닫아 두었다. 구 assignment·Claim·개인 event 경로는 유지한다.
+- 계약 테스트로 R1 스캐폴드와 증명 Rules 분리를 고정했다. 운영 Firebase 배포는 수행하지 않았다.
+
 # 2026-09-15 파티·그룹 명령 재설계 — 공개↔그룹 전환과 그룹 해산 게이트
 
 - 공개↔그룹 전환 비연결 원자 Repository를 추가했다. `nonGroupMemberCount`·`pendingNonGroupApplicantCount`와 그룹 `activeRecruitmentCount`만으로 전환을 판정·갱신하며 멤버·신청자 전원 그룹 membership 순회를 쓰지 않는다.

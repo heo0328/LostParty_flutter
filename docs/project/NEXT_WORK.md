@@ -7,8 +7,24 @@
 - 해산 버튼을 숨기는 임시 UI 변경은 철회했고 기존 화면을 복원했다. 해산 한 곳을 다시 보정하지 않고 인원수에 비례해 커지는 파티·그룹 명령 전체를 재설계한다.
 - 장기 설계와 영향·회귀 목록은 [`../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md)를 기준으로 한다.
 - `feature/party-group-command-redesign`에서 운영 Rules와 분리된 8인 접근 예산 증명 Rules·Emulator 시나리오를 작성했다. 로컬 정적 계약 테스트와 GitHub Actions의 Ubuntu·JDK 21 격리 Emulator에서 1·2·4·8인 lifecycle 및 핵심 거절 시나리오가 통과했다.
-- 비연결 Domain·Write Plan과 Firestore 원자 Repository까지 생성·신청·재신청·철회·거절·가입·승인, 캐릭터 변경·자리 이동, 탈퇴·추방·승계, 완료·취소·주차 전환·해산, 공개↔그룹 전환을 구현했다. 그룹 해산은 `activeRecruitmentCount` 게이트로 바꿨다. 운영 Router/DI와 `firestore.rules`는 아직 전환하지 않았다.
-- 다음은 모든 쓰기 경로가 준비된 상태에서 운영 Rules·Router/DI·`partyEvents` 읽기를 한 번에 연결한다.
+- 비연결 Domain·Write Plan과 Firestore 원자 Repository까지 생성·신청·재신청·철회·거절·가입·승인, 캐릭터 변경·자리 이동, 탈퇴·추방·승계, 완료·취소·주차 전환·해산, 공개↔그룹 전환을 구현했다. 그룹 해산은 `activeRecruitmentCount` 게이트로 바꿨다. 운영 Router/DI는 아직 전환하지 않았다.
+- 운영 Rules는 복구 가능한 커밋 단위로만 추가한다. 구 경로를 닫거나 Router/DI를 바꾸는 단계는 같은 연결 묶음에서만 수행하며 `dev`에 부분 병합하지 않는다.
+
+## 운영 Rules 복구 커밋 슬라이스
+
+기능 브랜치에서 Rules만 바꿀 때는 아래 순서를 지키며, 각 커밋은 단독 revert 가능한 복구 지점이다. 현재 연결된 운영 앱이 깨지지 않도록 **OR 추가·닫힌 스캐폴드**만 허용한다.
+
+| ID | 커밋 의도 | 포함 | 단독 revert 시 |
+| --- | --- | --- | --- |
+| R1 | `raidStates`·`partyEvents` 경로 스캐폴드 | match 추가, 쓰기는 닫힘 | 미사용 경로만 제거 |
+| R2 | lifecycle envelope·raidState 검증 OR 추가 | 증명 Rules 이식, 구 cycle/disband 유지 | 미사용 OR만 제거 |
+| R3 | 그룹 `activeRecruitmentCount` 생성·종료 | `validInitialGroup` 키 허용, close 분기 | 구 그룹 생성 키 복원 |
+| R4 | schemaVersion 2 모집 생성 분기 | v1 생성 유지 + 원자 생성 OR | v2 생성 문만 제거 |
+| R5 | 비lifecycle raidState create·partyEvents | 가입·신청·탈퇴 등 이벤트 유형 | 미사용 create 검증 제거 |
+| R6 | Aggregate 멤버십 갱신 분기 | 가입·승인·캐릭터·자리·탈퇴·visibility OR | 미사용 update 분기 제거 |
+| C* | Router/DI·읽기·구 경로 차단·자료 초기화 | 앱 연결과 함께만 | 부분 배포·`dev` 병합 금지 |
+
+증명용 `tools/party_scalability_proof.rules`는 R2까지 엔진 예산 오라클로 유지한다. 운영 Firebase 배포는 연결 묶음 검증 후 사용자 지시가 있을 때만 한 번 수행한다.
 
 ## 이번 작업 목표
 
@@ -73,7 +89,7 @@
 
 생성·신청·재신청·철회, 즉시 가입·승인·거절, 캐릭터 변경·자리 이동의 비연결 Firestore 원자 Repository도 추가했다. 신청 거절은 pending 집계를 줄이는 `PartyAtomicApplicationRejectWritePlan`을 쓰고, 재신청은 기존 `.apply` 계획으로 pending을 다시 올린다. 생성·가입은 `raidState` 점유와 주간 완료를 확인하며 assignment·Claim·slots·개인 event·전원 `members.get`을 사용하지 않는다. 계약 테스트는 운영 Router 미연결을 고정한다.
 
-공개↔그룹 전환의 비연결 원자 Repository와 그룹 해산의 `activeRecruitmentCount` 게이트도 추가했다. 그룹 생성은 `activeRecruitmentCount: 0`으로 시작하고, 해산은 `raidListings` 최대 20건 순회 대신 `GroupActiveRecruitmentWritePlan.validateDisband`만 사용한다. 운영 Rules와 Router/DI·`partyEvents` 읽기 전환은 모든 쓰기 경로가 준비된 뒤 별도 연결 단계에서 수행한다.
+공개↔그룹 전환의 비연결 원자 Repository와 그룹 해산의 `activeRecruitmentCount` 게이트도 추가했다. 그룹 생성은 `activeRecruitmentCount: 0`으로 시작하고, 해산은 `raidListings` 최대 20건 순회 대신 `GroupActiveRecruitmentWritePlan.validateDisband`만 사용한다. 운영 Rules와 Router/DI·`partyEvents` 읽기 전환은 Rules 복구 슬라이스 R1~R6를 먼저 쌓은 뒤, 구 경로 차단과 앱 연결(C*)을 한 묶음으로 수행한다.
 
 `party-scalability-proof.yml`은 기능 브랜치의 관련 증명 파일 push와 수동 실행에만 연결한다. Ubuntu·JDK 21·demo 프로젝트 Emulator와 전용 설정·Rules만 사용하며 운영 Firebase 인증·배포는 수행하지 않는다.
 
