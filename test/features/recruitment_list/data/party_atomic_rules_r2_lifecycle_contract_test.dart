@@ -21,16 +21,15 @@ void main() {
     expect(rules, contains('function validGroupDisbandUpdate('));
   });
 
-  test('R2 raidStates는 create를 닫고 lifecycle update·delete만 연다', () {
+  test('R2 raidStates는 lifecycle update·delete를 연고 create는 R5에 맡긴다', () {
     final start = rules.indexOf('match /raidStates/{stateId}');
     final end = rules.indexOf('match /characterActivity/{characterId}', start);
     final block = rules.substring(start, end);
-    expect(block, contains('allow create: if false'));
     expect(block, contains('validAtomicRaidStateUpdate('));
     expect(block, contains('validAtomicRaidStateDelete('));
   });
 
-  test('R2 partyEvents는 lifecycle create만 연다', () {
+  test('R2 partyEvents는 lifecycle create를 연고 membership create는 R5에 맡긴다', () {
     final start = rules.indexOf('match /partyEvents/{eventId}');
     final end = rules.indexOf('match /recruitments/{recruitmentId}', start);
     final block = rules.substring(start, end);

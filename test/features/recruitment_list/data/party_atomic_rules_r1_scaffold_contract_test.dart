@@ -9,7 +9,7 @@ void main() {
     rules = File('firestore.rules').readAsStringSync().replaceAll('\r\n', '\n');
   });
 
-  test('R1 경로는 유지되고 raidStates create는 계속 닫혀 있다', () {
+  test('R1 경로 스캐폴드는 raidStates·partyEvents match를 유지한다', () {
     final raidStatesStart = rules.indexOf('match /raidStates/{stateId}');
     final raidStatesEnd = rules.indexOf(
       'match /characterActivity/{characterId}',
@@ -19,7 +19,6 @@ void main() {
     expect(raidStatesStart, greaterThanOrEqualTo(0));
     expect(partyEventsStart, greaterThanOrEqualTo(0));
     final raidStates = rules.substring(raidStatesStart, raidStatesEnd);
-    expect(raidStates, contains('allow create: if false'));
     expect(raidStates, contains('playerId == currentPlayerId()'));
   });
 

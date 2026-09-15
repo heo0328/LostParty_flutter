@@ -1998,6 +1998,100 @@ service cloud.firestore {
         && state.revision == 1;
     }
 
+    function atomicRaidStateTargetAt(recruitment, index, playerId, stateId) {
+      return index < recruitment.raidStateTargets.size()
+        && recruitment.raidStateTargets[index].playerId == playerId
+        && recruitment.raidStateTargets[index].stateId == stateId;
+    }
+
+    function atomicRaidStateListedInTargets(recruitment, playerId, stateId) {
+      return atomicRaidStateTargetAt(recruitment, 0, playerId, stateId)
+        || atomicRaidStateTargetAt(recruitment, 1, playerId, stateId)
+        || atomicRaidStateTargetAt(recruitment, 2, playerId, stateId)
+        || atomicRaidStateTargetAt(recruitment, 3, playerId, stateId)
+        || atomicRaidStateTargetAt(recruitment, 4, playerId, stateId)
+        || atomicRaidStateTargetAt(recruitment, 5, playerId, stateId)
+        || atomicRaidStateTargetAt(recruitment, 6, playerId, stateId)
+        || atomicRaidStateTargetAt(recruitment, 7, playerId, stateId);
+    }
+
+    function validAtomicRaidStateCreate(playerId, stateId, data) {
+      let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
+      let member = getAfter(
+        recruitmentMemberPath(data.recruitmentId, playerId)
+      ).data;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && stateId == data.characterId + '_' + data.raidId
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && data.status == 'active'
+        && data.source == 'party'
+        && data.revision == 1
+        && data.recruitmentId is string
+        && recruitment.schemaVersion == 2
+        && !atomicIsLifecycleCommand(recruitment)
+        && recruitment.status == 'active'
+        && recruitment.currentCycleStatus == 'active'
+        && data.cycleKey == recruitment.currentCycleKey
+        && data.raidId == recruitment.raidId
+        && data.characterId == member.characterId
+        && ownsActiveCharacter(data.characterId)
+        && !hasWeeklyRaidClaimAfter(
+          playerId,
+          data.cycleKey,
+          data.characterId,
+          data.raidId
+        )
+        && atomicRaidStateListedInTargets(recruitment, playerId, stateId);
+    }
+
+    function atomicIsMembershipEventType(type) {
+      return type == 'partyCreated'
+        || type == 'memberJoined'
+        || type == 'applicationSubmitted'
+        || type == 'applicationWithdrawn'
+        || type == 'applicationRejected'
+        || type == 'characterChanged'
+        || type == 'membersRepositioned'
+        || type == 'memberLeft'
+        || type == 'memberKicked';
+    }
+
+    function atomicMembershipEventKeys(data) {
+      return data.keys().hasOnly([
+          'schemaVersion', 'eventId', 'recruitmentId', 'type', 'commandId',
+          'commandRevision', 'audiencePlayerIds', 'actorPlayerId', 'occurredAt'
+        ])
+        || (data.type in ['memberLeft', 'memberKicked']
+          && data.keys().hasOnly([
+            'schemaVersion', 'eventId', 'recruitmentId', 'type', 'commandId',
+            'commandRevision', 'audiencePlayerIds', 'actorPlayerId',
+            'targetPlayerId', 'occurredAt'
+          ]));
+    }
+
+    function validAtomicMembershipPartyEvent(data) {
+      let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
+      return !atomicIsLifecycleCommand(recruitment)
+        && recruitment.schemaVersion == 2
+        && atomicIsMembershipEventType(data.type)
+        && atomicMembershipEventKeys(data)
+        && data.schemaVersion == 1
+        && data.eventId is string
+        && data.commandId == data.eventId
+        && data.commandRevision == recruitment.revision
+        && data.audiencePlayerIds is list
+        && data.audiencePlayerIds.size() >= 1
+        && data.audiencePlayerIds.size() <= 8
+        && data.actorPlayerId is string
+        && data.occurredAt == request.time
+        && (data.type != 'partyCreated' || data.commandRevision == 1)
+        && (data.type in ['memberLeft', 'memberKicked']
+          ? data.targetPlayerId is string
+          : !('targetPlayerId' in data));
+    }
+
     function validGroupRaidListingDelete(groupId, recruitmentId) {
       let after = getAfter(recruitmentPath(recruitmentId)).data;
       let beforeLeader = exists(recruitmentPath(recruitmentId))
@@ -3635,12 +3729,16 @@ service cloud.firestore {
         );
       }
 
-      // R1/R2: raidState 경로. create는 R5, lifecycle update/delete는 R2에서 연다.
+      // R1/R2/R5: raidState 경로. create는 R5, lifecycle update/delete는 R2에서 연다.
       match /raidStates/{stateId} {
         allow get: if hasActiveBinding()
           && playerId == currentPlayerId();
         allow list: if false;
-        allow create: if false;
+        allow create: if validAtomicRaidStateCreate(
+          playerId,
+          stateId,
+          request.resource.data
+        );
         allow update: if validAtomicRaidStateUpdate(
           playerId,
           stateId,
@@ -4025,10 +4123,11 @@ service cloud.firestore {
       allow delete: if signedIn();
     }
 
-    // R1/R2: 공용 파티 이벤트. lifecycle create만 열고 get/list는 이후 읽기 슬라이스에서 연다.
+    // R1/R2/R5: 공용 파티 이벤트. lifecycle·membership create만 열고 get/list는 C*에서 연다.
     match /partyEvents/{eventId} {
       allow get, list, update, delete: if false;
-      allow create: if validAtomicLifecyclePartyEvent(request.resource.data);
+      allow create: if validAtomicLifecyclePartyEvent(request.resource.data)
+        || validAtomicMembershipPartyEvent(request.resource.data);
     }
 
     match /recruitments/{recruitmentId} {

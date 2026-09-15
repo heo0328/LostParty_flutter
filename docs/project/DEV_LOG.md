@@ -1,3 +1,9 @@
+# 2026-09-15 파티·그룹 명령 재설계 — 운영 Rules R5 membership raidState·partyEvents create
+
+- `validAtomicRaidStateCreate`를 추가해 schemaVersion 2 모집의 `raidStateTargets`와 membership·주간 Claim을 검증하는 create OR를 열었다. lifecycle update/delete는 R2를 유지한다.
+- `validAtomicMembershipPartyEvent`를 추가해 생성·가입·신청·캐릭터·자리·탈퇴·추방 이벤트 create OR를 lifecycle create와 병행했다.
+- R5 계약 테스트를 추가했고 운영 Firebase 배포는 수행하지 않았다. 다음은 R6다.
+
 # 2026-09-15 파티·그룹 명령 재설계 — 운영 Rules R4 schemaVersion 2 모집 생성
 
 - `validAtomicInitialRecruitment`를 추가해 schemaVersion 2 모집 생성 OR를 `validInitialRecruitment`와 병행했다. v1 생성·slot·assignment 검증은 유지한다.
