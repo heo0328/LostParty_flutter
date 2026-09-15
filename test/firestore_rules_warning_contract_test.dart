@@ -85,8 +85,9 @@ void main() {
     );
   });
 
-  test('모집 참가 검증에는 사용하지 않는 recruitmentId 인자가 없다', () {
-    expect(rules, contains('function validRecruitmentJoin(oldData, newData)'));
+  test('모집 참가 검증에는 atomic join만 남는다', () {
+    expect(rules, contains('function validAtomicRecruitmentJoin('));
+    expect(rules, isNot(contains('function validRecruitmentJoin(')));
     expect(
       rules,
       isNot(

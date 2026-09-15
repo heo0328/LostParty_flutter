@@ -34,25 +34,13 @@ void main() {
     expect(disband, contains("slot.data()?['playerId'] != current.id"));
   });
 
-  test('Player event Rules는 type을 확인한 뒤 해당 validator만 평가한다', () {
-    final start = rules.indexOf('function validPlayerEvent(');
-    final end = rules.indexOf(
-      'function validManualVerificationDisputeEvent(',
-      start,
-    );
-    final dispatcher = rules.substring(start, end);
+  test('공용 partyEvents Rules는 lifecycle·membership create만 연다', () {
+    final start = rules.indexOf('match /partyEvents/{eventId}');
+    final end = rules.indexOf('match /recruitments/{recruitmentId}', start);
+    final block = rules.substring(start, end);
 
-    expect(
-      dispatcher.indexOf('validLifecycleEvent('),
-      lessThan(dispatcher.indexOf('validCycleEvent(')),
-    );
-    expect(
-      dispatcher,
-      contains(
-        "data.type == 'manualVerificationDisputeOpened'\n"
-        '          && validManualVerificationDisputeEvent(',
-      ),
-    );
-    expect(dispatcher.split('\n').length, lessThan(12));
+    expect(block, contains('validAtomicLifecyclePartyEvent('));
+    expect(block, contains('validAtomicMembershipPartyEvent('));
+    expect(block, isNot(contains('function validPlayerEvent(')));
   });
 }

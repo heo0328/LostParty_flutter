@@ -1,3 +1,9 @@
+# 2026-09-15 파티·그룹 명령 재설계 — R7 legacy Rules 정리
+
+- C* `allow`에서 떼어낸 legacy validator·`validPlayerEvent` fan-out 등 55개 미사용 함수를 제거했다. `validAtomicStaleRaidStateDelete`는 `stateId` 검증을 추가했다.
+- `tools/prune_r7_unused_rules_functions.mjs`로 도달 가능성 기준 정리를 재현할 수 있게 했다. Rules 계약 테스트 35건 통과.
+- CLI `/test`는 503으로 컴파일 성공 여부를 확정하지 못했다. 콘솔 게시·1회 배포는 사용자 지시 후 진행한다.
+
 # 2026-09-15 파티·그룹 명령 재설계 — C* Rules 게시 실패·R7 착수
 
 - `firestore.rules-backup`으로 C* Rules 원본을 로컬 보존했다. `firebase deploy --only firestore --project lost-party` 1회는 `/test` 503으로 실패했고 Indexes 업로드에는 도달하지 않았다.

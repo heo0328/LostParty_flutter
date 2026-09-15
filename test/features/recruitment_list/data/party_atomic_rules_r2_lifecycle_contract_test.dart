@@ -9,15 +9,15 @@ void main() {
     rules = File('firestore.rules').readAsStringSync().replaceAll('\r\n', '\n');
   });
 
-  test('R2는 lifecycle 검증을 atomic 접두사로 추가하고 구 cycle·disband를 유지한다', () {
+  test('R2는 lifecycle 검증을 atomic 접두사로 추가한다', () {
     expect(rules, contains('function validAtomicLifecycleUpdate('));
     expect(rules, contains('function validAtomicRaidStateUpdate('));
     expect(rules, contains('function validAtomicRaidStateDelete('));
     expect(rules, contains('function validAtomicLifecyclePartyEvent('));
     expect(rules, contains('function validAtomicGroupRecruitmentClose('));
     expect(rules, contains('|| validAtomicLifecycleUpdate('));
-    expect(rules, contains('function validCycleCompletion('));
-    expect(rules, contains('function validRecruitmentDisband('));
+    expect(rules, isNot(contains('function validCycleCompletion(')));
+    expect(rules, isNot(contains('function validRecruitmentDisband(')));
     expect(rules, contains('function validGroupDisbandUpdate('));
   });
 

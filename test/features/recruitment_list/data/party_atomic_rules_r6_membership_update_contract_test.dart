@@ -9,7 +9,7 @@ void main() {
     rules = File('firestore.rules').readAsStringSync().replaceAll('\r\n', '\n');
   });
 
-  test('R6는 Aggregate 멤버십 update 검증 OR를 추가하고 구 분기를 유지한다', () {
+  test('R6는 Aggregate 멤버십 update 검증 OR만 연결한다', () {
     expect(rules, contains('function validAtomicPendingApplicationUpdate('));
     expect(rules, contains('function validAtomicRecruitmentJoin('));
     expect(rules, contains('function validAtomicCharacterRevisionUpdate('));
@@ -17,9 +17,9 @@ void main() {
     expect(rules, contains('function validAtomicRecruitmentMemberRemoval('));
     expect(rules, contains('function validAtomicRecruitmentVisibilityChange('));
     expect(rules, contains('|| validAtomicRecruitmentJoin('));
-    expect(rules, contains('function validRecruitmentJoin('));
-    expect(rules, contains('function validMembershipRevisionUpdate('));
-    expect(rules, contains('function validRecruitmentVisibilityChange('));
+    expect(rules, isNot(contains('function validRecruitmentJoin(')));
+    expect(rules, isNot(contains('function validMembershipRevisionUpdate(')));
+    expect(rules, isNot(contains('function validRecruitmentVisibilityChange(')));
   });
 
   test('R6 membership·raidState·group·listing 동반 OR를 연다', () {
