@@ -61,4 +61,4 @@
 
 ## 다음 작업
 
-현재 작업은 파티·그룹 명령 확장성 재설계의 비연결 원자 Repository 구현이다. 생성·신청·가입·승인·캐릭터·자리·탈퇴·lifecycle까지 비연결 Repository가 준비됐고, 다음은 공개↔그룹·그룹 해산 게이트 후 운영 Rules·Router/DI 일괄 연결이다. 상세는 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.
+현재 작업은 파티·그룹 명령 확장성 재설계의 비연결 원자 Repository 구현이다. 쓰기 경로 비연결 구현은 공개↔그룹·그룹 해산 게이트까지 준비됐고, 다음은 운영 Rules·Router/DI·`partyEvents` 읽기 일괄 연결이다. 상세는 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.

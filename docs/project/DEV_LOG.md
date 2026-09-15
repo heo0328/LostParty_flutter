@@ -1,3 +1,10 @@
+# 2026-09-15 파티·그룹 명령 재설계 — 공개↔그룹 전환과 그룹 해산 게이트
+
+- 공개↔그룹 전환 비연결 원자 Repository를 추가했다. `nonGroupMemberCount`·`pendingNonGroupApplicantCount`와 그룹 `activeRecruitmentCount`만으로 전환을 판정·갱신하며 멤버·신청자 전원 그룹 membership 순회를 쓰지 않는다.
+- 그룹 생성 Write Plan에 `activeRecruitmentCount: 0`을 넣고, 그룹 해산은 `raidListings.limit(20)` 순회 대신 `GroupActiveRecruitmentWritePlan.validateDisband`를 사용한다.
+- 계약 테스트로 원자 visibility Router 미연결과 해산 게이트·생성 초기값을 고정했다. 표적 테스트와 변경 파일 정적 분석이 통과했다.
+- 운영 Rules·Router/DI·`partyEvents` 읽기 전환은 수행하지 않았다. 다음은 일괄 연결 단계다.
+
 # 2026-09-15 파티·그룹 명령 재설계 — 생성·신청·가입·승인·캐릭터·자리 원자 Repository
 
 - 생성·신청·재신청·철회, 즉시 가입·승인·거절, 캐릭터 변경·자리 이동의 비연결 Firestore 원자 Repository를 추가했다.

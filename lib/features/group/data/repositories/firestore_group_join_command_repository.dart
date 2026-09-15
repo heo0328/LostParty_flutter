@@ -13,9 +13,9 @@ import '../../domain/entities/group_relation.dart';
 import '../../domain/entities/group_request_character.dart';
 import '../../domain/entities/group_summary.dart';
 import '../../domain/repositories/group_join_command_repository.dart';
-import '../../domain/services/group_disband_active_raid_check.dart';
 import '../../domain/services/group_join_command_validator.dart';
 import '../../domain/services/group_local_member_display_lookup.dart';
+import '../mappers/group_active_recruitment_write_plan.dart';
 import '../mappers/group_create_write_plan.dart';
 import '../mappers/group_document_mapper.dart';
 import '../mappers/group_join_write_plan.dart';
@@ -570,29 +570,6 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
           GroupJoinFailure.pendingGroupRequests,
         );
       }
-      final listings = await groupRef.collection('raidListings').limit(20).get();
-      var hasActiveGroupRaid = false;
-      for (final listing in listings.docs) {
-        final listingData = listing.data();
-        if (listingData['visibility'] != 'group') continue;
-        final recruitment = await _firestore
-            .collection('recruitments')
-            .doc(listing.id)
-            .get();
-        if (isBlockingActiveGroupRaid(
-          groupId: command.groupId,
-          listing: listingData,
-          recruitment: recruitment.data(),
-        )) {
-          hasActiveGroupRaid = true;
-          break;
-        }
-      }
-      if (hasActiveGroupRaid) {
-        return const GroupJoinCommandResult.failure(
-          GroupJoinFailure.activeGroupRaidExists,
-        );
-      }
     } on FirebaseException catch (error) {
       return GroupJoinCommandResult.failure(groupFirebaseFailure(error.code));
     }
@@ -628,6 +605,22 @@ class FirestoreGroupJoinCommandRepository implements GroupJoinCommandRepository 
       if (group.hasActiveJoinCode) {
         return const GroupJoinCommandResult.failure(
           GroupJoinFailure.joinCodeActive,
+        );
+      }
+      final activeRecruitmentCount =
+          groupSnapshot.data()?['activeRecruitmentCount'];
+      final count = activeRecruitmentCount is int ? activeRecruitmentCount : 0;
+      try {
+        GroupActiveRecruitmentWritePlan.validateDisband(
+          activeRecruitmentCount: count,
+        );
+      } on StateError {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.activeGroupRaidExists,
+        );
+      } on ArgumentError {
+        return const GroupJoinCommandResult.failure(
+          GroupJoinFailure.invalidRequest,
         );
       }
 

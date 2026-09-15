@@ -64,6 +64,7 @@ class GroupCreateWritePlan {
         'leaderPlayerId': playerId,
         'leaderDisplayCharacterNameSnapshot': characterName,
         'memberCount': 1,
+        'activeRecruitmentCount': 0,
         'revision': 1,
         'hasActiveJoinCode': false,
         'joinCodeVisibleToMembers': false,

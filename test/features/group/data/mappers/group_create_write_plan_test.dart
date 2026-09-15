@@ -38,6 +38,7 @@ void main() {
     expect(created.group['status'], 'active');
     expect(created.group['leaderPlayerId'], 'player-1');
     expect(created.group['memberCount'], 1);
+    expect(created.group['activeRecruitmentCount'], 0);
     expect(created.group['revision'], 1);
     expect(created.group['hasActiveJoinCode'], isFalse);
     expect(created.group.containsKey('activeJoinCode'), isFalse);
