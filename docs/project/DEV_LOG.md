@@ -1,3 +1,10 @@
+# 2026-09-15 파티·그룹 명령 재설계 — 운영 Rules R6 Aggregate 멤버십 갱신
+
+- 모집 update에 신청 집계·가입·캐릭터·자리·탈퇴·visibility Aggregate OR를 추가하고 구 join/revision/visibility/removal 분기는 유지했다.
+- 원자 가입 membership create·탈퇴 delete는 assignment 대신 `raidState`를 보고, membership 경로의 raidState delete와 그룹 `activeRecruitmentCount` open·visibility listing write OR를 열었다.
+- 승인자가 대상 `raidState`를 만들 수 있도록 R5 create 조건을 완화했다.
+- R6 계약 테스트를 추가했고 운영 Firebase 배포는 수행하지 않았다. 다음은 C*다.
+
 # 2026-09-15 파티·그룹 명령 재설계 — 운영 Rules R5 membership raidState·partyEvents create
 
 - `validAtomicRaidStateCreate`를 추가해 schemaVersion 2 모집의 `raidStateTargets`와 membership·주간 Claim을 검증하는 create OR를 열었다. lifecycle update/delete는 R2를 유지한다.

@@ -1689,6 +1689,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/players/$(target.playerId)/raidStates/$(target.stateId);
     }
 
+    function atomicRaidStateDocPath(playerId, stateId) {
+      return /databases/$(database)/documents/players/$(playerId)/raidStates/$(stateId);
+    }
+
     function atomicHasGroupId(data) {
       return data.groupId is string && data.groupId.size() > 0;
     }
@@ -2021,7 +2025,8 @@ service cloud.firestore {
         recruitmentMemberPath(data.recruitmentId, playerId)
       ).data;
       return hasActiveBinding()
-        && playerId == currentPlayerId()
+        && (playerId == currentPlayerId()
+          || canApproveApplications(data.recruitmentId))
         && stateId == data.characterId + '_' + data.raidId
         && data.schemaVersion == 1
         && data.playerId == playerId
@@ -2036,7 +2041,7 @@ service cloud.firestore {
         && data.cycleKey == recruitment.currentCycleKey
         && data.raidId == recruitment.raidId
         && data.characterId == member.characterId
-        && ownsActiveCharacter(data.characterId)
+        && ownsActiveCharacterForPlayer(data.characterId, playerId)
         && !hasWeeklyRaidClaimAfter(
           playerId,
           data.cycleKey,
@@ -2090,6 +2095,275 @@ service cloud.firestore {
         && (data.type in ['memberLeft', 'memberKicked']
           ? data.targetPlayerId is string
           : !('targetPlayerId' in data));
+    }
+
+    // R6: Aggregate 멤버십 갱신 OR. 구 join/revision/visibility/removal 분기는 유지한다.
+    function atomicActiveV2Recruitment(oldData) {
+      return hasActiveBinding()
+        && oldData.schemaVersion == 2
+        && oldData.status == 'active'
+        && oldData.currentCycleStatus == 'active';
+    }
+
+    function atomicAggregateSizesMatch(data) {
+      return data.partySlots is list
+        && data.raidStateTargets is list
+        && data.partySlots.size() == data.memberCount
+        && data.raidStateTargets.size() == data.memberCount
+        && data.memberCount == data.memberPlayerIds.size()
+        && data.memberCount == data.dealerCount + data.supportCount
+        && data.nonGroupMemberCount is int
+        && data.nonGroupMemberCount >= 0
+        && data.nonGroupMemberCount <= data.memberCount
+        && data.pendingApplicationCount is int
+        && data.pendingNonGroupApplicantCount is int
+        && data.pendingApplicationCount >= 0
+        && data.pendingNonGroupApplicantCount >= 0
+        && data.pendingNonGroupApplicantCount
+          <= data.pendingApplicationCount;
+    }
+
+    function validAtomicPendingApplicationUpdate(oldData, newData) {
+      return atomicActiveV2Recruitment(oldData)
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'pendingApplicationCount', 'pendingNonGroupApplicantCount',
+          'revision', 'updatedAt'
+        ])
+        && newData.pendingApplicationCount is int
+        && newData.pendingNonGroupApplicantCount is int
+        && newData.pendingApplicationCount >= 0
+        && newData.pendingNonGroupApplicantCount >= 0
+        && newData.pendingNonGroupApplicantCount
+          <= newData.pendingApplicationCount
+        && (newData.pendingApplicationCount
+              == oldData.pendingApplicationCount + 1
+            || newData.pendingApplicationCount
+              == oldData.pendingApplicationCount - 1)
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validAtomicRecruitmentJoin(oldData, newData) {
+      let added = newData.memberPlayerIds.toSet().difference(
+        oldData.memberPlayerIds.toSet()
+      );
+      let keys = newData.diff(oldData).affectedKeys();
+      return atomicActiveV2Recruitment(oldData)
+        && oldData.manualRecruitmentEnabled == true
+        && oldData.hasAvailableSlot == true
+        && (keys.hasOnly([
+            'memberPlayerIds', 'memberCount', 'dealerCount', 'supportCount',
+            'hasAvailableSlot', 'partySlots', 'raidStateTargets',
+            'nonGroupMemberCount', 'revision', 'updatedAt'
+          ])
+          || keys.hasOnly([
+            'memberPlayerIds', 'memberCount', 'dealerCount', 'supportCount',
+            'hasAvailableSlot', 'partySlots', 'raidStateTargets',
+            'nonGroupMemberCount', 'pendingApplicationCount',
+            'pendingNonGroupApplicantCount', 'revision', 'updatedAt'
+          ]))
+        && added.size() == 1
+        && newData.memberPlayerIds.size() == oldData.memberPlayerIds.size() + 1
+        && newData.memberCount == oldData.memberCount + 1
+        && newData.dealerCount + newData.supportCount
+          == oldData.dealerCount + oldData.supportCount + 1
+        && newData.hasAvailableSlot
+          == (newData.memberCount < newData.maxMemberCount)
+        && atomicAggregateSizesMatch(newData)
+        && (newData.nonGroupMemberCount == oldData.nonGroupMemberCount
+          || newData.nonGroupMemberCount == oldData.nonGroupMemberCount + 1)
+        && (!keys.hasAny([
+              'pendingApplicationCount', 'pendingNonGroupApplicantCount'
+            ])
+          || (newData.pendingApplicationCount
+                == oldData.pendingApplicationCount - 1
+              && (newData.pendingNonGroupApplicantCount
+                    == oldData.pendingNonGroupApplicantCount
+                  || newData.pendingNonGroupApplicantCount
+                    == oldData.pendingNonGroupApplicantCount - 1)))
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validAtomicCharacterRevisionUpdate(oldData, newData) {
+      return atomicActiveV2Recruitment(oldData)
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'partySlots', 'raidStateTargets', 'dealerCount', 'supportCount',
+          'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot',
+          'revision', 'updatedAt'
+        ])
+        && newData.memberPlayerIds == oldData.memberPlayerIds
+        && newData.memberCount == oldData.memberCount
+        && newData.leaderPlayerId == oldData.leaderPlayerId
+        && atomicAggregateSizesMatch(newData)
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validAtomicPositionAggregateUpdate(oldData, newData) {
+      return atomicActiveV2Recruitment(oldData)
+        && oldData.leaderPlayerId == currentPlayerId()
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'partySlots', 'revision', 'updatedAt'
+        ])
+        && newData.memberPlayerIds == oldData.memberPlayerIds
+        && newData.memberCount == oldData.memberCount
+        && newData.partySlots is list
+        && newData.partySlots.size() == newData.memberCount
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validAtomicRecruitmentMemberRemoval(oldData, newData) {
+      let removed = oldData.memberPlayerIds.toSet().difference(
+        newData.memberPlayerIds.toSet()
+      );
+      let actorIsLeader = oldData.leaderPlayerId == currentPlayerId();
+      let selfLeave = removed.hasAny([currentPlayerId()]);
+      return atomicActiveV2Recruitment(oldData)
+        && removed.size() == 1
+        && newData.memberPlayerIds.size() == oldData.memberPlayerIds.size() - 1
+        && (selfLeave || (actorIsLeader && !selfLeave))
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'memberPlayerIds', 'memberCount', 'dealerCount', 'supportCount',
+          'leaderPlayerId', 'leaderCharacterNameSnapshot',
+          'leaderClassNameSnapshot', 'hasAvailableSlot', 'partySlots',
+          'raidStateTargets', 'nonGroupMemberCount', 'revision', 'updatedAt'
+        ])
+        && newData.memberCount == oldData.memberCount - 1
+        && newData.memberCount >= 1
+        && newData.hasAvailableSlot == true
+        && atomicAggregateSizesMatch(newData)
+        && (newData.nonGroupMemberCount == oldData.nonGroupMemberCount
+          || newData.nonGroupMemberCount == oldData.nonGroupMemberCount - 1)
+        && newData.leaderPlayerId
+          == (!(oldData.leaderPlayerId in newData.memberPlayerIds)
+            ? newData.memberPlayerIds[0]
+            : oldData.leaderPlayerId)
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validAtomicRecruitmentVisibilityChange(oldData, newData) {
+      return atomicActiveV2Recruitment(oldData)
+        && oldData.leaderPlayerId == currentPlayerId()
+        && oldData.groupId is string
+        && newData.groupId == oldData.groupId
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'visibility', 'groupActiveRecruitmentCountAfter',
+          'revision', 'updatedAt'
+        ])
+        && oldData.visibility in ['public', 'group']
+        && newData.visibility in ['public', 'group']
+        && oldData.visibility != newData.visibility
+        && newData.groupActiveRecruitmentCountAfter is int
+        && (newData.visibility != 'group'
+          || (oldData.nonGroupMemberCount == 0
+            && oldData.pendingNonGroupApplicantCount == 0))
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validAtomicJoinedMembership(recruitmentId, playerId, data) {
+      let before = get(recruitmentPath(recruitmentId)).data;
+      let after = getAfter(recruitmentPath(recruitmentId)).data;
+      let stateId = data.characterId + '_' + after.raidId;
+      let directJoin = playerId == currentPlayerId()
+        && before.approvalPolicy.mode == 'directJoin'
+        && data.joinedBy == playerId;
+      let approvedJoin = canApproveApplications(recruitmentId)
+        && data.joinedBy == currentPlayerId();
+      return hasActiveBinding()
+        && before.schemaVersion == 2
+        && after.schemaVersion == 2
+        && data.schemaVersion == 1
+        && data.playerId == playerId
+        && data.partyIndex >= 0
+        && data.partyIndex < after.partyCount
+        && data.slotIndex >= 0
+        && data.slotIndex < after.membersPerParty
+        && data.canApproveApplications == false
+        && data.joinedAt == request.time
+        && data.updatedAt == request.time
+        && ownsActiveCharacterForPlayer(data.characterId, playerId)
+        && !(playerId in before.memberPlayerIds)
+        && playerId in after.memberPlayerIds
+        && (directJoin || approvedJoin)
+        && (before.visibility == 'public'
+          || (before.visibility == 'group'
+            && before.groupId is string
+            && (isCurrentGroupMember(before.groupId) || approvedJoin)))
+        && atomicRaidStateListedInTargets(after, playerId, stateId)
+        && getAfter(atomicRaidStateDocPath(playerId, stateId)).data.recruitmentId
+          == recruitmentId;
+    }
+
+    function validAtomicMemberRemoval(recruitmentId, playerId, data) {
+      let recruitment = get(recruitmentPath(recruitmentId)).data;
+      let after = getAfter(recruitmentPath(recruitmentId)).data;
+      let stateId = data.characterId + '_' + recruitment.raidId;
+      return hasActiveBinding()
+        && recruitment.schemaVersion == 2
+        && after.schemaVersion == 2
+        && (playerId == currentPlayerId()
+          || recruitment.leaderPlayerId == currentPlayerId())
+        && !(playerId in after.memberPlayerIds)
+        && !existsAfter(atomicRaidStateDocPath(playerId, stateId));
+    }
+
+    function validAtomicMembershipRaidStateDelete(playerId, stateId, oldData) {
+      let recruitment = getAfter(recruitmentPath(oldData.recruitmentId)).data;
+      return hasActiveBinding()
+        && recruitment.schemaVersion == 2
+        && !atomicIsLifecycleCommand(recruitment)
+        && oldData.status == 'active'
+        && oldData.playerId == playerId
+        && (playerId == currentPlayerId()
+          || recruitment.leaderPlayerId == currentPlayerId())
+        && !atomicRaidStateListedInTargets(recruitment, playerId, stateId);
+    }
+
+    function validAtomicGroupRecruitmentOpen(groupId, oldData, newData) {
+      let recruitment = getAfter(recruitmentPath(newData.lastRecruitmentId)).data;
+      return recruitment.groupId == groupId
+        && recruitment.schemaVersion == 2
+        && recruitment.visibility == 'group'
+        && ((recruitment.revision == 1
+            && recruitment.leaderPlayerId == currentPlayerId())
+          || (recruitment.revision > 1
+            && recruitment.leaderPlayerId == currentPlayerId()
+            && recruitment.visibility == 'group'))
+        && oldData.activeRecruitmentCount is int
+        && oldData.activeRecruitmentCount >= 0
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'activeRecruitmentCount', 'lastRecruitmentId',
+          'revision', 'updatedAt'
+        ])
+        && newData.activeRecruitmentCount == oldData.activeRecruitmentCount + 1
+        && recruitment.groupActiveRecruitmentCountAfter
+          == newData.activeRecruitmentCount
+        && newData.lastRecruitmentId == recruitment.recruitmentId
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time;
+    }
+
+    function validAtomicVisibilityListingWrite(groupId, recruitmentId, data) {
+      let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
+      return hasActiveBinding()
+        && recruitment.schemaVersion == 2
+        && recruitment.groupId == groupId
+        && recruitment.visibility == 'group'
+        && recruitment.leaderPlayerId == currentPlayerId()
+        && data.keys().hasOnly([
+          'recruitmentId', 'groupId', 'visibility', 'status',
+          'sourceRevision', 'updatedAt'
+        ])
+        && data.recruitmentId == recruitmentId
+        && data.groupId == groupId
+        && data.visibility == 'group'
+        && data.status == recruitment.status
+        && data.sourceRevision == recruitment.revision
+        && data.updatedAt == request.time;
     }
 
     function validGroupRaidListingDelete(groupId, recruitmentId) {
@@ -3749,6 +4023,10 @@ service cloud.firestore {
           playerId,
           stateId,
           resource.data
+        ) || validAtomicMembershipRaidStateDelete(
+          playerId,
+          stateId,
+          resource.data
         );
       }
 
@@ -4178,6 +4456,24 @@ service cloud.firestore {
         ) || validAtomicLifecycleUpdate(
           resource.data,
           request.resource.data
+        ) || validAtomicPendingApplicationUpdate(
+          resource.data,
+          request.resource.data
+        ) || validAtomicRecruitmentJoin(
+          resource.data,
+          request.resource.data
+        ) || validAtomicCharacterRevisionUpdate(
+          resource.data,
+          request.resource.data
+        ) || validAtomicPositionAggregateUpdate(
+          resource.data,
+          request.resource.data
+        ) || validAtomicRecruitmentMemberRemoval(
+          resource.data,
+          request.resource.data
+        ) || validAtomicRecruitmentVisibilityChange(
+          resource.data,
+          request.resource.data
         );
       allow delete: if false;
 
@@ -4190,6 +4486,10 @@ service cloud.firestore {
           playerId,
           request.resource.data
         ) || validJoinedMembership(
+          recruitmentId,
+          playerId,
+          request.resource.data
+        ) || validAtomicJoinedMembership(
           recruitmentId,
           playerId,
           request.resource.data
@@ -4211,6 +4511,10 @@ service cloud.firestore {
             request.resource.data
           );
         allow delete: if validMemberRemoval(
+          recruitmentId,
+          playerId,
+          resource.data
+        ) || validAtomicMemberRemoval(
           recruitmentId,
           playerId,
           resource.data
@@ -4312,6 +4616,10 @@ service cloud.firestore {
         groupId,
         resource.data,
         request.resource.data
+      ) || validAtomicGroupRecruitmentOpen(
+        groupId,
+        resource.data,
+        request.resource.data
       ) || validGroupJoinCodeFlagUpdate(
         resource.data,
         request.resource.data
@@ -4387,12 +4695,20 @@ service cloud.firestore {
           groupId,
           recruitmentId,
           request.resource.data
+        ) || validAtomicVisibilityListingWrite(
+          groupId,
+          recruitmentId,
+          request.resource.data
         );
         allow update: if validGroupRaidListingCreate(
           groupId,
           recruitmentId,
           request.resource.data
         ) || validAtomicLifecycleListingUpdate(
+          recruitmentId,
+          request.resource.data
+        ) || validAtomicVisibilityListingWrite(
+          groupId,
           recruitmentId,
           request.resource.data
         );
