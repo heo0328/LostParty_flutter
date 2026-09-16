@@ -1,3 +1,19 @@
+# 2026-09-16 C* 기능 복구 F1 — 그룹 이전·탈퇴·1인 해산 자동 계약
+
+- 그룹장 이전은 그룹 원본 1건과 이전·신규 그룹장 membership 2건, 일반 탈퇴·1인 해산은 그룹·본인 membership·membership state·relation의 고정 문서만 갱신함을 재확인했다. 파티 인원·연결 모집 수 비례 Transaction으로 되돌리지 않았다.
+- 앱은 1인 그룹 해산 전에 `activeRecruitmentCount == 0`을 검사하지만 Rules에는 같은 불변식이 빠져 있었다. `validGroupDisbandUpdate`에 정수·0 조건을 추가해 활성 그룹 모집이 있는 해산을 서버에서도 거절한다.
+- 전체 추적 Rules Emulator 도구에 그룹장 이전→기존 그룹장 탈퇴, 일반 멤버 탈퇴, 1인 해산과 활성 모집 해산 거절을 추가하고 demo 전용 Actions에 연결했다.
+- 그룹 Rules·Write Plan·C* 기준선·Rules 경고 표적 테스트 42건 통과. 두 변경 테스트 파일 정적 분석은 최초 동시 실행이 출력 없이 정지해 종료됐지만 파일별 재실행에서 각각 문제 0건으로 완료됐다. 로컬 전체 Rules Emulator는 F0에서 확인한 Windows 업로드 503 때문에 반복하지 않았다.
+- 변경 후 Rules SHA-256은 `EB5C6D9AAC313C44A7588495561C666D9A937AE724194D8278E552A83B1A9DF0`이며 운영 미게시다. Actions·Rules 게시·실기기 완료 전에는 F1을 최종 완료로 판정하지 않는다.
+
+# 2026-09-16 C* 기능 복구 F0 — 실행 기준·전체 Rules 회귀 진입점 정리
+
+- 구조 개선 전 `firestore.rules-backup`은 배포 원본이 아닌 로컬 비교 자료로 분류해 ignore 처리했다. 이전 보석 진단 도구는 `test/tool/lost_ark_gem_probe_test.dart`이며 이번 미추적 파일과 무관하다.
+- 미추적 생성 권한 도구를 현재 추적 `firestore.rules`의 그룹·모집 생성 기준선인 `tools/party_group_cutover_rules_test.mjs`로 정리했다. demo 프로젝트 전용 GitHub Actions와 정적 계약 테스트를 추가했으며 운영 프로젝트 인증·배포는 사용하지 않는다.
+- 기준 해시: Rules `B9185B07241CC93880212616CB14C5823BD55EF7D71D8E4AC38B8D5EA0BA4DA1`, Indexes `87716AC3100BC18065EBE96E1B78D09E37D21BB0E4A87BFA468B056C151EEE03`, 백업 `A66F8AE04AEEE633F3AD30A66A6345C974011B2A95767B3F9955A1573D17E0A7`.
+- 로컬 JBR 21에서 Firestore Emulator는 시작했으나 전체 Rules 업로드가 Rules 평가 전 `503 Network closed for unknown reason`으로 종료됐다. 같은 로컬 접근은 반복하지 않고 GitHub Actions를 실제 Emulator 검증 경로로 유지한다.
+- 신규 계약 테스트 2건 통과. 원격 Actions 실행은 커밋·push 이후 확인한다. 기능 코드·운영 Rules·Indexes·Firebase 배포는 변경하지 않았다.
+
 # 2026-09-16 실기기 판정 — 생성·가시성만 확인, 나머지 미해결
 
 - 사용자 확인: Rules 게시 이후 **고쳐진 것**은 (1) 레이드 모집방 생성 (2) 그룹 생성 (3) 목록·레이드 현황·상세에 모집이 보이는 것뿐이다.

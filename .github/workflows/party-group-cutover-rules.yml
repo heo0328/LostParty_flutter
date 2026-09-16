@@ -1,0 +1,59 @@
+name: Party group cutover Rules regression
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/party-group-command-redesign
+    paths:
+      - .github/workflows/party-group-cutover-rules.yml
+      - firebase.json
+      - firestore.rules
+      - firestore.indexes.json
+      - tools/package.json
+      - tools/package-lock.json
+      - tools/group_leave_rules_test.mjs
+      - tools/party_group_cutover_rules_test.mjs
+
+permissions:
+  contents: read
+
+jobs:
+  full-rules-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install Rules test dependencies
+        run: npm ci --prefix tools
+
+      - name: Run tracked full Rules regression
+        run: >-
+          npx --yes firebase-tools@15.29.0 emulators:exec
+          --config firebase.json
+          --only firestore
+          --project demo-party-group-cutover
+          "node tools/party_group_cutover_rules_test.mjs"
+
+      - name: Run group transfer leave and disband regression
+        run: >-
+          npx --yes firebase-tools@15.29.0 emulators:exec
+          --config firebase.json
+          --only firestore
+          --project demo-party-group-cutover
+          "node tools/group_leave_rules_test.mjs"

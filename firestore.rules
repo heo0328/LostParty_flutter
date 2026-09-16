@@ -720,6 +720,8 @@ service cloud.firestore {
         && oldData.leaderPlayerId == currentPlayerId()
         && oldData.memberCount == 1
         && oldData.hasActiveJoinCode == false
+        && oldData.activeRecruitmentCount is int
+        && oldData.activeRecruitmentCount == 0
         && newData.diff(oldData).affectedKeys().hasOnly([
           'status', 'memberCount', 'deletedAt',
           'revision', 'lastActivityAt', 'updatedAt'

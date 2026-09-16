@@ -665,6 +665,14 @@ void main() {
     expect(rules, contains('function validGroupMemberRoleTransferUpdate('));
     expect(rules, contains('function validGroupDisbandUpdate('));
     expect(rules, contains('function validGroupMemberDisbandDelete('));
+    final disbandStart = rules.indexOf('function validGroupDisbandUpdate(');
+    final disbandEnd = rules.indexOf(
+      'function validGroupMemberDisbandDelete(',
+      disbandStart,
+    );
+    final disbandRule = rules.substring(disbandStart, disbandEnd);
+    expect(disbandRule, contains('oldData.activeRecruitmentCount is int'));
+    expect(disbandRule, contains('oldData.activeRecruitmentCount == 0'));
     final groupUpdateStart = rules.indexOf(
       'allow update: if validGroupDisbandUpdate(',
     );

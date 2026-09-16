@@ -19,7 +19,7 @@ import {
 } from 'firebase/firestore';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PROJECT_ID = 'demo-rules-complexity';
+const PROJECT_ID = 'demo-party-group-cutover';
 const rules = fs.readFileSync(
   path.join(__dirname, '..', 'firestore.rules'),
   'utf8',
@@ -32,7 +32,11 @@ const leaderPlayerId = 'leader-player';
 const groupId = 'group-1';
 const characterId = 'char-member';
 
-async function seed(testEnv, activeGroupIds = [groupId]) {
+async function seed(
+  testEnv,
+  activeGroupIds = [groupId],
+  { soloLeader = false, activeRecruitmentCount = 0 } = {},
+) {
   const now = Timestamp.now();
   await testEnv.withSecurityRulesDisabled(async (context) => {
     const db = getFirestore(context);
@@ -67,7 +71,10 @@ async function seed(testEnv, activeGroupIds = [groupId]) {
       status: 'active',
       name: '테스트그룹',
       leaderPlayerId: leaderPlayerId,
-      memberCount: 2,
+      memberCount: soloLeader ? 1 : 2,
+      activeRecruitmentCount,
+      hasActiveJoinCode: false,
+      joinCodeVisibleToMembers: false,
       revision: 3,
       representativeCharacterId: 'char-leader',
       leaderDisplayCharacterNameSnapshot: '리더',
@@ -89,6 +96,34 @@ async function seed(testEnv, activeGroupIds = [groupId]) {
       createdAt: now,
       updatedAt: now,
     });
+    await setDoc(
+      doc(db, 'players', leaderPlayerId, 'groupMembershipState', 'current'),
+      {
+        schemaVersion: 1,
+        playerId: leaderPlayerId,
+        activeGroupIds: [groupId],
+        activeGroupCount: 1,
+        revision: 1,
+        updatedAt: now,
+      },
+    );
+    await setDoc(
+      doc(db, 'players', leaderPlayerId, 'groupRelations', groupId),
+      {
+        schemaVersion: 1,
+        groupId,
+        playerId: leaderPlayerId,
+        relation: 'member',
+        requestStatus: null,
+        groupNameSnapshot: '테스트그룹',
+        displayCharacterNameSnapshot: '리더',
+        expiresAt: null,
+        sourceRevision: 1,
+        createdAt: now,
+        updatedAt: now,
+      },
+    );
+    if (soloLeader) return;
     await setDoc(doc(db, 'groups', groupId, 'members', memberPlayerId), {
       schemaVersion: 1,
       groupId,
@@ -133,6 +168,114 @@ async function seed(testEnv, activeGroupIds = [groupId]) {
         updatedAt: now,
       },
     );
+  });
+}
+
+async function transferLeadershipTransaction(db) {
+  const groupRef = doc(db, 'groups', groupId);
+  const outgoingRef = doc(db, 'groups', groupId, 'members', leaderPlayerId);
+  const incomingRef = doc(db, 'groups', groupId, 'members', memberPlayerId);
+  await runTransaction(db, async (transaction) => {
+    const group = (await transaction.get(groupRef)).data();
+    const outgoing = (await transaction.get(outgoingRef)).data();
+    const incoming = (await transaction.get(incomingRef)).data();
+    transaction.update(groupRef, {
+      leaderPlayerId: memberPlayerId,
+      leaderDisplayCharacterNameSnapshot: incoming.displayCharacterNameSnapshot,
+      revision: group.revision + 1,
+      lastActivityAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    transaction.update(outgoingRef, {
+      role: 'member',
+      revision: outgoing.revision + 1,
+      updatedAt: serverTimestamp(),
+    });
+    transaction.update(incomingRef, {
+      role: 'leader',
+      revision: incoming.revision + 1,
+      updatedAt: serverTimestamp(),
+    });
+  });
+}
+
+async function formerLeaderLeaveTransaction(db) {
+  const groupRef = doc(db, 'groups', groupId);
+  const memberRef = doc(db, 'groups', groupId, 'members', leaderPlayerId);
+  const stateRef = doc(
+    db,
+    'players',
+    leaderPlayerId,
+    'groupMembershipState',
+    'current',
+  );
+  const relationRef = doc(
+    db,
+    'players',
+    leaderPlayerId,
+    'groupRelations',
+    groupId,
+  );
+  await runTransaction(db, async (transaction) => {
+    const group = (await transaction.get(groupRef)).data();
+    const state = (await transaction.get(stateRef)).data();
+    transaction.delete(memberRef);
+    transaction.update(groupRef, {
+      memberCount: group.memberCount - 1,
+      revision: group.revision + 1,
+      lastActivityAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    transaction.update(stateRef, {
+      schemaVersion: 1,
+      playerId: leaderPlayerId,
+      activeGroupIds: state.activeGroupIds.filter((id) => id !== groupId),
+      activeGroupCount: state.activeGroupIds.length - 1,
+      revision: state.revision + 1,
+      updatedAt: serverTimestamp(),
+    });
+    transaction.delete(relationRef);
+  });
+}
+
+async function disbandSoloGroupTransaction(db) {
+  const groupRef = doc(db, 'groups', groupId);
+  const memberRef = doc(db, 'groups', groupId, 'members', leaderPlayerId);
+  const stateRef = doc(
+    db,
+    'players',
+    leaderPlayerId,
+    'groupMembershipState',
+    'current',
+  );
+  const relationRef = doc(
+    db,
+    'players',
+    leaderPlayerId,
+    'groupRelations',
+    groupId,
+  );
+  await runTransaction(db, async (transaction) => {
+    const group = (await transaction.get(groupRef)).data();
+    const state = (await transaction.get(stateRef)).data();
+    transaction.update(groupRef, {
+      status: 'softDeleted',
+      memberCount: 0,
+      deletedAt: serverTimestamp(),
+      revision: group.revision + 1,
+      lastActivityAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    transaction.delete(memberRef);
+    transaction.update(stateRef, {
+      schemaVersion: 1,
+      playerId: leaderPlayerId,
+      activeGroupIds: state.activeGroupIds.filter((id) => id !== groupId),
+      activeGroupCount: state.activeGroupIds.length - 1,
+      revision: state.revision + 1,
+      updatedAt: serverTimestamp(),
+    });
+    transaction.delete(relationRef);
   });
 }
 
@@ -230,6 +373,25 @@ async function main() {
     ));
     console.log('PASS: self snapshot refresh and protected-field guards');
 
+    await seed(testEnv);
+    console.log('Running leader transfer and former leader leave...');
+    await assertSucceeds(transferLeadershipTransaction(leaderDb));
+    await assertSucceeds(formerLeaderLeaveTransaction(leaderDb));
+    console.log('PASS: leader transfer and former leader leave');
+
+    await seed(testEnv, [groupId], { soloLeader: true });
+    console.log('Running solo group disband...');
+    await assertSucceeds(disbandSoloGroupTransaction(leaderDb));
+    console.log('PASS: solo group disband');
+
+    await seed(testEnv, [groupId], {
+      soloLeader: true,
+      activeRecruitmentCount: 1,
+    });
+    await assertFails(disbandSoloGroupTransaction(leaderDb));
+    console.log('PASS: active recruitment blocks solo group disband');
+
+    await seed(testEnv);
     console.log('Running full leave transaction...');
     await assertSucceeds(leaveTransaction(db));
     console.log('PASS: full leave transaction');

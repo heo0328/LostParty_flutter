@@ -18,6 +18,9 @@ migrate_working_dir/
 # Local snapshot copied from the Firebase console (comparison only, never deploy)
 /firestore-web.rules
 
+# Local pre-cutover Firestore Rules backup (comparison only, never deploy)
+/firestore.rules-backup
+
 # IntelliJ related
 *.iml
 *.ipr
