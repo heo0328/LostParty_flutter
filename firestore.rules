@@ -3382,14 +3382,7 @@ service cloud.firestore {
       // 추가로 읽지 않게 한다.
       // 1인 해산과 그룹장 이전은 여러 문서를 함께 쓰므로 먼저 판정한다.
       // 초대코드와 표시 정책도 뒤의 가입·승인 복합 명령보다 먼저 종료한다.
-      allow update: if request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
-        && request.resource.data.memberCount == resource.data.memberCount + 1
-        && validGroupJoinCommandUpdate(
-        groupId,
-        resource.data,
-        request.resource.data
-      ) || validGroupDisbandUpdate(
+      allow update: if validGroupDisbandUpdate(
         groupId,
         resource.data,
         request.resource.data
@@ -3397,7 +3390,14 @@ service cloud.firestore {
         groupId,
         resource.data,
         request.resource.data
-      ) || validAtomicGroupRecruitmentClose(
+      ) || (request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
+        && request.resource.data.memberCount == resource.data.memberCount + 1
+        && validGroupJoinCommandUpdate(
+          groupId,
+          resource.data,
+          request.resource.data
+        )) || validAtomicGroupRecruitmentClose(
         groupId,
         resource.data,
         request.resource.data
