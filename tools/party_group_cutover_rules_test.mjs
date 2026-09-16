@@ -542,6 +542,27 @@ async function main() {
     }
     console.log('PASS: reapply refreshes group snapshot');
 
+    await assertSucceeds(applicationTxn(applicantDb, 'withdraw'));
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await setDoc(doc(adminDb, 'groups', 'group-linked-1', 'members', joinerPlayerId), {
+        schemaVersion: 1, groupId: 'group-linked-1', playerId: joinerPlayerId,
+        role: 'member', joinedAt: Timestamp.now(), revision: 1,
+      });
+      await updateDoc(doc(adminDb, 'recruitments', recruitmentId), { visibility: 'group' });
+      await updateDoc(doc(adminDb, 'groups', 'group-linked-1'), { activeRecruitmentCount: 1 });
+    });
+    console.log('test: group-only reapply checks current group membership');
+    await assertFails(applicationTxn(applicantDb, 'reapply', { countedAsNonGroup: true }));
+    await assertSucceeds(applicationTxn(applicantDb, 'reapply'));
+    const groupApplication = (await getDoc(doc(applicantDb, 'recruitments', recruitmentId, 'applications', joinerPlayerId))).data();
+    const groupRecruitment = (await getDoc(doc(applicantDb, 'recruitments', recruitmentId))).data();
+    if (groupApplication.countedAsNonGroupApplicant !== false
+      || groupRecruitment.pendingNonGroupApplicantCount !== 0) {
+      throw new Error('Group-only reapply count mismatch');
+    }
+    console.log('PASS: group-only reapply validates group snapshot');
+
     await testEnv.clearFirestore();
     await seedBase(testEnv, { weeklyClaim: true });
     console.log('test: public recruitment with manual weekly claim');
