@@ -3390,7 +3390,12 @@ service cloud.firestore {
         groupId,
         resource.data,
         request.resource.data
-      ) || (request.resource.data.diff(resource.data).affectedKeys()
+      ) || (request.resource.data.memberCount == resource.data.memberCount - 1
+        && validGroupMemberLeaveUpdate(
+        groupId,
+        resource.data,
+        request.resource.data
+      )) || (request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
         && request.resource.data.memberCount == resource.data.memberCount + 1
         && validGroupJoinCommandUpdate(
@@ -3416,10 +3421,6 @@ service cloud.firestore {
         resource.data,
         request.resource.data
       ) || validGroupLeaderApproveUpdate(
-        resource.data,
-        request.resource.data
-      ) || validGroupMemberLeaveUpdate(
-        groupId,
         resource.data,
         request.resource.data
       );
