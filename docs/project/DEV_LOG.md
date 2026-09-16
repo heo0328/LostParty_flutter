@@ -3050,3 +3050,14 @@
 - 그룹 자격 상실 정리는 실행자가 현재 파티원 및 그룹원이고 대상이 현재 그룹원이 아닌 경우만 허용한다. 대상이 파티장이면 기존 구현의 누락과 달리 가입 순서 후임의 승인 권한도 함께 승계한다.
 - 일반 제거는 공용 모집에서 최대 4건, 그룹 listing 포함 최대 5건이며 파티장 승계는 각각 최대 5·6건이다. 전원 membership 조회, 별도 slot, 기존 assignment·Claim과 Player별 event fan-out은 사용하지 않는다.
 - 관련 Write Plan·수명주기 회귀 18건과 변경 파일 정적 분석이 통과했다. 새 Repository는 운영 Router/DI와 Rules에 연결하지 않았고 실제 Firebase에는 접근하지 않았다.
+
+# 2026-09-16 F1 그룹 쓰기 복구 자동 검증·운영 Rules 게시
+
+- 그룹장 이전은 그룹 1건과 membership 2건, 일반 탈퇴·1인 해산은 그룹·본인 membership·membership state·relation의 고정 문서만 쓰는 구조를 유지했다. 파티 인원·그룹원·`raidListings` 수에 따른 fan-out으로 되돌리지 않았다.
+- `validGroupDisbandUpdate`에 `activeRecruitmentCount` 정수·0 조건을 추가해 활성 그룹 모집이 있는 1인 그룹의 해산을 서버에서도 차단했다.
+- 실제 Rules Emulator 검증 중 과거 membership에 `gemValidationSnapshot` 등 선택 필드가 없을 때의 평가 오류를 확인했다. 세 선택 필드는 누락/null/정상 타입을 허용하되, 갱신 허용 필드와 타입 제한은 그대로 유지했다.
+- 그룹장 이전에서 `groups` update OR와 membership update OR가 앞선 무관한 validator를 모두 평가해 표현식 1,000개 한도를 넘는 문제를 확인했다. 이전·role 변경 validator를 각 OR 앞쪽으로 옮겼으며 판정 조건과 쓰기 범위는 완화하지 않았다.
+- 표적 Rules 계약 38건과 변경 파일 정적 분석이 통과했다. 로컬 Flutter wrapper의 오래된 전역 lock은 사용자 프로세스를 종료하지 않고 동일 Flutter tool snapshot 직접 실행으로 우회했다.
+- GitHub Actions `35055217000`에서 전체 추적 Rules 기준선과 그룹장 이전→기존 그룹장 탈퇴, 일반 탈퇴, 1인 해산, 활성 모집 중 해산 거부가 모두 통과했다.
+- 브랜치·원격 HEAD `8600a5b`, `firebase.json`의 Rules 경로와 대상 `lost-party`를 재확인했다. SHA-256 `A8E9D51EF6F52E2B38BAE1F72462B98F78A2DA105B1522C47152B54BBE54BA1B`의 `firestore.rules`만 1회 게시했고 컴파일·업로드·release가 성공했다. Indexes와 다른 Firebase 자원은 게시하지 않았다.
+- 실기기 미확인: 그룹장 이전, 이전 그룹장 탈퇴, 일반 멤버 탈퇴, 마지막 1인 해산, 활성 모집 중 해산 차단 안내. 이 확인 전에는 F1을 완료로 닫거나 F2로 넘어가지 않는다.
