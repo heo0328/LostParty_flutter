@@ -623,6 +623,24 @@ void main() {
     expect(refresh, isNot(contains('newData.role == oldData.role')));
   });
 
+  test('과거 membership의 선택 Snapshot 필드 누락을 허용한다', () {
+    final start = rules.indexOf(
+      '    function validGroupMemberOptionalNumberFields(data)',
+    );
+    final end = rules.indexOf(
+      '    function validGroupMemberSnapshotsFromRelation',
+      start,
+    );
+    final optionalFields = rules.substring(start, end);
+    for (final field in [
+      'itemLevelSnapshot',
+      'combatPowerSnapshot',
+      'gemValidationSnapshot',
+    ]) {
+      expect(optionalFields, contains("!('$field' in data)"));
+    }
+  });
+
   test('일반 멤버 탈퇴 Rules helper와 삭제 경로를 고정한다', () {
     expect(
       rules,

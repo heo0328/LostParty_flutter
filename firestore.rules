@@ -408,10 +408,14 @@ service cloud.firestore {
     }
 
     function validGroupMemberOptionalNumberFields(data) {
-      return (data.itemLevelSnapshot == null || data.itemLevelSnapshot is number)
-        && (data.combatPowerSnapshot == null
+      return (!('itemLevelSnapshot' in data)
+          || data.itemLevelSnapshot == null
+          || data.itemLevelSnapshot is number)
+        && (!('combatPowerSnapshot' in data)
+          || data.combatPowerSnapshot == null
           || data.combatPowerSnapshot is number)
-        && (data.gemValidationSnapshot == null
+        && (!('gemValidationSnapshot' in data)
+          || data.gemValidationSnapshot == null
           || data.gemValidationSnapshot is map);
     }
 
