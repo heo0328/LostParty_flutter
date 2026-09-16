@@ -2788,7 +2788,14 @@ service cloud.firestore {
       match /groupRelations/{groupId} {
         allow get, list: if hasActiveBinding()
           && playerId == currentPlayerId();
-        allow create, update: if validInitialMemberGroupRelation(
+        // 코드 가입은 신청·승인 분기의 깊은 getAfter보다 먼저 판정한다.
+        allow create, update: if request.resource.data.relation == 'member'
+          && request.resource.data.requestStatus == null
+          && validJoinCodeMemberGroupRelation(
+          playerId,
+          groupId,
+          request.resource.data
+        ) || validInitialMemberGroupRelation(
           playerId,
           groupId,
           request.resource.data
@@ -2797,10 +2804,6 @@ service cloud.firestore {
           groupId,
           request.resource.data
         ) || validAcceptedGroupRelation(
-          playerId,
-          groupId,
-          request.resource.data
-        ) || validJoinCodeMemberGroupRelation(
           playerId,
           groupId,
           request.resource.data
@@ -3379,7 +3382,14 @@ service cloud.firestore {
       // 추가로 읽지 않게 한다.
       // 1인 해산과 그룹장 이전은 여러 문서를 함께 쓰므로 먼저 판정한다.
       // 초대코드와 표시 정책도 뒤의 가입·승인 복합 명령보다 먼저 종료한다.
-      allow update: if validGroupDisbandUpdate(
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
+        && request.resource.data.memberCount == resource.data.memberCount + 1
+        && validGroupJoinCommandUpdate(
+        groupId,
+        resource.data,
+        request.resource.data
+      ) || validGroupDisbandUpdate(
         groupId,
         resource.data,
         request.resource.data
@@ -3417,7 +3427,13 @@ service cloud.firestore {
 
       match /members/{playerId} {
         allow get, list: if isCurrentGroupMember(groupId);
-        allow create: if validInitialGroupMember(
+        // 가입자는 joinedBy로 먼저 걸러 기존 생성·초대·승인을 보호한다.
+        allow create: if request.resource.data.joinedBy == 'joinCode'
+          && validJoinCodeGroupMember(
+            groupId,
+            playerId,
+            request.resource.data
+          ) || validInitialGroupMember(
           groupId,
           playerId,
           request.resource.data
@@ -3426,10 +3442,6 @@ service cloud.firestore {
           playerId,
           request.resource.data
         ) || validApprovedGroupMember(
-          groupId,
-          playerId,
-          request.resource.data
-        ) || validJoinCodeGroupMember(
           groupId,
           playerId,
           request.resource.data
