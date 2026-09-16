@@ -9,6 +9,7 @@ import {
 import {
   doc,
   setDoc,
+  updateDoc,
   getDoc,
   runTransaction,
   serverTimestamp,
@@ -399,7 +400,7 @@ async function createPublicRecruitmentTxn(db) {
 }
 
 // F2-A: mirror the connected atomic application repository's public-room writes.
-async function applicationTxn(db, action) {
+async function applicationTxn(db, action, { countedAsNonGroup = false } = {}) {
   return runTransaction(db, async (tx) => {
     const recruitmentRef = doc(db, 'recruitments', recruitmentId);
     const applicationRef = doc(db, 'recruitments', recruitmentId, 'applications', joinerPlayerId);
@@ -423,7 +424,7 @@ async function applicationTxn(db, action) {
         status: 'pending', resolutionReason: null, approvalCount: 0,
         revision: application ? application.revision + 1 : 1,
         decidedAt: null, updatedAt: serverTimestamp(),
-        countedAsNonGroupApplicant: false,
+        countedAsNonGroupApplicant: countedAsNonGroup,
       };
       if (application) {
         tx.update(applicationRef, pending);
@@ -436,7 +437,9 @@ async function applicationTxn(db, action) {
     }
     tx.update(recruitmentRef, {
       pendingApplicationCount: recruitment.pendingApplicationCount + (isWithdraw ? -1 : 1),
-      pendingNonGroupApplicantCount: recruitment.pendingNonGroupApplicantCount,
+      pendingNonGroupApplicantCount: recruitment.pendingNonGroupApplicantCount
+        + (isWithdraw ? -(application.countedAsNonGroupApplicant ? 1 : 0)
+          : (countedAsNonGroup ? 1 : 0)),
       revision: nextRevision, updatedAt: serverTimestamp(),
     });
     const eventId = `${eventType}_${recruitmentId}_${nextRevision}`;
@@ -522,6 +525,22 @@ async function main() {
       throw new Error('Application reapply state mismatch');
     }
     console.log('PASS: public application create, withdraw and reapply');
+
+    await assertSucceeds(applicationTxn(applicantDb, 'withdraw'));
+    await assertSucceeds(createGroupTxn(db, 'group-linked-1'));
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await updateDoc(doc(adminDb, 'recruitments', recruitmentId), {
+        groupId: 'group-linked-1', visibility: 'public', nonGroupMemberCount: 0,
+      });
+    });
+    console.log('test: reapply after public linked-room group membership changes');
+    await assertSucceeds(applicationTxn(applicantDb, 'reapply', { countedAsNonGroup: true }));
+    const changedSnapshot = (await getDoc(doc(applicantDb, 'recruitments', recruitmentId, 'applications', joinerPlayerId))).data();
+    if (changedSnapshot.countedAsNonGroupApplicant !== true) {
+      throw new Error('Reapplication group snapshot not refreshed');
+    }
+    console.log('PASS: reapply refreshes group snapshot');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv, { weeklyClaim: true });
