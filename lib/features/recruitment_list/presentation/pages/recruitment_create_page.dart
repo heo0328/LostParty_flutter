@@ -613,12 +613,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
   }
 
   bool _canChooseCandidate(RecruitmentLeaderCandidate candidate) =>
-      !candidate.participationStatuses.any(
-        (status) =>
-            status.type ==
-                CandidateParticipationStatusType.overlappingSchedule ||
-            status.type == CandidateParticipationStatusType.uncertainSchedule,
-      ) &&
+      candidate.canSelect &&
       candidate.roles.any((option) => _hasEligibleRaid(option.itemLevel));
 
   bool _hasEligibleRaid(double? itemLevel) {

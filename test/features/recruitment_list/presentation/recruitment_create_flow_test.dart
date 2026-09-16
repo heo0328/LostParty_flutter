@@ -15,6 +15,7 @@ import 'package:lost_party/features/recruitment_list/domain/services/recruitment
 import 'package:lost_party/features/recruitment_list/domain/services/recruitment_command_service.dart';
 import 'package:lost_party/features/recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/active_raid_assignment.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_aggregate.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_application.dart';
 import 'package:lost_party/features/recruitment_list/domain/policies/approval_policy.dart';
@@ -26,6 +27,63 @@ import 'package:lost_party/shared/raid_catalog/domain/entities/raid_catalog.dart
 import 'package:lost_party/shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 
 void main() {
+  testWidgets('동일 레이드 확정 참가 캐릭터는 생성 후보에서 빨간색으로 차단한다', (tester) async {
+    final recruitmentRepository = InMemoryRecruitmentStateRepository();
+    final assignments = InMemoryActiveRaidAssignmentRepository();
+    await assignments.acquire(
+      ActiveRaidAssignment(
+        userId: 'local-user',
+        characterId: '대표바드',
+        raidId: 'serca',
+        difficultyId: 'normal',
+        recruitmentId: 'existing-room',
+        schedule: RaidParticipationSchedule(startAt: DateTime.utc(2026, 8, 20)),
+      ),
+    );
+    final session = FakeUserSession('local-user');
+    final clock = FakeRecruitmentClock(DateTime.utc(2026, 8, 20));
+    final accountRepository = _AccountRepository();
+    final commandService = RecruitmentCommandService(
+      session: session,
+      clock: clock,
+      idGenerator: SequentialRecruitmentIdGenerator(),
+      repository: recruitmentRepository,
+      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+      assignmentRepository: assignments,
+    );
+    final router = GoRouter(
+      initialLocation: '/create',
+      routes: [
+        GoRoute(
+          path: '/create',
+          builder: (context, state) => RecruitmentCreatePage(
+            catalogRepository: _CatalogRepository(),
+            commandService: commandService,
+            candidateService: RecruitmentLeaderCandidateService(
+              accountRepository: accountRepository,
+              weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+              session: session,
+              clock: clock,
+              assignmentRepository: assignments,
+              recruitmentRepository: recruitmentRepository,
+            ),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('leaderCandidateSelector')));
+    await tester.pumpAndSettle();
+    expect(find.text('동일 레이드 참가 중'), findsWidgets);
+    final blocked = tester.widget<ListTile>(
+      find.byKey(const ValueKey('leader-candidate-대표바드')),
+    );
+    expect(blocked.enabled, isFalse);
+  });
+
   testWidgets('좁은 화면에서 모집을 생성하고 상세 파티 구성을 표시한다', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -477,16 +535,12 @@ void main() {
     expect(find.text('가입 신청이 거절되었습니다.'), findsOneWidget);
   });
 
-  testWidgets('파티원이 수동 알림 전송 전에 확인하고 미연결 상태를 안내받는다', (
-    tester,
-  ) async {
+  testWidgets('파티원이 수동 알림 전송 전에 확인하고 미연결 상태를 안내받는다', (tester) async {
     final repository = InMemoryRecruitmentStateRepository();
     await repository.create(_memberRecruitment);
     final service = _service(repository, FakeUserSession('local-user'));
     await tester.pumpWidget(
-      MaterialApp(
-        home: _detailFor(_memberRecruitment.id, repository, service),
-      ),
+      MaterialApp(home: _detailFor(_memberRecruitment.id, repository, service)),
     );
     await tester.pumpAndSettle();
 
@@ -548,7 +602,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('자동으로 제외되지 않습니다.'), findsOneWidget);
     expect(find.textContaining('최소 전투력 확인 필요 파티원'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('confirmRecruitmentEditButton')));
+    await tester.tap(
+      find.byKey(const ValueKey('confirmRecruitmentEditButton')),
+    );
     await tester.pumpAndSettle();
 
     final updated = (await repository.getById(_pendingRecruitment.id))!;
@@ -636,7 +692,6 @@ class _CatalogRepository implements RaidCatalogRepository {
 }
 
 class _AccountRepository implements AccountRepository {
-
   @override
   Future<RosterSummaryApplyResult> applyRosterSummarySync({
     required int accountId,

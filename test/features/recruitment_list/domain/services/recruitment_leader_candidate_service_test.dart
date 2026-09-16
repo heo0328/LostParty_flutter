@@ -14,6 +14,7 @@ import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_recrui
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/active_raid_assignment.dart';
+import 'package:lost_party/features/recruitment_list/domain/repositories/active_raid_assignment_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/policies/party_composition_policy.dart';
 import 'package:lost_party/features/recruitment_list/domain/services/candidate_participation_status.dart';
 import 'package:lost_party/features/recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
@@ -171,6 +172,26 @@ void main() {
     expect(
       candidates.last.participationStatuses.map((status) => status.type),
       contains(CandidateParticipationStatusType.overlappingSchedule),
+    );
+  });
+
+  test('서버 raidState 점유가 있는 캐릭터는 생성 후보에서 차단한다', () async {
+    final service = RecruitmentLeaderCandidateService(
+      accountRepository: _AccountRepository(),
+      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+      session: FakeUserSession('local-user'),
+      clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 23)),
+      assignmentRepository: InMemoryActiveRaidAssignmentRepository(),
+      assignmentLookup: const _BlockingAssignmentLookup(),
+      recruitmentRepository: InMemoryRecruitmentStateRepository(),
+    );
+
+    final representative = (await service.load(_query())).first;
+    expect(representative.canSelect, isFalse);
+    expect(representative.rejectionReasons, contains('동일 레이드 참가 중'));
+    expect(
+      representative.participationStatuses.map((status) => status.type),
+      contains(CandidateParticipationStatusType.activeSameRaid),
     );
   });
 
@@ -548,3 +569,15 @@ CharacterBuildSnapshot _snapshot(int characterId, CharacterBuildRole role) =>
         ),
       ),
     );
+
+class _BlockingAssignmentLookup implements ActiveRaidAssignmentLookup {
+  const _BlockingAssignmentLookup();
+
+  @override
+  Future<bool> blocksCandidate({
+    required String playerId,
+    required String characterId,
+    required String raidId,
+    required String cycleKey,
+  }) async => characterId == 'AbCdEfGhIjKlMnOpQrSt';
+}
