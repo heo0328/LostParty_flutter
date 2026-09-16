@@ -3377,9 +3377,13 @@ service cloud.firestore {
       // 인원 증가, 초대코드 플래그·표시 정책만 허용한다.
       // 그룹장 승인·코드 플래그 검증을 먼저 두어 그룹원 확인 문서를
       // 추가로 읽지 않게 한다.
-      // 1인 해산은 여러 Projection 삭제를 동반하므로 가장 먼저 판정한다.
+      // 1인 해산과 그룹장 이전은 여러 문서를 함께 쓰므로 먼저 판정한다.
       // 초대코드와 표시 정책도 뒤의 가입·승인 복합 명령보다 먼저 종료한다.
       allow update: if validGroupDisbandUpdate(
+        groupId,
+        resource.data,
+        request.resource.data
+      ) || validGroupLeaderTransferUpdate(
         groupId,
         resource.data,
         request.resource.data
@@ -3408,10 +3412,6 @@ service cloud.firestore {
         groupId,
         resource.data,
         request.resource.data
-      ) || validGroupLeaderTransferUpdate(
-        groupId,
-        resource.data,
-        request.resource.data
       );
       allow delete: if false;
 
@@ -3434,12 +3434,12 @@ service cloud.firestore {
           playerId,
           request.resource.data
         );
-        allow update: if validGroupMemberSelfSnapshotRefresh(
+        allow update: if validGroupMemberRoleTransferUpdate(
           groupId,
           playerId,
           resource.data,
           request.resource.data
-        ) || validGroupMemberRoleTransferUpdate(
+        ) || validGroupMemberSelfSnapshotRefresh(
           groupId,
           playerId,
           resource.data,

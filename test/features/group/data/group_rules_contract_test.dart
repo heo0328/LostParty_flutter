@@ -703,6 +703,23 @@ void main() {
       groupUpdateStart,
       lessThan(rules.indexOf(') || validGroupJoinCommandUpdate(')),
     );
+    final transferUpdateStart = rules.indexOf(
+      ') || validGroupLeaderTransferUpdate(',
+      groupUpdateStart,
+    );
+    expect(transferUpdateStart, greaterThan(groupUpdateStart));
+    expect(
+      transferUpdateStart,
+      lessThan(rules.indexOf(') || validAtomicGroupRecruitmentClose(')),
+    );
+    final groupMemberUpdateStart = rules.indexOf(
+      'allow update: if validGroupMemberRoleTransferUpdate(',
+    );
+    expect(groupMemberUpdateStart, greaterThanOrEqualTo(0));
+    expect(
+      groupMemberUpdateStart,
+      lessThan(rules.indexOf(') || validGroupMemberSelfSnapshotRefresh(')),
+    );
     expect(rules, contains('allow update: if validMembershipStateRemove('));
     expect(rules, contains('function validGroupMemberDocumentKeys(data)'));
     expect(rules, contains('displayClassNameSnapshot'));
@@ -712,7 +729,7 @@ void main() {
     expect(rules, contains("'combatPowerSnapshot'"));
     expect(
       rules,
-      contains('allow update: if validGroupMemberSelfSnapshotRefresh('),
+      contains(') || validGroupMemberSelfSnapshotRefresh('),
     );
   });
 
