@@ -2337,11 +2337,16 @@ service cloud.firestore {
         && newData.diff(oldData).affectedKeys().hasOnly([
           'cycleKey', 'characterId', 'characterNameSnapshot', 'classNameSnapshot',
           'requestedRole', 'submittedBuildSnapshot', 'status', 'resolutionReason',
-          'approvalCount', 'revision', 'decidedAt', 'updatedAt'
+          'approvalCount', 'revision', 'decidedAt', 'updatedAt',
+          'countedAsNonGroupApplicant'
         ])
         && newData.status == 'pending'
         && newData.resolutionReason == null
         && newData.approvalCount == 0
+        && newData.countedAsNonGroupApplicant is bool
+        && newData.countedAsNonGroupApplicant
+          == (recruitment.groupId is string
+            && !exists(groupMemberPath(recruitment.groupId, playerId)))
         && newData.rejectionCount == oldData.rejectionCount
         && newData.revision == oldData.revision + 1
         && newData.decidedAt == null
@@ -3338,24 +3343,28 @@ service cloud.firestore {
           playerId,
           request.resource.data
         );
-        allow update: if validApplicantWithdrawal(
+        allow update: if (request.resource.data.status == 'withdrawn'
+          && validApplicantWithdrawal(
             playerId,
             resource.data,
             request.resource.data
-          ) || validApplicationDecision(
-            recruitmentId,
-            resource.data,
-            request.resource.data
-          ) || validApplicationReapply(
+          )) || (request.resource.data.status == 'pending'
+          && validApplicationReapply(
             recruitmentId,
             playerId,
             resource.data,
             request.resource.data
-          ) || validApplicationWeeklyCompletion(
+          )) || (request.resource.data.status in ['approved', 'rejected']
+          && validApplicationDecision(
+            recruitmentId,
+            resource.data,
+            request.resource.data
+          )) || (request.resource.data.status == 'superseded'
+          && validApplicationWeeklyCompletion(
             playerId,
             resource.data,
             request.resource.data
-          );
+          ));
         allow delete: if false;
 
         match /votes/{voterPlayerId} {

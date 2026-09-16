@@ -34,7 +34,10 @@ void main() {
       rules.indexOf('match /activeRaidAssignments/{assignmentId}'),
       rules.indexOf('match /events/{eventId}'),
     );
-    expect(assignment, contains('allow list, create, update, delete: if false'));
+    expect(
+      assignment,
+      contains('allow list, create, update, delete: if false'),
+    );
     expect(rules, contains("== 'manualVerificationDisputeOpened'"));
     expect(rules, isNot(contains('|| validPartyOwnerWeeklyRaidClaimCreate(')));
     expect(rules, contains('allow create, update, delete: if false;'));
@@ -68,5 +71,31 @@ void main() {
     expect(router, contains('PartyAtomicMembershipCommandAdapter'));
     expect(router, isNot(contains('FirestorePartyCreateRepository(')));
     expect(router, isNot(contains('FirestorePartyCycleCommandRepository(')));
+  });
+
+  test('F2-A 재신청은 현재 그룹 분류를 검증하고 결정 OR보다 먼저 평가한다', () {
+    final start = rules.indexOf('function validApplicationReapply(');
+    final end = rules.indexOf(
+      'function validManualWeeklyRaidClaimCreate(',
+      start,
+    );
+    final reapply = rules.substring(start, end);
+    expect(reapply, contains("'countedAsNonGroupApplicant'"));
+    expect(
+      reapply,
+      contains('!exists(groupMemberPath(recruitment.groupId, playerId))'),
+    );
+
+    final applicationStart = rules.indexOf('match /applications/{playerId}');
+    final applicationEnd = rules.indexOf(
+      'allow delete: if false;',
+      applicationStart,
+    );
+    final application = rules.substring(applicationStart, applicationEnd);
+    expect(
+      application.indexOf('validApplicationReapply('),
+      lessThan(application.indexOf('validApplicationDecision(')),
+    );
+    expect(application, contains("request.resource.data.status == 'pending'"));
   });
 }
