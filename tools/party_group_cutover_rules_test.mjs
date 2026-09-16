@@ -120,10 +120,12 @@ async function createGroupTxn(db, groupId) {
     const stateRef = doc(db, 'players', playerId, 'groupMembershipState', 'current');
     const relationRef = doc(db, 'players', playerId, 'groupRelations', groupId);
     const stateSnap = await tx.get(stateRef);
-    const previousIds = stateSnap.exists
+    const previousIds = stateSnap.exists()
       ? stateSnap.data().activeGroupIds ?? []
       : [];
-    const previousRevision = stateSnap.exists ? stateSnap.data().revision ?? 0 : 0;
+    const previousRevision = stateSnap.exists()
+      ? stateSnap.data().revision ?? 0
+      : 0;
     const activeGroupIds = [...previousIds, groupId];
     tx.set(groupRef, {
       schemaVersion: 1,
