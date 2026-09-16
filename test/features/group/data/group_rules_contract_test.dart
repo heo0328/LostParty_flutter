@@ -203,16 +203,16 @@ void main() {
       rules.indexOf('match /groups/{groupId}'),
     );
     expect(
-      groupMatch.indexOf('validGroupJoinCodeFlagUpdate('),
-      lessThan(groupMatch.indexOf('validGroupMemberLeaveUpdate(')),
+      groupMatch.indexOf('validGroupMemberLeaveUpdate('),
+      lessThan(groupMatch.indexOf('validGroupJoinCodeFlagUpdate(')),
     );
     expect(
-      groupMatch.indexOf('validGroupJoinCodeVisibilityUpdate('),
-      lessThan(groupMatch.indexOf('validGroupMemberLeaveUpdate(')),
+      groupMatch.indexOf('validGroupMemberLeaveUpdate('),
+      lessThan(groupMatch.indexOf('validGroupJoinCodeVisibilityUpdate(')),
     );
     expect(
-      groupMatch.indexOf('validGroupJoinCommandUpdate('),
-      lessThan(groupMatch.indexOf('validGroupMemberLeaveUpdate(')),
+      groupMatch.indexOf('validGroupMemberLeaveUpdate('),
+      lessThan(groupMatch.indexOf('validGroupJoinCommandUpdate(')),
     );
     expect(
       rules,
@@ -245,7 +245,14 @@ void main() {
         'function validJoinCodeMemberGroupRelation(playerId, groupId, data)',
       ),
     );
-    expect(rules, contains(') || validJoinCodeGroupMember('));
+    expect(
+      rules,
+      contains("allow create: if request.resource.data.joinedBy == 'joinCode'"),
+    );
+    expect(
+      groupMatch.indexOf('validJoinCodeGroupMember('),
+      lessThan(groupMatch.indexOf('validInitialGroupMember(')),
+    );
     expect(rules, contains(') || validJoinCodeRelationAccept('));
     expect(rules, contains(') || validGroupJoinCodeFlagUpdate('));
     expect(rules, contains(') || validGroupJoinCodeVisibilityUpdate('));
@@ -464,7 +471,7 @@ void main() {
     expect(rules, contains('match /groupRelations/{groupId}'));
     expect(
       rules,
-      contains('allow create, update: if validInitialMemberGroupRelation('),
+      contains("allow create, update: if request.resource.data.relation == 'member'"),
     );
     expect(
       rules,
@@ -551,7 +558,7 @@ void main() {
     expect(rules, contains('oldData.leaderPlayerId == currentPlayerId()'));
     expect(rules, contains('newData.memberCount == oldData.memberCount + 1'));
     expect(rules, contains(') || validGroupLeaderApproveUpdate('));
-    expect(rules, contains(') || validGroupMemberLeaveUpdate('));
+    expect(rules, contains('&& validGroupMemberLeaveUpdate('));
   });
 
   test('금지 문서는 그룹장만 읽고 만들고 지우며 수정할 수 없다', () {
@@ -678,7 +685,7 @@ void main() {
       rules,
       contains('validGroupDisbandRelationDelete(playerId, groupId)'),
     );
-    expect(rules, contains(') || validGroupMemberLeaveUpdate('));
+    expect(rules, contains('&& validGroupMemberLeaveUpdate('));
     expect(rules, contains('function validGroupLeaderTransferUpdate('));
     expect(rules, contains('function validGroupMemberRoleTransferUpdate('));
     expect(rules, contains('function validGroupDisbandUpdate('));
