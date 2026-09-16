@@ -71,7 +71,7 @@ class PartyAtomicCreateWritePlan {
       'schemaVersion': 2,
       'recruitmentId': command.recruitmentId,
       'partySlots': [PartyAtomicDocumentMapper.slot(slot)],
-      'nonGroupMemberCount': command.groupId == null ? 1 : 0,
+      'nonGroupMemberCount': 0,
       'pendingApplicationCount': 0,
       'pendingNonGroupApplicantCount': 0,
       'raidStateTargets': [
@@ -241,7 +241,8 @@ class PartyAtomicJoinWritePlan {
             },
         ],
         'nonGroupMemberCount':
-            aggregate.nonGroupMemberCount + (joiningIsGroupMember ? 0 : 1),
+            aggregate.nonGroupMemberCount +
+            (joiningSlot.countedAsNonGroupMember ? 1 : 0),
         'revision': nextRevision,
       }),
       membership: Map.unmodifiable(base.membership),

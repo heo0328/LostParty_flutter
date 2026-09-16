@@ -340,7 +340,7 @@ async function createPublicRecruitmentTxn(db) {
           countedAsNonGroupMember: false,
         },
       ],
-      nonGroupMemberCount: 1,
+      nonGroupMemberCount: 0,
       pendingApplicationCount: 0,
       pendingNonGroupApplicantCount: 0,
       raidStateTargets: [{ playerId, stateId }],

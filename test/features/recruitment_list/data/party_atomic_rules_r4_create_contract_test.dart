@@ -23,7 +23,7 @@ void main() {
     expect(create, contains('data.raidStateTargets.size() == 1'));
     expect(create, contains('data.commandTargets.size() == 0'));
     expect(create, contains('data.pendingApplicationCount == 0'));
-    expect(create, contains('data.nonGroupMemberCount == (data.groupId == null ? 1 : 0)'));
+    expect(create, contains('data.nonGroupMemberCount == 0'));
     expect(create, contains('data.lastCommandId == null'));
     expect(create, contains('getAfter(atomicRaidStatePath(target)).data'));
     expect(create, isNot(contains('getAfter(recruitmentSlotPath(')));

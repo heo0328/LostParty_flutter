@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_atomic_membership_write_plan.dart';
+import 'package:lost_party/features/recruitment_list/data/mappers/party_atomic_document_mapper.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_create_write_plan.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_join_write_plan.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_atomic_command.dart';
@@ -64,6 +65,46 @@ void main() {
     expect(plan.recruitment['groupActiveRecruitmentCountAfter'], 0);
   });
 
+  test('공개방 생성 결과는 Aggregate로 즉시 다시 읽을 수 있다', () {
+    final command = _createCommand(rules);
+    final base = PartyCreateWritePlan.fromCommand(
+      command: command,
+      playerId: 'player-0',
+      serverTimestamp: timestamp,
+      verifiedCharacterName: '캐릭터',
+      verifiedClassName: '바드',
+      verifiedItemLevel: 1700,
+    );
+    final plan = PartyAtomicCreateWritePlan.fromBase(
+      base: base,
+      command: command,
+      playerId: 'player-0',
+      classKey: '바드:지원',
+      serverTimestamp: timestamp,
+    );
+
+    final aggregate = PartyAtomicDocumentMapper.aggregate(plan.recruitment);
+    expect(aggregate.memberCount, 1);
+    expect(aggregate.nonGroupMemberCount, 0);
+
+    final join = PartyAtomicJoinWritePlan.fromBase(
+      base: _joinBase(className: '버서커', partyIndex: 0, slotIndex: 1),
+      aggregate: aggregate,
+      rules: rules,
+      classKey: '버서커',
+      raidId: 'raid-1',
+      difficultyId: 'hard',
+      joiningIsGroupMember: true,
+      serverTimestamp: timestamp,
+    );
+    final joined = PartyAtomicDocumentMapper.aggregate({
+      ...plan.recruitment,
+      ...join.recruitmentPatch,
+    });
+    expect(joined.memberCount, 2);
+    expect(joined.nonGroupMemberCount, 0);
+  });
+
   test('그룹 모집 생성은 전달된 activeRecruitmentCountAfter를 기록한다', () {
     final base = PartyCreateWritePlan(
       recruitment: {
@@ -75,10 +116,7 @@ void main() {
         'currentCycleStatus': 'active',
         'revision': 1,
       },
-      leaderMembership: {
-        'playerId': 'player-0',
-        'characterId': 'character-0',
-      },
+      leaderMembership: {'playerId': 'player-0', 'characterId': 'character-0'},
       assignment: {
         'playerId': 'player-0',
         'characterId': 'character-0',
@@ -100,6 +138,31 @@ void main() {
 
     expect(plan.recruitment['groupActiveRecruitmentCountAfter'], 2);
     expect(plan.groupActiveRecruitmentDelta, 1);
+  });
+
+  test('그룹 전용방 생성 결과도 Aggregate로 즉시 다시 읽을 수 있다', () {
+    final command = _createCommand(rules, groupId: 'group-1');
+    final base = PartyCreateWritePlan.fromCommand(
+      command: command,
+      playerId: 'player-0',
+      serverTimestamp: timestamp,
+      verifiedCharacterName: '캐릭터',
+      verifiedClassName: '바드',
+      verifiedItemLevel: 1700,
+    );
+    final plan = PartyAtomicCreateWritePlan.fromBase(
+      base: base,
+      command: command,
+      playerId: 'player-0',
+      classKey: '바드:지원',
+      serverTimestamp: timestamp,
+      groupActiveRecruitmentCountAfter: 1,
+    );
+
+    final aggregate = PartyAtomicDocumentMapper.aggregate(plan.recruitment);
+    expect(aggregate.memberCount, 1);
+    expect(aggregate.nonGroupMemberCount, 0);
+    expect(plan.groupRaidListing, isNotNull);
   });
 
   test('가입은 고정 슬롯과 raidState를 추가하고 공용 이벤트 한 건을 만든다', () {
@@ -199,31 +262,31 @@ PartyCreateCommand _createCommand(
   RecruitmentPartyRules rules, {
   String? groupId,
 }) => PartyCreateCommand(
-      recruitmentId: 'recruitment-1',
-      title: '테스트',
-      metadata: const RecruitmentMetadata(
-        catalogVersion: 'v1',
-        raidId: 'raid-1',
-        difficultyId: 'hard',
-        raidName: '레이드',
-        difficultyName: '하드',
-        difficultyAlias: '하드',
-        gateCount: 3,
-        minItemLevel: 1700,
-        minCombatPower: null,
-        experienceLevel: ExperienceLevel.experienced,
-        maxPlayHours: 2,
-      ),
-      leaderCharacterId: 'character-0',
-      leaderCharacterName: '캐릭터',
-      leaderClassName: '바드',
-      leaderRole: PartyRole.support,
-      leaderItemLevel: 1700,
-      approvalPolicy: const ApprovalPolicy.leaderOnly(),
-      compositionRules: rules,
-      cycleKey: '2026-09-09',
-      visibility: groupId == null
-          ? RecruitmentVisibility.public
-          : RecruitmentVisibility.group,
-      groupId: groupId,
-    );
+  recruitmentId: 'recruitment-1',
+  title: '테스트',
+  metadata: const RecruitmentMetadata(
+    catalogVersion: 'v1',
+    raidId: 'raid-1',
+    difficultyId: 'hard',
+    raidName: '레이드',
+    difficultyName: '하드',
+    difficultyAlias: '하드',
+    gateCount: 3,
+    minItemLevel: 1700,
+    minCombatPower: null,
+    experienceLevel: ExperienceLevel.experienced,
+    maxPlayHours: 2,
+  ),
+  leaderCharacterId: 'character-0',
+  leaderCharacterName: '캐릭터',
+  leaderClassName: '바드',
+  leaderRole: PartyRole.support,
+  leaderItemLevel: 1700,
+  approvalPolicy: const ApprovalPolicy.leaderOnly(),
+  compositionRules: rules,
+  cycleKey: '2026-09-09',
+  visibility: groupId == null
+      ? RecruitmentVisibility.public
+      : RecruitmentVisibility.group,
+  groupId: groupId,
+);

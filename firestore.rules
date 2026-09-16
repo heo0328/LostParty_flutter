@@ -1583,7 +1583,7 @@ service cloud.firestore {
         && data.commandTargets.size() == 0
         && data.pendingApplicationCount == 0
         && data.pendingNonGroupApplicantCount == 0
-        && data.nonGroupMemberCount == (data.groupId == null ? 1 : 0)
+        && data.nonGroupMemberCount == 0
         && (
           data.groupId == null
             ? data.groupActiveRecruitmentCountAfter == 0
