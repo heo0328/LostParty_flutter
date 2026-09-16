@@ -305,7 +305,7 @@ async function createPublicRecruitmentTxn(db) {
       status: 'active',
       visibility: 'public',
       groupId: null,
-      approvalPolicy: { mode: 'leaderApproval' },
+      approvalPolicy: { mode: 'leaderOnly' },
       continueTogether: false,
       manualRecruitmentEnabled: true,
       hasAvailableSlot: true,
@@ -398,6 +398,57 @@ async function createPublicRecruitmentTxn(db) {
   });
 }
 
+// F2-A: mirror the connected atomic application repository's public-room writes.
+async function applicationTxn(db, action) {
+  return runTransaction(db, async (tx) => {
+    const recruitmentRef = doc(db, 'recruitments', recruitmentId);
+    const applicationRef = doc(db, 'recruitments', recruitmentId, 'applications', joinerPlayerId);
+    const recruitment = (await tx.get(recruitmentRef)).data();
+    const application = (await tx.get(applicationRef)).data();
+    const nextRevision = recruitment.revision + 1;
+    const isWithdraw = action === 'withdraw';
+    const eventType = isWithdraw ? 'applicationWithdrawn' : 'applicationSubmitted';
+    if (isWithdraw) {
+      tx.update(applicationRef, {
+        status: 'withdrawn', resolutionReason: 'withdrawnByApplicant',
+        revision: application.revision + 1, decidedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    } else {
+      const pending = {
+        cycleKey, characterId: joinerCharacterId,
+        characterNameSnapshot: '가입자', classNameSnapshot: '바드',
+        requestedRole: 'support',
+        submittedBuildSnapshot: { itemLevel: 1700, combatPower: null, buildIntegritySnapshot: null },
+        status: 'pending', resolutionReason: null, approvalCount: 0,
+        revision: application ? application.revision + 1 : 1,
+        decidedAt: null, updatedAt: serverTimestamp(),
+        countedAsNonGroupApplicant: false,
+      };
+      if (application) {
+        tx.update(applicationRef, pending);
+      } else {
+        tx.set(applicationRef, {
+          schemaVersion: 1, recruitmentId, applicantPlayerId: joinerPlayerId,
+          rejectionCount: 0, createdAt: serverTimestamp(), ...pending,
+        });
+      }
+    }
+    tx.update(recruitmentRef, {
+      pendingApplicationCount: recruitment.pendingApplicationCount + (isWithdraw ? -1 : 1),
+      pendingNonGroupApplicantCount: recruitment.pendingNonGroupApplicantCount,
+      revision: nextRevision, updatedAt: serverTimestamp(),
+    });
+    const eventId = `${eventType}_${recruitmentId}_${nextRevision}`;
+    tx.set(doc(db, 'partyEvents', eventId), {
+      schemaVersion: 1, eventId, recruitmentId, type: eventType,
+      commandId: eventId, commandRevision: nextRevision,
+      audiencePlayerIds: [playerId, joinerPlayerId],
+      actorPlayerId: joinerPlayerId, occurredAt: serverTimestamp(),
+    });
+  });
+}
+
 async function main() {
   console.log('cycleKey', cycleKey);
   console.log('cutover baseline: loading tracked firestore.rules');
@@ -457,6 +508,20 @@ async function main() {
     console.log('test: public recruitment create clean');
     await assertSucceeds(createPublicRecruitmentTxn(db));
     console.log('PASS: public recruitment create clean');
+
+    await seedJoiner(testEnv);
+    const applicantDb = testEnv.authenticatedContext(joinerAuthUid).firestore();
+    console.log('test: public application create, withdraw and reapply');
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    await assertSucceeds(applicationTxn(applicantDb, 'withdraw'));
+    await assertSucceeds(applicationTxn(applicantDb, 'reapply'));
+    const reapplication = (await getDoc(doc(applicantDb, 'recruitments', recruitmentId, 'applications', joinerPlayerId))).data();
+    const afterReapply = (await getDoc(doc(applicantDb, 'recruitments', recruitmentId))).data();
+    if (reapplication.status !== 'pending' || reapplication.revision !== 3
+      || afterReapply.pendingApplicationCount !== 1 || afterReapply.revision !== 4) {
+      throw new Error('Application reapply state mismatch');
+    }
+    console.log('PASS: public application create, withdraw and reapply');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv, { weeklyClaim: true });
