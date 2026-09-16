@@ -209,17 +209,25 @@ F1 주요 흐름은 2026-09-16 실기기에서 복구 확인했다. 초대코드
 
 ### F2. 참가 진입 복구
 
-D2 즉시 가입, D3 신청 승인, D4 신청 불안정을 하나의 참가 상태 머신으로 점검한다.
+D2 즉시 가입, D3 신청 승인, D4 신청 불안정을 **신청 상태 전이 → 확정 참가 → 화면 재진입** 순서로 복구한다. 현 Router는 `FirestorePartyAtomicApplicationCommandRepository`와 `FirestorePartyAtomicJoinCommandRepository`를 실제 상세에 주입한다. 두 클래스의 오래된 “Router 미연결” 주석과 구 계약 문서의 `activeRaidAssignment` 서술을 실행 기준으로 삼지 않는다. 현재 기준은 schemaVersion 2 모집 Aggregate, Player별 `raidState`, 공용 `partyEvents`, 신청 원본 및 그룹 `raidListings`다.
 
-검사 순서:
+#### F2-A. 신청 상태 전이와 실패 지점 분리
 
-1. 신청 생성·철회·거절·재신청의 application `status/revision/approvalCount/rejectionCount` 전이를 고정한다.
-2. 즉시 가입과 승인 모두 같은 membership·`raidState`·Aggregate·listing 불변식을 만드는지 비교한다.
-3. 승인 사유 `approvedByApprover`, `approvalCount + 1`, 대상 membership 존재와 listing 전체 Snapshot sync가 Rules와 일치하는지 확인한다.
-4. 본인 stale `raidState` 정리와 타인 승인 경로를 분리하고, 승인자가 타인의 stale state를 삭제하지 않게 한다.
-5. 실패 후 재시도에서 중복 멤버·중복 이벤트·집계 증가가 생기지 않는지 확인한다.
+1. 운영 게시 Rules·인덱스와 현재 앱 빌드의 기준을 확인한다. 공개/그룹 전용 방, 직접 참가/승인 방을 구분하고 actor Player·recruitmentId·applicationId, 명령 전 `revision/status/cycleKey`와 Firebase 오류 `code`를 기록한다. “신청 실패”가 명령 Transaction, 권한 있는 읽기·Listen, 화면 갱신 중 어느 단계인지 분리한다. Listen 자체의 일반 역할별 재설계는 F3에 남긴다.
+2. 신청 생성 → 본인 철회 → 재신청, 파티장 거절 → 재신청, 승인 후 탈퇴 → 재신청을 각각 `applications/{playerId}`의 같은 문서 전이로 고정한다. `pending` 중복 거절, `revision` 증가, `approvalCount` 재신청 초기화, `rejectionCount` 유지, 신청 당시 `countedAsNonGroupApplicant`와 모집의 pending 집계 증감을 확인한다. 신청 대기는 `raidState` 확정 점유를 만들지 않는다.
+3. 실제 Write Plan의 모집·신청·공용 이벤트 쓰기와 `validPendingApplication`/재신청/철회/결정 Rules를 현재 전체 Rules Emulator에 재현한다. Windows 로컬 전체 Rules 업로드 503은 이미 분리된 환경 문제이므로 같은 시도를 반복하지 않고 demo 전용 GitHub Actions를 엔진 검증 경로로 사용한다. 결함이 재현된 문서와 Rules 분기만 좁게 수정한다.
 
-완료 조건: 공개/그룹 방 각각에서 신청·철회·재신청·거절·승인·즉시 가입이 실기기에서 일관되게 통과한다.
+#### F2-B. 즉시 가입과 승인 확정
+
+4. 즉시 가입은 신청 문서 없이 본인 actor가, 승인은 현재 승인권자가 `pending` 신청자를 확정한다. 두 경로의 성공 결과가 모집 `partySlots/memberPlayerIds`·인원/역할/그룹 집계·revision, 대상 membership·`raidState`, 그룹 listing 전체 Snapshot, 공용 이벤트 1건에서 일치하는지 비교한다. 승인 전이는 `approvedByApprover`, `approvalCount + 1`, pending 집계 −1이며 신청 당시 그룹 집계 Snapshot을 사용한다.
+5. Rules의 읽기·쓰기 순서를 따로 검증한다. 가입/승인 모두 소유 Character·주간 Claim·현재 회차·정원·역할/동일 파티 직업·기존 확정 점유·그룹 접근 권한을 Transaction에서 재판정한다. 승인자가 타인의 stale `raidState`를 지우지 않으며, 본인 즉시 가입의 stale 정리도 Rules가 허용하는 경우에만 수행한다. 다중 승인·가입 경쟁, revision 충돌, 중단 후 재시도에서 멤버·점유·이벤트·집계가 중복되지 않아야 한다.
+
+#### F2-C. 연결 검증과 완료 게이트
+
+6. 각 수정 뒤에는 기존 모집/그룹 생성과 v2 목록·현황·상세, F1 이전·탈퇴·초대코드·해산 차단을 회귀 보호한다. 표적 Domain/Write Plan/Rules 계약과 전체 Rules Emulator의 허용·거절 케이스를 먼저 통과시키고, Rules가 실제 변경됐을 때만 배포 절차를 적용한다. Indexes 게시가 새로 필요하면 별도 명시 지시를 받는다.
+7. 자동 검증 후 최대 3계정 실기기에서 공개·그룹 전용 각각 신청/철회/거절/재신청/승인/즉시 가입을 확인한다. 같은 레이드 복수 pending은 허용하되 첫 확정 참가 뒤 중복 확정은 차단하고, 만석·역할/직업 충돌·주간 완료·구 회차 및 앱 재진입을 대표 경계로 확인한다. 4·8인 경계와 경쟁은 Emulator로 보강하고 8대 디바이스를 요구하지 않는다.
+
+완료 조건: D2~D4의 실제 실패 지점과 수정 근거가 기록되고, 공개/그룹 방의 신청 상태 전이·확정 참가가 자동/실기기에서 일관되게 통과한다. 권한 오류나 재시도에서 부분 성공·중복 저장이 없고 기존 F0/F1 흐름이 유지된다. F3 Listen 전체·F4 orphan/그룹장 관리·F5 자리 조정·F6 회차 수명주기 구현은 이번 묶음에서 제외한다.
 
 ### F3. 상세 읽기와 Listen 복구
 
