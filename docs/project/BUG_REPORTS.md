@@ -507,6 +507,33 @@
 
 ---
 
+## BUG-019. 원자 모집 생성·목록·후보·신청 상태 불일치
+
+| 항목 | 내용 |
+| --- | --- |
+| 상태 | **첫 수정 구간 자동 검증 통과 — 기존 방·생성 권한 오류 조사 대기** |
+| 보고일 | 2026-09-17 |
+| 심각도 | 높음 — 새 공개방 신청 불가, 생성 후보와 서버 점유 판정 불일치 |
+| 실행 계획 | [`NEXT_WORK.md`](NEXT_WORK.md) F2-0/F2-A |
+
+### 확인된 사실
+
+- 디버그 에뮬레이터의 최초 신청 로그는 `PartyAtomicApplication unexpected ArgumentError: 모집 Aggregate 집계가 올바르지 않습니다.`이며, `PartyAtomicDocumentMapper.aggregate()`가 서버 쓰기 전에 중단됐다. 따라서 이 신청 실패를 Rules `permission-denied`로 분류하지 않는다.
+- 그룹 연결이 없는 공개방 생성 Write Plan은 첫 슬롯 `countedAsNonGroupMember = false`, `nonGroupMemberCount = 1`을 함께 저장한다. Domain Aggregate는 집계와 슬롯의 `true` 개수가 같아야 한다고 검사한다. 현재 Rules는 이 공개방 생성 조합을 허용하고, 기존 자동 테스트도 서로 다른 값의 결합을 검사하지 않았다. 이는 신규 공개방 신청 실패의 재현 가능한 코드 원인이다.
+- 생성 후보 서비스에 연결된 `FirestoreActiveRaidAssignmentLookup`은 구 `players/{playerId}/activeRaidAssignments`를 읽는다. 현재 원자 생성 명령은 새 `raidStates`에 점유를 쓰고 검사한다. 따라서 후보의 ‘동일 레이드 참가 중’ 표시가 서버 명령의 최종 차단과 다를 수 있다. 생성 화면의 `_canChooseCandidate`도 후보의 전체 `canSelect`가 아니라 일정 충돌·레벨만 검사한다.
+- 서버가 `permission-denied`를 반환한 특정 캐릭터의 재생성 실패는 별도 현상이다. 명령이 읽은 기존 `raidState`·연결 모집, 주차와 실패한 Rules 문서를 확인하기 전에는 첫 신청 오류와 동일 원인이라고 단정하지 않는다.
+- 다른 사용자에게 기존 방이 보이지 않는 이유도 미확정이다. 공개 목록 쿼리는 `schemaVersion == 2`, `visibility == public`, `status == active`, 수동 모집 활성, 빈자리, 현재 `targetCycleKey`를 모두 요구한다. Router는 주차 키를 생성 시 한 번 계산해 화면에 전달하므로 수요일 06시 경계 전후 앱 재진입 상태도 확인한다. 타인 계정이 실제로 다른 Player ID인지와 어느 저장 필드가 다른지 읽기 전에는 노출 필터를 완화하지 않는다.
+
+### 복구 경계
+
+- 먼저 문제 방과 생성 실패 캐릭터의 특정 문서만 읽기 전용으로 확인한다. 모집 ID·`revision/status/visibility/manualRecruitmentEnabled/hasAvailableSlot/targetCycleKey/partySlots/nonGroupMemberCount/pending` 집계, 대상 `raidState`의 상태·주차·모집 ID 및 Firebase 오류 코드를 기록한다. 계정 전체 자료를 초기화하거나 방을 추측으로 삭제하지 않는다.
+- 공개방 무그룹 집계의 단일 의미를 슬롯 Snapshot·모든 가입/탈퇴 Write Plan·Domain·Rules·테스트에서 일치시킨다. 그룹 ID가 없는 방의 비그룹원 집계는 `0`으로, 그룹 연결 방에서는 실제 비그룹 멤버 Snapshot만 세는 안을 기준으로 검증한다. 기존 잘못 저장된 테스트방은 범위와 수를 확인한 뒤 별도 복구/정리 결정을 받는다.
+- 생성·신청 후보는 운영 `raidState`와 현재 주간 완료 자료를 읽되, 생성 Transaction의 최종 재검증을 유지한다. 빨간 차단 표시와 선택 불가, 동시 변경 시 서버 거절 안내를 함께 계약 테스트로 고정한다.
+- 목록 미표시는 실제 저장 필드와 쿼리 조건을 비교해 정상 주차/비공개/만석 제외인지 읽기·갱신 결함인지 분리한다. 정상 제외 조건은 유지한다.
+- 상세 작업 순서·자동/실기기 회귀 게이트는 `NEXT_WORK.md` F2-0을 따른다. 신규 방의 코드·Rules 초안과 후보 조회를 수정했지만 운영 Rules·데이터는 변경하지 않았으며, 전체 Emulator와 실기기 확인 전에는 완료로 처리하지 않는다.
+
+---
+
 ## 백로그 연결
 
 - 열린 항목은 현재 Task와 **별도**로 추적한다.

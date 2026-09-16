@@ -211,13 +211,29 @@ F1 주요 흐름은 2026-09-16 실기기에서 복구 확인했다. 초대코드
 
 D2 즉시 가입, D3 신청 승인, D4 신청 불안정을 **신청 상태 전이 → 확정 참가 → 화면 재진입** 순서로 복구한다. 현 Router는 `FirestorePartyAtomicApplicationCommandRepository`와 `FirestorePartyAtomicJoinCommandRepository`를 실제 상세에 주입한다. 두 클래스의 오래된 “Router 미연결” 주석과 구 계약 문서의 `activeRaidAssignment` 서술을 실행 기준으로 삼지 않는다. 현재 기준은 schemaVersion 2 모집 Aggregate, Player별 `raidState`, 공용 `partyEvents`, 신청 원본 및 그룹 `raidListings`다.
 
+#### F2-0. 생성→목록→후보→신청 계약 재정렬 (F2-A/B보다 선행)
+
+2026-09-17 실기기에서 새 공개방 신청의 `unknown` 오류, 기존 방의 타인 목록 미표시, 점유 캐릭터의 생성 후보 표시 누락과 생성 `permission-denied`가 함께 보고됐다. `BUG-019`의 확인/미확정 근거를 기준으로 아래를 **한 번에 설계하되 구현은 순서대로 검증 가능한 작은 구간으로 분리**한다. 기존 F1 그룹 흐름, 그룹 전용방 및 정상 공개방을 회귀 보호하고, 구 assignment 구조는 복원하지 않는다.
+
+1. **증거 고정:** 실패한 신청 방과 보이지 않는 기존 방을 구분해 ID·공개/그룹·승인 방식·주차·`revision/status/visibility/manualRecruitmentEnabled/hasAvailableSlot`를 기록한다. 신청 방의 슬롯/비그룹/pending 집계, 생성 실패 캐릭터의 `raidState(status/cycleKey/recruitmentId)`와 연결 모집 상태, 실제 Firebase 오류 코드를 특정 문서로만 읽는다. 두 기기의 Player ID 구분, Router 생성 시 고정된 주차 키와 수요일 06시 전후 재진입도 확인한다. 목록 쿼리 필터로 의도대로 제외된 방인지 갱신/권한 오류인지 판정하기 전에는 필터를 넓히지 않는다.
+2. **저장 불변식 복구:** 현재 공개·무그룹 초기 슬롯은 `countedAsNonGroupMember=false`인데 `nonGroupMemberCount=1`이며 신청 Repository가 Domain Aggregate 생성에서 서버 쓰기 전에 실패한다. 무그룹 방의 비그룹 집계 `0`을 기준으로 생성·가입·탈퇴/추방·캐릭터 변경·공개 범위 명령의 슬롯 Snapshot과 카운트를 대조하고, Rules 초기 생성 검증과 그룹 연결 공개방의 별도 의미를 함께 고정한다. `PartyAtomicCreateWritePlan.fromBase()` 결과를 즉시 `PartyAtomicDocumentMapper.aggregate()`로 읽는 왕복 테스트와 공개/그룹/그룹 연결 공개방 1→2명 전이 테스트를 추가한다. 기존 잘못 저장된 방은 수·소유·주차 확인 뒤 제한적 복구 또는 테스트 데이터 정리를 별도 결정하며 임의 삭제하지 않는다.
+3. **후보·서버 판정 정렬:** Router의 후보 `FirestoreActiveRaidAssignmentLookup`이 구 `activeRaidAssignments`를 읽는 동안 생성/가입 명령은 `raidStates`를 쓴다. 조회를 현재 문서로 정렬하고 active/completed/이전 주차·만료 1회성·반복방·orphan 상태를 생성 `PartyCreateOccupancyGate` 및 주간 Claim 정책과 맞춘다. 생성 화면은 `candidate.canSelect`/역할 선택 가능성의 공통 결과를 사용해 동일 레이드 참가·이번 주 완료를 빨간 표시하고 선택을 막는다. 제출 직전 Transaction 재검증과 구체적 실패 안내는 유지한다.
+4. **생성 permission-denied 분리:** 기존 점유의 연결 모집 `get`, stale `raidState` 교체, 신규 모집/membership/event의 각 Rules 쓰기 중 최초 실패 문서를 Emulator로 재현한다. 실제 서버 실패 단계가 확인된 경로만 앱 또는 Rules에서 최소 수정한다. 단순히 권한 분기를 넓히지 않는다.
+5. **목록·신청 재검증:** 공개 목록의 현재 주차·활성·수동 모집·빈자리·타인 필터를 그대로 두고 저장값과 일치하는 방만 노출한다. 생성 결과가 read model과 Aggregate 양쪽에 유효한지 확인한 뒤 최초 신청→철회→재신청, 그룹 연결 공개방과 그룹 전용방, 즉시 가입·승인까지 진행한다. 화면 재진입과 구주차 전환도 포함한다.
+
+완료 게이트: 새 공개/그룹 방의 생성→다른 계정 목록/상세→신청 또는 즉시 가입이 같은 원본·주차·집계를 사용하고, 점유/완료 캐릭터가 생성 전 후보에서 차단되며, 서버 경쟁 거절에는 구체적 안내가 나온다. 공개·그룹 생성, F1 그룹 수명주기, 주간 Claim, 1·2·4·8인 대표 Rules Emulator와 최대 3계정 실기기를 회귀한다. Rules 변경 시 계약/경고 검사 후 배포 정책을 별도로 적용하며 Indexes 게시·기존 운영 데이터 변경·`dev/main` 병합은 현 단계에서 제외한다.
+
+진행(2026-09-17, 작업 브랜치 체크포인트 `887a0fb`·`6110013`): 공개·무그룹 신규 방의 초기 `nonGroupMemberCount`를 슬롯 Snapshot과 같은 `0`으로 맞췄고 가입 증분도 실제 추가 슬롯의 `countedAsNonGroupMember`를 기준으로 계산한다. Rules 초기 생성 조건과 전체 Emulator 생성 fixture를 같은 값으로 정렬했다. 생성 Write Plan→Aggregate 읽기 왕복과 공개방 1→2인 가입, 그룹 전용방 왕복을 표적 테스트로 고정했다. 생성 후보의 서버 조회를 구 `activeRaidAssignments`에서 `raidStates`로 변경하고 active 점유는 생성 명령의 `PartyCreateOccupancyGate`를 재사용한다. 생성 화면은 후보의 전체 `canSelect`를 적용한다. 직접 영향 Flutter 표적 42건, 변경 파일 정적 분석과 diff 검사는 통과했다. 전체 Rules Emulator, 운영 게시, 기존 불일치 방 처리, 실제 방 데이터 대조와 실기기 회귀는 아직 완료하지 않았다. 기존 운영 Rules는 사용자 확인 게시본을 그대로 유지하며 새 Rules는 아직 게시하지 않았다.
+
 #### F2-A. 신청 상태 전이와 실패 지점 분리
 
 1. 운영 게시 Rules·인덱스와 현재 앱 빌드의 기준을 확인한다. 공개/그룹 전용 방, 직접 참가/승인 방을 구분하고 actor Player·recruitmentId·applicationId, 명령 전 `revision/status/cycleKey`와 Firebase 오류 `code`를 기록한다. “신청 실패”가 명령 Transaction, 권한 있는 읽기·Listen, 화면 갱신 중 어느 단계인지 분리한다. Listen 자체의 일반 역할별 재설계는 F3에 남긴다.
 2. 신청 생성 → 본인 철회 → 재신청, 파티장 거절 → 재신청, 승인 후 탈퇴 → 재신청을 각각 `applications/{playerId}`의 같은 문서 전이로 고정한다. `pending` 중복 거절, `revision` 증가, `approvalCount` 재신청 초기화, `rejectionCount` 유지, 신청 당시 `countedAsNonGroupApplicant`와 모집의 pending 집계 증감을 확인한다. 신청 대기는 `raidState` 확정 점유를 만들지 않는다.
 3. 실제 Write Plan의 모집·신청·공용 이벤트 쓰기와 `validPendingApplication`/재신청/철회/결정 Rules를 현재 전체 Rules Emulator에 재현한다. Windows 로컬 전체 Rules 업로드 503은 이미 분리된 환경 문제이므로 같은 시도를 반복하지 않고 demo 전용 GitHub Actions를 엔진 검증 경로로 사용한다. 결함이 재현된 문서와 Rules 분기만 좁게 수정한다.
 
-현재 진행(2026-09-16): 공개방 신청→철회→재신청은 전체 Rules Emulator `35087432007`에서 통과했다. 그룹 연결 공개방에서 재신청 시 `countedAsNonGroupApplicant`가 바뀌는 경계는 `35087675480`에서 신청 update의 표현식 1,000개 한도 `PERMISSION_DENIED`로 재현했다. 재신청 허용 필드에 해당 Snapshot을 추가하되 현재 그룹 membership과 일치시켰고, 신청 update는 새 상태별 분기만 평가하도록 조정했다. 수정본 `35104429826`, 그룹 전용방의 정상/변조 재신청까지 확장한 `35104711642`의 전체 추적 Rules·F1 회귀가 통과했다. 관련 Flutter 표적 46건, 변경 테스트 파일 분석과 `git diff --check`가 통과했다. 최신 Rules SHA-256은 `AAB74C69483AE1C46AF69C3D8378F30573581AAA1FCBBB1485181BFBD31255D5`이다. **운영 `lost-party` Rules 게시 시도는 안전 심사에서 거절되어 실행되지 않았다.** 우회·재시도하지 않고 이 특정 Rules 버전의 명시적 운영 게시 승인 전까지 운영 반영과 실기기 완료 판정을 보류한다.
+현재 진행(2026-09-16): 공개방 신청→철회→재신청은 전체 Rules Emulator `35087432007`에서 통과했다. 그룹 연결 공개방에서 재신청 시 `countedAsNonGroupApplicant`가 바뀌는 경계는 `35087675480`에서 신청 update의 표현식 1,000개 한도 `PERMISSION_DENIED`로 재현했다. 재신청 허용 필드에 해당 Snapshot을 추가하되 현재 그룹 membership과 일치시켰고, 신청 update는 새 상태별 분기만 평가하도록 조정했다. 수정본 `35104429826`, 그룹 전용방의 정상/변조 재신청까지 확장한 `35104711642`의 전체 추적 Rules·F1 회귀가 통과했다. 관련 Flutter 표적 46건, 변경 테스트 파일 분석과 `git diff --check`가 통과했다. 최신 Rules SHA-256은 `AAB74C69483AE1C46AF69C3D8378F30573581AAA1FCBBB1485181BFBD31255D5`이다. 최초 운영 게시 시도는 안전 심사에서 명령 실행 전 거절됐다. 이후 사용자가 이 버전의 게시를 승인했으나 CLI 결과는 작업 중단으로 확인하지 못했다. 사용자는 현재 운영 게시 Rules와 로컬 파일의 내용이 동일함을 직접 확인했다. 따라서 소스 일치는 사용자 확인으로 기록하고, CLI 컴파일 경고 수·게시 시각·실기기 성공은 확인하지 않은 상태로 둔다. 동일 Rules의 재게시 없이 F2-A 실기기 신청→철회→재신청 결과를 먼저 받는다.
+
+실기기 피드백: 최초 신청에서 `신청을 처리하지 못했습니다.`가 표시됐다. 원자 신청 Repository에 추가한 디버그 빌드 전용 로그로 `PartyAtomicDocumentMapper.aggregate()`의 `ArgumentError: 모집 Aggregate 집계가 올바르지 않습니다`를 확인했다. 서버 쓰기 전 저장 문서와 Domain 불변식의 불일치이며 이 신청의 Rules `permission-denied`는 아니다. 신청 쓰기·Rules·사용자 안내는 아직 변경하지 않았다. F2-0의 생성 집계 복구와 기존 방 처리 방향을 먼저 확정하고, 실패 방의 실제 저장값을 확인하기 전에는 F2-A를 완료로 처리하지 않는다.
 
 #### F2-B. 즉시 가입과 승인 확정
 
