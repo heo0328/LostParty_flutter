@@ -9,6 +9,7 @@ import {
 import {
   doc,
   setDoc,
+  getDoc,
   runTransaction,
   serverTimestamp,
   Timestamp,
@@ -27,6 +28,10 @@ const authUid = 'owner-auth';
 const playerId = 'player-1';
 const characterId = 'charabcdefghijklmnop'; // 20 chars
 const gameAccountId = 'account-1';
+const joinerAuthUid = 'joiner-auth';
+const joinerPlayerId = 'player-2';
+const joinerCharacterId = 'charqrstuvwxyzabcdef';
+const joinCode = 'ABCD23';
 const recruitmentId = 'recruitment-1';
 const raidId = 'valtan';
 const cycleKey = currentCycleKey();
@@ -190,6 +195,83 @@ async function createGroupTxn(db, groupId) {
   });
 }
 
+async function seedJoiner(testEnv) {
+  const now = Timestamp.now();
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, 'authBindings', joinerAuthUid), {
+      schemaVersion: 1, playerId: joinerPlayerId, status: 'active',
+      linkedAt: now, updatedAt: now,
+    });
+    await setDoc(doc(db, 'players', joinerPlayerId), {
+      schemaVersion: 1, status: 'active', createdAt: now, updatedAt: now,
+    });
+    await setDoc(doc(db, 'characters', joinerCharacterId), {
+      schemaVersion: 1, status: 'active', ownerPlayerId: joinerPlayerId,
+      gameAccountId: 'account-2', characterName: '가입자', serverName: '루페온',
+      characterClassName: '바드', itemAvgLevel: 1700,
+    });
+  });
+}
+
+async function createJoinCodeTxn(db, groupId) {
+  return runTransaction(db, async (tx) => {
+    const groupRef = doc(db, 'groups', groupId);
+    const codeRef = doc(db, 'groupJoinCodes', joinCode);
+    const group = (await tx.get(groupRef)).data();
+    await tx.get(codeRef);
+    tx.set(codeRef, {
+      schemaVersion: 1, groupId, status: 'active', createdByPlayerId: playerId,
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+    tx.update(groupRef, {
+      hasActiveJoinCode: true, activeJoinCode: joinCode,
+      revision: group.revision + 1,
+      lastActivityAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+  });
+}
+
+async function joinByCodeTxn(db) {
+  return runTransaction(db, async (tx) => {
+    const code = (await tx.get(doc(db, 'groupJoinCodes', joinCode))).data();
+    const groupId = code.groupId;
+    const groupRef = doc(db, 'groups', groupId);
+    const stateRef = doc(db, 'players', joinerPlayerId, 'groupMembershipState', 'current');
+    const memberRef = doc(db, 'groups', groupId, 'members', joinerPlayerId);
+    const joinRelationRef = doc(db, 'groups', groupId, 'joinRelations', joinerPlayerId);
+    const playerRelationRef = doc(db, 'players', joinerPlayerId, 'groupRelations', groupId);
+    const group = (await tx.get(groupRef)).data();
+    await tx.get(stateRef);
+    await tx.get(doc(db, 'characters', joinerCharacterId));
+    await tx.get(joinRelationRef);
+    await tx.get(playerRelationRef);
+    tx.set(memberRef, {
+      schemaVersion: 1, groupId, playerId: joinerPlayerId, role: 'member',
+      joinedAt: serverTimestamp(), joinSequence: group.memberCount + 1,
+      joinedBy: 'joinCode', displayCharacterIdSnapshot: joinerCharacterId,
+      displayCharacterNameSnapshot: '가입자', displayClassNameSnapshot: '바드',
+      itemLevelSnapshot: 1700, combatPowerSnapshot: null,
+      gemValidationSnapshot: null, revision: 1,
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+    tx.set(stateRef, {
+      schemaVersion: 1, playerId: joinerPlayerId, activeGroupIds: [groupId],
+      activeGroupCount: 1, revision: 1, updatedAt: serverTimestamp(),
+    });
+    tx.set(playerRelationRef, {
+      schemaVersion: 1, groupId, playerId: joinerPlayerId, relation: 'member',
+      requestStatus: null, groupNameSnapshot: group.name,
+      displayCharacterNameSnapshot: '가입자', expiresAt: null,
+      sourceRevision: 1, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+    tx.update(groupRef, {
+      memberCount: group.memberCount + 1, revision: group.revision + 1,
+      lastActivityAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+  });
+}
+
 async function createPublicRecruitmentTxn(db) {
   const { startedAt, endsAt } = cycleWindow(cycleKey);
   const stateId = `${characterId}_${raidId}`;
@@ -332,6 +414,15 @@ async function main() {
     console.log('test: group create on clean membershipState');
     await assertSucceeds(createGroupTxn(db, 'group-new-1'));
     console.log('PASS: group create clean');
+
+    await seedJoiner(testEnv);
+    await assertSucceeds(createJoinCodeTxn(db, 'group-new-1'));
+    console.log('test: join by code on clean membershipState');
+    const joinerDb = testEnv.authenticatedContext(joinerAuthUid).firestore();
+    await assertSucceeds(joinByCodeTxn(joinerDb));
+    const joinedGroup = (await getDoc(doc(joinerDb, 'groups', 'group-new-1'))).data();
+    if (joinedGroup.memberCount !== 2) throw new Error('Join code memberCount mismatch');
+    console.log('PASS: join by code clean');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv, {
