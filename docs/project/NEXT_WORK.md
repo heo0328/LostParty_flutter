@@ -217,6 +217,8 @@ D2 즉시 가입, D3 신청 승인, D4 신청 불안정을 **신청 상태 전�
 2. 신청 생성 → 본인 철회 → 재신청, 파티장 거절 → 재신청, 승인 후 탈퇴 → 재신청을 각각 `applications/{playerId}`의 같은 문서 전이로 고정한다. `pending` 중복 거절, `revision` 증가, `approvalCount` 재신청 초기화, `rejectionCount` 유지, 신청 당시 `countedAsNonGroupApplicant`와 모집의 pending 집계 증감을 확인한다. 신청 대기는 `raidState` 확정 점유를 만들지 않는다.
 3. 실제 Write Plan의 모집·신청·공용 이벤트 쓰기와 `validPendingApplication`/재신청/철회/결정 Rules를 현재 전체 Rules Emulator에 재현한다. Windows 로컬 전체 Rules 업로드 503은 이미 분리된 환경 문제이므로 같은 시도를 반복하지 않고 demo 전용 GitHub Actions를 엔진 검증 경로로 사용한다. 결함이 재현된 문서와 Rules 분기만 좁게 수정한다.
 
+현재 진행(2026-09-16): 공개방 신청→철회→재신청은 전체 Rules Emulator `35087432007`에서 통과했다. 그룹 연결 공개방에서 재신청 시 `countedAsNonGroupApplicant`가 바뀌는 경계는 `35087675480`에서 신청 update의 표현식 1,000개 한도 `PERMISSION_DENIED`로 재현했다. 재신청 허용 필드에 해당 Snapshot을 추가하되 현재 그룹 membership과 일치시켰고, 신청 update는 새 상태별 분기만 평가하도록 조정했다. 수정본 `35104429826`, 그룹 전용방의 정상/변조 재신청까지 확장한 `35104711642`의 전체 추적 Rules·F1 회귀가 통과했다. 관련 Flutter 표적 46건, 변경 테스트 파일 분석과 `git diff --check`가 통과했다. 최신 Rules SHA-256은 `AAB74C69483AE1C46AF69C3D8378F30573581AAA1FCBBB1485181BFBD31255D5`이다. **운영 `lost-party` Rules 게시 시도는 안전 심사에서 거절되어 실행되지 않았다.** 우회·재시도하지 않고 이 특정 Rules 버전의 명시적 운영 게시 승인 전까지 운영 반영과 실기기 완료 판정을 보류한다.
+
 #### F2-B. 즉시 가입과 승인 확정
 
 4. 즉시 가입은 신청 문서 없이 본인 actor가, 승인은 현재 승인권자가 `pending` 신청자를 확정한다. 두 경로의 성공 결과가 모집 `partySlots/memberPlayerIds`·인원/역할/그룹 집계·revision, 대상 membership·`raidState`, 그룹 listing 전체 Snapshot, 공용 이벤트 1건에서 일치하는지 비교한다. 승인 전이는 `approvedByApprover`, `approvalCount + 1`, pending 집계 −1이며 신청 당시 그룹 집계 Snapshot을 사용한다.
