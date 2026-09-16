@@ -8,7 +8,6 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   doc,
-  getFirestore,
   setDoc,
   runTransaction,
   serverTimestamp,
@@ -60,7 +59,7 @@ function cycleWindow(key) {
 async function seedBase(testEnv, { membershipState = null, weeklyClaim = false } = {}) {
   const now = Timestamp.now();
   await testEnv.withSecurityRulesDisabled(async (context) => {
-    const db = getFirestore(context);
+    const db = context.firestore();
     await setDoc(doc(db, 'authBindings', authUid), {
       schemaVersion: 1,
       playerId,

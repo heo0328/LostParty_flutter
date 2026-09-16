@@ -8,7 +8,6 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   doc,
-  getFirestore,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -39,7 +38,7 @@ async function seed(
 ) {
   const now = Timestamp.now();
   await testEnv.withSecurityRulesDisabled(async (context) => {
-    const db = getFirestore(context);
+    const db = context.firestore();
     for (const [uid, playerId] of [
       [memberAuthUid, memberPlayerId],
       [leaderAuthUid, leaderPlayerId],
@@ -344,7 +343,7 @@ async function main() {
   try {
     await seed(testEnv);
     const memberContext = testEnv.authenticatedContext(memberAuthUid);
-    const db = getFirestore(memberContext);
+    const db = memberContext.firestore();
 
     const snapshotRef = doc(db, 'groups', groupId, 'members', memberPlayerId);
     await assertSucceeds(updateDoc(snapshotRef, {
@@ -366,7 +365,7 @@ async function main() {
     await assertFails(updateDoc(snapshotRef, {
       extraPermission: true, updatedAt: serverTimestamp(),
     }));
-    const leaderDb = getFirestore(testEnv.authenticatedContext(leaderAuthUid));
+    const leaderDb = testEnv.authenticatedContext(leaderAuthUid).firestore();
     await assertFails(updateDoc(
       doc(leaderDb, 'groups', groupId, 'members', memberPlayerId),
       { combatPowerSnapshot: 3000, updatedAt: serverTimestamp() },
