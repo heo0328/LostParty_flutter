@@ -204,7 +204,9 @@ class FirestorePartyAtomicApplicationCommandRepository
       transaction.update(applicationRef, plan.application);
       transaction.update(recruitmentRef, plan.recruitmentPatch);
       transaction.set(
-        _firestore.collection('partyEvents').doc(plan.event['eventId']! as String),
+        _firestore
+            .collection('partyEvents')
+            .doc(plan.event['eventId']! as String),
         plan.event,
       );
       return const PartyApplicationCommandResult.success();
@@ -264,7 +266,9 @@ class FirestorePartyAtomicApplicationCommandRepository
       );
       transaction.update(recruitmentRef, plan.recruitmentPatch);
       transaction.set(
-        _firestore.collection('partyEvents').doc(plan.event['eventId']! as String),
+        _firestore
+            .collection('partyEvents')
+            .doc(plan.event['eventId']! as String),
         plan.event,
       );
       return const PartyApplicationCommandResult.success();
@@ -297,6 +301,13 @@ class FirestorePartyAtomicApplicationCommandRepository
         return action(transaction, playerId);
       });
     } on FirebaseException catch (error) {
+      assert(() {
+        // ignore: avoid_print
+        print(
+          'PartyAtomicApplication FirebaseException: ${error.code} ${error.message}',
+        );
+        return true;
+      }());
       return PartyApplicationCommandResult.failure(switch (error.code) {
         'permission-denied' => PartyApplicationFailure.permissionDenied,
         'unavailable' ||
@@ -312,7 +323,14 @@ class FirestorePartyAtomicApplicationCommandRepository
       return const PartyApplicationCommandResult.failure(
         PartyApplicationFailure.invalidRequest,
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
+      assert(() {
+        // ignore: avoid_print
+        print(
+          'PartyAtomicApplication unexpected ${error.runtimeType}: $error\n$stackTrace',
+        );
+        return true;
+      }());
       return const PartyApplicationCommandResult.failure(
         PartyApplicationFailure.unknown,
       );
