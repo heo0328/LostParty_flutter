@@ -466,6 +466,69 @@ async function deleteOldRaidStateTxn(db) {
   });
 }
 
+async function approvePublicApplicationTxn(db) {
+  return runTransaction(db, async (tx) => {
+    const recruitmentRef = doc(db, 'recruitments', recruitmentId);
+    const applicationRef = doc(db, 'recruitments', recruitmentId, 'applications', joinerPlayerId);
+    const characterRef = doc(db, 'characters', joinerCharacterId);
+    const memberRef = doc(db, 'recruitments', recruitmentId, 'members', joinerPlayerId);
+    const stateId = `${joinerCharacterId}_${raidId}`;
+    const stateRef = doc(db, 'players', joinerPlayerId, 'raidStates', stateId);
+    const recruitment = (await tx.get(recruitmentRef)).data();
+    const application = (await tx.get(applicationRef)).data();
+    const character = (await tx.get(characterRef)).data();
+    if (application.status !== 'pending' || character.ownerPlayerId !== joinerPlayerId) {
+      throw new Error('Approval fixture is not pending or character ownership differs');
+    }
+    const nextRevision = recruitment.revision + 1;
+    const eventId = `memberJoined_${recruitmentId}_${nextRevision}`;
+    tx.update(recruitmentRef, {
+      memberPlayerIds: [...recruitment.memberPlayerIds, joinerPlayerId],
+      memberCount: 2, dealerCount: 1, supportCount: 1, hasAvailableSlot: true,
+      partySlots: [...recruitment.partySlots, {
+        playerId: joinerPlayerId, characterId: joinerCharacterId,
+        role: 'support', classKey: '바드', partyIndex: 0, slotIndex: 3,
+        countedAsNonGroupMember: false,
+      }],
+      raidStateTargets: [...recruitment.raidStateTargets, {
+        playerId: joinerPlayerId, stateId,
+      }],
+      nonGroupMemberCount: 0, pendingApplicationCount: 0,
+      pendingNonGroupApplicantCount: 0, revision: nextRevision,
+      updatedAt: serverTimestamp(),
+    });
+    tx.update(applicationRef, {
+      status: 'approved', resolutionReason: 'approvedByApprover',
+      approvalCount: application.approvalCount + 1,
+      revision: application.revision + 1, decidedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    tx.set(memberRef, {
+      schemaVersion: 1, playerId: joinerPlayerId, characterId: joinerCharacterId,
+      characterNameSnapshot: '가입자', classNameSnapshot: '바드',
+      role: 'support', partyIndex: 0, slotIndex: 3,
+      joinedAt: serverTimestamp(), joinedBy: playerId,
+      submittedBuildSnapshotId: null, itemLevelSnapshot: 1700,
+      combatPowerSnapshot: null, gemValidationSnapshot: null,
+      buildIntegritySnapshot: null, characterChangedAt: null,
+      canApproveApplications: false, updatedAt: serverTimestamp(),
+    });
+    tx.set(stateRef, {
+      schemaVersion: 1, playerId: joinerPlayerId,
+      characterId: joinerCharacterId, raidId, difficultyId: 'normal',
+      recruitmentId, cycleKey, role: 'support', status: 'active',
+      source: 'party', revision: 1,
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+    tx.set(doc(db, 'partyEvents', eventId), {
+      schemaVersion: 1, eventId, recruitmentId, type: 'memberJoined',
+      commandId: eventId, commandRevision: nextRevision,
+      audiencePlayerIds: [playerId, joinerPlayerId],
+      actorPlayerId: playerId, occurredAt: serverTimestamp(),
+    });
+  });
+}
+
 async function main() {
   console.log('cycleKey', cycleKey);
   console.log('cutover baseline: loading tracked firestore.rules');
@@ -576,6 +639,18 @@ async function main() {
       throw new Error('Group-only reapply count mismatch');
     }
     console.log('PASS: group-only reapply validates group snapshot');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    console.log('test: approver cannot read applicant raidState');
+    await assertFails(getDoc(doc(db, 'players', joinerPlayerId, 'raidStates', `${joinerCharacterId}_${raidId}`)));
+    console.log('PASS: applicant raidState get denied (expected)');
+    console.log('test: public application approval without applicant raidState read');
+    await assertSucceeds(approvePublicApplicationTxn(db));
+    console.log('PASS: public application approved without applicant raidState read');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);
