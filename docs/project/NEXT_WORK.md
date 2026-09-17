@@ -223,7 +223,7 @@ D2 즉시 가입, D3 신청 승인, D4 신청 불안정을 **신청 상태 전�
 
 완료 게이트: 새 공개/그룹 방의 생성→다른 계정 목록/상세→신청 또는 즉시 가입이 같은 원본·주차·집계를 사용하고, 점유/완료 캐릭터가 생성 전 후보에서 차단되며, 서버 경쟁 거절에는 구체적 안내가 나온다. 공개·그룹 생성, F1 그룹 수명주기, 주간 Claim, 1·2·4·8인 대표 Rules Emulator와 최대 3계정 실기기를 회귀한다. Rules 변경 시 계약/경고 검사 후 배포 정책을 별도로 적용하며 Indexes 게시·기존 운영 데이터 변경·`dev/main` 병합은 현 단계에서 제외한다.
 
-진행(2026-09-17, 작업 브랜치 체크포인트 `887a0fb`·`6110013`): 공개·무그룹 신규 방의 초기 `nonGroupMemberCount`를 슬롯 Snapshot과 같은 `0`으로 맞췄고 가입 증분도 실제 추가 슬롯의 `countedAsNonGroupMember`를 기준으로 계산한다. Rules 초기 생성 조건과 전체 Emulator 생성 fixture를 같은 값으로 정렬했다. 생성 Write Plan→Aggregate 읽기 왕복과 공개방 1→2인 가입, 그룹 전용방 왕복을 표적 테스트로 고정했다. 생성 후보의 서버 조회를 구 `activeRaidAssignments`에서 `raidStates`로 변경하고 active 점유는 생성 명령의 `PartyCreateOccupancyGate`를 재사용한다. 생성 화면은 후보의 전체 `canSelect`를 적용한다. 직접 영향 Flutter 표적 42건, 변경 파일 정적 분석과 diff 검사는 통과했다. 전체 Rules Emulator, 운영 게시, 기존 불일치 방 처리, 실제 방 데이터 대조와 실기기 회귀는 아직 완료하지 않았다. 기존 운영 Rules는 사용자 확인 게시본을 그대로 유지하며 새 Rules는 아직 게시하지 않았다.
+진행(2026-09-17, 작업 브랜치 체크포인트 `887a0fb`·`6110013`): 공개·무그룹 신규 방의 초기 `nonGroupMemberCount`를 슬롯 Snapshot과 같은 `0`으로 맞췄고 가입 증분도 실제 추가 슬롯의 `countedAsNonGroupMember`를 기준으로 계산한다. Rules 초기 생성 조건과 전체 Emulator 생성 fixture를 같은 값으로 정렬했다. 생성 Write Plan→Aggregate 읽기 왕복과 공개방 1→2인 가입, 그룹 전용방 왕복을 표적 테스트로 고정했다. 생성 후보의 서버 조회를 구 `activeRaidAssignments`에서 `raidStates`로 변경하고 active 점유는 생성 명령의 `PartyCreateOccupancyGate`를 재사용한다. 생성 화면은 후보의 전체 `canSelect`를 적용한다. 직접 영향 Flutter 표적 42건, 변경 파일 정적 분석과 diff 검사는 통과했다. 전체 추적 Rules Emulator 및 F1 회귀 CI `35114485069`도 커밋 `7f8e269`에서 통과했다. CI 로그의 의도된 거절 테스트 `PERMISSION_DENIED`와 도구의 Node deprecation 경고는 Rules 컴파일 경고 수의 확인을 대신하지 않는다. 운영 게시, 기존 불일치 방 처리, 실제 방 데이터 대조와 실기기 회귀는 아직 완료하지 않았다. 기존 운영 Rules는 사용자 확인 게시본을 그대로 유지하며 새 Rules는 아직 게시하지 않았다.
 
 #### F2-A. 신청 상태 전이와 실패 지점 분리
 
