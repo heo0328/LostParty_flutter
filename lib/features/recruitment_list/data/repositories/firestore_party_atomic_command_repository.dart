@@ -87,14 +87,19 @@ class FirestorePartyAtomicCommandRepository
               .doc(target.playerId)
               .collection('raidStates')
               .doc(target.raidStateId);
-          final snapshot = await transaction.get(ref);
-          final data = snapshot.data();
-          if (data != null) {
-            stateDocuments[target.pathKey] = Map<String, Object?>.from(data);
+          // Disband must not read other members' private raidStates. Rules
+          // checks each delete and the aggregate's complete target list.
+          if (command.type != PartyAtomicCommandType.disband) {
+            final snapshot = await transaction.get(ref);
+            final data = snapshot.data();
+            if (data != null) {
+              stateDocuments[target.pathKey] = Map<String, Object?>.from(data);
+            }
           }
           stateRefs[target.pathKey] = ref;
         }
-        if (!plan.raidStateDocumentsAllow(stateDocuments)) {
+        if (command.type != PartyAtomicCommandType.disband &&
+            !plan.raidStateDocumentsAllow(stateDocuments)) {
           return const PartyAtomicCommandResult.failure(
             PartyAtomicCommandFailure.raidStateConflict,
           );

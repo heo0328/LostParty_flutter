@@ -2187,12 +2187,33 @@ service cloud.firestore {
         && newData.updatedAt == request.time;
     }
 
+    function atomicPositionSlotAt(slots, index, playerId, partyIndex, slotIndex) {
+      return index < slots.size()
+        && slots[index].playerId == playerId
+        && slots[index].partyIndex == partyIndex
+        && slots[index].slotIndex == slotIndex;
+    }
+
+    function atomicPositionInSlots(slots, playerId, partyIndex, slotIndex) {
+      return atomicPositionSlotAt(slots, 0, playerId, partyIndex, slotIndex)
+        || atomicPositionSlotAt(slots, 1, playerId, partyIndex, slotIndex)
+        || atomicPositionSlotAt(slots, 2, playerId, partyIndex, slotIndex)
+        || atomicPositionSlotAt(slots, 3, playerId, partyIndex, slotIndex)
+        || atomicPositionSlotAt(slots, 4, playerId, partyIndex, slotIndex)
+        || atomicPositionSlotAt(slots, 5, playerId, partyIndex, slotIndex)
+        || atomicPositionSlotAt(slots, 6, playerId, partyIndex, slotIndex)
+        || atomicPositionSlotAt(slots, 7, playerId, partyIndex, slotIndex);
+    }
+
     function validMemberPositionChange(recruitmentId, playerId, oldData, newData) {
+      let before = get(recruitmentPath(recruitmentId)).data;
       let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
       return hasActiveBinding()
-        && recruitment.leaderPlayerId == currentPlayerId()
+        && before.schemaVersion == 2
+        && before.leaderPlayerId == currentPlayerId()
+        && recruitment.leaderPlayerId == before.leaderPlayerId
         && playerId != currentPlayerId()
-        && recruitment.slotLedgerVersion == 2
+        && recruitment.revision == before.revision + 1
         && newData.diff(oldData).affectedKeys().hasOnly([
           'partyIndex', 'slotIndex', 'updatedAt'
         ])
@@ -2203,21 +2224,10 @@ service cloud.firestore {
         && newData.slotIndex >= 0
         && newData.slotIndex < recruitment.membersPerParty
         && newData.updatedAt == request.time
-        && (!existsAfter(recruitmentSlotPath(
-            recruitmentId,
-            oldData.partyIndex,
-            oldData.slotIndex
-          ))
-          || getAfter(recruitmentSlotPath(
-            recruitmentId,
-            oldData.partyIndex,
-            oldData.slotIndex
-          )).data.playerId != playerId)
-        && getAfter(recruitmentSlotPath(
-          recruitmentId,
-          newData.partyIndex,
-          newData.slotIndex
-        )).data.playerId == playerId;
+        && atomicPositionInSlots(before.partySlots, playerId,
+          oldData.partyIndex, oldData.slotIndex)
+        && atomicPositionInSlots(recruitment.partySlots, playerId,
+          newData.partyIndex, newData.slotIndex);
     }
 
     function validEventTiming(data) {

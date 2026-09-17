@@ -529,6 +529,81 @@ async function approvePublicApplicationTxn(db) {
   });
 }
 
+async function repositionApprovedMemberTxn(db, destinationSlotIndex = 2, memberSlotIndex = destinationSlotIndex) {
+  return runTransaction(db, async (tx) => {
+    const recruitmentRef = doc(db, 'recruitments', recruitmentId);
+    const memberRef = doc(db, 'recruitments', recruitmentId, 'members', joinerPlayerId);
+    const recruitment = (await tx.get(recruitmentRef)).data();
+    await tx.get(memberRef);
+    const nextRevision = recruitment.revision + 1;
+    const eventId = `membersRepositioned_${recruitmentId}_${nextRevision}`;
+    tx.update(recruitmentRef, {
+      partySlots: recruitment.partySlots.map((slot) => slot.playerId === joinerPlayerId
+        ? { ...slot, slotIndex: destinationSlotIndex } : slot),
+      revision: nextRevision, updatedAt: serverTimestamp(),
+    });
+    tx.update(memberRef, { slotIndex: memberSlotIndex, updatedAt: serverTimestamp() });
+    tx.set(doc(db, 'partyEvents', eventId), {
+      schemaVersion: 1, eventId, recruitmentId, type: 'membersRepositioned',
+      commandId: eventId, commandRevision: nextRevision,
+      audiencePlayerIds: [playerId, joinerPlayerId], actorPlayerId: playerId,
+      occurredAt: serverTimestamp(),
+    });
+  });
+}
+
+async function kickApprovedMemberTxn(db) {
+  return runTransaction(db, async (tx) => {
+    const recruitmentRef = doc(db, 'recruitments', recruitmentId);
+    const memberRef = doc(db, 'recruitments', recruitmentId, 'members', joinerPlayerId);
+    const stateRef = doc(db, 'players', joinerPlayerId, 'raidStates', `${joinerCharacterId}_${raidId}`);
+    const recruitment = (await tx.get(recruitmentRef)).data();
+    await tx.get(memberRef);
+    const nextRevision = recruitment.revision + 1;
+    const eventId = `memberKicked_${recruitmentId}_${nextRevision}`;
+    tx.update(recruitmentRef, {
+      memberPlayerIds: [playerId], memberCount: 1, dealerCount: 1,
+      supportCount: 0, partySlots: recruitment.partySlots.filter((slot) => slot.playerId !== joinerPlayerId),
+      raidStateTargets: recruitment.raidStateTargets.filter((target) => target.playerId !== joinerPlayerId),
+      nonGroupMemberCount: 0, hasAvailableSlot: true,
+      revision: nextRevision, updatedAt: serverTimestamp(),
+    });
+    tx.delete(memberRef);
+    tx.delete(stateRef);
+    tx.set(doc(db, 'partyEvents', eventId), {
+      schemaVersion: 1, eventId, recruitmentId, type: 'memberKicked',
+      commandId: eventId, commandRevision: nextRevision,
+      audiencePlayerIds: [playerId, joinerPlayerId], actorPlayerId: playerId,
+      targetPlayerId: joinerPlayerId, occurredAt: serverTimestamp(),
+    });
+  });
+}
+
+async function disbandApprovedRoomTxn(db) {
+  return runTransaction(db, async (tx) => {
+    const recruitmentRef = doc(db, 'recruitments', recruitmentId);
+    const recruitment = (await tx.get(recruitmentRef)).data();
+    const nextRevision = recruitment.revision + 1;
+    const eventId = `disband_${recruitmentId}_${recruitment.revision}`;
+    tx.update(recruitmentRef, {
+      status: 'disbanded', manualRecruitmentEnabled: false, hasAvailableSlot: false,
+      commandTargets: recruitment.raidStateTargets,
+      revision: nextRevision, lastCommandId: eventId, lastCommandType: 'disband',
+      lastCommandActorPlayerId: playerId,
+      lastCommandAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+    for (const target of recruitment.raidStateTargets) {
+      tx.delete(doc(db, 'players', target.playerId, 'raidStates', target.stateId));
+    }
+    tx.set(doc(db, 'partyEvents', eventId), {
+      schemaVersion: 1, eventId, recruitmentId, type: 'disband',
+      commandId: eventId, commandRevision: nextRevision,
+      audiencePlayerIds: [playerId, joinerPlayerId], actorPlayerId: playerId,
+      occurredAt: serverTimestamp(),
+    });
+  });
+}
+
 async function main() {
   console.log('cycleKey', cycleKey);
   console.log('cutover baseline: loading tracked firestore.rules');
@@ -651,6 +726,34 @@ async function main() {
     console.log('test: public application approval without applicant raidState read');
     await assertSucceeds(approvePublicApplicationTxn(db));
     console.log('PASS: public application approved without applicant raidState read');
+
+    console.log('test: non-leader cannot reposition or kick another member');
+    await assertFails(repositionApprovedMemberTxn(applicantDb));
+    await assertFails(kickApprovedMemberTxn(applicantDb));
+    console.log('PASS: non-leader member mutations denied');
+    console.log('test: member projection cannot disagree with aggregate slot');
+    await assertFails(repositionApprovedMemberTxn(db, 2, 1));
+    console.log('PASS: mismatched member projection denied');
+
+    console.log('test: leader repositions a joined member using aggregate slots');
+    await assertSucceeds(repositionApprovedMemberTxn(db));
+    console.log('PASS: aggregate position change');
+    console.log('test: leader kicks joined member without reading private raidState');
+    await assertSucceeds(kickApprovedMemberTxn(db));
+    console.log('PASS: joined member kick');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    await assertSucceeds(approvePublicApplicationTxn(db));
+    console.log('test: non-leader cannot disband joined room');
+    await assertFails(disbandApprovedRoomTxn(applicantDb));
+    console.log('PASS: non-leader disband denied');
+    console.log('test: leader disbands two-member room without private raidState reads');
+    await assertSucceeds(disbandApprovedRoomTxn(db));
+    console.log('PASS: two-member disband');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);

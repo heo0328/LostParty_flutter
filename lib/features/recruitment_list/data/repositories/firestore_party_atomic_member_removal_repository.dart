@@ -150,13 +150,17 @@ class FirestorePartyAtomicMemberRemovalRepository
                 raidId: raidId,
               ),
             );
-        final raidState = await transaction.get(raidStateRef);
-        if (!raidState.exists ||
-            raidState.data()?['recruitmentId'] != command.recruitmentId ||
-            raidState.data()?['status'] != 'active') {
-          return const PartyMembershipResult.failure(
-            PartyMembershipFailure.participationConflict,
-          );
+        // A leader cannot read another player's private raidState. Its delete
+        // is validated against the post-command aggregate by Firestore Rules.
+        if (command.targetPlayerId == actorPlayerId) {
+          final raidState = await transaction.get(raidStateRef);
+          if (!raidState.exists ||
+              raidState.data()?['recruitmentId'] != command.recruitmentId ||
+              raidState.data()?['status'] != 'active') {
+            return const PartyMembershipResult.failure(
+              PartyMembershipFailure.participationConflict,
+            );
+          }
         }
 
         final now = FieldValue.serverTimestamp();
