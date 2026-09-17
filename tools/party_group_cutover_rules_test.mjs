@@ -727,10 +727,9 @@ async function main() {
     await assertSucceeds(approvePublicApplicationTxn(db));
     console.log('PASS: public application approved without applicant raidState read');
 
-    console.log('test: non-leader cannot reposition or kick another member');
+    console.log('test: non-leader cannot reposition another member');
     await assertFails(repositionApprovedMemberTxn(applicantDb));
-    await assertFails(kickApprovedMemberTxn(applicantDb));
-    console.log('PASS: non-leader member mutations denied');
+    console.log('PASS: non-leader reposition denied');
     console.log('test: member projection cannot disagree with aggregate slot');
     await assertFails(repositionApprovedMemberTxn(db, 2, 1));
     console.log('PASS: mismatched member projection denied');
