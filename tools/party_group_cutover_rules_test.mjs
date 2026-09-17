@@ -665,15 +665,18 @@ async function disbandApprovedRoomTxn(db) {
     const recruitment = (await tx.get(recruitmentRef)).data();
     const nextRevision = recruitment.revision + 1;
     const eventId = `disband_${recruitmentId}_${recruitment.revision}`;
+    const completed = recruitment.currentCycleStatus === 'completed';
     tx.update(recruitmentRef, {
       status: 'disbanded', manualRecruitmentEnabled: false, hasAvailableSlot: false,
-      commandTargets: recruitment.raidStateTargets,
+      commandTargets: completed ? [] : recruitment.raidStateTargets,
       revision: nextRevision, lastCommandId: eventId, lastCommandType: 'disband',
       lastCommandActorPlayerId: playerId,
       lastCommandAt: serverTimestamp(), updatedAt: serverTimestamp(),
     });
-    for (const target of recruitment.raidStateTargets) {
-      tx.delete(doc(db, 'players', target.playerId, 'raidStates', target.stateId));
+    if (!completed) {
+      for (const target of recruitment.raidStateTargets) {
+        tx.delete(doc(db, 'players', target.playerId, 'raidStates', target.stateId));
+      }
     }
     tx.set(doc(db, 'partyEvents', eventId), {
       schemaVersion: 1, eventId, recruitmentId, type: 'disband',
@@ -833,6 +836,29 @@ async function main() {
     console.log('test: leader disbands two-member room without private raidState reads');
     await assertSucceeds(disbandApprovedRoomTxn(db));
     console.log('PASS: two-member disband');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    await assertSucceeds(approvePublicApplicationTxn(db));
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await updateDoc(doc(adminDb, 'recruitments', recruitmentId), {
+        status: 'completed', currentCycleStatus: 'completed', hasAvailableSlot: false,
+        manualRecruitmentEnabled: false,
+      });
+      for (const [targetPlayer, targetCharacter] of [
+        [playerId, characterId], [joinerPlayerId, joinerCharacterId],
+      ]) {
+        await updateDoc(doc(adminDb, 'players', targetPlayer, 'raidStates',
+          `${targetCharacter}_${raidId}`), { status: 'completed' });
+      }
+    });
+    console.log('test: completed-room disband preserves completed raidStates');
+    await assertSucceeds(disbandApprovedRoomTxn(db));
+    console.log('PASS: completed-room disband');
 
     for (const totalMembers of [4, 8]) {
       await testEnv.clearFirestore();
