@@ -536,6 +536,8 @@
 
 콘솔 문서 대조: 세 방의 ID는 각각 `7eel6EoHVWwuQQFjkrbg`, `EbsqL1WN2GVgjU7dP7Y7`, `EmWQl5sD4yRn5j5ut4UB`이다. 모두 공개·active·수동 모집·빈자리이고 `targetCycleKey=2026-09-09`, `cycleEndsAt=2026-09-16 06:00 KST`, `continueTogether=false`라 현재 주차 목록에서 빠지는 것은 정상이다. 모두 `partySlots[0].countedAsNonGroupMember=false`/`nonGroupMemberCount=1` 불일치가 확인됐다. 실제 `raidStates` 문서는 아직 받지 못했지만 동일한 과거 주차 점유를 Emulator에 재현한 CI `35168119595`는 현행 한 Transaction `delete`→`set` 생성 시 Rules 1,000식 한도 `permission-denied`로 실패했다. 해결 범위와 안전 게이트는 `NEXT_WORK.md` F2-0을 따른다.
 
+추가 원인 확인: 본인 레이드 현황의 `watchActiveRaids`는 `status in [active, completed]`만 조회하고 주차로 거르지 않는다. 이 세 문서는 여전히 `active`여서 계속 보인다. 화면의 lazy 회차 보정은 `PartyAtomicCycleCommandAdapter._executeLifecycle`에서 `PartyAtomicDocumentMapper.aggregate`를 먼저 생성하는데, 위 불일치로 `ArgumentError`가 나면 보정 명령 전에 실패한다. 따라서 단순한 테스트 기간 표시 문제가 아니라 저장 불변식 때문에 자동 종료가 막힌 상태다. 콘솔에서 모집 문서만 삭제하면 하위 membership·신청 및 별도 `raidState`가 남을 수 있으므로 임의 삭제하지 않는다. 세 문서와 각 연결 state를 백업·대조한 뒤 `nonGroupMemberCount`의 제한적 보정과 lazy 종료 재시도를 별도 복구 단위로 검증한다.
+
 ---
 
 ## 백로그 연결
