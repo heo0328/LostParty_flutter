@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/party_atomic_command.dart';
 import '../../domain/entities/party_membership_command.dart';
@@ -173,8 +174,7 @@ class FirestorePartyAtomicMemberRemovalRepository
           raidId: raidId,
           serverTimestamp: now,
           successorSnapshot: successorSnapshot,
-          actorCanResolveLostGroupQualification:
-              canResolveLostQualification,
+          actorCanResolveLostGroupQualification: canResolveLostQualification,
         );
         transaction.update(recruitmentRef, plan.recruitmentPatch);
         transaction.delete(targetMembershipRef);
@@ -208,7 +208,11 @@ class FirestorePartyAtomicMemberRemovalRepository
         );
         return const PartyMembershipResult.success();
       });
-    } on FirebaseException catch (error) {
+    } on FirebaseException catch (error, stackTrace) {
+      assert(() {
+        debugPrint('PartyAtomicMemberRemoval ${error.code}: $stackTrace');
+        return true;
+      }());
       return PartyMembershipResult.failure(_firebaseFailure(error.code));
     } on ArgumentError {
       return const PartyMembershipResult.failure(

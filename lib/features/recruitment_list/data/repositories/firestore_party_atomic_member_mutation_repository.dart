@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/party_atomic_command.dart';
 import '../../domain/entities/party_membership_command.dart';
@@ -128,8 +129,7 @@ class FirestorePartyAtomicMemberMutationRepository
       if (nextRaidState.exists) {
         final status = nextRaidState.data()?['status'];
         final cycleKey = nextRaidState.data()?['cycleKey'];
-        if (status == 'completed' &&
-            cycleKey == aggregate.currentCycleKey) {
+        if (status == 'completed' && cycleKey == aggregate.currentCycleKey) {
           return const PartyMembershipResult.failure(
             PartyMembershipFailure.weeklyRaidCompleted,
           );
@@ -203,7 +203,9 @@ class FirestorePartyAtomicMemberMutationRepository
         recruitmentPatch: plan.recruitmentPatch,
       );
       transaction.set(
-        _firestore.collection('partyEvents').doc(plan.event['eventId']! as String),
+        _firestore
+            .collection('partyEvents')
+            .doc(plan.event['eventId']! as String),
         plan.event,
       );
       return const PartyMembershipResult.success();
@@ -283,7 +285,9 @@ class FirestorePartyAtomicMemberMutationRepository
         recruitmentPatch: plan.recruitmentPatch,
       );
       transaction.set(
-        _firestore.collection('partyEvents').doc(plan.event['eventId']! as String),
+        _firestore
+            .collection('partyEvents')
+            .doc(plan.event['eventId']! as String),
         plan.event,
       );
       return const PartyMembershipResult.success();
@@ -315,7 +319,11 @@ class FirestorePartyAtomicMemberMutationRepository
         }
         return action(transaction, playerId);
       });
-    } on FirebaseException catch (error) {
+    } on FirebaseException catch (error, stackTrace) {
+      assert(() {
+        debugPrint('PartyAtomicMemberMutation ${error.code}: $stackTrace');
+        return true;
+      }());
       return PartyMembershipResult.failure(switch (error.code) {
         'permission-denied' => PartyMembershipFailure.permissionDenied,
         'unavailable' ||

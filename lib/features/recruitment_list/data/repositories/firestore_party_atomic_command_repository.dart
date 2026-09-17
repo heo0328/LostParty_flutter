@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/party_atomic_command.dart';
 import '../../domain/repositories/party_atomic_command_repository.dart';
@@ -133,15 +134,11 @@ class FirestorePartyAtomicCommandRepository
               .doc(groupId)
               .collection('raidListings')
               .doc(command.recruitmentId);
-          if (plan.groupListingAction ==
-              PartyGroupListingWriteAction.delete) {
+          if (plan.groupListingAction == PartyGroupListingWriteAction.delete) {
             transaction.delete(listingRef);
           } else if (plan.groupListingAction ==
               PartyGroupListingWriteAction.update) {
-            transaction.update(
-              listingRef,
-              plan.listingPatch,
-            );
+            transaction.update(listingRef, plan.listingPatch);
           }
         }
 
@@ -162,7 +159,11 @@ class FirestorePartyAtomicCommandRepository
           revision: command.expectedRevision + 1,
         );
       });
-    } on FirebaseException catch (error) {
+    } on FirebaseException catch (error, stackTrace) {
+      assert(() {
+        debugPrint('PartyAtomicLifecycle ${error.code}: $stackTrace');
+        return true;
+      }());
       return PartyAtomicCommandResult.failure(_mapFirebase(error.code));
     } on FormatException {
       return const PartyAtomicCommandResult.failure(
