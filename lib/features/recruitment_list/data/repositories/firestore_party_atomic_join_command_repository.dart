@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
 
 import '../../domain/entities/party_atomic_command.dart';
@@ -113,7 +114,9 @@ class FirestorePartyAtomicJoinCommandRepository
       transaction.update(applicationRef, plan.applicationPatch);
       transaction.update(recruitmentRef, plan.recruitmentPatch);
       transaction.set(
-        _firestore.collection('partyEvents').doc(plan.event['eventId']! as String),
+        _firestore
+            .collection('partyEvents')
+            .doc(plan.event['eventId']! as String),
         plan.event,
       );
       return const PartyJoinResult.success();
@@ -145,8 +148,11 @@ class FirestorePartyAtomicJoinCommandRepository
       if (raw['revision'] != expectedRecruitmentRevision) {
         return const PartyJoinResult.failure(PartyJoinFailure.revisionConflict);
       }
-      if (raw['status'] != 'active' || raw['manualRecruitmentEnabled'] != true) {
-        return const PartyJoinResult.failure(PartyJoinFailure.recruitmentClosed);
+      if (raw['status'] != 'active' ||
+          raw['manualRecruitmentEnabled'] != true) {
+        return const PartyJoinResult.failure(
+          PartyJoinFailure.recruitmentClosed,
+        );
       }
       final aggregate = PartyAtomicDocumentMapper.aggregate(
         Map<String, Object?>.from(raw),
@@ -176,7 +182,9 @@ class FirestorePartyAtomicJoinCommandRepository
         )) {
           return const PartyJoinResult.failure(PartyJoinFailure.unauthorized);
         }
-        applicationRef = recruitmentRef.collection('applications').doc(playerId);
+        applicationRef = recruitmentRef
+            .collection('applications')
+            .doc(playerId);
         final application = await transaction.get(applicationRef);
         applicationData = application.data();
         if (!application.exists || applicationData == null) {
@@ -240,7 +248,11 @@ class FirestorePartyAtomicJoinCommandRepository
             ),
           );
       final character = await transaction.get(characterRef);
-      final raidState = await transaction.get(raidStateRef);
+      // 승인자는 신청자 소유 raidState를 읽을 수 없다. 새 state 쓰기는
+      // Rules create/update와 weekly Claim 검사에서 최종 충돌을 판정한다.
+      final raidState = playerId == actorPlayerId
+          ? await transaction.get(raidStateRef)
+          : null;
       final characterData = character.data();
       if (!character.exists || characterData?['status'] != 'active') {
         return const PartyJoinResult.failure(PartyJoinFailure.invalidCharacter);
@@ -248,7 +260,7 @@ class FirestorePartyAtomicJoinCommandRepository
       if (characterData?['ownerPlayerId'] != playerId) {
         return const PartyJoinResult.failure(PartyJoinFailure.ownershipLost);
       }
-      if (raidState.exists) {
+      if (raidState != null && raidState.exists) {
         final status = raidState.data()?['status'];
         final stateRecruitmentId = raidState.data()?['recruitmentId'];
         final stateCycleKey = raidState.data()?['cycleKey'];
@@ -259,7 +271,8 @@ class FirestorePartyAtomicJoinCommandRepository
         }
         if (status == 'active' && stateRecruitmentId != recruitmentId) {
           final assignedRecruitmentId = stateRecruitmentId;
-          if (assignedRecruitmentId is! String || assignedRecruitmentId.isEmpty) {
+          if (assignedRecruitmentId is! String ||
+              assignedRecruitmentId.isEmpty) {
             return const PartyJoinResult.failure(
               PartyJoinFailure.participationConflict,
             );
@@ -287,8 +300,9 @@ class FirestorePartyAtomicJoinCommandRepository
         }
       }
 
-      final listingGroupId =
-          raw['visibility'] == 'group' ? raw['groupId'] : null;
+      final listingGroupId = raw['visibility'] == 'group'
+          ? raw['groupId']
+          : null;
       final listing = await PartyRaidListingTx.read(
         transaction: transaction,
         firestore: _firestore,
@@ -426,7 +440,9 @@ class FirestorePartyAtomicJoinCommandRepository
         recruitmentPatch: joinPlan.recruitmentPatch,
       );
       transaction.set(
-        _firestore.collection('partyEvents').doc(joinPlan.event['eventId']! as String),
+        _firestore
+            .collection('partyEvents')
+            .doc(joinPlan.event['eventId']! as String),
         joinPlan.event,
       );
       return const PartyJoinResult.success();
@@ -456,7 +472,13 @@ class FirestorePartyAtomicJoinCommandRepository
         }
         return action(transaction, playerId);
       });
-    } on FirebaseException catch (error) {
+    } on FirebaseException catch (error, stack) {
+      if (kDebugMode) {
+        debugPrint(
+          'PartyAtomicJoin FirebaseException code=${error.code} message=${error.message}',
+        );
+        debugPrintStack(stackTrace: stack);
+      }
       return PartyJoinResult.failure(switch (error.code) {
         'permission-denied' => PartyJoinFailure.permissionDenied,
         'unavailable' ||
@@ -468,7 +490,11 @@ class FirestorePartyAtomicJoinCommandRepository
       return const PartyJoinResult.failure(PartyJoinFailure.invalidRequest);
     } on StateError {
       return const PartyJoinResult.failure(PartyJoinFailure.invalidRequest);
-    } catch (_) {
+    } catch (error, stack) {
+      if (kDebugMode) {
+        debugPrint('PartyAtomicJoin unexpected $error');
+        debugPrintStack(stackTrace: stack);
+      }
       return const PartyJoinResult.failure(PartyJoinFailure.unknown);
     }
   }

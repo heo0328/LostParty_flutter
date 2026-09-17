@@ -30,7 +30,7 @@ void main() {
   });
 
   test('생성은 raidState·공용 이벤트·그룹 활성 수를 쓰고 slots·assignment를 쓰지 않는다', () {
-    expect(createRepo.split('runTransaction(').length - 1, 1);
+    expect(createRepo.split('runTransaction').length - 1, 1);
     expect(createRepo, contains(".collection('raidStates')"));
     expect(createRepo, contains(".collection('partyEvents')"));
     expect(createRepo, contains('GroupActiveRecruitmentWritePlan.open'));
@@ -45,7 +45,10 @@ void main() {
   test('신청·재신청·철회는 pending 집계와 공용 이벤트만 갱신한다', () {
     expect(applicationRepo.split('runTransaction(').length - 1, 1);
     expect(applicationRepo, contains('PartyAtomicApplicationWritePlan.apply'));
-    expect(applicationRepo, contains('PartyAtomicApplicationWritePlan.withdraw'));
+    expect(
+      applicationRepo,
+      contains('PartyAtomicApplicationWritePlan.withdraw'),
+    );
     expect(applicationRepo, contains('PartyApplicationWritePlan.reapply'));
     expect(applicationRepo, contains(".collection('partyEvents')"));
     expect(applicationRepo, isNot(contains('activeRaidAssignments')));
@@ -59,6 +62,7 @@ void main() {
     expect(joinRepo, contains('PartyAtomicApplicationRejectWritePlan'));
     expect(joinRepo, contains('PartyRaidListingTx'));
     expect(joinRepo, contains('currentApprovalCount'));
+    expect(joinRepo, contains('final raidState = playerId == actorPlayerId'));
     expect(joinRepo, contains(".collection('raidStates')"));
     expect(joinRepo, contains(".collection('partyEvents')"));
     expect(joinRepo, isNot(contains("collection('members').get(")));
@@ -85,7 +89,10 @@ void main() {
 
   test('운영 Router에 원자 생성·신청·가입·mutation Repository를 연결한다', () {
     expect(router, contains('FirestorePartyAtomicCreateRepository'));
-    expect(router, contains('FirestorePartyAtomicApplicationCommandRepository'));
+    expect(
+      router,
+      contains('FirestorePartyAtomicApplicationCommandRepository'),
+    );
     expect(router, contains('FirestorePartyAtomicJoinCommandRepository'));
     expect(router, contains('FirestorePartyAtomicMemberMutationRepository'));
     expect(router, contains('PartyAtomicMembershipCommandAdapter'));

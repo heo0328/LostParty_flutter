@@ -243,6 +243,10 @@ D2 즉시 가입, D3 신청 승인, D4 신청 불안정을 **신청 상태 전�
 
 #### F2-B. 즉시 가입과 승인 확정
 
+실기기 디버그 근거(2026-09-17): 가입 승인 버튼에서 모집 문서와 신청 문서 읽기는 성공했고, `FirestorePartyAtomicJoinCommandRepository._join`의 신청자 `players/{applicantPlayerId}/raidStates/{characterId}_{raidId}` `transaction.get`에서 `permission-denied`가 발생했다(실기기 10:45 KST). Rules의 raidState `get`은 `playerId == currentPlayerId()`만 허용한다. 따라서 승인 쓰기/Rules 조합은 아직 실행되지 않았으며 과거의 승인 쓰기 추정 패치를 성공으로 취급하지 않는다. 다음 최소 수정은 승인 actor가 타인 raidState를 읽지 않고, 신규 raidState `create`와 주간 Claim의 기존 서버 Rules가 중복·완료 점유를 최종 거부하도록 하는 것이다. 본인 즉시 가입은 기존 상태 조회·stale 판정을 유지한다. 먼저 Emulator에서 정상 승인 및 타인 raidState 단건 get 거부, 기존 점유/Claim 승인 거부를 재현하고 그 뒤 Repository만 좁게 변경한다. 승인 완료 후 다른 문서의 Rules 한도·권한 실패가 드러나면 동일 명령의 첫 실패 지점을 다시 로그로 확인한다.
+
+수정·검증(2026-09-17): 승인 경로만 신청자 `raidState`의 Transaction 읽기를 생략하고 본인 즉시 가입의 읽기/충돌 판정은 유지했다. 승인자 타인 state `get` 거부·정상 승인 성공은 전체 Rules Emulator CI `35171953952`, 기존 점유와 주간 완료 시 승인 거부까지 포함한 CI `35172188208`에서 통과했다. Repository·계약 테스트 분석 0건, 직접 영향 Flutter 표적 12건 통과. 실기기 수정 빌드에서 승인→멤버/상태/신청 화면 갱신은 아직 미확인이다. 현 규칙에서는 충돌 거절도 `permission-denied`로 매핑될 수 있으므로 승인 성공 재현 뒤 별도 사용자 안내 개선 여부를 결정한다. Rules는 변경하지 않았고 재게시하지 않는다.
+
 4. 즉시 가입은 신청 문서 없이 본인 actor가, 승인은 현재 승인권자가 `pending` 신청자를 확정한다. 두 경로의 성공 결과가 모집 `partySlots/memberPlayerIds`·인원/역할/그룹 집계·revision, 대상 membership·`raidState`, 그룹 listing 전체 Snapshot, 공용 이벤트 1건에서 일치하는지 비교한다. 승인 전이는 `approvedByApprover`, `approvalCount + 1`, pending 집계 −1이며 신청 당시 그룹 집계 Snapshot을 사용한다.
 5. Rules의 읽기·쓰기 순서를 따로 검증한다. 가입/승인 모두 소유 Character·주간 Claim·현재 회차·정원·역할/동일 파티 직업·기존 확정 점유·그룹 접근 권한을 Transaction에서 재판정한다. 승인자가 타인의 stale `raidState`를 지우지 않으며, 본인 즉시 가입의 stale 정리도 Rules가 허용하는 경우에만 수행한다. 다중 승인·가입 경쟁, revision 충돌, 중단 후 재시도에서 멤버·점유·이벤트·집계가 중복되지 않아야 한다.
 
