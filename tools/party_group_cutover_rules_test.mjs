@@ -654,6 +654,42 @@ async function main() {
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'players', joinerPlayerId,
+        'raidStates', `${joinerCharacterId}_${raidId}`), {
+        schemaVersion: 1, playerId: joinerPlayerId,
+        characterId: joinerCharacterId, raidId,
+        recruitmentId: 'different-recruitment', cycleKey,
+        role: 'support', status: 'active', source: 'party', revision: 1,
+        createdAt: Timestamp.now(), updatedAt: Timestamp.now(),
+      });
+    });
+    console.log('test: approval cannot overwrite existing applicant raidState');
+    await assertFails(approvePublicApplicationTxn(db));
+    console.log('PASS: existing applicant raidState blocks approval');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'players', joinerPlayerId,
+        'weeklyRaidClaims', `${cycleKey}_${joinerCharacterId}_${raidId}`), {
+        schemaVersion: 1, playerId: joinerPlayerId,
+        characterId: joinerCharacterId, raidId, cycleKey,
+        source: 'manual', completedAt: Timestamp.now(), updatedAt: Timestamp.now(),
+      });
+    });
+    console.log('test: applicant weekly completion blocks approval');
+    await assertFails(approvePublicApplicationTxn(db));
+    console.log('PASS: applicant weekly completion blocks approval');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
     await assertSucceeds(createPublicRecruitmentTxn(db));
     console.log('test: current-cycle active raid state cleanup denied');
     await assertFails(deleteOldRaidStateTxn(db));
