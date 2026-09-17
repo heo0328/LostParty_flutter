@@ -579,6 +579,86 @@ async function kickApprovedMemberTxn(db) {
   });
 }
 
+async function seedExpandedApprovedRoom(testEnv, totalMembers) {
+  if (totalMembers !== 4 && totalMembers !== 8) throw new Error('Unsupported boundary fixture');
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const adminDb = context.firestore();
+    const recruitmentRef = doc(adminDb, 'recruitments', recruitmentId);
+    const recruitment = (await getDoc(recruitmentRef)).data();
+    const addedSlots = [];
+    const addedTargets = [];
+    const addedIds = [];
+    for (let index = 1; index <= totalMembers - 2; index += 1) {
+      const extraPlayerId = `player-extra-${index}`;
+      const extraCharacterId = `character-extra-${index}`;
+      const partyIndex = index <= 2 ? 0 : 1;
+      const slotIndex = index <= 2 ? index : index - 3;
+      const role = totalMembers === 8 && index === 6 ? 'support' : 'dealer';
+      const stateId = `${extraCharacterId}_${raidId}`;
+      const slot = {
+        playerId: extraPlayerId, characterId: extraCharacterId,
+        role, classKey: `class-${index}`, partyIndex, slotIndex,
+        countedAsNonGroupMember: false,
+      };
+      addedIds.push(extraPlayerId);
+      addedSlots.push(slot);
+      addedTargets.push({ playerId: extraPlayerId, stateId });
+      await setDoc(doc(adminDb, 'recruitments', recruitmentId, 'members', extraPlayerId), {
+        schemaVersion: 1, playerId: extraPlayerId, characterId: extraCharacterId,
+        characterNameSnapshot: `추가 ${index}`, classNameSnapshot: `class-${index}`,
+        role, partyIndex, slotIndex, joinedAt: Timestamp.now(),
+        joinedBy: playerId, canApproveApplications: false, updatedAt: Timestamp.now(),
+      });
+      await setDoc(doc(adminDb, 'players', extraPlayerId, 'raidStates', stateId), {
+        schemaVersion: 1, playerId: extraPlayerId, characterId: extraCharacterId,
+        raidId, difficultyId: 'normal', recruitmentId, cycleKey,
+        role, status: 'active', source: 'party', revision: 1,
+        createdAt: Timestamp.now(), updatedAt: Timestamp.now(),
+      });
+    }
+    await updateDoc(recruitmentRef, {
+      partyCount: totalMembers === 8 ? 2 : 1,
+      maxMemberCount: totalMembers,
+      memberPlayerIds: [...recruitment.memberPlayerIds, ...addedIds],
+      memberCount: totalMembers,
+      dealerCount: totalMembers === 8 ? 6 : 3,
+      supportCount: totalMembers === 8 ? 2 : 1,
+      hasAvailableSlot: false,
+      partySlots: [...recruitment.partySlots, ...addedSlots],
+      raidStateTargets: [...recruitment.raidStateTargets, ...addedTargets],
+    });
+  });
+}
+
+async function swapTwoDealersTxn(db) {
+  return runTransaction(db, async (tx) => {
+    const recruitmentRef = doc(db, 'recruitments', recruitmentId);
+    const firstRef = doc(db, 'recruitments', recruitmentId, 'members', 'player-extra-1');
+    const secondRef = doc(db, 'recruitments', recruitmentId, 'members', 'player-extra-2');
+    const recruitment = (await tx.get(recruitmentRef)).data();
+    await tx.get(firstRef);
+    await tx.get(secondRef);
+    const nextRevision = recruitment.revision + 1;
+    const eventId = `membersRepositioned_${recruitmentId}_${nextRevision}`;
+    tx.update(recruitmentRef, {
+      partySlots: recruitment.partySlots.map((slot) => {
+        if (slot.playerId === 'player-extra-1') return { ...slot, slotIndex: 2 };
+        if (slot.playerId === 'player-extra-2') return { ...slot, slotIndex: 1 };
+        return slot;
+      }),
+      revision: nextRevision, updatedAt: serverTimestamp(),
+    });
+    tx.update(firstRef, { slotIndex: 2, updatedAt: serverTimestamp() });
+    tx.update(secondRef, { slotIndex: 1, updatedAt: serverTimestamp() });
+    tx.set(doc(db, 'partyEvents', eventId), {
+      schemaVersion: 1, eventId, recruitmentId, type: 'membersRepositioned',
+      commandId: eventId, commandRevision: nextRevision,
+      audiencePlayerIds: recruitment.memberPlayerIds,
+      actorPlayerId: playerId, occurredAt: serverTimestamp(),
+    });
+  });
+}
+
 async function disbandApprovedRoomTxn(db) {
   return runTransaction(db, async (tx) => {
     const recruitmentRef = doc(db, 'recruitments', recruitmentId);
@@ -598,7 +678,7 @@ async function disbandApprovedRoomTxn(db) {
     tx.set(doc(db, 'partyEvents', eventId), {
       schemaVersion: 1, eventId, recruitmentId, type: 'disband',
       commandId: eventId, commandRevision: nextRevision,
-      audiencePlayerIds: [playerId, joinerPlayerId], actorPlayerId: playerId,
+      audiencePlayerIds: recruitment.memberPlayerIds, actorPlayerId: playerId,
       occurredAt: serverTimestamp(),
     });
   });
@@ -753,6 +833,24 @@ async function main() {
     console.log('test: leader disbands two-member room without private raidState reads');
     await assertSucceeds(disbandApprovedRoomTxn(db));
     console.log('PASS: two-member disband');
+
+    for (const totalMembers of [4, 8]) {
+      await testEnv.clearFirestore();
+      await seedBase(testEnv);
+      await seedJoiner(testEnv);
+      await assertSucceeds(createPublicRecruitmentTxn(db));
+      await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+      await assertSucceeds(approvePublicApplicationTxn(db));
+      await seedExpandedApprovedRoom(testEnv, totalMembers);
+      if (totalMembers === 4) {
+        console.log('test: occupied dealer slots exchange at four-member boundary');
+        await assertSucceeds(swapTwoDealersTxn(db));
+        console.log('PASS: occupied slot exchange');
+      }
+      console.log(`test: ${totalMembers}-member active room disband`);
+      await assertSucceeds(disbandApprovedRoomTxn(db));
+      console.log(`PASS: ${totalMembers}-member active disband`);
+    }
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);
