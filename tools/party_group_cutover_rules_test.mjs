@@ -579,6 +579,57 @@ async function kickApprovedMemberTxn(db) {
   });
 }
 
+async function directRejoinAfterKickTxn(db) {
+  return runTransaction(db, async (tx) => {
+    const recruitmentRef = doc(db, 'recruitments', recruitmentId);
+    const memberRef = doc(db, 'recruitments', recruitmentId, 'members', joinerPlayerId);
+    const stateId = `${joinerCharacterId}_${raidId}`;
+    const stateRef = doc(db, 'players', joinerPlayerId, 'raidStates', stateId);
+    const recruitment = (await tx.get(recruitmentRef)).data();
+    await tx.get(doc(db, 'characters', joinerCharacterId));
+    await tx.get(stateRef);
+    const nextRevision = recruitment.revision + 1;
+    const eventId = `memberJoined_${recruitmentId}_${nextRevision}`;
+    tx.update(recruitmentRef, {
+      memberPlayerIds: [...recruitment.memberPlayerIds, joinerPlayerId],
+      memberCount: 2, dealerCount: 1, supportCount: 1, hasAvailableSlot: true,
+      partySlots: [...recruitment.partySlots, {
+        playerId: joinerPlayerId, characterId: joinerCharacterId,
+        role: 'support', classKey: '바드', partyIndex: 0, slotIndex: 3,
+        countedAsNonGroupMember: false,
+      }],
+      raidStateTargets: [...recruitment.raidStateTargets, {
+        playerId: joinerPlayerId, stateId,
+      }],
+      nonGroupMemberCount: 0, revision: nextRevision,
+      updatedAt: serverTimestamp(),
+    });
+    tx.set(memberRef, {
+      schemaVersion: 1, playerId: joinerPlayerId, characterId: joinerCharacterId,
+      characterNameSnapshot: '가입자', classNameSnapshot: '바드',
+      role: 'support', partyIndex: 0, slotIndex: 3,
+      joinedAt: serverTimestamp(), joinedBy: joinerPlayerId,
+      submittedBuildSnapshotId: null, itemLevelSnapshot: 1700,
+      combatPowerSnapshot: null, gemValidationSnapshot: null,
+      buildIntegritySnapshot: null, characterChangedAt: null,
+      canApproveApplications: false, updatedAt: serverTimestamp(),
+    });
+    tx.set(stateRef, {
+      schemaVersion: 1, playerId: joinerPlayerId,
+      characterId: joinerCharacterId, raidId, difficultyId: 'normal',
+      recruitmentId, cycleKey, role: 'support', status: 'active',
+      source: 'party', revision: 1,
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+    tx.set(doc(db, 'partyEvents', eventId), {
+      schemaVersion: 1, eventId, recruitmentId, type: 'memberJoined',
+      commandId: eventId, commandRevision: nextRevision,
+      audiencePlayerIds: [playerId, joinerPlayerId],
+      actorPlayerId: joinerPlayerId, occurredAt: serverTimestamp(),
+    });
+  });
+}
+
 async function seedExpandedApprovedRoom(testEnv, totalMembers) {
   if (totalMembers !== 4 && totalMembers !== 8) throw new Error('Unsupported boundary fixture');
   await testEnv.withSecurityRulesDisabled(async (context) => {
@@ -852,6 +903,14 @@ async function main() {
     console.log('test: leader kicks joined member without reading private raidState');
     await assertSucceeds(kickApprovedMemberTxn(db));
     console.log('PASS: joined member kick');
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'recruitments', recruitmentId), {
+        approvalPolicy: { mode: 'directJoin' },
+      });
+    });
+    console.log('test: kicked member can directly rejoin when room allows direct join');
+    await assertSucceeds(directRejoinAfterKickTxn(applicantDb));
+    console.log('PASS: kicked member direct rejoin');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);
