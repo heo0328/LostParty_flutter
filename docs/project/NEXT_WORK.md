@@ -225,6 +225,10 @@ D2 즉시 가입, D3 신청 승인, D4 신청 불안정을 **신청 상태 전�
 
 진행(2026-09-17, 작업 브랜치 체크포인트 `887a0fb`·`6110013`): 공개·무그룹 신규 방의 초기 `nonGroupMemberCount`를 슬롯 Snapshot과 같은 `0`으로 맞췄고 가입 증분도 실제 추가 슬롯의 `countedAsNonGroupMember`를 기준으로 계산한다. Rules 초기 생성 조건과 전체 Emulator 생성 fixture를 같은 값으로 정렬했다. 생성 Write Plan→Aggregate 읽기 왕복과 공개방 1→2인 가입, 그룹 전용방 왕복을 표적 테스트로 고정했다. 생성 후보의 서버 조회를 구 `activeRaidAssignments`에서 `raidStates`로 변경하고 active 점유는 생성 명령의 `PartyCreateOccupancyGate`를 재사용한다. 생성 화면은 후보의 전체 `canSelect`를 적용한다. 직접 영향 Flutter 표적 42건, 변경 파일 정적 분석과 diff 검사는 통과했다. 전체 추적 Rules Emulator 및 F1 회귀 CI `35114485069`도 커밋 `7f8e269`에서 통과했다. CI 로그의 의도된 거절 테스트 `PERMISSION_DENIED`와 도구의 Node deprecation 경고는 Rules 컴파일 경고 수의 확인을 대신하지 않는다. 운영 게시, 기존 불일치 방 처리, 실제 방 데이터 대조와 실기기 회귀는 아직 완료하지 않았다. 기존 운영 Rules는 사용자 확인 게시본을 그대로 유지하며 새 Rules는 아직 게시하지 않았다.
 
+운영 데이터 대조 및 재현(2026-09-17): `이슈하이`의 세 방은 모두 `targetCycleKey=2026-09-09`, `continueTogether=false`, `cycleEndsAt=2026-09-16 06:00 KST`, `status=active`라 현재 주차 공개 목록 제외는 의도된 쿼리 결과다. 세 방 모두 초기 슬롯의 `countedAsNonGroupMember=false`인데 `nonGroupMemberCount=1`이라 기존 방 신청 Aggregate 실패 대상이다. 기존 방 문서의 수동 변경은 보류한다. 이전 주차 1회성 active 방/raidState를 만들고 현행 생성 명령처럼 동일 Transaction에서 stale raidState `delete`→`set`하는 Emulator 회귀 `35168119595`는 Rules 1,000식 평가 한도의 `permission-denied`로 실패했다. 이는 새 주차 생성 거부의 재현 가능한 경로다(실제 실패 캐릭터의 raidState는 아직 읽지 않았으므로 개별 사건 확정은 유보).
+
+다음 최소 수정: (a) `raidState`가 기존 모집의 만료된 1회성 점유임을 서버 문서·주차·종료시각으로 재검증하는 **단독 원자 삭제**를 생성 전 실행하고, (b) 새 모집·membership·raidState·공용 이벤트 생성은 기존 원자 Transaction을 유지한다. 삭제와 생성 사이 앱 종료/실패 시에는 이미 만료된 점유만 제거되고 기존 모집 문서는 유지되며 사용자가 재시도할 수 있어야 한다. 동일 주차 active·반복방·주간 Claim·소유권 불명 상태는 정리하지 않는다. 동시 변경은 삭제 Transaction과 생성 Transaction에서 각각 재검증하고 경쟁 시 구체적 충돌로 반환한다. 먼저 Emulator에서 stale 단독 삭제→새 생성 성공 및 반복방/이번 주 active 삭제 거부를 고정한 뒤 Repository를 수정한다. Rules 표현식을 단순히 완화하거나 전체 모집 문서를 삭제하지 않는다.
+
 #### F2-A. 신청 상태 전이와 실패 지점 분리
 
 1. 운영 게시 Rules·인덱스와 현재 앱 빌드의 기준을 확인한다. 공개/그룹 전용 방, 직접 참가/승인 방을 구분하고 actor Player·recruitmentId·applicationId, 명령 전 `revision/status/cycleKey`와 Firebase 오류 `code`를 기록한다. “신청 실패”가 명령 Transaction, 권한 있는 읽기·Listen, 화면 갱신 중 어느 단계인지 분리한다. Listen 자체의 일반 역할별 재설계는 F3에 남긴다.

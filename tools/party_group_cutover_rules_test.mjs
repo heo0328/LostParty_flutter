@@ -581,11 +581,25 @@ async function main() {
         cycleKey: oldCycleKey,
       });
     });
-    console.log('test: expired one-shot raid state replacement during create');
-    await assertSucceeds(createPublicRecruitmentTxn(db, {
+    console.log('test: same-transaction stale replacement exceeds Rules budget');
+    await assertFails(createPublicRecruitmentTxn(db, {
       id: 'recruitment-next-cycle', replaceStale: true,
     }));
-    console.log('PASS: expired one-shot raid state replaced during create');
+    console.log('PASS: same-transaction stale replacement denied (expected)');
+    console.log('test: standalone stale cleanup followed by atomic create');
+    await assertSucceeds(runTransaction(db, async (tx) => {
+      const oldRef = doc(db, 'recruitments', recruitmentId);
+      const stateRef = doc(db, 'players', playerId, 'raidStates', `${characterId}_${raidId}`);
+      const oldRoom = (await tx.get(oldRef)).data();
+      const oldState = (await tx.get(stateRef)).data();
+      if (oldState.recruitmentId !== recruitmentId || oldState.cycleKey !== oldCycleKey
+        || oldRoom.continueTogether || oldRoom.cycleEndsAt.toMillis() > Date.now()) {
+        throw new Error('Stale fixture is not an expired one-shot assignment');
+      }
+      tx.delete(stateRef);
+    }));
+    await assertSucceeds(createPublicRecruitmentTxn(db, { id: 'recruitment-next-cycle' }));
+    console.log('PASS: standalone stale cleanup and new atomic create');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv, { weeklyClaim: true });

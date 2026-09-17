@@ -534,6 +534,8 @@
 
 추가 제보(2026-09-17): 미노출/생성 충돌 확인 대상의 방장 캐릭터는 `이슈하이`이며 방 제목은 `카제노말모집`, `지평1단 모집`, `4막하드 모집`이다. 제목은 고유 ID가 아니므로 이 세 방의 `recruitmentId`와 각 문서의 목록 필터 필드, `이슈하이`의 해당 레이드별 `raidState`를 읽기 전에는 동일 원인으로 묶거나 데이터를 변경하지 않는다. 전체 Rules Emulator CI `35114485069`는 통과했으나 운영 데이터의 상태를 증명하지 않는다.
 
+콘솔 문서 대조: 세 방의 ID는 각각 `7eel6EoHVWwuQQFjkrbg`, `EbsqL1WN2GVgjU7dP7Y7`, `EmWQl5sD4yRn5j5ut4UB`이다. 모두 공개·active·수동 모집·빈자리이고 `targetCycleKey=2026-09-09`, `cycleEndsAt=2026-09-16 06:00 KST`, `continueTogether=false`라 현재 주차 목록에서 빠지는 것은 정상이다. 모두 `partySlots[0].countedAsNonGroupMember=false`/`nonGroupMemberCount=1` 불일치가 확인됐다. 실제 `raidStates` 문서는 아직 받지 못했지만 동일한 과거 주차 점유를 Emulator에 재현한 CI `35168119595`는 현행 한 Transaction `delete`→`set` 생성 시 Rules 1,000식 한도 `permission-denied`로 실패했다. 해결 범위와 안전 게이트는 `NEXT_WORK.md` F2-0을 따른다.
+
 ---
 
 ## 백로그 연결
