@@ -273,19 +273,20 @@ async function joinByCodeTxn(db) {
   });
 }
 
-async function createPublicRecruitmentTxn(db) {
+async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale = false } = {}) {
   const { startedAt, endsAt } = cycleWindow(cycleKey);
   const stateId = `${characterId}_${raidId}`;
   return runTransaction(db, async (tx) => {
-    const recruitmentRef = doc(db, 'recruitments', recruitmentId);
-    const memberRef = doc(db, 'recruitments', recruitmentId, 'members', playerId);
+    const recruitmentRef = doc(db, 'recruitments', id);
+    const memberRef = doc(db, 'recruitments', id, 'members', playerId);
     const raidStateRef = doc(db, 'players', playerId, 'raidStates', stateId);
-    const eventId = `partyCreated_${recruitmentId}_1`;
+    const eventId = `partyCreated_${id}_1`;
     const eventRef = doc(db, 'partyEvents', eventId);
 
+    if (replaceStale) tx.delete(raidStateRef);
     tx.set(recruitmentRef, {
       schemaVersion: 2,
-      recruitmentId,
+      recruitmentId: id,
       title: '공개 모집',
       leaderPlayerId: playerId,
       leaderCharacterNameSnapshot: '테스트',
@@ -376,7 +377,7 @@ async function createPublicRecruitmentTxn(db) {
       playerId,
       characterId,
       raidId,
-      recruitmentId,
+      recruitmentId: id,
       cycleKey,
       role: 'dealer',
       status: 'active',
@@ -388,7 +389,7 @@ async function createPublicRecruitmentTxn(db) {
     tx.set(eventRef, {
       schemaVersion: 1,
       eventId,
-      recruitmentId,
+      recruitmentId: id,
       type: 'partyCreated',
       commandId: eventId,
       commandRevision: 1,
@@ -562,6 +563,29 @@ async function main() {
       throw new Error('Group-only reapply count mismatch');
     }
     console.log('PASS: group-only reapply validates group snapshot');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    const oldCycleKey = currentCycleKey(new Date(Date.now() - 7 * 86400000));
+    const oldCycle = cycleWindow(oldCycleKey);
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await updateDoc(doc(adminDb, 'recruitments', recruitmentId), {
+        currentCycleKey: oldCycleKey,
+        targetCycleKey: oldCycleKey,
+        cycleStartedAt: Timestamp.fromDate(oldCycle.startedAt),
+        cycleEndsAt: Timestamp.fromDate(oldCycle.endsAt),
+      });
+      await updateDoc(doc(adminDb, 'players', playerId, 'raidStates', `${characterId}_${raidId}`), {
+        cycleKey: oldCycleKey,
+      });
+    });
+    console.log('test: expired one-shot raid state replacement during create');
+    await assertSucceeds(createPublicRecruitmentTxn(db, {
+      id: 'recruitment-next-cycle', replaceStale: true,
+    }));
+    console.log('PASS: expired one-shot raid state replaced during create');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv, { weeklyClaim: true });
