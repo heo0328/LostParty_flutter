@@ -453,6 +453,19 @@ async function applicationTxn(db, action, { countedAsNonGroup = false } = {}) {
   });
 }
 
+async function deleteOldRaidStateTxn(db) {
+  return runTransaction(db, async (tx) => {
+    const oldRef = doc(db, 'recruitments', recruitmentId);
+    const stateRef = doc(db, 'players', playerId, 'raidStates', `${characterId}_${raidId}`);
+    const oldRoom = (await tx.get(oldRef)).data();
+    const oldState = (await tx.get(stateRef)).data();
+    if (oldState.recruitmentId !== recruitmentId || oldRoom.recruitmentId !== recruitmentId) {
+      throw new Error('Stale fixture points to an unexpected recruitment');
+    }
+    tx.delete(stateRef);
+  });
+}
+
 async function main() {
   console.log('cycleKey', cycleKey);
   console.log('cutover baseline: loading tracked firestore.rules');
@@ -567,6 +580,9 @@ async function main() {
     await testEnv.clearFirestore();
     await seedBase(testEnv);
     await assertSucceeds(createPublicRecruitmentTxn(db));
+    console.log('test: current-cycle active raid state cleanup denied');
+    await assertFails(deleteOldRaidStateTxn(db));
+    console.log('PASS: current-cycle active raid state cleanup denied');
     const oldCycleKey = currentCycleKey(new Date(Date.now() - 7 * 86400000));
     const oldCycle = cycleWindow(oldCycleKey);
     await testEnv.withSecurityRulesDisabled(async (context) => {
@@ -576,9 +592,18 @@ async function main() {
         targetCycleKey: oldCycleKey,
         cycleStartedAt: Timestamp.fromDate(oldCycle.startedAt),
         cycleEndsAt: Timestamp.fromDate(oldCycle.endsAt),
+        continueTogether: true,
       });
       await updateDoc(doc(adminDb, 'players', playerId, 'raidStates', `${characterId}_${raidId}`), {
         cycleKey: oldCycleKey,
+      });
+    });
+    console.log('test: expired repeating-room raid state cleanup denied');
+    await assertFails(deleteOldRaidStateTxn(db));
+    console.log('PASS: expired repeating-room raid state cleanup denied');
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'recruitments', recruitmentId), {
+        continueTogether: false,
       });
     });
     console.log('test: same-transaction stale replacement exceeds Rules budget');
@@ -587,17 +612,7 @@ async function main() {
     }));
     console.log('PASS: same-transaction stale replacement denied (expected)');
     console.log('test: standalone stale cleanup followed by atomic create');
-    await assertSucceeds(runTransaction(db, async (tx) => {
-      const oldRef = doc(db, 'recruitments', recruitmentId);
-      const stateRef = doc(db, 'players', playerId, 'raidStates', `${characterId}_${raidId}`);
-      const oldRoom = (await tx.get(oldRef)).data();
-      const oldState = (await tx.get(stateRef)).data();
-      if (oldState.recruitmentId !== recruitmentId || oldState.cycleKey !== oldCycleKey
-        || oldRoom.continueTogether || oldRoom.cycleEndsAt.toMillis() > Date.now()) {
-        throw new Error('Stale fixture is not an expired one-shot assignment');
-      }
-      tx.delete(stateRef);
-    }));
+    await assertSucceeds(deleteOldRaidStateTxn(db));
     await assertSucceeds(createPublicRecruitmentTxn(db, { id: 'recruitment-next-cycle' }));
     console.log('PASS: standalone stale cleanup and new atomic create');
 

@@ -229,6 +229,8 @@ D2 즉시 가입, D3 신청 승인, D4 신청 불안정을 **신청 상태 전�
 
 다음 최소 수정: (a) `raidState`가 기존 모집의 만료된 1회성 점유임을 서버 문서·주차·종료시각으로 재검증하는 **단독 원자 삭제**를 생성 전 실행하고, (b) 새 모집·membership·raidState·공용 이벤트 생성은 기존 원자 Transaction을 유지한다. 삭제와 생성 사이 앱 종료/실패 시에는 이미 만료된 점유만 제거되고 기존 모집 문서는 유지되며 사용자가 재시도할 수 있어야 한다. 동일 주차 active·반복방·주간 Claim·소유권 불명 상태는 정리하지 않는다. 동시 변경은 삭제 Transaction과 생성 Transaction에서 각각 재검증하고 경쟁 시 구체적 충돌로 반환한다. 먼저 Emulator에서 stale 단독 삭제→새 생성 성공 및 반복방/이번 주 active 삭제 거부를 고정한 뒤 Repository를 수정한다. Rules 표현식을 단순히 완화하거나 전체 모집 문서를 삭제하지 않는다.
 
+구현 진행: 전체 Rules Emulator CI `35168309443`에서 동일 Transaction 교체 거부, 만료 1회성 `raidState` 단독 삭제→신규 모집 원자 생성 성공을 확인했다. 생성 Repository는 점유 교체 판정 시 첫 Transaction에서 stale state만 삭제하고, 두 번째 Transaction에서 인증·캐릭터·점유·주간 Claim·그룹 상태를 다시 읽고 새 모집을 생성하도록 변경했다. 현재 주차 active와 만료 반복방 삭제 거부를 추가한 Rules 회귀, 최종 Rules CI, 실기기 생성/신청은 아직 검증 전이다. Rules는 이 수정에서 새로 변경하지 않았으며 운영에는 앞선 초기 생성 집계 Rules 수정본도 아직 미게시다.
+
 #### F2-A. 신청 상태 전이와 실패 지점 분리
 
 1. 운영 게시 Rules·인덱스와 현재 앱 빌드의 기준을 확인한다. 공개/그룹 전용 방, 직접 참가/승인 방을 구분하고 actor Player·recruitmentId·applicationId, 명령 전 `revision/status/cycleKey`와 Firebase 오류 `code`를 기록한다. “신청 실패”가 명령 Transaction, 권한 있는 읽기·Listen, 화면 갱신 중 어느 단계인지 분리한다. Listen 자체의 일반 역할별 재설계는 F3에 남긴다.
