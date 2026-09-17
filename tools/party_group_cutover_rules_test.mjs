@@ -659,16 +659,36 @@ async function swapTwoDealersTxn(db) {
   });
 }
 
+async function seedGroupLinkedRoom(testEnv, db) {
+  const groupId = 'group-room-1';
+  await assertSucceeds(createGroupTxn(db, groupId));
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const adminDb = context.firestore();
+    await updateDoc(doc(adminDb, 'groups', groupId), { activeRecruitmentCount: 1 });
+    await updateDoc(doc(adminDb, 'recruitments', recruitmentId), {
+      groupId, visibility: 'group', groupActiveRecruitmentCountAfter: 1,
+    });
+    await setDoc(doc(adminDb, 'groups', groupId, 'raidListings', recruitmentId), {
+      recruitmentId, groupId, visibility: 'group', status: 'active',
+      sourceRevision: 2, updatedAt: Timestamp.now(),
+    });
+  });
+}
+
 async function disbandApprovedRoomTxn(db) {
   return runTransaction(db, async (tx) => {
     const recruitmentRef = doc(db, 'recruitments', recruitmentId);
     const recruitment = (await tx.get(recruitmentRef)).data();
+    const groupRef = recruitment.groupId
+      ? doc(db, 'groups', recruitment.groupId) : null;
+    const group = groupRef ? (await tx.get(groupRef)).data() : null;
     const nextRevision = recruitment.revision + 1;
     const eventId = `disband_${recruitmentId}_${recruitment.revision}`;
     const completed = recruitment.currentCycleStatus === 'completed';
     tx.update(recruitmentRef, {
       status: 'disbanded', manualRecruitmentEnabled: false, hasAvailableSlot: false,
       commandTargets: completed ? [] : recruitment.raidStateTargets,
+      ...(group ? { groupActiveRecruitmentCountAfter: group.activeRecruitmentCount - 1 } : {}),
       revision: nextRevision, lastCommandId: eventId, lastCommandType: 'disband',
       lastCommandActorPlayerId: playerId,
       lastCommandAt: serverTimestamp(), updatedAt: serverTimestamp(),
@@ -677,6 +697,15 @@ async function disbandApprovedRoomTxn(db) {
       for (const target of recruitment.raidStateTargets) {
         tx.delete(doc(db, 'players', target.playerId, 'raidStates', target.stateId));
       }
+    }
+    if (groupRef) {
+      tx.update(groupRef, {
+        activeRecruitmentCount: group.activeRecruitmentCount - 1,
+        lastRecruitmentId: recruitmentId,
+        revision: group.revision + 1,
+        updatedAt: serverTimestamp(),
+      });
+      tx.delete(doc(db, 'groups', recruitment.groupId, 'raidListings', recruitmentId));
     }
     tx.set(doc(db, 'partyEvents', eventId), {
       schemaVersion: 1, eventId, recruitmentId, type: 'disband',
@@ -877,6 +906,17 @@ async function main() {
       await assertSucceeds(disbandApprovedRoomTxn(db));
       console.log(`PASS: ${totalMembers}-member active disband`);
     }
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    await assertSucceeds(approvePublicApplicationTxn(db));
+    await seedGroupLinkedRoom(testEnv, db);
+    console.log('test: group room disband closes count and listing once');
+    await assertSucceeds(disbandApprovedRoomTxn(db));
+    console.log('PASS: group room disband');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);
