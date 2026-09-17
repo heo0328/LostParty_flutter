@@ -23,22 +23,35 @@ void main() {
     expect(rules, isNot(contains(r'$(partyIndex)_$(slotIndex)')));
     expect(
       rules,
-      contains(
-        r'/documents/recruitments/$(recruitmentId)/slots/1_3',
-      ),
+      contains(r'/documents/recruitments/$(recruitmentId)/slots/1_3'),
     );
-    expect(rules, contains('atomicInitialPartySlotMatches(slot, playerId, member)'));
+    expect(
+      rules,
+      contains('atomicInitialPartySlotMatches(slot, playerId, member)'),
+    );
   });
 
   test('자리 변경은 공대장·revision·Aggregate partySlots를 함께 요구한다', () {
     expect(rules, contains('function validAtomicPositionAggregateUpdate'));
     expect(rules, contains('function validMemberPositionChange'));
     expect(rules, isNot(contains('function validPartyCompositionForMember')));
-    expect(rules, contains('recruitment.leaderPlayerId == currentPlayerId()'));
-    expect(rules, contains('recruitment.slotLedgerVersion == 2'));
+    final start = rules.indexOf('function validMemberPositionChange');
+    final end = rules.indexOf('function validEventTiming', start);
+    final positionRule = rules.substring(start, end);
     expect(
-      rules,
-      contains('newData.partyIndex != oldData.partyIndex'),
+      positionRule,
+      contains('before.leaderPlayerId == currentPlayerId()'),
     );
+    expect(
+      positionRule,
+      contains('recruitment.revision == before.revision + 1'),
+    );
+    expect(positionRule, contains('atomicPositionInSlots(before.partySlots'));
+    expect(
+      positionRule,
+      contains('atomicPositionInSlots(recruitment.partySlots'),
+    );
+    expect(positionRule, isNot(contains('recruitmentSlotPath(')));
+    expect(positionRule, contains('newData.partyIndex != oldData.partyIndex'));
   });
 }

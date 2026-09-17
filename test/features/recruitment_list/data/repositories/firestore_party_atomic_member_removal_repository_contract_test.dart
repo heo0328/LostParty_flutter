@@ -30,6 +30,18 @@ void main() {
     expect(repository, isNot(contains(".collection('events')")));
   });
 
+  test('추방은 타인의 개인 raidState 읽기 없이 서버 삭제 검증을 사용한다', () {
+    expect(
+      repository,
+      contains('if (command.targetPlayerId == actorPlayerId)'),
+    );
+    expect(
+      repository,
+      contains('final raidState = await transaction.get(raidStateRef)'),
+    );
+    expect(repository, contains('transaction.delete(raidStateRef)'));
+  });
+
   test('운영 Router에 원자 탈퇴 Repository를 연결한다', () {
     expect(router, contains('FirestorePartyAtomicMemberRemovalRepository'));
   });

@@ -34,6 +34,14 @@ void main() {
     expect(repository, isNot(contains(".collection('slots')")));
   });
 
+  test('해산은 타인 raidState를 읽지 않고 전체 대상 삭제를 Rules에 맡긴다', () {
+    expect(
+      repository,
+      contains('if (command.type != PartyAtomicCommandType.disband)'),
+    );
+    expect(repository, contains('transaction.delete(ref)'));
+  });
+
   test('운영 Router에 원자 lifecycle Repository를 연결한다', () {
     expect(router, contains('FirestorePartyAtomicCommandRepository'));
     expect(router, contains('PartyAtomicCycleCommandAdapter'));
