@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/weekly_raid_claim.dart';
 import '../../domain/entities/weekly_raid_claim_command.dart';
@@ -410,7 +411,9 @@ class FirestoreWeeklyRaidClaimRepository
         final data = recruitment.data();
         activeRecruitmentTitle = data?['title'] as String?;
         isLeader = data?['leaderPlayerId'] == command.playerId;
-        final memberIds = List<String>.from(data?['memberPlayerIds'] as List? ?? const []);
+        final memberIds = List<String>.from(
+          data?['memberPlayerIds'] as List? ?? const [],
+        );
         willDisband = isLeader && memberIds.length == 1;
         if (isLeader && memberIds.length > 1) {
           final nextId = memberIds.firstWhere((id) => id != command.playerId);
@@ -439,7 +442,10 @@ class FirestoreWeeklyRaidClaimRepository
       }
       final recruitmentRef = application.reference.parent.parent;
       if (recruitmentRef == null) continue;
-      final recruitment = await recruitmentRef.get();
+      final recruitment = await readAccessiblePendingRecruitment(
+        () => recruitmentRef.get(),
+      );
+      if (recruitment == null) continue;
       if (recruitment.data()?['raidId'] != command.raidId) continue;
       candidates.add(
         _PendingClaimApplication(
@@ -529,6 +535,18 @@ class FirestoreWeeklyRaidClaimRepository
     'aborted' => WeeklyRaidClaimCommandFailure.temporarilyUnavailable,
     _ => WeeklyRaidClaimCommandFailure.unknown,
   };
+}
+
+@visibleForTesting
+Future<T?> readAccessiblePendingRecruitment<T>(
+  Future<T> Function() read,
+) async {
+  try {
+    return await read();
+  } on FirebaseException catch (error) {
+    if (error.code == 'permission-denied') return null;
+    rethrow;
+  }
 }
 
 class _ManualClaimConflictContext {
