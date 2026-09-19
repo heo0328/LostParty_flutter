@@ -4,8 +4,8 @@
 
 - 기존 `validAtomicStaleRaidStateDelete`를 유지하고 구 `activeRaidAssignments`에는 현재 바인딩 Player 본인, 정확한 문서 ID, active 상태, 연결 모집 없음 또는 기존 stale 모집일 때만 허용하는 delete 분기 하나를 추가했다. 생성·수정, 타인 정리, 정상 활성 모집 정리는 계속 닫혀 있다.
 - demo Rules 시나리오는 모집 원본 없음인 본인 `raidState`+구 assignment 원자 삭제 성공, 타인 삭제 거절, 정상 활성 모집 삭제 거절의 대표 사례만 추가했다. 인원수별 반복이나 Player 이벤트 fan-out은 추가하지 않았다.
-- JS 문법, Rules 문자열 계약, 관련 ViewModel 테스트 9건과 변경 Dart 파일 정적 분석은 통과했다. 로컬 Emulator는 이미 확인된 Windows Rules 로딩 503을 반복하지 않았으며 작업 브랜치 Actions의 실제 Rules 컴파일·평가를 기다린다.
-- 변경 Rules SHA-256은 `716402EF95051F6F07B799F275431B9A89718E7BA713A07EEEFB147FDCDCCC94`다. 운영 Rules는 게시하지 않았고 Actions·게시·실기기 확인 전에는 F6-D 완료로 판정하지 않는다.
+- JS 문법, Rules 문자열 계약, 관련 ViewModel 테스트 9건과 변경 Dart 파일 정적 분석이 통과했다. 로컬 Emulator는 이미 확인된 Windows Rules 로딩 503을 반복하지 않았으며, 작업 브랜치 Actions `35454451057`의 demo Emulator에서 전체 추적 Rules와 기존 그룹 이전·탈퇴·해산 회귀까지 통과했다. Actions의 Node/setup-java 주석은 Rules 컴파일 경고가 아니다.
+- 변경 Rules SHA-256은 `716402EF95051F6F07B799F275431B9A89718E7BA713A07EEEFB147FDCDCCC94`다. 운영 Rules는 게시하지 않았고 게시·실기기 확인 전에는 F6-D 완료로 판정하지 않는다.
 
 ## 2026-09-19 F6-B2-A 본인 주간 상태 list 검증
 

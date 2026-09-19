@@ -3211,4 +3211,4 @@
 - 내 계정 수동 완료 영향 확인에서 본인 active party `raidState`의 연결 모집을 단건 조회해 원본 없음·종료·완료·만료 상태를 정상 참가와 분리한다. 존재하지 않는 새로고침 안내 대신 `참가 기록 정리` 확인창을 추가했다.
 - 정리 Transaction은 Player·Character·raid·cycle·recruitmentId와 관찰 revision을 다시 검증하고, 여전히 stale인 경우에만 본인 `raidState` 및 정확히 일치하는 구 assignment를 원자 삭제한다. 완료 기록·신청·다른 상태는 변경하지 않으며 정상 활성 모집은 거절한다.
 - 기존 stale `raidState` Rules를 재사용하고 구 assignment에 같은 본인·고아 조건의 delete만 추가했다. demo에는 원본 없는 본인 정리 성공, 타인 거절, 정상 활성 모집 거절 대표 시나리오를 추가했다. 공용 이벤트·인원수 비례 조회·후처리는 추가하지 않았다.
-- JS 문법, Rules 문자열 계약, ViewModel 표적 9건과 변경 Dart 파일 정적 분석은 통과했다. 로컬 Rules Emulator의 기존 Windows 503은 반복하지 않았고, 변경 Rules SHA-256은 `716402EF95051F6F07B799F275431B9A89718E7BA713A07EEEFB147FDCDCCC94`다. 작업 브랜치 Actions·운영 게시·사용자 실기기 확인과 D4 신청 전 차단은 남아 있다.
+- JS 문법, Rules 문자열 계약, ViewModel 표적 9건과 변경 Dart 파일 정적 분석은 통과했다. 로컬 Rules Emulator의 기존 Windows 503은 반복하지 않았고, 작업 브랜치 Actions `35454451057`의 demo Emulator에서 전체 추적 Rules와 기존 그룹 회귀가 통과했다. 변경 Rules SHA-256은 `716402EF95051F6F07B799F275431B9A89718E7BA713A07EEEFB147FDCDCCC94`다. 운영 게시·사용자 실기기 확인과 D4 신청 전 차단은 남아 있다.

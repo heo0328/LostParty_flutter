@@ -460,12 +460,12 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
    4. **D4 신청 차단:** 신청 후보와 실제 신청 Transaction 모두 active state를 다시 확인한다. 정상 active는 `동일 레이드 참가 중`, 고아 active는 `종료된 파티의 참가 기록 정리 필요`로 신청 전에 차단한다. 신청 단계에서 자동 삭제하지 않고 본인 복구 명령으로 이동한다. 승인자는 타인의 private state를 읽거나 대신 정리하지 않으며 경쟁으로 상태가 바뀐 경우 Rules 최종 거절과 `신청자의 참가 상태가 변경되었습니다.` 안내를 유지한다.
    5. **D5 최소 검증:** Rules는 모집 원본 없음인 본인 orphan state 정리 성공, 활성 모집·타인·위조·completed 거절, legacy assignment 동시 정리만 자동 검증한다. 정상 UX는 사용자가 디바이스에서 `참가 표시 → 정리 안내 → 정리 → 표시 제거 → 수동 체크 또는 신청 가능` 한 사례와 정상 active 참가 한 사례만 확인한다. 기존 방 생성·신청·승인·자리 변경·추방·해산·완료/해제 및 그룹 흐름을 회귀 보호한다.
 
-   **D1~D3 구현 상태(2026-09-20): 코드·로컬 표적 검증 완료, Rules Emulator·게시·실기기 대기.** 내 계정의 수동 완료 영향 확인이 연결 모집 없음 또는 종료·완료·만료 상태를 단건 판정해 `orphanedParticipation`으로 분리하고, 별도 확인창의 `참가 기록 정리` 명령이 관찰한 Player·Character·raid·cycle·recruitmentId·revision을 Transaction에서 다시 검증한다. 성공 시 본인 active party `raidState`와 동일한 구 assignment만 원자 삭제하며 완료 기록·신청·다른 상태는 변경하지 않는다. Rules는 기존 stale state 삭제 계약을 재사용하고 구 assignment에 같은 본인·고아 조건의 delete만 추가했다. 정상 활성 모집과 타인 정리는 거절하는 demo 대표 시나리오를 추가했으며, JS 문법·변경 파일 정적 분석·표적 Flutter 9건은 통과했다. 로컬 Emulator의 기존 503은 반복하지 않았고 작업 브랜치 Actions 확인 전이므로 Rules 동작 검증 완료나 운영 반영으로 표시하지 않는다. D4 신청 전 차단은 아직 구현하지 않았다.
+   **D1~D3 구현 상태(2026-09-20): 코드·자동 검증 완료, Rules 게시·실기기 대기.** 내 계정의 수동 완료 영향 확인이 연결 모집 없음 또는 종료·완료·만료 상태를 단건 판정해 `orphanedParticipation`으로 분리하고, 별도 확인창의 `참가 기록 정리` 명령이 관찰한 Player·Character·raid·cycle·recruitmentId·revision을 Transaction에서 다시 검증한다. 성공 시 본인 active party `raidState`와 동일한 구 assignment만 원자 삭제하며 완료 기록·신청·다른 상태는 변경하지 않는다. Rules는 기존 stale state 삭제 계약을 재사용하고 구 assignment에 같은 본인·고아 조건의 delete만 추가했다. 정상 활성 모집과 타인 정리는 거절하는 demo 대표 시나리오를 추가했으며, JS 문법·변경 파일 정적 분석·표적 Flutter 9건과 작업 브랜치 demo Rules Emulator Actions `35454451057`이 통과했다. 로컬 Emulator의 기존 503은 반복하지 않았다. 운영 Rules는 아직 게시하지 않았고 D4 신청 전 차단도 구현하지 않았다.
 
    2026-09-20 확정 재현: `players/kVn6KZwZQO6or3BjNYqX/raidStates/xseSyVxZXWhKYxlZEucb_kazeros_act4`는 `status: active`, `source: party`, `cycleKey: 2026-09-16`, `recruitmentId: td904kw3PEgWI1GwIfUP`이며 해당 모집 원본은 존재하지 않는다. 앱은 이를 참가 중으로 표시하고 수동 완료에서 상태 불일치를 반환했으며, 같은 레이드 신청은 접수되지만 승인에서 권한 오류로 거절됐다. 이 문서는 자동 삭제하지 않고 D2의 첫 검증 대상으로 보존한다. 다른 Character·raid의 해산방 pending 신청 두 건은 이 증상의 직접 원인이 아니며 아래 운영 정리 백로그에 남긴다.
    - 참고: [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md), [`BUG_REPORTS.md`](BUG_REPORTS.md) `니티야` 고아 점유 기록.
 
-다음 확인은 F6-D D1~D3의 작업 브랜치 Rules Emulator 통과다. 이후 추적 Rules 게시과 사용자 실기기 단건 복구를 확인한 뒤 D4 신청 전 차단으로 진행한다. 정상 데이터의 B2/R4 흐름은 통과했지만 F6-D가 남아 있으므로 F6 전체 완료, `dev/main` 통합과 릴리즈는 보류한다. 에이전트는 실기기를 설치·조작하지 않으며 Rules 게시 전 별도 검증·게시 절차를 따른다.
+다음 확인은 F6-D D1~D3 추적 Rules 게시과 사용자 실기기 단건 복구다. 그 결과를 확인한 뒤 D4 신청 전 차단으로 진행한다. 정상 데이터의 B2/R4 흐름은 통과했지만 F6-D가 남아 있으므로 F6 전체 완료, `dev/main` 통합과 릴리즈는 보류한다. 에이전트는 실기기를 설치·조작하지 않으며 Rules 게시 전 별도 검증·게시 절차를 따른다.
 
 #### 후속 백로그 — 안전한 테스트 데이터 정리 도구 (F6 범위 밖)
 
