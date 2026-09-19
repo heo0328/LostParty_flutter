@@ -3181,3 +3181,9 @@
 - JS 문법, `git diff --check`, R3 정적 계약 테스트 5건이 통과했다. Flutter 묶음 실행 한 번과 `dart format` 단독 실행 한 번이 출력 없이 정지해 중단했으나, 이후 표적 Flutter 테스트를 개별 실행해 정상 통과를 확인했다. 이를 코드 실패로 기록하지 않는다.
 - 작업 브랜치 GitHub Actions `35448981992`에서 추적 Rules 컴파일과 전체 회귀가 통과했다. 개인 수동 완료·해제, 반복방 누락 state 재생성, 일반 멤버/파티장/마지막 1인/그룹방 개인 완료, 후임 승계와 위조 Snapshot 거절뿐 아니라 정상 신청·승인, 자리 변경, 추방·재가입, 2·4·8인 해산 및 그룹 회귀가 모두 통과했다.
 - R3 자동 검증은 완료했지만 운영 Rules 게시와 실기기 R4 검증은 아직 수행하지 않았다. 다음 게이트는 최신 추적 Rules의 대상 프로젝트·경로·diff 확인 후 운영 게시 1회이며, 이후 사용자가 실기기 흐름을 수동 확인한다. 그 전에는 B2 완료나 `dev/main` 통합으로 판정하지 않는다.
+
+# 2026-09-19 F6-B2-R3 운영 Rules 게시 503 보류
+
+- 배포 전 현재 브랜치 `feature/party-group-command-redesign`, 깨끗한 작업 트리, `firebase.json`의 Rules 경로 `firestore.rules`, `.firebaserc` 기본 프로젝트 `lost-party`를 확인했다. 대상 Rules SHA-256은 `11593015457B155BCE11FEC2D185DEB039D49F62F1C10C70DFEC24012EDA5857`이다.
+- `firebase deploy --only firestore:rules --project lost-party`를 정확히 한 번 실행했다. CLI는 Rules 원격 컴파일 `projects/lost-party:test`에서 HTTP 503 `The service is currently unavailable`로 종료됐다. Ruleset 업로드와 release에는 도달하지 않았고 Indexes·Functions는 배포하지 않았다.
+- 같은 명령을 반복하지 않는다. 운영 활성 소스는 갱신되지 않은 것으로 단계상 판정하며 콘솔 원본 일치는 별도 확인하지 않았다. 사용자가 결과를 확인하고 콘솔 게시 또는 재시도를 새로 지시하기 전에는 R4 실기기 검증, B2 완료 판정과 `dev/main` 통합을 진행하지 않는다.
