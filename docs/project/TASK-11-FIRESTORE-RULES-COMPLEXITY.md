@@ -12,7 +12,7 @@
 
 - lifecycle event schemaVersion 2의 완료·완료 취소 Payload에 공통 `raidId/difficultyId/cycleKey`와 최대 8개 `completionTargets`를 추가했다. Rules는 한 번 읽은 변경 후 모집의 `partySlots`와 audience·Player·Character를 인덱스별로 비교하며, 대상별 추가 문서 조회나 Player 이벤트 fan-out은 추가하지 않았다.
 - schemaVersion 1 lifecycle event create는 구 앱 호환을 위해 기존 필드 계약으로 유지하고, 새 schemaVersion 2 완료 이벤트의 대상 누락·Character 위조는 거절하도록 demo 시나리오를 추가했다.
-- Dart 표적·정적 계약과 JS 문법은 통과했다. 기존 Android Studio JBR로 demo Emulator를 실행했으나 Rules 로딩 단계에서 `503 Network closed for unknown reason`가 발생해 허용·거절 시나리오에는 도달하지 못했다. 작업 브랜치 CI 통과 전에는 Rules 동작 검증 완료로 기록하지 않으며 운영 Rules도 게시하지 않았다.
+- Dart 표적·정적 계약과 JS 문법은 통과했다. 기존 Android Studio JBR로 실행한 로컬 demo Emulator는 Rules 로딩 단계에서 `503 Network closed for unknown reason`가 발생했지만, 작업 브랜치 GitHub Actions `35417265039`의 격리 Emulator에서는 Rules 컴파일·로딩과 1·2·4·8인 lifecycle, 완료 대상 누락·Character 위조 거절이 모두 통과했다. Actions의 Node 20/setup-java v4 deprecation 표시는 Rules 경고가 아니다. 운영 Rules는 게시하지 않았다.
 
 ## 2026-09-13 파티 통합 오류 Snapshot allowlist 배포 시도
 

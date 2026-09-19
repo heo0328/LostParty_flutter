@@ -3141,4 +3141,4 @@
 - 원자 lifecycle Aggregate에 `raidId/difficultyId`를 포함하고, schemaVersion 2 공용 완료·완료 취소 이벤트에 공통 `raidId/difficultyId/cycleKey`와 최대 8개 `completionTargets[{playerId, characterId}]`를 기록한다. 이벤트 문서 수는 한 건으로 유지했다.
 - Rules는 변경 후 모집 `partySlots`와 audience·완료 대상을 같은 순서로 최대 8개 한 번씩 검증한다. 각 대상 검증에는 추가 문서 조회가 없으며 schemaVersion 1 lifecycle create는 구 앱 호환 계약으로 유지한다.
 - Event Mapper는 공용 대상에서 현재 Player의 Character를 하나만 선택하고, 누락·중복·손상 대상은 완료 기록으로 사용하지 않는다. Sync는 매핑된 Character·레이드·난이도·주차를 Drift 완료 기록에 전달한다.
-- 관련 Flutter 표적 63건, 변경 파일 분석, JS 문법과 diff 검사가 통과했다. demo Emulator는 기존 Rules 로딩 503으로 시나리오 전에 중단돼 CI 검증을 남겼다. 운영 Rules 배포·실기기 테스트·R3 체크박스 복구는 수행하지 않았고 F6-B2-R 전체 완료로 판정하지 않는다.
+- 관련 Flutter 표적 63건, 변경 파일 분석, JS 문법과 diff 검사가 통과했다. 로컬 demo Emulator는 기존 Rules 로딩 503으로 중단됐지만 작업 브랜치 GitHub Actions `35417265039`에서 Rules 컴파일·로딩과 1·2·4·8인 lifecycle, 완료 대상 누락·Character 위조 거절이 모두 통과했다. 운영 Rules 배포·실기기 테스트·R3 체크박스 복구는 수행하지 않았고 F6-B2-R 전체 완료로 판정하지 않는다.
