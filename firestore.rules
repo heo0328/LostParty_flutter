@@ -1637,12 +1637,20 @@ service cloud.firestore {
           || recruitment.lastCommandType == 'disband');
     }
 
+    function personalCompletionCommandMarker(data) {
+      return data.keys().hasAll([
+          'lastCommandType', 'lastCommandActorPlayerId', 'commandTargets'
+        ])
+        && data.lastCommandType == 'personalComplete'
+        && data.lastCommandActorPlayerId == currentPlayerId()
+        && data.commandTargets is list
+        && data.commandTargets.size() == 1;
+    }
+
     function personalCompletionTargetsCurrentPlayer(recruitment) {
-      return recruitment.commandTargets is list
+      return personalCompletionCommandMarker(recruitment)
         && recruitment.commandTargets.size() == 1
         && recruitment.commandTargets[0].playerId == currentPlayerId()
-        && recruitment.lastCommandType == 'personalComplete'
-        && recruitment.lastCommandActorPlayerId == currentPlayerId()
         && recruitment.lastCommandId is string
         && recruitment.lastCommandId.size() > 0
         && recruitment.lastCommandAt == request.time;
@@ -3762,10 +3770,11 @@ service cloud.firestore {
         recruitmentId,
         request.resource.data
       );
-      allow update: if validPersonalCompletionRecruitmentUpdate(
-          resource.data,
-          request.resource.data
-        ) || validRecurrenceChange(
+      allow update: if (personalCompletionCommandMarker(request.resource.data)
+          && validPersonalCompletionRecruitmentUpdate(
+            resource.data,
+            request.resource.data
+          )) || validRecurrenceChange(
           resource.data,
           request.resource.data
         ) || validAtomicLifecycleUpdate(

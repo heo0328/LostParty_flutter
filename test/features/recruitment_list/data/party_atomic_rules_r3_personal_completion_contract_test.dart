@@ -43,7 +43,15 @@ void main() {
       contains('function validPersonalCompletionRecruitmentUpdate('),
     );
     expect(rules, contains('function validPersonalLastMemberCompletion('));
+    expect(rules, contains('function personalCompletionCommandMarker(data)'));
     expect(rules, contains("lastCommandType == 'personalComplete'"));
+    expect(
+      rules,
+      contains(
+        'allow update: if (personalCompletionCommandMarker(request.resource.data)\n'
+        '          && validPersonalCompletionRecruitmentUpdate(',
+      ),
+    );
     expect(rules, contains('function validPersonalRaidStateCompletion('));
     expect(rules, contains("data.reason == 'weeklyRaidCompleted'"));
   });
