@@ -4,9 +4,11 @@ import 'package:lost_party/features/account/domain/entities/character_build_snap
 import 'package:lost_party/features/account/domain/entities/character_summary.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
 import 'package:lost_party/features/account/domain/entities/weekly_raid_claim.dart';
+import 'package:lost_party/features/account/domain/entities/weekly_raid_status_projection.dart';
 import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/account/domain/repositories/weekly_raid_claim_repository.dart';
+import 'package:lost_party/features/account/domain/repositories/weekly_raid_status_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/fake_recruitment_runtime.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_active_raid_assignment_repository.dart';
@@ -34,7 +36,9 @@ void main() {
 
     final candidates = await service.load(_aggregate);
 
-    final dealer = candidates.singleWhere((item) => item.characterId == 'ę°ëĽëëŹ');
+    final dealer = candidates.singleWhere(
+      (item) => item.characterId == 'ę°ëĽëëŹ',
+    );
     final cleared = candidates.singleWhere(
       (item) => item.characterId == 'ěëŁë°ë',
     );
@@ -44,103 +48,114 @@ void main() {
     expect(
       candidates.any(
         (candidate) =>
-            candidate.characterId == 'ëśęłě ěě' && candidate.accountLabel == 'ëśęłě ',
+            candidate.characterId == 'ëśęłě ěě' &&
+            candidate.accountLabel == 'ëśęłě ',
       ),
       isTrue,
     );
   });
 
-  test('ëěź ë ě´ë ě ě˛­ ěě íě  ě°¸ę° ěśŠëě íëł´ ěíëĄ ě ęłľíë¤', () async {
-    final recruitmentRepository = InMemoryRecruitmentStateRepository();
-    recruitmentRepository.seed(
-      _aggregate.copyWith(
-        state: _aggregate.state.copyWith(
-          applications: const {
-            'user-b': RecruitmentApplication(
-              applicantUserId: 'user-b',
-              characterId: 'ę°ëĽëëŹ',
-              className: 'ë¸ë ě´ë',
-              requestedRole: PartyRole.dealer,
-            ),
-          },
+  test(
+    'ëěź ë ě´ë ě ě˛­ ěě íě  ě°¸ę° ěśŠëě íëł´ ěíëĄ ě ęłľíë¤',
+    () async {
+      final recruitmentRepository = InMemoryRecruitmentStateRepository();
+      recruitmentRepository.seed(
+        _aggregate.copyWith(
+          state: _aggregate.state.copyWith(
+            applications: const {
+              'user-b': RecruitmentApplication(
+                applicantUserId: 'user-b',
+                characterId: 'ę°ëĽëëŹ',
+                className: 'ë¸ë ě´ë',
+                requestedRole: PartyRole.dealer,
+              ),
+            },
+          ),
         ),
-      ),
-    );
-    final assignmentRepository = InMemoryActiveRaidAssignmentRepository();
-    await assignmentRepository.acquire(
-      ActiveRaidAssignment(
-        userId: 'user-b',
-        characterId: 'ę°ëĽëëŹ',
-        raidId: 'serca',
-        difficultyId: 'hard',
-        recruitmentId: 'confirmed-party',
-        schedule: RaidParticipationSchedule(
-          startAt: DateTime.utc(2026, 8, 20, 10),
-          expectedEndAt: DateTime.utc(2026, 8, 20, 12),
+      );
+      final assignmentRepository = InMemoryActiveRaidAssignmentRepository();
+      await assignmentRepository.acquire(
+        ActiveRaidAssignment(
+          userId: 'user-b',
+          characterId: 'ę°ëĽëëŹ',
+          raidId: 'serca',
+          difficultyId: 'hard',
+          recruitmentId: 'confirmed-party',
+          schedule: RaidParticipationSchedule(
+            startAt: DateTime.utc(2026, 8, 20, 10),
+            expectedEndAt: DateTime.utc(2026, 8, 20, 12),
+          ),
         ),
-      ),
-    );
-    final service = RecruitmentApplicationCandidateService(
-      accountRepository: _AccountRepository(),
-      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
-      session: FakeUserSession('user-b'),
-      clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 20)),
-      assignmentRepository: assignmentRepository,
-      recruitmentRepository: recruitmentRepository,
-    );
+      );
+      final service = RecruitmentApplicationCandidateService(
+        accountRepository: _AccountRepository(),
+        weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+        session: FakeUserSession('user-b'),
+        clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 20)),
+        assignmentRepository: assignmentRepository,
+        recruitmentRepository: recruitmentRepository,
+      );
 
-    final candidate = (await service.load(
-      _aggregate,
-    )).singleWhere((item) => item.characterId == 'ę°ëĽëëŹ');
+      final candidate = (await service.load(
+        _aggregate,
+      )).singleWhere((item) => item.characterId == 'ę°ëĽëëŹ');
 
-    expect(candidate.canApply, isFalse);
-    expect(
-      candidate.participationStatuses
-          .where(
-            (status) =>
-                status.type == CandidateParticipationStatusType.pendingSameRaid,
-          )
-          .single
-          .count,
-      1,
-    );
-    expect(
-      candidate.participationStatuses.map((status) => status.type),
-      contains(CandidateParticipationStatusType.activeSameRaid),
-    );
-    expect(candidate.rejectionReasons, contains('동일 레이드 참가 중'));
-  });
+      expect(candidate.canApply, isFalse);
+      expect(
+        candidate.participationStatuses
+            .where(
+              (status) =>
+                  status.type ==
+                  CandidateParticipationStatusType.pendingSameRaid,
+            )
+            .single
+            .count,
+        1,
+      );
+      expect(
+        candidate.participationStatuses.map((status) => status.type),
+        contains(CandidateParticipationStatusType.activeSameRaid),
+      );
+      expect(candidate.rejectionReasons, contains('동일 레이드 참가 중'));
+    },
+  );
 
-  test('ěşëŚ­í° ëłę˛˝ íëł´ë ę°ëĽí ë¤ëĽ¸ ě­í ęłź ëśęłě ęšě§ íŹí¨íë¤', () async {
-    final service = RecruitmentApplicationCandidateService(
-      accountRepository: _AccountRepository(),
-      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
-      session: FakeUserSession('user-a'),
-      clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 20)),
-    );
+  test(
+    'ěşëŚ­í° ëłę˛˝ íëł´ë ę°ëĽí ë¤ëĽ¸ ě­í ęłź ëśęłě ęšě§ íŹí¨íë¤',
+    () async {
+      final service = RecruitmentApplicationCandidateService(
+        accountRepository: _AccountRepository(),
+        weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+        session: FakeUserSession('user-a'),
+        clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 20)),
+      );
 
-    final candidates = await service.loadForCharacterChange(_aggregate);
+      final candidates = await service.loadForCharacterChange(_aggregate);
 
-    expect(
-      candidates.map((candidate) => candidate.characterId),
-      containsAll(['ę°ëĽëëŹ', 'ěëŁë°ë', 'ëśęłě ěě']),
-    );
-    expect(
-      candidates.map((candidate) => candidate.role),
-      containsAll([PartyRole.dealer, PartyRole.support]),
-    );
-  });
+      expect(
+        candidates.map((candidate) => candidate.characterId),
+        containsAll(['ę°ëĽëëŹ', 'ěëŁë°ë', 'ëśęłě ěě']),
+      );
+      expect(
+        candidates.map((candidate) => candidate.role),
+        containsAll([PartyRole.dealer, PartyRole.support]),
+      );
+    },
+  );
 
-  test('ě¸ěŚ ěě¤ ęłě ě ě ě˛­ ěşëŚ­í° íëł´ěě ě ě¸íë¤', () async {
-    final service = RecruitmentApplicationCandidateService(
-      accountRepository: _LostOwnershipAccountRepository(),
-      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
-      session: FakeUserSession('user-a'),
-      clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 20)),
-    );
+  test(
+    'ě¸ěŚ ěě¤ ęłě ě ě ě˛­ ěşëŚ­í° íëł´ěě ě ě¸íë¤',
+    () async {
+      final service = RecruitmentApplicationCandidateService(
+        accountRepository: _LostOwnershipAccountRepository(),
+        weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+        session: FakeUserSession('user-a'),
+        clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 20)),
+      );
 
-    expect(await service.load(_aggregate), isEmpty);
-  });
+      expect(await service.load(_aggregate), isEmpty);
+    },
+  );
 
   test('서버 Character ID 점유는 동일 레이드의 다른 난이도 신청을 차단한다', () async {
     final service = RecruitmentApplicationCandidateService(
@@ -178,12 +193,65 @@ void main() {
 
     final candidates = await service.load(_aggregate);
     final completed = candidates.where(
-      (candidate) =>
-          candidate.rejectionReasons.contains('이번 주 동일 레이드 완료'),
+      (candidate) => candidate.rejectionReasons.contains('이번 주 동일 레이드 완료'),
     );
 
     expect(completed, isNotEmpty);
     expect(completed.every((candidate) => !candidate.canApply), isTrue);
+  });
+
+  test('통합 상태가 불일치면 신청 후보를 명시적으로 차단한다', () async {
+    final service = RecruitmentApplicationCandidateService(
+      accountRepository: _AccountRepository(),
+      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+      weeklyRaidStatusRepository: const _StatusRepository(
+        WeeklyRaidStatusKind.inconsistent,
+      ),
+      claimPlayerId: 'player-1',
+      session: FakeUserSession('user-b'),
+      clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 27)),
+    );
+
+    final candidate = (await service.load(_aggregate)).singleWhere(
+      (item) => item.accountId == 1 && item.role == PartyRole.dealer,
+    );
+
+    expect(candidate.canApply, isFalse);
+    expect(candidate.rejectionReasons, contains('레이드 참가·완료 상태 확인 필요'));
+    expect(
+      candidate.participationStatuses.map((status) => status.type),
+      contains(CandidateParticipationStatusType.raidStateInconsistent),
+    );
+  });
+
+  test('완료 state는 참가 중으로 중복 표시하지 않는다', () async {
+    final service = RecruitmentApplicationCandidateService(
+      accountRepository: _AccountRepository(),
+      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+      weeklyRaidStatusRepository: const _StatusRepository(
+        WeeklyRaidStatusKind.completed,
+      ),
+      assignmentLookup: const _AssignmentLookup(
+        characterId: 'AbCdEfGhIjKlMnOpQrSt',
+        raidId: 'serca',
+      ),
+      claimPlayerId: 'player-1',
+      session: FakeUserSession('user-b'),
+      clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 27)),
+    );
+
+    final candidate = (await service.load(_aggregate)).singleWhere(
+      (item) => item.accountId == 1 && item.role == PartyRole.dealer,
+    );
+    final types = candidate.participationStatuses
+        .map((status) => status.type)
+        .toList(growable: false);
+
+    expect(types, contains(CandidateParticipationStatusType.weeklyRaidClear));
+    expect(
+      types,
+      isNot(contains(CandidateParticipationStatusType.activeSameRaid)),
+    );
   });
 }
 
@@ -246,8 +314,27 @@ class _ClaimRepository implements WeeklyRaidClaimRepository {
   ]);
 }
 
-class _AccountRepository implements AccountRepository {
+class _StatusRepository implements WeeklyRaidStatusRepository {
+  const _StatusRepository(this.kind);
 
+  final WeeklyRaidStatusKind kind;
+
+  @override
+  Stream<List<WeeklyRaidStatusProjection>> watchCurrentCycleStatuses({
+    required String playerId,
+    required String cycleKey,
+  }) => Stream.value([
+    WeeklyRaidStatusProjection(
+      playerId: playerId,
+      characterId: 'AbCdEfGhIjKlMnOpQrSt',
+      raidId: 'serca',
+      cycleKey: cycleKey,
+      kind: kind,
+    ),
+  ]);
+}
+
+class _AccountRepository implements AccountRepository {
   @override
   Future<RosterSummaryApplyResult> applyRosterSummarySync({
     required int accountId,
@@ -351,7 +438,6 @@ class _AccountRepository implements AccountRepository {
 }
 
 class _LostOwnershipAccountRepository extends _AccountRepository {
-
   @override
   Future<RosterSummaryApplyResult> applyRosterSummarySync({
     required int accountId,

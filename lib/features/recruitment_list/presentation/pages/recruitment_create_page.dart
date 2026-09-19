@@ -638,6 +638,8 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       CandidateParticipationStatusType.overlappingSchedule => '동시간대 다른 파티 참가 중',
       CandidateParticipationStatusType.uncertainSchedule => '참가 일정 확인 필요',
       CandidateParticipationStatusType.weeklyRaidClear => '이번 주 동일 레이드 완료',
+      CandidateParticipationStatusType.raidStateInconsistent =>
+        '레이드 참가·완료 상태 확인 필요',
     };
     return Chip(
       avatar: Icon(

@@ -2,7 +2,9 @@ import '../../../account/domain/entities/character_build_snapshot.dart';
 import '../../../account/domain/repositories/account_repository.dart';
 import '../../../account/domain/repositories/activity_characters_repository.dart';
 import '../../../account/domain/entities/weekly_raid_claim.dart';
+import '../../../account/domain/entities/weekly_raid_status_projection.dart';
 import '../../../account/domain/repositories/weekly_raid_claim_repository.dart';
+import '../../../account/domain/repositories/weekly_raid_status_repository.dart';
 import '../../../account/domain/services/gem_validation_snapshot_mapper.dart';
 import '../../../account/domain/services/build_integrity_snapshot_mapper.dart';
 import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
@@ -137,6 +139,7 @@ class RecruitmentLeaderCandidateService {
     this.assignmentLookup,
     required this.recruitmentRepository,
     this.weeklyRaidClaimRepository,
+    this.weeklyRaidStatusRepository,
     this.claimPlayerId,
     this.activityCharactersRepository,
     this.conflictPolicy = const ParticipationConflictPolicy(),
@@ -151,6 +154,7 @@ class RecruitmentLeaderCandidateService {
   final ActiveRaidAssignmentLookup? assignmentLookup;
   final RecruitmentStateRepository recruitmentRepository;
   final WeeklyRaidClaimRepository? weeklyRaidClaimRepository;
+  final WeeklyRaidStatusRepository? weeklyRaidStatusRepository;
   final String? claimPlayerId;
   final ActivityCharactersRepository? activityCharactersRepository;
   final ParticipationConflictPolicy conflictPolicy;
@@ -164,7 +168,7 @@ class RecruitmentLeaderCandidateService {
     final accounts = await accountRepository.loadAccounts();
     final activeAssignments = await assignmentRepository.getByUser(userId);
     final weekKey = resetPolicy.weekFor(clock.now()).key;
-    final serverClaims = await _loadServerClaims(weekKey);
+    final serverStatuses = await _loadServerStatuses(weekKey);
     final activityCharacterIds = await loadRaidActivityCharacterIds(
       repository: activityCharactersRepository,
       playerId: claimPlayerId,
@@ -182,8 +186,19 @@ class RecruitmentLeaderCandidateService {
             '${character.serverName.trim().toLowerCase()}::${character.characterName.trim().toLowerCase()}';
         if (!seenCharacters.add(key)) continue;
         final serverCharacterId = character.serverCharacterId;
+        final serverStatus = serverCharacterId == null
+            ? null
+            : serverStatuses
+                  .where(
+                    (status) =>
+                        status.characterId == serverCharacterId &&
+                        status.raidId == query.raidId,
+                  )
+                  .firstOrNull;
         final hasServerAssignmentForSameRaid =
             serverCharacterId != null &&
+            (serverStatus == null ||
+                serverStatus.kind == WeeklyRaidStatusKind.active) &&
             assignmentLookup != null &&
             await assignmentLookup!.blocksCandidate(
               playerId: userId,
@@ -249,20 +264,28 @@ class RecruitmentLeaderCandidateService {
         final statuses = <CandidateParticipationStatus>[];
         final rejectionReasons = <String>[];
         if (roles.isEmpty) rejectionReasons.add('저장된 역할 세팅이 없습니다.');
-        final hasServerClaim =
-            character.serverCharacterId != null &&
-            serverClaims.any(
-              (claim) =>
-                  claim.characterId == character.serverCharacterId &&
-                  claim.raidId == query.raidId,
-            );
-        if (hasServerClaim) {
+        if (serverStatus?.isCompleted == true) {
           statuses.add(
             const CandidateParticipationStatus(
               type: CandidateParticipationStatusType.weeklyRaidClear,
             ),
           );
           rejectionReasons.add('이번 주 동일 레이드 완료');
+        }
+        if (serverStatus?.kind == WeeklyRaidStatusKind.legacyActive) {
+          statuses.add(
+            const CandidateParticipationStatus(
+              type: CandidateParticipationStatusType.activeSameRaid,
+            ),
+          );
+          rejectionReasons.add('동일 레이드 참가 중');
+        } else if (serverStatus?.isInconsistent == true) {
+          statuses.add(
+            const CandidateParticipationStatus(
+              type: CandidateParticipationStatusType.raidStateInconsistent,
+            ),
+          );
+          rejectionReasons.add('레이드 참가·완료 상태 확인 필요');
         }
         final pendingCount = await recruitmentRepository
             .countPendingApplications(
@@ -405,5 +428,30 @@ class RecruitmentLeaderCandidateService {
     return repository
         .watchCurrentCycleClaims(playerId: playerId, cycleKey: cycleKey)
         .first;
+  }
+
+  Future<List<WeeklyRaidStatusProjection>> _loadServerStatuses(
+    String cycleKey,
+  ) async {
+    final playerId = claimPlayerId;
+    if (playerId == null) return const [];
+    final statusRepository = weeklyRaidStatusRepository;
+    if (statusRepository != null) {
+      return statusRepository
+          .watchCurrentCycleStatuses(playerId: playerId, cycleKey: cycleKey)
+          .first;
+    }
+    final claims = await _loadServerClaims(cycleKey);
+    return claims
+        .map(
+          (claim) => WeeklyRaidStatusProjection(
+            playerId: claim.playerId,
+            characterId: claim.characterId,
+            raidId: claim.raidId,
+            cycleKey: claim.cycleKey,
+            kind: WeeklyRaidStatusKind.legacyCompleted,
+          ),
+        )
+        .toList(growable: false);
   }
 }

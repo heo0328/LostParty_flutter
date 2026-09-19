@@ -49,7 +49,7 @@
 - 직업·깨달음·질서 해/달/별 계층 메모, `망소빙` 같은 Build 별칭과 버전형 JSON 공유: [`../product/BUILD_MEMO_SHARING.md`](../product/BUILD_MEMO_SHARING.md)
 - 직업 시너지 선택·필터: [`../product/CLASS_SYNERGY_CATALOG.md`](../product/CLASS_SYNERGY_CATALOG.md)
 - 진행 중 내 Character 필터와 진행 중/레이드 모집의 참가 인원 로컬 정렬·남은 자리 2차 필터는 구현·실기기 확인했다. 계약: [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md) §14
-- 서버 데이터 무결성·복구 절차와 고아 binding/claim 점검은 재현 빈도가 높아질 때 별도 착수한다.
+- 테스트 데이터의 고아 `raidState`/신청 참조를 안전하게 진단·정리하는 도구는 별도 후속 작업이다. 모집 원본만 콘솔에서 단독 삭제하거나 Firebase 전체를 초기화하지 않는다. 실행 순서는 [`NEXT_WORK.md`](NEXT_WORK.md)의 F6 범위 밖 백로그를 따른다.
 - FCM, 유료 서비스, 서버 상시 스케줄러는 별도 승인 전까지 제외한다.
 
 ## 문서와 운영 주의
@@ -61,4 +61,4 @@
 
 ## 다음 작업
 
-현재 작업은 파티·그룹 명령 확장성 재설계 R1~R7·C* 이후의 기능 복구 단계다. F1 그룹장 이전·탈퇴·1인 해산, 직접 초대·검색 신청/수락·초대코드 가입과 활성 그룹 모집 중 해산 차단 안내의 주요 흐름을 사용자가 실기기에서 확인했다. 다음은 F2의 파티 즉시가입·신청 승인·신청 불안정 복구이며, orphan 방 복구 등 후속 범위는 [`NEXT_WORK.md`](NEXT_WORK.md)를 따른다.
+현재는 파티·그룹 명령 재설계 후 F6 회귀 복구 단계다. F6-B1은 실기기 확인까지 완료했다. F6-B2-A는 현재 주차 `raidState`·구 Claim·구 assignment를 `active/completed/legacyActive/legacyCompleted/inconsistent`로 해석하는 Projection, 내 계정 표시, 모집 생성·신청 후보, 본인 list Rules까지 구현했다. 현재 state 체크박스는 B2-B/C 명령 전까지 읽기 전용으로 두어 구 Claim 쓰기가 거짓 성공을 표시하지 않게 했다. 표적 47건·변경 파일 분석은 통과했고 전체 테스트는 기존 기준선과 같은 17건 실패, 전체 분석은 기존 38건만 남았다. Windows Rules Emulator는 기존과 같은 Rules 로딩 503으로 동작 검증에 도달하지 못했다. **다음 게이트는 작업 브랜치 CI에서 B2-A Rules 허용·거절을 확인하고, 검증된 Rules 게시 후 사용자가 실기기 표시·후보 흐름을 확인하는 것**이다. 그 전에는 B2-A를 운영 완료로 판정하거나 B2-B 쓰기를 활성화하지 않는다. 무제한 pending 정리는 핵심 Transaction에서 분리하고 반복방 누락 state 재생성은 B2-D에 두며, 생성 첫 선택 교착(C)·고아 점유 안내(D)는 이후 별도 작업으로 유지한다. 실기기 설치·조작은 사용자가 직접 수행하며 `dev`·`main` 통합과 릴리즈는 보류한다.

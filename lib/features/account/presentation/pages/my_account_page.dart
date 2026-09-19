@@ -13,6 +13,7 @@ import '../../domain/repositories/account_repository.dart';
 import '../../domain/repositories/character_weekly_raid_display_repository.dart';
 import '../../domain/repositories/weekly_raid_claim_repository.dart';
 import '../../domain/repositories/weekly_raid_claim_command_repository.dart';
+import '../../domain/repositories/weekly_raid_status_repository.dart';
 import '../../domain/services/character_summary_sync_service.dart';
 import '../../domain/services/representative_character_sync_service.dart';
 import '../../domain/services/startup_character_refresh_orchestrator.dart';
@@ -29,6 +30,7 @@ class MyAccountPage extends StatefulWidget {
     this.summarySyncService,
     this.representativeSyncService,
     this.weeklyRaidClaimRepository,
+    this.weeklyRaidStatusRepository,
     this.raidCatalogRepository,
     this.weeklyRaidDisplayRepository,
     this.playerId,
@@ -45,6 +47,7 @@ class MyAccountPage extends StatefulWidget {
   final CharacterSummarySyncService? summarySyncService;
   final RepresentativeCharacterSyncService? representativeSyncService;
   final WeeklyRaidClaimRepository? weeklyRaidClaimRepository;
+  final WeeklyRaidStatusRepository? weeklyRaidStatusRepository;
   final RaidCatalogRepository? raidCatalogRepository;
   final CharacterWeeklyRaidDisplayRepository? weeklyRaidDisplayRepository;
   final String? playerId;
@@ -78,6 +81,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
       summarySyncService: widget.summarySyncService,
       representativeSyncService: widget.representativeSyncService,
       weeklyRaidClaimRepository: widget.weeklyRaidClaimRepository,
+      weeklyRaidStatusRepository: widget.weeklyRaidStatusRepository,
       raidCatalogRepository: widget.raidCatalogRepository,
       weeklyRaidDisplayRepository: widget.weeklyRaidDisplayRepository,
       playerId: widget.playerId,
@@ -584,9 +588,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
                                 size: 16,
                                 color: Theme.of(context).colorScheme.error,
                               ),
-                              label: const Text(
-                                '서버 데이터 불일치 · 앱 재실행 또는 재인증 필요',
-                              ),
+                              label: const Text('서버 데이터 불일치 · 앱 재실행 또는 재인증 필요'),
                             ),
                         ],
                       ),

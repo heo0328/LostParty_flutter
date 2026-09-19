@@ -2,7 +2,9 @@ import '../../../account/domain/entities/character_build_role.dart';
 import '../../../account/domain/repositories/account_repository.dart';
 import '../../../account/domain/repositories/activity_characters_repository.dart';
 import '../../../account/domain/entities/weekly_raid_claim.dart';
+import '../../../account/domain/entities/weekly_raid_status_projection.dart';
 import '../../../account/domain/repositories/weekly_raid_claim_repository.dart';
+import '../../../account/domain/repositories/weekly_raid_status_repository.dart';
 import '../../../../shared/formatters/display_number_formatter.dart';
 import '../entities/party_recruitment.dart';
 import '../entities/active_raid_assignment.dart';
@@ -58,6 +60,7 @@ class RecruitmentApplicationCandidateService {
     this.assignmentLookup,
     this.recruitmentRepository,
     this.weeklyRaidClaimRepository,
+    this.weeklyRaidStatusRepository,
     this.claimPlayerId,
     this.activityCharactersRepository,
     this.conflictPolicy = const ParticipationConflictPolicy(),
@@ -72,6 +75,7 @@ class RecruitmentApplicationCandidateService {
   final ActiveRaidAssignmentLookup? assignmentLookup;
   final RecruitmentStateRepository? recruitmentRepository;
   final WeeklyRaidClaimRepository? weeklyRaidClaimRepository;
+  final WeeklyRaidStatusRepository? weeklyRaidStatusRepository;
   final String? claimPlayerId;
   final ActivityCharactersRepository? activityCharactersRepository;
   final ParticipationConflictPolicy conflictPolicy;
@@ -102,7 +106,7 @@ class RecruitmentApplicationCandidateService {
     final userId = session.currentUserId;
     if (accounts.isEmpty || userId == null) return const [];
     final weekKey = resetPolicy.weekFor(clock.now()).key;
-    final serverClaims = await _loadServerClaims(weekKey);
+    final serverStatuses = await _loadServerStatuses(weekKey);
     final activityCharacterIds = await loadRaidActivityCharacterIds(
       repository: activityCharactersRepository,
       playerId: claimPlayerId,
@@ -121,8 +125,19 @@ class RecruitmentApplicationCandidateService {
             '${character.serverName.trim().toLowerCase()}::${character.characterName.trim().toLowerCase()}';
         if (!seenCharacters.add(characterKey)) continue;
         final serverCharacterId = character.serverCharacterId;
+        final serverStatus = serverCharacterId == null
+            ? null
+            : serverStatuses
+                  .where(
+                    (status) =>
+                        status.characterId == serverCharacterId &&
+                        status.raidId == aggregate.metadata.raidId,
+                  )
+                  .firstOrNull;
         final hasServerAssignmentForSameRaid =
             serverCharacterId != null &&
+            (serverStatus == null ||
+                serverStatus.kind == WeeklyRaidStatusKind.active) &&
             assignmentLookup != null &&
             await assignmentLookup!.blocksCandidate(
               playerId: userId,
@@ -160,18 +175,26 @@ class RecruitmentApplicationCandidateService {
               '최소 전투력 ${DisplayNumberFormatter.integer(minimumCombatPower)} 미달',
             );
           }
-          final hasServerClaim =
-              character.serverCharacterId != null &&
-              serverClaims.any(
-                (claim) =>
-                    claim.characterId == character.serverCharacterId &&
-                    claim.raidId == aggregate.metadata.raidId,
-              );
-          if (hasServerClaim) {
+          if (serverStatus?.isCompleted == true) {
             reasons.add('이번 주 동일 레이드 완료');
             statuses.add(
               const CandidateParticipationStatus(
                 type: CandidateParticipationStatusType.weeklyRaidClear,
+              ),
+            );
+          }
+          if (serverStatus?.kind == WeeklyRaidStatusKind.legacyActive) {
+            reasons.add('동일 레이드 참가 중');
+            statuses.add(
+              const CandidateParticipationStatus(
+                type: CandidateParticipationStatusType.activeSameRaid,
+              ),
+            );
+          } else if (serverStatus?.isInconsistent == true) {
+            reasons.add('레이드 참가·완료 상태 확인 필요');
+            statuses.add(
+              const CandidateParticipationStatus(
+                type: CandidateParticipationStatusType.raidStateInconsistent,
               ),
             );
           }
@@ -241,6 +264,8 @@ class RecruitmentApplicationCandidateService {
                 '동시간대 다른 파티 참가 중',
               CandidateParticipationStatusType.uncertainSchedule =>
                 '참가 일정 확인 필요',
+              CandidateParticipationStatusType.raidStateInconsistent =>
+                '레이드 참가·완료 상태 확인 필요',
               _ => null,
             };
             if (reason != null && !reasons.contains(reason)) {
@@ -302,6 +327,31 @@ class RecruitmentApplicationCandidateService {
     return repository
         .watchCurrentCycleClaims(playerId: playerId, cycleKey: cycleKey)
         .first;
+  }
+
+  Future<List<WeeklyRaidStatusProjection>> _loadServerStatuses(
+    String cycleKey,
+  ) async {
+    final playerId = claimPlayerId;
+    if (playerId == null) return const [];
+    final statusRepository = weeklyRaidStatusRepository;
+    if (statusRepository != null) {
+      return statusRepository
+          .watchCurrentCycleStatuses(playerId: playerId, cycleKey: cycleKey)
+          .first;
+    }
+    final claims = await _loadServerClaims(cycleKey);
+    return claims
+        .map(
+          (claim) => WeeklyRaidStatusProjection(
+            playerId: claim.playerId,
+            characterId: claim.characterId,
+            raidId: claim.raidId,
+            cycleKey: claim.cycleKey,
+            kind: WeeklyRaidStatusKind.legacyCompleted,
+          ),
+        )
+        .toList(growable: false);
   }
 
   PartyCompositionFailure? _compositionFailure({

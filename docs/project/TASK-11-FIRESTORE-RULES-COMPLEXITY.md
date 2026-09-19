@@ -1,5 +1,11 @@
 # Task-11 Firestore Rules 복잡도 차단 — 종료된 진단 이력
 
+## 2026-09-19 F6-B2-A 본인 주간 상태 list 검증
+
+- `players/{playerId}/raidStates`와 구 `activeRaidAssignments`의 list를 현재 바인딩 Player 본인에게만 열고 구 assignment 쓰기는 계속 닫았다.
+- demo Rules Emulator 시나리오에 본인 현재 주차 list 성공과 타 Player list 거절을 추가했다. Android Studio JBR 21로 Emulator는 기동했으나 추적 `firestore.rules` 로딩이 기존 Windows 환경과 같은 `503 Network closed for unknown reason`로 중단돼 시나리오 평가에 도달하지 못했다.
+- 문자열 계약·JS 문법·Flutter 표적 테스트는 통과했지만 Rules 동작 검증을 대체하지 않는다. 작업 브랜치 GitHub Actions의 demo Emulator 통과 전에는 게시·운영 완료로 판정하지 않으며 Rules는 아직 게시하지 않았다.
+
 ## 2026-09-13 파티 통합 오류 Snapshot allowlist 배포 시도
 
 - 작업 브랜치 `codex/plan-release-stabilization-fixes`의 추적 커밋 `8b4d5ce`는 파티 Character 변경의 `affectedKeys`에 표시용 `buildIntegritySnapshot` 1개만 추가한다. 관련 문자열 계약 테스트 2건은 통과했다.

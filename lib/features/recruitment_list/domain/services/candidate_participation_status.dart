@@ -4,6 +4,7 @@ enum CandidateParticipationStatusType {
   overlappingSchedule,
   uncertainSchedule,
   weeklyRaidClear,
+  raidStateInconsistent,
 }
 
 class CandidateParticipationStatus {

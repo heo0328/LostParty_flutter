@@ -2,6 +2,57 @@
 
 > 2026-09-14 확장성 재설계 결정: 이 문서의 제품 정책은 유지하지만 신규 저장 계약은 별도 `activeRaidAssignments`와 `weeklyRaidClaims` 대신 통합 `raidState`를 사용한다. 상세 전환과 8인 원자 명령은 [`PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md)가 우선한다.
 
+## 0. 현재 C* 저장 계약 (2026-09-18)
+
+이 절은 아래 Task-078/079 시기의 Claim·assignment 설명보다 우선한다. 아래 기존 절은 사용자 UX와 과거 데이터 호환 의도를 보존하기 위한 기록이며, 신규 명령의 저장 원장으로 해석하지 않는다.
+
+### 0.1 단일 현재 원장
+
+- 신규 데이터의 참가·완료 원장은 `players/{playerId}/raidStates/{characterId}_{raidId}`다.
+- 현재 주차 `status == active`는 파티 참가 중, `status == completed`는 완료, 문서 부재는 둘 다 아님을 뜻한다.
+- 파티 전체 완료는 `active → completed`, 완료 취소는 `completed → active`, 완료방 해산은 `completed`를 보존한다.
+- 파티 밖 수동 완료는 `status: completed`, `source: manual`인 `raidState`를 사용한다. 활성 파티에서 수동 완료하면 모집 탈퇴·필요한 승계 또는 단독 해산과 같은 Transaction에서 기존 state를 `completed`로 전환한다.
+- `weeklyRaidClaims`와 `activeRaidAssignments`는 전환 전 데이터의 호환 원본이다. 신규 파티·수동 명령에서 함께 복제 쓰지 않는다.
+
+### 0.2 화면 판정과 과거 데이터 호환
+
+동일 Character·raidId의 **현재 주차** 상태는 Claim 객체로 억지 변환하지 않고 `none | active | completed | legacyCompleted | legacyActive | inconsistent`인 별도 Projection으로 판정한다. `raidState` 문서 ID에는 주차가 없으므로 반드시 문서의 `cycleKey`가 현재 주차인지 확인하며, 이전 주차 state는 현재 체크·참가 제한에 사용하지 않는다.
+
+1. 현재 주차 `raidState.completed`이면 `completed`다.
+2. 현재 주차 `raidState.active`이면 `active`다.
+3. 현재 주차 `raidState`가 없고 구 `weeklyRaidClaim`만 있으면 `legacyCompleted`다.
+4. 현재 주차 `raidState`가 없고 구 `activeRaidAssignment`만 있으면 `legacyActive`다.
+5. 현재 주차 state와 구 Claim 또는 assignment가 동시에 있으면 내용이 같아 보여도 `inconsistent`다. 한쪽만 지운 뒤 다른 기록이 다시 살아나는 체크·점유 회귀를 막기 위해 정상 우선순위로 병합하지 않는다.
+6. 어느 현재 주차 원장도 없으면 `none`이다.
+
+`completed`와 `legacyCompleted`만 내 계정 체크박스를 체크하고, `active`와 `legacyActive`는 참가 중 영향 안내 대상으로 사용한다. `inconsistent`는 우선순위로 숨기거나 자동 삭제하지 않고 체크·해제·생성·가입 같은 변경을 차단하며 구체적인 상태 불일치 안내를 반환한다. 구 Claim과 assignment는 **state가 없을 때만** 일괄 마이그레이션 없는 호환 읽기·해제 대상으로 유지한다.
+
+B2-A 전환 단계에서는 현재 `raidState`를 읽고 표시하는 계약만 먼저 연결한다. 따라서 `active/completed/inconsistent` 체크박스는 읽기 전용이며, 기존 Claim 명령으로 state 변경이 성공한 것처럼 보이지 않게 한다. `legacyCompleted` 해제와 상태가 없는 Character의 기존 수동 Claim 생성은 호환 경로를 유지한다. 현재 state 수동 생성·해제는 B2-B, active 참가 중 개인 완료는 B2-C에서 원자 명령과 Rules를 함께 연결한 뒤 활성화한다.
+
+이 Projection은 원장 상태를 공통 해석하는 값이지 모든 화면의 행동 정책을 하나로 합치는 객체가 아니다. 모집 후보는 `active/legacyActive`의 연결 모집이 종료·만료·고아인지 기존 `PartyCreateOccupancyGate`로 추가 판정하고, 내 계정은 실제 탈퇴·승계·단독 해산 영향을 별도로 계산한다. stale 판정과 개인 완료 영향 계산을 체크박스 표시 조건에 섞지 않는다.
+
+### 0.3 명령 분리
+
+- **내 계정 수동 완료**는 자기 Character 한 명만 대상으로 한다. 활성 참가 중이면 영향 안내 뒤 본인 membership 제거, 필요 시 파티장 승계 또는 단독 해산, 본인 `raidState` 완료 전환을 하나의 핵심 Transaction에서 처리한다.
+- **모집 상세 파티 전체 완료**는 파티장·공대장이 현재 Aggregate의 모든 `raidState`를 `completed`로 바꾸는 기존 원자 lifecycle 명령이다. 내 계정 수동 완료의 참가 차단 조건을 이 명령에 적용하지 않는다.
+- 개인 체크 해제는 출처와 관계없이 자기 완료 state만 삭제하고 모집의 공동 완료 Snapshot은 바꾸지 않는 기존 UX를 유지한다. 단, 완료 취소는 모든 대상 state가 그대로 있을 때만 성공하고 하나라도 개인 해제됐으면 새로고침·상태 변경 안내로 거절한다.
+- 반복방의 다음 주차 전환은 개인 해제로 이전 완료 state가 없어도 현재 membership을 기준으로 새 주차 `active` state를 생성할 수 있어야 한다. 문서가 있으면 같은 반복방의 직전 주차 state일 때만 갱신한다. 새 주차 수동 완료나 다른 모집의 active state가 이미 있으면 덮어쓰지 않고 전환 전체를 거절한다.
+- 정상적인 현재 상태와 과거 데이터 불일치를 같은 권한 오류로 표시하지 않는다.
+
+### 0.4 원자성·후처리 경계
+
+- 참가 중 수동 완료의 모집 Aggregate, membership, 후임 권한, 본인 `raidState`와 핵심 이벤트는 한 Transaction에서 확정한다.
+- 같은 레이드 pending 신청 수는 파티 최대 인원 8명과 무관하게 늘어날 수 있으므로 모든 신청 종료를 핵심 Transaction에 넣지 않는다. 완료 `raidState`를 먼저 원자 확정해 이후 승인·즉시 가입·생성·캐릭터 변경을 서버에서 최종 거절하고, 남은 pending 표시는 별도 비핵심 정리 또는 읽기 Projection으로 무효 처리한다.
+- 신청 정리 지연이 두 번째 참가를 허용해서는 안 되며, 신청자 개인 상태를 파티장에게 공개하지 않는다. 승인 시 state 충돌은 Rules의 최종 검증으로 막는다. 승인자가 원인을 안전하게 구분할 근거가 없으면 완료라고 추측하지 않고 `신청자의 참가 상태가 변경되었습니다. 새로고침해 주세요.`로 매핑한다.
+- 서버 상태가 완료된 뒤 표시만 늦는 것은 재구독으로 복구할 수 있지만, 핵심 상태 일부만 저장된 채 앱 재실행을 요구하는 구조는 허용하지 않는다.
+
+### 0.5 state 출처와 전이
+
+- 파티 밖 수동 완료 신규 state는 `source: manual`, `status: completed`, `recruitmentId: null`, `revision: 1`이다.
+- 활성 파티에서 개인 완료로 전환한 state는 현재 방에서 유래한 사실을 추적할 수 있게 `source: manual`, `status: completed`로 바꾸되 기존 `recruitmentId`를 원인·Rules 검증용으로 보존하고 revision을 증가시킨다.
+- 파티 전체 완료는 `source: party`를 유지한다. 완료 취소는 동일 모집·동일 회차의 party state만 `active`로 되돌린다.
+- 위 출처 차이는 감사·전이 검증용이며, 현재 주차 `completed`의 체크 표시와 동일 레이드 참가 차단 의미는 같다.
+
 ## 1. 목적
 
 이 문서는 LOSTPARTY에서 다음 세 상태를 분리하고 다시 연결하는 단일 기준이다.

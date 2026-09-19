@@ -8,9 +8,11 @@ import 'package:lost_party/features/account/domain/entities/local_game_account.d
 import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
 import 'package:lost_party/features/account/domain/entities/weekly_raid_claim.dart';
 import 'package:lost_party/features/account/domain/entities/weekly_raid_claim_command.dart';
+import 'package:lost_party/features/account/domain/entities/weekly_raid_status_projection.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/account/domain/repositories/weekly_raid_claim_command_repository.dart';
 import 'package:lost_party/features/account/domain/repositories/weekly_raid_claim_repository.dart';
+import 'package:lost_party/features/account/domain/repositories/weekly_raid_status_repository.dart';
 import 'package:lost_party/features/account/presentation/viewmodels/my_account_view_model.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token_store.dart';
@@ -42,6 +44,66 @@ void main() {
     },
   );
 
+  test(
+    'projects party completed state to checked and active state to guarded',
+    () async {
+      final viewModel = MyAccountViewModel(
+        apiTokenStore: _TokenStore(),
+        accountRepository: _AccountRepository(),
+        weeklyRaidClaimRepository: _EmptyClaimRepository(),
+        weeklyRaidStatusRepository: _StatusRepository(const [
+          WeeklyRaidStatusProjection(
+            playerId: 'player-1',
+            characterId: 'character-1',
+            raidId: 'serca',
+            cycleKey: '2026-08-26',
+            kind: WeeklyRaidStatusKind.completed,
+          ),
+        ]),
+        raidCatalogRepository: _RaidRepository(),
+        playerId: 'player-1',
+        cycleKey: '2026-08-26',
+      );
+
+      await viewModel.initialize();
+      await Future<void>.delayed(Duration.zero);
+      final character = viewModel.accounts.single.characters.single;
+      final completed = viewModel.weeklyRaidStatusesFor(character).single;
+      expect(completed.isCompleted, isTrue);
+      expect(completed.canToggle, isFalse);
+      expect(completed.statusMessage, '완료 처리된 레이드입니다.');
+      viewModel.dispose();
+
+      final activeViewModel = MyAccountViewModel(
+        apiTokenStore: _TokenStore(),
+        accountRepository: _AccountRepository(),
+        weeklyRaidStatusRepository: _StatusRepository(const [
+          WeeklyRaidStatusProjection(
+            playerId: 'player-1',
+            characterId: 'character-1',
+            raidId: 'serca',
+            cycleKey: '2026-08-26',
+            kind: WeeklyRaidStatusKind.active,
+            recruitmentId: 'recruitment-1',
+          ),
+        ]),
+        raidCatalogRepository: _RaidRepository(),
+        playerId: 'player-1',
+        cycleKey: '2026-08-26',
+      );
+      await activeViewModel.initialize();
+      await Future<void>.delayed(Duration.zero);
+      final activeCharacter = activeViewModel.accounts.single.characters.single;
+      final active = activeViewModel
+          .weeklyRaidStatusesFor(activeCharacter)
+          .single;
+      expect(active.isCompleted, isFalse);
+      expect(active.canToggle, isFalse);
+      expect(active.statusMessage, '현재 참가 중인 레이드입니다.');
+      activeViewModel.dispose();
+    },
+  );
+
   test('shows top gold raids ordered by entry item level descending', () async {
     final viewModel = MyAccountViewModel(
       apiTokenStore: _TokenStore(),
@@ -65,56 +127,59 @@ void main() {
     viewModel.dispose();
   });
 
-  test('creates and deletes a manual claim through the checkbox command', () async {
-    final commands = _ClaimCommandRepository();
-    final viewModel = MyAccountViewModel(
-      apiTokenStore: _TokenStore(),
-      accountRepository: _AccountRepository(),
-      weeklyRaidClaimRepository: _ClaimRepository(),
-      weeklyRaidClaimCommandRepository: commands,
-      raidCatalogRepository: _RaidRepository(),
-      playerId: 'player-1',
-      cycleKey: '2026-08-26',
-      cycleStartedAt: DateTime.utc(2026, 8, 25, 21),
-      cycleEndsAt: DateTime.utc(2026, 9, 1, 21),
-    );
+  test(
+    'creates and deletes a manual claim through the checkbox command',
+    () async {
+      final commands = _ClaimCommandRepository();
+      final viewModel = MyAccountViewModel(
+        apiTokenStore: _TokenStore(),
+        accountRepository: _AccountRepository(),
+        weeklyRaidClaimRepository: _ClaimRepository(),
+        weeklyRaidClaimCommandRepository: commands,
+        raidCatalogRepository: _RaidRepository(),
+        playerId: 'player-1',
+        cycleKey: '2026-08-26',
+        cycleStartedAt: DateTime.utc(2026, 8, 25, 21),
+        cycleEndsAt: DateTime.utc(2026, 9, 1, 21),
+      );
 
-    await viewModel.initialize();
-    await Future<void>.delayed(Duration.zero);
-    final character = viewModel.accounts.single.characters.single;
-    final raid = viewModel.weeklyRaidStatusesFor(character).single;
+      await viewModel.initialize();
+      await Future<void>.delayed(Duration.zero);
+      final character = viewModel.accounts.single.characters.single;
+      final raid = viewModel.weeklyRaidStatusesFor(character).single;
 
-    final impact = await viewModel.inspectWeeklyRaidCompletionImpact(
-      character: character,
-      raid: raid,
-    );
-    expect(impact.isSuccess, isTrue);
-    expect(commands.inspected?.raidId, 'serca');
-
-    expect(
-      await viewModel.setWeeklyRaidCompleted(
+      final impact = await viewModel.inspectWeeklyRaidCompletionImpact(
         character: character,
         raid: raid,
-        completed: true,
-        resolveConflicts: true,
-      ),
-      const WeeklyRaidClaimCommandResult.success(),
-    );
-    expect(commands.created?.difficultyId, 'hard');
-    expect(commands.created?.characterId, 'character-1');
-    expect(commands.resolveConflicts, isTrue);
+      );
+      expect(impact.isSuccess, isTrue);
+      expect(commands.inspected?.raidId, 'serca');
 
-    expect(
-      await viewModel.setWeeklyRaidCompleted(
-        character: character,
-        raid: raid,
-        completed: false,
-      ),
-      const WeeklyRaidClaimCommandResult.success(),
-    );
-    expect(commands.deleted?.raidId, 'serca');
-    viewModel.dispose();
-  });
+      expect(
+        await viewModel.setWeeklyRaidCompleted(
+          character: character,
+          raid: raid,
+          completed: true,
+          resolveConflicts: true,
+        ),
+        const WeeklyRaidClaimCommandResult.success(),
+      );
+      expect(commands.created?.difficultyId, 'hard');
+      expect(commands.created?.characterId, 'character-1');
+      expect(commands.resolveConflicts, isTrue);
+
+      expect(
+        await viewModel.setWeeklyRaidCompleted(
+          character: character,
+          raid: raid,
+          completed: false,
+        ),
+        const WeeklyRaidClaimCommandResult.success(),
+      );
+      expect(commands.deleted?.raidId, 'serca');
+      viewModel.dispose();
+    },
+  );
 
   test('saves display preference and shows all selected raids', () async {
     final displayRepository = InMemoryCharacterWeeklyRaidDisplayRepository();
@@ -154,42 +219,47 @@ void main() {
     viewModel.dispose();
   });
 
-  test('applies roster display count clamped per character eligibility', () async {
-    final displayRepository = InMemoryCharacterWeeklyRaidDisplayRepository();
-    final viewModel = MyAccountViewModel(
-      apiTokenStore: _TokenStore(),
-      accountRepository: _RosterAccountRepository(),
-      weeklyRaidClaimRepository: _EmptyClaimRepository(),
-      weeklyRaidDisplayRepository: displayRepository,
-      raidCatalogRepository: _MultiRaidRepository(),
-      playerId: 'player-1',
-      cycleKey: '2026-08-26',
-    );
+  test(
+    'applies roster display count clamped per character eligibility',
+    () async {
+      final displayRepository = InMemoryCharacterWeeklyRaidDisplayRepository();
+      final viewModel = MyAccountViewModel(
+        apiTokenStore: _TokenStore(),
+        accountRepository: _RosterAccountRepository(),
+        weeklyRaidClaimRepository: _EmptyClaimRepository(),
+        weeklyRaidDisplayRepository: displayRepository,
+        raidCatalogRepository: _MultiRaidRepository(),
+        playerId: 'player-1',
+        cycleKey: '2026-08-26',
+      );
 
-    await viewModel.initialize();
-    await Future<void>.delayed(Duration.zero);
-    final account = viewModel.accounts.single;
-    final high = account.characters.firstWhere((c) => c.id == 1);
-    final low = account.characters.firstWhere((c) => c.id == 2);
+      await viewModel.initialize();
+      await Future<void>.delayed(Duration.zero);
+      final account = viewModel.accounts.single;
+      final high = account.characters.firstWhere((c) => c.id == 1);
+      final low = account.characters.firstWhere((c) => c.id == 2);
 
-    expect(
-      await viewModel.applyRosterWeeklyRaidDisplayCount(
-        account: account,
-        displayCount: 5,
-      ),
-      isTrue,
-    );
+      expect(
+        await viewModel.applyRosterWeeklyRaidDisplayCount(
+          account: account,
+          displayCount: 5,
+        ),
+        isTrue,
+      );
 
-    expect(
-      viewModel.weeklyRaidStatusesFor(high).map((item) => item.raidId),
-      ['high_level', 'mid_level', 'low_level', 'junk'],
-    );
-    expect(
-      viewModel.weeklyRaidStatusesFor(low).map((item) => item.raidId),
-      ['low_level', 'junk'],
-    );
-    viewModel.dispose();
-  });
+      expect(viewModel.weeklyRaidStatusesFor(high).map((item) => item.raidId), [
+        'high_level',
+        'mid_level',
+        'low_level',
+        'junk',
+      ]);
+      expect(viewModel.weeklyRaidStatusesFor(low).map((item) => item.raidId), [
+        'low_level',
+        'junk',
+      ]);
+      viewModel.dispose();
+    },
+  );
 }
 
 class _ClaimCommandRepository implements WeeklyRaidClaimCommandRepository {
@@ -212,8 +282,7 @@ class _ClaimCommandRepository implements WeeklyRaidClaimCommandRepository {
   Future<WeeklyRaidClaimCommandResult> createManualClaim(
     CreateManualWeeklyRaidClaimCommand command, {
     bool resolveConflicts = false,
-  }
-  ) async {
+  }) async {
     created = command;
     this.resolveConflicts = resolveConflicts;
     return const WeeklyRaidClaimCommandResult.success();
@@ -256,6 +325,18 @@ class _EmptyClaimRepository implements WeeklyRaidClaimRepository {
     required String playerId,
     required String cycleKey,
   }) => Stream.value(const []);
+}
+
+class _StatusRepository implements WeeklyRaidStatusRepository {
+  const _StatusRepository(this.statuses);
+
+  final List<WeeklyRaidStatusProjection> statuses;
+
+  @override
+  Stream<List<WeeklyRaidStatusProjection>> watchCurrentCycleStatuses({
+    required String playerId,
+    required String cycleKey,
+  }) => Stream.value(statuses);
 }
 
 RaidDifficultyDefinition _difficulty({

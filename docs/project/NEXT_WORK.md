@@ -6,6 +6,7 @@
 - R1~R7·C* 구현과 운영 Rules·Indexes 게시는 완료했다. 운영 Router는 원자 Repository·어댑터를 쓴다.
 - 로컬에는 생성·읽기 v2·이전 Close/Open 가드·승인 패치·listing sync·Listen 가드·orphan 공개 전환·모집 삭제→disband·캐릭터 변경 atomic OR·그룹 전용방 파티장 탈퇴 차단 등이 **코드로 들어가 있다**.
 - **실기기 판정(2026-09-16 사용자 확인):** 아래 성공 항목은 사용자가 디바이스에서 확인했다. 그 밖의 보고 실패는 로컬 수정·자동 테스트 통과만으로 완료로 쓰지 않는다.
+- **2026-09-19 현재 작업:** F6-B1은 완료했다. F6-B2-A 읽기 Projection·내 계정 표시·모집 후보·본인 list Rules는 구현했고 표적 47건과 변경 파일 분석이 통과했다. 전체 테스트는 1,171건 통과·기존 기준선 17건 실패, 전체 분석은 기존 38건이다. 로컬 Rules Emulator는 Rules 로딩 503으로 허용·거절 시나리오를 시작하지 못했다. 다음은 작업 브랜치 CI 검증 → 검증된 Rules 별도 게시 → 사용자 실기기 확인이며, 그 전에 B2-B 쓰기 활성화·`dev/main` 통합을 하지 않는다.
 
 ### 실기기 확인됨 (고쳐진 것)
 
@@ -15,6 +16,7 @@
 4. 그룹 직접 초대·수락, 검색 가입 신청·수락, 일반 그룹원 탈퇴, 그룹장 이전·이전한 기존 그룹장 탈퇴, 마지막 1인 해산
 5. 초대코드 가입(사용자가 Rules 별도 게시 후 확인)
 6. 수정 빌드에서 가입 신청 승인(2026-09-17 사용자 실기기 확인). 즉시 가입·재진입 후 전체 상태 검증은 별개다.
+7. `이슈아이`의 수동 완료 체크 가능(2026-09-18 사용자 확인). 동일 레이드의 접근 불가 신청·정상 pending 영향 안내·체크 해제 등은 별도 회귀 항목이다.
 
 ### 실기기 복구 현황 (남은 항목 우선)
 
@@ -158,6 +160,8 @@
 
 ### F0. 실행 기준 고정과 재현 도구 정리
 
+참고: [`PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md), [`BUG_REPORTS.md`](BUG_REPORTS.md), [`TASK-11-FIRESTORE-RULES-COMPLEXITY.md`](TASK-11-FIRESTORE-RULES-COMPLEXITY.md).
+
 - 콘솔에 게시한 소스가 현재 추적 `firestore.rules`와 같은지 게시 시각·소스 또는 SHA-256으로 기록한다.
 - 필요한 Index가 `Enabled`인지 확인한다. Index 오류와 Rules deny를 같은 증상으로 취급하지 않는다.
 - 신규 schemaVersion 2 테스트 방과 기존 orphan 방을 구분해 테스트 ID·계정 역할·명령 직전 revision을 기록한다.
@@ -176,6 +180,8 @@
 - 신규 계약 테스트 2건은 통과했다. GitHub Actions 실제 실행은 기능 브랜치 커밋·push 이후 확인한다.
 
 ### F1. 그룹 쓰기 복구
+
+참고: [`FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md), [`GROUP_LEADER_EXIT_DISBAND_CONTRACT.md`](../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md), [`PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md).
 
 F1 주요 흐름은 2026-09-16 실기기에서 복구 확인했다. 초대코드 가입도 사용자가 Rules 게시 후 성공을 확인했고, 활성 그룹 전용 모집이 있는 1인 그룹의 해산 차단 안내까지 확인했다. 다음 구현 대상은 F2다. 무효·폐기 코드 및 중복 가입의 이번 실기기 재검증은 최종 회귀 때 확인한다.
 
@@ -210,9 +216,13 @@ F1 주요 흐름은 2026-09-16 실기기에서 복구 확인했다. 초대코드
 
 ### F2. 참가 진입 복구
 
+참고: [`PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md), [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md).
+
 D2 즉시 가입, D3 신청 승인, D4 신청 불안정을 **신청 상태 전이 → 확정 참가 → 화면 재진입** 순서로 복구한다. 현 Router는 `FirestorePartyAtomicApplicationCommandRepository`와 `FirestorePartyAtomicJoinCommandRepository`를 실제 상세에 주입한다. 두 클래스의 오래된 “Router 미연결” 주석과 구 계약 문서의 `activeRaidAssignment` 서술을 실행 기준으로 삼지 않는다. 현재 기준은 schemaVersion 2 모집 Aggregate, Player별 `raidState`, 공용 `partyEvents`, 신청 원본 및 그룹 `raidListings`다.
 
 #### F2-0. 생성→목록→후보→신청 계약 재정렬 (F2-A/B보다 선행)
+
+참고: [`FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`](../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md), [`PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md), [`BUG_REPORTS.md`](BUG_REPORTS.md) BUG-019.
 
 2026-09-17 실기기에서 새 공개방 신청의 `unknown` 오류, 기존 방의 타인 목록 미표시, 점유 캐릭터의 생성 후보 표시 누락과 생성 `permission-denied`가 함께 보고됐다. `BUG-019`의 확인/미확정 근거를 기준으로 아래를 **한 번에 설계하되 구현은 순서대로 검증 가능한 작은 구간으로 분리**한다. 기존 F1 그룹 흐름, 그룹 전용방 및 정상 공개방을 회귀 보호하고, 구 assignment 구조는 복원하지 않는다.
 
@@ -234,6 +244,8 @@ D2 즉시 가입, D3 신청 승인, D4 신청 불안정을 **신청 상태 전�
 
 #### F2-A. 신청 상태 전이와 실패 지점 분리
 
+참고: [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md).
+
 1. 운영 게시 Rules·인덱스와 현재 앱 빌드의 기준을 확인한다. 공개/그룹 전용 방, 직접 참가/승인 방을 구분하고 actor Player·recruitmentId·applicationId, 명령 전 `revision/status/cycleKey`와 Firebase 오류 `code`를 기록한다. “신청 실패”가 명령 Transaction, 권한 있는 읽기·Listen, 화면 갱신 중 어느 단계인지 분리한다. Listen 자체의 일반 역할별 재설계는 F3에 남긴다.
 2. 신청 생성 → 본인 철회 → 재신청, 파티장 거절 → 재신청, 승인 후 탈퇴 → 재신청을 각각 `applications/{playerId}`의 같은 문서 전이로 고정한다. `pending` 중복 거절, `revision` 증가, `approvalCount` 재신청 초기화, `rejectionCount` 유지, 신청 당시 `countedAsNonGroupApplicant`와 모집의 pending 집계 증감을 확인한다. 신청 대기는 `raidState` 확정 점유를 만들지 않는다.
 3. 실제 Write Plan의 모집·신청·공용 이벤트 쓰기와 `validPendingApplication`/재신청/철회/결정 Rules를 현재 전체 Rules Emulator에 재현한다. Windows 로컬 전체 Rules 업로드 503은 이미 분리된 환경 문제이므로 같은 시도를 반복하지 않고 demo 전용 GitHub Actions를 엔진 검증 경로로 사용한다. 결함이 재현된 문서와 Rules 분기만 좁게 수정한다.
@@ -244,14 +256,20 @@ D2 즉시 가입, D3 신청 승인, D4 신청 불안정을 **신청 상태 전�
 
 #### F2-B. 즉시 가입과 승인 확정
 
+참고: [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md), [`BUG_REPORTS.md`](BUG_REPORTS.md) 승인 실패 기록.
+
 실기기 디버그 근거(2026-09-17): 가입 승인 버튼에서 모집 문서와 신청 문서 읽기는 성공했고, `FirestorePartyAtomicJoinCommandRepository._join`의 신청자 `players/{applicantPlayerId}/raidStates/{characterId}_{raidId}` `transaction.get`에서 `permission-denied`가 발생했다(실기기 10:45 KST). Rules의 raidState `get`은 `playerId == currentPlayerId()`만 허용한다. 따라서 승인 쓰기/Rules 조합은 아직 실행되지 않았으며 과거의 승인 쓰기 추정 패치를 성공으로 취급하지 않는다. 다음 최소 수정은 승인 actor가 타인 raidState를 읽지 않고, 신규 raidState `create`와 주간 Claim의 기존 서버 Rules가 중복·완료 점유를 최종 거부하도록 하는 것이다. 본인 즉시 가입은 기존 상태 조회·stale 판정을 유지한다. 먼저 Emulator에서 정상 승인 및 타인 raidState 단건 get 거부, 기존 점유/Claim 승인 거부를 재현하고 그 뒤 Repository만 좁게 변경한다. 승인 완료 후 다른 문서의 Rules 한도·권한 실패가 드러나면 동일 명령의 첫 실패 지점을 다시 로그로 확인한다.
 
 수정·검증(2026-09-17): 승인 경로만 신청자 `raidState`의 Transaction 읽기를 생략하고 본인 즉시 가입의 읽기/충돌 판정은 유지했다. 승인자 타인 state `get` 거부·정상 승인 성공은 전체 Rules Emulator CI `35171953952`, 기존 점유와 주간 완료 시 승인 거부까지 포함한 CI `35172188208`에서 통과했다. Repository·계약 테스트 분석 0건, 직접 영향 Flutter 표적 12건 통과. **사용자가 수정 빌드의 가입 승인 성공을 실기기에서 확인했다.** 멤버·상태/신청 화면의 재진입 일관성과 즉시 가입은 별도 확인이 남았다. 현 규칙에서는 충돌 거절도 `permission-denied`로 매핑될 수 있다. 이 승인 수정에서 Rules는 변경하지 않았다.
+
+2026-09-18 후속 판정: `니티야`의 4막 승인 실패는 삭제된 모집 원본을 참조하는 기존 `active raidState`와 연결됐다. 같은 방장·신청자 Player의 다른 Character 승인은 성공했으므로 일반 승인 전체의 권한 오류로 취급하지 않는다. 신청 단계가 기존 active 점유를 허용하고 승인에서 모호한 권한 팝업이 되는 경계는 F6-D로 분리한다. 서버 고아 문서의 수동 정리는 이번 기능 복구에서 제외한다. 상세 근거는 `BUG_REPORTS.md` 2026-09-18 항목이다.
 
 4. 즉시 가입은 신청 문서 없이 본인 actor가, 승인은 현재 승인권자가 `pending` 신청자를 확정한다. 두 경로의 성공 결과가 모집 `partySlots/memberPlayerIds`·인원/역할/그룹 집계·revision, 대상 membership·`raidState`, 그룹 listing 전체 Snapshot, 공용 이벤트 1건에서 일치하는지 비교한다. 승인 전이는 `approvedByApprover`, `approvalCount + 1`, pending 집계 −1이며 신청 당시 그룹 집계 Snapshot을 사용한다.
 5. Rules의 읽기·쓰기 순서를 따로 검증한다. 가입/승인 모두 소유 Character·주간 Claim·현재 회차·정원·역할/동일 파티 직업·기존 확정 점유·그룹 접근 권한을 Transaction에서 재판정한다. 승인자가 타인의 stale `raidState`를 지우지 않으며, 본인 즉시 가입의 stale 정리도 Rules가 허용하는 경우에만 수행한다. 다중 승인·가입 경쟁, revision 충돌, 중단 후 재시도에서 멤버·점유·이벤트·집계가 중복되지 않아야 한다.
 
 #### F2-C. 연결 검증과 완료 게이트
+
+참고: [`PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md), [`FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`](../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md).
 
 6. 각 수정 뒤에는 기존 모집/그룹 생성과 v2 목록·현황·상세, F1 이전·탈퇴·초대코드·해산 차단을 회귀 보호한다. 표적 Domain/Write Plan/Rules 계약과 전체 Rules Emulator의 허용·거절 케이스를 먼저 통과시키고, Rules가 실제 변경됐을 때만 배포 절차를 적용한다. Indexes 게시가 새로 필요하면 별도 명시 지시를 받는다.
 7. 자동 검증 후 최대 3계정 실기기에서 공개·그룹 전용 각각 신청/철회/거절/재신청/승인/즉시 가입을 확인한다. 같은 레이드 복수 pending은 허용하되 첫 확정 참가 뒤 중복 확정은 차단하고, 만석·역할/직업 충돌·주간 완료·구 회차 및 앱 재진입을 대표 경계로 확인한다. 4·8인 경계와 경쟁은 Emulator로 보강하고 8대 디바이스를 요구하지 않는다.
@@ -259,6 +277,8 @@ D2 즉시 가입, D3 신청 승인, D4 신청 불안정을 **신청 상태 전�
 완료 조건: D2~D4의 실제 실패 지점과 수정 근거가 기록되고, 공개/그룹 방의 신청 상태 전이·확정 참가가 자동/실기기에서 일관되게 통과한다. 권한 오류나 재시도에서 부분 성공·중복 저장이 없고 기존 F0/F1 흐름이 유지된다. F3 Listen 전체·F4 orphan/그룹장 관리·F5 자리 조정·F6 회차 수명주기 구현은 이번 묶음에서 제외한다.
 
 ### F3. 상세 읽기와 Listen 복구
+
+참고: [`FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`](../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md), [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md).
 
 D9를 독립 묶음으로 처리한다. 공개 방문자, 신청자, 확정 멤버, 파티장별로 허용된 구독이 다르므로 화면 진입 시 실제로 연 Listener를 역할별로 대조한다.
 
@@ -270,6 +290,8 @@ D9를 독립 묶음으로 처리한다. 공개 방문자, 신청자, 확정 멤�
 완료 조건: 네 역할의 상세 진입·이탈·재진입에서 화면과 로그가 정상이고 기존 목록·현황 가시성이 유지된다.
 
 ### F4. orphan 예방과 복구
+
+참고: [`PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md), [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`BUG_REPORTS.md`](BUG_REPORTS.md).
 
 D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정책상 **현재 그룹장에게 그룹 전용방의 전체 공개 전환·모집 해산 두 권한만 추가**하며, 방 참가 여부는 조건이 아니다. 공대장·그룹장 역할을 합치거나 그룹장 Player ID를 모든 모집에 복제하지 않는다. 계약은 `docs/product/GROUP_PRODUCT_FLOW.md` §9.3을 따른다.
 
@@ -298,6 +320,8 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
 
 ### F5. 파티 구성 변경 회귀
 
+참고: [`PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md), [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md).
+
 2026-09-17 복구 후보: 승인 성공 직후 사용자가 자리 변경·추방·해산 실패를 보고했다. 자리 변경 Rules의 멤버 projection 갱신이 폐기된 `slots` 문서를 요구하던 불일치를 `partySlots` 전후 위치 확인으로 바꿨다. 추방은 타인 개인 `raidState`의 Transaction 읽기를 생략하고 삭제를 Rules에 검증시키며, 본인 탈퇴의 상태 읽기는 유지한다. demo 전체 Rules CI `35190655744`는 2인 이동·추방·활성 해산과 기존 그룹 회귀, `35190876922`는 점유 자리 교환·4/8인 활성 해산, `35191028614`는 완료방 해산 시 개인 완료 상태 보존, `35191866476`는 그룹 연결 방 해산의 집계·listing 정리, `35192360261`은 추방 후 직접 재가입까지 통과했다. CI fixture의 본인 제거를 `추방`이라 표기한 음성 테스트는 실제 타인 추방 테스트가 아니어서 바로잡았다. 앱 저장소와 Rules의 표적 분석·테스트는 통과했다. 최신 Rules SHA-256은 `3BA4889260B3BF74B1303E34ECFEF2B3D2A74284E59F0354A97BFC9D5D5F6FD4`다. 최초 운영 Rules 게시 시도는 안전 심사에서 명령 실행 전에 거절됐고, 사용자의 별도 명시 승인 후 `firebase deploy --only firestore:rules --project lost-party` 1회가 컴파일 경고 없이 release까지 성공했다. 다른 자원은 게시하지 않았다. 수정 디버그 APK를 데이터 유지 설치했고 **자리 변경·참가자 추방·실제 재가입 완료·참가자 있는 활성 방 해산 후 재참가 가능 상태를 사용자 실기기에서 확인했다.** 같은 테스트 시간대 `PartyAtomicJoin permission-denied` 로그가 3건 있었으나 최종 재가입은 성공했다. 당시 반복 시도나 다른 대상 방의 실패인지 확정할 자료가 없어 별도 재현 전까지 원인·복구 완료를 주장하지 않는다. 앱 재진입 후 상태·완료방·그룹 전용방의 실기기 검증은 별도다. 중단된 전체 `flutter test`를 다시 끝까지 실행한 결과 1,157건 통과·17건 실패로, 앞선 전체 실행의 실패 수와 같다. 전체 회귀 통과로 표시하지 않으며 실패 테스트의 기존 결함/신규 영향 분리는 F7에서 수행한다.
 
 - 참가 캐릭터 변경의 membership·Aggregate slot·`raidState` 교체가 한 Transaction에서 일치한다.
@@ -309,11 +333,15 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
 
 ### F6. 회차 수명주기 회귀
 
+참고: [`WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md), [`PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md), [`RAID_CATALOG_DATA.md`](../product/RAID_CATALOG_DATA.md), [`BUG_REPORTS.md`](BUG_REPORTS.md).
+
 활성 해산은 타인 개인 `raidState` 읽기를 생략하고 Rules의 전원 대상·삭제 검증을 사용한다. 완료 후 해산은 기존처럼 대상 상태를 읽거나 삭제하지 않는다. 전체 완료·취소·회차 전환은 이번 수정 범위가 아니며 별도 실기기 회귀가 필요하다.
 
-2026-09-17 실기기 신규 회귀: 완료방 해산 후 내 계정의 완료 체크가 보이지 않고, 기본 선택 레이드(4막)를 수동 완료한 캐릭터는 모집 생성에서 캐릭터와 레이드 선택이 함께 막힌다. 완료방 해산의 원자 Write Plan은 완료 `raidState`를 보존하지만 내 계정 체크 UI는 구 `weeklyRaidClaims`만 구독한다. 생성 후보 서비스도 구 Claim으로 완료를 판정하며, 생성 페이지는 기본 레이드에서 `candidate.canSelect`가 거짓이면 캐릭터를 고를 수 없고 캐릭터가 없으면 레이드 옵션을 비운다. **저장 상태 보존 테스트의 통과를 UI 완료 체크 통과로 취급하지 않는다.**
+2026-09-18 후속 판정: `이슈아이`의 모든 레이드 수동 체크는 구 assignment나 해당 Character Claim 잔여가 아니라 `_loadConflictContext`의 접근 불가 그룹방 신청 부모 읽기에서 먼저 실패한다. 바로 아래 F6-B1에서 이 조회 경계만 우선 복구한다. 수동 `weeklyRaidClaims`와 새 파티 `raidState`의 별도 계약 간극·완료방 해산 후 체크 누락은 F6-B2로 유지한다.
 
-복구 설계: (1) 실기기 해당 `raidState`의 `cycleKey/status/source/recruitmentId`와 구 Claim 존재 여부를 읽기 전용으로 대조해 완료 명령·해산·표시 중 첫 불일치를 확정한다. (2) 주간 완료 읽기를 수동 Claim과 파티 `raidState`가 일관된 하나의 화면 판정으로 합치되 주차 경계·완료 취소·중복 상태의 우선순위를 계약 테스트로 고정한다. 신규 명령에 구 Claim 복제 쓰기를 추가하지 않는다. (3) 생성 화면은 기본 레이드 완료 여부가 다른 레이드의 캐릭터/레이드 탐색을 막지 않게 하되, 선택한 레이드의 완료·참가 차단과 서버 최종 검증은 유지한다. (4) 다른 레이드 생성, 동일 레이드 거절, 완료 후 해산 체크 유지, 반복방/주차 전환을 자동·실기기로 검증한다. 이 묶음에서 Rules 변경이 필요하다고 확인되기 전에는 재게시하지 않는다.
+2026-09-17 실기기 신규 회귀: 완료방 해산 후 내 계정의 완료 체크가 보이지 않는다. 또 모집 생성 첫 진입은 대표 캐릭터와 첫 레이드(4막)를 암묵적 기본값으로 사용한다. 대표 캐릭터로 이미 4막 방을 생성·참가했거나 이번 주 완료한 뒤 다시 들어오면 그 기본 조합이 생성 불가능하여 캐릭터/레이드 선택이 함께 막힌다. 캐릭터가 많은 원정대에서는 다른 캐릭터→다른 레이드→원래 대표 캐릭터 순서로 우회할 수 있지만, 캐릭터가 하나인 사용자에게는 우회 경로도 없다. 완료방 해산의 원자 Write Plan은 완료 `raidState`를 보존하지만 내 계정 체크 UI는 구 `weeklyRaidClaims`만 구독한다. 생성 페이지는 기본 레이드에서 `candidate.canSelect`가 거짓이면 대표 캐릭터를 초기 선택하지 않고, 캐릭터가 없으면 레이드 옵션을 비운다. **저장 상태 보존 테스트의 통과를 UI 완료 체크 통과로 취급하지 않는다.**
+
+복구 설계: (1) 실기기 해당 `raidState`의 `cycleKey/status/source/recruitmentId`와 구 Claim 존재 여부를 읽기 전용으로 대조해 완료 명령·해산·표시 중 첫 불일치를 확정한다. (2) 주간 완료 읽기를 수동 Claim과 파티 `raidState`가 일관된 하나의 화면 판정으로 합치되 주차 경계·완료 취소·중복 상태의 우선순위를 계약 테스트로 고정한다. 신규 명령에 구 Claim 복제 쓰기를 추가하지 않는다. (3) 모집 생성의 초기 레이드 선택을 비우고 대표 캐릭터를 탐색 기준으로 유지하는 사용자 제안을 우선 검토한다. 캐릭터의 역할·아이템 레벨에 맞는 레이드 목록을 보여주되, 선택 레이드가 없을 때는 저장을 불허한다. 현재 Form과 draft가 선택 레이드/난이도를 필수로 받는 구조이므로 null 초기 상태의 UI·검증·제목 생성 영향을 함께 설계한다. 대표 캐릭터가 어느 레이드에도 참가할 수 없더라도 캐릭터 변경은 가능해야 한다. **기존 생성·참가·이번 주 완료 차단을 완화하지 않고**, 선택한 레이드의 후보 재판정과 서버 최종 검증을 유지한다. (4) 기본 대표 캐릭터의 동일 레이드 생성·참가·완료 각각에서 다른 레이드 선택, 단일 캐릭터/다중 캐릭터, 레이드 미선택 저장 거절, 기존 정상 생성, 완료 후 해산 체크 유지, 반복방/주차 전환을 자동·실기기로 검증한다. 이 묶음에서 Rules 변경이 필요하다고 확인되기 전에는 재게시하지 않는다.
 
 - 활성 방 완료, 반복방 완료, 완료 취소, 반복 설정 변경, 수요일 06시 주차 전환, 활성/완료 후 해산을 검증한다.
 - 모집과 최대 8개 `raidState`가 전부 반영되거나 전부 미반영되는지 확인한다.
@@ -321,7 +349,86 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
 
 완료 조건: 1·2·4·8인 자동 계약과 3계정 이하 대표 실기기 시나리오가 통과한다.
 
+#### F6 후속 실행 순서 — B1 표적 복구 확인, B2 상세 설계 대기 (2026-09-18)
+
+두 결함을 하나의 권한 패치로 합치지 않는다. 현재 실기기에서 성공한 방 생성·신청 거절·정상 캐릭터 승인·자리 변경·추방·활성 해산은 매 단계 회귀 보호한다. 정확한 ID·시각·데이터 근거는 `BUG_REPORTS.md`의 2026-09-18 항목에만 둔다.
+
+1. **F6-A — 첫 실패 지점 확인: 완료.** `니티야`의 4막 승인 실패는 삭제된 모집 원본을 가리키는 기존 `active raidState`와 부합한다. 같은 방장·신청자 Player의 다른 Character 승인은 실기기에서 성공했다. `이슈아이`의 모든 수동 완료 체크 실패는 별개로, 해산된 그룹 전용방의 잔존 pending 신청 부모를 `_loadConflictContext`가 읽다가 `permission-denied` 되는 지점까지 확인했다. 그룹은 `softDeleted`/멤버 0명이다. 두 서버 상태 모두 현재 보존하며 수동 정리하지 않는다. 원인 확인용 임시 단계 로그는 B1 검증 후 제거했다.
+   - 참고: [`BUG_REPORTS.md`](BUG_REPORTS.md) 2026-09-18 원인별 데이터 근거, [`DEV_LOG.md`](DEV_LOG.md) F6-A 진단 이력.
+2. **F6-B1 — 수동 체크 장애의 최소 복구: 완료.** 접근 불가·종료된 방의 pending 신청이 다른 레이드의 수동 완료를 막지 않도록 신청 이력 조회/분류만 수정한다. 부모 모집 `get`이 `permission-denied`인 신청은 현재 수동 완료 명령에서 조작 가능한 대상으로 간주하지 않고 **그 신청만 건너뛴다**. 다른 Firebase 오류·정상적으로 읽히는 현재 주차 신청은 건너뛰지 않는다. 접근 가능한 같은 레이드 pending 신청의 영향 안내·기존 철회/정리 흐름은 유지한다. 건너뛴 신청을 서버에서 자동 삭제·거절·철회하지 않으며, 이후 승인 시 Claim 존재를 Rules가 최종 거부한다. Rules와 서버 데이터는 변경하지 않았다.
+   - 완료 근거: 부모 모집 읽기의 `permission-denied`만 해당 신청을 제외하는 최소 변경과 표적 테스트 8건·변경 파일 분석 통과. 사용자가 `이슈아이` 수동 체크·해제, 완료 상태에서 동일 레이드 모집 캐릭터 선택 차단, 정상 pending 신청 1건 안내 및 실제 취소를 확인했다. 다른 Firebase 오류 전파는 자동 테스트, Claim 존재 시 승인 거절은 기존 Rules Emulator 계약으로 보호한다. 임시 단계 로그는 제거했다. 주차 전환과 새 `raidState` 통합은 B2/F7 범위이며 B1 완료를 F6 전체 완료로 확장하지 않는다.
+   - 참고: [`WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md) §3·§5·§6, [`BUG_REPORTS.md`](BUG_REPORTS.md) 2026-09-18, [`DEV_LOG.md`](DEV_LOG.md) F6-A/B1 기록, `tools/party_group_cutover_rules_test.mjs`의 Claim 존재 시 승인 거절 계약.
+   - 적용 경계: `FirestoreWeeklyRaidClaimRepository._loadConflictContext`의 pending 신청별 `recruitmentRef.get()`만 좁게 처리했다. 조회 쿼리·Character/주차 필터와 `createManualClaim` Transaction의 정상 대상 쓰기 집합은 그대로 두고, 사전 영향 확인(`inspectManualClaimImpact`)과 실제 체크(`createManualClaim`)가 같은 분류 함수를 계속 사용한다.
+   - 검증 경계: 접근 불가 부모의 예외가 **그 신청 하나만** 제외되고 `unavailable` 등 다른 예외는 기존 실패로 남는 것을 신규 테스트로 고정했다. 읽을 수 있는 동일 레이드 신청의 안내·취소는 실기기에서 확인했다. Claim 이후 승인은 기존 Rules의 `hasWeeklyRaidClaimAfter` 계약이 최종 거부한다. 새 `raidState` 점유와 완료 표시의 통합은 B2로 분리한다.
+3. **F6-B2 — 주간 상태/체크 표시 통합: B2-A 구현·로컬 자동 검증 완료, Rules CI·게시·실기기 미확인.** 수동 `weeklyRaidClaims`와 파티 `raidState`가 생성·신청 후보, 수동 체크/해제, 완료방 해산 후 내 계정 표시에서 일관되게 해석되도록 계약을 설계한다. 기존 활성 참가 시 탈퇴·승계·pending 신청 안내, `source: manual/party`, 완료 취소, 다른 난이도의 같은 `raidId`, 수요일 06시를 보존한다. 새 파티 명령에 구 Claim 복제 쓰기를 추가하지 않는다. **내 계정 수동 체크의 참가 중 영향 확인·탈퇴와 모집 상세의 파티 전체 완료는 서로 다른 명령**이므로 점유 차단을 공통 조건으로 일괄 적용하지 않는다.
+   - 참고: [`WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md) §3.2·§5.3·§5.4·§6·§11·§12, [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`BUG_REPORTS.md`](BUG_REPORTS.md) 완료방 해산 체크 누락 기록.
+   - 확인된 실제 간극: 운영 Router의 파티 완료는 `PartyAtomicCycleCommandAdapter → FirestorePartyAtomicCommandRepository`로 연결되어 최대 8명의 `raidState`를 `active → completed`로 바꾼다. 반면 내 계정 표시·수동 체크는 `FirestoreWeeklyRaidClaimRepository`의 구 `weeklyRaidClaims/activeRaidAssignments`만 사용한다. 따라서 완료방 해산 후 체크 누락과 활성 `raidState`가 있어도 수동 체크 가능한 현상은 같은 전환 미완료에서 발생한다. 구 `FirestorePartyCycleCommandRepository`의 Claim 쓰기를 운영 기준으로 되살리지 않는다.
+
+   **B2-A — 현재 주차 읽기 Projection**
+
+   1. 본인 `raidStates`를 읽는 Repository/Mapper를 만들고 내 계정·모집 후보가 동일한 **주간 상태 Projection**을 사용하게 한다. active state를 완료 전용 `WeeklyRaidClaim`으로 변환하지 않고 `none/active/completed/legacyActive/legacyCompleted/inconsistent`를 명시한다. Rules는 현재 Player의 자기 하위 list만 열고 타인 list를 계속 거절한다. 현재 주차 제한은 Repository 쿼리와 Projection의 `cycleKey` 검증으로 강제한다.
+   2. `completed state → 완료`, `active state → 참가 중`, state 없음 + 구 Claim → 호환 완료, state 없음 + 구 assignment → 호환 참가 순으로 합친다. 현재 주차 state와 legacy 문서가 동시에 있으면 내용이 같아 보여도 `inconsistent`로 반환한다. 한쪽 해제 뒤 다른 기록이 다시 체크·점유로 나타나는 회귀를 막기 위해 자동 병합·부분 삭제하지 않는다.
+   3. 문서 ID에 주차가 없으므로 모든 판정에서 state의 `cycleKey`를 검증한다. 완료방 해산이 현재 주차 completed state를 보존한 뒤 내 계정 체크가 유지되고, 이전 주차 state는 현재 체크·참가 제한에 영향을 주지 않는 것을 고정한다.
+   4. Projection은 저장 원장 해석만 공유한다. 모집 생성·신청 후보의 active 상태는 기존 `FirestoreActiveRaidAssignmentLookup`/`PartyCreateOccupancyGate`가 수행하는 연결 모집 종료·만료·고아 판정을 보존하고, 내 계정은 탈퇴·승계·단독 해산 영향 계산을 별도로 유지한다. 공통 타입 도입을 이유로 두 UX의 정책을 하나의 boolean으로 축약하지 않는다.
+   5. 구현은 `Projection 타입·순수 병합 테스트 → 본인 list Rules 계약 → Repository 읽기 → 내 계정 표시 연결 → 모집 후보 연결 및 기존 점유 게이트 회귀` 순서로 나눠 각 단계 diff를 검토한다.
+
+   **B2-A 구현 상태(2026-09-19):** 위 코드·Rules·Router 연결을 구현했다. 현재 state는 B2-B/C 쓰기 명령 전까지 내 계정에서 읽기 전용이며 구 Claim 명령으로 거짓 성공을 표시하지 않는다. 표적 47건·변경 파일 analyze·JS 문법·diff 검사는 통과했다. Rules Emulator 시나리오에 본인 `raidStates/activeRaidAssignments` list 허용과 타인 list 거절을 추가했으나 Windows 로컬의 기존 503으로 Rules 로딩에서 중단됐다. CI 통과와 게시·실기기 확인 전에는 운영 완료로 표시하지 않는다.
+
+   **B2-B — 파티 밖 수동 체크·해제**
+
+   1. 신규 수동 완료는 구 Claim 대신 `source: manual`, `status: completed`, `recruitmentId: null`, `revision: 1`인 raidState를 생성한다. 같은 주차 수동 state 체크는 멱등이며 다른 난이도도 같은 `raidId` 키를 공유한다. legacy active assignment가 남아 있으면 이를 덮어쓰지 않고 불일치로 거절한다.
+   2. 자기 completed state는 출처와 관계없이 개인 체크 해제할 수 있고, state가 없고 구 Claim만 있으면 기존 Claim 해제를 호환 경로로 유지한다. state와 Claim이 동시에 존재하거나 legacy assignment와 충돌하면 임의로 여러 원장을 삭제하지 않는다.
+   3. completed state를 먼저 원자 확정해 이후 승인·즉시 가입·생성·캐릭터 변경을 서버에서 거절한다. 같은 레이드 pending 수는 무제한일 수 있으므로 전부를 핵심 Transaction에 넣지 않고, UI Projection에서 즉시 무효 처리한 뒤 비핵심 정리 경로로 `superseded/weeklyRaidCompleted`를 반영한다. application Rules의 구 Claim 전용 조건을 통합 state 기준으로 정렬하되 신청자 개인 state를 파티장에게 노출하지 않는다.
+
+   **B2-C — 활성 참가 중 개인 완료**
+
+   1. 내 계정에서만 영향 확인 후 `탈퇴하고 완료 처리`를 실행한다. 일반 멤버는 Aggregate/membership/목표 slot 제거와 본인 state 완료 전환, 파티장은 후임 승계, 마지막 1인은 모집 해산과 state 완료 보존을 한 Transaction에서 처리한다. 이때 state는 `source: manual`로 바꾸고 기존 `recruitmentId`를 원인 추적·Rules 검증용으로 보존하며 revision을 증가시킨다.
+   2. 기존 `PartyAtomicMemberRemovalWritePlan`의 인원·역할·slot·그룹 listing·승계 계산을 공통 정책으로 재사용하되, 일반 탈퇴의 state 삭제를 그대로 호출한 뒤 별도 완료 쓰기를 덧붙이지 않는다. 개인 완료 전용 Write Plan/Rules 분기로 원자성을 증명한다.
+   3. 모집 상세의 `파티 전체 완료`는 기존 lifecycle 명령을 그대로 사용한다. 활성 참가를 발견했다는 이유로 이 명령을 차단하거나 수동 완료 안내를 띄우지 않는다.
+
+   **B2-D — 해제·반복방·호환 경계**
+
+   1. `source: manual/party` 모두 개인 체크 해제는 자기 completed state만 삭제하고 공동 완료 Snapshot은 바꾸지 않는다. 파티 전체 완료 취소는 대상 state가 하나라도 삭제·변경됐으면 원자 거절하고 새로고침·상태 변경 안내를 반환한다.
+   2. 반복방의 다음 주차 전환은 개인 해제로 이전 state가 없어도 현재 membership을 기준으로 새 주차 active state를 생성할 수 있게 Write Plan과 Rules를 확장한다. 기존 문서는 같은 반복방의 직전 주차 state일 때만 갱신하며, 새 주차 수동 완료나 다른 모집의 active state는 덮어쓰지 않고 명령 전체를 거절한다. 그렇지 않으면 개인 해제가 방을 영구 정지시키거나 반대로 실제 완료·참가를 소실시키므로 완료 조건으로 인정하지 않는다.
+   3. 과거 Claim·assignment는 bulk migration 없이 fallback 읽기·해제만 유지한다. 신규 명령이 legacy 원장과 state를 dual-write하지 않으며, 불일치 데이터는 별도 안전 정리 백로그로 보낸다.
+
+   **회귀·완료 기준**
+
+   - 자동: no-state/manual-completed/party-active/party-completed/legacy-claim/legacy-assignment/불일치 조합, 현재·이전 cycleKey, 다른 난이도 같은 raidId, 수요일 06시, 일반 멤버·파티장·마지막 1인, 1·4·8인 반복/1회성 완료·취소·전환·해산을 Domain/Repository/Rules Emulator로 검증한다. pending은 인원 경계와 분리해 0·1·다수에서 핵심 Transaction 문서 수가 증가하지 않고 승인 최종 차단과 UI 무효화가 유지되는지 검증한다.
+   - 보존: 기존 방 생성·신청·승인·즉시 가입·캐릭터 변경의 완료 차단, 자리 변경·추방·활성 해산, 그룹 listing/집계, B1의 접근 불가 신청 처리와 정상 pending 취소를 보호한다.
+   - 실기기: 사용자가 수동 체크/해제, 참가 중 영향 안내와 탈퇴·승계/단독 해산, 파티 전체 완료 후 체크 유지, 완료 취소/다음 주차 대표 흐름을 확인한다. 에이전트는 설치·조작하지 않는다.
+   - Rules가 변경되므로 전체 B2 자동 검증과 경고 확인 전에는 운영 게시하지 않는다. 운영 게시·실기기 확인 전 B2 완료나 `dev/main` 통합으로 표시하지 않는다.
+
+   **페이지·역할별 UX 회귀 보호**
+
+   | 사용자 위치 | 보존할 정상 흐름 | 새 구조에서 막아야 할 회귀 |
+   | --- | --- | --- |
+   | 내 계정 / 일반 사용자 | 미참가 Character 수동 체크·해제, 완료 시 체크 유지 | active 참가를 무시한 중복 완료, legacy 충돌 자동 삭제, 과거 cycle 표시 |
+   | 내 계정 / 참가자 | 영향 안내 확인 후 탈퇴와 개인 완료, 파티장이면 승계, 마지막 1인이면 해산 | 일반 탈퇴로 state를 먼저 삭제한 뒤 완료가 따로 실패하는 부분 저장 |
+   | 모집 상세 / 공대장 | 전원 파티 완료, 완료 취소, 완료방 해산 | 개인 수동 완료의 active 차단을 전원 완료에 적용, 개인 해제 후 취소가 부분 성공 |
+   | 반복방 / 공대장·파티원 | 새 주차 진입 시 완료 체크 초기화와 현재 멤버 active 재구성 | 개인 해제로 state가 빠진 멤버 때문에 전환 전체 실패 |
+   | 모집 생성·신청 / 일반 사용자 | completed 비활성, active 참가 안내, pending 복수 신청 | 오래된 pending 정리 수에 비례한 핵심 Transaction, 상태 충돌을 일반 권한 오류로만 표시 |
+   | 승인 / 공대장 | 정상 신청 승인, 이미 참가·완료된 신청은 서버 최종 거절 | 타인 private state 조회 허용, 거절 원인을 완료로 단정. 상세 원인을 안전하게 알 수 없으면 `신청자의 참가 상태가 변경되었습니다. 새로고침해 주세요.`로 안내 |
+
+   B2 구현 중 위 표의 다른 페이지를 편의상 같은 ViewModel 조건으로 묶지 않는다. 특히 내 계정 개인 명령과 모집 상세 공동 명령, 표시 Projection과 서버 최종 권한 검증은 각각 독립 테스트를 둔다.
+
+   **구현 순서:** B2-A Projection 타입·읽기·본인 list Rules → B2-B 수동 state 명령과 무제한 pending 비핵심화 → B2-C 참가 중 개인 완료 → B2-D 개인 해제·완료 취소 거절·반복방 누락 state 재생성 → 연결 자동 검증 → 사용자 실기기 체크리스트. 첫 구현 구간은 B2-A이며 이번 설계 단계에서는 기능 코드·Rules를 변경하지 않는다.
+4. **F6-C — 모집 생성 초기 선택 교착 해소.** 첫 진입에서 레이드를 자동 선택하지 않고 대표 캐릭터를 탐색 기준으로 둔다. 레이드·난이도 미선택 저장은 차단하되, 기본 4막이 불가능해도 다른 레이드와 Character 변경에 접근 가능해야 한다. null 레이드의 Form/draft/자동 제목·역할 변경/재진입, 단일·다중 Character와 기존 정상 생성을 자동·실기기로 검증한다. 점유·완료·레벨·역할 및 서버 최종 거절은 완화하지 않는다.
+   - 참고: [`RAID_CATALOG_DATA.md`](../product/RAID_CATALOG_DATA.md), [`PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md), [`BUG_REPORTS.md`](BUG_REPORTS.md) 기본 4막 교착 기록.
+5. **F6-D — 신청/승인 경계 보완.** 기존 `active raidState`가 있어도 신청은 pending으로 접수되고 승인에서 Rules update 거부가 모호한 권한 팝업이 되는 흐름을 분리한다. 정상 활성 점유·삭제된 모집을 가리키는 고아 점유·완료 상태의 안내와 서버 최종 차단을 계약 테스트로 고정한다. 고아 `raidState`를 일반 승인 코드에서 임의 덮어쓰거나 삭제하지 않는다. 정상 신규 방 승인·거절/재신청·4/8인 집계 및 재진입을 회귀 검증한다.
+   - 참고: [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md), [`BUG_REPORTS.md`](BUG_REPORTS.md) `니티야` 고아 점유 기록.
+
+다음 작업은 F6-B2-A Rules Emulator CI 검증이다. 통과한 정확한 소스만 별도 게시 절차로 운영에 반영하고, 사용자 실기기에서 내 계정 표시·생성/신청 후보 회귀를 확인한 뒤 B2-B로 넘어간다. B2·C·D는 각각 별도 검증 단위로 진행한다. 실기기 설치·조작·테스트는 사용자가 직접 수행한다. 각 단계의 `코드/계약 테스트`, `정상 실기기 흐름`, `제보 재현 해소`, `미확인 항목`을 분리 기록한다. 모든 결함이 정리되기 전 `dev`·`main` 통합이나 릴리즈는 하지 않는다.
+
+#### 후속 백로그 — 안전한 테스트 데이터 정리 도구 (F6 범위 밖)
+
+참고: [`BUG_REPORTS.md`](BUG_REPORTS.md) 고아 `raidState`와 콘솔 단독 삭제 이력, [`PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md) 원자 명령·후처리 경계.
+
+사용자가 콘솔에서 모집 문서를 단독 삭제하면 개인 점유·신청 참조가 남을 수 있다. 전체 Firebase 초기화는 이번 복구 방법이 아니다. 별도 작업에서 연결 문서 목록의 읽기 전용 진단, 대상별 백업·미리보기, 명시적 확인, 제한된 정리와 사후 무결성 검사를 설계한다. 그룹·인증·Character 등 무관한 데이터를 지우지 않으며 앱의 자동 고아 삭제는 선행하지 않는다.
+
 ### F7. 최종 통합 판정
+
+참고: [`PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md), [`BUG_REPORTS.md`](BUG_REPORTS.md), [`DEV_LOG.md`](DEV_LOG.md), [`TASK-11-FIRESTORE-RULES-COMPLEXITY.md`](TASK-11-FIRESTORE-RULES-COMPLEXITY.md).
 
 - F1~F6의 최종 코드 상태에서 표적 테스트, 전체 Rules 계약·Emulator, `flutter analyze`, 전체 `flutter test`를 한 번 실행한다.
 - 실기기 체크리스트는 공개/그룹 방과 정상/orphan 데이터를 포함해 한 번 최종 회귀한다.

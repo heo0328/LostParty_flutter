@@ -4,6 +4,7 @@ import '../../../../shared/formatters/display_number_formatter.dart';
 
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/entities/character_build_analysis.dart';
+import '../../domain/entities/weekly_raid_status_projection.dart';
 import '../models/weekly_raid_status_item.dart';
 
 class AccountCharacterCard extends StatelessWidget {
@@ -169,6 +170,7 @@ class AccountCharacterCard extends StatelessWidget {
                     child: InkWell(
                       onTap:
                           onWeeklyRaidChanged == null ||
+                              !raid.canToggle ||
                               busyRaidIds.contains(raid.raidId)
                           ? null
                           : () => onWeeklyRaidChanged!(raid, !raid.isCompleted),
@@ -184,6 +186,7 @@ class AccountCharacterCard extends StatelessWidget {
                               value: raid.isCompleted,
                               onChanged:
                                   onWeeklyRaidChanged == null ||
+                                      !raid.canToggle ||
                                       busyRaidIds.contains(raid.raidId)
                                   ? null
                                   : (value) => onWeeklyRaidChanged!(
@@ -203,6 +206,22 @@ class AccountCharacterCard extends StatelessWidget {
                               style: theme.textTheme.bodySmall,
                             ),
                           ),
+                          if (raid.statusMessage case final message?)
+                            Tooltip(
+                              message: message,
+                              child: Icon(
+                                raid.statusKind ==
+                                        WeeklyRaidStatusKind.inconsistent
+                                    ? Icons.error_outline
+                                    : Icons.info_outline,
+                                size: 16,
+                                color:
+                                    raid.statusKind ==
+                                        WeeklyRaidStatusKind.inconsistent
+                                    ? theme.colorScheme.error
+                                    : theme.colorScheme.primary,
+                              ),
+                            ),
                         ],
                       ),
                     ),

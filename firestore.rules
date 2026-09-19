@@ -2738,9 +2738,11 @@ service cloud.firestore {
       allow delete: if false;
 
       match /activeRaidAssignments/{assignmentId} {
-        // C*: 원자 raidState로 대체. 구 assignment 쓰기는 닫고 get만 유지한다.
+        // C*: 원자 raidState로 대체. 구 assignment 쓰기는 닫고 본인 호환 읽기만 유지한다.
         allow get: if hasActiveBinding();
-        allow list, create, update, delete: if false;
+        allow list: if hasActiveBinding()
+          && playerId == currentPlayerId();
+        allow create, update, delete: if false;
       }
 
       match /events/{eventId} {
@@ -2854,7 +2856,8 @@ service cloud.firestore {
       match /raidStates/{stateId} {
         allow get: if hasActiveBinding()
           && playerId == currentPlayerId();
-        allow list: if false;
+        allow list: if hasActiveBinding()
+          && playerId == currentPlayerId();
         allow create: if validAtomicRaidStateCreate(
           playerId,
           stateId,

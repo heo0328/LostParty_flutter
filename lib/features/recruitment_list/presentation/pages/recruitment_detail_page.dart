@@ -164,7 +164,8 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
                         : member.role == PartyRole.support
                         ? Icons.health_and_safety
                         : Icons.sports_martial_arts,
-                    color: member.itemLevel != null &&
+                    color:
+                        member.itemLevel != null &&
                             member.itemLevel! < metadata.minItemLevel
                         ? Theme.of(context).colorScheme.error
                         : null,
@@ -175,7 +176,8 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
                             member.itemLevel! < metadata.minItemLevel
                         ? '${member.className} · ${_role(member.role)}\n입장 레벨 ${DisplayNumberFormatter.integer(metadata.minItemLevel)} 미달'
                         : '${member.className} · ${_role(member.role)}',
-                    style: member.itemLevel != null &&
+                    style:
+                        member.itemLevel != null &&
                             member.itemLevel! < metadata.minItemLevel
                         ? TextStyle(color: Theme.of(context).colorScheme.error)
                         : null,
@@ -293,9 +295,7 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('알림을 보낼까요?'),
         content: Text(
-          recipientCount > 0
-              ? '참가 인원에게 알림을 보냅니다.'
-              : '알림을 받을 다른 참가자가 없습니다.',
+          recipientCount > 0 ? '참가 인원에게 알림을 보냅니다.' : '알림을 받을 다른 참가자가 없습니다.',
         ),
         actions: [
           TextButton(
@@ -685,6 +685,8 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
       CandidateParticipationStatusType.overlappingSchedule => '동시간대 다른 파티 참가 중',
       CandidateParticipationStatusType.uncertainSchedule => '참가 일정 확인 필요',
       CandidateParticipationStatusType.weeklyRaidClear => '이번 주 동일 레이드 완료',
+      CandidateParticipationStatusType.raidStateInconsistent =>
+        '레이드 참가·완료 상태 확인 필요',
     };
     return Chip(
       avatar: Icon(

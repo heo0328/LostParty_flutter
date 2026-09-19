@@ -12,10 +12,12 @@ import '../../domain/entities/character_weekly_raid_display_preference.dart';
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/entities/weekly_raid_claim.dart';
 import '../../domain/entities/weekly_raid_claim_command.dart';
+import '../../domain/entities/weekly_raid_status_projection.dart';
 import '../../domain/repositories/account_repository.dart';
 import '../../domain/repositories/character_weekly_raid_display_repository.dart';
 import '../../domain/repositories/weekly_raid_claim_command_repository.dart';
 import '../../domain/repositories/weekly_raid_claim_repository.dart';
+import '../../domain/repositories/weekly_raid_status_repository.dart';
 import '../../domain/services/character_summary_sync_service.dart';
 import '../../domain/services/representative_character_sync_service.dart';
 import '../../domain/services/weekly_raid_display_projector.dart';
@@ -30,6 +32,7 @@ class MyAccountViewModel extends ChangeNotifier {
     CharacterSummarySyncService? summarySyncService,
     RepresentativeCharacterSyncService? representativeSyncService,
     WeeklyRaidClaimRepository? weeklyRaidClaimRepository,
+    WeeklyRaidStatusRepository? weeklyRaidStatusRepository,
     RaidCatalogRepository? raidCatalogRepository,
     CharacterWeeklyRaidDisplayRepository? weeklyRaidDisplayRepository,
     String? playerId,
@@ -42,6 +45,7 @@ class MyAccountViewModel extends ChangeNotifier {
        _summarySyncService = summarySyncService,
        _representativeSyncService = representativeSyncService,
        _weeklyRaidClaimRepository = weeklyRaidClaimRepository,
+       _weeklyRaidStatusRepository = weeklyRaidStatusRepository,
        _raidCatalogRepository = raidCatalogRepository,
        _weeklyRaidDisplayRepository = weeklyRaidDisplayRepository,
        _playerId = playerId,
@@ -55,6 +59,7 @@ class MyAccountViewModel extends ChangeNotifier {
   final CharacterSummarySyncService? _summarySyncService;
   final RepresentativeCharacterSyncService? _representativeSyncService;
   final WeeklyRaidClaimRepository? _weeklyRaidClaimRepository;
+  final WeeklyRaidStatusRepository? _weeklyRaidStatusRepository;
   final RaidCatalogRepository? _raidCatalogRepository;
   final CharacterWeeklyRaidDisplayRepository? _weeklyRaidDisplayRepository;
   final String? _playerId;
@@ -63,6 +68,7 @@ class MyAccountViewModel extends ChangeNotifier {
   final DateTime? _cycleEndsAt;
   final WeeklyRaidClaimCommandRepository? _weeklyRaidClaimCommandRepository;
   StreamSubscription<List<WeeklyRaidClaim>>? _claimSubscription;
+  StreamSubscription<List<WeeklyRaidStatusProjection>>? _statusSubscription;
 
   bool _isLoadingTokenStatus = false;
   bool _isFetchingCharacters = false;
@@ -76,6 +82,7 @@ class MyAccountViewModel extends ChangeNotifier {
   LostArkApiErrorType? _errorType;
   RaidCatalog? _raidCatalog;
   List<WeeklyRaidClaim> _weeklyRaidClaims = const [];
+  List<WeeklyRaidStatusProjection> _weeklyRaidStatuses = const [];
   WeeklyRaidClaimReadFailureType? _claimReadFailure;
   final Set<String> _busyClaimKeys = <String>{};
   Map<int, CharacterWeeklyRaidDisplayPreference> _weeklyRaidDisplayPreferences =
@@ -140,10 +147,19 @@ class MyAccountViewModel extends ChangeNotifier {
     if (catalog == null || serverCharacterId == null || itemLevel == null) {
       return const [];
     }
-    final completedRaidIds = _weeklyRaidClaims
-        .where((claim) => claim.characterId == serverCharacterId)
-        .map((claim) => claim.raidId)
-        .toSet();
+    final statusByRaidId = {
+      for (final status in _weeklyRaidStatuses)
+        if (status.characterId == serverCharacterId) status.raidId: status,
+    };
+    final completedRaidIds = _weeklyRaidStatusRepository != null
+        ? statusByRaidId.values
+              .where((status) => status.isCompleted)
+              .map((status) => status.raidId)
+              .toSet()
+        : _weeklyRaidClaims
+              .where((claim) => claim.characterId == serverCharacterId)
+              .map((claim) => claim.raidId)
+              .toSet();
     final resolved = WeeklyRaidDisplayProjector.resolve(
       eligible: WeeklyRaidDisplayProjector.eligibleCandidates(
         catalog: catalog,
@@ -158,6 +174,7 @@ class MyAccountViewModel extends ChangeNotifier {
             difficultyId: entry.difficultyId,
             label: entry.label,
             isCompleted: completedRaidIds.contains(entry.raidId),
+            statusKind: statusByRaidId[entry.raidId]?.kind,
           ),
         )
         .toList(growable: false);
@@ -374,10 +391,31 @@ class MyAccountViewModel extends ChangeNotifier {
   }
 
   void _watchWeeklyRaidClaims() {
-    final repository = _weeklyRaidClaimRepository;
     final playerId = _playerId;
     final cycleKey = _cycleKey;
-    if (repository == null || playerId == null || cycleKey == null) return;
+    if (playerId == null || cycleKey == null) return;
+    final statusRepository = _weeklyRaidStatusRepository;
+    if (statusRepository != null) {
+      unawaited(_statusSubscription?.cancel());
+      _statusSubscription = statusRepository
+          .watchCurrentCycleStatuses(playerId: playerId, cycleKey: cycleKey)
+          .listen(
+            (statuses) {
+              _weeklyRaidStatuses = statuses;
+              _claimReadFailure = null;
+              notifyListeners();
+            },
+            onError: (Object error) {
+              _claimReadFailure = error is WeeklyRaidClaimReadException
+                  ? error.type
+                  : WeeklyRaidClaimReadFailureType.unknown;
+              notifyListeners();
+            },
+          );
+      return;
+    }
+    final repository = _weeklyRaidClaimRepository;
+    if (repository == null) return;
     unawaited(_claimSubscription?.cancel());
     _claimSubscription = repository
         .watchCurrentCycleClaims(playerId: playerId, cycleKey: cycleKey)
@@ -399,6 +437,7 @@ class MyAccountViewModel extends ChangeNotifier {
   @override
   void dispose() {
     unawaited(_claimSubscription?.cancel());
+    unawaited(_statusSubscription?.cancel());
     super.dispose();
   }
 

@@ -3083,3 +3083,40 @@
 - 현재 그룹 membership과 일치하는 `countedAsNonGroupApplicant` 재신청 변경만 허용하고 신청 update의 상태별 Rules 평가를 분리했다. 공개·그룹 전용 재신청 허용/변조 거절과 기존 그룹 F1 회귀가 `35104711642`에서 통과했다. Flutter 표적 46건, 변경 테스트 파일 분석 및 diff 검사도 통과했다.
 - Rules SHA-256 `AAB74C69483AE1C46AF69C3D8378F30573581AAA1FCBBB1485181BFBD31255D5`의 운영 게시 시도는 자동 안전 심사에서 거절되어 **명령 자체가 실행되지 않았다**. 운영 Rules 변경·실기기 완료로 기록하지 않으며, 우회·반복 시도 없이 특정 버전의 게시 승인 전까지 보류한다.
 - 이후 사용자가 해당 Rules 버전 게시를 승인했다. CLI 실행 결과는 작업 중단으로 복구하지 못했으나, 사용자가 운영에 게시된 Rules와 로컬 파일의 내용이 동일하다고 직접 확인했다. 로컬 해시는 위 값 그대로다. 운영 소스 일치는 사용자 확인이며 CLI 성공 로그·컴파일 경고 0건이나 F2-A 실기기 성공을 의미하지 않는다. 같은 소스 재게시 없이 공개·그룹 전용 신청 상태 전이를 실기기에서 확인한다.
+
+# 2026-09-18 F6-A 특정 캐릭터 권한 오류 진단 완료
+
+- 승인 실패와 수동 완료 실패를 서로 다른 원인으로 분리했다. 전자는 삭제된 모집을 참조하는 `니티야`의 고아 `raidState`, 후자는 `이슈아이`의 수동 완료 사전 검사에서 해산된 그룹방의 접근 불가 pending 신청 부모를 읽는 코드 경로다. 정확한 ID와 근거는 `BUG_REPORTS.md` 2026-09-18 항목을 따른다.
+- 수동 완료 Repository에 디버그 단계 로그만 추가한 APK로 첫 실패 지점을 실기기에서 재현했다. 변경 파일 정적 분석 0건, 계정 체크 표적 테스트 5건, 디버그 APK 빌드·데이터 유지 설치가 통과했다. 기능 수정·Rules 게시·서버 데이터 정리는 하지 않았다.
+- 다음 작업은 `NEXT_WORK.md` F6-B1의 조회 경계 최소 수정이다. 진단 로그와 문서 변경은 작업 브랜치에 미커밋이며, F6-B1 검증 후 로그 유지/제거를 결정한다.
+
+# 2026-09-18 F6-B1 수동 완료 체크 표적 복구
+
+- 접근할 수 없는 과거 그룹 모집의 pending 신청 부모 조회가 `permission-denied`일 때 해당 신청만 제외하도록 수동 완료 사전 분류를 좁게 수정했다. 정상 부모 조회와 다른 Firebase 오류의 처리, 서버 문서·Rules는 변경하지 않았다.
+- 신규 조회 경계 테스트 3건과 기존 내 계정 완료 표적 테스트 5건, 변경 파일 정적 분석이 통과했다. Claim 존재 시 파티 승인 거절은 기존 Rules Emulator 계약 테스트에 포함돼 있으나 이번 변경으로 Emulator를 새로 실행한 결과는 없다.
+- 사용자가 `이슈아이` 수동 완료 체크·해제, 완료 상태일 때 동일 레이드 모집의 캐릭터 선택 차단, 정상 pending 신청 1건의 취소 안내와 실제 지원 취소를 확인했다. 임시 단계 로그를 제거해 B1을 완료 판정한다. 주차 전환과 새 `raidState` 통합은 B2/F7에 남기며 전체 F6 완료로 확대 판정하지 않는다.
+- 이후 실기기 설치·조작·테스트는 사용자가 수동 진행한다. 에이전트는 코드·자동 검증을 마친 뒤 확인 항목을 전달하고, 필요할 때만 구간 종료 후 로그 수집을 요청한다. 다음 작업은 `NEXT_WORK.md` F6-B2 상세 설계다.
+
+# 2026-09-18 F6-B2 통합 완료 상태 상세 설계
+
+- 운영 Router를 대조해 파티 전체 완료는 원자 lifecycle에서 `raidState active → completed`를 사용하지만 내 계정 표시·수동 완료는 구 `weeklyRaidClaims/activeRaidAssignments`만 사용한다는 전환 간극을 확정했다. 구 Cycle Repository의 Claim fan-out을 복원하지 않는다.
+- 신규 완료·참가 원장은 `raidState`, 구 Claim은 state가 없는 과거 데이터의 호환 읽기·해제로 정했다. active state와 Claim이 동시에 있는 불일치는 자동 삭제하지 않는다. 수동 개인 완료와 모집 상세의 파티 전체 완료는 별도 명령으로 유지한다.
+- 구현을 B2-A 읽기 Projection, B2-B 파티 밖 수동 state, B2-C 활성 참가 개인 완료, B2-D 해제·반복방 경계로 나눴다. 핵심 Aggregate/membership/state는 앱 재실행 후처리에 의존하지 않고 원자 확정하며, pending 신청 수에 따른 Rules 접근 예산은 구현 전에 검증한다.
+- 장기 계약은 `WEEKLY_RAID_CLAIM_CONTRACT.md` §0, 실행 순서와 회귀 조건은 `NEXT_WORK.md` F6-B2에 기록했다. 이번 구간에서는 기능 코드·Rules·배포를 변경하지 않았다. 다음 구현은 B2-A다.
+
+# 2026-09-18 F6-B2 기존 계약·UX 교차검토
+
+- 실제 운영 Router, C* 확장성 계약, 참가 제품 정책과 F6-B2 초안을 다시 대조했다. active 상태를 완료 Claim으로 변환하지 않고 `none/active/completed/legacyActive/legacyCompleted/inconsistent` Projection으로 분리하며 `cycleKey`를 항상 검증하도록 계약을 보정했다.
+- 동일 레이드 pending 신청은 최대 파티 인원 8명과 무관하게 늘어날 수 있으므로 전체 신청 종료를 완료 핵심 Transaction에 넣는 초안을 폐기했다. completed `raidState`가 승인·가입을 최종 차단하고, stale pending 무효화·정리는 비핵심 경로로 분리한다.
+- 기존 개인 체크 해제 UX를 보존하면 반복방 다음 주차 전환에 필요한 state가 빠질 수 있음을 확인했다. 개인 해제는 자기 완료 state만 삭제하되 파티 완료 취소는 대상 누락 시 전부 거절하고, 다음 주차 전환은 현재 membership을 근거로 누락 active state를 생성하도록 B2-D 완료 조건을 보강했다.
+- 구 `activeRaidAssignment`도 Claim과 함께 fallback·불일치 판정에 포함했다. state와 legacy 문서가 동시에 있으면 한쪽 해제 뒤 다른 기록이 되살아나는 회귀를 막기 위해 내용 일치 여부와 무관하게 변경을 차단한다. 활성 파티 개인 완료의 state는 `source: manual`로 전환하되 기존 `recruitmentId`를 감사·Rules 검증용으로 보존한다.
+- 페이지·역할별 UX 회귀표를 `NEXT_WORK.md`에 추가하고 `PARTY_PARTICIPATION_RULES.md`의 Claim 최종 원장 표현을 C* state 기준으로 갱신했다. 이번 교차검토는 문서만 수정했고 기능 코드·Rules·배포는 변경하지 않았다.
+- 모집 후보는 현재도 `FirestoreActiveRaidAssignmentLookup`과 `PartyCreateOccupancyGate`로 연결 모집의 종료·만료·고아 여부를 추가 판정한다. 공통 주간 Projection은 원장 해석만 담당하고 이 점유 게이트나 내 계정의 탈퇴 영향 계산을 대체하지 않도록 B2-A 연결 순서를 세분화했다.
+
+# 2026-09-19 F6-B2-A 현재 주차 읽기 Projection 구현
+
+- `raidState`·구 Claim·구 assignment를 `active/completed/legacyActive/legacyCompleted/inconsistent`로 해석하는 순수 Projection과 Firestore Repository를 추가했다. 모든 문서의 Player·Character·raidId·cycleKey·문서 ID를 검증하고 state와 legacy가 겹치면 자동 병합하지 않는다.
+- 운영 Router의 내 계정·모집 생성·신청 후보에 공통 읽기를 연결했다. completed는 완료로만 표시하고 active는 기존 `PartyCreateOccupancyGate`의 종료·만료·고아 판정을 거쳐 참가 중으로 표시해 두 상태를 중복 경고하지 않는다.
+- B2-A는 읽기 단계이므로 현재 `active/completed/inconsistent` state 체크박스를 읽기 전용으로 뒀다. 구 Claim 명령이 state를 변경하지 못하고도 성공을 표시하는 회귀를 막고, 신규 state 쓰기와 활성 참가 개인 완료는 각각 B2-B/C에 남겼다.
+- Rules는 본인 `raidStates/activeRaidAssignments` list만 열고 타인 list·legacy assignment 쓰기를 계속 거절한다. 표적 47건, 변경 21개 Dart 파일 analyze, JS 문법과 `git diff --check`가 통과했다. 전체 `flutter test`는 1,171건 통과·17건 실패로 직전 기준선 17건을 유지했고, 전체 analyze는 기존 38건만 보고했다.
+- 로컬 Rules Emulator는 Android Studio JBR 21로 기동했으나 Rules 로딩 단계의 기존 `503 Network closed for unknown reason`로 중단돼 허용·거절 시나리오를 실행하지 못했다. Rules 게시·실기기·`dev/main` 통합은 하지 않았다. 다음 게이트는 작업 브랜치 CI의 demo Emulator 통과다.

@@ -7,13 +7,17 @@ import {
   assertSucceeds,
 } from '@firebase/rules-unit-testing';
 import {
+  collection,
   doc,
+  getDocs,
   setDoc,
   updateDoc,
   getDoc,
+  query,
   runTransaction,
   serverTimestamp,
   Timestamp,
+  where,
 } from 'firebase/firestore';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -778,6 +782,78 @@ async function main() {
   const db = testEnv.authenticatedContext(authUid).firestore();
 
   try {
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await setDoc(
+        doc(adminDb, 'players', playerId, 'raidStates', `${characterId}_${raidId}`),
+        {
+          schemaVersion: 1,
+          playerId,
+          characterId,
+          raidId,
+          cycleKey,
+          status: 'active',
+          source: 'party',
+          recruitmentId,
+          revision: 1,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+        },
+      );
+      await setDoc(
+        doc(
+          adminDb,
+          'players',
+          playerId,
+          'activeRaidAssignments',
+          `${characterId}_${raidId}`,
+        ),
+        {
+          schemaVersion: 1,
+          playerId,
+          characterId,
+          raidId,
+          cycleKey,
+          recruitmentId,
+          status: 'active',
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+        },
+      );
+    });
+    const crossPlayerDb = testEnv.authenticatedContext(joinerAuthUid).firestore();
+    const ownRaidStates = query(
+      collection(db, 'players', playerId, 'raidStates'),
+      where('cycleKey', '==', cycleKey),
+    );
+    const ownAssignments = query(
+      collection(db, 'players', playerId, 'activeRaidAssignments'),
+      where('cycleKey', '==', cycleKey),
+    );
+    console.log('test: owner can list current-cycle raid status sources');
+    await assertSucceeds(getDocs(ownRaidStates));
+    await assertSucceeds(getDocs(ownAssignments));
+    await assertFails(
+      getDocs(
+        query(
+          collection(crossPlayerDb, 'players', playerId, 'raidStates'),
+          where('cycleKey', '==', cycleKey),
+        ),
+      ),
+    );
+    await assertFails(
+      getDocs(
+        query(
+          collection(crossPlayerDb, 'players', playerId, 'activeRaidAssignments'),
+          where('cycleKey', '==', cycleKey),
+        ),
+      ),
+    );
+    console.log('PASS: owner-only raid status list contract');
+
     await testEnv.clearFirestore();
     await seedBase(testEnv);
     console.log('test: group create on clean membershipState');

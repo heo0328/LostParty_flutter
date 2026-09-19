@@ -29,15 +29,14 @@ void main() {
     expect(block, contains('allow update, delete: if false'));
   });
 
-  test('C*는 구 assignment·slot·cycle 쓰기와 파티 Claim·개인 event를 닫는다', () {
+  test('C*는 구 assignment 쓰기를 닫고 본인 호환 list만 연다', () {
     final assignment = rules.substring(
       rules.indexOf('match /activeRaidAssignments/{assignmentId}'),
       rules.indexOf('match /events/{eventId}'),
     );
-    expect(
-      assignment,
-      contains('allow list, create, update, delete: if false'),
-    );
+    expect(assignment, contains('allow list: if hasActiveBinding()'));
+    expect(assignment, contains('playerId == currentPlayerId()'));
+    expect(assignment, contains('allow create, update, delete: if false'));
     expect(rules, contains("== 'manualVerificationDisputeOpened'"));
     expect(rules, isNot(contains('|| validPartyOwnerWeeklyRaidClaimCreate(')));
     expect(rules, contains('allow create, update, delete: if false;'));

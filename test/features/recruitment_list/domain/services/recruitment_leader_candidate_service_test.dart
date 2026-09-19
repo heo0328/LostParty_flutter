@@ -5,9 +5,11 @@ import 'package:lost_party/features/account/domain/entities/character_build_cata
 import 'package:lost_party/features/account/domain/entities/character_summary.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
 import 'package:lost_party/features/account/domain/entities/weekly_raid_claim.dart';
+import 'package:lost_party/features/account/domain/entities/weekly_raid_status_projection.dart';
 import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
 import 'package:lost_party/features/account/domain/repositories/weekly_raid_claim_repository.dart';
+import 'package:lost_party/features/account/domain/repositories/weekly_raid_status_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/fake_recruitment_runtime.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_active_raid_assignment_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
@@ -230,6 +232,34 @@ void main() {
     );
   });
 
+  test('통합 완료 상태는 생성 후보에서 완료로만 차단한다', () async {
+    final service = RecruitmentLeaderCandidateService(
+      accountRepository: _AccountRepository(),
+      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+      weeklyRaidStatusRepository: const _StatusRepository(
+        WeeklyRaidStatusKind.completed,
+      ),
+      claimPlayerId: 'player-1',
+      session: FakeUserSession('local-user'),
+      clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 27)),
+      assignmentRepository: InMemoryActiveRaidAssignmentRepository(),
+      assignmentLookup: const _BlockingAssignmentLookup(),
+      recruitmentRepository: InMemoryRecruitmentStateRepository(),
+    );
+
+    final candidate = (await service.load(_query())).first;
+    final types = candidate.participationStatuses
+        .map((status) => status.type)
+        .toList(growable: false);
+
+    expect(candidate.canSelect, isFalse);
+    expect(types, contains(CandidateParticipationStatusType.weeklyRaidClear));
+    expect(
+      types,
+      isNot(contains(CandidateParticipationStatusType.activeSameRaid)),
+    );
+  });
+
   test('4인 파티에서 방장과 같은 딜러 직업 신청 후보를 차단한다', () async {
     final service = RecruitmentLeaderCandidateService(
       accountRepository: _AccountRepository(),
@@ -396,6 +426,26 @@ class _ClaimRepository implements WeeklyRaidClaimRepository {
       cycleEndsAt: DateTime.utc(2026, 9, 1, 21),
       completedAt: DateTime.utc(2026, 8, 27),
       updatedAt: DateTime.utc(2026, 8, 27),
+    ),
+  ]);
+}
+
+class _StatusRepository implements WeeklyRaidStatusRepository {
+  const _StatusRepository(this.kind);
+
+  final WeeklyRaidStatusKind kind;
+
+  @override
+  Stream<List<WeeklyRaidStatusProjection>> watchCurrentCycleStatuses({
+    required String playerId,
+    required String cycleKey,
+  }) => Stream.value([
+    WeeklyRaidStatusProjection(
+      playerId: playerId,
+      characterId: 'AbCdEfGhIjKlMnOpQrSt',
+      raidId: 'serca',
+      cycleKey: cycleKey,
+      kind: kind,
     ),
   ]);
 }

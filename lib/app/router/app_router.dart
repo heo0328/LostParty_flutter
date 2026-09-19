@@ -18,6 +18,7 @@ import '../../features/account/data/gateways/firestore_character_minimum_display
 import '../../features/account/data/gateways/firestore_representative_character_sync_gateway.dart';
 import '../../features/account/data/mappers/sibling_character_mapper.dart';
 import '../../features/account/data/repositories/firestore_weekly_raid_claim_repository.dart';
+import '../../features/account/data/repositories/firestore_weekly_raid_status_repository.dart';
 import '../../features/account/data/repositories/local_character_weekly_raid_display_repository.dart';
 import '../../features/account/data/repositories/local_nice_group_auto_refresh_settings_repository.dart';
 import '../../features/account/presentation/pages/api_token_settings_page.dart';
@@ -27,6 +28,7 @@ import '../../features/account/presentation/pages/my_account_page.dart';
 import '../../features/account/presentation/pages/game_account_verification_page.dart';
 import '../../features/account/domain/repositories/weekly_raid_claim_repository.dart';
 import '../../features/account/domain/repositories/weekly_raid_claim_command_repository.dart';
+import '../../features/account/domain/repositories/weekly_raid_status_repository.dart';
 import '../../features/account/domain/entities/local_game_account.dart';
 import '../../features/account/domain/repositories/account_ownership_status_gateway.dart';
 import '../../features/account/domain/repositories/character_summary_sync_gateway.dart';
@@ -134,6 +136,7 @@ GoRouter createAppRouter({
   PartyReadRepository? partyReadRepository,
   PartyEventSyncService? partyEventSyncService,
   WeeklyRaidClaimRepository? weeklyRaidClaimRepository,
+  WeeklyRaidStatusRepository? weeklyRaidStatusRepository,
   CharacterSummarySyncGateway? characterSummarySyncGateway,
   WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository,
   CharacterWeeklyRaidDisplayRepository? weeklyRaidDisplayRepository,
@@ -211,6 +214,13 @@ GoRouter createAppRouter({
       (weeklyRaidClaimRepositoryOrDefault is WeeklyRaidClaimCommandRepository
           ? weeklyRaidClaimRepositoryOrDefault
                 as WeeklyRaidClaimCommandRepository
+          : null);
+  final weeklyRaidStatusRepositoryOrDefault =
+      weeklyRaidStatusRepository ??
+      (weeklyRaidClaimRepository == null
+          ? FirestoreWeeklyRaidStatusRepository(
+              firestore: FirebaseFirestore.instance,
+            )
           : null);
   final weeklyRaidDisplayRepositoryOrDefault =
       weeklyRaidDisplayRepository ??
@@ -382,6 +392,7 @@ GoRouter createAppRouter({
     assignmentLookup: serverActiveRaidAssignmentLookup,
     recruitmentRepository: recruitmentRepository,
     weeklyRaidClaimRepository: weeklyRaidClaimRepositoryOrDefault,
+    weeklyRaidStatusRepository: weeklyRaidStatusRepositoryOrDefault,
     claimPlayerId: playerSession.playerId,
     activityCharactersRepository: activityCharactersRepositoryOrDefault,
     conflictPolicy: participationConflictPolicy,
@@ -395,6 +406,7 @@ GoRouter createAppRouter({
     assignmentLookup: serverActiveRaidAssignmentLookup,
     recruitmentRepository: recruitmentRepository,
     weeklyRaidClaimRepository: weeklyRaidClaimRepositoryOrDefault,
+    weeklyRaidStatusRepository: weeklyRaidStatusRepositoryOrDefault,
     claimPlayerId: playerSession.playerId,
     activityCharactersRepository: activityCharactersRepositoryOrDefault,
     conflictPolicy: participationConflictPolicy,
@@ -435,9 +447,7 @@ GoRouter createAppRouter({
                   characterSearchRepository:
                       characterSearchRepositoryForRoute(),
                   onInitialLoadComplete: () {
-                    unawaited(
-                      startupCharacterRefreshRunnerOrDefault.runOnce(),
-                    );
+                    unawaited(startupCharacterRefreshRunnerOrDefault.runOnce());
                   },
                   refreshSignal: raidStatusRefreshSignal,
                   cycleReconciler: lazyCycleReconciler,
@@ -483,8 +493,7 @@ GoRouter createAppRouter({
                                     firebaseAuth: FirebaseAuth.instance,
                                   ),
                             ),
-                        cycleCommandRepository:
-                            partyCycleCommandRepository,
+                        cycleCommandRepository: partyCycleCommandRepository,
                         cycleReconciler: lazyCycleReconciler,
                         visibilityCommandRepository:
                             FirestorePartyAtomicVisibilityCommandRepository(
@@ -514,6 +523,8 @@ GoRouter createAppRouter({
                   summarySyncService: characterSummarySyncService,
                   representativeSyncService: representativeSyncService,
                   weeklyRaidClaimRepository: weeklyRaidClaimRepositoryOrDefault,
+                  weeklyRaidStatusRepository:
+                      weeklyRaidStatusRepositoryOrDefault,
                   weeklyRaidDisplayRepository:
                       weeklyRaidDisplayRepositoryOrDefault,
                   raidCatalogRepository: raidCatalogRepository,
@@ -525,10 +536,10 @@ GoRouter createAppRouter({
                       weeklyRaidClaimCommandRepositoryOrDefault,
                   manualCharacterRefreshRunner:
                       startupCharacterRefreshRunnerOrDefault
-                              is ManualCharacterRefreshRunner
-                          ? startupCharacterRefreshRunnerOrDefault
-                                as ManualCharacterRefreshRunner
-                          : null,
+                          is ManualCharacterRefreshRunner
+                      ? startupCharacterRefreshRunnerOrDefault
+                            as ManualCharacterRefreshRunner
+                      : null,
                 ),
                 routes: [
                   GoRoute(
@@ -593,10 +604,11 @@ GoRouter createAppRouter({
                       catalogRepository: raidCatalogRepository,
                       commandService: recruitmentCommandService,
                       candidateService: recruitmentLeaderCandidateService,
-                      partyCreateRepository: FirestorePartyAtomicCreateRepository(
-                        firestore: FirebaseFirestore.instance,
-                        firebaseAuth: FirebaseAuth.instance,
-                      ),
+                      partyCreateRepository:
+                          FirestorePartyAtomicCreateRepository(
+                            firestore: FirebaseFirestore.instance,
+                            firebaseAuth: FirebaseAuth.instance,
+                          ),
                       groupReadRepository: groupReadRepositoryForRoute(),
                       playerId: playerSession.playerId,
                       newRecruitmentId: () => FirebaseFirestore.instance

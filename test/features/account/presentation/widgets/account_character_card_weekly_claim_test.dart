@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
+import 'package:lost_party/features/account/domain/entities/weekly_raid_status_projection.dart';
 import 'package:lost_party/features/account/presentation/models/weekly_raid_status_item.dart';
 import 'package:lost_party/features/account/presentation/widgets/account_character_card.dart';
 
@@ -179,6 +180,47 @@ void main() {
 
     expect(changedRaid?.raidId, 'serca');
     expect(changedValue, isTrue);
+  });
+
+  testWidgets('keeps current raidState checked but read-only during B2-A', (
+    tester,
+  ) async {
+    var changed = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 300,
+            height: 260,
+            child: AccountCharacterCard(
+              character: _character,
+              isRepresentative: true,
+              weeklyRaids: const [
+                WeeklyRaidStatusItem(
+                  raidId: 'serca',
+                  difficultyId: 'hard',
+                  label: '세르카',
+                  isCompleted: true,
+                  statusKind: WeeklyRaidStatusKind.completed,
+                ),
+              ],
+              onWeeklyRaidChanged: (_, _) => changed = true,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final checkbox = tester.widget<Checkbox>(
+      find.byKey(const ValueKey('weeklyRaidClaim-character-1-serca')),
+    );
+    expect(checkbox.value, isTrue);
+    expect(checkbox.onChanged, isNull);
+    expect(find.byTooltip('완료 처리된 레이드입니다.'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('weeklyRaidClaim-character-1-serca')),
+    );
+    expect(changed, isFalse);
   });
 }
 
