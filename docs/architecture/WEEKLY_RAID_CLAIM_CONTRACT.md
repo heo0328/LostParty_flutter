@@ -10,7 +10,7 @@
 
 - 신규 데이터의 참가·완료 원장은 `players/{playerId}/raidStates/{characterId}_{raidId}`다.
 - 현재 주차 `status == active`는 파티 참가 중, `status == completed`는 완료, 문서 부재는 둘 다 아님을 뜻한다.
-- 파티 전체 완료는 `active → completed`, 완료 취소는 `completed → active`, 완료방 해산은 `completed`를 보존한다.
+- 파티 전체 완료는 `active → completed`이며 현재 주차의 파티 전체 완료를 되돌리는 공동 `완료 취소` 명령은 제공하지 않는다. 완료방 해산은 개인 `completed`를 보존한다.
 - 파티 밖 수동 완료는 `status: completed`, `source: manual`인 `raidState`를 사용한다. 활성 파티에서 수동 완료하면 모집 탈퇴·필요한 승계 또는 단독 해산과 같은 Transaction에서 기존 state를 `completed`로 전환한다.
 - `weeklyRaidClaims`와 `activeRaidAssignments`는 전환 전 데이터의 호환 원본이다. 신규 파티·수동 명령에서 함께 복제 쓰지 않는다.
 
@@ -35,7 +35,7 @@
 
 - **내 계정 수동 완료**는 자기 Character 한 명만 대상으로 한다. 활성 참가 중이면 영향 안내 뒤 본인 membership 제거, 필요 시 파티장 승계 또는 단독 해산, 본인 `raidState` 완료 전환을 하나의 핵심 Transaction에서 처리한다.
 - **모집 상세 파티 전체 완료**는 파티장·공대장이 현재 Aggregate의 모든 `raidState`를 `completed`로 바꾸는 기존 원자 lifecycle 명령이다. 내 계정 수동 완료의 참가 차단 조건을 이 명령에 적용하지 않는다.
-- 개인 체크 해제는 출처와 관계없이 자기 완료 state와 호환 완료 Claim만 제거하고 모집의 공동 완료 Snapshot은 바꾸지 않는 기존 UX를 유지한다. 둘이 함께 존재하면 한 번의 사용자 동작으로 검증된 두 완료 근거를 함께 정리한다. active state·assignment·membership이 함께 있으면 이를 보존한다. 단, 파티 전체 완료 취소는 모든 대상 state가 그대로 있을 때만 성공하고 하나라도 개인 해제됐으면 새로고침·상태 변경 안내로 거절한다.
+- 개인 체크 해제는 출처와 관계없이 자기 완료 state와 호환 완료 Claim만 제거하고 모집의 공동 완료 Snapshot은 바꾸지 않는 기존 UX를 유지한다. 둘이 함께 존재하면 한 번의 사용자 동작으로 검증된 두 완료 근거를 함께 정리한다. active state·assignment·membership이 함께 있으면 이를 보존한다. 개인 해제는 과거 파티를 복원하지 않으며 공동 완료 취소 명령도 발생시키지 않는다.
 - 반복방의 다음 주차 전환은 개인 해제로 이전 완료 state가 없어도 현재 membership을 기준으로 새 주차 `active` state를 생성할 수 있어야 한다. 문서가 있으면 같은 반복방의 직전 주차 state일 때만 갱신한다. 새 주차 수동 완료나 다른 모집의 active state가 이미 있으면 덮어쓰지 않고 전환 전체를 거절한다.
 - 정상적인 현재 상태와 과거 데이터 불일치를 같은 권한 오류로 표시하지 않는다.
 
@@ -50,7 +50,7 @@
 
 - 파티 밖 수동 완료 신규 state는 `source: manual`, `status: completed`, `recruitmentId: null`, `revision: 1`이다.
 - 활성 파티에서 개인 완료로 전환한 state는 현재 방에서 유래한 사실을 추적할 수 있게 `source: manual`, `status: completed`로 바꾸되 기존 `recruitmentId`를 원인·Rules 검증용으로 보존하고 revision을 증가시킨다.
-- 파티 전체 완료는 `source: party`를 유지한다. 완료 취소는 동일 모집·동일 회차의 party state만 `active`로 되돌린다.
+- 파티 전체 완료는 `source: party`를 유지한다. 같은 주차의 `party completed`를 공동 명령으로 `active`로 되돌리지 않는다. 반복방은 수요일 06시 다음 주차 전환에서 현재 membership을 기준으로 새 `active`를 구성한다.
 - 위 출처 차이는 감사·전이 검증용이며, 현재 주차 `completed`의 체크 표시와 동일 레이드 참가 차단 의미는 같다.
 
 ### 0.6 완료 UX의 단일 인수 단위
@@ -90,7 +90,7 @@
 
 ## 2. 핵심 용어
 
-- **파티 회차 상태**: 모집방의 공동 진행 상태. `active`, `completed`, `completionCancelled`, `disbanded` 등으로 관리한다.
+- **파티 회차 상태**: 모집방의 공동 진행 상태. 신규 흐름은 `active`, `completed`, `disbanded`를 사용한다. 과거 `completionCancelled`는 읽기 호환 이력으로만 취급한다.
 - **활성 파티 점유**: 캐릭터가 현재 동일 레이드의 다른 활성 파티에 중복 참가하지 못하게 하는 임시 점유다.
 - **주간 완료 Claim**: 한 Player가 소유한 한 Character가 한 주차의 한 `raidId`를 실제 완료했다고 선언하는 서버 기록이다.
 - **개인 완료**: 일반 파티원이 레이드 상세에서 자기 참가 캐릭터만 완료 처리하거나, 내 계정에서 직접 완료 체크하는 동작이다.
@@ -157,8 +157,8 @@ players/{playerId}/weeklyRaidClaims/{cycleKey_characterId_raidId}
 
 문서 ID는 `${cycleKey}_${characterId}_${raidId}`다. Firestore Rules가 같은 값을 직접 재구성해 임의 ID와 중복 Claim을 거절할 수 있어야 한다. `cycleKey`는 `YYYY-MM-DD`, 서버 Character ID는 Firestore 자동 ID 형식인 영숫자 20자, `raidId`는 소문자 영숫자와 밑줄만 허용한다. 표시 이름은 식별 키로 사용하지 않는다.
 
-- `source == partyOwner`이면 `sourceRecruitmentId`와 `sourceCompletionRevision`은 필수다. 완료 취소가 **해당 파티 전체 완료 명령이 만든 Claim만** 식별하는 근거다.
-- `manual` 또는 `partyMember` Claim을 책임자가 완료 취소 명령으로 삭제할 수 없다.
+- `source == partyOwner`의 `sourceRecruitmentId`와 `sourceCompletionRevision`은 과거 전체 완료 출처를 식별하는 호환 메타데이터다. 신규 공동 완료 취소 명령에는 사용하지 않는다.
+- 책임자는 출처와 관계없이 다른 사용자의 완료 Claim을 삭제할 수 없다.
 
 ### 기존 Claim과 멱등성
 
@@ -201,7 +201,7 @@ membership 제거
 - 레이드 상세의 일반 멤버 `내 캐릭터 완료` 버튼
 - 기존 completed 방의 assignment 정리 및 데이터 이행
 
-Task-079 E에서 책임자 `파티 전체 완료`·반복 파티 제한적 전체 완료 취소·`partyOwner` Claim·assignment 정리까지 연결됐다. 아래 5.1은 실행 앱 기준이며, 5.2는 아직 별도 연결 단위다.
+Task-079 E 당시 책임자 `파티 전체 완료`·반복 파티 제한적 전체 완료 취소·`partyOwner` Claim·assignment 정리까지 연결됐다. 이후 2026-09-19 결정으로 전체 완료 취소는 폐기 대상이 됐다. 아래 5.1의 전체 완료 UX는 유지하고 5.2는 별도 연결 단위다.
 
 ### 5.1 파티장·공대장 — 파티 전체 완료
 
@@ -369,43 +369,15 @@ cycle completed Snapshot 생성/갱신
 
 현재 최대 8인에서 Firestore Transaction 쓰기 수와 Security Rules document access 한도를 구현 전에 계산한다. Spark 클라이언트 Transaction으로 안전하게 검증할 수 없으면 구현을 넓히지 않고 서버 선행 여부를 다시 결정한다.
 
-## 10. 파티 완료 취소와 해산
+## 10. 파티 완료 확정과 해산
 
-### 완료 취소
+### 파티 전체 완료 취소 폐기
 
-반복 파티의 완료 취소는 책임자가 실수로 실행한 **파티 전체 완료 명령의 제한된 공동 롤백**이다. 일반적인 개인 완료 해제와 다르다.
-
-허용 조건:
-
-- 현재 방이 `continueTogether == true`인 반복 파티다.
-- 현재 회차가 해당 `sourceCompletionRevision`으로 `completed` 상태다.
-- 현재 서버 시간이 `Asia/Seoul` 화요일 22:00보다 이르며 `cycleEndsAt - 8시간`과 일치한다.
-- 완료 당시 membership Snapshot과 현재 보존 membership·책임자·역할·슬롯이 변하지 않았다.
-- 완료 당시 전원의 Claim이 `source: partyOwner`, 같은 `sourceRecruitmentId`, 같은 `sourceCompletionRevision`이다.
-- 전원의 해당 active assignment가 아직 없고, Claim 해제 후 복원할 assignment가 다른 참가·Claim과 충돌하지 않는다.
-
-허용되면 하나의 Transaction에서:
-
-```text
-cycle completed -> active(또는 completionCancelled 이력 후 active)
-+ recruitment currentCycleStatus/revision 복구
-+ 해당 전체 완료가 만든 partyOwner Claim 전원 삭제
-+ 완료 당시 membership 기준 activeRaidAssignment 전원 복원
-+ 완료 취소 이벤트·알림 생성
-```
-
-- membership과 역할·슬롯은 완료 시 삭제하지 않았으므로 그대로 유지한다.
-- 완료 취소는 다른 방의 Claim, `manual` Claim, `partyMember` Claim 또는 완료 이후 사용자가 변경한 Claim을 삭제하지 않는다.
-- 한 명이라도 Claim을 직접 해제했거나 다른 모집에 참가·신청해 복원 충돌이 생겼거나 membership/책임자/구성이 바뀌었다면 전체 완료 취소를 거절한다.
-- 실패 시 회차·Claim·assignment 중 일부도 변경하지 않는다. 과거 기획의 부분 병합 복원과 `구성 점검 필요` 전환은 Claim 기반 초기 구현에서 사용하지 않는다.
-
-확인 문구 기본안:
-
-> 파티 전체 완료를 취소할까요? 완료 당시 파티원 전원의 앱 완료 상태가 해제되고 이 방의 참가 상태가 복구됩니다.
-
-거절 문구 기본안:
-
-> 완료 이후 일부 파티원의 참가 또는 완료 상태가 변경되어 전체 완료를 취소할 수 없습니다. 각 파티원이 내 계정에서 완료 상태를 확인해 주세요.
+- 2026-09-19 제품 결정으로 반복방을 포함한 파티 전체 완료 취소 기능을 제공하지 않는다.
+- 파티 전체 완료는 이번 주차의 확정 기록이며 방 전체를 이전 참가 상태로 복원하지 않는다.
+- 잘못된 완료 표시는 각 사용자가 내 계정에서 자기 체크만 해제해 정정한다. 이 동작은 다른 파티원의 완료, 공동 Snapshot, membership 또는 과거 방을 변경하지 않는다.
+- `다음 주도 함께하기` 방은 완료 당시 구성을 보존하고 수요일 06시 새 주차 전환에서 새 `active` 상태를 구성한다. 현재 주차를 되돌렸다가 다시 완료하는 중간 상태를 만들지 않는다.
+- 기존 `cancelCompletion` 명령·버튼·Rules 허용 분기는 제거 대상이다. 과거 `completionCancelled` 이벤트와 로컬 히스토리는 데이터 표시 호환을 위해 읽기만 유지한다.
 
 ### 해산
 
@@ -480,7 +452,7 @@ cycle completed -> active(또는 completionCancelled 이력 후 active)
 - Snapshot 전원의 Claim 멱등 생성
 - active assignment 전원 해제
 - 체크박스와 완료 이벤트 동기화
-- 반복 파티의 제한적 전체 완료 취소(원자 롤백)
+- 반복 파티의 제한적 전체 완료 취소(당시 구현, 2026-09-19 폐기 결정)
 
 ### 단계 F — 이행·실기기 검증 — **Task-080 (진행)**
 

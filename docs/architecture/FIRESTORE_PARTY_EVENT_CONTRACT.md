@@ -7,7 +7,7 @@
 ## 서버 이벤트
 
 - 경로는 `players/{playerId}/events/{eventId}`이며 해당 Player만 읽는다.
-- 회차 Transaction은 `partyCompleted`, `partyIncompleteEnded`, `partyCompletionCancelled` 이벤트를 완료 당시 대상 Player별로 함께 생성한다.
+- 신규 회차 Transaction은 `partyCompleted`, `partyIncompleteEnded` 이벤트를 생성한다. `partyCompletionCancelled`는 2026-09-19 이전 데이터 읽기 호환 type이며 새로 생성하지 않는다.
 - 이벤트 ID는 `recruitmentId + cycleKey + completionRevision + type` 조합으로 멱등성을 보장한다.
 - 이벤트는 회차 문서의 상태·revision·Player Snapshot과 결합해 Rules가 검증하며 생성 후 수정·삭제하지 않는다.
 - `occurredAt`은 서버 시간이고 `expiresAt`은 약 28일 뒤다. TTL 자동 삭제 설정은 배포 작업에서 별도 확인한다.
@@ -17,10 +17,10 @@
 ## 로컬 히스토리
 
 - Drift v7 `raidHistoryEntries`가 이벤트 ID를 기본 키로 저장한다.
-- 서버 상태는 `completed / incompleteEnded / completionCancelled`, 출처는 `partyEvent`다.
+- 신규 서버 상태는 `completed / incompleteEnded`, 출처는 `partyEvent`다. 과거 `completionCancelled`는 기존 히스토리 표시를 위해 읽을 수만 있다.
 - 같은 이벤트를 재동기화하면 서버 상태와 동기화 시각만 갱신하고 `visibility`와 `localStatusOverride`는 유지한다.
 - 사용자의 숨김은 서버에 전송하지 않으며 `visible / hidden`으로 로컬에만 저장한다.
-- 완료 취소 이벤트가 와도 과거 Drift 히스토리 표시는 사용자의 `localStatusOverride`를 유지한다. 다만 허용된 파티 전체 완료 취소 Transaction은 출처가 일치하는 서버 Claim을 삭제하므로 현재 주차 내 계정 체크박스는 미완료로 갱신된다.
+- 과거 완료 취소 이벤트가 동기화돼도 Drift 히스토리의 사용자 `localStatusOverride`는 유지한다. 신규 파티 전체 완료 취소 Transaction은 존재하지 않는다.
 - 완료 3종 외 type(알림·미래 type 포함)은 히스토리 sync에서 건너뛰며 전체 sync 실패로 만들지 않는다.
 
 ## 로컬 알림 receipt

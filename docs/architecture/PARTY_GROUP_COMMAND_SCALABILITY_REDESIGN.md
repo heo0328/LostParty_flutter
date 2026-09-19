@@ -14,7 +14,7 @@
 1. 계정·게임 계정·캐릭터 인증 자료는 보존한다. 새 스키마를 적용할 때 기존 파티·그룹·신청·회차·이벤트 테스트 자료는 초기화하며, 구 구조와 신 구조를 동시에 읽거나 쓰는 호환 계층은 만들지 않는다.
 2. 해산 시 pending 신청자별 서버 이벤트를 만들지 않는다. 신청 목록은 참조하는 모집 원본이 종료 상태이면 해당 신청을 즉시 숨기고, 앱은 기기에서 한 번만 로컬 안내를 표시한다.
 3. 종료된 모집의 `members`, `slots`, `applications`, 과거 회차 문서는 첫 출시에서 자동 삭제하지 않는다. 이 자료는 활성 판정에서 완전히 제외하고, 저장공간 문제가 실제로 확인될 때 운영자 정리 도구를 별도 설계한다.
-4. 완료·완료 취소·주차 전환·해산은 온라인에서만 실행하는 단일 원자 명령이다. 오프라인 큐를 사용하지 않으며, 실패하면 서버 변경이 없고 앱 재실행·화면 재진입 시 서버 원본으로 결과를 다시 판정한다.
+4. 완료·주차 전환·해산은 온라인에서만 실행하는 단일 원자 명령이다. 오프라인 큐를 사용하지 않으며, 실패하면 서버 변경이 없고 앱 재실행·화면 재진입 시 서버 원본으로 결과를 다시 판정한다. 2026-09-19 결정으로 파티 전체 완료 취소 명령은 폐기한다.
 
 위 결정에 따라 단계형 후처리, 구·신 스키마 dual-read, 자동 청소를 핵심 명령의 완료 조건으로 두지 않는다.
 
@@ -23,7 +23,7 @@
 | 영역 | 현재 증가 요인 | 영향 |
 | --- | --- | --- |
 | 파티 전체 완료 | 전원 membership·주간 Claim·assignment 조회, 전원 Claim·개인 event 생성, assignment 삭제 | 4·8인에서 Transaction·Rules 한도, 일부 완료·점유 잔존 위험 |
-| 완료 취소 | 완료 Snapshot 전원 membership·Claim·assignment 조회, Claim 삭제·assignment 복원·개인 event 생성 | 취소 실패, Claim과 점유 불일치 위험 |
+| 완료 취소(폐기 대상) | 완료 Snapshot 전원 membership·Claim·assignment 조회, Claim 삭제·assignment 복원·개인 event 생성 | 복구 복잡도와 상태 충돌 때문에 제품 기능에서 제거 |
 | 다음 주차 전환 | 전원 membership·assignment 조회와 재생성·갱신, 미완료 개인 event 생성 | 반복방이 새 주차로 넘어가지 못하거나 일부 점유가 이전 주차에 남을 위험 |
 | 모집 해산 | 전원 membership·assignment·slot 삭제, 신청 전체 확인, 멤버·대기자 개인 event 생성 | 현재 재현된 다인 `permission-denied`, 고아 관계 위험 |
 | 자리 이동·교환 | 전원 membership 재조회·구성 계산, 이동 1건당 전원 개인 event 생성; 교환은 두 사건 fan-out | 8인에서 자리 이동만 실패하거나 중복 이벤트가 급증할 위험 |
@@ -51,7 +51,7 @@
 | 자리 이동·교환 | 모집 + 전원 membership `N` | 모집·대상 membership 1~2·slot 2 + 전원 이벤트 | `N` 비례 | 고정 8칸 요약 사용 |
 | 탈퇴·추방·승계 | 모집·대상·필요 후임·점유·slot | 모집·대상 삭제·필요 후임 갱신 + 전원 이벤트 | 이벤트가 `N` 비례 | 핵심 상태는 고정 크기, 이벤트 1건 |
 | 전체 완료 | 고정 3 + `3N` | 모집·cycle 2 + Claim 최대 `N` + assignment 최대 `N` + event `N` + listing 최대 1 | `N` 비례 | 통합 `raidState` 원자 전환 |
-| 완료 취소 | 고정 3 + `3N` | 모집·cycle 2 + Claim 삭제 `N` + assignment 생성 `N` + event `N` + listing 최대 1 | `N` 비례 | 통합 `raidState` 원자 전환 |
+| 완료 취소(폐기 대상) | 고정 3 + `3N` | 모집·cycle 2 + Claim 삭제 `N` + assignment 생성 `N` + event `N` + listing 최대 1 | `N` 비례 | 신규 구조에 이식하지 않고 제거 |
 | 다음 주차 전환 | 고정 3 + `2N` | 모집·cycle 최대 2 + assignment 최대 `N` + event 최대 `N` + listing 최대 1 | `N` 비례 | 통합 `raidState` 원자 전환 |
 | 활성 모집 해산 | 고정 2 + member `N` + application `A` + assignment `N` + slot `N` | 모집 1 + member/assignment/slot 삭제 최대 `3N` + member/application event `N+A` + listing 최대 1 | `N+A` 비례 | 현재 재현 실패, 전면 교체 |
 | 공개→그룹 전환 | 모집·책임자 + member `N` + pending `A`, 신청 조회는 현재 최대 20 | 모집·listing | `N+A`, 20건 절단 | 자격 불일치 집계 사용 |
@@ -137,7 +137,7 @@ updatedAt
 
 - 동일 `characterId + raidId + cycleKey`에서 `active`와 `completed`는 한 문서 안에서 상호 배타적이다.
 - 다른 난이도는 기존 정책대로 같은 `raidId` 귀속을 공유한다.
-- 파티 완료는 `active → completed`, 완료 취소는 동일 회차·동일 모집의 `completed → active`, 다음 주차 전환은 새 `cycleKey`의 `active`, 활성 해산·탈퇴는 문서 삭제다.
+- 파티 완료는 `active → completed`, 다음 주차 전환은 새 `cycleKey`의 `active`, 활성 해산·탈퇴는 문서 삭제다. 동일 주차의 공동 `completed → active` 전이는 제공하지 않는다.
 - 완료 후 해산은 `completed` 문서를 보존한다. 수동 체크는 `source: manual`, 파티 완료는 `source: party`로 구분하되 화면 체크와 참가 차단은 같은 상태를 읽는다.
 - 별도 `activeRaidAssignments`와 `weeklyRaidClaims`를 신규 명령에서 함께 유지하지 않는다.
 
@@ -240,7 +240,7 @@ occurredAt
 | Character 변경·자리 이동·교환 | 구성 요약의 대상 1~2칸만 revision과 함께 변경한다. membership·slot도 대상 1~2명만 갱신하고 공용 이벤트는 실제 사건 수만큼 1~2건 기록한다. |
 | 탈퇴·추방·파티장 승계 | 대상과 필요 시 후임 한 명만 변경한다. 구성 요약에서 후임을 결정하고 공용 이벤트 1건을 남긴다. 그룹 listing을 포함해 일반 제거 최대 5건, 파티장 승계 최대 6건의 쓰기로 제한하며 기존 파티장 개인 탈퇴·자동 승계 제품 정책을 유지한다. |
 | 전체 완료 | 모집 원본의 회차 상태와 최대 8개 `raidState`를 한 Transaction에서 `completed`로 확정한다. 기존 assignment 삭제와 Claim 생성을 두 종류 문서로 나누지 않는다. |
-| 완료 취소 | 완료 Snapshot과 `lastCommandId`를 검증하고 같은 최대 8개 `raidState`를 `completed → active`로 원자 복원한다. 취소 가능 시간과 다른 점유 충돌 검사는 유지한다. |
+| 완료 취소 | 제품 기능에서 제거한다. 기존 명령·UI·Rules create/update 허용은 폐쇄하고 과거 이벤트 읽기 호환만 유지한다. |
 | 다음 주차 전환 | 모집 원본과 최대 8개 `raidState`의 `cycleKey`·상태를 한 Transaction으로 전환한다. 이전·새 주차 혼합 상태를 만들지 않는다. |
 | 모집 해산 | 모집 원본을 `disbanded`로 확정하고 활성 `raidState`만 최대 8건 해제한다. membership·slot·application·group listing은 즉시 삭제하지 않으며 부모 종료 상태로 기능에서 제외한다. 완료 후 마무리 해산은 `completed` `raidState`를 보존한다. |
 | 그룹 전용 전환 | 그룹 자격 집계값이 0일 때만 전환하고 listing은 모집 원본의 동일 revision Projection으로 갱신한다. |
