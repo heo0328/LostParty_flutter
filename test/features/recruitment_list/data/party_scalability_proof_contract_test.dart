@@ -48,6 +48,19 @@ void main() {
     expect(source, isNot(contains('/slots/')));
   });
 
+  test('공용 완료 이벤트는 8개 대상을 문서 추가 조회 없이 한 번씩 검증한다', () {
+    final source = functionSource(
+      'allEventTargetsMatch',
+      'validV2EventPayload',
+    );
+
+    expect(source.split('eventTargetMatches(').length - 1, 8);
+    expect(source, isNot(contains('get(')));
+    expect(source, isNot(contains('getAfter(')));
+    expect(source, isNot(contains('exists(')));
+    expect(source, isNot(contains('existsAfter(')));
+  });
+
   test('그룹 모집 종료 검증은 변경 후 그룹 원본만 한 번 읽는다', () {
     final source = functionSource(
       'validGroupLifecycleCount',
@@ -66,6 +79,8 @@ void main() {
     expect(emulatorTest, contains("'disband'"));
     expect(emulatorTest, contains('{ omitLast: true }'));
     expect(emulatorTest, contains('{ staleRevision: true }'));
+    expect(emulatorTest, contains('omitEventTarget: true'));
+    expect(emulatorTest, contains('tamperEventCharacter: true'));
     expect(emulatorTest, contains("authenticatedContext('outsider-auth')"));
     expect(emulatorTest, contains('completedDisband: true'));
     expect(emulatorTest, contains('closesActiveRecruitment'));
@@ -83,6 +98,7 @@ void main() {
     expect(productionRules, contains('match /raidStates/{stateId}'));
     expect(productionRules, contains('function validAtomicLifecycleUpdate('));
     expect(productionRules, contains('function validAtomicRaidStateUpdate('));
+    expect(productionRules, contains('function atomicAllEventTargetsMatch('));
     expect(productionRules, isNot(contains('function validLifecycleUpdate(')));
     expect(productionRules, isNot(contains('function validRaidStateUpdate(')));
   });

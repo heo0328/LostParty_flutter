@@ -114,7 +114,10 @@ class PartyEventMapper {
         difficultyId: _string(data['difficultyId']),
         actorPlayerId: _string(data['actorPlayerId']),
         targetPlayerId: _string(data['targetPlayerId']),
-        characterId: _string(data['characterId']),
+        characterId: sharedHistoryCharacterId(
+          data,
+          recipientPlayerId: recipientPlayerId,
+        ),
         characterNameSnapshot: _string(data['characterNameSnapshot']),
         classNameSnapshot: _string(data['classNameSnapshot']),
         role: _string(data['role']),
@@ -131,6 +134,38 @@ class PartyEventMapper {
     } on FormatException {
       return null;
     }
+  }
+
+  /// 공용 완료 이벤트에서 현재 수신자의 Character를 선택한다.
+  ///
+  /// schemaVersion 2는 수신자별 [completionTargets]를 사용하고, 과거
+  /// 공용 이벤트의 상단 [characterId]는 읽기 호환으로만 유지한다.
+  static String? sharedHistoryCharacterId(
+    Map<String, Object?> data, {
+    required String recipientPlayerId,
+  }) {
+    final targets = data['completionTargets'];
+    if (targets is List) {
+      String? characterId;
+      for (final raw in targets) {
+        if (raw is! Map) return null;
+        final target = Map<String, Object?>.from(raw);
+        final playerId = target['playerId'];
+        final candidateCharacterId = target['characterId'];
+        if (playerId is! String ||
+            playerId.isEmpty ||
+            candidateCharacterId is! String ||
+            candidateCharacterId.isEmpty) {
+          return null;
+        }
+        if (playerId == recipientPlayerId) {
+          if (characterId != null) return null;
+          characterId = candidateCharacterId;
+        }
+      }
+      return characterId;
+    }
+    return _string(data['characterId']);
   }
 
   static String _sharedWireType(String type) => switch (type) {

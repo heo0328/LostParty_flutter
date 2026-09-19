@@ -27,6 +27,13 @@ function targets(memberCount) {
   }));
 }
 
+function partySlots(memberCount) {
+  return Array.from({ length: memberCount }, (_, index) => ({
+    playerId: `player-${index}`,
+    characterId: `character-${index}`,
+  }));
+}
+
 function stateRef(db, target) {
   return db.doc(`players/${target.playerId}/raidStates/${target.stateId}`);
 }
@@ -54,12 +61,15 @@ async function seed(
     });
     await db.doc(`recruitments/${recruitmentId}`).set({
       recruitmentId,
+      raidId: 'raid-1',
+      difficultyId: 'hard',
       leaderPlayerId,
       groupId,
       status,
       continueTogether,
       currentCycleStatus: cycleStatus,
       currentCycleKey: '2026-09-09',
+      partySlots: partySlots(memberCount),
       raidStateTargets: memberTargets,
       commandTargets: memberTargets,
       groupActiveRecruitmentCountAfter: 1,
@@ -121,6 +131,13 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
         ? recruitment.currentCycleStatus
         : 'active';
     const commandId = `${type}-${memberCount}-${nextRevision}`;
+    const completionTargets = options.omitEventTarget
+      ? recruitment.partySlots.slice(0, recruitment.partySlots.length - 1)
+      : options.tamperEventCharacter
+        ? recruitment.partySlots.map((target, index) => index === 0
+          ? { ...target, characterId: 'other-character' }
+          : target)
+        : recruitment.partySlots;
     const closesActiveRecruitment =
       (type === 'complete' && recruitment.continueTogether === false)
       || (type === 'disband' && recruitment.status === 'active');
@@ -184,7 +201,9 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
     }
 
     transaction.set(db.doc(`partyEvents/${commandId}`), {
-      schemaVersion: 1,
+      schemaVersion: (type === 'complete' || type === 'cancelCompletion')
+        ? 2
+        : 1,
       eventId: commandId,
       recruitmentId,
       type,
@@ -192,6 +211,12 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
       commandRevision: nextRevision,
       audiencePlayerIds: memberTargets.map((target) => target.playerId),
       actorPlayerId: leaderPlayerId,
+      ...((type === 'complete' || type === 'cancelCompletion') ? {
+        raidId: recruitment.raidId,
+        difficultyId: recruitment.difficultyId,
+        cycleKey: recruitment.currentCycleKey,
+        completionTargets,
+      } : {}),
       occurredAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
   });
@@ -256,6 +281,22 @@ async function main() {
       lifecycleTransaction(leaderDb, 8, 'complete', { staleRevision: true }),
     );
     console.log('PASS: stale revision denied');
+
+    await seed(testEnv, 8);
+    await assertFails(
+      lifecycleTransaction(leaderDb, 8, 'complete', {
+        omitEventTarget: true,
+      }),
+    );
+    console.log('PASS: incomplete completion event targets denied');
+
+    await seed(testEnv, 8);
+    await assertFails(
+      lifecycleTransaction(leaderDb, 8, 'complete', {
+        tamperEventCharacter: true,
+      }),
+    );
+    console.log('PASS: forged completion event character denied');
 
     await seed(testEnv, 8);
     const outsiderDb = testEnv.authenticatedContext('outsider-auth').firestore();

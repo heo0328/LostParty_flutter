@@ -85,6 +85,67 @@ void main() {
     expect(PartyEventType.partyCompleted.isRaidHistoryEvent, isTrue);
     expect(PartyEventType.memberJoined.isRaidHistoryEvent, isFalse);
   });
+
+  test('공용 완료 이벤트는 수신자별 Character 대상을 선택한다', () {
+    final data = <String, Object?>{
+      'schemaVersion': 2,
+      'eventId': 'complete-1',
+      'type': 'complete',
+      'recruitmentId': 'party',
+      'commandRevision': 2,
+      'audiencePlayerIds': ['player-1', 'player-2'],
+      'actorPlayerId': 'player-1',
+      'raidId': 'raid-1',
+      'difficultyId': 'hard',
+      'cycleKey': '2026-09-16',
+      'completionTargets': [
+        {'playerId': 'player-1', 'characterId': 'character-1'},
+        {'playerId': 'player-2', 'characterId': 'character-2'},
+      ],
+      'occurredAt': DateTime.utc(2026, 9, 18),
+    };
+
+    final event = mapper.mapShared(data, recipientPlayerId: 'player-2');
+
+    expect(event, isNotNull);
+    expect(event!.knownType, PartyEventType.partyCompleted);
+    expect(event.characterId, 'character-2');
+    expect(
+      PartyEventMapper.sharedHistoryCharacterId(
+        data,
+        recipientPlayerId: 'player-2',
+      ),
+      'character-2',
+    );
+  });
+
+  test('공용 완료 대상이 누락·중복·손상되면 Character를 선택하지 않는다', () {
+    expect(
+      PartyEventMapper.sharedHistoryCharacterId({
+        'completionTargets': [
+          {'playerId': 'other', 'characterId': 'character-1'},
+        ],
+      }, recipientPlayerId: 'player-1'),
+      isNull,
+    );
+    expect(
+      PartyEventMapper.sharedHistoryCharacterId({
+        'completionTargets': [
+          {'playerId': 'player-1', 'characterId': 'character-1'},
+          {'playerId': 'player-1', 'characterId': 'character-2'},
+        ],
+      }, recipientPlayerId: 'player-1'),
+      isNull,
+    );
+    expect(
+      PartyEventMapper.sharedHistoryCharacterId({
+        'completionTargets': [
+          {'playerId': 'player-1'},
+        ],
+      }, recipientPlayerId: 'player-1'),
+      isNull,
+    );
+  });
 }
 
 DateTime _toDateTime(Object? value) {

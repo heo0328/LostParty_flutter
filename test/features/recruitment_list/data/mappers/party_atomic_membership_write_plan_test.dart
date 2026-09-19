@@ -205,6 +205,8 @@ void main() {
 
 PartyCommandAggregate _aggregate() => PartyCommandAggregate(
   recruitmentId: 'recruitment-1',
+  raidId: 'raid-1',
+  difficultyId: 'hard',
   leaderPlayerId: 'player-0',
   currentCycleKey: '2026-09-09',
   currentCycleStatus: PartyRaidStateStatus.active,

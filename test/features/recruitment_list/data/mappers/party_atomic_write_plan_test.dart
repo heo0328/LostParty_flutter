@@ -9,6 +9,8 @@ void main() {
 
   PartyCommandAggregate aggregate() => PartyCommandAggregate(
     recruitmentId: 'recruitment-1',
+    raidId: 'raid-1',
+    difficultyId: 'hard',
     leaderPlayerId: 'player-0',
     currentCycleKey: '2026-09-09',
     currentCycleStatus: PartyRaidStateStatus.active,
@@ -62,11 +64,20 @@ void main() {
     expect(plan.recruitmentPatch['revision'], 5);
     expect(plan.raidStateWrites.single.patch?['status'], 'completed');
     expect(plan.raidStateWrites.single.patch?['revision'], same(incrementOne));
+    expect(plan.eventDocument['schemaVersion'], 2);
+    expect(plan.eventDocument['raidId'], 'raid-1');
+    expect(plan.eventDocument['difficultyId'], 'hard');
+    expect(plan.eventDocument['cycleKey'], '2026-09-09');
+    expect(plan.eventDocument['completionTargets'], [
+      {'playerId': 'player-0', 'characterId': 'character-0'},
+    ]);
   });
 
   test('1회성 모집 완료는 반복방과 달리 모집 자체도 completed가 된다', () {
     final oneShot = PartyCommandAggregate(
       recruitmentId: 'recruitment-1',
+      raidId: 'raid-1',
+      difficultyId: 'hard',
       leaderPlayerId: 'player-0',
       currentCycleKey: '2026-09-09',
       currentCycleStatus: PartyRaidStateStatus.active,
@@ -113,6 +124,8 @@ void main() {
       PartyRaidStateWriteAction.delete,
     );
     expect(plan.eventDocument['audiencePlayerIds'], ['player-0']);
+    expect(plan.eventDocument['schemaVersion'], 1);
+    expect(plan.eventDocument, isNot(contains('completionTargets')));
   });
 
   test('8인 그룹 1회성 완료도 12건의 제한된 쓰기로 끝난다', () {
@@ -136,6 +149,8 @@ void main() {
       command: eightPlayerCommand,
       aggregate: PartyCommandAggregate(
         recruitmentId: 'recruitment-1',
+        raidId: 'raid-1',
+        difficultyId: 'hard',
         leaderPlayerId: 'player-0',
         currentCycleKey: '2026-09-09',
         currentCycleStatus: PartyRaidStateStatus.active,
@@ -166,6 +181,10 @@ void main() {
 
     expect(plan.maximumWriteCount, 12);
     expect(plan.raidStateWrites, hasLength(8));
+    expect(
+      plan.eventDocument['completionTargets'],
+      isA<List<Object?>>().having((value) => value.length, 'length', 8),
+    );
     expect(plan.closesActiveGroupRecruitment, isTrue);
     expect(plan.groupListingAction, PartyGroupListingWriteAction.delete);
   });
@@ -174,6 +193,8 @@ void main() {
     final stale = command(PartyAtomicCommandType.complete);
     final current = PartyCommandAggregate(
       recruitmentId: 'recruitment-1',
+      raidId: 'raid-1',
+      difficultyId: 'hard',
       leaderPlayerId: 'player-0',
       currentCycleKey: '2026-09-09',
       currentCycleStatus: PartyRaidStateStatus.active,
@@ -251,6 +272,8 @@ void main() {
   test('완료 후 해산은 completed raidState 보존을 위해 대상이 없어야 한다', () {
     final completed = PartyCommandAggregate(
       recruitmentId: 'recruitment-1',
+      raidId: 'raid-1',
+      difficultyId: 'hard',
       leaderPlayerId: 'player-0',
       currentCycleKey: '2026-09-09',
       currentCycleStatus: PartyRaidStateStatus.completed,

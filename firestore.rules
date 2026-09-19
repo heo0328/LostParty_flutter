@@ -1459,14 +1459,63 @@ service cloud.firestore {
         && atomicCommandIncludes(recruitment, playerId, stateId);
     }
 
+    function atomicEventTargetMatches(data, recruitment, index) {
+      return index >= recruitment.partySlots.size()
+        || (index < data.completionTargets.size()
+          && data.completionTargets[index].keys().hasOnly([
+            'playerId', 'characterId'
+          ])
+          && data.completionTargets[index].playerId
+            == recruitment.partySlots[index].playerId
+          && data.completionTargets[index].characterId
+            == recruitment.partySlots[index].characterId
+          && data.audiencePlayerIds[index]
+            == recruitment.partySlots[index].playerId);
+    }
+
+    function atomicAllEventTargetsMatch(data, recruitment) {
+      return data.audiencePlayerIds.size() == recruitment.partySlots.size()
+        && data.completionTargets.size() == recruitment.partySlots.size()
+        && recruitment.partySlots.size() >= 1
+        && recruitment.partySlots.size() <= 8
+        && atomicEventTargetMatches(data, recruitment, 0)
+        && atomicEventTargetMatches(data, recruitment, 1)
+        && atomicEventTargetMatches(data, recruitment, 2)
+        && atomicEventTargetMatches(data, recruitment, 3)
+        && atomicEventTargetMatches(data, recruitment, 4)
+        && atomicEventTargetMatches(data, recruitment, 5)
+        && atomicEventTargetMatches(data, recruitment, 6)
+        && atomicEventTargetMatches(data, recruitment, 7);
+    }
+
+    function atomicValidV2LifecycleEventPayload(data, recruitment) {
+      return data.schemaVersion == 2
+        && ((data.type == 'complete' || data.type == 'cancelCompletion')
+          ? (data.keys().hasOnly([
+              'schemaVersion', 'eventId', 'recruitmentId', 'type', 'commandId',
+              'commandRevision', 'audiencePlayerIds', 'actorPlayerId',
+              'raidId', 'difficultyId', 'cycleKey', 'completionTargets',
+              'occurredAt'
+            ])
+            && data.raidId == recruitment.raidId
+            && data.difficultyId == recruitment.difficultyId
+            && data.cycleKey == recruitment.currentCycleKey
+            && data.completionTargets is list
+            && atomicAllEventTargetsMatch(data, recruitment))
+          : data.keys().hasOnly([
+              'schemaVersion', 'eventId', 'recruitmentId', 'type', 'commandId',
+              'commandRevision', 'audiencePlayerIds', 'actorPlayerId',
+              'occurredAt'
+            ]));
+    }
+
     function validAtomicLifecyclePartyEvent(data) {
       let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
       return atomicIsLifecycleCommand(recruitment)
-        && data.keys().hasOnly([
+        && ((data.schemaVersion == 1 && data.keys().hasOnly([
           'schemaVersion', 'eventId', 'recruitmentId', 'type', 'commandId',
           'commandRevision', 'audiencePlayerIds', 'actorPlayerId', 'occurredAt'
-        ])
-        && data.schemaVersion == 1
+        ])) || atomicValidV2LifecycleEventPayload(data, recruitment))
         && data.eventId is string
         && data.type == recruitment.lastCommandType
         && data.commandId == recruitment.lastCommandId

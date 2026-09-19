@@ -8,6 +8,12 @@
 - 승인 후 SHA-256 `51146C8DF8B12493AE5B3DACAD47D533A74D242C25F57930FAAA49BF2E0280CC`의 `firestore.rules`만 운영 `lost-party`에 1회 게시 시도했다. 원격 컴파일 `projects/lost-party:test`가 HTTP 503 `UNAVAILABLE`을 반환해 `/rulesets` 업로드와 `/releases` 반영에는 도달하지 않았다. 운영 Rules는 갱신되지 않은 상태로 판정하며 같은 명령을 반복하지 않는다.
 - 이후 사용자가 Firebase 콘솔에서 Rules를 별도로 게시했다고 확인했다. AI는 활성 게시 소스와 로컬 SHA-256을 직접 대조하지 않았으므로 내용 일치는 단정하지 않는다. 게시 후 실기기에서 확인된 다인 전체 완료 권한 실패는 Rules 컴파일 실패가 아니라 앱이 타인 private `raidState`를 선조회하는 구조와 일치하며, 완료 기록 누락·체크박스 비활성은 각각 이벤트 Payload와 UI 명령 연결 문제로 분리한다.
 
+## 2026-09-19 F6-B2-R2 공용 완료 이벤트 검증
+
+- lifecycle event schemaVersion 2의 완료·완료 취소 Payload에 공통 `raidId/difficultyId/cycleKey`와 최대 8개 `completionTargets`를 추가했다. Rules는 한 번 읽은 변경 후 모집의 `partySlots`와 audience·Player·Character를 인덱스별로 비교하며, 대상별 추가 문서 조회나 Player 이벤트 fan-out은 추가하지 않았다.
+- schemaVersion 1 lifecycle event create는 구 앱 호환을 위해 기존 필드 계약으로 유지하고, 새 schemaVersion 2 완료 이벤트의 대상 누락·Character 위조는 거절하도록 demo 시나리오를 추가했다.
+- Dart 표적·정적 계약과 JS 문법은 통과했다. 기존 Android Studio JBR로 demo Emulator를 실행했으나 Rules 로딩 단계에서 `503 Network closed for unknown reason`가 발생해 허용·거절 시나리오에는 도달하지 못했다. 작업 브랜치 CI 통과 전에는 Rules 동작 검증 완료로 기록하지 않으며 운영 Rules도 게시하지 않았다.
+
 ## 2026-09-13 파티 통합 오류 Snapshot allowlist 배포 시도
 
 - 작업 브랜치 `codex/plan-release-stabilization-fixes`의 추적 커밋 `8b4d5ce`는 파티 Character 변경의 `affectedKeys`에 표시용 `buildIntegritySnapshot` 1개만 추가한다. 관련 문자열 계약 테스트 2건은 통과했다.

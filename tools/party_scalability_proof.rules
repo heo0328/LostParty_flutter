@@ -180,13 +180,62 @@ service cloud.firestore {
         && commandIncludes(recruitment, playerId, stateId);
     }
 
+    function eventTargetMatches(data, recruitment, index) {
+      return index >= recruitment.partySlots.size()
+        || (index < data.completionTargets.size()
+          && data.completionTargets[index].keys().hasOnly([
+            'playerId', 'characterId'
+          ])
+          && data.completionTargets[index].playerId
+            == recruitment.partySlots[index].playerId
+          && data.completionTargets[index].characterId
+            == recruitment.partySlots[index].characterId
+          && data.audiencePlayerIds[index]
+            == recruitment.partySlots[index].playerId);
+    }
+
+    function allEventTargetsMatch(data, recruitment) {
+      return data.audiencePlayerIds.size() == recruitment.partySlots.size()
+        && data.completionTargets.size() == recruitment.partySlots.size()
+        && recruitment.partySlots.size() >= 1
+        && recruitment.partySlots.size() <= 8
+        && eventTargetMatches(data, recruitment, 0)
+        && eventTargetMatches(data, recruitment, 1)
+        && eventTargetMatches(data, recruitment, 2)
+        && eventTargetMatches(data, recruitment, 3)
+        && eventTargetMatches(data, recruitment, 4)
+        && eventTargetMatches(data, recruitment, 5)
+        && eventTargetMatches(data, recruitment, 6)
+        && eventTargetMatches(data, recruitment, 7);
+    }
+
+    function validV2EventPayload(data, recruitment) {
+      return data.schemaVersion == 2
+        && ((data.type == 'complete' || data.type == 'cancelCompletion')
+          ? (data.keys().hasOnly([
+              'schemaVersion', 'eventId', 'recruitmentId', 'type', 'commandId',
+              'commandRevision', 'audiencePlayerIds', 'actorPlayerId',
+              'raidId', 'difficultyId', 'cycleKey', 'completionTargets',
+              'occurredAt'
+            ])
+            && data.raidId == recruitment.raidId
+            && data.difficultyId == recruitment.difficultyId
+            && data.cycleKey == recruitment.currentCycleKey
+            && data.completionTargets is list
+            && allEventTargetsMatch(data, recruitment))
+          : data.keys().hasOnly([
+              'schemaVersion', 'eventId', 'recruitmentId', 'type', 'commandId',
+              'commandRevision', 'audiencePlayerIds', 'actorPlayerId',
+              'occurredAt'
+            ]));
+    }
+
     function validEvent(data) {
       let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
-      return data.keys().hasOnly([
+      return ((data.schemaVersion == 1 && data.keys().hasOnly([
           'schemaVersion', 'eventId', 'recruitmentId', 'type', 'commandId',
           'commandRevision', 'audiencePlayerIds', 'actorPlayerId', 'occurredAt'
-        ])
-        && data.schemaVersion == 1
+        ])) || validV2EventPayload(data, recruitment))
         && data.eventId is string
         && data.type == recruitment.lastCommandType
         && data.commandId == recruitment.lastCommandId

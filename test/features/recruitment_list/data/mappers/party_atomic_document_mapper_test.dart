@@ -4,6 +4,8 @@ import 'package:lost_party/features/recruitment_list/data/mappers/party_atomic_d
 void main() {
   Map<String, Object?> document() => {
     'recruitmentId': 'recruitment-1',
+    'raidId': 'raid-1',
+    'difficultyId': 'hard',
     'leaderPlayerId': 'player-0',
     'currentCycleKey': '2026-09-09',
     'currentCycleStatus': 'active',
@@ -31,6 +33,8 @@ void main() {
     final aggregate = PartyAtomicDocumentMapper.aggregate(document());
 
     expect(aggregate.recruitmentId, 'recruitment-1');
+    expect(aggregate.raidId, 'raid-1');
+    expect(aggregate.difficultyId, 'hard');
     expect(aggregate.memberCount, 1);
     expect(aggregate.partySlots.single.classKey, '버서커');
   });

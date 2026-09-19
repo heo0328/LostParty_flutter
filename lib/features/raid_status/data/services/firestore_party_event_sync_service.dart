@@ -65,14 +65,14 @@ class FirestorePartyEventSyncService implements PartyEventSyncService {
 
         final historyStatus = _historyStatus(mapped.knownType);
         if (historyStatus != null) {
-          final characterId = value['characterId'];
-          final raidId = value['raidId'];
-          final difficultyId = value['difficultyId'];
-          final cycleKey = value['cycleKey'];
-          if (characterId is String &&
-              raidId is String &&
-              difficultyId is String &&
-              cycleKey is String) {
+          final characterId = mapped.characterId;
+          final raidId = mapped.raidId;
+          final difficultyId = mapped.difficultyId;
+          final cycleKey = mapped.cycleKey;
+          if (characterId != null &&
+              raidId != null &&
+              difficultyId != null &&
+              cycleKey != null) {
             await _database.syncPartyHistoryEvent(
               eventId: mapped.eventId,
               playerId: playerId,

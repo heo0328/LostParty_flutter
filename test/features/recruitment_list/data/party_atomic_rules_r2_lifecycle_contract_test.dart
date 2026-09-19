@@ -34,6 +34,10 @@ void main() {
     final end = rules.indexOf('match /recruitments/{recruitmentId}', start);
     final block = rules.substring(start, end);
     expect(block, contains('validAtomicLifecyclePartyEvent('));
+    expect(rules, contains('function atomicAllEventTargetsMatch('));
+    expect(rules, contains("'completionTargets'"));
+    expect(rules, contains('data.raidId == recruitment.raidId'));
+    expect(rules, contains('data.difficultyId == recruitment.difficultyId'));
   });
 
   test('R2 listing·group update는 기존 분기와 lifecycle OR를 함께 둔다', () {

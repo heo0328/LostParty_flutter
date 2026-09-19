@@ -8,6 +8,8 @@ class PartyAtomicDocumentMapper {
     final slots = _list(data['partySlots']).map(_slot).toList(growable: false);
     return PartyCommandAggregate(
       recruitmentId: _string(data, 'recruitmentId'),
+      raidId: _string(data, 'raidId'),
+      difficultyId: _string(data, 'difficultyId'),
       leaderPlayerId: _string(data, 'leaderPlayerId'),
       currentCycleKey: _string(data, 'currentCycleKey'),
       currentCycleStatus: _raidStatus(data['currentCycleStatus']),

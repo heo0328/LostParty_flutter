@@ -149,6 +149,8 @@ class PartyCommandEnvelope {
 class PartyCommandAggregate {
   PartyCommandAggregate({
     required this.recruitmentId,
+    required this.raidId,
+    required this.difficultyId,
     required this.leaderPlayerId,
     required this.currentCycleKey,
     required this.currentCycleStatus,
@@ -165,6 +167,8 @@ class PartyCommandAggregate {
     this.lastCommandType,
   }) : partySlots = List.unmodifiable(partySlots) {
     if (recruitmentId.isEmpty ||
+        raidId.isEmpty ||
+        difficultyId.isEmpty ||
         leaderPlayerId.isEmpty ||
         currentCycleKey.isEmpty ||
         revision < 0) {
@@ -206,6 +210,8 @@ class PartyCommandAggregate {
   }
 
   final String recruitmentId;
+  final String raidId;
+  final String difficultyId;
   final String leaderPlayerId;
   final String currentCycleKey;
   final PartyRaidStateStatus currentCycleStatus;

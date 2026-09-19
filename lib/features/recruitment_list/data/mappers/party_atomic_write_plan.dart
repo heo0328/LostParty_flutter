@@ -177,7 +177,11 @@ class PartyAtomicWritePlan {
   ];
 
   Map<String, Object?> get eventDocument => {
-    'schemaVersion': 1,
+    'schemaVersion':
+        command.type == PartyAtomicCommandType.complete ||
+            command.type == PartyAtomicCommandType.cancelCompletion
+        ? 2
+        : 1,
     'eventId': command.commandId,
     'recruitmentId': command.recruitmentId,
     'type': command.type.name,
@@ -187,6 +191,16 @@ class PartyAtomicWritePlan {
       for (final slot in aggregate.partySlots) slot.playerId,
     ],
     'actorPlayerId': command.actorPlayerId,
+    if (command.type == PartyAtomicCommandType.complete ||
+        command.type == PartyAtomicCommandType.cancelCompletion) ...{
+      'raidId': aggregate.raidId,
+      'difficultyId': aggregate.difficultyId,
+      'cycleKey': aggregate.currentCycleKey,
+      'completionTargets': [
+        for (final slot in aggregate.partySlots)
+          {'playerId': slot.playerId, 'characterId': slot.characterId},
+      ],
+    },
     'occurredAt': serverTimestamp,
   };
 

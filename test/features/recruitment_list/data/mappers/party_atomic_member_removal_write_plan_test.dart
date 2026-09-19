@@ -121,6 +121,8 @@ PartyCommandAggregate _aggregate({
   int nonGroupMemberCount = 1,
 }) => PartyCommandAggregate(
   recruitmentId: 'recruitment-1',
+  raidId: 'raid-1',
+  difficultyId: 'hard',
   leaderPlayerId: 'leader',
   currentCycleKey: '2026-09-09',
   currentCycleStatus: PartyRaidStateStatus.active,
@@ -145,6 +147,8 @@ PartyCommandAggregate _aggregate({
 
 PartyCommandAggregate _soloAggregate() => PartyCommandAggregate(
   recruitmentId: 'recruitment-1',
+  raidId: 'raid-1',
+  difficultyId: 'hard',
   leaderPlayerId: 'leader',
   currentCycleKey: '2026-09-09',
   currentCycleStatus: PartyRaidStateStatus.active,

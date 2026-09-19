@@ -3135,3 +3135,10 @@
 - `FirestorePartyAtomicCommandRepository`가 완료·완료 취소·주차 전환에서 모든 대상 Player의 private `raidState`를 선조회하던 경로를 제거했다. 해산과 동일하게 클라이언트는 대상 경로만 구성하고, 모집 Aggregate 대상 일치와 각 state 전이는 기존 Write Plan·Rules에 맡긴다.
 - 인증 binding·모집 Aggregate·필요 시 그룹 원본 읽기, 공용 이벤트 한 건과 최대 8인 제한은 유지했다. Rules·이벤트 Payload·UI·운영 Firebase는 이번 구간에서 변경하지 않았다.
 - Repository 계약 5건, Write Plan 9건, lifecycle Rules 계약 5건, 확장성 계약 6건 등 표적 25건과 변경 파일 정적 분석이 통과했다. 실제 앱 인증 흐름의 공개·그룹 1·2·4·8인 Emulator 검증은 R4에 남기므로 전체 완료 UX나 B2 완료로 판정하지 않는다.
+
+# 2026-09-19 F6-B2-R2 공용 완료 이벤트 Snapshot 구현
+
+- 원자 lifecycle Aggregate에 `raidId/difficultyId`를 포함하고, schemaVersion 2 공용 완료·완료 취소 이벤트에 공통 `raidId/difficultyId/cycleKey`와 최대 8개 `completionTargets[{playerId, characterId}]`를 기록한다. 이벤트 문서 수는 한 건으로 유지했다.
+- Rules는 변경 후 모집 `partySlots`와 audience·완료 대상을 같은 순서로 최대 8개 한 번씩 검증한다. 각 대상 검증에는 추가 문서 조회가 없으며 schemaVersion 1 lifecycle create는 구 앱 호환 계약으로 유지한다.
+- Event Mapper는 공용 대상에서 현재 Player의 Character를 하나만 선택하고, 누락·중복·손상 대상은 완료 기록으로 사용하지 않는다. Sync는 매핑된 Character·레이드·난이도·주차를 Drift 완료 기록에 전달한다.
+- 관련 Flutter 표적 63건, 변경 파일 분석, JS 문법과 diff 검사가 통과했다. demo Emulator는 기존 Rules 로딩 503으로 시나리오 전에 중단돼 CI 검증을 남겼다. 운영 Rules 배포·실기기 테스트·R3 체크박스 복구는 수행하지 않았고 F6-B2-R 전체 완료로 판정하지 않는다.
