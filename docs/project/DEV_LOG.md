@@ -3165,3 +3165,12 @@
 - 반복방 다음 주차 전환은 현재 membership/`partySlots`를 근거로 누락 state를 생성하거나 같은 모집의 기존 state를 갱신한다. 새 주차 시간창은 정확히 7일이며 요청 시각이 시작 이상·종료 미만이어야 한다. 다른 모집·새 주차 수동 완료 state는 덮어쓰지 않는다.
 - 개인 완료·해제, 일반 멤버·파티장·마지막 1인, 그룹 전용 마지막 1인, 반복방 state 재생성 및 기존 lifecycle 표적 테스트와 핵심 변경 파일 분석은 통과했다. 전체 `flutter analyze`는 기존 lint를 포함한 50건을 반환했다. 전체 `flutter test`는 계약 갱신 전 1,183건 통과·13건 실패였고, 현재 작업에서 바뀐 legacy assignment 계약 테스트는 갱신 후 단독 통과했다. 기존 활동 Character Rules 문자열 및 Firebase 미초기화 최상위 위젯 테스트 등 기준선 실패는 남아 있어 전체 회귀 통과로 기록하지 않는다.
 - 로컬 Firestore Emulator는 CLI 설정 경로와 Android Studio JBR 21을 명시해 기동했으나 Rules 로딩 단계의 기존 `503 Network closed for unknown reason`로 시나리오 전에 중단됐다. 재시도하지 않는다. 운영 Rules 배포와 실기기 조작은 하지 않았으며, 다음 게이트는 작업 브랜치 커밋·demo Rules CI다.
+
+# 2026-09-19 F6-B2-R3 Rules 예산 복구 후속 체크포인트
+
+- R3 구현을 `dfe0440`, Rules 우선순위 보정을 `e660c4c`, 개인 완료 명령 표식과 마지막 1인 전용 경량 검증을 `b5769bf`로 작업 브랜치에 커밋·푸시했다. 현재 `feature/party-group-command-redesign`의 로컬과 원격은 `b5769bf`로 같고 작업 트리는 깨끗하다. `dev/main` 통합과 운영 Rules 게시, 실기기 조작은 하지 않았다.
+- `b5769bf`는 기존 모집 Aggregate의 `lastCommand*` 필드에 `personalComplete`를 기록해 개인 완료 하위 쓰기가 같은 원자 명령을 짧게 식별하도록 바꿨다. 새 문서나 Player별 이벤트 복제, 타인 private state 선읽기는 추가하지 않았다.
+- GitHub Actions `35443055507`에서 추적 Rules 컴파일, 개인 수동 완료·해제, 반복방 누락 state 재생성, 공개방 마지막 1인 완료·해산, 그룹방 마지막 1인 완료·listing/활성 수 정리가 통과했다. 이전 실행에서 막혔던 마지막 1인 개인 완료는 복구됐다.
+- 다음 다인방 시나리오 준비의 정상 신청 생성에서 application create·recruitment update·party event create가 함께 평가되며 Firestore Rules `maximum of 1000 expressions`에 도달했다. 일반 멤버 개인 완료 명령까지 도달하기 전 실패이므로 정상 신청 회귀이며 R3 완료로 볼 수 없다.
+- 단순 OR 순서 변경은 이미 실패했다. 다음 작업은 모집 update의 `personalComplete` 표식을 값싼 선행 게이트로 분리해 해당 명령에만 상세 개인 완료 검증을 평가하도록 하는 것이다. 신청 검증을 삭제·완화하지 않으며, 정상 신청·승인 뒤 일반 멤버 완료, 파티장 완료와 승계, 위조 후임 Snapshot 거절 순으로 같은 demo CI에서 확인한다.
+- 사용 한도나 세션 중단 시 재개 기준은 대화 요약이 아니라 추적 커밋, 깨끗한 작업 트리, `NEXT_WORK.md`의 첫 실패 단계와 CI 실행 ID다. 미커밋 변경이 있을 때는 소유·목적을 확인하기 전 초기화하지 않고, 검증 가능한 중간 단위는 작업 브랜치에 커밋·푸시한 뒤 남은 실패와 다음 한 동작을 문서에 기록한다.
