@@ -3199,3 +3199,9 @@
 - 개인 완료 Rules marker를 읽기 위해 `PartyAtomicCommandType.personalComplete`를 추가한 뒤 lifecycle 전용 `PartyAtomicWritePlan`의 exhaustive switch가 누락돼 debug build가 실패했다.
 - lifecycle command envelope는 개인 완료 marker 생성을 명시적으로 거절하고, Write Plan의 상태 판별도 `personalComplete`를 `false`로 처리하도록 보완했다. 개인 완료는 기존 전용 Repository/Transaction만 사용하며 lifecycle Write Plan의 허용 범위를 넓히지 않는다.
 - Domain·Write Plan 표적 테스트 16건이 통과했다. 동일 결과를 확인하는 전체 CI·인원수 반복 테스트·실기기 조작은 실행하지 않았으며, 사용자가 실제 debug build로 확인한다.
+# 2026-09-20 F6-B2 정상 완료 사이클 확인과 고아 참가 복구 설계
+
+- 사용자가 앞서 전달한 디바이스 체크리스트의 정상 파티 완료·해산·개인 체크 유지/해제·재참가 흐름이 모두 통과했다고 확인했다. 인원수별 동일 UI 테스트를 추가 반복하지 않는다.
+- 별도로 `players/kVn6KZwZQO6or3BjNYqX/raidStates/xseSyVxZXWhKYxlZEucb_kazeros_act4`가 존재하지 않는 모집 `td904kw3PEgWI1GwIfUP`을 `active`로 참조해 참가 표시, 수동 완료 상태 불일치, 신청 후 승인 권한 오류를 일으키는 것을 데이터로 확정했다.
+- 정상 완료 흐름의 회귀와 과거 콘솔 삭제로 생긴 고아 데이터를 분리했다. 본인 단건 고아 active state는 F6-D의 명시적 `참가 기록 정리`로 복구하고, 다른 Character·raid의 고아 pending 신청 및 다수 데이터 일괄 정리는 별도 운영 도구 백로그로 유지한다.
+- 이번 단계는 설계·문서 정리만 수행했다. 기능 코드·Rules·운영 데이터·브랜치 통합은 변경하지 않았다.

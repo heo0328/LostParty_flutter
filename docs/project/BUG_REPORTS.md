@@ -583,6 +583,14 @@
 
 ## 백로그 연결
 
+### 2026-09-20 삭제된 모집을 참조하는 active raidState 확정
+
+- 실기기 정상 완료 사이클은 통과했으나 한 Character의 4막이 실제 참가방 없이 `참가 중`으로 표시되고, 수동 완료 시 `이 캐릭터의 참가·완료 기록이 일치하지 않습니다. 새로고침 후 다시 확인해 주세요.`가 노출됐다. 별도 새로고침 기능은 없고 서버 고아 데이터는 재구독으로 복구되지 않으므로 문구도 부정확하다.
+- 확인 문서는 `players/kVn6KZwZQO6or3BjNYqX/raidStates/xseSyVxZXWhKYxlZEucb_kazeros_act4`다. `status: active`, `source: party`, `cycleKey: 2026-09-16`, `recruitmentId: td904kw3PEgWI1GwIfUP`, `revision: 1`이며 `recruitments/td904kw3PEgWI1GwIfUP` 원본은 존재하지 않는다. 고아 참가 기록으로 확정한다.
+- 완료 근거와 겹쳐 빨간 불일치 표시가 나던 다른 항목은 사용자가 개인 체크 해제 후 사라졌지만, 이 active state는 연결 모집이 없어 탈퇴·승계·해산 후 완료 전환을 할 수 없으므로 남았다. 완료 체크→해제로 우회 삭제하지 않는다.
+- 다른 Character·raid에 해산된 방을 참조하는 pending 신청 두 건도 남아 있으나 이 4막 참가 표시의 직접 원인은 아니다. 본인 단건 orphan active 복구는 F6-D, 다수 고아 신청·상태의 운영 진단/정리는 별도 백로그로 분리한다.
+- 해결 계약은 [`WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md) §0.7과 [`NEXT_WORK.md`](NEXT_WORK.md) F6-D를 따른다. 현재 서버 문서는 보존하며 코드·Rules·데이터를 아직 변경하지 않았다.
+
 ### 2026-09-18 승인 실패와 수동 완료 실패 — 별도 원인으로 분리
 
 현재 판정:
