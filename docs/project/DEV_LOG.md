@@ -3193,3 +3193,9 @@
 - 실제 디바이스 2기로 같은 정상 UX 결과를 직접 확인할 수 있으면 동일 자동 UI·통합 테스트를 중복 실행하지 않는다. 자동 검증은 Security Rules 권한·위조 요청·동시성·원자성·주차 경계처럼 실기기로 만들기 어렵거나 안전하지 않은 경계에 집중한다.
 - 동일 구현의 인원수 검증은 2인·4인·8인을 반복하지 않고 현재 최대치인 8인 대표 사례 하나를 기본으로 한다. 마지막 1인 해산, 책임자 승계, 권한 거절처럼 상태 전이 자체가 다른 경우에만 별도 최소 사례를 유지한다.
 - 중간 작업은 포맷·diff 검토를 기본으로 하고 전체 테스트·분석·CI를 관성적으로 반복하지 않는다. 코드가 바뀌지 않은 동일 검증은 재사용하며, 디바이스 수동 확인은 사용자가 수행한다.
+
+# 2026-09-20 lifecycle 명령 enum 컴파일 회귀 수정
+
+- 개인 완료 Rules marker를 읽기 위해 `PartyAtomicCommandType.personalComplete`를 추가한 뒤 lifecycle 전용 `PartyAtomicWritePlan`의 exhaustive switch가 누락돼 debug build가 실패했다.
+- lifecycle command envelope는 개인 완료 marker 생성을 명시적으로 거절하고, Write Plan의 상태 판별도 `personalComplete`를 `false`로 처리하도록 보완했다. 개인 완료는 기존 전용 Repository/Transaction만 사용하며 lifecycle Write Plan의 허용 범위를 넓히지 않는다.
+- Domain·Write Plan 표적 테스트 16건이 통과했다. 동일 결과를 확인하는 전체 CI·인원수 반복 테스트·실기기 조작은 실행하지 않았으며, 사용자가 실제 debug build로 확인한다.

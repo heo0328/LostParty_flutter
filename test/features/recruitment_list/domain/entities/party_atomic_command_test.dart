@@ -136,6 +136,26 @@ void main() {
     );
   });
 
+  test('개인 완료 표식은 lifecycle 명령 envelope로 만들 수 없다', () {
+    expect(
+      () => PartyCommandEnvelope(
+        commandId: 'personal-complete-1',
+        recruitmentId: 'recruitment-1',
+        type: PartyAtomicCommandType.personalComplete,
+        actorPlayerId: 'player-1',
+        expectedRevision: 1,
+        expectedCycleKey: '2026-09-16',
+        targets: [
+          PartyCommandTarget(
+            playerId: 'player-1',
+            raidStateId: 'character-1_raid-1',
+          ),
+        ],
+      ),
+      throwsArgumentError,
+    );
+  });
+
   test('응답 유실 후 revision과 commandId로 적용 여부를 판정한다', () {
     final applied = aggregate(
       revision: 5,

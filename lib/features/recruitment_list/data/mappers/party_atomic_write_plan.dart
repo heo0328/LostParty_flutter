@@ -112,6 +112,7 @@ class PartyAtomicWritePlan {
         PartyAtomicCommandType.advanceCycle =>
           status == 'active' || status == 'completed',
         PartyAtomicCommandType.disband => status == 'active',
+        PartyAtomicCommandType.personalComplete => false,
       };
       if (!allowed) return false;
     }

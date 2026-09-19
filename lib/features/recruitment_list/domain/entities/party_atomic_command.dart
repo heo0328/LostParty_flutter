@@ -123,6 +123,9 @@ class PartyCommandEnvelope {
         expectedRevision < 0) {
       throw ArgumentError('명령 식별자와 revision이 올바르지 않습니다.');
     }
+    if (type == PartyAtomicCommandType.personalComplete) {
+      throw ArgumentError('개인 완료는 lifecycle 명령으로 만들 수 없습니다.');
+    }
     if (targets.length > 8 ||
         (targets.isEmpty && type != PartyAtomicCommandType.disband)) {
       throw ArgumentError('명령 대상은 최대 8개이며 해산 외에는 필수입니다.');
