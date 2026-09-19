@@ -3119,4 +3119,4 @@
 - 운영 Router의 내 계정·모집 생성·신청 후보에 공통 읽기를 연결했다. completed는 완료로만 표시하고 active는 기존 `PartyCreateOccupancyGate`의 종료·만료·고아 판정을 거쳐 참가 중으로 표시해 두 상태를 중복 경고하지 않는다.
 - B2-A는 읽기 단계이므로 현재 `active/completed/inconsistent` state 체크박스를 읽기 전용으로 뒀다. 구 Claim 명령이 state를 변경하지 못하고도 성공을 표시하는 회귀를 막고, 신규 state 쓰기와 활성 참가 개인 완료는 각각 B2-B/C에 남겼다.
 - Rules는 본인 `raidStates/activeRaidAssignments` list만 열고 타인 list·legacy assignment 쓰기를 계속 거절한다. 표적 47건, 변경 21개 Dart 파일 analyze, JS 문법과 `git diff --check`가 통과했다. 전체 `flutter test`는 1,171건 통과·17건 실패로 직전 기준선 17건을 유지했고, 전체 analyze는 기존 38건만 보고했다.
-- 로컬 Rules Emulator는 Android Studio JBR 21로 기동했으나 Rules 로딩 단계의 기존 `503 Network closed for unknown reason`로 중단돼 허용·거절 시나리오를 실행하지 못했다. Rules 게시·실기기·`dev/main` 통합은 하지 않았다. 다음 게이트는 작업 브랜치 CI의 demo Emulator 통과다.
+- 로컬 Rules Emulator는 Android Studio JBR 21로 기동했으나 Rules 로딩 단계의 기존 `503 Network closed for unknown reason`로 중단돼 허용·거절 시나리오를 실행하지 못했다. 작업 브랜치 GitHub Actions `35412398666`에서는 전체 추적 Rules 회귀와 B2-A 본인 현재 주차 list 허용·타 Player list 거절이 모두 통과했다. Rules 운영 게시·실기기·`dev/main` 통합은 하지 않았다. 다음 게이트는 검증본 Rules의 별도 게시 승인과 1회 게시다.
