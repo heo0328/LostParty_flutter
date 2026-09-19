@@ -1954,6 +1954,23 @@ service cloud.firestore {
         && !(playerId in recruitment.memberPlayerIds);
     }
 
+    function validLegacyStaleAssignmentDelete(
+      playerId,
+      assignmentId,
+      data
+    ) {
+      let path = recruitmentPath(data.recruitmentId);
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && data.playerId == playerId
+        && assignmentId == data.characterId + '_' + data.raidId
+        && data.status == 'active'
+        && (
+          !exists(path)
+          || validAtomicStaleRaidStateRecruitment(get(path).data)
+        );
+    }
+
     function atomicIsMembershipEventType(type) {
       return type == 'partyCreated'
         || type == 'memberJoined'
@@ -3219,6 +3236,10 @@ service cloud.firestore {
           && playerId == currentPlayerId();
         allow create, update: if false;
         allow delete: if validLegacyAssignmentConsumedByPersonalCompletion(
+          playerId,
+          assignmentId,
+          resource.data
+        ) || validLegacyStaleAssignmentDelete(
           playerId,
           assignmentId,
           resource.data

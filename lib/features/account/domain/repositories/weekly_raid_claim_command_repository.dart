@@ -4,6 +4,7 @@ enum WeeklyRaidClaimCommandFailure {
   unauthenticated,
   invalidRequest,
   activeAssignment,
+  orphanedParticipation,
   pendingApplication,
   stateInconsistent,
   permissionDenied,
@@ -44,5 +45,9 @@ abstract interface class WeeklyRaidClaimCommandRepository {
 
   Future<WeeklyRaidClaimCommandResult> deleteManualClaim(
     DeleteManualWeeklyRaidClaimCommand command,
+  );
+
+  Future<WeeklyRaidClaimCommandResult> cleanupOrphanParticipation(
+    CleanupOrphanRaidParticipationCommand command,
   );
 }

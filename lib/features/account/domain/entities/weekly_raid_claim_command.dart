@@ -26,6 +26,8 @@ class ManualWeeklyRaidClaimImpact {
     this.willDisbandRecruitment = false,
     this.nextLeaderCharacterName,
     this.pendingApplicationCount = 0,
+    this.orphanedRecruitmentId,
+    this.orphanedStateRevision,
   });
 
   final String? activeRecruitmentId;
@@ -34,10 +36,31 @@ class ManualWeeklyRaidClaimImpact {
   final bool willDisbandRecruitment;
   final String? nextLeaderCharacterName;
   final int pendingApplicationCount;
+  final String? orphanedRecruitmentId;
+  final int? orphanedStateRevision;
 
   bool get hasActiveRecruitment => activeRecruitmentId != null;
+  bool get hasOrphanedParticipation => orphanedRecruitmentId != null;
   bool get requiresConfirmation =>
       hasActiveRecruitment || pendingApplicationCount > 0;
+}
+
+class CleanupOrphanRaidParticipationCommand {
+  const CleanupOrphanRaidParticipationCommand({
+    required this.playerId,
+    required this.characterId,
+    required this.raidId,
+    required this.cycleKey,
+    required this.recruitmentId,
+    this.expectedStateRevision,
+  });
+
+  final String playerId;
+  final String characterId;
+  final String raidId;
+  final String cycleKey;
+  final String recruitmentId;
+  final int? expectedStateRevision;
 }
 
 class DeleteManualWeeklyRaidClaimCommand {

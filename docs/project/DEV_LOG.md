@@ -3205,3 +3205,10 @@
 - 별도로 `players/kVn6KZwZQO6or3BjNYqX/raidStates/xseSyVxZXWhKYxlZEucb_kazeros_act4`가 존재하지 않는 모집 `td904kw3PEgWI1GwIfUP`을 `active`로 참조해 참가 표시, 수동 완료 상태 불일치, 신청 후 승인 권한 오류를 일으키는 것을 데이터로 확정했다.
 - 정상 완료 흐름의 회귀와 과거 콘솔 삭제로 생긴 고아 데이터를 분리했다. 본인 단건 고아 active state는 F6-D의 명시적 `참가 기록 정리`로 복구하고, 다른 Character·raid의 고아 pending 신청 및 다수 데이터 일괄 정리는 별도 운영 도구 백로그로 유지한다.
 - 이번 단계는 설계·문서 정리만 수행했다. 기능 코드·Rules·운영 데이터·브랜치 통합은 변경하지 않았다.
+
+# 2026-09-20 F6-D D1~D3 단건 고아 참가 복구 구현
+
+- 내 계정 수동 완료 영향 확인에서 본인 active party `raidState`의 연결 모집을 단건 조회해 원본 없음·종료·완료·만료 상태를 정상 참가와 분리한다. 존재하지 않는 새로고침 안내 대신 `참가 기록 정리` 확인창을 추가했다.
+- 정리 Transaction은 Player·Character·raid·cycle·recruitmentId와 관찰 revision을 다시 검증하고, 여전히 stale인 경우에만 본인 `raidState` 및 정확히 일치하는 구 assignment를 원자 삭제한다. 완료 기록·신청·다른 상태는 변경하지 않으며 정상 활성 모집은 거절한다.
+- 기존 stale `raidState` Rules를 재사용하고 구 assignment에 같은 본인·고아 조건의 delete만 추가했다. demo에는 원본 없는 본인 정리 성공, 타인 거절, 정상 활성 모집 거절 대표 시나리오를 추가했다. 공용 이벤트·인원수 비례 조회·후처리는 추가하지 않았다.
+- JS 문법, Rules 문자열 계약, ViewModel 표적 9건과 변경 Dart 파일 정적 분석은 통과했다. 로컬 Rules Emulator의 기존 Windows 503은 반복하지 않았고, 변경 Rules SHA-256은 `716402EF95051F6F07B799F275431B9A89718E7BA713A07EEEFB147FDCDCCC94`다. 작업 브랜치 Actions·운영 게시·사용자 실기기 확인과 D4 신청 전 차단은 남아 있다.

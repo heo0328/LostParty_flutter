@@ -181,6 +181,46 @@ void main() {
     },
   );
 
+  test('cleans the inspected orphan participation through its own command', () async {
+    final commands = _ClaimCommandRepository();
+    final viewModel = MyAccountViewModel(
+      apiTokenStore: _TokenStore(),
+      accountRepository: _AccountRepository(),
+      weeklyRaidClaimRepository: _EmptyClaimRepository(),
+      weeklyRaidClaimCommandRepository: commands,
+      raidCatalogRepository: _RaidRepository(),
+      playerId: 'player-1',
+      cycleKey: '2026-08-26',
+      cycleStartedAt: DateTime.utc(2026, 8, 25, 21),
+      cycleEndsAt: DateTime.utc(2026, 9, 1, 21),
+    );
+
+    await viewModel.initialize();
+    await Future<void>.delayed(Duration.zero);
+    final character = viewModel.accounts.single.characters.single;
+    final raid = viewModel.weeklyRaidStatusesFor(character).single;
+    const impact = ManualWeeklyRaidClaimImpact(
+      orphanedRecruitmentId: 'missing-recruitment',
+      orphanedStateRevision: 3,
+    );
+
+    expect(
+      await viewModel.cleanupOrphanParticipation(
+        character: character,
+        raid: raid,
+        impact: impact,
+      ),
+      const WeeklyRaidClaimCommandResult.success(),
+    );
+    expect(commands.cleanedOrphan?.playerId, 'player-1');
+    expect(commands.cleanedOrphan?.characterId, 'character-1');
+    expect(commands.cleanedOrphan?.raidId, 'serca');
+    expect(commands.cleanedOrphan?.cycleKey, '2026-08-26');
+    expect(commands.cleanedOrphan?.recruitmentId, 'missing-recruitment');
+    expect(commands.cleanedOrphan?.expectedStateRevision, 3);
+    viewModel.dispose();
+  });
+
   test('saves display preference and shows all selected raids', () async {
     final displayRepository = InMemoryCharacterWeeklyRaidDisplayRepository();
     final viewModel = MyAccountViewModel(
@@ -266,6 +306,7 @@ class _ClaimCommandRepository implements WeeklyRaidClaimCommandRepository {
   CreateManualWeeklyRaidClaimCommand? inspected;
   CreateManualWeeklyRaidClaimCommand? created;
   DeleteManualWeeklyRaidClaimCommand? deleted;
+  CleanupOrphanRaidParticipationCommand? cleanedOrphan;
   bool? resolveConflicts;
 
   @override
@@ -293,6 +334,14 @@ class _ClaimCommandRepository implements WeeklyRaidClaimCommandRepository {
     DeleteManualWeeklyRaidClaimCommand command,
   ) async {
     deleted = command;
+    return const WeeklyRaidClaimCommandResult.success();
+  }
+
+  @override
+  Future<WeeklyRaidClaimCommandResult> cleanupOrphanParticipation(
+    CleanupOrphanRaidParticipationCommand command,
+  ) async {
+    cleanedOrphan = command;
     return const WeeklyRaidClaimCommandResult.success();
   }
 }

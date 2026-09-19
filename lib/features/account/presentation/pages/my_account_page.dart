@@ -1014,6 +1014,14 @@ class _MyAccountPageState extends State<MyAccountPage> {
         return;
       }
       impact = impactResult.impact;
+      if (impact?.hasOrphanedParticipation == true) {
+        await _confirmOrphanParticipationCleanup(
+          character: character,
+          raid: raid,
+          impact: impact!,
+        );
+        return;
+      }
     }
     final resolveConflicts = impact?.requiresConfirmation == true;
     final confirmed = await showDialog<bool>(
@@ -1057,6 +1065,47 @@ class _MyAccountPageState extends State<MyAccountPage> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _confirmOrphanParticipationCleanup({
+    required LocalAccountCharacter character,
+    required WeeklyRaidStatusItem raid,
+    required ManualWeeklyRaidClaimImpact impact,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('참가 기록 정리'),
+        content: Text(
+          '${character.characterName} 캐릭터의 ${raid.label}에 '
+          '종료되거나 삭제된 파티의 참가 기록이 남아 있습니다.\n\n'
+          '참가 기록만 정리하며 레이드를 완료로 처리하지 않습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('참가 기록 정리'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final result = await _viewModel.cleanupOrphanParticipation(
+      character: character,
+      raid: raid,
+      impact: impact,
+    );
+    if (!mounted) return;
+    final message = result.isSuccess
+        ? '남아 있던 참가 기록을 정리했습니다. 완료 여부를 다시 선택해 주세요.'
+        : _claimFailureMessage(result.failure!);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   String _weeklyRaidCompletionConfirmation(
     LocalAccountCharacter character,
     WeeklyRaidStatusItem raid,
@@ -1089,10 +1138,12 @@ class _MyAccountPageState extends State<MyAccountPage> {
       switch (failure) {
         WeeklyRaidClaimCommandFailure.activeAssignment =>
           '현재 참가 중인 파티가 있어 완료 처리할 수 없습니다.',
+        WeeklyRaidClaimCommandFailure.orphanedParticipation =>
+          '종료되거나 삭제된 파티의 참가 기록이 남아 있습니다.',
         WeeklyRaidClaimCommandFailure.pendingApplication =>
           '승인 대기 중인 신청이 있어 먼저 철회해야 합니다.',
         WeeklyRaidClaimCommandFailure.stateInconsistent =>
-          '이 캐릭터의 참가·완료 기록이 일치하지 않습니다. 새로고침 후 다시 확인해 주세요.',
+          '이 캐릭터의 참가·완료 기록을 안전하게 정리할 수 없습니다.',
         WeeklyRaidClaimCommandFailure.unauthenticated => '로그인 상태를 다시 확인해 주세요.',
         WeeklyRaidClaimCommandFailure.permissionDenied =>
           '완료 상태를 변경할 권한이 없습니다.',

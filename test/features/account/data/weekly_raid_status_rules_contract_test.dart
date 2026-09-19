@@ -22,7 +22,7 @@ void main() {
     }
   });
 
-  test('legacy assignment 생성·수정은 닫고 개인 완료 자기 정리만 연다', () {
+  test('legacy assignment 생성·수정은 닫고 검증된 자기 정리만 연다', () {
     final start = rules.indexOf('match /activeRaidAssignments/{assignmentId}');
     final end = rules.indexOf('\n      match /', start + 1);
     final block = rules.substring(start, end);
@@ -32,6 +32,17 @@ void main() {
       contains(
         'allow delete: if validLegacyAssignmentConsumedByPersonalCompletion(',
       ),
+    );
+    expect(block, contains('validLegacyStaleAssignmentDelete('));
+    expect(
+      rules,
+      contains("data.status == 'active'"),
+    );
+    expect(rules, contains('playerId == currentPlayerId()'));
+    expect(rules, contains('!exists(path)'));
+    expect(
+      rules,
+      contains('validAtomicStaleRaidStateRecruitment(get(path).data)'),
     );
   });
 }

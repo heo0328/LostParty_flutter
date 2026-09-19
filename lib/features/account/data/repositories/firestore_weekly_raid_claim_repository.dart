@@ -11,6 +11,7 @@ import '../../domain/repositories/weekly_raid_claim_repository.dart';
 import '../dtos/weekly_raid_claim_dto.dart';
 import '../mappers/weekly_raid_claim_mapper.dart';
 import '../mappers/weekly_raid_claim_document_id.dart';
+import 'firestore_weekly_raid_status_command_repository.dart';
 import '../../../recruitment_list/data/mappers/party_membership_event_writer.dart';
 import '../../../recruitment_list/data/mappers/party_membership_write_plan.dart';
 import '../../../recruitment_list/data/mappers/party_raid_listing_sync.dart';
@@ -34,6 +35,14 @@ class FirestoreWeeklyRaidClaimRepository
   final FirebaseFirestore _firestore;
   final FirebaseAuth _firebaseAuth;
   final WeeklyRaidClaimMapper _mapper;
+
+  @override
+  Future<WeeklyRaidClaimCommandResult> cleanupOrphanParticipation(
+    CleanupOrphanRaidParticipationCommand command,
+  ) => FirestoreWeeklyRaidStatusCommandRepository(
+    firestore: _firestore,
+    firebaseAuth: _firebaseAuth,
+  ).cleanupOrphanParticipation(command);
 
   @override
   Future<WeeklyRaidClaimImpactResult> inspectManualClaimImpact(

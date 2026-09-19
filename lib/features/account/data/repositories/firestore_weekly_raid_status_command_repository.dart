@@ -7,6 +7,7 @@ import '../../../recruitment_list/data/mappers/party_atomic_document_mapper.dart
 import '../../../recruitment_list/data/mappers/party_atomic_member_removal_write_plan.dart';
 import '../../../recruitment_list/domain/entities/party_atomic_command.dart';
 import '../../../recruitment_list/domain/policies/party_composition_policy.dart';
+import '../../../recruitment_list/domain/services/party_create_occupancy_gate.dart';
 import '../../domain/entities/weekly_raid_claim_command.dart';
 import '../../domain/repositories/weekly_raid_claim_command_repository.dart';
 import '../mappers/weekly_raid_claim_document_id.dart';
@@ -21,11 +22,13 @@ class FirestoreWeeklyRaidStatusCommandRepository
   const FirestoreWeeklyRaidStatusCommandRepository({
     required FirebaseFirestore firestore,
     required FirebaseAuth firebaseAuth,
+    this.clock = DateTime.now,
   }) : _firestore = firestore,
        _firebaseAuth = firebaseAuth;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _firebaseAuth;
+  final DateTime Function() clock;
 
   @override
   Future<WeeklyRaidClaimImpactResult> inspectManualClaimImpact(
@@ -76,6 +79,11 @@ class FirestoreWeeklyRaidStatusCommandRepository
 
     try {
       final context = await _loadContext(command);
+      if (context.impact.hasOrphanedParticipation) {
+        return const WeeklyRaidClaimCommandResult.failure(
+          WeeklyRaidClaimCommandFailure.orphanedParticipation,
+        );
+      }
       if (context.impact.requiresConfirmation && !resolveConflicts) {
         return WeeklyRaidClaimCommandResult.failure(
           context.impact.hasActiveRecruitment
@@ -166,6 +174,83 @@ class FirestoreWeeklyRaidStatusCommandRepository
         unawaited(_supersedePendingApplications(context.pendingApplications));
       }
       return result;
+    } on _WeeklyRaidStateContractException {
+      return const WeeklyRaidClaimCommandResult.failure(
+        WeeklyRaidClaimCommandFailure.stateInconsistent,
+      );
+    } on FirebaseException catch (error) {
+      return WeeklyRaidClaimCommandResult.failure(_failure(error.code));
+    } catch (_) {
+      return const WeeklyRaidClaimCommandResult.failure(
+        WeeklyRaidClaimCommandFailure.unknown,
+      );
+    }
+  }
+
+  @override
+  Future<WeeklyRaidClaimCommandResult> cleanupOrphanParticipation(
+    CleanupOrphanRaidParticipationCommand command,
+  ) async {
+    final uid = _firebaseAuth.currentUser?.uid;
+    if (uid == null || uid.isEmpty) {
+      return const WeeklyRaidClaimCommandResult.failure(
+        WeeklyRaidClaimCommandFailure.unauthenticated,
+      );
+    }
+    if (!_validCleanup(command)) {
+      return const WeeklyRaidClaimCommandResult.failure(
+        WeeklyRaidClaimCommandFailure.invalidRequest,
+      );
+    }
+    try {
+      return await _firestore.runTransaction((transaction) async {
+        final playerId = await _boundPlayerId(transaction, uid);
+        if (playerId != command.playerId) {
+          return const WeeklyRaidClaimCommandResult.failure(
+            WeeklyRaidClaimCommandFailure.invalidRequest,
+          );
+        }
+        final stateRef = _state(
+          command.playerId,
+          command.characterId,
+          command.raidId,
+        );
+        final assignmentRef = _assignment(
+          command.playerId,
+          command.characterId,
+          command.raidId,
+        );
+        final recruitmentRef = _firestore
+            .collection('recruitments')
+            .doc(command.recruitmentId);
+        final state = await transaction.get(stateRef);
+        final assignment = await transaction.get(assignmentRef);
+        final recruitment = await transaction.get(recruitmentRef);
+        final stateData = state.data();
+        final assignmentData = assignment.data();
+        if (stateData == null && assignmentData == null) {
+          return const WeeklyRaidClaimCommandResult.success();
+        }
+        if (stateData != null) {
+          _validateOrphanState(command, stateData);
+        }
+        if (assignmentData != null) {
+          _validateOrphanAssignment(command, assignmentData);
+        }
+        if (!_isStaleRecruitment(
+          playerId: command.playerId,
+          recruitmentId: command.recruitmentId,
+          cycleKey: command.cycleKey,
+          recruitment: recruitment.data(),
+        )) {
+          return const WeeklyRaidClaimCommandResult.failure(
+            WeeklyRaidClaimCommandFailure.activeAssignment,
+          );
+        }
+        if (stateData != null) transaction.delete(stateRef);
+        if (assignmentData != null) transaction.delete(assignmentRef);
+        return const WeeklyRaidClaimCommandResult.success();
+      });
     } on _WeeklyRaidStateContractException {
       return const WeeklyRaidClaimCommandResult.failure(
         WeeklyRaidClaimCommandFailure.stateInconsistent,
@@ -458,10 +543,18 @@ class FirestoreWeeklyRaidStatusCommandRepository
     if (stateData != null) {
       _validateState(command, stateData);
       if (stateData['status'] == 'active') {
-        recruitmentId = stateData['recruitmentId'] as String?;
+        final rawRecruitmentId = stateData['recruitmentId'];
+        if (rawRecruitmentId is! String || rawRecruitmentId.isEmpty) {
+          throw const _WeeklyRaidStateContractException();
+        }
+        recruitmentId = rawRecruitmentId;
       }
     } else if (assignment.exists) {
-      recruitmentId = assignment.data()?['recruitmentId'] as String?;
+      final rawRecruitmentId = assignment.data()?['recruitmentId'];
+      if (rawRecruitmentId is! String || rawRecruitmentId.isEmpty) {
+        throw const _WeeklyRaidStateContractException();
+      }
+      recruitmentId = rawRecruitmentId;
     }
 
     String? title;
@@ -474,6 +567,20 @@ class FirestoreWeeklyRaidStatusCommandRepository
           .doc(recruitmentId)
           .get();
       final data = recruitment.data();
+      if (_isStaleRecruitment(
+        playerId: command.playerId,
+        recruitmentId: recruitmentId,
+        cycleKey: command.cycleKey,
+        recruitment: data,
+      )) {
+        return _StatusCommandContext(
+          impact: ManualWeeklyRaidClaimImpact(
+            orphanedRecruitmentId: recruitmentId,
+            orphanedStateRevision: stateData?['revision'] as int?,
+          ),
+          pendingApplications: const [],
+        );
+      }
       if (data == null ||
           data['status'] != 'active' ||
           data['currentCycleStatus'] != 'active' ||
@@ -605,6 +712,80 @@ class FirestoreWeeklyRaidStatusCommandRepository
       _claimId(command.cycleKey, command.characterId, command.raidId) != null &&
       command.cycleEndsAt.toUtc().difference(command.cycleStartedAt.toUtc()) ==
           const Duration(days: 7);
+
+  bool _validCleanup(CleanupOrphanRaidParticipationCommand command) =>
+      command.playerId.trim().isNotEmpty &&
+      command.characterId.trim().isNotEmpty &&
+      command.raidId.trim().isNotEmpty &&
+      command.cycleKey.trim().isNotEmpty &&
+      command.recruitmentId.trim().isNotEmpty;
+
+  bool _isStaleRecruitment({
+    required String playerId,
+    required String recruitmentId,
+    required String cycleKey,
+    required Map<String, dynamic>? recruitment,
+  }) {
+    final status = recruitment?['status'];
+    final currentCycleStatus = recruitment?['currentCycleStatus'];
+    if (status == 'completed' || currentCycleStatus == 'completed') {
+      return true;
+    }
+    final rawCycleEndsAt = recruitment?['cycleEndsAt'];
+    final decision = PartyCreateOccupancyGate.decide(
+      newRecruitmentId: 'orphan-cleanup',
+      playerId: playerId,
+      newRecruitmentExists: false,
+      newRecruitmentLeaderId: null,
+      assignmentExists: true,
+      assignmentRecruitmentId: recruitmentId,
+      assignmentCycleKey: cycleKey,
+      assignedRecruitmentExists: recruitment != null,
+      assignedRecruitmentStatus: status is String ? status : null,
+      assignedRecruitmentCycleKey: recruitment?['currentCycleKey'] is String
+          ? recruitment!['currentCycleKey'] as String
+          : null,
+      assignedRecruitmentContinuesTogether:
+          recruitment?['continueTogether'] == true,
+      assignedRecruitmentCycleEndsAt: rawCycleEndsAt is Timestamp
+          ? rawCycleEndsAt.toDate()
+          : null,
+      newCycleKey: cycleKey,
+      now: clock(),
+    );
+    return decision == PartyCreateOccupancyDecision.replaceStaleAssignment;
+  }
+
+  void _validateOrphanState(
+    CleanupOrphanRaidParticipationCommand command,
+    Map<String, dynamic> data,
+  ) {
+    if (data['playerId'] != command.playerId ||
+        data['characterId'] != command.characterId ||
+        data['raidId'] != command.raidId ||
+        data['cycleKey'] != command.cycleKey ||
+        data['recruitmentId'] != command.recruitmentId ||
+        data['status'] != 'active' ||
+        data['source'] != 'party' ||
+        (command.expectedStateRevision != null &&
+            data['revision'] != command.expectedStateRevision)) {
+      throw const _WeeklyRaidStateContractException();
+    }
+  }
+
+  void _validateOrphanAssignment(
+    CleanupOrphanRaidParticipationCommand command,
+    Map<String, dynamic> data,
+  ) {
+    if (data['playerId'] != command.playerId ||
+        data['characterId'] != command.characterId ||
+        data['raidId'] != command.raidId ||
+        data['cycleKey'] != command.cycleKey ||
+        data['recruitmentId'] != command.recruitmentId ||
+        data['status'] != 'active') {
+      throw const _WeeklyRaidStateContractException();
+    }
+  }
 
   void _validateState(
     CreateManualWeeklyRaidClaimCommand command,

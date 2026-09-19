@@ -796,6 +796,77 @@ async function deleteCompletedRaidStateTxn(db, ownerPlayerId, ownerCharacterId) 
   });
 }
 
+async function cleanupOrphanRaidStateTxn(
+  db,
+  ownerPlayerId,
+  ownerCharacterId,
+  orphanRecruitmentId,
+) {
+  return runTransaction(db, async (tx) => {
+    const stateRef = doc(
+      db,
+      'players',
+      ownerPlayerId,
+      'raidStates',
+      `${ownerCharacterId}_${raidId}`,
+    );
+    const assignmentRef = doc(
+      db,
+      'players',
+      ownerPlayerId,
+      'activeRaidAssignments',
+      `${ownerCharacterId}_${raidId}`,
+    );
+    const recruitmentRef = doc(db, 'recruitments', orphanRecruitmentId);
+    await tx.get(stateRef);
+    await tx.get(assignmentRef);
+    await tx.get(recruitmentRef);
+    tx.delete(stateRef);
+    tx.delete(assignmentRef);
+  });
+}
+
+async function seedOrphanRaidState(testEnv, orphanRecruitmentId) {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const adminDb = context.firestore();
+    const now = Timestamp.now();
+    const stateId = `${characterId}_${raidId}`;
+    await setDoc(
+      doc(adminDb, 'players', playerId, 'raidStates', stateId),
+      {
+        schemaVersion: 1,
+        playerId,
+        characterId,
+        raidId,
+        difficultyId: 'normal',
+        cycleKey,
+        status: 'active',
+        source: 'party',
+        recruitmentId: orphanRecruitmentId,
+        revision: 1,
+        createdAt: now,
+        updatedAt: now,
+      },
+    );
+    await setDoc(
+      doc(adminDb, 'players', playerId, 'activeRaidAssignments', stateId),
+      {
+        schemaVersion: 1,
+        playerId,
+        characterId,
+        raidId,
+        difficultyId: 'normal',
+        cycleKey,
+        recruitmentId: orphanRecruitmentId,
+        role: 'dealer',
+        status: 'active',
+        createdAt: now,
+        updatedAt: now,
+      },
+    );
+  });
+}
+
 async function advanceCycleWithMissingStateTxn(db, nextCycleKey) {
   const { startedAt, endsAt } = cycleWindow(nextCycleKey);
   return runTransaction(db, async (tx) => {
@@ -1025,6 +1096,81 @@ async function main() {
     await assertSucceeds(createManualRaidStateTxn(db));
     await assertSucceeds(deleteCompletedRaidStateTxn(db, playerId, characterId));
     console.log('PASS: personal manual completion toggle');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    const orphanRecruitmentId = 'missing-recruitment';
+    await seedOrphanRaidState(testEnv, orphanRecruitmentId);
+    console.log('test: owner cleans only a missing-recruitment raid state');
+    await assertSucceeds(
+      cleanupOrphanRaidStateTxn(
+        db,
+        playerId,
+        characterId,
+        orphanRecruitmentId,
+      ),
+    );
+    const orphanState = await getDoc(
+      doc(db, 'players', playerId, 'raidStates', `${characterId}_${raidId}`),
+    );
+    const orphanAssignment = await getDoc(
+      doc(
+        db,
+        'players',
+        playerId,
+        'activeRaidAssignments',
+        `${characterId}_${raidId}`,
+      ),
+    );
+    if (orphanState.exists() || orphanAssignment.exists()) {
+      throw new Error('orphan raid status documents were not deleted');
+    }
+
+    await seedOrphanRaidState(testEnv, orphanRecruitmentId);
+    const orphanAttackerDb = testEnv.authenticatedContext(joinerAuthUid).firestore();
+    await assertFails(
+      cleanupOrphanRaidStateTxn(
+        orphanAttackerDb,
+        playerId,
+        characterId,
+        orphanRecruitmentId,
+      ),
+    );
+    console.log('PASS: orphan cleanup is owner-only');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await setDoc(
+        doc(
+          adminDb,
+          'players',
+          playerId,
+          'activeRaidAssignments',
+          `${characterId}_${raidId}`,
+        ),
+        {
+          schemaVersion: 1,
+          playerId,
+          characterId,
+          raidId,
+          difficultyId: 'normal',
+          cycleKey,
+          recruitmentId,
+          role: 'dealer',
+          status: 'active',
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+        },
+      );
+    });
+    await assertFails(
+      cleanupOrphanRaidStateTxn(db, playerId, characterId, recruitmentId),
+    );
+    console.log('PASS: active recruitment participation cannot be orphan-cleaned');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);

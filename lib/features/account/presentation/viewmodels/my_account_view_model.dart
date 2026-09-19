@@ -362,6 +362,49 @@ class MyAccountViewModel extends ChangeNotifier {
     );
   }
 
+  Future<WeeklyRaidClaimCommandResult> cleanupOrphanParticipation({
+    required LocalAccountCharacter character,
+    required WeeklyRaidStatusItem raid,
+    required ManualWeeklyRaidClaimImpact impact,
+  }) async {
+    final repository = _weeklyRaidClaimCommandRepository;
+    final playerId = _playerId;
+    final cycleKey = _cycleKey;
+    final characterId = character.serverCharacterId;
+    final recruitmentId = impact.orphanedRecruitmentId;
+    if (repository == null ||
+        playerId == null ||
+        cycleKey == null ||
+        characterId == null ||
+        recruitmentId == null) {
+      return const WeeklyRaidClaimCommandResult.failure(
+        WeeklyRaidClaimCommandFailure.invalidRequest,
+      );
+    }
+    final key = '$characterId:${raid.raidId}';
+    if (!_busyClaimKeys.add(key)) {
+      return const WeeklyRaidClaimCommandResult.failure(
+        WeeklyRaidClaimCommandFailure.temporarilyUnavailable,
+      );
+    }
+    notifyListeners();
+    try {
+      return await repository.cleanupOrphanParticipation(
+        CleanupOrphanRaidParticipationCommand(
+          playerId: playerId,
+          characterId: characterId,
+          raidId: raid.raidId,
+          cycleKey: cycleKey,
+          recruitmentId: recruitmentId,
+          expectedStateRevision: impact.orphanedStateRevision,
+        ),
+      );
+    } finally {
+      _busyClaimKeys.remove(key);
+      notifyListeners();
+    }
+  }
+
   Future<void> loadTokenStatus() async {
     _isLoadingTokenStatus = true;
     notifyListeners();
