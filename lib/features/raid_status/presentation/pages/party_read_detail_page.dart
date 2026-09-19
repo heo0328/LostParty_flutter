@@ -25,7 +25,6 @@ import '../../../recruitment_list/domain/entities/recruitment_application.dart';
 import '../../../recruitment_list/domain/entities/party_visibility_command.dart';
 import '../../../recruitment_list/domain/policies/approval_policy.dart';
 import '../../../recruitment_list/domain/policies/party_composition_policy.dart';
-import '../../../recruitment_list/domain/policies/party_cycle_policy.dart';
 import '../../../recruitment_list/domain/repositories/party_application_command_repository.dart';
 import '../../../recruitment_list/domain/repositories/party_cycle_command_repository.dart';
 import '../../../recruitment_list/domain/repositories/party_join_command_repository.dart';
@@ -841,7 +840,6 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                     isLeader: _isLeader(summary),
                     submitting: _submitting,
                     onComplete: () => _confirmComplete(summary),
-                    onCancelCompletion: () => _confirmCancelCompletion(summary),
                     onToggleRecurrence: (value) =>
                         _confirmSetRecurrence(summary, value),
                     onDisband: () => _confirmDisband(summary),
@@ -1300,9 +1298,9 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     final cycleRepository = widget.cycleCommandRepository;
     if (cycleRepository == null) {
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('모집 삭제를 처리할 수 없습니다.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('모집 삭제를 처리할 수 없습니다.')));
       return;
     }
     final result = await cycleRepository.disband(
@@ -1348,7 +1346,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
         title: const Text('파티 전체 완료할까요?'),
         content: Text(
           repeating
-              ? '완료 당시 파티원 전원의 주간 레이드 완료 상태가 기록되고, 이번 회차가 완료 처리됩니다. 방과 다음 회차 준비 구성은 유지되며, 파티장은 허용 기한까지 전체 완료를 취소할 수 있습니다.'
+              ? '완료 당시 파티원 전원의 주간 레이드 완료 상태가 기록되고, 이번 회차가 완료 처리됩니다. 방과 다음 회차 준비 구성은 유지되며 이번 주차의 파티 전체 완료는 되돌릴 수 없습니다.'
               : '완료 당시 파티원 전원의 주간 레이드 완료 상태가 기록되고, 활성 모집에서 제외됩니다. 이후 수정할 수 없으며 해산 절차로 이동합니다.',
         ),
         actions: [
@@ -1392,77 +1390,6 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(_cycleFailureMessage(result.failure!))),
-    );
-  }
-
-  Future<void> _confirmCancelCompletion(
-    PublicRecruitmentSummary summary,
-  ) async {
-    final repository = widget.cycleCommandRepository;
-    final cycle = _cycle;
-    if (repository == null ||
-        !_isLeader(summary) ||
-        !summary.continueTogether ||
-        !summary.isCycleCompleted ||
-        cycle == null ||
-        !cycle.isCompleted ||
-        _submitting) {
-      return;
-    }
-    final window = const PartyCyclePolicy().fromKey(summary.currentCycleKey);
-    final deadline = window?.completionCancelDeadline;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('전체 완료를 취소할까요?'),
-        content: Text(
-          deadline == null
-              ? '파티 전체 완료를 취소할까요? 완료 당시 파티원 전원의 앱 완료 상태가 해제되고 이 방의 참가 상태가 복구됩니다.'
-              : '완료 당시 파티원 전원의 앱 완료 상태가 해제되고 이 방의 참가 상태가 복구됩니다. 허용 기한(${KoreaTimeFormatter.dayAndTime(deadline)}) 전에만 취소할 수 있습니다.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('닫기'),
-          ),
-          FilledButton(
-            key: const ValueKey('confirmCancelCompletionButton'),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('전체 완료 취소'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    setState(() => _submitting = true);
-    final result = await repository.cancelCompletion(
-      PartyCancelCompletionCommand(
-        recruitmentId: widget.recruitmentId,
-        cycleKey: summary.currentCycleKey,
-        expectedRecruitmentRevision: summary.revision,
-        expectedCompletionRevision: cycle.completionRevision,
-      ),
-    );
-    if (!mounted) return;
-    setState(() => _submitting = false);
-    if (result.isSuccess) {
-      await _syncPartyEventsAfterCycleChange();
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('완료를 취소했습니다.')));
-      return;
-    }
-    final failure = result.failure!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          failure == PartyCycleFailure.revisionConflict
-              ? '완료 이후 일부 파티원의 참가 또는 완료 상태가 변경되어 전체 완료를 취소할 수 없습니다. 각 파티원이 내 계정에서 완료 상태를 확인해 주세요.'
-              : _cycleFailureMessage(failure),
-        ),
-      ),
     );
   }
 
@@ -2663,7 +2590,6 @@ class _CycleLifecycleSection extends StatelessWidget {
     required this.isLeader,
     required this.submitting,
     required this.onComplete,
-    required this.onCancelCompletion,
     required this.onToggleRecurrence,
     required this.onDisband,
   });
@@ -2673,24 +2599,11 @@ class _CycleLifecycleSection extends StatelessWidget {
   final bool isLeader;
   final bool submitting;
   final VoidCallback onComplete;
-  final VoidCallback onCancelCompletion;
   final ValueChanged<bool> onToggleRecurrence;
   final VoidCallback onDisband;
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now().toUtc();
-    final window = const PartyCyclePolicy().fromKey(summary.currentCycleKey);
-    final cancelDeadline = window?.completionCancelDeadline;
-    final canCancel =
-        isLeader &&
-        summary.continueTogether &&
-        summary.isActiveRecruitment &&
-        summary.isCycleCompleted &&
-        cycle != null &&
-        cycle!.isCompleted &&
-        cancelDeadline != null &&
-        now.isBefore(cancelDeadline);
     final canComplete =
         isLeader && summary.isActiveRecruitment && summary.isCycleActive;
     final showDisband =
@@ -2703,7 +2616,7 @@ class _CycleLifecycleSection extends StatelessWidget {
         summary.isActiveRecruitment &&
         (summary.isCycleActive || summary.isCycleCompleted);
 
-    if (!canComplete && !canCancel && !showDisband && !canToggleRecurrence) {
+    if (!canComplete && !showDisband && !canToggleRecurrence) {
       return const SizedBox.shrink();
     }
 
@@ -2738,17 +2651,8 @@ class _CycleLifecycleSection extends StatelessWidget {
               icon: const Icon(Icons.check_circle_outline),
               label: const Text('파티 전체 완료'),
             ),
-          if (canCancel) ...[
-            if (canComplete) const SizedBox(height: AppSpacing.xs),
-            OutlinedButton.icon(
-              key: const ValueKey('cancelCompletionButton'),
-              onPressed: submitting ? null : onCancelCompletion,
-              icon: const Icon(Icons.undo),
-              label: const Text('전체 완료 취소'),
-            ),
-          ],
           if (showDisband) ...[
-            if (canComplete || canCancel) const SizedBox(height: AppSpacing.xs),
+            if (canComplete) const SizedBox(height: AppSpacing.xs),
             OutlinedButton.icon(
               key: const ValueKey('disbandPartyButton'),
               onPressed: submitting ? null : onDisband,
@@ -3203,8 +3107,6 @@ String _cycleFailureMessage(PartyCycleFailure failure) => switch (failure) {
   PartyCycleFailure.recruitmentClosed => '이미 종료된 모집입니다.',
   PartyCycleFailure.cycleMismatch => '회차 정보가 바뀌었습니다. 다시 확인해 주세요.',
   PartyCycleFailure.alreadyCompleted => '이미 완료된 회차입니다.',
-  PartyCycleFailure.notCompleted => '완료된 회차만 취소할 수 있습니다.',
-  PartyCycleFailure.completionCancelExpired => '완료 취소 허용 기한이 지났습니다.',
   PartyCycleFailure.notReadyForAdvance => '아직 다음 회차로 전환할 수 없습니다.',
   PartyCycleFailure.revisionConflict => '모집 상태가 바뀌었습니다. 다시 확인해 주세요.',
   PartyCycleFailure.permissionDenied =>

@@ -16,6 +16,8 @@ import {
   query,
   runTransaction,
   serverTimestamp,
+  deleteField,
+  increment,
   Timestamp,
   where,
 } from 'firebase/firestore';
@@ -198,6 +200,11 @@ async function createGroupTxn(db, groupId) {
       updatedAt: serverTimestamp(),
     });
   });
+}
+
+function offsetCycleKey(key, days) {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
 async function seedJoiner(testEnv) {
@@ -771,6 +778,163 @@ async function disbandApprovedRoomTxn(db) {
   });
 }
 
+async function createManualRaidStateTxn(db) {
+  const { startedAt, endsAt } = cycleWindow(cycleKey);
+  const stateRef = doc(db, 'players', playerId, 'raidStates', `${characterId}_${raidId}`);
+  return setDoc(stateRef, {
+    schemaVersion: 1, playerId, characterId, raidId, difficultyId: 'normal',
+    cycleKey, status: 'completed', source: 'manual', recruitmentId: null,
+    revision: 1, cycleStartedAt: Timestamp.fromDate(startedAt),
+    cycleEndsAt: Timestamp.fromDate(endsAt), completedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+async function deleteCompletedRaidStateTxn(db, ownerPlayerId, ownerCharacterId) {
+  return runTransaction(db, async (tx) => {
+    tx.delete(doc(db, 'players', ownerPlayerId, 'raidStates', `${ownerCharacterId}_${raidId}`));
+  });
+}
+
+async function advanceCycleWithMissingStateTxn(db, nextCycleKey) {
+  const { startedAt, endsAt } = cycleWindow(nextCycleKey);
+  return runTransaction(db, async (tx) => {
+    const recruitmentRef = doc(db, 'recruitments', recruitmentId);
+    const recruitment = (await tx.get(recruitmentRef)).data();
+    const target = recruitment.raidStateTargets[0];
+    const slot = recruitment.partySlots[0];
+    const eventId = `advanceCycle_${recruitmentId}_${recruitment.revision}`;
+    tx.update(recruitmentRef, {
+      status: 'active', currentCycleStatus: 'active',
+      currentCycleKey: nextCycleKey, targetCycleKey: nextCycleKey,
+      cycleStartedAt: Timestamp.fromDate(startedAt),
+      cycleEndsAt: Timestamp.fromDate(endsAt),
+      completedAt: null, completedByPlayerId: null,
+      commandTargets: recruitment.raidStateTargets,
+      revision: recruitment.revision + 1,
+      lastCommandId: eventId, lastCommandType: 'advanceCycle',
+      lastCommandActorPlayerId: playerId,
+      lastCommandAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+    tx.set(doc(db, 'players', target.playerId, 'raidStates', target.stateId), {
+      schemaVersion: 1, playerId: slot.playerId,
+      characterId: slot.characterId, raidId: recruitment.raidId,
+      difficultyId: recruitment.difficultyId,
+      recruitmentId, cycleKey: nextCycleKey, role: slot.role,
+      status: 'active', source: 'party', revision: increment(1),
+      completedAt: deleteField(), updatedAt: serverTimestamp(),
+    }, { merge: true });
+    tx.set(doc(db, 'partyEvents', eventId), {
+      schemaVersion: 1, eventId, recruitmentId, type: 'advanceCycle',
+      commandId: eventId, commandRevision: recruitment.revision + 1,
+      audiencePlayerIds: recruitment.memberPlayerIds,
+      actorPlayerId: playerId, occurredAt: serverTimestamp(),
+    });
+  });
+}
+
+async function completeActiveMemberTxn(
+  db,
+  actorPlayerId,
+  actorCharacterId,
+  { forgedLeaderSnapshot = false } = {},
+) {
+  return runTransaction(db, async (tx) => {
+    const recruitmentRef = doc(db, 'recruitments', recruitmentId);
+    const memberRef = doc(db, 'recruitments', recruitmentId, 'members', actorPlayerId);
+    const stateId = `${actorCharacterId}_${raidId}`;
+    const stateRef = doc(db, 'players', actorPlayerId, 'raidStates', stateId);
+    const recruitment = (await tx.get(recruitmentRef)).data();
+    await tx.get(memberRef);
+    const remainingSlots = recruitment.partySlots.filter(
+      (slot) => slot.playerId !== actorPlayerId,
+    );
+    const remainingIds = recruitment.memberPlayerIds.filter(
+      (id) => id !== actorPlayerId,
+    );
+    const transfersLeadership = recruitment.leaderPlayerId === actorPlayerId
+      && remainingIds.length > 0;
+    const successorRef = transfersLeadership
+      ? doc(db, 'recruitments', recruitmentId, 'members', remainingIds[0])
+      : null;
+    const successor = successorRef ? (await tx.get(successorRef)).data() : null;
+    const groupRef = recruitment.groupId
+      ? doc(db, 'groups', recruitment.groupId) : null;
+    const group = groupRef ? (await tx.get(groupRef)).data() : null;
+    const groupListingRef = recruitment.groupId
+      ? doc(db, 'groups', recruitment.groupId, 'raidListings', recruitmentId)
+      : null;
+    const nextRevision = recruitment.revision + 1;
+    const eventId = `memberLeft_${recruitmentId}_${nextRevision}`;
+    tx.update(recruitmentRef, {
+      ...(remainingIds.length === 0 ? {
+        status: 'disbanded', manualRecruitmentEnabled: false,
+        hasAvailableSlot: false,
+      } : { hasAvailableSlot: true }),
+      memberPlayerIds: remainingIds,
+      memberCount: remainingIds.length,
+      dealerCount: remainingSlots.filter((slot) => slot.role === 'dealer').length,
+      supportCount: remainingSlots.filter((slot) => slot.role === 'support').length,
+      partySlots: remainingSlots,
+      raidStateTargets: recruitment.raidStateTargets.filter(
+        (target) => target.playerId !== actorPlayerId,
+      ),
+      nonGroupMemberCount: remainingSlots.filter(
+        (slot) => slot.countedAsNonGroupMember,
+      ).length,
+      ...(group && remainingIds.length === 0
+        ? { groupActiveRecruitmentCountAfter: group.activeRecruitmentCount - 1 }
+        : {}),
+      ...(transfersLeadership
+        ? {
+          leaderPlayerId: remainingIds[0],
+          leaderCharacterNameSnapshot: forgedLeaderSnapshot
+            ? '위조된 가입자'
+            : successor.characterNameSnapshot,
+          leaderClassNameSnapshot: successor.classNameSnapshot,
+        } : {}),
+      commandTargets: [{ playerId: actorPlayerId, stateId }],
+      lastCommandId: deleteField(), lastCommandType: deleteField(),
+      lastCommandActorPlayerId: deleteField(), lastCommandAt: deleteField(),
+      revision: nextRevision, updatedAt: serverTimestamp(),
+    });
+    tx.delete(memberRef);
+    if (successorRef) {
+      tx.update(successorRef, {
+        canApproveApplications: true,
+        updatedAt: serverTimestamp(),
+      });
+    }
+    if (groupRef && remainingIds.length === 0) {
+      tx.update(groupRef, {
+        activeRecruitmentCount: group.activeRecruitmentCount - 1,
+        lastRecruitmentId: recruitmentId,
+        revision: group.revision + 1,
+        updatedAt: serverTimestamp(),
+      });
+      tx.delete(groupListingRef);
+    } else if (groupListingRef) {
+      tx.update(groupListingRef, {
+        memberCount: remainingIds.length,
+        sourceRevision: nextRevision,
+        updatedAt: serverTimestamp(),
+      });
+    }
+    tx.update(stateRef, {
+      status: 'completed', source: 'manual', revision: 2,
+      completedAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+    tx.set(doc(db, 'partyEvents', eventId), {
+      schemaVersion: 1, eventId, recruitmentId, type: 'memberLeft',
+      commandId: eventId, commandRevision: nextRevision,
+      audiencePlayerIds: recruitment.memberPlayerIds,
+      actorPlayerId, targetPlayerId: actorPlayerId,
+      reason: 'weeklyRaidCompleted',
+      occurredAt: serverTimestamp(),
+    });
+  });
+}
+
 async function main() {
   console.log('cycleKey', cycleKey);
   console.log('cutover baseline: loading tracked firestore.rules');
@@ -853,6 +1017,152 @@ async function main() {
       ),
     );
     console.log('PASS: owner-only raid status list contract');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    console.log('test: owner creates and deletes manual completed raidState');
+    await assertSucceeds(createManualRaidStateTxn(db));
+    await assertSucceeds(deleteCompletedRaidStateTxn(db, playerId, characterId));
+    console.log('PASS: personal manual completion toggle');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    const previousCycleKey = offsetCycleKey(cycleKey, -7);
+    const previousWindow = cycleWindow(previousCycleKey);
+    const nextCycleKey = cycleKey;
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await updateDoc(doc(adminDb, 'recruitments', recruitmentId), {
+        continueTogether: true,
+        currentCycleStatus: 'completed',
+        currentCycleKey: previousCycleKey,
+        targetCycleKey: previousCycleKey,
+        cycleStartedAt: Timestamp.fromDate(previousWindow.startedAt),
+        cycleEndsAt: Timestamp.fromDate(previousWindow.endsAt),
+        revision: 2,
+      });
+      await updateDoc(
+        doc(adminDb, 'players', playerId, 'raidStates', `${characterId}_${raidId}`),
+        {
+          status: 'completed', cycleKey: previousCycleKey,
+          completedAt: Timestamp.now(), revision: 2,
+        },
+      );
+    });
+    await assertSucceeds(deleteCompletedRaidStateTxn(db, playerId, characterId));
+    console.log('test: next cycle recreates a personally cleared raidState');
+    await assertSucceeds(advanceCycleWithMissingStateTxn(db, nextCycleKey));
+    const recreatedState = (await getDoc(doc(
+      db,
+      'players',
+      playerId,
+      'raidStates',
+      `${characterId}_${raidId}`,
+    ))).data();
+    if (recreatedState.status !== 'active'
+      || recreatedState.source !== 'party'
+      || recreatedState.cycleKey !== nextCycleKey) {
+      throw new Error('Next-cycle missing raidState reconstruction mismatch');
+    }
+    console.log('PASS: next-cycle missing raidState reconstruction');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    console.log('test: last member completes manually and disbands atomically');
+    await assertSucceeds(completeActiveMemberTxn(db, playerId, characterId));
+    const singleCompletionRoom = (await getDoc(doc(db, 'recruitments', recruitmentId))).data();
+    const singleCompletionState = (await getDoc(doc(db, 'players', playerId,
+      'raidStates', `${characterId}_${raidId}`))).data();
+    if (singleCompletionRoom.status !== 'disbanded'
+      || singleCompletionRoom.memberCount !== 0
+      || singleCompletionState.status !== 'completed') {
+      throw new Error('Last-member personal completion mismatch');
+    }
+    console.log('PASS: last-member personal completion');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await seedGroupLinkedRoom(testEnv, db);
+    console.log('test: group-room last member completion closes listing and count');
+    await assertSucceeds(completeActiveMemberTxn(db, playerId, characterId));
+    const completedGroup = (await getDoc(doc(db, 'groups', 'group-room-1'))).data();
+    const completedGroupRoom = (await getDoc(
+      doc(db, 'recruitments', recruitmentId),
+    )).data();
+    const completedGroupListing = await getDoc(
+      doc(db, 'groups', 'group-room-1', 'raidListings', recruitmentId),
+    );
+    if (completedGroup.activeRecruitmentCount !== 0
+      || completedGroupRoom.status !== 'disbanded'
+      || completedGroupListing.exists()) {
+      throw new Error('Group-room personal completion aggregate mismatch');
+    }
+    console.log('PASS: group-room personal completion');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    const personalApplicantDb = testEnv.authenticatedContext(joinerAuthUid).firestore();
+    await assertSucceeds(applicationTxn(personalApplicantDb, 'apply'));
+    await assertSucceeds(approvePublicApplicationTxn(db));
+    console.log('test: joined member leaves and completes in one transaction');
+    await assertSucceeds(completeActiveMemberTxn(
+      personalApplicantDb,
+      joinerPlayerId,
+      joinerCharacterId,
+    ));
+    const memberCompletionRoom = (await getDoc(doc(db, 'recruitments', recruitmentId))).data();
+    const memberCompletionState = (await getDoc(doc(personalApplicantDb,
+      'players', joinerPlayerId, 'raidStates', `${joinerCharacterId}_${raidId}`))).data();
+    if (memberCompletionRoom.memberCount !== 1
+      || memberCompletionRoom.memberPlayerIds.includes(joinerPlayerId)
+      || memberCompletionState.status !== 'completed') {
+      throw new Error('Joined-member personal completion mismatch');
+    }
+    console.log('PASS: joined-member personal completion');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    const leaderTransferApplicantDb = testEnv.authenticatedContext(joinerAuthUid).firestore();
+    await assertSucceeds(applicationTxn(leaderTransferApplicantDb, 'apply'));
+    await assertSucceeds(approvePublicApplicationTxn(db));
+    console.log('test: leader personal completion transfers leadership atomically');
+    await assertSucceeds(completeActiveMemberTxn(db, playerId, characterId));
+    const leaderTransferRoom = (await getDoc(
+      doc(db, 'recruitments', recruitmentId),
+    )).data();
+    const leaderTransferMember = (await getDoc(
+      doc(db, 'recruitments', recruitmentId, 'members', joinerPlayerId),
+    )).data();
+    if (leaderTransferRoom.leaderPlayerId !== joinerPlayerId
+      || leaderTransferRoom.leaderCharacterNameSnapshot !== '가입자'
+      || leaderTransferRoom.leaderClassNameSnapshot !== '바드'
+      || leaderTransferMember.canApproveApplications !== true) {
+      throw new Error('Leader personal completion transfer mismatch');
+    }
+    console.log('PASS: leader personal completion transfer');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    const forgedTransferApplicantDb = testEnv.authenticatedContext(joinerAuthUid).firestore();
+    await assertSucceeds(applicationTxn(forgedTransferApplicantDb, 'apply'));
+    await assertSucceeds(approvePublicApplicationTxn(db));
+    console.log('test: forged successor snapshot is denied');
+    await assertFails(completeActiveMemberTxn(
+      db,
+      playerId,
+      characterId,
+      { forgedLeaderSnapshot: true },
+    ));
+    console.log('PASS: forged successor snapshot denied');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);

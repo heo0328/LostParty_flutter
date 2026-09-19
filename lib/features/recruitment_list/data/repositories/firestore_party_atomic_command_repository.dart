@@ -93,6 +93,14 @@ class FirestorePartyAtomicCommandRepository
         final recruitmentPatch = Map<String, Object?>.from(
           plan.recruitmentPatch,
         );
+        if (command.type == PartyAtomicCommandType.advanceCycle) {
+          recruitmentPatch['cycleStartedAt'] = Timestamp.fromDate(
+            command.nextCycleStartedAt!.toUtc(),
+          );
+          recruitmentPatch['cycleEndsAt'] = Timestamp.fromDate(
+            command.nextCycleEndsAt!.toUtc(),
+          );
+        }
         final groupId = aggregate.groupId;
         if (groupId != null) {
           if (plan.closesActiveGroupRecruitment) {
@@ -131,6 +139,11 @@ class FirestorePartyAtomicCommandRepository
           final ref = stateRefs[write.target.pathKey]!;
           if (write.action == PartyRaidStateWriteAction.delete) {
             transaction.delete(ref);
+          } else if (write.action == PartyRaidStateWriteAction.upsert) {
+            transaction.set(ref, {
+              ...write.patch!,
+              if (write.removeCompletedAt) 'completedAt': FieldValue.delete(),
+            }, SetOptions(merge: true));
           } else {
             transaction.update(ref, write.patch!);
           }

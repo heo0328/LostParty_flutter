@@ -15,52 +15,52 @@ void main() {
     expect(rules, contains('request.time < newData.cycleEndsAt'));
   });
 
-  test('반복방 assignment 생성과 회차 갱신만 별도 허용한다', () {
-    expect(rules, contains('function validCycleAdvanceAssignmentCreate('));
-    expect(rules, contains('function validCycleAdvanceAssignmentUpdate('));
+  test('반복방은 현재 멤버의 raidState 생성과 회차 갱신만 허용한다', () {
+    expect(rules, contains('function validAtomicAdvanceRaidStateCreate('));
+    expect(rules, contains('function validAtomicRaidStateUpdate('));
     expect(
       rules,
       contains(
-        "newData.diff(data).affectedKeys().hasOnly([\n          'cycleKey', 'updatedAt'",
+        "newData.diff(oldData).affectedKeys().hasOnly([\n          'status', 'source', 'cycleKey', 'revision', 'completedAt',\n          'updatedAt'",
       ),
     );
-    expect(rules, contains('newData.cycleKey == after.currentCycleKey'));
+    expect(rules, contains('newData.cycleKey == recruitment.currentCycleKey'));
+    expect(rules, contains('atomicAdvanceStateMatchesSlot(recruitment, data)'));
   });
 
-  test('1회성 만료 전환은 해당 이전 점유 삭제만 허용한다', () {
-    expect(rules, contains('let oneShotCycleAdvanceRemoval ='));
-    expect(rules, contains('data.cycleKey == recruitment.currentCycleKey'));
-    expect(rules, contains("after.status == 'incompleteEnded'"));
-  });
-
-  test('회차 승계 assignment도 Character와 raidId canonical 키를 쓴다', () {
+  test('다음 주차 생성은 현재 멤버와 정확한 원자 명령 대상만 허용한다', () {
+    expect(rules, contains("recruitment.lastCommandType == 'advanceCycle'"));
+    expect(rules, contains('data.recruitmentId == recruitment.recruitmentId'));
     expect(
-      RegExp("assignmentId == data.characterId \\+ '_' \\+ data.raidId")
-          .allMatches(rules)
-          .length,
+      rules,
+      contains('atomicCommandIncludes(recruitment, playerId, stateId)'),
+    );
+    expect(rules, contains('atomicAdvanceStateMatchesSlot(recruitment, data)'));
+  });
+
+  test('회차 승계 raidState도 Character와 raidId canonical 키를 쓴다', () {
+    expect(
+      RegExp(
+        "stateId == data.characterId \\+ '_' \\+ data.raidId",
+      ).allMatches(rules).length,
       greaterThanOrEqualTo(3),
     );
   });
 
-  test('기존 1회성 미완료 종료 점유만 가입 시 교체할 수 있다', () {
+  test('구 assignment 신규 쓰기는 닫고 개인 완료에 따른 자기 정리만 허용한다', () {
     expect(
       rules,
-      contains('function validLegacyIncompleteAssignmentReplacement('),
+      contains('function validLegacyAssignmentConsumedByPersonalCompletion('),
     );
-    expect(rules, contains("oldRecruitment.status == 'incompleteEnded'"));
+    expect(rules, contains('allow create, update: if false;'));
     expect(
       rules,
-      contains("oldRecruitment.currentCycleStatus == 'incompleteEnded'"),
+      contains(
+        'allow delete: if validLegacyAssignmentConsumedByPersonalCompletion(',
+      ),
     );
-    expect(rules, contains('oldRecruitment.continueTogether == false'));
-    expect(rules, contains('data.cycleKey != newData.cycleKey'));
-    expect(
-      rules,
-      contains('validJoinedAssignment(playerId, assignmentId, newData)'),
-    );
-    expect(
-      rules,
-      contains('validInitialAssignment(playerId, assignmentId, newData)'),
-    );
+    expect(rules, contains("state.status == 'completed'"));
+    expect(rules, contains("state.source == 'manual'"));
+    expect(rules, contains('!(playerId in recruitment.memberPlayerIds)'));
   });
 }

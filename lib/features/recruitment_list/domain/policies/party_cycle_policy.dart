@@ -1,21 +1,20 @@
 import 'raid_cycle_schedule.dart';
 
 class PartyCycleWindow {
-  const PartyCycleWindow({required this.key, required this.startedAt, required this.endsAt, required this.completionCancelDeadline});
+  const PartyCycleWindow({
+    required this.key,
+    required this.startedAt,
+    required this.endsAt,
+  });
   final String key;
   final DateTime startedAt;
   final DateTime endsAt;
-  final DateTime completionCancelDeadline;
 }
 
 class PartyCyclePolicy {
-  const PartyCyclePolicy({
-    this.schedule = const RaidCycleSchedule(),
-    this.completionCancelLeadTime = const Duration(hours: 8),
-  });
+  const PartyCyclePolicy({this.schedule = const RaidCycleSchedule()});
 
   final RaidCycleSchedule schedule;
-  final Duration completionCancelLeadTime;
 
   PartyCycleWindow? fromKey(String key) {
     final parts = key.split('-');
@@ -39,21 +38,18 @@ class PartyCyclePolicy {
     }
     final startedAt = localStart.subtract(schedule.utcOffset);
     final endsAt = startedAt.add(schedule.cycleLength);
-    return PartyCycleWindow(
-      key: key,
-      startedAt: startedAt,
-      endsAt: endsAt,
-      completionCancelDeadline: endsAt.subtract(completionCancelLeadTime),
-    );
+    return PartyCycleWindow(key: key, startedAt: startedAt, endsAt: endsAt);
   }
 
   String keyFor(DateTime instant) {
     final local = instant.toUtc().add(schedule.utcOffset);
     final midnight = DateTime.utc(local.year, local.month, local.day);
     final days = (local.weekday - schedule.resetWeekday + 7) % 7;
-    var start = midnight.subtract(Duration(days: days)).add(
-      Duration(hours: schedule.resetHour, minutes: schedule.resetMinute),
-    );
+    var start = midnight
+        .subtract(Duration(days: days))
+        .add(
+          Duration(hours: schedule.resetHour, minutes: schedule.resetMinute),
+        );
     if (local.isBefore(start)) start = start.subtract(schedule.cycleLength);
     return '${start.year}-${start.month.toString().padLeft(2, '0')}-${start.day.toString().padLeft(2, '0')}';
   }

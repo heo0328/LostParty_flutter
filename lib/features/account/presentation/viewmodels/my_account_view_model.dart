@@ -175,6 +175,10 @@ class MyAccountViewModel extends ChangeNotifier {
             label: entry.label,
             isCompleted: completedRaidIds.contains(entry.raidId),
             statusKind: statusByRaidId[entry.raidId]?.kind,
+            hasActiveEvidence:
+                statusByRaidId[entry.raidId]?.hasActiveEvidence ?? false,
+            hasCompletedEvidence:
+                statusByRaidId[entry.raidId]?.hasCompletedEvidence ?? false,
           ),
         )
         .toList(growable: false);

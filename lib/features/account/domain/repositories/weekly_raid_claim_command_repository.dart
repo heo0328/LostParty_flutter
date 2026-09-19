@@ -5,6 +5,7 @@ enum WeeklyRaidClaimCommandFailure {
   invalidRequest,
   activeAssignment,
   pendingApplication,
+  stateInconsistent,
   permissionDenied,
   temporarilyUnavailable,
   unknown,
@@ -39,8 +40,7 @@ abstract interface class WeeklyRaidClaimCommandRepository {
   Future<WeeklyRaidClaimCommandResult> createManualClaim(
     CreateManualWeeklyRaidClaimCommand command, {
     bool resolveConflicts = false,
-  }
-  );
+  });
 
   Future<WeeklyRaidClaimCommandResult> deleteManualClaim(
     DeleteManualWeeklyRaidClaimCommand command,

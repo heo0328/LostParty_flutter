@@ -74,7 +74,7 @@ void main() {
   test('Emulator 계약은 1 2 4 8인과 핵심 거절 경로를 포함한다', () {
     expect(emulatorTest, contains('[1, 2, 4, 8]'));
     expect(emulatorTest, contains("'complete'"));
-    expect(emulatorTest, contains("'cancelCompletion'"));
+    expect(emulatorTest, isNot(contains("'cancelCompletion'")));
     expect(emulatorTest, contains("'advanceCycle'"));
     expect(emulatorTest, contains("'disband'"));
     expect(emulatorTest, contains('{ omitLast: true }'));

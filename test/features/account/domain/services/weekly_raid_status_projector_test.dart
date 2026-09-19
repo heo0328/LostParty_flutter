@@ -72,7 +72,10 @@ void main() {
     );
 
     expect(projected.single.kind, WeeklyRaidStatusKind.inconsistent);
-    expect(projected.single.isCompleted, isFalse);
+    expect(projected.single.isCompleted, isTrue);
+    expect(projected.single.hasCompletedEvidence, isTrue);
+    expect(projected.single.hasCompletedState, isTrue);
+    expect(projected.single.hasLegacyClaim, isTrue);
   });
 
   test('현재 주차가 아닌 record는 Projection에서 제외한다', () {

@@ -41,6 +41,10 @@ class WeeklyRaidStatusProjection {
     required this.cycleKey,
     required this.kind,
     this.recruitmentId,
+    this.hasActiveEvidence = false,
+    this.hasCompletedEvidence = false,
+    this.hasCompletedState = false,
+    this.hasLegacyClaim = false,
   });
 
   final String playerId;
@@ -49,14 +53,20 @@ class WeeklyRaidStatusProjection {
   final String cycleKey;
   final WeeklyRaidStatusKind kind;
   final String? recruitmentId;
+  final bool hasActiveEvidence;
+  final bool hasCompletedEvidence;
+  final bool hasCompletedState;
+  final bool hasLegacyClaim;
 
   String get key => '$characterId:$raidId';
 
   bool get isCompleted =>
+      hasCompletedEvidence ||
       kind == WeeklyRaidStatusKind.completed ||
       kind == WeeklyRaidStatusKind.legacyCompleted;
 
   bool get isActive =>
+      hasActiveEvidence ||
       kind == WeeklyRaidStatusKind.active ||
       kind == WeeklyRaidStatusKind.legacyActive;
 

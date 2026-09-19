@@ -7,6 +7,8 @@ class WeeklyRaidStatusItem {
     required this.label,
     required this.isCompleted,
     this.statusKind,
+    this.hasActiveEvidence = false,
+    this.hasCompletedEvidence = false,
   });
 
   final String raidId;
@@ -14,12 +16,13 @@ class WeeklyRaidStatusItem {
   final String label;
   final bool isCompleted;
   final WeeklyRaidStatusKind? statusKind;
+  final bool hasActiveEvidence;
+  final bool hasCompletedEvidence;
 
-  // B2-A only unifies reads. Current raidState mutations are introduced by
-  // B2-B/C, so exposing those toggles here would report a false success through
-  // the legacy Claim command repository.
   bool get canToggle =>
-      statusKind == null || statusKind == WeeklyRaidStatusKind.legacyCompleted;
+      statusKind != WeeklyRaidStatusKind.inconsistent ||
+      hasActiveEvidence ||
+      hasCompletedEvidence;
 
   String? get statusMessage => switch (statusKind) {
     WeeklyRaidStatusKind.active ||

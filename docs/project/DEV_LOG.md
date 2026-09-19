@@ -3157,3 +3157,11 @@
 - 잘못된 완료는 각 사용자가 내 계정에서 자기 완료 체크만 해제한다. 반복방은 완료 당시 membership을 유지하고 수요일 06시 새 주차 전환에서 새 `active` 상태를 구성한다.
 - R1의 완료·주차 전환 권한 경계와 R2의 완료 이벤트 Snapshot은 계속 유효하다. 당시 함께 추가된 완료 취소 분기만 제거하며 과거 `completionCancelled` 이벤트·Drift 기록은 읽기 호환을 유지한다.
 - 이번 단계는 문서만 수정했다. 코드·Rules·배포는 변경하지 않았고 다음 R3 구현 범위에 완료 취소 제거와 개인 체크 조작 복구를 함께 기록했다.
+
+# 2026-09-19 F6-B2-R3 중단 구현 복구·자동 검증 진행
+
+- 중단된 작업 트리를 보존해 개인 완료 명령을 `raidState` 원장에 연결했다. 미참가 수동 완료/해제, 활성 참가자의 탈퇴+완료, 파티장 후임 승계, 마지막 1인 해산, 그룹 listing·활성 수 정리를 각 핵심 Transaction 안에서 처리한다. pending 신청 정리는 인원수와 무관한 비핵심 후처리이며 타인 private state 선읽기와 Player별 이벤트 fan-out을 추가하지 않았다.
+- 파티장 개인 완료 Rules에 후임 membership의 Player·Character/Class Snapshot·승인 권한 검증을 추가했다. `weeklyRaidCompleted` 탈퇴 이유, 완료 state 기반 생성·신청·승인 차단, 본인 completed state와 호환 Claim의 제한적 해제를 계약에 반영했다. 파티 전체 완료 취소 실행 경로는 제거하고 과거 이벤트 읽기만 유지한다.
+- 반복방 다음 주차 전환은 현재 membership/`partySlots`를 근거로 누락 state를 생성하거나 같은 모집의 기존 state를 갱신한다. 새 주차 시간창은 정확히 7일이며 요청 시각이 시작 이상·종료 미만이어야 한다. 다른 모집·새 주차 수동 완료 state는 덮어쓰지 않는다.
+- 개인 완료·해제, 일반 멤버·파티장·마지막 1인, 그룹 전용 마지막 1인, 반복방 state 재생성 및 기존 lifecycle 표적 테스트와 핵심 변경 파일 분석은 통과했다. 전체 `flutter analyze`는 기존 lint를 포함한 50건을 반환했다. 전체 `flutter test`는 계약 갱신 전 1,183건 통과·13건 실패였고, 현재 작업에서 바뀐 legacy assignment 계약 테스트는 갱신 후 단독 통과했다. 기존 활동 Character Rules 문자열 및 Firebase 미초기화 최상위 위젯 테스트 등 기준선 실패는 남아 있어 전체 회귀 통과로 기록하지 않는다.
+- 로컬 Firestore Emulator는 CLI 설정 경로와 Android Studio JBR 21을 명시해 기동했으나 Rules 로딩 단계의 기존 `503 Network closed for unknown reason`로 시나리오 전에 중단됐다. 재시도하지 않는다. 운영 Rules 배포와 실기기 조작은 하지 않았으며, 다음 게이트는 작업 브랜치 커밋·demo Rules CI다.

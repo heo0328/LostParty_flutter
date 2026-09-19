@@ -31,7 +31,6 @@ service cloud.firestore {
       return state.recruitmentId == data.recruitmentId
         && state.cycleKey == data.currentCycleKey
         && ((data.lastCommandType == 'complete' && state.status == 'completed')
-          || (data.lastCommandType == 'cancelCompletion' && state.status == 'active')
           || (data.lastCommandType == 'advanceCycle' && state.status == 'active'));
     }
 
@@ -84,13 +83,6 @@ service cloud.firestore {
           && newData.status
             == (oldData.continueTogether ? 'active' : 'completed')
           && newData.currentCycleStatus == 'completed'
-          && newData.currentCycleKey == oldData.currentCycleKey)
-        || (newData.lastCommandType == 'cancelCompletion'
-          && oldData.status == 'active'
-          && oldData.continueTogether == true
-          && oldData.currentCycleStatus == 'completed'
-          && newData.status == 'active'
-          && newData.currentCycleStatus == 'active'
           && newData.currentCycleKey == oldData.currentCycleKey)
         || (newData.lastCommandType == 'advanceCycle'
           && oldData.status == 'active'
@@ -162,10 +154,6 @@ service cloud.firestore {
             && oldData.status == 'active'
             && newData.status == 'completed'
             && newData.cycleKey == oldData.cycleKey)
-          || (recruitment.lastCommandType == 'cancelCompletion'
-            && oldData.status == 'completed'
-            && newData.status == 'active'
-            && newData.cycleKey == oldData.cycleKey)
           || (recruitment.lastCommandType == 'advanceCycle'
             && (oldData.status == 'active' || oldData.status == 'completed')
             && newData.status == 'active'
@@ -211,7 +199,7 @@ service cloud.firestore {
 
     function validV2EventPayload(data, recruitment) {
       return data.schemaVersion == 2
-        && ((data.type == 'complete' || data.type == 'cancelCompletion')
+        && (data.type == 'complete'
           ? (data.keys().hasOnly([
               'schemaVersion', 'eventId', 'recruitmentId', 'type', 'commandId',
               'commandRevision', 'audiencePlayerIds', 'actorPlayerId',

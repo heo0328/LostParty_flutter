@@ -108,11 +108,31 @@ void main() {
         expectedRevision: 4,
         expectedCycleKey: '2026-09-09',
         nextCycleKey: '2026-09-09',
+        nextCycleStartedAt: DateTime.utc(2026, 9, 8, 21),
+        nextCycleEndsAt: DateTime.utc(2026, 9, 15, 21),
         targets: [
           PartyCommandTarget(playerId: 'player-0', raidStateId: 'state-0'),
         ],
       ),
       throwsArgumentError,
+    );
+
+    expect(
+      () => PartyCommandEnvelope(
+        commandId: 'command-4',
+        recruitmentId: 'recruitment-1',
+        type: PartyAtomicCommandType.advanceCycle,
+        actorPlayerId: 'player-0',
+        expectedRevision: 4,
+        expectedCycleKey: '2026-09-09',
+        nextCycleKey: '2026-09-16',
+        nextCycleStartedAt: DateTime.utc(2026, 9, 15, 21),
+        nextCycleEndsAt: DateTime.utc(2026, 9, 22, 21),
+        targets: [
+          PartyCommandTarget(playerId: 'player-0', raidStateId: 'state-0'),
+        ],
+      ),
+      returnsNormally,
     );
   });
 

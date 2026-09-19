@@ -81,12 +81,7 @@ class PartyAggregateSlot {
   String get positionKey => '${partyIndex}_$slotIndex';
 }
 
-enum PartyAtomicCommandType {
-  complete,
-  cancelCompletion,
-  advanceCycle,
-  disband,
-}
+enum PartyAtomicCommandType { complete, advanceCycle, disband }
 
 enum PartyAtomicMemberRemovalType { leave, kick, lostGroupQualification }
 
@@ -113,6 +108,8 @@ class PartyCommandEnvelope {
     required this.expectedCycleKey,
     required List<PartyCommandTarget> targets,
     this.nextCycleKey,
+    this.nextCycleStartedAt,
+    this.nextCycleEndsAt,
   }) : targets = List.unmodifiable(targets) {
     if (commandId.isEmpty ||
         recruitmentId.isEmpty ||
@@ -130,8 +127,18 @@ class PartyCommandEnvelope {
       throw ArgumentError('명령 대상은 중복될 수 없습니다.');
     }
     final isAdvance = type == PartyAtomicCommandType.advanceCycle;
-    if (isAdvance != (nextCycleKey != null && nextCycleKey!.isNotEmpty) ||
-        (isAdvance && nextCycleKey == expectedCycleKey)) {
+    final hasNextWindow =
+        nextCycleKey != null &&
+        nextCycleKey!.isNotEmpty &&
+        nextCycleStartedAt != null &&
+        nextCycleEndsAt != null;
+    if (isAdvance != hasNextWindow ||
+        (isAdvance &&
+            (nextCycleKey == expectedCycleKey ||
+                nextCycleEndsAt!.toUtc().difference(
+                      nextCycleStartedAt!.toUtc(),
+                    ) !=
+                    const Duration(days: 7)))) {
       throw ArgumentError('다음 회차 키는 주차 전환 명령에만 필요합니다.');
     }
   }
@@ -143,6 +150,8 @@ class PartyCommandEnvelope {
   final int expectedRevision;
   final String expectedCycleKey;
   final String? nextCycleKey;
+  final DateTime? nextCycleStartedAt;
+  final DateTime? nextCycleEndsAt;
   final List<PartyCommandTarget> targets;
 }
 
@@ -188,9 +197,7 @@ class PartyCommandAggregate {
         pendingNonGroupApplicantCount < 0 ||
         nonGroupMemberCount > partySlots.length ||
         nonGroupMemberCount !=
-            partySlots
-                .where((slot) => slot.countedAsNonGroupMember)
-                .length ||
+            partySlots.where((slot) => slot.countedAsNonGroupMember).length ||
         pendingNonGroupApplicantCount > pendingApplicationCount) {
       throw ArgumentError('모집 Aggregate 집계가 올바르지 않습니다.');
     }

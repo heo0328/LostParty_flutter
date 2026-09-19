@@ -583,8 +583,8 @@ void main() {
     expect(find.text('4막 노말 모집'), findsNothing);
   });
 
-  testWidgets('파티장이 단독 모집을 삭제하면 leave 명령을 보낸다', (tester) async {
-    final membership = _RecordingMembershipRepository();
+  testWidgets('파티장이 단독 모집을 삭제하면 disband 명령을 보낸다', (tester) async {
+    final cycle = _RecordingCycleRepository();
     await pumpPage(
       tester,
       recruitment: Stream.value(
@@ -596,7 +596,8 @@ void main() {
       members: Stream.value(
         const PartyReadSnapshot(items: [], isFromCache: false),
       ),
-      membershipCommandRepository: membership,
+      membershipCommandRepository: _RecordingMembershipRepository(),
+      cycleCommandRepository: cycle,
       playerId: 'player-1',
     );
     await tester.pumpAndSettle();
@@ -611,9 +612,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(membership.leaveCommands, hasLength(1));
-    expect(membership.leaveCommands.single.targetPlayerId, 'player-1');
-    expect(membership.leaveCommands.single.expectedRecruitmentRevision, 1);
+    expect(cycle.disbandCommands, hasLength(1));
+    expect(cycle.disbandCommands.single.expectedRecruitmentRevision, 1);
     expect(find.text('모집을 삭제했습니다.'), findsOneWidget);
   });
 
@@ -2216,11 +2216,6 @@ class _RecordingCycleRepository implements PartyCycleCommandRepository {
     completeCommands.add(command);
     return const PartyCycleResult.success();
   }
-
-  @override
-  Future<PartyCycleResult> cancelCompletion(
-    PartyCancelCompletionCommand command,
-  ) => throw UnimplementedError();
 
   @override
   Future<PartyCycleResult> setRecurrence(PartySetRecurrenceCommand command) =>

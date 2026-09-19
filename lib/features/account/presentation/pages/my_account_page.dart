@@ -1091,6 +1091,8 @@ class _MyAccountPageState extends State<MyAccountPage> {
           '현재 참가 중인 파티가 있어 완료 처리할 수 없습니다.',
         WeeklyRaidClaimCommandFailure.pendingApplication =>
           '승인 대기 중인 신청이 있어 먼저 철회해야 합니다.',
+        WeeklyRaidClaimCommandFailure.stateInconsistent =>
+          '이 캐릭터의 참가·완료 기록이 일치하지 않습니다. 새로고침 후 다시 확인해 주세요.',
         WeeklyRaidClaimCommandFailure.unauthenticated => '로그인 상태를 다시 확인해 주세요.',
         WeeklyRaidClaimCommandFailure.permissionDenied =>
           '완료 상태를 변경할 권한이 없습니다.',

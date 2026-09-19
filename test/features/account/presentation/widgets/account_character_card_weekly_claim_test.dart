@@ -182,7 +182,7 @@ void main() {
     expect(changedValue, isTrue);
   });
 
-  testWidgets('keeps current raidState checked but read-only during B2-A', (
+  testWidgets('keeps current raidState checked and allows personal uncheck', (
     tester,
   ) async {
     var changed = false;
@@ -215,12 +215,12 @@ void main() {
       find.byKey(const ValueKey('weeklyRaidClaim-character-1-serca')),
     );
     expect(checkbox.value, isTrue);
-    expect(checkbox.onChanged, isNull);
+    expect(checkbox.onChanged, isNotNull);
     expect(find.byTooltip('완료 처리된 레이드입니다.'), findsOneWidget);
     await tester.tap(
       find.byKey(const ValueKey('weeklyRaidClaim-character-1-serca')),
     );
-    expect(changed, isFalse);
+    expect(changed, isTrue);
   });
 }
 

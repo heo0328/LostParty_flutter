@@ -70,7 +70,7 @@ void main() {
       final character = viewModel.accounts.single.characters.single;
       final completed = viewModel.weeklyRaidStatusesFor(character).single;
       expect(completed.isCompleted, isTrue);
-      expect(completed.canToggle, isFalse);
+      expect(completed.canToggle, isTrue);
       expect(completed.statusMessage, '완료 처리된 레이드입니다.');
       viewModel.dispose();
 
@@ -98,7 +98,7 @@ void main() {
           .weeklyRaidStatusesFor(activeCharacter)
           .single;
       expect(active.isCompleted, isFalse);
-      expect(active.canToggle, isFalse);
+      expect(active.canToggle, isTrue);
       expect(active.statusMessage, '현재 참가 중인 레이드입니다.');
       activeViewModel.dispose();
     },

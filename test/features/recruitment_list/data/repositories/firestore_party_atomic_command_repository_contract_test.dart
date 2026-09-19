@@ -38,6 +38,7 @@ void main() {
     expect(repository, isNot(contains('transaction.get(ref)')));
     expect(repository, isNot(contains('raidStateDocumentsAllow(')));
     expect(repository, contains('transaction.update(ref, write.patch!)'));
+    expect(repository, contains('SetOptions(merge: true)'));
     expect(repository, contains('transaction.delete(ref)'));
   });
 

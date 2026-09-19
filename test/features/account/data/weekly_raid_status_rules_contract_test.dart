@@ -22,10 +22,16 @@ void main() {
     }
   });
 
-  test('legacy assignment 쓰기는 계속 닫혀 있다', () {
+  test('legacy assignment 생성·수정은 닫고 개인 완료 자기 정리만 연다', () {
     final start = rules.indexOf('match /activeRaidAssignments/{assignmentId}');
     final end = rules.indexOf('\n      match /', start + 1);
     final block = rules.substring(start, end);
-    expect(block, contains('allow create, update, delete: if false;'));
+    expect(block, contains('allow create, update: if false;'));
+    expect(
+      block,
+      contains(
+        'allow delete: if validLegacyAssignmentConsumedByPersonalCompletion(',
+      ),
+    );
   });
 }

@@ -43,6 +43,12 @@ void main() {
         nextCycleKey: type == PartyAtomicCommandType.advanceCycle
             ? '2026-09-16'
             : null,
+        nextCycleStartedAt: type == PartyAtomicCommandType.advanceCycle
+            ? DateTime.utc(2026, 9, 15, 21)
+            : null,
+        nextCycleEndsAt: type == PartyAtomicCommandType.advanceCycle
+            ? DateTime.utc(2026, 9, 22, 21)
+            : null,
         targets: [
           PartyCommandTarget(
             playerId: 'player-0',
@@ -107,7 +113,14 @@ void main() {
     );
 
     expect(plan.recruitmentPatch['currentCycleKey'], '2026-09-16');
+    expect(plan.recruitmentPatch['targetCycleKey'], '2026-09-16');
+    expect(
+      plan.raidStateWrites.single.action,
+      PartyRaidStateWriteAction.upsert,
+    );
     expect(plan.raidStateWrites.single.patch?['cycleKey'], '2026-09-16');
+    expect(plan.raidStateWrites.single.patch?['source'], 'party');
+    expect(plan.raidStateWrites.single.removeCompletedAt, isTrue);
   });
 
   test('활성 해산은 raidState를 삭제하고 개인 이벤트를 복제하지 않는다', () {

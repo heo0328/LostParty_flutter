@@ -1,6 +1,6 @@
 import '../../domain/entities/party_atomic_command.dart';
 
-enum PartyRaidStateWriteAction { update, delete }
+enum PartyRaidStateWriteAction { update, upsert, delete }
 
 enum PartyGroupListingWriteAction { none, update, delete }
 
@@ -9,11 +9,13 @@ class PartyRaidStateWrite {
     required this.target,
     required this.action,
     this.patch,
+    this.removeCompletedAt = false,
   });
 
   final PartyCommandTarget target;
   final PartyRaidStateWriteAction action;
   final Map<String, Object?>? patch;
+  final bool removeCompletedAt;
 }
 
 class PartyAtomicWritePlan {
@@ -37,9 +39,6 @@ class PartyAtomicWritePlan {
     }
     if ((command.type == PartyAtomicCommandType.complete &&
             aggregate.currentCycleStatus != PartyRaidStateStatus.active) ||
-        (command.type == PartyAtomicCommandType.cancelCompletion &&
-            (aggregate.currentCycleStatus != PartyRaidStateStatus.completed ||
-                !aggregate.continueTogether)) ||
         (command.type == PartyAtomicCommandType.advanceCycle &&
             !aggregate.continueTogether)) {
       throw StateError('현재 회차 상태에서 실행할 수 없는 명령입니다.');
@@ -110,7 +109,6 @@ class PartyAtomicWritePlan {
       final status = data['status'];
       final allowed = switch (command.type) {
         PartyAtomicCommandType.complete => status == 'active',
-        PartyAtomicCommandType.cancelCompletion => status == 'completed',
         PartyAtomicCommandType.advanceCycle =>
           status == 'active' || status == 'completed',
         PartyAtomicCommandType.disband => status == 'active',
@@ -127,14 +125,22 @@ class PartyAtomicWritePlan {
         'currentCycleStatus': 'completed',
       if (command.type == PartyAtomicCommandType.complete)
         'status': aggregate.continueTogether ? 'active' : 'completed',
-      if (command.type == PartyAtomicCommandType.cancelCompletion ||
-          command.type == PartyAtomicCommandType.advanceCycle)
+      if (command.type == PartyAtomicCommandType.advanceCycle)
         'currentCycleStatus': 'active',
-      if (command.type == PartyAtomicCommandType.cancelCompletion ||
-          command.type == PartyAtomicCommandType.advanceCycle)
+      if (command.type == PartyAtomicCommandType.advanceCycle)
         'status': 'active',
       if (command.type == PartyAtomicCommandType.advanceCycle)
         'currentCycleKey': command.nextCycleKey,
+      if (command.type == PartyAtomicCommandType.advanceCycle)
+        'targetCycleKey': command.nextCycleKey,
+      if (command.type == PartyAtomicCommandType.advanceCycle)
+        'cycleStartedAt': command.nextCycleStartedAt,
+      if (command.type == PartyAtomicCommandType.advanceCycle)
+        'cycleEndsAt': command.nextCycleEndsAt,
+      if (command.type == PartyAtomicCommandType.advanceCycle) ...{
+        'completedAt': null,
+        'completedByPlayerId': null,
+      },
       if (command.type == PartyAtomicCommandType.disband) ...{
         'status': 'disbanded',
         'manualRecruitmentEnabled': false,
@@ -160,6 +166,13 @@ class PartyAtomicWritePlan {
           target: target,
           action: PartyRaidStateWriteAction.delete,
         )
+      else if (command.type == PartyAtomicCommandType.advanceCycle)
+        PartyRaidStateWrite(
+          target: target,
+          action: PartyRaidStateWriteAction.upsert,
+          patch: _advanceRaidState(target),
+          removeCompletedAt: true,
+        )
       else
         PartyRaidStateWrite(
           target: target,
@@ -168,20 +181,36 @@ class PartyAtomicWritePlan {
             'status': command.type == PartyAtomicCommandType.complete
                 ? 'completed'
                 : 'active',
-            if (command.type == PartyAtomicCommandType.advanceCycle)
-              'cycleKey': command.nextCycleKey,
+            if (command.type == PartyAtomicCommandType.complete)
+              'completedAt': serverTimestamp,
             'revision': incrementOne,
             'updatedAt': serverTimestamp,
           },
         ),
   ];
 
+  Map<String, Object?> _advanceRaidState(PartyCommandTarget target) {
+    final slot = aggregate.partySlots.firstWhere(
+      (candidate) => candidate.playerId == target.playerId,
+    );
+    return {
+      'schemaVersion': 1,
+      'playerId': slot.playerId,
+      'characterId': slot.characterId,
+      'raidId': aggregate.raidId,
+      'difficultyId': aggregate.difficultyId,
+      'recruitmentId': aggregate.recruitmentId,
+      'cycleKey': command.nextCycleKey,
+      'role': slot.role.name,
+      'status': 'active',
+      'source': 'party',
+      'revision': incrementOne,
+      'updatedAt': serverTimestamp,
+    };
+  }
+
   Map<String, Object?> get eventDocument => {
-    'schemaVersion':
-        command.type == PartyAtomicCommandType.complete ||
-            command.type == PartyAtomicCommandType.cancelCompletion
-        ? 2
-        : 1,
+    'schemaVersion': command.type == PartyAtomicCommandType.complete ? 2 : 1,
     'eventId': command.commandId,
     'recruitmentId': command.recruitmentId,
     'type': command.type.name,
@@ -191,8 +220,7 @@ class PartyAtomicWritePlan {
       for (final slot in aggregate.partySlots) slot.playerId,
     ],
     'actorPlayerId': command.actorPlayerId,
-    if (command.type == PartyAtomicCommandType.complete ||
-        command.type == PartyAtomicCommandType.cancelCompletion) ...{
+    if (command.type == PartyAtomicCommandType.complete) ...{
       'raidId': aggregate.raidId,
       'difficultyId': aggregate.difficultyId,
       'cycleKey': aggregate.currentCycleKey,

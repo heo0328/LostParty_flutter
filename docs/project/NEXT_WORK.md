@@ -6,7 +6,7 @@
 - R1~R7·C* 구현과 운영 Rules·Indexes 게시는 완료했다. 운영 Router는 원자 Repository·어댑터를 쓴다.
 - 로컬에는 생성·읽기 v2·이전 Close/Open 가드·승인 패치·listing sync·Listen 가드·orphan 공개 전환·모집 삭제→disband·캐릭터 변경 atomic OR·그룹 전용방 파티장 탈퇴 차단 등이 **코드로 들어가 있다**.
 - **실기기 판정(2026-09-16 사용자 확인):** 아래 성공 항목은 사용자가 디바이스에서 확인했다. 그 밖의 보고 실패는 로컬 수정·자동 테스트 통과만으로 완료로 쓰지 않는다.
-- **2026-09-19 현재 작업:** 사용자가 F6-B2-A Rules를 콘솔에서 별도로 게시한 뒤 완료 UX의 세 회귀를 실기기에서 확인했다. 2인 이상 파티 전체 완료는 공대장이 타인 private `raidState`를 읽어 `permission-denied`가 되고, 1인 완료는 성공해도 공용 이벤트에 완료 기록 필드가 없어 히스토리가 생략되며, `raidState.completed` 체크박스는 B2-A 임시 제한으로 해제할 수 없다. B2-A를 완료로 판정하지 않고 아래 **F6-B2-R 완료 UX 복구**를 최우선 단일 인수 단위로 진행한다. `dev/main` 통합과 릴리즈는 계속 보류한다.
+- **2026-09-19 현재 작업:** F6-B2-R3의 개인 완료·해제와 파티 전체 완료 취소 제거 구현을 작업 브랜치에서 시작했으나 사용 한도 중단으로 **미완성·미커밋 상태**다. 단순 테스트 대기가 아니며 확정 Rules 결함 수정, 구현 대조, 자동 검증과 Git 체크포인트가 남아 있다. 아래 `R3 중단 체크포인트`부터 재개하고, 완료 전 현재 diff를 폐기·덮어쓰기하거나 Rules를 게시하지 않는다. `dev/main` 통합과 릴리즈는 계속 보류한다.
 
 ### 실기기 확인됨 (고쳐진 것)
 
@@ -383,6 +383,29 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
    2. **R2 공용 완료 이벤트와 기록:** Player별 이벤트 fan-out은 되살리지 않는다. 공용 이벤트 한 건에 공통 `raidId/difficultyId/cycleKey`와 최대 8명의 `playerId/characterId` 완료 대상 Snapshot을 넣고, 수신자는 자기 대상을 선택해 완료 기록을 생성한다. Rules allowlist·대상 일치·최대 8명·이벤트 재전송 거절을 검증한다. 필드 누락을 조용히 성공 처리하는 기존 sync 테스트를 완료 기록 생성/누락 거절 테스트로 보강한다.
       - **완료(2026-09-19):** lifecycle 이벤트 schemaVersion 2의 완료 이벤트에 공통 레이드 정보와 `completionTargets`를 기록한다. 당시 구현한 완료 취소 이벤트 생성 분기는 제거 대상이며 과거 이벤트 읽기만 유지한다. Rules는 모집 `partySlots`와 audience·대상 배열을 최대 8개까지 같은 순서로 검증하고 문서 추가 조회는 하지 않는다. 기존 schemaVersion 1은 구 앱 호환 create만 유지한다. Event Mapper가 현재 Player의 Character를 선택하고 sync가 그 값을 Drift 완료 기록에 사용한다. 관련 Flutter 표적 63건, 변경 파일 분석, JS 문법과 diff 검사가 통과했다. 로컬 demo Emulator는 기존과 같은 Rules 로딩 503으로 중단됐지만 작업 브랜치 GitHub Actions `35417265039`에서 1·2·4·8인 lifecycle, 완료 대상 누락·Character 위조 거절을 포함한 격리 Rules 검증이 통과했다. 운영 Rules는 게시하지 않았고 실제 앱 전체 사이클은 R4에 남긴다.
    3. **R3 완료 조작 UX 복구:** 먼저 모집 상세의 `전체 완료 취소` 버튼과 신규 호출 경로를 제거하고, Domain/Adapter/Write Plan/Rules의 `cancelCompletion` 허용 분기를 폐쇄한다. 과거 `completionCancelled` 이벤트·Drift 기록의 읽기 Mapper는 호환용으로 유지한다. 이어서 `active`는 미체크와 오른쪽 참가 안내 아이콘을 함께 표시하고 체크박스 선택은 영향 확인 후 B2-C 개인 완료 명령으로 연결한다. `completed`는 체크와 완료 안내 아이콘을 함께 표시하고 본인이 해제할 수 있게 B2-B/D 자기 state 삭제 명령으로 연결한다. 안내 아이콘은 조작을 설명할 뿐 체크박스를 비활성화하는 조건이 아니다. `inconsistent`도 일괄 차단하지 않는다. 본인·Character·raidId·현재 cycle이 검증된 완료 근거가 있으면 체크 표시와 해제 경로를 제공하고, 완료 근거만 제한적으로 정리하며 active 참가 근거는 보존한다. 소유권이나 식별자가 검증되지 않는 손상 데이터만 임의 변경 없이 구체적인 복구 안내로 보낸다.
+
+      **R3 중단 체크포인트 — 이 지점부터 재개(2026-09-19)**
+
+      - 브랜치는 `feature/party-group-command-redesign`, 마지막 추적 커밋은 `2348332 docs: retire party completion cancellation`이다. R3 코드·Rules·테스트 변경은 작업 트리에 미커밋으로 남아 있으며 `dev/main`에는 반영되지 않았다. 현재 변경을 이전 작업 결과로 보존하고 임의 초기화·체크아웃·덮어쓰기를 하지 않는다.
+      - 로컬 초안에는 파티 전체 완료 취소의 신규 UI·Domain·Adapter·Write Plan·Rules 경로 제거, 과거 이벤트 읽기 호환 유지, `raidState` 기반 개인 수동 완료·해제 Repository, active 참가자의 탈퇴+완료 원자 명령, Projection/체크박스 연결, 통합 완료 상태를 사용하는 일부 Rules와 계약 테스트가 들어가 있다. 이는 **구현 초안**이며 완료 판정이 아니다.
+      - **확정 수정 사항:** `firestore.rules`의 `validPersonalCompletionRecruitmentUpdate`는 파티장이 개인 완료해 후임에게 승계할 때 변경되는 `leaderPlayerId`, `leaderCharacterNameSnapshot`, `leaderClassNameSnapshot`을 현재 `affectedKeys().hasOnly(...)`에 허용하지 않는다. 이대로는 일반 멤버 경로와 달리 파티장 승계 경로가 `permission-denied` 될 수 있으므로, 단순 allowlist 추가에 그치지 말고 후임 Player와 membership Snapshot의 일치까지 기존 승계 계약과 같은 수준으로 검증한다.
+      - **재대조가 필요한 구현 경계:** 일반 멤버 탈퇴+완료, 파티장 승계+완료, 마지막 1인 해산+완료, 그룹 전용 listing/활성 수, 수동 completed state 생성·개인 삭제, completed+legacy Claim 제한 수렴, active 근거 보존, pending 신청 비핵심 정리, 반복방 다음 주차 재구성을 B2-B/C/D 계약과 각각 대조한다. 특히 일반 탈퇴의 state 삭제 후 완료를 별도로 쓰는 부분 성공 구조, 타인 private state 선읽기, 대상 수에 비례한 이벤트 복제는 다시 도입하지 않는다.
+      - 중단 전 `git diff --check`는 내용 오류 없이 줄바꿈 경고만 확인했지만 최종 검증으로 재사용하지 않는다. 최신 표적 테스트 묶음은 실행 결과를 확보하지 못했고, 전체 `flutter test`도 통과 상태가 아니다. 기존 계약 테스트의 오래된 문자열 기대와 Firebase 기본 앱을 요구하는 테스트가 섞여 있으므로 이번 변경 영향과 기존 실패를 분리하되, 신규 회귀를 기존 실패로 간주해 넘기지 않는다.
+      - 로컬 Rules Emulator는 Rules 로딩 단계의 기존 HTTP 503으로 검증 결과를 만들지 못했다. 현재 R3 Rules는 작업 브랜치 Rules CI를 통과하지 않았고 운영에 게시되지 않았다. 이전에 사용자가 콘솔에 게시한 Rules를 이 미커밋 R3 초안과 동일하다고 간주하지 않는다.
+
+      **R3 재개 순서**
+
+      1. 현재 미커밋 diff와 신규 파일을 보존한 채 R3 계약별 변경표를 다시 만들고, 위 확정 승계 Rules 결함을 먼저 수정한다.
+      2. B2-B/C/D의 Write Plan·Repository·Router/DI·Projection·Rules가 같은 식별자와 원자 경계를 쓰는지 대조한다. 반복방 다음 주차와 legacy/불일치 경계가 초안에 실제 구현됐는지도 코드 근거로 판정하고 누락만 보완한다.
+      3. 코드 포맷, JS 문법, `git diff --check` 후 개인 수동 체크/해제, 일반 멤버·파티장·마지막 1인 완료, 그룹 전용방, 완료 취소 미노출·서버 거절의 표적 Flutter/Rules 계약 테스트를 실행한다.
+      4. 변경 범위가 Router·공용 Domain·Rules에 걸치므로 변경 파일 분석과 전체 `flutter analyze`, 전체 `flutter test`를 최종 상태에서 한 번 실행한다. 실패는 이번 변경 회귀와 기존 결함을 근거로 분리해 기록한다.
+      5. 로컬 Emulator 503이 계속되면 같은 실패를 반복하지 않고, 검증 가능한 커밋을 작업 브랜치에 남긴 뒤 기존 demo Rules CI로 1·2·4·8인 및 거부 사례를 확인한다. CI 전이나 실패 상태에서는 운영 Rules를 게시하지 않는다.
+      6. 자동 검증과 문서 기록이 끝난 후에만 R3 코드·Rules·테스트를 한 검증 단위로 커밋·작업 브랜치 푸시한다. 사용자는 그 뒤 R4 체크리스트로 실기기를 수동 확인한다. 실기기 설치·조작은 에이전트가 수행하지 않는다.
+
+      **R3 재개 구현 상태(2026-09-19): 자동 검증 진행 중.** 중단 초안을 보존해 파티장 개인 완료의 후임 membership·리더 Snapshot 검증을 보완했다. 파티 밖 수동 `raidState` 완료·해제, 활성 참가자의 탈퇴/승계/마지막 1인 해산과 완료 원자 전환, 그룹 listing·활성 수 정리, 완료 기반 생성·신청·승인 차단을 같은 계약으로 연결했다. 개인 완료 이벤트는 일반 탈퇴와 구분하도록 `reason=weeklyRaidCompleted`를 기록하되 공용 이벤트 한 건 원칙을 유지한다. 반복방은 개인이 이전 완료 state를 지웠더라도 현재 `partySlots`를 근거로 다음 주차 active state를 upsert하며, 현재 시간은 새 주차 시작 이상·종료 미만이어야 한다. 새 주차 수동 완료나 다른 모집 state는 Rules가 덮어쓰기를 거절한다.
+
+      파티 전체 완료 취소의 신규 UI·Domain·Adapter·Write Plan·Rules 실행 경로는 제거했고 과거 이벤트 읽기만 유지했다. 개인 완료·해제 및 lifecycle 표적 Flutter/정적 Rules 계약은 통과했으며 핵심 변경 13개 파일 분석은 0건이다. 전체 분석은 기존 파일을 포함한 50건, 전체 테스트는 계약 테스트 갱신 전 실행 기준 1,183건 통과·13건 실패였다. 이번 작업의 낡은 legacy assignment 문자열 기대는 현재 제한적 자기 정리 계약으로 갱신해 단독 통과했으며, 기존 활동 Character Rules 문자열·Firebase 기본 앱 미초기화 위젯 등 기준선 실패를 전체 성공으로 숨기지 않는다. 로컬 Emulator는 Android Studio JBR 21로 기동했으나 Rules 로딩 단계의 기존 HTTP 503으로 실행되지 않았다. 작업 브랜치 Rules CI 통과 전에는 R3 자동 완료, 운영 게시 또는 실기기 검증 단계로 판정하지 않는다.
+
    4. **R4 한 사이클 검증:** Rules 문서를 직접 갱신해 앱의 선행 읽기를 우회하는 테스트만으로 판정하지 않는다. 실제 앱 Repository와 같은 인증 클라이언트로 공개·그룹 방의 1·2·4·8인 완료를 Emulator에서 실행하고 Rules 문서 접근·표현식 예산을 함께 확인한다. `2인 완료 → 두 Player 완료 기록 → 완료방 해산 → 두 Player 체크 유지 → 한 Player만 해제 → 그 Player 재참가 가능·다른 Player 완료 유지`를 자동 검증하고 사용자는 같은 대표 흐름을 실기기에서 확인한다. 반복방은 공동 완료 취소 없이 다음 주차에 현재 membership으로 새 active 상태를 구성해야 한다.
 
    **회귀 보호:** 기존 1인 완료, 자리 이동·교환, 추방·재가입, 활성 해산, 그룹 전용 listing/활성 수, 정상 신청 승인, B1 pending 신청 처리와 수요일 06시 주차 경계를 보존한다. Rules가 바뀌면 전체 추적 Rules CI·경고 확인 후 별도 게시 절차를 따르며, 실기기 설치·조작은 사용자가 수행한다.
@@ -425,13 +448,13 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
 
    B2 구현 중 위 표의 다른 페이지를 편의상 같은 ViewModel 조건으로 묶지 않는다. 특히 내 계정 개인 명령과 모집 상세 공동 명령, 표시 Projection과 서버 최종 권한 검증은 각각 독립 테스트를 둔다.
 
-   **구현 순서:** B2-A Projection 타입·읽기·본인 list Rules → R1 다인 완료 권한 경계 → R2 공용 완료 이벤트 → R3 체크박스 개인 완료·해제 명령 → R4 실제 앱 전체 사이클 검증. 현재 B2-A·R1·R2까지 구현됐고 다음 구간은 R3다. R3는 B2-B/C/D의 개인 명령과 불일치 수렴 경계를 함께 구현하되 R4 전에는 전체 완료로 판정하지 않는다.
+   **구현 순서:** B2-A Projection 타입·읽기·본인 list Rules → R1 다인 완료 권한 경계 → R2 공용 완료 이벤트 → R3 체크박스 개인 완료·해제 명령 → R4 실제 앱 전체 사이클 검증. 현재 B2-A·R1·R2까지 구현됐고 R3는 위 체크포인트의 미커밋 초안에서 재개한다. R3는 B2-B/C/D의 개인 명령과 불일치 수렴 경계를 함께 구현하되 확정 결함 수정·자동 검증·작업 브랜치 체크포인트 전에는 구현 완료로, R4 전에는 B2 전체 완료로 판정하지 않는다.
 4. **F6-C — 모집 생성 초기 선택 교착 해소.** 첫 진입에서 레이드를 자동 선택하지 않고 대표 캐릭터를 탐색 기준으로 둔다. 레이드·난이도 미선택 저장은 차단하되, 기본 4막이 불가능해도 다른 레이드와 Character 변경에 접근 가능해야 한다. null 레이드의 Form/draft/자동 제목·역할 변경/재진입, 단일·다중 Character와 기존 정상 생성을 자동·실기기로 검증한다. 점유·완료·레벨·역할 및 서버 최종 거절은 완화하지 않는다.
    - 참고: [`RAID_CATALOG_DATA.md`](../product/RAID_CATALOG_DATA.md), [`PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md), [`BUG_REPORTS.md`](BUG_REPORTS.md) 기본 4막 교착 기록.
 5. **F6-D — 신청/승인 경계 보완.** 기존 `active raidState`가 있어도 신청은 pending으로 접수되고 승인에서 Rules update 거부가 모호한 권한 팝업이 되는 흐름을 분리한다. 정상 활성 점유·삭제된 모집을 가리키는 고아 점유·완료 상태의 안내와 서버 최종 차단을 계약 테스트로 고정한다. 고아 `raidState`를 일반 승인 코드에서 임의 덮어쓰거나 삭제하지 않는다. 정상 신규 방 승인·거절/재신청·4/8인 집계 및 재진입을 회귀 검증한다.
    - 참고: [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md), [`BUG_REPORTS.md`](BUG_REPORTS.md) `니티야` 고아 점유 기록.
 
-다음 작업은 F6-B2-R3이며 R1~R4를 하나의 완료 UX 인수 단위로 유지한다. B2-A의 읽기 Projection은 재사용하되 읽기 전용 체크박스와 `inconsistent` 일괄 차단 정책은 폐기한다. R3에서는 개인 완료·해제와 검증 가능한 불일치 수렴을 연결하고, R4에서 실제 앱 인증 흐름의 전체 사이클을 확인한다. 사용자 콘솔 게시본과 로컬 추적 Rules의 내용 일치는 별도 확인 전까지 단정하지 않는다. 코드·Rules·문서·자동 검증이 끝난 뒤 사용자가 실기기에서 전체 사이클을 확인하며, 그 전에는 B2 완료·`dev/main` 통합·릴리즈를 하지 않는다.
+다음 작업은 F6-B2-R3 신규 착수가 아니라 위 **R3 중단 체크포인트의 미커밋 구현 복구와 완성**이다. 먼저 현재 diff를 보존하고 확정된 파티장 승계 Rules 결함을 수정한 뒤 B2-B/C/D 누락을 대조한다. B2-A의 읽기 Projection은 재사용하되 읽기 전용 체크박스와 `inconsistent` 일괄 차단 정책은 폐기한다. R3에서는 개인 완료·해제와 검증 가능한 불일치 수렴을 연결하고, R4에서 실제 앱 인증 흐름의 전체 사이클을 확인한다. 사용자 콘솔 게시본과 로컬 추적 Rules의 내용 일치는 별도 확인 전까지 단정하지 않는다. 코드·Rules·문서·자동 검증이 끝난 뒤 사용자가 실기기에서 전체 사이클을 확인하며, 그 전에는 Rules 게시, B2 완료, `dev/main` 통합과 릴리즈를 하지 않는다.
 
 #### 후속 백로그 — 안전한 테스트 데이터 정리 도구 (F6 범위 밖)
 

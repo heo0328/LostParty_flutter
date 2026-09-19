@@ -201,7 +201,7 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
     }
 
     transaction.set(db.doc(`partyEvents/${commandId}`), {
-      schemaVersion: (type === 'complete' || type === 'cancelCompletion')
+      schemaVersion: type === 'complete'
         ? 2
         : 1,
       eventId: commandId,
@@ -211,7 +211,7 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
       commandRevision: nextRevision,
       audiencePlayerIds: memberTargets.map((target) => target.playerId),
       actorPlayerId: leaderPlayerId,
-      ...((type === 'complete' || type === 'cancelCompletion') ? {
+      ...(type === 'complete' ? {
         raidId: recruitment.raidId,
         difficultyId: recruitment.difficultyId,
         cycleKey: recruitment.currentCycleKey,
@@ -236,12 +236,6 @@ async function main() {
 
     for (const memberCount of [1, 2, 4, 8]) {
       await seed(testEnv, memberCount);
-      await assertSucceeds(
-        lifecycleTransaction(leaderDb, memberCount, 'complete'),
-      );
-      await assertSucceeds(
-        lifecycleTransaction(leaderDb, memberCount, 'cancelCompletion'),
-      );
       await assertSucceeds(
         lifecycleTransaction(leaderDb, memberCount, 'complete'),
       );

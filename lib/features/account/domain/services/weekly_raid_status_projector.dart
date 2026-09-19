@@ -33,7 +33,24 @@ class WeeklyRaidStatusProjector {
           .toList(growable: false);
 
       final kind = _resolveKind(stateRecords, legacyRecords);
-      final source = stateRecords.firstOrNull ?? legacyRecords.firstOrNull;
+      final activeRecords = recordsForKey
+          .where(
+            (record) =>
+                record.kind == WeeklyRaidStatusRecordKind.activeState ||
+                record.kind == WeeklyRaidStatusRecordKind.legacyAssignment,
+          )
+          .toList(growable: false);
+      final completedRecords = recordsForKey
+          .where(
+            (record) =>
+                record.kind == WeeklyRaidStatusRecordKind.completedState ||
+                record.kind == WeeklyRaidStatusRecordKind.legacyClaim,
+          )
+          .toList(growable: false);
+      final source =
+          activeRecords.firstOrNull ??
+          stateRecords.firstOrNull ??
+          legacyRecords.firstOrNull;
       result.add(
         WeeklyRaidStatusProjection(
           playerId: playerId,
@@ -41,9 +58,16 @@ class WeeklyRaidStatusProjector {
           raidId: first.raidId,
           cycleKey: cycleKey,
           kind: kind,
-          recruitmentId: kind == WeeklyRaidStatusKind.inconsistent
-              ? null
-              : source?.recruitmentId,
+          recruitmentId: source?.recruitmentId,
+          hasActiveEvidence: activeRecords.isNotEmpty,
+          hasCompletedEvidence: completedRecords.isNotEmpty,
+          hasCompletedState: stateRecords.any(
+            (record) =>
+                record.kind == WeeklyRaidStatusRecordKind.completedState,
+          ),
+          hasLegacyClaim: legacyRecords.any(
+            (record) => record.kind == WeeklyRaidStatusRecordKind.legacyClaim,
+          ),
         ),
       );
     }

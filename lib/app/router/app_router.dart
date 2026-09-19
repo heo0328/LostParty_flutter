@@ -18,6 +18,7 @@ import '../../features/account/data/gateways/firestore_character_minimum_display
 import '../../features/account/data/gateways/firestore_representative_character_sync_gateway.dart';
 import '../../features/account/data/mappers/sibling_character_mapper.dart';
 import '../../features/account/data/repositories/firestore_weekly_raid_claim_repository.dart';
+import '../../features/account/data/repositories/firestore_weekly_raid_status_command_repository.dart';
 import '../../features/account/data/repositories/firestore_weekly_raid_status_repository.dart';
 import '../../features/account/data/repositories/local_character_weekly_raid_display_repository.dart';
 import '../../features/account/data/repositories/local_nice_group_auto_refresh_settings_repository.dart';
@@ -211,10 +212,16 @@ GoRouter createAppRouter({
       weeklyRaidClaimRepository ?? defaultWeeklyRaidClaimRepository!;
   final weeklyRaidClaimCommandRepositoryOrDefault =
       weeklyRaidClaimCommandRepository ??
-      (weeklyRaidClaimRepositoryOrDefault is WeeklyRaidClaimCommandRepository
-          ? weeklyRaidClaimRepositoryOrDefault
-                as WeeklyRaidClaimCommandRepository
-          : null);
+      (weeklyRaidClaimRepository == null
+          ? FirestoreWeeklyRaidStatusCommandRepository(
+              firestore: FirebaseFirestore.instance,
+              firebaseAuth: FirebaseAuth.instance,
+            )
+          : (weeklyRaidClaimRepositoryOrDefault
+                    is WeeklyRaidClaimCommandRepository
+                ? weeklyRaidClaimRepositoryOrDefault
+                      as WeeklyRaidClaimCommandRepository
+                : null));
   final weeklyRaidStatusRepositoryOrDefault =
       weeklyRaidStatusRepository ??
       (weeklyRaidClaimRepository == null

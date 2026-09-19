@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/entities/party_atomic_command.dart';
 import '../../domain/entities/party_cycle_command.dart';
+import '../../domain/policies/party_cycle_policy.dart';
 import '../../domain/repositories/party_atomic_command_repository.dart';
 import '../../domain/repositories/party_cycle_command_repository.dart';
 import '../../domain/services/party_cycle_command_validator.dart';
@@ -31,16 +32,6 @@ class PartyAtomicCycleCommandAdapter implements PartyCycleCommandRepository {
         expectedCycleKey: command.cycleKey,
         type: PartyAtomicCommandType.complete,
       );
-
-  @override
-  Future<PartyCycleResult> cancelCompletion(
-    PartyCancelCompletionCommand command,
-  ) => _executeLifecycle(
-    recruitmentId: command.recruitmentId,
-    expectedRevision: command.expectedRecruitmentRevision,
-    expectedCycleKey: command.cycleKey,
-    type: PartyAtomicCommandType.cancelCompletion,
-  );
 
   @override
   Future<PartyCycleResult> advance(PartyAdvanceCycleCommand command) =>
@@ -142,7 +133,10 @@ class PartyAtomicCycleCommandAdapter implements PartyCycleCommandRepository {
     if (authUid == null || authUid.isEmpty) {
       return const PartyCycleResult.failure(PartyCycleFailure.unauthenticated);
     }
-    final binding = await _firestore.collection('authBindings').doc(authUid).get();
+    final binding = await _firestore
+        .collection('authBindings')
+        .doc(authUid)
+        .get();
     final playerId = binding.data()?['playerId'];
     if (binding.data()?['status'] != 'active' ||
         playerId is! String ||
@@ -236,6 +230,12 @@ class PartyAtomicCycleCommandAdapter implements PartyCycleCommandRepository {
         return const PartyCycleResult.failure(PartyCycleFailure.invalidRequest);
       }
       final cycleKey = expectedCycleKey ?? aggregate.currentCycleKey;
+      final nextCycle = type == PartyAtomicCommandType.advanceCycle
+          ? const PartyCyclePolicy().fromKey(nextCycleKey ?? '')
+          : null;
+      if (type == PartyAtomicCommandType.advanceCycle && nextCycle == null) {
+        return const PartyCycleResult.failure(PartyCycleFailure.invalidRequest);
+      }
       final completedDisband =
           type == PartyAtomicCommandType.disband &&
           aggregate.currentCycleStatus == PartyRaidStateStatus.completed;
@@ -260,6 +260,8 @@ class PartyAtomicCycleCommandAdapter implements PartyCycleCommandRepository {
           expectedRevision: expectedRevision,
           expectedCycleKey: cycleKey,
           nextCycleKey: nextCycleKey,
+          nextCycleStartedAt: nextCycle?.startedAt,
+          nextCycleEndsAt: nextCycle?.endsAt,
           targets: targets,
         ),
       );
@@ -280,30 +282,30 @@ class PartyAtomicCycleCommandAdapter implements PartyCycleCommandRepository {
     }
   }
 
-  PartyCycleFailure _mapAtomicFailure(PartyAtomicCommandFailure failure) =>
-      switch (failure) {
-        PartyAtomicCommandFailure.unauthenticated =>
-          PartyCycleFailure.unauthenticated,
-        PartyAtomicCommandFailure.playerBindingMissing =>
-          PartyCycleFailure.playerBindingMissing,
-        PartyAtomicCommandFailure.unauthorized => PartyCycleFailure.unauthorized,
-        PartyAtomicCommandFailure.notFound => PartyCycleFailure.notFound,
-        PartyAtomicCommandFailure.recruitmentClosed =>
-          PartyCycleFailure.recruitmentClosed,
-        PartyAtomicCommandFailure.cycleMismatch =>
-          PartyCycleFailure.cycleMismatch,
-        PartyAtomicCommandFailure.revisionConflict =>
-          PartyCycleFailure.revisionConflict,
-        PartyAtomicCommandFailure.raidStateConflict =>
-          PartyCycleFailure.revisionConflict,
-        PartyAtomicCommandFailure.permissionDenied =>
-          PartyCycleFailure.permissionDenied,
-        PartyAtomicCommandFailure.temporarilyUnavailable =>
-          PartyCycleFailure.temporarilyUnavailable,
-        PartyAtomicCommandFailure.invalidRequest =>
-          PartyCycleFailure.invalidRequest,
-        PartyAtomicCommandFailure.unknown => PartyCycleFailure.unknown,
-      };
+  PartyCycleFailure _mapAtomicFailure(
+    PartyAtomicCommandFailure failure,
+  ) => switch (failure) {
+    PartyAtomicCommandFailure.unauthenticated =>
+      PartyCycleFailure.unauthenticated,
+    PartyAtomicCommandFailure.playerBindingMissing =>
+      PartyCycleFailure.playerBindingMissing,
+    PartyAtomicCommandFailure.unauthorized => PartyCycleFailure.unauthorized,
+    PartyAtomicCommandFailure.notFound => PartyCycleFailure.notFound,
+    PartyAtomicCommandFailure.recruitmentClosed =>
+      PartyCycleFailure.recruitmentClosed,
+    PartyAtomicCommandFailure.cycleMismatch => PartyCycleFailure.cycleMismatch,
+    PartyAtomicCommandFailure.revisionConflict =>
+      PartyCycleFailure.revisionConflict,
+    PartyAtomicCommandFailure.raidStateConflict =>
+      PartyCycleFailure.revisionConflict,
+    PartyAtomicCommandFailure.permissionDenied =>
+      PartyCycleFailure.permissionDenied,
+    PartyAtomicCommandFailure.temporarilyUnavailable =>
+      PartyCycleFailure.temporarilyUnavailable,
+    PartyAtomicCommandFailure.invalidRequest =>
+      PartyCycleFailure.invalidRequest,
+    PartyAtomicCommandFailure.unknown => PartyCycleFailure.unknown,
+  };
 
   PartyCycleFailure _firebaseFailure(String code) => switch (code) {
     'permission-denied' => PartyCycleFailure.permissionDenied,

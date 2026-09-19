@@ -8,7 +8,6 @@ void main() {
     final cycle = policy.fromKey('2026-08-26')!;
     expect(cycle.startedAt, DateTime.utc(2026, 8, 25, 21));
     expect(cycle.endsAt, DateTime.utc(2026, 9, 1, 21));
-    expect(cycle.completionCancelDeadline, DateTime.utc(2026, 9, 1, 13));
   });
   test('수요일이 아닌 회차 키는 거절한다', () {
     expect(policy.fromKey('2026-08-27'), isNull);
@@ -23,14 +22,8 @@ void main() {
       schedule: RaidCycleSchedule(resetHour: 13),
     );
 
-    expect(
-      testPolicy.keyFor(DateTime.utc(2026, 8, 26, 3, 59)),
-      '2026-08-19',
-    );
-    expect(
-      testPolicy.keyFor(DateTime.utc(2026, 8, 26, 4)),
-      '2026-08-26',
-    );
+    expect(testPolicy.keyFor(DateTime.utc(2026, 8, 26, 3, 59)), '2026-08-19');
+    expect(testPolicy.keyFor(DateTime.utc(2026, 8, 26, 4)), '2026-08-26');
     expect(
       testPolicy.fromKey('2026-08-26')!.startedAt,
       DateTime.utc(2026, 8, 26, 4),
