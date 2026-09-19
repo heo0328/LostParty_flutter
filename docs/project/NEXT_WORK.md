@@ -382,7 +382,7 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
       - **로컬 구현 완료(2026-09-19):** 원자 lifecycle Repository에서 대상 `raidState`의 `transaction.get()`과 클라이언트 문서 사전 판정을 제거했다. 인증 binding·모집 Aggregate·필요 시 그룹 원본만 읽으며, 모집 대상 일치와 각 state 전이는 기존 Write Plan·Rules가 검증한다. Repository·Write Plan·lifecycle Rules·확장성 계약 표적 테스트 25건과 변경 파일 분석이 통과했다. Rules·이벤트 형식·운영 Firebase는 변경하지 않았다. 실제 인증 클라이언트의 공개·그룹 1·2·4·8인 실행은 R4 완료 게이트로 남긴다.
    2. **R2 공용 완료 이벤트와 기록:** Player별 이벤트 fan-out은 되살리지 않는다. 공용 이벤트 한 건에 공통 `raidId/difficultyId/cycleKey`와 최대 8명의 `playerId/characterId` 완료 대상 Snapshot을 넣고, 수신자는 자기 대상을 선택해 완료 기록을 생성한다. Rules allowlist·대상 일치·최대 8명·이벤트 재전송 거절을 검증한다. 필드 누락을 조용히 성공 처리하는 기존 sync 테스트를 완료 기록 생성/누락 거절 테스트로 보강한다.
       - **완료(2026-09-19):** lifecycle 이벤트 schemaVersion 2에 완료·완료 취소일 때만 공통 레이드 정보와 `completionTargets`를 기록한다. Rules는 모집 `partySlots`와 audience·대상 배열을 최대 8개까지 같은 순서로 검증하고 문서 추가 조회는 하지 않는다. 기존 schemaVersion 1은 구 앱 호환 create만 유지한다. Event Mapper가 현재 Player의 Character를 선택하고 sync가 그 값을 Drift 완료 기록에 사용한다. 관련 Flutter 표적 63건, 변경 파일 분석, JS 문법과 diff 검사가 통과했다. 로컬 demo Emulator는 기존과 같은 Rules 로딩 503으로 중단됐지만 작업 브랜치 GitHub Actions `35417265039`에서 1·2·4·8인 lifecycle, 완료 대상 누락·Character 위조 거절을 포함한 격리 Rules 검증이 통과했다. 운영 Rules는 게시하지 않았고 실제 앱 전체 사이클은 R4에 남긴다.
-   3. **R3 체크박스 UX 복구:** `active`는 미체크와 오른쪽 참가 안내 아이콘을 함께 표시하고 체크박스 선택은 영향 확인 후 B2-C 개인 완료 명령으로 연결한다. `completed`는 체크와 완료 안내 아이콘을 함께 표시하고 본인이 해제할 수 있게 B2-B/D 자기 state 삭제 명령으로 연결한다. 안내 아이콘은 조작을 설명할 뿐 체크박스를 비활성화하는 조건이 아니다. `inconsistent`만 안전을 위해 조작을 차단한다.
+   3. **R3 체크박스 UX 복구:** `active`는 미체크와 오른쪽 참가 안내 아이콘을 함께 표시하고 체크박스 선택은 영향 확인 후 B2-C 개인 완료 명령으로 연결한다. `completed`는 체크와 완료 안내 아이콘을 함께 표시하고 본인이 해제할 수 있게 B2-B/D 자기 state 삭제 명령으로 연결한다. 안내 아이콘은 조작을 설명할 뿐 체크박스를 비활성화하는 조건이 아니다. `inconsistent`도 일괄 차단하지 않는다. 본인·Character·raidId·현재 cycle이 검증된 완료 근거가 있으면 체크 표시와 해제 경로를 제공하고, 완료 근거만 제한적으로 정리하며 active 참가 근거는 보존한다. 소유권이나 식별자가 검증되지 않는 손상 데이터만 임의 변경 없이 구체적인 복구 안내로 보낸다.
    4. **R4 한 사이클 검증:** Rules 문서를 직접 갱신해 앱의 선행 읽기를 우회하는 테스트만으로 판정하지 않는다. 실제 앱 Repository와 같은 인증 클라이언트로 공개·그룹 방의 1·2·4·8인 완료를 Emulator에서 실행하고 Rules 문서 접근·표현식 예산을 함께 확인한다. `2인 완료 → 두 Player 완료 기록 → 완료방 해산 → 두 Player 체크 유지 → 한 Player만 해제 → 그 Player 재참가 가능·다른 Player 완료 유지`를 자동 검증하고 사용자는 같은 대표 흐름을 실기기에서 확인한다. 반복방 완료·전체 완료 취소는 한 명이 개인 해제한 경우 원자 거절되는 기존 계약도 함께 보호한다.
 
    **회귀 보호:** 기존 1인 완료, 자리 이동·교환, 추방·재가입, 활성 해산, 그룹 전용 listing/활성 수, 정상 신청 승인, B1 pending 신청 처리와 수요일 06시 주차 경계를 보존한다. Rules가 바뀌면 전체 추적 Rules CI·경고 확인 후 별도 게시 절차를 따르며, 실기기 설치·조작은 사용자가 수행한다.
@@ -390,7 +390,7 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
    **B2-B — 파티 밖 수동 체크·해제**
 
    1. 신규 수동 완료는 구 Claim 대신 `source: manual`, `status: completed`, `recruitmentId: null`, `revision: 1`인 raidState를 생성한다. 같은 주차 수동 state 체크는 멱등이며 다른 난이도도 같은 `raidId` 키를 공유한다. legacy active assignment가 남아 있으면 이를 덮어쓰지 않고 불일치로 거절한다.
-   2. 자기 completed state는 출처와 관계없이 개인 체크 해제할 수 있고, state가 없고 구 Claim만 있으면 기존 Claim 해제를 호환 경로로 유지한다. state와 Claim이 동시에 존재하거나 legacy assignment와 충돌하면 임의로 여러 원장을 삭제하지 않는다.
+   2. 자기 completed state는 출처와 관계없이 개인 체크 해제할 수 있고, state가 없고 구 Claim만 있으면 기존 Claim 해제를 호환 경로로 유지한다. completed state와 구 Claim이 함께 있으면 한 번의 해제 명령으로 검증된 본인·현재 주차 완료 근거를 함께 제거한다. active state/assignment가 완료 근거와 함께 있으면 완료 근거만 제거하고 참가 근거는 보존한다. 소유권·Character·raidId·cycleKey가 맞지 않는 문서는 임의 삭제하지 않는다.
    3. completed state를 먼저 원자 확정해 이후 승인·즉시 가입·생성·캐릭터 변경을 서버에서 거절한다. 같은 레이드 pending 수는 무제한일 수 있으므로 전부를 핵심 Transaction에 넣지 않고, UI Projection에서 즉시 무효 처리한 뒤 비핵심 정리 경로로 `superseded/weeklyRaidCompleted`를 반영한다. application Rules의 구 Claim 전용 조건을 통합 state 기준으로 정렬하되 신청자 개인 state를 파티장에게 노출하지 않는다.
 
    **B2-C — 활성 참가 중 개인 완료**
@@ -403,7 +403,7 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
 
    1. `source: manual/party` 모두 개인 체크 해제는 자기 completed state만 삭제하고 공동 완료 Snapshot은 바꾸지 않는다. 파티 전체 완료 취소는 대상 state가 하나라도 삭제·변경됐으면 원자 거절하고 새로고침·상태 변경 안내를 반환한다.
    2. 반복방의 다음 주차 전환은 개인 해제로 이전 state가 없어도 현재 membership을 기준으로 새 주차 active state를 생성할 수 있게 Write Plan과 Rules를 확장한다. 기존 문서는 같은 반복방의 직전 주차 state일 때만 갱신하며, 새 주차 수동 완료나 다른 모집의 active state는 덮어쓰지 않고 명령 전체를 거절한다. 그렇지 않으면 개인 해제가 방을 영구 정지시키거나 반대로 실제 완료·참가를 소실시키므로 완료 조건으로 인정하지 않는다.
-   3. 과거 Claim·assignment는 bulk migration 없이 fallback 읽기·해제만 유지한다. 신규 명령이 legacy 원장과 state를 dual-write하지 않으며, 불일치 데이터는 별도 안전 정리 백로그로 보낸다.
+   3. 과거 Claim·assignment는 bulk migration 없이 fallback 읽기·해제만 유지한다. 신규 명령이 legacy 원장과 state를 dual-write하지 않는다. 불일치는 진단 상태로 유지하되, 본인 소유와 현재 주차 식별이 증명되는 완료 근거는 체크박스 한 번으로 제한적으로 수렴시킨다. 증명할 수 없는 손상 데이터만 별도 안전 복구 백로그로 보낸다.
 
    **회귀·완료 기준**
 
@@ -416,7 +416,7 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
 
    | 사용자 위치 | 보존할 정상 흐름 | 새 구조에서 막아야 할 회귀 |
    | --- | --- | --- |
-   | 내 계정 / 일반 사용자 | 미참가 Character 수동 체크·해제, 완료 시 체크 유지 | active 참가를 무시한 중복 완료, legacy 충돌 자동 삭제, 과거 cycle 표시 |
+   | 내 계정 / 일반 사용자 | 미참가 Character 수동 체크·해제, 완료 시 체크 유지, 완료·해제 후 같은 레이드 흐름 반복 | active 참가를 무시한 중복 완료, 소유권 미확인 legacy 자동 삭제, 과거 cycle 표시, 불일치 분류만으로 개인 해제 차단 |
    | 내 계정 / 참가자 | 영향 안내 확인 후 탈퇴와 개인 완료, 파티장이면 승계, 마지막 1인이면 해산 | 일반 탈퇴로 state를 먼저 삭제한 뒤 완료가 따로 실패하는 부분 저장 |
    | 모집 상세 / 공대장 | 전원 파티 완료, 완료 취소, 완료방 해산 | 개인 수동 완료의 active 차단을 전원 완료에 적용, 개인 해제 후 취소가 부분 성공 |
    | 반복방 / 공대장·파티원 | 새 주차 진입 시 완료 체크 초기화와 현재 멤버 active 재구성 | 개인 해제로 state가 빠진 멤버 때문에 전환 전체 실패 |
@@ -425,13 +425,13 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
 
    B2 구현 중 위 표의 다른 페이지를 편의상 같은 ViewModel 조건으로 묶지 않는다. 특히 내 계정 개인 명령과 모집 상세 공동 명령, 표시 Projection과 서버 최종 권한 검증은 각각 독립 테스트를 둔다.
 
-   **구현 순서:** B2-A Projection 타입·읽기·본인 list Rules → B2-B 수동 state 명령과 무제한 pending 비핵심화 → B2-C 참가 중 개인 완료 → B2-D 개인 해제·완료 취소 거절·반복방 누락 state 재생성 → 연결 자동 검증 → 사용자 실기기 체크리스트. 첫 구현 구간은 B2-A이며 이번 설계 단계에서는 기능 코드·Rules를 변경하지 않는다.
+   **구현 순서:** B2-A Projection 타입·읽기·본인 list Rules → R1 다인 완료 권한 경계 → R2 공용 완료 이벤트 → R3 체크박스 개인 완료·해제 명령 → R4 실제 앱 전체 사이클 검증. 현재 B2-A·R1·R2까지 구현됐고 다음 구간은 R3다. R3는 B2-B/C/D의 개인 명령과 불일치 수렴 경계를 함께 구현하되 R4 전에는 전체 완료로 판정하지 않는다.
 4. **F6-C — 모집 생성 초기 선택 교착 해소.** 첫 진입에서 레이드를 자동 선택하지 않고 대표 캐릭터를 탐색 기준으로 둔다. 레이드·난이도 미선택 저장은 차단하되, 기본 4막이 불가능해도 다른 레이드와 Character 변경에 접근 가능해야 한다. null 레이드의 Form/draft/자동 제목·역할 변경/재진입, 단일·다중 Character와 기존 정상 생성을 자동·실기기로 검증한다. 점유·완료·레벨·역할 및 서버 최종 거절은 완화하지 않는다.
    - 참고: [`RAID_CATALOG_DATA.md`](../product/RAID_CATALOG_DATA.md), [`PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md), [`BUG_REPORTS.md`](BUG_REPORTS.md) 기본 4막 교착 기록.
 5. **F6-D — 신청/승인 경계 보완.** 기존 `active raidState`가 있어도 신청은 pending으로 접수되고 승인에서 Rules update 거부가 모호한 권한 팝업이 되는 흐름을 분리한다. 정상 활성 점유·삭제된 모집을 가리키는 고아 점유·완료 상태의 안내와 서버 최종 차단을 계약 테스트로 고정한다. 고아 `raidState`를 일반 승인 코드에서 임의 덮어쓰거나 삭제하지 않는다. 정상 신규 방 승인·거절/재신청·4/8인 집계 및 재진입을 회귀 검증한다.
    - 참고: [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md), [`BUG_REPORTS.md`](BUG_REPORTS.md) `니티야` 고아 점유 기록.
 
-다음 작업은 F6-B2-R1부터 시작하되 R1~R4를 하나의 완료 UX 인수 단위로 유지하는 것이다. B2-A의 읽기 Projection은 재사용하되 읽기 전용 체크박스 정책은 폐기한다. 사용자 콘솔 게시본과 로컬 추적 Rules의 내용 일치는 별도 확인 전까지 단정하지 않는다. 코드·Rules·문서·자동 검증이 끝난 뒤 사용자가 실기기에서 전체 사이클을 확인하며, 그 전에는 B2 완료·`dev/main` 통합·릴리즈를 하지 않는다.
+다음 작업은 F6-B2-R3이며 R1~R4를 하나의 완료 UX 인수 단위로 유지한다. B2-A의 읽기 Projection은 재사용하되 읽기 전용 체크박스와 `inconsistent` 일괄 차단 정책은 폐기한다. R3에서는 개인 완료·해제와 검증 가능한 불일치 수렴을 연결하고, R4에서 실제 앱 인증 흐름의 전체 사이클을 확인한다. 사용자 콘솔 게시본과 로컬 추적 Rules의 내용 일치는 별도 확인 전까지 단정하지 않는다. 코드·Rules·문서·자동 검증이 끝난 뒤 사용자가 실기기에서 전체 사이클을 확인하며, 그 전에는 B2 완료·`dev/main` 통합·릴리즈를 하지 않는다.
 
 #### 후속 백로그 — 안전한 테스트 데이터 정리 도구 (F6 범위 밖)
 
