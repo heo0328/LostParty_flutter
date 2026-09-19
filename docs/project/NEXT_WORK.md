@@ -390,10 +390,10 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
       - R3 복구 구현은 `dfe0440`, 개인 완료 Rules 우선순위 조정은 `e660c4c`, 개인 완료 명령 표식과 마지막 1인 전용 Rules 경량화는 `b5769bf`에 각각 추적·푸시됐다. 과거 미커밋 초안을 다시 찾거나 되살리지 말고 이 커밋부터 이어간다.
       - `b5769bf`는 기존 Aggregate의 `lastCommand*`에 `personalComplete` 명령 표식을 기록한다. 마지막 1인 모집 갱신과 membership 삭제는 이 표식을 사용하는 전용 검증 경로로 분리했으며 새 문서, Player별 이벤트 fan-out, 타인 private state 선읽기는 추가하지 않았다.
       - GitHub Actions `35443055507`에서 Rules 컴파일, 개인 수동 완료·해제, 개인 해제로 빠진 반복방 state의 다음 주차 재생성, 공개방 마지막 1인 완료·해산, 그룹방 마지막 1인 완료·listing/활성 수 정리까지 통과했다.
-      - 같은 실행은 다인방 검증 준비 중 가입자의 `applicationTxn(..., 'apply')`에서 실패했다. `firestore.rules`의 application create(현재 약 3852행), recruitment update(약 3765행), party event create(약 3754행)가 한 Transaction에서 평가되며 `maximum of 1000 expressions`에 도달했다. 따라서 일반 멤버 개인 완료 자체에 도달하기 전의 **정상 신청 회귀**이며 R3 완료로 판정하지 않는다.
-      - 원인 가설은 모든 모집 update에서 무거운 `validPersonalCompletionRecruitmentUpdate`를 첫 OR로 평가하는 구조다. 신청 시에도 기존 모집의 `memberCount == 1` 때문에 마지막 1인 개인 완료 상세 검증으로 진입한 뒤 정상 신청 Rules를 평가해 예산을 소모한다. 단순 OR 순서 변경은 `e660c4c`에서 이미 실패했으므로 같은 접근을 반복하지 않는다.
-      - 다음 수정은 `lastCommandType == personalComplete`, actor, 단일 target 등 값싼 명령 표식 검사를 allow 진입부 또는 얕은 wrapper에 두고, 표식이 맞을 때만 개인 완료 상세 검증을 호출하도록 한다. 정상 신청·승인·가입·자리 변경·추방·해산은 개인 완료 상세 함수에 들어가지 않아야 한다. 보안을 완화하거나 application 검증을 삭제하는 방식으로 해결하지 않는다.
-      - 위 경량 진입 후 같은 demo CI에서 정상 신청·승인, 일반 멤버 개인 완료, 파티장 완료 후 승계, 위조 후임 Snapshot 거절까지 순서대로 통과해야 한다. 이어서 기존 1·2·4·8인 lifecycle 및 그룹 기능 회귀를 확인한다. CI가 통과하기 전 운영 Rules 게시·실기기 확인·`dev/main` 통합을 진행하지 않는다.
+      - `b5769bf` CI는 다인방 검증 준비 중 가입자의 `applicationTxn(..., 'apply')`에서 application create·recruitment update·party event create가 함께 평가되며 `maximum of 1000 expressions`에 도달했다. 원인은 모든 모집 update가 무거운 개인 완료 상세 검증을 먼저 평가한 것이며, 단순 OR 순서 변경으로 해결하지 않았다.
+      - 후속 커밋 `4abdb89 fix: gate personal completion rule evaluation`에서 `lastCommandType == personalComplete`, actor와 단일 target을 확인하는 값싼 `personalCompletionCommandMarker`를 모집 update의 선행 게이트로 추가했다. 표식이 맞을 때만 개인 완료 상세 검증을 호출하며 정상 신청·승인·가입·자리 변경·추방·해산의 기존 검증은 완화하지 않았다.
+      - GitHub Actions `35448981992`가 전체 통과했다. Rules 컴파일, 정상 신청·철회·재신청·승인, 일반 멤버 개인 완료, 파티장 개인 완료 후 승계, 위조 후임 Snapshot 거절, 마지막 1인·그룹 마지막 1인 완료, 자리 변경·추방·재가입, 2·4·8인 해산, 그룹 생성·가입·승계·탈퇴·해산 회귀를 확인했다.
+      - R3 코드·Rules 자동 검증은 완료했다. 다음 게이트는 최신 추적 Rules의 운영 게시와 사용자의 R4 실기기 수동 확인이다. 게시·실기기 확인 전에는 B2 전체 완료, `dev/main` 통합 또는 릴리즈로 판정하지 않는다.
 
       **R3 재개 순서**
 
@@ -404,9 +404,9 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
       5. 로컬 Emulator 503이 계속되면 같은 실패를 반복하지 않고, 검증 가능한 커밋을 작업 브랜치에 남긴 뒤 기존 demo Rules CI로 1·2·4·8인 및 거부 사례를 확인한다. CI 전이나 실패 상태에서는 운영 Rules를 게시하지 않는다.
       6. 자동 검증과 문서 기록이 끝난 후에만 R3 코드·Rules·테스트를 한 검증 단위로 커밋·작업 브랜치 푸시한다. 사용자는 그 뒤 R4 체크리스트로 실기기를 수동 확인한다. 실기기 설치·조작은 에이전트가 수행하지 않는다.
 
-      **R3 재개 구현 상태(2026-09-19): 자동 검증 진행 중·정상 신청 회귀 해결 필요.** 파티장 개인 완료의 후임 membership·리더 Snapshot 검증을 보완했다. 파티 밖 수동 `raidState` 완료·해제, 활성 참가자의 탈퇴/승계/마지막 1인 해산과 완료 원자 전환, 그룹 listing·활성 수 정리, 완료 기반 생성·신청·승인 차단을 같은 계약으로 연결했다. 개인 완료 이벤트는 일반 탈퇴와 구분하도록 `reason=weeklyRaidCompleted`를 기록하되 공용 이벤트 한 건 원칙을 유지한다. 반복방은 개인이 이전 완료 state를 지웠더라도 현재 `partySlots`를 근거로 다음 주차 active state를 upsert하며, 현재 시간은 새 주차 시작 이상·종료 미만이어야 한다. 새 주차 수동 완료나 다른 모집 state는 Rules가 덮어쓰기를 거절한다.
+      **R3 구현 상태(2026-09-19): 코드·Rules 자동 검증 완료, 운영 게시·R4 수동 검증 대기.** 파티장 개인 완료의 후임 membership·리더 Snapshot 검증을 보완했다. 파티 밖 수동 `raidState` 완료·해제, 활성 참가자의 탈퇴/승계/마지막 1인 해산과 완료 원자 전환, 그룹 listing·활성 수 정리, 완료 기반 생성·신청·승인 차단을 같은 계약으로 연결했다. 개인 완료 이벤트는 일반 탈퇴와 구분하도록 `reason=weeklyRaidCompleted`를 기록하되 공용 이벤트 한 건 원칙을 유지한다. 반복방은 개인이 이전 완료 state를 지웠더라도 현재 `partySlots`를 근거로 다음 주차 active state를 upsert하며, 현재 시간은 새 주차 시작 이상·종료 미만이어야 한다. 새 주차 수동 완료나 다른 모집 state는 Rules가 덮어쓰기를 거절한다.
 
-      파티 전체 완료 취소의 신규 UI·Domain·Adapter·Write Plan·Rules 실행 경로는 제거했고 과거 이벤트 읽기만 유지했다. 개인 완료·해제 및 lifecycle 표적 Flutter/정적 Rules 계약은 통과했으며 핵심 변경 13개 파일 분석은 0건이다. 전체 분석은 기존 파일을 포함한 50건, 전체 테스트는 계약 테스트 갱신 전 실행 기준 1,183건 통과·13건 실패였다. 이번 작업의 낡은 legacy assignment 문자열 기대는 현재 제한적 자기 정리 계약으로 갱신해 단독 통과했으며, 기존 활동 Character Rules 문자열·Firebase 기본 앱 미초기화 위젯 등 기준선 실패를 전체 성공으로 숨기지 않는다. 로컬 Emulator는 Android Studio JBR 21로 기동했으나 Rules 로딩 단계의 기존 HTTP 503으로 실행되지 않았다. demo CI에서는 마지막 1인·그룹 마지막 1인까지 통과했지만 정상 신청 단계가 Rules 표현식 한도를 초과했으므로 R3 자동 완료, 운영 게시 또는 실기기 검증 단계로 판정하지 않는다.
+      파티 전체 완료 취소의 신규 UI·Domain·Adapter·Write Plan·Rules 실행 경로는 제거했고 과거 이벤트 읽기만 유지했다. 개인 완료·해제 및 lifecycle 표적 Flutter/정적 Rules 계약은 통과했으며 핵심 변경 13개 파일 분석은 0건이다. 전체 분석은 기존 파일을 포함한 50건, 전체 테스트는 계약 테스트 갱신 전 실행 기준 1,183건 통과·13건 실패였다. 이번 작업의 낡은 legacy assignment 문자열 기대는 현재 제한적 자기 정리 계약으로 갱신해 단독 통과했으며, 기존 활동 Character Rules 문자열·Firebase 기본 앱 미초기화 위젯 등 기준선 실패를 전체 성공으로 숨기지 않는다. 로컬 Emulator는 Android Studio JBR 21로 기동했으나 Rules 로딩 단계의 기존 HTTP 503으로 실행되지 않았다. demo CI `35448981992`에서 추적 Rules 전체 회귀가 통과했지만 운영 게시와 실기기 수동 검증 전에는 B2 전체 완료로 판정하지 않는다.
 
    4. **R4 한 사이클 검증:** Rules 문서를 직접 갱신해 앱의 선행 읽기를 우회하는 테스트만으로 판정하지 않는다. 실제 앱 Repository와 같은 인증 클라이언트로 공개·그룹 방의 1·2·4·8인 완료를 Emulator에서 실행하고 Rules 문서 접근·표현식 예산을 함께 확인한다. `2인 완료 → 두 Player 완료 기록 → 완료방 해산 → 두 Player 체크 유지 → 한 Player만 해제 → 그 Player 재참가 가능·다른 Player 완료 유지`를 자동 검증하고 사용자는 같은 대표 흐름을 실기기에서 확인한다. 반복방은 공동 완료 취소 없이 다음 주차에 현재 membership으로 새 active 상태를 구성해야 한다.
 
@@ -456,7 +456,7 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
 5. **F6-D — 신청/승인 경계 보완.** 기존 `active raidState`가 있어도 신청은 pending으로 접수되고 승인에서 Rules update 거부가 모호한 권한 팝업이 되는 흐름을 분리한다. 정상 활성 점유·삭제된 모집을 가리키는 고아 점유·완료 상태의 안내와 서버 최종 차단을 계약 테스트로 고정한다. 고아 `raidState`를 일반 승인 코드에서 임의 덮어쓰거나 삭제하지 않는다. 정상 신규 방 승인·거절/재신청·4/8인 집계 및 재진입을 회귀 검증한다.
    - 참고: [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md), [`BUG_REPORTS.md`](BUG_REPORTS.md) `니티야` 고아 점유 기록.
 
-다음 작업은 `b5769bf`부터 F6-B2-R3 Rules 표현식 예산 회귀를 해결하는 것이다. 개인 완료 상세 검증 앞에 값싼 `personalComplete` 명령 표식 게이트를 두어 정상 신청 Transaction이 개인 완료 검증을 타지 않게 한 뒤, demo CI에서 신청·승인과 일반 멤버/파티장 개인 완료·승계·위조 거절을 확인한다. B2-A의 읽기 Projection은 재사용하되 읽기 전용 체크박스와 `inconsistent` 일괄 차단 정책은 폐기한다. 사용자 콘솔 게시본과 로컬 추적 Rules의 내용 일치는 별도 확인 전까지 단정하지 않는다. 코드·Rules·문서·자동 검증이 끝난 뒤 사용자가 실기기에서 전체 사이클을 확인하며, 그 전에는 Rules 게시, B2 완료, `dev/main` 통합과 릴리즈를 하지 않는다.
+다음 작업은 최신 추적본 `4abdb89` 기준 `firestore.rules`의 대상 프로젝트·경로·diff를 다시 확인하고 운영 Rules를 한 번 게시하는 것이다. 게시 성공과 활성 소스 확인 후 사용자가 R4 실기기 체크리스트로 개인 수동 완료·해제, 참가 중 일반 멤버 완료, 파티장 승계, 마지막 1인/그룹방 정리, 파티 전체 완료 후 개인 해제를 확인한다. 에이전트는 실기기를 설치·조작하지 않는다. 운영 게시와 R4 확인 전에는 B2 완료, `dev/main` 통합과 릴리즈를 하지 않는다.
 
 #### 후속 백로그 — 안전한 테스트 데이터 정리 도구 (F6 범위 밖)
 
