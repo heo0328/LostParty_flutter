@@ -6,6 +6,7 @@
 - demo Rules Emulator 시나리오에 본인 현재 주차 list 성공과 타 Player list 거절을 추가했다. Android Studio JBR 21로 Emulator는 기동했으나 추적 `firestore.rules` 로딩이 기존 Windows 환경과 같은 `503 Network closed for unknown reason`로 중단돼 시나리오 평가에 도달하지 못했다.
 - 문자열 계약·JS 문법·Flutter 표적 테스트에 더해 작업 브랜치 GitHub Actions `35412398666`의 demo Emulator에서 전체 추적 Rules 회귀와 본인 현재 주차 list 허용·타 Player list 거절이 통과했다.
 - 승인 후 SHA-256 `51146C8DF8B12493AE5B3DACAD47D533A74D242C25F57930FAAA49BF2E0280CC`의 `firestore.rules`만 운영 `lost-party`에 1회 게시 시도했다. 원격 컴파일 `projects/lost-party:test`가 HTTP 503 `UNAVAILABLE`을 반환해 `/rulesets` 업로드와 `/releases` 반영에는 도달하지 않았다. 운영 Rules는 갱신되지 않은 상태로 판정하며 같은 명령을 반복하지 않는다.
+- 이후 사용자가 Firebase 콘솔에서 Rules를 별도로 게시했다고 확인했다. AI는 활성 게시 소스와 로컬 SHA-256을 직접 대조하지 않았으므로 내용 일치는 단정하지 않는다. 게시 후 실기기에서 확인된 다인 전체 완료 권한 실패는 Rules 컴파일 실패가 아니라 앱이 타인 private `raidState`를 선조회하는 구조와 일치하며, 완료 기록 누락·체크박스 비활성은 각각 이벤트 Payload와 UI 명령 연결 문제로 분리한다.
 
 ## 2026-09-13 파티 통합 오류 Snapshot allowlist 배포 시도
 

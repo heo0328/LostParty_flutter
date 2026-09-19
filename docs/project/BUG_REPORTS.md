@@ -540,6 +540,45 @@
 
 ---
 
+## BUG-020. 파티 완료 수명주기의 권한·기록·개인 해제 회귀
+
+| 항목 | 내용 |
+| --- | --- |
+| 상태 | **원인 확인·재설계 완료 — 구현 전** |
+| 보고일 | 2026-09-19 |
+| 심각도 | 매우 높음 — 다인 전체 완료 불가 및 성공 완료의 기록·해제 UX 손상 |
+| 실행 계획 | [`NEXT_WORK.md`](NEXT_WORK.md) F6-B2-R |
+
+### 실기기 재현
+
+- 공대장 Character로 A 레이드 모집 생성 → 다른 계정 가입 → 파티 전체 완료 시 `권한을 확인할 수 없습니다.`로 실패한다.
+- 같은 모집의 해산은 성공한다.
+- 같은 Character·레이드로 다시 혼자 모집 생성 → 파티 전체 완료와 해산은 성공하지만 완료 기록 화면에는 기록이 없다.
+- 내 계정에는 완료 상태가 표시돼도 체크박스로 해제할 수 없다. 참가·완료 안내 `i` 표시는 유용하지만 안내를 이유로 체크박스 자체를 비활성화하는 것은 기존 UX 위반이다.
+
+### 확인된 서로 다른 원인
+
+1. `FirestorePartyAtomicCommandRepository`가 해산 외 lifecycle 명령에서 모든 대상 Player의 private `raidState`를 `transaction.get()`한다. Rules는 자기 Player 경로만 읽게 하므로 타인 한 명이 추가되는 순간 완료가 `permission-denied` 될 수 있다. 해산은 2026-09-17 수정에서만 이 읽기를 생략해 서로 다른 결과가 난다.
+2. 원자 lifecycle의 공용 `partyEvents` 완료 문서에는 `characterId/raidId/difficultyId/cycleKey`가 없다. 완료 기록 sync는 네 필드가 모두 있을 때만 Drift 기록을 만들고 누락 시 조용히 건너뛴다.
+3. B2-A가 새 state 쓰기 명령 미연결을 이유로 `active/completed/inconsistent`를 모두 `canToggle=false`로 만들었다. 이는 사용자가 요구한 제품 정책이 아니라 구현 중간 단계를 운영에 노출한 회귀이며, 기존 `완료 상태 유지 후 본인 해제 가능` 계약과 충돌한다.
+
+### 테스트가 놓친 이유
+
+- 확장성 Rules Emulator lifecycle 시나리오는 모집만 읽고 타인 state를 바로 update하므로 실제 앱 Repository의 private state 선읽기를 재현하지 않는다.
+- Repository 계약 테스트는 Transaction·컬렉션 사용 문자열만 확인하며 인증된 2인 실제 실행을 하지 않는다.
+- 완료 이벤트 테스트는 type 분류만 검사하고 완료 기록에 필요한 Snapshot 필드와 실제 Drift 기록 생성을 검증하지 않는다.
+
+### 복구 기준
+
+- 공용 이벤트 한 건과 최대 8인 Aggregate 구조는 유지한다. Player별 이벤트 fan-out은 복원하지 않는다.
+- 완료 명령의 타인 private read를 제거하고 Rules가 Aggregate 대상·각 state update·revision을 검증한다.
+- 각 state 쓰기에서 전체 대상을 다시 검사하는 `8×8` Rules 평가를 금지하고, 공개·그룹 1·2·4·8인을 실제 앱 Repository와 같은 인증 흐름으로 검증한다.
+- 공용 완료 이벤트에 공통 레이드·난이도·주차와 최대 8명의 Player·Character 대상을 보존해 수신자별 기록을 만든다.
+- `active` 안내 아이콘과 `completed` 안내 아이콘은 유지하되 체크박스 조작을 막지 않는다. active 선택은 영향 확인과 개인 완료, completed 해제는 본인 state만 제거하는 명령으로 연결한다. `inconsistent`만 차단한다.
+- 완료 판정은 `2인 이상 전체 완료 → 각자 완료 기록 → 완료방 해산 → 체크 유지 → 한 명만 해제 → 해제한 Player 재참가 가능·나머지 완료 유지` 전체 사이클의 자동·실기기 통과다.
+
+---
+
 ## 백로그 연결
 
 ### 2026-09-18 승인 실패와 수동 완료 실패 — 별도 원인으로 분리

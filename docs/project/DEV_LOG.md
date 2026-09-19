@@ -3121,3 +3121,11 @@
 - Rules는 본인 `raidStates/activeRaidAssignments` list만 열고 타인 list·legacy assignment 쓰기를 계속 거절한다. 표적 47건, 변경 21개 Dart 파일 analyze, JS 문법과 `git diff --check`가 통과했다. 전체 `flutter test`는 1,171건 통과·17건 실패로 직전 기준선 17건을 유지했고, 전체 analyze는 기존 38건만 보고했다.
 - 로컬 Rules Emulator는 Android Studio JBR 21로 기동했으나 Rules 로딩 단계의 기존 `503 Network closed for unknown reason`로 중단돼 허용·거절 시나리오를 실행하지 못했다. 작업 브랜치 GitHub Actions `35412398666`에서는 전체 추적 Rules 회귀와 B2-A 본인 현재 주차 list 허용·타 Player list 거절이 모두 통과했다.
 - 사용자 승인 후 SHA-256 `51146C8DF8B12493AE5B3DACAD47D533A74D242C25F57930FAAA49BF2E0280CC`의 `firestore.rules`만 운영 `lost-party`에 1회 게시 시도했다. 원격 컴파일 `/test`가 HTTP 503 `UNAVAILABLE`로 끝나 Ruleset 업로드·release에는 도달하지 않았고 운영 Rules는 갱신되지 않았다. 같은 명령을 반복하지 않으며 새 지시 전에는 실기기 확인·B2-B·`dev/main` 통합을 진행하지 않는다.
+
+# 2026-09-19 F6-B2 완료 UX 회귀 판정과 재설계
+
+- 사용자가 Rules를 콘솔에서 별도로 게시한 뒤 `2인 전체 완료 권한 실패`, `1인 완료·해산 후 완료 기록 누락`, `raidState 완료 체크 해제 불가`를 실기기에서 확인했다. 콘솔 활성 소스와 로컬 해시는 직접 대조하지 않았다.
+- 다인 완료 실패는 원자 Repository가 해산 외 lifecycle에서 모든 대상의 private `raidState`를 읽는 반면 Rules는 본인 get만 허용하는 구조로 확정했다. 혼자 완료와 해산 성공·타인 참가 시 완료 실패의 차이를 설명한다.
+- 완료 기록 누락은 공용 lifecycle 이벤트에 Character·raid·difficulty·cycle Snapshot이 없고 sync가 네 필드 누락 이벤트를 건너뛰는 구조로 확정했다. 공용 이벤트 한 건 원칙은 유지하되 최대 8명의 수신자별 Character 대상과 공통 레이드 Snapshot을 보존한다.
+- B2-A의 읽기 전용 체크박스는 사용자 요구가 아니라 구현 중간 단계에서 추가된 제한이며 기존 개인 해제 계약을 위반한다. 안내 아이콘은 유지하지만 checkbox를 막지 않고 active 개인 완료와 completed 개인 해제 명령까지 연결한 상태만 사용자 완료로 판정한다.
+- `파티 전체 완료 → 각자 완료 기록 → 완료방 해산 → 내 계정 체크 유지 → 본인 해제 → 재참가 가능`을 F6-B2-R 하나의 인수 단위로 재정의했다. 구현은 R1~R4로 나누되 전체 앱 Repository 인증 흐름과 실기기 사이클이 통과하기 전 게시 가능·완료·통합 상태로 기록하지 않는다. 이번 구간은 문서 설계만 변경하며 코드·Rules·Firebase 데이터는 수정하지 않았다.

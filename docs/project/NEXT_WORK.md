@@ -6,7 +6,7 @@
 - R1~R7·C* 구현과 운영 Rules·Indexes 게시는 완료했다. 운영 Router는 원자 Repository·어댑터를 쓴다.
 - 로컬에는 생성·읽기 v2·이전 Close/Open 가드·승인 패치·listing sync·Listen 가드·orphan 공개 전환·모집 삭제→disband·캐릭터 변경 atomic OR·그룹 전용방 파티장 탈퇴 차단 등이 **코드로 들어가 있다**.
 - **실기기 판정(2026-09-16 사용자 확인):** 아래 성공 항목은 사용자가 디바이스에서 확인했다. 그 밖의 보고 실패는 로컬 수정·자동 테스트 통과만으로 완료로 쓰지 않는다.
-- **2026-09-19 현재 작업:** F6-B1은 완료했다. F6-B2-A 읽기 Projection·내 계정 표시·모집 후보·본인 list Rules는 구현했고 표적 47건과 변경 파일 분석이 통과했다. 전체 테스트는 1,171건 통과·기존 기준선 17건 실패, 전체 분석은 기존 38건이다. 로컬 Rules Emulator는 Rules 로딩 503으로 허용·거절 시나리오를 시작하지 못했지만, 작업 브랜치 GitHub Actions `35412398666`에서 전체 추적 Rules 회귀와 본인 현재 주차 list 허용·타 Player list 거절 시나리오가 통과했다. 승인된 운영 게시 1회는 원격 컴파일 `/test` 단계의 HTTP 503으로 끝나 Ruleset 업로드·release에 도달하지 못했다. 같은 명령을 반복하지 않으며, 진단 결과 확인과 사용자의 새 지시 전에는 B2-B 쓰기 활성화·실기기 완료 판정·`dev/main` 통합을 하지 않는다.
+- **2026-09-19 현재 작업:** 사용자가 F6-B2-A Rules를 콘솔에서 별도로 게시한 뒤 완료 UX의 세 회귀를 실기기에서 확인했다. 2인 이상 파티 전체 완료는 공대장이 타인 private `raidState`를 읽어 `permission-denied`가 되고, 1인 완료는 성공해도 공용 이벤트에 완료 기록 필드가 없어 히스토리가 생략되며, `raidState.completed` 체크박스는 B2-A 임시 제한으로 해제할 수 없다. B2-A를 완료로 판정하지 않고 아래 **F6-B2-R 완료 UX 복구**를 최우선 단일 인수 단위로 진행한다. `dev/main` 통합과 릴리즈는 계속 보류한다.
 
 ### 실기기 확인됨 (고쳐진 것)
 
@@ -360,7 +360,7 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
    - 참고: [`WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md) §3·§5·§6, [`BUG_REPORTS.md`](BUG_REPORTS.md) 2026-09-18, [`DEV_LOG.md`](DEV_LOG.md) F6-A/B1 기록, `tools/party_group_cutover_rules_test.mjs`의 Claim 존재 시 승인 거절 계약.
    - 적용 경계: `FirestoreWeeklyRaidClaimRepository._loadConflictContext`의 pending 신청별 `recruitmentRef.get()`만 좁게 처리했다. 조회 쿼리·Character/주차 필터와 `createManualClaim` Transaction의 정상 대상 쓰기 집합은 그대로 두고, 사전 영향 확인(`inspectManualClaimImpact`)과 실제 체크(`createManualClaim`)가 같은 분류 함수를 계속 사용한다.
    - 검증 경계: 접근 불가 부모의 예외가 **그 신청 하나만** 제외되고 `unavailable` 등 다른 예외는 기존 실패로 남는 것을 신규 테스트로 고정했다. 읽을 수 있는 동일 레이드 신청의 안내·취소는 실기기에서 확인했다. Claim 이후 승인은 기존 Rules의 `hasWeeklyRaidClaimAfter` 계약이 최종 거부한다. 새 `raidState` 점유와 완료 표시의 통합은 B2로 분리한다.
-3. **F6-B2 — 주간 상태/체크 표시 통합: B2-A 구현·로컬 자동 검증 완료, Rules CI·게시·실기기 미확인.** 수동 `weeklyRaidClaims`와 파티 `raidState`가 생성·신청 후보, 수동 체크/해제, 완료방 해산 후 내 계정 표시에서 일관되게 해석되도록 계약을 설계한다. 기존 활성 참가 시 탈퇴·승계·pending 신청 안내, `source: manual/party`, 완료 취소, 다른 난이도의 같은 `raidId`, 수요일 06시를 보존한다. 새 파티 명령에 구 Claim 복제 쓰기를 추가하지 않는다. **내 계정 수동 체크의 참가 중 영향 확인·탈퇴와 모집 상세의 파티 전체 완료는 서로 다른 명령**이므로 점유 차단을 공통 조건으로 일괄 적용하지 않는다.
+3. **F6-B2 — 주간 상태/체크 표시 통합: B2-A 중간 상태 회귀 확인, 완료 UX 복구 우선.** 수동 `weeklyRaidClaims`와 파티 `raidState`가 생성·신청 후보, 수동 체크/해제, 완료방 해산 후 내 계정 표시에서 일관되게 해석되도록 계약을 설계한다. 기존 활성 참가 시 탈퇴·승계·pending 신청 안내, `source: manual/party`, 완료 취소, 다른 난이도의 같은 `raidId`, 수요일 06시를 보존한다. 새 파티 명령에 구 Claim 복제 쓰기를 추가하지 않는다. **내 계정 수동 체크의 참가 중 영향 확인·탈퇴와 모집 상세의 파티 전체 완료는 서로 다른 명령**이지만, 사용자에게 제공하는 완료 사이클은 아래 F6-B2-R의 하나의 인수 단위로 검증한다.
    - 참고: [`WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md) §3.2·§5.3·§5.4·§6·§11·§12, [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`BUG_REPORTS.md`](BUG_REPORTS.md) 완료방 해산 체크 누락 기록.
    - 확인된 실제 간극: 운영 Router의 파티 완료는 `PartyAtomicCycleCommandAdapter → FirestorePartyAtomicCommandRepository`로 연결되어 최대 8명의 `raidState`를 `active → completed`로 바꾼다. 반면 내 계정 표시·수동 체크는 `FirestoreWeeklyRaidClaimRepository`의 구 `weeklyRaidClaims/activeRaidAssignments`만 사용한다. 따라서 완료방 해산 후 체크 누락과 활성 `raidState`가 있어도 수동 체크 가능한 현상은 같은 전환 미완료에서 발생한다. 구 `FirestorePartyCycleCommandRepository`의 Claim 쓰기를 운영 기준으로 되살리지 않는다.
 
@@ -372,7 +372,18 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
    4. Projection은 저장 원장 해석만 공유한다. 모집 생성·신청 후보의 active 상태는 기존 `FirestoreActiveRaidAssignmentLookup`/`PartyCreateOccupancyGate`가 수행하는 연결 모집 종료·만료·고아 판정을 보존하고, 내 계정은 탈퇴·승계·단독 해산 영향 계산을 별도로 유지한다. 공통 타입 도입을 이유로 두 UX의 정책을 하나의 boolean으로 축약하지 않는다.
    5. 구현은 `Projection 타입·순수 병합 테스트 → 본인 list Rules 계약 → Repository 읽기 → 내 계정 표시 연결 → 모집 후보 연결 및 기존 점유 게이트 회귀` 순서로 나눠 각 단계 diff를 검토한다.
 
-   **B2-A 구현 상태(2026-09-19):** 위 코드·Rules·Router 연결을 구현했다. 현재 state는 B2-B/C 쓰기 명령 전까지 내 계정에서 읽기 전용이며 구 Claim 명령으로 거짓 성공을 표시하지 않는다. 표적 47건·변경 파일 analyze·JS 문법·diff 검사는 통과했다. Rules Emulator 시나리오에 본인 `raidStates/activeRaidAssignments` list 허용과 타인 list 거절을 추가했으나 Windows 로컬의 기존 503으로 Rules 로딩에서 중단됐다. CI 통과와 게시·실기기 확인 전에는 운영 완료로 표시하지 않는다.
+   **B2-A 구현 상태 정정(2026-09-19):** 읽기 Projection·Rules·Router 연결과 자동 검증은 완료했지만, 대응 쓰기 명령 없이 `raidState` 체크박스를 읽기 전용으로 노출한 것은 기존 해제 UX를 깨뜨린 회귀다. 사용자의 운영 게시·실기기 확인에서 이 문제가 드러났으므로 B2-A를 독립 완료 또는 게시 가능한 단계로 취급하지 않는다. 기존 `canToggle` 차단 테스트는 제품 계약이 아니라 제거·대체해야 할 회귀 근거다.
+
+   **F6-B2-R — 완료 UX 복구: 현재 최우선 작업 구간**
+
+   하나의 사용자 흐름은 `파티 전체 완료 → 완료 기록 → 완료방 해산 → 내 계정 체크 유지 → 본인 체크 해제 → 동일 레이드 재참가 가능`이다. 내부 코드는 아래처럼 나누되 전체 흐름이 통과하기 전에는 어느 중간 구간도 운영 완료로 판정하지 않는다.
+
+   1. **R1 전체 완료 권한 경계:** 현재 앱 Repository가 `complete/cancelCompletion/advanceCycle`에서 모든 대상의 private `raidState`를 직접 읽는 구조를 제거한다. 모집 Aggregate의 고정 대상과 Rules의 각 update·`getAfter` 검증으로 1·2·4·8인의 상태가 전부 반영되거나 전부 거절되게 한다. 해산에서 이미 적용한 타인 private read 제거 원칙을 완료 명령에도 맞추되, 대상 누락·추가·stale revision·비공대장은 계속 거절한다. 각 state 쓰기마다 전체 대상을 다시 검사하는 `8×8` Rules 평가나 인원수 비례 이벤트 복제는 도입하지 않는다.
+   2. **R2 공용 완료 이벤트와 기록:** Player별 이벤트 fan-out은 되살리지 않는다. 공용 이벤트 한 건에 공통 `raidId/difficultyId/cycleKey`와 최대 8명의 `playerId/characterId` 완료 대상 Snapshot을 넣고, 수신자는 자기 대상을 선택해 완료 기록을 생성한다. Rules allowlist·대상 일치·최대 8명·이벤트 재전송 거절을 검증한다. 필드 누락을 조용히 성공 처리하는 기존 sync 테스트를 완료 기록 생성/누락 거절 테스트로 보강한다.
+   3. **R3 체크박스 UX 복구:** `active`는 미체크와 오른쪽 참가 안내 아이콘을 함께 표시하고 체크박스 선택은 영향 확인 후 B2-C 개인 완료 명령으로 연결한다. `completed`는 체크와 완료 안내 아이콘을 함께 표시하고 본인이 해제할 수 있게 B2-B/D 자기 state 삭제 명령으로 연결한다. 안내 아이콘은 조작을 설명할 뿐 체크박스를 비활성화하는 조건이 아니다. `inconsistent`만 안전을 위해 조작을 차단한다.
+   4. **R4 한 사이클 검증:** Rules 문서를 직접 갱신해 앱의 선행 읽기를 우회하는 테스트만으로 판정하지 않는다. 실제 앱 Repository와 같은 인증 클라이언트로 공개·그룹 방의 1·2·4·8인 완료를 Emulator에서 실행하고 Rules 문서 접근·표현식 예산을 함께 확인한다. `2인 완료 → 두 Player 완료 기록 → 완료방 해산 → 두 Player 체크 유지 → 한 Player만 해제 → 그 Player 재참가 가능·다른 Player 완료 유지`를 자동 검증하고 사용자는 같은 대표 흐름을 실기기에서 확인한다. 반복방 완료·전체 완료 취소는 한 명이 개인 해제한 경우 원자 거절되는 기존 계약도 함께 보호한다.
+
+   **회귀 보호:** 기존 1인 완료, 자리 이동·교환, 추방·재가입, 활성 해산, 그룹 전용 listing/활성 수, 정상 신청 승인, B1 pending 신청 처리와 수요일 06시 주차 경계를 보존한다. Rules가 바뀌면 전체 추적 Rules CI·경고 확인 후 별도 게시 절차를 따르며, 실기기 설치·조작은 사용자가 수행한다.
 
    **B2-B — 파티 밖 수동 체크·해제**
 
@@ -418,7 +429,7 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
 5. **F6-D — 신청/승인 경계 보완.** 기존 `active raidState`가 있어도 신청은 pending으로 접수되고 승인에서 Rules update 거부가 모호한 권한 팝업이 되는 흐름을 분리한다. 정상 활성 점유·삭제된 모집을 가리키는 고아 점유·완료 상태의 안내와 서버 최종 차단을 계약 테스트로 고정한다. 고아 `raidState`를 일반 승인 코드에서 임의 덮어쓰거나 삭제하지 않는다. 정상 신규 방 승인·거절/재신청·4/8인 집계 및 재진입을 회귀 검증한다.
    - 참고: [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md), [`BUG_REPORTS.md`](BUG_REPORTS.md) `니티야` 고아 점유 기록.
 
-GitHub Actions `35412398666`에서 통과한 F6-B2-A Rules 검증본의 운영 게시 1회는 원격 컴파일 `/test` 단계 HTTP 503으로 실패했다. `/rulesets` 업로드와 `/releases` 반영에는 도달하지 않았으므로 운영 반영·실기기 확인을 시작하지 않는다. 다음 작업은 이 실패 결과 확인 후 사용자의 새 지시에 따른 단일 재시도 여부 결정이다. 성공 게시 후 사용자가 실기기에서 내 계정 표시·생성/신청 후보 회귀를 확인한 뒤 B2-B로 넘어간다. B2·C·D는 각각 별도 검증 단위로 진행한다. 실기기 설치·조작·테스트는 사용자가 직접 수행한다. 각 단계의 `코드/계약 테스트`, `정상 실기기 흐름`, `제보 재현 해소`, `미확인 항목`을 분리 기록한다. 모든 결함이 정리되기 전 `dev`·`main` 통합이나 릴리즈는 하지 않는다.
+다음 작업은 F6-B2-R1부터 시작하되 R1~R4를 하나의 완료 UX 인수 단위로 유지하는 것이다. B2-A의 읽기 Projection은 재사용하되 읽기 전용 체크박스 정책은 폐기한다. 사용자 콘솔 게시본과 로컬 추적 Rules의 내용 일치는 별도 확인 전까지 단정하지 않는다. 코드·Rules·문서·자동 검증이 끝난 뒤 사용자가 실기기에서 전체 사이클을 확인하며, 그 전에는 B2 완료·`dev/main` 통합·릴리즈를 하지 않는다.
 
 #### 후속 백로그 — 안전한 테스트 데이터 정리 도구 (F6 범위 밖)
 
