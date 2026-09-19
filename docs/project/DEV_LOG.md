@@ -3129,3 +3129,9 @@
 - 완료 기록 누락은 공용 lifecycle 이벤트에 Character·raid·difficulty·cycle Snapshot이 없고 sync가 네 필드 누락 이벤트를 건너뛰는 구조로 확정했다. 공용 이벤트 한 건 원칙은 유지하되 최대 8명의 수신자별 Character 대상과 공통 레이드 Snapshot을 보존한다.
 - B2-A의 읽기 전용 체크박스는 사용자 요구가 아니라 구현 중간 단계에서 추가된 제한이며 기존 개인 해제 계약을 위반한다. 안내 아이콘은 유지하지만 checkbox를 막지 않고 active 개인 완료와 completed 개인 해제 명령까지 연결한 상태만 사용자 완료로 판정한다.
 - `파티 전체 완료 → 각자 완료 기록 → 완료방 해산 → 내 계정 체크 유지 → 본인 해제 → 재참가 가능`을 F6-B2-R 하나의 인수 단위로 재정의했다. 구현은 R1~R4로 나누되 전체 앱 Repository 인증 흐름과 실기기 사이클이 통과하기 전 게시 가능·완료·통합 상태로 기록하지 않는다. 이번 구간은 문서 설계만 변경하며 코드·Rules·Firebase 데이터는 수정하지 않았다.
+
+# 2026-09-19 F6-B2-R1 다인 완료 권한 경계 복구
+
+- `FirestorePartyAtomicCommandRepository`가 완료·완료 취소·주차 전환에서 모든 대상 Player의 private `raidState`를 선조회하던 경로를 제거했다. 해산과 동일하게 클라이언트는 대상 경로만 구성하고, 모집 Aggregate 대상 일치와 각 state 전이는 기존 Write Plan·Rules에 맡긴다.
+- 인증 binding·모집 Aggregate·필요 시 그룹 원본 읽기, 공용 이벤트 한 건과 최대 8인 제한은 유지했다. Rules·이벤트 Payload·UI·운영 Firebase는 이번 구간에서 변경하지 않았다.
+- Repository 계약 5건, Write Plan 9건, lifecycle Rules 계약 5건, 확장성 계약 6건 등 표적 25건과 변경 파일 정적 분석이 통과했다. 실제 앱 인증 흐름의 공개·그룹 1·2·4·8인 Emulator 검증은 R4에 남기므로 전체 완료 UX나 B2 완료로 판정하지 않는다.

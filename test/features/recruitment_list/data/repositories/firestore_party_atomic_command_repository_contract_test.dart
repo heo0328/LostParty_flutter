@@ -34,11 +34,10 @@ void main() {
     expect(repository, isNot(contains(".collection('slots')")));
   });
 
-  test('해산은 타인 raidState를 읽지 않고 전체 대상 삭제를 Rules에 맡긴다', () {
-    expect(
-      repository,
-      contains('if (command.type != PartyAtomicCommandType.disband)'),
-    );
+  test('모든 lifecycle 명령은 타인 raidState를 읽지 않고 전이 검증을 Rules에 맡긴다', () {
+    expect(repository, isNot(contains('transaction.get(ref)')));
+    expect(repository, isNot(contains('raidStateDocumentsAllow(')));
+    expect(repository, contains('transaction.update(ref, write.patch!)'));
     expect(repository, contains('transaction.delete(ref)'));
   });
 
