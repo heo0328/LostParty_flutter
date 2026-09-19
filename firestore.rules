@@ -3266,12 +3266,12 @@ service cloud.firestore {
           stateId,
           request.resource.data
         );
-        allow update: if validAtomicRaidStateUpdate(
+        allow update: if validPersonalRaidStateCompletion(
           playerId,
           stateId,
           resource.data,
           request.resource.data
-        ) || validPersonalRaidStateCompletion(
+        ) || validAtomicRaidStateUpdate(
           playerId,
           stateId,
           resource.data,
@@ -3673,8 +3673,8 @@ service cloud.firestore {
       allow get, list: if hasActiveBinding()
         && resource.data.audiencePlayerIds.hasAny([currentPlayerId()]);
       allow update, delete: if false;
-      allow create: if validAtomicLifecyclePartyEvent(request.resource.data)
-        || validAtomicMembershipPartyEvent(request.resource.data);
+      allow create: if validAtomicMembershipPartyEvent(request.resource.data)
+        || validAtomicLifecyclePartyEvent(request.resource.data);
     }
 
     match /recruitments/{recruitmentId} {
@@ -3684,7 +3684,10 @@ service cloud.firestore {
         recruitmentId,
         request.resource.data
       );
-      allow update: if validRecurrenceChange(
+      allow update: if validPersonalCompletionRecruitmentUpdate(
+          resource.data,
+          request.resource.data
+        ) || validRecurrenceChange(
           resource.data,
           request.resource.data
         ) || validAtomicLifecycleUpdate(
@@ -3703,9 +3706,6 @@ service cloud.firestore {
           resource.data,
           request.resource.data
         ) || validAtomicRecruitmentMemberRemoval(
-          resource.data,
-          request.resource.data
-        ) || validPersonalCompletionRecruitmentUpdate(
           resource.data,
           request.resource.data
         ) || validAtomicRecruitmentVisibilityChange(
@@ -3820,7 +3820,11 @@ service cloud.firestore {
       // 추가로 읽지 않게 한다.
       // 1인 해산과 그룹장 이전은 여러 문서를 함께 쓰므로 먼저 판정한다.
       // 초대코드와 표시 정책도 뒤의 가입·승인 복합 명령보다 먼저 종료한다.
-      allow update: if validGroupDisbandUpdate(
+      allow update: if validAtomicGroupRecruitmentClose(
+        groupId,
+        resource.data,
+        request.resource.data
+      ) || validGroupDisbandUpdate(
         groupId,
         resource.data,
         request.resource.data
@@ -3840,11 +3844,7 @@ service cloud.firestore {
           groupId,
           resource.data,
           request.resource.data
-        )) || validAtomicGroupRecruitmentClose(
-        groupId,
-        resource.data,
-        request.resource.data
-      ) || validAtomicGroupRecruitmentOpen(
+        )) || validAtomicGroupRecruitmentOpen(
         groupId,
         resource.data,
         request.resource.data
@@ -3922,25 +3922,25 @@ service cloud.firestore {
           recruitmentId,
           request.resource.data
         );
-        allow update: if validGroupRaidListingCreate(
+        allow update: if validPersonalCompletionListingUpdate(
+          recruitmentId,
+          resource.data,
+          request.resource.data
+        ) || validGroupRaidListingCreate(
           groupId,
           recruitmentId,
           request.resource.data
         ) || validAtomicLifecycleListingUpdate(
           recruitmentId,
           request.resource.data
-        ) || validPersonalCompletionListingUpdate(
-          recruitmentId,
-          resource.data,
-          request.resource.data
         ) || validAtomicVisibilityListingWrite(
           groupId,
           recruitmentId,
           request.resource.data
         );
-        allow delete: if validGroupRaidListingDelete(groupId, recruitmentId)
-          || validAtomicLifecycleListingDelete(recruitmentId)
-          || validPersonalCompletionListingDelete(recruitmentId);
+        allow delete: if validPersonalCompletionListingDelete(recruitmentId)
+          || validGroupRaidListingDelete(groupId, recruitmentId)
+          || validAtomicLifecycleListingDelete(recruitmentId);
       }
 
       // Unit 4는 초대·신청 처리에 더해 코드 가입이 pending 요청을

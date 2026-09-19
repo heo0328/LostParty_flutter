@@ -70,7 +70,7 @@ void main() {
     expect(rules, contains('function validAtomicAdvanceRaidStateCreate('));
     expect(rules, contains('function atomicAdvanceStateMatchesSlot('));
     expect(rules, contains('&& validManualRaidStateCreate('));
-    expect(rules, contains('|| validPersonalRaidStateCompletion('));
+    expect(rules, contains('allow update: if validPersonalRaidStateCompletion('));
   });
 
   test('파티 전체 완료 취소 실행 경로는 제거하고 과거 읽기만 별도 보존한다', () {
