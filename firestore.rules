@@ -1640,7 +1640,12 @@ service cloud.firestore {
     function personalCompletionTargetsCurrentPlayer(recruitment) {
       return recruitment.commandTargets is list
         && recruitment.commandTargets.size() == 1
-        && recruitment.commandTargets[0].playerId == currentPlayerId();
+        && recruitment.commandTargets[0].playerId == currentPlayerId()
+        && recruitment.lastCommandType == 'personalComplete'
+        && recruitment.lastCommandActorPlayerId == currentPlayerId()
+        && recruitment.lastCommandId is string
+        && recruitment.lastCommandId.size() > 0
+        && recruitment.lastCommandAt == request.time;
     }
 
     function validPersonalCompletionListingUpdate(
@@ -1901,6 +1906,8 @@ service cloud.firestore {
         && newData.completedAt == request.time
         && newData.updatedAt == request.time
         && recruitment.schemaVersion == 2
+        && personalCompletionTargetsCurrentPlayer(recruitment)
+        && recruitment.commandTargets[0].stateId == stateId
         && recruitment.raidId == oldData.raidId
         && recruitment.currentCycleKey == oldData.cycleKey
         && !(playerId in recruitment.memberPlayerIds)
@@ -1986,6 +1993,8 @@ service cloud.firestore {
         && data.audiencePlayerIds.size() <= 8
         && data.actorPlayerId is string
         && data.occurredAt == request.time
+        && (!('reason' in data)
+          || data.commandId == recruitment.lastCommandId)
         && (data.type != 'partyCreated' || data.commandRevision == 1)
         && (data.type in ['memberLeft', 'memberKicked']
           ? data.targetPlayerId is string
@@ -2168,6 +2177,59 @@ service cloud.firestore {
         || validPersonalCompletionSuccessor(oldData, newData);
     }
 
+    function validPersonalLastMemberCompletion(oldData, newData) {
+      let target = newData.commandTargets[0];
+      let completedState = getAfter(atomicRaidStatePath(target)).data;
+      return atomicActiveV2Recruitment(oldData)
+        && oldData.memberCount == 1
+        && oldData.memberPlayerIds == [currentPlayerId()]
+        && oldData.partySlots.size() == 1
+        && oldData.partySlots[0].playerId == currentPlayerId()
+        && oldData.raidStateTargets.size() == 1
+        && oldData.raidStateTargets[0].playerId == currentPlayerId()
+        && newData.commandTargets is list
+        && newData.commandTargets.size() == 1
+        && target.playerId == currentPlayerId()
+        && target.stateId == oldData.raidStateTargets[0].stateId
+        && completedState.playerId == currentPlayerId()
+        && completedState.characterId == oldData.partySlots[0].characterId
+        && completedState.raidId == oldData.raidId
+        && completedState.status == 'completed'
+        && completedState.source == 'manual'
+        && completedState.recruitmentId == oldData.recruitmentId
+        && completedState.cycleKey == oldData.currentCycleKey
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'manualRecruitmentEnabled', 'memberPlayerIds',
+          'memberCount', 'dealerCount', 'supportCount', 'hasAvailableSlot',
+          'partySlots', 'raidStateTargets', 'nonGroupMemberCount',
+          'groupActiveRecruitmentCountAfter', 'commandTargets',
+          'lastCommandId', 'lastCommandType', 'lastCommandActorPlayerId',
+          'lastCommandAt', 'revision', 'updatedAt'
+        ])
+        && newData.status == 'disbanded'
+        && newData.manualRecruitmentEnabled == false
+        && newData.memberPlayerIds.size() == 0
+        && newData.memberCount == 0
+        && newData.dealerCount == 0
+        && newData.supportCount == 0
+        && newData.hasAvailableSlot == false
+        && newData.partySlots.size() == 0
+        && newData.raidStateTargets.size() == 0
+        && newData.nonGroupMemberCount == 0
+        && newData.leaderPlayerId == oldData.leaderPlayerId
+        && newData.leaderCharacterNameSnapshot
+          == oldData.leaderCharacterNameSnapshot
+        && newData.leaderClassNameSnapshot == oldData.leaderClassNameSnapshot
+        && personalCompletionTargetsCurrentPlayer(newData)
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time
+        && (!(oldData.groupId is string)
+          || (newData.groupActiveRecruitmentCountAfter
+              == oldData.groupActiveRecruitmentCountAfter - 1
+            && getAfter(groupPath(oldData.groupId)).data.activeRecruitmentCount
+              == newData.groupActiveRecruitmentCountAfter));
+    }
+
     function validPersonalCompletionRecruitmentUpdate(oldData, newData) {
       let removed = oldData.memberPlayerIds.toSet().difference(
         newData.memberPlayerIds.toSet()
@@ -2175,7 +2237,9 @@ service cloud.firestore {
       let target = newData.commandTargets[0];
       let completedState = getAfter(atomicRaidStatePath(target)).data;
       let hasRemainingMembers = newData.memberCount > 0;
-      return atomicActiveV2Recruitment(oldData)
+      return oldData.memberCount == 1
+        ? validPersonalLastMemberCompletion(oldData, newData)
+        : (atomicActiveV2Recruitment(oldData)
         && removed.size() == 1
         && removed.hasAny([currentPlayerId()])
         && newData.commandTargets is list
@@ -2213,10 +2277,7 @@ service cloud.firestore {
         && validPersonalCompletionLeaderProjection(oldData, newData)
         && newData.revision == oldData.revision + 1
         && newData.updatedAt == request.time
-        && !('lastCommandId' in newData)
-        && !('lastCommandType' in newData)
-        && !('lastCommandActorPlayerId' in newData)
-        && !('lastCommandAt' in newData)
+        && personalCompletionTargetsCurrentPlayer(newData)
         && (!(oldData.groupId is string)
           || (hasRemainingMembers
             && newData.groupActiveRecruitmentCountAfter
@@ -2240,7 +2301,7 @@ service cloud.firestore {
             && newData.manualRecruitmentEnabled == false
             && newData.hasAvailableSlot == false
             && newData.nonGroupMemberCount == 0
-            && newData.leaderPlayerId == oldData.leaderPlayerId));
+            && newData.leaderPlayerId == oldData.leaderPlayerId)));
     }
 
     function validAtomicRecruitmentVisibilityChange(oldData, newData) {
@@ -2313,6 +2374,23 @@ service cloud.firestore {
               == 'completed'
             && getAfter(atomicRaidStateDocPath(playerId, stateId)).data.source
               == 'manual'));
+    }
+
+    function validPersonalCompletionMemberDelete(
+      recruitmentId,
+      playerId,
+      data
+    ) {
+      let after = getAfter(recruitmentPath(recruitmentId)).data;
+      let stateId = data.characterId + '_' + after.raidId;
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && after.schemaVersion == 2
+        && personalCompletionTargetsCurrentPlayer(after)
+        && after.commandTargets[0].stateId == stateId
+        && !(playerId in after.memberPlayerIds)
+        && getAfter(atomicRaidStateDocPath(playerId, stateId)).data.status
+          == 'completed';
     }
 
     function validAtomicMembershipRaidStateDelete(playerId, stateId, oldData) {
@@ -3748,7 +3826,11 @@ service cloud.firestore {
             resource.data,
             request.resource.data
           );
-        allow delete: if validAtomicMemberRemoval(
+        allow delete: if validPersonalCompletionMemberDelete(
+          recruitmentId,
+          playerId,
+          resource.data
+        ) || validAtomicMemberRemoval(
           recruitmentId,
           playerId,
           resource.data

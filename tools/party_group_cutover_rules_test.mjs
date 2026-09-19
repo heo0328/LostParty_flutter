@@ -894,8 +894,9 @@ async function completeActiveMemberTxn(
           leaderClassNameSnapshot: successor.classNameSnapshot,
         } : {}),
       commandTargets: [{ playerId: actorPlayerId, stateId }],
-      lastCommandId: deleteField(), lastCommandType: deleteField(),
-      lastCommandActorPlayerId: deleteField(), lastCommandAt: deleteField(),
+      lastCommandId: eventId, lastCommandType: 'personalComplete',
+      lastCommandActorPlayerId: actorPlayerId,
+      lastCommandAt: serverTimestamp(),
       revision: nextRevision, updatedAt: serverTimestamp(),
     });
     tx.delete(memberRef);

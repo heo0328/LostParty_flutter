@@ -81,7 +81,12 @@ class PartyAggregateSlot {
   String get positionKey => '${partyIndex}_$slotIndex';
 }
 
-enum PartyAtomicCommandType { complete, advanceCycle, disband }
+enum PartyAtomicCommandType {
+  complete,
+  advanceCycle,
+  disband,
+  personalComplete,
+}
 
 enum PartyAtomicMemberRemovalType { leave, kick, lostGroupQualification }
 

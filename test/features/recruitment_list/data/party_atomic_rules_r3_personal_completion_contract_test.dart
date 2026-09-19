@@ -35,9 +35,15 @@ void main() {
     expect(commandRepository, contains('transaction.update(stateRef, {'));
     expect(commandRepository, contains("'reason': 'weeklyRaidCompleted'"));
     expect(
+      commandRepository,
+      contains("'lastCommandType': PartyAtomicCommandType.personalComplete.name"),
+    );
+    expect(
       rules,
       contains('function validPersonalCompletionRecruitmentUpdate('),
     );
+    expect(rules, contains('function validPersonalLastMemberCompletion('));
+    expect(rules, contains("lastCommandType == 'personalComplete'"));
     expect(rules, contains('function validPersonalRaidStateCompletion('));
     expect(rules, contains("data.reason == 'weeklyRaidCompleted'"));
   });

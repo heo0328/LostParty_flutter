@@ -330,10 +330,10 @@ class FirestoreWeeklyRaidStatusCommandRepository
           ),
         },
       ],
-      'lastCommandId': FieldValue.delete(),
-      'lastCommandType': FieldValue.delete(),
-      'lastCommandActorPlayerId': FieldValue.delete(),
-      'lastCommandAt': FieldValue.delete(),
+      'lastCommandId': eventId,
+      'lastCommandType': PartyAtomicCommandType.personalComplete.name,
+      'lastCommandActorPlayerId': command.playerId,
+      'lastCommandAt': now,
     });
 
     transaction.update(recruitmentRef, recruitmentPatch);
