@@ -3187,3 +3187,9 @@
 - 배포 전 현재 브랜치 `feature/party-group-command-redesign`, 깨끗한 작업 트리, `firebase.json`의 Rules 경로 `firestore.rules`, `.firebaserc` 기본 프로젝트 `lost-party`를 확인했다. 대상 Rules SHA-256은 `11593015457B155BCE11FEC2D185DEB039D49F62F1C10C70DFEC24012EDA5857`이다.
 - `firebase deploy --only firestore:rules --project lost-party`를 정확히 한 번 실행했다. CLI는 Rules 원격 컴파일 `projects/lost-party:test`에서 HTTP 503 `The service is currently unavailable`로 종료됐다. Ruleset 업로드와 release에는 도달하지 않았고 Indexes·Functions는 배포하지 않았다.
 - 같은 명령을 반복하지 않는다. 운영 활성 소스는 갱신되지 않은 것으로 단계상 판정하며 콘솔 원본 일치는 별도 확인하지 않았다. 사용자가 결과를 확인하고 콘솔 게시 또는 재시도를 새로 지시하기 전에는 R4 실기기 검증, B2 완료 판정과 `dev/main` 통합을 진행하지 않는다.
+
+# 2026-09-19 테스트 비용 최소화 정책 확정
+
+- 실제 디바이스 2기로 같은 정상 UX 결과를 직접 확인할 수 있으면 동일 자동 UI·통합 테스트를 중복 실행하지 않는다. 자동 검증은 Security Rules 권한·위조 요청·동시성·원자성·주차 경계처럼 실기기로 만들기 어렵거나 안전하지 않은 경계에 집중한다.
+- 동일 구현의 인원수 검증은 2인·4인·8인을 반복하지 않고 현재 최대치인 8인 대표 사례 하나를 기본으로 한다. 마지막 1인 해산, 책임자 승계, 권한 거절처럼 상태 전이 자체가 다른 경우에만 별도 최소 사례를 유지한다.
+- 중간 작업은 포맷·diff 검토를 기본으로 하고 전체 테스트·분석·CI를 관성적으로 반복하지 않는다. 코드가 바뀌지 않은 동일 검증은 재사용하며, 디바이스 수동 확인은 사용자가 수행한다.
