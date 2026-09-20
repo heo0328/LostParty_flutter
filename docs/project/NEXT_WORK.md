@@ -474,12 +474,14 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
    4. application create/reapply Rules는 최종 상태에서 해당 applicant의 exact `raidState`가 존재하지 않아야 한다. 기존 completed Claim/state 검사와 병행하되 정상 신청·철회·재신청의 현재 조건, 그룹 분류와 표현식 예산을 완화하지 않는다. direct join은 기존 raidState create 계약이 점유 경쟁을 최종 거절하는지 계약 테스트로 고정하고 불필요한 중복 Rules 조회를 추가하지 않는다.
    5. D5 자동 검증은 공용 수명 분기와 Rules의 `state 잔존 신청 거절/정리 후 신청 성공` 대표 사례만 추가한다. 신청·재신청·즉시 가입의 정상 UI는 동일 결과 자동 테스트를 반복하지 않고 구현 종료 뒤 사용자가 디바이스 2기로 `차단 → 명시적 정리 → 다시 신청/가입`을 확인한다. 승인 실패 안내·명시적 거절은 D6 범위로 남긴다.
 
+   **D5 구현 상태(2026-09-20): 코드·Rules·자동 검증 완료, 운영 게시·실기기 확인 대기.** 신청·재신청과 본인 즉시 가입은 exact state와 연결 모집 한 건을 공용 수명 판정으로 분류한다. 정상 active/유효 반복방은 참가 충돌, current completed는 주간 완료, current·historical orphan active는 관찰 식별자를 포함한 정리 필요 결과로 반환한다. 모집 상세는 기존 단건 정리 Repository를 재사용해 사용자가 `참가 기록 정리`를 명시적으로 선택하게 하며 성공 뒤 원래 신청·가입을 자동 재실행하지 않는다. historical completed는 최대 2회 Transaction 중 첫 회에서 기존 state만 삭제하고 두 번째 회에서 모든 조건을 다시 읽어 신청·즉시 가입을 수행한다. application create/reapply Rules는 최종 exact state 부재와 legacy Claim 부재를 함께 요구한다. 승인자의 타인 state 읽기와 D6 안내는 변경하지 않았다. 표적 Rules/수명 판정 13건, 모집 상세 46건, 변경 파일 정적 분석과 JS 문법·diff 검사가 통과했고 demo 전체 Rules Actions `35494192803`도 통과했다. 추적 Rules SHA-256은 `9228699FEB79F2F41AC782B8E4F98FF6AEE1F94248354B954CEF503AB2B65B0C`다.
+
    **추가 실기기 재현(2026-09-20):** 다른 Player의 `players/Grn71r8G1pvCEvLAtpVB/raidStates/hTfsqNxwHm5Oo4GL8zcK_kazeros_act4`는 `status=active`, `source=party`, `cycleKey=2026-09-09`, `recruitmentId=VjtZmBAeUGIiFOMPF6Xx`다. 현재 주차 `2026-09-16` Projection에서 제외돼 느낌표가 없지만 완료 체크는 고정 문서 경로를 읽고 cycle 불일치로 `안전하게 정리할 수 없음`을 반환했다. 이는 현재 주차 고아와 동일한 표시 버그가 아니라 **이전 주차 active 고아가 쓰기 경로를 점유한 별도 경계**다. 연결 모집의 실제 존재·상태는 아직 확인하지 않았으므로 구현은 missing/stale 재검증 뒤에만 정리를 허용한다.
 
    2026-09-20 확정 재현: `players/kVn6KZwZQO6or3BjNYqX/raidStates/xseSyVxZXWhKYxlZEucb_kazeros_act4`는 `status: active`, `source: party`, `cycleKey: 2026-09-16`, `recruitmentId: td904kw3PEgWI1GwIfUP`이며 해당 모집 원본은 존재하지 않는다. 앱은 이를 참가 중으로 표시하고 수동 완료에서 상태 불일치를 반환했으며, 같은 레이드 신청은 접수되지만 승인에서 권한 오류로 거절됐다. 이 문서는 자동 삭제하지 않고 D2의 첫 검증 대상으로 보존한다. 다른 Character·raid의 해산방 pending 신청 두 건은 이 증상의 직접 원인이 아니며 아래 운영 정리 백로그에 남긴다.
    - 참고: [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md), [`BUG_REPORTS.md`](BUG_REPORTS.md) `니티야` 고아 점유 기록.
 
-다음 구현은 F6-D D5 신청/재신청/즉시 가입 사전 차단과 Rules 최종 방어다. 그 뒤 D6 승인 실패의 명시적 거절 UX를 연결한다. D1~D4와 정상 데이터 B2/R4가 통과했더라도 F6-D 전체는 미완료이며 `dev/main` 통합과 릴리즈를 보류한다. 에이전트는 실기기를 설치·조작하지 않고 기능 섹션 자동 검증 뒤 사용자에게 최소 수동 체크리스트를 전달한다.
+다음 구현은 F6-D D6 승인 실패의 명시적 거절 UX다. D5는 운영 Rules 게시와 사용자 실기기에서 `신청/즉시 가입 차단 → 명시적 정리 → 재시도 성공`, 정상 active·유효 반복방 보존을 확인하기 전까지 완료로 닫지 않는다. D1~D5와 정상 데이터 B2/R4가 통과했더라도 F6-D 전체는 미완료이며 `dev/main` 통합과 릴리즈를 보류한다. 에이전트는 실기기를 설치·조작하지 않고 기능 섹션 자동 검증 뒤 사용자에게 최소 수동 체크리스트를 전달한다.
 
 #### 후속 백로그 — 안전한 테스트 데이터 정리 도구 (F6 범위 밖)
 
