@@ -81,8 +81,8 @@ class RecruitmentForm extends StatelessWidget {
   final TextEditingController combatPowerController;
   final RecruitmentFormDraft draft;
   final List<EligibleRaidOption> raidOptions;
-  final RaidDefinition selectedRaid;
-  final RaidDifficultyDefinition selectedDifficulty;
+  final RaidDefinition? selectedRaid;
+  final RaidDifficultyDefinition? selectedDifficulty;
   final ValueChanged<String> onTitleChanged;
   final ValueChanged<RaidDefinition> onRaidChanged;
   final ValueChanged<RaidDifficultyDefinition> onDifficultyChanged;
@@ -111,10 +111,11 @@ class RecruitmentForm extends StatelessWidget {
       RecruitmentFormPairRow(
         key: const ValueKey('raidDifficultyRow'),
         start: DropdownButtonFormField<RaidDefinition>(
-          key: ValueKey('raid-${selectedRaid.raidId}'),
+          key: ValueKey('raid-${selectedRaid?.raidId ?? 'none'}'),
           isExpanded: true,
+          hint: const Text('레이드 선택'),
           initialValue: raidOptions.any(
-            (option) => option.raid.raidId == selectedRaid.raidId,
+            (option) => option.raid.raidId == selectedRaid?.raidId,
           )
               ? selectedRaid
               : null,
@@ -139,10 +140,11 @@ class RecruitmentForm extends StatelessWidget {
           },
         ),
         end: DropdownButtonFormField<RaidDifficultyDefinition>(
-          key: ValueKey('difficulty-${selectedRaid.raidId}'),
+          key: ValueKey('difficulty-${selectedRaid?.raidId ?? 'none'}'),
           isExpanded: true,
+          hint: Text(selectedRaid == null ? '레이드 먼저 선택' : '난이도 선택'),
           initialValue: _difficulties.any(
-            (item) => item.difficultyId == selectedDifficulty.difficultyId,
+            (item) => item.difficultyId == selectedDifficulty?.difficultyId,
           )
               ? selectedDifficulty
               : null,
@@ -238,7 +240,7 @@ class RecruitmentForm extends StatelessWidget {
   );
 
   List<RaidDifficultyDefinition> get _difficulties => raidOptions
-      .where((option) => option.raid.raidId == selectedRaid.raidId)
+      .where((option) => option.raid.raidId == selectedRaid?.raidId)
       .expand((option) => option.difficulties)
       .toList(growable: false);
 

@@ -110,6 +110,7 @@ class RecruitmentLeaderCandidateQuery {
     this.occupiedMembers = const [],
     this.replacingMemberId,
     this.allowPositionChanges = false,
+    this.evaluateRaidConstraints = true,
   });
 
   final String raidId;
@@ -127,6 +128,10 @@ class RecruitmentLeaderCandidateQuery {
   /// 캐릭터 변경 시 교체 대상 PlayerId. 신청·즉시 가입에서는 null이다.
   final String? replacingMemberId;
   final bool allowPositionChanges;
+
+  /// 모집 생성 첫 진입처럼 레이드가 아직 선택되지 않았을 때는 Character와
+  /// 역할 Snapshot만 구성하고 특정 레이드의 참가·완료·구성 조건은 평가하지 않는다.
+  final bool evaluateRaidConstraints;
 }
 
 class RecruitmentLeaderCandidateService {
@@ -166,9 +171,13 @@ class RecruitmentLeaderCandidateService {
     final userId = session.currentUserId;
     if (userId == null) return const [];
     final accounts = await accountRepository.loadAccounts();
-    final activeAssignments = await assignmentRepository.getByUser(userId);
+    final activeAssignments = query.evaluateRaidConstraints
+        ? await assignmentRepository.getByUser(userId)
+        : const <ActiveRaidAssignment>[];
     final weekKey = resetPolicy.weekFor(clock.now()).key;
-    final serverStatuses = await _loadServerStatuses(weekKey);
+    final serverStatuses = query.evaluateRaidConstraints
+        ? await _loadServerStatuses(weekKey)
+        : const <WeeklyRaidStatusProjection>[];
     final activityCharacterIds = await loadRaidActivityCharacterIds(
       repository: activityCharactersRepository,
       playerId: claimPlayerId,
@@ -186,7 +195,8 @@ class RecruitmentLeaderCandidateService {
             '${character.serverName.trim().toLowerCase()}::${character.characterName.trim().toLowerCase()}';
         if (!seenCharacters.add(key)) continue;
         final serverCharacterId = character.serverCharacterId;
-        final serverStatus = serverCharacterId == null
+        final serverStatus = !query.evaluateRaidConstraints ||
+                serverCharacterId == null
             ? null
             : serverStatuses
                   .where(
@@ -196,6 +206,7 @@ class RecruitmentLeaderCandidateService {
                   )
                   .firstOrNull;
         final hasServerAssignmentForSameRaid =
+            query.evaluateRaidConstraints &&
             serverCharacterId != null &&
             (serverStatus == null ||
                 serverStatus.kind == WeeklyRaidStatusKind.active) &&
@@ -221,10 +232,11 @@ class RecruitmentLeaderCandidateService {
           };
           final itemLevel = snapshot.itemLevel ?? character.itemLevel;
           final reasons = <String>[];
-          if (itemLevel == null || itemLevel < query.minItemLevel) {
+          if (query.evaluateRaidConstraints &&
+              (itemLevel == null || itemLevel < query.minItemLevel)) {
             reasons.add('입장 레벨 ${query.minItemLevel} 미달');
           }
-          if (compositionPolicy != null) {
+          if (query.evaluateRaidConstraints && compositionPolicy != null) {
             final compositionFailure = _compositionFailure(
               policy: compositionPolicy,
               userId: userId,
@@ -287,12 +299,13 @@ class RecruitmentLeaderCandidateService {
           );
           rejectionReasons.add('레이드 참가·완료 상태 확인 필요');
         }
-        final pendingCount = await recruitmentRepository
-            .countPendingApplications(
-              applicantUserId: userId,
-              characterId: character.characterName,
-              raidId: query.raidId,
-            );
+        final pendingCount = query.evaluateRaidConstraints
+            ? await recruitmentRepository.countPendingApplications(
+                applicantUserId: userId,
+                characterId: character.characterName,
+                raidId: query.raidId,
+              )
+            : 0;
         if (pendingCount > 0) {
           statuses.add(
             CandidateParticipationStatus(
@@ -301,22 +314,26 @@ class RecruitmentLeaderCandidateService {
             ),
           );
         }
-        final decision = conflictPolicy.evaluate(
-          proposed: ActiveRaidAssignment(
-            userId: userId,
-            characterId: character.characterName,
-            raidId: query.raidId,
-            difficultyId: query.difficultyId,
-            recruitmentId: 'new-recruitment-candidate',
-            schedule: RaidParticipationSchedule(
-              startAt: query.startAt,
-              expectedEndAt: query.maxPlayHours == null
-                  ? null
-                  : query.startAt.add(Duration(hours: query.maxPlayHours!)),
-            ),
-          ),
-          activeAssignments: activeAssignments,
-        );
+        final decision = query.evaluateRaidConstraints
+            ? conflictPolicy.evaluate(
+                proposed: ActiveRaidAssignment(
+                  userId: userId,
+                  characterId: character.characterName,
+                  raidId: query.raidId,
+                  difficultyId: query.difficultyId,
+                  recruitmentId: 'new-recruitment-candidate',
+                  schedule: RaidParticipationSchedule(
+                    startAt: query.startAt,
+                    expectedEndAt: query.maxPlayHours == null
+                        ? null
+                        : query.startAt.add(
+                            Duration(hours: query.maxPlayHours!),
+                          ),
+                  ),
+                ),
+                activeAssignments: activeAssignments,
+              )
+            : const ParticipationConflictDecision([]);
         if (hasServerAssignmentForSameRaid) {
           statuses.add(
             const CandidateParticipationStatus(

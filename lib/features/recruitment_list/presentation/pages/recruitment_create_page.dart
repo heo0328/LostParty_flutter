@@ -107,43 +107,41 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       final catalog = await widget.catalogRepository.loadCatalog();
       final raid = catalog.raids.where((raid) => raid.isActive).first;
       final difficulty = raid.difficulties.where((item) => item.isActive).first;
-      final candidates = await _loadCandidates(raid, difficulty);
+      final candidates = await _loadCandidates(
+        raid,
+        difficulty,
+        evaluateRaidConstraints: false,
+      );
       final leader = candidates
           .where(
-            (candidate) => candidate.isRepresentative && candidate.canSelect,
+            (candidate) =>
+                candidate.isRepresentative &&
+                candidate.roles.any(
+                  (option) => _eligibilityPolicy
+                      .eligibleRaids(
+                        catalog: catalog,
+                        itemLevel: option.itemLevel,
+                      )
+                      .isNotEmpty,
+                ),
           )
           .firstOrNull;
-      final role = leader?.resolveSelectedRole() ?? PartyRole.dealer;
-      final eligible = _eligibilityPolicy.eligibleRaids(
-        catalog: catalog,
-        itemLevel: leader?.optionFor(role)?.itemLevel,
-      );
-      final selectedRaid = eligible
-          .where((option) => option.raid.raidId == raid.raidId)
-          .firstOrNull;
-      final selectedOption = selectedRaid ?? eligible.firstOrNull;
-      final selectedDifficulty =
-          selectedOption?.highestDifficulty ?? difficulty;
-      final refreshedCandidates = selectedOption == null
-          ? candidates
-          : await _loadCandidates(selectedOption.raid, selectedDifficulty);
-      final refreshedLeader = refreshedCandidates
-          .where((candidate) => candidate.characterId == leader?.characterId)
-          .firstOrNull;
+      final role = leader?.resolveSelectedRole(
+            usable: (option) => _eligibilityPolicy
+                .eligibleRaids(catalog: catalog, itemLevel: option.itemLevel)
+                .isNotEmpty,
+          ) ??
+          PartyRole.dealer;
       setState(() {
         _catalog = catalog;
-        _candidates = refreshedCandidates;
-        _leader = refreshedLeader ?? leader;
+        _candidates = candidates;
+        _leader = leader;
         _role = role;
-        _raid = selectedOption?.raid ?? raid;
-        _difficulty = selectedDifficulty;
-        _draft = _draft.copyWith(
-          raidId: (selectedOption?.raid ?? raid).raidId,
-          difficultyId: selectedDifficulty.difficultyId,
-        );
+        _raid = null;
+        _difficulty = null;
+        _draft = const RecruitmentFormDraft.empty();
         _loading = false;
       });
-      _syncAutoTitle(force: true);
     } catch (_) {
       setState(() {
         _loadError = '모집 생성 정보를 불러오지 못했습니다.';
@@ -166,8 +164,8 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
               combatPowerController: _combatPower,
               draft: _draft,
               raidOptions: _eligibleRaidOptions,
-              selectedRaid: _raid!,
-              selectedDifficulty: _difficulty!,
+              selectedRaid: _raid,
+              selectedDifficulty: _difficulty,
               beforeFields: [
                 _audienceSelector(),
                 const SizedBox(height: recruitmentFormFieldGap),
@@ -235,6 +233,12 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
 
   void _syncAutoTitle({bool force = false}) {
     if (!_draft.usesAutoTitle) return;
+    if (_difficulty == null) {
+      if (_title.text.isEmpty) return;
+      _title.clear();
+      _draft = _draft.copyWith(title: '');
+      return;
+    }
     if (!force && _title.text.isEmpty) return;
     final title = _generatedTitle;
     if (_title.text == title) return;
@@ -367,14 +371,16 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
 
   Future<List<RecruitmentLeaderCandidate>> _loadCandidates(
     RaidDefinition raid,
-    RaidDifficultyDefinition difficulty,
-  ) => widget.candidateService.load(
+    RaidDifficultyDefinition difficulty, {
+    bool evaluateRaidConstraints = true,
+  }) => widget.candidateService.load(
     RecruitmentLeaderCandidateQuery(
       raidId: raid.raidId,
       difficultyId: difficulty.difficultyId,
       minItemLevel: difficulty.minItemLevel,
       startAt: widget.candidateService.clock.now(),
       maxPlayHours: null,
+      evaluateRaidConstraints: evaluateRaidConstraints,
     ),
   );
 
@@ -391,7 +397,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
         difficultyId: difficulty.difficultyId,
       );
     });
-    _syncAutoTitle();
+    _syncAutoTitle(force: true);
     await _refreshCandidates();
   }
 
@@ -406,10 +412,15 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
 
   Future<void> _changeRole(PartyRole role) async {
     setState(() => _role = role);
+    if (_raid == null) return;
     await _refreshRaidSelectionForLeader();
   }
 
   Future<void> _refreshRaidSelectionForLeader() async {
+    if (_raid == null) {
+      setState(() {});
+      return;
+    }
     final options = _eligibleRaidOptions;
     if (options.isEmpty) {
       setState(() {});
@@ -437,8 +448,11 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
   }
 
   Future<void> _refreshCandidates() async {
+    final raid = _raid;
+    final difficulty = _difficulty;
+    if (raid == null || difficulty == null) return;
     final selectedCharacterId = _leader?.characterId;
-    final candidates = await _loadCandidates(_raid!, _difficulty!);
+    final candidates = await _loadCandidates(raid, difficulty);
     if (!mounted) return;
     final selected = candidates
         .where((candidate) => candidate.characterId == selectedCharacterId)
@@ -452,7 +466,14 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
 
   Widget _leaderSelector() {
     final leader = _leader;
-    final selectableRoles = leader?.selectableRoles ?? const <PartyRole>[];
+    final selectableRoles = leader == null
+        ? const <PartyRole>[]
+        : _raid == null
+        ? leader.roles
+              .where((option) => _hasEligibleRaid(option.itemLevel))
+              .map((option) => option.role)
+              .toList(growable: false)
+        : leader.selectableRoles;
     final characterField = InkWell(
       key: const ValueKey('leaderCandidateSelector'),
       onTap: _showLeaderCandidates,
@@ -687,6 +708,14 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       ).showSnackBar(SnackBar(content: Text(groupBlock)));
       return;
     }
+    final raid = _raid;
+    final difficulty = _difficulty;
+    if (raid == null || difficulty == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('레이드와 난이도를 선택해주세요.')),
+      );
+      return;
+    }
     final leader = _leader;
     if (leader == null ||
         !leader.canSelect ||
@@ -696,8 +725,6 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
       );
       return;
     }
-    final raid = _raid!;
-    final difficulty = _difficulty!;
     final selectedOption = leader.optionFor(_role)!;
     if ((selectedOption.itemLevel ?? 0) < difficulty.minItemLevel ||
         (_normalizedMinCombatPower != null &&

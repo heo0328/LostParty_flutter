@@ -75,6 +75,16 @@ void main() {
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const ValueKey('raid-none')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('leaderCandidateSelector')));
+    await tester.pumpAndSettle();
+    final beforeRaidSelection = tester.widget<ListTile>(
+      find.byKey(const ValueKey('leader-candidate-대표바드')),
+    );
+    expect(beforeRaidSelection.enabled, isTrue);
+    await tester.tap(find.byKey(const ValueKey('leader-candidate-대표바드')));
+    await tester.pumpAndSettle();
+    await _selectSercaRaid(tester);
     await tester.tap(find.byKey(const ValueKey('leaderCandidateSelector')));
     await tester.pumpAndSettle();
     expect(find.text('동일 레이드 참가 중'), findsWidgets);
@@ -144,6 +154,15 @@ void main() {
     addTearDown(router.dispose);
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
     await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('raid-none')), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('saveRecruitmentButton')),
+    );
+    await tester.tap(find.byKey(const ValueKey('saveRecruitmentButton')));
+    await tester.pumpAndSettle();
+    expect(find.text('레이드와 난이도를 선택해주세요.'), findsOneWidget);
+    await _selectSercaRaid(tester);
 
     await tester.tap(find.byKey(const ValueKey('leaderCandidateSelector')));
     await tester.pumpAndSettle();
@@ -613,6 +632,15 @@ void main() {
     expect(updated.metadata.minCombatPower, 350000);
     expect(updated.revision, 1);
   });
+}
+
+Future<void> _selectSercaRaid(WidgetTester tester) async {
+  final selector = find.byKey(const ValueKey('raid-none'));
+  await tester.ensureVisible(selector);
+  await tester.tap(selector);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('세르카').last);
+  await tester.pumpAndSettle();
 }
 
 RecruitmentDetailPage _detailFor(

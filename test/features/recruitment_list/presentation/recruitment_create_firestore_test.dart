@@ -77,6 +77,7 @@ void main() {
 
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
     await tester.pumpAndSettle();
+    await _selectSercaRaid(tester);
     await tester.tap(find.byKey(const ValueKey('saveRecruitmentButton')));
     await tester.pumpAndSettle();
 
@@ -146,6 +147,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await _selectSercaRaid(tester);
     await tester.tap(find.byKey(const ValueKey('saveRecruitmentButton')));
     await tester.pumpAndSettle();
 
@@ -196,6 +198,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await _selectSercaRaid(tester);
     await tester.tap(find.byKey(const ValueKey('saveRecruitmentButton')));
     await tester.pumpAndSettle();
 
@@ -247,6 +250,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('그룹 레이드'));
     await tester.pumpAndSettle();
+    await _selectSercaRaid(tester);
     await tester.ensureVisible(
       find.byKey(const ValueKey('saveRecruitmentButton')),
     );
@@ -305,6 +309,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('groupOnlyVisibilityCheckbox')));
     await tester.pumpAndSettle();
+    await _selectSercaRaid(tester);
     await tester.ensureVisible(
       find.byKey(const ValueKey('saveRecruitmentButton')),
     );
@@ -386,6 +391,15 @@ Future<void> _pumpCreateRoute(WidgetTester tester, Widget page) async {
   );
   addTearDown(router.dispose);
   await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+}
+
+Future<void> _selectSercaRaid(WidgetTester tester) async {
+  final selector = find.byKey(const ValueKey('raid-none'));
+  await tester.ensureVisible(selector);
+  await tester.tap(selector);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('세르카').last);
+  await tester.pumpAndSettle();
 }
 
 class _RecordingPartyCreateRepository implements PartyCreateRepository {
