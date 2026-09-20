@@ -616,6 +616,102 @@ void main() {
     expect(find.text('가입 신청을 거절했습니다.'), findsOneWidget);
   });
 
+  testWidgets('승인 권한 실패는 최신 신청일 때 명시적 거절 안내를 표시한다', (tester) async {
+    final repository = _FakeJoinCommandRepository(
+      approveResult: const PartyJoinResult.failure(
+        PartyJoinFailure.permissionDenied,
+      ),
+    );
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      recruitmentApplications: Stream.value(
+        PartyReadSnapshot(items: [_pendingApplication()], isFromCache: false),
+      ),
+      joinCommandRepository: repository,
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('approveApplication-player-applicant')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('가입 신청 승인 불가'), findsOneWidget);
+    expect(find.textContaining('신청자의 참가 데이터에 오류가 있어'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('closeApprovalFailureDialog')));
+    await tester.pumpAndSettle();
+    expect(repository.lastReject, isNull);
+  });
+
+  testWidgets('승인 실패 안내에서 신청 거절을 선택하면 기존 거절 명령을 재사용한다', (tester) async {
+    final repository = _FakeJoinCommandRepository(
+      approveResult: const PartyJoinResult.failure(
+        PartyJoinFailure.permissionDenied,
+      ),
+    );
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      recruitmentApplications: Stream.value(
+        PartyReadSnapshot(items: [_pendingApplication()], isFromCache: false),
+      ),
+      joinCommandRepository: repository,
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('approveApplication-player-applicant')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('rejectAfterApprovalFailureButton')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.lastReject?.applicantPlayerId, 'player-applicant');
+    expect(repository.lastReject?.expectedApplicationRevision, 3);
+    expect(repository.lastReject?.expectedRecruitmentRevision, 1);
+    expect(find.text('가입 신청을 거절했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('캐시 신청 목록의 승인 실패는 기존 권한 안내를 유지한다', (tester) async {
+    final repository = _FakeJoinCommandRepository(
+      approveResult: const PartyJoinResult.failure(
+        PartyJoinFailure.permissionDenied,
+      ),
+    );
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      recruitmentApplications: Stream.value(
+        PartyReadSnapshot(items: [_pendingApplication()], isFromCache: true),
+      ),
+      joinCommandRepository: repository,
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('approveApplication-player-applicant')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('가입 신청 승인 불가'), findsNothing);
+    expect(find.text('가입 권한을 확인하지 못했습니다.'), findsOneWidget);
+  });
+
   testWidgets('캐시 snapshot이면 오프라인 안내를 함께 표시한다', (tester) async {
     await pumpPage(
       tester,
@@ -1999,6 +2095,11 @@ class _FakeWeeklyRaidClaimCommandRepository
 }
 
 class _FakeJoinCommandRepository implements PartyJoinCommandRepository {
+  _FakeJoinCommandRepository({
+    this.approveResult = const PartyJoinResult.success(),
+  });
+
+  final PartyJoinResult approveResult;
   PartyDirectJoinCommand? lastDirectJoin;
   PartyDecideApplicationCommand? lastApprove;
   PartyDecideApplicationCommand? lastReject;
@@ -2012,7 +2113,7 @@ class _FakeJoinCommandRepository implements PartyJoinCommandRepository {
   @override
   Future<PartyJoinResult> approve(PartyDecideApplicationCommand command) async {
     lastApprove = command;
-    return const PartyJoinResult.success();
+    return approveResult;
   }
 
   @override

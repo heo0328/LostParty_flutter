@@ -102,6 +102,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
   PartyReadFailureType? _membersFailure;
   PartyReadFailureType? _applicationsFailure;
   bool _membersFromCache = false;
+  bool _applicationsFromCache = false;
   bool _myApplicationLoading = false;
   bool _submitting = false;
   bool _staleAssignmentHealAttempted = false;
@@ -271,6 +272,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     _applications = const [];
     _applicationsLoading = false;
     _applicationsFailure = null;
+    _applicationsFromCache = false;
 
     _membersSubscription = widget.partyReadRepository
         .watchRecruitmentMembers(widget.recruitmentId)
@@ -337,6 +339,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
         _applications = const [];
         _applicationsLoading = false;
         _applicationsFailure = null;
+        _applicationsFromCache = false;
       });
       return;
     }
@@ -418,6 +421,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       _applications = snapshot.items;
       _applicationsLoading = false;
       _applicationsFailure = null;
+      _applicationsFromCache = snapshot.isFromCache;
     });
   }
 
@@ -425,6 +429,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     if (!mounted) return;
     setState(() {
       _applicationsLoading = false;
+      _applicationsFromCache = false;
       _applicationsFailure = error is PartyReadException
           ? error.type
           : PartyReadFailureType.unknown;
@@ -690,8 +695,83 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       );
       return;
     }
+    if (approve &&
+        result.failure == PartyJoinFailure.permissionDenied &&
+        _canOfferApprovalFailureRecovery(
+          summary: summary,
+          application: application,
+        )) {
+      await _showApprovalFailureRecovery(
+        summary: summary,
+        application: application,
+      );
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(_joinFailureMessage(result.failure!))),
+    );
+  }
+
+  bool _canOfferApprovalFailureRecovery({
+    required PublicRecruitmentSummary summary,
+    required PartyApplicationSummary application,
+  }) {
+    final state = _viewModel.state;
+    final currentSummary = state.item;
+    if (currentSummary == null ||
+        state.isFromCache ||
+        currentSummary.id != widget.recruitmentId ||
+        currentSummary.id != summary.id ||
+        currentSummary.revision != summary.revision ||
+        !_canManageApplications(currentSummary) ||
+        _applicationsLoading ||
+        _applicationsFailure != null ||
+        _applicationsFromCache) {
+      return false;
+    }
+    for (final currentApplication in _applications) {
+      if (currentApplication.applicantPlayerId ==
+              application.applicantPlayerId &&
+          currentApplication.revision == application.revision &&
+          currentApplication.status ==
+              RecruitmentApplicationStatus.pending) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> _showApprovalFailureRecovery({
+    required PublicRecruitmentSummary summary,
+    required PartyApplicationSummary application,
+  }) async {
+    final shouldReject = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('가입 신청 승인 불가'),
+        content: const Text(
+          '신청자의 참가 데이터에 오류가 있어 승인할 수 없습니다. '
+          '해당 신청을 거절해 주세요.',
+        ),
+        actions: [
+          TextButton(
+            key: const ValueKey('closeApprovalFailureDialog'),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('닫기'),
+          ),
+          FilledButton(
+            key: const ValueKey('rejectAfterApprovalFailureButton'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('신청 거절'),
+          ),
+        ],
+      ),
+    );
+    if (shouldReject != true || !mounted) return;
+    await _decideApplication(
+      summary: summary,
+      application: application,
+      approve: false,
     );
   }
 
