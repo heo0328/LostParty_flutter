@@ -589,7 +589,16 @@
 - 확인 문서는 `players/kVn6KZwZQO6or3BjNYqX/raidStates/xseSyVxZXWhKYxlZEucb_kazeros_act4`다. `status: active`, `source: party`, `cycleKey: 2026-09-16`, `recruitmentId: td904kw3PEgWI1GwIfUP`, `revision: 1`이며 `recruitments/td904kw3PEgWI1GwIfUP` 원본은 존재하지 않는다. 고아 참가 기록으로 확정한다.
 - 완료 근거와 겹쳐 빨간 불일치 표시가 나던 다른 항목은 사용자가 개인 체크 해제 후 사라졌지만, 이 active state는 연결 모집이 없어 탈퇴·승계·해산 후 완료 전환을 할 수 없으므로 남았다. 완료 체크→해제로 우회 삭제하지 않는다.
 - 다른 Character·raid에 해산된 방을 참조하는 pending 신청 두 건도 남아 있으나 이 4막 참가 표시의 직접 원인은 아니다. 본인 단건 orphan active 복구는 F6-D, 다수 고아 신청·상태의 운영 진단/정리는 별도 백로그로 분리한다.
-- 해결 계약은 [`WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md) §0.7과 [`NEXT_WORK.md`](NEXT_WORK.md) F6-D를 따른다. 현재 서버 문서는 보존하며 코드·Rules·데이터를 아직 변경하지 않았다.
+- 해결 계약은 [`WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md) §0.7과 [`NEXT_WORK.md`](NEXT_WORK.md) F6-D를 따른다. 이 최초 재현 시점에는 서버 문서를 보존하고 코드·Rules·데이터를 변경하지 않았으며, 이후 D1~D3 구현·검증 및 사용자 Rules 게시가 진행됐다.
+
+### 2026-09-20 이전 주차 active 고아의 비표시·쓰기 차단
+
+- 다른 Player `Grn71r8G1pvCEvLAtpVB`의 `raidStates/hTfsqNxwHm5Oo4GL8zcK_kazeros_act4`는 `status=active`, `source=party`, `cycleKey=2026-09-09`, `recruitmentId=VjtZmBAeUGIiFOMPF6Xx`, `revision=1`이다. 현재 앱 주차는 `2026-09-16`이다.
+- 현재 주차 Projection 쿼리는 과거 cycle을 제외하므로 내 계정 참가 느낌표가 없는 것은 계약상 정상이다. 그러나 완료 체크는 Character·raidId의 고정 문서 경로를 직접 읽어 cycle 불일치에서 `안전하게 정리할 수 없음`으로 종료한다.
+- 연결 모집 `VjtZmBAeUGIiFOMPF6Xx`의 존재·상태는 아직 제공되지 않았으므로 이 문서를 실제 고아로 최종 확정하거나 삭제하지 않는다. missing/종료/완료/만료 비반복 상태가 재검증될 때만 `historicalOrphanActive`로 정리한다. 유효 반복방이면 정상 승계/참가 충돌로 남긴다.
+- 후속 설계는 현재 주차 느낌표를 과거 데이터까지 확장하지 않는다. 완료·생성·신청·즉시 가입의 exact-state preflight에서만 과거 active 고아를 발견하고 신청자 본인에게 정리를 안내한다. 방장은 타인 private state를 읽지 않으며 승인 실패 시 명시적 신청 거절 UX를 제공한다.
+- D4 코드 반영(2026-09-20): 공용 exact-state 수명 판정으로 이전 주차 active를 missing/종료/완료/만료 1회성 고아와 유효 반복방 충돌로 분리했다. 내 계정 정리는 관찰한 과거 cycle·revision·recruitmentId를 사용하고 현재 주차 느낌표는 추가하지 않는다. 이전 주차 completed는 고아 정리 대신 수동 완료·모집 생성의 정상 rollover로 처리한다. Rules 변경·배포는 없으며 사용자가 실제 과거 고아 데이터의 안내·정리 성공을 확인했다. 유효 반복방의 실기기 확인은 남아 있다.
+- 남은 신청 경계: 과거 고아는 평상시 표시가 없어 신청자가 사전에 모를 수 있다. D5에서 신청 저장 전 본인 exact-state 검증과 정리 안내를 구현한다. 고아 데이터 상시 발견과 공대장 자동 거절 여부는 [`../product/DETAIL_IMPROVEMENTS.md`](../product/DETAIL_IMPROVEMENTS.md)의 장기 개선 후보로 분리한다.
 
 ### 2026-09-18 승인 실패와 수동 완료 실패 — 별도 원인으로 분리
 

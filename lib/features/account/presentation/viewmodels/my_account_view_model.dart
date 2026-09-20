@@ -369,7 +369,7 @@ class MyAccountViewModel extends ChangeNotifier {
   }) async {
     final repository = _weeklyRaidClaimCommandRepository;
     final playerId = _playerId;
-    final cycleKey = _cycleKey;
+    final cycleKey = impact.orphanedCycleKey;
     final characterId = character.serverCharacterId;
     final recruitmentId = impact.orphanedRecruitmentId;
     if (repository == null ||

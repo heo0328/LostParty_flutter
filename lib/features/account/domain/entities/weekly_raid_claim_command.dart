@@ -27,7 +27,9 @@ class ManualWeeklyRaidClaimImpact {
     this.nextLeaderCharacterName,
     this.pendingApplicationCount = 0,
     this.orphanedRecruitmentId,
+    this.orphanedCycleKey,
     this.orphanedStateRevision,
+    this.isHistoricalOrphanedParticipation = false,
   });
 
   final String? activeRecruitmentId;
@@ -37,7 +39,9 @@ class ManualWeeklyRaidClaimImpact {
   final String? nextLeaderCharacterName;
   final int pendingApplicationCount;
   final String? orphanedRecruitmentId;
+  final String? orphanedCycleKey;
   final int? orphanedStateRevision;
+  final bool isHistoricalOrphanedParticipation;
 
   bool get hasActiveRecruitment => activeRecruitmentId != null;
   bool get hasOrphanedParticipation => orphanedRecruitmentId != null;

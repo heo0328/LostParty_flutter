@@ -96,6 +96,33 @@ class FirestorePartyAtomicCreateRepository implements PartyCreateRepository {
             );
           }
 
+          final stateOccupancy =
+              raidState.exists &&
+                  raidStateCycleKey is String &&
+                  raidStateStatus is String
+              ? PartyCreateOccupancyGate.classifyExistingRaidState(
+                  requestedCycleKey: command.cycleKey,
+                  stateCycleKey: raidStateCycleKey,
+                  stateStatus: raidStateStatus,
+                  recruitmentExists: assignedRecruitment?.exists == true,
+                  recruitmentStatus:
+                      assignedRecruitment?.data()?['status'] as String?,
+                  recruitmentCycleStatus:
+                      assignedRecruitment?.data()?['currentCycleStatus']
+                          as String?,
+                  recruitmentCycleKey:
+                      assignedRecruitment?.data()?['currentCycleKey']
+                          as String?,
+                  recruitmentContinuesTogether:
+                      assignedRecruitment?.data()?['continueTogether'] == true,
+                  recruitmentCycleEndsAt:
+                      (assignedRecruitment?.data()?['cycleEndsAt']
+                              as Timestamp?)
+                          ?.toDate(),
+                  now: clock(),
+                )
+              : null;
+
           DocumentSnapshot<Map<String, dynamic>>? group;
           DocumentSnapshot<Map<String, dynamic>>? membership;
           final groupId = command.groupId;
@@ -122,9 +149,8 @@ class FirestorePartyAtomicCreateRepository implements PartyCreateRepository {
               PartyCreateFailure.ownershipLost,
             );
           }
-          if (raidState.exists &&
-              raidStateStatus == 'completed' &&
-              raidStateCycleKey == command.cycleKey) {
+          if (stateOccupancy ==
+              ExistingRaidStateOccupancyDecision.currentCompleted) {
             return const PartyCreateResult.failure(
               PartyCreateFailure.weeklyRaidCompleted,
             );
@@ -235,6 +261,12 @@ class FirestorePartyAtomicCreateRepository implements PartyCreateRepository {
             return const PartyCreateResult.failure(
               PartyCreateFailure.weeklyRaidCompleted,
             );
+          }
+
+          if (stateOccupancy ==
+              ExistingRaidStateOccupancyDecision.historicalCompleted) {
+            transaction.delete(raidStateRef);
+            return null;
           }
 
           if (occupancy ==

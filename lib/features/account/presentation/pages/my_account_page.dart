@@ -1076,6 +1076,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
         title: const Text('참가 기록 정리'),
         content: Text(
           '${character.characterName} 캐릭터의 ${raid.label}에 '
+          '${impact.isHistoricalOrphanedParticipation ? '지난 주차의 ' : ''}'
           '종료되거나 삭제된 파티의 참가 기록이 남아 있습니다.\n\n'
           '참가 기록만 정리하며 레이드를 완료로 처리하지 않습니다.',
         ),

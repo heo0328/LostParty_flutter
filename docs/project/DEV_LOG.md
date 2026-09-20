@@ -3211,4 +3211,21 @@
 - 내 계정 수동 완료 영향 확인에서 본인 active party `raidState`의 연결 모집을 단건 조회해 원본 없음·종료·완료·만료 상태를 정상 참가와 분리한다. 존재하지 않는 새로고침 안내 대신 `참가 기록 정리` 확인창을 추가했다.
 - 정리 Transaction은 Player·Character·raid·cycle·recruitmentId와 관찰 revision을 다시 검증하고, 여전히 stale인 경우에만 본인 `raidState` 및 정확히 일치하는 구 assignment를 원자 삭제한다. 완료 기록·신청·다른 상태는 변경하지 않으며 정상 활성 모집은 거절한다.
 - 기존 stale `raidState` Rules를 재사용하고 구 assignment에 같은 본인·고아 조건의 delete만 추가했다. demo에는 원본 없는 본인 정리 성공, 타인 거절, 정상 활성 모집 거절 대표 시나리오를 추가했다. 공용 이벤트·인원수 비례 조회·후처리는 추가하지 않았다.
-- JS 문법, Rules 문자열 계약, ViewModel 표적 9건과 변경 Dart 파일 정적 분석은 통과했다. 로컬 Rules Emulator의 기존 Windows 503은 반복하지 않았고, 작업 브랜치 Actions `35454451057`의 demo Emulator에서 전체 추적 Rules와 기존 그룹 회귀가 통과했다. 변경 Rules SHA-256은 `716402EF95051F6F07B799F275431B9A89718E7BA713A07EEEFB147FDCDCCC94`다. 운영 게시·사용자 실기기 확인과 D4 신청 전 차단은 남아 있다.
+- JS 문법, Rules 문자열 계약, ViewModel 표적 9건과 변경 Dart 파일 정적 분석은 통과했다. 로컬 Rules Emulator의 기존 Windows 503은 반복하지 않았고, 작업 브랜치 Actions `35454451057`의 demo Emulator에서 전체 추적 Rules와 기존 그룹 회귀가 통과했다. 변경 Rules SHA-256은 `716402EF95051F6F07B799F275431B9A89718E7BA713A07EEEFB147FDCDCCC94`다. 이후 사용자가 Rules를 콘솔에서 한 차례 게시했다고 확인했으나 활성 소스 해시는 AI가 대조하지 않았다. 사용자 실기기 확인과 후속 신청 전 차단은 남아 있다.
+
+# 2026-09-20 F6-D 이전 주차 고아·신청/승인 UX 설계 보완
+
+- 현재 주차 `2026-09-16`에 다른 Player의 동일 Character·raid 경로에서 `cycleKey=2026-09-09`, `status=active`, `source=party` 문서가 발견됐다. 현재 주차 Projection에서 제외돼 느낌표가 없는 것은 정상이나, 완료 버튼은 고정 경로를 읽고 cycle 불일치로 정리 불가를 반환한다.
+- 현재 주차 active 고아는 느낌표+정리, 이전 주차 active 고아는 현재 느낌표 없이 완료·생성·신청·즉시 가입 직전 exact-state 판정에서 정리 안내를 제공하도록 분리했다. 정리는 관찰한 과거 cycle/revision/recruitmentId를 검증하고 원래 동작을 자동 재실행하지 않는다.
+- 이전 주차 completed와 유효 반복방은 고아로 삭제하지 않는다. completed는 정상 rollover, 반복방은 승계 또는 참가 충돌로 처리한다. 단순 cycle 불일치만으로 삭제하지 않는다.
+- 신청자는 pending 저장 전에 본인 state와 연결 모집을 단건 판정한다. 방장은 타인 private state를 읽지 않으며 과거 pending/경쟁으로 승인 Rules가 거절되면 데이터 오류 안내와 기존 `신청 거절` 버튼을 제공한다. permission 오류의 원인이 항상 신청자 데이터라고 확정할 수 없으므로 자동 거절은 하지 않는다.
+- 이번 단계는 설계·문서만 변경했다. 다음 구현 순서는 D4 과거 고아 확장 → D5 신청/즉시 가입 및 Rules 최종 차단 → D6 승인 실패 명시적 거절 UX다.
+
+# 2026-09-20 F6-D D4 이전 주차 고아 판정·정리 구현
+
+- `PartyCreateOccupancyGate.classifyExistingRaidState`를 추가해 고정 `raidState`를 현재/이전 주차 active 고아, 유효 참가 충돌, 현재/이전 주차 completed로 분리했다. 모집 원본 없음·종료·완료·만료 1회성만 고아이며 유효 반복방은 삭제하지 않는다.
+- 내 계정 완료 사전 확인은 이전 주차 고아에 현재 참가 느낌표를 추가하지 않고 `지난 주차의 종료된 파티 참가 기록` 정리를 안내한다. 정리 Transaction은 화면의 현재 주차가 아니라 관찰한 state cycleKey·revision·recruitmentId를 재검증한다.
+- 이전 주차 completed는 고아가 아니므로 수동 완료와 원자 모집 생성에서 기존 completed state를 본인 delete 계약으로 정리한 뒤 현재 주차 명령을 한 번 재시도한다. 신청·재신청·즉시 가입의 사전 차단은 D5로 유지한다.
+- Rules는 변경하지 않았고 운영 배포도 하지 않았다. 공용 분류·기존 점유·ViewModel 표적 테스트 21건과 변경 파일 `flutter analyze`, `git diff --check`가 통과했다. 실기기 설치·조작은 수행하지 않았으며 D4 수동 확인은 사용자 검증으로 남긴다.
+- 사용자 실기기에서 과거 고아 완료 데이터의 안내·정리가 정상 작동함을 확인해 D4의 해당 수동 항목을 완료했다.
+- 후속 UX 위험을 기록했다. 이전 주차 고아는 현재 Projection에 나타나지 않아 사용자가 쓰기 동작 전에는 알기 어렵다. D5는 신청 저장 전에 신청자에게 정리를 안내해 잘못된 신청이 공대장에게 도달하지 않게 한다. 기존 pending 신청의 승인 실패를 공대장 측에서 자동 거절하는 기능은 현재 미구현이며, D6의 명시적 `신청 거절` 방식을 유지한다. 자동 거절은 오판·revision 경쟁 영향을 검토한 뒤 별도 결정한다.
