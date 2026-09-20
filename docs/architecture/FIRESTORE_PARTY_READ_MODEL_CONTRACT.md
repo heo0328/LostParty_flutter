@@ -175,6 +175,8 @@ orderBy updatedAt desc
 
 `pending`은 목록 상단에 표시하고 `rejected`, `withdrawn`, `superseded`는 최근 처리 결과로 구분한다. 모집 종료로 닫힌 신청은 `superseded` 상태와 `resolutionReason == recruitmentClosed`로 구분한다. `approved`는 확정 참가로 전환되므로 신청 중 목록에 남기지 않고 진행 중 membership을 기준으로 한다.
 
+부모 모집이 삭제되거나 종료된 뒤 application만 남은 항목은 같은 collection group 조회에 나타날 수 있다. 신청 중 화면은 해당 카드에서 본인 고아 신청 정리를 요청할 수 있으며, 서버 Rules가 부모 없음 또는 `completed/disbanded/incompleteEnded`를 확인한 경우에만 application 원본을 삭제한다. 활성 모집의 `pending`은 삭제가 아니라 기존 철회 흐름으로 안내한다.
+
 ### 모집 상세—현재 파티원
 
 상세 진입 시 모집 문서와 `recruitments/{recruitmentId}/members`를 각각 실시간 구독한다. 슬롯 이행 후 멤버는 `partyIndex`, `slotIndex` 순서로 안정 정렬하며, 4인 파티와 공격대 모두 정원 전체의 점유·빈 슬롯을 구분한다. 현재처럼 가입 멤버만 나열하지 않고 빈 슬롯도 표시 전용 모델에서 생성해 Card/Cell로 렌더링한다. 공개 상세 방문자에게는 위에서 정의한 필수 표시 Snapshot만 노출하고 권한·내부 식별 정보는 UI에 전달하지 않는다.

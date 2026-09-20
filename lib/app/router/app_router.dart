@@ -87,6 +87,7 @@ import '../../features/raid_status/presentation/pages/party_notifications_page.d
 import '../../features/raid_status/presentation/pages/party_read_detail_page.dart';
 import '../../features/raid_status/presentation/pages/raid_status_page.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_atomic_application_command_repository.dart';
+import '../../features/recruitment_list/data/repositories/firestore_party_application_cleanup_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_active_raid_assignment_lookup.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_atomic_command_repository.dart';
 import '../../features/recruitment_list/data/repositories/firestore_party_atomic_create_repository.dart';
@@ -458,6 +459,11 @@ GoRouter createAppRouter({
                   },
                   refreshSignal: raidStatusRefreshSignal,
                   cycleReconciler: lazyCycleReconciler,
+                  applicationCleanupRepository:
+                      FirestorePartyApplicationCleanupRepository(
+                        firestore: FirebaseFirestore.instance,
+                        firebaseAuth: FirebaseAuth.instance,
+                      ),
                 ),
                 routes: [
                   GoRoute(

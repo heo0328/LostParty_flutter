@@ -23,6 +23,7 @@ import 'package:lost_party/features/recruitment_list/domain/entities/party_recru
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_aggregate.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_application.dart';
 import 'package:lost_party/features/recruitment_list/domain/repositories/party_read_repository.dart';
+import 'package:lost_party/features/recruitment_list/domain/repositories/party_application_cleanup_repository.dart';
 import 'package:lost_party/shared/raid_catalog/domain/entities/raid_catalog.dart';
 import 'package:lost_party/shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 
@@ -44,6 +45,7 @@ void main() {
     )?
     membersForId,
     VoidCallback? onInitialLoadComplete,
+    PartyApplicationCleanupRepository? applicationCleanupRepository,
   }) async {
     final activeDatabase = database ?? AccountDatabase(NativeDatabase.memory());
     if (database == null) addTearDown(activeDatabase.close);
@@ -67,6 +69,7 @@ void main() {
           activityCharactersRepository: activityCharactersRepository,
           characterSearchRepository: characterSearchRepository,
           onInitialLoadComplete: onInitialLoadComplete,
+          applicationCleanupRepository: applicationCleanupRepository,
         ),
       ),
     );
@@ -84,9 +87,7 @@ void main() {
     expect(find.text('진행 중인 레이드가 없습니다.'), findsNothing);
   });
 
-  testWidgets('두 목록과 부가 로딩 및 첫 렌더링 뒤 초기 완료를 한 번 알린다', (
-    tester,
-  ) async {
+  testWidgets('두 목록과 부가 로딩 및 첫 렌더링 뒤 초기 완료를 한 번 알린다', (tester) async {
     final active = StreamController<PartyReadSnapshot<ActiveRaidSummary>>();
     final applications =
         StreamController<PartyReadSnapshot<PartyApplicationSummary>>();
@@ -183,12 +184,13 @@ void main() {
       const ValueKey('raidRoomUnreadBadge_recruitment-1'),
     );
     expect(badge, findsOneWidget);
-    expect(find.descendant(of: badge, matching: find.text('2')), findsOneWidget);
+    expect(
+      find.descendant(of: badge, matching: find.text('2')),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('진행 중 목록을 아래로 당기면 방별 읽지 않은 수를 다시 읽는다', (
-    tester,
-  ) async {
+  testWidgets('진행 중 목록을 아래로 당기면 방별 읽지 않은 수를 다시 읽는다', (tester) async {
     final database = AccountDatabase(NativeDatabase.memory());
     addTearDown(database.close);
     await pumpPage(
@@ -212,17 +214,17 @@ void main() {
       occurredAt: DateTime.utc(2026, 9, 8, 6),
       expiresAt: DateTime.utc(2026, 10, 6),
     );
-    await tester.drag(
-      find.byType(ListView).first,
-      const Offset(0, 400),
-    );
+    await tester.drag(find.byType(ListView).first, const Offset(0, 400));
     await tester.pumpAndSettle();
 
     final badge = find.byKey(
       const ValueKey('raidRoomUnreadBadge_recruitment-1'),
     );
     expect(badge, findsOneWidget);
-    expect(find.descendant(of: badge, matching: find.text('1')), findsOneWidget);
+    expect(
+      find.descendant(of: badge, matching: find.text('1')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('진행 중 카드에 남은 자리와 제한을 한 줄로 표시한다', (tester) async {
@@ -328,6 +330,39 @@ void main() {
     expect(find.text('모집이 종료되어 신청이 닫혔습니다.'), findsOneWidget);
     expect(find.text('대기캐릭'), findsOneWidget);
     expect(find.text('종료캐릭'), findsOneWidget);
+  });
+
+  testWidgets('신청 카드에서 고아 신청 정리를 확인 후 실행한다', (tester) async {
+    final cleanup = _CleanupRepository();
+    await pumpPage(
+      tester,
+      applications: Stream.value(
+        PartyReadSnapshot(
+          items: [
+            _application(
+              characterId: 'character-1',
+              characterName: '고아신청캐릭터',
+              status: RecruitmentApplicationStatus.pending,
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      applicationCleanupRepository: cleanup,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('pendingRaidsTab')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('cleanupApplication_recruitment-1')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('고아 신청 기록 정리'), findsOneWidget);
+    await tester.tap(find.text('정리'));
+    await tester.pumpAndSettle();
+    expect(cleanup.recruitmentId, 'recruitment-1');
+    expect(cleanup.applicantPlayerId, 'player-1');
+    expect(find.text('남아 있던 신청 기록을 삭제했습니다.'), findsOneWidget);
   });
 
   testWidgets('캐시 snapshot이면 오프라인 안내를 함께 표시한다', (tester) async {
@@ -1103,4 +1138,19 @@ class _PageSearch extends Fake implements GroupCharacterSearchRepository {
     String ownerPlayerId, {
     int limit = groupCharacterSearchPageSize,
   }) async => charactersByPlayer[ownerPlayerId] ?? const [];
+}
+
+class _CleanupRepository implements PartyApplicationCleanupRepository {
+  String? recruitmentId;
+  String? applicantPlayerId;
+
+  @override
+  Future<PartyApplicationCleanupResult> deleteOrphan({
+    required String recruitmentId,
+    required String applicantPlayerId,
+  }) async {
+    this.recruitmentId = recruitmentId;
+    this.applicantPlayerId = applicantPlayerId;
+    return const PartyApplicationCleanupResult.success();
+  }
 }

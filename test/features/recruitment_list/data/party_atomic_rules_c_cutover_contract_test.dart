@@ -88,7 +88,7 @@ void main() {
 
     final applicationStart = rules.indexOf('match /applications/{playerId}');
     final applicationEnd = rules.indexOf(
-      'allow delete: if false;',
+      'match /votes/{voterPlayerId}',
       applicationStart,
     );
     final application = rules.substring(applicationStart, applicationEnd);
@@ -97,6 +97,21 @@ void main() {
       lessThan(application.indexOf('validApplicationDecision(')),
     );
     expect(application, contains("request.resource.data.status == 'pending'"));
+    expect(application, contains('validOrphanApplicationDelete('));
+  });
+
+  test('F8-A 고아 신청 삭제는 본인과 종료·누락 부모만 허용한다', () {
+    final start = rules.indexOf('function validOrphanApplicationDelete(');
+    final end = rules.indexOf(
+      'function validApplicationWeeklyCompletion(',
+      start,
+    );
+    final validator = rules.substring(start, end);
+    expect(validator, contains('playerId == currentPlayerId()'));
+    expect(validator, contains('oldData.applicantPlayerId == playerId'));
+    expect(validator, contains('!exists(parentPath)'));
+    expect(validator, contains("'completed', 'disbanded', 'incompleteEnded'"));
+    expect(validator, isNot(contains("'active'")));
   });
 
   test('F6-D5 신청·재신청은 applicant exact raidState가 남으면 거절한다', () {

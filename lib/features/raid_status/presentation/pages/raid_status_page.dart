@@ -16,6 +16,7 @@ import '../../../recruitment_list/domain/entities/party_event.dart';
 import '../../../recruitment_list/domain/entities/party_recruitment.dart';
 import '../../../recruitment_list/domain/entities/recruitment_aggregate.dart';
 import '../../../recruitment_list/domain/entities/recruitment_application.dart';
+import '../../../recruitment_list/domain/repositories/party_application_cleanup_repository.dart';
 import '../../../recruitment_list/domain/repositories/party_read_repository.dart';
 import '../../../recruitment_list/domain/services/lazy_cycle_reconciler.dart';
 import '../../data/repositories/drift_raid_status_filter_store.dart';
@@ -43,6 +44,7 @@ class RaidStatusPage extends StatefulWidget {
     this.onInitialLoadComplete,
     this.refreshSignal,
     this.cycleReconciler,
+    this.applicationCleanupRepository,
     super.key,
   });
 
@@ -59,6 +61,7 @@ class RaidStatusPage extends StatefulWidget {
   final VoidCallback? onInitialLoadComplete;
   final ValueListenable<int>? refreshSignal;
   final LazyCycleReconciler? cycleReconciler;
+  final PartyApplicationCleanupRepository? applicationCleanupRepository;
 
   @override
   State<RaidStatusPage> createState() => _RaidStatusPageState();
@@ -207,6 +210,42 @@ class _RaidStatusPageState extends State<RaidStatusPage>
     }
   }
 
+  Future<void> _cleanupOrphanApplication(
+    PartyApplicationSummary application,
+  ) async {
+    final repository = widget.applicationCleanupRepository;
+    if (repository == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('고아 신청 기록 정리'),
+        content: const Text(
+          '사라졌거나 종료된 모집방의 신청만 삭제할 수 있습니다. '
+          '진행 중인 신청은 모집 상세에서 철회해 주세요.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('정리'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final result = await repository.deleteOrphan(
+      recruitmentId: application.recruitmentId,
+      applicantPlayerId: application.applicantPlayerId,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_applicationCleanupMessage(result))),
+    );
+  }
+
   @override
   void dispose() {
     _activeRaids.removeListener(_checkInitialLoadComplete);
@@ -279,6 +318,7 @@ class _RaidStatusPageState extends State<RaidStatusPage>
                 await context.push('/raid-status/$recruitmentId');
                 await _refreshStatus();
               },
+              onCleanup: _cleanupOrphanApplication,
             ),
             onRefresh: _refreshStatus,
           ),
@@ -697,10 +737,15 @@ class _ActiveRaidCard extends StatelessWidget {
 }
 
 class _ApplicationCard extends StatelessWidget {
-  const _ApplicationCard({required this.summary, required this.onOpen});
+  const _ApplicationCard({
+    required this.summary,
+    required this.onOpen,
+    required this.onCleanup,
+  });
 
   final PartyApplicationSummary summary;
   final VoidCallback onOpen;
+  final VoidCallback onCleanup;
 
   @override
   Widget build(BuildContext context) {
@@ -730,6 +775,14 @@ class _ApplicationCard extends StatelessWidget {
                     label: _applicationStatusLabel(summary.status),
                     tone: _applicationStatusTone(summary.status),
                   ),
+                  IconButton(
+                    key: ValueKey(
+                      'cleanupApplication_${summary.recruitmentId}',
+                    ),
+                    tooltip: '고아 신청 기록 정리',
+                    onPressed: onCleanup,
+                    icon: const Icon(Icons.delete_outline),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -758,6 +811,7 @@ class _ApplicationCard extends StatelessWidget {
 List<Widget> _applicationRows(
   List<PartyApplicationSummary> items, {
   required ValueChanged<String> onOpen,
+  required ValueChanged<PartyApplicationSummary> onCleanup,
 }) {
   final pending = <PartyApplicationSummary>[];
   final resolved = <PartyApplicationSummary>[];
@@ -772,11 +826,35 @@ List<Widget> _applicationRows(
   return [
     if (pending.isNotEmpty) const _SectionHeader(label: '승인 대기'),
     for (final item in pending)
-      _ApplicationCard(summary: item, onOpen: () => onOpen(item.recruitmentId)),
+      _ApplicationCard(
+        summary: item,
+        onOpen: () => onOpen(item.recruitmentId),
+        onCleanup: () => onCleanup(item),
+      ),
     if (resolved.isNotEmpty) const _SectionHeader(label: '최근 처리 결과'),
     for (final item in resolved)
-      _ApplicationCard(summary: item, onOpen: () => onOpen(item.recruitmentId)),
+      _ApplicationCard(
+        summary: item,
+        onOpen: () => onOpen(item.recruitmentId),
+        onCleanup: () => onCleanup(item),
+      ),
   ];
+}
+
+String _applicationCleanupMessage(PartyApplicationCleanupResult result) {
+  if (result.isSuccess) return '남아 있던 신청 기록을 삭제했습니다.';
+  return switch (result.failure!) {
+    PartyApplicationCleanupFailure.notOrphaned =>
+      '진행 중인 모집의 신청은 삭제할 수 없습니다. 모집 상세에서 철회해 주세요.',
+    PartyApplicationCleanupFailure.unauthenticated ||
+    PartyApplicationCleanupFailure.playerBindingMissing =>
+      '신청 기록을 삭제할 권한을 확인하지 못했습니다.',
+    PartyApplicationCleanupFailure.temporarilyUnavailable =>
+      '서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+    PartyApplicationCleanupFailure.invalidRequest ||
+    PartyApplicationCleanupFailure.unknown =>
+      '신청 기록을 삭제하지 못했습니다.',
+  };
 }
 
 class _SectionHeader extends StatelessWidget {

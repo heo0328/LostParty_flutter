@@ -126,6 +126,21 @@ async function seedBase(testEnv, { membershipState = null, weeklyClaim = false }
   });
 }
 
+async function seedApplicationForCleanup(testEnv, id, { parentStatus } = {}) {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const adminDb = context.firestore();
+    if (parentStatus != null) {
+      await setDoc(doc(adminDb, 'recruitments', id), { status: parentStatus });
+    }
+    await setDoc(doc(adminDb, 'recruitments', id, 'applications', playerId), {
+      schemaVersion: 1,
+      recruitmentId: id,
+      applicantPlayerId: playerId,
+      status: 'pending',
+    });
+  });
+}
+
 async function createGroupTxn(db, groupId) {
   return runTransaction(db, async (tx) => {
     const groupRef = doc(db, 'groups', groupId);
@@ -1658,6 +1673,58 @@ async function main() {
     console.log('test: public recruitment with manual weekly claim');
     await assertFails(createPublicRecruitmentTxn(db));
     console.log('PASS: weekly claim blocks raidState create (expected)');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await seedApplicationForCleanup(testEnv, 'missing-parent');
+    const missingApplication = doc(
+      db,
+      'recruitments',
+      'missing-parent',
+      'applications',
+      playerId,
+    );
+    console.log('test: applicant deletes application with missing parent');
+    await assertSucceeds(deleteDoc(missingApplication));
+    await seedApplicationForCleanup(testEnv, 'missing-parent-other');
+    await assertFails(deleteDoc(doc(
+      joinerDb,
+      'recruitments',
+      'missing-parent-other',
+      'applications',
+      playerId,
+    )));
+    await seedApplicationForCleanup(testEnv, 'ended-parent', {
+      parentStatus: 'disbanded',
+    });
+    console.log('test: applicant deletes application with ended parent');
+    await assertSucceeds(deleteDoc(doc(
+      db,
+      'recruitments',
+      'ended-parent',
+      'applications',
+      playerId,
+    )));
+    await seedApplicationForCleanup(testEnv, 'active-parent', {
+      parentStatus: 'active',
+    });
+    console.log('test: active parent and another player cannot delete application');
+    await assertFails(deleteDoc(doc(
+      db,
+      'recruitments',
+      'active-parent',
+      'applications',
+      playerId,
+    )));
+    await assertFails(deleteDoc(doc(
+      joinerDb,
+      'recruitments',
+      'active-parent',
+      'applications',
+      playerId,
+    )));
+    console.log('PASS: orphan application delete boundary');
   } finally {
     await testEnv.cleanup();
   }

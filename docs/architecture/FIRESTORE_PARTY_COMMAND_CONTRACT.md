@@ -186,6 +186,13 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 - `expectedApplicationUpdatedAt` 또는 신청 revision으로 동시 승인과 경쟁을 감지한다.
 - 이미 `approved`, `rejected`, `withdrawn`, `superseded`면 멱등적 현재 결과를 반환하고 멤버십을 역으로 제거하지 않는다.
 
+#### 승인 대기 고아 신청 정리
+
+- 신청자 본인은 부모 모집이 존재하지 않거나 부모 상태가 `completed`, `disbanded`, `incompleteEnded`일 때에만 자기 `applications/{playerId}` 문서를 삭제할 수 있다.
+- `active` 모집의 신청은 상태와 무관하게 이 삭제 경로를 사용할 수 없다. `pending`이면 기존 철회를 사용하고 처리 결과는 모집 단위 재신청 이력으로 유지한다.
+- Rules가 현재 binding, 문서의 `applicantPlayerId/recruitmentId`, 삭제 시점의 부모 존재·상태를 검증한다. 클라이언트가 부모를 읽지 못했다는 사실만으로 고아로 간주하지 않는다.
+- 이 명령은 application 한 건만 삭제한다. 모집 Aggregate, membership, `raidState`, 주간 완료와 이벤트를 함께 쓰지 않는다.
+
 ### 4.5 즉시 가입
 
 신청과 확정 참가를 한 Transaction으로 처리한다. 중간 `pending` 문서를 만들지 않는다.

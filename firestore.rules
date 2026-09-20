@@ -2809,6 +2809,19 @@ service cloud.firestore {
         && newData.updatedAt == request.time;
     }
 
+    function validOrphanApplicationDelete(recruitmentId, playerId, oldData) {
+      let parentPath = recruitmentPath(recruitmentId);
+      return hasActiveBinding()
+        && playerId == currentPlayerId()
+        && oldData.schemaVersion == 1
+        && oldData.applicantPlayerId == playerId
+        && oldData.recruitmentId == recruitmentId
+        && (!exists(parentPath)
+          || get(parentPath).data.status in [
+            'completed', 'disbanded', 'incompleteEnded'
+          ]);
+    }
+
     function validApplicationWeeklyCompletion(playerId, oldData, newData) {
       return hasActiveBinding()
         && playerId == currentPlayerId()
@@ -3916,7 +3929,11 @@ service cloud.firestore {
             resource.data,
             request.resource.data
           ));
-        allow delete: if false;
+        allow delete: if validOrphanApplicationDelete(
+          recruitmentId,
+          playerId,
+          resource.data
+        );
 
         match /votes/{voterPlayerId} {
           allow get, list: if canReadPrivateRecruitmentData(recruitmentId);
