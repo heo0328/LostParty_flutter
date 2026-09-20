@@ -3235,4 +3235,4 @@
 - 운영 원자 신청·즉시 가입 Repository가 본인의 exact `raidState`와 active state의 연결 모집 한 건을 읽어 D4 공용 수명 판정을 재사용하도록 연결했다. 정상 참가·유효 반복방, 현재 완료, 현재/이전 고아, 이전 완료와 손상 데이터를 서로 다른 결과로 유지했다.
 - 고아 결과에는 관찰한 Character·raid·cycle·recruitmentId·revision을 담고 모집 상세의 기존 본인 단건 정리 명령에 연결했다. 사용자가 명시적으로 정리한 뒤 원래 신청·가입을 다시 눌러야 하며 자동 삭제·자동 재신청은 하지 않는다. 이전 completed만 최대 2회 제한 Transaction으로 먼저 정리하고 모든 조건을 다시 읽는다.
 - application create/reapply Rules는 최종 exact state가 없어야 pending 저장을 허용한다. 승인자는 타인의 private state를 읽지 않고 승인 실패 안내는 D6로 남겼다.
-- 정적 Rules/수명 판정 13건, 모집 상세 46건, 변경 파일 분석, JS 문법과 diff 검사가 통과했다. 작업 브랜치 demo 전체 Rules Actions `35494192803`도 신청·재신청 state 차단과 기존 파티·그룹 회귀를 포함해 통과했다. Rules SHA-256은 `9228699FEB79F2F41AC782B8E4F98FF6AEE1F94248354B954CEF503AB2B65B0C`이며 운영 게시·실기기 확인 전에는 D5를 최종 완료로 판정하지 않는다.
+- 정적 Rules/수명 판정 13건, 모집 상세 46건, 변경 파일 분석, JS 문법과 diff 검사가 통과했다. 작업 브랜치 demo 전체 Rules Actions `35494192803`도 신청·재신청 state 차단과 기존 파티·그룹 회귀를 포함해 통과했다. Rules SHA-256은 `9228699FEB79F2F41AC782B8E4F98FF6AEE1F94248354B954CEF503AB2B65B0C`다. 운영 `lost-party` Rules 게시 1회 시도는 원격 컴파일 `/test` HTTP 503으로 끝나 Ruleset 업로드·release에 도달하지 않았고 운영 Rules는 미반영이다. 같은 명령은 반복하지 않으며 수동 게시·실기기 확인 전에는 D5를 최종 완료로 판정하지 않는다.

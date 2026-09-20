@@ -5,7 +5,7 @@
 - application create/reapply의 기존 완료 검사를 exact `raidState` 부재와 legacy Claim 부재로 분리했다. state가 남은 요청은 상태 내용을 반복 검사하지 않고 단건 `existsAfter`에서 먼저 거절하므로 부모 모집 N+1 조회, 인원수 비례 검증과 Player 이벤트 fan-out을 추가하지 않는다.
 - 신청 create와 철회 후 reapply 모두 state 잔존 거절, state 제거 후 기존 정상 흐름 성공을 demo 시나리오로 고정했다. 즉시 가입은 기존 `raidState` create 계약이 최종 점유 경쟁을 거절하며 중복 Rules 조회를 추가하지 않았다.
 - JS 문법, 정적 Rules 계약, 관련 Flutter 표적 테스트와 변경 파일 분석이 통과했다. 작업 브랜치 Actions `35494192803`에서 전체 추적 Rules 및 기존 그룹 이전·탈퇴·해산 회귀가 통과했다. Actions의 Node/setup-java 주석은 Rules 컴파일 경고가 아니다.
-- 추적 Rules SHA-256은 `9228699FEB79F2F41AC782B8E4F98FF6AEE1F94248354B954CEF503AB2B65B0C`다. 운영 게시와 게시본 대조는 아직 수행하지 않았다.
+- 추적 Rules SHA-256은 `9228699FEB79F2F41AC782B8E4F98FF6AEE1F94248354B954CEF503AB2B65B0C`다. 운영 `lost-party`에 Rules만 1회 게시 시도했으나 원격 컴파일 `projects/lost-party:test`가 HTTP 503 `UNAVAILABLE`을 반환했다. `/rulesets` 업로드와 `/releases` 반영에는 도달하지 않아 운영 Rules는 갱신되지 않았으며 같은 명령을 반복하지 않는다.
 
 ## 2026-09-20 F6-D 단건 고아 참가 기록 정리 검증
 
