@@ -502,6 +502,8 @@ GoRouter createAppRouter({
                             ),
                         cycleCommandRepository: partyCycleCommandRepository,
                         cycleReconciler: lazyCycleReconciler,
+                        weeklyRaidClaimCommandRepository:
+                            weeklyRaidClaimCommandRepositoryOrDefault,
                         visibilityCommandRepository:
                             FirestorePartyAtomicVisibilityCommandRepository(
                               firestore: FirebaseFirestore.instance,

@@ -23,6 +23,7 @@ import '../../../recruitment_list/domain/entities/party_recruitment.dart';
 import '../../../recruitment_list/domain/entities/recruitment_aggregate.dart';
 import '../../../recruitment_list/domain/entities/recruitment_application.dart';
 import '../../../recruitment_list/domain/entities/party_visibility_command.dart';
+import '../../../recruitment_list/domain/entities/party_raid_state_conflict.dart';
 import '../../../recruitment_list/domain/policies/approval_policy.dart';
 import '../../../recruitment_list/domain/policies/party_composition_policy.dart';
 import '../../../recruitment_list/domain/repositories/party_application_command_repository.dart';
@@ -36,6 +37,8 @@ import '../../../recruitment_list/domain/services/group_raid_qualification.dart'
 import '../../../recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
 import '../../../recruitment_list/domain/services/lazy_cycle_reconciler.dart';
 import '../../../group/domain/repositories/group_read_repository.dart';
+import '../../../account/domain/entities/weekly_raid_claim_command.dart';
+import '../../../account/domain/repositories/weekly_raid_claim_command_repository.dart';
 import '../../domain/services/party_event_sync_service.dart';
 import '../party_notification_message.dart';
 import '../viewmodels/party_notification_view_model.dart';
@@ -56,6 +59,7 @@ class PartyReadDetailPage extends StatefulWidget {
     this.groupReadRepository,
     this.playerId,
     this.cycleReconciler,
+    this.weeklyRaidClaimCommandRepository,
     super.key,
   });
 
@@ -72,6 +76,7 @@ class PartyReadDetailPage extends StatefulWidget {
   final GroupReadRepository? groupReadRepository;
   final String? playerId;
   final LazyCycleReconciler? cycleReconciler;
+  final WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository;
 
   @override
   State<PartyReadDetailPage> createState() => _PartyReadDetailPageState();
@@ -529,6 +534,11 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
         ).showSnackBar(const SnackBar(content: Text('파티에 참가했습니다.')));
         return;
       }
+      if (result.failure == PartyJoinFailure.orphanedParticipation &&
+          result.orphanedParticipation != null) {
+        await _offerOrphanCleanup(result.orphanedParticipation!);
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_joinFailureMessage(result.failure!))),
       );
@@ -557,8 +567,70 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       ).showSnackBar(const SnackBar(content: Text('가입을 신청했습니다.')));
       return;
     }
+    if (result.failure == PartyApplicationFailure.orphanedParticipation &&
+        result.orphanedParticipation != null) {
+      await _offerOrphanCleanup(result.orphanedParticipation!);
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(_applicationFailureMessage(result.failure!))),
+    );
+  }
+
+  Future<void> _offerOrphanCleanup(
+    PartyOrphanedRaidParticipation orphan,
+  ) async {
+    final repository = widget.weeklyRaidClaimCommandRepository;
+    final playerId = widget.playerId;
+    if (repository == null || playerId == null || playerId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_orphanedParticipationMessage(orphan))),
+      );
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('참가 기록 정리'),
+        content: Text(
+          '${_orphanedParticipationMessage(orphan)}\n\n'
+          '참가 기록만 정리하며 신청이나 즉시 가입은 자동으로 진행하지 않습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('참가 기록 정리'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _submitting = true);
+    final result = await repository.cleanupOrphanParticipation(
+      CleanupOrphanRaidParticipationCommand(
+        playerId: playerId,
+        characterId: orphan.characterId,
+        raidId: orphan.raidId,
+        cycleKey: orphan.cycleKey,
+        recruitmentId: orphan.recruitmentId,
+        expectedStateRevision: orphan.stateRevision,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result.isSuccess
+              ? '남아 있던 참가 기록을 정리했습니다. 신청 또는 가입을 다시 시도해 주세요.'
+              : _orphanCleanupFailureMessage(result.failure!),
+        ),
+      ),
     );
   }
 
@@ -3034,6 +3106,12 @@ String _applicationFailureMessage(PartyApplicationFailure failure) =>
         '참가할 수 없는 캐릭터입니다. 내 계정에서 정보를 새로고침한 뒤 다시 시도해 주세요.',
       PartyApplicationFailure.weeklyRaidCompleted =>
         '이 캐릭터는 이번 주 동일 레이드를 이미 완료했습니다.',
+      PartyApplicationFailure.participationConflict =>
+        '이미 동일 레이드에 참가 중이어서 신청할 수 없습니다.',
+      PartyApplicationFailure.orphanedParticipation =>
+        '종료되거나 삭제된 파티의 참가 기록 정리가 필요합니다.',
+      PartyApplicationFailure.stateInconsistent =>
+        '이 캐릭터의 참가·완료 기록을 안전하게 확인할 수 없습니다.',
       PartyApplicationFailure.recruitmentClosed => '모집이 마감되어 신청할 수 없습니다.',
       PartyApplicationFailure.approvalModeMismatch => '이 방은 신청 방식이 다릅니다.',
       PartyApplicationFailure.capacityFull => '모집 정원이 가득 찼습니다.',
@@ -3067,12 +3145,40 @@ String _joinFailureMessage(PartyJoinFailure failure) => switch (failure) {
   PartyJoinFailure.applicationNotPending => '처리할 수 있는 신청이 아닙니다.',
   PartyJoinFailure.participationConflict =>
     '이미 확정된 참가 또는 겹치는 일정이 있어 가입할 수 없습니다.',
+  PartyJoinFailure.orphanedParticipation =>
+    '종료되거나 삭제된 파티의 참가 기록 정리가 필요합니다.',
+  PartyJoinFailure.stateInconsistent =>
+    '이 캐릭터의 참가·완료 기록을 안전하게 확인할 수 없습니다.',
   PartyJoinFailure.revisionConflict => '상태가 바뀌었습니다. 다시 확인해 주세요.',
   PartyJoinFailure.permissionDenied => '가입 권한을 확인하지 못했습니다.',
   PartyJoinFailure.temporarilyUnavailable => '네트워크 연결이 불안정합니다.',
   PartyJoinFailure.invalidRequest => '가입 정보를 확인하지 못했습니다.',
   PartyJoinFailure.unknown => '가입을 처리하지 못했습니다.',
 };
+
+String _orphanedParticipationMessage(
+  PartyOrphanedRaidParticipation orphan,
+) => orphan.isHistorical
+    ? '지난 주차의 종료되거나 삭제된 파티 참가 기록이 남아 있습니다.'
+    : '종료되거나 삭제된 파티의 참가 기록이 남아 있습니다.';
+
+String _orphanCleanupFailureMessage(WeeklyRaidClaimCommandFailure failure) =>
+    switch (failure) {
+      WeeklyRaidClaimCommandFailure.activeAssignment =>
+        '아직 활성 파티에 참가 중이어서 기록을 정리할 수 없습니다.',
+      WeeklyRaidClaimCommandFailure.stateInconsistent =>
+        '이 캐릭터의 참가 기록을 안전하게 정리할 수 없습니다.',
+      WeeklyRaidClaimCommandFailure.permissionDenied =>
+        '참가 기록을 정리할 권한을 확인하지 못했습니다.',
+      WeeklyRaidClaimCommandFailure.temporarilyUnavailable =>
+        '네트워크 연결이 불안정합니다.',
+      WeeklyRaidClaimCommandFailure.unauthenticated ||
+      WeeklyRaidClaimCommandFailure.invalidRequest ||
+      WeeklyRaidClaimCommandFailure.pendingApplication ||
+      WeeklyRaidClaimCommandFailure.orphanedParticipation ||
+      WeeklyRaidClaimCommandFailure.unknown =>
+        '참가 기록을 정리하지 못했습니다.',
+    };
 
 String _membershipFailureMessage(PartyMembershipFailure failure) =>
     switch (failure) {

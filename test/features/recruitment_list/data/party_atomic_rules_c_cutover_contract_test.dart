@@ -36,7 +36,8 @@ void main() {
     );
     expect(assignment, contains('allow list: if hasActiveBinding()'));
     expect(assignment, contains('playerId == currentPlayerId()'));
-    expect(assignment, contains('allow create, update, delete: if false'));
+    expect(assignment, contains('allow create, update: if false'));
+    expect(assignment, contains('validLegacyStaleAssignmentDelete('));
     expect(rules, contains("== 'manualVerificationDisputeOpened'"));
     expect(rules, isNot(contains('|| validPartyOwnerWeeklyRaidClaimCreate(')));
     expect(rules, contains('allow create, update, delete: if false;'));
@@ -96,5 +97,25 @@ void main() {
       lessThan(application.indexOf('validApplicationDecision(')),
     );
     expect(application, contains("request.resource.data.status == 'pending'"));
+  });
+
+  test('F6-D5 신청·재신청은 applicant exact raidState가 남으면 거절한다', () {
+    final createStart = rules.indexOf('function validPendingApplication(');
+    final createEnd = rules.indexOf(
+      'function validApplicantWithdrawal(',
+      createStart,
+    );
+    final create = rules.substring(createStart, createEnd);
+    expect(create, contains('!existsAfter(raidStatePath('));
+    expect(create, contains('data.characterId'));
+
+    final reapplyStart = rules.indexOf('function validApplicationReapply(');
+    final reapplyEnd = rules.indexOf(
+      'function validManualWeeklyRaidClaimCreate(',
+      reapplyStart,
+    );
+    final reapply = rules.substring(reapplyStart, reapplyEnd);
+    expect(reapply, contains('!existsAfter(raidStatePath('));
+    expect(reapply, contains('newData.characterId'));
   });
 }

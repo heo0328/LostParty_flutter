@@ -2,6 +2,7 @@ import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart'
 
 import 'party_gem_validation_snapshot.dart';
 import 'party_recruitment.dart';
+import 'party_raid_state_conflict.dart';
 
 class PartyDirectJoinCommand {
   const PartyDirectJoinCommand({
@@ -55,6 +56,8 @@ enum PartyJoinFailure {
   alreadyMember,
   applicationNotPending,
   participationConflict,
+  orphanedParticipation,
+  stateInconsistent,
   revisionConflict,
   permissionDenied,
   temporarilyUnavailable,
@@ -63,9 +66,23 @@ enum PartyJoinFailure {
 }
 
 class PartyJoinResult {
-  const PartyJoinResult.success() : failure = null;
-  const PartyJoinResult.failure(this.failure);
+  const PartyJoinResult.success()
+    : failure = null,
+      orphanedParticipation = null,
+      didRollOverHistoricalState = false;
+  const PartyJoinResult.failure(this.failure)
+    : orphanedParticipation = null,
+      didRollOverHistoricalState = false;
+  const PartyJoinResult.orphaned(this.orphanedParticipation)
+    : failure = PartyJoinFailure.orphanedParticipation,
+      didRollOverHistoricalState = false;
+  const PartyJoinResult.historicalStateRolledOver()
+    : failure = null,
+      orphanedParticipation = null,
+      didRollOverHistoricalState = true;
 
   final PartyJoinFailure? failure;
-  bool get isSuccess => failure == null;
+  final PartyOrphanedRaidParticipation? orphanedParticipation;
+  final bool didRollOverHistoricalState;
+  bool get isSuccess => failure == null && !didRollOverHistoricalState;
 }

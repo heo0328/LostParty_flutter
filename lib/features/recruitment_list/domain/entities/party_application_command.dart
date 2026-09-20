@@ -2,6 +2,7 @@ import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart'
 
 import 'party_recruitment.dart';
 import 'party_gem_validation_snapshot.dart';
+import 'party_raid_state_conflict.dart';
 
 class PartyApplyCommand {
   const PartyApplyCommand({
@@ -38,6 +39,9 @@ enum PartyApplicationFailure {
   ownershipLost,
   invalidCharacter,
   weeklyRaidCompleted,
+  participationConflict,
+  orphanedParticipation,
+  stateInconsistent,
   recruitmentClosed,
   approvalModeMismatch,
   capacityFull,
@@ -52,8 +56,22 @@ enum PartyApplicationFailure {
 }
 
 class PartyApplicationCommandResult {
-  const PartyApplicationCommandResult.success() : failure = null;
-  const PartyApplicationCommandResult.failure(this.failure);
+  const PartyApplicationCommandResult.success()
+    : failure = null,
+      orphanedParticipation = null,
+      didRollOverHistoricalState = false;
+  const PartyApplicationCommandResult.failure(this.failure)
+    : orphanedParticipation = null,
+      didRollOverHistoricalState = false;
+  const PartyApplicationCommandResult.orphaned(this.orphanedParticipation)
+    : failure = PartyApplicationFailure.orphanedParticipation,
+      didRollOverHistoricalState = false;
+  const PartyApplicationCommandResult.historicalStateRolledOver()
+    : failure = null,
+      orphanedParticipation = null,
+      didRollOverHistoricalState = true;
   final PartyApplicationFailure? failure;
-  bool get isSuccess => failure == null;
+  final PartyOrphanedRaidParticipation? orphanedParticipation;
+  final bool didRollOverHistoricalState;
+  bool get isSuccess => failure == null && !didRollOverHistoricalState;
 }

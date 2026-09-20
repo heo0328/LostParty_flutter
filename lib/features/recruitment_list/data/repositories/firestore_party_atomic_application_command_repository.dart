@@ -2,27 +2,30 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/entities/party_application_command.dart';
-import '../../domain/entities/party_atomic_command.dart';
 import '../../domain/policies/party_composition_policy.dart';
 import '../../domain/repositories/party_application_command_repository.dart';
 import '../../domain/services/party_application_command_validator.dart';
+import '../../domain/services/party_create_occupancy_gate.dart';
 import '../mappers/party_application_write_plan.dart';
 import '../mappers/party_atomic_application_write_plan.dart';
 import '../mappers/party_atomic_document_mapper.dart';
+import 'party_raid_state_occupancy_inspector.dart';
 
 /// 새 Aggregate 구조용 신청·재신청·철회 Repository.
 ///
-/// 운영 Router에는 아직 연결하지 않는다.
+/// 운영 모집 상세의 신청·재신청·철회 명령에 연결된다.
 class FirestorePartyAtomicApplicationCommandRepository
     implements PartyApplicationCommandRepository {
   const FirestorePartyAtomicApplicationCommandRepository({
     required FirebaseFirestore firestore,
     required FirebaseAuth firebaseAuth,
+    this.clock = DateTime.now,
   }) : _firestore = firestore,
        _firebaseAuth = firebaseAuth;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _firebaseAuth;
+  final DateTime Function() clock;
 
   @override
   Future<PartyApplicationCommandResult> apply(PartyApplyCommand command) async {
@@ -30,7 +33,18 @@ class FirestorePartyAtomicApplicationCommandRepository
       command,
     );
     if (invalid != null) return PartyApplicationCommandResult.failure(invalid);
-    return _run((transaction, playerId) async {
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final result = await _applyOnce(command);
+      if (!result.didRollOverHistoricalState) return result;
+    }
+    return const PartyApplicationCommandResult.failure(
+      PartyApplicationFailure.temporarilyUnavailable,
+    );
+  }
+
+  Future<PartyApplicationCommandResult> _applyOnce(
+    PartyApplyCommand command,
+  ) => _run((transaction, playerId) async {
       final recruitmentRef = _firestore
           .collection('recruitments')
           .doc(command.recruitmentId);
@@ -85,24 +99,39 @@ class FirestorePartyAtomicApplicationCommandRepository
           PartyApplicationFailure.invalidRequest,
         );
       }
-      final raidState = await transaction.get(
-        _firestore
-            .collection('players')
-            .doc(playerId)
-            .collection('raidStates')
-            .doc(
-              PartyRaidState.documentIdFor(
-                characterId: command.characterId,
-                raidId: raidId,
-              ),
-            ),
+      final occupancy = await PartyRaidStateOccupancyInspector.inspect(
+        transaction: transaction,
+        firestore: _firestore,
+        playerId: playerId,
+        characterId: command.characterId,
+        raidId: raidId,
+        requestedCycleKey: command.cycleKey,
+        now: clock(),
       );
-      if (raidState.exists &&
-          raidState.data()?['status'] == 'completed' &&
-          raidState.data()?['cycleKey'] == command.cycleKey) {
-        return const PartyApplicationCommandResult.failure(
-          PartyApplicationFailure.weeklyRaidCompleted,
-        );
+      switch (occupancy.decision) {
+        case ExistingRaidStateOccupancyDecision.currentCompleted:
+          return const PartyApplicationCommandResult.failure(
+            PartyApplicationFailure.weeklyRaidCompleted,
+          );
+        case ExistingRaidStateOccupancyDecision.currentActive:
+        case ExistingRaidStateOccupancyDecision.participationConflict:
+          return const PartyApplicationCommandResult.failure(
+            PartyApplicationFailure.participationConflict,
+          );
+        case ExistingRaidStateOccupancyDecision.currentOrphanActive:
+        case ExistingRaidStateOccupancyDecision.historicalOrphanActive:
+          return PartyApplicationCommandResult.orphaned(
+            occupancy.orphanedParticipation!,
+          );
+        case ExistingRaidStateOccupancyDecision.historicalCompleted:
+          transaction.delete(occupancy.stateRef);
+          return const PartyApplicationCommandResult.historicalStateRolledOver();
+        case ExistingRaidStateOccupancyDecision.inconsistent:
+          return const PartyApplicationCommandResult.failure(
+            PartyApplicationFailure.stateInconsistent,
+          );
+        case null:
+          break;
       }
       if (!character.exists || characterData?['status'] != 'active') {
         return const PartyApplicationCommandResult.failure(
@@ -211,7 +240,6 @@ class FirestorePartyAtomicApplicationCommandRepository
       );
       return const PartyApplicationCommandResult.success();
     });
-  }
 
   @override
   Future<PartyApplicationCommandResult> withdraw(

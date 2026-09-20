@@ -12,6 +12,7 @@ import {
   getDocs,
   setDoc,
   updateDoc,
+  deleteDoc,
   getDoc,
   query,
   runTransaction,
@@ -1362,9 +1363,76 @@ async function main() {
 
     await seedJoiner(testEnv);
     const applicantDb = testEnv.authenticatedContext(joinerAuthUid).firestore();
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(
+        context.firestore(),
+        'players',
+        joinerPlayerId,
+        'raidStates',
+        `${joinerCharacterId}_${raidId}`,
+      ), {
+        schemaVersion: 1,
+        playerId: joinerPlayerId,
+        characterId: joinerCharacterId,
+        raidId,
+        recruitmentId: 'missing-recruitment',
+        cycleKey,
+        role: 'support',
+        status: 'active',
+        source: 'party',
+        revision: 1,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      });
+    });
+    console.log('test: application create denied while exact raidState remains');
+    await assertFails(applicationTxn(applicantDb, 'apply'));
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await deleteDoc(doc(
+        context.firestore(),
+        'players',
+        joinerPlayerId,
+        'raidStates',
+        `${joinerCharacterId}_${raidId}`,
+      ));
+    });
+    console.log('PASS: occupied applicant state blocks application create');
     console.log('test: public application create, withdraw and reapply');
     await assertSucceeds(applicationTxn(applicantDb, 'apply'));
     await assertSucceeds(applicationTxn(applicantDb, 'withdraw'));
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(
+        context.firestore(),
+        'players',
+        joinerPlayerId,
+        'raidStates',
+        `${joinerCharacterId}_${raidId}`,
+      ), {
+        schemaVersion: 1,
+        playerId: joinerPlayerId,
+        characterId: joinerCharacterId,
+        raidId,
+        recruitmentId: 'missing-recruitment',
+        cycleKey,
+        role: 'support',
+        status: 'active',
+        source: 'party',
+        revision: 1,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      });
+    });
+    console.log('test: application reapply denied while exact raidState remains');
+    await assertFails(applicationTxn(applicantDb, 'reapply'));
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await deleteDoc(doc(
+        context.firestore(),
+        'players',
+        joinerPlayerId,
+        'raidStates',
+        `${joinerCharacterId}_${raidId}`,
+      ));
+    });
     await assertSucceeds(applicationTxn(applicantDb, 'reapply'));
     const reapplication = (await getDoc(doc(applicantDb, 'recruitments', recruitmentId, 'applications', joinerPlayerId))).data();
     const afterReapply = (await getDoc(doc(applicantDb, 'recruitments', recruitmentId))).data();

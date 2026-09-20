@@ -12,7 +12,9 @@ import 'package:lost_party/features/account/domain/entities/character_profile.da
 import 'package:lost_party/features/account/domain/entities/character_summary.dart';
 import 'package:lost_party/features/account/domain/entities/local_game_account.dart';
 import 'package:lost_party/features/account/domain/entities/roster_summary_apply_result.dart';
+import 'package:lost_party/features/account/domain/entities/weekly_raid_claim_command.dart';
 import 'package:lost_party/features/account/domain/repositories/account_repository.dart';
+import 'package:lost_party/features/account/domain/repositories/weekly_raid_claim_command_repository.dart';
 import 'package:lost_party/features/raid_status/presentation/pages/party_read_detail_page.dart';
 import 'package:lost_party/features/group/domain/entities/group_member.dart';
 import 'package:lost_party/features/group/domain/repositories/group_read_repository.dart';
@@ -29,6 +31,7 @@ import 'package:lost_party/features/recruitment_list/domain/entities/party_cycle
 import 'package:lost_party/features/recruitment_list/domain/entities/party_visibility_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_join_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_read_models.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_raid_state_conflict.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_aggregate.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/recruitment_application.dart';
@@ -65,6 +68,7 @@ void main() {
     AccountDatabase? accountDatabase,
     PartyEventSyncService? eventSyncService,
     LazyCycleReconciler? cycleReconciler,
+    WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -87,6 +91,7 @@ void main() {
           accountDatabase: accountDatabase,
           eventSyncService: eventSyncService,
           cycleReconciler: cycleReconciler,
+          weeklyRaidClaimCommandRepository: weeklyRaidClaimCommandRepository,
         ),
       ),
     );
@@ -316,6 +321,60 @@ void main() {
       '아크그리드 오류',
     ]);
     expect(find.text('가입을 신청했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('이전 주차 고아 신청은 명시적 정리 후 자동 재신청하지 않는다', (tester) async {
+    const orphan = PartyOrphanedRaidParticipation(
+      characterId: 'server-character-1',
+      raidId: 'kazeros_act4',
+      cycleKey: '2026-08-12',
+      recruitmentId: 'missing-recruitment',
+      stateRevision: 3,
+      isHistorical: true,
+    );
+    final repository = _FakeApplicationCommandRepository(
+      applyResult: const PartyApplicationCommandResult.orphaned(orphan),
+    );
+    final cleanupRepository = _FakeWeeklyRaidClaimCommandRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(item: _summary(), isFromCache: false),
+      ),
+      myApplication: Stream.value(
+        const PartyReadDetailSnapshot(item: null, isFromCache: false),
+      ),
+      applicationCommandRepository: repository,
+      weeklyRaidClaimCommandRepository: cleanupRepository,
+      candidateService: _candidateService(),
+      playerId: 'player-applicant',
+    );
+    await tester.pumpAndSettle();
+
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('openApplicationButton')),
+    );
+    await tester.pumpAndSettle();
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('apply-candidate-1-dealer')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('지난 주차의 종료되거나 삭제된'), findsOneWidget);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(FilledButton),
+        matching: find.text('참가 기록 정리'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(cleanupRepository.lastCleanup?.cycleKey, '2026-08-12');
+    expect(cleanupRepository.lastCleanup?.expectedStateRevision, 3);
+    expect(repository.applyCount, 1);
+    expect(find.textContaining('신청 또는 가입을 다시 시도'), findsOneWidget);
   });
 
   testWidgets('지원자 카드에서 타 직업 보석만 빨간 경고로 표시한다', (tester) async {
@@ -1885,13 +1944,20 @@ RecruitmentLeaderCandidateService _multiCharacterCandidateService() {
 
 class _FakeApplicationCommandRepository
     implements PartyApplicationCommandRepository {
+  _FakeApplicationCommandRepository({
+    this.applyResult = const PartyApplicationCommandResult.success(),
+  });
+
+  final PartyApplicationCommandResult applyResult;
   PartyApplyCommand? lastApply;
   PartyWithdrawApplicationCommand? lastWithdraw;
+  int applyCount = 0;
 
   @override
   Future<PartyApplicationCommandResult> apply(PartyApplyCommand command) async {
+    applyCount += 1;
     lastApply = command;
-    return const PartyApplicationCommandResult.success();
+    return applyResult;
   }
 
   @override
@@ -1901,6 +1967,35 @@ class _FakeApplicationCommandRepository
     lastWithdraw = command;
     return const PartyApplicationCommandResult.success();
   }
+}
+
+class _FakeWeeklyRaidClaimCommandRepository
+    implements WeeklyRaidClaimCommandRepository {
+  CleanupOrphanRaidParticipationCommand? lastCleanup;
+
+  @override
+  Future<WeeklyRaidClaimCommandResult> cleanupOrphanParticipation(
+    CleanupOrphanRaidParticipationCommand command,
+  ) async {
+    lastCleanup = command;
+    return const WeeklyRaidClaimCommandResult.success();
+  }
+
+  @override
+  Future<WeeklyRaidClaimCommandResult> createManualClaim(
+    CreateManualWeeklyRaidClaimCommand command, {
+    bool resolveConflicts = false,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<WeeklyRaidClaimCommandResult> deleteManualClaim(
+    DeleteManualWeeklyRaidClaimCommand command,
+  ) => throw UnimplementedError();
+
+  @override
+  Future<WeeklyRaidClaimImpactResult> inspectManualClaimImpact(
+    CreateManualWeeklyRaidClaimCommand command,
+  ) => throw UnimplementedError();
 }
 
 class _FakeJoinCommandRepository implements PartyJoinCommandRepository {

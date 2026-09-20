@@ -10,26 +10,30 @@ import '../../domain/entities/party_recruitment.dart';
 import '../../domain/policies/party_composition_policy.dart';
 import '../../domain/repositories/party_join_command_repository.dart';
 import '../../domain/services/party_join_command_validator.dart';
+import '../../domain/services/party_create_occupancy_gate.dart';
 import '../mappers/party_atomic_application_write_plan.dart';
 import '../mappers/party_atomic_document_mapper.dart';
 import '../mappers/party_atomic_membership_write_plan.dart';
 import '../mappers/party_join_write_plan.dart';
 import '../mappers/party_raid_listing_sync.dart';
+import 'party_raid_state_occupancy_inspector.dart';
 
 /// 새 Aggregate·raidState 구조용 즉시 가입·승인·거절 Repository.
 ///
-/// 전원 membership 재조회와 개인 event fan-out을 쓰지 않으며 운영 Router에는
-/// 아직 연결하지 않는다.
+/// 전원 membership 재조회와 개인 event fan-out을 쓰지 않으며 운영 모집 상세의
+/// 즉시 가입·승인·거절 명령에 연결된다.
 class FirestorePartyAtomicJoinCommandRepository
     implements PartyJoinCommandRepository {
   const FirestorePartyAtomicJoinCommandRepository({
     required FirebaseFirestore firestore,
     required FirebaseAuth firebaseAuth,
+    this.clock = DateTime.now,
   }) : _firestore = firestore,
        _firebaseAuth = firebaseAuth;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _firebaseAuth;
+  final DateTime Function() clock;
 
   @override
   Future<PartyJoinResult> joinDirectly(PartyDirectJoinCommand command) async {
@@ -37,17 +41,23 @@ class FirestorePartyAtomicJoinCommandRepository
       command,
     );
     if (invalid != null) return PartyJoinResult.failure(invalid);
-    return _join(
-      recruitmentId: command.recruitmentId,
-      expectedRecruitmentRevision: command.expectedRecruitmentRevision,
-      expectedApplicationRevision: null,
-      requestedCharacterId: command.characterId,
-      requestedRole: command.role,
-      requestedCycleKey: command.cycleKey,
-      combatPower: command.combatPower,
-      gemValidation: command.gemValidation,
-      buildIntegrity: command.buildIntegrity,
-      requiresDirectJoin: true,
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final result = await _join(
+        recruitmentId: command.recruitmentId,
+        expectedRecruitmentRevision: command.expectedRecruitmentRevision,
+        expectedApplicationRevision: null,
+        requestedCharacterId: command.characterId,
+        requestedRole: command.role,
+        requestedCycleKey: command.cycleKey,
+        combatPower: command.combatPower,
+        gemValidation: command.gemValidation,
+        buildIntegrity: command.buildIntegrity,
+        requiresDirectJoin: true,
+      );
+      if (!result.didRollOverHistoricalState) return result;
+    }
+    return const PartyJoinResult.failure(
+      PartyJoinFailure.temporarilyUnavailable,
     );
   }
 
@@ -250,8 +260,16 @@ class FirestorePartyAtomicJoinCommandRepository
       final character = await transaction.get(characterRef);
       // 승인자는 신청자 소유 raidState를 읽을 수 없다. 새 state 쓰기는
       // Rules create/update와 weekly Claim 검사에서 최종 충돌을 판정한다.
-      final raidState = playerId == actorPlayerId
-          ? await transaction.get(raidStateRef)
+      final occupancy = playerId == actorPlayerId
+          ? await PartyRaidStateOccupancyInspector.inspect(
+              transaction: transaction,
+              firestore: _firestore,
+              playerId: playerId,
+              characterId: characterId,
+              raidId: raidId,
+              requestedCycleKey: cycleKey,
+              now: clock(),
+            )
           : null;
       final characterData = character.data();
       if (!character.exists || characterData?['status'] != 'active') {
@@ -260,43 +278,31 @@ class FirestorePartyAtomicJoinCommandRepository
       if (characterData?['ownerPlayerId'] != playerId) {
         return const PartyJoinResult.failure(PartyJoinFailure.ownershipLost);
       }
-      if (raidState != null && raidState.exists) {
-        final status = raidState.data()?['status'];
-        final stateRecruitmentId = raidState.data()?['recruitmentId'];
-        final stateCycleKey = raidState.data()?['cycleKey'];
-        if (status == 'completed' && stateCycleKey == cycleKey) {
-          return const PartyJoinResult.failure(
-            PartyJoinFailure.weeklyRaidCompleted,
-          );
-        }
-        if (status == 'active' && stateRecruitmentId != recruitmentId) {
-          final assignedRecruitmentId = stateRecruitmentId;
-          if (assignedRecruitmentId is! String ||
-              assignedRecruitmentId.isEmpty) {
+      if (occupancy != null) {
+        switch (occupancy.decision) {
+          case ExistingRaidStateOccupancyDecision.currentCompleted:
+            return const PartyJoinResult.failure(
+              PartyJoinFailure.weeklyRaidCompleted,
+            );
+          case ExistingRaidStateOccupancyDecision.currentActive:
+          case ExistingRaidStateOccupancyDecision.participationConflict:
             return const PartyJoinResult.failure(
               PartyJoinFailure.participationConflict,
             );
-          }
-          final assigned = await transaction.get(
-            _firestore.collection('recruitments').doc(assignedRecruitmentId),
-          );
-          final assignedStatus = assigned.data()?['status'];
-          if (assigned.exists &&
-              assignedStatus != 'disbanded' &&
-              assignedStatus != 'incompleteEnded') {
-            return const PartyJoinResult.failure(
-              PartyJoinFailure.participationConflict,
+          case ExistingRaidStateOccupancyDecision.currentOrphanActive:
+          case ExistingRaidStateOccupancyDecision.historicalOrphanActive:
+            return PartyJoinResult.orphaned(
+              occupancy.orphanedParticipation!,
             );
-          }
-          // Rules: stale delete는 본인 playerId만 허용. 승인자가 타 유저 state를
-          // 지우면 전체 Transaction이 deny되므로 본인 즉시가입에서만 정리한다.
-          if (playerId == actorPlayerId) {
-            transaction.delete(raidStateRef);
-          } else {
+          case ExistingRaidStateOccupancyDecision.historicalCompleted:
+            transaction.delete(occupancy.stateRef);
+            return const PartyJoinResult.historicalStateRolledOver();
+          case ExistingRaidStateOccupancyDecision.inconsistent:
             return const PartyJoinResult.failure(
-              PartyJoinFailure.participationConflict,
+              PartyJoinFailure.stateInconsistent,
             );
-          }
+          case null:
+            break;
         }
       }
 

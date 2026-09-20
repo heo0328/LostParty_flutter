@@ -2781,7 +2781,12 @@ service cloud.firestore {
         && canAccessRecruitmentByAudience(recruitment)
         && !(playerId in recruitment.memberPlayerIds)
         && ownsActiveCharacter(data.characterId)
-        && !hasWeeklyRaidCompletionAfter(
+        && !existsAfter(raidStatePath(
+          playerId,
+          data.characterId,
+          recruitment.raidId
+        ))
+        && !hasWeeklyRaidClaimAfter(
           playerId,
           data.cycleKey,
           data.characterId,
@@ -2869,7 +2874,12 @@ service cloud.firestore {
         && canAccessRecruitmentByAudience(recruitment)
         && !(playerId in recruitment.memberPlayerIds)
         && ownsActiveCharacter(newData.characterId)
-        && !hasWeeklyRaidCompletionAfter(
+        && !existsAfter(raidStatePath(
+          playerId,
+          newData.characterId,
+          recruitment.raidId
+        ))
+        && !hasWeeklyRaidClaimAfter(
           playerId,
           newData.cycleKey,
           newData.characterId,
