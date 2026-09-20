@@ -61,4 +61,4 @@
 
 ## 다음 작업
 
-파티·그룹 명령 재설계의 F6 회귀 복구와 F7 최종 대조를 완료했다. F6-B1/B2, F6-C, F6-D, F6-E의 구현·표적 검증·사용자 실기기 확인이 끝났으며 F7에서는 새 코드나 Rules 변경 없이 문서·코드·Git 상태를 교차 확인했다. 본인 즉시 가입 D5는 신청 흐름과 동일한 점유 판정·고아 정리 UX를 사용하고 이미 통과한 D5 서버 경계 및 공용 신청 UX 근거가 있어 중복 통합 테스트를 생략했다. 작업 브랜치는 `dev` 통합 준비 상태이며 `main`·release 반영은 별도 안정화 단계에서 수행한다. 운영 Rules 활성 소스 해시 대조는 별도 미확인 운영 근거로 남지만 현재 통합 차단 결함은 아니다. 고아 데이터 상시 발견과 공대장 자동 거절은 [`../product/DETAIL_IMPROVEMENTS.md`](../product/DETAIL_IMPROVEMENTS.md)의 장기 후보로, 다수 고아 신청·상태의 운영 일괄 정리는 별도 백로그로 유지한다.
+파티·그룹 명령 재설계 F7은 `dev` 통합을 완료했다. 현재 `feature/raid-status-record-removal`에서 F8-A 승인 대기 고아 신청 정리를 진행한다. 부모 모집이 없거나 `completed/disbanded/incompleteEnded`인 본인 application 한 건만 삭제하고 활성 모집은 기존 철회를 유지한다. 앱·정적 계약과 GitHub Actions demo Emulator `35529627164`가 통과했으며 운영 Rules 게시와 실기기 확인은 남아 있다. 완료 기록 삭제는 공용 이벤트 재동기화와 로컬 tombstone 계약이 필요해 F8-B로 분리했다. 고아 데이터 상시 발견과 공대장 자동 거절은 [`../product/DETAIL_IMPROVEMENTS.md`](../product/DETAIL_IMPROVEMENTS.md)의 장기 후보로 유지한다.

@@ -1,5 +1,12 @@
 # Task-11 Firestore Rules 복잡도 차단 — 종료된 진단 이력
 
+## 2026-09-21 F8-A 고아 application 단건 삭제 검증
+
+- 현재 Player가 신청자인 application만, 부모 모집 없음 또는 `completed/disbanded/incompleteEnded`일 때 단건 삭제하도록 허용했다. 활성 부모와 타인 신청은 계속 거절한다.
+- 모집 Aggregate·membership·`raidState`·주간 완료·이벤트 쓰기를 추가하지 않아 인원수 비례 조회나 fan-out이 없다. 삭제 판정은 부모 모집 경로 한 건만 확인한다.
+- GitHub Actions demo Emulator `35529627164`에서 신규 허용·거절 사례와 기존 파티·그룹 회귀가 통과했다. Actions의 Node/setup-java 안내는 Rules 컴파일 경고가 아니다.
+- 추적 Rules SHA-256은 `6691D744E2D816D2618F1C8B2C8EFF7CB1C607F09CC238A11AE955C57583310B`다. 운영 Rules는 아직 게시하지 않았다.
+
 ## 2026-09-20 F6-D5 신청 state 최종 차단 검증
 
 - application create/reapply의 기존 완료 검사를 exact `raidState` 부재와 legacy Claim 부재로 분리했다. state가 남은 요청은 상태 내용을 반복 검사하지 않고 단건 `existsAfter`에서 먼저 거절하므로 부모 모집 N+1 조회, 인원수 비례 검증과 Player 이벤트 fan-out을 추가하지 않는다.
