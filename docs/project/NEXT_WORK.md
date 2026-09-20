@@ -501,6 +501,32 @@ D5~D8을 같은 재현 시나리오로 시작한다. 사용자가 확인한 정�
    - **회귀 보호:** 제한 없음 모집, 정확히 최소값과 초과 Character, 미달·null 전투력, 신청·재신청·즉시 가입·Character 변경을 구분한다. 기존 아이템 레벨·점유·완료·역할·동일 파티 직업·고아 복구 조건은 그대로 먼저 또는 함께 만족해야 한다.
    - 참고: [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md) 4.3 최소 전투력 판정 계약, [`MVP.md`](../product/MVP.md) 모집글 작성/지원.
 
+   **구현 전 실제 연결·충돌 조사(2026-09-21):**
+
+   1. 운영 Router의 모집 상세는 과거 `RecruitmentApplicationCandidateService`가 아니라 생성 화면과 공유하는 `RecruitmentLeaderCandidateService`를 사용한다. 과거 서비스에는 최소 전투력 후보 판정이 있으나 운영 상세의 `RecruitmentLeaderCandidateQuery`에는 `minCombatPower`가 없으므로 현재 신청·즉시 가입·Character 변경 후보에는 실제 차단이 적용되지 않는다.
+   2. `FirestorePartyAtomicApplicationCommandRepository`는 모집 원본과 Character의 입장 레벨·소유권·점유를 확인하지만 `command.combatPower`와 모집 제한을 비교하지 않는다. `FirestorePartyAtomicJoinCommandRepository`도 즉시 가입 또는 신청 Snapshot의 전투력을 membership에 복사할 뿐 제한을 검사하지 않는다. `FirestorePartyAtomicMemberMutationRepository` 역시 변경 Character 전투력을 저장만 한다.
+   3. 모집 생성자의 기존 제한 검사는 그대로 둔다. F6-E는 모집 생성·수정, 전투력 산식, 계정 갱신과 Build Snapshot 생성, Firestore Rules·스키마·이벤트·인원 집계를 변경하지 않는다.
+   4. 앱의 물리적·기술적 변조는 대응하지 않는다. 전투력을 속여 제한 모집에 참가할 실익이 낮고 현재 외부 배포된 구버전도 없으므로, 변조·구버전 우회를 위한 서버 권위 검증은 F6-E 완료 조건이 아니다.
+
+   **확정 구현 설계:**
+
+   1. `제한 없음 / 충족 / 정보 없음 / 미달`을 구분하는 단일 Domain 판정 정책을 둔다. 제한과 전투력이 같으면 충족이며, 제한이 있을 때 전투력 `null`은 미달과 같은 차단 대상이지만 사용자 문구는 `전투력 정보 없음`으로 구분한다.
+   2. 운영 상세의 신청·즉시 가입과 Character 변경 후보 query에 모집의 `minCombatPower`를 전달한다. `RecruitmentLeaderCandidateService`는 선택 역할 Build Snapshot의 전투력으로 역할별 거절 사유를 만들며, F6-C의 레이드 미선택 탐색과 모집 생성 후보에는 이 제한을 새로 적용하지 않는다.
+   3. UI 후보 차단만 신뢰하지 않는다. 신청·재신청 Transaction은 현재 모집 Aggregate 제한과 `PartyApplyCommand.combatPower`, 즉시 가입은 `PartyDirectJoinCommand.combatPower`, Character 변경은 `PartyChangeCharacterCommand.combatPower`를 쓰기 직전에 같은 정책으로 다시 비교한다. 기존 인증·모집 상태·revision·Character 소유권·입장 레벨·점유/완료·고아 판정·파티 구성 검증의 순서와 결과를 재작성하지 않고 기존 쓰기 계획 직전의 추가 게이트로 둔다.
+   4. 승인 Transaction은 신청자의 private Character/`raidState`를 추가 조회하지 않는다. 이미 읽는 모집의 고정 제한과 application `submittedBuildSnapshot.combatPower`만 비교한다. 제한 미달 또는 Snapshot 누락이면 승인만 거절하고 신청은 `pending`으로 유지해 공대장이 기존 거절 버튼을 선택할 수 있게 한다. 과거 미달 신청도 같은 방식으로 차단하며 자동 거절·자동 삭제하지 않는다.
+   5. `PartyApplicationFailure`, `PartyJoinFailure`, `PartyMembershipFailure`에 최소 전투력 미충족을 일반 `invalidCharacter`와 구분한 결과를 추가한다. 신청자에게는 최소 전투력 미달/정보 없음 안내를, 공대장에게는 `신청 캐릭터가 최소 전투력을 충족하지 않아 승인할 수 없습니다. 신청을 거절해 주세요.`를 표시한다. 이 결과는 D6의 `permissionDenied` 기반 고아 승인 복구 안내로 보내지 않는다.
+   6. 승인 목록에서는 application Snapshot과 모집 제한만으로 미달·정보 없음 상태를 표시하고 승인 버튼만 비활성화한다. 거절 버튼은 유지한다. 제한을 충족한 정상 신청과 제한 없는 방의 기존 승인 UX는 그대로 둔다.
+
+   **회귀 위험과 보호 기준:**
+
+   - 전투력 제한 때문에 기존 `weeklyRaidCompleted`, `participationConflict`, `orphanedParticipation`, `stateInconsistent`, revision 충돌과 파티 구성 실패가 일반 전투력 오류로 덮이지 않게 한다. 후보 UI의 선차단과 Transaction 최종 게이트를 분리하되 서버 쓰기 전 기존 상태 검증은 보존한다.
+   - 제한이 없는 방은 `combatPower == null`도 지금처럼 신청·즉시 가입·승인·Character 변경이 가능해야 한다. 제한값과 정확히 같은 전투력도 허용한다.
+   - 이미 확정 참가한 미달 멤버를 자동 추방하거나 기존 membership을 수정하지 않는다. 이후 Character 변경 대상만 현재 제한을 만족해야 한다.
+   - 다음 주 함께하기 상태의 Character 변경에도 같은 모집 제한을 적용하되, 완료 기록 유지와 다음 주 준비 예외는 변경하지 않는다.
+   - 비교는 기존 Aggregate와 command/application Snapshot만 사용하므로 추가 Firestore 문서 읽기, 인원수 비례 호출, 개인 이벤트 fan-out과 Rules 배포가 없어야 한다.
+
+   **최소 검증:** Domain 판정의 제한 없음·정확한 경계·미달·정보 없음, 운영 후보의 역할별 차단, 신청/재신청·즉시 가입·승인·Character 변경의 쓰기 직전 대표 게이트, 제한 없는 기존 흐름과 D6 승인 오류 분리를 표적으로 검증한다. 동일 UI 자동 반복은 하지 않으며 사용자는 실기기 두 대로 `미달 신청 차단`과 `충족 신청 → 승인`, 필요하면 즉시 가입 또는 Character 변경 대표 한 건만 확인한다. Rules가 바뀌지 않으므로 Emulator·운영 게시를 수행하지 않는다.
+
 D6 승인 실패의 명시적 거절 UX는 방어 경로 표적 자동 검증과 정상 승인 보존 실기기 결과를 근거로 통과했다. 전용 대화상자 재현을 위한 콘솔 고아 데이터 인위 생성은 하지 않는다. 신청·승인 뒤 Character 변경·자리 이동·해산·재가입·전체 완료·개인 해제 사이클도 통과했다. D6는 `36bdeb4` 체크포인트로 닫았고 F6-C 초기 선택 교착도 코드·표적 자동 검증과 사용자 실기기 확인을 마쳐 완료 처리했다. 다음은 별도 검증 단위인 F6-E 최소 전투력 신청 제한이다. 그다음 F7에서 본인 즉시 가입의 D5 복구 UX, 문서의 과거 미확인 표기, 최종 자동·실기기 회귀를 한 번 정리한다. 운영 Rules 활성 소스 대조는 별도 미확인 근거로 남기며, F7 전에는 `dev/main` 통합과 릴리즈를 보류한다.
 
 #### 후속 백로그 — 안전한 테스트 데이터 정리 도구 (F6 범위 밖)
