@@ -541,10 +541,11 @@ D6·F6-C·F6-E는 코드·표적 검증·실기기 근거로 닫았다. 다음 F
 
 참고: [`PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md), [`BUG_REPORTS.md`](BUG_REPORTS.md), [`DEV_LOG.md`](DEV_LOG.md), [`TASK-11-FIRESTORE-RULES-COMPLEXITY.md`](TASK-11-FIRESTORE-RULES-COMPLEXITY.md).
 
-- F1~F6의 최종 코드 상태에서 표적 테스트, 전체 Rules 계약·Emulator, `flutter analyze`, 전체 `flutter test`를 한 번 실행한다.
-- 실기기 체크리스트는 공개/그룹 방과 정상/orphan 데이터를 포함해 한 번 최종 회귀한다.
+- F1~F6 리메이크의 각 단계에서 이미 통과한 표적 자동·Rules Emulator·실기기 UX 검증을 다시 반복하지 않는다.
+- F7은 최종 코드·Git·문서 상태를 대조하고, 과거 미확인 표기와 실제로 남은 항목만 분리한다. 코드가 바뀌지 않았다면 전체 `flutter test`·전체 `flutter analyze`·전체 Rules Emulator·실기기 통합 회귀를 새로 실행하지 않는다.
+- 본인 즉시 가입 D5 고아 복구 UX처럼 아직 확인되지 않은 독립 항목만 필요한 최소 실기기 확인으로 남긴다.
 - 미해결 항목이 있으면 기능 브랜치를 유지하며 `dev`·`main`·release를 움직이지 않는다.
-- 전부 통과한 뒤 문서 완료 이력을 `DEV_LOG`로 옮기고 최신 `dev`에 통합한다. 새 release는 그 이후 별도 결정한다.
+- 남은 항목을 확인한 뒤 문서 완료 이력을 `DEV_LOG`로 옮기고 최신 `dev`에 통합한다. 새 release는 그 이후 별도 결정한다.
 
 ## 실패 조사 시 필수 근거
 
