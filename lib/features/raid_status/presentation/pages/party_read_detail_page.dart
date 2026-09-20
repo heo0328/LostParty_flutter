@@ -26,6 +26,7 @@ import '../../../recruitment_list/domain/entities/party_visibility_command.dart'
 import '../../../recruitment_list/domain/entities/party_raid_state_conflict.dart';
 import '../../../recruitment_list/domain/policies/approval_policy.dart';
 import '../../../recruitment_list/domain/policies/party_composition_policy.dart';
+import '../../../recruitment_list/domain/policies/minimum_combat_power_policy.dart';
 import '../../../recruitment_list/domain/repositories/party_application_command_repository.dart';
 import '../../../recruitment_list/domain/repositories/party_cycle_command_repository.dart';
 import '../../../recruitment_list/domain/repositories/party_join_command_repository.dart';
@@ -474,6 +475,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
         raidId: summary.metadata.raidId,
         difficultyId: summary.metadata.difficultyId,
         minItemLevel: summary.metadata.minItemLevel,
+        minCombatPower: summary.metadata.minCombatPower,
         startAt: startAt,
         maxPlayHours: summary.metadata.maxPlayHours,
         partyRules: summary.partyRules,
@@ -692,6 +694,18 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     if (result.isSuccess) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(approve ? '가입 신청을 승인했습니다.' : '가입 신청을 거절했습니다.')),
+      );
+      return;
+    }
+    if (approve &&
+        result.failure == PartyJoinFailure.minimumCombatPowerNotMet) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            '신청 캐릭터가 모집 최소 전투력을 충족하지 않아 '
+            '승인할 수 없습니다. 신청을 거절해 주세요.',
+          ),
+        ),
       );
       return;
     }
@@ -916,6 +930,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                 if (_isLeader(summary))
                   _PendingApplicationsSection(
                     applications: _applications,
+                    minCombatPower: summary.metadata.minCombatPower,
                     loading: _applicationsLoading,
                     failure: _applicationsFailure,
                     submitting: _submitting,
@@ -1103,6 +1118,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
           raidId: summary.metadata.raidId,
           difficultyId: summary.metadata.difficultyId,
           minItemLevel: summary.metadata.minItemLevel,
+          minCombatPower: summary.metadata.minCombatPower,
           startAt: summary.metadata.raidStartAt ?? DateTime.now(),
           maxPlayHours: summary.metadata.maxPlayHours,
           partyRules: summary.partyRules,
@@ -2459,6 +2475,7 @@ class _RoleBadge extends StatelessWidget {
 class _PendingApplicationsSection extends StatelessWidget {
   const _PendingApplicationsSection({
     required this.applications,
+    required this.minCombatPower,
     required this.loading,
     required this.failure,
     required this.submitting,
@@ -2469,6 +2486,7 @@ class _PendingApplicationsSection extends StatelessWidget {
   });
 
   final List<PartyApplicationSummary> applications;
+  final int? minCombatPower;
   final bool loading;
   final PartyReadFailureType? failure;
   final bool submitting;
@@ -2508,6 +2526,7 @@ class _PendingApplicationsSection extends StatelessWidget {
                   'pendingApplication-${application.applicantPlayerId}',
                 ),
                 application: application,
+                minCombatPower: minCombatPower,
                 canDecide: canDecide,
                 submitting: submitting,
                 synergyService: synergyService,
@@ -2525,6 +2544,7 @@ class _ApplicationCard extends StatelessWidget {
   const _ApplicationCard({
     super.key,
     required this.application,
+    required this.minCombatPower,
     required this.canDecide,
     required this.submitting,
     required this.onApprove,
@@ -2533,6 +2553,7 @@ class _ApplicationCard extends StatelessWidget {
   });
 
   final PartyApplicationSummary application;
+  final int? minCombatPower;
   final bool canDecide;
   final bool submitting;
   final ClassSynergyService? synergyService;
@@ -2557,6 +2578,20 @@ class _ApplicationCard extends StatelessWidget {
     final itemLevel = application.itemLevel;
     final combatPower = application.combatPower;
     final synergies = _synergyLabels();
+    final combatPowerDecision = const MinimumCombatPowerPolicy().evaluate(
+      minimum: minCombatPower,
+      actual: combatPower,
+    );
+    final canApprove = canDecide && combatPowerDecision.isAllowed;
+    final combatPowerFailureText = switch (combatPowerDecision) {
+      MinimumCombatPowerDecision.missing =>
+        '전투력 정보가 없어 승인할 수 없습니다. 신청을 거절해 주세요.',
+      MinimumCombatPowerDecision.belowMinimum =>
+        '최소 전투력을 충족하지 않아 승인할 수 없습니다. '
+        '신청을 거절해 주세요.',
+      MinimumCombatPowerDecision.unrestricted ||
+      MinimumCombatPowerDecision.satisfied => null,
+    };
 
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -2606,6 +2641,18 @@ class _ApplicationCard extends StatelessWidget {
             ],
             const SizedBox(height: 4),
             const Text('파티장 승인 대기'),
+            if (combatPowerFailureText != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                combatPowerFailureText,
+                key: ValueKey(
+                  'applicationCombatPowerFailure-${application.applicantPlayerId}',
+                ),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ],
             if (canDecide) ...[
               const SizedBox(height: 8),
               Row(
@@ -2627,7 +2674,7 @@ class _ApplicationCard extends StatelessWidget {
                       key: ValueKey(
                         'approveApplication-${application.applicantPlayerId}',
                       ),
-                      onPressed: submitting
+                      onPressed: submitting || !canApprove
                           ? null
                           : () => onApprove(application),
                       child: const Text('승인'),
@@ -3184,6 +3231,8 @@ String _applicationFailureMessage(PartyApplicationFailure failure) =>
       PartyApplicationFailure.ownershipLost => '캐릭터 소유권을 확인하지 못했습니다.',
       PartyApplicationFailure.invalidCharacter =>
         '참가할 수 없는 캐릭터입니다. 내 계정에서 정보를 새로고침한 뒤 다시 시도해 주세요.',
+      PartyApplicationFailure.minimumCombatPowerNotMet =>
+        '선택한 캐릭터가 모집 최소 전투력을 충족하지 않습니다.',
       PartyApplicationFailure.weeklyRaidCompleted =>
         '이 캐릭터는 이번 주 동일 레이드를 이미 완료했습니다.',
       PartyApplicationFailure.participationConflict =>
@@ -3215,6 +3264,8 @@ String _joinFailureMessage(PartyJoinFailure failure) => switch (failure) {
   PartyJoinFailure.ownershipLost => '캐릭터 소유권을 확인하지 못했습니다.',
   PartyJoinFailure.invalidCharacter =>
     '참가할 수 없는 캐릭터입니다. 내 계정에서 정보를 새로고침한 뒤 다시 시도해 주세요.',
+  PartyJoinFailure.minimumCombatPowerNotMet =>
+    '모집 최소 전투력을 충족하지 않아 참가할 수 없습니다.',
   PartyJoinFailure.weeklyRaidCompleted => '이 캐릭터는 이번 주 동일 레이드를 이미 완료했습니다.',
   PartyJoinFailure.recruitmentClosed => '모집이 마감되어 참가할 수 없습니다.',
   PartyJoinFailure.approvalModeMismatch => '이 방은 가입 방식이 다릅니다.',
@@ -3269,6 +3320,8 @@ String _membershipFailureMessage(PartyMembershipFailure failure) =>
       PartyMembershipFailure.ownershipLost => '캐릭터 소유권을 확인하지 못했습니다.',
       PartyMembershipFailure.invalidCharacter =>
         '변경할 캐릭터를 확인하지 못했습니다. 인증과 입장 레벨을 확인해 주세요.',
+      PartyMembershipFailure.minimumCombatPowerNotMet =>
+        '변경할 캐릭터가 모집 최소 전투력을 충족하지 않습니다.',
       PartyMembershipFailure.weeklyRaidCompleted =>
         '이 캐릭터는 이번 주 동일 레이드를 이미 완료했습니다.',
       PartyMembershipFailure.recruitmentClosed => '이미 종료된 모집입니다.',

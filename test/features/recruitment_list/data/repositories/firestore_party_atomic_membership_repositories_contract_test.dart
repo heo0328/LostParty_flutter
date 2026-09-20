@@ -62,7 +62,7 @@ void main() {
     expect(joinRepo, contains('PartyAtomicApplicationRejectWritePlan'));
     expect(joinRepo, contains('PartyRaidListingTx'));
     expect(joinRepo, contains('currentApprovalCount'));
-    expect(joinRepo, contains('final raidState = playerId == actorPlayerId'));
+    expect(joinRepo, contains('final occupancy = playerId == actorPlayerId'));
     expect(joinRepo, contains(".collection('raidStates')"));
     expect(joinRepo, contains(".collection('partyEvents')"));
     expect(joinRepo, isNot(contains("collection('members').get(")));
@@ -85,6 +85,14 @@ void main() {
     expect(mutationRepo, isNot(contains('activeRaidAssignments')));
     expect(mutationRepo, isNot(contains('weeklyRaidClaims')));
     expect(mutationRepo, isNot(contains(".collection('events')")));
+  });
+
+  test('신청·즉시가입·승인·캐릭터 변경은 같은 최소 전투력 정책을 적용한다', () {
+    for (final repository in [applicationRepo, joinRepo, mutationRepo]) {
+      expect(repository, contains('MinimumCombatPowerPolicy'));
+      expect(repository, contains("raw['minCombatPower']"));
+      expect(repository, contains('minimumCombatPowerNotMet'));
+    }
   });
 
   test('운영 Router에 원자 생성·신청·가입·mutation Repository를 연결한다', () {

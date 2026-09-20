@@ -140,6 +140,25 @@ void main() {
     expect(candidates.last.rejectionReasons, contains('저장된 역할 세팅이 없습니다.'));
   });
 
+  test('최소 전투력 미달 캐릭터를 신청 및 변경 후보에서 차단한다', () async {
+    final service = RecruitmentLeaderCandidateService(
+      accountRepository: _AccountRepository(),
+      weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+      session: FakeUserSession('local-user'),
+      clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 23)),
+      assignmentRepository: InMemoryActiveRaidAssignmentRepository(),
+      recruitmentRepository: InMemoryRecruitmentStateRepository(),
+    );
+
+    final candidates = await service.load(_query(minCombatPower: 300001));
+
+    expect(candidates.first.canSelect, isFalse);
+    expect(
+      candidates.first.roles.expand((option) => option.rejectionReasons),
+      contains('최소 전투력 300,001 미달'),
+    );
+  });
+
   test('확정 참가와 사용자 일정 충돌을 생성 후보에서 차단한다', () async {
     final assignments = InMemoryActiveRaidAssignmentRepository();
     await assignments.acquire(
@@ -452,6 +471,7 @@ class _StatusRepository implements WeeklyRaidStatusRepository {
 
 RecruitmentLeaderCandidateQuery _query({
   int minItemLevel = 1700,
+  int? minCombatPower,
   RecruitmentPartyRules? partyRules,
   List<OccupiedPartyMember> occupiedMembers = const [],
   String? replacingMemberId,
@@ -459,6 +479,7 @@ RecruitmentLeaderCandidateQuery _query({
   raidId: 'serca',
   difficultyId: 'normal',
   minItemLevel: minItemLevel,
+  minCombatPower: minCombatPower,
   startAt: DateTime.utc(2026, 8, 23, 10),
   maxPlayHours: 3,
   partyRules: partyRules,

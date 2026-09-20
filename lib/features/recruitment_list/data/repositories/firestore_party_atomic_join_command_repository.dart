@@ -8,6 +8,7 @@ import '../../domain/entities/party_gem_validation_snapshot.dart';
 import '../../domain/entities/party_join_command.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/policies/party_composition_policy.dart';
+import '../../domain/policies/minimum_combat_power_policy.dart';
 import '../../domain/repositories/party_join_command_repository.dart';
 import '../../domain/services/party_join_command_validator.dart';
 import '../../domain/services/party_create_occupancy_gate.dart';
@@ -34,6 +35,7 @@ class FirestorePartyAtomicJoinCommandRepository
   final FirebaseFirestore _firestore;
   final FirebaseAuth _firebaseAuth;
   final DateTime Function() clock;
+  static const _minimumCombatPowerPolicy = MinimumCombatPowerPolicy();
 
   @override
   Future<PartyJoinResult> joinDirectly(PartyDirectJoinCommand command) async {
@@ -323,6 +325,16 @@ class FirestorePartyAtomicJoinCommandRepository
           name is! String ||
           className is! String) {
         return const PartyJoinResult.failure(PartyJoinFailure.invalidCharacter);
+      }
+      if (!_minimumCombatPowerPolicy
+          .evaluate(
+            minimum: raw['minCombatPower'] as num?,
+            actual: combatPower,
+          )
+          .isAllowed) {
+        return const PartyJoinResult.failure(
+          PartyJoinFailure.minimumCombatPowerNotMet,
+        );
       }
 
       var joiningIsGroupMember = true;

@@ -9,8 +9,10 @@ import '../../../account/domain/services/gem_validation_snapshot_mapper.dart';
 import '../../../account/domain/services/build_integrity_snapshot_mapper.dart';
 import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
 import 'package:lost_party/shared/character_build/party_gem_validation_snapshot.dart';
+import 'package:lost_party/shared/formatters/display_number_formatter.dart';
 import '../entities/active_raid_assignment.dart';
 import '../entities/party_recruitment.dart';
+import '../policies/minimum_combat_power_policy.dart';
 import '../policies/participation_conflict_policy.dart';
 import '../policies/party_composition_policy.dart';
 import '../policies/weekly_raid_reset_policy.dart';
@@ -106,6 +108,7 @@ class RecruitmentLeaderCandidateQuery {
     required this.minItemLevel,
     required this.startAt,
     required this.maxPlayHours,
+    this.minCombatPower,
     this.partyRules,
     this.occupiedMembers = const [],
     this.replacingMemberId,
@@ -118,6 +121,7 @@ class RecruitmentLeaderCandidateQuery {
   final int minItemLevel;
   final DateTime startAt;
   final int? maxPlayHours;
+  final int? minCombatPower;
 
   /// 신청·참가 후보 구성 판정용. 모집 생성 후보에서는 null이다.
   final RecruitmentPartyRules? partyRules;
@@ -164,6 +168,7 @@ class RecruitmentLeaderCandidateService {
   final ActivityCharactersRepository? activityCharactersRepository;
   final ParticipationConflictPolicy conflictPolicy;
   final WeeklyRaidResetPolicy resetPolicy;
+  static const _minimumCombatPowerPolicy = MinimumCombatPowerPolicy();
 
   Future<List<RecruitmentLeaderCandidate>> load(
     RecruitmentLeaderCandidateQuery query,
@@ -248,6 +253,27 @@ class RecruitmentLeaderCandidateService {
             );
             if (compositionFailure != null) {
               reasons.add(_compositionReason(compositionFailure));
+            }
+          }
+          if (query.evaluateRaidConstraints) {
+            final combatPowerDecision = _minimumCombatPowerPolicy.evaluate(
+              minimum: query.minCombatPower,
+              actual: snapshot.combatPower ?? character.combatPower,
+            );
+            switch (combatPowerDecision) {
+              case MinimumCombatPowerDecision.missing:
+                reasons.add(
+                  '전투력 정보 없음 · 최소 전투력 '
+                  '${DisplayNumberFormatter.integer(query.minCombatPower!)} 필요',
+                );
+              case MinimumCombatPowerDecision.belowMinimum:
+                reasons.add(
+                  '최소 전투력 '
+                  '${DisplayNumberFormatter.integer(query.minCombatPower!)} 미달',
+                );
+              case MinimumCombatPowerDecision.unrestricted:
+              case MinimumCombatPowerDecision.satisfied:
+                break;
             }
           }
           roles.add(

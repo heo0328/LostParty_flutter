@@ -69,6 +69,7 @@ enum PartyMembershipFailure {
   unauthorized,
   ownershipLost,
   invalidCharacter,
+  minimumCombatPowerNotMet,
   weeklyRaidCompleted,
   recruitmentClosed,
   alreadyCurrentCharacter,

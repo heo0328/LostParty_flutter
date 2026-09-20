@@ -616,6 +616,41 @@ void main() {
     expect(find.text('가입 신청을 거절했습니다.'), findsOneWidget);
   });
 
+  testWidgets('최소 전투력 미달 신청은 승인만 차단하고 거절은 유지한다', (tester) async {
+    final repository = _FakeJoinCommandRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(minCombatPower: 300000),
+          isFromCache: false,
+        ),
+      ),
+      recruitmentApplications: Stream.value(
+        PartyReadSnapshot(
+          items: [_pendingApplication(combatPower: 299999.0)],
+          isFromCache: false,
+        ),
+      ),
+      joinCommandRepository: repository,
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('최소 전투력을 충족하지 않아 승인할 수 없습니다. 신청을 거절해 주세요.'),
+      findsOneWidget,
+    );
+    final approve = tester.widget<FilledButton>(
+      find.byKey(const ValueKey('approveApplication-player-applicant')),
+    );
+    final reject = tester.widget<OutlinedButton>(
+      find.byKey(const ValueKey('rejectApplication-player-applicant')),
+    );
+    expect(approve.onPressed, isNull);
+    expect(reject.onPressed, isNotNull);
+  });
+
   testWidgets('승인 권한 실패는 최신 신청일 때 명시적 거절 안내를 표시한다', (tester) async {
     final repository = _FakeJoinCommandRepository(
       approveResult: const PartyJoinResult.failure(
@@ -1931,13 +1966,14 @@ PublicRecruitmentSummary _summary({
   bool continueTogether = false,
   String visibility = 'public',
   String? groupId,
+  int? minCombatPower,
 }) => PublicRecruitmentSummary(
   id: id,
   title: title,
   leaderUserId: 'player-1',
   leaderCharacterName: '이슈아이',
   leaderClassName: '기상술사',
-  metadata: const RecruitmentMetadata(
+  metadata: RecruitmentMetadata(
     catalogVersion: '2026-08-01',
     raidId: 'act4',
     difficultyId: 'normal',
@@ -1946,7 +1982,7 @@ PublicRecruitmentSummary _summary({
     difficultyAlias: '노말',
     gateCount: 2,
     minItemLevel: 1680,
-    minCombatPower: null,
+    minCombatPower: minCombatPower,
     experienceLevel: null,
     maxPlayHours: null,
   ),
@@ -1972,6 +2008,7 @@ PublicRecruitmentSummary _summary({
 PartyApplicationSummary _pendingApplication({
   PartyGemValidationSnapshot? gemValidation,
   BuildIntegritySnapshot? buildIntegrity,
+  double? combatPower,
 }) => PartyApplicationSummary(
   recruitmentId: 'recruitment-1',
   applicantPlayerId: 'player-applicant',
@@ -1984,6 +2021,7 @@ PartyApplicationSummary _pendingApplication({
   revision: 3,
   createdAt: DateTime.utc(2026, 8, 20),
   updatedAt: DateTime.utc(2026, 8, 21),
+  combatPower: combatPower,
   gemValidation: gemValidation,
   buildIntegrity: buildIntegrity,
 );

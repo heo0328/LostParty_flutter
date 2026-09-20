@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/entities/party_application_command.dart';
 import '../../domain/policies/party_composition_policy.dart';
+import '../../domain/policies/minimum_combat_power_policy.dart';
 import '../../domain/repositories/party_application_command_repository.dart';
 import '../../domain/services/party_application_command_validator.dart';
 import '../../domain/services/party_create_occupancy_gate.dart';
@@ -26,6 +27,7 @@ class FirestorePartyAtomicApplicationCommandRepository
   final FirebaseFirestore _firestore;
   final FirebaseAuth _firebaseAuth;
   final DateTime Function() clock;
+  static const _minimumCombatPowerPolicy = MinimumCombatPowerPolicy();
 
   @override
   Future<PartyApplicationCommandResult> apply(PartyApplyCommand command) async {
@@ -152,6 +154,16 @@ class FirestorePartyAtomicApplicationCommandRepository
           className is! String) {
         return const PartyApplicationCommandResult.failure(
           PartyApplicationFailure.invalidCharacter,
+        );
+      }
+      if (!_minimumCombatPowerPolicy
+          .evaluate(
+            minimum: raw['minCombatPower'] as num?,
+            actual: command.combatPower,
+          )
+          .isAllowed) {
+        return const PartyApplicationCommandResult.failure(
+          PartyApplicationFailure.minimumCombatPowerNotMet,
         );
       }
 

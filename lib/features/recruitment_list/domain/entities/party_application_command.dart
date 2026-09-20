@@ -38,6 +38,7 @@ enum PartyApplicationFailure {
   notFound,
   ownershipLost,
   invalidCharacter,
+  minimumCombatPowerNotMet,
   weeklyRaidCompleted,
   participationConflict,
   orphanedParticipation,

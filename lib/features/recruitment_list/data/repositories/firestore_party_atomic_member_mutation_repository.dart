@@ -6,6 +6,7 @@ import '../../domain/entities/party_atomic_command.dart';
 import '../../domain/entities/party_membership_command.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/policies/party_composition_policy.dart';
+import '../../domain/policies/minimum_combat_power_policy.dart';
 import '../../domain/repositories/party_atomic_member_mutation_repository.dart';
 import '../../domain/services/party_membership_command_validator.dart';
 import '../mappers/party_atomic_document_mapper.dart';
@@ -27,6 +28,7 @@ class FirestorePartyAtomicMemberMutationRepository
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _firebaseAuth;
+  static const _minimumCombatPowerPolicy = MinimumCombatPowerPolicy();
 
   @override
   Future<PartyMembershipResult> changeCharacter(
@@ -147,6 +149,16 @@ class FirestorePartyAtomicMemberMutationRepository
           className is! String) {
         return const PartyMembershipResult.failure(
           PartyMembershipFailure.invalidCharacter,
+        );
+      }
+      if (!_minimumCombatPowerPolicy
+          .evaluate(
+            minimum: raw['minCombatPower'] as num?,
+            actual: command.combatPower,
+          )
+          .isAllowed) {
+        return const PartyMembershipResult.failure(
+          PartyMembershipFailure.minimumCombatPowerNotMet,
         );
       }
 
