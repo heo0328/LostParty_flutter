@@ -1,5 +1,12 @@
 # Task-11 Firestore Rules 복잡도 차단 — 종료된 진단 이력
 
+## 2026-09-21 BUG-021 그룹 신청 승인 표현식 예산 복구
+
+- demo CI `35562516961`에서 membership 문서가 없는 최초 신청 승인부터 Firestore Rules `maximum of 1000 expressions`로 실패해 Player별 고아 데이터가 아닌 공통 승인 경로 회귀로 확정했다.
+- `joinRelations`, `members`, `groupMembershipState`, Player `groupRelations`, `groups`에서 application 승인 validator를 actor·kind·status·joinedBy·memberCount의 값싼 guard 뒤 앞쪽으로 옮겼다. 권한 조건, Transaction 문서 수와 저장 스키마는 변경하지 않았다.
+- 표적 정적 계약 5건과 Actions `35565203228`의 전체 추적 Rules 회귀가 통과했다. 최초 membership 생성 승인, revision 14의 빈 membership 갱신 승인, 초대코드 가입, 그룹장 이전·탈퇴·해산을 같은 실행에서 확인했다.
+- 추적 Rules SHA-256은 `907302E0747A28FFFB581DB295E60633C04811EF33E6AE3F161EA5A6CB5B0FD6`다. 운영 Rules 게시와 실기기 확인 전이므로 BUG-021 완료 또는 통합으로 판정하지 않는다.
+
 ## 2026-09-21 F8-A 고아 application 단건 삭제 검증
 
 - 현재 Player가 신청자인 application만, 부모 모집 없음 또는 `completed/disbanded/incompleteEnded`일 때 단건 삭제하도록 허용했다. 활성 부모와 타인 신청은 계속 거절한다.

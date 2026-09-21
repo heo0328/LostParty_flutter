@@ -3353,3 +3353,9 @@
 - `feature/raid-status-record-removal`을 `dev`에 fast-forward한 뒤 기존 `main` 이력을 일반 병합으로 연결했다. 병합 결과 tree는 작업 브랜치와 동일하며 기능 내용의 추가 변경이나 충돌은 없었다.
 - `dev`와 `main`을 통합 커밋 `69a29ca`로 맞추고 GitHub 원격에도 각각 푸시했다. 강제 푸시와 이력 삭제는 사용하지 않았다.
 - 다음 작업 기준은 이 공통 통합 지점이며 GitHub Actions 파이프라인 구축·검증은 별도 작업으로 시작한다.
+# 2026-09-21 BUG-021 그룹 가입 신청 승인 Rules 복구 — 자동 검증 완료
+
+- 동일 그룹에서 여러 Player의 일반 신청 승인이 실패하고 초대코드 가입은 성공한 현상을 데이터 고아가 아닌 공통 Rules 경로로 재분류했다. demo CI `35562516961`에서 최초 membership 생성 승인도 표현식 1,000개 한도로 실패해 원인을 확정했다.
+- application 승인 Transaction이 쓰는 다섯 경로의 승인 validator를 값싼 필드 guard와 함께 앞쪽으로 이동했다. 보안 조건, 원자 쓰기 문서 수, 스키마와 제품 Dart 코드는 변경하지 않았다.
+- 표적 Rules 문자열 계약 5건, JS 문법과 diff 검사가 통과했다. Actions `35565203228`에서 최초 가입 승인, revision 14의 빈 membership 재가입 승인과 기존 그룹 전체 회귀가 통과했다.
+- 작업 브랜치 `fix/group-join-relation-conflict`, Rules 커밋 `96cea59`, 정상 성공 기대값 커밋 `e82fb16`, Rules SHA-256 `907302E0747A28FFFB581DB295E60633C04811EF33E6AE3F161EA5A6CB5B0FD6`다. 운영 Rules 게시·실기기 승인·`dev` 통합은 아직 수행하지 않았다.

@@ -27,9 +27,9 @@
 3. demo Rules CI `35562516961`에서 membership 문서가 아예 없는 최초 가입 승인도 `PERMISSION_DENIED`로 실패했고 Emulator가 `maximum of 1000 expressions`를 명시했다. 따라서 빈 membership update만의 문제가 아니라 **현재 그룹 신청 승인 Transaction 전체의 Rules 평가 예산 회귀**로 원인을 확정한다. 과거 계정별 성공 차이는 현재 데이터 고아가 아니라 이후 Rules OR가 늘거나 순서가 밀린 시점 차이로 본다.
 4. 실패 로그는 한 승인 Transaction의 `joinRelations update`, `members create`, `groupMembershipState create/update`, `groupRelations create/update`, `groups update`에서 동시에 표현식 한도 도달을 가리킨다. 현재 각 allow에서 application 승인 분기가 일반 초대·신청·탈퇴·원자 모집 분기 뒤쪽에 있어, 승인과 무관한 validator를 먼저 평가한다. 이 저장소에서 그룹장 이전·초대코드·모집 신청 update도 같은 원인으로 실패했고 관련 분기를 앞쪽으로 옮겨 복구한 이력이 있다.
 5. 신청 승인은 그룹장이 대상 Player의 private membership을 읽지 못하므로 `activeGroupIds=arrayUnion(groupId)`, `activeGroupCount=increment(1)`, `revision=increment(1)` 병합 쓰기를 보낸다. 전달 데이터라면 결과는 ID 1개/count 1/revision 15로 논리적으로 유효하므로 데이터 값 자체보다 Rules 평가 경로를 먼저 검증한다.
-6. 추가한 회귀는 membership 문서가 없는 최초 승인과 빈 membership/revision 14 재가입 승인을 모두 성공 조건으로 둔다. 현재는 첫 승인에서 의도대로 red가 발생해 두 번째까지 도달하지 못했다. Rules 수정 뒤 둘 다 통과해야 하며 기존 전체 회귀도 같은 실행에서 유지해야 한다.
+6. 추가한 회귀는 membership 문서가 없는 최초 승인과 빈 membership/revision 14 재가입 승인을 모두 성공 조건으로 둔다. Rules 평가 순서 수정 뒤 두 사례와 기존 전체 회귀가 Actions `35565203228`에서 함께 통과했다.
 
-진단 구현 상태: 제품 코드·Rules는 변경하지 않고 전체 Rules 회귀 도구에 `membership 문서 없음 → 최초 승인`과 `빈 membership/revision 14 → 재가입 승인` Transaction을 추가했다. 로컬 문법 검사는 통과했다. 작업 브랜치 demo CI `35562516961`에서 첫 승인부터 표현식 1,000개 한도 초과를 재현해 원인을 확정했다.
+구현 상태: 제품 Dart 코드는 변경하지 않았다. `joinRelations`, `members`, `groupMembershipState`, Player `groupRelations`, `groups`의 application 승인 분기를 값싼 명령 식별 guard와 함께 앞쪽으로 옮겼다. 승인 조건·Transaction 문서 수·저장 스키마는 유지했다. 표적 정적 계약 5건과 전체 demo Rules 회귀 Actions `35565203228`이 통과했고, 추적 Rules SHA-256은 `907302E0747A28FFFB581DB295E60633C04811EF33E6AE3F161EA5A6CB5B0FD6`다. 운영 Rules 게시와 실기기 신청 승인 확인 전에는 완료 또는 `dev` 통합으로 판정하지 않는다.
 
 ### 조사 순서
 
@@ -41,8 +41,9 @@
    - `groups/{groupId}/members/{targetPlayerId}` 존재 여부
    - `groups/{groupId}/blockedPlayers/{targetPlayerId}` 존재 여부
    - `groups/{groupId}`의 `status`, `leaderPlayerId`, `memberCount`, `revision`
-3. 최소 수정은 보안 조건을 삭제하지 않고 승인임을 식별하는 싼 필드 guard 뒤 `validGroupApplicationDecision`, `validApprovedGroupMember`, `validLeaderApprovedMembershipStateAdd`, `validLeaderApprovedGroupRelation`, `validGroupLeaderApproveUpdate`를 각 관련 allow의 앞쪽에서 평가하게 하는 것이다. 다른 명령도 먼저 깊은 승인 validator를 타지 않도록 actor/`kind`/`joinedBy`/`requestStatus`/변경 필드 guard를 함께 둔다.
-4. 수정본은 최초 승인과 빈 membership 재가입 승인, 거절, 초대 수락, 초대코드 가입, 그룹 생성·탈퇴·그룹장 이전·1인 해산을 같은 demo CI 한 번으로 검증한다. Rules 조건·문서 수·Transaction 구조는 바꾸지 않는다.
+3. **완료:** 보안 조건을 삭제하지 않고 승인임을 식별하는 싼 필드 guard 뒤 `validGroupApplicationDecision`, `validApprovedGroupMember`, `validLeaderApprovedMembershipStateAdd`, `validLeaderApprovedGroupRelation`, `validGroupLeaderApproveUpdate`를 각 관련 allow의 앞쪽에서 평가하게 했다.
+4. **완료:** 최초 승인과 빈 membership 재가입 승인, 초대코드 가입, 그룹 생성·탈퇴·그룹장 이전·1인 해산을 같은 demo CI `35565203228`에서 검증했다. Rules 조건·문서 수·Transaction 구조는 바꾸지 않았다.
+5. **남음:** 검증된 Rules를 운영에 게시한 뒤 사용자가 일반 가입 신청 승인을 실기기에서 확인한다. 게시 전후 소스 해시와 실패 단계를 기록하며, Indexes·Functions는 배포하지 않는다.
 
 ### 회귀 보호와 완료 조건
 
