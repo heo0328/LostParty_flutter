@@ -6,7 +6,46 @@
 - R1~R7·C* 구현과 운영 Rules·Indexes 게시는 완료했다. 운영 Router는 원자 Repository·어댑터를 쓴다.
 - 로컬에는 생성·읽기 v2·이전 Close/Open 가드·승인 패치·listing sync·Listen 가드·orphan 공개 전환·모집 삭제→disband·캐릭터 변경 atomic OR·그룹 전용방 파티장 탈퇴 차단 등이 **코드로 들어가 있다**.
 - **실기기 판정(2026-09-16 사용자 확인):** 아래 성공 항목은 사용자가 디바이스에서 확인했다. 그 밖의 보고 실패는 로컬 수정·자동 테스트 통과만으로 완료로 쓰지 않는다.
-- **2026-09-21 현재 작업:** 파티·그룹 재설계 F7과 승인 대기 고아 신청 정리 F8-A는 구현·검증·Rules 게시·실기기 확인 및 `dev`·`main` 통합을 완료했다. 검토하던 완료 기록 삭제 F8-B는 사용자에게 필요한 삭제 사유가 없다고 재판단해 폐기했으며 구현하지 않는다. 두 통합 브랜치는 같은 완료 기준을 가리킨다. 다음 작업은 별도 범위의 GitHub Actions 파이프라인 구축·검증이다.
+- **2026-09-21 현재 작업:** 파티·그룹 재설계 F7과 승인 대기 고아 신청 정리 F8-A는 구현·검증·Rules 게시·실기기 확인 및 `dev`·`main` 통합을 완료했다. 검토하던 완료 기록 삭제 F8-B는 사용자에게 필요한 삭제 사유가 없다고 재판단해 폐기했으며 구현하지 않는다. 두 통합 브랜치는 같은 완료 기준을 가리킨다. 예정했던 GitHub Actions 파이프라인보다 먼저, 특정 Player에서만 일반 그룹 가입 승인·초대 수락이 실패하고 초대코드 가입은 성공한 `BUG-021`을 `fix/group-join-relation-conflict`에서 분석한다.
+
+## 현재 단일 작업 — BUG-021 특정 Player 그룹 가입 실패 분석
+
+참고: [`BUG_REPORTS.md`](BUG_REPORTS.md)의 `BUG-021`, [`FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md) §5~§8.
+
+### 확인된 재현 경계
+
+- 같은 그룹·같은 앱 빌드에서 Player 2의 일반 가입은 성공하지만 Player 3은 신청 승인 또는 초대 수락 과정에서 `이 그룹에 가입할 수 없습니다.`가 표시된다.
+- Player 3의 요청 거절은 성공하고, 같은 그룹의 초대코드 즉시 가입은 성공했다.
+- 이 문구는 `blocked`와 Firestore `permission-denied`를 함께 표시하므로 화면 문구만으로 차단 여부를 확정하지 않는다.
+- 초대코드 가입도 `blockedPlayers`, 활성 그룹 수 50개 제한, 그룹 정원, Player/Character 소유권과 활성 상태를 검사한다. 같은 Player가 같은 그룹에 코드로 가입했으므로 이 공통 조건과 전역 Rules·그룹 자체 장애는 우선 원인에서 제외한다.
+
+### 코드 대조 결과와 1차 가설
+
+1. 신청 승인은 그룹장이 대상 Player의 private `groupMembershipState/current`를 읽지 못하므로 `activeGroupIds=arrayUnion(groupId)`, `activeGroupCount=increment(1)`, `revision=increment(1)` 병합 쓰기를 보낸다. Rules는 최종 배열 크기·count·revision·신규 groupId 하나 추가를 대조한다. 기존 요약의 배열/count/revision이 어긋나 있으면 거절은 가능하지만 승인은 `permission-denied`가 된다.
+2. 초대 수락과 초대코드 가입은 가입자가 자기 membership state를 읽고 완성된 문서를 다시 쓴다. 초대코드는 pending 요청이 없거나 이미 최종 상태면 `requestStatus=null`인 코드 전용 Projection 분기를 사용하므로, 과거 `groupRelations/{groupId}` 또는 요청 전이 데이터가 깨진 경우 일반 승인/수락만 실패하고 코드 가입은 성공할 수 있다.
+3. 코드 가입 성공은 `groupMembershipState/current`, `groupRelations/{groupId}`, `members/{playerId}`를 정상 가입 형태로 갱신할 수 있다. 따라서 이번 성공 뒤의 현재 데이터는 실패 직전 고아·불일치를 이미 덮었을 수 있으며, 현재 문서만 보고 원인이 없었다고 판단하지 않는다.
+4. 현재 자동 검증은 그룹 생성·초대코드 및 Write Plan/Rules 문자열 계약은 갖지만, 기존 불일치 membership/projection을 가진 Player의 신청 승인·초대 수락 실제 Rules Transaction을 충분히 재현하지 않는다. 수정 전에 이 빈 구간을 대표 데이터로 먼저 고정한다.
+
+### 조사 순서
+
+1. 같은 증상이 다시 발생한 시점에 동작을 `신청 생성`, `그룹장 승인`, `초대 생성`, `초대 대상 수락`으로 구분하고 최초 실패 명령과 Firebase 오류 code를 기록한다.
+2. 실패 Transaction 직전 아래 exact 문서만 대조한다. 전체 Player나 그룹을 순회하지 않는다.
+   - `players/{targetPlayerId}/groupMembershipState/current`
+   - `players/{targetPlayerId}/groupRelations/{groupId}`
+   - `groups/{groupId}/joinRelations/{targetPlayerId}`
+   - `groups/{groupId}/members/{targetPlayerId}` 존재 여부
+   - `groups/{groupId}/blockedPlayers/{targetPlayerId}` 존재 여부
+   - `groups/{groupId}`의 `status`, `leaderPlayerId`, `memberCount`, `revision`
+3. 위 데이터를 그대로 Rules Emulator에 만들어 일반 신청 승인, 초대 수락, 거절, 초대코드 가입을 비교한다. 정상 Player 자료와 달라지는 첫 Rules 조건을 원인으로 확정한다.
+4. 데이터 불일치가 원인이면 수동 콘솔 삭제를 정상 복구법으로 삼지 않는다. 가입자가 자기 상태를 안전하게 점검·정리하거나 정상 명령이 원자적으로 수렴시키는 최소 복구 계약을 별도로 설계한다. 정상 데이터에서도 실패하면 해당 Write Plan/Rules 분기만 수정한다.
+
+### 회귀 보호와 완료 조건
+
+- 그룹 생성, 정상 Player의 신청·승인, 직접 초대·수락·거절, 초대코드 가입, 일반 탈퇴, 그룹장 이전과 마지막 1인 해산을 보존한다.
+- block·50개 제한·정원·타인 조작은 계속 거절하며 private membership state를 그룹장에게 새로 공개하지 않는다.
+- 인원수 비례 조회·쓰기, 전원 순회, Cloud Functions와 콘솔 수동 정리를 도입하지 않는다.
+- 원인 자료와 재현 전에는 코드·Rules를 추측 수정하지 않는다. 수정이 필요하면 대표 정상 1건·불일치 1건의 Rules 경계만 자동 검증하고 실제 UX는 사용자가 실기기에서 확인한다.
+- 이 작업이 분석·수정·실기기 확인을 마치기 전 `dev`·`main`에 통합하지 않는다.
 
 ### 실기기 확인됨 (고쳐진 것)
 
