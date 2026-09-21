@@ -471,7 +471,11 @@ void main() {
     expect(rules, contains('match /groupRelations/{groupId}'));
     expect(
       rules,
-      contains("allow create, update: if request.resource.data.relation == 'member'"),
+      contains('allow create, update: if playerId != currentPlayerId()'),
+    );
+    expect(
+      rules,
+      contains("request.resource.data.relation == 'member'"),
     );
     expect(
       rules,
@@ -509,8 +513,15 @@ void main() {
     );
     expect(
       rules,
-      contains(') || validGroupApplicationDecision('),
-      reason: 'joinRelations update는 초대 전이와 신청 전이만 허용한다.',
+      contains(
+        "request.resource.data.status in ['accepted', 'rejected', 'blocked']",
+      ),
+      reason: 'joinRelations update는 신청 결정 여부를 값싼 필드로 먼저 판별한다.',
+    );
+    expect(
+      rules,
+      contains('&& validGroupApplicationDecision('),
+      reason: '신청 결정으로 식별된 쓰기만 상세 승인·거절·금지 검증을 수행한다.',
     );
   });
 
@@ -526,8 +537,13 @@ void main() {
     expect(rules, contains('groupId in state.activeGroupIds'));
     expect(
       rules,
-      contains(') || validApprovedGroupMember('),
-      reason: 'members create는 생성·초대 수락·그룹장 승인 경로만 허용한다.',
+      contains("request.resource.data.joinedBy == 'application'"),
+      reason: 'members create는 신청 승인 문서를 joinedBy로 먼저 판별한다.',
+    );
+    expect(
+      rules,
+      contains('&& validApprovedGroupMember('),
+      reason: '신청 승인으로 식별된 멤버만 상세 승인 검증을 수행한다.',
     );
   });
 
@@ -540,7 +556,8 @@ void main() {
         'getAfter(groupPath(addedGroupId)).data.leaderPlayerId == callerId',
       ),
     );
-    expect(rules, contains(') || validLeaderApprovedMembershipStateAdd('));
+    expect(rules, contains('allow create: if (playerId != currentPlayerId()'));
+    expect(rules, contains('&& validLeaderApprovedMembershipStateAdd('));
   });
 
   test('승인 이후 대상 Projection과 그룹 인원 증가는 그룹장에게만 열린다', () {
@@ -557,7 +574,14 @@ void main() {
     );
     expect(rules, contains('oldData.leaderPlayerId == currentPlayerId()'));
     expect(rules, contains('newData.memberCount == oldData.memberCount + 1'));
-    expect(rules, contains(') || validGroupLeaderApproveUpdate('));
+    expect(
+      rules,
+      contains(
+        'request.resource.data.memberCount\n          == resource.data.memberCount + 1',
+      ),
+      reason: '그룹 update는 승인에 해당하는 인원 증가를 먼저 판별한다.',
+    );
+    expect(rules, contains('&& validGroupLeaderApproveUpdate('));
     expect(rules, contains('&& validGroupMemberLeaveUpdate('));
   });
 

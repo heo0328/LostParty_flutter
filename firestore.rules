@@ -3288,25 +3288,25 @@ service cloud.firestore {
       match /groupMembershipState/{docId} {
         allow get, list: if hasActiveBinding()
           && playerId == currentPlayerId();
-        allow create: if validMembershipStateAdd(
+        // 그룹장 승인은 대상 Player가 아닌 호출자가 쓰므로 먼저 분기한다.
+        // 본인 생성·가입 validator를 선평가하면 승인 Transaction의 Rules
+        // 표현식 예산을 소진한다.
+        allow create: if (playerId != currentPlayerId()
+          && validLeaderApprovedMembershipStateAdd(
           playerId,
           docId,
           [],
           0,
           request.resource.data
-        ) || validLeaderApprovedMembershipStateAdd(
+        )) || validMembershipStateAdd(
           playerId,
           docId,
           [],
           0,
           request.resource.data
         );
-        allow update: if validMembershipStateRemove(
-          playerId,
-          docId,
-          resource.data,
-          request.resource.data
-        ) || validMembershipStateAdd(
+        allow update: if (playerId != currentPlayerId()
+          && validLeaderApprovedMembershipStateAdd(
           playerId,
           docId,
           resource.data.activeGroupIds is list
@@ -3314,7 +3314,12 @@ service cloud.firestore {
             : [],
           resource.data.revision is int ? resource.data.revision : 0,
           request.resource.data
-        ) || validLeaderApprovedMembershipStateAdd(
+        )) || validMembershipStateRemove(
+          playerId,
+          docId,
+          resource.data,
+          request.resource.data
+        ) || validMembershipStateAdd(
           playerId,
           docId,
           resource.data.activeGroupIds is list
@@ -3330,7 +3335,14 @@ service cloud.firestore {
         allow get, list: if hasActiveBinding()
           && playerId == currentPlayerId();
         // 코드 가입은 신청·승인 분기의 깊은 getAfter보다 먼저 판정한다.
-        allow create, update: if request.resource.data.relation == 'member'
+        allow create, update: if playerId != currentPlayerId()
+          && request.resource.data.relation == 'member'
+          && request.resource.data.requestStatus == 'accepted'
+          && validLeaderApprovedGroupRelation(
+            playerId,
+            groupId,
+            request.resource.data
+          ) || request.resource.data.relation == 'member'
           && request.resource.data.requestStatus == null
           && validJoinCodeMemberGroupRelation(
           playerId,
@@ -3345,10 +3357,6 @@ service cloud.firestore {
           groupId,
           request.resource.data
         ) || validAcceptedGroupRelation(
-          playerId,
-          groupId,
-          request.resource.data
-        ) || validLeaderApprovedGroupRelation(
           playerId,
           groupId,
           request.resource.data
@@ -3959,7 +3967,12 @@ service cloud.firestore {
       // 추가로 읽지 않게 한다.
       // 1인 해산과 그룹장 이전은 여러 문서를 함께 쓰므로 먼저 판정한다.
       // 초대코드와 표시 정책도 뒤의 가입·승인 복합 명령보다 먼저 종료한다.
-      allow update: if validAtomicGroupRecruitmentClose(
+      allow update: if (request.resource.data.memberCount
+          == resource.data.memberCount + 1
+        && validGroupLeaderApproveUpdate(
+          resource.data,
+          request.resource.data
+        )) || validAtomicGroupRecruitmentClose(
         groupId,
         resource.data,
         request.resource.data
@@ -3997,16 +4010,18 @@ service cloud.firestore {
         groupId,
         resource.data,
         request.resource.data
-      ) || validGroupLeaderApproveUpdate(
-        resource.data,
-        request.resource.data
       );
       allow delete: if false;
 
       match /members/{playerId} {
         allow get, list: if isCurrentGroupMember(groupId);
         // 가입자는 joinedBy로 먼저 걸러 기존 생성·초대·승인을 보호한다.
-        allow create: if request.resource.data.joinedBy == 'joinCode'
+        allow create: if request.resource.data.joinedBy == 'application'
+          && validApprovedGroupMember(
+            groupId,
+            playerId,
+            request.resource.data
+          ) || request.resource.data.joinedBy == 'joinCode'
           && validJoinCodeGroupMember(
             groupId,
             playerId,
@@ -4016,10 +4031,6 @@ service cloud.firestore {
           playerId,
           request.resource.data
         ) || validInvitedGroupMember(
-          groupId,
-          playerId,
-          request.resource.data
-        ) || validApprovedGroupMember(
           groupId,
           playerId,
           request.resource.data
@@ -4102,7 +4113,15 @@ service cloud.firestore {
           true,
           request.resource.data
         );
-        allow update: if validGroupInvitationCreate(
+        allow update: if resource.data.kind == 'application'
+          && resource.data.status == 'pending'
+          && request.resource.data.status in ['accepted', 'rejected', 'blocked']
+          && validGroupApplicationDecision(
+            groupId,
+            playerId,
+            resource.data,
+            request.resource.data
+          ) || validGroupInvitationCreate(
           groupId,
           playerId,
           resource.data.revision,
@@ -4116,11 +4135,6 @@ service cloud.firestore {
           reusableGroupJoinRelation(resource.data),
           request.resource.data
         ) || validGroupJoinRelationDecision(
-          groupId,
-          playerId,
-          resource.data,
-          request.resource.data
-        ) || validGroupApplicationDecision(
           groupId,
           playerId,
           resource.data,
