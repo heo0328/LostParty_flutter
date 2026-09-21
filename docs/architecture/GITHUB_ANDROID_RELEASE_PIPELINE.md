@@ -86,6 +86,8 @@ workflow가 tag를 자동 생성하거나 브랜치를 병합하지 않는다. r
 
 작업 브랜치에서 Secrets·서명·artifact를 검증하는 동안에만 해당 브랜치 push trigger를 두었고, Actions `35592769624` 성공 뒤 제거했다. 최종 workflow는 `workflow_dispatch`와 `v*` tag만 유지한다.
 
+최초 `v1.0.0` run `35596035632`는 signed APK 검증과 artifact 업로드까지 통과했으나 checkout 없는 release job이 저장소를 자동 판별하지 못했다. `gh release view/create`에 `--repo "$GITHUB_REPOSITORY"`를 명시해 이후 태그 게시 경로를 보정했으며, `v1.0.0`은 같은 성공 artifact의 체크섬을 재검증한 뒤 공개 Release로 복구했다.
+
 ## 5. 회귀 보호와 실패 처리
 
 - 앱 ID·Firebase Android config·서명 변경 외 앱 기능, Firestore Rules, Indexes와 서버 데이터는 변경하지 않는다.

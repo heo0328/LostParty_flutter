@@ -37,8 +37,8 @@
 - **C workflow 원격 artifact 검증 완료:** CI는 비밀번호 파일을 만들지 않고 네 Repository Secrets를 환경변수로 전달한다. package/version/승인 인증서 검증, SHA-256, 7일 artifact, tag/main 이력 가드와 기존 Release 덮어쓰기 차단을 구성했다. 첫 실행 `35591621599`는 새 `apksigner` 출력 파싱 오류로 검증 단계에서 실패했으며 실제 빌드·서명 실패가 아니었다. 파싱을 수정한 `35592769624`에서 signed APK 검증과 artifact 업로드가 통과했다.
 - **Secrets 등록 완료:** 사용자가 keystore·비밀번호의 별도 백업을 완료했고 GitHub Actions Secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`를 값 노출 없이 등록했다.
 - **D signed artifact 실기기 확인 완료:** 임시 작업 브랜치 push trigger 제거본을 원격에 반영했고, 사용자가 성공 run `35592769624`의 artifact APK를 내려받아 실기기에 설치한 뒤 앱과 Firebase 기능이 정상 작동함을 확인했다.
-- **E 통합·태그 진행:** 작업 브랜치와 `dev`, `main`을 검증 커밋 `0c93b34`로 맞추고 `v1.0.0` 태그를 게시했다. 태그 run `35596035632`의 signed APK 빌드·검증·artifact 업로드는 통과했지만 checkout 없는 release job이 저장소를 자동 판별하지 못해 Release 게시만 실패했다.
-- **다음 게이트:** `gh release`에 저장소를 명시한 보정을 `dev`·`main`에 반영하고, 성공 artifact로 `v1.0.0` Release를 복구한 뒤 자산과 체크섬을 확인한다. 기존 Firebase Android 앱 등록은 최종 Release 확인 전까지 유지한다.
+- **E 통합·v1.0.0 게시 완료:** 작업 브랜치와 `dev`, `main`을 검증 커밋 `0c93b34`로 맞추고 `v1.0.0` 태그를 게시했다. 태그 run `35596035632`에서 signed APK 빌드·검증·artifact 업로드가 통과했다. checkout 없는 release job의 저장소 자동 판별 실패는 `--repo "$GITHUB_REPOSITORY"` 명시로 보정했고, 같은 성공 artifact의 SHA-256을 재검증한 뒤 공개 GitHub Release에 APK와 체크섬을 게시했다.
+- **다음 게이트:** 릴리즈 파이프라인 작업은 종료한다. 기존 Firebase Android 앱 등록의 삭제 여부는 별도 운영 정리 작업으로 결정하고, 같은 키의 덮어쓰기 설치는 최초 후속 버전에서 확인한다.
 
 ### 완료 게이트
 
