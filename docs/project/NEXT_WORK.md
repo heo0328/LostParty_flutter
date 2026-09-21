@@ -6,7 +6,7 @@
 - R1~R7·C* 구현과 운영 Rules·Indexes 게시는 완료했다. 운영 Router는 원자 Repository·어댑터를 쓴다.
 - 로컬에는 생성·읽기 v2·이전 Close/Open 가드·승인 패치·listing sync·Listen 가드·orphan 공개 전환·모집 삭제→disband·캐릭터 변경 atomic OR·그룹 전용방 파티장 탈퇴 차단 등이 **코드로 들어가 있다**.
 - **실기기 판정(2026-09-16 사용자 확인):** 아래 성공 항목은 사용자가 디바이스에서 확인했다. 그 밖의 보고 실패는 로컬 수정·자동 테스트 통과만으로 완료로 쓰지 않는다.
-- **2026-09-21 현재 작업:** 파티·그룹 재설계 F7과 승인 대기 고아 신청 정리 F8-A는 구현·검증·Rules 게시·실기기 확인 및 `dev`·`main` 통합을 완료했다. 검토하던 완료 기록 삭제 F8-B는 사용자에게 필요한 삭제 사유가 없다고 재판단해 폐기했으며 구현하지 않는다. 두 통합 브랜치는 같은 완료 기준을 가리킨다. 예정했던 GitHub Actions 파이프라인보다 먼저, 그룹 가입 신청 승인이 Rules 표현식 1,000개 한도로 거절되는 `BUG-021`을 `fix/group-join-relation-conflict`에서 복구한다.
+- **2026-09-21 현재 작업:** 파티·그룹 재설계 F7과 승인 대기 고아 신청 정리 F8-A는 구현·검증·Rules 게시·실기기 확인 및 `dev`·`main` 통합을 완료했다. 검토하던 완료 기록 삭제 F8-B는 폐기했다. `BUG-021`은 `fix/group-join-relation-conflict`에서 Rules 수정·자동 검증·운영 게시와 기존 실패 Player 2명의 실기기 승인까지 완료했으며, 작업 브랜치의 `dev` 통합만 남아 있다.
 
 ## 현재 단일 작업 — BUG-021 그룹 가입 신청 승인 Rules 회귀
 
@@ -29,7 +29,7 @@
 5. 신청 승인은 그룹장이 대상 Player의 private membership을 읽지 못하므로 `activeGroupIds=arrayUnion(groupId)`, `activeGroupCount=increment(1)`, `revision=increment(1)` 병합 쓰기를 보낸다. 전달 데이터라면 결과는 ID 1개/count 1/revision 15로 논리적으로 유효하므로 데이터 값 자체보다 Rules 평가 경로를 먼저 검증한다.
 6. 추가한 회귀는 membership 문서가 없는 최초 승인과 빈 membership/revision 14 재가입 승인을 모두 성공 조건으로 둔다. Rules 평가 순서 수정 뒤 두 사례와 기존 전체 회귀가 Actions `35565203228`에서 함께 통과했다.
 
-구현 상태: 제품 Dart 코드는 변경하지 않았다. `joinRelations`, `members`, `groupMembershipState`, Player `groupRelations`, `groups`의 application 승인 분기를 값싼 명령 식별 guard와 함께 앞쪽으로 옮겼다. 승인 조건·Transaction 문서 수·저장 스키마는 유지했다. 표적 정적 계약 5건과 전체 demo Rules 회귀 Actions `35565203228`이 통과했고, 추적 Rules SHA-256은 `907302E0747A28FFFB581DB295E60633C04811EF33E6AE3F161EA5A6CB5B0FD6`다. 운영 Rules 게시와 실기기 신청 승인 확인 전에는 완료 또는 `dev` 통합으로 판정하지 않는다.
+구현 상태: 제품 Dart 코드는 변경하지 않았다. `joinRelations`, `members`, `groupMembershipState`, Player `groupRelations`, `groups`의 application 승인 분기를 값싼 명령 식별 guard와 함께 앞쪽으로 옮겼다. 승인 조건·Transaction 문서 수·저장 스키마는 유지했다. 표적 정적 계약 5건과 전체 demo Rules 회귀 Actions `35565203228`이 통과했고, 추적 Rules SHA-256은 `907302E0747A28FFFB581DB295E60633C04811EF33E6AE3F161EA5A6CB5B0FD6`다. 사용자가 같은 Rules를 운영에 게시한 뒤 기존 승인 실패 Player 2명 모두 정상 승인됨을 확인했다.
 
 ### 조사 순서
 
@@ -43,7 +43,7 @@
    - `groups/{groupId}`의 `status`, `leaderPlayerId`, `memberCount`, `revision`
 3. **완료:** 보안 조건을 삭제하지 않고 승인임을 식별하는 싼 필드 guard 뒤 `validGroupApplicationDecision`, `validApprovedGroupMember`, `validLeaderApprovedMembershipStateAdd`, `validLeaderApprovedGroupRelation`, `validGroupLeaderApproveUpdate`를 각 관련 allow의 앞쪽에서 평가하게 했다.
 4. **완료:** 최초 승인과 빈 membership 재가입 승인, 초대코드 가입, 그룹 생성·탈퇴·그룹장 이전·1인 해산을 같은 demo CI `35565203228`에서 검증했다. Rules 조건·문서 수·Transaction 구조는 바꾸지 않았다.
-5. **남음:** 검증된 Rules를 운영에 게시한 뒤 사용자가 일반 가입 신청 승인을 실기기에서 확인한다. 게시 전후 소스 해시와 실패 단계를 기록하며, Indexes·Functions는 배포하지 않는다.
+5. **완료:** 사용자가 검증된 Rules를 운영에 게시한 뒤 기존 승인 실패 Player 2명의 일반 가입 신청 승인을 실기기에서 확인했다. Indexes·Functions는 배포하지 않았다.
 
 ### 회귀 보호와 완료 조건
 
@@ -51,7 +51,7 @@
 - block·50개 제한·정원·타인 조작은 계속 거절하며 private membership state를 그룹장에게 새로 공개하지 않는다.
 - 인원수 비례 조회·쓰기, 전원 순회, Cloud Functions와 콘솔 수동 정리를 도입하지 않는다.
 - 원인은 demo Rules CI로 확정했다. 수정은 승인 validator 평가 순서와 싼 guard에 한정하고 실제 UX는 사용자가 실기기에서 확인한다.
-- 이 작업이 분석·수정·실기기 확인을 마치기 전 `dev`·`main`에 통합하지 않는다.
+- 분석·수정·자동 검증·운영 게시·실기기 확인을 마쳤다. 작업 브랜치를 `dev`에 통합하기 전 최신 `origin/dev`와 충돌 여부를 확인하며, `main`에는 직접 통합하지 않는다.
 
 ### 실기기 확인됨 (고쳐진 것)
 

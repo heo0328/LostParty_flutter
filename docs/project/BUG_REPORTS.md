@@ -22,7 +22,7 @@
 
 | 항목 | 내용 |
 | --- | --- |
-| 상태 | Rules 수정·자동 검증 완료, 운영 게시·실기기 확인 전 — `fix/group-join-relation-conflict` |
+| 상태 | 종료 — Rules 게시 후 기존 실패 Player 2명 승인 확인 |
 | 보고일 | 2026-09-21 |
 | 관련 화면 | 그룹 가입 신청 승인, 직접 초대 수락, 초대코드 가입 |
 
@@ -43,12 +43,12 @@
 - Player 2도 빈 배열/count 0/revision 6인 기존 문서에서 동일하게 실패해 특정 계정 문제가 아니라 공통 승인 경로로 범위가 넓어졌다.
 - demo Rules CI `35562516961`에서 membership 문서가 없는 최초 가입 승인도 `maximum of 1000 expressions`로 거절됐다. 현재 그룹 신청 승인 Transaction 전체가 Rules OR 순서 때문에 예산을 초과하는 회귀로 원인을 확정한다.
 - 승인 Transaction이 쓰는 신청 원본, 멤버, membership 요약, Player Projection, 그룹 원본의 application 승인 validator가 각각 무관한 분기 뒤쪽에 있다. 보안 검사를 완화하지 않고 싼 명령 식별 guard와 승인 validator를 앞쪽에 배치하는 최소 Rules 수정이 필요하다.
-- 해당 다섯 승인 분기를 값싼 guard와 함께 앞쪽으로 옮긴 뒤 Actions `35565203228`에서 최초 membership 생성 승인과 revision 14의 빈 membership 갱신 승인, 기존 그룹 전체 회귀가 통과했다. 운영 게시와 실기기 확인은 남아 있다.
+- 해당 다섯 승인 분기를 값싼 guard와 함께 앞쪽으로 옮긴 뒤 Actions `35565203228`에서 최초 membership 생성 승인과 revision 14의 빈 membership 갱신 승인, 기존 그룹 전체 회귀가 통과했다. 사용자가 Rules를 게시한 뒤 기존에 실패하던 Player 2명 모두 정상 승인됐다.
 - 신청 승인은 대상의 private membership 요약을 읽지 않고 배열 합집합·숫자 증가로 병합한다. 이번 데이터는 정상이지만 과거 데이터의 `activeGroupIds`, `activeGroupCount`, `revision` 불일치에 취약한 점은 별도 회귀 경계다.
 - 초대코드 가입은 membership과 Player relation을 완성된 형태로 다시 써서 기존 불일치를 정상화했을 수 있다. 따라서 코드 가입 후 데이터는 실패 당시 원인을 보존하지 않을 수 있다.
 - 직접 초대 수락까지 동일하게 실패했는지는 최초 실패 동작과 서버 오류 code를 분리해 재확인한다. 신청 승인 실패와 한 원인으로 미리 묶지 않는다.
 
-운영 게시와 실기기 완료 조건은 [`NEXT_WORK.md`](NEXT_WORK.md)의 `BUG-021` 작업 구간을 따른다.
+작업 브랜치 통합 상태는 [`NEXT_WORK.md`](NEXT_WORK.md)의 `BUG-021` 작업 구간을 따른다.
 
 ---
 
