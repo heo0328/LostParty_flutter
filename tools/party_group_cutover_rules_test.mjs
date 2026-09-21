@@ -1453,8 +1453,8 @@ async function main() {
     const returningJoinerDb = testEnv.authenticatedContext(joinerAuthUid).firestore();
     await assertSucceeds(applyToGroupTxn(returningJoinerDb, 'group-empty-approval'));
     console.log('test: group application approval updates empty membershipState');
-    await assertFails(approveGroupApplicationTxn(db, 'group-empty-approval'));
-    console.log('PASS: empty membershipState approval denial reproduced');
+    await assertSucceeds(approveGroupApplicationTxn(db, 'group-empty-approval'));
+    console.log('PASS: empty membershipState approval');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);
