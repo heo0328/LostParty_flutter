@@ -3393,3 +3393,10 @@
 - 태그는 `pubspec.yaml` versionName 및 `origin/main` 포함 여부를 확인한다. Release 게시는 서명 Secrets가 없는 별도 `contents: write` job에서만 수행하며 기존 Release를 덮어쓰지 않는다.
 - 변경 후 로컬 release APK 재빌드가 성공했다. 원격 Secrets 등록·Actions 실행·임시 작업 브랜치 trigger 제거는 아직 수행하지 않았다.
 - 사용자가 keystore와 비밀번호의 별도 백업을 완료했다. GitHub Actions Secrets 네 개를 값 노출 없이 등록하고 이름·갱신 시각만 확인했다. 최초 원격 workflow 실행은 작업 브랜치 push 뒤 진행한다.
+
+# 2026-09-21 Android APK Actions artifact 검증
+
+- 첫 원격 run `35591621599`는 APK 빌드와 Secrets 복원까지 성공했지만 새 `apksigner` 출력의 두 번째 콜론 앞 문자열을 지문으로 읽어 검증 단계에서 실패했다. 실제 APK 서명 실패나 키 불일치가 아니므로 서명 설정은 바꾸지 않았다.
+- 지문 추출을 마지막 `certificate SHA-256 digest:` 값 기준으로 수정했다. 동시에 key alias와 같은 문자열이 포함된 job output이 Secret으로 오인돼 생략되지 않도록 workflow artifact 이름을 중립화하고, GitHub 공식 Action을 Node 24 기반 최신 major로 올렸다.
+- 두 번째 run `35592769624`에서 Secrets 복원, release APK 빌드, package `kr.co.heowork0921.lostparty`, version `1.0.0+1`, 승인 인증서 지문, SHA-256 생성과 7일 artifact 업로드가 모두 통과했다.
+- 원격 검증용 작업 브랜치 push trigger는 성공 후 제거했다. 최종 workflow는 수동 artifact와 `v*` 태그 GitHub Release만 제공한다.

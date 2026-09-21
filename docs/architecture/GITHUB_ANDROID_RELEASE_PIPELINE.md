@@ -84,7 +84,7 @@
 
 workflow가 tag를 자동 생성하거나 브랜치를 병합하지 않는다. release 안정화가 끝나 `main`과 `dev`를 최종 release 시점으로 맞춘 뒤 사람이 해당 커밋에 태그를 생성·푸시한다.
 
-작업 브랜치에서 Secrets·서명·artifact를 검증하는 동안에만 해당 브랜치 push trigger를 둔다. 검증이 끝나면 이 임시 trigger를 제거하고 최종 workflow는 `workflow_dispatch`와 `v*` tag만 유지한다.
+작업 브랜치에서 Secrets·서명·artifact를 검증하는 동안에만 해당 브랜치 push trigger를 두었고, Actions `35592769624` 성공 뒤 제거했다. 최종 workflow는 `workflow_dispatch`와 `v*` tag만 유지한다.
 
 ## 5. 회귀 보호와 실패 처리
 
