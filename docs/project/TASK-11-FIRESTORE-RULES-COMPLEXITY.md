@@ -5,7 +5,7 @@
 - 현재 Player가 신청자인 application만, 부모 모집 없음 또는 `completed/disbanded/incompleteEnded`일 때 단건 삭제하도록 허용했다. 활성 부모와 타인 신청은 계속 거절한다.
 - 모집 Aggregate·membership·`raidState`·주간 완료·이벤트 쓰기를 추가하지 않아 인원수 비례 조회나 fan-out이 없다. 삭제 판정은 부모 모집 경로 한 건만 확인한다.
 - GitHub Actions demo Emulator `35529627164`에서 신규 허용·거절 사례와 기존 파티·그룹 회귀가 통과했다. Actions의 Node/setup-java 안내는 Rules 컴파일 경고가 아니다.
-- 추적 Rules SHA-256은 `6691D744E2D816D2618F1C8B2C8EFF7CB1C607F09CC238A11AE955C57583310B`다. 운영 Rules는 아직 게시하지 않았다.
+- 추적 Rules SHA-256은 `6691D744E2D816D2618F1C8B2C8EFF7CB1C607F09CC238A11AE955C57583310B`다. 사용자가 Firebase 콘솔에서 Rules를 직접 게시했고 실기기 고아 신청 삭제 성공을 확인했다. AI는 활성 소스 해시를 독립 대조하지 않았다.
 
 ## 2026-09-20 F6-D5 신청 state 최종 차단 검증
 

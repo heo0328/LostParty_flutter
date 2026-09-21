@@ -61,4 +61,4 @@
 
 ## 다음 작업
 
-파티·그룹 명령 재설계 F7은 `dev` 통합을 완료했다. 현재 `feature/raid-status-record-removal`에서 F8-A 승인 대기 고아 신청 정리를 진행한다. 부모 모집이 없거나 `completed/disbanded/incompleteEnded`인 본인 application 한 건만 삭제하고 활성 모집은 기존 철회를 유지한다. 앱·정적 계약과 GitHub Actions demo Emulator `35529627164`가 통과했으며 운영 Rules 게시와 실기기 확인은 남아 있다. 완료 기록 삭제는 공용 이벤트 재동기화와 로컬 tombstone 계약이 필요해 F8-B로 분리했다. 고아 데이터 상시 발견과 공대장 자동 거절은 [`../product/DETAIL_IMPROVEMENTS.md`](../product/DETAIL_IMPROVEMENTS.md)의 장기 후보로 유지한다.
+파티·그룹 명령 재설계 F7은 `dev` 통합을 완료했다. `feature/raid-status-record-removal`의 F8-A 승인 대기 고아 신청 정리는 자동 검증, 사용자 콘솔 Rules 게시와 실기기 확인까지 완료했다. 부모 모집이 없거나 `completed/disbanded/incompleteEnded`인 본인 application 한 건만 삭제하고 활성 모집은 기존 철회를 유지한다. 다음 범위는 F8-B 완료 기록 삭제이며, 공용 이벤트 재동기화와 로컬 tombstone 계약을 먼저 확정해야 한다. 고아 데이터 상시 발견과 공대장 자동 거절은 [`../product/DETAIL_IMPROVEMENTS.md`](../product/DETAIL_IMPROVEMENTS.md)의 장기 후보로 유지한다.
