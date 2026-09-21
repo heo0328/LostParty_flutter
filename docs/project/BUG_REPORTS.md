@@ -31,6 +31,7 @@
 1. Player 1이 그룹을 만들고 Player 2·3을 신청 또는 초대로 가입시킨다.
 2. Player 2는 가입되지만 Player 3은 `이 그룹에 가입할 수 없습니다.`가 표시된다. 요청 거절은 가능하다.
 3. Player 3이 같은 그룹에 초대코드로 가입하면 성공한다.
+4. 이전에 정상 승인됐던 Player 2도 새 그룹 재신청 승인에서 같은 증상이 발생했다. 이 Player도 빈 membership 문서가 `revision=6`으로 남아 있다.
 
 ### 현재 판단
 
@@ -39,6 +40,7 @@
 - 전달된 Player 3의 membership 요약은 빈 배열/count 0/revision 14로 서로 일치한다. 이번 사례의 우선 원인은 아니다.
 - 재확인 결과 문제 그룹의 `application/pending` 신청 원본과 Player 3의 `groupRelations/{groupId}` Projection은 모두 존재하고 서로 일치한다. Projection 누락 가설은 폐기한다.
 - Player 3의 membership은 빈 배열/count 0이지만 revision 14인 기존 문서다. 승인은 최초 create가 아니라 update Rules를 타며, 그룹장 승인 분기 앞에 일반 탈퇴·본인 가입 분기가 놓여 있다. 과거 같은 Rules OR 평가 순서에서 표현식 1,000개 초과가 반복됐고, 거절은 membership을 쓰지 않으며 초대코드는 본인 가입 분기에서 일찍 성공하므로 현재 현상을 함께 설명한다.
+- Player 2도 빈 배열/count 0/revision 6인 기존 문서에서 동일하게 실패해 특정 계정 문제가 아니라 기존 빈 membership update 경로의 공통 결함 가능성이 높아졌다.
 - 우선 검증은 membership 문서 없음과 기존 빈 문서 revision 14의 그룹장 승인을 Rules Emulator에서 비교해, 후자만 표현식 한도 `PERMISSION_DENIED`인지 확인하는 것이다.
 - 신청 승인은 대상의 private membership 요약을 읽지 않고 배열 합집합·숫자 증가로 병합한다. 이번 데이터는 정상이지만 과거 데이터의 `activeGroupIds`, `activeGroupCount`, `revision` 불일치에 취약한 점은 별도 회귀 경계다.
 - 초대코드 가입은 membership과 Player relation을 완성된 형태로 다시 써서 기존 불일치를 정상화했을 수 있다. 따라서 코드 가입 후 데이터는 실패 당시 원인을 보존하지 않을 수 있다.

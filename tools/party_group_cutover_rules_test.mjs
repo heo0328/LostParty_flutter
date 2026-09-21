@@ -19,6 +19,7 @@ import {
   serverTimestamp,
   deleteField,
   increment,
+  arrayUnion,
   Timestamp,
   where,
 } from 'firebase/firestore';
@@ -223,7 +224,7 @@ function offsetCycleKey(key, days) {
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
-async function seedJoiner(testEnv) {
+async function seedJoiner(testEnv, { membershipState = null } = {}) {
   const now = Timestamp.now();
   await testEnv.withSecurityRulesDisabled(async (context) => {
     const db = context.firestore();
@@ -238,6 +239,102 @@ async function seedJoiner(testEnv) {
       schemaVersion: 1, status: 'active', ownerPlayerId: joinerPlayerId,
       gameAccountId: 'account-2', characterName: '가입자', serverName: '루페온',
       characterClassName: '바드', itemAvgLevel: 1700,
+    });
+    if (membershipState != null) {
+      await setDoc(
+        doc(db, 'players', joinerPlayerId, 'groupMembershipState', 'current'),
+        membershipState,
+      );
+    }
+  });
+}
+
+async function applyToGroupTxn(db, groupId) {
+  return runTransaction(db, async (tx) => {
+    const groupRef = doc(db, 'groups', groupId);
+    const relationRef = doc(db, 'groups', groupId, 'joinRelations', joinerPlayerId);
+    const statsRef = doc(db, 'groups', groupId, 'applicantStats', joinerPlayerId);
+    const playerRelationRef = doc(db, 'players', joinerPlayerId, 'groupRelations', groupId);
+    const stateRef = doc(db, 'players', joinerPlayerId, 'groupMembershipState', 'current');
+    const characterRef = doc(db, 'characters', joinerCharacterId);
+    const group = (await tx.get(groupRef)).data();
+    await tx.get(stateRef);
+    await tx.get(characterRef);
+    await tx.get(relationRef);
+    await tx.get(statsRef);
+    const expiresAt = Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000);
+    tx.set(relationRef, {
+      schemaVersion: 1, groupId, targetPlayerId: joinerPlayerId,
+      kind: 'application', status: 'pending', requestedByPlayerId: joinerPlayerId,
+      characterIdSnapshot: joinerCharacterId,
+      characterNameSnapshot: '가입자', serverNameSnapshot: '루페온',
+      characterClassNameSnapshot: '바드', itemLevelSnapshot: 1700,
+      combatPowerSnapshot: null, gemValidationSnapshot: null,
+      applicationAttempt: 1, revision: 1,
+      createdAt: serverTimestamp(), expiresAt, decidedAt: null,
+      updatedAt: serverTimestamp(),
+    });
+    tx.set(statsRef, {
+      schemaVersion: 1, groupId, playerId: joinerPlayerId,
+      applicationCount: 1, lastCharacterNameSnapshot: '가입자',
+      lastItemLevelSnapshot: 1700, lastCombatPowerSnapshot: null,
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+    tx.set(playerRelationRef, {
+      schemaVersion: 1, groupId, playerId: joinerPlayerId,
+      relation: 'applied', requestStatus: 'pending',
+      groupNameSnapshot: group.name,
+      displayCharacterNameSnapshot: '가입자', expiresAt,
+      sourceRevision: 1, createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    tx.update(groupRef, {
+      revision: group.revision + 1,
+      lastActivityAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+  });
+}
+
+async function approveGroupApplicationTxn(db, groupId) {
+  return runTransaction(db, async (tx) => {
+    const groupRef = doc(db, 'groups', groupId);
+    const relationRef = doc(db, 'groups', groupId, 'joinRelations', joinerPlayerId);
+    const memberRef = doc(db, 'groups', groupId, 'members', joinerPlayerId);
+    const stateRef = doc(db, 'players', joinerPlayerId, 'groupMembershipState', 'current');
+    const playerRelationRef = doc(db, 'players', joinerPlayerId, 'groupRelations', groupId);
+    const group = (await tx.get(groupRef)).data();
+    const relation = (await tx.get(relationRef)).data();
+    await tx.get(memberRef);
+    tx.update(relationRef, {
+      status: 'accepted', revision: relation.revision + 1,
+      decidedAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+    tx.set(memberRef, {
+      schemaVersion: 1, groupId, playerId: joinerPlayerId, role: 'member',
+      joinedAt: serverTimestamp(), joinSequence: group.memberCount + 1,
+      joinedBy: 'application', displayCharacterIdSnapshot: joinerCharacterId,
+      displayCharacterNameSnapshot: '가입자', displayClassNameSnapshot: '바드',
+      itemLevelSnapshot: 1700, combatPowerSnapshot: null,
+      gemValidationSnapshot: null, revision: 1,
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+    tx.set(stateRef, {
+      schemaVersion: 1, playerId: joinerPlayerId,
+      activeGroupIds: arrayUnion(groupId),
+      activeGroupCount: increment(1), revision: increment(1),
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    tx.set(playerRelationRef, {
+      schemaVersion: 1, groupId, playerId: joinerPlayerId,
+      relation: 'member', requestStatus: 'accepted',
+      groupNameSnapshot: group.name,
+      displayCharacterNameSnapshot: relation.characterNameSnapshot,
+      expiresAt: null, sourceRevision: 1,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    tx.update(groupRef, {
+      memberCount: group.memberCount + 1, revision: group.revision + 1,
+      lastActivityAt: serverTimestamp(), updatedAt: serverTimestamp(),
     });
   });
 }
@@ -1333,6 +1430,35 @@ async function main() {
     await assertSucceeds(createGroupTxn(db, 'group-new-1'));
     console.log('PASS: group create clean');
 
+    await seedJoiner(testEnv);
+    const firstJoinerDb = testEnv.authenticatedContext(joinerAuthUid).firestore();
+    await assertSucceeds(applyToGroupTxn(firstJoinerDb, 'group-new-1'));
+    console.log('test: group application approval creates first membershipState');
+    await assertSucceeds(approveGroupApplicationTxn(db, 'group-new-1'));
+    console.log('PASS: first group application approval');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await assertSucceeds(createGroupTxn(db, 'group-empty-approval'));
+    await seedJoiner(testEnv, {
+      membershipState: {
+        schemaVersion: 1,
+        playerId: joinerPlayerId,
+        activeGroupIds: [],
+        activeGroupCount: 0,
+        revision: 14,
+        updatedAt: Timestamp.now(),
+      },
+    });
+    const returningJoinerDb = testEnv.authenticatedContext(joinerAuthUid).firestore();
+    await assertSucceeds(applyToGroupTxn(returningJoinerDb, 'group-empty-approval'));
+    console.log('test: group application approval updates empty membershipState');
+    await assertFails(approveGroupApplicationTxn(db, 'group-empty-approval'));
+    console.log('PASS: empty membershipState approval denial reproduced');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await assertSucceeds(createGroupTxn(db, 'group-new-1'));
     await seedJoiner(testEnv);
     await assertSucceeds(createJoinCodeTxn(db, 'group-new-1'));
     console.log('test: join by code on clean membershipState');

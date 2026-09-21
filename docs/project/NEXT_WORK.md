@@ -22,11 +22,14 @@
 ### 코드 대조 결과와 1차 가설
 
 1. 전달된 Player 3의 `groupMembershipState/current`는 `activeGroupIds=[]`, `activeGroupCount=0`, `revision=14`, `schemaVersion=1`, 같은 `playerId`로 확인됐다. 배열과 count가 일치하므로 이번 사례의 1차 원인을 membership 요약 불일치로 보지 않는다.
+   이전에 승인이 성공했던 Player 2도 재신청 승인 시 동일하게 실패했고, 이 Player 역시 `activeGroupIds=[]`, `activeGroupCount=0`, `revision=6`인 기존 membership 문서를 가진다. 따라서 특정 디바이스·Player 하나의 고아 상태가 아니라 **빈 membership 문서가 남아 있는 재가입 계정의 공통 경로**로 범위를 수정한다.
 2. 재확인 결과 문제 그룹 `p7RU5Dm8IfAMmGZg2hSv`에는 Player 3의 `joinRelations/{playerId}`와 `players/{playerId}/groupRelations/{groupId}`가 모두 존재하며, `application/applied`, `pending`, `sourceRevision=1`, Snapshot과 시각도 서로 일치한다. Projection 누락 가설은 폐기한다.
 3. Player 3은 빈 membership 문서가 `revision=14`로 이미 존재하므로 신청 승인 시 `groupMembershipState/current`의 **update Rules**를 탄다. 이 update allow는 `validMembershipStateRemove` → 본인 `validMembershipStateAdd` → `validLeaderApprovedMembershipStateAdd` 순서다. 그룹장이 실행하는 승인에서는 앞선 두 분기가 실패한 뒤 세 번째의 깊은 `get/getAfter` 검증까지 평가된다.
 4. 이 저장소에서는 그룹장 이전·초대코드·모집 신청 update에서도 기능 조건은 맞지만 Rules OR 순서 때문에 표현식 1,000개 한도를 넘겨 `permission-denied`가 발생한 이력이 있다. Player 3의 `revision=14` 빈 문서는 create가 아닌 더 깊은 update 분기를 선택하게 하고, 거절은 membership 문서를 쓰지 않으며, 초대코드 가입은 본인 `validMembershipStateAdd`에서 더 일찍 성공한다. 세 관찰을 함께 설명하므로 **membership update의 그룹장 승인 분기 평가 예산**을 현재 1순위 원인 가설로 둔다.
 5. 신청 승인은 그룹장이 대상 Player의 private membership을 읽지 못하므로 `activeGroupIds=arrayUnion(groupId)`, `activeGroupCount=increment(1)`, `revision=increment(1)` 병합 쓰기를 보낸다. 전달 데이터라면 결과는 ID 1개/count 1/revision 15로 논리적으로 유효하므로 데이터 값 자체보다 Rules 평가 경로를 먼저 검증한다.
 6. 현재 자동 검증은 그룹 생성·초대코드 및 Write Plan/Rules 문자열 계약은 갖지만, **기존의 빈 membership 문서를 update하는 그룹장 신청 승인** 실제 Rules Transaction이 없다. 정상 create 승인과 이 update 승인을 나란히 재현해 오류 메시지의 표현식 한도 여부를 확인한다.
+
+진단 구현 상태: 제품 코드·Rules는 변경하지 않고 전체 Rules 회귀 도구에 `membership 문서 없음 → 최초 승인`과 `빈 membership/revision 14 → 재가입 승인` Transaction을 추가했다. 로컬 문법 검사는 통과했다. 저장소의 기존 Windows Emulator 503 이력 때문에 동일 로컬 실행을 반복하지 않고, 작업 브랜치 CI 실행 전까지 원인 확정으로 표시하지 않는다.
 
 ### 조사 순서
 
