@@ -6,7 +6,34 @@
 - R1~R7·C* 구현과 운영 Rules·Indexes 게시는 완료했다. 운영 Router는 원자 Repository·어댑터를 쓴다.
 - 로컬에는 생성·읽기 v2·이전 Close/Open 가드·승인 패치·listing sync·Listen 가드·orphan 공개 전환·모집 삭제→disband·캐릭터 변경 atomic OR·그룹 전용방 파티장 탈퇴 차단 등이 **코드로 들어가 있다**.
 - **실기기 판정(2026-09-16 사용자 확인):** 아래 성공 항목은 사용자가 디바이스에서 확인했다. 그 밖의 보고 실패는 로컬 수정·자동 테스트 통과만으로 완료로 쓰지 않는다.
-- **2026-09-21 현재 작업:** 파티·그룹 재설계 F7과 승인 대기 고아 신청 정리 F8-A는 구현·검증·Rules 게시·실기기 확인 및 `dev`·`main` 통합을 완료했다. 검토하던 완료 기록 삭제 F8-B는 폐기했다. `BUG-021`도 Rules 수정·자동 검증·운영 게시와 기존 실패 Player 2명의 실기기 승인, `dev` 통합까지 완료했다. 다음 독립 작업은 GitHub Actions 파이프라인 구축·검증이다.
+- **2026-09-21 현재 작업:** 파티·그룹 재설계 F7, F8-A와 `BUG-021`은 완료했다. 다음 독립 작업은 정식 Android ID `kr.co.heowork0921.lostparty`, 영구 release 서명과 태그 기반 GitHub APK Release 파이프라인 구축이다. 상세 계약은 [`GITHUB_ANDROID_RELEASE_PIPELINE.md`](../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md)를 따른다.
+
+## 현재 단일 작업 — GitHub Android APK Release 파이프라인
+
+### 포함 범위
+
+1. Firebase 프로젝트 `lost-party`에 정식 package ID의 Android 앱을 추가하고 Android FlutterFire 설정을 교체한다.
+2. Gradle·MainActivity를 `kr.co.heowork0921.lostparty`로 일치시킨다.
+3. 한 개의 영구 release keystore를 로컬과 GitHub Actions에서 안전하게 공유하도록 signingConfig와 ignore/Secret 계약을 구성한다.
+4. 수동 실행에서는 APK artifact만, `v*` 태그에서는 GitHub Release와 APK·SHA-256을 생성하는 workflow를 추가한다.
+5. package/version/signature 검사를 통과한 APK만 게시한다.
+
+### 진행 순서
+
+1. 새 Firebase Android 앱 등록과 설정 파일 확보 — 외부 프로젝트 변경이므로 사용자 승인·로그인 상태를 확인한 뒤 수행
+2. 앱 ID·FlutterFire config 전환과 로컬 release APK 빌드
+3. 정식 ID 앱의 Firebase Auth·Firestore 실기기 확인
+4. release keystore 생성·오프라인 백업 및 GitHub Secrets 등록
+5. Actions 수동 artifact 빌드·다운로드·업데이트 설치 확인
+6. release workflow의 태그/버전/main 이력 가드 검증
+7. 최종 release 승인 시 태그를 푸시해 GitHub Release APK 확인
+
+### 완료 게이트
+
+- 새 ID의 설치·Firebase 연결과 같은 키의 업데이트 설치를 사용자가 실기기에서 확인한다.
+- Secret 누락·버전 불일치·main 밖 태그·중복 Release는 게시 전에 실패한다.
+- workflow는 앱 기능·Firestore·브랜치·태그를 임의 변경하지 않는다.
+- 구현·Actions 검증·실기기 확인 전에는 `dev`에 통합하지 않는다.
 
 ## 완료 작업 — BUG-021 그룹 가입 신청 승인 Rules 회귀
 

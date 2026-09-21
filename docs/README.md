@@ -44,6 +44,7 @@
 - [`architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md): Task-11 그룹 생성·Player 단위 가입·초대코드와 Rules 계약
 - [`architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md`](architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md): 그룹장 즉시 지정 이전·후속 탈퇴·1인 해산과 보관 계약
 - [`architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md): 인원수 비례 파티·그룹 명령, 공용 이벤트·Aggregate·통합 raidState·8인 제한 원자 명령 재설계
+- [`architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md`](architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md): 정식 Android ID·영구 서명키·태그 기반 APK GitHub Release 자동화 계약
 
 ## Integrations
 

@@ -3365,3 +3365,9 @@
 
 - 최신 `origin/dev`가 작업 브랜치의 직접 조상임을 확인하고 `fix/group-join-relation-conflict`를 `dev`에 fast-forward했다. 기능 완료 커밋 `063612c`까지 `origin/dev`에 푸시했으며 충돌과 이력 재작성은 없었다.
 - 이 완료 기록을 반영한 문서 커밋도 같은 작업 브랜치를 거쳐 `dev`에 통합한다. `main`과 release는 변경하지 않으며 다음 독립 작업은 GitHub Actions 파이프라인 구축·검증이다.
+
+# 2026-09-21 GitHub Android APK Release 파이프라인 준비
+
+- 사용자가 수동으로 만든 release APK를 실기기에 설치해 정상 작동을 확인했다. 현재 Gradle release는 debug key로 서명되고 Android ID는 `com.example.lost_party`이므로 이 결과만으로 반복 가능한 정식 배포 상태로 보지 않는다.
+- 정식 Android ID를 `kr.co.heowork0921.lostparty`로 확정했다. Firebase Android 앱 재등록, Gradle·MainActivity·FlutterFire config 일치, 영구 release keystore와 GitHub Secrets, 수동 artifact와 `v*` 태그 GitHub Release의 단계별 계약을 추가했다.
+- 현재 Flutter 3.41.6/Dart 3.11.4, CI Java 21, `pubspec.yaml` 1.0.0+1을 기준으로 한다. 아직 앱 ID·Firebase 설정·서명·workflow·외부 GitHub/Firebase 상태는 변경하지 않았다.

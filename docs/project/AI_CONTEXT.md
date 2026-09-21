@@ -61,4 +61,4 @@
 
 ## 다음 작업
 
-파티·그룹 명령 재설계 F7, F8-A 승인 대기 고아 신청 정리와 BUG-021 그룹 신청 승인 복구는 구현·자동 검증·사용자 콘솔 Rules 게시·실기기 확인 및 `dev` 통합까지 완료했다. F7·F8-A 완료 기준은 `main`에도 반영됐지만 BUG-021은 릴리즈 결정 전이므로 `main`에 올리지 않았다. 검토하던 F8-B 완료 기록 삭제는 제품상 삭제 사유가 없다고 재판단해 폐기했다. 다음 작업은 별도 범위의 GitHub Actions 파이프라인 구축·검증이다. 고아 데이터 상시 발견과 공대장 자동 거절은 [`../product/DETAIL_IMPROVEMENTS.md`](../product/DETAIL_IMPROVEMENTS.md)의 장기 후보로 유지한다.
+파티·그룹 명령 재설계 F7, F8-A 승인 대기 고아 신청 정리와 BUG-021 그룹 신청 승인 복구는 구현·검증·운영 반영·실기기 확인 및 `dev` 통합까지 완료했다. 다음 작업은 정식 Android ID `kr.co.heowork0921.lostparty` 전환, 영구 release 서명과 GitHub Releases APK 자동 게시다. 실행 계약은 [`../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md`](../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md)를 따른다. 고아 데이터 상시 발견과 공대장 자동 거절은 [`../product/DETAIL_IMPROVEMENTS.md`](../product/DETAIL_IMPROVEMENTS.md)의 장기 후보로 유지한다.
