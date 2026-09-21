@@ -37,8 +37,9 @@
 - 같은 Player·그룹의 초대코드 가입이 성공했으므로 block, 정원, 그룹 비활성, 50개 가입 한도, Player/Character 활성·소유권과 전역 Rules 불일치는 가능성이 낮다.
 - 표시 문구는 실제 block뿐 아니라 Firestore `permission-denied`에도 공용이므로 차단되었다는 증거가 아니다.
 - 전달된 Player 3의 membership 요약은 빈 배열/count 0/revision 14로 서로 일치한다. 이번 사례의 우선 원인은 아니다.
-- 문제 그룹에는 `application/pending` 신청 원본이 있지만 Player 3의 대응 `groupRelations/{groupId}` Projection이 없다. 승인은 기존 Projection을 전제로 `createdAt` 없이 merge하며 Rules는 최종 `createdAt` timestamp를 요구하므로, 이 누락은 현재 승인 `permission-denied`를 직접 설명한다.
-- 현재 신청 Repository와 Rules는 신청 원본과 Projection을 같은 Transaction으로 생성하므로 정상 최신 경로에서 이 부분 상태가 생겨서는 안 된다. 누락의 발생 원인은 과거/다른 실행 경로, 수동 삭제, 운영 Rules 불일치 또는 콘솔 표시 지연을 분리해 확인한다.
+- 재확인 결과 문제 그룹의 `application/pending` 신청 원본과 Player 3의 `groupRelations/{groupId}` Projection은 모두 존재하고 서로 일치한다. Projection 누락 가설은 폐기한다.
+- Player 3의 membership은 빈 배열/count 0이지만 revision 14인 기존 문서다. 승인은 최초 create가 아니라 update Rules를 타며, 그룹장 승인 분기 앞에 일반 탈퇴·본인 가입 분기가 놓여 있다. 과거 같은 Rules OR 평가 순서에서 표현식 1,000개 초과가 반복됐고, 거절은 membership을 쓰지 않으며 초대코드는 본인 가입 분기에서 일찍 성공하므로 현재 현상을 함께 설명한다.
+- 우선 검증은 membership 문서 없음과 기존 빈 문서 revision 14의 그룹장 승인을 Rules Emulator에서 비교해, 후자만 표현식 한도 `PERMISSION_DENIED`인지 확인하는 것이다.
 - 신청 승인은 대상의 private membership 요약을 읽지 않고 배열 합집합·숫자 증가로 병합한다. 이번 데이터는 정상이지만 과거 데이터의 `activeGroupIds`, `activeGroupCount`, `revision` 불일치에 취약한 점은 별도 회귀 경계다.
 - 초대코드 가입은 membership과 Player relation을 완성된 형태로 다시 써서 기존 불일치를 정상화했을 수 있다. 따라서 코드 가입 후 데이터는 실패 당시 원인을 보존하지 않을 수 있다.
 - 직접 초대 수락까지 동일하게 실패했는지는 최초 실패 동작과 서버 오류 code를 분리해 재확인한다. 신청 승인 실패와 한 원인으로 미리 묶지 않는다.
