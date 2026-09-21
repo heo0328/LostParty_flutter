@@ -21,10 +21,13 @@
 
 ### 코드 대조 결과와 1차 가설
 
-1. 신청 승인은 그룹장이 대상 Player의 private `groupMembershipState/current`를 읽지 못하므로 `activeGroupIds=arrayUnion(groupId)`, `activeGroupCount=increment(1)`, `revision=increment(1)` 병합 쓰기를 보낸다. Rules는 최종 배열 크기·count·revision·신규 groupId 하나 추가를 대조한다. 기존 요약의 배열/count/revision이 어긋나 있으면 거절은 가능하지만 승인은 `permission-denied`가 된다.
-2. 초대 수락과 초대코드 가입은 가입자가 자기 membership state를 읽고 완성된 문서를 다시 쓴다. 초대코드는 pending 요청이 없거나 이미 최종 상태면 `requestStatus=null`인 코드 전용 Projection 분기를 사용하므로, 과거 `groupRelations/{groupId}` 또는 요청 전이 데이터가 깨진 경우 일반 승인/수락만 실패하고 코드 가입은 성공할 수 있다.
-3. 코드 가입 성공은 `groupMembershipState/current`, `groupRelations/{groupId}`, `members/{playerId}`를 정상 가입 형태로 갱신할 수 있다. 따라서 이번 성공 뒤의 현재 데이터는 실패 직전 고아·불일치를 이미 덮었을 수 있으며, 현재 문서만 보고 원인이 없었다고 판단하지 않는다.
-4. 현재 자동 검증은 그룹 생성·초대코드 및 Write Plan/Rules 문자열 계약은 갖지만, 기존 불일치 membership/projection을 가진 Player의 신청 승인·초대 수락 실제 Rules Transaction을 충분히 재현하지 않는다. 수정 전에 이 빈 구간을 대표 데이터로 먼저 고정한다.
+1. 전달된 Player 3의 `groupMembershipState/current`는 `activeGroupIds=[]`, `activeGroupCount=0`, `revision=14`, `schemaVersion=1`, 같은 `playerId`로 확인됐다. 배열과 count가 일치하므로 이번 사례의 1차 원인을 membership 요약 불일치로 보지 않는다.
+2. 문제 그룹 `p7RU5Dm8IfAMmGZg2hSv`에는 Player 3의 `joinRelations/{playerId}`가 정상 `application/pending/revision=1`로 있지만, 대응하는 `players/{playerId}/groupRelations/{groupId}`가 존재하지 않는다. 승인 Rules는 승인 후 Projection 존재와 유효한 `createdAt` timestamp를 요구한다. 승인 Write Plan은 기존 Projection 보존을 전제로 `createdAt` 없이 merge하므로, Projection이 실제로 없으면 불완전 문서를 만들게 되어 `permission-denied`가 발생한다. 이는 현재 승인 실패의 직접 원인으로 설명된다.
+3. 정상 신청 Repository와 현재 Rules는 신청 원본·applicantStats·역방향 Projection·그룹 activity를 한 Transaction으로 쓰며 Rules도 `existsAfter(groupRelationPath(...))`를 요구한다. 따라서 현재 추적 앱·Rules의 정상 신청만으로 `pending 원본만 있고 Projection이 없는 상태`가 새로 생겨서는 안 된다. 과거/다른 실행 경로, 수동 삭제, 운영 Rules 불일치 또는 콘솔 표시 지연 중 무엇인지 별도로 확정해야 한다.
+4. 신청 승인은 그룹장이 대상 Player의 private `groupMembershipState/current`를 읽지 못하므로 `activeGroupIds=arrayUnion(groupId)`, `activeGroupCount=increment(1)`, `revision=increment(1)` 병합 쓰기를 보낸다. 이번 데이터에서는 요약이 정상이나, 별도 과거 데이터의 불일치에는 여전히 취약한 구조이므로 회귀 경계로 유지한다.
+5. 초대 수락과 초대코드 가입은 가입자가 자기 membership state를 읽고 완성된 문서를 다시 쓴다. 초대코드는 pending 요청이 없거나 이미 최종 상태면 `requestStatus=null`인 코드 전용 Projection 분기를 사용하므로, 과거 `groupRelations/{groupId}` 또는 요청 전이 데이터가 깨진 경우 일반 승인/수락만 실패하고 코드 가입은 성공할 수 있다.
+6. 코드 가입 성공은 `groupMembershipState/current`, `groupRelations/{groupId}`, `members/{playerId}`를 정상 가입 형태로 갱신할 수 있다. 따라서 이번 성공 뒤의 현재 데이터는 실패 직전 고아·불일치를 이미 덮었을 수 있으며, 현재 문서만 보고 원인이 없었다고 판단하지 않는다.
+7. 현재 자동 검증은 그룹 생성·초대코드 및 Write Plan/Rules 문자열 계약은 갖지만, Projection 누락 상태의 신청 승인·거절·초대 수락 실제 Rules Transaction을 충분히 재현하지 않는다. 수정 전에 이 빈 구간을 대표 데이터로 먼저 고정한다.
 
 ### 조사 순서
 
@@ -36,7 +39,7 @@
    - `groups/{groupId}/members/{targetPlayerId}` 존재 여부
    - `groups/{groupId}/blockedPlayers/{targetPlayerId}` 존재 여부
    - `groups/{groupId}`의 `status`, `leaderPlayerId`, `memberCount`, `revision`
-3. 위 데이터를 그대로 Rules Emulator에 만들어 일반 신청 승인, 초대 수락, 거절, 초대코드 가입을 비교한다. 정상 Player 자료와 달라지는 첫 Rules 조건을 원인으로 확정한다.
+3. 전달된 Projection 누락 데이터를 그대로 Rules Emulator에 만들어 일반 신청 승인과 거절을 비교한다. 현재 추적 Rules 기준으로 둘 다 Projection의 `createdAt` 조건을 어떻게 통과·거절하는지 확인하고, 사용자 관찰의 `거절 성공`과 다르면 운영 게시본 또는 실제 실행 경로 불일치로 분리한다. 이어 초대 수락과 초대코드 가입을 비교한다.
 4. 데이터 불일치가 원인이면 수동 콘솔 삭제를 정상 복구법으로 삼지 않는다. 가입자가 자기 상태를 안전하게 점검·정리하거나 정상 명령이 원자적으로 수렴시키는 최소 복구 계약을 별도로 설계한다. 정상 데이터에서도 실패하면 해당 Write Plan/Rules 분기만 수정한다.
 
 ### 회귀 보호와 완료 조건
