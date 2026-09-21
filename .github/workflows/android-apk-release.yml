@@ -182,7 +182,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "Release $GITHUB_REF_NAME already exists." >&2
             exit 1
           fi
@@ -196,5 +196,6 @@ jobs:
           "dist/lostparty-${GITHUB_REF_NAME}-android.apk"
           "dist/lostparty-${GITHUB_REF_NAME}-android.apk.sha256"
           --verify-tag
+          --repo "$GITHUB_REPOSITORY"
           --title "LOSTPARTY $VERSION_NAME"
           --generate-notes

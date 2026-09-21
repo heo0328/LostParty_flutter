@@ -3401,3 +3401,4 @@
 - 두 번째 run `35592769624`에서 Secrets 복원, release APK 빌드, package `kr.co.heowork0921.lostparty`, version `1.0.0+1`, 승인 인증서 지문, SHA-256 생성과 7일 artifact 업로드가 모두 통과했다.
 - 원격 검증용 작업 브랜치 push trigger는 성공 후 제거했다. 최종 workflow는 수동 artifact와 `v*` 태그 GitHub Release만 제공한다.
 - 사용자가 run `35592769624`의 `android-apk-1.0.0-1` artifact를 내려받아 실기기에 정상 설치했고, 앱 실행과 Firebase 기능도 정상 작동함을 확인했다. signed artifact 실기기 게이트를 통과했으며 같은 키의 후속 버전 덮어쓰기 설치는 최초 후속 버전에서 확인한다.
+- `dev`와 `main`을 검증 커밋 `0c93b34`로 맞추고 `v1.0.0` 태그를 게시했다. 태그 run `35596035632`에서 signed APK 빌드·검증·artifact 업로드는 통과했지만, checkout 없는 release job의 `gh release create`가 저장소를 자동 판별하지 못해 게시만 실패했다. Release 조회·생성 명령에 `--repo "$GITHUB_REPOSITORY"`를 명시하는 최소 보정을 적용하고, 성공 artifact를 재빌드하지 않는 복구 절차를 사용한다.
