@@ -32,7 +32,11 @@
 
 - **A 설정 전환 완료:** 사용자가 Firebase Android 앱 `kr.co.heowork0921.lostparty`를 등록하고 설정 파일을 전달했다. Gradle namespace/applicationId, MainActivity, `google-services.json`, `firebase.json`, Android `FirebaseOptions.appId`를 정식 ID와 Firebase app ID `1:574337852234:android:2e565a53ade5153dc057b3`로 맞췄다.
 - 새 JSON client 존재·app ID 연결 검사, `flutter analyze lib/firebase_options.dart`, 기존 Android Studio JBR을 사용한 `:app:processDebugGoogleServices`가 통과했다.
-- **다음 게이트:** 사용자가 새 package APK를 직접 빌드·설치해 Firebase 초기화, 익명 인증과 Firestore 기본 진입을 확인한다. 확인 전에는 기존 Firebase Android 앱 등록을 삭제하지 않고 서명·Actions 구현으로 넘어가지 않는다.
+- 사용자가 새 package APK가 기존 앱과 별도로 설치되고 정상 작동함을 확인해 정식 ID·Firebase 전환 게이트를 통과했다.
+- **B 로컬 서명 완료:** 영구 JKS와 Git에서 제외되는 `android/key.properties`를 구성하고 Gradle release buildType을 해당 키로 전환했다. `flutter build apk --release`가 성공했으며 APK package `kr.co.heowork0921.lostparty`, version `1.0.0+1`, 인증서 `CN=LostParty, OU=Development, O=HeoWork0921`를 확인했다. 키와 비밀번호는 Git 변경 목록에 없다.
+- **C workflow 로컬 구현 완료:** CI는 비밀번호 파일을 만들지 않고 네 Repository Secrets를 환경변수로 전달한다. package/version/승인 인증서 검증, SHA-256, 7일 artifact, tag/main 이력 가드와 기존 Release 덮어쓰기 차단을 구성했다. 작업 브랜치 push trigger는 최초 원격 검증 뒤 제거할 임시 항목이다.
+- **Secrets 등록 완료:** 사용자가 keystore·비밀번호의 별도 백업을 완료했고 GitHub Actions Secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`를 값 노출 없이 등록했다.
+- **다음 게이트:** 현재 변경을 커밋·작업 브랜치 push해 최초 signed artifact run을 검증한다. 성공하면 임시 작업 브랜치 push trigger를 제거하고 최종 `workflow_dispatch`·`v*` tag 계약만 남긴다. 기존 Firebase Android 앱 등록은 파이프라인 완료 전까지 유지한다.
 
 ### 완료 게이트
 

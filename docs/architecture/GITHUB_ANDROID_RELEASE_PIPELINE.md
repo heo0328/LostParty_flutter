@@ -23,13 +23,15 @@
 
 - 착수 시 Android ID는 임시값 `com.example.lost_party`였다.
 - 착수 시 `android/app/google-services.json`과 `lib/firebase_options.dart`의 Android Firebase 앱도 임시 ID에 연결돼 있었다.
-- 현재 `release` buildType은 debug signingConfig를 사용한다.
-- 로컬 `android/key.properties`와 정식 keystore는 저장소에 없다.
+- 착수 시 `release` buildType은 debug signingConfig를 사용했다.
+- 착수 시 로컬 `android/key.properties`와 정식 keystore는 저장소에 없었다.
 - Git tag와 GitHub Release는 아직 없다.
 
 수동 release APK의 실행 성공은 앱 런타임 확인 근거지만, CI 배포 준비 완료를 뜻하지 않는다. GitHub hosted runner의 임시 debug key로 매번 서명하면 다음 APK를 기존 설치본 위에 업데이트하지 못할 수 있으므로 정식 배포에는 하나의 영구 release key를 사용한다.
 
-2026-09-21에 사용자가 Firebase Android 앱 `kr.co.heowork0921.lostparty`를 추가하고 새 설정 파일을 전달했다. Gradle namespace/applicationId, MainActivity package·경로, `google-services.json`, `firebase.json`, Android `FirebaseOptions.appId`를 새 등록값으로 일치시켰다. JSON·정적 분석과 `processDebugGoogleServices`는 통과했으며 APK 빌드·실기기 Firebase 연결은 사용자 확인 전이다.
+2026-09-21에 사용자가 Firebase Android 앱 `kr.co.heowork0921.lostparty`를 추가하고 새 설정 파일을 전달했다. Gradle namespace/applicationId, MainActivity package·경로, `google-services.json`, `firebase.json`, Android `FirebaseOptions.appId`를 새 등록값으로 일치시켰다. JSON·정적 분석과 `processDebugGoogleServices`가 통과했고, 사용자가 새 package APK의 별도 설치와 정상 동작을 확인했다.
+
+같은 날 영구 JKS와 ignored `android/key.properties`를 만들고 Gradle release signingConfig를 해당 키로 전환했다. 로컬 release APK는 package `kr.co.heowork0921.lostparty`, version `1.0.0+1`, 인증서 `CN=LostParty, OU=Development, O=HeoWork0921`로 검증했다. keystore와 비밀번호는 Git 변경 목록에 포함되지 않는다. GitHub Secrets 등록과 Actions workflow 구현은 다음 단계다.
 
 ## 4. 작업 단계
 
@@ -50,7 +52,7 @@
 
 1. 사용자가 장기 보관할 release keystore를 로컬에서 한 번 생성하고 별도 백업한다.
 2. keystore와 비밀번호를 Git에 커밋하지 않는다.
-3. 로컬 빌드는 ignored `android/key.properties`로, CI는 GitHub Repository Secrets로 같은 키를 복원한다.
+3. 로컬 빌드는 ignored `android/key.properties`로 키를 읽는다. CI는 GitHub Repository Secrets를 환경변수로 Gradle에 전달하고 runner 임시 경로에 keystore만 복원한다. 비밀번호가 담긴 파일은 CI 작업 공간에 만들지 않는다.
 4. Secret 이름은 다음으로 고정한다.
    - `ANDROID_KEYSTORE_BASE64`
    - `ANDROID_KEYSTORE_PASSWORD`
@@ -72,15 +74,17 @@
 1. repository checkout
 2. Java 21과 Flutter 3.41.6 고정 설치
 3. `flutter pub get`
-4. Secrets로 임시 keystore와 `key.properties` 구성
+4. Secrets로 runner 임시 keystore를 복원하고 서명값을 환경변수로 전달
 5. 태그 실행이면 `v<pubspec versionName>` 일치 및 태그 커밋의 `main` 포함 여부 검사
 6. `flutter build apk --release`
 7. APK 서명 유효성, package ID, versionName/versionCode 검사
 8. `lostparty-<tag>-android.apk`로 이름 변경 및 `.sha256` 생성
-9. 수동 실행은 짧은 보존 기간의 workflow artifact 업로드
-10. 태그 실행은 `contents: write`의 기본 `GITHUB_TOKEN`으로 GitHub Release 생성 및 두 파일 첨부
+9. 검증 결과를 짧은 보존 기간의 workflow artifact로 업로드
+10. 수동 실행은 artifact까지만 제공하고, 태그 실행은 별도 최소 권한 job이 `contents: write`의 기본 `GITHUB_TOKEN`으로 GitHub Release 생성 및 두 파일 첨부
 
 workflow가 tag를 자동 생성하거나 브랜치를 병합하지 않는다. release 안정화가 끝나 `main`과 `dev`를 최종 release 시점으로 맞춘 뒤 사람이 해당 커밋에 태그를 생성·푸시한다.
+
+작업 브랜치에서 Secrets·서명·artifact를 검증하는 동안에만 해당 브랜치 push trigger를 둔다. 검증이 끝나면 이 임시 trigger를 제거하고 최종 workflow는 `workflow_dispatch`와 `v*` tag만 유지한다.
 
 ## 5. 회귀 보호와 실패 처리
 

@@ -1,0 +1,207 @@
+name: Android APK release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+    branches:
+      - feature/github-apk-release-pipeline
+    paths:
+      - .github/workflows/android-apk-release.yml
+      - android/**
+      - lib/**
+      - assets/**
+      - pubspec.yaml
+      - pubspec.lock
+
+concurrency:
+  group: android-apk-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and verify signed APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      artifact_name: ${{ steps.metadata.outputs.artifact_name }}
+      asset_name: ${{ steps.metadata.outputs.asset_name }}
+      version_name: ${{ steps.metadata.outputs.version_name }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate version and release source
+        id: metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          full_version="$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml | head -n 1 | tr -d '\r')"
+          if [[ ! "$full_version" =~ ^([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+)$ ]]; then
+            echo "pubspec.yaml version must use <name>+<code>." >&2
+            exit 1
+          fi
+
+          version_name="${BASH_REMATCH[1]}"
+          version_code="${BASH_REMATCH[2]}"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            expected_tag="v${version_name}"
+            if [[ "$GITHUB_REF_NAME" != "$expected_tag" ]]; then
+              echo "Tag $GITHUB_REF_NAME does not match pubspec version $expected_tag." >&2
+              exit 1
+            fi
+
+            git fetch origin main --no-tags
+            if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+              echo "Release tag commit is not contained in origin/main." >&2
+              exit 1
+            fi
+          fi
+
+          artifact_name="lostparty-${version_name}-${version_code}-android"
+          asset_name="${artifact_name}.apk"
+          echo "version_name=$version_name" >> "$GITHUB_OUTPUT"
+          echo "version_code=$version_code" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=$artifact_name" >> "$GITHUB_OUTPUT"
+          echo "asset_name=$asset_name" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.41.6
+          cache: true
+
+      - name: Validate signing secrets and restore keystore
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/lostparty-release.jks
+        run: |
+          set -euo pipefail
+          for value in \
+            "$ANDROID_KEYSTORE_BASE64" \
+            "$ANDROID_KEYSTORE_PASSWORD" \
+            "$ANDROID_KEY_ALIAS" \
+            "$ANDROID_KEY_PASSWORD"; do
+            if [[ -z "$value" ]]; then
+              echo "One or more Android signing secrets are missing." >&2
+              exit 1
+            fi
+          done
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$ANDROID_KEYSTORE_PATH"
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Build signed release APK
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/lostparty-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: flutter build apk --release
+
+      - name: Verify APK identity and signature
+        id: verify
+        shell: bash
+        env:
+          EXPECTED_PACKAGE: kr.co.heowork0921.lostparty
+          EXPECTED_CERT_SHA256: f9b9ee5a2ec4059ef329ae6b2e4b5392f729124c0a4f5f55248c9da8cd8bc5ea
+          VERSION_NAME: ${{ steps.metadata.outputs.version_name }}
+          VERSION_CODE: ${{ steps.metadata.outputs.version_code }}
+          ASSET_NAME: ${{ steps.metadata.outputs.asset_name }}
+        run: |
+          set -euo pipefail
+
+          apk="build/app/outputs/flutter-apk/app-release.apk"
+          build_tools_dir="$(find "$ANDROID_SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          aapt="$build_tools_dir/aapt"
+          apksigner="$build_tools_dir/apksigner"
+
+          badging="$($aapt dump badging "$apk" | head -n 1)"
+          [[ "$badging" == *"name='$EXPECTED_PACKAGE'"* ]]
+          [[ "$badging" == *"versionCode='$VERSION_CODE'"* ]]
+          [[ "$badging" == *"versionName='$VERSION_NAME'"* ]]
+
+          signer_output="$($apksigner verify --verbose --print-certs "$apk")"
+          certificate_sha256="$(printf '%s\n' "$signer_output" | awk -F': ' '/certificate SHA-256 digest/{print tolower($2); exit}')"
+          if [[ "$certificate_sha256" != "$EXPECTED_CERT_SHA256" ]]; then
+            echo "APK certificate does not match the approved release key." >&2
+            exit 1
+          fi
+
+          mkdir -p dist
+          cp "$apk" "dist/$ASSET_NAME"
+          (
+            cd dist
+            sha256sum "$ASSET_NAME" > "$ASSET_NAME.sha256"
+          )
+
+      - name: Upload verified APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.metadata.outputs.artifact_name }}
+          path: |
+            dist/${{ steps.metadata.outputs.asset_name }}
+            dist/${{ steps.metadata.outputs.asset_name }}.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Remove temporary signing material
+        if: always()
+        shell: bash
+        run: rm -f "${{ runner.temp }}/lostparty-release.jks"
+
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: dist
+
+      - name: Refuse to overwrite an existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists." >&2
+            exit 1
+          fi
+
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASSET_NAME: ${{ needs.build.outputs.asset_name }}
+          VERSION_NAME: ${{ needs.build.outputs.version_name }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME"
+          "dist/$ASSET_NAME"
+          "dist/$ASSET_NAME.sha256"
+          --verify-tag
+          --title "LOSTPARTY $VERSION_NAME"
+          --generate-notes

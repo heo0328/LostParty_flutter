@@ -3378,3 +3378,18 @@
 - Gradle namespace/applicationId, MainActivity package와 경로, `google-services.json`, `firebase.json`, Android `FirebaseOptions.appId`를 같은 등록값으로 변경했다. 기존 Firebase Android client는 새 앱 확인 전 삭제하지 않았다.
 - JSON 연결 검사와 `flutter analyze lib/firebase_options.dart`가 통과했다. 첫 Gradle 검사는 셸 `JAVA_HOME` 부재로 실행 전에 중단됐고, 새 설치 없이 기존 Android Studio JBR `D:\dev\android\jbr`을 해당 명령에만 지정해 `:app:processDebugGoogleServices`가 성공했다.
 - APK 빌드·설치·Firebase 초기화·익명 인증·Firestore 진입은 사용자 수동 확인 항목이다. release signing과 GitHub Actions workflow는 아직 변경하지 않았다.
+
+# 2026-09-21 정식 Android ID 실기기 확인·영구 로컬 서명
+
+- 사용자가 정식 package APK가 기존 임시 package 앱과 별도로 설치되고 정상 작동함을 확인했다. 이를 정식 Android ID와 새 Firebase Android 앱 연결의 실기기 통과 근거로 삼는다.
+- 저장소 밖에 영구 JKS를 생성하고 Git에서 제외되는 `android/key.properties`를 구성했다. Gradle release buildType의 debug signing을 제거하고 영구 release signingConfig로 전환했다.
+- `flutter build apk --release`가 성공했다. 생성 APK의 package는 `kr.co.heowork0921.lostparty`, version은 `1.0.0+1`, 서명 인증서는 `CN=LostParty, OU=Development, O=HeoWork0921`이며 SHA-256 인증서 지문은 `f9b9ee5a2ec4059ef329ae6b2e4b5392f729124c0a4f5f55248c9da8cd8bc5ea`다.
+- JKS와 `key.properties`는 Git 변경 목록에 없고 비밀번호를 출력하지 않았다. 다음 단계는 오프라인 백업 확인, GitHub Repository Secrets 등록과 Actions workflow 구현이다.
+
+# 2026-09-21 Android APK Release workflow 로컬 구현
+
+- 로컬 `key.properties`와 CI 환경변수를 함께 지원하도록 release signingConfig 입력 경계를 분리했다. CI는 runner 임시 경로에 JKS만 복원하고 비밀번호 파일은 만들지 않는다.
+- `workflow_dispatch`, `v*` tag와 최초 검증용 작업 브랜치 push를 지원하는 workflow를 추가했다. Flutter 3.41.6·Java 21 고정 빌드, package/version/승인 인증서 검증, SHA-256과 7일 artifact를 구성했다.
+- 태그는 `pubspec.yaml` versionName 및 `origin/main` 포함 여부를 확인한다. Release 게시는 서명 Secrets가 없는 별도 `contents: write` job에서만 수행하며 기존 Release를 덮어쓰지 않는다.
+- 변경 후 로컬 release APK 재빌드가 성공했다. 원격 Secrets 등록·Actions 실행·임시 작업 브랜치 trigger 제거는 아직 수행하지 않았다.
+- 사용자가 keystore와 비밀번호의 별도 백업을 완료했다. GitHub Actions Secrets 네 개를 값 노출 없이 등록하고 이름·갱신 시각만 확인했다. 최초 원격 workflow 실행은 작업 브랜치 push 뒤 진행한다.
