@@ -3359,4 +3359,9 @@
 - application 승인 Transaction이 쓰는 다섯 경로의 승인 validator를 값싼 필드 guard와 함께 앞쪽으로 이동했다. 보안 조건, 원자 쓰기 문서 수, 스키마와 제품 Dart 코드는 변경하지 않았다.
 - 표적 Rules 문자열 계약 5건, JS 문법과 diff 검사가 통과했다. Actions `35565203228`에서 최초 가입 승인, revision 14의 빈 membership 재가입 승인과 기존 그룹 전체 회귀가 통과했다.
 - 작업 브랜치 `fix/group-join-relation-conflict`, Rules 커밋 `96cea59`, 정상 성공 기대값 커밋 `e82fb16`, Rules SHA-256 `907302E0747A28FFFB581DB295E60633C04811EF33E6AE3F161EA5A6CB5B0FD6`다. 운영 Rules 게시·실기기 승인·`dev` 통합은 아직 수행하지 않았다.
-- 이후 사용자가 Rules를 콘솔에 게시하고 기존에 승인되지 않던 Player 2명 모두 정상 승인됨을 확인했다. BUG-021 기능 복구는 완료했으며 `dev` 통합만 남긴다.
+- 이후 사용자가 Rules를 콘솔에 게시하고 기존에 승인되지 않던 Player 2명 모두 정상 승인됨을 확인했다. 이 시점에 BUG-021 기능 복구를 완료하고 `dev` 통합만 남겼다.
+
+# 2026-09-21 BUG-021 dev 통합
+
+- 최신 `origin/dev`가 작업 브랜치의 직접 조상임을 확인하고 `fix/group-join-relation-conflict`를 `dev`에 fast-forward했다. 기능 완료 커밋 `063612c`까지 `origin/dev`에 푸시했으며 충돌과 이력 재작성은 없었다.
+- 이 완료 기록을 반영한 문서 커밋도 같은 작업 브랜치를 거쳐 `dev`에 통합한다. `main`과 release는 변경하지 않으며 다음 독립 작업은 GitHub Actions 파이프라인 구축·검증이다.

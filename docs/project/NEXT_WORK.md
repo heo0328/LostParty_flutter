@@ -6,9 +6,9 @@
 - R1~R7·C* 구현과 운영 Rules·Indexes 게시는 완료했다. 운영 Router는 원자 Repository·어댑터를 쓴다.
 - 로컬에는 생성·읽기 v2·이전 Close/Open 가드·승인 패치·listing sync·Listen 가드·orphan 공개 전환·모집 삭제→disband·캐릭터 변경 atomic OR·그룹 전용방 파티장 탈퇴 차단 등이 **코드로 들어가 있다**.
 - **실기기 판정(2026-09-16 사용자 확인):** 아래 성공 항목은 사용자가 디바이스에서 확인했다. 그 밖의 보고 실패는 로컬 수정·자동 테스트 통과만으로 완료로 쓰지 않는다.
-- **2026-09-21 현재 작업:** 파티·그룹 재설계 F7과 승인 대기 고아 신청 정리 F8-A는 구현·검증·Rules 게시·실기기 확인 및 `dev`·`main` 통합을 완료했다. 검토하던 완료 기록 삭제 F8-B는 폐기했다. `BUG-021`은 `fix/group-join-relation-conflict`에서 Rules 수정·자동 검증·운영 게시와 기존 실패 Player 2명의 실기기 승인까지 완료했으며, 작업 브랜치의 `dev` 통합만 남아 있다.
+- **2026-09-21 현재 작업:** 파티·그룹 재설계 F7과 승인 대기 고아 신청 정리 F8-A는 구현·검증·Rules 게시·실기기 확인 및 `dev`·`main` 통합을 완료했다. 검토하던 완료 기록 삭제 F8-B는 폐기했다. `BUG-021`도 Rules 수정·자동 검증·운영 게시와 기존 실패 Player 2명의 실기기 승인, `dev` 통합까지 완료했다. 다음 독립 작업은 GitHub Actions 파이프라인 구축·검증이다.
 
-## 현재 단일 작업 — BUG-021 그룹 가입 신청 승인 Rules 회귀
+## 완료 작업 — BUG-021 그룹 가입 신청 승인 Rules 회귀
 
 참고: [`BUG_REPORTS.md`](BUG_REPORTS.md)의 `BUG-021`, [`FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md) §5~§8.
 
@@ -51,7 +51,7 @@
 - block·50개 제한·정원·타인 조작은 계속 거절하며 private membership state를 그룹장에게 새로 공개하지 않는다.
 - 인원수 비례 조회·쓰기, 전원 순회, Cloud Functions와 콘솔 수동 정리를 도입하지 않는다.
 - 원인은 demo Rules CI로 확정했다. 수정은 승인 validator 평가 순서와 싼 guard에 한정하고 실제 UX는 사용자가 실기기에서 확인한다.
-- 분석·수정·자동 검증·운영 게시·실기기 확인을 마쳤다. 작업 브랜치를 `dev`에 통합하기 전 최신 `origin/dev`와 충돌 여부를 확인하며, `main`에는 직접 통합하지 않는다.
+- 분석·수정·자동 검증·운영 게시·실기기 확인을 마쳤고 작업 브랜치를 최신 `origin/dev`에 fast-forward 통합했다. `main`은 변경하지 않았다.
 
 ### 실기기 확인됨 (고쳐진 것)
 

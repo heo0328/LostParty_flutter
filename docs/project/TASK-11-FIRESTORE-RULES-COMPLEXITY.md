@@ -5,7 +5,7 @@
 - demo CI `35562516961`에서 membership 문서가 없는 최초 신청 승인부터 Firestore Rules `maximum of 1000 expressions`로 실패해 Player별 고아 데이터가 아닌 공통 승인 경로 회귀로 확정했다.
 - `joinRelations`, `members`, `groupMembershipState`, Player `groupRelations`, `groups`에서 application 승인 validator를 actor·kind·status·joinedBy·memberCount의 값싼 guard 뒤 앞쪽으로 옮겼다. 권한 조건, Transaction 문서 수와 저장 스키마는 변경하지 않았다.
 - 표적 정적 계약 5건과 Actions `35565203228`의 전체 추적 Rules 회귀가 통과했다. 최초 membership 생성 승인, revision 14의 빈 membership 갱신 승인, 초대코드 가입, 그룹장 이전·탈퇴·해산을 같은 실행에서 확인했다.
-- 추적 Rules SHA-256은 `907302E0747A28FFFB581DB295E60633C04811EF33E6AE3F161EA5A6CB5B0FD6`다. 사용자가 운영 Rules를 게시한 뒤 기존 승인 실패 Player 2명 모두 정상 승인됨을 확인했다. AI는 콘솔 활성 소스 해시를 독립 대조하지 않았고 작업 브랜치의 `dev` 통합은 남아 있다.
+- 추적 Rules SHA-256은 `907302E0747A28FFFB581DB295E60633C04811EF33E6AE3F161EA5A6CB5B0FD6`다. 사용자가 운영 Rules를 게시한 뒤 기존 승인 실패 Player 2명 모두 정상 승인됨을 확인했다. AI는 콘솔 활성 소스 해시를 독립 대조하지 않았으며 작업 브랜치는 `dev`에 fast-forward 통합했다.
 
 ## 2026-09-21 F8-A 고아 application 단건 삭제 검증
 
