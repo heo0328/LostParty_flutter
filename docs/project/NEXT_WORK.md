@@ -6,16 +6,16 @@
 - R1~R7·C* 구현과 운영 Rules·Indexes 게시는 완료했다. 운영 Router는 원자 Repository·어댑터를 쓴다.
 - 로컬에는 생성·읽기 v2·이전 Close/Open 가드·승인 패치·listing sync·Listen 가드·orphan 공개 전환·모집 삭제→disband·캐릭터 변경 atomic OR·그룹 전용방 파티장 탈퇴 차단 등이 **코드로 들어가 있다**.
 - **실기기 판정(2026-09-16 사용자 확인):** 아래 성공 항목은 사용자가 디바이스에서 확인했다. 그 밖의 보고 실패는 로컬 수정·자동 테스트 통과만으로 완료로 쓰지 않는다.
-- **2026-09-21 현재 작업:** 파티·그룹 재설계 F7과 승인 대기 고아 신청 정리 F8-A는 구현·검증·Rules 게시·실기기 확인 및 `dev`·`main` 통합을 완료했다. 검토하던 완료 기록 삭제 F8-B는 사용자에게 필요한 삭제 사유가 없다고 재판단해 폐기했으며 구현하지 않는다. 두 통합 브랜치는 같은 완료 기준을 가리킨다. 예정했던 GitHub Actions 파이프라인보다 먼저, 특정 Player에서만 일반 그룹 가입 승인·초대 수락이 실패하고 초대코드 가입은 성공한 `BUG-021`을 `fix/group-join-relation-conflict`에서 분석한다.
+- **2026-09-21 현재 작업:** 파티·그룹 재설계 F7과 승인 대기 고아 신청 정리 F8-A는 구현·검증·Rules 게시·실기기 확인 및 `dev`·`main` 통합을 완료했다. 검토하던 완료 기록 삭제 F8-B는 사용자에게 필요한 삭제 사유가 없다고 재판단해 폐기했으며 구현하지 않는다. 두 통합 브랜치는 같은 완료 기준을 가리킨다. 예정했던 GitHub Actions 파이프라인보다 먼저, 그룹 가입 신청 승인이 Rules 표현식 1,000개 한도로 거절되는 `BUG-021`을 `fix/group-join-relation-conflict`에서 복구한다.
 
-## 현재 단일 작업 — BUG-021 특정 Player 그룹 가입 실패 분석
+## 현재 단일 작업 — BUG-021 그룹 가입 신청 승인 Rules 회귀
 
 참고: [`BUG_REPORTS.md`](BUG_REPORTS.md)의 `BUG-021`, [`FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md) §5~§8.
 
 ### 확인된 재현 경계
 
-- 같은 그룹·같은 앱 빌드에서 Player 2의 일반 가입은 성공하지만 Player 3은 신청 승인 또는 초대 수락 과정에서 `이 그룹에 가입할 수 없습니다.`가 표시된다.
-- Player 3의 요청 거절은 성공하고, 같은 그룹의 초대코드 즉시 가입은 성공했다.
+- 최초 관찰에서는 같은 앱 빌드에서 Player 2가 승인되고 Player 3만 실패하는 것으로 보였으나, 재신청 결과 Player 2도 동일하게 실패했다. 현재 그룹 신청 승인의 공통 회귀다.
+- Player 3의 요청 거절과 같은 그룹의 초대코드 즉시 가입은 성공했다.
 - 이 문구는 `blocked`와 Firestore `permission-denied`를 함께 표시하므로 화면 문구만으로 차단 여부를 확정하지 않는다.
 - 초대코드 가입도 `blockedPlayers`, 활성 그룹 수 50개 제한, 그룹 정원, Player/Character 소유권과 활성 상태를 검사한다. 같은 Player가 같은 그룹에 코드로 가입했으므로 이 공통 조건과 전역 Rules·그룹 자체 장애는 우선 원인에서 제외한다.
 
@@ -24,12 +24,12 @@
 1. 전달된 Player 3의 `groupMembershipState/current`는 `activeGroupIds=[]`, `activeGroupCount=0`, `revision=14`, `schemaVersion=1`, 같은 `playerId`로 확인됐다. 배열과 count가 일치하므로 이번 사례의 1차 원인을 membership 요약 불일치로 보지 않는다.
    이전에 승인이 성공했던 Player 2도 재신청 승인 시 동일하게 실패했고, 이 Player 역시 `activeGroupIds=[]`, `activeGroupCount=0`, `revision=6`인 기존 membership 문서를 가진다. 따라서 특정 디바이스·Player 하나의 고아 상태가 아니라 **빈 membership 문서가 남아 있는 재가입 계정의 공통 경로**로 범위를 수정한다.
 2. 재확인 결과 문제 그룹 `p7RU5Dm8IfAMmGZg2hSv`에는 Player 3의 `joinRelations/{playerId}`와 `players/{playerId}/groupRelations/{groupId}`가 모두 존재하며, `application/applied`, `pending`, `sourceRevision=1`, Snapshot과 시각도 서로 일치한다. Projection 누락 가설은 폐기한다.
-3. Player 3은 빈 membership 문서가 `revision=14`로 이미 존재하므로 신청 승인 시 `groupMembershipState/current`의 **update Rules**를 탄다. 이 update allow는 `validMembershipStateRemove` → 본인 `validMembershipStateAdd` → `validLeaderApprovedMembershipStateAdd` 순서다. 그룹장이 실행하는 승인에서는 앞선 두 분기가 실패한 뒤 세 번째의 깊은 `get/getAfter` 검증까지 평가된다.
-4. 이 저장소에서는 그룹장 이전·초대코드·모집 신청 update에서도 기능 조건은 맞지만 Rules OR 순서 때문에 표현식 1,000개 한도를 넘겨 `permission-denied`가 발생한 이력이 있다. Player 3의 `revision=14` 빈 문서는 create가 아닌 더 깊은 update 분기를 선택하게 하고, 거절은 membership 문서를 쓰지 않으며, 초대코드 가입은 본인 `validMembershipStateAdd`에서 더 일찍 성공한다. 세 관찰을 함께 설명하므로 **membership update의 그룹장 승인 분기 평가 예산**을 현재 1순위 원인 가설로 둔다.
+3. demo Rules CI `35562516961`에서 membership 문서가 아예 없는 최초 가입 승인도 `PERMISSION_DENIED`로 실패했고 Emulator가 `maximum of 1000 expressions`를 명시했다. 따라서 빈 membership update만의 문제가 아니라 **현재 그룹 신청 승인 Transaction 전체의 Rules 평가 예산 회귀**로 원인을 확정한다. 과거 계정별 성공 차이는 현재 데이터 고아가 아니라 이후 Rules OR가 늘거나 순서가 밀린 시점 차이로 본다.
+4. 실패 로그는 한 승인 Transaction의 `joinRelations update`, `members create`, `groupMembershipState create/update`, `groupRelations create/update`, `groups update`에서 동시에 표현식 한도 도달을 가리킨다. 현재 각 allow에서 application 승인 분기가 일반 초대·신청·탈퇴·원자 모집 분기 뒤쪽에 있어, 승인과 무관한 validator를 먼저 평가한다. 이 저장소에서 그룹장 이전·초대코드·모집 신청 update도 같은 원인으로 실패했고 관련 분기를 앞쪽으로 옮겨 복구한 이력이 있다.
 5. 신청 승인은 그룹장이 대상 Player의 private membership을 읽지 못하므로 `activeGroupIds=arrayUnion(groupId)`, `activeGroupCount=increment(1)`, `revision=increment(1)` 병합 쓰기를 보낸다. 전달 데이터라면 결과는 ID 1개/count 1/revision 15로 논리적으로 유효하므로 데이터 값 자체보다 Rules 평가 경로를 먼저 검증한다.
-6. 현재 자동 검증은 그룹 생성·초대코드 및 Write Plan/Rules 문자열 계약은 갖지만, **기존의 빈 membership 문서를 update하는 그룹장 신청 승인** 실제 Rules Transaction이 없다. 정상 create 승인과 이 update 승인을 나란히 재현해 오류 메시지의 표현식 한도 여부를 확인한다.
+6. 추가한 회귀는 membership 문서가 없는 최초 승인과 빈 membership/revision 14 재가입 승인을 모두 성공 조건으로 둔다. 현재는 첫 승인에서 의도대로 red가 발생해 두 번째까지 도달하지 못했다. Rules 수정 뒤 둘 다 통과해야 하며 기존 전체 회귀도 같은 실행에서 유지해야 한다.
 
-진단 구현 상태: 제품 코드·Rules는 변경하지 않고 전체 Rules 회귀 도구에 `membership 문서 없음 → 최초 승인`과 `빈 membership/revision 14 → 재가입 승인` Transaction을 추가했다. 로컬 문법 검사는 통과했다. 저장소의 기존 Windows Emulator 503 이력 때문에 동일 로컬 실행을 반복하지 않고, 작업 브랜치 CI 실행 전까지 원인 확정으로 표시하지 않는다.
+진단 구현 상태: 제품 코드·Rules는 변경하지 않고 전체 Rules 회귀 도구에 `membership 문서 없음 → 최초 승인`과 `빈 membership/revision 14 → 재가입 승인` Transaction을 추가했다. 로컬 문법 검사는 통과했다. 작업 브랜치 demo CI `35562516961`에서 첫 승인부터 표현식 1,000개 한도 초과를 재현해 원인을 확정했다.
 
 ### 조사 순서
 
@@ -41,15 +41,15 @@
    - `groups/{groupId}/members/{targetPlayerId}` 존재 여부
    - `groups/{groupId}/blockedPlayers/{targetPlayerId}` 존재 여부
    - `groups/{groupId}`의 `status`, `leaderPlayerId`, `memberCount`, `revision`
-3. Rules Emulator에서 같은 신청·Projection을 만든 뒤 대상 membership을 (a) 문서 없음, (b) `activeGroupIds=[]/count=0/revision=14` 두 상태로 나눠 그룹장 승인을 실행한다. (b)만 `PERMISSION_DENIED`이고 Emulator 로그가 표현식 한도 초과라면 원인을 확정한다. 같은 데이터의 거절과 본인 초대코드 가입은 비교 회귀로 둔다.
-4. 데이터 불일치가 원인이면 수동 콘솔 삭제를 정상 복구법으로 삼지 않는다. 가입자가 자기 상태를 안전하게 점검·정리하거나 정상 명령이 원자적으로 수렴시키는 최소 복구 계약을 별도로 설계한다. 정상 데이터에서도 실패하면 해당 Write Plan/Rules 분기만 수정한다.
+3. 최소 수정은 보안 조건을 삭제하지 않고 승인임을 식별하는 싼 필드 guard 뒤 `validGroupApplicationDecision`, `validApprovedGroupMember`, `validLeaderApprovedMembershipStateAdd`, `validLeaderApprovedGroupRelation`, `validGroupLeaderApproveUpdate`를 각 관련 allow의 앞쪽에서 평가하게 하는 것이다. 다른 명령도 먼저 깊은 승인 validator를 타지 않도록 actor/`kind`/`joinedBy`/`requestStatus`/변경 필드 guard를 함께 둔다.
+4. 수정본은 최초 승인과 빈 membership 재가입 승인, 거절, 초대 수락, 초대코드 가입, 그룹 생성·탈퇴·그룹장 이전·1인 해산을 같은 demo CI 한 번으로 검증한다. Rules 조건·문서 수·Transaction 구조는 바꾸지 않는다.
 
 ### 회귀 보호와 완료 조건
 
 - 그룹 생성, 정상 Player의 신청·승인, 직접 초대·수락·거절, 초대코드 가입, 일반 탈퇴, 그룹장 이전과 마지막 1인 해산을 보존한다.
 - block·50개 제한·정원·타인 조작은 계속 거절하며 private membership state를 그룹장에게 새로 공개하지 않는다.
 - 인원수 비례 조회·쓰기, 전원 순회, Cloud Functions와 콘솔 수동 정리를 도입하지 않는다.
-- 원인 자료와 재현 전에는 코드·Rules를 추측 수정하지 않는다. 수정이 필요하면 대표 정상 1건·불일치 1건의 Rules 경계만 자동 검증하고 실제 UX는 사용자가 실기기에서 확인한다.
+- 원인은 demo Rules CI로 확정했다. 수정은 승인 validator 평가 순서와 싼 guard에 한정하고 실제 UX는 사용자가 실기기에서 확인한다.
 - 이 작업이 분석·수정·실기기 확인을 마치기 전 `dev`·`main`에 통합하지 않는다.
 
 ### 실기기 확인됨 (고쳐진 것)

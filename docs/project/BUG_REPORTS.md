@@ -18,11 +18,11 @@
 
 ---
 
-## BUG-021. 특정 Player의 일반 그룹 가입만 권한 오류로 실패
+## BUG-021. 그룹 가입 신청 승인이 Rules 평가 한도로 실패
 
 | 항목 | 내용 |
 | --- | --- |
-| 상태 | 분석 중 — `fix/group-join-relation-conflict` |
+| 상태 | 원인 확정·수정 전 — `fix/group-join-relation-conflict` |
 | 보고일 | 2026-09-21 |
 | 관련 화면 | 그룹 가입 신청 승인, 직접 초대 수락, 초대코드 가입 |
 
@@ -40,8 +40,9 @@
 - 전달된 Player 3의 membership 요약은 빈 배열/count 0/revision 14로 서로 일치한다. 이번 사례의 우선 원인은 아니다.
 - 재확인 결과 문제 그룹의 `application/pending` 신청 원본과 Player 3의 `groupRelations/{groupId}` Projection은 모두 존재하고 서로 일치한다. Projection 누락 가설은 폐기한다.
 - Player 3의 membership은 빈 배열/count 0이지만 revision 14인 기존 문서다. 승인은 최초 create가 아니라 update Rules를 타며, 그룹장 승인 분기 앞에 일반 탈퇴·본인 가입 분기가 놓여 있다. 과거 같은 Rules OR 평가 순서에서 표현식 1,000개 초과가 반복됐고, 거절은 membership을 쓰지 않으며 초대코드는 본인 가입 분기에서 일찍 성공하므로 현재 현상을 함께 설명한다.
-- Player 2도 빈 배열/count 0/revision 6인 기존 문서에서 동일하게 실패해 특정 계정 문제가 아니라 기존 빈 membership update 경로의 공통 결함 가능성이 높아졌다.
-- 우선 검증은 membership 문서 없음과 기존 빈 문서 revision 14의 그룹장 승인을 Rules Emulator에서 비교해, 후자만 표현식 한도 `PERMISSION_DENIED`인지 확인하는 것이다.
+- Player 2도 빈 배열/count 0/revision 6인 기존 문서에서 동일하게 실패해 특정 계정 문제가 아니라 공통 승인 경로로 범위가 넓어졌다.
+- demo Rules CI `35562516961`에서 membership 문서가 없는 최초 가입 승인도 `maximum of 1000 expressions`로 거절됐다. 현재 그룹 신청 승인 Transaction 전체가 Rules OR 순서 때문에 예산을 초과하는 회귀로 원인을 확정한다.
+- 승인 Transaction이 쓰는 신청 원본, 멤버, membership 요약, Player Projection, 그룹 원본의 application 승인 validator가 각각 무관한 분기 뒤쪽에 있다. 보안 검사를 완화하지 않고 싼 명령 식별 guard와 승인 validator를 앞쪽에 배치하는 최소 Rules 수정이 필요하다.
 - 신청 승인은 대상의 private membership 요약을 읽지 않고 배열 합집합·숫자 증가로 병합한다. 이번 데이터는 정상이지만 과거 데이터의 `activeGroupIds`, `activeGroupCount`, `revision` 불일치에 취약한 점은 별도 회귀 경계다.
 - 초대코드 가입은 membership과 Player relation을 완성된 형태로 다시 써서 기존 불일치를 정상화했을 수 있다. 따라서 코드 가입 후 데이터는 실패 당시 원인을 보존하지 않을 수 있다.
 - 직접 초대 수락까지 동일하게 실패했는지는 최초 실패 동작과 서버 오류 code를 분리해 재확인한다. 신청 승인 실패와 한 원인으로 미리 묶지 않는다.
