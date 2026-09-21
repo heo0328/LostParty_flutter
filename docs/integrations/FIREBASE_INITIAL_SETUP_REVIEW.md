@@ -24,7 +24,7 @@ Player와 Firebase의 장기 구조 방향은 `../architecture/PLAYER_FIREBASE_M
 |---|---|---|
 | Firebase 프로젝트 | 사용자 완료 보고 | 프로젝트 ID `lost-party` 생성 및 CLI 인식 완료 |
 | FlutterFire CLI 연결 | 코드 확인 | `firebase.json`과 `lib/firebase_options.dart` 생성 확인 |
-| Android 앱 등록 | 코드 확인 | Android 패키지명 `com.example.lost_party`가 `google-services.json` 및 Gradle 설정과 일치 |
+| Android 앱 등록 | 정식 ID 전환·실기기 확인 전 | `kr.co.heowork0921.lostparty` 등록 및 Gradle·FlutterFire 설정 반영, 최소 Gradle 연결 검사 통과 |
 | Android Google Services Plugin | 코드 확인 | 루트 Android 설정에 플러그인 버전 선언, 앱 모듈에 플러그인 적용 확인 |
 | iOS 설정값 | 코드 확인 | `firebase_options.dart`에 iOS 설정 존재 |
 | macOS 설정값 | 코드 확인 | `firebase_options.dart`에 macOS 설정 존재 |
@@ -76,10 +76,10 @@ android/app/build.gradle.kts applicationId
 android/app/build.gradle.kts namespace
 android/app/google-services.json package_name
 
-= com.example.lost_party
+= kr.co.heowork0921.lostparty
 ```
 
-따라서 현재 Android 앱과 Firebase Android 등록 정보 사이의 패키지명 불일치는 발견되지 않았다.
+`google-services.json`은 전환 안전성을 위해 기존 임시 앱과 새 정식 앱 client를 함께 포함하며 Google Services Plugin이 applicationId에 맞는 새 client를 선택한다. 정적 대조와 `processDebugGoogleServices`는 통과했으며 새 package APK의 실기기 Firebase 연결은 확인 전이다.
 
 ### 4.4 등록된 Dart 플랫폼 설정
 
@@ -376,17 +376,17 @@ Firestore 컬렉션을 아직 수동 생성하지 않은 것은 현재 단계에
 
 ## 13. 현재 결론
 
-Firebase 프로젝트와 FlutterFire 설정 파일 생성, Android 앱 등록 및 Gradle Plugin 연결은 현재 저장소에서 확인됐다. Android 패키지명도 Firebase 등록 정보와 일치한다.
+Firebase Core·Anonymous Auth·Player binding·Firestore 기능과 운영 Rules는 구현돼 있다. 2026-09-21 정식 Android ID `kr.co.heowork0921.lostparty`를 추가 등록하고 저장소 설정을 전환했으며 Gradle Google Services 연결까지 확인했다.
 
-그러나 앱은 아직 Firebase를 실행하지 않는다. Firebase 패키지, Core 초기화, Anonymous 로그인, Player binding, Firestore Repository 및 Security Rules는 모두 후속 단계다.
+남은 확인은 새 package APK의 Firebase 초기화·Anonymous Auth·Firestore 실기기 진입이다. 이 확인 전에는 기존 임시 Android 앱 등록을 삭제하지 않는다.
 
 따라서 현재 상태는 다음과 같이 정의한다.
 
 ```text
-Firebase 프로젝트 및 플랫폼 설정 생성 완료
-Android 네이티브 연결 설정 완료
-Firebase Core 의존성 반영 완료, 앱 초기화는 미적용
-Auth 및 Firestore 애플리케이션 기능은 미구현
+Firebase 프로젝트·운영 Auth/Firestore 기능 적용
+정식 Android 앱 등록·로컬 설정 전환·Gradle 연결 검사 완료
+정식 package APK 실기기 Firebase 연결 확인 전
+기존 임시 Firebase Android 앱 등록 유지
 ```
 
 다음 코드 작업은 Firebase Core 초기화만 독립 작업 단위로 검토한 뒤 진행하는 것이 적절하다.

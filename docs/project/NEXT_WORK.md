@@ -28,6 +28,12 @@
 6. release workflow의 태그/버전/main 이력 가드 검증
 7. 최종 release 승인 시 태그를 푸시해 GitHub Release APK 확인
 
+### 현재 진행 상태
+
+- **A 설정 전환 완료:** 사용자가 Firebase Android 앱 `kr.co.heowork0921.lostparty`를 등록하고 설정 파일을 전달했다. Gradle namespace/applicationId, MainActivity, `google-services.json`, `firebase.json`, Android `FirebaseOptions.appId`를 정식 ID와 Firebase app ID `1:574337852234:android:2e565a53ade5153dc057b3`로 맞췄다.
+- 새 JSON client 존재·app ID 연결 검사, `flutter analyze lib/firebase_options.dart`, 기존 Android Studio JBR을 사용한 `:app:processDebugGoogleServices`가 통과했다.
+- **다음 게이트:** 사용자가 새 package APK를 직접 빌드·설치해 Firebase 초기화, 익명 인증과 Firestore 기본 진입을 확인한다. 확인 전에는 기존 Firebase Android 앱 등록을 삭제하지 않고 서명·Actions 구현으로 넘어가지 않는다.
+
 ### 완료 게이트
 
 - 새 ID의 설치·Firebase 연결과 같은 키의 업데이트 설치를 사용자가 실기기에서 확인한다.

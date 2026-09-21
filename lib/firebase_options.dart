@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDM3D2KSqWzmYBI6QD6nFnaxnlvibQ7FCc',
-    appId: '1:574337852234:android:e9e51d71f28ae73ec057b3',
+    appId: '1:574337852234:android:2e565a53ade5153dc057b3',
     messagingSenderId: '574337852234',
     projectId: 'lost-party',
     storageBucket: 'lost-party.firebasestorage.app',

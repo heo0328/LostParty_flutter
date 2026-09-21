@@ -20,7 +20,7 @@
       "android": {
         "default": {
           "projectId": "lost-party",
-          "appId": "1:574337852234:android:e9e51d71f28ae73ec057b3",
+          "appId": "1:574337852234:android:2e565a53ade5153dc057b3",
           "fileOutput": "android/app/google-services.json"
         }
       },
@@ -28,7 +28,7 @@
         "lib/firebase_options.dart": {
           "projectId": "lost-party",
           "configurations": {
-            "android": "1:574337852234:android:e9e51d71f28ae73ec057b3",
+            "android": "1:574337852234:android:2e565a53ade5153dc057b3",
             "ios": "1:574337852234:ios:67eb32b7b177cac9c057b3",
             "macos": "1:574337852234:ios:67eb32b7b177cac9c057b3",
             "web": "1:574337852234:web:1313fddf31f40035c057b3",

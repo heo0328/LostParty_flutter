@@ -3371,3 +3371,10 @@
 - 사용자가 수동으로 만든 release APK를 실기기에 설치해 정상 작동을 확인했다. 현재 Gradle release는 debug key로 서명되고 Android ID는 `com.example.lost_party`이므로 이 결과만으로 반복 가능한 정식 배포 상태로 보지 않는다.
 - 정식 Android ID를 `kr.co.heowork0921.lostparty`로 확정했다. Firebase Android 앱 재등록, Gradle·MainActivity·FlutterFire config 일치, 영구 release keystore와 GitHub Secrets, 수동 artifact와 `v*` 태그 GitHub Release의 단계별 계약을 추가했다.
 - 현재 Flutter 3.41.6/Dart 3.11.4, CI Java 21, `pubspec.yaml` 1.0.0+1을 기준으로 한다. 아직 앱 ID·Firebase 설정·서명·workflow·외부 GitHub/Firebase 상태는 변경하지 않았다.
+
+# 2026-09-21 정식 Android ID·Firebase 설정 전환
+
+- 사용자가 Firebase 프로젝트 `lost-party`에 `kr.co.heowork0921.lostparty` Android 앱을 등록하고 새 `google-services.json`을 전달했다. 새 Firebase Android app ID는 `1:574337852234:android:2e565a53ade5153dc057b3`다.
+- Gradle namespace/applicationId, MainActivity package와 경로, `google-services.json`, `firebase.json`, Android `FirebaseOptions.appId`를 같은 등록값으로 변경했다. 기존 Firebase Android client는 새 앱 확인 전 삭제하지 않았다.
+- JSON 연결 검사와 `flutter analyze lib/firebase_options.dart`가 통과했다. 첫 Gradle 검사는 셸 `JAVA_HOME` 부재로 실행 전에 중단됐고, 새 설치 없이 기존 Android Studio JBR `D:\dev\android\jbr`을 해당 명령에만 지정해 `:app:processDebugGoogleServices`가 성공했다.
+- APK 빌드·설치·Firebase 초기화·익명 인증·Firestore 진입은 사용자 수동 확인 항목이다. release signing과 GitHub Actions workflow는 아직 변경하지 않았다.

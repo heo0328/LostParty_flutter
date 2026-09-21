@@ -19,15 +19,17 @@
 
 정식 ID는 릴리즈 후 변경하지 않는다. 변경하면 Android가 다른 앱으로 취급하고 기존 설치본 위에 업데이트할 수 없다.
 
-## 3. 현재 상태와 선행 문제
+## 3. 착수 시 상태와 선행 문제
 
-- 현재 Android ID는 임시값 `com.example.lost_party`다.
-- 현재 `android/app/google-services.json`과 `lib/firebase_options.dart`의 Android Firebase 앱도 임시 ID에 연결돼 있다.
+- 착수 시 Android ID는 임시값 `com.example.lost_party`였다.
+- 착수 시 `android/app/google-services.json`과 `lib/firebase_options.dart`의 Android Firebase 앱도 임시 ID에 연결돼 있었다.
 - 현재 `release` buildType은 debug signingConfig를 사용한다.
 - 로컬 `android/key.properties`와 정식 keystore는 저장소에 없다.
 - Git tag와 GitHub Release는 아직 없다.
 
 수동 release APK의 실행 성공은 앱 런타임 확인 근거지만, CI 배포 준비 완료를 뜻하지 않는다. GitHub hosted runner의 임시 debug key로 매번 서명하면 다음 APK를 기존 설치본 위에 업데이트하지 못할 수 있으므로 정식 배포에는 하나의 영구 release key를 사용한다.
+
+2026-09-21에 사용자가 Firebase Android 앱 `kr.co.heowork0921.lostparty`를 추가하고 새 설정 파일을 전달했다. Gradle namespace/applicationId, MainActivity package·경로, `google-services.json`, `firebase.json`, Android `FirebaseOptions.appId`를 새 등록값으로 일치시켰다. JSON·정적 분석과 `processDebugGoogleServices`는 통과했으며 APK 빌드·실기기 Firebase 연결은 사용자 확인 전이다.
 
 ## 4. 작업 단계
 
