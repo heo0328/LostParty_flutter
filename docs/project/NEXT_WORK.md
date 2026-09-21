@@ -36,11 +36,12 @@
 - **B 로컬 서명 완료:** 영구 JKS와 Git에서 제외되는 `android/key.properties`를 구성하고 Gradle release buildType을 해당 키로 전환했다. `flutter build apk --release`가 성공했으며 APK package `kr.co.heowork0921.lostparty`, version `1.0.0+1`, 인증서 `CN=LostParty, OU=Development, O=HeoWork0921`를 확인했다. 키와 비밀번호는 Git 변경 목록에 없다.
 - **C workflow 원격 artifact 검증 완료:** CI는 비밀번호 파일을 만들지 않고 네 Repository Secrets를 환경변수로 전달한다. package/version/승인 인증서 검증, SHA-256, 7일 artifact, tag/main 이력 가드와 기존 Release 덮어쓰기 차단을 구성했다. 첫 실행 `35591621599`는 새 `apksigner` 출력 파싱 오류로 검증 단계에서 실패했으며 실제 빌드·서명 실패가 아니었다. 파싱을 수정한 `35592769624`에서 signed APK 검증과 artifact 업로드가 통과했다.
 - **Secrets 등록 완료:** 사용자가 keystore·비밀번호의 별도 백업을 완료했고 GitHub Actions Secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`를 값 노출 없이 등록했다.
-- **다음 게이트:** 임시 작업 브랜치 push trigger 제거본을 원격에 반영하고, 사용자가 성공 run의 artifact APK를 내려받아 설치·실행한다. 이후 release 승인 시 최종 `main` 시점의 `v1.0.0` 태그로 GitHub Release 게시를 검증한다. 기존 Firebase Android 앱 등록은 파이프라인 완료 전까지 유지한다.
+- **D signed artifact 실기기 확인 완료:** 임시 작업 브랜치 push trigger 제거본을 원격에 반영했고, 사용자가 성공 run `35592769624`의 artifact APK를 내려받아 실기기에 설치한 뒤 앱과 Firebase 기능이 정상 작동함을 확인했다.
+- **다음 게이트:** 작업 브랜치를 `dev`에 통합한다. 이후 release 승인 시 최종 `main` 시점의 `v1.0.0` 태그로 GitHub Release 게시를 검증한다. 기존 Firebase Android 앱 등록은 최종 Release 확인 전까지 유지한다.
 
 ### 완료 게이트
 
-- 새 ID의 설치·Firebase 연결과 같은 키의 업데이트 설치를 사용자가 실기기에서 확인한다.
+- 새 ID의 설치·Firebase 연결은 실기기에서 확인했다. 같은 키의 후속 버전 덮어쓰기 설치는 최초 후속 버전에서 확인한다.
 - Secret 누락·버전 불일치·main 밖 태그·중복 Release는 게시 전에 실패한다.
 - workflow는 앱 기능·Firestore·브랜치·태그를 임의 변경하지 않는다.
 - 구현·Actions 검증·실기기 확인 전에는 `dev`에 통합하지 않는다.

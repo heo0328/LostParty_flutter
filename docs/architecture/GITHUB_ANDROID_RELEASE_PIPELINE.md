@@ -4,7 +4,7 @@
 
 검증된 LOSTPARTY Android 버전을 동일한 앱 ID와 서명으로 빌드하고, Git 태그에 대응하는 GitHub Release 페이지에서 APK를 직접 내려받을 수 있게 한다.
 
-이 계약은 Google Play 배포가 아닌 GitHub Releases를 통한 APK 직접 배포를 우선한다. 현재 수동으로 만든 release APK는 사용자 실기기에서 정상 실행이 확인됐다.
+이 계약은 Google Play 배포가 아닌 GitHub Releases를 통한 APK 직접 배포를 우선한다. Actions `35592769624`에서 영구 키로 서명한 artifact APK는 사용자 실기기 설치·실행과 Firebase 연결이 정상임을 확인했다.
 
 ## 2. 확정값
 
