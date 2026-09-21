@@ -61,4 +61,4 @@
 
 ## 다음 작업
 
-파티·그룹 명령 재설계 F7과 `feature/raid-status-record-removal`의 F8-A 승인 대기 고아 신청 정리는 구현·자동 검증·사용자 콘솔 Rules 게시·실기기 확인까지 완료했다. 부모 모집이 없거나 `completed/disbanded/incompleteEnded`인 본인 application 한 건만 삭제하고 활성 모집은 기존 철회를 유지한다. 검토하던 F8-B 완료 기록 삭제는 제품상 삭제 사유가 없다고 재판단해 폐기했으며 삭제 UI·로컬 tombstone·DB 마이그레이션은 구현하지 않는다. 기존 숨김·다시 표시·로컬 정정은 유지한다. 사용자의 최신 지시에 따라 이 완료 지점을 `dev`와 `main`의 공통 기준으로 통합한다. 다음 작업은 별도 범위의 GitHub Actions 파이프라인 구축·검증이다. 고아 데이터 상시 발견과 공대장 자동 거절은 [`../product/DETAIL_IMPROVEMENTS.md`](../product/DETAIL_IMPROVEMENTS.md)의 장기 후보로 유지한다.
+파티·그룹 명령 재설계 F7과 F8-A 승인 대기 고아 신청 정리는 구현·자동 검증·사용자 콘솔 Rules 게시·실기기 확인 및 `dev`·`main` 통합까지 완료했다. 부모 모집이 없거나 `completed/disbanded/incompleteEnded`인 본인 application 한 건만 삭제하고 활성 모집은 기존 철회를 유지한다. 검토하던 F8-B 완료 기록 삭제는 제품상 삭제 사유가 없다고 재판단해 폐기했으며 삭제 UI·로컬 tombstone·DB 마이그레이션은 구현하지 않는다. 기존 숨김·다시 표시·로컬 정정은 유지한다. 두 통합 브랜치는 같은 완료 기준을 가리킨다. 다음 작업은 별도 범위의 GitHub Actions 파이프라인 구축·검증이다. 고아 데이터 상시 발견과 공대장 자동 거절은 [`../product/DETAIL_IMPROVEMENTS.md`](../product/DETAIL_IMPROVEMENTS.md)의 장기 후보로 유지한다.
