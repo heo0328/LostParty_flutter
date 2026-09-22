@@ -53,4 +53,28 @@ void main() {
     expect(attempts, 2);
     expect(find.text('준비된 앱 player-1'), findsOneWidget);
   });
+
+  testWidgets('초기화가 빨라도 최소 진입 화면 시간을 보장한다', (tester) async {
+    await tester.pumpWidget(
+      AppBootstrap<PlayerSession>(
+        initialize: () async => session,
+        minimumLoadingDuration: const Duration(milliseconds: 2200),
+        loadingBuilder: (_) =>
+            const MaterialApp(home: SizedBox(key: Key('branded-entry-screen'))),
+        appBuilder: (_, ready) =>
+            MaterialApp(home: Text('준비된 앱 ${ready.playerId}')),
+      ),
+    );
+
+    await tester.pump();
+    expect(find.byKey(const Key('branded-entry-screen')), findsOneWidget);
+    expect(find.text('준비된 앱 player-1'), findsNothing);
+
+    await tester.pump(const Duration(milliseconds: 2199));
+    expect(find.byKey(const Key('branded-entry-screen')), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump();
+    expect(find.text('준비된 앱 player-1'), findsOneWidget);
+  });
 }

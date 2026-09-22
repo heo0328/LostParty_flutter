@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import 'app/bootstrap/app_bootstrap.dart';
 import 'app/bootstrap/app_services_initializer.dart';
+import 'app/bootstrap/lost_party_entry_screen.dart';
 import 'app/router/app_router.dart';
 import 'app/theme/app_theme.dart';
 import 'features/account/data/local/account_database.dart';
@@ -28,6 +29,9 @@ void main() {
   runApp(
     AppBootstrap<PlayerSession>(
       initialize: initializeAppServices,
+      minimumLoadingDuration: lostPartyEntryAnimationDuration,
+      transitionDuration: const Duration(milliseconds: 280),
+      loadingBuilder: (_) => const LostPartyEntryScreen(),
       appBuilder: (_, playerSession) => MyApp(playerSession: playerSession),
     ),
   );
