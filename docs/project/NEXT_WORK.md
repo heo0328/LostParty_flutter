@@ -1,8 +1,8 @@
-# NEXT WORK — BUG-022 재설치·재인증 후 파티 권한 오류 분석
+# NEXT WORK — BUG-022 직접 권한 오류 수정과 원정대 이전 복구 설계
 
-> 상태: **분석만 진행 중**. 코드·Firestore Rules·운영 데이터·배포는 변경하지 않는다. 확인된 직접 결함과 재설치 계정 단절의 구조적 위험을 분리해 검증한 뒤 구현 범위를 다시 승인받는다.
+> 상태: **수정 설계 완료·구현 미착수**. 코드·Firestore Rules·운영 데이터·배포는 아직 변경하지 않는다. 직접 Rules 결함은 먼저 독립 수정하고, 재설치·원정대 이전의 Player 단절은 별도 아키텍처 작업으로 분리한다.
 
-## 현재 단일 작업 — BUG-022 원인 확정과 수정 설계
+## 현재 단일 작업 — BUG-022 수정 설계 확정
 
 참고: [`BUG_REPORTS.md`](BUG_REPORTS.md)의 `BUG-022`, [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`GAME_ACCOUNT_VERIFICATION_CONTRACT.md`](../architecture/GAME_ACCOUNT_VERIFICATION_CONTRACT.md).
 
@@ -13,27 +13,109 @@
 - 해산은 모집 생성 당시 그룹 count Snapshot `5`와 현재 group count `17`을 Rules가 함께 연속값으로 요구해 거절된다.
 - 추방·탈퇴는 Repository가 그룹 `raidListings`를 부분 갱신하지만 Rules에 참가자 제거용 listing update 분기가 없어 거절된다.
 
-### 분석 순서
+### 설계 원칙
 
-1. 재설치 없는 Emulator fixture로 여러 그룹방 생성 후 오래된 방 해산 실패를 재현한다.
-2. 그룹방 추방·탈퇴에서 모집 본문, membership, `raidState`, listing 중 최초 거절 경계를 분리한다.
-3. 공개방과 그룹방을 대조해 listing 쓰기 유무가 실패를 결정하는지 확인한다.
-4. 제공 가능한 운영 데이터에서 재설치 전·후 Player binding과 이전 Player의 활성 상태를 읽기 전용으로 대조한다.
-5. 직접 Rules 결함의 최소 수정안과 원정대 소유권 이전 복구 정책을 별도 작업 단위로 확정한다.
+1. `AuthUid → PlayerId`는 LOSTPARTY 사회적 사용자 식별이고, 원정대 인증은 GameAccount·Character 소유 증명이다. 원정대 인증만으로 두 Player가 같은 사람이라고 간주하지 않는다.
+2. 재설치한 동일 사용자와 타인이 사용하던 원정대의 새 소유자는 현재 인증 정보만으로 구별할 수 없다. 따라서 그룹 membership, 모집 소유권, 신청·완료 이력은 새 Player에 자동 승계하지 않는다.
+3. 이번 제보의 해산 및 참가자 제거 실패는 Player 이전과 무관한 Rules 결함이므로 작업 그룹 A에서 먼저 최소 수정한다.
+4. Player 복구와 원정대 소유권 이전 후 상태 정리는 작업 그룹 B로 분리한다. B가 완료되지 않아도 A의 직접 권한 오류 수정·검증을 막지 않는다.
+5. 운영 데이터를 콘솔에서 직접 수정하거나 이전 Player의 전체 데이터를 새 Player로 복사하지 않는다.
 
-### 완료 조건
+### 작업 그룹 A — 직접 Rules 결함 최소 수정
 
-- 두 권한 실패를 각각 Emulator에서 재현하고 최초 거절 조건을 확인한다.
-- 재설치가 직접 원인인지, 별도 구조적 위험인지를 근거로 구분한다.
-- 기존 생성·신청·승인·자리 이동·개인 완료·반복방·그룹 count/listing 흐름의 회귀 보호 목록을 확정한다.
-- 구현 대상 파일·Rules 분기·테스트와 운영 데이터 이행 필요 여부가 결정된 후 사용자 승인을 받는다.
+#### A1. 오래된 그룹 모집 해산 count 검증
 
-### 제외 범위
+- `atomicValidGroupLifecycleCount`에서 모집 생성 당시 `oldData.groupActiveRecruitmentCountAfter - 1`을 현재 해산의 기준으로 사용하지 않는다.
+- 그룹 원본의 Transaction 전 값을 `get(groupPath)`로, 변경 후 값을 `getAfter(groupPath)`로 확인한다.
+- 닫히는 활성 그룹 모집이면 다음 세 조건을 함께 강제한다.
+  1. 현재 그룹 count가 1 이상이다.
+  2. 그룹 count가 현재 `N → N-1`로 정확히 감소한다.
+  3. 모집에 기록하는 `groupActiveRecruitmentCountAfter`가 변경 후 그룹 count와 같다.
+- 그룹 문서 자체의 `validAtomicGroupRecruitmentClose` 검증은 유지한다. 모집 Rules와 그룹 Rules가 같은 Transaction의 현재 count 전이를 양쪽에서 확인하게 한다.
+- 닫히지 않는 lifecycle 명령은 기존처럼 모집의 count Snapshot을 변경하지 않는다.
+- Dart Repository는 이미 현재 그룹 count를 읽어 `N-1`을 쓰므로 제품 코드 변경 없이 Rules와 회귀 fixture만 수정하는 것을 기본안으로 한다.
 
-- 현재 단계의 앱 코드·Rules·데이터 수정
-- Rules 또는 다른 Firebase 자원 배포
-- 로그인·복구키·원정대 기반 Player 복구 방식 결정
+#### A2. 그룹 모집 참가자 추방·탈퇴 listing 검증
+
+- `validAtomicMemberRemovalListingUpdate(groupId, recruitmentId, oldData, newData)` 전용 validator를 추가한다.
+- 같은 Transaction의 모집 전·후 문서가 기존 `validAtomicRecruitmentMemberRemoval`을 만족하고, 모집의 `groupId`가 경로와 같으며 변경 후에도 `visibility == group`인 경우만 허용한다.
+- listing에서 변경 가능한 필드는 `memberCount`, `sourceRevision`, `updatedAt` 세 개로 제한한다.
+- 세 값은 각각 변경 후 모집의 `memberCount`, `revision`, `request.time`과 같아야 한다.
+- 마지막 1인 제거로 방이 종료되는 경로는 listing update가 아니라 기존 lifecycle/listing delete 계약을 사용한다.
+- 공개방은 listing 쓰기를 새로 추가하지 않는다. 누락 listing 자동 생성이나 전체 Snapshot 덮어쓰기도 이번 수정에 포함하지 않는다.
+
+#### A3. 자동 검증
+
+- `tools/party_group_cutover_rules_test.mjs`에 생성 당시 모집 Snapshot count와 현재 그룹 count가 다른 fixture를 추가한다. 예: 모집 Snapshot `5`, 현재 그룹 `17`에서 해산 후 `16`을 허용한다.
+- 같은 fixture에서 `4`, `15`, `17` 등 현재 전이와 맞지 않는 count, 그룹 문서 갱신 누락, 비방장 해산은 계속 거절한다.
+- 그룹 전용방의 방장 추방, 본인 탈퇴, 탈퇴 후 재가입을 허용하고 listing의 count·revision·시각 변조는 거절한다.
+- 공개방의 같은 추방·탈퇴가 listing 없이 유지되는지 대조한다.
+- 인원수 반복은 최대 8인 대표 한 건만 추가하고, 마지막 1인 종료·방장 승계처럼 상태 전이가 다른 경계만 별도 최소 사례로 둔다.
+- 기존 생성·신청·승인·즉시 가입·자리 이동·개인 완료·반복방·공개 범위 전환·그룹 해산 회귀를 같은 demo Emulator 묶음에서 보존한다.
+- 정적 계약 테스트는 새 validator의 allow 연결, 허용 필드 제한과 현재 count 전이식을 고정한다.
+
+#### A4. 배포와 실기기 확인
+
+- Rules 변경이므로 표적 정적 검사와 demo Emulator 전체 회귀가 통과한 최신 추적본만 운영 프로젝트에 한 번 배포 시도한다.
+- 첫 배포 실패 시 반복하지 않고 실패 단계와 활성 소스를 대조한다. 재시도는 진단 보고 후 사용자의 새 지시가 있을 때만 한다.
+- 실기기는 그룹 전용방 한 개에서 `참가자 추방 → 재가입 → 본인 탈퇴`, 여러 방을 만든 그룹의 오래된 방 해산을 확인한다.
+- 공개방 정상 추방·탈퇴와 그룹의 다른 활성 모집 count가 보존되는지도 함께 확인한다.
+
+### 작업 그룹 B — Player 복구와 원정대 소유권 이전 안전화
+
+#### B1. 제품 정책
+
+- 원정대 소유권 이전은 GameAccount·Character의 사용권만 옮긴다. 이전 Player의 그룹, 모집, 신청, 알림, 완료 이력과 파티장 지위는 새 Player로 이전하지 않는다.
+- 앱 재설치 후 기존 그룹·이력을 그대로 복구하려면 원정대 인증과 별개의 신뢰 가능한 Player 복구 수단이 필요하다. 새 AuthUid를 기존 Player에 붙이는 기능은 클라이언트 Rules로 열지 않고 운영자 또는 향후 신뢰 서버 명령으로만 설계한다.
+- 따라서 B의 기본 목표는 사회적 데이터 승계가 아니라, 이전 소유자가 남긴 Character 기반 활성 상태를 안전하게 무효화·정리하는 것이다.
+
+#### B2. 소유권 세대값
+
+- `gameAccounts`와 소속 `characters`에 단조 증가하는 `ownershipRevision`을 둔다. 소유 Player가 실제로 바뀔 때만 1 증가시키고 같은 Player의 재인증에는 증가시키지 않는다.
+- 신규 application, membership, `raidState`의 Character Snapshot에는 생성 당시 `ownerPlayerId`와 `ownershipRevision`을 저장한다.
+- 이후 승인·가입·Character 변경·완료·탈퇴 명령은 현재 Character 소유자와 revision이 Snapshot과 모두 같은지 확인한다.
+- Player A → B → A처럼 소유권이 되돌아와도 A 시절의 오래된 활성 문서가 다시 유효해지는 ABA 회귀를 revision으로 차단한다.
+- 기존 revision 없는 문서는 현재 Character 소유자가 Snapshot Player와 같고 계정 revision이 초기값인 경우에만 legacy 호환한다. 최초 소유권 이전 뒤에는 자동으로 stale 판정하며, 정상 명령으로 다시 저장될 때 최신 revision을 기록한다.
+
+#### B3. 지연 무효화와 정리
+
+- 소유권 이전 Transaction에서 이전 Player의 전체 그룹·모집·신청을 순회하지 않는다. 문서 수가 무제한이고 타인의 사회적 데이터를 새 소유자가 읽는 구조도 허용하지 않기 때문이다.
+- 이전 revision의 pending 신청은 승인할 수 없으며 `ownershipChanged` 상태로 명시적 무효화할 수 있게 한다. 단순 `permission-denied`로 숨기지 않는다.
+- 이전 revision의 활성 membership을 발견한 모집은 구성 점검 대상으로 판정한다. 정상 멤버 또는 파티장이 실행하는 제한된 정리 명령으로 stale membership과 연결 `raidState`를 제거한다.
+- stale 대상이 파티장이면 남은 멤버가 있을 때 기존 승계 규칙으로 파티장을 넘기고, 마지막 1인이면 방을 해산한다. 그룹 membership과 그룹장 권한은 Player 기반이므로 원정대 새 소유자에게 넘기지 않는다.
+- 새 소유자의 신규 `raidState`는 최신 ownership revision으로 생성한다. 이전 Player 경로의 stale state는 신규 소유자의 점유로 간주하지 않되, 연결 모집 정리 시 감사 가능한 원자 명령으로 제거한다.
+- 화면은 `캐릭터 소유권이 변경되어 신청/참가 상태를 정리해야 합니다`를 별도 안내하고 일반 권한 실패와 구분한다.
+
+#### B4. 별도 설계·검증 게이트
+
+- B는 Firestore 스키마, 인증 Transaction, 파티 명령과 Rules를 함께 바꾸므로 A 완료 후 새 작업 그룹으로 다시 승인받는다.
+- 최소 회귀는 동일 Player 재인증, A→B 이전, A→B→A 재이전, revision 없는 기존 문서, stale pending 승인 거절·정리, 일반 멤버 stale, 파티장 stale 승계와 마지막 1인 해산이다.
+- 타인의 그룹·모집·과거 기록 비공개, 새 Player로의 자동 승계 금지와 이전 Player의 멀티유저 명령 차단을 Rules 계약으로 고정한다.
+- 기존 운영 데이터의 일괄 마이그레이션은 하지 않는다. revision 초기화 또는 필요한 최소 backfill이 있다면 읽기 전용 영향 집계와 별도 승인 후 진행한다.
+
+### 구현 순서와 승인 게이트
+
+1. A의 Emulator 실패 fixture를 먼저 추가해 현재 Rules에서 두 결함을 재현한다.
+2. A1 count 검증을 수정하고 위조 count 거절까지 확인한다.
+3. A2 listing validator를 추가하고 그룹방 추방·탈퇴·재가입과 공개방 대조를 확인한다.
+4. A 전체 회귀, Rules 경고 0개와 diff 검토 후 운영 배포 및 실기기 확인을 진행한다.
+5. A 완료 기록을 정리한 뒤 B의 데이터 계약·UI·이행 범위를 별도 작업으로 올리고 다시 승인받는다.
+6. B 구현 전 재설치 전·후 Player binding과 이전 Player의 활성 상태는 가능한 범위에서 읽기 전용으로 대조하되, 결과를 A의 직접 원인으로 소급하지 않는다.
+
+### 현재 설계 단계 완료 조건
+
+- 직접 권한 오류의 변경 함수, 허용 필드, Emulator 허용·거절 사례와 실기기 확인 항목이 확정된다.
+- 원정대 인증과 Player 복구의 책임을 분리하고 자동 사회적 데이터 승계를 금지하는 안전 기준이 확정된다.
+- 소유권 재이전 ABA를 포함한 stale 상태 판정과 제한된 정리 방향이 정의된다.
+- 구현은 A부터 시작하며 B는 별도 승인을 받는다는 작업 경계가 문서화된다.
+
+### 현재 제외 범위
+
+- 이 설계 단계의 앱 코드·Rules·운영 데이터 변경과 배포
 - 기존 문제 방의 콘솔 수동 보정
+- 이전 Player의 그룹·모집·이력 전체를 새 Player로 복사
+- 클라이언트가 기존 Player에 새 AuthUid를 직접 연결하는 복구 기능
+- A와 B를 한 번에 구현·배포하는 작업 확장
 
 ---
 

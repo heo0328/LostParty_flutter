@@ -22,7 +22,7 @@
 
 | 항목 | 내용 |
 | --- | --- |
-| 상태 | 분석 중 — 직접 Rules 결함 2건 확인, 재설치와의 인과관계는 미확정 |
+| 상태 | 수정 설계 완료·구현 미착수 — 직접 Rules 결함 A와 원정대 이전 안전화 B를 분리 |
 | 보고일 | 2026-09-23 |
 | 관련 화면 | 그룹 전용 파티 모집, 참가자 추방·탈퇴, 모집 해산 |
 
@@ -73,14 +73,26 @@
 4. 재설치 전·후 `AuthUid → PlayerId`, 원정대 `ownerPlayerId`, 이전 Player의 활성 모집·신청·`raidState`를 읽기 전용으로 대조한다.
 5. 위 직접 결함 수정안과 원정대 소유권 이전 시 활성 상태 정리 정책을 별도 작업으로 설계한다.
 
-### 해결 방향 후보 — 아직 구현 승인 아님
+### 확정 수정 설계 — 구현 전
 
-- 해산 count 검증은 모집 생성 당시 Snapshot의 연속성이 아니라 Transaction의 현재 그룹 count 전후 `N → N-1`과 변경 후 모집 count의 일치로 검증한다.
-- 그룹 listing에는 참가자 제거 전용 update validator를 추가하고, 변경 가능 필드를 3개로 제한해 변경 후 모집의 `memberCount`, `revision`, 서버 시각과 일치시킨다.
-- 회귀는 오래된 그룹방 닫기, 그룹방 추방·탈퇴·재가입·해산, 위조 count/revision/listing과 비방장 명령 거절을 포함한다.
-- 원정대 재인증 복구는 이전 Player의 활성 상태 처리 정책이 확정된 뒤 별도 설계한다. 과거 기록과 그룹 소유권을 새 Player에 자동 승계한다고 가정하지 않는다.
+직접 권한 오류와 원정대 이전 후 고아 상태를 두 작업 그룹으로 분리한다.
 
-실행 순서와 완료 조건은 [`NEXT_WORK.md`](NEXT_WORK.md)의 `BUG-022` 분석 구간을 따른다.
+#### A. 직접 Rules 결함
+
+- 해산 count는 모집 생성 당시 Snapshot이 아니라 Transaction의 현재 그룹 원본 전후 `N → N-1`을 검증하고, 변경 후 모집 count를 변경 후 그룹 count와 일치시킨다.
+- 그룹 listing에는 참가자 제거 전용 update validator를 추가한다. 모집 원본의 정상 참가자 제거 명령과 같은 Transaction일 때만 `memberCount`, `sourceRevision`, `updatedAt` 세 필드 변경을 허용하고 변경 후 모집 값과 일치시킨다.
+- 오래된 그룹방 닫기, 그룹방 추방·탈퇴·재가입, 공개방 대조, 위조 count/revision/listing과 비방장 명령 거절을 Emulator 회귀로 고정한다.
+- Dart Repository의 현재 쓰기 형태는 계약에 맞으므로 A의 기본 변경 범위는 Rules와 회귀 fixture다.
+
+#### B. 원정대 소유권 이전 안전화
+
+- 원정대 인증은 GameAccount·Character 소유권만 이전하며 그룹·모집·신청·완료 이력과 파티장 지위는 새 Player로 자동 승계하지 않는다.
+- 앱 재설치 후 같은 LOSTPARTY Player를 복구하는 기능은 원정대 인증과 분리한다. 새 AuthUid의 기존 Player 재연결은 클라이언트 쓰기로 열지 않고 향후 신뢰 가능한 운영자·서버 명령으로만 설계한다.
+- GameAccount·Character에 단조 증가하는 `ownershipRevision`을 두고 Character 기반 신청·membership·`raidState`에 생성 당시 revision을 기록한다. 소유권이 A→B→A로 돌아와도 과거 A 문서가 다시 활성화되지 않게 한다.
+- 이전 revision의 신청은 승인 불가·명시적 무효화 대상으로, 활성 membership은 구성 점검·제한된 정리 대상으로 처리한다. stale 파티장이면 기존 승계 규칙을 적용하고 마지막 1인이면 해산한다.
+- 이전 Player 전체를 동기 순회하거나 운영 데이터를 일괄 복사하지 않는다. B는 스키마·인증·명령·Rules 영향이 크므로 A 완료 후 별도 승인 작업으로 진행한다.
+
+실행 순서와 완료 조건은 [`NEXT_WORK.md`](NEXT_WORK.md)의 `BUG-022` 수정 설계 구간을 따른다.
 
 ---
 
