@@ -18,6 +18,72 @@
 
 ---
 
+## BUG-022. 앱 재설치·동일 원정대 재인증 후 그룹 모집 관리 권한 오류
+
+| 항목 | 내용 |
+| --- | --- |
+| 상태 | 분석 중 — 직접 Rules 결함 2건 확인, 재설치와의 인과관계는 미확정 |
+| 보고일 | 2026-09-23 |
+| 관련 화면 | 그룹 전용 파티 모집, 참가자 추방·탈퇴, 모집 해산 |
+
+### 보고 시나리오
+
+1. 동일 디바이스에서 앱 데이터 삭제 또는 앱 재설치로 Firebase 익명 사용자가 바뀐다.
+2. 기존에 사용하던 동일 원정대를 새 Player에서 다시 인증한다.
+3. 그룹 생성, 타인의 가입 신청 승인과 방 생성은 성공한다.
+4. 특정 그룹 모집에서 참가자 추방·탈퇴 또는 방 해산을 실행하면 권한 확인 실패 안내가 표시된다.
+
+### 확보한 사실
+
+- 앱은 Firebase 익명 Auth UID가 없으면 새 익명 UID를 만들고, 해당 UID의 `authBindings`가 없으면 새 `PlayerId`를 생성한다. 앱 데이터 삭제·재설치 뒤에는 기존 Player가 자동 복구되지 않는다.
+- 원정대 재인증은 `gameAccounts.ownerPlayerId`, 소속 `characters.ownerPlayerId`와 `playerGameAccounts` 소유 상태를 새 Player 기준으로 갱신한다. 기존 Player의 그룹·모집·신청·`raidState` 전체를 이전하거나 정리하지는 않는다.
+- 제보 모집은 재인증 후 현재 Player가 방장이며, 모집 Aggregate·3개 membership·3개 `raidState`의 Player/Character/raid/cycle/recruitment 연결이 서로 일치한다. 신청 승인도 성공했으므로 이 방의 기본 소유권과 참가 구성은 정상 범위다.
+- 디바이스 로그에는 해산 시 `PartyAtomicLifecycle permission-denied`, 참가자 제거 시 `PartyAtomicMemberRemoval permission-denied`가 각각 기록됐다. 두 명령은 서로 다른 Rules 경로다.
+- 제보 모집의 `groupActiveRecruitmentCountAfter`는 생성 당시 값 `5`이고, 명령 당시 그룹의 `activeRecruitmentCount`는 `17`이다.
+
+### 확정된 직접 원인
+
+#### A. 그룹 모집 해산
+
+- Repository는 Transaction에서 현재 그룹 count `17`을 읽어 `16`으로 감소시키고, 모집의 `groupActiveRecruitmentCountAfter`도 `16`으로 쓴다.
+- Rules `atomicValidGroupLifecycleCount`는 동시에 변경 후 값이 모집의 기존 Snapshot `5 - 1 = 4`여야 한다고 요구한다.
+- 동일 쓰기가 `16`과 `4`를 동시에 만족할 수 없으므로 이 데이터에서 해산은 확정적으로 거절된다.
+- 이는 여러 그룹 모집을 만든 뒤 과거에 생성한 방을 닫는 일반적인 순서에서도 발생할 수 있다. 재설치 여부와 무관하게 재현 가능한 계약 결함이다.
+
+#### B. 그룹 모집 참가자 추방·탈퇴
+
+- Repository는 모집·membership·대상 `raidState`를 변경하면서 `groups/{groupId}/raidListings/{recruitmentId}`의 `memberCount`, `sourceRevision`, `updatedAt`도 함께 갱신한다.
+- 모집 Aggregate의 참가자 제거 Rules는 존재하지만, `raidListings` update allow에는 참가자 제거 명령을 검증하는 분기가 없다.
+- 기존 허용 분기는 개인 완료, 전체 Snapshot 동기화, lifecycle, 공개 범위 전환뿐이므로 위 3필드 부분 갱신은 거절된다.
+- 따라서 제보 데이터의 Player 소유권과 무관하게 그룹 전용방 추방·탈퇴 Transaction이 실패한다.
+
+### 현재 결론과 미확정 범위
+
+- 이번 제보의 실제 `permission-denied`는 위 두 Rules 계약 불일치만으로 각각 설명된다. **재설치 이전 데이터 충돌을 이번 실패의 직접 원인으로 확정하지 않는다.**
+- 다만 새 Player로 원정대 소유권만 이동하고 이전 Player의 활성 파티 상태를 정리하지 않는 구조는 별도의 고아 데이터·점유 충돌 위험이다. 이 구조적 문제는 BUG-022의 직접 수정과 섞지 않고 후속 계정 복구 정책으로 분리한다.
+- 이전·현재 AuthUid, 이전 Player의 활성 모집·신청·`raidState` 원본은 아직 대조하지 않았다. 이 자료 없이 과거 Player 데이터가 이번 방에 영향을 줬다고 기록하지 않는다.
+
+### 다음 분석 재개 지점
+
+코드·Rules 수정 전에 아래 순서로 근거를 추가한다.
+
+1. Emulator에서 재설치 없이 그룹 모집을 여러 개 생성한 뒤 오래된 방을 해산해 `5 → 4` Snapshot 조건과 현재 group count 조건의 충돌을 재현한다.
+2. 정상 그룹 전용방의 참가자 추방·본인 탈퇴 Transaction을 재현하고, `raidListings` update를 제거한 대조 요청과 비교해 최초 거절 문서를 확정한다.
+3. 동일 시나리오에서 공개방은 listing 쓰기가 없어 성공하는지 확인해 그룹 listing 경계로 원인을 제한한다.
+4. 재설치 전·후 `AuthUid → PlayerId`, 원정대 `ownerPlayerId`, 이전 Player의 활성 모집·신청·`raidState`를 읽기 전용으로 대조한다.
+5. 위 직접 결함 수정안과 원정대 소유권 이전 시 활성 상태 정리 정책을 별도 작업으로 설계한다.
+
+### 해결 방향 후보 — 아직 구현 승인 아님
+
+- 해산 count 검증은 모집 생성 당시 Snapshot의 연속성이 아니라 Transaction의 현재 그룹 count 전후 `N → N-1`과 변경 후 모집 count의 일치로 검증한다.
+- 그룹 listing에는 참가자 제거 전용 update validator를 추가하고, 변경 가능 필드를 3개로 제한해 변경 후 모집의 `memberCount`, `revision`, 서버 시각과 일치시킨다.
+- 회귀는 오래된 그룹방 닫기, 그룹방 추방·탈퇴·재가입·해산, 위조 count/revision/listing과 비방장 명령 거절을 포함한다.
+- 원정대 재인증 복구는 이전 Player의 활성 상태 처리 정책이 확정된 뒤 별도 설계한다. 과거 기록과 그룹 소유권을 새 Player에 자동 승계한다고 가정하지 않는다.
+
+실행 순서와 완료 조건은 [`NEXT_WORK.md`](NEXT_WORK.md)의 `BUG-022` 분석 구간을 따른다.
+
+---
+
 ## BUG-021. 그룹 가입 신청 승인이 Rules 평가 한도로 실패
 
 | 항목 | 내용 |

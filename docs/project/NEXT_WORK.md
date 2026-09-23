@@ -1,4 +1,43 @@
-# NEXT WORK — 애니메이션 진입 화면 테스트
+# NEXT WORK — BUG-022 재설치·재인증 후 파티 권한 오류 분석
+
+> 상태: **분석만 진행 중**. 코드·Firestore Rules·운영 데이터·배포는 변경하지 않는다. 확인된 직접 결함과 재설치 계정 단절의 구조적 위험을 분리해 검증한 뒤 구현 범위를 다시 승인받는다.
+
+## 현재 단일 작업 — BUG-022 원인 확정과 수정 설계
+
+참고: [`BUG_REPORTS.md`](BUG_REPORTS.md)의 `BUG-022`, [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`GAME_ACCOUNT_VERIFICATION_CONTRACT.md`](../architecture/GAME_ACCOUNT_VERIFICATION_CONTRACT.md).
+
+### 현재 확인된 기준
+
+- 앱 데이터 삭제·재설치는 새 익명 AuthUid와 새 PlayerId를 만들며, 동일 원정대 재인증은 GameAccount·Character 소유권만 새 Player로 옮긴다.
+- 제보 방은 새 Player가 정상 방장이고 모집·membership·`raidState` 연결도 일치한다. 재설치 이전 데이터가 이 방의 권한 오류를 직접 만들었다는 증거는 없다.
+- 해산은 모집 생성 당시 그룹 count Snapshot `5`와 현재 group count `17`을 Rules가 함께 연속값으로 요구해 거절된다.
+- 추방·탈퇴는 Repository가 그룹 `raidListings`를 부분 갱신하지만 Rules에 참가자 제거용 listing update 분기가 없어 거절된다.
+
+### 분석 순서
+
+1. 재설치 없는 Emulator fixture로 여러 그룹방 생성 후 오래된 방 해산 실패를 재현한다.
+2. 그룹방 추방·탈퇴에서 모집 본문, membership, `raidState`, listing 중 최초 거절 경계를 분리한다.
+3. 공개방과 그룹방을 대조해 listing 쓰기 유무가 실패를 결정하는지 확인한다.
+4. 제공 가능한 운영 데이터에서 재설치 전·후 Player binding과 이전 Player의 활성 상태를 읽기 전용으로 대조한다.
+5. 직접 Rules 결함의 최소 수정안과 원정대 소유권 이전 복구 정책을 별도 작업 단위로 확정한다.
+
+### 완료 조건
+
+- 두 권한 실패를 각각 Emulator에서 재현하고 최초 거절 조건을 확인한다.
+- 재설치가 직접 원인인지, 별도 구조적 위험인지를 근거로 구분한다.
+- 기존 생성·신청·승인·자리 이동·개인 완료·반복방·그룹 count/listing 흐름의 회귀 보호 목록을 확정한다.
+- 구현 대상 파일·Rules 분기·테스트와 운영 데이터 이행 필요 여부가 결정된 후 사용자 승인을 받는다.
+
+### 제외 범위
+
+- 현재 단계의 앱 코드·Rules·데이터 수정
+- Rules 또는 다른 Firebase 자원 배포
+- 로그인·복구키·원정대 기반 Player 복구 방식 결정
+- 기존 문제 방의 콘솔 수동 보정
+
+---
+
+## 완료 작업 — 애니메이션 진입 화면 테스트
 
 > 상태: 구현·자동 검증·사용자 실기기 확인을 완료했고 `feature/animated-entry-screen`을 최신 `dev`에 통합·push했다. 다음 제품 작업 선정 전 완료 기록으로 유지한다.
 
