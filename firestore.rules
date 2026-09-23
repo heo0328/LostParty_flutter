@@ -1431,16 +1431,24 @@ service cloud.firestore {
           && oldData.status == 'active');
     }
 
+    function atomicValidClosingGroupLifecycleCount(oldData, newData) {
+      let groupBefore = get(groupPath(oldData.groupId)).data;
+      let groupAfter = getAfter(groupPath(oldData.groupId)).data;
+      return groupBefore.activeRecruitmentCount is int
+        && groupBefore.activeRecruitmentCount > 0
+        && groupAfter.activeRecruitmentCount
+          == groupBefore.activeRecruitmentCount - 1
+        && newData.groupActiveRecruitmentCountAfter
+          == groupAfter.activeRecruitmentCount;
+    }
+
     function atomicValidGroupLifecycleCount(oldData, newData) {
       return !atomicHasGroupId(oldData)
         || (!atomicClosesActiveGroupRecruitment(oldData, newData)
           && newData.groupActiveRecruitmentCountAfter
             == oldData.groupActiveRecruitmentCountAfter)
         || (atomicClosesActiveGroupRecruitment(oldData, newData)
-          && getAfter(groupPath(oldData.groupId)).data.activeRecruitmentCount
-            == newData.groupActiveRecruitmentCountAfter
-          && newData.groupActiveRecruitmentCountAfter
-            == oldData.groupActiveRecruitmentCountAfter - 1);
+          && atomicValidClosingGroupLifecycleCount(oldData, newData));
     }
 
     function validAtomicLifecycleUpdate(oldData, newData) {

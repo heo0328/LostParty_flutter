@@ -27,7 +27,10 @@ void main() {
     expect(close, contains('oldData.activeRecruitmentCount is int'));
     expect(close, contains('oldData.activeRecruitmentCount > 0'));
     expect(close, contains('newData.lastRecruitmentId is string'));
-    expect(close, contains('existsAfter(recruitmentPath(newData.lastRecruitmentId))'));
+    expect(
+      close,
+      contains('existsAfter(recruitmentPath(newData.lastRecruitmentId))'),
+    );
     expect(
       close,
       contains(
@@ -55,5 +58,45 @@ void main() {
     expect(rules, contains('|| validAtomicGroupRecruitmentClose('));
     expect(rules, contains('function validGroupDisbandUpdate('));
     expect(rules, contains('allow update: if validGroupDisbandUpdate('));
+  });
+
+  test('R3 lifecycle close는 과거 모집 Snapshot 대신 현재 그룹 count를 감소시킨다', () {
+    final start = rules.indexOf(
+      'function atomicValidClosingGroupLifecycleCount(',
+    );
+    final end = rules.indexOf(
+      'function atomicValidGroupLifecycleCount(',
+      start,
+    );
+    final lifecycleCount = rules.substring(start, end);
+
+    expect(lifecycleCount, contains('groupBefore.activeRecruitmentCount > 0'));
+    expect(
+      lifecycleCount,
+      contains(
+        'groupAfter.activeRecruitmentCount\n'
+        '          == groupBefore.activeRecruitmentCount - 1',
+      ),
+    );
+    expect(
+      lifecycleCount,
+      contains(
+        'newData.groupActiveRecruitmentCountAfter\n'
+        '          == groupAfter.activeRecruitmentCount',
+      ),
+    );
+    expect(
+      lifecycleCount,
+      isNot(
+        contains(
+          'newData.groupActiveRecruitmentCountAfter\n'
+          '            == oldData.groupActiveRecruitmentCountAfter - 1',
+        ),
+      ),
+    );
+    expect(
+      rules,
+      contains('atomicValidClosingGroupLifecycleCount(oldData, newData)'),
+    );
   });
 }

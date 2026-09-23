@@ -41,7 +41,13 @@ function stateRef(db, target) {
 async function seed(
   testEnv,
   memberCount,
-  { status = 'active', cycleStatus = 'active', continueTogether = true } = {},
+  {
+    status = 'active',
+    cycleStatus = 'active',
+    continueTogether = true,
+    groupActiveRecruitmentCount = 1,
+    recruitmentGroupCountSnapshot = groupActiveRecruitmentCount,
+  } = {},
 ) {
   await testEnv.clearFirestore();
   const now = firebase.firestore.Timestamp.now();
@@ -54,7 +60,7 @@ async function seed(
       status: 'active',
     });
     await db.doc(`groups/${groupId}`).set({
-      activeRecruitmentCount: 1,
+      activeRecruitmentCount: groupActiveRecruitmentCount,
       lastRecruitmentId: recruitmentId,
       revision: 1,
       updatedAt: now,
@@ -72,7 +78,7 @@ async function seed(
       partySlots: partySlots(memberCount),
       raidStateTargets: memberTargets,
       commandTargets: memberTargets,
-      groupActiveRecruitmentCountAfter: 1,
+      groupActiveRecruitmentCountAfter: recruitmentGroupCountSnapshot,
       revision: 1,
       lastCommandId: 'seed',
       lastCommandType: 'seed',
@@ -141,15 +147,19 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
     const closesActiveRecruitment =
       (type === 'complete' && recruitment.continueTogether === false)
       || (type === 'disband' && recruitment.status === 'active');
+    const group = closesActiveRecruitment
+      ? (await transaction.get(groupRef)).data()
+      : null;
+    const nextGroupCount = closesActiveRecruitment
+      ? group.activeRecruitmentCount - 1
+      : recruitment.groupActiveRecruitmentCountAfter;
 
     transaction.update(recruitmentRef, {
       status: nextStatus,
       currentCycleStatus: nextCycleStatus,
       currentCycleKey: nextCycleKey,
       commandTargets,
-      groupActiveRecruitmentCountAfter: closesActiveRecruitment
-        ? recruitment.groupActiveRecruitmentCountAfter - 1
-        : recruitment.groupActiveRecruitmentCountAfter,
+      groupActiveRecruitmentCountAfter: nextGroupCount,
       revision: options.staleRevision ? nextRevision + 1 : nextRevision,
       lastCommandId: commandId,
       lastCommandType: type,
@@ -185,7 +195,7 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
 
     if (closesActiveRecruitment) {
       transaction.update(groupRef, {
-        activeRecruitmentCount: 0,
+        activeRecruitmentCount: nextGroupCount,
         lastRecruitmentId: recruitmentId,
         revision: 2,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -250,6 +260,13 @@ async function main() {
       );
       console.log(`PASS: ${memberCount}-member group disband`);
     }
+
+    await seed(testEnv, 8, {
+      groupActiveRecruitmentCount: 17,
+      recruitmentGroupCountSnapshot: 5,
+    });
+    await assertSucceeds(lifecycleTransaction(leaderDb, 8, 'disband'));
+    console.log('PASS: old group room closes from current 17 to 16');
 
     await seed(testEnv, 8, { continueTogether: false });
     await assertSucceeds(lifecycleTransaction(leaderDb, 8, 'complete'));

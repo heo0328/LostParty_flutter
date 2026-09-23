@@ -1,6 +1,6 @@
 # NEXT WORK — BUG-022 직접 권한 오류 수정과 원정대 이전 복구 설계
 
-> 상태: **수정 설계 완료·구현 미착수**. 코드·Firestore Rules·운영 데이터·배포는 아직 변경하지 않는다. 직접 Rules 결함은 먼저 독립 수정하고, 재설치·원정대 이전의 Player 단절은 별도 아키텍처 작업으로 분리한다.
+> 상태: **작업 그룹 A 진행 중**. A1 현재 그룹 count 기반 해산 검증은 구현했고 A2 그룹방 참가자 제거 listing 검증은 아직 착수하지 않았다. 운영 Rules·데이터·배포는 변경하지 않았다.
 
 ## 현재 단일 작업 — BUG-022 수정 설계 확정
 
@@ -34,6 +34,8 @@
 - 그룹 문서 자체의 `validAtomicGroupRecruitmentClose` 검증은 유지한다. 모집 Rules와 그룹 Rules가 같은 Transaction의 현재 count 전이를 양쪽에서 확인하게 한다.
 - 닫히지 않는 lifecycle 명령은 기존처럼 모집의 count Snapshot을 변경하지 않는다.
 - Dart Repository는 이미 현재 그룹 count를 읽어 `N-1`을 쓰므로 제품 코드 변경 없이 Rules와 회귀 fixture만 수정하는 것을 기본안으로 한다.
+
+**A1 구현 상태(2026-09-23):** `firestore.rules`와 독립 scalability proof Rules에 현재 그룹 원본 전후 값을 한 번씩 읽는 전용 helper를 추가했다. 기존 Dart Repository는 변경하지 않았다. 생성 당시 모집 Snapshot `5`, 현재 그룹 count `17`, 해산 후 `16` fixture를 추가했고 새 정적 계약 1건, JS 문법과 `git diff --check`가 통과했다. 전체 정적 계약 파일에는 이번 변경과 무관한 기존 allow 순서 문자열 assertion 1건이 실패하므로 새 계약만 분리 실행했다. 로컬 Firestore Emulator는 Rules 로딩 전에 기존 환경 문제인 HTTP 503 `Network closed for unknown reason`로 중단되어 실제 Rules assertion은 CI 격리 환경에서 확인해야 한다. A1은 운영 배포·실기기 확인 전이며 A2와 전체 Rules 회귀가 끝날 때까지 배포하지 않는다.
 
 #### A2. 그룹 모집 참가자 추방·탈퇴 listing 검증
 
