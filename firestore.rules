@@ -2186,6 +2186,30 @@ service cloud.firestore {
         && newData.updatedAt == request.time;
     }
 
+    function validAtomicMemberRemovalListingUpdate(
+      groupId,
+      recruitmentId,
+      oldData,
+      newData
+    ) {
+      let recruitmentBefore = get(recruitmentPath(recruitmentId)).data;
+      let recruitmentAfter = getAfter(recruitmentPath(recruitmentId)).data;
+      return recruitmentBefore.groupId == groupId
+        && recruitmentAfter.groupId == groupId
+        && recruitmentBefore.visibility == 'group'
+        && recruitmentAfter.visibility == 'group'
+        && validAtomicRecruitmentMemberRemoval(
+          recruitmentBefore,
+          recruitmentAfter
+        )
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'memberCount', 'sourceRevision', 'updatedAt'
+        ])
+        && newData.memberCount == recruitmentAfter.memberCount
+        && newData.sourceRevision == recruitmentAfter.revision
+        && newData.updatedAt == request.time;
+    }
+
     function validPersonalCompletionSuccessor(oldData, newData) {
       let successor = getAfter(recruitmentMemberPath(
         oldData.recruitmentId,
@@ -4081,6 +4105,11 @@ service cloud.firestore {
           request.resource.data
         );
         allow update: if validPersonalCompletionListingUpdate(
+          recruitmentId,
+          resource.data,
+          request.resource.data
+        ) || validAtomicMemberRemovalListingUpdate(
+          groupId,
           recruitmentId,
           resource.data,
           request.resource.data

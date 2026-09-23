@@ -676,7 +676,11 @@ async function repositionApprovedMemberTxn(db, destinationSlotIndex = 2, memberS
   });
 }
 
-async function kickApprovedMemberTxn(db) {
+async function removeApprovedMemberTxn(
+  db,
+  actorPlayerId,
+  { tamperListingCount = false } = {},
+) {
   return runTransaction(db, async (tx) => {
     const recruitmentRef = doc(db, 'recruitments', recruitmentId);
     const memberRef = doc(db, 'recruitments', recruitmentId, 'members', joinerPlayerId);
@@ -684,7 +688,9 @@ async function kickApprovedMemberTxn(db) {
     const recruitment = (await tx.get(recruitmentRef)).data();
     await tx.get(memberRef);
     const nextRevision = recruitment.revision + 1;
-    const eventId = `memberKicked_${recruitmentId}_${nextRevision}`;
+    const selfLeave = actorPlayerId === joinerPlayerId;
+    const eventType = selfLeave ? 'memberLeft' : 'memberKicked';
+    const eventId = `${eventType}_${recruitmentId}_${nextRevision}`;
     tx.update(recruitmentRef, {
       memberPlayerIds: [playerId], memberCount: 1, dealerCount: 1,
       supportCount: 0, partySlots: recruitment.partySlots.filter((slot) => slot.playerId !== joinerPlayerId),
@@ -694,13 +700,31 @@ async function kickApprovedMemberTxn(db) {
     });
     tx.delete(memberRef);
     tx.delete(stateRef);
+    if (recruitment.visibility === 'group') {
+      tx.update(
+        doc(db, 'groups', recruitment.groupId, 'raidListings', recruitmentId),
+        {
+          memberCount: tamperListingCount ? 7 : 1,
+          sourceRevision: nextRevision,
+          updatedAt: serverTimestamp(),
+        },
+      );
+    }
     tx.set(doc(db, 'partyEvents', eventId), {
-      schemaVersion: 1, eventId, recruitmentId, type: 'memberKicked',
+      schemaVersion: 1, eventId, recruitmentId, type: eventType,
       commandId: eventId, commandRevision: nextRevision,
-      audiencePlayerIds: [playerId, joinerPlayerId], actorPlayerId: playerId,
+      audiencePlayerIds: [playerId, joinerPlayerId], actorPlayerId,
       targetPlayerId: joinerPlayerId, occurredAt: serverTimestamp(),
     });
   });
+}
+
+async function kickApprovedMemberTxn(db, options = {}) {
+  return removeApprovedMemberTxn(db, playerId, options);
+}
+
+async function leaveApprovedRoomTxn(db, options = {}) {
+  return removeApprovedMemberTxn(db, joinerPlayerId, options);
 }
 
 async function directRejoinAfterKickTxn(db) {
@@ -1718,6 +1742,46 @@ async function main() {
     console.log('test: group room disband closes count and listing once');
     await assertSucceeds(disbandApprovedRoomTxn(db));
     console.log('PASS: group room disband');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    await assertSucceeds(approvePublicApplicationTxn(db));
+    await seedGroupLinkedRoom(testEnv, db);
+    console.log('test: leader kick updates group listing with recruitment revision');
+    await assertSucceeds(kickApprovedMemberTxn(db));
+    const kickedGroupListing = (await getDoc(doc(
+      db, 'groups', 'group-room-1', 'raidListings', recruitmentId,
+    ))).data();
+    if (kickedGroupListing.memberCount !== 1
+      || kickedGroupListing.sourceRevision !== 4) {
+      throw new Error('Group listing member removal snapshot mismatch');
+    }
+    console.log('PASS: group room leader kick listing update');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    await assertSucceeds(approvePublicApplicationTxn(db));
+    await seedGroupLinkedRoom(testEnv, db);
+    console.log('test: member self-leave updates group listing');
+    await assertSucceeds(leaveApprovedRoomTxn(applicantDb));
+    console.log('PASS: group room self-leave listing update');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    await assertSucceeds(approvePublicApplicationTxn(db));
+    await seedGroupLinkedRoom(testEnv, db);
+    console.log('test: member removal cannot forge group listing member count');
+    await assertFails(kickApprovedMemberTxn(db, { tamperListingCount: true }));
+    console.log('PASS: forged group listing member count denied');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);

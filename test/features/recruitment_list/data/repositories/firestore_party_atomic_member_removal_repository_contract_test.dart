@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   late String repository;
   late String router;
+  late String rules;
 
   setUpAll(() {
     repository = File(
@@ -12,6 +13,7 @@ void main() {
       'firestore_party_atomic_member_removal_repository.dart',
     ).readAsStringSync();
     router = File('lib/app/router/app_router.dart').readAsStringSync();
+    rules = File('firestore.rules').readAsStringSync().replaceAll('\r\n', '\n');
   });
 
   test('탈퇴·추방은 한 Transaction에서 대상 raidState와 공용 이벤트를 사용한다', () {
@@ -40,6 +42,47 @@ void main() {
       contains('final raidState = await transaction.get(raidStateRef)'),
     );
     expect(repository, contains('transaction.delete(raidStateRef)'));
+  });
+
+  test('그룹방 참가자 제거는 listing의 인원·revision·시각만 함께 갱신한다', () {
+    expect(repository, contains(".collection('raidListings')"));
+    expect(repository, contains("'memberCount': aggregate.memberCount - 1"));
+    expect(repository, contains("'sourceRevision': aggregate.revision + 1"));
+    expect(repository, contains("'updatedAt': now"));
+
+    final start = rules.indexOf(
+      'function validAtomicMemberRemovalListingUpdate(',
+    );
+    final end = rules.indexOf(
+      'function validPersonalCompletionSuccessor(',
+      start,
+    );
+    final listingRule = rules.substring(start, end);
+    expect(listingRule, contains('validAtomicRecruitmentMemberRemoval('));
+    expect(
+      listingRule,
+      contains(
+        "newData.diff(oldData).affectedKeys().hasOnly([\n"
+        "          'memberCount', 'sourceRevision', 'updatedAt'\n"
+        '        ])',
+      ),
+    );
+    expect(
+      listingRule,
+      contains('newData.memberCount == recruitmentAfter.memberCount'),
+    );
+    expect(
+      listingRule,
+      contains('newData.sourceRevision == recruitmentAfter.revision'),
+    );
+    expect(
+      rules,
+      contains(
+        'validAtomicMemberRemovalListingUpdate(\n'
+        '          groupId,\n'
+        '          recruitmentId,',
+      ),
+    );
   });
 
   test('운영 Router에 원자 탈퇴 Repository를 연결한다', () {

@@ -1,6 +1,6 @@
 # NEXT WORK — BUG-022 직접 권한 오류 수정과 원정대 이전 복구 설계
 
-> 상태: **작업 그룹 A 진행 중**. A1 현재 그룹 count 기반 해산 검증은 구현했고 A2 그룹방 참가자 제거 listing 검증은 아직 착수하지 않았다. 운영 Rules·데이터·배포는 변경하지 않았다.
+> 상태: **작업 그룹 A 자동 검증 대기**. A1 현재 그룹 count 기반 해산과 A2 그룹방 참가자 제거 listing 검증을 로컬 구현했다. demo Emulator CI·운영 배포·실기기 확인은 아직 진행하지 않았다.
 
 ## 현재 단일 작업 — BUG-022 수정 설계 확정
 
@@ -45,6 +45,8 @@
 - 세 값은 각각 변경 후 모집의 `memberCount`, `revision`, `request.time`과 같아야 한다.
 - 마지막 1인 제거로 방이 종료되는 경로는 listing update가 아니라 기존 lifecycle/listing delete 계약을 사용한다.
 - 공개방은 listing 쓰기를 새로 추가하지 않는다. 누락 listing 자동 생성이나 전체 Snapshot 덮어쓰기도 이번 수정에 포함하지 않는다.
+
+**A2 구현 상태(2026-09-23):** 그룹 listing update에 `validAtomicMemberRemovalListingUpdate`를 연결했다. 같은 Transaction의 모집 전후 문서가 기존 참가자 제거 검증을 통과하고 경로 `groupId`와 그룹 공개 범위가 유지될 때만 listing의 `memberCount`, `sourceRevision`, `updatedAt` 세 필드 변경을 허용한다. 변경 후 값은 모집의 인원수·revision·`request.time`과 일치해야 한다. 제품 Repository는 이미 같은 세 필드를 쓰므로 변경하지 않았다. 방장 추방, 본인 탈퇴와 listing 인원 위조 거절 fixture를 전체 production Rules Emulator 스크립트에 추가했다. Repository·Router·Rules 정적 계약 5건, JS 문법과 `git diff --check`가 통과했다. 로컬 Emulator는 A1에서 Rules 로딩 전 503이 반복 확인되어 같은 실패 명령을 재실행하지 않았으며, A1·A2 실제 Rules 허용·거절과 기존 전체 회귀는 CI 격리 환경에서 확인한다.
 
 #### A3. 자동 검증
 
