@@ -27,6 +27,10 @@ import '../../features/account/presentation/pages/character_management_page.dart
 import '../../features/account/presentation/pages/character_detail_page.dart';
 import '../../features/account/presentation/pages/my_account_page.dart';
 import '../../features/account/presentation/pages/game_account_verification_page.dart';
+import '../../features/account_recovery/data/gateways/firebase_google_account_recovery_gateway.dart';
+import '../../features/account_recovery/data/repositories/account_recovery_repository_impl.dart';
+import '../../features/account_recovery/domain/repositories/account_recovery_repository.dart';
+import '../../features/account_recovery/presentation/pages/account_recovery_page.dart';
 import '../../features/account/domain/repositories/weekly_raid_claim_repository.dart';
 import '../../features/account/domain/repositories/weekly_raid_claim_command_repository.dart';
 import '../../features/account/domain/repositories/weekly_raid_status_repository.dart';
@@ -153,9 +157,16 @@ GoRouter createAppRouter({
   GroupApplicationCommandRepository? groupApplicationCommandRepository,
   GroupJoinCodeCommandRepository? groupJoinCodeCommandRepository,
   StartupCharacterRefreshRunner? startupCharacterRefreshRunner,
+  AccountRecoveryRepository? accountRecoveryRepository,
 }) {
   final operatorAccessRepositoryOrDefault =
       operatorAccessRepository ?? FirestoreOperatorAccessRepository();
+  AccountRecoveryRepository? accountRecoveryRepositoryCache =
+      accountRecoveryRepository;
+  AccountRecoveryRepository accountRecoveryRepositoryForRoute() =>
+      accountRecoveryRepositoryCache ??= AccountRecoveryRepositoryImpl(
+        FirebaseGoogleAccountRecoveryGateway(),
+      );
   GroupReadRepository? groupReadRepositoryCache = groupReadRepository;
   GroupReadRepository groupReadRepositoryForRoute() =>
       groupReadRepositoryCache ??= FirestoreGroupReadRepository(
@@ -767,6 +778,12 @@ GoRouter createAppRouter({
           operatorAccessRepository: operatorAccessRepositoryOrDefault,
         ),
         routes: [
+          GoRoute(
+            path: 'account-recovery',
+            builder: (context, state) => AccountRecoveryPage(
+              repository: accountRecoveryRepositoryForRoute(),
+            ),
+          ),
           GoRoute(
             path: 'game-account-verification',
             builder: (context, state) => GameAccountVerificationPage(

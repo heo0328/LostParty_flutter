@@ -6,6 +6,7 @@
 
 - 통합 기준은 `dev`이며 `dev`와 `main`에서 직접 수정하지 않는다. 최신 `dev`에서 기존 동일 목적 브랜치를 우선 확인하고, 없으면 `feature/*`, `fix/*`, `docs/*`, `refactor/*`, `release/*` 중 작업 목적에 맞는 브랜치로 분기한다. 도구명 접두사는 새로 만들지 않는다.
 - 앱은 Firebase 익명 Auth와 Player binding, 게임 계정·Character 인증, 그룹, 레이드 모집·신청·참가·회차·완료 Claim, 로컬 알림과 계정 관리 흐름을 제공한다.
+- Firebase 계정 복구는 기존 익명 AuthUid에 Google 자격 증명을 연결해 같은 Player binding을 유지하는 방식으로 진행한다. D1은 기존 설치에서 복구 수단을 연결하고, D2는 재설치 후 새 익명 계정을 만들기 전 복구 진입을 제공한다. 계약: [`../architecture/FIREBASE_ACCOUNT_RECOVERY_CONTRACT.md`](../architecture/FIREBASE_ACCOUNT_RECOVERY_CONTRACT.md)
 - 앱 시작 시 브랜드 이미지를 사용하는 약 2.2초의 1회성 Flutter 진입 연출을 서비스 초기화와 병렬 실행한다. Android 일반·적응형·단색 아이콘과 iOS AppIcon 세트도 같은 브랜드 자산으로 구성했으며 실기기 적용을 확인했다.
 - 주차 경계는 한국 수요일 오전 6시 공통 정책을 사용한다. 만료된 1회성 방은 미완료 종료되고 새 주차 점유를 막지 않으며, 반복방은 최초 접근 시 멱등하게 현재 주차로 승계된다.
 - 그룹 생성·가입 신청·탈퇴·그룹장 양도·초대코드 확인/가입·마지막 1인 해산과 레이드 주요 명령은 운영 Rules 및 실기기에서 확인했다. `BUG-021`은 그룹 신청 승인 Transaction의 Rules 표현식 1,000개 한도 초과가 원인이었으며, 승인 분기 평가 순서만 최소 수정해 전체 demo 회귀와 운영 게시 후 기존 실패 Player 2명의 승인을 확인하고 `dev`에 통합했다.
@@ -62,4 +63,4 @@
 
 ## 다음 작업
 
-파티·그룹 명령 재설계 F7, F8-A 승인 대기 고아 신청 정리와 BUG-021 그룹 신청 승인 복구는 구현·검증·운영 반영·실기기 확인 및 `dev` 통합까지 완료했다. 정식 Android ID `kr.co.heowork0921.lostparty`, 새 Firebase Android 앱, 영구 release 서명, 키 백업·GitHub Secrets, Actions signed artifact와 실기기 동작을 확인했으며 공개 GitHub Release `v1.0.0`에 APK와 체크섬을 게시했다. 릴리즈 파이프라인 작업은 완료했으며 다음 제품 작업은 별도로 선정한다. 실행 계약은 [`../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md`](../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md)를 따른다. 고아 데이터 상시 발견과 공대장 자동 거절은 [`../product/DETAIL_IMPROVEMENTS.md`](../product/DETAIL_IMPROVEMENTS.md)의 장기 후보로 유지한다.
+현재 단일 작업은 Firebase 계정 복구 D1이다. 설정에서 기존 익명 사용자에게 Google 복구 수단을 연결하되 AuthUid·PlayerId와 기존 Firestore 데이터는 변경하지 않는다. D1 완료 뒤 재설치 시작 시 복구 진입을 제공하는 D2를 진행한다. 실행 계약은 [`../architecture/FIREBASE_ACCOUNT_RECOVERY_CONTRACT.md`](../architecture/FIREBASE_ACCOUNT_RECOVERY_CONTRACT.md)를 따른다.

@@ -11,7 +11,7 @@ Firebase Authentication의 `AuthUid`를 LOSTPARTY 영속 사용자 식별자인 
 - Player binding 완료 전 앱 진입 대기
 - 클라이언트의 binding 변경·삭제 및 임의 Player 연결 차단
 
-복구키, 새 AuthUid 재연결, 공개 프로필, 게임 계정과 Character 서버 이전은 포함하지 않는다. 재연결은 향후 신뢰할 수 있는 서버 명령으로만 제공한다.
+복구키, 새 AuthUid 재연결, 공개 프로필, 게임 계정과 Character 서버 이전은 포함하지 않는다. 서로 다른 AuthUid의 재연결은 향후 신뢰할 수 있는 서버 명령으로만 제공한다. 현재 AuthUid를 유지한 채 인증 provider를 연결하는 계정 복구는 [`FIREBASE_ACCOUNT_RECOVERY_CONTRACT.md`](FIREBASE_ACCOUNT_RECOVERY_CONTRACT.md)를 따른다.
 
 ## 2. 식별자 관계
 

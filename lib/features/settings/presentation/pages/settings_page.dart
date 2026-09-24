@@ -25,6 +25,18 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
+            child: Text('LOSTPARTY 계정'),
+          ),
+          ListTile(
+            key: const ValueKey('settingsAccountRecovery'),
+            leading: const Icon(Icons.phonelink_lock_outlined),
+            title: const Text('계정 복구 설정'),
+            subtitle: const Text('재설치와 기기 변경에 대비해 복구 수단을 연결합니다.'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/account-recovery'),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
             child: Text('로스트아크 연동'),
           ),
           ListTile(

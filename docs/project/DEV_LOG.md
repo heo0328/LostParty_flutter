@@ -3414,3 +3414,12 @@
 - `dev`와 `main`을 검증 커밋 `0c93b34`로 맞추고 `v1.0.0` 태그를 게시했다. 태그 run `35596035632`에서 signed APK 빌드·검증·artifact 업로드는 통과했지만, checkout 없는 release job의 `gh release create`가 저장소를 자동 판별하지 못해 게시만 실패했다. Release 조회·생성 명령에 `--repo "$GITHUB_REPOSITORY"`를 명시하는 최소 보정을 적용하고, 성공 artifact를 재빌드하지 않는 복구 절차를 사용한다.
 - 보정 커밋 `4569245`를 작업 브랜치, `dev`, `main`에 fast-forward 반영했다. 기존 `v1.0.0` 태그는 검증 앱 커밋 `0c93b34`에서 이동하지 않았다.
 - run `35596035632`의 성공 artifact를 내려받아 SHA-256 `68e9beaacdf3f475de142630f200f87f03b8efc15251f484cfe0b5045c25460e` 일치를 확인한 뒤 공개 Release `v1.0.0`에 `lostparty-v1.0.0-android.apk`와 `.sha256`을 게시했다. Release는 draft·prerelease가 아니며 임시 복구 파일은 삭제했다.
+
+# 2026-09-25 Firebase 계정 복구 D1 코드 구간
+
+- 앱 재설치·기기 변경에 대비해 기존 익명 Firebase 사용자에게 Google credential을 연결하는 계약을 추가했다. 연결 성공 전후 같은 AuthUid와 기존 Player binding을 사용하며 Firestore 문서·Rules·Indexes는 변경하지 않는다.
+- 설정에 계정 복구 화면을 추가했다. 이미 연결된 사용자는 멱등 성공으로 처리하고, 사용자 취소와 다른 Firebase 사용자에게 이미 연결된 credential 충돌은 현재 세션을 바꾸지 않는다. UID 불일치는 성공으로 처리하지 않는다.
+- 새 Google 인증 모듈은 복구 화면 진입 때만 생성한다. 라우터 생성 시 Firebase Auth를 먼저 조회해 기존 Firebase 미초기화 Widget 테스트를 깨뜨린 초기 구현은 지연 생성으로 바로잡았다.
+- 계정 복구 표적 8건과 기존 설정/운영자 화면 회귀 7건, 변경 파일 분석과 diff 검사가 통과했다. 전체 `test/widget_test.dart`의 남은 실패는 이번 diff 밖 기존 라우터가 Firebase 미초기화 상태에서 `FirebaseFirestore.instance`를 생성하는 지점이다.
+- 새로 가능해진 흐름은 기존 설치 사용자의 Google 복구 수단 연결 코드와 상태 안내다. 보존 확인한 흐름은 설정의 일반/운영자 진입점과 연결 취소·충돌 시 현재 사용자 유지다.
+- 실기기 Google 연결과 재설치 복구는 아직 확인하지 않았다. 현재 Android Firebase 설정에 OAuth client와 certificate hash가 없으므로 Firebase Console의 Google provider·release SHA 등록과 새 `google-services.json` 반영이 선행돼야 한다. 사용자가 실기기를 조작하며 확인한다.

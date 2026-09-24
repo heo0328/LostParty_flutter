@@ -1,4 +1,48 @@
-# NEXT WORK — 애니메이션 진입 화면 테스트
+# NEXT WORK — Firebase 계정 복구 연결
+
+> 상태: `feature/account-recovery-linking`에서 D1을 진행한다. 기존 익명 로그인과 Player binding은 보존하며, 이번 구간은 기존 사용자의 Google 복구 수단 연결까지만 포함한다.
+
+## 현재 단일 작업 — D1 기존 익명 계정에 복구 수단 연결
+
+- 기준 계약: [`FIREBASE_ACCOUNT_RECOVERY_CONTRACT.md`](../architecture/FIREBASE_ACCOUNT_RECOVERY_CONTRACT.md)
+- 종료 조건: 설정에서 복구 연결 상태를 확인하고 Google 계정을 현재 Firebase 사용자에게 연결할 수 있으며, 성공 전후 UID가 같고 충돌·취소 시 기존 세션과 데이터가 바뀌지 않는다.
+
+### 포함 범위
+
+1. Google 인증 자격 증명을 현재 Firebase 사용자에 `linkWithCredential`로 연결한다.
+2. 미연결·연결 완료 상태와 실패 사유를 설정 화면에서 안내한다.
+3. 이미 다른 LOSTPARTY 사용자에게 연결된 자격 증명은 자동 병합하거나 로그인하지 않는다.
+4. UID 불변, 멱등 연결, 취소, 충돌 처리를 표적 테스트로 검증한다.
+
+### 제외 범위
+
+- 재설치 직후 복구/새로 시작 선택을 위한 부트스트랩 변경(D2)
+- 서로 다른 AuthUid·PlayerId의 Firestore 데이터 병합 또는 이전
+- Firestore 저장 구조·Rules·Indexes 변경과 배포
+- Firebase Console의 Google provider·SHA 설정 변경
+
+### 회귀 보호
+
+- 계정 복구를 사용하지 않는 기존 사용자는 현재 자동 익명 로그인과 앱 진입을 그대로 사용한다.
+- 연결 명령은 Firestore 문서를 쓰지 않으며 Player binding을 새로 만들지 않는다.
+- 취소·실패·충돌에서 Firebase sign-out, 익명 계정 재생성, 다른 사용자 로그인으로 전환하지 않는다.
+- 게임 계정 인증과 Firebase 사용자 복구 UI를 분리한다.
+
+### 다음 구간
+
+D1 완료 후 D2에서 Firebase 세션이 없는 경우에만 익명 계정 생성 전에 복구 선택 화면을 제공한다. D2의 실제 정상 동작은 사용자가 디바이스에서 확인한다.
+
+### 현재 구현·검증 상태
+
+- 설정의 `계정 복구 설정` 화면, Google credential 연결, 연결 상태 표시와 실패 안내를 구현했다.
+- 연결 전후 UID 불변, 이미 연결된 계정의 멱등 처리, 취소, 다른 사용자 credential 충돌 거절, Google 설정 오류 변환을 검증했다.
+- 계정 복구 표적 8건과 기존 설정/운영자 화면 회귀 7건이 통과했고 변경 파일 정적 분석과 `git diff --check`가 통과했다.
+- 전체 `test/widget_test.dart`는 계정 복구 Repository의 지연 생성을 확인한 뒤에도 기존 라우터의 `FirebaseFirestore.instance` 사전 생성 때문에 Firebase 미초기화 상태에서 실패한다. 새 복구 Gateway가 실패 원인이던 첫 실행은 지연 생성으로 수정했으며, 남은 실패 지점은 이번 diff 밖 기존 코드다.
+- 현재 `android/app/google-services.json`에는 정식 package의 OAuth client와 certificate hash가 없다. 따라서 Firebase Console의 Google provider·release SHA 등록과 갱신된 설정 파일 반영 전에는 실기기 Google 연결을 완료할 수 없다. 외부 설정과 실기기 확인은 D3 게이트로 유지한다.
+
+---
+
+# 완료 기록 — 애니메이션 진입 화면 테스트
 
 > 상태: 구현·자동 검증·사용자 실기기 확인을 완료했고 `feature/animated-entry-screen`을 최신 `dev`에 통합·push했다. 다음 제품 작업 선정 전 완료 기록으로 유지한다.
 
