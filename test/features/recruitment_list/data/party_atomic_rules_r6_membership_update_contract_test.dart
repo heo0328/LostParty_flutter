@@ -16,10 +16,13 @@ void main() {
     expect(rules, contains('function validAtomicPositionAggregateUpdate('));
     expect(rules, contains('function validAtomicRecruitmentMemberRemoval('));
     expect(rules, contains('function validAtomicRecruitmentVisibilityChange('));
-    expect(rules, contains('|| validAtomicRecruitmentJoin('));
+    expect(rules, contains('&& validAtomicRecruitmentJoin('));
     expect(rules, isNot(contains('function validRecruitmentJoin(')));
     expect(rules, isNot(contains('function validMembershipRevisionUpdate(')));
-    expect(rules, isNot(contains('function validRecruitmentVisibilityChange(')));
+    expect(
+      rules,
+      isNot(contains('function validRecruitmentVisibilityChange(')),
+    );
   });
 
   test('R6 membership·raidState·group·listing 동반 OR를 연다', () {
@@ -29,7 +32,7 @@ void main() {
     expect(rules, contains('function validAtomicMemberCharacterChange('));
     expect(rules, contains('function validAtomicGroupRecruitmentOpen('));
     expect(rules, contains('function validAtomicVisibilityListingWrite('));
-    expect(rules, contains('|| validAtomicJoinedMembership('));
+    expect(rules, contains('&& validAtomicJoinedMembership('));
     expect(rules, contains('validAtomicMemberRemoval('));
     expect(rules, contains('|| validAtomicMembershipRaidStateDelete('));
     expect(rules, contains('validAtomicMemberCharacterChange('));

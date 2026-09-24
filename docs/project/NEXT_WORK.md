@@ -66,6 +66,8 @@
 
 **A3 그룹원 확인 비용 결과(2026-09-24):** `35952954093`에서 listing 쓰기를 제외한 모집·membership·raidState·event 4개 쓰기도 한도를 넘었고, `35953072208`에서는 listing과 event를 모두 제외한 3개 쓰기도 동일하게 실패했다. 공개방의 동일 참가 흐름은 4개 쓰기로 통과하므로 문서 수나 listing 자체가 아니라 그룹방 참가 시 membership validator가 수행하는 그룹원 존재 확인이 임계점을 넘기는 조건이다. 이미 확인한 active binding을 재사용해 `isCurrentGroupMember` 대신 membership `exists`만 직접 검사한 `35953245277`도 효과가 없어 되돌렸다. 다음 구간은 모집·membership·raidState·partyEvent 각 match의 긴 OR에서 가입 분기를 식별하기 전에 소비하는 비용을 함께 측정하고, 보안 조건을 줄이지 않는 범위에서 가입 marker를 각 문서에 선배치하는 통합 설계를 먼저 작성한다. 앞서 모집 문서 한 곳만 marker 순서를 바꾼 접근은 실패했으므로 반복하지 않는다.
 
+**A3 통합 OR 선별 설계(2026-09-24):** 모집 update는 `memberCount N → N+1`, membership create는 `canApproveApplications == false`, `raidState` create는 `source == party && createdAt 존재`, 기존 listing update는 `sourceRevision 부재`를 값싼 가입 marker로 사용해 각각의 기존 상세 validator를 관련 없는 분기보다 먼저 평가한다. marker만으로 허용하지 않고 `validAtomicRecruitmentJoin`, `validAtomicJoinedMembership`, `validAtomicRaidStateCreate`, `validGroupRaidListingCreate`의 기존 조건을 모두 통과해야 한다. 공용 `partyEvents`는 membership validator가 이미 첫 분기라 변경하지 않는다. 회귀 보호 범위는 신규 파티장 생성, 수동 완료 state 생성, 회차 advance state 재생성, 공개방 직접 가입, 그룹방 직접 재가입, 신청 승인, 추방·탈퇴, 개인 완료, lifecycle, visibility 전환과 listing 위조 거절이다. 이번 구간은 OR 선별과 정적 계약만 수정하며 저장 스키마·Dart Repository·원자 쓰기 문서 수·권한 조건은 변경하지 않는다.
+
 #### A4. 배포와 실기기 확인
 
 - Rules 변경이므로 표적 정적 검사와 demo Emulator 전체 회귀가 통과한 최신 추적본만 운영 프로젝트에 한 번 배포 시도한다.

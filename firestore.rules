@@ -3422,16 +3422,18 @@ service cloud.firestore {
           && playerId == currentPlayerId();
         allow list: if hasActiveBinding()
           && playerId == currentPlayerId();
-        allow create: if (request.resource.data.source == 'manual'
+        allow create: if (request.resource.data.source == 'party'
+          && 'createdAt' in request.resource.data
+          && validAtomicRaidStateCreate(
+            playerId,
+            stateId,
+            request.resource.data
+          )) || (request.resource.data.source == 'manual'
           && validManualRaidStateCreate(
           playerId,
           stateId,
           request.resource.data
         )) || validAtomicAdvanceRaidStateCreate(
-          playerId,
-          stateId,
-          request.resource.data
-        ) || validAtomicRaidStateCreate(
           playerId,
           stateId,
           request.resource.data
@@ -3854,7 +3856,12 @@ service cloud.firestore {
         recruitmentId,
         request.resource.data
       );
-      allow update: if (personalCompletionCommandMarker(request.resource.data)
+      allow update: if (request.resource.data.memberCount
+          == resource.data.memberCount + 1
+        && validAtomicRecruitmentJoin(
+          resource.data,
+          request.resource.data
+        )) || (personalCompletionCommandMarker(request.resource.data)
           && validPersonalCompletionRecruitmentUpdate(
             resource.data,
             request.resource.data
@@ -3865,9 +3872,6 @@ service cloud.firestore {
           resource.data,
           request.resource.data
         ) || validAtomicPendingApplicationUpdate(
-          resource.data,
-          request.resource.data
-        ) || validAtomicRecruitmentJoin(
           resource.data,
           request.resource.data
         ) || validAtomicCharacterRevisionUpdate(
@@ -3889,11 +3893,12 @@ service cloud.firestore {
         allow get, list: if canReadPrivateRecruitmentData(recruitmentId)
           || canReadPublicRecruitmentMembers(recruitmentId)
           || (hasActiveBinding() && playerId == currentPlayerId());
-        allow create: if validAtomicInitialLeaderMembership(
-          recruitmentId,
-          playerId,
-          request.resource.data
-        ) || validAtomicJoinedMembership(
+        allow create: if (request.resource.data.canApproveApplications == false
+          && validAtomicJoinedMembership(
+            recruitmentId,
+            playerId,
+            request.resource.data
+          )) || validAtomicInitialLeaderMembership(
           recruitmentId,
           playerId,
           request.resource.data
@@ -4104,7 +4109,12 @@ service cloud.firestore {
           recruitmentId,
           request.resource.data
         );
-        allow update: if validPersonalCompletionListingUpdate(
+        allow update: if (!('sourceRevision' in request.resource.data)
+          && validGroupRaidListingCreate(
+            groupId,
+            recruitmentId,
+            request.resource.data
+          )) || validPersonalCompletionListingUpdate(
           recruitmentId,
           resource.data,
           request.resource.data
@@ -4112,10 +4122,6 @@ service cloud.firestore {
           groupId,
           recruitmentId,
           resource.data,
-          request.resource.data
-        ) || validGroupRaidListingCreate(
-          groupId,
-          recruitmentId,
           request.resource.data
         ) || validAtomicLifecycleListingUpdate(
           recruitmentId,
