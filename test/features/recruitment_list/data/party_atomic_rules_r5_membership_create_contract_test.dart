@@ -21,26 +21,44 @@ void main() {
     expect(block, contains('validAtomicRaidStateDelete('));
   });
 
-  test('R5 raidState create는 v2 모집·raidStateTargets·주간 Claim을 검증한다', () {
+  test('R5 raidState create는 정렬된 가입 target·주간 Claim을 검증한다', () {
     final start = rules.indexOf('function validAtomicRaidStateCreate(');
     final end = rules.indexOf('function atomicIsMembershipEventType(');
     final create = rules.substring(start, end);
 
     expect(create, contains('recruitment.schemaVersion == 2'));
     expect(create, contains('!atomicIsLifecycleCommand(recruitment)'));
-    expect(create, contains('atomicRaidStateListedInTargets(recruitment'));
+    expect(create, contains('atomicJoinedRaidStateTarget(recruitment'));
     expect(create, contains('!hasWeeklyRaidClaimAfter('));
     expect(create, isNot(contains('getAfter(assignmentPath(')));
   });
 
-  test('R5 partyEvents create는 lifecycle OR와 membership 이벤트를 병행한다', () {
+  test('가입 target은 세 Aggregate 배열의 마지막 신규 Player와 일치한다', () {
+    final start = rules.indexOf('function atomicJoinedRaidStateTarget(');
+    final end = rules.indexOf('function validAtomicRaidStateCreate(', start);
+    final target = rules.substring(start, end);
+
+    expect(target, contains('let index = recruitment.memberCount - 1'));
+    expect(target, contains('recruitment.memberPlayerIds[index] == playerId'));
+    expect(target, contains('recruitment.partySlots[index].playerId == playerId'));
+    expect(
+      target,
+      contains('recruitment.raidStateTargets[index].playerId == playerId'),
+    );
+    expect(
+      target,
+      contains('recruitment.raidStateTargets[index].stateId == stateId'),
+    );
+  });
+
+  test('R5 partyEvents create는 membership과 lifecycle 이벤트를 병행한다', () {
     final start = rules.indexOf('match /partyEvents/{eventId}');
     final end = rules.indexOf('match /recruitments/{recruitmentId}', start);
     final block = rules.substring(start, end);
 
     expect(rules, contains('function validAtomicMembershipPartyEvent('));
-    expect(block, contains('validAtomicLifecyclePartyEvent('));
-    expect(block, contains('|| validAtomicMembershipPartyEvent('));
+    expect(block, contains('validAtomicMembershipPartyEvent('));
+    expect(block, contains('|| validAtomicLifecyclePartyEvent('));
   });
 
   test('R5 membership 이벤트는 Write Plan 유형과 revision 봉투를 허용한다', () {
