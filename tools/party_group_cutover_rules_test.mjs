@@ -771,11 +771,14 @@ async function directRejoinAfterKickTxn(db, { tamperListing = false } = {}) {
       createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
     });
     if (recruitment.visibility === 'group') {
-      const listingDocument = { ...recruitment, ...recruitmentPatch };
-      if (tamperListing) listingDocument.memberCount = 7;
-      tx.set(
+      const listingPatch = {
+        ...recruitmentPatch,
+        sourceRevision: nextRevision,
+      };
+      if (tamperListing) listingPatch.memberCount = 7;
+      tx.update(
         doc(db, 'groups', recruitment.groupId, 'raidListings', recruitmentId),
-        listingDocument,
+        listingPatch,
       );
     }
     tx.set(doc(db, 'partyEvents', eventId), {

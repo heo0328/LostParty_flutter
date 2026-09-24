@@ -19,7 +19,10 @@ void main() {
     expect(rules, contains('|| validAtomicRecruitmentJoin('));
     expect(rules, isNot(contains('function validRecruitmentJoin(')));
     expect(rules, isNot(contains('function validMembershipRevisionUpdate(')));
-    expect(rules, isNot(contains('function validRecruitmentVisibilityChange(')));
+    expect(
+      rules,
+      isNot(contains('function validRecruitmentVisibilityChange(')),
+    );
   });
 
   test('R6 membership·raidState·group·listing 동반 OR를 연다', () {
@@ -49,7 +52,7 @@ void main() {
     expect(join, isNot(contains('getAfter(recruitmentSlotPath(')));
   });
 
-  test('그룹 가입 listing은 참가 검증을 중복하지 않고 전체 Snapshot을 결합한다', () {
+  test('그룹 가입 listing은 참가 변경 필드 전체를 원본과 결합한다', () {
     final start = rules.indexOf('function validAtomicJoinListingUpdate(');
     final end = rules.indexOf(
       'function validPersonalCompletionSuccessor(',
@@ -68,7 +71,22 @@ void main() {
       listing,
       contains('recruitmentAfter.revision == recruitmentBefore.revision + 1'),
     );
-    expect(listing, contains('data == recruitmentAfter'));
+    expect(
+      listing,
+      contains("'revision', 'sourceRevision',\n          'updatedAt'"),
+    );
+    expect(
+      listing,
+      contains('newData.partySlots == recruitmentAfter.partySlots'),
+    );
+    expect(
+      listing,
+      contains('newData.raidStateTargets == recruitmentAfter.raidStateTargets'),
+    );
+    expect(
+      listing,
+      contains('newData.sourceRevision == recruitmentAfter.revision'),
+    );
     expect(listing, isNot(contains('validAtomicRecruitmentJoin(')));
     expect(
       rules,
