@@ -12,7 +12,12 @@
           "package_name": "com.example.lost_party"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "574337852234-vdkvdobbq8es2rdpumc1icqt6ja3a3cr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDM3D2KSqWzmYBI6QD6nFnaxnlvibQ7FCc"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "574337852234-vdkvdobbq8es2rdpumc1icqt6ja3a3cr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "574337852234-sgg94b56v8hp7et7fqutqvla940sl1ie.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.lostParty"
+              }
+            }
+          ]
         }
       }
     },
@@ -31,7 +48,28 @@
           "package_name": "kr.co.heowork0921.lostparty"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "574337852234-orom669nbg1u80j38ov5hamoeor8v59p.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "kr.co.heowork0921.lostparty",
+            "certificate_hash": "df13e0d20aaebfd3de72e8b73b20c07c96d10643"
+          }
+        },
+        {
+          "client_id": "574337852234-pje249p14id708ieg1t4q6fa9tmljih5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "kr.co.heowork0921.lostparty",
+            "certificate_hash": "6bb4a0bc306bd20c85f524ebb500ba208b2bb205"
+          }
+        },
+        {
+          "client_id": "574337852234-vdkvdobbq8es2rdpumc1icqt6ja3a3cr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDM3D2KSqWzmYBI6QD6nFnaxnlvibQ7FCc"
@@ -39,7 +77,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "574337852234-vdkvdobbq8es2rdpumc1icqt6ja3a3cr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "574337852234-sgg94b56v8hp7et7fqutqvla940sl1ie.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.lostParty"
+              }
+            }
+          ]
         }
       }
     }

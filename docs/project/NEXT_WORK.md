@@ -1,6 +1,6 @@
 # NEXT WORK — Firebase 계정 복구 연결
 
-> 상태: `feature/account-recovery-linking`에서 D1·D2 코드와 표적 검증을 완료했다. 외부 Firebase Google provider·서명 설정과 사용자 실기기 확인(D3)이 남아 있다.
+> 상태: `feature/account-recovery-linking`에서 D1·D2 코드와 표적 검증, D3 외부 Firebase Google provider·Android 서명 설정 및 최신 구성 파일 반영을 완료했다. 사용자 실기기 확인만 남아 있다.
 
 ## 현재 단일 작업 — D1 기존 익명 계정에 복구 수단 연결
 
@@ -39,10 +39,11 @@
 
 - 설정의 `계정 복구 설정` 화면, Google credential 연결, 연결 상태 표시와 실패 안내를 구현했다.
 - 연결 전후 UID 불변, 이미 연결된 계정의 멱등 처리, 취소, 다른 사용자 credential 충돌 거절, Google 설정 오류 변환을 검증했다.
-- D1은 로컬 커밋 `9214bda`로 보존했다. 원격 push는 외부 전송 명시 승인 부족으로 실행되지 않았다.
+- D1은 커밋 `9214bda`, D2는 커밋 `69fdd67`로 보존했고 원격 작업 브랜치에도 push했다.
 - D1·D2의 부트스트랩·연결·Player binding 표적 23건과 기존 설정/운영자 화면 회귀 7건이 통과했고 변경 파일 정적 분석과 `git diff --check`가 통과했다.
 - 전체 `test/widget_test.dart`는 계정 복구 Repository의 지연 생성을 확인한 뒤에도 기존 라우터의 `FirebaseFirestore.instance` 사전 생성 때문에 Firebase 미초기화 상태에서 실패한다. 새 복구 Gateway가 실패 원인이던 첫 실행은 지연 생성으로 수정했으며, 남은 실패 지점은 이번 diff 밖 기존 코드다.
-- 현재 `android/app/google-services.json`에는 정식 package의 OAuth client와 certificate hash가 없다. 따라서 Firebase Console의 Google provider·release SHA 등록과 갱신된 설정 파일 반영 전에는 실기기 Google 연결을 완료할 수 없다. 다음 단일 게이트는 D3 외부 설정과 사용자 실기기 확인이다.
+- Firebase Authentication의 Google provider를 활성화하고 정식 Android 앱에 debug/release SHA-1·SHA-256을 등록했다. 최신 `google-services.json`에는 정식 package의 debug/release Android OAuth client와 web client가 포함된다.
+- 다음 단일 게이트는 기존 설치 연결, 앱 삭제·재설치 복구와 충돌 거절을 사용자가 실기기에서 확인하는 것이다.
 - 로컬 `signingReport`로 등록 대상 지문을 확인했다.
   - debug SHA-1: `6B:B4:A0:BC:30:6B:D2:0C:85:F5:24:EB:B5:00:BA:20:8B:2B:B2:05`
   - debug SHA-256: `48:BE:2A:CF:E7:B5:B9:69:CE:E3:0D:CB:97:0C:AD:E7:C5:5C:0D:18:CD:F4:E2:BE:D6:E7:8E:45:F7:D8:B2:B5`

@@ -3433,3 +3433,11 @@
 - 기존 세션 무선택 진입, 명시 선택 전 익명 생성 금지, 새 시작 확인, 미연결 Google 계정의 신규 Player 승격 금지, 기존 Player binding read-only 조회를 포함한 부트스트랩·계정 복구·Player 표적 테스트 23건과 변경 파일 분석이 통과했다.
 - Firestore Rules·Indexes·데이터 스키마는 변경하지 않았다. 외부 Firebase Google provider·서명 SHA 설정과 기존 설치 연결/삭제·재설치 복구의 실기기 확인은 D3에 남긴다.
 - Android `signingReport`가 성공해 debug/release의 SHA-1·SHA-256을 확인했고 `NEXT_WORK.md`의 D3 입력값으로 기록했다. 비밀번호와 키 파일 내용은 출력하거나 문서화하지 않았다.
+
+# 2026-09-25 Firebase 계정 복구 D3 외부 인증 설정
+
+- Firebase Authentication의 Google provider를 활성화하고 프로젝트 지원 이메일을 지정했다. Firestore Rules·Indexes·데이터는 변경하지 않았다.
+- 정식 Android 앱 `kr.co.heowork0921.lostparty`에 debug/release SHA-1·SHA-256 네 개를 등록했다.
+- Firebase에서 다시 받은 `google-services.json`을 반영했다. 정식 package 항목에는 debug/release SHA-1 인증서 해시별 Android OAuth client와 공용 web OAuth client가 포함된다.
+- JSON 구조·package·Firebase app ID·OAuth client 수를 확인했고 Gradle `processDebugGoogleServices`, `processReleaseGoogleServices`가 모두 통과했다. 제품 Dart 코드는 바뀌지 않아 Flutter 테스트와 분석은 반복하지 않았다.
+- 외부 설정과 로컬 구성 반영은 완료했다. 기존 설치 연결 전후 Player·원정대·그룹 유지, 앱 삭제·재설치 뒤 같은 Player 복구와 다른 사용자 credential 충돌 거절은 사용자가 실기기에서 확인한다.
