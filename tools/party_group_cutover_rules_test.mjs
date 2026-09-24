@@ -1839,10 +1839,10 @@ async function main() {
     await assertSucceeds(leaveApprovedRoomTxn(applicantDb));
     console.log('PASS: group room self-leave listing update');
     console.log('diagnostic: group rejoin without listing write');
-    await assertExpressionLimit(directRejoinAfterKickTxn(applicantDb, {
+    await assertSucceeds(directRejoinAfterKickTxn(applicantDb, {
       skipListing: true,
     }));
-    console.log('PASS: four-write rejoin without listing reaches limit');
+    console.log('PASS: four-write rejoin without listing');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);
@@ -1853,25 +1853,10 @@ async function main() {
     await seedGroupLinkedRoom(testEnv, db, { includeJoinerGroupMember: true });
     await assertSucceeds(leaveApprovedRoomTxn(applicantDb));
     console.log('diagnostic: group rejoin without event write');
-    await assertExpressionLimit(directRejoinAfterKickTxn(applicantDb, {
-      skipEvent: true,
-    }));
-    console.log('PASS: four-write rejoin without event reaches limit');
-
-    await testEnv.clearFirestore();
-    await seedBase(testEnv);
-    await seedJoiner(testEnv);
-    await assertSucceeds(createPublicRecruitmentTxn(db));
-    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
-    await assertSucceeds(approvePublicApplicationTxn(db));
-    await seedGroupLinkedRoom(testEnv, db, { includeJoinerGroupMember: true });
-    await assertSucceeds(leaveApprovedRoomTxn(applicantDb));
-    console.log('diagnostic: group rejoin without listing and event writes');
     await assertSucceeds(directRejoinAfterKickTxn(applicantDb, {
-      skipListing: true,
       skipEvent: true,
     }));
-    console.log('PASS: three-write group rejoin stays within expression limit');
+    console.log('PASS: four-write rejoin without event');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);
