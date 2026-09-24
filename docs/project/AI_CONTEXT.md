@@ -39,6 +39,7 @@
 - 그룹 membership·초대코드·그룹장 이전/해산 계약과 레이드 명령·읽기·주간 Claim 계약이 구현돼 있다.
 - 진행 중 레이드 카드의 방별 unread 배지는 레이드 현황 탭 재선택 갱신으로 보완했다. 모든 방의 실시간 Listener는 추가하지 않았다.
 - 8인 공격대 자리 이동과 점유 자리 교환, 동일 파티 중복 직업 교환 차단은 구현됐고 실기기에서 확인했다. Character 변경 자동 이동·파란 안내 제거와 알림의 일부 실기기 확인은 남아 있다.
+- BUG-022의 오래된 그룹 count 기준 해산과 그룹방 참가자 제거 listing 갱신은 작업 브랜치 CI 근거를 확보했다. 그룹방 탈퇴 후 재가입은 안전 조건을 유지한 Rules 비용 축소에서도 1,000식 한도를 넘었고 모든 실험 코드는 되돌렸다. 다음 구현 후보는 신뢰 서버 참가 명령이지만 현재 Spark/Functions 제외 계약을 바꾸고 Blaze·결제 연결을 요구하므로 사용자 결정 전에는 구현하지 않는다. 설계: [`../architecture/TRUSTED_PARTY_JOIN_COMMAND_DESIGN.md`](../architecture/TRUSTED_PARTY_JOIN_COMMAND_DESIGN.md)
 - 기존 `release/1.0.0` 후보는 다인 명령 확장성 결함으로 폐기하고 이력용으로만 보존한다. 현재 우선 작업은 `BUG-018` 단일 보정이 아니라 파티·그룹 Firestore 명령, Player별 이벤트 fan-out과 Rules 접근 구조의 재설계다. 서버 후처리 단계는 사용하지 않고 현재 최대 8인의 핵심 상태를 제한된 원자 명령으로 확정하며, assignment·주간 Claim은 통합 `raidState`로 교체하는 방향이다. 종료 하위 문서 정리는 정확성과 분리한다. 기준: [`../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md)
 - 계약: [`../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md), [`../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md`](../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md), [`../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)
 
@@ -62,4 +63,4 @@
 
 ## 다음 작업
 
-파티·그룹 명령 재설계 F7, F8-A 승인 대기 고아 신청 정리와 BUG-021 그룹 신청 승인 복구는 구현·검증·운영 반영·실기기 확인 및 `dev` 통합까지 완료했다. 정식 Android ID `kr.co.heowork0921.lostparty`, 새 Firebase Android 앱, 영구 release 서명, 키 백업·GitHub Secrets, Actions signed artifact와 실기기 동작을 확인했으며 공개 GitHub Release `v1.0.0`에 APK와 체크섬을 게시했다. 릴리즈 파이프라인 작업은 완료했으며 다음 제품 작업은 별도로 선정한다. 실행 계약은 [`../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md`](../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md)를 따른다. 고아 데이터 상시 발견과 공대장 자동 거절은 [`../product/DETAIL_IMPROVEMENTS.md`](../product/DETAIL_IMPROVEMENTS.md)의 장기 후보로 유지한다.
+현재 단일 작업은 BUG-022다. A1 오래된 그룹 count 기반 해산과 A2 참가자 제거 listing 수정은 작업 브랜치에 남아 있고, A3 그룹방 재가입은 Rules 한계로 구조 결정을 기다린다. 서버 전환을 선택하면 결제·리전·예산 보호·직접 가입/승인 범위를 먼저 확정한다. Spark를 유지하면 안전 조건을 제거하거나 원자 쓰기를 분리하지 않고 A1/A2만 별도 완료할지 결정한다. 정식 Android ID와 릴리즈 파이프라인 기준은 [`../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md`](../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md)를 유지한다.

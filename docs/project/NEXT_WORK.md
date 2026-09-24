@@ -72,6 +72,8 @@
 
 **A3 구조 결정 지점:** listing/event 쓰기 제거, 그룹 membership 조회 축소, 네 match OR 선별, raidState 한쪽 및 membership·raidState 양쪽의 target 순회 제거까지 정상 재가입의 표현식 한도를 해소하지 못했다. 원자 쓰기를 임의로 나누거나 권한·소유권·주간 완료·그룹 접근·target 결합 검증을 더 삭제하면 부분 성공 또는 위조 참가를 열 수 있으므로 진행하지 않는다. 다음 구현은 (1) 서버가 권한과 최신 상태를 검증하고 Admin 원자 쓰기를 수행하는 신뢰 서버 참가 명령, 또는 (2) 명시적 참가 명령/증명 문서를 중심으로 Rules 데이터 계약을 재설계하는 작업 중 하나를 먼저 선택해야 한다. 기존 앱 쓰기와의 전환·구버전 거절 시점, 재시도 멱등성, 배포 순서가 포함되는 별도 작업 그룹이며 선택 전에는 A3 코드를 더 수정하지 않는다.
 
+**A3 서버 전환 조사(2026-09-24):** 저장소에는 Functions 소스·`firebase.json` Functions 설정·Flutter `firebase_functions` 의존성이 없고, 현재 파티 계약은 Spark 무료 범위와 Cloud Functions 제외를 명시한다. 공식 Firebase 기준 Functions는 로컬 Emulator 사용은 가능하지만 운영 배포에는 Blaze 요금제와 Cloud Billing 연결이 필요하며 무료 사용량 안에서도 build artifact 저장 등 과금 가능성이 있다. [`TRUSTED_PARTY_JOIN_COMMAND_DESIGN.md`](../architecture/TRUSTED_PARTY_JOIN_COMMAND_DESIGN.md)에 callable 입력, 서버 권위 검증, Admin 원자 쓰기, commandId 멱등성, 앱/Rules 단계 전환, 롤백과 검증 범위를 작성했다. 결제·리전·예산 보호, 직접 가입만 또는 신청 승인 포함 범위를 사용자가 명시 결정하기 전에는 Functions 초기화·의존성 추가·배포를 진행하지 않는다. Spark 유지 시 클라이언트 작성 proof 문서는 신뢰 근거가 아니고 Rules 재검증 비용을 피하지 못하므로 현재 문제의 권장 대안으로 보지 않는다.
+
 #### A4. 배포와 실기기 확인
 
 - Rules 변경이므로 표적 정적 검사와 demo Emulator 전체 회귀가 통과한 최신 추적본만 운영 프로젝트에 한 번 배포 시도한다.
