@@ -49,6 +49,37 @@ void main() {
     expect(join, isNot(contains('getAfter(recruitmentSlotPath(')));
   });
 
+  test('그룹 가입 listing은 참가 검증을 중복하지 않고 전체 Snapshot을 결합한다', () {
+    final start = rules.indexOf('function validAtomicJoinListingUpdate(');
+    final end = rules.indexOf(
+      'function validPersonalCompletionSuccessor(',
+      start,
+    );
+    final listing = rules.substring(start, end);
+
+    expect(listing, contains('isCurrentGroupMember(groupId)'));
+    expect(
+      listing,
+      contains(
+        'recruitmentAfter.memberCount == recruitmentBefore.memberCount + 1',
+      ),
+    );
+    expect(
+      listing,
+      contains('recruitmentAfter.revision == recruitmentBefore.revision + 1'),
+    );
+    expect(listing, contains('data == recruitmentAfter'));
+    expect(listing, isNot(contains('validAtomicRecruitmentJoin(')));
+    expect(
+      rules,
+      contains(
+        'allow update: if validAtomicJoinListingUpdate(\n'
+        '          groupId,\n'
+        '          recruitmentId,',
+      ),
+    );
+  });
+
   test('R6 원자 membership은 assignment 대신 raidState를 본다', () {
     final start = rules.indexOf('function validAtomicJoinedMembership(');
     final end = rules.indexOf('function validAtomicMemberRemoval(');

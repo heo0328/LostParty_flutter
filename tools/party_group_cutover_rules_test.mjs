@@ -727,7 +727,7 @@ async function leaveApprovedRoomTxn(db, options = {}) {
   return removeApprovedMemberTxn(db, joinerPlayerId, options);
 }
 
-async function directRejoinAfterKickTxn(db) {
+async function directRejoinAfterKickTxn(db, { tamperListing = false } = {}) {
   return runTransaction(db, async (tx) => {
     const recruitmentRef = doc(db, 'recruitments', recruitmentId);
     const memberRef = doc(db, 'recruitments', recruitmentId, 'members', joinerPlayerId);
@@ -771,9 +771,11 @@ async function directRejoinAfterKickTxn(db) {
       createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
     });
     if (recruitment.visibility === 'group') {
+      const listingDocument = { ...recruitment, ...recruitmentPatch };
+      if (tamperListing) listingDocument.memberCount = 7;
       tx.set(
         doc(db, 'groups', recruitment.groupId, 'raidListings', recruitmentId),
-        { ...recruitment, ...recruitmentPatch },
+        listingDocument,
       );
     }
     tx.set(doc(db, 'partyEvents', eventId), {
@@ -1823,6 +1825,11 @@ async function main() {
     console.log('test: member self-leave updates group listing');
     await assertSucceeds(leaveApprovedRoomTxn(applicantDb));
     console.log('PASS: group room self-leave listing update');
+    console.log('test: group room rejoin rejects listing mismatch');
+    await assertFails(directRejoinAfterKickTxn(applicantDb, {
+      tamperListing: true,
+    }));
+    console.log('PASS: mismatched group rejoin listing denied');
     console.log('test: member directly rejoins group room after self-leave');
     await assertSucceeds(directRejoinAfterKickTxn(applicantDb));
     console.log('PASS: group room rejoin after self-leave');
