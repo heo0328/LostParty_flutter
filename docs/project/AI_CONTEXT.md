@@ -39,7 +39,7 @@
 - 그룹 membership·초대코드·그룹장 이전/해산 계약과 레이드 명령·읽기·주간 Claim 계약이 구현돼 있다.
 - 진행 중 레이드 카드의 방별 unread 배지는 레이드 현황 탭 재선택 갱신으로 보완했다. 모든 방의 실시간 Listener는 추가하지 않았다.
 - 8인 공격대 자리 이동과 점유 자리 교환, 동일 파티 중복 직업 교환 차단은 구현됐고 실기기에서 확인했다. Character 변경 자동 이동·파란 안내 제거와 알림의 일부 실기기 확인은 남아 있다.
-- BUG-022의 오래된 그룹 count 기준 해산과 그룹방 참가자 제거 listing 갱신은 작업 브랜치 CI 근거를 확보했다. 그룹방 탈퇴 후 재가입은 국소 Rules 비용 축소에서 1,000식 한도를 넘었고 실험 코드는 모두 되돌렸다. 다음 구현은 Spark 범위에서 모집 update에 참가 정책을 집중하고 membership·raidState·event·listing을 직접 결합 검증으로 축소하는 작업 그룹 C다. 재설치 복구 D와 타인 원정대 이전 안전화 E는 분리한다. 설계: [`../architecture/BUG_022_REMAINING_FIX_DESIGN.md`](../architecture/BUG_022_REMAINING_FIX_DESIGN.md)
+- BUG-022의 오래된 그룹 count 기준 해산과 그룹방 참가자 제거 listing 갱신은 작업 브랜치 CI 근거를 확보했다. 그룹방 탈퇴 후 재가입은 국소 Rules 축소뿐 아니라 모집 update에 참가 정책을 집중한 작업 그룹 C도 기존 공개방 승인부터 1,000식 한도를 넘어 실패했고 구현을 모두 되돌렸다. 운영 배포는 없었다. C의 다음 단계는 신뢰 서버 또는 데이터 계약 변경의 별도 결정이며, 재설치 복구 D와 타인 원정대 이전 안전화 E는 독립 작업으로 남아 있다. 설계: [`../architecture/BUG_022_REMAINING_FIX_DESIGN.md`](../architecture/BUG_022_REMAINING_FIX_DESIGN.md)
 - 기존 `release/1.0.0` 후보는 다인 명령 확장성 결함으로 폐기하고 이력용으로만 보존한다. 현재 우선 작업은 `BUG-018` 단일 보정이 아니라 파티·그룹 Firestore 명령, Player별 이벤트 fan-out과 Rules 접근 구조의 재설계다. 서버 후처리 단계는 사용하지 않고 현재 최대 8인의 핵심 상태를 제한된 원자 명령으로 확정하며, assignment·주간 Claim은 통합 `raidState`로 교체하는 방향이다. 종료 하위 문서 정리는 정확성과 분리한다. 기준: [`../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md)
 - 계약: [`../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md), [`../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md`](../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md), [`../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)
 
@@ -63,4 +63,4 @@
 
 ## 다음 작업
 
-현재 단일 작업은 BUG-022다. A1 오래된 그룹 count 기반 해산과 A2 참가자 제거 listing 수정은 작업 브랜치에 남아 있다. 다음은 작업 그룹 C의 Spark 재가입 Rules 통합이며, 완료 후 D 계정 복구, E 소유권 세대값·stale 정리를 순차 진행한다. 유료 서버 전환은 C 실패 후 별도 사용자 결정이 있을 때만 검토한다. 정식 Android ID와 릴리즈 파이프라인 기준은 [`../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md`](../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md)를 유지한다.
+현재 단일 작업은 BUG-022다. A1 오래된 그룹 count 기반 해산과 A2 참가자 제거 listing 수정은 작업 브랜치에 남아 있다. 작업 그룹 C의 Spark 재가입 Rules 통합은 실패·원복됐으므로, 다음은 C 대안에 대한 사용자 결정 또는 독립 작업 D 계정 복구다. E 소유권 세대값·stale 정리는 D와 별도 검증 단위로 유지한다. 정식 Android ID와 릴리즈 파이프라인 기준은 [`../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md`](../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md)를 유지한다.
