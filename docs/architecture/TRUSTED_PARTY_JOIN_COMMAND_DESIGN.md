@@ -9,7 +9,9 @@ listing·event 쓰기 수, OR 순서, 그룹 membership 조회와 membership·ra
 않는다.
 
 이 문서는 신뢰 서버가 파티 참가를 검증하고 Admin SDK Transaction으로 확정하는 경우의
-최소 계약을 정의한다. 아직 구현·결제 플랜 변경·Functions 배포를 승인한 문서가 아니다.
+최소 계약을 정의하는 **최후 대안 문서**다. 먼저
+[`BUG_022_REMAINING_FIX_DESIGN.md`](BUG_022_REMAINING_FIX_DESIGN.md)의 Spark 가입 Rules 통합을
+진행한다. 이 문서는 구현·결제 플랜 변경·Functions 배포를 승인한 문서가 아니다.
 
 포함 범위:
 

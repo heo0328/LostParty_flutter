@@ -45,6 +45,7 @@
 - [`architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md`](architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md): 그룹장 즉시 지정 이전·후속 탈퇴·1인 해산과 보관 계약
 - [`architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md): 인원수 비례 파티·그룹 명령, 공용 이벤트·Aggregate·통합 raidState·8인 제한 원자 명령 재설계
 - [`architecture/TRUSTED_PARTY_JOIN_COMMAND_DESIGN.md`](architecture/TRUSTED_PARTY_JOIN_COMMAND_DESIGN.md): BUG-022 그룹방 재가입을 위한 신뢰 서버 참가 명령, 멱등성·전환·배포 결정 게이트
+- [`architecture/BUG_022_REMAINING_FIX_DESIGN.md`](architecture/BUG_022_REMAINING_FIX_DESIGN.md): BUG-022 미완료 재가입·재설치 복구·원정대 이전을 Spark 범위에서 분리한 실행 설계
 - [`architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md`](architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md): 정식 Android ID·영구 서명키·태그 기반 APK GitHub Release 자동화 계약
 
 ## Integrations

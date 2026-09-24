@@ -1,6 +1,6 @@
 # NEXT WORK — BUG-022 직접 권한 오류 수정과 원정대 이전 복구 설계
 
-> 상태: **작업 그룹 A3 구조 결정 대기**. A1 현재 그룹 count 기반 해산과 A2 그룹방 참가자 제거 listing 검증은 CI에서 허용·거절 결과를 확보했다. 그룹방 탈퇴 후 재가입은 안전 조건을 유지한 Rules 비용 축소 시도에서도 1,000식 한도를 초과했다. 신뢰 서버 명령 또는 데이터 계약 변경을 선택하기 전에는 전체 회귀·운영 배포·실기기 확인으로 넘어가지 않는다.
+> 상태: **미완료 버그 설계 완료, 작업 그룹 C 착수 대기**. A1 현재 그룹 count 기반 해산과 A2 그룹방 참가자 제거 listing 검증은 CI 근거를 확보했다. 그룹방 재가입은 Spark 범위의 가입 전용 Rules 책임 통합으로 다시 설계하며, 재설치 복구와 타인 원정대 이전 안전화는 각각 별도 작업 그룹 D/E로 진행한다.
 
 ## 현재 단일 작업 — BUG-022 수정 설계 확정
 
@@ -70,9 +70,9 @@
 
 **A3 교차문서 검증 결과(2026-09-24):** 첫 시도는 신규 membership create Rules가 모집 target과 같은 요청의 raidState를 검증한다는 불변식을 이용해 참가 raidState validator의 중복 target 순회만 제거했다. 단독 raidState 생성, membership 누락, target 불일치는 모두 거절됐지만 CI `35992417272`의 정상 그룹방 재가입은 여전히 1,000식 한도를 넘었다. 두 번째 시도는 제품 Write Plan의 `memberPlayerIds`·`partySlots`·`raidStateTargets` 동일 순서와 신규 참가자 마지막 추가를 계약으로 고정해 membership과 raidState 양쪽의 target 순회를 직접 마지막 인덱스 검증으로 바꿨다. 순서 위조는 거절됐지만 CI `35993347464`의 정상 재가입도 같은 한도에서 실패했다. 두 실행 모두 신규 생성·수동 완료·그룹 승인/코드 가입·공개방 재가입·자리 이동·추방/탈퇴·2/4/8인 해산과 A1/A2는 실패 지점 전까지 통과했다. 효과 없는 변경은 각각 `3d3e442`, `5d95005`에서 되돌렸고 운영 배포하지 않는다.
 
-**A3 구조 결정 지점:** listing/event 쓰기 제거, 그룹 membership 조회 축소, 네 match OR 선별, raidState 한쪽 및 membership·raidState 양쪽의 target 순회 제거까지 정상 재가입의 표현식 한도를 해소하지 못했다. 원자 쓰기를 임의로 나누거나 권한·소유권·주간 완료·그룹 접근·target 결합 검증을 더 삭제하면 부분 성공 또는 위조 참가를 열 수 있으므로 진행하지 않는다. 다음 구현은 (1) 서버가 권한과 최신 상태를 검증하고 Admin 원자 쓰기를 수행하는 신뢰 서버 참가 명령, 또는 (2) 명시적 참가 명령/증명 문서를 중심으로 Rules 데이터 계약을 재설계하는 작업 중 하나를 먼저 선택해야 한다. 기존 앱 쓰기와의 전환·구버전 거절 시점, 재시도 멱등성, 배포 순서가 포함되는 별도 작업 그룹이며 선택 전에는 A3 코드를 더 수정하지 않는다.
+**A3 구조 결정 지점:** listing/event 쓰기 제거, 그룹 membership 조회 축소, 네 match OR 선별, raidState 한쪽 및 membership·raidState 양쪽의 target 순회 제거까지 정상 재가입의 표현식 한도를 해소하지 못했다. 원자 쓰기를 임의로 나누거나 권한·소유권·주간 완료·그룹 접근·target 결합 검증을 더 삭제하면 부분 성공 또는 위조 참가를 열 수 있으므로 진행하지 않는다. 다음 무료 범위 구현은 모집 update 한 곳에 전체 참가 정책을 배치하고 membership·raidState·event·listing은 같은 revision의 직접 Projection 결합만 확인하는 작업 그룹 C다. 상세 실행 계약은 [`BUG_022_REMAINING_FIX_DESIGN.md`](../architecture/BUG_022_REMAINING_FIX_DESIGN.md)를 따른다.
 
-**A3 서버 전환 조사(2026-09-24):** 저장소에는 Functions 소스·`firebase.json` Functions 설정·Flutter `firebase_functions` 의존성이 없고, 현재 파티 계약은 Spark 무료 범위와 Cloud Functions 제외를 명시한다. 공식 Firebase 기준 Functions는 로컬 Emulator 사용은 가능하지만 운영 배포에는 Blaze 요금제와 Cloud Billing 연결이 필요하며 무료 사용량 안에서도 build artifact 저장 등 과금 가능성이 있다. [`TRUSTED_PARTY_JOIN_COMMAND_DESIGN.md`](../architecture/TRUSTED_PARTY_JOIN_COMMAND_DESIGN.md)에 callable 입력, 서버 권위 검증, Admin 원자 쓰기, commandId 멱등성, 앱/Rules 단계 전환, 롤백과 검증 범위를 작성했다. 결제·리전·예산 보호, 직접 가입만 또는 신청 승인 포함 범위를 사용자가 명시 결정하기 전에는 Functions 초기화·의존성 추가·배포를 진행하지 않는다. Spark 유지 시 클라이언트 작성 proof 문서는 신뢰 근거가 아니고 Rules 재검증 비용을 피하지 못하므로 현재 문제의 권장 대안으로 보지 않는다.
+**A3 서버 전환 조사(2026-09-24):** 저장소에는 Functions 구성이 없고 현재 계약도 Spark를 기준으로 한다. 신뢰 서버 설계는 기술적 최후 대안으로만 보존하며 현재 구현 순서에서 제외한다. 먼저 작업 그룹 C의 가입 전용 권위 validator와 Projection 결합 validator로 중복 정책 평가를 구조적으로 제거한다. 이 전체 재설계가 보안 거절을 유지한 채 Emulator 한도를 통과하지 못한 경우에만 서버 대안을 다시 검토한다.
 
 #### A4. 배포와 실기기 확인
 
@@ -81,7 +81,11 @@
 - 실기기는 그룹 전용방 한 개에서 `참가자 추방 → 재가입 → 본인 탈퇴`, 여러 방을 만든 그룹의 오래된 방 해산을 확인한다.
 - 공개방 정상 추방·탈퇴와 그룹의 다른 활성 모집 count가 보존되는지도 함께 확인한다.
 
-### 작업 그룹 B — Player 복구와 원정대 소유권 이전 안전화
+### 기존 작업 그룹 B 정책 기준 — 작업 그룹 D/E로 구체화
+
+아래 안전 기준은 유지하되 실제 구현 단위와 순서는
+[`BUG_022_REMAINING_FIX_DESIGN.md`](../architecture/BUG_022_REMAINING_FIX_DESIGN.md)의 D 계정 복구와
+E 원정대 소유권 이전 안전화를 따른다.
 
 #### B1. 제품 정책
 
@@ -106,28 +110,28 @@
 - 새 소유자의 신규 `raidState`는 최신 ownership revision으로 생성한다. 이전 Player 경로의 stale state는 신규 소유자의 점유로 간주하지 않되, 연결 모집 정리 시 감사 가능한 원자 명령으로 제거한다.
 - 화면은 `캐릭터 소유권이 변경되어 신청/참가 상태를 정리해야 합니다`를 별도 안내하고 일반 권한 실패와 구분한다.
 
-#### B4. 별도 설계·검증 게이트
+#### B4. 별도 구현·검증 게이트
 
-- B는 Firestore 스키마, 인증 Transaction, 파티 명령과 Rules를 함께 바꾸므로 A 완료 후 새 작업 그룹으로 다시 승인받는다.
+- D와 E는 인증 연결과 Firestore 스키마·파티 Rules의 변경 범위가 다르므로 C 완료 후에도 각각 별도 작업 그룹으로 진행한다.
 - 최소 회귀는 동일 Player 재인증, A→B 이전, A→B→A 재이전, revision 없는 기존 문서, stale pending 승인 거절·정리, 일반 멤버 stale, 파티장 stale 승계와 마지막 1인 해산이다.
 - 타인의 그룹·모집·과거 기록 비공개, 새 Player로의 자동 승계 금지와 이전 Player의 멀티유저 명령 차단을 Rules 계약으로 고정한다.
 - 기존 운영 데이터의 일괄 마이그레이션은 하지 않는다. revision 초기화 또는 필요한 최소 backfill이 있다면 읽기 전용 영향 집계와 별도 승인 후 진행한다.
 
 ### 구현 순서와 승인 게이트
 
-1. A의 Emulator 실패 fixture를 먼저 추가해 현재 Rules에서 두 결함을 재현한다.
-2. A1 count 검증을 수정하고 위조 count 거절까지 확인한다.
-3. A2 listing validator를 추가하고 그룹방 추방·탈퇴·재가입과 공개방 대조를 확인한다.
-4. A 전체 회귀, Rules 경고 0개와 diff 검토 후 운영 배포 및 실기기 확인을 진행한다.
-5. A 완료 기록을 정리한 뒤 B의 데이터 계약·UI·이행 범위를 별도 작업으로 올리고 다시 승인받는다.
-6. B 구현 전 재설치 전·후 Player binding과 이전 Player의 활성 상태는 가능한 범위에서 읽기 전용으로 대조하되, 결과를 A의 직접 원인으로 소급하지 않는다.
+1. 완료된 A1 해산과 A2 추방·탈퇴 수정은 그대로 보존한다.
+2. C에서 현재 재가입 실패와 기존 성공 기준을 고정한 뒤 가입 정책/Projection Rules 책임을 통합한다.
+3. C 전체 Emulator, Rules 경고 0개와 diff 검토 후 운영 배포 및 실기기 확인을 진행한다.
+4. D에서 익명 Firebase user를 복구 가능한 로그인 제공자에 연결하고 재설치 전후 같은 UID·Player 복구를 확인한다.
+5. E에서 ownershipRevision dual-write·stale 차단·제한 정리를 순차 구현한다.
+6. E 구현 전 재설치 전·후 Player binding과 이전 Player의 활성 상태는 가능한 범위에서 읽기 전용으로 대조하되, 결과를 A/C의 직접 원인으로 소급하지 않는다.
 
 ### 현재 설계 단계 완료 조건
 
 - 직접 권한 오류의 변경 함수, 허용 필드, Emulator 허용·거절 사례와 실기기 확인 항목이 확정된다.
 - 원정대 인증과 Player 복구의 책임을 분리하고 자동 사회적 데이터 승계를 금지하는 안전 기준이 확정된다.
 - 소유권 재이전 ABA를 포함한 stale 상태 판정과 제한된 정리 방향이 정의된다.
-- 구현은 A부터 시작하며 B는 별도 승인을 받는다는 작업 경계가 문서화된다.
+- 구현은 C → D → E로 분리하며 각 작업 그룹을 독립 검증·배포한다는 경계가 문서화된다.
 
 ### 현재 제외 범위
 

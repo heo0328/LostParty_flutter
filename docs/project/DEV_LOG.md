@@ -1,3 +1,11 @@
+# 2026-09-24 BUG-022 미완료 버그 Spark 수정 설계
+
+- 미완료 문제를 C 그룹방 재가입 Rules 통합, D 재설치 후 동일 Player 복구, E 타인 원정대 소유권 이전 안전화로 분리했다.
+- C는 모집 update에서 권한·그룹 자격·Character 소유·주간 완료·구성 정책을 한 번 검증하고 membership·raidState·event·listing은 같은 revision의 직접 Projection 결합만 확인하도록 설계했다. 단독/누락/변조 쓰기 거절과 기존 생성·승인·탈퇴·추방·해산 회귀를 완료 조건으로 둔다.
+- D는 원정대 인증으로 Player를 추정하지 않고 익명 Firebase user를 복구 가능한 로그인 제공자에 link해 재설치 후 같은 UID·Player를 복구한다. 이미 credential을 잃은 과거 익명 Player의 자동 병합은 지원하지 않는다.
+- E는 GameAccount·Character의 `ownershipRevision`과 application·membership·raidState Snapshot으로 A→B→A 재이전의 stale 상태 재활성화를 막고, 사회적 데이터 자동 승계 없이 제한 정리 명령을 사용한다.
+- Cloud Functions·Blaze는 현재 구현 순서에서 제외하고 C가 안전 계약을 유지한 채 실패한 경우의 최후 대안으로만 남겼다. 이번 구간은 문서만 수정했고 앱 코드·Rules·Firebase 설정·운영 배포는 변경하지 않았다.
+
 # 2026-09-24 BUG-022 그룹방 재가입 Rules 한계 확정
 
 - A1의 현재 그룹 count 기준 해산과 A2의 참가자 제거 listing 갱신은 전체 production Rules Emulator에서 정상·위조 거절 결과를 확보했다.
