@@ -107,10 +107,9 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 #### 원자성 및 단일 기준
 
 - `recruitments/{recruitmentId}`가 원본이며 listing은 독립적인 제품 상태나 권한 기준이 아니다.
-- 원본의 목록 노출 관련 필드를 변경하는 명령은 같은 Firestore Transaction에서 listing도 생성·전체 덮어쓰기·변경 필드 부분 갱신·삭제한다. 원본 커밋 후 별도 후처리, 화면 진입 시 보정, 실패를 삼키는 비동기 동기화는 사용하지 않는다.
+- 원본의 목록 노출 관련 필드를 변경하는 명령은 같은 Firestore Transaction에서 listing도 생성·덮어쓰기·삭제한다. 원본 커밋 후 별도 후처리, 화면 진입 시 보정, 실패를 삼키는 비동기 동기화는 사용하지 않는다.
 - 그룹 전용 모집인데 listing이 없으면 해당 모집을 변경하는 Transaction에서 현재 원본의 Transaction 후 상태로 listing을 생성한다. 이것은 변경된 방의 자연 복구이며, 변경되지 않은 기존 방의 일괄 보완을 대신하지 않는다.
-- 생성·누락 복구·공개 범위 전환의 전체 쓰기는 Rules가 `getAfter(recruitmentPath(recruitmentId))`를 기준으로 listing 문서가 원본 Snapshot과 `diff` 없이 일치하는지 검증한다. 생성 직후 listing은 revision 1과 파티장만 허용하고, 이후 덮어쓰기는 원본 revision +1과 같은 Transaction의 `updatedAt`을 요구한다.
-- 참가·승인·탈퇴처럼 변경 필드 집합이 고정된 명령은 Rules 1,000식 예산을 지키기 위해 기존 listing을 부분 갱신할 수 있다. 이때 허용 키를 명령별 고정 집합으로 제한하고, 목록에 영향을 주는 모든 변경 필드를 `getAfter(recruitment)`의 값과 대조하며 `sourceRevision == recruitment.revision`, `updatedAt == request.time`을 함께 강제한다. 일부 변경 필드를 생략해 오래된 값을 남기는 패치는 허용하지 않는다.
+- Rules는 `getAfter(recruitmentPath(recruitmentId))`를 기준으로 listing 문서가 원본 Snapshot과 `diff` 없이 일치하는지 검증한다. 생성 직후 listing은 revision 1과 파티장만 허용하고, 이후 덮어쓰기는 원본 revision +1과 같은 Transaction의 `updatedAt`을 요구한다. 리더가 아닌 즉시 가입·승인·탈퇴도 원본을 바꾸는 같은 Transaction에서 listing을 쓸 수 있다.
 
 #### 동기화 필드
 
@@ -122,7 +121,7 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 - 카드 표시: 제목, 레이드·난이도, 시작 일정, 최소 조건 등 수정 가능한 공개 카드 필드
 - 충돌과 정렬: `revision`, `updatedAt`
 
-구현 시 실제 모집 스키마와 `PublicRecruitmentSummary` 매퍼를 대조해 정확한 필드 목록을 write plan 및 Rules 테스트에 고정한다. 참가·승인은 `memberPlayerIds`, 인원·역할 count, `hasAvailableSlot`, `partySlots`, `raidStateTargets`, 비그룹 인원·신청 count, `revision`, `sourceRevision`, `updatedAt`을 함께 동기화한다. 일부 변경 필드를 생략해 나머지 Snapshot을 오래된 값으로 남기지 않는다.
+구현 시 실제 모집 스키마와 `PublicRecruitmentSummary` 매퍼를 대조해 정확한 필드 목록을 write plan 및 Rules 테스트에 고정한다. 일부 필드만 수동 패치해 나머지 Snapshot을 오래된 값으로 남기지 않는다.
 
 #### 상태별 동작
 

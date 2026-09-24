@@ -13,7 +13,10 @@ class PartyRaidListingSyncPlan {
     required Map<String, Object?> currentRecruitment,
     required Map<String, Object?> recruitmentPatch,
   }) {
-    final after = <String, Object?>{...currentRecruitment, ...recruitmentPatch};
+    final after = <String, Object?>{
+      ...currentRecruitment,
+      ...recruitmentPatch,
+    };
     final groupId = after['groupId'];
     final resolvedGroupId = groupId is String && groupId.isNotEmpty
         ? groupId
@@ -70,7 +73,10 @@ class PartyRaidListingTx {
         .doc(groupId)
         .collection('raidListings')
         .doc(recruitmentId);
-    return PartyRaidListingTx._(listingRef, await transaction.get(listingRef));
+    return PartyRaidListingTx._(
+      listingRef,
+      await transaction.get(listingRef),
+    );
   }
 
   void write({
@@ -95,34 +101,7 @@ class PartyRaidListingTx {
       transaction.set(listingRef, document);
     }
   }
-
-  void writeJoin({
-    required Transaction transaction,
-    required Map<String, Object?> currentRecruitment,
-    required Map<String, Object?> recruitmentPatch,
-  }) {
-    final listingRef = ref;
-    if (listingRef == null) return;
-    final plan = PartyRaidListingSyncPlan.afterRecruitmentChange(
-      currentRecruitment: currentRecruitment,
-      recruitmentPatch: recruitmentPatch,
-    );
-    final document = plan.listingDocument;
-    if (document == null) return;
-    if (snapshot?.exists == true) {
-      transaction.update(
-        listingRef,
-        partyRaidListingJoinPatch(recruitmentPatch),
-      );
-      return;
-    }
-    transaction.set(listingRef, document);
-  }
 }
-
-Map<String, Object?> partyRaidListingJoinPatch(
-  Map<String, Object?> recruitmentPatch,
-) => {...recruitmentPatch, 'sourceRevision': recruitmentPatch['revision']};
 
 Map<String, Object?> partyRecruitmentMap(Map<String, dynamic>? data) =>
     data == null ? const {} : Map<String, Object?>.from(data);

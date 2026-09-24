@@ -62,8 +62,6 @@
 
 **A3 다음 진단·수정 순서(2026-09-24):** 공개방 재가입과 그룹방 재가입의 쓰기 차이는 그룹 membership 확인과 `raidListings` 전체 Snapshot 덮어쓰기다. 먼저 production fixture의 축약 listing을 실제 생성 계약과 같은 모집 전체 Snapshot으로 교체해 fixture 왜곡 여부를 배제한다. 같은 실패가 유지되면 모집 update Rules가 이미 원자 요청 전체의 참가 적합성을 검증한다는 점을 이용해, listing update에서는 모집 참가 validator 전체를 다시 호출하지 않는다. 대신 모집 전후의 `groupId`·`visibility`, `memberCount N → N+1`, `revision N → N+1`, `updatedAt == request.time`과 listing 전체 Map이 `getAfter(recruitment)`와 정확히 같은지만 확인하는 전용 결합 validator를 둔다. 이 방식은 부분 Projection으로 계약을 축소하지 않고 전체 Snapshot 동기화와 위조 거절을 유지하며, 별도 Transaction 분리는 하지 않는다. 전용 validator 적용 전후에는 정상 재가입, listing 필드 위조, 모집과 다른 listing, 공개방 무 listing 흐름을 최소 회귀로 확인한다.
 
-**A3 추가 진단(2026-09-24):** 실제 전체 Snapshot fixture에서도 `35952078068`은 같은 1,000식 한도로 실패해 fixture 왜곡을 배제했다. 참가 validator 중복 호출 없이 전이 marker와 전체 Map 일치만 검사한 `35952427642`에서는 위조 listing 거절은 통과했지만 정상 재가입이 다시 한도를 넘었다. 따라서 전체 Map 비교도 이 요청의 예산 병목으로 판정하고 해당 보정은 최종 트리에서 제거한다. 다음 수정은 기존 listing이 있을 때 참가·승인이 바꾸는 모든 모집 필드를 부분 갱신하고, Rules에서 허용 키 제한과 각 필드의 `getAfter(recruitment)` 일치를 검증한다. listing 누락 시 전체 Snapshot 생성 복구, 공개방 무 listing, 원자 Transaction 계약은 유지한다.
-
 #### A4. 배포와 실기기 확인
 
 - Rules 변경이므로 표적 정적 검사와 demo Emulator 전체 회귀가 통과한 최신 추적본만 운영 프로젝트에 한 번 배포 시도한다.

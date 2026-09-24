@@ -293,7 +293,9 @@ class FirestorePartyAtomicJoinCommandRepository
             );
           case ExistingRaidStateOccupancyDecision.currentOrphanActive:
           case ExistingRaidStateOccupancyDecision.historicalOrphanActive:
-            return PartyJoinResult.orphaned(occupancy.orphanedParticipation!);
+            return PartyJoinResult.orphaned(
+              occupancy.orphanedParticipation!,
+            );
           case ExistingRaidStateOccupancyDecision.historicalCompleted:
             transaction.delete(occupancy.stateRef);
             return const PartyJoinResult.historicalStateRolledOver();
@@ -325,7 +327,10 @@ class FirestorePartyAtomicJoinCommandRepository
         return const PartyJoinResult.failure(PartyJoinFailure.invalidCharacter);
       }
       if (!_minimumCombatPowerPolicy
-          .evaluate(minimum: raw['minCombatPower'] as num?, actual: combatPower)
+          .evaluate(
+            minimum: raw['minCombatPower'] as num?,
+            actual: combatPower,
+          )
           .isAllowed) {
         return const PartyJoinResult.failure(
           PartyJoinFailure.minimumCombatPowerNotMet,
@@ -427,7 +432,7 @@ class FirestorePartyAtomicJoinCommandRepository
           approvalPlan.membership,
         );
         transaction.set(raidStateRef, approvalPlan.raidState);
-        listing.writeJoin(
+        listing.write(
           transaction: transaction,
           currentRecruitment: partyRecruitmentMap(raw),
           recruitmentPatch: approvalPlan.recruitmentPatch,
@@ -447,7 +452,7 @@ class FirestorePartyAtomicJoinCommandRepository
         joinPlan.membership,
       );
       transaction.set(raidStateRef, joinPlan.raidState);
-      listing.writeJoin(
+      listing.write(
         transaction: transaction,
         currentRecruitment: partyRecruitmentMap(raw),
         recruitmentPatch: joinPlan.recruitmentPatch,
