@@ -1830,14 +1830,6 @@ service cloud.firestore {
         || atomicRaidStateTargetAt(recruitment, 7, playerId, stateId);
     }
 
-    function atomicRecruitmentMemberCountIncreases(recruitmentId) {
-      let before = get(recruitmentPath(recruitmentId)).data;
-      let after = getAfter(recruitmentPath(recruitmentId)).data;
-      return before.schemaVersion == 2
-        && after.schemaVersion == 2
-        && after.memberCount == before.memberCount + 1;
-    }
-
     function validAtomicRaidStateCreate(playerId, stateId, data) {
       let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
       let member = getAfter(
@@ -3430,16 +3422,7 @@ service cloud.firestore {
           && playerId == currentPlayerId();
         allow list: if hasActiveBinding()
           && playerId == currentPlayerId();
-        allow create: if (request.resource.data.source == 'party'
-          && request.resource.data.recruitmentId is string
-          && atomicRecruitmentMemberCountIncreases(
-            request.resource.data.recruitmentId
-          )
-          && validAtomicRaidStateCreate(
-            playerId,
-            stateId,
-            request.resource.data
-          )) || (request.resource.data.source == 'manual'
+        allow create: if (request.resource.data.source == 'manual'
           && validManualRaidStateCreate(
           playerId,
           stateId,
@@ -3871,12 +3854,7 @@ service cloud.firestore {
         recruitmentId,
         request.resource.data
       );
-      allow update: if (request.resource.data.memberCount
-          == resource.data.memberCount + 1
-        && validAtomicRecruitmentJoin(
-          resource.data,
-          request.resource.data
-        )) || (personalCompletionCommandMarker(request.resource.data)
+      allow update: if (personalCompletionCommandMarker(request.resource.data)
           && validPersonalCompletionRecruitmentUpdate(
             resource.data,
             request.resource.data
@@ -3911,12 +3889,7 @@ service cloud.firestore {
         allow get, list: if canReadPrivateRecruitmentData(recruitmentId)
           || canReadPublicRecruitmentMembers(recruitmentId)
           || (hasActiveBinding() && playerId == currentPlayerId());
-        allow create: if (atomicRecruitmentMemberCountIncreases(recruitmentId)
-          && validAtomicJoinedMembership(
-            recruitmentId,
-            playerId,
-            request.resource.data
-          )) || validAtomicInitialLeaderMembership(
+        allow create: if validAtomicInitialLeaderMembership(
           recruitmentId,
           playerId,
           request.resource.data
@@ -4131,11 +4104,7 @@ service cloud.firestore {
           recruitmentId,
           request.resource.data
         );
-        allow update: if validGroupRaidListingCreate(
-          groupId,
-          recruitmentId,
-          request.resource.data
-        ) || validPersonalCompletionListingUpdate(
+        allow update: if validPersonalCompletionListingUpdate(
           recruitmentId,
           resource.data,
           request.resource.data
@@ -4143,6 +4112,10 @@ service cloud.firestore {
           groupId,
           recruitmentId,
           resource.data,
+          request.resource.data
+        ) || validGroupRaidListingCreate(
+          groupId,
+          recruitmentId,
           request.resource.data
         ) || validAtomicLifecycleListingUpdate(
           recruitmentId,
