@@ -2210,23 +2210,6 @@ service cloud.firestore {
         && newData.updatedAt == request.time;
     }
 
-    // 모집 update 자체가 validAtomicRecruitmentJoin으로 참가 전이를 검증한다.
-    // listing에서는 같은 검증을 중복 실행하지 않고, 전이 marker와 전체 Snapshot
-    // 일치만 결합해 원자 요청의 Rules 표현식 예산을 지킨다.
-    function validAtomicJoinListingUpdate(groupId, recruitmentId, data) {
-      let recruitmentBefore = get(recruitmentPath(recruitmentId)).data;
-      let recruitmentAfter = getAfter(recruitmentPath(recruitmentId)).data;
-      return isCurrentGroupMember(groupId)
-        && recruitmentBefore.groupId == groupId
-        && recruitmentAfter.groupId == groupId
-        && recruitmentBefore.visibility == 'group'
-        && recruitmentAfter.visibility == 'group'
-        && recruitmentAfter.memberCount == recruitmentBefore.memberCount + 1
-        && recruitmentAfter.revision == recruitmentBefore.revision + 1
-        && recruitmentAfter.updatedAt == request.time
-        && data == recruitmentAfter;
-    }
-
     function validPersonalCompletionSuccessor(oldData, newData) {
       let successor = getAfter(recruitmentMemberPath(
         oldData.recruitmentId,
@@ -4121,11 +4104,7 @@ service cloud.firestore {
           recruitmentId,
           request.resource.data
         );
-        allow update: if validAtomicJoinListingUpdate(
-          groupId,
-          recruitmentId,
-          request.resource.data
-        ) || validPersonalCompletionListingUpdate(
+        allow update: if validPersonalCompletionListingUpdate(
           recruitmentId,
           resource.data,
           request.resource.data
