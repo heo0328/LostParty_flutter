@@ -73,6 +73,8 @@ class _AccountRecoveryPageState extends State<AccountRecoveryPage> {
         AccountRecoveryFailureReason.network => '네트워크 연결을 확인한 뒤 다시 시도해 주세요.',
         AccountRecoveryFailureReason.tooManyRequests =>
           '요청이 너무 많습니다. 잠시 뒤 다시 시도해 주세요.',
+        AccountRecoveryFailureReason.recoveryAccountNotFound =>
+          '연결된 기존 LOSTPARTY 사용자를 찾을 수 없습니다.',
         AccountRecoveryFailureReason.noAuthenticatedUser =>
           '현재 LOSTPARTY 사용자 정보를 찾을 수 없습니다.',
         AccountRecoveryFailureReason.uidChanged ||

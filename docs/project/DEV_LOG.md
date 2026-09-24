@@ -3423,3 +3423,13 @@
 - 계정 복구 표적 8건과 기존 설정/운영자 화면 회귀 7건, 변경 파일 분석과 diff 검사가 통과했다. 전체 `test/widget_test.dart`의 남은 실패는 이번 diff 밖 기존 라우터가 Firebase 미초기화 상태에서 `FirebaseFirestore.instance`를 생성하는 지점이다.
 - 새로 가능해진 흐름은 기존 설치 사용자의 Google 복구 수단 연결 코드와 상태 안내다. 보존 확인한 흐름은 설정의 일반/운영자 진입점과 연결 취소·충돌 시 현재 사용자 유지다.
 - 실기기 Google 연결과 재설치 복구는 아직 확인하지 않았다. 현재 Android Firebase 설정에 OAuth client와 certificate hash가 없으므로 Firebase Console의 Google provider·release SHA 등록과 새 `google-services.json` 반영이 선행돼야 한다. 사용자가 실기기를 조작하며 확인한다.
+
+# 2026-09-25 Firebase 계정 복구 D2 시작 분기
+
+- 앱 시작 시 Firebase 세션이 없으면 더 이상 즉시 익명 사용자와 Player binding을 만들지 않는다. 1회 진입 연출 뒤 `Google로 기존 계정 복구`와 확인 대화상자가 있는 `새로 시작`을 제공한다.
+- 기존 익명 세션은 기존 get-or-create 흐름을 유지한다. Google provider가 연결된 비익명 세션과 복구 로그인은 기존 `authBindings/{authUid}`만 읽으며, binding이 없으면 새 Player를 만들지 않는다.
+- 처음 보는 Google 계정은 Firebase Auth가 임시 사용자를 만들 수 있으나 binding 조회 전에 이를 식별한다. 기존 binding이 없으면 새 사용자는 삭제를 시도하고 Firebase 세션을 종료한 뒤 `연결된 기존 사용자 없음`으로 안내한다. Firestore 쓰기는 발생하지 않는다.
+- Google SDK 초기화는 D1 연결과 D2 복구가 하나의 credential provider를 공유해 앱 수명당 한 번만 수행한다. Firebase Auth 세션과 Google SDK의 로컬 선택 세션도 분리한다.
+- 기존 세션 무선택 진입, 명시 선택 전 익명 생성 금지, 새 시작 확인, 미연결 Google 계정의 신규 Player 승격 금지, 기존 Player binding read-only 조회를 포함한 부트스트랩·계정 복구·Player 표적 테스트 23건과 변경 파일 분석이 통과했다.
+- Firestore Rules·Indexes·데이터 스키마는 변경하지 않았다. 외부 Firebase Google provider·서명 SHA 설정과 기존 설치 연결/삭제·재설치 복구의 실기기 확인은 D3에 남긴다.
+- Android `signingReport`가 성공해 debug/release의 SHA-1·SHA-256을 확인했고 `NEXT_WORK.md`의 D3 입력값으로 기록했다. 비밀번호와 키 파일 내용은 출력하거나 문서화하지 않았다.

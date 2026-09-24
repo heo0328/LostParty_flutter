@@ -11,6 +11,21 @@ class FirestorePlayerBindingStore implements PlayerBindingStore {
   final FirebaseFirestore _firestore;
 
   @override
+  Future<String?> getExistingActivePlayerId({required String authUid}) {
+    final bindingRef = _firestore.collection('authBindings').doc(authUid);
+    return _firestore.runTransaction((transaction) async {
+      final binding = await transaction.get(bindingRef);
+      if (!binding.exists) return null;
+      final playerId = _activePlayerId(binding.data());
+      final player = await transaction.get(
+        _firestore.collection('players').doc(playerId),
+      );
+      _requireActivePlayer(player.data());
+      return playerId;
+    });
+  }
+
+  @override
   Future<String> getOrCreateActivePlayerId({required String authUid}) {
     final bindingRef = _firestore.collection('authBindings').doc(authUid);
 

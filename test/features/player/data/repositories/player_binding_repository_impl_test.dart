@@ -38,17 +38,51 @@ void main() {
       throwsStateError,
     );
   });
+
+  test('복구 조회는 기존 binding만 반환하고 새 Player를 만들지 않는다', () async {
+    final existingStore = _FakePlayerBindingStore(
+      existingPlayerId: 'player-existing',
+    );
+    final existing = await PlayerBindingRepositoryImpl(
+      existingStore,
+    ).getExisting(authUid: ' auth-uid ');
+
+    expect(existing?.authUid, 'auth-uid');
+    expect(existing?.playerId, 'player-existing');
+    expect(existingStore.getOrCreateCalls, 0);
+
+    final missingStore = _FakePlayerBindingStore();
+    final missing = await PlayerBindingRepositoryImpl(
+      missingStore,
+    ).getExisting(authUid: 'auth-uid');
+    expect(missing, isNull);
+    expect(missingStore.getOrCreateCalls, 0);
+  });
 }
 
 class _FakePlayerBindingStore implements PlayerBindingStore {
-  _FakePlayerBindingStore({this.playerId = 'player-created', this.error});
+  _FakePlayerBindingStore({
+    this.playerId = 'player-created',
+    this.existingPlayerId,
+    this.error,
+  });
 
   final String playerId;
+  final String? existingPlayerId;
   final Object? error;
   final requestedAuthUids = <String>[];
+  var getOrCreateCalls = 0;
+
+  @override
+  Future<String?> getExistingActivePlayerId({required String authUid}) async {
+    requestedAuthUids.add(authUid);
+    if (error case final error?) throw error;
+    return existingPlayerId;
+  }
 
   @override
   Future<String> getOrCreateActivePlayerId({required String authUid}) async {
+    getOrCreateCalls += 1;
     requestedAuthUids.add(authUid);
     if (error case final error?) throw error;
     return playerId;

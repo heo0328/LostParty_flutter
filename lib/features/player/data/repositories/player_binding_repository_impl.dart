@@ -8,14 +8,27 @@ class PlayerBindingRepositoryImpl implements PlayerBindingRepository {
   final PlayerBindingStore _store;
 
   @override
+  Future<PlayerSession?> getExisting({required String authUid}) async {
+    final normalizedAuthUid = _normalizedAuthUid(authUid);
+    final playerId = await _store.getExistingActivePlayerId(
+      authUid: normalizedAuthUid,
+    );
+    if (playerId == null) return null;
+    return PlayerSession(authUid: normalizedAuthUid, playerId: playerId);
+  }
+
+  @override
   Future<PlayerSession> getOrCreate({required String authUid}) async {
-    final normalizedAuthUid = authUid.trim();
-    if (normalizedAuthUid.isEmpty) {
-      throw ArgumentError.value(authUid, 'authUid');
-    }
+    final normalizedAuthUid = _normalizedAuthUid(authUid);
     final playerId = await _store.getOrCreateActivePlayerId(
       authUid: normalizedAuthUid,
     );
     return PlayerSession(authUid: normalizedAuthUid, playerId: playerId);
+  }
+
+  String _normalizedAuthUid(String authUid) {
+    final normalized = authUid.trim();
+    if (normalized.isEmpty) throw ArgumentError.value(authUid, 'authUid');
+    return normalized;
   }
 }

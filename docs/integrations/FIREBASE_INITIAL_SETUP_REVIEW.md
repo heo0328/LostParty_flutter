@@ -6,6 +6,8 @@
 
 이 문서의 범위는 2026-08-24 당시 Firebase 초기 연결 상태 확인이다. 이후 Firebase Core, Anonymous Auth와 Player binding 구현이 진행됐으며 최신 상태는 `../project/AI_CONTEXT.md`, 다음 작업은 `../project/NEXT_WORK.md`, binding 계약은 `../architecture/FIREBASE_PLAYER_BINDING_CONTRACT.md`를 따른다.
 
+> 2026-09-25 추가: Firebase Core·Anonymous Auth·Firestore 적용은 완료됐다. 현재 계정 복구 D1·D2 코드는 구현됐으나 정식 Android 앱의 Google provider, debug/release SHA와 갱신된 `google-services.json`은 아직 미적용이다. 최신 실행 상태와 지문은 `../project/NEXT_WORK.md`, 복구 계약은 `../architecture/FIREBASE_ACCOUNT_RECOVERY_CONTRACT.md`를 따른다.
+
 Player와 Firebase의 장기 구조 방향은 `../architecture/PLAYER_FIREBASE_MIGRATION_REVIEW.md`를 기준으로 별도 검토한다.
 
 ## 2. 확인 기준

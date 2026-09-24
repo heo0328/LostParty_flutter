@@ -6,7 +6,7 @@
 
 - 통합 기준은 `dev`이며 `dev`와 `main`에서 직접 수정하지 않는다. 최신 `dev`에서 기존 동일 목적 브랜치를 우선 확인하고, 없으면 `feature/*`, `fix/*`, `docs/*`, `refactor/*`, `release/*` 중 작업 목적에 맞는 브랜치로 분기한다. 도구명 접두사는 새로 만들지 않는다.
 - 앱은 Firebase 익명 Auth와 Player binding, 게임 계정·Character 인증, 그룹, 레이드 모집·신청·참가·회차·완료 Claim, 로컬 알림과 계정 관리 흐름을 제공한다.
-- Firebase 계정 복구는 기존 익명 AuthUid에 Google 자격 증명을 연결해 같은 Player binding을 유지하는 방식으로 진행한다. D1은 기존 설치에서 복구 수단을 연결하고, D2는 재설치 후 새 익명 계정을 만들기 전 복구 진입을 제공한다. 계약: [`../architecture/FIREBASE_ACCOUNT_RECOVERY_CONTRACT.md`](../architecture/FIREBASE_ACCOUNT_RECOVERY_CONTRACT.md)
+- Firebase 계정 복구는 기존 익명 AuthUid에 Google 자격 증명을 연결해 같은 Player binding을 유지하는 방식이다. 기존 설치의 복구 수단 연결(D1)과 재설치 후 새 익명 계정을 만들기 전 복구/새 시작 선택(D2)을 구현·표적 검증했다. Google 복구는 기존 binding만 읽으며 처음 보는 Google 계정에 새 Player를 만들지 않는다. 외부 Firebase provider·SHA 설정과 실기기 확인(D3)이 남아 있다. 계약: [`../architecture/FIREBASE_ACCOUNT_RECOVERY_CONTRACT.md`](../architecture/FIREBASE_ACCOUNT_RECOVERY_CONTRACT.md)
 - 앱 시작 시 브랜드 이미지를 사용하는 약 2.2초의 1회성 Flutter 진입 연출을 서비스 초기화와 병렬 실행한다. Android 일반·적응형·단색 아이콘과 iOS AppIcon 세트도 같은 브랜드 자산으로 구성했으며 실기기 적용을 확인했다.
 - 주차 경계는 한국 수요일 오전 6시 공통 정책을 사용한다. 만료된 1회성 방은 미완료 종료되고 새 주차 점유를 막지 않으며, 반복방은 최초 접근 시 멱등하게 현재 주차로 승계된다.
 - 그룹 생성·가입 신청·탈퇴·그룹장 양도·초대코드 확인/가입·마지막 1인 해산과 레이드 주요 명령은 운영 Rules 및 실기기에서 확인했다. `BUG-021`은 그룹 신청 승인 Transaction의 Rules 표현식 1,000개 한도 초과가 원인이었으며, 승인 분기 평가 순서만 최소 수정해 전체 demo 회귀와 운영 게시 후 기존 실패 Player 2명의 승인을 확인하고 `dev`에 통합했다.
@@ -63,4 +63,4 @@
 
 ## 다음 작업
 
-현재 단일 작업은 Firebase 계정 복구 D1이다. 설정에서 기존 익명 사용자에게 Google 복구 수단을 연결하되 AuthUid·PlayerId와 기존 Firestore 데이터는 변경하지 않는다. D1 완료 뒤 재설치 시작 시 복구 진입을 제공하는 D2를 진행한다. 실행 계약은 [`../architecture/FIREBASE_ACCOUNT_RECOVERY_CONTRACT.md`](../architecture/FIREBASE_ACCOUNT_RECOVERY_CONTRACT.md)를 따른다.
+현재 단일 작업은 Firebase 계정 복구 D3다. D1·D2 코드는 작업 브랜치에서 완료했으며, 정식 Android 앱의 Google provider와 release SHA를 외부 Firebase 설정에 반영한 뒤 기존 설치 연결 및 재설치 복구를 사용자가 실기기에서 확인해야 한다. 실행 계약은 [`../architecture/FIREBASE_ACCOUNT_RECOVERY_CONTRACT.md`](../architecture/FIREBASE_ACCOUNT_RECOVERY_CONTRACT.md)를 따른다.

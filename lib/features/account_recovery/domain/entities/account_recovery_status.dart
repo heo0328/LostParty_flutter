@@ -13,6 +13,7 @@ enum AccountRecoveryFailureReason {
   invalidCredential,
   network,
   tooManyRequests,
+  recoveryAccountNotFound,
   uidChanged,
   unknown,
 }

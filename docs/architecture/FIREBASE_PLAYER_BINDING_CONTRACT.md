@@ -83,12 +83,17 @@ Player 최초 생성에는 공개 표시명이나 대표 캐릭터를 요구하�
 
 ```text
 Firebase Core
--> Anonymous Auth
--> Player binding 조회 또는 생성
+-> 기존 Firebase 사용자 있음
+   -> 익명 사용자: Player binding 조회 또는 생성
+   -> 복구 provider 연결 사용자: 기존 Player binding만 조회
+-> Firebase 사용자 없음
+   -> 기존 계정 복구: Google 로그인 후 기존 Player binding만 조회
+   -> 새로 시작 명시 선택: Anonymous Auth 후 Player binding 조회 또는 생성
 -> 기존 MyApp과 Drift/Fake 런타임 생성
 ```
 
 어느 단계에서든 실패하면 공용 부트스트랩 실패 화면을 표시하고 사용자가 다시 시도할 수 있다.
+복구 로그인이 성공해도 기존 binding이 없으면 새 Player를 만들지 않으며, 해당 세션을 정리하고 선택 화면에 남는다.
 
 ## 7. 실패 정책
 
@@ -101,7 +106,7 @@ Firebase Core
 
 - Domain: 빈 AuthUid/PlayerId 거부와 두 식별자 분리
 - Repository: AuthUid 정규화, PlayerSession 반환 및 저장 오류 전달
-- Auth: 기존 인증 재사용과 최초 익명 로그인
+- Auth: 기존 인증 재사용, 세션 없는 시작 선택과 명시적 최초 익명 로그인
 - Rules: 자기 binding 최초 생성, 기존 binding 재사용, 타인 읽기 및 update/delete 거부
 - 실기기: 최초 실행 후 문서 1쌍 생성, 재실행 후 같은 문서 재사용, 기존 Drift 데이터 유지
 
