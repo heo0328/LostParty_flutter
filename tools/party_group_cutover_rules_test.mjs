@@ -727,7 +727,15 @@ async function leaveApprovedRoomTxn(db, options = {}) {
   return removeApprovedMemberTxn(db, joinerPlayerId, options);
 }
 
-async function directRejoinAfterKickTxn(db) {
+async function directRejoinAfterKickTxn(
+  db,
+  {
+    skipMembership = false,
+    skipState = false,
+    skipEvent = false,
+    skipListing = false,
+  } = {},
+) {
   return runTransaction(db, async (tx) => {
     const recruitmentRef = doc(db, 'recruitments', recruitmentId);
     const memberRef = doc(db, 'recruitments', recruitmentId, 'members', joinerPlayerId);
@@ -753,35 +761,41 @@ async function directRejoinAfterKickTxn(db) {
       updatedAt: serverTimestamp(),
     };
     tx.update(recruitmentRef, recruitmentPatch);
-    tx.set(memberRef, {
-      schemaVersion: 1, playerId: joinerPlayerId, characterId: joinerCharacterId,
-      characterNameSnapshot: '가입자', classNameSnapshot: '바드',
-      role: 'support', partyIndex: 0, slotIndex: 3,
-      joinedAt: serverTimestamp(), joinedBy: joinerPlayerId,
-      submittedBuildSnapshotId: null, itemLevelSnapshot: 1700,
-      combatPowerSnapshot: null, gemValidationSnapshot: null,
-      buildIntegritySnapshot: null, characterChangedAt: null,
-      canApproveApplications: false, updatedAt: serverTimestamp(),
-    });
-    tx.set(stateRef, {
-      schemaVersion: 1, playerId: joinerPlayerId,
-      characterId: joinerCharacterId, raidId, difficultyId: 'normal',
-      recruitmentId, cycleKey, role: 'support', status: 'active',
-      source: 'party', revision: 1,
-      createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-    });
-    if (recruitment.visibility === 'group') {
+    if (!skipMembership) {
+      tx.set(memberRef, {
+        schemaVersion: 1, playerId: joinerPlayerId, characterId: joinerCharacterId,
+        characterNameSnapshot: '가입자', classNameSnapshot: '바드',
+        role: 'support', partyIndex: 0, slotIndex: 3,
+        joinedAt: serverTimestamp(), joinedBy: joinerPlayerId,
+        submittedBuildSnapshotId: null, itemLevelSnapshot: 1700,
+        combatPowerSnapshot: null, gemValidationSnapshot: null,
+        buildIntegritySnapshot: null, characterChangedAt: null,
+        canApproveApplications: false, updatedAt: serverTimestamp(),
+      });
+    }
+    if (!skipState) {
+      tx.set(stateRef, {
+        schemaVersion: 1, playerId: joinerPlayerId,
+        characterId: joinerCharacterId, raidId, difficultyId: 'normal',
+        recruitmentId, cycleKey, role: 'support', status: 'active',
+        source: 'party', revision: 1,
+        createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+      });
+    }
+    if (recruitment.visibility === 'group' && !skipListing) {
       tx.set(
         doc(db, 'groups', recruitment.groupId, 'raidListings', recruitmentId),
         { ...recruitment, ...recruitmentPatch },
       );
     }
-    tx.set(doc(db, 'partyEvents', eventId), {
-      schemaVersion: 1, eventId, recruitmentId, type: 'memberJoined',
-      commandId: eventId, commandRevision: nextRevision,
-      audiencePlayerIds: [playerId, joinerPlayerId],
-      actorPlayerId: joinerPlayerId, occurredAt: serverTimestamp(),
-    });
+    if (!skipEvent) {
+      tx.set(doc(db, 'partyEvents', eventId), {
+        schemaVersion: 1, eventId, recruitmentId, type: 'memberJoined',
+        commandId: eventId, commandRevision: nextRevision,
+        audiencePlayerIds: [playerId, joinerPlayerId],
+        actorPlayerId: joinerPlayerId, occurredAt: serverTimestamp(),
+      });
+    }
   });
 }
 
@@ -1823,6 +1837,18 @@ async function main() {
     console.log('test: member self-leave updates group listing');
     await assertSucceeds(leaveApprovedRoomTxn(applicantDb));
     console.log('PASS: group room self-leave listing update');
+    console.log('test: rejoin requires membership projection');
+    await assertFails(directRejoinAfterKickTxn(applicantDb, { skipMembership: true }));
+    console.log('PASS: rejoin without membership denied');
+    console.log('test: rejoin requires raidState projection');
+    await assertFails(directRejoinAfterKickTxn(applicantDb, { skipState: true }));
+    console.log('PASS: rejoin without raidState denied');
+    console.log('test: rejoin requires group listing projection');
+    await assertFails(directRejoinAfterKickTxn(applicantDb, { skipListing: true }));
+    console.log('PASS: rejoin without group listing denied');
+    console.log('test: rejoin requires memberJoined event');
+    await assertFails(directRejoinAfterKickTxn(applicantDb, { skipEvent: true }));
+    console.log('PASS: rejoin without event denied');
     console.log('test: member directly rejoins group room after self-leave');
     await assertSucceeds(directRejoinAfterKickTxn(applicantDb));
     console.log('PASS: group room rejoin after self-leave');
