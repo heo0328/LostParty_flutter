@@ -19,10 +19,7 @@ void main() {
     expect(rules, contains('|| validAtomicRecruitmentJoin('));
     expect(rules, isNot(contains('function validRecruitmentJoin(')));
     expect(rules, isNot(contains('function validMembershipRevisionUpdate(')));
-    expect(
-      rules,
-      isNot(contains('function validRecruitmentVisibilityChange(')),
-    );
+    expect(rules, isNot(contains('function validRecruitmentVisibilityChange(')));
   });
 
   test('R6 membership·raidState·group·listing 동반 OR를 연다', () {
@@ -60,11 +57,6 @@ void main() {
     expect(membership, contains('before.schemaVersion == 2'));
     expect(membership, contains('atomicRaidStateListedInTargets(after'));
     expect(membership, contains('getAfter(atomicRaidStateDocPath('));
-    expect(
-      membership,
-      contains('exists(groupMemberPath(before.groupId, playerId))'),
-    );
-    expect(membership, isNot(contains('isCurrentGroupMember(before.groupId)')));
     expect(membership, isNot(contains('getAfter(assignmentPath(')));
   });
 

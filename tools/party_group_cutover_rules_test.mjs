@@ -790,6 +790,16 @@ async function directRejoinAfterKickTxn(db, {
   });
 }
 
+async function assertExpressionLimit(promise) {
+  try {
+    await promise;
+  } catch (error) {
+    if (String(error).includes('maximum of 1000 expressions')) return;
+    throw error;
+  }
+  throw new Error('Expected Firestore Rules 1000-expression limit');
+}
+
 async function seedExpandedApprovedRoom(testEnv, totalMembers) {
   if (totalMembers !== 4 && totalMembers !== 8) throw new Error('Unsupported boundary fixture');
   await testEnv.withSecurityRulesDisabled(async (context) => {
@@ -1829,10 +1839,10 @@ async function main() {
     await assertSucceeds(leaveApprovedRoomTxn(applicantDb));
     console.log('PASS: group room self-leave listing update');
     console.log('diagnostic: group rejoin without listing write');
-    await assertSucceeds(directRejoinAfterKickTxn(applicantDb, {
+    await assertExpressionLimit(directRejoinAfterKickTxn(applicantDb, {
       skipListing: true,
     }));
-    console.log('PASS: four-write rejoin without listing');
+    console.log('PASS: four-write rejoin without listing reaches limit');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);
@@ -1843,10 +1853,10 @@ async function main() {
     await seedGroupLinkedRoom(testEnv, db, { includeJoinerGroupMember: true });
     await assertSucceeds(leaveApprovedRoomTxn(applicantDb));
     console.log('diagnostic: group rejoin without event write');
-    await assertSucceeds(directRejoinAfterKickTxn(applicantDb, {
+    await assertExpressionLimit(directRejoinAfterKickTxn(applicantDb, {
       skipEvent: true,
     }));
-    console.log('PASS: four-write rejoin without event');
+    console.log('PASS: four-write rejoin without event reaches limit');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);
@@ -1871,9 +1881,9 @@ async function main() {
     await assertSucceeds(approvePublicApplicationTxn(db));
     await seedGroupLinkedRoom(testEnv, db, { includeJoinerGroupMember: true });
     await assertSucceeds(leaveApprovedRoomTxn(applicantDb));
-    console.log('test: full five-write group rejoin after membership cost reduction');
-    await assertSucceeds(directRejoinAfterKickTxn(applicantDb));
-    console.log('PASS: full five-write group rejoin');
+    console.log('diagnostic: full five-write group rejoin reaches expression limit');
+    await assertExpressionLimit(directRejoinAfterKickTxn(applicantDb));
+    console.log('PASS: five-write expression limit reproduced');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);

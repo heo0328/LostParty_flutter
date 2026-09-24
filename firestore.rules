@@ -2409,8 +2409,7 @@ service cloud.firestore {
         && (before.visibility == 'public'
           || (before.visibility == 'group'
             && before.groupId is string
-            && (approvedJoin
-              || exists(groupMemberPath(before.groupId, playerId)))))
+            && (isCurrentGroupMember(before.groupId) || approvedJoin)))
         && atomicRaidStateListedInTargets(after, playerId, stateId)
         && getAfter(atomicRaidStateDocPath(playerId, stateId)).data.recruitmentId
           == recruitmentId;
