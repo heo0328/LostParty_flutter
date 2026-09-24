@@ -57,7 +57,7 @@ void main() {
   test('R3 group update는 close OR를 유지하고 구 해산 경로를 닫지 않는다', () {
     expect(rules, contains('|| validAtomicGroupRecruitmentClose('));
     expect(rules, contains('function validGroupDisbandUpdate('));
-    expect(rules, contains(') || validGroupDisbandUpdate('));
+    expect(rules, contains('allow update: if validGroupDisbandUpdate('));
   });
 
   test('R3 lifecycle close는 과거 모집 Snapshot 대신 현재 그룹 count를 감소시킨다', () {

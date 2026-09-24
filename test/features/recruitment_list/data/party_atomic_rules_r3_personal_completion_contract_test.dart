@@ -48,7 +48,7 @@ void main() {
     expect(
       rules,
       contains(
-        ')) || (personalCompletionCommandMarker(request.resource.data)\n'
+        'allow update: if (personalCompletionCommandMarker(request.resource.data)\n'
         '          && validPersonalCompletionRecruitmentUpdate(',
       ),
     );

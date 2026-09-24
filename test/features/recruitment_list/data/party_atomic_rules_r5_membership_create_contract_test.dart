@@ -33,15 +33,14 @@ void main() {
     expect(create, isNot(contains('getAfter(assignmentPath(')));
   });
 
-  test('R5 partyEvents create는 가입·membership·lifecycle 이벤트를 병행한다', () {
+  test('R5 partyEvents create는 lifecycle OR와 membership 이벤트를 병행한다', () {
     final start = rules.indexOf('match /partyEvents/{eventId}');
     final end = rules.indexOf('match /recruitments/{recruitmentId}', start);
     final block = rules.substring(start, end);
 
     expect(rules, contains('function validAtomicMembershipPartyEvent('));
-    expect(block, contains('validAtomicJoinedPartyEvent('));
+    expect(block, contains('validAtomicLifecyclePartyEvent('));
     expect(block, contains('|| validAtomicMembershipPartyEvent('));
-    expect(block, contains('|| validAtomicLifecyclePartyEvent('));
   });
 
   test('R5 membership 이벤트는 Write Plan 유형과 revision 봉투를 허용한다', () {
