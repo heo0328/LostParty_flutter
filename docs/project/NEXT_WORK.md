@@ -58,7 +58,7 @@
 - 기존 생성·신청·승인·즉시 가입·자리 이동·개인 완료·반복방·공개 범위 전환·그룹 해산 회귀를 같은 demo Emulator 묶음에서 보존한다.
 - 정적 계약 테스트는 새 validator의 allow 연결, 허용 필드 제한과 현재 count 전이식을 고정한다.
 
-**A3 CI 진단(2026-09-24):** 원격 demo Emulator 첫 실행 `35948873935`는 기존 production Rules 회귀 46건과 그룹 이전·탈퇴·해산 회귀 20건을 통과했다. 이후 production 묶음에 오래된 count `5`/현재 count `17`의 `17 → 16` 해산, 위조 count `15`, 그룹 갱신 누락, 탈퇴 후 그룹방 재가입을 추가했다. 보강 실행 `35949253847`에서 count 허용·거절, 추방과 본인 탈퇴는 모두 통과했으나 재가입의 전체 listing 동기화가 `/raidListings` update의 앞선 부분 갱신 validator들을 평가한 뒤 `validGroupRaidListingCreate`에 도달하면서 요청 전체 1,000식 한도를 초과했다. 저장 스키마나 허용 조건은 바꾸지 않고, 원본 모집과 완전히 같은 listing 동기화 validator를 update OR의 첫 분기로 옮겨 기존 join 명령이 예산 안에서 평가되게 한다. 참가자 제거 전용 validator와 lifecycle·visibility 조건은 그대로 유지하고 전체 demo 회귀로 동등성을 확인한다.
+**A3 CI 진단(2026-09-24):** 원격 demo Emulator 첫 실행 `35948873935`는 기존 production Rules 회귀 46건과 그룹 이전·탈퇴·해산 회귀 20건을 통과했다. 이후 production 묶음에 오래된 count `5`/현재 count `17`의 `17 → 16` 해산, 위조 count `15`, 그룹 갱신 누락, 탈퇴 후 그룹방 재가입을 추가했다. 보강 실행 `35949253847`에서 count 허용·거절, 추방과 본인 탈퇴는 모두 통과했으나 재가입 원자 요청이 1,000식 한도를 초과했다. listing 전체 동기화 validator만 첫 분기로 옮긴 실행 `35949904480`도 같은 지점에서 실패했으므로 단일 listing 경로 원인 가설은 폐기했다. 다음 보정은 저장 스키마나 기존 validator의 허용 조건을 바꾸지 않고, 기존 모집의 `memberCount N → N+1`인 참가 명령을 값 기반 marker로 먼저 분류해 모집 update·membership create·raidState create가 불필요한 OR 후보를 평가하지 않게 한다. 기존 일반 OR는 호환 경로로 유지하고 참가자 제거·lifecycle·visibility 조건은 그대로 둔 채 전체 demo 회귀로 동등성을 확인한다.
 
 #### A4. 배포와 실기기 확인
 
