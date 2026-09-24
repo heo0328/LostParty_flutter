@@ -77,6 +77,7 @@ void main() {
 
     expect(envelope, contains('after.memberCount == before.memberCount + 1'));
     expect(envelope, contains('after.revision == before.revision + 1'));
+    expect(envelope, contains('after.updatedAt == request.time'));
     expect(envelope, contains('after.partySlots[index].playerId == playerId'));
     expect(
       envelope,

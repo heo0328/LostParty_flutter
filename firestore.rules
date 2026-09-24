@@ -2501,8 +2501,17 @@ service cloud.firestore {
       let before = get(recruitmentPath(recruitmentId)).data;
       let after = getAfter(recruitmentPath(recruitmentId)).data;
       let index = after.memberCount - 1;
-      return after.memberCount == before.memberCount + 1
+      return before.schemaVersion == 2
+        && after.schemaVersion == 2
+        && before.status == 'active'
+        && before.currentCycleStatus == 'active'
+        && after.memberCount == before.memberCount + 1
         && after.revision == before.revision + 1
+        && after.updatedAt == request.time
+        && index >= 1
+        && index < after.memberPlayerIds.size()
+        && index < after.partySlots.size()
+        && index < after.raidStateTargets.size()
         && !(playerId in before.memberPlayerIds)
         && after.memberPlayerIds[index] == playerId
         && after.partySlots[index].playerId == playerId
@@ -2513,7 +2522,10 @@ service cloud.firestore {
     function validAtomicJoinedMembership(recruitmentId, playerId, data) {
       let after = getAfter(recruitmentPath(recruitmentId)).data;
       let stateId = data.characterId + '_' + after.raidId;
-      return atomicJoinProjectionEnvelope(
+      return data.schemaVersion == 1
+        && data.playerId == playerId
+        && data.canApproveApplications == false
+        && atomicJoinProjectionEnvelope(
           recruitmentId,
           playerId,
           stateId
@@ -2521,7 +2533,11 @@ service cloud.firestore {
     }
 
     function validAtomicJoinedRaidStateProjection(playerId, stateId, data) {
-      return atomicJoinProjectionEnvelope(
+      return data.schemaVersion == 1
+        && data.playerId == playerId
+        && data.source == 'party'
+        && data.status == 'active'
+        && atomicJoinProjectionEnvelope(
           data.recruitmentId,
           playerId,
           stateId
