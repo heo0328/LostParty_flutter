@@ -738,7 +738,7 @@ async function directRejoinAfterKickTxn(db) {
     await tx.get(stateRef);
     const nextRevision = recruitment.revision + 1;
     const eventId = `memberJoined_${recruitmentId}_${nextRevision}`;
-    tx.update(recruitmentRef, {
+    const recruitmentPatch = {
       memberPlayerIds: [...recruitment.memberPlayerIds, joinerPlayerId],
       memberCount: 2, dealerCount: 1, supportCount: 1, hasAvailableSlot: true,
       partySlots: [...recruitment.partySlots, {
@@ -751,7 +751,8 @@ async function directRejoinAfterKickTxn(db) {
       }],
       nonGroupMemberCount: 0, revision: nextRevision,
       updatedAt: serverTimestamp(),
-    });
+    };
+    tx.update(recruitmentRef, recruitmentPatch);
     tx.set(memberRef, {
       schemaVersion: 1, playerId: joinerPlayerId, characterId: joinerCharacterId,
       characterNameSnapshot: '가입자', classNameSnapshot: '바드',
@@ -769,6 +770,12 @@ async function directRejoinAfterKickTxn(db) {
       source: 'party', revision: 1,
       createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
     });
+    if (recruitment.visibility === 'group') {
+      tx.set(
+        doc(db, 'groups', recruitment.groupId, 'raidListings', recruitmentId),
+        { ...recruitment, ...recruitmentPatch },
+      );
+    }
     tx.set(doc(db, 'partyEvents', eventId), {
       schemaVersion: 1, eventId, recruitmentId, type: 'memberJoined',
       commandId: eventId, commandRevision: nextRevision,
@@ -858,23 +865,42 @@ async function swapTwoDealersTxn(db) {
   });
 }
 
-async function seedGroupLinkedRoom(testEnv, db) {
+async function seedGroupLinkedRoom(testEnv, db, {
+  activeRecruitmentCount = 1,
+  recruitmentCountSnapshot = 1,
+  includeJoinerGroupMember = false,
+} = {}) {
   const groupId = 'group-room-1';
   await assertSucceeds(createGroupTxn(db, groupId));
   await testEnv.withSecurityRulesDisabled(async (context) => {
     const adminDb = context.firestore();
-    await updateDoc(doc(adminDb, 'groups', groupId), { activeRecruitmentCount: 1 });
+    await updateDoc(doc(adminDb, 'groups', groupId), { activeRecruitmentCount });
     await updateDoc(doc(adminDb, 'recruitments', recruitmentId), {
-      groupId, visibility: 'group', groupActiveRecruitmentCountAfter: 1,
+      groupId, visibility: 'group',
+      groupActiveRecruitmentCountAfter: recruitmentCountSnapshot,
     });
     await setDoc(doc(adminDb, 'groups', groupId, 'raidListings', recruitmentId), {
       recruitmentId, groupId, visibility: 'group', status: 'active',
       sourceRevision: 2, updatedAt: Timestamp.now(),
     });
+    if (includeJoinerGroupMember) {
+      await setDoc(doc(adminDb, 'groups', groupId, 'members', joinerPlayerId), {
+        schemaVersion: 1, groupId, playerId: joinerPlayerId, role: 'member',
+        joinedAt: Timestamp.now(), joinSequence: 2, joinedBy: 'application',
+        displayCharacterIdSnapshot: joinerCharacterId,
+        displayCharacterNameSnapshot: '가입자', displayClassNameSnapshot: '바드',
+        itemLevelSnapshot: 1700, combatPowerSnapshot: null,
+        gemValidationSnapshot: null, revision: 1,
+        createdAt: Timestamp.now(), updatedAt: Timestamp.now(),
+      });
+    }
   });
 }
 
-async function disbandApprovedRoomTxn(db) {
+async function disbandApprovedRoomTxn(db, {
+  recruitmentCountAfter = null,
+  skipGroupUpdate = false,
+} = {}) {
   return runTransaction(db, async (tx) => {
     const recruitmentRef = doc(db, 'recruitments', recruitmentId);
     const recruitment = (await tx.get(recruitmentRef)).data();
@@ -887,7 +913,10 @@ async function disbandApprovedRoomTxn(db) {
     tx.update(recruitmentRef, {
       status: 'disbanded', manualRecruitmentEnabled: false, hasAvailableSlot: false,
       commandTargets: completed ? [] : recruitment.raidStateTargets,
-      ...(group ? { groupActiveRecruitmentCountAfter: group.activeRecruitmentCount - 1 } : {}),
+      ...(group ? {
+        groupActiveRecruitmentCountAfter:
+          recruitmentCountAfter ?? group.activeRecruitmentCount - 1,
+      } : {}),
       revision: nextRevision, lastCommandId: eventId, lastCommandType: 'disband',
       lastCommandActorPlayerId: playerId,
       lastCommandAt: serverTimestamp(), updatedAt: serverTimestamp(),
@@ -897,7 +926,7 @@ async function disbandApprovedRoomTxn(db) {
         tx.delete(doc(db, 'players', target.playerId, 'raidStates', target.stateId));
       }
     }
-    if (groupRef) {
+    if (groupRef && !skipGroupUpdate) {
       tx.update(groupRef, {
         activeRecruitmentCount: group.activeRecruitmentCount - 1,
         lastRecruitmentId: recruitmentId,
@@ -1738,10 +1767,31 @@ async function main() {
     await assertSucceeds(createPublicRecruitmentTxn(db));
     await assertSucceeds(applicationTxn(applicantDb, 'apply'));
     await assertSucceeds(approvePublicApplicationTxn(db));
-    await seedGroupLinkedRoom(testEnv, db);
-    console.log('test: group room disband closes count and listing once');
+    await seedGroupLinkedRoom(testEnv, db, {
+      activeRecruitmentCount: 17,
+      recruitmentCountSnapshot: 5,
+    });
+    console.log('test: old group room disband closes current count from 17 to 16');
     await assertSucceeds(disbandApprovedRoomTxn(db));
-    console.log('PASS: group room disband');
+    console.log('PASS: old group room disband uses current count');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    await assertSucceeds(approvePublicApplicationTxn(db));
+    await seedGroupLinkedRoom(testEnv, db, {
+      activeRecruitmentCount: 17,
+      recruitmentCountSnapshot: 5,
+    });
+    console.log('test: group room disband rejects forged count 15');
+    await assertFails(disbandApprovedRoomTxn(db, { recruitmentCountAfter: 15 }));
+    console.log('PASS: forged group close count denied');
+
+    console.log('test: group room disband requires current group count update');
+    await assertFails(disbandApprovedRoomTxn(db, { skipGroupUpdate: true }));
+    console.log('PASS: missing group close update denied');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);
@@ -1767,10 +1817,13 @@ async function main() {
     await assertSucceeds(createPublicRecruitmentTxn(db));
     await assertSucceeds(applicationTxn(applicantDb, 'apply'));
     await assertSucceeds(approvePublicApplicationTxn(db));
-    await seedGroupLinkedRoom(testEnv, db);
+    await seedGroupLinkedRoom(testEnv, db, { includeJoinerGroupMember: true });
     console.log('test: member self-leave updates group listing');
     await assertSucceeds(leaveApprovedRoomTxn(applicantDb));
     console.log('PASS: group room self-leave listing update');
+    console.log('test: member directly rejoins group room after self-leave');
+    await assertSucceeds(directRejoinAfterKickTxn(applicantDb));
+    console.log('PASS: group room rejoin after self-leave');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);
