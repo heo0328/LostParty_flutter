@@ -55,7 +55,7 @@ void main() {
     final membership = rules.substring(start, end);
 
     expect(membership, contains('before.schemaVersion == 2'));
-    expect(membership, contains('atomicJoinedRaidStateTarget(after'));
+    expect(membership, contains('atomicRaidStateListedInTargets(after'));
     expect(membership, contains('getAfter(atomicRaidStateDocPath('));
     expect(membership, isNot(contains('getAfter(assignmentPath(')));
   });

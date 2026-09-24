@@ -1830,21 +1830,6 @@ service cloud.firestore {
         || atomicRaidStateTargetAt(recruitment, 7, playerId, stateId);
     }
 
-    // 가입 Write Plan은 세 Aggregate 배열을 같은 가입 순서로 유지하고
-    // 신규 참가자를 마지막에 추가한다. 이 정렬 계약으로 가입 target을
-    // 전체 순회하지 않고도 membership·raidState 양쪽에서 동일하게 검증한다.
-    function atomicJoinedRaidStateTarget(recruitment, playerId, stateId) {
-      let index = recruitment.memberCount - 1;
-      return index >= 0
-        && index < recruitment.memberPlayerIds.size()
-        && index < recruitment.partySlots.size()
-        && index < recruitment.raidStateTargets.size()
-        && recruitment.memberPlayerIds[index] == playerId
-        && recruitment.partySlots[index].playerId == playerId
-        && recruitment.raidStateTargets[index].playerId == playerId
-        && recruitment.raidStateTargets[index].stateId == stateId;
-    }
-
     function validAtomicRaidStateCreate(playerId, stateId, data) {
       let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
       let member = getAfter(
@@ -1874,7 +1859,7 @@ service cloud.firestore {
           data.characterId,
           data.raidId
         )
-        && atomicJoinedRaidStateTarget(recruitment, playerId, stateId);
+        && atomicRaidStateListedInTargets(recruitment, playerId, stateId);
     }
 
     function validManualRaidStateCreate(playerId, stateId, data) {
@@ -2425,7 +2410,7 @@ service cloud.firestore {
           || (before.visibility == 'group'
             && before.groupId is string
             && (isCurrentGroupMember(before.groupId) || approvedJoin)))
-        && atomicJoinedRaidStateTarget(after, playerId, stateId)
+        && atomicRaidStateListedInTargets(after, playerId, stateId)
         && getAfter(atomicRaidStateDocPath(playerId, stateId)).data.recruitmentId
           == recruitmentId;
     }

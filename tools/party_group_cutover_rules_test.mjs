@@ -727,7 +727,7 @@ async function leaveApprovedRoomTxn(db, options = {}) {
   return removeApprovedMemberTxn(db, joinerPlayerId, options);
 }
 
-async function directRejoinAfterKickTxn(db, { reorderTargets = false } = {}) {
+async function directRejoinAfterKickTxn(db) {
   return runTransaction(db, async (tx) => {
     const recruitmentRef = doc(db, 'recruitments', recruitmentId);
     const memberRef = doc(db, 'recruitments', recruitmentId, 'members', joinerPlayerId);
@@ -746,9 +746,7 @@ async function directRejoinAfterKickTxn(db, { reorderTargets = false } = {}) {
         role: 'support', classKey: '바드', partyIndex: 0, slotIndex: 3,
         countedAsNonGroupMember: false,
       }],
-      raidStateTargets: reorderTargets ? [{
-        playerId: joinerPlayerId, stateId,
-      }, ...recruitment.raidStateTargets] : [...recruitment.raidStateTargets, {
+      raidStateTargets: [...recruitment.raidStateTargets, {
         playerId: joinerPlayerId, stateId,
       }],
       nonGroupMemberCount: 0, revision: nextRevision,
@@ -1825,9 +1823,6 @@ async function main() {
     console.log('test: member self-leave updates group listing');
     await assertSucceeds(leaveApprovedRoomTxn(applicantDb));
     console.log('PASS: group room self-leave listing update');
-    console.log('test: joined raidState target must remain at the appended index');
-    await assertFails(directRejoinAfterKickTxn(applicantDb, { reorderTargets: true }));
-    console.log('PASS: reordered rejoin target denied');
     console.log('test: member directly rejoins group room after self-leave');
     await assertSucceeds(directRejoinAfterKickTxn(applicantDb));
     console.log('PASS: group room rejoin after self-leave');
