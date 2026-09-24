@@ -727,7 +727,10 @@ async function leaveApprovedRoomTxn(db, options = {}) {
   return removeApprovedMemberTxn(db, joinerPlayerId, options);
 }
 
-async function directRejoinAfterKickTxn(db) {
+async function directRejoinAfterKickTxn(db, {
+  skipListing = false,
+  skipEvent = false,
+} = {}) {
   return runTransaction(db, async (tx) => {
     const recruitmentRef = doc(db, 'recruitments', recruitmentId);
     const memberRef = doc(db, 'recruitments', recruitmentId, 'members', joinerPlayerId);
@@ -770,19 +773,31 @@ async function directRejoinAfterKickTxn(db) {
       source: 'party', revision: 1,
       createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
     });
-    if (recruitment.visibility === 'group') {
+    if (recruitment.visibility === 'group' && !skipListing) {
       tx.set(
         doc(db, 'groups', recruitment.groupId, 'raidListings', recruitmentId),
         { ...recruitment, ...recruitmentPatch },
       );
     }
-    tx.set(doc(db, 'partyEvents', eventId), {
-      schemaVersion: 1, eventId, recruitmentId, type: 'memberJoined',
-      commandId: eventId, commandRevision: nextRevision,
-      audiencePlayerIds: [playerId, joinerPlayerId],
-      actorPlayerId: joinerPlayerId, occurredAt: serverTimestamp(),
-    });
+    if (!skipEvent) {
+      tx.set(doc(db, 'partyEvents', eventId), {
+        schemaVersion: 1, eventId, recruitmentId, type: 'memberJoined',
+        commandId: eventId, commandRevision: nextRevision,
+        audiencePlayerIds: [playerId, joinerPlayerId],
+        actorPlayerId: joinerPlayerId, occurredAt: serverTimestamp(),
+      });
+    }
   });
+}
+
+async function assertExpressionLimit(promise) {
+  try {
+    await promise;
+  } catch (error) {
+    if (String(error).includes('maximum of 1000 expressions')) return;
+    throw error;
+  }
+  throw new Error('Expected Firestore Rules 1000-expression limit');
 }
 
 async function seedExpandedApprovedRoom(testEnv, totalMembers) {
@@ -1823,9 +1838,37 @@ async function main() {
     console.log('test: member self-leave updates group listing');
     await assertSucceeds(leaveApprovedRoomTxn(applicantDb));
     console.log('PASS: group room self-leave listing update');
-    console.log('test: member directly rejoins group room after self-leave');
-    await assertSucceeds(directRejoinAfterKickTxn(applicantDb));
-    console.log('PASS: group room rejoin after self-leave');
+    console.log('diagnostic: group rejoin without listing write');
+    await assertSucceeds(directRejoinAfterKickTxn(applicantDb, {
+      skipListing: true,
+    }));
+    console.log('PASS: four-write rejoin without listing');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    await assertSucceeds(approvePublicApplicationTxn(db));
+    await seedGroupLinkedRoom(testEnv, db, { includeJoinerGroupMember: true });
+    await assertSucceeds(leaveApprovedRoomTxn(applicantDb));
+    console.log('diagnostic: group rejoin without event write');
+    await assertSucceeds(directRejoinAfterKickTxn(applicantDb, {
+      skipEvent: true,
+    }));
+    console.log('PASS: four-write rejoin without event');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    await assertSucceeds(approvePublicApplicationTxn(db));
+    await seedGroupLinkedRoom(testEnv, db, { includeJoinerGroupMember: true });
+    await assertSucceeds(leaveApprovedRoomTxn(applicantDb));
+    console.log('diagnostic: full five-write group rejoin reaches expression limit');
+    await assertExpressionLimit(directRejoinAfterKickTxn(applicantDb));
+    console.log('PASS: five-write expression limit reproduced');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);
