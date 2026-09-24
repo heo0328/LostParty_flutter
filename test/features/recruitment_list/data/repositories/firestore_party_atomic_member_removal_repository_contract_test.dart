@@ -85,6 +85,22 @@ void main() {
     );
   });
 
+  test('그룹 listing 전체 동기화는 부분 갱신 validator보다 먼저 평가한다', () {
+    final start = rules.indexOf('match /raidListings/{recruitmentId}');
+    final end = rules.indexOf('match /joinRelations/{playerId}', start);
+    final listingMatch = rules.substring(start, end);
+    expect(
+      listingMatch,
+      contains('allow update: if validGroupRaidListingCreate('),
+    );
+    expect(
+      listingMatch.indexOf('validGroupRaidListingCreate('),
+      lessThan(
+        listingMatch.indexOf('validAtomicMemberRemovalListingUpdate('),
+      ),
+    );
+  });
+
   test('운영 Router에 원자 탈퇴 Repository를 연결한다', () {
     expect(router, contains('FirestorePartyAtomicMemberRemovalRepository'));
   });

@@ -4104,7 +4104,11 @@ service cloud.firestore {
           recruitmentId,
           request.resource.data
         );
-        allow update: if validPersonalCompletionListingUpdate(
+        allow update: if validGroupRaidListingCreate(
+          groupId,
+          recruitmentId,
+          request.resource.data
+        ) || validPersonalCompletionListingUpdate(
           recruitmentId,
           resource.data,
           request.resource.data
@@ -4112,10 +4116,6 @@ service cloud.firestore {
           groupId,
           recruitmentId,
           resource.data,
-          request.resource.data
-        ) || validGroupRaidListingCreate(
-          groupId,
-          recruitmentId,
           request.resource.data
         ) || validAtomicLifecycleListingUpdate(
           recruitmentId,
