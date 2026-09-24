@@ -1862,42 +1862,6 @@ service cloud.firestore {
         && atomicRaidStateListedInTargets(recruitment, playerId, stateId);
     }
 
-    // 기존 모집 참가 시 membership create가 모집 target과 raidState 결합을
-    // 검증한다. raidState 쪽은 같은 요청에서 신규 membership이 생성됐는지만
-    // 강제해 동일한 8칸 target 순회를 중복하지 않는다.
-    function validAtomicJoinedRaidStateCreate(playerId, stateId, data) {
-      let memberPath = recruitmentMemberPath(data.recruitmentId, playerId);
-      let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
-      let member = getAfter(memberPath).data;
-      return hasActiveBinding()
-        && (playerId == currentPlayerId()
-          || canApproveApplications(data.recruitmentId))
-        && !exists(memberPath)
-        && member.joinedAt == request.time
-        && member.updatedAt == request.time
-        && stateId == data.characterId + '_' + data.raidId
-        && data.schemaVersion == 1
-        && data.playerId == playerId
-        && data.status == 'active'
-        && data.source == 'party'
-        && data.revision == 1
-        && data.recruitmentId is string
-        && recruitment.schemaVersion == 2
-        && !atomicIsLifecycleCommand(recruitment)
-        && recruitment.status == 'active'
-        && recruitment.currentCycleStatus == 'active'
-        && data.cycleKey == recruitment.currentCycleKey
-        && data.raidId == recruitment.raidId
-        && data.characterId == member.characterId
-        && ownsActiveCharacterForPlayer(data.characterId, playerId)
-        && !hasWeeklyRaidCompletionAfter(
-          playerId,
-          data.cycleKey,
-          data.characterId,
-          data.raidId
-        );
-    }
-
     function validManualRaidStateCreate(playerId, stateId, data) {
       return hasActiveBinding()
         && playerId == currentPlayerId()
@@ -3463,14 +3427,7 @@ service cloud.firestore {
           playerId,
           stateId,
           request.resource.data
-        )) || (request.resource.data.source == 'party'
-          && 'createdAt' in request.resource.data
-          && exists(recruitmentPath(request.resource.data.recruitmentId))
-          && validAtomicJoinedRaidStateCreate(
-            playerId,
-            stateId,
-            request.resource.data
-          )) || validAtomicAdvanceRaidStateCreate(
+        )) || validAtomicAdvanceRaidStateCreate(
           playerId,
           stateId,
           request.resource.data

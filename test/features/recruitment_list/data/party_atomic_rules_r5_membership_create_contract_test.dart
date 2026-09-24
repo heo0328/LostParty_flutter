@@ -33,37 +33,14 @@ void main() {
     expect(create, isNot(contains('getAfter(assignmentPath(')));
   });
 
-  test('기존 모집 참가 raidState는 신규 membership 계약에 결합한다', () {
-    final start = rules.indexOf('function validAtomicJoinedRaidStateCreate(');
-    final end = rules.indexOf('function validManualRaidStateCreate(', start);
-    final create = rules.substring(start, end);
-
-    expect(create, contains('!exists(memberPath)'));
-    expect(create, contains('member.joinedAt == request.time'));
-    expect(create, contains('member.updatedAt == request.time'));
-    expect(create, contains('ownsActiveCharacterForPlayer('));
-    expect(create, contains('!hasWeeklyRaidCompletionAfter('));
-    expect(create, isNot(contains('atomicRaidStateListedInTargets(')));
-
-    final matchStart = rules.indexOf('match /raidStates/{stateId}');
-    final matchEnd = rules.indexOf(
-      'match /characterActivity/{characterId}',
-      matchStart,
-    );
-    final match = rules.substring(matchStart, matchEnd);
-    expect(match, contains("'createdAt' in request.resource.data"));
-    expect(match, contains('exists(recruitmentPath('));
-    expect(match, contains('validAtomicJoinedRaidStateCreate('));
-  });
-
-  test('R5 partyEvents create는 membership과 lifecycle 이벤트를 병행한다', () {
+  test('R5 partyEvents create는 lifecycle OR와 membership 이벤트를 병행한다', () {
     final start = rules.indexOf('match /partyEvents/{eventId}');
     final end = rules.indexOf('match /recruitments/{recruitmentId}', start);
     final block = rules.substring(start, end);
 
     expect(rules, contains('function validAtomicMembershipPartyEvent('));
-    expect(block, contains('validAtomicMembershipPartyEvent('));
-    expect(block, contains('|| validAtomicLifecyclePartyEvent('));
+    expect(block, contains('validAtomicLifecyclePartyEvent('));
+    expect(block, contains('|| validAtomicMembershipPartyEvent('));
   });
 
   test('R5 membership 이벤트는 Write Plan 유형과 revision 봉투를 허용한다', () {

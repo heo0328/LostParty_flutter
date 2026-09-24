@@ -727,10 +727,7 @@ async function leaveApprovedRoomTxn(db, options = {}) {
   return removeApprovedMemberTxn(db, joinerPlayerId, options);
 }
 
-async function directRejoinAfterKickTxn(
-  db,
-  { skipMembership = false, tamperTarget = false } = {},
-) {
+async function directRejoinAfterKickTxn(db) {
   return runTransaction(db, async (tx) => {
     const recruitmentRef = doc(db, 'recruitments', recruitmentId);
     const memberRef = doc(db, 'recruitments', recruitmentId, 'members', joinerPlayerId);
@@ -750,25 +747,22 @@ async function directRejoinAfterKickTxn(
         countedAsNonGroupMember: false,
       }],
       raidStateTargets: [...recruitment.raidStateTargets, {
-        playerId: joinerPlayerId,
-        stateId: tamperTarget ? `${stateId}_forged` : stateId,
+        playerId: joinerPlayerId, stateId,
       }],
       nonGroupMemberCount: 0, revision: nextRevision,
       updatedAt: serverTimestamp(),
     };
     tx.update(recruitmentRef, recruitmentPatch);
-    if (!skipMembership) {
-      tx.set(memberRef, {
-        schemaVersion: 1, playerId: joinerPlayerId, characterId: joinerCharacterId,
-        characterNameSnapshot: '가입자', classNameSnapshot: '바드',
-        role: 'support', partyIndex: 0, slotIndex: 3,
-        joinedAt: serverTimestamp(), joinedBy: joinerPlayerId,
-        submittedBuildSnapshotId: null, itemLevelSnapshot: 1700,
-        combatPowerSnapshot: null, gemValidationSnapshot: null,
-        buildIntegritySnapshot: null, characterChangedAt: null,
-        canApproveApplications: false, updatedAt: serverTimestamp(),
-      });
-    }
+    tx.set(memberRef, {
+      schemaVersion: 1, playerId: joinerPlayerId, characterId: joinerCharacterId,
+      characterNameSnapshot: '가입자', classNameSnapshot: '바드',
+      role: 'support', partyIndex: 0, slotIndex: 3,
+      joinedAt: serverTimestamp(), joinedBy: joinerPlayerId,
+      submittedBuildSnapshotId: null, itemLevelSnapshot: 1700,
+      combatPowerSnapshot: null, gemValidationSnapshot: null,
+      buildIntegritySnapshot: null, characterChangedAt: null,
+      canApproveApplications: false, updatedAt: serverTimestamp(),
+    });
     tx.set(stateRef, {
       schemaVersion: 1, playerId: joinerPlayerId,
       characterId: joinerCharacterId, raidId, difficultyId: 'normal',
@@ -788,17 +782,6 @@ async function directRejoinAfterKickTxn(
       audiencePlayerIds: [playerId, joinerPlayerId],
       actorPlayerId: joinerPlayerId, occurredAt: serverTimestamp(),
     });
-  });
-}
-
-async function standaloneRejoinRaidStateCreateTxn(db) {
-  const stateId = `${joinerCharacterId}_${raidId}`;
-  return setDoc(doc(db, 'players', joinerPlayerId, 'raidStates', stateId), {
-    schemaVersion: 1, playerId: joinerPlayerId,
-    characterId: joinerCharacterId, raidId, difficultyId: 'normal',
-    recruitmentId, cycleKey, role: 'support', status: 'active',
-    source: 'party', revision: 1,
-    createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
   });
 }
 
@@ -1840,15 +1823,6 @@ async function main() {
     console.log('test: member self-leave updates group listing');
     await assertSucceeds(leaveApprovedRoomTxn(applicantDb));
     console.log('PASS: group room self-leave listing update');
-    console.log('test: rejoin raidState cannot be created without a joined membership');
-    await assertFails(standaloneRejoinRaidStateCreateTxn(applicantDb));
-    console.log('PASS: standalone rejoin raidState denied');
-    console.log('test: rejoin transaction requires the membership create');
-    await assertFails(directRejoinAfterKickTxn(applicantDb, { skipMembership: true }));
-    console.log('PASS: rejoin without membership denied');
-    console.log('test: joined membership still requires the exact raidState target');
-    await assertFails(directRejoinAfterKickTxn(applicantDb, { tamperTarget: true }));
-    console.log('PASS: mismatched rejoin target denied');
     console.log('test: member directly rejoins group room after self-leave');
     await assertSucceeds(directRejoinAfterKickTxn(applicantDb));
     console.log('PASS: group room rejoin after self-leave');

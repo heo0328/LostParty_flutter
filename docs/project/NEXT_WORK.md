@@ -68,8 +68,6 @@
 
 **A3 통합 OR 선별 결과(2026-09-24):** 모집·membership·`raidState`·listing 네 match에 가입 전용 값싼 marker를 동시에 선배치한 `35954589598`도 그룹방 재가입에서 1,000식 한도를 넘었다. 같은 실행에서 실패 지점 전까지 신규 생성, 수동 완료, 그룹 신청 승인·코드 가입, 공개방 가입, 자리 이동, 추방·탈퇴, 2·4·8인 해산과 A1·A2 허용·거절은 통과해 기존 흐름 회귀는 관찰되지 않았다. 그러나 재가입 개선 효과가 없으므로 통합 순서 변경과 전용 정적 계약은 최종 트리에서 되돌렸다. 이제 OR 순서·listing 비교·쓰기 수 축소를 반복하지 않는다. 다음 구간은 `validAtomicJoinedMembership`과 `validAtomicRaidStateCreate`가 같은 모집·membership·state 결합을 중복 확인하는 지점을 보안 불변식별로 분해하고, 어느 한 validator에서 교차문서 검증을 제거해도 단독 위조 쓰기가 열리지 않는지를 먼저 계약 수준에서 증명한다. 그 증명이 불가능하면 클라이언트 Rules만으로 현재 원자 계약을 유지하는 수정은 중단하고 신뢰 서버 명령 또는 데이터 계약 변경을 별도 선택지로 제시한다.
 
-**A3 결합 검증 분리 설계(2026-09-24):** 기존 모집에 참가하면서 만드는 `raidState` 전용 validator를 초기 방 생성·주차 전환 validator와 분리한다. 이 분기는 모집 문서가 요청 전부터 존재하고 대상 membership 문서가 요청 전에는 없으며 요청 후 `joinedAt`·`updatedAt == request.time`인 신규 문서로 존재할 때만 열린다. 신규 membership의 create Rules는 모집 전후 참가 전이, 그룹 전용방 membership, `raidStateTargets`의 정확한 player/state 결합과 같은 요청의 raidState 참조를 계속 검증한다. 따라서 참가 raidState validator에서는 중복 `raidStateTargets` 8칸 순회를 제거하되 상태 ID·소유 Character·레이드·주차·active 상태·주간 완료 부재·요청자/승인자 권한 검증은 유지한다. 초기 방 생성은 기존 `validAtomicRaidStateCreate`, 주차 전환은 기존 advance validator를 그대로 사용한다. 구현 검증은 (1) raidState 단독 생성 거절, (2) membership 쓰기 누락 거절, (3) 모집 target 불일치 거절, (4) 정상 그룹방 재가입 허용, (5) 기존 전체 회귀 순으로 진행하며 하나라도 보안 거절 또는 기존 흐름이 깨지면 이 분리를 최종 트리에 남기지 않는다.
-
 #### A4. 배포와 실기기 확인
 
 - Rules 변경이므로 표적 정적 검사와 demo Emulator 전체 회귀가 통과한 최신 추적본만 운영 프로젝트에 한 번 배포 시도한다.
