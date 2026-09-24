@@ -875,14 +875,16 @@ async function seedGroupLinkedRoom(testEnv, db, {
   await testEnv.withSecurityRulesDisabled(async (context) => {
     const adminDb = context.firestore();
     await updateDoc(doc(adminDb, 'groups', groupId), { activeRecruitmentCount });
-    await updateDoc(doc(adminDb, 'recruitments', recruitmentId), {
+    const recruitmentRef = doc(adminDb, 'recruitments', recruitmentId);
+    await updateDoc(recruitmentRef, {
       groupId, visibility: 'group',
       groupActiveRecruitmentCountAfter: recruitmentCountSnapshot,
     });
-    await setDoc(doc(adminDb, 'groups', groupId, 'raidListings', recruitmentId), {
-      recruitmentId, groupId, visibility: 'group', status: 'active',
-      sourceRevision: 2, updatedAt: Timestamp.now(),
-    });
+    const recruitment = (await getDoc(recruitmentRef)).data();
+    await setDoc(
+      doc(adminDb, 'groups', groupId, 'raidListings', recruitmentId),
+      recruitment,
+    );
     if (includeJoinerGroupMember) {
       await setDoc(doc(adminDb, 'groups', groupId, 'members', joinerPlayerId), {
         schemaVersion: 1, groupId, playerId: joinerPlayerId, role: 'member',

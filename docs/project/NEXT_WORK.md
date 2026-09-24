@@ -1,6 +1,6 @@
 # NEXT WORK — BUG-022 직접 권한 오류 수정과 원정대 이전 복구 설계
 
-> 상태: **작업 그룹 A 자동 검증 대기**. A1 현재 그룹 count 기반 해산과 A2 그룹방 참가자 제거 listing 검증을 로컬 구현했다. demo Emulator CI·운영 배포·실기기 확인은 아직 진행하지 않았다.
+> 상태: **작업 그룹 A3 재가입 표현식 비용 진단 중**. A1 현재 그룹 count 기반 해산과 A2 그룹방 참가자 제거 listing 검증은 CI에서 허용·거절 결과를 확보했다. 그룹방 탈퇴 후 재가입은 Rules 1,000식 한도를 초과하므로 전체 회귀·운영 배포·실기기 확인은 아직 진행하지 않는다.
 
 ## 현재 단일 작업 — BUG-022 수정 설계 확정
 
@@ -59,6 +59,8 @@
 - 정적 계약 테스트는 새 validator의 allow 연결, 허용 필드 제한과 현재 count 전이식을 고정한다.
 
 **A3 CI 진단(2026-09-24):** 원격 demo Emulator 첫 실행 `35948873935`는 기존 production Rules 회귀 46건과 그룹 이전·탈퇴·해산 회귀 20건을 통과했다. 이후 production 묶음에 오래된 count `5`/현재 count `17`의 `17 → 16` 해산, 위조 count `15`, 그룹 갱신 누락, 탈퇴 후 그룹방 재가입을 추가했다. 보강 실행 `35949253847`에서 count 허용·거절, 추방과 본인 탈퇴는 모두 통과했으나 그룹방 재가입 원자 요청이 1,000식 한도를 초과했다. listing 전체 동기화 validator를 먼저 평가한 `35949904480`, 참가 명령을 `memberCount N → N+1` marker로 먼저 분류한 `35950136462`도 같은 재가입 지점에서 실패했다. 두 보정은 효과가 없어 Rules와 정적 계약에서 되돌렸고, A1·A2 production fixture와 실패 재현만 보존한다. 따라서 A1·A2 직접 수정의 허용·거절 결과는 확보했지만 A3 전체 회귀는 그룹방 재가입 표현식 예산 때문에 미완료이며 운영 배포로 넘어가지 않는다. 다음 작업은 실패 요청의 문서별 표현식 비용을 분리하는 별도 진단 설계를 먼저 확정해야 한다.
+
+**A3 다음 진단·수정 순서(2026-09-24):** 공개방 재가입과 그룹방 재가입의 쓰기 차이는 그룹 membership 확인과 `raidListings` 전체 Snapshot 덮어쓰기다. 먼저 production fixture의 축약 listing을 실제 생성 계약과 같은 모집 전체 Snapshot으로 교체해 fixture 왜곡 여부를 배제한다. 같은 실패가 유지되면 모집 update Rules가 이미 원자 요청 전체의 참가 적합성을 검증한다는 점을 이용해, listing update에서는 모집 참가 validator 전체를 다시 호출하지 않는다. 대신 모집 전후의 `groupId`·`visibility`, `memberCount N → N+1`, `revision N → N+1`, `updatedAt == request.time`과 listing 전체 Map이 `getAfter(recruitment)`와 정확히 같은지만 확인하는 전용 결합 validator를 둔다. 이 방식은 부분 Projection으로 계약을 축소하지 않고 전체 Snapshot 동기화와 위조 거절을 유지하며, 별도 Transaction 분리는 하지 않는다. 전용 validator 적용 전후에는 정상 재가입, listing 필드 위조, 모집과 다른 listing, 공개방 무 listing 흐름을 최소 회귀로 확인한다.
 
 #### A4. 배포와 실기기 확인
 
