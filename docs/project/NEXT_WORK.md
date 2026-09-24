@@ -64,6 +64,8 @@
 
 **A3 비용 분리 결과(2026-09-24):** 실제 전체 Snapshot fixture를 사용한 `35952078068`도 같은 1,000식 한도로 실패해 fixture 왜곡을 배제했다. listing에서 모집 참가 validator를 중복 호출하지 않고 전이 marker와 전체 Map 일치만 검사한 `35952427642`, 참가·승인 변경 필드만 부분 갱신하고 해당 필드를 원본과 대조한 `35952736904`에서도 위조 listing 거절은 통과했지만 정상 재가입은 동일하게 한도를 넘었다. 두 구현은 효과가 없어 최종 트리에서 되돌렸다. 현재 근거상 특정 listing 비교식 하나가 아니라 모집·membership·raidState·event·listing 5개 쓰기의 Rules 평가 총량이 병목이다. 다음 구간은 제품 수정 전에 진단 fixture에서 listing 또는 event 쓰기를 각각 제외해 4개 쓰기 경계를 확인하고, 문서별 validator 비용을 줄일 수 있는지 판단한다. 원자성 또는 공용 event/Projection 계약을 완화해야만 통과한다면 임의로 분리 Transaction을 도입하지 않고 설계 결정을 다시 받는다.
 
+**A3 그룹원 확인 비용 결과(2026-09-24):** `35952954093`에서 listing 쓰기를 제외한 모집·membership·raidState·event 4개 쓰기도 한도를 넘었고, `35953072208`에서는 listing과 event를 모두 제외한 3개 쓰기도 동일하게 실패했다. 공개방의 동일 참가 흐름은 4개 쓰기로 통과하므로 문서 수나 listing 자체가 아니라 그룹방 참가 시 membership validator가 수행하는 그룹원 존재 확인이 임계점을 넘기는 조건이다. 이미 확인한 active binding을 재사용해 `isCurrentGroupMember` 대신 membership `exists`만 직접 검사한 `35953245277`도 효과가 없어 되돌렸다. 다음 구간은 모집·membership·raidState·partyEvent 각 match의 긴 OR에서 가입 분기를 식별하기 전에 소비하는 비용을 함께 측정하고, 보안 조건을 줄이지 않는 범위에서 가입 marker를 각 문서에 선배치하는 통합 설계를 먼저 작성한다. 앞서 모집 문서 한 곳만 marker 순서를 바꾼 접근은 실패했으므로 반복하지 않는다.
+
 #### A4. 배포와 실기기 확인
 
 - Rules 변경이므로 표적 정적 검사와 demo Emulator 전체 회귀가 통과한 최신 추적본만 운영 프로젝트에 한 번 배포 시도한다.
