@@ -32,7 +32,7 @@ void main() {
     expect(rules, contains("after.status == 'disbanded'"));
     expect(rules, contains('function validGroupRaidListingBackfill('));
     expect(rules, contains('function validGroupRaidListingDelete('));
-    expect(rules, contains('&& validGroupRaidListingCreate('));
+    expect(rules, contains('allow update: if validGroupRaidListingCreate('));
     expect(rules, contains('function validRecruitmentVisibilityChange('));
     expect(
       rules,

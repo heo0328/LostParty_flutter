@@ -157,7 +157,7 @@ void main() {
       ),
     );
     expect(rules, contains('|| validAtomicLifecycleListingDelete('));
-    expect(rules, contains('&& validGroupRaidListingCreate('));
+    expect(rules, contains('allow update: if validGroupRaidListingCreate('));
     expect(rules, contains('|| validAtomicLifecycleListingUpdate('));
   });
 
