@@ -62,6 +62,8 @@
 
 **A3 다음 진단·수정 순서(2026-09-24):** 공개방 재가입과 그룹방 재가입의 쓰기 차이는 그룹 membership 확인과 `raidListings` 전체 Snapshot 덮어쓰기다. 먼저 production fixture의 축약 listing을 실제 생성 계약과 같은 모집 전체 Snapshot으로 교체해 fixture 왜곡 여부를 배제한다. 같은 실패가 유지되면 모집 update Rules가 이미 원자 요청 전체의 참가 적합성을 검증한다는 점을 이용해, listing update에서는 모집 참가 validator 전체를 다시 호출하지 않는다. 대신 모집 전후의 `groupId`·`visibility`, `memberCount N → N+1`, `revision N → N+1`, `updatedAt == request.time`과 listing 전체 Map이 `getAfter(recruitment)`와 정확히 같은지만 확인하는 전용 결합 validator를 둔다. 이 방식은 부분 Projection으로 계약을 축소하지 않고 전체 Snapshot 동기화와 위조 거절을 유지하며, 별도 Transaction 분리는 하지 않는다. 전용 validator 적용 전후에는 정상 재가입, listing 필드 위조, 모집과 다른 listing, 공개방 무 listing 흐름을 최소 회귀로 확인한다.
 
+**A3 비용 분리 결과(2026-09-24):** 실제 전체 Snapshot fixture를 사용한 `35952078068`도 같은 1,000식 한도로 실패해 fixture 왜곡을 배제했다. listing에서 모집 참가 validator를 중복 호출하지 않고 전이 marker와 전체 Map 일치만 검사한 `35952427642`, 참가·승인 변경 필드만 부분 갱신하고 해당 필드를 원본과 대조한 `35952736904`에서도 위조 listing 거절은 통과했지만 정상 재가입은 동일하게 한도를 넘었다. 두 구현은 효과가 없어 최종 트리에서 되돌렸다. 현재 근거상 특정 listing 비교식 하나가 아니라 모집·membership·raidState·event·listing 5개 쓰기의 Rules 평가 총량이 병목이다. 다음 구간은 제품 수정 전에 진단 fixture에서 listing 또는 event 쓰기를 각각 제외해 4개 쓰기 경계를 확인하고, 문서별 validator 비용을 줄일 수 있는지 판단한다. 원자성 또는 공용 event/Projection 계약을 완화해야만 통과한다면 임의로 분리 Transaction을 도입하지 않고 설계 결정을 다시 받는다.
+
 #### A4. 배포와 실기기 확인
 
 - Rules 변경이므로 표적 정적 검사와 demo Emulator 전체 회귀가 통과한 최신 추적본만 운영 프로젝트에 한 번 배포 시도한다.
