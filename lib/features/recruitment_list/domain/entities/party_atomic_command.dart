@@ -1,7 +1,7 @@
 import 'party_recruitment.dart';
 import 'party_create_command.dart';
 
-enum PartyRaidStateStatus { active, completed }
+enum PartyRaidStateStatus { active, completed, incompleteEnded }
 
 enum PartyRaidStateSource { party, manual }
 
@@ -84,6 +84,7 @@ class PartyAggregateSlot {
 enum PartyAtomicCommandType {
   complete,
   advanceCycle,
+  incompleteEnd,
   disband,
   personalComplete,
 }
@@ -127,8 +128,10 @@ class PartyCommandEnvelope {
       throw ArgumentError('개인 완료는 lifecycle 명령으로 만들 수 없습니다.');
     }
     if (targets.length > 8 ||
-        (targets.isEmpty && type != PartyAtomicCommandType.disband)) {
-      throw ArgumentError('명령 대상은 최대 8개이며 해산 외에는 필수입니다.');
+        (targets.isEmpty &&
+            type != PartyAtomicCommandType.disband &&
+            type != PartyAtomicCommandType.incompleteEnd)) {
+      throw ArgumentError('명령 대상은 최대 8개이며 종료 명령 외에는 필수입니다.');
     }
     if (targets.map((target) => target.pathKey).toSet().length !=
         targets.length) {

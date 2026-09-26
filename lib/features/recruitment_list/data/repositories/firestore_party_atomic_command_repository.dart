@@ -68,7 +68,11 @@ class FirestorePartyAtomicCommandRepository
             PartyAtomicCommandFailure.revisionConflict,
           );
         }
-        if (aggregate.leaderPlayerId != playerId) {
+        final actorAllowed =
+            aggregate.leaderPlayerId == playerId ||
+            (command.type == PartyAtomicCommandType.incompleteEnd &&
+                aggregate.partySlots.any((slot) => slot.playerId == playerId));
+        if (!actorAllowed) {
           return const PartyAtomicCommandResult.failure(
             PartyAtomicCommandFailure.unauthorized,
           );

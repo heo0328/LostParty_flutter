@@ -230,16 +230,24 @@ class PartyAtomicCycleCommandAdapter implements PartyCycleCommandRepository {
         return const PartyCycleResult.failure(PartyCycleFailure.invalidRequest);
       }
       final cycleKey = expectedCycleKey ?? aggregate.currentCycleKey;
-      final nextCycle = type == PartyAtomicCommandType.advanceCycle
+      final effectiveType =
+          type == PartyAtomicCommandType.advanceCycle &&
+              !aggregate.continueTogether
+          ? PartyAtomicCommandType.incompleteEnd
+          : type;
+      final nextCycle = effectiveType == PartyAtomicCommandType.advanceCycle
           ? const PartyCyclePolicy().fromKey(nextCycleKey ?? '')
           : null;
-      if (type == PartyAtomicCommandType.advanceCycle && nextCycle == null) {
+      if (effectiveType == PartyAtomicCommandType.advanceCycle &&
+          nextCycle == null) {
         return const PartyCycleResult.failure(PartyCycleFailure.invalidRequest);
       }
       final completedDisband =
-          type == PartyAtomicCommandType.disband &&
+          effectiveType == PartyAtomicCommandType.disband &&
           aggregate.currentCycleStatus == PartyRaidStateStatus.completed;
-      final targets = completedDisband
+      final targetlessIncompleteEnd =
+          effectiveType == PartyAtomicCommandType.incompleteEnd;
+      final targets = completedDisband || targetlessIncompleteEnd
           ? const <PartyCommandTarget>[]
           : [
               for (final slot in aggregate.partySlots)
@@ -253,13 +261,14 @@ class PartyAtomicCycleCommandAdapter implements PartyCycleCommandRepository {
             ];
       final result = await _atomic.execute(
         PartyCommandEnvelope(
-          commandId: '${type.name}_${recruitmentId}_$expectedRevision',
+          commandId:
+              '${effectiveType.name}_${recruitmentId}_$expectedRevision',
           recruitmentId: recruitmentId,
-          type: type,
+          type: effectiveType,
           actorPlayerId: playerId,
           expectedRevision: expectedRevision,
           expectedCycleKey: cycleKey,
-          nextCycleKey: nextCycleKey,
+          nextCycleKey: nextCycle?.key,
           nextCycleStartedAt: nextCycle?.startedAt,
           nextCycleEndsAt: nextCycle?.endsAt,
           targets: targets,

@@ -7,7 +7,7 @@
 - 통합 기준은 `dev`이며 `dev`와 `main`에서 직접 수정하지 않는다. 최신 `dev`에서 기존 동일 목적 브랜치를 우선 확인하고, 없으면 `feature/*`, `fix/*`, `docs/*`, `refactor/*`, `release/*` 중 작업 목적에 맞는 브랜치로 분기한다. 도구명 접두사는 새로 만들지 않는다.
 - 앱은 Firebase 익명 Auth와 Player binding, 게임 계정·Character 인증, 그룹, 레이드 모집·신청·참가·회차·완료 Claim, 로컬 알림과 계정 관리 흐름을 제공한다.
 - 앱 시작 시 브랜드 이미지를 사용하는 약 2.2초의 1회성 Flutter 진입 연출을 서비스 초기화와 병렬 실행한다. Android 일반·적응형·단색 아이콘과 iOS AppIcon 세트도 같은 브랜드 자산으로 구성했으며 실기기 적용을 확인했다.
-- 주차 경계는 한국 수요일 오전 6시 공통 정책을 사용한다. 만료된 1회성 방은 미완료 종료되고 새 주차 점유를 막지 않으며, 반복방은 최초 접근 시 멱등하게 현재 주차로 승계된다.
+- 주차 경계는 한국 수요일 오전 6시 공통 정책을 사용한다. 반복방의 최초 접근 lazy 승계는 기존 흐름이다. 만료된 1회성 방의 진행 중 목록 분리와 `raidState` 비의존 `incompleteEnded` 전환은 F6-F로 구현·운영 게시됐고 기존 문제 방의 실제 전환까지 확인했다. 반복방 승계·현재 주차 무변경·종료 이력 노출의 실기기 회귀 확인은 남아 있다.
 - 그룹 생성·가입 신청·탈퇴·그룹장 양도·초대코드 확인/가입·마지막 1인 해산과 레이드 주요 명령은 운영 Rules 및 실기기에서 확인했다. `BUG-021`은 그룹 신청 승인 Transaction의 Rules 표현식 1,000개 한도 초과가 원인이었으며, 승인 분기 평가 순서만 최소 수정해 전체 demo 회귀와 운영 게시 후 기존 실패 Player 2명의 승인을 확인하고 `dev`에 통합했다.
 - 수동 인증 실기기 검증은 기능 결함으로 열린 것이 아니라 다음 통합 디바이스 테스트에서 필요할 때 함께 수행한다.
 
@@ -39,7 +39,7 @@
 - 그룹 membership·초대코드·그룹장 이전/해산 계약과 레이드 명령·읽기·주간 Claim 계약이 구현돼 있다.
 - 진행 중 레이드 카드의 방별 unread 배지는 레이드 현황 탭 재선택 갱신으로 보완했다. 모든 방의 실시간 Listener는 추가하지 않았다.
 - 8인 공격대 자리 이동과 점유 자리 교환, 동일 파티 중복 직업 교환 차단은 구현됐고 실기기에서 확인했다. Character 변경 자동 이동·파란 안내 제거와 알림의 일부 실기기 확인은 남아 있다.
-- BUG-022의 오래된 그룹 count 기준 해산과 그룹방 참가자 제거 listing 갱신은 작업 브랜치 CI 근거를 확보했다. 그룹방 탈퇴 후 재가입은 국소 Rules 축소뿐 아니라 모집 update에 참가 정책을 집중한 작업 그룹 C도 기존 공개방 승인부터 1,000식 한도를 넘어 실패했고 구현을 모두 되돌렸다. 운영 배포는 없었다. C의 다음 단계는 신뢰 서버 또는 데이터 계약 변경의 별도 결정이며, 재설치 복구 D와 타인 원정대 이전 안전화 E는 독립 작업으로 남아 있다. 설계: [`../architecture/BUG_022_REMAINING_FIX_DESIGN.md`](../architecture/BUG_022_REMAINING_FIX_DESIGN.md)
+- BUG-022의 A1 현재 그룹 count 검증과 A2 참가자 제거 listing 수정은 운영 게시됐고, 기존 문제 방 추방도 실기기에서 성공했다. F6-F는 지난 주차 1회성 방을 `raidState` 삭제 없이 `incompleteEnded`로 전환해 운영 문제 방에서 실제 동작을 확인했다. F6-G는 참가 Character 후보와 최종 Transaction의 점유 판정을 공용 정책으로 정렬하고 기존 단일 고아 정리 UX를 연결했다. 자동 삭제·자동 변경이나 Rules 수정 없이, 실기기에서 정리 안내 후 수동 재선택·Character 변경 성공까지 확인해 완료했다. 그룹방 재가입 C, 계정 복구 D와 소유권 이전 E는 별도 과제다. 설계: [`../architecture/BUG_022_REMAINING_FIX_DESIGN.md`](../architecture/BUG_022_REMAINING_FIX_DESIGN.md), 실행 계획: [`NEXT_WORK.md`](NEXT_WORK.md)
 - 기존 `release/1.0.0` 후보는 다인 명령 확장성 결함으로 폐기하고 이력용으로만 보존한다. 현재 우선 작업은 `BUG-018` 단일 보정이 아니라 파티·그룹 Firestore 명령, Player별 이벤트 fan-out과 Rules 접근 구조의 재설계다. 서버 후처리 단계는 사용하지 않고 현재 최대 8인의 핵심 상태를 제한된 원자 명령으로 확정하며, assignment·주간 Claim은 통합 `raidState`로 교체하는 방향이다. 종료 하위 문서 정리는 정확성과 분리한다. 기준: [`../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md)
 - 계약: [`../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md), [`../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md`](../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md), [`../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)
 
@@ -63,4 +63,4 @@
 
 ## 다음 작업
 
-현재 단일 작업은 BUG-022다. A1 오래된 그룹 count 기반 해산과 A2 참가자 제거 listing 수정은 작업 브랜치에 남아 있다. 작업 그룹 C의 Spark 재가입 Rules 통합은 실패·원복됐으므로, 다음은 C 대안에 대한 사용자 결정 또는 독립 작업 D 계정 복구다. E 소유권 세대값·stale 정리는 D와 별도 검증 단위로 유지한다. 정식 Android ID와 릴리즈 파이프라인 기준은 [`../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md`](../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md)를 유지한다.
+F6-G는 실기기 확인까지 완료했다. 현재 남은 BUG-022 직접 확인은 F6-F의 `다음 주도 함께하기` 반복방 승계, 현재 주차 방 무변경과 `partyIncompleteEnded` 종료 이력 노출이다. 그룹방 재가입 C 대안, 계정 복구 D, 소유권 이전 E는 직접 권한 수정과 분리된 별도 작업이다. 정식 Android ID와 릴리즈 파이프라인 기준은 [`../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md`](../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md)를 유지한다.

@@ -16,6 +16,7 @@ import '../../domain/entities/raid_status_filter_selection.dart';
 import '../../domain/entities/remaining_slots_filter_selection.dart';
 import '../../domain/repositories/raid_status_filter_store.dart';
 import '../../domain/services/filtered_page_session.dart';
+import '../../domain/services/active_raid_cycle_visibility_policy.dart';
 import '../../domain/services/raid_filter_candidates.dart';
 import '../../domain/services/raid_list_sort.dart';
 import '../../domain/services/raid_status_filter.dart';
@@ -36,6 +37,7 @@ class ActiveRaidFilterViewState {
     this.isFromCache = false,
     this.hasMore = false,
     this.failure,
+    this.expiredOneShotRecruitmentIds = const [],
   });
 
   final List<ActiveRaidSummary> originalItems;
@@ -51,6 +53,7 @@ class ActiveRaidFilterViewState {
   final bool isFromCache;
   final bool hasMore;
   final PartyReadFailureType? failure;
+  final List<String> expiredOneShotRecruitmentIds;
 
   bool get isEmptyOriginal =>
       !isLoading && failure == null && originalItems.isEmpty;
@@ -116,6 +119,9 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
     GroupReadRepository? groupReadRepository,
     ActivityCharactersRepository? activityCharactersRepository,
     GroupCharacterSearchRepository? characterSearchRepository,
+    ActiveRaidCycleVisibilityPolicy cycleVisibilityPolicy =
+        const ActiveRaidCycleVisibilityPolicy(),
+    DateTime Function() clock = DateTime.now,
   }) : _streamFactory = streamFactory,
        _playerId = playerId,
        _filterStore = filterStore,
@@ -124,6 +130,8 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
        _groupReadRepository = groupReadRepository,
        _activityCharactersRepository = activityCharactersRepository,
        _characterSearchRepository = characterSearchRepository,
+       _cycleVisibilityPolicy = cycleVisibilityPolicy,
+       _clock = clock,
        _session = FilteredPageSession<ActiveRaidSummary>(
          idOf: (item) => item.id,
          matches: _unrestrictedMatcher,
@@ -143,6 +151,8 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
   final GroupReadRepository? _groupReadRepository;
   final ActivityCharactersRepository? _activityCharactersRepository;
   final GroupCharacterSearchRepository? _characterSearchRepository;
+  final ActiveRaidCycleVisibilityPolicy _cycleVisibilityPolicy;
+  final DateTime Function() _clock;
   final FilteredPageSession<ActiveRaidSummary> _session;
 
   StreamSubscription<PartyReadSnapshot<ActiveRaidSummary>>? _subscription;
@@ -160,6 +170,8 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
   var _ownCharacters = const <RaidStatusFilterOption>[];
   final _raidCharacterIds = <String, Map<String, String>>{};
   final _characterPrefetchAttempted = <String>{};
+  List<ActiveRaidSummary> _latestSnapshotItems = const [];
+  var _latestSnapshotIsFromCache = false;
 
   ActiveRaidFilterViewState get state => _state;
 
@@ -432,13 +444,35 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
   }
 
   void _onSnapshot(PartyReadSnapshot<ActiveRaidSummary> snapshot) {
-    _session.replaceOriginal(snapshot.items, hasMore: false);
+    _latestSnapshotItems = snapshot.items;
+    _latestSnapshotIsFromCache = snapshot.isFromCache;
+    _applyCycleVisibility();
+  }
+
+  /// 앱이 열린 채 주차 경계를 넘은 경우 새 Firestore snapshot을 기다리지 않고
+  /// 현재 시각으로 목록 수명주기를 다시 판정한다.
+  void refreshCycleVisibility() => _applyCycleVisibility();
+
+  void _applyCycleVisibility() {
+    final now = _clock();
+    final visible = <ActiveRaidSummary>[];
+    final expiredOneShotIds = <String>[];
+    for (final item in _latestSnapshotItems) {
+      final cycleState = _cycleVisibilityPolicy.classify(item, now: now);
+      if (_cycleVisibilityPolicy.isVisible(cycleState)) {
+        visible.add(item);
+      } else if (cycleState == ActiveRaidCycleState.expiredOneShot) {
+        expiredOneShotIds.add(item.id);
+      }
+    }
+    _session.replaceOriginal(visible, hasMore: false);
     _emit(
       isLoading: false,
-      isFromCache: snapshot.isFromCache,
+      isFromCache: _latestSnapshotIsFromCache,
+      expiredOneShotRecruitmentIds: expiredOneShotIds,
       clearFailure: true,
     );
-    unawaited(_prefetchMemberCharacters(snapshot.items));
+    unawaited(_prefetchMemberCharacters(visible));
   }
 
   Future<void> _prefetchMemberCharacters(List<ActiveRaidSummary> items) async {
@@ -490,6 +524,7 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
     bool? isLoading,
     bool? isFromCache,
     PartyReadFailureType? failure,
+    List<String>? expiredOneShotRecruitmentIds,
     bool clearFailure = false,
   }) {
     if (_disposed) return;
@@ -522,6 +557,9 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
       isFromCache: isFromCache ?? _state.isFromCache,
       hasMore: _session.hasMore,
       failure: clearFailure ? null : (failure ?? _state.failure),
+      expiredOneShotRecruitmentIds:
+          expiredOneShotRecruitmentIds ??
+          _state.expiredOneShotRecruitmentIds,
     );
     notifyListeners();
   }

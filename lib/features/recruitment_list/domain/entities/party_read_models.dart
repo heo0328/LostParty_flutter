@@ -64,6 +64,7 @@ class ActiveRaidSummary {
     this.status = 'active',
     this.currentCycleStatus = 'active',
     this.continueTogether = false,
+    this.cycleEndsAt,
     this.leaderCharacterName,
     this.leaderClassName,
     this.raidStartAt,
@@ -91,6 +92,7 @@ class ActiveRaidSummary {
   /// Firestore `currentCycleStatus`. 반복방의 이번 회차 완료 여부를 표시한다.
   final String currentCycleStatus;
   final bool continueTogether;
+  final DateTime? cycleEndsAt;
   final DateTime? raidStartAt;
 
   /// `public` 또는 `group`. 일반 레이드는 public.

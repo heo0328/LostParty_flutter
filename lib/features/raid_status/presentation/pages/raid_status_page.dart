@@ -175,6 +175,7 @@ class _RaidStatusPageState extends State<RaidStatusPage>
   }
 
   Future<void> _refreshStatus() async {
+    _activeRaids.refreshCycleVisibility();
     await _reconcileVisibleRaids();
     await _history.syncNow();
     await _refreshUnread();
@@ -186,7 +187,10 @@ class _RaidStatusPageState extends State<RaidStatusPage>
     final reconciler = widget.cycleReconciler;
     if (reconciler == null || _activeRaids.state.isLoading) return;
     await reconciler.reconcileAll(
-      _activeRaids.state.originalItems.map((item) => item.id),
+      [
+        ..._activeRaids.state.originalItems.map((item) => item.id),
+        ..._activeRaids.state.expiredOneShotRecruitmentIds,
+      ],
     );
   }
 

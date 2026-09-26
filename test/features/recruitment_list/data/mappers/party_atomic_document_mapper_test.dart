@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_atomic_document_mapper.dart';
+import 'package:lost_party/features/recruitment_list/domain/entities/party_atomic_command.dart';
 
 void main() {
   Map<String, Object?> document() => {
@@ -52,5 +53,22 @@ void main() {
       () => PartyAtomicDocumentMapper.aggregate(unknownRole),
       throwsFormatException,
     );
+  });
+
+  test('미완료 종료 모집은 재시도 판정을 위해 종료 상태와 명령을 그대로 읽는다', () {
+    final ended = document()
+      ..['status'] = 'incompleteEnded'
+      ..['currentCycleStatus'] = 'incompleteEnded'
+      ..['lastCommandId'] = 'incompleteEnd_recruitment-1_4'
+      ..['lastCommandType'] = 'incompleteEnd';
+
+    final aggregate = PartyAtomicDocumentMapper.aggregate(ended);
+
+    expect(
+      aggregate.currentCycleStatus,
+      PartyRaidStateStatus.incompleteEnded,
+    );
+    expect(aggregate.status, PartyRecruitmentStatus.incompleteEnded);
+    expect(aggregate.lastCommandType, PartyAtomicCommandType.incompleteEnd);
   });
 }

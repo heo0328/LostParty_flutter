@@ -22,9 +22,15 @@ service cloud.firestore {
       return /databases/$(database)/documents/players/$(target.playerId)/raidStates/$(target.stateId);
     }
 
-    function actorOwns(oldData) {
+    function actorAllowed(oldData, newData) {
       return signedIn()
-        && get(bindingPath(request.auth.uid)).data.playerId == oldData.leaderPlayerId;
+        && ((newData.lastCommandType == 'incompleteEnd'
+            && oldData.memberPlayerIds.hasAny([
+              get(bindingPath(request.auth.uid)).data.playerId
+            ]))
+          || (newData.lastCommandType != 'incompleteEnd'
+            && get(bindingPath(request.auth.uid)).data.playerId
+              == oldData.leaderPlayerId));
     }
 
     function targetStateMatches(data, state) {
@@ -48,6 +54,7 @@ service cloud.firestore {
     function allTargetsMatch(data) {
       return data.commandTargets.size() <= 8
         && (data.commandTargets.size() >= 1
+          || data.lastCommandType == 'incompleteEnd'
           || (data.lastCommandType == 'disband'
             && data.currentCycleStatus == 'completed'))
         && targetMatchesTransition(data, 0)
@@ -66,11 +73,14 @@ service cloud.firestore {
         && newData.groupId == oldData.groupId
         && newData.raidStateTargets == oldData.raidStateTargets
         && (newData.commandTargets == oldData.raidStateTargets
+          || (newData.lastCommandType == 'incompleteEnd'
+            && newData.commandTargets.size() == 0)
           || (newData.lastCommandType == 'disband'
             && oldData.currentCycleStatus == 'completed'
             && newData.commandTargets.size() == 0))
         && newData.revision == oldData.revision + 1
-        && newData.lastCommandActorPlayerId == oldData.leaderPlayerId
+        && newData.lastCommandActorPlayerId
+          == get(bindingPath(request.auth.uid)).data.playerId
         && newData.groupActiveRecruitmentCountAfter is int
         && newData.lastCommandId is string
         && newData.lastCommandAt == request.time;
@@ -96,12 +106,35 @@ service cloud.firestore {
           && (oldData.status == 'active' || oldData.status == 'completed')
           && newData.status == 'disbanded'
           && newData.currentCycleStatus == oldData.currentCycleStatus
+          && newData.currentCycleKey == oldData.currentCycleKey)
+        || (newData.lastCommandType == 'incompleteEnd'
+          && oldData.schemaVersion == 2
+          && newData.schemaVersion == 2
+          && oldData.status == 'active'
+          && oldData.currentCycleStatus == 'active'
+          && oldData.continueTogether == false
+          && request.time >= oldData.cycleEndsAt
+          && newData.status == 'incompleteEnded'
+          && newData.currentCycleStatus == 'incompleteEnded'
+          && newData.manualRecruitmentEnabled == false
+          && newData.hasAvailableSlot == false
           && newData.currentCycleKey == oldData.currentCycleKey);
+    }
+
+    function validIncompleteEndShape(oldData, newData) {
+      return newData.lastCommandType != 'incompleteEnd'
+        || newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'currentCycleStatus', 'manualRecruitmentEnabled',
+          'hasAvailableSlot', 'groupActiveRecruitmentCountAfter',
+          'commandTargets', 'revision', 'lastCommandId', 'lastCommandType',
+          'lastCommandActorPlayerId', 'lastCommandAt', 'updatedAt'
+        ]);
     }
 
     function closesActiveGroupRecruitment(oldData, newData) {
       return (newData.lastCommandType == 'complete'
           && oldData.continueTogether == false)
+        || newData.lastCommandType == 'incompleteEnd'
         || (newData.lastCommandType == 'disband'
           && oldData.status == 'active');
     }
@@ -127,9 +160,10 @@ service cloud.firestore {
     }
 
     function validLifecycleUpdate(oldData, newData) {
-      return actorOwns(oldData)
+      return actorAllowed(oldData, newData)
         && validLifecycleShape(oldData, newData)
         && validLifecycleState(oldData, newData)
+        && validIncompleteEndShape(oldData, newData)
         && allTargetsMatch(newData)
         && validGroupLifecycleCount(oldData, newData);
     }
@@ -207,7 +241,7 @@ service cloud.firestore {
 
     function validV2EventPayload(data, recruitment) {
       return data.schemaVersion == 2
-        && (data.type == 'complete'
+        && ((data.type == 'complete' || data.type == 'partyIncompleteEnded')
           ? (data.keys().hasOnly([
               'schemaVersion', 'eventId', 'recruitmentId', 'type', 'commandId',
               'commandRevision', 'audiencePlayerIds', 'actorPlayerId',
@@ -226,6 +260,12 @@ service cloud.firestore {
             ]));
     }
 
+    function lifecycleEventType(recruitment) {
+      return recruitment.lastCommandType == 'incompleteEnd'
+        ? 'partyIncompleteEnded'
+        : recruitment.lastCommandType;
+    }
+
     function validEvent(data) {
       let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
       return ((data.schemaVersion == 1 && data.keys().hasOnly([
@@ -233,7 +273,7 @@ service cloud.firestore {
           'commandRevision', 'audiencePlayerIds', 'actorPlayerId', 'occurredAt'
         ])) || validV2EventPayload(data, recruitment))
         && data.eventId is string
-        && data.type == recruitment.lastCommandType
+        && data.type == lifecycleEventType(recruitment)
         && data.commandId == recruitment.lastCommandId
         && data.commandRevision == recruitment.revision
         && data.audiencePlayerIds is list
@@ -255,8 +295,10 @@ service cloud.firestore {
       let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
       return recruitment.recruitmentId == recruitmentId
         && (recruitment.status == 'completed'
-          || recruitment.status == 'disbanded')
+          || recruitment.status == 'disbanded'
+          || recruitment.status == 'incompleteEnded')
         && (recruitment.lastCommandType == 'complete'
+          || recruitment.lastCommandType == 'incompleteEnd'
           || recruitment.lastCommandType == 'disband');
     }
 
@@ -267,6 +309,9 @@ service cloud.firestore {
             && recruitment.status == 'disbanded')
           || (recruitment.lastCommandType == 'complete'
             && recruitment.status == 'completed'
+            && recruitment.continueTogether == false)
+          || (recruitment.lastCommandType == 'incompleteEnd'
+            && recruitment.status == 'incompleteEnded'
             && recruitment.continueTogether == false))
         && newData.activeRecruitmentCount == oldData.activeRecruitmentCount - 1
         && recruitment.groupActiveRecruitmentCountAfter

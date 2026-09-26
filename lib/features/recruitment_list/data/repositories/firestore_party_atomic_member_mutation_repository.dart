@@ -8,11 +8,13 @@ import '../../domain/entities/party_recruitment.dart';
 import '../../domain/policies/party_composition_policy.dart';
 import '../../domain/policies/minimum_combat_power_policy.dart';
 import '../../domain/repositories/party_atomic_member_mutation_repository.dart';
+import '../../domain/services/party_create_occupancy_gate.dart';
 import '../../domain/services/party_membership_command_validator.dart';
 import '../mappers/party_atomic_document_mapper.dart';
 import '../mappers/party_atomic_member_mutation_write_plan.dart';
 import '../mappers/party_membership_write_plan.dart';
 import '../mappers/party_raid_listing_sync.dart';
+import 'party_raid_state_occupancy_inspector.dart';
 
 /// 새 Aggregate·raidState 구조용 캐릭터 변경·자리 이동 Repository.
 ///
@@ -23,11 +25,13 @@ class FirestorePartyAtomicMemberMutationRepository
   const FirestorePartyAtomicMemberMutationRepository({
     required FirebaseFirestore firestore,
     required FirebaseAuth firebaseAuth,
+    this.clock = DateTime.now,
   }) : _firestore = firestore,
        _firebaseAuth = firebaseAuth;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _firebaseAuth;
+  final DateTime Function() clock;
   static const _minimumCombatPowerPolicy = MinimumCombatPowerPolicy();
 
   @override
@@ -97,19 +101,18 @@ class FirestorePartyAtomicMemberMutationRepository
               raidId: raidId,
             ),
           );
-      final nextRaidStateRef = _firestore
-          .collection('players')
-          .doc(playerId)
-          .collection('raidStates')
-          .doc(
-            PartyRaidState.documentIdFor(
-              characterId: command.newCharacterId,
-              raidId: raidId,
-            ),
-          );
       final character = await transaction.get(characterRef);
       final previousRaidState = await transaction.get(previousRaidStateRef);
-      final nextRaidState = await transaction.get(nextRaidStateRef);
+      final occupancy = await PartyRaidStateOccupancyInspector.inspect(
+        transaction: transaction,
+        firestore: _firestore,
+        playerId: playerId,
+        characterId: command.newCharacterId,
+        raidId: raidId,
+        requestedCycleKey: aggregate.currentCycleKey,
+        now: clock(),
+      );
+      final nextRaidStateRef = occupancy.stateRef;
       final characterData = character.data();
       if (!character.exists || characterData?['status'] != 'active') {
         return const PartyMembershipResult.failure(
@@ -128,17 +131,28 @@ class FirestorePartyAtomicMemberMutationRepository
           PartyMembershipFailure.notFound,
         );
       }
-      if (nextRaidState.exists) {
-        final status = nextRaidState.data()?['status'];
-        final cycleKey = nextRaidState.data()?['cycleKey'];
-        if (status == 'completed' && cycleKey == aggregate.currentCycleKey) {
+      switch (occupancy.decision) {
+        case ExistingRaidStateOccupancyDecision.currentCompleted:
           return const PartyMembershipResult.failure(
             PartyMembershipFailure.weeklyRaidCompleted,
           );
-        }
-        return const PartyMembershipResult.failure(
-          PartyMembershipFailure.participationConflict,
-        );
+        case ExistingRaidStateOccupancyDecision.currentActive:
+        case ExistingRaidStateOccupancyDecision.participationConflict:
+        case ExistingRaidStateOccupancyDecision.historicalCompleted:
+          return const PartyMembershipResult.failure(
+            PartyMembershipFailure.participationConflict,
+          );
+        case ExistingRaidStateOccupancyDecision.currentOrphanActive:
+        case ExistingRaidStateOccupancyDecision.historicalOrphanActive:
+          return PartyMembershipResult.orphaned(
+            occupancy.orphanedParticipation!,
+          );
+        case ExistingRaidStateOccupancyDecision.inconsistent:
+          return const PartyMembershipResult.failure(
+            PartyMembershipFailure.stateInconsistent,
+          );
+        case null:
+          break;
       }
       final itemLevel = _parseItemLevel(characterData?['itemAvgLevel']);
       final name = characterData?['characterName'];

@@ -29,6 +29,9 @@ void main() {
     Set<String> memberPlayerIds = const {},
     int memberCount = 1,
     int maxMemberCount = 8,
+    String status = 'active',
+    bool continueTogether = false,
+    DateTime? cycleEndsAt,
   }) => ActiveRaidSummary(
     id: id,
     title: id,
@@ -52,9 +55,67 @@ void main() {
     revision: 1,
     updatedAt: DateTime.utc(2026, 8, 20),
     isOwnedByCurrentPlayer: true,
+    status: status,
+    continueTogether: continueTogether,
+    cycleEndsAt: cycleEndsAt,
     groupId: groupId,
     memberPlayerIds: memberPlayerIds,
   );
+
+  test('만료 1회성만 진행 중에서 제외하고 후속 종료 대상으로 보존한다', () async {
+    var now = DateTime.utc(2026, 9, 22);
+    final viewModel = ActiveRaidFilterViewModel(
+      streamFactory: () => Stream.value(
+        PartyReadSnapshot(
+          items: [
+            raid(
+              id: 'current',
+              cycleEndsAt: DateTime.utc(2026, 9, 30),
+            ),
+            raid(
+              id: 'expired-recurring',
+              continueTogether: true,
+              cycleEndsAt: DateTime.utc(2026, 9, 23),
+            ),
+            raid(
+              id: 'expired-one-shot',
+              cycleEndsAt: DateTime.utc(2026, 9, 23),
+            ),
+            raid(
+              id: 'completed',
+              status: 'completed',
+              cycleEndsAt: DateTime.utc(2026, 9, 23),
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      playerId: 'player-1',
+      filterStore: MemoryRaidStatusFilterStore(),
+      clock: () => now,
+    )..start();
+    addTearDown(viewModel.dispose);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(viewModel.state.originalItems.map((item) => item.id), [
+      'current',
+      'expired-recurring',
+      'expired-one-shot',
+      'completed',
+    ]);
+
+    now = DateTime.utc(2026, 9, 25);
+    viewModel.refreshCycleVisibility();
+
+    expect(viewModel.state.originalItems.map((item) => item.id), [
+      'current',
+      'expired-recurring',
+      'completed',
+    ]);
+    expect(viewModel.state.expiredOneShotRecruitmentIds, [
+      'expired-one-shot',
+    ]);
+  });
 
   test('원본과 필터 결과를 나누고 공개 조건을 로컬 적용한다', () async {
     final store = MemoryRaidStatusFilterStore();

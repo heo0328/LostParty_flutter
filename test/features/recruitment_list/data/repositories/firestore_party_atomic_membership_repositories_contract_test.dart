@@ -87,6 +87,26 @@ void main() {
     expect(mutationRepo, isNot(contains(".collection('events')")));
   });
 
+  test('캐릭터 변경은 공용 raidState 점유 판정과 고아 결과를 사용한다', () {
+    expect(
+      mutationRepo,
+      contains('PartyRaidStateOccupancyInspector.inspect'),
+    );
+    expect(
+      mutationRepo,
+      contains('ExistingRaidStateOccupancyDecision.currentOrphanActive'),
+    );
+    expect(
+      mutationRepo,
+      contains('ExistingRaidStateOccupancyDecision.historicalOrphanActive'),
+    );
+    expect(mutationRepo, contains('PartyMembershipResult.orphaned'));
+    expect(
+      mutationRepo,
+      isNot(contains('transaction.delete(occupancy.stateRef)')),
+    );
+  });
+
   test('신청·즉시가입·승인·캐릭터 변경은 같은 최소 전투력 정책을 적용한다', () {
     for (final repository in [applicationRepo, joinRepo, mutationRepo]) {
       expect(repository, contains('MinimumCombatPowerPolicy'));

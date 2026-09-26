@@ -237,6 +237,11 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 - `partyIndex`와 `slotIndex`는 유지한다. 역할은 유지하거나 해당 파티의 역할 여유와 전체 구성 조건을 만족할 때 dealer↔support로 변경할 수 있다.
 - 다른 Character뿐 아니라 같은 Character의 저장된 반대 역할 설정도 허용한다.
 - 새 Character의 소유권, 입장 레벨, 확정 점유, 역할별 자리와 현재 파티의 동일 직업 딜러 제한을 다시 검증한다.
+- 변경 후보 조회와 최종 변경 Transaction은 새 Character의 기존 `raidState`를 같은 점유 판정으로 분류해야 한다. 후보 단계에서 교체 가능으로 표시한 종료 모집 연결 state를 최종 명령이 단순 존재 여부만으로 `participationConflict` 처리해서는 안 된다.
+- 새 Character가 현재 유효한 다른 모집에 참가 중이면 기존처럼 `participationConflict`로 거절한다. 만료됐지만 다음 회차 승계 대상인 반복방도 회차 조정 전에는 유효 점유로 보며, 현재 주차 완료 state는 기존 `weeklyRaidCompleted` 차단을 유지한다.
+- `active` state가 존재하지만 연결 모집이 없거나 `completed`, `disbanded`, `incompleteEnded`여서 기존 점유 정책상 고아로 판정되면 캐릭터 변경 Transaction은 아무 문서도 쓰지 않고 정확한 `playerId/characterId/raidId/cycleKey/recruitmentId/revision`을 포함한 명시적 고아 결과를 반환한다.
+- 화면은 기존 단일 고아 참가 정리 명령과 확인 대화상자를 재사용한다. 정리는 서버에서 같은 state와 부모 모집 상태를 다시 검증하고, 성공 뒤 캐릭터 변경을 자동 재실행하지 않는다. 사용자가 다시 선택·실행하면 변경 Transaction이 모든 조건을 새로 검증한다.
+- 모집 연결이 불명확하거나 읽은 state와 정리 대상 식별자가 일치하지 않는 경우에는 자동 덮어쓰기·삭제하지 않고 상태 불일치로 거절한다. 종료된 모집 전체 검색, Player 전체 순회와 과거 데이터 일괄 migration은 이 흐름에 포함하지 않는다.
 - 변경 후보 목록은 소유자 기기의 로컬 통합 Build 상태로 보석·아크그리드 확정 오류를 안내할 수 있다. 이 표시는 선택을 차단하지 않고 서버 계약에는 기존 보석 최소 요약만 전달한다.
 - 다른 Character 변경은 기존 확정 점유 삭제와 새 점유 생성을, 같은 Character 역할 변경은 기존 점유의 역할 갱신을 사용한다. membership Snapshot·role, 모집 역할별 집계와 revision을 같은 Transaction에서 갱신한다.
 - 다른 확정 파티에 참가 중인 Character의 이동·스왑은 로컬 최신 Projection으로 결과를 미리 계산하되, 양쪽 모집·membership·점유와 revision을 서버 Transaction에서 다시 검증하는 별도 후속 명령으로 구현한다.
@@ -321,6 +326,19 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 - 유료 스케줄러를 사용하지 않는다. 앱 실행·관련 화면 진입·명령 수행 시 만료 회차를 발견한 현재 멤버가 멱등 전환 Transaction을 실행한다.
 - 미완료 회차는 `incompleteEnded` Snapshot을 생성한다. 반복 파티는 현재 구성을 다음 회차로 승계하고 1회성 파티는 종료한다.
 - 지연 실행되더라도 Rules의 `request.time >= cycleEndsAt`, 연속된 다음 회차 경계와 revision 검증을 모두 통과해야 한다.
+
+#### 만료 방 발견과 1회성 미완료 종료
+
+- 만료 여부만으로 반복방과 1회성 방을 같은 명령으로 처리하지 않는다. `status == active && cycleEndsAt <= now`인 방을 발견하면 `continueTogether == true`는 기존 다음 회차 전환만 실행하고, `continueTogether == false`는 1회성 미완료 종료만 실행한다.
+- 1회성 미완료 종료는 화면에 보이거나 사용자가 접근한 모집 한 건만 대상으로 하는 멱등 Transaction이다. 전체 모집·그룹을 순회하는 스캔, 유료 스케줄러, Cloud Functions와 운영 데이터 일괄 migration은 도입하지 않는다.
+- Transaction은 모집을 다시 읽고 `schemaVersion == 2`, 모집·현재 회차의 `active` 상태, `continueTogether == false`, `request.time >= cycleEndsAt`, 예상 `revision/currentCycleKey`를 모두 검증한다. 요청 중 반복 설정이나 revision이 바뀌면 거절 또는 재시도하며 반복방을 `incompleteEnded`로 바꾸지 않는다.
+- 성공 시 모집의 `status/currentCycleStatus`를 `incompleteEnded`로 바꾸고 모집 활성·빈자리 표식을 끄며 revision과 명령 표식을 한 번만 증가시킨다. 참가자 구성 Snapshot과 모집 원본은 보존하고 자동 완료·해산·소유권 이전으로 바꾸지 않는다.
+- 그룹 전용방이면 같은 Transaction에서 해당 `raidListings/{recruitmentId}`를 삭제하고, Transaction이 다시 읽은 현재 그룹의 `activeRecruitmentCount`를 `N -> N-1`로 갱신한다. 방 생성 당시 count나 모집 Snapshot count를 사용하지 않는다. 공개방은 그룹 문서를 쓰지 않는다.
+- 이 명령은 참가자별 `players/{playerId}/raidStates/{stateId}`를 읽기 전제, 생성, 갱신 또는 삭제하지 않는다. 모집에 저장된 `raidStateTargets`는 당시 구성의 감사 Snapshot으로 그대로 보존한다.
+- 대상 `raidState`가 이미 없거나, 같은 결정적 경로가 이후 주차·다른 모집에 재사용돼 현재 `recruitmentId/cycleKey`가 달라도 미완료 종료를 막지 않는다. 특히 다른 모집이 소유한 현재 상태를 과거 방 종료가 삭제하거나 덮어써서는 안 된다.
+- 미완료 종료 이력은 대상자가 자기 기록을 만들 수 있는 공용 lifecycle 이벤트 한 건으로 발행한다. Player별 이벤트 fan-out을 추가하지 않는다.
+- 명령 실행 주체는 기존 계약대로 만료 회차를 발견한 현재 멤버로 제한한다. Rules는 행위자가 임의 종료 상태를 고르는 것을 허용하지 않고 위 고정 전이와 쓰기 집합만 검증한다.
+- 이미 `completed`, `disbanded`, `incompleteEnded`인 방은 변경하지 않는다. 기존 완료·해산·추방·자리 변경·반복방 다음 회차 전환의 권한, 판단 조건과 쓰기 순서는 이 명령 때문에 완화하거나 재정의하지 않는다.
 
 ## 5. Security Rules 보장 범위
 

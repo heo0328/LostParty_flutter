@@ -58,6 +58,7 @@ class PartyAtomicDocumentMapper {
   static PartyRaidStateStatus _raidStatus(Object? value) => switch (value) {
     'active' => PartyRaidStateStatus.active,
     'completed' => PartyRaidStateStatus.completed,
+    'incompleteEnded' => PartyRaidStateStatus.incompleteEnded,
     _ => throw const FormatException('지원하지 않는 회차 상태입니다.'),
   };
 

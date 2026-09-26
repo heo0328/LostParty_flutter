@@ -1,3 +1,27 @@
+# 2026-09-27 F6-G 참가 Character 변경 고아 점유 복구 실기기 확인
+
+- 현재 주차 모집에서 다른 활성 참가가 없는 Character 변경이 `다른 확정 참가와 충돌합니다`로 거절된 원인을, 후보 조회와 최종 Transaction의 `raidState` 수명 판정 불일치로 확정했다.
+- 최종 변경 Transaction을 기존 공용 `PartyRaidStateOccupancyInspector` 판정에 맞추고, 종료 모집에 연결된 고아 state는 쓰기 없이 명시적 결과로 반환해 기존 단일 참가 기록 정리 확인창으로 연결했다.
+- 정리는 사용자가 확인한 경우에만 기존 서버 명령으로 해당 state 한 건을 재검증·삭제한다. 정리 후 Character 변경은 자동 실행하지 않고 사용자가 다시 선택해야 하며, Rules와 기존 활성 참가·현재 완료·반복방 차단 조건은 변경하지 않았다.
+- 점유 정책 8건, 원자 membership Repository 계약 7건과 F6-G Widget 표적 테스트가 통과했고 변경 파일 정적 분석은 0건이었다. 상세 전체 Widget 묶음의 기존 이벤트 읽음 테스트 1건은 로컬 이벤트 조회 0건으로 실패해 별도 상태로 유지했다.
+- 사용자가 실기기에서 `정리 안내 표시 → 정리 실행 → 다시 Character 변경 → 정상 성공`을 확인했다. F6-G는 완료하며 Rules 게시 없이 현재 작업 브랜치에 유지한다.
+
+# 2026-09-27 F6-F 운영 게시·기존 문제 방 미완료 종료 확인
+
+- CLI는 Rules 원격 컴파일 성공·경고 0개 뒤 `/rulesets` HTTP 503을 반환했으나, 사용자가 Firebase 콘솔의 신규 게시 시각을 확인했고 운영 데이터에 이번 변경에서만 생성되는 `incompleteEnd` 명령 결과가 기록됐다. 따라서 앞선 보수적 `운영 미게시` 판정을 실제 게시 확인으로 정정한다.
+- 기존 지평의 성당 3단계 그룹방 `5BCRsQkPRDvje1DrllEM`은 revision `6 → 7`, `status/currentCycleStatus: active → incompleteEnded`, `manualRecruitmentEnabled/hasAvailableSlot: false`, `lastCommandId: incompleteEnd_5BCRsQkPRDvje1DrllEM_6`, `lastCommandType: incompleteEnd`로 전환됐다.
+- 방 문서는 삭제·해산되지 않고 `partySlots`, `memberPlayerIds`, 생성 당시 `raidStateTargets`가 그대로 보존됐다. `groupActiveRecruitmentCountAfter`는 과거 모집 Snapshot `5`가 아니라 명령 당시 현재 그룹 기준 결과 `10`으로 기록돼 F6-F와 A1의 결합 경계도 운영에서 작동했다.
+- 지난 주차 1회성 문제 방의 진행 중 제외와 서버 미완료 종료는 확인됐다. 반복방 다음 회차 승계, 현재 주차 방 무변경, `partyIncompleteEnded` 이력 노출은 아직 별도 확인 전이므로 F6-F 전체 완료·`dev` 통합은 보류한다.
+
+# 2026-09-26 F6-F 2단계 — 만료 1회성 방 원자 미완료 종료
+
+- 기존 lazy 회차 보정 진입점에서 반복방은 종전 `advanceCycle`을 유지하고, 만료된 1회성 방만 target 없는 `incompleteEnd` 원자 명령으로 분리했다. 현재 주차 방과 기존 완료·해산·추방·자리 변경의 조건은 변경하지 않았다.
+- 종료 Transaction은 모집을 `incompleteEnded`로 고정 전이하고 공용 `partyIncompleteEnded` 이벤트를 한 건 생성한다. 그룹방은 현재 그룹 count를 다시 읽어 `N -> N-1`로 갱신하고 listing을 삭제하며, 공개방은 그룹 문서를 쓰지 않는다.
+- 참가자 `raidState`는 명령 target, Transaction 읽기와 쓰기에서 모두 제외했다. 생성 당시 `raidStateTargets`와 `partySlots`는 감사 Snapshot으로 보존하므로 누락 state나 이후 모집이 재사용한 state를 삭제·덮어쓰지 않는다.
+- 숨겨진 만료 1회성 모집 ID도 화면 reconciliation에 전달해 다음 스트림 갱신·새로고침에서 멱등 재시도한다. 전체 모집/그룹 순회, 스케줄러, Functions와 migration은 추가하지 않았다.
+- 변경 Dart 표적 분석 0건, F6-F 정책·목록·Write Plan·Aggregate·Rules 계약과 기존 R2/R3/C* Rules 계약을 합쳐 52건, JS fixture 문법 검사가 통과했다. R3의 낡은 문자열 배치 검사는 권한 조건 변경 없이 현재 OR 체인의 해산 검증 존재를 확인하도록 교정했다. 로컬 Firestore Emulator는 Firebase CLI 설정 접근 승인 후 Java 미설치로 시작 전에 중단됐으며 Rules 실행 검증·운영 게시·실기기 확인은 남아 있다. 이 단계는 아직 F6-F 전체 완료나 `dev` 통합으로 판정하지 않는다.
+- Rules SHA-256 `01E06015969D8CA7183BAAB66E7F887A69B94200B07F448EBF84A3B542AB66A6`을 운영 `lost-party`에 한 번 게시 시도했다. `firestore.rules compiled successfully`와 경고 0개를 확인했지만 `/rulesets` 업로드가 HTTP 503 `The service is currently unavailable`로 실패해 `/releases` 반영에는 도달하지 않았고 운영 Rules는 갱신되지 않은 상태로 판정한다. 같은 명령을 즉시 반복하지 않는다.
+
 # 2026-09-24 BUG-022 작업 그룹 C Spark 통합 실패·원복
 
 - 모집 update 한 곳에서 참가 권한·그룹 접근·Character 소유·주간 완료와 membership·raidState·event·listing 결합을 검증하고, 동반 문서는 같은 revision의 Projection만 확인하는 C 설계를 구현했다.
@@ -3448,3 +3472,18 @@
 - `dev`와 `main`을 검증 커밋 `0c93b34`로 맞추고 `v1.0.0` 태그를 게시했다. 태그 run `35596035632`에서 signed APK 빌드·검증·artifact 업로드는 통과했지만, checkout 없는 release job의 `gh release create`가 저장소를 자동 판별하지 못해 게시만 실패했다. Release 조회·생성 명령에 `--repo "$GITHUB_REPOSITORY"`를 명시하는 최소 보정을 적용하고, 성공 artifact를 재빌드하지 않는 복구 절차를 사용한다.
 - 보정 커밋 `4569245`를 작업 브랜치, `dev`, `main`에 fast-forward 반영했다. 기존 `v1.0.0` 태그는 검증 앱 커밋 `0c93b34`에서 이동하지 않았다.
 - run `35596035632`의 성공 artifact를 내려받아 SHA-256 `68e9beaacdf3f475de142630f200f87f03b8efc15251f484cfe0b5045c25460e` 일치를 확인한 뒤 공개 Release `v1.0.0`에 `lostparty-v1.0.0-android.apk`와 `.sha256`을 게시했다. Release는 draft·prerelease가 아니며 임시 복구 파일은 삭제했다.
+
+# 2026-09-25 BUG-022 운영 데이터 대조와 완료 범위 정정
+
+- 운영 콘솔에서 기존 지난 주차 그룹방 `5BCRsQkPRDvje1DrllEM`(지평)과 `zxrz7IKQxq3Q386cktp8`(세르카)이 모두 `continueTogether=false`, 지난 주차, `active` 상태로 남은 것을 확인했다. 현재 주차 대조 방 `bDxr3PCcZo6j1HcVa7PN`, `tVzXqc9VKIoszI3R9i8x`은 정상 해산됐다.
+- A1 현재 그룹 count 검증과 A2 참가자 제거 listing Rules는 운영 게시가 확인됐고, 기존 문제 방의 추방은 실기기에서 성공했다. 다만 기존 지난 주차 방 해산은 계속 실패했으므로 A1/A2 게시를 BUG-022 전체 완료로 기록하지 않는다.
+- 현재 주차 지평 방 해산 뒤 같은 Character·raid의 결정적 `raidState`가 존재하지 않는 것을 직접 확인했다. 기존 방은 동일 경로를 생성 당시 `raidStateTargets`로 보존하고 있으며, 일반 해산은 모든 target 삭제를 요구하므로 누락되거나 다른 모집에 재사용된 state가 전체 Transaction을 막을 수 있다.
+- 2026-09-10 BUG-011의 완료 이력은 당시 `activeRaidAssignments` 교체와 lazy reconciliation 범위로 유지한다. 이후 v2 모집 Aggregate·`raidState` 경로에서 드러난 지난 주차 1회성 방 종료·진행 중 분리는 별도 F6-F이며 현재는 설계 보강만 완료되고 구현·자동 검증·실기기 확인은 남아 있다.
+- F6-F는 만료 1회성 방을 `incompleteEnded`로 전환하고 진행 중 목록에서 제외한다. 참가자 `raidState`를 읽기 전제나 쓰기·삭제 대상으로 삼지 않으며, 반복방·현재 주차 방과 정상 완료·해산·추방·자리 변경의 기존 계약은 변경하지 않는다. 이 기록 단계에서는 코드와 Firebase 데이터를 수정하지 않았다.
+
+# 2026-09-25 F6-F 1단계 — 진행 중 목록 수명주기 분리
+
+- 진행 중 읽기 모델에 모집의 `cycleEndsAt`을 연결하고, 현재·만료 반복·만료 1회성·이미 종료 상태를 구분하는 순수 정책을 추가했다.
+- 만료된 `continueTogether=false` 방만 진행 중 원본 목록에서 제외하고 다음 단계의 단건 종료 대상 ID로 보존한다. 현재 주차 방, 만료 반복방과 `completed` 해산 대기 방은 기존 표시를 유지한다. `cycleEndsAt`이 없는 과거 문서도 기존처럼 표시한다.
+- 새 미완료 종료 명령이 아직 없으므로 숨긴 1회성 방은 기존 반복방 reconciliation 호출에 보내지 않는다. 이 단계에서는 Firestore 쓰기, Rules, 일반 완료·해산, 추방·자리 변경과 참가자 `raidState`를 변경하지 않았다.
+- 순수 정책·읽기 매퍼·목록 ViewModel 표적 테스트 34건과 변경 파일 `flutter analyze`가 통과했다. F6-F 전체 완료가 아니라 1단계 완료이며, 다음은 `raidState` 비의존 `incompleteEnded` 원자 명령과 Rules 구현이다.

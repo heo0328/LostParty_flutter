@@ -46,6 +46,23 @@ void main() {
       ExistingRaidStateOccupancyDecision.currentOrphanActive,
     );
   });
+
+  test('incompleteEnded 모집을 가리키는 active는 orphan이다', () {
+    expect(
+      _classify(recruitmentStatus: 'incompleteEnded'),
+      ExistingRaidStateOccupancyDecision.historicalOrphanActive,
+    );
+  });
+
+  test('현재 주차의 유효한 active 모집 참가는 계속 차단한다', () {
+    expect(
+      _classify(
+        stateCycleKey: '2026-09-09',
+        recruitmentCycleKey: '2026-09-09',
+      ),
+      ExistingRaidStateOccupancyDecision.currentActive,
+    );
+  });
 }
 
 ExistingRaidStateOccupancyDecision _classify({

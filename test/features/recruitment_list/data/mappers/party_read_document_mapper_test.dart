@@ -137,6 +137,7 @@ void main() {
     expect(summary.status, 'active');
     expect(summary.currentCycleStatus, 'active');
     expect(summary.continueTogether, isFalse);
+    expect(summary.cycleEndsAt, DateTime.utc(2026, 8, 26, 21));
     expect(summary.isAwaitingDisband, isFalse);
     expect(summary.visibility, 'public');
     expect(summary.isGroupOnly, isFalse);

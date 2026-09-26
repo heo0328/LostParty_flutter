@@ -1324,15 +1324,20 @@ service cloud.firestore {
       return data.groupId is string && data.groupId.size() > 0;
     }
 
-    function atomicLifecycleActorOwns(oldData) {
+    function atomicLifecycleActorAllowed(oldData, newData) {
       return hasActiveBinding()
-        && currentPlayerId() == oldData.leaderPlayerId;
+        && ((newData.lastCommandType == 'incompleteEnd'
+            && oldData.memberPlayerIds is list
+            && oldData.memberPlayerIds.hasAny([currentPlayerId()]))
+          || (newData.lastCommandType != 'incompleteEnd'
+            && currentPlayerId() == oldData.leaderPlayerId));
     }
 
     function atomicIsLifecycleCommand(newData) {
       return newData.lastCommandType is string
         && (newData.lastCommandType == 'complete'
           || newData.lastCommandType == 'advanceCycle'
+          || newData.lastCommandType == 'incompleteEnd'
           || newData.lastCommandType == 'disband');
     }
 
@@ -1358,6 +1363,7 @@ service cloud.firestore {
     function atomicAllTargetsMatch(data) {
       return data.commandTargets.size() <= 8
         && (data.commandTargets.size() >= 1
+          || data.lastCommandType == 'incompleteEnd'
           || (data.lastCommandType == 'disband'
             && data.currentCycleStatus == 'completed'))
         && atomicTargetMatchesTransition(data, 0)
@@ -1375,11 +1381,13 @@ service cloud.firestore {
         && newData.groupId == oldData.groupId
         && newData.raidStateTargets == oldData.raidStateTargets
         && (newData.commandTargets == oldData.raidStateTargets
+          || (newData.lastCommandType == 'incompleteEnd'
+            && newData.commandTargets.size() == 0)
           || (newData.lastCommandType == 'disband'
             && oldData.currentCycleStatus == 'completed'
             && newData.commandTargets.size() == 0))
         && newData.revision == oldData.revision + 1
-        && newData.lastCommandActorPlayerId == oldData.leaderPlayerId
+        && newData.lastCommandActorPlayerId == currentPlayerId()
         && newData.groupActiveRecruitmentCountAfter is int
         && newData.lastCommandId is string
         && newData.lastCommandAt == request.time;
@@ -1421,12 +1429,39 @@ service cloud.firestore {
           && newData.currentCycleKey == oldData.currentCycleKey
           && newData.targetCycleKey == oldData.targetCycleKey
           && newData.cycleStartedAt == oldData.cycleStartedAt
+          && newData.cycleEndsAt == oldData.cycleEndsAt)
+        || (newData.lastCommandType == 'incompleteEnd'
+          && oldData.schemaVersion == 2
+          && newData.schemaVersion == 2
+          && oldData.status == 'active'
+          && oldData.currentCycleStatus == 'active'
+          && oldData.continueTogether == false
+          && oldData.cycleEndsAt is timestamp
+          && request.time >= oldData.cycleEndsAt
+          && newData.status == 'incompleteEnded'
+          && newData.currentCycleStatus == 'incompleteEnded'
+          && newData.manualRecruitmentEnabled == false
+          && newData.hasAvailableSlot == false
+          && newData.currentCycleKey == oldData.currentCycleKey
+          && newData.targetCycleKey == oldData.targetCycleKey
+          && newData.cycleStartedAt == oldData.cycleStartedAt
           && newData.cycleEndsAt == oldData.cycleEndsAt);
+    }
+
+    function atomicValidIncompleteEndShape(oldData, newData) {
+      return newData.lastCommandType != 'incompleteEnd'
+        || newData.diff(oldData).affectedKeys().hasOnly([
+          'status', 'currentCycleStatus', 'manualRecruitmentEnabled',
+          'hasAvailableSlot', 'groupActiveRecruitmentCountAfter',
+          'commandTargets', 'revision', 'lastCommandId', 'lastCommandType',
+          'lastCommandActorPlayerId', 'lastCommandAt', 'updatedAt'
+        ]);
     }
 
     function atomicClosesActiveGroupRecruitment(oldData, newData) {
       return (newData.lastCommandType == 'complete'
           && oldData.continueTogether == false)
+        || newData.lastCommandType == 'incompleteEnd'
         || (newData.lastCommandType == 'disband'
           && oldData.status == 'active');
     }
@@ -1453,9 +1488,10 @@ service cloud.firestore {
 
     function validAtomicLifecycleUpdate(oldData, newData) {
       return atomicIsLifecycleCommand(newData)
-        && atomicLifecycleActorOwns(oldData)
+        && atomicLifecycleActorAllowed(oldData, newData)
         && atomicValidLifecycleShape(oldData, newData)
         && atomicValidLifecycleState(oldData, newData)
+        && atomicValidIncompleteEndShape(oldData, newData)
         && atomicAllTargetsMatch(newData)
         && atomicValidGroupLifecycleCount(oldData, newData);
     }
@@ -1590,7 +1626,7 @@ service cloud.firestore {
 
     function atomicValidV2LifecycleEventPayload(data, recruitment) {
       return data.schemaVersion == 2
-        && (data.type == 'complete'
+        && ((data.type == 'complete' || data.type == 'partyIncompleteEnded')
           ? (data.keys().hasOnly([
               'schemaVersion', 'eventId', 'recruitmentId', 'type', 'commandId',
               'commandRevision', 'audiencePlayerIds', 'actorPlayerId',
@@ -1609,6 +1645,12 @@ service cloud.firestore {
             ]));
     }
 
+    function atomicLifecycleEventType(recruitment) {
+      return recruitment.lastCommandType == 'incompleteEnd'
+        ? 'partyIncompleteEnded'
+        : recruitment.lastCommandType;
+    }
+
     function validAtomicLifecyclePartyEvent(data) {
       let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
       return atomicIsLifecycleCommand(recruitment)
@@ -1617,7 +1659,7 @@ service cloud.firestore {
           'commandRevision', 'audiencePlayerIds', 'actorPlayerId', 'occurredAt'
         ])) || atomicValidV2LifecycleEventPayload(data, recruitment))
         && data.eventId is string
-        && data.type == recruitment.lastCommandType
+        && data.type == atomicLifecycleEventType(recruitment)
         && data.commandId == recruitment.lastCommandId
         && data.commandRevision == recruitment.revision
         && data.audiencePlayerIds is list
@@ -1640,8 +1682,10 @@ service cloud.firestore {
       let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
       return atomicIsLifecycleCommand(recruitment)
         && (recruitment.status == 'completed'
-          || recruitment.status == 'disbanded')
+          || recruitment.status == 'disbanded'
+          || recruitment.status == 'incompleteEnded')
         && (recruitment.lastCommandType == 'complete'
+          || recruitment.lastCommandType == 'incompleteEnd'
           || recruitment.lastCommandType == 'disband');
     }
 
@@ -1717,6 +1761,9 @@ service cloud.firestore {
               && recruitment.status == 'disbanded')
             || (recruitment.lastCommandType == 'complete'
               && recruitment.status == 'completed'
+              && recruitment.continueTogether == false)
+            || (recruitment.lastCommandType == 'incompleteEnd'
+              && recruitment.status == 'incompleteEnded'
               && recruitment.continueTogether == false)))
         || (personalCompletionTargetsCurrentPlayer(recruitment)
           && recruitment.groupId == groupId

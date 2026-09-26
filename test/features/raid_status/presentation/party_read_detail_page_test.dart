@@ -1149,6 +1149,76 @@ void main() {
     expect(find.text('참가 캐릭터를 변경했습니다.'), findsOneWidget);
   });
 
+  testWidgets('종료 방의 고아 점유는 명시적 정리 후 캐릭터 변경을 자동 재시도하지 않는다', (
+    tester,
+  ) async {
+    const orphan = PartyOrphanedRaidParticipation(
+      characterId: 'server-character-2',
+      raidId: 'kazeros_act4',
+      cycleKey: '2026-08-12',
+      recruitmentId: 'ended-recruitment',
+      stateRevision: 4,
+      isHistorical: true,
+    );
+    final membership = _RecordingMembershipRepository(
+      changeResult: const PartyMembershipResult.orphaned(orphan),
+    );
+    final cleanupRepository = _FakeWeeklyRaidClaimCommandRepository();
+    await pumpPage(
+      tester,
+      recruitment: Stream.value(
+        PartyReadDetailSnapshot(
+          item: _summary(memberCount: 1, maxMemberCount: 4),
+          isFromCache: false,
+        ),
+      ),
+      members: Stream.value(
+        const PartyReadSnapshot(
+          items: [
+            PartyMemberDisplay(
+              playerId: 'player-1',
+              characterId: 'server-character-1',
+              characterName: '지원바드',
+              className: '바드',
+              role: PartyRole.dealer,
+              partyIndex: 0,
+              slotIndex: 0,
+            ),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      membershipCommandRepository: membership,
+      weeklyRaidClaimCommandRepository: cleanupRepository,
+      candidateService: _multiCharacterCandidateService(),
+      playerId: 'player-1',
+    );
+    await tester.pumpAndSettle();
+
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('changeParticipatingCharacterButton')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('change-candidate-2-dealer')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('지난 주차의 종료되거나 삭제된'), findsOneWidget);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(FilledButton),
+        matching: find.text('참가 기록 정리'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(cleanupRepository.lastCleanup?.characterId, 'server-character-2');
+    expect(cleanupRepository.lastCleanup?.recruitmentId, 'ended-recruitment');
+    expect(cleanupRepository.lastCleanup?.expectedStateRevision, 4);
+    expect(membership.changeCommands, hasLength(1));
+    expect(find.textContaining('캐릭터 변경을 다시 시도'), findsOneWidget);
+  });
+
   testWidgets('변경 가능한 캐릭터가 없으면 안내 알림을 표시한다', (tester) async {
     await pumpPage(
       tester,
@@ -2397,6 +2467,11 @@ class _MultiDealerAccountRepository extends _AccountRepository {
 
 class _RecordingMembershipRepository
     implements PartyMembershipCommandRepository {
+  _RecordingMembershipRepository({
+    this.changeResult = const PartyMembershipResult.success(),
+  });
+
+  final PartyMembershipResult changeResult;
   final leaveCommands = <PartyRemoveMemberCommand>[];
   final kickCommands = <PartyRemoveMemberCommand>[];
   final lostQualificationCommands = <PartyRemoveMemberCommand>[];
@@ -2413,7 +2488,7 @@ class _RecordingMembershipRepository
     PartyChangeCharacterCommand command,
   ) async {
     changeCommands.add(command);
-    return const PartyMembershipResult.success();
+    return changeResult;
   }
 
   @override

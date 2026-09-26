@@ -33,14 +33,23 @@ class PartyAtomicWritePlan {
     final completedDisband =
         command.type == PartyAtomicCommandType.disband &&
         aggregate.currentCycleStatus == PartyRaidStateStatus.completed;
-    if ((completedDisband && command.targets.isNotEmpty) ||
-        (!completedDisband && !_targetsMatchSlots())) {
+    final targetlessIncompleteEnd =
+        command.type == PartyAtomicCommandType.incompleteEnd;
+    if (((completedDisband || targetlessIncompleteEnd) &&
+            command.targets.isNotEmpty) ||
+        (!completedDisband &&
+            !targetlessIncompleteEnd &&
+            !_targetsMatchSlots())) {
       throw StateError('명령 대상이 현재 파티 구성과 일치하지 않습니다.');
     }
     if ((command.type == PartyAtomicCommandType.complete &&
             aggregate.currentCycleStatus != PartyRaidStateStatus.active) ||
         (command.type == PartyAtomicCommandType.advanceCycle &&
-            !aggregate.continueTogether)) {
+            !aggregate.continueTogether) ||
+        (command.type == PartyAtomicCommandType.incompleteEnd &&
+            (aggregate.continueTogether ||
+                aggregate.currentCycleStatus !=
+                    PartyRaidStateStatus.active))) {
       throw StateError('현재 회차 상태에서 실행할 수 없는 명령입니다.');
     }
     if (aggregate.status != PartyRecruitmentStatus.active &&
@@ -75,6 +84,7 @@ class PartyAtomicWritePlan {
       aggregate.groupId != null &&
       ((command.type == PartyAtomicCommandType.complete &&
               !aggregate.continueTogether) ||
+          command.type == PartyAtomicCommandType.incompleteEnd ||
           (command.type == PartyAtomicCommandType.disband &&
               aggregate.status == PartyRecruitmentStatus.active));
 
@@ -111,6 +121,7 @@ class PartyAtomicWritePlan {
         PartyAtomicCommandType.complete => status == 'active',
         PartyAtomicCommandType.advanceCycle =>
           status == 'active' || status == 'completed',
+        PartyAtomicCommandType.incompleteEnd => false,
         PartyAtomicCommandType.disband => status == 'active',
         PartyAtomicCommandType.personalComplete => false,
       };
@@ -144,6 +155,12 @@ class PartyAtomicWritePlan {
       },
       if (command.type == PartyAtomicCommandType.disband) ...{
         'status': 'disbanded',
+        'manualRecruitmentEnabled': false,
+        'hasAvailableSlot': false,
+      },
+      if (command.type == PartyAtomicCommandType.incompleteEnd) ...{
+        'status': 'incompleteEnded',
+        'currentCycleStatus': 'incompleteEnded',
         'manualRecruitmentEnabled': false,
         'hasAvailableSlot': false,
       },
@@ -211,17 +228,24 @@ class PartyAtomicWritePlan {
   }
 
   Map<String, Object?> get eventDocument => {
-    'schemaVersion': command.type == PartyAtomicCommandType.complete ? 2 : 1,
+    'schemaVersion':
+        command.type == PartyAtomicCommandType.complete ||
+            command.type == PartyAtomicCommandType.incompleteEnd
+        ? 2
+        : 1,
     'eventId': command.commandId,
     'recruitmentId': command.recruitmentId,
-    'type': command.type.name,
+    'type': command.type == PartyAtomicCommandType.incompleteEnd
+        ? 'partyIncompleteEnded'
+        : command.type.name,
     'commandId': command.commandId,
     'commandRevision': command.expectedRevision + 1,
     'audiencePlayerIds': [
       for (final slot in aggregate.partySlots) slot.playerId,
     ],
     'actorPlayerId': command.actorPlayerId,
-    if (command.type == PartyAtomicCommandType.complete) ...{
+    if (command.type == PartyAtomicCommandType.complete ||
+        command.type == PartyAtomicCommandType.incompleteEnd) ...{
       'raidId': aggregate.raidId,
       'difficultyId': aggregate.difficultyId,
       'cycleKey': aggregate.currentCycleKey,

@@ -57,6 +57,16 @@ void main() {
         ],
       );
 
+  PartyCommandEnvelope incompleteEndCommand() => PartyCommandEnvelope(
+    commandId: 'incompleteEnd_recruitment-1_4',
+    recruitmentId: 'recruitment-1',
+    type: PartyAtomicCommandType.incompleteEnd,
+    actorPlayerId: 'player-0',
+    expectedRevision: 4,
+    expectedCycleKey: '2026-09-09',
+    targets: const [],
+  );
+
   test('완료는 모집과 raidState를 같은 다음 revision으로 만든다', () {
     final plan = PartyAtomicWritePlan(
       command: command(PartyAtomicCommandType.complete),
@@ -121,6 +131,96 @@ void main() {
     expect(plan.raidStateWrites.single.patch?['cycleKey'], '2026-09-16');
     expect(plan.raidStateWrites.single.patch?['source'], 'party');
     expect(plan.raidStateWrites.single.removeCompletedAt, isTrue);
+  });
+
+  test('만료된 1회성 모집 종료는 raidState 없이 모집과 공유 이력만 닫는다', () {
+    final oneShotGroup = PartyCommandAggregate(
+      recruitmentId: 'recruitment-1',
+      raidId: 'raid-1',
+      difficultyId: 'hard',
+      leaderPlayerId: 'player-0',
+      currentCycleKey: '2026-09-09',
+      currentCycleStatus: PartyRaidStateStatus.active,
+      revision: 4,
+      partySlots: aggregate().partySlots,
+      nonGroupMemberCount: 0,
+      pendingApplicationCount: 0,
+      pendingNonGroupApplicantCount: 0,
+      groupId: 'group-1',
+      visibility: 'group',
+      continueTogether: false,
+    );
+    final plan = PartyAtomicWritePlan(
+      command: incompleteEndCommand(),
+      aggregate: oneShotGroup,
+      serverTimestamp: timestamp,
+      incrementOne: incrementOne,
+    );
+
+    expect(plan.recruitmentPatch['status'], 'incompleteEnded');
+    expect(plan.recruitmentPatch['currentCycleStatus'], 'incompleteEnded');
+    expect(plan.recruitmentPatch['manualRecruitmentEnabled'], isFalse);
+    expect(plan.recruitmentPatch['hasAvailableSlot'], isFalse);
+    expect(plan.recruitmentPatch['commandTargets'], isEmpty);
+    expect(plan.raidStateWrites, isEmpty);
+    expect(plan.raidStateDocumentsAllow(const {}), isTrue);
+    expect(plan.eventDocument['schemaVersion'], 2);
+    expect(plan.eventDocument['type'], 'partyIncompleteEnded');
+    expect(plan.eventDocument['completionTargets'], [
+      {'playerId': 'player-0', 'characterId': 'character-0'},
+    ]);
+    expect(plan.closesActiveGroupRecruitment, isTrue);
+    expect(plan.groupListingAction, PartyGroupListingWriteAction.delete);
+    expect(plan.maximumWriteCount, 4);
+  });
+
+  test('반복 모집에는 미완료 종료 명령을 적용하지 않는다', () {
+    expect(
+      () => PartyAtomicWritePlan(
+        command: incompleteEndCommand(),
+        aggregate: aggregate(),
+        serverTimestamp: timestamp,
+        incrementOne: incrementOne,
+      ),
+      throwsStateError,
+    );
+  });
+
+  test('공개 1회성 모집 종료는 그룹 문서 쓰기를 만들지 않는다', () {
+    final publicOneShot = PartyCommandAggregate(
+      recruitmentId: 'recruitment-1',
+      raidId: 'raid-1',
+      difficultyId: 'hard',
+      leaderPlayerId: 'player-0',
+      currentCycleKey: '2026-09-09',
+      currentCycleStatus: PartyRaidStateStatus.active,
+      revision: 4,
+      partySlots: [
+        PartyAggregateSlot(
+          playerId: 'player-0',
+          characterId: 'character-0',
+          role: PartyRole.dealer,
+          classKey: '버서커',
+          partyIndex: 0,
+          slotIndex: 0,
+          countedAsNonGroupMember: true,
+        ),
+      ],
+      nonGroupMemberCount: 1,
+      pendingApplicationCount: 0,
+      pendingNonGroupApplicantCount: 0,
+      continueTogether: false,
+    );
+    final plan = PartyAtomicWritePlan(
+      command: incompleteEndCommand(),
+      aggregate: publicOneShot,
+      serverTimestamp: timestamp,
+      incrementOne: incrementOne,
+    );
+
+    expect(plan.closesActiveGroupRecruitment, isFalse);
+    expect(plan.groupListingAction, PartyGroupListingWriteAction.none);
+    expect(plan.maximumWriteCount, 2);
   });
 
   test('활성 해산은 raidState를 삭제하고 개인 이벤트를 복제하지 않는다', () {

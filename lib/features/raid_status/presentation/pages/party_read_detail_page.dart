@@ -585,8 +585,10 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
   }
 
   Future<void> _offerOrphanCleanup(
-    PartyOrphanedRaidParticipation orphan,
-  ) async {
+    PartyOrphanedRaidParticipation orphan, {
+    String automaticActionDescription = '신청이나 즉시 가입',
+    String retryInstruction = '신청 또는 가입을 다시 시도해 주세요.',
+  }) async {
     final repository = widget.weeklyRaidClaimCommandRepository;
     final playerId = widget.playerId;
     if (repository == null || playerId == null || playerId.isEmpty) {
@@ -601,7 +603,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
         title: const Text('참가 기록 정리'),
         content: Text(
           '${_orphanedParticipationMessage(orphan)}\n\n'
-          '참가 기록만 정리하며 신청이나 즉시 가입은 자동으로 진행하지 않습니다.',
+          '참가 기록만 정리하며 $automaticActionDescription은 자동으로 진행하지 않습니다.',
         ),
         actions: [
           TextButton(
@@ -634,7 +636,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       SnackBar(
         content: Text(
           result.isSuccess
-              ? '남아 있던 참가 기록을 정리했습니다. 신청 또는 가입을 다시 시도해 주세요.'
+              ? '남아 있던 참가 기록을 정리했습니다. $retryInstruction'
               : _orphanCleanupFailureMessage(result.failure!),
         ),
       ),
@@ -1225,6 +1227,15 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
             isNextWeekPrep ? '다음 주 참가 캐릭터를 변경했습니다.' : '참가 캐릭터를 변경했습니다.',
           ),
         ),
+      );
+      return;
+    }
+    if (result.failure == PartyMembershipFailure.orphanedParticipation &&
+        result.orphanedParticipation != null) {
+      await _offerOrphanCleanup(
+        result.orphanedParticipation!,
+        automaticActionDescription: '캐릭터 변경',
+        retryInstruction: '캐릭터 변경을 다시 시도해 주세요.',
       );
       return;
     }
@@ -3328,6 +3339,10 @@ String _membershipFailureMessage(PartyMembershipFailure failure) =>
       PartyMembershipFailure.alreadyCurrentCharacter => '이미 참가 중인 캐릭터입니다.',
       PartyMembershipFailure.participationConflict =>
         '다른 확정 참가와 충돌합니다. 캐릭터를 다시 선택해 주세요.',
+      PartyMembershipFailure.orphanedParticipation =>
+        '종료되거나 삭제된 파티의 참가 기록 정리가 필요합니다.',
+      PartyMembershipFailure.stateInconsistent =>
+        '이 캐릭터의 참가·완료 기록을 안전하게 확인할 수 없습니다.',
       PartyMembershipFailure.roleMismatch ||
       PartyMembershipFailure.invalidComposition => '현재 파티 구성과 맞지 않는 캐릭터입니다.',
       PartyMembershipFailure.revisionConflict => '모집 상태가 바뀌었습니다. 다시 확인해 주세요.',

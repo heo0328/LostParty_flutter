@@ -19,6 +19,8 @@ const recruitmentId = 'recruitment-1';
 const groupId = 'group-1';
 const leaderUid = 'leader-auth';
 const leaderPlayerId = 'player-0';
+const memberUid = 'member-auth';
+const memberPlayerId = 'player-1';
 
 function targets(memberCount) {
   return Array.from({ length: memberCount }, (_, index) => ({
@@ -59,6 +61,12 @@ async function seed(
       playerId: leaderPlayerId,
       status: 'active',
     });
+    if (memberCount > 1) {
+      await db.doc(`authBindings/${memberUid}`).set({
+        playerId: memberPlayerId,
+        status: 'active',
+      });
+    }
     await db.doc(`groups/${groupId}`).set({
       activeRecruitmentCount: groupActiveRecruitmentCount,
       lastRecruitmentId: recruitmentId,
@@ -66,6 +74,7 @@ async function seed(
       updatedAt: now,
     });
     await db.doc(`recruitments/${recruitmentId}`).set({
+      schemaVersion: 2,
       recruitmentId,
       raidId: 'raid-1',
       difficultyId: 'hard',
@@ -75,6 +84,12 @@ async function seed(
       continueTogether,
       currentCycleStatus: cycleStatus,
       currentCycleKey: '2026-09-09',
+      cycleEndsAt: firebase.firestore.Timestamp.fromDate(
+        new Date('2026-09-16T00:00:00Z'),
+      ),
+      manualRecruitmentEnabled: true,
+      hasAvailableSlot: true,
+      memberPlayerIds: memberTargets.map((target) => target.playerId),
       partySlots: partySlots(memberCount),
       raidStateTargets: memberTargets,
       commandTargets: memberTargets,
@@ -111,8 +126,8 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
   const listingRef = db.doc(`groups/${groupId}/raidListings/${recruitmentId}`);
   const groupRef = db.doc(`groups/${groupId}`);
   const memberTargets = targets(memberCount);
-  const commandTargets = type === 'disband'
-      && recruitmentStatusRequiresPreservedStates(options)
+  const commandTargets = type === 'incompleteEnd'
+    || (type === 'disband' && recruitmentStatusRequiresPreservedStates(options))
     ? []
     : memberTargets;
   const writtenTargets = options.omitLast
@@ -130,11 +145,15 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
       ? (recruitment.continueTogether ? 'active' : 'completed')
       : type === 'disband'
         ? 'disbanded'
+        : type === 'incompleteEnd'
+          ? 'incompleteEnded'
         : 'active';
     const nextCycleStatus = type === 'complete'
       ? 'completed'
       : type === 'disband'
         ? recruitment.currentCycleStatus
+        : type === 'incompleteEnd'
+          ? 'incompleteEnded'
         : 'active';
     const commandId = `${type}-${memberCount}-${nextRevision}`;
     const completionTargets = options.omitEventTarget
@@ -146,6 +165,7 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
         : recruitment.partySlots;
     const closesActiveRecruitment =
       (type === 'complete' && recruitment.continueTogether === false)
+      || type === 'incompleteEnd'
       || (type === 'disband' && recruitment.status === 'active');
     const group = closesActiveRecruitment
       ? (await transaction.get(groupRef)).data()
@@ -163,8 +183,12 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
       revision: options.staleRevision ? nextRevision + 1 : nextRevision,
       lastCommandId: commandId,
       lastCommandType: type,
-      lastCommandActorPlayerId: leaderPlayerId,
+      lastCommandActorPlayerId: options.actorPlayerId ?? leaderPlayerId,
       lastCommandAt: firebase.firestore.FieldValue.serverTimestamp(),
+      ...(type === 'incompleteEnd' ? {
+        manualRecruitmentEnabled: false,
+        hasAvailableSlot: false,
+      } : {}),
     });
 
     for (const target of writtenTargets) {
@@ -211,17 +235,17 @@ async function lifecycleTransaction(db, memberCount, type, options = {}) {
     }
 
     transaction.set(db.doc(`partyEvents/${commandId}`), {
-      schemaVersion: type === 'complete'
+      schemaVersion: type === 'complete' || type === 'incompleteEnd'
         ? 2
         : 1,
       eventId: commandId,
       recruitmentId,
-      type,
+      type: type === 'incompleteEnd' ? 'partyIncompleteEnded' : type,
       commandId,
       commandRevision: nextRevision,
       audiencePlayerIds: memberTargets.map((target) => target.playerId),
-      actorPlayerId: leaderPlayerId,
-      ...(type === 'complete' ? {
+      actorPlayerId: options.actorPlayerId ?? leaderPlayerId,
+      ...(type === 'complete' || type === 'incompleteEnd' ? {
         raidId: recruitment.raidId,
         difficultyId: recruitment.difficultyId,
         cycleKey: recruitment.currentCycleKey,
@@ -276,6 +300,26 @@ async function main() {
       }),
     );
     console.log('PASS: one-shot completion and completed disband');
+
+    await seed(testEnv, 8, { continueTogether: false });
+    const memberDb = testEnv.authenticatedContext(memberUid).firestore();
+    await assertSucceeds(
+      lifecycleTransaction(memberDb, 8, 'incompleteEnd', {
+        actorPlayerId: memberPlayerId,
+      }),
+    );
+    for (const target of targets(8)) {
+      await assertSucceeds(stateRef(memberDb, target).get());
+    }
+    console.log('PASS: expired one-shot ends without raidState writes');
+
+    await seed(testEnv, 8, { continueTogether: true });
+    await assertFails(
+      lifecycleTransaction(memberDb, 8, 'incompleteEnd', {
+        actorPlayerId: memberPlayerId,
+      }),
+    );
+    console.log('PASS: recurring room incomplete end denied');
 
     await seed(testEnv, 8);
     await assertSucceeds(lifecycleTransaction(leaderDb, 8, 'advanceCycle'));
