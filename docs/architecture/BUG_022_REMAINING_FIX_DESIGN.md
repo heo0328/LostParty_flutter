@@ -140,10 +140,19 @@ listing은 `getAfter(recruitment)`의 전체 Snapshot 및 같은 revision과 일
 
 ### C7. Spark 데이터 계약 대안 — 권위 Aggregate와 복구 가능한 Projection 분리
 
-> 상태: **설계 후보·구현 미승인**. Cloud Functions·Blaze를 사용하지 않는다. 기존 Rules의
+> 상태: **격리 proof 실패·채택 폐기(2026-09-27)**. Cloud Functions·Blaze를 사용하지 않는다. 기존 Rules의
 > 조건을 줄이는 안이 아니라, 같은 참가 사실을 여러 문서가 각각 권위 있게 재검증하는 현재
 > 중복 계약을 버전형 저장 계약으로 교체하는 안이다. 아래 proof가 통과하고 개발자가 목록·
 > 상세 UX 영향을 승인하기 전에는 제품 코드·Rules·Indexes를 수정하지 않는다.
+
+격리 Actions `36326380626`은 Transaction의 모집 단건 읽기를 proof Rules가 막은 하네스
+불일치, `36326546696`은 배열 내부 `serverTimestamp()` 사용 불가로 각각 실패했다. 실제 제품
+계약처럼 그룹 멤버의 단건 `get`만 허용하고, 배열 slot에는 결정적 event ID를 두며 같은
+Transaction event의 `occurredAt == request.time`을 권위 가입 시각으로 삼아 두 문제를 제거했다.
+그 다음 실행 `36326680954`에서 정상 그룹 직접 재가입 3-write가
+`maximum of 1000 expressions`로 거절됐다. 이는 아래에 미리 정한 폐기 조건이므로 승인 4-write,
+8인 크기, v2 migration과 제품 구현으로 진행하지 않는다. 이를 통과시키려고 권한·소유권·
+주간 완료·그룹 접근·원자성 조건을 줄이지 않는다.
 
 #### C7-1. 현재 병목과 변경 원칙
 

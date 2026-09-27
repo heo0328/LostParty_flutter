@@ -1,11 +1,12 @@
 # Task-11 Firestore Rules 복잡도 차단 — 종료된 진단 이력
 
-## 2026-09-27 C7 v3 직접 재가입 격리 proof 로컬 로딩 실패
+## 2026-09-27 C7 v3 직접 재가입 격리 proof — 3-write 한도 초과로 폐기
 
 - 운영 `firestore.rules`와 앱 코드를 수정하지 않고 별도 `party_join_v3_proof.rules`에 그룹 직접 재가입의 3-write 권위 Transaction을 구성했다. 모집 Aggregate·개인 `raidState`·결정적 party event를 모두 요구하고 비그룹원·block·타인 Character·주간 Claim·자리/count 위조·핵심 문서 누락을 거절하는 fixture를 추가했다.
 - 중단 지점 재검수에서 신규 append만 확인하고 기존 `memberPlayerIds/partySlots/raidStateTargets` 앞부분 보존을 강제하지 않은 proof 보안 누락을 발견했다. 최대 8개 기존 항목의 exact preservation helper와 기존 slot/target 변조 거절 사례를 추가한 뒤 JS 문법과 `git diff --check`를 통과했다.
 - 저장소 JDK 21로 격리 Firestore Emulator 자체는 기동했지만 `initializeTestEnvironment`의 proof Rules 로딩 단계에서 HTTP 503 `Network closed for unknown reason`가 발생했다. 시나리오 실행 전의 기존 Windows 환경 실패이므로 Rules 허용·거절 또는 1,000식 결과로 해석하지 않으며 같은 로컬 명령을 반복하지 않는다.
-- 다음 검증은 proof 파일만 포함한 원격 Actions에서 한 번 수행한다. 통과 전에는 C7 채택·제품 v3 구현·운영 Rules 게시로 진행하지 않는다.
+- Actions `36326380626`의 모집 단건 읽기 차단과 `36326546696`의 배열 내부 `serverTimestamp()` 제약은 proof 하네스 문제로 확인해 실제 제품 계약에 맞게 교정했다. slot에는 결정적 event ID를 저장하고 같은 Transaction event의 `occurredAt == request.time`을 권위 가입 시각으로 유지한다.
+- 교정 후 Actions `36326680954`에서 정상 그룹 직접 재가입 3-write 자체가 `maximum of 1000 expressions`로 거절됐다. C7의 사전 폐기 조건에 해당하므로 승인 4-write·8인·migration proof와 제품 구현을 진행하지 않는다. 운영 Rules·앱·데이터는 변경하거나 배포하지 않았다.
 
 ## 2026-09-27 F6-H 원격 회귀와 기존 그룹 재가입 한도 분리
 

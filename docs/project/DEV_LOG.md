@@ -1,3 +1,10 @@
+# 2026-09-27 BUG-022 C7 schema v3 격리 proof 폐기
+
+- 운영 Rules와 Flutter 제품 코드를 수정하지 않고 모집 Aggregate·개인 `raidState`·결정적 party event만 원자 확정하는 그룹 직접 재가입 3-write proof를 분리했다.
+- 기존 Aggregate 항목 보존, 비그룹원·block·타인 Character·주간 Claim·자리/count 위조와 핵심 문서 누락 거절을 포함했다. Actions `36326380626`의 모집 단건 읽기 차단과 `36326546696`의 배열 내부 서버 시각 제약은 proof 하네스 문제로 교정했다.
+- 실제 계약까지 도달한 Actions `36326680954`에서 정상 3-write가 Firestore Rules `maximum of 1000 expressions`로 실패했다. 미리 정한 C7 폐기 조건에 따라 승인 4-write·8인 크기·v2 migration과 제품 구현은 중단했다.
+- 권한·소유권·주간 완료·그룹 접근·원자성 조건이나 실패 회귀를 삭제하지 않았고, 운영 게시·실기기 변경은 없다. 재가입 C는 새 계약의 별도 승인 전까지 미완료·보류다.
+
 # 2026-09-27 F6-G 참가 Character 변경 고아 점유 복구 실기기 확인
 
 - 현재 주차 모집에서 다른 활성 참가가 없는 Character 변경이 `다른 확정 참가와 충돌합니다`로 거절된 원인을, 후보 조회와 최종 Transaction의 `raidState` 수명 판정 불일치로 확정했다.

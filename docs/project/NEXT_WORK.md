@@ -80,7 +80,7 @@
 
 **C7 Spark 데이터 계약 대안 설계(2026-09-27):** 유료 Functions 대안은 기존 합의상 제외한다. 다음 후보는 schema v3 모집 Aggregate의 확장 `partySlots`와 개인 `raidState`, application, party event만 가입의 원자 권위 상태로 유지하고, 하위 membership과 그룹 listing을 복구 가능한 읽기 Projection으로 내리는 방식이다. 그룹 listing은 발견 pointer로 남기며 실제 인원·revision은 recruitment에서 읽는다. 기존 v2 방은 멤버·점유를 바꾸지 않는 별도 멱등 migration 뒤 v3 가입을 재시도한다. 제품 코드를 바로 수정하지 않고 먼저 격리 proof에서 직접 가입 3-write·승인 4-write, 위조·누락 거절, 8인 문서 크기·Rules 예산과 v2 migration을 검증한다. proof 및 개발자의 목록 추가 읽기·Projection 지연·앱 전환 UX 승인을 모두 통과하기 전에는 채택하지 않는다. 상세 계약은 [`BUG_022_REMAINING_FIX_DESIGN.md`](../architecture/BUG_022_REMAINING_FIX_DESIGN.md) C7이다.
 
-**C7 첫 proof 상태(2026-09-27):** 운영 Rules·Flutter와 분리된 직접 재가입 3-write proof를 추가했다. 기존 Aggregate 앞부분 변조 가능성을 재검수에서 발견해 `memberPlayerIds/partySlots/raidStateTargets` 최대 8개 항목의 exact preservation과 기존 slot/target 위조 거절을 먼저 보강했다. JS 문법과 diff 검사는 통과했다. 로컬 Emulator는 기동했지만 proof Rules 로딩에서 Windows 환경의 기존 HTTP 503이 발생해 시나리오에는 도달하지 못했다. 같은 로컬 명령은 반복하지 않고 격리 Actions에서 정상 재가입과 비그룹원·block·타인 Character·주간 Claim·자리/count·핵심 문서 누락 거절을 한 번 검증한다.
+**C7 proof 결과·폐기(2026-09-27):** 운영 Rules·Flutter와 분리된 직접 재가입 3-write proof를 추가하고, 기존 Aggregate 앞부분 exact preservation과 비그룹원·block·타인 Character·주간 Claim·자리/count·핵심 문서 누락 거절을 포함했다. Actions `36326380626`의 모집 단건 읽기 하네스 불일치와 `36326546696`의 배열 내부 `serverTimestamp()` 제약을 실제 제품 계약에 맞게 교정했다. 최종 `36326680954`에서 정상 그룹 직접 재가입 3-write 자체가 `maximum of 1000 expressions`로 거절됐다. 사전 폐기 조건에 따라 승인 4-write·8인 크기·v2 migration·제품 구현은 중단한다. 운영 `firestore.rules`, Flutter 제품 코드와 운영 데이터는 변경하지 않았고 배포도 없다. 권한·소유권·주간 완료·그룹 접근·원자성 조건 또는 실패 회귀를 줄여 통과시키지 않는다.
 
 #### A4. 배포와 실기기 확인
 
@@ -134,8 +134,8 @@ Character 소유 관계와 과거 Player 데이터의 정합성을 다루므로 
 ### 구현 순서와 승인 게이트
 
 1. 완료된 A1 해산과 A2 추방·탈퇴 수정은 그대로 보존한다.
-2. C7 격리 proof에서 v3 핵심 3/4-write, 위조 거절, v2 migration, 8인 크기·Rules 예산을 먼저 판정한다.
-3. proof와 개발자 UX 승인을 통과한 경우에만 C7 제품 구현·전체 Emulator·Rules 경고 0개·운영 배포·실기기 확인을 진행한다.
+2. C7은 격리된 정상 3-write부터 1,000식 한도를 넘어 폐기했다. 승인 4-write, migration과 제품 구현으로 확장하지 않는다.
+3. 재가입 C의 다음 변경은 새 Spark 계약 또는 신뢰 서버를 다시 설계·승인하는 별도 결정 전까지 보류한다. 현재 합의상 Functions·Blaze는 선택하지 않는다.
 4. DE 구현 전 개발자와 복구·이전 UX 흐름을 확정하고 승인 결과를 문서화한다.
 5. DE-D에서 익명 Firebase user를 복구 가능한 로그인 제공자에 연결하고 재설치 전후 같은 UID·Player 복구를 확인한다.
 6. DE-E에서 ownershipRevision dual-write·stale 차단·제한 정리를 순차 구현한다. 구현 전 재설치 전·후 Player binding과 이전 Player의 활성 상태는 가능한 범위에서 읽기 전용으로 대조하되, 결과를 A/C의 직접 원인으로 소급하지 않는다.

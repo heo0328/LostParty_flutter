@@ -63,4 +63,4 @@
 
 ## 다음 작업
 
-F6-G는 실기기 확인까지 완료했고 F6-F의 1회성 종료·반복 승계도 확인했다. F6-H 구현과 표적 Dart 검증, 운영 수요일 06:00 원복은 완료했다. 다음 기술 구간은 Functions·Blaze 없이 그룹방 재가입을 복구하기 위한 C7 schema v3 격리 proof다. 가입 권위 상태를 모집 Aggregate·개인 raidState·application·event로 제한하고 membership·그룹 listing을 복구 가능한 Projection으로 내리는 계약의 3/4-write Rules 예산, 위조 거절, v2 migration과 8인 문서 크기를 먼저 판정한다. proof와 개발자 UX 승인 전에는 제품 구현·배포하지 않는다. 재설치 복구와 소유권 이전 stale 정리는 별도의 개발자 UX 결정 게이트를 선행하는 통합 작업 그룹 DE다.
+F6-G는 실기기 확인까지 완료했고 F6-F의 1회성 종료·반복 승계도 확인했다. F6-H 구현과 표적 Dart 검증, 운영 수요일 06:00 원복은 완료했다. Functions·Blaze 없이 그룹방 재가입을 복구하려던 C7 schema v3 격리 proof는 하네스 오류 두 건을 제거한 뒤에도 정상 직접 가입 3-write가 Actions `36326680954`에서 Rules 1,000식 한도를 넘어 사전 기준에 따라 폐기했다. 운영 Rules·Flutter 제품 코드·운영 데이터는 바꾸지 않았다. 재가입 C는 새 계약의 별도 승인 전까지 보류하고, 재설치 복구와 소유권 이전 stale 정리는 별도의 개발자 UX 결정 게이트를 선행하는 통합 작업 그룹 DE로 유지한다.
