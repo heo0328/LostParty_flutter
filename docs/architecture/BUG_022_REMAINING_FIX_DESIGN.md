@@ -138,6 +138,152 @@ listing은 `getAfter(recruitment)`의 전체 Snapshot 및 같은 revision과 일
   하나의 상위 작업 그룹 `DE`로 관리한다. C 미해결을 명시한 상태에서도 DE의 UX·정책
   설계는 진행할 수 있지만, 아래 UX 결정 게이트를 통과하기 전에는 구현하지 않는다.
 
+### C7. Spark 데이터 계약 대안 — 권위 Aggregate와 복구 가능한 Projection 분리
+
+> 상태: **설계 후보·구현 미승인**. Cloud Functions·Blaze를 사용하지 않는다. 기존 Rules의
+> 조건을 줄이는 안이 아니라, 같은 참가 사실을 여러 문서가 각각 권위 있게 재검증하는 현재
+> 중복 계약을 버전형 저장 계약으로 교체하는 안이다. 아래 proof가 통과하고 개발자가 목록·
+> 상세 UX 영향을 승인하기 전에는 제품 코드·Rules·Indexes를 수정하지 않는다.
+
+#### C7-1. 현재 병목과 변경 원칙
+
+현재 그룹방 직접 가입은 한 Transaction에서 모집 Aggregate, membership, 개인 `raidState`,
+그룹 listing과 공용 event를 함께 쓰며 각 Rules가 같은 Player·Character·slot·group·revision을
+다시 검증한다. 승인 가입은 application까지 더해진다. 문서 하나의 특정 조건이 아니라 전체
+요청의 중복 평가 합계가 1,000식을 넘으므로 다음 원칙으로 쓰기 책임을 줄인다.
+
+- 참가의 권위 원본은 모집 Aggregate의 정렬된 멤버/slot과 개인 `raidState`다.
+- 신청 승인에서는 pending application 전이도 같은 핵심 Transaction에 포함한다.
+- 알림 누락을 막기 위해 결정적 ID의 party event도 핵심 Transaction에 유지한다.
+- recruitment 하위 membership과 그룹 `raidListings`는 권위 원본이 아닌 읽기 Projection으로
+  내린다. 누락·지연돼도 참가 성공, 점유, 권한과 파티 구성이 달라지면 안 된다.
+- 핵심 Transaction을 여러 단계로 나누지 않는다. Aggregate만 성공하고 `raidState`가 실패하는
+  부분 참가는 계속 금지한다.
+
+#### C7-2. schemaVersion 3 권위 Aggregate
+
+기존 `partySlots`를 Player별 권위 멤버 항목으로 확장한다. 기존 필드
+`playerId/characterId/classKey/role/partyIndex/slotIndex/countedAsNonGroupMember`에 상세 화면이
+필요로 하는 Character 이름·아이템 레벨·전투력·Build Snapshot·가입 시각·가입 주체를 함께
+저장한다. 최대 인원 8명은 변경하지 않는다.
+
+- `memberPlayerIds`, `partySlots`, `raidStateTargets`, 인원·역할 count는 같은 순서와 크기를
+  유지한다. 기존 내 현황 array query와 lifecycle target 계약을 갑자기 교체하지 않는다.
+- 신규 가입 항목은 기존 `memberCount` 위치에 정확히 하나 append한다. Rules는 8개 전체를
+  반복 검색하지 않고 결정된 마지막 index와 전후 크기·count만 검증한다.
+- 파티장과 승인 권한은 기존 계약을 유지한다. 리더는 Aggregate의 `leaderPlayerId`, 위임 승인
+  권한은 기존 membership Projection을 읽되 신규 가입자는 Projection 부재를 false로 본다.
+  승인 권한 자체를 v3 Aggregate로 옮길지는 별도 proof 뒤 결정하며 임의로 제거하지 않는다.
+- 문서 1MiB 한도를 안전하게 지키는지 실제 최대 8인·최대 Build Snapshot fixture의 직렬화
+  크기를 측정한다. 안전 여유가 부족하면 Snapshot을 축소하지 않고 C7을 폐기한다.
+
+#### C7-3. 가입 핵심 Transaction
+
+직접 가입은 다음 세 문서만 원자 확정하는 것을 목표로 한다.
+
+1. `recruitments/{id}` schema v3 Aggregate update
+2. `players/{playerId}/raidStates/{characterId}_{raidId}` create
+3. `partyEvents/memberJoined_{recruitmentId}_{nextRevision}` create
+
+신청 승인은 위 세 문서에 기존 pending application update 한 건을 추가한다. Rules는 다음을
+그대로 유지한다.
+
+- active binding과 actor, 직접 가입/승인 모드 및 승인자 권한
+- 모집 active 회차·revision·정원·역할·slot·동일 파티 직업 구성
+- 그룹 전용방의 현재 그룹 membership과 block 정책
+- active Character와 현재 owner Player
+- 기존 참가·현재 주차 완료·주간 Claim 충돌
+- Aggregate와 `raidState`, event, application의 Player·Character·revision 결합
+
+membership과 listing 쓰기를 핵심 Transaction에서 뺀다는 이유로 위 조건을 클라이언트 사전
+검사만 믿거나 Rules에서 삭제하지 않는다.
+
+#### C7-4. membership Projection
+
+schema v3 화면과 명령은 Aggregate `partySlots`를 현재 멤버·Character·역할·위치의 원본으로
+사용한다. 하위 `members/{playerId}`는 구버전 읽기와 위임 승인 정보 호환을 위한 Projection으로
+남긴다.
+
+- 가입 성공 뒤 앱이 별도 멱등 sync로 membership Snapshot을 생성·갱신할 수 있다.
+- Projection Rules는 현재 Aggregate의 같은 Player 항목과 정확히 일치하는 값만 허용한다.
+- Projection sync 실패를 가입 실패로 되돌리지 않는다. 화면은 Aggregate로 정상 표시하고,
+  다음 상세 진입·새로고침에서 같은 멱등 sync를 재시도한다.
+- 탈퇴·추방 후 남은 Projection은 현재 멤버 목록으로 사용하지 않는다. 읽기는 Aggregate ID에
+  포함된 항목만 채택하고, stale Projection 삭제는 별도 제한 sync로 처리한다.
+- 위임 승인 권한 문서가 아직 복구되지 않았으면 false로 처리하며 권한을 추측 복원하지 않는다.
+
+#### C7-5. 그룹 listing Projection
+
+`groups/{groupId}/raidListings/{recruitmentId}`는 그룹방 발견을 위한 pointer로 유지한다. 그룹
+멤버 가입·Character 변경·자리 이동마다 모집 전체 Snapshot을 덮어쓰지 않는다.
+
+- 생성 시 groupId, recruitmentId, 회차와 공개 상태 등 발견에 필요한 최소 불변 필드만 쓴다.
+- 목록은 pointer ID로 실제 recruitment를 읽어 현재 인원·revision·상태를 표시한다.
+- 참가 성공 직후 listing memberCount가 잠시 이전 값이어도 상세와 권위 상태는 recruitment를
+  사용한다. 별도 멱등 sync가 Projection을 최신화하되 기능 권한에는 사용하지 않는다.
+- 해산·그룹→공개 전환의 pointer 삭제와 반복방 회차 전환은 기존 lifecycle 원자 계약을 유지한다.
+- 추가 읽기 비용은 표시 중인 문서 ID만 30개 이하 묶음으로 조회하고, 기존 최대 50개 그룹
+  listener보다 무제한 listener를 늘리지 않는 방식으로 측정한다. Spark 읽기 비용이 과도하면
+  이 안을 채택하지 않는다.
+
+#### C7-6. 기존 schema v2 방 전환
+
+신규 방만 v3로 만들고 기존 방의 재가입을 방치하지 않는다. v2→v3 전환은 참가와 분리된
+멱등 migration 명령으로 먼저 수행한다.
+
+- 모집의 기존 `memberPlayerIds/partySlots/raidStateTargets/count/leader/revision` 의미를 바꾸지
+  않고 membership Snapshot을 확장 slot에 복사한다.
+- migration은 참가자를 추가·삭제하거나 위치·권한·회차·그룹 count를 변경하지 않는다.
+- 최대 8개 기존 membership 문서를 읽어 Snapshot 일치를 검증하되 migration 자체는 모집 한
+  문서만 갱신한다. Rules 문서 접근 10개와 표현식 1,000개 한도를 proof에서 먼저 측정한다.
+- 누락된 legacy membership이 있으면 추측값으로 전환하지 않고 `migrationRequired` 상태를
+  반환한다. 기존 v2 방은 종전 읽기·명령을 계속 사용한다.
+- migration 성공 후 가입 요청을 새 Transaction으로 다시 실행한다. migration만 성공하고
+  가입이 실패해도 멤버·점유는 변하지 않으므로 부분 가입이 아니다.
+- 외부에 남은 구버전 앱이 v3 방을 잘못 쓰지 않도록 최소 앱 버전·dual-read 기간과 v2 쓰기
+  종료 시점을 개발자가 승인한 뒤 정한다.
+
+#### C7-7. 영향과 회귀 대응
+
+| 영향 | 발생 가능 문제 | 필수 대응 |
+|---|---|---|
+| 모집 문서 크기 증가 | 최대 Snapshot에서 1MiB 접근 | 8인 최악 fixture 크기 측정, 여유 부족 시 폐기 |
+| membership 지연 | 구버전 상세·승인 UI가 멤버를 누락 | v3 dual-read와 멱등 sync를 먼저 배포, Aggregate fallback |
+| listing 지연 | 그룹 목록 인원·revision이 잠시 stale | 실제 recruitment를 표시 원본으로 사용, pointer는 발견에만 사용 |
+| 추가 recruitment 읽기 | Spark 읽기량 증가 | 표시 page만 batch 조회, listener/read 계측과 상한 설정 |
+| v2/v3 공존 | 명령이 잘못된 저장 계약 사용 | schema별 Repository/Rules 분기와 v2 회귀 고정 |
+| migration 중 실패 | 일부 Snapshot만 전환될 위험 | 모집 한 문서의 원자 update, 실패 시 v2 유지 |
+| Projection 위조 | 클라이언트가 상세·listing 조작 | Aggregate와 exact-match하는 sync Rules만 허용 |
+| 알림 누락 | event를 후처리하면 유실 | party event는 핵심 Transaction에 유지 |
+
+#### C7-8. 구현 승인 전 proof 순서
+
+1. 제품 파일과 분리된 proof Rules/fixture에서 v3 직접 가입 3-write와 승인 4-write를 만든다.
+2. 공개·그룹 최초 가입, 탈퇴·추방 후 재가입과 신청 승인을 성공 기준으로 둔다.
+3. 타인 Character, 비그룹원, block, Claim/active state, 만석, slot/count/revision/event/application
+   위조와 문서 하나 누락을 모두 거절한다.
+4. 8인 직전 가입과 최악 Aggregate 크기, Rules 접근 수·표현식 한도를 확인한다.
+5. v2→v3 정상 migration, membership 누락, Snapshot 위조와 중복 실행을 확인한다.
+6. proof가 통과한 뒤에만 개발자에게 그룹 목록의 추가 읽기·Projection 지연 UX와 앱 버전
+   전환안을 제시해 승인을 받는다.
+7. 승인 후 별도 구현 구간에서 dual-read → v3 Rules → v3 write → v2 migration 순으로 진행한다.
+
+#### C7-9. 채택·폐기 조건
+
+채택 조건:
+
+- Functions·Blaze 없이 정상 그룹 재가입과 모든 핵심 위조 거절이 같은 Emulator 실행에서 통과
+- 권위 참가 상태에 부분 성공이 없고 membership/listing 누락이 기능 권한을 바꾸지 않음
+- 기존 공개·그룹 생성·신청 승인·자리/Character 변경·추방·완료·해산·반복방이 유지됨
+- 문서 크기와 Spark 읽기량이 명시한 상한 안에 있음
+
+폐기 조건:
+
+- 핵심 3/4-write도 1,000식을 넘음
+- membership/listing을 Projection으로 내려도 기존 UI·승인 권한을 안전하게 보존할 수 없음
+- v2 migration이 8인 접근 한도나 위조 방지를 만족하지 못함
+- 통과를 위해 권한·소유권·주간 완료·그룹 접근·원자성 조건을 완화해야 함
+
 ## 3. 작업 그룹 DE — 사용자 재인증·원정대 소유권 전환 정합성 복구
 
 재설치 후 재인증과 타인이 사용하던 인증 원정대의 정상 이전은 모두 `현재 Character

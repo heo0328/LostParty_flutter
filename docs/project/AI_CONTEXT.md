@@ -63,4 +63,4 @@
 
 ## 다음 작업
 
-F6-G는 실기기 확인까지 완료했고 F6-F의 1회성 종료·반복 승계도 확인했다. F6-H 구현과 표적 Dart 검증, 운영 수요일 06:00 원복은 완료했다. 다음 작업은 production Rules Emulator 회귀를 확보한 뒤 검증된 Rules를 한 번 게시하고, 승계 반복방의 캐릭터 변경·자리 이동·추방·신청/가입 및 앱 재시작 없는 경계 후 생성을 실기기로 확인하는 것이다. 그룹방 재가입 C 대안은 별도 작업이며, 재설치 복구와 소유권 이전 stale 정리는 개발자 UX 결정 게이트를 선행하는 통합 작업 그룹 DE다.
+F6-G는 실기기 확인까지 완료했고 F6-F의 1회성 종료·반복 승계도 확인했다. F6-H 구현과 표적 Dart 검증, 운영 수요일 06:00 원복은 완료했다. 다음 기술 구간은 Functions·Blaze 없이 그룹방 재가입을 복구하기 위한 C7 schema v3 격리 proof다. 가입 권위 상태를 모집 Aggregate·개인 raidState·application·event로 제한하고 membership·그룹 listing을 복구 가능한 Projection으로 내리는 계약의 3/4-write Rules 예산, 위조 거절, v2 migration과 8인 문서 크기를 먼저 판정한다. proof와 개발자 UX 승인 전에는 제품 구현·배포하지 않는다. 재설치 복구와 소유권 이전 stale 정리는 별도의 개발자 UX 결정 게이트를 선행하는 통합 작업 그룹 DE다.

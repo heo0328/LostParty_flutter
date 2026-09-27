@@ -1,5 +1,12 @@
 # Task-11 Firestore Rules 복잡도 차단 — 종료된 진단 이력
 
+## 2026-09-27 C7 v3 직접 재가입 격리 proof 로컬 로딩 실패
+
+- 운영 `firestore.rules`와 앱 코드를 수정하지 않고 별도 `party_join_v3_proof.rules`에 그룹 직접 재가입의 3-write 권위 Transaction을 구성했다. 모집 Aggregate·개인 `raidState`·결정적 party event를 모두 요구하고 비그룹원·block·타인 Character·주간 Claim·자리/count 위조·핵심 문서 누락을 거절하는 fixture를 추가했다.
+- 중단 지점 재검수에서 신규 append만 확인하고 기존 `memberPlayerIds/partySlots/raidStateTargets` 앞부분 보존을 강제하지 않은 proof 보안 누락을 발견했다. 최대 8개 기존 항목의 exact preservation helper와 기존 slot/target 변조 거절 사례를 추가한 뒤 JS 문법과 `git diff --check`를 통과했다.
+- 저장소 JDK 21로 격리 Firestore Emulator 자체는 기동했지만 `initializeTestEnvironment`의 proof Rules 로딩 단계에서 HTTP 503 `Network closed for unknown reason`가 발생했다. 시나리오 실행 전의 기존 Windows 환경 실패이므로 Rules 허용·거절 또는 1,000식 결과로 해석하지 않으며 같은 로컬 명령을 반복하지 않는다.
+- 다음 검증은 proof 파일만 포함한 원격 Actions에서 한 번 수행한다. 통과 전에는 C7 채택·제품 v3 구현·운영 Rules 게시로 진행하지 않는다.
+
 ## 2026-09-27 F6-H 원격 회귀와 기존 그룹 재가입 한도 분리
 
 - 작업 브랜치 커밋 `80654d9`로 Actions `36318200515`를 실행했다. 추적 `firestore.rules`는 경고 없이 컴파일됐고, 기존 생성·신청·승인·자리 이동·추방·탈퇴·완료·해산 흐름과 F6-H의 lifecycle 마커 미소진 거절, 소진 후 자리 이동·추방·신청 성공은 모두 통과했다.

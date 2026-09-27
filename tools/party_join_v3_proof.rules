@@ -1,0 +1,345 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function bindingPath(uid) {
+      return /databases/$(database)/documents/authBindings/$(uid);
+    }
+
+    function characterPath(characterId) {
+      return /databases/$(database)/documents/characters/$(characterId);
+    }
+
+    function recruitmentPath(recruitmentId) {
+      return /databases/$(database)/documents/recruitments/$(recruitmentId);
+    }
+
+    function raidStatePath(playerId, stateId) {
+      return /databases/$(database)/documents/players/$(playerId)/raidStates/$(stateId);
+    }
+
+    function eventPath(eventId) {
+      return /databases/$(database)/documents/partyEvents/$(eventId);
+    }
+
+    function groupMemberPath(groupId, playerId) {
+      return /databases/$(database)/documents/groups/$(groupId)/members/$(playerId);
+    }
+
+    function groupBlockPath(groupId, playerId) {
+      return /databases/$(database)/documents/groups/$(groupId)/blockedPlayers/$(playerId);
+    }
+
+    function weeklyClaimPath(playerId, cycleKey, characterId, raidId) {
+      return /databases/$(database)/documents/players/$(playerId)/weeklyRaidClaims/$(cycleKey + '_' + characterId + '_' + raidId);
+    }
+
+    function hasBinding() {
+      return request.auth != null
+        && exists(bindingPath(request.auth.uid));
+    }
+
+    function currentPlayerId() {
+      return get(bindingPath(request.auth.uid)).data.playerId;
+    }
+
+    function ownsActiveCharacter(playerId, characterId) {
+      let character = get(characterPath(characterId)).data;
+      return character.status == 'active'
+        && character.ownerPlayerId == playerId;
+    }
+
+    function validJoinedSlot(slot, playerId, characterId, oldCount, oldData) {
+      return slot.keys().hasOnly([
+          'playerId', 'characterId', 'classKey', 'role', 'partyIndex',
+          'slotIndex', 'countedAsNonGroupMember', 'characterNameSnapshot',
+          'itemLevelSnapshot', 'combatPowerSnapshot',
+          'gemValidationSnapshot', 'buildIntegritySnapshot', 'joinedBy',
+          'joinedAt'
+        ])
+        && slot.playerId == playerId
+        && slot.characterId == characterId
+        && slot.classKey is string
+        && slot.classKey.size() > 0
+        && slot.role in ['dealer', 'support']
+        && slot.partyIndex >= 0
+        && slot.partyIndex < oldData.partyCount
+        && slot.slotIndex >= 0
+        && slot.slotIndex < oldData.membersPerParty
+        && slot.countedAsNonGroupMember == false
+        && slot.characterNameSnapshot is string
+        && slot.characterNameSnapshot.size() > 0
+        && slot.itemLevelSnapshot is number
+        && slot.joinedBy == playerId
+        && slot.joinedAt == request.time
+        && oldCount == oldData.memberCount;
+    }
+
+    function noSlotCollisionAt(slots, index, joined) {
+      return index >= slots.size()
+        || slots[index].partyIndex != joined.partyIndex
+        || slots[index].slotIndex != joined.slotIndex;
+    }
+
+    function noClassCollisionAt(slots, index, joined) {
+      return index >= slots.size()
+        || joined.role != 'dealer'
+        || slots[index].role != 'dealer'
+        || slots[index].partyIndex != joined.partyIndex
+        || slots[index].classKey != joined.classKey;
+    }
+
+    function validJoinedPlacement(oldData, joined) {
+      return noSlotCollisionAt(oldData.partySlots, 0, joined)
+        && noSlotCollisionAt(oldData.partySlots, 1, joined)
+        && noSlotCollisionAt(oldData.partySlots, 2, joined)
+        && noSlotCollisionAt(oldData.partySlots, 3, joined)
+        && noSlotCollisionAt(oldData.partySlots, 4, joined)
+        && noSlotCollisionAt(oldData.partySlots, 5, joined)
+        && noSlotCollisionAt(oldData.partySlots, 6, joined)
+        && noSlotCollisionAt(oldData.partySlots, 7, joined)
+        && noClassCollisionAt(oldData.partySlots, 0, joined)
+        && noClassCollisionAt(oldData.partySlots, 1, joined)
+        && noClassCollisionAt(oldData.partySlots, 2, joined)
+        && noClassCollisionAt(oldData.partySlots, 3, joined)
+        && noClassCollisionAt(oldData.partySlots, 4, joined)
+        && noClassCollisionAt(oldData.partySlots, 5, joined)
+        && noClassCollisionAt(oldData.partySlots, 6, joined)
+        && noClassCollisionAt(oldData.partySlots, 7, joined);
+    }
+
+    function listEntryPreservedAt(oldValues, newValues, index) {
+      return index >= oldValues.size()
+        || (index < newValues.size()
+          && newValues[index] == oldValues[index]);
+    }
+
+    function existingEntriesPreserved(oldValues, newValues) {
+      return listEntryPreservedAt(oldValues, newValues, 0)
+        && listEntryPreservedAt(oldValues, newValues, 1)
+        && listEntryPreservedAt(oldValues, newValues, 2)
+        && listEntryPreservedAt(oldValues, newValues, 3)
+        && listEntryPreservedAt(oldValues, newValues, 4)
+        && listEntryPreservedAt(oldValues, newValues, 5)
+        && listEntryPreservedAt(oldValues, newValues, 6)
+        && listEntryPreservedAt(oldValues, newValues, 7);
+    }
+
+    function validDirectJoinState(
+      recruitmentId,
+      playerId,
+      characterId,
+      stateId,
+      newData
+    ) {
+      let state = getAfter(raidStatePath(playerId, stateId)).data;
+      return existsAfter(raidStatePath(playerId, stateId))
+        && state.keys().hasOnly([
+          'schemaVersion', 'playerId', 'characterId', 'raidId',
+          'difficultyId', 'recruitmentId', 'cycleKey', 'role', 'status',
+          'source', 'revision', 'createdAt', 'updatedAt'
+        ])
+        && state.schemaVersion == 1
+        && state.playerId == playerId
+        && state.characterId == characterId
+        && state.raidId == newData.raidId
+        && state.difficultyId == newData.difficultyId
+        && state.recruitmentId == recruitmentId
+        && state.cycleKey == newData.currentCycleKey
+        && state.role == newData.partySlots[newData.memberCount - 1].role
+        && state.status == 'active'
+        && state.source == 'party'
+        && state.revision == 1
+        && state.createdAt == request.time
+        && state.updatedAt == request.time;
+    }
+
+    function validDirectJoinEvent(
+      recruitmentId,
+      playerId,
+      eventId,
+      newData
+    ) {
+      let event = getAfter(eventPath(eventId)).data;
+      return existsAfter(eventPath(eventId))
+        && event.keys().hasOnly([
+          'schemaVersion', 'eventId', 'recruitmentId', 'type', 'commandId',
+          'commandRevision', 'audiencePlayerIds', 'actorPlayerId', 'occurredAt'
+        ])
+        && event.schemaVersion == 1
+        && event.eventId == eventId
+        && event.recruitmentId == recruitmentId
+        && event.type == 'memberJoined'
+        && event.commandId == eventId
+        && event.commandRevision == newData.revision
+        && event.audiencePlayerIds == newData.memberPlayerIds
+        && event.actorPlayerId == playerId
+        && event.occurredAt == request.time;
+    }
+
+    function validV3DirectJoin(recruitmentId, oldData, newData) {
+      let playerId = currentPlayerId();
+      let joinedIndex = oldData.memberCount;
+      let joined = newData.partySlots[joinedIndex];
+      let characterId = joined.characterId;
+      let stateId = characterId + '_' + oldData.raidId;
+      let eventId = 'memberJoined_' + recruitmentId + '_' + newData.revision;
+      return hasBinding()
+        && oldData.schemaVersion == 3
+        && newData.schemaVersion == 3
+        && oldData.status == 'active'
+        && oldData.currentCycleStatus == 'active'
+        && oldData.manualRecruitmentEnabled == true
+        && oldData.approvalPolicy.mode == 'directJoin'
+        && oldData.visibility == 'group'
+        && oldData.groupId is string
+        && oldData.groupId.size() > 0
+        && exists(groupMemberPath(oldData.groupId, playerId))
+        && !exists(groupBlockPath(oldData.groupId, playerId))
+        && !(playerId in oldData.memberPlayerIds)
+        && oldData.memberCount < oldData.maxMemberCount
+        && newData.diff(oldData).affectedKeys().hasOnly([
+          'memberPlayerIds', 'memberCount', 'dealerCount', 'supportCount',
+          'hasAvailableSlot', 'partySlots', 'raidStateTargets',
+          'revision', 'updatedAt'
+        ])
+        && newData.memberPlayerIds.size() == oldData.memberPlayerIds.size() + 1
+        && newData.memberPlayerIds[joinedIndex] == playerId
+        && existingEntriesPreserved(
+          oldData.memberPlayerIds,
+          newData.memberPlayerIds
+        )
+        && newData.memberPlayerIds.toSet().difference(
+          oldData.memberPlayerIds.toSet()
+        ) == [playerId].toSet()
+        && newData.partySlots.size() == oldData.partySlots.size() + 1
+        && existingEntriesPreserved(oldData.partySlots, newData.partySlots)
+        && validJoinedSlot(joined, playerId, characterId, joinedIndex, oldData)
+        && validJoinedPlacement(oldData, joined)
+        && newData.raidStateTargets.size()
+          == oldData.raidStateTargets.size() + 1
+        && existingEntriesPreserved(
+          oldData.raidStateTargets,
+          newData.raidStateTargets
+        )
+        && newData.raidStateTargets[joinedIndex].playerId == playerId
+        && newData.raidStateTargets[joinedIndex].stateId == stateId
+        && newData.memberCount == oldData.memberCount + 1
+        && newData.memberCount == newData.memberPlayerIds.size()
+        && newData.memberCount == newData.partySlots.size()
+        && newData.memberCount == newData.raidStateTargets.size()
+        && newData.dealerCount == oldData.dealerCount
+          + (joined.role == 'dealer' ? 1 : 0)
+        && newData.supportCount == oldData.supportCount
+          + (joined.role == 'support' ? 1 : 0)
+        && newData.hasAvailableSlot
+          == (newData.memberCount < newData.maxMemberCount)
+        && newData.revision == oldData.revision + 1
+        && newData.updatedAt == request.time
+        && ownsActiveCharacter(playerId, characterId)
+        && !exists(weeklyClaimPath(
+          playerId,
+          oldData.currentCycleKey,
+          characterId,
+          oldData.raidId
+        ))
+        && validDirectJoinState(
+          recruitmentId,
+          playerId,
+          characterId,
+          stateId,
+          newData
+        )
+        && validDirectJoinEvent(
+          recruitmentId,
+          playerId,
+          eventId,
+          newData
+        );
+    }
+
+    function validV3RaidStateCreate(playerId, stateId, data) {
+      let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
+      let joinedIndex = recruitment.memberCount - 1;
+      let slot = recruitment.partySlots[joinedIndex];
+      return hasBinding()
+        && playerId == currentPlayerId()
+        && recruitment.schemaVersion == 3
+        && recruitment.status == 'active'
+        && recruitment.currentCycleStatus == 'active'
+        && recruitment.revision
+          == get(recruitmentPath(data.recruitmentId)).data.revision + 1
+        && slot.playerId == playerId
+        && slot.characterId == data.characterId
+        && stateId == data.characterId + '_' + data.raidId
+        && data.playerId == playerId
+        && data.raidId == recruitment.raidId
+        && data.difficultyId == recruitment.difficultyId
+        && data.cycleKey == recruitment.currentCycleKey
+        && data.role == slot.role
+        && data.status == 'active'
+        && data.source == 'party'
+        && data.revision == 1
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && ownsActiveCharacter(playerId, data.characterId)
+        && !exists(weeklyClaimPath(
+          playerId,
+          data.cycleKey,
+          data.characterId,
+          data.raidId
+        ));
+    }
+
+    function validV3JoinEvent(eventId, data) {
+      let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
+      let joinedIndex = recruitment.memberCount - 1;
+      return hasBinding()
+        && recruitment.schemaVersion == 3
+        && recruitment.revision
+          == get(recruitmentPath(data.recruitmentId)).data.revision + 1
+        && data.eventId == eventId
+        && data.eventId
+          == 'memberJoined_' + data.recruitmentId + '_' + recruitment.revision
+        && data.type == 'memberJoined'
+        && data.commandId == data.eventId
+        && data.commandRevision == recruitment.revision
+        && data.audiencePlayerIds == recruitment.memberPlayerIds
+        && data.actorPlayerId == currentPlayerId()
+        && recruitment.partySlots[joinedIndex].playerId == currentPlayerId()
+        && data.occurredAt == request.time;
+    }
+
+    match /recruitments/{recruitmentId} {
+      allow update: if validV3DirectJoin(
+        recruitmentId,
+        resource.data,
+        request.resource.data
+      );
+      allow read: if false;
+      allow create, delete: if false;
+
+      match /members/{playerId} {
+        allow read, write: if false;
+      }
+    }
+
+    match /players/{playerId}/raidStates/{stateId} {
+      allow create: if validV3RaidStateCreate(
+        playerId,
+        stateId,
+        request.resource.data
+      );
+      allow read, update, delete: if false;
+    }
+
+    match /partyEvents/{eventId} {
+      allow create: if validV3JoinEvent(eventId, request.resource.data);
+      allow read, update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

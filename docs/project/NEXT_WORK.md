@@ -78,6 +78,10 @@
 
 **작업 그룹 C 실행 결과(2026-09-24):** 모집 update에 권한·그룹 접근·Character 소유·주간 완료·membership·raidState·event·listing 결합을 집중하고 나머지 문서는 같은 revision Projection만 확인하도록 구현했다. 정적 Rules 계약 41건은 통과했지만 전체 CI `35997627746`은 그룹방 재가입에 도달하기 전 기존 공개방 신청 승인에서 1,000식 한도를 넘었다. 승인자 권한 검증은 그대로 두고 Projection 봉투의 중복 조건만 더 줄인 `35998246596`도 같은 지점에서 실패했다. 두 구현 커밋은 `34d694e`, `d73db5a`로 되돌렸고 운영 배포하지 않았다. 따라서 작업 그룹 C의 현재 Spark 설계는 실패로 종료한다. 다음 단일 작업은 (1) 신뢰 서버 참가 명령 또는 데이터 계약 변경을 별도 승인해 C 대안을 설계하거나, (2) C와 독립적인 D 재설치 후 동일 Player 복구로 이동하는 것 중 사용자 결정이 필요하다.
 
+**C7 Spark 데이터 계약 대안 설계(2026-09-27):** 유료 Functions 대안은 기존 합의상 제외한다. 다음 후보는 schema v3 모집 Aggregate의 확장 `partySlots`와 개인 `raidState`, application, party event만 가입의 원자 권위 상태로 유지하고, 하위 membership과 그룹 listing을 복구 가능한 읽기 Projection으로 내리는 방식이다. 그룹 listing은 발견 pointer로 남기며 실제 인원·revision은 recruitment에서 읽는다. 기존 v2 방은 멤버·점유를 바꾸지 않는 별도 멱등 migration 뒤 v3 가입을 재시도한다. 제품 코드를 바로 수정하지 않고 먼저 격리 proof에서 직접 가입 3-write·승인 4-write, 위조·누락 거절, 8인 문서 크기·Rules 예산과 v2 migration을 검증한다. proof 및 개발자의 목록 추가 읽기·Projection 지연·앱 전환 UX 승인을 모두 통과하기 전에는 채택하지 않는다. 상세 계약은 [`BUG_022_REMAINING_FIX_DESIGN.md`](../architecture/BUG_022_REMAINING_FIX_DESIGN.md) C7이다.
+
+**C7 첫 proof 상태(2026-09-27):** 운영 Rules·Flutter와 분리된 직접 재가입 3-write proof를 추가했다. 기존 Aggregate 앞부분 변조 가능성을 재검수에서 발견해 `memberPlayerIds/partySlots/raidStateTargets` 최대 8개 항목의 exact preservation과 기존 slot/target 위조 거절을 먼저 보강했다. JS 문법과 diff 검사는 통과했다. 로컬 Emulator는 기동했지만 proof Rules 로딩에서 Windows 환경의 기존 HTTP 503이 발생해 시나리오에는 도달하지 못했다. 같은 로컬 명령은 반복하지 않고 격리 Actions에서 정상 재가입과 비그룹원·block·타인 Character·주간 Claim·자리/count·핵심 문서 누락 거절을 한 번 검증한다.
+
 #### A4. 배포와 실기기 확인
 
 - Rules 변경이므로 표적 정적 검사와 demo Emulator 전체 회귀가 통과한 최신 추적본만 운영 프로젝트에 한 번 배포 시도한다.
@@ -130,8 +134,8 @@ Character 소유 관계와 과거 Player 데이터의 정합성을 다루므로 
 ### 구현 순서와 승인 게이트
 
 1. 완료된 A1 해산과 A2 추방·탈퇴 수정은 그대로 보존한다.
-2. C에서 현재 재가입 실패와 기존 성공 기준을 고정한 뒤 가입 정책/Projection Rules 책임을 통합한다.
-3. C 전체 Emulator, Rules 경고 0개와 diff 검토 후 운영 배포 및 실기기 확인을 진행한다.
+2. C7 격리 proof에서 v3 핵심 3/4-write, 위조 거절, v2 migration, 8인 크기·Rules 예산을 먼저 판정한다.
+3. proof와 개발자 UX 승인을 통과한 경우에만 C7 제품 구현·전체 Emulator·Rules 경고 0개·운영 배포·실기기 확인을 진행한다.
 4. DE 구현 전 개발자와 복구·이전 UX 흐름을 확정하고 승인 결과를 문서화한다.
 5. DE-D에서 익명 Firebase user를 복구 가능한 로그인 제공자에 연결하고 재설치 전후 같은 UID·Player 복구를 확인한다.
 6. DE-E에서 ownershipRevision dual-write·stale 차단·제한 정리를 순차 구현한다. 구현 전 재설치 전·후 Player binding과 이전 Player의 활성 상태는 가능한 범위에서 읽기 전용으로 대조하되, 결과를 A/C의 직접 원인으로 소급하지 않는다.
