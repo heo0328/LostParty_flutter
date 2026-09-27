@@ -43,6 +43,15 @@ service cloud.firestore {
       return get(bindingPath(request.auth.uid)).data.playerId;
     }
 
+    // 제품 Rules의 그룹 전용 모집방 단건 조회 계약만 재현한다.
+    // directJoin Transaction은 현재 Aggregate를 읽어 revision과 배열을 보존해야 한다.
+    function canGetV3GroupRecruitment(data) {
+      return hasBinding()
+        && data.visibility == 'group'
+        && data.groupId is string
+        && exists(groupMemberPath(data.groupId, currentPlayerId()));
+    }
+
     function ownsActiveCharacter(playerId, characterId) {
       let character = get(characterPath(characterId)).data;
       return character.status == 'active'
@@ -311,12 +320,13 @@ service cloud.firestore {
     }
 
     match /recruitments/{recruitmentId} {
+      allow get: if canGetV3GroupRecruitment(resource.data);
+      allow list: if false;
       allow update: if validV3DirectJoin(
         recruitmentId,
         resource.data,
         request.resource.data
       );
-      allow read: if false;
       allow create, delete: if false;
 
       match /members/{playerId} {
