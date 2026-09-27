@@ -2,6 +2,7 @@ import '../../domain/entities/party_atomic_command.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/policies/party_composition_policy.dart';
 import 'party_atomic_document_mapper.dart';
+import 'party_atomic_lifecycle_marker_patch.dart';
 
 class PartyAtomicCharacterChangeWritePlan {
   PartyAtomicCharacterChangeWritePlan({
@@ -90,6 +91,7 @@ class PartyAtomicCharacterChangeWritePlan {
     final eventId = 'characterChanged_${aggregate.recruitmentId}_$nextRevision';
     return _CharacterChangeValues(
       recruitmentPatch: Map.unmodifiable({
+        ...lifecycleMarkerConsumptionPatch(aggregate),
         'partySlots': [
           for (final slot in nextSlots) PartyAtomicDocumentMapper.slot(slot),
         ],
@@ -234,6 +236,7 @@ class PartyAtomicRepositionWritePlan {
     final eventId = 'membersRepositioned_${aggregate.recruitmentId}_$revision';
     return _RepositionValues(
       recruitmentPatch: Map.unmodifiable({
+        ...lifecycleMarkerConsumptionPatch(aggregate),
         'partySlots': [
           for (final slot in nextSlots) PartyAtomicDocumentMapper.slot(slot),
         ],

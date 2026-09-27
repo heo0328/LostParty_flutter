@@ -1,6 +1,7 @@
 import '../../../group/data/mappers/group_active_recruitment_write_plan.dart';
 import '../../domain/entities/party_atomic_command.dart';
 import '../../domain/entities/party_create_command.dart';
+import 'party_atomic_lifecycle_marker_patch.dart';
 
 class PartyAtomicVisibilityWritePlan {
   PartyAtomicVisibilityWritePlan({
@@ -57,6 +58,7 @@ class PartyAtomicVisibilityWritePlan {
           );
     final nextRevision = aggregate.revision + 1;
     final recruitmentPatch = Map<String, Object?>.unmodifiable({
+      ...lifecycleMarkerConsumptionPatch(aggregate),
       'visibility': nextVisibility,
       'groupActiveRecruitmentCountAfter':
           groupPlan.groupPatch['activeRecruitmentCount'],

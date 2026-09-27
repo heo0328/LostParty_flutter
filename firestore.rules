@@ -1341,6 +1341,22 @@ service cloud.firestore {
           || newData.lastCommandType == 'disband');
     }
 
+    function atomicLifecycleMarkerConsumedOrPreserved(oldData, newData) {
+      return atomicIsLifecycleCommand(oldData)
+        ? (newData.commandTargets is list
+          && newData.commandTargets.size() == 0
+          && newData.lastCommandId == null
+          && newData.lastCommandType == null
+          && newData.lastCommandActorPlayerId == null
+          && newData.lastCommandAt == null)
+        : (newData.commandTargets == oldData.commandTargets
+          && newData.lastCommandId == oldData.lastCommandId
+          && newData.lastCommandType == oldData.lastCommandType
+          && newData.lastCommandActorPlayerId
+            == oldData.lastCommandActorPlayerId
+          && newData.lastCommandAt == oldData.lastCommandAt);
+    }
+
     function atomicTargetStateMatches(data, state) {
       return state.recruitmentId == data.recruitmentId
         && state.cycleKey == data.currentCycleKey
@@ -2116,8 +2132,11 @@ service cloud.firestore {
       return atomicActiveV2Recruitment(oldData)
         && newData.diff(oldData).affectedKeys().hasOnly([
           'pendingApplicationCount', 'pendingNonGroupApplicantCount',
+          'commandTargets', 'lastCommandId', 'lastCommandType',
+          'lastCommandActorPlayerId', 'lastCommandAt',
           'revision', 'updatedAt'
         ])
+        && atomicLifecycleMarkerConsumedOrPreserved(oldData, newData)
         && newData.pendingApplicationCount is int
         && newData.pendingNonGroupApplicantCount is int
         && newData.pendingApplicationCount >= 0
@@ -2143,14 +2162,19 @@ service cloud.firestore {
         && (keys.hasOnly([
             'memberPlayerIds', 'memberCount', 'dealerCount', 'supportCount',
             'hasAvailableSlot', 'partySlots', 'raidStateTargets',
-            'nonGroupMemberCount', 'revision', 'updatedAt'
+            'nonGroupMemberCount', 'commandTargets', 'lastCommandId',
+            'lastCommandType', 'lastCommandActorPlayerId', 'lastCommandAt',
+            'revision', 'updatedAt'
           ])
           || keys.hasOnly([
             'memberPlayerIds', 'memberCount', 'dealerCount', 'supportCount',
             'hasAvailableSlot', 'partySlots', 'raidStateTargets',
             'nonGroupMemberCount', 'pendingApplicationCount',
-            'pendingNonGroupApplicantCount', 'revision', 'updatedAt'
+            'pendingNonGroupApplicantCount', 'commandTargets',
+            'lastCommandId', 'lastCommandType', 'lastCommandActorPlayerId',
+            'lastCommandAt', 'revision', 'updatedAt'
           ]))
+        && atomicLifecycleMarkerConsumedOrPreserved(oldData, newData)
         && added.size() == 1
         && newData.memberPlayerIds.size() == oldData.memberPlayerIds.size() + 1
         && newData.memberCount == oldData.memberCount + 1
@@ -2179,8 +2203,11 @@ service cloud.firestore {
         && newData.diff(oldData).affectedKeys().hasOnly([
           'partySlots', 'raidStateTargets', 'dealerCount', 'supportCount',
           'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot',
+          'commandTargets', 'lastCommandId', 'lastCommandType',
+          'lastCommandActorPlayerId', 'lastCommandAt',
           'revision', 'updatedAt'
         ])
+        && atomicLifecycleMarkerConsumedOrPreserved(oldData, newData)
         && newData.memberPlayerIds == oldData.memberPlayerIds
         && newData.memberCount == oldData.memberCount
         && newData.leaderPlayerId == oldData.leaderPlayerId
@@ -2193,8 +2220,11 @@ service cloud.firestore {
       return atomicActiveV2Recruitment(oldData)
         && oldData.leaderPlayerId == currentPlayerId()
         && newData.diff(oldData).affectedKeys().hasOnly([
-          'partySlots', 'revision', 'updatedAt'
+          'partySlots', 'commandTargets', 'lastCommandId', 'lastCommandType',
+          'lastCommandActorPlayerId', 'lastCommandAt',
+          'revision', 'updatedAt'
         ])
+        && atomicLifecycleMarkerConsumedOrPreserved(oldData, newData)
         && newData.memberPlayerIds == oldData.memberPlayerIds
         && newData.memberCount == oldData.memberCount
         && newData.partySlots is list
@@ -2217,8 +2247,11 @@ service cloud.firestore {
           'memberPlayerIds', 'memberCount', 'dealerCount', 'supportCount',
           'leaderPlayerId', 'leaderCharacterNameSnapshot',
           'leaderClassNameSnapshot', 'hasAvailableSlot', 'partySlots',
-          'raidStateTargets', 'nonGroupMemberCount', 'revision', 'updatedAt'
+          'raidStateTargets', 'nonGroupMemberCount', 'commandTargets',
+          'lastCommandId', 'lastCommandType', 'lastCommandActorPlayerId',
+          'lastCommandAt', 'revision', 'updatedAt'
         ])
+        && atomicLifecycleMarkerConsumedOrPreserved(oldData, newData)
         && newData.memberCount == oldData.memberCount - 1
         && newData.memberCount >= 1
         && newData.hasAvailableSlot == true
@@ -2415,8 +2448,11 @@ service cloud.firestore {
         && newData.groupId == oldData.groupId
         && newData.diff(oldData).affectedKeys().hasOnly([
           'visibility', 'groupActiveRecruitmentCountAfter',
+          'commandTargets', 'lastCommandId', 'lastCommandType',
+          'lastCommandActorPlayerId', 'lastCommandAt',
           'revision', 'updatedAt'
         ])
+        && atomicLifecycleMarkerConsumedOrPreserved(oldData, newData)
         && oldData.visibility in ['public', 'group']
         && newData.visibility in ['public', 'group']
         && oldData.visibility != newData.visibility

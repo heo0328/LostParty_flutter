@@ -3,6 +3,7 @@ import '../../domain/entities/party_create_command.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/policies/party_composition_policy.dart';
 import 'party_atomic_document_mapper.dart';
+import 'party_atomic_lifecycle_marker_patch.dart';
 
 class PartyLeaderSuccessorSnapshot {
   const PartyLeaderSuccessorSnapshot({
@@ -123,6 +124,7 @@ class PartyAtomicMemberRemovalWritePlan {
         aggregate.nonGroupMemberCount -
         (target.countedAsNonGroupMember ? 1 : 0);
     final patch = <String, Object?>{
+      ...lifecycleMarkerConsumptionPatch(aggregate),
       'memberPlayerIds': [for (final slot in remaining) slot.playerId],
       'memberCount': remaining.length,
       'dealerCount': remaining

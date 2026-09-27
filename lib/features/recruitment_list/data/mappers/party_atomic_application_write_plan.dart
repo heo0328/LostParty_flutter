@@ -1,5 +1,6 @@
 import '../../domain/entities/party_atomic_command.dart';
 import 'party_atomic_membership_write_plan.dart';
+import 'party_atomic_lifecycle_marker_patch.dart';
 
 class PartyAtomicApplicationWritePlan {
   PartyAtomicApplicationWritePlan.apply({
@@ -83,6 +84,7 @@ class PartyAtomicApplicationWritePlan {
       throw StateError('신청 Aggregate 집계가 올바르지 않습니다.');
     }
     return Map.unmodifiable({
+      ...lifecycleMarkerConsumptionPatch(aggregate),
       'pendingApplicationCount': pending,
       'pendingNonGroupApplicantCount': pendingNonGroup,
       'revision': aggregate.revision + 1,

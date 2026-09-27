@@ -63,6 +63,7 @@ void main() {
             partyCreateRepository: createRepository,
             newRecruitmentId: () => 'firestore-recruitment-1',
             cycleKey: '2026-08-19',
+            currentCycleKey: () => '2026-08-26',
           ),
         ),
         GoRoute(
@@ -82,7 +83,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(createRepository.lastCommand?.leaderCharacterId, 'server-char-1');
-    expect(createRepository.lastCommand?.cycleKey, '2026-08-19');
+    expect(createRepository.lastCommand?.cycleKey, '2026-08-26');
     expect(
       createRepository.lastCommand?.recruitmentId,
       'firestore-recruitment-1',

@@ -3,6 +3,7 @@ import '../../domain/entities/party_create_command.dart';
 import '../../domain/entities/party_recruitment.dart';
 import '../../domain/policies/party_composition_policy.dart';
 import 'party_atomic_document_mapper.dart';
+import 'party_atomic_lifecycle_marker_patch.dart';
 import 'party_create_write_plan.dart';
 import 'party_join_write_plan.dart';
 
@@ -227,6 +228,7 @@ class PartyAtomicJoinWritePlan {
       raidStateId: raidStateId,
       recruitmentPatch: Map.unmodifiable({
         ...base.recruitmentUpdate,
+        ...lifecycleMarkerConsumptionPatch(aggregate),
         'partySlots': [
           for (final slot in nextSlots) PartyAtomicDocumentMapper.slot(slot),
         ],

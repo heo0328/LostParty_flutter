@@ -23,6 +23,7 @@ import 'features/group/domain/repositories/group_read_repository.dart';
 import 'features/player/domain/entities/player_session.dart';
 import 'features/raid_status/domain/services/party_event_sync_service.dart';
 import 'features/recruitment_list/domain/repositories/party_read_repository.dart';
+import 'features/recruitment_list/domain/services/party_cycle_runtime.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -84,6 +85,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   late final GoRouter _router;
   late final AccountDatabase _accountDatabase;
+  late final PartyCycleRuntime _cycleRuntime;
   late final bool _ownsAccountDatabase;
 
   @override
@@ -91,9 +93,11 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     _ownsAccountDatabase = widget.accountDatabase == null;
     _accountDatabase = widget.accountDatabase ?? AccountDatabase();
+    _cycleRuntime = PartyCycleRuntime();
     _router = createAppRouter(
       accountDatabase: _accountDatabase,
       playerSession: widget.playerSession,
+      cycleRuntime: _cycleRuntime,
       ownershipStatusGateway: widget.ownershipStatusGateway,
       gameAccountVerificationGateway: widget.gameAccountVerificationGateway,
       partyReadRepository: widget.partyReadRepository,
@@ -116,6 +120,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void dispose() {
     _router.dispose();
+    _cycleRuntime.dispose();
     if (_ownsAccountDatabase) {
       _accountDatabase.close();
     }

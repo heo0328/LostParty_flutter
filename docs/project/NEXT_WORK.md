@@ -1,6 +1,6 @@
 # NEXT WORK — BUG-022 직접 권한 오류 수정과 원정대 이전 복구 설계
 
-> 상태: **F6-G 참가 캐릭터 변경 고아 점유 복구 실기기 확인 완료; F6-F 반복방·현재 주차·종료 이력 회귀 확인 전**. A1 현재 그룹 count 기반 검증과 A2 그룹방 참가자 제거 listing 수정은 운영 Rules 게시가 확인됐고, A2 추방도 문제 방에서 실기기 성공했다. F6-F는 지난 주차 1회성 방을 진행 중 목록에서 분리하고 `raidState`를 건드리지 않는 `incompleteEnded` 원자 명령까지 운영에서 실행됐다. F6-G는 Rules 변경 없이 기존 단일 고아 정리 명령을 재사용하며 실기기에서 정리 후 수동 재선택·변경 성공을 확인했다. 재가입·계정 복구·소유권 이전은 별도 범위다.
+> 상태: **F6-F 1회성 미완료 종료·반복방 승계 실기기 확인, F6-H 코드·표적 Dart 검증 완료·Rules Emulator/게시/실기기 확인 대기**. 2026-09-27 임시 경계에서 확인한 승계 후 lifecycle 마커 오인과 Router 고정 회차 Snapshot을 각각 공용 마커 소진 계약과 단일 runtime 회차 공급원으로 수정했다. 운영 기본값은 KST 수요일 06:00으로 원복했다. 재가입·계정 복구·소유권 이전은 별도 범위다.
 
 ## 현재 단일 작업 — BUG-022 수정 설계 확정
 
@@ -841,6 +841,8 @@ D6·F6-C·F6-E는 코드·표적 검증·실기기 근거로 닫았다. 다음 F
 
 **2026-09-26~27 자동 검증·운영 확인 상태:** 변경 Dart 파일 표적 분석 0건, F6-F 정책·목록·Write Plan·Aggregate·Rules 계약과 기존 R2/R3/C* Rules 계약을 합쳐 52건이 통과했고 JS Rules fixture 문법도 통과했다. R3의 낡은 문자열 배치 검사는 권한 조건 변경 없이 현재 OR 체인 존재 여부를 확인하도록 교정했다. 로컬 Firestore Emulator는 Java 미설치로 시작하지 못했다. SHA-256 `01E06015969D8CA7183BAAB66E7F887A69B94200B07F448EBF84A3B542AB66A6`의 Rules 배포 CLI는 원격 컴파일 성공·경고 0개 뒤 `/rulesets` HTTP 503을 반환했지만, 이후 콘솔의 신규 게시 시각과 운영 문제 방의 신규 `incompleteEnd` 명령 실행으로 실제 활성화를 확인했다. 기존 지평 방 `5BCRsQkPRDvje1DrllEM`은 revision `6 → 7`, `status/currentCycleStatus: active → incompleteEnded`, 활성·빈자리 표식 false, `lastCommandType: incompleteEnd`로 전환됐고 생성 당시 `raidStateTargets/partySlots`는 보존됐다. 모집의 그룹 count 결과는 생성 당시 Snapshot `5`가 아니라 Transaction 당시 현재 그룹 기준 결과 `10`으로 기록됐다. 남은 확인은 반복방의 다음 회차 승계, 현재 주차 방 무변경과 미완료 종료 이력 노출이며 그 전에는 F6-F 전체 완료나 `dev` 통합으로 표기하지 않는다.
 
+**F6-F 실기기 경계 검증 순서(2026-09-27):** 운영 기본값은 KST 수요일 06:00으로 유지한다. 빠른 경계 검증이 필요하면 먼저 `RaidCycleSchedule` 기본값을 **현재보다 충분히 뒤인 같은 요일·시각**으로 임시 변경하고 그 빌드를 설치한다. 그런 다음 경계 **전에** 공개 1회성·그룹 1회성·공개 반복·그룹 반복 방을 생성해야 각 방의 `targetCycleKey/currentCycleKey/cycleStartedAt/cycleEndsAt`이 같은 임시 경계로 저장된다. 경계 후 앱을 재실행해 1회성 두 방의 진행 중 제외·`incompleteEnded` 전환과 반복 두 방의 다음 회차 승계를 확인한다. 임시 시각으로 바꾸기 전에 생성한 방은 기존 `cycleEndsAt`을 보존하므로 이 테스트 대상으로 사용하지 않는다. 확인 후에는 코드와 경계 테스트를 KST 수요일 06:00으로 원복하고 `dev`·`main`·release에 임시값을 통합하지 않는다. Rules·저장 스키마·기존 방의 저장 시각은 수정하지 않는다.
+
 **회귀 보호:** 기존 완료·해산·추방·자리 변경·참가·반복 설정과 반복방 membership 승계의 판단, 제약, 권한과 쓰기 순서를 임의로 바꾸지 않는다. 참가자 구성 Snapshot과 모집 원본은 보존하며 기존 stale `raidState` 판정·정리 범위를 이 작업을 이유로 넓히지 않는다.
 
 **최소 검증과 완료 조건:** 현재 1회성 무변경, 만료 1회성 숨김·단일 종료, 만료 반복방 전환·미종료, 이미 종료된 방 no-op을 표적으로 검증한다. Rules/Transaction은 종료 시각 전 거절, 반복방 거절, status·revision·반복 설정 변조 거절, 동시 재시도 멱등성, 공개방 무그룹 쓰기, 그룹 listing 삭제와 현재 count `N -> N-1`을 확인한다. 추가로 (a) 생성 당시 target `raidState`가 없음, (b) 같은 state 경로가 더 새 주차·다른 모집을 가리킴 두 사례에서 미완료 종료는 성공하고 새 state는 보존되는지 검증한다. 인원수 확장은 8인 대표 한 건만 사용하고 상태 전이가 다른 경계만 별도로 둔다. 사용자는 수정 빌드에서 `지난 주차 1회성 방이 진행 중에서 사라지고 미완료 종료 이력으로 남는지`, `다음 주도 함께하기 방이 다음 회차로 넘어가 계속 보이는지`, `현재 주차 방이 그대로인지`를 실기기로 확인한다. 자동 검증과 사용자 실기기 확인 전에는 완료 또는 `dev` 통합으로 판정하지 않는다.
@@ -882,6 +884,99 @@ D6·F6-C·F6-E는 코드·표적 검증·실기기 근거로 닫았다. 다음 F
 **실기기 확인(2026-09-27):** 기존 충돌이 발생하던 Character를 선택하자 참가 기록 정리 안내가 표시됐고, 사용자가 정리를 실행한 뒤 Character 변경을 다시 시도해 정상 성공했다. 정리 직후 자동 변경되지 않는 계약도 함께 확인됐다. 공용 점유 정책의 실제 활성 참가·현재 완료·반복방 보존은 표적 자동 검증으로 유지하며, F6-G를 완료 처리한다.
 
 **완료 결과:** 원인과 무관한 권한·조건을 완화하지 않고 위 재현을 기존 단일 고아 정리 경로로 복구했다. 자동·실기기 검증을 충족해 F6-G는 완료했지만, F6-F의 별도 회귀 확인 전에는 BUG-022 전체 종료 또는 `dev` 통합으로 표기하지 않는다.
+
+#### F6-H — 반복방 승계 후 멤버 명령과 실행 중 회차 갱신 (구현 완료·Rules/실기기 검증 전)
+
+**실기기·운영 데이터 근거(2026-09-27):**
+
+- KST 일요일 19:00으로 임시 경계를 설정한 빌드로 18:55에 방을 생성했다. 경계 후 1회성 방은 진행 중 목록에서 제외됐고 반복 방만 남아 F6-F의 핵심 분류는 통과했다.
+- 지평의 성당 3단계 `n9RmAeyRdY5mUEANJaQP`은 19:01에 `advanceCycle`, revision `4 → 5`, `currentCycleKey/targetCycleKey=2026-09-27`, `currentCycleStatus=active`, `cycleStartedAt=2026-09-27 19:00 KST`, `cycleEndsAt=2026-10-04 19:00 KST`로 승계됐다.
+- 벨가르딘 하드 `toae6qAv7mS5eA8Q6zLW`도 같은 새 회차로 승계된 뒤 19:09에 `complete`, revision `6`, `currentCycleStatus=completed`로 정상 완료됐다.
+- 활성 새 회차인 지평 방에서 Character 변경, 다른 참가자 추방, 다른 참가자 자리 이동이 모두 `permission-denied`로 실패했다. 이는 소유권·Player 불일치나 승계 실패가 아니다.
+- 경계 직후 같은 앱 프로세스에서 새 모집 생성은 `모집 생성 권한을 확인할 수 없습니다`로 실패했지만 앱 재실행 후 성공했다.
+
+**원인 A — 지속 명령 기록과 현재 Transaction 종류의 혼동:**
+
+1. lifecycle Transaction은 모집에 `lastCommandId/lastCommandType/lastCommandActorPlayerId/lastCommandAt/commandTargets`를 저장한다. 이 값은 멱등성·감사 기록으로 Transaction 종료 후에도 남는다.
+2. Rules의 `validAtomicRaidStateCreate`, `validAtomicMembershipPartyEvent`, `validAtomicMembershipRaidStateDelete`는 `!atomicIsLifecycleCommand(recruitment)`을 요구한다. 이 함수는 현재 요청에서 lifecycle 메타데이터가 **변경됐는지**가 아니라 저장된 `lastCommandType`이 lifecycle 문자열인지만 본다.
+3. `advanceCycle` 뒤 `lastCommandType=advanceCycle`가 남은 방에서 후속 멤버 명령은 Aggregate·membership·`raidState`·event 쓰기를 올바르게 계획해도 Rules에서 lifecycle 명령으로 오인된다.
+4. Character 변경은 기존 state 삭제·신규 state 생성·membership event에서, 추방·탈퇴는 state 삭제·event에서 거절된다. 자리 이동은 `raidState`를 쓰지 않지만 `membersRepositioned` event가 거절돼 전체 Transaction이 실패한다.
+5. 같은 guard를 쓰는 신청 승인·즉시 가입·재가입·신청 event도 lifecycle 이후 같은 원인으로 실패할 수 있다. 제보된 세 명령만 예외 처리하지 않고 공유 계약을 바로잡아야 한다.
+
+**원인 B — 앱 수명에 고정된 현재 회차:**
+
+1. `app_router.dart`는 Router 조립 시 `PartyCyclePolicy.keyFor(DateTime.now())`를 한 번 계산해 `currentCycleKey/currentCycle`로 보관한다.
+2. 레이드 현황·내 계정·모집 목록·모집 생성 Router가 같은 Snapshot을 받는다. 앱 실행 중 경계를 넘어도 생성 명령은 이전 회차를 전송하고 서버 Rules가 거절한다.
+3. 생성 화면에는 `cycleKey` 미주입 시 제출 직전 현재 시간으로 계산하는 기존 fallback이 있지만, 운영 Router가 고정 키를 항상 주입해 fallback을 사용하지 않는다.
+4. 앱 재실행 후에는 Router가 새 키를 계산하므로 생성이 성공한다. 이는 Rules 배포·Auth·소유권 문제가 아니다.
+
+**수정 원칙:**
+
+- `!atomicIsLifecycleCommand(...)`를 단순 삭제하거나 `signedIn()`·방장 여부만으로 대체하지 않는다. 실제 lifecycle 요청에 위조된 membership event·`raidState` 쓰기를 끼워 넣을 수 있게 되므로 권한 완화다.
+- lifecycle 메타데이터는 “직전 명령의 멱등성 기록”이지 방이 계속 lifecycle Transaction 중이라는 lock이 아니다. 후속 명령은 기존 revision·소유권·상태·점유·Claim·구성 검증을 모두 통과한 같은 Transaction에서만 이전 lifecycle 마커를 소진한다.
+- 반복 방 `i` 표시는 새 회차에도 승계된 확정 참가를 뜻하므로 유지한다. F6-F 1회성 미완료 종료의 보존 state·수동 고아 정리와 혼합하지 않는다.
+- 임시 테스트 경계는 운영 계약이 아니다. 현재 작업 트리의 KST 일요일 19:00을 코드·테스트·문서 계약의 KST 수요일 06:00으로 원복한 뒤만 실제 수정 커밋·`dev` 통합을 검토한다.
+
+**H1 설계 — 후속 명령의 lifecycle 마커 소진:**
+
+1. 공용 Write Plan helper로 `commandTargets=[]`, `lastCommandId=null`, `lastCommandType=null`, `lastCommandActorPlayerId=null`, `lastCommandAt=null`을 만든다. 이는 별도 쓰기가 아니라, 허용된 후속 Aggregate 명령의 revision 증가·기능 변경과 같은 원자 Transaction에만 포함한다.
+2. Character 변경, 자리 이동, 탈퇴·추방, 신청 승인·즉시 가입·재가입, 신청 생성·철회·거절 중 recruitment revision을 바꾸고 membership event/개인 state를 함께 쓰는 원자 경로를 전수 조사한다. 제보된 세 Repository에만 예외를 넣지 않는다.
+3. 각 Rules Aggregate validator는 기존 허용 필드에 마커 필드를 무조건 추가하지 않는다. **oldData가 lifecycle 마커를 가진 경우에만** 새 값이 빈 target·null 메타데이터인지 검증하고, 그 요청의 기존 Aggregate 전이·revision·`request.time`·작업 주체 검증을 모두 유지한다.
+   - Rules 구현에서는 nullable 필드를 map/string helper 인수로 넘기지 않는다. 필드 존재 여부와 타입을 먼저 확인한 뒤 직접 비교해 null 평가로 인한 예기치 않은 거절·허용을 막는다.
+4. 마커를 소진한 `getAfter(recruitment)`에서만 기존 membership event·`raidState` create/delete 분기가 평가되게 한다. 실제 `complete/advanceCycle/incompleteEnd/disband/personalComplete` Transaction은 계속 기존 lifecycle 마커·target·event 정합성을 요구하며 membership 분기를 탈 수 없다.
+5. 마커 소진 후에도 lifecycle event와 이력은 불변 `partyEvents`에 남는다. 후속 revision의 명령이 성공한 뒤 이전 lifecycle 요청은 기존 계약대로 conflict다.
+6. `atomicIsLifecycleCommand`·lifecycle validator·소유권·현재 상태·주간 Claim·직업/역할/자리·그룹 listing/count 조건은 완화하지 않는다. `completed/disbanded/incompleteEnded` 방을 활성 회차로 취급하지 않는다.
+
+**H2 설계 — 현재 회차를 제출·구독 시점에 갱신:**
+
+1. `PartyCyclePolicy`를 복제하거나 화면별 요일·시각 계산을 추가하지 않는다. 공용 정책과 clock을 쓰는 단일 runtime 회차 제공자를 Router/DI에 연결한다.
+2. 모집 생성은 화면 진입 때 받은 문자열이 아니라 **제출 직전** 제공자의 현재 키를 사용한다. 기존 `RecruitmentCreatePage` fallback과 같은 공용 정책 결과를 쓰며 서버 Rules 검증은 그대로 둔다.
+3. 모집 목록·신청 목록·내 계정 주간 표시처럼 회차 키로 스트림을 구독하는 화면은 제공자가 경계 변경을 알리면 기존 구독을 해제하고 새 키로 정확히 한 번 재구독한다. 기존 필터·정렬·로컬 선택은 보존한다.
+4. 앱이 포그라운드에 있어 timer가 지연될 수 있으므로 예정 경계 timer만 믿지 않고 app resume·수동 새로고침·주요 명령 제출에서 현재 키를 재확인한다. 중복 Listener·중복 생성 요청을 만들지 않는다.
+5. 경계 직전 키 계산 후 서버 Transaction 중 경계가 지나는 경쟁은 Rules가 거절하게 둔다. 실패를 성공으로 숨기거나 새 recruitment ID로 자동 중복 재시도하지 않고, 현재 회차로 새로고침한 뒤 사용자가 다시 제출하게 한다.
+6. 기존 방의 `cycleStartedAt/cycleEndsAt`을 현재 앱 설정으로 소급 재계산하지 않는다. 방은 생성·승계 시 저장된 경계를 계속 권위 값으로 사용한다.
+
+**예상 영향과 회귀 보호:**
+
+| 영향 경로 | 잘못 수정했을 때의 문제 | 보존 계약 |
+|---|---|---|
+| 실제 lifecycle 명령 | guard 삭제 시 위조 event/state를 끼워 넣을 수 있음 | lifecycle 마커·target·revision·actor·event 검증 유지 |
+| 신청·승인·즉시 가입 | 보고된 세 액션만 패치하면 반복방 재모집이 거절됨 | 공용 마커 소진 계약을 모든 원자 membership/application 경로에 동일 적용 |
+| Character 변경 | 점유·Claim·소유·레벨·구성 제약이 약화될 수 있음 | F6-G 공용 점유 판정과 기존 Validator/Write Plan 순서 유지 |
+| 자리 이동 | event만 허용하면 위조 알림 생성 가능 | 실제 `partySlots`·membership 위치·revision 전이와 event를 같은 Transaction으로 묶음 |
+| 추방·탈퇴 | 타인 state 삭제 권한이 넓어질 수 있음 | 방장/본인, 단일 제거, Aggregate target 제거, listing revision 동기 유지 |
+| 그룹 전용방 | listing/count가 모집 revision과 어긋날 수 있음 | 현재 그룹 원본 count, listing `sourceRevision`, 그룹 membership 조건 유지 |
+| 완료·해산·미완료 종료 | 활성 멤버 명령으로 오판할 수 있음 | `status/currentCycleStatus` 게이트 유지, 종료 방을 새로 활성화하지 않음 |
+| 멱등 재시도 | 마커 정리로 직전 lifecycle 성공을 잊을 수 있음 | 후속 revision 성공 전에는 기존 회복 유지, 후속 성공 후 이전 요청은 conflict |
+| 경계 전후 화면 | 서로 다른 키로 query/write할 수 있음 | 단일 runtime 제공자, 경계·resume의 1회 재구독, 제출 직전 재확인 |
+| 기존 저장 방 | 현재 schedule로 소급 변경될 수 있음 | 저장된 `cycleEndsAt`을 보존, 일괄 migration 없음 |
+
+**구현 순서:**
+
+1. **H1-A Rules/Write Plan 계약:** 원자 recruitment 쓰기 경로를 전수하고 공용 lifecycle 마커 소진 patch와 Rules helper를 추가한다. 이 단계에서 Router·시간 제공자는 변경하지 않는다.
+2. **H1-B 안전 검증:** 반복 승계 후 Character 변경·자리 이동·추방·탈퇴·신청 승인/즉시 가입을 표적 Rules Emulator로 확인한다. 기존 정상방의 같은 명령과 lifecycle 위조·타인·종료 상태·Claim/점유 충돌 거절을 함께 고정한다.
+3. **H2-A runtime 회차 제공자:** 기존 `PartyCyclePolicy`를 단일 clock 경계로 연결하고 Router의 고정 Snapshot 주입을 제거한다. 화면별 재구독·제출 시점을 한 구간씩 연결한다.
+4. **H2-B 경계 검증:** fake clock으로 재실행 없이 경계를 넘겨 생성 명령·모집 query·신청 query·내 계정 표시가 한 회차로 바뀌는지 확인한다. background resume와 경계 경쟁 거절도 별도로 확인한다.
+5. **최종 Rules/DI 대조:** 변경 Rules 계약, JS 문법, 경고 0개, 변경 Dart 표적 분석을 확인한다. Rules Emulator가 환경 문제로 막히면 문자열 계약만으로 완료 판정하지 않는다.
+6. **운영 게이트:** 임시 일요일 19:00을 수요일 06:00으로 원복한 최종 diff를 확인한다. Rules는 검증 완료 후 현재 추적본을 정확히 한 번만 게시 시도하며, Indexes·Functions·기존 데이터 migration은 제외한다.
+
+**구현 상태(2026-09-27):**
+
+- H1은 `complete/advanceCycle/incompleteEnd/disband` 직전 명령 봉투만 식별하는 공용 Write Plan patch를 추가했다. 신청·가입·승인·캐릭터 변경·자리 이동·탈퇴/추방·공개 범위 변경은 기존 Aggregate validator를 모두 통과한 같은 Transaction에서만 `commandTargets`와 `lastCommand*`를 비운다. 일반방과 `personalComplete` 봉투는 변경하지 않는다.
+- Rules는 위 여섯 Aggregate validator의 기존 허용 필드·revision·actor·상태·점유 조건을 유지하면서 lifecycle 마커의 정확한 소진 또는 비lifecycle 마커 보존을 추가 검증한다. `validAtomicRaidStateCreate/Delete`와 membership event의 실제 lifecycle 차단은 유지했다.
+- H2는 앱 수명의 `PartyCycleRuntime`을 Router `refreshListenable`로 연결했다. 경계 timer와 app resume·레이드 현황 탭 재선택에서 현재 회차를 확인하고, 키가 실제 변경된 경우에만 레이드 현황 신청 목록·내 계정·모집 목록 화면을 새 key로 재생성한다. 모집 생성은 제출 직전 회차를 다시 계산해 화면 진입 값보다 우선한다.
+- 임시 일요일 19:00 기본값은 운영 계약인 KST 수요일 06:00으로 원복했다. 기존 모집 문서의 저장된 회차 경계에는 migration이나 소급 계산을 하지 않는다.
+- runtime/생성 제출/Write Plan/Rules 정적 계약을 포함한 표적 Flutter 26건과 변경 Dart 파일 분석, JS 문법, `git diff --check`가 통과했다. 과거 R5 문자열 테스트 한 건은 현재 소스의 `membership OR lifecycle` 순서와 반대인 오래된 assertion으로 기존 기준선 실패임을 재확인했으며 이번 수정으로 순서를 바꾸지 않았다.
+- production Rules Emulator 시나리오에는 lifecycle 마커 미소진 거절, 소진 후 자리 이동·추방·신청 성공을 추가했다. 로컬 Java/Emulator 실행 환경이 없어 아직 실제 Rules 엔진 결과는 확보하지 않았고, 문자열 계약만으로 완료 판정하지 않는다.
+
+**최소 완료 조건:**
+
+- 활성 반복방이 `advanceCycle` 후에도 기존과 같은 주체·구성·점유 제약으로 Character 변경, 자리 이동, 추방·탈퇴, 신청·가입을 수행할 수 있다.
+- 위 명령이 성공해도 실제 lifecycle 명령의 target·event·state 검증, 방장/본인 권한, 주간 Claim·점유·구성·그룹 listing/count 제약은 기존과 동일하다.
+- 종료·미완료 종료·해산 방, 타인·위조 요청, 잘못된 revision·회차·event·state 조합은 계속 거절된다.
+- 앱을 재실행하지 않아도 경계 후 새 모집은 새 회차로 생성되고, 회차 기반 목록·표시는 중복 구독 없이 새 키로 전환된다.
+- 기존 방의 저장 경계와 F6-F 1회성 `incompleteEnded`, F6-G 단일 고아 정리, 완료·해산·개인 완료, 공개/그룹 방의 기존 흐름은 변경하지 않는다.
+- 자동 검증·Rules 게시·사용자 실기기 확인 전에는 F6-H 완료, BUG-022 전체 종료 또는 `dev` 통합으로 표기하지 않는다.
 
 #### 후속 백로그 — 안전한 테스트 데이터 정리 도구 (F6 범위 밖)
 

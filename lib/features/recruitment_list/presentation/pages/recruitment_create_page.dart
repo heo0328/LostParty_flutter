@@ -36,6 +36,7 @@ class RecruitmentCreatePage extends StatefulWidget {
     this.playerId,
     this.newRecruitmentId,
     this.cycleKey,
+    this.currentCycleKey,
     super.key,
   });
   final RaidCatalogRepository catalogRepository;
@@ -46,6 +47,7 @@ class RecruitmentCreatePage extends StatefulWidget {
   final String? playerId;
   final String Function()? newRecruitmentId;
   final String? cycleKey;
+  final String Function()? currentCycleKey;
   @override
   State<RecruitmentCreatePage> createState() => _RecruitmentCreatePageState();
 }
@@ -861,7 +863,9 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
         widget.newRecruitmentId?.call() ??
         DateTime.now().microsecondsSinceEpoch.toString();
     final cycleKey =
-        widget.cycleKey ?? const PartyCyclePolicy().keyFor(DateTime.now());
+        widget.currentCycleKey?.call() ??
+        widget.cycleKey ??
+        const PartyCyclePolicy().keyFor(DateTime.now());
     final result = await repository.create(
       PartyCreateCommand(
         recruitmentId: recruitmentId,

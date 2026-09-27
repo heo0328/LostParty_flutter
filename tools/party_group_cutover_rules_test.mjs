@@ -70,6 +70,34 @@ function cycleWindow(key) {
   return { startedAt, endsAt };
 }
 
+function lifecycleMarkerConsumptionPatch(recruitment) {
+  return ['complete', 'advanceCycle', 'incompleteEnd', 'disband']
+    .includes(recruitment.lastCommandType)
+    ? {
+      commandTargets: [],
+      lastCommandId: null,
+      lastCommandType: null,
+      lastCommandActorPlayerId: null,
+      lastCommandAt: null,
+    }
+    : {};
+}
+
+async function seedPersistedAdvanceCycleMarker(testEnv) {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const adminDb = context.firestore();
+    const recruitmentRef = doc(adminDb, 'recruitments', recruitmentId);
+    const recruitment = (await getDoc(recruitmentRef)).data();
+    await updateDoc(recruitmentRef, {
+      commandTargets: recruitment.raidStateTargets,
+      lastCommandId: `advanceCycle_${recruitmentId}_${recruitment.revision - 1}`,
+      lastCommandType: 'advanceCycle',
+      lastCommandActorPlayerId: playerId,
+      lastCommandAt: Timestamp.now(),
+    });
+  });
+}
+
 async function seedBase(testEnv, { membershipState = null, weeklyClaim = false } = {}) {
   const now = Timestamp.now();
   await testEnv.withSecurityRulesDisabled(async (context) => {
@@ -561,6 +589,7 @@ async function applicationTxn(db, action, { countedAsNonGroup = false } = {}) {
       }
     }
     tx.update(recruitmentRef, {
+      ...lifecycleMarkerConsumptionPatch(recruitment),
       pendingApplicationCount: recruitment.pendingApplicationCount + (isWithdraw ? -1 : 1),
       pendingNonGroupApplicantCount: recruitment.pendingNonGroupApplicantCount
         + (isWithdraw ? -(application.countedAsNonGroupApplicant ? 1 : 0)
@@ -607,6 +636,7 @@ async function approvePublicApplicationTxn(db) {
     const nextRevision = recruitment.revision + 1;
     const eventId = `memberJoined_${recruitmentId}_${nextRevision}`;
     tx.update(recruitmentRef, {
+      ...lifecycleMarkerConsumptionPatch(recruitment),
       memberPlayerIds: [...recruitment.memberPlayerIds, joinerPlayerId],
       memberCount: 2, dealerCount: 1, supportCount: 1, hasAvailableSlot: true,
       partySlots: [...recruitment.partySlots, {
@@ -653,7 +683,12 @@ async function approvePublicApplicationTxn(db) {
   });
 }
 
-async function repositionApprovedMemberTxn(db, destinationSlotIndex = 2, memberSlotIndex = destinationSlotIndex) {
+async function repositionApprovedMemberTxn(
+  db,
+  destinationSlotIndex = 2,
+  memberSlotIndex = destinationSlotIndex,
+  { skipMarkerConsumption = false } = {},
+) {
   return runTransaction(db, async (tx) => {
     const recruitmentRef = doc(db, 'recruitments', recruitmentId);
     const memberRef = doc(db, 'recruitments', recruitmentId, 'members', joinerPlayerId);
@@ -662,6 +697,7 @@ async function repositionApprovedMemberTxn(db, destinationSlotIndex = 2, memberS
     const nextRevision = recruitment.revision + 1;
     const eventId = `membersRepositioned_${recruitmentId}_${nextRevision}`;
     tx.update(recruitmentRef, {
+      ...(skipMarkerConsumption ? {} : lifecycleMarkerConsumptionPatch(recruitment)),
       partySlots: recruitment.partySlots.map((slot) => slot.playerId === joinerPlayerId
         ? { ...slot, slotIndex: destinationSlotIndex } : slot),
       revision: nextRevision, updatedAt: serverTimestamp(),
@@ -692,6 +728,7 @@ async function removeApprovedMemberTxn(
     const eventType = selfLeave ? 'memberLeft' : 'memberKicked';
     const eventId = `${eventType}_${recruitmentId}_${nextRevision}`;
     tx.update(recruitmentRef, {
+      ...lifecycleMarkerConsumptionPatch(recruitment),
       memberPlayerIds: [playerId], memberCount: 1, dealerCount: 1,
       supportCount: 0, partySlots: recruitment.partySlots.filter((slot) => slot.playerId !== joinerPlayerId),
       raidStateTargets: recruitment.raidStateTargets.filter((target) => target.playerId !== joinerPlayerId),
@@ -739,6 +776,7 @@ async function directRejoinAfterKickTxn(db) {
     const nextRevision = recruitment.revision + 1;
     const eventId = `memberJoined_${recruitmentId}_${nextRevision}`;
     const recruitmentPatch = {
+      ...lifecycleMarkerConsumptionPatch(recruitment),
       memberPlayerIds: [...recruitment.memberPlayerIds, joinerPlayerId],
       memberCount: 2, dealerCount: 1, supportCount: 1, hasAvailableSlot: true,
       partySlots: [...recruitment.partySlots, {
@@ -1686,6 +1724,51 @@ async function main() {
     console.log('test: public application approval without applicant raidState read');
     await assertSucceeds(approvePublicApplicationTxn(db));
     console.log('PASS: public application approved without applicant raidState read');
+
+    await seedPersistedAdvanceCycleMarker(testEnv);
+    console.log('test: stale lifecycle marker cannot be bypassed without consumption');
+    await assertFails(repositionApprovedMemberTxn(
+      db,
+      2,
+      2,
+      { skipMarkerConsumption: true },
+    ));
+    console.log('PASS: unconsumed lifecycle marker denied');
+
+    console.log('test: first valid member command consumes stale lifecycle marker');
+    await assertSucceeds(repositionApprovedMemberTxn(db));
+    const afterLifecycleReposition = (await getDoc(doc(
+      db,
+      'recruitments',
+      recruitmentId,
+    ))).data();
+    if (afterLifecycleReposition.lastCommandType !== null
+      || afterLifecycleReposition.lastCommandId !== null
+      || afterLifecycleReposition.commandTargets.length !== 0) {
+      throw new Error('Lifecycle marker was not consumed by member command');
+    }
+    console.log('PASS: member command consumes lifecycle marker');
+
+    await seedPersistedAdvanceCycleMarker(testEnv);
+    console.log('test: kick succeeds after lifecycle marker consumption');
+    await assertSucceeds(kickApprovedMemberTxn(db));
+    console.log('PASS: post-lifecycle kick');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await seedPersistedAdvanceCycleMarker(testEnv);
+    console.log('test: application succeeds after lifecycle marker consumption');
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    console.log('PASS: post-lifecycle application');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    await assertSucceeds(approvePublicApplicationTxn(db));
 
     console.log('test: non-leader cannot reposition another member');
     await assertFails(repositionApprovedMemberTxn(applicantDb));

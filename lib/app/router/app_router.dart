@@ -114,6 +114,7 @@ import '../../features/recruitment_list/domain/services/recruitment_command_serv
 import '../../features/recruitment_list/domain/services/recruitment_application_candidate_service.dart';
 import '../../features/recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
 import '../../features/recruitment_list/domain/services/lazy_cycle_reconciler.dart';
+import '../../features/recruitment_list/domain/services/party_cycle_runtime.dart';
 import '../../features/recruitment_list/domain/policies/participation_conflict_policy.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../shared/game_catalog/data/datasources/asset_game_catalog_data_source.dart';
@@ -133,6 +134,7 @@ final _groupNavigatorKey = GlobalKey<NavigatorState>();
 GoRouter createAppRouter({
   required AccountDatabase accountDatabase,
   required PlayerSession playerSession,
+  required PartyCycleRuntime cycleRuntime,
   AccountOwnershipStatusGateway? ownershipStatusGateway,
   GameAccountVerificationGateway? gameAccountVerificationGateway,
   PartyReadRepository? partyReadRepository,
@@ -236,8 +238,6 @@ GoRouter createAppRouter({
   final niceGroupSettingsRepository =
       LocalNiceGroupAutoRefreshSettingsRepository(database: accountDatabase);
   const cyclePolicy = PartyCyclePolicy();
-  final currentCycleKey = cyclePolicy.keyFor(DateTime.now());
-  final currentCycle = cyclePolicy.fromKey(currentCycleKey)!;
   final partyAtomicCommandRepository = FirestorePartyAtomicCommandRepository(
     firestore: FirebaseFirestore.instance,
     firebaseAuth: FirebaseAuth.instance,
@@ -424,6 +424,7 @@ GoRouter createAppRouter({
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
+    refreshListenable: cycleRuntime,
     initialLocation: '/raid-status',
     routes: [
       StatefulShellRoute.indexedStack(
@@ -433,7 +434,10 @@ GoRouter createAppRouter({
             manualVerificationRepository: manualVerificationRepositoryOrDefault,
             startupCharacterRefreshRunner:
                 startupCharacterRefreshRunnerOrDefault,
-            onRaidStatusSelected: () => raidStatusRefreshSignal.value++,
+            onRaidStatusSelected: () {
+              cycleRuntime.refresh();
+              raidStatusRefreshSignal.value++;
+            },
           );
         },
         branches: [
@@ -443,11 +447,12 @@ GoRouter createAppRouter({
               GoRoute(
                 path: '/raid-status',
                 builder: (context, state) => RaidStatusPage(
+                  key: ValueKey('raid-status-${cycleRuntime.current.key}'),
                   partyReadRepository: partyReadRepositoryOrDefault,
                   accountDatabase: accountDatabase,
                   eventSyncService: partyEventSyncServiceOrDefault,
                   playerId: playerSession.playerId,
-                  cycleKey: currentCycleKey,
+                  cycleKey: cycleRuntime.current.key,
                   raidCatalogRepository: raidCatalogRepository,
                   groupReadRepository: groupReadRepositoryForRoute(),
                   activityCharactersRepository:
@@ -533,6 +538,7 @@ GoRouter createAppRouter({
               GoRoute(
                 path: '/account',
                 builder: (context, state) => MyAccountPage(
+                  key: ValueKey('account-${cycleRuntime.current.key}'),
                   apiTokenStore: apiTokenStore,
                   accountRepository: accountRepository,
                   summarySyncService: characterSummarySyncService,
@@ -544,9 +550,9 @@ GoRouter createAppRouter({
                       weeklyRaidDisplayRepositoryOrDefault,
                   raidCatalogRepository: raidCatalogRepository,
                   playerId: playerSession.playerId,
-                  cycleKey: currentCycleKey,
-                  cycleStartedAt: currentCycle.startedAt,
-                  cycleEndsAt: currentCycle.endsAt,
+                  cycleKey: cycleRuntime.current.key,
+                  cycleStartedAt: cycleRuntime.current.startedAt,
+                  cycleEndsAt: cycleRuntime.current.endsAt,
                   weeklyRaidClaimCommandRepository:
                       weeklyRaidClaimCommandRepositoryOrDefault,
                   manualCharacterRefreshRunner:
@@ -595,8 +601,9 @@ GoRouter createAppRouter({
               GoRoute(
                 path: '/recruitments',
                 builder: (context, state) => RecruitmentListPage(
+                  key: ValueKey('recruitments-${cycleRuntime.current.key}'),
                   partyReadRepository: partyReadRepositoryOrDefault,
-                  cycleKey: currentCycleKey,
+                  cycleKey: cycleRuntime.current.key,
                   currentPlayerId: playerSession.playerId,
                   accountDatabase: accountDatabase,
                   filterStore: DriftRaidStatusFilterStore(accountDatabase),
@@ -630,7 +637,7 @@ GoRouter createAppRouter({
                           .collection('recruitments')
                           .doc()
                           .id,
-                      cycleKey: currentCycleKey,
+                      currentCycleKey: cycleRuntime.refreshAndGetKey,
                     ),
                   ),
                   GoRoute(
