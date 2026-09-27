@@ -39,7 +39,7 @@
 - 그룹 membership·초대코드·그룹장 이전/해산 계약과 레이드 명령·읽기·주간 Claim 계약이 구현돼 있다.
 - 진행 중 레이드 카드의 방별 unread 배지는 레이드 현황 탭 재선택 갱신으로 보완했다. 모든 방의 실시간 Listener는 추가하지 않았다.
 - 8인 공격대 자리 이동과 점유 자리 교환, 동일 파티 중복 직업 교환 차단은 구현됐고 실기기에서 확인했다. Character 변경 자동 이동·파란 안내 제거와 알림의 일부 실기기 확인은 남아 있다.
-- BUG-022의 A1 현재 그룹 count 검증과 A2 참가자 제거 listing 수정은 운영 게시됐고, 기존 문제 방 추방도 실기기에서 성공했다. F6-F는 지난 주차 1회성 방을 `raidState` 삭제 없이 `incompleteEnded`로 전환해 운영 문제 방에서 실제 동작을 확인했다. F6-G는 참가 Character 후보와 최종 Transaction의 점유 판정을 공용 정책으로 정렬하고 기존 단일 고아 정리 UX를 연결했다. 자동 삭제·자동 변경이나 Rules 수정 없이, 실기기에서 정리 안내 후 수동 재선택·Character 변경 성공까지 확인해 완료했다. 그룹방 재가입 C, 계정 복구 D와 소유권 이전 E는 별도 과제다. 설계: [`../architecture/BUG_022_REMAINING_FIX_DESIGN.md`](../architecture/BUG_022_REMAINING_FIX_DESIGN.md), 실행 계획: [`NEXT_WORK.md`](NEXT_WORK.md)
+- BUG-022의 A1 현재 그룹 count 검증과 A2 참가자 제거 listing 수정은 운영 게시됐고, 기존 문제 방 추방도 실기기에서 성공했다. F6-F는 지난 주차 1회성 방을 `raidState` 삭제 없이 `incompleteEnded`로 전환해 운영 문제 방에서 실제 동작을 확인했다. F6-G는 참가 Character 후보와 최종 Transaction의 점유 판정을 공용 정책으로 정렬하고 기존 단일 고아 정리 UX를 연결했다. 자동 삭제·자동 변경이나 Rules 수정 없이, 실기기에서 정리 안내 후 수동 재선택·Character 변경 성공까지 확인해 완료했다. 그룹방 재가입 C는 별도 과제이며, 재설치 동일 사용자 복구와 타인 원정대 소유권 이전 후 stale 정리는 통합 작업 그룹 DE로 관리한다. DE는 코드 수정 전에 개발자 의견으로 복구·이전 UX 분기와 안내·확인·실패 복구 흐름을 확정한다. 설계: [`../architecture/BUG_022_REMAINING_FIX_DESIGN.md`](../architecture/BUG_022_REMAINING_FIX_DESIGN.md), 실행 계획: [`NEXT_WORK.md`](NEXT_WORK.md)
 - 기존 `release/1.0.0` 후보는 다인 명령 확장성 결함으로 폐기하고 이력용으로만 보존한다. 현재 우선 작업은 `BUG-018` 단일 보정이 아니라 파티·그룹 Firestore 명령, Player별 이벤트 fan-out과 Rules 접근 구조의 재설계다. 서버 후처리 단계는 사용하지 않고 현재 최대 8인의 핵심 상태를 제한된 원자 명령으로 확정하며, assignment·주간 Claim은 통합 `raidState`로 교체하는 방향이다. 종료 하위 문서 정리는 정확성과 분리한다. 기준: [`../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md)
 - 계약: [`../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md), [`../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md`](../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md), [`../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)
 
@@ -63,4 +63,4 @@
 
 ## 다음 작업
 
-F6-G는 실기기 확인까지 완료했고 F6-F의 1회성 종료·반복 승계도 확인했다. F6-H 구현과 표적 Dart 검증, 운영 수요일 06:00 원복은 완료했다. 다음 작업은 production Rules Emulator 회귀를 확보한 뒤 검증된 Rules를 한 번 게시하고, 승계 반복방의 캐릭터 변경·자리 이동·추방·신청/가입 및 앱 재시작 없는 경계 후 생성을 실기기로 확인하는 것이다. 그룹방 재가입 C 대안, 계정 복구 D, 소유권 이전 E는 별도 작업이다.
+F6-G는 실기기 확인까지 완료했고 F6-F의 1회성 종료·반복 승계도 확인했다. F6-H 구현과 표적 Dart 검증, 운영 수요일 06:00 원복은 완료했다. 다음 작업은 production Rules Emulator 회귀를 확보한 뒤 검증된 Rules를 한 번 게시하고, 승계 반복방의 캐릭터 변경·자리 이동·추방·신청/가입 및 앱 재시작 없는 경계 후 생성을 실기기로 확인하는 것이다. 그룹방 재가입 C 대안은 별도 작업이며, 재설치 복구와 소유권 이전 stale 정리는 개발자 UX 결정 게이트를 선행하는 통합 작업 그룹 DE다.
