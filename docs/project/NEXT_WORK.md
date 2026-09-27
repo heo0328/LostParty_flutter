@@ -967,7 +967,7 @@ D6·F6-C·F6-E는 코드·표적 검증·실기기 근거로 닫았다. 다음 F
 - H2는 앱 수명의 `PartyCycleRuntime`을 Router `refreshListenable`로 연결했다. 경계 timer와 app resume·레이드 현황 탭 재선택에서 현재 회차를 확인하고, 키가 실제 변경된 경우에만 레이드 현황 신청 목록·내 계정·모집 목록 화면을 새 key로 재생성한다. 모집 생성은 제출 직전 회차를 다시 계산해 화면 진입 값보다 우선한다.
 - 임시 일요일 19:00 기본값은 운영 계약인 KST 수요일 06:00으로 원복했다. 기존 모집 문서의 저장된 회차 경계에는 migration이나 소급 계산을 하지 않는다.
 - runtime/생성 제출/Write Plan/Rules 정적 계약을 포함한 표적 Flutter 26건과 변경 Dart 파일 분석, JS 문법, `git diff --check`가 통과했다. 과거 R5 문자열 테스트 한 건은 현재 소스의 `membership OR lifecycle` 순서와 반대인 오래된 assertion으로 기존 기준선 실패임을 재확인했으며 이번 수정으로 순서를 바꾸지 않았다.
-- production Rules Emulator 시나리오에는 lifecycle 마커 미소진 거절, 소진 후 자리 이동·추방·신청 성공을 추가했다. 로컬 Java/Emulator 실행 환경이 없어 아직 실제 Rules 엔진 결과는 확보하지 않았고, 문자열 계약만으로 완료 판정하지 않는다.
+- production Rules Emulator 시나리오에는 lifecycle 마커 미소진 거절, 소진 후 자리 이동·추방·신청 성공을 추가했다. 저장소의 JDK 21로 로컬 Emulator 자체는 기동했지만 추적 Rules 로딩 단계에서 기존 Windows 환경과 같은 HTTP 503 `Network closed for unknown reason`가 발생해 시나리오 평가에는 도달하지 못했다. 같은 로컬 명령은 반복하지 않으며, 원격 작업 브랜치의 격리 CI 회귀 전에는 문자열 계약만으로 완료 판정하지 않는다.
 
 **최소 완료 조건:**
 

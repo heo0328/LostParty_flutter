@@ -1,5 +1,11 @@
 # Task-11 Firestore Rules 복잡도 차단 — 종료된 진단 이력
 
+## 2026-09-27 F6-H lifecycle 마커 소진 로컬 Emulator 로딩 실패
+
+- 반복방 `advanceCycle` 뒤 정상 멤버 명령이 지속된 lifecycle 마커 때문에 거절되는 문제를 수정하고, production Rules 회귀에 마커 미소진 거절과 소진 후 자리 이동·추방·신청 성공을 추가했다.
+- 저장소의 Temurin JDK 21로 Firestore Emulator는 정상 기동했으나 `initializeTestEnvironment`가 추적 `firestore.rules`를 로드하는 단계에서 HTTP 503 `Network closed for unknown reason`를 반환했다. 테스트 시나리오 평가 전 실패이며 Rules 허용·거절이나 표현식 1,000개 한도 결과는 확보되지 않았다.
+- 같은 Windows 로컬 명령은 반복하지 않는다. 다음 검증은 현재 작업 브랜치 체크포인트를 원격에 올린 뒤 기존 격리 GitHub Actions 전체 회귀로 수행한다. CI 통과 전에는 Rules 게시·F6-H 완료·`dev` 통합으로 판정하지 않는다.
+
 ## 2026-09-24 BUG-022 그룹방 재가입 표현식 한계
 
 - 그룹방 탈퇴 후 직접 재가입은 모집·membership·raidState·공용 이벤트·그룹 listing을 원자 갱신하며 production Rules에서 1,000식 한도를 넘는다. 공개방의 같은 재가입과 그룹방 탈퇴까지는 통과한다.
