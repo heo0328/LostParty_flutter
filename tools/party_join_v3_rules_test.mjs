@@ -100,7 +100,7 @@ function joinerSlot(overrides = {}) {
     gemValidationSnapshot: null,
     buildIntegritySnapshot: null,
     joinedBy: joinerPlayerId,
-    joinedAt: serverTimestamp(),
+    joinedEventId: `memberJoined_${recruitmentId}_2`,
     ...overrides,
   };
 }

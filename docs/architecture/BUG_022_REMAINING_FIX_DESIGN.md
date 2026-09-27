@@ -164,8 +164,11 @@ listing은 `getAfter(recruitment)`의 전체 Snapshot 및 같은 revision과 일
 
 기존 `partySlots`를 Player별 권위 멤버 항목으로 확장한다. 기존 필드
 `playerId/characterId/classKey/role/partyIndex/slotIndex/countedAsNonGroupMember`에 상세 화면이
-필요로 하는 Character 이름·아이템 레벨·전투력·Build Snapshot·가입 시각·가입 주체를 함께
-저장한다. 최대 인원 8명은 변경하지 않는다.
+필요로 하는 Character 이름·아이템 레벨·전투력·Build Snapshot·가입 주체와 결정적
+`joinedEventId`를 함께 저장한다. 최대 인원 8명은 변경하지 않는다. Firestore는 배열 내부에
+`serverTimestamp()`를 허용하지 않으므로 가입 시각을 클라이언트 시각으로 대체하지 않는다.
+권위 가입 시각은 같은 핵심 Transaction의 `partyEvents/{joinedEventId}.occurredAt == request.time`로
+보존하고, membership Projection의 `joinedAt`은 해당 event 시각으로 동기화한다.
 
 - `memberPlayerIds`, `partySlots`, `raidStateTargets`, 인원·역할 count는 같은 순서와 크기를
   유지한다. 기존 내 현황 array query와 lifecycle target 계약을 갑자기 교체하지 않는다.
@@ -255,6 +258,7 @@ schema v3 화면과 명령은 Aggregate `partySlots`를 현재 멤버·Character
 | migration 중 실패 | 일부 Snapshot만 전환될 위험 | 모집 한 문서의 원자 update, 실패 시 v2 유지 |
 | Projection 위조 | 클라이언트가 상세·listing 조작 | Aggregate와 exact-match하는 sync Rules만 허용 |
 | 알림 누락 | event를 후처리하면 유실 | party event는 핵심 Transaction에 유지 |
+| 배열 내부 가입 시각 | `serverTimestamp()` 사용 불가·클라이언트 시각 위조 | slot은 결정적 event ID를 저장하고 event의 `request.time`을 권위 시각으로 사용 |
 
 #### C7-8. 구현 승인 전 proof 순서
 

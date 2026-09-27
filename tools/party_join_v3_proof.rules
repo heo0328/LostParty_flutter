@@ -64,7 +64,7 @@ service cloud.firestore {
           'slotIndex', 'countedAsNonGroupMember', 'characterNameSnapshot',
           'itemLevelSnapshot', 'combatPowerSnapshot',
           'gemValidationSnapshot', 'buildIntegritySnapshot', 'joinedBy',
-          'joinedAt'
+          'joinedEventId'
         ])
         && slot.playerId == playerId
         && slot.characterId == characterId
@@ -80,7 +80,8 @@ service cloud.firestore {
         && slot.characterNameSnapshot.size() > 0
         && slot.itemLevelSnapshot is number
         && slot.joinedBy == playerId
-        && slot.joinedAt == request.time
+        && slot.joinedEventId
+          == 'memberJoined_' + oldData.recruitmentId + '_' + (oldData.revision + 1)
         && oldCount == oldData.memberCount;
     }
 
