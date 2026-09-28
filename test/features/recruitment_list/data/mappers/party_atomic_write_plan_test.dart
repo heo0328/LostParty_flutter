@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_atomic_write_plan.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_atomic_command.dart';
@@ -172,6 +173,129 @@ void main() {
     expect(plan.closesActiveGroupRecruitment, isTrue);
     expect(plan.groupListingAction, PartyGroupListingWriteAction.delete);
     expect(plan.maximumWriteCount, 4);
+  });
+
+  test('8인 완료 반복방 승계는 실제 쓰기 Snapshot으로 listing을 갱신한다', () {
+    final slots = List.generate(
+      8,
+      (index) => PartyAggregateSlot(
+        playerId: 'player-$index',
+        characterId: 'character-$index',
+        role: index % 4 == 3 ? PartyRole.support : PartyRole.dealer,
+        classKey: 'class-$index',
+        partyIndex: index ~/ 4,
+        slotIndex: index % 4,
+        countedAsNonGroupMember: false,
+      ),
+    );
+    final next = command(PartyAtomicCommandType.advanceCycle);
+    final plan = PartyAtomicWritePlan(
+      command: PartyCommandEnvelope(
+        commandId: next.commandId,
+        recruitmentId: next.recruitmentId,
+        type: next.type,
+        actorPlayerId: next.actorPlayerId,
+        expectedRevision: next.expectedRevision,
+        expectedCycleKey: next.expectedCycleKey,
+        nextCycleKey: next.nextCycleKey,
+        nextCycleStartedAt: next.nextCycleStartedAt,
+        nextCycleEndsAt: next.nextCycleEndsAt,
+        targets: [
+          for (final slot in slots)
+            PartyCommandTarget(
+              playerId: slot.playerId,
+              raidStateId: '${slot.characterId}_raid-1',
+            ),
+        ],
+      ),
+      aggregate: PartyCommandAggregate(
+        recruitmentId: 'recruitment-1',
+        raidId: 'raid-1',
+        difficultyId: 'hard',
+        leaderPlayerId: 'player-0',
+        currentCycleKey: '2026-09-09',
+        currentCycleStatus: PartyRaidStateStatus.completed,
+        revision: 4,
+        partySlots: slots,
+        nonGroupMemberCount: 0,
+        pendingApplicationCount: 0,
+        pendingNonGroupApplicantCount: 0,
+        groupId: 'group-1',
+        visibility: 'group',
+        continueTogether: true,
+      ),
+      serverTimestamp: timestamp,
+      incrementOne: incrementOne,
+    );
+    final current = <String, Object?>{
+      'schemaVersion': 2,
+      'recruitmentId': 'recruitment-1',
+      'groupId': 'group-1',
+      'visibility': 'group',
+      'currentCycleKey': '2026-09-09',
+      'targetCycleKey': '2026-09-09',
+      'currentCycleStatus': 'completed',
+      'completedAt': Timestamp.fromDate(DateTime.utc(2026, 9, 10)),
+      'completedByPlayerId': 'player-0',
+      'continueTogether': true,
+      'manualRecruitmentEnabled': false,
+      'hasAvailableSlot': false,
+      'memberCount': 8,
+      'memberPlayerIds': [for (final slot in slots) slot.playerId],
+      'title': '중단한 만석 반복방',
+      'revision': 4,
+    };
+    final applied = {
+      ...plan.recruitmentPatch,
+      'cycleStartedAt': Timestamp.fromDate(next.nextCycleStartedAt!),
+      'cycleEndsAt': Timestamp.fromDate(next.nextCycleEndsAt!),
+    };
+    final listing = plan.listingPatchAfterRecruitmentChange(
+      currentRecruitment: current,
+      appliedRecruitmentPatch: applied,
+    );
+
+    // 목록은 원본의 최종 상태와 sourceRevision 봉투 외에 차이가 없어야 한다.
+    expect(listing, {...current, ...applied, 'sourceRevision': 5});
+    expect(listing['currentCycleKey'], '2026-09-16');
+    expect(listing['targetCycleKey'], '2026-09-16');
+    expect(listing['cycleStartedAt'], isA<Timestamp>());
+    expect(listing['cycleEndsAt'], isA<Timestamp>());
+    expect(listing['currentCycleStatus'], 'active');
+    expect(listing['completedAt'], isNull);
+    expect(listing['completedByPlayerId'], isNull);
+    expect(listing['continueTogether'], isTrue);
+    expect(listing['manualRecruitmentEnabled'], isFalse);
+    expect(listing['hasAvailableSlot'], isFalse);
+    expect(listing['memberPlayerIds'], hasLength(8));
+    expect(plan.maximumWriteCount, 11);
+    expect(plan.raidStateWrites, hasLength(8));
+    expect(plan.groupListingAction, PartyGroupListingWriteAction.update);
+    expect(plan.closesActiveGroupRecruitment, isFalse);
+    expect(current['currentCycleKey'], '2026-09-09');
+    expect(applied, isNot(contains('sourceRevision')));
+  });
+
+  test('승계 이외 명령에는 listing Snapshot 덮어쓰기를 확장하지 않는다', () {
+    for (final type in [
+      PartyAtomicCommandType.complete,
+      PartyAtomicCommandType.disband,
+    ]) {
+      final plan = PartyAtomicWritePlan(
+        command: command(type),
+        aggregate: aggregate(),
+        serverTimestamp: timestamp,
+        incrementOne: incrementOne,
+      );
+      expect(
+        plan.listingPatchAfterRecruitmentChange(
+          currentRecruitment: {'unrelated': 'preserve existing behavior'},
+          appliedRecruitmentPatch: plan.recruitmentPatch,
+        ),
+        plan.listingPatch,
+      );
+      expect(plan.groupListingAction, PartyGroupListingWriteAction.none);
+    }
   });
 
   test('반복 모집에는 미완료 종료 명령을 적용하지 않는다', () {

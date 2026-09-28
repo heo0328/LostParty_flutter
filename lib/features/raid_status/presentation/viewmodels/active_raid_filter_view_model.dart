@@ -38,6 +38,7 @@ class ActiveRaidFilterViewState {
     this.hasMore = false,
     this.failure,
     this.expiredOneShotRecruitmentIds = const [],
+    this.expiredRecurringRaids = const [],
   });
 
   final List<ActiveRaidSummary> originalItems;
@@ -54,6 +55,7 @@ class ActiveRaidFilterViewState {
   final bool hasMore;
   final PartyReadFailureType? failure;
   final List<String> expiredOneShotRecruitmentIds;
+  final List<ActiveRaidSummary> expiredRecurringRaids;
 
   bool get isEmptyOriginal =>
       !isLoading && failure == null && originalItems.isEmpty;
@@ -457,8 +459,13 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
     final now = _clock();
     final visible = <ActiveRaidSummary>[];
     final expiredOneShotIds = <String>[];
+    final expiredRecurring = <ActiveRaidSummary>[];
     for (final item in _latestSnapshotItems) {
       final cycleState = _cycleVisibilityPolicy.classify(item, now: now);
+      if (cycleState == ActiveRaidCycleState.expiredRecurring &&
+          item.leaderPlayerId == _playerId) {
+        expiredRecurring.add(item);
+      }
       if (_cycleVisibilityPolicy.isVisible(cycleState)) {
         visible.add(item);
       } else if (cycleState == ActiveRaidCycleState.expiredOneShot) {
@@ -470,6 +477,7 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
       isLoading: false,
       isFromCache: _latestSnapshotIsFromCache,
       expiredOneShotRecruitmentIds: expiredOneShotIds,
+      expiredRecurringRaids: expiredRecurring,
       clearFailure: true,
     );
     unawaited(_prefetchMemberCharacters(visible));
@@ -525,6 +533,7 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
     bool? isFromCache,
     PartyReadFailureType? failure,
     List<String>? expiredOneShotRecruitmentIds,
+    List<ActiveRaidSummary>? expiredRecurringRaids,
     bool clearFailure = false,
   }) {
     if (_disposed) return;
@@ -558,8 +567,9 @@ class ActiveRaidFilterViewModel extends ChangeNotifier
       hasMore: _session.hasMore,
       failure: clearFailure ? null : (failure ?? _state.failure),
       expiredOneShotRecruitmentIds:
-          expiredOneShotRecruitmentIds ??
-          _state.expiredOneShotRecruitmentIds,
+          expiredOneShotRecruitmentIds ?? _state.expiredOneShotRecruitmentIds,
+      expiredRecurringRaids:
+          expiredRecurringRaids ?? _state.expiredRecurringRaids,
     );
     notifyListeners();
   }

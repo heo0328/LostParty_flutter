@@ -175,6 +175,7 @@ class _RaidStatusPageState extends State<RaidStatusPage>
   }
 
   Future<void> _refreshStatus() async {
+    widget.cycleReconciler?.retryObservedFailures();
     _activeRaids.refreshCycleVisibility();
     await _reconcileVisibleRaids();
     await _history.syncNow();
@@ -186,12 +187,27 @@ class _RaidStatusPageState extends State<RaidStatusPage>
   Future<void> _reconcileVisibleRaids() async {
     final reconciler = widget.cycleReconciler;
     if (reconciler == null || _activeRaids.state.isLoading) return;
-    await reconciler.reconcileAll(
-      [
-        ..._activeRaids.state.originalItems.map((item) => item.id),
-        ..._activeRaids.state.expiredOneShotRecruitmentIds,
-      ],
-    );
+    final state = _activeRaids.state;
+    for (final item in state.expiredRecurringRaids) {
+      if (!mounted) return;
+      await reconciler.reconcile(
+        item.id,
+        observedRevision: item.revision,
+        onAttemptCompleted: (targetCycleKey, result) {
+          assert(() {
+            debugPrint(
+              'PartyCycleReconcile room=${item.id} '
+              'revision=${item.revision} from=${item.currentCycleKey} '
+              'target=$targetCycleKey visibility=${item.visibility} '
+              'status=${result.status.name} failure=${result.failure?.name}',
+            );
+            return true;
+          }());
+        },
+      );
+    }
+    if (!mounted) return;
+    await reconciler.reconcileAll(state.expiredOneShotRecruitmentIds);
   }
 
   void _checkInitialLoadComplete() {

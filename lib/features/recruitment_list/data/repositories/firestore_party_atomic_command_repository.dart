@@ -134,7 +134,13 @@ class FirestorePartyAtomicCommandRepository
             transaction.delete(listingRef);
           } else if (plan.groupListingAction ==
               PartyGroupListingWriteAction.update) {
-            transaction.update(listingRef, plan.listingPatch);
+            transaction.update(
+              listingRef,
+              plan.listingPatchAfterRecruitmentChange(
+                currentRecruitment: raw,
+                appliedRecruitmentPatch: recruitmentPatch,
+              ),
+            );
           }
         }
 

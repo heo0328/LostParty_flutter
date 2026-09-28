@@ -20,6 +20,23 @@ void main() {
     expect(repository, contains(".collection('partyEvents')"));
   });
 
+  test('listing은 원본과 같은 Timestamp 변환 후 patch를 원자 update한다', () {
+    expect(repository, contains('plan.listingPatchAfterRecruitmentChange('));
+    expect(repository, contains('currentRecruitment: raw'));
+    expect(repository, contains('appliedRecruitmentPatch: recruitmentPatch'));
+    expect(
+      repository.indexOf(
+        "recruitmentPatch['cycleEndsAt'] = Timestamp.fromDate",
+      ),
+      lessThan(repository.indexOf('plan.listingPatchAfterRecruitmentChange(')),
+    );
+    expect(repository, isNot(contains('transaction.get(listingRef)')));
+    expect(
+      repository,
+      contains('transaction.update(recruitmentRef, recruitmentPatch)'),
+    );
+  });
+
   test('그룹 1회성 완료는 활성 수와 listing을 닫고 완료 후 해산은 이중 감소하지 않는다', () {
     expect(repository, contains('plan.closesActiveGroupRecruitment'));
     expect(repository, contains('PartyGroupListingWriteAction.delete'));

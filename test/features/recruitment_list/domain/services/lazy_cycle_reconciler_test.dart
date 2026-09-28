@@ -4,6 +4,81 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/domain/services/lazy_cycle_reconciler.dart';
 
 void main() {
+  test('상세와 관찰 목록이 겹쳐도 실제 gateway 요청은 하나다', () async {
+    final gateway = _ControlledGateway();
+    final reconciler = LazyCycleReconciler(gateway: gateway);
+    final detail = reconciler.reconcile('room');
+    final observed = reconciler.reconcile('room', observedRevision: 9);
+    await Future<void>.delayed(Duration.zero);
+    expect(gateway.calls, hasLength(1));
+    gateway.complete(const LazyCycleReconciliationResult.changed());
+    expect((await detail).isSuccess, isTrue);
+    expect((await observed).isSuccess, isTrue);
+  });
+
+  test('관찰 revision의 실패는 한 번만 보고하고 새 revision과 회차에서 재시도한다', () async {
+    var now = DateTime.utc(2026, 9, 23);
+    final gateway = _RecordingFailureGateway();
+    final reconciler = LazyCycleReconciler(gateway: gateway, clock: () => now);
+    final reports = <String>[];
+    Future<LazyCycleReconciliationResult> run(int revision) =>
+        reconciler.reconcile(
+          'group',
+          observedRevision: revision,
+          onAttemptCompleted: (cycle, result) =>
+              reports.add('$cycle:${result.failure?.name}'),
+        );
+    final first = run(9);
+    final concurrent = run(9);
+    expect(identical(first, concurrent), isTrue);
+    expect(
+      (await first).failure,
+      LazyCycleReconciliationFailure.permissionDenied,
+    );
+    await run(9);
+    expect(gateway.calls, hasLength(1));
+    expect(reports, ['2026-09-23:permissionDenied']);
+    await run(10);
+    expect(gateway.calls, hasLength(2));
+    now = DateTime.utc(2026, 9, 30);
+    await run(10);
+    expect(gateway.calls, hasLength(3));
+  });
+
+  test('명시적 새로고침은 관찰 실패만 다시 허용하고 진행 중 요청은 합친다', () async {
+    final gateway = _FailOnceGateway();
+    final reconciler = LazyCycleReconciler(gateway: gateway);
+    await reconciler.reconcile('group', observedRevision: 9);
+    reconciler.retryObservedFailures();
+    final retry = reconciler.reconcile('group', observedRevision: 9);
+    reconciler.retryObservedFailures();
+    final concurrent = reconciler.reconcile('group', observedRevision: 9);
+    expect(identical(retry, concurrent), isTrue);
+    expect((await retry).isSuccess, isTrue);
+    reconciler.retryObservedFailures();
+    await reconciler.reconcile('group', observedRevision: 9);
+    expect(gateway.callCount, 2);
+  });
+
+  test('여러 관찰 요청은 순차 처리하며 한 방 실패 후에도 다음 방을 처리한다', () async {
+    final gateway = _QueuedGateway();
+    final reconciler = LazyCycleReconciler(gateway: gateway);
+    final first = reconciler.reconcile('a', observedRevision: 1);
+    final second = reconciler.reconcile('b', observedRevision: 2);
+    await Future<void>.delayed(Duration.zero);
+    expect(gateway.calls, ['a']);
+    gateway.pending[0].complete(
+      const LazyCycleReconciliationResult.failed(
+        LazyCycleReconciliationFailure.invalidData,
+      ),
+    );
+    await first;
+    await Future<void>.delayed(Duration.zero);
+    expect(gateway.calls, ['a', 'b']);
+    gateway.pending[1].complete(const LazyCycleReconciliationResult.changed());
+    expect((await second).status, LazyCycleReconciliationStatus.changed);
+  });
+
   test('같은 방과 목표 회차의 동시 접근은 gateway를 한 번만 호출한다', () async {
     final gateway = _ControlledGateway();
     final reconciler = LazyCycleReconciler(
@@ -32,10 +107,7 @@ void main() {
       reconciler.reconcile('room-2'),
     ]);
 
-    expect(gateway.calls, {
-      ('room-1', '2026-09-09'),
-      ('room-2', '2026-09-09'),
-    });
+    expect(gateway.calls, {('room-1', '2026-09-09'), ('room-2', '2026-09-09')});
   });
 
   test('gateway 예외는 다른 화면을 막지 않는 방 단위 실패로 변환한다', () async {
@@ -52,9 +124,7 @@ void main() {
 
   test('빈 방 ID는 gateway를 호출하지 않고 거절한다', () async {
     final gateway = _ImmediateGateway();
-    final result = await LazyCycleReconciler(
-      gateway: gateway,
-    ).reconcile('  ');
+    final result = await LazyCycleReconciler(gateway: gateway).reconcile('  ');
 
     expect(result.failure, LazyCycleReconciliationFailure.invalidData);
     expect(gateway.calls, isEmpty);
@@ -106,11 +176,37 @@ void main() {
     ]);
 
     expect(results, hasLength(2));
-    expect(gateway.calls, {
-      ('room-1', '2026-09-09'),
-      ('room-2', '2026-09-09'),
-    });
+    expect(gateway.calls, {('room-1', '2026-09-09'), ('room-2', '2026-09-09')});
   });
+}
+
+class _RecordingFailureGateway implements LazyCycleReconciliationGateway {
+  final calls = <(String, String)>[];
+  @override
+  Future<LazyCycleReconciliationResult> reconcile({
+    required String recruitmentId,
+    required String targetCycleKey,
+  }) async {
+    calls.add((recruitmentId, targetCycleKey));
+    return const LazyCycleReconciliationResult.failed(
+      LazyCycleReconciliationFailure.permissionDenied,
+    );
+  }
+}
+
+class _QueuedGateway implements LazyCycleReconciliationGateway {
+  final calls = <String>[];
+  final pending = <Completer<LazyCycleReconciliationResult>>[];
+  @override
+  Future<LazyCycleReconciliationResult> reconcile({
+    required String recruitmentId,
+    required String targetCycleKey,
+  }) {
+    calls.add(recruitmentId);
+    final completer = Completer<LazyCycleReconciliationResult>();
+    pending.add(completer);
+    return completer.future;
+  }
 }
 
 class _ControlledGateway implements LazyCycleReconciliationGateway {

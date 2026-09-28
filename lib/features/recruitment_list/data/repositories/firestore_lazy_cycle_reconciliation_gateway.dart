@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/party_cycle_command.dart';
 import '../../domain/repositories/party_cycle_command_repository.dart';
@@ -53,6 +54,14 @@ class FirestoreLazyCycleReconciliationGateway
       if (result.isSuccess) {
         return const LazyCycleReconciliationResult.changed();
       }
+      assert(() {
+        debugPrint(
+          'PartyCycleReconcile command room=$recruitmentId '
+          'revision=$revision from=$currentCycleKey target=$targetCycleKey '
+          'failure=${result.failure?.name}',
+        );
+        return true;
+      }());
       if (result.failure == PartyCycleFailure.cycleMismatch ||
           result.failure == PartyCycleFailure.revisionConflict ||
           result.failure == PartyCycleFailure.recruitmentClosed) {
@@ -61,25 +70,31 @@ class FirestoreLazyCycleReconciliationGateway
           targetCycleKey: targetCycleKey,
         );
       }
-      return LazyCycleReconciliationResult.failed(
-        switch (result.failure!) {
-          PartyCycleFailure.permissionDenied ||
-          PartyCycleFailure.unauthenticated ||
-          PartyCycleFailure.playerBindingMissing ||
-          PartyCycleFailure.unauthorized =>
-            LazyCycleReconciliationFailure.permissionDenied,
-          PartyCycleFailure.temporarilyUnavailable =>
-            LazyCycleReconciliationFailure.temporarilyUnavailable,
-          PartyCycleFailure.invalidRequest || PartyCycleFailure.notFound =>
-            LazyCycleReconciliationFailure.invalidData,
-          _ => LazyCycleReconciliationFailure.unknown,
-        },
-      );
+      return LazyCycleReconciliationResult.failed(switch (result.failure!) {
+        PartyCycleFailure.permissionDenied ||
+        PartyCycleFailure.unauthenticated ||
+        PartyCycleFailure.playerBindingMissing ||
+        PartyCycleFailure.unauthorized =>
+          LazyCycleReconciliationFailure.permissionDenied,
+        PartyCycleFailure.temporarilyUnavailable =>
+          LazyCycleReconciliationFailure.temporarilyUnavailable,
+        PartyCycleFailure.invalidRequest || PartyCycleFailure.notFound =>
+          LazyCycleReconciliationFailure.invalidData,
+        _ => LazyCycleReconciliationFailure.unknown,
+      });
     } on FirebaseException catch (error) {
+      assert(() {
+        debugPrint(
+          'PartyCycleReconcile read room=$recruitmentId '
+          'target=$targetCycleKey code=${error.code}',
+        );
+        return true;
+      }());
       return LazyCycleReconciliationResult.failed(switch (error.code) {
         'permission-denied' => LazyCycleReconciliationFailure.permissionDenied,
-        'unavailable' || 'deadline-exceeded' || 'aborted' =>
-          LazyCycleReconciliationFailure.temporarilyUnavailable,
+        'unavailable' ||
+        'deadline-exceeded' ||
+        'aborted' => LazyCycleReconciliationFailure.temporarilyUnavailable,
         _ => LazyCycleReconciliationFailure.unknown,
       });
     } catch (_) {

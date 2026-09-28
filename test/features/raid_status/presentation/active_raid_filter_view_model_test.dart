@@ -32,10 +32,11 @@ void main() {
     String status = 'active',
     bool continueTogether = false,
     DateTime? cycleEndsAt,
+    String leaderPlayerId = 'player-1',
   }) => ActiveRaidSummary(
     id: id,
     title: id,
-    leaderPlayerId: 'player-1',
+    leaderPlayerId: leaderPlayerId,
     metadata: RecruitmentMetadata(
       catalogVersion: 'test',
       raidId: raidId,
@@ -54,7 +55,7 @@ void main() {
     maxMemberCount: maxMemberCount,
     revision: 1,
     updatedAt: DateTime.utc(2026, 8, 20),
-    isOwnedByCurrentPlayer: true,
+    isOwnedByCurrentPlayer: leaderPlayerId == 'player-1',
     status: status,
     continueTogether: continueTogether,
     cycleEndsAt: cycleEndsAt,
@@ -68,10 +69,7 @@ void main() {
       streamFactory: () => Stream.value(
         PartyReadSnapshot(
           items: [
-            raid(
-              id: 'current',
-              cycleEndsAt: DateTime.utc(2026, 9, 30),
-            ),
+            raid(id: 'current', cycleEndsAt: DateTime.utc(2026, 9, 30)),
             raid(
               id: 'expired-recurring',
               continueTogether: true,
@@ -112,9 +110,59 @@ void main() {
       'expired-recurring',
       'completed',
     ]);
-    expect(viewModel.state.expiredOneShotRecruitmentIds, [
-      'expired-one-shot',
-    ]);
+    expect(viewModel.state.expiredOneShotRecruitmentIds, ['expired-one-shot']);
+  });
+
+  test('반복 승계 후보는 필터와 무관한 만료 방장 방만 유지한다', () async {
+    final viewModel = ActiveRaidFilterViewModel(
+      streamFactory: () => Stream.value(
+        PartyReadSnapshot(
+          items: [
+            raid(
+              id: 'group',
+              groupId: 'g',
+              continueTogether: true,
+              memberCount: 8,
+              cycleEndsAt: DateTime.utc(2026, 9, 23),
+            ),
+            raid(
+              id: 'public',
+              continueTogether: true,
+              cycleEndsAt: DateTime.utc(2026, 9, 23),
+            ),
+            raid(
+              id: 'member',
+              groupId: 'g',
+              continueTogether: true,
+              leaderPlayerId: 'other',
+              cycleEndsAt: DateTime.utc(2026, 9, 23),
+            ),
+            raid(
+              id: 'current',
+              continueTogether: true,
+              cycleEndsAt: DateTime.utc(2026, 9, 30),
+            ),
+            raid(id: 'legacy', continueTogether: true),
+            raid(id: 'one-shot', cycleEndsAt: DateTime.utc(2026, 9, 23)),
+          ],
+          isFromCache: false,
+        ),
+      ),
+      playerId: 'player-1',
+      filterStore: MemoryRaidStatusFilterStore(),
+      clock: () => DateTime.utc(2026, 9, 25),
+    )..start();
+    addTearDown(viewModel.dispose);
+    await Future<void>.delayed(Duration.zero);
+    await viewModel.setSelection(
+      RaidStatusFilterSelection.unrestricted.toggleGroup(),
+    );
+    expect(
+      viewModel.state.expiredRecurringRaids.map((r) => (r.id, r.revision)),
+      [('group', 1), ('public', 1)],
+    );
+    expect(viewModel.state.expiredOneShotRecruitmentIds, ['one-shot']);
+    expect(viewModel.state.originalItems.any((r) => r.id == 'member'), isTrue);
   });
 
   test('원본과 필터 결과를 나누고 공개 조건을 로컬 적용한다', () async {
@@ -308,7 +356,10 @@ void main() {
     final viewModel = ActiveRaidFilterViewModel(
       streamFactory: () => Stream.value(
         PartyReadSnapshot(
-          items: [raid(id: 'public'), raid(id: 'group', groupId: 'group-1')],
+          items: [
+            raid(id: 'public'),
+            raid(id: 'group', groupId: 'group-1'),
+          ],
           isFromCache: false,
         ),
       ),
@@ -356,9 +407,9 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     await viewModel.setSelection(
-      RaidStatusFilterSelection.unrestricted
-          .togglePublic()
-          .toggleMember('player-2'),
+      RaidStatusFilterSelection.unrestricted.togglePublic().toggleMember(
+        'player-2',
+      ),
     );
     expect(viewModel.state.showGroupMemberFilters, isTrue);
     expect(viewModel.state.selection.memberPlayerIds, {'player-2'});
@@ -529,9 +580,7 @@ void main() {
     expect(viewModel.state.items.map((item) => item.id), ['few', 'many']);
     expect(
       await store.loadSort('player-1', RaidFilterScreen.activeRaids),
-      const RaidListSortSelection(
-        direction: RaidListSortDirection.ascending,
-      ),
+      const RaidListSortSelection(direction: RaidListSortDirection.ascending),
     );
 
     await viewModel.toggleMemberCountSort();
@@ -653,10 +702,10 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     await Future<void>.delayed(Duration.zero);
 
-    expect(
-      viewModel.state.ownCharacters.map((character) => character.id),
-      ['char-me', 'char-alt'],
-    );
+    expect(viewModel.state.ownCharacters.map((character) => character.id), [
+      'char-me',
+      'char-alt',
+    ]);
     expect(viewModel.showOwnCharacterFilters, isTrue);
     expect(viewModel.state.sortBarLabel, '참가 인원수');
 
@@ -668,9 +717,7 @@ void main() {
     ]);
     expect(
       await store.loadSort('player-1', RaidFilterScreen.activeRaids),
-      const RaidListSortSelection(
-        direction: RaidListSortDirection.ascending,
-      ),
+      const RaidListSortSelection(direction: RaidListSortDirection.ascending),
     );
 
     await viewModel.toggleOwnCharacter('char-me');

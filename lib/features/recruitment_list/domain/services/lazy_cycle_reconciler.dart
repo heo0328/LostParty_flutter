@@ -53,9 +53,23 @@ class LazyCycleReconciler {
   final PartyCyclePolicy _cyclePolicy;
   final LazyCycleClock _clock;
   final Map<String, Future<LazyCycleReconciliationResult>> _inFlight = {};
+  final Map<String, Future<LazyCycleReconciliationResult>> _gatewayInFlight =
+      {};
   final Set<String> _completed = {};
+  final Map<String, LazyCycleReconciliationResult> _observedResults = {};
+  Future<void> _observedQueue = Future.value();
 
-  Future<LazyCycleReconciliationResult> reconcile(String recruitmentId) {
+  /// 명시적인 새로고침에서는 실패만 다시 허용한다. 진행 중 요청은 합친다.
+  void retryObservedFailures() {
+    _observedResults.removeWhere((_, result) => !result.isSuccess);
+  }
+
+  Future<LazyCycleReconciliationResult> reconcile(
+    String recruitmentId, {
+    int? observedRevision,
+    void Function(String targetCycleKey, LazyCycleReconciliationResult result)?
+    onAttemptCompleted,
+  }) {
     final normalizedId = recruitmentId.trim();
     if (normalizedId.isEmpty) {
       return Future.value(
@@ -65,15 +79,31 @@ class LazyCycleReconciler {
       );
     }
     final targetCycleKey = _cyclePolicy.keyFor(_clock());
-    final requestKey = '$normalizedId::$targetCycleKey';
+    final cycleRequestKey = '$normalizedId::$targetCycleKey';
+    final requestKey = observedRevision == null
+        ? cycleRequestKey
+        : '$cycleRequestKey::$observedRevision';
+    final observed = _observedResults[requestKey];
+    if (observed != null) return Future.value(observed);
     if (_completed.contains(requestKey)) {
       return Future.value(const LazyCycleReconciliationResult.noChange());
     }
     final running = _inFlight[requestKey];
     if (running != null) return running;
 
-    final future = _run(normalizedId, targetCycleKey).then((result) {
-      if (result.isSuccess) _completed.add(requestKey);
+    final attempt = observedRevision == null
+        ? _run(normalizedId, targetCycleKey)
+        : _observedQueue.then((_) => _run(normalizedId, targetCycleKey));
+    if (observedRevision != null) {
+      _observedQueue = attempt.then<void>((_) {});
+    }
+    final future = attempt.then((result) {
+      if (observedRevision != null) {
+        _observedResults[requestKey] = result;
+      } else if (result.isSuccess) {
+        _completed.add(requestKey);
+      }
+      onAttemptCompleted?.call(targetCycleKey, result);
       return result;
     });
     _inFlight[requestKey] = future;
@@ -89,11 +119,29 @@ class LazyCycleReconciler {
   /// 전환을 막지 않으며, 실패한 방은 다음 화면 신호에서 다시 시도된다.
   Future<List<LazyCycleReconciliationResult>> reconcileAll(
     Iterable<String> recruitmentIds,
-  ) {
-    return Future.wait(recruitmentIds.toSet().map(reconcile));
+  ) async {
+    return [for (final id in recruitmentIds.toSet()) await reconcile(id)];
   }
 
   Future<LazyCycleReconciliationResult> _run(
+    String recruitmentId,
+    String targetCycleKey,
+  ) {
+    // 상세 진입(관찰 revision 없음)과 목록 진입도 같은 실제 요청을 공유한다.
+    final key = '$recruitmentId::$targetCycleKey';
+    final running = _gatewayInFlight[key];
+    if (running != null) return running;
+    final future = _invokeGateway(recruitmentId, targetCycleKey);
+    _gatewayInFlight[key] = future;
+    future.whenComplete(() {
+      if (identical(_gatewayInFlight[key], future)) {
+        _gatewayInFlight.remove(key);
+      }
+    });
+    return future;
+  }
+
+  Future<LazyCycleReconciliationResult> _invokeGateway(
     String recruitmentId,
     String targetCycleKey,
   ) async {
