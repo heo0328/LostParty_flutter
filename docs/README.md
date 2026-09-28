@@ -23,6 +23,13 @@
 - [`product/CLASS_SYNERGY_CATALOG.md`](product/CLASS_SYNERGY_CATALOG.md): 30개 직업·특성별 시너지 원본, 코드 사용법과 신청자 스펙 표시 비용 검토
 - [`product/BUILD_MEMO_SHARING.md`](product/BUILD_MEMO_SHARING.md): 직업·깨달음·질서 해달별 계층 메모, 파티 카드 표시와 JSON/서버 공유 구상
 
+## Feature Definitions
+
+사용자가 앱을 사용하는 전체 흐름과 여러 기능 영역의 연결을 관리한다.
+
+- [`feature-definitions/README.md`](feature-definitions/README.md): 기능 정의 문서의 범위와 목록
+- [`feature-definitions/LOSTPARTY_CORE_USER_FLOW_OVERVIEW.md`](feature-definitions/LOSTPARTY_CORE_USER_FLOW_OVERVIEW.md): 게임 계정·원정대 인증부터 일반 레이드, 그룹과 그룹 전용방까지 이어지는 핵심 사용자 흐름 통합 지도
+
 ## Architecture
 
 데이터 관계, Firebase 전환 및 백엔드 구조를 관리한다.
