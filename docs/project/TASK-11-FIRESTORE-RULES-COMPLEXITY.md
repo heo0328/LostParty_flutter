@@ -1,5 +1,14 @@
 # Task-11 Firestore Rules 복잡도 차단 — 종료된 진단 이력
 
+## 2026-09-29 A3 재현 전제 정정
+
+기존 production fixture는 leaderOnly 방에서 직접 재가입 성공을 기대했다. 실제 앱과
+Rules는 directJoin만 허용한다. 승인형 거절을 유지하고 정상 정책 fixture로 교정한
+`5874862`의 CI `36464308075`에서 전체 추적 Rules 및 그룹 이전·탈퇴·해산이 통과했다.
+제품 Rules 변경 없이 정상 직접 가입·재가입·8인 경계·그룹 신청 승인을 확인했으므로
+아래의 production 정상 재가입 한도 확정 판정은 철회한다. C/C7 실험의 당시 실패 이력은
+유지하며 운영 게시 성공이나 모든 거절 경로의 비용 해결로 확대하지 않는다.
+
 ## 2026-09-27 C7 v3 직접 재가입 격리 proof — 3-write 한도 초과로 폐기
 
 - 운영 `firestore.rules`와 앱 코드를 수정하지 않고 별도 `party_join_v3_proof.rules`에 그룹 직접 재가입의 3-write 권위 Transaction을 구성했다. 모집 Aggregate·개인 `raidState`·결정적 party event를 모두 요구하고 비그룹원·block·타인 Character·주간 Claim·자리/count 위조·핵심 문서 누락을 거절하는 fixture를 추가했다.

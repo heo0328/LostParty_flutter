@@ -1,3 +1,25 @@
+# 2026-09-29 A3 재현 전제 정정 및 전체 Rules 회귀 통과
+
+- 원인 판정 정정: 기존 그룹 재가입 fixture는 `leaderOnly` 방에서 직접 가입 성공을
+  기대했다. 공개방 fixture만 directJoin으로 전환했다. 실제 Router의 atomic join
+  Repository는 directJoin이 아니면 전송 전에 거절하고 Rules도 같은 조건을 요구한다.
+  따라서 과거 실패 로그는 정상 직접 가입의 비용 초과를 증명하지 않는다.
+- 승인형 직접 가입 거절·롤백은 보존하고, directJoin 그룹방의 최초 가입·탈퇴 후 재가입,
+  추방 후 최대 8인 재가입을 검증했다. 그룹 신청 승인 fixture도 실제 writer처럼 원본과
+  listing을 같은 Transaction에 기록한다. 원본·listing·membership·raidState 결과를 확인한다.
+- 첫 CI `36462314743`에서 정상 재가입 요청은 성공했으나 JSON 문자열 키 순서 비교가
+  실패했다. Map의 구조 비교로 교정한 `5874862`의
+  [CI 36464308075](https://github.com/heo0328/LostParty_flutter/actions/runs/36464308075)는
+  전체 추적 Rules와 별도 그룹 이전·탈퇴·해산 회귀 모두 PASS했다.
+- 새로 확인한 흐름: 정상 그룹 직접 가입/재가입과 그룹 신청 승인. 보존 확인: A2-B 제거
+  경계 및 F6-H marker 회귀, 기존 전체 파티/그룹 서버 회귀. 승인형 직접 가입은 계속 거절한다.
+- 앱·Rules·운영 데이터 변경 없음. 테스트와 문서만 수정해 정상 기능 재작성을 피했다.
+  node --check, git diff --check 통과. Dart 변경이 없어 Flutter 검증은 반복하지 않았다.
+- A3의 정상 재가입 한도 결함 판정은 철회한다. 과거 C/C7 실험 실패 자체를 소급해 성공으로
+  바꾸지는 않는다. 거절 요청의 1,000식 진단은 정상 요청 성공과 구분한다.
+- 미확인: A2-B/F6-H 운영 반영 및 실기기 추방→목록 재노출→재가입. 이 턴은 Rules 배포
+  없음, dev 미반영. `fix/bug-022-party-permissions`에 `2ffb54d`, `5874862` push 완료.
+
 # 2026-09-29 A2-B 참가자 제거 listing 동기화 구현 및 서버 검증
 
 - 변경: 기존 제거 Write Plan의 8개 구성 값과 sourceRevision/updatedAt을 동일 listing
