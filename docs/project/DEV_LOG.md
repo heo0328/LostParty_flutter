@@ -1,3 +1,30 @@
+# 2026-09-29 A2-B 참가자 제거 listing 동기화 구현 및 서버 검증
+
+- 변경: 기존 제거 Write Plan의 8개 구성 값과 sourceRevision/updatedAt을 동일 listing
+  update에 전달하고 방장 승계 시 leader Snapshot 3개도 전달한다. 추가 문서 조회·쓰기,
+  비동기 복구·스키마 변경 없이 기존 Transaction 범위를 유지했다.
+- Rules: 기존 구버전 3필드 요청을 유지하고 확장 patch는 허용 필드 및 변경 후 원본과의
+  구성 일치를 검증한다. 구버전 앱의 잔존 정보와 누락 listing 생성은 해결 범위가 아니다.
+- 새로 가능해진 흐름(서버 검증): 제거된 Player·slot·target 및 역할 count를 목록에서 함께
+  제거하며 만석→빈자리와 방장 승계도 동기화한다. stale listing도 제거 명령에서 교정한다.
+- 보존 확인: CI에서 공개방 승인·추방·직접 재가입, 자리 변경, 해산, lifecycle marker 소비,
+  그룹 추방·본인 탈퇴와 구버전 listing 요청을 확인했다. 마지막 1인의 일반 탈퇴 거절은
+  기존 Write Plan 테스트로 유지한다.
+- 검증: 표적 Flutter 테스트 11건 PASS, 변경 Dart 4파일 analyze 0 issues, format,
+  node --check 및 git diff --check 통과. 첫 계약 테스트의 실제 inline 참조와 다른 문자열
+  기대를 수정한 뒤 통과했으며 제품 경로를 테스트 기대에 맞춰 재작성하지 않았다.
+- [CI 36461139608](https://github.com/heo0328/LostParty_flutter/actions/runs/36461139608),
+  대상 `3440e6b`: 8인 제거·stale 교정, 구성/leader/회차/설정 위조 거절과 원자 롤백,
+  listing 누락 거절, 구버전 호환, 방장 승계, 같은 revision 중복 제거 단 한 건 커밋 PASS.
+  listing 단독 위조 거절에는 1,000식 한도 오류도 관찰되어 이 사례는 거절·롤백 근거로만
+  사용한다. 정상 제거들은 성공했다. 전체 CI는 기존 A3 그룹방 직접 재가입 1,000식에서
+  실패했으며 뒤의 회귀와 별도 그룹 탈퇴/해산 step은 실행되지 않았다.
+- 미확인 실기기: 제거된 계정의 모집 목록 재노출 및 방장 승계 카드. 전체 Rules 게이트
+  미충족으로 운영 배포·새 빌드 설치 요청은 하지 않았다. 운영 데이터 변경 없음.
+- Git: 기존 F6-I는 `5a14e67`, A2-B는 `3440e6b`로 구분 커밋·push했다. 현재 브랜치
+  `fix/bug-022-party-permissions` 유지, dev 미반영. 다음 A3 해결·전체 검증 후 F6-H 게시와
+  통합을 판단한다. 이번 결과를 BUG-022 전체 완료로 판정하지 않는다.
+
 # 2026-09-29 해결·잔여 버그 문서 최신화
 
 - 사용자 요청으로 BUG_REPORTS에 최신 판정 요약을 추가하고 BUG-022의 오래된 상태 표기를
