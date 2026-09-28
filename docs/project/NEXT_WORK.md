@@ -1,6 +1,6 @@
 # NEXT WORK — BUG-022 직접 권한 오류 수정과 원정대 이전 복구 설계
 
-> 상태: **F6-F 1회성 미완료 종료·반복방 승계 실기기 확인, F6-H 코드·표적 Dart 검증 완료·Rules Emulator/게시/실기기 확인 대기**. 2026-09-27 임시 경계에서 확인한 승계 후 lifecycle 마커 오인과 Router 고정 회차 Snapshot을 각각 공용 마커 소진 계약과 단일 runtime 회차 공급원으로 수정했다. 운영 기본값은 KST 수요일 06:00으로 원복했다. 재가입·계정 복구·소유권 이전은 별도 범위다.
+> 상태: **F6-F 1회성 미완료 종료 확인, F6-H 코드·표적 검증 완료, A2-B listing 잔존·A3 가입 Rules 1,000식·F6-I 그룹 반복방 승계 실패 수정 설계 확정**. 2026-09-28 실제 데이터와 현재 코드 대조에서 그룹 반복방 승계 실패 원인을 listing 필터 누락으로 단정한 초기 가설을 철회했다. 운영 기본값은 KST 수요일 06:00으로 원복됐다. 재설치·원정대 소유권 이전은 별도 DE 범위다.
 
 ## 현재 단일 작업 — BUG-022 수정 설계 확정
 
@@ -22,6 +22,37 @@
 3. 이번 제보의 해산 및 참가자 제거 실패는 Player 이전과 무관한 Rules 결함이므로 작업 그룹 A에서 먼저 최소 수정한다.
 4. Player 복구와 원정대 소유권 이전 후 상태 정리는 작업 그룹 B로 분리한다. B가 완료되지 않아도 A의 직접 권한 오류 수정·검증을 막지 않는다.
 5. 운영 데이터를 콘솔에서 직접 수정하거나 이전 Player의 전체 데이터를 새 Player로 복사하지 않는다.
+
+### 현재 수정의 간소화 기준
+
+- 간소화는 영향 조사·회귀 보호·필수 권한을 생략한다는 뜻이 아니다. 같은 상태를 여러 문서에서
+  반복 조회하거나 같은 정책을 여러 Rules validator가 다시 계산하지 않게 만드는 것을 뜻한다.
+- 화면 스트림이 이미 가지고 있는 모집 ID·회차·revision·방장 여부는 후보 선별에 재사용한다.
+  후보를 찾기 위한 새 전역 쿼리, 그룹별 추가 listener와 전체 데이터 순회를 만들지 않는다.
+- Firestore 원본 재확인과 쓰기는 최종 원자 Transaction 한 곳에 모은다. 화면 사전 확인은 UX
+  용도이며 Rules와 Transaction의 최종 판정을 대신하지 않는다.
+- 정상 현재 회차 방에는 보정 명령을 호출하지 않는다. 실패한 같은
+  `recruitmentId + targetCycleKey + revision`은 snapshot 알림마다 자동 반복하지 않고,
+  revision 변경·명시적 새로고침·앱 재진입
+  중 하나가 있을 때만 다시 시도한다.
+- Rules는 active binding, 명령 주체, Character 소유, 그룹 접근, 방 상태·정원, 주간 완료·점유,
+  원자 결과 정합성처럼 기능에 필요한 조건은 유지한다. 동일 사실을 recruitment, membership,
+  `raidState`, event, listing이 각각 긴 교차문서 순회로 재검증하는 중복은 제거 대상으로 본다.
+- Rules 단순화는 새 validator를 기존 긴 OR에 계속 추가하는 방식으로 하지 않는다. 실제 Router/DI에
+  연결된 writer를 먼저 대조하고, 사용되지 않는 legacy 분기와 중복 검증을 교체·제거한 최종
+  구조에서 표현식 수와 기존 기능을 함께 검증한다.
+
+### 다음 구현 순서
+
+1. F6-I는 기존 reconciler 결과를 추가 Firestore 호출 없이 소비해 실제 실패 종류를 먼저 확정한다.
+   원인 확인 전에는 Rules·listing·회차 계산을 추측 수정하지 않는다.
+2. A2-B는 기존 참가자 제거 Transaction의 listing update 필드만 원본 모집과 맞춘다. 추가 문서
+   읽기·쓰기 없이 추방·탈퇴 후 목록 재노출을 복구한다.
+3. F6-I의 확정 원인을 기존 `advanceCycle` 경로 안에서 최소 수정하고 승계 후 명령을 확인한다.
+4. A3는 앞선 두 결함과 섞지 않고 실제 active writer/Rules 분기를 대조한 뒤 중복 검증을 교체한다.
+   그룹 최초 가입·재가입·신청 승인이 같은 구조로 통과해야 완료한다.
+5. 각 구간은 표적 계약과 필요한 최대 8인 Rules 경계만 자동 검증하고, 최종 UX는 사용자가 실기기에서
+   확인한다. 한 구간이 실패해도 다음 구간의 조건을 임의로 완화하지 않는다.
 
 ### 작업 그룹 A — 직접 Rules 결함 최소 수정
 
@@ -49,6 +80,27 @@
 - 공개방은 listing 쓰기를 새로 추가하지 않는다. 누락 listing 자동 생성이나 전체 Snapshot 덮어쓰기도 이번 수정에 포함하지 않는다.
 
 **A2 구현 상태(2026-09-23):** 그룹 listing update에 `validAtomicMemberRemovalListingUpdate`를 연결했다. 같은 Transaction의 모집 전후 문서가 기존 참가자 제거 검증을 통과하고 경로 `groupId`와 그룹 공개 범위가 유지될 때만 listing의 `memberCount`, `sourceRevision`, `updatedAt` 세 필드 변경을 허용한다. 변경 후 값은 모집의 인원수·revision·`request.time`과 일치해야 한다. 제품 Repository는 이미 같은 세 필드를 쓰므로 변경하지 않았다. 방장 추방, 본인 탈퇴와 listing 인원 위조 거절 fixture를 전체 production Rules Emulator 스크립트에 추가했다. Repository·Router·Rules 정적 계약 5건, JS 문법과 `git diff --check`가 통과했다. 로컬 Emulator는 A1에서 Rules 로딩 전 503이 반복 확인되어 같은 실패 명령을 재실행하지 않았으며, A1·A2 실제 Rules 허용·거절과 기존 전체 회귀는 CI 격리 환경에서 확인한다.
+
+**A2-B 추가 확인 — 참가자 제거 후 listing 잔존 필드(2026-09-28):** 문제 방
+`eYjsz5OqzcppZCUK3Bts`의 원본 모집은 추방 후 방장 1인, revision 9로 정상 전환됐지만 그룹
+listing은 `sourceRevision=9`, `memberCount=1`만 바뀌고 제거된 Player가
+`memberPlayerIds/partySlots/raidStateTargets`에 남았으며 역할 count도 이전 값이었다. 그룹 모집
+목록은 listing의 `memberPlayerIds`를 사용해 본인 참가 방을 제외하므로, 추방·탈퇴한 사용자가
+해당 방을 재가입 후보 목록에서 보지 못할 수 있다. 이는 재가입 Rules 1,000식과 별개로 재가입
+진입 UX를 막는 직접 결함이다.
+
+수정은 기존 참가자 제거 Transaction에서 추가 읽기·새 문서·후처리를 만들지 않고, 이미 계산한
+`PartyAtomicMemberRemovalWritePlan.recruitmentPatch`의 제거 후 값을 같은 listing update에 포함한다.
+최소 동기화 대상은 `memberPlayerIds`, `partySlots`, `raidStateTargets`, `memberCount`,
+`dealerCount`, `supportCount`, `nonGroupMemberCount`, `hasAvailableSlot`이며, 방장 승계가 발생하면
+`leaderPlayerId/leaderCharacterNameSnapshot/leaderClassNameSnapshot`도 함께 맞춘다.
+`sourceRevision/updatedAt`은 기존처럼 유지한다. Rules는 이미 읽는 `getAfter(recruitment)` 결과와
+위 필드만 직접 일치시키며, 별도 모집 조회나 전체 Map 재검증을 추가하지 않는다.
+
+최소 검증은 일반 멤버 추방, 본인 탈퇴와 방장 승계 각각에서 원본 모집과 listing의 위 필드가
+같은지 확인하고, 추방된 그룹원이 방을 목록에서 다시 볼 수 있는지 확인한다. 공개방은 listing
+쓰기가 없고 마지막 1인 종료는 기존 listing delete를 유지한다. 이 수정은 재가입 Transaction
+자체의 Rules 1,000식 해결을 대신하지 않는다.
 
 #### A3. 자동 검증
 
@@ -81,6 +133,26 @@
 **C7 Spark 데이터 계약 대안 설계(2026-09-27):** 유료 Functions 대안은 기존 합의상 제외한다. 다음 후보는 schema v3 모집 Aggregate의 확장 `partySlots`와 개인 `raidState`, application, party event만 가입의 원자 권위 상태로 유지하고, 하위 membership과 그룹 listing을 복구 가능한 읽기 Projection으로 내리는 방식이다. 그룹 listing은 발견 pointer로 남기며 실제 인원·revision은 recruitment에서 읽는다. 기존 v2 방은 멤버·점유를 바꾸지 않는 별도 멱등 migration 뒤 v3 가입을 재시도한다. 제품 코드를 바로 수정하지 않고 먼저 격리 proof에서 직접 가입 3-write·승인 4-write, 위조·누락 거절, 8인 문서 크기·Rules 예산과 v2 migration을 검증한다. proof 및 개발자의 목록 추가 읽기·Projection 지연·앱 전환 UX 승인을 모두 통과하기 전에는 채택하지 않는다. 상세 계약은 [`BUG_022_REMAINING_FIX_DESIGN.md`](../architecture/BUG_022_REMAINING_FIX_DESIGN.md) C7이다.
 
 **C7 proof 결과·폐기(2026-09-27):** 운영 Rules·Flutter와 분리된 직접 재가입 3-write proof를 추가하고, 기존 Aggregate 앞부분 exact preservation과 비그룹원·block·타인 Character·주간 Claim·자리/count·핵심 문서 누락 거절을 포함했다. Actions `36326380626`의 모집 단건 읽기 하네스 불일치와 `36326546696`의 배열 내부 `serverTimestamp()` 제약을 실제 제품 계약에 맞게 교정했다. 최종 `36326680954`에서 정상 그룹 직접 재가입 3-write 자체가 `maximum of 1000 expressions`로 거절됐다. 사전 폐기 조건에 따라 승인 4-write·8인 크기·v2 migration·제품 구현은 중단한다. 운영 `firestore.rules`, Flutter 제품 코드와 운영 데이터는 변경하지 않았고 배포도 없다. 권한·소유권·주간 완료·그룹 접근·원자성 조건 또는 실패 회귀를 줄여 통과시키지 않는다.
+
+**A3 재개 기준 — 기능·Rules 구조 간소화(2026-09-28):** 재가입만 통과시키는 새 예외 validator나
+추가 조회를 덧붙이지 않는다. 먼저 실제 Router/DI에 연결된 생성·신청·승인·즉시 가입 writer와
+각 Firestore match의 allow 분기를 1:1로 대조한다. 운영 writer가 사용하지 않는 legacy·revert 잔여
+분기와 동일 정책의 중복 교차문서 검증을 표시한 뒤, 가입의 필수 조건을 다음 한 묶음으로 유지한다.
+
+1. active binding과 실제 actor
+2. 활성 모집·현재 회차·revision·정원과 자리
+3. 현재 Character 소유와 동일 레이드 참가·완료 충돌 부재
+4. 그룹 전용방의 현재 그룹 membership
+5. recruitment와 membership·`raidState`·event·listing 결과의 동일 Player·Character·revision 결합
+
+이 다섯 조건을 문서마다 처음부터 반복 계산하지 않는다. 모집의 명령 전이가 기능 정책을 한 번
+판정하고, 나머지 문서는 같은 Transaction의 결정된 결과와 경로·revision만 결합하도록 기존 긴
+분기를 **교체**한다. 기존 OR에 새 분기를 추가하는 과거 실패 접근은 반복하지 않는다. 단독 문서
+위조, 타인 Character, 비그룹원, 완료·점유 충돌은 계속 거절한다. 변경 전후 Rules 접근 호출과
+표현식 수를 비교하고, 최초 그룹 가입·탈퇴 후 재가입·신청 승인이 같은 구조로 통과해야 한다.
+이를 위해 새 컬렉션, 추가 Firestore 읽기, 별도 Transaction, Functions와 schema v3를 도입하지
+않는다. 실제 active writer를 제거해야 하거나 필수 다섯 조건을 유지하고도 한도를 넘으면 임의로
+보안을 더 쌓거나 줄이지 않고 현재 Spark 구조의 한계로 다시 결정한다.
 
 #### A4. 배포와 실기기 확인
 
@@ -988,6 +1060,98 @@ D6·F6-C·F6-E는 코드·표적 검증·실기기 근거로 닫았다. 다음 F
 - 앱을 재실행하지 않아도 경계 후 새 모집은 새 회차로 생성되고, 회차 기반 목록·표시는 중복 구독 없이 새 키로 전환된다.
 - 기존 방의 저장 경계와 F6-F 1회성 `incompleteEnded`, F6-G 단일 고아 정리, 완료·해산·개인 완료, 공개/그룹 방의 기존 흐름은 변경하지 않는다.
 - 자동 검증·Rules 게시·사용자 실기기 확인 전에는 F6-H 완료, BUG-022 전체 종료 또는 `dev` 통합으로 표기하지 않는다.
+
+#### F6-I — 그룹 반복방의 기존 회차 승계 실패 (원인 재확인·구현 전)
+
+**확인된 현상(2026-09-28):** 그룹 반복방 `eYjsz5OqzcppZCUK3Bts`는
+`continueTogether=true`, `status=active`인 상태로 이전 회차
+`2026-09-21`에 남았고 `advanceCycle` 이벤트가 없었다. 같은 조건의 공개 반복방
+`9R4u8gHNSUwMDJcBKh9Z`는 현재 회차 `2026-09-28`로 정상 승계됐다. 문제 방 원본 모집은
+revision 9, 방장 1인과 방장 `raidState`를 유지하지만 그룹 listing에는 제거된 두 번째 멤버와
+과거 party slot·target이 남아 있다.
+
+**원인 재검토(2026-09-28):** 최초에 “그룹 listing의 현재 회차 필터에서 먼저 빠져 승계 ID가
+전달되지 않았다”고 판단했으나 현재 코드와 맞지 않아 철회한다. 레이드 현황은 listing이 아니라
+원본 `recruitments`를 방장·멤버 조건으로 구독한다. `expiredRecurring`은 진행 중 목록에 유지되고,
+ViewModel 변경 listener가 `LazyCycleReconciler`를 호출한다. 따라서 새 listing 탐색 경로를 만드는
+것은 불필요한 조회·구조 추가이며 실제 원인을 가릴 수 있다. 현재 확정된 것은 승계 성공 이벤트가
+없다는 사실까지다. 기존 호출이 시작되지 않았는지, 시작 후 `permissionDenied/invalidData/
+temporarilyUnavailable` 중 어디에서 실패했는지는 반환 결과를 버리고 있어 아직 확정되지 않았다.
+
+**단순 구조 목표:** 확인 범위나 회귀 보호를 줄인다는 뜻이 아니다. 목록·상세·참가 상태·그룹
+Projection과 Rules에 미치는 영향은 모두 확인하되, 같은 문제를 처리하는 새 상태·새 복구 명령·
+별도 백그라운드 시스템을 추가하지 않는다. 이미 구현된 단일
+`ActiveRaidSummary → LazyCycleReconciler → advanceCycle` 흐름에서 실패 지점을 확인하고 그 한
+곳만 바로잡는다. 방의 회차 계산, 승계 Transaction, 파티장 권한과 참가자 state 생성 규칙은
+가능한 한 기존 구현을 그대로 사용한다. 기존 구조 때문에 여러 연결 지점을 고쳐야 한다면 직접
+영향 구간은 함께 수정하되, 동일 판정을 화면·Repository·Rules에 각각 새로 복제하지 않는다.
+
+**포함 범위:**
+
+1. `ActiveRaidFilterViewModel`이 이미 수행하는 회차 분류에서 `expiredRecurring` ID·revision·방장
+   여부를 별도 후보로 보존한다. 현재 회차 방 전체를 reconciler에 보내지 않는다.
+2. 기존 `LazyCycleReconciler`의 반환 결과를 ID와 함께 소비해 최초 실패 종류를 남긴다. 이 확인을
+   위해 새 Firestore 읽기나 쓰기, event 문서 또는 운영용 상태 필드를 추가하지 않는다.
+3. 현재 Player가 모집의 방장인 만료 반복방에만 기존 방장 전용 승계 명령을 시도한다.
+   파티원에게 새 권한을 주거나 Rules 조건을 완화하지 않는다.
+4. 같은 `ID + 목표 회차 + revision`의 중복·실패 반복 호출을 합친다. 여러 후보는 한꺼번에
+   무제한 실행하지 않는다.
+5. 확인된 실패가 원본 모집·참가 state·listing·Rules 중 한 곳의 실제 불일치이면 기존
+   `advanceCycle` Transaction 안에서 그 직접 원인만 수정한다. 별도 복구 Transaction을 만들지
+   않는다.
+6. 승계 성공 뒤에는 현재 목록 필터와 상세 화면이 갱신된 원본 데이터를 받아 기존 방식으로
+   표시·동작한다.
+
+**독립 문제로 분리할 범위:** 아래 항목은 이번 결함과 직접 인과관계가 없다는 확인 없이 단순히
+무시하지 않는다. 조사 결과 직접 원인이거나 F6-I 수정으로 깨지는 구간이면 필요한 범위에 포함하고,
+그렇지 않은 독립 문제일 때만 별도 작업으로 유지한다.
+
+- 후보 발견을 위한 신규 `raidListings` listener·추가 recruitment N건 조회
+- 원인과 무관한 `raidListings` 전체 스키마 재설계, 전체 Snapshot 일괄 복구 또는 과거 문서 migration
+- Cloud Functions, 예약 실행, 전역 `recruitments` 순회와 유료 플랜 기능
+- 방장이 앱을 실행하지 않아도 서버가 자동으로 회차를 넘기는 기능
+- 파티원에게 `advanceCycle` 권한 부여, 기존 Rules 권한·소유권·완료 조건 완화
+- 그룹방 직접 재가입 1,000식 문제와 재설치·원정대 소유권 이전 고아 정리
+
+**구조 선택 기준:**
+
+- 만료 반복방 판정은 기존 공용 회차 정책 한 곳을 사용한다.
+- 레이드 현황의 기존 원본 모집 snapshot을 후보 입력으로 사용하고, 최종 상태 판정과 쓰기는 기존
+  승계 Transaction 한 곳에서 수행한다.
+- 기존 listing 불일치가 승계 누락의 직접 원인으로 확인되면 필요한 동기화는 같은 승계
+  Transaction 안에서 처리한다. 이를 피하려고 후처리·재시도용 별도 상태를 추가하지 않는다.
+- Rules 변경이 필요 없다고 미리 단정하지 않는다. 기존 승계 쓰기 계약과 실제 쓰기가 다르면
+  그 불일치만 수정하고 권한·소유권·완료 조건은 유지한다.
+- 영향 분석에서 발견한 회귀는 숨기거나 범위 밖으로 밀어내지 않는다. 현재 수정의 직접 결과이면
+  같은 구간에서 해결하고, 독립 결함이면 근거와 사용자 영향을 기록해 별도로 결정한다.
+
+**기존 기능 보호:**
+
+- 현재 회차 방은 후보가 아니므로 아무 쓰기도 하지 않는다.
+- `continueTogether=false`인 1회성 방은 F6-F의 `incompleteEnd` 경로를 그대로 사용한다.
+- 공개 반복방의 기존 발견·승계 경로는 변경하지 않는다.
+- 만석, 모집 일시 중단과 이번 회차 완료 여부는 화면 노출 조건일 뿐, 이전 회차 반복방을
+  발견하는 조건으로 재사용하지 않는다. 최종 승계 가능 여부는 원본 모집과 기존 Transaction이
+  판단한다.
+- 승계는 기존 계약의 모집 문서·참가자 `raidState`·그룹 listing 원자 경계를 따른다. listing
+  불일치가 이번 승계 실패와 무관하다고 확인된 경우에만 전면 정합성 수정은 분리한다.
+
+**최소 검증:**
+
+1. 만료된 그룹 반복방이 기존 active snapshot에서 승계 후보로 전달되고 결과가 유실되지 않는다.
+2. 현재 회차 방은 보정 호출 대상이 아니며, 그룹 1회성 방은 기존 F6-F 경로만 사용한다. 공개
+   반복방은 동일 공용 후보 판정을 계속 사용한다.
+3. 비방장 사용자는 승계 쓰기를 시도하지 않는다.
+4. 같은 방·회차·revision이 목록 갱신으로 여러 번 발견되어도 실패 요청까지 반복 실행되지 않는다.
+5. 사용자 실기기에서는 그룹 반복방 한 건으로 경계를 넘긴 뒤 `i` 표시, 그룹 모집 목록 노출,
+   Character 변경·자리 이동·추방·완료를 확인한다. 공개 반복방과 1회성 방 전체 조합을 다시
+   반복 테스트하지 않는다.
+
+**완료 조건:** 그룹 반복방의 기존 승계 호출이 성공하고, 승계 후 기존 기능과 직접 영향 구간이
+정상 작동하는 것을 확인한다. 현재 회차 방에 대한 불필요한 원본 재조회와 같은 실패 요청의 반복
+Rules 평가가 늘지 않아야 한다. 기존 구조상 필요한 연결 수정은 누락하지 않되, 새 데이터 모델·
+새 권한·새 백그라운드 처리처럼 구조를 더 복잡하게 만드는 선택이 정말 필요해지면 우회 구현을
+추가하지 않고 근거와 대안을 먼저 검토한다.
 
 #### 후속 백로그 — 안전한 테스트 데이터 정리 도구 (F6 범위 밖)
 
