@@ -2282,12 +2282,43 @@ service cloud.firestore {
           recruitmentBefore,
           recruitmentAfter
         )
-        && newData.diff(oldData).affectedKeys().hasOnly([
-          'memberCount', 'sourceRevision', 'updatedAt'
-        ])
         && newData.memberCount == recruitmentAfter.memberCount
         && newData.sourceRevision == recruitmentAfter.revision
-        && newData.updatedAt == request.time;
+        && newData.updatedAt == request.time
+        && (
+          // 구버전 앱의 기존 3필드 요청은 같은 허용 범위를 유지한다.
+          newData.diff(oldData).affectedKeys().hasOnly([
+            'memberCount', 'sourceRevision', 'updatedAt'
+          ])
+          || (
+            newData.diff(oldData).affectedKeys().hasOnly([
+              'memberCount', 'sourceRevision', 'updatedAt',
+              'memberPlayerIds', 'partySlots', 'raidStateTargets',
+              'dealerCount', 'supportCount', 'nonGroupMemberCount',
+              'hasAvailableSlot', 'leaderPlayerId',
+              'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot'
+            ])
+            && newData.memberPlayerIds == recruitmentAfter.memberPlayerIds
+            && newData.partySlots == recruitmentAfter.partySlots
+            && newData.raidStateTargets == recruitmentAfter.raidStateTargets
+            && newData.dealerCount == recruitmentAfter.dealerCount
+            && newData.supportCount == recruitmentAfter.supportCount
+            && newData.nonGroupMemberCount == recruitmentAfter.nonGroupMemberCount
+            && newData.hasAvailableSlot == recruitmentAfter.hasAvailableSlot
+            && (
+              (recruitmentBefore.leaderPlayerId == recruitmentAfter.leaderPlayerId
+                && !newData.diff(oldData).affectedKeys().hasAny([
+                  'leaderPlayerId', 'leaderCharacterNameSnapshot',
+                  'leaderClassNameSnapshot'
+                ]))
+              || (newData.leaderPlayerId == recruitmentAfter.leaderPlayerId
+                && newData.leaderCharacterNameSnapshot
+                  == recruitmentAfter.leaderCharacterNameSnapshot
+                && newData.leaderClassNameSnapshot
+                  == recruitmentAfter.leaderClassNameSnapshot)
+            )
+          )
+        );
     }
 
     function validPersonalCompletionSuccessor(oldData, newData) {

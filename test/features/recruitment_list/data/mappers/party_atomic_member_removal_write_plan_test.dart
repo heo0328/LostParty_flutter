@@ -55,6 +55,41 @@ void main() {
     });
     expect(plan.recruitmentPatch['leaderPlayerId'], 'second');
     expect(plan.recruitmentPatch['leaderCharacterNameSnapshot'], '두번째');
+    expect(plan.listingPatch['leaderPlayerId'], 'second');
+    expect(plan.listingPatch['leaderCharacterNameSnapshot'], '두번째');
+    expect(plan.listingPatch['leaderClassNameSnapshot'], '버서커');
+    expect(plan.maximumWriteCount, 5);
+  });
+
+  test('그룹 목록은 제거 후 원본 구성과 같은 값만 전달하고 주차·모집 설정은 보존한다', () {
+    final plan = PartyAtomicMemberRemovalWritePlan(
+      aggregate: _aggregate(visibility: 'group'),
+      rules: rules,
+      targetPlayerId: 'third',
+      actorPlayerId: 'leader',
+      type: PartyAtomicMemberRemovalType.kick,
+      raidId: 'raid-1',
+      serverTimestamp: timestamp,
+    );
+    const fields = [
+      'memberPlayerIds',
+      'partySlots',
+      'raidStateTargets',
+      'memberCount',
+      'dealerCount',
+      'supportCount',
+      'nonGroupMemberCount',
+      'hasAvailableSlot',
+    ];
+    expect(
+      plan.listingPatch.keys,
+      unorderedEquals([...fields, 'sourceRevision', 'updatedAt']),
+    );
+    for (final field in fields) {
+      expect(plan.listingPatch[field], plan.recruitmentPatch[field]);
+    }
+    expect(plan.listingPatch['sourceRevision'], 5);
+    expect(plan.listingPatch['updatedAt'], same(timestamp));
     expect(plan.maximumWriteCount, 5);
   });
 
@@ -166,8 +201,7 @@ PartyAggregateSlot _slot(
   PartyRole role,
   int slotIndex, {
   bool countedAsNonGroupMember = false,
-}
-) => PartyAggregateSlot(
+}) => PartyAggregateSlot(
   playerId: playerId,
   characterId: characterId,
   role: role,

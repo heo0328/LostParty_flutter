@@ -49,6 +49,27 @@ class PartyAtomicMemberRemovalWritePlan {
   final _PartyAtomicMemberRemovalValues _values;
 
   Map<String, Object?> get recruitmentPatch => _values.recruitmentPatch;
+
+  /// 제거 후 값은 모집 patch에서 가져오며 목록에서 별도로 재계산하지 않는다.
+  Map<String, Object?> get listingPatch => {
+    for (final key in const [
+      'memberPlayerIds',
+      'partySlots',
+      'raidStateTargets',
+      'memberCount',
+      'dealerCount',
+      'supportCount',
+      'nonGroupMemberCount',
+      'hasAvailableSlot',
+      'leaderPlayerId',
+      'leaderCharacterNameSnapshot',
+      'leaderClassNameSnapshot',
+    ])
+      if (recruitmentPatch.containsKey(key)) key: recruitmentPatch[key],
+    'sourceRevision': recruitmentPatch['revision'],
+    'updatedAt': recruitmentPatch['updatedAt'],
+  };
+
   Map<String, Object?> get event => _values.event;
   String get targetPlayerId => _values.targetPlayerId;
   String get targetRaidStateId => _values.targetRaidStateId;
@@ -99,8 +120,7 @@ class PartyAtomicMemberRemovalWritePlan {
       throw StateError('마지막 파티원은 원자 해산 명령을 사용해야 합니다.');
     }
     final target = aggregate.partySlots[targetIndex];
-    if (target.countedAsNonGroupMember &&
-        aggregate.nonGroupMemberCount == 0) {
+    if (target.countedAsNonGroupMember && aggregate.nonGroupMemberCount == 0) {
       throw StateError('비그룹 파티원 집계가 일치하지 않습니다.');
     }
     final remaining = [...aggregate.partySlots]..removeAt(targetIndex);

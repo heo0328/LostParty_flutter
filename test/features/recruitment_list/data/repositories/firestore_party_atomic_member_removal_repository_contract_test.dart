@@ -44,11 +44,14 @@ void main() {
     expect(repository, contains('transaction.delete(raidStateRef)'));
   });
 
-  test('그룹방 참가자 제거는 listing의 인원·revision·시각만 함께 갱신한다', () {
+  test('그룹방 참가자 제거는 같은 계획의 참가 구성으로 listing을 갱신한다', () {
     expect(repository, contains(".collection('raidListings')"));
-    expect(repository, contains("'memberCount': aggregate.memberCount - 1"));
-    expect(repository, contains("'sourceRevision': aggregate.revision + 1"));
-    expect(repository, contains("'updatedAt': now"));
+    expect(
+      repository,
+      contains('plan.listingPatch,'),
+    );
+    expect(repository, isNot(contains('transaction.get(listingRef)')));
+    expect(repository, isNot(contains('transaction.set(listingRef')));
 
     final start = rules.indexOf(
       'function validAtomicMemberRemovalListingUpdate(',
@@ -63,8 +66,8 @@ void main() {
       listingRule,
       contains(
         "newData.diff(oldData).affectedKeys().hasOnly([\n"
-        "          'memberCount', 'sourceRevision', 'updatedAt'\n"
-        '        ])',
+        "            'memberCount', 'sourceRevision', 'updatedAt'\n"
+        '          ])',
       ),
     );
     expect(
@@ -75,6 +78,23 @@ void main() {
       listingRule,
       contains('newData.sourceRevision == recruitmentAfter.revision'),
     );
+    for (final field in [
+      'memberPlayerIds',
+      'partySlots',
+      'raidStateTargets',
+      'dealerCount',
+      'supportCount',
+      'nonGroupMemberCount',
+      'hasAvailableSlot',
+      'leaderPlayerId',
+      'leaderCharacterNameSnapshot',
+      'leaderClassNameSnapshot',
+    ]) {
+      expect(
+        listingRule.replaceAll(RegExp(r'\s+'), ' '),
+        contains('newData.$field == recruitmentAfter.$field'),
+      );
+    }
     expect(
       rules,
       contains(

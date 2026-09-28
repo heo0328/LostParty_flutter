@@ -715,43 +715,71 @@ async function repositionApprovedMemberTxn(
 async function removeApprovedMemberTxn(
   db,
   actorPlayerId,
-  { tamperListingCount = false } = {},
+  {
+    tamperListingCount = false, legacyListingOnly = false,
+    listingOverrides = {}, targetPlayerId = joinerPlayerId,
+    expectedRevision = null,
+  } = {},
 ) {
   return runTransaction(db, async (tx) => {
     const recruitmentRef = doc(db, 'recruitments', recruitmentId);
-    const memberRef = doc(db, 'recruitments', recruitmentId, 'members', joinerPlayerId);
-    const stateRef = doc(db, 'players', joinerPlayerId, 'raidStates', `${joinerCharacterId}_${raidId}`);
     const recruitment = (await tx.get(recruitmentRef)).data();
+    if (expectedRevision !== null && recruitment.revision !== expectedRevision) {
+      throw new Error('stale removal revision');
+    }
+    const target = recruitment.partySlots.find((slot) => slot.playerId === targetPlayerId);
+    const memberRef = doc(db, 'recruitments', recruitmentId, 'members', targetPlayerId);
+    const stateRef = doc(db, 'players', targetPlayerId, 'raidStates', `${target.characterId}_${raidId}`);
     await tx.get(memberRef);
+    const remainingSlots = recruitment.partySlots.filter((slot) => slot.playerId !== targetPlayerId);
+    const successorRef = targetPlayerId === recruitment.leaderPlayerId
+      ? doc(db, 'recruitments', recruitmentId, 'members', remainingSlots[0].playerId) : null;
+    const successor = successorRef ? (await tx.get(successorRef)).data() : null;
     const nextRevision = recruitment.revision + 1;
-    const selfLeave = actorPlayerId === joinerPlayerId;
+    const selfLeave = actorPlayerId === targetPlayerId;
     const eventType = selfLeave ? 'memberLeft' : 'memberKicked';
     const eventId = `${eventType}_${recruitmentId}_${nextRevision}`;
+    const composition = {
+      memberPlayerIds: remainingSlots.map((slot) => slot.playerId),
+      memberCount: remainingSlots.length,
+      dealerCount: remainingSlots.filter((slot) => slot.role === 'dealer').length,
+      supportCount: remainingSlots.filter((slot) => slot.role === 'support').length,
+      partySlots: remainingSlots,
+      raidStateTargets: recruitment.raidStateTargets.filter((target) => target.playerId !== targetPlayerId),
+      nonGroupMemberCount: recruitment.nonGroupMemberCount - (target.countedAsNonGroupMember ? 1 : 0),
+      hasAvailableSlot: true,
+      ...(successor ? {
+        leaderPlayerId: successor.playerId,
+        leaderCharacterNameSnapshot: successor.characterNameSnapshot,
+        leaderClassNameSnapshot: successor.classNameSnapshot,
+      } : {}),
+    };
     tx.update(recruitmentRef, {
-      ...lifecycleMarkerConsumptionPatch(recruitment),
-      memberPlayerIds: [playerId], memberCount: 1, dealerCount: 1,
-      supportCount: 0, partySlots: recruitment.partySlots.filter((slot) => slot.playerId !== joinerPlayerId),
-      raidStateTargets: recruitment.raidStateTargets.filter((target) => target.playerId !== joinerPlayerId),
-      nonGroupMemberCount: 0, hasAvailableSlot: true,
+      ...lifecycleMarkerConsumptionPatch(recruitment), ...composition,
       revision: nextRevision, updatedAt: serverTimestamp(),
     });
     tx.delete(memberRef);
     tx.delete(stateRef);
+    if (successorRef) {
+      tx.update(successorRef, { canApproveApplications: true, updatedAt: serverTimestamp() });
+    }
     if (recruitment.visibility === 'group') {
       tx.update(
         doc(db, 'groups', recruitment.groupId, 'raidListings', recruitmentId),
         {
-          memberCount: tamperListingCount ? 7 : 1,
+          ...(legacyListingOnly ? {} : composition),
+          memberCount: tamperListingCount ? 99 : remainingSlots.length,
           sourceRevision: nextRevision,
           updatedAt: serverTimestamp(),
+          ...listingOverrides,
         },
       );
     }
     tx.set(doc(db, 'partyEvents', eventId), {
       schemaVersion: 1, eventId, recruitmentId, type: eventType,
       commandId: eventId, commandRevision: nextRevision,
-      audiencePlayerIds: [playerId, joinerPlayerId], actorPlayerId,
-      targetPlayerId: joinerPlayerId, occurredAt: serverTimestamp(),
+      audiencePlayerIds: recruitment.memberPlayerIds, actorPlayerId,
+      targetPlayerId, occurredAt: serverTimestamp(),
     });
   });
 }
@@ -762,6 +790,106 @@ async function kickApprovedMemberTxn(db, options = {}) {
 
 async function leaveApprovedRoomTxn(db, options = {}) {
   return removeApprovedMemberTxn(db, joinerPlayerId, options);
+}
+
+async function verifyMemberRemovalListings(testEnv, db, applicantDb) {
+  const listingPath = ['groups', 'group-room-1', 'raidListings', recruitmentId];
+  const compositionFields = [
+    'memberPlayerIds', 'partySlots', 'raidStateTargets', 'memberCount',
+    'dealerCount', 'supportCount', 'nonGroupMemberCount', 'hasAvailableSlot',
+  ];
+  async function seed({ expanded = false } = {}) {
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    await assertSucceeds(approvePublicApplicationTxn(db));
+    if (expanded) await seedExpandedApprovedRoom(testEnv, 8);
+    await seedGroupLinkedRoom(testEnv, db, { includeJoinerGroupMember: true });
+  }
+  async function checkProjection(reader, leaderChanged = false) {
+    const source = (await getDoc(doc(reader, 'recruitments', recruitmentId))).data();
+    const listing = (await getDoc(doc(reader, ...listingPath))).data();
+    const fields = [...compositionFields, ...(leaderChanged ? [
+      'leaderPlayerId', 'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot',
+    ] : [])];
+    for (const field of fields) {
+      if (JSON.stringify(listing[field]) !== JSON.stringify(source[field])) {
+        throw new Error(`A2-B projection mismatch: ${field}`);
+      }
+    }
+    if (listing.sourceRevision !== source.revision) throw new Error('A2-B revision mismatch');
+  }
+  async function checkRollback() {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const admin = context.firestore();
+      const source = (await getDoc(doc(admin, 'recruitments', recruitmentId))).data();
+      const listing = (await getDoc(doc(admin, ...listingPath))).data();
+      const member = await getDoc(doc(admin, 'recruitments', recruitmentId, 'members', joinerPlayerId));
+      const state = await getDoc(doc(admin, 'players', joinerPlayerId, 'raidStates', `${joinerCharacterId}_${raidId}`));
+      if (source.revision !== 3 || source.memberCount !== 2 || !member.exists()
+        || !state.exists() || (listing && listing.memberCount !== 2)) {
+        throw new Error('A2-B failed request was not atomic');
+      }
+    });
+  }
+
+  await seed({ expanded: true });
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(doc(context.firestore(), ...listingPath), {
+      memberPlayerIds: ['stale-player'], partySlots: [], raidStateTargets: [],
+      dealerCount: 0, supportCount: 0, nonGroupMemberCount: 99,
+    });
+  });
+  await assertSucceeds(kickApprovedMemberTxn(db));
+  await checkProjection(db);
+  console.log('PASS: A2-B eight-member removal repairs stale listing composition');
+
+  await seed();
+  for (const [field, value] of Object.entries({
+    memberPlayerIds: [], partySlots: [], raidStateTargets: [], memberCount: 99,
+    dealerCount: 99, supportCount: 99, nonGroupMemberCount: 99,
+    hasAvailableSlot: false, leaderPlayerId: 'forged-leader',
+    leaderCharacterNameSnapshot: 'forged-name', leaderClassNameSnapshot: 'forged-class',
+    currentCycleKey: '1900-01-01', manualRecruitmentEnabled: false,
+  })) {
+    await assertFails(kickApprovedMemberTxn(db, { listingOverrides: { [field]: value } }));
+    await checkRollback();
+  }
+  await assertFails(updateDoc(doc(db, ...listingPath), {
+    memberPlayerIds: [playerId], memberCount: 1, sourceRevision: 4,
+    updatedAt: serverTimestamp(),
+  }));
+  await checkRollback();
+  console.log('PASS: A2-B forged composition/leader/cycle/settings and standalone writes denied atomically');
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await deleteDoc(doc(context.firestore(), ...listingPath));
+  });
+  await assertFails(kickApprovedMemberTxn(db));
+  await checkRollback();
+  console.log('PASS: A2-B missing listing rolls back removal');
+
+  await seed();
+  await assertSucceeds(kickApprovedMemberTxn(db, { legacyListingOnly: true }));
+  console.log('PASS: A2-B legacy three-field request remains compatible');
+
+  await seed();
+  await assertSucceeds(removeApprovedMemberTxn(db, playerId, { targetPlayerId: playerId }));
+  await checkProjection(applicantDb, true);
+  console.log('PASS: A2-B leader leave updates successor listing');
+
+  await seed();
+  const results = await Promise.allSettled([
+    kickApprovedMemberTxn(db, { expectedRevision: 3 }),
+    kickApprovedMemberTxn(db, { expectedRevision: 3 }),
+  ]);
+  if (results.filter((result) => result.status === 'fulfilled').length !== 1) {
+    throw new Error('A2-B duplicate removal must commit exactly once');
+  }
+  await checkProjection(db);
+  console.log('PASS: A2-B same-revision duplicate removal commits once');
 }
 
 async function directRejoinAfterKickTxn(db) {
@@ -1878,6 +2006,14 @@ async function main() {
     await assertFails(disbandApprovedRoomTxn(db, { skipGroupUpdate: true }));
     console.log('PASS: missing group close update denied');
 
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    await assertSucceeds(approvePublicApplicationTxn(db));
+    await seedGroupLinkedRoom(testEnv, db);
+    await verifyMemberRemovalListings(testEnv, db, applicantDb);
     await testEnv.clearFirestore();
     await seedBase(testEnv);
     await seedJoiner(testEnv);

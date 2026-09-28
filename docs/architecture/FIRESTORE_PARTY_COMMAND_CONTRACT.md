@@ -106,6 +106,19 @@ players/{playerId}/activeRaidAssignments/{characterId_raidId}
 
 #### 원자성 및 단일 기준
 
+**현재 원자 참가자 제거 경로의 적용 범위(2026-09-29, A2-B):** 아래 전체 Snapshot
+동기화는 장기 기준이다. 현재 운영 Router의 `PartyAtomicMemberRemovalWritePlan` 경로는
+동일 Transaction의 기존 listing `update`에 원본 patch의 `memberPlayerIds`, `partySlots`,
+`raidStateTargets`, `memberCount`, `dealerCount`, `supportCount`, `nonGroupMemberCount`,
+`hasAvailableSlot`을 전달하며, 방장 승계 시 leader ID·이름·직업도 전달한다.
+정렬 시각은 함께 갱신하고 원본 revision은 `sourceRevision`으로 기록한다. listing 자체
+revision·회차·모집 설정은 변경하지 않는다. 이 경로는 listing 누락 시 생성하지 않으며
+제거 전체가 실패한다. 별도 조회·비동기 보정·일괄 backfill을 추가하지 않는다.
+Rules는 확장 patch의 구성 값과 원본 변경 후 값을 비교하되 구버전 앱의 기존
+memberCount/sourceRevision/updatedAt 세 필드 요청도 종전대로 허용한다. 이 구버전 경로는
+잔존 구성을 복구하지 않으며 앱 전환 전까지 결함이 남을 수 있다. A2-B 운영 반영 상태는
+`NEXT_WORK.md`를 따른다.
+
 - `recruitments/{recruitmentId}`가 원본이며 listing은 독립적인 제품 상태나 권한 기준이 아니다.
 - 원본의 목록 노출 관련 필드를 변경하는 명령은 같은 Firestore Transaction에서 listing도 생성·덮어쓰기·삭제한다. 원본 커밋 후 별도 후처리, 화면 진입 시 보정, 실패를 삼키는 비동기 동기화는 사용하지 않는다.
 - 그룹 전용 모집인데 listing이 없으면 해당 모집을 변경하는 Transaction에서 현재 원본의 Transaction 후 상태로 listing을 생성한다. 이것은 변경된 방의 자연 복구이며, 변경되지 않은 기존 방의 일괄 보완을 대신하지 않는다.

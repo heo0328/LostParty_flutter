@@ -11,8 +11,7 @@ import '../mappers/party_atomic_member_removal_write_plan.dart';
 
 /// 새 Aggregate 구조용 탈퇴·추방 Repository.
 ///
-/// 전체 파티원 또는 개인 이벤트를 순회하지 않으며 운영 Router에는 아직
-/// 연결하지 않는다.
+/// 전체 파티원 또는 개인 이벤트를 순회하지 않으며 운영 Router에 연결된다.
 class FirestorePartyAtomicMemberRemovalRepository
     implements PartyAtomicMemberRemovalRepository {
   const FirestorePartyAtomicMemberRemovalRepository({
@@ -193,11 +192,7 @@ class FirestorePartyAtomicMemberRemovalRepository
                 .doc(aggregate.groupId!)
                 .collection('raidListings')
                 .doc(command.recruitmentId),
-            {
-              'memberCount': aggregate.memberCount - 1,
-              'sourceRevision': aggregate.revision + 1,
-              'updatedAt': now,
-            },
+            plan.listingPatch,
           );
         }
         transaction.set(
