@@ -1,17 +1,33 @@
 # lost_party
+1. 왜 만들기 시작했나
 
-A new Flutter project.
+지인들과 반복해서 레이드를 다니다 보면 매주 **누가 어떤 캐릭터로 어느 레이드를 함께 갈지** 일일이 확인하고 서로 일정을 맞춰야 합니다. 캐릭터가 많아질수록 대화만으로 상태를 공유하기 어려워지고, 파티를 맞추는 과정에서 “어? 이거 했는데”처럼 이미 완료한 레이드를 뒤늦게 확인하는 상황도 종종 생깁니다.
 
-## Getting Started
+Lost Party는 이런 실제 사용 과정의 불편함에서 시작했습니다. 각자의 캐릭터와 레이드 진행 상태를 함께 확인하고, 소수의 지인 그룹이 반복되는 파티 편성을 더 편하게 할 수 있도록 만드는 것이 프로젝트의 핵심 목적입니다.
 
-This project is a starting point for a Flutter application.
 
-A few resources to get you started if this is your first Flutter project:
+주요 기능
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+지인 그룹 중심의 파티 편성
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+소수의 지인이 그룹을 만들고, 각자 보유한 캐릭터를 기준으로 함께 갈 레이드를 구성합니다. 매번 메신저에서 캐릭터와 레이드를 다시 확인하는 과정을 줄이는 것이 핵심입니다.
+
+- 그룹 생성·가입·초대코드
+- 그룹 전용 레이드 모집
+- 캐릭터 단위 참가와 파티 구성
+- 다음 주 반복 구성 지원
+
+
+공개 모집은 보조적인 확장 기능
+
+그룹 밖의 사용자를 대상으로 공개 모집과 참가 신청도 지원합니다. 다만 초기 단계에서는 사용자 규모에 따라 효용이 크게 달라질 수 있기 때문에, 제품의 중심은 공개 모집보다 **지인 그룹의 반복적인 파티 편성 경험**에 두고 있습니다.
+
+- 공개 모집 탐색 및 필터
+- 캐릭터별 참가 신청
+- 승인 대기와 확정 참가
+
+현재 개발 상태
+
+해당 프로젝트의 노션페이지에서 상세확인 가능.
+
+https://app.notion.com/p/Lost-Party-3d3fca835ce58091936cc70485fbf79f?source=copy_link
