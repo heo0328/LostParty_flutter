@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import {
   initializeTestEnvironment,
@@ -967,9 +968,9 @@ async function assertGroupJoinResult(db, expectedCount) {
     'raidStates', `${joinerCharacterId}_${raidId}`));
   if (source.memberCount !== expectedCount || !member.exists() || !state.exists()
     || source.memberPlayerIds.filter((id) => id === joinerPlayerId).length !== 1
-    || JSON.stringify(listing) !== JSON.stringify(source)
+    || !isDeepStrictEqual(listing, source)
     || source.hasAvailableSlot !== (expectedCount < source.maxMemberCount)) {
-    throw new Error('A3 joined aggregate, membership, state or listing mismatch');
+    throw new Error(`A3 joined result mismatch: count=${source.memberCount}/${expectedCount}, member=${member.exists()}, state=${state.exists()}, listingFields=${Object.keys({ ...source, ...listing }).filter((key) => !isDeepStrictEqual(source[key], listing[key])).join(',')}`);
   }
 }
 
