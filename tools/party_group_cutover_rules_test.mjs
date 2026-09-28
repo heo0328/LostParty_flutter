@@ -635,7 +635,7 @@ async function approvePublicApplicationTxn(db) {
     }
     const nextRevision = recruitment.revision + 1;
     const eventId = `memberJoined_${recruitmentId}_${nextRevision}`;
-    tx.update(recruitmentRef, {
+    const recruitmentPatch = {
       ...lifecycleMarkerConsumptionPatch(recruitment),
       memberPlayerIds: [...recruitment.memberPlayerIds, joinerPlayerId],
       memberCount: 2, dealerCount: 1, supportCount: 1, hasAvailableSlot: true,
@@ -650,7 +650,12 @@ async function approvePublicApplicationTxn(db) {
       nonGroupMemberCount: 0, pendingApplicationCount: 0,
       pendingNonGroupApplicantCount: 0, revision: nextRevision,
       updatedAt: serverTimestamp(),
-    });
+    };
+    tx.update(recruitmentRef, recruitmentPatch);
+    if (recruitment.visibility === 'group') {
+      tx.set(doc(db, 'groups', recruitment.groupId, 'raidListings', recruitmentId),
+        { ...recruitment, ...recruitmentPatch });
+    }
     tx.update(applicationRef, {
       status: 'approved', resolutionReason: 'approvedByApprover',
       approvalCount: application.approvalCount + 1,
@@ -906,7 +911,9 @@ async function directRejoinAfterKickTxn(db) {
     const recruitmentPatch = {
       ...lifecycleMarkerConsumptionPatch(recruitment),
       memberPlayerIds: [...recruitment.memberPlayerIds, joinerPlayerId],
-      memberCount: 2, dealerCount: 1, supportCount: 1, hasAvailableSlot: true,
+      memberCount: recruitment.memberCount + 1,
+      dealerCount: recruitment.dealerCount, supportCount: recruitment.supportCount + 1,
+      hasAvailableSlot: recruitment.memberCount + 1 < recruitment.maxMemberCount,
       partySlots: [...recruitment.partySlots, {
         playerId: joinerPlayerId, characterId: joinerCharacterId,
         role: 'support', classKey: '바드', partyIndex: 0, slotIndex: 3,
@@ -945,10 +952,25 @@ async function directRejoinAfterKickTxn(db) {
     tx.set(doc(db, 'partyEvents', eventId), {
       schemaVersion: 1, eventId, recruitmentId, type: 'memberJoined',
       commandId: eventId, commandRevision: nextRevision,
-      audiencePlayerIds: [playerId, joinerPlayerId],
+      audiencePlayerIds: [...recruitment.memberPlayerIds, joinerPlayerId],
       actorPlayerId: joinerPlayerId, occurredAt: serverTimestamp(),
     });
   });
+}
+
+async function assertGroupJoinResult(db, expectedCount) {
+  const source = (await getDoc(doc(db, 'recruitments', recruitmentId))).data();
+  const listing = (await getDoc(doc(db, 'groups', source.groupId,
+    'raidListings', recruitmentId))).data();
+  const member = await getDoc(doc(db, 'recruitments', recruitmentId, 'members', joinerPlayerId));
+  const state = await getDoc(doc(db, 'players', joinerPlayerId,
+    'raidStates', `${joinerCharacterId}_${raidId}`));
+  if (source.memberCount !== expectedCount || !member.exists() || !state.exists()
+    || source.memberPlayerIds.filter((id) => id === joinerPlayerId).length !== 1
+    || JSON.stringify(listing) !== JSON.stringify(source)
+    || source.hasAvailableSlot !== (expectedCount < source.maxMemberCount)) {
+    throw new Error('A3 joined aggregate, membership, state or listing mismatch');
+  }
 }
 
 async function seedExpandedApprovedRoom(testEnv, totalMembers) {
@@ -1035,6 +1057,7 @@ async function seedGroupLinkedRoom(testEnv, db, {
   activeRecruitmentCount = 1,
   recruitmentCountSnapshot = 1,
   includeJoinerGroupMember = false,
+  approvalMode = 'leaderOnly',
 } = {}) {
   const groupId = 'group-room-1';
   await assertSucceeds(createGroupTxn(db, groupId));
@@ -1044,6 +1067,7 @@ async function seedGroupLinkedRoom(testEnv, db, {
     const recruitmentRef = doc(adminDb, 'recruitments', recruitmentId);
     await updateDoc(recruitmentRef, {
       groupId, visibility: 'group',
+      approvalPolicy: { mode: approvalMode },
       groupActiveRecruitmentCountAfter: recruitmentCountSnapshot,
     });
     const recruitment = (await getDoc(recruitmentRef)).data();
@@ -2042,9 +2066,58 @@ async function main() {
     console.log('test: member self-leave updates group listing');
     await assertSucceeds(leaveApprovedRoomTxn(applicantDb));
     console.log('PASS: group room self-leave listing update');
+    console.log('test: leaderOnly group room rejects direct rejoin');
+    await assertFails(directRejoinAfterKickTxn(applicantDb));
+    const rejectedGroup = (await getDoc(doc(db, 'recruitments', recruitmentId))).data();
+    const rejectedMembership = await getDoc(doc(applicantDb, 'recruitments', recruitmentId,
+      'members', joinerPlayerId));
+    const rejectedState = await getDoc(doc(applicantDb, 'players', joinerPlayerId,
+      'raidStates', `${joinerCharacterId}_${raidId}`));
+    if (rejectedGroup.approvalPolicy.mode !== 'leaderOnly'
+      || rejectedGroup.revision !== 4 || rejectedGroup.memberCount !== 1
+      || rejectedMembership.exists() || rejectedState.exists()) {
+      throw new Error('A3 rejected direct join changed the leaderOnly room');
+    }
+    console.log('PASS: A3 leaderOnly direct rejoin denied atomically');
+    // The app only sends joinDirectly for directJoin. The old fixture omitted
+    // this prerequisite for group rooms while setting it for public rooms.
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const admin = context.firestore();
+      const policy = { approvalPolicy: { mode: 'directJoin' } };
+      await updateDoc(doc(admin, 'recruitments', recruitmentId), policy);
+      await updateDoc(doc(admin, 'groups', 'group-room-1', 'raidListings', recruitmentId), policy);
+    });
     console.log('test: member directly rejoins group room after self-leave');
     await assertSucceeds(directRejoinAfterKickTxn(applicantDb));
+    await assertGroupJoinResult(applicantDb, 2);
     console.log('PASS: group room rejoin after self-leave');
+
+    await seedExpandedApprovedRoom(testEnv, 8);
+    await assertSucceeds(kickApprovedMemberTxn(db));
+    await assertSucceeds(directRejoinAfterKickTxn(applicantDb));
+    await assertGroupJoinResult(applicantDb, 8);
+    console.log('PASS: A3 group kick and direct rejoin at eight-member capacity');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await seedGroupLinkedRoom(testEnv, db, {
+      includeJoinerGroupMember: true, approvalMode: 'directJoin',
+    });
+    await assertSucceeds(directRejoinAfterKickTxn(applicantDb));
+    await assertGroupJoinResult(applicantDb, 2);
+    console.log('PASS: A3 first direct join into group room');
+
+    await testEnv.clearFirestore();
+    await seedBase(testEnv);
+    await seedJoiner(testEnv);
+    await assertSucceeds(createPublicRecruitmentTxn(db));
+    await seedGroupLinkedRoom(testEnv, db, { includeJoinerGroupMember: true });
+    await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+    await assertSucceeds(approvePublicApplicationTxn(db));
+    await assertGroupJoinResult(applicantDb, 2);
+    console.log('PASS: A3 group application approval preserves atomic listing');
 
     await testEnv.clearFirestore();
     await seedBase(testEnv);

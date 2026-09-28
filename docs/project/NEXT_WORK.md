@@ -4,6 +4,25 @@
 
 ## 현재 구간 결과 — A2-B 구현·서버 검증 완료, 운영 반영 대기
 
+**A3 실행 설계 갱신(2026-09-29):** 실제 Router는
+`FirestorePartyAtomicJoinCommandRepository`를 사용하며 직접 가입은
+`approvalPolicy.mode == directJoin`일 때만 전송한다. 기존 실패 fixture는
+`createPublicRecruitmentTxn`의 `leaderOnly`를 그룹방에도 유지한 채 직접 재가입 성공을
+기대했다. 공개방 재가입 fixture에는 directJoin 전환이 있지만 그룹방에는 없다.
+`validAtomicJoinedMembership`도 같은 모드 조건을 요구하므로 기존 한도 오류만으로 정상
+직접 가입의 비용 초과를 확정할 수 없다. 코드·Rules 구조 변경 전에 이 불일치를 검증한다.
+
+- 포함: 승인형 직접 가입 거절·롤백을 명시적 음성 사례로 보존하고, 실제 직접 가입형의
+  그룹 최초 가입·탈퇴/추방 후 재가입 및 최대 8인 경계를 분리한다. 그룹 신청 승인도
+  실제 writer처럼 listing을 같은 Transaction에서 갱신하는 fixture로 검증한다.
+- 제품 Rules/Flutter/스키마·운영 데이터는 우선 변경하지 않는다. 보안 조건을 완화하거나
+  실패한 C/C7 재설계를 재도입하지 않는다. 현재 목적 브랜치와 A2-B/F6-I 커밋을 유지한다.
+- 완료 판단: 기존 추적 Rules 전체 CI와 그룹 탈퇴/해산 회귀를 실행한다. 정상 요청도
+  실패하면 그 실제 정책·쓰기 세트와 오류 지점부터 비용 분석을 재개한다. 정상 요청이
+  통과하면 A3의 기존 원인 판정을 정정하고 잘못된 성공 기대를 복원하지 않는다.
+- 회귀 보호: 직접 가입 불가 정책, 그룹원 자격, 기존 점유/주간 완료, 소유권 및 원자성
+  거절을 유지한다. A2-B/F6-H 운영 게시·실기기·dev 통합은 별도 완료 게이트를 따른다.
+
 2026-09-29 `3440e6b`의 [CI 36461139608](https://github.com/heo0328/LostParty_flutter/actions/runs/36461139608)에서
 8인→7인·stale listing 교정, 구성/방장/회차/설정 위조 거절과 롤백, 누락 listing 실패,
 구버전 3필드 호환, 방장 승계, 같은 revision 중복 제거, 그룹 추방·본인 탈퇴가 통과했다.
