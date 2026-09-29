@@ -92,13 +92,15 @@ async function lifecycle(db, type) {
 }
 
 async function inspectAll(env) {
-  return env.withSecurityRulesDisabled(async ctx => {
+  let result;
+  await env.withSecurityRulesDisabled(async ctx => {
     const db = ctx.firestore();
     const room = (await getDoc(doc(db, 'recruitments', recruitmentId))).data();
     const states = await Promise.all(room.partySlots.map(async slot =>
       (await getDoc(doc(db, 'players', slot.playerId, 'raidStates', `${slot.characterId}_${raidId}`))).data()));
-    return { room, states };
+    result = { room, states };
   });
+  return result;
 }
 
 for (const [label, rules] of [['baseline', tracked], ['candidate', candidate]]) {
