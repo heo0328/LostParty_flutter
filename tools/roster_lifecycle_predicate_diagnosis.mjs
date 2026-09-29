@@ -1,6 +1,7 @@
 // DIAGNOSTIC ONLY: probes isolate predicates, not transaction authorization.
 // No deployments; all fixtures and probe writes use a demo Emulator project.
 import fs from 'node:fs';
+import assert from 'node:assert/strict';
 import { initializeTestEnvironment } from '@firebase/rules-unit-testing';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { seedRoom } from './roster_ownership_rules_proof.mjs';
@@ -79,5 +80,7 @@ try {
     }
     console.log(`DIAG ${name}: ${results[name]}`);
   }
+  assert.ok(Object.values(results).every(result => result === 'true'),
+    'one or more isolated predicates failed; inspect DIAG output');
   console.log('DIAG finished: probe results are not security or transaction acceptance.');
 } finally { await env.cleanup(); }

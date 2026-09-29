@@ -1,3 +1,15 @@
+# 2026-09-30 DE2-B2 개별 predicate 진단 완료 · 원자 거래 실패 유지
+
+- fix/roster-reauth-isolation 고정. 099a4ed와 demo 진단 CI 36609173357로 11개 개별 조건 true 확인.
+- actor/shape/state/incomplete/targets/groupCount/aggregate 전체/commandIncludes/마지막 slot/state update/event를 분리했다.
+  시간·필수 필드 불일치의 근거는 발견하지 못했다. 실제 8인 원자 거래 성공으로 확대하지 않는다.
+- 임시 probe 경로는 demo 메모리 Rules에만 추가했다. 신뢰 fixture의 after를 미리 준비하는
+  진단이므로 getAfter 결합 비용·경쟁 검증이 아니다. 코드에 결과 assertion을 추가해 후속 실패를 숨기지 않는다.
+- 다음 DE2-B3: 동일 원자 write set에서 Aggregate/state/event/listing 누적 검증 경계를 분리.
+  기존 조건을 근거 없이 제거하거나 반복 미세 최적화하지 않는다. 상세 설계 §8.
+- 새 앱 흐름 없음. 운영 코드·Rules·초기화 설정 보존. 실기기 미실행. 검증: Node 문법,
+  git diff --check, demo CI. 전체 Flutter 검사·운영 배포·dev/main 병합 없음.
+
 # 2026-09-30 DE2-B 비용 후보 비교 — 주차 전환 미해결
 
 - 전용 브랜치 고정, 앱·추적 firestore.rules·초기화 설정 무변경, dev/main 미병합·운영 배포 없음.

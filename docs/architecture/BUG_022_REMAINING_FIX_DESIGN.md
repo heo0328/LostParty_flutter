@@ -619,3 +619,38 @@ listing/event 각 validator의 첫 실패를 별도 진단으로 분리한다. �
 
 현재 proof는 미해결 후보를 재현하기 위해 CI failure를 유지한다. 테스트 삭제·거절 기대값으로
 교체해 녹색으로 만들지 않는다. 일반 full 회귀와 선택형 ownership-proof를 구분한다.
+
+## 8. DE2-B2 개별 조건 분리 진단 (2026-09-30)
+
+진단 CI [36609173357](https://github.com/heo0328/LostParty_flutter/actions/runs/36609173357),
+테스트 checkpoint 099a4ed에서 다음 **11개 개별 predicate 모두 true**를 확인했다.
+actor, shape, state, incompleteShape, targets, groupCount, aggregateAll,
+commandIncludes, slotMatch, stateUpdate, event.
+
+- 도구: tools/roster_lifecycle_predicate_diagnosis.mjs. 추적 Rules 함수는 바꾸지 않고 demo
+  Emulator 메모리에 진단 전용 dePredicateProbes 경로를 추가한다. 운영 소스/프로젝트에는 없다.
+- 8인 공개 반복방의 마지막 참가자(stateUpdate/slotMatch)와 전체 Aggregate/targets를 검사했다.
+  oldCycle 2026-09-16, nextCycle 2026-09-23, 종료/시작 2026-09-22T21:00Z,
+  nextEnds 2026-09-29T21:00Z, 요청 시각 2026-09-29T18:03Z로 시간 경계가 맞았다.
+- 이전/다음 state의 필수 schema/player/Character/raid/difficulty/role/revision 필드와
+  completedAt 부재를 기록했다. 완료 날짜 삭제 후 active 전환 모양을 대조했다.
+- probe는 신뢰 fixture로 전환 후 Aggregate/state를 미리 준비하고 단일 조건을 평가한다.
+  request.time 관련 필드는 probe 요청의 serverTimestamp로 맞춘다. 이 준비는 실제 원자 거래의
+  검증을 대신하지 않으며 구체 write set의 getAfter 평가 비용·경쟁·오프라인을 재현하지 않는다.
+- CI success는 진단 실행과 개별 판정 확인 성공이다. 실제 8인 advanceCycle/운영 Rules의
+  해결이나 보안 회귀 전체 성공이 아니다. 테스트 종료 시 결과를 요약하며 향후 predicate 하나라도
+  true가 아니면 진단도 실패 종료하도록 명시적 assertion을 추가했다.
+
+### 8.1 판단과 다음 검증 경계
+
+이번 fixture에서는 특정 shape/state/시간/마지막 slot 조건 자체가 false인 근거를 찾지 못했다.
+따라서 그 조건을 삭제하거나 완화할 이유가 없다. 같은 원자 write set에서 남는 1,000식 실패와
+개별 조건 true의 차이는 **거래 내 누적 검증 비용 또는 결합 평가 경로** 조사로 좁힌다.
+정확한 식 수나 특정 helper의 독점 원인까지 측정했다고 주장하지 않는다.
+
+다음 단일 작업은 DE2-B3이다. 동일 8인·동일 원자 write set·동일 before/after를 유지한 상태에서
+모집 Aggregate / 개별 raidState / 공용 이벤트 / 그룹 listing 경계를 격리한 진단 변형으로
+누적 비용의 주요 위치를 찾는다. 진단용 허용은 임시 메모리 Rules로만 격리하고 최종 후보에는
+남기지 않는다. 조건별 역할/소유권/target 연결 검증의 책임을 보존한 최종 후보에서 정상과
+위조·누락의 대조를 다시 통과해야 비용 개선으로 인정한다. 데이터 스키마/공용 계약 변경이
+필요해지면 이 근거로 설계를 먼저 갱신하며 현재 증거 없이 구조를 바꾸지 않는다.
