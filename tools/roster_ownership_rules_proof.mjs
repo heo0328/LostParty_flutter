@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, runTransaction,
   serverTimestamp, Timestamp, increment, deleteField } from 'firebase/firestore';
-import { removeApprovedMemberTxn, seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn,
+import { seedGroupLinkedRoom, disbandApprovedRoomTxn, removeApprovedMemberTxn, seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn,
   approvePublicApplicationTxn, seedExpandedApprovedRoom, cycleWindow,
   offsetCycleKey, cycleKey, authUid, playerId, characterId, recruitmentId, raidId,
 } from './party_group_cutover_rules_test.mjs';
@@ -30,13 +30,34 @@ const ownershipCandidate = tracked.replace(anchor, `return atomicIsLifecycleComm
 const includesStart = ownershipCandidate.indexOf('    function atomicCommandIncludes(');
 const includesEnd = ownershipCandidate.indexOf('    function atomicAdvanceStateMatchesSlotAt(', includesStart);
 assert.ok(includesStart >= 0 && includesEnd > includesStart);
-const candidate = ownershipCandidate.slice(0, includesStart) + `
+const directTargets = ownershipCandidate.slice(0, includesStart) + `
     function atomicCommandIncludes(data, playerId, stateId) {
       return data.commandTargets.size() <= 8
         && data.commandTargets.hasAny([{'playerId': playerId, 'stateId': stateId}]);
     }
 
 ` + ownershipCandidate.slice(includesEnd);
+const slotStart = directTargets.indexOf('    function atomicAdvanceStateMatchesSlot(recruitment, data) {');
+const slotEnd = directTargets.indexOf('    function validAtomicAdvanceRaidStateCreate(', slotStart);
+assert.ok(slotStart >= 0 && slotEnd > slotStart);
+const candidate = directTargets.slice(0, slotStart) + `
+    function atomicAdvanceStateMatchesSlot(recruitment, data) {
+      let slots = recruitment.partySlots;
+      let count = slots.size();
+      let index = count > 0 && slots[0].playerId == data.playerId ? 0
+        : count > 1 && slots[1].playerId == data.playerId ? 1
+        : count > 2 && slots[2].playerId == data.playerId ? 2
+        : count > 3 && slots[3].playerId == data.playerId ? 3
+        : count > 4 && slots[4].playerId == data.playerId ? 4
+        : count > 5 && slots[5].playerId == data.playerId ? 5
+        : count > 6 && slots[6].playerId == data.playerId ? 6
+        : count > 7 && slots[7].playerId == data.playerId ? 7 : -1;
+      return index >= 0 && count <= 8
+        && slots[index].characterId == data.characterId
+        && slots[index].role == data.role;
+    }
+
+` + directTargets.slice(slotEnd);
 
 async function seedRoom(env, db) {
   await env.clearFirestore();
@@ -78,6 +99,10 @@ async function lifecycle(db, type, { tamper = null } = {}) {
       lastCommandId: eventId, lastCommandType: type, lastCommandActorPlayerId: playerId,
       lastCommandAt: serverTimestamp(), updatedAt: serverTimestamp(),
     };
+    if (tamper === 'target-player') patch.commandTargets = room.raidStateTargets.map((target, index) =>
+      index === room.raidStateTargets.length - 1 ? { ...target, playerId: 'forged-player' } : target);
+    if (tamper === 'target-state') patch.commandTargets = room.raidStateTargets.map((target, index) =>
+      index === room.raidStateTargets.length - 1 ? { ...target, stateId: room.raidStateTargets[0].stateId } : target);
     if (type === 'advanceCycle') {
       const window = cycleWindow(cycleKey);
       Object.assign(patch, { status: 'active', currentCycleStatus: 'active',
@@ -89,6 +114,13 @@ async function lifecycle(db, type, { tamper = null } = {}) {
         completedAt: serverTimestamp(), completedByPlayerId: playerId });
     }
     tx.update(ref, patch);
+    if (room.groupId) {
+      tx.update(doc(db, 'groups', room.groupId, 'raidListings', recruitmentId), {
+        ...(type === 'advanceCycle' ? { ...room, ...patch } : {}),
+        recruitmentId, status: patch.status, sourceRevision: room.revision + 1,
+        updatedAt: serverTimestamp(),
+      });
+    }
     for (const slot of room.partySlots) {
       const isLast = slot === room.partySlots.at(-1);
       if (isLast && tamper === 'omit-state') continue;
@@ -127,7 +159,9 @@ async function inspectAll(env) {
     const room = (await getDoc(doc(db, 'recruitments', recruitmentId))).data();
     const states = await Promise.all(room.partySlots.map(async slot =>
       (await getDoc(doc(db, 'players', slot.playerId, 'raidStates', `${slot.characterId}_${raidId}`))).data()));
-    result = { room, states };
+    const listing = room.groupId
+      ? (await getDoc(doc(db, 'groups', room.groupId, 'raidListings', recruitmentId))).data() : null;
+    result = { room, states, listing };
   });
   return result;
 }
@@ -178,7 +212,7 @@ for (const [label, rules] of [['baseline', tracked], ['candidate', candidate]]) 
       });
     }
     if (label === 'candidate') {
-      for (const tamper of ['role', 'character', 'omit-state']) {
+      for (const tamper of ['role', 'character', 'omit-state', 'target-player', 'target-state']) {
         await check(`candidate advance tamper ${tamper}`, async () => {
           await seedRoom(env, db);
           const before = await inspectAll(env);
@@ -187,6 +221,26 @@ for (const [label, rules] of [['baseline', tracked], ['candidate', candidate]]) 
           console.log(`PASS candidate: advance rejects ${tamper} atomically`);
         });
       }
+      for (const type of ['complete', 'advanceCycle']) {
+        await check(`candidate group ${type}`, async () => {
+          await seedRoom(env, db);
+          await seedGroupLinkedRoom(env, db);
+          await assertSucceeds(lifecycle(db, type));
+          const after = await inspectAll(env);
+          assert.equal(after.listing.sourceRevision, after.room.revision);
+          assert.equal(after.listing.status, after.room.status);
+          if (type === 'advanceCycle') assert.deepEqual(after.listing.partySlots, after.room.partySlots);
+          console.log(`PASS candidate: group 8-member ${type} and listing`);
+        });
+      }
+      await check('candidate 8-member disband', async () => {
+        await seedRoom(env, db);
+        await assertSucceeds(disbandApprovedRoomTxn(db));
+        const after = await inspectAll(env);
+        assert.equal(after.room.status, 'disbanded');
+        assert.ok(after.states.every(state => state === undefined));
+        console.log('PASS candidate: shared target helper preserves 8-member disband');
+      });
     }
     await check(`${label} active cleanup and private access`, async () => {
     await seedRoom(env, db);
