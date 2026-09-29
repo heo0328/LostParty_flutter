@@ -247,7 +247,7 @@ memberCount/sourceRevision/updatedAt 세 필드 요청도 종전대로 허용한
 #### 참가 캐릭터 변경
 
 - 현재 멤버 본인만 자기 소유 Character로 변경할 수 있다.
-- `partyIndex`와 `slotIndex`는 유지한다. 역할은 유지하거나 해당 파티의 역할 여유와 전체 구성 조건을 만족할 때 dealer↔support로 변경할 수 있다.
+- 기본은 `partyIndex`와 `slotIndex` 유지이며 8인 예외는 아래 배치 규칙을 따른다. 역할은 유지하거나 배치 후 역할 정원과 전체 구성 조건을 만족할 때 dealer↔support로 변경할 수 있다.
 - 다른 Character뿐 아니라 같은 Character의 저장된 반대 역할 설정도 허용한다.
 - 새 Character의 소유권, 입장 레벨, 확정 점유, 역할별 자리와 현재 파티의 동일 직업 딜러 제한을 다시 검증한다.
 - 변경 후보 조회와 최종 변경 Transaction은 새 Character의 기존 `raidState`를 같은 점유 판정으로 분류해야 한다. 후보 단계에서 교체 가능으로 표시한 종료 모집 연결 state를 최종 명령이 단순 존재 여부만으로 `participationConflict` 처리해서는 안 된다.

@@ -1011,7 +1011,8 @@ async function verifyCharacterPlacement(testEnv, db, applicantDb) {
   const oldStateRef = doc(applicantDb, 'players', joinerPlayerId, 'raidStates', `${joinerCharacterId}_${raidId}`);
   const newStateRef = doc(applicantDb, 'players', joinerPlayerId, 'raidStates', `${replacementId}_${raidId}`);
   async function change({ partyIndex = 0, slotIndex = 3, tamperOther = false,
-    mismatch = false, skipOldDelete = false } = {}) {
+    mismatch = false, skipOldDelete = false, staleRevision = false,
+    tamperTarget = false } = {}) {
     return runTransaction(applicantDb, async (tx) => {
       const before = (await tx.get(recruitmentRef)).data();
       await tx.get(memberRef);
@@ -1023,10 +1024,11 @@ async function verifyCharacterPlacement(testEnv, db, applicantDb) {
       const patch = {
         ...lifecycleMarkerConsumptionPatch(before), partySlots: slots,
         raidStateTargets: before.raidStateTargets.map((t) => t.playerId === joinerPlayerId
-          ? { playerId: joinerPlayerId, stateId: `${replacementId}_${raidId}` } : t),
+          ? { playerId: joinerPlayerId, stateId: `${replacementId}_${raidId}` }
+          : tamperTarget && t.playerId === playerId ? { ...t, stateId: 'forged' } : t),
         dealerCount: slots.filter((s) => s.role === 'dealer').length,
         supportCount: slots.filter((s) => s.role === 'support').length,
-        revision: before.revision + 1, updatedAt: serverTimestamp(),
+        revision: before.revision + (staleRevision ? 0 : 1), updatedAt: serverTimestamp(),
       };
       tx.update(recruitmentRef, patch);
       tx.update(memberRef, {
@@ -1057,6 +1059,7 @@ async function verifyCharacterPlacement(testEnv, db, applicantDb) {
   for (const options of [
     { partyIndex: 1, slotIndex: 2 }, { partyIndex: 2 },
     { tamperOther: true }, { skipOldDelete: true },
+    { tamperTarget: true }, { staleRevision: true },
   ]) {
     console.log('test: BUG-017 reject', JSON.stringify(options));
     await assertFails(change(options));
@@ -1064,6 +1067,24 @@ async function verifyCharacterPlacement(testEnv, db, applicantDb) {
       || !(await getDoc(oldStateRef)).exists() || (await getDoc(newStateRef)).exists()) {
       throw new Error('BUG-017 rejected change was not atomic');
     }
+  }
+  for (const status of ['active', 'completed']) {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'players', joinerPlayerId, 'raidStates', `${replacementId}_${raidId}`), {
+        schemaVersion: 1, playerId: joinerPlayerId, characterId: replacementId,
+        raidId, difficultyId: 'normal', cycleKey, status, source: 'party',
+        recruitmentId: 'another-room', revision: 2,
+      });
+    });
+    console.log('test: BUG-017 cannot overwrite existing character state', status);
+    await assertFails(change());
+    if ((await getDoc(newStateRef)).data().recruitmentId !== 'another-room'
+      || !isDeepStrictEqual((await getDoc(recruitmentRef)).data(), original)) {
+      throw new Error('BUG-017 existing character state was overwritten');
+    }
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await deleteDoc(doc(context.firestore(), 'players', joinerPlayerId, 'raidStates', `${replacementId}_${raidId}`));
+    });
   }
   // Eight members: a dealer/support swap can repair the composition, but this
   // command changes only the character. Repositioning remains a leader command.
