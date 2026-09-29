@@ -426,13 +426,13 @@ async function joinByCodeTxn(db) {
   });
 }
 
-async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale = false } = {}) {
+async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale = false, ownerPlayerId = playerId, ownerCharacterId = characterId } = {}) {
   const { startedAt, endsAt } = cycleWindow(cycleKey);
-  const stateId = `${characterId}_${raidId}`;
+  const stateId = `${ownerCharacterId}_${raidId}`;
   return runTransaction(db, async (tx) => {
     const recruitmentRef = doc(db, 'recruitments', id);
-    const memberRef = doc(db, 'recruitments', id, 'members', playerId);
-    const raidStateRef = doc(db, 'players', playerId, 'raidStates', stateId);
+    const memberRef = doc(db, 'recruitments', id, 'members', ownerPlayerId);
+    const raidStateRef = doc(db, 'players', ownerPlayerId, 'raidStates', stateId);
     const eventId = `partyCreated_${id}_1`;
     const eventRef = doc(db, 'partyEvents', eventId);
 
@@ -441,10 +441,10 @@ async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale
       schemaVersion: 2,
       recruitmentId: id,
       title: '공개 모집',
-      leaderPlayerId: playerId,
+      leaderPlayerId: ownerPlayerId,
       leaderCharacterNameSnapshot: '테스트',
       leaderClassNameSnapshot: '버서커',
-      memberPlayerIds: [playerId],
+      memberPlayerIds: [ownerPlayerId],
       raidCatalogVersion: 1,
       raidId,
       difficultyId: 'normal',
@@ -485,8 +485,8 @@ async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale
       completedByPlayerId: null,
       partySlots: [
         {
-          playerId,
-          characterId,
+          playerId: ownerPlayerId,
+          characterId: ownerCharacterId,
           role: 'dealer',
           classKey: '버서커',
           partyIndex: 0,
@@ -497,7 +497,7 @@ async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale
       nonGroupMemberCount: 0,
       pendingApplicationCount: 0,
       pendingNonGroupApplicantCount: 0,
-      raidStateTargets: [{ playerId, stateId }],
+      raidStateTargets: [{ playerId: ownerPlayerId, stateId }],
       commandTargets: [],
       groupActiveRecruitmentCountAfter: 0,
       lastCommandId: null,
@@ -507,15 +507,15 @@ async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale
     });
     tx.set(memberRef, {
       schemaVersion: 1,
-      playerId,
-      characterId,
+      playerId: ownerPlayerId,
+      characterId: ownerCharacterId,
       characterNameSnapshot: '테스트',
       classNameSnapshot: '버서커',
       role: 'dealer',
       partyIndex: 0,
       slotIndex: 0,
       joinedAt: serverTimestamp(),
-      joinedBy: playerId,
+      joinedBy: ownerPlayerId,
       submittedBuildSnapshotId: null,
       itemLevelSnapshot: 1700,
       combatPowerSnapshot: null,
@@ -527,8 +527,8 @@ async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale
     });
     tx.set(raidStateRef, {
       schemaVersion: 1,
-      playerId,
-      characterId,
+      playerId: ownerPlayerId,
+      characterId: ownerCharacterId,
       raidId,
       recruitmentId: id,
       cycleKey,
@@ -546,8 +546,8 @@ async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale
       type: 'partyCreated',
       commandId: eventId,
       commandRevision: 1,
-      audiencePlayerIds: [playerId],
-      actorPlayerId: playerId,
+      audiencePlayerIds: [ownerPlayerId],
+      actorPlayerId: ownerPlayerId,
       occurredAt: serverTimestamp(),
     });
   });
@@ -2423,7 +2423,7 @@ async function main() {
   }
 }
 
-export { seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn, approvePublicApplicationTxn, seedExpandedApprovedRoom, cycleWindow, offsetCycleKey, cycleKey, authUid, playerId, characterId, recruitmentId, raidId };
+export { removeApprovedMemberTxn, seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn, approvePublicApplicationTxn, seedExpandedApprovedRoom, cycleWindow, offsetCycleKey, cycleKey, authUid, playerId, characterId, recruitmentId, raidId };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main().catch((error) => {
   console.error('FAIL:', error);

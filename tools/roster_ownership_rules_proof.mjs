@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, runTransaction,
   serverTimestamp, Timestamp, increment, deleteField } from 'firebase/firestore';
-import { seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn,
+import { removeApprovedMemberTxn, seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn,
   approvePublicApplicationTxn, seedExpandedApprovedRoom, cycleWindow,
   offsetCycleKey, cycleKey, authUid, playerId, characterId, recruitmentId, raidId,
 } from './party_group_cutover_rules_test.mjs';
@@ -49,7 +49,7 @@ async function seedRoom(env, db) {
         ownerPlayerId: slot.playerId, ownershipRevision: 1, status: 'active',
       }, { merge: true });
       await updateDoc(doc(admin, 'players', slot.playerId, 'raidStates', `${slot.characterId}_${raidId}`),
-        { cycleKey: pastKey });
+        { cycleKey: pastKey, difficultyId: 'normal' });
     }
   });
 }
@@ -134,6 +134,58 @@ for (const [label, rules] of [['baseline', tracked], ['candidate', candidate]]) 
     await assertFails(deleteDoc(targetRef));
     assert.deepEqual(await inspectAll(env), before);
     console.log(`PASS ${label}: private state read/delete remain protected`);
+    await env.withSecurityRulesDisabled(ctx => updateDoc(doc(ctx.firestore(), 'characters', target.characterId), {
+      ownerPlayerId: 'new-owner', ownershipRevision: 2,
+    }));
+    await assertSucceeds(removeApprovedMemberTxn(db, playerId, { targetPlayerId: target.playerId }));
+    const removed = await inspectAll(env);
+    assert.equal(removed.room.memberCount, 7);
+    assert.equal(removed.room.partySlots.some(s => s.playerId === target.playerId), false);
+    console.log(`PASS ${label}: existing leader can remove stale active member without private read`);
+
+    await seedRoom(env, db);
+    const preserved = await inspectAll(env);
+    const moved = preserved.room.partySlots.at(-1);
+    await env.withSecurityRulesDisabled(async ctx => {
+      const admin = ctx.firestore();
+      await setDoc(doc(admin, 'recruitments', 'newer-room'), {
+        ...preserved.room, recruitmentId: 'newer-room',
+      });
+      await updateDoc(doc(admin, 'players', moved.playerId, 'raidStates', `${moved.characterId}_${raidId}`),
+        { recruitmentId: 'newer-room', revision: 99 });
+    });
+    const beforeConflict = await inspectAll(env);
+    await assertFails(removeApprovedMemberTxn(db, playerId, { targetPlayerId: moved.playerId }));
+    assert.deepEqual(await inspectAll(env), beforeConflict);
+    console.log(`PASS ${label}: different-room state blocks old removal atomically`);
+
+    await seedRoom(env, db);
+    await assertSucceeds(lifecycle(db, 'complete'));
+    const completed = await inspectAll(env);
+    await assertFails(removeApprovedMemberTxn(db, playerId, { targetPlayerId: completed.room.partySlots.at(-1).playerId }));
+    assert.deepEqual(await inspectAll(env), completed);
+    console.log(`PASS ${label}: completed recurring-room removal needs a separate command`);
+
+    await seedRoom(env, db);
+    const oldUserState = await inspectAll(env);
+    await env.withSecurityRulesDisabled(async ctx => {
+      const admin = ctx.firestore();
+      await setDoc(doc(admin, 'authBindings', 'new-owner-auth'), {
+        schemaVersion: 1, playerId: 'new-owner', status: 'active', linkedAt: Timestamp.now(), updatedAt: Timestamp.now(),
+      });
+      await setDoc(doc(admin, 'players', 'new-owner'), { schemaVersion: 1, status: 'active' });
+      await updateDoc(doc(admin, 'characters', characterId), { ownerPlayerId: 'new-owner', ownershipRevision: 2 });
+      await setDoc(doc(admin, 'playerGameAccounts', 'new-owner_account-1'), {
+        schemaVersion: 1, playerId: 'new-owner', gameAccountId: 'account-1', status: 'active',
+        representativeCharacterId: characterId, updatedAt: Timestamp.now(),
+      });
+    });
+    const newDb = env.authenticatedContext('new-owner-auth').firestore();
+    await assertSucceeds(createPublicRecruitmentTxn(newDb, {
+      id: 'new-owner-room', ownerPlayerId: 'new-owner', ownerCharacterId: characterId,
+    }));
+    assert.deepEqual(await inspectAll(env), oldUserState, 'new owner create must not mutate old room or state');
+    console.log(`PASS ${label}: same Character new Player creates separate room while old state remains`);
   } finally { await env.cleanup(); }
 }
 console.log('DE2 proof finished; no production Rules or data modified.');
