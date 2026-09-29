@@ -1,3 +1,23 @@
+# 2026-09-29 DE2 최소 서버 proof — 부분 통과·주차 전환 경계 발견
+
+- fix/roster-reauth-isolation 유지. 테스트 checkpoint 570108c까지 원격 push. dev/main 병합 없음.
+- tools/roster_ownership_rules_proof.mjs와 기존 fixture의 명시적 export/직접 실행 guard,
+  선택형 ownership-proof CI를 추가했다. 기존 테스트 기본값은 유지한다.
+- 최종 CI 36581670667은 전체 failure. baseline 정상 8인 complete와 현재 소유권 변경 후에도
+  오래된 완료가 허용되는 상태를 재현했다. Aggregate 일괄 소유권 후보는 한도 실패로 채택하지 않았다.
+- 단건 state 소유권 후보는 정상 8인 complete와 구소유자/A→B→A 거절·원자 보존을 통과했다.
+  새 Player의 같은 Character 별도 모집 생성은 과거 방/state를 변경하지 않고 성공했다.
+  기존 공대장의 stale 일반 멤버 정리, private read/delete 거절, 다른 방 state 오삭제 거절도 확인했다.
+- 기존 completed 반복방에는 기존 제거 명령이 거절되므로 별도 정리 명령이 필요하다.
+- baseline/후보 모두 8인 advanceCycle은 1,000식 한도에서 실패했다. 기존 실기기 통과 범위를
+  부정하거나 모든 반복방의 장애로 확대하지 않으며, 다음 DE2-B에서 해당 최대치 경계를 조사한다.
+- 초기 두 실패는 difficultyId fixture 누락과 테스트 callback 반환 누락으로 보정했다.
+  전체 시도·실패 근거와 미확인 항목은 DE 설계 §6에 기록했다.
+- 새 앱 흐름: 구현 전. 보존 확인: demo에서 기존 경계의 일부 확인, 운영 무변경.
+  미확인: group listing 포함, 누락 state/legacy, 인증/신청/가입 통합, 실제 경쟁, 실기기.
+- 실행 검증: Node 문법 검사·git diff --check·demo Emulator CI. 전체 Flutter 검사는 반복하지 않았다.
+  운영 Rules·앱·초기화 설정 무변경. 실험 Rules는 테스트 메모리에서만 구성하며 배포하지 않았다.
+
 # 2026-09-29 DE1 코드 조사·계약 구체화
 
 - 브랜치 fix/roster-reauth-isolation 고정. 기능 코드·Rules·운영 데이터 변경 없음.

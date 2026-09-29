@@ -523,3 +523,54 @@ validAtomicAdvanceRaidStateCreate, validAtomicRaidStateUpdate, validAtomicStaleR
    만들지 않고 lifecycle·재이전 등 확인된 위험의 회귀 보호로 기록한다.
 5. 서버 proof 전에는 DE1의 비용·Rules 구현 가능성까지 검증 완료로 판정하지 않는다.
    위 proof는 DE2 첫 구간이며 결과에 따라 설계를 보완한 뒤 기능 연결을 진행한다.
+
+## 6. DE2 최소 서버 proof 결과 (2026-09-29)
+
+**부분 통과 · 8인 advanceCycle 차단으로 DE2 미완료.** production firestore.rules와 앱 코드는
+변경하지 않았다. tools/roster_ownership_rules_proof.mjs가 추적 Rules를 읽고 demo Emulator
+메모리 안에서만 후보를 구성한다. 운영 배포용 Rules가 아니다.
+
+최종 테스트 커밋 570108c, CI [36581670667](https://github.com/heo0328/LostParty_flutter/actions/runs/36581670667)
+결과는 failure다. 독립 시나리오의 일부 PASS를 전체 성공으로 바꾸지 않는다.
+
+| 시나리오 | 추적 Rules | 단건 state 소유권 후보 |
+|---|---|---|
+| 정상 8인 complete (실제 v2 완료 이벤트) | 성공 | 성공 |
+| 마지막 멤버 Character 소유자 변경 뒤 complete | 기존 참가를 그대로 완료시킴 | 원자 거절, Aggregate/8개 state 보존 |
+| A→B→A 차수 변경 뒤 complete | 기존 참가를 그대로 완료시킴 | 원자 거절, Aggregate/8개 state 보존 |
+| 정상 8인 advanceCycle | 표현식 1,000개 한도 실패 | 실패, 후보만의 회귀로 단정하지 않음 |
+| 타인 private state 직접 get/delete | 거절 | 거절 |
+| 기존 공대장이 stale 일반 멤버 단건 제거 | 성공, private state 클라이언트 조회 없음 | 성공 |
+| 대상 state가 다른 정상 방을 가리킨 경우 예전 방 제거 | 원자 거절, 교체 state 보존 | 동일 |
+| completed 반복방에서 기존 제거 명령 | 거절, 완료 상태 보존 | 동일, 새 제한 명령 필요 |
+| 같은 Character를 새 Player가 인증한 상태에서 별도 방 생성 | 성공, 이전 방/state 보존 | 동일 |
+
+마지막 사례는 서로 다른 Player/binding을 사용한다. 인증 자체는 fixture로 주입했으므로
+장비 API/수동 승인 UI 검증이나 신규 신청·가입·Character 변경 전체 통과로 확대하지 않는다.
+새 사용자를 기존 방에 강제 가입시키거나 기존 그룹 자격을 우회하지 않는다.
+
+### 6.1 시도와 기준 보정
+
+- 36580261694: fixture의 difficultyId 누락. 실제 생성 Write Plan은 해당 필드를 저장하므로
+  fixture를 보완했다. 소유권 후보 실패로 취급하지 않는다.
+- 36580532025: 정상 8인 complete 통과 후 테스트 callback 결과 반환 누락으로 중단.
+  테스트 유틸리티 수정이며 제품 수정이 아니다.
+- 36580835138: 기본 complete/소유권 변경 허용을 확인하고 baseline advanceCycle 한도에서 중단.
+- 36581337818: 사례를 독립 실행하여 Aggregate에서 8개 Character를 검사하는 후보가 정상
+  complete까지 한도에 걸리는 것을 확인. 동일 접근을 반복하지 않고 이 후보는 채택하지 않는다.
+- 36581670667: 각 state update가 자기 Character 하나의 소유자/차수만 검사하는 방식으로 변경.
+  complete는 실제 앱 Write Plan의 schemaVersion 2/completionTargets 이벤트와 대조했다.
+  정상 완료·stale 거절은 통과하나 baseline과 후보의 advanceCycle 실패는 유지한다.
+
+### 6.2 다음 단일 구간과 남은 범위
+
+1. **DE2-B:** 새 소유권 조건을 추가하기 전 8인 advanceCycle의 읽기/식 평가 경로를 추적한다.
+   atomicCommandIncludes/atomicAdvanceStateMatchesSlot의 반복과 실제 Write Plan 입력을 대조하고,
+   기존 단일 상태 재생성 테스트와 최대 8인 동시 전환의 차이를 확인한다.
+2. 해당 명령에 한정한 검증 비용 개선 후보를 demo proof에서 먼저 비교한다. 역할/Character/
+   target 결합·원자성 조건을 없애거나 8인을 줄여 통과시키지 않는다. proof 통과 전 운영 소스에 이식하지 않는다.
+3. 단건 state 후보는 기존 update에만 적용했다. 누락 state create, legacy 필드 부재, 변경 차수
+   위조/감소, 승인·가입·변경 Snapshot, 자동/수동 인증 원자성은 아직 미검증이다.
+4. group listing 포함 8인 lifecycle, stale 공대장/전원 stale/마지막 1인, completed 반복방의
+   새 정리 명령, 실제 동시 요청과 사용자 실기기도 미확인이다. 순차 충돌 fixture를 실제 경쟁 테스트로 표현하지 않는다.
+5. 판별·정리 비용 경계를 통과한 뒤 DE2 기반 코드에 착수한다. dev/main 통합과 운영 배포는 하지 않는다.

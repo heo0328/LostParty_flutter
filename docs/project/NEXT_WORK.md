@@ -21,8 +21,18 @@ fix/roster-reauth-isolation을 생성한다. **개발·자동 검증·사용자 
 - 로그인 연결, 기존 Player 복구, 전체 관계 복사, 그룹 전면 재설계, 일괄 운영 정리는 제외한다.
 - Git 브랜치 격리는 Firebase 환경 격리가 아니다. 문서 작업에서는 코드·Rules·설정·운영 데이터를 바꾸지 않는다.
 
-## DE1 조사 기록 · 다음 실행 DE2 최소 서버 proof
+## 다음 실행: DE2-B 8인 주차 전환 Rules 비용 proof
 
+DE2 최소 proof CI 36581670667은 **부분 통과·전체 failure**다. 새 Player 별도 방 생성,
+기존 stale 일반 멤버 정리·교체 state 보호가 통과했고 단건 state 소유권 후보는 정상 8인
+완료를 보존하며 이전 소유자/구세대 완료를 거절했다. **baseline과 후보 모두 8인 advanceCycle이
+실패**하여 DE2 완료로 판정하지 않는다. 상세 사례/한계는 설계 §6과 DEV_LOG를 따른다.
+
+다음 단일 작업은 기존 8인 advanceCycle의 1,000식 경계를 실제 Write Plan과 대조하고
+제한된 비용 개선 후보를 demo proof로 검증하는 것이다. 권한·target/Character/역할 결합을
+완화하지 않으며 proof 통과 전 운영 Rules에 이식하지 않는다. 동일 브랜치를 유지한다.
+
+### DE1에서 정리한 계약과 후속 확인
 1. 자동 장비 인증과 수동 승인/방어 실패/강제/만료 이전의 실제 Router/DI 및 Transaction을 추적한다.
 2. 생성·신청·승인·가입·변경·완료·반복방에서 후보 → 요청 → Write Plan → Rules 순서로 충돌 최소 사례를 확보한다.
 3. 현재 소유자와 ownershipRevision Snapshot, 같은 소유자 재인증/실제 이전/A→B→A 정책을 확정한다.
