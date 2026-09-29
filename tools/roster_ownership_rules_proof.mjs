@@ -329,7 +329,7 @@ assert.deepEqual(failures, [], 'feasibility gates failed; do not treat partial P
 console.log('DE2 proof finished; no production Rules or data modified.');
 
 }
-export { seedRoom };
+export { seedRoom, lifecycle, inspectAll };
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   await runProof();
 }
