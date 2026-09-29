@@ -11,6 +11,7 @@ on:
           - full
           - character-placement
           - ownership-proof
+          - ownership-diagnosis
   push:
     branches:
       - feature/party-group-command-redesign
@@ -52,7 +53,7 @@ jobs:
         run: npm ci --prefix tools
 
       - name: Run tracked full Rules regression
-        if: inputs.case != 'ownership-proof'
+        if: inputs.case != 'ownership-proof' && inputs.case != 'ownership-diagnosis'
         env:
           PARTY_RULES_CASE: ${{ inputs.case }}
         run: >-
@@ -63,7 +64,7 @@ jobs:
           "node tools/party_group_cutover_rules_test.mjs"
 
       - name: Run group transfer leave and disband regression
-        if: inputs.case != 'character-placement' && inputs.case != 'ownership-proof'
+        if: inputs.case != 'character-placement' && inputs.case != 'ownership-proof' && inputs.case != 'ownership-diagnosis'
         run: >-
           npx --yes firebase-tools@15.29.0 emulators:exec
           --config firebase.json
@@ -79,3 +80,12 @@ jobs:
           --only firestore
           --project demo-party-group-cutover
           "node tools/roster_ownership_rules_proof.mjs"
+
+      - name: Diagnose lifecycle predicates in demo only
+        if: inputs.case == 'ownership-diagnosis'
+        run: >-
+          npx --yes firebase-tools@15.29.0 emulators:exec
+          --config firebase.json
+          --only firestore
+          --project demo-party-group-cutover
+          "node tools/roster_lifecycle_predicate_diagnosis.mjs"

@@ -1,5 +1,7 @@
 // DE2 feasibility only. Never deploys or edits tracked production Rules.
 import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, runTransaction,
@@ -176,6 +178,7 @@ async function inspectAll(env) {
   return result;
 }
 
+async function runProof() {
 const failures = [];
 async function check(name, action) {
   try { await action(); }
@@ -324,3 +327,9 @@ for (const [label, rules] of [['baseline', tracked], ['candidate', candidate]]) 
 }
 assert.deepEqual(failures, [], 'feasibility gates failed; do not treat partial PASS as full acceptance');
 console.log('DE2 proof finished; no production Rules or data modified.');
+
+}
+export { seedRoom };
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await runProof();
+}
