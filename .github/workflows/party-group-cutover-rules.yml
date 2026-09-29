@@ -2,6 +2,14 @@ name: Party group cutover Rules regression
 
 on:
   workflow_dispatch:
+    inputs:
+      case:
+        description: Rules regression scope
+        type: choice
+        default: full
+        options:
+          - full
+          - character-placement
   push:
     branches:
       - feature/party-group-command-redesign
@@ -43,6 +51,8 @@ jobs:
         run: npm ci --prefix tools
 
       - name: Run tracked full Rules regression
+        env:
+          PARTY_RULES_CASE: ${{ inputs.case }}
         run: >-
           npx --yes firebase-tools@15.29.0 emulators:exec
           --config firebase.json
@@ -51,6 +61,7 @@ jobs:
           "node tools/party_group_cutover_rules_test.mjs"
 
       - name: Run group transfer leave and disband regression
+        if: inputs.case != 'character-placement'
         run: >-
           npx --yes firebase-tools@15.29.0 emulators:exec
           --config firebase.json

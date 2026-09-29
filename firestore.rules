@@ -2702,42 +2702,42 @@ service cloud.firestore {
     }
 
     // Compare the already loaded Aggregate; no per-participant document reads.
-    function atomicCharacterSlotChangeAt(before, after, oldMember, member, index) {
-      return index >= before.partySlots.size()
-        || (before.partySlots[index].playerId == member.playerId
-          ? (before.partySlots[index].characterId == oldMember.characterId
-            && before.partySlots[index].partyIndex == oldMember.partyIndex
-            && before.partySlots[index].slotIndex == oldMember.slotIndex
-            && after.partySlots[index].diff(before.partySlots[index])
-              .affectedKeys().hasOnly([
-                'characterId', 'classKey', 'role', 'partyIndex', 'slotIndex'
-              ])
-            && after.partySlots[index].characterId == member.characterId
-            && after.partySlots[index].classKey == member.classNameSnapshot
-            && after.partySlots[index].role == member.role
-            && after.partySlots[index].partyIndex == member.partyIndex
-            && after.partySlots[index].slotIndex == member.slotIndex)
-          : (after.partySlots[index] == before.partySlots[index]
-            && (after.partySlots[index].partyIndex != member.partyIndex
-              || after.partySlots[index].slotIndex != member.slotIndex)));
+    function atomicCharacterSlot(member, countedAsNonGroupMember) {
+      return {
+        'playerId': member.playerId, 'characterId': member.characterId,
+        'classKey': member.classNameSnapshot, 'role': member.role,
+        'partyIndex': member.partyIndex, 'slotIndex': member.slotIndex,
+        'countedAsNonGroupMember': countedAsNonGroupMember
+      };
+    }
+
+    function atomicCharacterDestinationFreeAt(slots, member, index) {
+      return index >= slots.size()
+        || slots[index].partyIndex != member.partyIndex
+        || slots[index].slotIndex != member.slotIndex;
     }
 
     function atomicCharacterPlacementMatches(before, after, oldMember, member) {
+      let counted = oldMember.get('countedAsNonGroupMember', false);
+      let others = before.partySlots.removeAll([atomicCharacterSlot(oldMember, counted)]);
       return before.partySlots.size() == after.partySlots.size()
         && before.partySlots.size() <= 8
+        && others.size() == before.partySlots.size() - 1
+        && after.partySlots.removeAll([atomicCharacterSlot(member, counted)]) == others
         && member.playerId in before.memberPlayerIds
         && member.partyIndex >= 0 && member.partyIndex < after.partyCount
         && member.slotIndex >= 0 && member.slotIndex < after.membersPerParty
         && (member.playerId != before.leaderPlayerId
           || (member.partyIndex == 0 && member.slotIndex == 0))
-        && atomicCharacterSlotChangeAt(before, after, oldMember, member, 0)
-        && atomicCharacterSlotChangeAt(before, after, oldMember, member, 1)
-        && atomicCharacterSlotChangeAt(before, after, oldMember, member, 2)
-        && atomicCharacterSlotChangeAt(before, after, oldMember, member, 3)
-        && atomicCharacterSlotChangeAt(before, after, oldMember, member, 4)
-        && atomicCharacterSlotChangeAt(before, after, oldMember, member, 5)
-        && atomicCharacterSlotChangeAt(before, after, oldMember, member, 6)
-        && atomicCharacterSlotChangeAt(before, after, oldMember, member, 7);
+        && ((oldMember.partyIndex == member.partyIndex
+            && oldMember.slotIndex == member.slotIndex)
+          || (atomicCharacterDestinationFreeAt(others, member, 0)
+            && atomicCharacterDestinationFreeAt(others, member, 1)
+            && atomicCharacterDestinationFreeAt(others, member, 2)
+            && atomicCharacterDestinationFreeAt(others, member, 3)
+            && atomicCharacterDestinationFreeAt(others, member, 4)
+            && atomicCharacterDestinationFreeAt(others, member, 5)
+            && atomicCharacterDestinationFreeAt(others, member, 6)));
     }
 
     function validAtomicMemberCharacterChange(

@@ -985,6 +985,20 @@ async function verifyCharacterPlacement(testEnv, db, applicantDb) {
   await seedExpandedApprovedRoom(testEnv, 8);
   await seedGroupLinkedRoom(testEnv, db, { includeJoinerGroupMember: true });
   await testEnv.withSecurityRulesDisabled(async (context) => {
+    // Put the actor last to exercise the longest existing target lookup path.
+    const admin = context.firestore();
+    const ref = doc(admin, 'recruitments', recruitmentId);
+    const room = (await getDoc(ref)).data();
+    const actorLast = (items, isActor) => [
+      ...items.filter((item) => !isActor(item)), ...items.filter(isActor),
+    ];
+    const ordering = {
+      partySlots: actorLast(room.partySlots, (s) => s.playerId === joinerPlayerId),
+      raidStateTargets: actorLast(room.raidStateTargets, (s) => s.playerId === joinerPlayerId),
+      memberPlayerIds: actorLast(room.memberPlayerIds, (id) => id === joinerPlayerId),
+    };
+    await updateDoc(ref, ordering);
+    await updateDoc(doc(admin, 'groups', 'group-room-1', 'raidListings', recruitmentId), ordering);
     await setDoc(doc(context.firestore(), 'characters', replacementId), {
       schemaVersion: 1, status: 'active', ownerPlayerId: joinerPlayerId,
       gameAccountId: 'account-2', characterName: '변경', serverName: '루페온',
@@ -1044,6 +1058,7 @@ async function verifyCharacterPlacement(testEnv, db, applicantDb) {
     { partyIndex: 1, slotIndex: 2 }, { partyIndex: 2 },
     { tamperOther: true }, { skipOldDelete: true },
   ]) {
+    console.log('test: BUG-017 reject', JSON.stringify(options));
     await assertFails(change(options));
     if (!isDeepStrictEqual((await getDoc(recruitmentRef)).data(), original)
       || !(await getDoc(oldStateRef)).exists() || (await getDoc(newStateRef)).exists()) {
@@ -1052,6 +1067,7 @@ async function verifyCharacterPlacement(testEnv, db, applicantDb) {
   }
   // Eight members: a dealer/support swap can repair the composition, but this
   // command changes only the character. Repositioning remains a leader command.
+  console.log('test: BUG-017 max-eight in-place replacement');
   await assertSucceeds(change());
   console.log('PASS: BUG-017 max-eight in-place change with no automatic swap');
   await testEnv.withSecurityRulesDisabled(async (context) => {
@@ -1488,6 +1504,12 @@ async function main() {
   const db = testEnv.authenticatedContext(authUid).firestore();
 
   try {
+    if (process.env.PARTY_RULES_CASE === 'character-placement') {
+      await verifyCharacterPlacement(
+        testEnv, db, testEnv.authenticatedContext(joinerAuthUid).firestore(),
+      );
+      return;
+    }
     await testEnv.clearFirestore();
     await seedBase(testEnv);
     await seedJoiner(testEnv);
