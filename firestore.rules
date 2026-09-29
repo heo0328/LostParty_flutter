@@ -2750,6 +2750,8 @@ service cloud.firestore {
       let after = getAfter(recruitmentPath(recruitmentId)).data;
       let oldStateId = oldData.characterId + '_' + before.raidId;
       let newStateId = newData.characterId + '_' + after.raidId;
+      let oldTarget = {'playerId': playerId, 'stateId': oldStateId};
+      let newTarget = {'playerId': playerId, 'stateId': newStateId};
       return hasActiveBinding()
         && playerId == currentPlayerId()
         && before.schemaVersion == 2
@@ -2775,8 +2777,10 @@ service cloud.firestore {
         && existsAfter(atomicRaidStateDocPath(playerId, newStateId))
         && getAfter(atomicRaidStateDocPath(playerId, newStateId)).data
           .recruitmentId == recruitmentId
-        && atomicRaidStateListedInTargets(after, playerId, newStateId)
-        && !atomicRaidStateListedInTargets(after, playerId, oldStateId)
+        && newTarget in after.raidStateTargets
+        && !(oldTarget in after.raidStateTargets)
+        && after.raidStateTargets.removeAll([newTarget])
+          == before.raidStateTargets.removeAll([oldTarget])
         && !hasWeeklyRaidCompletionAfter(
           playerId,
           after.currentCycleKey,
