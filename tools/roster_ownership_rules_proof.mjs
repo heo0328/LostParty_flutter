@@ -103,12 +103,21 @@ async function inspectAll(env) {
   return result;
 }
 
+const failures = [];
+async function check(name, action) {
+  try { await action(); }
+  catch (error) {
+    failures.push(name);
+    console.error(`PROOF FAILURE ${name}:`, error.message);
+  }
+}
 for (const [label, rules] of [['baseline', tracked], ['candidate', candidate]]) {
   const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutover',
     firestore: { rules, host: '127.0.0.1', port: 8080 } });
   const db = env.authenticatedContext(authUid).firestore();
   try {
     for (const type of ['complete', 'advanceCycle']) {
+      await check(`${label} ${type}`, async () => {
       await seedRoom(env, db);
       await assertSucceeds(lifecycle(db, type));
       console.log(`PASS ${label}: valid 8-member ${type}`);
@@ -127,7 +136,9 @@ for (const [label, rules] of [['baseline', tracked], ['candidate', candidate]]) 
         }
         console.log(`PASS ${label}: ${type} ${returned ? 'A-B-A' : 'ownership changed'} ${label === 'baseline' ? 'currently allowed' : 'rejected atomically'}`);
       }
+      });
     }
+    await check(`${label} active cleanup and private access`, async () => {
     await seedRoom(env, db);
     const before = await inspectAll(env);
     const target = before.room.partySlots.at(-1);
@@ -144,7 +155,9 @@ for (const [label, rules] of [['baseline', tracked], ['candidate', candidate]]) 
     assert.equal(removed.room.memberCount, 7);
     assert.equal(removed.room.partySlots.some(s => s.playerId === target.playerId), false);
     console.log(`PASS ${label}: existing leader can remove stale active member without private read`);
+    });
 
+    await check(`${label} replacement state protection`, async () => {
     await seedRoom(env, db);
     const preserved = await inspectAll(env);
     const moved = preserved.room.partySlots.at(-1);
@@ -160,14 +173,18 @@ for (const [label, rules] of [['baseline', tracked], ['candidate', candidate]]) 
     await assertFails(removeApprovedMemberTxn(db, playerId, { targetPlayerId: moved.playerId }));
     assert.deepEqual(await inspectAll(env), beforeConflict);
     console.log(`PASS ${label}: different-room state blocks old removal atomically`);
+    });
 
+    await check(`${label} completed cleanup boundary`, async () => {
     await seedRoom(env, db);
     await assertSucceeds(lifecycle(db, 'complete'));
     const completed = await inspectAll(env);
     await assertFails(removeApprovedMemberTxn(db, playerId, { targetPlayerId: completed.room.partySlots.at(-1).playerId }));
     assert.deepEqual(await inspectAll(env), completed);
     console.log(`PASS ${label}: completed recurring-room removal needs a separate command`);
+    });
 
+    await check(`${label} new owner namespace`, async () => {
     await seedRoom(env, db);
     const oldUserState = await inspectAll(env);
     await env.withSecurityRulesDisabled(async ctx => {
@@ -188,6 +205,8 @@ for (const [label, rules] of [['baseline', tracked], ['candidate', candidate]]) 
     }));
     assert.deepEqual(await inspectAll(env), oldUserState, 'new owner create must not mutate old room or state');
     console.log(`PASS ${label}: same Character new Player creates separate room while old state remains`);
+    });
   } finally { await env.cleanup(); }
 }
+assert.deepEqual(failures, [], 'feasibility gates failed; do not treat partial PASS as full acceptance');
 console.log('DE2 proof finished; no production Rules or data modified.');
