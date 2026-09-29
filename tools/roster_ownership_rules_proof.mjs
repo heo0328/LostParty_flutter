@@ -40,7 +40,7 @@ const directTargets = ownershipCandidate.slice(0, includesStart) + `
 const slotStart = directTargets.indexOf('    function atomicAdvanceStateMatchesSlot(recruitment, data) {');
 const slotEnd = directTargets.indexOf('    function validAtomicAdvanceRaidStateCreate(', slotStart);
 assert.ok(slotStart >= 0 && slotEnd > slotStart);
-const candidate = directTargets.slice(0, slotStart) + `
+const slotCandidate = directTargets.slice(0, slotStart) + `
     function atomicAdvanceStateMatchesSlot(recruitment, data) {
       let slots = recruitment.partySlots;
       let count = slots.size();
@@ -58,6 +58,18 @@ const candidate = directTargets.slice(0, slotStart) + `
     }
 
 ` + directTargets.slice(slotEnd);
+// Different approach after lookup-only candidates failed: bypass unrelated
+// validators using discriminators already required inside those validators.
+const candidate = slotCandidate
+  .replace('allow update: if validPersonalRaidStateCompletion(',
+    "allow update: if (request.resource.data.source == 'manual' && validPersonalRaidStateCompletion(")
+  .replace(') || validAtomicRaidStateUpdate(', ') ) || validAtomicRaidStateUpdate(')
+  .replace('function validAtomicRaidStateUpdate(playerId, stateId, oldData, newData) {',
+    'function validAtomicRaidStateUpdate(playerId, stateId, oldData, newData) {')
+  .replace('allow update: if (personalCompletionCommandMarker(request.resource.data)',
+    'allow update: if (atomicIsLifecycleCommand(request.resource.data) && validAtomicLifecycleUpdate(resource.data, request.resource.data)) || (personalCompletionCommandMarker(request.resource.data)')
+  .replace('allow create: if validAtomicMembershipPartyEvent(request.resource.data)',
+    "allow create: if ((request.resource.data.type == 'complete' || request.resource.data.type == 'advanceCycle') && validAtomicLifecyclePartyEvent(request.resource.data)) || validAtomicMembershipPartyEvent(request.resource.data)");
 
 async function seedRoom(env, db) {
   await env.clearFirestore();
