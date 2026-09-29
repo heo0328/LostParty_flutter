@@ -10,19 +10,20 @@ import { removeApprovedMemberTxn, seedBase, seedJoiner, createPublicRecruitmentT
 } from './party_group_cutover_rules_test.mjs';
 
 const tracked = fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8');
-const anchor = '&& atomicTargetStateMatches(\n            data,';
+const anchor = 'return atomicIsLifecycleCommand(recruitment)\n        && newData.playerId == playerId';
 assert.equal(tracked.split(anchor).length, 2, 'production hook must be unique');
-// Test-only candidate: one Character read per target, at the aggregate validator.
-// Slot snapshots are fixture metadata; this is not a deployable schema migration.
-const candidate = tracked.replace(anchor, `&& deOwnershipTargetCurrent(data, index)
-          ${anchor}`).replace('    function atomicTargetMatchesTransition(data, index) {', `
-    function deOwnershipTargetCurrent(data, index) {
-      let slot = data.partySlots[index];
-      let character = get(/databases/$(database)/documents/characters/$(slot.characterId)).data;
-      return character.ownerPlayerId == slot.playerId
-        && character.ownershipRevision == slot.ownershipRevision;
+// Second candidate: each updated state checks only its own Character. The
+// aggregate-wide variant failed the 8-member expression budget in CI 36581337818.
+// Missing-state creation and schema migration are deliberately not implemented.
+const candidate = tracked.replace(anchor, `return atomicIsLifecycleCommand(recruitment)
+        && deOwnershipStateCurrent(playerId, oldData)
+        && newData.playerId == playerId`).replace('    function validAtomicRaidStateUpdate(', `
+    function deOwnershipStateCurrent(playerId, state) {
+      let character = get(/databases/$(database)/documents/characters/$(state.characterId)).data;
+      return character.ownerPlayerId == playerId
+        && character.ownershipRevision == state.ownershipRevision;
     }
-    function atomicTargetMatchesTransition(data, index) {`);
+    function validAtomicRaidStateUpdate(`);
 
 async function seedRoom(env, db) {
   await env.clearFirestore();
@@ -49,7 +50,7 @@ async function seedRoom(env, db) {
         ownerPlayerId: slot.playerId, ownershipRevision: 1, status: 'active',
       }, { merge: true });
       await updateDoc(doc(admin, 'players', slot.playerId, 'raidStates', `${slot.characterId}_${raidId}`),
-        { cycleKey: pastKey, difficultyId: 'normal' });
+        { cycleKey: pastKey, difficultyId: 'normal', ownershipRevision: 1 });
     }
   });
 }
@@ -84,9 +85,13 @@ async function lifecycle(db, type) {
       });
     }
     tx.set(doc(db, 'partyEvents', eventId), {
-      schemaVersion: 1, eventId, recruitmentId, type, commandId: eventId,
+      schemaVersion: type === 'complete' ? 2 : 1, eventId, recruitmentId, type, commandId: eventId,
       commandRevision: room.revision + 1, audiencePlayerIds: room.memberPlayerIds,
       actorPlayerId: playerId, occurredAt: serverTimestamp(),
+      ...(type === 'complete' ? {
+        raidId: room.raidId, difficultyId: room.difficultyId, cycleKey: room.currentCycleKey,
+        completionTargets: room.partySlots.map(slot => ({ playerId: slot.playerId, characterId: slot.characterId })),
+      } : {}),
     });
   });
 }
