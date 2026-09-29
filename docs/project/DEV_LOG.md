@@ -1,3 +1,18 @@
+# 2026-09-30 DE2-B 비용 후보 비교 — 주차 전환 미해결
+
+- 전용 브랜치 고정, 앱·추적 firestore.rules·초기화 설정 무변경, dev/main 미병합·운영 배포 없음.
+- tools proof의 실제 advance 쓰기를 set(merge:true)와 runtime 필드로 정렬하고 역할/Character/
+  target 위조·쓰기 누락, 그룹 listing, 8인 해산 사례를 추가했다.
+- 8944714/CI 36606500265의 직접 target 맵 비교, af45781/CI 36606825983의 슬롯 조회 분리,
+  a0795c5/CI 36607243281의 명령 조기 분기 모두 정상 advanceCycle 실패를 유지했다.
+- 후보의 8인 complete와 stale/A→B→A 거절, 그룹 complete/listing, 8인 해산, 신규 소유자
+  별도 방 생성, 기존 제한 정리/교체 state 보호는 통과했다. 정상 advance 실패 중 위조 거절은
+  단독 보안 근거로 인정하지 않는다. 후보는 채택하지 않았고 전체 결과는 failure다.
+- 새 앱 흐름: 없음. 보존 확인: 위 demo 범위만. 실기기/그룹 주차 전환/소유권 기능은 미완료.
+- 검증: node --check, git diff --check, demo CI 세 차례. 전체 Flutter/운영 배포 없음.
+- 다음 DE2-B2는 개별 validator의 첫 실패를 진단한다. 같은 helper의 미세 수정이나 조건 삭제로
+  녹색을 만들지 않는다. 상세 근거와 미확인 범위는 설계 §7에 기록했다.
+
 # 2026-09-29 DE2 최소 서버 proof — 부분 통과·주차 전환 경계 발견
 
 - fix/roster-reauth-isolation 유지. 테스트 checkpoint 570108c까지 원격 push. dev/main 병합 없음.

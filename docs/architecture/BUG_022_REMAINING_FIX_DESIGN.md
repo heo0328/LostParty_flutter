@@ -574,3 +574,48 @@ validAtomicAdvanceRaidStateCreate, validAtomicRaidStateUpdate, validAtomicStaleR
 4. group listing 포함 8인 lifecycle, stale 공대장/전원 stale/마지막 1인, completed 반복방의
    새 정리 명령, 실제 동시 요청과 사용자 실기기도 미확인이다. 순차 충돌 fixture를 실제 경쟁 테스트로 표현하지 않는다.
 5. 판별·정리 비용 경계를 통과한 뒤 DE2 기반 코드에 착수한다. dev/main 통합과 운영 배포는 하지 않는다.
+
+## 7. DE2-B 비용 비교 결과 (2026-09-30) — 채택 보류
+
+현재 브랜치 fix/roster-reauth-isolation을 유지하고 앱/production Rules는 수정하지 않았다.
+운영 배포 없음. 아래 변경은 tools의 demo Rules 문자열 후보에만 적용했다.
+
+- CI 36606500265 (8944714): 명령 대상 8회 함수 순회를 playerId/stateId 두 필드 맵의
+  정확한 목록 포함 비교로 변경하고 최대 8개 제한 유지. 정상 advanceCycle은 여전히 실패했다.
+- CI 36606825983 (af45781): 사용자 슬롯 인덱스를 찾은 뒤 Character/role을 한 번 대조하는
+  후보로 바꾸고 그룹 listing·해산·target 위조를 추가했다. 공개/그룹 advanceCycle 실패 유지.
+- CI [36607243281](https://github.com/heo0328/LostParty_flutter/actions/runs/36607243281)
+  (a0795c5): 개인 완료 source guard와 lifecycle 우선 분기로 무관한 validator 평가를
+  분리했다. 정상 공개/그룹 advanceCycle 실패 유지. 이 후보도 운영 채택하지 않는다.
+
+검증의 advanceCycle 쓰기를 실제 _advanceRaidState의 set(merge:true), schemaVersion/
+Player/Character/raid/difficulty/role 필드와 대조해 정렬했다. 기존 baseline 한도 실패는
+관찰 결과로 명시하고 후보 정상 통과 조건과 구분한다. baseline 실패를 정상화했다고 하지 않는다.
+
+### 7.1 확인 범위
+
+- 후보의 정상 8인 complete, 소유자 변경·A→B→A complete 원자 거절은 계속 통과했다.
+- 그룹 8인 complete와 listing revision/status, 8인 해산의 state 삭제도 통과했다.
+- 신규 Player의 동일 Character 별도 방 생성, private state 직접 읽기/삭제 거절,
+  기존 공대장 단건 정리와 다른 방 state 보호는 유지했다.
+- role/Character/target Player/target state 위조, 마지막 state 쓰기 누락에서 원자 거절을
+  관찰했다. **정상 advanceCycle 자체가 실패하므로 이 거절만으로 해당 보안 조건이 올바르게
+  작동한다고 인정하지 않는다.** 정상 통과 후보 확보 뒤 대조 검증해야 한다.
+- 정상 공개/그룹 8인 advanceCycle은 모두 실패했다. 완료/해산 통과를 주차 전환이나
+  소유권 이전 기능 완료로 확대하지 않는다.
+
+### 7.2 가설 변경과 다음 단일 진단
+
+조회 함수 반복이 비용 기여 후보인 것은 맞지만 이를 바꾸어도 같은 오류가 남았다.
+1,000식 메시지만으로 해당 함수가 유일한 원인이라고 확정하지 않는다. 정상 전환의 다른
+조건 불일치 뒤 fallback 평가가 누적되는 가능성을 포함해 진단한다. 더 이상 동일 helper
+미세 최적화를 반복하거나 조건 삭제·범용 권한 완화로 통과시키지 않는다.
+
+다음은 **DE2-B2 개별 조건 진단**이다. demo에서 runtime-shaped 전후 문서와 state의 필수 필드,
+주차/시간 경계·삭제 sentinel 결과를 점검하고, lifecycle shape/state/target 결합/state update/
+listing/event 각 validator의 첫 실패를 별도 진단으로 분리한다. 진단용 약화 Rules가 필요하면
+별도 이름의 메모리 실험으로 격리하고 제품 후보나 보안 통과 결과로 사용하지 않는다.
+최초 실패 조건 또는 구체 평가 병목이 입증된 뒤에만 다음 수정 후보를 만든다.
+
+현재 proof는 미해결 후보를 재현하기 위해 CI failure를 유지한다. 테스트 삭제·거절 기대값으로
+교체해 녹색으로 만들지 않는다. 일반 full 회귀와 선택형 ownership-proof를 구분한다.

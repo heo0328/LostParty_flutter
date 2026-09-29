@@ -64,8 +64,6 @@ const candidate = slotCandidate
   .replace('allow update: if validPersonalRaidStateCompletion(',
     "allow update: if (request.resource.data.source == 'manual' && validPersonalRaidStateCompletion(")
   .replace(') || validAtomicRaidStateUpdate(', ') ) || validAtomicRaidStateUpdate(')
-  .replace('function validAtomicRaidStateUpdate(playerId, stateId, oldData, newData) {',
-    'function validAtomicRaidStateUpdate(playerId, stateId, oldData, newData) {')
   .replace('allow update: if (personalCompletionCommandMarker(request.resource.data)',
     'allow update: if (atomicIsLifecycleCommand(request.resource.data) && validAtomicLifecycleUpdate(resource.data, request.resource.data)) || (personalCompletionCommandMarker(request.resource.data)')
   .replace('allow create: if validAtomicMembershipPartyEvent(request.resource.data)',
