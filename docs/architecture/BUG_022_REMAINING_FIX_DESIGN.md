@@ -427,3 +427,99 @@ characterIdentityClaims의 read/write는 signedIn 기준으로 넓게 허용되�
 반영은 AGENTS.md의 검증·대상 확인·1회 배포·실패 시 중단 규칙을 따른다. **Git 브랜치
 분리는 Firebase 운영 환경 격리가 아니다.** 운영 데이터로 파괴적 회귀를 재현하지 않으며,
 서버 경계는 Emulator/CI에서 먼저 검증하고 실기기 검증용 표본은 사용자가 준비한다.
+
+## 5. DE1 조사 결과와 구현 기준 (2026-09-29)
+
+상태: 코드 경로 조사·계약 구체화. 아래 재현표는 **코드로 도출한 검증 시나리오**이며
+실기기/Emulator에서 새로 재현했다는 뜻이 아니다. DE2 진입 시 최소 서버 proof가 필요하다.
+
+### 5.1 실제 경로와 충돌 후보
+
+| 대상 | 근거 | 판정과 최소 시나리오 |
+|---|---|---|
+| 새 B의 별도 모집 생성/가입 | PartyRaidStateOccupancyInspector는 B의 raidStates만 조회, create도 동일 Player 경로 사용 | A의 state만으로 B가 막히는 것은 현재 코드에서 입증되지 않음. A active→B 인증→별도 방 생성/가입으로 확인 |
+| 이전 방의 자리 | Aggregate의 memberCount/partySlots는 인증 시 변경 안 됨, join은 capacity를 먼저 검사 | 이전 방이 만석이면 자리가 남아 거절될 수 있음. 정상 만석·직업·그룹 자격 조건을 우회해서는 안 됨 |
+| A→B→A | state 키는 Player+Character+raid, 판정은 주차/상태/부모 방 중심 | A 재취득 시 구세대 active/completed가 현재 제약으로 다시 사용될 수 있음 |
+| 신청 승인 | atomic join은 applicant Character의 ownerPlayerId를 검사 | A→B 직후 A 신청은 이미 ownershipLost로 거절. A로 돌아온 뒤 오래된 신청까지 구별할 차수는 없음 |
+| 전체 완료/반복 전환 | FirestorePartyAtomicCommandRepository는 binding·모집·필요 group count를 읽고 명령을 구성. Character 조회 없음 | 남은 슬롯으로 이전 Player state를 complete/advance할 가능성. 현재 Rules의 lifecycle/advance state 검증에도 현재 소유자 대조가 없음 |
+| 기존 고아 정리 | validAtomicStaleRaidStateDelete는 본인 active state와 부모 부재/종료 판정 | 부모가 정상인 소유권 변경 사례는 기존 정리 사유가 아님 |
+| 기존 탈퇴/추방 | removal Write Plan은 status/currentCycleStatus 모두 active 요구, 후임은 남은 첫 슬롯 | completed 반복방과 stale 첫 후임은 그대로 재사용 불가. 제한된 별도 정리 사유가 필요 |
+
+조사 파일: Router의 실제 Atomic Repository 연결, PartyRaidStateOccupancyInspector,
+FirestorePartyAtomicCreate/Join/MemberMutation/MemberRemoval/CommandRepository,
+PartyAtomicMemberRemovalWritePlan 및 firestore.rules의 validAtomicLifecycleUpdate,
+validAtomicAdvanceRaidStateCreate, validAtomicRaidStateUpdate, validAtomicStaleRaidStateDelete.
+자동 인증은 _claimOwnership, 수동 인증은 _claimForRequester와 호출부(승인·강제·방어 실패·
+만료 확정)를 함께 변경 대상으로 한다. 기존 구 Repository만 고쳐 실제 Router를 놓치지 않는다.
+
+### 5.2 권위 데이터와 차수 규칙
+
+- GameAccount의 ownerPlayerId/ownershipRevision을 소유권 전이 기준으로 하고 Character에
+  같은 차수를 반영한다. 원정대 전체 이전은 기존 인증 Transaction에 포함한다.
+- 신규 원정대의 시작 차수는 1. 필드 없는 계정은 legacy 차수 0으로 해석한다. 같은 소유자
+  재인증은 0 또는 기존 차수를 유지하고 실제 이전은 +1한다. 음수·비정수·계정/Character의
+  불일치는 unknown으로 거절하며 임의로 현재 값에 맞춰 고치지 않는다.
+- 신규 신청·참가·개인 state에는 현재 차수를 저장한다. Player 값은 기존 playerId를 활용하고
+  소유자 필드를 불필요하게 중복 추가하지 않는다. Aggregate 슬롯이 참가의 권위 원장이고
+  members/listing은 이를 투영한다. 승인 시 제출 당시 차수를 현재 값으로 덮어쓰지 않는다.
+- 공용 판정 결과를 current / ownershipChanged / unknown으로 구분한다. Player 또는 차수
+  불일치는 ownershipChanged, 읽기 실패·손상·필수 문서 부재는 unknown이다. unknown은 삭제 근거가 아니다.
+- Snapshot 필드 없는 과거 관계는 현재 소유자 일치와 계정/Character 모두 legacy 0일 때만
+  기존 동작을 허용한다. 차수 1 이상 계정의 차수 없는 관계는 legacy 관계로 구분해 정상 참가로
+  사용하지 않는다. 정리할 때는 대상 관계/원정대 일치까지 증명해야 한다.
+- 이 방식은 차수 도입 이후 A→B→A를 구분한다. **도입 이전에 이미 끝난 A→B→A의 과거 차수는
+  복원할 수 없다.** 이전 로그가 없는 데이터를 완전 자동 판정했다고 주장하지 않는다.
+- completed state의 과거 이력은 삭제하지 않는다. 재취득한 구세대 state는 현재 점유/완료
+  판정에서 제외하고 새 활동으로 대체할 때 정확한 이전 버전을 검증한다. 로컬/공용 완료
+  이벤트는 보존하며 새 사용자에게 복사하지 않는다.
+
+### 5.3 정리 권한·명령 경계
+
+- 신규 명령은 ownershipChanged 사유의 제한 정리로 분리한다. 정상 leave/kick과
+  lostGroupQualification의 기존 권한을 넓히지 않는다.
+- 일반 stale 참가: 본인의 이전 관계 또는 유효한 현 공대장이 정리 가능. stale 공대장:
+  유효한 기존 참가자가 정리하며 유효한 후임 중 기존 가입 순서상 첫 사람을 선정한다.
+- 마지막 1인 stale 방: 그 슬롯의 기존 Player가 본인 관계 해산 가능. 새 소유자나 외부인은
+  이전 방 권한을 얻지 않는다. 호출 가능한 기존 사용자가 없는 방은 추후 운영 진단 대상으로
+  남기되 새 소유자의 별도 모집 이용에 영향을 주지 않는다.
+- 여러 stale 참가자가 있으면 일반 stale 대상을 먼저 단건 정리하고 공대장을 마지막에
+  처리하는 방향으로 비용을 제한한다. 유효 후임이 없으면 임의 stale 후임 승계는 금지한다.
+  전원 stale/무응답 방은 자동 대량 해산하지 않으며 운영 진단 범위로 분리한다.
+- active 회차 정리: Aggregate 슬롯·member·연결 active state·인원/역할 count·그룹 listing과
+  필요한 마커를 같은 Transaction에서 반영. 해당 state가 이미 다른 방/새 차수이면 삭제하지 않는다.
+- completed 반복방 정리: 다음 주 참가 대상 슬롯/member/listing만 제거하며 개인 completed
+  state와 완료 이벤트는 보존한다. 마지막 1인이면 기존 완료방 해산 정책으로 count를 닫는다.
+- private state를 타인 클라이언트가 읽도록 열지 않는다. 서버 Rules가 삭제 대상 기존 데이터와
+  변경 후 Aggregate를 대조한다. state 부재/교체 시 처리와 접근 예산은 DE2 서버 proof로 확정한다.
+- 명령 입력에는 모집 ID, 예상 Aggregate revision, 대상 Player/Character, 관찰한 소유권 차수,
+  commandId를 포함한다. 요청 값을 믿지 않고 최신 Character/슬롯과 다시 대조한다.
+- 상태 불명·경쟁 변경은 재조회 안내, 이미 같은 정리가 적용된 재시도는 성공 수렴으로 처리한다.
+  단순 notFound만으로 성공 판정하지 않는다. 파티 이벤트는 기존 공용 이벤트 구조를 재사용한다.
+
+### 5.4 읽기 → 검증 → 쓰기 및 호환 전환
+
+- 일반 이용 명령: binding·대상 모집·Character/소유권·허용된 본인 state·필요 그룹 관계 읽기
+  → 공용 소유권 판정과 기존 구성/점유 검증 → Write Plan → 원자 쓰기 → Rules에서 최종 검증.
+- lifecycle: 대상 최대 8명의 Character를 읽어 판별 후 정상 대상만 남은 Aggregate로 기존 명령 실행.
+  stale 발견 시 그 상태로 complete/advance하지 않고 제한 정리를 안내한다. 읽기 실패 시 중단한다.
+  개별 정리 뒤 재조회하므로 정리와 lifecycle을 무제한 하나의 Transaction으로 묶지 않는다.
+- 모든 조회는 쓰기 전에 끝낸다. 후보 화면 판정은 안내이며 최종 Transaction이 다시 판정한다.
+  목록 전체에서 방마다 Character를 추가 조회하는 N+1 방식은 도입하지 않는다.
+- 구버전 set/merge가 차수를 없애거나 낮추는 것을 Rules로 거절해야 한다. 필드 추가 전용 준비
+  단계와 활성 전환을 분리하고 같은 필드의 여러 임시 표현을 만들지 않는다.
+- 운영 전환은 신규 명령 Snapshot과 lifecycle/정리 경로가 모두 연결된 앱/Rules를 하나의 기능
+  섹션으로 검증한 후 진행한다. DE2만 운영 배포하여 기존 앱만 사용하는 방을 먼저 막지 않는다.
+  구버전 거절 시 업데이트 안내를 준비하고 구버전 읽기 호환을 유지한다.
+- 현재 signedIn 소유권 쓰기 허용의 한계는 별도 공개된 제한이다. 이번 변경에서는 타입·차수
+  감소/누락·원정대/Character 전이 일관성을 검사하되 장비 인증의 서버 증명까지 구현했다고 하지 않는다.
+
+### 5.5 구현 전 proof와 남은 불확실성
+
+1. 8인 complete/advance의 Character 검사 추가 후 Rules 접근/평가 비용을 측정한다. 기존 8×8
+   재검사로 돌아가지 않는다. 실패하면 데이터를 임의 삭제하거나 소유권 검사를 빼지 않는다.
+2. 타인 private state를 읽지 않는 stale 정리가 새 차수 state를 지우지 않는지 검사한다.
+3. completed 반복방에서 개인 체크·과거 이벤트를 보존하며 참가 대상만 정리하는 계약을 검사한다.
+4. 현재 앱 상태에서 A→B 신규 이용 충돌을 실제로 재현한다. 재현되지 않으면 신규 버그라고
+   만들지 않고 lifecycle·재이전 등 확인된 위험의 회귀 보호로 기록한다.
+5. 서버 proof 전에는 DE1의 비용·Rules 구현 가능성까지 검증 완료로 판정하지 않는다.
+   위 proof는 DE2 첫 구간이며 결과에 따라 설계를 보완한 뒤 기능 연결을 진행한다.
