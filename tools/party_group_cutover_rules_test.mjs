@@ -974,6 +974,117 @@ async function assertGroupJoinResult(db, expectedCount) {
   }
 }
 
+async function verifyCharacterPlacement(testEnv, db, applicantDb) {
+  const replacementId = 'replacement-character';
+  await testEnv.clearFirestore();
+  await seedBase(testEnv);
+  await seedJoiner(testEnv);
+  await assertSucceeds(createPublicRecruitmentTxn(db));
+  await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+  await assertSucceeds(approvePublicApplicationTxn(db));
+  await seedExpandedApprovedRoom(testEnv, 8);
+  await seedGroupLinkedRoom(testEnv, db, { includeJoinerGroupMember: true });
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'characters', replacementId), {
+      schemaVersion: 1, status: 'active', ownerPlayerId: joinerPlayerId,
+      gameAccountId: 'account-2', characterName: '변경', serverName: '루페온',
+      characterClassName: '버서커', itemAvgLevel: 1700,
+    });
+  });
+  const recruitmentRef = doc(applicantDb, 'recruitments', recruitmentId);
+  const memberRef = doc(applicantDb, 'recruitments', recruitmentId, 'members', joinerPlayerId);
+  const listingRef = doc(applicantDb, 'groups', 'group-room-1', 'raidListings', recruitmentId);
+  const oldStateRef = doc(applicantDb, 'players', joinerPlayerId, 'raidStates', `${joinerCharacterId}_${raidId}`);
+  const newStateRef = doc(applicantDb, 'players', joinerPlayerId, 'raidStates', `${replacementId}_${raidId}`);
+  async function change({ partyIndex = 0, slotIndex = 3, tamperOther = false,
+    mismatch = false, skipOldDelete = false } = {}) {
+    return runTransaction(applicantDb, async (tx) => {
+      const before = (await tx.get(recruitmentRef)).data();
+      await tx.get(memberRef);
+      await tx.get(newStateRef);
+      await tx.get(listingRef);
+      const slots = before.partySlots.map((s) => s.playerId === joinerPlayerId
+        ? { ...s, characterId: replacementId, classKey: '버서커', role: 'dealer', partyIndex, slotIndex }
+        : tamperOther && s.playerId === playerId ? { ...s, classKey: '위조' } : s);
+      const patch = {
+        ...lifecycleMarkerConsumptionPatch(before), partySlots: slots,
+        raidStateTargets: before.raidStateTargets.map((t) => t.playerId === joinerPlayerId
+          ? { playerId: joinerPlayerId, stateId: `${replacementId}_${raidId}` } : t),
+        dealerCount: slots.filter((s) => s.role === 'dealer').length,
+        supportCount: slots.filter((s) => s.role === 'support').length,
+        revision: before.revision + 1, updatedAt: serverTimestamp(),
+      };
+      tx.update(recruitmentRef, patch);
+      tx.update(memberRef, {
+        characterId: replacementId, characterNameSnapshot: '변경',
+        classNameSnapshot: '버서커', role: 'dealer',
+        partyIndex: mismatch ? 0 : partyIndex, slotIndex,
+        characterChangedAt: serverTimestamp(), updatedAt: serverTimestamp(),
+      });
+      if (!skipOldDelete) tx.delete(oldStateRef);
+      tx.set(newStateRef, {
+        schemaVersion: 1, playerId: joinerPlayerId, characterId: replacementId,
+        raidId, difficultyId: 'normal', cycleKey: before.currentCycleKey,
+        status: 'active', source: 'party', recruitmentId,
+        revision: 1, updatedAt: serverTimestamp(),
+      });
+      tx.set(listingRef, { ...before, ...patch });
+      const eventId = `characterChanged_${recruitmentId}_${patch.revision}`;
+      tx.set(doc(applicantDb, 'partyEvents', eventId), {
+        schemaVersion: 1, eventId, recruitmentId, type: 'characterChanged',
+        commandId: eventId, commandRevision: patch.revision,
+        audiencePlayerIds: before.memberPlayerIds, actorPlayerId: joinerPlayerId,
+        occurredAt: serverTimestamp(),
+      });
+    });
+  }
+  const original = (await getDoc(recruitmentRef)).data();
+  console.log('test: BUG-017 max-eight rejects occupied/out-of-range/other-slot changes');
+  for (const options of [
+    { partyIndex: 1, slotIndex: 2 }, { partyIndex: 2 },
+    { tamperOther: true }, { skipOldDelete: true },
+  ]) {
+    await assertFails(change(options));
+    if (!isDeepStrictEqual((await getDoc(recruitmentRef)).data(), original)
+      || !(await getDoc(oldStateRef)).exists() || (await getDoc(newStateRef)).exists()) {
+      throw new Error('BUG-017 rejected change was not atomic');
+    }
+  }
+  // Eight members: a dealer/support swap can repair the composition, but this
+  // command changes only the character. Repositioning remains a leader command.
+  await assertSucceeds(change());
+  console.log('PASS: BUG-017 max-eight in-place change with no automatic swap');
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const admin = context.firestore();
+    const oldMember = (await getDoc(doc(admin, 'recruitments', recruitmentId, 'members', joinerPlayerId))).data();
+    const slots = original.partySlots.filter((s) => s.playerId !== 'player-extra-5');
+    const reset = { ...original, partySlots: slots,
+      memberPlayerIds: slots.map((s) => s.playerId), memberCount: 7,
+      dealerCount: 5, supportCount: 2, hasAvailableSlot: true,
+      raidStateTargets: original.raidStateTargets.filter((t) => t.playerId !== 'player-extra-5'),
+    };
+    await setDoc(doc(admin, 'recruitments', recruitmentId), reset);
+    await setDoc(doc(admin, 'groups', 'group-room-1', 'raidListings', recruitmentId), reset);
+    await updateDoc(doc(admin, 'recruitments', recruitmentId, 'members', joinerPlayerId), {
+      ...oldMember, characterId: joinerCharacterId, classNameSnapshot: '바드', role: 'support',
+    });
+    await deleteDoc(doc(admin, 'players', joinerPlayerId, 'raidStates', `${replacementId}_${raidId}`));
+    await setDoc(doc(admin, 'players', joinerPlayerId, 'raidStates', `${joinerCharacterId}_${raidId}`), {
+      schemaVersion: 1, playerId: joinerPlayerId, characterId: joinerCharacterId,
+      raidId, difficultyId: 'normal', recruitmentId, cycleKey, status: 'active', source: 'party', revision: 1,
+    });
+    await deleteDoc(doc(admin, 'partyEvents', `characterChanged_${recruitmentId}_${original.revision + 1}`));
+  });
+  await assertFails(change({ partyIndex: 1, slotIndex: 2, mismatch: true }));
+  await assertSucceeds(change({ partyIndex: 1, slotIndex: 2 }));
+  const after = (await getDoc(recruitmentRef)).data();
+  if (!isDeepStrictEqual(after, (await getDoc(listingRef)).data())
+    || (await getDoc(memberRef)).data().partyIndex !== 1) {
+    throw new Error('BUG-017 group listing or membership projection mismatch');
+  }
+  console.log('PASS: BUG-017 empty-slot character move and group projection');
+}
+
 async function seedExpandedApprovedRoom(testEnv, totalMembers) {
   if (totalMembers !== 4 && totalMembers !== 8) throw new Error('Unsupported boundary fixture');
   await testEnv.withSecurityRulesDisabled(async (context) => {
@@ -2039,6 +2150,7 @@ async function main() {
     await assertSucceeds(approvePublicApplicationTxn(db));
     await seedGroupLinkedRoom(testEnv, db);
     await verifyMemberRemovalListings(testEnv, db, applicantDb);
+    await verifyCharacterPlacement(testEnv, db, applicantDb);
     await testEnv.clearFirestore();
     await seedBase(testEnv);
     await seedJoiner(testEnv);

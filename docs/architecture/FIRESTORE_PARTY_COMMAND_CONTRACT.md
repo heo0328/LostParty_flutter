@@ -307,6 +307,12 @@ memberCount/sourceRevision/updatedAt 세 필드 요청도 종전대로 허용한
 
 #### 슬롯 점유 원장
 
+> 아래 별도 slots 원장은 이전 스키마 계약이다. 현재 schemaVersion 2는
+> PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN의 Aggregate.partySlots를 원장으로 사용한다.
+> BUG-017 복원도 이 최대 8칸에서 배치를 계산하며 전원 membership 재조회나 별도 slots
+> 문서를 만들지 않는다. 캐릭터 변경과 자동 빈자리 이동은 하나의 characterChanged
+> 공용 이벤트로 기록하고 별도 이동 이벤트를 만들지 않는다.
+
 - 신규 모집부터 `slotLedgerVersion: 2`와 `recruitments/{recruitmentId}/slots/{partyIndex}_{slotIndex}` 최소 Claim을 필수로 사용한다.
 - 슬롯 문서는 `{playerId, partyIndex, slotIndex, updatedAt}`만 저장한다. 문서 ID와 두 index가 일치해야 하고, 같은 원자적 명령의 membership 위치와 `playerId`가 일치해야 한다.
 - 역할 정원·동일 딜러 직업·변경 배치는 Transaction이 다시 읽은 최신 membership을 앱의 공용 Domain 정책으로 계산한다. Rules는 전체 파티 조합을 재계산하지 않고 권한·revision·변경 필드·Claim 연결만 검증한다.

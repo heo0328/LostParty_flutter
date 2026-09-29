@@ -59,12 +59,27 @@ class PartyAtomicCharacterChangeWritePlan {
     );
     if (oldIndex < 0) throw StateError('참가 Player를 찾을 수 없습니다.');
     final old = aggregate.partySlots[oldIndex];
-    final partyIndex = membershipPatch['partyIndex'] is int
-        ? membershipPatch['partyIndex']! as int
-        : old.partyIndex;
-    final slotIndex = membershipPatch['slotIndex'] is int
-        ? membershipPatch['slotIndex']! as int
-        : old.slotIndex;
+    final placement = PartyCompositionPolicy(rules).planReplacement(
+      replaceMemberId: playerId,
+      className: newClassKey,
+      role: newRole,
+      existing: [
+        for (final slot in aggregate.partySlots)
+          OccupiedPartyMember(
+            id: slot.playerId,
+            className: slot.classKey,
+            role: slot.role,
+            partyIndex: slot.partyIndex,
+            slotIndex: slot.slotIndex,
+            isLeader: slot.playerId == aggregate.leaderPlayerId,
+          ),
+      ],
+    );
+    if (!placement.canChange) {
+      throw StateError('파티 구성 정책 위반: ${placement.failure}');
+    }
+    final partyIndex = placement.destination?.partyIndex ?? old.partyIndex;
+    final slotIndex = placement.destination?.slotIndex ?? old.slotIndex;
     final replacement = PartyAggregateSlot(
       playerId: playerId,
       characterId: newCharacterId,
@@ -75,7 +90,11 @@ class PartyAtomicCharacterChangeWritePlan {
       countedAsNonGroupMember: old.countedAsNonGroupMember,
     );
     final nextSlots = [...aggregate.partySlots]..[oldIndex] = replacement;
-    _validateComposition(nextSlots, aggregate.leaderPlayerId, rules);
+    // A proven single swap is left for the leader; never move another member
+    // as a side effect of changing this character.
+    if (!placement.needsRebalance) {
+      _validateComposition(nextSlots, aggregate.leaderPlayerId, rules);
+    }
     final nextRevision = aggregate.revision + 1;
     final previousRaidStateId = PartyRaidState.documentIdFor(
       characterId: old.characterId,
@@ -119,7 +138,11 @@ class PartyAtomicCharacterChangeWritePlan {
         'revision': nextRevision,
         'updatedAt': serverTimestamp,
       }),
-      membershipPatch: Map.unmodifiable(membershipPatch),
+      membershipPatch: Map.unmodifiable({
+        ...membershipPatch,
+        'partyIndex': partyIndex,
+        'slotIndex': slotIndex,
+      }),
       previousRaidStateId: previousRaidStateId,
       nextRaidStateId: nextRaidStateId,
       nextRaidState: Map.unmodifiable({

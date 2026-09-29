@@ -2701,6 +2701,45 @@ service cloud.firestore {
         && (publicToggle || (disbanded && beforeLeader == currentPlayerId()));
     }
 
+    // Compare the already loaded Aggregate; no per-participant document reads.
+    function atomicCharacterSlotChangeAt(before, after, oldMember, member, index) {
+      return index >= before.partySlots.size()
+        || (before.partySlots[index].playerId == member.playerId
+          ? (before.partySlots[index].characterId == oldMember.characterId
+            && before.partySlots[index].partyIndex == oldMember.partyIndex
+            && before.partySlots[index].slotIndex == oldMember.slotIndex
+            && after.partySlots[index].diff(before.partySlots[index])
+              .affectedKeys().hasOnly([
+                'characterId', 'classKey', 'role', 'partyIndex', 'slotIndex'
+              ])
+            && after.partySlots[index].characterId == member.characterId
+            && after.partySlots[index].classKey == member.classNameSnapshot
+            && after.partySlots[index].role == member.role
+            && after.partySlots[index].partyIndex == member.partyIndex
+            && after.partySlots[index].slotIndex == member.slotIndex)
+          : (after.partySlots[index] == before.partySlots[index]
+            && (after.partySlots[index].partyIndex != member.partyIndex
+              || after.partySlots[index].slotIndex != member.slotIndex)));
+    }
+
+    function atomicCharacterPlacementMatches(before, after, oldMember, member) {
+      return before.partySlots.size() == after.partySlots.size()
+        && before.partySlots.size() <= 8
+        && member.playerId in before.memberPlayerIds
+        && member.partyIndex >= 0 && member.partyIndex < after.partyCount
+        && member.slotIndex >= 0 && member.slotIndex < after.membersPerParty
+        && (member.playerId != before.leaderPlayerId
+          || (member.partyIndex == 0 && member.slotIndex == 0))
+        && atomicCharacterSlotChangeAt(before, after, oldMember, member, 0)
+        && atomicCharacterSlotChangeAt(before, after, oldMember, member, 1)
+        && atomicCharacterSlotChangeAt(before, after, oldMember, member, 2)
+        && atomicCharacterSlotChangeAt(before, after, oldMember, member, 3)
+        && atomicCharacterSlotChangeAt(before, after, oldMember, member, 4)
+        && atomicCharacterSlotChangeAt(before, after, oldMember, member, 5)
+        && atomicCharacterSlotChangeAt(before, after, oldMember, member, 6)
+        && atomicCharacterSlotChangeAt(before, after, oldMember, member, 7);
+    }
+
     function validAtomicMemberCharacterChange(
       recruitmentId,
       playerId,
@@ -2711,8 +2750,6 @@ service cloud.firestore {
       let after = getAfter(recruitmentPath(recruitmentId)).data;
       let oldStateId = oldData.characterId + '_' + before.raidId;
       let newStateId = newData.characterId + '_' + after.raidId;
-      let locationUnchanged = newData.partyIndex == oldData.partyIndex
-        && newData.get('slotIndex', -1) == oldData.get('slotIndex', -1);
       return hasActiveBinding()
         && playerId == currentPlayerId()
         && before.schemaVersion == 2
@@ -2728,7 +2765,8 @@ service cloud.firestore {
         && (newData.characterId != oldData.characterId
           || newData.role != oldData.role)
         && newData.role in ['dealer', 'support']
-        && locationUnchanged
+        && after.revision == before.revision + 1
+        && atomicCharacterPlacementMatches(before, after, oldData, newData)
         && newData.canApproveApplications == oldData.canApproveApplications
         && ownsActiveCharacter(newData.characterId)
         && newData.characterChangedAt == request.time
