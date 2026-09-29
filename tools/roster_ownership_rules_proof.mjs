@@ -15,7 +15,7 @@ assert.equal(tracked.split(anchor).length, 2, 'production hook must be unique');
 // Second candidate: each updated state checks only its own Character. The
 // aggregate-wide variant failed the 8-member expression budget in CI 36581337818.
 // Missing-state creation and schema migration are deliberately not implemented.
-const candidate = tracked.replace(anchor, `return atomicIsLifecycleCommand(recruitment)
+const ownershipCandidate = tracked.replace(anchor, `return atomicIsLifecycleCommand(recruitment)
         && deOwnershipStateCurrent(playerId, oldData)
         && newData.playerId == playerId`).replace('    function validAtomicRaidStateUpdate(', `
     function deOwnershipStateCurrent(playerId, state) {
@@ -24,6 +24,19 @@ const candidate = tracked.replace(anchor, `return atomicIsLifecycleCommand(recru
         && character.ownershipRevision == state.ownershipRevision;
     }
     function validAtomicRaidStateUpdate(`);
+
+// DE2-B: target maps contain exactly playerId/stateId. Replace eight repeated
+// function calls per state with exact map membership; preserve the <=8 bound.
+const includesStart = ownershipCandidate.indexOf('    function atomicCommandIncludes(');
+const includesEnd = ownershipCandidate.indexOf('    function atomicAdvanceStateMatchesSlotAt(', includesStart);
+assert.ok(includesStart >= 0 && includesEnd > includesStart);
+const candidate = ownershipCandidate.slice(0, includesStart) + `
+    function atomicCommandIncludes(data, playerId, stateId) {
+      return data.commandTargets.size() <= 8
+        && data.commandTargets.hasAny([{'playerId': playerId, 'stateId': stateId}]);
+    }
+
+` + ownershipCandidate.slice(includesEnd);
 
 async function seedRoom(env, db) {
   await env.clearFirestore();
@@ -55,7 +68,7 @@ async function seedRoom(env, db) {
   });
 }
 
-async function lifecycle(db, type) {
+async function lifecycle(db, type, { tamper = null } = {}) {
   return runTransaction(db, async tx => {
     const ref = doc(db, 'recruitments', recruitmentId);
     const room = (await tx.get(ref)).data();
@@ -77,12 +90,23 @@ async function lifecycle(db, type) {
     }
     tx.update(ref, patch);
     for (const slot of room.partySlots) {
-      tx.update(doc(db, 'players', slot.playerId, 'raidStates', `${slot.characterId}_${raidId}`), {
+      const isLast = slot === room.partySlots.at(-1);
+      if (isLast && tamper === 'omit-state') continue;
+      const stateRef = doc(db, 'players', slot.playerId, 'raidStates', `${slot.characterId}_${raidId}`);
+      const statePatch = {
         status: type === 'complete' ? 'completed' : 'active', source: 'party',
         cycleKey: type === 'complete' ? room.currentCycleKey : cycleKey,
         revision: increment(1), updatedAt: serverTimestamp(),
         completedAt: type === 'complete' ? serverTimestamp() : deleteField(),
-      });
+        ...(isLast && tamper === 'role' ? { role: slot.role === 'support' ? 'dealer' : 'support' } : {}),
+        ...(isLast && tamper === 'character' ? { characterId: 'forged-character' } : {}),
+      };
+      if (type === 'advanceCycle') {
+        // Match runtime _advanceRaidState + set(merge:true), not just update.
+        tx.set(stateRef, { schemaVersion: 1, playerId: slot.playerId,
+          characterId: slot.characterId, raidId: room.raidId, difficultyId: room.difficultyId,
+          recruitmentId, role: slot.role, ...statePatch }, { merge: true });
+      } else tx.update(stateRef, statePatch);
     }
     tx.set(doc(db, 'partyEvents', eventId), {
       schemaVersion: type === 'complete' ? 2 : 1, eventId, recruitmentId, type, commandId: eventId,
@@ -124,6 +148,16 @@ for (const [label, rules] of [['baseline', tracked], ['candidate', candidate]]) 
     for (const type of ['complete', 'advanceCycle']) {
       await check(`${label} ${type}`, async () => {
       await seedRoom(env, db);
+      if (label === 'baseline' && type === 'advanceCycle') {
+        const before = await inspectAll(env);
+        try { await lifecycle(db, type); console.log('BASELINE observation: 8-member advance now succeeds'); }
+        catch (error) {
+          assert.match(error.message, /maximum of 1000 expressions/, 'unexpected baseline failure');
+          assert.deepEqual(await inspectAll(env), before);
+          console.log('BASELINE KNOWN LIMIT: 8-member advance expression budget; not a passing production flow');
+        }
+        return;
+      }
       await assertSucceeds(lifecycle(db, type));
       console.log(`PASS ${label}: valid 8-member ${type}`);
       for (const returned of [false, true]) {
@@ -142,6 +176,17 @@ for (const [label, rules] of [['baseline', tracked], ['candidate', candidate]]) 
         console.log(`PASS ${label}: ${type} ${returned ? 'A-B-A' : 'ownership changed'} ${label === 'baseline' ? 'currently allowed' : 'rejected atomically'}`);
       }
       });
+    }
+    if (label === 'candidate') {
+      for (const tamper of ['role', 'character', 'omit-state']) {
+        await check(`candidate advance tamper ${tamper}`, async () => {
+          await seedRoom(env, db);
+          const before = await inspectAll(env);
+          await assertFails(lifecycle(db, 'advanceCycle', { tamper }));
+          assert.deepEqual(await inspectAll(env), before);
+          console.log(`PASS candidate: advance rejects ${tamper} atomically`);
+        });
+      }
     }
     await check(`${label} active cleanup and private access`, async () => {
     await seedRoom(env, db);
