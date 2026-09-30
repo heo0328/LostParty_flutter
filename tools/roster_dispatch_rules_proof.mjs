@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { collection, getDocs, doc, updateDoc, deleteField } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteField, increment, serverTimestamp } from 'firebase/firestore';
 import { seedRoom, lifecycle, inspectAll, ownershipCandidate } from './roster_ownership_rules_proof.mjs';
 import { authUid, cycleKey, recruitmentId, raidId, seedGroupLinkedRoom, runCutoverRegression } from './party_group_cutover_rules_test.mjs';
 
@@ -20,8 +20,20 @@ function directDispatch(source) {
           ? validAtomicLifecycleUpdate(resource.data, request.resource.data)
           : (${original});\n` + source.slice(end);
 }
-const dispatch = directDispatch(tracked);
-const combined = directDispatch(ownershipCandidate);
+function recurrenceFirst(source) {
+  const start = source.indexOf('    function validRecurrenceChange(');
+  const end = source.indexOf('\n    // R2:', start);
+  assert.ok(start > 0 && end > start);
+  const original = source.slice(start, end);
+  const keyCheck = "newData.diff(oldData).affectedKeys().hasOnly([\n          'continueTogether', 'revision', 'updatedAt'\n        ])";
+  assert.equal(original.split(keyCheck).length, 2);
+  const reordered = original.replace(`        && ${keyCheck}\n`, '')
+    .replace('return hasActiveBinding()', `return ${keyCheck}\n        && hasActiveBinding()`);
+  return source.slice(0, start) + reordered + source.slice(end);
+}
+const buildCandidate = process.env.DISPATCH_SCOPE === 'recurrence' ? recurrenceFirst : directDispatch;
+const dispatch = buildCandidate(tracked);
+const combined = buildCandidate(ownershipCandidate);
 async function snapshot(env) {
   const result = await inspectAll(env);
   await env.withSecurityRulesDisabled(async ctx => {
@@ -57,6 +69,28 @@ for (const [label, rules] of [['dispatch', dispatch], ['ownership', combined]]) 
     await seedGroupLinkedRoom(env, db, { includeJoinerGroupMember: true });
   }
   try {
+    if (label === 'dispatch' && process.env.DISPATCH_SCOPE === 'recurrence') {
+      await check('recurrence marker preservation and authority', async () => {
+        for (const marker of [null, 'missing', 'advanceCycle', 'complete', 'legacyCommand']) {
+          await seed();
+          await env.withSecurityRulesDisabled(ctx => updateDoc(doc(ctx.firestore(), 'recruitments', recruitmentId),
+            { lastCommandType: marker === 'missing' ? deleteField() : marker }));
+          const before = await snapshot(env);
+          const patch = { continueTogether: false, revision: increment(1), updatedAt: serverTimestamp() };
+          await assertFails(updateDoc(doc(env.authenticatedContext('joiner-auth').firestore(), 'recruitments', recruitmentId), patch));
+          await assertFails(updateDoc(doc(db, 'recruitments', recruitmentId), { ...patch, title: 'forged' }));
+          assert.deepEqual(await snapshot(env), before);
+          await assertSucceeds(updateDoc(doc(db, 'recruitments', recruitmentId), patch));
+          const after = await snapshot(env);
+          assert.equal(after.room.continueTogether, false);
+          assert.equal(after.room.revision, before.room.revision + 1);
+          assert.equal(after.room.lastCommandType, before.room.lastCommandType);
+          assert.equal(Object.hasOwn(after.room, 'lastCommandType'), Object.hasOwn(before.room, 'lastCommandType'));
+          assert.deepEqual(after.states, before.states);
+          assert.deepEqual(after.events, before.events);
+        }
+      });
+    }
     let normalPassed = false;
     await check(`${label} normal 8-member group advance`, async () => {
       await seed();

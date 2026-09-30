@@ -10,6 +10,7 @@ on:
         options:
           - candidate
           - baseline
+          - recurrence
       case:
         description: Rules regression scope
         type: choice

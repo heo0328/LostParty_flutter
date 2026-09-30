@@ -739,3 +739,55 @@ DE2-B4 검증 수행은 마쳤으나 **후보 수용 조건은 실패**했다. �
 complete·추방·가입·변경의 허용 조건을 보존하고 legacy/missing/null 마커를 명시한 표와
 최소 수정 위치를 확정한 뒤 demo 후보를 만든다. 다른 정상 문서 validator를 전면 재작성하거나
 권한 조건을 삭제하지 않는다. 기존 소유권 이행·missing-state create·동시성·실기기는 여전히 후속 범위다.
+
+## 11. DE2-B5 명령 선택과 최소 후보 설계 (2026-09-30)
+
+### 11.1 확인한 실제 계약
+
+Router의 `PartyAtomicCycleCommandAdapter`는 lifecycle을 `FirestorePartyAtomicCommandRepository`에
+위임한다. 반복 설정은 Adapter의 `setRecurrence`가 binding → 모집 조회 → revision/공대장/상태
+확인 후 `PartyCycleWritePlan.recurrence`의 세 필드만 update한다. lifecycle Write Plan은
+모집 marker/revision과 state·event·그룹 listing을 같은 거래로 저장한다.
+일반 명령의 `party_atomic_lifecycle_marker_patch.dart`는 이전 lifecycle marker를 null/빈 targets로 소진한다.
+
+| 요청 | 모집 Rules 경로 및 보존할 조건 | marker 주의 |
+|---|---|---|
+| 개인 완료 | personalCompletionCommandMarker → 개인 완료 validator | personalComplete, actor/단일 target 필수 |
+| 반복 설정 | validRecurrenceChange | 이전 marker 유지; null뿐 아니라 advanceCycle/complete도 남을 수 있음 |
+| 주차 전환·전체 완료·미완료 종료·해산 | validAtomicLifecycleUpdate | 명령/actor/revision/시간/targets 및 group count 검증 유지 |
+| 신청 수 변경 | validAtomicPendingApplicationUpdate | 이전 lifecycle이면 소진, 아니면 보존 |
+| 가입·승인 | validAtomicRecruitmentJoin와 관련 문서 Rules | 멤버 +1, 정원·state·membership·event·listing 결합 유지 |
+| Character/자리 변경 | CharacterRevision/PositionAggregate validator와 관련 문서 Rules | 마커 소진/보존, 멤버 목록·정원·배치 계약 유지 |
+| 추방·탈퇴 | MemberRemoval validator와 관련 문서 Rules | 멤버 -1, 본인/공대장, 승계·state 삭제·listing 결합 유지 |
+| 공개 범위 변경 | VisibilityChange validator | 마커 소진/보존, 그룹과 외부 멤버/신청 제한 유지 |
+
+모집 update는 위 validator들의 OR다. marker는 마지막 명령 흔적이기도 하므로 단독 selector로
+전체 OR를 대체할 수 없다. 예를 들어 advanceCycle 직후 반복 설정은 marker를 유지하면서
+revision만 증가시키므로 lifecycle이 아닌 recurrence 경로를 계속 허용해야 한다.
+필드 누락을 null과 동치로 강제하거나 새로운 marker enum으로 기존 요청을 일괄 거절하지 않는다.
+
+### 11.2 이번 최소 실험: 기존 recurrence 조건의 평가 순서만 변경
+
+`firestore.rules`의 `validRecurrenceChange`(현재 1300행)는 인증/binding·공대장·상태를 먼저
+평가한 다음 affectedKeys가 continueTogether/revision/updatedAt에 한정되는지 검사한다.
+정상 lifecycle/추방 요청은 이 키 조건에서 제외되지만 그 전 인증·상태 평가를 거친다.
+
+demo 후보에서는 **이미 존재하는 affectedKeys.hasOnly 조건을 이 함수 맨 앞으로 이동**한다.
+모집 update OR, 다른 함수, 타입·권한·시간·revision 조건, 쓰기 묶음은 그대로 둔다.
+새 전역 guard나 ternary·helper를 추가하지 않는다. 모든 원래 AND 조건을 한 번씩 유지하므로
+정상 구조의 recurrence 요청에 대한 허용 정책은 같다. 키가 다른 요청의 불필요한 인증 평가를
+피할 수 있다는 것은 기술 가설이며, 실제 비용 절감/한도 통과는 아직 검증 전이다.
+
+missing/null/알 수 없는 marker를 가진 recurrence 요청은 기존 함수가 marker를 참조하지
+않았으므로 그 특성을 유지한다. 반대로 일반 명령의 missing marker를 새로 복구하거나 허용하지 않는다.
+손상 문서/미인증 요청의 평가 오류가 false로 바뀔 수 있어도 새 허용을 만들면 안 된다.
+
+### 11.3 회귀와 중단 기준
+
+1. recurrence 자체의 null/누락/이전 lifecycle/알 수 없는 marker 보존, 공대장 성공,
+   비방장 거절·허용되지 않은 필드 동시 변경 거절을 검사한다.
+2. 정상 8인 주차 전환·전체 완료 및 기존 cutover 회귀(마커 소진 후 추방 포함)를 대조한다.
+   기존 실패 후보의 외부 분기나 target/slot 최적화는 합치지 않는다.
+3. 정상 전환 통과 시에만 기존 위조/누락/비방장과 원자성 검사를 인정한다. 소유권 결합은 별도다.
+4. 이 단일 후보가 실패하면 같은 순서 변경을 다른 함수로 연쇄 확대하지 않는다. 결과를 기록하고
+   측정 근거를 추가할 다음 진단을 정한다. 운영 이식·배포·앱/스키마 변경은 이번 범위에서 제외한다.
