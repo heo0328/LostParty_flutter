@@ -915,3 +915,42 @@ disband/incompleteEnd 및 나머지 명령은 원래 target 검사 8개를 그�
   B6를 대조하고 단일 후보를 폐기한다. 같은 구간에서 다른 후보를 연쇄 추가하지 않는다.
 - 운영 수정·배포·dev/main 병합·실기기 자동 실행은 제외한다. 기존 Flutter 실패 기준과 사용자
   초기화 설정 변경은 보존한다.
+
+### 13.3 주 검증 결과 — demo 채택, 운영 이식 전
+
+611abc6 / CI [36705703747](https://github.com/heo0328/LostParty_flutter/actions/runs/36705703747)는
+**success**다. 실패한 외부 분기를 재사용하지 않은 단일 후보로 다음을 확인했다.
+
+| 검사 | 결과와 범위 |
+|---|---|
+| 정상 8인 그룹 주차 전환·전체 완료 | 단독 후보/단건 소유권 결합 모두 성공; 8state·listing revision·event 증가 확인 |
+| 기존 cutover 전체 | 단독 후보 성공; marker 소진 후 추방, 그룹 탈퇴/추방/재가입, Character 이동, 해산 등 유지 |
+| 전환 위조 9종 | 역할·Character·state 누락·target Player/state·비방장·state status/주차/모집 ID 거절, snapshot 불변 |
+| 완료 위조 4종 | state 누락·status/주차/모집 ID 거절, snapshot 불변 |
+| 제한 legacy | 소유권 필드 및 이전 marker가 없는 자료의 단독 후보 전환 성공 |
+| stale / A→B→A | 단독 후보는 기존처럼 허용. 소유권 결합은 전환·완료 모두 원자 거절 |
+
+위 snapshot은 모집·참가 state·listing·공용 event를 포함한다. 소유권 변경은 admin fixture 주입이며
+실제 인증·동시 경쟁·계정 복구 검증이 아니다. 소유권 결합의 전체 cutover/legacy 이행은 통과로
+확대하지 않는다. missing-state create 소유권 검사는 아직 추가하지 않았다.
+
+artifact `roster-targets-coverage`(30일), 로컬 `coverage/de2-b7-36705703747/`에 두 후보의
+원문·전후 coverage·manifest를 보관했다. 원문 일치 및 SHA-256을 대조했고 target state match는
+각 8회 true, all expected targets/lifecycle은 각 1회 true, raidState update는 8회 true였다.
+정확한 예산 잔여량이나 식 절감 수는 측정하지 않았다.
+
+- 단독 후보 SHA-256: `b5fc17df5d0902be361a309b12a1b76385ee872f2b453b896f36ac9465d294ef`
+- 소유권 결합 SHA-256: `5bcff8c10225904d64f2ab5aec1cc9193fdc92336222b5c23187468ea2b24a4d`
+
+Rules 컴파일 경고는 관찰되지 않았다. Actions/Node 자체 deprecated 안내는 Rules 경고와 구분한다.
+현재 추적 firestore.rules와 운영 Rules는 그대로다. **8인 전환 한도 차단의 해결 후보를 확보한 것**이며
+제품 반영·DE 전체 완료는 아니다. 후속 DE2-C는 이 후보를 demo 기반으로 누락 state 재생성 및
+legacy 0/현재 소유자/참가 Snapshot 차수 판별을 검증한다. §5.2 계약을 유지하고 인증 차수 생성·
+참가 Snapshot·완료 반복방 정리·동시성·실기기는 이후 연결한다.
+
+추가 경계: 기존 cutover에 미완료 종료 직접 사례가 없음을 확인하여 후보 Rules는 바꾸지 않고
+5bb02c2 / CI [36706232887](https://github.com/heo0328/LostParty_flutter/actions/runs/36706232887)에서
+해당 두 사례만 실행했다. 8인 그룹의 일반 멤버가 지난 1회성 방을 incompleteEnd하면 기존
+8state를 보존하고 listing 삭제·그룹 count 감소·event 생성을 원자 반영했다. 비어 있지 않은
+targets 요청은 모집/state/listing/event/group snapshot 불변으로 거절됐다. 전체 검사를 반복하지 않았다.
+DE2-B7 설계·단일 후보 검증은 완료이며 다음 DE2-C의 demo 기반으로 채택한다.

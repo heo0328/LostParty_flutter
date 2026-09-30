@@ -1,3 +1,23 @@
+# 2026-09-30 DE2-B7 target 명령 판별 분리 후보 통과
+
+- 전용 fix/roster-reauth-isolation 유지. 611abc6 설계·단일 demo 후보를 커밋/push하고
+  CI 36705703747 success. 원본 firestore.rules/앱 변경 없이 외부 명령 선택을 보존하고
+  complete/advance의 기대 status를 한 번 선택해 각 target 검사에 전달했다.
+- 새로 확인한 demo 흐름: 정상 8인 그룹 주차 전환·전체 완료가 단독/소유권 결합 모두 성공.
+  소유권 결합의 stale 및 A→B→A 전환/완료는 모집/state/listing/event 불변으로 거절됐다.
+- 보존: 단독 후보의 기존 cutover 전체(전환 후 추방·재가입·Character 변경·해산), 전환 위조
+  9종/완료 위조 4종 원자 거절, 제한 legacy 전환. 후보 원문·coverage·해시는 설계 §13에 기록했다.
+- 기존 cutover에 미완료 종료 사례가 없음을 확인하고 포함됐다는 초기 안내/설계를 정정했다.
+  후보 변경 없이 5bb02c2 / CI 36706232887에서 해당 경계만 추가 실행: 정상 8인 미완료 종료의
+  state 보존·listing 삭제/count 감소/event 생성, nonempty targets 원자 거절 모두 통과.
+- 미확인: 운영 이식·실기기·누락 state 소유권 검사·legacy 이행·인증/실제 동시 경쟁·완료 반복방 정리.
+  소유권 결합 전체 cutover 통과로 확대하지 않는다. B7 demo 채택이 DE 전체 구현 완료는 아니다.
+- 검증: Node 문법, git diff --check, 주 demo CI 1회와 누락 경계 CI 1회, coverage 원문/해시 대조.
+  Rules 컴파일 경고 관찰 없음(Actions/Node deprecated 안내 별도). Flutter 검사는 실행하지 않았고
+  기존 22건 실패/analyze 51건 기준 유지. 운영 배포·dev/main 병합 없음, 사용자 초기화 변경 보존.
+- 중단 뒤 추가 CI success를 확인하고 결과 문서를 같은 브랜치에 커밋/push한다. 다음 DE2-C는
+  누락 state/legacy 소유권 판별의 설계·demo proof이며 개발 브랜치를 계속 유지한다.
+
 # 2026-09-30 DE2-B6 Rules coverage 자료 확보
 
 - fix/roster-reauth-isolation 고정. 0ed6c26 측정 도구·설계 커밋/push 후 demo CI

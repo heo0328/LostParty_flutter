@@ -98,6 +98,7 @@ DE2-B4 검증 완료·후보 채택 불가: CI 36698759925에서 직접 분기�
 DE2-B5의 명령 선택 설계와 recurrence 순서 변경 실험도 완료했다. CI 36700305266은
 기존 회귀 통과·8인 전환 실패로 후보 채택 불가다. DE2-B6는 CI 36704079227에서 coverage 확보 완료다.
 원본 target 0–6 true·7의 완료 반환 누락, 직접 분기 8건 true를 관찰했으며 정확한 식 수는 미확정이다.
-다음 DE2-B7은 외부 분기를 유지하는 target 검사 중복 축소 설계·단일 demo proof다.
-기능 미해결·운영 수정 없음. [설계 §12](../architecture/BUG_022_REMAINING_FIX_DESIGN.md),
+DE2-B7은 CI 36705703747에서 정상 8인 전환/완료·기존 회귀·위조 거절·소유권 결합을 통과했고,
+CI 36706232887에서 미완료 종료 보존도 확인했다. 해결 후보를 demo에 확보했으며 운영 수정은 없다.
+다음은 DE2-C 누락 state·legacy 소유권 판별 proof다. [설계 §13](../architecture/BUG_022_REMAINING_FIX_DESIGN.md),
 [실행 계획](NEXT_WORK.md)을 따른다. 전용 브랜치 고정·dev/main 미반영.
