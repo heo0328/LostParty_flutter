@@ -1,3 +1,17 @@
+# 2026-09-30 DE2-B5 명령 선택 설계·recurrence 순서 후보 검증
+
+- 전용 브랜치 고정. Router/Adapter/Write Plan과 모집 validator를 대조해 설계 §11에 명령별
+  경로·marker 소진/보존·missing/null 경계를 기록했다. marker만으로 전체 명령을 분류하지 않는다.
+- 최소 후보는 validRecurrenceChange의 기존 키 제한을 첫 조건으로 이동한 것뿐이다.
+  외부 분기·추가 helper·권한 삭제 없음. demo 메모리 후보이며 firestore.rules는 무변경.
+- 5921dfb / CI 36700305266 failure. recurrence의 marker 5종 보존·비방장/추가 필드 거절,
+  기존 cutover 전체 회귀와 전환 후 추방은 통과. 단독/ownership 결합 모두 8인 전환 한도 실패.
+- 새 앱 흐름 없음. 보존 확인은 위 demo 범위. 정상 전환 실패로 이후 보안·소유권 사례와
+  별도 8인 그룹 전체 완료는 미실행이며 실기기도 미실행. 전체 기능 완료로 판정하지 않는다.
+- 검증: Node 문법, git diff --check, demo CI 1회. 동일 후보 재실행·Flutter 전체 검사 없음.
+- 설계·실험 결과를 같은 브랜치에 커밋/push한다. 사용자 초기화 파일 변경 보존,
+  dev/main 미병합·운영 배포 없음. 다음 DE2-B6는 평가 자료 확보; 연쇄 미세 변경은 중단한다.
+
 # 2026-09-30 DE2-B4 보안·회귀 proof — 완료/추방 회귀로 후보 채택 불가
 
 - fix/roster-reauth-isolation 유지. 8272fd3 후보 CI 36698759925 failure,
