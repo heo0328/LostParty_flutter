@@ -819,3 +819,58 @@ demo 프로젝트 `:ruleCoverage` JSON을 사용한다. 원본과 B3 직접 분�
 제외한다. 각 Rules 원문·SHA-256·결과·측정 구간을 함께 저장하며 CI artifact의 보관 기간은 30일이다.
 보고서는 식의 평가 횟수/값을 제공한다. 차이의 합을 단일 write의 1,000식 예산과 같다고 해석하지
 않으며, 성공/실패 거래의 평가 중단·여러 문서·재시도 가능성을 구분한다. 결과 판독 전 새 후보 없음.
+
+### 12.1 확보한 근거
+
+0ed6c26 / CI [36704079227](https://github.com/heo0328/LostParty_flutter/actions/runs/36704079227)는
+측정 성공이다. firebase-tools 15.29.0, Firestore Emulator 1.22.0에서 원본은 expression-limit,
+직접 분기는 allowed를 재확인했다. 기능 해결/보안 회귀 통과를 뜻하지 않는다.
+artifact `roster-lifecycle-coverage`에는 두 variant의 before/after JSON·Rules·manifest가 있다.
+로컬 사본은 무시 경로 `coverage/de2-b6-36704079227/`에 보관했다.
+
+- baseline Rules SHA-256: `e8baa2e4824d9200ab8a76fe07d7155578ba6982ca9b29941b9b7f55a6b3b1a5`
+- directFull Rules SHA-256: `da8ca47553ea64f37cda484dacaf5c75cc7379e4d3f9283fd8c4f7ba70cb670a`
+- 재판독: `node tools/roster_lifecycle_coverage_summary.mjs <artifact-directory>`.
+  before/after의 원문 일치·manifest 해시·sourcePosition 중복·선택 식의 값별 count 감소를 검사하고
+  sourcePosition별 반환값 차이를 `summary.json`으로 저장한다. 다른 소스 버전에는 위치를 재대조한다.
+
+### 12.2 목표 거래 구간의 관찰
+
+아래는 준비 요청을 차감한 **반환값 관찰 횟수**다. `증가 없음`은 미호출을 뜻하지 않는다.
+line은 artifact Rules 기준이며 직접 분기 전 함수들은 두 소스의 위치가 같다.
+
+| 식/호출 위치 | 원본 | 직접 분기 |
+|---|---|---|
+| recurrence 반환 L1301 | false 1, undefined 1 | 증가 없음 |
+| target state match 반환 L1361 | true 7, undefined 1 | true 8 |
+| target transition 반환 L1369 | true 7, undefined 1 | true 8 |
+| target index 0 호출 L1385 | true 1, undefined 1 | true 1 |
+| target index 1–6 호출 L1386–1391 | 각 true 1 | 각 true 1 |
+| target index 7 호출 L1392 | 증가 없음 | true 1 |
+| all targets 반환 L1380 | 증가 없음 | true 1 |
+| lifecycle actor/shape/state/incomplete shape 호출 L1507–1510 | 각 true 1, undefined 1 | 각 true 1 |
+| lifecycle 반환 L1506 / group count 호출 L1512 | 증가 없음 | 각 true 1 |
+| raidState update 반환 L1575 | 증가 없음 | true 8 |
+
+원본은 동일 8인 데이터에서 target index 0–6의 true 반환까지 관찰되고 index 7의 완료 반환이
+남지 않는다. 직접 분기는 같은 검증을 모두 통과한다. B3의 실제 write 경계 결과와 함께 보면
+**모집 Aggregate의 기존 명령 선택 경로 + 전체 target 검사 누적 비용**이 우선 조사 지점이다.
+8번째 참가자 데이터가 유효하지 않다는 증거가 아니며 target 검사만이 유일한 비용 원인이라고도
+확정하지 않는다. 원본 거절 시 모집/state/listing snapshot 불변, 비교 성공 시 8state/주차/listing
+revision을 확인했다. 이번 측정 도구의 snapshot에는 event가 없으므로 event 원자성까지 확대하지 않는다.
+
+### 12.3 해석 한계와 다음 변경 근거
+
+- 보고서는 시간순 trace/요청별 예산 계측기가 아니다. 하위 식과 상위 식이 중첩되며 거래의 get과
+  여러 write가 함께 포함된다. `undefined`, 빈 value와 반환 누락을 단독으로 권한 거절·미호출·정확한
+  초과 위치로 해석하지 않는다. 총 count를 합산해 1,000식 또는 절감량으로 보고하지 않는다.
+- 직접 분기는 baseline보다 더 많은 후속 검사를 완료한다. 두 전체 count의 단순 대소는 성능 비교가 아니다.
+- 다음 DE2-B7은 기존 외부 명령 분기를 유지하면서 target 검사 내부의 반복 명령 판별을 줄일 수 있는지
+  계약과 코드로 설계한다. 현재 L1369–1375/L1361–1365는 매 target마다 disband/complete/advanceCycle를
+  판별한다. 명령별 기대 상태 선택과 8개 대상 검사를 분리하는 방향을 검토하되, 한도 개선은 미검증이다.
+- 허용 조건(대상 목록 동일성·개수·각 state의 모집/주차/상태, disband 삭제, incompleteEnd 빈 목록),
+  권한·원자성은 삭제하지 않는다. 기존 실패한 외부 분기·맵 직접 비교·슬롯 조회 후보를 합치지 않는다.
+  설계가 성립할 때만 단일 demo 후보로 정상 8인 전환/완료와 기존 cutover(전환 후 추방 포함)를 우선 확인한다.
+  정상 전환 통과 후 위조/누락/비방장·소유권 결합을 검증한다. 실패하면 원문/coverage와 대조해 보고한다.
+
+DE2-B6는 자료 확보와 한계 기록 완료다. 운영 Rules·앱·배포·실기기·소유권 구현은 진행하지 않았다.

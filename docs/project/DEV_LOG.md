@@ -1,3 +1,19 @@
+# 2026-09-30 DE2-B6 Rules coverage 자료 확보
+
+- fix/roster-reauth-isolation 고정. 0ed6c26 측정 도구·설계 커밋/push 후 demo CI
+  [36704079227](https://github.com/heo0328/LostParty_flutter/actions/runs/36704079227) 1회 success.
+  성공은 측정 완료이며 원본 8인 전환은 계속 expression-limit, 직접 분기는 allowed다.
+- 공식 coverage JSON을 seed 이후/거래 직후로 구분하고 원문·해시와 artifact(30일)를 보관했다.
+  판독 스크립트로 원문 일치·해시·위치 중복·선택 반환값의 단조 증가를 검증했다.
+  핵심 결과·재현 명령·자료 한계는 설계 §12에 기록했다. 정확한 비용/초과 식은 미확정이다.
+- 새 앱 흐름 없음. demo 직접 분기의 8state/주차/listing revision, 원본 거절 시 모집/state/listing
+  불변을 확인했다. 이번 snapshot에는 event가 없고 완료/추방은 재검증하지 않았다.
+  B4 직접 분기의 기존 회귀는 그대로 미해결이며 실기기·소유권/legacy 구현도 미완료다.
+- 검증: Node 문법, git diff --check, demo 측정 CI 및 확보한 artifact의 오프라인 판독.
+  Flutter 전체 test/analyze는 실행하지 않았다. 기존 22건 실패/analyze 51건 기준은 유지한다.
+- 측정 결과와 판독 도구도 같은 원격 브랜치에 커밋/push한다. dev/main 미병합·운영 배포 없음.
+  사용자 초기화 파일 변경 보존. 다음은 DE2-B7 target 반복 명령 판별 축소 설계·단일 proof다.
+
 # 2026-09-30 DE2-B5 명령 선택 설계·recurrence 순서 후보 검증
 
 - 전용 브랜치 고정. Router/Adapter/Write Plan과 모집 validator를 대조해 설계 §11에 명령별
