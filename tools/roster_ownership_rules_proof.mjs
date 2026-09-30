@@ -101,14 +101,14 @@ async function seedRoom(env, db) {
   });
 }
 
-async function lifecycle(db, type, { tamper = null } = {}) {
+async function lifecycle(db, type, { tamper = null, actorPlayerId = playerId } = {}) {
   return runTransaction(db, async tx => {
     const ref = doc(db, 'recruitments', recruitmentId);
     const room = (await tx.get(ref)).data();
     const eventId = `${type}_${recruitmentId}_${room.revision}`;
     const patch = {
       commandTargets: room.raidStateTargets, revision: room.revision + 1,
-      lastCommandId: eventId, lastCommandType: type, lastCommandActorPlayerId: playerId,
+      lastCommandId: eventId, lastCommandType: type, lastCommandActorPlayerId: actorPlayerId,
       lastCommandAt: serverTimestamp(), updatedAt: serverTimestamp(),
     };
     if (tamper === 'target-player') patch.commandTargets = room.raidStateTargets.map((target, index) =>
@@ -155,7 +155,7 @@ async function lifecycle(db, type, { tamper = null } = {}) {
     tx.set(doc(db, 'partyEvents', eventId), {
       schemaVersion: type === 'complete' ? 2 : 1, eventId, recruitmentId, type, commandId: eventId,
       commandRevision: room.revision + 1, audiencePlayerIds: room.memberPlayerIds,
-      actorPlayerId: playerId, occurredAt: serverTimestamp(),
+      actorPlayerId, occurredAt: serverTimestamp(),
       ...(type === 'complete' ? {
         raidId: room.raidId, difficultyId: room.difficultyId, cycleKey: room.currentCycleKey,
         completionTargets: room.partySlots.map(slot => ({ playerId: slot.playerId, characterId: slot.characterId })),
@@ -329,7 +329,7 @@ assert.deepEqual(failures, [], 'feasibility gates failed; do not treat partial P
 console.log('DE2 proof finished; no production Rules or data modified.');
 
 }
-export { seedRoom, lifecycle, inspectAll };
+export { seedRoom, lifecycle, inspectAll, ownershipCandidate };
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   await runProof();
 }

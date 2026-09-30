@@ -1514,12 +1514,12 @@ async function completeActiveMemberTxn(
   });
 }
 
-async function main() {
+async function main(rulesOverride = rules) {
   console.log('cycleKey', cycleKey);
-  console.log('cutover baseline: loading tracked firestore.rules');
+  console.log(rulesOverride === rules ? 'cutover baseline: loading tracked firestore.rules' : 'cutover regression: loading demo candidate');
   const testEnv = await initializeTestEnvironment({
     projectId: PROJECT_ID,
-    firestore: { rules, host: '127.0.0.1', port: 8080 },
+    firestore: { rules: rulesOverride, host: '127.0.0.1', port: 8080 },
   });
   console.log('cutover baseline: rules compile succeeded');
   const db = testEnv.authenticatedContext(authUid).firestore();
@@ -2423,7 +2423,7 @@ async function main() {
   }
 }
 
-export { seedGroupLinkedRoom, disbandApprovedRoomTxn, removeApprovedMemberTxn, seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn, approvePublicApplicationTxn, seedExpandedApprovedRoom, cycleWindow, offsetCycleKey, cycleKey, authUid, playerId, characterId, recruitmentId, raidId };
+export { main as runCutoverRegression, seedGroupLinkedRoom, disbandApprovedRoomTxn, removeApprovedMemberTxn, seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn, approvePublicApplicationTxn, seedExpandedApprovedRoom, cycleWindow, offsetCycleKey, cycleKey, authUid, playerId, characterId, recruitmentId, raidId };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main().catch((error) => {
   console.error('FAIL:', error);

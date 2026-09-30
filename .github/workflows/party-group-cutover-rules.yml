@@ -14,6 +14,7 @@ on:
           - ownership-diagnosis
           - ownership-boundaries
           - ownership-aggregate
+          - ownership-dispatch
   push:
     branches:
       - feature/party-group-command-redesign
@@ -55,7 +56,7 @@ jobs:
         run: npm ci --prefix tools
 
       - name: Run tracked full Rules regression
-        if: inputs.case != 'ownership-proof' && inputs.case != 'ownership-diagnosis' && inputs.case != 'ownership-boundaries' && inputs.case != 'ownership-aggregate'
+        if: inputs.case != 'ownership-proof' && inputs.case != 'ownership-diagnosis' && inputs.case != 'ownership-boundaries' && inputs.case != 'ownership-aggregate' && inputs.case != 'ownership-dispatch'
         env:
           PARTY_RULES_CASE: ${{ inputs.case }}
         run: >-
@@ -66,7 +67,7 @@ jobs:
           "node tools/party_group_cutover_rules_test.mjs"
 
       - name: Run group transfer leave and disband regression
-        if: inputs.case != 'character-placement' && inputs.case != 'ownership-proof' && inputs.case != 'ownership-diagnosis' && inputs.case != 'ownership-boundaries' && inputs.case != 'ownership-aggregate'
+        if: inputs.case != 'character-placement' && inputs.case != 'ownership-proof' && inputs.case != 'ownership-diagnosis' && inputs.case != 'ownership-boundaries' && inputs.case != 'ownership-aggregate' && inputs.case != 'ownership-dispatch'
         run: >-
           npx --yes firebase-tools@15.29.0 emulators:exec
           --config firebase.json
@@ -109,3 +110,12 @@ jobs:
           --only firestore
           --project demo-party-group-cutover
           "node tools/roster_lifecycle_boundary_diagnosis.mjs --aggregate --confirm"
+
+      - name: Verify minimal dispatch and ownership candidates in demo only
+        if: inputs.case == 'ownership-dispatch'
+        run: >-
+          npx --yes firebase-tools@15.29.0 emulators:exec
+          --config firebase.json
+          --only firestore
+          --project demo-party-group-cutover
+          "node tools/roster_dispatch_rules_proof.mjs"
