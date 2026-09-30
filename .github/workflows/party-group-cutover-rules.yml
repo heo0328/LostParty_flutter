@@ -23,6 +23,7 @@ on:
           - ownership-boundaries
           - ownership-aggregate
           - ownership-dispatch
+          - ownership-coverage
   push:
     branches:
       - feature/party-group-command-redesign
@@ -64,7 +65,7 @@ jobs:
         run: npm ci --prefix tools
 
       - name: Run tracked full Rules regression
-        if: inputs.case != 'ownership-proof' && inputs.case != 'ownership-diagnosis' && inputs.case != 'ownership-boundaries' && inputs.case != 'ownership-aggregate' && inputs.case != 'ownership-dispatch'
+        if: inputs.case != 'ownership-proof' && inputs.case != 'ownership-diagnosis' && inputs.case != 'ownership-boundaries' && inputs.case != 'ownership-aggregate' && inputs.case != 'ownership-dispatch' && inputs.case != 'ownership-coverage'
         env:
           PARTY_RULES_CASE: ${{ inputs.case }}
         run: >-
@@ -75,7 +76,7 @@ jobs:
           "node tools/party_group_cutover_rules_test.mjs"
 
       - name: Run group transfer leave and disband regression
-        if: inputs.case != 'character-placement' && inputs.case != 'ownership-proof' && inputs.case != 'ownership-diagnosis' && inputs.case != 'ownership-boundaries' && inputs.case != 'ownership-aggregate' && inputs.case != 'ownership-dispatch'
+        if: inputs.case != 'character-placement' && inputs.case != 'ownership-proof' && inputs.case != 'ownership-diagnosis' && inputs.case != 'ownership-boundaries' && inputs.case != 'ownership-aggregate' && inputs.case != 'ownership-dispatch' && inputs.case != 'ownership-coverage'
         run: >-
           npx --yes firebase-tools@15.29.0 emulators:exec
           --config firebase.json
@@ -129,3 +130,21 @@ jobs:
           --only firestore
           --project demo-party-group-cutover
           "node tools/roster_dispatch_rules_proof.mjs"
+
+      - name: Capture lifecycle expression coverage in demo only
+        if: inputs.case == 'ownership-coverage'
+        run: >-
+          npx --yes firebase-tools@15.29.0 emulators:exec
+          --config firebase.json
+          --only firestore
+          --project demo-party-group-cutover
+          "node tools/roster_lifecycle_boundary_diagnosis.mjs --coverage"
+
+      - name: Preserve lifecycle coverage evidence
+        if: always() && inputs.case == 'ownership-coverage'
+        uses: actions/upload-artifact@v4
+        with:
+          name: roster-lifecycle-coverage
+          path: coverage/roster-lifecycle/
+          if-no-files-found: error
+          retention-days: 30

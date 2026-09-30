@@ -3,6 +3,7 @@
 // boundaries. Passing a variant is localization evidence, not security approval.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { initializeTestEnvironment } from '@firebase/rules-unit-testing';
 import { seedRoom, lifecycle, inspectAll } from './roster_ownership_rules_proof.mjs';
 import { authUid, cycleKey, seedGroupLinkedRoom } from './party_group_cutover_rules_test.mjs';
@@ -55,7 +56,18 @@ function aggregateRules(expression) {
       ? (${expression}) : (${original});\n` + tracked.slice(end);
 }
 const aggregateMode = process.argv.includes('--aggregate');
-const ruleVariants = process.argv.includes('--confirm')
+const coverageMode = process.argv.includes('--coverage');
+const coverageDirectory = new URL('../coverage/roster-lifecycle/', import.meta.url);
+async function captureCoverage(name, phase) {
+  const response = await fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-party-group-cutover:ruleCoverage');
+  assert.ok(response.ok, `coverage endpoint: ${response.status}`);
+  const report = await response.json();
+  fs.writeFileSync(new URL(`${name}-${phase}.json`, coverageDirectory), JSON.stringify(report, null, 2));
+}
+if (coverageMode) fs.mkdirSync(coverageDirectory, { recursive: true });
+const ruleVariants = coverageMode
+  ? { baseline: tracked, directFull: aggregateRules(aggregatePredicates.directFull) }
+  : process.argv.includes('--confirm')
   ? { baseline: tracked, directFull: aggregateRules(aggregatePredicates.directFull), control: aggregateRules('true') }
   : aggregateMode
   ? Object.fromEntries(Object.entries(aggregatePredicates).map(([name, expression]) => [name, aggregateRules(expression)]))
@@ -70,9 +82,14 @@ for (const [name, rules] of Object.entries(ruleVariants)) {
     await seedRoom(env, db);
     await seedGroupLinkedRoom(env, db);
     const before = await inspectAll(env);
+    if (coverageMode) {
+      fs.writeFileSync(new URL(`${name}.rules`, coverageDirectory), rules);
+      await captureCoverage(name, 'before');
+    }
     let error;
     try { await lifecycle(db, 'advanceCycle'); }
     catch (caught) { error = caught; }
+    if (coverageMode) await captureCoverage(name, 'after');
     const after = await inspectAll(env);
     if (error) {
       assert.deepEqual(after, before, 'rejected transaction changed data');
@@ -86,10 +103,19 @@ for (const [name, rules] of Object.entries(ruleVariants)) {
       results[name] = 'allowed';
     }
     console.log(`BOUNDARY ${name}: ${results[name]}`);
+    if (coverageMode) {
+      fs.writeFileSync(new URL(`${name}-manifest.json`, coverageDirectory), JSON.stringify({
+        variant: name, result: results[name], projectId: 'demo-party-group-cutover',
+        rulesSha256: createHash('sha256').update(rules).digest('hex'),
+        request: 'lifecycle advanceCycle; eight states and group listing',
+        interval: 'after setup and inspection, before transaction; immediately after transaction before inspection',
+        limitation: 'Coverage is aggregated expression evaluation data, not an exact per-operation budget counter.',
+      }, null, 2));
+    }
   } finally { await env.cleanup(); }
 }
-assert.equal(results[aggregateMode ? 'control' : 'bypassAllControl'], 'allowed', 'fixture/control must execute');
-if (process.argv.includes('--confirm')) {
+if (!coverageMode) assert.equal(results[aggregateMode ? 'control' : 'bypassAllControl'], 'allowed', 'fixture/control must execute');
+if (coverageMode || process.argv.includes('--confirm')) {
   assert.equal(results.baseline, 'expression-limit', 'baseline diagnosis changed');
   assert.equal(results.directFull, 'allowed', 'full lifecycle direct dispatch must pass');
 }
