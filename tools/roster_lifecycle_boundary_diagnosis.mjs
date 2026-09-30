@@ -28,9 +28,39 @@ const variants = {
   onlyListing: ['aggregate', 'states', 'event'],
   bypassAllControl: Object.keys(bypasses),
 };
+// Preserve the real request/write set; narrow only the recruitment update rule.
+// The ternary preserves normal fixture setup and avoids unrelated fallback rules.
+const aggregatePredicates = {
+  directFull: 'validAtomicLifecycleUpdate(resource.data, request.resource.data)',
+  noTargets: `atomicIsLifecycleCommand(request.resource.data)
+    && atomicLifecycleActorAllowed(resource.data, request.resource.data)
+    && atomicValidLifecycleShape(resource.data, request.resource.data)
+    && atomicValidLifecycleState(resource.data, request.resource.data)
+    && atomicValidIncompleteEndShape(resource.data, request.resource.data)
+    && atomicValidGroupLifecycleCount(resource.data, request.resource.data)`,
+  targetsOnly: 'atomicAllTargetsMatch(request.resource.data)',
+  firstTarget: 'atomicTargetMatchesTransition(request.resource.data, 0)',
+  lastTarget: 'atomicTargetMatchesTransition(request.resource.data, 7)',
+  control: 'true',
+};
+function aggregateRules(expression) {
+  const section = tracked.indexOf('    match /recruitments/{recruitmentId} {');
+  assert.ok(section > 0);
+  const start = tracked.indexOf('      allow update: if ', section);
+  const end = tracked.indexOf('      allow delete: if false;', start);
+  assert.ok(start > section && end > start);
+  const original = tracked.slice(start, end).trim().replace(/^allow update: if /, '').replace(/;$/, '');
+  return tracked.slice(0, start) + `      allow update: if
+    request.resource.data.lastCommandType == 'advanceCycle'
+      ? (${expression}) : (${original});\n` + tracked.slice(end);
+}
+const aggregateMode = process.argv.includes('--aggregate');
+const ruleVariants = aggregateMode
+  ? Object.fromEntries(Object.entries(aggregatePredicates).map(([name, expression]) => [name, aggregateRules(expression)]))
+  : Object.fromEntries(Object.entries(variants).map(([name, skips]) => [name,
+    tracked.replace(marker, marker + '\n' + skips.map(key => bypasses[key]).join('\n'))]));
 const results = {};
-for (const [name, skips] of Object.entries(variants)) {
-  const rules = tracked.replace(marker, marker + '\n' + skips.map(key => bypasses[key]).join('\n'));
+for (const [name, rules] of Object.entries(ruleVariants)) {
   const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutover',
     firestore: { rules, host: '127.0.0.1', port: 8080 } });
   try {
@@ -56,6 +86,6 @@ for (const [name, skips] of Object.entries(variants)) {
     console.log(`BOUNDARY ${name}: ${results[name]}`);
   } finally { await env.cleanup(); }
 }
-assert.equal(results.bypassAllControl, 'allowed', 'fixture/control must execute');
+assert.equal(results[aggregateMode ? 'control' : 'bypassAllControl'], 'allowed', 'fixture/control must execute');
 console.log('BOUNDARY SUMMARY', JSON.stringify(results));
 console.log('DIAGNOSTIC ONLY; no variant is authorized for deployment.');

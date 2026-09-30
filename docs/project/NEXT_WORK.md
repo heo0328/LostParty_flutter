@@ -23,6 +23,12 @@ fix/roster-reauth-isolation을 생성한다. **개발·자동 검증·사용자 
 
 ## 다음 실행: DE2-B3 원자 거래의 누적 검증 경계 진단
 
+경계 진단 CI 36610449568에서 모집 Aggregate만 제외하면 나머지 쓰기는 함께 통과하고,
+Aggregate만 남기면 실패했다. 동일 구간에서 모집 update의 실제 원자 거래 입력으로
+lifecycle 전체 / targets 제외 / targets 전체 / 첫·마지막 target을 분리한다.
+다른 명령 fallback을 제외한 직접 분기로 조건 불일치와 누적 비용을 구분한다.
+모두 demo 메모리 전용 진단이며 권한 완화 후보나 운영 배포본으로 사용하지 않는다.
+
 DE2 최소 proof CI 36581670667은 **부분 통과·전체 failure**다. 새 Player 별도 방 생성,
 기존 stale 일반 멤버 정리·교체 state 보호가 통과했고 단건 state 소유권 후보는 정상 8인
 완료를 보존하며 이전 소유자/구세대 완료를 거절했다. **baseline과 후보 모두 8인 advanceCycle이
