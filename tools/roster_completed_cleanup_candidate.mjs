@@ -22,10 +22,13 @@ export function completedCleanupCandidate(source) {
       let account = get(/databases/$(database)/documents/gameAccounts/$(character.gameAccountId)).data;
       let oldGeneration = slot.get('ownershipRevision', 0);
       return oldGeneration is int && oldGeneration >= 0
+        && observed is int
         && character.ownershipRevision is int
         && character.ownershipRevision > oldGeneration
         && character.ownershipRevision == observed
+        && account.ownershipRevision is int
         && account.ownershipRevision == character.ownershipRevision
+        && character.ownerPlayerId is string && character.ownerPlayerId.size() > 0
         && account.ownerPlayerId == character.ownerPlayerId;
     }
 

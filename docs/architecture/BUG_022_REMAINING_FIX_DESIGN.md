@@ -1013,7 +1013,7 @@ Rules의 `validAtomicRecruitmentMemberRemoval` 역시 active 주차를 요구한
 기술 가설이며 tools에서 생성한 demo Rules로만 검증한다.
 
 - 대상: schema 2, active 모집/ completed 주차, continueTogether true, 2–8명 중 일반 참가자 1명.
-  공대장·마지막 1인·과거 형태 listing의 호환은 이번 후보에서 제외하고 거절한다.
+  공대장·마지막 1인은 거절한다. 과거 형태 listing의 호환 검증은 이번 후보에서 제외한다.
 - 권한: 대상 관계의 기존 Player 본인 또는 현재 슬롯 소유권이 유효한 공대장. 일반 제3자 거절.
   대상 Character와 GameAccount의 현재 소유자/정수 차수가 일치하고 참가 Snapshot보다 차수가
   증가했을 때만 정리한다. A→B→A도 증가 차수로 판별한다. 누락 문서/불일치/음수는 unknown 거절.

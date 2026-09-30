@@ -7,7 +7,7 @@ import { doc, getDoc, getDocs, collection, setDoc, updateDoc, deleteDoc,
   runTransaction, serverTimestamp } from 'firebase/firestore';
 import { completedCleanupCandidate } from './roster_completed_cleanup_candidate.mjs';
 import { seedRoom, lifecycle, inspectAll } from './roster_ownership_rules_proof.mjs';
-import { authUid, playerId, recruitmentId, raidId, seedGroupLinkedRoom } from './party_group_cutover_rules_test.mjs';
+import { authUid, playerId, recruitmentId, raidId, seedGroupLinkedRoom, removeApprovedMemberTxn } from './party_group_cutover_rules_test.mjs';
 
 const rules = completedCleanupCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
 const directory = new URL('../coverage/roster-cleanup/', import.meta.url);
@@ -39,7 +39,7 @@ async function snapshot() {
   });
   return result;
 }
-async function seed({ returned = false, self = false, scenario = null } = {}) {
+async function seed({ returned = false, self = false, scenario = null, active = false } = {}) {
   await seedRoom(env, db);
   await seedGroupLinkedRoom(env, db, { includeJoinerGroupMember: true });
   originalSlots = (await inspectAll(env)).room.partySlots;
@@ -51,14 +51,14 @@ async function seed({ returned = false, self = false, scenario = null } = {}) {
     }
   });
   // This must succeed under the candidate before cleanup failures are meaningful.
-  await assertSucceeds(lifecycle(db, 'complete', { ownershipSnapshot: true }));
+  if (!active) await assertSucceeds(lifecycle(db, 'complete', { ownershipSnapshot: true }));
   const targetIndex = originalSlots.findIndex(s => s.playerId === 'player-2');
   const target = originalSlots[targetIndex];
   const observedOwnershipRevision = returned ? 3 : 2;
   await env.withSecurityRulesDisabled(async ctx => {
     const admin = ctx.firestore();
     await setDoc(doc(admin, 'authBindings', 'cleanup-third-auth'), { playerId: 'player-extra-1', status: 'active' });
-    for (const ref of [doc(admin, 'characters', target.characterId), doc(admin, 'gameAccounts', `de-account-${target.playerId}`)]) {
+    for (const ref of active ? [] : [doc(admin, 'characters', target.characterId), doc(admin, 'gameAccounts', `de-account-${target.playerId}`)]) {
       await updateDoc(ref, { ownerPlayerId: returned ? target.playerId : 'new-owner', ownershipRevision: observedOwnershipRevision });
     }
     if (scenario === 'other-state') await updateDoc(doc(admin, 'players', target.playerId, 'raidStates', `${target.characterId}_${raidId}`),
@@ -121,6 +121,16 @@ async function cleanup(client, request, tamper = null) {
   });
 }
 try {
+  for (const self of [false, true]) await check(`preserve active ${self ? 'leave' : 'kick'}`, async () => {
+    const request = await seed({ active: true, self }), before = await snapshot();
+    await assertSucceeds(removeApprovedMemberTxn(self ? selfDb : db, request.actor));
+    const after = await snapshot();
+    assert.equal(after.room.memberCount, 7);
+    assert.equal(after.states[request.targetIndex], null);
+    assert.deepEqual(after.states.filter((_, i) => i !== request.targetIndex), before.states.filter((_, i) => i !== request.targetIndex));
+    assert.deepEqual(after.groupMembers, before.groupMembers);
+    assert.equal(after.listing.sourceRevision, after.room.revision);
+  });
   for (const [name, options] of [['leader removal', {}], ['former self removal', { self: true }],
     ['returned owner removal', { returned: true }], ['preserve newer-room state', { scenario: 'other-state' }],
     ['preserve absent state', { scenario: 'missing-state' }]]) {
@@ -151,7 +161,7 @@ try {
     });
   }
   if (results.every(r => r.passed)) {
-    for (const scenario of ['unchanged-owner', 'missing-character', 'missing-account', 'account-mismatch', 'stale-leader',
+    for (const scenario of ['unchanged-owner', 'missing-character', 'missing-account', 'account-mismatch', 'null-owner', 'empty-owner', 'stale-leader',
       'stale-revision', 'stale-generation', 'third-party', 'leader-target', 'omit-member', 'omit-listing', 'omit-event',
       'listing-count', 'event-target', 'remaining-slot', 'delete-state', 'change-state']) {
       await check(`reject ${scenario} atomically`, async () => {
@@ -164,6 +174,9 @@ try {
           if (scenario === 'missing-character') await deleteDoc(charRef);
           if (scenario === 'missing-account') await deleteDoc(accountRef);
           if (scenario === 'account-mismatch') await updateDoc(accountRef, { ownershipRevision: 3 });
+          if (['null-owner', 'empty-owner'].includes(scenario)) for (const ref of [charRef, accountRef]) {
+            await updateDoc(ref, { ownerPlayerId: scenario === 'null-owner' ? null : '' });
+          }
           if (scenario === 'stale-leader') await updateDoc(doc(admin, 'characters', originalSlots[0].characterId), { ownerPlayerId: 'other', ownershipRevision: 2 });
         });
         if (scenario === 'stale-revision') request.expectedRevision--;
