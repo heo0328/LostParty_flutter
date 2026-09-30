@@ -3,6 +3,13 @@ name: Party group cutover Rules regression
 on:
   workflow_dispatch:
     inputs:
+      dispatch_scope:
+        description: Only for ownership-dispatch; baseline isolates regressions
+        type: choice
+        default: candidate
+        options:
+          - candidate
+          - baseline
       case:
         description: Rules regression scope
         type: choice
@@ -113,6 +120,8 @@ jobs:
 
       - name: Verify minimal dispatch and ownership candidates in demo only
         if: inputs.case == 'ownership-dispatch'
+        env:
+          DISPATCH_SCOPE: ${{ inputs.dispatch_scope }}
         run: >-
           npx --yes firebase-tools@15.29.0 emulators:exec
           --config firebase.json

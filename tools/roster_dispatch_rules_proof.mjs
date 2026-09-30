@@ -35,6 +35,19 @@ async function check(name, action) {
   try { await action(); console.log(`PASS DISPATCH: ${name}`); }
   catch (error) { failures.push(name); console.error(`FAIL DISPATCH: ${name}: ${error.message}`); }
 }
+if (process.env.DISPATCH_SCOPE === 'baseline') {
+  const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutover',
+    firestore: { rules: tracked, host: '127.0.0.1', port: 8080 } });
+  try {
+    await check('baseline normal 8-member group complete', async () => {
+      const db = env.authenticatedContext(authUid).firestore();
+      await seedRoom(env, db);
+      await seedGroupLinkedRoom(env, db, { includeJoinerGroupMember: true });
+      await assertSucceeds(lifecycle(db, 'complete'));
+    });
+  } finally { await env.cleanup(); }
+  await check('baseline existing full cutover regression', () => runCutoverRegression(tracked));
+} else {
 for (const [label, rules] of [['dispatch', dispatch], ['ownership', combined]]) {
   const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutover',
     firestore: { rules, host: '127.0.0.1', port: 8080 } });
@@ -89,10 +102,13 @@ for (const [label, rules] of [['dispatch', dispatch], ['ownership', combined]]) 
       });
     }
     for (const type of ['complete', 'advanceCycle']) {
+      let typePassed = type === 'advanceCycle';
       if (type === 'complete') await check(`${label} normal 8-member complete`, async () => {
         await seed();
         await assertSucceeds(lifecycle(db, type));
+        typePassed = true;
       });
+      if (!typePassed) continue;
       for (const returned of [false, true]) {
         await check(`${label} ${type} ${returned ? 'A-B-A' : 'transfer'}`, async () => {
           await seed();
@@ -113,5 +129,6 @@ for (const [label, rules] of [['dispatch', dispatch], ['ownership', combined]]) 
 }
 // Reuse existing commands and assertions instead of copying their implementations.
 await check('existing full cutover regression with dispatch only', () => runCutoverRegression(dispatch));
+}
 assert.deepEqual(failures, [], 'dispatch proof failed; no production adoption');
-console.log('DE2-B4 PASS: demo candidate only; ownership migration/device validation still pending.');
+console.log(`DE2-B4 scope ${process.env.DISPATCH_SCOPE || 'candidate'} passed; no production adoption.`);
