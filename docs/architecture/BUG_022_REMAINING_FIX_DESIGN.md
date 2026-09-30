@@ -954,3 +954,25 @@ legacy 0/현재 소유자/참가 Snapshot 차수 판별을 검증한다. §5.2 �
 8state를 보존하고 listing 삭제·그룹 count 감소·event 생성을 원자 반영했다. 비어 있지 않은
 targets 요청은 모집/state/listing/event/group snapshot 불변으로 거절됐다. 전체 검사를 반복하지 않았다.
 DE2-B7 설계·단일 후보 검증은 완료이며 다음 DE2-C의 demo 기반으로 채택한다.
+
+## 14. DE2-C 누락 state·legacy 판별 설계
+
+실제 Router의 atomic cycle Adapter/Repository와 Write Plan을 재확인했다. advance는 슬롯에서
+state 내용을 구성해 merge set하며, 개인 완료 후 state가 없는 경우에도 같은 경로로 재생성한다.
+현재 Write Plan에는 ownershipRevision이 없다. 이번에는 demo 요청에만 참가 슬롯의 차수를
+전달하며 제품 코드는 아직 바꾸지 않는다.
+
+- B7 target 후보를 그대로 재사용한다. 각 state create/update에서 Character와 연결 GameAccount의
+  현재 ownerPlayerId·차수를 대조한다. 없는 차수만 0으로 해석하며 null/문자열/음수는 거절한다.
+- 현재 소유자와 계정/Character 차수 일치, state 차수 일치 및 참가 슬롯 차수 일치가 필요하다.
+  차수 없는 관계는 둘 다 legacy 0인 경우에만 허용한다. 필수 문서 부재는 unknown으로 거절한다.
+- lifecycle 중 partySlots를 변경하지 못하도록 원본 슬롯 목록 보존을 요구한다. advance의 기존
+  슬롯 매칭에 차수 비교를 추가하고 complete에도 슬롯 매칭을 적용한다. state update의 기존
+  affectedKeys 제한을 유지해 이미 저장된 차수의 변경·삭제·자동 승격을 막는다.
+- 정상 최대 8인에서 create/update 혼합(마지막 참가자 누락) 및 전체 완료·legacy 전환을 먼저
+  확인한다. 모두 성공한 경우에만 누락 create의 stale/A→B→A/차수 위조, update 차수 변경,
+  계정/Character 불일치·필수 문서 부재와 슬롯 동시 위조의 원자 거절을 보안 근거로 인정한다.
+- Character 8건 외에 GameAccount 최대 8건의 Rules 접근이 추가된다. 접근/표현식 예산은
+  미검증이며 실패하면 조건을 삭제하지 않고 실패 지점과 더 좁은 다음 설계를 기록한다.
+- 인증 소유권 문서의 넓은 기존 write 권한은 별도 신뢰 한계다. 이번 fixture는 인증 완료 상태를
+  주입하며 인증 위조 방지·경쟁 이전·이력 복원까지 완료했다고 표현하지 않는다. 운영 이식/배포 없음.

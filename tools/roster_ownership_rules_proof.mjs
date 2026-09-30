@@ -101,7 +101,7 @@ async function seedRoom(env, db) {
   });
 }
 
-async function lifecycle(db, type, { tamper = null, actorPlayerId = playerId } = {}) {
+async function lifecycle(db, type, { tamper = null, actorPlayerId = playerId, ownershipSnapshot = false } = {}) {
   return runTransaction(db, async tx => {
     const ref = doc(db, 'recruitments', recruitmentId);
     const room = (await tx.get(ref)).data();
@@ -111,6 +111,8 @@ async function lifecycle(db, type, { tamper = null, actorPlayerId = playerId } =
       lastCommandId: eventId, lastCommandType: type, lastCommandActorPlayerId: actorPlayerId,
       lastCommandAt: serverTimestamp(), updatedAt: serverTimestamp(),
     };
+    if (tamper === 'slot-revision') patch.partySlots = room.partySlots.map((slot, index) =>
+      index === room.partySlots.length - 1 ? { ...slot, ownershipRevision: 3 } : slot);
     if (tamper === 'target-player') patch.commandTargets = room.raidStateTargets.map((target, index) =>
       index === room.raidStateTargets.length - 1 ? { ...target, playerId: 'forged-player' } : target);
     if (tamper === 'target-state') patch.commandTargets = room.raidStateTargets.map((target, index) =>
@@ -138,6 +140,7 @@ async function lifecycle(db, type, { tamper = null, actorPlayerId = playerId } =
       if (isLast && tamper === 'omit-state') continue;
       const stateRef = doc(db, 'players', slot.playerId, 'raidStates', `${slot.characterId}_${raidId}`);
       const statePatch = {
+        ...(ownershipSnapshot && Object.hasOwn(slot, 'ownershipRevision') ? { ownershipRevision: slot.ownershipRevision } : {}),
         status: type === 'complete' ? 'completed' : 'active', source: 'party',
         cycleKey: type === 'complete' ? room.currentCycleKey : cycleKey,
         revision: increment(1), updatedAt: serverTimestamp(),
@@ -147,6 +150,9 @@ async function lifecycle(db, type, { tamper = null, actorPlayerId = playerId } =
         ...(isLast && tamper === 'state-status' ? { status: type === 'complete' ? 'active' : 'completed' } : {}),
         ...(isLast && tamper === 'state-cycle' ? { cycleKey: offsetCycleKey(cycleKey, -14) } : {}),
         ...(isLast && tamper === 'state-recruitment' ? { recruitmentId: 'another-recruitment' } : {}),
+        ...(isLast && tamper === 'revision-forged' ? { ownershipRevision: 3 } : {}),
+        ...(isLast && tamper === 'revision-decreased' ? { ownershipRevision: 0 } : {}),
+        ...(isLast && tamper === 'revision-deleted' ? { ownershipRevision: deleteField() } : {}),
       };
       if (type === 'advanceCycle') {
         // Match runtime _advanceRaidState + set(merge:true), not just update.
