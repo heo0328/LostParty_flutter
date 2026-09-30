@@ -1001,3 +1001,38 @@ Windows CRLF로 로컬 문자열 hook 비교가 실패한 것은 정규화 대�
 기존 제거 명령이 완료방에서 거절된 §6의 사례를 출발점으로, 완료 state/event 보존·다음 주 슬롯
 제거·목록 동기화·권한/최신 차수 재검증·재시도를 확정한다. 일반 멤버 대표 사례부터 시작하며
 stale 공대장/마지막 1인·전체 인증 구현을 같은 구간에 합치지 않는다. 제품 이식·배포는 계속 제외한다.
+
+## 15. DE2-D 완료 반복방 일반 참가자 정리 — 구현 전 demo 계약
+
+코드 사실: `PartyAtomicMemberRemovalWritePlan`은 currentCycleStatus active만 허용하며,
+`FirestorePartyAtomicMemberRemovalRepository.remove`는 대상 raidState도 삭제한다.
+Rules의 `validAtomicRecruitmentMemberRemoval` 역시 active 주차를 요구한다. 완료방에 이를
+그대로 확대하면 완료 이력 삭제 위험이 있으므로 기존 탈퇴/추방 조건은 변경하지 않는다.
+
+이번 후보는 DE2-C를 기반으로 한 별도 `cleanupCompletedOwnership` 명령이다. 제품 연결 전
+기술 가설이며 tools에서 생성한 demo Rules로만 검증한다.
+
+- 대상: schema 2, active 모집/ completed 주차, continueTogether true, 2–8명 중 일반 참가자 1명.
+  공대장·마지막 1인·과거 형태 listing의 호환은 이번 후보에서 제외하고 거절한다.
+- 권한: 대상 관계의 기존 Player 본인 또는 현재 슬롯 소유권이 유효한 공대장. 일반 제3자 거절.
+  대상 Character와 GameAccount의 현재 소유자/정수 차수가 일치하고 참가 Snapshot보다 차수가
+  증가했을 때만 정리한다. A→B→A도 증가 차수로 판별한다. 누락 문서/불일치/음수는 unknown 거절.
+- 입력: commandId, expectedRevision, targetIndex, actorIndex, observedOwnershipRevision.
+  index는 조회 비용을 줄이는 힌트일 뿐이며 원본 슬롯과 Player를 대조한다. 예상 revision과
+  현재 차수를 서버에서 재검증한다. 원본 목록에서 정확히 대상만 제거하고 남은 순서를 보존한다.
+- 쓰기: 모집 구성/카운터/revision/명령 표식, 대상 member 삭제, 그룹 listing 동일 구성,
+  전용 불변 event 생성. raidState와 완료 이벤트는 쓰지 않는다. 서버도 대상 state의 전후 동일성을
+  검사하여 본인에게 별도 삭제 권한이 있더라도 같은 정리 요청에서 삭제/변조하지 못하게 한다.
+  state가 이미 다른 방/차수로 바뀌었거나 없으면 그 상태 그대로 보존한다.
+- 원자성: 모집 검사에서 member 부재·listing 결과·event를 요구한다. 각 projection 검사는
+  같은 요청의 모집 revision 증가 및 명령 표식을 요구한다. 기존 lifecycle 조건은 보존한다.
+  모든 참가자의 개인 state를 순회하지 않고 대상 1건만 Rules에서 확인한다.
+- 재시도: 대상이 남아 있으면 정상 거래를 시도한다. 없으면 기존 event의 commandId·원본 revision·
+  대상·관측 차수·actor가 모두 일치하는 경우에만 이미 처리됨으로 반환한다. event 부재/조회 실패는
+  성공이 아니다. 첫 요청에서 존재하지 않는 event를 읽으면 기존 audience read가 거절하므로
+  초기 event 조회를 전제하지 않는다. 다른 요청이 같은 대상을 제거하면 충돌로 처리한다.
+- 검증: 정상 최대 8인 완료방에서 공대장/본인 정리, 기록 보존, 동일 요청 재시도와 재이전,
+  다른 방 state 보존을 먼저 확인한다. 이후 정상 소유자·unknown·stale revision/관측 차수·
+  제3자·stale 공대장·부분 쓰기·잔여 슬롯/완료 state 변조의 원자 거절을 확인한다.
+  실제 동시 실행 대신 낡은 관측값 거절을 구분하며, 접근/평가 한도는 CI 결과로 판단한다.
+  실패 시 보호 조건을 제거하지 않고 해당 경계와 다음 구간을 기록한다.
