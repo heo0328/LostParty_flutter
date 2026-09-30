@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { collection, getDocs, doc, updateDoc, deleteField, increment, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, getDoc, doc, updateDoc, runTransaction, deleteField, increment, serverTimestamp } from 'firebase/firestore';
 import { seedRoom, lifecycle, inspectAll, ownershipCandidate } from './roster_ownership_rules_proof.mjs';
 import { authUid, cycleKey, recruitmentId, raidId, seedGroupLinkedRoom, runCutoverRegression } from './party_group_cutover_rules_test.mjs';
 
@@ -61,7 +61,8 @@ function sharedTargetStatus(source) {
           : (${calls}))`);
   return source.slice(0, start) + helpers + replaced + source.slice(end);
 }
-const targetMode = process.env.DISPATCH_SCOPE === 'targets';
+const fallbackMode = process.env.DISPATCH_SCOPE === 'targets-fallback';
+const targetMode = process.env.DISPATCH_SCOPE === 'targets' || fallbackMode;
 const buildCandidate = targetMode ? sharedTargetStatus
   : process.env.DISPATCH_SCOPE === 'recurrence' ? recurrenceFirst : directDispatch;
 const dispatch = buildCandidate(tracked);
@@ -92,7 +93,74 @@ async function check(name, action) {
   try { await action(); console.log(`PASS DISPATCH: ${name}`); return true; }
   catch (error) { failures.push(name); console.error(`FAIL DISPATCH: ${name}: ${error.message}`); return false; }
 }
-if (process.env.DISPATCH_SCOPE === 'baseline') {
+if (fallbackMode) {
+  // Same B7 candidate, only the missing incompleteEnd boundary; no full rerun.
+  const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutover',
+    firestore: { rules: dispatch, host: '127.0.0.1', port: 8080 } });
+  const leader = env.authenticatedContext(authUid).firestore();
+  const member = env.authenticatedContext('joiner-auth').firestore();
+  async function seedExpired() {
+    await seedRoom(env, leader);
+    await seedGroupLinkedRoom(env, leader, { includeJoinerGroupMember: true });
+    await env.withSecurityRulesDisabled(ctx => updateDoc(doc(ctx.firestore(), 'recruitments', recruitmentId),
+      { continueTogether: false }));
+  }
+  async function withGroupSnapshot() {
+    const result = await snapshot(env);
+    await env.withSecurityRulesDisabled(async ctx => {
+      result.group = (await getDoc(doc(ctx.firestore(), 'groups', result.room.groupId))).data();
+    });
+    return result;
+  }
+  async function endIncomplete(nonEmptyTargets = false) {
+    await runTransaction(member, async tx => {
+      const ref = doc(member, 'recruitments', recruitmentId);
+      const room = (await tx.get(ref)).data();
+      const groupRef = doc(member, 'groups', room.groupId);
+      const group = (await tx.get(groupRef)).data();
+      const nextCount = group.activeRecruitmentCount - 1;
+      const eventId = `incompleteEnd_${recruitmentId}_${room.revision}`;
+      tx.update(ref, {
+        status: 'incompleteEnded', currentCycleStatus: 'incompleteEnded',
+        manualRecruitmentEnabled: false, hasAvailableSlot: false,
+        commandTargets: nonEmptyTargets ? room.raidStateTargets : [],
+        groupActiveRecruitmentCountAfter: nextCount, revision: room.revision + 1,
+        lastCommandId: eventId, lastCommandType: 'incompleteEnd', lastCommandActorPlayerId: 'player-2',
+        lastCommandAt: serverTimestamp(), updatedAt: serverTimestamp(),
+      });
+      tx.update(groupRef, { activeRecruitmentCount: nextCount, lastRecruitmentId: recruitmentId,
+        revision: increment(1), updatedAt: serverTimestamp() });
+      tx.delete(doc(member, 'groups', room.groupId, 'raidListings', recruitmentId));
+      tx.set(doc(member, 'partyEvents', eventId), {
+        schemaVersion: 2, eventId, recruitmentId, type: 'partyIncompleteEnded', commandId: eventId,
+        commandRevision: room.revision + 1, audiencePlayerIds: room.memberPlayerIds,
+        actorPlayerId: 'player-2', occurredAt: serverTimestamp(), raidId: room.raidId,
+        difficultyId: room.difficultyId, cycleKey: room.currentCycleKey,
+        completionTargets: room.partySlots.map(slot => ({ playerId: slot.playerId, characterId: slot.characterId })),
+      });
+    });
+  }
+  try {
+    const passed = await check('8-member incompleteEnd preserves states and closes group listing', async () => {
+      await seedExpired();
+      const before = await withGroupSnapshot();
+      await assertSucceeds(endIncomplete());
+      const after = await withGroupSnapshot();
+      assert.equal(after.room.status, 'incompleteEnded');
+      assert.equal(after.room.revision, before.room.revision + 1);
+      assert.deepEqual(after.states, before.states);
+      assert.equal(after.listing, undefined);
+      assert.equal(after.group.activeRecruitmentCount, before.group.activeRecruitmentCount - 1);
+      assert.equal(after.events.length, before.events.length + 1);
+    });
+    if (passed) await check('incompleteEnd nonempty targets denied atomically', async () => {
+      await seedExpired();
+      const before = await withGroupSnapshot();
+      await assertFails(endIncomplete(true));
+      assert.deepEqual(await withGroupSnapshot(), before);
+    });
+  } finally { await env.cleanup(); }
+} else if (process.env.DISPATCH_SCOPE === 'baseline') {
   const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutover',
     firestore: { rules: tracked, host: '127.0.0.1', port: 8080 } });
   try {

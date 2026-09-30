@@ -905,7 +905,8 @@ disband/incompleteEnd 및 나머지 명령은 원래 target 검사 8개를 그�
 ### 13.2 검증·중단 기준
 
 - 기존 cutover 전체와 정상 8인 그룹 전환·전체 완료를 독립 검사한다. 전환 실패 때문에 완료
-  검사를 생략하지 않는다. cutover에는 미완료 종료·해산·marker 소진 후 추방·기존 참가 변경이 포함된다.
+  검사를 생략하지 않는다. cutover에는 해산·marker 소진 후 추방·기존 참가 변경이 포함된다.
+  미완료 종료는 기존 cutover에 직접 사례가 없어 별도로 정상 빈 targets/비정상 nonempty targets를 검사한다.
 - 위 정상 게이트 통과 후에만 역할/Character/target/state 누락·status/주차/모집 위조·비방장 거절,
   모집/state/listing/event snapshot 불변 및 제한 legacy 전환을 검사한다.
 - plain 후보의 회귀·보안 통과 후 기존 단건 ownership 검사 결합을 검사한다. 정상 명령 통과 전의

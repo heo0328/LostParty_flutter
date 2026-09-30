@@ -12,6 +12,7 @@ on:
           - baseline
           - recurrence
           - targets
+          - targets-fallback
       case:
         description: Rules regression scope
         type: choice
