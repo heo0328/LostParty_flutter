@@ -1,6 +1,7 @@
 // DE2-B4: no bypass matches, no deployment, no production-source edits.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
 import { collection, getDocs, doc, updateDoc, deleteField, increment, serverTimestamp } from 'firebase/firestore';
 import { seedRoom, lifecycle, inspectAll, ownershipCandidate } from './roster_ownership_rules_proof.mjs';
@@ -31,9 +32,53 @@ function recurrenceFirst(source) {
     .replace('return hasActiveBinding()', `return ${keyCheck}\n        && hasActiveBinding()`);
   return source.slice(0, start) + reordered + source.slice(end);
 }
-const buildCandidate = process.env.DISPATCH_SCOPE === 'recurrence' ? recurrenceFirst : directDispatch;
+function sharedTargetStatus(source) {
+  const start = source.indexOf('    function atomicAllTargetsMatch(data) {');
+  const end = source.indexOf('    function atomicValidLifecycleShape(', start);
+  assert.ok(start > 0 && end > start);
+  const original = source.slice(start, end);
+  const calls = Array.from({ length: 8 }, (_, index) => `atomicTargetMatchesTransition(data, ${index})`).join('\n        && ');
+  assert.equal(original.split(calls).length, 2);
+  const helpers = `    function atomicExpectedTargetStateMatches(data, state, expectedStatus) {
+      return state.recruitmentId == data.recruitmentId
+        && state.cycleKey == data.currentCycleKey
+        && state.status == expectedStatus;
+    }
+
+    function atomicExpectedTargetMatches(data, index, expectedStatus) {
+      return index >= data.commandTargets.size()
+        || atomicExpectedTargetStateMatches(data,
+          getAfter(atomicRaidStatePath(data.commandTargets[index])).data, expectedStatus);
+    }
+
+    function atomicAllExpectedTargetsMatch(data, expectedStatus) {
+      return ${Array.from({ length: 8 }, (_, index) => `atomicExpectedTargetMatches(data, ${index}, expectedStatus)`).join('\n        && ')};
+    }
+
+`;
+  const replaced = original.replace(calls, `((data.lastCommandType == 'complete' || data.lastCommandType == 'advanceCycle')
+          ? atomicAllExpectedTargetsMatch(data, data.lastCommandType == 'complete' ? 'completed' : 'active')
+          : (${calls}))`);
+  return source.slice(0, start) + helpers + replaced + source.slice(end);
+}
+const targetMode = process.env.DISPATCH_SCOPE === 'targets';
+const buildCandidate = targetMode ? sharedTargetStatus
+  : process.env.DISPATCH_SCOPE === 'recurrence' ? recurrenceFirst : directDispatch;
 const dispatch = buildCandidate(tracked);
 const combined = buildCandidate(ownershipCandidate);
+const coverageDirectory = new URL('../coverage/roster-targets/', import.meta.url);
+async function captureCoverage(label, phase, rules) {
+  fs.mkdirSync(coverageDirectory, { recursive: true });
+  const response = await fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-party-group-cutover:ruleCoverage');
+  assert.ok(response.ok, `coverage endpoint: ${response.status}`);
+  fs.writeFileSync(new URL(`${label}-${phase}.json`, coverageDirectory), JSON.stringify(await response.json()));
+  fs.writeFileSync(new URL(`${label}.rules`, coverageDirectory), rules);
+  fs.writeFileSync(new URL(`${label}-manifest.json`, coverageDirectory), JSON.stringify({
+    rulesSha256: createHash('sha256').update(rules).digest('hex'),
+    interval: 'after seed and snapshot; immediately after target advance transaction before snapshot',
+    limitation: 'Return-value coverage, not exact per-write expression cost.',
+  }, null, 2));
+}
 async function snapshot(env) {
   const result = await inspectAll(env);
   await env.withSecurityRulesDisabled(async ctx => {
@@ -44,8 +89,8 @@ async function snapshot(env) {
 }
 const failures = [];
 async function check(name, action) {
-  try { await action(); console.log(`PASS DISPATCH: ${name}`); }
-  catch (error) { failures.push(name); console.error(`FAIL DISPATCH: ${name}: ${error.message}`); }
+  try { await action(); console.log(`PASS DISPATCH: ${name}`); return true; }
+  catch (error) { failures.push(name); console.error(`FAIL DISPATCH: ${name}: ${error.message}`); return false; }
 }
 if (process.env.DISPATCH_SCOPE === 'baseline') {
   const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutover',
@@ -60,7 +105,12 @@ if (process.env.DISPATCH_SCOPE === 'baseline') {
   } finally { await env.cleanup(); }
   await check('baseline existing full cutover regression', () => runCutoverRegression(tracked));
 } else {
+const regressionPassed = !targetMode || await check('target candidate existing full cutover regression', () => runCutoverRegression(dispatch));
 for (const [label, rules] of [['dispatch', dispatch], ['ownership', combined]]) {
+  if (targetMode && label === 'ownership' && failures.length) {
+    console.log('SKIP ownership: plain target candidate has not passed acceptance gates');
+    continue;
+  }
   const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutover',
     firestore: { rules, host: '127.0.0.1', port: 8080 } });
   const db = env.authenticatedContext(authUid).firestore();
@@ -95,7 +145,9 @@ for (const [label, rules] of [['dispatch', dispatch], ['ownership', combined]]) 
     await check(`${label} normal 8-member group advance`, async () => {
       await seed();
       const before = await snapshot(env);
-      await assertSucceeds(lifecycle(db, 'advanceCycle'));
+      if (targetMode) await captureCoverage(label, 'before', rules);
+      try { await assertSucceeds(lifecycle(db, 'advanceCycle')); }
+      finally { if (targetMode) await captureCoverage(label, 'after', rules); }
       const after = await snapshot(env);
       assert.equal(after.room.revision, before.room.revision + 1);
       assert.equal(after.room.currentCycleKey, cycleKey);
@@ -106,9 +158,23 @@ for (const [label, rules] of [['dispatch', dispatch], ['ownership', combined]]) 
       assert.equal(after.events.length, before.events.length + 1);
       normalPassed = true;
     });
-    if (!normalPassed) continue; // Failed positives never confer security acceptance.
+    let completePassed = false;
+    if (targetMode) completePassed = await check(`${label} independent normal 8-member group complete`, async () => {
+      await seed();
+      const before = await snapshot(env);
+      await assertSucceeds(lifecycle(db, 'complete'));
+      const after = await snapshot(env);
+      assert.equal(after.room.currentCycleStatus, 'completed');
+      assert.equal(after.room.revision, before.room.revision + 1);
+      assert.equal(after.states.length, 8);
+      assert.ok(after.states.every(s => s.status === 'completed' && s.cycleKey === after.room.currentCycleKey));
+      assert.equal(after.listing.sourceRevision, after.room.revision);
+      assert.equal(after.events.length, before.events.length + 1);
+    });
+    if (!normalPassed || (targetMode && (!completePassed || !regressionPassed))) continue;
     if (label === 'dispatch') {
-      for (const tamper of ['role', 'character', 'omit-state', 'target-player', 'target-state', 'non-leader']) {
+      for (const tamper of ['role', 'character', 'omit-state', 'target-player', 'target-state', 'non-leader',
+        ...(targetMode ? ['state-status', 'state-cycle', 'state-recruitment'] : [])]) {
         await check(`reject ${tamper} atomically`, async () => {
           await seed();
           const before = await snapshot(env);
@@ -116,6 +182,14 @@ for (const [label, rules] of [['dispatch', dispatch], ['ownership', combined]]) 
           await assertFails(lifecycle(attacker, 'advanceCycle', {
             tamper, actorPlayerId: tamper === 'non-leader' ? 'player-2' : 'player-1',
           }));
+          assert.deepEqual(await snapshot(env), before);
+        });
+      }
+      if (targetMode) for (const tamper of ['omit-state', 'state-status', 'state-cycle', 'state-recruitment']) {
+        await check(`complete reject ${tamper} atomically`, async () => {
+          await seed();
+          const before = await snapshot(env);
+          await assertFails(lifecycle(db, 'complete', { tamper }));
           assert.deepEqual(await snapshot(env), before);
         });
       }
@@ -137,7 +211,8 @@ for (const [label, rules] of [['dispatch', dispatch], ['ownership', combined]]) 
     }
     for (const type of ['complete', 'advanceCycle']) {
       let typePassed = type === 'advanceCycle';
-      if (type === 'complete') await check(`${label} normal 8-member complete`, async () => {
+      if (type === 'complete' && targetMode) typePassed = completePassed;
+      if (type === 'complete' && !targetMode) await check(`${label} normal 8-member complete`, async () => {
         await seed();
         await assertSucceeds(lifecycle(db, type));
         typePassed = true;
@@ -162,7 +237,7 @@ for (const [label, rules] of [['dispatch', dispatch], ['ownership', combined]]) 
   } finally { await env.cleanup(); }
 }
 // Reuse existing commands and assertions instead of copying their implementations.
-await check('existing full cutover regression with dispatch only', () => runCutoverRegression(dispatch));
+if (!targetMode) await check('existing full cutover regression with dispatch only', () => runCutoverRegression(dispatch));
 }
 assert.deepEqual(failures, [], 'dispatch proof failed; no production adoption');
 console.log(`DE2-B4 scope ${process.env.DISPATCH_SCOPE || 'candidate'} passed; no production adoption.`);

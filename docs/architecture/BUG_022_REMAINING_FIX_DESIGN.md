@@ -874,3 +874,43 @@ revision을 확인했다. 이번 측정 도구의 snapshot에는 event가 없으
   정상 전환 통과 후 위조/누락/비방장·소유권 결합을 검증한다. 실패하면 원문/coverage와 대조해 보고한다.
 
 DE2-B6는 자료 확보와 한계 기록 완료다. 운영 Rules·앱·배포·실기기·소유권 구현은 진행하지 않았다.
+
+## 13. DE2-B7 target 명령 판별 분리 설계
+
+Router → PartyAtomicCycleCommandAdapter → FirestorePartyAtomicCommandRepository의 실제 연결을
+재확인했다. binding/모집 및 필요한 그룹을 읽고 모집·최대 8state·event·listing을 원자 저장한다.
+이번에는 이 경로·데이터·조회/쓰기 수·모집 allow update OR를 변경하지 않는다.
+
+### 13.1 단일 demo 후보
+
+`atomicAllTargetsMatch`의 기존 개수/빈 목록 조건 다음에서 complete/advanceCycle만 선택한다.
+선택한 기대 상태 문자열(completed/active)을 8개 대상 검사에 전달한다. 대상마다 같은 명령을
+다시 비교하지 않고, 기존과 같은 getAfter 대상의 recruitmentId/cycleKey/status 세 값을 검증한다.
+disband/incompleteEnd 및 나머지 명령은 원래 target 검사 8개를 그대로 호출한다.
+수정 범위는 이 helper와 complete/advance 전용 helper뿐이며 원본 firestore.rules는 유지한다.
+
+| 경계 | 보존 방식 |
+|---|---|
+| complete / advanceCycle | 기대 status만 한 번 선택; 0–7 모든 유효 target의 모집·주차·상태 대조 |
+| disband | 원래 existsAfter 부재 검사; 완료방 빈 목록 예외 유지 |
+| incompleteEnd | 원래 빈 목록/shape 정책; 비어 있지 않은 목록을 새로 허용하지 않음 |
+| 8 초과/목록 위조/누락 쓰기 | 기존 개수·shape의 target 동일성, 각 state 검사를 유지 |
+| 반복 설정·가입·변경·추방 | 외부 OR 및 marker 소진/보존 함수 무변경 |
+| 과거/누락 marker | complete/advance 요청에서만 분리; 기존 fallback을 대체하지 않음 |
+
+권한 완화 없이 반복 명령 판별을 줄인다는 기술 가설이다. 함수 호출/컴파일 비용 때문에 실제
+예산이 줄지 않을 수 있으므로 한도 해결을 가정하지 않는다. B4 외부 분기·B5 recurrence 순서·
+이전 맵/슬롯 최적화를 결합하지 않는다.
+
+### 13.2 검증·중단 기준
+
+- 기존 cutover 전체와 정상 8인 그룹 전환·전체 완료를 독립 검사한다. 전환 실패 때문에 완료
+  검사를 생략하지 않는다. cutover에는 미완료 종료·해산·marker 소진 후 추방·기존 참가 변경이 포함된다.
+- 위 정상 게이트 통과 후에만 역할/Character/target/state 누락·status/주차/모집 위조·비방장 거절,
+  모집/state/listing/event snapshot 불변 및 제한 legacy 전환을 검사한다.
+- plain 후보의 회귀·보안 통과 후 기존 단건 ownership 검사 결합을 검사한다. 정상 명령 통과 전의
+  stale/A→B→A 거절은 보안 성공으로 인정하지 않는다.
+- 전환 요청 before/after coverage와 후보 원문을 demo artifact로 보관한다. 실패하면 이 자료와
+  B6를 대조하고 단일 후보를 폐기한다. 같은 구간에서 다른 후보를 연쇄 추가하지 않는다.
+- 운영 수정·배포·dev/main 병합·실기기 자동 실행은 제외한다. 기존 Flutter 실패 기준과 사용자
+  초기화 설정 변경은 보존한다.

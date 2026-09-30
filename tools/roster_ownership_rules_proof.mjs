@@ -144,6 +144,9 @@ async function lifecycle(db, type, { tamper = null, actorPlayerId = playerId } =
         completedAt: type === 'complete' ? serverTimestamp() : deleteField(),
         ...(isLast && tamper === 'role' ? { role: slot.role === 'support' ? 'dealer' : 'support' } : {}),
         ...(isLast && tamper === 'character' ? { characterId: 'forged-character' } : {}),
+        ...(isLast && tamper === 'state-status' ? { status: type === 'complete' ? 'active' : 'completed' } : {}),
+        ...(isLast && tamper === 'state-cycle' ? { cycleKey: offsetCycleKey(cycleKey, -14) } : {}),
+        ...(isLast && tamper === 'state-recruitment' ? { recruitmentId: 'another-recruitment' } : {}),
       };
       if (type === 'advanceCycle') {
         // Match runtime _advanceRaidState + set(merge:true), not just update.

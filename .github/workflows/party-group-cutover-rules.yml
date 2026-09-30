@@ -11,6 +11,7 @@ on:
           - candidate
           - baseline
           - recurrence
+          - targets
       case:
         description: Rules regression scope
         type: choice
@@ -139,6 +140,15 @@ jobs:
           --only firestore
           --project demo-party-group-cutover
           "node tools/roster_lifecycle_boundary_diagnosis.mjs --coverage"
+
+      - name: Preserve target candidate coverage evidence
+        if: always() && inputs.case == 'ownership-dispatch' && inputs.dispatch_scope == 'targets'
+        uses: actions/upload-artifact@v4
+        with:
+          name: roster-targets-coverage
+          path: coverage/roster-targets/
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Preserve lifecycle coverage evidence
         if: always() && inputs.case == 'ownership-coverage'
