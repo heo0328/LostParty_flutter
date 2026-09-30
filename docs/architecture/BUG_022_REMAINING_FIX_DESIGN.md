@@ -976,3 +976,28 @@ state 내용을 구성해 merge set하며, 개인 완료 후 state가 없는 경
   미검증이며 실패하면 조건을 삭제하지 않고 실패 지점과 더 좁은 다음 설계를 기록한다.
 - 인증 소유권 문서의 넓은 기존 write 권한은 별도 신뢰 한계다. 이번 fixture는 인증 완료 상태를
   주입하며 인증 위조 방지·경쟁 이전·이력 복원까지 완료했다고 표현하지 않는다. 운영 이식/배포 없음.
+
+### 14.1 결과와 남은 범위
+
+0c3fb67 / CI [36721590205](https://github.com/heo0328/LostParty_flutter/actions/runs/36721590205)는 success.
+정상 3건(8인 create/update 혼합 전환·전체 완료·legacy 0 혼합 전환)과 원자 거절 16건을 통과했다.
+create는 마지막 참가자 state만 누락시켜 가장 뒤 슬롯 매칭과 기존 7개 update를 함께 검증했다.
+거절은 소유자 변경/A→B→A, Character/계정 부재, 계정 차수 불일치, null/음수/문자열 차수,
+참가 Snapshot 누락, lifecycle 슬롯 차수 변경, 새 state 차수 위조/감소/누락 및 기존 state 차수
+위조/감소/삭제다. 거절 전후 모집·8state(부재 포함)·listing·event snapshot을 대조했다.
+
+후보 SHA-256: `773cde2a9d2e78fe2e4b568fdf00bebe8de3c5016b364d41e535056d1e786585`.
+artifact `roster-legacy-candidate`(30일), 로컬 `coverage/de2-c-36721590205/`에 원문을 보관했다.
+B7 변환 함수를 공유 도구로 분리했고 정규화 소스의 B7 해시가 §13과 동일함을 확인했다.
+Windows CRLF로 로컬 문자열 hook 비교가 실패한 것은 정규화 대조로 분리했으며 운영 파일은 바꾸지 않았다.
+
+이 결과는 정상 fixture의 create/update·legacy 판별 proof 완료다. 다음을 완료로 확대하지 않는다.
+- 전체 state 동시 누락, 실제 개인 완료 UI 이후 재진입, 동시 소유권 이전·응답 유실, 실기기.
+- 인증 Transaction이 계정/Character 차수를 생성·보존하는 구현, 신청/가입/변경 Snapshot 연결.
+- 변경 후보 전체 cutover 재검증과 운영 컴파일/배포. B7의 이전 통과는 이번 소유권 조건 전체 회귀를 대신하지 않는다.
+- 현재 넓은 소유권 문서 write 권한의 서버 인증 보안. 이번 fixture의 ownership은 admin 주입이다.
+
+다음 DE2-D는 §5.3의 **completed 반복방 stale 일반 참가자 제한 정리**를 설계하고 demo proof한다.
+기존 제거 명령이 완료방에서 거절된 §6의 사례를 출발점으로, 완료 state/event 보존·다음 주 슬롯
+제거·목록 동기화·권한/최신 차수 재검증·재시도를 확정한다. 일반 멤버 대표 사례부터 시작하며
+stale 공대장/마지막 1인·전체 인증 구현을 같은 구간에 합치지 않는다. 제품 이식·배포는 계속 제외한다.

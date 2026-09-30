@@ -100,5 +100,7 @@ DE2-B5의 명령 선택 설계와 recurrence 순서 변경 실험도 완료했�
 원본 target 0–6 true·7의 완료 반환 누락, 직접 분기 8건 true를 관찰했으며 정확한 식 수는 미확정이다.
 DE2-B7은 CI 36705703747에서 정상 8인 전환/완료·기존 회귀·위조 거절·소유권 결합을 통과했고,
 CI 36706232887에서 미완료 종료 보존도 확인했다. 해결 후보를 demo에 확보했으며 운영 수정은 없다.
-다음은 DE2-C 누락 state·legacy 소유권 판별 proof다. [설계 §13](../architecture/BUG_022_REMAINING_FIX_DESIGN.md),
+DE2-C도 CI 36721590205에서 8인 혼합 재생성/완료/legacy 및 원자 거절 16건을 통과했다.
+다음은 DE2-D 완료 반복방 stale 일반 참가자 제한 정리 설계·demo proof다. 운영 구현·실기기는 미완료다.
+[설계 §14](../architecture/BUG_022_REMAINING_FIX_DESIGN.md),
 [실행 계획](NEXT_WORK.md)을 따른다. 전용 브랜치 고정·dev/main 미반영.

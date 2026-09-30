@@ -1,3 +1,19 @@
+# 2026-09-30 DE2-C 누락 state·legacy 소유권 proof 통과
+
+- fix/roster-reauth-isolation 유지. 0c3fb67에 설계·demo 도구 커밋/push,
+  CI 36721590205 success. 운영 Rules·앱·초기화 설정·데이터는 변경하지 않았다.
+- 새로 확인: 정상 8인 마지막 state create+기존 7개 update 전환, 전체 완료,
+  차수 필드 없는 legacy 0 혼합 전환이 계정/Character/슬롯/state 대조와 함께 통과했다.
+- 보존/거절: 소유자 변경·A→B→A·필수 문서 부재·손상/불일치 차수·참가 Snapshot 누락·
+  슬롯 동시 위조·state 차수 위조/감소/삭제 등 16건의 모집/state/listing/event 원자 보존.
+  B7 공유 함수 추출의 해시 동일성을 확인했다. 해당 후보 전체 cutover 통과를 주장하지 않는다.
+- 미확인: 실제 인증 차수 전이·동시 경쟁·전체 state 누락·완료방 정리·제품 연결·실기기.
+  정상 UI를 추가 실행하지 않았고 사용자 실기기 테스트 요청 단계도 아니다.
+- 검증: JS 문법, 문자열 hook 확인, B7 해시 대조, demo CI 1회, git diff --check.
+  로컬 CRLF hook 실패는 정규화 비교로 확인했다. GitHub 로그 읽기 502는 CI 실패와 구분한다.
+  Flutter 전체 검사는 미실행, 기존 22 실패/analyze 51건 유지. 배포·dev/main 통합 없음.
+- 상세와 후보 해시는 설계 §14. 결과 문서를 같은 브랜치에 커밋/push하고 다음 DE2-D로 인계한다.
+
 # 2026-09-30 DE2-B7 target 명령 판별 분리 후보 통과
 
 - 전용 fix/roster-reauth-isolation 유지. 611abc6 설계·단일 demo 후보를 커밋/push하고
