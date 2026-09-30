@@ -1,3 +1,20 @@
+# 2026-09-30 DE2-B3 원자 거래 진단 완료 · 직접 분기 최소 후보 확보
+
+- fix/roster-reauth-isolation 고정. ddd351f/CI 36610449568에서 모집 Aggregate 경계로 실패를 좁혔다.
+- 0459649/CI 36697760555에서 전체 lifecycle/targets 제외/targets 전체/첫·마지막 target/대조군 모두 허용.
+  임의 조건 생략의 진단 성공과 전체 validator를 유지한 직접 분기의 성공을 구분했다.
+- 80d05e5/CI 36698068865의 동일 실행에서 원본 expression-limit, 전체 직접 분기 allowed를 확인.
+  command 분기 평가 경로가 수정 지점이다. 정확한 함수별 비용 측정·보안 회귀 완료는 아니다.
+- 새로 확인한 흐름: demo에서 실제 8인 그룹 advanceCycle 원자 쓰기 성공, 모집 revision/주차,
+  state 8개 active/주차, listing sourceRevision 일치. 거절 거래 데이터 전체 불변 확인.
+- 보존 범위: 진단 후보의 다른 문서 Rules·앱 쓰기 모양 유지. 전체 기존 명령 회귀는 다음 DE2-B4.
+  실기기와 ownership 기능은 아직 미완료. 조건을 생략한 진단 Rules는 배포하지 않는다.
+- 검증: Node 문법, git diff --check, 위 demo CI. Rules 컴파일 경고 관찰 없음
+  (Actions/Node deprecation 경고와 구분). 결과 assertion은 관찰된 결과를 고정하며 재실행하지 않는다.
+- 도구 체크포인트는 같은 원격 브랜치에 push했다. 문서 마감도 동일 브랜치 커밋/push로 기록한다.
+  앱·firestore.rules·운영 데이터·초기화 설정 무변경. 사용자 기존 로컬 변경 보존.
+  Flutter 전체 검사·배포·dev/main 병합 없음. 상세 설계 §9, 다음 기준 NEXT_WORK.
+
 # 2026-09-30 DE2-B2 개별 predicate 진단 완료 · 원자 거래 실패 유지
 
 - fix/roster-reauth-isolation 고정. 099a4ed와 demo 진단 CI 36609173357로 11개 개별 조건 true 확인.

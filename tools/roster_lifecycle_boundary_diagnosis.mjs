@@ -89,5 +89,9 @@ for (const [name, rules] of Object.entries(ruleVariants)) {
   } finally { await env.cleanup(); }
 }
 assert.equal(results[aggregateMode ? 'control' : 'bypassAllControl'], 'allowed', 'fixture/control must execute');
+if (process.argv.includes('--confirm')) {
+  assert.equal(results.baseline, 'expression-limit', 'baseline diagnosis changed');
+  assert.equal(results.directFull, 'allowed', 'full lifecycle direct dispatch must pass');
+}
 console.log('BOUNDARY SUMMARY', JSON.stringify(results));
 console.log('DIAGNOSTIC ONLY; no variant is authorized for deployment.');

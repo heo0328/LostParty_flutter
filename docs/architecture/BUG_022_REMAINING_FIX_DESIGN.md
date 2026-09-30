@@ -654,3 +654,48 @@ commandIncludes, slotMatch, stateUpdate, event.
 남기지 않는다. 조건별 역할/소유권/target 연결 검증의 책임을 보존한 최종 후보에서 정상과
 위조·누락의 대조를 다시 통과해야 비용 개선으로 인정한다. 데이터 스키마/공용 계약 변경이
 필요해지면 이 근거로 설계를 먼저 갱신하며 현재 증거 없이 구조를 바꾸지 않는다.
+
+## 9. DE2-B3 실제 원자 거래 경계 진단 (2026-09-30)
+
+진단은 `tools/roster_lifecycle_boundary_diagnosis.mjs`에서 추적 Rules를 읽고 demo Emulator
+메모리에만 변형을 적용했다. 앱·운영 Rules·쓰기 스키마는 변경하지 않았다.
+
+### 9.1 실패 위치
+
+CI [36610449568](https://github.com/heo0328/LostParty_flutter/actions/runs/36610449568),
+ddd351f의 동일 8인 advanceCycle + 그룹 listing 원자 거래 결과:
+
+| 남긴 검증 | 결과 |
+|---|---|
+| 원본 전체 | 1,000식 한도 실패 |
+| 모집 Aggregate만 제외, 나머지 전체 | 허용 |
+| Aggregate만 유지 | 1,000식 한도 실패 |
+| state/event/listing 각각만 제외 | 모두 1,000식 한도 실패 |
+| state/event/listing 각각만 유지, 전체 허용 대조군 | 모두 허용 |
+
+따라서 이 fixture의 실패는 모집 update 평가 경로로 좁혀진다. state·event·listing 검증이
+합산돼서만 실패한다는 가설은 지지하지 않는다. 경계 제외는 원인 진단이며 배포 후보가 아니다.
+
+### 9.2 모집 검증 직접 분기
+
+CI [36697760555](https://github.com/heo0328/LostParty_flutter/actions/runs/36697760555),
+0459649에서 주차 전환 요청만 ternary로 직접 분기했다. 다른 명령은 기존 update 분기를
+유지하고 나머지 문서 Rules와 실제 쓰기 묶음은 그대로 뒀다.
+
+- `validAtomicLifecycleUpdate` 전체 직접 호출: **허용**.
+- targets 제외 나머지 조건, targets 전체, 첫 target, 마지막 target, 허용 대조군: 모두 허용.
+- 허용 후 모집 revision/주차, 8개 state의 active/주차, listing sourceRevision을 확인했다.
+- 전체 validator를 유지한 직접 분기도 통과했으므로 target 결합·역할·권한 조건을 삭제할
+  근거가 없다. 과거의 OR 앞부분 guard 추가와 이번 배타적 분기는 다른 접근이다.
+- 특정 fallback 함수의 정확한 비용/식 수는 측정하지 않았다. 정상 거래 한 건 성공을
+  위조·누락·구버전·소유권 후보까지 검증된 수정으로 확대하지 않는다.
+
+동일 실행 대조 CI [36698068865](https://github.com/heo0328/LostParty_flutter/actions/runs/36698068865),
+80d05e5에서도 원본은 expression-limit, 전체 직접 분기와 대조군은 allowed였다.
+이 결과를 assertion으로 고정했다. CI success는 진단 결과 확인이며 제품 수정 완료가 아니다.
+거절 거래의 전체 데이터 불변도 확인했다. Rules 컴파일 경고는 관찰되지 않았으며
+GitHub Action/Node deprecation 경고와 구분한다.
+
+다음은 이 직접 분기만을 최소 후보로 삼아
+누락·위조 거절과 기존 명령 회귀를 검증하는 DE2-B4다. 기존 실패 후보의 target/slot 미세
+최적화를 함께 이식하지 않는다. 운영 소스 수정·배포는 proof 검증 이후 별도 구간이다.
