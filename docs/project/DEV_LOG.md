@@ -1,3 +1,22 @@
+# 2026-09-30 DE2-D 완료 반복방 일반 참가자 정리 proof 통과
+
+- fix/roster-reauth-isolation 유지. 8c284e1 및 보강 9dd6d2b 커밋/push.
+  CI 36724586757(22건), 최종 36725053530(26건) 모두 success. 변경 후에만 재검증했다.
+- 새로 확인: 8인 완료 반복방에서 유효 공대장/기존 본인이 stale 일반 참가자를 제한 정리한다.
+  A→B→A도 구분하며 완료 state/event, 교체·부재 state를 보존한다. 동일 요청 재시도 무변경,
+  요청 불일치 거절과 남은 7명의 다음 주 전환까지 demo에서 확인했다.
+- 보존 확인: 기존 활성 그룹방 탈퇴·추방 2건, 기존 완료 이력·다른 참가자 state·그룹 관계 유지.
+  권한/소유권 unknown·낡은 요청·부분 쓰기·변조의 원자 거절 19건. 전체 cutover 통과는 주장하지 않는다.
+- 조사: 기존 remove는 active 주차 한정 및 state 삭제이므로 완료방 제한 명령을 별도로 설계했다.
+  대상 1건 state만 Rules에서 전후 대조하며 클라이언트의 타인 private state 접근은 열지 않았다.
+  C 후보 추출 해시 동일성 확인. 최종 후보·artifact·미확인 경계는 설계 §15.1에 기록했다.
+- 미확인: stale 공대장/마지막 1인, 실제 동시 실행·응답 유실·인증/제품 연결·실기기.
+  인증 상태는 admin 주입이며 기존 소유권 문서 write 신뢰 한계가 남는다.
+- 검증: JS 문법, 후보 생성 hook/해시 대조, demo CI, 결과 artifact 대조, git diff --check.
+  Flutter 검사 미실행, 기존 22 실패/analyze 51건 유지. 운영 Rules/앱/데이터/초기화 설정 변경 없음.
+- 다음 DE2-E는 stale 공대장 정리·승계. 여러 stale 선행 정리와 호출 권한의 관계부터 조사한다.
+  문서도 같은 브랜치에 커밋/push한다. dev/main 반영·배포 없으며 브랜치를 유지한다.
+
 # 2026-09-30 DE2-C 누락 state·legacy 소유권 proof 통과
 
 - fix/roster-reauth-isolation 유지. 0c3fb67에 설계·demo 도구 커밋/push,

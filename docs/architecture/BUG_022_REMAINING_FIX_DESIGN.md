@@ -1036,3 +1036,37 @@ Rules의 `validAtomicRecruitmentMemberRemoval` 역시 active 주차를 요구한
   제3자·stale 공대장·부분 쓰기·잔여 슬롯/완료 state 변조의 원자 거절을 확인한다.
   실제 동시 실행 대신 낡은 관측값 거절을 구분하며, 접근/평가 한도는 CI 결과로 판단한다.
   실패 시 보호 조건을 제거하지 않고 해당 경계와 다음 구간을 기록한다.
+
+### 15.1 결과와 미확인 경계
+
+8c284e1 / CI [36724586757](https://github.com/heo0328/LostParty_flutter/actions/runs/36724586757)는
+22건 통과했다. 이후 코드 검토에서 unknown 소유자의 null/빈 문자열과 정수 타입 방어를 명시하고,
+기존 활성방 제거 경로 회귀를 추가했다. 최종 9dd6d2b / CI
+[36725053530](https://github.com/heo0328/LostParty_flutter/actions/runs/36725053530)는 **26건 전부 통과**다.
+
+- 정상 5건: 8인 완료 반복방의 유효 공대장/기존 본인 정리, A→B→A 관계 정리,
+  다른 방/차수로 교체된 state 보존, state 부재 유지. 슬롯/member/listing 동기화와
+  원본 8개 state·기존 이벤트·그룹 문서/멤버 보존을 대조했다.
+- 각 정상 사례에서 동일 요청 재시도는 무변경 성공, 관측 차수가 다른 재시도는 성공으로 처리하지 않았다.
+  공대장 정리 후 남은 7명의 advanceCycle도 성공했고 제거된 대상의 completed state는 유지됐다.
+- 기존 경로 2건: 최대 8인 활성 그룹방의 정상 추방·본인 탈퇴가 해당 후보에서도 성공했다.
+  제거 대상 active state만 삭제되고 다른 참가자의 state와 그룹 멤버 관계는 보존됐다.
+- 원자 거절 19건: 정상 소유자, Character/계정 부재, 계정 차수 불일치, null/빈 소유자,
+  stale 공대장, 낡은 revision/차수, 실제 제3자, 공대장 대상, member/listing/event 누락,
+  listing count/event 대상/잔여 슬롯 위조, 대상 state 삭제/변조. 모집·원본 8state·member·listing·
+  event·group/groupMembers snapshot이 유지됐다. 제3자도 모집 읽기 성공 후 쓰기 거절을 확인했다.
+
+최종 후보 SHA-256: `f0d76be0e1740b69bd1f97cb52a81b8888c1f18ec0277ba4a9a8ccfdfd8bf5c6`.
+artifact `roster-cleanup-candidate`(30일), 로컬 `coverage/de2-d-36725053530/`에 후보와 결과를 보관했다.
+DE2-C 변환을 공유 함수로 추출했으며 §14 해시 동일성을 확인했다. 변경된 것은 tools/demo workflow와
+문서뿐이다. 운영 Rules·앱·초기화 설정·데이터·배포는 건드리지 않았다.
+
+한계: 실제 경쟁 Transaction/네트워크 응답 유실/앱 종료는 실행하지 않았고 낡은 입력 거절과
+동일 요청 재호출만 검증했다. 실제 인증은 admin 주입이며 넓은 소유권 write 권한 문제는 그대로다.
+전체 cutover, legacy listing, public 완료방, 복수 stale/마지막 1인, 실제 실기기·제품 연결은 미확인이다.
+이번 후보의 접근/평가 한도는 대표 사례 성공으로만 확인했으며 정확한 사용량/여유 예산은 측정하지 않았다.
+
+다음 DE2-E는 stale 공대장 정리·유효 후임 승계의 설계와 demo proof다. §5.3의 일반 stale 선행 정리
+방향과 실행 권한을 대조해야 한다. 공대장까지 stale이면 일반 멤버가 다른 stale 일반 멤버를 정리할
+권한은 이번 후보에 없으므로, 선행 정리가 항상 가능하다고 가정하지 않는다. 유효한 가입순 후임
+판별과 서버 비용을 먼저 설계하며 권한을 임의로 넓히지 않는다. 마지막 1인 해산은 별도 후속 경계다.
