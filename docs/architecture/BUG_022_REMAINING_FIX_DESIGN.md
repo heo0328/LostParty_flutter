@@ -699,3 +699,43 @@ GitHub Action/Node deprecation 경고와 구분한다.
 다음은 이 직접 분기만을 최소 후보로 삼아
 누락·위조 거절과 기존 명령 회귀를 검증하는 DE2-B4다. 기존 실패 후보의 target/slot 미세
 최적화를 함께 이식하지 않는다. 운영 소스 수정·배포는 proof 검증 이후 별도 구간이다.
+
+## 10. DE2-B4 보안·회귀 proof 결과 (2026-09-30) — 직접 분기 후보 채택 불가
+
+`tools/roster_dispatch_rules_proof.mjs`는 추적 원본의 모집 update 앞에 advanceCycle
+ternary만 추가했다. legacy 누락 marker는 `map.get` 기본값으로 기존 분기에 보내고,
+그 외 validator·target/slot helper는 그대로 유지했다. 소유권 결합 후보는 기존 단건 state
+검사만 추가했다. 진단용 allow-true나 조건 생략은 포함하지 않았다.
+
+### 10.1 대조 결과
+
+| 검증 | 직접 분기 후보 8272fd3 / CI 36698759925 | 원본 대조 25b1058 / CI 36699127414 |
+|---|---|---|
+| 정상 8인 그룹 주차 전환 + listing/event | 통과 | 기존 B3 한도 실패 근거 유지; 반복하지 않음 |
+| 역할/Character/target Player/target state 위조, 마지막 state 누락, 비방장 요청 | 거절, 모집·8 state·listing·event 불변 | 이번에 반복하지 않음 |
+| 이전 ownership 필드와 command marker 없는 fixture 전환 | 통과(직접 분기만) | 미실행 |
+| 정상 8인 그룹 전체 완료 | **1,000식 실패** | **통과** |
+| 기존 cutover 회귀 | **마커 소진 후 추방에서 1,000식 실패**, 이후 미실행 | **전체 통과** |
+| 단건 소유권 결합 정상 8인 전환 / 이전 소유자·A→B→A 전환 | 정상 통과 / 원자 거절 | 소유권 검사가 없는 직접 분기 후보에서는 둘 다 허용됨 |
+
+- 후보 CI [36698759925](https://github.com/heo0328/LostParty_flutter/actions/runs/36698759925)는
+  **failure**, 원본 대조 CI [36699127414](https://github.com/heo0328/LostParty_flutter/actions/runs/36699127414)는 success다.
+  원본 success를 후보 전체 성공으로 읽지 않는다.
+- 원본은 같은 그룹 fixture의 완료, 기존 마커 소진·추방·신청·재가입·해산·BUG-017 변경과
+  그룹 listing 검사까지 통과했다. 따라서 완료·추방 실패는 이번 후보의 회귀로 판정한다.
+- 소유권 결합 후보의 정상 complete가 실패한 상태에서 출력된 stale complete 거절은
+  보안 통과 근거에서 제외한다. 25b1058에서 명령별 정상 통과 후에만 해당 거절 검사를
+  실행하도록 고쳤다. 변경 없는 후보를 재실행하지 않았다.
+- legacy 검사는 필드 없는 이전 상태에서 전환되는 제한 사례다. 구버전 앱 전체 호환이나
+  ownership 필드 없는 데이터의 새 소유권 검사 정책 완료가 아니다.
+- 다른 명령의 원래 식을 보존했더라도 외부 분기 추가가 평가 예산에 영향을 준다는 근거다.
+  정확한 식 수·컴파일러 내부 원인은 아직 측정하지 않았다. map.get 한 줄만 원인으로 단정하지 않는다.
+
+### 10.2 다음 설계 경계
+
+DE2-B4 검증 수행은 마쳤으나 **후보 수용 조건은 실패**했다. 운영 Rules·앱은 수정하지 않는다.
+다음 DE2-B5는 모집 update의 명령 선택 구조를 설계부터 재검토한다. 외부 ternary/OR를 계속
+덧붙이지 않고 기존 분기 내부의 중복 판정·명령 구분과 fallback 필요성을 먼저 추적한다.
+complete·추방·가입·변경의 허용 조건을 보존하고 legacy/missing/null 마커를 명시한 표와
+최소 수정 위치를 확정한 뒤 demo 후보를 만든다. 다른 정상 문서 validator를 전면 재작성하거나
+권한 조건을 삭제하지 않는다. 기존 소유권 이행·missing-state create·동시성·실기기는 여전히 후속 범위다.
