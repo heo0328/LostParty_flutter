@@ -55,7 +55,9 @@ function aggregateRules(expression) {
       ? (${expression}) : (${original});\n` + tracked.slice(end);
 }
 const aggregateMode = process.argv.includes('--aggregate');
-const ruleVariants = aggregateMode
+const ruleVariants = process.argv.includes('--confirm')
+  ? { baseline: tracked, directFull: aggregateRules(aggregatePredicates.directFull), control: aggregateRules('true') }
+  : aggregateMode
   ? Object.fromEntries(Object.entries(aggregatePredicates).map(([name, expression]) => [name, aggregateRules(expression)]))
   : Object.fromEntries(Object.entries(variants).map(([name, skips]) => [name,
     tracked.replace(marker, marker + '\n' + skips.map(key => bypasses[key]).join('\n'))]));

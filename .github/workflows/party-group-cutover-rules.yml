@@ -108,4 +108,4 @@ jobs:
           --config firebase.json
           --only firestore
           --project demo-party-group-cutover
-          "node tools/roster_lifecycle_boundary_diagnosis.mjs --aggregate"
+          "node tools/roster_lifecycle_boundary_diagnosis.mjs --aggregate --confirm"
