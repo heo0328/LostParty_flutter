@@ -1,5 +1,7 @@
 // DE2-D isolated server-boundary proof. Ownership changes are admin fixtures.
 import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
@@ -9,7 +11,8 @@ import { completedCleanupCandidate } from './roster_completed_cleanup_candidate.
 import { seedRoom, lifecycle, inspectAll } from './roster_ownership_rules_proof.mjs';
 import { authUid, playerId, recruitmentId, raidId, seedGroupLinkedRoom, removeApprovedMemberTxn } from './party_group_cutover_rules_test.mjs';
 
-const rules = completedCleanupCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
+export async function runCleanupProof(rulesOverride = null, extension = null) {
+const rules = rulesOverride ?? completedCleanupCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
 const directory = new URL('../coverage/roster-cleanup/', import.meta.url);
 fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(new URL('candidate.rules', directory), rules);
@@ -191,8 +194,13 @@ try {
       });
     }
   } else console.log('SKIP CLEANUP: negative security claims gated on all positive cases');
+  if (extension && results.every(r => r.passed)) await extension({ env, db, selfDb, thirdDb, seed, snapshot, cleanup, check, getSlots: () => originalSlots });
 } finally {
   fs.writeFileSync(new URL('results.json', directory), JSON.stringify(results, null, 2));
   await env.cleanup();
 }
 if (results.some(r => !r.passed)) process.exitCode = 1;
+
+return results;
+}
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) await runCleanupProof();

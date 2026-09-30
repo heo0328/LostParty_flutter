@@ -28,6 +28,7 @@ on:
           - ownership-coverage
           - ownership-legacy
           - ownership-cleanup
+          - ownership-leader
   push:
     branches:
       - feature/party-group-command-redesign
@@ -69,7 +70,7 @@ jobs:
         run: npm ci --prefix tools
 
       - name: Run tracked full Rules regression
-        if: inputs.case != 'ownership-proof' && inputs.case != 'ownership-diagnosis' && inputs.case != 'ownership-boundaries' && inputs.case != 'ownership-aggregate' && inputs.case != 'ownership-dispatch' && inputs.case != 'ownership-coverage' && inputs.case != 'ownership-legacy' && inputs.case != 'ownership-cleanup'
+        if: inputs.case != 'ownership-proof' && inputs.case != 'ownership-diagnosis' && inputs.case != 'ownership-boundaries' && inputs.case != 'ownership-aggregate' && inputs.case != 'ownership-dispatch' && inputs.case != 'ownership-coverage' && inputs.case != 'ownership-legacy' && inputs.case != 'ownership-cleanup' && inputs.case != 'ownership-leader'
         env:
           PARTY_RULES_CASE: ${{ inputs.case }}
         run: >-
@@ -80,7 +81,7 @@ jobs:
           "node tools/party_group_cutover_rules_test.mjs"
 
       - name: Run group transfer leave and disband regression
-        if: inputs.case != 'character-placement' && inputs.case != 'ownership-proof' && inputs.case != 'ownership-diagnosis' && inputs.case != 'ownership-boundaries' && inputs.case != 'ownership-aggregate' && inputs.case != 'ownership-dispatch' && inputs.case != 'ownership-coverage' && inputs.case != 'ownership-legacy' && inputs.case != 'ownership-cleanup'
+        if: inputs.case != 'character-placement' && inputs.case != 'ownership-proof' && inputs.case != 'ownership-diagnosis' && inputs.case != 'ownership-boundaries' && inputs.case != 'ownership-aggregate' && inputs.case != 'ownership-dispatch' && inputs.case != 'ownership-coverage' && inputs.case != 'ownership-legacy' && inputs.case != 'ownership-cleanup' && inputs.case != 'ownership-leader'
         run: >-
           npx --yes firebase-tools@15.29.0 emulators:exec
           --config firebase.json
@@ -195,5 +196,23 @@ jobs:
         with:
           name: roster-cleanup-candidate
           path: coverage/roster-cleanup/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Verify ownership leader succession in demo only
+        if: inputs.case == 'ownership-leader'
+        run: >-
+          npx --yes firebase-tools@15.29.0 emulators:exec
+          --config firebase.json
+          --only firestore
+          --project demo-party-group-cutover
+          "node tools/roster_leader_cleanup_proof.mjs"
+
+      - name: Preserve leader succession candidate
+        if: always() && inputs.case == 'ownership-leader'
+        uses: actions/upload-artifact@v4
+        with:
+          name: roster-leader-candidate
+          path: coverage/roster-leader/
           if-no-files-found: error
           retention-days: 30
