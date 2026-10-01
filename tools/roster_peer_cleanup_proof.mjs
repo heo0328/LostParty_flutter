@@ -127,8 +127,22 @@ const results = await runCleanupProof(rules, async ({ env, seed, snapshot, check
   }
   await check('peer concurrent duplicate requests converge once', async () => {
     await setup(); const req = await request(); const before = await snapshot();
-    const outcome = await Promise.all([command(req), command(req)]);
-    assert.ok(outcome.includes('applied')); assert.ok(outcome.every(x => ['applied', 'already-applied'].includes(x)));
+    let arrivals = 0, release;
+    const gate = new Promise(resolve => { release = resolve; });
+    const timer = setTimeout(() => release(), 10000);
+    async function barrier() { if (++arrivals === 2) release(); await gate; }
+    let outcome;
+    try { outcome = await Promise.allSettled([command(req, null, barrier), command(req, null, barrier)]); }
+    finally { clearTimeout(timer); }
+    assert.ok(arrivals >= 2);
+    assert.ok(outcome.some(x => x.status === 'fulfilled' && x.value === 'applied'));
+    for (const item of outcome) {
+      if (item.status === 'rejected') assert.match(String(item.reason), /PERMISSION_DENIED|permission-denied|ABORTED|aborted/);
+      else assert.ok(['applied', 'already-applied'].includes(item.value));
+    }
+    // A Rules rejection is not necessarily retried by the SDK. Reconcile the exact command explicitly.
+    assert.equal(await command(req), 'already-applied');
+    await assert.rejects(command({ ...req, observedOwnershipRevision: 99 }), /retry mismatch/);
     const after = await snapshot(); assert.equal(after.room.revision, before.room.revision + 1); assert.equal(after.room.memberCount, 7);
     assert.deepEqual(after.states, before.states);
   });
@@ -139,6 +153,42 @@ const results = await runCleanupProof(rules, async ({ env, seed, snapshot, check
     // The persistent marker must not block the new leader's independent permission update.
     await assertSucceeds(updateDoc(doc(client(getSlots()[1].playerId), 'recruitments', recruitmentId, 'members', req.actor),
       { canApproveApplications: true, updatedAt: serverTimestamp() }));
+  });
+  for (const scenario of ['stale-successor', 'omit-successor', 'later-successor']) {
+    await check(`first successor rejects ${scenario}`, async () => {
+      await setup(1); const req = await request('leader');
+      if (scenario === 'later-successor') req.successorIndex = 2;
+      if (scenario === 'stale-successor') await env.withSecurityRulesDisabled(async ctx => {
+        const slot = getSlots()[1];
+        for (const ref of [doc(ctx.firestore(), 'characters', slot.characterId), doc(ctx.firestore(), 'gameAccounts', `de-account-${slot.playerId}`)])
+          await updateDoc(ref, { ownerPlayerId: 'new-owner', ownershipRevision: 2 });
+      });
+      const before = await snapshot(); await assertFails(command(req, scenario)); assert.deepEqual(await snapshot(), before);
+    });
+  }
+  await check('peer partial progress survives unknown target and resumes', async () => {
+    await setup(); await assertSucceeds(command(await request()));
+    const req = await request(); let saved;
+    await env.withSecurityRulesDisabled(async ctx => {
+      const ref = doc(ctx.firestore(), 'characters', req.targetCharacterId);
+      saved = (await getDoc(ref)).data(); await deleteDoc(ref);
+    });
+    const partial = await snapshot(); await assertFails(command(req)); assert.deepEqual(await snapshot(), partial);
+    await env.withSecurityRulesDisabled(ctx => setDoc(doc(ctx.firestore(), 'characters', req.targetCharacterId), saved));
+    await assertSucceeds(command(await request()));
+    const after = await snapshot(); assert.equal(after.room.memberCount, 6); assert.deepEqual(after.states, partial.states);
+  });
+  await check('peer actor ownership changes after room read', async () => {
+    await setup(); const req = await request(), before = await snapshot(); let changed = false;
+    await assertFails(command(req, null, async () => {
+      if (changed) return; changed = true;
+      await env.withSecurityRulesDisabled(async ctx => {
+        const slot = getSlots()[7];
+        for (const ref of [doc(ctx.firestore(), 'characters', slot.characterId), doc(ctx.firestore(), 'gameAccounts', `de-account-${slot.playerId}`)])
+          await updateDoc(ref, { ownerPlayerId: 'new-owner', ownershipRevision: 2 });
+      });
+    }));
+    assert.deepEqual(await snapshot(), before);
   });
 }, { skipRegression: true });
 if (results.every(r => r.passed) && process.env.LEADER_PROOF_SCOPE !== 'peer-chain-only') results.push(...await runCleanupProof(rules));

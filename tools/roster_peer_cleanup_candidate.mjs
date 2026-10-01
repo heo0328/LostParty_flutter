@@ -69,5 +69,12 @@ export function peerCleanupCandidate(source) {
   const priorStart = rules.indexOf('    function deLeaderPriorAt(');
   const priorEnd = rules.indexOf('    function deLeaderSuccessorUpdate(', priorStart);
   rules = rules.slice(0, priorStart) + rules.slice(priorEnd);
+  const successorCheck = '        && (command.successorIndex == command.actorIndex || deCurrentOwnership(before.partySlots[command.successorIndex]))\n';
+  assert.equal(rules.split(successorCheck).length, 2);
+  rules = rules.replace(successorCheck, '');
+  const successorIdentity = '&& slot.playerId == playerId && before.playerId == playerId';
+  assert.equal(rules.split(successorIdentity).length, 2);
+  // Aggregate forces a successor write; that write owns the current-owner proof.
+  rules = rules.replace(successorIdentity, successorIdentity + '\n        && deCurrentOwnership(slot)');
   return rules;
 }
