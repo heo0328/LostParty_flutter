@@ -30,7 +30,7 @@ export function leaderCleanupCandidate(source) {
         && deCurrentOwnership(before.partySlots[command.actorIndex])
         && command.successorIndex is int && command.successorIndex >= 0 && command.successorIndex < before.partySlots.size()
         && command.successorIndex != command.targetIndex
-        && deCurrentOwnership(before.partySlots[command.successorIndex])
+        && (command.successorIndex == command.actorIndex || deCurrentOwnership(before.partySlots[command.successorIndex]))
         && command.priorGenerations is list && command.priorGenerations.size() == before.partySlots.size()
         && deLeaderPriorValid(before, command)
         && after.leaderPlayerId == before.partySlots[command.successorIndex].playerId
@@ -52,7 +52,7 @@ export function leaderCleanupCandidate(source) {
         || deLeaderOwnershipChanged(room.partySlots[index], command.priorGenerations[index]);
     }
     function deLeaderPriorValid(room, command) {
-      return ${Array.from({ length: 7 }, (_, i) => `deLeaderPriorAt(room, command, ${i})`).join('\n        && ')};
+      return ${Array.from({ length: 7 }, (_, i) => `(command.successorIndex <= ${i} || (deLeaderPriorAt(room, command, ${i}) && `).join('')}true${'))'.repeat(7)};
     }
     function deLeaderSuccessorUpdate(roomId, playerId, before, after) {
       let roomBefore = get(recruitmentPath(roomId)).data;
