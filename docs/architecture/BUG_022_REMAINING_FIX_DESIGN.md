@@ -1441,4 +1441,48 @@ f56c48e / CI 36840112755: guard 뒤 전체 기존 허용식을 평가하면 stat
 1,000식 한도에 도달했다(부재 state만 통과). 다음 후보는 해당 명령만 기존 lifecycle validator로
 직접 분기한다. guard와 lifecycle 검사는 모두 유지하고, 무관한 멤버/신청 validator 탐색만 제외한다.
 다른 명령은 원래 허용식을 유지한다. 정상 실패 상태에서 위조 거절 검증은 실행하지 않았다.
+
+#### 20.2 최종 결과
+
+e7f447e / CI 36840397200에서 10/10 통과. 완료/부재/교체 state 보존, 이력/member/그룹 관계 보존,
+정확한 이벤트 재시도, group/listing/event 누락·완료 state 삭제·낡은 revision·외부 새 소유자·
+중복 해산 쓰기 거절을 확인했다. E5 기존 후보는 수정하지 않았다. 새 guard는 마지막 1인 completed
+disband에만 적용되며 전체 기존 회귀는 제품 이식 최종 단계에 수행한다. 생성 Rules SHA256:
+`0857df904122b5925afc7aa0fb4417104cfd58518c1a4631b14eaee98e5166f7`.
+Rules 컴파일 경고 미관찰(별도 Node/Actions 경고 있음). 제품/운영 Rules는 아직 변경하지 않았다.
+
+### 21. DE2-G 실제 인증 차수 저장 설계
+
+F 서버 경계를 마친 뒤 실제 Router가 사용하는 자동 `_claimOwnership`과 수동 `_claimForRequester`에
+같은 순수 소유권 전이 정책을 연결한다. 수동 승인·강제·방어 실패·만료 확정은 공통 함수 경유를 유지한다.
+
+1. transaction에서 읽은 GameAccount가 없으면 1, 기존 필드가 없으면 0, 같은 owner이면 현재 차수,
+   다른 owner이면 +1한다. 기존 계정의 owner 부재/손상, 차수 null/음수/비정수는 복구 추정 없이 거절한다.
+2. 기존 Character를 쓰기 전에 GameAccount ID·이전 owner·차수 일치를 검사한다. 참조된 계정이 없는데
+   기존 Character가 남은 경우도 새 계정으로 오인하지 않는다. 없는 신규 Character만 생성 가능하다.
+3. GameAccount와 모든 기존/새 Character에 같은 차수를 기록한다. API 목록에서 사라진 Character도
+   기존 missingFromLatestRoster 정책과 함께 차수를 반영한다. 표시 필드와 다른 계정은 변경하지 않는다.
+4. 전이 계산은 transaction 재실행마다 최신 계정 Snapshot으로 수행한다. 같은 owner 재시도는 차수를
+   올리지 않고 A→B→A는 1→2→3으로 증가한다. 실제 Auth 복구/그룹 권한 이전은 추가하지 않는다.
+5. 검증은 일반 인증 UI 중복 테스트보다 legacy/잘못된 차수/불일치/재이전 정책 경계를 우선한다.
+   동시 인증 서버 검증은 Rules 차수 계약과 함께 수행한다. 앱의 순수 정책 통과를 서버 강제 보장으로
+   기록하지 않는다. 기존 22 실패/51 analyze 항목 중 해당 인증 경로 영향은 구현 검증 전에 분류한다.
+6. 이 단계만 빌드해 실기기 완료 판정하지 않는다. 참가 Snapshot 저장·읽기/Rules 전환을 함께 마친 뒤
+   디바이스 테스트를 전달한다. 현재 운영 Rules의 넓은 인증 쓰기 권한을 보안 완료로 표현하지 않는다.
+
+#### 21.1 인증 차수 서버 경계 (G2)
+
+G 앱 정책 4건+기존 인증 시작 3건 및 변경 파일 analyze 통과. 다음 demo 후보는 GameAccount
+create 차수 1, update 동일 owner 차수 유지/다른 owner +1을 강제한다. legacy 양쪽 필드 없음은
+0으로 해석하지만 소유권 이전에서 차수 누락은 거절한다. 이미 차수가 저장된 문서는 필드 삭제를
+허용하지 않는다. Character는 getAfter(GameAccount)의 owner/차수와 일치하고 기존 계정 ID를 유지한다.
+일반 Character 표시 갱신은 소유권을 바꾸지 않는 한 기존 legacy 누락 필드를 유지할 수 있다.
+계정/Character 삭제 후 차수를 재설정하는 우회는 차단한다(실제 인증 경로는 삭제하지 않는다).
+
+이는 기존 signedIn 인증 쓰기 경계 안에서 데이터 전이만 보강한다. Spark 로컬 장비 판정의 진위나
+수동 운영자 승인 자체를 서버가 새로 검증한다는 의미가 아니다. 해당 기존 신뢰 한계는 유지한다.
+Rules는 Character마다 계정 한 건만 참조하며 전체 Character 목록 순회 검사를 추가하지 않는다.
+인증 앱은 모든 Character를 같은 transaction으로 갱신한다. 서버는 미갱신 Character를 현재 소유권으로
+인정하지 않는 후속 사용 검증과 함께 방어한다. 동시 인증과 중복 동일 owner 재시도, A→B→A 및
+차수·owner 불일치 거래의 원자 거절을 최대 8 Character fixture에서 확인한다.
 public/legacy 전체 조합, 실제 인증 차수 보호·Snapshot 작성·앱 연결과 운영 전환은 별도 남는다.

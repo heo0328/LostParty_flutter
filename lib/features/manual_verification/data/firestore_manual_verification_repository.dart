@@ -7,6 +7,7 @@ import 'package:lost_party/shared/character_build/character_optional_display_pre
 import '../../account/data/datasources/lost_ark_character_remote_data_source.dart';
 import '../../account/data/dtos/sibling_character_dto.dart';
 import '../../account/domain/character_identity_key.dart';
+import '../../account/domain/game_account_ownership_transition.dart';
 import '../../account/domain/entities/game_account_verification.dart';
 import '../domain/entities/manual_verification_request.dart';
 import '../domain/manual_verification_account_scope.dart';
@@ -788,9 +789,7 @@ class FirestoreManualVerificationRepository
         .map(
           (item) => _firestore
               .collection('characterIdentityClaims')
-              .doc(
-                characterIdentityKey(item.serverName, item.characterName),
-              ),
+              .doc(characterIdentityKey(item.serverName, item.characterName)),
         )
         .toList(growable: false);
     final claims = <DocumentSnapshot<Map<String, dynamic>>>[];
@@ -803,10 +802,7 @@ class FirestoreManualVerificationRepository
         .whereType<String>()
         .toSet();
     if (accountIds.length > 1) {
-      throw const ManualVerificationException(
-        'conflict',
-        '게임 계정 식별자가 충돌합니다.',
-      );
+      throw const ManualVerificationException('conflict', '게임 계정 식별자가 충돌합니다.');
     }
     if (resolvedGameAccountId != null &&
         resolvedGameAccountId.isNotEmpty &&
@@ -817,35 +813,50 @@ class FirestoreManualVerificationRepository
         '분쟁 대상 게임 계정과 원정대 식별자가 일치하지 않습니다.',
       );
     }
-    final accountRef = resolvedGameAccountId != null &&
-            resolvedGameAccountId.isNotEmpty
+    final accountRef =
+        resolvedGameAccountId != null && resolvedGameAccountId.isNotEmpty
         ? _firestore.collection('gameAccounts').doc(resolvedGameAccountId)
         : accountIds.isEmpty
         ? _firestore.collection('gameAccounts').doc()
         : _firestore.collection('gameAccounts').doc(accountIds.single);
     final account = await transaction.get(accountRef);
+    if (!account.exists &&
+        (accountIds.isNotEmpty ||
+            (resolvedGameAccountId != null &&
+                resolvedGameAccountId.isNotEmpty))) {
+      throw const ManualVerificationException(
+        'ownerChanged',
+        '원정대 소유 정보를 확인할 수 없습니다. 다시 조회해 주세요.',
+      );
+    }
     String? previousOwner;
     if (account.exists) {
       previousOwner = account.data()?['ownerPlayerId'] as String?;
     }
     if (previousOwner is String && previousOwner.isNotEmpty) {
-      if (previousOwnerPlayerId == null || previousOwner != previousOwnerPlayerId) {
+      if (previousOwnerPlayerId == null ||
+          previousOwner != previousOwnerPlayerId) {
         throw const ManualVerificationException(
           'existingOwner',
           '기존 소유자가 있어 이번 단계에서 승인할 수 없습니다.',
         );
       }
-    } else if (previousOwnerPlayerId != null && previousOwnerPlayerId.isNotEmpty) {
+    } else if (previousOwnerPlayerId != null &&
+        previousOwnerPlayerId.isNotEmpty) {
       throw const ManualVerificationException(
         'ownerChanged',
         '소유 상태가 변경되어 이전을 확정할 수 없습니다.',
       );
     }
+    final ownership = GameAccountOwnershipTransition.fromAccount(
+      account: account.data(),
+      nextOwnerPlayerId: requesterPlayerId,
+    );
     final storedCharacterIds = account.exists
         ? (account.data()?['characterIds'] as List?)
-                ?.whereType<String>()
-                .toList() ??
-            const <String>[]
+                  ?.whereType<String>()
+                  .toList() ??
+              const <String>[]
         : const <String>[];
     final characterRefs = <DocumentReference<Map<String, dynamic>>>[];
     for (var index = 0; index < claims.length; index++) {
@@ -866,12 +877,19 @@ class FirestoreManualVerificationRepository
         await transaction.get(_firestore.collection('characters').doc(id)),
       );
     }
+    for (final snapshot in storedCharacters) {
+      ownership.validateExistingCharacter(
+        character: snapshot.data(),
+        gameAccountId: accountRef.id,
+      );
+    }
     final now = FieldValue.serverTimestamp();
     for (final snapshot in storedCharacters) {
       if (snapshot.exists &&
           !characterRefs.any((ref) => ref.id == snapshot.id)) {
         transaction.update(snapshot.reference, {
           'ownerPlayerId': requesterPlayerId,
+          'ownershipRevision': ownership.nextRevision,
           'rosterStatus': 'missingFromLatestRoster',
           'updatedAt': now,
         });
@@ -880,12 +898,11 @@ class FirestoreManualVerificationRepository
     transaction.set(accountRef, {
       'schemaVersion': 1,
       'ownerPlayerId': requesterPlayerId,
+      'ownershipRevision': ownership.nextRevision,
       'status': 'active',
       'lookupCharacterName': siblings.first.characterName,
       'characterIds': allCharacterIds.toList(growable: false),
-      'createdAt': account.exists
-          ? (account.data()?['createdAt'] ?? now)
-          : now,
+      'createdAt': account.exists ? (account.data()?['createdAt'] ?? now) : now,
       'updatedAt': now,
     });
     final serverCharacters = <VerifiedServerCharacter>[];
@@ -898,6 +915,7 @@ class FirestoreManualVerificationRepository
       transaction.set(characterRef, {
         'schemaVersion': 1,
         'ownerPlayerId': requesterPlayerId,
+        'ownershipRevision': ownership.nextRevision,
         'gameAccountId': accountRef.id,
         'status': 'active',
         'rosterStatus': 'confirmed',
@@ -926,15 +944,19 @@ class FirestoreManualVerificationRepository
         ),
       );
     }
-    transaction.set(_firestore
-        .collection('playerGameAccounts')
-        .doc('${requesterPlayerId}_${accountRef.id}'), {
-      'schemaVersion': 1,
-      'playerId': requesterPlayerId,
-      'gameAccountId': accountRef.id,
-      'status': 'active',
-      'updatedAt': now,
-    }, SetOptions(merge: true));
+    transaction.set(
+      _firestore
+          .collection('playerGameAccounts')
+          .doc('${requesterPlayerId}_${accountRef.id}'),
+      {
+        'schemaVersion': 1,
+        'playerId': requesterPlayerId,
+        'gameAccountId': accountRef.id,
+        'status': 'active',
+        'updatedAt': now,
+      },
+      SetOptions(merge: true),
+    );
     if (previousOwner is String &&
         previousOwner.isNotEmpty &&
         previousOwner != requesterPlayerId) {

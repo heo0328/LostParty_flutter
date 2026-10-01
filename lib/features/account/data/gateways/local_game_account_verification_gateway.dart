@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../../domain/character_identity_key.dart';
+import '../../domain/game_account_ownership_transition.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -178,7 +179,10 @@ class LocalGameAccountVerificationGateway
         _firestore.collection('authBindings').doc(authUid),
       );
       final playerId = binding.data()?['playerId'];
-      if (!binding.exists || playerId is! String || playerId.isEmpty) {
+      if (!binding.exists ||
+          binding.data()?['status'] != 'active' ||
+          playerId is! String ||
+          playerId.isEmpty) {
         throw StateError('Active player binding is required.');
       }
       final claims = <DocumentSnapshot<Map<String, dynamic>>>[];
@@ -199,7 +203,14 @@ class LocalGameAccountVerificationGateway
       final account = accountIds.isEmpty
           ? null
           : await transaction.get(accountRef);
+      if (account != null && !account.exists) {
+        throw const FormatException('Referenced roster does not exist.');
+      }
       final previousOwner = account?.data()?['ownerPlayerId'];
+      final ownership = GameAccountOwnershipTransition.fromAccount(
+        account: account?.data(),
+        nextOwnerPlayerId: playerId,
+      );
       final storedCharacterIds =
           (account?.data()?['characterIds'] as List?)
               ?.whereType<String>()
@@ -225,12 +236,19 @@ class LocalGameAccountVerificationGateway
         );
       }
 
+      for (final snapshot in storedCharacters) {
+        ownership.validateExistingCharacter(
+          character: snapshot.data(),
+          gameAccountId: accountRef.id,
+        );
+      }
       final now = FieldValue.serverTimestamp();
       for (final snapshot in storedCharacters) {
         if (snapshot.exists &&
             !characterRefs.any((ref) => ref.id == snapshot.id)) {
           transaction.update(snapshot.reference, {
             'ownerPlayerId': playerId,
+            'ownershipRevision': ownership.nextRevision,
             'rosterStatus': 'missingFromLatestRoster',
             'updatedAt': now,
           });
@@ -239,6 +257,7 @@ class LocalGameAccountVerificationGateway
       transaction.set(accountRef, {
         'schemaVersion': 1,
         'ownerPlayerId': playerId,
+        'ownershipRevision': ownership.nextRevision,
         'status': 'active',
         'lookupCharacterName': challenge.characterName,
         'characterIds': allCharacterIds.toList(growable: false),
@@ -255,6 +274,7 @@ class LocalGameAccountVerificationGateway
         transaction.set(characterRef, {
           'schemaVersion': 1,
           'ownerPlayerId': playerId,
+          'ownershipRevision': ownership.nextRevision,
           'gameAccountId': accountRef.id,
           'status': 'active',
           'rosterStatus': 'confirmed',
