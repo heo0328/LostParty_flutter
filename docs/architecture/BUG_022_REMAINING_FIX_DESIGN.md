@@ -1485,4 +1485,11 @@ Rules는 Character마다 계정 한 건만 참조하며 전체 Character 목록 
 인증 앱은 모든 Character를 같은 transaction으로 갱신한다. 서버는 미갱신 Character를 현재 소유권으로
 인정하지 않는 후속 사용 검증과 함께 방어한다. 동시 인증과 중복 동일 owner 재시도, A→B→A 및
 차수·owner 불일치 거래의 원자 거절을 최대 8 Character fixture에서 확인한다.
+
+G2 첫 실행(9a5658e / CI 36841529052)은 전체 실패. test helper가 withSecurityRulesDisabled의
+반환값을 Snapshot으로 오인해 undefined를 반환했다. 출력된 거절 PASS도 전후 데이터 보존을 검증한
+근거로 사용하지 않는다. Snapshot을 명시 저장/검사하도록 수정한다. 동시 인증은 Rules가 낡은 전이를
+permission-denied로 거절할 수 있으므로 모든 요청의 즉시 성공을 요구하지 않는다. 최소 한 거래 성공,
+계정/Character 일관성, 거절 사유 제한, 사용자 명시 재시도에 해당하는 최신 상태 전이를 검증한다.
+permission-denied를 앱이 자동 무한 재시도하도록 바꾸지 않는다.
 public/legacy 전체 조합, 실제 인증 차수 보호·Snapshot 작성·앱 연결과 운영 전환은 별도 남는다.

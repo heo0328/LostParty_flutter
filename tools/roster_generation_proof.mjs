@@ -20,10 +20,15 @@ async function check(name, work) {
   catch (error) { results.push({ name, passed: false, error: error.message }); console.error(`FAIL GENERATION: ${name}: ${error.message}`); }
 }
 async function snapshot() {
-  return env.withSecurityRulesDisabled(async ctx => ({
-    account: (await getDoc(doc(ctx.firestore(), 'gameAccounts', 'roster'))).data(),
-    characters: await Promise.all(characterRefs.map(ref => getDoc(doc(ctx.firestore(), ref.path)).then(s => s.data()))),
-  }));
+  let result;
+  await env.withSecurityRulesDisabled(async ctx => {
+    result = {
+      account: (await getDoc(doc(ctx.firestore(), 'gameAccounts', 'roster'))).data(),
+      characters: await Promise.all(characterRefs.map(ref => getDoc(doc(ctx.firestore(), ref.path)).then(s => s.data()))),
+    };
+  });
+  assert.ok(result && Array.isArray(result.characters), 'snapshot was not captured');
+  return result;
 }
 async function seed(legacy = false) {
   await env.clearFirestore();
@@ -104,12 +109,30 @@ try {
   });
   await check('concurrent distinct owners serialize and same owner is idempotent', async () => {
     await seed();
-    await Promise.all([transfer('B'), transfer('C')]);
+    const owners = ['B', 'C'];
+    const competing = await Promise.allSettled(owners.map(transfer));
+    assert.ok(competing.some(r => r.status === 'fulfilled'));
+    for (const [index, result] of competing.entries()) {
+      if (result.status === 'rejected') {
+        assert.ok(['permission-denied', 'aborted'].includes(result.reason.code), result.reason.message);
+        const stable = await snapshot();
+        assert.ok(stable.characters.every(c => c.ownershipRevision === stable.account.ownershipRevision && c.ownerPlayerId === stable.account.ownerPlayerId));
+        // Explicit retry is a fresh authentication attempt against the latest owner.
+        await assertSucceeds(transfer(owners[index]));
+      }
+    }
     const after = await snapshot();
     assert.equal(after.account.ownershipRevision, 3);
     assert.ok(after.characters.every(c => c.ownershipRevision === 3 && c.ownerPlayerId === after.account.ownerPlayerId));
     await seed();
-    await Promise.all([transfer('B'), transfer('B')]);
+    const duplicate = await Promise.allSettled([transfer('B'), transfer('B')]);
+    assert.ok(duplicate.some(r => r.status === 'fulfilled'));
+    for (const result of duplicate) {
+      if (result.status === 'rejected') {
+        assert.ok(['permission-denied', 'aborted'].includes(result.reason.code), result.reason.message);
+        await assertSucceeds(transfer('B'));
+      }
+    }
     assert.equal((await snapshot()).account.ownershipRevision, 2);
   });
 } finally { await env.cleanup(); }
