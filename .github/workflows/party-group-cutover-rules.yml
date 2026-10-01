@@ -17,6 +17,8 @@ on:
           - leader-max-diagnosis
           - leader-distributed-diagnosis
           - leader-distributed
+          - peer-chain-only
+          - peer-chain
       case:
         description: Rules regression scope
         type: choice
@@ -207,12 +209,12 @@ jobs:
         if: inputs.case == 'ownership-leader'
         env:
           LEADER_PROOF_SCOPE: ${{ inputs.dispatch_scope }}
-        run: >-
-          npx --yes firebase-tools@15.29.0 emulators:exec
-          --config firebase.json
-          --only firestore
-          --project demo-party-group-cutover
-          "node tools/roster_leader_cleanup_proof.mjs"
+        run: |
+          proof_script=tools/roster_leader_cleanup_proof.mjs
+          if [[ "$LEADER_PROOF_SCOPE" == peer-* ]]; then
+            proof_script=tools/roster_peer_cleanup_proof.mjs
+          fi
+          npx --yes firebase-tools@15.29.0 emulators:exec --config firebase.json --only firestore --project demo-party-group-cutover "node $proof_script"
 
       - name: Preserve leader succession candidate
         if: always() && inputs.case == 'ownership-leader'
