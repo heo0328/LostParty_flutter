@@ -20,6 +20,7 @@ on:
           - peer-chain-only
           - peer-chain
           - last-member
+          - generation
       case:
         description: Rules regression scope
         type: choice
@@ -217,6 +218,9 @@ jobs:
           fi
           if [[ "$LEADER_PROOF_SCOPE" == last-member ]]; then
             proof_script=tools/roster_last_member_proof.mjs
+          fi
+          if [[ "$LEADER_PROOF_SCOPE" == generation ]]; then
+            proof_script=tools/roster_generation_proof.mjs
           fi
           npx --yes firebase-tools@15.29.0 emulators:exec --config firebase.json --only firestore --project demo-party-group-cutover "node $proof_script"
 
