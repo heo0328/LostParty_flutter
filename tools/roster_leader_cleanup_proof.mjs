@@ -11,7 +11,8 @@ import { playerId, recruitmentId } from './party_group_cutover_rules_test.mjs';
 
 const rules = leaderCleanupCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
 const directory = new URL('../coverage/roster-leader/', import.meta.url);
-const diagnostic = process.env.LEADER_PROOF_SCOPE === 'leader-diagnosis';
+const maximumDiagnostic = process.env.LEADER_PROOF_SCOPE === 'leader-max-diagnosis';
+const diagnostic = maximumDiagnostic || process.env.LEADER_PROOF_SCOPE === 'leader-diagnosis';
 fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(new URL('candidate.rules', directory), rules);
 fs.writeFileSync(new URL('manifest.json', directory), JSON.stringify({ sha256: createHash('sha256').update(rules).digest('hex') }));
@@ -19,7 +20,7 @@ const results = await runCleanupProof(rules, async ({ env, selfDb, seed, snapsho
   async function coverage(phase) {
     const response = await fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-party-group-cutover:ruleCoverage');
     assert.ok(response.ok, `coverage ${response.status}`);
-    fs.writeFileSync(new URL(`first-${phase}.json`, directory), JSON.stringify(await response.json()));
+    fs.writeFileSync(new URL(`${maximumDiagnostic ? 'maximum' : 'first'}-${phase}.json`, directory), JSON.stringify(await response.json()));
   }
   async function setup(lastOnly = false) {
     await seed();
@@ -86,7 +87,7 @@ const results = await runCleanupProof(rules, async ({ env, selfDb, seed, snapsho
     });
   }
   let simplePassed = false;
-  await check('leader succession first eligible and repeat', async () => {
+  if (!maximumDiagnostic) await check('leader succession first eligible and repeat', async () => {
     const request = await setup(), before = await snapshot();
     if (diagnostic) await coverage('before');
     try { assert.equal(await assertSucceeds(command(request)), 'applied'); }
@@ -129,11 +130,15 @@ const results = await runCleanupProof(rules, async ({ env, selfDb, seed, snapsho
         assert.deepEqual(await snapshot(), before);
       });
     }
+  }
+  if ((simplePassed && !diagnostic) || maximumDiagnostic) {
     // A legitimate maximum scan. Failure is a scalability blocker, never a security pass.
     await check('leader maximum scan last eligible', async () => {
       const request = await setup(true), before = await snapshot();
+      if (maximumDiagnostic) await coverage('before');
       try { await assertSucceeds(command(request)); }
       catch (error) { assert.deepEqual(await snapshot(), before); throw error; }
+      finally { if (maximumDiagnostic) await coverage('after'); }
       const after = await snapshot();
       assert.equal(after.room.leaderPlayerId, getSlots()[7].playerId);
       assert.deepEqual(after.states, before.states);
