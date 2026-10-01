@@ -83,7 +83,9 @@ export function leaderCleanupCandidate(source) {
   return rules;
 }
 
-// DE2-E3 experiment: every partition belongs to an already mandatory write.
+// DE2-E3 rejected experiment, retained for reproducibility; never use in production.
+// Maximum scan still fails. Missing target documents can skip the delete partition,
+// and the persistent marker gate can block later independent permission updates.
 export function distributedLeaderCleanupCandidate(source) {
   let rules = leaderCleanupCandidate(source);
   function change(from, to) {
