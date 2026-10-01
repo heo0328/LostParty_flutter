@@ -2430,7 +2430,7 @@ async function main(rulesOverride = rules) {
   }
 }
 
-export { main as runCutoverRegression, seedGroupLinkedRoom, disbandApprovedRoomTxn, removeApprovedMemberTxn, seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn, approvePublicApplicationTxn, seedExpandedApprovedRoom, cycleWindow, offsetCycleKey, cycleKey, authUid, playerId, characterId, recruitmentId, raidId };
+export { swapTwoDealersTxn, main as runCutoverRegression, seedGroupLinkedRoom, disbandApprovedRoomTxn, removeApprovedMemberTxn, seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn, approvePublicApplicationTxn, seedExpandedApprovedRoom, cycleWindow, offsetCycleKey, cycleKey, authUid, playerId, characterId, recruitmentId, raidId };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main().catch((error) => {
   console.error('FAIL:', error);

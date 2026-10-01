@@ -5,7 +5,7 @@ import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebas
 import { doc, collection, getDoc, getDocs, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { participationCandidate } from './roster_participation_candidate.mjs';
 import { seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn, approvePublicApplicationTxn,
-  seedExpandedApprovedRoom, authUid, recruitmentId, playerId, raidId } from './party_group_cutover_rules_test.mjs';
+  seedExpandedApprovedRoom, swapTwoDealersTxn, authUid, recruitmentId, playerId, raidId } from './party_group_cutover_rules_test.mjs';
 const rules = participationCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
 const directory = new URL('../coverage/roster-leader/', import.meta.url);
 fs.mkdirSync(directory, { recursive: true });
@@ -90,6 +90,20 @@ try {
       await assertSucceeds(applicationTxn(joiner, 'create', { ownershipRevision: 3 }));
       await assertSucceeds(approvePublicApplicationTxn(db, { ownershipRevision: 3 }));
       assert.equal((await snapshot()).room.partySlots[1].ownershipRevision, 3);
+    });
+    await check('maximum eight slots preserve generations during valid member swap', async () => {
+      await seed(); await createPublicRecruitmentTxn(db, { ownershipRevision: 1 });
+      await applicationTxn(joiner, 'create', { ownershipRevision: 1 });
+      await approvePublicApplicationTxn(db, { ownershipRevision: 1 });
+      await seedExpandedApprovedRoom(env, 8);
+      const before = await snapshot();
+      await assertSucceeds(swapTwoDealersTxn(db));
+      const after = await snapshot();
+      assert.equal(after.room.revision, before.room.revision + 1);
+      for (const slot of after.room.partySlots) {
+        assert.equal(slot.ownershipRevision, before.room.partySlots.find(s => s.playerId === slot.playerId).ownershipRevision);
+      }
+      assert.equal(after.room.partySlots.find(s => s.playerId === 'player-extra-1').slotIndex, 2);
     });
     await check('maximum eight slots reject generation-only forgery without member write', async () => {
       await seed(); await createPublicRecruitmentTxn(db, { ownershipRevision: 1 });

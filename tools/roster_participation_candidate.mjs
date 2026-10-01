@@ -32,10 +32,13 @@ export function participationCandidate(source) {
         : ${value};`);
   });
   const marker = '    match /recruitments/{recruitmentId} {';
-  const start = rules.indexOf('      allow update: if ', rules.indexOf(marker));
-  const end = rules.indexOf('      allow delete: if false;', start);
+  const rootMatch = /^      allow update: if\b/m.exec(rules.slice(rules.indexOf(marker)));
+  assert.ok(rootMatch, 'root recruitment update');
+  const start = rules.indexOf(marker) + rootMatch.index;
+  const end = rules.indexOf(';', start) + 1;
   assert.ok(start > 0 && end > start);
-  const original = rules.slice(start, end).trim().replace(/^allow update: if /, '').replace(/;$/, '');
+  const original = rules.slice(start, end).trim().replace(/^allow update: if\s*/, '').replace(/;$/, '');
+  assert.ok(!original.includes('match /'), 'update guard must cover one statement');
   rules = rules.slice(0, start) + `      allow update: if deChangedSlotGenerations(resource.data, request.resource.data)
         && (${original});
 ` + rules.slice(end);
