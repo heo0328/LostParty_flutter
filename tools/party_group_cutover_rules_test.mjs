@@ -426,7 +426,7 @@ async function joinByCodeTxn(db) {
   });
 }
 
-async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale = false, ownerPlayerId = playerId, ownerCharacterId = characterId } = {}) {
+async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale = false, ownerPlayerId = playerId, ownerCharacterId = characterId, ownershipRevision = null } = {}) {
   const { startedAt, endsAt } = cycleWindow(cycleKey);
   const stateId = `${ownerCharacterId}_${raidId}`;
   return runTransaction(db, async (tx) => {
@@ -487,6 +487,7 @@ async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale
         {
           playerId: ownerPlayerId,
           characterId: ownerCharacterId,
+      ...(ownershipRevision == null ? {} : { ownershipRevision }),
           role: 'dealer',
           classKey: '버서커',
           partyIndex: 0,
@@ -509,6 +510,7 @@ async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale
       schemaVersion: 1,
       playerId: ownerPlayerId,
       characterId: ownerCharacterId,
+      ...(ownershipRevision == null ? {} : { ownershipRevision }),
       characterNameSnapshot: '테스트',
       classNameSnapshot: '버서커',
       role: 'dealer',
@@ -529,6 +531,7 @@ async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale
       schemaVersion: 1,
       playerId: ownerPlayerId,
       characterId: ownerCharacterId,
+      ...(ownershipRevision == null ? {} : { ownershipRevision }),
       raidId,
       recruitmentId: id,
       cycleKey,
@@ -554,7 +557,7 @@ async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale
 }
 
 // F2-A: mirror the connected atomic application repository's public-room writes.
-async function applicationTxn(db, action, { countedAsNonGroup = false } = {}) {
+async function applicationTxn(db, action, { countedAsNonGroup = false, ownershipRevision = null } = {}) {
   return runTransaction(db, async (tx) => {
     const recruitmentRef = doc(db, 'recruitments', recruitmentId);
     const applicationRef = doc(db, 'recruitments', recruitmentId, 'applications', joinerPlayerId);
@@ -572,6 +575,7 @@ async function applicationTxn(db, action, { countedAsNonGroup = false } = {}) {
     } else {
       const pending = {
         cycleKey, characterId: joinerCharacterId,
+        ...(ownershipRevision == null ? {} : { ownershipRevision }),
         characterNameSnapshot: '가입자', classNameSnapshot: '바드',
         requestedRole: 'support',
         submittedBuildSnapshot: { itemLevel: 1700, combatPower: null, buildIntegritySnapshot: null },
@@ -620,7 +624,7 @@ async function deleteOldRaidStateTxn(db) {
   });
 }
 
-async function approvePublicApplicationTxn(db) {
+async function approvePublicApplicationTxn(db, { ownershipRevision = null } = {}) {
   return runTransaction(db, async (tx) => {
     const recruitmentRef = doc(db, 'recruitments', recruitmentId);
     const applicationRef = doc(db, 'recruitments', recruitmentId, 'applications', joinerPlayerId);
@@ -642,6 +646,7 @@ async function approvePublicApplicationTxn(db) {
       memberCount: 2, dealerCount: 1, supportCount: 1, hasAvailableSlot: true,
       partySlots: [...recruitment.partySlots, {
         playerId: joinerPlayerId, characterId: joinerCharacterId,
+      ...(ownershipRevision == null ? {} : { ownershipRevision }),
         role: 'support', classKey: '바드', partyIndex: 0, slotIndex: 3,
         countedAsNonGroupMember: false,
       }],
@@ -665,6 +670,7 @@ async function approvePublicApplicationTxn(db) {
     });
     tx.set(memberRef, {
       schemaVersion: 1, playerId: joinerPlayerId, characterId: joinerCharacterId,
+      ...(ownershipRevision == null ? {} : { ownershipRevision }),
       characterNameSnapshot: '가입자', classNameSnapshot: '바드',
       role: 'support', partyIndex: 0, slotIndex: 3,
       joinedAt: serverTimestamp(), joinedBy: playerId,
@@ -675,7 +681,8 @@ async function approvePublicApplicationTxn(db) {
     });
     tx.set(stateRef, {
       schemaVersion: 1, playerId: joinerPlayerId,
-      characterId: joinerCharacterId, raidId, difficultyId: 'normal',
+      characterId: joinerCharacterId,
+      ...(ownershipRevision == null ? {} : { ownershipRevision }), raidId, difficultyId: 'normal',
       recruitmentId, cycleKey, role: 'support', status: 'active',
       source: 'party', revision: 1,
       createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
