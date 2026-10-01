@@ -50,7 +50,10 @@ export function participationCandidate(source) {
           ((request.resource.data.characterId == resource.data.characterId
             && request.resource.data.get('ownershipRevision', 0) == resource.data.get('ownershipRevision', 0))
             || deCurrentOwnership(request.resource.data))
-          && (${memberOriginal});
+          && ((request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['partyIndex', 'slotIndex', 'updatedAt'])
+            && validMemberPositionChange(recruitmentId, playerId, resource.data, request.resource.data))
+            || (${memberOriginal}));
 ` + rules.slice(memberEnd);
   return rules.replace('    function deValidGeneration(', `
     function deApplicationGeneration(data) {
