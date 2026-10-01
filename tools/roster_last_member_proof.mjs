@@ -4,11 +4,11 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { peerCleanupCandidate } from './roster_peer_cleanup_candidate.mjs';
+import { lastMemberCandidate } from './roster_last_member_candidate.mjs';
 import { runCleanupProof } from './roster_completed_cleanup_proof.mjs';
 import { playerId, recruitmentId } from './party_group_cutover_rules_test.mjs';
 
-const rules = peerCleanupCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
+const rules = lastMemberCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
 const directory = new URL('../coverage/roster-leader/', import.meta.url);
 fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(new URL('candidate.rules', directory), rules);

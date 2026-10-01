@@ -1423,4 +1423,17 @@ Actions/Node 의존성 deprecation 경고는 Rules 경고와 구분한다. JS �
 - 기존 validator는 group count를 강제하지만 event/listing 보존·원자성은 실제 거절 검증 전까지
   입증된 것으로 간주하지 않는다. 누락 허용이 발견되면 해당 경계만 보강한 후보를 설계한다.
 - 인증 차수/앱 연결은 이 proof 이후 순차 진행한다. 운영 Rules 및 제품 완료를 뜻하지 않는다.
+
+#### 20.1 기존 경로 결과와 최소 보강
+
+afaede0 / CI 36839657706: 10건 중 7건 통과, 3건 실패. completed/부재/교체 state 보존 해산,
+정확한 이벤트 재시도, group 누락·낡은 revision·외부 새 소유자·해산 재쓰기 거절은 통과했다.
+listing 삭제 누락, event 누락, completed state 동시 삭제는 허용됐다. 기존 앱 정상 거래에는
+없는 변형이며, 서버 원자 계약의 빈틈으로 확인했다.
+
+최소 후보는 **마지막 1인 completed 회차의 disband**에만 기존 허용식 앞에 추가 guard를 둔다.
+기존 공대장 권한/해산 validator는 모두 유지하고, 변경 필드 제한·단일 기존 슬롯/member 보존·
+state 동일성(부재 포함)·그룹 listing 부재·새 정확한 disband event를 강제한다. 이를 OR 대안으로
+추가하지 않아 옛 허용식으로 우회할 수 없게 한다. 다른 인원/활성 회차는 기존 경로 그대로다.
+일반 해산은 current/unknown 소유권에서도 기존 공대장 권한으로 허용하며 stale 전용 권한을 만들지 않는다.
 public/legacy 전체 조합, 실제 인증 차수 보호·Snapshot 작성·앱 연결과 운영 전환은 별도 남는다.
