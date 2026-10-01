@@ -20,6 +20,7 @@ void main() {
       PartyAggregateSlot(
         playerId: 'player-0',
         characterId: 'character-0',
+        ownershipRevision: 7,
         role: PartyRole.dealer,
         classKey: '버서커',
         partyIndex: 0,
@@ -131,6 +132,7 @@ void main() {
     );
     expect(plan.raidStateWrites.single.patch?['cycleKey'], '2026-09-16');
     expect(plan.raidStateWrites.single.patch?['source'], 'party');
+    expect(plan.raidStateWrites.single.patch?['ownershipRevision'], 7);
     expect(plan.raidStateWrites.single.removeCompletedAt, isTrue);
   });
 

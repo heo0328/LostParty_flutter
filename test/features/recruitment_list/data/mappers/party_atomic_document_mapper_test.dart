@@ -15,7 +15,7 @@ void main() {
     'continueTogether': true,
     'revision': 4,
     'partySlots': [
-      {
+      <String, Object?>{
         'playerId': 'player-0',
         'characterId': 'character-0',
         'role': 'dealer',
@@ -38,6 +38,26 @@ void main() {
     expect(aggregate.difficultyId, 'hard');
     expect(aggregate.memberCount, 1);
     expect(aggregate.partySlots.single.classKey, '버서커');
+  });
+
+  test('legacy 누락과 명시 차수를 구분하고 손상 차수는 거절한다', () {
+    for (final revision in [null, 0, 3]) {
+      final data = document();
+      final slot = (data['partySlots']! as List).first as Map<String, Object?>;
+      if (revision != null) slot['ownershipRevision'] = revision;
+      final parsed = PartyAtomicDocumentMapper.aggregate(
+        data,
+      ).partySlots.single;
+      expect(PartyAtomicDocumentMapper.slot(parsed), slot);
+    }
+    for (final revision in [null, -1, 1.5, '1']) {
+      final data = document();
+      (data['partySlots']! as List).first['ownershipRevision'] = revision;
+      expect(
+        () => PartyAtomicDocumentMapper.aggregate(data),
+        throwsA(anyOf(isA<FormatException>(), isA<ArgumentError>())),
+      );
+    }
   });
 
   test('누락되거나 알 수 없는 필드는 과거 자료로 추측하지 않고 거절한다', () {
@@ -64,10 +84,7 @@ void main() {
 
     final aggregate = PartyAtomicDocumentMapper.aggregate(ended);
 
-    expect(
-      aggregate.currentCycleStatus,
-      PartyRaidStateStatus.incompleteEnded,
-    );
+    expect(aggregate.currentCycleStatus, PartyRaidStateStatus.incompleteEnded);
     expect(aggregate.status, PartyRecruitmentStatus.incompleteEnded);
     expect(aggregate.lastCommandType, PartyAtomicCommandType.incompleteEnd);
   });

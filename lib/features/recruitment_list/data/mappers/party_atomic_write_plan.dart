@@ -214,6 +214,8 @@ class PartyAtomicWritePlan {
       'schemaVersion': 1,
       'playerId': slot.playerId,
       'characterId': slot.characterId,
+      if (slot.ownershipRevision != null)
+        'ownershipRevision': slot.ownershipRevision,
       'raidId': aggregate.raidId,
       'difficultyId': aggregate.difficultyId,
       'recruitmentId': aggregate.recruitmentId,

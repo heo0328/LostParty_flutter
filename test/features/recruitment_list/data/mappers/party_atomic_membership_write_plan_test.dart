@@ -51,6 +51,7 @@ void main() {
       playerId: 'player-0',
       classKey: '바드:지원',
       serverTimestamp: timestamp,
+      ownershipRevision: 2,
     );
 
     expect(plan.recruitment['schemaVersion'], 2);
@@ -58,6 +59,12 @@ void main() {
     expect(plan.raidStateId, 'character-0_raid-1');
     expect(plan.raidState['status'], 'active');
     expect(plan.raidState['source'], 'party');
+    expect(plan.raidState['ownershipRevision'], 2);
+    expect(plan.leaderMembership['ownershipRevision'], 2);
+    expect(
+      (plan.recruitment['partySlots']! as List).single['ownershipRevision'],
+      2,
+    );
     expect(plan.leaderMembership['buildIntegritySnapshot'], {
       'status': 'error',
     });
@@ -96,12 +103,16 @@ void main() {
       difficultyId: 'hard',
       joiningIsGroupMember: true,
       serverTimestamp: timestamp,
+      ownershipRevision: 3,
     );
     final joined = PartyAtomicDocumentMapper.aggregate({
       ...plan.recruitment,
       ...join.recruitmentPatch,
     });
     expect(joined.memberCount, 2);
+    expect(joined.partySlots.last.ownershipRevision, 3);
+    expect(join.raidState['ownershipRevision'], 3);
+    expect(join.membership['ownershipRevision'], 3);
     expect(joined.nonGroupMemberCount, 0);
   });
 

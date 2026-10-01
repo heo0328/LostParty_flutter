@@ -38,6 +38,8 @@ class PartyAtomicDocumentMapper {
     'partyIndex': value.partyIndex,
     'slotIndex': value.slotIndex,
     'countedAsNonGroupMember': value.countedAsNonGroupMember,
+    if (value.ownershipRevision != null)
+      'ownershipRevision': value.ownershipRevision,
   };
 
   static PartyAggregateSlot _slot(Map<String, Object?> data) =>
@@ -53,6 +55,9 @@ class PartyAtomicDocumentMapper {
         partyIndex: _int(data, 'partyIndex'),
         slotIndex: _int(data, 'slotIndex'),
         countedAsNonGroupMember: _bool(data, 'countedAsNonGroupMember'),
+        ownershipRevision: data.containsKey('ownershipRevision')
+            ? _int(data, 'ownershipRevision')
+            : null,
       );
 
   static PartyRaidStateStatus _raidStatus(Object? value) => switch (value) {

@@ -9,8 +9,10 @@ class PartyAtomicApplicationWritePlan {
     required String applicantPlayerId,
     required bool applicantIsGroupMember,
     required Object serverTimestamp,
+    int? ownershipRevision,
   }) : application = Map.unmodifiable({
          ...application,
+         'ownershipRevision': ?ownershipRevision,
          'countedAsNonGroupApplicant':
              aggregate.groupId != null && !applicantIsGroupMember,
        }),

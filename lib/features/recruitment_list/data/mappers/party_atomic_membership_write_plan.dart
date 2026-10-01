@@ -15,15 +15,25 @@ class PartyAtomicCreateWritePlan {
     required String classKey,
     required Object serverTimestamp,
     int groupActiveRecruitmentCountAfter = 0,
+    int? ownershipRevision,
   }) : recruitment = _recruitment(
          base: base,
          command: command,
          playerId: playerId,
          classKey: classKey,
          groupActiveRecruitmentCountAfter: groupActiveRecruitmentCountAfter,
+         ownershipRevision: ownershipRevision,
        ),
-       leaderMembership = Map.unmodifiable(base.leaderMembership),
-       raidState = _raidState(base: base, command: command, playerId: playerId),
+       leaderMembership = Map.unmodifiable({
+         ...base.leaderMembership,
+         'ownershipRevision': ?ownershipRevision,
+       }),
+       raidState = _raidState(
+         base: base,
+         command: command,
+         playerId: playerId,
+         ownershipRevision: ownershipRevision,
+       ),
        event = _event(
          command: command,
          playerId: playerId,
@@ -53,6 +63,7 @@ class PartyAtomicCreateWritePlan {
     required String playerId,
     required String classKey,
     required int groupActiveRecruitmentCountAfter,
+    required int? ownershipRevision,
   }) {
     final slot = PartyAggregateSlot(
       playerId: playerId,
@@ -62,6 +73,7 @@ class PartyAtomicCreateWritePlan {
       partyIndex: 0,
       slotIndex: 0,
       countedAsNonGroupMember: false,
+      ownershipRevision: ownershipRevision,
     );
     final raidStateId = PartyRaidState.documentIdFor(
       characterId: command.leaderCharacterId,
@@ -91,10 +103,12 @@ class PartyAtomicCreateWritePlan {
     required PartyCreateWritePlan base,
     required PartyCreateCommand command,
     required String playerId,
+    required int? ownershipRevision,
   }) => Map.unmodifiable({
     ...base.assignment,
     'schemaVersion': 1,
     'playerId': playerId,
+    'ownershipRevision': ?ownershipRevision,
     'characterId': command.leaderCharacterId,
     'raidId': command.metadata.raidId,
     'difficultyId': command.metadata.difficultyId,
@@ -135,6 +149,7 @@ class PartyAtomicJoinWritePlan {
     required String difficultyId,
     required bool joiningIsGroupMember,
     required Object serverTimestamp,
+    int? ownershipRevision,
   }) : _values = _build(
          base: base,
          aggregate: aggregate,
@@ -144,6 +159,7 @@ class PartyAtomicJoinWritePlan {
          difficultyId: difficultyId,
          joiningIsGroupMember: joiningIsGroupMember,
          serverTimestamp: serverTimestamp,
+         ownershipRevision: ownershipRevision,
        );
 
   final _PartyAtomicJoinValues _values;
@@ -164,6 +180,7 @@ class PartyAtomicJoinWritePlan {
     required String difficultyId,
     required bool joiningIsGroupMember,
     required Object serverTimestamp,
+    required int? ownershipRevision,
   }) {
     if (aggregate.status != PartyRecruitmentStatus.active ||
         aggregate.currentCycleStatus != PartyRaidStateStatus.active ||
@@ -198,6 +215,7 @@ class PartyAtomicJoinWritePlan {
       slotIndex: slotIndex,
       countedAsNonGroupMember:
           aggregate.groupId != null && !joiningIsGroupMember,
+      ownershipRevision: ownershipRevision,
     );
     final nextSlots = [...aggregate.partySlots, joiningSlot];
     final arrangement = [
@@ -247,9 +265,13 @@ class PartyAtomicJoinWritePlan {
             (joiningSlot.countedAsNonGroupMember ? 1 : 0),
         'revision': nextRevision,
       }),
-      membership: Map.unmodifiable(base.membership),
+      membership: Map.unmodifiable({
+        ...base.membership,
+        'ownershipRevision': ?ownershipRevision,
+      }),
       raidState: Map.unmodifiable({
         ...base.assignment,
+        'ownershipRevision': ?ownershipRevision,
         'schemaVersion': 1,
         'difficultyId': difficultyId,
         'status': 'active',

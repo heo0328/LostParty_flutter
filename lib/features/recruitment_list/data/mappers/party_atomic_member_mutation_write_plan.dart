@@ -16,6 +16,7 @@ class PartyAtomicCharacterChangeWritePlan {
     required String difficultyId,
     required Map<String, Object?> membershipPatch,
     required Object serverTimestamp,
+    int? ownershipRevision,
   }) : _values = _build(
          aggregate: aggregate,
          rules: rules,
@@ -26,6 +27,7 @@ class PartyAtomicCharacterChangeWritePlan {
          raidId: raidId,
          difficultyId: difficultyId,
          membershipPatch: membershipPatch,
+         ownershipRevision: ownershipRevision,
          serverTimestamp: serverTimestamp,
        );
 
@@ -49,6 +51,7 @@ class PartyAtomicCharacterChangeWritePlan {
     required String difficultyId,
     required Map<String, Object?> membershipPatch,
     required Object serverTimestamp,
+    required int? ownershipRevision,
   }) {
     if (aggregate.status != PartyRecruitmentStatus.active ||
         aggregate.currentCycleStatus != PartyRaidStateStatus.active) {
@@ -59,6 +62,9 @@ class PartyAtomicCharacterChangeWritePlan {
     );
     if (oldIndex < 0) throw StateError('참가 Player를 찾을 수 없습니다.');
     final old = aggregate.partySlots[oldIndex];
+    if (old.ownershipRevision != null && ownershipRevision == null) {
+      throw StateError('새 캐릭터의 소유권 차수가 필요합니다.');
+    }
     final placement = PartyCompositionPolicy(rules).planReplacement(
       replaceMemberId: playerId,
       className: newClassKey,
@@ -88,6 +94,7 @@ class PartyAtomicCharacterChangeWritePlan {
       partyIndex: partyIndex,
       slotIndex: slotIndex,
       countedAsNonGroupMember: old.countedAsNonGroupMember,
+      ownershipRevision: ownershipRevision,
     );
     final nextSlots = [...aggregate.partySlots]..[oldIndex] = replacement;
     // A proven single swap is left for the leader; never move another member
@@ -140,6 +147,7 @@ class PartyAtomicCharacterChangeWritePlan {
       }),
       membershipPatch: Map.unmodifiable({
         ...membershipPatch,
+        'ownershipRevision': ?ownershipRevision,
         'partyIndex': partyIndex,
         'slotIndex': slotIndex,
       }),
@@ -149,6 +157,7 @@ class PartyAtomicCharacterChangeWritePlan {
         'schemaVersion': 1,
         'playerId': playerId,
         'characterId': newCharacterId,
+        'ownershipRevision': ?ownershipRevision,
         'raidId': raidId,
         'difficultyId': difficultyId,
         'cycleKey': aggregate.currentCycleKey,
@@ -241,6 +250,7 @@ class PartyAtomicRepositionWritePlan {
       partyIndex: destinationPartyIndex,
       slotIndex: destinationSlotIndex,
       countedAsNonGroupMember: source.countedAsNonGroupMember,
+      ownershipRevision: source.ownershipRevision,
     );
     final nextSlots = [...aggregate.partySlots]..[sourceIndex] = moved;
     if (destination != null) {
@@ -252,6 +262,7 @@ class PartyAtomicRepositionWritePlan {
         partyIndex: source.partyIndex,
         slotIndex: source.slotIndex,
         countedAsNonGroupMember: destination.countedAsNonGroupMember,
+        ownershipRevision: destination.ownershipRevision,
       );
     }
     _validateComposition(nextSlots, aggregate.leaderPlayerId, rules);

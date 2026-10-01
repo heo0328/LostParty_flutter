@@ -61,12 +61,16 @@ class PartyAggregateSlot {
     required this.partyIndex,
     required this.slotIndex,
     required this.countedAsNonGroupMember,
+    this.ownershipRevision,
   }) {
     if (playerId.isEmpty || characterId.isEmpty || classKey.isEmpty) {
       throw ArgumentError('파티 슬롯 식별자는 비어 있을 수 없습니다.');
     }
     if (partyIndex < 0 || slotIndex < 0) {
       throw ArgumentError('파티 슬롯 위치는 음수일 수 없습니다.');
+    }
+    if (ownershipRevision != null && ownershipRevision! < 0) {
+      throw ArgumentError('소유권 차수는 음수일 수 없습니다.');
     }
   }
 
@@ -77,6 +81,9 @@ class PartyAggregateSlot {
   final int partyIndex;
   final int slotIndex;
   final bool countedAsNonGroupMember;
+
+  /// Null preserves a legacy document's missing field; it is not a new claim.
+  final int? ownershipRevision;
 
   String get positionKey => '${partyIndex}_$slotIndex';
 }

@@ -19,6 +19,7 @@ void main() {
       rules: rules,
       playerId: 'member',
       newCharacterId: 'new-character',
+      ownershipRevision: 3,
       newClassKey: '소서리스',
       newRole: PartyRole.dealer,
       raidId: 'raid-1',
@@ -36,6 +37,14 @@ void main() {
     expect(plan.previousRaidStateId, 'old-character_raid-1');
     expect(plan.nextRaidStateId, 'new-character_raid-1');
     expect(plan.nextRaidState['revision'], 1);
+    expect(plan.nextRaidState['ownershipRevision'], 3);
+    expect(plan.membershipPatch['ownershipRevision'], 3);
+    expect(
+      (plan.recruitmentPatch['partySlots']! as List).firstWhere(
+        (s) => s['playerId'] == 'member',
+      )['ownershipRevision'],
+      3,
+    );
     expect(plan.nextRaidState['status'], 'active');
     expect((plan.recruitmentPatch['partySlots']! as List), hasLength(3));
   });
@@ -64,6 +73,23 @@ void main() {
     expect(emptyMove.maximumWriteCount, 4);
     expect(swap.membershipPatches.keys, containsAll(['member', 'other']));
     expect(swap.maximumWriteCount, 5);
+    for (final plan in [emptyMove, swap]) {
+      final slots = plan.recruitmentPatch['partySlots']! as List;
+      expect(
+        slots.firstWhere((s) => s['playerId'] == 'member')['ownershipRevision'],
+        5,
+      );
+      expect(
+        slots.firstWhere((s) => s['playerId'] == 'other')['ownershipRevision'],
+        0,
+      );
+      expect(
+        slots
+            .firstWhere((s) => s['playerId'] == 'leader')
+            .containsKey('ownershipRevision'),
+        false,
+      );
+    }
   });
 
   test('8인 구성 변경은 빈자리 우선이고 만석 교환은 자동 실행하지 않는다', () {
@@ -160,6 +186,7 @@ PartyCommandAggregate _aggregate({List<PartyAggregateSlot>? slots}) =>
             PartyAggregateSlot(
               playerId: 'member',
               characterId: 'old-character',
+              ownershipRevision: 5,
               role: PartyRole.dealer,
               classKey: '버서커',
               partyIndex: 0,
@@ -169,6 +196,7 @@ PartyCommandAggregate _aggregate({List<PartyAggregateSlot>? slots}) =>
             PartyAggregateSlot(
               playerId: 'other',
               characterId: 'other-character',
+              ownershipRevision: 0,
               role: PartyRole.dealer,
               classKey: '디스트로이어',
               partyIndex: 1,
