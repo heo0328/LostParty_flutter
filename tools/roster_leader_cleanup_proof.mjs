@@ -11,10 +11,16 @@ import { playerId, recruitmentId } from './party_group_cutover_rules_test.mjs';
 
 const rules = leaderCleanupCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
 const directory = new URL('../coverage/roster-leader/', import.meta.url);
+const diagnostic = process.env.LEADER_PROOF_SCOPE === 'leader-diagnosis';
 fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(new URL('candidate.rules', directory), rules);
 fs.writeFileSync(new URL('manifest.json', directory), JSON.stringify({ sha256: createHash('sha256').update(rules).digest('hex') }));
 const results = await runCleanupProof(rules, async ({ env, selfDb, seed, snapshot, check, getSlots }) => {
+  async function coverage(phase) {
+    const response = await fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-party-group-cutover:ruleCoverage');
+    assert.ok(response.ok, `coverage ${response.status}`);
+    fs.writeFileSync(new URL(`first-${phase}.json`, directory), JSON.stringify(await response.json()));
+  }
   async function setup(lastOnly = false) {
     await seed();
     const slots = getSlots();
@@ -82,7 +88,9 @@ const results = await runCleanupProof(rules, async ({ env, selfDb, seed, snapsho
   let simplePassed = false;
   await check('leader succession first eligible and repeat', async () => {
     const request = await setup(), before = await snapshot();
-    assert.equal(await assertSucceeds(command(request)), 'applied');
+    if (diagnostic) await coverage('before');
+    try { assert.equal(await assertSucceeds(command(request)), 'applied'); }
+    finally { if (diagnostic) await coverage('after'); }
     const after = await snapshot();
     assert.equal(after.room.leaderPlayerId, 'player-2');
     assert.equal(after.room.memberCount, 7);
@@ -101,7 +109,7 @@ const results = await runCleanupProof(rules, async ({ env, selfDb, seed, snapsho
     assert.ok(advanced.states.slice(1).every(s => s.status === 'active'));
     simplePassed = true;
   });
-  if (simplePassed) {
+  if (simplePassed && !diagnostic) {
     for (const scenario of ['later-successor', 'stale-actor', 'unknown-prior', 'stale-revision', 'stale-generation',
       'name', 'permission', 'omit-member', 'omit-successor', 'omit-listing', 'omit-event', 'listing-leader']) {
       await check(`leader rejects ${scenario} atomically`, async () => {
@@ -132,5 +140,5 @@ const results = await runCleanupProof(rules, async ({ env, selfDb, seed, snapsho
       assert.equal(after.room.memberCount, 7);
     });
   }
-});
+}, { skipRegression: diagnostic });
 fs.writeFileSync(new URL('results.json', directory), JSON.stringify(results, null, 2));

@@ -13,6 +13,7 @@ on:
           - recurrence
           - targets
           - targets-fallback
+          - leader-diagnosis
       case:
         description: Rules regression scope
         type: choice
@@ -201,6 +202,8 @@ jobs:
 
       - name: Verify ownership leader succession in demo only
         if: inputs.case == 'ownership-leader'
+        env:
+          LEADER_PROOF_SCOPE: ${{ inputs.dispatch_scope }}
         run: >-
           npx --yes firebase-tools@15.29.0 emulators:exec
           --config firebase.json

@@ -11,7 +11,7 @@ import { completedCleanupCandidate } from './roster_completed_cleanup_candidate.
 import { seedRoom, lifecycle, inspectAll } from './roster_ownership_rules_proof.mjs';
 import { authUid, playerId, recruitmentId, raidId, seedGroupLinkedRoom, removeApprovedMemberTxn } from './party_group_cutover_rules_test.mjs';
 
-export async function runCleanupProof(rulesOverride = null, extension = null) {
+export async function runCleanupProof(rulesOverride = null, extension = null, { skipRegression = false } = {}) {
 const rules = rulesOverride ?? completedCleanupCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
 const directory = new URL('../coverage/roster-cleanup/', import.meta.url);
 fs.mkdirSync(directory, { recursive: true });
@@ -124,6 +124,7 @@ async function cleanup(client, request, tamper = null) {
   });
 }
 try {
+  if (!skipRegression) {
   for (const self of [false, true]) await check(`preserve active ${self ? 'leave' : 'kick'}`, async () => {
     const request = await seed({ active: true, self }), before = await snapshot();
     await assertSucceeds(removeApprovedMemberTxn(self ? selfDb : db, request.actor));
@@ -194,6 +195,7 @@ try {
       });
     }
   } else console.log('SKIP CLEANUP: negative security claims gated on all positive cases');
+  }
   if (extension && results.every(r => r.passed)) await extension({ env, db, selfDb, thirdDb, seed, snapshot, cleanup, check, getSlots: () => originalSlots });
 } finally {
   fs.writeFileSync(new URL('results.json', directory), JSON.stringify(results, null, 2));
