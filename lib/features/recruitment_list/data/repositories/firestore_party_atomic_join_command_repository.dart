@@ -18,6 +18,7 @@ import '../mappers/party_atomic_membership_write_plan.dart';
 import '../mappers/party_join_write_plan.dart';
 import '../mappers/party_raid_listing_sync.dart';
 import 'party_raid_state_occupancy_inspector.dart';
+import 'party_character_ownership_reader.dart';
 
 /// 새 Aggregate·raidState 구조용 즉시 가입·승인·거절 Repository.
 ///
@@ -260,6 +261,29 @@ class FirestorePartyAtomicJoinCommandRepository
             ),
           );
       final character = await transaction.get(characterRef);
+      final ownership = await PartyCharacterOwnershipReader.read(
+        transaction: transaction,
+        firestore: _firestore,
+        playerId: playerId,
+        character: character.data(),
+      );
+      if (ownership.condition != GameAccountOwnershipCondition.current) {
+        return PartyJoinResult.failure(
+          ownership.condition == GameAccountOwnershipCondition.ownershipChanged
+              ? PartyJoinFailure.ownershipLost
+              : PartyJoinFailure.stateInconsistent,
+        );
+      }
+      if (applicationData != null) {
+        final condition = ownership.classifyParticipation(applicationData);
+        if (condition != GameAccountOwnershipCondition.current) {
+          return PartyJoinResult.failure(
+            condition == GameAccountOwnershipCondition.ownershipChanged
+                ? PartyJoinFailure.ownershipLost
+                : PartyJoinFailure.stateInconsistent,
+          );
+        }
+      }
       // 승인자는 신청자 소유 raidState를 읽을 수 없다. 새 state 쓰기는
       // Rules create/update와 weekly Claim 검사에서 최종 충돌을 판정한다.
       final occupancy = playerId == actorPlayerId
@@ -293,9 +317,7 @@ class FirestorePartyAtomicJoinCommandRepository
             );
           case ExistingRaidStateOccupancyDecision.currentOrphanActive:
           case ExistingRaidStateOccupancyDecision.historicalOrphanActive:
-            return PartyJoinResult.orphaned(
-              occupancy.orphanedParticipation!,
-            );
+            return PartyJoinResult.orphaned(occupancy.orphanedParticipation!);
           case ExistingRaidStateOccupancyDecision.historicalCompleted:
             transaction.delete(occupancy.stateRef);
             return const PartyJoinResult.historicalStateRolledOver();
@@ -327,10 +349,7 @@ class FirestorePartyAtomicJoinCommandRepository
         return const PartyJoinResult.failure(PartyJoinFailure.invalidCharacter);
       }
       if (!_minimumCombatPowerPolicy
-          .evaluate(
-            minimum: raw['minCombatPower'] as num?,
-            actual: combatPower,
-          )
+          .evaluate(minimum: raw['minCombatPower'] as num?, actual: combatPower)
           .isAllowed) {
         return const PartyJoinResult.failure(
           PartyJoinFailure.minimumCombatPowerNotMet,
@@ -409,6 +428,7 @@ class FirestorePartyAtomicJoinCommandRepository
         raidId: raidId,
         difficultyId: difficultyId,
         joiningIsGroupMember: joiningIsGroupMember,
+        ownershipRevision: ownership.revision!,
         serverTimestamp: now,
       );
 

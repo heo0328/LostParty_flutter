@@ -15,6 +15,7 @@ import '../mappers/party_atomic_member_mutation_write_plan.dart';
 import '../mappers/party_membership_write_plan.dart';
 import '../mappers/party_raid_listing_sync.dart';
 import 'party_raid_state_occupancy_inspector.dart';
+import 'party_character_ownership_reader.dart';
 
 /// 새 Aggregate·raidState 구조용 캐릭터 변경·자리 이동 Repository.
 ///
@@ -102,6 +103,19 @@ class FirestorePartyAtomicMemberMutationRepository
             ),
           );
       final character = await transaction.get(characterRef);
+      final ownership = await PartyCharacterOwnershipReader.read(
+        transaction: transaction,
+        firestore: _firestore,
+        playerId: playerId,
+        character: character.data(),
+      );
+      if (ownership.condition != GameAccountOwnershipCondition.current) {
+        return PartyMembershipResult.failure(
+          ownership.condition == GameAccountOwnershipCondition.ownershipChanged
+              ? PartyMembershipFailure.ownershipLost
+              : PartyMembershipFailure.stateInconsistent,
+        );
+      }
       final previousRaidState = await transaction.get(previousRaidStateRef);
       final occupancy = await PartyRaidStateOccupancyInspector.inspect(
         transaction: transaction,
@@ -208,6 +222,7 @@ class FirestorePartyAtomicMemberMutationRepository
         serverTimestamp: now,
       );
       final plan = PartyAtomicCharacterChangeWritePlan(
+        ownershipRevision: ownership.revision!,
         aggregate: aggregate,
         rules: _rules(raw),
         playerId: playerId,

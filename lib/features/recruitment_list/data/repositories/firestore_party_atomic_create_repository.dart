@@ -9,6 +9,7 @@ import '../../domain/services/party_create_command_validator.dart';
 import '../../domain/services/party_create_occupancy_gate.dart';
 import '../mappers/party_atomic_membership_write_plan.dart';
 import '../mappers/party_create_write_plan.dart';
+import 'party_character_ownership_reader.dart';
 
 /// 새 Aggregate·raidState 구조용 파티 생성 Repository.
 ///
@@ -80,6 +81,20 @@ class FirestorePartyAtomicCreateRepository implements PartyCreateRepository {
           final recruitment = await transaction.get(recruitmentRef);
           final raidState = await transaction.get(raidStateRef);
           final characterData = character.data();
+          final ownership = await PartyCharacterOwnershipReader.read(
+            transaction: transaction,
+            firestore: _firestore,
+            playerId: playerId,
+            character: characterData,
+          );
+          if (ownership.condition != GameAccountOwnershipCondition.current) {
+            return PartyCreateResult.failure(
+              ownership.condition ==
+                      GameAccountOwnershipCondition.ownershipChanged
+                  ? PartyCreateFailure.ownershipLost
+                  : PartyCreateFailure.serverDataMissing,
+            );
+          }
           final raidStateData = raidState.data();
           final raidStateRecruitmentId = raidStateData?['recruitmentId'];
           final raidStateCycleKey = raidStateData?['cycleKey'];
@@ -246,6 +261,7 @@ class FirestorePartyAtomicCreateRepository implements PartyCreateRepository {
             classKey: verifiedClass,
             serverTimestamp: now,
             groupActiveRecruitmentCountAfter: groupActiveRecruitmentCountAfter,
+            ownershipRevision: ownership.revision!,
           );
 
           final claimId =

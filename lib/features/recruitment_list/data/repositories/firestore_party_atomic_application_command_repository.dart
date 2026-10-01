@@ -11,6 +11,7 @@ import '../mappers/party_application_write_plan.dart';
 import '../mappers/party_atomic_application_write_plan.dart';
 import '../mappers/party_atomic_document_mapper.dart';
 import 'party_raid_state_occupancy_inspector.dart';
+import 'party_character_ownership_reader.dart';
 
 /// 새 Aggregate 구조용 신청·재신청·철회 Repository.
 ///
@@ -61,6 +62,19 @@ class FirestorePartyAtomicApplicationCommandRepository
       final application = await transaction.get(applicationRef);
       final raw = recruitment.data();
       final characterData = character.data();
+      final ownership = await PartyCharacterOwnershipReader.read(
+        transaction: transaction,
+        firestore: _firestore,
+        playerId: playerId,
+        character: characterData,
+      );
+      if (ownership.condition != GameAccountOwnershipCondition.current) {
+        return PartyApplicationCommandResult.failure(
+          ownership.condition == GameAccountOwnershipCondition.ownershipChanged
+              ? PartyApplicationFailure.ownershipLost
+              : PartyApplicationFailure.stateInconsistent,
+        );
+      }
       if (raw == null) {
         return const PartyApplicationCommandResult.failure(
           PartyApplicationFailure.notFound,
@@ -195,6 +209,7 @@ class FirestorePartyAtomicApplicationCommandRepository
           aggregate: aggregate,
           applicantPlayerId: playerId,
           applicantIsGroupMember: applicantIsGroupMember,
+          ownershipRevision: ownership.revision!,
           serverTimestamp: now,
         );
         transaction.set(applicationRef, plan.application);
@@ -240,6 +255,7 @@ class FirestorePartyAtomicApplicationCommandRepository
         aggregate: aggregate,
         applicantPlayerId: playerId,
         applicantIsGroupMember: applicantIsGroupMember,
+        ownershipRevision: ownership.revision!,
         serverTimestamp: now,
       );
       transaction.update(applicationRef, plan.application);
