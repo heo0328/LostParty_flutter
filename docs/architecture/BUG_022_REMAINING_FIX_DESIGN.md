@@ -1436,4 +1436,9 @@ listing 삭제 누락, event 누락, completed state 동시 삭제는 허용됐�
 state 동일성(부재 포함)·그룹 listing 부재·새 정확한 disband event를 강제한다. 이를 OR 대안으로
 추가하지 않아 옛 허용식으로 우회할 수 없게 한다. 다른 인원/활성 회차는 기존 경로 그대로다.
 일반 해산은 current/unknown 소유권에서도 기존 공대장 권한으로 허용하며 stale 전용 권한을 만들지 않는다.
+
+f56c48e / CI 36840112755: guard 뒤 전체 기존 허용식을 평가하면 state가 있는 정상 사례에서
+1,000식 한도에 도달했다(부재 state만 통과). 다음 후보는 해당 명령만 기존 lifecycle validator로
+직접 분기한다. guard와 lifecycle 검사는 모두 유지하고, 무관한 멤버/신청 validator 탐색만 제외한다.
+다른 명령은 원래 허용식을 유지한다. 정상 실패 상태에서 위조 거절 검증은 실행하지 않았다.
 public/legacy 전체 조합, 실제 인증 차수 보호·Snapshot 작성·앱 연결과 운영 전환은 별도 남는다.

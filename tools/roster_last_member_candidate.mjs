@@ -9,11 +9,12 @@ export function lastMemberCandidate(source) {
   assert.ok(start > 0 && end > start);
   const original = rules.slice(start, end).trim().replace(/^allow update: if /, '').replace(/;$/, '');
   rules = rules.slice(0, start) + `      allow update: if
-        (!(request.resource.data.get('lastCommandType', '') == 'disband'
+        (request.resource.data.get('lastCommandType', '') == 'disband'
           && resource.data.memberCount == 1
           && resource.data.currentCycleStatus == 'completed')
-          || deLastCompletedDisband(resource.data, request.resource.data))
-        && (${original});
+          ? (deLastCompletedDisband(resource.data, request.resource.data)
+            && validAtomicLifecycleUpdate(resource.data, request.resource.data))
+          : (${original});
 ` + rules.slice(end);
   const hook = '    function validAtomicLifecycleUpdate(';
   assert.equal(rules.split(hook).length, 2);
