@@ -82,3 +82,47 @@ export function leaderCleanupCandidate(source) {
     "allow create: if (request.resource.data.type == 'ownershipLeaderRemoved' && request.resource.data.eventId == eventId && deLeaderCleanupEventCreate(request.resource.data)) || (request.resource.data.type == 'ownershipParticipantRemoved'");
   return rules;
 }
+
+// DE2-E3 experiment: every partition belongs to an already mandatory write.
+export function distributedLeaderCleanupCandidate(source) {
+  let rules = leaderCleanupCandidate(source);
+  function change(from, to) {
+    assert.equal(rules.split(from).length, 2, `unique distribution hook: ${from}`);
+    rules = rules.replace(from, to);
+  }
+  change('        && deLeaderPriorValid(before, command)\n', '');
+  change('&& deLeaderCleanupStateUnchanged(target, before.raidId);',
+    `&& deLeaderCleanupStateUnchanged(target, before.raidId)
+        && deLeaderPriorAt(before, after.ownershipCleanup, 0)
+        && deLeaderPriorAt(before, after.ownershipCleanup, 1)
+        && deLeaderPriorAt(before, after.ownershipCleanup, 2);`);
+  change('&& after.canApproveApplications == true && after.updatedAt == request.time;',
+    `&& after.canApproveApplications == true && after.updatedAt == request.time
+        && deLeaderPriorAt(roomBefore, roomAfter.ownershipCleanup, 3)
+        && deLeaderPriorAt(roomBefore, roomAfter.ownershipCleanup, 4);`);
+  change('return deLeaderCleanupTransition(before, after) && data == deLeaderCleanupEvent(before, after);',
+    `return deLeaderCleanupTransition(before, after) && data == deLeaderCleanupEvent(before, after)
+        && deLeaderPriorAt(before, after.ownershipCleanup, 5)
+        && deLeaderPriorAt(before, after.ownershipCleanup, 6);`);
+  const unusedStart = rules.indexOf('    function deLeaderPriorValid(');
+  const unusedEnd = rules.indexOf('    function deLeaderSuccessorUpdate(', unusedStart);
+  assert.ok(unusedStart >= 0 && unusedEnd > unusedStart);
+  rules = rules.slice(0, unusedStart) + rules.slice(unusedEnd);
+  function exclusive(prefix, condition, validation) {
+    const start = rules.indexOf(prefix), end = rules.indexOf(';', start);
+    assert.ok(start >= 0 && end > start);
+    const original = rules.slice(start + prefix.indexOf('if ') + 3, end);
+    const fallback = original.slice(original.indexOf(' || ') + 4);
+    rules = rules.slice(0, start) + prefix.slice(0, prefix.indexOf('if ') + 3)
+      + `(${condition}) ? (${validation}) : (${fallback})` + rules.slice(end);
+  }
+  const marker = "getAfter(recruitmentPath(recruitmentId)).data.get('lastCommandType', '') == 'cleanupCompletedLeaderOwnership'";
+  exclusive('allow delete: if deLeaderCleanupMemberDelete(', marker,
+    'deLeaderCleanupMemberDelete(recruitmentId, playerId, resource.data)');
+  exclusive('allow update: if deLeaderSuccessorUpdate(', marker,
+    'deLeaderSuccessorUpdate(recruitmentId, playerId, resource.data, request.resource.data)');
+  exclusive("allow create: if (request.resource.data.type == 'ownershipLeaderRemoved'",
+    "request.resource.data.type == 'ownershipLeaderRemoved'",
+    'request.resource.data.eventId == eventId && deLeaderCleanupEventCreate(request.resource.data)');
+  return rules;
+}
