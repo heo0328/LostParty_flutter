@@ -95,7 +95,7 @@ try {
       assert.deepEqual(await snapshot(), before);
     });
   }
-  await check('maximum eight character change replaces prior generation state', async () => {
+  for (const staleMember of [false, true]) await check(`maximum eight character change ${staleMember ? 'rejects stale original membership' : 'replaces prior generation state'}`, async () => {
     await seed(3); await createPublicRecruitmentTxn(db, { ownershipRevision: 3 });
     await applicationTxn(joiner, 'create', { ownershipRevision: 3 });
     await approvePublicApplicationTxn(db, { ownershipRevision: 3 });
@@ -112,8 +112,15 @@ try {
         raidStateTargets: last(room.raidStateTargets, x=>x.playerId), memberPlayerIds: last(room.memberPlayerIds,x=>x) });
     });
     await oldState({ target: 'player-2', character: replacement, status: 'completed', claim: true });
+    if (staleMember) await env.withSecurityRulesDisabled(async ctx => {
+      const admin=ctx.firestore(), ref=doc(admin,'recruitments',recruitmentId);
+      const room=(await getDoc(ref)).data();
+      await updateDoc(ref,{partySlots:room.partySlots.map(s=>s.playerId==='player-2'?{...s,ownershipRevision:1}:s)});
+      await updateDoc(doc(admin,'recruitments',recruitmentId,'members','player-2'),{ownershipRevision:1});
+      await updateDoc(doc(admin,'players','player-2','raidStates',`${joinerCharacter}_${raidId}`),{ownershipRevision:1});
+    });
     const before = await snapshot();
-    await assertSucceeds(runTransaction(joiner, async tx => {
+    await (staleMember ? assertFails : assertSucceeds)(runTransaction(joiner, async tx => {
       const roomRef=doc(joiner,'recruitments',recruitmentId), memberRef=doc(joiner,'recruitments',recruitmentId,'members','player-2');
       const room=(await tx.get(roomRef)).data(); await tx.get(memberRef);
       const next=room.revision+1;
@@ -129,8 +136,8 @@ try {
         commandId:eventId,commandRevision:next,audiencePlayerIds:room.memberPlayerIds,actorPlayerId:'player-2',occurredAt:serverTimestamp()});
     }));
     const after=await snapshot(); assertHistory(before,after);
-    assert.equal(after.room.partySlots[7].characterId,replacement);
-    assert.equal(after.states[1].length,1);
+    if (staleMember) assert.deepEqual(after,before);
+    else { assert.equal(after.room.partySlots[7].characterId,replacement); assert.equal(after.states[1].length,1); }
   });
   for (const missing of ['room', 'member', 'state', 'event']) {
     await check(`missing ${missing} rejects the entire replacement`, async () => {
