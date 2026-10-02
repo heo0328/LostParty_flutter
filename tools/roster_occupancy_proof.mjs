@@ -86,17 +86,12 @@ try {
         } else {
           const ref = doc(admin, 'characters', joinerCharacter);
           const character = (await getDoc(ref)).data();
-          await updateDoc(ref, { ownershipRevision: 4, ownerPlayerId: 'new-owner' });
-          await updateDoc(doc(admin, 'gameAccounts', character.gameAccountId), { ownershipRevision: 4, ownerPlayerId: 'new-owner' });
+          await updateDoc(ref, { ownershipRevision: 5 });
+          await updateDoc(doc(admin, 'gameAccounts', character.gameAccountId), { ownershipRevision: 5 });
         }
       });
       const before = await snapshot();
-      if (change === 'ownership') {
-        // The connected approver reads Character and rejects before writing.
-        await assert.rejects(approvePublicApplicationTxn(db, { ownershipRevision: 3 }));
-      } else {
-        await assertFails(approvePublicApplicationTxn(db, { ownershipRevision: 3 }));
-      }
+      await assertFails(approvePublicApplicationTxn(db, { ownershipRevision: 3 }));
       assert.deepEqual(await snapshot(), before);
     });
   }

@@ -1610,3 +1610,8 @@ PartyOwnershipRecordPolicy는 권위 소유권 current, 정확한 Player/Charact
 이는 Domain 경계 및 실제 연결 코드 검증이며 Repository 거래의 모든 조합이나 실기기 통과가 아니다.
 다음은 직접 가입/승인 경쟁과 Character 변경 대체 서버 경계, 후보 목록·개인 완료 및 lifecycle 연결이다.
 운영 Rules는 이전 상태이므로 현재 중간 앱 빌드로 기능을 검증하거나 배포하지 않는다.
+
+H3 추가 경계 CI 36965944125는 직접 가입/점유 변경 거절 등 20건 통과, 최대 8인 Character 변경 1건 실패다.
+변경 validator에 남은 차수 미구분 weekly completion 검사와 1,000식 초과가 확인됐다.
+해당 claim 검사를 동일 차수 정책으로 정렬한 뒤 평가 비용을 재확인한다. 소유권 변경 거절 사례도
+클라이언트 사전 거절 대신 같은 owner 재취득 차수 3→5를 사용해 실제 서버 거절을 검증한다.
