@@ -21,9 +21,13 @@ export function occupancyCandidate(source) {
   edit('validAtomicRaidStateCreate', text => text.replace('!hasWeeklyRaidCompletionAfter(', '!deBlockingClaim(')
     .replace('data.raidId\n        )', "data.raidId, data.get('ownershipRevision', 0)\n        )"));
   edit('validAtomicMemberCharacterChange', text => text.replace('!hasWeeklyRaidCompletionAfter(', '!deBlockingClaim(')
-    .replace('return deCurrentOwnership(newData)', 'return deCurrentOwnership(oldData) && deCurrentOwnership(newData)')
     .replace('after.raidId\n        )', "after.raidId, newData.get('ownershipRevision', 0)\n        )"));
   const hook = 'allow update: if validPersonalRaidStateCompletion(';
+  // Cover legacy fallback validators too, not only the atomic validator.
+  const memberGuard = '|| deCurrentOwnership(request.resource.data))';
+  assert.equal(rules.split(memberGuard).length, 2);
+  rules = rules.replace(memberGuard,
+    '|| (deCurrentOwnership(resource.data) && deCurrentOwnership(request.resource.data)))');
   assert.equal(rules.split(hook).length, 2);
   rules = rules.replace(hook, `allow update: if deReplacePriorState(playerId, stateId, resource.data, request.resource.data)
           || validPersonalRaidStateCompletion(`);

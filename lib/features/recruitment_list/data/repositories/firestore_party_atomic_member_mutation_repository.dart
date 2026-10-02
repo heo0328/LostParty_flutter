@@ -10,6 +10,7 @@ import '../../domain/policies/minimum_combat_power_policy.dart';
 import '../../domain/repositories/party_atomic_member_mutation_repository.dart';
 import '../../domain/services/party_create_occupancy_gate.dart';
 import '../../domain/services/party_membership_command_validator.dart';
+import '../../domain/services/party_ownership_record_policy.dart';
 import '../mappers/party_atomic_document_mapper.dart';
 import '../mappers/party_atomic_member_mutation_write_plan.dart';
 import '../mappers/party_membership_write_plan.dart';
@@ -19,8 +20,7 @@ import 'party_character_ownership_reader.dart';
 
 /// 새 Aggregate·raidState 구조용 캐릭터 변경·자리 이동 Repository.
 ///
-/// 전원 membership 재조회와 개인 event fan-out을 쓰지 않으며 운영 Router에는
-/// 아직 연결하지 않는다.
+/// 운영 Router에서 사용하며 전원 membership 재조회와 개인 event fan-out을 쓰지 않는다.
 class FirestorePartyAtomicMemberMutationRepository
     implements PartyAtomicMemberMutationRepository {
   const FirestorePartyAtomicMemberMutationRepository({
@@ -103,6 +103,26 @@ class FirestorePartyAtomicMemberMutationRepository
             ),
           );
       final character = await transaction.get(characterRef);
+      final previousCharacter = await transaction.get(
+        _firestore.collection('characters').doc(oldCharacterId),
+      );
+      final previousOwnership = await PartyCharacterOwnershipReader.read(
+        transaction: transaction,
+        firestore: _firestore,
+        playerId: playerId,
+        character: previousCharacter.data(),
+      );
+      final previousMemberCondition = previousOwnership.classifyParticipation(
+        memberData,
+      );
+      if (previousMemberCondition != GameAccountOwnershipCondition.current) {
+        return PartyMembershipResult.failure(
+          previousMemberCondition ==
+                  GameAccountOwnershipCondition.ownershipChanged
+              ? PartyMembershipFailure.ownershipLost
+              : PartyMembershipFailure.stateInconsistent,
+        );
+      }
       final ownership = await PartyCharacterOwnershipReader.read(
         transaction: transaction,
         firestore: _firestore,
@@ -117,6 +137,21 @@ class FirestorePartyAtomicMemberMutationRepository
         );
       }
       final previousRaidState = await transaction.get(previousRaidStateRef);
+      final previousStateData = previousRaidState.data();
+      if (previousStateData != null &&
+          PartyOwnershipRecordPolicy.classify(
+                ownership: previousOwnership,
+                data: previousStateData,
+                playerId: playerId,
+                characterId: oldCharacterId,
+                raidId: raidId,
+                isRaidState: true,
+              ) !=
+              GameAccountOwnershipCondition.current) {
+        return const PartyMembershipResult.failure(
+          PartyMembershipFailure.stateInconsistent,
+        );
+      }
       final occupancy = await PartyRaidStateOccupancyInspector.inspect(
         transaction: transaction,
         firestore: _firestore,
@@ -125,6 +160,7 @@ class FirestorePartyAtomicMemberMutationRepository
         raidId: raidId,
         requestedCycleKey: aggregate.currentCycleKey,
         now: clock(),
+        ownership: ownership,
       );
       final nextRaidStateRef = occupancy.stateRef;
       final characterData = character.data();
