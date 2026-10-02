@@ -25,8 +25,8 @@ on:
           - occupancy
           - manual-completion
           - personal-completion
-            - personal-baseline
-            - orphan-cleanup
+          - personal-baseline
+          - orphan-cleanup
       case:
         description: Rules regression scope
         type: choice
