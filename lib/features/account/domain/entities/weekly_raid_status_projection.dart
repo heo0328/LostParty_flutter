@@ -21,6 +21,7 @@ class WeeklyRaidStatusRecord {
     required this.cycleKey,
     required this.kind,
     this.recruitmentId,
+    this.ownershipRevision = 0,
   });
 
   final String playerId;
@@ -29,6 +30,7 @@ class WeeklyRaidStatusRecord {
   final String cycleKey;
   final WeeklyRaidStatusRecordKind kind;
   final String? recruitmentId;
+  final int ownershipRevision;
 
   String get key => '$characterId:$raidId';
 }

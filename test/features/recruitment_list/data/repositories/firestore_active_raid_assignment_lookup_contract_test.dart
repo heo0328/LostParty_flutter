@@ -9,8 +9,9 @@ void main() {
       'firestore_active_raid_assignment_lookup.dart',
     ).readAsStringSync();
 
-    expect(source, contains(".collection('raidStates')"));
-    expect(source, contains('PartyCreateOccupancyGate.decide('));
+    expect(source, contains('PartyRaidStateOccupancyInspector.inspect('));
+    expect(source, contains('PartyCharacterOwnershipReader.read('));
+    expect(source, contains('ownership: ownership'));
     expect(source, isNot(contains(".collection('activeRaidAssignments')")));
   });
 }

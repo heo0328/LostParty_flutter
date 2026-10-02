@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../../domain/repositories/active_raid_assignment_repository.dart';
 import '../../domain/services/party_create_occupancy_gate.dart';
+import 'party_character_ownership_reader.dart';
+import 'party_raid_state_occupancy_inspector.dart';
 
 class FirestoreActiveRaidAssignmentLookup
     implements ActiveRaidAssignmentLookup {
@@ -9,7 +10,6 @@ class FirestoreActiveRaidAssignmentLookup
     required FirebaseFirestore firestore,
     this.clock = DateTime.now,
   }) : _firestore = firestore;
-
   final FirebaseFirestore _firestore;
   final DateTime Function() clock;
 
@@ -19,46 +19,37 @@ class FirestoreActiveRaidAssignmentLookup
     required String characterId,
     required String raidId,
     required String cycleKey,
-  }) async {
-    final document = await _firestore
-        .collection('players')
-        .doc(playerId)
-        .collection('raidStates')
-        .doc('${characterId}_$raidId')
-        .get();
-    if (!document.exists) return false;
-    final state = document.data();
-    if (state?['status'] == 'completed') {
-      return state?['cycleKey'] == cycleKey;
-    }
-    if (state?['status'] != 'active') return true;
-    final recruitmentId = state?['recruitmentId'];
-    if (recruitmentId is! String || recruitmentId.isEmpty) return true;
-    final recruitment = await _firestore
-        .collection('recruitments')
-        .doc(recruitmentId)
-        .get();
-    final recruitmentData = recruitment.data();
-    final decision = PartyCreateOccupancyGate.decide(
-      newRecruitmentId: 'candidate-check',
-      playerId: playerId,
-      newRecruitmentExists: false,
-      newRecruitmentLeaderId: null,
-      assignmentExists: true,
-      assignmentRecruitmentId: recruitmentId,
-      assignmentCycleKey: state?['cycleKey'] as String?,
-      assignedRecruitmentExists: recruitment.exists,
-      assignedRecruitmentStatus: recruitmentData?['status'] as String?,
-      assignedRecruitmentCycleKey:
-          recruitmentData?['currentCycleKey'] as String?,
-      assignedRecruitmentContinuesTogether:
-          recruitmentData?['continueTogether'] == true,
-      assignedRecruitmentCycleEndsAt:
-          (recruitmentData?['cycleEndsAt'] as Timestamp?)?.toDate(),
-      newCycleKey: cycleKey,
-      now: clock(),
+  }) => _firestore.runTransaction((transaction) async {
+    final character = await transaction.get(
+      _firestore.collection('characters').doc(characterId),
     );
-    return decision != PartyCreateOccupancyDecision.proceed &&
-        decision != PartyCreateOccupancyDecision.replaceStaleAssignment;
-  }
+    final ownership = await PartyCharacterOwnershipReader.read(
+      transaction: transaction,
+      firestore: _firestore,
+      playerId: playerId,
+      character: character.data(),
+    );
+    if (ownership.condition != GameAccountOwnershipCondition.current) {
+      throw const FormatException('Candidate ownership is not current.');
+    }
+    final occupancy = await PartyRaidStateOccupancyInspector.inspect(
+      transaction: transaction,
+      firestore: _firestore,
+      playerId: playerId,
+      characterId: characterId,
+      raidId: raidId,
+      requestedCycleKey: cycleKey,
+      now: clock(),
+      ownership: ownership,
+    );
+    return switch (occupancy.decision) {
+      null ||
+      ExistingRaidStateOccupancyDecision.historicalCompleted ||
+      ExistingRaidStateOccupancyDecision.currentOrphanActive ||
+      ExistingRaidStateOccupancyDecision.historicalOrphanActive => false,
+      ExistingRaidStateOccupancyDecision.inconsistent =>
+        throw const FormatException('Candidate occupancy is inconsistent.'),
+      _ => true,
+    };
+  });
 }

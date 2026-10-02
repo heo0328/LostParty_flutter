@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'ownership_record_stream.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -39,7 +40,7 @@ class FirestoreWeeklyRaidStatusRepository
         .collection('activeRaidAssignments')
         .where('cycleKey', isEqualTo: cycleKey);
 
-    late final StreamController<List<WeeklyRaidStatusProjection>> controller;
+    late final StreamController<List<WeeklyRaidStatusRecord>> controller;
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? stateSub;
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? claimSub;
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? assignmentSub;
@@ -54,13 +55,7 @@ class FirestoreWeeklyRaidStatusRepository
           assignments == null) {
         return;
       }
-      controller.add(
-        WeeklyRaidStatusProjector.project(
-          playerId: playerId,
-          cycleKey: cycleKey,
-          records: [...states!, ...claims!, ...assignments!],
-        ),
-      );
+      controller.add([...states!, ...claims!, ...assignments!]);
     }
 
     void addError(Object error, StackTrace stackTrace) {
@@ -69,58 +64,79 @@ class FirestoreWeeklyRaidStatusRepository
       }
     }
 
-    controller = StreamController<List<WeeklyRaidStatusProjection>>(
+    controller = StreamController<List<WeeklyRaidStatusRecord>>(
       onListen: () {
-        stateSub = stateQuery.snapshots().listen((snapshot) {
-          try {
-            states = snapshot.docs
-                .map(
-                  (document) => _stateRecord(
-                    document: document,
-                    playerId: playerId,
-                    cycleKey: cycleKey,
-                  ),
-                )
-                .toList(growable: false);
-            emitIfReady();
-          } catch (error, stackTrace) {
-            addError(error, stackTrace);
-          }
-        }, onError: addError);
-        claimSub = claimQuery.snapshots().listen((snapshot) {
-          try {
-            claims = snapshot.docs
-                .map(
-                  (document) => _legacyRecord(
-                    document: document,
-                    playerId: playerId,
-                    cycleKey: cycleKey,
-                    kind: WeeklyRaidStatusRecordKind.legacyClaim,
-                  ),
-                )
-                .toList(growable: false);
-            emitIfReady();
-          } catch (error, stackTrace) {
-            addError(error, stackTrace);
-          }
-        }, onError: addError);
-        assignmentSub = assignmentQuery.snapshots().listen((snapshot) {
-          try {
-            assignments = snapshot.docs
-                .map(
-                  (document) => _legacyRecord(
-                    document: document,
-                    playerId: playerId,
-                    cycleKey: cycleKey,
-                    kind: WeeklyRaidStatusRecordKind.legacyAssignment,
-                  ),
-                )
-                .toList(growable: false);
-            emitIfReady();
-          } catch (error, stackTrace) {
-            addError(error, stackTrace);
-          }
-        }, onError: addError);
+        stateSub = stateQuery.snapshots().listen(
+          (snapshot) {
+            try {
+              states = snapshot.docs
+                  .map(
+                    (document) => _stateRecord(
+                      document: document,
+                      playerId: playerId,
+                      cycleKey: cycleKey,
+                    ),
+                  )
+                  .toList(growable: false);
+              emitIfReady();
+            } catch (error, stackTrace) {
+              states = null;
+              addError(error, stackTrace);
+            }
+          },
+          onError: (Object error, StackTrace stack) {
+            states = null;
+            addError(error, stack);
+          },
+        );
+        claimSub = claimQuery.snapshots().listen(
+          (snapshot) {
+            try {
+              claims = snapshot.docs
+                  .map(
+                    (document) => _legacyRecord(
+                      document: document,
+                      playerId: playerId,
+                      cycleKey: cycleKey,
+                      kind: WeeklyRaidStatusRecordKind.legacyClaim,
+                    ),
+                  )
+                  .toList(growable: false);
+              emitIfReady();
+            } catch (error, stackTrace) {
+              claims = null;
+              addError(error, stackTrace);
+            }
+          },
+          onError: (Object error, StackTrace stack) {
+            claims = null;
+            addError(error, stack);
+          },
+        );
+        assignmentSub = assignmentQuery.snapshots().listen(
+          (snapshot) {
+            try {
+              assignments = snapshot.docs
+                  .map(
+                    (document) => _legacyRecord(
+                      document: document,
+                      playerId: playerId,
+                      cycleKey: cycleKey,
+                      kind: WeeklyRaidStatusRecordKind.legacyAssignment,
+                    ),
+                  )
+                  .toList(growable: false);
+              emitIfReady();
+            } catch (error, stackTrace) {
+              assignments = null;
+              addError(error, stackTrace);
+            }
+          },
+          onError: (Object error, StackTrace stack) {
+            assignments = null;
+            addError(error, stack);
+          },
+        );
       },
       onCancel: () async {
         await stateSub?.cancel();
@@ -128,7 +144,23 @@ class FirestoreWeeklyRaidStatusRepository
         await assignmentSub?.cancel();
       },
     );
-    return controller.stream;
+    return watchCurrentOwnershipRecords(
+          controller.stream,
+          (path) => _firestore
+              .doc(path)
+              .snapshots()
+              .map((snapshot) => snapshot.data()),
+        )
+        .map(
+          (records) => WeeklyRaidStatusProjector.project(
+            playerId: playerId,
+            cycleKey: cycleKey,
+            records: records,
+          ),
+        )
+        .handleError((Object error, StackTrace stack) {
+          Error.throwWithStackTrace(_readException(error), stack);
+        });
   }
 
   WeeklyRaidStatusRecord _stateRecord({
@@ -161,6 +193,7 @@ class FirestoreWeeklyRaidStatusRepository
           ? WeeklyRaidStatusRecordKind.activeState
           : WeeklyRaidStatusRecordKind.completedState,
       recruitmentId: data['recruitmentId'] as String?,
+      ownershipRevision: _ownershipRevision(data),
     );
   }
 
@@ -189,7 +222,18 @@ class FirestoreWeeklyRaidStatusRepository
       cycleKey: cycleKey,
       kind: kind,
       recruitmentId: data['recruitmentId'] as String?,
+      ownershipRevision: _ownershipRevision(data),
     );
+  }
+
+  int _ownershipRevision(Map<String, dynamic> data) {
+    final value = data.containsKey('ownershipRevision')
+        ? data['ownershipRevision']
+        : 0;
+    if (value is! int || value < 0) {
+      throw const FormatException('Invalid ownership revision.');
+    }
+    return value;
   }
 
   void _validateCommon({

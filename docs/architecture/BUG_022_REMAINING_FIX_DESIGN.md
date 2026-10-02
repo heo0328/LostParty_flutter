@@ -1665,3 +1665,24 @@ WeeklyRaidStatusProjector의 입력은 raidStates/weeklyRaidClaims/activeRaidAss
 
 후보 목록·수동 완료·lifecycle/정리 UI·전체 회귀·운영 Rules 이식·실기기는 여전히 미완료다.
 이번 구간에 공통 주간 현황 스트림을 부분 변경하지 않았다. 전용 브랜치 고정과 운영 배포 제외 유지.
+
+#### 22.7 후보·주간 현황 읽기 연결 (2026-10-02)
+
+WeeklyRaidStatusRecord에 원본 ownershipRevision을 보존한다(누락 0, null/음수/비정수 오류).
+세 종류 원본의 경로·식별자 검증 후 Character/계정의 일치하는 활성 소유권을 확인하고 projector로
+전달한다. 낮은 차수의 기록만 제외하며 동일 차수의 다른 owner·미래 차수·권위 불일치는 오류다.
+현재 차수와 legacy 0 정상 관계는 기존 projector의 active/completed/inconsistent 판정을 유지한다.
+
+ownership_record_stream은 현재 기록에 필요한 Character/계정 문서만 공유 구독하고 제거된 의존성은
+취소한다. Character/계정 갱신은 재평가하며 필요한 문서 도착 전 결과를 보내지 않는다.
+오류 시 빈 결과로 치환하지 않고 소스 목록/의존성 준비 상태를 무효화한다. 제거된 구독의 늦은 이벤트와
+취소 후 이벤트는 버린다. 상시 전체 방 listener나 무기한 소유권 캐시는 추가하지 않았다.
+FirestoreActiveRaidAssignmentLookup는 읽기 transaction에서 현재 소유권과 공통 inspector를 사용한다.
+현재 정상 완료/진행·고아 정책을 재사용하고 unknown은 오류로 전달한다. 최종 저장은 별도로 재검증한다.
+
+검증: 신규 스트림/판정 3건, 기존 projector 4건, lookup 연결 계약 1건 총 8건 통과.
+변경 코드/새 테스트 6파일 analyze 무결함, diff check 통과. 첫 실행은 사용량 한도로 자동 승인 검토가
+완료되지 않아 실행 전 차단됐고 사용자 재개 후 실행했다. 이를 테스트 실패로 세지 않는다.
+실제 Firestore 캐시/오프라인·UI 오류 복구·구독 비용과 전체 화면 영향은 최종 회귀/실기기에서 확인한다.
+다음 단일 구간은 수동 완료/완료 취소 쓰기의 현재 소유권 차수 및 구세대 기록 보호다.
+운영 Rules 이식·lifecycle/정리 UI·전체 회귀·배포·실기기는 여전히 미완료다.
