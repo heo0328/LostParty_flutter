@@ -24,11 +24,14 @@ export function personalCompletionCandidate(source) {
   // Dispatch only an actual personal-completion transition; preserve old paths otherwise.
   function dispatch(marker, indent, operation, condition, validator) {
     const anchor = rules.indexOf(marker);
-    const start = rules.indexOf(`${indent}allow ${operation}: if `, anchor);
+    const match = new RegExp(`^${indent}allow ${operation}: if\\s+`, 'm').exec(rules.slice(anchor + marker.length));
+    assert.ok(match, marker);
+    const start = anchor + marker.length + match.index;
     const end = rules.indexOf(';', start);
     assert.ok(anchor >= 0 && start > anchor && end > start, marker);
     const prefix = `${indent}allow ${operation}: if `;
-    const original = rules.slice(start + prefix.length, end);
+    assert.ok(!rules.slice(anchor + marker.length, start).includes('match /'), 'must stay within selected match');
+    const original = rules.slice(start + match[0].length, end);
     rules = rules.slice(0, start) + prefix + `(${condition}) ? (${validator}) : (${original})` + rules.slice(end);
   }
   dispatch('    match /recruitments/{recruitmentId} {', '      ', 'update',
