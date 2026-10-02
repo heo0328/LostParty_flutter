@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../account/domain/entities/weekly_raid_claim_command.dart';
+
 import '../../domain/entities/party_atomic_command.dart';
 import '../../domain/entities/party_raid_state_conflict.dart';
 import '../../domain/services/party_create_occupancy_gate.dart';
@@ -131,6 +133,30 @@ class PartyRaidStateOccupancyInspector {
           (recruitment?.data()?['cycleEndsAt'] as Timestamp?)?.toDate(),
       now: now,
     );
+    WeeklyRaidCommandObservation? observation;
+    if (decision == ExistingRaidStateOccupancyDecision.currentOrphanActive ||
+        decision == ExistingRaidStateOccupancyDecision.historicalOrphanActive) {
+      if (ownership?.condition != GameAccountOwnershipCondition.current) {
+        return PartyRaidStateOccupancyInspection.inconsistent(stateRef);
+      }
+      final assignment = await transaction.get(
+        firestore
+            .collection('players')
+            .doc(playerId)
+            .collection('activeRaidAssignments')
+            .doc('${characterId}_$raidId'),
+      );
+      observation = WeeklyRaidCommandObservation(
+        playerId: playerId,
+        characterId: characterId,
+        raidId: raidId,
+        cycleKey: requestedCycleKey,
+        ownershipRevision: ownership!.revision!,
+        state: data,
+        assignment: assignment.data(),
+        claim: null,
+      );
+    }
     return PartyRaidStateOccupancyInspection(
       stateRef: stateRef,
       decision: decision,
@@ -144,6 +170,7 @@ class PartyRaidStateOccupancyInspector {
               cycleKey: stateCycleKey,
               recruitmentId: recruitmentId!,
               stateRevision: stateRevision,
+              observation: observation,
               isHistorical:
                   decision ==
                   ExistingRaidStateOccupancyDecision.historicalOrphanActive,

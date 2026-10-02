@@ -402,6 +402,7 @@ class MyAccountViewModel extends ChangeNotifier {
           cycleKey: cycleKey,
           recruitmentId: recruitmentId,
           expectedStateRevision: impact.orphanedStateRevision,
+          observation: impact.observation,
         ),
       );
     } finally {

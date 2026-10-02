@@ -1,3 +1,5 @@
+import '../../../account/domain/entities/weekly_raid_claim_command.dart';
+
 class PartyOrphanedRaidParticipation {
   const PartyOrphanedRaidParticipation({
     required this.characterId,
@@ -6,6 +8,7 @@ class PartyOrphanedRaidParticipation {
     required this.recruitmentId,
     required this.stateRevision,
     required this.isHistorical,
+    this.observation,
   });
 
   final String characterId;
@@ -14,4 +17,5 @@ class PartyOrphanedRaidParticipation {
   final String recruitmentId;
   final int stateRevision;
   final bool isHistorical;
+  final WeeklyRaidCommandObservation? observation;
 }

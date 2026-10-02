@@ -312,14 +312,52 @@ class FirestoreWeeklyRaidStatusCommandRepository
         final recruitment = await transaction.get(recruitmentRef);
         final stateData = state.data();
         final assignmentData = assignment.data();
+        final ownership = await _ownership(
+          command.playerId,
+          command.characterId,
+          transaction,
+        );
+        if (command.observation?.matchesCleanup(
+              playerId: command.playerId,
+              characterId: command.characterId,
+              raidId: command.raidId,
+              ownershipRevision: ownership.revision!,
+              state: stateData,
+              assignment: assignmentData,
+            ) !=
+            true) {
+          throw const _WeeklyRaidStateContractException();
+        }
         if (stateData == null && assignmentData == null) {
           return const WeeklyRaidClaimCommandResult.success();
         }
         if (stateData != null) {
           _validateOrphanState(command, stateData);
+          if (_currentRecord(
+                ownership,
+                stateData,
+                command.playerId,
+                command.characterId,
+                command.raidId,
+                isState: true,
+              ) ==
+              null) {
+            throw const _WeeklyRaidStateContractException();
+          }
         }
         if (assignmentData != null) {
           _validateOrphanAssignment(command, assignmentData);
+          if (_currentRecord(
+                ownership,
+                assignmentData,
+                command.playerId,
+                command.characterId,
+                command.raidId,
+                cycleKey: command.cycleKey,
+              ) ==
+              null) {
+            throw const _WeeklyRaidStateContractException();
+          }
         }
         final recruitmentData = recruitment.data();
         if (recruitmentData != null &&

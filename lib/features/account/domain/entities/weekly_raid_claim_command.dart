@@ -63,6 +63,7 @@ class CleanupOrphanRaidParticipationCommand {
     required this.cycleKey,
     required this.recruitmentId,
     this.expectedStateRevision,
+    this.observation,
   });
 
   final String playerId;
@@ -71,6 +72,7 @@ class CleanupOrphanRaidParticipationCommand {
   final String cycleKey;
   final String recruitmentId;
   final int? expectedStateRevision;
+  final WeeklyRaidCommandObservation? observation;
 }
 
 class DeleteManualWeeklyRaidClaimCommand {
@@ -118,6 +120,24 @@ class WeeklyRaidCommandObservation {
   bool matchesApplication(String path, Map<String, dynamic> data) =>
       applicationVersions.containsKey(path) &&
       _same(applicationVersions[path], _version(data));
+
+  /// Cleanup uses the record's cycle, which may precede the query cycle.
+  /// Neither claims nor an already removed pair are deletion targets.
+  bool matchesCleanup({
+    required String playerId,
+    required String characterId,
+    required String raidId,
+    required int ownershipRevision,
+    required Map<String, dynamic>? state,
+    required Map<String, dynamic>? assignment,
+  }) =>
+      this.playerId == playerId &&
+      this.characterId == characterId &&
+      this.raidId == raidId &&
+      this.ownershipRevision == ownershipRevision &&
+      ((state == null && assignment == null) ||
+          (_same(stateVersion, _version(state)) &&
+              _same(assignmentVersion, _version(assignment))));
 
   bool matches({
     required String playerId,

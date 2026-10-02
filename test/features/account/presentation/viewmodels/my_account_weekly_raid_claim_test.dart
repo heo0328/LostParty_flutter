@@ -221,11 +221,22 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       final character = viewModel.accounts.single.characters.single;
       final raid = viewModel.weeklyRaidStatusesFor(character).single;
-      const impact = ManualWeeklyRaidClaimImpact(
+      final observation = WeeklyRaidCommandObservation(
+        playerId: 'player-1',
+        characterId: 'character-1',
+        raidId: 'serca',
+        cycleKey: '2026-08-26',
+        ownershipRevision: 3,
+        state: const {'cycleKey': '2026-08-19', 'revision': 3},
+        assignment: null,
+        claim: null,
+      );
+      final impact = ManualWeeklyRaidClaimImpact(
         orphanedRecruitmentId: 'missing-recruitment',
         orphanedCycleKey: '2026-08-19',
         orphanedStateRevision: 3,
         isHistoricalOrphanedParticipation: true,
+        observation: observation,
       );
 
       expect(
@@ -242,6 +253,7 @@ void main() {
       expect(commands.cleanedOrphan?.cycleKey, '2026-08-19');
       expect(commands.cleanedOrphan?.recruitmentId, 'missing-recruitment');
       expect(commands.cleanedOrphan?.expectedStateRevision, 3);
+      expect(commands.cleanedOrphan?.observation, same(observation));
       viewModel.dispose();
     },
   );

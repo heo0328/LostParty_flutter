@@ -628,6 +628,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
         cycleKey: orphan.cycleKey,
         recruitmentId: orphan.recruitmentId,
         expectedStateRevision: orphan.stateRevision,
+        observation: orphan.observation,
       ),
     );
     if (!mounted) return;

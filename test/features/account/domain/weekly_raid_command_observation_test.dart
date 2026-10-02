@@ -2,6 +2,62 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/entities/weekly_raid_claim_command.dart';
 
 void main() {
+  test(
+    'orphan cleanup preserves replaced records and permits only absent-pair retry',
+    () {
+      final state = <String, dynamic>{
+        'revision': 7,
+        'cycleKey': 'old-week',
+        'recruitmentId': 'old-room',
+        'updatedAt': 100,
+      };
+      final assignment = <String, dynamic>{...state};
+      final observed = WeeklyRaidCommandObservation(
+        playerId: 'p',
+        characterId: 'c',
+        raidId: 'r',
+        cycleKey: 'new-week',
+        ownershipRevision: 3,
+        state: state,
+        assignment: assignment,
+        claim: null,
+      );
+      bool matches(
+        Map<String, dynamic>? s,
+        Map<String, dynamic>? a, {
+        int generation = 3,
+      }) => observed.matchesCleanup(
+        playerId: 'p',
+        characterId: 'c',
+        raidId: 'r',
+        ownershipRevision: generation,
+        state: s,
+        assignment: a,
+      );
+      expect(matches(state, assignment), isTrue);
+      expect(
+        matches({...state, 'recruitmentId': 'new-room'}, assignment),
+        isFalse,
+      );
+      expect(matches(state, {...assignment, 'updatedAt': 200}), isFalse);
+      expect(matches(state, assignment, generation: 5), isFalse);
+      expect(matches(null, assignment), isFalse);
+      expect(matches(state, null), isFalse);
+      expect(matches(null, null), isTrue);
+      expect(matches(null, null, generation: 5), isFalse);
+      expect(
+        observed.matchesCleanup(
+          playerId: 'other',
+          characterId: 'c',
+          raidId: 'r',
+          ownershipRevision: 3,
+          state: null,
+          assignment: null,
+        ),
+        isFalse,
+      );
+    },
+  );
   final state = <String, dynamic>{
     'playerId': 'p',
     'characterId': 'c',
