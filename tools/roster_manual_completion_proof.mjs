@@ -4,9 +4,11 @@ import { createHash } from 'node:crypto';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { manualCompletionCandidate } from './roster_manual_completion_candidate.mjs';
+import { personalCompletionCandidate } from './roster_personal_completion_candidate.mjs';
 import { seedBase, authUid, playerId, characterId, cycleKey, cycleWindow, raidId } from './party_group_cutover_rules_test.mjs';
 
-const rules = manualCompletionCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
+const candidate = process.env.LEADER_PROOF_SCOPE === 'personal-completion' ? personalCompletionCandidate : manualCompletionCandidate;
+const rules = candidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
 const directory = new URL('../coverage/roster-leader/', import.meta.url);
 fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(new URL('candidate.rules', directory), rules);
@@ -106,5 +108,5 @@ try {
     const before = await snapshot(); await assertFails(deleteDoc(doc(db, statePath))); assert.deepEqual(await snapshot(), before);
   });
 } finally { await env.cleanup(); }
-fs.writeFileSync(new URL('results.json', directory), JSON.stringify(results, null, 2));
+fs.writeFileSync(new URL(process.env.LEADER_PROOF_SCOPE === 'personal-completion' ? 'manual-results.json' : 'results.json', directory), JSON.stringify(results, null, 2));
 if (results.some(r => !r.passed)) process.exitCode = 1;

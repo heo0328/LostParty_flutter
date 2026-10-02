@@ -239,7 +239,11 @@ jobs:
           if [[ "$LEADER_PROOF_SCOPE" == personal-completion || "$LEADER_PROOF_SCOPE" == personal-baseline ]]; then
             proof_script=tools/roster_personal_completion_proof.mjs
           fi
-          npx --yes firebase-tools@15.29.0 emulators:exec --config firebase.json --only firestore --project demo-party-group-cutover "node $proof_script"
+          proof_command="node $proof_script"
+          if [[ "$LEADER_PROOF_SCOPE" == personal-completion ]]; then
+            proof_command="$proof_command && node tools/roster_manual_completion_proof.mjs"
+          fi
+          npx --yes firebase-tools@15.29.0 emulators:exec --config firebase.json --only firestore --project demo-party-group-cutover "$proof_command"
 
       - name: Preserve leader succession candidate
         if: always() && inputs.case == 'ownership-leader'

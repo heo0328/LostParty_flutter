@@ -44,7 +44,7 @@ export function personalCompletionCandidate(source) {
   dispatch(uniqueMemberMarker, '        ', 'delete', 'dePersonalCommand(recruitmentId)',
     'validPersonalCompletionMemberDelete(recruitmentId, playerId, resource.data)');
   dispatch(uniqueMemberMarker, '        ', 'update', 'dePersonalCommand(recruitmentId)',
-    "request.resource.data.characterId == resource.data.characterId && request.resource.data.get('ownershipRevision', 0) == resource.data.get('ownershipRevision', 0) && validApprovalPermissionChange(recruitmentId, playerId, resource.data, request.resource.data)");
+    "request.resource.data.characterId == resource.data.characterId && request.resource.data.get('ownershipRevision', 0) == resource.data.get('ownershipRevision', 0) && deManualCurrentOwnership(resource.data) && validApprovalPermissionChange(recruitmentId, playerId, resource.data, request.resource.data)");
   dispatch('      match /raidListings/{recruitmentId} {', '        ', 'update', 'dePersonalCommand(recruitmentId)',
     'validPersonalCompletionListingUpdate(recruitmentId, resource.data, request.resource.data)');
   return rules.replace('    function deManualCurrentOwnership(', `
@@ -71,7 +71,7 @@ export function personalCompletionCandidate(source) {
         && event.commandRevision == after.revision
         && event.actorPlayerId == target.playerId && event.targetPlayerId == target.playerId
         && (before.leaderPlayerId == after.leaderPlayerId
-          || deManualCurrentOwnership(getAfter(recruitmentMemberPath(before.recruitmentId, after.leaderPlayerId)).data))
+          || getAfter(recruitmentMemberPath(before.recruitmentId, after.leaderPlayerId)).data.updatedAt == request.time)
         && (!(before.groupId is string) || dePersonalCompletionListing(before, after));
     }
     function dePersonalCompletionListing(before, after) {
