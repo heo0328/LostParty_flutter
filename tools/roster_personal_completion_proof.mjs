@@ -4,10 +4,12 @@ import { createHash } from 'node:crypto';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
 import { doc, collection, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
 import { personalCompletionCandidate } from './roster_personal_completion_candidate.mjs';
+import { manualCompletionCandidate } from './roster_manual_completion_candidate.mjs';
 import { seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn, approvePublicApplicationTxn,
   seedExpandedApprovedRoom, seedGroupLinkedRoom, completeActiveMemberTxn,
   authUid, playerId, characterId, recruitmentId, raidId } from './party_group_cutover_rules_test.mjs';
-const rules = personalCompletionCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
+const baseline = process.env.LEADER_PROOF_SCOPE === 'personal-baseline';
+const rules = (baseline ? manualCompletionCandidate : personalCompletionCandidate)(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
 const directory = new URL('../coverage/roster-leader/', import.meta.url);
 fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(new URL('candidate.rules', directory), rules);
@@ -68,7 +70,7 @@ try {
     if(kind==='solo') { assert.equal(after.room.status,'disbanded'); assert.equal(after.listings.length,0); assert.equal(after.group.activeRecruitmentCount,0); }
     else { assert.equal(after.room.memberCount,7); if(kind==='leader') assert.equal(after.room.leaderPlayerId,joinerId); }
   });
-  for (const part of ['state','member','slot','authority','successor']) await check(`reject stale ${part} atomically`,async()=>{
+  for (const part of baseline ? [] : ['state','member','slot','authority','successor']) await check(`reject stale ${part} atomically`,async()=>{
     await seed();
     await env.withSecurityRulesDisabled(async ctx=>{
       const admin=ctx.firestore();
@@ -79,7 +81,7 @@ try {
     });
     const before=await snapshot(); await assertFails(completeActiveMemberTxn(db,playerId,characterId)); assert.deepEqual(await snapshot(),before);
   });
-  for (const missing of ['room','member','state','event','listing','successor','group']) await check(`missing ${missing} rolls back completion`,async()=>{
+  for (const missing of baseline ? [] : ['room','member','state','event','listing','successor','group']) await check(`missing ${missing} rolls back completion`,async()=>{
     await seed(missing==='group'); const before=await snapshot();
     await assertFails(completeActiveMemberTxn(db,playerId,characterId,{omitWrites:[missing]})); assert.deepEqual(await snapshot(),before);
   });

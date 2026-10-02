@@ -25,6 +25,7 @@ on:
           - occupancy
           - manual-completion
           - personal-completion
+          - personal-baseline
       case:
         description: Rules regression scope
         type: choice
@@ -235,7 +236,7 @@ jobs:
           if [[ "$LEADER_PROOF_SCOPE" == manual-completion ]]; then
             proof_script=tools/roster_manual_completion_proof.mjs
           fi
-          if [[ "$LEADER_PROOF_SCOPE" == personal-completion ]]; then
+          if [[ "$LEADER_PROOF_SCOPE" == personal-completion || "$LEADER_PROOF_SCOPE" == personal-baseline ]]; then
             proof_script=tools/roster_personal_completion_proof.mjs
           fi
           npx --yes firebase-tools@15.29.0 emulators:exec --config firebase.json --only firestore --project demo-party-group-cutover "node $proof_script"
