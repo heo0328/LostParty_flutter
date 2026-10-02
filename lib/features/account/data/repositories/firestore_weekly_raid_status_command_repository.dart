@@ -8,6 +8,8 @@ import '../../../recruitment_list/data/mappers/party_atomic_member_removal_write
 import '../../../recruitment_list/domain/entities/party_atomic_command.dart';
 import '../../../recruitment_list/domain/policies/party_composition_policy.dart';
 import '../../../recruitment_list/domain/services/party_create_occupancy_gate.dart';
+import '../../../recruitment_list/domain/services/party_ownership_record_policy.dart';
+import '../../domain/game_account_ownership_snapshot.dart';
 import '../../domain/entities/weekly_raid_claim_command.dart';
 import '../../domain/repositories/weekly_raid_claim_command_repository.dart';
 import '../mappers/weekly_raid_claim_document_id.dart';
@@ -125,13 +127,53 @@ class FirestoreWeeklyRaidStatusCommandRepository
           final state = await transaction.get(stateRef);
           final claim = await transaction.get(claimRef);
           final assignment = await transaction.get(assignmentRef);
-          final stateData = state.data();
+          final ownership = await _ownership(
+            command.playerId,
+            command.characterId,
+            transaction,
+          );
+          _validateObservation(
+            command.observation,
+            playerId: command.playerId,
+            characterId: command.characterId,
+            raidId: command.raidId,
+            cycleKey: command.cycleKey,
+            ownership: ownership,
+            state: state.data(),
+            claim: claim.data(),
+            assignment: assignment.data(),
+            afterHistoricalDelete: attempt > 0,
+          );
+          final stateData = _currentRecord(
+            ownership,
+            state.data(),
+            command.playerId,
+            command.characterId,
+            command.raidId,
+            isState: true,
+          );
+          final claimData = _currentRecord(
+            ownership,
+            claim.data(),
+            command.playerId,
+            command.characterId,
+            command.raidId,
+            cycleKey: command.cycleKey,
+          );
+          final assignmentData = _currentRecord(
+            ownership,
+            assignment.data(),
+            command.playerId,
+            command.characterId,
+            command.raidId,
+          );
 
           if (stateData != null) {
             _validateStateIdentity(command, stateData);
             final stateCycleKey = stateData['cycleKey'] as String;
             if (stateCycleKey != command.cycleKey) {
-              if (stateData['status'] != 'completed' || assignment.exists) {
+              if (stateData['status'] != 'completed' ||
+                  assignmentData != null) {
                 return const _ManualClaimTransactionOutcome.result(
                   WeeklyRaidClaimCommandResult.failure(
                     WeeklyRaidClaimCommandFailure.stateInconsistent,
@@ -160,19 +202,19 @@ class FirestoreWeeklyRaidStatusCommandRepository
                 stateRef: stateRef,
                 stateData: stateData,
                 assignmentRef: assignmentRef,
-                assignmentData: assignment.data(),
+                assignmentData: assignmentData,
               ),
             );
           }
 
-          if (assignment.exists) {
+          if (assignmentData != null) {
             return const _ManualClaimTransactionOutcome.result(
               WeeklyRaidClaimCommandResult.failure(
                 WeeklyRaidClaimCommandFailure.stateInconsistent,
               ),
             );
           }
-          if (claim.exists) {
+          if (claimData != null) {
             return const _ManualClaimTransactionOutcome.result(
               WeeklyRaidClaimCommandResult.success(),
             );
@@ -180,6 +222,7 @@ class FirestoreWeeklyRaidStatusCommandRepository
 
           final now = FieldValue.serverTimestamp();
           transaction.set(stateRef, {
+            'ownershipRevision': ownership.revision,
             'schemaVersion': 1,
             'playerId': command.playerId,
             'characterId': command.characterId,
@@ -210,7 +253,9 @@ class FirestoreWeeklyRaidStatusCommandRepository
       );
 
       if (result.isSuccess && resolveConflicts) {
-        unawaited(_supersedePendingApplications(context.pendingApplications));
+        unawaited(
+          _supersedePendingApplications(context.pendingApplications, command),
+        );
       }
       return result;
     } on _WeeklyRaidStateContractException {
@@ -347,7 +392,12 @@ class FirestoreWeeklyRaidStatusCommandRepository
         raw['currentCycleStatus'] != 'active' ||
         raw['raidId'] != command.raidId ||
         raw['currentCycleKey'] != command.cycleKey ||
-        memberData['characterId'] != command.characterId) {
+        memberData['characterId'] != command.characterId ||
+        raw['revision'] != command.observation?.recruitmentRevision ||
+        (memberData.containsKey('ownershipRevision')
+                ? memberData['ownershipRevision']
+                : 0) !=
+            command.observation?.ownershipRevision) {
       throw const _WeeklyRaidStateContractException();
     }
 
@@ -357,7 +407,10 @@ class FirestoreWeeklyRaidStatusCommandRepository
     final target = aggregate.partySlots
         .where((slot) => slot.playerId == command.playerId)
         .firstOrNull;
-    if (target == null || target.characterId != command.characterId) {
+    if (target == null ||
+        target.characterId != command.characterId ||
+        (target.ownershipRevision ?? 0) !=
+            command.observation?.ownershipRevision) {
       throw const _WeeklyRaidStateContractException();
     }
 
@@ -373,8 +426,20 @@ class FirestoreWeeklyRaidStatusCommandRepository
           .doc(successor.playerId);
       final successorDoc = await transaction.get(successorRef);
       final successorData = successorDoc.data();
-      final characterName = successorData?['characterNameSnapshot'];
-      final className = successorData?['classNameSnapshot'];
+      final successorOwnership = await _ownership(
+        successor.playerId,
+        successor.characterId,
+        transaction,
+      );
+      if (successorData == null ||
+          successorData['characterId'] != successor.characterId ||
+          successorOwnership.classifyParticipation(successorData) !=
+              GameAccountOwnershipCondition.current ||
+          (successor.ownershipRevision ?? 0) != successorOwnership.revision) {
+        throw const _WeeklyRaidStateContractException();
+      }
+      final characterName = successorData['characterNameSnapshot'];
+      final className = successorData['classNameSnapshot'];
       if (characterName is! String || className is! String) {
         throw const _WeeklyRaidStateContractException();
       }
@@ -544,12 +609,46 @@ class FirestoreWeeklyRaidStatusCommandRepository
             .doc(claimId);
         final state = await transaction.get(stateRef);
         final claim = await transaction.get(claimRef);
-        final stateData = state.data();
+        final assignment = await transaction.get(
+          _assignment(command.playerId, command.characterId, command.raidId),
+        );
+        final ownership = await _ownership(
+          command.playerId,
+          command.characterId,
+          transaction,
+        );
+        _validateObservation(
+          command.observation,
+          playerId: command.playerId,
+          characterId: command.characterId,
+          raidId: command.raidId,
+          cycleKey: command.cycleKey,
+          ownership: ownership,
+          state: state.data(),
+          claim: claim.data(),
+          assignment: assignment.data(),
+        );
+        final stateData = _currentRecord(
+          ownership,
+          state.data(),
+          command.playerId,
+          command.characterId,
+          command.raidId,
+          isState: true,
+        );
+        final claimData = _currentRecord(
+          ownership,
+          claim.data(),
+          command.playerId,
+          command.characterId,
+          command.raidId,
+          cycleKey: command.cycleKey,
+        );
         if (stateData != null) {
           _validateDeleteState(command, stateData);
           if (stateData['status'] == 'completed') transaction.delete(stateRef);
         }
-        if (claim.exists) transaction.delete(claimRef);
+        if (claimData != null) transaction.delete(claimRef);
         if (stateData != null &&
             stateData['status'] != 'active' &&
             stateData['status'] != 'completed') {
@@ -583,10 +682,56 @@ class FirestoreWeeklyRaidStatusCommandRepository
       command.characterId,
       command.raidId,
     ).get();
+    final claim = await _claim(
+      command,
+    ).get(const GetOptions(source: Source.server));
+    final ownership = await _ownership(command.playerId, command.characterId);
+    final observedApplications = <String, Map<String, dynamic>>{};
+    WeeklyRaidCommandObservation observation([int? recruitmentRevision]) =>
+        WeeklyRaidCommandObservation(
+          playerId: command.playerId,
+          characterId: command.characterId,
+          raidId: command.raidId,
+          cycleKey: command.cycleKey,
+          ownershipRevision: ownership.revision!,
+          state: state.data(),
+          claim: claim.data(),
+          assignment: assignment.data(),
+          recruitmentRevision: recruitmentRevision,
+          applications: observedApplications,
+        );
+    _currentRecord(
+      ownership,
+      claim.data(),
+      command.playerId,
+      command.characterId,
+      command.raidId,
+      cycleKey: command.cycleKey,
+    );
     String? recruitmentId;
+    int? recruitmentRevision;
     String? observedCycleKey;
-    final stateData = state.data();
-    final assignmentData = assignment.data();
+    final stateData = _currentRecord(
+      ownership,
+      state.data(),
+      command.playerId,
+      command.characterId,
+      command.raidId,
+      isState: true,
+    );
+    final assignmentData = _currentRecord(
+      ownership,
+      assignment.data(),
+      command.playerId,
+      command.characterId,
+      command.raidId,
+    );
+    if (command.forCancellation) {
+      return _StatusCommandContext(
+        impact: ManualWeeklyRaidClaimImpact(observation: observation()),
+        pendingApplications: const [],
+      );
+    }
     if (stateData != null) {
       _validateStateIdentity(command, stateData);
       observedCycleKey = stateData['cycleKey'] as String;
@@ -600,8 +745,8 @@ class FirestoreWeeklyRaidStatusCommandRepository
         }
         recruitmentId = rawRecruitmentId;
       }
-    } else if (assignment.exists) {
-      _validateAssignmentIdentity(command, assignmentData!);
+    } else if (assignmentData != null) {
+      _validateAssignmentIdentity(command, assignmentData);
       observedCycleKey = assignmentData['cycleKey'] as String;
       final rawRecruitmentId = assignmentData['recruitmentId'];
       if (rawRecruitmentId is! String || rawRecruitmentId.isEmpty) {
@@ -620,6 +765,7 @@ class FirestoreWeeklyRaidStatusCommandRepository
           .doc(recruitmentId)
           .get();
       final data = recruitment.data();
+      recruitmentRevision = data?['revision'] as int?;
       if (data != null && data['raidId'] != command.raidId) {
         throw const _WeeklyRaidStateContractException();
       }
@@ -633,6 +779,7 @@ class FirestoreWeeklyRaidStatusCommandRepository
               ExistingRaidStateOccupancyDecision.historicalOrphanActive) {
         return _StatusCommandContext(
           impact: ManualWeeklyRaidClaimImpact(
+            observation: observation(recruitmentRevision),
             orphanedRecruitmentId: recruitmentId,
             orphanedCycleKey: observedCycleKey,
             orphanedStateRevision: stateData?['revision'] as int?,
@@ -685,7 +832,9 @@ class FirestoreWeeklyRaidStatusCommandRepository
     for (final application in query.docs) {
       final data = application.data();
       if (data['status'] != 'pending' ||
-          data['characterId'] != command.characterId) {
+          data['characterId'] != command.characterId ||
+          ownership.classifyParticipation(data) !=
+              GameAccountOwnershipCondition.current) {
         continue;
       }
       final recruitmentRef = application.reference.parent.parent;
@@ -701,11 +850,14 @@ class FirestoreWeeklyRaidStatusCommandRepository
         _PendingStatusApplication(
           applicationRef: application.reference,
           recruitmentRef: recruitmentRef,
+          observed: Map<String, dynamic>.unmodifiable(data),
         ),
       );
+      observedApplications[application.reference.path] = data;
     }
     return _StatusCommandContext(
       impact: ManualWeeklyRaidClaimImpact(
+        observation: observation(recruitmentRevision),
         activeRecruitmentId: recruitmentId,
         activeRecruitmentTitle: title,
         isRecruitmentLeader: isLeader,
@@ -719,17 +871,52 @@ class FirestoreWeeklyRaidStatusCommandRepository
 
   Future<void> _supersedePendingApplications(
     List<_PendingStatusApplication> applications,
+    CreateManualWeeklyRaidClaimCommand command,
   ) async {
     for (final candidate in applications) {
       try {
         await _firestore.runTransaction((transaction) async {
           final recruitment = await transaction.get(candidate.recruitmentRef);
           final application = await transaction.get(candidate.applicationRef);
+          final state = await transaction.get(
+            _state(command.playerId, command.characterId, command.raidId),
+          );
+          final ownership = await _ownership(
+            command.playerId,
+            command.characterId,
+            transaction,
+          );
           final recruitmentData = recruitment.data();
           final applicationData = application.data();
           if (recruitmentData == null ||
               applicationData == null ||
-              applicationData['status'] != 'pending') {
+              applicationData['status'] != 'pending' ||
+              command.observation?.matchesApplication(
+                    candidate.applicationRef.path,
+                    applicationData,
+                  ) !=
+                  true ||
+              applicationData['revision'] != candidate.observed['revision'] ||
+              applicationData['updatedAt'] != candidate.observed['updatedAt'] ||
+              applicationData['characterId'] != command.characterId ||
+              applicationData['cycleKey'] != command.cycleKey ||
+              applicationData['applicantPlayerId'] != command.playerId ||
+              applicationData['ownershipRevision'] !=
+                  candidate.observed['ownershipRevision'] ||
+              ownership.revision != command.observation?.ownershipRevision ||
+              ownership.classifyParticipation(applicationData) !=
+                  GameAccountOwnershipCondition.current ||
+              state.data()?['status'] != 'completed' ||
+              state.data()?['cycleKey'] != command.cycleKey ||
+              _currentRecord(
+                    ownership,
+                    state.data(),
+                    command.playerId,
+                    command.characterId,
+                    command.raidId,
+                    isState: true,
+                  ) ==
+                  null) {
             return;
           }
           final countedAsNonGroup =
@@ -751,7 +938,101 @@ class FirestoreWeeklyRaidStatusCommandRepository
         });
       } on FirebaseException {
         // 완료 state가 이미 최종 차단 원장이다. 신청 정리는 비핵심 후처리다.
+      } on _WeeklyRaidStateContractException {
+        // Ownership changed or became unknown after completion. Preserve applications.
       }
+    }
+  }
+
+  Future<GameAccountOwnershipSnapshot> _ownership(
+    String playerId,
+    String characterId, [
+    Transaction? transaction,
+  ]) async {
+    final characterRef = _firestore.collection('characters').doc(characterId);
+    final character =
+        (transaction == null
+                ? await characterRef.get(
+                    const GetOptions(source: Source.server),
+                  )
+                : await transaction.get(characterRef))
+            .data();
+    final accountId = character?['gameAccountId'];
+    if (accountId is! String || accountId.isEmpty) {
+      throw const _WeeklyRaidStateContractException();
+    }
+    final accountRef = _firestore.collection('gameAccounts').doc(accountId);
+    final account =
+        (transaction == null
+                ? await accountRef.get(const GetOptions(source: Source.server))
+                : await transaction.get(accountRef))
+            .data();
+    final ownership = GameAccountOwnershipSnapshot.inspect(
+      playerId: playerId,
+      gameAccountId: accountId,
+      account: account,
+      character: character,
+    );
+    if (ownership.condition != GameAccountOwnershipCondition.current) {
+      throw const _WeeklyRaidStateContractException();
+    }
+    return ownership;
+  }
+
+  Map<String, dynamic>? _currentRecord(
+    GameAccountOwnershipSnapshot ownership,
+    Map<String, dynamic>? data,
+    String playerId,
+    String characterId,
+    String raidId, {
+    bool isState = false,
+    String? cycleKey,
+  }) {
+    if (data == null) return null;
+    final recordCycle = data['cycleKey'];
+    if (recordCycle is! String || recordCycle.isEmpty) {
+      throw const _WeeklyRaidStateContractException();
+    }
+    final condition = PartyOwnershipRecordPolicy.classify(
+      ownership: ownership,
+      data: data,
+      playerId: playerId,
+      characterId: characterId,
+      raidId: raidId,
+      isRaidState: isState,
+      claimCycleKey: cycleKey ?? recordCycle,
+    );
+    if (condition == GameAccountOwnershipCondition.unknown) {
+      throw const _WeeklyRaidStateContractException();
+    }
+    return condition == GameAccountOwnershipCondition.current ? data : null;
+  }
+
+  void _validateObservation(
+    WeeklyRaidCommandObservation? observation, {
+    required String playerId,
+    required String characterId,
+    required String raidId,
+    required String cycleKey,
+    required GameAccountOwnershipSnapshot ownership,
+    required Map<String, dynamic>? state,
+    required Map<String, dynamic>? claim,
+    required Map<String, dynamic>? assignment,
+    bool afterHistoricalDelete = false,
+  }) {
+    if (observation == null ||
+        !observation.matches(
+          playerId: playerId,
+          characterId: characterId,
+          raidId: raidId,
+          cycleKey: cycleKey,
+          ownershipRevision: ownership.revision!,
+          state: state,
+          claim: claim,
+          assignment: assignment,
+          afterHistoricalDelete: afterHistoricalDelete,
+        )) {
+      throw const _WeeklyRaidStateContractException();
     }
   }
 
@@ -962,10 +1243,12 @@ class _PendingStatusApplication {
   const _PendingStatusApplication({
     required this.applicationRef,
     required this.recruitmentRef,
+    required this.observed,
   });
 
   final DocumentReference<Map<String, dynamic>> applicationRef;
   final DocumentReference<Map<String, dynamic>> recruitmentRef;
+  final Map<String, dynamic> observed;
 }
 
 class _ManualClaimTransactionOutcome {

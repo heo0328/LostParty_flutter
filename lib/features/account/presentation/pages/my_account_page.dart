@@ -1001,10 +1001,11 @@ class _MyAccountPageState extends State<MyAccountPage> {
     required bool completed,
   }) async {
     ManualWeeklyRaidClaimImpact? impact;
-    if (completed) {
+    {
       final impactResult = await _viewModel.inspectWeeklyRaidCompletionImpact(
         character: character,
         raid: raid,
+        forCancellation: !completed,
       );
       if (!mounted) return;
       if (!impactResult.isSuccess) {
@@ -1014,7 +1015,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
         return;
       }
       impact = impactResult.impact;
-      if (impact?.hasOrphanedParticipation == true) {
+      if (completed && impact?.hasOrphanedParticipation == true) {
         await _confirmOrphanParticipationCleanup(
           character: character,
           raid: raid,
@@ -1055,6 +1056,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
       raid: raid,
       completed: completed,
       resolveConflicts: resolveConflicts,
+      observation: impact?.observation,
     );
     if (!mounted) return;
     final message = result.isSuccess

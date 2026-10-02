@@ -1763,3 +1763,25 @@ room/member/state/event/listing/successor/group 쓰기 누락 거절 및 기존 
 후임 검사를 위한 멤버 쓰기를 모집이 강제하며, state 검사는 자기 소유권만 확인한다.
 이전 완료 후보 전체를 운영에 이식하거나 실제 앱에 연결한 상태가 아니다. 다음은 §22.8의
 영향 조회/확인 snapshot/최종 거래/취소/신청 후처리 연결이며 전용 브랜치 고정을 유지한다.
+
+#### 22.10 완료 앱 연결의 관찰 계약
+
+확인 전 조회에서 요청 식별자·소유권 차수와 state/claim/assignment의 버전 지문을 관찰한다.
+지문은 존재 여부·식별자·차수·revision·주차·상태·출처·모집·완료/갱신 시각을 보존한다.
+완료/해제 모두 확인창 이전에 조회하고 해당 관찰을 최종 명령에 전달한다. 실제 Firestore 명령은
+관찰이 없거나 거래 재조회가 달라지면 stateInconsistent로 종료한다. 취소는 과거 기록을 no-op으로
+보존하며 현재 완료 근거만 삭제한다. 조회 실패를 빈 상태로 취급하지 않는다.
+활성 참가 완료는 확인 당시 모집 revision도 비교하고 member/slot/후임 소유권을 다시 확인한다.
+현재 이전 주차 completed의 기존 삭제 후 재시도는 이번 호출에서 삭제한 부재만 제한적으로 인정한다.
+pending 신청 후처리는 관찰 신청 revision/차수/Character를 보존하고 최신 소유권과 완료 state를
+거래에서 재검증한다. 완료 해제 또는 재인증 뒤에는 낡은 후처리를 적용하지 않는다.
+관찰은 권한 토큰이 아니며 Rules 검증을 대체하지 않는다. 운영 Rules와 legacy Repository 이식은 제외한다.
+
+앱 연결 결과: Page는 완료/해제 모두 관찰 후 확인하며 ViewModel은 동일 관찰 객체를 명령에 전달한다.
+실제 Repository는 신규 완료에 ownershipRevision을 쓰고 공통 PartyOwnershipRecordPolicy로 현재/
+과거/unknown을 구분한다. 취소는 과거 차수 기록을 보존한다. 활성 참가 완료는 관찰 모집 revision,
+member/slot 차수와 후임 활성 권위를 확인한 뒤 기존 제거 Write Plan을 사용한다.
+신청 후처리는 확인 전에 관찰한 경로·revision·시각·차수·Character와 최신 완료 상태를 대조한다.
+관찰 변경 4건 및 ViewModel 전달/기존 흐름 7건 통과, 변경 6파일 analyze 무결함, diff check 통과.
+서버 후보 37건은 Rules 무변경 결과를 재사용한다. 실제 Firestore 거래/캐시/UI 실기기는 아직
+확인하지 않았으며 전체 회귀 완료가 아니다. 고아 active 정리의 차수 보호는 다음 단일 구간이다.

@@ -154,6 +154,16 @@ void main() {
       );
       expect(impact.isSuccess, isTrue);
       expect(commands.inspected?.raidId, 'serca');
+      final observation = WeeklyRaidCommandObservation(
+        playerId: 'player-1',
+        characterId: 'character-1',
+        raidId: 'serca',
+        cycleKey: '2026-08-26',
+        ownershipRevision: 3,
+        state: null,
+        claim: null,
+        assignment: null,
+      );
 
       expect(
         await viewModel.setWeeklyRaidCompleted(
@@ -161,22 +171,32 @@ void main() {
           raid: raid,
           completed: true,
           resolveConflicts: true,
+          observation: observation,
         ),
         const WeeklyRaidClaimCommandResult.success(),
       );
       expect(commands.created?.difficultyId, 'hard');
       expect(commands.created?.characterId, 'character-1');
       expect(commands.resolveConflicts, isTrue);
+      expect(commands.created?.observation, same(observation));
+      await viewModel.inspectWeeklyRaidCompletionImpact(
+        character: character,
+        raid: raid,
+        forCancellation: true,
+      );
+      expect(commands.inspected?.forCancellation, isTrue);
 
       expect(
         await viewModel.setWeeklyRaidCompleted(
           character: character,
           raid: raid,
           completed: false,
+          observation: observation,
         ),
         const WeeklyRaidClaimCommandResult.success(),
       );
       expect(commands.deleted?.raidId, 'serca');
+      expect(commands.deleted?.observation, same(observation));
       viewModel.dispose();
     },
   );

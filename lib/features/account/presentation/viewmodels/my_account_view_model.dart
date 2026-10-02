@@ -276,6 +276,7 @@ class MyAccountViewModel extends ChangeNotifier {
     required WeeklyRaidStatusItem raid,
     required bool completed,
     bool resolveConflicts = false,
+    WeeklyRaidCommandObservation? observation,
   }) async {
     final repository = _weeklyRaidClaimCommandRepository;
     final playerId = _playerId;
@@ -311,6 +312,7 @@ class MyAccountViewModel extends ChangeNotifier {
             cycleKey: cycleKey,
             cycleStartedAt: cycleStartedAt,
             cycleEndsAt: cycleEndsAt,
+            observation: observation,
           ),
           resolveConflicts: resolveConflicts,
         );
@@ -321,6 +323,7 @@ class MyAccountViewModel extends ChangeNotifier {
           characterId: characterId,
           raidId: raid.raidId,
           cycleKey: cycleKey,
+          observation: observation,
         ),
       );
     } finally {
@@ -332,6 +335,7 @@ class MyAccountViewModel extends ChangeNotifier {
   Future<WeeklyRaidClaimImpactResult> inspectWeeklyRaidCompletionImpact({
     required LocalAccountCharacter character,
     required WeeklyRaidStatusItem raid,
+    bool forCancellation = false,
   }) async {
     final repository = _weeklyRaidClaimCommandRepository;
     final playerId = _playerId;
@@ -358,6 +362,7 @@ class MyAccountViewModel extends ChangeNotifier {
         cycleKey: cycleKey,
         cycleStartedAt: cycleStartedAt,
         cycleEndsAt: cycleEndsAt,
+        forCancellation: forCancellation,
       ),
     );
   }
