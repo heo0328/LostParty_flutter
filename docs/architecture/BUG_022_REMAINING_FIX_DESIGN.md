@@ -1590,3 +1590,23 @@ CI 36965088067은 17/17 통과했다. 후보 SHA256:
 다음 앱 연결은 공통 inspector와 별도 create 점유 판정을 같은 소유권 정책에 맞춘다.
 조회 실패/손상은 unknown으로 거절하고 구세대 데이터는 선삭제하지 않는다. weekly claim 읽기도
 같은 판정을 사용한다. 후보 목록·수동 완료·반복방 정리 UI·운영 이식까지 완료로 확대하지 않는다.
+
+#### 22.4 H3 생성·신청·가입 앱 연결 (2026-10-02)
+
+실제 app_router.dart가 주입하는 Atomic Create/Application/Join Repository에 연결했다.
+PartyOwnershipRecordPolicy는 권위 소유권 current, 정확한 Player/Character/raid 식별자와 차수를
+확인한다. state는 유효한 주차/상태/문서 revision도 요구한다. claim은 요청 주차 일치가 필요하다.
+손상/미래 차수와 권위 불명은 unknown이며 정리나 이용 허용의 근거가 아니다.
+
+- Create는 구세대 state를 판정 입력에서 제외하고 기존 원자 Write Plan의 set으로 대체한다.
+  구세대 state가 가리킨 과거 방을 선조회/선삭제하지 않는다. 같은 모집 ID 재사용은 충돌로 거절한다.
+- Application 및 본인 Join은 기존 inspector에 동일 transaction에서 읽은 소유권을 전달한다.
+  구세대 state는 삭제 없이 보존하며 최종 가입 set에서만 교체된다. 자기 weekly claim도 판정한다.
+- Approver는 신청자 state/claim을 조회하지 않는다. 기존 신청 차수 대조 및 서버 최종 판정 유지.
+- 현재 차수의 기존 주차/고아 판정은 기존 정책을 사용한다. Character 변경은 이번 선택 인자를
+  전달하지 않아 기존 동작을 유지하며 별도 서버 경계 검증 뒤 연결한다.
+
+정책 테스트 신규 3건+기존 소유권 4건 통과, 변경 파일 6개 analyze 무결함, diff check 통과.
+이는 Domain 경계 및 실제 연결 코드 검증이며 Repository 거래의 모든 조합이나 실기기 통과가 아니다.
+다음은 직접 가입/승인 경쟁과 Character 변경 대체 서버 경계, 후보 목록·개인 완료 및 lifecycle 연결이다.
+운영 Rules는 이전 상태이므로 현재 중간 앱 빌드로 기능을 검증하거나 배포하지 않는다.

@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/party_atomic_command.dart';
 import '../../domain/entities/party_raid_state_conflict.dart';
 import '../../domain/services/party_create_occupancy_gate.dart';
+import '../../domain/services/party_ownership_record_policy.dart';
+import 'party_character_ownership_reader.dart';
 
 class PartyRaidStateOccupancyInspector {
   const PartyRaidStateOccupancyInspector._();
@@ -15,6 +17,7 @@ class PartyRaidStateOccupancyInspector {
     required String raidId,
     required String requestedCycleKey,
     required DateTime now,
+    GameAccountOwnershipSnapshot? ownership,
   }) async {
     final stateRef = firestore
         .collection('players')
@@ -28,8 +31,56 @@ class PartyRaidStateOccupancyInspector {
         );
     final state = await transaction.get(stateRef);
     final data = state.data();
+    if (ownership != null) {
+      final claim = await transaction.get(
+        firestore
+            .collection('players')
+            .doc(playerId)
+            .collection('weeklyRaidClaims')
+            .doc('${requestedCycleKey}_${characterId}_$raidId'),
+      );
+      final claimData = claim.data();
+      if (claimData != null) {
+        final condition = PartyOwnershipRecordPolicy.classify(
+          ownership: ownership,
+          data: claimData,
+          playerId: playerId,
+          characterId: characterId,
+          raidId: raidId,
+          isRaidState: false,
+          claimCycleKey: requestedCycleKey,
+        );
+        if (condition == GameAccountOwnershipCondition.unknown) {
+          return PartyRaidStateOccupancyInspection.inconsistent(stateRef);
+        }
+        if (condition == GameAccountOwnershipCondition.current) {
+          return PartyRaidStateOccupancyInspection(
+            stateRef: stateRef,
+            decision: ExistingRaidStateOccupancyDecision.currentCompleted,
+          );
+        }
+      }
+    }
     if (data == null) {
       return PartyRaidStateOccupancyInspection.none(stateRef);
+    }
+
+    if (ownership != null) {
+      final condition = PartyOwnershipRecordPolicy.classify(
+        ownership: ownership,
+        data: data,
+        playerId: playerId,
+        characterId: characterId,
+        raidId: raidId,
+        isRaidState: true,
+      );
+      if (condition == GameAccountOwnershipCondition.unknown) {
+        return PartyRaidStateOccupancyInspection.inconsistent(stateRef);
+      }
+      if (condition == GameAccountOwnershipCondition.ownershipChanged) {
+        // Keep the old document until a validated participation write replaces it.
+        return PartyRaidStateOccupancyInspection.none(stateRef);
+      }
     }
 
     final statePlayerId = data['playerId'];

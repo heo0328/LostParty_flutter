@@ -10,6 +10,7 @@ import '../../domain/services/party_create_occupancy_gate.dart';
 import '../mappers/party_atomic_membership_write_plan.dart';
 import '../mappers/party_create_write_plan.dart';
 import 'party_character_ownership_reader.dart';
+import '../../domain/services/party_ownership_record_policy.dart';
 
 /// 새 Aggregate·raidState 구조용 파티 생성 Repository.
 ///
@@ -95,13 +96,36 @@ class FirestorePartyAtomicCreateRepository implements PartyCreateRepository {
                   : PartyCreateFailure.serverDataMissing,
             );
           }
-          final raidStateData = raidState.data();
+          final storedState = raidState.data();
+          final stateOwnership = storedState == null
+              ? null
+              : PartyOwnershipRecordPolicy.classify(
+                  ownership: ownership,
+                  data: storedState,
+                  playerId: playerId,
+                  characterId: command.leaderCharacterId,
+                  raidId: command.metadata.raidId,
+                  isRaidState: true,
+                );
+          if (stateOwnership == GameAccountOwnershipCondition.unknown) {
+            return const PartyCreateResult.failure(
+              PartyCreateFailure.serverDataMissing,
+            );
+          }
+          final priorOwnership =
+              stateOwnership == GameAccountOwnershipCondition.ownershipChanged;
+          if (priorOwnership && recruitment.exists) {
+            return const PartyCreateResult.failure(
+              PartyCreateFailure.idConflict,
+            );
+          }
+          final raidStateData = priorOwnership ? null : storedState;
           final raidStateRecruitmentId = raidStateData?['recruitmentId'];
           final raidStateCycleKey = raidStateData?['cycleKey'];
           final raidStateStatus = raidStateData?['status'];
 
           DocumentSnapshot<Map<String, dynamic>>? assignedRecruitment;
-          if (raidState.exists &&
+          if (raidStateData != null &&
               raidStateStatus == 'active' &&
               raidStateRecruitmentId is String &&
               raidStateRecruitmentId.isNotEmpty &&
@@ -112,7 +136,7 @@ class FirestorePartyAtomicCreateRepository implements PartyCreateRepository {
           }
 
           final stateOccupancy =
-              raidState.exists &&
+              raidStateData != null &&
                   raidStateCycleKey is String &&
                   raidStateStatus is String
               ? PartyCreateOccupancyGate.classifyExistingRaidState(
@@ -177,7 +201,8 @@ class FirestorePartyAtomicCreateRepository implements PartyCreateRepository {
             newRecruitmentExists: recruitment.exists,
             newRecruitmentLeaderId:
                 recruitment.data()?['leaderPlayerId'] as String?,
-            assignmentExists: raidState.exists && raidStateStatus == 'active',
+            assignmentExists:
+                raidStateData != null && raidStateStatus == 'active',
             assignmentRecruitmentId: raidStateRecruitmentId is String
                 ? raidStateRecruitmentId
                 : null,
@@ -273,7 +298,24 @@ class FirestorePartyAtomicCreateRepository implements PartyCreateRepository {
                 .collection('weeklyRaidClaims')
                 .doc(claimId),
           );
-          if (claim.exists) {
+          final claimData = claim.data();
+          final claimOwnership = claimData == null
+              ? null
+              : PartyOwnershipRecordPolicy.classify(
+                  ownership: ownership,
+                  data: claimData,
+                  playerId: playerId,
+                  characterId: command.leaderCharacterId,
+                  raidId: command.metadata.raidId,
+                  isRaidState: false,
+                  claimCycleKey: command.cycleKey,
+                );
+          if (claimOwnership == GameAccountOwnershipCondition.unknown) {
+            return const PartyCreateResult.failure(
+              PartyCreateFailure.serverDataMissing,
+            );
+          }
+          if (claimOwnership == GameAccountOwnershipCondition.current) {
             return const PartyCreateResult.failure(
               PartyCreateFailure.weeklyRaidCompleted,
             );

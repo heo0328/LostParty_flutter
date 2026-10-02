@@ -1,3 +1,15 @@
+# 2026-10-02 DE2-H3 — 생성·신청·가입 점유 판정 앱 연결
+
+- 공통 PartyOwnershipRecordPolicy로 식별자·차수·state 상태를 검증한다. Create 별도 경로와
+  Application/본인 Join의 inspector에 적용했다. 실제 Router의 Repository 주입도 확인했다.
+- 새 연결: 과거 차수 점유는 선삭제 없이 신청/생성 진행, 최종 참가 Write Plan으로 대체.
+  구세대 weekly claim은 보존하고 현재 차수 claim은 제한한다. unknown은 거절한다.
+- 기존 보호: 현재 차수 주차/고아 정책, 승인자의 신청자 private 조회 금지, 원자 Write Plan 유지.
+- 검증: 신규 정책 3건+기존 소유권 4건, 총 7건 통과. 변경 파일 6개 analyze 무결함, diff check 통과.
+  정상 UI의 중복 자동 테스트 및 중간 전체 테스트는 실행하지 않았다. baseline 22 실패/51 analyze 유지.
+- 미확인: 직접 가입/승인 경쟁 서버 결합, Character 변경·후보 목록·수동 완료·lifecycle/정리 UI,
+  전체 회귀·운영 이식·실기기. 운영 Rules 무변경, 사용자 초기화 변경 보존. 전용 브랜치 유지.
+
 # 2026-10-02 DE2-H3 — 구세대 점유 원자 대체 서버 proof
 
 - 중단된 CI 36886677940은 13건 통과. 필수 쓰기 누락 4건을 추가한 072df61 /

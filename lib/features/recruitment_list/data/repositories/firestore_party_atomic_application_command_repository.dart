@@ -123,6 +123,7 @@ class FirestorePartyAtomicApplicationCommandRepository
         raidId: raidId,
         requestedCycleKey: command.cycleKey,
         now: clock(),
+        ownership: ownership,
       );
       switch (occupancy.decision) {
         case ExistingRaidStateOccupancyDecision.currentCompleted:

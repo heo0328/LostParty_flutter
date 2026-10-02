@@ -295,6 +295,7 @@ class FirestorePartyAtomicJoinCommandRepository
               raidId: raidId,
               requestedCycleKey: cycleKey,
               now: clock(),
+              ownership: ownership,
             )
           : null;
       final characterData = character.data();
