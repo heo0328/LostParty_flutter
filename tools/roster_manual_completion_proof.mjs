@@ -44,7 +44,12 @@ async function prior(value = 1, status = 'completed') {
   });
 }
 async function snapshot() {
-  return env.withSecurityRulesDisabled(async ctx => Promise.all(paths.map(async path => (await getDoc(doc(ctx.firestore(), path))).data())));
+  let result;
+  await env.withSecurityRulesDisabled(async ctx => {
+    result = await Promise.all(paths.map(async path => (await getDoc(doc(ctx.firestore(), path))).data()));
+  });
+  assert.ok(Array.isArray(result) && result.length === paths.length);
+  return result;
 }
 async function check(name, work) {
   try { await work(); results.push({ name, passed: true }); console.log(`PASS MANUAL: ${name}`); }
@@ -69,6 +74,14 @@ try {
     await seed(); const before = await snapshot();
     await assertFails(setDoc(doc(db, statePath), completion(value))); assert.deepEqual(await snapshot(), before);
   });
+  for (const path of [claimPath, assignmentPath]) for (const value of [3, null]) {
+    await check(`current or malformed legacy blocker ${path} generation ${value}`, async () => {
+      await seed(); await prior();
+      await env.withSecurityRulesDisabled(ctx => updateDoc(doc(ctx.firestore(), path), generation(value)));
+      const before = await snapshot();
+      await assertFails(setDoc(doc(db, statePath), completion())); assert.deepEqual(await snapshot(), before);
+    });
+  }
   await check('cancel current legacy claim while preserving active state', async () => {
     await seed('missing'); await prior('missing', 'active'); const before = await snapshot();
     await assertSucceeds(deleteDoc(doc(db, claimPath))); const after = await snapshot();
