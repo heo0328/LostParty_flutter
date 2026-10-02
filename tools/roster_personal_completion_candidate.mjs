@@ -12,7 +12,37 @@ export function personalCompletionCandidate(source) {
   assert.equal(rules.split(hook).length, 2);
   rules = rules.replace(hook, `${hook}
           && dePersonalCompletionBoundary(resource.data, request.resource.data)`);
+  // Dispatch only an actual personal-completion transition; preserve old paths otherwise.
+  function dispatch(marker, indent, operation, condition, validator) {
+    const anchor = rules.indexOf(marker);
+    const start = rules.indexOf(`${indent}allow ${operation}: if `, anchor);
+    const end = rules.indexOf(';', start);
+    assert.ok(anchor >= 0 && start > anchor && end > start, marker);
+    const prefix = `${indent}allow ${operation}: if `;
+    const original = rules.slice(start + prefix.length, end);
+    rules = rules.slice(0, start) + prefix + `(${condition}) ? (${validator}) : (${original})` + rules.slice(end);
+  }
+  dispatch('    match /recruitments/{recruitmentId} {', '      ', 'update',
+    "request.resource.data.get('lastCommandType', '') == 'personalComplete' && request.resource.data.lastCommandAt == request.time",
+    'dePersonalCompletionBoundary(resource.data, request.resource.data) && validPersonalCompletionRecruitmentUpdate(resource.data, request.resource.data)');
+  dispatch('      match /raidStates/{stateId} {', '        ', 'update',
+    "resource.data.status == 'active' && request.resource.data.status == 'completed' && request.resource.data.source == 'manual'",
+    'validPersonalRaidStateCompletion(playerId, stateId, resource.data, request.resource.data)');
+  const memberMarker = '      match /members/{playerId} {';
+  // Locate party members, not group members.
+  const partyStart = rules.indexOf('    match /recruitments/{recruitmentId} {');
+  const uniqueMemberMarker = rules.slice(partyStart, rules.indexOf(memberMarker, partyStart) + memberMarker.length);
+  dispatch(uniqueMemberMarker, '        ', 'delete', 'dePersonalCommand(recruitmentId)',
+    'validPersonalCompletionMemberDelete(recruitmentId, playerId, resource.data)');
+  dispatch(uniqueMemberMarker, '        ', 'update', 'dePersonalCommand(recruitmentId)',
+    "request.resource.data.characterId == resource.data.characterId && request.resource.data.get('ownershipRevision', 0) == resource.data.get('ownershipRevision', 0) && validApprovalPermissionChange(recruitmentId, playerId, resource.data, request.resource.data)");
+  dispatch('      match /raidListings/{recruitmentId} {', '        ', 'update', 'dePersonalCommand(recruitmentId)',
+    'validPersonalCompletionListingUpdate(recruitmentId, resource.data, request.resource.data)');
   return rules.replace('    function deManualCurrentOwnership(', `
+    function dePersonalCommand(roomId) {
+      let room = getAfter(recruitmentPath(roomId)).data;
+      return room.get('lastCommandType', '') == 'personalComplete' && room.lastCommandAt == request.time;
+    }
     function dePersonalCompletionBoundary(before, after) {
       let target = after.commandTargets[0];
       let memberPath = recruitmentMemberPath(before.recruitmentId, target.playerId);
