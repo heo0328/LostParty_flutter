@@ -8,6 +8,15 @@ export function personalCompletionCandidate(source) {
   const after = before.replace('return hasActiveBinding()', 'return deManualCurrentOwnership(oldData) && hasActiveBinding()');
   assert.notEqual(before, after);
   rules = rules.slice(0, start) + after + rules.slice(end);
+  for (const name of ['validPersonalCompletionRecruitmentUpdate', 'validPersonalRaidStateCompletion']) {
+    const from = rules.indexOf(`    function ${name}(`), to = rules.indexOf('\n    function ', from + 1);
+    const prior = rules.slice(from, to);
+    const next = prior.replace(/atomicRaidStateListedInTargets\(\s*(oldData|newData),\s*target.playerId,\s*target.stateId\s*\)/g,
+      '$1.raidStateTargets.hasAny([target])').replace('atomicRaidStateListedInTargets(recruitment, playerId, stateId)',
+      "recruitment.raidStateTargets.hasAny([{'playerId': playerId, 'stateId': stateId}])");
+    assert.notEqual(prior, next, name);
+    rules = rules.slice(0, from) + next + rules.slice(to);
+  }
   const hook = 'personalCompletionCommandMarker(request.resource.data)';
   assert.equal(rules.split(hook).length, 2);
   rules = rules.replace(hook, `${hook}
@@ -26,7 +35,7 @@ export function personalCompletionCandidate(source) {
     "request.resource.data.get('lastCommandType', '') == 'personalComplete' && request.resource.data.lastCommandAt == request.time",
     'dePersonalCompletionBoundary(resource.data, request.resource.data) && validPersonalCompletionRecruitmentUpdate(resource.data, request.resource.data)');
   dispatch('      match /raidStates/{stateId} {', '        ', 'update',
-    "resource.data.status == 'active' && request.resource.data.status == 'completed' && request.resource.data.source == 'manual'",
+    "resource.data.status == 'active' && request.resource.data.status == 'completed' && request.resource.data.source == 'manual' && resource.data.get('ownershipRevision', 0) == request.resource.data.get('ownershipRevision', 0)",
     'validPersonalRaidStateCompletion(playerId, stateId, resource.data, request.resource.data)');
   const memberMarker = '      match /members/{playerId} {';
   // Locate party members, not group members.
