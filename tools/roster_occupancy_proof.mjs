@@ -63,6 +63,13 @@ function assertHistory(before, after) {
   assert.deepEqual(after.claims,before.claims);
 }
 try {
+  for (const missing of ['room', 'member', 'state', 'event']) {
+    await check(`missing ${missing} rejects the entire replacement`, async () => {
+      await prepare(); const before = await snapshot();
+      await assertFails(createPublicRecruitmentTxn(db, { ownershipRevision: 3, omitWrites: [missing] }));
+      assert.deepEqual(await snapshot(), before);
+    });
+  }
   for (const status of ['active', 'completed']) {
     await check(`replace old ${status} through new recruitment and preserve history`, async () => {
       await prepare({ status, claim: status === 'completed' }); const before = await snapshot();

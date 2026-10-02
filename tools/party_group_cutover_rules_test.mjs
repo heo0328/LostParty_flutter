@@ -426,7 +426,7 @@ async function joinByCodeTxn(db) {
   });
 }
 
-async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale = false, ownerPlayerId = playerId, ownerCharacterId = characterId, ownershipRevision = null } = {}) {
+async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale = false, ownerPlayerId = playerId, ownerCharacterId = characterId, ownershipRevision = null, omitWrites = [] } = {}) {
   const { startedAt, endsAt } = cycleWindow(cycleKey);
   const stateId = `${ownerCharacterId}_${raidId}`;
   return runTransaction(db, async (tx) => {
@@ -437,7 +437,7 @@ async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale
     const eventRef = doc(db, 'partyEvents', eventId);
 
     if (replaceStale) tx.delete(raidStateRef);
-    tx.set(recruitmentRef, {
+    if (!omitWrites.includes('room')) tx.set(recruitmentRef, {
       schemaVersion: 2,
       recruitmentId: id,
       title: '공개 모집',
@@ -506,7 +506,7 @@ async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale
       lastCommandActorPlayerId: null,
       lastCommandAt: null,
     });
-    tx.set(memberRef, {
+    if (!omitWrites.includes('member')) tx.set(memberRef, {
       schemaVersion: 1,
       playerId: ownerPlayerId,
       characterId: ownerCharacterId,
@@ -527,7 +527,7 @@ async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale
       canApproveApplications: true,
       updatedAt: serverTimestamp(),
     });
-    tx.set(raidStateRef, {
+    if (!omitWrites.includes('state')) tx.set(raidStateRef, {
       schemaVersion: 1,
       playerId: ownerPlayerId,
       characterId: ownerCharacterId,
@@ -542,7 +542,7 @@ async function createPublicRecruitmentTxn(db, { id = recruitmentId, replaceStale
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
-    tx.set(eventRef, {
+    if (!omitWrites.includes('event')) tx.set(eventRef, {
       schemaVersion: 1,
       eventId,
       recruitmentId: id,
