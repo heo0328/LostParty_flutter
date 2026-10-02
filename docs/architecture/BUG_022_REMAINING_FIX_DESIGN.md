@@ -1686,3 +1686,25 @@ FirestoreActiveRaidAssignmentLookup는 읽기 transaction에서 현재 소유권
 실제 Firestore 캐시/오프라인·UI 오류 복구·구독 비용과 전체 화면 영향은 최종 회귀/실기기에서 확인한다.
 다음 단일 구간은 수동 완료/완료 취소 쓰기의 현재 소유권 차수 및 구세대 기록 보호다.
 운영 Rules 이식·lifecycle/정리 UI·전체 회귀·배포·실기기는 여전히 미완료다.
+
+#### 22.8 수동 완료 서버 경계 설계 (2026-10-02)
+
+코드 사실: app_router는 FirestoreWeeklyRaidStatusCommandRepository를 사용한다. 현재 구현은
+영향 조회 뒤 binding/state/claim/assignment를 transaction에서 읽지만 Character/계정 차수를
+확인하지 않는다. 수동 신규 state에는 차수가 없고 취소는 completed state와 기존 claim을 삭제한다.
+별도 pending 후처리도 관찰했던 신청 revision을 대조하지 않아 재신청과 경쟁할 수 있다.
+
+이번 첫 proof는 **파티 밖 수동 완료 및 개인 완료 삭제**로 제한한다. 활성 참가 중 완료의
+탈퇴·승계·마지막 1인 해산, 고아 정리, pending 후처리는 다음 결합 단계로 남긴다.
+- 신규 완료는 현재 활성 Character/계정의 일치하는 차수를 기록한다. 같은 Player 재취득으로
+  남은 낮은 차수 state는 직접 completed로 대체하고 과거 방/event/claim/assignment는 보존한다.
+- 낮은 차수 claim/assignment는 현재 완료를 막지 않는다. 동일/미래/손상 차수는 기존 차단을 유지한다.
+- 개인 취소는 현재 소유권 차수의 completed state/claim만 삭제한다. active, 다른 차수와
+  타인 상태는 보존한다. Rules의 다른 delete 분기로 우회되지 않는지 실제 요청으로 확인한다.
+- legacy 누락은 0이며 권위도 0일 때 정상 호환한다. 재취득 후 누락 쓰기는 현재 차수로 추정하지 않는다.
+- 현재 active 위에 수동 완료를 단독 쓰는 것은 거절한다. 참가 중 완료는 기존 원자 제거 경로만 사용한다.
+
+검증은 정상 신규/취소·legacy·과거 active/completed 대체·과거 이력 보존·current/future/손상 거절·
+소유권 변경 후 낡은 취소·복합 삭제 원자 거절이다. 정상 요청이 실패하면 거절 사례만으로 통과하지 않는다.
+후보는 demo 전용이며 서버 proof 후 앱의 영향 조회/최종 transaction/후처리를 함께 연결한다.
+운영 파일·배포·실기기·dev/main 통합은 이번 proof에 포함하지 않는다.
