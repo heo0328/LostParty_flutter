@@ -1708,3 +1708,20 @@ FirestoreActiveRaidAssignmentLookup는 읽기 transaction에서 현재 소유권
 소유권 변경 후 낡은 취소·복합 삭제 원자 거절이다. 정상 요청이 실패하면 거절 사례만으로 통과하지 않는다.
 후보는 demo 전용이며 서버 proof 후 앱의 영향 조회/최종 transaction/후처리를 함께 연결한다.
 운영 파일·배포·실기기·dev/main 통합은 이번 proof에 포함하지 않는다.
+
+실제 앱 연결의 후속 조건: 영향 조회와 최종 transaction 양쪽에서 공통 소유권 정책을 적용한다.
+현재 active 개인 완료는 state/member/slot의 같은 차수를 확인한 뒤 기존 제거 Write Plan을 재사용한다.
+확인창 이후 참가 방이 바뀌면 과거 확인을 새 방 탈퇴 승인으로 재사용하지 않는다. pending 후처리는
+관찰한 신청 ID/revision/Character/차수와 현재 완료 근거를 다시 확인하며 재신청을 종료하지 않는다.
+취소는 현재 완료만 삭제하고 과거 차수는 no-op 보존, unknown은 오류로 반환한다. 오래된 취소가
+새 차수 완료를 지우지 않도록 요청에 관찰한 차수/버전을 전달하는 경계도 UI부터 조사한다.
+구버전 weeklyRaidClaim create는 이번 후보에서 변경하지 않았으므로 운영 이식 전 호환/차단 게이트에
+포함한다. 신규 수동 저장은 raidState만 사용하고 old claim 쓰기를 되살리지 않는다.
+
+결과: 9180e77 / CI 36974569566 **22/22 통과**. SHA256
+`069a832fba6eb289d83dab89c3a8aaf5fb89ad88885e95a1dd10f27c4ecb954c`.
+정상 현재/legacy 완료·취소, 과거 active/completed 대체와 방/event/claim/assignment 보존,
+현재/미래/손상 기록 차단, 차수 위조·낡은 취소·복합 삭제 원자 거절을 확인했다.
+첫 CI 36974335271의 snapshot 수집 도구 오류는 교정했으며 당시 보존 판정은 근거에서 제외한다.
+Rules 컴파일 경고는 관찰되지 않았다. 거절 요청의 fallback 평가 한도 로그가 있어 모든 경로의
+비용 해결을 뜻하지 않는다. 참가 중 개인 완료/정리와 앱 연결은 다음 검증 범위다.
