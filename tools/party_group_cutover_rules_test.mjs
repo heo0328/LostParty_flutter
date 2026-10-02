@@ -905,7 +905,7 @@ async function verifyMemberRemovalListings(testEnv, db, applicantDb) {
   console.log('PASS: A2-B same-revision duplicate removal commits once');
 }
 
-async function directRejoinAfterKickTxn(db) {
+async function directRejoinAfterKickTxn(db, { ownershipRevision = null } = {}) {
   return runTransaction(db, async (tx) => {
     const recruitmentRef = doc(db, 'recruitments', recruitmentId);
     const memberRef = doc(db, 'recruitments', recruitmentId, 'members', joinerPlayerId);
@@ -924,6 +924,7 @@ async function directRejoinAfterKickTxn(db) {
       hasAvailableSlot: recruitment.memberCount + 1 < recruitment.maxMemberCount,
       partySlots: [...recruitment.partySlots, {
         playerId: joinerPlayerId, characterId: joinerCharacterId,
+      ...(ownershipRevision == null ? {} : { ownershipRevision }),
         role: 'support', classKey: '바드', partyIndex: 0, slotIndex: 3,
         countedAsNonGroupMember: false,
       }],
@@ -936,6 +937,7 @@ async function directRejoinAfterKickTxn(db) {
     tx.update(recruitmentRef, recruitmentPatch);
     tx.set(memberRef, {
       schemaVersion: 1, playerId: joinerPlayerId, characterId: joinerCharacterId,
+      ...(ownershipRevision == null ? {} : { ownershipRevision }),
       characterNameSnapshot: '가입자', classNameSnapshot: '바드',
       role: 'support', partyIndex: 0, slotIndex: 3,
       joinedAt: serverTimestamp(), joinedBy: joinerPlayerId,
@@ -946,7 +948,8 @@ async function directRejoinAfterKickTxn(db) {
     });
     tx.set(stateRef, {
       schemaVersion: 1, playerId: joinerPlayerId,
-      characterId: joinerCharacterId, raidId, difficultyId: 'normal',
+      characterId: joinerCharacterId,
+      ...(ownershipRevision == null ? {} : { ownershipRevision }), raidId, difficultyId: 'normal',
       recruitmentId, cycleKey, role: 'support', status: 'active',
       source: 'party', revision: 1,
       createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
@@ -2430,7 +2433,7 @@ async function main(rulesOverride = rules) {
   }
 }
 
-export { swapTwoDealersTxn, main as runCutoverRegression, seedGroupLinkedRoom, disbandApprovedRoomTxn, removeApprovedMemberTxn, seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn, approvePublicApplicationTxn, seedExpandedApprovedRoom, cycleWindow, offsetCycleKey, cycleKey, authUid, playerId, characterId, recruitmentId, raidId };
+export { directRejoinAfterKickTxn, swapTwoDealersTxn, main as runCutoverRegression, seedGroupLinkedRoom, disbandApprovedRoomTxn, removeApprovedMemberTxn, seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn, approvePublicApplicationTxn, seedExpandedApprovedRoom, cycleWindow, offsetCycleKey, cycleKey, authUid, playerId, characterId, recruitmentId, raidId };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main().catch((error) => {
   console.error('FAIL:', error);

@@ -2,10 +2,10 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, collection, getDoc, getDocs, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, getDoc, getDocs, setDoc, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { occupancyCandidate } from './roster_occupancy_candidate.mjs';
 import { seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn, approvePublicApplicationTxn,
-  seedExpandedApprovedRoom, swapTwoDealersTxn, authUid, recruitmentId, playerId, characterId, cycleKey, raidId } from './party_group_cutover_rules_test.mjs';
+  directRejoinAfterKickTxn, seedExpandedApprovedRoom, swapTwoDealersTxn, authUid, recruitmentId, playerId, characterId, cycleKey, raidId } from './party_group_cutover_rules_test.mjs';
 const rules = occupancyCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
 const directory = new URL('../coverage/roster-leader/', import.meta.url);
 fs.mkdirSync(directory, { recursive: true });
@@ -63,6 +63,80 @@ function assertHistory(before, after) {
   assert.deepEqual(after.claims,before.claims);
 }
 try {
+  await check('direct join replaces old state without application', async () => {
+    await prepare({ target: 'player-2', character: joinerCharacter });
+    await createPublicRecruitmentTxn(db, { ownershipRevision: 3 });
+    await env.withSecurityRulesDisabled(ctx => updateDoc(doc(ctx.firestore(), 'recruitments', recruitmentId),
+      { approvalPolicy: { mode: 'directJoin' } }));
+    const before = await snapshot();
+    await assertSucceeds(directRejoinAfterKickTxn(joiner, { ownershipRevision: 3 }));
+    const after = await snapshot(); assertHistory(before, after);
+    assert.equal(after.states[1][0].ownershipRevision, 3);
+  });
+  for (const change of ['ownership', 'occupancy']) {
+    await check(`approval rejects intervening ${change} change atomically`, async () => {
+      await prepare({ target: 'player-2', character: joinerCharacter });
+      await createPublicRecruitmentTxn(db, { ownershipRevision: 3 });
+      await applicationTxn(joiner, 'create', { ownershipRevision: 3 });
+      await env.withSecurityRulesDisabled(async ctx => {
+        const admin = ctx.firestore();
+        if (change === 'occupancy') {
+          await updateDoc(doc(admin, 'players', 'player-2', 'raidStates', `${joinerCharacter}_${raidId}`),
+            { ownershipRevision: 3, recruitmentId: 'new-current-room' });
+        } else {
+          const ref = doc(admin, 'characters', joinerCharacter);
+          const character = (await getDoc(ref)).data();
+          await updateDoc(ref, { ownershipRevision: 4, ownerPlayerId: 'new-owner' });
+          await updateDoc(doc(admin, 'gameAccounts', character.gameAccountId), { ownershipRevision: 4, ownerPlayerId: 'new-owner' });
+        }
+      });
+      const before = await snapshot();
+      if (change === 'ownership') {
+        // The connected approver reads Character and rejects before writing.
+        await assert.rejects(approvePublicApplicationTxn(db, { ownershipRevision: 3 }));
+      } else {
+        await assertFails(approvePublicApplicationTxn(db, { ownershipRevision: 3 }));
+      }
+      assert.deepEqual(await snapshot(), before);
+    });
+  }
+  await check('maximum eight character change replaces prior generation state', async () => {
+    await seed(3); await createPublicRecruitmentTxn(db, { ownershipRevision: 3 });
+    await applicationTxn(joiner, 'create', { ownershipRevision: 3 });
+    await approvePublicApplicationTxn(db, { ownershipRevision: 3 });
+    await seedExpandedApprovedRoom(env, 8);
+    const replacement = 'replacement-character';
+    await env.withSecurityRulesDisabled(async ctx => {
+      const admin = ctx.firestore();
+      const current = (await getDoc(doc(admin, 'characters', joinerCharacter))).data();
+      await setDoc(doc(admin, 'characters', replacement), { ...current });
+      const ref = doc(admin, 'recruitments', recruitmentId);
+      const room = (await getDoc(ref)).data();
+      const last = (items, key) => [...items.filter(x => key(x) !== 'player-2'), ...items.filter(x => key(x) === 'player-2')];
+      await updateDoc(ref, { partySlots: last(room.partySlots, x=>x.playerId),
+        raidStateTargets: last(room.raidStateTargets, x=>x.playerId), memberPlayerIds: last(room.memberPlayerIds,x=>x) });
+    });
+    await oldState({ target: 'player-2', character: replacement, status: 'completed', claim: true });
+    const before = await snapshot();
+    await assertSucceeds(runTransaction(joiner, async tx => {
+      const roomRef=doc(joiner,'recruitments',recruitmentId), memberRef=doc(joiner,'recruitments',recruitmentId,'members','player-2');
+      const room=(await tx.get(roomRef)).data(); await tx.get(memberRef);
+      const next=room.revision+1;
+      tx.update(roomRef,{partySlots:room.partySlots.map(s=>s.playerId==='player-2'?{...s,characterId:replacement,ownershipRevision:3}:s),
+        raidStateTargets:room.raidStateTargets.map(t=>t.playerId==='player-2'?{...t,stateId:`${replacement}_${raidId}`}:t),revision:next,updatedAt:serverTimestamp()});
+      tx.update(memberRef,{characterId:replacement,ownershipRevision:3,characterChangedAt:serverTimestamp(),updatedAt:serverTimestamp()});
+      tx.delete(doc(joiner,'players','player-2','raidStates',`${joinerCharacter}_${raidId}`));
+      tx.set(doc(joiner,'players','player-2','raidStates',`${replacement}_${raidId}`),{
+        schemaVersion:1,playerId:'player-2',characterId:replacement,raidId,recruitmentId,cycleKey,
+        role:'support',status:'active',source:'party',revision:1,ownershipRevision:3,updatedAt:serverTimestamp()});
+      const eventId=`characterChanged_${recruitmentId}_${next}`;
+      tx.set(doc(joiner,'partyEvents',eventId),{schemaVersion:1,eventId,recruitmentId,type:'characterChanged',
+        commandId:eventId,commandRevision:next,audiencePlayerIds:room.memberPlayerIds,actorPlayerId:'player-2',occurredAt:serverTimestamp()});
+    }));
+    const after=await snapshot(); assertHistory(before,after);
+    assert.equal(after.room.partySlots[7].characterId,replacement);
+    assert.equal(after.states[1].length,1);
+  });
   for (const missing of ['room', 'member', 'state', 'event']) {
     await check(`missing ${missing} rejects the entire replacement`, async () => {
       await prepare(); const before = await snapshot();
