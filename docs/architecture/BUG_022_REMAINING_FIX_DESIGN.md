@@ -1568,3 +1568,25 @@ A→B→A의 같은 Player 재취득을 검증해야 한다. 기존 상태를 �
 - 완료 조건: active/completed/legacy 대체 성공, 동일·미래·손상 차수 거절, 승인 경쟁·부분 쓰기 원자 거절,
   과거 room/event 보존을 demo에서 먼저 확인한 뒤 실제 점유 조회 및 요청/Write Plan에 연결한다.
   소유권 조회 실패만으로 state를 없다고 처리하지 않는다. 운영 파일 이식·실기기는 전체 연결 후다.
+
+#### 22.3 H3 구세대 점유 서버 proof 결과 (2026-10-02)
+
+7165fec / CI 36886677940의 13건 통과 후, 필수 쓰기 누락 4건을 추가한 072df61 /
+CI 36965088067은 17/17 통과했다. 후보 SHA256:
+`1e492574901ec7a0ffe44a687de655e82c34286d178d7203a933a8c8cd044ae9`.
+
+- 현재 계정/Character 차수 3 아래의 active/completed/legacy 0 state 대체를 확인했다.
+  기존 room/event/weekly claim은 보존한다. 신규 state revision은 기존 생성 계약대로 1이며
+  ownershipRevision과 함께 새 참가를 구분한다. 원정대 인증 자체를 이 proof에서 재실행한 것은 아니다.
+- 신청 시 구세대 state를 보존하고 승인 시 원자 대체한다. 승인자의 private state get은 거절된다.
+- 같은 차수/미래/null/음수/비정수 state, 동일/null 차수 claim은 신규 이용으로 덮어쓰지 못한다.
+- room/member/state/event 각 누락 거래, 기존 room/event를 재사용하는 state 단독 대체는 원자 거절된다.
+  같은 구세대 state를 대상으로 경쟁하는 두 신규 모집은 하나만 저장된다.
+- 서버 신규 대체 경로는 기존 참가 생성 validator, 최신 소유권과 차수, 새 이벤트 및 room revision 증가를
+  함께 요구한다. 운영 firestore.rules는 무변경이며 demo 후보에만 반영했다.
+
+잔여: 신청 이후 소유권 변경/점유 변경과 승인 경쟁 결합, 직접 가입 및 Character 변경의 구세대 대체,
+수동 완료, H3 후보와 기존 lifecycle/정리 전체 결합 회귀는 별도 검증 대상이다.
+다음 앱 연결은 공통 inspector와 별도 create 점유 판정을 같은 소유권 정책에 맞춘다.
+조회 실패/손상은 unknown으로 거절하고 구세대 데이터는 선삭제하지 않는다. weekly claim 읽기도
+같은 판정을 사용한다. 후보 목록·수동 완료·반복방 정리 UI·운영 이식까지 완료로 확대하지 않는다.

@@ -1,3 +1,15 @@
+# 2026-10-02 DE2-H3 — 구세대 점유 원자 대체 서버 proof
+
+- 중단된 CI 36886677940은 13건 통과. 필수 쓰기 누락 4건을 추가한 072df61 /
+  CI 36965088067은 17/17 통과했다. JS 문법·git diff --check 통과.
+- 새로 검증한 흐름: 과거 active/completed/legacy 점유가 있어도 현재 차수로 신규 생성·신청·승인 가능.
+  신청은 과거 state를 보존하고 승인 시 교체한다. 승인자의 private state 조회는 계속 거절된다.
+- 보존 확인: 과거 room/event/claim, 현재·손상 차수의 state, 누락 쓰기 실패의 전체 데이터,
+  두 생성 경쟁에서 하나만 저장. 미확인 범위와 후보 해시는 설계 §22.3을 따른다.
+- Flutter 앱 연결·운영 Rules 이식·배포·실기기는 이번 서버 proof에 포함하지 않았다.
+  기존 22 실패/51 analyze 유지. 사용자 초기화 변경 보존, 전용 브랜치 checkpoint commit/push,
+  dev/main 미반영. 다음은 실제 점유 조회·생성/신청/가입 저장 연결이다.
+
 # 2026-10-02 DE2-H3 — 참가 차수 서버 경계 검증
 
 - 중단 지점의 후보 생성기를 복구했다. 최초 CI 36876958794의 컴파일 오류는 trailing-space 검색이
@@ -4076,3 +4088,5 @@
 - 만료된 `continueTogether=false` 방만 진행 중 원본 목록에서 제외하고 다음 단계의 단건 종료 대상 ID로 보존한다. 현재 주차 방, 만료 반복방과 `completed` 해산 대기 방은 기존 표시를 유지한다. `cycleEndsAt`이 없는 과거 문서도 기존처럼 표시한다.
 - 새 미완료 종료 명령이 아직 없으므로 숨긴 1회성 방은 기존 반복방 reconciliation 호출에 보내지 않는다. 이 단계에서는 Firestore 쓰기, Rules, 일반 완료·해산, 추방·자리 변경과 참가자 `raidState`를 변경하지 않았다.
 - 순수 정책·읽기 매퍼·목록 ViewModel 표적 테스트 34건과 변경 파일 `flutter analyze`가 통과했다. F6-F 전체 완료가 아니라 1단계 완료이며, 다음은 `raidState` 비의존 `incompleteEnded` 원자 명령과 Rules 구현이다.
+
+- CI 로그에서 Rules 컴파일 경고는 관찰되지 않았다. Node/Actions 사용 중단 경고는 별도 도구 경고다.
