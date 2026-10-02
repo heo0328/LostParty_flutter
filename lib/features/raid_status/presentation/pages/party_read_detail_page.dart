@@ -131,12 +131,16 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
           _pendingOwnershipCleanup[member.playerId] ??
           await repository.inspect(widget.recruitmentId, member.playerId);
       if (!mounted) return;
+      final successionMessage = observation.kind == CompletedCleanupKind.leader
+          ? '\n공대장은 ${observation.successorName} 님에게 넘어갑니다.'
+          : '';
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('다음 주 참가 정리'),
           content: Text(
-            '${member.characterName ?? '선택한 참가자'}의 캐릭터 소유권이 변경되었습니다. 다음 주 명단에서 제외할까요? 기존 완료 기록과 그룹 가입은 유지됩니다.',
+            '${member.characterName ?? '선택한 참가자'}의 캐릭터 소유권이 변경되었습니다. 다음 주 명단에서 제외할까요? 기존 완료 기록과 그룹 가입은 유지됩니다.$successionMessage',
+            // Successor is confirmed from the server observation, not UI order.
           ),
           actions: [
             TextButton(
@@ -160,17 +164,19 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       );
     } on StateError catch (error) {
       _pendingOwnershipCleanup.remove(member.playerId);
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('참가 정보를 확인하거나 정리하지 못했습니다. 연결 상태를 확인한 뒤 다시 시도해 주세요.'),
           ),
         );
+      }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -1095,11 +1101,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                     summary.continueTogether &&
                     summary.currentCycleStatus == 'completed' &&
                     summary.memberCount > 1)
-                  for (final member in _members.where(
-                    (m) =>
-                        m.playerId != summary.leaderUserId &&
-                        (_isLeader(summary) || m.playerId == widget.playerId),
-                  ))
+                  for (final member in _members)
                     ListTile(
                       title: const Text('다음 주 참가 자격 확인'),
                       subtitle: Text(member.characterName ?? '참가자'),

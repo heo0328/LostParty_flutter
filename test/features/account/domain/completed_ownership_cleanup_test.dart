@@ -3,6 +3,125 @@ import 'package:lost_party/features/recruitment_list/domain/entities/completed_o
 import 'package:lost_party/features/account/domain/game_account_ownership_snapshot.dart';
 
 void main() {
+  test('eight member peer cleanup converges to first remaining successor', () {
+    var current = <String, dynamic>{
+      'recruitmentId': 'room',
+      'schemaVersion': 2,
+      'revision': 1,
+      'raidId': 'raid',
+      'status': 'active',
+      'currentCycleStatus': 'completed',
+      'continueTogether': true,
+      'leaderPlayerId': 'p0',
+      'memberCount': 8,
+      'dealerCount': 8,
+      'supportCount': 0,
+      'nonGroupMemberCount': 0,
+      'partySlots': [
+        for (var i = 0; i < 8; i++)
+          {
+            'playerId': 'p$i',
+            'characterId': 'c$i',
+            'role': 'dealer',
+            'countedAsNonGroupMember': false,
+          },
+      ],
+      'memberPlayerIds': [for (var i = 0; i < 8; i++) 'p$i'],
+      'raidStateTargets': [
+        for (var i = 0; i < 8; i++)
+          {'playerId': 'p$i', 'stateId': 'c${i}_raid'},
+      ],
+    };
+    for (var i = 1; i < 7; i++) {
+      final command = CompletedOwnershipCleanup(
+        roomId: 'room',
+        actorId: 'p7',
+        targetId: 'p$i',
+        characterId: 'c$i',
+        revision: current['revision'] as int,
+        targetIndex: 1,
+        actorIndex: (current['memberCount'] as int) - 1,
+        observedRevision: 3,
+        memberUpdatedAt: 100,
+        eventId: 'peer$i',
+        kind: CompletedCleanupKind.peer,
+        leaderIndex: 0,
+        observedLeaderRevision: 3,
+      );
+      final patch = command.patch(current, 200);
+      expect(patch['lastCommandType'], 'cleanupCompletedPeerOwnership');
+      final event = Map<String, dynamic>.from(command.event(current, 200));
+      expect(command.matchesReceipt(event), isTrue);
+      expect(
+        command.matchesReceipt({...event, 'observedLeaderRevision': 4}),
+        isFalse,
+      );
+      current = {...current, ...patch};
+    }
+    final leader = CompletedOwnershipCleanup(
+      roomId: 'room',
+      actorId: 'p7',
+      targetId: 'p0',
+      characterId: 'c0',
+      revision: 7,
+      targetIndex: 0,
+      actorIndex: 1,
+      observedRevision: 3,
+      memberUpdatedAt: 100,
+      eventId: 'leader',
+      kind: CompletedCleanupKind.leader,
+      successorIndex: 1,
+      successorId: 'p7',
+      successorName: '후임',
+      successorClass: '클래스',
+    );
+    final patch = leader.patch(current, 200);
+    expect(patch['memberPlayerIds'], ['p7']);
+    expect(patch['leaderPlayerId'], 'p7');
+    expect(leader.listingPatch(patch)['leaderCharacterNameSnapshot'], '후임');
+    expect(patch.containsKey('currentCycleStatus'), isFalse);
+    final event = Map<String, dynamic>.from(leader.event(current, 200));
+    expect(leader.matchesReceipt(event), isTrue);
+    expect(
+      leader.matchesReceipt({...event, 'successorPlayerId': 'other'}),
+      isFalse,
+    );
+  });
+  test('succession refuses skipping the first remaining member', () {
+    final command = CompletedOwnershipCleanup(
+      roomId: 'r',
+      actorId: 'p2',
+      targetId: 'p0',
+      characterId: 'c0',
+      revision: 1,
+      targetIndex: 0,
+      actorIndex: 2,
+      observedRevision: 2,
+      memberUpdatedAt: 1,
+      eventId: 'e',
+      kind: CompletedCleanupKind.leader,
+      successorIndex: 2,
+      successorId: 'p2',
+      successorName: 'n',
+      successorClass: 'c',
+    );
+    expect(
+      () => command.patch({
+        'recruitmentId': 'r',
+        'revision': 1,
+        'schemaVersion': 2,
+        'status': 'active',
+        'currentCycleStatus': 'completed',
+        'continueTogether': true,
+        'memberCount': 3,
+        'leaderPlayerId': 'p0',
+        'partySlots': [
+          for (var i = 0; i < 3; i++) {'playerId': 'p$i', 'characterId': 'c$i'},
+        ],
+      }, 1),
+      throwsStateError,
+    );
+  });
   final room = <String, dynamic>{
     'recruitmentId': 'room',
     'schemaVersion': 2,
@@ -171,3 +290,5 @@ void main() {
     },
   );
 }
+
+// Deliberately uses each current aggregate as the next command boundary.

@@ -52,11 +52,8 @@ class FirestoreCompletedOwnershipCleanupRepository
     final slots = List<Map<String, dynamic>>.from(room['partySlots'] as List);
     final ti = slots.indexWhere((s) => s['playerId'] == targetId);
     final ai = slots.indexWhere((s) => s['playerId'] == actorId);
-    if (ti < 0 ||
-        ai < 0 ||
-        targetId == room['leaderPlayerId'] ||
-        (actorId != targetId && actorId != room['leaderPlayerId'])) {
-      throw StateError('본인 또는 현재 공대장만 일반 참가자를 확인할 수 있습니다.');
+    if (ti < 0 || ai < 0) {
+      throw StateError('기존 참가자만 참가 자격을 확인할 수 있습니다.');
     }
     final target = slots[ti];
     final characterId = target['characterId'] as String;
@@ -85,7 +82,14 @@ class FirestoreCompletedOwnershipCleanupRepository
     )) {
       throw StateError('소유권 상실이 확인되지 않아 정리하지 않습니다.');
     }
-    if (actorId != targetId) {
+    final leaderTarget = targetId == room['leaderPlayerId'];
+    var kind = leaderTarget
+        ? CompletedCleanupKind.leader
+        : CompletedCleanupKind.participant;
+    int? leaderIndex, leaderRevision, successorIndex;
+    String? successorId, successorName, successorClass;
+    Object? successorUpdatedAt;
+    if (actorId != targetId || leaderTarget) {
       final actor = slots[ai];
       final current = await _authority(
         tx,
@@ -94,8 +98,68 @@ class FirestoreCompletedOwnershipCleanupRepository
       );
       if (current.classifyParticipation(actor) !=
           GameAccountOwnershipCondition.current) {
-        throw StateError('현재 공대장 참가 자격을 확인할 수 없습니다.');
+        throw StateError('요청자의 현재 참가 자격을 확인할 수 없습니다.');
       }
+    }
+    if (!leaderTarget &&
+        actorId != targetId &&
+        actorId != room['leaderPlayerId']) {
+      kind = CompletedCleanupKind.peer;
+      leaderIndex = slots.indexWhere(
+        (s) => s['playerId'] == room['leaderPlayerId'],
+      );
+      if (leaderIndex < 0) throw StateError('공대장 정보를 확인할 수 없습니다.');
+      final leader = slots[leaderIndex];
+      final leaderAuthority = await _authority(
+        tx,
+        leader['playerId'] as String,
+        leader['characterId'] as String,
+      );
+      if (!CompletedOwnershipCleanup.isStale(
+        leaderAuthority,
+        leader.containsKey('ownershipRevision')
+            ? leader['ownershipRevision']
+            : 0,
+      )) {
+        throw StateError('공대장 자격이 유지되거나 확인되지 않아 다른 참가자를 정리할 수 없습니다.');
+      }
+      leaderRevision = leaderAuthority.revision;
+    }
+    if (leaderTarget) {
+      if (slots.length < 2) throw StateError('마지막 참가자 해산은 별도 확인이 필요합니다.');
+      successorIndex = ti == 0 ? 1 : 0;
+      final successor = slots[successorIndex];
+      successorId = successor['playerId'] as String;
+      final successorAuthority = await _authority(
+        tx,
+        successorId,
+        successor['characterId'] as String,
+      );
+      if (successorAuthority.classifyParticipation(successor) !=
+          GameAccountOwnershipCondition.current) {
+        throw StateError(
+          '첫 후임의 참가 자격을 확인할 수 없습니다. 앞순번의 무효 참가자를 먼저 확인·정리해 주세요.',
+        );
+      }
+      final nextMember = (await tx.get(
+        firestore
+            .collection('recruitments')
+            .doc(roomId)
+            .collection('members')
+            .doc(successorId),
+      )).data();
+      if (nextMember == null ||
+          nextMember['playerId'] != successorId ||
+          nextMember['characterId'] != successor['characterId'] ||
+          successorAuthority.classifyParticipation(nextMember) !=
+              GameAccountOwnershipCondition.current ||
+          nextMember['characterNameSnapshot'] is! String ||
+          nextMember['classNameSnapshot'] is! String) {
+        throw StateError('후임 참가 기록을 확인할 수 없습니다.');
+      }
+      successorName = nextMember['characterNameSnapshot'] as String;
+      successorClass = nextMember['classNameSnapshot'] as String;
+      successorUpdatedAt = nextMember['updatedAt'];
     }
     final observation = CompletedOwnershipCleanup(
       roomId: roomId,
@@ -108,6 +172,14 @@ class FirestoreCompletedOwnershipCleanupRepository
       observedRevision: authority.revision!,
       memberUpdatedAt: member['updatedAt'],
       eventId: eventId,
+      kind: kind,
+      leaderIndex: leaderIndex,
+      observedLeaderRevision: leaderRevision,
+      successorIndex: successorIndex,
+      successorId: successorId,
+      successorName: successorName,
+      successorClass: successorClass,
+      successorUpdatedAt: successorUpdatedAt,
     );
     observation.patch(
       room,
@@ -135,56 +207,69 @@ class FirestoreCompletedOwnershipCleanupRepository
       });
 
   @override
-  Future<void> execute(CompletedOwnershipCleanup observation) =>
-      firestore.runTransaction((tx) async {
-        final actor = await _actor(tx);
-        if (actor != observation.actorId) {
-          throw StateError('사용자가 변경되었습니다. 다시 확인해 주세요.');
-        }
-        final ref = firestore
-            .collection('recruitments')
-            .doc(observation.roomId);
-        final room = (await tx.get(ref)).data();
-        if (room == null) throw StateError('모집을 찾을 수 없습니다.');
-        if (room['revision'] != observation.revision) {
-          final receipt = (await tx.get(
-            firestore.collection('partyEvents').doc(observation.eventId),
-          )).data();
-          if (observation.matchesReceipt(receipt)) return;
-          throw StateError('모집이 변경되었습니다. 다시 확인해 주세요.');
-        }
-        final latest = await _inspect(
-          tx,
-          observation.roomId,
-          observation.targetId,
-          actor,
-          room,
-          observation.eventId,
-        );
-        if (latest.characterId != observation.characterId ||
-            latest.observedRevision != observation.observedRevision ||
-            latest.memberUpdatedAt != observation.memberUpdatedAt ||
-            latest.targetIndex != observation.targetIndex ||
-            latest.actorIndex != observation.actorIndex) {
-          throw StateError('확인한 참가 정보가 변경되었습니다. 다시 확인해 주세요.');
-        }
-        final now = FieldValue.serverTimestamp();
-        final patch = observation.patch(room, now);
-        tx.update(ref, patch);
-        tx.delete(ref.collection('members').doc(observation.targetId));
-        if (room['visibility'] == 'group') {
-          tx.update(
-            firestore
-                .collection('groups')
-                .doc(room['groupId'] as String)
-                .collection('raidListings')
-                .doc(observation.roomId),
-            observation.listingPatch(patch),
-          );
-        }
-        tx.set(
-          firestore.collection('partyEvents').doc(observation.eventId),
-          observation.event(room, now),
-        );
+  Future<void> execute(
+    CompletedOwnershipCleanup observation,
+  ) => firestore.runTransaction((tx) async {
+    final actor = await _actor(tx);
+    if (actor != observation.actorId) {
+      throw StateError('사용자가 변경되었습니다. 다시 확인해 주세요.');
+    }
+    final ref = firestore.collection('recruitments').doc(observation.roomId);
+    final room = (await tx.get(ref)).data();
+    if (room == null) throw StateError('모집을 찾을 수 없습니다.');
+    if (room['revision'] != observation.revision) {
+      final receipt = (await tx.get(
+        firestore.collection('partyEvents').doc(observation.eventId),
+      )).data();
+      if (observation.matchesReceipt(receipt)) return;
+      throw StateError('모집이 변경되었습니다. 다시 확인해 주세요.');
+    }
+    final latest = await _inspect(
+      tx,
+      observation.roomId,
+      observation.targetId,
+      actor,
+      room,
+      observation.eventId,
+    );
+    if (latest.characterId != observation.characterId ||
+        latest.observedRevision != observation.observedRevision ||
+        latest.memberUpdatedAt != observation.memberUpdatedAt ||
+        latest.targetIndex != observation.targetIndex ||
+        latest.actorIndex != observation.actorIndex ||
+        latest.kind != observation.kind ||
+        latest.leaderIndex != observation.leaderIndex ||
+        latest.observedLeaderRevision != observation.observedLeaderRevision ||
+        latest.successorId != observation.successorId ||
+        latest.successorIndex != observation.successorIndex ||
+        latest.successorUpdatedAt != observation.successorUpdatedAt ||
+        latest.successorName != observation.successorName ||
+        latest.successorClass != observation.successorClass) {
+      throw StateError('확인한 참가 정보가 변경되었습니다. 다시 확인해 주세요.');
+    }
+    final now = FieldValue.serverTimestamp();
+    final patch = observation.patch(room, now);
+    tx.update(ref, patch);
+    tx.delete(ref.collection('members').doc(observation.targetId));
+    if (observation.kind == CompletedCleanupKind.leader) {
+      tx.update(ref.collection('members').doc(observation.successorId), {
+        'canApproveApplications': true,
+        'updatedAt': now,
       });
+    }
+    if (room['visibility'] == 'group') {
+      tx.update(
+        firestore
+            .collection('groups')
+            .doc(room['groupId'] as String)
+            .collection('raidListings')
+            .doc(observation.roomId),
+        observation.listingPatch(patch),
+      );
+    }
+    tx.set(
+      firestore.collection('partyEvents').doc(observation.eventId),
+      observation.event(room, now),
+    );
+  });
 }

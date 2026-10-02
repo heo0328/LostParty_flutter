@@ -1,5 +1,7 @@
 import '../../../account/domain/game_account_ownership_snapshot.dart';
 
+enum CompletedCleanupKind { participant, peer, leader }
+
 /// A single completed-party member removal; state/history are never targets.
 class CompletedOwnershipCleanup {
   CompletedOwnershipCleanup({
@@ -13,10 +15,32 @@ class CompletedOwnershipCleanup {
     required this.observedRevision,
     required this.memberUpdatedAt,
     required this.eventId,
+    this.kind = CompletedCleanupKind.participant,
+    this.leaderIndex,
+    this.observedLeaderRevision,
+    this.successorIndex,
+    this.successorId,
+    this.successorName,
+    this.successorClass,
+    this.successorUpdatedAt,
   });
   final String roomId, actorId, targetId, characterId, eventId;
   final int revision, targetIndex, actorIndex, observedRevision;
   final Object? memberUpdatedAt;
+  final CompletedCleanupKind kind;
+  final int? leaderIndex, observedLeaderRevision, successorIndex;
+  final String? successorId, successorName, successorClass;
+  final Object? successorUpdatedAt;
+  String get commandType => switch (kind) {
+    CompletedCleanupKind.participant => 'cleanupCompletedOwnership',
+    CompletedCleanupKind.peer => 'cleanupCompletedPeerOwnership',
+    CompletedCleanupKind.leader => 'cleanupCompletedLeaderOwnership',
+  };
+  String get eventType => switch (kind) {
+    CompletedCleanupKind.participant => 'ownershipParticipantRemoved',
+    CompletedCleanupKind.peer => 'ownershipPeerRemoved',
+    CompletedCleanupKind.leader => 'ownershipLeaderRemoved',
+  };
 
   static bool isStale(
     GameAccountOwnershipSnapshot authority,
@@ -33,7 +57,7 @@ class CompletedOwnershipCleanup {
     'eventId': eventId,
     'commandId': eventId,
     'recruitmentId': roomId,
-    'type': 'ownershipParticipantRemoved',
+    'type': eventType,
     'commandRevision': revision + 1,
     'expectedRevision': revision,
     'actorPlayerId': actorId,
@@ -42,20 +66,35 @@ class CompletedOwnershipCleanup {
     'observedOwnershipRevision': observedRevision,
     'audiencePlayerIds': List<String>.from(room['memberPlayerIds'] as List),
     'occurredAt': timestamp,
+    if (kind == CompletedCleanupKind.peer) ...{
+      'leaderPlayerId': room['leaderPlayerId'],
+      'observedLeaderRevision': observedLeaderRevision,
+    },
+    if (kind == CompletedCleanupKind.leader) ...{
+      'successorPlayerId': successorId,
+      'priorGenerations': List<int>.filled(
+        (room['partySlots'] as List).length,
+        0,
+      ),
+    },
   };
 
   bool matchesReceipt(Map<String, dynamic>? data) =>
       data != null &&
       data['eventId'] == eventId &&
       data['commandId'] == eventId &&
-      data['type'] == 'ownershipParticipantRemoved' &&
+      data['type'] == eventType &&
       data['recruitmentId'] == roomId &&
       data['actorPlayerId'] == actorId &&
       data['targetPlayerId'] == targetId &&
       data['targetCharacterId'] == characterId &&
       data['expectedRevision'] == revision &&
       data['commandRevision'] == revision + 1 &&
-      data['observedOwnershipRevision'] == observedRevision;
+      data['observedOwnershipRevision'] == observedRevision &&
+      (kind != CompletedCleanupKind.peer ||
+          data['observedLeaderRevision'] == observedLeaderRevision) &&
+      (kind != CompletedCleanupKind.leader ||
+          data['successorPlayerId'] == successorId);
 
   Map<String, Object?> patch(Map<String, dynamic> room, Object timestamp) {
     final slots = List<Map<String, dynamic>>.from(room['partySlots'] as List);
@@ -77,10 +116,28 @@ class CompletedOwnershipCleanup {
     final target = slots[targetIndex];
     if (target['playerId'] != targetId ||
         target['characterId'] != characterId ||
-        targetId == room['leaderPlayerId'] ||
         slots[actorIndex]['playerId'] != actorId ||
-        (actorId != targetId && actorId != room['leaderPlayerId'])) {
+        (kind == CompletedCleanupKind.participant &&
+            (targetId == room['leaderPlayerId'] ||
+                (actorId != targetId && actorId != room['leaderPlayerId'])))) {
       throw StateError('일반 참가자 정리 권한이 없습니다.');
+    }
+    if (kind == CompletedCleanupKind.peer &&
+        (targetId == room['leaderPlayerId'] ||
+            leaderIndex == null ||
+            leaderIndex! < 0 ||
+            leaderIndex! >= slots.length ||
+            slots[leaderIndex!]['playerId'] != room['leaderPlayerId'] ||
+            observedLeaderRevision == null)) {
+      throw StateError('공대장 소유권 확인이 필요합니다.');
+    }
+    if (kind == CompletedCleanupKind.leader &&
+        (targetId != room['leaderPlayerId'] ||
+            successorIndex != (targetIndex == 0 ? 1 : 0) ||
+            slots[successorIndex!]['playerId'] != successorId ||
+            successorName == null ||
+            successorClass == null)) {
+      throw StateError('첫 잔여 참가자만 후임이 될 수 있습니다.');
     }
     final remaining = [...slots]..removeAt(targetIndex);
     final raidId = room['raidId'] as String;
@@ -109,7 +166,7 @@ class CompletedOwnershipCleanup {
       'updatedAt': timestamp,
       'commandTargets': <Object>[],
       'lastCommandId': eventId,
-      'lastCommandType': 'cleanupCompletedOwnership',
+      'lastCommandType': commandType,
       'lastCommandActorPlayerId': actorId,
       'lastCommandAt': timestamp,
       'ownershipCleanup': {
@@ -117,6 +174,19 @@ class CompletedOwnershipCleanup {
         'targetIndex': targetIndex,
         'actorIndex': actorIndex,
         'observedOwnershipRevision': observedRevision,
+        if (kind == CompletedCleanupKind.peer) ...{
+          'leaderIndex': leaderIndex,
+          'observedLeaderRevision': observedLeaderRevision,
+        },
+        if (kind == CompletedCleanupKind.leader) ...{
+          'successorIndex': successorIndex,
+          'priorGenerations': List<int>.filled(slots.length, 0),
+        },
+      },
+      if (kind == CompletedCleanupKind.leader) ...{
+        'leaderPlayerId': successorId,
+        'leaderCharacterNameSnapshot': successorName,
+        'leaderClassNameSnapshot': successorClass,
       },
     };
   }
@@ -135,6 +205,13 @@ class CompletedOwnershipCleanup {
       key: patch[key],
     'sourceRevision': patch['revision'],
     'updatedAt': patch['updatedAt'],
+    if (kind == CompletedCleanupKind.leader)
+      for (final key in const [
+        'leaderPlayerId',
+        'leaderCharacterNameSnapshot',
+        'leaderClassNameSnapshot',
+      ])
+        key: patch[key],
   };
 }
 
