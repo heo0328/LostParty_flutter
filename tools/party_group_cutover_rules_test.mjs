@@ -1425,9 +1425,21 @@ async function completeActiveMemberTxn(
   db,
   actorPlayerId,
   actorCharacterId,
-  { forgedLeaderSnapshot = false } = {},
+  { forgedLeaderSnapshot = false, omitWrites = [] } = {},
 ) {
-  return runTransaction(db, async (tx) => {
+  return runTransaction(db, async (transaction) => {
+    const tx = {
+      get: ref => transaction.get(ref),
+      ...Object.fromEntries(['set', 'update', 'delete'].map(method => [method, (ref, ...args) => {
+        const kind = ref.path.startsWith('partyEvents/') ? 'event'
+          : ref.path.includes('/raidStates/') ? 'state'
+          : ref.path.includes('/raidListings/') ? 'listing'
+          : ref.path === `recruitments/${recruitmentId}` ? 'room'
+          : ref.path === `recruitments/${recruitmentId}/members/${actorPlayerId}` ? 'member'
+          : ref.path.includes('/members/') ? 'successor' : 'group';
+        if (!omitWrites.includes(kind)) transaction[method](ref, ...args);
+      }])),
+    };
     const recruitmentRef = doc(db, 'recruitments', recruitmentId);
     const memberRef = doc(db, 'recruitments', recruitmentId, 'members', actorPlayerId);
     const stateId = `${actorCharacterId}_${raidId}`;
@@ -1523,6 +1535,8 @@ async function completeActiveMemberTxn(
     });
   });
 }
+
+export { completeActiveMemberTxn };
 
 async function main(rulesOverride = rules) {
   console.log('cycleKey', cycleKey);

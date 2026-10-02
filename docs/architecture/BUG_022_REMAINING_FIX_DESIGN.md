@@ -1725,3 +1725,17 @@ FirestoreActiveRaidAssignmentLookup는 읽기 transaction에서 현재 소유권
 첫 CI 36974335271의 snapshot 수집 도구 오류는 교정했으며 당시 보존 판정은 근거에서 제외한다.
 Rules 컴파일 경고는 관찰되지 않았다. 거절 요청의 fallback 평가 한도 로그가 있어 모든 경로의
 비용 해결을 뜻하지 않는다. 참가 중 개인 완료/정리와 앱 연결은 다음 검증 범위다.
+
+#### 22.9 참가 중 개인 완료 서버 경계 (2026-10-02)
+
+기존 실제 Router → WeeklyRaidStatusCommandRepository._completeActiveState → MemberRemovalWritePlan은
+본인 제거·필요 후임 권한·state 완료·event·그룹 listing/count를 한 transaction에 저장한다.
+후임은 가입 순서 첫 멤버이며 전체 멤버의 private 상태를 읽지 않는다. 이 순서와 저장 원자성을 유지한다.
+후보는 개인 완료 state의 현재 활성 소유권과 이전 member/slot 차수 일치를 검증한다.
+모집 경계는 기존 슬롯에서 정확히 대상 하나만 제거하고 나머지 목록을 보존하며 fresh event와
+완료 state 갱신·membership 삭제·listing 갱신/삭제를 요구한다. 승계 시 후임의 현재 소유권도
+단건 확인한다. stale 후임을 건너뛰는 전체 탐색은 도입하지 않고 별도 정리 후 재시도한다.
+최대 8인 일반 참가자 제거와 책임자 승계, 마지막 1인 그룹 해산을 정상 기준으로 둔다.
+차수 불일치와 필수 쓰기 누락은 이전 전체 snapshot 보존으로 원자 거절을 확인한다.
+demo 후보/검증만 변경하며 운영 Rules·앱 연결·배포는 제외한다. 정상 실패가 있으면 앱 연결 전에
+baseline/실제 거래 차이와 실패 지점을 확인하고 결과를 다음 작업 기준으로 남긴다.
