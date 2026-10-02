@@ -1638,3 +1638,30 @@ Character 변경은 과거 room/event/claim 보존과 새 state 하나만 남는
 새 Character 검증만으로는 과거 참가를 변경으로 부활시킬 수 있으므로 기존 member도 current여야 한다.
 기존 슬롯/멤버 차수 1, 현재 소유권 3인 최대 8인 사례를 거절하고 정상 8인 변경 보존을 demo에서 검증한다.
 통과 후 실제 변경 Repository도 이전 Character/계정/member/state를 대조하며 후보 조회는 공통 정책과 맞춘다.
+
+#### 22.6 결과 및 후보 목록 연결 설계 (2026-10-02)
+
+최종 6146fef / CI 36966679938 22/22 통과. 후보 SHA256 `662309a35a5f259a7ce0f06f242b7c4b754025913560c141975c54513ff3e4d8`.
+이전 member가 current인지 검사하는 공통 member update guard로 legacy fallback도 보호한다.
+정상 최대 8인 변경과 이전 member/slot/state가 구세대인 변경의 원자 거절을 확인했다.
+실제 MemberMutation Repository는 이전 Character/계정/member/state를 transaction 안에서 확인한다.
+새 Character inspector에 이미 검증한 소유권을 전달해 구세대 점유 대체를 연결했다.
+변경 Repository analyze 무결함, diff check 통과. 기존 정책 테스트 7건은 정책 무변경으로 재사용한다.
+
+후보 목록 조사: app_router가 사용하는 Application/Leader 후보 서비스는 WeeklyRaidStatusRepository의
+첫 결과와 FirestoreActiveRaidAssignmentLookup를 함께 사용한다. completed projection이 있으면
+단건 lookup을 호출하기 전에 완료 사유가 결정된다. lookup만 바꾸면 해결되지 않는다.
+WeeklyRaidStatusProjector의 입력은 raidStates/weeklyRaidClaims/activeRaidAssignments 세 종류이며
+현재 record/projection에는 ownershipRevision이 없다. 합친 projection에서 차수를 추측하지 않는다.
+
+다음 단일 구간은 후보/주간 현황 공통 읽기다.
+1. 원본 문서의 경로·식별자·차수 검증과 현재 Character/계정 대조를 projection 이전에 수행한다.
+   같은 owner의 과거 차수는 제외, 현재 차수는 유지, 손상/조회 실패는 오류로 전파한다.
+   다른 owner의 확정된 과거 관계와 unknown을 구분하며 소유권 차수만으로 unrelated record를 숨기지 않는다.
+2. 같은 Character/계정의 중복 조회를 한 평가 안에서 공유하되 무기한 캐시하지 않는다.
+   소유권 변경 시 갱신, 빠르게 연속 도착한 snapshot 순서 역전, cancel 후 emit을 설계한다.
+3. assignmentLookup도 같은 판정으로 맞춘다. 현재 정상 상태의 완료/진행 중/고아 표시는 보존한다.
+4. 단순 정상 UI 반복 검증 대신 과거/현재 혼합·손상·A→B→A 및 비동기 갱신 순서 경계를 검증한다.
+
+후보 목록·수동 완료·lifecycle/정리 UI·전체 회귀·운영 Rules 이식·실기기는 여전히 미완료다.
+이번 구간에 공통 주간 현황 스트림을 부분 변경하지 않았다. 전용 브랜치 고정과 운영 배포 제외 유지.
