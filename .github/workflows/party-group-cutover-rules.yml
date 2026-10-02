@@ -25,7 +25,8 @@ on:
           - occupancy
           - manual-completion
           - personal-completion
-          - personal-baseline
+            - personal-baseline
+            - orphan-cleanup
       case:
         description: Rules regression scope
         type: choice
@@ -238,6 +239,9 @@ jobs:
           fi
           if [[ "$LEADER_PROOF_SCOPE" == personal-completion || "$LEADER_PROOF_SCOPE" == personal-baseline ]]; then
             proof_script=tools/roster_personal_completion_proof.mjs
+          fi
+          if [[ "$LEADER_PROOF_SCOPE" == orphan-cleanup ]]; then
+            proof_script=tools/roster_orphan_cleanup_proof.mjs
           fi
           proof_command="node $proof_script"
           if [[ "$LEADER_PROOF_SCOPE" == personal-completion ]]; then
