@@ -1,3 +1,18 @@
+# 2026-10-03 DE — 완료 반복방 일반 참가자 정리 앱 연결
+
+- 새로 연결: 실제 Router의 별도 Repository, 상세 화면의 참가 자격 확인/대상 확인,
+  최신 거래의 모집 revision·member 갱신 시각·현재 소유권 차수 재검증과 단건 원자 저장.
+  대상 본인 또는 현재 소유권이 유효한 공대장만 일반 참가자 정리를 실행한다.
+- 보존: 활성 탈퇴/추방 경로 무변경. 개인 raidState/claim·그룹 membership·완료 이력은
+  정리 거래의 읽기/쓰기 대상에서 제외한다. 모집/member/listing/event만 변경한다.
+- 검증: 최대 8인 구성·순서 보존/권한·상태 거절/정확한 event 재시도/차수 경계 4건 통과.
+  변경 4파일 analyze 무결함, 포맷/diff check 통과. 최초 잘못된 화면 getter 및 brace 경고 수정.
+  일반 D/E5 서버 후보는 무변경으로 기존 결과를 재사용하며 새 Dart 거래 실행 검증은 아니다.
+- 화면 내 처리 결과 불명 요청은 같은 commandId로 재시도한다. 앱 종료 후 영속 복구,
+  정리 event 알림 표시, peer/공대장 승계·마지막 1인, 전체 회귀·운영 Rules·실기기는 남았다.
+  기존 전체 테스트 22 실패/analyze 51 기준은 이번 결과로 해결 처리하지 않는다.
+- 전용 fix/roster-reauth-isolation 유지, 단계 커밋/push. dev/main 통합과 운영 배포 없음.
+  사용자 raid_cycle_schedule.dart 로컬 변경 보존. 상세 설계 §22.12/NEXT_WORK를 따른다.
 # 2026-10-02 DE2-H3 — 고아 active 참가 기록 정리 보호
 
 - 새로 연결한 흐름: 계정 화면과 방 상세(신청/가입/Character 변경)의 확인 당시 state/assignment

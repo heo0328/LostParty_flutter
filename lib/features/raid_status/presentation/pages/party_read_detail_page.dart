@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../../recruitment_list/domain/entities/completed_ownership_cleanup.dart';
 
 import 'package:flutter/material.dart';
 
@@ -52,6 +53,7 @@ class PartyReadDetailPage extends StatefulWidget {
     this.applicationCommandRepository,
     this.joinCommandRepository,
     this.membershipCommandRepository,
+    this.completedOwnershipCleanupRepository,
     this.cycleCommandRepository,
     this.visibilityCommandRepository,
     this.eventSyncService,
@@ -66,6 +68,8 @@ class PartyReadDetailPage extends StatefulWidget {
 
   final String recruitmentId;
   final PartyReadRepository partyReadRepository;
+  final CompletedOwnershipCleanupRepository?
+  completedOwnershipCleanupRepository;
   final PartyApplicationCommandRepository? applicationCommandRepository;
   final PartyJoinCommandRepository? joinCommandRepository;
   final PartyMembershipCommandRepository? membershipCommandRepository;
@@ -84,6 +88,94 @@ class PartyReadDetailPage extends StatefulWidget {
 }
 
 class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
+  final Map<String, CompletedOwnershipCleanup> _pendingOwnershipCleanup = {};
+
+  Future<void> _retryCompletedCleanup(
+    CompletedOwnershipCleanup observation,
+  ) async {
+    final repository = widget.completedOwnershipCleanupRepository;
+    if (repository == null || _submitting) return;
+    setState(() => _submitting = true);
+    try {
+      await repository.execute(observation);
+      _pendingOwnershipCleanup.remove(observation.targetId);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('참가 정리 완료를 확인했습니다.')));
+      }
+    } on StateError catch (error) {
+      _pendingOwnershipCleanup.remove(observation.targetId);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('처리 결과를 확인하지 못했습니다. 연결 후 다시 확인해 주세요.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _checkCompletedOwnership(PartyMemberDisplay member) async {
+    final repository = widget.completedOwnershipCleanupRepository;
+    if (repository == null || _submitting) return;
+    setState(() => _submitting = true);
+    try {
+      final observation =
+          _pendingOwnershipCleanup[member.playerId] ??
+          await repository.inspect(widget.recruitmentId, member.playerId);
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('다음 주 참가 정리'),
+          content: Text(
+            '${member.characterName ?? '선택한 참가자'}의 캐릭터 소유권이 변경되었습니다. 다음 주 명단에서 제외할까요? 기존 완료 기록과 그룹 가입은 유지됩니다.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('참가 정리'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+      _pendingOwnershipCleanup[member.playerId] = observation;
+      await repository.execute(observation);
+      _pendingOwnershipCleanup.remove(member.playerId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('다음 주 참가 명단에서 정리했습니다. 완료 기록은 유지됩니다.')),
+      );
+    } on StateError catch (error) {
+      _pendingOwnershipCleanup.remove(member.playerId);
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('참가 정보를 확인하거나 정리하지 못했습니다. 연결 상태를 확인한 뒤 다시 시도해 주세요.'),
+          ),
+        );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
   late final PartyReadDetailViewModel<PublicRecruitmentSummary> _viewModel;
   StreamSubscription<PartyReadDetailSnapshot<PartyApplicationSummary?>>?
   _myApplicationSubscription;
@@ -750,8 +842,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       if (currentApplication.applicantPlayerId ==
               application.applicantPlayerId &&
           currentApplication.revision == application.revision &&
-          currentApplication.status ==
-              RecruitmentApplicationStatus.pending) {
+          currentApplication.status == RecruitmentApplicationStatus.pending) {
         return true;
       }
     }
@@ -990,6 +1081,35 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                     submitting: _submitting,
                     onKick: (member) => _confirmKick(summary, member),
                   ),
+                for (final pending in _pendingOwnershipCleanup.values)
+                  TextButton(
+                    onPressed: _submitting
+                        ? null
+                        : () => _retryCompletedCleanup(pending),
+                    child: const Text('참가 정리 처리 결과 다시 확인'),
+                  ),
+                if (widget.completedOwnershipCleanupRepository != null &&
+                    _isConfirmedMember &&
+                    !_membersFromCache &&
+                    !_membersLoading &&
+                    summary.continueTogether &&
+                    summary.currentCycleStatus == 'completed' &&
+                    summary.memberCount > 1)
+                  for (final member in _members.where(
+                    (m) =>
+                        m.playerId != summary.leaderUserId &&
+                        (_isLeader(summary) || m.playerId == widget.playerId),
+                  ))
+                    ListTile(
+                      title: const Text('다음 주 참가 자격 확인'),
+                      subtitle: Text(member.characterName ?? '참가자'),
+                      trailing: OutlinedButton(
+                        onPressed: _submitting
+                            ? null
+                            : () => _checkCompletedOwnership(member),
+                        child: const Text('확인'),
+                      ),
+                    ),
                 if (_canCleanLostGroupQualification(summary))
                   _LostGroupQualificationSection(
                     members: _members
@@ -2600,7 +2720,7 @@ class _ApplicationCard extends StatelessWidget {
         '전투력 정보가 없어 승인할 수 없습니다. 신청을 거절해 주세요.',
       MinimumCombatPowerDecision.belowMinimum =>
         '최소 전투력을 충족하지 않아 승인할 수 없습니다. '
-        '신청을 거절해 주세요.',
+            '신청을 거절해 주세요.',
       MinimumCombatPowerDecision.unrestricted ||
       MinimumCombatPowerDecision.satisfied => null,
     };
@@ -3276,8 +3396,7 @@ String _joinFailureMessage(PartyJoinFailure failure) => switch (failure) {
   PartyJoinFailure.ownershipLost => '캐릭터 소유권을 확인하지 못했습니다.',
   PartyJoinFailure.invalidCharacter =>
     '참가할 수 없는 캐릭터입니다. 내 계정에서 정보를 새로고침한 뒤 다시 시도해 주세요.',
-  PartyJoinFailure.minimumCombatPowerNotMet =>
-    '모집 최소 전투력을 충족하지 않아 참가할 수 없습니다.',
+  PartyJoinFailure.minimumCombatPowerNotMet => '모집 최소 전투력을 충족하지 않아 참가할 수 없습니다.',
   PartyJoinFailure.weeklyRaidCompleted => '이 캐릭터는 이번 주 동일 레이드를 이미 완료했습니다.',
   PartyJoinFailure.recruitmentClosed => '모집이 마감되어 참가할 수 없습니다.',
   PartyJoinFailure.approvalModeMismatch => '이 방은 가입 방식이 다릅니다.',
@@ -3288,10 +3407,8 @@ String _joinFailureMessage(PartyJoinFailure failure) => switch (failure) {
   PartyJoinFailure.applicationNotPending => '처리할 수 있는 신청이 아닙니다.',
   PartyJoinFailure.participationConflict =>
     '이미 확정된 참가 또는 겹치는 일정이 있어 가입할 수 없습니다.',
-  PartyJoinFailure.orphanedParticipation =>
-    '종료되거나 삭제된 파티의 참가 기록 정리가 필요합니다.',
-  PartyJoinFailure.stateInconsistent =>
-    '이 캐릭터의 참가·완료 기록을 안전하게 확인할 수 없습니다.',
+  PartyJoinFailure.orphanedParticipation => '종료되거나 삭제된 파티의 참가 기록 정리가 필요합니다.',
+  PartyJoinFailure.stateInconsistent => '이 캐릭터의 참가·완료 기록을 안전하게 확인할 수 없습니다.',
   PartyJoinFailure.revisionConflict => '상태가 바뀌었습니다. 다시 확인해 주세요.',
   PartyJoinFailure.permissionDenied => '가입 권한을 확인하지 못했습니다.',
   PartyJoinFailure.temporarilyUnavailable => '네트워크 연결이 불안정합니다.',
@@ -3299,9 +3416,8 @@ String _joinFailureMessage(PartyJoinFailure failure) => switch (failure) {
   PartyJoinFailure.unknown => '가입을 처리하지 못했습니다.',
 };
 
-String _orphanedParticipationMessage(
-  PartyOrphanedRaidParticipation orphan,
-) => orphan.isHistorical
+String _orphanedParticipationMessage(PartyOrphanedRaidParticipation orphan) =>
+    orphan.isHistorical
     ? '지난 주차의 종료되거나 삭제된 파티 참가 기록이 남아 있습니다.'
     : '종료되거나 삭제된 파티의 참가 기록이 남아 있습니다.';
 
@@ -3319,8 +3435,7 @@ String _orphanCleanupFailureMessage(WeeklyRaidClaimCommandFailure failure) =>
       WeeklyRaidClaimCommandFailure.invalidRequest ||
       WeeklyRaidClaimCommandFailure.pendingApplication ||
       WeeklyRaidClaimCommandFailure.orphanedParticipation ||
-      WeeklyRaidClaimCommandFailure.unknown =>
-        '참가 기록을 정리하지 못했습니다.',
+      WeeklyRaidClaimCommandFailure.unknown => '참가 기록을 정리하지 못했습니다.',
     };
 
 String _membershipFailureMessage(PartyMembershipFailure failure) =>

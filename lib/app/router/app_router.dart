@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../features/recruitment_list/data/repositories/firestore_completed_ownership_cleanup_repository.dart';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -485,6 +486,11 @@ GoRouter createAppRouter({
                       final recruitmentId =
                           state.pathParameters['recruitmentId']!;
                       return PartyReadDetailPage(
+                        completedOwnershipCleanupRepository:
+                            FirestoreCompletedOwnershipCleanupRepository(
+                              firestore: FirebaseFirestore.instance,
+                              auth: FirebaseAuth.instance,
+                            ),
                         key: ValueKey(recruitmentId),
                         recruitmentId: recruitmentId,
                         partyReadRepository: partyReadRepositoryOrDefault,
