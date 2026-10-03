@@ -989,6 +989,17 @@ async function verifyCharacterPlacement(testEnv, db, applicantDb) {
   await testEnv.clearFirestore();
   await seedBase(testEnv);
   await seedJoiner(testEnv);
+  // Reauthenticated ownership guards require the authoritative roster, including
+  // for legacy members whose missing ownershipRevision is interpreted as zero.
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const admin = context.firestore();
+    for (const character of (await getDocs(collection(admin, 'characters'))).docs) {
+      const data = character.data();
+      await setDoc(doc(admin, 'gameAccounts', data.gameAccountId), {
+        ownerPlayerId: data.ownerPlayerId, status: 'active',
+      });
+    }
+  });
   await assertSucceeds(createPublicRecruitmentTxn(db));
   await assertSucceeds(applicationTxn(applicantDb, 'apply'));
   await assertSucceeds(approvePublicApplicationTxn(db));
