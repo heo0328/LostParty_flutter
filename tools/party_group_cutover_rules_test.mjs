@@ -1134,7 +1134,19 @@ async function verifyCharacterPlacement(testEnv, db, applicantDb) {
     await deleteDoc(doc(admin, 'partyEvents', `characterChanged_${recruitmentId}_${original.revision + 1}`));
   });
   await assertFails(change({ partyIndex: 1, slotIndex: 2, mismatch: true }));
-  await assertSucceeds(change({ partyIndex: 1, slotIndex: 2 }));
+  const coverageDirectory = process.env.RULES_POSITION_COVERAGE_DIR;
+  const capture = async (phase) => {
+    if (!coverageDirectory) return;
+    const response = await fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-party-group-cutover:ruleCoverage');
+    if (!response.ok) throw new Error('Could not capture position rule coverage');
+    fs.writeFileSync(path.join(coverageDirectory, phase + '.json'), JSON.stringify(await response.json()));
+  };
+  await capture('before-move');
+  try {
+    await assertSucceeds(change({ partyIndex: 1, slotIndex: 2 }));
+  } finally {
+    await capture('after-move');
+  }
   const after = (await getDoc(recruitmentRef)).data();
   if (!isDeepStrictEqual(after, (await getDoc(listingRef)).data())
     || (await getDoc(memberRef)).data().partyIndex !== 1) {
