@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, runTransaction,
+import { doc, getDoc, getDocs, collection, setDoc, updateDoc, deleteDoc, runTransaction,
   serverTimestamp, Timestamp, increment, deleteField } from 'firebase/firestore';
 import { seedGroupLinkedRoom, disbandApprovedRoomTxn, removeApprovedMemberTxn, seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn,
   approvePublicApplicationTxn, seedExpandedApprovedRoom, cycleWindow,
@@ -78,6 +78,17 @@ async function seedRoom(env, db) {
   await env.clearFirestore();
   await seedBase(env);
   await seedJoiner(env);
+  if (process.env.ROSTER_TRACKED_RULES === '1') {
+    // Historical fixtures omitted account authority; production requires it.
+    await env.withSecurityRulesDisabled(async ctx => {
+      for (const ref of (await getDocs(collection(ctx.firestore(), 'characters'))).docs) {
+        const character = ref.data();
+        assert.ok(character.gameAccountId, `fixture character ${ref.id}`);
+        await setDoc(doc(ctx.firestore(), 'gameAccounts', character.gameAccountId),
+          { ownerPlayerId: character.ownerPlayerId, status: 'active' });
+      }
+    });
+  }
   await assertSucceeds(createPublicRecruitmentTxn(db));
   await assertSucceeds(applicationTxn(env.authenticatedContext('joiner-auth').firestore(), 'create'));
   await assertSucceeds(approvePublicApplicationTxn(db));
