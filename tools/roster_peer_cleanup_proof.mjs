@@ -59,6 +59,7 @@ const results = await runCleanupProof(rules, async ({ env, seed, snapshot, check
       if (barrier) await barrier();
       const remaining = room.partySlots.filter(s => s.playerId !== target.playerId);
       if (tamper === 'remaining-slot') remaining[0] = { ...remaining[0], classKey: 'forged' };
+      if (tamper === 'remaining-generation') remaining[0] = { ...remaining[0], ownershipRevision: 99 };
       const composition = { partySlots: remaining, memberPlayerIds: remaining.map(s => s.playerId), memberCount: remaining.length,
         raidStateTargets: room.raidStateTargets.filter(s => s.playerId !== target.playerId),
         dealerCount: room.dealerCount - (target.role === 'dealer' ? 1 : 0), supportCount: room.supportCount - (target.role === 'support' ? 1 : 0),
@@ -90,6 +91,7 @@ const results = await runCleanupProof(rules, async ({ env, seed, snapshot, check
     await setup(); const before = await snapshot();
     for (let i = 0; i < 6; i++) {
       const req = await request();
+      if (process.env.ROSTER_COMPLEXITY_RULES_FILE) console.log(`PHASE peer removal ${i + 1}/6`);
       assert.equal(await assertSucceeds(command(req)), 'applied');
       const after = await snapshot();
       assert.equal(after.room.memberCount, 7 - i);
@@ -98,18 +100,21 @@ const results = await runCleanupProof(rules, async ({ env, seed, snapshot, check
       assert.equal(await command(req), 'already-applied'); assert.deepEqual(await snapshot(), after);
     }
     const req = await request('leader');
+    if (process.env.ROSTER_COMPLEXITY_RULES_FILE) console.log('PHASE leader succession');
     await assertSucceeds(command(req));
     const after = await snapshot();
     assert.equal(after.room.memberCount, 1); assert.equal(after.room.leaderPlayerId, getSlots()[7].playerId);
     assert.equal(after.members[0].canApproveApplications, true); assert.deepEqual(after.states, before.states);
     assert.deepEqual(after.events.filter(e => !e.id.startsWith('peer-')), before.events);
+    if (process.env.ROSTER_COMPLEXITY_RULES_FILE) console.log('PHASE advance after cleanup');
     await assertSucceeds(lifecycle(client(req.actor), 'advanceCycle', { actorPlayerId: req.actor, ownershipSnapshot: true }));
     const advanced = await snapshot(); assert.deepEqual(advanced.states.slice(0, 7), before.states.slice(0, 7));
     assert.equal(advanced.states[7].status, 'active'); normal = true;
   });
   if (!normal || process.env.LEADER_PROOF_SCOPE === 'peer-chain-only') return;
   for (const scenario of ['current-target', 'unknown-target', 'current-leader', 'unknown-leader', 'stale-actor', 'outsider', 'stale-generation', 'stale-revision',
-    'missing-member', 'omit-member', 'omit-event', 'omit-listing', 'remaining-slot', 'delete-state']) {
+    'missing-member', 'omit-member', 'omit-event', 'omit-listing', 'remaining-slot', 'delete-state',
+    ...(process.env.ROSTER_COMPLEXITY_RULES_FILE ? ['remaining-generation'] : [])]) {
     await check(`peer rejects ${scenario} atomically`, async () => {
       await setup(); const req = await request();
       await env.withSecurityRulesDisabled(async ctx => {

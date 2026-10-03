@@ -1,11 +1,12 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { deduplicateCleanup, dispatchCleanupEvents, rulesFunction } from './roster_complexity_candidate.mjs';
+import { deduplicateCleanup, dispatchCleanupEvents, rulesFunction, preserveExistingSlots } from './roster_complexity_candidate.mjs';
 
 const baseline = fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const deduplicated = deduplicateCleanup(baseline);
 const dispatched = dispatchCleanupEvents(deduplicated);
+const repaired = preserveExistingSlots(baseline);
 const aliases = new Map([
   ['deLeaderOwnershipChanged', 'deOwnershipChanged'], ['dePeerOwnershipChanged', 'deOwnershipChanged'],
   ['deLeaderCleanupStateUnchanged', 'deCleanupStateUnchanged'], ['dePeerCleanupStateUnchanged', 'deCleanupStateUnchanged'],
@@ -60,7 +61,7 @@ test('cleanup event types are disjoint from membership and lifecycle event domai
 
 test('static helper call graph is acyclic and remains within depth 20', () => {
   // Source-level conservative bound, not a Firestore runtime expression count.
-  for (const source of [baseline, deduplicated, dispatched]) {
+  for (const source of [baseline, repaired, deduplicateCleanup(repaired), dispatchCleanupEvents(deduplicateCleanup(repaired))]) {
     const all = new Set(names(source));
     const depth = (name, stack = []) => {
       assert.ok(!stack.includes(name), `recursive helper ${name}`);
@@ -72,4 +73,16 @@ test('static helper call graph is acyclic and remains within depth 20', () => {
     console.log(`source bytes=${Buffer.byteLength(source)}, functions=${all.size}, helper depth=${maximum}`);
     assert.ok(maximum <= 20, `helper depth ${maximum}`);
   }
+});
+
+test('preservation fast path changes only aggregate generation helper and retains all fallback checks', () => {
+  for (const name of names(baseline)) {
+    if (name !== 'deChangedSlotGenerations') assert.equal(rulesFunction(repaired, name).body, rulesFunction(baseline, name).body);
+  }
+  const body = rulesFunction(repaired, 'deChangedSlotGenerations').body;
+  assert.ok(body.includes('after.partySlots.size() <= 8'));
+  assert.ok(body.includes('before.partySlots.hasAll(after.partySlots)'));
+  for (let i = 0; i < 8; i++) assert.ok(body.includes(`deChangedSlotGenerationAt(before, after, ${i})`));
+  assert.deepEqual([...repaired.matchAll(/allow\s[\s\S]*?;/g)].map(m => m[0]),
+    [...baseline.matchAll(/allow\s[\s\S]*?;/g)].map(m => m[0]));
 });

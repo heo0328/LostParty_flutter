@@ -44,6 +44,20 @@ ${extras.trimEnd()};
   return result;
 }
 
+export function preserveExistingSlots(source) {
+  const original = rulesFunction(source, 'deChangedSlotGenerations');
+  const needle = '&& deChangedSlotGenerationAt(before, after, 0)';
+  assert.equal(original.text.split(needle).length, 2);
+  // hasAll uses the same exact element equality as the existing per-slot hasAny.
+  // Retain size <= 8 and fall back unchanged for any newly added/modified slot.
+  const replacement = original.text.replace(needle,
+    '&& (before.partySlots.hasAll(after.partySlots)\n+          || (deChangedSlotGenerationAt(before, after, 0)')
+    .replace('deChangedSlotGenerationAt(before, after, 7));',
+      'deChangedSlotGenerationAt(before, after, 7))));');
+  assert.notEqual(replacement, original.text);
+  return source.slice(0, original.start) + replacement + source.slice(original.end);
+}
+
 export function dispatchCleanupEvents(source) {
   const start = source.indexOf('    match /partyEvents/{eventId} {');
   const end = source.indexOf('    match /recruitments/{recruitmentId} {', start);
