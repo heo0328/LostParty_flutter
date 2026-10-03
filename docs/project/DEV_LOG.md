@@ -1,5 +1,21 @@
 # 2026-10-03 18:10 KST 최종 Rules 게시1회 실패
 
+## 2026-10-04 00:38 KST — 개인 완료 중복 제거본 게시1회 실패
+
+사용자 승인으로6742123의 firestore.rules(223746bytes,
+SHA6a4a4b52cf566f9c119d9de3c3876c411c336da24ee62b9bca5fd1be97bd1da9)를
+lost-party에 정확히1회 deploy --only firestore:rules 했다. 경로/생성 일치/diff 확인 후 진행.
+00:38:41 KST POST /projects/lost-party:test가503 UNAVAILABLE, CLI exit2.
+원격 컴파일 결과·경고는 미확정이며 Ruleset 업로드/Release 활성화 미도달이다.
+사전/사후 활성 Ruleset e46f131e-920a-4773-bc25-2ef4b7ff9169,
+updateTime2026-09-29T09:26:45.388946Z,
+SHAe8baa2e4824d9200ab8a76fe07d7155578ba6982ca9b29941b9b7f55a6b3b1a5 동일.
+근거 coverage/roster-publish-6742123의 deploy-once.log와 before/after 백업.
+재시도 없음. 로컬 제한 검증 완료와 원격 게시 실패를 구분하며503 원인은 여전히 미확정.
+새 운영 흐름 활성화 없음. 기존 운영본 보존 확인. 실기기/전체 회귀/dev·main 병합 미실행.
+사용자 초기화 설정·백업·분할본 보존. 전용 브랜치에서 결과 문서만 커밋·push한다.
+
+
 ## 2026-10-04 — 개인 완료 중복 fallback3곳 제거 검증·반영
 
 모집 update, 멤버 delete, 그룹 raidListings update의 후순위 개인 완료 호출만 제거했다.
