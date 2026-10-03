@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { removeRepeatedPositionValidation, deduplicateCleanup, dispatchCleanupEvents, rulesFunction, preserveExistingSlots, integratedBaseline } from './roster_complexity_candidate.mjs';
+import { validateOnlyChangedSlots, removeRepeatedPositionValidation, deduplicateCleanup, dispatchCleanupEvents, rulesFunction, preserveExistingSlots, integratedBaseline } from './roster_complexity_candidate.mjs';
 
 const baseline = integratedBaseline();
 const deduplicated = deduplicateCleanup(baseline);
@@ -97,4 +97,26 @@ test('preservation fast path changes only aggregate generation helper and retain
   assert.equal(changed.split('validMemberPositionChange(').length,2);
   const original=rulesFunction(baseline,'validMemberPositionChange');
   assert.throws(()=>removeRepeatedPositionValidation(baseline.replace(original.text, original.text.replace("'partyIndex', 'slotIndex', 'updatedAt'", "'partyIndex', 'slotIndex', 'updatedAt', 'role'"))));
+});
+
+
+test('changed-slot candidate retains member generation validation and all eight bounds', () => {
+  const before = dispatchCleanupEvents(deduplicateCleanup(preserveExistingSlots(integratedBaseline())));
+  const after = validateOnlyChangedSlots(before);
+  for (const name of names(before)) {
+    if (!['deChangedSlotGenerationAt', 'deChangedSlotGenerations'].includes(name))
+      assert.equal(rulesFunction(before,name).body,rulesFunction(after,name).body);
+  }
+  assert.ok(rulesFunction(after,'deChangedSlotGenerations').body.includes('after.partySlots.size() <= 8'));
+  assert.ok(rulesFunction(after,'deChangedSlotGenerationAt').body.includes('deSlotMemberGeneration(roomId, changed[index])'));
+  // Exhaustive small lists include reordering, duplicate slots, removals and replacements.
+  const lists = [[]];
+  for(let size=1;size<=4;size++) for(let n=0;n<3**size;n++)
+    lists.push(Array.from({length:size},(_,i)=>Math.floor(n/3**i)%3));
+  for(const a of lists) for(const b of lists) for(let validity=0;validity<8;validity++) {
+    const valid=x=>Boolean(validity & (1<<x));
+    const old=b.every(x=>a.includes(x)||valid(x));
+    const changed=b.filter(x=>!a.includes(x));
+    assert.equal(changed.every(valid),old);
+  }
 });

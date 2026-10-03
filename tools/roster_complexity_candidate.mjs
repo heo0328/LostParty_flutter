@@ -109,3 +109,21 @@ export function removeRepeatedPositionValidation(source) {
   assert.equal(block.split(duplicate).length, 2);
   return source.slice(0, update) + block.replace(duplicate, '') + source.slice(end);
 }
+
+export function validateOnlyChangedSlots(source) {
+  const at = rulesFunction(source, 'deChangedSlotGenerationAt');
+  assert.ok(at.body.includes('before.partySlots.hasAny([after.partySlots[index]])'));
+  let result = source.slice(0, at.start) + `    function deChangedSlotGenerationAt(roomId, changed, index) {
+      return index >= changed.size() || deSlotMemberGeneration(roomId, changed[index]);
+    }` + source.slice(at.end);
+  const all = rulesFunction(result, 'deChangedSlotGenerations');
+  assert.ok(all.body.includes('before.partySlots.hasAll(after.partySlots)'));
+  const checks = Array.from({ length: 8 }, (_, i) =>
+    `deChangedSlotGenerationAt(before.recruitmentId, changed, ${i})`).join('\n          && ');
+  result = result.slice(0, all.start) + `    function deChangedSlotGenerations(before, after) {
+      let changed = after.partySlots.removeAll(before.partySlots);
+      return before.partySlots == after.partySlots || (after.partySlots.size() <= 8
+        && (changed.size() == 0 || (${checks})));
+    }` + result.slice(all.end);
+  return result;
+}
