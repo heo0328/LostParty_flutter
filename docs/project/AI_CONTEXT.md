@@ -1,7 +1,8 @@
 # AI CONTEXT (2026)
 
 2026-10-03 최신 DE 상태: 앱·Rules 통합 완료. 전체 회귀는 사용자 지시로 생략,
-게시 경계 40건·정적 계약 3건 통과. 운영 게시 1회는 /test 503으로 실패, 활성 소스 불변 확인.
+게시 경계 40건·정적 계약 3건 통과. 추가 승인 게시에서 컴파일/업로드 성공, Release PATCH 503.
+최근 저장본 5개는 통합본과 일치, 활성 소스는 9월 29일 본 유지. [게시 진단](ROSTER_RULES_PUBLISH_DIAGNOSIS.md).
 재게시 자동 반복 없이 사용자 지시/콘솔 게시 확인 대기. [설계 §23](../architecture/BUG_022_REMAINING_FIX_DESIGN.md),
 [현재 실행 계획](NEXT_WORK.md), [실기기 목록](ROSTER_REAUTH_DEVICE_CHECKLIST.md).
 

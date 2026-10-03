@@ -2,6 +2,10 @@
 
 ## 2026-10-03 원정대 재인증 통합본 게시
 
+추가 사용자 승인 14:37 재게시: 원격 컴파일/Ruleset 생성은 성공했고 Release PATCH가 503,
+CLI 자동 create fallback은409. 최근5개 저장본 통합 소스 일치/활성 소스 불변을 확인했다.
+근본 원인 미확정. [진단 상세](ROSTER_RULES_PUBLISH_DIAGNOSIS.md)를 최신 기준으로 따른다.
+
 사용자 지시로 전체 회귀는 생략. 통합본 정적 계약 3건 및 최종 소스 demo 경계 40건 통과.
 demo 컴파일 경고 미관찰. 운영 1회는 `/test` HTTP 503으로 실패하고 rulesets/releases에
 도달하지 않았다. 활성 소스·ruleset은 전후 동일함을 직접 확인했다. 재시도하지 않았으며
