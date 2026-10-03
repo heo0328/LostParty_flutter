@@ -1,5 +1,39 @@
 # 2026-10-03 18:10 KST 최종 Rules 게시1회 실패
 
+## 2026-10-03 — 멤버 검증 순서 최소 수정, 기존 빈자리 변경 정상화
+
+사용자는 기존 기능 보존을 포함한 Rules 게시 준비 수정을 승인했고 firestore.rules-backup을
+별도 보존 기준으로 지정했다. 백업 SHA a25018185891bf411d854fda471845d6ac27a75ac5ff53f69f8cd5399b178e87
+작업 전후 동일. 기존 추적 원본 f43ea68c는 Git4453f53 및 원격 브랜치 이력에 보존한다.
+
+CI37123646592의 변경 슬롯 추출+중복 제거 후보는 빈자리 이동 한도 실패가 남아 채택하지 않았다.
+CI37123802602에서 실패 직전/직후 ruleCoverage를 수집했다. 캐릭터 변경 요청에 무관한
+방장 승계 검증이 선행하며, 캐릭터 검증이 새/옛 target 보존 조건까지 통과한 뒤 후반 평가를
+완료하지 못함을 확인했다. coverage 합산은 정확한 개별 쓰기 예산이라고 주장하지 않는다.
+이를 근거로 다른 함수/조건은 그대로 두고 members update에서 validAtomicMemberCharacterChange를
+기존 deLeaderSuccessorUpdate보다 먼저 평가했다. 앞쪽 자리 변경 빠른 경로를 유지하고,
+뒤쪽 동일 validMemberPositionChange 호출만 제거했다. 모든 validator 함수 본문은 그대로다.
+새 권한/명령/저장 구조를 추가하지 않았다.
+
+CI https://github.com/heo0328/LostParty_flutter/actions/runs/37124237550 성공:
+- 기존본 참가11건, 후보 참가11건 결과 이름/성공 일치.
+- 후보 Character 배치: 6종 위조/부분쓰기/점유좌석 거절, active/completed 기존 상태 덮어쓰기
+  거절2건, 최대8인 제자리 변경, 빈자리 이동 시 projection 불일치 거절 및 정상 이동/그룹 동기화
+  (총11개 요청 결과). 기준본에서 실패한 정상 빈자리 이동이 후보에서 통과했다.
+- 후보 정리/승계51건 및 마지막1인해산10건. 최대8인 연쇄정리→승계→주차전환,
+  위조/오래된 소유권/중복·경쟁·원자성/완료 이력 보존 포함. 후보 총83개 요청/시나리오 결과.
+- 컴파일 성공, Rules 컴파일 경고 미관찰. 음성 테스트 permission-denied와 Actions 폐기 경고는 별도.
+- Node정적10건, 생성 결과/CI 후보 바이트 일치, git diff --check 통과.
+
+새로 정상화한 흐름: 이 fixture의 다른 파티 빈자리 Character 변경. 보존 확인: 위 제한 사례.
+미확인: 실기기, 전체 회귀, 기타 모든 요청의 예산, 원격 게시503 및 활성화.
+Flutter 앱은 무변경이므로 기존 전체22실패/analyze51 기준을 보존하고 전체 검증 반복하지 않았다.
+최종 원본224266 bytes/SHA39a7b73168a6c236340bb91dffb58682fde5c9f85bdcb452c42ddc7637ad838b.
+이 수정은 실행 평가 비용 개선이며 컴파일 크기 감소/503 해결을 입증하지 않는다.
+전용 브랜치 유지·체크포인트 commit/push, dev/main 미반영. 운영/테스트 게시 없음.
+로컬 근거 coverage/position-measure 및 coverage/position-verified. 다음은 승인된 원격 진단이다.
+
+
 ## 2026-10-03 — 자리 변경 중복 평가 제거 후보와 기준본 한도 실패
 
 사용자 수정 지시로 members update 끝의 validMemberPositionChange 중복 호출을 제거하는

@@ -4632,22 +4632,17 @@ service cloud.firestore {
           && ((request.resource.data.diff(resource.data).affectedKeys()
               .hasOnly(['partyIndex', 'slotIndex', 'updatedAt'])
             && validMemberPositionChange(recruitmentId, playerId, resource.data, request.resource.data))
-            || (deLeaderSuccessorUpdate(recruitmentId, playerId, resource.data, request.resource.data) || validAtomicMemberCharacterChange(
+            || (validAtomicMemberCharacterChange(
             recruitmentId,
             playerId,
             resource.data,
             request.resource.data
-          ) || validMemberCharacterChange(
+          ) || deLeaderSuccessorUpdate(recruitmentId, playerId, resource.data, request.resource.data) || validMemberCharacterChange(
             recruitmentId,
             playerId,
             resource.data,
             request.resource.data
           ) || validApprovalPermissionChange(
-            recruitmentId,
-            playerId,
-            resource.data,
-            request.resource.data
-          ) || validMemberPositionChange(
             recruitmentId,
             playerId,
             resource.data,
