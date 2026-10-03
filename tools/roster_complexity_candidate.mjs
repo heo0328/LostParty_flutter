@@ -127,3 +127,19 @@ export function validateOnlyChangedSlots(source) {
     }` + result.slice(all.end);
   return result;
 }
+
+export function prioritizeCharacterChange(source) {
+  const start = source.indexOf('      match /members/{playerId} {');
+  const begin = source.indexOf('        allow update:', start);
+  const end = source.indexOf(';', begin);
+  const block = source.slice(begin, end);
+  const leader = 'deLeaderSuccessorUpdate(recruitmentId, playerId, resource.data, request.resource.data)';
+  const atomic = `validAtomicMemberCharacterChange(
+            recruitmentId,
+            playerId,
+            resource.data,
+            request.resource.data
+          )`;
+  assert.equal(block.split(`${leader} || ${atomic}`).length, 2);
+  return source.slice(0, begin) + block.replace(`${leader} || ${atomic}`, `${atomic} || ${leader}`) + source.slice(end);
+}

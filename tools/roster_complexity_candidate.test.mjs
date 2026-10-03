@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { validateOnlyChangedSlots, removeRepeatedPositionValidation, deduplicateCleanup, dispatchCleanupEvents, rulesFunction, preserveExistingSlots, integratedBaseline } from './roster_complexity_candidate.mjs';
+import { prioritizeCharacterChange, validateOnlyChangedSlots, removeRepeatedPositionValidation, deduplicateCleanup, dispatchCleanupEvents, rulesFunction, preserveExistingSlots, integratedBaseline } from './roster_complexity_candidate.mjs';
 
 const baseline = integratedBaseline();
 const deduplicated = deduplicateCleanup(baseline);
@@ -119,4 +119,12 @@ test('changed-slot candidate retains member generation validation and all eight 
     const changed=b.filter(x=>!a.includes(x));
     assert.equal(changed.every(valid),old);
   }
+});
+
+
+test('character priority changes only order of the same two validators', () => {
+  const before=removeRepeatedPositionValidation(dispatchCleanupEvents(deduplicateCleanup(preserveExistingSlots(integratedBaseline()))));
+  const after=prioritizeCharacterChange(before);
+  for (const name of names(before)) assert.equal(rulesFunction(before,name).body,rulesFunction(after,name).body);
+  assert.equal([...before.matchAll(/allow\s[\s\S]*?;/g)].filter((m,i)=>m[0]!==[...after.matchAll(/allow\s[\s\S]*?;/g)][i][0]).length,1);
 });
