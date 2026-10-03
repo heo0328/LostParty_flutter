@@ -27,6 +27,7 @@ on:
           - personal-completion
           - personal-baseline
           - orphan-cleanup
+          - publish-boundaries
       case:
         description: Rules regression scope
         type: choice
@@ -246,6 +247,11 @@ jobs:
           proof_command="node $proof_script"
           if [[ "$LEADER_PROOF_SCOPE" == personal-completion ]]; then
             proof_command="$proof_command && node tools/roster_manual_completion_proof.mjs"
+          fi
+          if [[ "$LEADER_PROOF_SCOPE" == publish-boundaries ]]; then
+            export ROSTER_TRACKED_RULES=1
+            node tools/integrate_roster_rules.mjs --check
+            proof_command="node tools/roster_generation_proof.mjs && node tools/roster_last_member_proof.mjs && node tools/roster_orphan_cleanup_proof.mjs"
           fi
           npx --yes firebase-tools@15.29.0 emulators:exec --config firebase.json --only firestore --project demo-party-group-cutover "$proof_command"
 
