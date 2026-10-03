@@ -1,5 +1,68 @@
 # Task-11 Firestore Rules 복잡도 차단 — 종료된 진단 이력
 
+## 2026-10-03 복잡도 개선 후보 — 로컬 실행 차단, 채택 보류
+
+사용자가 중복 제거와 안전한 분기 축소를 승인했다. 운영 게시·원격 비교·dev/main 병합은 제외한다.
+503 원인 해결과 구조 개선은 별개다. 배포 원본은 SHA `11ef3dde…`로 유지했다.
+
+### 후보와 코드 근거
+
+`tools/roster_complexity_candidate.mjs`는 누적 생성 결과 뒤 적용하는 별도 변환이다.
+`integrate_roster_rules.mjs --complexity-candidates`는 coverage/roster-complexity에만
+baseline/deduplicated/dispatched를 생성한다. 기본 생성과 --check는 기존 배포 원본을 유지한다.
+과거 fixture와 후보 생성 체인은 변경하지 않았다. 추정 미사용 함수 삭제는 하지 않았다.
+
+| 후보 | 소스 bytes | 함수 수 | 정적 최대 helper 깊이 | 상태 |
+| --- | ---: | ---: | ---: | --- |
+| 기준본 | 227459 | 279 | 6 | 배포 원본 유지 |
+| 동일 검사 공통화 | 224298 | 274 | 6 | 정적 대조 통과, 실행 미확인 |
+| 이벤트 분기 추가 | 224358 | 274 | 6 | 정적 대조 통과, 실행 미확인 |
+
+1단계는 ownershipChanged/stateUnchanged 두 검사의 leader/peer 복제와 peer composition
+복제를 제거한다. 원본 본문이 같지 않으면 변환 자체를 실패시킨다. leader composition은
+공통 비교를 호출하고 leaderPlayerId/이름/직업 Snapshot 비교를 추가로 유지한다.
+동일 조건의 평가 순서와 공통 호출이 바뀌므로 정적 동등성만으로 실행 비용 동등성을 주장하지 않는다.
+
+### Write Plan → Rules 경로 판단
+
+Router의 두 FirestoreCompletedOwnershipCleanupRepository 연결 → transaction의 binding,
+모집/member/character/gameAccount 조회 → CompletedOwnershipCleanup의 모집 patch,
+member 삭제/후임 변경, listing patch, event 원자 저장을 기준으로 대조했다.
+정리는 기존 완료 state를 승계하지 않으며 원정대·그룹 관계와 과거 기록 보존 검사는 유지한다.
+
+| 쓰기 경로 | 실제 계약과 신규성 | 이번 결정 |
+| --- | --- | --- |
+| 모집 update | cleanup patch가 revision+1, expectedRevision, lastCommandId/type/actor/at를 저장. 일반 membership/lifecycle와 marker 보존·소진 경로 혼재 | 기존 OR/분기 유지. 종류만으로 독점 분기하지 않음 |
+| member update | 승계 권한 변경 외에도 별도 승인 권한 변경 가능. 방장 정리 후 marker가 남은 독립 변경을 기존 proof가 보호 | 기존 분기 유지 |
+| member delete | 일반/peer/방장 정리와 개인 완료·일반 탈퇴/추방 혼재 | 현재 문서별 검증 분담 유지 |
+| group raidListing update | 정리 patch와 일반 목록/회차/공개 범위 경로 공유 | 기존 분기 유지 |
+| partyEvent create | 세 ownership 이벤트는 membership의 9개 종류 및 lifecycle 종류와 서로 배타적 | 세 종류만 직접 분기 후보. 나머지 OR 유지 |
+
+이벤트 후보는 기존 cleanup validator의 before/after revision, expectedRevision, actor,
+request.time 및 정확한 event/command 비교를 그대로 호출한다. 새 명령 ID != 이전 ID라는
+추가 정책은 만들지 않는다. 잘못된 요청이 다른 이벤트 validator로 우회 가능한지 서버 검사 후 채택한다.
+소유권/승계/마지막 1인 정책과 앱 스키마·인터페이스는 변경하지 않았다.
+
+### 검증 결과와 다음 게이트
+
+- Node 정적 계약 6건 통과: 본문/allow 보존, 방장 비교 보존, 생성원본 변경 시 실패,
+  이벤트 한 경로 변경, 종류 배타성, 정적 호출 그래프. 이는 Rules 컴파일/권한 검사가 아니다.
+- 생성 결과 일치와 JS 문법, diff 검사 통과. 소스 감소는 컴파일 결과 크기 감소를 뜻하지 않는다.
+- 과거 Rules 사후 주입 실패를 반복하지 않으려고 JDK21/emulator1.22.0 시작 시 --rules로
+  기준본을 로딩했다. sandbox loopback 제한은 권한 확장 실행으로 해소하여 기동했다.
+  실제 첫 비인증 요청은 gRPC INTERNAL/RST_STREAM, HTTP 읽기 대조는
+  503 Network closed for unknown reason. permission-denied 판정 전 실패이며 후보는 실행하지 않았다.
+  프로세스 종료. 운영 API 요청/배포와 원격 CI는 실행하지 않았다.
+- 새 후보의 컴파일 경고 0개, 최대 8인 평가 한도, 실제 허용/거절 동등성은 미확인이다.
+
+다음 검증 도구는 `tools/roster_complexity_differential.mjs`다. 정상 로컬 demo 에뮬레이터에서
+기준본 → 공통화 → 이벤트 분기 순으로 같은 cleanup-peer/last-member 제한 묶음을 실행한다.
+첫 실패에서 중단하며 전체 회귀는 실행하지 않는다. 기존 proof에 원본 경로 override를 연결했고
+이 모드에서만 알 수 없는 명령/다른 정리 이벤트 종류/잔존 marker로 event 재생성 거절을 추가했다.
+기존 8인 정리·승계·전환, 재이전, 누락 쓰기와 상태/그룹 보존 검사를 재사용한다.
+새 비교 도구의 문법은 확인했으나 실행 결과는 아직 없다. 로컬 환경 복구 또는 별도 검증 환경
+결정 전 배포 원본으로 승격하지 않는다. 런타임 검증 실패를 권한 완화로 해결하지 않는다.
+
 ## 2026-10-03 원정대 재인증 통합본 게시
 
 추가 사용자 승인 14:37 재게시: 원격 컴파일/Ruleset 생성은 성공했고 Release PATCH가 503,

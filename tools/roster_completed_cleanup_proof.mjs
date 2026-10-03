@@ -12,7 +12,9 @@ import { seedRoom, lifecycle, inspectAll } from './roster_ownership_rules_proof.
 import { authUid, playerId, recruitmentId, raidId, seedGroupLinkedRoom, removeApprovedMemberTxn } from './party_group_cutover_rules_test.mjs';
 
 export async function runCleanupProof(rulesOverride = null, extension = null, { skipRegression = false } = {}) {
-const rules = rulesOverride ?? completedCleanupCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
+const rules = process.env.ROSTER_COMPLEXITY_RULES_FILE
+  ? fs.readFileSync(process.env.ROSTER_COMPLEXITY_RULES_FILE, 'utf8')
+  : rulesOverride ?? completedCleanupCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
 const directory = new URL('../coverage/roster-cleanup/', import.meta.url);
 fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(new URL('candidate.rules', directory), rules);
@@ -100,7 +102,7 @@ async function cleanup(client, request, tamper = null) {
     };
     const nextRevision = room.revision + 1;
     tx.update(ref, { ...composition, revision: nextRevision, updatedAt: serverTimestamp(),
-      commandTargets: [], lastCommandType: 'cleanupCompletedOwnership', lastCommandId: request.commandId,
+      commandTargets: [], lastCommandType: tamper === 'unknown-command' ? 'unknown' : 'cleanupCompletedOwnership', lastCommandId: request.commandId,
       lastCommandActorPlayerId: request.actor, lastCommandAt: serverTimestamp(), ownershipCleanup: {
         expectedRevision: request.expectedRevision, targetIndex: request.targetIndex,
         actorIndex: request.actorIndex, observedOwnershipRevision: request.observedOwnershipRevision,
@@ -111,7 +113,7 @@ async function cleanup(client, request, tamper = null) {
       ...(tamper === 'listing-count' ? { memberCount: 99 } : {}),
     });
     if (tamper !== 'omit-event') tx.set(eventRef, { schemaVersion: 1, eventId: request.commandId, commandId: request.commandId,
-      recruitmentId, type: 'ownershipParticipantRemoved', commandRevision: nextRevision,
+      recruitmentId, type: tamper === 'wrong-event-type' ? 'ownershipLeaderRemoved' : 'ownershipParticipantRemoved', commandRevision: nextRevision,
       expectedRevision: room.revision, actorPlayerId: request.actor, targetPlayerId: target.playerId,
       targetCharacterId: target.characterId, observedOwnershipRevision: request.observedOwnershipRevision,
       audiencePlayerIds: room.memberPlayerIds, occurredAt: serverTimestamp(),
@@ -153,6 +155,15 @@ try {
       assert.equal(after.listing.sourceRevision, after.room.revision);
       assert.equal(await cleanup(client, request), 'already-applied');
       assert.deepEqual(await snapshot(), after, 'retry makes no writes');
+      if (process.env.ROSTER_COMPLEXITY_RULES_FILE && name === 'leader removal') {
+        const event = after.events.find(e => e.id === request.commandId);
+        const { id: _id, ...payload } = event;
+        await assertFails(setDoc(doc(client, 'partyEvents', `${request.commandId}-replayed`), {
+          ...payload, eventId: `${request.commandId}-replayed`,
+          commandId: `${request.commandId}-replayed`, occurredAt: serverTimestamp(),
+        }));
+        assert.deepEqual(await snapshot(), after, 'persistent marker cannot authorize another event');
+      }
       await assert.rejects(cleanup(client, { ...request, observedOwnershipRevision: 99 }), /retry operation mismatch/);
       assert.deepEqual(await snapshot(), after);
       if (name === 'leader removal') {
@@ -167,7 +178,8 @@ try {
   if (results.every(r => r.passed)) {
     for (const scenario of ['unchanged-owner', 'missing-character', 'missing-account', 'account-mismatch', 'null-owner', 'empty-owner', 'stale-leader',
       'stale-revision', 'stale-generation', 'third-party', 'leader-target', 'omit-member', 'omit-listing', 'omit-event',
-      'listing-count', 'event-target', 'remaining-slot', 'delete-state', 'change-state']) {
+      'listing-count', 'event-target', 'remaining-slot', 'delete-state', 'change-state',
+      ...(process.env.ROSTER_COMPLEXITY_RULES_FILE ? ['unknown-command', 'wrong-event-type'] : [])]) {
       await check(`reject ${scenario} atomically`, async () => {
         const request = await seed({ self: ['delete-state', 'change-state'].includes(scenario) });
         await env.withSecurityRulesDisabled(async ctx => {

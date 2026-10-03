@@ -1,3 +1,22 @@
+# 2026-10-03 Rules 복잡도 후보 구현 — 정적 검증 완료·실행 검증 차단
+
+- 사용자 승인 두 단계를 배포 원본과 분리된 변환으로 구현했다. 공통화 224298 bytes/274함수,
+  이벤트 분기 추가 224358 bytes, 기준본 227459 bytes/279함수. 정적 호출 깊이 모두6이다.
+- 새로 가능해진 제품 흐름 없음. 동일 소유권/상태 검사와 목록 비교를 공통화하고 이벤트 경로만
+  종류별 후보를 만들었다. 모집/member/listing의 독점 분기는 잔존 marker/독립 명령 때문에 유지했다.
+  권한·소유권·승계·스키마·앱 변경 없음. 정적 검토에서는 방장 전용 비교와 기존 allow를 보존했다.
+- 생성 본문 대조 등6건, 생성 결과 일치, JS 문법과 diff 검사를 통과했다. 새 후보의 실제 허용/거절,
+  컴파일 경고0 및 최대8인 한도는 미확인이다. 전체 Flutter/analyze/Rules 회귀는 실행하지 않았다.
+- Windows 로컬의 사후 Rules 주입 대신 시작 --rules를 조사했다. sandbox loopback 차단 후
+  허용된 권한 확장으로 기동했지만 기준본 읽기가 gRPC INTERNAL/RST_STREAM,
+  HTTP503 Network closed for unknown reason으로 실패했다. 정상 거절 검사 이전 실패다.
+  후보 서버 검사는 실행하지 않았고 프로세스 종료했다. 운영503 원인으로 연결해 단정하지 않는다.
+- 제한 비교 runner와 명령/이벤트 종류 위조·잔존 marker event 재생성 거절 사례를 준비했다.
+  원본 경로 override는 이 runner에서만 사용하며 과거 fixture/기본 proof 경로를 보존한다.
+- firestore.rules SHA11ef3dde… 유지. 운영 게시/원격 CI/dev/main 병합 없음.
+  실기기 전 항목 대기. fix/roster-reauth-isolation에서 후보 체크포인트를 커밋/push한다.
+  기존 초기화 설정은 건드리지 않았다. 상세는 TASK-11-FIRESTORE-RULES-COMPLEXITY 최신 절 참조.
+
 # 2026-10-03 14:37 DE 재게시 — 업로드 성공·활성화 503 분리
 
 - 사용자 새 1회 승인으로 동일 Rules를 운영에 게시 시도. 원격 컴파일 200/경고 없음,
