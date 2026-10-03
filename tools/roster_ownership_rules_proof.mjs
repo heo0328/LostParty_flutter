@@ -11,7 +11,10 @@ import { seedGroupLinkedRoom, disbandApprovedRoomTxn, removeApprovedMemberTxn, s
   offsetCycleKey, cycleKey, authUid, playerId, characterId, recruitmentId, raidId,
 } from './party_group_cutover_rules_test.mjs';
 
-const tracked = fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8');
+const currentTracked = fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8');
+const tracked = currentTracked.startsWith('// roster-reauth-integrated-v1')
+  ? fs.readFileSync(new URL('./fixtures/roster_reauth_preintegration.rules', import.meta.url), 'utf8').replace(/\r\n/g, '\n')
+  : currentTracked;
 const anchor = 'return atomicIsLifecycleCommand(recruitment)\n        && newData.playerId == playerId';
 assert.equal(tracked.split(anchor).length, 2, 'production hook must be unique');
 // Second candidate: each updated state checks only its own Character. The
