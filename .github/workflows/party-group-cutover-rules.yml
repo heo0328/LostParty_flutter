@@ -28,6 +28,7 @@ on:
           - personal-baseline
           - orphan-cleanup
           - publish-boundaries
+          - complexity-comparison
       case:
         description: Rules regression scope
         type: choice
@@ -254,7 +255,23 @@ jobs:
             # Generation already passed on this exact Rules hash in run 37093970487.
             proof_command="node tools/roster_last_member_proof.mjs && node tools/roster_orphan_cleanup_proof.mjs"
           fi
+          if [[ "$LEADER_PROOF_SCOPE" == complexity-comparison ]]; then
+            node tools/integrate_roster_rules.mjs --check
+            node --test tools/roster_complexity_candidate.test.mjs
+            proof_command="node tools/roster_complexity_differential.mjs"
+          fi
           npx --yes firebase-tools@15.29.0 emulators:exec --config firebase.json --only firestore --project demo-party-group-cutover "$proof_command"
+
+      - name: Preserve bounded complexity comparison
+        if: always() && inputs.case == 'ownership-leader' && inputs.dispatch_scope == 'complexity-comparison'
+        uses: actions/upload-artifact@v4
+        with:
+          name: roster-complexity-comparison
+          path: |
+            coverage/roster-complexity/
+            firestore-debug.log
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Preserve leader succession candidate
         if: always() && inputs.case == 'ownership-leader'
