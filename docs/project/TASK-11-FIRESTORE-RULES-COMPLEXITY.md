@@ -1,5 +1,30 @@
 # Task-11 Firestore Rules 복잡도 차단 — 종료된 진단 이력
 
+## 2026-10-03 제한 CI — 기준본 최대8인 정리 평가 한도 실패
+
+사용자 재개 승인으로 dfd79fa의 기존 workflow에서 ownership-leader/complexity-comparison만
+실행했다. [CI37106260020](https://github.com/heo0328/LostParty_flutter/actions/runs/37106260020)는
+실제 demo 에뮬레이터까지 정상 도달했으며 로컬 HTTP/2 장애는 재현하지 않았다.
+정적6건/생성 일치는 통과했지만 baseline/cleanup-peer 첫 시나리오가 실패했다.
+
+- 기준본 SHA11ef3dde97ac202f488d1a12d861c2cf20c13e50ef9c5c3e1dc45e1fdc3af151.
+- 시나리오: peer maximum six removals then leader succession and advance.
+- 모집 update L4631에서 maximum of 1000 expressions. 내부 실패 보고는 L2507
+  dePeerCleanupEvent의 event map 구성 지점이다. member delete/listing/event 오류도 함께 기록됐다.
+  한도 도달 위치만으로 그 함수가 과도 비용의 원인이라고 확정하지 않는다.
+- 시나리오 내부 각 반복 단계 로그는 없어 몇 번째 정리인지 확정하지 않는다. 시나리오 통과0건이며
+  기준본 실패 시 중단 계약에 따라 last-member/두 후보를 실행하지 않았다.
+- 기존 통합 게시 경계40건은 generation/last-member/orphan이었다. 이번 peer 연쇄 검사는
+  그 묶음과 다르므로 과거 통과를 취소하거나 이번 실패를 개선 후보의 회귀로 해석하지 않는다.
+- 전역 deChangedSlotGenerations 8칸 검사와 누적 정리 validator 결합 비용은 후속 조사 후보다.
+  삭제/우회하지 않았고 인과 비교나 최소 수정은 아직 수행하지 않았다.
+- 런타임 진단 listener의 ArrayIndexOutOfBoundsException 경고가 함께 있다. 이는 컴파일
+  경고와 구분하며 평가식1000 오류를 숨기지 않는다. 컴파일 경고는 관찰되지 않았다.
+
+결과 artifact는 coverage/roster-complexity/ci-37106260020에 확보했다. 같은 CI 재실행 없음.
+운영/배포 원본/앱 무변경, dev/main 미반영. 다음은 기준본 명령 비용 분리 설계 후 필요한 표적 검사다.
+운영 활성화503의 원인이 이 런타임 한도라는 근거는 없으며 두 장애를 구분한다.
+
 ## 2026-10-03 복잡도 개선 후보 — 로컬 실행 차단, 채택 보류
 
 사용자가 중복 제거와 안전한 분기 축소를 승인했다. 운영 게시·원격 비교·dev/main 병합은 제외한다.

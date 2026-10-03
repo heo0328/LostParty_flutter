@@ -1,5 +1,10 @@
 # AI CONTEXT (2026)
 
+2026-10-03 최신: 사용자 승인 제한 CI [37106260020](https://github.com/heo0328/LostParty_flutter/actions/runs/37106260020)는
+기준본 최대8인 정리 시나리오에서 평가식1000 한도로 실패. 두 개선 후보는 미실행/미채택이다.
+다음은 기준본 정리 비용 원인 분리·최소 수정 설계. 운영 게시503과 별개이며 운영/배포 원본 무변경.
+[현재 작업](NEXT_WORK.md), [상세](TASK-11-FIRESTORE-RULES-COMPLEXITY.md).
+
 2026-10-03 최종 사용자 결정: 로컬 HTTP/2 진단 결과 기록 후 보류. 최소 Rules와 Node 자체
 HTTP/2 대조도 실패하여 로컬 전송 문제로 범위를 좁혔으며 구체적 원인은 미확정이다.
 원격 CI/추가 진단/후보 채택은 새 지시 전 진행하지 않는다. [진단 기록](TASK-11-FIRESTORE-RULES-COMPLEXITY.md).

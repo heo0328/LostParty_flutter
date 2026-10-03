@@ -1,3 +1,16 @@
+# 2026-10-03 제한 CI 실행 — 기준본 peer 정리 한도 실패
+
+- 사용자 승인으로 기존 workflow에 complexity-comparison을 추가하고 dfd79fa 커밋/push 후
+  demo CI37106260020을1회 실행했다. 전체 회귀/운영 배포 없음.
+- 정적6건/생성 일치 통과, 기준본 최대8인 peer 연쇄정리 시나리오는 모집 update 평가식1000으로
+  실패했다. 실패 후 자동 중단하여 두 후보/last-member는 실행하지 않았다. 후보 회귀로 판정하지 않는다.
+- 로컬 HTTP/2 문제와 달리 CI는 Rules 평가에 도달했다. 이벤트 구성 L2507에서 한도 도달 보고,
+  근본 비용 원인은 미확정이다. 전역 차수 검사와 정리 결합은 후속 조사 후보이며 아직 수정하지 않았다.
+- 새 제품 흐름 없음. 실행으로 보존을 확인한 정리 흐름 없음. 실기기/후보 비교는 미완료다.
+  firestore.rules SHA11ef3dde… 유지, 앱/초기화 설정 보존, 운영503 해결 주장 없음.
+- 실패 로그/artifact 확인과 문서 diff 검사. 전용 fix/roster-reauth-isolation에 결과 커밋/push,
+  dev/main 미반영. 상세는 TASK-11-FIRESTORE-RULES-COMPLEXITY 최신 절을 따른다.
+
 # 2026-10-03 후속 로컬 HTTP/2 대조 진단
 
 - 사용자의 진행 지시로 포트/관련 환경변수 확인 후 최소 deny Rules와 별도8088 포트로 분리했다.
