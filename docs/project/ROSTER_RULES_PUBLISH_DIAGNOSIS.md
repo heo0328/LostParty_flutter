@@ -1,5 +1,16 @@
 # 원정대 Rules 게시 실패 분석 — 2026-10-03
 
+## 최신 시도 — 2026-10-03 21:57 KST
+
+사용자 승인으로 48bb6f3/224266bytes/SHA39a7b73168a6c236340bb91dffb58682fde5c9f85bdcb452c42ddc7637ad838b
+운영 lost-party Rules만 정확히1회 CLI deploy. /test503 UNAVAILABLE(exit2)로
+Ruleset 업로드와 Release 활성화에 도달하지 못했다. 원격 컴파일 결과/경고는 미확정.
+사전/사후 active e46f131e, updateTime2026-09-29T09:26:45.388946Z,
+SHAe8baa2e4824d9200ab8a76fe07d7155578ba6982ca9b29941b9b7f55a6b3b1a5 동일.
+기존 캐릭터 이동의 평가 비용 수정은 게시503 해결을 보장하지 않으며 원인은 여전히 미확정.
+동일 명령 재시도 없음. 근거 coverage/roster-publish-48bb6f3의 로그 및 활성 소스 백업.
+
+
 ## 최신 비교 결과 — 2026-10-03 20:52–20:53 KST
 
 사용자가 추천 비교안을 승인하고 테스트 프로젝트 표시명 `rules-test-1`을 확인했다.

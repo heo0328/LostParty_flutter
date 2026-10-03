@@ -1,5 +1,19 @@
 # 2026-10-03 18:10 KST 최종 Rules 게시1회 실패
 
+## 2026-10-03 21:57 KST — 검증된 멤버 순서 수정본 게시1회 실패
+
+사용자 게시 지시로 fix/roster-reauth-isolation 48bb6f3의 firestore.rules만 lost-party에
+정확히1회 CLI deploy했다. SHA39a7b73168a6c236340bb91dffb58682fde5c9f85bdcb452c42ddc7637ad838b,
+224266bytes, 생성 일치/diff 검사 및 이전 동일 후보 CI 통과를 확인했다.
+POST /projects/lost-party:test가 12:57:07.957Z에503 UNAVAILABLE, exit2.
+컴파일 결과/경고 판정 미확정, Ruleset 업로드/Release 요청 미도달.
+사전/사후 active e46f131e-920a-4773-bc25-2ef4b7ff9169, updateTime2026-09-29T09:26:45.388946Z,
+SHAe8baa2e4824d9200ab8a76fe07d7155578ba6982ca9b29941b9b7f55a6b3b1a5 동일.
+새 운영 흐름 활성화 없음. 로컬 제한 기능 검증은 유지하며 전체 회귀/실기기는 미실행.
+백업/초기화 사용자 변경 보존, dev/main 미반영. 추가 게시 없음.
+근거 coverage/roster-publish-48bb6f3/deploy-once.log 및 before/after.json,.rules.
+
+
 ## 2026-10-03 — 멤버 검증 순서 최소 수정, 기존 빈자리 변경 정상화
 
 사용자는 기존 기능 보존을 포함한 Rules 게시 준비 수정을 승인했고 firestore.rules-backup을
