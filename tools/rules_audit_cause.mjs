@@ -1,14 +1,18 @@
 import fs from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { integratedBaseline } from './roster_complexity_candidate.mjs';
+import { integratedBaseline, preserveExistingSlots, deduplicateCleanup, dispatchCleanupEvents } from './roster_complexity_candidate.mjs';
 import { seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn, approvePublicApplicationTxn,
   seedPersistedAdvanceCycleMarker, repositionApprovedMemberTxn, kickApprovedMemberTxn, authUid } from './party_group_cutover_rules_test.mjs';
-const gitRules=ref=>execFileSync('git',['show',`${ref}:firestore.rules`],{encoding:'utf8'}).replace(/\r\n/g,'\n');
-const variants={operating:gitRules('68f0508'),integrated:integratedBaseline(),backupEquivalent:gitRules('4453f53'),current:fs.readFileSync('firestore.rules','utf8')};
+const variants={operating:fs.readFileSync('tools/fixtures/roster_reauth_preintegration.rules','utf8').replace(/\r\n/g,'\n'),
+  integrated:integratedBaseline(),backupEquivalent:dispatchCleanupEvents(deduplicateCleanup(preserveExistingSlots(integratedBaseline()))),
+  current:fs.readFileSync('firestore.rules','utf8')};
+assert.equal(createHash('sha256').update(variants.operating).digest('hex'),'e8baa2e4824d9200ab8a76fe07d7155578ba6982ca9b29941b9b7f55a6b3b1a5');
+assert.equal(createHash('sha256').update(variants.backupEquivalent).digest('hex'),'f43ea68c10658121206581b10730706f68f5cf524e4dc8543840352242ee0500');
 const results=[];fs.mkdirSync('coverage/rules-audit',{recursive:true});
+fs.mkdirSync('coverage/roster-leader',{recursive:true});
+fs.writeFileSync('coverage/roster-leader/manifest.json',JSON.stringify({diagnostic:'post-cycle-kick',sha256:createHash('sha256').update(variants.current).digest('hex')}));
 process.env.RULES_AUDIT='1';
 for(const [name,rules] of Object.entries(variants)){
   const row={name,sha256:createHash('sha256').update(rules).digest('hex'),phase:'setup'};
