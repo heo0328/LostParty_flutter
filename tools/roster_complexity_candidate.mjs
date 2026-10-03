@@ -1,5 +1,13 @@
 // Local candidates only: no promotion until differential emulator checks pass.
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { orphanCleanupCandidate } from './roster_orphan_cleanup_candidate.mjs';
+
+// Keep the comparison baseline reproducible after the accepted result is promoted.
+export function integratedBaseline() {
+  const source = fs.readFileSync(new URL('./fixtures/roster_reauth_preintegration.rules', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  return '// roster-reauth-integrated-v1\n' + orphanCleanupCandidate(source);
+}
 
 export function rulesFunction(source, name) {
   const start = source.indexOf(`    function ${name}(`);

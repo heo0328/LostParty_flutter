@@ -1,9 +1,8 @@
-import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { deduplicateCleanup, dispatchCleanupEvents, rulesFunction, preserveExistingSlots } from './roster_complexity_candidate.mjs';
+import { deduplicateCleanup, dispatchCleanupEvents, rulesFunction, preserveExistingSlots, integratedBaseline } from './roster_complexity_candidate.mjs';
 
-const baseline = fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const baseline = integratedBaseline();
 const deduplicated = deduplicateCleanup(baseline);
 const dispatched = dispatchCleanupEvents(deduplicated);
 const repaired = preserveExistingSlots(baseline);

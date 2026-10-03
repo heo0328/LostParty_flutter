@@ -5,12 +5,12 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { deduplicateCleanup, dispatchCleanupEvents, preserveExistingSlots } from './roster_complexity_candidate.mjs';
+import { deduplicateCleanup, dispatchCleanupEvents, preserveExistingSlots, integratedBaseline } from './roster_complexity_candidate.mjs';
 
 const root = new URL('../', import.meta.url);
 const directory = new URL('coverage/roster-complexity/', root);
 fs.mkdirSync(directory, { recursive: true });
-const baseline = fs.readFileSync(new URL('firestore.rules', root), 'utf8').replace(/\r\n/g, '\n');
+const baseline = integratedBaseline();
 // Unmodified baseline already failed CI37106260020; do not repeat that run.
 const repaired = preserveExistingSlots(baseline);
 const deduplicated = deduplicateCleanup(repaired);

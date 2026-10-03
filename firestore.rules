@@ -2315,42 +2315,13 @@ service cloud.firestore {
         && after.lastCommandAt == request.time;
     }
 
-    function deLeaderOwnershipChanged(slot, observed) {
-      let character = get(characterPath(slot.characterId)).data;
-      let account = get(/databases/$(database)/documents/gameAccounts/$(character.gameAccountId)).data;
-      let oldGeneration = slot.get('ownershipRevision', 0);
-      return oldGeneration is int && oldGeneration >= 0
-        && observed is int
-        && character.ownershipRevision is int
-        && character.ownershipRevision > oldGeneration
-        && character.ownershipRevision == observed
-        && account.ownershipRevision is int
-        && account.ownershipRevision == character.ownershipRevision
-        && character.ownerPlayerId is string && character.ownerPlayerId.size() > 0
-        && account.ownerPlayerId == character.ownerPlayerId;
-    }
 
-    function deLeaderCleanupStateUnchanged(slot, raidId) {
-      let path = atomicRaidStateDocPath(slot.playerId, slot.characterId + '_' + raidId);
-      return exists(path)
-        ? getAfter(path).data == get(path).data
-        : !existsAfter(path);
-    }
 
     function deLeaderCleanupComposition(data, room) {
-      return data.partySlots == room.partySlots
-        && data.memberPlayerIds == room.memberPlayerIds
-        && data.raidStateTargets == room.raidStateTargets
-        && data.memberCount == room.memberCount
-        && data.dealerCount == room.dealerCount
-        && data.supportCount == room.supportCount
-        && data.nonGroupMemberCount == room.nonGroupMemberCount
-        && data.hasAvailableSlot == room.hasAvailableSlot
+      return deCleanupComposition(data, room)
         && data.leaderPlayerId == room.leaderPlayerId
         && data.leaderCharacterNameSnapshot == room.leaderCharacterNameSnapshot
-        && data.leaderClassNameSnapshot == room.leaderClassNameSnapshot
-        && data.sourceRevision == room.revision
-        && data.updatedAt == request.time;
+        && data.leaderClassNameSnapshot == room.leaderClassNameSnapshot;
     }
 
     function deLeaderCleanupEvent(before, after) {
@@ -2391,7 +2362,7 @@ service cloud.firestore {
         && after.leaderPlayerId == before.partySlots[command.successorIndex].playerId
         && getAfter(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(after.leaderPlayerId)).data.canApproveApplications == true
         && getAfter(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(after.leaderPlayerId)).data.updatedAt == request.time
-        && deLeaderOwnershipChanged(target, command.observedOwnershipRevision)
+        && deOwnershipChanged(target, command.observedOwnershipRevision)
         && after.diff(before).affectedKeys().hasOnly([
           'partySlots', 'memberPlayerIds', 'raidStateTargets', 'memberCount',
           'dealerCount', 'supportCount', 'nonGroupMemberCount', 'hasAvailableSlot',
@@ -2421,7 +2392,7 @@ service cloud.firestore {
       return deLeaderCleanupTransition(before, after)
         && target.playerId == playerId && target.characterId == data.characterId
         && !(playerId in after.memberPlayerIds)
-        && deLeaderCleanupStateUnchanged(target, before.raidId);
+        && deCleanupStateUnchanged(target, before.raidId);
     }
 
     function deLeaderCleanupListing(groupId, roomId, before, after) {
@@ -2465,40 +2436,8 @@ service cloud.firestore {
         && after.lastCommandAt == request.time;
     }
 
-    function dePeerOwnershipChanged(slot, observed) {
-      let character = get(characterPath(slot.characterId)).data;
-      let account = get(/databases/$(database)/documents/gameAccounts/$(character.gameAccountId)).data;
-      let oldGeneration = slot.get('ownershipRevision', 0);
-      return oldGeneration is int && oldGeneration >= 0
-        && observed is int
-        && character.ownershipRevision is int
-        && character.ownershipRevision > oldGeneration
-        && character.ownershipRevision == observed
-        && account.ownershipRevision is int
-        && account.ownershipRevision == character.ownershipRevision
-        && character.ownerPlayerId is string && character.ownerPlayerId.size() > 0
-        && account.ownerPlayerId == character.ownerPlayerId;
-    }
 
-    function dePeerCleanupStateUnchanged(slot, raidId) {
-      let path = atomicRaidStateDocPath(slot.playerId, slot.characterId + '_' + raidId);
-      return exists(path)
-        ? getAfter(path).data == get(path).data
-        : !existsAfter(path);
-    }
 
-    function dePeerCleanupComposition(data, room) {
-      return data.partySlots == room.partySlots
-        && data.memberPlayerIds == room.memberPlayerIds
-        && data.raidStateTargets == room.raidStateTargets
-        && data.memberCount == room.memberCount
-        && data.dealerCount == room.dealerCount
-        && data.supportCount == room.supportCount
-        && data.nonGroupMemberCount == room.nonGroupMemberCount
-        && data.hasAvailableSlot == room.hasAvailableSlot
-        && data.sourceRevision == room.revision
-        && data.updatedAt == request.time;
-    }
 
     function dePeerCleanupEvent(before, after) {
       let command = after.ownershipCleanup;
@@ -2532,7 +2471,7 @@ service cloud.firestore {
         && deCurrentOwnership(before.partySlots[command.actorIndex])
         && command.leaderIndex is int && command.leaderIndex >= 0 && command.leaderIndex < before.partySlots.size()
         && before.partySlots[command.leaderIndex].playerId == before.leaderPlayerId
-        && dePeerOwnershipChanged(before.partySlots[command.leaderIndex], command.observedLeaderRevision)
+        && deOwnershipChanged(before.partySlots[command.leaderIndex], command.observedLeaderRevision)
         && after.diff(before).affectedKeys().hasOnly([
           'partySlots', 'memberPlayerIds', 'raidStateTargets', 'memberCount',
           'dealerCount', 'supportCount', 'nonGroupMemberCount', 'hasAvailableSlot',
@@ -2550,7 +2489,7 @@ service cloud.firestore {
         && after.updatedAt == request.time
         && exists(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(target.playerId))
         && !existsAfter(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(target.playerId))
-        && (before.visibility != 'group' || dePeerCleanupComposition(
+        && (before.visibility != 'group' || deCleanupComposition(
           getAfter(/databases/$(database)/documents/groups/$(before.groupId)/raidListings/$(before.recruitmentId)).data, after))
         && getAfter(/databases/$(database)/documents/partyEvents/$(after.lastCommandId)).data == dePeerCleanupEvent(before, after);
     }
@@ -2562,8 +2501,8 @@ service cloud.firestore {
       return dePeerCleanupTransition(before, after)
         && target.playerId == playerId && target.characterId == data.characterId
         && !(playerId in after.memberPlayerIds)
-        && dePeerOwnershipChanged(target, after.ownershipCleanup.observedOwnershipRevision)
-        && dePeerCleanupStateUnchanged(target, before.raidId);
+        && deOwnershipChanged(target, after.ownershipCleanup.observedOwnershipRevision)
+        && deCleanupStateUnchanged(target, before.raidId);
     }
 
     function dePeerCleanupListing(groupId, roomId, before, after) {
@@ -2575,7 +2514,7 @@ service cloud.firestore {
           'partySlots', 'memberPlayerIds', 'raidStateTargets', 'memberCount',
           'dealerCount', 'supportCount', 'nonGroupMemberCount', 'hasAvailableSlot',
           'sourceRevision', 'updatedAt'])
-        && dePeerCleanupComposition(after, roomAfter);
+        && deCleanupComposition(after, roomAfter);
     }
 
     function dePeerCleanupEventCreate(data) {
@@ -4541,10 +4480,11 @@ service cloud.firestore {
     }
     function deChangedSlotGenerations(before, after) {
       return before.partySlots == after.partySlots || (after.partySlots.size() <= 8
-        && deChangedSlotGenerationAt(before, after, 0) && deChangedSlotGenerationAt(before, after, 1)
+        && (before.partySlots.hasAll(after.partySlots)
+          || (deChangedSlotGenerationAt(before, after, 0) && deChangedSlotGenerationAt(before, after, 1)
         && deChangedSlotGenerationAt(before, after, 2) && deChangedSlotGenerationAt(before, after, 3)
         && deChangedSlotGenerationAt(before, after, 4) && deChangedSlotGenerationAt(before, after, 5)
-        && deChangedSlotGenerationAt(before, after, 6) && deChangedSlotGenerationAt(before, after, 7));
+        && deChangedSlotGenerationAt(before, after, 6) && deChangedSlotGenerationAt(before, after, 7))));
     }
     function deValidGeneration(data) {
       return data.get('ownershipRevision', 0) is int
@@ -4617,8 +4557,14 @@ service cloud.firestore {
       allow get, list: if hasActiveBinding()
         && resource.data.audiencePlayerIds.hasAny([currentPlayerId()]);
       allow update, delete: if false;
-      allow create: if (request.resource.data.type == 'ownershipPeerRemoved') ? (request.resource.data.eventId == eventId && dePeerCleanupEventCreate(request.resource.data)) : ((request.resource.data.type == 'ownershipLeaderRemoved' && request.resource.data.eventId == eventId && deLeaderCleanupEventCreate(request.resource.data)) || (request.resource.data.type == 'ownershipParticipantRemoved' && request.resource.data.eventId == eventId && deCleanupEventCreate(request.resource.data)) || validAtomicMembershipPartyEvent(request.resource.data)
-        || validAtomicLifecyclePartyEvent(request.resource.data));
+      allow create: if request.resource.data.type == 'ownershipPeerRemoved'
+        ? (request.resource.data.eventId == eventId && dePeerCleanupEventCreate(request.resource.data))
+        : request.resource.data.type == 'ownershipLeaderRemoved'
+          ? (request.resource.data.eventId == eventId && deLeaderCleanupEventCreate(request.resource.data))
+          : request.resource.data.type == 'ownershipParticipantRemoved'
+            ? (request.resource.data.eventId == eventId && deCleanupEventCreate(request.resource.data))
+            : (validAtomicMembershipPartyEvent(request.resource.data)
+              || validAtomicLifecyclePartyEvent(request.resource.data));
     }
 
     match /recruitments/{recruitmentId} {

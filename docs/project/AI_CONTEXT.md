@@ -1,23 +1,12 @@
 # AI CONTEXT (2026)
 
-2026-10-03 최신: 사용자 승인 제한 CI [37106260020](https://github.com/heo0328/LostParty_flutter/actions/runs/37106260020)는
-기준본 최대8인 정리 시나리오에서 평가식1000 한도로 실패. 두 개선 후보는 미실행/미채택이다.
-다음은 기준본 정리 비용 원인 분리·최소 수정 설계. 운영 게시503과 별개이며 운영/배포 원본 무변경.
-[현재 작업](NEXT_WORK.md), [상세](TASK-11-FIRESTORE-RULES-COMPLEXITY.md).
-
-2026-10-03 최종 사용자 결정: 로컬 HTTP/2 진단 결과 기록 후 보류. 최소 Rules와 Node 자체
-HTTP/2 대조도 실패하여 로컬 전송 문제로 범위를 좁혔으며 구체적 원인은 미확정이다.
-원격 CI/추가 진단/후보 채택은 새 지시 전 진행하지 않는다. [진단 기록](TASK-11-FIRESTORE-RULES-COMPLEXITY.md).
-
-2026-10-03 후속: Rules 중복 제거·이벤트 분기 후보와 제한 비교 도구 작성. 정적 계약 6건 통과.
-로컬 기준본 요청부터 전송/503 실패로 동작 검증 차단, 배포 원본 채택 보류. 운영 게시/원격 검증 없음.
-[복잡도 결과](TASK-11-FIRESTORE-RULES-COMPLEXITY.md), [다음 게이트](NEXT_WORK.md). 전용 브랜치 유지.
-
-2026-10-03 최신 DE 상태: 앱·Rules 통합 완료. 전체 회귀는 사용자 지시로 생략,
-게시 경계 40건·정적 계약 3건 통과. 추가 승인 게시에서 컴파일/업로드 성공, Release PATCH 503.
-최근 저장본 5개는 통합본과 일치, 활성 소스는 9월 29일 본 유지. [게시 진단](ROSTER_RULES_PUBLISH_DIAGNOSIS.md).
-재게시 자동 반복 없이 사용자 지시/콘솔 게시 확인 대기. [설계 §23](../architecture/BUG_022_REMAINING_FIX_DESIGN.md),
-[현재 실행 계획](NEXT_WORK.md), [실기기 목록](ROSTER_REAUTH_DEVICE_CHECKLIST.md).
+2026-10-03 최신 DE 상태: 8인 참가 정리 평가 한도 수정과 중복/이벤트 분기 개선을
+검증된 최종 Rules에 반영했다. 같은 해시에서 제한 서버72건(정리/해산61+참가11),
+정적7+3건 통과. 전체 회귀는 사용자 지시로 생략했다.
+운영 활성화503은 별도 미해결이며 이번 운영 게시/실기기/dev/main 병합은 없다.
+전용 fix/roster-reauth-isolation 유지. [현재 계획](NEXT_WORK.md),
+[검증 상세](TASK-11-FIRESTORE-RULES-COMPLEXITY.md), [게시 진단](ROSTER_RULES_PUBLISH_DIAGNOSIS.md),
+[실기기 목록](ROSTER_REAUTH_DEVICE_CHECKLIST.md).
 
 > 프로젝트 전체 지도와 현재 상태의 요약이다. 행동 규칙은 `ai_rules.md`, 바로 실행할 상세 작업은 `NEXT_WORK.md`, 완료 경과는 `DEV_LOG.md`가 기준이다.
 
