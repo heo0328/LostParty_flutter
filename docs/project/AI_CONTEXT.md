@@ -1,8 +1,9 @@
 # AI CONTEXT (2026)
 
-2026-10-03 최신 DE 상태: 파트 1의 마지막 1인 해산·중단 요청 복구·정리 알림까지 앱 연결 완료.
-표적/기존 매핑 17건·변경 분석 통과. 다음은 파트 2 Rules 통합·전체 회귀·운영·사용자 실기기다.
-[설계 §22.14](../architecture/BUG_022_REMAINING_FIX_DESIGN.md), [현재 실행 계획](NEXT_WORK.md).
+2026-10-03 최신 DE 상태: 앱·Rules 통합 완료. 전체 회귀는 사용자 지시로 생략,
+게시 경계 40건·정적 계약 3건 통과. 운영 게시 1회는 /test 503으로 실패, 활성 소스 불변 확인.
+재게시 자동 반복 없이 사용자 지시/콘솔 게시 확인 대기. [설계 §23](../architecture/BUG_022_REMAINING_FIX_DESIGN.md),
+[현재 실행 계획](NEXT_WORK.md), [실기기 목록](ROSTER_REAUTH_DEVICE_CHECKLIST.md).
 
 > 프로젝트 전체 지도와 현재 상태의 요약이다. 행동 규칙은 `ai_rules.md`, 바로 실행할 상세 작업은 `NEXT_WORK.md`, 완료 경과는 `DEV_LOG.md`가 기준이다.
 

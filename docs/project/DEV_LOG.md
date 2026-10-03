@@ -1,3 +1,29 @@
+# 2026-10-03 DE 통합 Rules 게시 1회 실패 — 사용자 전체 회귀 생략 결정
+
+- 사용자 지시로 전체 Flutter test/analyze 및 전체 Rules 회귀를 생략했다. 기존 22 실패/51건과
+  8인 주차 전환 한도는 해결·검증 완료로 바꾸지 않는다.
+- 누적 orphanCleanupCandidate를 루트 firestore.rules로 통합했다. 통합 전 fixture를 보존하고
+  재생성 일치 검사를 추가했다. 새 기능은 인증 차수/참가·완료·정리 서버 계약이며 실제 운영은 미반영이다.
+- 정적 계약 3건 통과. 최종 원본의 인증 15건은 CI 37093970487에서 통과했다. 이후 과거 도구
+  원본 hook 오류와 샘플 gameAccount 부재가 확인돼 도구/fixture만 수정했다. CI 37096574994에서
+  마지막 1인 해산 10건+고아 정리 15건 통과. Rules 소스는 그 사이 변경하지 않았다.
+  정상·부분 쓰기/재이전/타인 요청 거절·완료 이력 보존을 확인했으며 전체 회귀 통과 주장은 아니다.
+- 새 workflow의 기본 브랜치 미등록 404는 기존 workflow에 제한 실행 경로를 연결해 해결했다.
+  중단 중 자동 승인 검토가 사용량 한도로 실패한 로그 조회는 미실행이었다. 사용자 재개 후 조회했다.
+- 2026-10-03 13:29 KST `firebase deploy --only firestore:rules --project lost-party --non-interactive`
+  정확히 1회 실행. `/projects/lost-party:test` HTTP 503 UNAVAILABLE로 종료 코드 2.
+  `/rulesets` 및 `/releases` 게시 요청 미도달. Indexes·다른 서비스·운영 데이터 변경 없음.
+- 게시 전후 활성 ruleset `e46f131e-920a-4773-bc25-2ef4b7ff9169`, updateTime
+  `2026-09-29T09:26:45.388946Z`, SHA256
+  `e8baa2e4824d9200ab8a76fe07d7155578ba6982ca9b29941b9b7f55a6b3b1a5`로 동일함을 API 조회로 확인했다.
+  통합 로컬 SHA256은 `11ef3dde97ac202f488d1a12d861c2cf20c13e50ef9c5c3e1dc45e1fdc3af151`이다.
+  demo 컴파일 경고 미관찰. 운영 컴파일은 503이므로 성공/경고 0 확정이 아니다.
+- 운영 실패만으로 특정 기능/복잡도를 원인으로 단정하거나 권한을 완화하지 않았다.
+  재게시 반복 금지. 사용자 후속 지시 또는 직접 게시 결과를 확인한 뒤 실기기 13항목을 진행한다.
+  [실기기 목록](ROSTER_REAUTH_DEVICE_CHECKLIST.md)에 준비/기대 결과/3기기 한계를 기록했다.
+- fix/roster-reauth-isolation 유지, 통합/도구 커밋 1b32eb3→fca7f9c→3fdafe9→3e4316a push 완료.
+  결과 문서도 같은 브랜치에 커밋/push한다. dev/main 미반영, 사용자 초기화 설정 변경 보존.
+
 # 2026-10-03 DE 파트 1 — 마지막 1인 해산·중단 요청 복구 마무리
 
 - 새로 연결: stale가 확인된 마지막 기존 공대장의 완료 반복방 해산. 모집 종료·그룹 count/listing·
