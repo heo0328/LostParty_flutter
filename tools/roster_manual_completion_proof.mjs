@@ -8,7 +8,9 @@ import { personalCompletionCandidate } from './roster_personal_completion_candid
 import { seedBase, authUid, playerId, characterId, cycleKey, cycleWindow, raidId } from './party_group_cutover_rules_test.mjs';
 
 const candidate = process.env.LEADER_PROOF_SCOPE === 'personal-completion' ? personalCompletionCandidate : manualCompletionCandidate;
-const rules = candidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
+const rules = process.env.ROSTER_COMPLEXITY_RULES_FILE
+  ? fs.readFileSync(process.env.ROSTER_COMPLEXITY_RULES_FILE, 'utf8')
+  : candidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
 const directory = new URL('../coverage/roster-leader/', import.meta.url);
 fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(new URL('candidate.rules', directory), rules);

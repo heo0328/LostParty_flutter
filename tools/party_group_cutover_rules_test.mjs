@@ -116,6 +116,7 @@ async function seedBase(testEnv, { membershipState = null, weeklyClaim = false }
       createdAt: now,
       updatedAt: now,
     });
+    if (process.env.RULES_AUDIT === '1') await setDoc(doc(db, 'gameAccounts', gameAccountId), {ownerPlayerId: playerId, status: 'active'});
     await setDoc(doc(db, 'characters', characterId), {
       schemaVersion: 1,
       status: 'active',
@@ -264,6 +265,7 @@ async function seedJoiner(testEnv, { membershipState = null } = {}) {
     await setDoc(doc(db, 'players', joinerPlayerId), {
       schemaVersion: 1, status: 'active', createdAt: now, updatedAt: now,
     });
+    if (process.env.RULES_AUDIT === '1') await setDoc(doc(db, 'gameAccounts', 'account-2'), {ownerPlayerId: joinerPlayerId, status: 'active'});
     await setDoc(doc(db, 'characters', joinerCharacterId), {
       schemaVersion: 1, status: 'active', ownerPlayerId: joinerPlayerId,
       gameAccountId: 'account-2', characterName: '가입자', serverName: '루페온',

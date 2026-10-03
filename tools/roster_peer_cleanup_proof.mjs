@@ -8,7 +8,9 @@ import { peerCleanupCandidate } from './roster_peer_cleanup_candidate.mjs';
 import { runCleanupProof } from './roster_completed_cleanup_proof.mjs';
 import { lifecycle } from './roster_ownership_rules_proof.mjs';
 import { recruitmentId } from './party_group_cutover_rules_test.mjs';
-const rules = peerCleanupCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
+const rules = process.env.ROSTER_COMPLEXITY_RULES_FILE
+  ? fs.readFileSync(process.env.ROSTER_COMPLEXITY_RULES_FILE, 'utf8')
+  : peerCleanupCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
 const directory = new URL('../coverage/roster-leader/', import.meta.url);
 fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(new URL('candidate.rules', directory), rules);

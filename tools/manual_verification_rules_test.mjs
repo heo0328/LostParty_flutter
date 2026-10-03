@@ -8,7 +8,6 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   doc,
-  getFirestore,
   setDoc,
   updateDoc,
   serverTimestamp,
@@ -16,7 +15,7 @@ import {
 } from 'firebase/firestore';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PROJECT_ID = 'lost-party-rules-test';
+const PROJECT_ID = process.env.RULES_AUDIT === '1' ? 'demo-party-group-cutover' : 'lost-party-rules-test';
 const rules = fs.readFileSync(
   path.join(__dirname, '..', 'firestore.rules'),
   'utf8',
@@ -38,7 +37,7 @@ function pastTimestamp(hours = 1) {
 
 async function seedBase(testEnv) {
   await testEnv.withSecurityRulesDisabled(async (context) => {
-    const db = getFirestore(context);
+    const db = context.firestore();
     await setDoc(doc(db, 'authBindings', operatorAuthUid), {
       schemaVersion: 1,
       playerId: operatorPlayerId,
@@ -92,7 +91,7 @@ async function seedPendingRequest(testEnv, overrides = {}) {
     ...overrides,
   };
   await testEnv.withSecurityRulesDisabled(async (context) => {
-    const db = getFirestore(context);
+    const db = context.firestore();
     await setDoc(doc(db, 'manualVerificationRequests', requestId), payload);
   });
   return { createdAt, expiresAt };
@@ -108,9 +107,7 @@ try {
   await seedBase(testEnv);
   await seedPendingRequest(testEnv);
 
-  const operatorDb = getFirestore(
-    testEnv.authenticatedContext(operatorAuthUid),
-  );
+  const operatorDb = testEnv.authenticatedContext(operatorAuthUid).firestore();
 
   console.log('test: operator cancel');
   await assertSucceeds(

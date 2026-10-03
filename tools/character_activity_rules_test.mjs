@@ -18,7 +18,7 @@ import {
 } from 'firebase/firestore';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PROJECT_ID = 'lost-party-character-activity-rules';
+const PROJECT_ID = process.env.RULES_AUDIT === '1' ? 'demo-party-group-cutover' : 'lost-party-character-activity-rules';
 const rules = fs.readFileSync(
   path.join(__dirname, '..', 'firestore.rules'),
   'utf8',
