@@ -5,7 +5,8 @@ import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebas
 import { doc, getDoc, setDoc, updateDoc, writeBatch, Timestamp } from 'firebase/firestore';
 import { orphanCleanupCandidate } from './roster_orphan_cleanup_candidate.mjs';
 import { seedBase, authUid, playerId, characterId, cycleKey, raidId } from './party_group_cutover_rules_test.mjs';
-const rules = orphanCleanupCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
+const source = fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8');
+const rules = process.env.ROSTER_TRACKED_RULES === '1' ? source : orphanCleanupCandidate(source);
 const directory = new URL('../coverage/roster-leader/', import.meta.url);
 fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(new URL('candidate.rules', directory), rules);

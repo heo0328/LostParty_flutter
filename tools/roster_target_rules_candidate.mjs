@@ -1,6 +1,11 @@
 // B7 demo-only transformation; never deploy this generated candidate.
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 export function sharedTargetStatus(source) {
+  // Historical candidate proofs retain their original input after promotion.
+  if (source.startsWith('// roster-reauth-integrated-v1')) {
+    source = fs.readFileSync(new URL('./fixtures/roster_reauth_preintegration.rules', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  }
   const start = source.indexOf('    function atomicAllTargetsMatch(data) {');
   const end = source.indexOf('    function atomicValidLifecycleShape(', start);
   assert.ok(start > 0 && end > start);

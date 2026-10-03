@@ -8,7 +8,8 @@ import { lastMemberCandidate } from './roster_last_member_candidate.mjs';
 import { runCleanupProof } from './roster_completed_cleanup_proof.mjs';
 import { playerId, recruitmentId } from './party_group_cutover_rules_test.mjs';
 
-const rules = lastMemberCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
+const source = fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8');
+const rules = process.env.ROSTER_TRACKED_RULES === '1' ? source : lastMemberCandidate(source);
 const directory = new URL('../coverage/roster-leader/', import.meta.url);
 fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(new URL('candidate.rules', directory), rules);

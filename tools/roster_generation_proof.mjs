@@ -5,7 +5,8 @@ import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebas
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, runTransaction, deleteField } from 'firebase/firestore';
 import { generationCandidate } from './roster_generation_candidate.mjs';
 
-const rules = generationCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
+const source = fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8');
+const rules = process.env.ROSTER_TRACKED_RULES === '1' ? source : generationCandidate(source);
 const directory = new URL('../coverage/roster-leader/', import.meta.url);
 fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(new URL('candidate.rules', directory), rules);

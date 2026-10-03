@@ -1,3 +1,4 @@
+// roster-reauth-integrated-v1
 rules_version = '2';
 
 service cloud.firestore {
@@ -1376,26 +1377,52 @@ service cloud.firestore {
           ));
     }
 
+    function atomicExpectedTargetStateMatches(data, state, expectedStatus) {
+      return state.recruitmentId == data.recruitmentId
+        && state.cycleKey == data.currentCycleKey
+        && state.status == expectedStatus;
+    }
+
+    function atomicExpectedTargetMatches(data, index, expectedStatus) {
+      return index >= data.commandTargets.size()
+        || atomicExpectedTargetStateMatches(data,
+          getAfter(atomicRaidStatePath(data.commandTargets[index])).data, expectedStatus);
+    }
+
+    function atomicAllExpectedTargetsMatch(data, expectedStatus) {
+      return atomicExpectedTargetMatches(data, 0, expectedStatus)
+        && atomicExpectedTargetMatches(data, 1, expectedStatus)
+        && atomicExpectedTargetMatches(data, 2, expectedStatus)
+        && atomicExpectedTargetMatches(data, 3, expectedStatus)
+        && atomicExpectedTargetMatches(data, 4, expectedStatus)
+        && atomicExpectedTargetMatches(data, 5, expectedStatus)
+        && atomicExpectedTargetMatches(data, 6, expectedStatus)
+        && atomicExpectedTargetMatches(data, 7, expectedStatus);
+    }
+
     function atomicAllTargetsMatch(data) {
       return data.commandTargets.size() <= 8
         && (data.commandTargets.size() >= 1
           || data.lastCommandType == 'incompleteEnd'
           || (data.lastCommandType == 'disband'
             && data.currentCycleStatus == 'completed'))
-        && atomicTargetMatchesTransition(data, 0)
+        && ((data.lastCommandType == 'complete' || data.lastCommandType == 'advanceCycle')
+          ? atomicAllExpectedTargetsMatch(data, data.lastCommandType == 'complete' ? 'completed' : 'active')
+          : (atomicTargetMatchesTransition(data, 0)
         && atomicTargetMatchesTransition(data, 1)
         && atomicTargetMatchesTransition(data, 2)
         && atomicTargetMatchesTransition(data, 3)
         && atomicTargetMatchesTransition(data, 4)
         && atomicTargetMatchesTransition(data, 5)
         && atomicTargetMatchesTransition(data, 6)
-        && atomicTargetMatchesTransition(data, 7);
+        && atomicTargetMatchesTransition(data, 7)));
     }
 
     function atomicValidLifecycleShape(oldData, newData) {
       return newData.leaderPlayerId == oldData.leaderPlayerId
         && newData.groupId == oldData.groupId
         && newData.raidStateTargets == oldData.raidStateTargets
+        && newData.partySlots == oldData.partySlots
         && (newData.commandTargets == oldData.raidStateTargets
           || (newData.lastCommandType == 'incompleteEnd'
             && newData.commandTargets.size() == 0)
@@ -1502,6 +1529,32 @@ service cloud.firestore {
           && atomicValidClosingGroupLifecycleCount(oldData, newData));
     }
 
+
+    function deLastCompletedDisband(before, after) {
+      let slot = before.partySlots[0];
+      let memberPath = /databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(slot.playerId);
+      let eventPath = /databases/$(database)/documents/partyEvents/$(after.lastCommandId);
+      let event = getAfter(eventPath).data;
+      return before.partySlots.size() == 1
+        && slot.playerId == before.leaderPlayerId
+        && after.diff(before).affectedKeys().hasOnly([
+          'status', 'manualRecruitmentEnabled', 'hasAvailableSlot', 'commandTargets',
+          'groupActiveRecruitmentCountAfter', 'revision', 'lastCommandId',
+          'lastCommandType', 'lastCommandActorPlayerId', 'lastCommandAt', 'updatedAt'])
+        && after.commandTargets == []
+        && getAfter(memberPath).data == get(memberPath).data
+        && deCleanupStateUnchanged(slot, before.raidId)
+        && (!atomicHasGroupId(before)
+          || !existsAfter(/databases/$(database)/documents/groups/$(before.groupId)/raidListings/$(before.recruitmentId)))
+        && !exists(eventPath)
+        && event.recruitmentId == before.recruitmentId
+        && event.eventId == after.lastCommandId && event.commandId == after.lastCommandId
+        && event.type == 'disband' && event.commandRevision == after.revision
+        && event.actorPlayerId == currentPlayerId()
+        && event.audiencePlayerIds == before.memberPlayerIds
+        && event.occurredAt == request.time;
+    }
+
     function validAtomicLifecycleUpdate(oldData, newData) {
       return atomicIsLifecycleCommand(newData)
         && atomicLifecycleActorAllowed(oldData, newData)
@@ -1533,7 +1586,8 @@ service cloud.firestore {
       return index < recruitment.partySlots.size()
         && recruitment.partySlots[index].playerId == data.playerId
         && recruitment.partySlots[index].characterId == data.characterId
-        && recruitment.partySlots[index].role == data.role;
+        && recruitment.partySlots[index].role == data.role
+        && recruitment.partySlots[index].get('ownershipRevision', 0) == data.get('ownershipRevision', 0);
     }
 
     function atomicAdvanceStateMatchesSlot(recruitment, data) {
@@ -1547,14 +1601,28 @@ service cloud.firestore {
         || atomicAdvanceStateMatchesSlotAt(recruitment, data, 7);
     }
 
+    function deCurrentOwnership(data) {
+      let character = get(characterPath(data.characterId)).data;
+      let account = get(/databases/$(database)/documents/gameAccounts/$(character.gameAccountId)).data;
+      let generation = character.get('ownershipRevision', 0);
+      return generation is int && generation >= 0
+        && account.get('ownershipRevision', 0) is int
+        && account.get('ownershipRevision', 0) == generation
+        && character.ownerPlayerId == data.playerId
+        && account.ownerPlayerId == data.playerId
+        && data.get('ownershipRevision', 0) is int
+        && data.get('ownershipRevision', 0) == generation;
+    }
+
     function validAtomicAdvanceRaidStateCreate(playerId, stateId, data) {
       let recruitment = getAfter(recruitmentPath(data.recruitmentId)).data;
       return atomicIsLifecycleCommand(recruitment)
         && recruitment.lastCommandType == 'advanceCycle'
+        && deCurrentOwnership(data)
         && data.keys().hasOnly([
           'schemaVersion', 'playerId', 'characterId', 'raidId',
           'difficultyId', 'recruitmentId', 'cycleKey', 'role', 'status',
-          'source', 'revision', 'updatedAt'
+          'source', 'revision', 'updatedAt', 'ownershipRevision'
         ])
         && data.schemaVersion == 1
         && data.playerId == playerId
@@ -1574,6 +1642,7 @@ service cloud.firestore {
     function validAtomicRaidStateUpdate(playerId, stateId, oldData, newData) {
       let recruitment = getAfter(recruitmentPath(oldData.recruitmentId)).data;
       return atomicIsLifecycleCommand(recruitment)
+        && deCurrentOwnership(oldData)
         && newData.playerId == playerId
         && oldData.playerId == playerId
         && stateId == oldData.characterId + '_' + oldData.raidId
@@ -1590,6 +1659,7 @@ service cloud.firestore {
         && newData.updatedAt == request.time
         && ((recruitment.lastCommandType == 'complete'
             && oldData.status == 'active'
+            && atomicAdvanceStateMatchesSlot(recruitment, oldData)
             && newData.status == 'completed'
             && newData.source == oldData.source
             && newData.cycleKey == oldData.cycleKey
@@ -1796,7 +1866,8 @@ service cloud.firestore {
     }
 
     function atomicInitialPartySlotMatches(slot, playerId, member) {
-      return slot.playerId == playerId
+      return slot.get('ownershipRevision', 0) == member.get('ownershipRevision', 0)
+        && slot.playerId == playerId
         && slot.characterId == member.characterId
         && slot.role == member.role
         && slot.partyIndex == 0
@@ -1898,7 +1969,7 @@ service cloud.firestore {
       let member = getAfter(
         recruitmentMemberPath(data.recruitmentId, playerId)
       ).data;
-      return hasActiveBinding()
+      return deCurrentOwnership(data) && hasActiveBinding()
         && (playerId == currentPlayerId()
           || canApproveApplications(data.recruitmentId))
         && stateId == data.characterId + '_' + data.raidId
@@ -1915,12 +1986,13 @@ service cloud.firestore {
         && data.cycleKey == recruitment.currentCycleKey
         && data.raidId == recruitment.raidId
         && data.characterId == member.characterId
+        && data.get('ownershipRevision', 0) == member.get('ownershipRevision', 0)
         && ownsActiveCharacterForPlayer(data.characterId, playerId)
-        && !hasWeeklyRaidCompletionAfter(
+        && !deBlockingClaim(
           playerId,
           data.cycleKey,
           data.characterId,
-          data.raidId
+          data.raidId, data.get('ownershipRevision', 0)
         )
         && atomicRaidStateListedInTargets(recruitment, playerId, stateId);
     }
@@ -1933,7 +2005,7 @@ service cloud.firestore {
           'schemaVersion', 'playerId', 'characterId', 'raidId',
           'difficultyId', 'cycleKey', 'status', 'source', 'recruitmentId',
           'revision', 'cycleStartedAt', 'cycleEndsAt', 'completedAt',
-          'updatedAt'
+          'updatedAt', 'ownershipRevision'
         ])
         && data.schemaVersion == 1
         && data.playerId == playerId
@@ -1952,14 +2024,14 @@ service cloud.firestore {
         && request.time < data.cycleEndsAt
         && data.completedAt == request.time
         && data.updatedAt == request.time
-        && ownsActiveCharacter(data.characterId)
-        && !hasWeeklyRaidClaimAfter(
+        && deManualCurrentOwnership(data)
+        && !deBlockingClaim(
           playerId,
           data.cycleKey,
           data.characterId,
-          data.raidId
+          data.raidId, data.get('ownershipRevision', 0)
         )
-        && !existsAfter(assignmentPath(playerId, stateId));
+        && deManualAssignmentAvailable(playerId, stateId, data);
     }
 
     function validPersonalRaidStateCompletion(
@@ -1969,7 +2041,7 @@ service cloud.firestore {
       newData
     ) {
       let recruitment = getAfter(recruitmentPath(oldData.recruitmentId)).data;
-      return hasActiveBinding()
+      return deManualCurrentOwnership(oldData) && hasActiveBinding()
         && playerId == currentPlayerId()
         && oldData.playerId == playerId
         && stateId == oldData.characterId + '_' + oldData.raidId
@@ -1990,7 +2062,7 @@ service cloud.firestore {
         && recruitment.raidId == oldData.raidId
         && recruitment.currentCycleKey == oldData.cycleKey
         && !(playerId in recruitment.memberPlayerIds)
-        && !atomicRaidStateListedInTargets(recruitment, playerId, stateId)
+        && !recruitment.raidStateTargets.hasAny([{'playerId': playerId, 'stateId': stateId}])
         && !existsAfter(recruitmentMemberPath(oldData.recruitmentId, playerId));
     }
 
@@ -1999,7 +2071,7 @@ service cloud.firestore {
         && playerId == currentPlayerId()
         && data.playerId == playerId
         && stateId == data.characterId + '_' + data.raidId
-        && data.status == 'completed';
+        && data.status == 'completed' && deManualCurrentOwnership(data);
     }
 
     function validLegacyAssignmentConsumedByPersonalCompletion(
@@ -2031,14 +2103,15 @@ service cloud.firestore {
       data
     ) {
       let path = recruitmentPath(data.recruitmentId);
-      return hasActiveBinding()
+      return deManualCurrentOwnership(data) && hasActiveBinding()
         && playerId == currentPlayerId()
         && data.playerId == playerId
         && assignmentId == data.characterId + '_' + data.raidId
         && data.status == 'active'
         && (
           !exists(path)
-          || validAtomicStaleRaidStateRecruitment(get(path).data)
+          || (get(path).data.raidId == data.raidId
+            && validAtomicStaleRaidStateRecruitment(get(path).data))
         );
     }
 
@@ -2233,6 +2306,414 @@ service cloud.firestore {
         && newData.updatedAt == request.time;
     }
 
+
+    function deLeaderCleanupTransition(before, after) {
+      return after.get('lastCommandType', '') == 'cleanupCompletedLeaderOwnership'
+        && before.revision + 1 == after.revision
+        && after.ownershipCleanup.expectedRevision == before.revision
+        && after.lastCommandActorPlayerId == currentPlayerId()
+        && after.lastCommandAt == request.time;
+    }
+
+    function deLeaderOwnershipChanged(slot, observed) {
+      let character = get(characterPath(slot.characterId)).data;
+      let account = get(/databases/$(database)/documents/gameAccounts/$(character.gameAccountId)).data;
+      let oldGeneration = slot.get('ownershipRevision', 0);
+      return oldGeneration is int && oldGeneration >= 0
+        && observed is int
+        && character.ownershipRevision is int
+        && character.ownershipRevision > oldGeneration
+        && character.ownershipRevision == observed
+        && account.ownershipRevision is int
+        && account.ownershipRevision == character.ownershipRevision
+        && character.ownerPlayerId is string && character.ownerPlayerId.size() > 0
+        && account.ownerPlayerId == character.ownerPlayerId;
+    }
+
+    function deLeaderCleanupStateUnchanged(slot, raidId) {
+      let path = atomicRaidStateDocPath(slot.playerId, slot.characterId + '_' + raidId);
+      return exists(path)
+        ? getAfter(path).data == get(path).data
+        : !existsAfter(path);
+    }
+
+    function deLeaderCleanupComposition(data, room) {
+      return data.partySlots == room.partySlots
+        && data.memberPlayerIds == room.memberPlayerIds
+        && data.raidStateTargets == room.raidStateTargets
+        && data.memberCount == room.memberCount
+        && data.dealerCount == room.dealerCount
+        && data.supportCount == room.supportCount
+        && data.nonGroupMemberCount == room.nonGroupMemberCount
+        && data.hasAvailableSlot == room.hasAvailableSlot
+        && data.leaderPlayerId == room.leaderPlayerId
+        && data.leaderCharacterNameSnapshot == room.leaderCharacterNameSnapshot
+        && data.leaderClassNameSnapshot == room.leaderClassNameSnapshot
+        && data.sourceRevision == room.revision
+        && data.updatedAt == request.time;
+    }
+
+    function deLeaderCleanupEvent(before, after) {
+      let command = after.ownershipCleanup;
+      let target = before.partySlots[command.targetIndex];
+      return {
+        'schemaVersion': 1, 'eventId': after.lastCommandId,
+        'commandId': after.lastCommandId, 'recruitmentId': before.recruitmentId,
+        'type': 'ownershipLeaderRemoved', 'commandRevision': after.revision,
+        'expectedRevision': before.revision, 'actorPlayerId': currentPlayerId(),
+        'targetPlayerId': target.playerId, 'targetCharacterId': target.characterId,
+        'observedOwnershipRevision': command.observedOwnershipRevision,
+        'successorPlayerId': before.partySlots[command.successorIndex].playerId,
+        'priorGenerations': command.priorGenerations,
+        'audiencePlayerIds': before.memberPlayerIds, 'occurredAt': request.time
+      };
+    }
+
+    function deLeaderCleanupAggregate(before, after) {
+      let command = after.ownershipCleanup;
+      let target = before.partySlots[command.targetIndex];
+      let remaining = before.partySlots.removeAll([target]);
+      return hasActiveBinding() && deLeaderCleanupTransition(before, after)
+        && before.schemaVersion == 2 && before.status == 'active'
+        && before.currentCycleStatus == 'completed' && before.continueTogether == true
+        && before.memberCount >= 2 && before.memberCount <= 8
+        && command.keys().hasOnly(['expectedRevision', 'targetIndex', 'actorIndex', 'observedOwnershipRevision', 'successorIndex', 'priorGenerations'])
+        && command.targetIndex is int && command.targetIndex >= 0
+        && command.targetIndex < before.partySlots.size()
+        && target.playerId == before.leaderPlayerId
+        && command.actorIndex is int && command.actorIndex >= 0 && command.actorIndex < before.partySlots.size()
+        && before.partySlots[command.actorIndex].playerId == currentPlayerId()
+        && deCurrentOwnership(before.partySlots[command.actorIndex])
+        && command.successorIndex is int && command.successorIndex >= 0 && command.successorIndex < before.partySlots.size()
+        && command.successorIndex != command.targetIndex
+        && command.priorGenerations is list && command.priorGenerations.size() == before.partySlots.size()
+        && command.successorIndex == (command.targetIndex == 0 ? 1 : 0)
+        && after.leaderPlayerId == before.partySlots[command.successorIndex].playerId
+        && getAfter(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(after.leaderPlayerId)).data.canApproveApplications == true
+        && getAfter(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(after.leaderPlayerId)).data.updatedAt == request.time
+        && deLeaderOwnershipChanged(target, command.observedOwnershipRevision)
+        && after.diff(before).affectedKeys().hasOnly([
+          'partySlots', 'memberPlayerIds', 'raidStateTargets', 'memberCount',
+          'dealerCount', 'supportCount', 'nonGroupMemberCount', 'hasAvailableSlot',
+          'revision', 'updatedAt', 'commandTargets', 'lastCommandId', 'lastCommandType',
+          'lastCommandActorPlayerId', 'lastCommandAt', 'ownershipCleanup',
+          'leaderPlayerId', 'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot'])
+        && after.partySlots == remaining && after.memberCount == before.memberCount - 1
+        && after.memberPlayerIds == before.memberPlayerIds.removeAll([target.playerId])
+        && after.raidStateTargets == before.raidStateTargets.removeAll([
+          {'playerId': target.playerId, 'stateId': target.characterId + '_' + before.raidId}])
+        && after.dealerCount == before.dealerCount - (target.role == 'dealer' ? 1 : 0)
+        && after.supportCount == before.supportCount - (target.role == 'support' ? 1 : 0)
+        && after.nonGroupMemberCount == before.nonGroupMemberCount - (target.countedAsNonGroupMember ? 1 : 0)
+        && after.hasAvailableSlot == true && after.commandTargets == []
+        && after.lastCommandId is string && after.lastCommandId.size() > 0
+        && after.updatedAt == request.time
+        && !existsAfter(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(target.playerId))
+        && (before.visibility != 'group' || deLeaderCleanupComposition(
+          getAfter(/databases/$(database)/documents/groups/$(before.groupId)/raidListings/$(before.recruitmentId)).data, after))
+        && getAfter(/databases/$(database)/documents/partyEvents/$(after.lastCommandId)).data == deLeaderCleanupEvent(before, after);
+    }
+
+    function deLeaderCleanupMemberDelete(roomId, playerId, data) {
+      let before = get(recruitmentPath(roomId)).data;
+      let after = getAfter(recruitmentPath(roomId)).data;
+      let target = before.partySlots[after.ownershipCleanup.targetIndex];
+      return deLeaderCleanupTransition(before, after)
+        && target.playerId == playerId && target.characterId == data.characterId
+        && !(playerId in after.memberPlayerIds)
+        && deLeaderCleanupStateUnchanged(target, before.raidId);
+    }
+
+    function deLeaderCleanupListing(groupId, roomId, before, after) {
+      let roomBefore = get(recruitmentPath(roomId)).data;
+      let roomAfter = getAfter(recruitmentPath(roomId)).data;
+      return deLeaderCleanupTransition(roomBefore, roomAfter)
+        && roomBefore.groupId == groupId && roomBefore.visibility == 'group'
+        && after.diff(before).affectedKeys().hasOnly([
+          'partySlots', 'memberPlayerIds', 'raidStateTargets', 'memberCount',
+          'dealerCount', 'supportCount', 'nonGroupMemberCount', 'hasAvailableSlot',
+          'sourceRevision', 'updatedAt', 'leaderPlayerId', 'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot'])
+        && deLeaderCleanupComposition(after, roomAfter);
+    }
+
+    function deLeaderCleanupEventCreate(data) {
+      let before = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
+      return deLeaderCleanupTransition(before, after) && data == deLeaderCleanupEvent(before, after);
+    }
+
+
+    function deLeaderSuccessorUpdate(roomId, playerId, before, after) {
+      let roomBefore = get(recruitmentPath(roomId)).data;
+      let roomAfter = getAfter(recruitmentPath(roomId)).data;
+      let slot = roomBefore.partySlots[roomAfter.ownershipCleanup.successorIndex];
+      return deLeaderCleanupTransition(roomBefore, roomAfter)
+        && slot.playerId == playerId && before.playerId == playerId
+        && deCurrentOwnership(slot)
+        && before.characterId == slot.characterId
+        && roomAfter.leaderPlayerId == playerId
+        && roomAfter.leaderCharacterNameSnapshot == before.characterNameSnapshot
+        && roomAfter.leaderClassNameSnapshot == before.classNameSnapshot
+        && after.diff(before).affectedKeys().hasOnly(['canApproveApplications', 'updatedAt'])
+        && after.canApproveApplications == true && after.updatedAt == request.time;
+    }
+    function dePeerCleanupTransition(before, after) {
+      return after.get('lastCommandType', '') == 'cleanupCompletedPeerOwnership'
+        && before.revision + 1 == after.revision
+        && after.ownershipCleanup.expectedRevision == before.revision
+        && after.lastCommandActorPlayerId == currentPlayerId()
+        && after.lastCommandAt == request.time;
+    }
+
+    function dePeerOwnershipChanged(slot, observed) {
+      let character = get(characterPath(slot.characterId)).data;
+      let account = get(/databases/$(database)/documents/gameAccounts/$(character.gameAccountId)).data;
+      let oldGeneration = slot.get('ownershipRevision', 0);
+      return oldGeneration is int && oldGeneration >= 0
+        && observed is int
+        && character.ownershipRevision is int
+        && character.ownershipRevision > oldGeneration
+        && character.ownershipRevision == observed
+        && account.ownershipRevision is int
+        && account.ownershipRevision == character.ownershipRevision
+        && character.ownerPlayerId is string && character.ownerPlayerId.size() > 0
+        && account.ownerPlayerId == character.ownerPlayerId;
+    }
+
+    function dePeerCleanupStateUnchanged(slot, raidId) {
+      let path = atomicRaidStateDocPath(slot.playerId, slot.characterId + '_' + raidId);
+      return exists(path)
+        ? getAfter(path).data == get(path).data
+        : !existsAfter(path);
+    }
+
+    function dePeerCleanupComposition(data, room) {
+      return data.partySlots == room.partySlots
+        && data.memberPlayerIds == room.memberPlayerIds
+        && data.raidStateTargets == room.raidStateTargets
+        && data.memberCount == room.memberCount
+        && data.dealerCount == room.dealerCount
+        && data.supportCount == room.supportCount
+        && data.nonGroupMemberCount == room.nonGroupMemberCount
+        && data.hasAvailableSlot == room.hasAvailableSlot
+        && data.sourceRevision == room.revision
+        && data.updatedAt == request.time;
+    }
+
+    function dePeerCleanupEvent(before, after) {
+      let command = after.ownershipCleanup;
+      let target = before.partySlots[command.targetIndex];
+      return {
+        'schemaVersion': 1, 'eventId': after.lastCommandId,
+        'commandId': after.lastCommandId, 'recruitmentId': before.recruitmentId,
+        'type': 'ownershipPeerRemoved', 'commandRevision': after.revision,
+        'expectedRevision': before.revision, 'actorPlayerId': currentPlayerId(),
+        'targetPlayerId': target.playerId, 'targetCharacterId': target.characterId,
+        'observedOwnershipRevision': command.observedOwnershipRevision,
+        'leaderPlayerId': before.leaderPlayerId, 'observedLeaderRevision': command.observedLeaderRevision,
+        'audiencePlayerIds': before.memberPlayerIds, 'occurredAt': request.time
+      };
+    }
+
+    function dePeerCleanupAggregate(before, after) {
+      let command = after.ownershipCleanup;
+      let target = before.partySlots[command.targetIndex];
+      let remaining = before.partySlots.removeAll([target]);
+      return hasActiveBinding() && dePeerCleanupTransition(before, after)
+        && before.schemaVersion == 2 && before.status == 'active'
+        && before.currentCycleStatus == 'completed' && before.continueTogether == true
+        && before.memberCount >= 2 && before.memberCount <= 8
+        && command.keys().hasOnly(['expectedRevision', 'targetIndex', 'actorIndex', 'observedOwnershipRevision', 'leaderIndex', 'observedLeaderRevision'])
+        && command.targetIndex is int && command.targetIndex >= 0
+        && command.targetIndex < before.partySlots.size()
+        && target.playerId != before.leaderPlayerId
+        && command.actorIndex is int && command.actorIndex >= 0 && command.actorIndex < before.partySlots.size()
+        && before.partySlots[command.actorIndex].playerId == currentPlayerId()
+        && deCurrentOwnership(before.partySlots[command.actorIndex])
+        && command.leaderIndex is int && command.leaderIndex >= 0 && command.leaderIndex < before.partySlots.size()
+        && before.partySlots[command.leaderIndex].playerId == before.leaderPlayerId
+        && dePeerOwnershipChanged(before.partySlots[command.leaderIndex], command.observedLeaderRevision)
+        && after.diff(before).affectedKeys().hasOnly([
+          'partySlots', 'memberPlayerIds', 'raidStateTargets', 'memberCount',
+          'dealerCount', 'supportCount', 'nonGroupMemberCount', 'hasAvailableSlot',
+          'revision', 'updatedAt', 'commandTargets', 'lastCommandId', 'lastCommandType',
+          'lastCommandActorPlayerId', 'lastCommandAt', 'ownershipCleanup'])
+        && after.partySlots == remaining && after.memberCount == before.memberCount - 1
+        && after.memberPlayerIds == before.memberPlayerIds.removeAll([target.playerId])
+        && after.raidStateTargets == before.raidStateTargets.removeAll([
+          {'playerId': target.playerId, 'stateId': target.characterId + '_' + before.raidId}])
+        && after.dealerCount == before.dealerCount - (target.role == 'dealer' ? 1 : 0)
+        && after.supportCount == before.supportCount - (target.role == 'support' ? 1 : 0)
+        && after.nonGroupMemberCount == before.nonGroupMemberCount - (target.countedAsNonGroupMember ? 1 : 0)
+        && after.hasAvailableSlot == true && after.commandTargets == []
+        && after.lastCommandId is string && after.lastCommandId.size() > 0
+        && after.updatedAt == request.time
+        && exists(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(target.playerId))
+        && !existsAfter(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(target.playerId))
+        && (before.visibility != 'group' || dePeerCleanupComposition(
+          getAfter(/databases/$(database)/documents/groups/$(before.groupId)/raidListings/$(before.recruitmentId)).data, after))
+        && getAfter(/databases/$(database)/documents/partyEvents/$(after.lastCommandId)).data == dePeerCleanupEvent(before, after);
+    }
+
+    function dePeerCleanupMemberDelete(roomId, playerId, data) {
+      let before = get(recruitmentPath(roomId)).data;
+      let after = getAfter(recruitmentPath(roomId)).data;
+      let target = before.partySlots[after.ownershipCleanup.targetIndex];
+      return dePeerCleanupTransition(before, after)
+        && target.playerId == playerId && target.characterId == data.characterId
+        && !(playerId in after.memberPlayerIds)
+        && dePeerOwnershipChanged(target, after.ownershipCleanup.observedOwnershipRevision)
+        && dePeerCleanupStateUnchanged(target, before.raidId);
+    }
+
+    function dePeerCleanupListing(groupId, roomId, before, after) {
+      let roomBefore = get(recruitmentPath(roomId)).data;
+      let roomAfter = getAfter(recruitmentPath(roomId)).data;
+      return dePeerCleanupTransition(roomBefore, roomAfter)
+        && roomBefore.groupId == groupId && roomBefore.visibility == 'group'
+        && after.diff(before).affectedKeys().hasOnly([
+          'partySlots', 'memberPlayerIds', 'raidStateTargets', 'memberCount',
+          'dealerCount', 'supportCount', 'nonGroupMemberCount', 'hasAvailableSlot',
+          'sourceRevision', 'updatedAt'])
+        && dePeerCleanupComposition(after, roomAfter);
+    }
+
+    function dePeerCleanupEventCreate(data) {
+      let before = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
+      return dePeerCleanupTransition(before, after) && data == dePeerCleanupEvent(before, after);
+    }
+
+
+    function dePeerCommand(roomId) {
+      let before = get(recruitmentPath(roomId)).data;
+      let after = getAfter(recruitmentPath(roomId)).data;
+      return after.get('lastCommandType', '') == 'cleanupCompletedPeerOwnership'
+        && after.revision != before.revision;
+    }
+    function deCleanupTransition(before, after) {
+      return after.get('lastCommandType', '') == 'cleanupCompletedOwnership'
+        && before.revision + 1 == after.revision
+        && after.ownershipCleanup.expectedRevision == before.revision
+        && after.lastCommandActorPlayerId == currentPlayerId()
+        && after.lastCommandAt == request.time;
+    }
+
+    function deOwnershipChanged(slot, observed) {
+      let character = get(characterPath(slot.characterId)).data;
+      let account = get(/databases/$(database)/documents/gameAccounts/$(character.gameAccountId)).data;
+      let oldGeneration = slot.get('ownershipRevision', 0);
+      return oldGeneration is int && oldGeneration >= 0
+        && observed is int
+        && character.ownershipRevision is int
+        && character.ownershipRevision > oldGeneration
+        && character.ownershipRevision == observed
+        && account.ownershipRevision is int
+        && account.ownershipRevision == character.ownershipRevision
+        && character.ownerPlayerId is string && character.ownerPlayerId.size() > 0
+        && account.ownerPlayerId == character.ownerPlayerId;
+    }
+
+    function deCleanupStateUnchanged(slot, raidId) {
+      let path = atomicRaidStateDocPath(slot.playerId, slot.characterId + '_' + raidId);
+      return exists(path)
+        ? getAfter(path).data == get(path).data
+        : !existsAfter(path);
+    }
+
+    function deCleanupComposition(data, room) {
+      return data.partySlots == room.partySlots
+        && data.memberPlayerIds == room.memberPlayerIds
+        && data.raidStateTargets == room.raidStateTargets
+        && data.memberCount == room.memberCount
+        && data.dealerCount == room.dealerCount
+        && data.supportCount == room.supportCount
+        && data.nonGroupMemberCount == room.nonGroupMemberCount
+        && data.hasAvailableSlot == room.hasAvailableSlot
+        && data.sourceRevision == room.revision
+        && data.updatedAt == request.time;
+    }
+
+    function deCleanupEvent(before, after) {
+      let command = after.ownershipCleanup;
+      let target = before.partySlots[command.targetIndex];
+      return {
+        'schemaVersion': 1, 'eventId': after.lastCommandId,
+        'commandId': after.lastCommandId, 'recruitmentId': before.recruitmentId,
+        'type': 'ownershipParticipantRemoved', 'commandRevision': after.revision,
+        'expectedRevision': before.revision, 'actorPlayerId': currentPlayerId(),
+        'targetPlayerId': target.playerId, 'targetCharacterId': target.characterId,
+        'observedOwnershipRevision': command.observedOwnershipRevision,
+        'audiencePlayerIds': before.memberPlayerIds, 'occurredAt': request.time
+      };
+    }
+
+    function deCleanupAggregate(before, after) {
+      let command = after.ownershipCleanup;
+      let target = before.partySlots[command.targetIndex];
+      let remaining = before.partySlots.removeAll([target]);
+      return hasActiveBinding() && deCleanupTransition(before, after)
+        && before.schemaVersion == 2 && before.status == 'active'
+        && before.currentCycleStatus == 'completed' && before.continueTogether == true
+        && before.memberCount >= 2 && before.memberCount <= 8
+        && command.keys().hasOnly(['expectedRevision', 'targetIndex', 'actorIndex', 'observedOwnershipRevision'])
+        && command.targetIndex is int && command.targetIndex >= 0
+        && command.targetIndex < before.partySlots.size()
+        && target.playerId != before.leaderPlayerId
+        && (currentPlayerId() == target.playerId
+          || (currentPlayerId() == before.leaderPlayerId
+            && before.partySlots[command.actorIndex].playerId == currentPlayerId()
+            && deCurrentOwnership(before.partySlots[command.actorIndex])))
+        && deOwnershipChanged(target, command.observedOwnershipRevision)
+        && after.diff(before).affectedKeys().hasOnly([
+          'partySlots', 'memberPlayerIds', 'raidStateTargets', 'memberCount',
+          'dealerCount', 'supportCount', 'nonGroupMemberCount', 'hasAvailableSlot',
+          'revision', 'updatedAt', 'commandTargets', 'lastCommandId', 'lastCommandType',
+          'lastCommandActorPlayerId', 'lastCommandAt', 'ownershipCleanup'])
+        && after.partySlots == remaining && after.memberCount == before.memberCount - 1
+        && after.memberPlayerIds == before.memberPlayerIds.removeAll([target.playerId])
+        && after.raidStateTargets == before.raidStateTargets.removeAll([
+          {'playerId': target.playerId, 'stateId': target.characterId + '_' + before.raidId}])
+        && after.dealerCount == before.dealerCount - (target.role == 'dealer' ? 1 : 0)
+        && after.supportCount == before.supportCount - (target.role == 'support' ? 1 : 0)
+        && after.nonGroupMemberCount == before.nonGroupMemberCount - (target.countedAsNonGroupMember ? 1 : 0)
+        && after.hasAvailableSlot == true && after.commandTargets == []
+        && after.lastCommandId is string && after.lastCommandId.size() > 0
+        && after.updatedAt == request.time
+        && !existsAfter(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(target.playerId))
+        && deCleanupStateUnchanged(target, before.raidId)
+        && (before.visibility != 'group' || deCleanupComposition(
+          getAfter(/databases/$(database)/documents/groups/$(before.groupId)/raidListings/$(before.recruitmentId)).data, after))
+        && getAfter(/databases/$(database)/documents/partyEvents/$(after.lastCommandId)).data == deCleanupEvent(before, after);
+    }
+
+    function deCleanupMemberDelete(roomId, playerId, data) {
+      let before = get(recruitmentPath(roomId)).data;
+      let after = getAfter(recruitmentPath(roomId)).data;
+      let target = before.partySlots[after.ownershipCleanup.targetIndex];
+      return deCleanupTransition(before, after)
+        && target.playerId == playerId && target.characterId == data.characterId
+        && !(playerId in after.memberPlayerIds);
+    }
+
+    function deCleanupListing(groupId, roomId, before, after) {
+      let roomBefore = get(recruitmentPath(roomId)).data;
+      let roomAfter = getAfter(recruitmentPath(roomId)).data;
+      return deCleanupTransition(roomBefore, roomAfter)
+        && roomBefore.groupId == groupId && roomBefore.visibility == 'group'
+        && after.diff(before).affectedKeys().hasOnly([
+          'partySlots', 'memberPlayerIds', 'raidStateTargets', 'memberCount',
+          'dealerCount', 'supportCount', 'nonGroupMemberCount', 'hasAvailableSlot',
+          'sourceRevision', 'updatedAt'])
+        && deCleanupComposition(after, roomAfter);
+    }
+
+    function deCleanupEventCreate(data) {
+      let before = get(recruitmentPath(data.recruitmentId)).data;
+      let after = getAfter(recruitmentPath(data.recruitmentId)).data;
+      return deCleanupTransition(before, after) && data == deCleanupEvent(before, after);
+    }
+
     function validAtomicRecruitmentMemberRemoval(oldData, newData) {
       let removed = oldData.memberPlayerIds.toSet().difference(
         newData.memberPlayerIds.toSet()
@@ -2413,16 +2894,8 @@ service cloud.firestore {
         && newData.commandTargets is list
         && newData.commandTargets.size() == 1
         && target.playerId == currentPlayerId()
-        && atomicRaidStateListedInTargets(
-          oldData,
-          target.playerId,
-          target.stateId
-        )
-        && !atomicRaidStateListedInTargets(
-          newData,
-          target.playerId,
-          target.stateId
-        )
+        && oldData.raidStateTargets.hasAny([target])
+        && !newData.raidStateTargets.hasAny([target])
         && completedState.playerId == currentPlayerId()
         && completedState.status == 'completed'
         && completedState.source == 'manual'
@@ -2504,7 +2977,7 @@ service cloud.firestore {
         && data.joinedBy == playerId;
       let approvedJoin = canApproveApplications(recruitmentId)
         && data.joinedBy == currentPlayerId();
-      return hasActiveBinding()
+      return deCurrentOwnership(data) && hasActiveBinding()
         && before.schemaVersion == 2
         && after.schemaVersion == 2
         && data.schemaVersion == 1
@@ -2519,7 +2992,7 @@ service cloud.firestore {
         && ownsActiveCharacterForPlayer(data.characterId, playerId)
         && !(playerId in before.memberPlayerIds)
         && playerId in after.memberPlayerIds
-        && (directJoin || approvedJoin)
+        && (directJoin || (approvedJoin && deApprovedGeneration(recruitmentId, playerId, data)))
         && (before.visibility == 'public'
           || (before.visibility == 'group'
             && before.groupId is string
@@ -2578,7 +3051,7 @@ service cloud.firestore {
 
     function validAtomicStaleRaidStateDelete(playerId, stateId, oldData) {
       let path = recruitmentPath(oldData.recruitmentId);
-      return hasActiveBinding()
+      return deManualCurrentOwnership(oldData) && hasActiveBinding()
         && stateId == oldData.characterId + '_' + oldData.raidId
         && playerId == currentPlayerId()
         && oldData.playerId == playerId
@@ -2586,7 +3059,8 @@ service cloud.firestore {
         && oldData.source == 'party'
         && (
           !exists(path)
-          || validAtomicStaleRaidStateRecruitment(get(path).data)
+          || (get(path).data.raidId == oldData.raidId
+            && validAtomicStaleRaidStateRecruitment(get(path).data))
         );
     }
 
@@ -2606,7 +3080,7 @@ service cloud.firestore {
     function validAtomicInitialLeaderMembership(recruitmentId, playerId, data) {
       let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
       let stateId = data.characterId + '_' + recruitment.raidId;
-      return hasActiveBinding()
+      return deCurrentOwnership(data) && hasActiveBinding()
         && playerId == currentPlayerId()
         && recruitment.schemaVersion == 2
         && data.schemaVersion == 1
@@ -2703,7 +3177,14 @@ service cloud.firestore {
 
     // Compare the already loaded Aggregate; no per-participant document reads.
     function atomicCharacterSlot(member, countedAsNonGroupMember) {
-      return {
+      return member.keys().hasAny(['ownershipRevision'])
+        ? {
+        'ownershipRevision': member.ownershipRevision, 'playerId': member.playerId, 'characterId': member.characterId,
+        'classKey': member.classNameSnapshot, 'role': member.role,
+        'partyIndex': member.partyIndex, 'slotIndex': member.slotIndex,
+        'countedAsNonGroupMember': countedAsNonGroupMember
+      }
+        : {
         'playerId': member.playerId, 'characterId': member.characterId,
         'classKey': member.classNameSnapshot, 'role': member.role,
         'partyIndex': member.partyIndex, 'slotIndex': member.slotIndex,
@@ -2752,7 +3233,7 @@ service cloud.firestore {
       let newStateId = newData.characterId + '_' + after.raidId;
       let oldTarget = {'playerId': playerId, 'stateId': oldStateId};
       let newTarget = {'playerId': playerId, 'stateId': newStateId};
-      return hasActiveBinding()
+      return deCurrentOwnership(newData) && hasActiveBinding()
         && playerId == currentPlayerId()
         && before.schemaVersion == 2
         && after.schemaVersion == 2
@@ -2761,7 +3242,7 @@ service cloud.firestore {
         && newData.diff(oldData).affectedKeys().hasOnly([
           'characterId', 'characterNameSnapshot', 'classNameSnapshot',
           'itemLevelSnapshot', 'combatPowerSnapshot', 'gemValidationSnapshot',
-          'buildIntegritySnapshot',
+          'buildIntegritySnapshot', 'ownershipRevision',
           'role', 'partyIndex', 'slotIndex', 'characterChangedAt', 'updatedAt'
         ])
         && (newData.characterId != oldData.characterId
@@ -2781,11 +3262,11 @@ service cloud.firestore {
         && !(oldTarget in after.raidStateTargets)
         && after.raidStateTargets.removeAll([newTarget])
           == before.raidStateTargets.removeAll([oldTarget])
-        && !hasWeeklyRaidCompletionAfter(
+        && !deBlockingClaim(
           playerId,
           after.currentCycleKey,
           newData.characterId,
-          after.raidId
+          after.raidId, newData.get('ownershipRevision', 0)
         );
     }
 
@@ -2950,7 +3431,7 @@ service cloud.firestore {
 
     function validPendingApplication(recruitmentId, playerId, data) {
       let recruitment = get(recruitmentPath(recruitmentId)).data;
-      return hasActiveBinding()
+      return deApplicationGeneration(data) && hasActiveBinding()
         && playerId == currentPlayerId()
         && data.schemaVersion == 1
         && data.recruitmentId == recruitmentId
@@ -2969,16 +3450,12 @@ service cloud.firestore {
         && canAccessRecruitmentByAudience(recruitment)
         && !(playerId in recruitment.memberPlayerIds)
         && ownsActiveCharacter(data.characterId)
-        && !existsAfter(raidStatePath(
-          playerId,
-          data.characterId,
-          recruitment.raidId
-        ))
-        && !hasWeeklyRaidClaimAfter(
+        && deAvailablePriorState(playerId, data.characterId, recruitment.raidId, data.get('ownershipRevision', 0))
+        && !deBlockingClaim(
           playerId,
           data.cycleKey,
           data.characterId,
-          recruitment.raidId
+          recruitment.raidId, data.get('ownershipRevision', 0)
         );
     }
 
@@ -3034,7 +3511,7 @@ service cloud.firestore {
     // 거절·철회·superseded 후 같은 방 재신청. rejectionCount는 유지한다.
     function validApplicationReapply(recruitmentId, playerId, oldData, newData) {
       let recruitment = get(recruitmentPath(recruitmentId)).data;
-      return hasActiveBinding()
+      return deApplicationGeneration(newData) && hasActiveBinding()
         && playerId == currentPlayerId()
         && oldData.applicantPlayerId == playerId
         && (oldData.status == 'rejected'
@@ -3045,7 +3522,7 @@ service cloud.firestore {
           'cycleKey', 'characterId', 'characterNameSnapshot', 'classNameSnapshot',
           'requestedRole', 'submittedBuildSnapshot', 'status', 'resolutionReason',
           'approvalCount', 'revision', 'decidedAt', 'updatedAt',
-          'countedAsNonGroupApplicant'
+          'countedAsNonGroupApplicant', 'ownershipRevision'
         ])
         && newData.status == 'pending'
         && newData.resolutionReason == null
@@ -3075,16 +3552,12 @@ service cloud.firestore {
         && canAccessRecruitmentByAudience(recruitment)
         && !(playerId in recruitment.memberPlayerIds)
         && ownsActiveCharacter(newData.characterId)
-        && !existsAfter(raidStatePath(
-          playerId,
-          newData.characterId,
-          recruitment.raidId
-        ))
-        && !hasWeeklyRaidClaimAfter(
+        && deAvailablePriorState(playerId, newData.characterId, recruitment.raidId, newData.get('ownershipRevision', 0))
+        && !deBlockingClaim(
           playerId,
           newData.cycleKey,
           newData.characterId,
-          recruitment.raidId
+          recruitment.raidId, newData.get('ownershipRevision', 0)
         );
     }
 
@@ -3127,7 +3600,7 @@ service cloud.firestore {
     }
 
     function validManualWeeklyRaidClaimDelete(playerId, claimId, data) {
-      return hasActiveBinding()
+      return deManualCurrentOwnership(data) && hasActiveBinding()
         && playerId == currentPlayerId()
         && data.playerId == playerId
         && data.characterId is string
@@ -3592,7 +4065,12 @@ service cloud.firestore {
           stateId,
           request.resource.data
         );
-        allow update: if validPersonalRaidStateCompletion(
+        allow update: if (resource.data.status == 'active' && request.resource.data.status == 'completed' && request.resource.data.source == 'manual' && resource.data.get('ownershipRevision', 0) == request.resource.data.get('ownershipRevision', 0)) ? (validPersonalRaidStateCompletion(playerId, stateId, resource.data, request.resource.data)) : ((request.resource.data.source == 'manual'
+          && deOlderState(resource.data, playerId, request.resource.data.characterId,
+            request.resource.data.raidId, request.resource.data.get('ownershipRevision', 0))
+          && validManualRaidStateCreate(playerId, stateId, request.resource.data))
+          || deReplacePriorState(playerId, stateId, resource.data, request.resource.data)
+          || validPersonalRaidStateCompletion(
           playerId,
           stateId,
           resource.data,
@@ -3602,7 +4080,7 @@ service cloud.firestore {
           stateId,
           resource.data,
           request.resource.data
-        );
+        ));
         allow delete: if (resource.data.status == 'completed'
           && validPersonalCompletedRaidStateDelete(
             playerId,
@@ -3961,12 +4439,152 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+
+
+
+
+
+    function dePersonalCommand(roomId) {
+      let room = getAfter(recruitmentPath(roomId)).data;
+      return room.get('lastCommandType', '') == 'personalComplete' && room.lastCommandAt == request.time;
+    }
+    function dePersonalCompletionBoundary(before, after) {
+      let target = after.commandTargets[0];
+      let memberPath = recruitmentMemberPath(before.recruitmentId, target.playerId);
+      let member = get(memberPath).data;
+      let state = getAfter(atomicRaidStatePath(target)).data;
+      let eventPath = /databases/$(database)/documents/partyEvents/$(after.lastCommandId);
+      let event = getAfter(eventPath).data;
+      return member.playerId == target.playerId && member.characterId == state.characterId
+        && member.get('ownershipRevision', 0) == state.get('ownershipRevision', 0)
+        && before.partySlots.size() == after.partySlots.size() + 1
+        && before.partySlots.removeAll([atomicCharacterSlot(member, member.get('countedAsNonGroupMember', false))]) == after.partySlots
+        && before.memberPlayerIds.removeAll([target.playerId]) == after.memberPlayerIds
+        && before.raidStateTargets.removeAll([target]) == after.raidStateTargets
+        && !existsAfter(memberPath) && state.updatedAt == request.time
+        && !exists(eventPath) && event.occurredAt == request.time
+        && event.type == 'memberLeft' && event.reason == 'weeklyRaidCompleted'
+        && event.commandRevision == after.revision
+        && event.actorPlayerId == target.playerId && event.targetPlayerId == target.playerId
+        && (before.leaderPlayerId == after.leaderPlayerId
+          || getAfter(recruitmentMemberPath(before.recruitmentId, after.leaderPlayerId)).data.updatedAt == request.time)
+        && (!(before.groupId is string) || dePersonalCompletionListing(before, after));
+    }
+    function dePersonalCompletionListing(before, after) {
+      let path = /databases/$(database)/documents/groups/$(before.groupId)/raidListings/$(before.recruitmentId);
+      return after.memberCount == 0 ? !existsAfter(path)
+        : (getAfter(path).data.sourceRevision == after.revision && getAfter(path).data.updatedAt == request.time);
+    }
+    function deManualCurrentOwnership(data) {
+      let character = get(characterPath(data.characterId)).data;
+      let account = get(/databases/$(database)/documents/gameAccounts/$(character.gameAccountId)).data;
+      return character.status == 'active' && account.status == 'active' && deCurrentOwnership(data);
+    }
+    function deManualAssignmentAvailable(playerId, stateId, data) {
+      let path = assignmentPath(playerId, stateId);
+      return !existsAfter(path) || deOlderRecord(getAfter(path).data,
+        playerId, data.characterId, data.raidId, data.get('ownershipRevision', 0));
+    }
+    function deOlderRecord(data, playerId, characterId, raidId, generation) {
+      let prior = data.get('ownershipRevision', 0);
+      return data.playerId == playerId && data.characterId == characterId && data.raidId == raidId
+        && prior is int && prior >= 0 && generation is int && prior < generation;
+    }
+    function deOlderState(data, playerId, characterId, raidId, generation) {
+      return deOlderRecord(data, playerId, characterId, raidId, generation)
+        && data.status in ['active', 'completed'] && data.revision is int && data.revision >= 1;
+    }
+    function deAvailablePriorState(playerId, characterId, raidId, generation) {
+      let path = raidStatePath(playerId, characterId, raidId);
+      return !existsAfter(path) || deOlderState(getAfter(path).data, playerId, characterId, raidId, generation);
+    }
+    function deBlockingClaim(playerId, cycleKey, characterId, raidId, generation) {
+      let path = weeklyRaidClaimPath(playerId, cycleKey, characterId, raidId);
+      return existsAfter(path) && !deOlderRecord(getAfter(path).data, playerId, characterId, raidId, generation);
+    }
+    function deFreshParticipation(data) {
+      let roomPath = recruitmentPath(data.recruitmentId);
+      let memberPath = recruitmentMemberPath(data.recruitmentId, data.playerId);
+      let room = getAfter(roomPath).data;
+      let kind = !exists(roomPath) ? 'partyCreated' : (!exists(memberPath) ? 'memberJoined' : 'characterChanged');
+      let eventId = kind + '_' + data.recruitmentId + '_' + string(room.revision);
+      let eventPath = /databases/$(database)/documents/partyEvents/$(eventId);
+      return room.updatedAt == request.time && getAfter(memberPath).data.updatedAt == request.time
+        && (!exists(roomPath) || room.revision == get(roomPath).data.revision + 1)
+        && !exists(eventPath) && getAfter(eventPath).data.occurredAt == request.time
+        && getAfter(eventPath).data.type == kind;
+    }
+    function deReplacePriorState(playerId, stateId, before, after) {
+      return deOlderState(before, playerId, after.characterId, after.raidId, after.get('ownershipRevision', 0))
+        && before.get('recruitmentId', null) != after.recruitmentId
+        && deFreshParticipation(after)
+        && validAtomicRaidStateCreate(playerId, stateId, after);
+    }
+    function deApplicationGeneration(data) {
+      return deCurrentOwnership({'characterId': data.characterId, 'playerId': data.applicantPlayerId,
+        'ownershipRevision': data.get('ownershipRevision', 0)});
+    }
+    function deApprovedGeneration(roomId, playerId, member) {
+      let application = get(/databases/$(database)/documents/recruitments/$(roomId)/applications/$(playerId)).data;
+      return application.status == 'pending' && application.characterId == member.characterId
+        && application.get('ownershipRevision', 0) == member.get('ownershipRevision', 0);
+    }
+    function deSlotMemberGeneration(roomId, slot) {
+      let member = getAfter(/databases/$(database)/documents/recruitments/$(roomId)/members/$(slot.playerId)).data;
+      return member.playerId == slot.playerId && member.characterId == slot.characterId
+        && slot.get('ownershipRevision', 0) is int && slot.get('ownershipRevision', 0) >= 0
+        && slot.get('ownershipRevision', 0) == member.get('ownershipRevision', 0);
+    }
+    function deChangedSlotGenerationAt(before, after, index) {
+      return index >= after.partySlots.size() || before.partySlots.hasAny([after.partySlots[index]])
+        || deSlotMemberGeneration(before.recruitmentId, after.partySlots[index]);
+    }
+    function deChangedSlotGenerations(before, after) {
+      return before.partySlots == after.partySlots || (after.partySlots.size() <= 8
+        && deChangedSlotGenerationAt(before, after, 0) && deChangedSlotGenerationAt(before, after, 1)
+        && deChangedSlotGenerationAt(before, after, 2) && deChangedSlotGenerationAt(before, after, 3)
+        && deChangedSlotGenerationAt(before, after, 4) && deChangedSlotGenerationAt(before, after, 5)
+        && deChangedSlotGenerationAt(before, after, 6) && deChangedSlotGenerationAt(before, after, 7));
+    }
+    function deValidGeneration(data) {
+      return data.get('ownershipRevision', 0) is int
+        && data.get('ownershipRevision', 0) >= 0
+        && data.get('ownershipRevision', 0) <= 9007199254740991
+        && data.ownerPlayerId is string && data.ownerPlayerId.size() > 0;
+    }
+
+    function deGenerationUpdate(before, after) {
+      return deValidGeneration(before) && deValidGeneration(after)
+        && (!before.keys().hasAny(['ownershipRevision'])
+          || after.keys().hasAny(['ownershipRevision']))
+        && after.get('ownershipRevision', 0) == before.get('ownershipRevision', 0)
+          + (after.ownerPlayerId == before.ownerPlayerId ? 0 : 1);
+    }
+
+    function deCharacterGeneration(data) {
+      let account = getAfter(/databases/$(database)/documents/gameAccounts/$(data.gameAccountId)).data;
+      return deValidGeneration(data) && deValidGeneration(account)
+        && data.ownerPlayerId == account.ownerPlayerId
+        && data.get('ownershipRevision', 0) == account.get('ownershipRevision', 0);
+    }
+
     match /gameAccounts/{gameAccountId} {
-      allow read, write: if signedIn();
+      allow read: if signedIn();
+      allow create: if signedIn() && deValidGeneration(request.resource.data)
+        && request.resource.data.ownershipRevision == 1;
+      allow update: if signedIn() && deGenerationUpdate(resource.data, request.resource.data);
+      allow delete: if false;
     }
 
     match /characters/{characterId} {
-      allow read, write: if signedIn();
+      allow read: if signedIn();
+      allow create: if signedIn() && deCharacterGeneration(request.resource.data);
+      allow update: if signedIn()
+        && request.resource.data.gameAccountId == resource.data.gameAccountId
+        && (!resource.data.keys().hasAny(['ownershipRevision'])
+          || request.resource.data.keys().hasAny(['ownershipRevision']))
+        && deCharacterGeneration(request.resource.data);
+      allow delete: if false;
     }
 
     match /characterIdentityClaims/{claimId} {
@@ -3999,8 +4617,8 @@ service cloud.firestore {
       allow get, list: if hasActiveBinding()
         && resource.data.audiencePlayerIds.hasAny([currentPlayerId()]);
       allow update, delete: if false;
-      allow create: if validAtomicMembershipPartyEvent(request.resource.data)
-        || validAtomicLifecyclePartyEvent(request.resource.data);
+      allow create: if (request.resource.data.type == 'ownershipPeerRemoved') ? (request.resource.data.eventId == eventId && dePeerCleanupEventCreate(request.resource.data)) : ((request.resource.data.type == 'ownershipLeaderRemoved' && request.resource.data.eventId == eventId && deLeaderCleanupEventCreate(request.resource.data)) || (request.resource.data.type == 'ownershipParticipantRemoved' && request.resource.data.eventId == eventId && deCleanupEventCreate(request.resource.data)) || validAtomicMembershipPartyEvent(request.resource.data)
+        || validAtomicLifecyclePartyEvent(request.resource.data));
     }
 
     match /recruitments/{recruitmentId} {
@@ -4010,7 +4628,14 @@ service cloud.firestore {
         recruitmentId,
         request.resource.data
       );
-      allow update: if (personalCompletionCommandMarker(request.resource.data)
+      allow update: if (request.resource.data.get('lastCommandType', '') == 'personalComplete' && request.resource.data.lastCommandAt == request.time) ? (dePersonalCompletionBoundary(resource.data, request.resource.data) && validPersonalCompletionRecruitmentUpdate(resource.data, request.resource.data)) : (deChangedSlotGenerations(resource.data, request.resource.data)
+        && ((request.resource.data.get('lastCommandType', '') == 'disband'
+          && resource.data.memberCount == 1
+          && resource.data.currentCycleStatus == 'completed')
+          ? (deLastCompletedDisband(resource.data, request.resource.data)
+            && validAtomicLifecycleUpdate(resource.data, request.resource.data))
+          : ((request.resource.data.get('lastCommandType', '') == 'cleanupCompletedPeerOwnership') ? (dePeerCleanupAggregate(resource.data, request.resource.data)) : ((request.resource.data.get('lastCommandType', '') == 'cleanupCompletedLeaderOwnership' && deLeaderCleanupAggregate(resource.data, request.resource.data)) || (request.resource.data.get('lastCommandType', '') == 'cleanupCompletedOwnership' && deCleanupAggregate(resource.data, request.resource.data)) || (personalCompletionCommandMarker(request.resource.data)
+          && dePersonalCompletionBoundary(resource.data, request.resource.data)
           && validPersonalCompletionRecruitmentUpdate(
             resource.data,
             request.resource.data
@@ -4038,7 +4663,8 @@ service cloud.firestore {
         ) || validAtomicRecruitmentVisibilityChange(
           resource.data,
           request.resource.data
-        );
+        )))));
+
       allow delete: if false;
 
       match /members/{playerId} {
@@ -4054,7 +4680,13 @@ service cloud.firestore {
           playerId,
           request.resource.data
         );
-        allow update: if validAtomicMemberCharacterChange(
+        allow update: if (dePersonalCommand(recruitmentId)) ? (request.resource.data.characterId == resource.data.characterId && request.resource.data.get('ownershipRevision', 0) == resource.data.get('ownershipRevision', 0) && deManualCurrentOwnership(resource.data) && validApprovalPermissionChange(recruitmentId, playerId, resource.data, request.resource.data)) : (((request.resource.data.characterId == resource.data.characterId
+            && request.resource.data.get('ownershipRevision', 0) == resource.data.get('ownershipRevision', 0))
+            || (deCurrentOwnership(resource.data) && deCurrentOwnership(request.resource.data)))
+          && ((request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['partyIndex', 'slotIndex', 'updatedAt'])
+            && validMemberPositionChange(recruitmentId, playerId, resource.data, request.resource.data))
+            || (deLeaderSuccessorUpdate(recruitmentId, playerId, resource.data, request.resource.data) || validAtomicMemberCharacterChange(
             recruitmentId,
             playerId,
             resource.data,
@@ -4074,8 +4706,8 @@ service cloud.firestore {
             playerId,
             resource.data,
             request.resource.data
-          );
-        allow delete: if validPersonalCompletionMemberDelete(
+          ))));
+        allow delete: if (dePersonalCommand(recruitmentId)) ? (validPersonalCompletionMemberDelete(recruitmentId, playerId, resource.data)) : ((dePeerCommand(recruitmentId)) ? (dePeerCleanupMemberDelete(recruitmentId, playerId, resource.data)) : (deLeaderCleanupMemberDelete(recruitmentId, playerId, resource.data) || deCleanupMemberDelete(recruitmentId, playerId, resource.data) || validPersonalCompletionMemberDelete(
           recruitmentId,
           playerId,
           resource.data
@@ -4083,7 +4715,7 @@ service cloud.firestore {
           recruitmentId,
           playerId,
           resource.data
-        );
+        )));
       }
 
       match /slots/{slotId} {
@@ -4260,7 +4892,7 @@ service cloud.firestore {
           recruitmentId,
           request.resource.data
         );
-        allow update: if validPersonalCompletionListingUpdate(
+        allow update: if (dePersonalCommand(recruitmentId)) ? (validPersonalCompletionListingUpdate(recruitmentId, resource.data, request.resource.data)) : ((dePeerCommand(recruitmentId)) ? (dePeerCleanupListing(groupId, recruitmentId, resource.data, request.resource.data)) : (deLeaderCleanupListing(groupId, recruitmentId, resource.data, request.resource.data) || deCleanupListing(groupId, recruitmentId, resource.data, request.resource.data) || validPersonalCompletionListingUpdate(
           recruitmentId,
           resource.data,
           request.resource.data
@@ -4280,7 +4912,7 @@ service cloud.firestore {
           groupId,
           recruitmentId,
           request.resource.data
-        );
+        )));
         allow delete: if validPersonalCompletionListingDelete(recruitmentId)
           || validGroupRaidListingDelete(groupId, recruitmentId)
           || validAtomicLifecycleListingDelete(recruitmentId);

@@ -1,0 +1,37 @@
+name: Roster Rules publish boundary check
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tracked-boundaries:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci --prefix tools
+      - run: node tools/integrate_roster_rules.mjs --check
+      - name: Compile final Rules and check only publication boundaries
+        env:
+          ROSTER_TRACKED_RULES: '1'
+        run: >-
+          npx --yes firebase-tools@15.29.0 emulators:exec
+          --config firebase.json --only firestore --project demo-party-group-cutover
+          "node tools/roster_generation_proof.mjs && node tools/roster_last_member_proof.mjs && node tools/roster_orphan_cleanup_proof.mjs"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tracked-roster-rules-check
+          path: |
+            coverage/roster-leader/
+            firestore-debug.log
+          retention-days: 30
