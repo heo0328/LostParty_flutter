@@ -29,6 +29,7 @@ on:
           - orphan-cleanup
           - publish-boundaries
           - complexity-comparison
+          - complexity-participation
       case:
         description: Rules regression scope
         type: choice
@@ -260,10 +261,13 @@ jobs:
             node --test tools/roster_complexity_candidate.test.mjs
             proof_command="node tools/roster_complexity_differential.mjs"
           fi
+          if [[ "$LEADER_PROOF_SCOPE" == complexity-participation ]]; then
+            proof_command="node tools/roster_complexity_differential.mjs --participation-only"
+          fi
           npx --yes firebase-tools@15.29.0 emulators:exec --config firebase.json --only firestore --project demo-party-group-cutover "$proof_command"
 
       - name: Preserve bounded complexity comparison
-        if: always() && inputs.case == 'ownership-leader' && inputs.dispatch_scope == 'complexity-comparison'
+        if: always() && inputs.case == 'ownership-leader' && startsWith(inputs.dispatch_scope, 'complexity-')
         uses: actions/upload-artifact@v4
         with:
           name: roster-complexity-comparison

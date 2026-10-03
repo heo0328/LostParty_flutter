@@ -6,7 +6,9 @@ import { doc, collection, getDoc, getDocs, setDoc, updateDoc, serverTimestamp } 
 import { participationCandidate } from './roster_participation_candidate.mjs';
 import { seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn, approvePublicApplicationTxn,
   seedExpandedApprovedRoom, swapTwoDealersTxn, authUid, recruitmentId, playerId, raidId } from './party_group_cutover_rules_test.mjs';
-const rules = participationCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
+const rules = process.env.ROSTER_COMPLEXITY_RULES_FILE
+  ? fs.readFileSync(process.env.ROSTER_COMPLEXITY_RULES_FILE, 'utf8')
+  : participationCandidate(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
 const directory = new URL('../coverage/roster-leader/', import.meta.url);
 fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(new URL('candidate.rules', directory), rules);

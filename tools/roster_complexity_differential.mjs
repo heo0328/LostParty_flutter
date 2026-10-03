@@ -14,8 +14,10 @@ const baseline = fs.readFileSync(new URL('firestore.rules', root), 'utf8').repla
 // Unmodified baseline already failed CI37106260020; do not repeat that run.
 const repaired = preserveExistingSlots(baseline);
 const deduplicated = deduplicateCleanup(repaired);
-const variants = { repaired, deduplicated, dispatched: dispatchCleanupEvents(deduplicated) };
-const suites = [
+const participationOnly = process.argv.includes('--participation-only');
+const variants = participationOnly ? { dispatched: dispatchCleanupEvents(deduplicated) }
+  : { repaired, deduplicated, dispatched: dispatchCleanupEvents(deduplicated) };
+const suites = participationOnly ? [['participation', 'tools/roster_participation_proof.mjs']] : [
   ['cleanup-peer', 'tools/roster_peer_cleanup_proof.mjs'],
   ['last-member', 'tools/roster_last_member_proof.mjs'],
 ];
@@ -33,7 +35,7 @@ for (const [variant, rules] of Object.entries(variants)) {
         FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080' },
     });
     fs.writeFileSync(new URL(`${variant}-${suite}.log`, directory), (run.stdout ?? '') + (run.stderr ?? ''));
-    const passes = (run.stdout ?? '').split(/\r?\n/).filter(l => l.startsWith('PASS CLEANUP:'));
+    const passes = (run.stdout ?? '').split(/\r?\n/).filter(l => /^PASS (CLEANUP|PARTICIPATION):/.test(l));
     const succeeded = run.status === 0 && passes.length > 0;
     results.push({ suite, succeeded, passes, error: run.error?.message });
     summary.push({ variant, suite, succeeded, count: passes.length,
