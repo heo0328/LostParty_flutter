@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { deduplicateCleanup, dispatchCleanupEvents, rulesFunction, preserveExistingSlots, integratedBaseline } from './roster_complexity_candidate.mjs';
+import { removeRepeatedPositionValidation, deduplicateCleanup, dispatchCleanupEvents, rulesFunction, preserveExistingSlots, integratedBaseline } from './roster_complexity_candidate.mjs';
 
 const baseline = integratedBaseline();
 const deduplicated = deduplicateCleanup(baseline);
@@ -84,4 +84,17 @@ test('preservation fast path changes only aggregate generation helper and retain
   for (let i = 0; i < 8; i++) assert.ok(body.includes(`deChangedSlotGenerationAt(before, after, ${i})`));
   assert.deepEqual([...repaired.matchAll(/allow\s[\s\S]*?;/g)].map(m => m[0]),
     [...baseline.matchAll(/allow\s[\s\S]*?;/g)].map(m => m[0]));
+});
+
+ test('position fallback is redundant only while validator implies fast-path shape', () => {
+  const baseline = dispatchCleanupEvents(deduplicateCleanup(preserveExistingSlots(integratedBaseline())));
+  const candidate = removeRepeatedPositionValidation(baseline);
+  for (const name of names(baseline)) assert.equal(rulesFunction(candidate,name).body,rulesFunction(baseline,name).body);
+  const before=[...baseline.matchAll(/allow\s[\s\S]*?;/g)].map(m=>m[0]);
+  const after=[...candidate.matchAll(/allow\s[\s\S]*?;/g)].map(m=>m[0]);
+  assert.equal(before.filter((x,i)=>x!==after[i]).length,1);
+  const changed=after.find((x,i)=>x!==before[i]);
+  assert.equal(changed.split('validMemberPositionChange(').length,2);
+  const original=rulesFunction(baseline,'validMemberPositionChange');
+  assert.throws(()=>removeRepeatedPositionValidation(baseline.replace(original.text, original.text.replace("'partyIndex', 'slotIndex', 'updatedAt'", "'partyIndex', 'slotIndex', 'updatedAt', 'role'"))));
 });

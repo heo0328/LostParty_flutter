@@ -88,3 +88,24 @@ export function dispatchCleanupEvents(source) {
   return source.slice(0, start) + section.slice(0, allow) + replacement
     + section.slice(terminator + 1) + source.slice(end);
 }
+
+export function removeRepeatedPositionValidation(source) {
+  const guard = "newData.diff(oldData).affectedKeys().hasOnly([\n          'partyIndex', 'slotIndex', 'updatedAt'\n        ])";
+  assert.ok(rulesFunction(source, 'validMemberPositionChange').body.includes(guard),
+    'position validator must imply the existing fast-path shape');
+  const start = source.indexOf('      match /members/{playerId} {');
+  const update = source.indexOf('        allow update:', start);
+  const end = source.indexOf(';', update);
+  assert.ok(start >= 0 && update > start && end > update);
+  const block = source.slice(update, end);
+  assert.ok(block.includes("request.resource.data.diff(resource.data).affectedKeys()\n              .hasOnly(['partyIndex', 'slotIndex', 'updatedAt'])"));
+  assert.equal(block.split('validMemberPositionChange(').length, 3);
+  const duplicate = ` || validMemberPositionChange(
+            recruitmentId,
+            playerId,
+            resource.data,
+            request.resource.data
+          )`;
+  assert.equal(block.split(duplicate).length, 2);
+  return source.slice(0, update) + block.replace(duplicate, '') + source.slice(end);
+}

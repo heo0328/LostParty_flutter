@@ -30,6 +30,7 @@ on:
           - publish-boundaries
           - complexity-comparison
           - complexity-participation
+          - complexity-position
       case:
         description: Rules regression scope
         type: choice
@@ -261,6 +262,9 @@ jobs:
             node --test tools/roster_complexity_candidate.test.mjs
             proof_command="node tools/roster_complexity_differential.mjs"
           fi
+          if [[ "$LEADER_PROOF_SCOPE" == complexity-position ]]; then
+            proof_command="node tools/roster_position_differential.mjs"
+          fi
           if [[ "$LEADER_PROOF_SCOPE" == complexity-participation ]]; then
             proof_command="node tools/roster_complexity_differential.mjs --participation-only"
           fi
@@ -273,6 +277,7 @@ jobs:
           name: roster-complexity-comparison
           path: |
             coverage/roster-complexity/
+            coverage/roster-position/
             firestore-debug.log
           if-no-files-found: error
           retention-days: 30
