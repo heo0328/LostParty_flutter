@@ -69,3 +69,16 @@ https://firebase.google.com/docs/rules/manage-deploy
    기존 활성 소스와 통합 소스의 동일 API 단계 결과를 비교한다. 운영 Rules를 축소·완화하지 않는다.
 4. 운영 활성 해시가 통합본과 같아진 뒤 실기기 테스트를 시작한다. 이번 작업에서 Rules/앱은 무수정,
    전체 회귀는 사용자 생략 지시 유지. 로컬 상세 로그·소스 대조는 coverage/roster-publish-retry에 보존했다.
+# 최신 추가 시도: 2026-10-03 18:10 KST
+
+사용자 승인으로 최종 수정본(4453f53,224418bytes,
+SHA256 f43ea68c10658121206581b10730706f68f5cf524e4dc8543840352242ee0500)을
+lost-party에 정확히1회 게시했다. /test200(컴파일 성공,경고없음), /rulesets POST503,
+Release 요청 미도달로 종료했다. 이전14:37의 Release PATCH503과 실패 단계가 다르다.
+원인 미확정. 구조 개선 후에도 게시 실패는 남아 있으며 같은 명령은 반복하지 않았다.
+
+사전/사후 활성 Rules는 e46f131e-920a-4773-bc25-2ef4b7ff9169,
+2026-09-29T09:26:45.388946Z, SHAe8baa2e4824d9200ab8a76fe07d7155578ba6982ca9b29941b9b7f55a6b3b1a5로
+동일했다. 저장 이력은 이번에 조회하지 않아 실패 요청의 저장본 생성 여부는 미확인이다.
+로컬 근거: coverage/roster-publish-final/deploy-once.log 및 before/after.json,.rules.
+새 지시 전 추가 게시하지 않는다. 아래는 이전 시도 이력이다.

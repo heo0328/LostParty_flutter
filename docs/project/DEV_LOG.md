@@ -1,3 +1,17 @@
+# 2026-10-03 18:10 KST 최종 Rules 게시1회 실패
+
+- 사용자 명시 지시로4453f53의 검증본 f43ea68c…/224418bytes를 lost-party에 Rules만1회 게시했다.
+  사전 전용 브랜치/생성 일치/firebase.json 경로/대상 확인, 사용자 초기화 변경 제외.
+- /test200(컴파일 성공/경고없음) → /rulesets POST503 UNAVAILABLE, 종료코드2.
+  Release 요청 미도달. 같은 명령 재실행 없음. 저장본 생성 여부는 별도 조회하지 않았으므로
+  503만으로 서버에 저장본이 없다고 확정하지 않는다.
+- 사전/사후 활성 ruleset e46f131e-920a-4773-bc25-2ef4b7ff9169,
+  updateTime2026-09-29T09:26:45.388946Z,
+  SHAe8baa2e4824d9200ab8a76fe07d7155578ba6982ca9b29941b9b7f55a6b3b1a5 동일.
+- 근거 coverage/roster-publish-final의 deploy-once.log,before/after.json 및 .rules.
+  새 운영 흐름 없음/실기기 미확인. 기존 CI 검증본 무변경이라 테스트 반복 없음, 문서 diff검사.
+  같은 전용 브랜치에 결과 커밋/push, dev/main/운영 데이터/다른 Firebase 서비스 무변경.
+
 # 2026-10-03 3구간 완료 — 정리 한도 수정·후보 검증·최종 Rules 반영
 
 - 기존 슬롯8칸 반복 확인에 동등한 hasAll 빠른 경로를 추가했다. 최대8 제한과 신규/변경 슬롯의
