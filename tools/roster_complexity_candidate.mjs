@@ -51,7 +51,7 @@ export function preserveExistingSlots(source) {
   // hasAll uses the same exact element equality as the existing per-slot hasAny.
   // Retain size <= 8 and fall back unchanged for any newly added/modified slot.
   const replacement = original.text.replace(needle,
-    '&& (before.partySlots.hasAll(after.partySlots)\n+          || (deChangedSlotGenerationAt(before, after, 0)')
+    '&& (before.partySlots.hasAll(after.partySlots)\n          || (deChangedSlotGenerationAt(before, after, 0)')
     .replace('deChangedSlotGenerationAt(before, after, 7));',
       'deChangedSlotGenerationAt(before, after, 7))));');
   assert.notEqual(replacement, original.text);
