@@ -1,5 +1,31 @@
 # 2026-10-03 18:10 KST 최종 Rules 게시1회 실패
 
+## 2026-10-04 — 개인 완료 중복 fallback3곳 제거 검증·반영
+
+모집 update, 멤버 delete, 그룹 raidListings update의 후순위 개인 완료 호출만 제거했다.
+각 validator 성공은 personalCompletionTargetsCurrentPlayer → personalComplete와
+lastCommandAt==request.time을 요구하므로 이미 앞쪽 전용 분기를 선택한다. 모집의
+마지막1인/다인 양쪽을 확인했다. 모든 함수 본문과 앞쪽 소유권/원자성 경계는 그대로다.
+raidState fallback은 이번 변경에서 제외했다. Router의 FirestoreWeeklyRaidStatusCommandRepository,
+_completeActiveState의 모집/member/state/listing 원자 저장과 기존 주간 완료 계약을 대조했다.
+
+- CI37132447511: 기준39a7b731·후보6a4a4b52 각각15건, 결과 이름/허용·거절 동일.
+  최대8인 일반 참가자·방장 완료/승계, 마지막1인 해산, stale state/member/slot/authority/successor,
+  room/member/state/event/listing/successor/group 부분 쓰기 거절과 다른 상태 보존을 확인했다.
+- https://github.com/heo0328/LostParty_flutter/actions/runs/37132447511
+- 정적2건: 함수 본문 전부 보존·allow3곳만 변경·앞쪽 호출 유지·조건 변형 시 생성 거절.
+- 생성 결과/CI 후보 byte 일치, git diff --check 통과. 컴파일 경고 미관찰.
+  Actions Node/setup-java 폐기 예정 경고와 의도한 거절의 런타임 오류는 구분했다.
+- 최종223746bytes/SHA6a4a4b52cf566f9c119d9de3c3876c411c336da24ee62b9bca5fd1be97bd1da9.
+  소스520bytes 감소는 컴파일 크기 감소 또는 게시503 해결을 입증하지 않는다.
+
+새 제품 흐름 추가 없음. 위 개인 완료 경계의 기존 결과 보존 확인. 전체 회귀/실기기/추가 게시
+미실행. 기존 Flutter22실패/analyze51 기준을 해결 또는 면제 처리하지 않았다. 기존 R3 문자열
+계약 테스트는 현재 분기 형태와 이미 불일치해 이번 검증은 실제 서버 비교와 새 정적 계약으로
+한정했다. 사용자 firestore.rules-backup SHAa2501818 유지, 초기화와 분할본 보존.
+전용 fix/roster-reauth-isolation에서 후보1694d61 커밋·push 후 검증, dev/main 미반영.
+
+
 ## 2026-10-04 — 분할 성공 보고와 전체 무손실 축소 실패
 
 사용자는 백업 분할 두 파일이 테스트 프로젝트에서 각각 즉시 게시됐다고 확인했다.

@@ -1,8 +1,10 @@
-import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { removeRepeatedPersonalCompletion, rulesFunction } from './roster_complexity_candidate.mjs';
-const before = fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+import { removeRepeatedPersonalCompletion, rulesFunction, integratedBaseline, preserveExistingSlots,
+  deduplicateCleanup, dispatchCleanupEvents, removeRepeatedPositionValidation, prioritizeCharacterChange } from './roster_complexity_candidate.mjs';
+// Keep the differential baseline reproducible after promotion.
+const before = prioritizeCharacterChange(removeRepeatedPositionValidation(dispatchCleanupEvents(
+  deduplicateCleanup(preserveExistingSlots(integratedBaseline())))));
 const after = removeRepeatedPersonalCompletion(before);
 test('only three personal completion fallback branches change; every helper is preserved', () => {
   for (const [, name] of before.matchAll(/    function (\w+)\(/g))

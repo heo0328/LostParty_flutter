@@ -4580,12 +4580,7 @@ service cloud.firestore {
           && resource.data.currentCycleStatus == 'completed')
           ? (deLastCompletedDisband(resource.data, request.resource.data)
             && validAtomicLifecycleUpdate(resource.data, request.resource.data))
-          : ((request.resource.data.get('lastCommandType', '') == 'cleanupCompletedPeerOwnership') ? (dePeerCleanupAggregate(resource.data, request.resource.data)) : ((request.resource.data.get('lastCommandType', '') == 'cleanupCompletedLeaderOwnership' && deLeaderCleanupAggregate(resource.data, request.resource.data)) || (request.resource.data.get('lastCommandType', '') == 'cleanupCompletedOwnership' && deCleanupAggregate(resource.data, request.resource.data)) || (personalCompletionCommandMarker(request.resource.data)
-          && dePersonalCompletionBoundary(resource.data, request.resource.data)
-          && validPersonalCompletionRecruitmentUpdate(
-            resource.data,
-            request.resource.data
-          )) || validRecurrenceChange(
+          : ((request.resource.data.get('lastCommandType', '') == 'cleanupCompletedPeerOwnership') ? (dePeerCleanupAggregate(resource.data, request.resource.data)) : ((request.resource.data.get('lastCommandType', '') == 'cleanupCompletedLeaderOwnership' && deLeaderCleanupAggregate(resource.data, request.resource.data)) || (request.resource.data.get('lastCommandType', '') == 'cleanupCompletedOwnership' && deCleanupAggregate(resource.data, request.resource.data)) || validRecurrenceChange(
           resource.data,
           request.resource.data
         ) || validAtomicLifecycleUpdate(
@@ -4648,11 +4643,7 @@ service cloud.firestore {
             resource.data,
             request.resource.data
           ))));
-        allow delete: if (dePersonalCommand(recruitmentId)) ? (validPersonalCompletionMemberDelete(recruitmentId, playerId, resource.data)) : ((dePeerCommand(recruitmentId)) ? (dePeerCleanupMemberDelete(recruitmentId, playerId, resource.data)) : (deLeaderCleanupMemberDelete(recruitmentId, playerId, resource.data) || deCleanupMemberDelete(recruitmentId, playerId, resource.data) || validPersonalCompletionMemberDelete(
-          recruitmentId,
-          playerId,
-          resource.data
-        ) || validAtomicMemberRemoval(
+        allow delete: if (dePersonalCommand(recruitmentId)) ? (validPersonalCompletionMemberDelete(recruitmentId, playerId, resource.data)) : ((dePeerCommand(recruitmentId)) ? (dePeerCleanupMemberDelete(recruitmentId, playerId, resource.data)) : (deLeaderCleanupMemberDelete(recruitmentId, playerId, resource.data) || deCleanupMemberDelete(recruitmentId, playerId, resource.data) || validAtomicMemberRemoval(
           recruitmentId,
           playerId,
           resource.data
@@ -4833,11 +4824,7 @@ service cloud.firestore {
           recruitmentId,
           request.resource.data
         );
-        allow update: if (dePersonalCommand(recruitmentId)) ? (validPersonalCompletionListingUpdate(recruitmentId, resource.data, request.resource.data)) : ((dePeerCommand(recruitmentId)) ? (dePeerCleanupListing(groupId, recruitmentId, resource.data, request.resource.data)) : (deLeaderCleanupListing(groupId, recruitmentId, resource.data, request.resource.data) || deCleanupListing(groupId, recruitmentId, resource.data, request.resource.data) || validPersonalCompletionListingUpdate(
-          recruitmentId,
-          resource.data,
-          request.resource.data
-        ) || validAtomicMemberRemovalListingUpdate(
+        allow update: if (dePersonalCommand(recruitmentId)) ? (validPersonalCompletionListingUpdate(recruitmentId, resource.data, request.resource.data)) : ((dePeerCommand(recruitmentId)) ? (dePeerCleanupListing(groupId, recruitmentId, resource.data, request.resource.data)) : (deLeaderCleanupListing(groupId, recruitmentId, resource.data, request.resource.data) || deCleanupListing(groupId, recruitmentId, resource.data, request.resource.data) || validAtomicMemberRemovalListingUpdate(
           groupId,
           recruitmentId,
           resource.data,

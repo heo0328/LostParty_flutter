@@ -3,9 +3,11 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { removeRepeatedPersonalCompletion } from './roster_complexity_candidate.mjs';
+import { removeRepeatedPersonalCompletion, integratedBaseline, preserveExistingSlots,
+  deduplicateCleanup, dispatchCleanupEvents, removeRepeatedPositionValidation, prioritizeCharacterChange } from './roster_complexity_candidate.mjs';
 
-const baseline = fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const baseline = prioritizeCharacterChange(removeRepeatedPositionValidation(dispatchCleanupEvents(
+  deduplicateCleanup(preserveExistingSlots(integratedBaseline())))));
 const candidate = removeRepeatedPersonalCompletion(baseline);
 const directory = new URL('../coverage/roster-complexity/personal/', import.meta.url);
 fs.mkdirSync(directory, { recursive: true });

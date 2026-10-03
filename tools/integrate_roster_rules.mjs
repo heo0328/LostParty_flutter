@@ -2,12 +2,12 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { deduplicateCleanup, dispatchCleanupEvents, preserveExistingSlots, integratedBaseline, removeRepeatedPositionValidation, prioritizeCharacterChange } from './roster_complexity_candidate.mjs';
+import { deduplicateCleanup, dispatchCleanupEvents, preserveExistingSlots, integratedBaseline, removeRepeatedPositionValidation, prioritizeCharacterChange, removeRepeatedPersonalCompletion } from './roster_complexity_candidate.mjs';
 const target = new URL('../firestore.rules', import.meta.url);
 const baseline = integratedBaseline();
 const repaired = preserveExistingSlots(baseline);
 const deduplicated = deduplicateCleanup(repaired);
-const result = prioritizeCharacterChange(removeRepeatedPositionValidation(dispatchCleanupEvents(deduplicated)));
+const result = removeRepeatedPersonalCompletion(prioritizeCharacterChange(removeRepeatedPositionValidation(dispatchCleanupEvents(deduplicated))));
 assert.ok(result.includes('function deGenerationUpdate('));
 assert.ok(result.includes('function deLastCompletedDisband('));
 assert.ok(result.includes('function deReplacePriorState('));
