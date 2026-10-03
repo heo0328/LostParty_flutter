@@ -23,6 +23,45 @@ export function rulesFunction(source, name) {
   return { start, end, text: source.slice(start, end), body: source.slice(open + 1, end - 1) };
 }
 
+// These validators imply the earlier personalComplete/request.time dispatch.
+// Remove only their unreachable fallback calls; keep every validator unchanged.
+export function removeRepeatedPersonalCompletion(source) {
+  const target = rulesFunction(source, 'personalCompletionTargetsCurrentPlayer').body;
+  assert.ok(target.includes('personalCompletionCommandMarker(recruitment)'));
+  assert.ok(target.includes('recruitment.lastCommandAt == request.time'));
+  assert.ok(rulesFunction(source, 'personalCompletionCommandMarker').body.includes("data.lastCommandType == 'personalComplete'"));
+  for (const [name, argument] of [
+    ['validPersonalLastMemberCompletion', 'newData'],
+    ['validPersonalCompletionRecruitmentUpdate', 'newData'],
+    ['validPersonalCompletionMemberDelete', 'after'],
+    ['validPersonalCompletionListingUpdate', 'recruitment'],
+  ]) assert.ok(rulesFunction(source, name).body.includes(`personalCompletionTargetsCurrentPlayer(${argument})`));
+  const fragments = [
+    ` || (personalCompletionCommandMarker(request.resource.data)
+          && dePersonalCompletionBoundary(resource.data, request.resource.data)
+          && validPersonalCompletionRecruitmentUpdate(
+            resource.data,
+            request.resource.data
+          ))`,
+    ` || validPersonalCompletionMemberDelete(
+          recruitmentId,
+          playerId,
+          resource.data
+        )`,
+    ` || validPersonalCompletionListingUpdate(
+          recruitmentId,
+          resource.data,
+          request.resource.data
+        )`,
+  ];
+  let result = source;
+  for (const fragment of fragments) {
+    assert.equal(result.split(fragment).length, 2, 'personal fallback source drift');
+    result = result.replace(fragment, '');
+  }
+  return result;
+}
+
 export function deduplicateCleanup(source) {
   let result = source;
   // Compare bodies before substituting; generator drift must fail closed.

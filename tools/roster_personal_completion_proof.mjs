@@ -9,7 +9,9 @@ import { seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn, appro
   seedExpandedApprovedRoom, seedGroupLinkedRoom, completeActiveMemberTxn,
   authUid, playerId, characterId, recruitmentId, raidId } from './party_group_cutover_rules_test.mjs';
 const baseline = process.env.LEADER_PROOF_SCOPE === 'personal-baseline';
-const rules = (baseline ? manualCompletionCandidate : personalCompletionCandidate)(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
+const rules = process.env.ROSTER_COMPLEXITY_RULES_FILE
+  ? fs.readFileSync(process.env.ROSTER_COMPLEXITY_RULES_FILE, 'utf8')
+  : (baseline ? manualCompletionCandidate : personalCompletionCandidate)(fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'));
 const directory = new URL('../coverage/roster-leader/', import.meta.url);
 fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(new URL('candidate.rules', directory), rules);

@@ -1,5 +1,10 @@
 # AI CONTEXT (2026)
 
+2026-10-04: 사용자는 분할본 각각 게시 성공. 전체 무손실 축소153208bytes도 /test503 실패,
+원본 미채택. 현재는 개인 완료의 중복 fallback3곳 후보를 제한 CI 비교한다.
+테스트 활성본은 사용자 분할 게시 이후64d6a696…이며 아래 최소 거절 상태는 과거 기록이다.
+[현재 작업](NEXT_WORK.md), [진단](ROSTER_RULES_PUBLISH_DIAGNOSIS.md).
+
 2026-10-03 21:57 KST 최신 원본39a7b731 게시1회는 /test503 실패. 업로드/활성화 미도달,
 사전/사후 운영 기존본 일치. 추가 시도 없음. [게시 기록](ROSTER_RULES_PUBLISH_DIAGNOSIS.md).
 

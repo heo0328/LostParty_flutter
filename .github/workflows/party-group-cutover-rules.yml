@@ -31,6 +31,7 @@ on:
           - complexity-comparison
           - complexity-participation
           - complexity-position
+          - complexity-personal
       case:
         description: Rules regression scope
         type: choice
@@ -264,6 +265,10 @@ jobs:
           fi
           if [[ "$LEADER_PROOF_SCOPE" == complexity-position ]]; then
             proof_command="node tools/roster_position_differential.mjs"
+          fi
+          if [[ "$LEADER_PROOF_SCOPE" == complexity-personal ]]; then
+            node --test tools/roster_personal_dedup.test.mjs
+            proof_command="node tools/roster_personal_differential.mjs"
           fi
           if [[ "$LEADER_PROOF_SCOPE" == complexity-participation ]]; then
             proof_command="node tools/roster_complexity_differential.mjs --participation-only"
