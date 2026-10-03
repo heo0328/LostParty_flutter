@@ -97,7 +97,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     if (repository == null || _submitting) return;
     setState(() => _submitting = true);
     try {
-      await repository.execute(observation);
+      await repository.retry(observation);
       _pendingOwnershipCleanup.remove(observation.targetId);
       if (mounted) {
         ScaffoldMessenger.of(
@@ -139,7 +139,9 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
         builder: (context) => AlertDialog(
           title: const Text('다음 주 참가 정리'),
           content: Text(
-            '${member.characterName ?? '선택한 참가자'}의 캐릭터 소유권이 변경되었습니다. 다음 주 명단에서 제외할까요? 기존 완료 기록과 그룹 가입은 유지됩니다.$successionMessage',
+            observation.kind == CompletedCleanupKind.disband
+                ? '마지막 참가자의 캐릭터 소유권이 변경되었습니다. 이 방을 해산할까요? 기존 완료 기록과 그룹 가입은 유지됩니다.'
+                : '${member.characterName ?? '선택한 참가자'}의 캐릭터 소유권이 변경되었습니다. 다음 주 명단에서 제외할까요? 기존 완료 기록과 그룹 가입은 유지됩니다.$successionMessage',
             // Successor is confirmed from the server observation, not UI order.
           ),
           actions: [
@@ -149,7 +151,11 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('참가 정리'),
+              child: Text(
+                observation.kind == CompletedCleanupKind.disband
+                    ? '해산'
+                    : '참가 정리',
+              ),
             ),
           ],
         ),
@@ -1100,7 +1106,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
                     !_membersLoading &&
                     summary.continueTogether &&
                     summary.currentCycleStatus == 'completed' &&
-                    summary.memberCount > 1)
+                    summary.memberCount > 0)
                   for (final member in _members)
                     ListTile(
                       title: const Text('다음 주 참가 자격 확인'),

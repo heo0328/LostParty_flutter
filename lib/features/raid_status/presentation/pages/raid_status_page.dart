@@ -12,6 +12,7 @@ import '../../../account/domain/repositories/activity_characters_repository.dart
 import '../../../group/domain/repositories/group_character_search_repository.dart';
 import '../../../group/domain/repositories/group_read_repository.dart';
 import '../../../recruitment_list/domain/entities/party_read_models.dart';
+import '../../../recruitment_list/domain/entities/completed_ownership_cleanup.dart';
 import '../../../recruitment_list/domain/entities/party_event.dart';
 import '../../../recruitment_list/domain/entities/party_recruitment.dart';
 import '../../../recruitment_list/domain/entities/recruitment_aggregate.dart';
@@ -28,6 +29,7 @@ import '../viewmodels/party_read_stream_view_model.dart';
 import '../viewmodels/raid_history_view_model.dart';
 import '../widgets/raid_list_sort_row.dart';
 import '../widgets/raid_status_filter_sheet.dart';
+import 'completed_cleanup_recovery_page.dart';
 
 class RaidStatusPage extends StatefulWidget {
   const RaidStatusPage({
@@ -45,6 +47,7 @@ class RaidStatusPage extends StatefulWidget {
     this.refreshSignal,
     this.cycleReconciler,
     this.applicationCleanupRepository,
+    this.completedOwnershipCleanupRepository,
     super.key,
   });
 
@@ -62,6 +65,8 @@ class RaidStatusPage extends StatefulWidget {
   final ValueListenable<int>? refreshSignal;
   final LazyCycleReconciler? cycleReconciler;
   final PartyApplicationCleanupRepository? applicationCleanupRepository;
+  final CompletedOwnershipCleanupRepository?
+  completedOwnershipCleanupRepository;
 
   @override
   State<RaidStatusPage> createState() => _RaidStatusPageState();
@@ -286,6 +291,22 @@ class _RaidStatusPageState extends State<RaidStatusPage>
       appBar: AppBar(
         title: const Text('레이드 현황'),
         actions: [
+          if (widget.completedOwnershipCleanupRepository != null)
+            IconButton(
+              tooltip: '참가 정리 처리 결과',
+              icon: const Icon(Icons.history),
+              onPressed: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => CompletedCleanupRecoveryPage(
+                      repository: widget.completedOwnershipCleanupRepository!,
+                      playerId: widget.playerId,
+                    ),
+                  ),
+                );
+                if (mounted) await _refreshStatus();
+              },
+            ),
           IconButton(
             key: const ValueKey('partyNotificationsButton'),
             tooltip: '알림',

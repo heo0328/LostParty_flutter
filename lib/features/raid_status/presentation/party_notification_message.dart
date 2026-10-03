@@ -23,13 +23,18 @@ class PartyNotificationMessage {
       PartyEventType.memberJoined => '$name님이 파티에 참가했습니다.',
       PartyEventType.memberLeft => '$name님이 파티에서 탈퇴했습니다.',
       PartyEventType.memberKicked => '$target님이 파티에서 제외되었습니다.',
-      PartyEventType.memberCharacterChanged => previous == null
-          ? '참가 캐릭터가 $name(으)로 변경되었습니다.'
-          : '$previous님이 참가 캐릭터를 $name(으)로 변경했습니다.',
+      PartyEventType.memberCharacterChanged =>
+        previous == null
+            ? '참가 캐릭터가 $name(으)로 변경되었습니다.'
+            : '$previous님이 참가 캐릭터를 $name(으)로 변경했습니다.',
       PartyEventType.memberMoved => '$target님의 위치가 변경되었습니다.',
+      PartyEventType.ownershipParticipantRemoved ||
+      PartyEventType.ownershipPeerRemoved =>
+        '소유권이 변경된 캐릭터의 다음 주 참가가 정리되었습니다. 완료 기록은 유지됩니다.',
+      PartyEventType.ownershipLeaderRemoved =>
+        '공대장 캐릭터의 소유권 변경으로 다음 주 참가가 정리되고 공대장이 승계되었습니다.',
       PartyEventType.partyCompleted => '파티 회차가 완료되었습니다.',
-      PartyEventType.partyCompletionCancelled =>
-        '파티 완료가 취소되었습니다. 기록을 확인해주세요.',
+      PartyEventType.partyCompletionCancelled => '파티 완료가 취소되었습니다. 기록을 확인해주세요.',
       PartyEventType.partyIncompleteEnded => '파티 회차가 미완료로 종료되었습니다.',
       PartyEventType.partyEnded => '파티 모집이 종료되었습니다.',
       PartyEventType.partyDisbanded => '파티 모집이 해산되었습니다.',
@@ -44,12 +49,14 @@ class PartyNotificationMessage {
     final known = PartyEventType.tryParse(type);
     return switch (known) {
       PartyEventType.partyDisbanded ||
+      PartyEventType.ownershipParticipantRemoved ||
+      PartyEventType.ownershipPeerRemoved ||
+      PartyEventType.ownershipLeaderRemoved ||
       PartyEventType.partyEnded ||
       PartyEventType.partyCompleted ||
       PartyEventType.partyCompletionCancelled ||
       PartyEventType.partyIncompleteEnded ||
-      null =>
-        '/raid-status',
+      null => '/raid-status',
       PartyEventType.applicationSubmitted ||
       PartyEventType.applicationApproved ||
       PartyEventType.applicationRejected ||
@@ -58,8 +65,7 @@ class PartyNotificationMessage {
       PartyEventType.memberLeft ||
       PartyEventType.memberKicked ||
       PartyEventType.memberCharacterChanged ||
-      PartyEventType.memberMoved =>
-        '/raid-status/$recruitmentId',
+      PartyEventType.memberMoved => '/raid-status/$recruitmentId',
     };
   }
 

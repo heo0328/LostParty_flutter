@@ -2,15 +2,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../domain/entities/completed_ownership_cleanup.dart';
 import 'party_character_ownership_reader.dart';
+import 'completed_cleanup_journal.dart';
 
 class FirestoreCompletedOwnershipCleanupRepository
     implements CompletedOwnershipCleanupRepository {
   const FirestoreCompletedOwnershipCleanupRepository({
     required this.firestore,
     required this.auth,
+    this.journal = const CompletedCleanupJournal(),
   });
   final FirebaseFirestore firestore;
   final FirebaseAuth auth;
+  final CompletedCleanupJournal journal;
 
   Future<String> _actor(Transaction tx) async {
     final uid = auth.currentUser?.uid;
@@ -83,13 +86,16 @@ class FirestoreCompletedOwnershipCleanupRepository
       throw StateError('소유권 상실이 확인되지 않아 정리하지 않습니다.');
     }
     final leaderTarget = targetId == room['leaderPlayerId'];
-    var kind = leaderTarget
+    final lastMember = leaderTarget && slots.length == 1;
+    var kind = lastMember
+        ? CompletedCleanupKind.disband
+        : leaderTarget
         ? CompletedCleanupKind.leader
         : CompletedCleanupKind.participant;
     int? leaderIndex, leaderRevision, successorIndex;
     String? successorId, successorName, successorClass;
     Object? successorUpdatedAt;
-    if (actorId != targetId || leaderTarget) {
+    if (actorId != targetId || (leaderTarget && !lastMember)) {
       final actor = slots[ai];
       final current = await _authority(
         tx,
@@ -125,8 +131,7 @@ class FirestoreCompletedOwnershipCleanupRepository
       }
       leaderRevision = leaderAuthority.revision;
     }
-    if (leaderTarget) {
-      if (slots.length < 2) throw StateError('마지막 참가자 해산은 별도 확인이 필요합니다.');
+    if (leaderTarget && !lastMember) {
       successorIndex = ti == 0 ? 1 : 0;
       final successor = slots[successorIndex];
       successorId = successor['playerId'] as String;
@@ -162,6 +167,7 @@ class FirestoreCompletedOwnershipCleanupRepository
       successorUpdatedAt = nextMember['updatedAt'];
     }
     final observation = CompletedOwnershipCleanup(
+      targetName: member['characterNameSnapshot'] as String?,
       roomId: roomId,
       actorId: actorId,
       targetId: targetId,
@@ -207,7 +213,46 @@ class FirestoreCompletedOwnershipCleanupRepository
       });
 
   @override
-  Future<void> execute(
+  Future<List<CompletedOwnershipCleanup>> pending(String actorId) =>
+      journal.pending(actorId);
+
+  @override
+  Future<void> forget(CompletedOwnershipCleanup observation) =>
+      journal.remove(observation);
+
+  @override
+  Future<void> retry(CompletedOwnershipCleanup observation) async {
+    final actor = await firestore.runTransaction(_actor);
+    if (actor != observation.actorId) throw StateError('사용자가 변경되었습니다.');
+    // A removed member may no longer read the room, but keeps event audience access.
+    Map<String, dynamic>? receipt;
+    try {
+      receipt =
+          (await firestore
+                  .collection('partyEvents')
+                  .doc(observation.eventId)
+                  .get(const GetOptions(source: Source.server)))
+              .data();
+    } on FirebaseException catch (error) {
+      // A non-existent event can be denied by resource-based read rules.
+      // This is not success: retry the original, fully validated transaction.
+      if (error.code != 'permission-denied') rethrow;
+    }
+    if (receipt != null) {
+      if (!observation.matchesReceipt(receipt)) {
+        throw StateError('저장된 요청과 처리 결과가 다릅니다. 다시 확인해 주세요.');
+      }
+      await journal.remove(observation);
+      return;
+    }
+    await execute(observation);
+  }
+
+  @override
+  Future<void> execute(CompletedOwnershipCleanup observation) =>
+      journal.run(observation, () => _execute(observation));
+
+  Future<void> _execute(
     CompletedOwnershipCleanup observation,
   ) => firestore.runTransaction((tx) async {
     final actor = await _actor(tx);
@@ -249,6 +294,32 @@ class FirestoreCompletedOwnershipCleanupRepository
     }
     final now = FieldValue.serverTimestamp();
     final patch = observation.patch(room, now);
+    if (observation.kind == CompletedCleanupKind.disband) {
+      final groupId = room['groupId'];
+      if (groupId is String && groupId.isNotEmpty) {
+        final groupRef = firestore.collection('groups').doc(groupId);
+        final group = (await tx.get(groupRef)).data();
+        final count = group?['activeRecruitmentCount'];
+        final revision = group?['revision'];
+        if (count is! int || count < 1 || revision is! int) {
+          throw StateError('그룹 모집 정보를 확인할 수 없습니다.');
+        }
+        patch['groupActiveRecruitmentCountAfter'] = count - 1;
+        tx.update(groupRef, {
+          'activeRecruitmentCount': count - 1,
+          'lastRecruitmentId': observation.roomId,
+          'revision': revision + 1,
+          'updatedAt': now,
+        });
+        tx.delete(groupRef.collection('raidListings').doc(observation.roomId));
+      }
+      tx.update(ref, patch);
+      tx.set(
+        firestore.collection('partyEvents').doc(observation.eventId),
+        observation.event(room, now),
+      );
+      return;
+    }
     tx.update(ref, patch);
     tx.delete(ref.collection('members').doc(observation.targetId));
     if (observation.kind == CompletedCleanupKind.leader) {

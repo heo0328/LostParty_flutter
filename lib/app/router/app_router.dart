@@ -448,6 +448,11 @@ GoRouter createAppRouter({
               GoRoute(
                 path: '/raid-status',
                 builder: (context, state) => RaidStatusPage(
+                  completedOwnershipCleanupRepository:
+                      FirestoreCompletedOwnershipCleanupRepository(
+                        firestore: FirebaseFirestore.instance,
+                        auth: FirebaseAuth.instance,
+                      ),
                   key: ValueKey('raid-status-${cycleRuntime.current.key}'),
                   partyReadRepository: partyReadRepositoryOrDefault,
                   accountDatabase: accountDatabase,
