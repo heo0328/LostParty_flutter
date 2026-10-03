@@ -33,6 +33,7 @@ on:
           - complexity-position
           - complexity-personal
           - complexity-audit
+          - complexity-audit-cause
       case:
         description: Rules regression scope
         type: choice
@@ -274,6 +275,9 @@ jobs:
           if [[ "$LEADER_PROOF_SCOPE" == complexity-audit ]]; then
             node tools/rules_audit.mjs
             proof_command="node tools/rules_baseline_audit.mjs"
+          fi
+          if [[ "$LEADER_PROOF_SCOPE" == complexity-audit-cause ]]; then
+            proof_command="node tools/rules_audit_cause.mjs"
           fi
           if [[ "$LEADER_PROOF_SCOPE" == complexity-participation ]]; then
             proof_command="node tools/roster_complexity_differential.mjs --participation-only"
