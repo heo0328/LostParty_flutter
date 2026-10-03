@@ -1,5 +1,11 @@
 # AI CONTEXT (2026)
 
+2026-10-03 테스트 프로젝트 비교: 최소본 활성화 성공, 과거/현재 대형본 test503,
+사전 Ruleset 복원 Release503. **rules-test-1은 최소 거절 규칙 상태로 복원 미완료**.
+운영 무변경, 근본 원인 미확정. [진단/복원 대상](ROSTER_RULES_PUBLISH_DIAGNOSIS.md),
+[다음 작업](NEXT_WORK.md). 아래 이력과 구분한다.
+
+
 2026-10-03 18:10 KST 추가 승인 게시1회: 최종본 컴파일 성공, Ruleset 업로드503으로 실패.
 Release 미도달/사후 활성 소스9월29일 본 유지 확인. 자동 재게시하지 않는다.
 [게시 진단](ROSTER_RULES_PUBLISH_DIAGNOSIS.md). 아래 구현·검증 완료와 운영 반영은 구분한다.

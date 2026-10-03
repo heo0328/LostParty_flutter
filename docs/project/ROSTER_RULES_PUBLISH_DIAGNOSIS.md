@@ -1,6 +1,45 @@
 # 원정대 Rules 게시 실패 분석 — 2026-10-03
 
-## 현재 결론
+## 최신 비교 결과 — 2026-10-03 20:52–20:53 KST
+
+사용자가 추천 비교안을 승인하고 테스트 프로젝트 표시명 `rules-test-1`을 확인했다.
+Firebase 목록에서 ID `rules-test-1-81e31`과 일치 확인 후 해당 프로젝트만 변경했다.
+운영 `lost-party`에는 쓰기 요청을 하지 않았다. 원본 Rules/앱/초기화 설정은 변경하지 않았다.
+
+| 입력/단계 | 결과 | 활성 소스 확인 |
+|---|---|---|
+| 최소 거절 규칙 148 bytes | test/createRuleset/updateRelease 모두 성공 | 최소본 해시 일치 |
+| 운영 과거 성공본 185937 bytes, e8baa2e… | test 503, 저장/적용 미도달 | 최소본 유지 |
+| 현재 검증본 224418 bytes, f43ea68c… | test 503, 저장/적용 미도달 | 최소본 유지 |
+| 테스트 사전 Ruleset 직접 복원 | updateRelease 503 | 최소본 유지, 복원 미완료 |
+
+**테스트 프로젝트는 현재 모든 클라이언트 읽기·쓰기를 거절하는 최소 규칙 상태다.**
+사전 Ruleset `db415c0d-4e2f-4357-82f8-189798c9d4d2`와 소스 백업은 보존했다.
+사전 해시 cf bf로 시작하는 전체 값은
+`cfbf6686b01dfb53c5e090ad63acb302409af011d54a274ecfd5769ffd7b44d2`다.
+현재 활성 Ruleset `211d86f8-e0d1-46db-8952-1e674fe8e1a4`, 해시
+`61d45e2c79ed7b5c1c7de15e36fce3efbfae1ba71d67dd4a2da24b22bbb2231c`.
+각 입력은 1회만 시도했고 실패 후 같은 입력을 반복하지 않았다. CLI의 PATCH 실패 후
+CreateRelease 대체 호출을 피하기 위해 기존 Firebase CLI 라이브러리의 단계별 API를 사용했다.
+컴파일 성공 최소본은 응답 `{}`로 경고 없음. 두 큰 소스는 컴파일 결과 미확정이다.
+
+기존 운영 감사 로그도 대조했다. 9월29일 16:25 성공 UpdateRelease와 10월3일 14:14
+INVALID_ARGUMENT 요청은 프로젝트/Release/요청 구조 및 granted:true가 같고 Ruleset만 달랐다.
+감사 로그의 가장 최근 성공 기록이 현재 활성본의 마지막 게시 시각과 같지는 않으므로
+전체 요청 이력이 완전하다고 주장하지 않는다. INVALID_ARGUMENT의 세부 인수는 제공되지 않았다.
+
+판단: 최소 규칙으로 프로젝트/인증/기본 적용 경로는 동작한다. 과거 성공 소스 및 이미 저장된
+테스트 Ruleset 재적용도 실패하므로 새 원정대 기능만의 회귀로 단정할 수 없다.
+대형 Rules 처리/원격 서비스/현재 실행 환경의 통신 문제를 아직 구분하지 못했다.
+소스 크기와 복잡도 중 원인, 컴파일된 크기 초과 여부도 미확정이다.
+다음 권고는 다른 실행 환경에서 동일 소스를 제한 비교해 통신 변수를 분리하고,
+테스트 원래 Ruleset 복원을 우선 확인하는 것이다. 추가 원격 쓰기는 새 지시 후 수행한다.
+코드 축소/권한 완화/운영 게시/문의 전송/전체 회귀는 하지 않았다.
+
+근거: ignored `coverage/rules-publish-isolation/`의 프로젝트별 before-source/releases,
+release-audit.json, minimal/previous/current/restore-result.json 및 compare-stage.cjs.
+
+## 이전 결론 (14:37 시도 기준)
 
 현재 Rules는 업로드 내용이 손실된 상태가 아니다. 운영 프로젝트에 저장된 최근 5개 Ruleset은
 모두 로컬 통합본과 내용 해시가 같다. 그러나 활성 Release는 9월 29일 Ruleset을 가리킨다.
