@@ -32,6 +32,7 @@ on:
           - complexity-participation
           - complexity-position
           - complexity-personal
+          - complexity-audit
       case:
         description: Rules regression scope
         type: choice
@@ -67,7 +68,7 @@ permissions:
 jobs:
   full-rules-regression:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -270,6 +271,10 @@ jobs:
             node --test tools/roster_personal_dedup.test.mjs
             proof_command="node tools/roster_personal_differential.mjs"
           fi
+          if [[ "$LEADER_PROOF_SCOPE" == complexity-audit ]]; then
+            node tools/rules_audit.mjs
+            proof_command="node tools/rules_baseline_audit.mjs"
+          fi
           if [[ "$LEADER_PROOF_SCOPE" == complexity-participation ]]; then
             proof_command="node tools/roster_complexity_differential.mjs --participation-only"
           fi
@@ -283,6 +288,7 @@ jobs:
           path: |
             coverage/roster-complexity/
             coverage/roster-position/
+            coverage/rules-audit/
             firestore-debug.log
           if-no-files-found: error
           retention-days: 30
