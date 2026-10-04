@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { compactTargetScans, targetScanCandidate, compactCleanupComposition, dispatchGroupRecruitmentCount, skipCompletedMembershipFallbacks } from './rules_target_scan_candidate.mjs';
-import { rulesFunction } from './roster_complexity_candidate.mjs';
+import { rulesFunction, prioritizeMemberRemoval } from './roster_complexity_candidate.mjs';
 const baseline = memberRemovalBaseline();
 const candidate = compactTargetScans(baseline);
 test('foreign stale cleanup rejects before ownership reads without changing conditions', () => {
@@ -72,10 +72,11 @@ test('group count dispatch preserves validators and fails if a competing path pe
 });
 
 test('completed membership fallback guard requires the existing active contract', () => {
-  const result = skipCompletedMembershipFallbacks(baseline);
+  const input = prioritizeMemberRemoval(baseline);
+  const result = skipCompletedMembershipFallbacks(input);
   const tokens = text => text.match(/\w+|[^\s]/g).filter(x => x !== '(' && x !== ')').sort();
-  assert.deepEqual(tokens(result.replace("(resource.data.currentCycleStatus == 'active' && (validAtomicPendingApplicationUpdate", '(validAtomicPendingApplicationUpdate')), tokens(baseline));
+  assert.deepEqual(tokens(result.replace("(resource.data.currentCycleStatus == 'active' && (validAtomicPendingApplicationUpdate", '(validAtomicPendingApplicationUpdate')), tokens(input));
   const f = rulesFunction(baseline, 'validAtomicRecruitmentJoin');
-  assert.throws(() => skipCompletedMembershipFallbacks(baseline.replace(f.text,
+  assert.throws(() => skipCompletedMembershipFallbacks(input.replace(f.text,
     f.text.replace('atomicActiveV2Recruitment(oldData)', 'true'))));
 });
