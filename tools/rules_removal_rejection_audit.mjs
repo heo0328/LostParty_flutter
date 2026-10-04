@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import { prioritizeMemberRemoval } from './roster_complexity_candidate.mjs';
 import { boundRemovalRejections } from './rules_removal_rejection_candidate.mjs';
+import { targetScanCandidate } from './rules_target_scan_candidate.mjs';
 import { seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn,
   approvePublicApplicationTxn, seedGroupLinkedRoom, seedPersistedAdvanceCycleMarker,
   repositionApprovedMemberTxn, kickApprovedMemberTxn, authUid } from './party_group_cutover_rules_test.mjs';
@@ -24,7 +25,7 @@ async function coverage(name) {
   fs.writeFileSync(`${directory}/${name}.json`, await response.text());
 }
 const bounded = process.env.RULES_REMOVAL_BOUNDED === '1';
-const variants = bounded ? { bounded: boundRemovalRejections(baseline) }
+const variants = bounded ? { bounded: process.env.RULES_TARGET_SCAN === '1' ? targetScanCandidate(baseline) : boundRemovalRejections(baseline) }
   : { baseline, candidate: prioritizeMemberRemoval(baseline) };
 for (const [variant, rules] of Object.entries(variants)) {
   fs.writeFileSync(`${directory}/${variant}.rules`, rules);

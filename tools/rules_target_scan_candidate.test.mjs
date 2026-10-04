@@ -1,0 +1,24 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { compactTargetScans } from './rules_target_scan_candidate.mjs';
+import { rulesFunction } from './roster_complexity_candidate.mjs';
+const baseline = fs.readFileSync('firestore.rules', 'utf8').replace(/\r\n/g, '\n');
+const candidate = compactTargetScans(baseline);
+test('target scan keeps every index and legacy extra fields; no permission predicate changes', () => {
+  const changed = new Set(['atomicCommandIncludes', 'atomicTargetAt', 'atomicRaidStateListedInTargets', 'atomicRaidStateTargetAt']);
+  for (const [, name] of baseline.matchAll(/    function (\w+)\(/g)) {
+    if (!changed.has(name)) assert.equal(rulesFunction(candidate, name).text, rulesFunction(baseline, name).text);
+  }
+  for (const [name, field] of [['atomicCommandIncludes', 'commandTargets'], ['atomicRaidStateListedInTargets', 'raidStateTargets']]) {
+    const body = rulesFunction(candidate, name).body.replaceAll('targets.size()', 'targets.length');
+    // Executes the generated boolean expression for well-formed contract maps.
+    const evaluate = new Function('data', 'recruitment', 'playerId', 'stateId', body);
+    for (let size = 0; size <= 9; size++) for (let match = -1; match < size; match++) {
+      const targets = Array.from({ length: size }, (_, i) => ({ playerId: i === match ? 'p' : 'other', stateId: 's', legacyExtra: true }));
+      const data = { [field]: targets };
+      assert.equal(evaluate(data, data, 'p', 's'), match >= 0 && match < 8);
+      assert.equal(evaluate(data, data, 'p', 'wrong'), false);
+    }
+  }
+});

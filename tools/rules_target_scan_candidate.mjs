@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import { rulesFunction } from './roster_complexity_candidate.mjs';
+import { boundRemovalRejections } from './rules_removal_rejection_candidate.mjs';
+
+export function compactTargetScans(source) {
+  for (const [name, helper, arg, field] of [
+    ['atomicCommandIncludes', 'atomicTargetAt', 'data', 'commandTargets'],
+    ['atomicRaidStateListedInTargets', 'atomicRaidStateTargetAt', 'recruitment', 'raidStateTargets'],
+  ]) {
+    const f = rulesFunction(source, name);
+    const helperFunction = rulesFunction(source, helper);
+    assert.equal((source.match(new RegExp(`\\b${helper}\\(`, 'g')) ?? []).length, 9);
+    assert.ok(helperFunction.body.includes(`index < ${arg}.${field}.size()`));
+    assert.ok(helperFunction.body.includes(`${arg}.${field}[index].playerId == playerId`));
+    assert.ok(helperFunction.body.includes(`${arg}.${field}[index].stateId == stateId`));
+    for (let i = 0; i < 8; i++) assert.ok(f.body.includes(`${helper}(${arg}, ${i}, playerId, stateId)`));
+    let expression = '';
+    for (let i = 7; i >= 0; i--) {
+      const pair = `(targets[${i}].playerId == playerId && targets[${i}].stateId == stateId)`;
+      expression = `(count > ${i} && (${pair}${expression ? ` || ${expression}` : ''}))`;
+    }
+    source = source.replace(f.text, `    function ${name}(${arg}, playerId, stateId) {
+      let targets = ${arg}.${field};
+      let count = targets.size();
+      return ${expression};
+    }`).replace(helperFunction.text + '\n\n', '');
+    assert.ok(!source.includes(`${helper}(`));
+  }
+  return source;
+}
+
+export function targetScanCandidate(baseline) {
+  return compactTargetScans(boundRemovalRejections(baseline));
+}
