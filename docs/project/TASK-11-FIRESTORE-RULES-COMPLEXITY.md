@@ -1,4 +1,160 @@
-# Task-11 Firestore Rules 복잡도 차단 — 종료된 진단 이력
+# Firestore Rules 복잡도 — 전면 조사와 기능 보존 설계
+
+## 2026-10-04 전면 조사 결과 — 현행 기준선에는 미해결 기능 실패가 있다
+
+이번에는 앱·Rules를 수정하지 않고 조사 도구/검증 입력 선택/문서만 변경했다.
+사용자 승인: Spark 직접 저장 우선, Rules 서버 경계 기준선1회, Flutter 전체 회귀 제외.
+**현재본을 전체 기능 정상본으로 간주하지 않는다.** 아래 실패를 분리한 뒤 간소화한다.
+
+### A. 비교 기준 고정
+
+| 기준 | SHA256 앞8자리 | 정규화 bytes | 의미 |
+|---|---|---:|---|
+| 운영/dev 68f0508 | e8baa2e4 |185937|최근 사전/사후 조회한 운영 활성본|
+| 재인증 통합 초기본 |11ef3dde|227459|integratedBaseline() 재현; 간소화 전 비교|
+| 사용자 백업/4453f53 |f43ea68c|224418|백업 CRLF를 LF로 바꾸면 정확히 동일|
+| 캐릭터 변경 평가 순서 수정/48bb6f3 |39a7b731|224266|빈자리 변경 한도 수정과 자리 중복 제거|
+| 현재/6742123 |6a4a4b52|223746|개인 완료 중복 fallback3곳 제거|
+
+사용자 백업 raw229393bytes/SHAa2501818…는 보존했다. 파일 이름이나 과거 완료 보고 대신
+위 소스와 증거를 사용한다. 소스 축소153208bytes의 /test503 실패는 별도 게시 실험이다.
+정리 한도 개선(hasAll), 중복 helper 공통화, 이벤트 분기, 캐릭터 평가 순서, 개인 완료 중복 제거는
+각각 생성 도구의 독립 변환으로 재현된다. 모두 한 종류의 '버그 수정'으로 합쳐 판정하지 않는다.
+
+### B. 전수 정적 조사
+
+[전체 경로·함수 목록](RULES_AUDIT_INVENTORY.md)은 현재 해시의 **34 match(루트 포함),
+118 allow, 274 함수**를 포함한다. 모든 allow에서 호출 그래프를 따라갔으며 미도달 함수0,
+공백 정규화 후 완전히 동일한 함수 본문0, 재귀0, 최대 helper 깊이6이다.
+인자 이름이 다른 의미상 중복이나 논리적으로 불가능한 분기는 별도 검토 대상이다.
+
+| 우선 조사 경로 | 도달 가능한 고유 helper 수 | 주요 부담/판정 |
+|---|---:|---|
+| 모집 update |62|개인 완료·소유권 정리·수명주기·신청·가입·변경·탈퇴가 연결된 OR/삼항 체인|
+| 참가 member update |34|자리·캐릭터·승계·구 assignment 경로 동시 유지|
+| raidState update |33|개인 완료·구세대 교체·주차 수명주기와 남은 중복 개인 완료 호출|
+| 그룹 raidListing update |29|모집의 파생 상태·방장·구성·revision 동기화|
+| 그룹 update / 신청 update |각27|그룹 관계 원자성 / 재신청·승인·완료 처리|
+| partyEvent create |23|대상·명령 revision·원본 상태/완료 snapshot 상호 검증|
+
+이 숫자는 실행 횟수·Firestore 문서 접근 수·컴파일 AST 크기가 아니다. 동일 get 경로의 캐시,
+짧은 회로 평가, 분기별 실행을 고려해야 한다. 소스 줄 수 목표나 임의 축소율을 완료 기준으로 삼지 않는다.
+
+### C. 기능별 경계와 로컬 이전 판정
+
+| 영역/문서 | 실제 연결/상태 | Rules에 남길 것 / 간소화 방향 |
+|---|---|---|
+| authBindings, players, operatorAssignments |Player 인증 바인딩·활동, Router 운영자 저장소|본인 식별/운영자 권한/변경 필드 보호 유지. 표시·최종접속 UX만 로컬|
+| gameAccounts, characters, identityClaims, playerGameAccounts |로컬 장비 인증 Gateway→원격 데이터 동기화|세대·owner 일치 유지. 장비 판정은 이미 로컬이며 추가 절감원이 아님|
+| accountVerificationChallenges, activeAccountVerificationChallenges |현재 클라이언트 쓰기 거절, 향후 서버 계약|거절 경로 유지. 사용하지 않는 실제 함수는 발견되지 않음|
+| manualVerificationRequests, manualVerificationBlocks |FirestoreManualVerificationRepository/운영자|승인·분쟁·요청자/운영자 권한 유지; 만료 취소의 계약 불일치 별도 해결|
+| recruitments, members, applications/votes |Router atomic 저장소→전용 create/join/application/member mutation/removal→Write Plan|점유·직업/역할·승인·참가 세대·revision·원자성은 로컬 단독 이전 불가|
+| recruitments/slots |구 원장 읽기만, 쓰기 false|현재 기능 삭제 수단으로 활용하지 않음|
+| recruitments/cycles, raidStates, weeklyRaidClaims, activeRaidAssignments |Cycle adapter/weekly status command 저장소, 현재·구세대 공존|완료/재승계/점유와 과거 기록 보호 유지. legacy 제거는 데이터/앱 호환 증거 없으므로 보류|
+| partyEvents, players/events |공용 원자 이벤트/구 이벤트 읽기·일부 생성|audience·actor·revision·발생 조건 유지. 이벤트 문자열/표시는 로컬|
+| groups, members, groupMembershipState, groupRelations |그룹 create/join/application/joinCode 저장소|책임자/정원/역방향 관계·count·탈퇴/해산 동기화 유지|
+| group raidListings |모집 명령이 같은 transaction에서 갱신|화면용이어도 모집 가시성과 접근에 영향. 로컬만 갱신하거나 원자 검사 삭제 불가|
+| joinRelations, applicantStats, blockedPlayers, groupJoinCodes |그룹 가입/코드·차단 경계|권한·중복가입·통계/관계 일치 유지. 입력 안내만 로컬|
+| characterActivity |활동 캐릭터 저장소|본인 쓰기/소유권/형식 유지, 그룹 필터·정렬·표시는 이미 앱 수행|
+| collection-group applications |본인 신청 조회|쿼리/본인 조건 유지. 로컬 필터로 권한 대체 금지|
+
+앱 연결 근거: app_router.dart의 FirestorePartyAtomicCommandRepository, cycle adapter,
+FirestoreWeeklyRaidStatusCommandRepository, 그룹/수동 인증 저장소. 캐릭터 변경은
+firestore_party_atomic_member_mutation_repository의 모집/member/character/이전state 읽기 후
+공용 배치 판정→Write Plan→모집/member/state/event 원자 쓰기다. 개인 완료도 같은 원자 경계를 유지한다.
+
+**현재 확인된 안전한 대규모 로컬 이전 후보는 없다.** 보석·전투력 상세 판정/표시·정렬·장비 인증은
+이미 앱에서 수행한다. Snapshot의 타입/변경 가능 필드/권한 검사까지 없애면 변조로 공유 데이터가
+깨질 수 있다. 로컬에서 검사한다는 사실만으로 Rules 중복으로 분류하지 않는다.
+
+추가로 현재 원정대 인증은 신뢰 서버의 장비 증명을 Rules가 검증하는 구조가 아니다.
+gameAccounts 쓰기는 signedIn+세대 일관성을 검사하며 장비 인증 성공 자체를 증명하지 않는다.
+이는 기존 Spark 계약의 신뢰 한계이고 이번 간소화로 새로 발생한 결함은 아니다. 세대 테스트 통과를
+악의적 소유권 탈취 방어 완료로 확대하지 않는다. 이를 강화하려면 별도 신뢰 서버 설계가 필요하다.
+
+### D. 기준선1회 검증과 실패 분류
+
+[CI37135392373](https://github.com/heo0328/LostParty_flutter/actions/runs/37135392373):
+현재6a4a4b52 고정, 독립12 suite를 끝까지 수집했다. 일부 suite 실패 후에도 다음 suite 실행.
+**10 suite 정상 종료/2 실패. 전체 성공 판정 아님.** 전체 Flutter 회귀는 실행하지 않았다.
+
+| suite | 결과 |
+|---|---|
+| 일반 파티/그룹 cutover |PASS 로그25건 후 추방 한도 실패, 후속 구간 미도달|
+| 그룹 이전·탈퇴·해산 |20건 통과|
+| 활동 캐릭터 |suite 정상 종료/완료 메시지; PASS 형식이 아니므로 건수 합산 제외|
+| 운영자 수동 인증 |정상 취소·분쟁 열기 후 만료 취소의 거절 기대 실패|
+| 소유권 세대 |15건 통과 (A→B→A/동시성/위조/원자성)|
+| 참가/점유 |11건/22건 통과|
+| 수동 완료/참가 중 개인 완료 |22건/15건 통과|
+| 이전 소유자 peer 정리·승계 |51건 통과 (최대8 연쇄 정리→승계→주차 전환 포함)|
+| 마지막1인/고아 정리 |10건/15건 통과|
+
+**거절 테스트 해석 한계:** 정상 종료한 group_leave/manual_completion/occupancy/orphan_cleanup
+로그에도1000식 한도 메시지가 각각1/20/1/10회 나타난다(로그 문구 수이며 요청 수 아님).
+기존 assertFails는 논리적권한거절과 한도초과거절을 구별하지 않는다. 따라서 suite 통과를
+모든 거절 경로의 비용 여유/권한논리 검증 완료로 확대하지 않는다. 전수 재실행은 하지 않고
+각 후보 영향 경계에서 의도한 거절조건·평가coverage를 확인하도록 완료 조건에 추가한다.
+이는 기존 검증의 관측 한계이며 새Rules 회귀로 단정하지 않는다.
+
+PASS 로그 합206은 서로 다른 suite의 로그 수이지 모든 제품 조합206개의 완전 검증을 뜻하지 않는다.
+일반 cutover가 중단된 뒤의 전체 완료/반복방/각종 거절 조합은 다른 suite와 겹치는 부분만 확인됐으며
+미도달 구간 전체를 통과로 표시하지 않는다. 특히 자동 장비 인증 성공 증명·수동 인증 전체 승인/분쟁
+및 모든118 allow의 정상/거절 조합을 자동으로 망라한 것은 아니다. 정적 목록 완전성과 실행 커버리지를 구분한다.
+
+1. **기능 실패: 주차 표식 이후 일반 추방.** 원래 통과해야 하는 요청이 1000식 한도에 도달한다.
+   부분 저장을 허용하거나 기대를 assertFails로 바꾸지 않았다.
+   [원인 비교CI37135757931](https://github.com/heo0328/LostParty_flutter/actions/runs/37135757931):
+   같은 fixture·명령에서 운영e8baa2e 성공, 통합11ef3dde/백업f43ea68c/현재6a4a4b52 모두 실패.
+   최근 간소화 이전 통합본부터 존재하는 미해결 실패로 분류한다. 통합 내 정확한 최초 커밋과
+   최다 비용 함수까지 확정한 것은 아니다. 실패 행은 모집update/raidState delete 등으로,
+   도달 한도 위치를 원인 함수로 단정하지 않는다. 기존 A2-B 사용자 통과를 취소하거나 모든 추방 실패로 확대하지 않는다.
+2. **기준 불일치: 운영자의 만료 pendingProof 취소.** 테스트는 거절을 기대하지만 실제 허용된다.
+   운영/dev와 현재의 해당match 및 도달 helper19개가 완전히 같다. 최근 재인증/간소화 회귀가 아니다.
+   만료 후 승인과 만료 후 취소를 구분한 명시 계약이 충분하지 않으므로 테스트/Rules 중 하나를 임의 교정하지 않는다.
+   별도 제품 정책 확정이 필요하며 현재는 테스트 기대·기존 동작 불일치로 기록한다.
+
+검증 준비 변경: 후보 생성 대신 고정 원본 옵션, 기존 full fixture에 누락된 gameAccount 권한 문서,
+manual test의 SDK context.firestore() 사용, demo project 선택만 보완했다. 기대값 변경 없음.
+신규 workflow는 기본 브랜치 미등록404로 실행되지 않아 기존 workflow 범위를 확장했다.
+최초 좁은 진단 실행37135700673은 얕은 checkout의 과거객체 의존 제거를 위해 취소,
+해시 확인한 기존 fixture/생성 체인으로37135757931을 실행했다. 전체 기준선 재실행 없음.
+
+### E. 간소화 후보의 우선순위와 채택 조건
+
+| 순서 | 후보 | 근거/기대 효과 | 위험·검증/채택 조건 |
+|---|---|---|---|
+|0|현재 추방 실패의 비용 분리와 최소 복구 설계|기능 정상 기준 없이는 간소화 회귀 판별 불가|아래 단일 구간을 먼저 수행. 기능 복구와 일반 리팩터링 diff 분리|
+|1|명령별 불필요한 OR 평가 축소|모집62/member34/state33 helper 연결; 일반 명령 앞에 다른 명령 검사 존재|현재 요청의 형태·revision·시각으로 구분되는 경우만. 과거 lastCommandType 단독 분기 금지|
+|2|raidState 개인 완료 중복 fallback|validator의 affectedKeys가 ownershipRevision 변경을 금지하며 active→completed/manual을 강제|앞쪽 분기 함의와 누락/null/잘못된타입을 포함한 동등성 증명 후 별도후보; 추방 복구와 섞지 않음|
+|3|동일 경로 읽기·세대 검사 인자 재사용|deManualCurrentOwnership에서 character/account를 읽고 deCurrentOwnership가 같은 경로 재조회|캐시 때문에 접근 수 절감은 미확정. 함수 깊이·짧은 회로·누락문서 거절 보존, 실제 평가 비교|
+|4|legacy/신규 경로 분리|member update에 atomic/구 assignment 캐릭터 변경 공존|구버전과 실제 legacy 데이터 조사 전 삭제 금지. 명시 schema로 안전하게 분리될 때만|
+|5|파생 상태/명령 envelope 구조 조정|모집/listing/event 상호 검증이 큰 코드 비중|앱·스키마·구버전 영향 크므로 이번 동등 간소화 제외, 필요 근거만 후속 제안|
+
+snapshot 타입검사 삭제, 소유권/점유/원자성 로컬 이전, 전체멤버 검사의 한 문서 집중,
+함수명/공백 축소 반복은 채택하지 않는다. 파일 분리는 유지보수 효과이며 같은 ruleset의
+컴파일 한도를 자동 해결하지 않는다. 정적 공통화가 컴파일 크기를 줄였다고 주장하지 않는다.
+
+### F. 다음 단일 구현 준비 구간 — 추방 비용 원인 확정
+
+입력: 고정6a4a4b52와 원인 비교의 동일fixture. 일반 추방 transaction은 모집/member/state/event를
+같이 변경하고 이전 lifecycle marker를 소비한다. 운영 앱 member removal Write Plan과 테스트의
+변경 필드/표식 소비/읽기순서를 먼저 필드별 대조한다.
+
+1. 기존 실패1건에 문서별 ruleCoverage를 붙여 모집update/member delete/state delete/event create의
+   평가 경로를 기록한다. 토큰/노드 합을 정확한 expression 수로 오인하지 않는다.
+2. 검증 함수 본문·권한을 유지하면서 일반 제거 validator가 무관한 고비용 lifecycle/cleanup 분기보다
+   먼저 선택되도록 하는 후보를 하나만 설계한다. 필요하다면 현재 변경 필드와 명령 소비 조건으로
+   안전한 guard를 둔다. 클라이언트 제공 marker만 신뢰하거나 새 저장 필드를 추가하지 않는다.
+3. assertFails만으로 거절 통과를 선언하지 않고, 영향받는 음성 사례의 한도 초과 여부와 실제 거절조건을 구분한다.
+   실패 재현+최대8 일반 추방/본인탈퇴+책임자 승계+마지막1인+표식 미소비/위조/부분쓰기 거절을
+   같은 기준으로 비교한다. 소유권정리/개인완료/주차전환은 변경allow와 겹치는 최소 경계만 실행한다.
+4. 신규 허용 또는 정상 거절 회귀/평가 한도 실패가 있으면 후보 미채택. 스키마 변경이 필요하면
+   구현을 확장하지 않고 재설계한다. 성공본만 독립 기능 복구 커밋으로 만들고 이후 일반 간소화 시작.
+
+이번 조사에서 위 구현은 실행하지 않았다. 전체 기준선의 실패가 남아 있으므로 현행 전체기능 검증완료,
+Rules 간소화 완료, 실기기 준비완료 또는 게시503 해결로 보고하지 않는다. 원격 게시 별도 승인 필요.
+
 
 ## 2026-10-04 개인 완료 중복 호출 축소
 
