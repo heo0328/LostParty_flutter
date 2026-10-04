@@ -14,7 +14,12 @@ const results=[];fs.mkdirSync('coverage/rules-audit',{recursive:true});
 fs.mkdirSync('coverage/roster-leader',{recursive:true});
 fs.writeFileSync('coverage/roster-leader/manifest.json',JSON.stringify({diagnostic:'post-cycle-kick',sha256:createHash('sha256').update(variants.current).digest('hex')}));
 process.env.RULES_AUDIT='1';
-for(const [name,rules] of Object.entries(variants)){
+const coverageOnly=process.env.RULES_REMOVAL_COVERAGE === '1';
+async function coverage(label) {
+  const response=await fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-party-group-cutover:ruleCoverage');
+  assert.ok(response.ok);fs.writeFileSync(`coverage/rules-audit/${label}.json`,await response.text());
+}
+for(const [name,rules] of Object.entries(coverageOnly ? {current:variants.current} : variants)){
   const row={name,sha256:createHash('sha256').update(rules).digest('hex'),phase:'setup'};
   const env=await initializeTestEnvironment({projectId:'demo-party-group-cutover',firestore:{rules,host:'127.0.0.1',port:8080}});
   try{
@@ -25,10 +30,12 @@ for(const [name,rules] of Object.entries(variants)){
     await assertFails(repositionApprovedMemberTxn(db,2,2,{skipMarkerConsumption:true}));
     await assertSucceeds(repositionApprovedMemberTxn(db));
     await seedPersistedAdvanceCycleMarker(env);row.phase='kick';
-    await assertSucceeds(kickApprovedMemberTxn(db));row.passed=true;
+    if(coverageOnly)await coverage('removal-before');
+    try { await assertSucceeds(kickApprovedMemberTxn(db));row.passed=true; }
+    finally { if(coverageOnly)await coverage('removal-after'); }
   }catch(e){row.passed=false;row.error=e.message;}finally{await env.cleanup();}
   results.push(row);console.log(JSON.stringify(row));
 }
 fs.writeFileSync('coverage/rules-audit/cause-results.json',JSON.stringify(results,null,2));
 // Diagnostic comparison expects a known failure; no change to functional expectations.
-assert.equal(results.length,4);
+assert.equal(results.length,coverageOnly ? 1 : 4);
