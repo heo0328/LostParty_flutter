@@ -1,5 +1,23 @@
 # 2026-10-03 18:10 KST 최종 Rules 게시1회 실패
 
+## 2026-10-05 정리 Aggregate 동일 본문 공통화 — 제한 CI 통과
+
+직전9654be80의 수동 게시도 실패했다는 사용자 보고를 받았다. 새 실패의 HTTP 단계/활성
+소스는 독립 확인하지 않았으며 Release503 재현으로 확정하지 않는다.
+- firestore.rules 직접 반영: cd04e69ed04d64383d61d9a38193779b3cf5c7135b068fd2d86730c47c95f197,
+  223114bytes(이전224462에서1348bytes 감소). 컴파일 크기 감소·게시 해결은 미확인.
+- deCleanupAggregate/dePeerCleanupAggregate/deLeaderCleanupAggregate의 정확히 동일한
+  연속 집계 조건을 deCleanupAggregateUpdate로 추출. 대상·남은 자리·인원·역할·시각 조건 보존.
+  권한/소유권/승계/listing/event 검사는 각 원래 위치에 유지. 새 제품 기능/앱 스키마 변경 없음.
+- 생성기 역치환으로 원본 전체와 정확히 일치하며 서로 다른 조건을 공통화하려 하면 정적 실패.
+  Node14건·Flutter 경고 계약3건·생성 일치·diff 검사 통과. 정적 helper깊이6/재귀0/미도달0.
+- c44d1ac 전용 브랜치 commit/push. CI37211831330 제한 검증 통과, 전체 회귀는 생략.
+  최대8 정리/승계/주차전환(peer51)·마지막1인10·개인완료15·일반 추방/그룹 보호 검증 통과.
+  원시 로그1000식 오류0건, CI candidate와 실제 firestore.rules byte 일치.
+- 백업 raw SHAa2501818 유지, 사용자 초기화/분할 파일 보존. 운영 재배포/데이터 변경/dev/main
+  병합 없음. 실기기·원격 컴파일 경고·게시 성공 여부는 미확인.
+
+
 ## 2026-10-04 소유권 읽기 재사용 후보를 실제 Rules에 직접 반영
 
 사용자 요청에 따라 후보 검증 전부터 firestore.rules를 수정한다. 백업은 보존하며
