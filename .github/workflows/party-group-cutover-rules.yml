@@ -343,7 +343,7 @@ jobs:
           retention-days: 30
 
       - name: Preserve leader succession candidate
-        if: always() && inputs.case == 'ownership-leader'
+        if: always() && inputs.case == 'ownership-leader' && inputs.dispatch_scope != 'complexity-group-display'
         uses: actions/upload-artifact@v4
         with:
           name: roster-leader-candidate

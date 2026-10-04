@@ -1,5 +1,170 @@
 # Firestore Rules 복잡도 — 전면 조사와 기능 보존 설계
 
+## 2026-10-05 최소 보호 유지형 축소 조사 및 첫 구현
+
+기준e7aeb309(223488bytes/274함수/34match/118allow)에서 그룹 표시 검사만 변경했다.
+현재23bce947(222435bytes/272함수/34match/118allow),1053bytes(약0.47%) 감소.
+게시 문제를 해결할 만큼 큰 축소라고 판단하지 않는다. 이번 운영/테스트 Firebase 요청은0회다.
+
+### 후보 판정과 실제 대체 경로
+
+| 분류 | 대상/원본 위치 | 결정·앱 대체·보존 항목 |
+|---|---|---|
+| 삭제 가능·이번 반영 | 그룹 member 표시 대조 함수2개, 원본4468/4475행 | GroupMemberWriteFields.fromCharacter/fromJoinRelation이 기존대로 서버에 복사 저장. class/level/power 일치 검사는 제거, 최소형식 유지 |
+| 간소화·이번 반영 | selfRefresh 원본4483행 | FirestoreGroupJoinCommandRepository의 transaction은 Character active/owner 확인 후 SnapshotWritePlan 저장을 유지. Rules의 표시 class 대조와 전용Character get만 제거 |
+| 간소화 후보·보류 | 신청통계 원본5165행, 차단이력5213행 | GroupApplicationWritePlan이 복사. relation/state 조회는 신청횟수·실행권한에 필요해 제거 불가. 형식검사 대체 비용을 포함하면 소규모여서 이번에 확장하지 않음 |
+| 유지 | 모든 식별자·이름/role·group/member revision·소유권 차수 | 표시값과 달리 권한/이전/역관계 결합에 사용됨. 기존 동작 유지 |
+| 간소화 후보·미입증 | 모집/member/state 명령 중복 | 일부 검사가 다른 문서 쓰기를 강제하는 유일한 연결일 수 있음. 필수쓰기 함의 증명 전 삭제0개 |
+| 유지·사용 조사 필요 | legacy assignment/claim/구데이터 복구 | 실제 활성 데이터 없음이 입증되지 않아 삭제0개. 호환 중단을 추측하지 않음 |
+| 구조 변경 필요 | 모집/listing/event/raidState 복제 검증 | 원본·파생 저장 계약과 구버전 이행이 필요하므로 이번 제외 |
+
+함수 호출4곳에서 교차대조wrapper 호출을 제거하고 기존 형식검사를 직접 호출한다.
+Rules 소스의 Character get2곳(공유wrapper/selfRefresh)이 제거됐다. 초기생성/코드가입/표시갱신에서
+논리상 재조회가 줄지만 같은 Character를 다른 조건에서 읽으므로 과금·고유문서 접근 감소는 확정하지 않는다.
+relation get은 권한/상태 결합에 계속 필요해 유지했다. 앱의 네트워크 읽기/서버 쓰기는 변경하지 않았다.
+
+### 공유 데이터 흐름과 계약 변경
+
+GroupMemberWriteFields → GroupJoinWritePlan/GroupMemberSnapshotWritePlan → Firestore transaction →
+GroupReadRepository.snapshots → GroupDocumentMapper → GroupMemberDisplayBuilder 흐름 유지.
+그룹장 이전은 group.leaderPlayerId 및 outgoing/incoming member.role/revision을 함께 저장한다.
+본인표시 변경은 허용필드만 갱신하며 이름/ID/role/가입순번/그룹/소유자 변경은 계속 거절한다.
+레이드 파티 classKey/role/자리/점유/방장/주차 전환은 이번 diff에 없다.
+
+의도한 변경: 표시 class가 Character와 달라도 허용, 초대/승인 표시 수치가 relation과 달라도 허용.
+class는 비어 있지 않은 문자열 필수. 숫자 필드는 누락/null/number, 보석은 누락/null/map 유지.
+기존 앱은 필드를 채워 저장한다. 숫자 누락은 mapper의 nullable 정책과 일치한다.
+관계에만 있던 표시 숫자 필드를 membership에서 누락하는 요청도 허용하므로 동등 리팩터링이 아니다.
+권한과 원자성의 기대값은 변경하지 않는다.
+
+### 전체 allow 분류(현재118개)
+
+아래는 allow별 안전 경계 분류다. 함수별 모든 의미를 새로 증명했다는 뜻이 아니며,
+기존 호출 그래프와 계약을 대조해 미입증 제거는 유지로 분류한다. 직접 표시 변경 외에는 삭제하지 않는다.
+
+| 현재 행 | 경로 | 동작 | 분류 |
+|---:|---|---|---|
+| 1358 | `/databases/{database}/documents/authBindings/{authUid}` | get | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 1359 | `/databases/{database}/documents/authBindings/{authUid}` | list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 1360 | `/databases/{database}/documents/authBindings/{authUid}` | create | 유지: 권한·상태/원자성 |
+| 1367 | `/databases/{database}/documents/authBindings/{authUid}` | update, delete | 유지: 권한·상태/원자성 |
+| 1371 | `/databases/{database}/documents/operatorAssignments/{playerId}` | get | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 1372 | `/databases/{database}/documents/operatorAssignments/{playerId}` | list, create, update, delete | 유지: 권한·상태/원자성 |
+| 1417 | `/databases/{database}/documents/players/{playerId}` | get | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 1421 | `/databases/{database}/documents/players/{playerId}` | list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 1422 | `/databases/{database}/documents/players/{playerId}` | create | 유지: 권한·상태/원자성 |
+| 1426 | `/databases/{database}/documents/players/{playerId}` | update | 유지: 권한·상태/원자성 |
+| 1434 | `/databases/{database}/documents/players/{playerId}` | delete | 유지: 권한·상태/원자성 |
+| 1480 | `/databases/{database}/documents/players/{playerId}/activeRaidAssignments/{assignmentId}` | get | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 1481 | `/databases/{database}/documents/players/{playerId}/activeRaidAssignments/{assignmentId}` | list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 1483 | `/databases/{database}/documents/players/{playerId}/activeRaidAssignments/{assignmentId}` | create, update | 유지: legacy/완료 호환 조사 필요 |
+| 1484 | `/databases/{database}/documents/players/{playerId}/activeRaidAssignments/{assignmentId}` | delete | 유지: legacy/완료 호환 조사 필요 |
+| 1530 | `/databases/{database}/documents/players/{playerId}/events/{eventId}` | get, list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 1533 | `/databases/{database}/documents/players/{playerId}/events/{eventId}` | create | 유지: 권한·상태/원자성 |
+| 1540 | `/databases/{database}/documents/players/{playerId}/events/{eventId}` | update, delete | 유지: 권한·상태/원자성 |
+| 1663 | `/databases/{database}/documents/players/{playerId}/groupMembershipState/{docId}` | get, list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 1668 | `/databases/{database}/documents/players/{playerId}/groupMembershipState/{docId}` | create | 유지: 권한·상태/원자성 |
+| 1682 | `/databases/{database}/documents/players/{playerId}/groupMembershipState/{docId}` | update | 유지: 권한·상태/원자성 |
+| 1705 | `/databases/{database}/documents/players/{playerId}/groupMembershipState/{docId}` | delete | 유지: 권한·상태/원자성 |
+| 1858 | `/databases/{database}/documents/players/{playerId}/groupRelations/{groupId}` | get, list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 1861 | `/databases/{database}/documents/players/{playerId}/groupRelations/{groupId}` | create, update | 유지: 권한·상태/원자성 |
+| 1887 | `/databases/{database}/documents/players/{playerId}/groupRelations/{groupId}` | delete | 유지: 권한·상태/원자성 |
+| 1951 | `/databases/{database}/documents/players/{playerId}/weeklyRaidClaims/{claimId}` | get | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 1952 | `/databases/{database}/documents/players/{playerId}/weeklyRaidClaims/{claimId}` | list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 1954 | `/databases/{database}/documents/players/{playerId}/weeklyRaidClaims/{claimId}` | create | 유지: legacy/완료 호환 조사 필요 |
+| 1959 | `/databases/{database}/documents/players/{playerId}/weeklyRaidClaims/{claimId}` | update | 유지: legacy/완료 호환 조사 필요 |
+| 1960 | `/databases/{database}/documents/players/{playerId}/weeklyRaidClaims/{claimId}` | delete | 유지: legacy/완료 호환 조사 필요 |
+| 2204 | `/databases/{database}/documents/players/{playerId}/raidStates/{stateId}` | get | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 2206 | `/databases/{database}/documents/players/{playerId}/raidStates/{stateId}` | list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 2208 | `/databases/{database}/documents/players/{playerId}/raidStates/{stateId}` | create | 유지: 권한·상태/원자성 |
+| 2222 | `/databases/{database}/documents/players/{playerId}/raidStates/{stateId}` | update | 유지: 권한·상태/원자성 |
+| 2238 | `/databases/{database}/documents/players/{playerId}/raidStates/{stateId}` | delete | 유지: 권한·상태/원자성 |
+| 2336 | `/databases/{database}/documents/players/{playerId}/characterActivity/{characterId}` | get, list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 2337 | `/databases/{database}/documents/players/{playerId}/characterActivity/{characterId}` | create, update | 유지: 권한·상태/원자성 |
+| 2342 | `/databases/{database}/documents/players/{playerId}/characterActivity/{characterId}` | delete | 유지: 권한·상태/원자성 |
+| 2385 | `/databases/{database}/documents/accountVerificationChallenges/{challengeId}` | read, write | 유지: 권한·상태/원자성 |
+| 2389 | `/databases/{database}/documents/activeAccountVerificationChallenges/{playerId}` | read, write | 유지: 권한·상태/원자성 |
+| 2646 | `/databases/{database}/documents/manualVerificationRequests/{requestId}` | get | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 2650 | `/databases/{database}/documents/manualVerificationRequests/{requestId}` | list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 2654 | `/databases/{database}/documents/manualVerificationRequests/{requestId}` | create | 유지: 권한·상태/원자성 |
+| 2655 | `/databases/{database}/documents/manualVerificationRequests/{requestId}` | update | 유지: 권한·상태/원자성 |
+| 2668 | `/databases/{database}/documents/manualVerificationRequests/{requestId}` | delete | 유지: 권한·상태/원자성 |
+| 2699 | `/databases/{database}/documents/manualVerificationBlocks/{blockId}` | get | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 2700 | `/databases/{database}/documents/manualVerificationBlocks/{blockId}` | list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 2701 | `/databases/{database}/documents/manualVerificationBlocks/{blockId}` | create | 유지: 권한·상태/원자성 |
+| 2702 | `/databases/{database}/documents/manualVerificationBlocks/{blockId}` | update, delete | 유지: 권한·상태/원자성 |
+| 2807 | `/databases/{database}/documents/gameAccounts/{gameAccountId}` | read | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 2808 | `/databases/{database}/documents/gameAccounts/{gameAccountId}` | create | 유지: 권한·상태/원자성 |
+| 2810 | `/databases/{database}/documents/gameAccounts/{gameAccountId}` | update | 유지: 권한·상태/원자성 |
+| 2811 | `/databases/{database}/documents/gameAccounts/{gameAccountId}` | delete | 유지: 권한·상태/원자성 |
+| 2822 | `/databases/{database}/documents/characters/{characterId}` | read | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 2823 | `/databases/{database}/documents/characters/{characterId}` | create | 유지: 권한·상태/원자성 |
+| 2824 | `/databases/{database}/documents/characters/{characterId}` | update | 유지: 권한·상태/원자성 |
+| 2829 | `/databases/{database}/documents/characters/{characterId}` | delete | 유지: 권한·상태/원자성 |
+| 2833 | `/databases/{database}/documents/characterIdentityClaims/{claimId}` | read, write | 유지: 권한·상태/원자성 |
+| 2897 | `/databases/{database}/documents/playerGameAccounts/{ownershipId}` | read | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 2898 | `/databases/{database}/documents/playerGameAccounts/{ownershipId}` | create | 유지: 권한·상태/원자성 |
+| 2903 | `/databases/{database}/documents/playerGameAccounts/{ownershipId}` | update | 유지: 권한·상태/원자성 |
+| 2914 | `/databases/{database}/documents/playerGameAccounts/{ownershipId}` | delete | 유지: 권한·상태/원자성 |
+| 2937 | `/databases/{database}/documents/partyEvents/{eventId}` | get, list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 2939 | `/databases/{database}/documents/partyEvents/{eventId}` | update, delete | 구조 변경 필요: 파생 상태/명령 결합 |
+| 2940 | `/databases/{database}/documents/partyEvents/{eventId}` | create | 구조 변경 필요: 파생 상태/명령 결합 |
+| 3402 | `/databases/{database}/documents/recruitments/{recruitmentId}` | get | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 3403 | `/databases/{database}/documents/recruitments/{recruitmentId}` | list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 3404 | `/databases/{database}/documents/recruitments/{recruitmentId}` | create | 유지: 권한·상태/원자성 |
+| 3408 | `/databases/{database}/documents/recruitments/{recruitmentId}` | update | 유지: 권한·상태/원자성 |
+| 3440 | `/databases/{database}/documents/recruitments/{recruitmentId}` | delete | 유지: 권한·상태/원자성 |
+| 3780 | `/databases/{database}/documents/recruitments/{recruitmentId}/members/{playerId}` | get, list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 3783 | `/databases/{database}/documents/recruitments/{recruitmentId}/members/{playerId}` | create | 유지: 권한·상태/원자성 |
+| 3792 | `/databases/{database}/documents/recruitments/{recruitmentId}/members/{playerId}` | update | 유지: 권한·상태/원자성 |
+| 3814 | `/databases/{database}/documents/recruitments/{recruitmentId}/members/{playerId}` | delete | 유지: 권한·상태/원자성 |
+| 3823 | `/databases/{database}/documents/recruitments/{recruitmentId}/slots/{slotId}` | get, list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 3825 | `/databases/{database}/documents/recruitments/{recruitmentId}/slots/{slotId}` | create, update, delete | 유지: 권한·상태/원자성 |
+| 3985 | `/databases/{database}/documents/recruitments/{recruitmentId}/applications/{playerId}` | get | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 3986 | `/databases/{database}/documents/recruitments/{recruitmentId}/applications/{playerId}` | list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 3989 | `/databases/{database}/documents/recruitments/{recruitmentId}/applications/{playerId}` | create | 유지: 권한·상태/원자성 |
+| 3994 | `/databases/{database}/documents/recruitments/{recruitmentId}/applications/{playerId}` | update | 유지: 권한·상태/원자성 |
+| 4016 | `/databases/{database}/documents/recruitments/{recruitmentId}/applications/{playerId}` | delete | 유지: 권한·상태/원자성 |
+| 4023 | `/databases/{database}/documents/recruitments/{recruitmentId}/applications/{playerId}/votes/{voterPlayerId}` | get, list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 4024 | `/databases/{database}/documents/recruitments/{recruitmentId}/applications/{playerId}/votes/{voterPlayerId}` | create, update, delete | 유지: 권한·상태/원자성 |
+| 4030 | `/databases/{database}/documents/recruitments/{recruitmentId}/cycles/{cycleKey}` | get, list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 4031 | `/databases/{database}/documents/recruitments/{recruitmentId}/cycles/{cycleKey}` | create, update, delete | 유지: 권한·상태/원자성 |
+| 4350 | `/databases/{database}/documents/groups/{groupId}` | get | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 4352 | `/databases/{database}/documents/groups/{groupId}` | list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 4353 | `/databases/{database}/documents/groups/{groupId}` | create | 유지: 권한·상태/원자성 |
+| 4360 | `/databases/{database}/documents/groups/{groupId}` | update | 유지: 권한·상태/원자성 |
+| 4405 | `/databases/{database}/documents/groups/{groupId}` | delete | 유지: 권한·상태/원자성 |
+| 4619 | `/databases/{database}/documents/groups/{groupId}/members/{playerId}` | get, list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 4621 | `/databases/{database}/documents/groups/{groupId}/members/{playerId}` | create | 간소화 반영: 표시 교차대조만; 권한 유지 |
+| 4640 | `/databases/{database}/documents/groups/{groupId}/members/{playerId}` | update | 간소화 반영: 표시 교차대조만; 권한 유지 |
+| 4651 | `/databases/{database}/documents/groups/{groupId}/members/{playerId}` | delete | 유지: 권한·상태/원자성 |
+| 4864 | `/databases/{database}/documents/groups/{groupId}/raidListings/{recruitmentId}` | get, list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 4865 | `/databases/{database}/documents/groups/{groupId}/raidListings/{recruitmentId}` | create | 구조 변경 필요: 파생 상태/명령 결합 |
+| 4878 | `/databases/{database}/documents/groups/{groupId}/raidListings/{recruitmentId}` | update | 구조 변경 필요: 파생 상태/명령 결합 |
+| 4895 | `/databases/{database}/documents/groups/{groupId}/raidListings/{recruitmentId}` | delete | 구조 변경 필요: 파생 상태/명령 결합 |
+| 5066 | `/databases/{database}/documents/groups/{groupId}/joinRelations/{playerId}` | get | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 5068 | `/databases/{database}/documents/groups/{groupId}/joinRelations/{playerId}` | list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 5069 | `/databases/{database}/documents/groups/{groupId}/joinRelations/{playerId}` | create | 유지: 권한·상태/원자성 |
+| 5083 | `/databases/{database}/documents/groups/{groupId}/joinRelations/{playerId}` | update | 유지: 권한·상태/원자성 |
+| 5115 | `/databases/{database}/documents/groups/{groupId}/joinRelations/{playerId}` | delete | 유지: 권한·상태/원자성 |
+| 5148 | `/databases/{database}/documents/groups/{groupId}/applicantStats/{playerId}` | get | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 5150 | `/databases/{database}/documents/groups/{groupId}/applicantStats/{playerId}` | list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 5151 | `/databases/{database}/documents/groups/{groupId}/applicantStats/{playerId}` | create | 간소화 후보: 표시 대조; 권한 유지 |
+| 5158 | `/databases/{database}/documents/groups/{groupId}/applicantStats/{playerId}` | update | 간소화 후보: 표시 대조; 권한 유지 |
+| 5165 | `/databases/{database}/documents/groups/{groupId}/applicantStats/{playerId}` | delete | 간소화 후보: 표시 대조; 권한 유지 |
+| 5203 | `/databases/{database}/documents/groups/{groupId}/blockedPlayers/{playerId}` | get, list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 5204 | `/databases/{database}/documents/groups/{groupId}/blockedPlayers/{playerId}` | create | 간소화 후보: 표시 대조; 권한 유지 |
+| 5209 | `/databases/{database}/documents/groups/{groupId}/blockedPlayers/{playerId}` | update | 간소화 후보: 표시 대조; 권한 유지 |
+| 5210 | `/databases/{database}/documents/groups/{groupId}/blockedPlayers/{playerId}` | delete | 간소화 후보: 표시 대조; 권한 유지 |
+| 5255 | `/databases/{database}/documents/groupJoinCodes/{code}` | get | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 5256 | `/databases/{database}/documents/groupJoinCodes/{code}` | list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+| 5257 | `/databases/{database}/documents/groupJoinCodes/{code}` | create | 유지: 권한·상태/원자성 |
+| 5258 | `/databases/{database}/documents/groupJoinCodes/{code}` | update | 유지: 권한·상태/원자성 |
+| 5259 | `/databases/{database}/documents/groupJoinCodes/{code}` | delete | 유지: 권한·상태/원자성 |
+| 5265 | `/databases/{database}/documents/{path=**}/applications/{applicantPlayerId}` | list | 유지: 읽기/기본 권한 또는 명시적 거절 |
+
+아래는 이전 이력이다.
+
 2026-10-05 01:15 KST 최신: 새 승인 게시1회에서 e7aeb309 컴파일200/경고0·업로드200 및
 저장 소스 일치, 활성화PATCH503/CLI fallback409로 실패. 운영 활성e8baa2e4 유지 확인.
 재시도 없음. 다음은 활성화 실패 원인 분리. [상세](ROSTER_RULES_PUBLISH_DIAGNOSIS.md).

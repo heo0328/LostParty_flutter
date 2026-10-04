@@ -1,5 +1,16 @@
 # Task-11 Firestore 그룹 생성·가입 계약
 
+## 2026-10-05 표시 Snapshot 서버 검사 계약 조정
+
+그룹 membership 표시 class/itemLevel/combatPower는 앱의 기존 WritePlan이 서버에 저장한다.
+Rules는 Character/relation과 값이 같은지 재검사하지 않고, class 비어있지 않은 string 및
+선택적 number/null·gem map/null 형식을 검사한다. 숫자 누락도 nullable 읽기 계약상 허용한다.
+ID·이름·역할·가입관계·리비전·실행권한·그룹장 이전의 원자성은 기존대로 유지한다.
+본인 표시갱신 외 타인갱신/역할변경은 허용하지 않는다. 앱의 Character 소유권 조회·서버 저장·
+다른 기기의 구독은 유지한다. 레이드 구성의 classKey/role 검사를 이 계약으로 완화하지 않는다.
+신청통계/차단이력의 표시값 교차검사는 이번 변경 대상이 아니다. 운영 반영 전 검증본 계약이다.
+
+
 ## 2026-09-05 초대코드 단순화·복원·폐기 UX 후속 결정
 
 - 변경 전에는 초대코드 원문이 생성 직후 ViewModel 메모리에만 남아 앱 재실행·방장 위임 뒤 표시와 재입력 없는 폐기가 불가능했다. 현재는 그룹의 선택 필드 `activeJoinCode`로 복원한다.
