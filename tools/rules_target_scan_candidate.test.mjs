@@ -2,7 +2,7 @@ import { memberRemovalBaseline } from './roster_complexity_candidate.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { compactTargetScans, targetScanCandidate } from './rules_target_scan_candidate.mjs';
+import { compactTargetScans, targetScanCandidate, compactCleanupComposition } from './rules_target_scan_candidate.mjs';
 import { rulesFunction } from './roster_complexity_candidate.mjs';
 const baseline = memberRemovalBaseline();
 const candidate = compactTargetScans(baseline);
@@ -31,4 +31,21 @@ test('target scan keeps every index and legacy extra fields; no permission predi
       assert.equal(evaluate(data, data, 'p', 'wrong'), false);
     }
   }
+});
+
+test('cleanup composition retains all required fields and revision/time checks', () => {
+  const before = rulesFunction(baseline, 'deCleanupComposition');
+  const afterSource = compactCleanupComposition(baseline);
+  const after = rulesFunction(afterSource, 'deCleanupComposition');
+  const keys = [...before.body.matchAll(/data\.(\w+) == room\.\1/g)].map(m => m[1]);
+  const listed = [...after.body.matchAll(/'([^']+)'/g)].map(m => m[1]);
+  assert.deepEqual(listed, keys);
+  assert.equal(keys.length, 8);
+  assert.ok(after.body.includes('data.sourceRevision == room.revision'));
+  assert.ok(after.body.includes('data.updatedAt == request.time'));
+  for (const [, name] of baseline.matchAll(/    function (\w+)\(/g)) {
+    if (name !== before.name && name !== 'deCleanupComposition')
+      assert.equal(rulesFunction(baseline, name).text, rulesFunction(afterSource, name).text);
+  }
+  assert.throws(() => compactCleanupComposition(baseline.replace('data.memberCount == room.memberCount', 'true')));
 });

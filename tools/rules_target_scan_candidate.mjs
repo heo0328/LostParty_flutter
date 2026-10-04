@@ -30,8 +30,19 @@ export function compactTargetScans(source) {
   return source;
 }
 
+// Compare the same required fields together; absent fields remain rejected.
+export function compactCleanupComposition(source) {
+  const f = rulesFunction(source, 'deCleanupComposition');
+  const keys = ['partySlots', 'memberPlayerIds', 'raidStateTargets', 'memberCount',
+    'dealerCount', 'supportCount', 'nonGroupMemberCount', 'hasAvailableSlot'];
+  const original = keys.map(key => `data.${key} == room.${key}`).join('\n        && ');
+  assert.ok(f.text.includes(original));
+  const expression = `data.diff(room).unchangedKeys().hasAll([${keys.map(key => `'${key}'`).join(', ')}])`;
+  return source.replace(f.text, f.text.replace(original, expression));
+}
+
 export function targetScanCandidate(baseline) {
-  let source = compactTargetScans(boundRemovalRejections(baseline));
+  let source = compactCleanupComposition(compactTargetScans(boundRemovalRejections(baseline)));
   const f = rulesFunction(source, 'validAtomicStaleRaidStateDelete');
   const old = 'return deManualCurrentOwnership(oldData) && hasActiveBinding()';
   assert.ok(f.text.includes(old));

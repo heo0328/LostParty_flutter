@@ -27,8 +27,21 @@ const thirdDb = env.authenticatedContext('cleanup-third-auth').firestore();
 let originalSlots;
 const results = [];
 async function check(name, action) {
+  const audit = process.env.RULES_BUDGET_AUDIT === '1';
+  const offset = audit && fs.existsSync('firestore-debug.log') ? fs.statSync('firestore-debug.log').size : 0;
+  if (audit) console.log('BUDGET BEGIN ' + JSON.stringify({ name, at: new Date().toISOString() }));
   try { await action(); results.push({ name, passed: true }); console.log(`PASS CLEANUP: ${name}`); }
   catch (error) { results.push({ name, passed: false, error: error.message }); console.error(`FAIL CLEANUP: ${name}: ${error.message}`); }
+  if (audit) {
+    const log = fs.existsSync('firestore-debug.log') ? fs.readFileSync('firestore-debug.log').subarray(offset).toString() : '';
+    const exceeded = log.includes('maximum of 1000');
+    console.log('BUDGET END ' + JSON.stringify({ name, exceeded, at: new Date().toISOString() }));
+    if (exceeded) {
+      const out = 'coverage/rules-audit/cleanup-budget';
+      fs.mkdirSync(out, { recursive: true });
+      fs.writeFileSync(`${out}/${name.replace(/[^a-zA-Z0-9-]/g, '_')}.log`, log);
+    }
+  }
 }
 async function snapshot() {
   const result = await inspectAll(env);
