@@ -9,7 +9,9 @@ import { runCleanupProof } from './roster_completed_cleanup_proof.mjs';
 import { playerId, recruitmentId } from './party_group_cutover_rules_test.mjs';
 
 const source = fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8');
-const rules = process.env.ROSTER_TRACKED_RULES === '1' ? source : lastMemberCandidate(source);
+const rules = process.env.ROSTER_COMPLEXITY_RULES_FILE
+  ? fs.readFileSync(process.env.ROSTER_COMPLEXITY_RULES_FILE, 'utf8')
+  : process.env.ROSTER_TRACKED_RULES === '1' ? source : lastMemberCandidate(source);
 const directory = new URL('../coverage/roster-leader/', import.meta.url);
 fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(new URL('candidate.rules', directory), rules);
