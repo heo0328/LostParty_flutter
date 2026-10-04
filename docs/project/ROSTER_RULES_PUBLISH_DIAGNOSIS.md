@@ -1,5 +1,23 @@
 # 원정대 Rules 게시 실패 분석 — 2026-10-03
 
+## 2026-10-04 17:21 KST 검증본 게시 1회 — 업로드 성공·활성화 실패
+
+- 전용 브랜치05499c8의 firestore.rules, SHA3b0f492ba48fe6e7e2f68949239bb64bb52739d41013a1c448a1c69dd5a5663f,
+  224316bytes를 lost-party에 Rules만 정확히1회 CLI 게시했다. dry-run/재시도 없음.
+- /test200·컴파일 issues[]로 경고0, /rulesets POST200. 저장된 Ruleset
+  f18499bf-b3ef-472c-9cd4-9f68c71162ac의 응답 소스 해시는 로컬 원본과 일치한다.
+- /releases/cloud.firestore PATCH503. CLI 자동 create fallback POST409, 종료코드1.
+  CLI 내부 fallback과 별개로 에이전트가 재게시한 횟수는0이다.
+- 사전/사후 활성 Ruleset e46f131e-920a-4773-bc25-2ef4b7ff9169,
+  해시e8baa2e4824d9200ab8a76fe07d7155578ba6982ca9b29941b9b7f55a6b3b1a5 동일.
+  운영 활성본은2026-09-29 유지. 이번 수정본은 운영 적용되지 않았다.
+- 근거: coverage/roster-publish-removal의 before/after.json·rules, deploy-once.log, result.json.
+  소스 손실은 이번 응답 대조에서 배제했으나 컴파일 결과 크기/활성화503의 근본 원인은 미확정.
+- 제한 기능·권한 검증과 거절 한도 수정은 완료, 운영 활성화·사용자 실기기는 미완료다.
+  정상 기능을 추가 삭제/완화하지 않는다. 다음은 실패한 활성화 단계의 원인 분리이며
+  새 지시 전 반복 게시하지 않는다. dev/main 미반영, 사용자 파일 보존.
+
+
 ## 2026-10-04 00:38 KST — 개인 완료 중복 제거본 게시1회 실패
 
 사용자 승인으로6742123의 firestore.rules(223746bytes,
