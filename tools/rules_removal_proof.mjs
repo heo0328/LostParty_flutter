@@ -7,12 +7,13 @@ import path from 'node:path';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
 import { prioritizeMemberRemoval } from './roster_complexity_candidate.mjs';
 import { targetScanCandidate } from './rules_target_scan_candidate.mjs';
+import { scopeFunctions } from './rules_scope_candidate.mjs';
 import { doc, getDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { seedBase,seedJoiner,createPublicRecruitmentTxn,applicationTxn,approvePublicApplicationTxn,
  seedPersistedAdvanceCycleMarker,repositionApprovedMemberTxn,kickApprovedMemberTxn,verifyMemberRemovalListings,authUid,
  seedExpandedApprovedRoom, removeApprovedMemberTxn, recruitmentId, playerId } from './party_group_cutover_rules_test.mjs';
 const source=memberRemovalBaseline();
-const rules=process.env.RULES_TARGET_SCAN === '1' ? targetScanCandidate(source) : prioritizeMemberRemoval(source);
+const rules=process.env.RULES_TARGET_SCAN === '1' ? scopeFunctions(targetScanCandidate(source)).source : prioritizeMemberRemoval(source);
 const dir='coverage/rules-audit/removal';fs.mkdirSync(dir,{recursive:true});fs.mkdirSync('coverage/roster-leader',{recursive:true});
 fs.writeFileSync(`${dir}/candidate.rules`,rules);
 fs.writeFileSync('coverage/roster-leader/manifest.json',JSON.stringify({sha256:createHash('sha256').update(rules).digest('hex')}));
