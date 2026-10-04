@@ -49,3 +49,11 @@ test('cleanup composition retains all required fields and revision/time checks',
   }
   assert.throws(() => compactCleanupComposition(baseline.replace('data.memberCount == room.memberCount', 'true')));
 });
+
+test('completed cycles skip active-only authentication work with identical predicates', () => {
+  const before = rulesFunction(baseline, 'atomicActiveV2Recruitment').text;
+  const after = rulesFunction(targetScanCandidate(baseline), 'atomicActiveV2Recruitment').text;
+  const tokens = text => text.match(/\w+|[^\s]/g).sort();
+  assert.deepEqual(tokens(before), tokens(after));
+  assert.ok(after.indexOf("oldData.currentCycleStatus == 'active'") < after.indexOf('hasActiveBinding()'));
+});

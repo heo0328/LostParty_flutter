@@ -51,5 +51,11 @@ export function targetScanCandidate(baseline) {
     'return hasActiveBinding() && playerId == currentPlayerId()')
     .replace('&& playerId == currentPlayerId()\n        && oldData.playerId',
       '&& deManualCurrentOwnership(oldData)\n        && oldData.playerId'));
+  const active = rulesFunction(source, 'atomicActiveV2Recruitment');
+  assert.ok(active.text.includes('return hasActiveBinding()'));
+  assert.ok(active.text.includes("&& oldData.currentCycleStatus == 'active'"));
+  source = source.replace(active.text, active.text
+    .replace('return hasActiveBinding()', "return oldData.currentCycleStatus == 'active' && hasActiveBinding()")
+    .replace("&& oldData.currentCycleStatus == 'active';", ';'));
   return source;
 }
