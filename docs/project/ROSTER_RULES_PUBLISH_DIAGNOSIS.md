@@ -1,5 +1,34 @@
 # 원정대 Rules 게시 실패 분석 — 2026-10-03
 
+## 2026-10-05 02:10 KST — 전체 Rules 테스트 프로젝트 활성화 성공
+
+사용자가 rules-test-1-81e31에서 최대 2회 비교를 승인했다. 각 후보 1회씩 실행했고
+운영 lost-party는 변경하지 않았다. 사전 활성 소스는 coverage/rules-executable/attempt1에 보존했다.
+
+| 후보 | 소스 bytes / SHA 앞8자 | /test | /rulesets | /releases PATCH |
+|---|---|---|---|---|
+| 함수명만 축약 | 152163 / b23fae9b | 200·경고0 | 200 | 400 INVALID_ARGUMENT |
+| 함수명+인자·지역변수 축약 | 134048 / 23702cbc | 200·경고0 | 200 | 200·활성 해시 일치 |
+
+성공 source SHA256: `23702cbcc50542f2ade0004b66a5aad452a809898351ed7260a950360c6a30b5`.
+활성 Ruleset: `projects/rules-test-1-81e31/rulesets/f317ab80-911c-45b4-8ece-e6c6f310199f`.
+updateTime: 2026-10-04T17:10:18.501319Z. 성공 요청 소요시간 test2777ms/create2425ms/release4827ms.
+공식 getExecutable이 반환한 V1의 base64 해제 크기는 242424bytes다. 실패본의 실행 코드 크기는
+얻지 못했으므로 정확한 제한 초과 수치나 기존 모든503의 원인을 확정하지 않는다.
+조건 변경 없이 식별자를 줄인 전체본이 활성화됐다는 사실은 실행 코드 크기 관련 가설을 강하게 지지한다.
+
+이번 변경은 직전 d7cb4795의 함수272개·인자/let833개 이름 축약과 공백 축소다.
+필드·문자열·경로·조건·호출 순서와 공유 저장 계약은 유지하며, 역치환한 비주석 토큰 전체 일치를
+생성 시 강제한다. 이전 그룹 표시 대조 축소라는 의도한 계약 변경은 그대로 포함한다.
+실제 firestore.rules가 성공 파일과 바이트 일치한다. 생성 도구 --check --review로 가독본과
+이름 대응표를 coverage/rules-executable/review에 재생성할 수 있다. 백업과 사용자 초기화 설정 보존.
+
+정적 변환 테스트4건/생성 일치/diff 검사 통과. 실제 축약본 제한 CI 검증은 진행 중이며
+전체 Flutter/회귀/실기기 검증은 하지 않았다. 성공 범위는 테스트 프로젝트이며 운영 적용은 아직 미수행.
+추가 게시 예산은 0회(2/2 소진). 운영 게시 또는 추가 테스트 게시에는 새 승인이 필요하다.
+fix/roster-reauth-isolation 유지, dev/main 미반영. 요청/응답 근거는 coverage/rules-executable/attempt{1,2}/result.json.
+
+
 ## 2026-10-05 01:15 KST — 배치 수정본 운영 게시1회, 활성화 실패
 
 사용자 새 명시 승인으로7f1fdf4의 firestore.rules e7aeb309/223488bytes를 lost-party에1회 게시했다.

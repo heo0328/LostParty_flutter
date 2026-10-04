@@ -13,7 +13,7 @@ import { seedBase,seedJoiner,createPublicRecruitmentTxn,applicationTxn,approvePu
  seedPersistedAdvanceCycleMarker,repositionApprovedMemberTxn,kickApprovedMemberTxn,verifyMemberRemovalListings,authUid,
  seedExpandedApprovedRoom, removeApprovedMemberTxn, recruitmentId, playerId } from './party_group_cutover_rules_test.mjs';
 const source=memberRemovalBaseline();
-const rules=process.env.RULES_TARGET_SCAN === '1' ? scopeFunctions(targetScanCandidate(source)).source : prioritizeMemberRemoval(source);
+const rules=process.env.RULES_TRACKED_COMPACT === '1' ? fs.readFileSync('firestore.rules','utf8') : process.env.RULES_TARGET_SCAN === '1' ? scopeFunctions(targetScanCandidate(source)).source : prioritizeMemberRemoval(source);
 const dir='coverage/rules-audit/removal';fs.mkdirSync(dir,{recursive:true});fs.mkdirSync('coverage/roster-leader',{recursive:true});
 fs.writeFileSync(`${dir}/candidate.rules`,rules);
 fs.writeFileSync('coverage/roster-leader/manifest.json',JSON.stringify({sha256:createHash('sha256').update(rules).digest('hex')}));

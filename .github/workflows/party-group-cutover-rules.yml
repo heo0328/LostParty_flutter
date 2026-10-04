@@ -42,6 +42,7 @@ on:
           - complexity-target-normal
           - complexity-rejection-phase
           - complexity-group-display
+          - complexity-compact
       case:
         description: Rules regression scope
         type: choice
@@ -308,6 +309,14 @@ jobs:
           if [[ "$LEADER_PROOF_SCOPE" == complexity-target-normal ]]; then
             node --test tools/rules_target_scan_candidate.test.mjs tools/rules_removal_rejection_candidate.test.mjs tools/rules_removal_candidate.test.mjs
             export RULES_TARGET_SCAN=1
+            proof_command="node tools/rules_removal_proof.mjs"
+          fi
+          if [[ "$LEADER_PROOF_SCOPE" == complexity-compact ]]; then
+            node tools/integrate_roster_rules.mjs --check
+            node --test tools/rules_executable_compact.test.mjs
+            export RULES_TRACKED_COMPACT=1
+            export RULES_TARGET_SCAN=1
+            export GROUP_DISPLAY_RELAXED=1
             proof_command="node tools/rules_removal_proof.mjs"
           fi
           if [[ "$LEADER_PROOF_SCOPE" == complexity-group-display ]]; then
