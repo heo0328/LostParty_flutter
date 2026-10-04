@@ -1,5 +1,19 @@
 # 2026-10-03 18:10 KST 최종 Rules 게시1회 실패
 
+## 2026-10-05 00:58 KST — 정리 공통화본 게시1회 실패
+
+사용자의 새 게시 지시로 a86179b의 firestore.rules(cd04e69e/223114bytes)를 lost-party에
+Rules만 정확히1회 게시했다. /test503·CLI exit2, /rulesets 업로드와 /releases 활성화 미도달.
+원격 컴파일 완료/경고0은 이번 요청에서 확인되지 않았다. 이전 제한 CI 결과는 유지한다.
+사전/사후 활성 Ruleset e46f131e-920a-4773-bc25-2ef4b7ff9169 및 SHAe8baa2e4 동일,
+활성 updateTime2026-09-29T09:26:45.388946Z. 수정본 운영 미적용, 재시도 없음.
+근거: coverage/roster-publish-aggregate의 before/after.json·rules 및 deploy-once.log.
+수동 게시도 실패했다는 사용자 보고와 별도로 이번 CLI 실패 단계를 확인했다.
+이번503만으로 컴파일 용량 초과를 확정할 수 없다. 다음은 실패 단계 원인 분리이며
+새 지시 없이 반복 게시/추측 기능 삭제를 하지 않는다. 코드·백업·사용자 설정 보존,
+전용 브랜치 유지·dev/main 미반영. 기존 검증 재사용, 문서 diff 검사 수행.
+
+
 ## 2026-10-05 정리 Aggregate 동일 본문 공통화 — 제한 CI 통과
 
 직전9654be80의 수동 게시도 실패했다는 사용자 보고를 받았다. 새 실패의 HTTP 단계/활성
