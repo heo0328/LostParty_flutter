@@ -2474,7 +2474,7 @@ async function main(rulesOverride = rules) {
 
 export { directRejoinAfterKickTxn, swapTwoDealersTxn, main as runCutoverRegression, seedGroupLinkedRoom, disbandApprovedRoomTxn, removeApprovedMemberTxn, seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn, approvePublicApplicationTxn, seedExpandedApprovedRoom, cycleWindow, offsetCycleKey, cycleKey, authUid, playerId, characterId, recruitmentId, raidId };
 
-export { seedPersistedAdvanceCycleMarker, repositionApprovedMemberTxn, kickApprovedMemberTxn };
+export { seedPersistedAdvanceCycleMarker, repositionApprovedMemberTxn, kickApprovedMemberTxn, verifyMemberRemovalListings };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main().catch((error) => {
   console.error('FAIL:', error);

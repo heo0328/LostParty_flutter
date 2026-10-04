@@ -182,3 +182,18 @@ export function prioritizeCharacterChange(source) {
   assert.equal(block.split(`${leader} || ${atomic}`).length, 2);
   return source.slice(0, begin) + block.replace(`${leader} || ${atomic}`, `${atomic} || ${leader}`) + source.slice(end);
 }
+
+export function prioritizeMemberRemoval(source) {
+  const begin=source.indexOf('      allow update:',source.indexOf('    match /recruitments/{recruitmentId}'));
+  const end=source.indexOf(';',begin);
+  let block=source.slice(begin,end);
+  const call=`validAtomicRecruitmentMemberRemoval(
+          resource.data,
+          request.resource.data
+        )`;
+  const anchor="((request.resource.data.get('lastCommandType', '') == 'cleanupCompletedLeaderOwnership'";
+  assert.equal(block.split(' || '+call).length,2);
+  assert.equal(block.split(anchor).length,2);
+  block=block.replace(' || '+call,'').replace(anchor,'('+call+" || (request.resource.data.get('lastCommandType', '') == 'cleanupCompletedLeaderOwnership'");
+  return source.slice(0,begin)+block+source.slice(end);
+}

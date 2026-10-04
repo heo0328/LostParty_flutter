@@ -35,6 +35,7 @@ on:
           - complexity-audit
           - complexity-audit-cause
           - complexity-removal-coverage
+          - complexity-removal-candidate
       case:
         description: Rules regression scope
         type: choice
@@ -283,6 +284,10 @@ jobs:
           if [[ "$LEADER_PROOF_SCOPE" == complexity-removal-coverage ]]; then
             export RULES_REMOVAL_COVERAGE=1
             proof_command="node tools/rules_audit_cause.mjs"
+          fi
+          if [[ "$LEADER_PROOF_SCOPE" == complexity-removal-candidate ]]; then
+            node --test tools/rules_removal_candidate.test.mjs
+            proof_command="node tools/rules_removal_proof.mjs"
           fi
           if [[ "$LEADER_PROOF_SCOPE" == complexity-participation ]]; then
             proof_command="node tools/roster_complexity_differential.mjs --participation-only"
