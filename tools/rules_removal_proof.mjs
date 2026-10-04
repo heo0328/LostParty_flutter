@@ -47,6 +47,7 @@ try{
 for(const script of ['roster_personal_completion_proof','roster_peer_cleanup_proof','roster_last_member_proof','group_leave_rules_test']){
  const run=spawnSync(process.execPath,[`tools/${script}.mjs`],{encoding:'utf8',timeout:300000,env:{...process.env,RULES_BUDGET_AUDIT:'1',ROSTER_TRACKED_RULES:'1',LEADER_PROOF_SCOPE:'',ROSTER_COMPLEXITY_RULES_FILE:path.resolve(`${dir}/candidate.rules`)}});
  const output=(run.stdout??'')+(run.stderr??'');fs.writeFileSync(`${dir}/${script}.log`,output);
+ if(run.status!==0) console.error(output);
  assert.equal(run.status,0,script);
  console.log(script+' passed');
 }

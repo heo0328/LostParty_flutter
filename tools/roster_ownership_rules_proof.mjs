@@ -12,7 +12,10 @@ import { seedGroupLinkedRoom, disbandApprovedRoomTxn, removeApprovedMemberTxn, s
 } from './party_group_cutover_rules_test.mjs';
 
 const currentTracked = fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8');
-const tracked = currentTracked.startsWith('// roster-reauth-integrated-v1')
+// Historical diagnostic candidates need their original hook even when the
+// deployed source is comment-free/compacted. Runtime proofs read the explicit
+// ROSTER_COMPLEXITY_RULES_FILE independently; this does not replace that input.
+const tracked = process.env.ROSTER_COMPLEXITY_RULES_FILE || currentTracked.startsWith('// roster-reauth-integrated-v1')
   ? fs.readFileSync(new URL('./fixtures/roster_reauth_preintegration.rules', import.meta.url), 'utf8').replace(/\r\n/g, '\n')
   : currentTracked;
 const anchor = 'return atomicIsLifecycleCommand(recruitment)\n        && newData.playerId == playerId';
