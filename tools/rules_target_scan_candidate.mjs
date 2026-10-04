@@ -41,6 +41,51 @@ export function compactCleanupComposition(source) {
   return source.replace(f.text, f.text.replace(original, expression));
 }
 
+export function dispatchGroupRecruitmentCount(source) {
+  for (const name of ['validGroupLeaderApproveUpdate', 'validGroupDisbandUpdate',
+    'validGroupLeaderTransferUpdate', 'validGroupMemberLeaveUpdate', 'validGroupActivityUpdate',
+    'validGroupMemberJoinUpdate', 'validGroupJoinCodeFlagUpdate', 'validGroupJoinCodeVisibilityUpdate']) {
+    const body = rulesFunction(source, name).body;
+    assert.match(body, /newData\.diff\(oldData\)\.affectedKeys\(\)\s*\.hasOnly\(\[/, name);
+    assert.ok(!body.includes("'activeRecruitmentCount'"), name);
+  }
+  const join = rulesFunction(source, 'validGroupJoinCommandUpdate').body;
+  assert.ok(join.includes('validGroupActivityUpdate(oldData, newData)'));
+  assert.ok(join.includes('validGroupMemberJoinUpdate(groupId, oldData, newData)'));
+  for (const [name, sign] of [['Close', '-'], ['Open', '+']]) {
+    assert.ok(rulesFunction(source, `validAtomicGroupRecruitment${name}Body`).body
+      .includes(`newData.activeRecruitmentCount == oldData.activeRecruitmentCount ${sign} 1`));
+  }
+  const start = source.indexOf('      allow update:', source.indexOf('    match /groups/{groupId}'));
+  const end = source.indexOf(';', start);
+  let original = source.slice(start, end).replace('      allow update: if ', '');
+  const calls = [];
+  for (const kind of ['Close', 'Open']) {
+    const call = `validAtomicGroupRecruitment${kind}(\n        groupId,\n        resource.data,\n        request.resource.data\n      )`;
+    assert.equal(original.split(' || ' + call).length, 2);
+    original = original.replace(' || ' + call, '');
+    calls.push(call);
+  }
+  return source.slice(0, start) + `      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasAny(['activeRecruitmentCount'])
+        ? (${calls.join(' || ')}) : (${original})` + source.slice(end);
+}
+
+export function skipCompletedMembershipFallbacks(source) {
+  const names = ['validAtomicPendingApplicationUpdate', 'validAtomicRecruitmentJoin',
+    'validAtomicCharacterRevisionUpdate', 'validAtomicPositionAggregateUpdate',
+    'validAtomicRecruitmentVisibilityChange'];
+  for (const name of names)
+    assert.ok(rulesFunction(source, name).body.includes('atomicActiveV2Recruitment(oldData)'), name);
+  assert.ok(rulesFunction(source, 'atomicActiveV2Recruitment').body.includes("oldData.currentCycleStatus == 'active'"));
+  const start = source.indexOf('      allow update:', source.indexOf('    match /recruitments/{recruitmentId}'));
+  const end = source.indexOf(';', start);
+  const block = source.slice(start, end);
+  const calls = names.map(name => `${name}(\n          resource.data,\n          request.resource.data\n        )`).join(' || ');
+  assert.equal(block.split(calls).length, 2);
+  return source.slice(0, start) + block.replace(calls,
+    `(resource.data.currentCycleStatus == 'active' && (${calls}))`) + source.slice(end);
+}
+
 export function targetScanCandidate(baseline) {
   let source = compactCleanupComposition(compactTargetScans(boundRemovalRejections(baseline)));
   const f = rulesFunction(source, 'validAtomicStaleRaidStateDelete');
@@ -57,5 +102,5 @@ export function targetScanCandidate(baseline) {
   source = source.replace(active.text, active.text
     .replace('return hasActiveBinding()', "return oldData.currentCycleStatus == 'active' && hasActiveBinding()")
     .replace("&& oldData.currentCycleStatus == 'active';", ';'));
-  return source;
+  return dispatchGroupRecruitmentCount(skipCompletedMembershipFallbacks(source));
 }

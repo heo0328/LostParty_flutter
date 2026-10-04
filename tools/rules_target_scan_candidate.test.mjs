@@ -2,7 +2,7 @@ import { memberRemovalBaseline } from './roster_complexity_candidate.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { compactTargetScans, targetScanCandidate, compactCleanupComposition } from './rules_target_scan_candidate.mjs';
+import { compactTargetScans, targetScanCandidate, compactCleanupComposition, dispatchGroupRecruitmentCount, skipCompletedMembershipFallbacks } from './rules_target_scan_candidate.mjs';
 import { rulesFunction } from './roster_complexity_candidate.mjs';
 const baseline = memberRemovalBaseline();
 const candidate = compactTargetScans(baseline);
@@ -56,4 +56,26 @@ test('completed cycles skip active-only authentication work with identical predi
   const tokens = text => text.match(/\w+|[^\s]/g).sort();
   assert.deepEqual(tokens(before), tokens(after));
   assert.ok(after.indexOf("oldData.currentCycleStatus == 'active'") < after.indexOf('hasActiveBinding()'));
+});
+
+test('group count dispatch preserves validators and fails if a competing path permits the field', () => {
+  const result = dispatchGroupRecruitmentCount(baseline);
+  for (const [, name] of baseline.matchAll(/    function (\w+)\(/g))
+    assert.equal(rulesFunction(result, name).text, rulesFunction(baseline, name).text);
+  const allows = source => [...source.matchAll(/allow\s[\s\S]*?;/g)].map(m => m[0]);
+  const a = allows(baseline), b = allows(result);
+  assert.equal(a.length, b.length);
+  assert.equal(a.filter((x, i) => x !== b[i]).length, 1);
+  const f = rulesFunction(baseline, 'validGroupActivityUpdate');
+  assert.throws(() => dispatchGroupRecruitmentCount(baseline.replace(f.text,
+    f.text.replace("['revision'", "['activeRecruitmentCount', 'revision'"))));
+});
+
+test('completed membership fallback guard requires the existing active contract', () => {
+  const result = skipCompletedMembershipFallbacks(baseline);
+  const tokens = text => text.match(/\w+|[^\s]/g).filter(x => x !== '(' && x !== ')').sort();
+  assert.deepEqual(tokens(result.replace("(resource.data.currentCycleStatus == 'active' && (validAtomicPendingApplicationUpdate", '(validAtomicPendingApplicationUpdate')), tokens(baseline));
+  const f = rulesFunction(baseline, 'validAtomicRecruitmentJoin');
+  assert.throws(() => skipCompletedMembershipFallbacks(baseline.replace(f.text,
+    f.text.replace('atomicActiveV2Recruitment(oldData)', 'true'))));
 });

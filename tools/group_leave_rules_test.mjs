@@ -20,7 +20,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ID = 'demo-party-group-cutover';
 const rules = fs.readFileSync(
-  path.join(__dirname, '..', 'firestore.rules'),
+  process.env.ROSTER_COMPLEXITY_RULES_FILE || path.join(__dirname, '..', 'firestore.rules'),
   'utf8',
 );
 
