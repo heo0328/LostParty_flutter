@@ -102,5 +102,10 @@ export function targetScanCandidate(baseline) {
   source = source.replace(active.text, active.text
     .replace('return hasActiveBinding()', "return oldData.currentCycleStatus == 'active' && hasActiveBinding()")
     .replace("&& oldData.currentCycleStatus == 'active';", ';'));
+  const recurrence = rulesFunction(source, 'validRecurrenceChange');
+  const shape = "newData.diff(oldData).affectedKeys().hasOnly([\n          'continueTogether', 'revision', 'updatedAt'\n        ])";
+  assert.ok(recurrence.text.includes('&& ' + shape));
+  source = source.replace(recurrence.text, recurrence.text.replace('&& ' + shape, '')
+    .replace('return hasActiveBinding()', `return ${shape} && hasActiveBinding()`));
   return dispatchGroupRecruitmentCount(skipCompletedMembershipFallbacks(source));
 }

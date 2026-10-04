@@ -80,3 +80,11 @@ test('completed membership fallback guard requires the existing active contract'
   assert.throws(() => skipCompletedMembershipFallbacks(input.replace(f.text,
     f.text.replace('atomicActiveV2Recruitment(oldData)', 'true'))));
 });
+
+test('recurrence rejects unrelated changed fields before authentication with identical conditions', () => {
+  const before = rulesFunction(baseline, 'validRecurrenceChange').text;
+  const after = rulesFunction(targetScanCandidate(baseline), 'validRecurrenceChange').text;
+  const tokens = text => text.match(/\w+|[^\s]/g).sort();
+  assert.deepEqual(tokens(before), tokens(after));
+  assert.ok(after.indexOf('affectedKeys()') < after.indexOf('hasActiveBinding()'));
+});
