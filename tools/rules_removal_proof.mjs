@@ -17,8 +17,10 @@ try{
  await env.clearFirestore();await seedBase(env);await seedJoiner(env);
  const db=env.authenticatedContext(authUid).firestore(),joiner=env.authenticatedContext('joiner-auth').firestore();
  await createPublicRecruitmentTxn(db);await applicationTxn(joiner,'apply');await approvePublicApplicationTxn(db);
+ console.log('PHASE reject unconsumed marker');
  await seedPersistedAdvanceCycleMarker(env);await assertFails(repositionApprovedMemberTxn(db,2,2,{skipMarkerConsumption:true}));
- await repositionApprovedMemberTxn(db);await seedPersistedAdvanceCycleMarker(env);await assertSucceeds(kickApprovedMemberTxn(db));
+ console.log('PHASE normal reposition');await repositionApprovedMemberTxn(db);
+ console.log('PHASE post-cycle kick');await seedPersistedAdvanceCycleMarker(env);await assertSucceeds(kickApprovedMemberTxn(db));
  console.log('PASS REMOVAL: original post-cycle kick');
  await verifyMemberRemovalListings(env,db,joiner);
 }finally{await env.cleanup();}
