@@ -25,7 +25,13 @@ async function coverage(name) {
   fs.writeFileSync(`${directory}/${name}.json`, await response.text());
 }
 const bounded = process.env.RULES_REMOVAL_BOUNDED === '1';
-const variants = bounded ? { bounded: process.env.RULES_TARGET_SCAN === '1' ? targetScanCandidate(baseline) : boundRemovalRejections(baseline) }
+const diagnosis = process.env.RULES_REJECTION_PHASE === '1';
+const diagnosticSource = targetScanCandidate(baseline);
+const listingStart = diagnosticSource.indexOf('        allow update:', diagnosticSource.indexOf('      match /raidListings/{recruitmentId}'));
+const listingEnd = diagnosticSource.indexOf(';', listingStart);
+const denyListing = diagnosticSource.slice(0, listingStart) + '        allow update: if false' + diagnosticSource.slice(listingEnd);
+const variants = diagnosis ? { explicitListingDeny: denyListing }
+  : bounded ? { bounded: process.env.RULES_TARGET_SCAN === '1' ? targetScanCandidate(baseline) : boundRemovalRejections(baseline) }
   : { baseline, candidate: prioritizeMemberRemoval(baseline) };
 for (const [variant, rules] of Object.entries(variants)) {
   fs.writeFileSync(`${directory}/${variant}.rules`, rules);
@@ -34,7 +40,7 @@ for (const [variant, rules] of Object.entries(variants)) {
   try {
     const db = env.authenticatedContext(authUid).firestore();
     const joiner = env.authenticatedContext('joiner-auth').firestore();
-    for (const scenario of ['unconsumed-marker', 'forged-listing']) {
+    for (const scenario of diagnosis ? ['forged-listing'] : ['unconsumed-marker', 'forged-listing']) {
       await env.clearFirestore();
       await seedBase(env); await seedJoiner(env);
       await assertSucceeds(createPublicRecruitmentTxn(db));
@@ -59,4 +65,4 @@ for (const [variant, rules] of Object.entries(variants)) {
   } finally { await env.cleanup(); }
 }
 fs.writeFileSync(`${directory}/results.json`, JSON.stringify(results, null, 2));
-if (bounded) assert.ok(results.every(row => !row.budgetExceeded), 'Rejection budget remains: do not promote');
+if (bounded && !diagnosis) assert.ok(results.every(row => !row.budgetExceeded), 'Rejection budget remains: do not promote');

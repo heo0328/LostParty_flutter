@@ -1,10 +1,18 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { compactTargetScans } from './rules_target_scan_candidate.mjs';
+import { compactTargetScans, targetScanCandidate } from './rules_target_scan_candidate.mjs';
 import { rulesFunction } from './roster_complexity_candidate.mjs';
 const baseline = fs.readFileSync('firestore.rules', 'utf8').replace(/\r\n/g, '\n');
 const candidate = compactTargetScans(baseline);
+test('foreign stale cleanup rejects before ownership reads without changing conditions', () => {
+  const name = 'validAtomicStaleRaidStateDelete';
+  const before = rulesFunction(baseline, name).text;
+  const after = rulesFunction(targetScanCandidate(baseline), name).text;
+  const tokens = text => text.match(/\w+|[^\s]/g).sort();
+  assert.deepEqual(tokens(before), tokens(after));
+  assert.ok(after.indexOf('playerId == currentPlayerId()') < after.indexOf('deManualCurrentOwnership(oldData)'));
+});
 test('target scan keeps every index and legacy extra fields; no permission predicate changes', () => {
   const changed = new Set(['atomicCommandIncludes', 'atomicTargetAt', 'atomicRaidStateListedInTargets', 'atomicRaidStateTargetAt']);
   for (const [, name] of baseline.matchAll(/    function (\w+)\(/g)) {

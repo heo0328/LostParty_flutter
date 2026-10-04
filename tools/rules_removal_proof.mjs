@@ -5,9 +5,13 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
 import { prioritizeMemberRemoval } from './roster_complexity_candidate.mjs';
+import { targetScanCandidate } from './rules_target_scan_candidate.mjs';
+import { doc, getDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { seedBase,seedJoiner,createPublicRecruitmentTxn,applicationTxn,approvePublicApplicationTxn,
- seedPersistedAdvanceCycleMarker,repositionApprovedMemberTxn,kickApprovedMemberTxn,verifyMemberRemovalListings,authUid } from './party_group_cutover_rules_test.mjs';
-const rules=prioritizeMemberRemoval(fs.readFileSync('firestore.rules','utf8').replace(/\r\n/g,'\n'));
+ seedPersistedAdvanceCycleMarker,repositionApprovedMemberTxn,kickApprovedMemberTxn,verifyMemberRemovalListings,authUid,
+ seedExpandedApprovedRoom, removeApprovedMemberTxn, recruitmentId, playerId } from './party_group_cutover_rules_test.mjs';
+const source=fs.readFileSync('firestore.rules','utf8').replace(/\r\n/g,'\n');
+const rules=process.env.RULES_TARGET_SCAN === '1' ? targetScanCandidate(source) : prioritizeMemberRemoval(source);
 const dir='coverage/rules-audit/removal';fs.mkdirSync(dir,{recursive:true});fs.mkdirSync('coverage/roster-leader',{recursive:true});
 fs.writeFileSync(`${dir}/candidate.rules`,rules);
 fs.writeFileSync('coverage/roster-leader/manifest.json',JSON.stringify({sha256:createHash('sha256').update(rules).digest('hex')}));
@@ -23,6 +27,20 @@ try{
  console.log('PHASE post-cycle kick');await seedPersistedAdvanceCycleMarker(env);await assertSucceeds(kickApprovedMemberTxn(db));
  console.log('PASS REMOVAL: original post-cycle kick');
  await verifyMemberRemovalListings(env,db,joiner);
+ if(process.env.RULES_TARGET_SCAN === '1') {
+   await env.clearFirestore();await seedBase(env);await seedJoiner(env);
+   await createPublicRecruitmentTxn(db);await applicationTxn(joiner,'apply');await approvePublicApplicationTxn(db);
+   await seedExpandedApprovedRoom(env,8);
+   await assertFails(removeApprovedMemberTxn(joiner,'player-2',{targetPlayerId:'player-extra-1'}));
+   await assertFails(deleteDoc(doc(joiner,'recruitments',recruitmentId,'members','player-2')));
+   await assertSucceeds(removeApprovedMemberTxn(joiner,'player-2'));
+   assert.equal((await getDoc(doc(db,'recruitments',recruitmentId))).data().memberCount,7);
+   console.log('PASS REMOVAL: maximum-eight self leave; foreign kick and member-only deletion rejected');
+   await seedPersistedAdvanceCycleMarker(env);
+   const ref=doc(db,'recruitments',recruitmentId), before=(await getDoc(ref)).data();
+   await assertSucceeds(updateDoc(ref,{continueTogether:!before.continueTogether,revision:before.revision+1,updatedAt:serverTimestamp()}));
+   console.log('PASS REMOVAL: recurrence setting preserves previous lifecycle marker');
+ }
 }finally{await env.cleanup();}
 for(const script of ['roster_personal_completion_proof','roster_peer_cleanup_proof','roster_last_member_proof']){
  const run=spawnSync(process.execPath,[`tools/${script}.mjs`],{encoding:'utf8',timeout:300000,env:{...process.env,ROSTER_TRACKED_RULES:'1',LEADER_PROOF_SCOPE:'',ROSTER_COMPLEXITY_RULES_FILE:path.resolve(`${dir}/candidate.rules`)}});
