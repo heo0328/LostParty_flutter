@@ -16,12 +16,13 @@ export function compactTargetScans(source) {
     for (let i = 0; i < 8; i++) assert.ok(f.body.includes(`${helper}(${arg}, ${i}, playerId, stateId)`));
     let expression = '';
     for (let i = 7; i >= 0; i--) {
-      const pair = `(targets[${i}].playerId == playerId && targets[${i}].stateId == stateId)`;
+      const pair = `(targets[${i}].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId']))`;
       expression = `(count > ${i} && (${pair}${expression ? ` || ${expression}` : ''}))`;
     }
     source = source.replace(f.text, `    function ${name}(${arg}, playerId, stateId) {
       let targets = ${arg}.${field};
       let count = targets.size();
+      let expected = {'playerId': playerId, 'stateId': stateId};
       return ${expression};
     }`).replace(helperFunction.text + '\n\n', '');
     assert.ok(!source.includes(`${helper}(`));

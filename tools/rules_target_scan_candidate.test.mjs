@@ -23,7 +23,8 @@ test('target scan keeps every index and legacy extra fields; no permission predi
     // Executes the generated boolean expression for well-formed contract maps.
     const evaluate = new Function('data', 'recruitment', 'playerId', 'stateId', body);
     for (let size = 0; size <= 9; size++) for (let match = -1; match < size; match++) {
-      const targets = Array.from({ length: size }, (_, i) => ({ playerId: i === match ? 'p' : 'other', stateId: 's', legacyExtra: true }));
+      const targets = Array.from({ length: size }, (_, i) => ({ playerId: i === match ? 'p' : 'other', stateId: 's', legacyExtra: true,
+        diff(expected) { return { unchangedKeys: () => ({ hasAll: keys => keys.every(key => this[key] === expected[key]) }) }; } }));
       const data = { [field]: targets };
       assert.equal(evaluate(data, data, 'p', 's'), match >= 0 && match < 8);
       assert.equal(evaluate(data, data, 'p', 'wrong'), false);

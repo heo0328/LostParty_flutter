@@ -2,6 +2,12 @@
 
 ## 다음 단일 작업 — 원자 쓰기 거절의 getAfter 평가 원인 분리
 
+CI37181496157에서 listing update를 명시 false로 대체한 진단본도 동일 state delete1000식.
+목록 validator만의 비용 문제는 아님을 확인했다(진단본 운영 사용 금지).
+다음 후보는 각 target의 두 필드 비교를 Map.diff의 unchangedKeys 두 필드 포함으로 표현한다.
+추가 필드는 무시하고 두 키 모두 일치해야 하는 계약 유지. 존재하지 않는 키는 일치로 보지 않는다.
+예상 map 한 번 바인딩, 최대8 검사 유지. demo 평가 결과가 개선될 때만 정상 묶음으로 진행한다.
+
 현재 실행 후보: validAtomicStaleRaidStateDelete의 본인 여부 검사를 소유권 조회보다 먼저
 평가한다. 기존 모든 AND 조건은 유지한다. 다른 참가자 추방에서 본인 전용 stale fallback의
 deManualCurrentOwnership 조회가 먼저 실행되는 비용을 줄인다. 제한 거절 통과 후 정상 검증과
