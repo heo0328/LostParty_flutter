@@ -30,5 +30,14 @@ export function compactTargetScans(source) {
 }
 
 export function targetScanCandidate(baseline) {
-  return compactTargetScans(boundRemovalRejections(baseline));
+  let source = compactTargetScans(boundRemovalRejections(baseline));
+  const f = rulesFunction(source, 'validAtomicStaleRaidStateDelete');
+  const old = 'return deManualCurrentOwnership(oldData) && hasActiveBinding()';
+  assert.ok(f.text.includes(old));
+  assert.ok(f.text.includes('&& playerId == currentPlayerId()'));
+  source = source.replace(f.text, f.text.replace(old,
+    'return hasActiveBinding() && playerId == currentPlayerId()')
+    .replace('&& playerId == currentPlayerId()\n        && oldData.playerId',
+      '&& deManualCurrentOwnership(oldData)\n        && oldData.playerId'));
+  return source;
 }

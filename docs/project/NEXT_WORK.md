@@ -2,6 +2,11 @@
 
 ## 다음 단일 작업 — 원자 쓰기 거절의 getAfter 평가 원인 분리
 
+현재 실행 후보: validAtomicStaleRaidStateDelete의 본인 여부 검사를 소유권 조회보다 먼저
+평가한다. 기존 모든 AND 조건은 유지한다. 다른 참가자 추방에서 본인 전용 stale fallback의
+deManualCurrentOwnership 조회가 먼저 실행되는 비용을 줄인다. 제한 거절 통과 후 정상 검증과
+승인된 운영 게시1회까지 연속 수행한다. 실제 Rules는 검증 전 변경하지 않는다.
+
 후보66e10e0c(CI37178943702)도 목록 인원 위조의 raidStates delete1000식 한도 실패.
 단순 순서/검색 축소의 연속 실패로 같은 접근의 패치를 멈춘다. [검증 이력](DEV_LOG.md).
 실제 Rules6a4a4b52 유지, 정상 추방 수정 후보도 미채택이다.
