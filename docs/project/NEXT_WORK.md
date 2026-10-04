@@ -1,5 +1,17 @@
 # NEXT WORK — 원정대 재인증 후 정상 사용 보장
 
+## 2026-10-05 승인 작업 — 그룹 표시 Snapshot 교차 대조 축소
+
+기준e7aeb309/backup 보존. 첫 변경은 groups/members의 표시 class/itemLevel/combatPower에
+한정한다. 앱 GroupMemberWriteFields가 character/relation에서 복사하고 selfRefresh가 기존값을
+보존해 저장함을 확인했다. 식별자/이름/role/소유권/그룹장 이전/목록 동기화는 유지한다.
+최소 문자열/숫자/map 타입은 유지, class 불일치만 허용하는 계약 변경을 테스트로 구분한다.
+통계/차단의 표시 검사는 조회가 권한·횟수 검증에도 필요하므로 독립 후보로 분류하고 이번에
+같이 제거하지 않는다. 전체118 allow 분류와 실제 절감량을 TASK-11에 기록한다.
+생성기·실제 Rules 동시 변경, 그룹 표적 CI/계약/생성일치/diff 검증. Firebase 원격 게시 없음.
+아래는 이전 기록이다.
+
+
 2026-10-05 01:15 KST 최신: 새 승인 게시1회에서 e7aeb309 컴파일200/경고0·업로드200 및
 저장 소스 일치, 활성화PATCH503/CLI fallback409로 실패. 운영 활성e8baa2e4 유지 확인.
 재시도 없음. 다음은 활성화 실패 원인 분리. [상세](ROSTER_RULES_PUBLISH_DIAGNOSIS.md).

@@ -372,6 +372,32 @@ async function main() {
     ));
     console.log('PASS: self snapshot refresh and protected-field guards');
 
+    if (process.env.GROUP_DISPLAY_RELAXED === '1') {
+      // Intentional contract change: display snapshots need not match Character.
+      await assertSucceeds(updateDoc(snapshotRef, {
+        displayClassNameSnapshot: '다른 표시 직업', itemLevelSnapshot: null,
+        combatPowerSnapshot: null, updatedAt: serverTimestamp(),
+      }));
+      for (const value of ['', null, 42, deleteField()]) {
+        await assertFails(updateDoc(snapshotRef, {
+          displayClassNameSnapshot: value, updatedAt: serverTimestamp(),
+        }));
+      }
+      for (const [field, value] of [['itemLevelSnapshot', 'bad'],
+        ['combatPowerSnapshot', {}], ['gemValidationSnapshot', 42]]) {
+        await assertFails(updateDoc(snapshotRef, { [field]: value, updatedAt: serverTimestamp() }));
+      }
+      await assertFails(updateDoc(doc(testEnv.unauthenticatedContext().firestore(),
+        'groups', groupId, 'members', memberPlayerId), {
+        combatPowerSnapshot: 10, updatedAt: serverTimestamp(),
+      }));
+      await assertSucceeds(updateDoc(snapshotRef, {
+        itemLevelSnapshot: deleteField(), combatPowerSnapshot: deleteField(),
+        gemValidationSnapshot: deleteField(), updatedAt: serverTimestamp(),
+      }));
+      console.log('PASS: display mismatch allowed; malformed types and unauthenticated writes rejected');
+    }
+
     await seed(testEnv);
     console.log('Running leader transfer and former leader leave...');
     await assertSucceeds(transferLeadershipTransaction(leaderDb));

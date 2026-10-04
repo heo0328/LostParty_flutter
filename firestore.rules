@@ -206,10 +206,6 @@ service cloud.firestore {
 
 
 
-
-
-
-
     // 본인 membership 표시 Snapshot만 갱신한다. display Character는 바꿀 수 없다.
 
 
@@ -4414,10 +4410,7 @@ service cloud.firestore {
       return hasActiveBinding()
         && playerId == currentPlayerId()
         && validNewGroupMemberCore(groupId, playerId, data)
-        && validGroupMemberSnapshotsFromCharacter(
-          data,
-          data.displayCharacterIdSnapshot
-        )
+        && validGroupMemberOptionalNumberFields(data)
         && data.role == 'leader'
         && data.joinedBy == 'created'
         && data.joinSequence == 1
@@ -4454,7 +4447,9 @@ service cloud.firestore {
     }
 
     function validGroupMemberOptionalNumberFields(data) {
-      return (!('itemLevelSnapshot' in data)
+      return data.displayClassNameSnapshot is string
+        && data.displayClassNameSnapshot.size() > 0
+        && (!('itemLevelSnapshot' in data)
           || data.itemLevelSnapshot == null
           || data.itemLevelSnapshot is number)
         && (!('combatPowerSnapshot' in data)
@@ -4465,29 +4460,12 @@ service cloud.firestore {
           || data.gemValidationSnapshot is map);
     }
 
-    function validGroupMemberSnapshotsFromRelation(data, relation) {
-      return data.displayClassNameSnapshot == relation.characterClassNameSnapshot
-        && data.itemLevelSnapshot == relation.itemLevelSnapshot
-        && data.combatPowerSnapshot == relation.combatPowerSnapshot
-        && validGroupMemberOptionalNumberFields(data);
-    }
-
-    function validGroupMemberSnapshotsFromCharacter(data, characterId) {
-      let character = get(characterPath(characterId)).data;
-      // 표시 Snapshot은 Transaction 시점 클라이언트 값을 저장한다.
-      // Firestore Character에는 combatPower가 없을 수 있으므로 class·형식만 검증한다.
-      return data.displayClassNameSnapshot == character.characterClassName
-        && validGroupMemberOptionalNumberFields(data);
-    }
-
     function validGroupMemberSelfSnapshotRefresh(
       groupId,
       playerId,
       oldData,
       newData
     ) {
-      let characterId = oldData.displayCharacterIdSnapshot;
-      let character = get(characterPath(characterId)).data;
       return isCurrentPlayerActive()
         && playerId == currentPlayerId()
         && exists(groupMemberPath(groupId, playerId))
@@ -4500,7 +4478,6 @@ service cloud.firestore {
           'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
           'displayCharacterNameSnapshot', 'revision', 'createdAt'
         ])
-        && newData.displayClassNameSnapshot == character.characterClassName
         && validGroupMemberOptionalNumberFields(newData)
         && newData.updatedAt == request.time
         && newData.diff(oldData).affectedKeys().hasOnly([
@@ -4519,7 +4496,7 @@ service cloud.firestore {
       return isCurrentPlayerActive()
         && playerId == currentPlayerId()
         && validNewGroupMemberCore(groupId, playerId, data)
-        && validGroupMemberSnapshotsFromRelation(data, relation)
+        && validGroupMemberOptionalNumberFields(data)
         && data.role == 'member'
         && data.joinedBy == 'invitation'
         && data.joinSequence == group.memberCount
@@ -4597,7 +4574,7 @@ service cloud.firestore {
         && group.leaderPlayerId == callerId
         && playerId != callerId
         && validNewGroupMemberCore(groupId, playerId, data)
-        && validGroupMemberSnapshotsFromRelation(data, relation)
+        && validGroupMemberOptionalNumberFields(data)
         && data.role == 'member'
         && data.joinedBy == 'application'
         && data.joinSequence == group.memberCount
@@ -4619,10 +4596,7 @@ service cloud.firestore {
       return isCurrentPlayerActive()
         && playerId == currentPlayerId()
         && validNewGroupMemberCore(groupId, playerId, data)
-        && validGroupMemberSnapshotsFromCharacter(
-          data,
-          data.displayCharacterIdSnapshot
-        )
+        && validGroupMemberOptionalNumberFields(data)
         && data.role == 'member'
         && data.joinedBy == 'joinCode'
         && data.joinSequence == group.memberCount
