@@ -107,5 +107,5 @@ export function targetScanCandidate(baseline) {
   assert.ok(recurrence.text.includes('&& ' + shape));
   source = source.replace(recurrence.text, recurrence.text.replace('&& ' + shape, '')
     .replace('return hasActiveBinding()', `return ${shape} && hasActiveBinding()`));
-  return dispatchGroupRecruitmentCount(skipCompletedMembershipFallbacks(source));
+  return dispatchGroupRecruitmentCount(skipCompletedMembershipFallbacks(source)).replace(/^[ \t]+$/gm, '');
 }

@@ -1299,14 +1299,14 @@ service cloud.firestore {
     }
 
     function validRecurrenceChange(oldData, newData) {
-      return hasActiveBinding()
+      return newData.diff(oldData).affectedKeys().hasOnly([
+          'continueTogether', 'revision', 'updatedAt'
+        ]) && hasActiveBinding()
         && oldData.leaderPlayerId == currentPlayerId()
         && oldData.status == 'active'
         && (oldData.currentCycleStatus == 'active'
           || oldData.currentCycleStatus == 'completed')
-        && newData.diff(oldData).affectedKeys().hasOnly([
-          'continueTogether', 'revision', 'updatedAt'
-        ])
+
         && newData.continueTogether is bool
         && newData.revision == oldData.revision + 1
         && newData.updatedAt == request.time;
@@ -1565,21 +1565,11 @@ service cloud.firestore {
         && atomicValidGroupLifecycleCount(oldData, newData);
     }
 
-    function atomicTargetAt(data, index, playerId, stateId) {
-      return index < data.commandTargets.size()
-        && data.commandTargets[index].playerId == playerId
-        && data.commandTargets[index].stateId == stateId;
-    }
-
     function atomicCommandIncludes(data, playerId, stateId) {
-      return atomicTargetAt(data, 0, playerId, stateId)
-        || atomicTargetAt(data, 1, playerId, stateId)
-        || atomicTargetAt(data, 2, playerId, stateId)
-        || atomicTargetAt(data, 3, playerId, stateId)
-        || atomicTargetAt(data, 4, playerId, stateId)
-        || atomicTargetAt(data, 5, playerId, stateId)
-        || atomicTargetAt(data, 6, playerId, stateId)
-        || atomicTargetAt(data, 7, playerId, stateId);
+      let targets = data.commandTargets;
+      let count = targets.size();
+      let expected = {'playerId': playerId, 'stateId': stateId};
+      return (count > 0 && ((targets[0].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 1 && ((targets[1].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 2 && ((targets[2].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 3 && ((targets[3].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 4 && ((targets[4].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 5 && ((targets[5].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 6 && ((targets[6].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 7 && ((targets[7].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId']))))))))))))))))));
     }
 
     function atomicAdvanceStateMatchesSlotAt(recruitment, data, index) {
@@ -1947,21 +1937,11 @@ service cloud.firestore {
         && state.revision == 1;
     }
 
-    function atomicRaidStateTargetAt(recruitment, index, playerId, stateId) {
-      return index < recruitment.raidStateTargets.size()
-        && recruitment.raidStateTargets[index].playerId == playerId
-        && recruitment.raidStateTargets[index].stateId == stateId;
-    }
-
     function atomicRaidStateListedInTargets(recruitment, playerId, stateId) {
-      return atomicRaidStateTargetAt(recruitment, 0, playerId, stateId)
-        || atomicRaidStateTargetAt(recruitment, 1, playerId, stateId)
-        || atomicRaidStateTargetAt(recruitment, 2, playerId, stateId)
-        || atomicRaidStateTargetAt(recruitment, 3, playerId, stateId)
-        || atomicRaidStateTargetAt(recruitment, 4, playerId, stateId)
-        || atomicRaidStateTargetAt(recruitment, 5, playerId, stateId)
-        || atomicRaidStateTargetAt(recruitment, 6, playerId, stateId)
-        || atomicRaidStateTargetAt(recruitment, 7, playerId, stateId);
+      let targets = recruitment.raidStateTargets;
+      let count = targets.size();
+      let expected = {'playerId': playerId, 'stateId': stateId};
+      return (count > 0 && ((targets[0].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 1 && ((targets[1].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 2 && ((targets[2].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 3 && ((targets[3].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 4 && ((targets[4].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 5 && ((targets[5].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 6 && ((targets[6].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 7 && ((targets[7].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId']))))))))))))))))));
     }
 
     function validAtomicRaidStateCreate(playerId, stateId, data) {
@@ -2177,10 +2157,10 @@ service cloud.firestore {
 
     // R6: Aggregate 멤버십 갱신 OR. 구 join/revision/visibility/removal 분기는 유지한다.
     function atomicActiveV2Recruitment(oldData) {
-      return hasActiveBinding()
+      return oldData.currentCycleStatus == 'active' && hasActiveBinding()
         && oldData.schemaVersion == 2
         && oldData.status == 'active'
-        && oldData.currentCycleStatus == 'active';
+        ;
     }
 
     function atomicAggregateSizesMatch(data) {
@@ -2202,7 +2182,7 @@ service cloud.firestore {
     }
 
     function validAtomicPendingApplicationUpdate(oldData, newData) {
-      return atomicActiveV2Recruitment(oldData)
+      return newData.revision == oldData.revision + 1 && atomicActiveV2Recruitment(oldData)
         && newData.diff(oldData).affectedKeys().hasOnly([
           'pendingApplicationCount', 'pendingNonGroupApplicantCount',
           'commandTargets', 'lastCommandId', 'lastCommandType',
@@ -2220,7 +2200,7 @@ service cloud.firestore {
               == oldData.pendingApplicationCount + 1
             || newData.pendingApplicationCount
               == oldData.pendingApplicationCount - 1)
-        && newData.revision == oldData.revision + 1
+
         && newData.updatedAt == request.time;
     }
 
@@ -2229,7 +2209,7 @@ service cloud.firestore {
         oldData.memberPlayerIds.toSet()
       );
       let keys = newData.diff(oldData).affectedKeys();
-      return atomicActiveV2Recruitment(oldData)
+      return newData.revision == oldData.revision + 1 && atomicActiveV2Recruitment(oldData)
         && oldData.manualRecruitmentEnabled == true
         && oldData.hasAvailableSlot == true
         && (keys.hasOnly([
@@ -2267,12 +2247,12 @@ service cloud.firestore {
                     == oldData.pendingNonGroupApplicantCount
                   || newData.pendingNonGroupApplicantCount
                     == oldData.pendingNonGroupApplicantCount - 1)))
-        && newData.revision == oldData.revision + 1
+
         && newData.updatedAt == request.time;
     }
 
     function validAtomicCharacterRevisionUpdate(oldData, newData) {
-      return atomicActiveV2Recruitment(oldData)
+      return newData.revision == oldData.revision + 1 && atomicActiveV2Recruitment(oldData)
         && newData.diff(oldData).affectedKeys().hasOnly([
           'partySlots', 'raidStateTargets', 'dealerCount', 'supportCount',
           'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot',
@@ -2285,12 +2265,12 @@ service cloud.firestore {
         && newData.memberCount == oldData.memberCount
         && newData.leaderPlayerId == oldData.leaderPlayerId
         && atomicAggregateSizesMatch(newData)
-        && newData.revision == oldData.revision + 1
+
         && newData.updatedAt == request.time;
     }
 
     function validAtomicPositionAggregateUpdate(oldData, newData) {
-      return atomicActiveV2Recruitment(oldData)
+      return newData.revision == oldData.revision + 1 && atomicActiveV2Recruitment(oldData)
         && oldData.leaderPlayerId == currentPlayerId()
         && newData.diff(oldData).affectedKeys().hasOnly([
           'partySlots', 'commandTargets', 'lastCommandId', 'lastCommandType',
@@ -2302,7 +2282,7 @@ service cloud.firestore {
         && newData.memberCount == oldData.memberCount
         && newData.partySlots is list
         && newData.partySlots.size() == newData.memberCount
-        && newData.revision == oldData.revision + 1
+
         && newData.updatedAt == request.time;
     }
 
@@ -2561,14 +2541,7 @@ service cloud.firestore {
     }
 
     function deCleanupComposition(data, room) {
-      return data.partySlots == room.partySlots
-        && data.memberPlayerIds == room.memberPlayerIds
-        && data.raidStateTargets == room.raidStateTargets
-        && data.memberCount == room.memberCount
-        && data.dealerCount == room.dealerCount
-        && data.supportCount == room.supportCount
-        && data.nonGroupMemberCount == room.nonGroupMemberCount
-        && data.hasAvailableSlot == room.hasAvailableSlot
+      return data.diff(room).unchangedKeys().hasAll(['partySlots', 'memberPlayerIds', 'raidStateTargets', 'memberCount', 'dealerCount', 'supportCount', 'nonGroupMemberCount', 'hasAvailableSlot'])
         && data.sourceRevision == room.revision
         && data.updatedAt == request.time;
     }
@@ -2659,7 +2632,7 @@ service cloud.firestore {
       );
       let actorIsLeader = oldData.leaderPlayerId == currentPlayerId();
       let selfLeave = removed.hasAny([currentPlayerId()]);
-      return atomicActiveV2Recruitment(oldData)
+      return newData.revision == oldData.revision + 1 && atomicActiveV2Recruitment(oldData)
         && removed.size() == 1
         && newData.memberPlayerIds.size() == oldData.memberPlayerIds.size() - 1
         && (selfLeave || (actorIsLeader && !selfLeave))
@@ -2682,7 +2655,7 @@ service cloud.firestore {
           == (!(oldData.leaderPlayerId in newData.memberPlayerIds)
             ? newData.memberPlayerIds[0]
             : oldData.leaderPlayerId)
-        && newData.revision == oldData.revision + 1
+
         && newData.updatedAt == request.time;
     }
 
@@ -2698,13 +2671,13 @@ service cloud.firestore {
         && recruitmentAfter.groupId == groupId
         && recruitmentBefore.visibility == 'group'
         && recruitmentAfter.visibility == 'group'
+        && newData.memberCount == recruitmentAfter.memberCount
+        && newData.sourceRevision == recruitmentAfter.revision
+        && newData.updatedAt == request.time
         && validAtomicRecruitmentMemberRemoval(
           recruitmentBefore,
           recruitmentAfter
         )
-        && newData.memberCount == recruitmentAfter.memberCount
-        && newData.sourceRevision == recruitmentAfter.revision
-        && newData.updatedAt == request.time
         && (
           // 구버전 앱의 기존 3필드 요청은 같은 허용 범위를 유지한다.
           newData.diff(oldData).affectedKeys().hasOnly([
@@ -2885,7 +2858,7 @@ service cloud.firestore {
     }
 
     function validAtomicRecruitmentVisibilityChange(oldData, newData) {
-      return atomicActiveV2Recruitment(oldData)
+      return newData.revision == oldData.revision + 1 && atomicActiveV2Recruitment(oldData)
         && oldData.leaderPlayerId == currentPlayerId()
         && oldData.groupId is string
         && newData.groupId == oldData.groupId
@@ -2903,7 +2876,7 @@ service cloud.firestore {
         && (newData.visibility != 'group'
           || (oldData.nonGroupMemberCount == 0
             && oldData.pendingNonGroupApplicantCount == 0))
-        && newData.revision == oldData.revision + 1
+
         && newData.updatedAt == request.time;
     }
 
@@ -2990,9 +2963,9 @@ service cloud.firestore {
 
     function validAtomicStaleRaidStateDelete(playerId, stateId, oldData) {
       let path = recruitmentPath(oldData.recruitmentId);
-      return deManualCurrentOwnership(oldData) && hasActiveBinding()
+      return hasActiveBinding() && playerId == currentPlayerId()
         && stateId == oldData.characterId + '_' + oldData.raidId
-        && playerId == currentPlayerId()
+        && deManualCurrentOwnership(oldData)
         && oldData.playerId == playerId
         && oldData.status == 'active'
         && oldData.source == 'party'
@@ -4574,19 +4547,22 @@ service cloud.firestore {
         recruitmentId,
         request.resource.data
       );
-      allow update: if (request.resource.data.get('lastCommandType', '') == 'personalComplete' && request.resource.data.lastCommandAt == request.time) ? (dePersonalCompletionBoundary(resource.data, request.resource.data) && validPersonalCompletionRecruitmentUpdate(resource.data, request.resource.data)) : (deChangedSlotGenerations(resource.data, request.resource.data)
+      allow update: if (!(request.resource.data.get('lastCommandType', '') in ['complete', 'advanceCycle', 'incompleteEnd', 'disband']) || request.resource.data.lastCommandAt == request.time || validRecurrenceChange(resource.data, request.resource.data)) && ((request.resource.data.get('lastCommandType', '') == 'personalComplete' && request.resource.data.lastCommandAt == request.time) ? (dePersonalCompletionBoundary(resource.data, request.resource.data) && validPersonalCompletionRecruitmentUpdate(resource.data, request.resource.data)) : (deChangedSlotGenerations(resource.data, request.resource.data)
         && ((request.resource.data.get('lastCommandType', '') == 'disband'
           && resource.data.memberCount == 1
           && resource.data.currentCycleStatus == 'completed')
           ? (deLastCompletedDisband(resource.data, request.resource.data)
             && validAtomicLifecycleUpdate(resource.data, request.resource.data))
-          : ((request.resource.data.get('lastCommandType', '') == 'cleanupCompletedPeerOwnership') ? (dePeerCleanupAggregate(resource.data, request.resource.data)) : ((request.resource.data.get('lastCommandType', '') == 'cleanupCompletedLeaderOwnership' && deLeaderCleanupAggregate(resource.data, request.resource.data)) || (request.resource.data.get('lastCommandType', '') == 'cleanupCompletedOwnership' && deCleanupAggregate(resource.data, request.resource.data)) || validRecurrenceChange(
+          : ((request.resource.data.get('lastCommandType', '') == 'cleanupCompletedPeerOwnership') ? (dePeerCleanupAggregate(resource.data, request.resource.data)) : ((resource.data.currentCycleStatus == 'active' && request.resource.data.memberCount == resource.data.memberCount - 1 && validAtomicRecruitmentMemberRemoval(
+          resource.data,
+          request.resource.data
+        )) || (request.resource.data.get('lastCommandType', '') == 'cleanupCompletedLeaderOwnership' && deLeaderCleanupAggregate(resource.data, request.resource.data)) || (request.resource.data.get('lastCommandType', '') == 'cleanupCompletedOwnership' && deCleanupAggregate(resource.data, request.resource.data)) || validRecurrenceChange(
           resource.data,
           request.resource.data
         ) || validAtomicLifecycleUpdate(
           resource.data,
           request.resource.data
-        ) || validAtomicPendingApplicationUpdate(
+        ) || (resource.data.currentCycleStatus == 'active' && (validAtomicPendingApplicationUpdate(
           resource.data,
           request.resource.data
         ) || validAtomicRecruitmentJoin(
@@ -4598,13 +4574,10 @@ service cloud.firestore {
         ) || validAtomicPositionAggregateUpdate(
           resource.data,
           request.resource.data
-        ) || validAtomicRecruitmentMemberRemoval(
-          resource.data,
-          request.resource.data
         ) || validAtomicRecruitmentVisibilityChange(
           resource.data,
           request.resource.data
-        )))));
+        ))))))));
 
       allow delete: if false;
 
@@ -4719,16 +4692,21 @@ service cloud.firestore {
       // 추가로 읽지 않게 한다.
       // 1인 해산과 그룹장 이전은 여러 문서를 함께 쓰므로 먼저 판정한다.
       // 초대코드와 표시 정책도 뒤의 가입·승인 복합 명령보다 먼저 종료한다.
-      allow update: if (request.resource.data.memberCount
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasAny(['activeRecruitmentCount'])
+        ? (validAtomicGroupRecruitmentClose(
+        groupId,
+        resource.data,
+        request.resource.data
+      ) || validAtomicGroupRecruitmentOpen(
+        groupId,
+        resource.data,
+        request.resource.data
+      )) : ((request.resource.data.memberCount
           == resource.data.memberCount + 1
         && validGroupLeaderApproveUpdate(
           resource.data,
           request.resource.data
-        )) || validAtomicGroupRecruitmentClose(
-        groupId,
-        resource.data,
-        request.resource.data
-      ) || validGroupDisbandUpdate(
+        )) || validGroupDisbandUpdate(
         groupId,
         resource.data,
         request.resource.data
@@ -4748,11 +4726,7 @@ service cloud.firestore {
           groupId,
           resource.data,
           request.resource.data
-        )) || validAtomicGroupRecruitmentOpen(
-        groupId,
-        resource.data,
-        request.resource.data
-      ) || validGroupJoinCodeFlagUpdate(
+        )) || validGroupJoinCodeFlagUpdate(
         resource.data,
         request.resource.data
       ) || validGroupJoinCodeVisibilityUpdate(
@@ -4762,7 +4736,7 @@ service cloud.firestore {
         groupId,
         resource.data,
         request.resource.data
-      );
+      ));
       allow delete: if false;
 
       match /members/{playerId} {

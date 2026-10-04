@@ -40,10 +40,21 @@ void main() {
     expect(rules, contains('data.difficultyId == recruitment.difficultyId'));
   });
 
-  test('R2 listing·group update는 기존 분기와 lifecycle OR를 함께 둔다', () {
+  test('R2 listing과 그룹 모집 수 분기는 lifecycle 검증을 유지한다', () {
     expect(rules, contains('|| validAtomicLifecycleListingUpdate('));
     expect(rules, contains('|| validAtomicLifecycleListingDelete('));
-    expect(rules, contains('|| validAtomicGroupRecruitmentClose('));
+    final groupStart = rules.indexOf('match /groups/{groupId}');
+    final updateStart = rules.indexOf('allow update:', groupStart);
+    final updateEnd = rules.indexOf(';', updateStart);
+    final groupUpdate = rules.substring(updateStart, updateEnd);
+    expect(
+      groupUpdate,
+      contains("affectedKeys().hasAny(['activeRecruitmentCount'])"),
+    );
+    expect(groupUpdate, contains('? (validAtomicGroupRecruitmentClose('));
+    expect(groupUpdate, contains('|| validAtomicGroupRecruitmentOpen('));
+    expect(groupUpdate, contains('validGroupDisbandUpdate('));
+    expect(groupUpdate, contains('validGroupLeaderTransferUpdate('));
     expect(rules, contains('function validGroupRaidListingDelete('));
   });
 
