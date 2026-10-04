@@ -2,10 +2,23 @@ import { memberRemovalBaseline } from './roster_complexity_candidate.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { compactTargetScans, targetScanCandidate, compactCleanupComposition, dispatchGroupRecruitmentCount, skipCompletedMembershipFallbacks, reuseOwnershipReads } from './rules_target_scan_candidate.mjs';
+import { compactTargetScans, targetScanCandidate, compactCleanupComposition, dispatchGroupRecruitmentCount, skipCompletedMembershipFallbacks, reuseOwnershipReads, shareCleanupAggregateUpdate } from './rules_target_scan_candidate.mjs';
 import { rulesFunction, prioritizeMemberRemoval } from './roster_complexity_candidate.mjs';
 const baseline = memberRemovalBaseline();
 const candidate = compactTargetScans(baseline);
+test('shared cleanup update reverses exactly to the original source and rejects divergent contracts', () => {
+  const result = shareCleanupAggregateUpdate(baseline);
+  const helper = rulesFunction(result, 'deCleanupAggregateUpdate');
+  const predicate = helper.body.trim().replace(/^return /, '').replace(/;$/, '');
+  const call = 'deCleanupAggregateUpdate(before, after, target, remaining)';
+  const withoutHelper = result.replace(helper.text + '\n\n', '');
+  assert.equal(withoutHelper.split(call).length - 1, 3);
+  assert.equal(withoutHelper.replaceAll(call, predicate), baseline);
+  assert.ok(Buffer.byteLength(result) < Buffer.byteLength(baseline));
+  const peer = rulesFunction(baseline, 'dePeerCleanupAggregate');
+  assert.throws(() => shareCleanupAggregateUpdate(baseline.replace(peer.text,
+    peer.text.replace('after.hasAvailableSlot == true', 'after.hasAvailableSlot == false'))));
+});
 test('foreign stale cleanup rejects before ownership reads without changing conditions', () => {
   const name = 'validAtomicStaleRaidStateDelete';
   const before = rulesFunction(baseline, name).text;

@@ -2324,6 +2324,19 @@ service cloud.firestore {
       };
     }
 
+    function deCleanupAggregateUpdate(before, after, target, remaining) {
+      return after.partySlots == remaining && after.memberCount == before.memberCount - 1
+        && after.memberPlayerIds == before.memberPlayerIds.removeAll([target.playerId])
+        && after.raidStateTargets == before.raidStateTargets.removeAll([
+          {'playerId': target.playerId, 'stateId': target.characterId + '_' + before.raidId}])
+        && after.dealerCount == before.dealerCount - (target.role == 'dealer' ? 1 : 0)
+        && after.supportCount == before.supportCount - (target.role == 'support' ? 1 : 0)
+        && after.nonGroupMemberCount == before.nonGroupMemberCount - (target.countedAsNonGroupMember ? 1 : 0)
+        && after.hasAvailableSlot == true && after.commandTargets == []
+        && after.lastCommandId is string && after.lastCommandId.size() > 0
+        && after.updatedAt == request.time;
+    }
+
     function deLeaderCleanupAggregate(before, after) {
       let command = after.ownershipCleanup;
       let target = before.partySlots[command.targetIndex];
@@ -2353,16 +2366,7 @@ service cloud.firestore {
           'revision', 'updatedAt', 'commandTargets', 'lastCommandId', 'lastCommandType',
           'lastCommandActorPlayerId', 'lastCommandAt', 'ownershipCleanup',
           'leaderPlayerId', 'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot'])
-        && after.partySlots == remaining && after.memberCount == before.memberCount - 1
-        && after.memberPlayerIds == before.memberPlayerIds.removeAll([target.playerId])
-        && after.raidStateTargets == before.raidStateTargets.removeAll([
-          {'playerId': target.playerId, 'stateId': target.characterId + '_' + before.raidId}])
-        && after.dealerCount == before.dealerCount - (target.role == 'dealer' ? 1 : 0)
-        && after.supportCount == before.supportCount - (target.role == 'support' ? 1 : 0)
-        && after.nonGroupMemberCount == before.nonGroupMemberCount - (target.countedAsNonGroupMember ? 1 : 0)
-        && after.hasAvailableSlot == true && after.commandTargets == []
-        && after.lastCommandId is string && after.lastCommandId.size() > 0
-        && after.updatedAt == request.time
+        && deCleanupAggregateUpdate(before, after, target, remaining)
         && !existsAfter(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(target.playerId))
         && (before.visibility != 'group' || deLeaderCleanupComposition(
           getAfter(/databases/$(database)/documents/groups/$(before.groupId)/raidListings/$(before.recruitmentId)).data, after))
@@ -2461,16 +2465,7 @@ service cloud.firestore {
           'dealerCount', 'supportCount', 'nonGroupMemberCount', 'hasAvailableSlot',
           'revision', 'updatedAt', 'commandTargets', 'lastCommandId', 'lastCommandType',
           'lastCommandActorPlayerId', 'lastCommandAt', 'ownershipCleanup'])
-        && after.partySlots == remaining && after.memberCount == before.memberCount - 1
-        && after.memberPlayerIds == before.memberPlayerIds.removeAll([target.playerId])
-        && after.raidStateTargets == before.raidStateTargets.removeAll([
-          {'playerId': target.playerId, 'stateId': target.characterId + '_' + before.raidId}])
-        && after.dealerCount == before.dealerCount - (target.role == 'dealer' ? 1 : 0)
-        && after.supportCount == before.supportCount - (target.role == 'support' ? 1 : 0)
-        && after.nonGroupMemberCount == before.nonGroupMemberCount - (target.countedAsNonGroupMember ? 1 : 0)
-        && after.hasAvailableSlot == true && after.commandTargets == []
-        && after.lastCommandId is string && after.lastCommandId.size() > 0
-        && after.updatedAt == request.time
+        && deCleanupAggregateUpdate(before, after, target, remaining)
         && exists(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(target.playerId))
         && !existsAfter(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(target.playerId))
         && (before.visibility != 'group' || deCleanupComposition(
@@ -2586,16 +2581,7 @@ service cloud.firestore {
           'dealerCount', 'supportCount', 'nonGroupMemberCount', 'hasAvailableSlot',
           'revision', 'updatedAt', 'commandTargets', 'lastCommandId', 'lastCommandType',
           'lastCommandActorPlayerId', 'lastCommandAt', 'ownershipCleanup'])
-        && after.partySlots == remaining && after.memberCount == before.memberCount - 1
-        && after.memberPlayerIds == before.memberPlayerIds.removeAll([target.playerId])
-        && after.raidStateTargets == before.raidStateTargets.removeAll([
-          {'playerId': target.playerId, 'stateId': target.characterId + '_' + before.raidId}])
-        && after.dealerCount == before.dealerCount - (target.role == 'dealer' ? 1 : 0)
-        && after.supportCount == before.supportCount - (target.role == 'support' ? 1 : 0)
-        && after.nonGroupMemberCount == before.nonGroupMemberCount - (target.countedAsNonGroupMember ? 1 : 0)
-        && after.hasAvailableSlot == true && after.commandTargets == []
-        && after.lastCommandId is string && after.lastCommandId.size() > 0
-        && after.updatedAt == request.time
+        && deCleanupAggregateUpdate(before, after, target, remaining)
         && !existsAfter(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(target.playerId))
         && deCleanupStateUnchanged(target, before.raidId)
         && (before.visibility != 'group' || deCleanupComposition(

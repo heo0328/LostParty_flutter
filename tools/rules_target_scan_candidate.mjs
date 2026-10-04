@@ -99,6 +99,27 @@ export function reuseOwnershipReads(source) {
     .replace(manual.text, manual.text.replace('deCurrentOwnership(data)', 'deOwnershipMatches(data, character, account)'));
 }
 
+export function shareCleanupAggregateUpdate(source) {
+  const names = ['deCleanupAggregate', 'dePeerCleanupAggregate', 'deLeaderCleanupAggregate'];
+  let shared;
+  for (const name of names) {
+    const f = rulesFunction(source, name);
+    const start = f.text.indexOf('after.partySlots == remaining &&');
+    const end = f.text.indexOf('&& after.updatedAt == request.time', start)
+      + '&& after.updatedAt == request.time'.length;
+    assert.ok(start > 0 && end > start, name);
+    const predicate = f.text.slice(start, end);
+    if (shared === undefined) shared = predicate;
+    else assert.equal(predicate, shared, name);
+    source = source.replace(f.text, f.text.slice(0, start)
+      + 'deCleanupAggregateUpdate(before, after, target, remaining)' + f.text.slice(end));
+  }
+  const insertion = source.indexOf('    function deLeaderCleanupAggregate(');
+  return source.slice(0, insertion)
+    + `    function deCleanupAggregateUpdate(before, after, target, remaining) {\n      return ${shared};\n    }\n\n`
+    + source.slice(insertion);
+}
+
 export function targetScanCandidate(baseline) {
   let source = compactCleanupComposition(compactTargetScans(boundRemovalRejections(baseline)));
   const f = rulesFunction(source, 'validAtomicStaleRaidStateDelete');
@@ -120,5 +141,5 @@ export function targetScanCandidate(baseline) {
   assert.ok(recurrence.text.includes('&& ' + shape));
   source = source.replace(recurrence.text, recurrence.text.replace('&& ' + shape, '')
     .replace('return hasActiveBinding()', `return ${shape} && hasActiveBinding()`));
-  return reuseOwnershipReads(dispatchGroupRecruitmentCount(skipCompletedMembershipFallbacks(source))).replace(/^[ \t]+$/gm, '');
+  return shareCleanupAggregateUpdate(reuseOwnershipReads(dispatchGroupRecruitmentCount(skipCompletedMembershipFallbacks(source)))).replace(/^[ \t]+$/gm, '');
 }
