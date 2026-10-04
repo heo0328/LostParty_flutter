@@ -6,11 +6,12 @@ import { deduplicateCleanup, dispatchCleanupEvents, preserveExistingSlots, integ
 import { targetScanCandidate } from './rules_target_scan_candidate.mjs';
 import { scopeFunctions } from './rules_scope_candidate.mjs';
 import { simplifyGroupDisplay } from './rules_group_display_candidate.mjs';
+import { stripRulesComments } from './rules_strip_comments.mjs';
 const target = new URL('../firestore.rules', import.meta.url);
 const baseline = integratedBaseline();
 const repaired = preserveExistingSlots(baseline);
 const deduplicated = deduplicateCleanup(repaired);
-const result = scopeFunctions(simplifyGroupDisplay(targetScanCandidate(removeRepeatedPersonalCompletion(prioritizeCharacterChange(removeRepeatedPositionValidation(dispatchCleanupEvents(deduplicated))))))).source;
+const result = stripRulesComments(scopeFunctions(simplifyGroupDisplay(targetScanCandidate(removeRepeatedPersonalCompletion(prioritizeCharacterChange(removeRepeatedPositionValidation(dispatchCleanupEvents(deduplicated))))))).source);
 assert.ok(result.includes('function deGenerationUpdate('));
 assert.ok(result.includes('function deLastCompletedDisband('));
 assert.ok(result.includes('function deReplacePriorState('));

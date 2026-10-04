@@ -1,4 +1,3 @@
-// roster-reauth-integrated-v1
 rules_version = '2';
 
 service cloud.firestore {
@@ -124,9 +123,6 @@ service cloud.firestore {
         && character.ownerPlayerId == playerId;
     }
 
-    // Task-11 Unit 1~4: 그룹 생성·공개 읽기, 초대·신청·승인·금지와
-    // 초대코드 생성·폐기·즉시 가입을 연다.
-    // 탈퇴·추방·이전·해산 쓰기는 계속 닫아 둔다.
     function groupPath(groupId) {
       return /databases/$(database)/documents/groups/$(groupId);
     }
@@ -149,8 +145,6 @@ service cloud.firestore {
 
 
 
-    // 금지 목록은 그룹장만 읽지만 exists()는 호출자 읽기 권한과 무관하다.
-    // 본·부계정과 Character 변경은 Player 단위 block을 우회하지 못한다.
 
 
     function isCurrentPlayerActive() {
@@ -163,10 +157,7 @@ service cloud.firestore {
         && exists(groupMemberPath(groupId, currentPlayerId()));
     }
 
-    // 그룹 전용 레이드에서 대상이 그룹 membership을 잃었고,
-    // 요청자는 같은 레이드·그룹의 현재 멤버일 때만 제한적 정리를 허용한다.
 
-    // 삼항을 한 함수에 16단 중첩하면 컴파일러가 괄호를 닫지 못한다.
 
 
 
@@ -174,8 +165,6 @@ service cloud.firestore {
 
 
 
-    // 직접 입력 그룹명은 trim 후 1~20자이며 줄바꿈·제어문자를 포함하지 않는다.
-    // Rules는 Unicode 정규화 결과를 재계산하지 못하므로 원문 형식만 강제한다.
 
 
 
@@ -184,18 +173,14 @@ service cloud.firestore {
 
 
 
-    // 생성과 갱신 모두 이전 상태를 명시적으로 전달해 nullable map을 사용하지 않는다.
 
 
 
 
 
 
-    // 생성 Transaction은 새 Group ID를 읽지 않는다. 상세 화면이 사라진 ID를 열 때만
-    // 존재 여부를 분기해 없는 문서에서 resource.data를 읽지 않는다.
 
 
-    // 계약 §6 초대·신청 원본의 허용 필드 집합.
 
 
 
@@ -206,42 +191,26 @@ service cloud.firestore {
 
 
 
-    // 본인 membership 표시 Snapshot만 갱신한다. display Character는 바꿀 수 없다.
 
 
-    // 같은 groupId + playerId에 유효 pending 관계가 있으면 종류가 달라도
-    // 새 요청으로 덮어쓰지 못한다. 만료·최종 relation만 재사용한다.
 
 
-    // 계약 §6은 expiresAt == createdAt + 24시간을 요구하지만 클라이언트는 서버
-    // 시각을 알 수 없다. createdAt은 request.time으로 고정하고 expiresAt은
-    // 기기 시각 오차를 감안한 구간으로만 허용한다.
 
 
 
 
-    // 계약 §8.3. 현재 그룹원만 초대하며 자기 자신은 초대하지 못한다.
-    // 초대는 누적 신청 횟수를 증가시키지 않는다.
 
 
-    // 계약 §8.5. 신청은 본인만 만들고 applicantStats 증가와 함께 성공한다.
 
 
-    // 계약 §8.4. 수락·거절은 대상 Player만, 취소는 발신자 또는 그룹장만 한다.
-    // Unit 2는 pending invitation 전이만 열고 신청 승인·거절은 Unit 3에서 연다.
 
 
-    // 계약 §8.4 초대 수락 membership. joinSequence는 읽은 memberCount + 1이며
-    // 그룹 인원 갱신 이후 값과 같아야 한다.
 
 
-    // 계약 §9. Unit 2 상태 변경은 공개 필드를 바꾸지 않고 활동 시각만 갱신한다.
 
 
 
 
-    // Native list difference replaces the unrolled 50-slot search.
-    // Guard the index: malformed removals must fail closed.
 
 
 
@@ -265,34 +234,16 @@ service cloud.firestore {
 
 
 
-    // 초대·신청 명령을 실행할 수 있는 호출자만 그룹 활동 시각을 갱신한다.
-    // 그룹원이 아니면 같은 Transaction에서 자기 요청 Projection이 남아야 한다.
 
 
 
 
-    // 계약 §5. 요청 Projection은 원본 join relation과 같은 sourceRevision을 갖는다.
-    // 초대는 발신 그룹원이 대상 Player 경로에 쓰므로 본인 확인만으로 제한하지 않는다.
 
 
-    // 초대 수락이 끝난 Projection은 member/accepted로 바뀐다.
 
 
-    // 계약 §6.1. 신청 경로에서만 만들고 갱신하며 정확히 1씩 증가시킨다.
 
 
-    // 계약 §8.6 그룹장 신청 처리(Unit 3).
-    //
-    // 승인 Transaction은 문서 5건을 쓰므로 쓰기마다 접근 수를 줄여야 한다.
-    // 그룹장 판정은 binding·Player·그룹을 한 번씩만 읽는 아래 helper로 모으고,
-    // 하위 문서 규칙은 이미 읽은 getAfter 결과를 재사용한다. 그룹 원본 규칙은
-    // 자기 문서를 다시 읽지 않고 resource.data로 그룹장을 확인한다.
-    //
-    // 승인 Transaction 접근 예산: 서로 다른 문서 8개(authBindings, players/{그룹장},
-    // groups/{g}, joinRelations/{p}, members/{p}, blockedPlayers/{p},
-    // players/{p}/groupMembershipState/current, players/{p}/groupRelations/{g}),
-    // get·getAfter를 따로 세면 접근 12회다. 쓰기별 접근 호출은 그룹 5, 요청 8,
-    // membership 8, 요약 6, Projection 6으로 단일 쓰기 한도 10 이하다.
     function isActiveGroupLeader(groupId) {
       let callerId = currentPlayerId();
       return hasActiveBinding()
@@ -300,41 +251,18 @@ service cloud.firestore {
         && get(groupPath(groupId)).data.leaderPlayerId == callerId;
     }
 
-    // 승인·거절·금지 전이. 호출자가 대상이 아니므로 초대 전이와 분리해
-    // validGroupJoinRelationDecision이 쓰는 초대 경로 접근 수를 늘리지 않는다.
 
 
-    // 계약 §8.6 승인은 초대 수락과 같은 membership 원자 쓰기를 수행한다.
-    // 그룹장이 대상 Player 문서를 만들므로 joinSequence, 정원, 금지 부재와
-    // Player 요약 반영을 모두 getAfter로 다시 확인한다.
 
 
-    // 대상 Player 요약은 개인 데이터라 그룹장이 읽지 못한다. 클라이언트는
-    // arrayUnion·increment 병합 쓰기를 보내고 Rules가 결과 문서에서 Group ID
-    // 정확히 1개 추가와 50개 한도를 최종 판정한다.
 
 
-    // 승인 이후 대상 Player Projection. 그룹장은 대상 Projection을 읽지 못하므로
-    // createdAt은 병합 쓰기로 보존하고 Rules는 timestamp 여부만 확인한다.
 
 
-    // 계약 §8.6 승인은 그룹장이 실행하므로 신규 멤버가 호출자가 아니다.
-    // 그룹 문서 규칙은 대상 Player ID를 알 수 없어 그룹장·정원·필드 집합만
-    // 강제하고, member ↔ memberCount 결합은 membership 쓰기 규칙이 확인한다.
 
 
-    // 계약 §6.2·§10. block 생성은 대상 relation의 blocked 전이 또는 이미 끝난
-    // 신청에만 묶는다. 수정은 열지 않고 해제는 문서 삭제로만 한다.
 
 
-    // 계약 §7 초대코드(Unit 4).
-    //
-    // 코드 생성 접근 예산: authBindings, players/{리더}, groups/{g},
-    // members/{리더}, groupJoinCodes/{code} → get·getAfter 합계 약 8회.
-    // 코드 가입 접근 예산: authBindings, players/{가입자}, groupJoinCodes/{code},
-    // groups/{g}, groupMembershipState, characters/{c}, joinRelations/{선택},
-    // blockedPlayers exists, members getAfter, groupRelations getAfter →
-    // 서로 다른 문서 ≤10, get·getAfter 합계 약 16회(한도 ~20 이하).
     function validJoinCodeId(code) {
       return code is string
         && code.matches('^([2-9A-HJ-NP-Z]{6}|[2-9A-HJ-NP-Z]{20})$');
@@ -344,22 +272,14 @@ service cloud.firestore {
 
 
 
-    // 코드 생성·삭제가 같은 Transaction에서 hasActiveJoinCode만 뒤집는다.
 
 
-    // 화면 공개 정책만 바꾸며 가입 가능 여부는 건드리지 않는다.
 
 
-    // 계약 §8.7. 코드 가입 membership. Character Snapshot은 선택한 인증
-    // Character에서 오며, pending relation이 남으면 안 된다.
 
 
-    // 코드 가입이 기존 pending 초대·신청을 accepted로 종료한다.
-    // applicantStats는 이 경로에서 쓰지 않는다.
 
 
-    // pending 없이 코드로만 가입한 Projection. createdAt은 기존 요청
-    // Projection을 덮어쓸 때 병합·보존될 수 있다.
 
 
     function canApproveApplications(recruitmentId) {
@@ -375,7 +295,6 @@ service cloud.firestore {
 
 
 
-    // R2: 원자 lifecycle 명령 검증(증명 Rules 이식). 구 cycle/disband 분기는 유지한다.
     function atomicRaidStatePath(target) {
       return /databases/$(database)/documents/players/$(target.playerId)/raidStates/$(target.stateId);
     }
@@ -698,7 +617,6 @@ service cloud.firestore {
             && personalCompletionTargetsCurrentPlayer(recruitment)));
     }
 
-    // R6: Aggregate 멤버십 갱신 OR. 구 join/revision/visibility/removal 분기는 유지한다.
     function atomicActiveV2Recruitment(oldData) {
       return oldData.currentCycleStatus == 'active' && hasActiveBinding()
         && oldData.schemaVersion == 2
@@ -1169,8 +1087,6 @@ service cloud.firestore {
 
 
 
-    // 생성 replace와 OccupancyGate의 stale 판정을 맞춘다.
-    // wipe로 모집만 지운 orphan raidState와 incompleteEnded·만료 1회성도 허용한다.
 
 
 
@@ -1183,7 +1099,6 @@ service cloud.firestore {
 
 
 
-    // Compare the already loaded Aggregate; no per-participant document reads.
     function atomicCharacterSlot(member, countedAsNonGroupMember) {
       return member.keys().hasAny(['ownershipRevision'])
         ? {
@@ -1243,10 +1158,7 @@ service cloud.firestore {
 
 
 
-    // 신청 계열: 같은 Transaction의 application 상태 전이와 수신자만 허용.
-    // 명령 Repository가 이벤트를 쓰지 않으면 orphan create는 전이 검증에서 거절된다.
 
-    // 멤버십 계열: 모집 revision·멤버 전후 집합과 수신자를 검증한다.
 
 
 
@@ -1277,7 +1189,6 @@ service cloud.firestore {
         );
     }
 
-    // 거절·철회·superseded 후 같은 방 재신청. rejectionCount는 유지한다.
 
 
 
@@ -1286,24 +1197,16 @@ service cloud.firestore {
 
 
 
-    // list 규칙은 쿼리 제약만으로 증명되어야 한다. exists/get이 섞이면
-    // 공개 목록·내 현황 쿼리 전체가 permission-denied가 된다.
 
 
 
 
-    // 생성 Transaction은 신규 ID의 존재 여부를 get으로 확인한다.
-    // 없는 문서에서 resource.data를 읽으면 규칙이 거부되므로 단건 get만 분기한다.
 
 
 
 
-    // Option 1: 공개 모집 membership 목록은 로그인 사용자에게 허용하고
-    // Domain/UI는 표시 Snapshot만 소비한다.
 
 
-    // 신청 Transaction은 신규 application get으로 존재 여부를 확인한다.
-    // 없는 문서에서 resource.data를 읽으면 규칙이 거부되므로 단건 get만 분기한다.
 
 
 
@@ -1475,8 +1378,6 @@ service cloud.firestore {
         );
     }
 
-        // C*: 원자 raidState로 대체. 생성·수정은 닫고 본인 호환 읽기를 유지한다.
-        // 단, 같은 방에서 개인 완료로 전환된 본인의 구 assignment만 함께 정리한다.
         allow get: if hasActiveBinding();
         allow list: if hasActiveBinding()
           && playerId == currentPlayerId();
@@ -1529,7 +1430,6 @@ service cloud.firestore {
 
         allow get, list: if hasActiveBinding()
           && playerId == currentPlayerId();
-        // C*: 파티 fan-out create는 닫고 운영자 분쟁 이벤트만 허용한다.
         allow create: if request.resource.data.type
             == 'manualVerificationDisputeOpened'
           && validManualVerificationDisputeEvent(
@@ -1540,8 +1440,6 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
-      // 요약은 본인만 읽는다. 그룹장 승인 쓰기는 대상 요약을 읽지 않고
-      // 병합 쓰기 결과만 Rules가 판정한다.
       match /groupMembershipState/{docId} {
     function validMembershipStateAdd(
       playerId,
@@ -1662,9 +1560,6 @@ service cloud.firestore {
 
         allow get, list: if hasActiveBinding()
           && playerId == currentPlayerId();
-        // 그룹장 승인은 대상 Player가 아닌 호출자가 쓰므로 먼저 분기한다.
-        // 본인 생성·가입 validator를 선평가하면 승인 Transaction의 Rules
-        // 표현식 예산을 소진한다.
         allow create: if (playerId != currentPlayerId()
           && validLeaderApprovedMembershipStateAdd(
           playerId,
@@ -1857,7 +1752,6 @@ service cloud.firestore {
 
         allow get, list: if hasActiveBinding()
           && playerId == currentPlayerId();
-        // 코드 가입은 신청·승인 분기의 깊은 getAfter보다 먼저 판정한다.
         allow create, update: if playerId != currentPlayerId()
           && request.resource.data.relation == 'member'
           && request.resource.data.requestStatus == 'accepted'
@@ -1946,8 +1840,6 @@ service cloud.firestore {
         && request.time < data.cycleEndsAt;
     }
 
-        // list는 본인만. get은 assignment와 같이 active binding이면 단건 조회 가능.
-        // 파티 전체 완료 Transaction이 멤버 Claim 존재 여부를 멱등으로 확인해야 한다.
         allow get: if hasActiveBinding();
         allow list: if hasActiveBinding()
           && playerId == currentPlayerId();
@@ -1964,7 +1856,6 @@ service cloud.firestore {
         );
       }
 
-      // R1/R2/R5: raidState 경로. create는 R5, lifecycle update/delete는 R2에서 연다.
       match /raidStates/{stateId} {
     function atomicCommandIncludes(data, playerId, stateId) {
       let targets = data.commandTargets;
@@ -2331,8 +2222,6 @@ service cloud.firestore {
         );
     }
 
-        // 그룹 상세·필터 후보는 활동 ID만 읽고 Character 표시 문서를 따로 조회한다.
-        // 별도 Projection 컬렉션과 그룹 교집합 검사는 Rules 컴파일 한도를 넘긴다.
         allow get, list: if hasActiveBinding();
         allow create, update: if validCharacterActivityWrite(
           playerId,
@@ -2914,7 +2803,6 @@ service cloud.firestore {
       allow delete: if signedIn();
     }
 
-    // C*: 공용 파티 이벤트. audience 기반 읽기와 atomic create만 연다.
     match /partyEvents/{eventId} {
     function deLeaderCleanupEventCreate(data) {
       let before = get(recruitmentPath(data.recruitmentId)).data;
@@ -3655,7 +3543,6 @@ service cloud.firestore {
       let recruitment = getAfter(recruitmentPath(recruitmentId)).data;
       let oldAssignmentId = oldData.characterId + '_' + recruitment.raidId;
       let newAssignmentId = newData.characterId + '_' + recruitment.raidId;
-      // 반복 완료 후: 다음 회차 준비 membership만 변경. Claim·새 assignment는 유지/생성하지 않는다.
       let nextWeekPrep = recruitment.status == 'active'
         && recruitment.continueTogether == true
         && recruitment.currentCycleStatus == 'completed';
@@ -3819,7 +3706,6 @@ service cloud.firestore {
       }
 
       match /slots/{slotId} {
-        // C*: 점유 원장은 Aggregate partySlots다. 구 slot 문서는 읽기만 허용한다.
         allow get, list: if canReadPrivateRecruitmentData(recruitmentId)
           || canReadPublicRecruitmentMembers(recruitmentId);
         allow create, update, delete: if false;
@@ -4026,7 +3912,6 @@ service cloud.firestore {
       }
 
       match /cycles/{cycleKey} {
-        // C*: 회차 상태는 모집 Aggregate에 둔다. 구 cycles 쓰기는 닫는다.
         allow get, list: if canReadPrivateRecruitmentData(recruitmentId);
         allow create, update, delete: if false;
       }
@@ -4258,8 +4143,6 @@ service cloud.firestore {
     }
 
     function validAtomicGroupRecruitmentClose(groupId, oldData, newData) {
-      // transfer·leave 등 다른 group update OR보다 먼저 평가되므로,
-      // lastRecruitmentId가 없거나 문서가 없으면 clean false를 반환한다.
       return newData.diff(oldData).affectedKeys().hasOnly([
           'activeRecruitmentCount', 'lastRecruitmentId',
           'revision', 'updatedAt'
@@ -4306,8 +4189,6 @@ service cloud.firestore {
     }
 
     function validAtomicGroupRecruitmentOpen(groupId, oldData, newData) {
-      // transfer·leave 등 다른 group update OR보다 먼저 평가되므로,
-      // lastRecruitmentId가 없거나 문서가 없으면 clean false를 반환한다.
       return newData.diff(oldData).affectedKeys().hasOnly([
           'activeRecruitmentCount', 'lastRecruitmentId',
           'revision', 'updatedAt'
@@ -4348,15 +4229,8 @@ service cloud.firestore {
     }
 
       allow get: if canGetGroup(groupId);
-      // list는 공개 검색·최신 목록만 허용한다. query에 status == 'active'가 없으면 거절된다.
       allow list: if hasActiveBinding() && resource.data.status == 'active';
       allow create: if validInitialGroup(groupId, request.resource.data);
-      // 공개 필드 수정은 계속 열지 않는다. 초대·신청·코드 명령의 활동 시각,
-      // 인원 증가, 초대코드 플래그·표시 정책만 허용한다.
-      // 그룹장 승인·코드 플래그 검증을 먼저 두어 그룹원 확인 문서를
-      // 추가로 읽지 않게 한다.
-      // 1인 해산과 그룹장 이전은 여러 문서를 함께 쓰므로 먼저 판정한다.
-      // 초대코드와 표시 정책도 뒤의 가입·승인 복합 명령보다 먼저 종료한다.
       allow update: if request.resource.data.diff(resource.data).affectedKeys().hasAny(['activeRecruitmentCount'])
         ? (validAtomicGroupRecruitmentClose(
         groupId,
@@ -4471,8 +4345,6 @@ service cloud.firestore {
         && exists(groupMemberPath(groupId, playerId))
         && oldData.playerId == playerId
         && oldData.groupId == groupId
-        // Preserve required-field rejection for malformed legacy documents.
-        // affectedKeys below protects values AND field additions/deletions.
         && oldData.keys().hasAll([
           'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
           'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
@@ -4617,7 +4489,6 @@ service cloud.firestore {
     }
 
         allow get, list: if isCurrentGroupMember(groupId);
-        // 가입자는 joinedBy로 먼저 걸러 기존 생성·초대·승인을 보호한다.
         allow create: if request.resource.data.joinedBy == 'application'
           && validApprovedGroupMember(
             groupId,
@@ -4792,7 +4663,6 @@ service cloud.firestore {
           recruitmentAfter
         )
         && (
-          // 구버전 앱의 기존 3필드 요청은 같은 허용 범위를 유지한다.
           newData.diff(oldData).affectedKeys().hasOnly([
             'memberCount', 'sourceRevision', 'updatedAt'
           ])
@@ -4897,8 +4767,6 @@ service cloud.firestore {
           || validAtomicLifecycleListingDelete(recruitmentId);
       }
 
-      // Unit 4는 초대·신청 처리에 더해 코드 가입이 pending 요청을
-      // accepted로 종료하는 경로를 연다. 신청자 취소·탈퇴는 계속 닫는다.
       match /joinRelations/{playerId} {
     function validGroupJoinRelationKeys(data) {
       return data.keys().hasOnly([
@@ -5165,9 +5033,6 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // 계약 §6.2·§10. 금지 목록은 현재 그룹장만 읽고 만들고 지운다.
-      // 금지된 당사자는 자기 문서의 존재 여부도 조회하지 못한다.
-      // 해제는 삭제 한 건이며 이전 relation을 되돌리지 않는다.
       match /blockedPlayers/{playerId} {
     function validGroupBlockCreate(groupId, playerId, data) {
       let relation = getAfter(groupJoinRelationPath(groupId, playerId)).data;
@@ -5211,8 +5076,6 @@ service cloud.firestore {
       }
     }
 
-    // 계약 §7·§10. 정확한 코드 단건 get만 허용하고 list는 금지한다.
-    // 생성·삭제는 그룹 hasActiveJoinCode 전이와 같은 Transaction에서만 성공한다.
     match /groupJoinCodes/{code} {
     function validJoinCodeCreate(code, data) {
       let groupId = data.groupId;
@@ -5259,8 +5122,6 @@ service cloud.firestore {
       allow delete: if validJoinCodeDelete(code);
     }
 
-    // 컬렉션 그룹 쿼리는 중첩 경로 규칙이 적용되지 않아 재귀 와일드카드가 필요하다.
-    // 신청 중 화면이 본인 신청만 회차 단위로 조회하는 용도로만 연다.
     match /{path=**}/applications/{applicantPlayerId} {
       allow list: if hasActiveBinding()
         && resource.data.applicantPlayerId == currentPlayerId();
