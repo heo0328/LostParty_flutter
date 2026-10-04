@@ -1,5 +1,19 @@
 # 2026-10-03 18:10 KST 최종 Rules 게시1회 실패
 
+## 2026-10-05 01:15 KST — 배치 수정본 운영 게시1회, 활성화 실패
+
+사용자 새 명시 승인으로7f1fdf4의 firestore.rules e7aeb309/223488bytes를 lost-party에1회 게시했다.
+/test200(body {}, 경고0), /rulesets POST200. 저장 Ruleset bfa3bd58-584d-41fa-80b4-e5f1ad988f60,
+업로드 응답 소스 SHAe7aeb30935287c5bea18d18ee6dc520f59fb0ac35a782bc6b2cd93d61d9d8545로 원본 일치.
+Release PATCH503 UNAVAILABLE, CLI 내부 create fallback POST409 ALREADY_EXISTS, CLI exit1.
+재실행 없음. 사전/사후 활성 e46f131e/해시e8baa2e4/updateTime2026-09-29T09:26:45.388946Z 동일.
+즉 컴파일 성공과 소스 업로드까지 확인했으나 운영 적용 실패. 함수 배치의 test 개선과
+활성화 실패를 분리한다. 서버 내부 크기/Release503 근본 원인은 아직 미확정이다.
+근거: coverage/roster-publish-scope-approved의 deploy-once.log, before/after.json·rules.
+다음은 활성화 실패 원인 분리이며 새 지시 전 재게시하지 않는다. 코드/백업/사용자 설정 유지,
+전용 브랜치 유지·dev/main 미반영. 기존 제한 검증 재사용·문서 diff 검사 수행.
+
+
 ## 2026-10-05 함수 scope 배치 실험 — 서버 검사 재현 성공, 최종 배포 실행 차단
 
 - 기준cd04e69e(223114bytes/274함수/34match/118allow)를 별도 보존, 사용자 backup 무변경.
