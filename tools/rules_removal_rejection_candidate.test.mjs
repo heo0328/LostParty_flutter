@@ -13,6 +13,12 @@ test('listing reorders identical conditions; every other validator is unchanged'
       const tokens = s => s.match(/\w+|[^\s]/g).sort();
       assert.deepEqual(tokens(a), tokens(b));
       assert.ok(b.indexOf('newData.memberCount ==') < b.indexOf('&& validAtomicRecruitmentMemberRemoval('));
+    } else if (['validAtomicPendingApplicationUpdate', 'validAtomicRecruitmentJoin',
+      'validAtomicCharacterRevisionUpdate', 'validAtomicPositionAggregateUpdate',
+      'validAtomicRecruitmentMemberRemoval', 'validAtomicRecruitmentVisibilityChange'].includes(name)) {
+      const tokens = text => text.match(/\w+|[^\s]/g).sort();
+      assert.deepEqual(tokens(a), tokens(b), name);
+      assert.ok(b.includes('return newData.revision == oldData.revision + 1 && atomicActiveV2Recruitment(oldData)'));
     } else assert.equal(a, b, name);
   }
 });

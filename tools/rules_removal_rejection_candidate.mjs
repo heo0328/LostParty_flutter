@@ -13,17 +13,21 @@ export function boundRemovalRejections(baseline) {
   const end = source.indexOf(';', begin);
   const expression = source.slice(begin, end).replace('      allow update: if ', '');
   const gate = "(!(request.resource.data.get('lastCommandType', '') in ['complete', 'advanceCycle', 'incompleteEnd', 'disband']) || request.resource.data.lastCommandAt == request.time || validRecurrenceChange(resource.data, request.resource.data))";
-  for (const name of ['validRecurrenceChange', 'atomicValidLifecycleShape',
-    'validAtomicPendingApplicationUpdate', 'validAtomicRecruitmentJoin',
+  source = source.slice(0, begin) + `      allow update: if ${gate} && (${expression})` + source.slice(end);
+  // Reorder existing checks only inside ordinary membership validators. A new
+  // top-level gate consumed the budget of unrelated lifecycle/succession paths.
+  for (const name of ['validAtomicPendingApplicationUpdate', 'validAtomicRecruitmentJoin',
     'validAtomicCharacterRevisionUpdate', 'validAtomicPositionAggregateUpdate',
-    'validAtomicRecruitmentMemberRemoval', 'validAtomicRecruitmentVisibilityChange',
-    'validPersonalCompletionRecruitmentUpdate', 'validPersonalLastMemberCompletion']) {
-    assert.ok(rulesFunction(source, name).body.includes('newData.revision == oldData.revision + 1'), name);
+    'validAtomicRecruitmentMemberRemoval', 'validAtomicRecruitmentVisibilityChange']) {
+    const fn = rulesFunction(source, name);
+    const check = '&& newData.revision == oldData.revision + 1';
+    assert.equal(fn.text.split(check).length, 2, name);
+    assert.ok(fn.body.includes('return atomicActiveV2Recruitment(oldData)'), name);
+    const reordered = fn.text.replace(check, '')
+      .replace('return atomicActiveV2Recruitment(oldData)',
+        'return newData.revision == oldData.revision + 1 && atomicActiveV2Recruitment(oldData)');
+    source = source.replace(fn.text, reordered);
   }
-  for (const name of ['deCleanupTransition', 'deLeaderCleanupTransition', 'dePeerCleanupTransition']) {
-    assert.ok(rulesFunction(source, name).body.includes('before.revision + 1 == after.revision'), name);
-  }
-  source = source.slice(0, begin) + `      allow update: if request.resource.data.revision == resource.data.revision + 1 && ${gate} && (${expression})` + source.slice(end);
   const f = rulesFunction(source, 'validAtomicMemberRemovalListingUpdate');
   const heavy = `&& validAtomicRecruitmentMemberRemoval(
           recruitmentBefore,
