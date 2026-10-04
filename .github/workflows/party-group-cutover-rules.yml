@@ -43,6 +43,7 @@ on:
           - complexity-rejection-phase
           - complexity-group-display
           - complexity-compact
+          - complexity-compact-remaining
       case:
         description: Rules regression scope
         type: choice
@@ -318,6 +319,14 @@ jobs:
             export RULES_TARGET_SCAN=1
             export GROUP_DISPLAY_RELAXED=1
             proof_command="node tools/rules_removal_proof.mjs"
+          fi
+          if [[ "$LEADER_PROOF_SCOPE" == complexity-compact-remaining ]]; then
+            node tools/integrate_roster_rules.mjs --check
+            export ROSTER_COMPLEXITY_RULES_FILE="$PWD/firestore.rules"
+            export RULES_BUDGET_AUDIT=1
+            export GROUP_DISPLAY_RELAXED=1
+            export LEADER_PROOF_SCOPE=''
+            proof_command="node tools/roster_peer_cleanup_proof.mjs && node tools/roster_last_member_proof.mjs && node tools/group_leave_rules_test.mjs"
           fi
           if [[ "$LEADER_PROOF_SCOPE" == complexity-group-display ]]; then
             node tools/integrate_roster_rules.mjs --check
