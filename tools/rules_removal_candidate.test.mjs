@@ -18,3 +18,14 @@ test('removal count guard cannot outlive its validator implication',()=>{
   const f=rulesFunction(before,'validAtomicRecruitmentMemberRemoval');
   assert.throws(()=>prioritizeMemberRemoval(before.replace(f.text,f.text.replace('&& newData.memberCount == oldData.memberCount - 1','&& true'))));
 });
+
+test('active-cycle guard cannot outlive either validation link',()=>{
+  for (const [name, condition] of [
+    ['validAtomicRecruitmentMemberRemoval', 'return atomicActiveV2Recruitment(oldData)'],
+    ['atomicActiveV2Recruitment', "&& oldData.currentCycleStatus == 'active'"],
+  ]) {
+    const f=rulesFunction(before,name);
+    assert.throws(()=>prioritizeMemberRemoval(before.replace(f.text,
+      f.text.replace(condition,condition.startsWith('return')?'return true':'&& true'))));
+  }
+});
