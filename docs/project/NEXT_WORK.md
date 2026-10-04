@@ -2,6 +2,18 @@
 
 ## 다음 단일 작업 — 거절 경로의 잔존 평가 한도 분리
 
+### 이번 후보 설계
+
+- 모집 update 진입에서 lifecycle 타입(complete/advanceCycle/incompleteEnd/disband)은
+  현재 request.time의 명령이거나 기존 validRecurrenceChange가 허용하는 설정 변경인 경우만
+  기존 검사를 계속한다. marker 없는 과거 요청은 기존 경로를 유지한다.
+  일반 참가/신청/변경/제거/공개범위는 기존 marker 소비 계약상 lifecycle 타입을 남길 수 없다.
+  소유권 정리/개인 완료는 별도 타입이다. 이후 원본 검사 전체는 삭제하지 않는다.
+- 제거 listing validator의 기존 memberCount/sourceRevision/updatedAt 일치를 무거운
+  모집 제거 검사보다 먼저 평가한다. 비교조건과 허용 범위는 그대로다.
+- 후보 파일에만 적용. 기존 두 거절 요청에 한도 실패가 남으면 정상 묶음 재실행과 승격을 중단한다.
+  통과하면 기존 제거 정상/완료 경계 및 신규 최대8 본인탈퇴·권한/부분쓰기만 제한 검증한다.
+
 현재 배포 원본6a4a4b52는 그대로다. 후보6aa8ee83은 정상 추방·자리·최대8 목록·승계·
 완료/정리 경계를 통과했으나 음성 요청 한도 실패로 미채택이다. 두 음성 사례는 기존본도
 같이 실패하며 상세 근거·세 후보 이력은 [DEV_LOG](DEV_LOG.md)와 [TASK-11](TASK-11-FIRESTORE-RULES-COMPLEXITY.md)에 있다.

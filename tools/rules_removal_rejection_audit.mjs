@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import { prioritizeMemberRemoval } from './roster_complexity_candidate.mjs';
+import { boundRemovalRejections } from './rules_removal_rejection_candidate.mjs';
 import { seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn,
   approvePublicApplicationTxn, seedGroupLinkedRoom, seedPersistedAdvanceCycleMarker,
   repositionApprovedMemberTxn, kickApprovedMemberTxn, authUid } from './party_group_cutover_rules_test.mjs';
@@ -22,7 +23,11 @@ async function coverage(name) {
   assert.ok(response.ok);
   fs.writeFileSync(`${directory}/${name}.json`, await response.text());
 }
-for (const [variant, rules] of Object.entries({ baseline, candidate: prioritizeMemberRemoval(baseline) })) {
+const bounded = process.env.RULES_REMOVAL_BOUNDED === '1';
+const variants = bounded ? { bounded: boundRemovalRejections(baseline) }
+  : { baseline, candidate: prioritizeMemberRemoval(baseline) };
+for (const [variant, rules] of Object.entries(variants)) {
+  fs.writeFileSync(`${directory}/${variant}.rules`, rules);
   const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutover',
     firestore: { rules, host: '127.0.0.1', port: 8080 } });
   try {
@@ -53,3 +58,4 @@ for (const [variant, rules] of Object.entries({ baseline, candidate: prioritizeM
   } finally { await env.cleanup(); }
 }
 fs.writeFileSync(`${directory}/results.json`, JSON.stringify(results, null, 2));
+if (bounded) assert.ok(results.every(row => !row.budgetExceeded), 'Rejection budget remains: do not promote');
