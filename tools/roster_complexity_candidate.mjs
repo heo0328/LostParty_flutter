@@ -185,6 +185,8 @@ export function prioritizeCharacterChange(source) {
 
 export function prioritizeMemberRemoval(source) {
   assert.ok(rulesFunction(source,'validAtomicRecruitmentMemberRemoval').body.includes('&& newData.memberCount == oldData.memberCount - 1'));
+  assert.ok(rulesFunction(source,'validAtomicRecruitmentMemberRemoval').body.includes('return atomicActiveV2Recruitment(oldData)'));
+  assert.ok(rulesFunction(source,'atomicActiveV2Recruitment').body.includes("&& oldData.currentCycleStatus == 'active'"));
   const begin=source.indexOf('      allow update:',source.indexOf('    match /recruitments/{recruitmentId}'));
   const end=source.indexOf(';',begin);
   let block=source.slice(begin,end);
@@ -195,6 +197,6 @@ export function prioritizeMemberRemoval(source) {
   const anchor="((request.resource.data.get('lastCommandType', '') == 'cleanupCompletedLeaderOwnership'";
   assert.equal(block.split(' || '+call).length,2);
   assert.equal(block.split(anchor).length,2);
-  block=block.replace(' || '+call,'').replace(anchor,'((request.resource.data.memberCount == resource.data.memberCount - 1 && '+call+") || (request.resource.data.get('lastCommandType', '') == 'cleanupCompletedLeaderOwnership'");
+  block=block.replace(' || '+call,'').replace(anchor,"((resource.data.currentCycleStatus == 'active' && request.resource.data.memberCount == resource.data.memberCount - 1 && "+call+") || (request.resource.data.get('lastCommandType', '') == 'cleanupCompletedLeaderOwnership'");
   return source.slice(0,begin)+block+source.slice(end);
 }

@@ -9,7 +9,7 @@ test('only one allow changes; helpers and guarded reordered predicates are prese
   const allows=s=>[...s.matchAll(/allow\s[\s\S]*?;/g)].map(m=>m[0]);
   const a=allows(before),b=allows(after);assert.equal(a.length,b.length);assert.equal(a.filter((x,i)=>x!==b[i]).length,1);
   const tokens=s=>s.match(/'(?:\\.|[^'\\])*'|\w+|[^\s]/g).filter(t=>t!=='('&&t!==')').sort();
-  assert.deepEqual(tokens(before),tokens(after.replace('request.resource.data.memberCount == resource.data.memberCount - 1 && ','')));
+  assert.deepEqual(tokens(before),tokens(after.replace("resource.data.currentCycleStatus == 'active' && request.resource.data.memberCount == resource.data.memberCount - 1 && ",'')));
   const changed=b.find((x,i)=>x!==a[i]);
   assert.ok(changed.indexOf('validAtomicRecruitmentMemberRemoval(')<changed.indexOf("== 'cleanupCompletedLeaderOwnership'"));
   assert.ok(changed.indexOf('dePeerCleanupAggregate(')<changed.indexOf('validAtomicRecruitmentMemberRemoval('));
