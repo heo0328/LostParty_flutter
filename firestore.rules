@@ -1591,9 +1591,7 @@ service cloud.firestore {
         || atomicAdvanceStateMatchesSlotAt(recruitment, data, 7);
     }
 
-    function deCurrentOwnership(data) {
-      let character = get(characterPath(data.characterId)).data;
-      let account = get(/databases/$(database)/documents/gameAccounts/$(character.gameAccountId)).data;
+    function deOwnershipMatches(data, character, account) {
       let generation = character.get('ownershipRevision', 0);
       return generation is int && generation >= 0
         && account.get('ownershipRevision', 0) is int
@@ -1602,6 +1600,12 @@ service cloud.firestore {
         && account.ownerPlayerId == data.playerId
         && data.get('ownershipRevision', 0) is int
         && data.get('ownershipRevision', 0) == generation;
+    }
+
+    function deCurrentOwnership(data) {
+      let character = get(characterPath(data.characterId)).data;
+      let account = get(/databases/$(database)/documents/gameAccounts/$(character.gameAccountId)).data;
+      return deOwnershipMatches(data, character, account);
     }
 
     function validAtomicAdvanceRaidStateCreate(playerId, stateId, data) {
@@ -4390,7 +4394,7 @@ service cloud.firestore {
     function deManualCurrentOwnership(data) {
       let character = get(characterPath(data.characterId)).data;
       let account = get(/databases/$(database)/documents/gameAccounts/$(character.gameAccountId)).data;
-      return character.status == 'active' && account.status == 'active' && deCurrentOwnership(data);
+      return character.status == 'active' && account.status == 'active' && deOwnershipMatches(data, character, account);
     }
     function deManualAssignmentAvailable(playerId, stateId, data) {
       let path = assignmentPath(playerId, stateId);

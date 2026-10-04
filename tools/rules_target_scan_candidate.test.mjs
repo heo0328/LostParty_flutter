@@ -2,7 +2,7 @@ import { memberRemovalBaseline } from './roster_complexity_candidate.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { compactTargetScans, targetScanCandidate, compactCleanupComposition, dispatchGroupRecruitmentCount, skipCompletedMembershipFallbacks } from './rules_target_scan_candidate.mjs';
+import { compactTargetScans, targetScanCandidate, compactCleanupComposition, dispatchGroupRecruitmentCount, skipCompletedMembershipFallbacks, reuseOwnershipReads } from './rules_target_scan_candidate.mjs';
 import { rulesFunction, prioritizeMemberRemoval } from './roster_complexity_candidate.mjs';
 const baseline = memberRemovalBaseline();
 const candidate = compactTargetScans(baseline);
@@ -87,4 +87,21 @@ test('recurrence rejects unrelated changed fields before authentication with ide
   const tokens = text => text.match(/\w+|[^\s]/g).sort();
   assert.deepEqual(tokens(before), tokens(after));
   assert.ok(after.indexOf('affectedKeys()') < after.indexOf('hasActiveBinding()'));
+});
+
+test('ownership map reuse preserves the exact predicate and both guarded reads', () => {
+  const result = reuseOwnershipReads(baseline);
+  const original = rulesFunction(baseline, 'deCurrentOwnership').text;
+  const shared = rulesFunction(result, 'deOwnershipMatches').text;
+  assert.equal(shared.slice(shared.indexOf('      let generation')),
+    original.slice(original.indexOf('      let generation')));
+  for (const name of ['deCurrentOwnership', 'deManualCurrentOwnership']) {
+    const before = rulesFunction(baseline, name).text;
+    const after = rulesFunction(result, name).text;
+    assert.equal(after.match(/let character =[\s\S]*?let account =[^;]+;/)[0],
+      before.match(/let character =[\s\S]*?let account =[^;]+;/)[0]);
+    assert.ok(after.includes('deOwnershipMatches(data, character, account)'));
+  }
+  assert.ok(rulesFunction(result, 'deManualCurrentOwnership').text.includes(
+    "character.status == 'active' && account.status == 'active' && deOwnershipMatches(data, character, account)"));
 });

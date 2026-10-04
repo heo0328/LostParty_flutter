@@ -86,6 +86,19 @@ export function skipCompletedMembershipFallbacks(source) {
     `(resource.data.currentCycleStatus == 'active' && (${calls}))`) + source.slice(end);
 }
 
+export function reuseOwnershipReads(source) {
+  const current = rulesFunction(source, 'deCurrentOwnership');
+  const manual = rulesFunction(source, 'deManualCurrentOwnership');
+  const split = current.text.indexOf("      let generation = character.get('ownershipRevision', 0);");
+  assert.ok(split > 0);
+  const predicate = current.text.slice(split);
+  assert.ok(manual.text.includes("return character.status == 'active' && account.status == 'active' && deCurrentOwnership(data);"));
+  const shared = `    function deOwnershipMatches(data, character, account) {\n${predicate}`;
+  const wrapper = current.text.slice(0, split) + '      return deOwnershipMatches(data, character, account);\n    }';
+  return source.replace(current.text, shared + '\n\n' + wrapper)
+    .replace(manual.text, manual.text.replace('deCurrentOwnership(data)', 'deOwnershipMatches(data, character, account)'));
+}
+
 export function targetScanCandidate(baseline) {
   let source = compactCleanupComposition(compactTargetScans(boundRemovalRejections(baseline)));
   const f = rulesFunction(source, 'validAtomicStaleRaidStateDelete');
@@ -107,5 +120,5 @@ export function targetScanCandidate(baseline) {
   assert.ok(recurrence.text.includes('&& ' + shape));
   source = source.replace(recurrence.text, recurrence.text.replace('&& ' + shape, '')
     .replace('return hasActiveBinding()', `return ${shape} && hasActiveBinding()`));
-  return dispatchGroupRecruitmentCount(skipCompletedMembershipFallbacks(source)).replace(/^[ \t]+$/gm, '');
+  return reuseOwnershipReads(dispatchGroupRecruitmentCount(skipCompletedMembershipFallbacks(source))).replace(/^[ \t]+$/gm, '');
 }
