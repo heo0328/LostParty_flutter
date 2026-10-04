@@ -1,5 +1,32 @@
 # Firestore Rules 복잡도 — 전면 조사와 기능 보존 설계
 
+## 2026-10-04 추방 한도 — 평가 경로 계측과 단일 후보
+
+첫 무조건 순서변경 후보 CI37169303283은 추방 전 정상자리변경에서1000식 회귀로 미채택했다.
+후속 후보4410275는 validAtomicRecruitmentMemberRemoval의 기존 필수조건인
+new.memberCount==old.memberCount-1을 선행guard로 둬 unrelated 자리변경에서 제거검사를 생략한다.
+검증본문은 유지하며 해당함의가 없어지면 생성거절하는 정적검사를 추가했다. 최초후보를
+성공한 수정으로 기록하지 않는다. 두 후보 모두 원격게시하지 않았다.
+
+
+CI37169075268에서 기존 실패1건 직전/직후 ruleCoverage를 확보했다.
+운영 앱 PartyAtomicMemberRemovalWritePlan과 테스트의 모집patch/member삭제/state삭제/event생성,
+그룹listing/후임membership 조건부쓰기 및 lifecycle marker 소비값을 대조했다.
+memberCount/구성/targets/revision/event audience·actor가 같은 의미이며 앱 코드는 변경하지 않았다.
+
+coverage에서는 validAtomicRecruitmentJoin, validAtomicPendingApplicationUpdate,
+validAtomicCharacterRevisionUpdate, validAtomicPositionAggregateUpdate 등 선행 검사 실행이 보이고,
+validAtomicRecruitmentMemberRemoval은 atomicAggregateSizesMatch 호출(기준2678행)까지 진행 후
+완료되지 않았다. 이는 원래 허용될 일반 제거 검사 앞의 누적 비용이 있다는 근거다.
+coverage 노드 수를 정확한1000식 예산 또는 각문서별 실행비용으로 환산하지 않는다.
+
+후보 prioritizeMemberRemoval은 모집update의 일반 OR 내 removal항만 맨앞으로 이동한다.
+개인완료/마지막1인완료해산/peer정리 전용분기와 전역세대검사, 모든helper본문, 다른allow는 보존한다.
+정적검사1건(변경allow1개/함수본문동일/토큰multiset동일/전용peer분기위치유지) 통과.
+배포원본6a4a4b52는 그대로이며 후보는 별도coverage 경로에만 생성한다.
+검증결과와 채택여부는 후속 기록을 따른다. 게시/데이터수정/dev·main병합 없음.
+
+
 ## 2026-10-04 전면 조사 결과 — 현행 기준선에는 미해결 기능 실패가 있다
 
 이번에는 앱·Rules를 수정하지 않고 조사 도구/검증 입력 선택/문서만 변경했다.
