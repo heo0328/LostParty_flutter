@@ -1,3 +1,4 @@
+import { memberRemovalBaseline } from './roster_complexity_candidate.mjs';
 // Read-only demo diagnosis: distinguish policy rejection from evaluation exhaustion.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
@@ -10,7 +11,7 @@ import { seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn,
   approvePublicApplicationTxn, seedGroupLinkedRoom, seedPersistedAdvanceCycleMarker,
   repositionApprovedMemberTxn, kickApprovedMemberTxn, authUid } from './party_group_cutover_rules_test.mjs';
 
-const baseline = fs.readFileSync('firestore.rules', 'utf8').replace(/\r\n/g, '\n');
+const baseline = memberRemovalBaseline();
 assert.equal(createHash('sha256').update(baseline).digest('hex'),
   '6a4a4b52cf566f9c119d9de3c3876c411c336da24ee62b9bca5fd1be97bd1da9');
 const directory = 'coverage/rules-audit/removal-rejections';

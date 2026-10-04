@@ -1,8 +1,9 @@
+import { memberRemovalBaseline } from './roster_complexity_candidate.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { prioritizeMemberRemoval, rulesFunction } from './roster_complexity_candidate.mjs';
-const before=fs.readFileSync('firestore.rules','utf8').replace(/\r\n/g,'\n');
+const before=memberRemovalBaseline();
 const after=prioritizeMemberRemoval(before);
 test('only one allow changes; helpers and guarded reordered predicates are preserved',()=>{
   for(const [,name] of before.matchAll(/    function (\w+)\(/g))assert.equal(rulesFunction(before,name).text,rulesFunction(after,name).text);

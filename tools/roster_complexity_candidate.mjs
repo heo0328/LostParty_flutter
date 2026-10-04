@@ -9,6 +9,13 @@ export function integratedBaseline() {
   return '// roster-reauth-integrated-v1\n' + orphanCleanupCandidate(source);
 }
 
+// Fixed 6a4a4b52 input for reproducible removal comparisons after promotion.
+export function memberRemovalBaseline() {
+  return removeRepeatedPersonalCompletion(prioritizeCharacterChange(
+    removeRepeatedPositionValidation(dispatchCleanupEvents(
+      deduplicateCleanup(preserveExistingSlots(integratedBaseline()))))));
+}
+
 export function rulesFunction(source, name) {
   const start = source.indexOf(`    function ${name}(`);
   assert.ok(start >= 0, `missing function ${name}`);

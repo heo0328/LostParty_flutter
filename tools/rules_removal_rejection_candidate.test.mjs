@@ -1,9 +1,10 @@
+import { memberRemovalBaseline } from './roster_complexity_candidate.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { rulesFunction } from './roster_complexity_candidate.mjs';
 import { boundRemovalRejections } from './rules_removal_rejection_candidate.mjs';
-const before = fs.readFileSync('firestore.rules', 'utf8').replace(/\r\n/g, '\n');
+const before = memberRemovalBaseline();
 const after = boundRemovalRejections(before);
 test('listing reorders identical conditions; every other validator is unchanged', () => {
   for (const [, name] of before.matchAll(/    function (\w+)\(/g)) {

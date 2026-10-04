@@ -1,9 +1,10 @@
+import { memberRemovalBaseline } from './roster_complexity_candidate.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { compactTargetScans, targetScanCandidate } from './rules_target_scan_candidate.mjs';
 import { rulesFunction } from './roster_complexity_candidate.mjs';
-const baseline = fs.readFileSync('firestore.rules', 'utf8').replace(/\r\n/g, '\n');
+const baseline = memberRemovalBaseline();
 const candidate = compactTargetScans(baseline);
 test('foreign stale cleanup rejects before ownership reads without changing conditions', () => {
   const name = 'validAtomicStaleRaidStateDelete';

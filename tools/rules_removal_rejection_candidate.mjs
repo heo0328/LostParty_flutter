@@ -13,7 +13,17 @@ export function boundRemovalRejections(baseline) {
   const end = source.indexOf(';', begin);
   const expression = source.slice(begin, end).replace('      allow update: if ', '');
   const gate = "(!(request.resource.data.get('lastCommandType', '') in ['complete', 'advanceCycle', 'incompleteEnd', 'disband']) || request.resource.data.lastCommandAt == request.time || validRecurrenceChange(resource.data, request.resource.data))";
-  source = source.slice(0, begin) + `      allow update: if ${gate} && (${expression})` + source.slice(end);
+  for (const name of ['validRecurrenceChange', 'atomicValidLifecycleShape',
+    'validAtomicPendingApplicationUpdate', 'validAtomicRecruitmentJoin',
+    'validAtomicCharacterRevisionUpdate', 'validAtomicPositionAggregateUpdate',
+    'validAtomicRecruitmentMemberRemoval', 'validAtomicRecruitmentVisibilityChange',
+    'validPersonalCompletionRecruitmentUpdate', 'validPersonalLastMemberCompletion']) {
+    assert.ok(rulesFunction(source, name).body.includes('newData.revision == oldData.revision + 1'), name);
+  }
+  for (const name of ['deCleanupTransition', 'deLeaderCleanupTransition', 'dePeerCleanupTransition']) {
+    assert.ok(rulesFunction(source, name).body.includes('before.revision + 1 == after.revision'), name);
+  }
+  source = source.slice(0, begin) + `      allow update: if request.resource.data.revision == resource.data.revision + 1 && ${gate} && (${expression})` + source.slice(end);
   const f = rulesFunction(source, 'validAtomicMemberRemovalListingUpdate');
   const heavy = `&& validAtomicRecruitmentMemberRemoval(
           recruitmentBefore,

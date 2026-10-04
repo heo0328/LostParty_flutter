@@ -1,3 +1,4 @@
+import { memberRemovalBaseline } from './roster_complexity_candidate.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -10,7 +11,7 @@ import { doc, getDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/fir
 import { seedBase,seedJoiner,createPublicRecruitmentTxn,applicationTxn,approvePublicApplicationTxn,
  seedPersistedAdvanceCycleMarker,repositionApprovedMemberTxn,kickApprovedMemberTxn,verifyMemberRemovalListings,authUid,
  seedExpandedApprovedRoom, removeApprovedMemberTxn, recruitmentId, playerId } from './party_group_cutover_rules_test.mjs';
-const source=fs.readFileSync('firestore.rules','utf8').replace(/\r\n/g,'\n');
+const source=memberRemovalBaseline();
 const rules=process.env.RULES_TARGET_SCAN === '1' ? targetScanCandidate(source) : prioritizeMemberRemoval(source);
 const dir='coverage/rules-audit/removal';fs.mkdirSync(dir,{recursive:true});fs.mkdirSync('coverage/roster-leader',{recursive:true});
 fs.writeFileSync(`${dir}/candidate.rules`,rules);
