@@ -1,5 +1,10 @@
 # LOSTPARTY 문서 안내
 
+## 이번 변경과 테스트 안내
+
+- [원정대 재인증 변경 안내와 실기기 테스트](project/ROSTER_REAUTH_CHANGE_AND_TEST_GUIDE.md): 사용자 관점의 새 기능, 테스트 순서, Rules 변경 근거.
+
+
 ## 문서 읽는 순서
 
 현재 작업을 시작할 때는 다음 순서로 확인한다.

@@ -1,5 +1,9 @@
 # AI CONTEXT (2026)
 
+현재 사용자 안내: [재인증 변경·테스트 종합 문서](ROSTER_REAUTH_CHANGE_AND_TEST_GUIDE.md).
+10월5일 일반/그룹방 생성·신청·수락 사용자 통과. 기존 반복방 확인 버튼 오류는 원인 미확정.
+
+
 2026-10-05 12:03 KST: 전체 Rules23702cbc 운영 lost-party 게시·활성 해시 일치 확인.
 제한 검증 완료, 실기기 대기. 전용 브랜치 유지·dev/main 미반영. [결과](DEV_LOG.md), [다음](NEXT_WORK.md).
 아래는 이전 기록이다.
