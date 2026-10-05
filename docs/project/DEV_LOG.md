@@ -1,5 +1,19 @@
 # 2026-10-03 18:10 KST 최종 Rules 게시1회 실패
 
+## 2026-10-05 12:03 KST — 운영 Rules 게시 성공
+
+사용자의 새 '진행' 승인으로 검증된 추적본을 lost-party에 정확히1회 게시했다.
+/test200(경고0,3744ms), /rulesets200(3160ms), /releases PATCH200(5134ms).
+활성 Ruleset: projects/lost-party/rulesets/a21d43be-7893-4600-a1b4-47eb44e5ceb3.
+활성 updateTime: 2026-10-05T03:03:55.164808Z(12:03:55 KST).
+소스134048bytes/SHA256 23702cbcc50542f2ade0004b66a5aad452a809898351ed7260a950360c6a30b5,
+로컬 추적본·테스트 프로젝트 성공본·운영 활성 소스 일치. getExecutable V1 반환242424bytes.
+사전 활성 소스와 결과는 coverage/rules-executable/production-approved-20577ee에 보존했다.
+재시도/Rules 추가 수정/Indexes·Functions·Hosting 배포/운영 데이터 수정 없음.
+기존 정적4건·제한 CI 통과 결과 재사용, 생성 일치/diff 확인. 실기기 검증은 사용자 수행 대기.
+새로 가능해진 흐름은 전체 수정 Rules의 운영 적용이며, 원정대 재인증 UX까지 실기기 통과한 것은 아니다.
+기존 권한·공유 저장 보존 근거는 직전 제한 검증을 참조한다. 전용 브랜치 유지, dev/main 미반영.
+
 ## 2026-10-05 02:10 KST — 테스트 프로젝트 전체 Rules 활성화 성공
 
 - 사용자 승인 최대2회 비교를 완료했다. 함수명 축약본은 활성화400, 인자/let까지 축약한
