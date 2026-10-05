@@ -1,5 +1,16 @@
 # 개발 이력
 
+## 2026-10-05 Android 1.1.0 공개 게시 완료
+
+v1.1.0 태그는 main에 포함된84055555f39810be373d67326d7dda4fb5e719f4를 가리킨다.
+버전1.1.0+2, 초기화KST 수요일06시. Actions37294958731 빌드·서명/앱ID/버전 검증·게시 모두 성공.
+https://github.com/heo0328/LostParty_flutter/releases/tag/v1.1.0 에 정식 공개(draft/prerelease 아님).
+APK lostparty-v1.1.0-android.apk(71046612bytes) 및.sha256 첨부 확인.
+SHA256:80394d95d1fdf57590ed76aca9a8e9f77240c07d5448dcc457eb9106bad6e4e7.
+GitHub 자산 digest와 게시된 checksum 파일 일치. 설명은 docs/releases/v1.1.0.md의 사용자 요청4항목으로 적용.
+Firebase 재배포·새 기능 변경·전체 회귀 재실행 없음. 실기기 업데이트 설치는 사용자 확인 대상.
+release 브랜치는 보존하고 완료 기록을 main/dev에도 반영한다. 태그는 빌드 원본에서 이동하지 않는다.
+
 ## 2026-10-05 Android 1.1.0 릴리즈 준비
 
 사용자가 main 기준 수요일06시 복원 및 v1.1.0 태그 APK 공개 게시를 승인했다.
