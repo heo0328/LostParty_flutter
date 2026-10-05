@@ -23,8 +23,9 @@ updateTime: 2026-10-04T17:10:18.501319Z. 성공 요청 소요시간 test2777ms/c
 실제 firestore.rules가 성공 파일과 바이트 일치한다. 생성 도구 --check --review로 가독본과
 이름 대응표를 coverage/rules-executable/review에 재생성할 수 있다. 백업과 사용자 초기화 설정 보존.
 
-정적 변환 테스트4건/생성 일치/diff 검사 통과. 실제 축약본 제한 CI 검증은 진행 중이며
-전체 Flutter/회귀/실기기 검증은 하지 않았다. 성공 범위는 테스트 프로젝트이며 운영 적용은 아직 미수행.
+정적 변환 테스트4건/생성 일치/diff 검사 통과. 실제 축약본 제한 검증은 DEV_LOG의
+첫 구간 통과 및 CI37220260827 성공으로 완료했다. 후속82 PASS marker/원시1000식 오류0건.
+CI manifest의 SHA256도 활성 성공본과 일치한다. 전체 Flutter/회귀/실기기는 미수행. 성공 범위는 테스트 프로젝트이며 운영 적용은 아직 미수행.
 추가 게시 예산은 0회(2/2 소진). 운영 게시 또는 추가 테스트 게시에는 새 승인이 필요하다.
 fix/roster-reauth-isolation 유지, dev/main 미반영. 요청/응답 근거는 coverage/rules-executable/attempt{1,2}/result.json.
 
