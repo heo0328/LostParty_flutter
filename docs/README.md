@@ -2,7 +2,7 @@
 
 ## 이번 변경과 테스트 안내
 
-- [원정대 재인증 변경 안내와 실기기 테스트](project/ROSTER_REAUTH_CHANGE_AND_TEST_GUIDE.md): 사용자 관점의 새 기능, 테스트 순서, Rules 변경 근거.
+- [원정대 재인증 변경 안내](project/ROSTER_REAUTH_CHANGE_GUIDE.md): 사용자 관점의 새 기능과 Rules 변경 근거. 테스트 목록은 채팅에서 안내.
 
 
 ## 문서 읽는 순서
