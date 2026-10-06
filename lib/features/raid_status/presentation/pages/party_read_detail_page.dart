@@ -1627,7 +1627,12 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_cycleFailureMessage(result.failure!))),
+      SnackBar(
+        content: Text(
+          '${_cycleFailureMessage(result.failure!)}'
+          '${result.diagnosticId == null ? '' : '\n진단 ID: ${result.diagnosticId}'}',
+        ),
+      ),
     );
   }
 
@@ -1697,7 +1702,12 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_cycleFailureMessage(result.failure!))),
+      SnackBar(
+        content: Text(
+          '${_cycleFailureMessage(result.failure!)}'
+          '${result.diagnosticId == null ? '' : '\n진단 ID: ${result.diagnosticId}'}',
+        ),
+      ),
     );
   }
 
@@ -1757,7 +1767,12 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_cycleFailureMessage(result.failure!))),
+      SnackBar(
+        content: Text(
+          '${_cycleFailureMessage(result.failure!)}'
+          '${result.diagnosticId == null ? '' : '\n진단 ID: ${result.diagnosticId}'}',
+        ),
+      ),
     );
   }
 
@@ -1806,7 +1821,12 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_cycleFailureMessage(result.failure!))),
+      SnackBar(
+        content: Text(
+          '${_cycleFailureMessage(result.failure!)}'
+          '${result.diagnosticId == null ? '' : '\n진단 ID: ${result.diagnosticId}'}',
+        ),
+      ),
     );
   }
 
@@ -3488,7 +3508,7 @@ String _cycleFailureMessage(PartyCycleFailure failure) => switch (failure) {
   PartyCycleFailure.notReadyForAdvance => '아직 다음 회차로 전환할 수 없습니다.',
   PartyCycleFailure.revisionConflict => '모집 상태가 바뀌었습니다. 다시 확인해 주세요.',
   PartyCycleFailure.permissionDenied =>
-    '권한을 확인하지 못했습니다. 잠시 후 다시 시도하거나 Rules 배포 상태를 확인해 주세요.',
+    '서버에서 요청이 거절되었습니다. 문제가 반복되면 진단 ID와 함께 알려주세요.',
   PartyCycleFailure.temporarilyUnavailable => '네트워크 연결이 불안정합니다.',
   PartyCycleFailure.invalidRequest => '요청을 확인하지 못했습니다.',
   PartyCycleFailure.unknown => '회차 명령을 처리하지 못했습니다.',

@@ -1467,18 +1467,24 @@ return rf31(z7r)
 && rf102(z7r, z7n, z7o)
 && z7q.diff(z7p).affectedKeys().hasOnly([
 'status', 'source', 'cycleKey', 'revision', 'completedAt',
-'updatedAt'
+'updatedAt', 'role'
 ])
 && z7q.revision == z7p.revision + 1
 && z7q.updatedAt == request.time
 && ((z7r.lastCommandType == 'complete'
 && z7p.status == 'active'
-&& rf103(z7r, z7p)
+&& z7p.recruitmentId == z7r.recruitmentId
+&& z7p.raidId == z7r.raidId
+&& z7p.difficultyId == z7r.difficultyId
+&& z7p.cycleKey == z7r.currentCycleKey
+&& (!('role' in z7p) || z7p.role == z7q.role)
+&& rf103(z7r, z7q)
 && z7q.status == 'completed'
 && z7q.source == z7p.source
 && z7q.cycleKey == z7p.cycleKey
 && z7q.completedAt == request.time)
 || (z7r.lastCommandType == 'advanceCycle'
+&& !z7q.diff(z7p).affectedKeys().hasAny(['role'])
 && (z7p.status == 'active' || z7p.status == 'completed')
 && z7q.status == 'active'
 && z7q.source == 'party'

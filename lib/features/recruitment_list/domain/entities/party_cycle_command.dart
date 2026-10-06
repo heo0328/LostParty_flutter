@@ -73,8 +73,9 @@ enum PartyCycleFailure {
 }
 
 class PartyCycleResult {
-  const PartyCycleResult.success() : failure = null;
-  const PartyCycleResult.failure(this.failure);
+  const PartyCycleResult.success() : failure = null, diagnosticId = null;
+  const PartyCycleResult.failure(this.failure, {this.diagnosticId});
   final PartyCycleFailure? failure;
+  final String? diagnosticId;
   bool get isSuccess => failure == null;
 }

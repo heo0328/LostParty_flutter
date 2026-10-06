@@ -8,6 +8,7 @@ import { scopeFunctions } from './rules_scope_candidate.mjs';
 import { simplifyGroupDisplay } from './rules_group_display_candidate.mjs';
 import { stripRulesComments } from './rules_strip_comments.mjs';
 import { compactExecutableRules } from './rules_executable_compact.mjs';
+import { completionRoleCompatibility } from './rules_completion_role.mjs';
 const target = new URL('../firestore.rules', import.meta.url);
 const baseline = integratedBaseline();
 const repaired = preserveExistingSlots(baseline);
@@ -16,12 +17,13 @@ const readable = stripRulesComments(scopeFunctions(simplifyGroupDisplay(targetSc
 assert.ok(readable.includes('function deGenerationUpdate('));
 assert.ok(readable.includes('function deLastCompletedDisband('));
 assert.ok(readable.includes('function deReplacePriorState('));
-const compact = compactExecutableRules(readable);
+const compatible = completionRoleCompatibility(readable);
+const compact = compactExecutableRules(compatible);
 const result = compact.source;
 if (process.argv.includes('--review')) {
   const directory = new URL('../coverage/rules-executable/review/', import.meta.url);
   fs.mkdirSync(directory, { recursive: true });
-  fs.writeFileSync(new URL('readable.rules', directory), readable);
+  fs.writeFileSync(new URL('readable.rules', directory), compatible);
   fs.writeFileSync(new URL('symbols.json', directory), JSON.stringify({
     functions: compact.functions, locals: compact.locals,
     renamedBindings: compact.renamedBindings,

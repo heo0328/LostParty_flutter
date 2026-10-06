@@ -157,6 +157,7 @@ class PartyAtomicCharacterChangeWritePlan {
         'schemaVersion': 1,
         'playerId': playerId,
         'characterId': newCharacterId,
+        'role': newRole.name,
         'ownershipRevision': ?ownershipRevision,
         'raidId': raidId,
         'difficultyId': difficultyId,

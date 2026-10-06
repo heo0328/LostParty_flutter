@@ -277,7 +277,10 @@ class PartyAtomicCycleCommandAdapter implements PartyCycleCommandRepository {
       if (result.isApplied) {
         return const PartyCycleResult.success();
       }
-      return PartyCycleResult.failure(_mapAtomicFailure(result.failure!));
+      return PartyCycleResult.failure(
+        _mapAtomicFailure(result.failure!),
+        diagnosticId: '${effectiveType.name}_${recruitmentId}_$expectedRevision',
+      );
     } on FormatException {
       return const PartyCycleResult.failure(PartyCycleFailure.invalidRequest);
     } on ArgumentError {

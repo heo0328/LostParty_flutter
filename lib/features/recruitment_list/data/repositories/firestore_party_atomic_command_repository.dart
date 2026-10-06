@@ -20,6 +20,20 @@ class FirestorePartyAtomicCommandRepository
 
   @override
   Future<PartyAtomicCommandResult> execute(PartyCommandEnvelope command) async {
+    var attempt = 0;
+    var stage = 'authentication';
+    void trace(String phase, [String details = '']) {
+      stage = phase;
+      if (kDebugMode) {
+        debugPrint(
+          'PartyAtomicLifecycle id=${command.commandId} '
+          'room=${command.recruitmentId} attempt=$attempt phase=$phase '
+          'cycle=${command.expectedCycleKey} expected=${command.expectedRevision} $details',
+        );
+      }
+    }
+
+    trace(stage);
     final uid = _firebaseAuth.currentUser?.uid;
     if (uid == null || uid.isEmpty) {
       return const PartyAtomicCommandResult.failure(
@@ -27,7 +41,9 @@ class FirestorePartyAtomicCommandRepository
       );
     }
     try {
-      return await _firestore.runTransaction((transaction) async {
+      final result = await _firestore.runTransaction((transaction) async {
+        attempt++;
+        trace('binding-read');
         final binding = await transaction.get(
           _firestore.collection('authBindings').doc(uid),
         );
@@ -49,6 +65,7 @@ class FirestorePartyAtomicCommandRepository
         final recruitmentRef = _firestore
             .collection('recruitments')
             .doc(command.recruitmentId);
+        trace('recruitment-read');
         final recruitmentSnapshot = await transaction.get(recruitmentRef);
         final raw = recruitmentSnapshot.data();
         if (raw == null) {
@@ -59,6 +76,7 @@ class FirestorePartyAtomicCommandRepository
         final aggregate = PartyAtomicDocumentMapper.aggregate(
           Map<String, Object?>.from(raw),
         );
+        trace('validate', 'actual=${aggregate.revision}');
         if (aggregate.lastCommandId == command.commandId &&
             aggregate.revision == command.expectedRevision + 1) {
           return PartyAtomicCommandResult.applied(revision: aggregate.revision);
@@ -83,6 +101,12 @@ class FirestorePartyAtomicCommandRepository
           aggregate: aggregate,
           serverTimestamp: FieldValue.serverTimestamp(),
           incrementOne: FieldValue.increment(1),
+        );
+        trace(
+          'write-plan',
+          'roles=${aggregate.partySlots.map((s) => '${s.playerId}/${s.characterId}:${s.role.name}').join(',')} '
+              'targets=${command.targets.map((t) => t.pathKey).join(',')} '
+              'targetServerStatesRead=false',
         );
         final stateRefs = <String, DocumentReference<Map<String, dynamic>>>{};
         for (final target in command.targets) {
@@ -144,6 +168,10 @@ class FirestorePartyAtomicCommandRepository
           }
         }
 
+        trace(
+          'enqueue-writes',
+          'recruitmentKeys=${recruitmentPatch.keys.join(',')}',
+        );
         transaction.update(recruitmentRef, recruitmentPatch);
         for (final write in plan.raidStateWrites) {
           final ref = stateRefs[write.target.pathKey]!;
@@ -162,13 +190,22 @@ class FirestorePartyAtomicCommandRepository
           _firestore.collection('partyEvents').doc(command.commandId),
           plan.eventDocument,
         );
+        trace('commit-pending');
         return PartyAtomicCommandResult.applied(
           revision: command.expectedRevision + 1,
         );
       });
+      trace(
+        result.isApplied ? 'committed' : 'rejected',
+        'failure=${result.failure}',
+      );
+      return result;
     } on FirebaseException catch (error, stackTrace) {
       assert(() {
-        debugPrint('PartyAtomicLifecycle ${error.code}: $stackTrace');
+        debugPrint(
+          'PartyAtomicLifecycle id=${command.commandId} attempt=$attempt '
+          'failedPhase=$stage code=${error.code} message=${error.message}: $stackTrace',
+        );
         return true;
       }());
       return PartyAtomicCommandResult.failure(_mapFirebase(error.code));

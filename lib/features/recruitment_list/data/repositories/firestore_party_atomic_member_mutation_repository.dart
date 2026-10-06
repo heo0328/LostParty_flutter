@@ -273,6 +273,15 @@ class FirestorePartyAtomicMemberMutationRepository
       transaction.update(recruitmentRef, plan.recruitmentPatch);
       transaction.update(memberRef, plan.membershipPatch);
       transaction.delete(previousRaidStateRef);
+      if (kDebugMode) {
+        debugPrint(
+          'PartyAtomicMemberMutation phase=character-change-plan '
+          'room=${command.recruitmentId} player=$playerId '
+          'old=$oldCharacterId/$oldRole new=${command.newCharacterId}/${command.newRole} '
+          'state=${nextRaidStateRef.path} role=${plan.nextRaidState['role']} '
+          'keys=${plan.nextRaidState.keys.join(',')} commit=pending',
+        );
+      }
       transaction.set(nextRaidStateRef, plan.nextRaidState);
       listing.write(
         transaction: transaction,
@@ -398,7 +407,9 @@ class FirestorePartyAtomicMemberMutationRepository
       });
     } on FirebaseException catch (error, stackTrace) {
       assert(() {
-        debugPrint('PartyAtomicMemberMutation ${error.code}: $stackTrace');
+        debugPrint(
+          'PartyAtomicMemberMutation ${error.code} ${error.message}: $stackTrace',
+        );
         return true;
       }());
       return PartyMembershipResult.failure(switch (error.code) {

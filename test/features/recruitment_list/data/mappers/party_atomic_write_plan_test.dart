@@ -81,6 +81,7 @@ void main() {
     expect(plan.recruitmentPatch['status'], 'active');
     expect(plan.recruitmentPatch['revision'], 5);
     expect(plan.raidStateWrites.single.patch?['status'], 'completed');
+    expect(plan.raidStateWrites.single.patch?['role'], 'dealer');
     expect(plan.raidStateWrites.single.patch?['revision'], same(incrementOne));
     expect(plan.eventDocument['schemaVersion'], 2);
     expect(plan.eventDocument['raidId'], 'raid-1');

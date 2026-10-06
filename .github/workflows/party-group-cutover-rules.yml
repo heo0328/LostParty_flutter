@@ -45,6 +45,7 @@ on:
           - complexity-compact
           - complexity-compact-remaining
           - complexity-compact-final
+          - completion-role
       case:
         description: Rules regression scope
         type: choice
@@ -84,6 +85,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -349,6 +352,10 @@ jobs:
           fi
           if [[ "$LEADER_PROOF_SCOPE" == complexity-participation ]]; then
             proof_command="node tools/roster_complexity_differential.mjs --participation-only"
+          fi
+          if [[ "$LEADER_PROOF_SCOPE" == completion-role ]]; then
+            node tools/integrate_roster_rules.mjs --check
+            proof_command="node tools/party_completion_role_proof.mjs"
           fi
           npx --yes firebase-tools@15.29.0 emulators:exec --config firebase.json --only firestore --project demo-party-group-cutover "$proof_command"
 

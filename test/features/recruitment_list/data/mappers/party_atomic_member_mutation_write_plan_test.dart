@@ -46,6 +46,7 @@ void main() {
       3,
     );
     expect(plan.nextRaidState['status'], 'active');
+    expect(plan.nextRaidState['role'], 'dealer');
     expect((plan.recruitmentPatch['partySlots']! as List), hasLength(3));
   });
 

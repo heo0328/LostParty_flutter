@@ -200,6 +200,11 @@ class PartyAtomicWritePlan {
                 : 'active',
             if (command.type == PartyAtomicCommandType.complete)
               'completedAt': serverTimestamp,
+            if (command.type == PartyAtomicCommandType.complete)
+              'role': aggregate.partySlots
+                  .firstWhere((slot) => slot.playerId == target.playerId)
+                  .role
+                  .name,
             'revision': incrementOne,
             'updatedAt': serverTimestamp,
           },

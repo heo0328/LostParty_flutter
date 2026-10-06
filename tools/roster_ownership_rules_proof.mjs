@@ -118,7 +118,7 @@ async function seedRoom(env, db) {
   });
 }
 
-async function lifecycle(db, type, { tamper = null, actorPlayerId = playerId, ownershipSnapshot = false } = {}) {
+async function lifecycle(db, type, { tamper = null, actorPlayerId = playerId, ownershipSnapshot = false, completionRole = false } = {}) {
   return runTransaction(db, async tx => {
     const ref = doc(db, 'recruitments', recruitmentId);
     const room = (await tx.get(ref)).data();
@@ -157,6 +157,7 @@ async function lifecycle(db, type, { tamper = null, actorPlayerId = playerId, ow
       if (isLast && tamper === 'omit-state') continue;
       const stateRef = doc(db, 'players', slot.playerId, 'raidStates', `${slot.characterId}_${raidId}`);
       const statePatch = {
+        ...(completionRole && type === 'complete' ? { role: slot.role } : {}),
         ...(ownershipSnapshot && Object.hasOwn(slot, 'ownershipRevision') ? { ownershipRevision: slot.ownershipRevision } : {}),
         status: type === 'complete' ? 'completed' : 'active', source: 'party',
         cycleKey: type === 'complete' ? room.currentCycleKey : cycleKey,
