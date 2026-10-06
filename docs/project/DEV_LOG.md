@@ -73,6 +73,12 @@ revision은 별도다. 실제 결함을 반영한 비교에서 목록 버전만 
 사용자 로컬 Tuesday00 설정은 커밋에서 제외하고 보존한다. 추적본 초기화는 Wednesday06을 유지한다.
 작업 브랜치 이력은 병합으로 보존하며 기존 release 브랜치·태그·APK는 변경하지 않는다.
 
+완료 문서65e2c46까지 작업 브랜치 push 후 dev/main 모두 충돌 없이 fast-forward 통합했고
+원격 두 브랜치에 atomic push했다. local dev/origin dev/local main/origin main의65e2c46 일치를 확인했다.
+이 통합 기록도 동일 경로로 반영한 후 사용자 지시대로 fix/party-completion-role 로컬·원격만 삭제한다.
+최종 checkout은 dev이며, 작업 코드/문서는 모두 커밋하고 사용자 초기화 설정만 미커밋으로 남긴다.
+초기화 파일 보존 해시:8E2A1CBEE4DD97872E05007509DB92C8F38DF12CB8DE1AC5D79C2842CE2950C0.
+
 ### 구현 당시 기록 (아래 대기 문구는 당시 상태이며 위 실기기 성공으로 갱신됨)
 
 ### 운영 반영 및 실기기 대기
