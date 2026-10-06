@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/party_atomic_command.dart';
 import '../../domain/entities/party_cycle_command.dart';
@@ -197,6 +198,16 @@ class PartyAtomicCycleCommandAdapter implements PartyCycleCommandRepository {
     String? expectedCycleKey,
     String? nextCycleKey,
   }) async {
+    final diagnosticId = '${type.name}_${recruitmentId}_$expectedRevision';
+    var stage = 'preflight-binding-read';
+    void trace(String phase) {
+      stage = phase;
+      if (kDebugMode) {
+        debugPrint('PartyAtomicLifecycle id=$diagnosticId phase=$phase');
+      }
+    }
+
+    trace(stage);
     final authUid = _firebaseAuth.currentUser?.uid;
     if (authUid == null || authUid.isEmpty) {
       return const PartyCycleResult.failure(PartyCycleFailure.unauthenticated);
@@ -214,6 +225,7 @@ class PartyAtomicCycleCommandAdapter implements PartyCycleCommandRepository {
           PartyCycleFailure.playerBindingMissing,
         );
       }
+      trace('preflight-recruitment-read');
       final recruitment = await _firestore
           .collection('recruitments')
           .doc(recruitmentId)
@@ -261,8 +273,7 @@ class PartyAtomicCycleCommandAdapter implements PartyCycleCommandRepository {
             ];
       final result = await _atomic.execute(
         PartyCommandEnvelope(
-          commandId:
-              '${effectiveType.name}_${recruitmentId}_$expectedRevision',
+          commandId: '${effectiveType.name}_${recruitmentId}_$expectedRevision',
           recruitmentId: recruitmentId,
           type: effectiveType,
           actorPlayerId: playerId,
@@ -279,7 +290,8 @@ class PartyAtomicCycleCommandAdapter implements PartyCycleCommandRepository {
       }
       return PartyCycleResult.failure(
         _mapAtomicFailure(result.failure!),
-        diagnosticId: '${effectiveType.name}_${recruitmentId}_$expectedRevision',
+        diagnosticId:
+            '${effectiveType.name}_${recruitmentId}_$expectedRevision',
       );
     } on FormatException {
       return const PartyCycleResult.failure(PartyCycleFailure.invalidRequest);
@@ -287,10 +299,27 @@ class PartyAtomicCycleCommandAdapter implements PartyCycleCommandRepository {
       return const PartyCycleResult.failure(PartyCycleFailure.invalidRequest);
     } on StateError {
       return const PartyCycleResult.failure(PartyCycleFailure.invalidRequest);
-    } on FirebaseException catch (error) {
-      return PartyCycleResult.failure(_firebaseFailure(error.code));
-    } catch (_) {
-      return const PartyCycleResult.failure(PartyCycleFailure.unknown);
+    } on FirebaseException catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+          'PartyAtomicLifecycle id=$diagnosticId failedPhase=$stage '
+          'code=${error.code} message=${error.message}: $stackTrace',
+        );
+      }
+      return PartyCycleResult.failure(
+        _firebaseFailure(error.code),
+        diagnosticId: diagnosticId,
+      );
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+          'PartyAtomicLifecycle id=$diagnosticId failedPhase=$stage $error: $stackTrace',
+        );
+      }
+      return PartyCycleResult.failure(
+        PartyCycleFailure.unknown,
+        diagnosticId: diagnosticId,
+      );
     }
   }
 
