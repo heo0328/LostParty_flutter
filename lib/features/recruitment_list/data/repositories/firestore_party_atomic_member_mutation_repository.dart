@@ -43,6 +43,8 @@ class FirestorePartyAtomicMemberMutationRepository
       command,
     );
     if (invalid != null) return PartyMembershipResult.failure(invalid);
+    final diagnosticId =
+        'characterChanged_${command.recruitmentId}_${command.expectedRecruitmentRevision}';
     return _run((transaction, playerId) async {
       final recruitmentRef = _firestore
           .collection('recruitments')
@@ -275,7 +277,7 @@ class FirestorePartyAtomicMemberMutationRepository
       transaction.delete(previousRaidStateRef);
       if (kDebugMode) {
         debugPrint(
-          'PartyAtomicMemberMutation phase=character-change-plan '
+          'PartyAtomicMemberMutation id=$diagnosticId phase=character-change-plan '
           'room=${command.recruitmentId} player=$playerId '
           'old=$oldCharacterId/$oldRole new=${command.newCharacterId}/${command.newRole} '
           'state=${nextRaidStateRef.path} role=${plan.nextRaidState['role']} '
@@ -295,7 +297,7 @@ class FirestorePartyAtomicMemberMutationRepository
         plan.event,
       );
       return const PartyMembershipResult.success();
-    });
+    }, diagnosticId: diagnosticId);
   }
 
   @override
@@ -381,8 +383,10 @@ class FirestorePartyAtomicMemberMutationRepository
   }
 
   Future<PartyMembershipResult> _run(
-    Future<PartyMembershipResult> Function(Transaction, String) action,
-  ) async {
+    Future<PartyMembershipResult> Function(Transaction, String) action, {
+    String? diagnosticId,
+  }) async {
+    var attempt = 0;
     final uid = _firebaseAuth.currentUser?.uid;
     if (uid == null) {
       return const PartyMembershipResult.failure(
@@ -390,7 +394,13 @@ class FirestorePartyAtomicMemberMutationRepository
       );
     }
     try {
-      return await _firestore.runTransaction((transaction) async {
+      final result = await _firestore.runTransaction((transaction) async {
+        attempt++;
+        if (kDebugMode) {
+          debugPrint(
+            'PartyAtomicMemberMutation id=$diagnosticId attempt=$attempt phase=binding-read',
+          );
+        }
         final binding = await transaction.get(
           _firestore.collection('authBindings').doc(uid),
         );
@@ -405,10 +415,16 @@ class FirestorePartyAtomicMemberMutationRepository
         }
         return action(transaction, playerId);
       });
+      if (kDebugMode) {
+        debugPrint(
+          'PartyAtomicMemberMutation id=$diagnosticId attempt=$attempt phase=${result.isSuccess ? 'committed' : 'rejected'} failure=${result.failure}',
+        );
+      }
+      return result;
     } on FirebaseException catch (error, stackTrace) {
       assert(() {
         debugPrint(
-          'PartyAtomicMemberMutation ${error.code} ${error.message}: $stackTrace',
+          'PartyAtomicMemberMutation id=$diagnosticId attempt=$attempt ${error.code} ${error.message}: $stackTrace',
         );
         return true;
       }());

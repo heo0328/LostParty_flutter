@@ -13,6 +13,58 @@ void main() {
     maxDealersPerClassPerParty: 1,
   );
 
+  for (final previousRole in PartyRole.values) {
+    for (final nextRole in PartyRole.values) {
+      for (final sameCharacter in [false, true]) {
+        if (sameCharacter && previousRole == nextRole) continue;
+        test(
+          '$previousRole → $nextRole sameCharacter=$sameCharacter 역할 저장',
+          () {
+            final aggregate = _aggregate(
+              slots: [
+                PartyAggregateSlot(
+                  playerId: 'leader',
+                  characterId: 'original',
+                  role: previousRole,
+                  classKey: '바드',
+                  partyIndex: 0,
+                  slotIndex: 0,
+                  countedAsNonGroupMember: false,
+                ),
+              ],
+            );
+            PartyAtomicCharacterChangeWritePlan build() =>
+                PartyAtomicCharacterChangeWritePlan(
+                  aggregate: aggregate,
+                  rules: rules,
+                  playerId: 'leader',
+                  newCharacterId: sameCharacter ? 'original' : 'replacement',
+                  newClassKey: nextRole == PartyRole.support
+                      ? '바드:지원'
+                      : '바드:공격',
+                  newRole: nextRole,
+                  raidId: 'raid-1',
+                  difficultyId: 'hard',
+                  membershipPatch: {'role': nextRole.name},
+                  serverTimestamp: timestamp,
+                );
+            if (sameCharacter) {
+              // Runtime currently rejects same-character role-only mutation.
+              expect(build, throwsStateError);
+              return;
+            }
+            final plan = build();
+            expect(plan.nextRaidState['role'], nextRole.name);
+            expect(
+              (plan.recruitmentPatch['partySlots'] as List).single['role'],
+              nextRole.name,
+            );
+          },
+        );
+      }
+    }
+  }
+
   test('캐릭터 변경은 기존 raidState 삭제와 신규 상태 생성만 계획한다', () {
     final plan = PartyAtomicCharacterChangeWritePlan(
       aggregate: _aggregate(),

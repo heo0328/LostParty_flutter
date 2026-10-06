@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { initializeTestEnvironment } from '@firebase/rules-unit-testing';
-import { doc, getDoc, updateDoc, deleteDoc, deleteField } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField } from 'firebase/firestore';
 import { authUid, recruitmentId, raidId, seedGroupLinkedRoom } from './party_group_cutover_rules_test.mjs';
 
 process.env.ROSTER_TRACKED_RULES = '1';
@@ -35,6 +35,9 @@ for (const [version, rules] of [['baseline', baseline], ['candidate', candidate]
       await updateDoc(doc(admin, 'groups', original.groupId, 'raidListings', recruitmentId),
         { revision: listingFixed ? roomRevision : roomRevision - 2 });
       for (const [index, slot] of slots.entries()) {
+        const accountId = `completion-account-${index}`;
+        await setDoc(doc(admin, 'gameAccounts', accountId), { ownerPlayerId: slot.playerId, status: 'active', ownershipRevision: 1 });
+        await updateDoc(doc(admin, 'characters', slot.characterId), { gameAccountId: accountId });
         const ref = doc(admin, 'players', slot.playerId, 'raidStates', `${slot.characterId}_${raidId}`);
         await updateDoc(ref, { revision: index === targetIndex ? 1 : 3,
           role: index === targetIndex && missing && !roleFixed ? deleteField() : slot.role });
