@@ -1,5 +1,21 @@
 # 개발 이력
 
+## 2026-10-06 Android 1.1.1 공개 게시 완료
+
+- 사용자 지시로 main3f8798f 기준 release/1.1.1에서 버전을1.1.1+3으로 올렸다.
+  main과 태그의 RaidCycleSchedule은 UTC+9/Wednesday/06:00, 실제 주차 정책은 해당 기본값 사용 확인.
+  로컬 Tuesday00 테스트 설정은 ignored coverage/raid_cycle_schedule.before-v1.1.1.dart에 보존 후 복원했다.
+- 빌드 원본6f3876e7e8de760ba6e9866837a7d2b4bc0e9bd1을 main/dev에 포함한 뒤 v1.1.1 태그 push.
+  Actions37449901609에서 release APK 빌드, 영구 서명 인증서, 정식 앱ID kr.co.heowork0921.lostparty,
+  versionName1.1.1/versionCode3 검사와 게시 모두 성공했다.
+- https://github.com/heo0328/LostParty_flutter/releases/tag/v1.1.1 정식 공개(draft/prerelease false).
+  lostparty-v1.1.1-android.apk 71063000bytes 및 .sha256 첨부 확인. 자산 digest와 checksum 일치:
+  b5e71b5cabad28e6b26fb8f55fbb89a14514d63eed4c109f24d5631da5d8c3dc.
+- 설명은 docs/releases/v1.1.1.md의 사용자 요청 문구로 적용하고 원격 본문을 확인했다.
+  BUG-023의 기존 검증·두 방 실기기 완료 결과를 재사용하며 Rules 재게시와 전체 회귀 반복은 하지 않았다.
+  새 APK 업데이트 설치는 사용자 실기기 영역으로 미실행. release 브랜치와 태그는 이력으로 보존하고
+  게시 기록을 main/dev에도 동기화한다.
+
 ## 2026-10-06 BUG-023 완료 — 실제 두 방 성공 및 재발 방지 기록
 
 ### 사용자 확인과 완료 범위

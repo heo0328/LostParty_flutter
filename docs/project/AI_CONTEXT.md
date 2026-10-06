@@ -1,5 +1,12 @@
 # AI CONTEXT (2026)
 
+## 최신 공개 릴리즈 — Android 1.1.1+3 (2026-10-06)
+
+v1.1.1 태그6f3876e, KST 수요일06:00 초기화. BUG-023 수정 포함.
+Actions37449901609 빌드·영구 서명·앱 ID/버전 검사·공개 게시 성공, APK 체크섬 일치.
+[릴리즈](https://github.com/heo0328/LostParty_flutter/releases/tag/v1.1.1),
+[설명](../releases/v1.1.1.md), [기록](DEV_LOG.md). 아래1.1.0 내용은 이전 릴리즈 이력이다.
+
 ## 최근 완료 — 반복 모집 완료 실패 BUG-023 (2026-10-06)
 
 캐릭터 변경 raidState.role 누락 수정·제한 CI27건·운영 게시/활성 해시 일치까지 확인했다.
