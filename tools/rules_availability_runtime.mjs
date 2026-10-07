@@ -26,7 +26,7 @@ export function availabilityRuntime(input) {
   replace('allow update: if (bug24Advancing(getAfter(recruitmentPath(recruitmentId)).data))',
     "allow update: if (getAfter(recruitmentPath(recruitmentId)).data.get('lastCommandType', '') in ['advanceCycle', 'complete'] && getAfter(recruitmentPath(recruitmentId)).data.lastCommandAt == request.time)");
   replace("? validAtomicRaidStateUpdate(playerId, stateId, resource.data, request.resource.data)\n          : ((resource.data.status == 'completed'",
-    "? (resource.data.recruitmentId == request.resource.data.recruitmentId && validAtomicRaidStateUpdate(playerId, stateId, resource.data, request.resource.data))\n          : ((resource.data.status == 'completed'");
+    "? (resource.data.recruitmentId == request.resource.data.recruitmentId && existsAfter(recruitmentPath(resource.data.recruitmentId)) && validAtomicRaidStateUpdate(playerId, stateId, resource.data, request.resource.data))\n          : ((resource.data.status == 'completed'");
   const fields = "['guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardCycleStartedAt', 'guardCycleEndsAt', 'guardSlotIndex', 'guardCheckedAt']";
   const helpers = `
     function sealRemoved(before, data) {

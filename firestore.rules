@@ -1892,7 +1892,7 @@ allow update: if (request.resource.data.diff(resource.data).affectedKeys().hasAn
 && rf40(getAfter(rf7(request.resource.data.recruitmentId)).data))
 ? rf130(playerId, stateId, resource.data, request.resource.data) : (
 (resource.data.status == 'active' && request.resource.data.status == 'completed' && request.resource.data.source == 'party')
-? (resource.data.recruitmentId == request.resource.data.recruitmentId && rf130(playerId, stateId, resource.data, request.resource.data))
+? (resource.data.recruitmentId == request.resource.data.recruitmentId && existsAfter(rf7(resource.data.recruitmentId)) && rf130(playerId, stateId, resource.data, request.resource.data))
 : ((resource.data.status == 'completed' && request.resource.data.status == 'active' && request.resource.data.source == 'party')
 ? (rf129(playerId, stateId, resource.data, request.resource.data)
 || rf139(playerId, stateId, resource.data, request.resource.data))
