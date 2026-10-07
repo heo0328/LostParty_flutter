@@ -1,5 +1,32 @@
 # 개발 이력
 
+## 2026-10-07 BUG-024 Spark C 상세 설계·격리된 8인 선행 검증 완료
+
+사용자가 상태 확장안의 상세 설계·8인 선행 검증을 승인했다. 기존 목적 브랜치를 재사용했다.
+d748d70/f0aa71d/c844d95에서 ignored Rules 생성기·검증 도구·demo CI만 구현했다.
+실제 앱 writer와 추적firestore.rules는 변경하지 않았다. 단계별 계약·앱 호환 영향은
+[Spark 대안 설계](../architecture/RECURRING_CYCLE_SPARK_ALTERNATIVE_DESIGN.md)의C 절을 따른다.
+
+- 새로 가능성이 증명된 흐름: 기존 state의 Rules 인증 metadata 또는 참가·완료 없는 strict stub을
+  단건 인증한 뒤, 8인 state/방/목록/event를 한 transaction으로 전환하고 전체 완료한다.
+  absent·같은 방 완료·다른 방 완료·다른 역할/난이도 완료·manual 완료의5가지가 통과했다.
+- 보존 확인: 같은 방 active 정상 전환/전체 완료, 준비 중 기존 완료 기록·Claim·완료 이벤트,
+  인증 중 기존 state의 core 필드·revision과 room/member/listing/event/Claim 불변.
+  위조·부분 쓰기·오래된 revision·소유권 상실·현재 완료/Claim/legacy 점유 및 후발 legacy Claim 거절.
+- 검증: 최종 [Actions37575254780](https://github.com/heo0328/LostParty_flutter/actions/runs/37575254780)25/25 통과
+  (8인 정상6건·부정 경계19건), Node 구문 확인·격리 생성·git diff --check.
+  Rules 호출/식 수의 정밀 coverage는Emulator429(응답128998507bytes>104857600)로 미수집.
+  요청 결과·생성 후보·CI/debug log는coverage/bug024-ci-37575254780에 보존했다.
+- 중간 결과: 첫19/20에서 active 충돌 fixture의 조기 거절을 수정. 다음23/25에서 normalactive 범용 dispatch의
+  1000식 한도와 역할 위조 fixture의 동일 값 문제를 확인했다. 기존 전환 validator에 직접 연결하고
+  실제 반대 역할 요청으로 보완한 최종본이 통과했다. 보호 검사는 삭제·완화하지 않았다.
+- 미구현·미확인: 앱 strict stub 처리, 개인 완료/참가 writer 인증 전체 무효화, 준비 후 재선택,
+  구버전 오류 안내/롤아웃, 최종 생성 Rules·운영 compiler 경고0개·전체 앱 회귀·두 실제 방 검증.
+
+승인된 상세 설계·선행 proof 그룹은 완료했으며 실제 버그 전체 수정은 진행 중이다.
+Flutter 변경에 대한 테스트/실기기 빌드·설치는 실행하지 않았다. Functions·결제 변경·운영 Rules 게시0회.
+dev/main 미통합·BUG-024 미종료. 초기화 파일의 기존 로컬 상태는 보존·커밋 제외했다.
+
 ## 2026-10-07 BUG-024 Spark A 격리 후보 구현·한도 검증 실패
 
 사용자가 Spark 무료 요금제 유지 상태의 수정 진행을 지시했다. 필수 문서·현재 목적 브랜치·미커밋 초기화

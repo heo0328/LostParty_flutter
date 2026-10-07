@@ -180,7 +180,7 @@ C는 저장 스키마와 기존 reader/writer 계약을 바꾸므로 A의 최소
 승인 범위는 실현 가능성 검증까지이며 앱·추적 Rules·운영 데이터에는 도입하지 않는다.
 실패 시 B 전체 개편을 자동 시작하지 않는다.
 
-현재 결론은 **A 전체 수정 실패, C 상세 설계·선행 검증 진행**이다.
+현재 결론은 **A 전체 수정 실패, C 상세 설계·격리된 8인 선행 검증 통과**다.
 기능 코드·추적 Rules·운영 데이터·결제 설정에는 이번 격리 후보를 반영하지 않았다.
 
 ### C 선행 proof의 구체 계약
@@ -216,3 +216,63 @@ Claim 삭제+인증을 같은 요청에 넣어 우회할 수 없어야 한다. �
 앱 도입 전 별도 확정할 영향은 RaidState codec/조회 projection/후보 정책의 stub 처리,
 개인 완료·해제와 참가/변경/해산 writer의 표식 보존 또는 무효화, 구버전 앱 쓰기 차단과 재조회 안내다.
 선행 proof만으로 이러한 호환성 작업이나 BUG-024 전체 수정이 완료됐다고 판정하지 않는다.
+
+### 앱 도입을 위한 후속 상세 설계 — 아직 구현하지 않음
+
+| 실제 연결/경로 | 영향과 도입 계약 |
+|---|---|
+| `lib/app/router/app_router.dart`의 Atomic repository → Cycle adapter | 기존 DI와 공개 명령은 유지. advance 요청에 한해 동일 expectedRevision/대상/window로 단건 인증 후 최종 transaction을 실행. 타인의 state 읽기를 추가하지 않음 |
+| `firestore_party_atomic_command_repository.dart` | 인증 도중 실패 시 핵심 쓰기를 시작하지 않음. 최종 revision 충돌은 재조회 안내. 다른 모드로 자동 재실행하지 않음 |
+| `party_ownership_record_policy.dart`, `party_raid_state_occupancy_inspector.dart` | 정확한 stub만 별도 판별한 후 live ownership/generation을 대조. stub은 참가·완료 없음으로 해석하며 손상 자료를 stub으로 추정하지 않음 |
+| `firestore_weekly_raid_status_repository.dart` | 현재 cycleKey equality query는 cycleKey가 없는 stub을 반환하지 않음. 기존 active/completed projection은 보존. 다른 전체/직접 읽기 경로의 stub 처리는 따로 필요 |
+| `firestore_weekly_raid_status_command_repository.dart` | 개인 완료/해제의 실제 canonical writer에 stub→완료와 인증 무효화를 연결. Claim/점유/소유권 검사는 그대로 유지 |
+| 생성·신청·승인·즉시 참가·활성 변경·삭제 writer | stub→정상 state는 원래 참가 권한과 점유 정책을 충족해야 함. 기존 state 변경은 인증을 보존하거나 여덟 필드를 모두 제거하여 무효화. 일부만 삭제/변조 불가 |
+| 준비 변경 event/member Rules | 인증 이후 재선택할 때 exact stub도 ‘기록 없음’으로 처리할 제한 경로 필요. state/Claim 불변·본인 ownership·타인 자동 교환 금지는 유지 |
+
+stub을 기존 `PartyRaidStateStatus`나 방의 `currentCycleStatus`에 추가하지 않는다.
+참가 기록과 인증만 있는 자료는 별도 타입/strict parser로 구별하여 기존 active/completed의 의미를 보존한다.
+소유권 이전 후의 오래된 stub은 strict identity 검증 뒤 기존 generation 분류로 무효 판정하며,
+고아 데이터 일괄 삭제나 이전 소유자의 자료 자동 정리는 추가하지 않는다.
+
+격리 proof는 인증 변경을 audit 전용으로 제한한다. 실제 앱 도입 시에는 기존 정상 명령이 검증된
+canonical 상태를 쓰면서 인증 **전체 제거**를 할 수 있는 제한 경로를 별도 검증해야 한다.
+stub→개인 완료/참가도 각 원래 create 정책을 update 상황에 결합하는 전용 경계가 필요하다.
+인증 제거와 legacy Claim 생성을 한 요청에 결합하는 것은 before 표식으로 계속 거절한다.
+정상 canonical 쓰기가 인증을 무효화한 뒤에는 다음 advance가 반드시 다시 인증을 받아야 한다.
+
+인증은 현재 전환 window에서만 생성하고 core state를 점유하지 않는다. 해당 window 동안의 legacy Claim
+쓰기 차단은 기존 canonical 완료 명령을 대체하지 않으며, 새 앱의 개인 완료가 정상 인증 무효화 경로를
+사용할 수 있어야 한다. 이 경로를 구현하지 않은 채 격리 후보를 운영 게시하면 정상 기능을 막게 된다.
+
+구버전 advance에 인증 없는 우회 경로를 남길 수 없다. 따라서 새 앱 배포와 Rules 적용 순서,
+구버전 advance/개인 완료가 거절됐을 때 재조회·업데이트 안내를 실제 구현 전에 확정한다.
+격리 proof 통과는 이 호환성·롤아웃 문제까지 해결했다는 뜻이 아니다.
+
+### C 선행 검증 결과 — 2026-10-07
+
+최종 도구 커밋 `c844d95`, [Actions37575254780](https://github.com/heo0328/LostParty_flutter/actions/runs/37575254780): **25/25 통과**.
+`tools/bug024_spark_seal_candidate.mjs`는 A readable에서 ignored demo 후보만 생성한다.
+`tools/bug024_spark_seal_proof.mjs`가 기존 seed/준비/최종 전환 fixture를 재사용한다.
+
+| 구분 | 확인한 결과 |
+|---|---|
+| 8인 정상 6건 | A→B→C→B 후 absent stub, 같은 방 완료, 다른 방 완료, 다른 역할·난이도 완료, 개인 완료, 같은 방 active 각각 인증→전환→전체 완료 성공 |
+| 보존 | 준비 중 모든 state/Claim/기존 완료 이벤트 불변. 인증 중 기존 state는 인증 필드 외 전부 불변, room/member/listing/event/Claim 불변. absent stub에는 참가/완료 필드 없음 |
+| 부정 경계 19건 | 현재 완료·타방 active·손상 기록·현재 Claim·legacy 점유, Claim 삭제+인증, 인증 revision/slot/generation/schema/record/future 위조, 비방장·타인 private 읽기, 미인증·부분/오래된 전환, 인증 후 구성 revision/소유권/현재 완료 변경, 완료 해제/타인 역할 변경 끼워넣기, 후발 Claim 및 표식 삭제+Claim/인증+Claim 거절 |
+| 한도 | 정상 8인 핵심 요청이 접근/evaluation 오류 없이 통과. Service call error·maximum/evaluation limit를 올바른 거절로 인정하지 않는 harness 사용 |
+
+첫 실행37574747640은19/20 성공: active 충돌 fixture가 준비 단계에서 먼저 거절돼 인증 검증에 도달하지 못했다.
+active를 준비 뒤 타방 점유로 배치하도록 바로잡았다. 다음37575063658은23/25 성공:
+정상 active 전환의 범용 분기에서1000식 한도 실패, 타인 역할 위조 fixture가 기존과 같은 역할을 써 변경 없음이었다.
+active→active advance는 기존 `validAtomicRaidStateUpdate`에 직접 dispatch하도록 해 모든 기존 검사는 보존했다.
+역할 fixture는 현재 슬롯의 반대 역할을 쓰도록 수정했다. 권한 완화나 정상 코드 삭제로 통과시키지 않았다.
+
+coverage 수집은 별도 한계가 있다. 첫 요청은Emulator500, 최종 응답은429
+(`gRPC message exceeds maximum size 104857600: 128998507`)다. 이 요청은25건 실행 완료 뒤의
+진단 자료 수집이며 Rules write 평가 실패가 아니다. results.json·CI log·생성 후보·debug log는 보존했다.
+따라서 정밀 호출/식 수와 한도 여유 수치는 확보하지 못했으며 임의로 추정하지 않는다.
+운영 compiler 경고0개·최종 추적본 생성 일치·전체 앱 회귀는 아직 검증 대상이다.
+
+이로써 C의 핵심 방식은 선행 검증을 통과했다. **앱 도입 완료·모든 사이드 이펙트 해소·운영 게시 가능을 뜻하지 않는다.**
+위 호환 설계를 구현·검증하고 롤아웃 범위를 확정하는 단계는 남아 있다. 추적 Rules·Flutter 코드·결제·Functions 변경0회,
+운영 게시0회, dev/main 미통합, BUG-024 미종료를 유지한다.

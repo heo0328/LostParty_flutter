@@ -40,7 +40,7 @@
 - [완료 반복방의 다음 주 캐릭터 변경 설계](architecture/RECURRING_NEXT_WEEK_CHARACTER_CHANGE_DESIGN.md): BUG-024 원인 분석, 완료 기록 보존과 준비 변경·전환의 저장 경계. 구현 후보는 Rules 한도·회귀 실패로 배포 보류.
 - [반복방 서버 트랜잭션 후속 설계](architecture/RECURRING_CYCLE_SERVER_TRANSACTION_DESIGN.md): 준비 변경·주차 전환의 서버 권한, 원자성, 재진입과 전환 순서. Spark 무료 유지 결정으로 중단한 대안.
 
-- [반복방 Spark 무료 대안 재설계](architecture/RECURRING_CYCLE_SPARK_ALTERNATIVE_DESIGN.md): 현재 실행 기준. A 격리 후보는 정상 전환5건의 한도 실패로 배포 불가. 검증 표식·idle 확장 C는 미승인 후보.
+- [반복방 Spark 무료 대안 재설계](architecture/RECURRING_CYCLE_SPARK_ALTERNATIVE_DESIGN.md): 현재 실행 기준. C 상태 확장 상세 설계·격리된 8인 선행 검증25/25 통과. 앱 호환 구현·운영 도입은 남음.
 
 데이터 관계, Firebase 전환 및 백엔드 구조를 관리한다.
 
