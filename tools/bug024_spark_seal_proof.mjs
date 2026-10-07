@@ -123,7 +123,8 @@ try {
   });
   await check('reject audit clearing completion or modifying peers', async () => {
     await setup({ targetState: 'same' }); await denied(() => auditOne({ extra: { completedAt: deleteField(), status: 'active' } }));
-    await denied(() => auditOne({ index: 1, extra: { role: 'support' } }));
+    const r = await room();
+    await denied(() => auditOne({ index: 1, extra: { role: r.partySlots[1].role === 'support' ? 'dealer' : 'support' } }));
   });
   await check('reject ownership transfer after all audits atomically', async () => {
     await setup(); await auditAll();

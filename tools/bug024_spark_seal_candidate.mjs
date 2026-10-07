@@ -128,7 +128,11 @@ for (const operation of ['create', 'update']) {
     ? 'sealIdle(request.resource.data) && sealAudit(playerId, stateId, request.resource.data)'
     : 'sealAuditUpdate(playerId, stateId, resource.data, request.resource.data)';
   const otherwise = operation === 'create' ? old : `sealIdle(resource.data)
-      ? sealAdvanceIdle(playerId, stateId, resource.data, request.resource.data) : (${old})`;
+      ? sealAdvanceIdle(playerId, stateId, resource.data, request.resource.data)
+      : ((resource.data.get('status', '') == 'active' && request.resource.data.get('status', '') == 'active'
+          && request.resource.data.get('source', '') == 'party'
+          && bug24Advancing(getAfter(recruitmentPath(request.resource.data.recruitmentId)).data))
+        ? validAtomicRaidStateUpdate(playerId, stateId, resource.data, request.resource.data) : (${old}))`;
   source = source.slice(0, begin) + `        allow ${operation}: if (${condition}) ? (${audit}) : (${otherwise})` + source.slice(end);
 }
 // Assignment create/update are already unconditionally forbidden in the published contract.
