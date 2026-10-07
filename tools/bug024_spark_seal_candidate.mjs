@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const out = 'coverage/bug024/spark-seal';
 let source = fs.readFileSync('coverage/bug024/spark/preparation-distributed.rules', 'utf8');
-const guards = "['guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardSlotIndex', 'guardCheckedAt']";
+const guards = "['guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardCycleStartedAt', 'guardCycleEndsAt', 'guardSlotIndex', 'guardCheckedAt']";
 function replace(before, after) {
   assert.equal(source.split(before).length, 2, before);
   source = source.replace(before, () => after);
@@ -21,9 +21,9 @@ function replaceFunction(name, body) {
 const helpers = `
     function sealIdle(data) {
       return data.keys().hasOnly(['playerId', 'characterId', 'raidId', 'ownershipRevision',
-        'guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardSlotIndex', 'guardCheckedAt'])
+        'guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardCycleStartedAt', 'guardCycleEndsAt', 'guardSlotIndex', 'guardCheckedAt'])
         && data.keys().hasAll(['playerId', 'characterId', 'raidId', 'ownershipRevision',
-        'guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardSlotIndex', 'guardCheckedAt'])
+        'guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardCycleStartedAt', 'guardCycleEndsAt', 'guardSlotIndex', 'guardCheckedAt'])
         && data.guardSchemaVersion == 1;
     }
     function sealAvailableBefore(path, data) {
@@ -40,6 +40,10 @@ const helpers = `
         && data.guardRoomRevision == room.revision
         && data.guardCycleKey is string && data.guardCycleKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && data.guardCycleKey > room.currentCycleKey
+        && data.guardCycleStartedAt is timestamp && data.guardCycleEndsAt is timestamp
+        && data.guardCycleStartedAt >= room.cycleEndsAt
+        && data.guardCycleEndsAt == data.guardCycleStartedAt + duration.value(7, 'd')
+        && request.time >= data.guardCycleStartedAt && request.time < data.guardCycleEndsAt
         && index is int && index >= 0 && index < room.partySlots.size()
         && room.partySlots[index].playerId == playerId && data.playerId == playerId
         && room.partySlots[index].characterId == data.characterId
@@ -55,11 +59,14 @@ const helpers = `
         && before.raidId == data.raidId && before.get('ownershipRevision', 0) == data.ownershipRevision
         && (sealIdle(before)
           || (sparkPrepKnownCompleted(before, playerId, data.characterId, data.raidId, data.ownershipRevision)
-            && before.cycleKey < data.guardCycleKey)
+            && before.cycleKey < data.guardCycleKey && before.completedAt is timestamp && before.updatedAt is timestamp)
           || (before.get('schemaVersion', 0) == 1 && before.get('status', '') == 'active'
             && before.source == 'party' && before.recruitmentId == data.guardRecruitmentId
             && before.revision is int && before.revision >= 1 && before.role in ['dealer', 'support']
-            && before.cycleKey is string && before.cycleKey < data.guardCycleKey))
+            && before.cycleKey is string && before.cycleKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+            && before.cycleKey < data.guardCycleKey && !('completedAt' in before)
+            && before.difficultyId == get(recruitmentPath(data.guardRecruitmentId)).data.difficultyId
+            && before.role == get(recruitmentPath(data.guardRecruitmentId)).data.partySlots[data.guardSlotIndex].role))
         && sealAudit(playerId, stateId, data);
     }
     function sealPrepared(before, data, room) {
@@ -67,6 +74,7 @@ const helpers = `
         && before.guardRecruitmentId == room.recruitmentId
         && before.guardRoomRevision == room.revision - 1
         && before.guardCycleKey == data.cycleKey
+        && before.guardCycleStartedAt == room.cycleStartedAt && before.guardCycleEndsAt == room.cycleEndsAt
         && !data.diff(before).affectedKeys().hasAny(${guards})
         && before.guardSlotIndex is int && before.guardSlotIndex >= 0
         && atomicAdvanceStateMatchesSlotAt(room, data, before.guardSlotIndex);
@@ -77,7 +85,7 @@ const helpers = `
         && atomicIsLifecycleCommand(room) && room.lastCommandType == 'advanceCycle'
         && room.lastCommandAt == request.time
         && data.keys().hasOnly(['playerId', 'characterId', 'raidId', 'ownershipRevision',
-          'guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardSlotIndex', 'guardCheckedAt',
+          'guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardCycleStartedAt', 'guardCycleEndsAt', 'guardSlotIndex', 'guardCheckedAt',
           'schemaVersion', 'difficultyId', 'recruitmentId', 'cycleKey', 'role', 'status', 'source', 'revision', 'updatedAt'])
         && data.playerId == playerId && stateId == data.characterId + '_' + data.raidId
         && data.characterId == before.characterId && data.raidId == before.raidId
@@ -89,9 +97,9 @@ const helpers = `
     }
     function sealBlocksClaimAt(path, cycle) {
       return (exists(path) && get(path).data.get('guardSchemaVersion', 0) == 1
-          && get(path).data.guardCycleKey == cycle)
+          && get(path).data.guardCycleKey == cycle && request.time < get(path).data.guardCycleEndsAt)
         || (existsAfter(path) && getAfter(path).data.get('guardSchemaVersion', 0) == 1
-          && getAfter(path).data.guardCycleKey == cycle);
+          && getAfter(path).data.guardCycleKey == cycle && request.time < getAfter(path).data.guardCycleEndsAt);
     }
 `;
 source = source.replace('    function bug24Unchanged(', () => helpers + '\n    function bug24Unchanged(');

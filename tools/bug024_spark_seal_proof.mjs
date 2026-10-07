@@ -1,7 +1,7 @@
 // Isolated C feasibility. No production credentials, app writers, or deployed Rules.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteField, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { authUid, playerId, recruitmentId, raidId, cycleKey, cycleWindow } from './party_group_cutover_rules_test.mjs';
 process.env.BUG024_IMPORT_ONLY = '1';
 process.env.BUG024_SPARK_EVENT = '1';
@@ -9,7 +9,7 @@ process.env.BUG024_RULES_FILE = 'coverage/bug024/spark-seal/candidate.rules';
 const { env, db, admin, snapshot, seed, prepare, advance, denied, lifecycle, replacement, second } = await import('./bug024_preparation_proof.mjs');
 const results = [];
 const dir = 'coverage/bug024/spark-seal';
-const guardKeys = ['guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardSlotIndex', 'guardCheckedAt'];
+const guardKeys = ['guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardCycleStartedAt', 'guardCycleEndsAt', 'guardSlotIndex', 'guardCheckedAt'];
 async function check(name, work) {
   try { await work(); results.push({ name, passed: true }); console.log(`PASS C ${name}`); }
   catch (e) { results.push({ name, passed: false, error: e.message }); console.error(`FAIL C ${name}: ${e.message}`); }
@@ -18,9 +18,11 @@ async function room() { return (await getDoc(doc(db, 'recruitments', recruitment
 function stateRef(client, slot) { return doc(client, 'players', slot.playerId, 'raidStates', `${slot.characterId}_${raidId}`); }
 function auditData(r, index, extra = {}) {
   const slot = r.partySlots[index];
+  const window = cycleWindow(cycleKey);
   return { playerId: slot.playerId, characterId: slot.characterId, raidId, ownershipRevision: slot.ownershipRevision,
     guardSchemaVersion: 1, guardRecruitmentId: recruitmentId, guardRoomRevision: r.revision,
-    guardCycleKey: cycleKey, guardSlotIndex: index, guardCheckedAt: serverTimestamp(), ...extra };
+    guardCycleKey: cycleKey, guardCycleStartedAt: Timestamp.fromDate(window.startedAt),
+    guardCycleEndsAt: Timestamp.fromDate(window.endsAt), guardSlotIndex: index, guardCheckedAt: serverTimestamp(), ...extra };
 }
 async function auditOne({ index = null, extra = {}, client = db } = {}) {
   const r = await room(); index ??= r.partySlots.findIndex(s => s.playerId === playerId);
@@ -65,9 +67,23 @@ try {
       await setup({ targetState }); await auditAll(); await advance(); await lifecycle(db, 'complete', { completionRole: true });
     });
   }
-  for (const targetState of ['current', 'active']) {
-    await check(`reject audit ${targetState} state`, async () => { await setup({ targetState }); await denied(() => auditOne()); });
-  }
+  await check('8-member same-room active normal advance and complete', async () => {
+    await seed();
+    await admin(async adb => {
+      const r = (await getDoc(doc(adb, 'recruitments', recruitmentId))).data();
+      const patch = { currentCycleStatus: 'active', completedAt: null, completedByPlayerId: null };
+      await updateDoc(doc(adb, 'recruitments', recruitmentId), patch);
+      await updateDoc(doc(adb, 'groups', r.groupId, 'raidListings', recruitmentId), patch);
+      for (const slot of r.partySlots) await updateDoc(stateRef(adb, slot), { status: 'active', completedAt: deleteField() });
+    });
+    await auditAll(); await advance(); await lifecycle(db, 'complete', { completionRole: true });
+  });
+  await check('reject audit current state', async () => { await setup({ targetState: 'current' }); await denied(() => auditOne()); });
+  await check('reject other-room active state after preparation', async () => {
+    await setup({ targetState: 'foreign' });
+    await admin(adb => updateDoc(doc(adb, 'players', playerId, 'raidStates', `${replacement}_${raidId}`), { status: 'active' }));
+    await denied(() => auditOne());
+  });
   await check('reject malformed prior completed state', async () => {
     await setup({ targetState: 'foreign' });
     await admin(adb => updateDoc(doc(adb, 'players', playerId, 'raidStates', `${replacement}_${raidId}`), { source: 'unknown' }));
@@ -89,7 +105,8 @@ try {
     await denied(() => auditOne());
   });
   for (const [name, extra] of Object.entries({ revision: { guardRoomRevision: 0 }, slot: { guardSlotIndex: 100 },
-    generation: { ownershipRevision: 2 }, schema: { guardSchemaVersion: 2 }, record: { status: 'active' } })) {
+    generation: { ownershipRevision: 2 }, schema: { guardSchemaVersion: 2 }, record: { status: 'active' },
+    future: { guardCycleStartedAt: Timestamp.fromDate(new Date(Date.now() + 86400000 * 7)), guardCycleEndsAt: Timestamp.fromDate(new Date(Date.now() + 86400000 * 14)) } })) {
     await check(`reject forged audit ${name}`, async () => { await setup(); await denied(() => auditOne({ extra })); });
   }
   await check('reject nonleader audit and private peer state read', async () => {
@@ -100,6 +117,13 @@ try {
   await check('reject unaudited and partial/stale final transition', async () => {
     await setup(); await denied(() => advance()); await auditAll();
     await denied(() => advance({ omit: true })); await denied(() => advance({ staleRevision: true }));
+  });
+  await check('reject stale seal after membership revision changes', async () => {
+    await setup(); await auditAll(); await prepare({ id: second }); await denied(() => advance());
+  });
+  await check('reject audit clearing completion or modifying peers', async () => {
+    await setup({ targetState: 'same' }); await denied(() => auditOne({ extra: { completedAt: deleteField(), status: 'active' } }));
+    await denied(() => auditOne({ index: 1, extra: { role: 'support' } }));
   });
   await check('reject ownership transfer after all audits atomically', async () => {
     await setup(); await auditAll();
@@ -119,11 +143,18 @@ try {
       const b = writeBatch(db); b.delete(stateRef(db, slot)); b.set(claimRef(), claimData()); await b.commit();
     });
   });
+  await check('reject Claim creation plus audit in same batch', async () => {
+    await setup();
+    await denied(async () => {
+      const r = await room(); const i = r.partySlots.findIndex(s => s.playerId === playerId);
+      const b = writeBatch(db); b.set(stateRef(db, r.partySlots[i]), auditData(r, i), { merge: true }); b.set(claimRef(), claimData()); await b.commit();
+    });
+  });
 } finally {
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(`${dir}/results.json`, JSON.stringify(results, null, 2));
-  const coverage = await fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-party-group-cutover:ruleCoverage').then(r => r.text());
-  fs.writeFileSync(`${dir}/ruleCoverage.json`, coverage);
+  const coverage = await fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-party-group-cutover:ruleCoverage');
+  fs.writeFileSync(`${dir}/coverage-response.json`, JSON.stringify({ status: coverage.status, body: await coverage.text() }));
   await env.cleanup();
 }
 assert.ok(results.every(r => r.passed), `${results.filter(r => !r.passed).length} C feasibility failures`);

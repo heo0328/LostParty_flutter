@@ -186,19 +186,21 @@ C는 저장 스키마와 기존 reader/writer 계약을 바꾸므로 A의 최소
 ### C 선행 proof의 구체 계약
 
 canonical state에 `guardSchemaVersion=1`, `guardRecruitmentId`, `guardRoomRevision`,
-`guardCycleKey`, `guardSlotIndex`, `guardCheckedAt`을 추가한다. 기존 state는 이 여섯 필드만
-변경할 수 있다. state가 없으면 playerId·characterId·raidId·ownershipRevision과 여섯 필드만
+`guardCycleKey`, `guardCycleStartedAt`, `guardCycleEndsAt`, `guardSlotIndex`, `guardCheckedAt`을 추가한다. 기존 state는 이 여덟 필드만
+변경할 수 있다. state가 없으면 playerId·characterId·raidId·ownershipRevision과 여덟 필드만
 있는 availability-only stub을 만든다. stub에는 status/source/cycleKey/revision이 없으며,
 실제 참가·완료 또는 손상 문서와 구별하는 정확한 key 집합을 갖는다.
 
 단건 인증은 방장만 요청하고 해당 슬롯·방 revision·날짜 형식·live ownership을 검사한다.
-방은 before/after가 완전히 같아야 한다. 대상 주차의 before Claim과 before legacy assignment가
+방은 before/after가 완전히 같아야 한다. 검사 시점은 대상 7일 window 안이며 window 시작은 기존 회차 종료 이후다.
+최종 전환의 window가 인증 window와 정확히 같아야 한다. Claim 차단도 인증 window가 끝나면 종료한다.
+대상 주차의 before Claim과 before legacy assignment가
 없거나 엄격한 이전 소유권 자료여야 한다. 기존 state는 같은 소유권의 유효한 이전 주차 completed,
 같은 방의 이전 active 또는 정확한 stub만 허용한다. 완료 정보와 state revision은 변경하지 않는다.
 방장은 타인의 private state를 읽지 않고 room 슬롯으로 blind merge한다.
 
-legacy Claim 생성과 assignment 쓰기는 canonical state의 before/after 인증 표식을 함께 확인한다.
-Claim은 인증 대상 주차에, assignment는 표식 존재 동안 차단한다. 표식 삭제+legacy 쓰기와
+legacy Claim 생성은 canonical state의 before/after 인증 표식을 함께 확인한다.
+Claim은 인증 대상 주차에 차단한다. assignment 생성/수정은 기존 Rules에서 이미 무조건 금지하며 그대로 유지한다. 표식 삭제+legacy 쓰기와
 Claim 삭제+인증을 같은 요청에 넣어 우회할 수 없어야 한다. 인증은 미래 주차 전체를 인증하지 않는다.
 다른 canonical 명령이 표식을 제거하면 인증을 다시 받아야 한다.
 
