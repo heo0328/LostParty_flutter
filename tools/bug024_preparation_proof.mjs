@@ -27,7 +27,7 @@ async function snapshot() {
       claims: await Promise.all(room.memberPlayerIds.map(p => read('players', p, 'weeklyRaidClaims'))) };
   });
 }
-async function seed({ targetState = 'absent', missingListing = false } = {}) {
+async function seed({ targetState = 'absent', missingListing = false, actorLast = false } = {}) {
   await seedRoom(env, db);
   await seedGroupLinkedRoom(env, db);
   await admin(async adb => {
@@ -59,6 +59,13 @@ async function seed({ targetState = 'absent', missingListing = false } = {}) {
         cycleKey: targetState === 'current' ? cycleKey : original.cycleKey };
       if (targetState === 'manual') state.recruitmentId = null;
       await setDoc(doc(adb, 'players', playerId, 'raidStates', `${replacement}_${raidId}`), state);
+    }
+    if (actorLast) {
+      const patch = { partySlots: [...room.partySlots.slice(1), room.partySlots[0]],
+        raidStateTargets: [...room.raidStateTargets.slice(1), room.raidStateTargets[0]],
+        memberPlayerIds: [...room.memberPlayerIds.slice(1), room.memberPlayerIds[0]] };
+      await updateDoc(doc(adb, 'recruitments', recruitmentId), patch);
+      await updateDoc(doc(adb, 'groups', room.groupId, 'raidListings', recruitmentId), patch);
     }
     if (missingListing) await deleteDoc(doc(adb, 'groups', room.groupId, 'raidListings', recruitmentId));
   });
@@ -132,7 +139,7 @@ async function check(name, work) {
 }
 try {
   await check('8-member preparation preserves states/claims/completion event, repeated changes', async () => {
-    await seed(); const before = await snapshot();
+    await seed({ actorLast: true }); const before = await snapshot();
     await prepare(); await prepare({ id: second }); await prepare({ id: replacement });
     const after = await snapshot();
     assert.deepEqual(after.states, before.states); assert.deepEqual(after.claims, before.claims);
@@ -175,6 +182,42 @@ try {
     await admin(adb => updateDoc(doc(adb, 'players', playerId, 'raidStates', `${replacement}_${raidId}`), { status: 'active' })); await denied(() => advance());
   });
   await check('reject partial/stale advance', async () => { await seed(); await prepare(); await denied(() => advance({ omit: true })); await denied(() => advance({ staleRevision: true })); });
+
+  await check('preserve weekly claim and reject deleting it during preparation', async () => {
+    await seed();
+    await admin(async adb => {
+      const ref = doc(adb, 'recruitments', recruitmentId);
+      const room = (await getDoc(ref)).data(); const window = cycleWindow(cycleKey);
+      const patch = { currentCycleKey: cycleKey, targetCycleKey: cycleKey,
+        cycleStartedAt: Timestamp.fromDate(window.startedAt), cycleEndsAt: Timestamp.fromDate(window.endsAt) };
+      await updateDoc(ref, patch);
+      await setDoc(doc(adb, 'groups', room.groupId, 'raidListings', recruitmentId), { ...room, ...patch });
+      await setDoc(doc(adb, 'players', playerId, 'weeklyRaidClaims', `${cycleKey}_${replacement}_${raidId}`), {
+        schemaVersion: 1, playerId, characterId: replacement, raidId, cycleKey,
+        ownershipRevision: 1, source: 'manual', difficultyId: room.difficultyId,
+        cycleStartedAt: patch.cycleStartedAt, cycleEndsAt: patch.cycleEndsAt,
+        completedAt: Timestamp.now(), updatedAt: Timestamp.now() });
+    });
+    const before = await snapshot(); await denied(() => prepare({ tamper: 'delete-claim' }));
+    await prepare(); assert.deepEqual((await snapshot()).claims, before.claims);
+  });
+  await check('reject unknown completed record', async () => {
+    await seed({ targetState: 'foreign' });
+    await admin(adb => updateDoc(doc(adb, 'players', playerId, 'raidStates', `${replacement}_${raidId}`), { source: 'unknown' }));
+    await denied(() => prepare());
+  });
+  await check('reject legacy occupancy acquired after preparation', async () => {
+    await seed(); await prepare();
+    await admin(adb => setDoc(doc(adb, 'players', playerId, 'activeRaidAssignments', `${replacement}_${raidId}`), {
+      playerId, characterId: replacement, raidId, ownershipRevision: 1, recruitmentId: 'other-room', cycleKey }));
+    await denied(() => advance());
+  });
+  await check('reject current claim acquired after preparation', async () => {
+    await seed(); await prepare();
+    await admin(adb => setDoc(doc(adb, 'players', playerId, 'weeklyRaidClaims', `${cycleKey}_${replacement}_${raidId}`), {
+      playerId, characterId: replacement, raidId, ownershipRevision: 1, cycleKey }));
+    await denied(() => advance());
+  });
 } finally { await env.cleanup(); }
 fs.mkdirSync('coverage/bug024', { recursive: true });
 fs.writeFileSync('coverage/bug024/results.json', JSON.stringify(results, null, 2));

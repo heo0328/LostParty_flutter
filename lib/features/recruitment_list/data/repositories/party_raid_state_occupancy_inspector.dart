@@ -65,6 +65,31 @@ class PartyRaidStateOccupancyInspector {
         }
       }
     }
+    if (ignoreCompletedClaim && ownership != null) {
+      final assignment = await transaction.get(
+        firestore
+            .collection('players')
+            .doc(playerId)
+            .collection('activeRaidAssignments')
+            .doc('${characterId}_$raidId'),
+      );
+      final assignmentData = assignment.data();
+      if (assignmentData != null &&
+          PartyOwnershipRecordPolicy.classify(
+                ownership: ownership,
+                data: assignmentData,
+                playerId: playerId,
+                characterId: characterId,
+                raidId: raidId,
+                isRaidState: false,
+                claimCycleKey: assignmentData['cycleKey'] is String
+                    ? assignmentData['cycleKey'] as String
+                    : null,
+              ) !=
+              GameAccountOwnershipCondition.ownershipChanged) {
+        return PartyRaidStateOccupancyInspection.inconsistent(stateRef);
+      }
+    }
     if (data == null) {
       return PartyRaidStateOccupancyInspection.none(stateRef);
     }

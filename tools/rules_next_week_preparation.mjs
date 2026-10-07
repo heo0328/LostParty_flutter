@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 export function nextWeekPreparation(source) {
   function replaceOnce(before, after) {
     assert.equal(source.split(before).length, 2, before);
-    source = source.replace(before, after);
+    source = source.replace(before, () => after);
   }
   const helpers = `
     function bug24Unchanged(path) {
@@ -21,11 +21,26 @@ export function nextWeekPreparation(source) {
         && after.memberCount == before.memberCount && after.lastCommandType == null
         && after.partySlots != before.partySlots;
     }
+    function bug24KnownCompleted(data, playerId, characterId, raidId) {
+      return data.schemaVersion == 1 && data.status == 'completed'
+        && data.playerId == playerId && data.characterId == characterId && data.raidId == raidId
+        && data.revision is int && data.revision >= 1
+        && data.cycleKey is string && data.cycleKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.source in ['manual', 'party'] && data.role in ['dealer', 'support']
+        && data.difficultyId is string && data.difficultyId.size() > 0
+        && deCurrentOwnership(data);
+    }
+    function bug24AssignmentAvailable(data) {
+      let path = assignmentPath(data.playerId, data.characterId + '_' + data.raidId);
+      return !existsAfter(path) || deOlderRecord(getAfter(path).data,
+        data.playerId, data.characterId, data.raidId, data.get('ownershipRevision', 0));
+    }
     function bug24PrepRecords(before, oldMember, member) {
       let oldPath = atomicRaidStateDocPath(member.playerId, oldMember.characterId + '_' + before.raidId);
       let newPath = atomicRaidStateDocPath(member.playerId, member.characterId + '_' + before.raidId);
       return bug24Unchanged(oldPath) && bug24Unchanged(newPath)
-        && (!exists(newPath) || get(newPath).data.status == 'completed')
+        && (!exists(newPath) || bug24KnownCompleted(get(newPath).data, member.playerId, member.characterId, before.raidId))
+        && bug24AssignmentAvailable({'playerId': member.playerId, 'characterId': member.characterId, 'raidId': before.raidId, 'ownershipRevision': member.ownershipRevision})
         && bug24Unchanged(weeklyRaidClaimPath(member.playerId, before.currentCycleKey, oldMember.characterId, before.raidId))
         && bug24Unchanged(weeklyRaidClaimPath(member.playerId, before.currentCycleKey, member.characterId, before.raidId));
     }
@@ -46,10 +61,9 @@ export function nextWeekPreparation(source) {
     function bug24PrepPair(before, after, oldMember, member) {
       let oldTarget = {'playerId': member.playerId, 'stateId': oldMember.characterId + '_' + before.raidId};
       let newTarget = {'playerId': member.playerId, 'stateId': member.characterId + '_' + before.raidId};
-      return bug24PrepState(before) && bug24PrepState(after)
-        && member.playerId == currentPlayerId() && oldMember.playerId == member.playerId
+      return member.playerId == currentPlayerId() && oldMember.playerId == member.playerId
         && member.characterId != oldMember.characterId
-        && deCurrentOwnership(oldMember) && deCurrentOwnership(member)
+        && deManualCurrentOwnership(oldMember) && deManualCurrentOwnership(member)
         && member.role in ['dealer', 'support']
         && member.diff(oldMember).affectedKeys().hasOnly([
           'characterId', 'characterNameSnapshot', 'classNameSnapshot', 'itemLevelSnapshot',
@@ -80,8 +94,12 @@ export function nextWeekPreparation(source) {
         && (before.visibility != 'group' || bug24PrepListing(before, after));
     }
     function bug24PrepMember(roomId, playerId, oldMember, member) {
-      return playerId == currentPlayerId() && bug24PrepPair(
-        get(recruitmentPath(roomId)).data, getAfter(recruitmentPath(roomId)).data, oldMember, member);
+      let before = get(recruitmentPath(roomId)).data;
+      let after = getAfter(recruitmentPath(roomId)).data;
+      return hasActiveBinding() && playerId == currentPlayerId()
+        && bug24PrepState(before) && after.revision == before.revision + 1
+        && after.updatedAt == request.time && member.updatedAt == request.time
+        && atomicCharacterSlot(member, oldMember.get('countedAsNonGroupMember', false)) in after.partySlots;
     }
 `;
   replaceOnce('    function atomicIsLifecycleCommand(newData) {', helpers + '\n    function atomicIsLifecycleCommand(newData) {');
@@ -109,7 +127,8 @@ export function nextWeekPreparation(source) {
   const advance = `
     function bug24AdvanceCompleted(playerId, stateId, oldData, data) {
       let room = getAfter(recruitmentPath(data.recruitmentId)).data;
-      return oldData.status == 'completed' && oldData.cycleKey < data.cycleKey
+      return bug24KnownCompleted(oldData, playerId, data.characterId, data.raidId) && oldData.cycleKey < data.cycleKey
+        && bug24AssignmentAvailable(data)
         && oldData.revision is int && oldData.revision >= 1
         && oldData.playerId == playerId && data.playerId == playerId
         && oldData.characterId == data.characterId && oldData.raidId == data.raidId
@@ -145,8 +164,8 @@ export function nextWeekPreparation(source) {
               || deReplacePriorState(playerId, stateId, resource.data, request.resource.data))
             : (${priorUpdate}))` + source.slice(updateEnd);
   replaceOnce("&& !newData.diff(oldData).affectedKeys().hasAny(['role'])",
-    "&& oldData.cycleKey < newData.cycleKey\n            && !deBlockingClaim(playerId, newData.cycleKey, newData.characterId, newData.raidId, newData.get('ownershipRevision', 0))\n            && !newData.diff(oldData).affectedKeys().hasAny(['role'])");
+    "&& oldData.cycleKey < newData.cycleKey\n            && bug24AssignmentAvailable(newData)\n            && !deBlockingClaim(playerId, newData.cycleKey, newData.characterId, newData.raidId, newData.get('ownershipRevision', 0))\n            && !newData.diff(oldData).affectedKeys().hasAny(['role'])");
   replaceOnce('        && atomicAdvanceStateMatchesSlot(recruitment, data);',
-    "        && atomicAdvanceStateMatchesSlot(recruitment, data)\n        && !deBlockingClaim(playerId, data.cycleKey, data.characterId, data.raidId, data.get('ownershipRevision', 0));");
+    "        && atomicAdvanceStateMatchesSlot(recruitment, data)\n        && bug24AssignmentAvailable(data)\n        && !deBlockingClaim(playerId, data.cycleKey, data.characterId, data.raidId, data.get('ownershipRevision', 0));");
   return source;
 }
