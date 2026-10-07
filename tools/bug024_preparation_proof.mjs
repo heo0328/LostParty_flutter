@@ -100,7 +100,11 @@ async function prepare({ id = replacement, omit = null, tamper = null, expectedR
       const eventId = `characterChanged_${recruitmentId}_${nextRevision}`;
       tx.set(doc(client, 'partyEvents', eventId), { schemaVersion: 1, eventId, recruitmentId,
         type: 'characterChanged', commandId: eventId, commandRevision: nextRevision,
-        audiencePlayerIds: before.memberPlayerIds, actorPlayerId: playerId, occurredAt: serverTimestamp() });
+        audiencePlayerIds: before.memberPlayerIds, actorPlayerId: playerId, occurredAt: serverTimestamp(),
+        ...(process.env.BUG024_SPARK_EVENT === '1' ? {
+          previousCharacterId: member.characterId, nextCharacterId: id,
+          nextOwnershipRevision: member.ownershipRevision, cycleKey: before.currentCycleKey,
+        } : {}) });
     }
     if (tamper === 'delete-old') tx.delete(doc(client, 'players', playerId, 'raidStates', `${member.characterId}_${raidId}`));
     if (tamper === 'delete-new') tx.delete(doc(client, 'players', playerId, 'raidStates', `${id}_${raidId}`));

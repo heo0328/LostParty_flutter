@@ -30,7 +30,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // It never authenticates to or deploys into the production Firebase project.
 const PROJECT_ID = 'demo-party-group-cutover';
 const rules = fs.readFileSync(
-  path.join(__dirname, '..', 'firestore.rules'),
+  process.env.PARTY_RULES_FILE || path.join(__dirname, '..', 'firestore.rules'),
   'utf8',
 );
 

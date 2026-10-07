@@ -49,6 +49,7 @@ on:
           - bug024
           - bug024-diagnosis
           - bug024-budget
+          - bug024-spark
       case:
         description: Rules regression scope
         type: choice
@@ -371,6 +372,11 @@ jobs:
           if [[ "$LEADER_PROOF_SCOPE" == bug024-budget ]]; then
             node tools/integrate_roster_rules.mjs --check --review
             proof_command="node tools/bug024_advance_budget_diagnosis.mjs"
+          fi
+          if [[ "$LEADER_PROOF_SCOPE" == bug024-spark ]]; then
+            node tools/integrate_roster_rules.mjs --check --review
+            node tools/bug024_spark_preparation_candidate.mjs --generate
+            proof_command="node tools/bug024_spark_feasibility_runner.mjs"
           fi
           npx --yes firebase-tools@15.29.0 emulators:exec --config firebase.json --only firestore --project demo-party-group-cutover "$proof_command"
 

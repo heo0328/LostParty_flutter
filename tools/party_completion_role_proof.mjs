@@ -7,10 +7,10 @@ import { doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField } from 'firebase
 import { authUid, recruitmentId, raidId, seedGroupLinkedRoom } from './party_group_cutover_rules_test.mjs';
 
 process.env.ROSTER_TRACKED_RULES = '1';
-process.env.ROSTER_COMPLEXITY_RULES_FILE = 'firestore.rules';
+process.env.ROSTER_COMPLEXITY_RULES_FILE = process.env.COMPLETION_RULES_FILE || 'firestore.rules';
 const { seedRoom, lifecycle, inspectAll } = await import('./roster_ownership_rules_proof.mjs');
 const baseline = execFileSync('git', ['show', '223e852:firestore.rules'], { encoding: 'utf8' });
-const candidate = fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8');
+const candidate = fs.readFileSync(process.env.COMPLETION_RULES_FILE || new URL('../firestore.rules', import.meta.url), 'utf8');
 const results = [];
 for (const [version, rules] of [['baseline', baseline], ['candidate', candidate]]) {
   const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutover',
