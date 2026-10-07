@@ -1,5 +1,224 @@
 # 개발 이력
 
+## 2026-10-08 Rules 전체 영향 기획 재검토·문서 복구 지점
+
+사용자가 구현 없이 기존 버그·게시 장애 반복 대응·복잡도 축소·부작용·앱 기능별 로컬 이관/삭제
+판단을 다시 상세 검토하고 문서를 커밋·푸시하도록 지시했다. 이전 커밋 금지는 이번 문서 범위에 해제됐다.
+현재fix/recurring-next-week-character-change와 원격은 시작5b24319로 일치,
+dev/main은원격조회에서도e4f8e0f였다. 일반 환경의DNS thread 실패 후 권한 확장 읽기에서 확인했다.
+
+[축소 설계](../architecture/FIRESTORE_RULES_REDUCTION_DESIGN.md) §9~15에 전체33개 허용경로의
+앱 소비·get/list/write 책임·축소 판정·부작용을 기록했다. BUG-024 준비 변경/전환과
+BUG-023 role 보완,BUG-022 count/추방/만료 종료를 구분했다. 공개v1.1.1의DI도atomic임을 확인했다.
+준비 변경의 누락listing 거절을 일반backfill과 구분했고,인증의signedIn 기반 기존 신뢰 경계,
+이벤트의과거완료/audience 보존과 앱cache·이행·구버전 경합을 명시했다.
+게시 단계별 실패 대응과,전환Rules 게시 실패 시 이행 금지·이행 후 최종게시 실패 시 동결 유지
+및자료/앱/Rules를 묶은 복구 조건을 추가했다. 구자료 잔존량·실제순감소·내부compiled는 미확인이다.
+
+- 새로 가능해진 흐름: 없음. 구현·Firebase 게시/조회·운영 데이터 이행0회.
+- 보존 확인: 비문서5개파일SHA 확인으로 추적Rules·기존초기화설정·firestore2·후보도구/테스트 보존.
+  기능동작은이번에재검증하지않았다. 이전 회귀 결과와 실기기 결과의 유효범위를 유지했다.
+- 미확인 실기기: BUG-024 두방 준비변경·타기기구성·이력보존·다음주전환/완료,향후 축소 후 앱 영향.
+- 검증: 문서내용/상대링크/외국어오입력검사,git diff --check,문서전용stage 검토. Flutter/Emulator 재실행 없음.
+- Git 범위: 앞선 미커밋 조사/설계 문서를 포함한 문서 복구 지점. 비문서 변경은 커밋 제외·그대로 유지.
+  사용자 지시에 따라 이 문서 묶음을 현재 작업 브랜치에 커밋·push하며 실제 결과는 Git 이력/종료 보고로 확인한다.
+  BUG-024 미종료로dev/main미반영·브랜치유지. 아래의 커밋/푸시 보류는 당시 이력이다.
+
+## 2026-10-07 Rules 대폭 축소 조사·설계
+
+사용자가 반복 게시 실패의 구조적 해결과 불필요 검증/로컬 이관/삭제 후보 조사를 요청했다.
+Spark 무료 유지·앱 업데이트와 데이터 이행 허용을 설계 전제로 확인했다.
+현재408f163f의 정적 조사:151427bytes·296함수·34match·118allow·최대helper깊이6,
+allow 호출 그래프 미도달0·본문 문자열 완전중복0. 의미상 중복이 없다는 증명은 아니다.
+실제 DI/목록 writer·reader/개인 완료/점유 inspector/완료 event mapper를 확인했다.
+listing 형식 혼용과 직접 표시 소비, 현재도 읽는 구 Claim/assignment, 과거 완료 이력의
+completionTargets 의존을 확인해 검사만 삭제하는 안을 배제했다.
+[축소 설계](../architecture/FIRESTORE_RULES_REDUCTION_DESIGN.md)에 우선순위·책임 경계·
+단계별 이행/검증·게시 여유 목표를 기록했다. 측정한 대상 bytes는 제거 가능량이 아니며
+30% source 축소 목표 및 실행 크기 여유는 아직 달성/입증되지 않았다.
+
+- 새로 가능해진 흐름: 없음. 설계만 완료했고 운영 BUG-024는 미적용 상태다.
+- 보존 확인한 기존 흐름: 코드/Rules/생성기 무수정, 기존 사용자 변경·미추적 자료 보존.
+  기능 회귀를 새로 실행해 확인했다는 뜻은 아니다.
+- 미확인 실기기 항목: 기존 BUG-024 및 구조 변경 후 목록/원장/이력 동작. 사용자 인수는 후속이다.
+- 검증: 기존 정적 audit 실행과 함수 선언 소스 크기 집계, 원본 코드/계약 검토, 문서 diff 검사.
+  Flutter/Emulator 테스트·원격 Firebase 요청·실제 이행·배포는0회.
+- 현재fix/recurring-next-week-character-change 유지·설계 완료/구현 대기·미커밋·dev미반영·push없음.
+
+## 2026-10-07 조사 내역 문서 보존·작업 보류
+
+사용자가 현재까지 확인한 내역만 기록하고 커밋·푸시하지 않도록 지시했다.
+검사/저장 성공과 활성화400 실패, 기존 활성본 유지, 로컬5개 회귀 통과 및coverage 내보내기
+한도, 미확정 compiled 크기/원인, 다음 변환 제안을 기존 기록과 대조해 보존했다.
+NEXT_WORK와AI_CONTEXT에 새 지시 전 추가 조사·구현·검증·게시 보류를 명시했다.
+이번 구간은 문서만 수정했다. 기존 코드 변경·미추적firestore2.rules·후보 도구를 그대로 유지했다.
+검증은git diff --check와내용검토만 수행. 커밋·푸시·병합·추가원격요청없음.
+현재fix/recurring-next-week-character-change·보류·미커밋·dev미반영·브랜치유지.
+
+## 2026-10-07 22:22~22:23 KST 제한 스코프 후보 격리 게시1회 실패
+
+사용자 `진행`으로고정명세의rules-test-1-81e31/(default)/cloud.firestore 후보1회를승인받았다.
+현재fix/recurring-next-week-character-change/5b24319·기존미커밋변경을보존하고경로/SHA/
+5개suite결과를확인했다. 후보e892c33e/151429bytes, 추적Rules408f163f/실제pipeline불변.
+사전GET200으로기준36b5920e활성확인. test200/경고0·create200/응답sourceSHA일치이나
+PATCH400 INVALID_ARGUMENT로활성화실패했다. 생성Ruleset a8100528-fe72-4375-b2f4-83c7a94c9e70.
+사후GET200에서기준36b5920e/Ruleset36f81396-b9eb-4efb-9210-b5fdcfce7dff/
+updateTime2026-10-07T10:05:52.401643Z가그대로유지됐다.
+게시1/1소진·자동재시도0·createfallback0·운영lost-party쓰기0. executable미조회.
+근거: coverage/bug024/publish-scope/isolated-candidate-result.json,isolated-candidate-publish.log.
+새로확인: helper17개scope이동만으로는활성화문제가해결되지않는다. compiled크기/원인미확정.
+보존확인: 원격기존활성본유지, 로컬권한회귀5개통과결과재사용·Rules/앱조건변경없음.
+실기기미확인·운영도입보류. 다음단일로컬변환설계를NEXT_WORK에기록, 아직구현하지않았다.
+문서diff검사. 진행중·미커밋·dev/main미반영·push없음·브랜치유지.
+
+## 2026-10-07 HTTP/2 정상화 후 제한 스코프 후보5개 회귀 통과
+
+사용자 후속 대조: HTTP/1 포트11805/8080·HTTP/2 포트11808/8080 모두ok.
+AdGuard localhost 필터 대조 후 로컬 최소/후보 Rules 로드도200이다. 에이전트 서비스/설정 변경없음.
+첫 runtime 실행은 fixture 생성 잠금 timeout으로 중단했고 검증 통과로 세지 않았다.
+기존 활성본/추적본/후보/최소 허용 Rules·단일/다중 문서 transaction·fixture 조회를 분리했다.
+최초 Java 로그에는 한국어 JValidationMessages 리소스 누락 예외가 있었다. 직접 실행 도구에
+빠진 CLI 기본 영어 JVM 옵션을 적용하자 동일1.22.0에서 기존/후보의 생성·신청·승인·8인 준비가
+모두통과했다. 중간1.21.0 대조도한국어리소스예외로실패했고 버전회귀 원인으로 확정하지 않았다.
+공식 배포 SHA검증한1.21 JAR는ignored 작업폴더에만 두며 전역 runtime/CLI는변경없음.
+
+최종 후보e892c33e의 runtime30·완료역할27·8인캐릭터배치·수동22·개인15,5개suite 모두exit0.
+새로 확인한 흐름: helper17개 스코프 후보의8인 준비·전환·완료 및위조/부분쓰기 거절.
+보존 확인: 기존 완료역할·stub캐릭터변경/빈자리이동·수동/개인완료와원자성 경계.
+coverage응답은137169111bytes가Emulator100MiB전송한도를넘어HTTP429로미확보다.
+이는권한접근/평가한도와구분하며 suite로그/runtime결과JSON은보존했다.
+근거: coverage/bug024/publish-scope/{suites.json,validated-run-en.log,validated-emulator-en.log,runtime/}.
+실기기미확인·원격활성화미확인. 추적Rules408f163f/생성pipeline/앱코드불변.
+격리rules-test-1-81e31 후보1회 명세를준비했으며 새승인전원격요청없음. 운영추가쓰기0회.
+현재fix/recurring-next-week-character-change·진행중·미커밋·dev/main미반영·push없음·브랜치유지.
+
+## 2026-10-07 사용자 일반 터미널 재현·AdGuard 대조 준비
+
+사용자가 최소 대조 출력4줄을 전달했다. HTTP/1 포트5188/8080 모두ok,
+HTTP/2 포트5191/8080 모두Protocol error로 Codex 밖에서도재현됐다.
+읽기전용서비스/프로세스확인: Adguard Service Running, Adguard·AdguardSvc 실행,
+설치버전8.0.2/8.0.5584. Winsock 공급자경로는mswsock.dll뿐이었다.
+AdGuard설정DB는mode=ro 열기도실패하여localhost필터현재값은확보하지못했다.
+공식문서에localhost필터옵션이있어우선대조대상으로제시했다. 실행중이라는근거만으로
+AdGuard를원인확정하지않는다. 사용자설정조작후동일최소대조의성공여부가필요하다.
+참고: https://adguard.com/kb/adguard-for-windows/settings/app-settings/advanced-settings/
+OS빌드26300.9457/DisplayVersion26H2도확인했지만이정보만으로Windows알려진문제에귀속하지않는다.
+서비스중지·설정변경·업데이트·Rules조건수정·게시없음. 기존후보/정적검증결과유지,
+권한런타임/실기기미확인. 문서diff검사·목적브랜치유지·미커밋·dev/main미반영·push없음.
+
+## 2026-10-07 로컬 Emulator 연결 원인 분리 — Rules 외 최소 HTTP/2 실패
+
+사용자 후속 `진행`으로 로컬 연결 진단과 후보 실행 검증을 이어갔다. 필수 문서/Git/직전 로그를
+확인하고 같은 목적브랜치와 사용자 로컬 변경을 유지했다. Rules/앱/생성 pipeline 수정 없음.
+
+- 캐시 Emulator1.22.0의 HTTP JSON 요청은 내부 Netty gRPC 채널로 전달된다. Java FINE 로그에서
+  localhost:8080으로HTTP/2 SETTINGS를 보낸 직후 채널종료·503을 확인했다. 원시 로그는ignored.
+- Emulator 없는 Node HTTP/1·HTTP/2 최소서버 대조: HTTP/1 임의포트/8080 모두ok,
+  HTTP/2 양쪽Protocol error. 별도 번들Node(동일24.19.0)에서도ECONNRESET/Protocol error.
+  127.0.0.1·127.0.0.2·::1 비교도HTTP/2 정상요청 실패. 후보내용과 독립적인 통신 실패 근거다.
+- 정확한 차단 주체와Node 버전 의존성은 미확인. HTTP/2 실패를 운영PATCH400/콘솔503 원인으로
+  연결하지 않는다. Win서비스 정보는현재 실행권한에서조회되지 않았고 시스템설정변경은없다.
+- 일반PowerShell의최소대조결과를사용자에게요청했다. script는ignored
+  coverage/bug024/publish-scope/node-transport-control.cjs이며 결과4줄 출력·실패exit1·JSON저장,
+  임시localhost서버만열고종료한다. Firebase인증/외부접속/배포없음. 구문검사통과.
+- 후보5개suite는정상Rules로드가선행돼야하므로재반복하지않았다. 기존정적7/7은변경없어재사용.
+  새사용자흐름없음·권한런타임/실기기미확인·추가원격게시0회·운영변경0회.
+  추적Rules SHA408f163f 유지·diff검사수행. 목적브랜치유지·문서미커밋·dev/main미반영·push없음.
+
+## 2026-10-07 Rules 제한 스코프 후보 생성 — 정적 통과·Emulator 검증 보류
+
+사용자 후속 `진행`으로 17개 단일 기능 helper 선언 위치만 보정한 별도 후보를 생성했다.
+tools/rules_bug024_scope_candidate.mjs와 계약 테스트를 추가했다. 본문/allow 조건 일치,
+호출 가시성·wildcard capture·주변 match 구조 보존을 검사한다. 추적 Rules/실제 pipeline은 불변이다.
+
+- 후보 SHA256 e892c33e21181a7c0d5e1f0a31a2ca418b8c6a32bed26eab35ddf2cb6c80c37d,
+  151429bytes·함수296개·allow118개. 원본보다2bytes 커서 소스 축소 성과로 해석하지 않는다.
+- node --test tools/rules_bug024_scope_candidate.test.mjs tools/rules_executable_compact.test.mjs:7/7 통과.
+  integrate_roster_rules.mjs --check --review 통과·추적 SHA408f163f 유지·diff 검사 수행.
+- CLI Emulator는 hub4400 준비 실패. 직접 Java 실행은 sandbox loopback Permission denied,
+  권한 확장 후 시작됐으나 Rules 로드 내부 연결503/UNAVAILABLE였다. 최소 deny-all Rules도
+  실패하며 localhost/IPv4/3초 준비 대기 비교도 같았다. 운영 콘솔503과 같은 원인으로 단정하지 않는다.
+  기존5개 suite는 Rules 로드 준비 단계 실패로 권한 동작 성공/실패를 판정하지 않는다.
+  증거: coverage/bug024/publish-scope의 manifest.json·suites.json·probe*.log·direct-run.log.
+- 새 사용자 흐름 없음·기존 흐름은 정적 보존만 확인·런타임 회귀/실기기 미확인.
+  Flutter 코드 무변경으로 재검증 생략. 추가 원격 게시0회·운영 변경 없음.
+- 다음은 Emulator 연결 정상화 후5개 suite, 이후 별도 승인된 격리 후보1회 게시다.
+  목적브랜치 유지·도구/문서 미커밋·dev/main 미반영·push없음·사용자 초기화 변경 보존.
+
+## 2026-10-07 Rules 격리2회 대조 — 기준 성공·후보 활성화400 재현
+
+사용자가 rules-test-1-81e31 조회 및 성공본1회 후 성공 시 실패본1회, 최대2회 게시를 `진행`으로
+승인했다. 해당 새 승인으로 이전 자동 승인 검토의 구체적 대상 승인 부족을 해소했다.
+프로젝트/기본 DB/활성 release GET200: ACTIVE·Native/asia-northeast3·기존23702cbc를 확인했다.
+KST19:05~19:06에 같은release/payload로 native fetch를 각 단계1회씩 실행했다.
+
+- 기준36b5920e/134301bytes: test200/경고0·create200/응답소스일치·PATCH200·사후활성해시일치.
+  Ruleset36f81396-b9eb-4efb-9210-b5fdcfce7dff. V1 executable GET200/242981bytes, ID일치.
+- 후보408f163f/151427bytes: test200/경고0·create200/소스일치·PATCH400 INVALID_ARGUMENT.
+  Ruleset16ba19b6-418f-4da6-af91-645a9580dd48. 사후활성은위기준본36b5920e 유지.
+- 판정: 운영프로젝트/CLI만의 현상은 아니며 후보내용에따라 활성화가실패한다. 실행코드규모/구조가
+  우선가설이다. 후보compiled크기와정확한400내부원인은여전히미확인, 한도초과확정아님.
+- 예산2/2소진·자동재시도0·create fallback0·운영lost-party 쓰기0회. 운영은이번API대상에포함하지않았다.
+  테스트프로젝트는기준본활성상태로남았으며추가원복/삭제하지않았다. 근거는ignored
+  coverage/rules-debug-20261007/isolated-result.json·test-project-preflight.json이다.
+
+다음권고는기능을보존하는17개단일기능helper의제한스코프보정과로컬동등성검증이다.
+이번승인에보정구현·추가테스트/운영게시를포함하지않는다. 새사용자흐름없음·실기기미확인/보류.
+생성/앱/Rules코드변경없어Flutter/Emulator반복없음. 문서diff검사수행.
+목적브랜치유지·문서미커밋·dev/main미통합·push없음·초기화로컬변경보존·BUG-024미종료.
+
+## 2026-10-07 Rules 게시 차단 1단계 로컬 비교 완료
+
+사용자 `진행합니다` 지시 후 기존 목적 브랜치에서 가독본·생성기·성공 게시 도구·실제 Router/DI와
+guard writer/Rules를 비교했다. 성공36b5920e와 실패408f163f를 각각 재생성해 보존 활성본/추적본과
+바이트 일치를 assert했다. 추가25/제거1/기존 함수 변경3/allow 변경7·기존 함수 스코프 변경0이었다.
+추가 root helper21개 중17개는 단일 기능 이용 범위여서 제한 스코프 후보로 정리했다.
+기존 성공 요청도 동일CLI updateRelease여서 payload/updateMask 가설의 우선순위를 낮췄다.
+compiled 규모/구조는 가설 유지, 특정 함수 원인이나 용량 초과 확정 아님.
+
+격리 `rules-test-1-81e31` 프로젝트·DB·활성 Rules GET 사전 조회는 자동 승인 검토가 해당 비공개
+대상의 구체적인 사용자 승인 부재로 실행 전 차단했다. 원격 조회/게시0회, 우회·재시도0회다.
+기준본1회 후 성공 시 실패본1회, 최대2회·운영 쓰기0회 실험 manifest를 준비하고 대상 승인을 요청한다.
+근거는 coverage/rules-debug-20261007의 phase1-report.md/comparison.json/experiment-manifest.json.
+
+새 사용자 흐름 없음, 기존 규칙/기능 코드·생성기/초기화 로컬 상태 보존. 실기기는 미확인·보류다.
+검증은 재생성2개 해시/바이트 일치 assert와 문서 diff 검사. Flutter/Emulator는 변경 없어 반복하지 않았다.
+문서 미커밋·dev/main 미통합·push 없음·목적 브랜치 유지. BUG-024/게시 장애는 미종료다.
+
+## 2026-10-07 Rules 게시 차단 해결 기획·설계
+
+사용자 요청으로 기존 목적 브랜치에서 문서 설계만 진행했다. 필수 진입 문서와 실제 Git 상태,
+최신 디버그 근거·CLI fallback·생성 pipeline·과거 성공/실패 비교 및 공식 PATCH/크기/getExecutable
+계약을 대조했다. [진단 문서](ROSTER_RULES_PUBLISH_DIAGNOSIS.md)에 현재 설계를 추가하고,
+10월5일의 '해결' 결론이 현재 BUG-024 실패까지 해결했다는 뜻으로 읽히지 않게 시점을 명시했다.
+
+권고 순서는 원격 쓰기 없는 기준 비교, 새 승인하의 격리 기준/실패본 대조, 단일 기능 동등 후보,
+검증된 전체본의 새 승인 운영1회다. 기준도 실패할 때 요청/환경 분기로 전환하고, 내부 원인이
+노출되지 않으면 지원용 자료를 준비하는 중단 기준을 정했다. source/compiled 크기와 실제 활성
+해시를 분리하며 기능 삭제·권한 완화·무변경 재시도·분할본 운영을 해결책에서 제외했다.
+
+새 사용자 흐름 없음. 기존 운영본 보존은 직전 디버그 사후GET 근거이며 이번에 새 검증하지 않았다.
+미확인 실기기 항목과 BUG-024 미종료 상태를 유지한다. 문서 내용/링크 및 git diff --check 확인.
+기능 코드·Rules·생성기 변경, Flutter/Emulator 재실행, 원격 게시/데이터 변경0회.
+현재 브랜치 유지·문서 미커밋·dev/main 미통합·push 없음. 기존 초기화 파일의 로컬 변경 보존.
+
+## 2026-10-07 Rules CLI 디버그 게시 1회 — 최초 실패 400, 후속 409 확인
+
+사용자가 업로드·게시를 디버그 모드로 정확히1회 실행하도록 새로 승인했다. 기존 목적 브랜치
+fix/recurring-next-week-character-change의5b24319를 유지하고 추적 Rules·코드는 변경하지 않았다.
+firebase.json/firestore.rules·lost-party·생성 일치·diff 검사를 확인했다. 기존 검증본과 동일하여
+Flutter/Emulator 검증은 반복하지 않았다. 초기화 파일의 기존 로컬 변경은 보존했다.
+
+- KST2026-10-07 18:48, Firebase CLI15.32.1의 `deploy --only firestore:rules --project lost-party --debug --non-interactive`를1회 실행했다. 종료코드1, 에이전트 재시도0회.
+- `/test`200/본문{}로 오류·경고0, `/rulesets`POST200. 생성df0f3c9d-24c9-4fe5-abdd-85f89f6d86ea의 응답 소스는 로컬408f163f/151427bytes와 바이트 일치했다.
+- 최초 실패는 `/releases/cloud.firestore`PATCH400 `INVALID_ARGUMENT: Request contains an invalid argument.`다. CLI의updateOrCreateRelease가 모든update 실패를catch해createRelease를 호출하므로 이어진POST409 ALREADY_EXISTS가 최종 오류로 표시됐다. 409는 동일 Rules 내용 판정이나 최초 실패 원인이 아니다.
+- 읽기 전용 사후GET으로 실제 활성Ruleset26621a37-ae16-45c4-9858-f10380439e28, SHA36b5920e, updateTime2026-10-06T08:45:58.539478Z 유지 확인. 업로드 성공과 운영 활성화 성공을 구분한다. 콘솔 최신 시간/별표만으로 운영 성공을 판단했던 채팅 설명은 API 근거로 정정했다.
+- 내부400 원인은 미확정이다. 기존 실행 코드 규모/구조 가설은 유지하지만 서버가 상세원인·후보 실행 크기를 제공하지 않아 용량 초과로 확정하지 않는다. 다음 조사는 활성화 단계에 한정하며 새 승인 없이 재게시·기능 삭제·권한 완화를 하지 않는다.
+- 근거: ignored `coverage/rules-debug-20261007/deploy-once.log`, `firebase-debug.log`, `result.json`, `active-after.rules`. 인증정보가 포함될 수 있는 원시 디버그 로그는 외부 공유하지 않는다.
+
+새로 가능해진 사용자 흐름 없음, 기존 운영 활성본 유지 확인. 실기기 항목은 미확인·착수 보류다.
+BUG-024 미종료, dev/main 미통합·push 없음·목적 브랜치 유지. Rules 외 Firebase 배포 없음.
+
 ## 2026-10-07 BUG-024 보완본 재게시 — 컴파일 통과·활성화 실패
 
 사용자가 경고 보완본의 재배포1회를 `실행`으로 승인했다. 필수 문서·기존 목적 브랜치5c4eac5·

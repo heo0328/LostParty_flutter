@@ -37,7 +37,9 @@
 
 ## Architecture
 
-- [완료 반복방의 다음 주 캐릭터 변경 설계](architecture/RECURRING_NEXT_WEEK_CHARACTER_CHANGE_DESIGN.md): BUG-024 원인 분석, 완료 기록 보존과 준비 변경·전환의 저장 경계. 구현 후보는 Rules 한도·회귀 실패로 배포 보류.
+- [Firestore Rules 대폭 축소 설계](architecture/FIRESTORE_RULES_REDUCTION_DESIGN.md): Spark 무료 유지, 전체 데이터 영역별 앱 영향·로컬 이관/삭제 판단·부작용·게시 실패/이행 복구와 단계별 축소 설계. 구현·운영 이행은 미착수.
+
+- [완료 반복방의 다음 주 캐릭터 변경 설계](architecture/RECURRING_NEXT_WEEK_CHARACTER_CHANGE_DESIGN.md): BUG-024 원인·완료 기록 보존·준비 변경/전환 경계. Spark C 제한 회귀 통과 후 원격 활성화400으로 운영 반영 보류.
 - [반복방 서버 트랜잭션 후속 설계](architecture/RECURRING_CYCLE_SERVER_TRANSACTION_DESIGN.md): 준비 변경·주차 전환의 서버 권한, 원자성, 재진입과 전환 순서. Spark 무료 유지 결정으로 중단한 대안.
 
 - [반복방 Spark 무료 대안 재설계](architecture/RECURRING_CYCLE_SPARK_ALTERNATIVE_DESIGN.md): 현재 실행 기준. C 상태 확장 상세 설계·격리된 8인 선행 검증25/25 통과. 앱 호환 구현·운영 도입은 남음.
