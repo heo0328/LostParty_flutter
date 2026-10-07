@@ -1,5 +1,16 @@
 # 버그 리포트
 
+## BUG-024. 완료 반복방 다음 주 참가 캐릭터 변경 실패 (2026-10-07, 설계)
+
+- 사용자 보고: BUG-023 완료 성공 후 다음 주 대기 상태의 두 방에서 모든 계정의 캐릭터 변경 실패.
+- 노르딘 모집/Ailker `EsDaq4qFhXe9SDXQv5eV`, 4막하드/니티안 `8CNzjWUjIE43uCjkvOye`.
+- 팝업: `모집 또는 멤버 정보를 찾지 못했습니다.` 문서 삭제나 Rules 거절을 확정하는 메시지가 아니다.
+- 코드상 atomic Repository는 completed raidState도 notFound로 반환하고 mapper는 active 회차만 허용한다.
+  v1.1.0에도 mapper 제한이 있어 BUG-023 역할 보완으로 새로 생긴 조건은 아니다.
+- 이번에 운영 데이터·런타임 요청 로그는 재조회하지 않았다. 두 요청의 정확한 반환 지점 재현은 미확인이다.
+- 상태: 분석·설계, 구현 미착수. [상세 설계](../architecture/RECURRING_NEXT_WEEK_CHARACTER_CHANGE_DESIGN.md).
+
+
 ## BUG-023. 캐릭터 변경 후 반복 모집 전체 완료 실패 (2026-10-06 완료)
 
 여러 테스트에서 반복되어 최종 확인을 지연시킨 장애다. 운영 읽기 조회에서

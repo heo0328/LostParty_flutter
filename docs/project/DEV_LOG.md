@@ -1,5 +1,28 @@
 # 개발 이력
 
+## 2026-10-07 BUG-024 분석·설계 문서화
+
+사용자가 완료 반복방 두 곳의 다음 주 캐릭터 변경 실패를 보고하고 dev 분기·설계·커밋을 지시했다.
+origin/dev fetch 후 dev와 차이 0/0 확인, e4f8e0f에서 `fix/recurring-next-week-character-change` 생성.
+기존 목적 브랜치와 과거 완료 브랜치를 확인했으며 이 브랜치는 준비 변경과 후속 주차 전환 검증 완료가 종료 기준이다.
+
+실제 Router/adapter, atomic Repository/mapper, UI 및 주차 전환 writer를 조사했다.
+completed raidState를 notFound로 반환하고 mapper도 active 회차만 허용하는 연결 누락을 확인했다.
+v1.1.0 mapper에서도 같은 제한을 확인했다. BUG-023의 완료 성공은 보존하며 다음 주 준비 성공으로 확대하지 않는다.
+검토용 Rules에는 atomic active 전용 검사와 legacy 준비 경로가 병존한다. 생성 일치는 구현 전 검증 과제로 남겼다.
+운영 데이터 재조회·실기기 재현·Rules 실행 검증은 이번에 하지 않았다.
+
+완료 기록을 수정하지 않는 준비 전용 저장 경계, 구성·membership·목록·이벤트 원자성,
+반복 변경·소유권·revision 경합·다음 주 전환 회귀 기준을 상세 설계에 기록했다.
+동일 캐릭터 역할 변경의 별도 계약 불일치를 발견했으나 기능 범위를 확장하지 않았다.
+[설계](../architecture/RECURRING_NEXT_WEEK_CHARACTER_CHANGE_DESIGN.md), 실행 기준은 NEXT_WORK 참조.
+
+새로 가능해진 앱 흐름은 없다(문서만 변경). 기존 완료 성공은 이전 사용자 확인 근거이며 이번 재검증이 아니다.
+미확인 실기기 항목은 준비 변경·기기 간 반영·완료 기록 보존·이후 주차 전환과 완료다.
+검증은 문서 내용 대조와 git diff --check이며 Flutter/Rules 테스트와 배포는 실행하지 않는다.
+문서 6개만 커밋 대상으로 지정한다. 초기화 파일의 기존 로컬 상태는 보존한다.
+작업 브랜치를 유지하며 dev/main 통합·push는 이번 범위에 포함하지 않는다.
+
 ## 2026-10-06 Android 1.1.1 공개 게시 완료
 
 - 사용자 지시로 main3f8798f 기준 release/1.1.1에서 버전을1.1.1+3으로 올렸다.

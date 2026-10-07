@@ -37,6 +37,8 @@
 
 ## Architecture
 
+- [완료 반복방의 다음 주 캐릭터 변경 설계](architecture/RECURRING_NEXT_WEEK_CHARACTER_CHANGE_DESIGN.md): BUG-024 원인 분석, 완료 기록 보존과 준비 변경의 저장 경계. 구현 미착수.
+
 데이터 관계, Firebase 전환 및 백엔드 구조를 관리한다.
 
 - [`architecture/FIREBASE_PARTY_PRODUCT_FLOW.md`](architecture/FIREBASE_PARTY_PRODUCT_FLOW.md): Firebase 파티 제품 흐름의 최신 통합 기준
