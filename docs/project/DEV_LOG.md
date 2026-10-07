@@ -1,5 +1,44 @@
 # 개발 이력
 
+## 2026-10-07 BUG-024 구현 후보 검증 실패·서버 트랜잭션 후속 설계
+
+사용자 승인 수정안으로 후보 목적 분리, 완료 state/Claim을 쓰지 않는 준비 Write Plan,
+필수 목록 누락 거절, revision 선검사, 이전 완료 state 전환 보호와 Rules 원자 결합을 구현했다.
+새로 가능해진 흐름은 검증 후보의 준비 변경/A→B→C이며 운영 제공 완료가 아니다.
+소유권·활성 점유·현재 Claim·미확인 기록 보호는 한도 해결을 위해 완화하지 않았다.
+
+제한 Flutter 정책/Write Plan 27개, 변경 앱 파일 analyze, 포맷, git diff --check,
+Rules 생성 일치와 rules_completion_role 정적 테스트는 통과했다. 전체 Flutter suite/analyze는 반복하지 않았고
+기존 전체 테스트22건/analyze51건 문제를 해결한 것으로 기록하지 않는다.
+
+[Linux Actions 37570086691](https://github.com/heo0328/LostParty_flutter/actions/runs/37570086691):
+BUG-024 30개 중 22개 성공, 8개 실패. 기록 없는 대상은 8인 준비·연속 변경 후 전환에서 접근 오류,
+완료 기록 대상은 준비 변경 자체에서도 접근 오류가 났다. 정상 요청 실패는 거절 검증 성공으로 보지 않는다.
+독립 실행한 BUG-023 proof는 기존 normal-advance 실패, character-placement proof는 제자리 변경 성공 후
+7인 빈자리 이동에서 1000식 평가 한도 실패다. 기존 활성 변경 전체를 보존 검증 완료로 선언하지 않는다.
+
+[격리 접근 진단 37569949642](https://github.com/heo0328/LostParty_flutter/actions/runs/37569949642):
+추적본 동등/legacy 경로만 공유/Claim 경로만 공유는 실패, 둘 다 공유할 때 첫 8인 준비·전환·전체 완료 성공.
+실제 점유/Claim 경로 보호를 제거하는 진단본이므로 배포용 수정으로 사용하지 않는다.
+진단 스크립트 exit0은 진단 완료를 뜻하며 추적 Rules 통과를 뜻하지 않는다.
+후보 Rules 142495 bytes, SHA256 7456bdca7d506fffca4becede25a83bf6e9b8dff15ba2c0f7d0add158b6a1336.
+
+운영 배포 시도 0회. 조회한 활성 Rules는 이전 성공본 134301 bytes,
+SHA256 36b5920e7677b395192e47e05daeea1eec4512beaf19250bf6c5a82eff352e3d,
+ruleset 26621a37-ae16-45c4-9858-f10380439e28. 이번 후보를 활성본으로 바꾸지 않았다.
+운영 컴파일 경고 0개 완료 조건은 이번 미배포 후보에 대해 충족 선언하지 않는다.
+두 실제 방의 변경·기기 간 반영·완료 보존·다음 주 전체 완료는 모두 미확인이다.
+
+사용자가 한도 진단 후 서버 트랜잭션 후속 설계 진행을 승인했다.
+[후속 설계](../architecture/RECURRING_CYCLE_SERVER_TRANSACTION_DESIGN.md)는 준비 변경과 advanceCycle을 함께
+서버로 옮기고 인증 binding·소유권/점유·서버 주차·원자 목록/이벤트·중복 영수증·Rules 직접 쓰기 차단을 정의한다.
+Functions/App Check 로컬 연결 부재, 구버전 전환 영향과 배포 전 원격 환경 확인을 명시했다.
+이번 후속 단계는 문서 설계만 수행했으며 Functions 구현·배포나 후보 코드 추가 수정은 하지 않았다.
+
+기존 목적 브랜치에서 후보 013051c까지 커밋·push, dev/origin dev e4f8e0f 유지, main 미통합.
+후속 설계 문서도 같은 브랜치에 복구 지점을 남긴다. 초기화 파일의 기존 로컬 상태는 보존·커밋 제외.
+BUG-024는 미종료이며 브랜치를 유지한다.
+
 ## 2026-10-07 BUG-024 분석·설계 문서화
 
 사용자가 완료 반복방 두 곳의 다음 주 캐릭터 변경 실패를 보고하고 dev 분기·설계·커밋을 지시했다.

@@ -4,7 +4,10 @@
 
 완료 반복방의 다음 주 참가 캐릭터 변경이 문서/멤버 없음 안내로 실패한다.
 atomic 변경 경로의 active 상태 제한을 확인했다. BUG-023 전체 완료 성공과 구분한다.
-dev 기준 `fix/recurring-next-week-character-change`에서 분석·설계만 기록했다. 구현 미완료.
+dev 기준 `fix/recurring-next-week-character-change`의 구현 후보는 8인 Rules 한도·회귀 실패로 배포 보류다.
+사용자 승인으로 준비 변경·전환의 [서버 트랜잭션 설계](../architecture/RECURRING_CYCLE_SERVER_TRANSACTION_DESIGN.md)를 완료했다.
+서버 구현·배포 미착수, 운영 Rules 게시 0회다. BUG-024는 열린 상태다.
+운영 게시와 실기기 확인 결과는 NEXT_WORK/DEV_LOG를 따른다. 실기기 확인 전 종료·dev/main 통합하지 않는다.
 [실행 계획](NEXT_WORK.md), [분석·설계](../architecture/RECURRING_NEXT_WEEK_CHARACTER_CHANGE_DESIGN.md).
 
 ## 최신 공개 릴리즈 — Android 1.1.1+3 (2026-10-06)
