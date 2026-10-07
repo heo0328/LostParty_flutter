@@ -35,9 +35,9 @@ class PartyAtomicCharacterChangeWritePlan {
 
   Map<String, Object?> get recruitmentPatch => _values.recruitmentPatch;
   Map<String, Object?> get membershipPatch => _values.membershipPatch;
-  String get previousRaidStateId => _values.previousRaidStateId;
-  String get nextRaidStateId => _values.nextRaidStateId;
-  Map<String, Object?> get nextRaidState => _values.nextRaidState;
+  String get previousRaidStateId => _values.previousRaidStateId!;
+  String get nextRaidStateId => _values.nextRaidStateId!;
+  Map<String, Object?> get nextRaidState => _values.nextRaidState!;
   Map<String, Object?> get event => _values.event;
 
   static _CharacterChangeValues _build({
@@ -52,9 +52,13 @@ class PartyAtomicCharacterChangeWritePlan {
     required Map<String, Object?> membershipPatch,
     required Object serverTimestamp,
     required int? ownershipRevision,
+    bool nextWeekPrep = false,
   }) {
     if (aggregate.status != PartyRecruitmentStatus.active ||
-        aggregate.currentCycleStatus != PartyRaidStateStatus.active) {
+        (nextWeekPrep
+            ? !aggregate.continueTogether ||
+                  aggregate.currentCycleStatus != PartyRaidStateStatus.completed
+            : aggregate.currentCycleStatus != PartyRaidStateStatus.active)) {
       throw StateError('활성 회차에서만 캐릭터를 변경할 수 있습니다.');
     }
     final oldIndex = aggregate.partySlots.indexWhere(
@@ -151,23 +155,25 @@ class PartyAtomicCharacterChangeWritePlan {
         'partyIndex': partyIndex,
         'slotIndex': slotIndex,
       }),
-      previousRaidStateId: previousRaidStateId,
-      nextRaidStateId: nextRaidStateId,
-      nextRaidState: Map.unmodifiable({
-        'schemaVersion': 1,
-        'playerId': playerId,
-        'characterId': newCharacterId,
-        'role': newRole.name,
-        'ownershipRevision': ?ownershipRevision,
-        'raidId': raidId,
-        'difficultyId': difficultyId,
-        'cycleKey': aggregate.currentCycleKey,
-        'status': 'active',
-        'source': 'party',
-        'recruitmentId': aggregate.recruitmentId,
-        'revision': 1,
-        'updatedAt': serverTimestamp,
-      }),
+      previousRaidStateId: nextWeekPrep ? null : previousRaidStateId,
+      nextRaidStateId: nextWeekPrep ? null : nextRaidStateId,
+      nextRaidState: nextWeekPrep
+          ? null
+          : Map.unmodifiable({
+              'schemaVersion': 1,
+              'playerId': playerId,
+              'characterId': newCharacterId,
+              'role': newRole.name,
+              'ownershipRevision': ?ownershipRevision,
+              'raidId': raidId,
+              'difficultyId': difficultyId,
+              'cycleKey': aggregate.currentCycleKey,
+              'status': 'active',
+              'source': 'party',
+              'recruitmentId': aggregate.recruitmentId,
+              'revision': 1,
+              'updatedAt': serverTimestamp,
+            }),
       event: _event(
         eventId: eventId,
         type: 'characterChanged',
@@ -178,6 +184,40 @@ class PartyAtomicCharacterChangeWritePlan {
       ),
     );
   }
+}
+
+/// Completed recurrence preparation deliberately exposes no raidState writes.
+class PartyAtomicNextWeekCharacterChangeWritePlan {
+  PartyAtomicNextWeekCharacterChangeWritePlan({
+    required PartyCommandAggregate aggregate,
+    required RecruitmentPartyRules rules,
+    required String playerId,
+    required String newCharacterId,
+    required String newClassKey,
+    required PartyRole newRole,
+    required String raidId,
+    required String difficultyId,
+    required Map<String, Object?> membershipPatch,
+    required Object serverTimestamp,
+    required int ownershipRevision,
+  }) : _values = PartyAtomicCharacterChangeWritePlan._build(
+         aggregate: aggregate,
+         rules: rules,
+         playerId: playerId,
+         newCharacterId: newCharacterId,
+         newClassKey: newClassKey,
+         newRole: newRole,
+         raidId: raidId,
+         difficultyId: difficultyId,
+         membershipPatch: membershipPatch,
+         serverTimestamp: serverTimestamp,
+         ownershipRevision: ownershipRevision,
+         nextWeekPrep: true,
+       );
+  final _CharacterChangeValues _values;
+  Map<String, Object?> get recruitmentPatch => _values.recruitmentPatch;
+  Map<String, Object?> get membershipPatch => _values.membershipPatch;
+  Map<String, Object?> get event => _values.event;
 }
 
 class PartyAtomicRepositionWritePlan {
@@ -361,9 +401,9 @@ class _CharacterChangeValues {
   });
   final Map<String, Object?> recruitmentPatch;
   final Map<String, Object?> membershipPatch;
-  final String previousRaidStateId;
-  final String nextRaidStateId;
-  final Map<String, Object?> nextRaidState;
+  final String? previousRaidStateId;
+  final String? nextRaidStateId;
+  final Map<String, Object?>? nextRaidState;
   final Map<String, Object?> event;
 }
 

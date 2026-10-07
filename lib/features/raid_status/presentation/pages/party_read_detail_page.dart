@@ -1238,6 +1238,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       );
       return;
     }
+    final isNextWeekPrep = summary.continueTogether && summary.isCycleCompleted;
     final me = _members.firstWhere(
       (member) => member.playerId == widget.playerId,
     );
@@ -1246,6 +1247,9 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     try {
       candidates = await candidateService.load(
         RecruitmentLeaderCandidateQuery(
+          purpose: isNextWeekPrep
+              ? RecruitmentCandidatePurpose.nextWeekPreparation
+              : RecruitmentCandidatePurpose.currentCycle,
           raidId: summary.metadata.raidId,
           difficultyId: summary.metadata.difficultyId,
           minItemLevel: summary.metadata.minItemLevel,
@@ -1269,7 +1273,6 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     if (!mounted) return;
     setState(() => _submitting = false);
 
-    final isNextWeekPrep = summary.continueTogether && summary.isCycleCompleted;
     final eligible =
         <
           ({
@@ -1280,16 +1283,11 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
     for (final candidate in candidates) {
       final serverId = candidate.serverCharacterId;
       if (serverId == null || serverId.isEmpty) continue;
-      final claimOnlyBlocked =
-          candidate.rejectionReasons.length == 1 &&
-          candidate.rejectionReasons.single == '이번 주 동일 레이드 완료';
-      if (!candidate.canSelect && !(isNextWeekPrep && claimOnlyBlocked)) {
-        continue;
-      }
+      if (!candidate.canSelect) continue;
       for (final option in candidate.roles.where(
         (option) => option.canSelect,
       )) {
-        if (me.characterId == serverId && option.role == me.role) continue;
+        if (me.characterId == serverId) continue;
         eligible.add((candidate: candidate, option: option));
       }
     }
@@ -1318,7 +1316,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
         builder: (dialogContext) => AlertDialog(
           title: const Text('다음 주 참가 캐릭터를 변경할까요?'),
           content: const Text(
-            '이번 회차 완료 기록은 유지됩니다. 구성을 바꾸면 이 회차의 전체 완료 취소는 더 이상 할 수 없습니다.',
+            '이번 주 완료 기록은 유지되며 다음 주 참가 구성만 변경됩니다. 다음 주 시작 시 참가 가능 여부를 다시 확인합니다.',
           ),
           actions: [
             TextButton(

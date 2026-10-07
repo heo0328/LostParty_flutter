@@ -101,6 +101,8 @@ class RecruitmentLeaderCandidate {
   }
 }
 
+enum RecruitmentCandidatePurpose { currentCycle, nextWeekPreparation }
+
 class RecruitmentLeaderCandidateQuery {
   const RecruitmentLeaderCandidateQuery({
     required this.raidId,
@@ -114,6 +116,7 @@ class RecruitmentLeaderCandidateQuery {
     this.replacingMemberId,
     this.allowPositionChanges = false,
     this.evaluateRaidConstraints = true,
+    this.purpose = RecruitmentCandidatePurpose.currentCycle,
   });
 
   final String raidId;
@@ -136,6 +139,7 @@ class RecruitmentLeaderCandidateQuery {
   /// 모집 생성 첫 진입처럼 레이드가 아직 선택되지 않았을 때는 Character와
   /// 역할 Snapshot만 구성하고 특정 레이드의 참가·완료·구성 조건은 평가하지 않는다.
   final bool evaluateRaidConstraints;
+  final RecruitmentCandidatePurpose purpose;
 }
 
 class RecruitmentLeaderCandidateService {
@@ -200,8 +204,8 @@ class RecruitmentLeaderCandidateService {
             '${character.serverName.trim().toLowerCase()}::${character.characterName.trim().toLowerCase()}';
         if (!seenCharacters.add(key)) continue;
         final serverCharacterId = character.serverCharacterId;
-        final serverStatus = !query.evaluateRaidConstraints ||
-                serverCharacterId == null
+        final serverStatus =
+            !query.evaluateRaidConstraints || serverCharacterId == null
             ? null
             : serverStatuses
                   .where(
@@ -308,7 +312,10 @@ class RecruitmentLeaderCandidateService {
               type: CandidateParticipationStatusType.weeklyRaidClear,
             ),
           );
-          rejectionReasons.add('이번 주 동일 레이드 완료');
+          if (query.purpose !=
+              RecruitmentCandidatePurpose.nextWeekPreparation) {
+            rejectionReasons.add('이번 주 동일 레이드 완료');
+          }
         }
         if (serverStatus?.kind == WeeklyRaidStatusKind.legacyActive) {
           statuses.add(

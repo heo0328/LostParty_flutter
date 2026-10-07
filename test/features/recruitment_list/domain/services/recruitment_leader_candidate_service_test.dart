@@ -279,6 +279,36 @@ void main() {
     );
   });
 
+  for (final status in [
+    WeeklyRaidStatusKind.completed,
+    WeeklyRaidStatusKind.inconsistent,
+  ]) {
+    test('다음 주 준비는 완료만 허용하고 불일치와 역할 자격은 유지한다: $status', () async {
+      final service = RecruitmentLeaderCandidateService(
+        accountRepository: _AccountRepository(),
+        weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+        weeklyRaidStatusRepository: _StatusRepository(status),
+        claimPlayerId: 'player-1',
+        session: FakeUserSession('local-user'),
+        clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 27)),
+        assignmentRepository: InMemoryActiveRaidAssignmentRepository(),
+        recruitmentRepository: InMemoryRecruitmentStateRepository(),
+      );
+      final query = _query(
+        purpose: RecruitmentCandidatePurpose.nextWeekPreparation,
+      );
+      final candidate = (await service.load(query)).first;
+      expect(candidate.canSelect, status == WeeklyRaidStatusKind.completed);
+      final belowLevel = (await service.load(
+        _query(
+          purpose: RecruitmentCandidatePurpose.nextWeekPreparation,
+          minItemLevel: 1800,
+        ),
+      )).first;
+      expect(belowLevel.canSelect, isFalse);
+    });
+  }
+
   test('4인 파티에서 방장과 같은 딜러 직업 신청 후보를 차단한다', () async {
     final service = RecruitmentLeaderCandidateService(
       accountRepository: _AccountRepository(),
@@ -471,11 +501,14 @@ class _StatusRepository implements WeeklyRaidStatusRepository {
 
 RecruitmentLeaderCandidateQuery _query({
   int minItemLevel = 1700,
+  RecruitmentCandidatePurpose purpose =
+      RecruitmentCandidatePurpose.currentCycle,
   int? minCombatPower,
   RecruitmentPartyRules? partyRules,
   List<OccupiedPartyMember> occupiedMembers = const [],
   String? replacingMemberId,
 }) => RecruitmentLeaderCandidateQuery(
+  purpose: purpose,
   raidId: 'serca',
   difficultyId: 'normal',
   minItemLevel: minItemLevel,

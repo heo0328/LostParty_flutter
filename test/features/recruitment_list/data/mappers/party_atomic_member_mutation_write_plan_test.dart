@@ -102,6 +102,56 @@ void main() {
     expect((plan.recruitmentPatch['partySlots']! as List), hasLength(3));
   });
 
+  test('완료 반복방 준비 변경은 구성과 이벤트만 만들고 완료 필드를 쓰지 않는다', () {
+    final plan = PartyAtomicNextWeekCharacterChangeWritePlan(
+      aggregate: _aggregate(cycleStatus: PartyRaidStateStatus.completed),
+      rules: rules,
+      playerId: 'member',
+      newCharacterId: 'new-character',
+      newClassKey: '소서리스',
+      newRole: PartyRole.dealer,
+      raidId: 'raid-1',
+      difficultyId: 'hard',
+      ownershipRevision: 5,
+      membershipPatch: {'characterId': 'new-character', 'role': 'dealer'},
+      serverTimestamp: timestamp,
+    );
+    expect(plan.recruitmentPatch.keys.toSet(), {
+      'partySlots',
+      'raidStateTargets',
+      'dealerCount',
+      'supportCount',
+      'revision',
+      'updatedAt',
+    });
+    expect(plan.membershipPatch['characterId'], 'new-character');
+    expect(plan.event['type'], 'characterChanged');
+    expect(plan.recruitmentPatch['revision'], 5);
+    expect(
+      (plan.recruitmentPatch['raidStateTargets'] as List)[1]['stateId'],
+      'new-character_raid-1',
+    );
+  });
+
+  test('진행 중 회차는 준비 전용 writer를 사용할 수 없다', () {
+    expect(
+      () => PartyAtomicNextWeekCharacterChangeWritePlan(
+        aggregate: _aggregate(),
+        rules: rules,
+        playerId: 'member',
+        newCharacterId: 'new-character',
+        newClassKey: '소서리스',
+        newRole: PartyRole.dealer,
+        raidId: 'raid-1',
+        difficultyId: 'hard',
+        ownershipRevision: 5,
+        membershipPatch: {},
+        serverTimestamp: timestamp,
+      ),
+      throwsStateError,
+    );
+  });
+
   test('빈자리 이동은 한 명, 점유 자리 교환은 두 명만 갱신한다', () {
     final emptyMove = PartyAtomicRepositionWritePlan(
       aggregate: _aggregate(),
@@ -215,50 +265,52 @@ void main() {
   });
 }
 
-PartyCommandAggregate _aggregate({List<PartyAggregateSlot>? slots}) =>
-    PartyCommandAggregate(
-      recruitmentId: 'recruitment-1',
-      raidId: 'raid-1',
-      difficultyId: 'hard',
-      leaderPlayerId: 'leader',
-      currentCycleKey: '2026-09-09',
-      currentCycleStatus: PartyRaidStateStatus.active,
-      revision: 4,
-      partySlots:
-          slots ??
-          [
-            PartyAggregateSlot(
-              playerId: 'leader',
-              characterId: 'leader-character',
-              role: PartyRole.support,
-              classKey: '바드:지원',
-              partyIndex: 0,
-              slotIndex: 0,
-              countedAsNonGroupMember: false,
-            ),
-            PartyAggregateSlot(
-              playerId: 'member',
-              characterId: 'old-character',
-              ownershipRevision: 5,
-              role: PartyRole.dealer,
-              classKey: '버서커',
-              partyIndex: 0,
-              slotIndex: 1,
-              countedAsNonGroupMember: false,
-            ),
-            PartyAggregateSlot(
-              playerId: 'other',
-              characterId: 'other-character',
-              ownershipRevision: 0,
-              role: PartyRole.dealer,
-              classKey: '디스트로이어',
-              partyIndex: 1,
-              slotIndex: 0,
-              countedAsNonGroupMember: false,
-            ),
-          ],
-      nonGroupMemberCount: 0,
-      pendingApplicationCount: 0,
-      pendingNonGroupApplicantCount: 0,
-      continueTogether: true,
-    );
+PartyCommandAggregate _aggregate({
+  List<PartyAggregateSlot>? slots,
+  PartyRaidStateStatus cycleStatus = PartyRaidStateStatus.active,
+}) => PartyCommandAggregate(
+  recruitmentId: 'recruitment-1',
+  raidId: 'raid-1',
+  difficultyId: 'hard',
+  leaderPlayerId: 'leader',
+  currentCycleKey: '2026-09-09',
+  currentCycleStatus: cycleStatus,
+  revision: 4,
+  partySlots:
+      slots ??
+      [
+        PartyAggregateSlot(
+          playerId: 'leader',
+          characterId: 'leader-character',
+          role: PartyRole.support,
+          classKey: '바드:지원',
+          partyIndex: 0,
+          slotIndex: 0,
+          countedAsNonGroupMember: false,
+        ),
+        PartyAggregateSlot(
+          playerId: 'member',
+          characterId: 'old-character',
+          ownershipRevision: 5,
+          role: PartyRole.dealer,
+          classKey: '버서커',
+          partyIndex: 0,
+          slotIndex: 1,
+          countedAsNonGroupMember: false,
+        ),
+        PartyAggregateSlot(
+          playerId: 'other',
+          characterId: 'other-character',
+          ownershipRevision: 0,
+          role: PartyRole.dealer,
+          classKey: '디스트로이어',
+          partyIndex: 1,
+          slotIndex: 0,
+          countedAsNonGroupMember: false,
+        ),
+      ],
+  nonGroupMemberCount: 0,
+  pendingApplicationCount: 0,
+  pendingNonGroupApplicantCount: 0,
+  continueTogether: true,
+);

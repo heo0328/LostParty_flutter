@@ -20,6 +20,7 @@ class PartyRaidStateOccupancyInspector {
     required String requestedCycleKey,
     required DateTime now,
     GameAccountOwnershipSnapshot? ownership,
+    bool ignoreCompletedClaim = false,
   }) async {
     final stateRef = firestore
         .collection('players')
@@ -55,7 +56,8 @@ class PartyRaidStateOccupancyInspector {
         if (condition == GameAccountOwnershipCondition.unknown) {
           return PartyRaidStateOccupancyInspection.inconsistent(stateRef);
         }
-        if (condition == GameAccountOwnershipCondition.current) {
+        if (condition == GameAccountOwnershipCondition.current &&
+            !ignoreCompletedClaim) {
           return PartyRaidStateOccupancyInspection(
             stateRef: stateRef,
             decision: ExistingRaidStateOccupancyDecision.currentCompleted,
