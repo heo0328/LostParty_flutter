@@ -63,7 +63,6 @@ export function nextWeekPreparation(source) {
       let newTarget = {'playerId': member.playerId, 'stateId': member.characterId + '_' + before.raidId};
       return member.playerId == currentPlayerId() && oldMember.playerId == member.playerId
         && member.characterId != oldMember.characterId
-        && deManualCurrentOwnership(oldMember) && deManualCurrentOwnership(member)
         && member.role in ['dealer', 'support']
         && member.diff(oldMember).affectedKeys().hasOnly([
           'characterId', 'characterNameSnapshot', 'classNameSnapshot', 'itemLevelSnapshot',
@@ -78,7 +77,7 @@ export function nextWeekPreparation(source) {
         && (member.playerId == before.leaderPlayerId
           ? after.leaderCharacterNameSnapshot == member.characterNameSnapshot && after.leaderClassNameSnapshot == member.classNameSnapshot
           : after.leaderCharacterNameSnapshot == before.leaderCharacterNameSnapshot && after.leaderClassNameSnapshot == before.leaderClassNameSnapshot)
-        && bug24PrepRecords(before, oldMember, member);
+;
     }
     function bug24PrepAggregate(before, after) {
       let path = recruitmentMemberPath(before.recruitmentId, currentPlayerId());
@@ -89,8 +88,7 @@ export function nextWeekPreparation(source) {
           'lastCommandId', 'lastCommandType', 'lastCommandActorPlayerId', 'lastCommandAt', 'revision', 'updatedAt'])
         && after.updatedAt == request.time && atomicAggregateSizesMatch(after)
         && atomicLifecycleMarkerConsumedOrPreserved(before, after)
-        && getAfter(path).data.updatedAt == request.time
-        && getAfter(path).data.characterId != get(path).data.characterId
+        && bug24PrepPair(before, after, get(path).data, getAfter(path).data)
         && bug24PrepEvent(before, after)
         && (before.visibility != 'group' || bug24PrepListing(before, after));
     }
@@ -100,7 +98,9 @@ export function nextWeekPreparation(source) {
       return hasActiveBinding() && playerId == currentPlayerId()
         && bug24PrepState(before) && after.revision == before.revision + 1
         && after.updatedAt == request.time && member.updatedAt == request.time
-        && bug24PrepPair(before, after, oldMember, member);
+        && member.characterId != oldMember.characterId
+        && deManualCurrentOwnership(oldMember) && deManualCurrentOwnership(member)
+        && bug24PrepRecords(before, oldMember, member);
     }
 `;
   replaceOnce('    function atomicIsLifecycleCommand(newData) {', helpers + '\n    function atomicIsLifecycleCommand(newData) {');
@@ -117,7 +117,7 @@ export function nextWeekPreparation(source) {
     'bug24PrepDispatch(resource.data, request.resource.data)',
     'bug24PrepAggregate(resource.data, request.resource.data)');
   dispatchUpdate('      match /members/{playerId}',
-    "request.resource.data.characterId != resource.data.characterId && bug24PrepDispatch(get(recruitmentPath(recruitmentId)).data, getAfter(recruitmentPath(recruitmentId)).data)",
+    "bug24PrepDispatch(get(recruitmentPath(recruitmentId)).data, getAfter(recruitmentPath(recruitmentId)).data)",
     'bug24PrepMember(recruitmentId, playerId, resource.data, request.resource.data)');
   dispatchUpdate('      match /raidListings/{recruitmentId}',
     'bug24PrepDispatch(get(recruitmentPath(recruitmentId)).data, getAfter(recruitmentPath(recruitmentId)).data)',

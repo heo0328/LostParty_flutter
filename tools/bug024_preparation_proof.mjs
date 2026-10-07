@@ -83,6 +83,7 @@ async function prepare({ id = replacement, omit = null, tamper = null, expectedR
       revision: nextRevision, updatedAt: serverTimestamp(),
       commandTargets: [], lastCommandId: null, lastCommandType: null, lastCommandActorPlayerId: null, lastCommandAt: null };
     const memberPatch = { characterId: id, characterNameSnapshot: id, characterChangedAt: serverTimestamp(), updatedAt: serverTimestamp() };
+    if (tamper === 'other-permission') tx.update(doc(client, 'recruitments', recruitmentId, 'members', before.memberPlayerIds.find(p => p !== playerId)), { canApproveApplications: true, updatedAt: serverTimestamp() });
     if (tamper === 'privilege') memberPatch.canApproveApplications = !member.canApproveApplications;
     if (tamper === 'other-slot') patch.partySlots[7] = { ...patch.partySlots[7], characterId: id };
     if (tamper === 'complete-status') patch.currentCycleStatus = 'active';
@@ -159,7 +160,7 @@ try {
   for (const omit of ['room', 'member', 'listing', 'event']) await check(`reject missing ${omit}`, async () => {
     await seed(); await denied(() => prepare({ omit }));
   });
-  for (const tamper of ['privilege', 'other-slot', 'complete-status', 'delete-old', 'delete-new', 'write-new']) await check(`reject ${tamper}`, async () => {
+  for (const tamper of ['privilege', 'other-permission', 'other-slot', 'complete-status', 'delete-old', 'delete-new', 'write-new']) await check(`reject ${tamper}`, async () => {
     await seed({ targetState: 'same' }); await denied(() => prepare({ tamper }));
   });
   await check('reject missing listing without recreating it', async () => { await seed({ missingListing: true }); await denied(() => prepare()); });
