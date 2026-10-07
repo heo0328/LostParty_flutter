@@ -275,10 +275,11 @@ class FirestorePartyAtomicCommandRepository
         final raw = (await tx.get(
           _firestore.collection('recruitments').doc(command.recruitmentId),
         )).data();
-        if (raw == null)
+        if (raw == null) {
           return const PartyAtomicCommandResult.failure(
             PartyAtomicCommandFailure.notFound,
           );
+        }
         final aggregate = PartyAtomicDocumentMapper.aggregate(raw);
         if (aggregate.lastCommandId == command.commandId &&
             aggregate.revision == command.expectedRevision + 1) {

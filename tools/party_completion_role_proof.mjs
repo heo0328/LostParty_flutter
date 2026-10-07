@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { initializeTestEnvironment } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField } from 'firebase/firestore';
-import { authUid, recruitmentId, raidId, seedGroupLinkedRoom } from './party_group_cutover_rules_test.mjs';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { authUid, recruitmentId, raidId, seedGroupLinkedRoom, cycleKey, cycleWindow } from './party_group_cutover_rules_test.mjs';
 
 process.env.ROSTER_TRACKED_RULES = '1';
 process.env.ROSTER_COMPLEXITY_RULES_FILE = process.env.COMPLETION_RULES_FILE || 'firestore.rules';
@@ -49,6 +49,16 @@ for (const [version, rules] of [['baseline', baseline], ['candidate', candidate]
         if (invalid === 'missing-document') await deleteDoc(ref);
       }
     });
+    if (type === 'advanceCycle' && version === 'candidate' && process.env.BUG024_RUNTIME === '1') {
+      const room = (await getDoc(doc(db, 'recruitments', recruitmentId))).data();
+      const window = cycleWindow(cycleKey);
+      for (const [index, slot] of room.partySlots.entries()) await setDoc(doc(db, 'players', slot.playerId, 'raidStates', `${slot.characterId}_${raidId}`), {
+        playerId: slot.playerId, characterId: slot.characterId, raidId, ownershipRevision: slot.ownershipRevision ?? 0,
+        guardSchemaVersion: 1, guardRecruitmentId: recruitmentId, guardRoomRevision: room.revision,
+        guardCycleKey: cycleKey, guardSlotIndex: index, guardCheckedAt: serverTimestamp(),
+        guardCycleStartedAt: Timestamp.fromDate(window.startedAt), guardCycleEndsAt: Timestamp.fromDate(window.endsAt),
+      }, { merge: true });
+    }
     const before = await inspectAll(env);
     let error;
     try { await lifecycle(db, type, { completionRole: version === 'candidate', tamper }); }

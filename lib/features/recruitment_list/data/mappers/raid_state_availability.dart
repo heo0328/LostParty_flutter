@@ -26,8 +26,9 @@ class RaidStateAvailability {
   static bool isStub(Map<String, dynamic>? data) {
     if (data == null ||
         data.length != _fields.length ||
-        !data.keys.toSet().containsAll(_fields))
+        !data.keys.toSet().containsAll(_fields)) {
       return false;
+    }
     final start = data['guardCycleStartedAt'];
     final end = data['guardCycleEndsAt'];
     final index = data['guardSlotIndex'];

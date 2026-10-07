@@ -394,7 +394,7 @@ jobs:
           fi
           if [[ "$LEADER_PROOF_SCOPE" == bug024-runtime ]]; then
             node tools/integrate_roster_rules.mjs --check --review
-            proof_command="BUG024_RULES_FILE=firestore.rules BUG024_RUNTIME=1 node tools/bug024_spark_seal_proof.mjs"
+            proof_command="node tools/bug024_runtime_regression_runner.mjs"
           fi
           npx --yes firebase-tools@15.29.0 emulators:exec --config firebase.json --only firestore --project demo-party-group-cutover "$proof_command"
 

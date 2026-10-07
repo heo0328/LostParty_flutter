@@ -1,7 +1,7 @@
 // Isolated C feasibility. No production credentials, app writers, or deployed Rules.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
-import { doc, getDoc, setDoc, updateDoc, deleteField, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { authUid, playerId, recruitmentId, raidId, cycleKey, cycleWindow, createPublicRecruitmentTxn } from './party_group_cutover_rules_test.mjs';
 process.env.BUG024_IMPORT_ONLY = '1';
 process.env.BUG024_SPARK_EVENT = '1';
