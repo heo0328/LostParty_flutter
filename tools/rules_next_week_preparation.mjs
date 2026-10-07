@@ -17,7 +17,7 @@ export function nextWeekPreparation(source) {
         && data.continueTogether == true && data.currentCycleStatus == 'completed';
     }
     function bug24PrepDispatch(before, after) {
-      return before.currentCycleStatus == 'completed' && after.currentCycleStatus == 'completed'
+      return before.currentCycleStatus == 'completed'
         && after.memberCount == before.memberCount && after.lastCommandType == null
         && after.raidStateTargets != before.raidStateTargets;
     }
@@ -76,8 +76,7 @@ export function nextWeekPreparation(source) {
         && after.supportCount == before.supportCount + (member.role == 'support' ? 1 : 0) - (oldMember.role == 'support' ? 1 : 0)
         && (member.playerId == before.leaderPlayerId
           ? after.leaderCharacterNameSnapshot == member.characterNameSnapshot && after.leaderClassNameSnapshot == member.classNameSnapshot
-          : after.leaderCharacterNameSnapshot == before.leaderCharacterNameSnapshot && after.leaderClassNameSnapshot == before.leaderClassNameSnapshot)
-;
+          : after.leaderCharacterNameSnapshot == before.leaderCharacterNameSnapshot && after.leaderClassNameSnapshot == before.leaderClassNameSnapshot);
     }
     function bug24PrepAggregate(before, after) {
       let path = recruitmentMemberPath(before.recruitmentId, currentPlayerId());
@@ -117,7 +116,7 @@ export function nextWeekPreparation(source) {
     'bug24PrepDispatch(resource.data, request.resource.data)',
     'bug24PrepAggregate(resource.data, request.resource.data)');
   dispatchUpdate('      match /members/{playerId}',
-    "bug24PrepDispatch(get(recruitmentPath(recruitmentId)).data, getAfter(recruitmentPath(recruitmentId)).data)",
+    "(request.resource.data.characterId != resource.data.characterId && bug24PrepState(get(recruitmentPath(recruitmentId)).data)) || bug24PrepDispatch(get(recruitmentPath(recruitmentId)).data, getAfter(recruitmentPath(recruitmentId)).data)",
     'bug24PrepMember(recruitmentId, playerId, resource.data, request.resource.data)');
   dispatchUpdate('      match /raidListings/{recruitmentId}',
     'bug24PrepDispatch(get(recruitmentPath(recruitmentId)).data, getAfter(recruitmentPath(recruitmentId)).data)',

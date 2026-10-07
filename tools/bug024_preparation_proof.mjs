@@ -15,7 +15,11 @@ const db = env.authenticatedContext(authUid).firestore();
 const replacement = 'bug024replacement001';
 const second = 'bug024replacement002';
 const results = [];
-async function admin(work) { return env.withSecurityRulesDisabled(ctx => work(ctx.firestore())); }
+async function admin(work) {
+  let result;
+  await env.withSecurityRulesDisabled(async ctx => { result = await work(ctx.firestore()); });
+  return result;
+}
 async function snapshot() {
   return admin(async adb => {
     const read = async (...parts) => (await getDocs(collection(adb, ...parts))).docs

@@ -151,7 +151,7 @@ return rf4() && z1k.schemaVersion == 2 && z1k.status == 'active'
 && z1k.continueTogether == true && z1k.currentCycleStatus == 'completed';
 }
 function rf33(z1l, z1m) {
-return z1l.currentCycleStatus == 'completed' && z1m.currentCycleStatus == 'completed'
+return z1l.currentCycleStatus == 'completed'
 && z1m.memberCount == z1l.memberCount && z1m.lastCommandType == null
 && z1m.raidStateTargets != z1l.raidStateTargets;
 }
@@ -210,8 +210,7 @@ return member.playerId == rf5() && oldMember.playerId == member.playerId
 && after.supportCount == z20.supportCount + (member.role == 'support' ? 1 : 0) - (oldMember.role == 'support' ? 1 : 0)
 && (member.playerId == z20.leaderPlayerId
 ? after.leaderCharacterNameSnapshot == member.characterNameSnapshot && after.leaderClassNameSnapshot == member.classNameSnapshot
-: after.leaderCharacterNameSnapshot == z20.leaderCharacterNameSnapshot && after.leaderClassNameSnapshot == z20.leaderClassNameSnapshot)
-;
+: after.leaderCharacterNameSnapshot == z20.leaderCharacterNameSnapshot && after.leaderClassNameSnapshot == z20.leaderClassNameSnapshot);
 }
 function rf40(z23, z24) {
 let z25 = rf8(z23.recruitmentId, rf5());
@@ -3204,7 +3203,7 @@ recruitmentId,
 playerId,
 request.resource.data
 );
-allow update: if (rf33(get(rf7(recruitmentId)).data, getAfter(rf7(recruitmentId)).data)) ? (rf41(recruitmentId, playerId, resource.data, request.resource.data)) : ((rf151(recruitmentId)) ? (request.resource.data.characterId == resource.data.characterId && request.resource.data.get('ownershipRevision', 0) == resource.data.get('ownershipRevision', 0) && rf154(resource.data) && rf212(recruitmentId, playerId, resource.data, request.resource.data)) : (((request.resource.data.characterId == resource.data.characterId
+allow update: if ((request.resource.data.characterId != resource.data.characterId && rf32(get(rf7(recruitmentId)).data)) || rf33(get(rf7(recruitmentId)).data, getAfter(rf7(recruitmentId)).data)) ? (rf41(recruitmentId, playerId, resource.data, request.resource.data)) : ((rf151(recruitmentId)) ? (request.resource.data.characterId == resource.data.characterId && request.resource.data.get('ownershipRevision', 0) == resource.data.get('ownershipRevision', 0) && rf154(resource.data) && rf212(recruitmentId, playerId, resource.data, request.resource.data)) : (((request.resource.data.characterId == resource.data.characterId
 && request.resource.data.get('ownershipRevision', 0) == resource.data.get('ownershipRevision', 0))
 || (rf49(resource.data) && rf49(request.resource.data)))
 && ((request.resource.data.diff(resource.data).affectedKeys()
