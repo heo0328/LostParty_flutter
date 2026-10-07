@@ -1752,11 +1752,16 @@ playerId,
 stateId,
 request.resource.data
 );
-allow update: if (resource.data.status == 'active' && request.resource.data.status == 'completed' && request.resource.data.source == 'manual' && resource.data.get('ownershipRevision', 0) == request.resource.data.get('ownershipRevision', 0)) ? (rf118(playerId, stateId, resource.data, request.resource.data)) : ((request.resource.data.source == 'manual'
+allow update: if
+(resource.data.status == 'active' && request.resource.data.status == 'completed' && request.resource.data.source == 'party')
+? rf114(playerId, stateId, resource.data, request.resource.data)
+: ((resource.data.status == 'completed' && request.resource.data.status == 'active' && request.resource.data.source == 'party')
+? (rf112(playerId, stateId, resource.data, request.resource.data)
+|| rf123(playerId, stateId, resource.data, request.resource.data))
+: ((resource.data.status == 'active' && request.resource.data.status == 'completed' && request.resource.data.source == 'manual' && resource.data.get('ownershipRevision', 0) == request.resource.data.get('ownershipRevision', 0)) ? (rf118(playerId, stateId, resource.data, request.resource.data)) : ((request.resource.data.source == 'manual'
 && rf153(resource.data, playerId, request.resource.data.characterId,
 request.resource.data.raidId, request.resource.data.get('ownershipRevision', 0))
 && rf117(playerId, stateId, request.resource.data))
-|| rf112(playerId, stateId, resource.data, request.resource.data)
 || rf123(playerId, stateId, resource.data, request.resource.data)
 || rf118(
 playerId,
@@ -1768,7 +1773,7 @@ playerId,
 stateId,
 resource.data,
 request.resource.data
-));
+))));
 allow delete: if (resource.data.status == 'completed'
 && rf119(
 playerId,
@@ -2823,7 +2828,7 @@ request.resource.data
 ) || rf182(
 resource.data,
 request.resource.data
-) || rf37(resource.data, request.resource.data) || (resource.data.currentCycleStatus == 'active' && (rf185(
+) || (resource.data.currentCycleStatus == 'completed' && request.resource.data.currentCycleStatus == 'completed' && rf37(resource.data, request.resource.data)) || (resource.data.currentCycleStatus == 'active' && (rf185(
 resource.data,
 request.resource.data
 ) || rf186(

@@ -82,7 +82,7 @@ export function nextWeekPreparation(source) {
   replaceOnce('    function atomicIsLifecycleCommand(newData) {', helpers + '\n    function atomicIsLifecycleCommand(newData) {');
   // Dedicated dispatch, before active-only commands. Do not broaden their gate.
   replaceOnce("        ) || (resource.data.currentCycleStatus == 'active' && (validAtomicPendingApplicationUpdate(",
-    "        ) || bug24PrepAggregate(resource.data, request.resource.data) || (resource.data.currentCycleStatus == 'active' && (validAtomicPendingApplicationUpdate(");
+    "        ) || (resource.data.currentCycleStatus == 'completed' && request.resource.data.currentCycleStatus == 'completed' && bug24PrepAggregate(resource.data, request.resource.data)) || (resource.data.currentCycleStatus == 'active' && (validAtomicPendingApplicationUpdate(");
   replaceOnce('            || (validAtomicMemberCharacterChange(',
     '            || (bug24PrepMember(recruitmentId, playerId, resource.data, request.resource.data) || validAtomicMemberCharacterChange(');
   // Legacy assignment checks must not authorize an isolated V2 prep member write.
@@ -112,8 +112,20 @@ export function nextWeekPreparation(source) {
 `;
   replaceOnce('    function validAtomicAdvanceRaidStateCreate(playerId, stateId, data) {',
     advance + '\n    function validAtomicAdvanceRaidStateCreate(playerId, stateId, data) {');
-  replaceOnce('          || deReplacePriorState(playerId, stateId, resource.data, request.resource.data)',
-    '          || bug24AdvanceCompleted(playerId, stateId, resource.data, request.resource.data)\n          || deReplacePriorState(playerId, stateId, resource.data, request.resource.data)');
+  // Discriminators are already mandatory in the selected validators. Keep
+  // complete off unrelated fallback paths, preserving its eight-member budget.
+  const stateMatch = source.indexOf('      match /raidStates/{stateId}');
+  const updateStart = source.indexOf('        allow update: if ', stateMatch);
+  const updateEnd = source.indexOf(';', updateStart);
+  assert.ok(stateMatch >= 0 && updateStart > stateMatch && updateEnd > updateStart);
+  const priorUpdate = source.slice(updateStart + '        allow update: if '.length, updateEnd);
+  source = source.slice(0, updateStart) + `        allow update: if
+        (resource.data.status == 'active' && request.resource.data.status == 'completed' && request.resource.data.source == 'party')
+          ? validAtomicRaidStateUpdate(playerId, stateId, resource.data, request.resource.data)
+          : ((resource.data.status == 'completed' && request.resource.data.status == 'active' && request.resource.data.source == 'party')
+            ? (bug24AdvanceCompleted(playerId, stateId, resource.data, request.resource.data)
+              || deReplacePriorState(playerId, stateId, resource.data, request.resource.data))
+            : (${priorUpdate}))` + source.slice(updateEnd);
   replaceOnce("&& !newData.diff(oldData).affectedKeys().hasAny(['role'])",
     "&& oldData.cycleKey < newData.cycleKey\n            && !deBlockingClaim(playerId, newData.cycleKey, newData.characterId, newData.raidId, newData.get('ownershipRevision', 0))\n            && !newData.diff(oldData).affectedKeys().hasAny(['role'])");
   replaceOnce('        && atomicAdvanceStateMatchesSlot(recruitment, data);',
