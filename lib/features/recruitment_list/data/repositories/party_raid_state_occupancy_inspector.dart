@@ -7,6 +7,7 @@ import '../../domain/entities/party_raid_state_conflict.dart';
 import '../../domain/services/party_create_occupancy_gate.dart';
 import '../../domain/services/party_ownership_record_policy.dart';
 import 'party_character_ownership_reader.dart';
+import '../mappers/raid_state_availability.dart';
 
 class PartyRaidStateOccupancyInspector {
   const PartyRaidStateOccupancyInspector._();
@@ -102,6 +103,7 @@ class PartyRaidStateOccupancyInspector {
         characterId: characterId,
         raidId: raidId,
         isRaidState: true,
+        availabilityOnly: RaidStateAvailability.isStub(data),
       );
       if (condition == GameAccountOwnershipCondition.unknown) {
         return PartyRaidStateOccupancyInspection.inconsistent(stateRef);
@@ -113,6 +115,9 @@ class PartyRaidStateOccupancyInspector {
     }
 
     final statePlayerId = data['playerId'];
+    if (RaidStateAvailability.isStub(data) && ownership != null) {
+      return PartyRaidStateOccupancyInspection.none(stateRef);
+    }
     final stateCharacterId = data['characterId'];
     final stateRaidId = data['raidId'];
     final stateCycleKey = data['cycleKey'];

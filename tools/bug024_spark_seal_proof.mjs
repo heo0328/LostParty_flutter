@@ -2,10 +2,10 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { doc, getDoc, setDoc, updateDoc, deleteField, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
-import { authUid, playerId, recruitmentId, raidId, cycleKey, cycleWindow } from './party_group_cutover_rules_test.mjs';
+import { authUid, playerId, recruitmentId, raidId, cycleKey, cycleWindow, createPublicRecruitmentTxn } from './party_group_cutover_rules_test.mjs';
 process.env.BUG024_IMPORT_ONLY = '1';
 process.env.BUG024_SPARK_EVENT = '1';
-process.env.BUG024_RULES_FILE = 'coverage/bug024/spark-seal/candidate.rules';
+process.env.BUG024_RULES_FILE ||= 'coverage/bug024/spark-seal/candidate.rules';
 const { env, db, admin, snapshot, seed, prepare, advance, denied, lifecycle, replacement, second } = await import('./bug024_preparation_proof.mjs');
 const results = [];
 const dir = 'coverage/bug024/spark-seal';
@@ -151,6 +151,35 @@ try {
       const b = writeBatch(db); b.set(stateRef(db, r.partySlots[i]), auditData(r, i), { merge: true }); b.set(claimRef(), claimData()); await b.commit();
     });
   });
+  if (process.env.BUG024_RUNTIME === '1') {
+    await check('runtime stub personal completion/cancel and final advance collision', async () => {
+      await setup(); await auditAll();
+      const r = await room(); const slot = r.partySlots.find(s => s.playerId === playerId);
+      await setDoc(stateRef(db, slot), { ...claimData(), ownershipRevision: 1,
+        source: 'manual', status: 'completed', recruitmentId: null, revision: 1 });
+      await denied(() => advance());
+      await deleteDoc(stateRef(db, slot));
+      await auditOne(); await advance(); await lifecycle(db, 'complete', { completionRole: true });
+    });
+    await check('runtime exact stub can be reselected without record changes', async () => {
+      await setup(); await auditOne();
+      await prepare({ id: second }); const before = await snapshot();
+      await prepare(); assert.deepEqual((await snapshot()).states, before.states);
+      await auditAll(); await advance();
+    });
+    await check('runtime stub normal room creation and other-room occupancy blocks old transition', async () => {
+      await setup(); await auditOne();
+      await createPublicRecruitmentTxn(db, { id: 'runtime-new-room', ownerCharacterId: replacement, ownershipRevision: 1 });
+      await denied(() => auditOne());
+    });
+    await check('runtime partial seal removal and forged normal replacement rejected', async () => {
+      await setup(); await auditOne(); const r = await room(); const slot = r.partySlots.find(s => s.playerId === playerId);
+      await denied(() => updateDoc(stateRef(db, slot), { guardCheckedAt: deleteField() }));
+      await denied(() => setDoc(stateRef(db, slot), { ...claimData(), ownershipRevision: 2,
+        source: 'manual', status: 'completed', recruitmentId: null, revision: 1 }));
+      await denied(() => updateDoc(stateRef(db, slot), { guardCycleKey: '2099-01-01' }));
+    });
+  }
 } finally {
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(`${dir}/results.json`, JSON.stringify(results, null, 2));

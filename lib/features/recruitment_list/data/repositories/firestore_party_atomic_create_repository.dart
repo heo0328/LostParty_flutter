@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../mappers/raid_state_availability.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../group/data/mappers/group_active_recruitment_write_plan.dart';
@@ -106,6 +107,7 @@ class FirestorePartyAtomicCreateRepository implements PartyCreateRepository {
                   characterId: command.leaderCharacterId,
                   raidId: command.metadata.raidId,
                   isRaidState: true,
+                  availabilityOnly: RaidStateAvailability.isStub(storedState),
                 );
           if (stateOwnership == GameAccountOwnershipCondition.unknown) {
             return const PartyCreateResult.failure(
@@ -119,7 +121,10 @@ class FirestorePartyAtomicCreateRepository implements PartyCreateRepository {
               PartyCreateFailure.idConflict,
             );
           }
-          final raidStateData = priorOwnership ? null : storedState;
+          final raidStateData =
+              priorOwnership || RaidStateAvailability.isStub(storedState)
+              ? null
+              : storedState;
           final raidStateRecruitmentId = raidStateData?['recruitmentId'];
           final raidStateCycleKey = raidStateData?['cycleKey'];
           final raidStateStatus = raidStateData?['status'];

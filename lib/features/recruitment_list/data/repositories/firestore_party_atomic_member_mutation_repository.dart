@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../mappers/raid_state_availability.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
@@ -159,6 +160,9 @@ class FirestorePartyAtomicMemberMutationRepository
                 characterId: oldCharacterId,
                 raidId: raidId,
                 isRaidState: true,
+                availabilityOnly: RaidStateAvailability.isStub(
+                  previousStateData,
+                ),
               ) !=
               GameAccountOwnershipCondition.current) {
         return const PartyMembershipResult.failure(

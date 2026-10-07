@@ -174,14 +174,22 @@ class PartyAtomicCharacterChangeWritePlan {
               'revision': 1,
               'updatedAt': serverTimestamp,
             }),
-      event: _event(
-        eventId: eventId,
-        type: 'characterChanged',
-        aggregate: aggregate,
-        revision: nextRevision,
-        actorPlayerId: playerId,
-        serverTimestamp: serverTimestamp,
-      ),
+      event: {
+        ..._event(
+          eventId: eventId,
+          type: 'characterChanged',
+          aggregate: aggregate,
+          revision: nextRevision,
+          actorPlayerId: playerId,
+          serverTimestamp: serverTimestamp,
+        ),
+        if (nextWeekPrep) ...{
+          'previousCharacterId': old.characterId,
+          'nextCharacterId': newCharacterId,
+          'nextOwnershipRevision': ownershipRevision ?? 0,
+          'cycleKey': aggregate.currentCycleKey,
+        },
+      },
     );
   }
 }

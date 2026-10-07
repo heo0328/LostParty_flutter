@@ -11,6 +11,7 @@ class PartyOwnershipRecordPolicy {
     required String characterId,
     required String raidId,
     required bool isRaidState,
+    bool availabilityOnly = false,
     String? claimCycleKey,
   }) {
     if (ownership.condition != GameAccountOwnershipCondition.current ||
@@ -19,7 +20,7 @@ class PartyOwnershipRecordPolicy {
         data['raidId'] != raidId) {
       return GameAccountOwnershipCondition.unknown;
     }
-    if (isRaidState) {
+    if (isRaidState && !availabilityOnly) {
       final revision = data['revision'];
       final cycle = data['cycleKey'];
       if (revision is! int ||
@@ -29,7 +30,7 @@ class PartyOwnershipRecordPolicy {
           !const ['active', 'completed'].contains(data['status'])) {
         return GameAccountOwnershipCondition.unknown;
       }
-    } else if (data['cycleKey'] != claimCycleKey) {
+    } else if (!isRaidState && data['cycleKey'] != claimCycleKey) {
       return GameAccountOwnershipCondition.unknown;
     }
     return ownership.classifyParticipation(data);

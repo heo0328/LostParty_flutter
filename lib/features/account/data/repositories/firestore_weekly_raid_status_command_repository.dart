@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../recruitment_list/data/mappers/raid_state_availability.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../recruitment_list/data/mappers/party_atomic_document_mapper.dart';
@@ -1027,6 +1028,21 @@ class FirestoreWeeklyRaidStatusCommandRepository
     String? cycleKey,
   }) {
     if (data == null) return null;
+    if (isState && RaidStateAvailability.isStub(data)) {
+      final condition = PartyOwnershipRecordPolicy.classify(
+        ownership: ownership,
+        data: data,
+        playerId: playerId,
+        characterId: characterId,
+        raidId: raidId,
+        isRaidState: true,
+        availabilityOnly: true,
+      );
+      if (condition == GameAccountOwnershipCondition.unknown) {
+        throw const _WeeklyRaidStateContractException();
+      }
+      return null;
+    }
     final recordCycle = data['cycleKey'];
     if (recordCycle is! String || recordCycle.isEmpty) {
       throw const _WeeklyRaidStateContractException();

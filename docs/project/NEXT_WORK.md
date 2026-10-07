@@ -1,5 +1,30 @@
 # NEXT WORK — BUG-024 완료 반복방의 다음 주 캐릭터 변경
 
+## 최신 승인 작업 — 실제 앱 도입부터 실기기 테스트 직전까지 (2026-10-07)
+
+사용자가 디바이스 준비를 알리고 실기기 테스트 전까지 진행하도록 지시했다. 기존 C 선행 검증 전용
+승인 범위를 실제 앱·추적 Rules 구현과 검증·운영 Rules 1회 게시까지 확장한다. Spark 무료 유지.
+현재 브랜치fix/recurring-next-week-character-change, 시작c89d0b3. 초기화 로컬 변경 보존·커밋 제외.
+
+작업 순서:
+1. strict availability-only parser와 소유권 분류를 연결하고 후보·참가·준비 재선택·개인 완료가
+   stub을 참가/완료 없음으로 해석하게 한다. 손상 자료는 계속 거절한다.
+2. 기존 공개 lifecycle 명령/DI를 유지하면서 advance 전에 대상별 blind 인증을 수행한다.
+   expectedRevision/대상/window를 고정하고 핵심 전환은 계속 한 transaction으로 확정한다.
+3. 생성 가능한 인증 metadata는 audit Rules로만 제한한다. stub→정상 참가/개인 완료와 인증 전체 제거는
+   원래 명령의 권한·점유 검사를 통과할 때만 허용한다. 부분 제거/변조·legacy Claim 결합 우회는 거절한다.
+4. A의 준비 event metadata를 앱 writer와 결합하고 C를 정식 생성 pipeline에 연결한다.
+   실제 추적본의8인/부정 경계·완료·기존 명령 회귀, 전체Flutter test/analyze·생성 일치를 확인한다.
+5. 게시 전 경로/프로젝트/diff를 확인해 Rules를 정확히1회 게시한다. 실패 시 진단하고 재시도하지 않는다.
+   성공하면 실기기 체크리스트를 전달한다. 빌드 설치·기기 조작은 사용자가 수행한다.
+
+회귀 보호: 완료 기록/이벤트, 반복방 정상active 전환·전체 완료/역할 저장, 개인 완료/해제,
+생성·신청·승인·즉시 참가·활성 캐릭터 변경·빈자리 이동·그룹 목록 동기화·해산·소유권 이전의 경계.
+새 인증 없는 구버전 advance는 허용하지 않는다. 서버 거절 시 재조회/최신 앱 안내를 제공한다.
+개인 완료와 참가의 정상 canonical writer는 표식 제거 또는 엄격한 stub 대체 경로를 허용하므로
+검증용 후보를 그대로 게시하지 않는다. Functions/결제/Indexes/Hosting/일괄 정리/완료 취소는 제외한다.
+두 실제 방의 사용자 확인 전BUG-024 종료나dev/main 통합은 하지 않는다.
+
 ## 현재 우선 작업 (2026-10-07) — C 선행 검증 통과·앱 호환 구현 범위 확정
 
 기존 목적 브랜치 `fix/recurring-next-week-character-change`를 유지한다. dev/origin dev e4f8e0f 유지.

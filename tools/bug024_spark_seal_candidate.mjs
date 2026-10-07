@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const out = 'coverage/bug024/spark-seal';
-let source = fs.readFileSync('coverage/bug024/spark/preparation-distributed.rules', 'utf8');
+export function availabilitySeals(source) {
 const guards = "['guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardCycleStartedAt', 'guardCycleEndsAt', 'guardSlotIndex', 'guardCheckedAt']";
 function replace(before, after) {
   assert.equal(source.split(before).length, 2, before);
@@ -140,6 +140,13 @@ assert.ok(source.includes('allow create, update: if false;'));
 replace('        allow create: if validManualWeeklyRaidClaimCreate(', `        allow create: if !sealBlocksClaimAt(
           atomicRaidStateDocPath(playerId, request.resource.data.characterId + '_' + request.resource.data.raidId),
           request.resource.data.cycleKey) && validManualWeeklyRaidClaimCreate(`);
+return source;
+}
+
+if (process.argv[1]?.replaceAll('\\', '/').endsWith('/bug024_spark_seal_candidate.mjs')) {
+const source = availabilitySeals(fs.readFileSync('coverage/bug024/spark/preparation-distributed.rules', 'utf8'));
 fs.mkdirSync(out, { recursive: true });
 fs.writeFileSync(`${out}/candidate.rules`, source);
 console.log('C availability seal: demo-only candidate generated; deployment writes 0');
+
+}

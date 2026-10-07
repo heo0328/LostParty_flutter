@@ -3506,7 +3506,7 @@ String _cycleFailureMessage(PartyCycleFailure failure) => switch (failure) {
   PartyCycleFailure.notReadyForAdvance => '아직 다음 회차로 전환할 수 없습니다.',
   PartyCycleFailure.revisionConflict => '모집 상태가 바뀌었습니다. 다시 확인해 주세요.',
   PartyCycleFailure.permissionDenied =>
-    '서버에서 요청이 거절되었습니다. 문제가 반복되면 진단 ID와 함께 알려주세요.',
+    '서버에서 요청이 거절되었습니다. 최신 앱에서 모집을 새로고침해 주세요. 문제가 반복되면 진단 ID와 함께 알려주세요.',
   PartyCycleFailure.temporarilyUnavailable => '네트워크 연결이 불안정합니다.',
   PartyCycleFailure.invalidRequest => '요청을 확인하지 못했습니다.',
   PartyCycleFailure.unknown => '회차 명령을 처리하지 못했습니다.',

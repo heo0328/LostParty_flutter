@@ -41,6 +41,11 @@ class FirestorePartyAtomicCommandRepository
       );
     }
     try {
+      if (command.type == PartyAtomicCommandType.advanceCycle) {
+        trace('availability-certification');
+        final preflight = await _certifyAdvance(command, uid);
+        if (preflight != null) return preflight;
+      }
       final result = await _firestore.runTransaction((transaction) async {
         attempt++;
         trace('binding-read');
@@ -246,6 +251,92 @@ class FirestorePartyAtomicCommandRepository
     } on ArgumentError {
       return null;
     }
+  }
+
+  Future<PartyAtomicCommandResult?> _certifyAdvance(
+    PartyCommandEnvelope command,
+    String uid,
+  ) async {
+    // Each transaction audits one target. No private peer state is read by the
+    // leader. A failed audit cannot change the room or any participation state.
+    for (var index = 0; index < command.targets.length; index++) {
+      final rejected = await _firestore.runTransaction<PartyAtomicCommandResult?>((
+        tx,
+      ) async {
+        final binding = (await tx.get(
+          _firestore.collection('authBindings').doc(uid),
+        )).data();
+        if (binding?['status'] != 'active' ||
+            binding?['playerId'] != command.actorPlayerId) {
+          return const PartyAtomicCommandResult.failure(
+            PartyAtomicCommandFailure.unauthorized,
+          );
+        }
+        final raw = (await tx.get(
+          _firestore.collection('recruitments').doc(command.recruitmentId),
+        )).data();
+        if (raw == null)
+          return const PartyAtomicCommandResult.failure(
+            PartyAtomicCommandFailure.notFound,
+          );
+        final aggregate = PartyAtomicDocumentMapper.aggregate(raw);
+        if (aggregate.lastCommandId == command.commandId &&
+            aggregate.revision == command.expectedRevision + 1) {
+          return PartyAtomicCommandResult.applied(revision: aggregate.revision);
+        }
+        if (aggregate.revision != command.expectedRevision) {
+          return const PartyAtomicCommandResult.failure(
+            PartyAtomicCommandFailure.revisionConflict,
+          );
+        }
+        if (aggregate.leaderPlayerId != command.actorPlayerId) {
+          return const PartyAtomicCommandResult.failure(
+            PartyAtomicCommandFailure.unauthorized,
+          );
+        }
+        // Validate the unchanged public command contract before the first write.
+        PartyAtomicWritePlan(
+          command: command,
+          aggregate: aggregate,
+          serverTimestamp: FieldValue.serverTimestamp(),
+          incrementOne: FieldValue.increment(1),
+        );
+        final slot = aggregate.partySlots[index];
+        final stateId = PartyRaidState.documentIdFor(
+          characterId: slot.characterId,
+          raidId: aggregate.raidId,
+        );
+        tx.set(
+          _firestore
+              .collection('players')
+              .doc(slot.playerId)
+              .collection('raidStates')
+              .doc(stateId),
+          {
+            'playerId': slot.playerId,
+            'characterId': slot.characterId,
+            'raidId': aggregate.raidId,
+            'ownershipRevision': slot.ownershipRevision ?? 0,
+            'guardSchemaVersion': 1,
+            'guardRecruitmentId': command.recruitmentId,
+            'guardRoomRevision': command.expectedRevision,
+            'guardCycleKey': command.nextCycleKey,
+            'guardCycleStartedAt': Timestamp.fromDate(
+              command.nextCycleStartedAt!.toUtc(),
+            ),
+            'guardCycleEndsAt': Timestamp.fromDate(
+              command.nextCycleEndsAt!.toUtc(),
+            ),
+            'guardSlotIndex': index,
+            'guardCheckedAt': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true),
+        );
+        return null;
+      });
+      if (rejected != null) return rejected;
+    }
+    return null;
   }
 
   PartyAtomicCommandFailure _mapFirebase(String code) => switch (code) {

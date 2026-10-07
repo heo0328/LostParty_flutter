@@ -10,6 +10,7 @@ import { stripRulesComments } from './rules_strip_comments.mjs';
 import { compactExecutableRules } from './rules_executable_compact.mjs';
 import { completionRoleCompatibility } from './rules_completion_role.mjs';
 import { nextWeekPreparation } from './rules_next_week_preparation.mjs';
+import { availabilityRuntime } from './rules_availability_runtime.mjs';
 const target = new URL('../firestore.rules', import.meta.url);
 const baseline = integratedBaseline();
 const repaired = preserveExistingSlots(baseline);
@@ -18,7 +19,7 @@ const readable = stripRulesComments(scopeFunctions(simplifyGroupDisplay(targetSc
 assert.ok(readable.includes('function deGenerationUpdate('));
 assert.ok(readable.includes('function deLastCompletedDisband('));
 assert.ok(readable.includes('function deReplacePriorState('));
-const compatible = nextWeekPreparation(completionRoleCompatibility(readable));
+const compatible = availabilityRuntime(nextWeekPreparation(completionRoleCompatibility(readable)));
 const compact = compactExecutableRules(compatible);
 const result = compact.source;
 if (process.argv.includes('--review')) {
