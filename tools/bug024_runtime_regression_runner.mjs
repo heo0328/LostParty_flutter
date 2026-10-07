@@ -4,7 +4,7 @@ const results = [];
 for (const [name, script, extra] of [
   ['runtime-boundaries', 'tools/bug024_spark_seal_proof.mjs', { BUG024_RULES_FILE: 'firestore.rules', BUG024_RUNTIME: '1' }],
   ['completion-role', 'tools/party_completion_role_proof.mjs', { BUG024_RUNTIME: '1' }],
-  ['character-placement', 'tools/party_group_cutover_rules_test.mjs', { PARTY_RULES_CASE: 'character-placement' }],
+  ['character-placement', 'tools/party_group_cutover_rules_test.mjs', { PARTY_RULES_CASE: 'character-placement', BUG024_RUNTIME: '1' }],
   ['manual-completion', 'tools/roster_manual_completion_proof.mjs', { ROSTER_COMPLEXITY_RULES_FILE: 'firestore.rules' }],
   ['personal-completion', 'tools/roster_personal_completion_proof.mjs', { ROSTER_COMPLEXITY_RULES_FILE: 'firestore.rules' }],
 ]) {

@@ -1111,8 +1111,26 @@ async function verifyCharacterPlacement(testEnv, db, applicantDb) {
   }
   // Eight members: a dealer/support swap can repair the composition, but this
   // command changes only the character. Repositioning remains a leader command.
+  if (process.env.BUG024_RUNTIME === '1') {
+    const window = cycleWindow(cycleKey);
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'players', joinerPlayerId, 'raidStates', `${replacementId}_${raidId}`), {
+        playerId: joinerPlayerId, characterId: replacementId, raidId, ownershipRevision: 0,
+        guardSchemaVersion: 1, guardRecruitmentId: 'prior-certification-room',
+        guardRoomRevision: 1, guardCycleKey: cycleKey, guardSlotIndex: 0,
+        guardCycleStartedAt: Timestamp.fromDate(window.startedAt),
+        guardCycleEndsAt: Timestamp.fromDate(window.endsAt), guardCheckedAt: serverTimestamp(),
+      });
+    });
+  }
   console.log('test: BUG-017 max-eight in-place replacement');
   await assertSucceeds(change());
+  if (process.env.BUG024_RUNTIME === '1') {
+    if (Object.keys((await getDoc(newStateRef)).data()).some(key => key.startsWith('guard'))) {
+      throw new Error('Normal character replacement did not invalidate certification');
+    }
+    console.log('PASS: BUG-024 max-eight active character change replaces exact availability stub');
+  }
   console.log('PASS: BUG-017 max-eight in-place change with no automatic swap');
   await testEnv.withSecurityRulesDisabled(async (context) => {
     const admin = context.firestore();
