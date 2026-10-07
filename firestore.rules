@@ -2955,7 +2955,7 @@ allow create: if rf200(
 recruitmentId,
 request.resource.data
 );
-allow update: if (rf40(request.resource.data) || (request.resource.data.get('lastCommandType', '') == 'complete' && request.resource.data.lastCommandAt == request.time)) ? (rf198(resource.data, request.resource.data)) : ((rf41(resource.data, request.resource.data)) ? (rf51(resource.data, request.resource.data)) : ((!(request.resource.data.get('lastCommandType', '') in ['complete', 'advanceCycle', 'incompleteEnd', 'disband']) || request.resource.data.lastCommandAt == request.time || rf186(resource.data, request.resource.data)) && ((request.resource.data.get('lastCommandType', '') == 'personalComplete' && request.resource.data.lastCommandAt == request.time) ? (rf165(resource.data, request.resource.data) && rf93(resource.data, request.resource.data)) : (rf211(resource.data, request.resource.data)
+allow update: if (request.resource.data.get('lastCommandType', '') in ['advanceCycle', 'complete'] && request.resource.data.lastCommandAt == request.time) ? (rf198(resource.data, request.resource.data)) : ((rf41(resource.data, request.resource.data)) ? (rf51(resource.data, request.resource.data)) : ((!(request.resource.data.get('lastCommandType', '') in ['complete', 'advanceCycle', 'incompleteEnd', 'disband']) || request.resource.data.lastCommandAt == request.time || rf186(resource.data, request.resource.data)) && ((request.resource.data.get('lastCommandType', '') == 'personalComplete' && request.resource.data.lastCommandAt == request.time) ? (rf165(resource.data, request.resource.data) && rf93(resource.data, request.resource.data)) : (rf211(resource.data, request.resource.data)
 && ((request.resource.data.get('lastCommandType', '') == 'disband'
 && resource.data.memberCount == 1
 && resource.data.currentCycleStatus == 'completed')
@@ -4333,7 +4333,7 @@ groupId,
 recruitmentId,
 request.resource.data
 );
-allow update: if (rf40(getAfter(rf7(recruitmentId)).data) || (getAfter(rf7(recruitmentId)).data.get('lastCommandType', '') == 'complete' && getAfter(rf7(recruitmentId)).data.lastCommandAt == request.time)) ? (rf274(recruitmentId, request.resource.data)) : ((rf41(get(rf7(recruitmentId)).data, getAfter(rf7(recruitmentId)).data)) ? (rf272(groupId, recruitmentId, request.resource.data)) : ((rf164(recruitmentId)) ? (rf276(recruitmentId, resource.data, request.resource.data)) : ((rf82(recruitmentId)) ? (rf279(groupId, recruitmentId, resource.data, request.resource.data)) : (rf278(groupId, recruitmentId, resource.data, request.resource.data) || rf280(groupId, recruitmentId, resource.data, request.resource.data) || rf281(
+allow update: if (getAfter(rf7(recruitmentId)).data.get('lastCommandType', '') in ['advanceCycle', 'complete'] && getAfter(rf7(recruitmentId)).data.lastCommandAt == request.time) ? (rf274(recruitmentId, request.resource.data)) : ((rf41(get(rf7(recruitmentId)).data, getAfter(rf7(recruitmentId)).data)) ? (rf272(groupId, recruitmentId, request.resource.data)) : ((rf164(recruitmentId)) ? (rf276(recruitmentId, resource.data, request.resource.data)) : ((rf82(recruitmentId)) ? (rf279(groupId, recruitmentId, resource.data, request.resource.data)) : (rf278(groupId, recruitmentId, resource.data, request.resource.data) || rf280(groupId, recruitmentId, resource.data, request.resource.data) || rf281(
 groupId,
 recruitmentId,
 resource.data,

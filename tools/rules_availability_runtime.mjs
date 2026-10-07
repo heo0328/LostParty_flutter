@@ -22,9 +22,9 @@ export function availabilityRuntime(input) {
   // A complete command has the same immutable slots/targets lifecycle shape.
   // Dispatch before unrelated membership/cleanup fallbacks, including denials.
   replace('allow update: if (bug24Advancing(request.resource.data))',
-    "allow update: if (bug24Advancing(request.resource.data) || (request.resource.data.get('lastCommandType', '') == 'complete' && request.resource.data.lastCommandAt == request.time))");
+    "allow update: if (request.resource.data.get('lastCommandType', '') in ['advanceCycle', 'complete'] && request.resource.data.lastCommandAt == request.time)");
   replace('allow update: if (bug24Advancing(getAfter(recruitmentPath(recruitmentId)).data))',
-    "allow update: if (bug24Advancing(getAfter(recruitmentPath(recruitmentId)).data) || (getAfter(recruitmentPath(recruitmentId)).data.get('lastCommandType', '') == 'complete' && getAfter(recruitmentPath(recruitmentId)).data.lastCommandAt == request.time))");
+    "allow update: if (getAfter(recruitmentPath(recruitmentId)).data.get('lastCommandType', '') in ['advanceCycle', 'complete'] && getAfter(recruitmentPath(recruitmentId)).data.lastCommandAt == request.time)");
   replace("? validAtomicRaidStateUpdate(playerId, stateId, resource.data, request.resource.data)\n          : ((resource.data.status == 'completed'",
     "? (resource.data.recruitmentId == request.resource.data.recruitmentId && validAtomicRaidStateUpdate(playerId, stateId, resource.data, request.resource.data))\n          : ((resource.data.status == 'completed'");
   const fields = "['guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardCycleStartedAt', 'guardCycleEndsAt', 'guardSlotIndex', 'guardCheckedAt']";
