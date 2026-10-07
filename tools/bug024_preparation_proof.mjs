@@ -142,10 +142,12 @@ async function advance({ omit = false, staleRevision = false, deleteClaim = fals
 }
 async function denied(work) {
   const before = await snapshot();
-  await assert.rejects(work, error => error.code === 'permission-denied' && !/maximum|evaluation limit/i.test(error.message));
+  await assert.rejects(work, error => error.code === 'permission-denied'
+    && !/maximum|evaluation limit|service call error/i.test(error.message));
   assert.deepEqual(await snapshot(), before, 'rejected operation must be atomic');
 }
 async function check(name, work) {
+  if (process.env.BUG024_FILTER && !new RegExp(process.env.BUG024_FILTER).test(name)) return;
   if (process.env.BUG024_DIAGNOSIS === '1' && results.length > 0) return;
   try { await work(); results.push({ name, passed: true }); console.log(`PASS BUG024 ${name}`); }
   catch (e) { results.push({ name, passed: false, error: e.message }); console.error(`FAIL BUG024 ${name}: ${e.message}`); }
