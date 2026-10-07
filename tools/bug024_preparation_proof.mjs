@@ -106,7 +106,7 @@ async function prepare({ id = replacement, omit = null, tamper = null, expectedR
     if (tamper === 'delete-claim') tx.delete(doc(client, 'players', playerId, 'weeklyRaidClaims', `${before.currentCycleKey}_${id}_${raidId}`));
   });
 }
-async function advance({ omit = false, staleRevision = false } = {}) {
+async function advance({ omit = false, staleRevision = false, deleteClaim = false } = {}) {
   return runTransaction(db, async tx => {
     const ref = doc(db, 'recruitments', recruitmentId);
     const room = (await tx.get(ref)).data();
@@ -117,6 +117,7 @@ async function advance({ omit = false, staleRevision = false } = {}) {
       completedAt: null, completedByPlayerId: null, commandTargets: room.raidStateTargets,
       revision: room.revision + (staleRevision ? 0 : 1), lastCommandId: eventId, lastCommandType: 'advanceCycle',
       lastCommandActorPlayerId: playerId, lastCommandAt: serverTimestamp(), updatedAt: serverTimestamp() };
+    if (deleteClaim) tx.delete(doc(db, 'players', playerId, 'weeklyRaidClaims', `${cycleKey}_${replacement}_${raidId}`));
     tx.update(ref, patch);
     tx.update(doc(db, 'groups', room.groupId, 'raidListings', recruitmentId), { ...room, ...patch, sourceRevision: patch.revision });
     for (const [index, slot] of room.partySlots.entries()) {
@@ -221,8 +222,10 @@ try {
   await check('reject current claim acquired after preparation', async () => {
     await seed(); await prepare();
     await admin(adb => setDoc(doc(adb, 'players', playerId, 'weeklyRaidClaims', `${cycleKey}_${replacement}_${raidId}`), {
-      playerId, characterId: replacement, raidId, ownershipRevision: 1, cycleKey }));
-    await denied(() => advance());
+      playerId, characterId: replacement, raidId, ownershipRevision: 1, cycleKey,
+      cycleStartedAt: Timestamp.fromDate(cycleWindow(cycleKey).startedAt),
+      cycleEndsAt: Timestamp.fromDate(cycleWindow(cycleKey).endsAt) }));
+    await denied(() => advance()); await denied(() => advance({ deleteClaim: true }));
   });
 } finally {
   if (process.env.BUG024_DIAGNOSIS === '1') {

@@ -33,6 +33,15 @@ export function nextWeekPreparation(source) {
         && data.difficultyId is string && data.difficultyId.size() > 0
         && deCurrentOwnership(data);
     }
+    function bug24CommandIncludes(room, playerId, stateId) {
+      return room.commandTargets.size() <= 8
+        && {'playerId': playerId, 'stateId': stateId} in room.commandTargets;
+    }
+    function bug24PriorClaimAvailable(data) {
+      let path = weeklyRaidClaimPath(data.playerId, data.cycleKey, data.characterId, data.raidId);
+      return !exists(path) || deOlderRecord(get(path).data,
+        data.playerId, data.characterId, data.raidId, data.get('ownershipRevision', 0));
+    }
     function bug24AssignmentAvailable(data) {
       let path = assignmentPath(data.playerId, data.characterId + '_' + data.raidId);
       return !existsAfter(path) || deOlderRecord(getAfter(path).data,
@@ -139,13 +148,10 @@ export function nextWeekPreparation(source) {
     function bug24AdvanceCompleted(playerId, stateId, oldData, data) {
       let room = getAfter(recruitmentPath(data.recruitmentId)).data;
       return bug24KnownCompleted(oldData, playerId, data.characterId, data.raidId) && oldData.cycleKey < data.cycleKey
-        && bug24AssignmentAvailable(data)
-        && oldData.revision is int && oldData.revision >= 1
-        && oldData.playerId == playerId && data.playerId == playerId
-        && oldData.characterId == data.characterId && oldData.raidId == data.raidId
+        && bug24AssignmentAvailable(data) && bug24PriorClaimAvailable(data)
+        && data.playerId == playerId
         && stateId == data.characterId + '_' + data.raidId
         && oldData.get('ownershipRevision', 0) == data.get('ownershipRevision', 0)
-        && deCurrentOwnership(oldData) && deCurrentOwnership(data)
         && atomicIsLifecycleCommand(room) && room.lastCommandType == 'advanceCycle'
         && room.lastCommandAt == request.time
         && data.diff(oldData).affectedKeys().hasOnly([
@@ -154,12 +160,18 @@ export function nextWeekPreparation(source) {
         && data.cycleKey == room.currentCycleKey && data.raidId == room.raidId
         && data.difficultyId == room.difficultyId && data.revision == oldData.revision + 1
         && data.updatedAt == request.time && !('completedAt' in data)
-        && atomicCommandIncludes(room, playerId, stateId) && atomicAdvanceStateMatchesSlot(room, data)
+        && bug24CommandIncludes(room, playerId, stateId) && atomicAdvanceStateMatchesSlot(room, data)
         && !deBlockingClaim(playerId, data.cycleKey, data.characterId, data.raidId, data.get('ownershipRevision', 0));
     }
 `;
   replaceOnce('    function validAtomicAdvanceRaidStateCreate(playerId, stateId, data) {',
     advance + '\n    function validAtomicAdvanceRaidStateCreate(playerId, stateId, data) {');
+  const advanceCreateStart = source.indexOf('    function validAtomicAdvanceRaidStateCreate(');
+  const advanceCreateEnd = source.indexOf('    function validAtomicRaidStateUpdate(', advanceCreateStart);
+  const advanceCreate = source.slice(advanceCreateStart, advanceCreateEnd);
+  source = source.slice(0, advanceCreateStart) + advanceCreate.replace(
+    'atomicCommandIncludes(recruitment, playerId, stateId)',
+    'bug24CommandIncludes(recruitment, playerId, stateId)') + source.slice(advanceCreateEnd);
   // Discriminators are already mandatory in the selected validators. Keep
   // complete off unrelated fallback paths, preserving its eight-member budget.
   const stateMatch = source.indexOf('      match /raidStates/{stateId}');
@@ -183,8 +195,8 @@ export function nextWeekPreparation(source) {
               || deReplacePriorState(playerId, stateId, resource.data, request.resource.data))
             : (${priorUpdate}))` + source.slice(updateEnd);
   replaceOnce("&& !newData.diff(oldData).affectedKeys().hasAny(['role'])",
-    "&& oldData.cycleKey < newData.cycleKey\n            && bug24AssignmentAvailable(newData)\n            && !deBlockingClaim(playerId, newData.cycleKey, newData.characterId, newData.raidId, newData.get('ownershipRevision', 0))\n            && !newData.diff(oldData).affectedKeys().hasAny(['role'])");
+    "&& oldData.cycleKey < newData.cycleKey\n            && bug24AssignmentAvailable(newData)\n            && bug24PriorClaimAvailable(newData)\n            && !deBlockingClaim(playerId, newData.cycleKey, newData.characterId, newData.raidId, newData.get('ownershipRevision', 0))\n            && !newData.diff(oldData).affectedKeys().hasAny(['role'])");
   replaceOnce('        && atomicAdvanceStateMatchesSlot(recruitment, data);',
-    "        && atomicAdvanceStateMatchesSlot(recruitment, data)\n        && bug24AssignmentAvailable(data)\n        && !deBlockingClaim(playerId, data.cycleKey, data.characterId, data.raidId, data.get('ownershipRevision', 0));");
+    "        && atomicAdvanceStateMatchesSlot(recruitment, data)\n        && bug24AssignmentAvailable(data)\n        && bug24PriorClaimAvailable(data)\n        && !deBlockingClaim(playerId, data.cycleKey, data.characterId, data.raidId, data.get('ownershipRevision', 0));");
   return source;
 }
