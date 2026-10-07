@@ -65,9 +65,9 @@ async function seed({ targetState = 'absent', missingListing = false } = {}) {
 }
 async function prepare({ id = replacement, omit = null, tamper = null, expectedRevision = null, client = db } = {}) {
   return runTransaction(client, async tx => {
-    const roomRef = doc(db, 'recruitments', recruitmentId);
+    const roomRef = doc(client, 'recruitments', recruitmentId);
     const before = (await tx.get(roomRef)).data();
-    const memberRef = doc(db, 'recruitments', recruitmentId, 'members', playerId);
+    const memberRef = doc(client, 'recruitments', recruitmentId, 'members', playerId);
     const member = (await tx.get(memberRef)).data();
     const nextRevision = expectedRevision ?? before.revision + 1;
     const patch = { partySlots: before.partySlots.map(s => s.playerId === playerId ? { ...s, characterId: id } : s),
@@ -81,17 +81,17 @@ async function prepare({ id = replacement, omit = null, tamper = null, expectedR
     if (tamper === 'complete-status') patch.currentCycleStatus = 'active';
     if (omit !== 'room') tx.update(roomRef, patch);
     if (omit !== 'member') tx.update(memberRef, memberPatch);
-    if (omit !== 'listing') tx.set(doc(db, 'groups', before.groupId, 'raidListings', recruitmentId), { ...before, ...patch });
+    if (omit !== 'listing') tx.set(doc(client, 'groups', before.groupId, 'raidListings', recruitmentId), { ...before, ...patch });
     if (omit !== 'event') {
       const eventId = `characterChanged_${recruitmentId}_${nextRevision}`;
-      tx.set(doc(db, 'partyEvents', eventId), { schemaVersion: 1, eventId, recruitmentId,
+      tx.set(doc(client, 'partyEvents', eventId), { schemaVersion: 1, eventId, recruitmentId,
         type: 'characterChanged', commandId: eventId, commandRevision: nextRevision,
         audiencePlayerIds: before.memberPlayerIds, actorPlayerId: playerId, occurredAt: serverTimestamp() });
     }
-    if (tamper === 'delete-old') tx.delete(doc(db, 'players', playerId, 'raidStates', `${member.characterId}_${raidId}`));
-    if (tamper === 'delete-new') tx.delete(doc(db, 'players', playerId, 'raidStates', `${id}_${raidId}`));
-    if (tamper === 'write-new') tx.set(doc(db, 'players', playerId, 'raidStates', `${id}_${raidId}`), { status: 'active' });
-    if (tamper === 'delete-claim') tx.delete(doc(db, 'players', playerId, 'weeklyRaidClaims', `${before.currentCycleKey}_${id}_${raidId}`));
+    if (tamper === 'delete-old') tx.delete(doc(client, 'players', playerId, 'raidStates', `${member.characterId}_${raidId}`));
+    if (tamper === 'delete-new') tx.delete(doc(client, 'players', playerId, 'raidStates', `${id}_${raidId}`));
+    if (tamper === 'write-new') tx.set(doc(client, 'players', playerId, 'raidStates', `${id}_${raidId}`), { status: 'active' });
+    if (tamper === 'delete-claim') tx.delete(doc(client, 'players', playerId, 'weeklyRaidClaims', `${before.currentCycleKey}_${id}_${raidId}`));
   });
 }
 async function advance({ omit = false, staleRevision = false } = {}) {
@@ -123,7 +123,7 @@ async function advance({ omit = false, staleRevision = false } = {}) {
 }
 async function denied(work) {
   const before = await snapshot();
-  await assert.rejects(work, error => error.code === 'permission-denied');
+  await assert.rejects(work, error => error.code === 'permission-denied' && !/maximum|evaluation limit/i.test(error.message));
   assert.deepEqual(await snapshot(), before, 'rejected operation must be atomic');
 }
 async function check(name, work) {

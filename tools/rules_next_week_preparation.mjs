@@ -16,6 +16,11 @@ export function nextWeekPreparation(source) {
       return hasActiveBinding() && data.schemaVersion == 2 && data.status == 'active'
         && data.continueTogether == true && data.currentCycleStatus == 'completed';
     }
+    function bug24PrepDispatch(before, after) {
+      return before.currentCycleStatus == 'completed' && after.currentCycleStatus == 'completed'
+        && after.memberCount == before.memberCount && after.lastCommandType == null
+        && after.partySlots != before.partySlots;
+    }
     function bug24PrepRecords(before, oldMember, member) {
       let oldPath = atomicRaidStateDocPath(member.playerId, oldMember.characterId + '_' + before.raidId);
       let newPath = atomicRaidStateDocPath(member.playerId, member.characterId + '_' + before.raidId);
@@ -80,11 +85,24 @@ export function nextWeekPreparation(source) {
     }
 `;
   replaceOnce('    function atomicIsLifecycleCommand(newData) {', helpers + '\n    function atomicIsLifecycleCommand(newData) {');
-  // Dedicated dispatch, before active-only commands. Do not broaden their gate.
-  replaceOnce("        ) || (resource.data.currentCycleStatus == 'active' && (validAtomicPendingApplicationUpdate(",
-    "        ) || (resource.data.currentCycleStatus == 'completed' && request.resource.data.currentCycleStatus == 'completed' && bug24PrepAggregate(resource.data, request.resource.data)) || (resource.data.currentCycleStatus == 'active' && (validAtomicPendingApplicationUpdate(");
-  replaceOnce('            || (validAtomicMemberCharacterChange(',
-    '            || (bug24PrepMember(recruitmentId, playerId, resource.data, request.resource.data) || validAtomicMemberCharacterChange(');
+  // Dedicated dispatch avoids evaluating unrelated completed-room cleanup paths.
+  function dispatchUpdate(match, predicate, validation) {
+    const matchStart = source.indexOf(match);
+    const start = source.indexOf('      allow update: if ', matchStart);
+    const end = source.indexOf(';', start);
+    assert.ok(matchStart >= 0 && start > matchStart && end > start);
+    const prior = source.slice(start + '      allow update: if '.length, end);
+    source = source.slice(0, start) + `      allow update: if (${predicate}) ? (${validation}) : (${prior})` + source.slice(end);
+  }
+  dispatchUpdate('    match /recruitments/{recruitmentId}',
+    'bug24PrepDispatch(resource.data, request.resource.data)',
+    'bug24PrepAggregate(resource.data, request.resource.data)');
+  dispatchUpdate('      match /members/{playerId}',
+    "request.resource.data.characterId != resource.data.characterId && bug24PrepDispatch(get(recruitmentPath(recruitmentId)).data, getAfter(recruitmentPath(recruitmentId)).data)",
+    'bug24PrepMember(recruitmentId, playerId, resource.data, request.resource.data)');
+  dispatchUpdate('      match /raidListings/{recruitmentId}',
+    'bug24PrepDispatch(get(recruitmentPath(recruitmentId)).data, getAfter(recruitmentPath(recruitmentId)).data)',
+    'validGroupRaidListingCreate(groupId, recruitmentId, request.resource.data)');
   // Legacy assignment checks must not authorize an isolated V2 prep member write.
   replaceOnce('      return membershipFieldsOk\n        && (nextWeekPrep',
     "      return membershipFieldsOk\n        && !(recruitment.schemaVersion == 2 && nextWeekPrep)\n        && (nextWeekPrep");
