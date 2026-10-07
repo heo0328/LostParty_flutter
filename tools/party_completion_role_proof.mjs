@@ -65,6 +65,11 @@ for (const [version, rules] of [['baseline', baseline], ['candidate', candidate]
     catch (caught) { error = caught; }
     const after = await inspectAll(env);
     const allowed = !error;
+    if (!allowed && version === 'candidate') {
+      assert.equal(error.code, 'permission-denied', `${label}: unexpected failure`);
+      assert.doesNotMatch(error.message, /maximum|evaluation limit|service call error|1000 expressions/i,
+        `${label}: budget exhaustion is not a policy denial`);
+    }
     if (!allowed) assert.deepEqual(after, before, `${label}: rejected write changed data`);
     assert.equal(allowed, expected, `${version}/${label}: ${error?.message ?? 'unexpected allow'}`);
     if (allowed) {

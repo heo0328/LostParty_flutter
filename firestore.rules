@@ -150,7 +150,7 @@ return z1j.keys().hasOnly(['playerId', 'characterId', 'raidId', 'ownershipRevisi
 && z1j.guardSchemaVersion == 1;
 }
 function rf32(z1k, z1l) {
-return !exists(z1k) || rf169(get(z1k).data, z1l.playerId,
+return !exists(z1k) || rf168(get(z1k).data, z1l.playerId,
 z1l.characterId, z1l.raidId, z1l.ownershipRevision);
 }
 function rf33(z1m, z1n, z1o) {
@@ -172,14 +172,14 @@ return rf4() && rf5() == z1p.leaderPlayerId
 && z1p.partySlots[z1q].characterId == z1o.characterId
 && z1p.partySlots[z1q].get('ownershipRevision', 0) == z1o.ownershipRevision
 && z1o.raidId == z1p.raidId && z1n == z1o.characterId + '_' + z1o.raidId
-&& rf168(z1o)
+&& rf167(z1o)
 && rf32(rf9(z1m, z1n), z1o)
 && rf32(rf11(z1m, z1o.guardCycleKey, z1o.characterId, z1o.raidId), z1o);
 }
 function rf34(z1r, z1s, z1t, z1u) {
 return z1u.diff(z1t).affectedKeys().hasOnly(['guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardCycleStartedAt', 'guardCycleEndsAt', 'guardSlotIndex', 'guardCheckedAt', 'ownershipRevision'])
 && z1t.playerId == z1u.playerId && z1t.characterId == z1u.characterId
-&& z1t.raidId == z1u.raidId && (z1t.get('ownershipRevision', 0) == z1u.ownershipRevision || (rf31(z1t) && rf169(z1t, z1r, z1u.characterId, z1u.raidId, z1u.ownershipRevision)))
+&& z1t.raidId == z1u.raidId && (z1t.get('ownershipRevision', 0) == z1u.ownershipRevision || (rf31(z1t) && rf168(z1t, z1r, z1u.characterId, z1u.raidId, z1u.ownershipRevision)))
 && (rf31(z1t)
 || (rf46(z1t, z1r, z1u.characterId, z1u.raidId, z1u.ownershipRevision)
 && z1t.cycleKey < z1u.guardCycleKey && z1t.completedAt is timestamp && z1t.updatedAt is timestamp)
@@ -204,7 +204,7 @@ return z1v.get('guardSchemaVersion', 0) == 1
 }
 function rf36(z1y, z1z, z20, z21) {
 let z22 = getAfter(rf7(z21.recruitmentId)).data;
-return rf31(z20) && rf35(z20, z21, z22) && rf168(z21)
+return rf31(z20) && rf35(z20, z21, z22) && rf167(z21)
 && rf53(z22) && z22.lastCommandType == 'advanceCycle'
 && z22.lastCommandAt == request.time
 && z21.keys().hasOnly(['playerId', 'characterId', 'raidId', 'ownershipRevision',
@@ -248,7 +248,7 @@ return data.schemaVersion == 1 && data.status == 'completed'
 && data.source in ['manual', 'party']
 && (data.source == 'manual' ? data.get('role', null) == null || data.role in ['dealer', 'support'] : data.role in ['dealer', 'support'])
 && data.difficultyId is string && data.difficultyId.size() > 0
-&& rf168(data);
+&& rf167(data);
 }
 function rf43(z2d, playerId, stateId) {
 return z2d.commandTargets.size() <= 8
@@ -256,12 +256,12 @@ return z2d.commandTargets.size() <= 8
 }
 function rf44(z2e) {
 let z2f = rf11(z2e.playerId, z2e.cycleKey, z2e.characterId, z2e.raidId);
-return !exists(z2f) || rf169(get(z2f).data,
+return !exists(z2f) || rf168(get(z2f).data,
 z2e.playerId, z2e.characterId, z2e.raidId, z2e.get('ownershipRevision', 0));
 }
 function rf45(z2g) {
 let z2h = rf9(z2g.playerId, z2g.characterId + '_' + z2g.raidId);
-return !existsAfter(z2h) || rf169(getAfter(z2h).data,
+return !existsAfter(z2h) || rf168(getAfter(z2h).data,
 z2g.playerId, z2g.characterId, z2g.raidId, z2g.get('ownershipRevision', 0));
 }
 function rf46(data, z2i, z2j, z2k, z2l) {
@@ -344,7 +344,7 @@ return rf4() && playerId == rf5()
 && rf39(before) && z32.revision == before.revision + 1
 && z32.updatedAt == request.time && member.updatedAt == request.time
 && member.characterId != z31.characterId
-&& rf168(z31) && rf168(member)
+&& rf167(z31) && rf167(member)
 && rf45({'playerId': playerId, 'characterId': member.characterId, 'raidId': before.raidId, 'ownershipRevision': member.ownershipRevision});
 }
 function rf53(z33) {
@@ -1152,7 +1152,7 @@ z6m,
 z6n
 ) {
 let z6o = rf7(z6n.recruitmentId);
-return rf168(z6n) && rf4()
+return rf167(z6n) && rf4()
 && z6l == rf5()
 && z6n.playerId == z6l
 && z6m == z6n.characterId + '_' + z6n.raidId
@@ -1554,7 +1554,7 @@ return rf4()
 && z8s.keys().hasOnly([
 'schemaVersion', 'playerId', 'characterId', 'raidId', 'cycleKey',
 'difficultyId', 'source', 'cycleStartedAt', 'cycleEndsAt',
-'completedAt', 'updatedAt'
+'completedAt', 'updatedAt', 'ownershipRevision'
 ])
 && z8s.schemaVersion == 1
 && z8s.playerId == z8q
@@ -1581,11 +1581,11 @@ z8s.raidId
 && request.time < z8s.cycleEndsAt
 && z8s.completedAt == request.time
 && z8s.updatedAt == request.time
-&& rf17(z8s.characterId)
+&& rf17(z8s.characterId) && rf167(z8s)
 && !existsAfter(rf9(z8q, z8t));
 }
 function rf123(z8u, z8v, z8w) {
-return rf168(z8w) && rf4()
+return rf167(z8w) && rf4()
 && z8u == rf5()
 && z8w.playerId == z8u
 && z8w.characterId is string
@@ -1644,15 +1644,15 @@ return rf126(z97, z98) && z98.playerId == z97.playerId
 && z98.characterId == z97.characterId && z98.raidId == z97.raidId
 && (rf31(z97) || z97.get('status', '') in ['active', 'completed'])
 && (z98.get('source', '') == 'manual'
-? ((rf31(z97) || rf170(z97, z95, z98.characterId, z98.raidId, z98.get('ownershipRevision', 0)))
-&& rf134(z95, z96, z98))
-: ((rf31(z97) || rf170(z97, z95, z98.characterId, z98.raidId, z98.get('ownershipRevision', 0)))
-&& rf172(z98) && rf133(z95, z96, z98)));
+? ((rf31(z97) || rf169(z97, z95, z98.characterId, z98.raidId, z98.get('ownershipRevision', 0)))
+&& rf133(z95, z96, z98))
+: ((rf31(z97) || rf169(z97, z95, z98.characterId, z98.raidId, z98.get('ownershipRevision', 0)))
+&& rf171(z98) && rf132(z95, z96, z98)));
 }
 function rf128(z99, z9a, z9b, z9c) {
 return rf31(z9b) && !z9c.diff(z9b).affectedKeys().hasAny(['guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardCycleStartedAt', 'guardCycleEndsAt', 'guardSlotIndex', 'guardCheckedAt'])
 && z9c.playerId == z9b.playerId && z9c.characterId == z9b.characterId && z9c.raidId == z9b.raidId
-&& rf172(z9c) && rf133(z99, z9a, z9c);
+&& rf171(z9c) && rf132(z99, z9a, z9c);
 }
 function rf129(z9d, z9e, z9f, z9g) {
 let z9h = getAfter(rf7(z9g.recruitmentId)).data;
@@ -1671,199 +1671,196 @@ return rf42(z9f, z9d, z9g.characterId, z9g.raidId) && z9f.cycleKey < z9g.cycleKe
 && z9g.updatedAt == request.time && !('completedAt' in z9g)
 && rf43(z9h, z9d, z9e);
 }
-function rf130(z9i, z9j, z9k) {
-return false;
-}
-function rf131(z9l, z9m, z9n, z9o) {
-let z9p = getAfter(rf7(z9n.recruitmentId)).data;
-return rf53(z9p)
-&& rf60(z9n)
-&& z9o.playerId == z9l
-&& z9n.playerId == z9l
-&& z9m == z9n.characterId + '_' + z9n.raidId
-&& z9o.characterId == z9n.characterId
-&& z9o.raidId == z9n.raidId
-&& z9o.difficultyId == z9n.difficultyId
-&& z9o.recruitmentId == z9n.recruitmentId
-&& rf124(z9p, z9l, z9m)
-&& z9o.diff(z9n).affectedKeys().hasOnly([
+function rf130(z9i, z9j, z9k, z9l) {
+let z9m = getAfter(rf7(z9k.recruitmentId)).data;
+return rf53(z9m)
+&& rf60(z9k)
+&& z9l.playerId == z9i
+&& z9k.playerId == z9i
+&& z9j == z9k.characterId + '_' + z9k.raidId
+&& z9l.characterId == z9k.characterId
+&& z9l.raidId == z9k.raidId
+&& z9l.difficultyId == z9k.difficultyId
+&& z9l.recruitmentId == z9k.recruitmentId
+&& rf124(z9m, z9i, z9j)
+&& z9l.diff(z9k).affectedKeys().hasOnly([
 'status', 'source', 'cycleKey', 'revision', 'completedAt',
 'updatedAt', 'role'
 ])
-&& z9o.revision == z9n.revision + 1
-&& z9o.updatedAt == request.time
-&& ((z9p.lastCommandType == 'complete'
-&& z9n.status == 'active'
-&& z9n.recruitmentId == z9p.recruitmentId
-&& z9n.raidId == z9p.raidId
-&& z9n.difficultyId == z9p.difficultyId
-&& z9n.cycleKey == z9p.currentCycleKey
-&& (!('role' in z9n) || z9n.role == z9o.role)
-&& rf125(z9p, z9o)
-&& z9o.status == 'completed'
-&& z9o.source == z9n.source
-&& z9o.cycleKey == z9n.cycleKey
-&& z9o.completedAt == request.time)
-|| (z9p.lastCommandType == 'advanceCycle'
-&& z9n.cycleKey < z9o.cycleKey
-&& rf168(z9o)
-&& rf35(z9n, z9o, z9p)
-&& !z9o.diff(z9n).affectedKeys().hasAny(['role'])
-&& (z9n.status == 'active' || z9n.status == 'completed')
-&& z9o.status == 'active'
-&& z9o.source == 'party'
-&& z9o.cycleKey == z9p.currentCycleKey
-&& !('completedAt' in z9o)
+&& z9l.revision == z9k.revision + 1
+&& z9l.updatedAt == request.time
+&& ((z9m.lastCommandType == 'complete'
+&& z9k.status == 'active'
+&& z9k.recruitmentId == z9m.recruitmentId
+&& z9k.raidId == z9m.raidId
+&& z9k.difficultyId == z9m.difficultyId
+&& z9k.cycleKey == z9m.currentCycleKey
+&& (!('role' in z9k) || z9k.role == z9l.role)
+&& rf125(z9m, z9l)
+&& z9l.status == 'completed'
+&& z9l.source == z9k.source
+&& z9l.cycleKey == z9k.cycleKey
+&& z9l.completedAt == request.time)
+|| (z9m.lastCommandType == 'advanceCycle'
+&& z9k.cycleKey < z9l.cycleKey
+&& rf167(z9l)
+&& rf35(z9k, z9l, z9m)
+&& !z9l.diff(z9k).affectedKeys().hasAny(['role'])
+&& (z9k.status == 'active' || z9k.status == 'completed')
+&& z9l.status == 'active'
+&& z9l.source == 'party'
+&& z9l.cycleKey == z9m.currentCycleKey
+&& !('completedAt' in z9l)
 ));
 }
-function rf132(z9q, z9r, z9s) {
-let z9t = getAfter(rf7(z9s.recruitmentId)).data;
-return z9t.lastCommandType == 'disband'
-&& z9t.status == 'disbanded'
-&& z9s.status == 'active'
-&& rf124(z9t, z9q, z9r);
+function rf131(z9n, z9o, z9p) {
+let z9q = getAfter(rf7(z9p.recruitmentId)).data;
+return z9q.lastCommandType == 'disband'
+&& z9q.status == 'disbanded'
+&& z9p.status == 'active'
+&& rf124(z9q, z9n, z9o);
 }
-function rf133(z9u, z9v, z9w) {
-let z9x = getAfter(rf7(z9w.recruitmentId)).data;
-let z9y = getAfter(
-rf8(z9w.recruitmentId, z9u)
+function rf132(z9r, z9s, z9t) {
+let z9u = getAfter(rf7(z9t.recruitmentId)).data;
+let z9v = getAfter(
+rf8(z9t.recruitmentId, z9r)
 ).data;
-return rf60(z9w) && rf4()
-&& (z9u == rf5()
-|| rf27(z9w.recruitmentId))
-&& z9v == z9w.characterId + '_' + z9w.raidId
-&& z9w.schemaVersion == 1
-&& z9w.playerId == z9u
-&& z9w.status == 'active'
-&& z9w.source == 'party'
-&& z9w.revision == 1
-&& z9w.recruitmentId is string
-&& z9x.schemaVersion == 2
-&& !rf53(z9x)
-&& z9x.status == 'active'
-&& z9x.currentCycleStatus == 'active'
-&& z9w.cycleKey == z9x.currentCycleKey
-&& z9w.raidId == z9x.raidId
-&& z9w.characterId == z9y.characterId
-&& z9w.get('ownershipRevision', 0) == z9y.get('ownershipRevision', 0)
-&& rf18(z9w.characterId, z9u)
-&& !rf171(
-z9u,
-z9w.cycleKey,
-z9w.characterId,
-z9w.raidId, z9w.get('ownershipRevision', 0)
+return rf60(z9t) && rf4()
+&& (z9r == rf5()
+|| rf27(z9t.recruitmentId))
+&& z9s == z9t.characterId + '_' + z9t.raidId
+&& z9t.schemaVersion == 1
+&& z9t.playerId == z9r
+&& z9t.status == 'active'
+&& z9t.source == 'party'
+&& z9t.revision == 1
+&& z9t.recruitmentId is string
+&& z9u.schemaVersion == 2
+&& !rf53(z9u)
+&& z9u.status == 'active'
+&& z9u.currentCycleStatus == 'active'
+&& z9t.cycleKey == z9u.currentCycleKey
+&& z9t.raidId == z9u.raidId
+&& z9t.characterId == z9v.characterId
+&& z9t.get('ownershipRevision', 0) == z9v.get('ownershipRevision', 0)
+&& rf18(z9t.characterId, z9r)
+&& !rf170(
+z9r,
+z9t.cycleKey,
+z9t.characterId,
+z9t.raidId, z9t.get('ownershipRevision', 0)
 )
-&& rf68(z9x, z9u, z9v);
+&& rf68(z9u, z9r, z9s);
 }
-function rf134(z9z, za0, za1) {
+function rf133(z9w, z9x, z9y) {
 return rf4()
-&& z9z == rf5()
-&& za0 == za1.characterId + '_' + za1.raidId
-&& za1.keys().hasOnly([
+&& z9w == rf5()
+&& z9x == z9y.characterId + '_' + z9y.raidId
+&& z9y.keys().hasOnly([
 'schemaVersion', 'playerId', 'characterId', 'raidId',
 'difficultyId', 'cycleKey', 'status', 'source', 'recruitmentId',
 'revision', 'cycleStartedAt', 'cycleEndsAt', 'completedAt',
 'updatedAt', 'ownershipRevision'
 ])
-&& za1.schemaVersion == 1
-&& za1.playerId == z9z
-&& za1.characterId is string
-&& za1.raidId is string
-&& za1.difficultyId is string
-&& za1.cycleKey is string
-&& za1.status == 'completed'
-&& za1.source == 'manual'
-&& za1.recruitmentId == null
-&& za1.revision == 1
-&& za1.cycleStartedAt is timestamp
-&& za1.cycleEndsAt is timestamp
-&& za1.cycleEndsAt == za1.cycleStartedAt + duration.value(7, 'd')
-&& request.time >= za1.cycleStartedAt
-&& request.time < za1.cycleEndsAt
-&& za1.completedAt == request.time
-&& za1.updatedAt == request.time
-&& rf168(za1)
-&& !rf171(
-z9z,
-za1.cycleKey,
-za1.characterId,
-za1.raidId, za1.get('ownershipRevision', 0)
+&& z9y.schemaVersion == 1
+&& z9y.playerId == z9w
+&& z9y.characterId is string
+&& z9y.raidId is string
+&& z9y.difficultyId is string
+&& z9y.cycleKey is string
+&& z9y.status == 'completed'
+&& z9y.source == 'manual'
+&& z9y.recruitmentId == null
+&& z9y.revision == 1
+&& z9y.cycleStartedAt is timestamp
+&& z9y.cycleEndsAt is timestamp
+&& z9y.cycleEndsAt == z9y.cycleStartedAt + duration.value(7, 'd')
+&& request.time >= z9y.cycleStartedAt
+&& request.time < z9y.cycleEndsAt
+&& z9y.completedAt == request.time
+&& z9y.updatedAt == request.time
+&& rf167(z9y)
+&& !rf170(
+z9w,
+z9y.cycleKey,
+z9y.characterId,
+z9y.raidId, z9y.get('ownershipRevision', 0)
 )
-&& rf139(z9z, za0, za1);
+&& rf138(z9w, z9x, z9y);
 }
-function rf135(
+function rf134(
 playerId,
 stateId,
-za2,
-za3
+z9z,
+za0
 ) {
-let za4 = getAfter(rf7(za2.recruitmentId)).data;
-return rf168(za2) && rf4()
+let za1 = getAfter(rf7(z9z.recruitmentId)).data;
+return rf167(z9z) && rf4()
 && playerId == rf5()
-&& za2.playerId == playerId
-&& stateId == za2.characterId + '_' + za2.raidId
-&& za2.status == 'active'
-&& za2.source == 'party'
-&& za2.recruitmentId is string
-&& za3.diff(za2).affectedKeys().hasOnly([
+&& z9z.playerId == playerId
+&& stateId == z9z.characterId + '_' + z9z.raidId
+&& z9z.status == 'active'
+&& z9z.source == 'party'
+&& z9z.recruitmentId is string
+&& za0.diff(z9z).affectedKeys().hasOnly([
 'status', 'source', 'revision', 'completedAt', 'updatedAt'
 ])
-&& za3.status == 'completed'
-&& za3.source == 'manual'
-&& za3.revision == za2.revision + 1
-&& za3.completedAt == request.time
-&& za3.updatedAt == request.time
-&& za4.schemaVersion == 2
-&& rf67(za4)
-&& za4.commandTargets[0].stateId == stateId
-&& za4.raidId == za2.raidId
-&& za4.currentCycleKey == za2.cycleKey
-&& !(playerId in za4.memberPlayerIds)
-&& !za4.raidStateTargets.hasAny([{'playerId': playerId, 'stateId': stateId}])
-&& !existsAfter(rf8(za2.recruitmentId, playerId));
+&& za0.status == 'completed'
+&& za0.source == 'manual'
+&& za0.revision == z9z.revision + 1
+&& za0.completedAt == request.time
+&& za0.updatedAt == request.time
+&& za1.schemaVersion == 2
+&& rf67(za1)
+&& za1.commandTargets[0].stateId == stateId
+&& za1.raidId == z9z.raidId
+&& za1.currentCycleKey == z9z.cycleKey
+&& !(playerId in za1.memberPlayerIds)
+&& !za1.raidStateTargets.hasAny([{'playerId': playerId, 'stateId': stateId}])
+&& !existsAfter(rf8(z9z.recruitmentId, playerId));
+}
+function rf135(za2, za3, za4) {
+return rf4()
+&& za2 == rf5()
+&& za4.playerId == za2
+&& za3 == za4.characterId + '_' + za4.raidId
+&& za4.status == 'completed' && rf167(za4);
 }
 function rf136(za5, za6, za7) {
+let za8 = getAfter(rf7(za7.recruitmentId)).data;
 return rf4()
-&& za5 == rf5()
+&& za8.schemaVersion == 2
+&& !rf53(za8)
+&& za7.status == 'active'
 && za7.playerId == za5
-&& za6 == za7.characterId + '_' + za7.raidId
-&& za7.status == 'completed' && rf168(za7);
+&& (za5 == rf5()
+|| za8.leaderPlayerId == rf5())
+&& !rf68(za8, za5, za6);
 }
-function rf137(za8, za9, zaa) {
-let zab = getAfter(rf7(zaa.recruitmentId)).data;
-return rf4()
-&& zab.schemaVersion == 2
-&& !rf53(zab)
-&& zaa.status == 'active'
-&& zaa.playerId == za8
-&& (za8 == rf5()
-|| zab.leaderPlayerId == rf5())
-&& !rf68(zab, za8, za9);
-}
-function rf138(zac, zad, zae) {
-let zaf = rf7(zae.recruitmentId);
-return rf4() && zac == rf5()
-&& zad == zae.characterId + '_' + zae.raidId
-&& rf168(zae)
-&& zae.playerId == zac
-&& zae.status == 'active'
-&& zae.source == 'party'
+function rf137(za9, zaa, zab) {
+let zac = rf7(zab.recruitmentId);
+return rf4() && za9 == rf5()
+&& zaa == zab.characterId + '_' + zab.raidId
+&& rf167(zab)
+&& zab.playerId == za9
+&& zab.status == 'active'
+&& zab.source == 'party'
 && (
-!exists(zaf)
-|| (get(zaf).data.raidId == zae.raidId
-&& rf99(get(zaf).data))
+!exists(zac)
+|| (get(zac).data.raidId == zab.raidId
+&& rf99(get(zac).data))
 );
 }
-function rf139(zag, zah, zai) {
-let zaj = rf9(zag, zah);
-return !existsAfter(zaj) || rf169(getAfter(zaj).data,
-zag, zai.characterId, zai.raidId, zai.get('ownershipRevision', 0));
+function rf138(zad, zae, zaf) {
+let zag = rf9(zad, zae);
+return !existsAfter(zag) || rf168(getAfter(zag).data,
+zad, zaf.characterId, zaf.raidId, zaf.get('ownershipRevision', 0));
 }
-function rf140(zak, zal, zam, zan) {
-return rf170(zam, zak, zan.characterId, zan.raidId, zan.get('ownershipRevision', 0))
-&& zam.get('recruitmentId', null) != zan.recruitmentId
-&& rf172(zan)
-&& rf133(zak, zal, zan);
+function rf139(zah, zai, zaj, zak) {
+return rf169(zaj, zah, zak.characterId, zak.raidId, zak.get('ownershipRevision', 0))
+&& zaj.get('recruitmentId', null) != zak.recruitmentId
+&& rf171(zak)
+&& rf132(zah, zai, zak);
 }
 allow get: if rf4()
 && playerId == rf5();
@@ -1872,17 +1869,13 @@ allow list: if rf4()
 allow create: if (request.resource.data.keys().hasAny(['guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardCycleStartedAt', 'guardCycleEndsAt', 'guardSlotIndex', 'guardCheckedAt'])) ? (rf31(request.resource.data) && rf33(playerId, stateId, request.resource.data)) : (
 request.resource.data.keys().hasAll(['source', 'recruitmentId', 'characterId', 'raidId', 'revision'])
 && ((request.resource.data.source == 'party' && rf40(getAfter(rf7(request.resource.data.recruitmentId)).data))
-? rf130(playerId, stateId, request.resource.data)
+? false
 : ((request.resource.data.source == 'manual'
-&& rf134(
+&& rf133(
 playerId,
 stateId,
 request.resource.data
-)) || rf130(
-playerId,
-stateId,
-request.resource.data
-) || rf133(
+)) || false || rf132(
 playerId,
 stateId,
 request.resource.data
@@ -1892,39 +1885,43 @@ allow update: if (request.resource.data.diff(resource.data).affectedKeys().hasAn
 ? rf36(playerId, stateId, resource.data, request.resource.data)
 : rf128(playerId, stateId, resource.data, request.resource.data))
 : ((request.resource.data.get('source', '') == 'manual'
-&& rf170(resource.data, playerId, request.resource.data.characterId, request.resource.data.raidId, request.resource.data.get('ownershipRevision', 0)))
-? rf134(playerId, stateId, request.resource.data)
+&& rf169(resource.data, playerId, request.resource.data.characterId, request.resource.data.raidId, request.resource.data.get('ownershipRevision', 0)))
+? rf133(playerId, stateId, request.resource.data)
 : ((resource.data.get('status', '') == 'active' && request.resource.data.get('status', '') == 'active'
 && request.resource.data.get('source', '') == 'party'
 && rf40(getAfter(rf7(request.resource.data.recruitmentId)).data))
-? rf131(playerId, stateId, resource.data, request.resource.data) : (
+? rf130(playerId, stateId, resource.data, request.resource.data) : (
 (resource.data.status == 'active' && request.resource.data.status == 'completed' && request.resource.data.source == 'party')
-? rf131(playerId, stateId, resource.data, request.resource.data)
+? rf130(playerId, stateId, resource.data, request.resource.data)
 : ((resource.data.status == 'completed' && request.resource.data.status == 'active' && request.resource.data.source == 'party')
 ? (rf129(playerId, stateId, resource.data, request.resource.data)
-|| rf140(playerId, stateId, resource.data, request.resource.data))
-: ((resource.data.status == 'active' && request.resource.data.status == 'completed' && request.resource.data.source == 'manual' && resource.data.get('ownershipRevision', 0) == request.resource.data.get('ownershipRevision', 0)) ? (rf135(playerId, stateId, resource.data, request.resource.data)) : ((request.resource.data.source == 'manual'
-&& rf170(resource.data, playerId, request.resource.data.characterId,
+|| rf139(playerId, stateId, resource.data, request.resource.data))
+: ((resource.data.status == 'active' && request.resource.data.status == 'completed' && request.resource.data.source == 'manual' && resource.data.get('ownershipRevision', 0) == request.resource.data.get('ownershipRevision', 0)) ? (rf134(playerId, stateId, resource.data, request.resource.data)) : ((request.resource.data.source == 'manual'
+&& rf169(resource.data, playerId, request.resource.data.characterId,
 request.resource.data.raidId, request.resource.data.get('ownershipRevision', 0))
-&& rf134(playerId, stateId, request.resource.data))
-|| rf140(playerId, stateId, resource.data, request.resource.data)
-|| rf135(
+&& rf133(playerId, stateId, request.resource.data))
+|| rf139(playerId, stateId, resource.data, request.resource.data)
+|| rf134(
 playerId,
 stateId,
 resource.data,
 request.resource.data
-) || rf131(
+) || rf130(
 playerId,
 stateId,
 resource.data,
 request.resource.data
 ))))))));
 allow delete: if (resource.data.status == 'completed'
-&& rf136(
+&& rf135(
 playerId,
 stateId,
 resource.data
-)) || rf132(
+)) || rf131(
+playerId,
+stateId,
+resource.data
+) || rf136(
 playerId,
 stateId,
 resource.data
@@ -1932,88 +1929,84 @@ resource.data
 playerId,
 stateId,
 resource.data
-) || rf138(
-playerId,
-stateId,
-resource.data
 );
 }
 match /characterActivity/{characterId} {
-function rf141(zao, zap) {
-return /databases/$(database)/documents/playerGameAccounts/$(zao + '_' + zap);
+function rf140(zal, zam) {
+return /databases/$(database)/documents/playerGameAccounts/$(zal + '_' + zam);
 }
-function rf142(zaq, zar) {
-return /databases/$(database)/documents/players/$(zaq)/characterActivity/$(zar);
+function rf141(zan, zao) {
+return /databases/$(database)/documents/players/$(zan)/characterActivity/$(zao);
 }
-function rf143(zas, zat, zau) {
-let zav = rf16(zat);
+function rf142(zap, zaq, zar) {
+let zas = rf16(zaq);
+return exists(zas)
+&& get(zas).data.status == 'active'
+&& get(zas).data.ownerPlayerId == zap
+&& get(zas).data.gameAccountId == zar;
+}
+function rf143(zat, zau) {
+let zav = rf140(zat, zau);
 return exists(zav)
-&& get(zav).data.status == 'active'
-&& get(zav).data.ownerPlayerId == zas
-&& get(zav).data.gameAccountId == zau;
+&& get(zav).data.playerId == zat
+&& get(zav).data.gameAccountId == zau
+&& get(zav).data.status == 'active';
 }
-function rf144(zaw, zax) {
-let zay = rf141(zaw, zax);
-return exists(zay)
-&& get(zay).data.playerId == zaw
-&& get(zay).data.gameAccountId == zax
-&& get(zay).data.status == 'active';
-}
-function rf145(zaz, zb0, zb1) {
-let zb2 = rf141(zaz, zb0);
-return !exists(zb2)
-|| !('representativeCharacterId' in get(zb2).data)
-|| !(get(zb2).data.representativeCharacterId is string)
-|| get(zb2).data.representativeCharacterId.size() == 0
-|| zb1 == get(zb2).data.representativeCharacterId
-|| existsAfter(rf142(
-zaz,
-get(zb2).data.representativeCharacterId
+function rf144(zaw, zax, zay) {
+let zaz = rf140(zaw, zax);
+return !exists(zaz)
+|| !('representativeCharacterId' in get(zaz).data)
+|| !(get(zaz).data.representativeCharacterId is string)
+|| get(zaz).data.representativeCharacterId.size() == 0
+|| zay == get(zaz).data.representativeCharacterId
+|| existsAfter(rf141(
+zaw,
+get(zaz).data.representativeCharacterId
 ));
 }
-function rf146(zb3, zb4, zb5) {
+function rf145(zb0, zb1, zb2) {
 return rf4()
-&& rf5() == zb3
-&& zb4 == zb5.characterId
-&& zb5.keys().hasOnly([
+&& rf5() == zb0
+&& zb1 == zb2.characterId
+&& zb2.keys().hasOnly([
 'schemaVersion',
 'playerId',
 'characterId',
 'gameAccountId',
 'updatedAt'
 ])
-&& zb5.schemaVersion == 1
-&& zb5.playerId == zb3
-&& zb5.characterId is string
-&& zb5.characterId.size() > 0
-&& zb5.gameAccountId is string
-&& zb5.gameAccountId.size() > 0
-&& zb5.updatedAt == request.time
-&& rf143(zb3, zb4, zb5.gameAccountId)
-&& rf144(zb3, zb5.gameAccountId)
-&& rf145(zb3, zb5.gameAccountId, zb4);
+&& zb2.schemaVersion == 1
+&& zb2.playerId == zb0
+&& zb2.characterId is string
+&& zb2.characterId.size() > 0
+&& zb2.gameAccountId is string
+&& zb2.gameAccountId.size() > 0
+&& zb2.updatedAt == request.time
+&& rf142(zb0, zb1, zb2.gameAccountId)
+&& rf143(zb0, zb2.gameAccountId)
+&& rf144(zb0, zb2.gameAccountId, zb1);
 }
-function rf147(zb6, zb7, zb8) {
-let zb9 = get(rf141(zb6, zb8.gameAccountId)).data;
+function rf146(zb3, zb4, zb5) {
+let zb6 = get(rf140(zb3, zb5.gameAccountId)).data;
 return rf4()
-&& rf5() == zb6
-&& zb8.playerId == zb6
-&& zb8.characterId == zb7
-&& zb9.playerId == zb6
-&& zb9.gameAccountId == zb8.gameAccountId
+&& rf5() == zb3
+&& zb5.playerId == zb3
+&& zb5.characterId == zb4
+&& zb6.playerId == zb3
+&& zb6.gameAccountId == zb5.gameAccountId
 && (
-!zb9.keys().hasAny(['representativeCharacterId'])
-|| zb9.representativeCharacterId == null
-|| zb9.representativeCharacterId != zb7
+!zb6.keys().hasAny(['representativeCharacterId'])
+|| zb6.representativeCharacterId == null
+|| zb6.representativeCharacterId != zb4
 );
 }
 allow get, list: if rf4();
-allow create, update: if rf146(
+allow create, update: if rf145(
 playerId,
 characterId,
 request.resource.data
 );
-allow delete: if rf147(
+allow delete: if rf146(
 playerId,
 characterId,
 resource.data
@@ -2027,241 +2020,241 @@ match /activeAccountVerificationChallenges/{playerId} {
 allow read, write: if false;
 }
 match /manualVerificationRequests/{requestId} {
-function rf148(zba) {
-return zba is string
-&& zba.matches('^LP-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$');
+function rf147(zb7) {
+return zb7 is string
+&& zb7.matches('^LP-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$');
 }
-function rf149(zbb, zbc) {
-return zbb is string
-&& zbb.size() > 0
-&& exists(/databases/$(database)/documents/gameAccounts/$(zbb))
-&& get(/databases/$(database)/documents/gameAccounts/$(zbb))
+function rf148(zb8, zb9) {
+return zb8 is string
+&& zb8.size() > 0
+&& exists(/databases/$(database)/documents/gameAccounts/$(zb8))
+&& get(/databases/$(database)/documents/gameAccounts/$(zb8))
 .data.status == 'active'
-&& get(/databases/$(database)/documents/gameAccounts/$(zbb))
-.data.ownerPlayerId == zbc;
+&& get(/databases/$(database)/documents/gameAccounts/$(zb8))
+.data.ownerPlayerId == zb9;
 }
-function rf150(zbd) {
-let zbe =
-/databases/$(database)/documents/characterIdentityClaims/$(zbd.targetIdentityKey);
-let zbf = exists(zbe)
-&& get(zbe).data.gameAccountId is string
-&& get(zbe).data.gameAccountId.size() > 0;
-return zbf
-? rf149(
-get(zbe).data.gameAccountId,
-zbd.requesterPlayerId
+function rf149(zba) {
+let zbb =
+/databases/$(database)/documents/characterIdentityClaims/$(zba.targetIdentityKey);
+let zbc = exists(zbb)
+&& get(zbb).data.gameAccountId is string
+&& get(zbb).data.gameAccountId.size() > 0;
+return zbc
+? rf148(
+get(zbb).data.gameAccountId,
+zba.requesterPlayerId
 )
-: ('targetGameAccountId' in zbd
-&& rf149(
-zbd.targetGameAccountId,
-zbd.requesterPlayerId
+: ('targetGameAccountId' in zba
+&& rf148(
+zba.targetGameAccountId,
+zba.requesterPlayerId
 ));
 }
-function rf151(zbg) {
+function rf150(zbd) {
 return rf4()
-&& zbg.schemaVersion == 1
-&& zbg.requesterPlayerId == rf5()
-&& zbg.targetIdentityKey is string
-&& zbg.targetIdentityKey.size() > 0
-&& zbg.localAccountId is number
-&& zbg.localAccountId >= 1
-&& zbg.localAccountLabelSnapshot is string
-&& zbg.proofServerName is string
-&& zbg.proofServerName.size() > 0
-&& zbg.proofCharacterName is string
-&& zbg.proofCharacterName.size() > 0
-&& rf148(zbg.verificationCode)
-&& zbg.status == 'pendingProof'
-&& zbg.attemptNumberForTarget is number
-&& zbg.attemptNumberForTarget >= 1
-&& zbg.totalAttemptNumberForPlayer is number
-&& zbg.totalAttemptNumberForPlayer >= 1
-&& zbg.createdAt == request.time
-&& zbg.updatedAt == request.time
-&& zbg.expiresAt is timestamp
-&& (!('defenseOfRequestId' in zbg)
-? !rf150(zbg)
-: (zbg.defenseOfRequestId is string
-&& zbg.defenseOfRequestId.size() > 0
-&& exists(/databases/$(database)/documents/manualVerificationRequests/$(zbg.defenseOfRequestId))
-&& get(/databases/$(database)/documents/manualVerificationRequests/$(zbg.defenseOfRequestId))
+&& zbd.schemaVersion == 1
+&& zbd.requesterPlayerId == rf5()
+&& zbd.targetIdentityKey is string
+&& zbd.targetIdentityKey.size() > 0
+&& zbd.localAccountId is number
+&& zbd.localAccountId >= 1
+&& zbd.localAccountLabelSnapshot is string
+&& zbd.proofServerName is string
+&& zbd.proofServerName.size() > 0
+&& zbd.proofCharacterName is string
+&& zbd.proofCharacterName.size() > 0
+&& rf147(zbd.verificationCode)
+&& zbd.status == 'pendingProof'
+&& zbd.attemptNumberForTarget is number
+&& zbd.attemptNumberForTarget >= 1
+&& zbd.totalAttemptNumberForPlayer is number
+&& zbd.totalAttemptNumberForPlayer >= 1
+&& zbd.createdAt == request.time
+&& zbd.updatedAt == request.time
+&& zbd.expiresAt is timestamp
+&& (!('defenseOfRequestId' in zbd)
+? !rf149(zbd)
+: (zbd.defenseOfRequestId is string
+&& zbd.defenseOfRequestId.size() > 0
+&& exists(/databases/$(database)/documents/manualVerificationRequests/$(zbd.defenseOfRequestId))
+&& get(/databases/$(database)/documents/manualVerificationRequests/$(zbd.defenseOfRequestId))
 .data.status == 'awaitingOwnerResponse'
-&& get(/databases/$(database)/documents/manualVerificationRequests/$(zbg.defenseOfRequestId))
+&& get(/databases/$(database)/documents/manualVerificationRequests/$(zbd.defenseOfRequestId))
 .data.previousOwnerPlayerId == rf5()
-&& request.time < get(/databases/$(database)/documents/manualVerificationRequests/$(zbg.defenseOfRequestId))
+&& request.time < get(/databases/$(database)/documents/manualVerificationRequests/$(zbd.defenseOfRequestId))
 .data.ownerResponseDeadlineAt));
 }
-function rf152(zbh, zbi) {
-return zbi.requesterPlayerId == zbh.requesterPlayerId
-&& zbi.targetIdentityKey == zbh.targetIdentityKey;
+function rf151(zbe, zbf) {
+return zbf.requesterPlayerId == zbe.requesterPlayerId
+&& zbf.targetIdentityKey == zbe.targetIdentityKey;
 }
-function rf153(zbj, zbk) {
-return zbj.status == 'pendingProof'
-&& rf152(zbj, zbk)
+function rf152(zbg, zbh) {
+return zbg.status == 'pendingProof'
+&& rf151(zbg, zbh)
 && (
 (
-zbk.status == 'cancelled'
-&& zbk.reviewReason is string
-&& zbk.reviewReason.size() > 0
-&& zbk.reviewedAt is timestamp
-&& zbk.resolvedAt is timestamp
-&& zbk.diff(zbj).affectedKeys().hasOnly([
+zbh.status == 'cancelled'
+&& zbh.reviewReason is string
+&& zbh.reviewReason.size() > 0
+&& zbh.reviewedAt is timestamp
+&& zbh.resolvedAt is timestamp
+&& zbh.diff(zbg).affectedKeys().hasOnly([
 'status', 'reviewedByOperatorPlayerId', 'reviewedAt',
 'reviewReason', 'resolvedAt', 'updatedAt'
 ])
 )
 || (
-zbk.status == 'blocked'
-&& zbk.reviewReason is string
-&& zbk.reviewReason.size() > 0
-&& zbk.reviewedAt is timestamp
-&& zbk.resolvedAt is timestamp
-&& zbk.diff(zbj).affectedKeys().hasOnly([
+zbh.status == 'blocked'
+&& zbh.reviewReason is string
+&& zbh.reviewReason.size() > 0
+&& zbh.reviewedAt is timestamp
+&& zbh.resolvedAt is timestamp
+&& zbh.diff(zbg).affectedKeys().hasOnly([
 'status', 'reviewedByOperatorPlayerId', 'reviewedAt',
 'reviewReason', 'resolvedAt', 'updatedAt'
 ])
 )
 || (
-zbk.status == 'approved'
-&& zbk.targetGameAccountId is string
-&& zbk.targetGameAccountId.size() > 0
-&& zbk.reviewedAt is timestamp
-&& zbk.resolvedAt is timestamp
-&& zbk.diff(zbj).affectedKeys().hasOnly([
+zbh.status == 'approved'
+&& zbh.targetGameAccountId is string
+&& zbh.targetGameAccountId.size() > 0
+&& zbh.reviewedAt is timestamp
+&& zbh.resolvedAt is timestamp
+&& zbh.diff(zbg).affectedKeys().hasOnly([
 'status', 'targetGameAccountId', 'reviewedByOperatorPlayerId',
 'reviewedAt', 'resolvedAt', 'updatedAt'
 ])
 )
-|| rf161(zbj, zbk)
+|| rf160(zbg, zbh)
 );
 }
-function rf154(zbl, zbm) {
-return zbl.status == 'pendingProof'
-&& !('defenseOfRequestId' in zbl
-&& zbl.defenseOfRequestId is string
-&& zbl.defenseOfRequestId.size() > 0)
-&& rf152(zbl, zbm)
-&& zbm.status == 'awaitingOwnerResponse'
-&& zbm.targetGameAccountId is string
-&& zbm.targetGameAccountId.size() > 0
-&& zbm.previousOwnerPlayerId is string
-&& zbm.previousOwnerPlayerId.size() > 0
-&& zbm.previousOwnerPlayerId != zbl.requesterPlayerId
-&& zbm.disputeOpenedAt is timestamp
-&& zbm.ownerResponseDeadlineAt is timestamp
-&& zbm.reviewedAt is timestamp
-&& zbm.diff(zbl).affectedKeys().hasOnly([
+function rf153(zbi, zbj) {
+return zbi.status == 'pendingProof'
+&& !('defenseOfRequestId' in zbi
+&& zbi.defenseOfRequestId is string
+&& zbi.defenseOfRequestId.size() > 0)
+&& rf151(zbi, zbj)
+&& zbj.status == 'awaitingOwnerResponse'
+&& zbj.targetGameAccountId is string
+&& zbj.targetGameAccountId.size() > 0
+&& zbj.previousOwnerPlayerId is string
+&& zbj.previousOwnerPlayerId.size() > 0
+&& zbj.previousOwnerPlayerId != zbi.requesterPlayerId
+&& zbj.disputeOpenedAt is timestamp
+&& zbj.ownerResponseDeadlineAt is timestamp
+&& zbj.reviewedAt is timestamp
+&& zbj.diff(zbi).affectedKeys().hasOnly([
 'status', 'targetGameAccountId', 'previousOwnerPlayerId',
 'disputeOpenedAt', 'ownerResponseDeadlineAt',
 'reviewedByOperatorPlayerId', 'reviewedAt', 'updatedAt'
 ]);
 }
-function rf155(zbn, zbo) {
-return zbn.status == 'awaitingOwnerResponse'
-&& zbo.status == 'defended'
-&& zbo.reviewReason == 'ownerDefended'
-&& zbo.reviewedAt is timestamp
-&& zbo.resolvedAt is timestamp
-&& request.time < zbn.ownerResponseDeadlineAt
-&& zbo.diff(zbn).affectedKeys().hasOnly([
+function rf154(zbk, zbl) {
+return zbk.status == 'awaitingOwnerResponse'
+&& zbl.status == 'defended'
+&& zbl.reviewReason == 'ownerDefended'
+&& zbl.reviewedAt is timestamp
+&& zbl.resolvedAt is timestamp
+&& request.time < zbk.ownerResponseDeadlineAt
+&& zbl.diff(zbk).affectedKeys().hasOnly([
 'status', 'reviewedByOperatorPlayerId', 'reviewedAt',
 'reviewReason', 'resolvedAt', 'updatedAt'
 ]);
 }
-function rf156(zbp, zbq) {
-return zbq.status == 'transferred'
-&& (zbq.reviewReason == 'operatorForced'
-|| zbq.reviewReason == 'ownerDefenseFailed')
-&& !('defenseOfRequestId' in zbp
-&& zbp.defenseOfRequestId is string
-&& zbp.defenseOfRequestId.size() > 0)
-&& (zbp.status == 'pendingProof'
-|| zbp.status == 'awaitingOwnerResponse')
-&& zbq.targetGameAccountId is string
-&& zbq.targetGameAccountId.size() > 0
-&& zbq.reviewedAt is timestamp
-&& zbq.resolvedAt is timestamp
-&& zbq.diff(zbp).affectedKeys().hasOnly([
+function rf155(zbm, zbn) {
+return zbn.status == 'transferred'
+&& (zbn.reviewReason == 'operatorForced'
+|| zbn.reviewReason == 'ownerDefenseFailed')
+&& !('defenseOfRequestId' in zbm
+&& zbm.defenseOfRequestId is string
+&& zbm.defenseOfRequestId.size() > 0)
+&& (zbm.status == 'pendingProof'
+|| zbm.status == 'awaitingOwnerResponse')
+&& zbn.targetGameAccountId is string
+&& zbn.targetGameAccountId.size() > 0
+&& zbn.reviewedAt is timestamp
+&& zbn.resolvedAt is timestamp
+&& zbn.diff(zbm).affectedKeys().hasOnly([
 'status', 'targetGameAccountId', 'reviewReason',
 'reviewedByOperatorPlayerId', 'reviewedAt', 'resolvedAt', 'updatedAt'
 ]);
 }
-function rf157(zbr, zbs) {
+function rf156(zbo, zbp) {
 return rf6()
-&& zbs.reviewedByOperatorPlayerId == rf5()
-&& zbs.updatedAt == request.time
+&& zbp.reviewedByOperatorPlayerId == rf5()
+&& zbp.updatedAt == request.time
 && (
-(zbs.status != 'transferred'
+(zbp.status != 'transferred'
 && (
-rf153(zbr, zbs)
-|| rf154(zbr, zbs)
-|| rf155(zbr, zbs)
+rf152(zbo, zbp)
+|| rf153(zbo, zbp)
+|| rf154(zbo, zbp)
 ))
-|| rf156(zbr, zbs)
+|| rf155(zbo, zbp)
 );
 }
-function rf158(zbt, zbu) {
-return zbu.schemaVersion == zbt.schemaVersion
-&& zbu.requesterPlayerId == zbt.requesterPlayerId
-&& zbu.targetIdentityKey == zbt.targetIdentityKey
-&& zbu.localAccountId == zbt.localAccountId
-&& zbu.proofServerName == zbt.proofServerName
-&& zbu.proofCharacterName == zbt.proofCharacterName
-&& zbu.localAccountLabelSnapshot == zbt.localAccountLabelSnapshot;
+function rf157(zbq, zbr) {
+return zbr.schemaVersion == zbq.schemaVersion
+&& zbr.requesterPlayerId == zbq.requesterPlayerId
+&& zbr.targetIdentityKey == zbq.targetIdentityKey
+&& zbr.localAccountId == zbq.localAccountId
+&& zbr.proofServerName == zbq.proofServerName
+&& zbr.proofCharacterName == zbq.proofCharacterName
+&& zbr.localAccountLabelSnapshot == zbq.localAccountLabelSnapshot;
 }
-function rf159(zbv, zbw) {
+function rf158(zbs, zbt) {
 return rf4()
-&& zbv.requesterPlayerId == rf5()
-&& zbv.status == 'pendingProof'
-&& zbw.status == 'cancelled'
-&& rf158(zbv, zbw)
-&& zbw.verificationCode == zbv.verificationCode
-&& zbw.diff(zbv).affectedKeys().hasOnly([
+&& zbs.requesterPlayerId == rf5()
+&& zbs.status == 'pendingProof'
+&& zbt.status == 'cancelled'
+&& rf157(zbs, zbt)
+&& zbt.verificationCode == zbs.verificationCode
+&& zbt.diff(zbs).affectedKeys().hasOnly([
 'status', 'resolvedAt', 'updatedAt'
 ])
-&& zbw.resolvedAt == request.time
-&& zbw.updatedAt == request.time;
+&& zbt.resolvedAt == request.time
+&& zbt.updatedAt == request.time;
 }
-function rf160(zbx, zby) {
+function rf159(zbu, zbv) {
 return rf4()
-&& zbx.requesterPlayerId == rf5()
-&& zbx.status == 'pendingProof'
-&& zby.status == 'pendingProof'
-&& rf158(zbx, zby)
-&& zby.diff(zbx).affectedKeys().hasOnly([
+&& zbu.requesterPlayerId == rf5()
+&& zbu.status == 'pendingProof'
+&& zbv.status == 'pendingProof'
+&& rf157(zbu, zbv)
+&& zbv.diff(zbu).affectedKeys().hasOnly([
 'verificationCode', 'createdAt', 'expiresAt', 'updatedAt',
 'attemptNumberForTarget', 'totalAttemptNumberForPlayer'
 ])
-&& rf148(zby.verificationCode)
-&& zby.createdAt == request.time
-&& zby.updatedAt == request.time
-&& zby.expiresAt is timestamp
-&& zby.attemptNumberForTarget == zbx.attemptNumberForTarget + 1
-&& zby.totalAttemptNumberForPlayer
-== zbx.totalAttemptNumberForPlayer + 1;
+&& rf147(zbv.verificationCode)
+&& zbv.createdAt == request.time
+&& zbv.updatedAt == request.time
+&& zbv.expiresAt is timestamp
+&& zbv.attemptNumberForTarget == zbu.attemptNumberForTarget + 1
+&& zbv.totalAttemptNumberForPlayer
+== zbu.totalAttemptNumberForPlayer + 1;
 }
-function rf161(zbz, zc0) {
-return zc0.status == 'approved'
-&& zbz.defenseOfRequestId is string
-&& zbz.defenseOfRequestId.size() > 0
-&& zc0.targetGameAccountId is string
-&& zc0.targetGameAccountId.size() > 0
-&& zc0.reviewedAt is timestamp
-&& zc0.resolvedAt is timestamp
-&& zc0.diff(zbz).affectedKeys().hasOnly([
+function rf160(zbw, zbx) {
+return zbx.status == 'approved'
+&& zbw.defenseOfRequestId is string
+&& zbw.defenseOfRequestId.size() > 0
+&& zbx.targetGameAccountId is string
+&& zbx.targetGameAccountId.size() > 0
+&& zbx.reviewedAt is timestamp
+&& zbx.resolvedAt is timestamp
+&& zbx.diff(zbw).affectedKeys().hasOnly([
 'status', 'targetGameAccountId', 'reviewedByOperatorPlayerId',
 'reviewedAt', 'resolvedAt', 'updatedAt'
 ]);
 }
-function rf162(zc1, zc2) {
+function rf161(zby, zbz) {
 return rf4()
-&& zc1.status == 'awaitingOwnerResponse'
-&& zc2.status == 'transferred'
-&& request.time >= zc1.ownerResponseDeadlineAt
-&& zc2.reviewReason == 'ownerResponseExpired'
-&& zc2.resolvedAt == request.time
-&& zc2.updatedAt == request.time
-&& zc2.diff(zc1).affectedKeys().hasOnly([
+&& zby.status == 'awaitingOwnerResponse'
+&& zbz.status == 'transferred'
+&& request.time >= zby.ownerResponseDeadlineAt
+&& zbz.reviewReason == 'ownerResponseExpired'
+&& zbz.resolvedAt == request.time
+&& zbz.updatedAt == request.time
+&& zbz.diff(zby).affectedKeys().hasOnly([
 'status', 'targetGameAccountId', 'reviewReason', 'resolvedAt', 'updatedAt'
 ]);
 }
@@ -2273,218 +2266,218 @@ allow list: if rf6()
 || (rf4()
 && (resource.data.requesterPlayerId == rf5()
 || resource.data.previousOwnerPlayerId == rf5()));
-allow create: if rf151(request.resource.data);
-allow update: if rf159(
+allow create: if rf150(request.resource.data);
+allow update: if rf158(
 resource.data,
 request.resource.data
-) || rf160(
+) || rf159(
 resource.data,
 request.resource.data
-) || rf157(
+) || rf156(
 resource.data,
 request.resource.data
-) || rf162(
+) || rf161(
 resource.data,
 request.resource.data
 );
 allow delete: if false;
 }
 match /manualVerificationBlocks/{blockId} {
-function rf163(zc3) {
+function rf162(zc0) {
 return rf6()
-&& zc3.schemaVersion == 1
-&& zc3.playerId is string
-&& zc3.playerId.size() > 0
-&& zc3.status == 'active'
-&& zc3.reason is string
-&& zc3.reason.size() > 0
-&& zc3.blockedByOperatorPlayerId == rf5()
-&& zc3.blockedAt == request.time
+&& zc0.schemaVersion == 1
+&& zc0.playerId is string
+&& zc0.playerId.size() > 0
+&& zc0.status == 'active'
+&& zc0.reason is string
+&& zc0.reason.size() > 0
+&& zc0.blockedByOperatorPlayerId == rf5()
+&& zc0.blockedAt == request.time
 && (
-(zc3.targetIdentityKey is string && zc3.targetIdentityKey.size() > 0)
-|| (zc3.targetGameAccountId is string
-&& zc3.targetGameAccountId.size() > 0)
+(zc0.targetIdentityKey is string && zc0.targetIdentityKey.size() > 0)
+|| (zc0.targetGameAccountId is string
+&& zc0.targetGameAccountId.size() > 0)
 );
 }
-function rf164(zc4) {
+function rf163(zc1) {
 return rf4()
 && (
-!exists(/databases/$(database)/documents/manualVerificationBlocks/$(zc4))
+!exists(/databases/$(database)/documents/manualVerificationBlocks/$(zc1))
 || rf6()
-|| get(/databases/$(database)/documents/manualVerificationBlocks/$(zc4))
+|| get(/databases/$(database)/documents/manualVerificationBlocks/$(zc1))
 .data.playerId == rf5()
 );
 }
-allow get: if rf164(blockId);
+allow get: if rf163(blockId);
 allow list: if rf6();
-allow create: if rf163(request.resource.data);
+allow create: if rf162(request.resource.data);
 allow update, delete: if false;
 }
-function rf165(zc5) {
-let zc6 = getAfter(rf7(zc5)).data;
-return zc6.get('lastCommandType', '') == 'personalComplete' && zc6.lastCommandAt == request.time;
+function rf164(zc2) {
+let zc3 = getAfter(rf7(zc2)).data;
+return zc3.get('lastCommandType', '') == 'personalComplete' && zc3.lastCommandAt == request.time;
 }
-function rf166(zc7, zc8) {
-let zc9 = zc8.commandTargets[0];
-let zca = rf8(zc7.recruitmentId, zc9.playerId);
-let zcb = get(zca).data;
-let zcc = getAfter(rf28(zc9)).data;
-let zcd = /databases/$(database)/documents/partyEvents/$(zc8.lastCommandId);
-let zce = getAfter(zcd).data;
-return zcb.playerId == zc9.playerId && zcb.characterId == zcc.characterId
-&& zcb.get('ownershipRevision', 0) == zcc.get('ownershipRevision', 0)
-&& zc7.partySlots.size() == zc8.partySlots.size() + 1
-&& zc7.partySlots.removeAll([rf94(zcb, zcb.get('countedAsNonGroupMember', false))]) == zc8.partySlots
-&& zc7.memberPlayerIds.removeAll([zc9.playerId]) == zc8.memberPlayerIds
-&& zc7.raidStateTargets.removeAll([zc9]) == zc8.raidStateTargets
-&& !existsAfter(zca) && zcc.updatedAt == request.time
-&& !exists(zcd) && zce.occurredAt == request.time
-&& zce.type == 'memberLeft' && zce.reason == 'weeklyRaidCompleted'
-&& zce.commandRevision == zc8.revision
-&& zce.actorPlayerId == zc9.playerId && zce.targetPlayerId == zc9.playerId
-&& (zc7.leaderPlayerId == zc8.leaderPlayerId
-|| getAfter(rf8(zc7.recruitmentId, zc8.leaderPlayerId)).data.updatedAt == request.time)
-&& (!(zc7.groupId is string) || rf167(zc7, zc8));
+function rf165(zc4, zc5) {
+let zc6 = zc5.commandTargets[0];
+let zc7 = rf8(zc4.recruitmentId, zc6.playerId);
+let zc8 = get(zc7).data;
+let zc9 = getAfter(rf28(zc6)).data;
+let zca = /databases/$(database)/documents/partyEvents/$(zc5.lastCommandId);
+let zcb = getAfter(zca).data;
+return zc8.playerId == zc6.playerId && zc8.characterId == zc9.characterId
+&& zc8.get('ownershipRevision', 0) == zc9.get('ownershipRevision', 0)
+&& zc4.partySlots.size() == zc5.partySlots.size() + 1
+&& zc4.partySlots.removeAll([rf94(zc8, zc8.get('countedAsNonGroupMember', false))]) == zc5.partySlots
+&& zc4.memberPlayerIds.removeAll([zc6.playerId]) == zc5.memberPlayerIds
+&& zc4.raidStateTargets.removeAll([zc6]) == zc5.raidStateTargets
+&& !existsAfter(zc7) && zc9.updatedAt == request.time
+&& !exists(zca) && zcb.occurredAt == request.time
+&& zcb.type == 'memberLeft' && zcb.reason == 'weeklyRaidCompleted'
+&& zcb.commandRevision == zc5.revision
+&& zcb.actorPlayerId == zc6.playerId && zcb.targetPlayerId == zc6.playerId
+&& (zc4.leaderPlayerId == zc5.leaderPlayerId
+|| getAfter(rf8(zc4.recruitmentId, zc5.leaderPlayerId)).data.updatedAt == request.time)
+&& (!(zc4.groupId is string) || rf166(zc4, zc5));
 }
-function rf167(zcf, zcg) {
-let zch = /databases/$(database)/documents/groups/$(zcf.groupId)/raidListings/$(zcf.recruitmentId);
-return zcg.memberCount == 0 ? !existsAfter(zch)
-: (getAfter(zch).data.sourceRevision == zcg.revision && getAfter(zch).data.updatedAt == request.time);
+function rf166(zcc, zcd) {
+let zce = /databases/$(database)/documents/groups/$(zcc.groupId)/raidListings/$(zcc.recruitmentId);
+return zcd.memberCount == 0 ? !existsAfter(zce)
+: (getAfter(zce).data.sourceRevision == zcd.revision && getAfter(zce).data.updatedAt == request.time);
 }
-function rf168(zci) {
-let zcj = get(rf16(zci.characterId)).data;
-let zck = get(/databases/$(database)/documents/gameAccounts/$(zcj.gameAccountId)).data;
-return zcj.status == 'active' && zck.status == 'active' && rf59(zci, zcj, zck);
+function rf167(zcf) {
+let zcg = get(rf16(zcf.characterId)).data;
+let zch = get(/databases/$(database)/documents/gameAccounts/$(zcg.gameAccountId)).data;
+return zcg.status == 'active' && zch.status == 'active' && rf59(zcf, zcg, zch);
 }
-function rf169(zcl, zcm, zcn, zco, zcp) {
-let zcq = zcl.get('ownershipRevision', 0);
-return zcl.playerId == zcm && zcl.characterId == zcn && zcl.raidId == zco
-&& zcq is int && zcq >= 0 && zcp is int && zcq < zcp;
+function rf168(zci, zcj, zck, zcl, zcm) {
+let zcn = zci.get('ownershipRevision', 0);
+return zci.playerId == zcj && zci.characterId == zck && zci.raidId == zcl
+&& zcn is int && zcn >= 0 && zcm is int && zcn < zcm;
 }
-function rf170(zcr, zcs, zct, zcu, zcv) {
-return rf169(zcr, zcs, zct, zcu, zcv)
-&& zcr.status in ['active', 'completed'] && zcr.revision is int && zcr.revision >= 1;
+function rf169(zco, zcp, zcq, zcr, zcs) {
+return rf168(zco, zcp, zcq, zcr, zcs)
+&& zco.status in ['active', 'completed'] && zco.revision is int && zco.revision >= 1;
 }
-function rf171(zcw, zcx, zcy, zcz, zd0) {
-let zd1 = rf11(zcw, zcx, zcy, zcz);
-return existsAfter(zd1) && !rf169(getAfter(zd1).data, zcw, zcy, zcz, zd0);
+function rf170(zct, zcu, zcv, zcw, zcx) {
+let zcy = rf11(zct, zcu, zcv, zcw);
+return existsAfter(zcy) && !rf168(getAfter(zcy).data, zct, zcv, zcw, zcx);
 }
-function rf172(zd2) {
-let zd3 = rf7(zd2.recruitmentId);
-let zd4 = rf8(zd2.recruitmentId, zd2.playerId);
-let zd5 = getAfter(zd3).data;
-let zd6 = !exists(zd3) ? 'partyCreated' : (!exists(zd4) ? 'memberJoined' : 'characterChanged');
-let zd7 = zd6 + '_' + zd2.recruitmentId + '_' + string(zd5.revision);
-let zd8 = /databases/$(database)/documents/partyEvents/$(zd7);
-return zd5.updatedAt == request.time && getAfter(zd4).data.updatedAt == request.time
-&& (!exists(zd3) || zd5.revision == get(zd3).data.revision + 1)
-&& !exists(zd8) && getAfter(zd8).data.occurredAt == request.time
-&& getAfter(zd8).data.type == zd6;
+function rf171(zcz) {
+let zd0 = rf7(zcz.recruitmentId);
+let zd1 = rf8(zcz.recruitmentId, zcz.playerId);
+let zd2 = getAfter(zd0).data;
+let zd3 = !exists(zd0) ? 'partyCreated' : (!exists(zd1) ? 'memberJoined' : 'characterChanged');
+let zd4 = zd3 + '_' + zcz.recruitmentId + '_' + string(zd2.revision);
+let zd5 = /databases/$(database)/documents/partyEvents/$(zd4);
+return zd2.updatedAt == request.time && getAfter(zd1).data.updatedAt == request.time
+&& (!exists(zd0) || zd2.revision == get(zd0).data.revision + 1)
+&& !exists(zd5) && getAfter(zd5).data.occurredAt == request.time
+&& getAfter(zd5).data.type == zd3;
 }
-function rf173(zd9, zda) {
-let zdb = getAfter(/databases/$(database)/documents/recruitments/$(zd9)/members/$(zda.playerId)).data;
-return zdb.playerId == zda.playerId && zdb.characterId == zda.characterId
-&& zda.get('ownershipRevision', 0) is int && zda.get('ownershipRevision', 0) >= 0
-&& zda.get('ownershipRevision', 0) == zdb.get('ownershipRevision', 0);
+function rf172(zd6, zd7) {
+let zd8 = getAfter(/databases/$(database)/documents/recruitments/$(zd6)/members/$(zd7.playerId)).data;
+return zd8.playerId == zd7.playerId && zd8.characterId == zd7.characterId
+&& zd7.get('ownershipRevision', 0) is int && zd7.get('ownershipRevision', 0) >= 0
+&& zd7.get('ownershipRevision', 0) == zd8.get('ownershipRevision', 0);
 }
-function rf174(zdc, zdd, zde) {
-return zde >= zdd.partySlots.size() || zdc.partySlots.hasAny([zdd.partySlots[zde]])
-|| rf173(zdc.recruitmentId, zdd.partySlots[zde]);
+function rf173(zd9, zda, zdb) {
+return zdb >= zda.partySlots.size() || zd9.partySlots.hasAny([zda.partySlots[zdb]])
+|| rf172(zd9.recruitmentId, zda.partySlots[zdb]);
 }
-function rf175(zdf) {
-return zdf.get('ownershipRevision', 0) is int
-&& zdf.get('ownershipRevision', 0) >= 0
-&& zdf.get('ownershipRevision', 0) <= 9007199254740991
-&& zdf.ownerPlayerId is string && zdf.ownerPlayerId.size() > 0;
+function rf174(zdc) {
+return zdc.get('ownershipRevision', 0) is int
+&& zdc.get('ownershipRevision', 0) >= 0
+&& zdc.get('ownershipRevision', 0) <= 9007199254740991
+&& zdc.ownerPlayerId is string && zdc.ownerPlayerId.size() > 0;
 }
 match /gameAccounts/{gameAccountId} {
-function rf176(zdg, zdh) {
-return rf175(zdg) && rf175(zdh)
-&& (!zdg.keys().hasAny(['ownershipRevision'])
-|| zdh.keys().hasAny(['ownershipRevision']))
-&& zdh.get('ownershipRevision', 0) == zdg.get('ownershipRevision', 0)
-+ (zdh.ownerPlayerId == zdg.ownerPlayerId ? 0 : 1);
+function rf175(zdd, zde) {
+return rf174(zdd) && rf174(zde)
+&& (!zdd.keys().hasAny(['ownershipRevision'])
+|| zde.keys().hasAny(['ownershipRevision']))
+&& zde.get('ownershipRevision', 0) == zdd.get('ownershipRevision', 0)
++ (zde.ownerPlayerId == zdd.ownerPlayerId ? 0 : 1);
 }
 allow read: if rf0();
-allow create: if rf0() && rf175(request.resource.data)
+allow create: if rf0() && rf174(request.resource.data)
 && request.resource.data.ownershipRevision == 1;
-allow update: if rf0() && rf176(resource.data, request.resource.data);
+allow update: if rf0() && rf175(resource.data, request.resource.data);
 allow delete: if false;
 }
 match /characters/{characterId} {
-function rf177(zdi) {
-let zdj = getAfter(/databases/$(database)/documents/gameAccounts/$(zdi.gameAccountId)).data;
-return rf175(zdi) && rf175(zdj)
-&& zdi.ownerPlayerId == zdj.ownerPlayerId
-&& zdi.get('ownershipRevision', 0) == zdj.get('ownershipRevision', 0);
+function rf176(zdf) {
+let zdg = getAfter(/databases/$(database)/documents/gameAccounts/$(zdf.gameAccountId)).data;
+return rf174(zdf) && rf174(zdg)
+&& zdf.ownerPlayerId == zdg.ownerPlayerId
+&& zdf.get('ownershipRevision', 0) == zdg.get('ownershipRevision', 0);
 }
 allow read: if rf0();
-allow create: if rf0() && rf177(request.resource.data);
+allow create: if rf0() && rf176(request.resource.data);
 allow update: if rf0()
 && request.resource.data.gameAccountId == resource.data.gameAccountId
 && (!resource.data.keys().hasAny(['ownershipRevision'])
 || request.resource.data.keys().hasAny(['ownershipRevision']))
-&& rf177(request.resource.data);
+&& rf176(request.resource.data);
 allow delete: if false;
 }
 match /characterIdentityClaims/{claimId} {
 allow read, write: if rf0();
 }
 match /playerGameAccounts/{ownershipId} {
-function rf178(zdk, zdl) {
-return zdl.diff(zdk).affectedKeys().hasAny([
+function rf177(zdh, zdi) {
+return zdi.diff(zdh).affectedKeys().hasAny([
 'representativeCharacterId',
 'representativeCharacterUpdatedAt'
 ]);
 }
-function rf179(zdm, zdn) {
-let zdo = get(rf16(zdn.representativeCharacterId)).data;
-return zdn.representativeCharacterId is string
-&& zdn.representativeCharacterId.size() > 0
-&& zdo.ownerPlayerId == zdm.playerId
-&& zdo.gameAccountId == zdm.gameAccountId
-&& zdo.status == 'active';
+function rf178(zdj, zdk) {
+let zdl = get(rf16(zdk.representativeCharacterId)).data;
+return zdk.representativeCharacterId is string
+&& zdk.representativeCharacterId.size() > 0
+&& zdl.ownerPlayerId == zdj.playerId
+&& zdl.gameAccountId == zdj.gameAccountId
+&& zdl.status == 'active';
 }
-function rf180(zdp) {
-return zdp.keys().hasAny(['representativeCharacterId'])
-? zdp.representativeCharacterId
+function rf179(zdm) {
+return zdm.keys().hasAny(['representativeCharacterId'])
+? zdm.representativeCharacterId
 : null;
 }
+function rf180(zdn, zdo) {
+let zdp = rf179(zdn);
+return rf4()
+&& zdn.playerId == rf5()
+&& zdn.status == 'active'
+&& zdn.gameAccountId is string
+&& zdp == null
+&& zdo.diff(zdn).affectedKeys().hasOnly([
+'representativeCharacterId'
+])
+&& rf178(zdn, zdo)
+&& (!zdo.keys().hasAny(['representativeCharacterUpdatedAt'])
+|| zdo.representativeCharacterUpdatedAt == null);
+}
 function rf181(zdq, zdr) {
-let zds = rf180(zdq);
+let zds = rf179(zdq);
+let zdt = !zdq.keys().hasAny([
+'representativeCharacterUpdatedAt'
+])
+|| zdq.representativeCharacterUpdatedAt == null
+|| request.time >= zdq.representativeCharacterUpdatedAt
++ duration.value(5, 'm');
 return rf4()
 && zdq.playerId == rf5()
 && zdq.status == 'active'
 && zdq.gameAccountId is string
-&& zds == null
+&& zds != null
 && zdr.diff(zdq).affectedKeys().hasOnly([
-'representativeCharacterId'
-])
-&& rf179(zdq, zdr)
-&& (!zdr.keys().hasAny(['representativeCharacterUpdatedAt'])
-|| zdr.representativeCharacterUpdatedAt == null);
-}
-function rf182(zdt, zdu) {
-let zdv = rf180(zdt);
-let zdw = !zdt.keys().hasAny([
-'representativeCharacterUpdatedAt'
-])
-|| zdt.representativeCharacterUpdatedAt == null
-|| request.time >= zdt.representativeCharacterUpdatedAt
-+ duration.value(5, 'm');
-return rf4()
-&& zdt.playerId == rf5()
-&& zdt.status == 'active'
-&& zdt.gameAccountId is string
-&& zdv != null
-&& zdu.diff(zdt).affectedKeys().hasOnly([
 'representativeCharacterId',
 'representativeCharacterUpdatedAt'
 ])
-&& zdu.representativeCharacterId != zdv
-&& zdu.representativeCharacterUpdatedAt == request.time
-&& zdw
-&& rf179(zdt, zdu);
+&& zdr.representativeCharacterId != zds
+&& zdr.representativeCharacterUpdatedAt == request.time
+&& zdt
+&& rf178(zdq, zdr);
 }
 allow read: if rf0();
 allow create: if rf0()
@@ -2493,33 +2486,33 @@ allow create: if rf0()
 'representativeCharacterUpdatedAt'
 ]);
 allow update: if rf0()
-&& (!rf178(
+&& (!rf177(
+resource.data,
+request.resource.data
+) || rf180(
 resource.data,
 request.resource.data
 ) || rf181(
-resource.data,
-request.resource.data
-) || rf182(
 resource.data,
 request.resource.data
 ));
 allow delete: if rf0();
 }
 match /partyEvents/{eventId} {
+function rf182(zdu) {
+let zdv = get(rf7(zdu.recruitmentId)).data;
+let zdw = getAfter(rf7(zdu.recruitmentId)).data;
+return rf74(zdv, zdw) && zdu == rf76(zdv, zdw);
+}
 function rf183(zdx) {
 let zdy = get(rf7(zdx.recruitmentId)).data;
 let zdz = getAfter(rf7(zdx.recruitmentId)).data;
-return rf74(zdy, zdz) && zdx == rf76(zdy, zdz);
+return rf79(zdy, zdz) && zdx == rf80(zdy, zdz);
 }
 function rf184(ze0) {
 let ze1 = get(rf7(ze0.recruitmentId)).data;
 let ze2 = getAfter(rf7(ze0.recruitmentId)).data;
-return rf79(ze1, ze2) && ze0 == rf80(ze1, ze2);
-}
-function rf185(ze3) {
-let ze4 = get(rf7(ze3.recruitmentId)).data;
-let ze5 = getAfter(rf7(ze3.recruitmentId)).data;
-return rf83(ze4, ze5) && ze3 == rf87(ze4, ze5);
+return rf83(ze1, ze2) && ze0 == rf87(ze1, ze2);
 }
 allow get, list: if rf4()
 && resource.data.audiencePlayerIds.hasAny([rf5()]);
@@ -2529,314 +2522,314 @@ allow create: if
 && getAfter(rf7(request.resource.data.recruitmentId)).data.currentCycleStatus == 'completed')
 ? (request.resource.data.eventId == eventId && rf47(request.resource.data))
 : (request.resource.data.type == 'ownershipPeerRemoved'
-? (request.resource.data.eventId == eventId && rf184(request.resource.data))
-: request.resource.data.type == 'ownershipLeaderRemoved'
 ? (request.resource.data.eventId == eventId && rf183(request.resource.data))
+: request.resource.data.type == 'ownershipLeaderRemoved'
+? (request.resource.data.eventId == eventId && rf182(request.resource.data))
 : request.resource.data.type == 'ownershipParticipantRemoved'
-? (request.resource.data.eventId == eventId && rf185(request.resource.data))
+? (request.resource.data.eventId == eventId && rf184(request.resource.data))
 : (rf71(request.resource.data)
 || rf65(request.resource.data)));
 }
 match /recruitments/{recruitmentId} {
-function rf186(ze6) {
-return ze6.visibility == 'public'
-|| (ze6.visibility == 'group'
-&& ze6.groupId is string
-&& exists(rf20(ze6.groupId, rf5())));
+function rf185(ze3) {
+return ze3.visibility == 'public'
+|| (ze3.visibility == 'group'
+&& ze3.groupId is string
+&& exists(rf20(ze3.groupId, rf5())));
 }
-function rf187(ze7, ze8) {
-return ze8.diff(ze7).affectedKeys().hasOnly([
+function rf186(ze4, ze5) {
+return ze5.diff(ze4).affectedKeys().hasOnly([
 'continueTogether', 'revision', 'updatedAt'
 ]) && rf4()
-&& ze7.leaderPlayerId == rf5()
-&& ze7.status == 'active'
-&& (ze7.currentCycleStatus == 'active'
-|| ze7.currentCycleStatus == 'completed')
-&& ze8.continueTogether is bool
-&& ze8.revision == ze7.revision + 1
-&& ze8.updatedAt == request.time;
+&& ze4.leaderPlayerId == rf5()
+&& ze4.status == 'active'
+&& (ze4.currentCycleStatus == 'active'
+|| ze4.currentCycleStatus == 'completed')
+&& ze5.continueTogether is bool
+&& ze5.revision == ze4.revision + 1
+&& ze5.updatedAt == request.time;
 }
-function rf188(ze9, zea) {
+function rf187(ze6, ze7) {
 return rf4()
-&& ((zea.lastCommandType == 'incompleteEnd'
-&& ze9.memberPlayerIds is list
-&& ze9.memberPlayerIds.hasAny([rf5()]))
-|| (zea.lastCommandType != 'incompleteEnd'
-&& rf5() == ze9.leaderPlayerId));
+&& ((ze7.lastCommandType == 'incompleteEnd'
+&& ze6.memberPlayerIds is list
+&& ze6.memberPlayerIds.hasAny([rf5()]))
+|| (ze7.lastCommandType != 'incompleteEnd'
+&& rf5() == ze6.leaderPlayerId));
 }
-function rf189(zeb, zec) {
-return zec >= zeb.commandTargets.size()
-|| (zeb.lastCommandType == 'disband'
-&& !existsAfter(rf28(zeb.commandTargets[zec])))
-|| (zeb.lastCommandType != 'disband'
+function rf188(ze8, ze9) {
+return ze9 >= ze8.commandTargets.size()
+|| (ze8.lastCommandType == 'disband'
+&& !existsAfter(rf28(ze8.commandTargets[ze9])))
+|| (ze8.lastCommandType != 'disband'
 && rf55(
-zeb,
-getAfter(rf28(zeb.commandTargets[zec])).data
+ze8,
+getAfter(rf28(ze8.commandTargets[ze9])).data
 ));
 }
-function rf190(zed, zee, zef) {
-return zee >= zed.commandTargets.size()
-|| rf56(zed,
-getAfter(rf28(zed.commandTargets[zee])).data, zef);
+function rf189(zea, zeb, zec) {
+return zeb >= zea.commandTargets.size()
+|| rf56(zea,
+getAfter(rf28(zea.commandTargets[zeb])).data, zec);
 }
-function rf191(zeg, zeh) {
-return rf190(zeg, 0, zeh)
-&& rf190(zeg, 1, zeh)
-&& rf190(zeg, 2, zeh)
-&& rf190(zeg, 3, zeh)
-&& rf190(zeg, 4, zeh)
-&& rf190(zeg, 5, zeh)
-&& rf190(zeg, 6, zeh)
-&& rf190(zeg, 7, zeh);
+function rf190(zed, zee) {
+return rf189(zed, 0, zee)
+&& rf189(zed, 1, zee)
+&& rf189(zed, 2, zee)
+&& rf189(zed, 3, zee)
+&& rf189(zed, 4, zee)
+&& rf189(zed, 5, zee)
+&& rf189(zed, 6, zee)
+&& rf189(zed, 7, zee);
 }
-function rf192(zei) {
-return zei.commandTargets.size() <= 8
-&& (zei.commandTargets.size() >= 1
-|| zei.lastCommandType == 'incompleteEnd'
-|| (zei.lastCommandType == 'disband'
-&& zei.currentCycleStatus == 'completed'))
-&& ((zei.lastCommandType == 'complete' || zei.lastCommandType == 'advanceCycle')
-? rf191(zei, zei.lastCommandType == 'complete' ? 'completed' : 'active')
-: (rf189(zei, 0)
-&& rf189(zei, 1)
-&& rf189(zei, 2)
-&& rf189(zei, 3)
-&& rf189(zei, 4)
-&& rf189(zei, 5)
-&& rf189(zei, 6)
-&& rf189(zei, 7)));
+function rf191(zef) {
+return zef.commandTargets.size() <= 8
+&& (zef.commandTargets.size() >= 1
+|| zef.lastCommandType == 'incompleteEnd'
+|| (zef.lastCommandType == 'disband'
+&& zef.currentCycleStatus == 'completed'))
+&& ((zef.lastCommandType == 'complete' || zef.lastCommandType == 'advanceCycle')
+? rf190(zef, zef.lastCommandType == 'complete' ? 'completed' : 'active')
+: (rf188(zef, 0)
+&& rf188(zef, 1)
+&& rf188(zef, 2)
+&& rf188(zef, 3)
+&& rf188(zef, 4)
+&& rf188(zef, 5)
+&& rf188(zef, 6)
+&& rf188(zef, 7)));
 }
-function rf193(zej, zek) {
-return zek.leaderPlayerId == zej.leaderPlayerId
-&& zek.groupId == zej.groupId
-&& zek.raidStateTargets == zej.raidStateTargets
-&& zek.partySlots == zej.partySlots
-&& (zek.commandTargets == zej.raidStateTargets
-|| (zek.lastCommandType == 'incompleteEnd'
-&& zek.commandTargets.size() == 0)
-|| (zek.lastCommandType == 'disband'
+function rf192(zeg, zeh) {
+return zeh.leaderPlayerId == zeg.leaderPlayerId
+&& zeh.groupId == zeg.groupId
+&& zeh.raidStateTargets == zeg.raidStateTargets
+&& zeh.partySlots == zeg.partySlots
+&& (zeh.commandTargets == zeg.raidStateTargets
+|| (zeh.lastCommandType == 'incompleteEnd'
+&& zeh.commandTargets.size() == 0)
+|| (zeh.lastCommandType == 'disband'
+&& zeg.currentCycleStatus == 'completed'
+&& zeh.commandTargets.size() == 0))
+&& zeh.revision == zeg.revision + 1
+&& zeh.lastCommandActorPlayerId == rf5()
+&& zeh.groupActiveRecruitmentCountAfter is int
+&& zeh.lastCommandId is string
+&& zeh.lastCommandAt == request.time;
+}
+function rf193(zei, zej) {
+return (zej.lastCommandType == 'complete'
+&& zei.status == 'active'
+&& zei.currentCycleStatus == 'active'
+&& zej.status
+== (zei.continueTogether ? 'active' : 'completed')
 && zej.currentCycleStatus == 'completed'
-&& zek.commandTargets.size() == 0))
-&& zek.revision == zej.revision + 1
-&& zek.lastCommandActorPlayerId == rf5()
-&& zek.groupActiveRecruitmentCountAfter is int
-&& zek.lastCommandId is string
-&& zek.lastCommandAt == request.time;
+&& zej.currentCycleKey == zei.currentCycleKey
+&& zej.targetCycleKey == zei.targetCycleKey
+&& zej.cycleStartedAt == zei.cycleStartedAt
+&& zej.cycleEndsAt == zei.cycleEndsAt)
+|| (zej.lastCommandType == 'advanceCycle'
+&& zei.status == 'active'
+&& zei.continueTogether == true
+&& (zei.currentCycleStatus == 'active'
+|| zei.currentCycleStatus == 'completed')
+&& zej.status == 'active'
+&& zej.currentCycleStatus == 'active'
+&& zej.currentCycleKey != zei.currentCycleKey
+&& zej.targetCycleKey == zej.currentCycleKey
+&& zej.cycleStartedAt is timestamp
+&& zej.cycleEndsAt is timestamp
+&& zej.cycleStartedAt >= zei.cycleEndsAt
+&& zej.cycleEndsAt
+== zej.cycleStartedAt + duration.value(7, 'd')
+&& request.time >= zej.cycleStartedAt
+&& request.time < zej.cycleEndsAt
+&& zej.completedAt == null
+&& zej.completedByPlayerId == null)
+|| (zej.lastCommandType == 'disband'
+&& (zei.status == 'active' || zei.status == 'completed')
+&& zej.status == 'disbanded'
+&& zej.currentCycleStatus == zei.currentCycleStatus
+&& zej.currentCycleKey == zei.currentCycleKey
+&& zej.targetCycleKey == zei.targetCycleKey
+&& zej.cycleStartedAt == zei.cycleStartedAt
+&& zej.cycleEndsAt == zei.cycleEndsAt)
+|| (zej.lastCommandType == 'incompleteEnd'
+&& zei.schemaVersion == 2
+&& zej.schemaVersion == 2
+&& zei.status == 'active'
+&& zei.currentCycleStatus == 'active'
+&& zei.continueTogether == false
+&& zei.cycleEndsAt is timestamp
+&& request.time >= zei.cycleEndsAt
+&& zej.status == 'incompleteEnded'
+&& zej.currentCycleStatus == 'incompleteEnded'
+&& zej.manualRecruitmentEnabled == false
+&& zej.hasAvailableSlot == false
+&& zej.currentCycleKey == zei.currentCycleKey
+&& zej.targetCycleKey == zei.targetCycleKey
+&& zej.cycleStartedAt == zei.cycleStartedAt
+&& zej.cycleEndsAt == zei.cycleEndsAt);
 }
-function rf194(zel, zem) {
-return (zem.lastCommandType == 'complete'
-&& zel.status == 'active'
-&& zel.currentCycleStatus == 'active'
-&& zem.status
-== (zel.continueTogether ? 'active' : 'completed')
-&& zem.currentCycleStatus == 'completed'
-&& zem.currentCycleKey == zel.currentCycleKey
-&& zem.targetCycleKey == zel.targetCycleKey
-&& zem.cycleStartedAt == zel.cycleStartedAt
-&& zem.cycleEndsAt == zel.cycleEndsAt)
-|| (zem.lastCommandType == 'advanceCycle'
-&& zel.status == 'active'
-&& zel.continueTogether == true
-&& (zel.currentCycleStatus == 'active'
-|| zel.currentCycleStatus == 'completed')
-&& zem.status == 'active'
-&& zem.currentCycleStatus == 'active'
-&& zem.currentCycleKey != zel.currentCycleKey
-&& zem.targetCycleKey == zem.currentCycleKey
-&& zem.cycleStartedAt is timestamp
-&& zem.cycleEndsAt is timestamp
-&& zem.cycleStartedAt >= zel.cycleEndsAt
-&& zem.cycleEndsAt
-== zem.cycleStartedAt + duration.value(7, 'd')
-&& request.time >= zem.cycleStartedAt
-&& request.time < zem.cycleEndsAt
-&& zem.completedAt == null
-&& zem.completedByPlayerId == null)
-|| (zem.lastCommandType == 'disband'
-&& (zel.status == 'active' || zel.status == 'completed')
-&& zem.status == 'disbanded'
-&& zem.currentCycleStatus == zel.currentCycleStatus
-&& zem.currentCycleKey == zel.currentCycleKey
-&& zem.targetCycleKey == zel.targetCycleKey
-&& zem.cycleStartedAt == zel.cycleStartedAt
-&& zem.cycleEndsAt == zel.cycleEndsAt)
-|| (zem.lastCommandType == 'incompleteEnd'
-&& zel.schemaVersion == 2
-&& zem.schemaVersion == 2
-&& zel.status == 'active'
-&& zel.currentCycleStatus == 'active'
-&& zel.continueTogether == false
-&& zel.cycleEndsAt is timestamp
-&& request.time >= zel.cycleEndsAt
-&& zem.status == 'incompleteEnded'
-&& zem.currentCycleStatus == 'incompleteEnded'
-&& zem.manualRecruitmentEnabled == false
-&& zem.hasAvailableSlot == false
-&& zem.currentCycleKey == zel.currentCycleKey
-&& zem.targetCycleKey == zel.targetCycleKey
-&& zem.cycleStartedAt == zel.cycleStartedAt
-&& zem.cycleEndsAt == zel.cycleEndsAt);
-}
-function rf195(zen, zeo) {
-return zeo.lastCommandType != 'incompleteEnd'
-|| zeo.diff(zen).affectedKeys().hasOnly([
+function rf194(zek, zel) {
+return zel.lastCommandType != 'incompleteEnd'
+|| zel.diff(zek).affectedKeys().hasOnly([
 'status', 'currentCycleStatus', 'manualRecruitmentEnabled',
 'hasAvailableSlot', 'groupActiveRecruitmentCountAfter',
 'commandTargets', 'revision', 'lastCommandId', 'lastCommandType',
 'lastCommandActorPlayerId', 'lastCommandAt', 'updatedAt'
 ]);
 }
-function rf196(zep, zeq) {
-return (zeq.lastCommandType == 'complete'
-&& zep.continueTogether == false)
-|| zeq.lastCommandType == 'incompleteEnd'
-|| (zeq.lastCommandType == 'disband'
-&& zep.status == 'active');
+function rf195(zem, zen) {
+return (zen.lastCommandType == 'complete'
+&& zem.continueTogether == false)
+|| zen.lastCommandType == 'incompleteEnd'
+|| (zen.lastCommandType == 'disband'
+&& zem.status == 'active');
 }
-function rf197(zer, zes) {
-let zet = get(rf19(zer.groupId)).data;
-let zeu = getAfter(rf19(zer.groupId)).data;
-return zet.activeRecruitmentCount is int
-&& zet.activeRecruitmentCount > 0
-&& zeu.activeRecruitmentCount
-== zet.activeRecruitmentCount - 1
-&& zes.groupActiveRecruitmentCountAfter
-== zeu.activeRecruitmentCount;
+function rf196(zeo, zep) {
+let zeq = get(rf19(zeo.groupId)).data;
+let zer = getAfter(rf19(zeo.groupId)).data;
+return zeq.activeRecruitmentCount is int
+&& zeq.activeRecruitmentCount > 0
+&& zer.activeRecruitmentCount
+== zeq.activeRecruitmentCount - 1
+&& zep.groupActiveRecruitmentCountAfter
+== zer.activeRecruitmentCount;
 }
-function rf198(zev, zew) {
-return !rf30(zev)
-|| (!rf196(zev, zew)
-&& zew.groupActiveRecruitmentCountAfter
-== zev.groupActiveRecruitmentCountAfter)
-|| (rf196(zev, zew)
-&& rf197(zev, zew));
+function rf197(zes, zet) {
+return !rf30(zes)
+|| (!rf195(zes, zet)
+&& zet.groupActiveRecruitmentCountAfter
+== zes.groupActiveRecruitmentCountAfter)
+|| (rf195(zes, zet)
+&& rf196(zes, zet));
 }
-function rf199(zex, zey) {
-return rf53(zey)
-&& rf188(zex, zey)
-&& rf193(zex, zey)
-&& rf194(zex, zey)
-&& rf195(zex, zey)
-&& rf192(zey)
-&& rf198(zex, zey);
+function rf198(zeu, zev) {
+return rf53(zev)
+&& rf187(zeu, zev)
+&& rf192(zeu, zev)
+&& rf193(zeu, zev)
+&& rf194(zeu, zev)
+&& rf191(zev)
+&& rf197(zeu, zev);
 }
-function rf200(zez, zf0, zf1) {
-return zez.get('ownershipRevision', 0) == zf1.get('ownershipRevision', 0)
-&& zez.playerId == zf0
-&& zez.characterId == zf1.characterId
-&& zez.role == zf1.role
-&& zez.partyIndex == 0
-&& zez.slotIndex == 0
-&& zez.classKey is string
-&& zez.classKey.size() > 0
-&& zez.countedAsNonGroupMember == false;
+function rf199(zew, zex, zey) {
+return zew.get('ownershipRevision', 0) == zey.get('ownershipRevision', 0)
+&& zew.playerId == zex
+&& zew.characterId == zey.characterId
+&& zew.role == zey.role
+&& zew.partyIndex == 0
+&& zew.slotIndex == 0
+&& zew.classKey is string
+&& zew.classKey.size() > 0
+&& zew.countedAsNonGroupMember == false;
 }
-function rf201(zf2, zf3) {
-let zf4 = rf5();
-let zf5 = getAfter(rf8(zf2, zf4)).data;
-let zf6 = zf3.partySlots[0];
-let zf7 = zf3.raidStateTargets[0];
-let zf8 = zf5.characterId + '_' + zf3.raidId;
-let zf9 = getAfter(rf28(zf7)).data;
+function rf200(zez, zf0) {
+let zf1 = rf5();
+let zf2 = getAfter(rf8(zez, zf1)).data;
+let zf3 = zf0.partySlots[0];
+let zf4 = zf0.raidStateTargets[0];
+let zf5 = zf2.characterId + '_' + zf0.raidId;
+let zf6 = getAfter(rf28(zf4)).data;
 return rf4()
-&& zf3.schemaVersion == 2
-&& zf3.recruitmentId == zf2
-&& zf3.leaderPlayerId == zf4
-&& zf3.memberPlayerIds == [zf4]
-&& zf3.memberCount == 1
-&& zf3.maxMemberCount >= 1
-&& zf3.dealerCount + zf3.supportCount == 1
-&& zf3.status == 'active'
+&& zf0.schemaVersion == 2
+&& zf0.recruitmentId == zez
+&& zf0.leaderPlayerId == zf1
+&& zf0.memberPlayerIds == [zf1]
+&& zf0.memberCount == 1
+&& zf0.maxMemberCount >= 1
+&& zf0.dealerCount + zf0.supportCount == 1
+&& zf0.status == 'active'
 && (
-(zf3.groupId == null && zf3.visibility == 'public')
-|| (zf3.groupId is string
-&& zf3.visibility in ['public', 'group']
-&& exists(rf20(zf3.groupId, zf4))
-&& get(rf19(zf3.groupId)).data.status == 'active')
+(zf0.groupId == null && zf0.visibility == 'public')
+|| (zf0.groupId is string
+&& zf0.visibility in ['public', 'group']
+&& exists(rf20(zf0.groupId, zf1))
+&& get(rf19(zf0.groupId)).data.status == 'active')
 )
-&& zf3.currentCycleKey == zf3.targetCycleKey
-&& zf3.currentCycleStatus == 'active'
-&& zf3.cycleEndsAt == zf3.cycleStartedAt + duration.value(7, 'd')
-&& request.time >= zf3.cycleStartedAt
-&& request.time < zf3.cycleEndsAt
-&& zf3.revision == 1
-&& zf3.slotLedgerVersion == 2
-&& zf3.partySlots.size() == 1
-&& zf3.raidStateTargets.size() == 1
-&& zf3.commandTargets.size() == 0
-&& zf3.pendingApplicationCount == 0
-&& zf3.pendingNonGroupApplicantCount == 0
-&& zf3.nonGroupMemberCount == 0
+&& zf0.currentCycleKey == zf0.targetCycleKey
+&& zf0.currentCycleStatus == 'active'
+&& zf0.cycleEndsAt == zf0.cycleStartedAt + duration.value(7, 'd')
+&& request.time >= zf0.cycleStartedAt
+&& request.time < zf0.cycleEndsAt
+&& zf0.revision == 1
+&& zf0.slotLedgerVersion == 2
+&& zf0.partySlots.size() == 1
+&& zf0.raidStateTargets.size() == 1
+&& zf0.commandTargets.size() == 0
+&& zf0.pendingApplicationCount == 0
+&& zf0.pendingNonGroupApplicantCount == 0
+&& zf0.nonGroupMemberCount == 0
 && (
-zf3.groupId == null
-? zf3.groupActiveRecruitmentCountAfter == 0
-: (existsAfter(rf19(zf3.groupId))
-&& zf3.groupActiveRecruitmentCountAfter
-== getAfter(rf19(zf3.groupId)).data.activeRecruitmentCount)
+zf0.groupId == null
+? zf0.groupActiveRecruitmentCountAfter == 0
+: (existsAfter(rf19(zf0.groupId))
+&& zf0.groupActiveRecruitmentCountAfter
+== getAfter(rf19(zf0.groupId)).data.activeRecruitmentCount)
 )
-&& zf3.lastCommandId == null
-&& zf3.lastCommandType == null
-&& zf3.lastCommandActorPlayerId == null
-&& zf3.lastCommandAt == null
-&& zf3.createdAt == request.time
-&& zf3.updatedAt == request.time
-&& zf3.leaderCharacterNameSnapshot == zf5.characterNameSnapshot
-&& zf3.leaderClassNameSnapshot == zf5.classNameSnapshot
-&& zf5.playerId == zf4
-&& zf5.joinedBy == zf4
-&& zf5.partyIndex == 0
-&& zf5.slotIndex == 0
-&& zf5.canApproveApplications == true
-&& rf17(zf5.characterId)
-&& rf200(zf6, zf4, zf5)
-&& zf7.playerId == zf4
-&& zf7.stateId == zf8
-&& zf9.recruitmentId == zf2
-&& zf9.playerId == zf4
-&& zf9.characterId == zf5.characterId
-&& zf9.raidId == zf3.raidId
-&& zf9.cycleKey == zf3.currentCycleKey
-&& zf9.status == 'active'
-&& zf9.source == 'party'
-&& zf9.revision == 1;
+&& zf0.lastCommandId == null
+&& zf0.lastCommandType == null
+&& zf0.lastCommandActorPlayerId == null
+&& zf0.lastCommandAt == null
+&& zf0.createdAt == request.time
+&& zf0.updatedAt == request.time
+&& zf0.leaderCharacterNameSnapshot == zf2.characterNameSnapshot
+&& zf0.leaderClassNameSnapshot == zf2.classNameSnapshot
+&& zf2.playerId == zf1
+&& zf2.joinedBy == zf1
+&& zf2.partyIndex == 0
+&& zf2.slotIndex == 0
+&& zf2.canApproveApplications == true
+&& rf17(zf2.characterId)
+&& rf199(zf3, zf1, zf2)
+&& zf4.playerId == zf1
+&& zf4.stateId == zf5
+&& zf6.recruitmentId == zez
+&& zf6.playerId == zf1
+&& zf6.characterId == zf2.characterId
+&& zf6.raidId == zf0.raidId
+&& zf6.cycleKey == zf0.currentCycleKey
+&& zf6.status == 'active'
+&& zf6.source == 'party'
+&& zf6.revision == 1;
 }
-function rf202(zfa, zfb) {
-return zfb.revision == zfa.revision + 1 && rf72(zfa)
-&& zfb.diff(zfa).affectedKeys().hasOnly([
+function rf201(zf7, zf8) {
+return zf8.revision == zf7.revision + 1 && rf72(zf7)
+&& zf8.diff(zf7).affectedKeys().hasOnly([
 'pendingApplicationCount', 'pendingNonGroupApplicantCount',
 'commandTargets', 'lastCommandId', 'lastCommandType',
 'lastCommandActorPlayerId', 'lastCommandAt',
 'revision', 'updatedAt'
 ])
-&& rf54(zfa, zfb)
-&& zfb.pendingApplicationCount is int
-&& zfb.pendingNonGroupApplicantCount is int
-&& zfb.pendingApplicationCount >= 0
-&& zfb.pendingNonGroupApplicantCount >= 0
-&& zfb.pendingNonGroupApplicantCount
-<= zfb.pendingApplicationCount
-&& (zfb.pendingApplicationCount
-== zfa.pendingApplicationCount + 1
-|| zfb.pendingApplicationCount
-== zfa.pendingApplicationCount - 1)
-&& zfb.updatedAt == request.time;
+&& rf54(zf7, zf8)
+&& zf8.pendingApplicationCount is int
+&& zf8.pendingNonGroupApplicantCount is int
+&& zf8.pendingApplicationCount >= 0
+&& zf8.pendingNonGroupApplicantCount >= 0
+&& zf8.pendingNonGroupApplicantCount
+<= zf8.pendingApplicationCount
+&& (zf8.pendingApplicationCount
+== zf7.pendingApplicationCount + 1
+|| zf8.pendingApplicationCount
+== zf7.pendingApplicationCount - 1)
+&& zf8.updatedAt == request.time;
 }
-function rf203(zfc, zfd) {
-let zfe = zfd.memberPlayerIds.toSet().difference(
-zfc.memberPlayerIds.toSet()
+function rf202(zf9, zfa) {
+let zfb = zfa.memberPlayerIds.toSet().difference(
+zf9.memberPlayerIds.toSet()
 );
-let zff = zfd.diff(zfc).affectedKeys();
-return zfd.revision == zfc.revision + 1 && rf72(zfc)
-&& zfc.manualRecruitmentEnabled == true
-&& zfc.hasAvailableSlot == true
-&& (zff.hasOnly([
+let zfc = zfa.diff(zf9).affectedKeys();
+return zfa.revision == zf9.revision + 1 && rf72(zf9)
+&& zf9.manualRecruitmentEnabled == true
+&& zf9.hasAvailableSlot == true
+&& (zfc.hasOnly([
 'memberPlayerIds', 'memberCount', 'dealerCount', 'supportCount',
 'hasAvailableSlot', 'partySlots', 'raidStateTargets',
 'nonGroupMemberCount', 'commandTargets', 'lastCommandId',
 'lastCommandType', 'lastCommandActorPlayerId', 'lastCommandAt',
 'revision', 'updatedAt'
 ])
-|| zff.hasOnly([
+|| zfc.hasOnly([
 'memberPlayerIds', 'memberCount', 'dealerCount', 'supportCount',
 'hasAvailableSlot', 'partySlots', 'raidStateTargets',
 'nonGroupMemberCount', 'pendingApplicationCount',
@@ -2844,140 +2837,143 @@ return zfd.revision == zfc.revision + 1 && rf72(zfc)
 'lastCommandId', 'lastCommandType', 'lastCommandActorPlayerId',
 'lastCommandAt', 'revision', 'updatedAt'
 ]))
-&& rf54(zfc, zfd)
-&& zfe.size() == 1
-&& zfd.memberPlayerIds.size() == zfc.memberPlayerIds.size() + 1
-&& zfd.memberCount == zfc.memberCount + 1
-&& zfd.dealerCount + zfd.supportCount
-== zfc.dealerCount + zfc.supportCount + 1
-&& zfd.hasAvailableSlot
-== (zfd.memberCount < zfd.maxMemberCount)
-&& rf73(zfd)
-&& (zfd.nonGroupMemberCount == zfc.nonGroupMemberCount
-|| zfd.nonGroupMemberCount == zfc.nonGroupMemberCount + 1)
-&& (!zff.hasAny([
+&& rf54(zf9, zfa)
+&& zfb.size() == 1
+&& zfa.memberPlayerIds.size() == zf9.memberPlayerIds.size() + 1
+&& zfa.memberCount == zf9.memberCount + 1
+&& zfa.dealerCount + zfa.supportCount
+== zf9.dealerCount + zf9.supportCount + 1
+&& zfa.hasAvailableSlot
+== (zfa.memberCount < zfa.maxMemberCount)
+&& rf73(zfa)
+&& (zfa.nonGroupMemberCount == zf9.nonGroupMemberCount
+|| zfa.nonGroupMemberCount == zf9.nonGroupMemberCount + 1)
+&& (!zfc.hasAny([
 'pendingApplicationCount', 'pendingNonGroupApplicantCount'
 ])
-|| (zfd.pendingApplicationCount
-== zfc.pendingApplicationCount - 1
-&& (zfd.pendingNonGroupApplicantCount
-== zfc.pendingNonGroupApplicantCount
-|| zfd.pendingNonGroupApplicantCount
-== zfc.pendingNonGroupApplicantCount - 1)))
-&& zfd.updatedAt == request.time;
+|| (zfa.pendingApplicationCount
+== zf9.pendingApplicationCount - 1
+&& (zfa.pendingNonGroupApplicantCount
+== zf9.pendingNonGroupApplicantCount
+|| zfa.pendingNonGroupApplicantCount
+== zf9.pendingNonGroupApplicantCount - 1)))
+&& zfa.updatedAt == request.time;
 }
-function rf204(zfg, zfh) {
-return zfh.revision == zfg.revision + 1 && rf72(zfg)
-&& zfh.diff(zfg).affectedKeys().hasOnly([
+function rf203(zfd, zfe) {
+return zfe.revision == zfd.revision + 1 && rf72(zfd)
+&& zfe.diff(zfd).affectedKeys().hasOnly([
 'partySlots', 'raidStateTargets', 'dealerCount', 'supportCount',
 'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot',
 'commandTargets', 'lastCommandId', 'lastCommandType',
 'lastCommandActorPlayerId', 'lastCommandAt',
 'revision', 'updatedAt'
 ])
-&& rf54(zfg, zfh)
-&& zfh.memberPlayerIds == zfg.memberPlayerIds
-&& zfh.memberCount == zfg.memberCount
-&& zfh.leaderPlayerId == zfg.leaderPlayerId
-&& rf73(zfh)
-&& zfh.updatedAt == request.time;
+&& rf54(zfd, zfe)
+&& zfe.memberPlayerIds == zfd.memberPlayerIds
+&& zfe.memberCount == zfd.memberCount
+&& zfe.leaderPlayerId == zfd.leaderPlayerId
+&& rf73(zfe)
+&& zfe.updatedAt == request.time;
 }
-function rf205(zfi, zfj) {
-return zfj.revision == zfi.revision + 1 && rf72(zfi)
-&& zfi.leaderPlayerId == rf5()
-&& zfj.diff(zfi).affectedKeys().hasOnly([
+function rf204(zff, zfg) {
+return zfg.revision == zff.revision + 1 && rf72(zff)
+&& zff.leaderPlayerId == rf5()
+&& zfg.diff(zff).affectedKeys().hasOnly([
 'partySlots', 'commandTargets', 'lastCommandId', 'lastCommandType',
 'lastCommandActorPlayerId', 'lastCommandAt',
 'revision', 'updatedAt'
 ])
-&& rf54(zfi, zfj)
-&& zfj.memberPlayerIds == zfi.memberPlayerIds
-&& zfj.memberCount == zfi.memberCount
-&& zfj.partySlots is list
-&& zfj.partySlots.size() == zfj.memberCount
-&& zfj.updatedAt == request.time;
+&& rf54(zff, zfg)
+&& zfg.memberPlayerIds == zff.memberPlayerIds
+&& zfg.memberCount == zff.memberCount
+&& zfg.partySlots is list
+&& zfg.partySlots.size() == zfg.memberCount
+&& zfg.updatedAt == request.time;
 }
-function rf206(zfk, zfl) {
-return zfl.revision == zfk.revision + 1 && rf72(zfk)
-&& zfk.leaderPlayerId == rf5()
-&& zfk.groupId is string
-&& zfl.groupId == zfk.groupId
-&& zfl.diff(zfk).affectedKeys().hasOnly([
+function rf205(zfh, zfi) {
+return zfi.revision == zfh.revision + 1 && rf72(zfh)
+&& zfh.leaderPlayerId == rf5()
+&& zfh.groupId is string
+&& zfi.groupId == zfh.groupId
+&& zfi.diff(zfh).affectedKeys().hasOnly([
 'visibility', 'groupActiveRecruitmentCountAfter',
 'commandTargets', 'lastCommandId', 'lastCommandType',
 'lastCommandActorPlayerId', 'lastCommandAt',
 'revision', 'updatedAt'
 ])
-&& rf54(zfk, zfl)
-&& zfk.visibility in ['public', 'group']
-&& zfl.visibility in ['public', 'group']
-&& zfk.visibility != zfl.visibility
-&& zfl.groupActiveRecruitmentCountAfter is int
-&& (zfl.visibility != 'group'
-|| (zfk.nonGroupMemberCount == 0
-&& zfk.pendingNonGroupApplicantCount == 0))
-&& zfl.updatedAt == request.time;
+&& rf54(zfh, zfi)
+&& zfh.visibility in ['public', 'group']
+&& zfi.visibility in ['public', 'group']
+&& zfh.visibility != zfi.visibility
+&& zfi.groupActiveRecruitmentCountAfter is int
+&& (zfi.visibility != 'group'
+|| (zfh.nonGroupMemberCount == 0
+&& zfh.pendingNonGroupApplicantCount == 0))
+&& zfi.updatedAt == request.time;
 }
-function rf207(zfm) {
+function rf206(zfj) {
 return rf4()
-&& (zfm.visibility == 'public'
-|| zfm.leaderPlayerId == rf5()
-|| rf5() in zfm.memberPlayerIds);
+&& (zfj.visibility == 'public'
+|| zfj.leaderPlayerId == rf5()
+|| rf5() in zfj.memberPlayerIds);
 }
-function rf208(zfn) {
+function rf207(zfk) {
 return rf4()
-&& (rf186(zfn)
-|| zfn.leaderPlayerId == rf5()
+&& (rf185(zfk)
+|| zfk.leaderPlayerId == rf5()
+|| rf5() in zfk.memberPlayerIds);
+}
+function rf208(zfl) {
+return rf4()
+&& (!exists(rf7(zfl))
+|| rf207(resource.data));
+}
+function rf209(zfm) {
+let zfn = get(rf7(zfm)).data;
+return rf4()
+&& (zfn.leaderPlayerId == rf5()
 || rf5() in zfn.memberPlayerIds);
 }
-function rf209(zfo) {
+function rf210(zfo) {
 return rf4()
-&& (!exists(rf7(zfo))
-|| rf208(resource.data));
-}
-function rf210(zfp) {
-let zfq = get(rf7(zfp)).data;
-return rf4()
-&& (zfq.leaderPlayerId == rf5()
-|| rf5() in zfq.memberPlayerIds);
-}
-function rf211(zfr) {
-return rf4()
-&& exists(rf7(zfr))
-&& rf186(
-get(rf7(zfr)).data
+&& exists(rf7(zfo))
+&& rf185(
+get(rf7(zfo)).data
 );
 }
-function rf212(zfs, zft) {
-return zfs.partySlots == zft.partySlots || (zft.partySlots.size() <= 8
-&& (zfs.partySlots.hasAll(zft.partySlots)
-|| (rf174(zfs, zft, 0) && rf174(zfs, zft, 1)
-&& rf174(zfs, zft, 2) && rf174(zfs, zft, 3)
-&& rf174(zfs, zft, 4) && rf174(zfs, zft, 5)
-&& rf174(zfs, zft, 6) && rf174(zfs, zft, 7))));
+function rf211(zfp, zfq) {
+return zfp.partySlots == zfq.partySlots || (zfq.partySlots.size() <= 8
+&& (zfp.partySlots.hasAll(zfq.partySlots)
+|| (rf173(zfp, zfq, 0) && rf173(zfp, zfq, 1)
+&& rf173(zfp, zfq, 2) && rf173(zfp, zfq, 3)
+&& rf173(zfp, zfq, 4) && rf173(zfp, zfq, 5)
+&& rf173(zfp, zfq, 6) && rf173(zfp, zfq, 7))));
 }
-allow get: if rf209(recruitmentId);
-allow list: if rf207(resource.data);
-allow create: if rf201(
+allow get: if rf208(recruitmentId);
+allow list: if rf206(resource.data);
+allow create: if rf200(
 recruitmentId,
 request.resource.data
 );
-allow update: if (rf40(request.resource.data)) ? (rf199(resource.data, request.resource.data)) : ((rf41(resource.data, request.resource.data)) ? (rf51(resource.data, request.resource.data)) : ((!(request.resource.data.get('lastCommandType', '') in ['complete', 'advanceCycle', 'incompleteEnd', 'disband']) || request.resource.data.lastCommandAt == request.time || rf187(resource.data, request.resource.data)) && ((request.resource.data.get('lastCommandType', '') == 'personalComplete' && request.resource.data.lastCommandAt == request.time) ? (rf166(resource.data, request.resource.data) && rf93(resource.data, request.resource.data)) : (rf212(resource.data, request.resource.data)
+allow update: if (rf40(request.resource.data)) ? (rf198(resource.data, request.resource.data)) : ((rf41(resource.data, request.resource.data)) ? (rf51(resource.data, request.resource.data)) : ((!(request.resource.data.get('lastCommandType', '') in ['complete', 'advanceCycle', 'incompleteEnd', 'disband']) || request.resource.data.lastCommandAt == request.time || rf186(resource.data, request.resource.data)) && ((request.resource.data.get('lastCommandType', '') == 'personalComplete' && request.resource.data.lastCommandAt == request.time) ? (rf165(resource.data, request.resource.data) && rf93(resource.data, request.resource.data)) : (rf211(resource.data, request.resource.data)
 && ((request.resource.data.get('lastCommandType', '') == 'disband'
 && resource.data.memberCount == 1
 && resource.data.currentCycleStatus == 'completed')
 ? (rf57(resource.data, request.resource.data)
-&& rf199(resource.data, request.resource.data))
+&& rf198(resource.data, request.resource.data))
 : ((request.resource.data.get('lastCommandType', '') == 'cleanupCompletedPeerOwnership') ? (rf81(resource.data, request.resource.data)) : ((resource.data.currentCycleStatus == 'active' && request.resource.data.memberCount == resource.data.memberCount - 1 && rf89(
 resource.data,
 request.resource.data
-)) || (request.resource.data.get('lastCommandType', '') == 'cleanupCompletedLeaderOwnership' && rf78(resource.data, request.resource.data)) || (request.resource.data.get('lastCommandType', '') == 'cleanupCompletedOwnership' && rf88(resource.data, request.resource.data)) || rf187(
+)) || (request.resource.data.get('lastCommandType', '') == 'cleanupCompletedLeaderOwnership' && rf78(resource.data, request.resource.data)) || (request.resource.data.get('lastCommandType', '') == 'cleanupCompletedOwnership' && rf88(resource.data, request.resource.data)) || rf186(
 resource.data,
 request.resource.data
-) || rf199(
+) || rf198(
 resource.data,
 request.resource.data
-) || (resource.data.currentCycleStatus == 'active' && (rf202(
+) || (resource.data.currentCycleStatus == 'active' && (rf201(
+resource.data,
+request.resource.data
+) || rf202(
 resource.data,
 request.resource.data
 ) || rf203(
@@ -2989,339 +2985,336 @@ request.resource.data
 ) || rf205(
 resource.data,
 request.resource.data
-) || rf206(
-resource.data,
-request.resource.data
 ))))))))));
 allow delete: if false;
 match /members/{playerId} {
-function rf213(zfu, zfv, zfw) {
-return zfv == 0
-? rf214(zfu, zfw)
-: rf215(zfu, zfw);
+function rf212(zfr, zfs, zft) {
+return zfs == 0
+? rf213(zfr, zft)
+: rf214(zfr, zft);
 }
-function rf214(zfx, slotIndex) {
+function rf213(zfu, slotIndex) {
 return slotIndex == 0
-? /databases/$(database)/documents/recruitments/$(zfx)/slots/0_0
+? /databases/$(database)/documents/recruitments/$(zfu)/slots/0_0
 : slotIndex == 1
-? /databases/$(database)/documents/recruitments/$(zfx)/slots/0_1
+? /databases/$(database)/documents/recruitments/$(zfu)/slots/0_1
 : slotIndex == 2
-? /databases/$(database)/documents/recruitments/$(zfx)/slots/0_2
-: /databases/$(database)/documents/recruitments/$(zfx)/slots/0_3;
+? /databases/$(database)/documents/recruitments/$(zfu)/slots/0_2
+: /databases/$(database)/documents/recruitments/$(zfu)/slots/0_3;
 }
-function rf215(zfy, slotIndex) {
+function rf214(zfv, slotIndex) {
 return slotIndex == 0
-? /databases/$(database)/documents/recruitments/$(zfy)/slots/1_0
+? /databases/$(database)/documents/recruitments/$(zfv)/slots/1_0
 : slotIndex == 1
-? /databases/$(database)/documents/recruitments/$(zfy)/slots/1_1
+? /databases/$(database)/documents/recruitments/$(zfv)/slots/1_1
 : slotIndex == 2
-? /databases/$(database)/documents/recruitments/$(zfy)/slots/1_2
-: /databases/$(database)/documents/recruitments/$(zfy)/slots/1_3;
+? /databases/$(database)/documents/recruitments/$(zfv)/slots/1_2
+: /databases/$(database)/documents/recruitments/$(zfv)/slots/1_3;
 }
-function rf216(zfz, zg0, zg1) {
-let zg2 = get(rf7(zfz)).data;
-let zg3 = getAfter(rf7(zfz)).data;
-let zg4 = zg2.partySlots[zg3.ownershipCleanup.targetIndex];
-return rf74(zg2, zg3)
-&& zg4.playerId == zg0 && zg4.characterId == zg1.characterId
-&& !(zg0 in zg3.memberPlayerIds)
-&& rf85(zg4, zg2.raidId);
+function rf215(zfw, zfx, zfy) {
+let zfz = get(rf7(zfw)).data;
+let zg0 = getAfter(rf7(zfw)).data;
+let zg1 = zfz.partySlots[zg0.ownershipCleanup.targetIndex];
+return rf74(zfz, zg0)
+&& zg1.playerId == zfx && zg1.characterId == zfy.characterId
+&& !(zfx in zg0.memberPlayerIds)
+&& rf85(zg1, zfz.raidId);
 }
-function rf217(zg5, zg6, zg7, zg8) {
-let zg9 = get(rf7(zg5)).data;
-let zga = getAfter(rf7(zg5)).data;
-let zgb = zg9.partySlots[zga.ownershipCleanup.successorIndex];
-return rf74(zg9, zga)
-&& zgb.playerId == zg6 && zg7.playerId == zg6
-&& rf60(zgb)
-&& zg7.characterId == zgb.characterId
-&& zga.leaderPlayerId == zg6
-&& zga.leaderCharacterNameSnapshot == zg7.characterNameSnapshot
-&& zga.leaderClassNameSnapshot == zg7.classNameSnapshot
-&& zg8.diff(zg7).affectedKeys().hasOnly(['canApproveApplications', 'updatedAt'])
-&& zg8.canApproveApplications == true && zg8.updatedAt == request.time;
+function rf216(zg2, zg3, zg4, zg5) {
+let zg6 = get(rf7(zg2)).data;
+let zg7 = getAfter(rf7(zg2)).data;
+let zg8 = zg6.partySlots[zg7.ownershipCleanup.successorIndex];
+return rf74(zg6, zg7)
+&& zg8.playerId == zg3 && zg4.playerId == zg3
+&& rf60(zg8)
+&& zg4.characterId == zg8.characterId
+&& zg7.leaderPlayerId == zg3
+&& zg7.leaderCharacterNameSnapshot == zg4.characterNameSnapshot
+&& zg7.leaderClassNameSnapshot == zg4.classNameSnapshot
+&& zg5.diff(zg4).affectedKeys().hasOnly(['canApproveApplications', 'updatedAt'])
+&& zg5.canApproveApplications == true && zg5.updatedAt == request.time;
 }
-function rf218(zgc, zgd, zge) {
-let zgf = get(rf7(zgc)).data;
-let zgg = getAfter(rf7(zgc)).data;
-let zgh = zgf.partySlots[zgg.ownershipCleanup.targetIndex];
-return rf79(zgf, zgg)
-&& zgh.playerId == zgd && zgh.characterId == zge.characterId
-&& !(zgd in zgg.memberPlayerIds)
-&& rf84(zgh, zgg.ownershipCleanup.observedOwnershipRevision)
-&& rf85(zgh, zgf.raidId);
+function rf217(zg9, zga, zgb) {
+let zgc = get(rf7(zg9)).data;
+let zgd = getAfter(rf7(zg9)).data;
+let zge = zgc.partySlots[zgd.ownershipCleanup.targetIndex];
+return rf79(zgc, zgd)
+&& zge.playerId == zga && zge.characterId == zgb.characterId
+&& !(zga in zgd.memberPlayerIds)
+&& rf84(zge, zgd.ownershipCleanup.observedOwnershipRevision)
+&& rf85(zge, zgc.raidId);
 }
-function rf219(zgi, zgj, zgk) {
-let zgl = get(rf7(zgi)).data;
-let zgm = getAfter(rf7(zgi)).data;
-let zgn = zgl.partySlots[zgm.ownershipCleanup.targetIndex];
-return rf83(zgl, zgm)
-&& zgn.playerId == zgj && zgn.characterId == zgk.characterId
-&& !(zgj in zgm.memberPlayerIds);
+function rf218(zgf, zgg, zgh) {
+let zgi = get(rf7(zgf)).data;
+let zgj = getAfter(rf7(zgf)).data;
+let zgk = zgi.partySlots[zgj.ownershipCleanup.targetIndex];
+return rf83(zgi, zgj)
+&& zgk.playerId == zgg && zgk.characterId == zgh.characterId
+&& !(zgg in zgj.memberPlayerIds);
 }
-function rf220(zgo, zgp, zgq) {
-let zgr = get(rf7(zgo)).data;
-let zgs = getAfter(rf7(zgo)).data;
-let zgt = zgq.characterId + '_' + zgs.raidId;
-let zgu = zgp == rf5()
-&& zgr.approvalPolicy.mode == 'directJoin'
-&& zgq.joinedBy == zgp;
-let zgv = rf27(zgo)
-&& zgq.joinedBy == rf5();
-return rf60(zgq) && rf4()
-&& zgr.schemaVersion == 2
-&& zgs.schemaVersion == 2
-&& zgq.schemaVersion == 1
-&& zgq.playerId == zgp
-&& zgq.partyIndex >= 0
-&& zgq.partyIndex < zgs.partyCount
-&& zgq.slotIndex >= 0
-&& zgq.slotIndex < zgs.membersPerParty
-&& zgq.canApproveApplications == false
-&& zgq.joinedAt == request.time
-&& zgq.updatedAt == request.time
-&& rf18(zgq.characterId, zgp)
-&& !(zgp in zgr.memberPlayerIds)
-&& zgp in zgs.memberPlayerIds
-&& (zgu || (zgv && rf230(zgo, zgp, zgq)))
-&& (zgr.visibility == 'public'
-|| (zgr.visibility == 'group'
-&& zgr.groupId is string
-&& (rf24(zgr.groupId) || zgv)))
-&& rf68(zgs, zgp, zgt)
-&& getAfter(rf29(zgp, zgt)).data.recruitmentId
-== zgo;
+function rf219(zgl, zgm, zgn) {
+let zgo = get(rf7(zgl)).data;
+let zgp = getAfter(rf7(zgl)).data;
+let zgq = zgn.characterId + '_' + zgp.raidId;
+let zgr = zgm == rf5()
+&& zgo.approvalPolicy.mode == 'directJoin'
+&& zgn.joinedBy == zgm;
+let zgs = rf27(zgl)
+&& zgn.joinedBy == rf5();
+return rf60(zgn) && rf4()
+&& zgo.schemaVersion == 2
+&& zgp.schemaVersion == 2
+&& zgn.schemaVersion == 1
+&& zgn.playerId == zgm
+&& zgn.partyIndex >= 0
+&& zgn.partyIndex < zgp.partyCount
+&& zgn.slotIndex >= 0
+&& zgn.slotIndex < zgp.membersPerParty
+&& zgn.canApproveApplications == false
+&& zgn.joinedAt == request.time
+&& zgn.updatedAt == request.time
+&& rf18(zgn.characterId, zgm)
+&& !(zgm in zgo.memberPlayerIds)
+&& zgm in zgp.memberPlayerIds
+&& (zgr || (zgs && rf229(zgl, zgm, zgn)))
+&& (zgo.visibility == 'public'
+|| (zgo.visibility == 'group'
+&& zgo.groupId is string
+&& (rf24(zgo.groupId) || zgs)))
+&& rf68(zgp, zgm, zgq)
+&& getAfter(rf29(zgm, zgq)).data.recruitmentId
+== zgl;
 }
-function rf221(zgw, zgx, zgy) {
-let zgz = get(rf7(zgw)).data;
-let zh0 = getAfter(rf7(zgw)).data;
-let zh1 = zgy.characterId + '_' + zgz.raidId;
+function rf220(zgt, zgu, zgv) {
+let zgw = get(rf7(zgt)).data;
+let zgx = getAfter(rf7(zgt)).data;
+let zgy = zgv.characterId + '_' + zgw.raidId;
 return rf4()
-&& zgz.schemaVersion == 2
-&& zh0.schemaVersion == 2
-&& (zgx == rf5()
-|| zgz.leaderPlayerId == rf5())
-&& !(zgx in zh0.memberPlayerIds)
-&& (!existsAfter(rf29(zgx, zh1))
-|| (zgx == rf5()
-&& getAfter(rf29(zgx, zh1)).data.status
+&& zgw.schemaVersion == 2
+&& zgx.schemaVersion == 2
+&& (zgu == rf5()
+|| zgw.leaderPlayerId == rf5())
+&& !(zgu in zgx.memberPlayerIds)
+&& (!existsAfter(rf29(zgu, zgy))
+|| (zgu == rf5()
+&& getAfter(rf29(zgu, zgy)).data.status
 == 'completed'
-&& getAfter(rf29(zgx, zh1)).data.source
+&& getAfter(rf29(zgu, zgy)).data.source
 == 'manual'));
 }
-function rf222(
-zh2,
-zh3,
-zh4
+function rf221(
+zgz,
+zh0,
+zh1
 ) {
-let zh5 = getAfter(rf7(zh2)).data;
-let zh6 = zh4.characterId + '_' + zh5.raidId;
+let zh2 = getAfter(rf7(zgz)).data;
+let zh3 = zh1.characterId + '_' + zh2.raidId;
 return rf4()
-&& zh3 == rf5()
-&& zh5.schemaVersion == 2
-&& rf67(zh5)
-&& zh5.commandTargets[0].stateId == zh6
-&& !(zh3 in zh5.memberPlayerIds)
-&& getAfter(rf29(zh3, zh6)).data.status
+&& zh0 == rf5()
+&& zh2.schemaVersion == 2
+&& rf67(zh2)
+&& zh2.commandTargets[0].stateId == zh3
+&& !(zh0 in zh2.memberPlayerIds)
+&& getAfter(rf29(zh0, zh3)).data.status
 == 'completed';
 }
-function rf223(zh7, zh8, zh9) {
-let zha = getAfter(rf7(zh7)).data;
-let zhb = zh9.characterId + '_' + zha.raidId;
-return rf60(zh9) && rf4()
-&& zh8 == rf5()
-&& zha.schemaVersion == 2
-&& zh9.schemaVersion == 1
-&& zh9.playerId == zh8
-&& zh9.joinedBy == zh8
-&& zh9.partyIndex == 0
-&& zh9.slotIndex == 0
-&& zh9.canApproveApplications == true
-&& zh9.joinedAt == request.time
-&& zh9.updatedAt == request.time
-&& zha.leaderPlayerId == zh8
-&& zha.memberPlayerIds == [zh8]
-&& rf17(zh9.characterId)
-&& rf68(zha, zh8, zhb)
-&& getAfter(rf29(zh8, zhb)).data.recruitmentId
-== zh7;
+function rf222(zh4, zh5, zh6) {
+let zh7 = getAfter(rf7(zh4)).data;
+let zh8 = zh6.characterId + '_' + zh7.raidId;
+return rf60(zh6) && rf4()
+&& zh5 == rf5()
+&& zh7.schemaVersion == 2
+&& zh6.schemaVersion == 1
+&& zh6.playerId == zh5
+&& zh6.joinedBy == zh5
+&& zh6.partyIndex == 0
+&& zh6.slotIndex == 0
+&& zh6.canApproveApplications == true
+&& zh6.joinedAt == request.time
+&& zh6.updatedAt == request.time
+&& zh7.leaderPlayerId == zh5
+&& zh7.memberPlayerIds == [zh5]
+&& rf17(zh6.characterId)
+&& rf68(zh7, zh5, zh8)
+&& getAfter(rf29(zh5, zh8)).data.recruitmentId
+== zh4;
 }
-function rf224(
-zhc,
+function rf223(
+zh9,
 playerId,
-zhd,
-zhe
+zha,
+zhb
 ) {
-let zhf = get(rf7(zhc)).data;
-let zhg = getAfter(rf7(zhc)).data;
-let oldStateId = zhd.characterId + '_' + zhf.raidId;
-let newStateId = zhe.characterId + '_' + zhg.raidId;
-let zhh = {'playerId': playerId, 'stateId': oldStateId};
-let zhi = {'playerId': playerId, 'stateId': newStateId};
-return rf60(zhe) && rf4()
+let zhc = get(rf7(zh9)).data;
+let zhd = getAfter(rf7(zh9)).data;
+let oldStateId = zha.characterId + '_' + zhc.raidId;
+let newStateId = zhb.characterId + '_' + zhd.raidId;
+let zhe = {'playerId': playerId, 'stateId': oldStateId};
+let zhf = {'playerId': playerId, 'stateId': newStateId};
+return rf60(zhb) && rf4()
 && playerId == rf5()
-&& zhf.schemaVersion == 2
-&& zhg.schemaVersion == 2
-&& zhg.status == 'active'
-&& zhg.currentCycleStatus == 'active'
-&& zhe.diff(zhd).affectedKeys().hasOnly([
+&& zhc.schemaVersion == 2
+&& zhd.schemaVersion == 2
+&& zhd.status == 'active'
+&& zhd.currentCycleStatus == 'active'
+&& zhb.diff(zha).affectedKeys().hasOnly([
 'characterId', 'characterNameSnapshot', 'classNameSnapshot',
 'itemLevelSnapshot', 'combatPowerSnapshot', 'gemValidationSnapshot',
 'buildIntegritySnapshot', 'ownershipRevision',
 'role', 'partyIndex', 'slotIndex', 'characterChangedAt', 'updatedAt'
 ])
-&& (zhe.characterId != zhd.characterId
-|| zhe.role != zhd.role)
-&& zhe.role in ['dealer', 'support']
-&& zhg.revision == zhf.revision + 1
-&& rf96(zhf, zhg, zhd, zhe)
-&& zhe.canApproveApplications == zhd.canApproveApplications
-&& rf17(zhe.characterId)
-&& zhe.characterChangedAt == request.time
-&& zhe.updatedAt == request.time
+&& (zhb.characterId != zha.characterId
+|| zhb.role != zha.role)
+&& zhb.role in ['dealer', 'support']
+&& zhd.revision == zhc.revision + 1
+&& rf96(zhc, zhd, zha, zhb)
+&& zhb.canApproveApplications == zha.canApproveApplications
+&& rf17(zhb.characterId)
+&& zhb.characterChangedAt == request.time
+&& zhb.updatedAt == request.time
 && !existsAfter(rf29(playerId, oldStateId))
 && existsAfter(rf29(playerId, newStateId))
 && getAfter(rf29(playerId, newStateId)).data
-.recruitmentId == zhc
-&& zhi in zhg.raidStateTargets
-&& !(zhh in zhg.raidStateTargets)
-&& zhg.raidStateTargets.removeAll([zhi])
-== zhf.raidStateTargets.removeAll([zhh])
-&& !rf171(
+.recruitmentId == zh9
+&& zhf in zhd.raidStateTargets
+&& !(zhe in zhd.raidStateTargets)
+&& zhd.raidStateTargets.removeAll([zhf])
+== zhc.raidStateTargets.removeAll([zhe])
+&& !rf170(
 playerId,
-zhg.currentCycleKey,
-zhe.characterId,
-zhg.raidId, zhe.get('ownershipRevision', 0)
+zhd.currentCycleKey,
+zhb.characterId,
+zhd.raidId, zhb.get('ownershipRevision', 0)
 );
 }
-function rf225(zhj, zhk, zhl, zhm) {
-let zhn = getAfter(rf7(zhj)).data;
-let zho = zhl.characterId + '_' + zhn.raidId;
-let zhp = zhm.characterId + '_' + zhn.raidId;
-let zhq = zhn.status == 'active'
-&& zhn.continueTogether == true
-&& zhn.currentCycleStatus == 'completed';
-let zhr = zhm.partyIndex == zhl.partyIndex
-&& zhm.get('slotIndex', -1) == zhl.get('slotIndex', -1);
-let zhs = zhn.slotLedgerVersion == 2
-&& zhm.partyIndex >= 0
-&& zhm.partyIndex < zhn.partyCount
-&& zhm.slotIndex >= 0
-&& zhm.slotIndex < zhn.membersPerParty
-&& !existsAfter(rf213(
-zhj,
-zhl.partyIndex,
-zhl.slotIndex
+function rf224(zhg, zhh, zhi, zhj) {
+let zhk = getAfter(rf7(zhg)).data;
+let zhl = zhi.characterId + '_' + zhk.raidId;
+let zhm = zhj.characterId + '_' + zhk.raidId;
+let zhn = zhk.status == 'active'
+&& zhk.continueTogether == true
+&& zhk.currentCycleStatus == 'completed';
+let zho = zhj.partyIndex == zhi.partyIndex
+&& zhj.get('slotIndex', -1) == zhi.get('slotIndex', -1);
+let zhp = zhk.slotLedgerVersion == 2
+&& zhj.partyIndex >= 0
+&& zhj.partyIndex < zhk.partyCount
+&& zhj.slotIndex >= 0
+&& zhj.slotIndex < zhk.membersPerParty
+&& !existsAfter(rf212(
+zhg,
+zhi.partyIndex,
+zhi.slotIndex
 ))
-&& getAfter(rf213(
-zhj,
-zhm.partyIndex,
-zhm.slotIndex
-)).data.playerId == zhk;
-let zht = rf4()
-&& zhk == rf5()
-&& zhm.diff(zhl).affectedKeys().hasOnly([
+&& getAfter(rf212(
+zhg,
+zhj.partyIndex,
+zhj.slotIndex
+)).data.playerId == zhh;
+let zhq = rf4()
+&& zhh == rf5()
+&& zhj.diff(zhi).affectedKeys().hasOnly([
 'characterId', 'characterNameSnapshot', 'classNameSnapshot',
 'itemLevelSnapshot', 'combatPowerSnapshot', 'gemValidationSnapshot',
 'buildIntegritySnapshot',
 'role', 'partyIndex', 'slotIndex', 'characterChangedAt', 'updatedAt'
 ])
-&& (zhm.characterId != zhl.characterId
-|| zhm.role != zhl.role)
-&& zhm.role in ['dealer', 'support']
-&& (zhr || zhs)
-&& zhm.canApproveApplications == zhl.canApproveApplications
-&& rf17(zhm.characterId)
-&& zhm.characterChangedAt == request.time
-&& zhm.updatedAt == request.time;
-let zhu = zho == zhp
-? (existsAfter(rf9(zhk, zhp))
-&& getAfter(rf9(zhk, zhp)).data.role
-== zhm.role)
-: (!existsAfter(rf9(zhk, zho))
-&& getAfter(rf9(zhk, zhp)).data.characterId
-== zhm.characterId
-&& getAfter(rf9(zhk, zhp)).data.role
-== zhm.role);
+&& (zhj.characterId != zhi.characterId
+|| zhj.role != zhi.role)
+&& zhj.role in ['dealer', 'support']
+&& (zho || zhp)
+&& zhj.canApproveApplications == zhi.canApproveApplications
+&& rf17(zhj.characterId)
+&& zhj.characterChangedAt == request.time
+&& zhj.updatedAt == request.time;
+let zhr = zhl == zhm
+? (existsAfter(rf9(zhh, zhm))
+&& getAfter(rf9(zhh, zhm)).data.role
+== zhj.role)
+: (!existsAfter(rf9(zhh, zhl))
+&& getAfter(rf9(zhh, zhm)).data.characterId
+== zhj.characterId
+&& getAfter(rf9(zhh, zhm)).data.role
+== zhj.role);
 let nextWeekPrepAssignmentOk =
-!existsAfter(rf9(zhk, zho))
-&& !existsAfter(rf9(zhk, zhp));
-return zht
-&& !(zhn.schemaVersion == 2 && zhq)
-&& (zhq
+!existsAfter(rf9(zhh, zhl))
+&& !existsAfter(rf9(zhh, zhm));
+return zhq
+&& !(zhk.schemaVersion == 2 && zhn)
+&& (zhn
 ? nextWeekPrepAssignmentOk
-: (zhu
+: (zhr
 && !rf15(
-zhk,
-zhn.currentCycleKey,
-zhm.characterId,
-zhn.raidId
+zhh,
+zhk.currentCycleKey,
+zhj.characterId,
+zhk.raidId
 )));
 }
-function rf226(zhv, zhw, zhx, zhy) {
-let zhz = get(rf7(zhv)).data;
+function rf225(zhs, zht, zhu, zhv) {
+let zhw = get(rf7(zhs)).data;
 return rf4()
-&& zhz.leaderPlayerId == rf5()
-&& zhw != rf5()
-&& zhy.diff(zhx).affectedKeys().hasOnly([
+&& zhw.leaderPlayerId == rf5()
+&& zht != rf5()
+&& zhv.diff(zhu).affectedKeys().hasOnly([
 'canApproveApplications', 'updatedAt'
 ])
-&& zhy.canApproveApplications is bool
-&& zhy.updatedAt == request.time;
+&& zhv.canApproveApplications is bool
+&& zhv.updatedAt == request.time;
 }
-function rf227(zi0, zi1, zi2, zi3, zi4) {
-return zi1 < zi0.size()
-&& zi0[zi1].playerId == zi2
-&& zi0[zi1].partyIndex == zi3
-&& zi0[zi1].slotIndex == zi4;
+function rf226(zhx, zhy, zhz, zi0, zi1) {
+return zhy < zhx.size()
+&& zhx[zhy].playerId == zhz
+&& zhx[zhy].partyIndex == zi0
+&& zhx[zhy].slotIndex == zi1;
 }
-function rf228(zi5, zi6, zi7, zi8) {
-return rf227(zi5, 0, zi6, zi7, zi8)
-|| rf227(zi5, 1, zi6, zi7, zi8)
-|| rf227(zi5, 2, zi6, zi7, zi8)
-|| rf227(zi5, 3, zi6, zi7, zi8)
-|| rf227(zi5, 4, zi6, zi7, zi8)
-|| rf227(zi5, 5, zi6, zi7, zi8)
-|| rf227(zi5, 6, zi6, zi7, zi8)
-|| rf227(zi5, 7, zi6, zi7, zi8);
+function rf227(zi2, zi3, zi4, zi5) {
+return rf226(zi2, 0, zi3, zi4, zi5)
+|| rf226(zi2, 1, zi3, zi4, zi5)
+|| rf226(zi2, 2, zi3, zi4, zi5)
+|| rf226(zi2, 3, zi3, zi4, zi5)
+|| rf226(zi2, 4, zi3, zi4, zi5)
+|| rf226(zi2, 5, zi3, zi4, zi5)
+|| rf226(zi2, 6, zi3, zi4, zi5)
+|| rf226(zi2, 7, zi3, zi4, zi5);
 }
-function rf229(zi9, zia, zib, zic) {
-let zid = get(rf7(zi9)).data;
-let zie = getAfter(rf7(zi9)).data;
+function rf228(zi6, zi7, zi8, zi9) {
+let zia = get(rf7(zi6)).data;
+let zib = getAfter(rf7(zi6)).data;
 return rf4()
-&& zid.schemaVersion == 2
-&& zid.leaderPlayerId == rf5()
-&& zie.leaderPlayerId == zid.leaderPlayerId
-&& zia != rf5()
-&& zie.revision == zid.revision + 1
-&& zic.diff(zib).affectedKeys().hasOnly([
+&& zia.schemaVersion == 2
+&& zia.leaderPlayerId == rf5()
+&& zib.leaderPlayerId == zia.leaderPlayerId
+&& zi7 != rf5()
+&& zib.revision == zia.revision + 1
+&& zi9.diff(zi8).affectedKeys().hasOnly([
 'partyIndex', 'slotIndex', 'updatedAt'
 ])
-&& (zic.partyIndex != zib.partyIndex
-|| zic.slotIndex != zib.slotIndex)
-&& zic.partyIndex >= 0
-&& zic.partyIndex < zie.partyCount
-&& zic.slotIndex >= 0
-&& zic.slotIndex < zie.membersPerParty
-&& zic.updatedAt == request.time
-&& rf228(zid.partySlots, zia,
-zib.partyIndex, zib.slotIndex)
-&& rf228(zie.partySlots, zia,
-zic.partyIndex, zic.slotIndex);
+&& (zi9.partyIndex != zi8.partyIndex
+|| zi9.slotIndex != zi8.slotIndex)
+&& zi9.partyIndex >= 0
+&& zi9.partyIndex < zib.partyCount
+&& zi9.slotIndex >= 0
+&& zi9.slotIndex < zib.membersPerParty
+&& zi9.updatedAt == request.time
+&& rf227(zia.partySlots, zi7,
+zi8.partyIndex, zi8.slotIndex)
+&& rf227(zib.partySlots, zi7,
+zi9.partyIndex, zi9.slotIndex);
 }
-function rf230(zif, zig, zih) {
-let zii = get(/databases/$(database)/documents/recruitments/$(zif)/applications/$(zig)).data;
-return zii.status == 'pending' && zii.characterId == zih.characterId
-&& zii.get('ownershipRevision', 0) == zih.get('ownershipRevision', 0);
+function rf229(zic, zid, zie) {
+let zif = get(/databases/$(database)/documents/recruitments/$(zic)/applications/$(zid)).data;
+return zif.status == 'pending' && zif.characterId == zie.characterId
+&& zif.get('ownershipRevision', 0) == zie.get('ownershipRevision', 0);
 }
-allow get, list: if rf210(recruitmentId)
-|| rf211(recruitmentId)
+allow get, list: if rf209(recruitmentId)
+|| rf210(recruitmentId)
 || (rf4() && playerId == rf5());
-allow create: if rf223(
+allow create: if rf222(
 recruitmentId,
 playerId,
 request.resource.data
-) || rf220(
+) || rf219(
 recruitmentId,
 playerId,
 request.resource.data
@@ -3331,210 +3324,210 @@ allow update: if
 && get(rf7(recruitmentId)).data.schemaVersion == 2
 && get(rf7(recruitmentId)).data.currentCycleStatus == 'active')
 ? (rf60(resource.data)
-&& rf224(recruitmentId, playerId, resource.data, request.resource.data))
-: (((request.resource.data.characterId != resource.data.characterId && rf39(get(rf7(recruitmentId)).data)) || rf41(get(rf7(recruitmentId)).data, getAfter(rf7(recruitmentId)).data)) ? (rf52(recruitmentId, playerId, resource.data, request.resource.data)) : ((rf165(recruitmentId)) ? (request.resource.data.characterId == resource.data.characterId && request.resource.data.get('ownershipRevision', 0) == resource.data.get('ownershipRevision', 0) && rf168(resource.data) && rf226(recruitmentId, playerId, resource.data, request.resource.data)) : (((request.resource.data.characterId == resource.data.characterId
+&& rf223(recruitmentId, playerId, resource.data, request.resource.data))
+: (((request.resource.data.characterId != resource.data.characterId && rf39(get(rf7(recruitmentId)).data)) || rf41(get(rf7(recruitmentId)).data, getAfter(rf7(recruitmentId)).data)) ? (rf52(recruitmentId, playerId, resource.data, request.resource.data)) : ((rf164(recruitmentId)) ? (request.resource.data.characterId == resource.data.characterId && request.resource.data.get('ownershipRevision', 0) == resource.data.get('ownershipRevision', 0) && rf167(resource.data) && rf225(recruitmentId, playerId, resource.data, request.resource.data)) : (((request.resource.data.characterId == resource.data.characterId
 && request.resource.data.get('ownershipRevision', 0) == resource.data.get('ownershipRevision', 0))
 || (rf60(resource.data) && rf60(request.resource.data)))
 && ((request.resource.data.diff(resource.data).affectedKeys()
 .hasOnly(['partyIndex', 'slotIndex', 'updatedAt'])
-&& rf229(recruitmentId, playerId, resource.data, request.resource.data))
-|| (rf224(
+&& rf228(recruitmentId, playerId, resource.data, request.resource.data))
+|| (rf223(
 recruitmentId,
 playerId,
 resource.data,
 request.resource.data
-) || rf217(recruitmentId, playerId, resource.data, request.resource.data) || rf225(
+) || rf216(recruitmentId, playerId, resource.data, request.resource.data) || rf224(
 recruitmentId,
 playerId,
 resource.data,
 request.resource.data
-) || rf226(
+) || rf225(
 recruitmentId,
 playerId,
 resource.data,
 request.resource.data
 ))))));
-allow delete: if (rf165(recruitmentId)) ? (rf222(recruitmentId, playerId, resource.data)) : ((rf82(recruitmentId)) ? (rf218(recruitmentId, playerId, resource.data)) : (rf216(recruitmentId, playerId, resource.data) || rf219(recruitmentId, playerId, resource.data) || rf221(
+allow delete: if (rf164(recruitmentId)) ? (rf221(recruitmentId, playerId, resource.data)) : ((rf82(recruitmentId)) ? (rf217(recruitmentId, playerId, resource.data)) : (rf215(recruitmentId, playerId, resource.data) || rf218(recruitmentId, playerId, resource.data) || rf220(
 recruitmentId,
 playerId,
 resource.data
 )));
 }
 match /slots/{slotId} {
-allow get, list: if rf210(recruitmentId)
-|| rf211(recruitmentId);
+allow get, list: if rf209(recruitmentId)
+|| rf210(recruitmentId);
 allow create, update, delete: if false;
 }
 match /applications/{playerId} {
-function rf231(zij, zik) {
-return /databases/$(database)/documents/recruitments/$(zij)/applications/$(zik);
+function rf230(zig, zih) {
+return /databases/$(database)/documents/recruitments/$(zig)/applications/$(zih);
 }
-function rf232(zil, zim, zin) {
-let zio = get(rf7(zil)).data;
-return rf239(zin) && rf4()
-&& zim == rf5()
-&& zin.schemaVersion == 1
-&& zin.recruitmentId == zil
-&& zin.applicantPlayerId == zim
-&& zin.cycleKey == zio.targetCycleKey
-&& zin.status == 'pending'
-&& zin.revision == 1
-&& zin.approvalCount == 0
-&& zin.rejectionCount == 0
-&& zin.createdAt == request.time
-&& zin.updatedAt == request.time
-&& zio.status == 'active'
-&& zio.manualRecruitmentEnabled == true
-&& zio.hasAvailableSlot == true
-&& zio.approvalPolicy.mode == 'leaderOnly'
-&& rf186(zio)
-&& !(zim in zio.memberPlayerIds)
-&& rf17(zin.characterId)
-&& rf238(zim, zin.characterId, zio.raidId, zin.get('ownershipRevision', 0))
-&& !rf171(
-zim,
-zin.cycleKey,
-zin.characterId,
-zio.raidId, zin.get('ownershipRevision', 0)
+function rf231(zii, zij, zik) {
+let zil = get(rf7(zii)).data;
+return rf238(zik) && rf4()
+&& zij == rf5()
+&& zik.schemaVersion == 1
+&& zik.recruitmentId == zii
+&& zik.applicantPlayerId == zij
+&& zik.cycleKey == zil.targetCycleKey
+&& zik.status == 'pending'
+&& zik.revision == 1
+&& zik.approvalCount == 0
+&& zik.rejectionCount == 0
+&& zik.createdAt == request.time
+&& zik.updatedAt == request.time
+&& zil.status == 'active'
+&& zil.manualRecruitmentEnabled == true
+&& zil.hasAvailableSlot == true
+&& zil.approvalPolicy.mode == 'leaderOnly'
+&& rf185(zil)
+&& !(zij in zil.memberPlayerIds)
+&& rf17(zik.characterId)
+&& rf237(zij, zik.characterId, zil.raidId, zik.get('ownershipRevision', 0))
+&& !rf170(
+zij,
+zik.cycleKey,
+zik.characterId,
+zil.raidId, zik.get('ownershipRevision', 0)
 );
 }
-function rf233(zip, ziq, zir) {
+function rf232(zim, zin, zio) {
 return rf4()
-&& zip == rf5()
-&& ziq.applicantPlayerId == zip
-&& ziq.status == 'pending'
-&& zir.diff(ziq).affectedKeys().hasOnly([
+&& zim == rf5()
+&& zin.applicantPlayerId == zim
+&& zin.status == 'pending'
+&& zio.diff(zin).affectedKeys().hasOnly([
 'status', 'resolutionReason', 'revision', 'decidedAt', 'updatedAt'
 ])
-&& zir.status == 'withdrawn'
-&& zir.resolutionReason == 'withdrawnByApplicant'
-&& zir.revision == ziq.revision + 1
-&& zir.decidedAt == request.time
-&& zir.updatedAt == request.time;
+&& zio.status == 'withdrawn'
+&& zio.resolutionReason == 'withdrawnByApplicant'
+&& zio.revision == zin.revision + 1
+&& zio.decidedAt == request.time
+&& zio.updatedAt == request.time;
 }
-function rf234(zis, zit, ziu) {
-let ziv = rf7(zis);
+function rf233(zip, ziq, zir) {
+let zis = rf7(zip);
 return rf4()
-&& zit == rf5()
-&& ziu.schemaVersion == 1
-&& ziu.applicantPlayerId == zit
-&& ziu.recruitmentId == zis
-&& (!exists(ziv)
-|| get(ziv).data.status in [
+&& ziq == rf5()
+&& zir.schemaVersion == 1
+&& zir.applicantPlayerId == ziq
+&& zir.recruitmentId == zip
+&& (!exists(zis)
+|| get(zis).data.status in [
 'completed', 'disbanded', 'incompleteEnded'
 ]);
 }
-function rf235(ziw, zix, ziy, ziz) {
-let zj0 = get(rf7(ziw)).data;
-return rf239(ziz) && rf4()
-&& zix == rf5()
-&& ziy.applicantPlayerId == zix
-&& (ziy.status == 'rejected'
-|| ziy.status == 'withdrawn'
-|| ziy.status == 'superseded'
-|| ziy.status == 'approved')
-&& ziz.diff(ziy).affectedKeys().hasOnly([
+function rf234(zit, ziu, ziv, ziw) {
+let zix = get(rf7(zit)).data;
+return rf238(ziw) && rf4()
+&& ziu == rf5()
+&& ziv.applicantPlayerId == ziu
+&& (ziv.status == 'rejected'
+|| ziv.status == 'withdrawn'
+|| ziv.status == 'superseded'
+|| ziv.status == 'approved')
+&& ziw.diff(ziv).affectedKeys().hasOnly([
 'cycleKey', 'characterId', 'characterNameSnapshot', 'classNameSnapshot',
 'requestedRole', 'submittedBuildSnapshot', 'status', 'resolutionReason',
 'approvalCount', 'revision', 'decidedAt', 'updatedAt',
 'countedAsNonGroupApplicant', 'ownershipRevision'
 ])
-&& ziz.status == 'pending'
-&& ziz.resolutionReason == null
-&& ziz.approvalCount == 0
-&& ziz.countedAsNonGroupApplicant is bool
-&& ziz.countedAsNonGroupApplicant
-== (zj0.groupId is string
-&& !exists(rf20(zj0.groupId, zix)))
-&& ziz.rejectionCount == ziy.rejectionCount
-&& ziz.revision == ziy.revision + 1
-&& ziz.decidedAt == null
-&& ziz.updatedAt == request.time
-&& ziz.schemaVersion == ziy.schemaVersion
-&& ziz.recruitmentId == ziw
-&& ziz.applicantPlayerId == zix
-&& ziz.cycleKey == zj0.targetCycleKey
-&& ziz.characterId is string
-&& ziz.characterId.size() > 0
-&& ziz.characterNameSnapshot is string
-&& ziz.classNameSnapshot is string
-&& (ziz.requestedRole == 'dealer'
-|| ziz.requestedRole == 'support')
-&& zj0.status == 'active'
-&& zj0.manualRecruitmentEnabled == true
-&& zj0.hasAvailableSlot == true
-&& zj0.approvalPolicy.mode == 'leaderOnly'
-&& rf186(zj0)
-&& !(zix in zj0.memberPlayerIds)
-&& rf17(ziz.characterId)
-&& rf238(zix, ziz.characterId, zj0.raidId, ziz.get('ownershipRevision', 0))
-&& !rf171(
-zix,
-ziz.cycleKey,
-ziz.characterId,
-zj0.raidId, ziz.get('ownershipRevision', 0)
+&& ziw.status == 'pending'
+&& ziw.resolutionReason == null
+&& ziw.approvalCount == 0
+&& ziw.countedAsNonGroupApplicant is bool
+&& ziw.countedAsNonGroupApplicant
+== (zix.groupId is string
+&& !exists(rf20(zix.groupId, ziu)))
+&& ziw.rejectionCount == ziv.rejectionCount
+&& ziw.revision == ziv.revision + 1
+&& ziw.decidedAt == null
+&& ziw.updatedAt == request.time
+&& ziw.schemaVersion == ziv.schemaVersion
+&& ziw.recruitmentId == zit
+&& ziw.applicantPlayerId == ziu
+&& ziw.cycleKey == zix.targetCycleKey
+&& ziw.characterId is string
+&& ziw.characterId.size() > 0
+&& ziw.characterNameSnapshot is string
+&& ziw.classNameSnapshot is string
+&& (ziw.requestedRole == 'dealer'
+|| ziw.requestedRole == 'support')
+&& zix.status == 'active'
+&& zix.manualRecruitmentEnabled == true
+&& zix.hasAvailableSlot == true
+&& zix.approvalPolicy.mode == 'leaderOnly'
+&& rf185(zix)
+&& !(ziu in zix.memberPlayerIds)
+&& rf17(ziw.characterId)
+&& rf237(ziu, ziw.characterId, zix.raidId, ziw.get('ownershipRevision', 0))
+&& !rf170(
+ziu,
+ziw.cycleKey,
+ziw.characterId,
+zix.raidId, ziw.get('ownershipRevision', 0)
 );
 }
-function rf236(zj1, zj2, zj3) {
-let zj4 = zj3.status == 'approved'
-&& zj3.approvalCount == zj2.approvalCount + 1
-&& zj3.rejectionCount == zj2.rejectionCount
+function rf235(ziy, ziz, zj0) {
+let zj1 = zj0.status == 'approved'
+&& zj0.approvalCount == ziz.approvalCount + 1
+&& zj0.rejectionCount == ziz.rejectionCount
 && existsAfter(rf8(
-zj1,
-zj2.applicantPlayerId
+ziy,
+ziz.applicantPlayerId
 ));
-let zj5 = zj3.status == 'rejected'
-&& zj3.rejectionCount == zj2.rejectionCount + 1
-&& zj3.approvalCount == zj2.approvalCount;
+let zj2 = zj0.status == 'rejected'
+&& zj0.rejectionCount == ziz.rejectionCount + 1
+&& zj0.approvalCount == ziz.approvalCount;
 return rf4()
-&& rf27(zj1)
-&& zj2.status == 'pending'
-&& zj3.diff(zj2).affectedKeys().hasOnly([
+&& rf27(ziy)
+&& ziz.status == 'pending'
+&& zj0.diff(ziz).affectedKeys().hasOnly([
 'status', 'resolutionReason', 'approvalCount', 'rejectionCount',
 'revision', 'decidedAt', 'updatedAt'
 ])
-&& ((zj4 && zj3.resolutionReason == 'approvedByApprover')
-|| (zj5 && zj3.resolutionReason == 'rejectedByApprover'))
-&& zj3.revision == zj2.revision + 1
-&& zj3.decidedAt == request.time
-&& zj3.updatedAt == request.time;
+&& ((zj1 && zj0.resolutionReason == 'approvedByApprover')
+|| (zj2 && zj0.resolutionReason == 'rejectedByApprover'))
+&& zj0.revision == ziz.revision + 1
+&& zj0.decidedAt == request.time
+&& zj0.updatedAt == request.time;
 }
-function rf237(zj6, zj7) {
+function rf236(zj3, zj4) {
 return rf4()
-&& (!exists(rf231(zj6, zj7))
-|| rf210(zj6)
+&& (!exists(rf230(zj3, zj4))
+|| rf209(zj3)
 || resource.data.applicantPlayerId == rf5());
 }
-function rf238(zj8, zj9, zja, zjb) {
-let zjc = rf13(zj8, zj9, zja);
-return !existsAfter(zjc) || rf170(getAfter(zjc).data, zj8, zj9, zja, zjb);
+function rf237(zj5, zj6, zj7, zj8) {
+let zj9 = rf13(zj5, zj6, zj7);
+return !existsAfter(zj9) || rf169(getAfter(zj9).data, zj5, zj6, zj7, zj8);
 }
-function rf239(data) {
+function rf238(data) {
 return rf60({'characterId': data.characterId, 'playerId': data.applicantPlayerId,
 'ownershipRevision': data.get('ownershipRevision', 0)});
 }
-allow get: if rf237(recruitmentId, playerId);
-allow list: if rf210(recruitmentId)
+allow get: if rf236(recruitmentId, playerId);
+allow list: if rf209(recruitmentId)
 || (rf4()
 && resource.data.applicantPlayerId == rf5());
-allow create: if rf232(
+allow create: if rf231(
 recruitmentId,
 playerId,
 request.resource.data
 );
 allow update: if (request.resource.data.status == 'withdrawn'
-&& rf233(
+&& rf232(
 playerId,
 resource.data,
 request.resource.data
 )) || (request.resource.data.status == 'pending'
-&& rf235(
+&& rf234(
 recruitmentId,
 playerId,
 resource.data,
 request.resource.data
 )) || (request.resource.data.status in ['approved', 'rejected']
-&& rf236(
+&& rf235(
 recruitmentId,
 resource.data,
 request.resource.data
@@ -3544,58 +3537,58 @@ playerId,
 resource.data,
 request.resource.data
 ));
-allow delete: if rf234(
+allow delete: if rf233(
 recruitmentId,
 playerId,
 resource.data
 );
 match /votes/{voterPlayerId} {
-allow get, list: if rf210(recruitmentId);
+allow get, list: if rf209(recruitmentId);
 allow create, update, delete: if false;
 }
 }
 match /cycles/{cycleKey} {
-allow get, list: if rf210(recruitmentId);
+allow get, list: if rf209(recruitmentId);
 allow create, update, delete: if false;
 }
 }
 match /groups/{groupId} {
-function rf240(zjd) {
-return /databases/$(database)/documents/players/$(zjd)/groupMembershipState/current;
+function rf239(zja) {
+return /databases/$(database)/documents/players/$(zja)/groupMembershipState/current;
 }
-function rf241(zje, zjf) {
-return /databases/$(database)/documents/groups/$(zje)/applicantStats/$(zjf);
+function rf240(zjb, zjc) {
+return /databases/$(database)/documents/groups/$(zjb)/applicantStats/$(zjc);
 }
-function rf242(zjg, zjh) {
-return /databases/$(database)/documents/groups/$(zjg)/blockedPlayers/$(zjh);
+function rf241(zjd, zje) {
+return /databases/$(database)/documents/groups/$(zjd)/blockedPlayers/$(zje);
 }
-function rf243(zji, zjj) {
-return exists(rf242(zji, zjj));
+function rf242(zjf, zjg) {
+return exists(rf241(zjf, zjg));
 }
-function rf244(zjk) {
+function rf243(zjh) {
 return rf4()
-&& get(rf19(zjk)).data.leaderPlayerId == rf5();
+&& get(rf19(zjh)).data.leaderPlayerId == rf5();
 }
-function rf245(zjl) {
-return zjl is string
-&& zjl.size() >= 1
-&& zjl.size() <= 20
-&& !zjl.matches('(?s).*[\\x00-\\x1f\\x7f].*');
+function rf244(zji) {
+return zji is string
+&& zji.size() >= 1
+&& zji.size() <= 20
+&& !zji.matches('(?s).*[\\x00-\\x1f\\x7f].*');
 }
-function rf246(zjm) {
-return zjm.normalizedName is string
-&& zjm.normalizedName.size() >= 1
-&& zjm.normalizedName.size() <= 20
-&& zjm.normalizedRepresentativeCharacterName is string
-&& zjm.normalizedRepresentativeCharacterName.size() >= 1
-&& zjm.normalizedRepresentativeCharacterName.size() <= 40;
+function rf245(zjj) {
+return zjj.normalizedName is string
+&& zjj.normalizedName.size() >= 1
+&& zjj.normalizedName.size() <= 20
+&& zjj.normalizedRepresentativeCharacterName is string
+&& zjj.normalizedRepresentativeCharacterName.size() >= 1
+&& zjj.normalizedRepresentativeCharacterName.size() <= 40;
 }
-function rf247(zjn, zjo) {
-let zjp = rf5();
-let zjq = getAfter(rf20(zjn, zjp)).data;
-let zjr = getAfter(rf240(zjp)).data;
+function rf246(zjk, zjl) {
+let zjm = rf5();
+let zjn = getAfter(rf20(zjk, zjm)).data;
+let zjo = getAfter(rf239(zjm)).data;
 return rf23()
-&& zjo.keys().hasOnly([
+&& zjl.keys().hasOnly([
 'schemaVersion', 'status', 'name', 'normalizedName',
 'representativeCharacterId', 'representativeCharacterNameSnapshot',
 'normalizedRepresentativeCharacterName',
@@ -3605,320 +3598,320 @@ return rf23()
 'hasActiveJoinCode', 'activeJoinCode', 'joinCodeVisibleToMembers', 'lastActivityAt',
 'createdAt', 'updatedAt', 'deletedAt'
 ])
-&& zjo.schemaVersion == 1
-&& zjo.status == 'active'
-&& rf245(zjo.name)
-&& rf246(zjo)
-&& zjo.representativeCharacterNameSnapshot is string
-&& zjo.representativeCharacterNameSnapshot.size() > 0
-&& zjo.representativeServerNameSnapshot is string
-&& zjo.representativeServerNameSnapshot.size() > 0
-&& zjo.leaderPlayerId == zjp
-&& zjo.leaderDisplayCharacterNameSnapshot
-== zjo.representativeCharacterNameSnapshot
-&& zjo.memberCount == 1
-&& zjo.activeRecruitmentCount == 0
-&& zjo.revision == 1
-&& zjo.hasActiveJoinCode == false
-&& (!('activeJoinCode' in zjo) || zjo.activeJoinCode == null)
-&& zjo.joinCodeVisibleToMembers == false
-&& zjo.deletedAt == null
-&& zjo.createdAt == request.time
-&& zjo.updatedAt == request.time
-&& zjo.lastActivityAt == request.time
-&& rf17(zjo.representativeCharacterId)
-&& zjq.playerId == zjp
-&& zjq.role == 'leader'
-&& zjq.joinSequence == 1
-&& zjq.joinedBy == 'created'
-&& zjq.displayCharacterIdSnapshot == zjo.representativeCharacterId
-&& zjn in zjr.activeGroupIds
-&& existsAfter(rf21(zjp, zjn));
+&& zjl.schemaVersion == 1
+&& zjl.status == 'active'
+&& rf244(zjl.name)
+&& rf245(zjl)
+&& zjl.representativeCharacterNameSnapshot is string
+&& zjl.representativeCharacterNameSnapshot.size() > 0
+&& zjl.representativeServerNameSnapshot is string
+&& zjl.representativeServerNameSnapshot.size() > 0
+&& zjl.leaderPlayerId == zjm
+&& zjl.leaderDisplayCharacterNameSnapshot
+== zjl.representativeCharacterNameSnapshot
+&& zjl.memberCount == 1
+&& zjl.activeRecruitmentCount == 0
+&& zjl.revision == 1
+&& zjl.hasActiveJoinCode == false
+&& (!('activeJoinCode' in zjl) || zjl.activeJoinCode == null)
+&& zjl.joinCodeVisibleToMembers == false
+&& zjl.deletedAt == null
+&& zjl.createdAt == request.time
+&& zjl.updatedAt == request.time
+&& zjl.lastActivityAt == request.time
+&& rf17(zjl.representativeCharacterId)
+&& zjn.playerId == zjm
+&& zjn.role == 'leader'
+&& zjn.joinSequence == 1
+&& zjn.joinedBy == 'created'
+&& zjn.displayCharacterIdSnapshot == zjl.representativeCharacterId
+&& zjk in zjo.activeGroupIds
+&& existsAfter(rf21(zjm, zjk));
 }
-function rf248(zjs) {
+function rf247(zjp) {
 return rf4()
-&& (!exists(rf19(zjs))
+&& (!exists(rf19(zjp))
 || resource.data.status == 'active'
-|| rf24(zjs));
+|| rf24(zjp));
 }
-function rf249(zjt, zju) {
-return zju.diff(zjt).affectedKeys()
+function rf248(zjq, zjr) {
+return zjr.diff(zjq).affectedKeys()
 .hasOnly(['revision', 'lastActivityAt', 'updatedAt'])
+&& zjr.revision == zjq.revision + 1
+&& zjr.lastActivityAt == request.time
+&& zjr.updatedAt == request.time;
+}
+function rf249(zjs, zjt, zju) {
+let zjv = rf20(zjs, rf5());
+return existsAfter(zjv)
+&& zju.diff(zjt).affectedKeys()
+.hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
+&& zju.memberCount == zjt.memberCount + 1
+&& zju.memberCount <= 50
 && zju.revision == zjt.revision + 1
 && zju.lastActivityAt == request.time
-&& zju.updatedAt == request.time;
+&& zju.updatedAt == request.time
+&& getAfter(zjv).data.joinSequence == zju.memberCount;
 }
-function rf250(zjv, zjw, zjx) {
-let zjy = rf20(zjv, rf5());
-return existsAfter(zjy)
-&& zjx.diff(zjw).affectedKeys()
+function rf250(zjw, zjx, zjy) {
+return rf23()
+&& zjx.status == 'active'
+&& zjy.diff(zjx).affectedKeys()
 .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
-&& zjx.memberCount == zjw.memberCount + 1
-&& zjx.memberCount <= 50
-&& zjx.revision == zjw.revision + 1
-&& zjx.lastActivityAt == request.time
-&& zjx.updatedAt == request.time
-&& getAfter(zjy).data.joinSequence == zjx.memberCount;
+&& zjy.memberCount == zjx.memberCount - 1
+&& zjy.memberCount >= 1
+&& zjy.revision == zjx.revision + 1
+&& zjy.lastActivityAt == request.time
+&& zjy.updatedAt == request.time
+&& !existsAfter(rf20(zjw, rf5()));
 }
 function rf251(zjz, zk0, zk1) {
+let zk2 = getAfter(rf20(zjz, rf5())).data;
+let zk3 = getAfter(rf20(zjz, zk1.leaderPlayerId)).data;
 return rf23()
 && zk0.status == 'active'
-&& zk1.diff(zk0).affectedKeys()
-.hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
-&& zk1.memberCount == zk0.memberCount - 1
-&& zk1.memberCount >= 1
-&& zk1.revision == zk0.revision + 1
-&& zk1.lastActivityAt == request.time
-&& zk1.updatedAt == request.time
-&& !existsAfter(rf20(zjz, rf5()));
-}
-function rf252(zk2, zk3, zk4) {
-let zk5 = getAfter(rf20(zk2, rf5())).data;
-let zk6 = getAfter(rf20(zk2, zk4.leaderPlayerId)).data;
-return rf23()
-&& zk3.status == 'active'
-&& zk3.leaderPlayerId == rf5()
-&& zk4.leaderPlayerId is string
-&& zk4.leaderPlayerId != zk3.leaderPlayerId
-&& zk4.diff(zk3).affectedKeys().hasOnly([
+&& zk0.leaderPlayerId == rf5()
+&& zk1.leaderPlayerId is string
+&& zk1.leaderPlayerId != zk0.leaderPlayerId
+&& zk1.diff(zk0).affectedKeys().hasOnly([
 'leaderPlayerId', 'leaderDisplayCharacterNameSnapshot',
 'revision', 'lastActivityAt', 'updatedAt'
 ])
-&& zk4.leaderDisplayCharacterNameSnapshot
-== zk6.displayCharacterNameSnapshot
-&& zk4.revision == zk3.revision + 1
-&& zk4.lastActivityAt == request.time
-&& zk4.updatedAt == request.time
-&& zk5.role == 'member'
-&& zk6.role == 'leader'
-&& zk6.playerId == zk4.leaderPlayerId;
+&& zk1.leaderDisplayCharacterNameSnapshot
+== zk3.displayCharacterNameSnapshot
+&& zk1.revision == zk0.revision + 1
+&& zk1.lastActivityAt == request.time
+&& zk1.updatedAt == request.time
+&& zk2.role == 'member'
+&& zk3.role == 'leader'
+&& zk3.playerId == zk1.leaderPlayerId;
+}
+function rf252(zk4, zk5, zk6) {
+return rf23()
+&& zk5.status == 'active'
+&& zk5.leaderPlayerId == rf5()
+&& zk5.memberCount == 1
+&& zk5.hasActiveJoinCode == false
+&& zk5.activeRecruitmentCount is int
+&& zk5.activeRecruitmentCount == 0
+&& zk6.diff(zk5).affectedKeys().hasOnly([
+'status', 'memberCount', 'deletedAt',
+'revision', 'lastActivityAt', 'updatedAt'
+])
+&& zk6.status == 'softDeleted'
+&& zk6.memberCount == 0
+&& zk6.deletedAt == request.time
+&& zk6.revision == zk5.revision + 1
+&& zk6.lastActivityAt == request.time
+&& zk6.updatedAt == request.time
+&& !existsAfter(rf20(zk4, rf5()));
 }
 function rf253(zk7, zk8, zk9) {
 return rf23()
 && zk8.status == 'active'
-&& zk8.leaderPlayerId == rf5()
-&& zk8.memberCount == 1
-&& zk8.hasActiveJoinCode == false
-&& zk8.activeRecruitmentCount is int
-&& zk8.activeRecruitmentCount == 0
-&& zk9.diff(zk8).affectedKeys().hasOnly([
-'status', 'memberCount', 'deletedAt',
-'revision', 'lastActivityAt', 'updatedAt'
-])
-&& zk9.status == 'softDeleted'
-&& zk9.memberCount == 0
-&& zk9.deletedAt == request.time
-&& zk9.revision == zk8.revision + 1
-&& zk9.lastActivityAt == request.time
-&& zk9.updatedAt == request.time
-&& !existsAfter(rf20(zk7, rf5()));
+&& (rf24(zk7)
+|| existsAfter(rf21(rf5(), zk7)))
+&& (rf248(zk8, zk9)
+|| rf249(zk7, zk8, zk9));
 }
-function rf254(zka, zkb, zkc) {
+function rf254(zka, zkb) {
 return rf23()
-&& zkb.status == 'active'
-&& (rf24(zka)
-|| existsAfter(rf21(rf5(), zka)))
-&& (rf249(zkb, zkc)
-|| rf250(zka, zkb, zkc));
-}
-function rf255(zkd, zke) {
-return rf23()
-&& zkd.status == 'active'
-&& zkd.leaderPlayerId == rf5()
-&& zke.diff(zkd).affectedKeys()
+&& zka.status == 'active'
+&& zka.leaderPlayerId == rf5()
+&& zkb.diff(zka).affectedKeys()
 .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
-&& zke.memberCount == zkd.memberCount + 1
-&& zke.memberCount <= 50
-&& zke.revision == zkd.revision + 1
-&& zke.lastActivityAt == request.time
-&& zke.updatedAt == request.time;
+&& zkb.memberCount == zka.memberCount + 1
+&& zkb.memberCount <= 50
+&& zkb.revision == zka.revision + 1
+&& zkb.lastActivityAt == request.time
+&& zkb.updatedAt == request.time;
 }
-function rf256(zkf, zkg) {
+function rf255(zkc, zkd) {
 return rf23()
-&& zkf.status == 'active'
-&& zkf.leaderPlayerId == rf5()
-&& zkg.diff(zkf).affectedKeys()
+&& zkc.status == 'active'
+&& zkc.leaderPlayerId == rf5()
+&& zkd.diff(zkc).affectedKeys()
 .hasOnly([
 'hasActiveJoinCode', 'activeJoinCode', 'revision', 'lastActivityAt', 'updatedAt'
 ])
-&& zkg.hasActiveJoinCode != zkf.hasActiveJoinCode
+&& zkd.hasActiveJoinCode != zkc.hasActiveJoinCode
 && (
-(zkg.hasActiveJoinCode == true
-&& rf26(zkg.activeJoinCode))
-|| (zkg.hasActiveJoinCode == false
-&& zkg.activeJoinCode == null)
+(zkd.hasActiveJoinCode == true
+&& rf26(zkd.activeJoinCode))
+|| (zkd.hasActiveJoinCode == false
+&& zkd.activeJoinCode == null)
 )
-&& zkg.revision == zkf.revision + 1
-&& zkg.lastActivityAt == request.time
-&& zkg.updatedAt == request.time;
+&& zkd.revision == zkc.revision + 1
+&& zkd.lastActivityAt == request.time
+&& zkd.updatedAt == request.time;
 }
-function rf257(zkh, zki) {
+function rf256(zke, zkf) {
 return rf23()
-&& zkh.status == 'active'
-&& zkh.leaderPlayerId == rf5()
-&& zki.diff(zkh).affectedKeys()
+&& zke.status == 'active'
+&& zke.leaderPlayerId == rf5()
+&& zkf.diff(zke).affectedKeys()
 .hasOnly([
 'joinCodeVisibleToMembers', 'revision', 'lastActivityAt', 'updatedAt'
 ])
-&& zki.joinCodeVisibleToMembers is bool
-&& zki.joinCodeVisibleToMembers != zkh.joinCodeVisibleToMembers
-&& zki.revision == zkh.revision + 1
-&& zki.lastActivityAt == request.time
-&& zki.updatedAt == request.time;
+&& zkf.joinCodeVisibleToMembers is bool
+&& zkf.joinCodeVisibleToMembers != zke.joinCodeVisibleToMembers
+&& zkf.revision == zke.revision + 1
+&& zkf.lastActivityAt == request.time
+&& zkf.updatedAt == request.time;
 }
-function rf258(zkj, zkk, zkl) {
-return zkl.diff(zkk).affectedKeys().hasOnly([
+function rf257(zkg, zkh, zki) {
+return zki.diff(zkh).affectedKeys().hasOnly([
 'activeRecruitmentCount', 'lastRecruitmentId',
 'revision', 'updatedAt'
 ])
-&& zkl.lastRecruitmentId is string
-&& zkl.lastRecruitmentId.size() > 0
-&& existsAfter(rf7(zkl.lastRecruitmentId))
-&& rf259(
+&& zki.lastRecruitmentId is string
+&& zki.lastRecruitmentId.size() > 0
+&& existsAfter(rf7(zki.lastRecruitmentId))
+&& rf258(
+zkg,
+zkh,
+zki,
+getAfter(rf7(zki.lastRecruitmentId)).data
+);
+}
+function rf258(
 zkj,
 zkk,
 zkl,
-getAfter(rf7(zkl.lastRecruitmentId)).data
-);
-}
-function rf259(
-zkm,
-zkn,
-zko,
-zkp
+zkm
 ) {
-return ((rf53(zkp)
-&& zkp.groupId == zkm
-&& ((zkp.lastCommandType == 'disband'
-&& zkp.status == 'disbanded')
-|| (zkp.lastCommandType == 'complete'
-&& zkp.status == 'completed'
-&& zkp.continueTogether == false)
-|| (zkp.lastCommandType == 'incompleteEnd'
-&& zkp.status == 'incompleteEnded'
-&& zkp.continueTogether == false)))
-|| (rf67(zkp)
-&& zkp.groupId == zkm
-&& zkp.status == 'disbanded'
-&& zkp.memberCount == 0))
-&& zkn.activeRecruitmentCount is int
-&& zkn.activeRecruitmentCount > 0
-&& zko.activeRecruitmentCount == zkn.activeRecruitmentCount - 1
-&& zkp.groupActiveRecruitmentCountAfter
-== zko.activeRecruitmentCount
-&& zko.lastRecruitmentId == zkp.recruitmentId
-&& zko.revision == zkn.revision + 1
-&& zko.updatedAt == request.time;
+return ((rf53(zkm)
+&& zkm.groupId == zkj
+&& ((zkm.lastCommandType == 'disband'
+&& zkm.status == 'disbanded')
+|| (zkm.lastCommandType == 'complete'
+&& zkm.status == 'completed'
+&& zkm.continueTogether == false)
+|| (zkm.lastCommandType == 'incompleteEnd'
+&& zkm.status == 'incompleteEnded'
+&& zkm.continueTogether == false)))
+|| (rf67(zkm)
+&& zkm.groupId == zkj
+&& zkm.status == 'disbanded'
+&& zkm.memberCount == 0))
+&& zkk.activeRecruitmentCount is int
+&& zkk.activeRecruitmentCount > 0
+&& zkl.activeRecruitmentCount == zkk.activeRecruitmentCount - 1
+&& zkm.groupActiveRecruitmentCountAfter
+== zkl.activeRecruitmentCount
+&& zkl.lastRecruitmentId == zkm.recruitmentId
+&& zkl.revision == zkk.revision + 1
+&& zkl.updatedAt == request.time;
 }
-function rf260(zkq, zkr, zks) {
-return zks.diff(zkr).affectedKeys().hasOnly([
+function rf259(zkn, zko, zkp) {
+return zkp.diff(zko).affectedKeys().hasOnly([
 'activeRecruitmentCount', 'lastRecruitmentId',
 'revision', 'updatedAt'
 ])
-&& zks.lastRecruitmentId is string
-&& zks.lastRecruitmentId.size() > 0
-&& existsAfter(rf7(zks.lastRecruitmentId))
-&& rf261(
+&& zkp.lastRecruitmentId is string
+&& zkp.lastRecruitmentId.size() > 0
+&& existsAfter(rf7(zkp.lastRecruitmentId))
+&& rf260(
+zkn,
+zko,
+zkp,
+getAfter(rf7(zkp.lastRecruitmentId)).data
+);
+}
+function rf260(
 zkq,
 zkr,
 zks,
-getAfter(rf7(zks.lastRecruitmentId)).data
-);
-}
-function rf261(
-zkt,
-zku,
-zkv,
-zkw
+zkt
 ) {
-return zkw.groupId == zkt
-&& zkw.schemaVersion == 2
-&& zkw.visibility == 'group'
-&& ((zkw.revision == 1
-&& zkw.leaderPlayerId == rf5())
-|| (zkw.revision > 1
-&& zkw.leaderPlayerId == rf5()
-&& zkw.visibility == 'group'))
-&& zku.activeRecruitmentCount is int
-&& zku.activeRecruitmentCount >= 0
-&& zkv.activeRecruitmentCount == zku.activeRecruitmentCount + 1
-&& zkw.groupActiveRecruitmentCountAfter
-== zkv.activeRecruitmentCount
-&& zkv.lastRecruitmentId == zkw.recruitmentId
-&& zkv.revision == zku.revision + 1
-&& zkv.updatedAt == request.time;
+return zkt.groupId == zkq
+&& zkt.schemaVersion == 2
+&& zkt.visibility == 'group'
+&& ((zkt.revision == 1
+&& zkt.leaderPlayerId == rf5())
+|| (zkt.revision > 1
+&& zkt.leaderPlayerId == rf5()
+&& zkt.visibility == 'group'))
+&& zkr.activeRecruitmentCount is int
+&& zkr.activeRecruitmentCount >= 0
+&& zks.activeRecruitmentCount == zkr.activeRecruitmentCount + 1
+&& zkt.groupActiveRecruitmentCountAfter
+== zks.activeRecruitmentCount
+&& zks.lastRecruitmentId == zkt.recruitmentId
+&& zks.revision == zkr.revision + 1
+&& zks.updatedAt == request.time;
 }
-allow get: if rf248(groupId);
+allow get: if rf247(groupId);
 allow list: if rf4() && resource.data.status == 'active';
-allow create: if rf247(groupId, request.resource.data);
+allow create: if rf246(groupId, request.resource.data);
 allow update: if request.resource.data.diff(resource.data).affectedKeys().hasAny(['activeRecruitmentCount'])
-? (rf258(
+? (rf257(
 groupId,
 resource.data,
 request.resource.data
-) || rf260(
+) || rf259(
 groupId,
 resource.data,
 request.resource.data
 )) : ((request.resource.data.memberCount
 == resource.data.memberCount + 1
-&& rf255(
+&& rf254(
 resource.data,
 request.resource.data
-)) || rf253(
+)) || rf252(
 groupId,
 resource.data,
 request.resource.data
-) || rf252(
+) || rf251(
 groupId,
 resource.data,
 request.resource.data
 ) || (request.resource.data.memberCount == resource.data.memberCount - 1
-&& rf251(
+&& rf250(
 groupId,
 resource.data,
 request.resource.data
 )) || (request.resource.data.diff(resource.data).affectedKeys()
 .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
 && request.resource.data.memberCount == resource.data.memberCount + 1
-&& rf254(
+&& rf253(
 groupId,
 resource.data,
 request.resource.data
-)) || rf256(
+)) || rf255(
 resource.data,
 request.resource.data
-) || rf257(
+) || rf256(
 resource.data,
 request.resource.data
-) || rf254(
+) || rf253(
 groupId,
 resource.data,
 request.resource.data
 ));
 allow delete: if false;
 match /members/{playerId} {
-function rf262(zkx, zky, zkz) {
-let zl0 = getAfter(rf19(zkx)).data;
+function rf261(zku, zkv, zkw) {
+let zkx = getAfter(rf19(zku)).data;
 return rf4()
-&& zky == rf5()
-&& rf264(zkx, zky, zkz)
-&& rf265(zkz)
-&& zkz.role == 'leader'
-&& zkz.joinedBy == 'created'
-&& zkz.joinSequence == 1
-&& zkz.displayCharacterIdSnapshot is string
-&& zkz.displayCharacterNameSnapshot is string
-&& zl0.status == 'active'
-&& zl0.leaderPlayerId == zky
-&& zl0.memberCount == 1
-&& zl0.revision == 1
-&& zl0.representativeCharacterId == zkz.displayCharacterIdSnapshot
-&& zl0.leaderDisplayCharacterNameSnapshot
-== zkz.displayCharacterNameSnapshot;
+&& zkv == rf5()
+&& rf263(zku, zkv, zkw)
+&& rf264(zkw)
+&& zkw.role == 'leader'
+&& zkw.joinedBy == 'created'
+&& zkw.joinSequence == 1
+&& zkw.displayCharacterIdSnapshot is string
+&& zkw.displayCharacterNameSnapshot is string
+&& zkx.status == 'active'
+&& zkx.leaderPlayerId == zkv
+&& zkx.memberCount == 1
+&& zkx.revision == 1
+&& zkx.representativeCharacterId == zkw.displayCharacterIdSnapshot
+&& zkx.leaderDisplayCharacterNameSnapshot
+== zkw.displayCharacterNameSnapshot;
 }
-function rf263(zl1) {
-return zl1.keys().hasOnly([
+function rf262(zky) {
+return zky.keys().hasOnly([
 'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
 'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
 'displayCharacterNameSnapshot', 'displayClassNameSnapshot',
@@ -3926,48 +3919,48 @@ return zl1.keys().hasOnly([
 'revision', 'createdAt', 'updatedAt'
 ]);
 }
-function rf264(zl2, zl3, zl4) {
-return rf263(zl4)
-&& zl4.schemaVersion == 1
-&& zl4.groupId == zl2
-&& zl4.playerId == zl3
-&& zl4.revision == 1
-&& zl4.joinedAt == request.time
-&& zl4.createdAt == request.time
-&& zl4.updatedAt == request.time;
+function rf263(zkz, zl0, zl1) {
+return rf262(zl1)
+&& zl1.schemaVersion == 1
+&& zl1.groupId == zkz
+&& zl1.playerId == zl0
+&& zl1.revision == 1
+&& zl1.joinedAt == request.time
+&& zl1.createdAt == request.time
+&& zl1.updatedAt == request.time;
 }
-function rf265(zl5) {
-return zl5.displayClassNameSnapshot is string
-&& zl5.displayClassNameSnapshot.size() > 0
-&& (!('itemLevelSnapshot' in zl5)
-|| zl5.itemLevelSnapshot == null
-|| zl5.itemLevelSnapshot is number)
-&& (!('combatPowerSnapshot' in zl5)
-|| zl5.combatPowerSnapshot == null
-|| zl5.combatPowerSnapshot is number)
-&& (!('gemValidationSnapshot' in zl5)
-|| zl5.gemValidationSnapshot == null
-|| zl5.gemValidationSnapshot is map);
+function rf264(zl2) {
+return zl2.displayClassNameSnapshot is string
+&& zl2.displayClassNameSnapshot.size() > 0
+&& (!('itemLevelSnapshot' in zl2)
+|| zl2.itemLevelSnapshot == null
+|| zl2.itemLevelSnapshot is number)
+&& (!('combatPowerSnapshot' in zl2)
+|| zl2.combatPowerSnapshot == null
+|| zl2.combatPowerSnapshot is number)
+&& (!('gemValidationSnapshot' in zl2)
+|| zl2.gemValidationSnapshot == null
+|| zl2.gemValidationSnapshot is map);
 }
-function rf266(
-zl6,
-zl7,
-zl8,
-zl9
+function rf265(
+zl3,
+zl4,
+zl5,
+zl6
 ) {
 return rf23()
-&& zl7 == rf5()
-&& exists(rf20(zl6, zl7))
-&& zl8.playerId == zl7
-&& zl8.groupId == zl6
-&& zl8.keys().hasAll([
+&& zl4 == rf5()
+&& exists(rf20(zl3, zl4))
+&& zl5.playerId == zl4
+&& zl5.groupId == zl3
+&& zl5.keys().hasAll([
 'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
 'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
 'displayCharacterNameSnapshot', 'revision', 'createdAt'
 ])
-&& rf265(zl9)
-&& zl9.updatedAt == request.time
-&& zl9.diff(zl8).affectedKeys().hasOnly([
+&& rf264(zl6)
+&& zl6.updatedAt == request.time
+&& zl6.diff(zl5).affectedKeys().hasOnly([
 'displayClassNameSnapshot',
 'itemLevelSnapshot',
 'combatPowerSnapshot',
@@ -3975,395 +3968,395 @@ return rf23()
 'updatedAt'
 ]);
 }
-function rf267(zla, zlb, zlc) {
-let zld = getAfter(rf19(zla)).data;
-let zle = getAfter(rf22(zla, zlb)).data;
-let zlf = getAfter(rf240(zlb)).data;
+function rf266(zl7, zl8, zl9) {
+let zla = getAfter(rf19(zl7)).data;
+let zlb = getAfter(rf22(zl7, zl8)).data;
+let zlc = getAfter(rf239(zl8)).data;
 return rf23()
-&& zlb == rf5()
-&& rf264(zla, zlb, zlc)
-&& rf265(zlc)
-&& zlc.role == 'member'
-&& zlc.joinedBy == 'invitation'
-&& zlc.joinSequence == zld.memberCount
-&& zlc.displayCharacterIdSnapshot == zle.characterIdSnapshot
-&& zlc.displayCharacterNameSnapshot == zle.characterNameSnapshot
-&& zld.status == 'active'
-&& zld.memberCount <= 50
-&& zld.leaderPlayerId != zlb
-&& zle.kind == 'invitation'
-&& zle.status == 'accepted'
-&& zle.targetPlayerId == zlb
-&& !rf243(zla, zlb)
-&& zla in zlf.activeGroupIds;
+&& zl8 == rf5()
+&& rf263(zl7, zl8, zl9)
+&& rf264(zl9)
+&& zl9.role == 'member'
+&& zl9.joinedBy == 'invitation'
+&& zl9.joinSequence == zla.memberCount
+&& zl9.displayCharacterIdSnapshot == zlb.characterIdSnapshot
+&& zl9.displayCharacterNameSnapshot == zlb.characterNameSnapshot
+&& zla.status == 'active'
+&& zla.memberCount <= 50
+&& zla.leaderPlayerId != zl8
+&& zlb.kind == 'invitation'
+&& zlb.status == 'accepted'
+&& zlb.targetPlayerId == zl8
+&& !rf242(zl7, zl8)
+&& zl7 in zlc.activeGroupIds;
 }
-function rf268(zlg, zlh, zli) {
-let zlj = getAfter(rf19(zlg)).data;
+function rf267(zld, zle, zlf) {
+let zlg = getAfter(rf19(zld)).data;
 return rf4()
-&& zlh == rf5()
-&& zli.role == 'member'
-&& zli.playerId == zlh
-&& zlj.status == 'active'
-&& zlj.memberCount == get(rf19(zlg)).data.memberCount - 1
-&& !existsAfter(rf20(zlg, zlh))
-&& !existsAfter(rf21(zlh, zlg));
+&& zle == rf5()
+&& zlf.role == 'member'
+&& zlf.playerId == zle
+&& zlg.status == 'active'
+&& zlg.memberCount == get(rf19(zld)).data.memberCount - 1
+&& !existsAfter(rf20(zld, zle))
+&& !existsAfter(rf21(zle, zld));
 }
-function rf269(
-zlk,
-zll,
-zlm,
-zln
+function rf268(
+zlh,
+zli,
+zlj,
+zlk
 ) {
-let zlo = get(rf19(zlk)).data;
-let zlp = getAfter(rf19(zlk)).data;
+let zll = get(rf19(zlh)).data;
+let zlm = getAfter(rf19(zlh)).data;
 return rf23()
-&& zlo.status == 'active'
-&& zlo.leaderPlayerId == rf5()
-&& zlp.leaderPlayerId != zlo.leaderPlayerId
-&& zlp.status == 'active'
-&& zln.diff(zlm).affectedKeys()
+&& zll.status == 'active'
+&& zll.leaderPlayerId == rf5()
+&& zlm.leaderPlayerId != zll.leaderPlayerId
+&& zlm.status == 'active'
+&& zlk.diff(zlj).affectedKeys()
 .hasOnly(['role', 'revision', 'updatedAt'])
-&& zln.revision == zlm.revision + 1
-&& zln.updatedAt == request.time
+&& zlk.revision == zlj.revision + 1
+&& zlk.updatedAt == request.time
 && (
-(zll == rf5()
-&& zlm.role == 'leader'
-&& zln.role == 'member')
-|| (zll == zlp.leaderPlayerId
-&& zlm.role == 'member'
-&& zln.role == 'leader')
+(zli == rf5()
+&& zlj.role == 'leader'
+&& zlk.role == 'member')
+|| (zli == zlm.leaderPlayerId
+&& zlj.role == 'member'
+&& zlk.role == 'leader')
 );
 }
-function rf270(zlq, zlr, zls) {
-let zlt = getAfter(rf19(zlq)).data;
+function rf269(zln, zlo, zlp) {
+let zlq = getAfter(rf19(zln)).data;
 return rf4()
-&& zlr == rf5()
-&& zls.role == 'leader'
-&& zls.playerId == zlr
-&& zlt.status == 'softDeleted'
-&& zlt.memberCount == 0
-&& zlt.leaderPlayerId == zlr
-&& !existsAfter(rf20(zlq, zlr))
-&& !existsAfter(rf21(zlr, zlq));
+&& zlo == rf5()
+&& zlp.role == 'leader'
+&& zlp.playerId == zlo
+&& zlq.status == 'softDeleted'
+&& zlq.memberCount == 0
+&& zlq.leaderPlayerId == zlo
+&& !existsAfter(rf20(zln, zlo))
+&& !existsAfter(rf21(zlo, zln));
 }
-function rf271(zlu, zlv, zlw) {
-let zlx = rf5();
-let zly = getAfter(rf19(zlu)).data;
-let zlz = getAfter(rf22(zlu, zlv)).data;
-let zm0 = getAfter(rf240(zlv)).data;
+function rf270(zlr, zls, zlt) {
+let zlu = rf5();
+let zlv = getAfter(rf19(zlr)).data;
+let zlw = getAfter(rf22(zlr, zls)).data;
+let zlx = getAfter(rf239(zls)).data;
 return rf4()
-&& get(rf2(zlx)).data.status == 'active'
-&& zly.leaderPlayerId == zlx
-&& zlv != zlx
-&& rf264(zlu, zlv, zlw)
-&& rf265(zlw)
-&& zlw.role == 'member'
-&& zlw.joinedBy == 'application'
-&& zlw.joinSequence == zly.memberCount
-&& zlw.displayCharacterIdSnapshot == zlz.characterIdSnapshot
-&& zlw.displayCharacterNameSnapshot == zlz.characterNameSnapshot
-&& zly.status == 'active'
-&& zly.memberCount <= 50
-&& zlz.kind == 'application'
-&& zlz.status == 'accepted'
-&& zlz.targetPlayerId == zlv
-&& !rf243(zlu, zlv)
-&& zlu in zm0.activeGroupIds;
+&& get(rf2(zlu)).data.status == 'active'
+&& zlv.leaderPlayerId == zlu
+&& zls != zlu
+&& rf263(zlr, zls, zlt)
+&& rf264(zlt)
+&& zlt.role == 'member'
+&& zlt.joinedBy == 'application'
+&& zlt.joinSequence == zlv.memberCount
+&& zlt.displayCharacterIdSnapshot == zlw.characterIdSnapshot
+&& zlt.displayCharacterNameSnapshot == zlw.characterNameSnapshot
+&& zlv.status == 'active'
+&& zlv.memberCount <= 50
+&& zlw.kind == 'application'
+&& zlw.status == 'accepted'
+&& zlw.targetPlayerId == zls
+&& !rf242(zlr, zls)
+&& zlr in zlx.activeGroupIds;
 }
-function rf272(zm1, zm2, zm3) {
-let zm4 = getAfter(rf19(zm1)).data;
-let zm5 = getAfter(rf240(zm2)).data;
-let zm6 = rf22(zm1, zm2);
+function rf271(zly, zlz, zm0) {
+let zm1 = getAfter(rf19(zly)).data;
+let zm2 = getAfter(rf239(zlz)).data;
+let zm3 = rf22(zly, zlz);
 return rf23()
-&& zm2 == rf5()
-&& rf264(zm1, zm2, zm3)
-&& rf265(zm3)
-&& zm3.role == 'member'
-&& zm3.joinedBy == 'joinCode'
-&& zm3.joinSequence == zm4.memberCount
-&& zm3.displayCharacterIdSnapshot is string
-&& zm3.displayCharacterNameSnapshot is string
-&& rf17(zm3.displayCharacterIdSnapshot)
-&& get(rf16(zm3.displayCharacterIdSnapshot))
-.data.characterName == zm3.displayCharacterNameSnapshot
-&& zm4.status == 'active'
-&& zm4.memberCount <= 50
-&& zm4.leaderPlayerId != zm2
-&& !rf243(zm1, zm2)
-&& zm1 in zm5.activeGroupIds
+&& zlz == rf5()
+&& rf263(zly, zlz, zm0)
+&& rf264(zm0)
+&& zm0.role == 'member'
+&& zm0.joinedBy == 'joinCode'
+&& zm0.joinSequence == zm1.memberCount
+&& zm0.displayCharacterIdSnapshot is string
+&& zm0.displayCharacterNameSnapshot is string
+&& rf17(zm0.displayCharacterIdSnapshot)
+&& get(rf16(zm0.displayCharacterIdSnapshot))
+.data.characterName == zm0.displayCharacterNameSnapshot
+&& zm1.status == 'active'
+&& zm1.memberCount <= 50
+&& zm1.leaderPlayerId != zlz
+&& !rf242(zly, zlz)
+&& zly in zm2.activeGroupIds
 && (
-!existsAfter(zm6)
-|| getAfter(zm6).data.status != 'pending'
+!existsAfter(zm3)
+|| getAfter(zm3).data.status != 'pending'
 );
 }
 allow get, list: if rf24(groupId);
 allow create: if request.resource.data.joinedBy == 'application'
-&& rf271(
+&& rf270(
 groupId,
 playerId,
 request.resource.data
 ) || request.resource.data.joinedBy == 'joinCode'
-&& rf272(
+&& rf271(
 groupId,
 playerId,
 request.resource.data
-) || rf262(
+) || rf261(
 groupId,
 playerId,
-request.resource.data
-) || rf267(
-groupId,
-playerId,
-request.resource.data
-);
-allow update: if rf269(
-groupId,
-playerId,
-resource.data,
 request.resource.data
 ) || rf266(
 groupId,
 playerId,
+request.resource.data
+);
+allow update: if rf268(
+groupId,
+playerId,
+resource.data,
+request.resource.data
+) || rf265(
+groupId,
+playerId,
 resource.data,
 request.resource.data
 );
-allow delete: if rf268(
+allow delete: if rf267(
 groupId,
 playerId,
 resource.data
-) || rf270(
+) || rf269(
 groupId,
 playerId,
 resource.data
 );
 }
 match /raidListings/{recruitmentId} {
-function rf273(zm7, zm8, zm9) {
-let recruitment = getAfter(rf7(zm8)).data;
-let zma = !exists(rf7(zm8));
-return rf24(zm7)
-&& recruitment.groupId == zm7
+function rf272(zm4, zm5, zm6) {
+let recruitment = getAfter(rf7(zm5)).data;
+let zm7 = !exists(rf7(zm5));
+return rf24(zm4)
+&& recruitment.groupId == zm4
 && recruitment.visibility == 'group'
-&& zm9.diff(recruitment).affectedKeys().size() == 0
+&& zm6.diff(recruitment).affectedKeys().size() == 0
 && (
-zma
+zm7
 ? recruitment.revision == 1
 && recruitment.leaderPlayerId == rf5()
 && recruitment.updatedAt == request.time
 : recruitment.revision
-== get(rf7(zm8)).data.revision + 1
+== get(rf7(zm5)).data.revision + 1
 && recruitment.updatedAt == request.time
 );
 }
-function rf274(zmb, zmc, zmd) {
+function rf273(zm8, zm9, zma) {
+let zmb = getAfter(rf7(zm9)).data;
+return exists(rf7(zm9))
+&& rf24(zm8)
+&& zmb.groupId == zm8
+&& zmb.visibility == 'group'
+&& zmb.status != 'disbanded'
+&& zmb.currentCycleStatus != 'disbanded'
+&& zma.diff(zmb).affectedKeys().size() == 0
+&& zmb.revision
+== get(rf7(zm9)).data.revision
+&& rf5() in zmb.memberPlayerIds;
+}
+function rf274(zmc, zmd) {
 let zme = getAfter(rf7(zmc)).data;
-return exists(rf7(zmc))
-&& rf24(zmb)
-&& zme.groupId == zmb
-&& zme.visibility == 'group'
-&& zme.status != 'disbanded'
-&& zme.currentCycleStatus != 'disbanded'
-&& zmd.diff(zme).affectedKeys().size() == 0
-&& zme.revision
-== get(rf7(zmc)).data.revision
-&& rf5() in zme.memberPlayerIds;
+return rf53(zme)
+&& zme.lastCommandType != 'disband'
+&& zmd.recruitmentId == zmc
+&& zmd.sourceRevision == zme.revision
+&& zmd.status == zme.status
+&& zmd.updatedAt == request.time;
 }
-function rf275(zmf, zmg) {
-let zmh = getAfter(rf7(zmf)).data;
-return rf53(zmh)
-&& zmh.lastCommandType != 'disband'
-&& zmg.recruitmentId == zmf
-&& zmg.sourceRevision == zmh.revision
-&& zmg.status == zmh.status
-&& zmg.updatedAt == request.time;
+function rf275(zmf) {
+let zmg = getAfter(rf7(zmf)).data;
+return rf53(zmg)
+&& (zmg.status == 'completed'
+|| zmg.status == 'disbanded'
+|| zmg.status == 'incompleteEnded')
+&& (zmg.lastCommandType == 'complete'
+|| zmg.lastCommandType == 'incompleteEnd'
+|| zmg.lastCommandType == 'disband');
 }
-function rf276(zmi) {
-let zmj = getAfter(rf7(zmi)).data;
-return rf53(zmj)
-&& (zmj.status == 'completed'
-|| zmj.status == 'disbanded'
-|| zmj.status == 'incompleteEnded')
-&& (zmj.lastCommandType == 'complete'
-|| zmj.lastCommandType == 'incompleteEnd'
-|| zmj.lastCommandType == 'disband');
-}
-function rf277(
-zmk,
-zml,
-zmm
+function rf276(
+zmh,
+zmi,
+zmj
 ) {
-let zmn = getAfter(rf7(zmk)).data;
-return rf67(zmn)
-&& zmn.status == 'active'
-&& zmm.diff(zml).affectedKeys().hasOnly([
+let zmk = getAfter(rf7(zmh)).data;
+return rf67(zmk)
+&& zmk.status == 'active'
+&& zmj.diff(zmi).affectedKeys().hasOnly([
 'memberCount', 'sourceRevision', 'updatedAt'
 ])
-&& zmm.memberCount == zmn.memberCount
-&& zmm.sourceRevision == zmn.revision
-&& zmm.updatedAt == request.time;
+&& zmj.memberCount == zmk.memberCount
+&& zmj.sourceRevision == zmk.revision
+&& zmj.updatedAt == request.time;
 }
-function rf278(zmo) {
-let zmp = getAfter(rf7(zmo)).data;
-return rf67(zmp)
-&& zmp.status == 'disbanded'
-&& zmp.memberCount == 0;
+function rf277(zml) {
+let zmm = getAfter(rf7(zml)).data;
+return rf67(zmm)
+&& zmm.status == 'disbanded'
+&& zmm.memberCount == 0;
 }
-function rf279(zmq, zmr, zms, zmt) {
-let zmu = get(rf7(zmr)).data;
-let zmv = getAfter(rf7(zmr)).data;
-return rf74(zmu, zmv)
-&& zmu.groupId == zmq && zmu.visibility == 'group'
-&& zmt.diff(zms).affectedKeys().hasOnly([
+function rf278(zmn, zmo, zmp, zmq) {
+let zmr = get(rf7(zmo)).data;
+let zms = getAfter(rf7(zmo)).data;
+return rf74(zmr, zms)
+&& zmr.groupId == zmn && zmr.visibility == 'group'
+&& zmq.diff(zmp).affectedKeys().hasOnly([
 'partySlots', 'memberPlayerIds', 'raidStateTargets', 'memberCount',
 'dealerCount', 'supportCount', 'nonGroupMemberCount', 'hasAvailableSlot',
 'sourceRevision', 'updatedAt', 'leaderPlayerId', 'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot'])
-&& rf75(zmt, zmv);
+&& rf75(zmq, zms);
 }
-function rf280(zmw, zmx, zmy, zmz) {
-let zn0 = get(rf7(zmx)).data;
-let zn1 = getAfter(rf7(zmx)).data;
-return rf79(zn0, zn1)
-&& zn0.groupId == zmw && zn0.visibility == 'group'
-&& zmz.diff(zmy).affectedKeys().hasOnly([
+function rf279(zmt, zmu, zmv, zmw) {
+let zmx = get(rf7(zmu)).data;
+let zmy = getAfter(rf7(zmu)).data;
+return rf79(zmx, zmy)
+&& zmx.groupId == zmt && zmx.visibility == 'group'
+&& zmw.diff(zmv).affectedKeys().hasOnly([
 'partySlots', 'memberPlayerIds', 'raidStateTargets', 'memberCount',
 'dealerCount', 'supportCount', 'nonGroupMemberCount', 'hasAvailableSlot',
 'sourceRevision', 'updatedAt'])
-&& rf86(zmz, zn1);
+&& rf86(zmw, zmy);
 }
-function rf281(zn2, zn3, zn4, zn5) {
-let zn6 = get(rf7(zn3)).data;
-let zn7 = getAfter(rf7(zn3)).data;
-return rf83(zn6, zn7)
-&& zn6.groupId == zn2 && zn6.visibility == 'group'
-&& zn5.diff(zn4).affectedKeys().hasOnly([
+function rf280(zmz, zn0, zn1, zn2) {
+let zn3 = get(rf7(zn0)).data;
+let zn4 = getAfter(rf7(zn0)).data;
+return rf83(zn3, zn4)
+&& zn3.groupId == zmz && zn3.visibility == 'group'
+&& zn2.diff(zn1).affectedKeys().hasOnly([
 'partySlots', 'memberPlayerIds', 'raidStateTargets', 'memberCount',
 'dealerCount', 'supportCount', 'nonGroupMemberCount', 'hasAvailableSlot',
 'sourceRevision', 'updatedAt'])
-&& rf86(zn5, zn7);
+&& rf86(zn2, zn4);
 }
-function rf282(
-zn8,
-zn9,
-zna,
-znb
+function rf281(
+zn5,
+zn6,
+zn7,
+zn8
 ) {
-let znc = get(rf7(zn9)).data;
-let znd = getAfter(rf7(zn9)).data;
-return znc.groupId == zn8
-&& znd.groupId == zn8
-&& znc.visibility == 'group'
-&& znd.visibility == 'group'
-&& znb.memberCount == znd.memberCount
-&& znb.sourceRevision == znd.revision
-&& znb.updatedAt == request.time
+let zn9 = get(rf7(zn6)).data;
+let zna = getAfter(rf7(zn6)).data;
+return zn9.groupId == zn5
+&& zna.groupId == zn5
+&& zn9.visibility == 'group'
+&& zna.visibility == 'group'
+&& zn8.memberCount == zna.memberCount
+&& zn8.sourceRevision == zna.revision
+&& zn8.updatedAt == request.time
 && rf89(
-znc,
-znd
+zn9,
+zna
 )
 && (
-znb.diff(zna).affectedKeys().hasOnly([
+zn8.diff(zn7).affectedKeys().hasOnly([
 'memberCount', 'sourceRevision', 'updatedAt'
 ])
 || (
-znb.diff(zna).affectedKeys().hasOnly([
+zn8.diff(zn7).affectedKeys().hasOnly([
 'memberCount', 'sourceRevision', 'updatedAt',
 'memberPlayerIds', 'partySlots', 'raidStateTargets',
 'dealerCount', 'supportCount', 'nonGroupMemberCount',
 'hasAvailableSlot', 'leaderPlayerId',
 'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot'
 ])
-&& znb.memberPlayerIds == znd.memberPlayerIds
-&& znb.partySlots == znd.partySlots
-&& znb.raidStateTargets == znd.raidStateTargets
-&& znb.dealerCount == znd.dealerCount
-&& znb.supportCount == znd.supportCount
-&& znb.nonGroupMemberCount == znd.nonGroupMemberCount
-&& znb.hasAvailableSlot == znd.hasAvailableSlot
+&& zn8.memberPlayerIds == zna.memberPlayerIds
+&& zn8.partySlots == zna.partySlots
+&& zn8.raidStateTargets == zna.raidStateTargets
+&& zn8.dealerCount == zna.dealerCount
+&& zn8.supportCount == zna.supportCount
+&& zn8.nonGroupMemberCount == zna.nonGroupMemberCount
+&& zn8.hasAvailableSlot == zna.hasAvailableSlot
 && (
-(znc.leaderPlayerId == znd.leaderPlayerId
-&& !znb.diff(zna).affectedKeys().hasAny([
+(zn9.leaderPlayerId == zna.leaderPlayerId
+&& !zn8.diff(zn7).affectedKeys().hasAny([
 'leaderPlayerId', 'leaderCharacterNameSnapshot',
 'leaderClassNameSnapshot'
 ]))
-|| (znb.leaderPlayerId == znd.leaderPlayerId
-&& znb.leaderCharacterNameSnapshot
-== znd.leaderCharacterNameSnapshot
-&& znb.leaderClassNameSnapshot
-== znd.leaderClassNameSnapshot)
+|| (zn8.leaderPlayerId == zna.leaderPlayerId
+&& zn8.leaderCharacterNameSnapshot
+== zna.leaderCharacterNameSnapshot
+&& zn8.leaderClassNameSnapshot
+== zna.leaderClassNameSnapshot)
 )
 )
 );
 }
-function rf283(zne, znf, zng) {
-let znh = getAfter(rf7(znf)).data;
+function rf282(znb, znc, znd) {
+let zne = getAfter(rf7(znc)).data;
 return rf4()
-&& znh.schemaVersion == 2
-&& znh.groupId == zne
-&& znh.visibility == 'group'
-&& znh.leaderPlayerId == rf5()
-&& zng.keys().hasOnly([
+&& zne.schemaVersion == 2
+&& zne.groupId == znb
+&& zne.visibility == 'group'
+&& zne.leaderPlayerId == rf5()
+&& znd.keys().hasOnly([
 'recruitmentId', 'groupId', 'visibility', 'status',
 'sourceRevision', 'updatedAt'
 ])
-&& zng.recruitmentId == znf
-&& zng.groupId == zne
-&& zng.visibility == 'group'
-&& zng.status == znh.status
-&& zng.sourceRevision == znh.revision
-&& zng.updatedAt == request.time;
+&& znd.recruitmentId == znc
+&& znd.groupId == znb
+&& znd.visibility == 'group'
+&& znd.status == zne.status
+&& znd.sourceRevision == zne.revision
+&& znd.updatedAt == request.time;
 }
-function rf284(zni, znj) {
-let after = getAfter(rf7(znj)).data;
-let znk = exists(rf7(znj))
-? get(rf7(znj)).data.leaderPlayerId
+function rf283(znf, zng) {
+let after = getAfter(rf7(zng)).data;
+let znh = exists(rf7(zng))
+? get(rf7(zng)).data.leaderPlayerId
 : after.leaderPlayerId;
-let znl = after.visibility == 'public'
+let zni = after.visibility == 'public'
 && after.leaderPlayerId == rf5();
-let znm = after.status == 'disbanded'
+let znj = after.status == 'disbanded'
 || after.currentCycleStatus == 'disbanded';
 return rf4()
-&& after.groupId == zni
+&& after.groupId == znf
 && after.updatedAt == request.time
-&& (znl || (znm && znk == rf5()));
+&& (zni || (znj && znh == rf5()));
 }
 allow get, list: if rf24(groupId);
-allow create: if rf273(
+allow create: if rf272(
 groupId,
 recruitmentId,
-request.resource.data
-) || rf274(
-groupId,
-recruitmentId,
-request.resource.data
-) || rf283(
-groupId,
-recruitmentId,
-request.resource.data
-);
-allow update: if (rf40(getAfter(rf7(recruitmentId)).data)) ? (rf275(recruitmentId, request.resource.data)) : ((rf41(get(rf7(recruitmentId)).data, getAfter(rf7(recruitmentId)).data)) ? (rf273(groupId, recruitmentId, request.resource.data)) : ((rf165(recruitmentId)) ? (rf277(recruitmentId, resource.data, request.resource.data)) : ((rf82(recruitmentId)) ? (rf280(groupId, recruitmentId, resource.data, request.resource.data)) : (rf279(groupId, recruitmentId, resource.data, request.resource.data) || rf281(groupId, recruitmentId, resource.data, request.resource.data) || rf282(
-groupId,
-recruitmentId,
-resource.data,
 request.resource.data
 ) || rf273(
 groupId,
 recruitmentId,
 request.resource.data
-) || rf275(
+) || rf282(
+groupId,
 recruitmentId,
 request.resource.data
-) || rf283(
+);
+allow update: if (rf40(getAfter(rf7(recruitmentId)).data)) ? (rf274(recruitmentId, request.resource.data)) : ((rf41(get(rf7(recruitmentId)).data, getAfter(rf7(recruitmentId)).data)) ? (rf272(groupId, recruitmentId, request.resource.data)) : ((rf164(recruitmentId)) ? (rf276(recruitmentId, resource.data, request.resource.data)) : ((rf82(recruitmentId)) ? (rf279(groupId, recruitmentId, resource.data, request.resource.data)) : (rf278(groupId, recruitmentId, resource.data, request.resource.data) || rf280(groupId, recruitmentId, resource.data, request.resource.data) || rf281(
+groupId,
+recruitmentId,
+resource.data,
+request.resource.data
+) || rf272(
+groupId,
+recruitmentId,
+request.resource.data
+) || rf274(
+recruitmentId,
+request.resource.data
+) || rf282(
 groupId,
 recruitmentId,
 request.resource.data
 )))));
-allow delete: if rf278(recruitmentId)
-|| rf284(groupId, recruitmentId)
-|| rf276(recruitmentId);
+allow delete: if rf277(recruitmentId)
+|| rf283(groupId, recruitmentId)
+|| rf275(recruitmentId);
 }
 match /joinRelations/{playerId} {
-function rf285(znn) {
-return znn.keys().hasOnly([
+function rf284(znk) {
+return znk.keys().hasOnly([
 'schemaVersion', 'groupId', 'targetPlayerId', 'kind', 'status',
 'requestedByPlayerId', 'characterIdSnapshot', 'characterNameSnapshot',
 'serverNameSnapshot', 'characterClassNameSnapshot', 'itemLevelSnapshot',
@@ -4371,162 +4364,162 @@ return znn.keys().hasOnly([
 'revision', 'createdAt', 'expiresAt', 'decidedAt', 'updatedAt'
 ]);
 }
-function rf286(zno) {
-return zno == null
-|| zno.status != 'pending'
-|| zno.expiresAt <= request.time;
+function rf285(znl) {
+return znl == null
+|| znl.status != 'pending'
+|| znl.expiresAt <= request.time;
 }
-function rf287(znp) {
-return znp.expiresAt is timestamp
-&& znp.expiresAt > request.time + duration.value(23, 'h')
-&& znp.expiresAt < request.time + duration.value(25, 'h');
+function rf286(znm) {
+return znm.expiresAt is timestamp
+&& znm.expiresAt > request.time + duration.value(23, 'h')
+&& znm.expiresAt < request.time + duration.value(25, 'h');
+}
+function rf287(
+znn,
+zno,
+znp,
+znq,
+znr
+) {
+return rf23()
+&& rf284(znr)
+&& znr.schemaVersion == 1
+&& znr.groupId == znn
+&& znr.targetPlayerId == zno
+&& znr.status == 'pending'
+&& znr.requestedByPlayerId is string
+&& znr.characterIdSnapshot is string
+&& znr.characterNameSnapshot is string
+&& znr.serverNameSnapshot is string
+&& znr.characterClassNameSnapshot is string
+&& znr.applicationAttempt is int
+&& znr.revision == znp + 1
+&& znr.createdAt == request.time
+&& znr.updatedAt == request.time
+&& znr.decidedAt == null
+&& rf286(znr)
+&& znq
+&& get(rf19(znn)).data.status == 'active'
+&& !exists(rf20(znn, zno))
+&& !rf242(znn, zno)
+&& existsAfter(rf21(zno, znn));
 }
 function rf288(
-znq,
-znr,
 zns,
 znt,
-znu
+znu,
+znv,
+znw,
+znx
 ) {
-return rf23()
-&& rf285(znu)
-&& znu.schemaVersion == 1
-&& znu.groupId == znq
-&& znu.targetPlayerId == znr
-&& znu.status == 'pending'
-&& znu.requestedByPlayerId is string
-&& znu.characterIdSnapshot is string
-&& znu.characterNameSnapshot is string
-&& znu.serverNameSnapshot is string
-&& znu.characterClassNameSnapshot is string
-&& znu.applicationAttempt is int
-&& znu.revision == zns + 1
-&& znu.createdAt == request.time
-&& znu.updatedAt == request.time
-&& znu.decidedAt == null
-&& rf287(znu)
-&& znt
-&& get(rf19(znq)).data.status == 'active'
-&& !exists(rf20(znq, znr))
-&& !rf243(znq, znr)
-&& existsAfter(rf21(znr, znq));
+return rf287(
+zns,
+znt,
+znu,
+znw,
+znx
+)
+&& znx.kind == 'invitation'
+&& znx.requestedByPlayerId == rf5()
+&& znt != rf5()
+&& rf24(zns)
+&& znx.applicationAttempt == znv;
 }
 function rf289(
-znv,
-znw,
-znx,
 zny,
 znz,
-zo0
+zo0,
+zo1,
+zo2
 ) {
-return rf288(
-znv,
-znw,
-znx,
+let zo3 = getAfter(rf240(zny, znz)).data;
+return rf287(
+zny,
 znz,
-zo0
-)
-&& zo0.kind == 'invitation'
-&& zo0.requestedByPlayerId == rf5()
-&& znw != rf5()
-&& rf24(znv)
-&& zo0.applicationAttempt == zny;
-}
-function rf290(
+zo0,
 zo1,
-zo2,
-zo3,
-zo4,
-zo5
-) {
-let zo6 = getAfter(rf241(zo1, zo2)).data;
-return rf288(
-zo1,
-zo2,
-zo3,
-zo4,
-zo5
+zo2
 )
-&& zo5.kind == 'application'
-&& zo5.requestedByPlayerId == zo2
-&& zo2 == rf5()
-&& zo5.applicationAttempt >= 1
-&& zo5.applicationAttempt == zo6.applicationCount;
+&& zo2.kind == 'application'
+&& zo2.requestedByPlayerId == znz
+&& znz == rf5()
+&& zo2.applicationAttempt >= 1
+&& zo2.applicationAttempt == zo3.applicationCount;
 }
-function rf291(zo7, zo8, zo9, zoa) {
+function rf290(zo4, zo5, zo6, zo7) {
 return rf23()
-&& zoa.diff(zo9).affectedKeys()
+&& zo7.diff(zo6).affectedKeys()
 .hasOnly(['status', 'revision', 'decidedAt', 'updatedAt'])
-&& zo9.kind == 'invitation'
-&& zo9.status == 'pending'
-&& zoa.revision == zo9.revision + 1
-&& zoa.decidedAt == request.time
-&& zoa.updatedAt == request.time
-&& existsAfter(rf21(zo8, zo7))
+&& zo6.kind == 'invitation'
+&& zo6.status == 'pending'
+&& zo7.revision == zo6.revision + 1
+&& zo7.decidedAt == request.time
+&& zo7.updatedAt == request.time
+&& existsAfter(rf21(zo5, zo4))
 && (
-(zoa.status == 'accepted'
-&& zo8 == rf5()
-&& zo9.expiresAt > request.time
-&& !rf243(zo7, zo8)
-&& existsAfter(rf20(zo7, zo8)))
-|| (zoa.status == 'rejected'
-&& zo8 == rf5())
-|| (zoa.status == 'cancelled'
-&& rf24(zo7)
-&& (zo9.requestedByPlayerId == rf5()
-|| rf244(zo7)))
+(zo7.status == 'accepted'
+&& zo5 == rf5()
+&& zo6.expiresAt > request.time
+&& !rf242(zo4, zo5)
+&& existsAfter(rf20(zo4, zo5)))
+|| (zo7.status == 'rejected'
+&& zo5 == rf5())
+|| (zo7.status == 'cancelled'
+&& rf24(zo4)
+&& (zo6.requestedByPlayerId == rf5()
+|| rf243(zo4)))
 );
 }
-function rf292(zob, zoc, zod, zoe) {
-return rf25(zob)
-&& zoe.diff(zod).affectedKeys()
+function rf291(zo8, zo9, zoa, zob) {
+return rf25(zo8)
+&& zob.diff(zoa).affectedKeys()
 .hasOnly(['status', 'revision', 'decidedAt', 'updatedAt'])
-&& zod.kind == 'application'
-&& zod.status == 'pending'
-&& zod.targetPlayerId == zoc
-&& zoc != rf5()
-&& zoe.revision == zod.revision + 1
-&& zoe.decidedAt == request.time
-&& zoe.updatedAt == request.time
-&& existsAfter(rf21(zoc, zob))
+&& zoa.kind == 'application'
+&& zoa.status == 'pending'
+&& zoa.targetPlayerId == zo9
+&& zo9 != rf5()
+&& zob.revision == zoa.revision + 1
+&& zob.decidedAt == request.time
+&& zob.updatedAt == request.time
+&& existsAfter(rf21(zo9, zo8))
 && (
-(zoe.status == 'accepted'
-&& zod.expiresAt > request.time
-&& !rf243(zob, zoc)
-&& existsAfter(rf20(zob, zoc)))
-|| zoe.status == 'rejected'
-|| (zoe.status == 'blocked'
-&& existsAfter(rf242(zob, zoc)))
+(zob.status == 'accepted'
+&& zoa.expiresAt > request.time
+&& !rf242(zo8, zo9)
+&& existsAfter(rf20(zo8, zo9)))
+|| zob.status == 'rejected'
+|| (zob.status == 'blocked'
+&& existsAfter(rf241(zo8, zo9)))
 );
 }
-function rf293(zof, zog, zoh, zoi) {
+function rf292(zoc, zod, zoe, zof) {
 return rf23()
-&& zog == rf5()
-&& zoi.diff(zoh).affectedKeys()
+&& zod == rf5()
+&& zof.diff(zoe).affectedKeys()
 .hasOnly(['status', 'revision', 'decidedAt', 'updatedAt'])
-&& zoh.status == 'pending'
-&& zoh.targetPlayerId == zog
-&& zoh.expiresAt > request.time
-&& zoi.status == 'accepted'
-&& zoi.revision == zoh.revision + 1
-&& zoi.decidedAt == request.time
-&& zoi.updatedAt == request.time
-&& !rf243(zof, zog)
-&& existsAfter(rf20(zof, zog))
-&& getAfter(rf20(zof, zog)).data.joinedBy
+&& zoe.status == 'pending'
+&& zoe.targetPlayerId == zod
+&& zoe.expiresAt > request.time
+&& zof.status == 'accepted'
+&& zof.revision == zoe.revision + 1
+&& zof.decidedAt == request.time
+&& zof.updatedAt == request.time
+&& !rf242(zoc, zod)
+&& existsAfter(rf20(zoc, zod))
+&& getAfter(rf20(zoc, zod)).data.joinedBy
 == 'joinCode';
 }
 allow get: if rf4()
 && (playerId == rf5() || rf24(groupId));
 allow list: if rf24(groupId);
-allow create: if rf289(
+allow create: if rf288(
 groupId,
 playerId,
 0,
 0,
 true,
 request.resource.data
-) || rf290(
+) || rf289(
 groupId,
 playerId,
 0,
@@ -4536,30 +4529,30 @@ request.resource.data
 allow update: if resource.data.kind == 'application'
 && resource.data.status == 'pending'
 && request.resource.data.status in ['accepted', 'rejected', 'blocked']
-&& rf292(
+&& rf291(
 groupId,
 playerId,
 resource.data,
+request.resource.data
+) || rf288(
+groupId,
+playerId,
+resource.data.revision,
+resource.data.applicationAttempt,
+rf285(resource.data),
 request.resource.data
 ) || rf289(
 groupId,
 playerId,
 resource.data.revision,
-resource.data.applicationAttempt,
-rf286(resource.data),
+rf285(resource.data),
 request.resource.data
 ) || rf290(
 groupId,
 playerId,
-resource.data.revision,
-rf286(resource.data),
-request.resource.data
-) || rf291(
-groupId,
-playerId,
 resource.data,
 request.resource.data
-) || rf293(
+) || rf292(
 groupId,
 playerId,
 resource.data,
@@ -4568,45 +4561,45 @@ request.resource.data
 allow delete: if false;
 }
 match /applicantStats/{playerId} {
-function rf294(
+function rf293(
+zog,
+zoh,
+zoi,
 zoj,
-zok,
-zol,
-zom,
-zon
+zok
 ) {
-let zoo = getAfter(rf22(zoj, zok)).data;
+let zol = getAfter(rf22(zog, zoh)).data;
 return rf23()
-&& zok == rf5()
-&& zon.keys().hasOnly([
+&& zoh == rf5()
+&& zok.keys().hasOnly([
 'schemaVersion', 'groupId', 'playerId', 'applicationCount',
 'lastCharacterNameSnapshot', 'lastItemLevelSnapshot',
 'lastCombatPowerSnapshot', 'createdAt', 'updatedAt'
 ])
-&& zon.schemaVersion == 1
-&& zon.groupId == zoj
-&& zon.playerId == zok
-&& zon.applicationCount == zol + 1
-&& zon.lastCharacterNameSnapshot == zoo.characterNameSnapshot
-&& zon.lastItemLevelSnapshot == zoo.itemLevelSnapshot
-&& zon.lastCombatPowerSnapshot == zoo.combatPowerSnapshot
-&& zon.createdAt == zom
-&& zon.updatedAt == request.time
-&& zoo.kind == 'application'
-&& zoo.status == 'pending'
-&& zoo.applicationAttempt == zon.applicationCount;
+&& zok.schemaVersion == 1
+&& zok.groupId == zog
+&& zok.playerId == zoh
+&& zok.applicationCount == zoi + 1
+&& zok.lastCharacterNameSnapshot == zol.characterNameSnapshot
+&& zok.lastItemLevelSnapshot == zol.itemLevelSnapshot
+&& zok.lastCombatPowerSnapshot == zol.combatPowerSnapshot
+&& zok.createdAt == zoj
+&& zok.updatedAt == request.time
+&& zol.kind == 'application'
+&& zol.status == 'pending'
+&& zol.applicationAttempt == zok.applicationCount;
 }
 allow get: if rf4()
 && (playerId == rf5() || rf24(groupId));
-allow list: if rf244(groupId);
-allow create: if rf294(
+allow list: if rf243(groupId);
+allow create: if rf293(
 groupId,
 playerId,
 0,
 request.time,
 request.resource.data
 );
-allow update: if rf294(
+allow update: if rf293(
 groupId,
 playerId,
 resource.data.applicationCount,
@@ -4616,38 +4609,38 @@ request.resource.data
 allow delete: if false;
 }
 match /blockedPlayers/{playerId} {
-function rf295(zop, zoq, zor) {
-let zos = getAfter(rf22(zop, zoq)).data;
-let stats = get(rf241(zop, zoq));
-return rf25(zop)
-&& zoq != rf5()
-&& zor.keys().hasOnly([
+function rf294(zom, zon, zoo) {
+let zop = getAfter(rf22(zom, zon)).data;
+let stats = get(rf240(zom, zon));
+return rf25(zom)
+&& zon != rf5()
+&& zoo.keys().hasOnly([
 'schemaVersion', 'groupId', 'playerId', 'blockedByPlayerId', 'reason',
 'characterNameSnapshot', 'applicationCountSnapshot',
 'itemLevelSnapshot', 'combatPowerSnapshot', 'createdAt', 'updatedAt'
 ])
-&& zor.schemaVersion == 1
-&& zor.groupId == zop
-&& zor.playerId == zoq
-&& zor.blockedByPlayerId == rf5()
-&& zor.characterNameSnapshot == zos.characterNameSnapshot
-&& zor.itemLevelSnapshot == zos.itemLevelSnapshot
-&& zor.combatPowerSnapshot == zos.combatPowerSnapshot
-&& zor.applicationCountSnapshot
+&& zoo.schemaVersion == 1
+&& zoo.groupId == zom
+&& zoo.playerId == zon
+&& zoo.blockedByPlayerId == rf5()
+&& zoo.characterNameSnapshot == zop.characterNameSnapshot
+&& zoo.itemLevelSnapshot == zop.itemLevelSnapshot
+&& zoo.combatPowerSnapshot == zop.combatPowerSnapshot
+&& zoo.applicationCountSnapshot
 == (stats == null ? 0 : stats.data.applicationCount)
-&& zor.createdAt == request.time
-&& zor.updatedAt == request.time
-&& zos.targetPlayerId == zoq
-&& zos.kind == 'application'
+&& zoo.createdAt == request.time
+&& zoo.updatedAt == request.time
+&& zop.targetPlayerId == zon
+&& zop.kind == 'application'
 && (
-(zor.reason == 'applicationRejected'
-&& zos.status == 'blocked')
-|| (zor.reason == 'manual'
-&& zos.status in ['rejected', 'cancelled', 'expired', 'blocked'])
+(zoo.reason == 'applicationRejected'
+&& zop.status == 'blocked')
+|| (zoo.reason == 'manual'
+&& zop.status in ['rejected', 'cancelled', 'expired', 'blocked'])
 );
 }
-allow get, list: if rf244(groupId);
-allow create: if rf295(
+allow get, list: if rf243(groupId);
+allow create: if rf294(
 groupId,
 playerId,
 request.resource.data
@@ -4657,47 +4650,47 @@ allow delete: if rf25(groupId);
 }
 }
 match /groupJoinCodes/{code} {
-function rf296(zot, zou) {
-let zov = zou.groupId;
-let zow = get(rf19(zov)).data;
-let zox = getAfter(rf19(zov)).data;
-return rf25(zov)
-&& rf26(zot)
-&& zou.keys().hasOnly([
+function rf295(zoq, zor) {
+let zos = zor.groupId;
+let zot = get(rf19(zos)).data;
+let zou = getAfter(rf19(zos)).data;
+return rf25(zos)
+&& rf26(zoq)
+&& zor.keys().hasOnly([
 'schemaVersion', 'groupId', 'status', 'createdByPlayerId',
 'createdAt', 'updatedAt'
 ])
-&& zou.schemaVersion == 1
-&& zou.groupId is string
-&& zou.groupId.size() > 0
-&& zou.status == 'active'
-&& zou.createdByPlayerId == rf5()
-&& zou.createdAt == request.time
-&& zou.updatedAt == request.time
-&& zow.hasActiveJoinCode == false
-&& zox.hasActiveJoinCode == true
-&& zox.activeJoinCode == zot
-&& zox.revision == zow.revision + 1;
+&& zor.schemaVersion == 1
+&& zor.groupId is string
+&& zor.groupId.size() > 0
+&& zor.status == 'active'
+&& zor.createdByPlayerId == rf5()
+&& zor.createdAt == request.time
+&& zor.updatedAt == request.time
+&& zot.hasActiveJoinCode == false
+&& zou.hasActiveJoinCode == true
+&& zou.activeJoinCode == zoq
+&& zou.revision == zot.revision + 1;
 }
-function rf297(zoy) {
-let zoz = resource.data;
-let zp0 = zoz.groupId;
-let zp1 = get(rf19(zp0)).data;
-let zp2 = getAfter(rf19(zp0)).data;
-return rf25(zp0)
-&& rf26(zoy)
-&& zoz.status == 'active'
-&& zp1.hasActiveJoinCode == true
-&& zp2.hasActiveJoinCode == false
-&& zp1.activeJoinCode == zoy
-&& zp2.activeJoinCode == null
-&& zp2.revision == zp1.revision + 1;
+function rf296(zov) {
+let zow = resource.data;
+let zox = zow.groupId;
+let zoy = get(rf19(zox)).data;
+let zoz = getAfter(rf19(zox)).data;
+return rf25(zox)
+&& rf26(zov)
+&& zow.status == 'active'
+&& zoy.hasActiveJoinCode == true
+&& zoz.hasActiveJoinCode == false
+&& zoy.activeJoinCode == zov
+&& zoz.activeJoinCode == null
+&& zoz.revision == zoy.revision + 1;
 }
 allow get: if rf4() && rf26(code);
 allow list: if false;
-allow create: if rf296(code, request.resource.data);
+allow create: if rf295(code, request.resource.data);
 allow update: if false;
-allow delete: if rf297(code);
+allow delete: if rf296(code);
 }
 match /{path=**}/applications/{applicantPlayerId} {
 allow list: if rf4()

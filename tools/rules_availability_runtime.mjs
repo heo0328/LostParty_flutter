@@ -6,6 +6,15 @@ import { availabilitySeals } from './bug024_spark_seal_candidate.mjs';
 // clients to introduce a seal through a normal participation/completion writer.
 export function availabilityRuntime(input) {
   let source = availabilitySeals(distributePreparationRecords(input));
+  // Absent final creation is forbidden: certification must first create a stub.
+  // Inline the proof's constant denial so the deployed compiler has no unused
+  // parameters in the otherwise obsolete create validator.
+  const absentValidator = /    function validAtomicAdvanceRaidStateCreate\(playerId, stateId, data\) \{\s*return false;\s*\}/;
+  assert.ok(absentValidator.test(source));
+  source = source.replace(absentValidator, '');
+  const absentCalls = /validAtomicAdvanceRaidStateCreate\(\s*playerId,\s*stateId,\s*request\.resource\.data\s*\)/g;
+  assert.equal([...source.matchAll(absentCalls)].length, 2);
+  source = source.replace(absentCalls, 'false');
   function replace(before, after) {
     assert.equal(source.split(before).length, 2, before);
     source = source.replace(before, () => after);
@@ -72,5 +81,11 @@ export function availabilityRuntime(input) {
   // rules. Reject a different generation rather than trusting the shape alone.
   replace('|| sealIdle(get(newPath).data) || sparkPrepKnownCompleted',
     '|| (sealIdle(get(newPath).data) && get(newPath).data.playerId == data.actorPlayerId && get(newPath).data.characterId == data.nextCharacterId && get(newPath).data.raidId == room.raidId && get(newPath).data.ownershipRevision == data.nextOwnershipRevision) || sparkPrepKnownCompleted');
+  // A newly created legacy Claim cannot masquerade as an older ownership
+  // lifetime. Missing generation remains compatible only with live generation 0.
+  replace("'completedAt', 'updatedAt'\n        ])\n        && data.schemaVersion == 1",
+    "'completedAt', 'updatedAt', 'ownershipRevision'\n        ])\n        && data.schemaVersion == 1");
+  replace("        && ownsActiveCharacter(data.characterId)\n        && !existsAfter(assignmentPath(playerId, assignmentId));",
+    "        && ownsActiveCharacter(data.characterId) && deManualCurrentOwnership(data)\n        && !existsAfter(assignmentPath(playerId, assignmentId));");
   return source;
 }

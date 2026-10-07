@@ -13,6 +13,8 @@
    expectedRevision/대상/window를 고정하고 핵심 전환은 계속 한 transaction으로 확정한다.
 3. 생성 가능한 인증 metadata는 audit Rules로만 제한한다. stub→정상 참가/개인 완료와 인증 전체 제거는
    원래 명령의 권한·점유 검사를 통과할 때만 허용한다. 부분 제거/변조·legacy Claim 결합 우회는 거절한다.
+   legacy Claim 신규 생성도 현재 소유권 차수를 대조한다. missing generation은 실제 현재 차수0일 때만
+   허용하고, 이전 차수로 위장한 새 Claim을 허용하지 않는다. 기존 이전 차수 자료 읽기 호환은 유지한다.
 4. A의 준비 event metadata를 앱 writer와 결합하고 C를 정식 생성 pipeline에 연결한다.
    실제 추적본의8인/부정 경계·완료·기존 명령 회귀, 전체Flutter test/analyze·생성 일치를 확인한다.
 5. 게시 전 경로/프로젝트/diff를 확인해 Rules를 정확히1회 게시한다. 실패 시 진단하고 재시도하지 않는다.

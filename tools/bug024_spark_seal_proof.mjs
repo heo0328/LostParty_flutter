@@ -45,6 +45,7 @@ async function setup(options) { await seed(options); await prepare(); }
 function claimData() {
   const window = cycleWindow(cycleKey);
   return { schemaVersion: 1, playerId, characterId: replacement, raidId, cycleKey,
+    ...(process.env.BUG024_RUNTIME === '1' ? { ownershipRevision: 1 } : {}),
     difficultyId: 'normal', source: 'manual', cycleStartedAt: Timestamp.fromDate(window.startedAt),
     cycleEndsAt: Timestamp.fromDate(window.endsAt), completedAt: serverTimestamp(), updatedAt: serverTimestamp() };
 }
@@ -152,6 +153,13 @@ try {
     });
   });
   if (process.env.BUG024_RUNTIME === '1') {
+    await check('runtime legacy Claim cannot forge an older ownership lifetime', async () => {
+      await setup();
+      await denied(() => setDoc(claimRef(), { ...claimData(), ownershipRevision: 0 }));
+      const missing = claimData(); delete missing.ownershipRevision;
+      await denied(() => setDoc(claimRef(), missing));
+      await setDoc(claimRef(), claimData()); await denied(() => auditOne());
+    });
     await check('runtime stub personal completion/cancel and final advance collision', async () => {
       await setup(); await auditAll();
       const r = await room(); const slot = r.partySlots.find(s => s.playerId === playerId);
