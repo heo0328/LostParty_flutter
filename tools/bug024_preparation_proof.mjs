@@ -134,6 +134,7 @@ async function denied(work) {
   assert.deepEqual(await snapshot(), before, 'rejected operation must be atomic');
 }
 async function check(name, work) {
+  if (process.env.BUG024_DIAGNOSIS === '1' && results.length > 0) return;
   try { await work(); results.push({ name, passed: true }); console.log(`PASS BUG024 ${name}`); }
   catch (e) { results.push({ name, passed: false, error: e.message }); console.error(`FAIL BUG024 ${name}: ${e.message}`); }
 }
@@ -218,7 +219,14 @@ try {
       playerId, characterId: replacement, raidId, ownershipRevision: 1, cycleKey }));
     await denied(() => advance());
   });
-} finally { await env.cleanup(); }
+} finally {
+  if (process.env.BUG024_DIAGNOSIS === '1') {
+    const coverage = await fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-party-group-cutover:ruleCoverage').then(r => r.text());
+    fs.mkdirSync('coverage/bug024', { recursive: true });
+    fs.writeFileSync('coverage/bug024/ruleCoverage.json', coverage);
+  }
+  await env.cleanup();
+}
 fs.mkdirSync('coverage/bug024', { recursive: true });
 fs.writeFileSync('coverage/bug024/results.json', JSON.stringify(results, null, 2));
 assert.ok(results.every(r => r.passed), `${results.filter(r => !r.passed).length} BUG024 failures`);

@@ -153,7 +153,7 @@ return rf4() && z1k.schemaVersion == 2 && z1k.status == 'active'
 function rf33(z1l, z1m) {
 return z1l.currentCycleStatus == 'completed' && z1m.currentCycleStatus == 'completed'
 && z1m.memberCount == z1l.memberCount && z1m.lastCommandType == null
-&& z1m.partySlots != z1l.partySlots;
+&& z1m.raidStateTargets != z1l.raidStateTargets;
 }
 function rf34(z1n, z1o, z1p, z1q) {
 return z1n.schemaVersion == 1 && z1n.status == 'completed'
@@ -223,7 +223,8 @@ return rf32(z23) && z24.revision == z23.revision + 1
 'lastCommandId', 'lastCommandType', 'lastCommandActorPlayerId', 'lastCommandAt', 'revision', 'updatedAt'])
 && z24.updatedAt == request.time && rf62(z24)
 && rf43(z23, z24)
-&& rf39(z23, z24, get(z25).data, getAfter(z25).data)
+&& getAfter(z25).data.updatedAt == request.time
+&& getAfter(z25).data.characterId != get(z25).data.characterId
 && rf38(z23, z24)
 && (z23.visibility != 'group' || rf37(z23, z24));
 }
@@ -233,7 +234,7 @@ let z2b = getAfter(rf7(z26)).data;
 return rf4() && z27 == rf5()
 && rf32(z2a) && z2b.revision == z2a.revision + 1
 && z2b.updatedAt == request.time && z29.updatedAt == request.time
-&& rf83(z29, z28.get('countedAsNonGroupMember', false)) in z2b.partySlots;
+&& rf39(z2a, z2b, z28, z29);
 }
 function rf42(z2c) {
 return z2c.lastCommandType is string

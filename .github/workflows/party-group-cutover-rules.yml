@@ -47,6 +47,7 @@ on:
           - complexity-compact-final
           - completion-role
           - bug024
+          - bug024-diagnosis
       case:
         description: Rules regression scope
         type: choice
@@ -362,10 +363,14 @@ jobs:
             node tools/integrate_roster_rules.mjs --check --review
             proof_command="node tools/bug024_preparation_proof.mjs && node tools/party_completion_role_proof.mjs && PARTY_RULES_CASE=character-placement node tools/party_group_cutover_rules_test.mjs"
           fi
+          if [[ "$LEADER_PROOF_SCOPE" == bug024-diagnosis ]]; then
+            node tools/integrate_roster_rules.mjs --check --review
+            proof_command="BUG024_DIAGNOSIS=1 node tools/bug024_preparation_proof.mjs"
+          fi
           npx --yes firebase-tools@15.29.0 emulators:exec --config firebase.json --only firestore --project demo-party-group-cutover "$proof_command"
 
       - name: Preserve BUG-024 proof
-        if: always() && inputs.dispatch_scope == 'bug024'
+        if: always() && startsWith(inputs.dispatch_scope, 'bug024')
         uses: actions/upload-artifact@v4
         with:
           name: bug024-rules-evidence
@@ -389,7 +394,7 @@ jobs:
           retention-days: 30
 
       - name: Preserve leader succession candidate
-        if: always() && inputs.case == 'ownership-leader' && inputs.dispatch_scope != 'complexity-group-display' && inputs.dispatch_scope != 'completion-role' && inputs.dispatch_scope != 'bug024'
+        if: always() && inputs.case == 'ownership-leader' && inputs.dispatch_scope != 'complexity-group-display' && inputs.dispatch_scope != 'completion-role' && !startsWith(inputs.dispatch_scope, 'bug024')
         uses: actions/upload-artifact@v4
         with:
           name: roster-leader-candidate

@@ -19,7 +19,7 @@ export function nextWeekPreparation(source) {
     function bug24PrepDispatch(before, after) {
       return before.currentCycleStatus == 'completed' && after.currentCycleStatus == 'completed'
         && after.memberCount == before.memberCount && after.lastCommandType == null
-        && after.partySlots != before.partySlots;
+        && after.raidStateTargets != before.raidStateTargets;
     }
     function bug24KnownCompleted(data, playerId, characterId, raidId) {
       return data.schemaVersion == 1 && data.status == 'completed'
@@ -89,7 +89,8 @@ export function nextWeekPreparation(source) {
           'lastCommandId', 'lastCommandType', 'lastCommandActorPlayerId', 'lastCommandAt', 'revision', 'updatedAt'])
         && after.updatedAt == request.time && atomicAggregateSizesMatch(after)
         && atomicLifecycleMarkerConsumedOrPreserved(before, after)
-        && bug24PrepPair(before, after, get(path).data, getAfter(path).data)
+        && getAfter(path).data.updatedAt == request.time
+        && getAfter(path).data.characterId != get(path).data.characterId
         && bug24PrepEvent(before, after)
         && (before.visibility != 'group' || bug24PrepListing(before, after));
     }
@@ -99,7 +100,7 @@ export function nextWeekPreparation(source) {
       return hasActiveBinding() && playerId == currentPlayerId()
         && bug24PrepState(before) && after.revision == before.revision + 1
         && after.updatedAt == request.time && member.updatedAt == request.time
-        && atomicCharacterSlot(member, oldMember.get('countedAsNonGroupMember', false)) in after.partySlots;
+        && bug24PrepPair(before, after, oldMember, member);
     }
 `;
   replaceOnce('    function atomicIsLifecycleCommand(newData) {', helpers + '\n    function atomicIsLifecycleCommand(newData) {');
