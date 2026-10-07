@@ -29,21 +29,25 @@
 
 ## 현재 상태와 실기기 완료 조건
 
+2026-10-07 사용자가 경고 보완본의 운영 Rules 재배포1회를 `실행`으로 승인했다.
+408f163f 추적본을 재검토하고 동일 경고0 게이트·재시도 없는 게시 절차를 적용한다.
+
 실제 앱 도입은 805429c/d987bbd, 기존 빈자리 이동의 한도 보호는70a48ed,
 legacy Claim 신규 소유권 차수 검증은b6df18d, 완료 누락 방 선검사는900022d에 반영했다.
 최종 [Actions37582342297](https://github.com/heo0328/LostParty_flutter/actions/runs/37582342297)에서
 실제 추적 Rules의5개 검증 묶음 모두 통과했다(runtime30·완료역할27·8인 stub 변경/배치·수동22·개인15).
 접근/평가 한도 오류0건, 생성 일치·변경 파일 analyze·정적5건 통과.
 전체Flutter는 기존110실패/분석51건이 남아 있으며 기준본 대조 신규 테스트 실패0건이다.
-운영 게시는 실기기 전 차단 상태다. 1회 시도의 `/test`는HTTP200/오류0이나 경고3개가 반환돼
-경고0 조건에 따라 Ruleset 생성·release 갱신 전에 중단했다. 운영 활성 해시36b5920e... 유지 확인.
-원인: C 변환 후 호출이 없어진 `bug24PriorClaimAvailable`(`rf44`)의 unused 경고와 그 안의
-exists/get invalid-name 경고다. 호출0개를 assert하고 해당 선언만 로컬 제거했다.
-Claim 검사는 인증의 `sealAvailableBefore`에서 유지되며 실제 평가 조건 변경은 없다.
-로컬 최종 Rules SHA408f163fc6bf6f06d8a7a628da2e1b2bdd2747d36936d7b2aee995c161e53793,
-151427bytes, 재생성·정적5건·diff 검사 통과. 최종 원격 경고0/활성화는 아직 미확인이다.
-AGENTS.md §5에 따라 진단을 확인한 사용자의 새로운 재게시 지시 전에는 원격 요청을 반복하지 않는다.
-따라서 현재 앱을 기존 운영 Rules에 연결해 BUG-024 실기기 성공을 기대하면 안 된다.
+경고 보완본5c4eac5/408f163f(151427bytes)을 사용자 승인 후1회 재게시했다.
+`/test`200/경고0·오류0, `/rulesets`200/소스 일치이나 `/releases`PATCH400 INVALID_ARGUMENT로
+활성화 실패했다. 운영36b5920e 해시·기존 활성시각 유지 확인. 자동 재시도0회.
+실기기 착수는 계속 보류한다. [상세 진단](DEV_LOG.md)의 최신 재게시 기록을 따른다.
+
+다음 작업은 권한·원자성 검사를 보존하는 Rules 실행 코드 규모/구조 조사다.
+기존 활성 V1 executable242981bytes를 확인했고, source/compiled 한도는 별개다.
+실패 후보 내부 크기는 미확인으로 용량 초과를 확정하지 않는다. 동일408f163f 무변경 재게시나
+기능 삭제·검사 완화를 해결안으로 삼지 않는다. 보완 후보의 동등성·로컬 검증 후 추가 게시에는
+AGENTS.md §5에 따른 사용자의 새로운 지시가 필요하다.
 A 실패·C 선행 proof 이력은 [DEV_LOG](DEV_LOG.md)와 [Spark 설계](../architecture/RECURRING_CYCLE_SPARK_ALTERNATIVE_DESIGN.md)에 있다.
 
 사용자 실기기 확인은 최신 작업 브랜치 앱으로 두 실제 방에서 수행한다.

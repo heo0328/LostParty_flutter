@@ -7,10 +7,10 @@ atomic 변경 경로의 active 상태 제한을 확인했다. BUG-023 전체 완
 `fix/recurring-next-week-character-change`에서 Spark C를 실제 앱·추적 Rules에 도입했다.
 strict stub/소유권 조회·개인 완료/참가 호환·준비 재선택·advance 단건 인증을 연결했다.
 기존 빈자리 이동 평가 한도는 기존 전용 validator 직접 연결로 보완했다. 보호 검사는 유지한다.
-Functions/결제 변경 없음. 실제 추적본의 Rules5개 묶음 통과 후 운영1회 게시를 시도했으나,
-원격 컴파일 경고3개로 생성/활성화 전에 중단했다. 운영36b5920e 유지. 사용되지 않는 함수 선언만
-로컬에서 제거했고 사용자 재게시 지시를 기다린다. 실기기 착수는 운영 반영 뒤다.
-최종 검증·게시 진단과 두 실제 방의 실기기 항목은 실행 계획을 따른다.
+Functions/결제 변경 없음. 사용자 승인 재게시의 컴파일은경고0·오류0, Ruleset 생성 성공이나
+활성화PATCH400 INVALID_ARGUMENT로 운영 적용 실패했다. 기존36b5920e 활성 유지 확인.
+실기기 착수 보류. 실행 코드 규모/구조는 조사 가설이며 후보 내부 크기는 미확인이다.
+최종 검증·게시 진단과 다음 작업은 [실행 계획](NEXT_WORK.md), [DEV_LOG](DEV_LOG.md)를 따른다.
 BUG-024 미종료·dev/main 미통합이며 기존 공개 APK에는 새 앱 수정이 자동 포함되지 않는다.
 [실행 계획](NEXT_WORK.md), [분석·설계](../architecture/RECURRING_NEXT_WEEK_CHARACTER_CHANGE_DESIGN.md).
 

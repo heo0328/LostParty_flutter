@@ -1,5 +1,36 @@
 # 개발 이력
 
+## 2026-10-07 BUG-024 보완본 재게시 — 컴파일 통과·활성화 실패
+
+사용자가 경고 보완본의 재배포1회를 `실행`으로 승인했다. 필수 문서·기존 목적 브랜치5c4eac5·
+초기화 로컬 상태·firebase.json의firestore.rules·lost-party를 확인했다. 생성 일치와 이전5개 회귀
+묶음 결과를 대조했고, 코드 변경이 없어 Flutter/Emulator 검증을 반복하지 않았다.
+
+- 제출본:408f163fc6bf6f06d8a7a628da2e1b2bdd2747d36936d7b2aee995c161e53793 /151427bytes.
+- 단일 재게시 시도: `/test`200, 오류0/경고0. `/rulesets`200, 생성된 소스 해시도 제출본과 일치.
+  생성 Ruleset:907eaec9-fc9a-472d-b648-85c8d08cb8e6, 생성시각2026-10-07T08:13:12.876495Z.
+  `/releases`PATCH400 `INVALID_ARGUMENT: Request contains an invalid argument.` 활성화 실패.
+  자동 재시도·다른 release 생성·기능 삭제·권한 완화는 하지 않았다.
+- 운영 보호 확인: 읽기 전용 조회200, 기존Ruleset26621a37-ae16-45c4-9858-f10380439e28 및
+  SHA36b5920e7677b395192e47e05daeea1eec4512beaf19250bf6c5a82eff352e3d 유지.
+  운영 활성 시각2026-10-06T08:45:58.539478Z 유지. 생성 성공을 운영 적용 성공으로 기록하지 않는다.
+- 진단: PATCH 본문은Firebase CLI의updateRelease와 같은release.name/rulesetName 형태이며
+  [공식 PATCH 계약](https://firebase.google.com/docs/reference/rules/rest/v1/projects.releases/patch)과 대조했다.
+  기존 성공본 대비 source134301→151427bytes, 함수272→296, match34/allow118은 동일하다.
+  활성본getExecutable V1 읽기200:242981bytes. [공식 한도](https://firebase.google.com/docs/firestore/quotas)는
+  source256KB·compiled250KB를 구분한다. 실행 코드 크기/구조는 우선 조사 가설이며 원인 확정은 아니다.
+  실패 후보는 활성화되지 않아 해당release의getExecutable로 후보 실행 크기를 얻을 수 없다.
+  서버400 본문에는 상세원인/내부크기 정보가 없으므로 초과 수치를 추정해 확정하지 않는다.
+- 근거:coverage/bug024-rules-republish.json, bug024-rules-republish-active.json,
+  bug024-active-executable.json. 인증 토큰은 출력/저장하지 않았다.
+- 새 흐름·회귀 보호: 실제 코드와 기존 로컬 검증 결과는 유지. 이번 요청에서 기능 코드는 변경하지 않았다.
+  미확인 실기기 항목은 두 실제 방의 연속 변경·기기 간 반영·완료 보존·다음 주 전체 완료 그대로다.
+
+실기기 착수 보류, BUG-024 미종료·dev/main 미통합·목적 브랜치 유지. 경고 문제는 해소됐으나
+운영 활성화 문제가 남았다. 다음은 권한 검사를 보존하는 실행 코드 규모/구조 조사이며 같은408f163f의
+무변경 재게시를 해결안으로 삼지 않는다. 추가 게시에는 진단/보완 후 사용자의 새 지시가 필요하다.
+Functions·Indexes·Hosting·결제·실제 파티 데이터 변경 없음. 초기화 로컬 변경 보존.
+
 ## 2026-10-07 BUG-024 실제 앱·추적 Rules 도입과 실기기 전 검증
 
 사용자가 디바이스 준비 후 실기기 테스트 전까지 실제 수정을 승인했다. 목적 브랜치

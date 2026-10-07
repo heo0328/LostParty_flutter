@@ -1,6 +1,6 @@
 # 버그 리포트
 
-## BUG-024. 완료 반복방 다음 주 참가 캐릭터 변경 실패 (2026-10-07, 실제 앱 도입·컴파일 경고로 운영 반영 중단)
+## BUG-024. 완료 반복방 다음 주 참가 캐릭터 변경 실패 (2026-10-07, 실제 앱 도입·활성화400으로 운영 반영 보류)
 
 - 사용자 보고: BUG-023 완료 성공 후 다음 주 대기 상태의 두 방에서 모든 계정의 캐릭터 변경 실패.
 - 노르딘 모집/Ailker `EsDaq4qFhXe9SDXQv5eV`, 4막하드/니티안 `8CNzjWUjIE43uCjkvOye`.
@@ -10,9 +10,9 @@
 - 이번에 운영 데이터·런타임 요청 로그는 재조회하지 않았다. 두 요청의 정확한 반환 지점 재현은 미확인이다.
 - 현재 상태: 사용자가 실기기 테스트 전까지 실제 수정을 승인해 준비 전용 writer·후보 목적 분리,
   strict stub·개인 완료/참가 호환·준비 재선택·인증 선행 전환과 추적 Rules를 도입했다.
-  Rules5개 묶음은 통과했으나1회 게시 시도에서 컴파일 경고3개로 생성/활성화 전에 중단했다.
-  운영은 기존36b5920e 유지. unused 함수 선언만 로컬 제거했으며 재게시에는 사용자 새 지시가 필요하다.
-  최종 검증·게시 진단과 두 실제 방 체크리스트는 [NEXT_WORK](NEXT_WORK.md)를 따른다.
+  Rules5개 묶음 통과. 경고 보완본 재게시에서 컴파일경고0·Ruleset 생성 성공이나
+  활성화PATCH400 INVALID_ARGUMENT로 실패했다. 운영36b5920e 유지, 실기기 착수 보류.
+  최종 검증·게시 진단과 후속 조사는 [NEXT_WORK](NEXT_WORK.md)를 따른다.
   실기기 확인 전 버그 종료나 dev/main 통합은 하지 않는다.
 - 설계: [원래 보존 계약](../architecture/RECURRING_NEXT_WEEK_CHARACTER_CHANGE_DESIGN.md),
   [Spark C 실제 도입](../architecture/RECURRING_CYCLE_SPARK_ALTERNATIVE_DESIGN.md).
