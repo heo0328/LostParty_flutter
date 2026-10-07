@@ -9,6 +9,10 @@
   v1.1.0에도 mapper 제한이 있어 BUG-023 역할 보완으로 새로 생긴 조건은 아니다.
 - 이번에 운영 데이터·런타임 요청 로그는 재조회하지 않았다. 두 요청의 정확한 반환 지점 재현은 미확인이다.
 - 상태: 준비 전용 writer·후보 목적 분리·전환 보호 후보를 구현했으나 8인 접근/평가 한도 및 기존 전환·빈자리 이동 회귀로 배포 불가. BUG-024 22/30 성공, 8개 실패. 운영 게시 0회. 사용자 승인으로 [서버 트랜잭션 후속 설계](../architecture/RECURRING_CYCLE_SERVER_TRANSACTION_DESIGN.md) 후 Spark 유지 결정으로 서버안 중단. [무료 대안 재설계](../architecture/RECURRING_CYCLE_SPARK_ALTERNATIVE_DESIGN.md), 8인 한도 증명 대기. 실기기 확인 전 종료하지 않는다. [원래 설계](../architecture/RECURRING_NEXT_WEEK_CHARACTER_CHANGE_DESIGN.md).
+- Spark A 실행: Actions37572942042의 격리 준비 분산 후보는 5개 정상 전환에서 한도 실패하여 배포 불가.
+  운영 성공본 완료·정상 전환27건은 통과했다. 빈자리 이동은 운영 성공본에서도 실패해 이번 후보만의
+  회귀로 단정했던 판단을 정정한다. 부정 요청의 service 접근 오류를 성공에서 제외하는 재검증 결과는 DEV_LOG 참조.
+  다음 상태 metadata/idle 확장 C는 미승인·미구현 후보이며 현재 저장 구조의 해결안이 완성된 것은 아니다.
 
 
 ## BUG-023. 캐릭터 변경 후 반복 모집 전체 완료 실패 (2026-10-06 완료)

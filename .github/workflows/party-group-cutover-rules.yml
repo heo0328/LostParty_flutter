@@ -51,6 +51,7 @@ on:
           - bug024-budget
           - bug024-spark
           - bug024-spark-rejections
+          - bug024-spark-seal
       case:
         description: Rules regression scope
         type: choice
@@ -383,6 +384,12 @@ jobs:
             node tools/integrate_roster_rules.mjs --check --review
             node tools/bug024_spark_preparation_candidate.mjs --generate
             proof_command="BUG024_FILTER='^reject|^preserve' BUG024_SPARK_EVENT=1 BUG024_RULES_FILE=coverage/bug024/spark/preparation-distributed.rules BUG024_EVIDENCE_DIR=coverage/bug024/spark/strict-rejections node tools/bug024_preparation_proof.mjs"
+          fi
+          if [[ "$LEADER_PROOF_SCOPE" == bug024-spark-seal ]]; then
+            node tools/integrate_roster_rules.mjs --check --review
+            node tools/bug024_spark_preparation_candidate.mjs --generate
+            node tools/bug024_spark_seal_candidate.mjs
+            proof_command="node tools/bug024_spark_seal_proof.mjs"
           fi
           npx --yes firebase-tools@15.29.0 emulators:exec --config firebase.json --only firestore --project demo-party-group-cutover "$proof_command"
 

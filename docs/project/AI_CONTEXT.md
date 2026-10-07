@@ -4,12 +4,12 @@
 
 완료 반복방의 다음 주 참가 캐릭터 변경이 문서/멤버 없음 안내로 실패한다.
 atomic 변경 경로의 active 상태 제한을 확인했다. BUG-023 전체 완료 성공과 구분한다.
-dev 기준 `fix/recurring-next-week-character-change`의 구현 후보는 8인 Rules 한도·회귀 실패로 배포 보류다.
-서버 설계 후 운영 조회에서 결제 미연결·Functions API 미사용/비활성을 확인했다.
-사용자는 Spark 무료 유지·서버안 중단·무료 대안 재설계를 확정했다.
-[무료 대안 설계](../architecture/RECURRING_CYCLE_SPARK_ALTERNATIVE_DESIGN.md)는 현재 구조의 준비 검사 분산과
-8인 전환 가능 여부를 먼저 증명하고, 실패 시 단일 원장 이행을 별도 검토한다. 한도 통과는 미입증이다.
-Functions 구현/배포·결제 연결 없음, 운영 Rules 게시 0회. BUG-024는 열린 상태다.
+`fix/recurring-next-week-character-change`에서 Spark 무료 대안 A의 격리 Rules 후보를 구현·검증했다.
+운영 성공본의 완료/정상 전환27건 통과, A 후보는 준비 뒤 5개 정상 전환의 한도 실패로 배포 불가다.
+빈자리 이동 한도 실패는 운영 성공본에서도 같아 이번 후보만의 회귀로 단정한 판단을 정정했다.
+[무료 대안과 실행 결과](../architecture/RECURRING_CYCLE_SPARK_ALTERNATIVE_DESIGN.md): 다음 C는 기존 state의
+검증 표식·idle 확장 후보다. 사용자가 상세 설계·격리된 8인 선행 proof를 승인했으며 운영 도입은 하지 않는다.
+Spark 유지·서버안 중단. Functions/결제/운영 Rules 변경0회, BUG-024 미종료, dev/main 미통합.
 [실행 계획](NEXT_WORK.md), [분석·설계](../architecture/RECURRING_NEXT_WEEK_CHARACTER_CHANGE_DESIGN.md).
 
 ## 최신 공개 릴리즈 — Android 1.1.1+3 (2026-10-06)

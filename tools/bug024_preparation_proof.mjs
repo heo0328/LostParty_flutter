@@ -152,6 +152,7 @@ async function check(name, work) {
   try { await work(); results.push({ name, passed: true }); console.log(`PASS BUG024 ${name}`); }
   catch (e) { results.push({ name, passed: false, error: e.message }); console.error(`FAIL BUG024 ${name}: ${e.message}`); }
 }
+if (process.env.BUG024_IMPORT_ONLY !== '1') {
 try {
   await check('8-member preparation preserves states/claims/completion event, repeated changes', async () => {
     await seed({ actorLast: true }); const before = await snapshot();
@@ -252,3 +253,5 @@ fs.mkdirSync(evidenceDir, { recursive: true });
 fs.writeFileSync(`${evidenceDir}/results.json`, JSON.stringify(results, null, 2));
 assert.ok(results.every(r => r.passed), `${results.filter(r => !r.passed).length} BUG024 failures`);
 console.log(`BUG024: ${results.length} passed; demo Emulator only.`);
+}
+export { env, db, admin, snapshot, seed, prepare, advance, denied, lifecycle, replacement, second };
