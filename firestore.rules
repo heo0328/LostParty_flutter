@@ -1891,6 +1891,9 @@ allow update: if (request.resource.data.diff(resource.data).affectedKeys().hasAn
 ? (request.resource.data.get('recruitmentId', null) is string && rf40(getAfter(rf7(request.resource.data.recruitmentId)).data)
 ? rf36(playerId, stateId, resource.data, request.resource.data)
 : rf128(playerId, stateId, resource.data, request.resource.data))
+: ((request.resource.data.get('source', '') == 'manual'
+&& rf170(resource.data, playerId, request.resource.data.characterId, request.resource.data.raidId, request.resource.data.get('ownershipRevision', 0)))
+? rf134(playerId, stateId, request.resource.data)
 : ((resource.data.get('status', '') == 'active' && request.resource.data.get('status', '') == 'active'
 && request.resource.data.get('source', '') == 'party'
 && rf40(getAfter(rf7(request.resource.data.recruitmentId)).data))
@@ -1915,7 +1918,7 @@ playerId,
 stateId,
 resource.data,
 request.resource.data
-)))))));
+))))))));
 allow delete: if (resource.data.status == 'completed'
 && rf136(
 playerId,
@@ -3323,7 +3326,13 @@ recruitmentId,
 playerId,
 request.resource.data
 );
-allow update: if ((request.resource.data.characterId != resource.data.characterId && rf39(get(rf7(recruitmentId)).data)) || rf41(get(rf7(recruitmentId)).data, getAfter(rf7(recruitmentId)).data)) ? (rf52(recruitmentId, playerId, resource.data, request.resource.data)) : ((rf165(recruitmentId)) ? (request.resource.data.characterId == resource.data.characterId && request.resource.data.get('ownershipRevision', 0) == resource.data.get('ownershipRevision', 0) && rf168(resource.data) && rf226(recruitmentId, playerId, resource.data, request.resource.data)) : (((request.resource.data.characterId == resource.data.characterId
+allow update: if
+(request.resource.data.characterId != resource.data.characterId
+&& get(rf7(recruitmentId)).data.schemaVersion == 2
+&& get(rf7(recruitmentId)).data.currentCycleStatus == 'active')
+? (rf60(resource.data)
+&& rf224(recruitmentId, playerId, resource.data, request.resource.data))
+: (((request.resource.data.characterId != resource.data.characterId && rf39(get(rf7(recruitmentId)).data)) || rf41(get(rf7(recruitmentId)).data, getAfter(rf7(recruitmentId)).data)) ? (rf52(recruitmentId, playerId, resource.data, request.resource.data)) : ((rf165(recruitmentId)) ? (request.resource.data.characterId == resource.data.characterId && request.resource.data.get('ownershipRevision', 0) == resource.data.get('ownershipRevision', 0) && rf168(resource.data) && rf226(recruitmentId, playerId, resource.data, request.resource.data)) : (((request.resource.data.characterId == resource.data.characterId
 && request.resource.data.get('ownershipRevision', 0) == resource.data.get('ownershipRevision', 0))
 || (rf60(resource.data) && rf60(request.resource.data)))
 && ((request.resource.data.diff(resource.data).affectedKeys()
@@ -3344,7 +3353,7 @@ recruitmentId,
 playerId,
 resource.data,
 request.resource.data
-)))));
+))))));
 allow delete: if (rf165(recruitmentId)) ? (rf222(recruitmentId, playerId, resource.data)) : ((rf82(recruitmentId)) ? (rf218(recruitmentId, playerId, resource.data)) : (rf216(recruitmentId, playerId, resource.data) || rf219(recruitmentId, playerId, resource.data) || rf221(
 recruitmentId,
 playerId,

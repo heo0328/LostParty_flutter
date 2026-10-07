@@ -4,9 +4,9 @@ import { isDeepStrictEqual } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import {
   initializeTestEnvironment,
-  assertFails,
   assertSucceeds,
 } from '@firebase/rules-unit-testing';
+import { assertRulesDenied as assertFails } from './assert_rules_denied.mjs';
 import {
   collection,
   doc,

@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
+import { initializeTestEnvironment, assertSucceeds } from '@firebase/rules-unit-testing';
+import { assertRulesDenied as assertFails } from './assert_rules_denied.mjs';
 import { doc, collection, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
 import { personalCompletionCandidate } from './roster_personal_completion_candidate.mjs';
 import { manualCompletionCandidate } from './roster_manual_completion_candidate.mjs';

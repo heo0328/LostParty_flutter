@@ -41,6 +41,31 @@ export function availabilityRuntime(input) {
   replace(`? (${audit})`, `? (${audit} || sealNormalReplacement(playerId, stateId, resource.data, request.resource.data))`);
   replace('? sealAdvanceIdle(playerId, stateId, resource.data, request.resource.data)',
     '? (request.resource.data.get(\'recruitmentId\', null) is string && bug24Advancing(getAfter(recruitmentPath(request.resource.data.recruitmentId)).data)\n        ? sealAdvanceIdle(playerId, stateId, resource.data, request.resource.data)\n        : sealParticipateIdle(playerId, stateId, resource.data, request.resource.data))');
+  // A known older manual record is exclusively the existing replacement path.
+  // Do not evaluate unrelated participation branches after a Claim denial.
+  replace(': ((resource.data.get(\'status\', \'\') == \'active\' && request.resource.data.get(\'status\', \'\') == \'active\'',
+    `: ((request.resource.data.get('source', '') == 'manual'
+        && deOlderState(resource.data, playerId, request.resource.data.characterId, request.resource.data.raidId, request.resource.data.get('ownershipRevision', 0)))
+      ? validManualRaidStateCreate(playerId, stateId, request.resource.data)
+      : ((resource.data.get('status', '') == 'active' && request.resource.data.get('status', '') == 'active'`);
+  // Close the additional conditional surrounding the prior update expression.
+  const stateMatch = source.indexOf('      match /raidStates/{stateId}');
+  const update = source.indexOf('        allow update:', stateMatch);
+  const updateEnd = source.indexOf(';', update);
+  source = source.slice(0, updateEnd) + ')' + source.slice(updateEnd);
+
+  const memberMatch = source.indexOf('      match /members/{playerId} {');
+  const memberUpdate = source.indexOf('        allow update:', memberMatch);
+  const memberEnd = source.indexOf(';', memberUpdate);
+  const existing = source.slice(memberUpdate + '        allow update: if '.length, memberEnd);
+  assert.ok(existing.includes('bug24PrepMember(') && existing.includes('validAtomicMemberCharacterChange('));
+  source = source.slice(0, memberUpdate) + `        allow update: if
+    (request.resource.data.characterId != resource.data.characterId
+      && get(recruitmentPath(recruitmentId)).data.schemaVersion == 2
+      && get(recruitmentPath(recruitmentId)).data.currentCycleStatus == 'active')
+      ? (deCurrentOwnership(resource.data)
+        && validAtomicMemberCharacterChange(recruitmentId, playerId, resource.data, request.resource.data))
+      : (${existing})` + source.slice(memberEnd);
   replace('(!exists(newPath) || sparkPrepKnownCompleted(get(newPath).data,',
     '(!exists(newPath) || sealIdle(get(newPath).data) || sparkPrepKnownCompleted(get(newPath).data,');
   // Same stub identity/generation is proved by the membership and live ownership
