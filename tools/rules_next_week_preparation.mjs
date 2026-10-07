@@ -29,9 +29,10 @@ export function nextWeekPreparation(source) {
         && data.playerId == playerId && data.characterId == characterId && data.raidId == raidId
         && data.revision is int && data.revision >= 1
         && data.cycleKey is string && data.cycleKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-        && data.source in ['manual', 'party'] && data.role in ['dealer', 'support']
+        && data.source in ['manual', 'party']
+        && (data.source == 'manual' ? data.get('role', null) == null || data.role in ['dealer', 'support'] : data.role in ['dealer', 'support'])
         && data.difficultyId is string && data.difficultyId.size() > 0
-        && deCurrentOwnership(data);
+        && deManualCurrentOwnership(data);
     }
     function bug24CommandIncludes(room, playerId, stateId) {
       return room.commandTargets.size() <= 8
@@ -171,7 +172,7 @@ export function nextWeekPreparation(source) {
   const advanceCreate = source.slice(advanceCreateStart, advanceCreateEnd);
   source = source.slice(0, advanceCreateStart) + advanceCreate.replace(
     'atomicCommandIncludes(recruitment, playerId, stateId)',
-    'bug24CommandIncludes(recruitment, playerId, stateId)') + source.slice(advanceCreateEnd);
+    'bug24CommandIncludes(recruitment, playerId, stateId)').replace('deCurrentOwnership(data)', 'deManualCurrentOwnership(data)') + source.slice(advanceCreateEnd);
   // Discriminators are already mandatory in the selected validators. Keep
   // complete off unrelated fallback paths, preserving its eight-member budget.
   const stateMatch = source.indexOf('      match /raidStates/{stateId}');
@@ -195,7 +196,7 @@ export function nextWeekPreparation(source) {
               || deReplacePriorState(playerId, stateId, resource.data, request.resource.data))
             : (${priorUpdate}))` + source.slice(updateEnd);
   replaceOnce("&& !newData.diff(oldData).affectedKeys().hasAny(['role'])",
-    "&& oldData.cycleKey < newData.cycleKey\n            && bug24AssignmentAvailable(newData)\n            && bug24PriorClaimAvailable(newData)\n            && !deBlockingClaim(playerId, newData.cycleKey, newData.characterId, newData.raidId, newData.get('ownershipRevision', 0))\n            && !newData.diff(oldData).affectedKeys().hasAny(['role'])");
+    "&& oldData.cycleKey < newData.cycleKey\n            && deManualCurrentOwnership(newData)\n            && bug24AssignmentAvailable(newData)\n            && bug24PriorClaimAvailable(newData)\n            && !deBlockingClaim(playerId, newData.cycleKey, newData.characterId, newData.raidId, newData.get('ownershipRevision', 0))\n            && !newData.diff(oldData).affectedKeys().hasAny(['role'])");
   replaceOnce('        && atomicAdvanceStateMatchesSlot(recruitment, data);',
     "        && atomicAdvanceStateMatchesSlot(recruitment, data)\n        && bug24AssignmentAvailable(data)\n        && bug24PriorClaimAvailable(data)\n        && !deBlockingClaim(playerId, data.cycleKey, data.characterId, data.raidId, data.get('ownershipRevision', 0));");
   return source;

@@ -6,11 +6,13 @@ import { doc, collection, getDocs, getDoc, setDoc, updateDoc, deleteDoc,
   runTransaction, serverTimestamp, increment, deleteField, Timestamp } from 'firebase/firestore';
 import { authUid, playerId, recruitmentId, raidId, cycleKey, cycleWindow,
   seedGroupLinkedRoom } from './party_group_cutover_rules_test.mjs';
+const rulesPath = process.env.BUG024_RULES_FILE || 'firestore.rules';
+const evidenceDir = process.env.BUG024_EVIDENCE_DIR || 'coverage/bug024';
 process.env.ROSTER_TRACKED_RULES = '1';
-process.env.ROSTER_COMPLEXITY_RULES_FILE = 'firestore.rules';
+process.env.ROSTER_COMPLEXITY_RULES_FILE = rulesPath;
 const { seedRoom, lifecycle } = await import('./roster_ownership_rules_proof.mjs');
 const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutover',
-  firestore: { host: '127.0.0.1', port: 8080, rules: fs.readFileSync('firestore.rules', 'utf8') } });
+  firestore: { host: '127.0.0.1', port: 8080, rules: fs.readFileSync(rulesPath, 'utf8') } });
 const db = env.authenticatedContext(authUid).firestore();
 const replacement = 'bug024replacement001';
 const second = 'bug024replacement002';
@@ -61,7 +63,7 @@ async function seed({ targetState = 'absent', missingListing = false, actorLast 
         source: targetState === 'manual' ? 'manual' : 'party',
         status: targetState === 'active' ? 'active' : 'completed',
         cycleKey: targetState === 'current' ? cycleKey : original.cycleKey };
-      if (targetState === 'manual') state.recruitmentId = null;
+      if (targetState === 'manual') { state.recruitmentId = null; delete state.role; }
       await setDoc(doc(adb, 'players', playerId, 'raidStates', `${replacement}_${raidId}`), state);
     }
     if (actorLast) {
@@ -184,6 +186,11 @@ try {
   await check('reject target ownership lost at advance', async () => {
     await seed(); await prepare(); await admin(adb => updateDoc(doc(adb, 'characters', replacement), { ownershipRevision: 2 })); await denied(() => advance());
   });
+  await check('reject target account deactivated at advance', async () => {
+    await seed(); await prepare();
+    await admin(adb => updateDoc(doc(adb, 'gameAccounts', `bug024-account-${playerId}`), { status: 'inactive' }));
+    await denied(() => advance());
+  });
   await check('reject other room occupancy acquired after preparation', async () => {
     await seed({ targetState: 'foreign' }); await prepare();
     await admin(adb => updateDoc(doc(adb, 'players', playerId, 'raidStates', `${replacement}_${raidId}`), { status: 'active' })); await denied(() => advance());
@@ -230,12 +237,12 @@ try {
 } finally {
   if (process.env.BUG024_DIAGNOSIS === '1') {
     const coverage = await fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-party-group-cutover:ruleCoverage').then(r => r.text());
-    fs.mkdirSync('coverage/bug024', { recursive: true });
-    fs.writeFileSync('coverage/bug024/ruleCoverage.json', coverage);
+    fs.mkdirSync(evidenceDir, { recursive: true });
+    fs.writeFileSync(`${evidenceDir}/ruleCoverage.json`, coverage);
   }
   await env.cleanup();
 }
-fs.mkdirSync('coverage/bug024', { recursive: true });
-fs.writeFileSync('coverage/bug024/results.json', JSON.stringify(results, null, 2));
+fs.mkdirSync(evidenceDir, { recursive: true });
+fs.writeFileSync(`${evidenceDir}/results.json`, JSON.stringify(results, null, 2));
 assert.ok(results.every(r => r.passed), `${results.filter(r => !r.passed).length} BUG024 failures`);
 console.log(`BUG024: ${results.length} passed; demo Emulator only.`);
