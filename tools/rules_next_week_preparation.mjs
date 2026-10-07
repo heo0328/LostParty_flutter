@@ -16,6 +16,9 @@ export function nextWeekPreparation(source) {
       return hasActiveBinding() && data.schemaVersion == 2 && data.status == 'active'
         && data.continueTogether == true && data.currentCycleStatus == 'completed';
     }
+    function bug24Advancing(data) {
+      return data.get('lastCommandType', null) == 'advanceCycle' && data.lastCommandAt == request.time;
+    }
     function bug24PrepDispatch(before, after) {
       return before.currentCycleStatus == 'completed'
         && after.memberCount == before.memberCount && after.lastCommandType == null
@@ -121,6 +124,14 @@ export function nextWeekPreparation(source) {
   dispatchUpdate('      match /raidListings/{recruitmentId}',
     'bug24PrepDispatch(get(recruitmentPath(recruitmentId)).data, getAfter(recruitmentPath(recruitmentId)).data)',
     'validGroupRaidListingCreate(groupId, recruitmentId, request.resource.data)');
+  // Lifecycle shape already forces unchanged slots/targets, making the
+  // changed-slot generation wrapper redundant on this exact command path.
+  dispatchUpdate('    match /recruitments/{recruitmentId}',
+    'bug24Advancing(request.resource.data)',
+    'validAtomicLifecycleUpdate(resource.data, request.resource.data)');
+  dispatchUpdate('      match /raidListings/{recruitmentId}',
+    'bug24Advancing(getAfter(recruitmentPath(recruitmentId)).data)',
+    'validAtomicLifecycleListingUpdate(recruitmentId, request.resource.data)');
   // Legacy assignment checks must not authorize an isolated V2 prep member write.
   replaceOnce('      return membershipFieldsOk\n        && (nextWeekPrep',
     "      return membershipFieldsOk\n        && !(recruitment.schemaVersion == 2 && nextWeekPrep)\n        && (nextWeekPrep");
@@ -152,6 +163,14 @@ export function nextWeekPreparation(source) {
   // Discriminators are already mandatory in the selected validators. Keep
   // complete off unrelated fallback paths, preserving its eight-member budget.
   const stateMatch = source.indexOf('      match /raidStates/{stateId}');
+  const createStart = source.indexOf('        allow create: if ', stateMatch);
+  const createEnd = source.indexOf(';', createStart);
+  const priorCreate = source.slice(createStart + '        allow create: if '.length, createEnd);
+  source = source.slice(0, createStart) + `        allow create: if
+        request.resource.data.keys().hasAll(['source', 'recruitmentId', 'characterId', 'raidId', 'revision'])
+        && ((request.resource.data.source == 'party' && bug24Advancing(getAfter(recruitmentPath(request.resource.data.recruitmentId)).data))
+          ? validAtomicAdvanceRaidStateCreate(playerId, stateId, request.resource.data)
+          : (${priorCreate}))` + source.slice(createEnd);
   const updateStart = source.indexOf('        allow update: if ', stateMatch);
   const updateEnd = source.indexOf(';', updateStart);
   assert.ok(stateMatch >= 0 && updateStart > stateMatch && updateEnd > updateStart);
