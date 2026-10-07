@@ -1,9 +1,29 @@
 # BUG-024 서버 트랜잭션 후속 설계
 
-2026-10-07. 상태: 사용자 승인에 따른 **설계 완료, 구현·배포 미착수**.
+2026-10-07. 상태: 설계 후 구현 진행 지시를 받았으나 **사용자 Spark 유지 결정으로 서버안 중단**.
 기존 목적 브랜치 `fix/recurring-next-week-character-change`를 재사용한다.
 [준비 변경의 제품·저장 계약](RECURRING_NEXT_WEEK_CHARACTER_CHANGE_DESIGN.md)은 유지한다.
-이번 승인은 기존 계획 §5의 구조 변경 제외를 서버 처리 설계에 한해 확장한다.
+설계 승인은 기존 계획 §5의 구조 변경 제외를 서버 처리 설계에 한해 확장했다.
+이후 구현 진행 지시를 받았지만 결제 연결·유료 플랜 전환까지 승인받은 것으로 해석하지 않는다.
+
+## 구현 착수 전 확인한 운영 전제 — 결정 필요
+
+2026-10-07 운영 API를 읽기 전용으로 조회했다. Firestore는 `asia-northeast3`의 Native DB이며,
+Cloud Billing 응답은 `billingEnabled=false`다. Functions v2 목록 조회는 API 미사용/비활성 403으로
+실패했다. 이것은 Functions 목록이 비어 있다는 확인이 아니다. API 활성화·결제 연결·배포는 하지 않았다.
+
+[기존 명령 계약 §1](FIRESTORE_PARTY_COMMAND_CONTRACT.md)은 별도 지시 전 Spark만 사용하고
+결제수단 연결·유료 플랜·초과 과금 가능 기능·Functions를 제외한다.
+[기존 신뢰 서버 설계 §2](TRUSTED_PARTY_JOIN_COMMAND_DESIGN.md)도 Blaze/결제 및 운영 전제 결정을 요구한다.
+Cloud Functions는 로컬 에뮬레이션과 달리 운영 배포에 Blaze가 필요하다.
+[Firebase 공식 조건](https://firebase.google.com/docs/functions/get-started).
+
+이 비용 전제를 후속 설계 승인 전에 해소하지 못한 것은 설계의 누락이다.
+설계 승인과 일반 구현 진행 지시를 유료 전환 승인으로 취급하지 않는다.
+사용자는 Spark 무료 유지·현재 서버안 중단·무료 대안 재설계를 선택했다.
+[무료 대안 설계](RECURRING_CYCLE_SPARK_ALTERNATIVE_DESIGN.md)가 현재 기준이다.
+선택은 Blaze 도입을 전제로 한 로컬 구현·검증(운영 설정·배포 별도) 또는 Spark 유지와 무료 범위 재설계다.
+Spark 유지 시 클라이언트 proof를 신뢰하거나 권한 검사를 완화하는 방식은 대안으로 사용하지 않는다.
 
 ## 전환 근거와 검증 한계
 
@@ -38,7 +58,7 @@ cycle adapter는 슬롯으로 targets를 만들고 클라이언트의 다음 주
 atomic Repository는 authBindings·모집을 읽지만 전환 대상 state는 읽지 않고 upsert한다.
 새 서버는 이 클라이언트 정보를 권한의 근거로 사용하지 않는다.
 로컬 firebase.json에는 Functions 설정이 없고 pubspec에는 cloud_functions/App Check 연결이 없다.
-운영 Functions 존재·DB 리전·결제/할당량·IAM 상태는 이번 조사에서 확인하지 않았다.
+운영 DB 리전·결제 연결은 위 착수 전 확인 결과를 따른다. Functions 목록·할당량·IAM 상태는 미확인이다.
 
 ## 명령 경계와 앱 연결
 
@@ -166,4 +186,4 @@ ownershipLost, occupied, stateInconsistent, invalidRequest, temporarilyUnavailab
 6. 사용자가 두 실제 방에서 변경·기기 간 반영·완료 보존·다음 주 전체 완료를 확인한 뒤 버그를 종료하고
    최종 문서·검증 결과를 dev에 통합한다. 현재 설계 완료는 BUG-024 해결 완료가 아니다.
 
-이번 설계 단계에서는 함수 코드/의존성/Rules를 추가 수정하거나 Functions·Rules·앱을 배포하지 않는다.
+이 서버안은 중단했다. 함수 코드/의존성/Functions 초기화·배포·결제 연결을 진행하지 않는다.
