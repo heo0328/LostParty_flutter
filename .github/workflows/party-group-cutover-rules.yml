@@ -362,7 +362,7 @@ jobs:
           fi
           if [[ "$LEADER_PROOF_SCOPE" == bug024 ]]; then
             node tools/integrate_roster_rules.mjs --check --review
-            proof_command="node tools/bug024_preparation_proof.mjs && node tools/party_completion_role_proof.mjs && PARTY_RULES_CASE=character-placement node tools/party_group_cutover_rules_test.mjs"
+            proof_command="node tools/bug024_regression_runner.mjs"
           fi
           if [[ "$LEADER_PROOF_SCOPE" == bug024-diagnosis ]]; then
             node tools/integrate_roster_rules.mjs --check --review
