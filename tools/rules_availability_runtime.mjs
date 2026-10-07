@@ -15,6 +15,13 @@ export function availabilityRuntime(input) {
   const absentCalls = /validAtomicAdvanceRaidStateCreate\(\s*playerId,\s*stateId,\s*request\.resource\.data\s*\)/g;
   assert.equal([...source.matchAll(absentCalls)].length, 2);
   source = source.replace(absentCalls, 'false');
+  // Certification now checks the before Claim in sealAvailableBefore. The
+  // old final-transition-only wrapper has no callers after the C transform.
+  // Remove only that unreachable declaration; do not remove its shared helpers.
+  assert.equal([...source.matchAll(/\bbug24PriorClaimAvailable\s*\(/g)].length, 1);
+  const obsoleteClaim = /    function bug24PriorClaimAvailable\(data\) \{\s*let path = weeklyRaidClaimPath\(data\.playerId, data\.cycleKey, data\.characterId, data\.raidId\);\s*return !exists\(path\) \|\| deOlderRecord\(get\(path\)\.data,\s*data\.playerId, data\.characterId, data\.raidId, data\.get\('ownershipRevision', 0\)\);\s*\}/;
+  assert.ok(obsoleteClaim.test(source));
+  source = source.replace(obsoleteClaim, '');
   function replace(before, after) {
     assert.equal(source.split(before).length, 2, before);
     source = source.replace(before, () => after);

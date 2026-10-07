@@ -4,13 +4,14 @@
 
 완료 반복방의 다음 주 참가 캐릭터 변경이 문서/멤버 없음 안내로 실패한다.
 atomic 변경 경로의 active 상태 제한을 확인했다. BUG-023 전체 완료 성공과 구분한다.
-`fix/recurring-next-week-character-change`에서 Spark 무료 대안 A의 격리 Rules 후보를 구현·검증했다.
-운영 성공본의 완료/정상 전환27건 통과, A 후보는 준비 뒤 5개 정상 전환의 한도 실패로 배포 불가다.
-빈자리 이동 한도 실패는 운영 성공본에서도 같아 이번 후보만의 회귀로 단정한 판단을 정정했다.
-[무료 대안과 실행 결과](../architecture/RECURRING_CYCLE_SPARK_ALTERNATIVE_DESIGN.md): 다음 C는 기존 state의
-검증 표식·idle 확장 후보다. 승인된 상세 설계·격리된 8인 선행 proof는c844d95/Actions37575254780에서25/25 통과했다.
-실제 앱 stub 처리·개인 완료/참가 writer 호환·구버전 롤아웃은 미구현이며 운영 도입은 하지 않았다.
-Spark 유지·서버안 중단. Functions/결제/운영 Rules 변경0회, BUG-024 미종료, dev/main 미통합.
+`fix/recurring-next-week-character-change`에서 Spark C를 실제 앱·추적 Rules에 도입했다.
+strict stub/소유권 조회·개인 완료/참가 호환·준비 재선택·advance 단건 인증을 연결했다.
+기존 빈자리 이동 평가 한도는 기존 전용 validator 직접 연결로 보완했다. 보호 검사는 유지한다.
+Functions/결제 변경 없음. 실제 추적본의 Rules5개 묶음 통과 후 운영1회 게시를 시도했으나,
+원격 컴파일 경고3개로 생성/활성화 전에 중단했다. 운영36b5920e 유지. 사용되지 않는 함수 선언만
+로컬에서 제거했고 사용자 재게시 지시를 기다린다. 실기기 착수는 운영 반영 뒤다.
+최종 검증·게시 진단과 두 실제 방의 실기기 항목은 실행 계획을 따른다.
+BUG-024 미종료·dev/main 미통합이며 기존 공개 APK에는 새 앱 수정이 자동 포함되지 않는다.
 [실행 계획](NEXT_WORK.md), [분석·설계](../architecture/RECURRING_NEXT_WEEK_CHARACTER_CHANGE_DESIGN.md).
 
 ## 최신 공개 릴리즈 — Android 1.1.1+3 (2026-10-06)

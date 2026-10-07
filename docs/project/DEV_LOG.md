@@ -1,5 +1,59 @@
 # 개발 이력
 
+## 2026-10-07 BUG-024 실제 앱·추적 Rules 도입과 실기기 전 검증
+
+사용자가 디바이스 준비 후 실기기 테스트 전까지 실제 수정을 승인했다. 목적 브랜치
+`fix/recurring-next-week-character-change`를 재사용하고 초기화 파일의 로컬 상태는 보존·커밋 제외했다.
+805429c/d987bbd에서 strict availability-only parser·소유권 분류·후보/참가/개인 완료 호환,
+준비 event metadata와 advance 단건 인증을 앱·추적 Rules 생성 pipeline에 연결했다.
+
+- 새로 가능해진 흐름: 완료 반복방의 A→B→C 준비 변경, 완료 캐릭터 선택, stub 재선택,
+  8인 대상별 인증 뒤 absent/같은 방/다른 방/다른 역할·난이도/manual 완료의 다음 주 전환과 전체 완료.
+  인증 일부 성공 후 실패해도 구성·참가·완료의 핵심 상태는 부분 전환하지 않는다.
+- 보존 확인: 준비 중 이전/새 state·Claim·완료 이벤트, 인증 중 기존 완료 core 필드/revision,
+  정상 active 전환·BUG-023 역할 보완/전체 완료, 빈자리 이동·목록 동기화, 개인 완료/해제·승계·단독 해산.
+  위조 인증·부분 전환·현재 완료/legacy 점유·소유권/구성 경합·부분 표식 제거를 거절한다.
+- 보완:70a48ed는 진행 중 캐릭터 변경·이전 소유권 manual 대체를 기존 전용 validator에 직접 연결해
+  unrelated fallback 평가를 피한다. b6df18d는 새 legacy Claim이 이전 소유권 차수로 위장하지 못하도록
+  현재 차수를 검증한다. 누락 차수는 live0일 때만 허용하며 기존 과거 자료 읽기는 유지한다.
+- 부정 요청 검사 강화: 접근/evaluation exhaustion은 정상 거절로 세지 않는다. 강화한 완료 proof에서
+  reject-room 한도를 발견해c01410c에서 lifecycle 전용 dispatch와 state 방 일치 선검사를 추가했다.
+  해당 명령 판정의 중복이8인 개인 완료 한도를 넘겨142ac05에서 같은 type 집합 판정 한 번으로 합쳤다.
+  4ad321f의8인 stub 경계는 통과했으나 같은 소스의 reject-room 한도가 다시 나타났다.
+  원래·요청 state 모두 잘못된 방 ID를 보존해 단순 ID 일치만으로는 누락 방 조회를 막지 못했다.
+  900022d에서 완료 state의 연결 방 존재를 먼저 검사하도록 보완했다.
+  권한·소유권·원자성·목록·이벤트 검사는 삭제하거나 완화하지 않았다.
+- 검증: [Actions37582342297](https://github.com/heo0328/LostParty_flutter/actions/runs/37582342297)
+  실제 추적 Rules의5개 묶음 모두 통과: runtime30건, 완료 역할27건(기준/후보), 캐릭터 배치,
+  수동 완료22건, 개인 완료15건. 원시 로그의1000식/service call error0건.
+  8인 활성 변경이 strict stub을 대체하며 인증을 전부 무효화하는 추가 경계도 통과했다.
+  Node 생성/축약/역할 계약5건·생성 일치·git diff --check 통과.
+- Flutter: 전체1185pass/110fail. 수정 전c89d0b3도1183pass/110fail이며 실패 식별자 집합이 같아
+  신규 실패0건이다. 새 strict parser/소유권 정책2건 통과. 전체lib/test analyze는 기존51건
+  (info49/warning2), 변경 파일 analyze는0건이다. 비교용 ignored baseline 사본까지 포함한 기본
+  analyze102건은 동일51건의 중복이므로 실제lib/test 전체를 다시 지정해51건을 확정했다.
+  실패 원인은 기존 Rules 문자열 계약·날짜 fixture·widget 테스트 등이며 이번 범위에서 일괄 정리하지 않았다.
+- 한계: 정상 최대8인 요청을 실행해 한도 내 통과를 확인했지만 정밀 coverage 응답429로
+  호출/평가 여유 수치는 확보하지 못했다. 모든 데이터 조합·모든 사이드 이펙트 해소를 주장하지 않는다.
+- 미확인 실기기: 두 실제 방의 준비 변경·기기 간 반영·기존 완료 이력 보존·정상 다음 주 전환 후 전체 완료,
+  기존 활성 변경/자동 이동·개인 완료/해제. 빌드·설치·기기 조작은 실행하지 않았다.
+
+운영1회 게시 시도: Firebase 인증을 사용하고 재시도 없는 단계별API 요청으로 추적7a4dea72를 제출했다.
+`/test` HTTP200, 오류0/경고3개:257:10 unused rf44,259:9 exists 및259:30 get invalid-name.
+경고0 조건에 따라 `/rulesets` POST·`/releases` PATCH는 실행하지 않았다. 활성 소스 읽기200으로
+기존 Ruleset26621a37-ae16-45c4-9858-f10380439e28와 SHA36b5920e7677b395192e47e05daeea1eec4512beaf19250bf6c5a82eff352e3d를 확인했다.
+원시 응답은coverage/bug024-rules-publish.json, 읽기 확인은coverage/bug024-rules-active.json에 보존했다.
+
+rf44는 C에서 마지막 호출 경로가 제거된 `bug24PriorClaimAvailable`이었다. 실제 Claim 검사는
+인증의 `sealAvailableBefore`에서 유지한다. 함수명 등장1개(선언만/호출0개)를 assert한 뒤
+그 선언만 생성 경계에서 제거했다. 공유 helper·allow·평가 조건은 변경하지 않았다.
+로컬 최종408f163f/151427bytes의 생성 일치·정적5건·diff 검사 통과. 위5개 Rules 묶음은
+7a4dea72 평가본의 결과이며, 이후 변경은 이 미사용 선언 제거와 식별자 재축약뿐이다.
+최종 원격 컴파일 경고0·Ruleset 생성·활성화는 미확인이다. 재게시 시도0회, 사용자 새 지시 필요.
+따라서 실기기 테스트 직전 단계까지 완료됐다고 판정하지 않으며 운영 반영이 남아 있다.
+Spark 유지, Functions/결제/Indexes/Hosting 변경 없음.
+BUG-024 미종료·dev/main 미통합이며 실기기 확인까지 목적 브랜치를 유지한다.
+
 ## 2026-10-07 BUG-024 Spark C 상세 설계·격리된 8인 선행 검증 완료
 
 사용자가 상태 확장안의 상세 설계·8인 선행 검증을 승인했다. 기존 목적 브랜치를 재사용했다.
