@@ -261,25 +261,4 @@ class PartyAtomicWritePlan {
     },
     'occurredAt': serverTimestamp,
   };
-
-  Map<String, Object?> get listingPatch => {
-    'recruitmentId': command.recruitmentId,
-    'sourceRevision': command.expectedRevision + 1,
-    'status': recruitmentPatch['status'] ?? aggregate.status.name,
-    'updatedAt': serverTimestamp,
-  };
-
-  /// 승계에서는 생성 당시 listing이 아니라 원본의 전환 후 Snapshot을 반영한다.
-  /// appliedRecruitmentPatch는 Repository가 Timestamp 변환까지 마친 실제 쓰기다.
-  /// 다른 lifecycle 명령의 종료·삭제 계약은 기존 부분 patch를 유지한다.
-  Map<String, Object?> listingPatchAfterRecruitmentChange({
-    required Map<String, Object?> currentRecruitment,
-    required Map<String, Object?> appliedRecruitmentPatch,
-  }) => {
-    if (command.type == PartyAtomicCommandType.advanceCycle) ...{
-      ...currentRecruitment,
-      ...appliedRecruitmentPatch,
-    },
-    ...listingPatch,
-  };
 }

@@ -22,7 +22,6 @@ class PartyAtomicVisibilityWritePlan {
 
   Map<String, Object?> get recruitmentPatch => _values.recruitmentPatch;
   Map<String, Object?> get groupPatch => _values.groupPatch;
-  Map<String, Object?>? get listingDocument => _values.listingDocument;
   bool get deleteListing => _values.deleteListing;
 
   static _PartyAtomicVisibilityValues _build({
@@ -68,16 +67,6 @@ class PartyAtomicVisibilityWritePlan {
     return _PartyAtomicVisibilityValues(
       recruitmentPatch: recruitmentPatch,
       groupPatch: groupPlan.groupPatch,
-      listingDocument: nextVisibility == RecruitmentVisibility.group
-          ? Map.unmodifiable({
-              'recruitmentId': aggregate.recruitmentId,
-              'groupId': aggregate.groupId,
-              'visibility': RecruitmentVisibility.group,
-              'status': aggregate.status.name,
-              'sourceRevision': nextRevision,
-              'updatedAt': serverTimestamp,
-            })
-          : null,
       deleteListing: nextVisibility == RecruitmentVisibility.public,
     );
   }
@@ -87,12 +76,10 @@ class _PartyAtomicVisibilityValues {
   const _PartyAtomicVisibilityValues({
     required this.recruitmentPatch,
     required this.groupPatch,
-    required this.listingDocument,
     required this.deleteListing,
   });
 
   final Map<String, Object?> recruitmentPatch;
   final Map<String, Object?> groupPatch;
-  final Map<String, Object?>? listingDocument;
   final bool deleteListing;
 }

@@ -19,7 +19,6 @@ void main() {
     expect(plan.recruitmentPatch['visibility'], 'group');
     expect(plan.recruitmentPatch['revision'], 8);
     expect(plan.groupPatch['activeRecruitmentCount'], 2);
-    expect(plan.listingDocument?['sourceRevision'], 8);
     expect(plan.deleteListing, isFalse);
   });
 
@@ -33,7 +32,6 @@ void main() {
     );
 
     expect(plan.groupPatch['activeRecruitmentCount'], 0);
-    expect(plan.listingDocument, isNull);
     expect(plan.deleteListing, isTrue);
   });
 

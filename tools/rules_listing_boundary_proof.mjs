@@ -64,7 +64,10 @@ async function backfill(db, firstRead) {
     const listing = await tx.get(doc(db, listingPath));
     if (attempts === 1 && firstRead) await firstRead();
     if (listing.exists()) return 'existing';
-    tx.set(doc(db, listingPath), source.data());
+    const data = source.data();
+    if (data?.visibility !== 'group' || data.groupId !== 'group-room-1'
+      || data.status !== 'active' || data.currentCycleStatus === 'disbanded') return 'closed';
+    tx.set(doc(db, listingPath), data);
     return 'created';
   });
   return { result, attempts };
@@ -123,7 +126,9 @@ try {
   await reset({ missing: true, patch: { privateNote: 'synthetic' } });
   await denied('unknown field on source still cannot be disclosed', () => setDoc(doc(leader, listingPath), { ...base, privateNote: 'synthetic' }));
 
-  for (const patch of [{ visibility: 'public' }, { status: 'disbanded' }, { currentCycleStatus: 'disbanded' }]) {
+  for (const patch of [{ visibility: 'public' }, { status: 'disbanded' },
+    { status: 'completed', currentCycleStatus: 'completed' }, { status: 'incompleteEnded' },
+    { currentCycleStatus: 'disbanded' }]) {
     await reset({ missing: true, patch });
     await denied(`backfill excludes ${JSON.stringify(patch)}`, () => setDoc(doc(leader, listingPath), { ...base, ...patch }));
   }
@@ -174,6 +179,18 @@ try {
   assert.ok(results.some(r => r.attempts > 1), 'losing transaction must retry');
   assert.deepEqual(await snapshot(), [base, base, null, null]);
   pass('concurrent missing backfills retry without overwriting or source mutation');
+  for (const patch of [{ visibility: 'public' }, { status: 'completed', currentCycleStatus: 'completed' }]) {
+    await reset({ missing: true });
+    const changed = { ...base, ...patch, revision: base.revision + 1 };
+    // Inject only the committed source transition, after backfill has read.
+    // Lifecycle/visibility command authorization is tested by separate suites.
+    await assertRulesDenied(backfill(leader,
+      () => admin(db => setDoc(doc(db, sourcePath), changed))));
+    assert.deepEqual(await snapshot(), [changed, null, null, null]);
+    assert.equal((await backfill(leader)).result, 'closed');
+    assert.deepEqual(await snapshot(), [changed, null, null, null]);
+    pass(`stale backfill is denied and reentry skips ${JSON.stringify(patch)}`);
+  }
   console.log(`Listing boundary proof: ${passed} passed; no production requests.`);
 } finally {
   await env.cleanup();

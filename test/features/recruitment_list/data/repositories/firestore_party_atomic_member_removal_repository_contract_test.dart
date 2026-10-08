@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   late String repository;
   late String router;
-  late String rules;
 
   setUpAll(() {
     repository = File(
@@ -13,7 +12,6 @@ void main() {
       'firestore_party_atomic_member_removal_repository.dart',
     ).readAsStringSync();
     router = File('lib/app/router/app_router.dart').readAsStringSync();
-    rules = File('firestore.rules').readAsStringSync().replaceAll('\r\n', '\n');
   });
 
   test('탈퇴·추방은 한 Transaction에서 대상 raidState와 공용 이벤트를 사용한다', () {
@@ -46,63 +44,10 @@ void main() {
 
   test('그룹방 참가자 제거는 같은 계획의 참가 구성으로 listing을 갱신한다', () {
     expect(repository, contains(".collection('raidListings')"));
-    expect(
-      repository,
-      contains('plan.listingPatch,'),
-    );
+    expect(repository, contains('partyRaidListingDocument('));
+    expect(repository, contains('currentRecruitment: raw'));
+    expect(repository, contains('recruitmentPatch: plan.recruitmentPatch'));
     expect(repository, isNot(contains('transaction.get(listingRef)')));
-    expect(repository, isNot(contains('transaction.set(listingRef')));
-
-    final start = rules.indexOf(
-      'function validAtomicMemberRemovalListingUpdate(',
-    );
-    final end = rules.indexOf(
-      'function validPersonalCompletionSuccessor(',
-      start,
-    );
-    final listingRule = rules.substring(start, end);
-    expect(listingRule, contains('validAtomicRecruitmentMemberRemoval('));
-    expect(
-      listingRule,
-      contains(
-        "newData.diff(oldData).affectedKeys().hasOnly([\n"
-        "            'memberCount', 'sourceRevision', 'updatedAt'\n"
-        '          ])',
-      ),
-    );
-    expect(
-      listingRule,
-      contains('newData.memberCount == recruitmentAfter.memberCount'),
-    );
-    expect(
-      listingRule,
-      contains('newData.sourceRevision == recruitmentAfter.revision'),
-    );
-    for (final field in [
-      'memberPlayerIds',
-      'partySlots',
-      'raidStateTargets',
-      'dealerCount',
-      'supportCount',
-      'nonGroupMemberCount',
-      'hasAvailableSlot',
-      'leaderPlayerId',
-      'leaderCharacterNameSnapshot',
-      'leaderClassNameSnapshot',
-    ]) {
-      expect(
-        listingRule.replaceAll(RegExp(r'\s+'), ' '),
-        contains('newData.$field == recruitmentAfter.$field'),
-      );
-    }
-    expect(
-      rules,
-      contains(
-        'validAtomicMemberRemovalListingUpdate(\n'
-        '          groupId,\n'
-        '          recruitmentId,',
-      ),
-    );
   });
 
   test('운영 Router에 원자 탈퇴 Repository를 연결한다', () {

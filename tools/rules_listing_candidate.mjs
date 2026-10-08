@@ -62,7 +62,7 @@ export function canonicalListings(source) {
           let before = get(path).data;
           return isCurrentGroupMember(groupId)
             && currentPlayerId() in before.memberPlayerIds
-            && before.status != 'disbanded' && before.currentCycleStatus != 'disbanded'
+            && before.status == 'active' && before.currentCycleStatus != 'disbanded'
             && getAfter(path).data == before && r1ListingCopy(data, before);
         }
         function r1ListingCreate(data) {

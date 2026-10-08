@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lost_party/features/recruitment_list/data/mappers/party_raid_listing_document.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_atomic_member_removal_write_plan.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_atomic_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
@@ -55,9 +56,7 @@ void main() {
     });
     expect(plan.recruitmentPatch['leaderPlayerId'], 'second');
     expect(plan.recruitmentPatch['leaderCharacterNameSnapshot'], '두번째');
-    expect(plan.listingPatch['leaderPlayerId'], 'second');
-    expect(plan.listingPatch['leaderCharacterNameSnapshot'], '두번째');
-    expect(plan.listingPatch['leaderClassNameSnapshot'], '버서커');
+    expect(plan.recruitmentPatch['leaderClassNameSnapshot'], '버서커');
     expect(plan.maximumWriteCount, 5);
   });
 
@@ -71,25 +70,18 @@ void main() {
       raidId: 'raid-1',
       serverTimestamp: timestamp,
     );
-    const fields = [
-      'memberPlayerIds',
-      'partySlots',
-      'raidStateTargets',
-      'memberCount',
-      'dealerCount',
-      'supportCount',
-      'nonGroupMemberCount',
-      'hasAvailableSlot',
-    ];
-    expect(
-      plan.listingPatch.keys,
-      unorderedEquals([...fields, 'sourceRevision', 'updatedAt']),
+    final current = <String, Object?>{
+      'title': '방',
+      'currentCycleKey': '2026-09-09',
+      'continueTogether': true,
+    };
+    final listing = partyRaidListingDocument(
+      currentRecruitment: current,
+      recruitmentPatch: plan.recruitmentPatch,
     );
-    for (final field in fields) {
-      expect(plan.listingPatch[field], plan.recruitmentPatch[field]);
-    }
-    expect(plan.listingPatch['sourceRevision'], 5);
-    expect(plan.listingPatch['updatedAt'], same(timestamp));
+    expect(listing, {...current, ...plan.recruitmentPatch});
+    expect(listing['revision'], 5);
+    expect(listing.containsKey('sourceRevision'), isFalse);
     expect(plan.maximumWriteCount, 5);
   });
 

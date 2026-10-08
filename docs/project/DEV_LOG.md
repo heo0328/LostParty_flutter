@@ -1,5 +1,18 @@
 # 개발 이력
 
+## 2026-10-08 R1 writer 중복 API 제거·종료 listing 재생성 차단
+
+시작0a097d2, 동일 목적브랜치. 실제 Router/Repository/WritePlan/Rules 연결을 축소 설계 §17
+책임표로 기록하고 호출 없는 lifecycle/removal 부분 patch와 visibility6필드 문서54행을 제거했다.
+- 새 흐름: 일회성 완료·미완료 종료된 방을 backfill이 다시 생성하지 않음. 운영 새 기능은 아직 없음.
+- 보존: 반복방 회차완료 대기·최대8인 원본 전체복사/승계·그룹 읽기·누락 예외.
+- 검증: Flutter 표적33건, 변경10파일 analyze, Emulator 목록34건, 생성기check/문법/diff 확인.
+  공개/종료 경합은 자동 retry 성공 대신 정책 거절 후 재진입 생략을 확인했다.
+- 축소: 앱 구현54행 제거, Rules 후보147988→147985bytes(직전3bytes/기준3442bytes 감소).
+  앱 코드 감소를 Rules 감소로 계산하지 않는다. 추적408f163f 및 운영 무변경.
+- 미완료: public-linked 잔여목록/count 전이 차이, 중첩 필드/과거자료/혼합버전 전환과 실기기.
+- Git: 목적브랜치 체크포인트·기존4파일 보존, dev/main 미통합. Firebase 원격 요청/배포0.
+
 ## 2026-10-08 R1 목록 전용 서버 경계30건 검증
 
 시작9f3fcc4, 목적브랜치fix/recurring-next-week-character-change. 후보6c71c5bf를 변경하지 않고

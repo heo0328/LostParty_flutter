@@ -560,6 +560,56 @@ R1 다음 시작 산출물은 명령별 before/after/필수쓰기와 reader 필�
 
 ## 17. R1 로컬 후보와 재개 검증 (2026-10-08)
 
+### writer 수명 계약 정리 — 2026-10-08 후속
+
+목표는 여러 listing 형식의 중복 검증 제거다. 실제 운영 Router는 atomic create/join/
+membership mutation+removal/visibility/cycle adapter를 사용한다. 구 non-atomic Repository는
+생성자 선언만 남아 있고 Router 연결은 없다. 이번에는 그 전체 삭제로 범위를 넓히지 않았다.
+3개 WritePlan에서 실제 호출 없는 lifecycle listingPatch/AfterRecruitmentChange, removal listingPatch,
+visibility의6필드 listingDocument를 제거했다(구현54행). visibility는 검증된 이진 전환 결과로
+delete 또는 canonical set을 실행한다. sourceRevision을 새로 만드는 atomic 목록 API는 남지 않는다.
+원본 patch에서 최종 전체문서를 만드는 helper 하나를 실제 Repository와 테스트가 사용한다.
+
+| 실제 writer | 목록 쓰기와 누락 전제 | 읽기·권한/수명 책임 |
+|---|---|---|
+| AtomicCreate → membership plan | 그룹 생성 시 canonical set | 신규 원본·참가자·그룹 count와 원자 생성 |
+| AtomicJoin | group이면 shared sync set, 누락 생성 가능 | 원본/신청/Character/state/목록 등 read 후 write, 원본 참가 검증 |
+| AtomicMemberMutation active 변경·자리 | group이면 shared sync set | 본인 active 참가자는 그룹 탈퇴 뒤 blind write 가능, 그룹 read 확대 없음 |
+| AtomicMemberMutation nextWeekPrep | 기존 목록 필수, shared sync set | transaction read와 snapshot.exists 검사 + 원본 준비 결합 |
+| AtomicMemberRemoval | group이면 최종 원본 set | 목록 read 없이 쓰며 create 제한으로 누락 시 전체 거절; 승계 포함 |
+| AtomicVisibility | group 전환 set, public 전환 delete | 원본·그룹·리더 membership read, groupId 유지, 기존 집계 권한 유지 |
+| AtomicCommand complete/advance | 반복방 유지 set, 일회성 종료 delete | 실제 Timestamp 변환 완료한 원본 patch를 복사; 기존목록 필수 경로 유지 |
+| AtomicCommand disband/incompleteEnd | group 목록 delete | 원본/그룹 count/state/event 원자 처리, 완료 후 해산 count 중복 감소 방지 |
+| CycleAdapter recurrence | group이면 canonical set | 리더·revision·active 방 조건, 완료 회차의 누락목록 생성은 후보가 거절 |
+| WeeklyRaidStatus personalComplete | 그룹 잔류자 있으면 set, 마지막1인은 delete | 원본·member·state와 원자 처리, 누락 허용 확대 없음 |
+| CompletedOwnershipCleanup | 잔류자 set, 마지막 해산 delete | 기존 observation/revision·후임·원본 검사 보존 |
+| Backfill | missing만 set, 기존 partial은 건드리지 않음 | 현재 그룹 참가자, 원본 불변, status=active, cycle disband 제외 |
+
+**종료 후 재생성 보완:** 기존 backfill은 status=completed까지 조회하고 disbanded만 제외하여,
+일회성 완료로 삭제한 listing을 다시 만들 수 있었다. 장기 계약의 되돌릴 수 없는 종료 삭제에 맞춰
+앱 조회/transaction 재확인과 후보 Rules의 backfill을 status=active로 통일했다.
+반복방은 status=active/currentCycleStatus=completed이므로 다음 주 대기 목록 복구를 유지한다.
+추적 Rules·운영은 바뀌지 않으며 앱/후보를 함께 전환해야 한다.
+
+검증: Flutter 직접 영향33건·변경10파일 analyze 통과. 목록 proof는 종료2건과 공개/종료 경합2건을
+추가한34건 통과. 경합에서는 읽기 뒤 원본 전환을 admin fixture로 주입하여 old payload가
+permission-denied로 거절되고 재진입이 쓰기를 생략함을 확인했다. 명령 자체의 권한을 admin으로
+검증한 것은 아니다. 자동 retry 성공을 기대한 최초 테스트는 실패했고 실제 거절 경계로 바로잡았다.
+기존5개 suite의 명령 검증 본문은 변경하지 않았으므로 재실행하지 않았다.
+
+최신 검토후보98e0bbdce15eb527134513abe21b045b219b15ed694d1d8a54c049d2ecd7efda,
+147985bytes. 직전보다3bytes 감소, 추적151427 대비3442bytes(약2.27%) 감소다.
+앱54행 제거를 Rules54행 감소로 계산하지 않는다. 대폭 감소는 아직 달성하지 못했다.
+로그: coverage/rules-listing/writer-flutter.log, writer-analyze.log, writer-listing-confirmed.log.
+
+**남은 차이와 영향:** public-linked 방의 lifecycle은 목록 action=none이므로 과거 잔여목록을
+자동 삭제하지 않는다. personalComplete 마지막1인/ownership 해산은 groupId가 있으면 삭제한다.
+또 closesActiveGroupRecruitment는 visibility 아닌 groupId를 기준으로 count를 줄인다.
+이는 이번 API 제거 전부터의 차이이며 공개전환 뒤 종료의 count 계약을 따로 검증해야 한다.
+무조건 삭제/그룹 count 수정을 함께 적용하지 않았다. backfill 한 방 실패가 반복 전체를 중단하는
+기존 동작도 유지한다. 무한재시도·일괄 복구를 추가하지 않는다. 중첩 필드와 실제 과거자료,
+앱/Rules 혼합 전환, R1 최종 승인·게시 인수는 아직 미완료다.
+
 ### 목록 전용 권한·backfill 책임표 검증
 
 6c71c5bf 후보를 그대로 사용한 `tools/rules_listing_boundary_proof.mjs`의30건이 통과했다.

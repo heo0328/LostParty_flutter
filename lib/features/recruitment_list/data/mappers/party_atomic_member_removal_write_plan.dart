@@ -50,26 +50,6 @@ class PartyAtomicMemberRemovalWritePlan {
 
   Map<String, Object?> get recruitmentPatch => _values.recruitmentPatch;
 
-  /// 제거 후 값은 모집 patch에서 가져오며 목록에서 별도로 재계산하지 않는다.
-  Map<String, Object?> get listingPatch => {
-    for (final key in const [
-      'memberPlayerIds',
-      'partySlots',
-      'raidStateTargets',
-      'memberCount',
-      'dealerCount',
-      'supportCount',
-      'nonGroupMemberCount',
-      'hasAvailableSlot',
-      'leaderPlayerId',
-      'leaderCharacterNameSnapshot',
-      'leaderClassNameSnapshot',
-    ])
-      if (recruitmentPatch.containsKey(key)) key: recruitmentPatch[key],
-    'sourceRevision': recruitmentPatch['revision'],
-    'updatedAt': recruitmentPatch['updatedAt'],
-  };
-
   Map<String, Object?> get event => _values.event;
   String get targetPlayerId => _values.targetPlayerId;
   String get targetRaidStateId => _values.targetRaidStateId;

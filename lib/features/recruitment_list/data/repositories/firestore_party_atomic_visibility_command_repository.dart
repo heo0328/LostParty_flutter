@@ -144,7 +144,7 @@ class FirestorePartyAtomicVisibilityCommandRepository
         transaction.update(groupRef, plan.groupPatch);
         if (plan.deleteListing) {
           transaction.delete(listingRef);
-        } else if (plan.listingDocument != null) {
+        } else {
           transaction.set(
             listingRef,
             partyRaidListingDocument(

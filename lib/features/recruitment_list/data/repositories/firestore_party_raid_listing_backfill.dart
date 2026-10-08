@@ -16,7 +16,7 @@ class FirestorePartyRaidListingBackfill {
         .collection('recruitments')
         .where('schemaVersion', isEqualTo: 2)
         .where('memberPlayerIds', arrayContains: playerId)
-        .where('status', whereIn: const ['active', 'completed'])
+        .where('status', isEqualTo: 'active')
         .limit(50)
         .get();
     for (final doc in snapshot.docs) {
@@ -54,7 +54,7 @@ class FirestorePartyRaidListingBackfill {
       if (after['visibility'] != 'group' || after['groupId'] != groupId) {
         return;
       }
-      if (after['status'] == 'disbanded' ||
+      if (after['status'] != 'active' ||
           after['currentCycleStatus'] == 'disbanded') {
         return;
       }
