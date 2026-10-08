@@ -1041,14 +1041,15 @@ async function verifyCharacterPlacement(testEnv, db, applicantDb) {
   const newStateRef = doc(applicantDb, 'players', joinerPlayerId, 'raidStates', `${replacementId}_${raidId}`);
   async function change({ partyIndex = 0, slotIndex = 3, tamperOther = false,
     mismatch = false, skipOldDelete = false, staleRevision = false,
-    tamperTarget = false } = {}) {
+    tamperTarget = false, omitListing = false, forgedGeneration = false } = {}) {
     return runTransaction(applicantDb, async (tx) => {
       const before = (await tx.get(recruitmentRef)).data();
       await tx.get(memberRef);
       await tx.get(newStateRef);
       await tx.get(listingRef);
       const slots = before.partySlots.map((s) => s.playerId === joinerPlayerId
-        ? { ...s, characterId: replacementId, classKey: '버서커', role: 'dealer', partyIndex, slotIndex }
+        ? { ...s, characterId: replacementId, classKey: '버서커', role: 'dealer', partyIndex, slotIndex,
+          ...(forgedGeneration ? { ownershipRevision: 999 } : {}) }
         : tamperOther && s.playerId === playerId ? { ...s, classKey: '위조' } : s);
       const patch = {
         ...lifecycleMarkerConsumptionPatch(before), partySlots: slots,
@@ -1073,7 +1074,7 @@ async function verifyCharacterPlacement(testEnv, db, applicantDb) {
         status: 'active', source: 'party', recruitmentId,
         revision: 1, updatedAt: serverTimestamp(),
       });
-      tx.set(listingRef, { ...before, ...patch });
+      if (!omitListing) tx.set(listingRef, { ...before, ...patch });
       const eventId = `characterChanged_${recruitmentId}_${patch.revision}`;
       tx.set(doc(applicantDb, 'partyEvents', eventId), {
         schemaVersion: 1, eventId, recruitmentId, type: 'characterChanged',
@@ -1084,11 +1085,39 @@ async function verifyCharacterPlacement(testEnv, db, applicantDb) {
     });
   }
   const original = (await getDoc(recruitmentRef)).data();
+  if (process.env.R1_PLACEMENT_PROBE) {
+    // Reload only the Rules, preserving seeded data and clearing setup coverage.
+    const probeEnv = await initializeTestEnvironment({ projectId: PROJECT_ID,
+      firestore: { host: '127.0.0.1', port: 8080, rules } });
+    const options = JSON.parse(process.env.R1_PLACEMENT_PROBE);
+    let error;
+    try { await change(options); } catch (caught) { error = caught; }
+    const directory = process.env.R1_PROBE_DIR;
+    if (!directory) throw new Error('R1_PROBE_DIR is required');
+    fs.mkdirSync(directory, { recursive: true });
+    fs.writeFileSync(path.join(directory, 'request-result.json'), JSON.stringify({
+      options, allowed: !error, error: error?.message ?? null,
+    }, null, 2));
+    const response = await fetch(`http://127.0.0.1:8080/emulator/v1/projects/${PROJECT_ID}:ruleCoverage`);
+    if (!response.ok) throw new Error(`Coverage failed: ${response.status}`);
+    const chunks = []; let length = 0;
+    for await (const chunk of response.body) {
+      length += chunk.length;
+      if (length > 64 * 1024 * 1024) throw new Error('Single-request coverage exceeds 64 MiB');
+      chunks.push(chunk);
+    }
+    fs.writeFileSync(path.join(directory, 'coverage.json'), Buffer.concat(chunks));
+    console.log(JSON.stringify({ probe: options, allowed: !error, coverageBytes: length,
+      budgetError: /maximum|evaluation limit|service call error/i.test(error?.message ?? '') }));
+    await probeEnv.cleanup();
+    return;
+  }
   console.log('test: BUG-017 max-eight rejects occupied/out-of-range/other-slot changes');
   for (const options of [
     { partyIndex: 1, slotIndex: 2 }, { partyIndex: 2 },
     { tamperOther: true }, { skipOldDelete: true },
     { tamperTarget: true }, { staleRevision: true },
+    ...(process.env.R1_LISTING === '1' ? [{ omitListing: true }, { forgedGeneration: true }] : []),
   ]) {
     console.log('test: BUG-017 reject', JSON.stringify(options));
     await assertFails(change(options));

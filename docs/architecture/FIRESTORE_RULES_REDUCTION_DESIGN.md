@@ -560,6 +560,29 @@ R1 다음 시작 산출물은 명령별 before/after/필수쓰기와 reader 필�
 
 ## 17. R1 로컬 후보와 재개 검증 (2026-10-08)
 
+### 후속: 변경 슬롯 평가 비용 분리
+
+단일 요청 전 Rules 재로드로 setup coverage를 제외했다. 정상/타 슬롯 위조 각 요청을
+기준과 후보에서 대조했으며 정상 요청의 슬롯 검사 경로는 같았다. 후보에 목록 결합14 expression
+sample이 추가됐다. coverage sample 합계는 공식1,000식 budget 수치로 해석하지 않는다.
+거절 요청은 평가 순서/조기 종료가 달라 단순 sample 차이를 순수 비용으로 계산하지 않았다.
+
+기존에는8개 위치마다 before 전체 목록을 검색했다. 후속 후보는
+after.partySlots.removeAll(before.partySlots)로 변경 슬롯을 한 번 추출하고 기존
+deSlotMemberGeneration을 각 변경 슬롯에 적용한다. 동일 목록 허용·8인 상한·각 슬롯과
+membership의 player/character/ownershipRevision 비교를 유지하며 서버 검사를 로컬로 옮기지 않는다.
+차분 모델은 순서/중복/제거/빈 목록/8·9개 경계와 임의 membership 허용 여부를 대조해 통과했다.
+이 모델 검증은 Emulator의 실제 권한 검증을 대체하지 않는다.
+
+후보7b2fe1da829b532dae82743d7b7b03c29822f278b64d732f0cb629a3ad4a8b93는148088bytes,
+기준 대비3339bytes(약2.21%) 감소다. 기존 캐릭터/자리 suite 통과, 준비30·완료역할27·수동22·개인15 통과.
+추가한 omitListing 부정 요청에서는1,000식 한도 오류가 남았다. forgedGeneration 신규 사례는
+그 앞 실패로 실행되지 않았으므로 미검증이다. 목록 결합을 각 명령검사 앞에 둔87f38004는 실패하여 제외했다.
+R1 완료·게시 가능성을 주장하지 않는다. 다음은 누락 요청을 싼 게이트에서 정상 거절하도록 책임을 설계하는 일이다.
+근거: coverage/rules-listing/probe-{baseline,candidate} 및 *-positive,
+changed-slots-placement.log, changed-slots-all.log, listing-first-placement.log.
+추적Rules·운영자료·Dart 앱 추가 변경 없음. 아래는 이전 후보 이력이다.
+
 ### 판정
 
 **R1 미완료·후보 승격 보류.** 시작 HEAD4c091fa, 브랜치fix/recurring-next-week-character-change.

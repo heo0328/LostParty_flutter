@@ -2,8 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { rulesFunction } from './roster_complexity_candidate.mjs';
 
-// Review-only R1 candidate. The 8-member character/placement regression still
-// exceeds the evaluation budget. Never promote this output to deployment Rules
+// Review-only R1 candidate. Never promote this output to deployment Rules
 // until the complete R1 acceptance gate passes (reduction design section 17).
 
 export function canonicalListings(source) {
@@ -16,6 +15,23 @@ export function canonicalListings(source) {
     const f = rulesFunction(source, name);
     source = source.slice(0, f.start) + text + source.slice(f.end);
   };
+  // Inspect exactly the same changed slots once. Unchanged slots do not need
+  // another full before-list search at each of the eight guard positions.
+  replaceFunction('deChangedSlotGenerationAt', `    function deChangedSlotGenerationAt(roomId, slots, index) {
+      return index >= slots.size() || deSlotMemberGeneration(roomId, slots[index]);
+    }`);
+  replaceFunction('deChangedSlotGenerations', `    function deChangedSlotGenerations(before, after) {
+      let changed = after.partySlots.removeAll(before.partySlots);
+      return before.partySlots == after.partySlots || (after.partySlots.size() <= 8
+        && deChangedSlotGenerationAt(before.recruitmentId, changed, 0)
+        && deChangedSlotGenerationAt(before.recruitmentId, changed, 1)
+        && deChangedSlotGenerationAt(before.recruitmentId, changed, 2)
+        && deChangedSlotGenerationAt(before.recruitmentId, changed, 3)
+        && deChangedSlotGenerationAt(before.recruitmentId, changed, 4)
+        && deChangedSlotGenerationAt(before.recruitmentId, changed, 5)
+        && deChangedSlotGenerationAt(before.recruitmentId, changed, 6)
+        && deChangedSlotGenerationAt(before.recruitmentId, changed, 7));
+    }`);
   // These helpers are consumed only by the source's mandatory listing checks.
   replaceFunction('deCleanupComposition', `    function deCleanupComposition(data, room) {
       return data == room;
