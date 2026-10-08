@@ -560,6 +560,55 @@ R1 다음 시작 산출물은 명령별 before/after/필수쓰기와 reader 필�
 
 ## 17. R1 로컬 후보와 재개 검증 (2026-10-08)
 
+### 공개 전환·종료 count 책임 보완 — 최신 체크포인트
+
+기존 후보의 실제 client Transaction에서 group→public 전환이 그룹 close Rules에 거절됐다.
+close는 lifecycle/개인완료만 허용했지만 앱은 공개 전환에도 감소를 요청했다.
+별도로 AtomicCommand·개인 마지막1인·완료 소유권 정리는 groupId만으로 감소했으며,
+공개방에 groupId를 보존하는 계약과 충돌했다. 앱만 변경하면 원본 Rules도 감소를 요구하여 종료가 막힌다.
+
+| 전이 | 그룹 count·목록 책임 |
+|---|---|
+| group→public | 현재 count N→N-1, 목록 삭제를 원본 전환과 결합 |
+| public→group | 현재 count N→N+1, canonical 목록 생성과 결합 |
+| 공개방 완료/해산/만료/개인 마지막1인 | groupId가 남아도 count Snapshot 보존, 그룹/목록 쓰기 없음 |
+| 그룹 일회성 완료/해산/만료/개인 마지막1인 | 현재 그룹 count N→N-1과 삭제, 생성 당시 Snapshot 차이 허용 |
+| 그룹 반복 회차완료 | count 유지, canonical 목록 유지 |
+| 일회성 완료 뒤 해산 | 이미 닫힌 count 유지; 반복 완료 뒤 해산은 한 번 감소 |
+| 마지막 완료1인 소유권 정리 | active+group일 때만 감소, 완료 raidState·member Snapshot 보존 |
+
+후보는 기존 현재 집계 검사를 전역으로 옮겨 lifecycle/개인완료가 공유한다.
+그룹 close는 전이 전 active+group 및 같은 요청의 원본 revision/time을 요구하여
+종료 원본을 재사용한 감소를 차단한다. 공개 전환은 실제 그룹 전후 count에 결합한다.
+공개/이미 종료 방의 count 감소를 다시 요구하지 않도록 앱 세 writer의 조건을 맞췄다.
+
+그룹 count 쓰기를 누락한 해산 요청은 기존 긴 OR 경로에서 1,000식 오류를 냈다.
+현재 시각의 명시적인 complete/advanceCycle/disband/incompleteEnd는 lifecycle로 직접 분기한다.
+슬롯은 lifecycle의 원본 동일성 검사로 보존하고, 완료 마지막1인 해산은 별도 member/state/event
+보존 검사를 유지한다. 다른 명령을 시도해 권한을 얻는 fallback을 제거한 것이며 보호 삭제가 아니다.
+
+검증: tools/rules_group_count_proof.mjs 22건(공개4종 종료·그룹 감소/누락/이중감소,
+과거 Snapshot 차이, 완료 후 해산, 소유권 상실 후 정리, 양방향 공개전환/누락,
+다른 모집 count가 남은 상태의 종료 원본 재사용 거절). 위조 요청은 실제 permission-denied와
+전후 문서 불변을 확인하며 평가 한도 오류는 통과로 세지 않는다.
+목록34·완료역할27·개인완료15건 회귀 통과. Flutter19건/분석4파일/생성기check/문법/diff 통과.
+초기 재현 fixture의 소유권 차수·누락 난이도를 실제 앱 형식으로 맞췄고,
+개인완료가 참조하는 집계 함수의 로컬 범위 오류는 전역 공유로 수정 후 통과했다.
+로그: coverage/rules-listing/group-count-before.log, group-count-final.log, count-final-regression.log.
+
+최신후보17471d0f4bff19595c90ddb43c28766cbf976d77ba9d0adc0736ff59f4a93667,
+148725bytes. 직전147985보다740bytes 증가, 추적151427 대비2702bytes(약1.78%) 감소.
+이번은 기능 보존 결함 보완으로, 대폭 축소 실적으로 포장하지 않는다.
+추적408f163f/운영 유지·원격0. 원격 컴파일 경고/활성화는 이번에 확인하지 않았다.
+
+부작용/인수: 기존 잘못된 이중감소를 기대하는 구버전 앱은 후보에서 거절될 수 있으므로
+앱/Rules 전환을 함께 설계해야 한다. 공개 잔여목록을 개인완료/소유권 정리가 자동 삭제하지 않게
+통일했으며 과거 잔여자료는 별도 이행 대상이다. 이미 어긋난 운영 집계를 자동 보정하지 않는다.
+완료 후 목록 삭제·공개/그룹 전환·내 계정 마지막1인 완료·소유권 정리는 최종 앱 전환 뒤 사용자
+실기기 확인 항목이다. 현재 운영 Rules와 이 앱 진행본을 조합해 인수를 시작하지 않는다.
+아래 writer 정리 당시의 미확인 count 항목은 이 결과로 갱신하며 나머지 R1 인수 잔여는 유지한다.
+
+
 ### writer 수명 계약 정리 — 2026-10-08 후속
 
 목표는 여러 listing 형식의 중복 검증 제거다. 실제 운영 Router는 atomic create/join/

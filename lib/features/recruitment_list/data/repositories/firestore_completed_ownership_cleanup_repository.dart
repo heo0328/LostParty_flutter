@@ -297,7 +297,10 @@ class FirestoreCompletedOwnershipCleanupRepository
     final patch = observation.patch(room, now);
     if (observation.kind == CompletedCleanupKind.disband) {
       final groupId = room['groupId'];
-      if (groupId is String && groupId.isNotEmpty) {
+      if (room['visibility'] == 'group' &&
+          room['status'] == 'active' &&
+          groupId is String &&
+          groupId.isNotEmpty) {
         final groupRef = firestore.collection('groups').doc(groupId);
         final group = (await tx.get(groupRef)).data();
         final count = group?['activeRecruitmentCount'];

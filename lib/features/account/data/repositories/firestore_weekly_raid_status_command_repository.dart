@@ -492,7 +492,7 @@ class FirestoreWeeklyRaidStatusCommandRepository
 
     DocumentReference<Map<String, dynamic>>? groupRef;
     int? groupCountAfter;
-    final groupId = aggregate.groupId;
+    final groupId = aggregate.visibility == 'group' ? aggregate.groupId : null;
     if (aggregate.memberCount == 1 && groupId != null) {
       groupRef = _firestore.collection('groups').doc(groupId);
       final group = await transaction.get(groupRef);

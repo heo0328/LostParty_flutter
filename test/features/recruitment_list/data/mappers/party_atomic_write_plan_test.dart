@@ -117,6 +117,44 @@ void main() {
     expect(plan.recruitmentPatch['status'], 'completed');
   });
 
+  for (final type in [
+    PartyAtomicCommandType.complete,
+    PartyAtomicCommandType.disband,
+    PartyAtomicCommandType.incompleteEnd,
+  ]) {
+    test('공개 전환 후 ${type.name}은 남은 groupId로 그룹 집계를 다시 닫지 않는다', () {
+      final room = PartyCommandAggregate(
+        recruitmentId: 'recruitment-1',
+        raidId: 'raid-1',
+        difficultyId: 'hard',
+        leaderPlayerId: 'player-0',
+        currentCycleKey: '2026-09-09',
+        currentCycleStatus: PartyRaidStateStatus.active,
+        revision: 4,
+        partySlots: aggregate().partySlots,
+        nonGroupMemberCount: 0,
+        pendingApplicationCount: 0,
+        pendingNonGroupApplicantCount: 0,
+        groupId: 'group-1',
+        visibility: 'public',
+      );
+      final plan = PartyAtomicWritePlan(
+        command: type == PartyAtomicCommandType.incompleteEnd
+            ? incompleteEndCommand()
+            : command(type),
+        aggregate: room,
+        serverTimestamp: timestamp,
+        incrementOne: incrementOne,
+      );
+      expect(plan.closesActiveGroupRecruitment, isFalse);
+      expect(plan.groupListingAction, PartyGroupListingWriteAction.none);
+      expect(
+        plan.recruitmentPatch.containsKey('groupActiveRecruitmentCountAfter'),
+        isFalse,
+      );
+    });
+  }
+
   test('전환은 모집과 모든 raidState의 회차 키를 함께 바꾼다', () {
     final plan = PartyAtomicWritePlan(
       command: command(PartyAtomicCommandType.advanceCycle),

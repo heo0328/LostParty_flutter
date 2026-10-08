@@ -81,6 +81,7 @@ class PartyAtomicWritePlan {
 
   bool get closesActiveGroupRecruitment =>
       aggregate.groupId != null &&
+      aggregate.visibility == 'group' &&
       ((command.type == PartyAtomicCommandType.complete &&
               !aggregate.continueTogether) ||
           command.type == PartyAtomicCommandType.incompleteEnd ||

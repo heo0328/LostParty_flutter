@@ -1536,10 +1536,10 @@ async function completeActiveMemberTxn(
       ? doc(db, 'recruitments', recruitmentId, 'members', remainingIds[0])
       : null;
     const successor = successorRef ? (await tx.get(successorRef)).data() : null;
-    const groupRef = recruitment.groupId
+    const groupRef = recruitment.visibility === 'group' && recruitment.groupId
       ? doc(db, 'groups', recruitment.groupId) : null;
     const group = groupRef ? (await tx.get(groupRef)).data() : null;
-    const groupListingRef = recruitment.groupId
+    const groupListingRef = recruitment.visibility === 'group' && recruitment.groupId
       ? doc(db, 'groups', recruitment.groupId, 'raidListings', recruitmentId)
       : null;
     const nextRevision = recruitment.revision + 1;
