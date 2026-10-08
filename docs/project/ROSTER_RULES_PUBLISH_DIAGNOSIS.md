@@ -1,5 +1,13 @@
 # 원정대 Rules 게시 실패 분석 — 2026-10-03
 
+## 2026-10-08 11:16 KST — 기존 성공본 복원 성공
+
+사용자 `1회 진행` 승인 후 사전 전체거절ecf30f94와 성공ruleset36b5920e를 확인했다.
+기존ruleset26621a37-ae16-45c4-9858-f10380439e28으로 release PATCH1회200.
+사후GET200/source SHA36b5920e 일치,134301bytes,updateTime2026-10-08T02:16:46.593197Z.
+test/create/fallback/자동재시도/자료쓰기0. 승인1/1소진. BUG-024 후보 활성화 성공과 구분한다.
+근거: ignored coverage/bug024/restore-approved-once-result.json.
+
 ## 2026-10-08 첫 구간 실조회 — 의도하지 않은 전체 차단 확인
 
 10:24 KST 운영GET에서 기존 성공본이 아니라 전체read/write false인163bytes/ecf30f94를 확인했다.

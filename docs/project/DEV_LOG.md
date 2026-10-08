@@ -1,5 +1,20 @@
 # 개발 이력
 
+## 2026-10-08 11:16 KST 운영 Rules 성공본 복원
+
+사용자가 준비된복원명세에 `1회 진행`을 승인했다. 현재브랜치/기존변경/firebase경로/lost-party 대상을 확인했다.
+운영 전체차단ecf30f94와 기존성공ruleset26621a37-ae16-45c4-9858-f10380439e28의36b5920e를 사전GET으로 대조했다.
+release cloud.firestore PATCH1회200, 사후GET/source SHA36b5920e/134301bytes 일치.
+활성updateTime2026-10-08T02:16:46.593197Z. 승인1/1소진,신규test/create/fallback/재시도/자료쓰기0.
+추적firestore.rules는408f163f 그대로며 로컬실패후보를 게시한 것이 아니다.
+근거는ignored coverage/bug024/restore-approved-once-result.json이다.
+
+- 새로 가능해진 흐름: Rules 전체접근거절을 해제하고 기존성공정책으로 복원. 실제앱동작 확인은별도다.
+- 보존 확인: 기존Ruleset 원문SHA일치,앱코드/운영자료변경없음. BUG-024 신규명령은 여전히미지원.
+- 미확인 실기기: 공개앱의목록/내계정조회·기존동작. BUG-024 인수는계속보류.
+- 검증: 사전/사후GET과PATCH결과,문서diff검사. 신규컴파일/Flutter/Emulator 실행없음.
+- Git: 문서복구기록만작업브랜치커밋/push,dev/main미반영·브랜치유지·기존비문서변경보존.
+
 ## 2026-10-08 첫 구간 기준 조사와 운영 전체 차단 발견
 
 사용자의 첫 구간 착수 지시를 브리핑의 기준 확정 구간으로 진행했다.
