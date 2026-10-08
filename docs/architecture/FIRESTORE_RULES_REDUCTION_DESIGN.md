@@ -904,3 +904,95 @@ R2 운영 전환은 자료/호환 게이트와 함께 보류하고, 다음 단�
 장시간 실행은 제한 시간·종료 코드·출력 파일을 명시하고, 진행 중 상태와 완료를 구분한다.
 기존 로그를 덮어쓰는 suites.json 하나만 완료 증거로 사용하지 않는다.
 현재 실행에는 대용량 coverage 출력, 전체 회귀, 무한대기 또는 Firebase 원격 요청이 필요하지 않다.
+
+## 19. R3 명령 책임 조사와 단일 후보 선정 (2026-10-08)
+
+### 판정과 측정 범위
+
+기준 커밋4863537, R1 가독본과17471d0f/148725bytes를 대조했다. 다음 로컬 구현 후보는
+**완료된 반복 모집의 소유권 정리 3종(participant/peer/leader)의 원본 검증 통합**이다.
+마지막1인 해산은 별도 lifecycle 경계이므로 포함하지 않는다. 앱 스키마/기능 삭제가 아닌
+명령별 공통 구조 통합부터 검증하며, 효과가 작으면 대폭 축소 완료로 채택하지 않는다.
+
+읽기전용 `tools/rules_cleanup_design_audit.mjs`는 baseline SHA를 고정하고 메모리에서만
+동일한 room 조건·targetIndex 범위·revision 전환 조건을 공통 함수로 치환한다.
+Rules 파일을 만들거나 수정하지 않으며 Firebase 호출도 하지 않는다.
+
+| 비교 | 가독 함수 본문 bytes | 해석 |
+|---|---:|---|
+| cleanup 원본 검증 3개 | 7439 | 세 명령의 실제 공통 조건과 상이한 권한 확인 |
+| 활성 캐릭터 변경 원본/member/placement 3개 | 4555 | 소유권·raidState·점유가 분산되어 단순 제거 불가 |
+| lifecycle event/payload/target 검사 4개 | 3251 | 이벤트 payload와 과거 audience 보호는 고유 책임 |
+
+위 수치는 후보군의 **선택한 함수 묶음 면적**이지 전체 명령군 크기나 제거 가능량이 아니다.
+세 묶음 중 cleanup의 확인된 중복 면적과 계약 분리 가능성이 가장 커 우선 선정했다.
+저장소 전체의 최대 절감 명령군임을 입증한 것은 아니다.
+
+공통 조건만 추출한 정적 계산은148725→148099bytes, 순감소626bytes(0.42%)다.
+함수 추가 비용까지 포함하며 R2 제거 가정과 합산하지 않는다. 계산 결과를 R1 후보에 적용하지 않았다.
+전체 원본 검증 통합의 순감소량은 아직 미측정이다. 따라서 단순 helper 추출만을 위한 구현은
+별도 완료 구간으로 진행하지 않고 다음 통합 후보 안에서 비교한다.
+compiled 크기·평가식 수·문서 접근 수·게시 성공 여부는 이 계산으로 알 수 없다.
+
+### 원본과 파생 문서 책임표
+
+근거는17471d0f 생성 입력 `coverage/rules-listing/readable.rules`의 아래 함수명이다.
+가독본은 재생성되므로 행 번호보다 함수명을 기준으로 찾는다.
+
+| 명령 | 원본의 actor/필드/필수 결과 | 파생 문서의 고유 책임·이동 금지 조건 |
+|---|---|---|
+| participant 정리 | `deCleanupAggregate`: 본인 또는 현 소유권을 가진 책임자; aggregate/명령 필드만 변경; 대상 소유권 차수 증가, member 부재, group listing 전체 일치, 정해진 event 강제 | `deCleanupMemberDelete`: 동일 전환·대상 player/character·원본에서 제외. raidState 불변은 원본에서 검사 |
+| peer 정리 | `dePeerCleanupAggregate`: 현 소유권의 참가자, 기존 책임자의 소유권 변경; 같은 aggregate 허용필드; **대상 member 사전 존재와 사후 부재**, listing/event 강제 | `dePeerCleanupMemberDelete`: 대상 소유권 변경과 raidState 불변을 여기서 검사. 사전 존재 검사를 제거하면 delete 없이 통과할 수 있어 이 검사를 source에서 생략하는 근거가 사라짐 |
+| leader 정리 | `deLeaderCleanupAggregate`: 현 소유권 참가자, 대상은 이전 책임자; 첫 잔존 슬롯으로 승계; leader snapshot 필드 추가 허용; 후임 member의 승인권 true/현재 timestamp; 대상 member 부재, listing/event 강제 | `deLeaderCleanupMemberDelete`: 대상 일치·raidState 불변. `deLeaderSuccessorUpdate`: 후임의 현 소유권·이름/직업 snapshot·승인권/시각 외 수정 금지. 원본의 후임 playerId 검사만으로 대체 불가 |
+| 활성 참가·캐릭터 변경·자리 이동 | revision/집계/허용필드와 `deChangedSlotGenerations`의 변경 슬롯 member 결합 | `deSlotMemberGeneration`은 player/character/ownershipRevision 일치만 확인. 역할·자리·시각의 모든 쓰기를 강제한다고 해석하면 안 됨. member의 placement/raidState/승인권 검사를 일괄 삭제하지 않음 |
+| lifecycle 이벤트 | lifecycle 원본 검증과 event target/payload 검증 분리 | `atomicIsLifecycleCommand`는 명령 종류만 판정. `validAtomicLifecyclePartyEvent`만으로 이전 revision 대비 신규 전환·event 경로 ID 결합을 보장한다고 가정하지 않음 |
+| 일반 membership 이벤트 | 생성/참가/신청/변경/제거를 넓은 event validator가 처리 | `validAtomicMembershipPartyEvent`의 형식 검사를 원본 권한 검사와 중복이라고 판정할 수 없음. 독립 위조 요청과 각 원본 writer의 결합을 별도 입증해야 함 |
+
+정리 event는 `partyEvents/{eventId}`의 세 전용 create 함수에서 경로 ID·동일 원본 전환·정규 event map
+전체 일치를 요구한다. 원본도 같은 map의 사후 존재를 요구한다. 원본은 revision+1,
+expectedRevision, 현재 actor/time을 확인하므로 event 단독쓰기와 원본 재사용 거절을 보존해야 한다.
+모든 공통화가 이 양방향 결합을 유지해야 한다. `!existsAfter`는 이미 없던 문서에도 참이므로
+이를 무조건 'delete 쓰기 강제'로 부르지 않는다. leader와 participant는 이 차이를 다음 회귀에서 다룬다.
+일반 이벤트의 결합은 미입증 사항이며 이번 조사만으로 악용 가능성이 확정된 버그라고 보고하지 않는다.
+
+### 다음 구현 후보의 구체적 구조
+
+1. 원본 진입은 정리 명령 세 종류를 명시적으로 분기한다. 다른 lifecycle/개인완료/준비 명령을
+   fallback OR로 섞지 않는다. 기존 dispatch의 우선순위와 거절 경계를 먼저 고정한다.
+2. 공통 원본 함수가 상태(schema2/active/completed/recurring),2~8인,revision/actor/time,
+   target 범위, 집계 결과, member 사후 부재와 listing/event 결합을 한 번 표현한다.
+3. 종류별 함수는 actor 허용 범위, command key 집합, source 변경 key 집합, 소유권 검사 위치,
+   후임/책임자 조건만 담당한다. **세 종류의 허용 key를 하나의 넓은 합집합으로 허용하지 않는다.**
+4. event payload는 기존 schema1과 각 종류별 정확한 key 집합을 유지한다. 읽기 audience는
+   명령 전 memberPlayerIds이며 제거된 사람의 기존 이력 조회를 유지한다. payload 축소나 로컬 이력 대체는 제외한다.
+5. member delete와 후임 update에만 있는 검사는 유지한다. 원본 쪽으로 이전하려면
+   기존 정상/누락자료 동작, 필수 쓰기,문서 접근 예산을 먼저 비교한다. 검사 이전 자체를 감소량으로 가정하지 않는다.
+
+실제 writer는 `firestore_completed_ownership_cleanup_repository.dart`의 `_execute`:
+모집 revision 확인→재시도 receipt 확인→관찰값 재확인→모집 patch/member delete/
+leader이면 successor update/group이면 listing set/event set을 같은 transaction에 넣는다.
+`CompletedOwnershipCleanup`이 종류/command/event를 생성하고 로컬 journal은 재시도 관찰값을 보관한다.
+Router의 RaidStatus/PartyReadDetail 연결과 recovery UI가 있으므로 죽은 코드가 아니다.
+서버 권한을 로컬로 옮기지 않는다. 로컬에는 기존 결과 계산·관찰값·재시도 안내를 유지한다.
+이 구간에서 없어지는 사용자 기능, 신규 데이터 이행, 구버전 차단은 없다.
+
+### 회귀·부작용과 채택 기준
+
+| 위험 | 다음 후보의 최소 검증 |
+|---|---|
+| 과도한 공통화로 타인이 정리 | 세 종류 actor 위조·관찰 차수 위조·다른 대상 player/character 거절 |
+| 고아 member/raidState 검사 우회 | member 삭제 누락, 이미 없는 member, 완료 기록 수정/삭제 동반 요청을 기존 기준과 대조; unique 검사 삭제 금지 |
+| 잘못된 승계/승인권 확대 | 첫 잔존 슬롯 외 승계, 후임 update 누락, snapshot 위조·다른 member 변경 거절 |
+| listing/event 누락 또는 과거 명령 재사용 | group listing 누락/다른 그룹/다른 source, event 누락/ID·audience 위조, 단독 event·revision 재사용 거절 |
+| 공통 함수 호출로 실행 예산 증가 | 8인 대표 정상 요청과 위조/누락 요청을 각각 평가; 한도 오류로 실패한 요청을 정상 권한 거절로 세지 않음 |
+| BUG-022~024 재발 | 제거 후 listing, 역할 구성, 완료 후 다음 주 준비 경계를 변경된 공유 함수 범위에 맞춰 재검증 |
+| 재진입 이중 제거 | 같은 receipt의 재시도·다른 revision 경합에서 추가 감소 없음; 앱 journal/receipt 계약 유지 |
+
+다음 구간은 로컬 후보 하나와 해당 서버 경계까지만 진행한다. 결과는 전후 bytes/SHA, 정상·거절,
+평가 오류, 미확인 compiled 효과를 구분한다. 순감소가 작거나 예산 회귀가 생기면 후보를 승격하지 않고
+실패 근거를 남긴다. 동일 순서 변경을 반복하지 않는다. 롤백은17471d0f 생성 경로를 유지하며
+통합 변환을 적용하지 않는 것으로 한다. 추적Rules408f163f 및 운영 성공본은 건드리지 않는다.
+
+이번 검증은 계산 도구의 SHA/치환 assertion·실행과 diff 검토다. Flutter/Emulator 재실행 없음.
+새 기능 동작은 없고 기존 앱·Rules 입력을 보존했다. 실기기와 원격 컴파일·게시 미확인,
+Firebase 원격 요청0. §18의 R1 중첩필드/과거자료/backfill/혼합버전/미참조함수 인수는 여전히 남는다.
