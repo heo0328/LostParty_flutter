@@ -21,6 +21,8 @@ R3 정리 통합87edb514는1183bytes/0.80% 감소이나 정상3개 경계의 평
 전체 계약 크기 조사 완료,30% 감소 근거 미확보. 구형 member 변경 fallback 폐쇄 가정2600bytes 감소,
 표시대조6개는 최대336bytes. 후속 기획 검토로 fallback 폐쇄는 보조 후보로 내리고 전체 전환 계획을 우선한다.
 호출 깊이는 추적/R1/R3 최대6, 정리 경로4→5. 단일 호출 helper 통합·반복 탐색 축소 방안은 §24 참조.
+깊이 개선을 잔여 A1~F 실행 순서에 통합했다(§25). 다음은 실제 writer와 cleanup/advance fixture 정합화.
+R1 잔여→깊이 개선→구형 계약 종료→canonical target→최종 전환/게시 순서이며 대폭 감소 근거는 아직 미확보다.
 앱 변경은 검토용 진행본이며 운영 반영·dev/main 통합 없음.
 상세는 [축소 설계 §17](../architecture/FIRESTORE_RULES_REDUCTION_DESIGN.md#17-r1-로컬-후보와-재개-검증-2026-10-08)과 NEXT_WORK를 따른다.
 
