@@ -1,5 +1,17 @@
 # 원정대 Rules 게시 실패 분석 — 2026-10-03
 
+## 2026-10-08 첫 구간 실조회 — 의도하지 않은 전체 차단 확인
+
+10:24 KST 운영GET에서 기존 성공본이 아니라 전체read/write false인163bytes/ecf30f94를 확인했다.
+release 갱신은10월7일22:42 KST, ruleset62ddc2ca-e98e-460f-85eb-70f1a7a8533d다.
+로컬 firestore2.rules와 일치하며 추적 firestore.rules(408f163f)는 바뀌지 않았다.
+사용자는 의도한 상태가 아니라고 확인했다. 변경 주체는 알 수 없다. 이번 작업의 원격 쓰기0회다.
+현재 앱 접근 거절과 이전 큰 기능본의PATCH400/후속409 문제를 분리한다.
+기존 성공ruleset26621a37-ae16-45c4-9858-f10380439e28은10:27 GET200/36b5920e/134301bytes로 확인.
+새 실행 지시 후 기존ruleset 복원PATCH최대1회·사후SHA확인으로 복구를 먼저 판단한다.
+새test/create·자동retry·CLI fallback·자료쓰기0. BUG-024 해결 게시와 다르다.
+[전체 근거와 복구 명세](../architecture/FIRESTORE_RULES_REDUCTION_DESIGN.md#16-첫-구간--기준-확정-조사-2026-10-08).
+
 ## 2026-10-08 재검토
 
 새 게시 시도 없이 [축소 설계](../architecture/FIRESTORE_RULES_REDUCTION_DESIGN.md) §9~15에

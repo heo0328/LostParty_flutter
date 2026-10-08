@@ -1,6 +1,7 @@
 # Firestore Rules 대폭 축소 설계
 
-최초2026-10-07, 전체 영향 재검토2026-10-08. 상태: 기획 문서 정리, 구현·데이터 이행·게시 미착수.
+최초2026-10-07, 전체 영향 재검토2026-10-08. 상태: 첫 구간 기준 조사 수행, 축소 구현·데이터 이행·게시 미착수.
+최신 운영 조회와 첫 구간 판정은 §16을 따른다. 이전 활성본36b5920e를 현재 운영본으로 사용하지 않는다.
 §9~15는 후속 전체 영역 검토와 실행 전 게이트다. 앞선 후보를 구현 확정안으로 해석하지 않는다.
 
 사용자 요청은 반복되는 게시 실패를 대상으로 불필요한 검증, 로컬 이관, 구조 축소를 찾는 것이다.
@@ -29,7 +30,7 @@ BUG-024 게시 차단 해결에 종속된 설계로 현재 목적 브랜치를 �
 
 기준은 `firestore.rules` SHA256 `408f163fc6bf6f06d8a7a628da2e1b2bdd2747d36936d7b2aee995c161e53793`다.
 배포 경로는 `firebase.json`의 `firestore.rules`, 기본 프로젝트는 `lost-party`다.
-운영의 마지막 보존 조회는 성공본36b5920e이며, 이번 설계에서 원격을 새로 조회하지 않았다.
+최초 설계 당시 마지막 보존 조회는 성공본36b5920e였다. 10월8일 후속 조회에서 운영본 변경을 확인했다(§16).
 
 `tools/rules_audit.mjs`의 로컬 정적 조사: 151,427 bytes, 함수296, match34, allow118,
 최대 helper 깊이6, 정적 allow 호출 그래프 미도달 함수0, 본문 문자열 완전 중복0.
@@ -434,3 +435,119 @@ R2/R3는 각각 명세·동등성·전환 검토 후 별도 단위로 진행한�
 이번에는 Flutter/Emulator/게시를 재실행하지 않는다. 신규 사용자 흐름 없음·실기기 미확인이다.
 기존110테스트 실패/51분석 항목은 이전 기준 기록이며 현재 새로 측정한 수치가 아니다.
 진행 중 기능브랜치의 문서 복구 지점만 커밋·push하고 dev/main은 BUG-024 인수 전 통합하지 않는다.
+
+## 16. 첫 구간 — 기준 확정 조사 (2026-10-08)
+
+사용자의 첫 구간 착수 지시는 직전 브리핑의 1구간인 기준 확정으로 적용한다.
+R1 목록 통합 구현과 구분한다. 코드·Rules·운영 자료 변경 없이 현재 기준과 다음 구현의 진입 조건을 확정한다.
+로컬 기준87a1b47, 현재/원격 작업브랜치 일치. dev/main은 원격 조회에서도e4f8e0f다.
+기존 초기화 파일·firestore2.rules·scope 후보 도구/테스트는 보존한다.
+
+### 16.1 운영본 불일치 — 우선 확인 사항
+
+10월8일10:24 KST, lost-party의 release와 그 ruleset source를 GET으로 조회했다.
+
+| 항목 | 조회 결과 |
+|---|---|
+| 대상 | lost-party / (default), release cloud.firestore |
+| 활성 Ruleset | 62ddc2ca-e98e-460f-85eb-70f1a7a8533d |
+| release updateTime | 2026-10-07T13:42:04.272521Z = 10월7일22:42 KST |
+| 소스 | 163 bytes, SHA256 ecf30f940747dcc3c5ba4993093e9a11ac9fc5df7e14b2a1512d2446923d84eb |
+| 내용 | 재귀 전체 경로에 allow read, write: if false |
+| 로컬 대조 | 미추적 firestore2.rules와 SHA 일치. 배포 원본 firestore.rules는408f163f 유지 |
+
+따라서 현재 운영은 기존 성공본36b5920e가 유지된 상태가 아니라 **클라이언트 전체 접근 거절**이다.
+앱의 새 서버 읽기·쓰기는 거절되며 이미 저장된 로컬 캐시가 보이는 현상과 구분해야 한다.
+관리 인증으로 수행한 이번 데이터 조회 성공은 일반 앱의 Rules 통과 증거가 아니다.
+이번 에이전트 작업에서 게시/복원한 것은 아니다. 사용자는 전체 차단이 **의도한 상태가 아니라고 확인**했다.
+변경 주체는 미확인이다. 운영 복구를 구조 축소보다 우선할 별도 작업으로 올리되 자동 게시하지 않는다.
+10:27 KST 기존 성공 Ruleset26621a37-ae16-45c4-9858-f10380439e28을 GET200으로 재확인했고,
+134301bytes/SHA36b5920e7677b395192e47e05daeea1eec4512beaf19250bf6c5a82eff352e3d로
+보존본과 일치했다. 신규 Ruleset을 만들지 않고 기존 성공본을 복원할 수 있는 대상이 존재한다.
+복원 명세는 release cloud.firestore 사전GET/source 확인 → 기존 성공 Ruleset을 가리키도록
+PATCH 최대1회 → 사후GET/source SHA 확인이다. test/create/fallback/자동재시도/데이터쓰기0회.
+사전 활성본이 이번163bytes와 다르면 다른 변경과 경합할 수 있어 실행하지 않고 다시 판단한다.
+AGENTS.md §5의 실패 후 새 지시 조건에 따라 실제 PATCH는 후속 실행 지시를 받은 뒤 수행한다.
+복원은 BUG-023까지의 기존 기능용이며 BUG-024 준비/인증 확장용이 아니다. 새 작업본 앱의
+BUG-024 신규 명령은 여전히 서버에서 거절될 수 있어 정상 복구와 BUG-024 종료를 구분한다.
+자료23건의 전체 무결성 검증이나 현재 작업본 전체 호환을 복원 근거로 주장하지 않는다.
+이전 실패본408f163f를 반복 게시하지 않는다.
+작은 deny-all 활성화는 큰 기능본의 게시 가능성이나 400 원인을 증명하지 않는다.
+
+### 16.2 구 원장 잔존 자료의 제한 조회
+
+Firestore runQuery의 읽기 전용 collectionGroup 요청3회. 각 경로 limit201,
+선택 필드는 status/cycleKey/ownershipRevision만이며 원본 ID·문서 원문은 저장하지 않았다.
+상한에 도달한 경로가 없어 이번 조회 시점의 해당 collectionGroup 결과는 잘리지 않았다.
+경로가 players/{id}/{collection}/{id}에 해당하는지도 메모리에서 검사했고 예외0건이다.
+이 세 조회는 동일 시점의 원자 스냅샷이 아니며 미래 새 자료가 생기지 않는다는 보증도 아니다.
+
+| collectionGroup | 관측 건수 | 상태/필드 집계 | 판정 |
+|---|---:|---|---|
+| activeRaidAssignments | 0 | 상한 미도달 | 현재 이행할 관측 자료 없음. 영구 미사용 증거는 아님 |
+| weeklyRaidClaims | 0 | 상한 미도달 | 현재 이행할 관측 자료 없음. 읽기 제거와 별개 |
+| raidStates | 23 | completed19, active4; ownershipRevision 존재17/부재6 | 현재 원장은 보존. 부재6건을 손상/삭제 대상으로 단정하지 않음 |
+
+cycleKey별 건수는2026-09-29:8, 2026-10-06:8, 2026-09-23:5, 2026-09-28:1,
+2026-09-16:1이다. 운영 기본 주차 경계는 KST 수요일06시지만 테스트 시점·과거 설정으로 생성된
+자료일 수 있으므로 문자열을 현재 주차로 자동 치환하지 않는다. 개별 소유자/원본 모집과의
+유효성 교차검증은 하지 않았으며23건을 모두 현재 유효한 점유라고 해석하지 않는다.
+
+이 결과로 R2는 대량 이행을 필수 작업으로 가정하지 않는다. 전환 직전 재조회에서도 구 자료가0이고
+신규 구쓰기 차단·호환 앱 준비가 확인되면 **변환 쓰기0건인 전환**을 선택할 수 있다.
+반대로 새 구자료가 발견되면 해당 범위의 충돌 분류와 이행 명세부터 적용한다.
+현재 deny-all 상태를 이행 동결 승인으로 재해석하지 않는다.
+근거: ignored coverage/bug024/baseline-readonly-result.json. 조회 도구도 coverage에만 보존했다.
+
+### 16.3 공개 태그별 실제 연결과 제거 제한
+
+태그 소스의 app_router와 개인 완료 명령/읽기 Repository를 직접 대조했다.
+태그와 실행 중 APK의 일치·현재 설치 비율은 미확인이다. 아래 표는 코드 연결 근거다.
+
+| 소스 기준 | 파티 명령 기본 DI | 개인 완료 기본 쓰기 | 주간 상태 읽기 |
+|---|---|---|---|
+| v1.0.0 / 0c93b34 | Atomic 생성·신청·참가·멤버 변경/제거·공개범위, AtomicCycleAdapter | WeeklyRaidStatusCommand의 raidStates set, 구 Claim/assignment 삭제 호환 | raidStates + weeklyRaidClaims + activeRaidAssignments |
+| v1.1.0 / 8405555 | 같은 Atomic 계열 | 같은 새 원장·구 삭제 호환 | 동일3경로 |
+| v1.1.1 / 6f3876e | 같은 Atomic 계열 | 같은 새 원장·구 삭제 호환 | 동일3경로 |
+| 작업본 / 87a1b47 | Atomic 계열 + BUG-024 준비/인증 확장 | stub·소유권 호환이 추가된 새 원장 명령 | 동일3경로 |
+
+기존 FirestoreWeeklyRaidClaimRepository도 router에서 생성되지만 개인 완료 명령 기본 주입은
+FirestoreWeeklyRaidStatusCommandRepository다. 클래스가 존재한다는 이유로 실제 legacy writer로 세지 않는다.
+테스트/대체 주입·예전 개발 APK·변조 클라이언트는 이 표로 사용 종료를 입증할 수 없다.
+현재 Rules의 legacy 신규 쓰기 허용 여부와 실제 배포 APK의 소비를 별도 확인해야 한다.
+
+중요한 추가 발견: FirestoreWeeklyRaidStatusRepository는3개 스트림 결과를 모두 기다린 뒤 상태를 낸다.
+빈 legacy 조회도 서버에서 거절되면 오류를 전달하므로 **자료0건 ≠ 읽기 Rules 제거 가능**이다.
+PartyRaidStateOccupancyInspector도 구 Claim/assignment를 transaction.get한다.
+R2에서는 최신 앱의 명령/상태 reader를 함께 전환하고, 구앱을 지원하는 기간의 빈 조회 권한은
+별도로 유지하거나 업데이트 필요 상태를 정의한다. 신규 쓰기 폐쇄와 읽기 폐쇄를 묶지 않는다.
+
+### 16.4 R1 구현 전 고정한 연결 범위
+
+| 명령군 | 현재 listing 방식 | 다음 구간에서 보존할 조건 |
+|---|---|---|
+| atomic 생성 | 생성 시 listing 저장 | 그룹 공개범위·원본 생성·그룹 count 결합 |
+| 참가/승인·캐릭터/자리 변경 | PartyRaidListingTx의 최종 원본 복사 | snapshot 대신 transaction 최신 원본, 원자성·8인 한도 |
+| BUG-024 준비 변경 | 같은 동기화 계열, 기존 listing 필요 | listing 누락을 자동 생성으로 바꾸지 않음 |
+| lifecycle | 일반 부분patch; advanceCycle은 원본+patch 복사 후 sourceRevision | 반복 완료 유지/전환, 해산·1회성 종료 삭제 구분 |
+| 탈퇴/추방 | MemberRemovalWritePlan의 필드별 patch | BUG-022 멤버·정원·후임 이름 및 revision 반영 |
+| 공개범위 전환 | group 전환 최소6필드 set, public 전환 delete | 직접 카드 reader가 소비할 필드와 공개 범위 |
+| 개인 완료·소유권 정리 | 별도 partial update/delete | 마지막1인·승계·완료 이력·group count |
+| backfill | 원본 복사 set, 원본 변경 없는 예외 | 기존 참가자 권한/누락/종료 상태와 일반 명령 분리 |
+
+직접 listing을 카드로 읽는 FirestorePartyReadRepository는 손상/필수필드 누락 mapping 예외를 건너뛴다.
+따라서 최소6필드 writer와 full writer 혼용은 필드별 reader 표로 확인해야 하며,
+단순히 Rules만 canonical full-copy 조건으로 바꾸면 구 writer의 정상 조작이 거절될 수 있다.
+이번에는 모든 필드의 공개성을 확정하거나 canonical writer를 구현하지 않았다.
+R1 다음 시작 산출물은 명령별 before/after/필수쓰기와 reader 필드표다.
+
+### 16.5 구간 판정과 후속 실행 경계
+
+- 확인 완료: 운영 활성 소스, 로컬 실패 기준, 공개3태그 기본 DI/원장 경로,
+  구 원장0건/새 원장23건, legacy 읽기 폐쇄의 명확한 앱 오류 위험, R1 연결 범위.
+- 사용자 확인 완료: 전체 차단은 의도하지 않은 상태. 기존 성공본 복원 명세 준비, 실제 게시 지시는 대기.
+- 다음 로컬 구간: R1 필드/책임표 확정 후 단일 projection 후보 구현. R2/R3 동시 착수하지 않음.
+- 원격 게시·자료 이행: 이번 실행0회. 기존 게시 예산은 소진된 상태이며 새 명세/지시 전 재시도 없음.
+- 새 기능/실기기: 없음. BUG-024 미종료. 기존110실패/51분석 기록을 이번 결과로 재측정하지 않음.
+- R2 진입 시 추가 확인: 실제 배포 단말 범위, 구writer 차단, 직전 잔존량, ownershipRevision 부재의 의미.
+  큰 이행을 생략할 수 있는 근거는 확보했지만 legacy 검사를 지금 제거하는 승인은 아니다.
