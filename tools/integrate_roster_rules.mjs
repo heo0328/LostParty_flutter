@@ -20,8 +20,17 @@ assert.ok(readable.includes('function deGenerationUpdate('));
 assert.ok(readable.includes('function deLastCompletedDisband('));
 assert.ok(readable.includes('function deReplacePriorState('));
 const compatible = availabilityRuntime(nextWeekPreparation(completionRoleCompatibility(readable)));
-const compact = compactExecutableRules(compatible);
+const candidate = process.argv.includes('--listing-candidate');
+const reviewed = candidate ? (await import('./rules_listing_candidate.mjs')).canonicalListings(compatible) : compatible;
+const compact = compactExecutableRules(reviewed);
 const result = compact.source;
+if (candidate) {
+  fs.mkdirSync('coverage/rules-listing', {recursive: true});
+  fs.writeFileSync('coverage/rules-listing/candidate.rules', result);
+  fs.writeFileSync('coverage/rules-listing/readable.rules', reviewed);
+  console.log(JSON.stringify({candidate: true, bytes: Buffer.byteLength(result), sha256: createHash('sha256').update(result).digest('hex')}));
+  process.exit(0);
+}
 if (process.argv.includes('--review')) {
   const directory = new URL('../coverage/rules-executable/review/', import.meta.url);
   fs.mkdirSync(directory, { recursive: true });

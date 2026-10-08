@@ -88,12 +88,11 @@ class PartyAtomicWritePlan {
               aggregate.status == PartyRecruitmentStatus.active));
 
   PartyGroupListingWriteAction get groupListingAction {
-    if (aggregate.groupId == null ||
-        (command.type == PartyAtomicCommandType.disband &&
-            aggregate.status == PartyRecruitmentStatus.completed)) {
+    if (aggregate.groupId == null || aggregate.visibility != 'group') {
       return PartyGroupListingWriteAction.none;
     }
-    return closesActiveGroupRecruitment
+    return closesActiveGroupRecruitment ||
+            command.type == PartyAtomicCommandType.disband
         ? PartyGroupListingWriteAction.delete
         : PartyGroupListingWriteAction.update;
   }

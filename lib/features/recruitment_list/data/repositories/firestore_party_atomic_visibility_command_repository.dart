@@ -1,3 +1,4 @@
+import '../mappers/party_raid_listing_document.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -144,7 +145,13 @@ class FirestorePartyAtomicVisibilityCommandRepository
         if (plan.deleteListing) {
           transaction.delete(listingRef);
         } else if (plan.listingDocument != null) {
-          transaction.set(listingRef, plan.listingDocument!);
+          transaction.set(
+            listingRef,
+            partyRaidListingDocument(
+              currentRecruitment: raw,
+              recruitmentPatch: plan.recruitmentPatch,
+            ),
+          );
         }
         return const PartyVisibilityResult.success();
       });

@@ -778,7 +778,13 @@ async function removeApprovedMemberTxn(
     if (successorRef) {
       tx.update(successorRef, { canApproveApplications: true, updatedAt: serverTimestamp() });
     }
-    if (recruitment.visibility === 'group') {
+    if (recruitment.visibility === 'group' && process.env.R1_LISTING === '1' && !legacyListingOnly) {
+      tx.set(doc(db, 'groups', recruitment.groupId, 'raidListings', recruitmentId), {
+        ...recruitment, ...lifecycleMarkerConsumptionPatch(recruitment), ...composition,
+        revision: nextRevision, updatedAt: serverTimestamp(),
+        memberCount: tamperListingCount ? 99 : remainingSlots.length, ...listingOverrides,
+      });
+    } else if (recruitment.visibility === 'group') {
       tx.update(
         doc(db, 'groups', recruitment.groupId, 'raidListings', recruitmentId),
         {
@@ -1509,7 +1515,7 @@ async function completeActiveMemberTxn(
       : null;
     const nextRevision = recruitment.revision + 1;
     const eventId = `memberLeft_${recruitmentId}_${nextRevision}`;
-    tx.update(recruitmentRef, {
+    const recruitmentPatch = {
       ...(remainingIds.length === 0 ? {
         status: 'disbanded', manualRecruitmentEnabled: false,
         hasAvailableSlot: false,
@@ -1541,7 +1547,8 @@ async function completeActiveMemberTxn(
       lastCommandActorPlayerId: actorPlayerId,
       lastCommandAt: serverTimestamp(),
       revision: nextRevision, updatedAt: serverTimestamp(),
-    });
+    };
+    tx.update(recruitmentRef, recruitmentPatch);
     tx.delete(memberRef);
     if (successorRef) {
       tx.update(successorRef, {
@@ -1557,6 +1564,8 @@ async function completeActiveMemberTxn(
         updatedAt: serverTimestamp(),
       });
       tx.delete(groupListingRef);
+    } else if (groupListingRef && process.env.R1_LISTING === '1') {
+      tx.set(groupListingRef, { ...recruitment, ...recruitmentPatch });
     } else if (groupListingRef) {
       tx.update(groupListingRef, {
         memberCount: remainingIds.length,

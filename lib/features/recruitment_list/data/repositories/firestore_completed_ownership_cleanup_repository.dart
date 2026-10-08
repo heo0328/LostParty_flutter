@@ -1,3 +1,4 @@
+import '../mappers/party_raid_listing_document.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../domain/entities/completed_ownership_cleanup.dart';
@@ -329,13 +330,16 @@ class FirestoreCompletedOwnershipCleanupRepository
       });
     }
     if (room['visibility'] == 'group') {
-      tx.update(
+      tx.set(
         firestore
             .collection('groups')
             .doc(room['groupId'] as String)
             .collection('raidListings')
             .doc(observation.roomId),
-        observation.listingPatch(patch),
+        partyRaidListingDocument(
+          currentRecruitment: room,
+          recruitmentPatch: patch,
+        ),
       );
     }
     tx.set(

@@ -1,10 +1,12 @@
+import '../mappers/party_raid_listing_document.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// 손대지 않은 그룹 전용 모집에 listing이 없으면, 현재 원본 Snapshot으로 만든다.
 /// 모집 revision은 바꾸지 않는다. 실패는 호출 측에서 삼킨다.
 class FirestorePartyRaidListingBackfill {
-  const FirestorePartyRaidListingBackfill({required FirebaseFirestore firestore})
-    : _firestore = firestore;
+  const FirestorePartyRaidListingBackfill({
+    required FirebaseFirestore firestore,
+  }) : _firestore = firestore;
 
   final FirebaseFirestore _firestore;
 
@@ -58,7 +60,10 @@ class FirestorePartyRaidListingBackfill {
       }
       final members = after['memberPlayerIds'];
       if (members is! List || !members.contains(playerId)) return;
-      transaction.set(listingRef, Map<String, Object?>.from(after));
+      transaction.set(
+        listingRef,
+        partyRaidListingDocument(currentRecruitment: after),
+      );
     });
   }
 }

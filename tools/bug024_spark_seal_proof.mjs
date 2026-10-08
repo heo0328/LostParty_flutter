@@ -8,9 +8,10 @@ process.env.BUG024_SPARK_EVENT = '1';
 process.env.BUG024_RULES_FILE ||= 'coverage/bug024/spark-seal/candidate.rules';
 const { env, db, admin, snapshot, seed, prepare, advance, denied, lifecycle, replacement, second } = await import('./bug024_preparation_proof.mjs');
 const results = [];
-const dir = 'coverage/bug024/spark-seal';
+const dir = process.env.BUG024_EVIDENCE_DIR || 'coverage/bug024/spark-seal';
 const guardKeys = ['guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardCycleStartedAt', 'guardCycleEndsAt', 'guardSlotIndex', 'guardCheckedAt'];
 async function check(name, work) {
+  if (process.env.BUG024_FILTER && !new RegExp(process.env.BUG024_FILTER).test(name)) return;
   try { await work(); results.push({ name, passed: true }); console.log(`PASS C ${name}`); }
   catch (e) { results.push({ name, passed: false, error: e.message }); console.error(`FAIL C ${name}: ${e.message}`); }
 }
@@ -191,8 +192,10 @@ try {
 } finally {
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(`${dir}/results.json`, JSON.stringify(results, null, 2));
-  const coverage = await fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-party-group-cutover:ruleCoverage');
-  fs.writeFileSync(`${dir}/coverage-response.json`, JSON.stringify({ status: coverage.status, body: await coverage.text() }));
+  if (process.env.RULES_SKIP_COVERAGE !== '1') {
+    const coverage = await fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-party-group-cutover:ruleCoverage');
+    fs.writeFileSync(`${dir}/coverage-response.json`, JSON.stringify({ status: coverage.status, body: await coverage.text() }));
+  }
   await env.cleanup();
 }
 assert.ok(results.every(r => r.passed), `${results.filter(r => !r.passed).length} C feasibility failures`);

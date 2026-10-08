@@ -1,3 +1,4 @@
+import 'party_raid_listing_document.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../domain/entities/party_create_command.dart';
@@ -13,10 +14,7 @@ class PartyRaidListingSyncPlan {
     required Map<String, Object?> currentRecruitment,
     required Map<String, Object?> recruitmentPatch,
   }) {
-    final after = <String, Object?>{
-      ...currentRecruitment,
-      ...recruitmentPatch,
-    };
+    final after = <String, Object?>{...currentRecruitment, ...recruitmentPatch};
     final groupId = after['groupId'];
     final resolvedGroupId = groupId is String && groupId.isNotEmpty
         ? groupId
@@ -41,7 +39,7 @@ class PartyRaidListingSyncPlan {
     }
     return PartyRaidListingSyncPlan(
       groupId: resolvedGroupId,
-      listingDocument: after,
+      listingDocument: partyRaidListingDocument(currentRecruitment: after),
     );
   }
 
@@ -55,6 +53,21 @@ class PartyRaidListingTx {
 
   /// 그룹 listing을 읽지 않을 때 쓰기 no-op용.
   static const empty = PartyRaidListingTx._(null, null);
+
+  /// A source-authorized participant may update its derived listing without
+  /// obtaining group-only read permission. Rules validate the source transition.
+  static PartyRaidListingTx forWrite({
+    required FirebaseFirestore firestore,
+    required String groupId,
+    required String recruitmentId,
+  }) => PartyRaidListingTx._(
+    firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('raidListings')
+        .doc(recruitmentId),
+    null,
+  );
 
   final DocumentReference<Map<String, dynamic>>? ref;
   final DocumentSnapshot<Map<String, dynamic>>? snapshot;
@@ -73,10 +86,7 @@ class PartyRaidListingTx {
         .doc(groupId)
         .collection('raidListings')
         .doc(recruitmentId);
-    return PartyRaidListingTx._(
-      listingRef,
-      await transaction.get(listingRef),
-    );
+    return PartyRaidListingTx._(listingRef, await transaction.get(listingRef));
   }
 
   void write({

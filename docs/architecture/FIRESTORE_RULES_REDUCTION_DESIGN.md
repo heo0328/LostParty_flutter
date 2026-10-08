@@ -1,7 +1,8 @@
 # Firestore Rules 대폭 축소 설계
 
-최초2026-10-07, 전체 영향 재검토2026-10-08. 상태: 첫 구간 기준 조사 수행, 축소 구현·데이터 이행·게시 미착수.
-최신 운영 조회와 첫 구간 판정은 §16을 따른다. 이전 활성본36b5920e를 현재 운영본으로 사용하지 않는다.
+최초2026-10-07, 전체 영향 재검토2026-10-08. 상태: R1 로컬 후보 검증 중, 평가 한도 회귀로 승격 보류.
+운영 성공본36b5920e는10월8일11:16 KST 복원·활성SHA 확인했다. R1 원격 게시/자료 이행은 미실행이다.
+운영 조사·복원은 §16, R1 구현과 재개 검증은 §17을 따른다.
 §9~15는 후속 전체 영역 검토와 실행 전 게이트다. 앞선 후보를 구현 확정안으로 해석하지 않는다.
 
 사용자 요청은 반복되는 게시 실패를 대상으로 불필요한 검증, 로컬 이관, 구조 축소를 찾는 것이다.
@@ -556,3 +557,86 @@ R1 다음 시작 산출물은 명령별 before/after/필수쓰기와 reader 필�
 - 새 기능/실기기: 없음. BUG-024 미종료. 기존110실패/51분석 기록을 이번 결과로 재측정하지 않음.
 - R2 진입 시 추가 확인: 실제 배포 단말 범위, 구writer 차단, 직전 잔존량, ownershipRevision 부재의 의미.
   큰 이행을 생략할 수 있는 근거는 확보했지만 legacy 검사를 지금 제거하는 승인은 아니다.
+
+## 17. R1 로컬 후보와 재개 검증 (2026-10-08)
+
+### 판정
+
+**R1 미완료·후보 승격 보류.** 시작 HEAD4c091fa, 브랜치fix/recurring-next-week-character-change.
+canonical writer와 후보 생성 경로를 연결했지만 모든 회귀가 통과하지 않았다.
+이 커밋은 검토/복구용 진행본이다. 현재 운영 Rules와 함께 앱을 배포하거나 실기기 인수를 시작하지 않는다.
+
+기본 생성기의 `--check`는 여전히 추적408f163f와 일치한다. `--listing-candidate`만
+ignored coverage/rules-listing에 후보를 만든다. 최종 보존 후보a190ad6313f525b9211d957d4900e75bc5b3e5b4daf0b4ac365e0cb689a4696c,
+148053bytes: 기준151427 대비3374bytes(약2.23%) 감소. compiled 크기·원격 경고·게시 가능성은 미측정이다.
+R1만으로30% 감소 또는 게시 장애 해결을 달성한 것이 아니다.
+
+### 저장 계약과 실제 연결
+
+`party_raid_listing_document.dart`가 현재 원본57개 top-level 필드를 명시한다.
+새 필드는 자동 노출하지 않고 StateError로 거절한다. 최종 원본+실제 patch를 합쳐 전체 set하며
+sourceRevision은 새 목록에 만들지 않는다. 기존 reader는 수정하지 않았다.
+이 허용표는 필드 단위 공개범위의 출발점이며 모든 과거 원본의 실측/이행을 완료한 표가 아니다.
+
+| 필드군 | 포함 내용 | 역할·주의 |
+|---|---|---|
+| 식별·공개범위 | schema/recruitment/group/visibility, leader/member IDs | 그룹원 목록 읽기 범위 유지. 이름만 표시값이고 ID/범위는 권한자료 |
+| 카드·조건 | title, raid/difficulty/catalog snapshots, 레벨/전투력, 경험/시간 | 원본 없이 listing을 카드로 읽는 기존 mapper에 필요 |
+| 구성·주차 | slots, 인원/역할 count, cycle key/status/window, continueTogether | 자리·참가·완료 정책 자료. 로컬 권한 검증으로 이관하지 않음 |
+| 원자 명령 | revision, targets, lastCommand*, ownershipCleanup, group count | 원본과 같은 요청에 결합하기 위한 복사. 과거 완료 이력을 재구성하지 않음 |
+| 수명·시각 | created/updated/completed 시각, 완료자, 신청 count | null도 그대로 보존. 신청 count만 바꾸는 기존 명령은 목록 의무를 추가하지 않음 |
+
+| 연결한 writer | 후보에서 달라지는 쓰기 | 남은 검토/위험 |
+|---|---|---|
+| atomic 생성·참가/승인 | membership plan/shared listing sync의 공통 복사 | 신규 필드 허용표와 모든 writer 경계 추가 검증 필요 |
+| 캐릭터·자리/준비 변경 | 공통 sync, 그룹을 떠난 active 참가자는 원본 권한에 의한 blind listing write | 기존 group 읽기권한을 새로 부여하지 않음. 준비 변경은 기존 listing 필요. 평가 한도 회귀 남음 |
+| lifecycle | 부분 update 대신 최종 원본 set | 반복 완료 유지/주차 전환; 1회성 종료·해산 삭제. public-linked 과거 잔여 목록 처리 미확인 |
+| 제거·개인 완료·소유권 정리 | composition 부분 patch 대신 최종 원본 set | 마지막1인 삭제/승계 보존이 목표. 신규 생성과 missing 계약을 별도로 검사해야 함 |
+| 공개범위 전환 | group 전환 최소6필드 대신 전체 원본 set, public 전환 delete | 구버전6필드 쓰기는 새 후보에서 거절될 수 있음 |
+| 반복 설정·backfill | 반복 설정에 목록 복사 추가, backfill 공통 writer | 반복 설정 시 추가 쓰기 발생. backfill은 원본 불변·현재 그룹 참가자만 허용 |
+
+현재 사용되지 않는 lifecycle listingPatch API와 구 sourceRevision 테스트 일부는 남아 있다.
+이것을 모두 통일했다고 판정하지 않는다. 후보 채택 전 호출자/테스트 정리와 전체 write 책임표를 끝낸다.
+
+### Rules 책임과 실패에서 확인한 점
+
+listing은 groupId/visibility/허용 키·원본 전체 일치와 실제 revision+1/server time을 확인한다.
+기존 모집 권한 검증을 listing에서 다시 실행하지 않는다. 원본 무변경 생성은 참가자 backfill로 분리한다.
+원본의 기존 준비/개인완료/소유권정리 결합은 재사용하고, 결합이 없던 명령 분기에만 목록 의무를 추가했다.
+기존 목록 필수 명령에서 set으로 누락을 조용히 복구하지 않도록 listing create 경로도 제한했다.
+하지만 이 정책 전체의 정상/누락/위조 검증은 아직 끝나지 않았다.
+
+1. 첫 후보aeae3d0e(147910bytes)는 원본 update 전체에 공통 diff/기존 listing 조회를 추가했다.
+   8인 완료 준비에서 service-call 오류, 변경/개인완료에서1,000식 오류가 발생했다.
+2. 기존 결합을 반복하지 않고 분기별로 필요한 검사만 추가한f6dc4374(148128bytes)에서
+   8인 준비→전환→완료가 통과했다. 캐릭터 제자리 변경은 통과했지만 빈자리 이동이 한도에 걸렸다.
+3. 유지/삭제 검사를 분리한 최종a190ad63에서 준비/인증30·완료역할27·개인완료15건 통과.
+   캐릭터/자리 suite의 다른 slot 변조 거절에서 한도 오류가 남았다. 일반 permission-denied로 통과 처리하지 않았다.
+4. 동일 fixture를 추적408f163f로 실행하면 제자리/stub/빈자리 이동과 거절 경계 모두 통과했다.
+   따라서 이번 차단을 localhost 통신 장애로 처리하지 않는다.
+5. 별도cc6e5434는 동일 OR 대안에서 캐릭터/자리 검사를 앞세웠지만 초기 참가 단계에서 한도 오류가 났다.
+   실효성이 없어 제외하고a190ad63으로 되돌렸다. 권한 조건 삭제·원격 실험은 하지 않았다.
+
+다음은 단순 helper 축약/순서 변경 반복이 아니라 **명령별 필수 쓰기와 평가 책임의 재설계**다.
+특히 새 결합을 다른 문서로 이동하려면 그 문서 쓰기가 원본에서 강제되는 근거가 필요하다.
+R1 범위에서 안전한 예산을 확보할 수 없으면 R3 선행 필요성을 별도 설계로 명시해야 한다.
+소스 감소와 실행 평가 예산은 별개의 제약이다.
+
+### 검증·부작용·미완료 게이트
+
+- 사용자 localhost 필터 해제 후 HTTP/1·HTTP/2 4건 모두 정상. 시스템 보안 설정은 에이전트가 변경하지 않았다.
+- Flutter 저장 계획/공통 writer 표적27건 통과. 중단 직전11파일 분석에 이어 추가4파일 분석 통과.
+- manual completion22건은 최초후보에서 통과했다. 이후 변경한 원본 목록 결합 분기를 소비하지 않으므로 반복 실행하지 않았다.
+- 전체 Flutter는 후보 채택 전이므로 재실행하지 않았다. 이전 전체110실패/분석51건 기록을 해결로 바꾸지 않는다.
+- Rules runtime coverage 내보내기는 최초 실행에서 대용량 문자열 직렬화 실패가 발생했다.
+  후속 실행은 명시적 RULES_SKIP_COVERAGE로 생략하고 실제 assertion 결과와 로그를 보존했다. coverage 확보를 주장하지 않는다.
+- 기존 부분 patch APK와 새 Rules의 혼합은 쓰기 거절을 만들 수 있다. 반대로 새 full-copy 앱을 현재 운영 Rules에
+  먼저 내보내면 개인완료/제거 등 기존 필드제한에 걸릴 수 있다. 앱/Rules 전환 순서·호환 인수는 미완료다.
+- 과거 원본에 허용표 밖 필드가 있으면 정상 명령도 로컬에서 거절된다. top-level 허용표는 중첩 필드의 개인정보 검토를 대신하지 않는다.
+- 전체 복사에 따른 쓰기 payload 증가, 반복 설정의 추가 쓰기, 기존 sourceRevision 없는 목록 읽기,
+  public-linked 잔여 목록, 누락 listing/단독쓰기/타 그룹 위조/backfill/경합과 모든 관련 writer는 최종 인수 전 남은 항목이다.
+- 데이터 이행·운영 요청·Rules 게시0회. 추적Rules와 기존 사용자4파일 해시 보존. dev/main 통합 없음.
+
+로컬 근거는 coverage/rules-listing의 first-run, revised-runtime-all, revised-completion,
+revised-personal, revised-placement-2, baseline-placement, reordered-placement, flutter-tests 로그다.
+후보 생성 코드와 fixture 조정은 검토용 체크포인트에 포함하며 원시 로그는 ignored 상태로 둔다.

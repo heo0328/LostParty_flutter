@@ -267,6 +267,12 @@ class FirestorePartyAtomicMemberMutationRepository
             groupId: aggregate.groupId,
             recruitmentId: command.recruitmentId,
           );
+        } else if (!nextWeekPrep) {
+          listing = PartyRaidListingTx.forWrite(
+            firestore: _firestore,
+            groupId: aggregate.groupId!,
+            recruitmentId: command.recruitmentId,
+          );
         }
       }
 

@@ -125,7 +125,8 @@ async function advance({ omit = false, staleRevision = false, deleteClaim = fals
       lastCommandActorPlayerId: playerId, lastCommandAt: serverTimestamp(), updatedAt: serverTimestamp() };
     if (deleteClaim) tx.delete(doc(db, 'players', playerId, 'weeklyRaidClaims', `${cycleKey}_${replacement}_${raidId}`));
     tx.update(ref, patch);
-    tx.update(doc(db, 'groups', room.groupId, 'raidListings', recruitmentId), { ...room, ...patch, sourceRevision: patch.revision });
+    if (process.env.R1_LISTING === '1') tx.set(doc(db, 'groups', room.groupId, 'raidListings', recruitmentId), { ...room, ...patch });
+    else tx.update(doc(db, 'groups', room.groupId, 'raidListings', recruitmentId), { ...room, ...patch, sourceRevision: patch.revision });
     for (const [index, slot] of room.partySlots.entries()) {
       if (omit && index === 7) continue;
       tx.set(doc(db, 'players', slot.playerId, 'raidStates', `${slot.characterId}_${raidId}`), {
