@@ -1042,3 +1042,79 @@ participant-baseline-test,dispatched-test}.log` 및 manifest. 핵심 결과는 �
 정리 직후/receipt/advance를 구분하고 한 단순 사례의 기준/후보 비용을 제한된 로그로 비교한다.
 전체 coverage 대용량 수집·전체 suite 반복·권한 삭제·동일 분기 재시도는 하지 않는다.
 새 명령 통합을 계속할지 더 큰 데이터 계약 전환으로 갈지는 해당 근거 후 판단한다.
+
+## 21. R3 실패 연산 분리·fixture 계약 대조 (2026-10-08)
+
+기준8987bc5. 이번은 진단만 수행했으며 앱/Rules/후보 생성기를 변경하지 않았다.
+`tools/rules_cleanup_diagnosis.mjs`는 demo Emulator만 사용하고 각 연산 직전 동일 Rules를
+다시 로드한다.90초 종료 상한·연산별 결과 즉시 저장·선택적 보고서8MiB 상한을 둔다.
+`roster_peer_cleanup_proof.mjs`에 진단 전용 진입점을 추가해 전체 suite 재실행을 피했다.
+진단 exit0은 관찰 완료이며, JSON의 passed:false를 통과로 세지 않는다.
+
+### 최초 실패와 실제 writer 차이
+
+| 분리한 작업 | 결과와 판정 |
+|---|---|
+| 기준본 일반 participant 정리 write | 성공 |
+| 같은 명령 receipt 재조회 | 성공, already-applied |
+| 이어지는 advance write | permission-denied. 이번 단일 연산 결과에는1000식 메시지 없음 |
+| 기준본 peer6회 정리 뒤 leader 승계 write | source update에서1000식 한도 실패 |
+| 멤버 차수만 정합화한 같은 leader 승계 | 동일1000식 실패. 차수 불일치만으로 설명되지 않음 |
+| returned-owner 단일 정리, 기준/후보 | 기준 성공 / 후보 source update1000식 실패 |
+| 멤버 차수를 정합화한 returned-owner, 기준/후보 | 기준 성공 / 후보1000식 실패 유지 |
+
+§20의 'leader removal 복합 사례 실패'를 '일반 정리 자체 실패'로 해석하지 않는다.
+이번 분리에서 정리와 receipt는 성공했고 최초 실패 연산은 advance였다.
+과거 복합 실행의 한도 오류와 이번 재로드 후 단일 연산의 일반 거절을 같은 오류라고 단정하지 않는다.
+
+현재 테스트 seed는 source.partySlots와 raidState 차수를1로 올리지만 member 차수를 갱신하지 않아
+모든8명에서 slotGeneration1/memberGeneration0이다. 실제 `_inspect`는 이 불일치를
+정리 write 전에 거절한다(`firestore_completed_ownership_cleanup_repository.dart`의 member 조회 직후).
+진단의 `R3_ALIGN_FIXTURE=1`은 **로컬 demo 자료의 member 차수만** 슬롯과 맞춘 대조다.
+이 보정 후에도 returned-owner 회귀와 승계 한도 실패가 유지되므로 fixture 문제만으로 면책하지 않는다.
+
+advance fixture `roster_ownership_rules_proof.mjs:lifecycle`는 바로 transaction을 실행한다.
+실제 `FirestorePartyAtomicCommandRepository.execute`는 `_certifyAdvance`를 먼저 호출해 각 대상에
+guardRoomRevision/cycle/slot 인증을 기록한다. Rules `bug24AdvanceCompleted→sealPrepared`가
+이를 요구하지만 옛 fixture는 그 절차를 생략했다. 따라서 이 advance 실패를 최신 앱의
+전환 기능이 깨졌다는 근거로 쓰지 않는다. 이번에는 인증을 우회하거나 Rules를 완화하지 않았다.
+실제 앱의 정리 transaction은 target/member/authority와 후임을 추가 조회하고 관찰값을 비교한다.
+proof는 그 사전 검사를 모두 재현하지 않으므로 서버 경계 대조와 앱 end-to-end 판정을 구분한다.
+
+### 평가 비용의 확인 범위
+
+동일 returned-owner 입력·동일 환경에서 기준17471d0f는 통과하고 후보87edb514는
+recruitment update의1000식 한도를 초과한다. member 차수 정합화 후에도 결과가 같다.
+이것이 이번에 확보한 실행 비용 근거이며 정확한 식 수/증가분은 확보하지 못했다.
+
+정적 경로 차이는 기존 aggregate1층→공통aggregate+종류별policy2층, policy 인자4개 전달,
+participant 정상 경로에서 policy/listing/event를 고르는 kind 조건3곳 추가다.
+검사식의 공통화가 source bytes를 줄여도 요청당 평가량을 줄인다는 보장은 없다.
+이 정적 차이를 공식 실행식3개 증가나 전체 원인으로 단정하지 않는다.
+
+단일 요청 뒤 ruleCoverage도8MiB를 넘어 수집을 중단했다. 제한을 늘리거나 대용량 원문을 저장하지 않았다.
+최초 수집 예외 뒤 Node 종료 assertion도 관찰되어, 결과를 보고서보다 먼저 저장하고
+보고서는 기본 비활성으로 바꿨다. 이후 단계 분리 실행은 정상 종료했다.
+정확한 함수별 실행수·문서 접근수·compiled 크기·원격 게시 효과는 미확인으로 남긴다.
+
+근거 파일은 ignored `coverage/rules-cleanup/diagnosis/`의 baseline-stages,
+baseline-peer,aligned-peer,baseline-returned,candidate-returned,
+aligned-baseline-returned,aligned-candidate-returned JSON이다.
+재현은 R1_LISTING/R3_CLEANUP/ROSTER_TRACKED_RULES=1, ROSTER_COMPLEXITY_RULES_FILE와
+R3_READABLE에 해당 기준/후보 경로, R3_DIAGNOSIS_LABEL에 결과 이름을 지정한다.
+returned 비교는 R3_DIAGNOSIS_CASE=returned, 차수 대조는 R3_ALIGN_FIXTURE=1이다.
+일반 연산은 새 진단 도구, peer 승계는 기존 peer proof의 진단 진입점을 사용한다.
+
+### 다음 접근의 결정
+
+소규모 helper 추출/명령 분기 순서 변경은 계속 중단한다.87edb514는 미채택 유지다.
+다음 단일 구간은 **기존 불변 partyEvent를 이용한 정리 명령 검증 책임 재배치 설계**다.
+새 collection을 추가하는 것으로 가정하지 않고, source가 해당 event의 신규 생성을 강제하고
+event가 source before/after와 대상 권한을 검증하는 구조의 순감소/접근 비용을 먼저 계산한다.
+event 재사용·단독쓰기·member 누락·후임 미갱신 차단을 입증하지 못하면 그 안도 제외한다.
+member에만 있는 완료기록/소유권 검사를 임의로 옮기지 않는다. 이는 새 구현 승격 결정이 아니다.
+큰 감소가 가능한지 평가하는 설계 구간이며 감소율이나 게시 성공을 선약하지 않는다.
+
+기준 승계 실패는 별도 미해결 인수 경계로 유지하고 새 설계의 회귀 조건에 포함한다.
+옛 fixture의 차수·advance 인증 계약 정합화도 후속 구현 검증 전에 필요하다.
+운영/격리 Firebase 요청0, 앱/실기기 변경0. 이번 Emulator 종료, 입력3개 SHA와 사용자4파일 보존.

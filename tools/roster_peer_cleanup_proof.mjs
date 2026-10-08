@@ -92,6 +92,11 @@ const results = await runCleanupProof(rules, async ({ env, seed, snapshot, check
       return 'applied';
     });
   }
+  if (process.env.R3_DIAGNOSIS_LABEL) {
+    const { diagnosePeer } = await import('./rules_cleanup_diagnosis.mjs');
+    await diagnosePeer({ env, setup, snapshot, request, command });
+    return;
+  }
   let normal = false;
   await check('peer maximum six removals then leader succession and advance', async () => {
     await setup(); const before = await snapshot();
@@ -202,5 +207,5 @@ const results = await runCleanupProof(rules, async ({ env, seed, snapshot, check
     assert.deepEqual(await snapshot(), before);
   });
 }, { skipRegression: true });
-if (results.every(r => r.passed) && process.env.LEADER_PROOF_SCOPE !== 'peer-chain-only') results.push(...await runCleanupProof(rules));
+if (!process.env.R3_DIAGNOSIS_LABEL && results.every(r => r.passed) && process.env.LEADER_PROOF_SCOPE !== 'peer-chain-only') results.push(...await runCleanupProof(rules));
 fs.writeFileSync(new URL('results.json', directory), JSON.stringify(results, null, 2));
