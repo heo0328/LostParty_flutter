@@ -108,13 +108,23 @@ export function canonicalListings(source) {
   let expression = source.slice(rootStart, rootEnd);
   // Preparation, personal completion and cleanup already bind the final listing.
   // Add the obligation only to source branches that did not have that binding.
+  // Factor the common listing obligation out of active command alternatives.
+  // Pending application counters retain their existing listing-free branch.
+  // Join/character/position require an active source and preserve status and
+  // visibility, so transition reduces to their previous initial-copy check.
+  const activeStart = expression.indexOf('validAtomicRecruitmentJoin(');
+  const activeLast = expression.indexOf('validAtomicRecruitmentVisibilityChange(', activeStart);
+  const activeEnd = expression.indexOf(')', activeLast) + 1;
+  assert.ok(activeStart >= 0 && activeLast > activeStart && activeEnd > activeLast);
+  const activeCommands = expression.slice(activeStart, activeEnd);
+  expression = expression.slice(0, activeStart)
+    + `(r1ListingTransition(resource.data, request.resource.data) && (${activeCommands}))`
+    + expression.slice(activeEnd);
   for (const name of ['validAtomicLifecycleUpdate', 'validAtomicRecruitmentMemberRemoval',
-    'validRecurrenceChange', 'validAtomicRecruitmentJoin', 'validAtomicCharacterRevisionUpdate',
-    'validAtomicPositionAggregateUpdate', 'validAtomicRecruitmentVisibilityChange']) {
+    'validRecurrenceChange']) {
     const call = new RegExp(`${name}\\(\\s*resource\\.data,\\s*request\\.resource\\.data\\s*\\)`, 'g');
     assert.ok(call.test(expression), name); call.lastIndex = 0;
-    const binding = ['validRecurrenceChange', 'validAtomicRecruitmentJoin',
-      'validAtomicCharacterRevisionUpdate', 'validAtomicPositionAggregateUpdate'].includes(name)
+    const binding = name === 'validRecurrenceChange'
       ? 'r1InitialListing(request.resource.data)'
       : 'r1ListingTransition(resource.data, request.resource.data)';
     expression = expression.replace(call, match => `(${match} && ${binding})`);

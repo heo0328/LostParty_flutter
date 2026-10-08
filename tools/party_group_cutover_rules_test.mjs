@@ -1636,6 +1636,48 @@ async function main(rulesOverride = rules) {
       );
       return;
     }
+    if (process.env.PARTY_RULES_CASE === 'r1-active-listing') {
+      if (process.env.R1_LISTING !== '1') throw new Error('R1 candidate required');
+      const applicantDb = testEnv.authenticatedContext(joinerAuthUid).firestore();
+      await testEnv.clearFirestore();
+      await seedBase(testEnv);
+      await seedJoiner(testEnv);
+      // Match the authoritative ownership fixture used by character-placement.
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const admin = context.firestore();
+        for (const character of (await getDocs(collection(admin, 'characters'))).docs) {
+          const data = character.data();
+          await setDoc(doc(admin, 'gameAccounts', data.gameAccountId), {
+            ownerPlayerId: data.ownerPlayerId, status: 'active',
+          });
+        }
+      });
+      await assertSucceeds(createPublicRecruitmentTxn(db));
+      await seedGroupLinkedRoom(testEnv, db, { includeJoinerGroupMember: true });
+      const listingRef = doc(db, 'groups', 'group-room-1', 'raidListings', recruitmentId);
+      const beforeListing = (await getDoc(listingRef)).data();
+      await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+      if (!isDeepStrictEqual((await getDoc(listingRef)).data(), beforeListing)) {
+        throw new Error('Application counter exception unexpectedly changed listing');
+      }
+      console.log('PASS R1: group application counters require no listing write');
+      await assertSucceeds(approvePublicApplicationTxn(db));
+      await assertGroupJoinResult(applicantDb, 2);
+      console.log('PASS R1: group approval binds canonical listing');
+      await seedExpandedApprovedRoom(testEnv, 8);
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const admin = context.firestore();
+        const sourceRef = doc(admin, 'recruitments', recruitmentId);
+        await updateDoc(sourceRef, { approvalPolicy: { mode: 'directJoin' } });
+        await setDoc(doc(admin, 'groups', 'group-room-1', 'raidListings', recruitmentId),
+          (await getDoc(sourceRef)).data());
+      });
+      await assertSucceeds(kickApprovedMemberTxn(db));
+      await assertSucceeds(directRejoinAfterKickTxn(applicantDb));
+      await assertGroupJoinResult(applicantDb, 8);
+      console.log('PASS R1: max-eight removal and direct rejoin bind canonical listing');
+      return;
+    }
     await testEnv.clearFirestore();
     await seedBase(testEnv);
     await seedJoiner(testEnv);
