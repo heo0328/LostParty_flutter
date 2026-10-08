@@ -3,7 +3,9 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
-import { assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
+import { assertSucceeds, assertFails as legacyAssertFails } from '@firebase/rules-unit-testing';
+import { assertRulesDenied } from './assert_rules_denied.mjs';
+const assertFails = process.env.R3_CLEANUP === '1' ? assertRulesDenied : legacyAssertFails;
 import { peerCleanupCandidate } from './roster_peer_cleanup_candidate.mjs';
 import { runCleanupProof } from './roster_completed_cleanup_proof.mjs';
 import { lifecycle } from './roster_ownership_rules_proof.mjs';
@@ -72,12 +74,14 @@ const results = await runCleanupProof(rules, async ({ env, seed, snapshot, check
         ...(req.kind === 'peer' ? { leaderIndex: req.leaderIndex, observedLeaderRevision: req.observedLeaderRevision }
           : { successorIndex: req.successorIndex, priorGenerations: req.priorGenerations }) };
       const revision = room.revision + 1;
-      tx.update(ref, { ...composition, revision, updatedAt: serverTimestamp(), commandTargets: [], ownershipCleanup,
+      const patch = { ...composition, revision, updatedAt: serverTimestamp(), commandTargets: [], ownershipCleanup,
         lastCommandType: req.kind === 'peer' ? 'cleanupCompletedPeerOwnership' : 'cleanupCompletedLeaderOwnership',
-        lastCommandId: req.commandId, lastCommandActorPlayerId: req.actor, lastCommandAt: serverTimestamp() });
+        lastCommandId: req.commandId, lastCommandActorPlayerId: req.actor, lastCommandAt: serverTimestamp() };
+      tx.update(ref, patch);
       if (tamper !== 'omit-member') tx.delete(doc(db, 'recruitments', recruitmentId, 'members', target.playerId));
       if (successor && tamper !== 'omit-successor') tx.update(doc(db, 'recruitments', recruitmentId, 'members', successor.playerId), { canApproveApplications: true, updatedAt: serverTimestamp() });
-      if (tamper !== 'omit-listing') tx.update(doc(db, 'groups', room.groupId, 'raidListings', recruitmentId), { ...composition, sourceRevision: revision, updatedAt: serverTimestamp() });
+      if (tamper !== 'omit-listing' && process.env.R1_LISTING === '1') tx.set(doc(db, 'groups', room.groupId, 'raidListings', recruitmentId), { ...room, ...patch });
+      else if (tamper !== 'omit-listing') tx.update(doc(db, 'groups', room.groupId, 'raidListings', recruitmentId), { ...composition, sourceRevision: revision, updatedAt: serverTimestamp() });
       if (tamper !== 'omit-event') tx.set(eventRef, { schemaVersion: 1, eventId: req.commandId, commandId: req.commandId, recruitmentId,
         type, commandRevision: revision, expectedRevision: room.revision, actorPlayerId: req.actor,
         targetPlayerId: target.playerId, targetCharacterId: target.characterId, observedOwnershipRevision: req.observedOwnershipRevision,

@@ -996,3 +996,49 @@ Router의 RaidStatus/PartyReadDetail 연결과 recovery UI가 있으므로 죽�
 이번 검증은 계산 도구의 SHA/치환 assertion·실행과 diff 검토다. Flutter/Emulator 재실행 없음.
 새 기능 동작은 없고 기존 앱·Rules 입력을 보존했다. 실기기와 원격 컴파일·게시 미확인,
 Firebase 원격 요청0. §18의 R1 중첩필드/과거자료/backfill/혼합버전/미참조함수 인수는 여전히 남는다.
+
+## 20. R3 정리 통합 후보 구현·미채택 (2026-10-08)
+
+기준11c611b에서 `tools/rules_cleanup_candidate.mjs`로 정리 원본3종의 공통 상태/범위/
+집계/member 부재/listing/event 검증을 한 함수로 묶었다. 종류별 actor·key·소유권·승계
+검사와 member/event/state 함수는 유지했다. 정적2건에서 다른 함수 본문 전체 동일과
+allow 호출 위치·순서 보존을 확인했다. 실제 앱·추적Rules·R1 생성 pipeline에는 연결하지 않았다.
+
+후보87edb51493004c826ea57deb110edbb8faaf07a6543cbcb9cec82620ea2a1097:
+148725→147542bytes, 순감소1183bytes(0.80%). compiled 크기나 게시 효과는 미확인이다.
+**실행 한도 회귀로 미채택**하며 대폭 축소 완료가 아니다. 후보는 재현 도구로만 남긴다.
+
+기존 cleanup proof 두 개에 R1 전체 원본 listing 저장과 revision 기대를 연결했다.
+R3 모드는 `assertRulesDenied`로 한도 오류를 일반 거절 성공으로 세지 않는다.
+실제 앱 `_execute`와 동일한 patch를 source/listing에 쓰며 예전 fixture 모드도 유지한다.
+영어 JVM의 로컬 Emulator1.22.0/demo-party-group-cutover에서 동일 fixture를 대조했다.
+
+| 검증 | R1 기준17471d0f | 통합 후보87edb514 |
+|---|---|---|
+| 최대8인에서 peer6명 순차 정리 | 각 명령 성공 | 각 명령 성공 |
+| 이어지는 leader 승계 | 평가식1000 한도 실패 | 같은 한도 실패 |
+| 활성 kick/leave, 이전 소유자 본인 정리 | 3건 통과 | 3건 통과 |
+| returned owner / newer-room state / absent state | 3건 통과 | **3건 한도 실패: 신규 회귀** |
+| leader removal 및 후속 advance를 포함한 복합 사례 | 한도 실패 | 한도 실패 |
+| 위조/누락/경합 전체 | 정상 게이트 실패로 미실행 | 정상 게이트 실패로 미실행 |
+
+leader removal 복합 사례는 정리·재시도·후속 advance 중 정확한 실패 연산을 아직 분리하지 않았다.
+기준본도 실패했다고 R1 기능 전체의 실제 앱 장애를 확정하지 않는다. fixture와 원본 명령을
+분리해서 확인해야 한다. 반면 세 단순 사례의 기준 통과/후보 실패는 채택 거절의 충분한 근거다.
+
+설계의 정리 전용 dispatch도 한 번 대조했다(f64428ed/147601bytes).
+기존 OR에서 신선한 participant/leader 정리만 분리하고 peer 분기를 유지했으나 첫 peer부터
+한도 실패하여 제외했다. 실행 종류를 동적으로 계산하는 분기 비용과 공통 helper 비용을
+서버 표현식 수로 아직 분리 계측하지 않았으므로 원인을 단정하지 않는다. 같은 순서 실험은 중단한다.
+최종 도구는87edb514를 재생성하며 dispatch 변형은 채택하지 않는다.
+
+근거: ignored `coverage/rules-cleanup/{candidate-test,baseline-test,participant-test,
+participant-baseline-test,dispatched-test}.log` 및 manifest. 핵심 결과는 위 표로 추적 문서에 보존했다.
+최초 Java 인자 quoting/샌드박스 루프백 실패는 수정하여 Emulator가 정상 실행된 뒤 측정했다.
+검증 후 이번 Emulator를 종료했다. 원격 Firebase 요청0, 실기기 미실행, Flutter 무변경으로 미실행.
+기존 사용자4파일·추적408f163f·R1후보17471d0f는 보존했다.
+
+다음은 구현 확장이 아니라 **기준본 cleanup 실패 연산·평가 비용 분리 진단** 한 구간이다.
+정리 직후/receipt/advance를 구분하고 한 단순 사례의 기준/후보 비용을 제한된 로그로 비교한다.
+전체 coverage 대용량 수집·전체 suite 반복·권한 삭제·동일 분기 재시도는 하지 않는다.
+새 명령 통합을 계속할지 더 큰 데이터 계약 전환으로 갈지는 해당 근거 후 판단한다.

@@ -4,7 +4,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
+import { initializeTestEnvironment, assertSucceeds, assertFails as legacyAssertFails } from '@firebase/rules-unit-testing';
+import { assertRulesDenied } from './assert_rules_denied.mjs';
+const assertFails = process.env.R3_CLEANUP === '1' ? assertRulesDenied : legacyAssertFails;
 import { doc, getDoc, getDocs, collection, setDoc, updateDoc, deleteDoc,
   runTransaction, serverTimestamp } from 'firebase/firestore';
 import { completedCleanupCandidate } from './roster_completed_cleanup_candidate.mjs';
@@ -114,14 +116,18 @@ async function cleanup(client, request, tamper = null) {
       nonGroupMemberCount: room.nonGroupMemberCount - (target.countedAsNonGroupMember ? 1 : 0), hasAvailableSlot: true,
     };
     const nextRevision = room.revision + 1;
-    tx.update(ref, { ...composition, revision: nextRevision, updatedAt: serverTimestamp(),
+    const patch = { ...composition, revision: nextRevision, updatedAt: serverTimestamp(),
       commandTargets: [], lastCommandType: tamper === 'unknown-command' ? 'unknown' : 'cleanupCompletedOwnership', lastCommandId: request.commandId,
       lastCommandActorPlayerId: request.actor, lastCommandAt: serverTimestamp(), ownershipCleanup: {
         expectedRevision: request.expectedRevision, targetIndex: request.targetIndex,
         actorIndex: request.actorIndex, observedOwnershipRevision: request.observedOwnershipRevision,
-      } });
+      } };
+    tx.update(ref, patch);
     if (tamper !== 'omit-member') tx.delete(doc(client, 'recruitments', recruitmentId, 'members', target.playerId));
-    if (tamper !== 'omit-listing') tx.update(doc(client, 'groups', room.groupId, 'raidListings', recruitmentId), {
+    if (tamper !== 'omit-listing' && process.env.R1_LISTING === '1') tx.set(doc(client, 'groups', room.groupId, 'raidListings', recruitmentId), {
+      ...room, ...patch, ...(tamper === 'listing-count' ? { memberCount: 99 } : {}),
+    });
+    else if (tamper !== 'omit-listing') tx.update(doc(client, 'groups', room.groupId, 'raidListings', recruitmentId), {
       ...composition, sourceRevision: nextRevision, updatedAt: serverTimestamp(),
       ...(tamper === 'listing-count' ? { memberCount: 99 } : {}),
     });
@@ -148,7 +154,7 @@ try {
     assert.equal(after.states[request.targetIndex], null);
     assert.deepEqual(after.states.filter((_, i) => i !== request.targetIndex), before.states.filter((_, i) => i !== request.targetIndex));
     assert.deepEqual(after.groupMembers, before.groupMembers);
-    assert.equal(after.listing.sourceRevision, after.room.revision);
+    assert.equal(after.listing[process.env.R1_LISTING === '1' ? 'revision' : 'sourceRevision'], after.room.revision);
   });
   for (const [name, options] of [['leader removal', {}], ['former self removal', { self: true }],
     ['returned owner removal', { returned: true }], ['preserve newer-room state', { scenario: 'other-state' }],
@@ -165,7 +171,7 @@ try {
       assert.deepEqual(after.group, before.group);
       assert.deepEqual(after.groupMembers, before.groupMembers);
       assert.deepEqual(after.listing.partySlots, after.room.partySlots);
-      assert.equal(after.listing.sourceRevision, after.room.revision);
+      assert.equal(after.listing[process.env.R1_LISTING === '1' ? 'revision' : 'sourceRevision'], after.room.revision);
       assert.equal(await cleanup(client, request), 'already-applied');
       assert.deepEqual(await snapshot(), after, 'retry makes no writes');
       if (process.env.ROSTER_COMPLEXITY_RULES_FILE && name === 'leader removal') {
