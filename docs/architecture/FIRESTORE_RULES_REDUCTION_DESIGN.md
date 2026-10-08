@@ -560,6 +560,43 @@ R1 다음 시작 산출물은 명령별 before/after/필수쓰기와 reader 필�
 
 ## 17. R1 로컬 후보와 재개 검증 (2026-10-08)
 
+### 목록 전용 권한·backfill 책임표 검증
+
+6c71c5bf 후보를 그대로 사용한 `tools/rules_listing_boundary_proof.mjs`의30건이 통과했다.
+대상은 demo-party-group-cutover/localhost:8080뿐이며 운영/원격 API 요청은 없다.
+Router는 기본 Firestore repository일 때 backfill을 연결한다. 목록 ViewModel 시작 시 호출되며,
+repository는 본인 참가 원본 최대50건을 조회한 뒤 transaction에서 원본→목록 순서로 다시 읽고
+목록이 없는 경우에만 canonical set한다. 원본 revision을 올리지 않는다. 테스트는 이 읽기/쓰기
+순서의 재진입·경쟁과 별도의 위조 직접쓰기를 검증하며 실제 Dart/UI 실행 검증을 대신하지 않는다.
+
+| 경계 | 요청·결과 | 책임 |
+|---|---|---|
+| 구형 목록 읽기 | 현재 그룹원은 부분 필드/sourceRevision 목록 get/list 가능; 외부인·미인증은 거절 | 기존 그룹 읽기 범위 유지 |
+| 목록 단독쓰기 | 원본 없이 revision 증가/동일 전체덮어쓰기/삭제 모두 거절 | 기존 목록 변경은 같은 요청의 원본 변경 필요 |
+| backfill 주체 | 현재 그룹원+원본 참가자만 누락 생성; 비참가 그룹원/외부인/미인증/그룹 탈퇴 참가자 거절 | `r1ListingBackfill`의 그룹/참가 이중 조건 |
+| 경로·내용 | 다른 그룹 경로·groupId 위조·원본 없는 ID·제목/revision 위조·부분복사 거절 | source 경로와 groupId 및 전체값 일치 |
+| 새 필드 | listing에만 추가하거나 원본에도 존재하는 미허용 top-level 필드 모두 거절 | Dart 필드표에서 생성된 Rules hasOnly |
+| 수명 | 공개방·status 해산·cycle 해산 복사 거절; 완료 회차 대기방은 누락 생성 허용 | 기존 backfill 예외 유지 |
+| 재진입 | 기존 부분 목록과 정상 목록 모두 수정하지 않음 | Dart와 같은 read-before-create 순서 |
+| 오래된 snapshot | 원본 변경 이전 payload 거절, 새 transaction은 최신 원본 복사 | source 불변·getAfter 일치 |
+| 동시 누락 생성 | 두 참가자가 missing을 읽은 뒤 경쟁; 하나 생성, 하나 재시도 후 existing 반환 | Firestore transaction precondition, 원본 revision 무변경 |
+
+거절은 `assertRulesDenied`로 평가/접근 한도 오류와 구분했다. 매 요청 전후 원본/목록/위조 대상
+문서를 비교해 불변을 확인했다. 최종 정상·경쟁 요청은 source와 listing의 전체 일치도 확인했다.
+최초 실행은 테스트 보조 함수가 Rules-disabled callback의 반환값을 전달하지 않아 중단됐다.
+명시적 반환값 보존으로 고친 최종 실행30건만 완료 근거로 삼는다. Rules·앱 수정은 필요하지 않았다.
+
+부작용·한계: 기존 부분 listing은 backfill 재진입으로 자동 교정되지 않는다. 허용표 밖 필드가
+원본에 있으면 정상 앱의 canonical writer도 거절한다. 현재 backfill은 방별 실패를 분리하지 않아
+이런 실패 하나가 뒤쪽 방의 보완까지 중단하며 ViewModel에서 예외를 삼킨다. 전체 writer 인수에서
+검토할 기존 처리다. top-level 허용표는 중첩 map/list 필드의 안전성을 증명하지 않는다.
+completed/incompleteEnded 같은 되돌릴 수 없는 종료와 backfill의 계약 정합성, lifecycle/공개전환과
+backfill 사이의 경쟁, 과거 실제 자료와 구버전 앱 혼합은 이번30건의 검증 범위 밖이다.
+후보 source147988bytes/기준 대비2.27% 감소는 그대로이며 원격 compiled 크기·게시 성공은 미확인이다.
+실행: 후보 생성 후 로컬 Emulator에서 R1_LISTING=1 및 PARTY_RULES_FILE=coverage/rules-listing/candidate.rules로
+위 proof를 Node 실행한다. 최종 로그: coverage/rules-listing/listing-boundaries-final.log.
+이전5개 suite·active-listing3건은 동일 Rules이므로 재실행하지 않았다. R1 전체 완료 판정은 보류한다.
+
 ### 최신: active 대안의 공통 결합 게이트
 
 후보6c71c5bf2acd54368463689edc7a569cf4a6fe22aa6e545a15f5068a506533c8는147988bytes다.
