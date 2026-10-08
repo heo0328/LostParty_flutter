@@ -1323,3 +1323,83 @@ mutation/removal에 연결된다. 구 FirestorePartyMembershipCommandRepository�
 원본과 기존 사용자4파일을 보존했다. 계산은 source 크기이며 compiled·실행 예산·게시 효과를
 증명하지 않는다. R1 인수 잔여·기준 승계1000식·fixture 차수/인증·BUG-024 운영 미반영은 남는다.
 다음 작은 폐쇄 후보를 진행하더라도 전체 축소 목표 미달을 별도 미완료로 계속 표시한다.
+
+## 24. 호출 깊이 조사와 전체 계획 보정 (2026-10-08)
+
+사용자가 최초 기획과의 정합성 검토 후 호출 깊이 조사·축소 방안을 추가 요청했다.
+`tools/rules_call_depth_audit.mjs`로 추적본408f163f, R1 17471d0f, 미채택 R3 87edb514의
+가독본을 각각 재축약해 SHA를 확인한 뒤 allow에서 연결되는 사용자 함수 호출 그래프를 조사했다.
+allow 자체와 get/getAfter 같은 내장 함수는 깊이에 포함하지 않는다. 분기 중 가장 긴 정적
+경로이며 실제 요청별 실행 식 수·compiled 트리 크기를 측정한 결과가 아니다.
+
+| 대상 | 전체 최대 깊이 | 소유권 정리 aggregate 깊이 |
+|---|---:|---:|
+| 추적본408f163f | 6 | 4 |
+| R1 검토본17471d0f | 6 | 4 |
+| 미채택 통합87edb514 | 6 | 5 |
+
+최장 경로 두 개는 세 입력에서 같다.
+
+```text
+validPersonalCompletionRecruitmentUpdate
+ → validPersonalLastMemberCompletion
+ → personalCompletionTargetsCurrentPlayer
+ → personalCompletionCommandMarker → currentPlayerId → bindingPath
+
+validAtomicGroupRecruitmentClose
+ → validAtomicGroupRecruitmentCloseBody
+ → personalCompletionTargetsCurrentPlayer
+ → personalCompletionCommandMarker → currentPlayerId → bindingPath
+```
+
+2026-10-08 확인한 [공식 제한표](https://firebase.google.com/docs/firestore/quotas#security_rules)는
+함수 호출 깊이20을 명시한다. 현재 정적6단계는 이에 근접하지 않는다. 따라서 호출 깊이 초과를
+기존 활성화400/후속409·503의 원인으로 확정하지 않는다. 게시 단계 오류, 런타임1000식,
+문서 접근 한도는 구분한다. 가장 깊은 함수가 실제 실패한 함수라는 근거도 없다.
+
+반면 §21의 기준/통합 대조는 정리4→5단계와 함께 kind 분기·인자 전달이 추가되고 정상 요청이
+1000식으로 실패했음을 보여 준다. 이것은 후보의 비용 회귀 근거지만 깊이1단계 증가만의
+효과를 분리한 실험은 아니다. 전체 최대 깊이가 같은6이라고 실행 비용도 같다고 볼 수 없다.
+
+### 깊이 감소 방안과 채택 조건
+
+| 방안 | 예상 정적 효과 | 보존/실패 조건 |
+|---|---|---|
+| personalCompletionCommandMarker를 유일 호출자인 personalCompletionTargetsCurrentPlayer 안에 합치기 | 위 두 경로 각각6→5 예상 | 현재 호출1곳 확인. keys/type/actor/target 크기 검사·단락평가 순서를 보존. 합친 뒤 다른 경로 포함 최대값 재계산 필요 |
+| validAtomicGroupRecruitmentCloseBody를 유일 호출자인 Close에 합치기 | 그룹 close 경로1단계 감소 예상 | existsAfter 선행 조건과 데이터 부재 거절, get/getAfter 시점·인자/let 제한 보존. 개인완료 경로는 이 변경만으로 줄지 않음 |
+| actor/binding 관찰값을 명령 validator 내에서 한 번 확보하여 순수 비교에 전달 | 반복 currentPlayerId 경로의 호출 감소 가능 | request.auth 부재·inactive binding·다른 actor 위조 거절 유지. 파라미터/let/호출 복잡도와 전체 소스 증가 가능하므로 전역 일괄 변경 금지 |
+| canonical target 표현으로 identity/자리 포함 여부를 직접 검사 | 반복 탐색 감소 후보, 깊이 감소 보장 없음 | 키 충돌·중복 자리·role/classKey·차수 검증, 필수8개 상태 쓰기 유지. 기존 R3 저장 계약 전환의 일부로만 검토 |
+
+앞의 두 개는 함수 본문을 여러 곳에 복제하는 전역 inline과 다르다. 단일 호출 보조 함수의
+경계를 없애는 한정안이며 아직 구현·정적 변환·서버 검증하지 않았다. 작은 depth 최적화를
+대폭 축소의 주 계획으로 다시 승격하지 않는다. bindingPath를 모든 위치에 풀어 쓰는 방식은
+중복 소스가 늘 수 있어 우선안에서 제외한다. kind 통합/분기 순서 재실험도 다시 열지 않는다.
+
+### 깊이와 별도로 봐야 하는 반복 호출
+
+다음6함수는 같은 하위 helper 호출문이 각각8곳 있다. 정적 호출 위치 수이며 실제 실행8회를
+뜻하지 않는다. 인원수·단락평가·분기에 따라 실행 수는 달라진다.
+
+- atomicAllEventTargetsMatch → atomicEventTargetMatches
+- atomicAdvanceStateMatchesSlot → atomicAdvanceStateMatchesSlotAt
+- atomicAllExpectedTargetsMatch → atomicExpectedTargetMatches
+- atomicAllTargetsMatch → atomicTargetMatchesTransition
+- deChangedSlotGenerations → deChangedSlotGenerationAt
+- atomicPositionInSlots → atomicPositionSlotAt
+
+이 중 event 대상/자리 identity 탐색은 canonical 표현 통일로 줄일 후보이고, 완료/전환의
+필수 raidState getAfter 검증은8인 보호의 핵심이므로 횟수만 줄이려고 생략하지 않는다.
+R1의 변경 슬롯만 검사하는 최적화는 이미 적용된 결과라 새 성과로 다시 계산하지 않는다.
+
+### 실행 계획 정정
+
+§23의2600bytes fallback 폐쇄를 다음 핵심 구현으로 바로 진행하는 순서는 재검토한다.
+최초 §7의 '작은 삭제 반복 대신 구조 전환 가능성 판정'에 맞춰 **전체 전환 계획 확정**을
+다음 구간으로 둔다. 목록 인수 잔여, 구형 쓰기 종료, canonical target/명령 책임 전환과
+위 깊이 보조안을 한 표에서 의존성·순감소·동등성·부작용·게시 가능 중간본 기준으로 판단한다.
+깊이, 소스 bytes, 반복 호출 구조, 실행 한도/권한 결과, 원격 컴파일/활성화를 독립 지표로 둔다.
+예상 효과가 입증되지 않은 안은 후보로 남기고 확정 절감량에 더하지 않는다.
+
+이번 완료는 조사·설계 기록뿐이다. 도구 입력 SHA/재귀 방지/괄호 assertion·Node 문법·diff 확인,
+기존 분석/실패 근거 재사용. 앱/Rules 변경·Emulator 재실행·운영 API/게시0. 공식 문서 웹 조회만 수행.
+BUG-024·기준 승계 실패·R1 잔여·대폭 축소/최종 게시 인수는 계속 미완료다.
