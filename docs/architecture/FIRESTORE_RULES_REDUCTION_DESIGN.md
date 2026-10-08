@@ -831,3 +831,76 @@ R1 범위에서 안전한 예산을 확보할 수 없으면 R3 선행 필요성�
 로컬 근거는 coverage/rules-listing의 first-run, revised-runtime-all, revised-completion,
 revised-personal, revised-placement-2, baseline-placement, reordered-placement, flutter-tests 로그다.
 후보 생성 코드와 fixture 조정은 검토용 체크포인트에 포함하며 원시 로그는 ignored 상태로 둔다.
+
+
+## 18. R2 로컬 의존성·축소 실측과 중단 후 복구 점검 (2026-10-08)
+
+### 복구 기준과 조사 범위
+
+사용자는 약1시간 진행 후 앱 종료/재실행에서 대화가 사라졌다고 보고했다.
+현재 Git/reflog/원격 작업브랜치는1ed0bbe로 일치했고 기존 사용자4파일 외 신규 미커밋 변경은 없었다.
+coverage/rules-listing 최신 실행 기록은16:23 KST의 직전 집계22건까지다.
+오늘17:30의 해당 저장소 로컬 세션2개는 metadata/response/event 각1개만 기록돼 있으며
+저장된 tool 실행/완료 기록은 확인하지 못했다. 이 사실만으로 대화 삭제·저장 실패의 원인을 확정할 수 없다.
+조회 시 Java/Node/Dart 프로세스는 없었다. 앱 자체의 종료 원인·소실 대화 복구는 미확인이다.
+이번은 로컬 조사/정적 계산이며 앱·Rules 배포·자료변경·Emulator·전체Flutter 재실행은0회다.
+
+### 실제 연결과 위험
+
+| 흐름/근거 | 현재 의존성 | 성급히 제거하면 생기는 문제 | 필요한 전환 |
+|---|---|---|---|
+| app_router209~235, MyAccountViewModel446 | 기본 command는 WeeklyRaidStatusCommand, 기본 read는 WeeklyRaidStatusRepository | 클래스 이름만 보고 구 Claim Repository 전체 삭제 시 주입/fallback 계약 단절 | 기본/주입 경로와 소비 메서드 구분 |
+| WeeklyRaidStatusRepository33~135 | state/Claim/assignment 세 stream이 모두 준비돼야 결과 emit | 구자료0건이어도 get/list 거절 시 현황 오류 | 새 reader 선행, 구버전 읽기 유지 |
+| AtomicCreate298~316 | 현재 주차 Claim 직접 읽고 소유권 분류 | 조회 거절 또는 유효완료 무시 | 이행 후 단일 state 기반 완료 판정 |
+| OccupancyInspector36~95, AtomicApplication118/Join290/MemberMutation172 | Claim 완료·assignment 충돌·소유권 차수 확인 | 신청/승인/변경 실패 또는 완료 캐릭터 재참가 허용 | 공용 inspector의 단일 원장 계약을 먼저 고정 |
+| WeeklyRaidStatusCommand123/304/649 | 완료/고아정리/완료해제에서 구자료 읽기,381/583/695에서 삭제 | 쓰기 전면 금지 시 구자료가 있는 요청만 실패 | 소비 삭제는 호환 기간 유지하거나 이행 후 앱 의존 제거 |
+| Rules sealAudit/deBlockingClaim/deManualAssignmentAvailable/bug24AssignmentAvailable/bug24PrepStates | 구자료 점유/완료 및 준비 중 불변 대조 | collection match만 없애도 교차 get/exists 검사는 남음 | 단일원장 보존 근거 후 호출 단위 제거 |
+
+공개v1.1.1의 WeeklyRaidStatusRepository는 현재와 diff0이며 동일 세 경로를 읽는다.
+해당 태그 OccupancyInspector에도 Claim/assignment 조회가 존재한다.
+현재 Router의 atomic application/join/member/visibility/create 연결은 유지되며 구버전=legacy writer라는
+일괄 분류는 틀리다. 앱 버전 문자열 검사는 서버 차단 증거로 사용하지 않는다.
+
+### 재현 가능한 정적 크기 계산
+
+실행: node tools/rules_legacy_size_audit.mjs. 입력은 R1 가독본이며 compactor 결과가
+17471d0f/148725bytes인지 먼저 강제 확인한다. 입력이 달라지면 중단한다.
+두 legacy match의 get/list 조건을 그대로 두고 write=false로 가정한 문자열을 메모리에서만 계산한다.
+함수 이름 중복을 거절하고 최대400회 이내에 신규 미참조 함수만 제거한다. Rules 파일을 쓰지 않는다.
+
+| 계산 | bytes | 의미 |
+|---|---:|---|
+| R1 기준 |148725| 실제 현재 검토후보 |
+| 구원장 write 금지 가정 |145575| 컴파일/권한/이행 검증 전 정적 추정 |
+| 추가 감소 |3150| R1 대비 약2.12%, 추적151427 대비 누적5852/약3.86% |
+
+제거 가정은 assignment 소비/고아삭제2함수, Claim 생성/삭제2함수와 신규 미참조 sealBlocksClaimAt이다.
+assignment의 create/update는 이미false여서 신규쓰기 차단만으로 큰 절감이 생기지 않는다.
+기준부터 미참조인 atomicHasGroupId는 별도 보고하고 R2 감소량에 포함하지 않았다.
+이는 이전 R1 변경에서 호출이 사라진 함수로 최종 승격 전 경고0 게이트에서 정리해야 한다.
+계산 뒤에도 assignmentPath/weeklyRaidClaimPath 선언·호출17개가 남는다. 이 수는 문서 접근 횟수가 아니다.
+정적 문자열 참조 검사는 보수적 크기 계산일 뿐 도달성/권한 동등성 또는 compiled 크기 증명이 아니다.
+
+결론: R2 직접 쓰기 validator 제거만으로 대폭 축소는 불가능하다. 작은 삭제·검증을 반복하지 않는다.
+R2 운영 전환은 자료/호환 게이트와 함께 보류하고, 다음 단일 설계에서 §6 R3의 명령별 중복 검증을
+크기·필수쓰기 책임으로 분해한다. 명시적 명령 분기, member/event의 원본 결합이 우선 조사 대상이다.
+기존 count/목록/개인완료 보호를 유지하며 순환 신뢰만 남기는 삭제는 금지한다.
+
+### R1 잔여 인수 고정
+
+| 항목 | 판정 | 완료 근거 |
+|---|---|---|
+| 중첩 필드 그룹 노출 | 미확인 | 원본57필드 각각의 nested payload·그룹원 읽기 계약 대조 |
+| 허용표 밖 과거 필드 | 이행 조사 필요 | 승인된 범위의 실제 자료 분류; 신규 unknown 필드는 계속 거절 |
+| 구형 부분목록·공개 잔여목록 | 이행 필요 | 정상 명령/별도 정리 책임 분리; 자동 전체삭제 금지 |
+| backfill 한 방 오류가 이후 방 중단 | 수정 필요 | 오류 분류·방별 진행/보고 계약; 무한재시도 금지 |
+| 앱/Rules 혼합버전 | 전환 설계 필요 | 새 writer 허용·구 writer 거절·복구 순서의 게시 가능한 중간본 |
+| atomicHasGroupId 미참조 | 정리 필요 | 후보 생성기에서 제거·정적 호출 검사, 최종 원격경고0 |
+| 실기기/운영 게시 | 보류 | 최종 후보 승격과 새 게시 지시 후 수행 |
+
+### 재개 시 작업 운영
+
+대화에만 판단을 쌓지 않고 조사/계산/검증의 작은 완료 단위마다 파일에 근거를 남긴다.
+장시간 실행은 제한 시간·종료 코드·출력 파일을 명시하고, 진행 중 상태와 완료를 구분한다.
+기존 로그를 덮어쓰는 suites.json 하나만 완료 증거로 사용하지 않는다.
+현재 실행에는 대용량 coverage 출력, 전체 회귀, 무한대기 또는 Firebase 원격 요청이 필요하지 않다.
