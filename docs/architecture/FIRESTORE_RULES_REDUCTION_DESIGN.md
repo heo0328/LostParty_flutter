@@ -1118,3 +1118,99 @@ member에만 있는 완료기록/소유권 검사를 임의로 옮기지 않는�
 기준 승계 실패는 별도 미해결 인수 경계로 유지하고 새 설계의 회귀 조건에 포함한다.
 옛 fixture의 차수·advance 인증 계약 정합화도 후속 구현 검증 전에 필요하다.
 운영/격리 Firebase 요청0, 앱/실기기 변경0. 이번 Emulator 종료, 입력3개 SHA와 사용자4파일 보존.
+
+## 22. R3 기존 event 검증 책임 재배치 설계·미채택 (2026-10-08)
+
+기준 ec89bfd, R1 가독본/축약본17471d0f. 정리 participant/peer/leader3종만 조사했다.
+앱·Rules·생성 pipeline을 바꾸지 않고 `tools/rules_cleanup_event_design_audit.mjs`에서
+메모리 안의 두 설계안을 계산했다. 배포 가능한 후보나 권한 동등성 검증 결과가 아니다.
+
+### 결론과 정적 크기
+
+| 안 | 축약 소스 bytes | 기준148725 대비 |
+|---|---:|---:|
+| 원본은 신규 event+전체 canonical map 확인, event는 기존 aggregate 검증 수행 | 149065 | 340 증가 |
+| 원본은 신규 event+동일 모집 ID/정확한 event type 확인, canonical map은 event만 확인 | 149143 | 418 증가 |
+
+첫 계산 SHA20ae6680d4ee44ae856adcfe68ebdbcb7c2ca7b43d79c6dd8230049067373f8d,
+두 번째ad7cbc0285fef569b82b50857e72f5c74eae71a9a6dba22367af0f88f6cac0d2.
+대상 aggregate의 event 조회 꼬리를 제거하고 event create의 transition 호출을 해당 aggregate
+정책 호출로 대체했다. source에는 신규 event 결합 함수를 남긴다. member/state/listing 고유
+검사와 기존 source 분기 호출 위치는 유지한다. 작은 envelope도 경로·type 결합 코드 때문에
+더 작지 않았다. 이는 두 구체적인 안의 실측이며 모든 가능한 재설계의 하한이라는 뜻은 아니다.
+
+**양을 줄이는 구현으로 미채택한다.** 기존 aggregate 검사는 event에 중복 구현되어 있던 것이
+아니라 source에만 있었다. 위치를 옮겨도 본문은 없어지지 않는다. source 평가량 분산 가능성과
+compiled 크기 변화는 미확인이며 이를 게시 해결 근거로 삼지 않는다. R3 helper/분기/단순 위치
+이동 실험은 여기서 닫고, 다음에는 큰 저장·명령 계약을 없앨 수 있는 범위를 먼저 선정한다.
+
+### 책임과 필수 동시 쓰기
+
+| 경계 | 유지해야 할 책임 | 누락·위조 시 판단 |
+|---|---|---|
+| source update | 기존 바깥 분기/슬롯 차수 검사, 해당 lastCommandId event의 이전 부재와 요청 후 존재, 같은 모집·정확한 전용 type 결합 | 과거 event 재사용과 다른 방 event로 승인 불가 |
+| event create | source get/getAfter, revision+1·현재 actor/time·명령 type, 기존 aggregate 전체, canonical payload 및 경로 eventId 일치 | event 단독 생성은 source revision 불변으로 거절해야 함 |
+| target member delete | source 전후와 대상 player/character 결합; peer의 대상 소유권 변경·완료 state 보존, leader의 완료 state 보존 | member 검사를 source/event에 있다고 추정하여 제거하지 않음 |
+| successor member update | 현재 소유권, 기존 character 및 이름/직업 Snapshot 결합, 승인권한/time만 변경 | source/event의 후임 ID·canApprove/time 확인과 함께 필요 |
+| group listing | 최종 source와 동일한 canonical 문서 | revision이 바뀌므로 이전 listing 재사용으로는 통과 불가 |
+| raidState | 완료 기록과 기존 상태를 그대로 보존 | 정리 명령이 완료 기록을 삭제·덮어쓰는 기능으로 바뀌면 안 됨 |
+
+두 문서가 서로 getAfter를 읽는 구조는 정책 함수의 재귀 호출을 의미하지 않는다. 다만 데이터
+연결만으로 안전성이 자동 입증되지는 않는다. 신규 생성 강제와 전용 create 분기/원본 전이
+검사를 함께 유지해야 한다. 일반 event validator의 권한을 정리 명령에 재사용하지 않는다.
+현재 장기 계약은 event를 명령 결과로 정의한다. 향후 채택하려면 검증 책임 변경을 계약에
+명시해야 하며, 이번 미채택 설계 때문에 기존 계약 자체를 바꾸지는 않는다.
+
+### 누락과 재시도의 중요한 한계
+
+- event 단독/다른 방/다른 type/다른 command ID/과거 revision은 위 연결에서 거절하도록 설계했다.
+  기존 event update/delete 거절은 유지한다. 이미 성공한 재시도는 앱의 receipt 조회로 종료해야 하며,
+  기존 event를 다시 set하는 새 transaction을 허용하는 방식으로 멱등성을 구현하지 않는다.
+- peer는 member의 exists(before)와 !existsAfter를 둘 다 요구하므로 실제 삭제 검사가 실행된다.
+  participant/leader는 !existsAfter만으로 이미 없는 member도 만족한다. participant는 source에
+  완료 state 검사가 있지만 leader의 state 검사는 member delete에만 있다. 따라서 **이미 없는
+  leader member의 경우 state 검사가 반드시 실행된다고 주장할 수 없다.** 실제 앱 `_inspect`는
+  member 존재/차수 정합을 먼저 요구하므로 앱 정상 흐름과 악의적 직접 요청을 구분한다.
+- successor의 after.canApprove=true/updatedAt=request.time은 일반적인 쓰기 누락을 막는 조건이나
+  실제 successor update 경로의 소유권/Snapshot 검증을 무조건 대체하지 않는다. 이미 조건을
+  만족하는 데이터·같은 요청의 다른 허용 경로까지 포함한 위조 테스트 없이는 필수 update를
+  완전히 입증했다고 하지 않는다. 이 한계는 위치 이동으로 해결되지 않는다.
+- 같은 expectedRevision의 동시 명령은 정확한 source 전후 revision 결합으로 한 번만 적용해야 한다.
+  이들 항목은 이번 **설계상의 검증 조건**이며 새 Emulator 테스트 통과 실적이 아니다.
+
+### 8인 접근·평가 비용과 앱 영향
+
+정리3종은 매 요청 대상1명이며 8인을 한 번에 정리하는 명령으로 바꾸지 않는다.
+event가 aggregate 전체를 실행하면 기존 source before/after 조회2회 위에 다음 접근이 추가된다.
+캐시를 가정하지 않는 호출식 수준의 부분 합계이며 실제 전체 실행 횟수는 미측정이다.
+
+| 그룹방 정상 경로 | binding/currentPlayerId 호출을 제외한 event 쪽 접근식 |
+|---|---|
+| participant, 현재 leader가 정리, state 존재 | source2+actor character/account2+target character/account2+member after1+state exists/get/getAfter3+listing1 = 11 |
+| peer | source2+actor2+기존 leader 소유권2+target member exists/existsAfter2+listing1 = 9 |
+| leader | source2+actor2+target2+successor getAfter2+target member after1+listing1 = 10 |
+
+hasActiveBinding의 exists/get 및 여러 currentPlayerId 조회는 위 수에 추가된다. 같은 경로 캐시를
+기대하지 않는 프로젝트 개별쓰기10/전체20 예산을 이 설계로 입증할 수 없다. 실제 서버의 캐시
+효과를 제외한 보수적 계산이므로 '실행 시 무조건 같은 횟수로 실패'라는 단정도 하지 않는다.
+source의 신규 event exists/getAfter와 member/listing 검증도 transaction 전체에 남는다.
+1000식 한도는 위치만 옮겨 해결된다고 할 수 없고 기존 기준 승계 실패는 계속 미해결이다.
+
+현재 앱 writer는 source+target member delete+group listing+event, leader면 successor update를
+하나의 transaction으로 쓴다. 새 컬렉션·비동기 후처리·추가 네트워크 명령은 이 안에 없다.
+하지만 채택하면 event 검증 실패가 정리 전체를 막아 재인증 후 고아 관계 정리가 계속 실패할 수 있다.
+이벤트 읽기/audience·로컬 receipt/history는 유지하며 로컬로 권한을 이전하거나 기능을 삭제하지 않는다.
+이번 미채택으로 사용자 앱 기능·데이터·운영 Rules에 새 영향은 없다.
+
+### 검증·후속 범위
+
+계산 도구는 입력 SHA를 고정하고 변경 대상 외 함수 동일성·allow 선언 동일성을 assertion으로
+확인한다. Node 실행/문법·diff 검토만 수행했다. Rules 파일 생성0, Emulator/Flutter/원격 요청0.
+compiler 경고·compiled 크기·실행 한도·실기기·게시 성공은 미확인이다.
+
+다음 제안은 **전체 명령·저장 계약의 대규모 삭제 가능량 선정** 한 설계 구간이다.
+명령군별 전용/공유 함수 크기를 나눠 보안 검사를 통째로 삭제하는 가상치와 구분하고,
+서버 중복 Snapshot/구형 쓰기 계약/표시 전용 필드를 없앨 때 실제 함께 제거되는 코드와
+앱/이행/읽기 호환 비용을 비교한다. 하나의 전환을 선정하거나 대폭 감소 근거 부족을 명시한다.
+이 제안은 기능 삭제 승인이나 다음 구현 착수를 뜻하지 않는다. R1 인수 잔여(§18), fixture 정합화,
+기준 승계 실패, BUG-024 운영 미반영은 그대로 남는다. 작은 정리 함수 실험을 다시 열지 않는다.
