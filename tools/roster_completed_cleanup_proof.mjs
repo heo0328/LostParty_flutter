@@ -66,8 +66,13 @@ async function seed({ returned = false, self = false, scenario = null, active = 
   await env.withSecurityRulesDisabled(async ctx => {
     for (const slot of originalSlots) {
       const gameAccountId = `de-account-${slot.playerId}`;
-      await setDoc(doc(ctx.firestore(), 'gameAccounts', gameAccountId), { ownerPlayerId: slot.playerId, ownershipRevision: 1 });
+      await setDoc(doc(ctx.firestore(), 'gameAccounts', gameAccountId), { ownerPlayerId: slot.playerId, ownershipRevision: 1,
+        ...(process.env.RULES_A1 === '1' ? { status: 'active' } : {}) });
       await updateDoc(doc(ctx.firestore(), 'characters', slot.characterId), { gameAccountId });
+      if (process.env.RULES_A1 === '1') {
+        await updateDoc(doc(ctx.firestore(), 'recruitments', recruitmentId, 'members', slot.playerId),
+          { ownershipRevision: slot.ownershipRevision });
+      }
     }
   });
   // This must succeed under the candidate before cleanup failures are meaningful.

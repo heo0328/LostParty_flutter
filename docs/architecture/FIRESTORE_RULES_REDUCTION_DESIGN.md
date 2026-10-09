@@ -1475,6 +1475,74 @@ member 상세 전체 병합·그룹 관계 재설계·인증 기능 삭제는 D�
 확인한 뒤0건 전환을 기록한다. 새 schema가 필요 없는 B만으로 불필요한 이행을 만들지 않는다.
 읽기 원장과 UI 문구만 로컬로 옮겨 서버 권한/과거 이력을 없애는 안은 제외한다.
 
-다음 착수는 **A1 검증 기준 정합화** 한 구간이다. 그 결과로 기준 승계 문제의 수정 단위를
+계획 확정 당시 다음 착수는 **A1 검증 기준 정합화** 한 구간이다. 그 결과로 기준 승계 문제의 수정 단위를
 확정하고 A2 이후를 이어간다. 이번 계획 기록의 검증은 문서 대조·diff 검사이며 앱/Rules/
 운영 자료 무변경, Flutter/Emulator/원격 게시0이다. 전체 기획 완료나 게시 문제 해결로 판정하지 않는다.
+
+## 26. A1 검증 기준 정합화 완료 (2026-10-09)
+
+§25의 첫 구간만 수행했다. `RULES_A1=1`에서 cleanup seed의 member 차수를 slot과 맞추고,
+새로 연결하는 gameAccount에 실제 인증 계약의 `status: active`를 넣는다. 예전 fixture는
+별도 대조를 위해 기본 동작을 유지한다. Rules·앱·후보 생성기는 변경하지 않았다.
+
+`rules_cleanup_diagnosis.mjs`는 A1 입력을 R1 SHA로 고정한다. 인증 없는 직접 advance를
+별도 관찰한 뒤 현재 `_certifyAdvance`처럼 대상별 transaction에서 binding·room revision·
+leader를 읽고 guard8필드를 merge한다. 타인의 private state를 인증 writer가 읽지 않는다.
+관리자 snapshot은 검증용 관찰에만 사용한다. 최종 advance는 기존 lifecycle writer를 사용한다.
+이 도구가 Dart WritePlan과 Repository의 모든 사전 검사·오류 매핑을 실행하는 것은 아니다.
+
+### 연산별 결과
+
+| 연산 | 최종 결과 / 보존 확인 |
+|---|---|
+| 최대8인 seed 및 participant1명 정리 | 성공. member/slot 차수1, 같은 Character. 완료 state·그룹·그룹원 불변 |
+| 같은 정리 요청 receipt | already-applied. 전체 snapshot 불변 |
+| 인증 없는 구형 직접 advance | permission-denied, 최종 오류에1000식 문구 없음. 전체 상태 불변. evaluation error도 포함되어 깨끗한 위조 거절 suite 통과로 세지 않음 |
+| 남은7명 개별 인증 | 모두 성공. 방·목록·멤버·이벤트·완료 핵심 필드 불변 |
+| 인증 후 advance | 성공. 방 revision+1/현재주 active, 목록=원본, 남은 state revision+1. 제거된 참가자 완료 state 및 그룹 관계 보존 |
+| 별도8인 seed에서 peer6회 정리 | 각각 성공, 각 receipt 재진입 불변. 완료 state·그룹 관계 보존 |
+| 남은2인에서 leader 승계 | recruitment update가1000식 평가 한도 초과. 거래 전후 전체 snapshot 동일 |
+
+최초 인증 실행은 새 gameAccount fixture의 status 누락으로 실패했다. Rules의
+`sealAudit → deManualCurrentOwnership`과 기존 Spark fixture를 대조해 자료 누락임을
+확인한 뒤 A1 seed만 보완했다. 보완 후 같은 경로의 인증/전환이 성공했다.
+기존 직접 advance 실패를 최신 앱의 주차 전환 결함으로 분류하지 않는다.
+
+### 남은 기준 결함과 다음 최소 수정
+
+승계 직전 입력은 memberCount2/revision10/currentCycleStatus=completed, 차수[1,1],
+targetIndex0/actorIndex1/successorIndex1/observedOwnershipRevision2이다.
+기존 leader=`player-1`, actor/후임=`player-extra-6`, 명령=`peer-leader-10`.
+8명 중6명 정리 후 원본·leader member 삭제·후임 승인권 update·목록·event를 한 거래로 쓴다.
+오류는 축약본 L2962 recruitment allow update에서1000식 초과이며 정확한 내부 소진 식은 미확인이다.
+
+가독본 경로는 recruitment allow update의 일반 분기→`deChangedSlotGenerations`→
+leader 명령 분기→`deLeaderCleanupAggregate`. aggregate는 현재 actor 소유권, target 소유권 변화,
+첫 남은 후임·승인권, `deCleanupAggregateUpdate`, member 부재, listing/event 결합을 검사한다.
+정적 경로와 오류의 allow 위치만으로 특정 helper가 원인이라고 확정하지 않는다.
+이미 없는 leader member의 완료 state 보호도 아직 검증되지 않았다.
+
+다음 **A1-F**는 이 승계 경로의 dispatch/중복 평가를 조사하고 최소 후보 한 개만 대조한다.
+현재 소유권/완료/후임/원자 결합을 삭제해 통과시키지 않는다. 정상 경계 통과 뒤 타인·오래된 차수·
+문서 누락·leader member 부재를 확인한다. 채택/보류 후 A2로 복귀하며 R3 통합 재실험이나
+구형 계약 전체 재설계로 확대하지 않는다. 실행 계획의 포함·제외·완료 조건은 NEXT_WORK가 관리한다.
+
+### 지표·재현·한계
+
+- 입력/출력: R1 SHA17471d0f/148725bytes 그대로, 추적408f163f/151427bytes 그대로. 이번 감소0bytes.
+- 깊이/반복 호출: Rules 무변경, §24의 최대6/정리4 유지. 새로운 실행 호출 수는 미측정.
+- 정상/위조/누락: 위 표의 관찰만 수행. 승계 정상 경계 실패로 위조/누락 전체 회귀는 통과 선언하지 않음.
+- 평가식/접근: 승계1000식 오류 재현. 정확한 식 수·문서접근 수 미측정, coverage 수집0.
+- 게시/실기기: 운영 요청·배포·실기기0. 게시 실패 원인이나 해결을 이번 결과로 확정하지 않음.
+- 검증: 변경 JS2파일 구문 검사, diff 검사, Emulator1.22.0/영문 locale에서 분리 실행 후 종료.
+
+로컬 재현은 영어 locale의 demo-party-group-cutover Emulator:8080에서 진행한다.
+`RULES_A1=1`, `R1_LISTING=1`, `R3_CLEANUP=1`, `ROSTER_TRACKED_RULES=1`,
+`ROSTER_COMPLEXITY_RULES_FILE=coverage/rules-listing/candidate.rules`,
+`R3_READABLE=coverage/rules-listing/readable.rules`, `R3_DIAGNOSIS_LABEL`을 지정한다.
+participant는 `node tools/rules_cleanup_diagnosis.mjs`, peer는 `node tools/roster_peer_cleanup_proof.mjs`.
+R3_ALIGN_FIXTURE/CASE/CAPTURE_PROFILE은 설정하지 않는다. R1 재생성은 listing-candidate 모드만 사용한다.
+증거는 ignored `coverage/rules-cleanup/diagnosis/a-one-current-writer-fixed*`, `a-one-peer*`에 있으며
+peer leader-input은 실제 요청과 거래 전 snapshot을 포함한다. 최초 status 누락 관찰은
+`a-one-current-writer*`에 별도 보존했다. 각 실행90초 상한·각 단계 즉시 저장은 유지한다.
+진단 exit0은 기록 완료일 뿐 모든 Rules 요청의 성공이 아니며 passed:false를 통과로 합산하지 않는다.
