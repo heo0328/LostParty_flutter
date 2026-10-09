@@ -1619,3 +1619,87 @@ R3_DIAGNOSIS_LABEL은 설정하지 않는다. 실행180초 상한·각 결과 �
 manifest/proof-input/results/proof.log/depth.json은 ignored `coverage/rules-leader-budget/`에 기록한다.
 깊이 감사 도구는 추가 인자로 가독본 경로와 기대 SHA를 받아 같은 정적 분석을 재사용한다.
 추적408f163f·R1 17471d0f·사용자4파일 SHA는 모두 보존했다.
+
+## 28. A2 목록 안전성·보정 실패 처리 (2026-10-09)
+
+### 공개범위 대조
+
+R1 목록57개 최상위 필드를 아래처럼 전부 분류했다. 현재 그룹원은 기존 Rules의
+`canAccessRecruitmentByAudience`로 그룹 원본 단건도 읽을 수 있다. 목록 get/list의
+`isCurrentGroupMember`도 active binding과 같은 그룹 membership 존재를 요구한다.
+따라서 **현재 계약의 원본 필드를 같은 그룹원에게 복제**하는 범위로 판단한다.
+단건 읽기가 목록 구독/캐시에 확대되는 점은 남으며, 탈퇴 이후 기존 캐시 회수까지 보장하지 않는다.
+
+| 분류 | 허용 필드 전체 | 판정 |
+|---|---|---|
+| 식별·표시 |schemaVersion, recruitmentId, title, leaderPlayerId, leaderCharacterNameSnapshot, leaderClassNameSnapshot, memberPlayerIds| 방/참가자 식별·표시, 기존 원본 읽기와 같은 대상 |
+| 레이드·조건 |raidCatalogVersion, raidId, difficultyId, raidNameSnapshot, difficultyNameSnapshot, difficultyAliasSnapshot, gateCount, minItemLevel, minCombatPower, experienceLevel, maxPlayHours, raidStartAt| 목록/필터 표시 |
+| 공개·운영 정책 |status, visibility, groupId, approvalPolicy, continueTogether, manualRecruitmentEnabled, hasAvailableSlot| 그룹 범위와 모집 상태 |
+| 회차 |currentCycleKey, targetCycleKey, currentCycleStatus, cycleStartedAt, cycleEndsAt| 방 회차, 개인 주간 Claim 전체가 아님 |
+| 구성·수량 |partyCount, membersPerParty, supportsPerParty, maxDealersPerClassPerParty, slotLedgerVersion, memberCount, maxMemberCount, dealerCount, supportCount, nonGroupMemberCount, pendingApplicationCount, pendingNonGroupApplicantCount, groupActiveRecruitmentCountAfter| 집계·구성값, 신청자 상세를 포함하지 않음 |
+| 변경·완료 |revision, createdAt, updatedAt, completedAt, completedByPlayerId| 방의 변경/완료 메타데이터 |
+| 중첩 |partySlots, raidStateTargets, commandTargets, ownershipCleanup| 아래 하위 필드 검토 참조 |
+| 명령 |lastCommandId, lastCommandType, lastCommandActorPlayerId, lastCommandAt| 원본의 마지막 명령 식별/행위자/시각 |
+
+partySlots의 현재 writer 필드는 playerId/characterId/role/classKey/partyIndex/slotIndex/
+countedAsNonGroupMember/ownershipRevision이다. 이름·장비 인증 자료·개인 토큰을 넣지 않는다.
+raidStateTargets/commandTargets는 playerId/stateId의 참조 목록이며 실제 private state 본문이 아니다.
+ownershipCleanup은 expectedRevision/targetIndex/actorIndex/observedOwnershipRevision와
+종류별 leaderIndex/observedLeaderRevision 또는 successorIndex/priorGenerations로 구성된다.
+기준은 PartyAtomicDocumentMapper.slot, PartyAtomicWritePlan, CompletedOwnershipCleanup이다.
+
+최상위 허용표는 **중첩 키의 허용표가 아니다**. 과거/관리자 입력의 unknown 중첩값까지
+안전하다고 단정하지 않는다. 원본=목록 복제를 유지하므로 임의 잘라내기는 하지 않는다.
+E에서 실제 중첩 키/값 종류를 조사하고 민감한 unknown이 있으면 게시·보정을 중단하여
+해당 필드의 별도 저장/이행 계약을 먼저 확정한다. 앱에서 보이지 않는다고 비공개로 간주하지 않는다.
+
+### 방별 보정 계약과 구현
+
+기존 최대50개 자기 참가 active 모집 조회·group 필터·원본→listing transaction 읽기·
+기존 listing 보존·원본 revision 불변은 유지한다. 새 batch 정책은 방별 자료 계약 오류와
+permission-denied/failed-precondition/not-found를 수집하고 다음 방을 진행한다.
+그 외 Firebase 오류는 공통 인증/통신 문제 가능성이 있어 남은 방을 중단한다.
+별도 자동 재시도는 추가하지 않는다(SDK transaction 자체 재시도는 기존대로).
+알 수 없는 프로그래밍 예외는 전파한다. 조회 자체 실패도 batch 진입 전에 전파된다.
+
+부분 실패는 처리/실패/미시도 개수와 방별 오류 코드로 호출자에게 전달한다.
+처리 수는 새로 생성한 수가 아니라 이미 존재/조건 변경으로 쓰지 않은 방도 포함한 완료 수다.
+목록 ViewModel은 정상 구독을 유지하고 집계 진단만 출력한다. 방 ID·문서·원시 오류 본문은
+로그에 출력하지 않는다. 새로운 사용자 경고 UI나 자동 재시도는 추가하지 않았다.
+실제 Router의 기존 callback 연결을 유지하므로 새 별도 DI 경로는 없다.
+
+### 과거자료·혼합버전 전환 표 (E 차단 조건)
+
+| 자료/조합 | 현재 처리 | E에서 필요한 확인 |
+|---|---|---|
+| 정상 원본·목록 누락 | 현 그룹 참가자만 원본 불변으로 생성 | 실제 누락 수·권한·재진입 확인 |
+| unknown 최상위 필드 | 앱/Rules 허용표로 복제 거절, 다음 방 계속 | 용도/소유자 분류 후 정식 이행. 자동 필드 삭제 금지 |
+| unknown 중첩 필드 | 최상위 검사만으로 차단 보장 못함 | 키/민감도 조사, 문제 있으면 전환 차단 |
+| 구형 부분목록 | 기존 문서 그대로 유지, backfill 덮어쓰기 없음 | 정상 새 명령으로 완전 복사되는 경우와 별도 조건부 이행 대상 분리 |
+| 종료/해산 원본·목록 누락 | 보정 생성 제외 | 잔존 목록 정리 필요성 조사 |
+| public 전환 뒤 오래된 group 목록 | 보정이 삭제하지 않음. UI 필터가 보안 삭제를 대체하지 않음 | 잔존 조회 가능성·원본 일치 대조 후 승인된 조건부 정리 |
+| 새 앱+현재 운영 Rules | 완전 복사 쓰기가 거절될 수 있음 | 새 기능 노출/업데이트·활성 전환 순서 확정 |
+| 구 앱+새 후보 Rules | 부분목록 쓰기 거절, 구 읽기 필드 의존 유지 | 강제 업데이트/지원 종료 안내·실제 공개앱 읽기 검증 |
+| 새 앱+새 Rules | 로컬 검증한 원본=목록 계약 | 활성 SHA·운영 이행·실기기 인수 후 완료 |
+
+운영 자료0건/이행 불필요를 주장하지 않는다. 위 운영 조사와 게시 가능한 중간본은 E/F로
+명시 이관한다. 이번 A2 완료는 로컬 안전성 작업 완료이며 R1 운영 전체 인수 완료가 아니다.
+
+### 후보·검증
+
+`rules_listing_safety_candidate.mjs`는 고정 R1에 A1-F를 한 번 적용한 다음 미참조
+atomicHasGroupId 선언만 제거한다. 선언 외 호출0을 확인하고 모든 allow 및 승계 aggregate
+원문 보존을 검사한다. 기존 R1/A1-F 증거 파일과 추적 Rules는 덮어쓰지 않는다.
+후속은 `coverage/rules-listing-safety/readable.rules`를 누적 기준으로 사용한다.
+
+- 후보6f549385d34f54be879bb59d3edf7d8b19e633be5e1de785e375ae368672eeef,
+  148833bytes. A1-F 대비81bytes 감소, 추적151427 대비2594bytes 감소(약1.71%).
+- 전체 함수 깊이6/정리4 유지, 도달 가능한 호출·권한 식 변화0. compiled 크기·실제 평가수 미측정.
+- 방별 실패/중단 정책5건과 기존 목록 document/sync7건, Flutter 합계12건 통과.
+- 생성기 SHA/미참조/allow/승계 보존 검사·깊이 감사·변경5파일 정적 분석·diff 검토.
+- 도달 가능한 Rules 식이 바뀌지 않아 Emulator 재실행은 생략하고 A1-F16건 결과를 재사용한다.
+  기존 목록 서버 경계34건은 과거 근거이며 이번에 다시 실행했다고 세지 않는다.
+- 운영 API/배포/자료 이행/디바이스0. 실기기에서 일부 보정 실패 후 정상 목록 유지와
+  재진입·그룹 탈퇴/공개 전환 표시를 최종 기능 인수 때 확인해야 한다.
+
+30% 목표105998bytes까지 추가42835bytes 감소가 필요하다. 다음은 B 호출 구조 개선이다.
