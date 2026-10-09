@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { initializeTestEnvironment, assertSucceeds } from '@firebase/rules-unit-testing';
 import { assertRulesDenied as assertFails } from './assert_rules_denied.mjs';
-import { doc, collection, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { personalCompletionCandidate } from './roster_personal_completion_candidate.mjs';
 import { manualCompletionCandidate } from './roster_manual_completion_candidate.mjs';
 import { seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn, approvePublicApplicationTxn,
@@ -62,6 +62,27 @@ async function check(name, work) {
   catch(error) { results.push({name,passed:false,error:error.message}); console.error(`FAIL PERSONAL: ${name}: ${error.message}`); }
 }
 try {
+  if (process.env.DEPTH_BOUNDARIES === '1') {
+    for (const kind of ['other-player', 'inactive-binding']) await check(`depth rejects ${kind}`, async () => {
+      await seed();
+      if (kind === 'inactive-binding') await env.withSecurityRulesDisabled(ctx =>
+        updateDoc(doc(ctx.firestore(), 'authBindings', authUid), { status: 'inactive' }));
+      const before = await snapshot();
+      await assertFails(completeActiveMemberTxn(db, kind === 'other-player' ? joinerId : playerId,
+        kind === 'other-player' ? joinerCharacter : characterId));
+      assert.deepEqual(await snapshot(), before);
+    });
+    await check('group close rejects absent recruitment without writing counter', async () => {
+      await seed(true);
+      await env.withSecurityRulesDisabled(ctx => deleteDoc(doc(ctx.firestore(), 'recruitments', recruitmentId)));
+      const before = await snapshot();
+      await assertFails(updateDoc(doc(db, 'groups', 'group-room-1'), {
+        activeRecruitmentCount: 0, lastRecruitmentId: recruitmentId,
+        revision: before.group.revision + 1, updatedAt: serverTimestamp(),
+      }));
+      assert.deepEqual(await snapshot(), before);
+    });
+  }
   for (const kind of ['member','leader','solo']) await check(`normal ${kind} completion preserves others`, async()=>{
     await seed(kind==='solo'); const before=await snapshot(), actor=kind==='member'?joinerId:playerId;
     await assertSucceeds(completeActiveMemberTxn(kind==='member'?joiner:db, actor, kind==='member'?joinerCharacter:characterId));

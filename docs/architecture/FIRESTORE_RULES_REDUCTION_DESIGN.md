@@ -1703,3 +1703,53 @@ atomicHasGroupId 선언만 제거한다. 선언 외 호출0을 확인하고 모�
   재진입·그룹 탈퇴/공개 전환 표시를 최종 기능 인수 때 확인해야 한다.
 
 30% 목표105998bytes까지 추가42835bytes 감소가 필요하다. 다음은 B 호출 구조 개선이다.
+
+## 29. B 호출 깊이 후보 평가·채택 보류 (2026-10-09)
+
+입력은 A2 6f549385/148833bytes다. marker 선언과 단일 호출을 확인한 뒤
+`personalCompletionCommandMarker(data)`의 Boolean 반환식을 인자 이름만 바꿔
+`personalCompletionTargetsCurrentPlayer(recruitment)`에 괄호로 삽입했다.
+허용 키·actor·대상 list/size와 caller의 대상 player/명령ID/시각 검사를 순서대로 유지한다.
+중복 size 검사도 이번에는 제거하지 않았다. 다른 함수와 allow는 그대로다.
+
+정적 계약2건은 다른 함수/allow 원문 동일성과 삽입식을 되돌렸을 때 이전 caller의
+완전 일치를 확인한다. 이전 승계 보호·목록·backfill 계약은 이번 변환의 수정 대상이 아니다.
+실제 Router의 FirestoreWeeklyRaidStatusCommandRepository 연결과 `_completeActiveState`
+개인 완료 경로를 확인했다. 앱의 저장 자료·Repository·DI·UI는 변경하지 않았다.
+
+close-body는 현재 existsAfter를 확인한 뒤 getAfter를 인자로 평가한다. 본문 let를 단순히
+caller에 올리면 존재 확인 전 조회가 평가될 수 있다. 보호를 유지하려면 식 중복 또는 다른
+구조가 필요하므로 이 별도 변환은 미적용한다. 전역 actor 인자/조회 재사용도 도입하지 않았다.
+
+| 지표 | 결과 |
+|---|---|
+| 후보 |a1883020de389ef38d4313de15b9b3360c65490d33292b9cb160bbcbbcc0ef25,148792bytes |
+| 크기 | A2 대비41bytes 감소. **미채택이므로 누적 축소 실적에 미포함** |
+| 깊이 | 전체 최대6→5. 개인 마지막1인과 그룹 close의 기존6 경로가5, 정리3종4 유지 |
+| 반복 호출/비용 | marker 함수 호출1층 제거, 조건/문서조회 불변. 실제 평가식 수·접근 횟수 미측정 |
+| 개인 경계 | 후보16/18, 동일 입력 기준A2도16/18 |
+| 그룹집계 | 후보22/22 |
+| 정적/환경 | 계약2/2, 구문·diff·깊이 감사. Emulator1.22.0 영어 locale |
+| 운영 | 원격 API/컴파일/게시/자료이행/실기기0 |
+
+개인 경계의 실패는 `normal leader completion preserves others`와
+`missing event rolls back completion`이다. 정상 방장 완료는 기준 source update L2961,
+후보 L2958에서1000식 초과를 반환한다. event 누락은 엄격 거절 helper가 평가/접근 한도
+오류를 감지해 실패 처리했다. 일반 permission-denied 통과로 세지 않았다.
+타인·inactive binding·부재 모집의 group close 거절, 일반 member/마지막1인 완료,
+차수/누락 나머지 경계는 통과했다. 부정 통과 사례는 snapshot 불변도 확인했다.
+
+이전 R1 개인완료15건 통과 기록과 이번 A2 기준 실패는 아직 인과가 확정되지 않았다.
+기준 source/fixture/실행 환경 차이를 구분해야 하며 깊이 통합의 새 회귀라고 단정하지 않는다.
+반대로 기준도 실패한다는 이유로 정상 실패를 면제하여 후보를 채택하지 않는다.
+**B 후보 평가는 완료, 채택 보류**. 누적 기준은 A2 그대로 유지하고 B-F에서 위 두 연산과
+실제 writer 자료를 좁게 대조한 뒤 재판정한다. 이번에 다른 Rules 수정으로 범위를 넓히지 않았다.
+
+재현: `node tools/rules_depth_candidate.mjs`, `node --test tools/rules_depth_candidate.test.mjs`.
+개인 proof는 R1_LISTING=1, DEPTH_BOUNDARIES=1 및 ROSTER_COMPLEXITY_RULES_FILE에
+기준/후보 경로를 지정하여 `node tools/roster_personal_completion_proof.mjs`를 실행한다.
+그룹 proof는 R1_LISTING=1, PARTY_RULES_FILE에 후보를 지정하여
+`node tools/rules_group_count_proof.mjs`를 실행한다. 동시 실행하지 않는다.
+ignored coverage/rules-depth에 manifest/depth/personal.log/baseline-personal.log,
+candidate-personal-results.json/baseline-personal-results.json/group-count.log를 보존했다.
+앱 실기기 개인 완료·후임 승계·마지막1인 화면 흐름과 운영 적용은 미확인으로 남긴다.
