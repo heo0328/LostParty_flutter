@@ -92,6 +92,11 @@ const results = await runCleanupProof(rules, async ({ env, seed, snapshot, check
       return 'applied';
     });
   }
+  if (process.env.LEADER_BUDGET_PROOF === '1') {
+    const { runLeaderBudgetProof } = await import('./rules_leader_budget_proof.mjs');
+    await runLeaderBudgetProof({ env, setup, snapshot, request, command, client, getSlots });
+    return;
+  }
   if (process.env.R3_DIAGNOSIS_LABEL) {
     const { diagnosePeer } = await import('./rules_cleanup_diagnosis.mjs');
     await diagnosePeer({ env, setup, snapshot, request, command });
@@ -207,5 +212,5 @@ const results = await runCleanupProof(rules, async ({ env, seed, snapshot, check
     assert.deepEqual(await snapshot(), before);
   });
 }, { skipRegression: true });
-if (!process.env.R3_DIAGNOSIS_LABEL && results.every(r => r.passed) && process.env.LEADER_PROOF_SCOPE !== 'peer-chain-only') results.push(...await runCleanupProof(rules));
+if (!process.env.LEADER_BUDGET_PROOF && !process.env.R3_DIAGNOSIS_LABEL && results.every(r => r.passed) && process.env.LEADER_PROOF_SCOPE !== 'peer-chain-only') results.push(...await runCleanupProof(rules));
 fs.writeFileSync(new URL('results.json', directory), JSON.stringify(results, null, 2));

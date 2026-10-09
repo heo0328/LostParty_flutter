@@ -1546,3 +1546,76 @@ R3_ALIGN_FIXTURE/CASE/CAPTURE_PROFILE은 설정하지 않는다. R1 재생성은
 peer leader-input은 실제 요청과 거래 전 snapshot을 포함한다. 최초 status 누락 관찰은
 `a-one-current-writer*`에 별도 보존했다. 각 실행90초 상한·각 단계 즉시 저장은 유지한다.
 진단 exit0은 기록 완료일 뿐 모든 Rules 요청의 성공이 아니며 passed:false를 통과로 합산하지 않는다.
+
+## 27. A1-F 승계 평가 한도 최소 수정 (2026-10-09)
+
+### 변경과 판단
+
+R1 가독본을 입력으로 하는 별도 `rules_leader_budget_candidate.mjs`를 추가했다.
+현재 시각의 `cleanupCompletedLeaderOwnership`만 recruitment update 선두에서
+`deLeaderCleanupAggregate`로 직접 분기한다. 기존 일반 OR의 같은 leaf는 제거한다.
+현재 시각 조건은 오래된 명령 표식이 남아 있는 후속 독립 쓰기를 막지 않기 위한 것이다.
+그 밖의 allow와 함수는 그대로이며, leader aggregate만 아래 보존 조건을 추가한다.
+
+기존 `deChangedSlotGenerations`는 슬롯 변화가 있는 요청에8개 위치 검사를 호출했다.
+승계 aggregate는 이미 `after.partySlots == before.partySlots.removeAll([target])`를 강제한다.
+따라서 남은 슬롯 값/차수가 바뀔 수 없으며 이 공통 변경 슬롯 검사는 승계 경로에서 중복이다.
+공통 검사에 있던 after 슬롯8인 상한은 전용 aggregate에 명시적으로 유지했다.
+전체 평가식 수를 계측한 결과는 아니며, 분기·중복 검사 제거의 결합 효과로 정상 요청이 통과했다.
+
+추가로 leader member의 **before 존재**를 원본에서 강제한다. 이미 있는 after 부재 조건과
+결합하여 member delete validator의 완료 state 불변 검사가 반드시 실행되게 한다.
+실제 Repository `_inspect`도 target member가 없으면 진행하지 않으므로 앱 계약을 보존한다.
+구자료에 leader member가 없다면 정리를 거절하며, 이 구자료를 자동 복구/삭제하지 않는다.
+이전의 부재 문서 경계를 안전하다고 가정하거나 기존 취약 요청이 성공했다고 주장하지 않는다.
+
+전용 aggregate의 소유권·후임·표시값·member/목록/event 결합 검사는 유지한다.
+후임의 현재 소유권은 기존 successor member update validator에서 계속 검사한다.
+기존 Router의 cleanup Repository 연결과 `_inspect`의 읽기/관찰값 계약은 변경하지 않았다.
+
+### 검증과 회귀 보호
+
+최종 후보 demo Emulator1.22.0 결과 **16/16**:
+
+- 최대8인 시작→peer6회→마지막2인 승계→receipt 재진입. 완료 state·그룹 관계 보존.
+- 8인에서 actor와 첫 후임이 다른 승계, 이후 후임의 독립 member 승인권 변경 성공.
+- 오래된 관찰 차수/room revision, outsider, 소유권 상실 actor/후임, 뒤순번 후임 거절.
+- successor 갱신/member 삭제/event/listing 누락, 남은 슬롯 차수 변조, 완료 state 삭제 거절.
+- leader member 부재 및 그 상태의 완료 state 삭제 시도 거절.
+
+모든 부정 사례는 permission-denied와 최대식/접근 한도 오류 부재를 확인하고 전체 관찰
+snapshot 불변을 비교했다. 정확한 내부 식 수나 get/getAfter 수는 미측정이다.
+정적 계약 **2/2**는 다른 함수/allow 불변과 현재 시각 외 fallback의 동일성을 확인했다.
+앱 UI end-to-end·동시성 전체 suite·다른 모든 명령의 런타임 회귀를 새로 실행한 것은 아니다.
+이번 영향을 받지 않은 과거 결과와 같은 것으로 전체 앱 인수를 선언하지 않는다.
+
+초안66be2304(+159bytes)는15건 통과 후, 검토에서 기존 after 슬롯8인 상한을 명시적으로
+보존하도록 보완했다. 최종본은 요청자 소유권 상실도 추가하여16건을 다시 실행했다.
+두 실행 모두 로컬이며 미채택 R3를 재사용하지 않았다. 정상·부정 경계 통과를 근거로
+**로컬 누적 후보로 채택**, 생성 pipeline/추적 배포본 승격과 운영 인수는 E/F로 보류한다.
+
+### 고정 지표와 후속 연결
+
+| 지표 | 결과 |
+|---|---|
+| 입력 | R1 17471d0f/148725bytes |
+| 최종 후보 |053603bc5584f8ac5fa4a86d538390a8b010d55863afad9f93ec5ca6dbfe68b8 /148914bytes |
+| 크기 | R1 대비+189bytes. 추적151427bytes 대비2513bytes 감소 상태. A1-F 자체는 축소 실적0 |
+| 함수 깊이 | 전체 최대6, 정리3종4 유지. 깊이 감소로 설명하지 않음 |
+| 반복 호출 | 승계에서 공통 슬롯 검사 진입을 제거. 실제 호출 횟수·평가식 수는 미측정 |
+| 실행 | 기준 승계1000식 실패→최종 정상 성공, 위조/누락14건 거절. 대용량coverage0 |
+| 게시/실기기 | 원격 API·배포·실기기0, 원격 경고/게시 성공 효과 미확인 |
+
+30% 목표105998bytes까지 누적 후보에서42916bytes 추가 감소가 필요하다.
+이번 결함 수정은 대폭 축소나 게시 실패 해결을 대신하지 않는다. 다음은 기존 순서의 A2다.
+R1 목록 생성기만 실행하면 이 overlay는 포함되지 않으므로, 후속 생성 입력 변경에서
+승계 수정을 보존하고 그 시점의 새 SHA/계약을 확인해야 한다.
+
+재현: `node tools/rules_leader_budget_candidate.mjs` 후 `node --test tools/rules_leader_budget_candidate.test.mjs`.
+영문 locale의 demo-party-group-cutover:8080에서 RULES_A1/R1_LISTING/R3_CLEANUP/
+ROSTER_TRACKED_RULES/LEADER_BUDGET_PROOF=1, ROSTER_COMPLEXITY_RULES_FILE을
+`coverage/rules-leader-budget/candidate.rules`로 지정하여 `node tools/roster_peer_cleanup_proof.mjs` 실행.
+R3_DIAGNOSIS_LABEL은 설정하지 않는다. 실행180초 상한·각 결과 즉시 저장·실패 exit1을 사용한다.
+manifest/proof-input/results/proof.log/depth.json은 ignored `coverage/rules-leader-budget/`에 기록한다.
+깊이 감사 도구는 추가 인자로 가독본 경로와 기대 SHA를 받아 같은 정적 분석을 재사용한다.
+추적408f163f·R1 17471d0f·사용자4파일 SHA는 모두 보존했다.

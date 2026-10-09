@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { compactExecutableRules } from './rules_executable_compact.mjs';
 
-const inputs = [
+const inputs = process.argv.length > 2 ? [['selected', process.argv[2], process.argv[3]]] : [
   ['tracked', 'coverage/rules-executable/review/readable.rules', '408f163fc6bf6f06d8a7a628da2e1b2bdd2747d36936d7b2aee995c161e53793'],
   ['R1', 'coverage/rules-listing/readable.rules', '17471d0f4bff19595c90ddb43c28766cbf976d77ba9d0adc0736ff59f4a93667'],
   ['rejected-R3', 'coverage/rules-cleanup/readable.rules', '87edb51493004c826ea57deb110edbb8faaf07a6543cbcb9cec82620ea2a1097'],
