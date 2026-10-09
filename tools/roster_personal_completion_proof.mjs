@@ -21,7 +21,11 @@ const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutov
 const db = env.authenticatedContext(authUid).firestore(), joiner = env.authenticatedContext('joiner-auth').firestore();
 const joinerId = 'player-2', joinerCharacter = 'charqrstuvwxyzabcdef';
 const results = [];
-async function seed(solo = false) {
+const focused = process.env.PERSONAL_FOCUS === '1';
+// Historical reproduction only: the old fixture reordered slots but not member IDs.
+const legacyOrder = process.env.PERSONAL_LEGACY_ORDER === '1';
+let beforeOperation;
+async function seed(solo = false, memberLast = false) {
   await env.clearFirestore(); await seedBase(env); await seedJoiner(env);
   await env.withSecurityRulesDisabled(async ctx => {
     const admin = ctx.firestore();
@@ -35,14 +39,20 @@ async function seed(solo = false) {
     await applicationTxn(joiner, 'create', { ownershipRevision: 3 });
     await approvePublicApplicationTxn(db, { ownershipRevision: 3 });
     await seedExpandedApprovedRoom(env, 8);
-    await env.withSecurityRulesDisabled(async ctx => {
+    if (legacyOrder || memberLast) await env.withSecurityRulesDisabled(async ctx => {
       const ref = doc(ctx.firestore(), 'recruitments', recruitmentId), room = (await getDoc(ref)).data();
       const last = (items, id) => [...items.filter(x => id(x) !== joinerId), ...items.filter(x => id(x) === joinerId)];
-      await updateDoc(ref, { partySlots: last(room.partySlots, x=>x.playerId),
+      await updateDoc(ref, { ...(!legacyOrder ? { memberPlayerIds: last(room.memberPlayerIds, x=>x) } : {}),
+        partySlots: last(room.partySlots, x=>x.playerId),
         raidStateTargets: last(room.raidStateTargets, x=>x.playerId) });
     });
   }
   await seedGroupLinkedRoom(env, db, { includeJoinerGroupMember: !solo });
+  if (!legacyOrder) {
+    const room = (await snapshot()).room;
+    assert.deepEqual(room.memberPlayerIds, room.partySlots.map(slot => slot.playerId));
+    assert.deepEqual(room.memberPlayerIds, room.raidStateTargets.map(target => target.playerId));
+  }
 }
 async function snapshot() {
   let result;
@@ -58,8 +68,18 @@ async function snapshot() {
   assert.ok(result); return result;
 }
 async function check(name, work) {
+  if (focused && !['normal leader completion preserves others', 'missing event rolls back completion'].includes(name)) return;
+  beforeOperation = undefined;
   try { await work(); results.push({name,passed:true}); console.log(`PASS PERSONAL: ${name}`); }
-  catch(error) { results.push({name,passed:false,error:error.message}); console.error(`FAIL PERSONAL: ${name}: ${error.message}`); }
+  catch(error) {
+    let unchanged;
+    if (beforeOperation) {
+      const after = await snapshot();
+      try { assert.deepEqual(after, beforeOperation); unchanged = true; } catch { unchanged = false; }
+    }
+    results.push({name,passed:false,error:error.message, unchanged});
+    console.error(`FAIL PERSONAL: ${name}: ${error.message}; unchanged=${unchanged}`);
+  }
 }
 try {
   if (process.env.DEPTH_BOUNDARIES === '1') {
@@ -84,7 +104,8 @@ try {
     });
   }
   for (const kind of ['member','leader','solo']) await check(`normal ${kind} completion preserves others`, async()=>{
-    await seed(kind==='solo'); const before=await snapshot(), actor=kind==='member'?joinerId:playerId;
+    await seed(kind==='solo', kind==='member'); const before=await snapshot(), actor=kind==='member'?joinerId:playerId;
+    beforeOperation = before;
     await assertSucceeds(completeActiveMemberTxn(kind==='member'?joiner:db, actor, kind==='member'?joinerCharacter:characterId));
     const after=await snapshot(), index=kind==='member'?1:0;
     assert.equal(after.states[index][0].status,'completed'); assert.equal(after.states[index][0].ownershipRevision,3);
@@ -107,6 +128,7 @@ try {
   });
   for (const missing of baseline ? [] : ['room','member','state','event','listing','successor','group']) await check(`missing ${missing} rolls back completion`,async()=>{
     await seed(missing==='group'); const before=await snapshot();
+    beforeOperation = before;
     await assertFails(completeActiveMemberTxn(db,playerId,characterId,{omitWrites:[missing]})); assert.deepEqual(await snapshot(),before);
   });
 } finally { await env.cleanup(); }

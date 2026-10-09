@@ -1753,3 +1753,73 @@ caller에 올리면 존재 확인 전 조회가 평가될 수 있다. 보호를 
 ignored coverage/rules-depth에 manifest/depth/personal.log/baseline-personal.log,
 candidate-personal-results.json/baseline-personal-results.json/group-count.log를 보존했다.
 앱 실기기 개인 완료·후임 승계·마지막1인 화면 흐름과 운영 적용은 미확인으로 남긴다.
+
+## 30. B-F 개인 완료 기준 실패 분리 (2026-10-09)
+
+**조사 완료, 결함 미수정.** R1 성공과 A1-F/A2 실패를 같은 환경·입력으로 재현했다.
+따라서 §29의 “기준도 실패”는 기존 문제가 면제된다는 뜻이 아니다. A1-F의 국소 정리 검증이
+공유 update 경로의 개인 완료 회귀를 놓쳤다. §27/28의 채택은 재검토 상태로 정정한다.
+A2 파일은 수정 입력으로 보존하지만 정상 기준/승격 가능본으로 취급하지 않는다. B도 보류다.
+
+### 30.1 입력과 실제 앱 정합성
+
+`FirestoreWeeklyRaidStatusCommandRepository._completeActiveState`는 현재 본인 state/member/slot과
+소유권을 확인하고, 방장이면 partySlots에서 남은 첫 사람의 member/소유권을 읽는다.
+`PartyAtomicMemberRemovalWritePlan`은 남은 slots로 memberPlayerIds와 raidStateTargets를 만들고
+후임·counts를 정한다. 본인 member 삭제, 본인 state 완료, 후임 권한, 모집/목록과 이벤트는 같은 거래다.
+마지막1인은 그룹 count와 listing 삭제를 포함한다. Router의 운영 Repository 연결은 §29에서 확인했다.
+
+기존 proof는 joiner를 partySlots/raidStateTargets 마지막으로 옮기고 memberPlayerIds는 그대로 둔다.
+후임 선택 helper는 memberPlayerIds[0]을 사용하므로 이 자료에서 실제 앱과 후임이 달랐다.
+기본 fixture를 세 배열의 가입순서가 같도록 수정했다. 방장 시나리오는 원래 가입순서와
+현재 소유권 차수3인 joiner 후임을 유지한다. member 완료는 세 배열 모두 joiner를 마지막으로
+옮겨 최대8인 마지막 대상 경계를 유지한다. seed 뒤 배열 정합성 assertion을 추가했다.
+과거 비교만 PERSONAL_LEGACY_ORDER=1로 불일치 자료를 재현한다.
+
+proof는 서버 경계용 JS 거래이며 Dart Repository 실행 자체가 아니다. helper는 state revision을2로
+쓰지만 이번 자료의 이전 revision1에서 앱의 increment(1)과 결과가 같다. 실제 앱의 관찰 토큰 검사와
+추가 소유권 사전 읽기까지 동일 실행하지 않는다. 이번 후임은 유효한 character/gameAccount/member/slot
+차수3을 사용하며 추가6명은 변경 대상이 아니다. 다른 과거 자료까지 앱 호환이 입증된 것은 아니다.
+
+### 30.2 고정 환경 비교
+
+Java/Firestore Emulator1.22.0, 영어 locale, demo-party-group-cutover:8080,
+R1_LISTING=1. PERSONAL_FOCUS=1은 아래2건만 실행한다. 매 실행 Rules를 로드하고 매 건 데이터를 초기화한다.
+
+| 소스 | fixture | 방장 완료 | event 누락 |
+|---|---|---|---|
+| R1 17471d0f /148725bytes | 과거 불일치 | 성공 | 일반 거절·불변 |
+| A2 6f549385 /148833bytes | 과거 불일치 | 1000식 초과·불변 | 한도 오류·불변 |
+| A2 6f549385 | 정합 | 1000식 초과·불변 | 한도 오류·불변 |
+| A1-F 053603bc /148914bytes | 정합 | 1000식 초과·불변 | 한도 오류·불변 |
+| R1 17471d0f | 정합 | 성공 | 일반 거절·불변 |
+
+이후 정합 자료의 전체 개인 경계를 한 번 실행:16/18. 위2건만 실패했다.
+snapshot은 모집·members·개인8명 states·partyEvents·그룹·listing·그룹members 전체를 비교한다.
+event 누락은 거절되더라도 평가 엔진 한도 오류이므로 정책 검증 통과로 세지 않는다.
+정상 방장 요청의 명시적인1000식 오류는 A1-F compact source update L2964/A2 L2961이다.
+다른 문서 평가 오류도 함께 출력되므로 로그만으로 모든 개별 문서의 비용을 확정하지 않는다.
+
+과거10월8일 R1 개인15건 통과 기록은 이번2건 재현과 일치한다. 당시 이후 추가된3개 부정 경계는
+별도 요청이며 이번 단독2건에서도 실패하므로 앞선 테스트 누적만으로 설명되지 않는다.
+R1→A1-F 변경은 방장 정리용 최상위 분기 추가·기존 위치 분기 제거와 정리 validator의
+8인/member 존재 guard 추가다. 개인 완료 validator는 불변이며 모집 공통 dispatch를 바꾼
+8cf05f2 단계에서 회귀가 나타난다. 정확히 몇 식이 증가했는지는 미측정이다.
+이번 runtime 평가 한도 회귀와 운영 게시409/503의 직접 인과는 별개로 미확정이다.
+
+### 30.3 다음 최소 수정과 부작용 보호
+
+다음 B-F1은 A2 모집 update의 명령 분기만 대상으로 한다. 개인 완료가 다른 명령용 분기를
+거치지 않도록 기존 personalComplete 조건/본문을 일찍 선택하는 구조를 먼저 검토한다.
+validator 삭제·권한 완화·앱 로컬 이관은 이번 오류 수정에 포함하지 않는다.
+분기 이동은 다른 명령의 평가 비용을 다시 늘릴 수 있어 개인18건과 기존 정리16건을 함께 보호한다.
+lastCommandAt==request.time, 과거 marker fallback, event/listing 강제와 후임 소유권,
+정리의8인/member 존재 검사는 보존한다. 정상 성공뿐 아니라 누락/위조가 일반 거절되어야 한다.
+두 경로 검증 전 B 채택·C 진행·추적본 승격·운영 게시·dev/main 통합은 보류한다.
+
+재현 도구: `tools/roster_personal_completion_proof.mjs`.
+ROSTER_COMPLEXITY_RULES_FILE에 표의 후보 경로를 지정하고 R1_LISTING=1,
+PERSONAL_FOCUS=1로2건 실행. 과거 자료는 PERSONAL_LEGACY_ORDER=1, 정합은0.
+전체 개인 경계는 PERSONAL_FOCUS=0, PERSONAL_LEGACY_ORDER=0, DEPTH_BOUNDARIES=1.
+ignored `coverage/rules-personal-diagnosis/`에 각 조합의 log/results JSON을 보존했다.
+앱/추적 Rules는 변경하지 않았다. 새 앱 흐름·실기기·운영 정상화 완료를 주장하지 않는다.
