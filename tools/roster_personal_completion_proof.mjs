@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { initializeTestEnvironment, assertSucceeds } from '@firebase/rules-unit-testing';
 import { assertRulesDenied as assertFails } from './assert_rules_denied.mjs';
-import { doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp, runTransaction } from 'firebase/firestore';
 import { personalCompletionCandidate } from './roster_personal_completion_candidate.mjs';
 import { manualCompletionCandidate } from './roster_manual_completion_candidate.mjs';
 import { seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn, approvePublicApplicationTxn,
@@ -22,6 +22,7 @@ const db = env.authenticatedContext(authUid).firestore(), joiner = env.authentic
 const joinerId = 'player-2', joinerCharacter = 'charqrstuvwxyzabcdef';
 const results = [];
 const focused = process.env.PERSONAL_FOCUS === '1';
+const dispatchOnly = process.env.PERSONAL_DISPATCH_ONLY === '1';
 // Historical reproduction only: the old fixture reordered slots but not member IDs.
 const legacyOrder = process.env.PERSONAL_LEGACY_ORDER === '1';
 let beforeOperation;
@@ -68,6 +69,7 @@ async function snapshot() {
   assert.ok(result); return result;
 }
 async function check(name, work) {
+  if (dispatchOnly && !name.startsWith('dispatch ')) return;
   if (focused && !['normal leader completion preserves others', 'missing event rolls back completion'].includes(name)) return;
   beforeOperation = undefined;
   try { await work(); results.push({name,passed:true}); console.log(`PASS PERSONAL: ${name}`); }
@@ -82,6 +84,38 @@ async function check(name, work) {
   }
 }
 try {
+  if (dispatchOnly) {
+    for (const marker of ['personalComplete', 'cleanupCompletedLeaderOwnership']) {
+      for (const current of [false, true]) await check(`dispatch ${marker} ${current ? 'forged current rejects' : 'stale permits independent recurrence'}`, async () => {
+        await seed();
+        await env.withSecurityRulesDisabled(async ctx => {
+          const ref = doc(ctx.firestore(), 'recruitments', recruitmentId);
+          await updateDoc(ref, { lastCommandType: marker, lastCommandAt: Timestamp.fromMillis(0) });
+          await setDoc(doc(ctx.firestore(), 'groups', 'group-room-1', 'raidListings', recruitmentId), (await getDoc(ref)).data());
+        });
+        const before = await snapshot(); beforeOperation = before;
+        const operation = runTransaction(db, async tx => {
+          const ref = doc(db, 'recruitments', recruitmentId), room = (await tx.get(ref)).data();
+          const patch = { continueTogether: !room.continueTogether, revision: room.revision + 1, updatedAt: serverTimestamp(),
+            ...(current ? { lastCommandAt: serverTimestamp() } : {}) };
+          tx.update(ref, patch);
+          tx.set(doc(db, 'groups', 'group-room-1', 'raidListings', recruitmentId), { ...room, ...patch });
+        });
+        if (current) {
+          await assertFails(operation); assert.deepEqual(await snapshot(), before);
+        } else {
+          await assertSucceeds(operation);
+          const after = await snapshot();
+          assert.equal(after.room.continueTogether, !before.room.continueTogether);
+          assert.equal(after.room.revision, before.room.revision + 1);
+          assert.equal(after.room.lastCommandType, marker);
+          assert.deepEqual(after.room.lastCommandAt, before.room.lastCommandAt);
+          assert.deepEqual(after.listings, [{ id: recruitmentId, ...after.room }]);
+          for (const key of ['members', 'states', 'events', 'group', 'groupMembers']) assert.deepEqual(after[key], before[key]);
+        }
+      });
+    }
+  }
   if (process.env.DEPTH_BOUNDARIES === '1') {
     for (const kind of ['other-player', 'inactive-binding']) await check(`depth rejects ${kind}`, async () => {
       await seed();

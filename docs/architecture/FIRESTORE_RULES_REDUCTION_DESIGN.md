@@ -1,7 +1,17 @@
 # Firestore Rules 대폭 축소 설계
 
-최초2026-10-07, 전체 영향 재검토2026-10-08. 상태: R1 로컬 후보 검증 중, 평가 한도 회귀로 승격 보류.
+> 2026-10-10 실행 방침 변경: D-X1의 기능별 확장을 중단한다. 이후 작업은
+> [Rules 책임 축소·로컬 이전 실행 계획](RULES_LOCALIZATION_EXECUTION_PLAN.md)을 따른다.
+> 아래 기록은 근거와 이력으로 보존하며, 각 절의 ‘다음 구간’을 현재 실행 지시로 해석하지 않는다.
+> 과거 감소율 목표·목표 크기는 폐기됐다. 현재는 기능·권한을 유지하는 간소화와 실제 게시 정상화로 판단한다.
+
+최초2026-10-07, 현황 최신화2026-10-09. **B 깊이 후보 재판정 완료·로컬 채택.**
+B-F1 회귀 복구를 보존한 b6b4003a/148794bytes에서 서버60건·정적3건 통과.
+최대깊이6→5·정리4 유지·B-F1 대비41bytes 감소. 최신 판정/재현은 §32를 따른다.
+§27~31의 이전 결과는 당시 이력으로 유지한다. 추적본/운영 승격은 하지 않았다.
+Rules 대폭 축소·반복 게시 실패 해결·BUG-024 운영 반영은 아직 미완료다.
 운영 성공본36b5920e는10월8일11:16 KST 복원·활성SHA 확인했다. R1 원격 게시/자료 이행은 미실행이다.
+이는 마지막 확인 기록이며 이번 문서 최신화에서 운영 재조회는 하지 않았다.
 운영 조사·복원은 §16, R1 구현과 재개 검증은 §17을 따른다.
 §9~15는 후속 전체 영역 검토와 실행 전 게이트다. 앞선 후보를 구현 확정안으로 해석하지 않는다.
 
@@ -1823,3 +1833,1266 @@ PERSONAL_FOCUS=1로2건 실행. 과거 자료는 PERSONAL_LEGACY_ORDER=1, 정합
 전체 개인 경계는 PERSONAL_FOCUS=0, PERSONAL_LEGACY_ORDER=0, DEPTH_BOUNDARIES=1.
 ignored `coverage/rules-personal-diagnosis/`에 각 조합의 log/results JSON을 보존했다.
 앱/추적 Rules는 변경하지 않았다. 새 앱 흐름·실기기·운영 정상화 완료를 주장하지 않는다.
+
+## 31. B-F1 개인 완료 분기 복구 (2026-10-09)
+
+### 구현과 보존 근거
+
+A2 6f549385를 고정 입력으로 `rules_personal_budget_candidate.mjs`가 격리 후보를 생성한다.
+모집 update 내부의 personalComplete 현재시각 조건과 두 validator를 그대로 선두로 이동하고,
+기존 위치는 else 본문으로 치환한다. 모든 함수와 다른 allow는 원문이 같다.
+검증을 삭제하거나 앱 저장 계약/권한/데이터 구조를 변경하지 않았다.
+
+personalComplete는 leaderCleanup/lifecycle 명령과 다르며, 준비 분기는 lastCommandType==null을
+요구한다. 따라서 현재 personalComplete 요청은 이전에도 같은 두 validator로 도달한다.
+그 외 요청은 이전 fallback을 유지한다. 오래된 personal/leaderCleanup 표식은 현재시각 조건에
+해당하지 않아 기존 반복 설정 변경을 막지 않는다. 시각만 현재로 위조한 설정 변경은 거절된다.
+이 의미 보존은 원문 비교 정적 검사와4개 추가 서버 경계로 함께 확인했다.
+
+실제 `_completeActiveState`의 후임 소유권 읽기·WritePlan과 Router 연결은 그대로다.
+JS proof의 서버 경계 검증과 실기기 UI 인수의 차이는 §30.1의 제한을 유지한다.
+방장 정리의 최대8인·before member 존재·완료 상태 보존, 개인 완료의 후임/목록/event 원자성은 유지한다.
+
+### 결과와 채택
+
+| 항목 | 결과 |
+|---|---|
+| 후보 SHA | e2a8a7e60bf818f2b5f66af2de453b2ecaa34d4151f77afbaaaa8885ef979772 |
+| 소스 크기 |148835bytes, A2 대비+2bytes. 축소 실적으로 세지 않음 |
+| 정적 깊이 | 전체 최대6, 정리4 유지. 함수 호출 깊이 감소는 없음 |
+| 직전 실패2건 | 방장 완료 성공, event 누락 일반 거절·snapshot 불변 |
+| 개인 완료 |18/18: 최대8인·마지막1인·소유권 차수·타인/binding·필수쓰기 누락 |
+| 방장 정리 |16/16: peer6회 후 승계/receipt, actor와 후임 분리, 위조·누락·state 보존 |
+| 분기 추가 경계 |4/4: personal/leaderCleanup의 과거 표식 설정 변경 성공·현재 표식 위조 거절 |
+| 정적 계약 |2/2: 모든 validator 동일, 단일 allow 변경·조건/본문 이동과 fallback 보존 |
+| 운영 | API/게시/이행/실기기0. 원격 컴파일 경고·compiled 크기는 미측정 |
+
+**B-F1 구현·로컬 검증 완료, 후속 로컬 기준으로 채택.** 추적 Rules408f163f와 운영은 그대로다.
+과거 A1-F/A2 자체의 회귀 판정을 취소하지 않는다. 이번 후보로 그 회귀를 복구했다.
+분기 이동은 다른 명령 비용에 영향을 줄 수 있어 양쪽 경계와 과거 표식을 확인했지만 전체 앱
+인수를 대체하지 않는다. 게시 실패409/503 해결이나30% 축소 완료로 해석하지 않는다.
+B 깊이 통합은 새 기준에서 별도 재판정하며 이 구간에서 B/C까지 확장하지 않았다.
+
+### 재현과 미커밋 상태
+
+기존 R1→A1-F→A2 생성 흐름 뒤 `node tools/rules_personal_budget_candidate.mjs`를 실행한다.
+입력 해시가 다르면 생성은 실패한다. `node --test tools/rules_personal_budget_candidate.test.mjs`로 정적 계약을 확인한다.
+Emulator1.22.0/영어 locale/demo-party-group-cutover:8080에서 아래 순차 실행을 사용한다.
+공통은 R1_LISTING=1, ROSTER_COMPLEXITY_RULES_FILE=coverage/rules-personal-budget/candidate.rules다.
+
+- 개인: PERSONAL_FOCUS=0, PERSONAL_LEGACY_ORDER=0, PERSONAL_DISPATCH_ONLY=0, DEPTH_BOUNDARIES=1,
+  `node tools/roster_personal_completion_proof.mjs`.
+- 정리: RULES_A1=1, R3_CLEANUP=1, ROSTER_TRACKED_RULES=1, LEADER_BUDGET_PROOF=1,
+  LEADER_BUDGET_DIRECTORY=coverage/rules-personal-budget, `node tools/roster_peer_cleanup_proof.mjs`.
+- 추가 분기: PERSONAL_FOCUS=0, PERSONAL_DISPATCH_ONLY=1, PERSONAL_LEGACY_ORDER=0,
+  `node tools/roster_personal_completion_proof.mjs`. 개인 결과의 공유 출력은 실행마다 별도 복사한다.
+
+증거는 ignored coverage/rules-personal-budget의 manifest/depth, focus/personal/dispatch logs와
+각 results JSON, leader.log/results.json에 보존했다. 정리 proof 출력 경로를 선택 가능하게 하여
+과거 A1-F 증거를 덮어쓰지 않는다. 재실행이 필요하면 같은 demo에서 순차 실행한다.
+사용자 지시대로 브랜치 생성·커밋·푸시·머지는 하지 않았다. 앞선 미커밋 문서와 사용자4파일을 보존한다.
+
+## 32. B 깊이 후보 재판정과 로컬 채택 (2026-10-09)
+
+### 변경 범위와 보존
+
+`rules_depth_recheck_candidate.mjs`는 B-F1 실행 소스 해시e2a8a7e6를 강제하고 기존
+depthCandidate 변환을 재사용한다. 과거 A2와 이미 변환한 입력은 거절한다.
+출력은 coverage/rules-depth-recheck로 분리하여 B-F1과 과거 B 증거를 유지한다.
+marker의 순수 반환식을 유일 호출자 안에 인자로 치환하여 삽입하고 선언을 제거한다.
+허용 키·actor·대상·시각·중복 size 검사의 내용과 순서는 그대로다.
+다른 모든 함수/allow, B-F1 선두 분기, 정리의 member 존재/8인·완료 보존 검사는 원문 동일하다.
+close-body 통합, 전역 actor 인자화, 추가 검증 삭제와 앱/Router/저장 계약 변경은 없다.
+
+### 결과
+
+| 항목 | 결과 |
+|---|---|
+| 기준 | B-F1 e2a8a7e60bf818f2b5f66af2de453b2ecaa34d4151f77afbaaaa8885ef979772 /148835bytes |
+| 새 후보 | b6b4003a705ed313c08ecc3aafabed709330a43a2dc0a8069fe9db66f5742971 /148794bytes |
+| 크기 | 기준 대비41bytes 감소, 추적408f163f/151427bytes 대비2633bytes(약1.74%) 감소 |
+| 깊이 | 전체 최대6→5, 개인/그룹 close의 기존6 경로5, 정리3종4 유지 |
+| 서버 경계 | 개인18/18·방장 정리16/16·현재/과거 표식4/4·그룹집계22/22, 합계60/60 |
+| 정적 계약 |3/3: 다른 함수/allow 보존, caller 원문 복원, 잘못된 기준 입력 거절 |
+| 운영/실기기 | 실행0. 원격 컴파일 경고·compiled 크기·실제 평가식 수는 미측정 |
+
+**새 후보를 후속 로컬 기준으로 채택한다.** 과거 a1883020의 보류 판정을 소급해 통과로 바꾸지 않는다.
+B-F1과 동일한 개인/정리/표식 경계가 모두 통과했고 그룹집계의 전환·종료·누락/재사용 거절도 통과했다.
+부정 경계는 엄격 거절 helper와 snapshot 비교를 유지한다. 호출 깊이 개선만으로 권한 보존을 판정하지 않았다.
+추적 Rules·운영은 그대로이며 최종 앱/혼합버전·자료 이행·게시 인수는 E/F에 남는다.
+41bytes는 보조 개선이다.30% 목표 달성이나409/503 게시 실패 해결을 입증하지 않는다.
+다음 C는 구형 쓰기 계약의 앱 버전별 의존·부작용·전환안과 단일 폐쇄 범위를 먼저 확정한다.
+
+### 재현·기록
+
+B-F1 생성 뒤 `node tools/rules_depth_recheck_candidate.mjs`,
+`node --test tools/rules_depth_recheck_candidate.test.mjs`를 실행한다.
+서버 검증은 §31의 개인/정리/분기 환경을 사용하되 ROSTER_COMPLEXITY_RULES_FILE을
+coverage/rules-depth-recheck/candidate.rules로, LEADER_BUDGET_DIRECTORY를
+coverage/rules-depth-recheck로 바꾼다. 각 검증은 같은 demo Emulator에서 순차 실행한다.
+그룹집계는 R1_LISTING=1, PARTY_RULES_FILE=coverage/rules-depth-recheck/candidate.rules로
+`node tools/rules_group_count_proof.mjs`를 실행한다. 개인 정상 모드와 dispatchOnly 모드를 혼용하지 않는다.
+깊이 검사는 rules_call_depth_audit.mjs에 가독본 경로와 위 최종 SHA를 전달한다.
+
+ignored 출력의 manifest/depth.json, personal-results.json/results.json/dispatch-results.json,
+personal/leader/dispatch/group-count.log에 근거를 보존했다. 모든 실행 종료코드0과 결과 수를 확인했다.
+앱 코드 변경이 없어 Flutter 전체검증은 반복하지 않았다. 실기기 개인 완료/승계·마지막1인·그룹 전환은 미확인이다.
+사용자4파일·추적본 SHA 보존. 기존 목적 브랜치에서 미커밋 유지, 브랜치 생성·커밋·푸시·머지·배포 없음.
+
+
+## 33. C 구형 계약 종료 조사와 전환 설계 (2026-10-09)
+
+### 판정과 측정
+
+C 조사·설계를 완료했다. 다음 구현은 C1 구형 member 캐릭터 변경 fallback 하나의 폐쇄로 한정한다.
+Claim/assignment 읽기·소비삭제의 일괄 제거는 채택하지 않는다. 현재 앱도 잔존 자료 처리에 사용한다.
+C1은 보조 축소이고, 대폭 축소의 중심인 D 대상 표현·중복 탐색 구조 개선을 대체하지 않는다.
+기능 코드·Rules 파일·운영 권한은 이번 조사에서 변경하지 않았다.
+
+최신 B b6b4003a/148794bytes에 기존 정적 audit의 입력 경로·강제 해시만 메모리에서 교체하여 재계산했다.
+원본 audit 파일은 보존했다. compactExecutableRules 기준이며 compiled 크기·평가식 수·게시 성공의 증거가 아니다.
+
+| 가정 | 결과 | 판정 |
+|---|---|---|
+| old member 호출을 false로 바꾸고 새로 미참조인 함수만 제거 |146194bytes, 2600bytes(약1.75%) 감소| C1 구현 후보 |
+| 두 legacy 원장의 get/list만 보존하고 모든 write를 false로 변경 |145644bytes, 3150bytes 감소| 소비삭제까지 막으므로 미채택 |
+
+C1 제거 후보는 validMemberCharacterChange, recruitmentSlotPath, recruitmentFirstPartySlotPath,
+recruitmentSecondPartySlotPath의 4개다. 두 가정은 독립 측정이며 합산하지 않는다.
+legacy 전체 쓰기 제거 후에도 원장 경로 참조17개가 남는다. 자료0건만으로 참조/권한을 모두 없앨 수 없다.
+ignored 근거는 coverage/rules-contract-retirement/rules_contract_size_audit.json과
+rules_legacy_size_audit.json이다. 예상 감소량은 실제 구현·검증 후 확정한다.
+
+### 실제 연결과 버전별 의존
+
+공개 버전 비교는 v1.1.1의 소스(6f3876e7) 기준이다. 설치 바이너리·실기기 동작을 검증한 것은 아니다.
+
+| 영역 | 현재 앱 및 공개1.1.1 근거 | 종료 판단 |
+|---|---|---|
+| 일반 캐릭터 변경 | app_router.dart의 PartyAtomicMembershipCommandAdapter → FirestorePartyAtomicMemberMutationRepository. 구 FirestorePartyMembershipCommandRepository는 lib의 생성 호출 없이 선언만 존재 | 기본 연결은 이미 원자 쓰기. 구형 fallback만 폐쇄 검토 가능 |
+| 일반 변경 쓰기 | mutation repository의 room/member·이전 raidState 삭제·새 raidState 생성·event 원자 처리, WritePlan의 slot/역할 정책 | 새 원자 validator·소유권·완료 충돌·정원 검사 유지 |
+| 완료 반복방 준비 | 현재 BUG-024 준비 분기는 room/member/listing/event를 변경하고 현재 주 state를 변경하지 않음. 공개1.1.1과 이 부분은 다름 | 준비 전용 Rules 분기를 보존. 공개판의 기존 미지원 문제를 C1 회귀와 구분 |
+| 주간 상태 조회 | FirestoreWeeklyRaidStatusRepository가 raidStates·weeklyRaidClaims·activeRaidAssignments 세 구독을 합침. 해당 파일은 공개판과 동일 | 자료가 없어도 get/list 권한 유지. 권한 거절을 빈 결과로 간주하지 않음 |
+| 참가·캐릭터 변경 충돌 | PartyRaidStateOccupancyInspector가 현재 state와 소유권에 따라 Claim/assignment를 읽고 불일치도 판정 | 조회 및 완료 충돌 검사 유지 |
+| 완료 해제·고아 정리 | 기본 연결인 FirestoreWeeklyRaidStatusCommandRepository가 legacy 자료를 읽고 조건부 소비삭제 | delete 권한·소유권 검사 유지 |
+| 구 Claim repository | Router에 조회 호환 및 주입 경로가 남음 | 클래스 미사용으로 단정하여 제거하지 않음 |
+
+근거 파일: lib/app/router/app_router.dart,
+lib/features/recruitment_list/data/repositories/firestore_party_atomic_member_mutation_repository.dart,
+lib/features/recruitment_list/data/repositories/firestore_party_membership_command_repository.dart,
+lib/features/recruitment_list/data/mappers/party_atomic_member_mutation_write_plan.dart.
+주간 저장소와 occupancy inspector는 각 클래스 선언 파일을 기준으로 한다.
+Rules 근거는 최신 B readable의 validMemberCharacterChange/validAtomicMemberCharacterChange,
+member allow update, activeRaidAssignments/weeklyRaidClaims match다.
+
+### 발견한 기존 제품 계약 불일치 — 동일 캐릭터 역할 변경
+
+PARTY_PARTICIPATION_RULES.md의 캐릭터 변경 정책은 같은 캐릭터의 반대 역할 변경을 허용한다.
+Domain state machine 테스트도 이를 허용하지만 실제 원자 WritePlan은 이전/새 raidState ID가 같으면
+StateError를 던진다. 현재 mapper 테스트는 이 거절을 기대하고 공개1.1.1에도 같은 거절이 존재한다.
+원자 Rules 역시 이전 state의 부재와 새 state의 존재를 동시에 요구하므로 동일 경로로 만족할 수 없다.
+구 fallback의 동일 assignment ID 분기는 별도로 존재한다.
+
+따라서 이 기능을 '현재 정상 지원·보존 확인'으로 기록하지 않는다. C1이 새로 만드는 결함도 아니다.
+제품 정책을 축소에 맞춰 삭제하지 않는다. C1에서는 기존 실패를 기준 비교로 명시하고,
+역할 변경의 동일 state 갱신 계약·event/target 검증을 별도 설계할 후속 과제로 둔다.
+그 설계가 확정되기 전 동일 캐릭터 역할 변경 지원 완료 또는 최종 기능 인수를 선언하지 않는다.
+기존 구형 writer 사용자를 이 경로로 지원 중인지에 관한 운영 증거는 아직 없으므로,
+C1 로컬 구현 통과만으로 운영 폐쇄를 승인한 것으로 보지 않는다.
+
+### 앱/Rules 조합과 자료 전환
+
+아래 구 Rules는 로컬 B, 신 Rules는 C1만 적용한 후보다. 현재 운영 복원본과 혼동하지 않는다.
+
+| 조합 | 기대 및 한계 |
+|---|---|
+| 공개1.1.1 + B | 기본 일반 변경은 원자 경로. 준비/역할 변경의 기존 한계 존재 |
+| 현재 앱 + B | BUG-024 준비 전용 경로 사용. 최종 실기기 인수는 미완료 |
+| 공개1.1.1 + C1 | 기본 일반 변경 경로는 남음. 정적 연결상 추가 영향 예상 없음, 실행 검증 전 확정 금지 |
+| 현재 앱 + C1 | 원자 일반 변경·준비 전용 경로 유지가 회귀 완료 조건 |
+
+더 오래된 앱·수동 구형 writer는 C1에서 비원자 캐릭터 변경을 거절당할 수 있다.
+이는 의도된 계약 종료이며 공개1.1.1 전체를 구형 writer로 분류하지 않는다.
+앱 버전 문자열을 서버 권한 근거로 사용하지 않고 쓰기 형식을 Rules에서 제한한다.
+업데이트 안내/강제 전환 기능의 실제 연결·배포 여부는 별도 확인이 필요하다.
+향후 D/E의 읽기 스키마 변경에는 위 C1 호환 판단을 재사용하지 않고 네 조합을 다시 검증한다.
+
+legacy 원장 전면 종료는 다음 조건을 순서대로 충족할 때 별도 구현한다.
+
+1. 새 앱의 canonical 상태 읽기와 이전 자료 해석 계약을 마련하고 구독 오류/누락 처리를 확인한다.
+2. 운영 writer 종류와 자료 수를 승인된 E 조사에서 확인한다. 과거0건 기록은 현재0건의 증거가 아니다.
+3. 종료 대상 신규 쓰기를 차단하되 필요한 소비삭제는 유지한다. 업데이트 전환 없이 읽기부터 막지 않는다.
+4. 자료0건은 잔존 writer 차단과 함께 판정한다. 잔존 자료는 player·character·raid·cycle·소유권으로 대조한다.
+   이전 소유권·과거 주 자료를 현재 완료로 승격하지 않는다. canonical과 충돌하거나 필드가 누락된 자료는
+   자동 덮어쓰기/삭제하지 않고 분리 보고한다. 정상 잔존 자료만 검증된 변환 대상으로 삼는다.
+5. 이행 전 원본/식별자/해시와 진행 위치를 기록하고, 재실행해도 중복 상태가 생기지 않게 한다.
+   동시 쓰기 감지 시 해당 건을 중단하며 각 상태 전환의 원자성을 유지한다.
+6. 새 읽기 경로 전환과 기존 앱 종료를 확인한 뒤 legacy 읽기·소비삭제 및 참조 검증을 제거한다.
+   중간 실패는 기록한 건부터 재개한다. 이행 후 새 쓰기가 있으면 과거 전체 스냅샷을 덮어쓰지 않는다.
+   롤백은 호환 Rules/앱으로 먼저 복구하고 변경된 건을 재대조한다. 실제 이행 도구·수행은 E 별도 범위다.
+
+단순 표시·선택 안내는 로컬 이관 후보지만 소유권·완료 충돌·정원·원자성 검사는 서버에서 유지한다.
+이번 C에서 로컬 이전이나 기능 삭제를 구현하지 않는다.
+
+### 다음 단일 구현 C1과 회귀 완료 조건
+
+- 입력 b6b4003a를 고정한 별도 로컬 후보에서 구 fallback 호출과 새 미참조4함수만 제거한다.
+  추적 Rules 승격·운영 배포는 이 후보 구간에 포함하지 않는다.
+- B-F1 개인 완료 선두 분기, BUG-024 준비 분기, 원자 변경과 legacy get/list/delete는 원문 보존한다.
+- 8인 대표 변경의 역할/배치 경계, 완료 반복방 준비, 다른 소유자·완료 충돌·원자 쓰기 누락 거절,
+  구 비원자 요청 거절을 해당 계약 proof로 확인한다. 동일 캐릭터 역할 변경은 전후 기존 실패를 구분한다.
+- 기존 개인 완료/정리 분기에 영향이 없는지 정적 비교하고 공유 분기에 영향이 있는 서버 경계를 검증한다.
+  구독·완료 해제·고아 소비삭제의 권한 보존을 확인한다. 테스트 수를 목표로 무관한 전체검증을 반복하지 않는다.
+- 후보 순감소·호출 깊이·회귀 결과를 기록한 뒤 D에 넘긴다. 역할 변경 계약 불일치는 별도 미완료로 유지한다.
+  C1 통과를 게시 장애 해결·운영 반영·30% 축소 달성으로 보고하지 않는다.
+
+
+## 34. C1 구 member fallback 폐쇄 — 로컬 채택 (2026-10-09)
+
+### 변경과 결과
+
+rules_member_retirement_candidate.mjs는 최신 B의 compact SHA b6b4003a를 강제하고,
+구 validMemberCharacterChange 호출 하나를 false로 바꾼다. 해당 함수와 전용 경로 함수3개만 제거한다.
+다른 함수와 allow는 그대로이며 변경된 member allow도 해당 호출 외 원문이 동일하다.
+false는 주변 분기 평가 순서를 보존하기 위해 남긴다. 앱 writer·schema·운영 소스는 변경하지 않았다.
+
+| 항목 | 결과 |
+|---|---|
+| 새 로컬 후보 |18cf2c09344823c6d749a82077213d0e8a88a2381c4e2d9a2a04e1f3f96a3d61 |
+| 크기 |146194bytes, B 대비2600bytes 감소 |
+| 추적본 대비 |151427→146194bytes, 5233bytes(약3.46%) 감소 |
+| 최대 사용자 함수 깊이 |5 유지 |
+| 정적 계약 |3/3. 나머지 validator·allow 보존, 변경 입력 거절 |
+| 일반 변경 |13개 연산 경계 통과: 8개 위조/누락·배치 거절, 기존 active/completed 점유2개 거절, 정상 변경·자리 불일치 거절·빈자리 이동 |
+| C1 계약 proof |후보9개 검사 통과 + 기준본 기존 오류 재현1개 별도 기록 |
+| 공유 분기 |개인/정리 현재·과거 표식4개 통과 |
+| 운영·실기기 |미실행, 원격 컴파일 경고·활성 소스·compiled 크기 미확인 |
+
+후보 서버 경계26개와 정적3개가 통과하여 **D의 후속 로컬 기준으로 채택**한다.
+추적 firestore.rules 승격·게시 성공·대폭 축소 완료 판정은 아니다.
+권한 종료의 운영 영향과 공개앱 인수·자료 이행은 §33 및 E/F 조건을 그대로 유지한다.
+
+### 기준 오류와 의도된 권한 종료 구분
+
+schemaVersion1 방에서 기존 assignment가 가리키는 캐릭터로 member만 바꾸는 구형 요청을 비교했다.
+B 기준은 1000식 평가 한도로 실패했고 C1은 평가 한도 오류 없이 명시적 permission-denied를 반환했다.
+기준본의 실패를 허용 성공으로 바꾸어 해석하지 않는다. 이 재현은 일반 앱의 원자 변경 성공과 별개다.
+후보 proof는 권한 거절에서 maximum/evaluation limit/service call error를 허용하지 않는다.
+기준 재현1건은 서버 기능 통과26건에 포함하지 않는다. 해당 구형 요청이 운영에서 정상 지원됐다는 증거도 아니다.
+
+동일 캐릭터 반대 역할 변경의 제품/WritePlan 불일치는 계속 미완료다. 이번에는 앱과 해당 원자 validator를
+수정하지 않았으며 모든 잔존 validator 원문 보존을 확인했다. 이 기능의 실기기 지원을 새로 입증하지 않았다.
+
+### 보존 확인과 부작용
+
+- 최대8인 일반 변경·빈자리 이동·listing 동기화, 완료 상태/Claim을 보존하는 반복 준비 변경이 통과했다.
+- 준비 변경의 room/member/listing/event 누락과 타인 요청은 상태 변화 없이 거절됐다.
+- legacy 본인 get/list·현재 주 Claim 해제·고아 assignment 삭제가 통과했다. 해당 권한은 원문 보존이다.
+- 개인/방장 정리의 과거 표식은 독립 설정 변경을 허용하고 위조 현재 표식은 거절했다.
+- 오래된 비원자 writer는 C1에서 차단될 수 있다. 현재/공개1.1.1의 기본 원자 연결 판단은 §33을 따른다.
+- 실기기 일반 변경·역할/자리 UI·준비 재진입·주간 표시/해제는 최종 앱/Rules 연결 후 사용자 확인 대상이다.
+
+### 재현·검증 범위
+
+B 기준을 생성한 뒤 node tools/rules_member_retirement_candidate.mjs와
+node --test tools/rules_member_retirement_candidate.test.mjs를 실행한다.
+깊이 audit에는 coverage/rules-member-retirement/readable.rules와 위 SHA를 전달한다.
+Emulator1.22.0/영어 locale/127.0.0.1:8080/demo-party-group-cutover에서 순차 실행:
+
+1. PARTY_RULES_FILE=coverage/rules-member-retirement/candidate.rules, PARTY_RULES_CASE=character-placement,
+   R1_LISTING=1, BUG024_RUNTIME=1로 party_group_cutover_rules_test.mjs.
+2. R1_LISTING=1로 rules_member_retirement_proof.mjs. 기준 오류와 후보 거절을 해시 고정 입력으로 분리한다.
+3. ROSTER_COMPLEXITY_RULES_FILE=동일 후보, R1_LISTING=1, PERSONAL_FOCUS=0,
+   PERSONAL_LEGACY_ORDER=0, PERSONAL_DISPATCH_ONLY=1로 roster_personal_completion_proof.mjs.
+
+ignored coverage/rules-member-retirement에 manifest/depth.json, character.log, contract.log,
+contract-results.json, dispatch.log/dispatch-results.json과 emulator.log를 보존했다.
+proof 실행 후 증거 기록/입력 해시 assertion만 보강했고 Node 문법 검사를 통과했다. 요청·검증 조건은 동일하다.
+로컬 컴파일/로딩은 성공했다. 로그의 Emulator websocket trace 내부 ArrayIndexOutOfBounds 경고는
+Rules 소스 컴파일 경고와 구별한다. 원격 컴파일 경고0 조건은 아직 확인하지 않았다.
+처음 sandbox loopback 연결이 막혀 권한 확장으로 로컬 demo만 실행했고 종료했다.
+앱 코드 변화가 없어 Flutter 전체검증은 반복하지 않았다. Git diff 검사 통과, 기존 사용자 변경4파일과
+추적 Rules SHA 보존. 현재 목적 브랜치에서 미커밋 유지, dev 반영·커밋·푸시·머지·배포 없음.
+
+
+## 35. D 단일 대상 표현 후보 — 구현 전 계약 (2026-10-09)
+
+입력은 C1 18cf2c09/146194bytes다. 선택 후보는 raidStateTargets와 commandTargets의
+identity를 정확한 {playerId, stateId} map으로 한정하고 두 membership 탐색을 list.hasAny로 대체하는 것이다.
+문자열 연결 키는 사용하지 않아 구분자 충돌을 만들지 않는다. 배열의 순서와 개수·필수 대상 상태 쓰기 검사는
+기존 source/event validator에 남긴다. hasAny 자체를 유일성·모든 대상 쓰기의 증명으로 사용하지 않는다.
+두 목록의 의미는 다르므로 합치지 않는다: raidStateTargets는 현재 참가자, commandTargets는 이번 명령 대상이다.
+개인완료의1명·전체완료8명·완료방 해산의빈목록·과거 표식 유지/소비 계약을 변경하지 않는다.
+
+현재 생성/가입/변경 writer와 PartyAtomicWritePlan은 두 키만 저장한다. 정리 writer의 기존 목록 보존은
+과거 추가키도 유지할 수 있으므로 운영 자료 무조건 호환으로 판단하지 않는다. partySlots와 event의
+completionTargets는 역할/자리/소유권 또는 characterId 의미가 있어 이번 표현에 강제로 통합하지 않는다.
+Router/Repository 연결과 raidState 식별자·수명·소유권은 그대로다. 앱 writer 변경은 이번 후보에 필요 없다.
+
+수정 범위는 atomicRaidStateListedInTargets와 atomicCommandIncludes 두 함수다. <=8 상한을 명시하고
+정확한 map을 직접 포함 검사한다. 기존 부분 identity 비교가 허용한 추가키 map은 매칭되지 않는다.
+운영 전 E에서 목록 길이/키/중복/순서/대상 결합을 조사해야 한다. 추가키가 실제로 있으면 백업과 동시쓰기
+검사 후 의미 없는 키만 제거하는 이행 계약이 필요하고, 충돌·중복·잘못된 대상은 자동 정규화하지 않는다.
+기존 앱+후보는 현재 writer의 정확한 map에서만 호환 예상이며 과거 추가키 자료는 별도 이행 대상이다.
+새 앱+기존 Rules도 같은 정확한 map을 저장하므로 형식 호환이나 실기기 확인은 별도다.
+
+회귀 보호: 최대8인 완료와 필수 state 누락·target/player 위조·소유권 거절, 생성/가입/캐릭터 변경,
+개인완료/마지막1인·빈목록 해산. helper 수준에서 추가키·9개·잘못된쌍·순서·중복을 비교하고,
+source가 보호하는 경계와 helper만으로 보호하지 않는 경계를 구분한다. 원본 getAfter와 모든 다른 함수/allow
+원문을 보존하는 정적 검사를 추가한다. 후보 효과가 작으면 다른 helper를 연쇄 수정하지 않고 목표 미달을 기록한다.
+추적본 승격·운영 조사/이행/게시·Git 변경은 제외한다.
+
+
+### D 결과 — 기능 경계 통과, 축소 목표 미달·조건부 보존
+
+후보3e45b9a7956251c9d698247ee61f9ae58e2ac221cfa9668de10d067b9d8c2924는144842bytes다.
+C1 대비1352bytes 감소, 추적151427bytes 대비6585bytes(약4.35%) 감소다. 전체 최대 호출 깊이는5로 같다.
+두 helper 각각의 최대8회 map.diff 비교가 한 번의 내장 list.hasAny 호출로 바뀐다.
+내장 함수 내부 계산량·compiled 크기·실제 평가식 수/접근량 감소는 별도 측정하지 않았으므로 수치로 주장하지 않는다.
+get/getAfter 수와 필수 상태 검증은 변경하지 않았다. 대체 검사 <=8 비용을 포함한 순감소다.
+
+| 검증 | 결과 |
+|---|---|
+| helper 격리 기준/후보 |각7개, 총14개 통과. 8번째 대상·순서·중복·빈목록·잘못된쌍·추가키·9개 목록 |
+| 전체 Rules 기준/후보 |C1과 후보 각8개 통과. 8인 완료·state 누락·target player/state·character·소유권차수 위조 거절, active/완료방 해산 |
+| 전체 Rules 후보 추가 |캐릭터 변경13개 연산, 개인완료18개, 준비/인증/8인 주차 전환2개 통과 |
+| 후보 전체 서버 경계 합계 |41개. 기준8개와 helper14개는 별도 집계 |
+| 정적 |2개 통과. 두 helper 외 모든 함수·allow 원문 보존, 잘못된 입력 거절 |
+
+helper만 보면 중복과 순서 변경은 계속 허용된다. 따라서 hasAny를 source의 개수·순서·유일성 검사 대신
+사용하지 않는다. 추가키와9개 목록은 기준 helper가 허용하지만 후보 helper는 거절한다. 이는 의도된 계약 강화다.
+격리 helper proof의 익명 쓰기 allow는 테스트 전용이며 후보/추적/운영 Rules에 삽입하지 않는다.
+
+첫 전체완료 실행은 기준 C1에서도 실패했다. 과거 seedRoom fixture가 확장된 Character의 gameAccountId와
+계정/member ownershipRevision을 마련하지 않던 문제였다. BUG024의 기존 검증 방식처럼 실제 writer의
+계정 연결·차수를 seed에 보완한 뒤 동일 요청으로 C1과 후보8개가 모두 통과했다. Rules를 완화하지 않았다.
+실패 결과 results.json 및 baseline-full.json과 수정 후 baseline-corrected.json/candidate-full.json을 분리 보존한다.
+results.json의 초기 전체완료 실패를 전체 통과로 덮어쓰지 않으며 최종 전체 결과는 candidate-full.json이다.
+
+현재 앱 연결은 app_router.dart의 원자 가입/변경 Repository를 유지한다. 생성·가입·변경의
+party_atomic_membership_write_plan.dart/party_atomic_member_mutation_write_plan.dart와 명령의
+party_atomic_write_plan.dart는 정확한 두 키를 출력한다. 공개 앱 소스의 기존 동일 출력과 E 실제 설치/자료 확인은
+구별한다. 이번에 앱·reader·저장 스키마·구독 권한을 변경하지 않았다. 추가키가 붙은 기존 대상 map은
+거절될 수 있으므로 현재/공개 앱의 전체 자료 호환 완료로 판정하지 않는다.
+
+**D 후보는 조건부 보존하고 기본 로컬 기준은 C1로 유지한다.** 정상 형식의 서버 경계는 통과했지만,
+30% 목표 대비 필요한 추가 감소는 약38843bytes다. 두 identity 검색만 바꾸는 설계로는 대폭 축소를 달성하지 못한다.
+효과를 부풀리거나 partySlots/event 대상 검사까지 근거 없이 삭제하지 않는다. E 통합을 자동 착수하지 않는다.
+다음은 D 결과를 바탕으로 source/member/slot/target 중복 저장 계약의 재설계 범위를 확정할 설계 구간이다.
+단일 참가자 원본으로 바꾸려면 참가자 구독·승인권한·Snapshot·개인완료·소유권 정리까지 바뀌므로 §25 D 제외
+범위를 넘어선다. 그 확대 범위·기능별 부작용·앱 강제 전환·자료 이행·롤백과 예상 순감소를 먼저 제시해야 한다.
+Spark 유지, 보안 검증 보존, 기존 기능 삭제 없음 원칙은 그대로다. 30%를 필수 기준에서 제외하려면 사용자 결정이 필요하다.
+
+재현: C1 생성 후 node tools/rules_exact_targets_candidate.mjs 및
+node --test tools/rules_exact_targets_candidate.test.mjs. 깊이 audit에는 readable 경로와 위 SHA를 전달한다.
+로컬 Emulator1.22.0 영어 locale/demo-party-group-cutover:8080에서 tools/rules_exact_targets_proof.mjs를 실행한다.
+최종 전체 proof만 실행하려면 TARGET_FULL_ONLY=1, TARGET_RESULT=candidate-full을 지정한다.
+기준 비교는 TARGET_FULL_RULES=coverage/rules-member-retirement/candidate.rules, TARGET_RESULT=baseline-corrected.
+캐릭터 변경·개인완료는 §34/§31 실행 변수에서 후보 경로만 rules-exact-targets로 지정하며 개인은
+PERSONAL_DISPATCH_ONLY=0, DEPTH_BOUNDARIES=1이다. 주차 전환은 bug024_spark_seal_proof.mjs에
+R1_LISTING=1, BUG024_RUNTIME=1, RULES_SKIP_COVERAGE=1, BUG024_RULES_FILE=후보,
+BUG024_FILTER='absent|same completed', BUG024_EVIDENCE_DIR=coverage/rules-exact-targets/advance를 지정했다.
+증거는 ignored coverage/rules-exact-targets의 manifest/depth·각 log/results JSON에 보존한다.
+로컬 로딩 성공. 원격 컴파일 경고0·게시·활성 소스·실기기 인수는 미확인. Flutter 변경 없어 전체검증 반복 없음.
+Git 금지 유지, 기존 사용자 변경과 추적 Rules를 보존했다. 브랜치 fix/recurring-next-week-character-change 미커밋,
+dev 반영·커밋·푸시·머지·배포 없음. 검증 Emulator 종료.
+
+
+## 36. D-X 확대 설계 — 참가자 원본과 명령 검증 책임 통합 (2026-10-09)
+
+### 결정과 적용 상태
+
+추천 구현 방향은 **별도 단일 roster 문서 + 모집 요약 + 현재 raidState + 불변 event**다.
+모집 source에 참가자 상세 전체를 넣는 안은 선정하지 않는다. R1 group listing은 source 전체 복사이며
+현재 partyRaidListingFields의 허용 목록을 넘는 상세 필드가 추가되기 때문이다. 명단을 별도 문서로 두면
+공개/그룹 목록은 요약으로 유지하면서 member·partySlots·raidStateTargets 사이의 복제 검증을 줄일 수 있다.
+이 설계는 §25 D의 기존 제외 범위를 확대하는 후속 설계이며 현재 schema2 구현을 바꾼 사실이 아니다.
+D의 정확한 target helper 후보를 누적 입력으로 사용하지 않는다. 기본 입력은 C1 18cf2c09다.
+Spark 유지, 기능 보존, 소유권/정원/완료 충돌/필수 쓰기 검사 유지, 운영 적용 전 검증 원칙은 그대로다.
+
+### 실제 의존과 변경 경계
+
+| 현재 경로/근거 | 새 책임 | 보존하거나 확인할 기능 |
+|---|---|---|
+| FirestorePartyReadRepository.watchRecruitmentMembers:387, members 구독 | roster 단건 구독을 기존 PartyMemberDisplay로 변환 | 자리 정렬·빈칸·이름/레벨/전투력/빌드 표시·캐시/권한 오류 |
+| PartyAtomicDocumentMapper.aggregate의 partySlots | roster→기존 Domain slot 변환 | UI와 Domain의 자리/직업/역할 정책 재사용 |
+| AtomicCreate/Join, MembershipWritePlan | source+roster+대상 state+event 원자 저장 | 신청 승인·즉시참가·최대8인·그룹원 여부 |
+| AtomicJoin repository 승인권한 조회:552 | roster의 기존 actor 권한 조회 | 타인 권한 위조·리더 외 승인자·신청 처리 |
+| AtomicMemberMutation repository member 읽기/자리 갱신:53/428 | entry 변경과 source revision 결합 | 캐릭터 변경·자리 이동/교환·역할별 자리 제한 |
+| AtomicMemberRemoval repository:81/98 | before roster에서 대상/승계자 결정 | 탈퇴·추방·첫 잔여 참가자 승계·마지막1인 |
+| CompletedOwnershipCleanupRepository:68/154/328, CompletedOwnershipCleanup.patch | before entry의 차수와 현재 Character/account 대조 후 map 삭제/승계 | 완료 기록 보존·이전 소유자의 무효 관계 정리 |
+| 주간 status command의 개인완료·소비삭제 | source/roster 탈퇴와 본인 state 완료를 같은 명령으로 확정 | 수동 완료·다른 참가자 보존·구 assignment 소비삭제 |
+| PartyAtomicWritePlan.commandTargets, lifecycle writer | 명령 대상 Player 목록과 before/after entry에서 stateId 도출 | 전체 완료·준비·인증·주차 전환·해산·미완료 종료 |
+| partyRaidListingDocument | schema3 요약만 source와 동일 복사 | 그룹 목록·count 원자성·backfill·공개 전환 |
+| app_router.dart의 원자 Repository/adapter 연결 | 검증 후 구현체 내부 schema 분기 교체 | 테스트용 서비스만 바꾸고 실제 연결을 빠뜨리지 않음 |
+
+참조 경로는 lib/features/recruitment_list/data/{repositories,mappers}, domain/entities 및 lib/app/router다.
+구 non-atomic 클래스의 존재만으로 활성 writer로 분류하지 않는다. 실제 Router와 직접 생성/주입 호출을 함께 확인한다.
+읽기 계약의 'slotIndex 미구현' 같은 과거 설명은 현재 코드와 다르므로 이번 설계의 기준으로 사용하지 않는다.
+현재 슬롯·원자 writer와 §33~35의 근거를 우선하며 해당 과거 정책 전체를 이번 문서 작업에서 재작성하지 않는다.
+
+### 저장 계약 초안 — schema3
+
+| 문서 | 저장할 값 | 제거/유지 근거 |
+|---|---|---|
+| recruitments/{id} | schemaVersion3, 기존 모집 설정·주차·leader·revision, rosterRevision, memberPlayerIds, 필요한 검색/집계 요약, 현재 명령 메타데이터 | partySlots·raidStateTargets 제거. memberPlayerIds는 내 방 array-contains 쿼리 때문에 유지 |
+| recruitments/{id}/roster/current | schemaVersion1, recruitmentId, revision, entries: map<PlayerId, MemberEntry> | 참가자 identity·역할·자리·권한·표시 Snapshot의 단일 원본 |
+| MemberEntry | characterId, ownershipRevision, role, partyIndex, slotIndex, canApproveApplications, joinedAt/joinedBy, membershipOrder, countedAsNonGroupMember, 기존 표시 Snapshot·변경시각 | key가 playerId. 중복 playerId 필드는 제거. stateId는 characterId와 방 raidId로 도출 |
+| 명령 메타데이터 | id/type/actor/time/revision, 대상 PlayerId 목록(0~8), 필요 시 이전/다음 캐릭터 식별자 | commandTargets의 stateId 복제 대신 before/after entry에서 도출. 개인1명·전체명단·빈대상 의미는 type별 고정 |
+| players/{pid}/raidStates/{characterId_raidId} | 기존 개인 점유/주간 완료/차수/인증 상태 | 로컬 이관 금지. 기존 namespace와 완료 기록 보존 |
+| partyEvents/{id} | 기존 audience·명령 revision·발생시각·완료 당시 대상 Snapshot | 현재 roster에서 과거 기록 재구성 금지. event 불변 계약 유지 |
+| groups/{gid}/raidListings/{id} | source 요약의 허용 필드 전체 복사 | roster 상세는 복사하지 않음. 같은 transaction의 source와 동등성 유지 |
+| 구 members/{pid}, 구 slots | 전환 후 신규 쓰기 종료, 보존/조회만 필요한 과거 자료 분리 | 이행 직후 전체 삭제 금지. orphan 본인 get 및 종료방 과거 조회 계약 검토 |
+
+Entry 허용키·타입·길이/수치 범위를 닫고 arbitrary nested map을 받지 않는다. 빌드 Snapshot은 기존
+형식 계약을 재사용하며 명단 최대8명에서 문서 크기·전송량을 실측한다. 큰 Snapshot을 로컬에만 옮겨
+재설치/다른 기기의 표시·과거 의미를 잃게 하지 않는다. Snapshot 별도 문서 분리는 비용이 입증될 때만 재검토한다.
+memberCount/dealerCount/supportCount와 leader 표시 Snapshot은 검색/화면 의존이 확인된 동안 유지한다.
+계산 가능한 UI 정렬·빈자리 모델·형식·후보 추천은 로컬에서 만든다. 요약값을 클라이언트 주장이란 이유로 신뢰하지 않는다.
+
+### 읽기·공개 범위와 수명
+
+- source get/list는 현재 공개·그룹·참가자 조건과 내 방 쿼리 동작을 보존한다. 새 roster의 get은
+  현재 members의 공개 audience 또는 확정 참가자 조건에 맞춘다. roster collection list는 불필요하면 열지 않는다.
+- 기존 members는 본인 단건 get 예외도 있다. 이를 roster 전체 get의 '내 entry 존재' 예외로 무조건 옮기면
+  원본 부재/종료방에서 타인 자료까지 노출될 수 있다. orphan 본인 기록은 기존 개별 문서를 읽기 전용으로
+  보존하고 목록에 합치지 않는다. 신규 orphan은 원자 source+roster 계약으로 만들지 않는다.
+- Detail과 roster를 두 구독으로 읽을 때 revision이 어긋난 중간 화면을 정상으로 표시하지 않는다.
+  source.rosterRevision과 roster.revision이 일치하는 조합만 새 상세로 전환한다. 마지막 정상 화면/동기화 상태와
+  서버 오류를 구분하고 캐시의 과거 승인권한으로 쓰기를 실행하지 않는다.
+- 종료방 roster는 이력 표시 수명 동안 유지한다. source만 삭제하는 관리 작업은 금지하고 고아 기록 처리 계획을 따른다.
+  과거 event의 audience/대상은 새 명단이나 신규 소유자로 바꾸지 않는다.
+
+### 서버 검증 책임 — source에서 전체 명령, 각 문서에서 원자 연결
+
+복제된 전체 명령 validator를 모든 문서에 다시 실행하는 구조를 바꾸되 source 검증을 생략하지 않는다.
+
+| 쓰기 루트 | 필수 책임 |
+|---|---|
+| source create/update | active binding·actor 권한, expected revision, 허용 type/필드, before/after roster, 정원/자리/직업/역할, 차수, type별 state 전이·필수 getAfter, event·listing·group count 존재/동등성 |
+| roster create/update | 같은 source가 이 요청에서 실제 생성 또는 revision+1로 변경되고 요청시각/ID/type이 일치, source.rosterRevision과 일치. 무관한 단독 쓰기·삭제 거절 |
+| raidState create/update/delete | 현재 source 명령과 정확한 player/character/raid/cycle/차수 결합, 허용된 상태전이만 허용. 타방·이전 차수 기록 덮어쓰기 금지 |
+| event create | 실제 source revision 전이·새 eventId·type/actor/time/audience/당시 대상·허용키 결합. source는 이 event의 필수 생성 확인 |
+| listing/group count | 같은 source와 요약 동일성·정확한 증감 확인. 없는 source를 근거로 쓰기 불가 |
+
+source 변경 여부는 get/getAfter의 revision 차이 및 생성 전 부재로 판정한다. 과거 lastCommandId만으로
+다른 문서 단독 변경을 허용하지 않는다. 같은 write request에서 source Rules도 평가된다는 연결을 proof로 검증한다.
+source는 변경 후 roster를 실제 읽고 전이 전체를 검사하므로 roster가 단순 source 메타데이터만 흉내내어
+임의 entry를 넣는 요청은 source에서 거절되어야 한다. 검사 책임 이동 후 양쪽의 필수쓰기 누락을 각각 위조한다.
+
+map 변경은 added/removed/changed key 집합으로 명령별 허용 대상을 제한한다. untouched entry는 원문 동일.
+신규/변경 entry의 소유권을 검증하고 8자리 유일성·파티별 역할/직업 제한을 bounded 검사한다.
+map.keys 순서를 자리나 승계 순서로 사용하지 않는다. membershipOrder는 이행 시 기존 partySlots 배열의
+상대 순서를 보존한다. 이동/캐릭터 변경에서 이를 바꾸지 않고 신규 참가만 끝에 추가한다. 정리의 첫 잔여 참가자
+승계는 이 순서로 결정하고 화면 자리 정렬은 partyIndex/slotIndex를 사용한다. 순서값 중복·임의 변경은 거절한다.
+전체완료/advance는 최대8개 state를 여전히 확인한다. 명단 통합만으로 접근/평가 한도 통과를 가정하지 않는다.
+추가 roster get/getAfter 비용과 반복 평가를 세고, 원본과 대상의 상호 연결을 약화하지 않은 채 비교한다.
+
+### 기능별 변경과 회귀 보호
+
+| 기능 | 변경 설계와 보존 조건 | 주요 부작용/거절 사례 |
+|---|---|---|
+| 생성·신청·승인·즉시참가 | 새 entry+source 요약+state+event 원자 저장, pending 신청은 별도 유지 | 동시에 마지막 자리 승인, 동일Player 중복, 신청/승인권한 누락 |
+| 자리 이동·교환 | 같은 roster에서 대상1~2개 entry만 수정, Domain 자리 정책 재사용 | 서로 다른 entry의 같은 자리·다른 참가자 Snapshot 변경 |
+| 다른 캐릭터 변경 | 이전 state 제거/새 state와 entry 갱신, 완료/점유 충돌 유지 | 새 캐릭터 차수 위조, old/new state 누락 |
+| 동일 캐릭터 역할 변경 | 기존 제품 정책을 실제 구현에 연결. 같은 state ID이면 delete/create 대신 role update | 이전/새 경로 부재/존재 동시요구 제거, 불가능한 자리·완료 상태 변경 거절. 기존 결함을 범위에 명시적으로 포함 |
+| 승인권한 변경·방장 승계 | actor의 before 권한과 명령 대상만 변경, 후임 표시/권한 함께 갱신 | 본인 임의 권한 상승, 떠난 리더의 재사용 |
+| 개인완료·탈퇴·추방 | before entry를 바탕으로 참가 제거, 개인 state/남은명단/승계 원자 처리 | 마지막1인 종료·그룹count·무관한 타인완료 변경 |
+| 완료방 준비·advance | 준비는 roster만 캐릭터 변경하고 현재 완료 state/event 보존; 인증과 다음주 전이 분리 유지 | Claim 삭제·이미점유·현재완료 덮어쓰기·중간에 소유권 변경 |
+| 무효 소유권 정리 | before entry 차수와 현재 account/Character 비교, 신규 소유자의 상태는 미변경 | 이미 없는 member 문서에 의존하지 않되 원장 불일치는 자동 정상화하지 않음 |
+| 공개/그룹 목록·알림·이력 | 요약 쿼리/불변 event를 유지, reader는 source+roster revision 조합 | 캐시 혼합·해산/탈퇴 직후 권한변경·과거 완료 대상 변화 |
+
+실기기 정상 UI를 중간마다 반복하지 않는다. proof는 최대8인·마지막1인·동시성·원자성·소유권·위조요청을
+우선한다. 최종 앱 연결 후 사용자에게 캐릭터/동일캐릭터 역할/자리/승인/준비/주간표시의 수동 항목을 한 번 전달한다.
+
+### 앱 전환·자료 이행·게시 실패 대처
+
+1. 운영과 분리된 로컬 schema3 proof에서 이행 전/후 자료와 권한 경계를 검증한다. 공개1.1.1을 schema3 writer로
+   오인하지 않는다. 새 앱은 schema2 read-only 및 schema3 writer/reader를 지원하고 잘못된 버전은 갱신 안내로 중단한다.
+2. 단순 앱 버전 문자열/클라이언트 UI로 차단을 보장하지 않는다. 실제 구 schema 쓰기 종료를 Rules에서 강제한다.
+   v2+v3 dual-write를 장기 유지하면 복제 검사도 남으므로 최종 축소안으로 사용하지 않는다.
+3. 이행 계획은 방별 source revision, members/slots/targets/state의 식별자·차수·자리·권한·Snapshot을 대조한
+   manifest/백업/충돌 목록을 먼저 만든다. 누락을 기본값으로 채워 권한이나 완료를 새로 만들지 않는다.
+   가입순서·목록순서·중복·unknown/확장키·소유권 차수·완료방/과거주차·원본부재를 분류한다.
+4. 짧은 쓰기 동결을 포함한 전환 창을 계획한다. 읽기는 유지하고 클라이언트에는 명확한 점검/업데이트 상태를 표시한다.
+   동결/신규 schema Rules 활성 SHA 확인 전 이행을 시작하지 않는다. 409/503이 나면 단계와 활성본을 확인하고
+   기존 서비스/자료 상태를 유지한다. 실패한 게시를 성공으로 가정하여 앱 또는 자료만 먼저 전환하지 않는다.
+5. 동결 상태에서 승인된 신뢰 실행 주체가 방별 원자 source+roster 전환을 수행한다. 정식 구현 전에 관리 자격증명
+   사용 범위와 실행 절차를 확정하며 앱에 관리권한을 주지 않는다. Spark를 벗어나는 상시 서버는 추가하지 않는다.
+   source revision 비교·원본 해시·전환 버전·진행 checkpoint로 재실행을 멱등 처리한다. 여러 방 전체 원자성은 가정하지 않는다.
+6. 모든 대상 방/reader/legacy writer 차단을 확인한 뒤 v3 쓰기를 연다. 이행 중 mixed schema 방은 v2 read-only와
+   v3 처리를 분기하고 방 단위 혼합 쓰기를 거절한다. 구 members는 쓰기만 차단하고 필요한 읽기/복구 자료를 보존한다.
+7. 실패 복구: 신규 v3 쓰기 전이면 manifest와 해시가 같은 방만 v2로 복원. v3 쓰기 후에는 다시 동결하고
+   현재 v3→v2 역변환을 별도 검증해야 한다. 오래된 백업으로 최신 완료/참가 기록을 덮지 않는다.
+   롤백 Rules도 게시 실패할 수 있으므로 이행/쓰기 재개는 활성 확인을 전제로 한다. 무조건 복구 가능하다고 약속하지 않는다.
+
+| 앱/Rules 조합 | 전환 중 지원 |
+|---|---|
+| 구앱+v2 | 현재 방식, 동결 전까지 |
+| 새앱+v2 | v2 조회·업데이트/점검 안내, v3 쓰기 금지 |
+| 구앱+v3 | 쓰기 거절·업데이트 필요. 구 members의 오래된 화면을 현재 명단처럼 사용하지 않음 |
+| 새앱+v3 | 이행 확인된 방만 신규 계약 사용 |
+
+실제 최소 앱 버전/배포 채널·이행 주체·점검 시간은 실행 단계에서 정한다. 이번 설계는 운영 변경 승인이 아니다.
+필요한 인덱스가 생기면 별도 명시 지시 전 배포하지 않는다. 현재 내 방 memberPlayerIds 쿼리는 보존하여
+불필요한 인덱스 변경을 피한다. 신규 roster 상세를 listing에 넣는 privacy 확대는 범위에 없다.
+
+### 순감소 근거와 구현 진입 기준
+
+C1 입력에 rules_contract_size_audit의 호출 그래프 분석 부분을 메모리에서 재사용했다. 새 allow 그룹을
+source+members, source+members+raidStates+partyEvents로 묶고 원본 도구/Rules 파일은 수정하지 않았다.
+ignored coverage/rules-roster-design/inventory.json에 함수명 목록과 결과를 보존한다.
+수치는 해당 쓰기 루트들에만 도달 가능한 함수 선언 크기이며 모든 read/shared 함수·allow·대체 검사는 제외한다.
+
+| 교체 표면(C1) | 전용 선언 크기 | 의미 |
+|---|---:|---|
+| member 쓰기만 |8084bytes| 하위문서 삭제만으로 목표 달성 불가 |
+| member 전용+target/slot/event 탐색8함수 합집합 |11017bytes| 일부 공유 포함. 독립 절감량에 더하지 않음 |
+| source+member 쓰기 |44390bytes| 기존 권한·상태전이까지 포함. 전부 중복 코드가 아님 |
+| source+member+raidState+partyEvent 쓰기 |69625bytes| 명령 책임 재설계의 넓은 교체 표면. source/member 수치와 중첩 |
+
+30% 목표는 추적151427bytes의70% 이하, 정수 기준105998bytes 이하이다.
+C1 146194에서 **추가40196bytes 순감소**가 필요하다. source+member 전용44390을 전부 대체한다고 해도
+나머지 대체 코드에4194bytes만 허용되어 현실적 근거가 약하다. 전체 party 경계69625를 대체하는 가정에서는
+새 validator/roster/allow/호환 비용 합계29429bytes 이하여야 한다. 실제 한계는 compact 재생성으로 확인한다.
+이 값은 예상 절감이나 개발 견적이 아니라 **가정을 평가하기 위한 크기 예산**이다. 30% 달성은 아직 미입증이다.
+D의1352bytes나 R2의3150bytes를 여기에 단순 합산하지 않는다. 미채택 코드·제거가 불가능한 read는 남긴다.
+
+단일 roster는 조회/쓰기 경로를 단순화할 수 있지만 roster 추가 접근·map 검증·부분변경/공개범위·이행 코드가
+효과를 상쇄할 수 있다. 따라서 전체 앱 재작성에 앞서 별도 로컬 schema3 후보로 검증 책임을 실제 구현하고
+동일 기준 전체 compact bytes·최대깊이·접근/평가 결과를 측정한다. 빈 validator나 allow false로 정상 기능을 막은
+후보를 축소 성공으로 계산하지 않는다. 형식검사만 만든 skeleton은 전체 효과 추정에서 제외한다.
+
+### 단계별 실행안과 중단 조건
+
+| 구간 | 포함 | 완료 조건 |
+|---|---|---|
+| D-X1 구조 선행 proof | C1에서 격리된 schema3 roster/source/state/event 책임 분리. 생성·참가·캐릭터/동일캐릭터 역할·전체/개인완료·마지막1인·준비/advance·정리의 필수 전이 proof, 함수별 대체 목록/크기 예산 | 권한/누락/최대8인 경계와 실제 대체 비용. 구현되지 않은 명령은 미완료 표기하고 전체30% 달성 주장 금지 |
+| D-X2 앱/명령 연결 | 공용 모델·mapper·Domain 정책·Repository와 Router 실제 연결, 기존 단위정책 재사용 | 신구 schema 구분·명령별 writer/read 검증, 동일캐릭터 역할 결함 포함 |
+| D-X3 reader/이행 도구 | roster 구독·revision 일치·목록/이력 보존·버전 gate·dry-run manifest/역변환/멱등 도구 | 오프라인/권한거절/누락/혼합버전·충돌/재개 proof. 운영 이행은 제외 |
+| E 최종 통합 | legacy 폐쇄·추가키/중첩unknown·실자료 조사·이행 계획, 최종 단일 후보 | 정상 기능 전체·회귀·정적/Flutter 영향검증, 최종 순감소·30% 판정 |
+| F 운영 | 대상·활성소스 확인→승인된 게시/동결/이행/재개→사용자 실기기 | 게시 실패 시 반복금지, 활성 SHA·기능 인수 후 완료 |
+
+D-X1부터 다음 구간 요청으로 진행할 수 있게 범위를 기록한다. 이번 턴에는 구현하지 않는다.
+X1에서 충분한 효과가 없거나 경계를 통과하지 못하면 X2 전체 앱 전환을 시작하지 않는다. 임의 기능 삭제나
+Spark 포기로 맞추지 않고 실제 최대 효과와 필요한 제품 선택을 보고한다. 30% 목표를 낮추는 결정은 사용자에게 있다.
+
+이번 결과는 조사·설계 완료다. 새로 사용 가능한 기능 없음, 보존은 계약/코드 대조 수준이며 새 자동/실기기 검증 없음.
+정적 크기 조사와 문서 diff 확인만 실행했다. 기본 C1·조건부 D·추적 Rules·사용자4파일 보존.
+현재 fix/recurring-next-week-character-change 미커밋, dev 반영·브랜치 생성·커밋·푸시·머지·원격 요청·배포 없음.
+
+## 37. D-X1 중간 검증 — 최대8인 완료의 책임 분리 (2026-10-09)
+
+### 판정과 범위
+
+§36 전체 구현의 첫 접근/원자성 실험을 완료했다. **D-X1 전체 완료나 schema3 채택 판정은 아니다.**
+C1 18cf2c09 입력 해시를 고정하고 `deOwnershipMatches`를 그대로 추출해 소유권 검사를 재사용했다.
+새 probe는 고정된 `room`/raid fixture에 대한 완료 전이만 열고 나머지 경로는 닫는다.
+실제 source/state 전체 필드·event Snapshot·group/listing·reader/legacy 계약을 구현하지 않았으므로
+이 작은 코드의 크기를 전체 Rules 감소량으로 계산하거나 원본 대신 배포할 수 없다.
+
+도구: `tools/rules_roster_budget_probe.mjs`, `tools/rules_roster_budget_proof.mjs`,
+`tools/rules_roster_access_calibration.mjs`. 결과는 ignored `coverage/rules-roster-budget/`에 보존한다.
+추적 firestore.rules·firebase.json·앱 코드는 이번 실험에서 수정하지 않았다.
+
+### 검증한 연결
+
+- source는 기존 명단·리더/주차를 고정하고 revision+1, 새 commandId, 완료 상태, 요청시각을 검사한다.
+  roster 단건에서 state 경로를 도출하여8개 getAfter와 필수 event를 확인한다.
+- state는 source의 실제 before/after 전이와 명단 포함·character/raid/cycle/generation을 확인한다.
+  각 character/account의 현재 소유권을 재검사하고 허용 필드만 변경한다. 외부 참가자의 같은 방 상태를
+  명령에 끼워넣는 요청도 거절한다. 전체 명령 validator를 state마다 다시 실행하지 않는다.
+- event는 실제 source 전이·명령ID·actor·revision·요청시각과 create-only를 확인한다.
+  이번 event는 연결 확인용 축약 형식으로, 실제 audience/targets/historical Snapshot은 후속 필수 구현이다.
+- 완료에서는 roster 쓰기를 전부 닫았다. 향후 생성/참가/변경을 허용할 때 완료 명령이 동반 roster 변경을
+  허용하지 않는지도 통합 재검증해야 한다. 현재 성공은 신뢰된 관리 fixture의 기존 명단을 전제로 한다.
+
+| 실험 | 결과 | 읽을 때 주의할 점 |
+|---|---|---|
+| central: source에서 actor 확인 |31/31| 정상8인1 + 누락/위조/재사용 거절30, 거절 후 부분쓰기 없음 |
+| binding-at-event: 필수 event에서 actor 확인 |31/31| source가 실제 새 event를 요구하는 연결을 전제로 한 비교안; 아직 선택/승격 안 함 |
+| ownership 생략 대조군 |정상1건 허용| 접근 비용 대조용이며 안전한 후보가 아님. 소유권 생략은 채택 금지 |
+| 접근 한도 교정 |4건 기대결과 일치| 단건10·batch20 허용, 단건11·batch21은 service call error로 거절 |
+
+정책 거절30건은 필수 state/event/source 누락, 각 단독 쓰기, roster 임의변경, 명단 외/타방 state,
+character/generation/role/cycle 위조, source revision/actor/확장키 위조, 비활성 binding/비리더/비로그인,
+character/account 소유자 변경·차수 변경·account 부재, 과거 event/command 재사용, 완료 후 state 재쓰기,
+event 덮어쓰기, 동일 expected revision의 후발 요청이다. 후발 요청은 선행 성공 뒤 순차 재현했으며
+동시에 실행한 네트워크 경합 테스트로 부르지 않는다.
+정책 거절에는 기존 `assertRulesDenied`를 사용하여 평가 한도/Service call error를 성공으로 세지 않았다.
+접근 한도 교정의 기대 한도 오류는 별도 분류했다.
+
+### 크기·깊이와 접근 한도 해석
+
+| 완료 전용 실험 | compact bytes | readable SHA-256 | 최대 사용자 함수 깊이 |
+|---|---:|---|---:|
+| central |4780|0e3636bd39996c6142f68bf4af64096006dccdc1b137e0a46abd7540de75ec9f|2|
+| binding-at-event |4822|f3b8e2a9fd193b39f6c0e5e9211902d47a71e9cad5f8590c18276fe9b9a532d3|2|
+| unsafe 대조군 |4800|92f9bd8cacc677a17fa75cdcb5383c2bc82cf7ce86f8346c0e88cddb54b6062d|2|
+
+같은 compact 도구·정적 호출 그래프 도구로 측정했다. central compact SHA는
+3911553280e628067628275428d9d3462745159a2e20db57ca6940ac912b9476이다.
+깊이2는 완료 전용 실험 값이며 C1 전체 깊이5를2로 줄였다는 뜻이 아니다.
+완료 대상 helper8회 호출은 유지된다. 중첩 깊이·반복 횟수·문서 접근 횟수·컴파일 크기를 혼동하지 않는다.
+
+[Firebase 공식 한도](https://firebase.google.com/docs/firestore/quotas#security_rules)는 쓰기당10,
+batch/transaction당20회 문서 접근을 명시하며 캐시된 접근은 제외한다. 단순 함수 호출 합산으로
+이번 후보를 실패라고 단정하지 않았다. Emulator1.22.0에서 별도 읽기 전용 경로11/21개는 거절되고
+동반 쓰기/getAfter를 쓰는8인 완료는 통과했다. 이는 이번 요청의 통과 근거이며 정확한 캐시 계산식이나
+운영 컴파일·배포 성공을 입증하지 않는다. 추가 roster/listing/group 접근 뒤에는 실제 요청으로 다시 검증한다.
+
+### 미구현과 재개 순서
+
+1. 생성/참가: 닫힌 entry 형식·Snapshot, 자리/역할/직업 제한, 중복/승인권한, roster 실제 변경 연결.
+2. 다른/동일 캐릭터 역할 변경: old/new state 원자 연결·완료/점유 충돌, 기존 membershipOrder 보존.
+3. 개인완료·탈퇴·마지막1인·승계: 무관한 상태 보존과 필수 정리.
+4. 준비/advance·소유권 정리: 완료 이력·인증/차수·다음주 상태 보존.
+5. 실제 event/listing/group count, 읽기·legacy 호환을 포함해 C1 교체본 전체를 만들고 최종 크기/깊이 측정.
+
+이 전이가 빠진 작은 skeleton으로30% 달성을 선언하지 않는다. X1 채택 판정 전 X2 앱 연결은 보류한다.
+이번 구간에서 새로 사용 가능한 앱 기능 없음. 기존 흐름의 보존은 격리된 완료 경계 검사 수준이며 전체 앱
+회귀/실기기/운영자료는 미확인이다. 초기 결과 수집에서 withSecurityRulesDisabled 반환값 오해로 도구가 실패해
+명시적 snapshot 저장으로 수정했다. 이는 Rules 거절이 아니며 수정 후 검증했다. 재사용3건 추가 후 사용 한도로
+자동 승인 검토가 실행을 막았고 사용자 재개 요청 후 최종31건씩 통과했다. 원격 API/게시는 호출하지 않았다.
+
+## 38. D-X1 공개방 생성·참가 — 검증 책임 분산 (2026-10-09)
+
+### 범위와 결과
+
+`tools/rules_roster_join_probe.mjs`와 `rules_roster_join_proof.mjs`에 공개방 생성·즉시참가·승인 참가의
+별도 schema3 실험을 구현했다. **61건 통과, 생성/참가 하위 구조 검증 완료; 전체 X1 채택은 보류**다.
+추적 Rules/앱/운영은 변경하지 않았다. C1의 소유권·과거차수 Claim 함수5개를 원문 추출하고 입력 해시를 고정한다.
+실제 Router의 AtomicCreate/Join 연결, Repository의 승인자 before 권한/신청 generation/소유권 읽기,
+PartyJoinWritePlan/AtomicMembershipWritePlan, PartyCompositionPolicy의 자리·역할·딜러직업 규칙을 대조했다.
+
+부분 후보 compact SHA `17ca538febf84481cb6aa4a374b8bf24b9d858ea8f92baef77dd9e203b3b742f`,
+14510bytes, 최대 사용자 함수 깊이4(validNewState→entryShape→gem→text).
+§37 완료 전용 probe와 별도 파일이며 둘을 더하거나 C1에서 빼서 전체 감소량을 계산하지 않는다.
+manifest/results/depth와 실패 이력은 ignored `coverage/rules-roster-join/`에 있다.
+
+### 실제 재현한 문제와 설계 조정
+
+처음 source에 모집 설정·entry 형식·자리·상태·event 검사를 집중한13859bytes 후보는 **생성에서1000식 초과**했다.
+이는 운영409/503의 원인 확정이 아니라 신규 구조 후보의 실행 평가량 문제다. 소스가 작아도 한 쓰기 루트에
+집중된 검증이 실패할 수 있음을 확인했다(`initial-failure.json`, `initial-candidate.rules`).
+
+entry 형식을 roster로 옮기자 생성은 성공했지만 재전송에서 불필요한 참가 분기 평가가 남았다.
+단순 AND 선행 조건으로는 실패했으며 명령/revision의 명시적 삼항 분기로 재전송 검사를 격리해 해결했다.
+그 뒤 정상8번째 참가에서1000식 초과를 확인했다. 변경 금지 설정의 반복 검사를 제거한 것만으로도 해결되지 않았다.
+검사를 삭제하거나 한도 오류를 정상 거절로 취급하지 않고 아래 책임 분산으로 최종 검증했다.
+
+| 문서 | 이번 생성/참가 책임 | 필수 실제 쓰기 연결 |
+|---|---|---|
+| source | 생성 설정·actor·명령/revision, 신규 player1명, 기존 entry 불변, 요약 증감, 승인 before 권한/신청, 필수 state/event | 생성 또는 revision+1, rosterRevision+1, state 신규 생성·시각, 새 event 부재/생성 확인 |
+| roster | 닫힌 문서 형식·source 목록 동등성·신규 자리/역할/직업 제한·기존 순서보다 큰 membershipOrder | source 실제 생성/갱신, rosterRevision 일치. 단독 쓰기·이름 위조·삭제 불가 |
+| 새 raidState | 닫힌 state·신규 entry/Snapshot 형식, character/account 소유권·현재 차수·active 상태·Claim | source의 유일 commandPlayer와 after entry, 정확한 character_raid 경로. create-only |
+| event | 기존 생성/참가 event의 ID/type/revision/actor/audience/시각·닫힌 필드 | source 실제 전이·canonical eventId, create-only |
+| 신청 승인 | before pending/캐릭터/차수/역할/주차/제출 Snapshot과 새 entry 동등성, after approved/revision+1 | source approve 대상과 동일, 신청 변경은 status/revision/updatedAt만 |
+
+§36의 'source에서 전체 검사'는 이 실험에서 **source는 전체 명령의 원자 연결을 강제하고 하위 필수 쓰기는
+각자의 검사를 한 번씩 실행**하는 방식으로 구체화했다. source가 after state를 요구하고 state update는 닫혀 있으므로
+entry 검사를 state create로 옮겨도 기존 state를 재사용해 검사를 생략할 수 없다. 다른 명령에 같은 이전을 적용할 때는
+create-only 전제가 없을 수 있으므로 해당 명령의 실제 쓰기를 별도로 증명해야 한다.
+
+참가에서는 생성 시 검증된 변경 금지 설정을 다시 전부 검사하지 않는다. 엄격한 source diff 허용 목록으로
+기존 설정을 보존하고 인원/역할/잔여자리/신청 수 증감만 검사한다. 기존 entry는 map diff에서 changed/removed가0,
+added가 commandPlayer1명이어야 한다. 신규 권한은 false, 생성 리더만 true다. 가입순서의 연속 숫자는 요구하지 않지만
+기존 모든 순서보다 커야 하며 기존 참가자의 순서·Snapshot을 바꿀 수 없다.
+
+### 회귀 보호와 검증
+
+- 정상 생성,7→8인 즉시참가, 승인 참가와 각 명령 재전송 거절; 방장 외 승인 권한 보유자 승인 허용.
+- 같은 마지막 자리에 두 요청을 Promise.allSettled로 동시 제출해 정확히1건 성공, 인원/명단/revision8 확인.
+- source/roster/state/event/신청 각각 누락, 단독 쓰기, 잘못된 roster 이름, orphan roster 덮어쓰기 거절.
+- 자리 중복과 같은 딜러직업을 별도 유효 fixture에서 검사해 역할 정원 초과로 우연히 거절되는 검증을 피했다.
+  역할 초과·9인·중복 순서·신규 승인권한·기존 entry 변경/삭제·추가 entry·집계/revision 위조 거절.
+- current Claim/현재 active·completed state 차단. 과거 ownership Claim은 C1 정책대로 비차단.
+  character/account 소유자·account 차수·신청 차수/캐릭터 위조, 비활성 binding·비로그인·비승인자 거절.
+- 기존 null/v1/v2 보석·Build Snapshot 수용, 임의 중첩 확장키·타입 위조 거절. 신청 제출값과 승인 entry도 대조.
+  Snapshot 형식 검증은 외부 게임 API 값의 진실성 검증을 의미하지 않는다.
+- 각 거절은 assertRulesDenied로 평가 한도/Service call error를 실패 처리하고, 전후 snapshot으로 부분쓰기 부재 확인.
+  Node 문법·기존 정적 깊이 도구·git diff --check 통과. 앱 변경 없어 Flutter 전체 테스트/실기기는 실행하지 않았다.
+
+### 한계·부작용과 다음 작업
+
+현재 실험은 공개·그룹 미연결방,4인 파티1~2개/파티별 서포터1/딜러 동일직업1의 설정과 최대8인 대표 사례다.
+승인 신청은 신뢰된 fixture에서 시작하며 실제 submittedBuildSnapshot 중첩 대신 동일 값의 평탄화된 proof 필드다.
+신청 생성/거절/재신청·실제 전체 승인 patch·reader, 그룹 자격/listing/count, 구 state 소비삭제/재사용, 자유 설정·
+전체 모집 필드는 아직 통합하지 않았다. 순수한 create-only state는 현재 과거 state 재사용 흐름까지 대체하지 못한다.
+문자열256자 등의 새 닫힌 형식 경계는 이행 실자료 대조가 필요하고, arbitrary map 제한을 과거 자료에 바로 적용하지 않는다.
+
+§37과 이번 후보는 단일 Rules로 통합되지 않았으며 생성→참가→완료 연속 실행 검증도 남아 있다.
+이 하위 구간의 성공을 전체 기존 기능 보존·30% 달성·게시 해결로 해석하지 않는다. 다음은 다른/동일 캐릭터 역할 변경,
+이후 개인완료/마지막1인·준비/advance/정리·그룹/읽기 통합과 전체 크기 측정이다. 기본 C1 및 사용자 변경4파일 해시 보존.
+
+## 39. D-X1 기본 캐릭터·역할 변경 검증과 재배치 호환 차이 (2026-10-09)
+
+### 결과와 판정
+
+§38의17ca538f 생성/참가 후보를 확장한 로컬61420d3f에서 기본 변경60건·기존 생성/참가61건을 통과했다.
+추가로 기존 Domain이 허용하는 재배치 대기 경로를 후보가 거절하는1건을 재현했다. 이1건은 성공 회귀가 아니며
+**후보 미채택, 전체 캐릭터 변경 구간 미완료**다. 다음은 재배치 호환 보완이며 앱 전환/운영 승격은 보류한다.
+
+도구 `tools/rules_roster_change_{probe,proof}.mjs`, 비교 검증은 기존 join proof의 Rules/결과 경로 override를 사용한다.
+ignored `coverage/rules-roster-change/`에 candidate/readable/manifest/results/join-results/depth와 로그를 보존했다.
+compact SHA `61420d3f80e7d4dff2db66b6e8fd306bc8fd1867e8a79c410c58d444de6dbc8a`,20614bytes,
+§38 대비6104bytes 추가, 최대 사용자 함수 깊이4 유지. 전체 Rules의 크기·절감률·compiled size는 아니다.
+
+### 구현과 계약 대조
+
+- product/PARTY_PARTICIPATION_RULES §5, FIRESTORE_PARTY_COMMAND_CONTRACT §4.7 및 실제 Router의
+  FirestorePartyAtomicMemberMutationRepository 연결을 확인했다. Repository는 본인/현재방/소유권과 상태를 읽고
+  AtomicCharacterChangeWritePlan은 기존 state 삭제+신규 state 생성으로 작성한다. 같은 state ID이면 throw하는
+  기존 결함이 남아 있고, C1 member Rules도 같은 경로에 existsAfter/!existsAfter를 동시에 요구한다.
+- 이번 후보는 source의 change 명령/revision 및 rosterRevision 증가, 본인 actor, target entry 하나만 변경,
+  인원/목록/설정 불변과 역할 집계 증감을 검사한다. 가입순서·joinedAt/joinedBy·승인권한·그룹집계 표시는 보존한다.
+- 다른 캐릭터: source가 이전 state 존재/삭제와 신규 경로의 이전 부재/생성을 요구한다. old delete는 before entry,
+  room/raid/difficulty/cycle/role/generation과 현재 소유권을 확인한다. 새 state는 §38 entry/Snapshot/소유권/Claim 검사를 재사용한다.
+- 동일 캐릭터 역할: before/after가 같은 경로에서 revision+1, role/updatedAt만 변경되도록 한다. 기존 active 상태·주차·
+  소유권·완료 충돌·entry 표시정보와 현재 character의 이름/직업도 확인한다. 기존 상태를 삭제·재생성하지 않는다.
+- roster에서 대상 본인을 제외해 자리/직업/역할을 검사한다. 가입 시 append 순서 조건은 변경에 재사용하지 않으며
+  source entry diff가 membershipOrder 변경을 막는다. 방장0:0 고정석도 보존한다. event는 characterChanged canonical ID,
+  revision/actor/audience/time과 새 문서 생성을 요구한다. 과거 event를 재작성하지 않는다.
+
+### 검증과 제한
+
+기본60건은 최대8인 다른 캐릭터 변경·방장 변경, 역할 여유가 있는7인 같은 캐릭터 역할 변경, 다른 파티 빈자리로
+이동하는 역할 변경, 각 재전송 거절 및 동시 변경1건만 성공을 포함한다. 인원별 반복이 아니라 다른 상태 전이 사례다.
+source/roster/new/old/event 누락·단독쓰기, old 부재/완료/타방/소유권·차수 변경, new 점유/완료/소유권·차수/비활성,
+Claim·비로그인·비활성 binding·타인 요청, 권한/순서/가입시각/작성자/Snapshot/레벨/전투력/자리/역할/집계/revision/
+event 위조와 무관한 state 삭제를 거절했다. 현재 Claim은 차단하고 과거 소유권 Claim은 허용한다.
+모든 정책 거절은 평가 한도/Service call error를 실패로 세며 전후 snapshot으로 부분쓰기 부재를 확인한다.
+후보의 전체 생성/참가61건도 재사용해 새 change 분기가 기존 흐름을 여는지/막는지 검사했다.
+
+재배치 호환 차이: 8인에서 p2가 방장p0와 같은 딜러직업으로 변경하면 현재 파티는 직업 중복이다. 다른 파티 p4와
+나중에 교환하면 두 파티 모두 유효해지는 자료를 구성했다. 현재 Domain.planReplacement는
+inPlaceNeedsRebalance로 변경을 허용하고 자동 자리 교환은 하지 않는다. 새 후보는 즉시 유효한 최종 구성만 허용해
+이 요청을 거절한다. 이 차이를 정상 권한 거절로 포장하지 않고 KNOWN GAP 결과로 기록했다.
+제자리→결정적 첫 빈자리→유효한 단일 교환 가능성이라는 전체 우선순위도 아직 서버 proof에서 완성되지 않았다.
+단순히 직업/역할 제한을 없애는 것으로 해결하지 않는다. 다음 구간은 bounded 교환 증명과 방장 후속 명령 보존이다.
+
+생성/참가/변경이 한 후보에 들어갔지만 완료 probe는 아직 별도다. 연속 생성→참가→변경→완료,
+그룹/listing·leader 표시요약·legacy state 소비삭제·모든 설정/reader·실기기/운영 검증은 미완료다.
+후보에서는 old 점유를 임의 덮어쓰지 않는다. 기존 앱의 고아 정리/과거 state 재사용을 대체 완료한 것이 아니다.
+새로 사용 가능한 앱 기능은 없으며 같은 캐릭터 역할 결함도 앱/운영에서는 아직 수정되지 않았다.
+
+중단 지점의 도구 오류는 기존 함수 추출기가4칸 들여쓰기를 가정한 것이어서 입력 선언 들여쓰기를 정규화해 해결했다.
+Rules 정책 오류와 구분한다. Node 문법·정적 깊이·diff 확인, 로컬 Emulator만 실행했으며 추적 Rules/사용자4파일은 보존했다.
+
+## 40. D-X1 재배치 호환과 방장 자리 명령 — 로컬 검증 완료 (2026-10-09)
+
+### 40.1 계약과 구현 범위
+
+§39에서 실제로 막혔던 `inPlaceNeedsRebalance`를 복구한 별도 후보를 구현했다.
+`PartyCompositionPolicy.planReplacement`의 제자리 → 첫 유효 빈자리 → 단일 교환 가능 → 거절 순서를 따른다.
+교환 가능성은 대상 본인과 다른 한 명에 한정하지 않는다. 다른 참가자 두 명을 교환하거나 방장 본인의 캐릭터를
+바꾼 뒤 다른 참가자를 교환해야 하는 경우도 허용한다. 캐릭터 변경 단계에서 자동 교환하지 않는다.
+방장은0:0 고정이며 후속 `membersRepositioned`는 기존 WritePlan처럼 자리만 교환/이동하고 전체 구성을 확인한다.
+실제 앱 Router/DI와 Domain/WritePlan을 대조했지만 앱 writer 연결은 변경하지 않았다.
+
+실험 명령에 `placementProof: {p0, p1, swap}`를 추가했다. p0/p1은 파티별 PlayerId 목록, swap은
+재배치 대기의 유효 교환 증거 두 ID(0파티,1파티 순)다. 영구적인 유효성/권한 플래그가 아니다.
+필수 불변 event 생성 규칙이 목록 전체성·중복·실제 파티·캐릭터 중복을 원본 roster와 대조한다.
+변경은 before roster, 후속 자리는 after roster를 사용한다. source가 신규 event의 실제 생성을 강제한다.
+자리 명령은 `positionTarget: {partyIndex, slotIndex, other}`와 변경 대상 ID를 기록한다.
+이전 명령 증거가 문서에 남더라도 새 revision과 신규 event 대조 없이는 재사용할 수 없다.
+
+roster는 지원가를 S, 딜러를 D+직업명으로 나타내는 임시 토큰 목록을 계산한다. 중복 없음·최대4명·딜러3명으로
+현재 공개방 실험 설정(파티당 지원가1명·동일 직업 딜러1명)을 검증한다. 다른 설정 일반화는 미완료다.
+교환 검사는 중복 직업이 존재하더라도 토큰 한 개만 제거한다. `removeAll`로 중복 전체를 지워 허용하지 않는다.
+제자리 유효 시 불필요한 이동은 거절하고, 이동 가능한 경우 실제 첫 빈자리를 강제한다.
+변경 대상 이외 entry, 가입 정보·권한·순서 불변을 source에서 유지하며 소유권/Claim/state/event 기존 검사는 보존했다.
+방장 자리 명령은1~2 entry의 자리/updatedAt만 변경할 수 있고 역할·Snapshot·개인 state 변경은 거절한다.
+
+### 40.2 한도 초과와 책임 조정
+
+초기7724a1a 후보는 재배치 허용 경로에서1000식 한도를 초과했다. 증거 전체성 확인을 roster에 집중한 것이 원인이었다.
+필수 event로 원본 대조를 옮기자 해당 경로가 통과했다. 후속 자리 명령에서도 같은 집중을 피하도록 분리했다.
+event에 검사를 추가한 중간 후보는 오래된 명령 재실행의 거절 경로에서 다시 한도를 초과했다.
+fresh revision을 삼항 분기로 먼저 판정해 불필요한 증거 계산을 차단했다. 실패를 권한 거절 성공으로 계산하지 않았다.
+초기 호출 사슬6단계는 중간 전달 함수 제거와 단순 토큰 변환 결합으로4단계까지 줄였다.
+검사 삭제나 역할/직업 제한 완화는 없으며 현재 최대8인 경계의 정상·위조 경로에서 한도 오류가 사라졌다.
+
+### 40.3 결과와 재현
+
+최종 SHA `e922fc4d2ffe648500211427b43b81d197449871de2b49e5d1d6d0a97450f923`,
+compact25522bytes·정적 최대 호출깊이4. §39보다4908bytes 증가한 기능 보존 비용이다.
+전체 Rules30% 감소나 운영 게시 성공을 입증한 값이 아니다. 완료/그룹/reader 통합 비용도 남아 있다.
+넓은 교체 가정의 새 코드 예산29429bytes와 단순 비교하면3907bytes만 남으므로 최종 통합 비용을 계속 측정해야 한다.
+이는 남은 비용 예측이나 최종 구조 채택 약속이 아니다.
+
+- 변경/자리103건 통과: 기존60건, 이전 실패 재배치1건, 증거 위조10건, 과거 명단의 캐릭터 중복1건,
+  실제 Dart Domain14건, 우선순위 우회3건, 자리 정상2건·권한/원자성/위조12건.
+- 생성/즉시참가/승인61건을 같은 최종 후보에서 통과. 합계164건, 한도 초과를 거절 성공으로 허용하지 않음.
+- Domain14건은 앱의 실제 `planReplacement` 실행 결과를 서버 요청의 기대값으로 사용했다.
+  지원가/직업 충돌, 방장 변경, 양방향 첫 빈자리, 기존 재배치 대기 구성, 불가능한 교환을 포함한다.
+- Node 문법·정적 깊이·diff 확인. Emulator1.22.0 최종 컴파일 HTTP200/빈 응답이며 경고 항목 없음.
+  운영 컴파일 경고0개 확인을 대체하지 않는다. 원격 API/게시0, 실기기 미실행.
+
+재현 도구: `tools/rules_roster_rebalance_probe.mjs`, `tools/roster_rebalance_domain_fixtures.dart`,
+`tools/rules_roster_change_proof.mjs`의 ROSTER_CHANGE_RULES/RESULTS/WITNESS=1,
+`tools/rules_roster_join_proof.mjs`의 ROSTER_JOIN_RULES/RESULTS.
+출력은 `coverage/rules-roster-rebalance/`의 manifest/results/join-results/domain-fixtures/depth/compile-response다.
+join→change 기준 후보 생성 후 rebalance 후보를 생성하고, 실제 Dart fixture 생성 후 proof를 실행한다.
+
+### 40.4 판정과 남은 영향
+
+재배치 호환 하위 구간은 로컬 검증 완료이며 e922fc4d를 다음 부분 실험의 기준으로 사용한다.
+전체 X1 완료나 추적본/운영 승격은 아니다. C1 기본 기준은 유지하며 다음은 개인완료/마지막1인 통합이다.
+명령 증거 작성과 자리 명령 schema는 향후 앱 WritePlan에 연결해야 한다. 잘못된 증거는 전체 요청이 거절되므로
+앱 전환 시 Domain 결과를 동일하게 직렬화해야 한다. 현재 앱 기능이 새로 활성화되거나 수정된 것은 없다.
+그룹/listing, leader 표시요약, legacy state 소비삭제, 모든 reader와 혼합버전 이행은 여전히 미완료다.
+실기기 확인은 앱 연결 후 재배치 안내 유지 → 방장 자리 변경 → 안내 해제, 첫 빈자리 이동,
+동일 캐릭터 역할 변경과 동시 변경 재시도를 사용자가 수행한다. 현재 단계에서는 설치/조작을 요청하지 않는다.
+
+## 41. D-X1 공개방 개인완료·승계·마지막1인 통합 (2026-10-09)
+
+### 계약과 결과
+
+생성/참가/변경/자리 후보e922fc4d 위에 개인완료를 통합했다. 운영/앱 변경이 아닌 별도 로컬 실험이다.
+실제 app_router의 FirestoreWeeklyRaidStatusCommandRepository 연결, 해당 Repository의 _completeActiveState,
+PartyAtomicMemberRemovalWritePlan과 WEEKLY_RAID_CLAIM_CONTRACT §0의 현재 raidState 계약을 대조했다.
+§37은 전체완료 전용이며 개인완료 코드를 그대로 가져올 수 없다. 개인완료는 본인 제거와 승계/해산을 수반한다.
+
+- source: 본인 active binding, 현재 주차/공개방, revision, 정확한 대상 제거와 인원/역할 요약,
+  마지막1인 disbanded/모집중지, 첫 잔여 참가자 승계/표시 Snapshot, 필수 roster/state/event 쓰기를 검사한다.
+- roster: 대상 entry만 제거하며 후임이 있으면 승인권한/updatedAt만 변경한다. 후임의 현재 Character/account
+  소유자·차수를 검사한다. map 삽입 순서는 사용하지 않고 기존 memberPlayerIds의 가입 순서를 보존한다.
+- state: before entry의 식별자/차수/역할/주차와 현재 소유권을 대조하고 completed/manual, completedAt,
+  revision+1만 허용한다. 기존 recruitmentId를 보존하고 타인 완료나 무관한 상태 변경은 거절한다.
+- event: memberLeft ID/revision, weeklyRaidCompleted 사유, actor/target과 변경 전 전체 audience를 고정한다.
+  출발한 사용자도 이력 audience에 남는다. source가 새 event 생성을 요구해 누락 시 전부 롤백된다.
+
+기존 제거 WritePlan은 후임의 자리를 이동하지 않는다. §40 후보의 방장 변경0:0 강제는 승계 후 변경을
+막는 충돌이었다. 이번 후보는 현재 방장의 기존 자리를 고정한다. 생성 당시0:0과 승계 후 고정석을 구분한다.
+실제 Domain도 유효한 기존 자리를 보존한다. 자동 자리 이동이나 후임 선택 권한 완화는 하지 않았다.
+기존 운영 Rules의 동일0:0 조건은 남아 있으며 앱/운영 수정 완료로 해석하지 않는다.
+
+### 검증과 비용
+
+최종 SHA `8f009d3dcb6ebd98755df73d7618de1a50fe831859b570939cad60b3b5da6494`, compact30749bytes,
+정적 최대 호출깊이4. §40 대비5227bytes 증가했다. 기존 넓은 교체 가정의 새 코드 예산29429bytes보다
+1320bytes 크며 아직 전체완료/준비/전환/그룹/reader 비용도 남아 있다. 기능 검증 통과는30% 축소 달성이 아니다.
+다음 통합은 재사용·중복 제거 비용을 같이 측정하고, 정상 기능을 빼서 목표를 맞추지 않는다.
+
+- 개인완료58건: 최대8인 일반/방장, 마지막1인, 타인 state 보존, 재실행/동시 요청, 누락·위조·차수·주차·
+  후임 권한/자리/가입순서·이벤트 경계, 완료 후 재참가 거절, 승계 후 캐릭터 변경/자리 이동 거절.
+- 인증된 실제 Rules 요청으로 생성→8인 참가→8회 개인완료→마지막 해산을 연속 확인했다.
+  관리 fixture에서만 성공한 것이 아니다. state8개 완료/manual과 이벤트16개를 확인했다.
+- 동일 최종 후보에서 기존 변경/자리103건 및 생성/참가61건 통과, 합계222건.
+  assertRulesDenied는 평가 한도/문서 접근 한도 초과를 정책 거절 성공으로 계산하지 않는다.
+- Emulator1.22.0 로컬 컴파일200/빈 응답으로 경고 항목 없음. 운영 컴파일/게시 검증을 대체하지 않는다.
+  Node 문법·정적 깊이·diff 확인. 앱 코드 수정이 없어 전체 Flutter 테스트/analyze는 반복하지 않았다.
+
+도구는 tools/rules_roster_personal_{probe,proof}.mjs, 결과는 coverage/rules-roster-personal/ 아래 manifest,
+personal-results(58), results(기존 변경103), join-results(61), depth, compile-response다.
+개인 결과와 기존 변경 결과의 파일명 충돌을 발견해 개인 결과를 별도 파일로 보존했다.
+중간55건 통과 뒤 추가3건 실행은 사용 한도로 자동 승인 검토가 실행하지 못했으며, 사용자 재개 후58건을 확인했다.
+
+### 판정과 다음 구간
+
+공개방 개인완료/마지막1인 하위 구간 로컬 검증 완료. 부분 실험 후속 기준으로만 사용하며 C1 기본 기준은 유지한다.
+새로 활성화된 앱 기능 없음. 추적 firestore.rules와 사용자 기존4파일은 보존했다.
+그룹 count/listing, legacy 소비삭제, 개인 수동완료/해제, 준비 guard 정리, 전체완료 Snapshot/reader는 미구현이다.
+다음은 전체완료 상태 계약을 현재 후보에 연결한 뒤 준비/인증/advance를 검증한다. 이번에는 착수하지 않았다.
+실기기 개인완료 확인창·승계 표시·마지막 해산·완료 후 후보 제외·승계 후 변경은 앱 연결 후 사용자 확인 대상이다.
+브랜치 fix/recurring-next-week-character-change 미커밋 유지. 브랜치 생성·커밋·푸시·머지·dev 반영·운영 API/배포 없음.
+
+## 42. D-X1 공개방 전체완료 상태 통합 (2026-10-09)
+
+### 계약과 변경
+
+개인완료 통합8f009d3d 위에 공개방 전체완료를 연결했다. 실제 Router의 FirestorePartyAtomicCommandRepository,
+PartyAtomicWritePlan의 recruitmentPatch/raidStateWrites/eventDocument, 주간 귀속 계약 §0과 C1 Rules의
+validAtomicRaidStateUpdate 및 party_completion_role_proof를 대조했다. §37의 고정 room 실험을 그대로 채택하지 않았다.
+
+- source는 현재 회차의 방장만 revision+1 전체완료를 실행하고, 최대8명 state와 새 event를 필수 요구한다.
+- 전체완료는 roster/명단/인원/역할/rosterRevision을 보존한다. roster 동반 쓰기·삭제는 허용하지 않는다.
+- currentCycleStatus는 completed. continueTogether=true면 모집 status=active, 아니면 completed다.
+  생성의 선택 필드 타입을 닫고, 이전 실험 fixture의 필드 부재만 active/false 기본값으로 호환한다.
+  반복방의 모집 active를 참가 가능한 회차로 오인하지 않도록 모집 update를 회차 active에서만 분기한다.
+- 각 state는 본인 entry·방/레이드/난이도/주차·현재 소유권과 결합하고 active→completed, source=party,
+  completedAt/updatedAt와 revision+1을 확인한다. 역할 누락은 기존 C1 계약처럼 roster 역할로만 보충한다.
+  이미 존재하는 역할 불일치나 타인·다른 방·다른 주차·차수 위조는 거절한다.
+- schemaVersion2 complete 이벤트에 기존 순서의 audience, raidId/difficultyId/cycleKey,
+  completionTargets[{playerId,characterId}]를 정확하게 저장한다. 추가키/누락/중복/재정렬/덮어쓰기는 거절한다.
+  향후 준비 변경 후에도 이 완료 당시 기록을 현재 roster로 재구성하지 않는다.
+
+### 검증·크기와 한계
+
+최종 SHA `7a3a3e26d7ff5b2b25d0933d9c9fed1bfb426665a1cbf9c9082a48e327c77562`,
+compact35391bytes·정적 최대깊이4. §41 대비4642bytes 증가했고 기존 새 코드 예산29429bytes를5962bytes 초과했다.
+이는 명령들을 한 후보로 통합한 비용이지 전체 Rules 최종 크기가 아니다. 30% 감소 목표를 달성한 것으로 판정하지 않는다.
+준비/전환/그룹/reader 비용도 남아 있어 후속 통합에서 중복 제거 가능량을 함께 측정해야 한다.
+
+- 전체완료49건: 최대8인 일회성/반복방, roster 불변, 전원 party 완료, 이벤트 당시 대상, 누락/위조/권한/
+  소유권·역할·주차, 재실행/동시 요청, 완료 반복방 개인완료/캐릭터 변경 차단, 과거 역할 누락 보충.
+- 관리 fixture 외에 인증된 생성→8인 참가→전체완료 연속 요청도 통과했다. 명단 보존·state8개·event9개 확인.
+- 최종 후보에서 기존 개인58건·변경/자리103건·생성/참가61건 회귀 통과, 합계271건.
+  평가 한도 초과를 정상 권한 거절로 계산하지 않았다. 로컬 Emulator1.22.0 검증이며 운영 성능 보장은 아니다.
+- Node 문법, 정적 깊이, diff 확인. 로컬 컴파일200/빈 응답(경고 항목 없음). 운영 API/게시0.
+  앱 파일 변경이 없어 전체 Flutter 테스트/analyze를 반복하지 않았다.
+
+도구: tools/rules_roster_complete_probe.mjs와 rules_roster_complete_suite.mjs.
+공통 personal proof에 ROSTER_PERSONAL_RULES/RESULTS와 ROSTER_FULL_SUITE=1을 지정해 전체완료를 실행한다.
+기존 개인검사에는 ROSTER_FULL_SUITE를 지정하지 않는다. 출력은 coverage/rules-roster-complete의
+complete-results(49), personal-results(58), results(103), join-results(61), manifest/depth/compile-response다.
+
+### 판정과 후속
+
+전체완료 상태 하위 구간 로컬 검증 완료. 새 후보를 부분 실험 후속 기준으로 사용하며 C1 기본 기준은 유지한다.
+다음은 반복방 완료 상태의 준비 변경·인증·advance 통합이다. 현재 회차 active gate는 향후 준비 전용 분기로
+엄격하게 확장해야 하며, 일반 변경 분기를 다시 열어 해결하지 않는다. 이번에는 준비/advance에 착수하지 않았다.
+그룹 count/listing, legacy 소비삭제, 개인 해제, 실제 reader/앱 연결·이행·운영은 여전히 미완료다.
+실기기 전체완료 후 일회성 종료/반복방 유지, 완료 체크와 이력, 준비 화면은 앱 연결 후 사용자가 확인한다.
+새로 활성화된 앱 기능 없음. 기존 작업 브랜치 미커밋 보존, 브랜치 생성·커밋·푸시·머지·dev 반영·배포 없음.
+
+## 43. D-X1 반복방 준비 변경 체크포인트 (2026-10-10)
+
+§42 후보 위에 prepare 전용 명령을 연결했다. 실제 Router의 member mutation Repository,
+PartyAtomicNextWeekCharacterChangeWritePlan, Spark C 및 주간 귀속 계약 §0을 대조했다.
+인증/advance까지 완료한 결과가 아니라, 그 전에 완료 기록 보존 경계를 검증한 체크포인트다.
+
+모집은 active/continueTogether/completed 회차에서 본인의 서로 다른 캐릭터 변경만 허용한다.
+명단·인원·가입 순서·권한·회차는 보존하고 revision/rosterRevision을 각각 증가시킨다.
+일반 변경의 구성/자리 정책을 재사용하며 동일 캐릭터 역할만 변경은 준비에서 열지 않았다.
+완료 회차에서 일반 change/개인완료가 허용되지 않는 기존 분기도 유지한다.
+
+검사 책임은 모집에 이전/새 소유권·자격·본인 entry 변경, roster에 배치,
+필수 immutable 이벤트에 배치 증거·정확한 전후 캐릭터·새 대상 기록/legacy 점유로 분산했다.
+이전/새 state는 get/getAfter 동등성을 확인한다. 다른 방 명령을 같은 요청에 섞어 state를 바꾸는
+가능성을 문서별 prepare 쓰기 차단만으로 안전하다고 가정하지 않는다.
+완료 이벤트 update/delete 및 Claim/assignment 쓰기는 이 부분 후보에서 닫혀 있다.
+전체 legacy writer와 합칠 때 Claim 보존·assignment 동시 변경 우회를 다시 검증해야 한다.
+
+새 대상은 부재, 정확한 availability stub, 알려진 현재/과거 완료만 허용한다.
+완료 판정과 stub 형식은 고정 SHA의 C1 helper를 재사용했다. 다른 방 active·손상 자료는 거절한다.
+현재 완료/Claim을 이유로 준비 자체를 막지 않으며 다음 주 참가나 완료 취소를 만들지 않는다.
+이전 state 부재도 준비를 막지 않되 이전 캐릭터 현재 소유권은 계속 확인한다.
+
+첫 후보는 roster에 자격/소유권/배치를 모아1000식 초과가 났다. 책임 분산 후 준비는 통과했으나
+새 dispatch를 포함한 실제 생성→참가→전체완료에서 source1000식 초과가 추가 재현됐다.
+전체완료의 대상 state 경로·요청시각·완료 상태 필수 확인은 보존하고, 각 state validator가 강제하는
+신원/source 중복 대조를 source에서 제거해 해결했다. 이 조정은 후보 전체완료49건으로 회귀 확인했다.
+prepareOwnership→entryShape 중첩은 entryShape를 직접 호출해 최대깊이5→4로 줄였다.
+
+최종 SHA `0d13d7e07197ec588270bb9ab8df2852afdf882ced5b700302eba708d61e9e12`,
+compact39080bytes·최대깊이4. §42 대비3689bytes 증가, 새 코드 예산29429bytes보다9651bytes 초과다.
+부분 명령 통합 비용이며 전체 Rules 크기나30% 축소 성과로 계산하지 않는다.
+
+- 준비60건: 최대8인, A→B→C, 현재/과거/manual 완료·stub·부재, 이전 state 없음,
+  완료 이벤트·state 보존, 방장 자리/권한, 현재/이전 차수 legacy 점유, 권한/소유권,
+  누락/위조/동시 요청/재실행 및 인증된 생성→8인 참가→전체완료→준비 변경.
+- 기존 전체완료49·개인58·변경/자리103·생성/참가61, 총331건 동일 최종 SHA에서 통과.
+  변경/자리103에는 기존 실제 Domain14건이 포함된다. 준비 전용 빈자리/재배치 요청은 후속 검증이다.
+- 로컬 Emulator1.22.0 컴파일200/빈 응답, Node 문법·깊이·diff 검증. 운영 컴파일/게시 증거는 아니다.
+  앱 코드 변경 없음으로 전체 Flutter 검증은 반복하지 않았다.
+
+도구는 tools/rules_roster_prepare_probe.mjs와 rules_roster_prepare_suite.mjs다.
+공통 personal proof에 ROSTER_PREPARE_SUITE=1, ROSTER_PERSONAL_RULES/RESULTS를 지정한다.
+결과는 coverage/rules-roster-prepare의 prepare/complete/personal/join-results 및 results.json에 저장한다.
+
+다음은 준비 배치 추가 경계와 Spark C 인증/advance 결합이다. 인증 중단은 핵심 상태를 바꾸지 않아야 하고,
+전환은 최신 소유권/주차/guard/legacy 충돌과 전원 원자쓰기를 다시 증명해야 한다.
+그룹/reader/전체 legacy·앱/운영·실기기 미확인. 전체 X1 미완료, X2 진입 보류, C1 기본 기준 유지.
+실기기 준비 화면·완료 표시·방장 표시·주차 넘김은 앱 연결 후 사용자 확인 대상으로 남는다.
+
+## 44. D-X1 준비 배치 추가 검증 (2026-10-10)
+
+§43에서 남긴 준비 전용 배치 경계를 동일0d13d7e0 후보에서 검증했다. Rules 생성기/실행 소스는 변경하지 않았다.
+실제 PartyCompositionPolicy로 생성한 기존 domain-fixtures14건을 prepare 원자 요청에 적용했다.
+최대8인 재배치 대기·역할/직업 충돌·빈자리 이동·방장 고정석을 포함해 기존 Domain 허용/거절과 일치했다.
+swap 부재/방장 포함/같은 파티/외부 대상/해결되지 않는 교환, 명단 누락/중복, 타인 자동 이동8건과
+빈자리 우선순위/불필요 이동3건을 추가해25건 통과했다. 정상 변경 후 타인 entry와 전원 완료 state,
+완료 당시 이벤트·명단·회차 보존을 확인했고 부정 요청은 전체 snapshot 불변을 확인했다.
+
+도구: tools/rules_roster_prepare_placement_suite.mjs. 공통 personal proof에서
+ROSTER_PREPARE_PLACEMENT=1과 ROSTER_PERSONAL_RULES/RESULTS를 지정한다.
+결과는 coverage/rules-roster-prepare/prepare-placement-results.json(25건, 실패0)이다.
+기존331건은 동일 Rules SHA이므로 재사용했다. 누적356건이며 이번 실행 수는25건이다.
+compact39080bytes·깊이4 유지, 추가 Rules 비용0. Node 문법·diff 확인, Flutter/운영 검증은 실행하지 않았다.
+
+준비 배치 검증 완료. 인증/advance 구현은 다음 독립 단위로 남는다. 기존 Spark C의 인증 writer는
+partySlots index를 사용하므로 schema3에서는 memberPlayerIds 순서와 roster entry를 결합해야 한다.
+이 index는 partyIndex/slotIndex와 다른 값이다. 준비의 rosterRevision과 source revision도 혼용하지 않는다.
+전환 전에 인증 중 방/명단 불변·소유권·주차/legacy 충돌을 확인하고 전환 시 전원 필수 쓰기를 다시 증명한다.
+인증이 일부 성공해도 참가 예약이나 완료 해제가 되면 안 된다. 전체 legacy writer 결합 전 채택은 금지한다.
+새로 활성화된 앱 기능/운영 변경 없음. 실기기 준비 화면·이력·주차 전환은 앱 연결 후 확인한다.
+
+## 45. D-X1 공개 반복방 인증·advance 통합 (2026-10-10)
+
+§44 후보 위에 Spark C의 대상별 인증과 전원 전환을 연결했다. 실제 atomic command Repository의
+_certifyAdvance blind merge, PartyAtomicWritePlan의 advance state/event, 주간 귀속 §0과 C1 seal 계약을 대조했다.
+앱 Router/DI 및 공개 명령은 변경하지 않았다. 인증에는 타인의 private state 읽기 권한을 새로 주지 않는다.
+
+인증은 방장 binding과 schema3 공개 반복방, 방/roster 불변, source/roster revision, 현재 소유권,
+대상 캐릭터·레이드, 현재 유효한 새 주차 window, before Claim/assignment 충돌을 검사한다.
+guardSlotIndex는 memberPlayerIds 순서이며 roster의 자리 좌표와 구별한다. 실제 앱의 partySlots index를
+바로 이 후보에 연결하면 안 된다. 기존 guard8필드를 유지하고, 상태가 없으면 정확한 availability stub만 만든다.
+기존 completed/active core·revision은 인증에서 변경하지 않는다. 인증 중 일부만 성공해도 참가/완료 전이는 없다.
+기존 sealAuditUpdate의 보존·과거 완료·동일방 active·이전 차수 stub 갱신 계약을 재사용했다.
+
+최종 advanceCycle은 source revision+1, 전원 canonical state, 새 이벤트를 한 요청에서 강제한다.
+각 state는 guard의 방/revision/주차/window/대상 순번과 현재 소유권을 다시 검사한다.
+이전 완료의 방/역할/난이도가 달라도 인증을 통과하면 현재 roster 기준 active/party로 전환한다.
+완료 시각을 제거하고 revision+1하며 guard는 보존한다. roster/명단/권한/인원 및 과거 완료 이벤트는 보존한다.
+인증 후 준비 변경으로 source revision이 증가하면 기존 인증은 무효다. 미변경 참가자도 다시 인증해야 한다.
+
+전환 이벤트는 schema1 기본 필드에 placementProof를 추가했다. 실제 roster와 분할 명단을 대조하고
+파티별 역할/동일 직업/자리 중복을 검사한다. 준비에서 허용한 재배치 대기 구성을 곧바로 전환하지 않는다.
+이 이벤트 추가 필드는 X2 앱 writer/reader 연결 시 반영할 계약이며 현재 앱과 그대로 호환된다는 뜻이 아니다.
+처음 일반 변경용 proofShape를 재사용했을 때 event1000식 초과가 재현됐다. 전환에서는 캐릭터가 바뀌지 않으므로
+기존 명단에 이미 강제된 캐릭터 중복 대조를 반복하지 않는 전용 partition/구성 검사로 바꿔 해결했다.
+
+최종 SHA `1a5d402c138ce51118af5741dc5b2c8a7104ea91942d2abdef4f15e020f67647`,
+compact47007bytes·최대깊이4. §44 대비7927bytes 증가, 새 코드 예산29429bytes보다17578bytes 초과다.
+이는 부분 후보 비용이며 전체 축소 목표 달성/운영 게시 문제 해결의 근거가 아니다.
+
+인증·전환58건: 최대8인 party/manual/타방·타역할·타난이도 과거 완료, 같은방 active, 부재→stub→active,
+인증 core 보존, 권한/소유권/주차/legacy 충돌, 인증 일부 실패, 필수 쓰기 누락, guard 변조/제거,
+재실행·동시 전환, 인증 후 실제 준비 변경/재인증, 이전 차수 stub 갱신/legacy 무시, 잘못된 구성 거절.
+에뮬레이터의 평가식/문서접근 한도 오류는 정상 거절 성공으로 계산하지 않았다.
+도구: tools/rules_roster_advance_probe.mjs 및 rules_roster_advance_suite.mjs.
+공통 personal proof에서 ROSTER_ADVANCE_SUITE=1 및 ROSTER_PERSONAL_RULES/RESULTS를 지정한다.
+추가 검증만 실행할 때 ROSTER_CHECK_FILTER를 쓸 수 있으며 전체 결과와 다른 디렉터리에 기록한다.
+
+제한: 전체 legacy writer와 guard 소비/제거·개인 해제·소유권 정리의 결합은 미완료다.
+부분 후보의 Claim/assignment 쓰기는 닫혀 있어 인증 이후 구 writer가 충돌을 만들지 못함을 전체 Rules에서
+입증한 결과로 볼 수 없다. 다음 구간에서 이 결합을 확인한 뒤 그룹/reader/전체 크기 판정으로 진행한다.
+현재 C1 기본 기준 유지, X1 미완료·X2 보류. 앱/추적 Rules/운영 변경과 실기기 실행 없음.
+
+최종 동일 SHA에서 기존356건을 다시 확인해 총414건 통과했다. 로컬 컴파일200/빈 응답(경고 항목 없음),
+Node 문법·정적 깊이·diff 검증. 앱 코드 변경이 없어 전체 Flutter 검증은 반복하지 않았다.
+운영 API/게시0회. 추적 Rules408f163f 및 사용자 기존4파일의 SHA 불변을 확인했다.
+
+## 46. D-X1 인증 stub의 정상 생성·참가 교체 (2026-10-10)
+
+§45 후보는 state create와 인증 update만 열려 있어, 인증 정보만 있는 기존 state를 실제 참가 state로
+교체하는 update를 거절했다. 앱 AtomicCreateRepository/참가 점유 검사와 RaidStateAvailability는
+인증 전용 stub을 참가 점유로 취급하지 않는다. C1 sealNormalReplacement도 정상 참가로의 전체 교체를 허용한다.
+이번 단위는 이 계약을 schema3 공개방 생성/즉시참가/승인 참가에만 연결했다.
+
+변경 전 state는 C1 sealIdle의 정확한12개 필드 집합과 guardSchemaVersion1이어야 한다.
+새 state는 player/character/raid를 보존하며 guard8개를 모두 제거하고 기존 validNewState를 통과해야 한다.
+현재 소유권·모집 명령·source/roster/event·승인 application 원자 결합 검사는 유지한다.
+이전 소유 차수 stub은 현재 차수의 정상 참가로 교체할 수 있지만 새 state의 현재 소유권 검사를 생략하지 않는다.
+부분 guard 잔존은 기존 인증 갱신 분기에서 거절되며 active/completed 기록을 stub으로 간주하지 않는다.
+
+초기 후보d9bb4f05에서 완료 Claim 충돌 거절 시1000식 초과를 재현했다. 정상 거절 성공으로 세지 않고,
+validNewState의 상세 참가 정보 검사 앞에 기존 Claim 충돌/현재 소유권 검사를 배치했다.
+검사를 삭제하거나 로컬로 옮기지 않았다. 최종3dafcf0a에서는 해당 위조 요청이 한도 오류 없이 거절된다.
+
+최종 SHA `3dafcf0a7737a2d7fd5f65c27eeb6109d5c8217c67648f7ad036cac8971ee0c4`,
+compact47557bytes·최대깊이4. §45보다550bytes 증가, 새 코드 예산29429bytes보다18128bytes 초과다.
+전체 Rules 크기나 게시 해결을 입증한 수치가 아니다. C1 기준 유지·X1 미완료·X2 보류.
+
+새 경계49건: 생성/최대8인 참가/승인의 정상 교체와 재실행, 필수 문서 누락, guard별 누락/부분 잔존,
+신원 변조·추가키·active/completed 위장, Claim 충돌·소유권·binding·비인증·승인 권한/신청 전이,
+이전 소유 차수와 동시 마지막 자리 경쟁. 허용 후 guard 소멸과 거절 후 전체 snapshot 불변을 확인한다.
+도구는 tools/rules_roster_stub_probe.mjs 및 rules_roster_stub_suite.mjs,
+기존 join proof에 ROSTER_STUB_SUITE=1과 ROSTER_JOIN_RULES/RESULTS를 지정한다.
+테스트의 짧은 characterId는 기존 schema3 probe fixture 관례이며 실제 앱 strict parser의 ID 형식 검증을 대신하지 않는다.
+sealIdle은 C1의 필드 집합 검사이며 앱 parser의 모든 타입/형식 검사를 새로 이식한 것으로 설명하지 않는다.
+
+범위 밖: 일반 캐릭터 변경의 대상 stub 교체, guard가 붙은 개인완료/수동해제·소유권 정리,
+legacy Claim writer 결합과 before/after 인증 제거 우회 차단, 그룹/reader/전체 Rules 비용, 앱 연결·운영 게시.
+다음 단일 단위는 legacy Claim create/delete를 기존 C1 계약과 결합해 인증 전후 차단을 증명하는 것이다.
+assignment create/update는 C1에서도 닫혀 있으므로 새 writer를 임의로 만들지 않는다.
+
+동일 최종 SHA에서 신규49+기존414=463건 통과. 로컬 컴파일200/빈 응답(경고 항목 없음),
+Node 문법·정적 깊이·diff 검증. 앱 불변으로 전체 Flutter 검증은 반복하지 않았다.
+운영 API/게시0회, 추적408f163f 및 사용자 기존4파일 SHA 불변. 커밋/푸시/머지 없이 미커밋 보존.
+
+## 47. D-X1 legacy Claim 쓰기 결합과 인증 전후 차단 (2026-10-10)
+
+§46 후보에 C1의 validManualWeeklyRaidClaimCreate/Delete와 sealBlocksClaimAt을 연결했다.
+기존 본인 binding, 현재 소유권 차수,20자 character ID·raid/difficulty/주차 형식,7일 window·요청 시각,
+manual 신규 생성과 getAfter assignment 부재를 보존한다. update는 닫혀 있다.
+bound/actor/현재 소유권 helper를 재사용하고 중복 ownsActiveCharacter만 제거했다.
+이는 playerId==actor 및 data.playerId==playerId 뒤의 currentStateOwnership이 같은 소유/활성 조건을 보장하기 때문이다.
+삭제의 source 제한을 새로 추가하지 않았다. 현재 소유권/본인/현재 주차가 맞는 과거 party source 삭제도 C1과 같다.
+소유 차수 누락 생성은 live0에서만 허용한다. live1의 구버전 누락 writer가 허용된다는 뜻이 아니다.
+
+실제 앱 Router의 기본 명령은 FirestoreWeeklyRaidStatusCommandRepository다. 구 ClaimRepository는 읽기 및
+호환 코드로 남아 있고 예전 create 구현은 소유 차수를 쓰지 않는다. 신규 앱에 Claim 복제 쓰기를 연결하지 않았다.
+신규 참가의 점유 검사는 통합 state와 현재 차수 Claim을 조회하며, 이번 작업은 Rules 호환 쓰기 경계만 결합했다.
+legacy 읽기·assignment 소비/삭제·새 수동완료 명령 전체와 UI/DI 변경은 범위 밖이다.
+
+인증 전후 조건은 둘 다 필요하다. 실제 정상 stub 교체+Claim 쓰기에서 before 검사를 제거하면 우회가 허용됐고,
+인증+Claim 동시 쓰기에서 after 검사를 제거하면 우회가 허용됐다. 대조본은 coverage에만 저장하며 배포하지 않는다.
+before 대조는 참가 state의 같은 주차 Claim 차단에 가려지지 않도록 source와 Claim의 cycleKey가 다른 요청을 사용한다.
+동일 주차 참가 충돌 거절과는 별도 서버 경계다.20자 ID를 사용하고 정상 참가 교체 자체의 허용도 확인했다.
+
+최종 SHA `f2741903927409dc923dd57228373225ff83675c789d5d77a444528ca126aa50`,
+compact49905bytes·최대깊이4. §46 대비2348bytes 증가, 잠정 교체 예산29429bytes보다20476bytes 초과다.
+아직 전체 대체본이 아니며 legacy 경계를 합칠 때 중복 비용을 다시 계산해야 한다. 전체30% 축소나 게시 해결 근거가 아니다.
+
+신규 후보 경계57건과 before/after 제거 대조2건 통과. 공통42건은 C1 원본에서도 같은 결과를 확인했다.
+생성/삭제·업데이트 거절, 현재/누락/이전 차수, 권한·형식·시각·assignment, 인증 유지/만료/다른 주차,
+인증→Claim 및 Claim→인증, 인증 동시 쓰기·정상 stub 대체와 일부/전체 제거의 원자성 경계를 확인했다.
+
+별도 실패1건: 인증과 Claim을 서로 다른 batch로 동시에 제출했을 때 둘 다 PERMISSION_DENIED 안의
+Service call error로 실패했다. 각각 반대 원장을 exists로 조회하는 지점이다.1000식 초과는 관측하지 않았다.
+두 요청 중 하나 성공이라는 동시성 완료 조건은 미충족이며 정상 정책 거절로 계산하지 않는다.
+직렬 양방향/동일 batch 경계 통과와 별개다. 에뮬레이터 잠금 문제인지 실제 계약 문제인지 아직 확정하지 않았다.
+initial-with-race.log 및 initial-with-race-results.json에 실패를 보존했고 같은 재시도를 반복하지 않았다.
+다음 단일 구간은 해당 동시성 실패를 C1/최소 상호조회 재현과 실제 오류 근거로 분리하는 조사다.
+이 문제를 이유로 before/after 보안 검사를 제거하거나 앱 재시도 우회를 추가하지 않는다.
+
+도구: tools/rules_roster_claim_probe.mjs 및 rules_roster_claim_proof.mjs.
+ROSTER_CLAIM_BASELINE=1은 C1 공통42건, ROSTER_CLAIM_RACE=1은 별도 미완료 동시성 진단만 실행한다.
+기본 검증59건에는 후보57건과 별도 변이본2건이 포함된다. 원본 후보의 성공 수와 혼합하지 않는다.
+
+기존463건을 같은 최종 후보에서 재검증해 후보 총520건 통과. 동시 요청 실패1건은 별도 미완료다.
+로컬 컴파일200/빈 응답(경고 항목 없음), Node 문법·정적 깊이·diff 검증.
+앱 코드 불변으로 Flutter 전체 검증·실기기 실행은 하지 않았다. 추적408f163f·사용자 기존4파일 SHA 보존.
+운영 API/게시0회. 기존 fix 브랜치 미커밋 유지, 브랜치 생성·커밋·푸시·머지·dev 반영 없음.
+
+## 48. D-X1 인증/Claim 동시 서비스 오류 원인 분리 (2026-10-10)
+
+§47의 실패는 새 후보 전용인지, 복잡한 검증 없이도 발생하는지 비교했다. 앱·Rules 후보는 변경하지 않았다.
+C1은 schema2 partySlots fixture, 최소본은 probe/a·probe/b 두 문서만 사용한다.
+각 조건은 직렬 양방향을 먼저 확인하고 동시 batch 쌍을 한 번 실행했다. 이전 후보의 같은 요청을 재시도하지 않았다.
+
+| 대상 | 소스 bytes | 직렬 양방향 | 동시 결과 | 소요 |
+|---|---:|---|---|---:|
+| 기존 C1 18cf2c09 |146194|먼저 성공·나중 정책 거절|둘 다 Service call error, 저장0|2048ms|
+| 상호 exists만 |311|먼저 성공·나중 정책 거절|1성공·1정책 거절, 저장1|25ms|
+| 상호 조회 없는 대조 |169|둘 다 허용|둘 다 성공, 저장2|17ms|
+| 상호 exists + 한쪽 existsAfter |369|먼저 성공·나중 정책 거절|둘 다 Service call error, 저장0|2032ms|
+| 위 조건 + 공통 신원2문서 조회 |585|먼저 성공·나중 정책 거절|둘 다 Service call error, 저장0|2032ms|
+
+369bytes 최소본의 조건은 A.create에서 !exists(B), B.create에서 !exists(A) && !existsAfter(A)다.
+별도 사용자 함수가 없고 전체 인증/소유권/명단 검사가 없어도 재현됐다. 이 실패에는 큰 소스나 깊은 호출이 필요하지 않다.
+공통 신원 조회도 필수 원인이 아니다. 오류는 Rules service exists 조회에서 반환되고 두 문서 모두 저장되지 않았다.
+반면 이 비교만으로 엔진 내부 잠금 구현의 정확한 결함 위치나 모든 실행 순서에서의 재현을 입증한 것은 아니다.
+
+판정: 새 roster 구조의 회귀로 볼 근거는 없으며, 현재 에뮬레이터1.22.0의 상호 before/after 조회가 겹치는
+동시 batch 처리 문제로 추정한다. 공식 Firebase 문서도 에뮬레이터가 운영의 모든 transaction 동작을 구현하지 않으며
+동시 쓰기의 잠금 해제가 지연될 수 있다고 설명한다. 이 문서는 일반 제한 근거이며 이번 정확한2초 오류의 확정 원인 설명은 아니다.
+참고: https://firebase.google.com/docs/emulator-suite/connect_firestore#how_the_cloud_firestore_emulator_differs_from_production
+
+이번 원인 분리 조사 단위는 완료했다. §47의 하나 성공 보장 검증은 여전히 미완료이며 실패를 성공으로 바꾸지 않는다.
+운영 동시성/진행 가능성은 최종 통합 인수 항목으로 유지한다. 운영 재현 없이 운영도 정상/오류라고 단정하지 않는다.
+§47에서 각각 우회 필요성을 입증한 before/after 검사를 제거하지 않고 앱 임의 재시도/지연도 추가하지 않는다.
+이 결과를 별개 장애인409/503 게시 실패의 원인 설명으로 사용하지 않는다.
+
+도구 tools/rules_claim_race_diagnostic.mjs. 기본 C1/최소/대조3조건은 results.json,
+RACE_DIAGNOSTIC_FOLLOWUP=1의 before/after·공통조회2조건은 followup-results.json에 저장한다.
+각 결과에는 SHA·크기·직렬 결과·동시 응답/오류·실제 저장 snapshot을 남겼다(coverage/rules-claim-race).
+총5조건 조사이며10개 직렬 순서 확인을 앱 신규 회귀 성공 수에 더하지 않는다.
+후보f2741903/49905bytes·깊이4 및 기존520건 결과는 그대로 유지하고 불변 코드 전체 테스트는 반복하지 않았다.
+Node 문법·diff·추적 Rules와 사용자4파일 SHA 확인. 운영 API/게시·앱/실기기 변경·Git 쓰기 없음.
+다음은 일반 캐릭터 변경의 대상 stub 교체를 별도 구현·검증한다. 동시성 인수 항목은 완료로 처리하지 않는다.
+
+## 49. D-X1 일반 캐릭터 변경 대상 stub 교체 (2026-10-10)
+
+§47 후보는 changeStateRequired의 !exists(nextPath)와 state update의 명령 제한 때문에 대상 인증 stub을 거절했다.
+기존 앱은 AtomicMemberMutationRepository에서 이전/새 소유권과 점유를 읽고 WritePlan으로 이전 state 삭제·새 state set을 수행한다.
+Router 기본 연결과 C1 sealNormalReplacement 계약을 대조했다. 이번 변경은 schema3 격리 후보에 한정한다.
+
+source는 기존 state의 존재/삭제, 새 state의 신원·주차·역할·현재 요청 시각·revision1을 계속 강제한다.
+대상 부재 조건만 제거하고 실제 새 state 쓰기의 create/update 허용식에 이전 기록 판정을 맡겼다.
+§46 strict stub 교체 분기에 change를 추가해12개 필드 집합/신원 보존·guard8개 전체 제거·현재 소유권·Claim을 검사한다.
+이벤트/명단/자리 검사와 이전 state 삭제의 소유권은 유지한다. 새 state의 실제 쓰기를 updatedAt==request.time으로 강제하므로
+기존 문서를 쓰지 않고 source만 바꾸는 경로는 허용하지 않는다. active/completed와 부분 guard 기록은 대체 대상이 아니다.
+
+최종 SHA `0409798737d52518db6426668668ce15e3ff84e98503cdf8be25f52938edf584`,
+compact49898bytes·최대깊이4. 이전49905bytes보다7bytes 감소, 잠정 교체 예산29429bytes보다20469bytes 초과다.
+기능 허용을 복구하면서 기존 검사를 재사용했지만 전체30% 축소 목표 달성이나 게시 해결 근거는 아니다.
+
+새 경계52건: 최대8인 일반/방장/재배치, 재실행, 필수 쓰기 누락, 이전·새 소유권, Claim 충돌,
+guard별 누락/부분 잔존, 신원·상태 위장·추가키, 이전 소유 차수 stub과 이전 차수 Claim 호환.
+성공 시 이전 state 삭제·guard 전체 소멸·다른 참가자 state 보존, 거절 시 snapshot 전체 불변을 확인했다.
+이 테스트의 짧은 character ID는 기존 probe fixture 관례이며 앱 strict parser 검증을 대신하지 않는다.
+현재 앱 WritePlan에는 probe의 createdAt 필드가 없으므로 앱 무수정 호환을 주장하지 않는다. schema3 writer 연결은 X2 범위다.
+
+도구 tools/rules_roster_change_stub_probe.mjs 및 rules_roster_change_stub_suite.mjs.
+기존 change proof의 ROSTER_CHANGE_STUB=1·ROSTER_CHANGE_WITNESS=1과 RULES/RESULTS 경로로 실행한다.
+Claim proof는 ROSTER_CLAIM_RULES로 후보를 선택하고 같은 디렉터리 readable.rules에서 변이 대조를 생성한다.
+개인완료 guard 소비/수동해제·소유권 정리·그룹/reader·전체 통합은 별도다.
+§48의 동시 인증/Claim 서비스 오류와 운영 인수 미확인도 그대로 유지한다.
+
+최종 후보에서 신규52+기존520=572건 통과, before/after 제거 변이2건은 별도 통과했다.
+로컬 컴파일200/빈 응답(경고 항목 없음), Node 문법·정적 깊이·diff 검증.
+앱 불변으로 Flutter 전체 검증/실기기 실행은 생략했다. 추적408f163f와 사용자4파일 SHA 불변.
+운영 API/게시0회, 기존 fix 브랜치 미커밋 보존·브랜치 생성/커밋/푸시/머지/dev 반영 없음.
+
+## 50. D-X1 active 참가자 개인완료의 인증 보존 (2026-10-10)
+
+이번 전이는 active party state → completed/manual이며 파티 밖 stub → 수동완료와 구분한다.
+Router의 FirestoreWeeklyRaidStatusCommandRepository._completeActiveState는 state를 update하고
+status/source/revision/completedAt/updatedAt만 바꾼다. guard8개를 삭제하지 않는다.
+C1 validPersonalRaidStateCompletion도 같은5개 변경만 허용한다. sealNormalReplacement의 전체 guard 소비는
+strict stub 또는 이전 소유 차수/과거 state에 대한 별도 신규 완료 계약이며 현재 참가 state 완료에 적용하지 않는다.
+따라서 active 개인완료에 guard 삭제 허용을 추가할 필요가 없다. 후보 personalState의 기존 계약을 유지했다.
+
+인증 표식은 잔존하지만 완료 status/source와 source revision·명단 변경이 기존 인증의 전환 재사용을 제한한다.
+advanceState는 현재 roster entry, 인증 당시 revision/주차/index와 실제 새 명령을 다시 검사한다.
+오래된/다른 방/만료 인증 표식 자체는 본인의 현재 참가 완료를 차단하는 조건이 아니다.
+guard 삭제·변조를 허용하지 않으므로 인증/Claim before/after 차단도 그대로 유지한다.
+앱은 state/Claim/assignment와 소유권을 먼저 읽지만 active 완료 validator에는 별도 Claim 부재 조건이 없다.
+이번에는 새 Claim 조건을 중복 추가하지 않았다. Claim 쓰기 결합 검증은 §47 결과를 유지한다.
+파티 밖 수동완료는 recruitmentId:null·revision1의 전체 set으로 guard를 소비하므로 다음 별도 구간에서 다룬다.
+
+신규39건 통과: 최대8인 일반/방장·마지막1인 완료와 replay, 다른 참가자 state 보존,
+각 guard 삭제8건·변조8건·전체 제거3건, 필수 source/roster/state/event·권한/소유권·이전 완료/주차/역할 거절,
+오래된/만료 인증을 보존한 정상 완료. 거절 시 source/roster/state/event 전체 snapshot 불변을 확인했다.
+guard fixture는 관리자 초기화로 구성한 서버 경계 검사이며 실제 앱 인증→전환 UI 전체 검증은 아니다.
+도구 tools/rules_roster_personal_guard_suite.mjs, ROSTER_PERSONAL_GUARD=1.
+공통 personal writer에는 테스트용 statePatch 인수만 추가했다. 기존 개인완료58건도 다시 통과했다.
+
+Rules 불변: SHA0409798737d52518db6426668668ce15e3ff84e98503cdf8be25f52938edf584,
+49898bytes·최대깊이4. §49 로컬 컴파일200/경고 항목 없음·기존572건을 유지하며 새39건을 더해 누적611건이다.
+이번 실행은39+58건이고 기존58건을 누적에 중복 가산하지 않았다. 변이2건은 기존 별도 결과를 유지한다.
+Rules가 바뀌지 않아 전체 회귀·컴파일·깊이 검사를 반복하지 않았다. Node 문법·diff·SHA 보존 확인.
+평가 한도/Service call error는 이번 검증에서 관측되지 않았다. §48 동시성 운영 인수는 여전히 미완료다.
+새 앱 기능이나 추가 크기 감소는 없다. 전체30% 축소·운영 게시 해결로 판정하지 않는다.
+앱/추적 Rules/사용자4파일 불변, 실기기는 앱 연결 후 사용자 확인 대상이다.
+운영 API/배포0회, 기존 fix 브랜치 미커밋 유지·브랜치 생성/커밋/푸시/머지/dev 반영 없음.
+
+## 51. D-X1 파티 밖 인증 stub의 수동완료 전환 (2026-10-10)
+
+Router의 FirestoreWeeklyRaidStatusCommandRepository는 state/Claim/assignment/소유권을 먼저 읽는다.
+_currentRecord는 RaidStateAvailability.isStub의 정확한 인증 전용 기록을 소유권 분류 후 null로 취급한다.
+현재 Claim은 성공으로 반환하고 새로 중복 저장하지 않으며, 현재 assignment가 있으면 불일치로 거절한다.
+그 외에는 recruitmentId:null·revision1·completed/manual·현재 소유 차수·7일 window의 전체 set을 수행한다.
+이 set은 인증8개를 남기지 않는다. active 참가자 완료의 update/인증 보존(§50)과 별개다.
+
+이번 후보는 strict stub update만 열었다. 기존 guard 전체 제거 분기의 sealIdle·player/character/raid 신원 보존
+뒤에서 source==manual이면 C1 validManualRaidStateCreate를 호출하고, 참가/변경은 기존 validNewState로 보낸다.
+bound/actor/currentStateOwnership과 Claim/이전 차수 helper를 공유한다. deManualAssignmentAvailable은 C1에서 그대로 옮겼다.
+부재→수동완료 create, 이전 차수 active/completed 교체, 수동완료 해제는 아직 닫혀 있으며 별도 후속이다.
+
+현재 소유권·본인 binding·정확한 출력 key 집합·문서ID·7일 window·요청 시각·revision1을 보존한다.
+Claim과 assignment는 getAfter를 확인하므로 현재/미래 차수 또는 신원이 맞지 않는 기록을 거절하고,
+같은 신원의 이전 소유 차수 기록은 보존한 채 새 완료를 허용한다. stub의 과거 차수도 현재 live 차수로 저장한다.
+같은 요청의 Claim 생성은 기존 before 인증 차단과 완료의 getAfter Claim 검사로 거절한다.
+반면 권한을 만족하는 기존 Claim 삭제+canonical 완료는 C1에서 허용하는 전이이며 후보도 보존했다.
+실제 앱은 이 경우 기존 Claim을 성공으로 반환하므로 테스트 허용 경계를 새 앱 흐름으로 해석하지 않는다.
+assignment 삭제 권한은 이번에 추가하지 않았다. 임의 삭제+완료 묶음은 원자 거절된다.
+
+strict stub은 참가/완료가 없는 정확한 key 집합과 guardSchemaVersion1을 뜻한다. C1과 동일하게
+이전 guard의 모든 타입/시각을 재검증하지 않는다. 앱 strict parser가 더 엄격하다는 기존 차이는 유지한다.
+현재 완료가 저장되면 기존 인증은 사라지며 다음 전환에는 새 인증·현재 완료 충돌 검사가 필요하다.
+인증 제거만 하는 쓰기 또는 일부 표식 잔존은 허용하지 않는다. 다른 참가자의 state는 변경하지 않는다.
+
+도구 tools/rules_roster_manual_stub_probe.mjs와 rules_roster_manual_stub_proof.mjs.
+ROSTER_MANUAL_BASELINE=1은 동일한 공통 요청을 C1 원본에서 대조한다. baseline은 새 후보의 일부 전이만 연 범위와 구분한다.
+
+최종 SHA `cbb2b90947372eb0b93dd12bdfbceed69425e6b6f405d7c7626995ab438ec87b`,
+51189bytes·최대깊이4. §50 대비1291bytes 증가, 잠정 교체 예산29429bytes보다21760bytes 초과다.
+부분 후보의 기능 결합 비용이며 전체30% 축소 성과가 아니다. 최종 legacy 중복 제거량과 전체 대체본 비용을 함께 평가한다.
+신규70건(공통67+범위 제외3)과 같은 최종 후보의 기존611건, 후보 총681건 통과.
+공통67건은 C1에서도 같은 결과를 확인했다. 인증 before/after 제거 변이2건은 별도로 통과했다.
+신원/현재 소유권·Claim/assignment 현재·과거·미래 차수, window·시각·key 위조,
+guard별 누락/잔존·전체 잔존·재실행·동시 batch의 다른 기록 변경 거절을 확인했다.
+거절 시 snapshot 전체 불변, 성공 시 다른 완료·과거 Claim/assignment 보존을 확인했다.
+전체 state dispatch 변경이므로 기존 참가/변경/개인·전체완료/준비/인증/Claim 회귀를 같은 후보에서 순차 실행했다.
+
+로컬 컴파일200/빈 응답(경고 항목 없음), 정적 최대깊이4, Node 문법·diff·SHA 보존 확인.
+이번 테스트에 평가 한도/Service call error 없음. §48 별도 동시 요청의 운영 인수는 미완료로 유지한다.
+앱·추적408f163f·사용자4파일 불변. Flutter 전체 검증·실기기 조작은 하지 않았다.
+미확인 실기기: X2 연결 후 인증된 캐릭터의 파티 밖 수동완료·재조회 표시·중복 클릭 안내.
+운영 API/배포0회, fix/recurring-next-week-character-change 미커밋 유지·Git 쓰기/dev 반영 없음.
+다음 단일 구간은 파티 밖 수동완료의 일반 생성/이전 소유 차수 교체 계약이다. 해제와 소유권 정리 전체는 별도다.

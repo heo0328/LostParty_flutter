@@ -1,5 +1,16 @@
 # Task-11 Firestore 그룹 생성·가입 계약
 
+## 2026-10-10 관계·통계·차단 표시 책임 조정 (로컬 반영, 운영 미반영)
+
+아래10월5일의 제외 범위를 확장한다. groupRelations의 그룹명/캐릭터 표시명,
+applicantStats와 blockedPlayers의 표시 이름/레벨/전투력은 원본 동일성 대조 대신 기본 타입을 검사한다.
+관계 표시 이름은256자 이내 문자열이며 앱 GroupDocumentMapper가 제어문자·공백·길이·누락 기본값을 처리한다.
+표시 숫자의 음수·비유한 값은 로컬에서 null 처리한다. 표시 복사본은 원본 진실성의 보증이 아니다.
+ID·그룹 존재·가입 상태·revision·만료·실행 주체·실제 신청 횟수·차단 대상·원자 결합은 서버에서 유지한다.
+공통 관계 필드 검사는 create/update 진입점으로 통합하며 요청과 결정은 kind/status별로 분기한다.
+서버 조회 권한이나 레이드 classKey/role 제한을 완화하지 않는다. 저장 경로/스키마와 정상 writer는 유지한다.
+운영 전환은 R1/C1 호환 영향까지 포함해 실행 계획의2-2~3-2 결과를 따른다.
+
 ## 2026-10-05 표시 Snapshot 서버 검사 계약 조정
 
 그룹 membership 표시 class/itemLevel/combatPower는 앱의 기존 WritePlan이 서버에 저장한다.

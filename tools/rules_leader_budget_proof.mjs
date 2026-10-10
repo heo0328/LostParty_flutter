@@ -5,7 +5,7 @@ import { doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { recruitmentId } from './party_group_cutover_rules_test.mjs';
 import { assertRulesDenied } from './assert_rules_denied.mjs';
 export async function runLeaderBudgetProof({ env, setup, snapshot, request, command, client, getSlots }) {
-  const results = [], directory = 'coverage/rules-leader-budget';
+  const results = [], directory = process.env.LEADER_BUDGET_DIRECTORY || 'coverage/rules-leader-budget';
   const manifest = JSON.parse(fs.readFileSync(`${directory}/manifest.json`, 'utf8'));
   assert.equal(createHash('sha256').update(fs.readFileSync(process.env.ROSTER_COMPLEXITY_RULES_FILE)).digest('hex'), manifest.sha256);
   fs.writeFileSync(`${directory}/proof-input.json`, JSON.stringify(manifest, null, 2));

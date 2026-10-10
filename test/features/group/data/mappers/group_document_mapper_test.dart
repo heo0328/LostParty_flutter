@@ -78,7 +78,10 @@ void main() {
 
   test('softDeleted 그룹은 상태를 그대로 노출하고 active로 취급하지 않는다', () {
     final summary = mapper.toPublicSummary(
-      GroupDocumentDto(id: 'group-1', data: groupData(status: 'softDeleted')),
+      GroupDocumentDto(
+        id: 'group-1',
+        data: groupData(status: 'softDeleted'),
+      ),
     );
 
     expect(summary.status, GroupStatus.softDeleted);
@@ -97,7 +100,10 @@ void main() {
     );
     expect(
       () => mapper.toPublicSummary(
-        GroupDocumentDto(id: 'group-1', data: groupData(status: 'archived')),
+        GroupDocumentDto(
+          id: 'group-1',
+          data: groupData(status: 'archived'),
+        ),
       ),
       throwsA(isA<GroupContractException>()),
     );
@@ -193,6 +199,59 @@ void main() {
     expect(relation.requestStatus, isNull);
     expect(relation.expiresAt, isNull);
     expect(relation.isExpiredAt(lastActivityAt), isFalse);
+  });
+
+  test('표시값 정리는 관계 권한과 revision의 엄격한 파싱을 바꾸지 않는다', () {
+    final data = <String, Object?>{
+      'schemaVersion': 1,
+      'playerId': 'player-1',
+      'relation': 'member',
+      'requestStatus': null,
+      'groupNameSnapshot': '  그룹\n이름  ',
+      'displayCharacterNameSnapshot': ' ',
+      'expiresAt': null,
+      'sourceRevision': 1,
+      'createdAt': createdAt,
+      'updatedAt': lastActivityAt,
+    };
+    final relation = mapper.toRelation(
+      GroupDocumentDto(id: 'group-1', data: data),
+    );
+    expect(relation.groupNameSnapshot, '그룹 이름');
+    expect(relation.displayCharacterNameSnapshot, '알 수 없는 캐릭터');
+    expect(relation.isMember, isTrue);
+    expect(
+      () => mapper.toRelation(
+        GroupDocumentDto(id: 'group-1', data: {...data, 'relation': 'admin'}),
+      ),
+      throwsA(isA<GroupContractException>()),
+    );
+    expect(
+      () => mapper.toRelation(
+        GroupDocumentDto(id: 'group-1', data: {...data, 'sourceRevision': '1'}),
+      ),
+      throwsA(isA<GroupContractException>()),
+    );
+  });
+
+  test('신청 표시 스펙의 비유한수와 음수는 누락 처리하고 실제 횟수는 보존한다', () {
+    final stats = mapper.toApplicantStats(
+      groupId: 'group-1',
+      playerId: 'player-1',
+      data: {
+        'schemaVersion': 1,
+        'groupId': 'group-1',
+        'playerId': 'player-1',
+        'applicationCount': 3,
+        'lastCharacterNameSnapshot': '  캐릭터  ',
+        'lastItemLevelSnapshot': double.nan,
+        'lastCombatPowerSnapshot': -1,
+      },
+    );
+    expect(stats.lastCharacterNameSnapshot, '캐릭터');
+    expect(stats.lastItemLevelSnapshot, isNull);
+    expect(stats.lastCombatPowerSnapshot, isNull);
+    expect(stats.applicationCount, 3);
   });
 
   Map<String, Object?> joinRelationData({
@@ -313,9 +372,18 @@ void main() {
       GroupDocumentDto(id: 'player-9', data: joinRelationData()),
     );
 
-    expect(relation.isPendingAt(createdAt.add(const Duration(hours: 23))), isTrue);
-    expect(relation.isPendingAt(createdAt.add(const Duration(hours: 24))), isFalse);
-    expect(relation.isExpiredAt(createdAt.add(const Duration(hours: 24))), isTrue);
+    expect(
+      relation.isPendingAt(createdAt.add(const Duration(hours: 23))),
+      isTrue,
+    );
+    expect(
+      relation.isPendingAt(createdAt.add(const Duration(hours: 24))),
+      isFalse,
+    );
+    expect(
+      relation.isExpiredAt(createdAt.add(const Duration(hours: 24))),
+      isTrue,
+    );
   });
 
   test('join relation 문서 ID와 targetPlayerId 불일치를 계약 오류로 올린다', () {
@@ -333,13 +401,19 @@ void main() {
   test('join relation 종류·상태·숫자 형식 오류를 계약 오류로 구분한다', () {
     expect(
       () => mapper.toJoinRelation(
-        GroupDocumentDto(id: 'player-9', data: joinRelationData(kind: 'joinCode')),
+        GroupDocumentDto(
+          id: 'player-9',
+          data: joinRelationData(kind: 'joinCode'),
+        ),
       ),
       throwsA(isA<GroupContractException>()),
     );
     expect(
       () => mapper.toJoinRelation(
-        GroupDocumentDto(id: 'player-9', data: joinRelationData(status: 'done')),
+        GroupDocumentDto(
+          id: 'player-9',
+          data: joinRelationData(status: 'done'),
+        ),
       ),
       throwsA(isA<GroupContractException>()),
     );

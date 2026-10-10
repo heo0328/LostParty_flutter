@@ -37,7 +37,9 @@
 
 ## Architecture
 
-- [Firestore Rules 대폭 축소 설계](architecture/FIRESTORE_RULES_REDUCTION_DESIGN.md): Spark 무료 유지, 전체 영역별 앱 영향·부작용·게시 실패/이행 복구와 단계별 축소 설계. R1 목록 누락의 평가 한도 회귀와 목록 전용 경계 검증 완료, 전체 writer 인수·후보 승격·운영 이행은 대기.
+- [Rules 책임 축소·로컬 이전 실행 계획](architecture/RULES_LOCALIZATION_EXECUTION_PLAN.md): 현재 실행 기준. 감소율 목표 없이 작은 단위별로 진행한다. 3-2 로컬 완료. 운영 게시1회는 컴파일 성공 후 활성화400/CLI fallback409로 실패, 기존 활성본 유지. 현재 순서는 NEXT_WORK를 따른다.
+
+- [Firestore Rules 대폭 축소 설계](architecture/FIRESTORE_RULES_REDUCTION_DESIGN.md): Spark 무료 유지와 양·복잡도·깊이 축소. C1 로컬 기준, D 조건부 후보는 누적4.35% 감소로 목표 미달. 단일 명단 설계(§36), 완료(§37), 생성·참가(§38), 캐릭터/역할 변경(§39), 재배치 호환(§40). 개인완료/마지막1인 통합(§41). 전체완료 상태 통합(§42), 준비 변경 기본 경계331건 검증(§43), 준비 배치 추가25건(§44), 인증/advance414건 검증(§45), 인증 stub 참가 교체463건 검증(§46), Claim 결합 후보520건 검증·동시 요청1건 미완료(§47), 원인 분리 조사 완료·운영 동시성 미확인(§48), 일반 변경 대상 stub 교체572건 검증(§49), active 개인완료 인증 보존39건·누적611건(§50), 파티 밖 stub 수동완료681건 검증(§51), 다음 일반 수동완료 생성·이전 소유 차수 교체, 전체 D-X1 진행 중. 운영 게시·최종 인수 미완료.
 
 - [완료 반복방의 다음 주 캐릭터 변경 설계](architecture/RECURRING_NEXT_WEEK_CHARACTER_CHANGE_DESIGN.md): BUG-024 원인·완료 기록 보존·준비 변경/전환 경계. Spark C 제한 회귀 통과 후 원격 활성화400으로 운영 반영 보류.
 - [반복방 서버 트랜잭션 후속 설계](architecture/RECURRING_CYCLE_SERVER_TRANSACTION_DESIGN.md): 준비 변경·주차 전환의 서버 권한, 원자성, 재진입과 전환 순서. Spark 무료 유지 결정으로 중단한 대안.

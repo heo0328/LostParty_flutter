@@ -105,11 +105,9 @@ class GroupDocumentMapper {
               _string(data, 'requestStatus'),
               'requestStatus',
             ),
-      groupNameSnapshot: _string(data, 'groupNameSnapshot'),
-      displayCharacterNameSnapshot: _string(
-        data,
-        'displayCharacterNameSnapshot',
-      ),
+      groupNameSnapshot: _displayText(data['groupNameSnapshot']) ?? '이름 없는 그룹',
+      displayCharacterNameSnapshot:
+          _displayText(data['displayCharacterNameSnapshot']) ?? '알 수 없는 캐릭터',
       expiresAt: data['expiresAt'] == null ? null : _date(data, 'expiresAt'),
       sourceRevision: _integer(data, 'sourceRevision'),
       createdAt: _date(data, 'createdAt'),
@@ -171,9 +169,11 @@ class GroupDocumentMapper {
       groupId: _string(data, 'groupId'),
       playerId: _string(data, 'playerId'),
       applicationCount: _integer(data, 'applicationCount'),
-      lastCharacterNameSnapshot: data['lastCharacterNameSnapshot'] as String?,
-      lastItemLevelSnapshot: _nullableDouble(data, 'lastItemLevelSnapshot'),
-      lastCombatPowerSnapshot: _nullableDouble(data, 'lastCombatPowerSnapshot'),
+      lastCharacterNameSnapshot: _displayText(
+        data['lastCharacterNameSnapshot'],
+      ),
+      lastItemLevelSnapshot: _displayNumber(data['lastItemLevelSnapshot']),
+      lastCombatPowerSnapshot: _displayNumber(data['lastCombatPowerSnapshot']),
     );
   }
 
@@ -196,10 +196,11 @@ class GroupDocumentMapper {
         _string(data, 'reason'),
         'reason',
       ),
-      characterNameSnapshot: _string(data, 'characterNameSnapshot'),
+      characterNameSnapshot:
+          _displayText(data['characterNameSnapshot']) ?? '알 수 없는 캐릭터',
       applicationCountSnapshot: _integer(data, 'applicationCountSnapshot'),
-      itemLevelSnapshot: _nullableDouble(data, 'itemLevelSnapshot'),
-      combatPowerSnapshot: _nullableDouble(data, 'combatPowerSnapshot'),
+      itemLevelSnapshot: _displayNumber(data['itemLevelSnapshot']),
+      combatPowerSnapshot: _displayNumber(data['combatPowerSnapshot']),
       createdAt: _date(data, 'createdAt'),
     );
   }
@@ -255,6 +256,20 @@ class GroupDocumentMapper {
       throw GroupContractException('$field must be a non-empty string.');
     }
     return value;
+  }
+
+  // Informational copies are not authority or eligibility inputs. Clean them
+  // locally without relaxing the strict ID/status/counter readers above.
+  String? _displayText(Object? value) {
+    if (value is! String) return null;
+    final text = value.replaceAll(RegExp(r'[\x00-\x1f\x7f]'), ' ').trim();
+    if (text.isEmpty) return null;
+    return String.fromCharCodes(text.runes.take(256));
+  }
+
+  double? _displayNumber(Object? value) {
+    if (value is! num || !value.isFinite || value < 0) return null;
+    return value.toDouble();
   }
 
   String? _optionalString(Map<String, Object?> data, String field) {

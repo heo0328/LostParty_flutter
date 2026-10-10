@@ -1,0 +1,8 @@
+{
+  "baselineSourceBytes": 151427,
+  "maximumSourceBytes": 145267,
+  "maximumUserFunctionDepth": 5,
+  "referenceSha256": "8b39db360ff7f76408b0d199a06b0f8e43ae5ebb09ae8b1b61f733d64d647ca2",
+  "publicationVerified": false,
+  "note": "Local growth guard only. Passing does not prove remote compilation or publishing success. Budget increases require an explained contract/cost review."
+}
