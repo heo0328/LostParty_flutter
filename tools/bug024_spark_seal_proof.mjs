@@ -128,6 +128,25 @@ try {
     const r = await room();
     await denied(() => auditOne({ index: 1, extra: { role: r.partySlots[1].role === 'support' ? 'dealer' : 'support' } }));
   });
+  await check('reject audit core identity changes and missing ownership repair', async () => {
+    await setup({ targetState: 'same' });
+    for (const extra of [
+      { playerId: 'forged-player' }, { characterId: second }, { raidId: 'forged-raid' },
+      { ownershipRevision: 2 }, { ownershipRevision: deleteField() },
+    ]) await denied(() => auditOne({ extra }));
+    const r = await room(); const slot = r.partySlots.find(s => s.playerId === playerId);
+    await admin(adb => updateDoc(stateRef(adb, slot), { ownershipRevision: deleteField() }));
+    await denied(() => auditOne());
+  });
+  await check('audit preserves exact stub and upgrades older stub ownership', async () => {
+    await setup(); await auditOne(); await auditOne();
+    const r = await room(); const slot = r.partySlots.find(s => s.playerId === playerId);
+    await admin(adb => updateDoc(stateRef(adb, slot), { ownershipRevision: 0 }));
+    await auditOne();
+    const data = await admin(async adb => (await getDoc(stateRef(adb, slot))).data());
+    assert.equal(data.ownershipRevision, slot.ownershipRevision);
+    assert.equal('status' in data, false);
+  });
   await check('reject ownership transfer after all audits atomically', async () => {
     await setup(); await auditAll();
     await admin(adb => updateDoc(doc(adb, 'gameAccounts', `bug024-account-${playerId}`), { ownershipRevision: 2, ownerPlayerId: 'other-owner' }));

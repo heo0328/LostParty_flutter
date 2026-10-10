@@ -1,5 +1,9 @@
 # Rules 책임 축소·로컬 이전 실행 계획
 
+> 최신 사용자 지시: 구간별 수정 중단·현황 보존. 아래 실행 순서는 이력이며 자동 재개하지 않는다. NEXT_WORK 및 세 방향 통합 설계의 중단 체크포인트를 따른다.
+
+> 2026-10-10 후속 구현 기준: [세 방향 통합 간소화 설계](RULES_SIMPLIFICATION_THREE_TRACK_DESIGN.md). 아래 완료 내역·게시 실험은 근거로 보존하며 다음 단위는 NEXT_WORK를 따른다.
+
 2026-10-10 최신 지시 반영: 감소율 목표 없이 게시 정상화를 목표로 하며, 지정한 작은 작업 단위별로 진행한다.
 이 계획은 기존 FIRESTORE_RULES_REDUCTION_DESIGN.md의 D-X1 기능별 확장 순서를 대체한다.
 기존 §1~15의 기능·권한 근거와 §16~51의 실측 결과는 재사용하되 실험 후보 채택을 전제하지 않는다.
@@ -356,3 +360,58 @@ preflight는 실제 파일/후보 일치와 실제 소스 크기를 확인하고
 현재1순위는 제거 비교 실험의 우선순위이며, 앞 절의 준비 변경 중복 책임 정리(2순위)는 기능을 유지하는 간소화 우선순위다.
 둘의 목적은 다르다. 어느 묶음을 빼고 성공해도 해당 개별 함수의 오류가 증명되는 것은 아니며 전체 내부 크기가 경계 아래로 내려간 결과일 수 있다.
 공유 helper·allow 호출 관계와 과거 자료 영향을 명시하기 전 비교본을 게시하지 않는다.
+
+## 1순위 함수군 제거 게시 실험 — 성공 (2026-10-10 18:04 KST)
+
+사용자 명시 지시로 테스트 프로젝트 rules-test-1-81e31에 진단용 비교본을1회 게시했다.
+현재 전체본은 커밋49acce8 및 firestore.rules(fd90aa93)에 그대로 보존했다. 운영 lost-party 대상 요청/변경 없음.
+
+- 제외 함수: sealAudit, sealAuditUpdate, sealPrepared, sealAdvanceIdle, bug24AdvanceCompleted.
+- 함수 선언5개 삭제 후 남은 호출5곳을 각각 false로 교체했다. 다른 함수의 검증 조건은 변경하지 않았다.
+- 후보20dfcdeb498dc0612abc02b1323023146bc1692e802b7e16a093124edd246eb9/181901bytes.
+  들여쓰기 유지. 전체본187865bytes에서5964bytes 감소. 준비/전환 기능 제한을 허용한 진단 전용본이다.
+- 별도 firebase.json으로 candidate.rules만 지정하고 CLI --debug --only firestore:rules --project rules-test-1-81e31로1회 실행했다.
+- /test200(약5.141초), /rulesets200, release PATCH200(약2.480초), CLI exit0.
+- 사후 GET: 활성 ruleset bad18882-7763-46fa-b7cf-9eb7500160df, 후보 SHA 일치.
+  release updateTime2026-10-10T09:04:26.406362Z. 테스트 프로젝트는 이 진단용 규칙으로 남아 있다. 자동 복구 게시 없음.
+
+### 경고와 판정
+
+원격 컴파일에 경고5개가 있었다: 미사용 sealAvailableBefore(rf31), bug24KnownCompleted(rf37),
+bug24CommandIncludes(rf38), 그리고 미사용 rf31 본문의 exists/get에 Invalid function name 경고2개.
+제거 후 남은 함수에서 발생한 경고를 숨기지 않는다. CLI는 경고 뒤 게시까지 진행했다.
+이번 결과는 게시 가능성을 보는 기능 제외 실험 성공이며 **경고0·기능 보존을 요구하는 운영 배포 완료가 아니다**.
+경고 제거를 위한 추가 게시나 나머지 순위 실험은 실행하지 않았다.
+
+확인된 결론:1순위 묶음과 관련 호출을 제외한 후보는 해당 테스트 프로젝트에서 활성화됐다.
+특정 함수 하나의 잘못된 코드인지, 제거로 내부 총량이 줄었기 때문인지는 아직 구분되지 않는다.
+전체 정렬본fd90aa93을 같은 테스트 프로젝트에 게시한 대조는 없으므로 줄맞춤/프로젝트 차이까지 완전히 분리한 실험은 아니다.
+과거 같은 테스트 프로젝트의36b5920e 성공/408f163f 실패 기록은 보조 근거로만 사용한다.
+
+다음 판단 후보는 성공 비교본에1순위의 서로 의존하는 하위 묶음을 단계적으로 복원하여 실패 경계를 좁히거나,
+1순위 검사의 필수 보안 조건을 유지하며 중복 책임을 줄이는 것이다. 새 게시에는 별도 지시가 필요하다.
+현재 운영 Rules는 변경하지 않았다. 실제 앱 기능 인수 및 운영 게시 정상화는 계속 미완료다.
+
+근거: coverage/rules-rank1-removal/{manifest.json,candidate.rules,readable.rules,firebase.json,before.json,before.rules,deploy.log,after.json,result.json}.
+
+
+## 1순위 함수군 단독 게시 실험 — 성공 (2026-10-10 18:10 KST)
+
+사용자가 제거한 함수군만 게시하는 역방향 비교를 승인했다. 원래 함수 5개와 필요한 보조 함수 19개,
+총 24개를 원문 그대로 추출하고 raidStates 생성/갱신에서 호출하는 최소 진단용 allow를 구성했다.
+함수 본문은 유지했지만 전체본의 allow 분기와 주변 함수 조합은 재현하지 않는 실험이다.
+
+- 대상: rules-test-1-81e31. 별도 firebase.json/candidate.rules로 --debug 게시 정확히 1회.
+- 후보: aae06656c3076219dff0c5e2fe698825d3e2f7b4b9e95698dc506ef3b841f0cf, 10580bytes.
+- /test200 응답 {}·경고0(약0.541초), /rulesets200, release PATCH200(약1.300초), CLI exit0.
+- 사후 활성 소스 GET으로 후보 SHA/크기 일치 확인. ruleset fc8a7a87-508a-4d82-af6f-2e660c7843e2,
+  updateTime 2026-10-10T09:10:35.577469Z. 현재 테스트 프로젝트는 이 단독 진단본으로 활성화돼 있다.
+- 전체 firestore.rules(fd90aa93)와 운영 lost-party는 변경하지 않았다. 자동 재시도·복구 게시 없음.
+
+제거본과 단독본 모두 게시 성공이다. 해당 함수군 자체가 언제나 게시 불가능하다는 가설은 약해졌다.
+전체 조합의 누적 컴파일 크기/복잡도 또는 호출 경로 결합 문제가 더 유력하지만, 특정 내부 제한을 확정한 것은 아니다.
+전체 정렬본의 같은 프로젝트 대조와 실제 컴파일 크기는 미확인이다. 단독본의 단순화한 allow도 차이점이다.
+다음 작업은 전체본에서 이 함수군의 중복 검증/호출 조합을 좁혀 기능 보존 간소화안을 만드는 것이다.
+추가 게시 실험은 새 지시 후에만 진행한다. 운영 정상화와 앱 기능 인수는 아직 완료되지 않았다.
+
+근거: coverage/rules-rank1-only/{manifest.json,readable.rules,candidate.rules,firebase.json,before.json,before.rules,deploy.log,after.json,result.json}.

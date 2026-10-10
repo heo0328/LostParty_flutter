@@ -8,6 +8,11 @@ import {memberRetirementCandidate} from './rules_member_retirement_candidate.mjs
 import {localizeGroupDisplay} from './rules_local_display.mjs';
 import {rulesFunction} from './roster_complexity_candidate.mjs';
 import {compactExecutableRules} from './rules_executable_compact.mjs';
+import {simplifyAvailabilityAudit} from './bug024_spark_seal_candidate.mjs';
+import {directAuthorization} from './rules_auth_direct.mjs';
+import {directSealValidation} from './rules_seal_direct.mjs';
+import {sharedAdvanceValidation} from './rules_advance_shared.mjs';
+import {deduplicatePreparation} from './rules_prep_dedup.mjs';
 
 export function localizationPipeline(input){
   const stages=[];
@@ -23,5 +28,10 @@ export function localizationPipeline(input){
   source=measure('B-depth',depthRecheckCandidate(source).readable);
   source=measure('C1-member-retirement',memberRetirementCandidate(source).readable);
   source=measure('local-display-and-common-projection',localizeGroupDisplay(source));
+  source=measure('audit-shared-room-and-core-invariants',simplifyAvailabilityAudit(source));
+  source=measure('direct-authorization',directAuthorization(source));
+  source=measure('direct-seal-validation',directSealValidation(source));
+  source=measure('shared-advance-validation',sharedAdvanceValidation(source));
+  source=measure('deduplicate-preparation',deduplicatePreparation(source));
   return {source,stages};
 }

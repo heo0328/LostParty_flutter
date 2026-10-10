@@ -143,6 +143,29 @@ replace('        allow create: if validManualWeeklyRaidClaimCreate(', `        a
 return source;
 }
 
+// Apply after the preserved baseline transforms so old diagnostic inputs remain reproducible.
+export function simplifyAvailabilityAudit(source) {
+  const replace = (before, after) => {
+    assert.equal(source.split(before).length, 2, `Audit simplification anchor: ${before}`);
+    source = source.replace(before, () => after);
+  };
+  replace('function sealAudit(playerId, stateId, data) {\n      let room = get(recruitmentPath(data.guardRecruitmentId)).data;',
+    'function sealAudit(playerId, stateId, data, room) {');
+  replace('function sealAuditUpdate(playerId, stateId, before, data) {\n      return',
+    'function sealAuditUpdate(playerId, stateId, before, data) {\n      let room = get(recruitmentPath(data.guardRecruitmentId)).data;\n      return');
+  // affectedKeys includes additions/deletions too. The three identity keys cannot change.
+  // ownershipRevision CAN change for an older stub in the runtime transform: keep its guard.
+  replace('\n        && before.playerId == data.playerId && before.characterId == data.characterId\n        && before.raidId == data.raidId && ', '\n        && ');
+  replace('before.difficultyId == get(recruitmentPath(data.guardRecruitmentId)).data.difficultyId',
+    'before.difficultyId == room.difficultyId');
+  replace('before.role == get(recruitmentPath(data.guardRecruitmentId)).data.partySlots[data.guardSlotIndex].role',
+    'before.role == room.partySlots[data.guardSlotIndex].role');
+  replace('&& sealAudit(playerId, stateId, data);', '&& sealAudit(playerId, stateId, data, room);');
+  replace('sealAudit(playerId, stateId, request.resource.data)',
+    'sealAudit(playerId, stateId, request.resource.data, get(recruitmentPath(request.resource.data.guardRecruitmentId)).data)');
+  return source;
+}
+
 if (process.argv[1]?.replaceAll('\\', '/').endsWith('/bug024_spark_seal_candidate.mjs')) {
 const source = availabilitySeals(fs.readFileSync('coverage/bug024/spark/preparation-distributed.rules', 'utf8'));
 fs.mkdirSync(out, { recursive: true });
