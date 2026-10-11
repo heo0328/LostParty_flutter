@@ -37,7 +37,7 @@
 
 ## Architecture
 
-- [운영 Rules 전체 구조 재설계](architecture/RULES_PRODUCTION_RESTRUCTURE_DESIGN.md): §14 B1+A2 전체 기능본 테스트 게시 성공·활성SHA일치. 그룹 표시 검증 로컬 이전/중복 분기 통합 완료, 새 앱 파서·복구 확인 후 운영 전환 대기.
+- [운영 Rules 전체 구조 재설계](architecture/RULES_PRODUCTION_RESTRUCTURE_DESIGN.md): §14 B1+A2 전체 기능본 테스트 게시 성공·활성SHA일치. 그룹 표시 검증 로컬 이전/중복 분기 통합 완료, 운영 lost-party도 14:17 KST 게시 성공·활성SHA일치. 실기기 인수 대기.
 
 - [전체 Rules 세 방향 간소화 설계](architecture/RULES_SIMPLIFICATION_THREE_TRACK_DESIGN.md): 최신 후속 설계. 중복 검사·표시 로컬 이전·호출 단순화, 기존 기능/부작용/회귀와 구간별 범위. 사용자 요청으로 구간별 수정 중단·보존. 게시 정상화 미완료; 중단 체크포인트 참조.
 

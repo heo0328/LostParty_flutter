@@ -382,3 +382,12 @@ B1+A2가 충분하다는 근거 없이 이후 A3를 계속 자동 확장하는 �
 운영은 이번에 변경하지 않았다. 다음은 새 파서 포함 앱 사용 확인, 운영 활성 소스 읽기/차이 검토,
 §9의 복구 방안 결정 후 동일SHA 운영1회 게시다. 기존 불완전 운영본/과거 비호환 가능본을 자동 복구본으로 지정하지 않는다.
 최신 그룹 contract는 로컬 구현 기준이며 운영 기능 인수 전에는 운영 정상화 완료로 보고하지 않는다.
+
+### 운영 전환 결과 — 2026-10-11 14:17 KST
+
+사용자가 성공본 커밋 후 운영 게시를 명시 지시하여 bca158d로 보존하고 lost-party에1회 게시했다.
+사전 활성7a441b1f가 마지막 확인과 동일함을 확인·보존했다. /test200 응답{}, 경고0, /rulesets200, PATCH /releases200.
+활성 ruleset2419f77b-9535-479a-a519-3ddd8f7a6005, updateTime2026-10-11T05:17:14.085611Z.
+재조회 SHA256 f7ce11cf23b740f301efb0f5ceb837fa85ac625efeaee66172613d5af8dc2e55/181935bytes로 로컬·테스트 성공본과 일치.
+운영 게시 성공은 확인됐고 실기기 기능 인수/새 파서 설치는 미확인이다. 과거본 자동 rollback은 수행하지 않았다.
+근거 coverage/rules-group-display-production/의 deploy.log, active-before/after.json·rules. push/merge/dev 반영 없음.

@@ -1,43 +1,27 @@
-# NEXT WORK — 테스트 게시 성공본의 운영 전환 준비
+# NEXT WORK — 운영 게시 성공본 실기기 인수
 
-## 최신 결과
+## 현재 완료 상태
 
-2026-10-11 B1 그룹 표시 검증 로컬 이전+A2 그룹 수정 통합 구현 완료.
-**테스트 프로젝트 전체 기능본 게시 성공:** 13:57 KST 컴파일/Ruleset생성/활성화200, 경고0.
-13:58 KST 실제 활성SHA `f7ce11cf23b740f301efb0f5ceb837fa85ac625efeaee66172613d5af8dc2e55` 일치 확인.
-181935bytes, 함수272, 최대깊이5. 직전보다3716bytes 감소. 실제 변경/검증/부작용은 [설계§14](../architecture/RULES_PRODUCTION_RESTRUCTURE_DESIGN.md#14-b1a2-구현-결과--2026-10-11).
-운영 게시/실기기 인수/향후 수정의 지속 게시 안정성은 아직 완료하지 않았다.
+2026-10-11 성공본 코드·Rules·도구·문서를 bca158d로 커밋했다.
+14:17 KST 운영 lost-party에 정확히1회 게시 성공: /test200 응답{}, 경고0, /rulesets200, PATCH /releases200.
+활성 Rules SHA256: f7ce11cf23b740f301efb0f5ceb837fa85ac625efeaee66172613d5af8dc2e55 (181935bytes).
+테스트 성공본·로컬·운영 활성본이 동일하다. Ruleset2419f77b-9535-479a-a519-3ddd8f7a6005.
+설계와 검증: [운영 재설계§14](../architecture/RULES_PRODUCTION_RESTRUCTURE_DESIGN.md), 게시 이력: [DEV_LOG](DEV_LOG.md).
 
-## 다음 단일 작업 — 동일 성공본 커밋·운영 전환
+## 다음 단일 작업 — 사용자 실기기 확인
 
-2026-10-11 최신 사용자 지시로 성공본 커밋 후 운영 게시 1회를 진행한다.
-14:16 KST 운영 활성본 재조회 결과 기존7a441b1f와 동일하다. 원본은 coverage/rules-group-display-production/active-before.rules에 보존했다.
-새 로컬 표시 파서의 실기기 설치는 아직 확인되지 않았으며 실기기 인수 항목으로 남긴다.
-호환성이 검증된 과거 복구본은 없으므로 삭제 진단본/BUG-024 이전본으로 자동 복구하지 않는다.
+- 새 GroupDocumentMapper/GroupMemberDisplayBuilder가 포함된 앱 설치 여부와 그룹 표시를 확인한다. 설치·조작은 사용자가 한다.
+- 그룹 생성, 초대 수락/신청 승인/코드 가입, 표시 갱신, 그룹장 승계·탈퇴를 확인한다.
+- 파티 준비·주차 전환·완료의 기존 흐름을 확인한다.
+- 실패가 관찰되면 해당 액션/로그/데이터를 근거로 최소 수정한다. 변경 없는 테스트·배포를 반복하지 않는다.
 
-### 포함 범위와 순서
+## 보존·제외 범위
 
-1. 새 GroupDocumentMapper/GroupMemberDisplayBuilder가 포함된 앱을 사용하는지 확인한다. 실기기 설치는 사용자가 수행한다.
-2. 운영 lost-party의 활성 Rules를 읽고 마지막 확인7a441b1f와 차이를 검토한다. 사용자 변경을 무조건 덮어쓰지 않는다.
-3. 현재 앱과 호환되는 복구 수단을 결정한다. 사용자 삭제본7a441b1f와 BUG-024 이전36b5920e를 자동 rollback으로 쓰지 않는다. 설계§9의 복구 한계를 명시한다.
-4. 최신 게시 지시에 따라 성공본과 관련 앱·도구·문서를 커밋한 뒤 동일SHA의 추적 firestore.rules를 운영에 정확히1회 게시하고 경고/활성SHA를 확인한다.
-5. 사용자에게 그룹 생성·초대/신청/코드 가입·표시/승계/탈퇴, 파티 준비/전환/완료의 실기기 인수 항목을 전달한다.
-
-### 확인 범위와 제외
-
-- 게시 직전 현재 브랜치/diff/firebase.json/대상과 SHA를 확인한다. 변경 없는 코드의 자동 검증은 반복하지 않는다.
-- 실패 시 단계/응답/활성본을 기록하고 즉시 재게시하지 않는다. 성공1회로 향후 모든 업데이트 안정성을 단정하지 않는다.
-- 이번 성공본의 추가 간소화, A3 전면 재구성, 새 스키마/서버/요금제, Indexes/Functions/Hosting, 운영 데이터 이행은 포함하지 않는다.
-- 성공본 커밋은 현재 지시에 포함한다. 푸시/머지/dev 반영은 진행하지 않는다.
-
-## 보존과 재개 기준
-
-기존 fix/recurring-next-week-character-change 유지, 변경은 미커밋이다.
-로컬 firestore.rules 및 생성도구는f7ce11cf 전체본, 테스트 활성은같은SHA/ruleset911a10f2-b9b1-4908-a707-a917f692d95c.
-보존 커밋e913f1a/전체3f683e9b, 실패 후보5f415791, 이전 진단본e64f152d는 비교 이력이다.
-운영 재조회는 완료했고 게시 전이다. 활성7a441b1f는 함수11개 삭제·미정의 호출151곳으로 기능 정상 기준이 아니다.
-별도 raid_cycle_schedule.dart와 기존 미추적 실험 자료는 보존한다.
-근거 coverage/rules-group-display의 before/candidate/readable/preflight/검증/게시/active-before·after 기록.
+기존 fix/recurring-next-week-character-change 유지. 이번 지시는 커밋·운영 게시이며 push/merge/dev 반영은 하지 않았다.
+별도 raid_cycle_schedule.dart와 기존 미추적 실험 자료는 그대로 보존했다.
+운영 게시 전7a441b1f와 게시 후f7ce11cf 및 로그는 coverage/rules-group-display-production/에 보존했다.
+삭제 진단본/BUG-024 이전본을 자동 복구하지 않는다. 새 성공본의 기능 인수와 향후 수정의 지속 게시 안정성은 아직 확인 중이다.
+추가 간소화/A3 전면 재구성/서버·요금제·데이터 이행/Indexes·Functions·Hosting은 이번 범위 밖이다.
 
 ## 별도 후속 과제 — 현재 Rules 구간과 분리
 

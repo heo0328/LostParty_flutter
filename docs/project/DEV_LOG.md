@@ -1,5 +1,16 @@
 # 개발 이력
 
+## 2026-10-11 성공본 커밋·운영 게시 완료
+
+- 성공본과 관련 앱·도구·문서18파일을 bca158d로 커밋. 별도 raid_cycle_schedule.dart/기존 미추적 진단 자료 제외.
+- 운영 lost-party 게시1회 성공(14:17 KST): /test200 응답{}, 경고0, /rulesets200, PATCH /releases200.
+- 활성 ruleset2419f77b-9535-479a-a519-3ddd8f7a6005, updateTime2026-10-11T05:17:14.085611Z. 재조회 SHA256 f7ce11cf23b740f301efb0f5ceb837fa85ac625efeaee66172613d5af8dc2e55/181935bytes 일치.
+- 새로 가능해진 흐름: 테스트 성공 전체 기능본을 운영에도 활성화. 그룹 표시 검증 로컬 이전과 중복 분기 통합 적용.
+- 보존 확인한 기존 흐름: 아래 B1+A2 회귀 결과를 유지; 동일 소스라 자동 테스트는 반복하지 않음. 이번 확인은 git diff --check, 운영 사전 소스 대조·게시·활성SHA 확인.
+- 미확인 실기기 항목: 새 파서 설치, 그룹 생성/가입/표시/승계/탈퇴, 파티 준비/전환/완료. 1회 성공으로 향후 모든 수정의 안정성을 단정하지 않음.
+- 현재 fix/recurring-next-week-character-change 유지, push/merge/dev 반영 없음. 게시 근거 coverage/rules-group-display-production/.
+
+
 ## 2026-10-11 B1+A2 전체 기능 Rules 테스트 게시 성공
 
 - 새로 가능해진 흐름: 그룹 표시값이 잘못된 타입/음수/비유한이어도 앱이 기본값/null로 처리하며 표시명 누락 member의 본인 표시갱신도 가능하다. 권한·ID·role·차단·인원은 서버 검증 유지.
