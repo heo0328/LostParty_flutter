@@ -13,6 +13,8 @@ import {directAuthorization} from './rules_auth_direct.mjs';
 import {directSealValidation} from './rules_seal_direct.mjs';
 import {sharedAdvanceValidation} from './rules_advance_shared.mjs';
 import {deduplicatePreparation} from './rules_prep_dedup.mjs';
+import {restructureProduction} from './rules_production_restructure.mjs';
+import {groupDisplayContract} from './rules_group_display_contract.mjs';
 
 export function localizationPipeline(input){
   const stages=[];
@@ -33,5 +35,7 @@ export function localizationPipeline(input){
   source=measure('direct-seal-validation',directSealValidation(source));
   source=measure('shared-advance-validation',sharedAdvanceValidation(source));
   source=measure('deduplicate-preparation',deduplicatePreparation(source));
+  source=measure('production-common-gates',restructureProduction(source));
+  source=measure('group-display-contract',groupDisplayContract(source));
   return {source,stages};
 }

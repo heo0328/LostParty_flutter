@@ -110,12 +110,7 @@ void main() {
   });
 
   test('필수 문자열·숫자·시각 누락을 계약 오류로 구분한다', () {
-    for (final field in [
-      'name',
-      'representativeCharacterNameSnapshot',
-      'representativeServerNameSnapshot',
-      'leaderDisplayCharacterNameSnapshot',
-    ]) {
+    for (final field in ['name']) {
       expect(
         () => mapper.toPublicSummary(
           GroupDocumentDto(id: 'group-1', data: {...groupData(), field: ''}),
@@ -142,6 +137,57 @@ void main() {
       ),
       throwsA(isA<GroupContractException>()),
     );
+  });
+
+  test('그룹 표시 손상은 기본값으로 읽고 membership 보안 필드는 엄격하게 유지한다', () {
+    final summary = mapper.toPublicSummary(
+      GroupDocumentDto(
+        id: 'g',
+        data: {
+          ...groupData(),
+          'representativeCharacterNameSnapshot': 7,
+          'representativeServerNameSnapshot': null,
+          'leaderDisplayCharacterNameSnapshot': '  이름\n정리  ',
+        },
+      ),
+    );
+    expect(summary.representativeCharacterNameSnapshot, '알 수 없는 캐릭터');
+    expect(summary.representativeServerNameSnapshot, '-');
+    expect(summary.leaderDisplayCharacterNameSnapshot, '이름 정리');
+    final data = <String, Object?>{
+      'schemaVersion': 1,
+      'groupId': 'g',
+      'role': 'member',
+      'joinedAt': createdAt,
+      'joinSequence': 2,
+      'joinedBy': 'application',
+      'displayCharacterIdSnapshot': 'c',
+      'displayCharacterNameSnapshot': [],
+      'displayClassNameSnapshot': false,
+      'itemLevelSnapshot': -1,
+      'combatPowerSnapshot': double.infinity,
+      'gemValidationSnapshot': 'invalid',
+      'revision': 1,
+    };
+    final member = mapper.toMember(GroupDocumentDto(id: 'p', data: data));
+    expect(member.displayCharacterNameSnapshot, '알 수 없는 캐릭터');
+    expect(member.displayClassNameSnapshot, isNull);
+    expect(member.itemLevelSnapshot, isNull);
+    expect(member.combatPowerSnapshot, isNull);
+    expect(member.gemValidationSnapshot, isNull);
+    for (final field in [
+      'groupId',
+      'role',
+      'joinedBy',
+      'displayCharacterIdSnapshot',
+    ]) {
+      expect(
+        () => mapper.toMember(
+          GroupDocumentDto(id: 'p', data: {...data, field: null}),
+        ),
+        throwsA(isA<GroupContractException>()),
+      );
+    }
   });
 
   test('membership 문서는 Player ID를 문서 ID에서 읽는다', () {
@@ -398,7 +444,7 @@ void main() {
     );
   });
 
-  test('join relation 종류·상태·숫자 형식 오류를 계약 오류로 구분한다', () {
+  test('join relation 종류·상태는 엄격하고 표시 숫자 오류는 null로 읽는다', () {
     expect(
       () => mapper.toJoinRelation(
         GroupDocumentDto(
@@ -417,15 +463,23 @@ void main() {
       ),
       throwsA(isA<GroupContractException>()),
     );
-    expect(
-      () => mapper.toJoinRelation(
-        GroupDocumentDto(
-          id: 'player-9',
-          data: joinRelationData(itemLevelSnapshot: '1,700.50'),
-        ),
+    final relation = mapper.toJoinRelation(
+      GroupDocumentDto(
+        id: 'player-9',
+        data: {
+          ...joinRelationData(itemLevelSnapshot: '1,700.50'),
+          'characterNameSnapshot': null,
+          'serverNameSnapshot': 1,
+          'characterClassNameSnapshot': [],
+          'gemValidationSnapshot': false,
+        },
       ),
-      throwsA(isA<GroupContractException>()),
     );
+    expect(relation.itemLevelSnapshot, isNull);
+    expect(relation.characterNameSnapshot, '알 수 없는 캐릭터');
+    expect(relation.serverNameSnapshot, '-');
+    expect(relation.characterClassNameSnapshot, '-');
+    expect(relation.gemValidationSnapshot, isNull);
   });
 
   test('applicant stats 문서가 없으면 신청 횟수 0으로 취급한다', () {

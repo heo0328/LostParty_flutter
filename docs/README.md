@@ -37,6 +37,8 @@
 
 ## Architecture
 
+- [운영 Rules 전체 구조 재설계](architecture/RULES_PRODUCTION_RESTRUCTURE_DESIGN.md): §14 B1+A2 전체 기능본 테스트 게시 성공·활성SHA일치. 그룹 표시 검증 로컬 이전/중복 분기 통합 완료, 새 앱 파서·복구 확인 후 운영 전환 대기.
+
 - [전체 Rules 세 방향 간소화 설계](architecture/RULES_SIMPLIFICATION_THREE_TRACK_DESIGN.md): 최신 후속 설계. 중복 검사·표시 로컬 이전·호출 단순화, 기존 기능/부작용/회귀와 구간별 범위. 사용자 요청으로 구간별 수정 중단·보존. 게시 정상화 미완료; 중단 체크포인트 참조.
 
 - [Rules 책임 축소·로컬 이전 실행 계획](architecture/RULES_LOCALIZATION_EXECUTION_PLAN.md): 현재 실행 기준. 감소율 목표 없이 작은 단위별로 진행한다. 3-2 로컬 완료. 운영 게시1회는 컴파일 성공 후 활성화400/CLI fallback409로 실패, 기존 활성본 유지. 현재 순서는 NEXT_WORK를 따른다.

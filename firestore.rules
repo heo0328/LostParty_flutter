@@ -1403,8 +1403,6 @@ service cloud.firestore {
           return z83.schemaVersion == 1 && z83.groupId == z82 && z83.playerId == z81
             && z83.createdAt is timestamp && z83.updatedAt == request.time
             && existsAfter(rf17(z82))
-            && z83.groupNameSnapshot is string && z83.groupNameSnapshot.size() <= 256
-            && z83.displayCharacterNameSnapshot is string && z83.displayCharacterNameSnapshot.size() <= 256
             && z83.keys().hasOnly([
               'schemaVersion', 'groupId', 'playerId', 'relation', 'requestStatus',
               'groupNameSnapshot', 'displayCharacterNameSnapshot', 'expiresAt',
@@ -1830,11 +1828,7 @@ service cloud.firestore {
                   : ((resource.data.status == 'completed' && request.resource.data.status == 'active' && request.resource.data.source == 'party')
                     ? (rf31(playerId, stateId, resource.data, request.resource.data, false)
                       || rf131(playerId, stateId, resource.data, request.resource.data))
-                    : ((resource.data.status == 'active' && request.resource.data.status == 'completed' && request.resource.data.source == 'manual' && resource.data.get('ownershipRevision', 0) == request.resource.data.get('ownershipRevision', 0)) ? (rf126(playerId, stateId, resource.data, request.resource.data)) : ((request.resource.data.source == 'manual'
-                          && rf161(resource.data, playerId, request.resource.data.characterId,
-                          request.resource.data.raidId, request.resource.data.get('ownershipRevision', 0))
-                          && rf125(playerId, stateId, request.resource.data))
-                        || rf131(playerId, stateId, resource.data, request.resource.data)
+                    : ((resource.data.status == 'active' && request.resource.data.status == 'completed' && request.resource.data.source == 'manual' && resource.data.get('ownershipRevision', 0) == request.resource.data.get('ownershipRevision', 0)) ? (rf126(playerId, stateId, resource.data, request.resource.data)) : (rf131(playerId, stateId, resource.data, request.resource.data)
                         || rf126(
                         playerId,
                         stateId,
@@ -2896,21 +2890,15 @@ service cloud.firestore {
                 && (!(request.resource.data.lastCommandType == 'disband'
                     && resource.data.memberCount == 1 && resource.data.currentCycleStatus == 'completed')
                   || rf50(resource.data, request.resource.data)))) : ((rf36(resource.data, request.resource.data)) ? (rf44(resource.data, request.resource.data)) : ((!(request.resource.data.get('lastCommandType', '') in ['complete', 'advanceCycle', 'incompleteEnd', 'disband']) || request.resource.data.lastCommandAt == request.time || (rf178(resource.data, request.resource.data) && rf191(request.resource.data))) && ((rf204(resource.data, request.resource.data)
-                    && ((request.resource.data.get('lastCommandType', '') == 'disband'
+                    && (!(request.resource.data.get('lastCommandType', '') == 'disband'
                         && resource.data.memberCount == 1
-                        && resource.data.currentCycleStatus == 'completed')
-                      ? (rf50(resource.data, request.resource.data)
-                        && (rf189(resource.data, request.resource.data) && rf192(resource.data, request.resource.data)))
-                      : ((request.resource.data.get('lastCommandType', '') == 'cleanupCompletedPeerOwnership') ? (rf73(resource.data, request.resource.data)) : ((resource.data.currentCycleStatus == 'active' && request.resource.data.memberCount == resource.data.memberCount - 1 && (rf81(
+                        && resource.data.currentCycleStatus == 'completed') && ((request.resource.data.get('lastCommandType', '') == 'cleanupCompletedPeerOwnership') ? (rf73(resource.data, request.resource.data)) : ((resource.data.currentCycleStatus == 'active' && request.resource.data.memberCount == resource.data.memberCount - 1 && (rf81(
                               resource.data,
                               request.resource.data
                             ) && rf192(resource.data, request.resource.data))) || (request.resource.data.get('lastCommandType', '') == 'cleanupCompletedOwnership' && rf80(resource.data, request.resource.data)) || (rf178(
                             resource.data,
                             request.resource.data
-                          ) && rf191(request.resource.data)) || (rf189(
-                            resource.data,
-                            request.resource.data
-                          ) && rf192(resource.data, request.resource.data)) || (resource.data.currentCycleStatus == 'active' && (rf194(
+                          ) && rf191(request.resource.data)) || (resource.data.currentCycleStatus == 'active' && (rf194(
                               resource.data,
                               request.resource.data
                             ) || (rf192(resource.data, request.resource.data) && (rf195(
@@ -2978,18 +2966,13 @@ service cloud.firestore {
             && zgc.joinedBy == zgb;
           let zgh = rf25(zga)
             && zgc.joinedBy == rf3();
-          return rf53(zgc) && rf2()
-            && zgd.schemaVersion == 2
+          return zgd.schemaVersion == 2
             && zge.schemaVersion == 2
-            && zgc.schemaVersion == 1
-            && zgc.playerId == zgb
             && zgc.partyIndex >= 0
             && zgc.partyIndex < zge.partyCount
             && zgc.slotIndex >= 0
             && zgc.slotIndex < zge.membersPerParty
             && zgc.canApproveApplications == false
-            && zgc.joinedAt == request.time
-            && zgc.updatedAt == request.time
             && rf16(zgc.characterId, zgb)
             && !(zgb in zgd.memberPlayerIds)
             && zgb in zge.memberPlayerIds
@@ -3038,17 +3021,12 @@ service cloud.firestore {
         function rf212(zgt, zgu, zgv) {
           let zgw = getAfter(rf5(zgt)).data;
           let zgx = zgv.characterId + '_' + zgw.raidId;
-          return rf53(zgv) && rf2()
-            && zgu == rf3()
+          return zgu == rf3()
             && zgw.schemaVersion == 2
-            && zgv.schemaVersion == 1
-            && zgv.playerId == zgu
             && zgv.joinedBy == zgu
             && zgv.partyIndex == 0
             && zgv.slotIndex == 0
             && zgv.canApproveApplications == true
-            && zgv.joinedAt == request.time
-            && zgv.updatedAt == request.time
             && zgw.leaderPlayerId == zgu
             && zgw.memberPlayerIds == [zgu]
             && rf15(zgv.characterId)
@@ -3163,15 +3141,15 @@ service cloud.firestore {
         allow get, list: if rf202(recruitmentId)
           || rf203(recruitmentId)
           || (rf2() && playerId == rf3());
-        allow create: if rf212(
-          recruitmentId,
-          playerId,
-          request.resource.data
-        ) || rf209(
-          recruitmentId,
-          playerId,
-          request.resource.data
-        );
+        allow create: if rf53(request.resource.data) && rf2() && request.resource.data.schemaVersion == 1 && request.resource.data.playerId == playerId && request.resource.data.joinedAt == request.time && request.resource.data.updatedAt == request.time && ( rf212(
+            recruitmentId,
+            playerId,
+            request.resource.data
+          ) || rf209(
+            recruitmentId,
+            playerId,
+            request.resource.data
+        ));
         allow update: if
         (request.resource.data.characterId != resource.data.characterId
             && get(rf5(recruitmentId)).data.schemaVersion == 2
@@ -3450,13 +3428,7 @@ service cloud.firestore {
           && ziy.status == 'active'
           && rf233(ziy.name)
           && rf234(ziy)
-          && ziy.representativeCharacterNameSnapshot is string
-          && ziy.representativeCharacterNameSnapshot.size() > 0
-          && ziy.representativeServerNameSnapshot is string
-          && ziy.representativeServerNameSnapshot.size() > 0
           && ziy.leaderPlayerId == ziz
-          && ziy.leaderDisplayCharacterNameSnapshot
-        == ziy.representativeCharacterNameSnapshot
           && ziy.memberCount == 1
           && ziy.activeRecruitmentCount == 0
           && ziy.revision == 1
@@ -3482,289 +3454,201 @@ service cloud.firestore {
             || resource.data.status == 'active'
             || rf22(zj2));
       }
-      function rf237(zj3, zj4) {
-        return zj4.diff(zj3).affectedKeys()
-        .hasOnly(['revision', 'lastActivityAt', 'updatedAt'])
-          && zj4.revision == zj3.revision + 1
-          && zj4.lastActivityAt == request.time
-          && zj4.updatedAt == request.time;
-      }
-      function rf238(zj5, zj6, zj7) {
-        let zj8 = rf18(zj5, rf3());
-        return existsAfter(zj8)
-          && zj7.diff(zj6).affectedKeys()
-        .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
-          && zj7.memberCount == zj6.memberCount + 1
-          && zj7.memberCount <= 50
-          && zj7.revision == zj6.revision + 1
-          && zj7.lastActivityAt == request.time
-          && zj7.updatedAt == request.time
-          && getAfter(zj8).data.joinSequence == zj7.memberCount;
-      }
-      function rf239(zj9, zja, zjb) {
+      function rf237(zj3, zj4, zj5) {
         return rf21()
-          && zja.status == 'active'
-          && zjb.diff(zja).affectedKeys()
+          && zj4.status == 'active'
+          && zj5.diff(zj4).affectedKeys()
         .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
-          && zjb.memberCount == zja.memberCount - 1
-          && zjb.memberCount >= 1
-          && zjb.revision == zja.revision + 1
-          && zjb.lastActivityAt == request.time
-          && zjb.updatedAt == request.time
-          && !existsAfter(rf18(zj9, rf3()));
+          && zj5.memberCount == zj4.memberCount - 1
+          && zj5.memberCount >= 1
+          && !existsAfter(rf18(zj3, rf3()));
       }
-      function rf240(zjc, zjd, zje) {
-        let zjf = getAfter(rf18(zjc, rf3())).data;
-        let zjg = getAfter(rf18(zjc, zje.leaderPlayerId)).data;
+      function rf238(zj6, zj7, zj8) {
+        let zj9 = getAfter(rf18(zj6, rf3())).data;
+        let zja = getAfter(rf18(zj6, zj8.leaderPlayerId)).data;
         return rf21()
-          && zjd.status == 'active'
-          && zjd.leaderPlayerId == rf3()
-          && zje.leaderPlayerId is string
-          && zje.leaderPlayerId != zjd.leaderPlayerId
-          && zje.diff(zjd).affectedKeys().hasOnly([
+          && zj7.status == 'active'
+          && zj7.leaderPlayerId == rf3()
+          && zj8.leaderPlayerId is string
+          && zj8.leaderPlayerId != zj7.leaderPlayerId
+          && zj8.diff(zj7).affectedKeys().hasOnly([
             'leaderPlayerId', 'leaderDisplayCharacterNameSnapshot',
             'revision', 'lastActivityAt', 'updatedAt'
         ])
-          && zje.leaderDisplayCharacterNameSnapshot
-        == zjg.displayCharacterNameSnapshot
-          && zje.revision == zjd.revision + 1
-          && zje.lastActivityAt == request.time
-          && zje.updatedAt == request.time
-          && zjf.role == 'member'
-          && zjg.role == 'leader'
-          && zjg.playerId == zje.leaderPlayerId;
+          && zj9.role == 'member'
+          && zja.role == 'leader'
+          && zja.playerId == zj8.leaderPlayerId;
       }
-      function rf241(zjh, zji, zjj) {
+      function rf239(zjb, zjc, zjd) {
         return rf21()
-          && zji.status == 'active'
-          && zji.leaderPlayerId == rf3()
-          && zji.memberCount == 1
-          && zji.hasActiveJoinCode == false
-          && zji.activeRecruitmentCount is int
-          && zji.activeRecruitmentCount == 0
-          && zjj.diff(zji).affectedKeys().hasOnly([
+          && zjc.status == 'active'
+          && zjc.leaderPlayerId == rf3()
+          && zjc.memberCount == 1
+          && zjc.hasActiveJoinCode == false
+          && zjc.activeRecruitmentCount is int
+          && zjc.activeRecruitmentCount == 0
+          && zjd.diff(zjc).affectedKeys().hasOnly([
             'status', 'memberCount', 'deletedAt',
             'revision', 'lastActivityAt', 'updatedAt'
         ])
-          && zjj.status == 'softDeleted'
-          && zjj.memberCount == 0
-          && zjj.deletedAt == request.time
-          && zjj.revision == zji.revision + 1
-          && zjj.lastActivityAt == request.time
-          && zjj.updatedAt == request.time
-          && !existsAfter(rf18(zjh, rf3()));
+          && zjd.status == 'softDeleted'
+          && zjd.memberCount == 0
+          && zjd.deletedAt == request.time
+          && !existsAfter(rf18(zjb, rf3()));
       }
-      function rf242(zjk, zjl, zjm) {
-        return rf21()
-          && zjl.status == 'active'
-          && (rf22(zjk)
-            || existsAfter(rf19(rf3(), zjk)))
-          && (rf237(zjl, zjm)
-            || rf238(zjk, zjl, zjm));
+      function rf240(zje, zjf, zjg) {
+        return rf21() && zjf.status == 'active'
+          && zjg.diff(zjf).affectedKeys().hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
+          && (zjg.diff(zjf).affectedKeys().hasAny(['memberCount'])
+            ? (zjg.memberCount == zjf.memberCount + 1 && zjg.memberCount <= 50
+              && (zjf.leaderPlayerId == rf3()
+                || ((rf22(zje) || existsAfter(rf19(rf3(), zje)))
+                  && existsAfter(rf18(zje, rf3()))
+                  && getAfter(rf18(zje, rf3())).data.joinSequence == zjg.memberCount)))
+            : (rf22(zje) || existsAfter(rf19(rf3(), zje))));
       }
-      function rf243(zjn, zjo) {
+      function rf241(zjh, zji) {
         return rf21()
-          && zjn.status == 'active'
-          && zjn.leaderPlayerId == rf3()
-          && zjo.diff(zjn).affectedKeys()
-        .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
-          && zjo.memberCount == zjn.memberCount + 1
-          && zjo.memberCount <= 50
-          && zjo.revision == zjn.revision + 1
-          && zjo.lastActivityAt == request.time
-          && zjo.updatedAt == request.time;
-      }
-      function rf244(zjp, zjq) {
-        return rf21()
-          && zjp.status == 'active'
-          && zjp.leaderPlayerId == rf3()
-          && zjq.diff(zjp).affectedKeys()
+          && zjh.status == 'active'
+          && zjh.leaderPlayerId == rf3()
+          && zji.diff(zjh).affectedKeys()
         .hasOnly([
             'hasActiveJoinCode', 'activeJoinCode', 'revision', 'lastActivityAt', 'updatedAt'
         ])
-          && zjq.hasActiveJoinCode != zjp.hasActiveJoinCode
+          && zji.hasActiveJoinCode != zjh.hasActiveJoinCode
           && (
-          (zjq.hasActiveJoinCode == true
-              && rf24(zjq.activeJoinCode))
-            || (zjq.hasActiveJoinCode == false
-              && zjq.activeJoinCode == null)
-        )
-          && zjq.revision == zjp.revision + 1
-          && zjq.lastActivityAt == request.time
-          && zjq.updatedAt == request.time;
+          (zji.hasActiveJoinCode == true
+              && rf24(zji.activeJoinCode))
+            || (zji.hasActiveJoinCode == false
+              && zji.activeJoinCode == null)
+        );
       }
-      function rf245(zjr, zjs) {
+      function rf242(zjj, zjk) {
         return rf21()
-          && zjr.status == 'active'
-          && zjr.leaderPlayerId == rf3()
-          && zjs.diff(zjr).affectedKeys()
+          && zjj.status == 'active'
+          && zjj.leaderPlayerId == rf3()
+          && zjk.diff(zjj).affectedKeys()
         .hasOnly([
             'joinCodeVisibleToMembers', 'revision', 'lastActivityAt', 'updatedAt'
         ])
-          && zjs.joinCodeVisibleToMembers is bool
-          && zjs.joinCodeVisibleToMembers != zjr.joinCodeVisibleToMembers
-          && zjs.revision == zjr.revision + 1
-          && zjs.lastActivityAt == request.time
-          && zjs.updatedAt == request.time;
+          && zjk.joinCodeVisibleToMembers is bool
+          && zjk.joinCodeVisibleToMembers != zjj.joinCodeVisibleToMembers;
       }
-      function rf246(zjt, zju, zjv) {
-        return zjv.diff(zju).affectedKeys().hasOnly([
+      function rf243(zjl, zjm, zjn) {
+        return zjn.diff(zjm).affectedKeys().hasOnly([
             'activeRecruitmentCount', 'lastRecruitmentId',
             'revision', 'updatedAt'
         ])
-          && zjv.lastRecruitmentId is string
-          && zjv.lastRecruitmentId.size() > 0
-          && existsAfter(rf5(zjv.lastRecruitmentId))
-          && rf247(
-          zjt,
-          zju,
-          zjv,
-          getAfter(rf5(zjv.lastRecruitmentId)).data
-        );
+          && zjn.lastRecruitmentId is string
+          && zjn.lastRecruitmentId.size() > 0
+          && existsAfter(rf5(zjn.lastRecruitmentId))
+          && (rf244(
+            zjl,
+            zjm,
+            zjn,
+            getAfter(rf5(zjn.lastRecruitmentId)).data
+          ) || rf245(zjl, zjm, zjn,
+            getAfter(rf5(zjn.lastRecruitmentId)).data));
       }
-      function rf247(
-        zjw,
-        zjx,
-        zjy,
-        zjz
+      function rf244(
+        zjo,
+        zjp,
+        zjq,
+        zjr
       ) {
-        let zk0 = get(rf5(zjz.recruitmentId)).data;
-        return zk0.visibility == 'group' && zk0.status == 'active'
-          && zk0.groupId == zjw && zjz.revision == zk0.revision + 1
-          && zjz.updatedAt == request.time
-          && ((zjz.visibility == 'public' && zjz.groupId == zjw)
-            || (rf46(zjz)
-              && zjz.groupId == zjw
-              && ((zjz.lastCommandType == 'disband'
-                  && zjz.status == 'disbanded')
-                || (zjz.lastCommandType == 'complete'
-                  && zjz.status == 'completed'
-                  && zjz.continueTogether == false)
-                || (zjz.lastCommandType == 'incompleteEnd'
-                  && zjz.status == 'incompleteEnded'
-                  && zjz.continueTogether == false)))
-            || (rf59(zjz)
-              && zjz.groupId == zjw
-              && zjz.status == 'disbanded'
-              && zjz.memberCount == 0))
-          && zjx.activeRecruitmentCount is int
-          && zjx.activeRecruitmentCount > 0
-          && zjy.activeRecruitmentCount == zjx.activeRecruitmentCount - 1
-          && zjz.groupActiveRecruitmentCountAfter
-        == zjy.activeRecruitmentCount
-          && zjy.lastRecruitmentId == zjz.recruitmentId
-          && zjy.revision == zjx.revision + 1
-          && zjy.updatedAt == request.time;
+        let zjs = get(rf5(zjr.recruitmentId)).data;
+        return zjs.visibility == 'group' && zjs.status == 'active'
+          && zjs.groupId == zjo && zjr.revision == zjs.revision + 1
+          && zjr.updatedAt == request.time
+          && ((zjr.visibility == 'public' && zjr.groupId == zjo)
+            || (rf46(zjr)
+              && zjr.groupId == zjo
+              && ((zjr.lastCommandType == 'disband'
+                  && zjr.status == 'disbanded')
+                || (zjr.lastCommandType == 'complete'
+                  && zjr.status == 'completed'
+                  && zjr.continueTogether == false)
+                || (zjr.lastCommandType == 'incompleteEnd'
+                  && zjr.status == 'incompleteEnded'
+                  && zjr.continueTogether == false)))
+            || (rf59(zjr)
+              && zjr.groupId == zjo
+              && zjr.status == 'disbanded'
+              && zjr.memberCount == 0))
+          && zjp.activeRecruitmentCount is int
+          && zjp.activeRecruitmentCount > 0
+          && zjq.activeRecruitmentCount == zjp.activeRecruitmentCount - 1
+          && zjr.groupActiveRecruitmentCountAfter
+        == zjq.activeRecruitmentCount
+          && zjq.lastRecruitmentId == zjr.recruitmentId;
       }
-      function rf248(zk1, zk2, zk3) {
-        return zk3.diff(zk2).affectedKeys().hasOnly([
-            'activeRecruitmentCount', 'lastRecruitmentId',
-            'revision', 'updatedAt'
-        ])
-          && zk3.lastRecruitmentId is string
-          && zk3.lastRecruitmentId.size() > 0
-          && existsAfter(rf5(zk3.lastRecruitmentId))
-          && rf249(
-          zk1,
-          zk2,
-          zk3,
-          getAfter(rf5(zk3.lastRecruitmentId)).data
-        );
-      }
-      function rf249(
-        zk4,
-        zk5,
-        zk6,
-        zk7
+      function rf245(
+        zjt,
+        zju,
+        zjv,
+        zjw
       ) {
-        return zk7.groupId == zk4
-          && zk7.schemaVersion == 2
-          && zk7.visibility == 'group'
-          && ((zk7.revision == 1
-              && zk7.leaderPlayerId == rf3())
-            || (zk7.revision > 1
-              && zk7.leaderPlayerId == rf3()
-              && zk7.visibility == 'group'))
-          && zk5.activeRecruitmentCount is int
-          && zk5.activeRecruitmentCount >= 0
-          && zk6.activeRecruitmentCount == zk5.activeRecruitmentCount + 1
-          && zk7.groupActiveRecruitmentCountAfter
-        == zk6.activeRecruitmentCount
-          && zk6.lastRecruitmentId == zk7.recruitmentId
-          && zk6.revision == zk5.revision + 1
-          && zk6.updatedAt == request.time;
+        return zjw.groupId == zjt
+          && zjw.schemaVersion == 2
+          && zjw.visibility == 'group'
+          && ((zjw.revision == 1
+              && zjw.leaderPlayerId == rf3())
+            || (zjw.revision > 1
+              && zjw.leaderPlayerId == rf3()
+              && zjw.visibility == 'group'))
+          && zju.activeRecruitmentCount is int
+          && zju.activeRecruitmentCount >= 0
+          && zjv.activeRecruitmentCount == zju.activeRecruitmentCount + 1
+          && zjw.groupActiveRecruitmentCountAfter
+        == zjv.activeRecruitmentCount
+          && zjv.lastRecruitmentId == zjw.recruitmentId;
       }
       allow get: if rf236(groupId);
       allow list: if rf2() && resource.data.status == 'active';
       allow create: if rf235(groupId, request.resource.data);
-      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasAny(['activeRecruitmentCount'])
-        ? (rf246(
-          groupId,
-          resource.data,
-          request.resource.data
-        ) || rf248(
-          groupId,
-          resource.data,
-          request.resource.data
-      )) : ((request.resource.data.memberCount
-          == resource.data.memberCount + 1
-            && rf243(
-            resource.data,
-            request.resource.data
-        )) || rf241(
-          groupId,
-          resource.data,
-          request.resource.data
-        ) || rf240(
-          groupId,
-          resource.data,
-          request.resource.data
-        ) || (request.resource.data.memberCount == resource.data.memberCount - 1
-            && rf239(
-            groupId,
-            resource.data,
-            request.resource.data
-        )) || (request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['memberCount', 'revision', 'lastActivityAt', 'updatedAt'])
-            && request.resource.data.memberCount == resource.data.memberCount + 1
-            && rf242(
-            groupId,
-            resource.data,
-            request.resource.data
-        )) || rf244(
-          resource.data,
-          request.resource.data
-        ) || rf245(
-          resource.data,
-          request.resource.data
-        ) || rf242(
-          groupId,
-          resource.data,
-          request.resource.data
-      ));
+      allow update: if request.resource.data.revision == resource.data.revision + 1 && request.resource.data.updatedAt == request.time && ( request.resource.data.diff(resource.data).affectedKeys().hasAny(['activeRecruitmentCount'])
+          ? (rf243(groupId, resource.data, request.resource.data)) : (request.resource.data.lastActivityAt == request.time && (rf239(
+              groupId,
+              resource.data,
+              request.resource.data
+            ) || rf238(
+              groupId,
+              resource.data,
+              request.resource.data
+            ) || (request.resource.data.memberCount == resource.data.memberCount - 1
+                && rf237(
+                groupId,
+                resource.data,
+                request.resource.data
+            )) || rf241(
+              resource.data,
+              request.resource.data
+            ) || rf242(
+              resource.data,
+              request.resource.data
+            ) || rf240(
+              groupId,
+              resource.data,
+              request.resource.data
+      ))));
       allow delete: if false;
       match /members/{playerId} {
-        function rf250(zk8, zk9, zka) {
-          let zkb = getAfter(rf17(zk8)).data;
+        function rf246(zjx, zjy, zjz) {
+          let zk0 = getAfter(rf17(zjx)).data;
           return rf2()
-            && zk9 == rf3()
-            && rf252(zk8, zk9, zka)
-            && rf253(zka)
-            && zka.role == 'leader'
-            && zka.joinedBy == 'created'
-            && zka.joinSequence == 1
-            && zka.displayCharacterIdSnapshot is string
-            && zka.displayCharacterNameSnapshot is string
-            && zkb.status == 'active'
-            && zkb.leaderPlayerId == zk9
-            && zkb.memberCount == 1
-            && zkb.revision == 1
-            && zkb.representativeCharacterId == zka.displayCharacterIdSnapshot
-            && zkb.leaderDisplayCharacterNameSnapshot
-          == zka.displayCharacterNameSnapshot;
+            && zjy == rf3()
+            && zjz.role == 'leader'
+            && zjz.joinedBy == 'created'
+            && zjz.joinSequence == 1
+            && zjz.displayCharacterIdSnapshot is string
+            && zk0.status == 'active'
+            && zk0.leaderPlayerId == zjy
+            && zk0.memberCount == 1
+            && zk0.revision == 1
+            && zk0.representativeCharacterId == zjz.displayCharacterIdSnapshot;
         }
-        function rf251(zkc) {
-          return zkc.keys().hasOnly([
+        function rf247(zk1) {
+          return zk1.keys().hasOnly([
               'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
               'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
               'displayCharacterNameSnapshot', 'displayClassNameSnapshot',
@@ -3772,48 +3656,24 @@ service cloud.firestore {
               'revision', 'createdAt', 'updatedAt'
           ]);
         }
-        function rf252(zkd, zke, zkf) {
-          return rf251(zkf)
-            && zkf.schemaVersion == 1
-            && zkf.groupId == zkd
-            && zkf.playerId == zke
-            && zkf.revision == 1
-            && zkf.joinedAt == request.time
-            && zkf.createdAt == request.time
-            && zkf.updatedAt == request.time;
-        }
-        function rf253(zkg) {
-          return zkg.displayClassNameSnapshot is string
-            && zkg.displayClassNameSnapshot.size() > 0
-            && (!('itemLevelSnapshot' in zkg)
-              || zkg.itemLevelSnapshot == null
-              || zkg.itemLevelSnapshot is number)
-            && (!('combatPowerSnapshot' in zkg)
-              || zkg.combatPowerSnapshot == null
-              || zkg.combatPowerSnapshot is number)
-            && (!('gemValidationSnapshot' in zkg)
-              || zkg.gemValidationSnapshot == null
-              || zkg.gemValidationSnapshot is map);
-        }
-        function rf254(
-          zkh,
-          zki,
-          zkj,
-          zkk
+        function rf248(
+          zk2,
+          zk3,
+          zk4,
+          zk5
         ) {
           return rf21()
-            && zki == rf3()
-            && exists(rf18(zkh, zki))
-            && zkj.playerId == zki
-            && zkj.groupId == zkh
-            && zkj.keys().hasAll([
+            && zk3 == rf3()
+            && exists(rf18(zk2, zk3))
+            && zk4.playerId == zk3
+            && zk4.groupId == zk2
+            && zk4.keys().hasAll([
               'schemaVersion', 'groupId', 'playerId', 'role', 'joinedAt',
               'joinSequence', 'joinedBy', 'displayCharacterIdSnapshot',
-              'displayCharacterNameSnapshot', 'revision', 'createdAt'
+              'revision', 'createdAt'
           ])
-            && rf253(zkk)
-            && zkk.updatedAt == request.time
-            && zkk.diff(zkj).affectedKeys().hasOnly([
+            && zk5.updatedAt == request.time
+            && zk5.diff(zk4).affectedKeys().hasOnly([
               'displayClassNameSnapshot',
               'itemLevelSnapshot',
               'combatPowerSnapshot',
@@ -3821,213 +3681,209 @@ service cloud.firestore {
               'updatedAt'
           ]);
         }
-        function rf255(zkl, zkm, zkn) {
-          let zko = getAfter(rf17(zkl)).data;
-          let zkp = getAfter(rf20(zkl, zkm)).data;
-          let zkq = getAfter(rf228(zkm)).data;
+        function rf249(zk6, zk7, zk8) {
+          let zk9 = getAfter(rf17(zk6)).data;
+          let zka = getAfter(rf20(zk6, zk7)).data;
+          let zkb = getAfter(rf228(zk7)).data;
           return rf21()
-            && zkm == rf3()
-            && rf252(zkl, zkm, zkn)
-            && rf253(zkn)
-            && zkn.role == 'member'
-            && zkn.joinedBy == 'invitation'
-            && zkn.joinSequence == zko.memberCount
-            && zkn.displayCharacterIdSnapshot == zkp.characterIdSnapshot
-            && zkn.displayCharacterNameSnapshot == zkp.characterNameSnapshot
-            && zko.status == 'active'
-            && zko.memberCount <= 50
-            && zko.leaderPlayerId != zkm
-            && zkp.kind == 'invitation'
-            && zkp.status == 'accepted'
-            && zkp.targetPlayerId == zkm
-            && !rf231(zkl, zkm)
-            && zkl in zkq.activeGroupIds;
+            && zk7 == rf3()
+            && zk8.role == 'member'
+            && zk8.joinedBy == 'invitation'
+            && zk8.joinSequence == zk9.memberCount
+            && zk8.displayCharacterIdSnapshot == zka.characterIdSnapshot
+            && zk9.status == 'active'
+            && zk9.memberCount <= 50
+            && zk9.leaderPlayerId != zk7
+            && zka.kind == 'invitation'
+            && zka.status == 'accepted'
+            && zka.targetPlayerId == zk7
+            && !rf231(zk6, zk7)
+            && zk6 in zkb.activeGroupIds;
         }
-        function rf256(zkr, zks, zkt) {
-          let zku = getAfter(rf17(zkr)).data;
+        function rf250(zkc, zkd, zke) {
+          let zkf = getAfter(rf17(zkc)).data;
           return rf2()
-            && zks == rf3()
-            && zkt.role == 'member'
-            && zkt.playerId == zks
-            && zku.status == 'active'
-            && zku.memberCount == get(rf17(zkr)).data.memberCount - 1
-            && !existsAfter(rf18(zkr, zks))
-            && !existsAfter(rf19(zks, zkr));
+            && zkd == rf3()
+            && zke.role == 'member'
+            && zke.playerId == zkd
+            && zkf.status == 'active'
+            && zkf.memberCount == get(rf17(zkc)).data.memberCount - 1
+            && !existsAfter(rf18(zkc, zkd))
+            && !existsAfter(rf19(zkd, zkc));
         }
-        function rf257(
-          zkv,
-          zkw,
-          zkx,
-          zky
+        function rf251(
+          zkg,
+          zkh,
+          zki,
+          zkj
         ) {
-          let zkz = get(rf17(zkv)).data;
-          let zl0 = getAfter(rf17(zkv)).data;
+          let zkk = get(rf17(zkg)).data;
+          let zkl = getAfter(rf17(zkg)).data;
           return rf21()
-            && zkz.status == 'active'
-            && zkz.leaderPlayerId == rf3()
-            && zl0.leaderPlayerId != zkz.leaderPlayerId
-            && zl0.status == 'active'
-            && zky.diff(zkx).affectedKeys()
+            && zkk.status == 'active'
+            && zkk.leaderPlayerId == rf3()
+            && zkl.leaderPlayerId != zkk.leaderPlayerId
+            && zkl.status == 'active'
+            && zkj.diff(zki).affectedKeys()
           .hasOnly(['role', 'revision', 'updatedAt'])
-            && zky.revision == zkx.revision + 1
-            && zky.updatedAt == request.time
+            && zkj.revision == zki.revision + 1
+            && zkj.updatedAt == request.time
             && (
-            (zkw == rf3()
-                && zkx.role == 'leader'
-                && zky.role == 'member')
-              || (zkw == zl0.leaderPlayerId
-                && zkx.role == 'member'
-                && zky.role == 'leader')
+            (zkh == rf3()
+                && zki.role == 'leader'
+                && zkj.role == 'member')
+              || (zkh == zkl.leaderPlayerId
+                && zki.role == 'member'
+                && zkj.role == 'leader')
           );
         }
-        function rf258(zl1, zl2, zl3) {
-          let zl4 = getAfter(rf17(zl1)).data;
+        function rf252(zkm, zkn, zko) {
+          let zkp = getAfter(rf17(zkm)).data;
           return rf2()
-            && zl2 == rf3()
-            && zl3.role == 'leader'
-            && zl3.playerId == zl2
-            && zl4.status == 'softDeleted'
-            && zl4.memberCount == 0
-            && zl4.leaderPlayerId == zl2
-            && !existsAfter(rf18(zl1, zl2))
-            && !existsAfter(rf19(zl2, zl1));
+            && zkn == rf3()
+            && zko.role == 'leader'
+            && zko.playerId == zkn
+            && zkp.status == 'softDeleted'
+            && zkp.memberCount == 0
+            && zkp.leaderPlayerId == zkn
+            && !existsAfter(rf18(zkm, zkn))
+            && !existsAfter(rf19(zkn, zkm));
         }
-        function rf259(zl5, zl6, zl7) {
-          let zl8 = rf3();
-          let zl9 = getAfter(rf17(zl5)).data;
-          let zla = getAfter(rf20(zl5, zl6)).data;
-          let zlb = getAfter(rf228(zl6)).data;
+        function rf253(zkq, zkr, zks) {
+          let zkt = rf3();
+          let zku = getAfter(rf17(zkq)).data;
+          let zkv = getAfter(rf20(zkq, zkr)).data;
+          let zkw = getAfter(rf228(zkr)).data;
           return rf2()
-            && get(rf1(zl8)).data.status == 'active'
-            && zl9.leaderPlayerId == zl8
-            && zl6 != zl8
-            && rf252(zl5, zl6, zl7)
-            && rf253(zl7)
-            && zl7.role == 'member'
-            && zl7.joinedBy == 'application'
-            && zl7.joinSequence == zl9.memberCount
-            && zl7.displayCharacterIdSnapshot == zla.characterIdSnapshot
-            && zl7.displayCharacterNameSnapshot == zla.characterNameSnapshot
-            && zl9.status == 'active'
-            && zl9.memberCount <= 50
-            && zla.kind == 'application'
-            && zla.status == 'accepted'
-            && zla.targetPlayerId == zl6
-            && !rf231(zl5, zl6)
-            && zl5 in zlb.activeGroupIds;
+            && get(rf1(zkt)).data.status == 'active'
+            && zku.leaderPlayerId == zkt
+            && zkr != zkt
+            && zks.role == 'member'
+            && zks.joinedBy == 'application'
+            && zks.joinSequence == zku.memberCount
+            && zks.displayCharacterIdSnapshot == zkv.characterIdSnapshot
+            && zku.status == 'active'
+            && zku.memberCount <= 50
+            && zkv.kind == 'application'
+            && zkv.status == 'accepted'
+            && zkv.targetPlayerId == zkr
+            && !rf231(zkq, zkr)
+            && zkq in zkw.activeGroupIds;
         }
-        function rf260(zlc, zld, zle) {
-          let zlf = getAfter(rf17(zlc)).data;
-          let zlg = getAfter(rf228(zld)).data;
-          let zlh = rf20(zlc, zld);
+        function rf254(zkx, zky, zkz) {
+          let zl0 = getAfter(rf17(zkx)).data;
+          let zl1 = getAfter(rf228(zky)).data;
+          let zl2 = rf20(zkx, zky);
           return rf21()
-            && zld == rf3()
-            && rf252(zlc, zld, zle)
-            && rf253(zle)
-            && zle.role == 'member'
-            && zle.joinedBy == 'joinCode'
-            && zle.joinSequence == zlf.memberCount
-            && zle.displayCharacterIdSnapshot is string
-            && zle.displayCharacterNameSnapshot is string
-            && rf15(zle.displayCharacterIdSnapshot)
-            && get(rf14(zle.displayCharacterIdSnapshot))
-          .data.characterName == zle.displayCharacterNameSnapshot
-            && zlf.status == 'active'
-            && zlf.memberCount <= 50
-            && zlf.leaderPlayerId != zld
-            && !rf231(zlc, zld)
-            && zlc in zlg.activeGroupIds
+            && zky == rf3()
+            && zkz.role == 'member'
+            && zkz.joinedBy == 'joinCode'
+            && zkz.joinSequence == zl0.memberCount
+            && zkz.displayCharacterIdSnapshot is string
+            && rf15(zkz.displayCharacterIdSnapshot)
+            && zl0.status == 'active'
+            && zl0.memberCount <= 50
+            && zl0.leaderPlayerId != zky
+            && !rf231(zkx, zky)
+            && zkx in zl1.activeGroupIds
             && (
-            !existsAfter(zlh)
-              || getAfter(zlh).data.status != 'pending'
+            !existsAfter(zl2)
+              || getAfter(zl2).data.status != 'pending'
           );
         }
         allow get, list: if rf22(groupId);
-        allow create: if request.resource.data.joinedBy == 'application'
-          && rf259(
-          groupId,
-          playerId,
-          request.resource.data
-        ) || request.resource.data.joinedBy == 'joinCode'
-          && rf260(
-          groupId,
-          playerId,
-          request.resource.data
-        ) || rf250(
-          groupId,
-          playerId,
-          request.resource.data
-        ) || rf255(
-          groupId,
-          playerId,
-          request.resource.data
-        );
-        allow update: if rf257(
+        allow create: if (rf247(request.resource.data)
+            && request.resource.data.schemaVersion == 1
+            && request.resource.data.groupId == groupId
+            && request.resource.data.playerId == playerId
+            && request.resource.data.revision == 1
+            && request.resource.data.joinedAt == request.time
+            && request.resource.data.createdAt == request.time
+            && request.resource.data.updatedAt == request.time) && ( request.resource.data.joinedBy == 'application'
+            && rf253(
+            groupId,
+            playerId,
+            request.resource.data
+          ) || request.resource.data.joinedBy == 'joinCode'
+            && rf254(
+            groupId,
+            playerId,
+            request.resource.data
+          ) || rf246(
+            groupId,
+            playerId,
+            request.resource.data
+          ) || rf249(
+            groupId,
+            playerId,
+            request.resource.data
+        ));
+        allow update: if rf251(
           groupId,
           playerId,
           resource.data,
           request.resource.data
-        ) || rf254(
+        ) || rf248(
           groupId,
           playerId,
           resource.data,
           request.resource.data
         );
-        allow delete: if rf256(
+        allow delete: if rf250(
           groupId,
           playerId,
           resource.data
-        ) || rf258(
+        ) || rf252(
           groupId,
           playerId,
           resource.data
         );
       }
       match /raidListings/{recruitmentId} {
-        function rf261(zli, zlj) {
-          return zlj.groupId == groupId && zlj.visibility == 'group'
-            && zli == zlj && zli.keys().hasOnly(['schemaVersion', 'recruitmentId', 'title', 'leaderPlayerId', 'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot', 'memberPlayerIds', 'raidCatalogVersion', 'raidId', 'difficultyId', 'raidNameSnapshot', 'difficultyNameSnapshot', 'difficultyAliasSnapshot', 'gateCount', 'minItemLevel', 'minCombatPower', 'experienceLevel', 'maxPlayHours', 'raidStartAt', 'status', 'visibility', 'groupId', 'approvalPolicy', 'continueTogether', 'manualRecruitmentEnabled', 'hasAvailableSlot', 'currentCycleKey', 'targetCycleKey', 'currentCycleStatus', 'cycleStartedAt', 'cycleEndsAt', 'partyCount', 'membersPerParty', 'supportsPerParty', 'maxDealersPerClassPerParty', 'slotLedgerVersion', 'memberCount', 'maxMemberCount', 'dealerCount', 'supportCount', 'revision', 'createdAt', 'updatedAt', 'completedAt', 'completedByPlayerId', 'partySlots', 'nonGroupMemberCount', 'pendingApplicationCount', 'pendingNonGroupApplicantCount', 'raidStateTargets', 'commandTargets', 'groupActiveRecruitmentCountAfter', 'lastCommandId', 'lastCommandType', 'lastCommandActorPlayerId', 'lastCommandAt', 'ownershipCleanup']);
+        function rf255(zl3, zl4) {
+          return zl4.groupId == groupId && zl4.visibility == 'group'
+            && zl3 == zl4 && zl3.keys().hasOnly(['schemaVersion', 'recruitmentId', 'title', 'leaderPlayerId', 'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot', 'memberPlayerIds', 'raidCatalogVersion', 'raidId', 'difficultyId', 'raidNameSnapshot', 'difficultyNameSnapshot', 'difficultyAliasSnapshot', 'gateCount', 'minItemLevel', 'minCombatPower', 'experienceLevel', 'maxPlayHours', 'raidStartAt', 'status', 'visibility', 'groupId', 'approvalPolicy', 'continueTogether', 'manualRecruitmentEnabled', 'hasAvailableSlot', 'currentCycleKey', 'targetCycleKey', 'currentCycleStatus', 'cycleStartedAt', 'cycleEndsAt', 'partyCount', 'membersPerParty', 'supportsPerParty', 'maxDealersPerClassPerParty', 'slotLedgerVersion', 'memberCount', 'maxMemberCount', 'dealerCount', 'supportCount', 'revision', 'createdAt', 'updatedAt', 'completedAt', 'completedByPlayerId', 'partySlots', 'nonGroupMemberCount', 'pendingApplicationCount', 'pendingNonGroupApplicantCount', 'raidStateTargets', 'commandTargets', 'groupActiveRecruitmentCountAfter', 'lastCommandId', 'lastCommandType', 'lastCommandActorPlayerId', 'lastCommandAt', 'ownershipCleanup']);
         }
-        function rf262(zlk) {
-          let zll = rf5(recruitmentId);
-          let after = getAfter(zll).data;
-          return rf2() && rf261(zlk, after)
+        function rf256(zl5) {
+          let zl6 = rf5(recruitmentId);
+          let after = getAfter(zl6).data;
+          return rf2() && rf255(zl5, after)
             && after.updatedAt == request.time
-            && (!exists(zll) ? after.revision == 1
-              : after.revision == get(zll).data.revision + 1);
+            && (!exists(zl6) ? after.revision == 1
+              : after.revision == get(zl6).data.revision + 1);
         }
-        function rf263(zlm) {
-          let zln = rf5(recruitmentId);
-          let zlo = get(zln).data;
+        function rf257(zl7) {
+          let zl8 = rf5(recruitmentId);
+          let zl9 = get(zl8).data;
           return rf22(groupId)
-            && rf3() in zlo.memberPlayerIds
-            && zlo.status == 'active' && zlo.currentCycleStatus != 'disbanded'
-            && getAfter(zln).data == zlo && rf261(zlm, zlo);
+            && rf3() in zl9.memberPlayerIds
+            && zl9.status == 'active' && zl9.currentCycleStatus != 'disbanded'
+            && getAfter(zl8).data == zl9 && rf255(zl7, zl9);
         }
-        function rf264(zlp) {
-          let zlq = rf5(recruitmentId);
-          return rf262(zlp) && (!exists(zlq)
-              || get(zlq).data.visibility != 'group'
-              || (zlp.memberCount >= get(zlq).data.memberCount
-                && zlp.currentCycleStatus != 'completed'
-                && !(zlp.get('lastCommandType', '') in ['complete', 'advanceCycle'])));
+        function rf258(zla) {
+          let zlb = rf5(recruitmentId);
+          return rf256(zla) && (!exists(zlb)
+              || get(zlb).data.visibility != 'group'
+              || (zla.memberCount >= get(zlb).data.memberCount
+                && zla.currentCycleStatus != 'completed'
+                && !(zla.get('lastCommandType', '') in ['complete', 'advanceCycle'])));
         }
-        function rf265() {
-          let zlr = rf5(recruitmentId);
-          let zls = get(zlr).data;
-          let zlt = getAfter(zlr).data;
-          return rf2() && zls.groupId == groupId && zlt.groupId == groupId
-            && zlt.revision == zls.revision + 1 && zlt.updatedAt == request.time
-            && (zlt.visibility == 'public' || zlt.status in ['completed', 'disbanded', 'incompleteEnded']);
+        function rf259() {
+          let zlc = rf5(recruitmentId);
+          let zld = get(zlc).data;
+          let zle = getAfter(zlc).data;
+          return rf2() && zld.groupId == groupId && zle.groupId == groupId
+            && zle.revision == zld.revision + 1 && zle.updatedAt == request.time
+            && (zle.visibility == 'public' || zle.status in ['completed', 'disbanded', 'incompleteEnded']);
         }
         allow get, list: if rf22(groupId);
-        allow create: if rf264(request.resource.data) || rf263(request.resource.data);
-        allow update: if rf262(request.resource.data);
-        allow delete: if rf265();
+        allow create: if rf258(request.resource.data) || rf257(request.resource.data);
+        allow update: if rf256(request.resource.data);
+        allow delete: if rf259();
       }
       match /joinRelations/{playerId} {
-        function rf266(zlu) {
-          return zlu.keys().hasOnly([
+        function rf260(zlf) {
+          return zlf.keys().hasOnly([
               'schemaVersion', 'groupId', 'targetPlayerId', 'kind', 'status',
               'requestedByPlayerId', 'characterIdSnapshot', 'characterNameSnapshot',
               'serverNameSnapshot', 'characterClassNameSnapshot', 'itemLevelSnapshot',
@@ -4035,210 +3891,153 @@ service cloud.firestore {
               'revision', 'createdAt', 'expiresAt', 'decidedAt', 'updatedAt'
           ]);
         }
-        function rf267(zlv) {
-          return zlv == null
-            || zlv.status != 'pending'
-            || zlv.expiresAt <= request.time;
+        function rf261(zlg) {
+          return zlg == null
+            || zlg.status != 'pending'
+            || zlg.expiresAt <= request.time;
         }
-        function rf268(zlw) {
-          return zlw.expiresAt is timestamp
-            && zlw.expiresAt > request.time + duration.value(23, 'h')
-            && zlw.expiresAt < request.time + duration.value(25, 'h');
+        function rf262(zlh) {
+          return zlh.expiresAt is timestamp
+            && zlh.expiresAt > request.time + duration.value(23, 'h')
+            && zlh.expiresAt < request.time + duration.value(25, 'h');
         }
-        function rf269(
-          zlx,
-          zly,
-          zlz,
-          zm0,
-          zm1
+        function rf263(
+          zli,
+          zlj,
+          zlk,
+          zll,
+          zlm
         ) {
           return rf21()
-            && rf266(zm1)
-            && zm1.schemaVersion == 1
-            && zm1.groupId == zlx
-            && zm1.targetPlayerId == zly
-            && zm1.status == 'pending'
-            && zm1.requestedByPlayerId is string
-            && zm1.characterIdSnapshot is string
-            && zm1.characterNameSnapshot is string
-            && zm1.serverNameSnapshot is string
-            && zm1.characterClassNameSnapshot is string
-            && zm1.applicationAttempt is int
-            && zm1.revision == zlz + 1
-            && zm1.createdAt == request.time
-            && zm1.updatedAt == request.time
-            && zm1.decidedAt == null
-            && rf268(zm1)
-            && zm0
-            && get(rf17(zlx)).data.status == 'active'
-            && !exists(rf18(zlx, zly))
-            && !rf231(zlx, zly)
-            && existsAfter(rf19(zly, zlx));
+            && rf260(zlm)
+            && zlm.schemaVersion == 1
+            && zlm.groupId == zli
+            && zlm.targetPlayerId == zlj
+            && zlm.status == 'pending'
+            && zlm.requestedByPlayerId is string
+            && zlm.characterIdSnapshot is string
+            && zlm.applicationAttempt is int
+            && zlm.revision == zlk + 1
+            && zlm.createdAt == request.time
+            && zlm.updatedAt == request.time
+            && zlm.decidedAt == null
+            && rf262(zlm)
+            && zll
+            && get(rf17(zli)).data.status == 'active'
+            && !exists(rf18(zli, zlj))
+            && !rf231(zli, zlj)
+            && existsAfter(rf19(zlj, zli));
         }
-        function rf270(
-          zm2,
-          zm3,
-          zm4,
-          zm5,
-          zm6,
-          zm7
-        ) {
-          return rf269(
-            zm2,
-            zm3,
-            zm4,
-            zm6,
-            zm7
-          )
-            && zm7.kind == 'invitation'
-            && zm7.requestedByPlayerId == rf3()
-            && zm3 != rf3()
-            && rf22(zm2)
-            && zm7.applicationAttempt == zm5;
+        function rf264(zln, zlo, zlp, zlq, zlr, zls) {
+          return rf263(zln, zlo, zlp, zlr, zls)
+            && (zls.kind == 'invitation'
+              ? (zls.requestedByPlayerId == rf3()
+                && zlo != rf3() && rf22(zln)
+                && zls.applicationAttempt == zlq)
+              : (zls.kind == 'application' && zls.requestedByPlayerId == zlo
+                && zlo == rf3() && zls.applicationAttempt >= 1
+                && zls.applicationAttempt == getAfter(rf229(zln, zlo)).data.applicationCount));
         }
-        function rf271(
-          zm8,
-          zm9,
-          zma,
-          zmb,
-          zmc
-        ) {
-          let zmd = getAfter(rf229(zm8, zm9)).data;
-          return rf269(
-            zm8,
-            zm9,
-            zma,
-            zmb,
-            zmc
-          )
-            && zmc.kind == 'application'
-            && zmc.requestedByPlayerId == zm9
-            && zm9 == rf3()
-            && zmc.applicationAttempt >= 1
-            && zmc.applicationAttempt == zmd.applicationCount;
-        }
-        function rf272(zme, zmf, zmg, zmh) {
+        function rf265(zlt, zlu, zlv, zlw) {
           return rf21()
-            && zmh.diff(zmg).affectedKeys()
-          .hasOnly(['status', 'revision', 'decidedAt', 'updatedAt'])
-            && zmg.kind == 'invitation'
-            && zmg.status == 'pending'
-            && zmh.revision == zmg.revision + 1
-            && zmh.decidedAt == request.time
-            && zmh.updatedAt == request.time
-            && existsAfter(rf19(zmf, zme))
+            && zlv.kind == 'invitation'
+            && zlv.status == 'pending'
+            && existsAfter(rf19(zlu, zlt))
             && (
-            (zmh.status == 'accepted'
-                && zmf == rf3()
-                && zmg.expiresAt > request.time
-                && !rf231(zme, zmf)
-                && existsAfter(rf18(zme, zmf)))
-              || (zmh.status == 'rejected'
-                && zmf == rf3())
-              || (zmh.status == 'cancelled'
-                && rf22(zme)
-                && (zmg.requestedByPlayerId == rf3()
-                  || rf232(zme)))
+            (zlw.status == 'accepted'
+                && zlu == rf3()
+                && zlv.expiresAt > request.time
+                && !rf231(zlt, zlu)
+                && existsAfter(rf18(zlt, zlu)))
+              || (zlw.status == 'rejected'
+                && zlu == rf3())
+              || (zlw.status == 'cancelled'
+                && rf22(zlt)
+                && (zlv.requestedByPlayerId == rf3()
+                  || rf232(zlt)))
           );
         }
-        function rf273(zmi, zmj, zmk, zml) {
-          return rf23(zmi)
-            && zml.diff(zmk).affectedKeys()
-          .hasOnly(['status', 'revision', 'decidedAt', 'updatedAt'])
-            && zmk.kind == 'application'
-            && zmk.status == 'pending'
-            && zmk.targetPlayerId == zmj
-            && zmj != rf3()
-            && zml.revision == zmk.revision + 1
-            && zml.decidedAt == request.time
-            && zml.updatedAt == request.time
-            && existsAfter(rf19(zmj, zmi))
+        function rf266(zlx, zly, zlz, zm0) {
+          return rf23(zlx)
+            && zlz.kind == 'application'
+            && zlz.status == 'pending'
+            && zlz.targetPlayerId == zly
+            && zly != rf3()
+            && existsAfter(rf19(zly, zlx))
             && (
-            (zml.status == 'accepted'
-                && zmk.expiresAt > request.time
-                && !rf231(zmi, zmj)
-                && existsAfter(rf18(zmi, zmj)))
-              || zml.status == 'rejected'
-              || (zml.status == 'blocked'
-                && existsAfter(rf230(zmi, zmj)))
+            (zm0.status == 'accepted'
+                && zlz.expiresAt > request.time
+                && !rf231(zlx, zly)
+                && existsAfter(rf18(zlx, zly)))
+              || zm0.status == 'rejected'
+              || (zm0.status == 'blocked'
+                && existsAfter(rf230(zlx, zly)))
           );
         }
-        function rf274(zmm, zmn, zmo, zmp) {
+        function rf267(zm1, zm2, zm3, zm4) {
           return rf21()
-            && zmn == rf3()
-            && zmp.diff(zmo).affectedKeys()
-          .hasOnly(['status', 'revision', 'decidedAt', 'updatedAt'])
-            && zmo.status == 'pending'
-            && zmo.targetPlayerId == zmn
-            && zmo.expiresAt > request.time
-            && zmp.status == 'accepted'
-            && zmp.revision == zmo.revision + 1
-            && zmp.decidedAt == request.time
-            && zmp.updatedAt == request.time
-            && !rf231(zmm, zmn)
-            && existsAfter(rf18(zmm, zmn))
-            && getAfter(rf18(zmm, zmn)).data.joinedBy
+            && zm2 == rf3()
+            && zm3.status == 'pending'
+            && zm3.targetPlayerId == zm2
+            && zm3.expiresAt > request.time
+            && zm4.status == 'accepted'
+            && !rf231(zm1, zm2)
+            && existsAfter(rf18(zm1, zm2))
+            && getAfter(rf18(zm1, zm2)).data.joinedBy
           == 'joinCode';
         }
         allow get: if rf2()
           && (playerId == rf3() || rf22(groupId));
         allow list: if rf22(groupId);
-        allow create: if request.resource.data.kind == 'invitation'
-          ? rf270(groupId, playerId, 0, 0, true, request.resource.data)
-          : rf271(groupId, playerId, 0, true, request.resource.data);
+        allow create: if rf264(groupId, playerId, 0, 0, true, request.resource.data);
         allow update: if request.resource.data.status == 'pending'
-          ? (request.resource.data.kind == 'invitation'
-            ? rf270(groupId, playerId, resource.data.revision,
-            resource.data.applicationAttempt, rf267(resource.data), request.resource.data)
-            : rf271(groupId, playerId, resource.data.revision,
-            rf267(resource.data), request.resource.data))
-          : ((resource.data.kind == 'application' && resource.data.status == 'pending'
-              && request.resource.data.status in ['accepted', 'rejected', 'blocked']
-              && rf273(groupId, playerId, resource.data, request.resource.data))
-            || rf272(groupId, playerId, resource.data, request.resource.data)
-            || rf274(groupId, playerId, resource.data, request.resource.data));
+          ? rf264(groupId, playerId, resource.data.revision,
+          request.resource.data.kind == 'invitation' ? resource.data.applicationAttempt : 0,
+          rf261(resource.data), request.resource.data)
+          : (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'revision', 'decidedAt', 'updatedAt']) && request.resource.data.revision == resource.data.revision + 1 && request.resource.data.decidedAt == request.time && request.resource.data.updatedAt == request.time && ((resource.data.kind == 'application' && resource.data.status == 'pending'
+                && request.resource.data.status in ['accepted', 'rejected', 'blocked']
+                && rf266(groupId, playerId, resource.data, request.resource.data))
+              || rf265(groupId, playerId, resource.data, request.resource.data)
+              || rf267(groupId, playerId, resource.data, request.resource.data)));
         allow delete: if false;
       }
       match /applicantStats/{playerId} {
-        function rf275(
-          zmq,
-          zmr,
-          zms,
-          zmt,
-          zmu
+        function rf268(
+          zm5,
+          zm6,
+          zm7,
+          zm8,
+          zm9
         ) {
-          let zmv = getAfter(rf20(zmq, zmr)).data;
+          let zma = getAfter(rf20(zm5, zm6)).data;
           return rf21()
-            && zmr == rf3()
-            && zmu.keys().hasOnly([
+            && zm6 == rf3()
+            && zm9.keys().hasOnly([
               'schemaVersion', 'groupId', 'playerId', 'applicationCount',
               'lastCharacterNameSnapshot', 'lastItemLevelSnapshot',
               'lastCombatPowerSnapshot', 'createdAt', 'updatedAt'
           ])
-            && zmu.schemaVersion == 1
-            && zmu.groupId == zmq
-            && zmu.playerId == zmr
-            && zmu.applicationCount == zms + 1
-            && zmu.lastCharacterNameSnapshot is string && zmu.lastCharacterNameSnapshot.size() <= 256
-            && (zmu.lastItemLevelSnapshot == null || zmu.lastItemLevelSnapshot is number)
-            && (zmu.lastCombatPowerSnapshot == null || zmu.lastCombatPowerSnapshot is number)
-            && zmu.createdAt == zmt
-            && zmu.updatedAt == request.time
-            && zmv.kind == 'application'
-            && zmv.status == 'pending'
-            && zmv.applicationAttempt == zmu.applicationCount;
+            && zm9.schemaVersion == 1
+            && zm9.groupId == zm5
+            && zm9.playerId == zm6
+            && zm9.applicationCount == zm7 + 1
+            && zm9.createdAt == zm8
+            && zm9.updatedAt == request.time
+            && zma.kind == 'application'
+            && zma.status == 'pending'
+            && zma.applicationAttempt == zm9.applicationCount;
         }
         allow get: if rf2()
           && (playerId == rf3() || rf22(groupId));
         allow list: if rf232(groupId);
-        allow create: if rf275(
+        allow create: if rf268(
           groupId,
           playerId,
           0,
           request.time,
           request.resource.data
         );
-        allow update: if rf275(
+        allow update: if rf268(
           groupId,
           playerId,
           resource.data.applicationCount,
@@ -4248,38 +4047,35 @@ service cloud.firestore {
         allow delete: if false;
       }
       match /blockedPlayers/{playerId} {
-        function rf276(zmw, zmx, zmy) {
-          let zmz = getAfter(rf20(zmw, zmx)).data;
-          let stats = get(rf229(zmw, zmx));
-          return rf23(zmw)
-            && zmx != rf3()
-            && zmy.keys().hasOnly([
+        function rf269(zmb, zmc, zmd) {
+          let zme = getAfter(rf20(zmb, zmc)).data;
+          let stats = get(rf229(zmb, zmc));
+          return rf23(zmb)
+            && zmc != rf3()
+            && zmd.keys().hasOnly([
               'schemaVersion', 'groupId', 'playerId', 'blockedByPlayerId', 'reason',
               'characterNameSnapshot', 'applicationCountSnapshot',
               'itemLevelSnapshot', 'combatPowerSnapshot', 'createdAt', 'updatedAt'
           ])
-            && zmy.schemaVersion == 1
-            && zmy.groupId == zmw
-            && zmy.playerId == zmx
-            && zmy.blockedByPlayerId == rf3()
-            && zmy.characterNameSnapshot is string && zmy.characterNameSnapshot.size() <= 256
-            && (zmy.itemLevelSnapshot == null || zmy.itemLevelSnapshot is number)
-            && (zmy.combatPowerSnapshot == null || zmy.combatPowerSnapshot is number)
-            && zmy.applicationCountSnapshot
+            && zmd.schemaVersion == 1
+            && zmd.groupId == zmb
+            && zmd.playerId == zmc
+            && zmd.blockedByPlayerId == rf3()
+            && zmd.applicationCountSnapshot
           == (stats == null ? 0 : stats.data.applicationCount)
-            && zmy.createdAt == request.time
-            && zmy.updatedAt == request.time
-            && zmz.targetPlayerId == zmx
-            && zmz.kind == 'application'
+            && zmd.createdAt == request.time
+            && zmd.updatedAt == request.time
+            && zme.targetPlayerId == zmc
+            && zme.kind == 'application'
             && (
-            (zmy.reason == 'applicationRejected'
-                && zmz.status == 'blocked')
-              || (zmy.reason == 'manual'
-                && zmz.status in ['rejected', 'cancelled', 'expired', 'blocked'])
+            (zmd.reason == 'applicationRejected'
+                && zme.status == 'blocked')
+              || (zmd.reason == 'manual'
+                && zme.status in ['rejected', 'cancelled', 'expired', 'blocked'])
           );
         }
         allow get, list: if rf232(groupId);
-        allow create: if rf276(
+        allow create: if rf269(
           groupId,
           playerId,
           request.resource.data
@@ -4289,47 +4085,47 @@ service cloud.firestore {
       }
     }
     match /groupJoinCodes/{code} {
-      function rf277(zn0, zn1) {
-        let zn2 = zn1.groupId;
-        let zn3 = get(rf17(zn2)).data;
-        let zn4 = getAfter(rf17(zn2)).data;
-        return rf23(zn2)
-          && rf24(zn0)
-          && zn1.keys().hasOnly([
+      function rf270(zmf, zmg) {
+        let zmh = zmg.groupId;
+        let zmi = get(rf17(zmh)).data;
+        let zmj = getAfter(rf17(zmh)).data;
+        return rf23(zmh)
+          && rf24(zmf)
+          && zmg.keys().hasOnly([
             'schemaVersion', 'groupId', 'status', 'createdByPlayerId',
             'createdAt', 'updatedAt'
         ])
-          && zn1.schemaVersion == 1
-          && zn1.groupId is string
-          && zn1.groupId.size() > 0
-          && zn1.status == 'active'
-          && zn1.createdByPlayerId == rf3()
-          && zn1.createdAt == request.time
-          && zn1.updatedAt == request.time
-          && zn3.hasActiveJoinCode == false
-          && zn4.hasActiveJoinCode == true
-          && zn4.activeJoinCode == zn0
-          && zn4.revision == zn3.revision + 1;
+          && zmg.schemaVersion == 1
+          && zmg.groupId is string
+          && zmg.groupId.size() > 0
+          && zmg.status == 'active'
+          && zmg.createdByPlayerId == rf3()
+          && zmg.createdAt == request.time
+          && zmg.updatedAt == request.time
+          && zmi.hasActiveJoinCode == false
+          && zmj.hasActiveJoinCode == true
+          && zmj.activeJoinCode == zmf
+          && zmj.revision == zmi.revision + 1;
       }
-      function rf278(zn5) {
-        let zn6 = resource.data;
-        let zn7 = zn6.groupId;
-        let zn8 = get(rf17(zn7)).data;
-        let zn9 = getAfter(rf17(zn7)).data;
-        return rf23(zn7)
-          && rf24(zn5)
-          && zn6.status == 'active'
-          && zn8.hasActiveJoinCode == true
-          && zn9.hasActiveJoinCode == false
-          && zn8.activeJoinCode == zn5
-          && zn9.activeJoinCode == null
-          && zn9.revision == zn8.revision + 1;
+      function rf271(zmk) {
+        let zml = resource.data;
+        let zmm = zml.groupId;
+        let zmn = get(rf17(zmm)).data;
+        let zmo = getAfter(rf17(zmm)).data;
+        return rf23(zmm)
+          && rf24(zmk)
+          && zml.status == 'active'
+          && zmn.hasActiveJoinCode == true
+          && zmo.hasActiveJoinCode == false
+          && zmn.activeJoinCode == zmk
+          && zmo.activeJoinCode == null
+          && zmo.revision == zmn.revision + 1;
       }
       allow get: if rf2() && rf24(code);
       allow list: if false;
-      allow create: if rf277(code, request.resource.data);
+      allow create: if rf270(code, request.resource.data);
       allow update: if false;
-      allow delete: if rf278(code);
+      allow delete: if rf271(code);
     }
     match /{path=**}/applications/{applicantPlayerId} {
       allow list: if rf2()

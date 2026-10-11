@@ -1,5 +1,7 @@
 # 전체 Rules 간소화 — 세 방향 통합 설계
 
+> 2026-10-11 최신 설계는 [운영 전체 구조 재설계안](RULES_PRODUCTION_RESTRUCTURE_DESIGN.md)이다. 아래는 이전 구현/진단 근거로 보존한다. 작은 구간별 운영 게시 계획은 재개하지 않는다.
+
 ## 사용자 요청에 따른 중단·보존 체크포인트
 
 특정 구간을 조금씩 수정하고 매번 게시하는 현재 방식은 게시 정상화 성과가 확인되지 않아 사용자 요청으로 중단한다.
@@ -484,3 +486,29 @@ compact146524→146582bytes(+58). 함수/호출 깊이·문서 조회 제거0. �
 기존 누적3f683e9b를 유지한다. 기존 정상 writer/권한 계약은 변경하지 않았다. 실기기 추가 검증 없음.
 다음3-1 그룹 멤버 표시도 후보 단계에서 조회/함수/분기 감소가 있는지 먼저 판정하고,
 같은 타입/길이 검사 치환만으로 끝나는 안은 자동 구현/게시하지 않는다.
+
+
+## 2026-10-11 전체 총량 가설 — 다른 함수군 삭제 게시 성공
+
+사용자 지시로 국소 최적화 대신 별도 함수군 삭제 진단을 테스트 프로젝트 rules-test-1-81e31에서1회 수행했다.
+기준은 보존e913f1a의 전체3f683e9b/189056bytes. 원본 Rules·운영 프로젝트는 수정하지 않았다.
+이전 인증 삭제군과 다른 그룹 관련 함수 중 본문이 큰8개를 골랐다:
+- validInitialGroup
+- validAtomicGroupRecruitmentCloseBody
+- validGroupBlockCreate
+- validGroupApplicantStatsWrite
+- validJoinCodeGroupMember
+- validApprovedGroupMember
+- validGroupPendingJoinRelation
+- validGroupJoinRelationDecision
+정의8개를 삭제하고 남은 호출10곳을 false로 치환했다. 미정의 호출을 남기는 실험이 아니며 해당 기능 경로는 비활성화된다.
+전체178185bytes(-10871), 후보e64f152d32cf4b107579f08721da990fee1b42bcd92321fa811ca4477df7a650.
+컴파일200·생성200·활성화PATCH200, CLI exit0. 원격 경고11개. 경고는 로컬 result.json에 보존한다.
+00:11 KST 활성 SHA 일치, ruleset e149d7e4-336a-4f3c-86bc-e8cef09bba36 확인.
+
+판정: 이전 의심 인증 함수군을 유지해도 다른 함수군을 제거하면 게시된다. 특정 인증 함수 자체보다
+전체 조합의 총량/컴파일 복잡도 부담이라는 설명을 추가로 지지한다. 정확한 내부 한도/compiled 크기는 미측정이다.
+이는 기능 보존 수정본이 아니라 사용자 승인 진단본이다. 테스트 프로젝트는 이제 이 기능 제외본이 활성 상태다.
+기능 테스트·운영 배포·자동 복구·재시도 없음. 운영 활성본은 이번 재조회하지 않았다.
+근거 coverage/rules-group-removal/{build.mjs,manifest.json,firebase.json,deploy.log,before.json,after.json,result.json}.
+이 결과로 기존 작은 수정 계획을 자동 재개하지 않는다. 후속 설계는 전체 구조 부담 감소를 기준으로 재판단한다.
