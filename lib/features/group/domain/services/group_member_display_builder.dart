@@ -1,5 +1,6 @@
 import '../entities/group_member.dart';
 import '../entities/group_member_display.dart';
+import 'group_display_value.dart';
 
 /// membership Snapshot과 Character 문서를 합쳐 그룹원 카드 표시값을 만든다.
 abstract final class GroupMemberDisplayBuilder {
@@ -13,20 +14,22 @@ abstract final class GroupMemberDisplayBuilder {
 
     return GroupMemberDisplay(
       member: member,
-      characterName: member.displayCharacterNameSnapshot,
-      className: _firstNonEmpty([
+      characterName:
+          GroupDisplayValue.text(member.displayCharacterNameSnapshot) ??
+          '알 수 없는 캐릭터',
+      className:
+          _firstNonEmpty([
             member.displayClassNameSnapshot,
-            if (isActiveCharacter && legacyClassName is String)
-              legacyClassName,
+            if (isActiveCharacter && legacyClassName is String) legacyClassName,
           ]) ??
           '-',
       itemLevel:
-          member.itemLevelSnapshot ??
+          GroupDisplayValue.number(member.itemLevelSnapshot) ??
           (isActiveCharacter
               ? _parseNumeric(characterData['itemAvgLevel'])
               : null),
       combatPower:
-          member.combatPowerSnapshot ??
+          GroupDisplayValue.number(member.combatPowerSnapshot) ??
           (isActiveCharacter
               ? _parseNumeric(characterData['combatPower'])
               : null),
@@ -36,14 +39,13 @@ abstract final class GroupMemberDisplayBuilder {
 
   static String? _firstNonEmpty(Iterable<String?> values) {
     for (final value in values) {
-      if (value != null && value.isNotEmpty) return value;
+      final clean = GroupDisplayValue.text(value);
+      if (clean != null) return clean;
     }
     return null;
   }
 
-  static double? _parseNumeric(Object? value) => value is num
-      ? value.toDouble()
-      : value is String
-      ? double.tryParse(value.replaceAll(',', '').trim())
-      : null;
+  static double? _parseNumeric(Object? value) => GroupDisplayValue.number(
+    value is String ? double.tryParse(value.replaceAll(',', '').trim()) : value,
+  );
 }

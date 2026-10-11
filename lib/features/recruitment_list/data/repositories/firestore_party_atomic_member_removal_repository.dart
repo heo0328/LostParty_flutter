@@ -1,3 +1,4 @@
+import '../mappers/party_raid_listing_document.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -186,13 +187,16 @@ class FirestorePartyAtomicMemberRemovalRepository
           );
         }
         if (aggregate.visibility == 'group') {
-          transaction.update(
+          transaction.set(
             _firestore
                 .collection('groups')
                 .doc(aggregate.groupId!)
                 .collection('raidListings')
                 .doc(command.recruitmentId),
-            plan.listingPatch,
+            partyRaidListingDocument(
+              currentRecruitment: raw,
+              recruitmentPatch: plan.recruitmentPatch,
+            ),
           );
         }
         transaction.set(

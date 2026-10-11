@@ -78,7 +78,10 @@ void main() {
 
   test('softDeleted 그룹은 상태를 그대로 노출하고 active로 취급하지 않는다', () {
     final summary = mapper.toPublicSummary(
-      GroupDocumentDto(id: 'group-1', data: groupData(status: 'softDeleted')),
+      GroupDocumentDto(
+        id: 'group-1',
+        data: groupData(status: 'softDeleted'),
+      ),
     );
 
     expect(summary.status, GroupStatus.softDeleted);
@@ -97,19 +100,17 @@ void main() {
     );
     expect(
       () => mapper.toPublicSummary(
-        GroupDocumentDto(id: 'group-1', data: groupData(status: 'archived')),
+        GroupDocumentDto(
+          id: 'group-1',
+          data: groupData(status: 'archived'),
+        ),
       ),
       throwsA(isA<GroupContractException>()),
     );
   });
 
   test('필수 문자열·숫자·시각 누락을 계약 오류로 구분한다', () {
-    for (final field in [
-      'name',
-      'representativeCharacterNameSnapshot',
-      'representativeServerNameSnapshot',
-      'leaderDisplayCharacterNameSnapshot',
-    ]) {
+    for (final field in ['name']) {
       expect(
         () => mapper.toPublicSummary(
           GroupDocumentDto(id: 'group-1', data: {...groupData(), field: ''}),
@@ -136,6 +137,57 @@ void main() {
       ),
       throwsA(isA<GroupContractException>()),
     );
+  });
+
+  test('그룹 표시 손상은 기본값으로 읽고 membership 보안 필드는 엄격하게 유지한다', () {
+    final summary = mapper.toPublicSummary(
+      GroupDocumentDto(
+        id: 'g',
+        data: {
+          ...groupData(),
+          'representativeCharacterNameSnapshot': 7,
+          'representativeServerNameSnapshot': null,
+          'leaderDisplayCharacterNameSnapshot': '  이름\n정리  ',
+        },
+      ),
+    );
+    expect(summary.representativeCharacterNameSnapshot, '알 수 없는 캐릭터');
+    expect(summary.representativeServerNameSnapshot, '-');
+    expect(summary.leaderDisplayCharacterNameSnapshot, '이름 정리');
+    final data = <String, Object?>{
+      'schemaVersion': 1,
+      'groupId': 'g',
+      'role': 'member',
+      'joinedAt': createdAt,
+      'joinSequence': 2,
+      'joinedBy': 'application',
+      'displayCharacterIdSnapshot': 'c',
+      'displayCharacterNameSnapshot': [],
+      'displayClassNameSnapshot': false,
+      'itemLevelSnapshot': -1,
+      'combatPowerSnapshot': double.infinity,
+      'gemValidationSnapshot': 'invalid',
+      'revision': 1,
+    };
+    final member = mapper.toMember(GroupDocumentDto(id: 'p', data: data));
+    expect(member.displayCharacterNameSnapshot, '알 수 없는 캐릭터');
+    expect(member.displayClassNameSnapshot, isNull);
+    expect(member.itemLevelSnapshot, isNull);
+    expect(member.combatPowerSnapshot, isNull);
+    expect(member.gemValidationSnapshot, isNull);
+    for (final field in [
+      'groupId',
+      'role',
+      'joinedBy',
+      'displayCharacterIdSnapshot',
+    ]) {
+      expect(
+        () => mapper.toMember(
+          GroupDocumentDto(id: 'p', data: {...data, field: null}),
+        ),
+        throwsA(isA<GroupContractException>()),
+      );
+    }
   });
 
   test('membership 문서는 Player ID를 문서 ID에서 읽는다', () {
@@ -193,6 +245,59 @@ void main() {
     expect(relation.requestStatus, isNull);
     expect(relation.expiresAt, isNull);
     expect(relation.isExpiredAt(lastActivityAt), isFalse);
+  });
+
+  test('표시값 정리는 관계 권한과 revision의 엄격한 파싱을 바꾸지 않는다', () {
+    final data = <String, Object?>{
+      'schemaVersion': 1,
+      'playerId': 'player-1',
+      'relation': 'member',
+      'requestStatus': null,
+      'groupNameSnapshot': '  그룹\n이름  ',
+      'displayCharacterNameSnapshot': ' ',
+      'expiresAt': null,
+      'sourceRevision': 1,
+      'createdAt': createdAt,
+      'updatedAt': lastActivityAt,
+    };
+    final relation = mapper.toRelation(
+      GroupDocumentDto(id: 'group-1', data: data),
+    );
+    expect(relation.groupNameSnapshot, '그룹 이름');
+    expect(relation.displayCharacterNameSnapshot, '알 수 없는 캐릭터');
+    expect(relation.isMember, isTrue);
+    expect(
+      () => mapper.toRelation(
+        GroupDocumentDto(id: 'group-1', data: {...data, 'relation': 'admin'}),
+      ),
+      throwsA(isA<GroupContractException>()),
+    );
+    expect(
+      () => mapper.toRelation(
+        GroupDocumentDto(id: 'group-1', data: {...data, 'sourceRevision': '1'}),
+      ),
+      throwsA(isA<GroupContractException>()),
+    );
+  });
+
+  test('신청 표시 스펙의 비유한수와 음수는 누락 처리하고 실제 횟수는 보존한다', () {
+    final stats = mapper.toApplicantStats(
+      groupId: 'group-1',
+      playerId: 'player-1',
+      data: {
+        'schemaVersion': 1,
+        'groupId': 'group-1',
+        'playerId': 'player-1',
+        'applicationCount': 3,
+        'lastCharacterNameSnapshot': '  캐릭터  ',
+        'lastItemLevelSnapshot': double.nan,
+        'lastCombatPowerSnapshot': -1,
+      },
+    );
+    expect(stats.lastCharacterNameSnapshot, '캐릭터');
+    expect(stats.lastItemLevelSnapshot, isNull);
+    expect(stats.lastCombatPowerSnapshot, isNull);
+    expect(stats.applicationCount, 3);
   });
 
   Map<String, Object?> joinRelationData({
@@ -313,9 +418,18 @@ void main() {
       GroupDocumentDto(id: 'player-9', data: joinRelationData()),
     );
 
-    expect(relation.isPendingAt(createdAt.add(const Duration(hours: 23))), isTrue);
-    expect(relation.isPendingAt(createdAt.add(const Duration(hours: 24))), isFalse);
-    expect(relation.isExpiredAt(createdAt.add(const Duration(hours: 24))), isTrue);
+    expect(
+      relation.isPendingAt(createdAt.add(const Duration(hours: 23))),
+      isTrue,
+    );
+    expect(
+      relation.isPendingAt(createdAt.add(const Duration(hours: 24))),
+      isFalse,
+    );
+    expect(
+      relation.isExpiredAt(createdAt.add(const Duration(hours: 24))),
+      isTrue,
+    );
   });
 
   test('join relation 문서 ID와 targetPlayerId 불일치를 계약 오류로 올린다', () {
@@ -330,16 +444,13 @@ void main() {
     );
   });
 
-  test('join relation 종류·상태·숫자 형식 오류를 계약 오류로 구분한다', () {
+  test('join relation 종류·상태는 엄격하고 표시 숫자 오류는 null로 읽는다', () {
     expect(
       () => mapper.toJoinRelation(
-        GroupDocumentDto(id: 'player-9', data: joinRelationData(kind: 'joinCode')),
-      ),
-      throwsA(isA<GroupContractException>()),
-    );
-    expect(
-      () => mapper.toJoinRelation(
-        GroupDocumentDto(id: 'player-9', data: joinRelationData(status: 'done')),
+        GroupDocumentDto(
+          id: 'player-9',
+          data: joinRelationData(kind: 'joinCode'),
+        ),
       ),
       throwsA(isA<GroupContractException>()),
     );
@@ -347,11 +458,28 @@ void main() {
       () => mapper.toJoinRelation(
         GroupDocumentDto(
           id: 'player-9',
-          data: joinRelationData(itemLevelSnapshot: '1,700.50'),
+          data: joinRelationData(status: 'done'),
         ),
       ),
       throwsA(isA<GroupContractException>()),
     );
+    final relation = mapper.toJoinRelation(
+      GroupDocumentDto(
+        id: 'player-9',
+        data: {
+          ...joinRelationData(itemLevelSnapshot: '1,700.50'),
+          'characterNameSnapshot': null,
+          'serverNameSnapshot': 1,
+          'characterClassNameSnapshot': [],
+          'gemValidationSnapshot': false,
+        },
+      ),
+    );
+    expect(relation.itemLevelSnapshot, isNull);
+    expect(relation.characterNameSnapshot, '알 수 없는 캐릭터');
+    expect(relation.serverNameSnapshot, '-');
+    expect(relation.characterClassNameSnapshot, '-');
+    expect(relation.gemValidationSnapshot, isNull);
   });
 
   test('applicant stats 문서가 없으면 신청 횟수 0으로 취급한다', () {

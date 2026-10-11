@@ -14,6 +14,13 @@
 
 ## 2. 공통 명령 원칙
 
+BUG-024(2026-10-07)의 완료 반복방 준비 변경과 인증 후 주차 전환은
+[Spark 대안의 실제 도입 계약](RECURRING_CYCLE_SPARK_ALTERNATIVE_DESIGN.md)을 따른다.
+공개 명령과 Router/DI는 유지한다. `advanceCycle`만 대상별 인증 transaction을 선행하고,
+방·전원 state·필수 목록·이벤트는 기존 단일 핵심 transaction에서 확정한다.
+인증 중 실패해도 참가·완료·방 구성을 부분 전환하지 않는다. 인증 없는 구버전 advance는 거절하며
+새 앱과 새 Rules를 함께 사용해야 한다. 오래된 요청을 다른 모드로 자동 재실행하지 않는다.
+
 개인 캐릭터의 주간 레이드 완료와 명령 차단 기준은 [`WEEKLY_RAID_CLAIM_CONTRACT.md`](WEEKLY_RAID_CLAIM_CONTRACT.md)를 따른다. Claim 구현 이후 모집 생성·즉시 가입·승인·참가 캐릭터 변경은 같은 `playerId + characterId + raidId + cycleKey` Claim 부재를 Transaction과 Rules에서 함께 검증해야 한다.
 
 - 모든 명령은 `AuthUid -> PlayerId` active binding을 요구한다.

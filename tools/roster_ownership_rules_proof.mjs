@@ -145,7 +145,9 @@ async function lifecycle(db, type, { tamper = null, actorPlayerId = playerId, ow
         completedAt: serverTimestamp(), completedByPlayerId: playerId });
     }
     tx.update(ref, patch);
-    if (room.groupId) {
+    if (room.groupId && process.env.R1_LISTING === '1') {
+      tx.set(doc(db, 'groups', room.groupId, 'raidListings', recruitmentId), { ...room, ...patch });
+    } else if (room.groupId) {
       tx.update(doc(db, 'groups', room.groupId, 'raidListings', recruitmentId), {
         ...(type === 'advanceCycle' ? { ...room, ...patch } : {}),
         recruitmentId, status: patch.status, sourceRevision: room.revision + 1,

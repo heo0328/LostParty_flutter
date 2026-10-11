@@ -20,15 +20,15 @@ void main() {
     expect(repository, contains(".collection('partyEvents')"));
   });
 
-  test('listing은 원본과 같은 Timestamp 변환 후 patch를 원자 update한다', () {
-    expect(repository, contains('plan.listingPatchAfterRecruitmentChange('));
+  test('listing은 원본과 같은 Timestamp 변환 후 patch를 원자 set한다', () {
+    expect(repository, contains('partyRaidListingDocument('));
     expect(repository, contains('currentRecruitment: raw'));
-    expect(repository, contains('appliedRecruitmentPatch: recruitmentPatch'));
+    expect(repository, contains('recruitmentPatch: recruitmentPatch'));
     expect(
       repository.indexOf(
         "recruitmentPatch['cycleEndsAt'] = Timestamp.fromDate",
       ),
-      lessThan(repository.indexOf('plan.listingPatchAfterRecruitmentChange(')),
+      lessThan(repository.indexOf('partyRaidListingDocument(')),
     );
     expect(repository, isNot(contains('transaction.get(listingRef)')));
     expect(

@@ -5,6 +5,7 @@ import '../../domain/entities/group_join_relation.dart';
 import '../../domain/entities/group_member.dart';
 import '../../domain/entities/group_relation.dart';
 import '../../domain/entities/group_summary.dart';
+import '../../domain/services/group_display_value.dart';
 
 class GroupDocumentDto {
   const GroupDocumentDto({required this.id, required this.data});
@@ -34,18 +35,14 @@ class GroupDocumentMapper {
       groupId: document.id,
       name: _string(data, 'name'),
       status: _status(data),
-      representativeCharacterNameSnapshot: _string(
-        data,
-        'representativeCharacterNameSnapshot',
-      ),
-      representativeServerNameSnapshot: _string(
-        data,
-        'representativeServerNameSnapshot',
-      ),
-      leaderDisplayCharacterNameSnapshot: _string(
-        data,
-        'leaderDisplayCharacterNameSnapshot',
-      ),
+      representativeCharacterNameSnapshot:
+          _displayText(data['representativeCharacterNameSnapshot']) ??
+          '알 수 없는 캐릭터',
+      representativeServerNameSnapshot:
+          _displayText(data['representativeServerNameSnapshot']) ?? '-',
+      leaderDisplayCharacterNameSnapshot:
+          _displayText(data['leaderDisplayCharacterNameSnapshot']) ??
+          '알 수 없는 캐릭터',
       memberCount: _integer(data, 'memberCount'),
       revision: _integer(data, 'revision'),
       hasActiveJoinCode: _boolean(data, 'hasActiveJoinCode'),
@@ -71,16 +68,11 @@ class GroupDocumentMapper {
         'joinedBy',
       ),
       displayCharacterIdSnapshot: _string(data, 'displayCharacterIdSnapshot'),
-      displayCharacterNameSnapshot: _string(
-        data,
-        'displayCharacterNameSnapshot',
-      ),
-      displayClassNameSnapshot: _optionalString(
-        data,
-        'displayClassNameSnapshot',
-      ),
-      itemLevelSnapshot: _nullableDouble(data, 'itemLevelSnapshot'),
-      combatPowerSnapshot: _nullableDouble(data, 'combatPowerSnapshot'),
+      displayCharacterNameSnapshot:
+          _displayText(data['displayCharacterNameSnapshot']) ?? '알 수 없는 캐릭터',
+      displayClassNameSnapshot: _displayText(data['displayClassNameSnapshot']),
+      itemLevelSnapshot: _displayNumber(data['itemLevelSnapshot']),
+      combatPowerSnapshot: _displayNumber(data['combatPowerSnapshot']),
       gemValidationSnapshot: _softGemValidation(data['gemValidationSnapshot']),
       revision: _integer(data, 'revision'),
     );
@@ -105,11 +97,9 @@ class GroupDocumentMapper {
               _string(data, 'requestStatus'),
               'requestStatus',
             ),
-      groupNameSnapshot: _string(data, 'groupNameSnapshot'),
-      displayCharacterNameSnapshot: _string(
-        data,
-        'displayCharacterNameSnapshot',
-      ),
+      groupNameSnapshot: _displayText(data['groupNameSnapshot']) ?? '이름 없는 그룹',
+      displayCharacterNameSnapshot:
+          _displayText(data['displayCharacterNameSnapshot']) ?? '알 수 없는 캐릭터',
       expiresAt: data['expiresAt'] == null ? null : _date(data, 'expiresAt'),
       sourceRevision: _integer(data, 'sourceRevision'),
       createdAt: _date(data, 'createdAt'),
@@ -142,11 +132,13 @@ class GroupDocumentMapper {
       ),
       requestedByPlayerId: _string(data, 'requestedByPlayerId'),
       characterIdSnapshot: _string(data, 'characterIdSnapshot'),
-      characterNameSnapshot: _string(data, 'characterNameSnapshot'),
-      serverNameSnapshot: _string(data, 'serverNameSnapshot'),
-      characterClassNameSnapshot: _string(data, 'characterClassNameSnapshot'),
-      itemLevelSnapshot: _nullableDouble(data, 'itemLevelSnapshot'),
-      combatPowerSnapshot: _nullableDouble(data, 'combatPowerSnapshot'),
+      characterNameSnapshot:
+          _displayText(data['characterNameSnapshot']) ?? '알 수 없는 캐릭터',
+      serverNameSnapshot: _displayText(data['serverNameSnapshot']) ?? '-',
+      characterClassNameSnapshot:
+          _displayText(data['characterClassNameSnapshot']) ?? '-',
+      itemLevelSnapshot: _displayNumber(data['itemLevelSnapshot']),
+      combatPowerSnapshot: _displayNumber(data['combatPowerSnapshot']),
       gemValidationSnapshot: _softGemValidation(data['gemValidationSnapshot']),
       applicationAttempt: _integer(data, 'applicationAttempt'),
       revision: _integer(data, 'revision'),
@@ -171,9 +163,11 @@ class GroupDocumentMapper {
       groupId: _string(data, 'groupId'),
       playerId: _string(data, 'playerId'),
       applicationCount: _integer(data, 'applicationCount'),
-      lastCharacterNameSnapshot: data['lastCharacterNameSnapshot'] as String?,
-      lastItemLevelSnapshot: _nullableDouble(data, 'lastItemLevelSnapshot'),
-      lastCombatPowerSnapshot: _nullableDouble(data, 'lastCombatPowerSnapshot'),
+      lastCharacterNameSnapshot: _displayText(
+        data['lastCharacterNameSnapshot'],
+      ),
+      lastItemLevelSnapshot: _displayNumber(data['lastItemLevelSnapshot']),
+      lastCombatPowerSnapshot: _displayNumber(data['lastCombatPowerSnapshot']),
     );
   }
 
@@ -196,10 +190,11 @@ class GroupDocumentMapper {
         _string(data, 'reason'),
         'reason',
       ),
-      characterNameSnapshot: _string(data, 'characterNameSnapshot'),
+      characterNameSnapshot:
+          _displayText(data['characterNameSnapshot']) ?? '알 수 없는 캐릭터',
       applicationCountSnapshot: _integer(data, 'applicationCountSnapshot'),
-      itemLevelSnapshot: _nullableDouble(data, 'itemLevelSnapshot'),
-      combatPowerSnapshot: _nullableDouble(data, 'combatPowerSnapshot'),
+      itemLevelSnapshot: _displayNumber(data['itemLevelSnapshot']),
+      combatPowerSnapshot: _displayNumber(data['combatPowerSnapshot']),
       createdAt: _date(data, 'createdAt'),
     );
   }
@@ -257,6 +252,12 @@ class GroupDocumentMapper {
     return value;
   }
 
+  // Informational copies are not authority or eligibility inputs. Clean them
+  // locally without relaxing the strict ID/status/counter readers above.
+  String? _displayText(Object? value) => GroupDisplayValue.text(value);
+
+  double? _displayNumber(Object? value) => GroupDisplayValue.number(value);
+
   String? _optionalString(Map<String, Object?> data, String field) {
     final value = data[field];
     if (value == null) return null;
@@ -279,13 +280,6 @@ class GroupDocumentMapper {
     final value = data[field];
     if (value is bool) return value;
     throw GroupContractException('$field must be a boolean.');
-  }
-
-  double? _nullableDouble(Map<String, Object?> data, String field) {
-    final value = data[field];
-    if (value == null) return null;
-    if (value is num) return value.toDouble();
-    throw GroupContractException('$field must be a number or null.');
   }
 
   PartyGemValidationSnapshot? _softGemValidation(Object? raw) {

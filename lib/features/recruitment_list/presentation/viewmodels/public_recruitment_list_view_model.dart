@@ -17,6 +17,7 @@ import '../../../raid_status/domain/services/raid_list_sort.dart';
 import '../../../raid_status/domain/services/raid_status_filter.dart';
 import '../../../raid_status/presentation/viewmodels/raid_filter_sheet_host.dart';
 import '../../domain/entities/party_read_models.dart';
+import '../../domain/entities/party_raid_listing_backfill_failure.dart';
 import '../../domain/entities/recruitment_aggregate.dart';
 import '../../domain/repositories/party_read_repository.dart';
 
@@ -238,7 +239,12 @@ class PublicRecruitmentListViewModel extends ChangeNotifier
       unawaited(() async {
         try {
           await backfill();
-        } catch (_) {}
+        } catch (error) {
+          // Keep the normal list subscription; do not log document payloads.
+          debugPrint(
+            '모집 목록 보정 실패: ${error is PartyRaidListingBackfillFailure ? error : error.runtimeType}',
+          );
+        }
       }());
     }
   }

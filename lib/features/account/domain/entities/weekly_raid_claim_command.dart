@@ -175,6 +175,14 @@ class WeeklyRaidCommandObservation {
             'recruitmentId',
             'completedAt',
             'updatedAt',
+            'guardSchemaVersion',
+            'guardRecruitmentId',
+            'guardRoomRevision',
+            'guardCycleKey',
+            'guardCycleStartedAt',
+            'guardCycleEndsAt',
+            'guardSlotIndex',
+            'guardCheckedAt',
           ])
             data[key],
         ]);

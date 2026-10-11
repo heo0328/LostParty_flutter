@@ -1,10 +1,13 @@
+import '../mappers/party_raid_listing_document.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'party_raid_listing_backfill_batch.dart';
 
 /// 손대지 않은 그룹 전용 모집에 listing이 없으면, 현재 원본 Snapshot으로 만든다.
-/// 모집 revision은 바꾸지 않는다. 실패는 호출 측에서 삼킨다.
+/// 모집 revision은 바꾸지 않는다. 부분 실패는 집계하여 호출 측에 전달한다.
 class FirestorePartyRaidListingBackfill {
-  const FirestorePartyRaidListingBackfill({required FirebaseFirestore firestore})
-    : _firestore = firestore;
+  const FirestorePartyRaidListingBackfill({
+    required FirebaseFirestore firestore,
+  }) : _firestore = firestore;
 
   final FirebaseFirestore _firestore;
 
@@ -14,20 +17,25 @@ class FirestorePartyRaidListingBackfill {
         .collection('recruitments')
         .where('schemaVersion', isEqualTo: 2)
         .where('memberPlayerIds', arrayContains: playerId)
-        .where('status', whereIn: const ['active', 'completed'])
+        .where('status', isEqualTo: 'active')
         .limit(50)
         .get();
+    final groupsByRoom = <String, String>{};
     for (final doc in snapshot.docs) {
       final data = doc.data();
       if (data['visibility'] != 'group') continue;
       final groupId = data['groupId'];
       if (groupId is! String || groupId.isEmpty) continue;
-      await _createIfMissing(
-        recruitmentId: doc.id,
-        groupId: groupId,
-        playerId: playerId,
-      );
+      groupsByRoom[doc.id] = groupId;
     }
+    await runPartyRaidListingBackfillBatch(
+      groupsByRoom.keys.toList(),
+      (roomId) => _createIfMissing(
+        recruitmentId: roomId,
+        groupId: groupsByRoom[roomId]!,
+        playerId: playerId,
+      ),
+    );
   }
 
   Future<void> _createIfMissing({
@@ -52,13 +60,16 @@ class FirestorePartyRaidListingBackfill {
       if (after['visibility'] != 'group' || after['groupId'] != groupId) {
         return;
       }
-      if (after['status'] == 'disbanded' ||
+      if (after['status'] != 'active' ||
           after['currentCycleStatus'] == 'disbanded') {
         return;
       }
       final members = after['memberPlayerIds'];
       if (members is! List || !members.contains(playerId)) return;
-      transaction.set(listingRef, Map<String, Object?>.from(after));
+      transaction.set(
+        listingRef,
+        partyRaidListingDocument(currentRecruitment: after),
+      );
     });
   }
 }

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../mappers/raid_state_availability.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
@@ -67,6 +68,17 @@ class FirestorePartyAtomicMemberMutationRepository
       final aggregate = PartyAtomicDocumentMapper.aggregate(
         Map<String, Object?>.from(raw),
       );
+      final nextWeekPrep =
+          aggregate.status == PartyRecruitmentStatus.active &&
+          aggregate.continueTogether &&
+          aggregate.currentCycleStatus == PartyRaidStateStatus.completed;
+      if (aggregate.status != PartyRecruitmentStatus.active ||
+          (!nextWeekPrep &&
+              aggregate.currentCycleStatus != PartyRaidStateStatus.active)) {
+        return const PartyMembershipResult.failure(
+          PartyMembershipFailure.recruitmentClosed,
+        );
+      }
       final oldCharacterId = memberData['characterId'];
       final oldRole = _role(memberData['role']);
       if (oldCharacterId is! String || oldRole == null) {
@@ -148,6 +160,9 @@ class FirestorePartyAtomicMemberMutationRepository
                 characterId: oldCharacterId,
                 raidId: raidId,
                 isRaidState: true,
+                availabilityOnly: RaidStateAvailability.isStub(
+                  previousStateData,
+                ),
               ) !=
               GameAccountOwnershipCondition.current) {
         return const PartyMembershipResult.failure(
@@ -163,6 +178,7 @@ class FirestorePartyAtomicMemberMutationRepository
         requestedCycleKey: aggregate.currentCycleKey,
         now: clock(),
         ownership: ownership,
+        ignoreCompletedClaim: nextWeekPrep,
       );
       final nextRaidStateRef = occupancy.stateRef;
       final characterData = character.data();
@@ -176,21 +192,28 @@ class FirestorePartyAtomicMemberMutationRepository
           PartyMembershipFailure.ownershipLost,
         );
       }
-      if (!previousRaidState.exists ||
-          previousRaidState.data()?['recruitmentId'] != command.recruitmentId ||
-          previousRaidState.data()?['status'] != 'active') {
+      if (!nextWeekPrep &&
+          (!previousRaidState.exists ||
+              previousRaidState.data()?['recruitmentId'] !=
+                  command.recruitmentId ||
+              previousRaidState.data()?['status'] != 'active')) {
         return const PartyMembershipResult.failure(
           PartyMembershipFailure.notFound,
         );
       }
       switch (occupancy.decision) {
         case ExistingRaidStateOccupancyDecision.currentCompleted:
+          if (nextWeekPrep) break;
           return const PartyMembershipResult.failure(
             PartyMembershipFailure.weeklyRaidCompleted,
           );
+        case ExistingRaidStateOccupancyDecision.historicalCompleted:
+          if (nextWeekPrep) break;
+          return const PartyMembershipResult.failure(
+            PartyMembershipFailure.participationConflict,
+          );
         case ExistingRaidStateOccupancyDecision.currentActive:
         case ExistingRaidStateOccupancyDecision.participationConflict:
-        case ExistingRaidStateOccupancyDecision.historicalCompleted:
           return const PartyMembershipResult.failure(
             PartyMembershipFailure.participationConflict,
           );
@@ -244,9 +267,23 @@ class FirestorePartyAtomicMemberMutationRepository
             groupId: aggregate.groupId,
             recruitmentId: command.recruitmentId,
           );
+        } else if (!nextWeekPrep) {
+          listing = PartyRaidListingTx.forWrite(
+            firestore: _firestore,
+            groupId: aggregate.groupId!,
+            recruitmentId: command.recruitmentId,
+          );
         }
       }
 
+      if (nextWeekPrep &&
+          aggregate.visibility == 'group' &&
+          aggregate.groupId != null &&
+          listing.snapshot?.exists != true) {
+        return const PartyMembershipResult.failure(
+          PartyMembershipFailure.stateInconsistent,
+        );
+      }
       final now = FieldValue.serverTimestamp();
       final membershipPatch = PartyMembershipWritePlan.changeCharacter(
         characterId: command.newCharacterId,
@@ -259,6 +296,42 @@ class FirestorePartyAtomicMemberMutationRepository
         buildIntegrity: command.buildIntegrity,
         serverTimestamp: now,
       );
+      if (nextWeekPrep) {
+        final plan = PartyAtomicNextWeekCharacterChangeWritePlan(
+          ownershipRevision: ownership.revision!,
+          aggregate: aggregate,
+          rules: _rules(raw),
+          playerId: playerId,
+          newCharacterId: command.newCharacterId,
+          newClassKey: className,
+          newRole: command.newRole,
+          raidId: raidId,
+          difficultyId: difficultyId,
+          membershipPatch: membershipPatch,
+          serverTimestamp: now,
+        );
+        transaction.update(recruitmentRef, plan.recruitmentPatch);
+        transaction.update(memberRef, plan.membershipPatch);
+        listing.write(
+          transaction: transaction,
+          currentRecruitment: partyRecruitmentMap(raw),
+          recruitmentPatch: plan.recruitmentPatch,
+        );
+        transaction.set(
+          _firestore
+              .collection('partyEvents')
+              .doc(plan.event['eventId']! as String),
+          plan.event,
+        );
+        if (kDebugMode) {
+          debugPrint(
+            'PartyAtomicMemberMutation id=$diagnosticId mode=nextWeekPrep '
+            'cycle=${aggregate.currentCycleKey} revision=${aggregate.revision} '
+            'old=$oldCharacterId new=${command.newCharacterId} stateWrites=0 commit=pending',
+          );
+        }
+        return const PartyMembershipResult.success();
+      }
       final plan = PartyAtomicCharacterChangeWritePlan(
         ownershipRevision: ownership.revision!,
         aggregate: aggregate,

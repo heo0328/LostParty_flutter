@@ -1,5 +1,25 @@
 # 버그 리포트
 
+## BUG-024. 완료 반복방 다음 주 참가 캐릭터 변경 실패 (2026-10-07, 실제 앱 도입·활성화400으로 운영 반영 보류)
+
+- 사용자 보고: BUG-023 완료 성공 후 다음 주 대기 상태의 두 방에서 모든 계정의 캐릭터 변경 실패.
+- 노르딘 모집/Ailker `EsDaq4qFhXe9SDXQv5eV`, 4막하드/니티안 `8CNzjWUjIE43uCjkvOye`.
+- 팝업: `모집 또는 멤버 정보를 찾지 못했습니다.` 문서 삭제나 Rules 거절을 확정하는 메시지가 아니다.
+- 수정 전 atomic Repository는 completed raidState도 notFound로 반환하고 mapper는 active 회차만 허용했다.
+  v1.1.0에도 mapper 제한이 있어 BUG-023 역할 보완으로 새로 생긴 조건은 아니다.
+- 이번에 운영 데이터·런타임 요청 로그는 재조회하지 않았다. 두 요청의 정확한 반환 지점 재현은 미확인이다.
+- 현재 상태: 사용자가 실기기 테스트 전까지 실제 수정을 승인해 준비 전용 writer·후보 목적 분리,
+  strict stub·개인 완료/참가 호환·준비 재선택·인증 선행 전환과 추적 Rules를 도입했다.
+  Rules5개 묶음 통과. 경고 보완본 재게시에서 컴파일경고0·Ruleset 생성 성공이나
+  활성화PATCH400 INVALID_ARGUMENT로 실패했다. 운영36b5920e 유지, 실기기 착수 보류.
+  최종 검증·게시 진단과 후속 조사는 [NEXT_WORK](NEXT_WORK.md)를 따른다.
+  실기기 확인 전 버그 종료나 dev/main 통합은 하지 않는다.
+- 설계: [원래 보존 계약](../architecture/RECURRING_NEXT_WEEK_CHARACTER_CHANGE_DESIGN.md),
+  [Spark C 실제 도입](../architecture/RECURRING_CYCLE_SPARK_ALTERNATIVE_DESIGN.md).
+  서버안은 Spark 무료 유지 결정으로 중단했다. A의 한도 실패·C 선행25/25·실제 도입 검증 이력은 DEV_LOG 참조.
+  기존 빈자리 이동 한도 실패는 기준본에서도 재현됐으며 기존 validator 직접 연결로 보완했다.
+
+
 ## BUG-023. 캐릭터 변경 후 반복 모집 전체 완료 실패 (2026-10-06 완료)
 
 여러 테스트에서 반복되어 최종 확인을 지연시킨 장애다. 운영 읽기 조회에서

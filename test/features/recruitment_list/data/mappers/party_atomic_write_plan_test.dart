@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lost_party/features/recruitment_list/data/mappers/party_raid_listing_document.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_atomic_write_plan.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_atomic_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
@@ -114,8 +115,45 @@ void main() {
     );
 
     expect(plan.recruitmentPatch['status'], 'completed');
-    expect(plan.listingPatch['status'], 'completed');
   });
+
+  for (final type in [
+    PartyAtomicCommandType.complete,
+    PartyAtomicCommandType.disband,
+    PartyAtomicCommandType.incompleteEnd,
+  ]) {
+    test('공개 전환 후 ${type.name}은 남은 groupId로 그룹 집계를 다시 닫지 않는다', () {
+      final room = PartyCommandAggregate(
+        recruitmentId: 'recruitment-1',
+        raidId: 'raid-1',
+        difficultyId: 'hard',
+        leaderPlayerId: 'player-0',
+        currentCycleKey: '2026-09-09',
+        currentCycleStatus: PartyRaidStateStatus.active,
+        revision: 4,
+        partySlots: aggregate().partySlots,
+        nonGroupMemberCount: 0,
+        pendingApplicationCount: 0,
+        pendingNonGroupApplicantCount: 0,
+        groupId: 'group-1',
+        visibility: 'public',
+      );
+      final plan = PartyAtomicWritePlan(
+        command: type == PartyAtomicCommandType.incompleteEnd
+            ? incompleteEndCommand()
+            : command(type),
+        aggregate: room,
+        serverTimestamp: timestamp,
+        incrementOne: incrementOne,
+      );
+      expect(plan.closesActiveGroupRecruitment, isFalse);
+      expect(plan.groupListingAction, PartyGroupListingWriteAction.none);
+      expect(
+        plan.recruitmentPatch.containsKey('groupActiveRecruitmentCountAfter'),
+        isFalse,
+      );
+    });
+  }
 
   test('전환은 모집과 모든 raidState의 회차 키를 함께 바꾼다', () {
     final plan = PartyAtomicWritePlan(
@@ -253,13 +291,13 @@ void main() {
       'cycleStartedAt': Timestamp.fromDate(next.nextCycleStartedAt!),
       'cycleEndsAt': Timestamp.fromDate(next.nextCycleEndsAt!),
     };
-    final listing = plan.listingPatchAfterRecruitmentChange(
+    final listing = partyRaidListingDocument(
       currentRecruitment: current,
-      appliedRecruitmentPatch: applied,
+      recruitmentPatch: applied,
     );
 
-    // 목록은 원본의 최종 상태와 sourceRevision 봉투 외에 차이가 없어야 한다.
-    expect(listing, {...current, ...applied, 'sourceRevision': 5});
+    // 목록은 원본에 실제 적용할 Timestamp 변환 patch까지 같아야 한다.
+    expect(listing, {...current, ...applied});
     expect(listing['currentCycleKey'], '2026-09-16');
     expect(listing['targetCycleKey'], '2026-09-16');
     expect(listing['cycleStartedAt'], isA<Timestamp>());
@@ -277,28 +315,6 @@ void main() {
     expect(plan.closesActiveGroupRecruitment, isFalse);
     expect(current['currentCycleKey'], '2026-09-09');
     expect(applied, isNot(contains('sourceRevision')));
-  });
-
-  test('승계 이외 명령에는 listing Snapshot 덮어쓰기를 확장하지 않는다', () {
-    for (final type in [
-      PartyAtomicCommandType.complete,
-      PartyAtomicCommandType.disband,
-    ]) {
-      final plan = PartyAtomicWritePlan(
-        command: command(type),
-        aggregate: aggregate(),
-        serverTimestamp: timestamp,
-        incrementOne: incrementOne,
-      );
-      expect(
-        plan.listingPatchAfterRecruitmentChange(
-          currentRecruitment: {'unrelated': 'preserve existing behavior'},
-          appliedRecruitmentPatch: plan.recruitmentPatch,
-        ),
-        plan.listingPatch,
-      );
-      expect(plan.groupListingAction, PartyGroupListingWriteAction.none);
-    }
   });
 
   test('반복 모집에는 미완료 종료 명령을 적용하지 않는다', () {

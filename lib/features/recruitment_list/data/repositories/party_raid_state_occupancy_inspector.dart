@@ -7,6 +7,7 @@ import '../../domain/entities/party_raid_state_conflict.dart';
 import '../../domain/services/party_create_occupancy_gate.dart';
 import '../../domain/services/party_ownership_record_policy.dart';
 import 'party_character_ownership_reader.dart';
+import '../mappers/raid_state_availability.dart';
 
 class PartyRaidStateOccupancyInspector {
   const PartyRaidStateOccupancyInspector._();
@@ -20,6 +21,7 @@ class PartyRaidStateOccupancyInspector {
     required String requestedCycleKey,
     required DateTime now,
     GameAccountOwnershipSnapshot? ownership,
+    bool ignoreCompletedClaim = false,
   }) async {
     final stateRef = firestore
         .collection('players')
@@ -55,12 +57,38 @@ class PartyRaidStateOccupancyInspector {
         if (condition == GameAccountOwnershipCondition.unknown) {
           return PartyRaidStateOccupancyInspection.inconsistent(stateRef);
         }
-        if (condition == GameAccountOwnershipCondition.current) {
+        if (condition == GameAccountOwnershipCondition.current &&
+            !ignoreCompletedClaim) {
           return PartyRaidStateOccupancyInspection(
             stateRef: stateRef,
             decision: ExistingRaidStateOccupancyDecision.currentCompleted,
           );
         }
+      }
+    }
+    if (ignoreCompletedClaim && ownership != null) {
+      final assignment = await transaction.get(
+        firestore
+            .collection('players')
+            .doc(playerId)
+            .collection('activeRaidAssignments')
+            .doc('${characterId}_$raidId'),
+      );
+      final assignmentData = assignment.data();
+      if (assignmentData != null &&
+          PartyOwnershipRecordPolicy.classify(
+                ownership: ownership,
+                data: assignmentData,
+                playerId: playerId,
+                characterId: characterId,
+                raidId: raidId,
+                isRaidState: false,
+                claimCycleKey: assignmentData['cycleKey'] is String
+                    ? assignmentData['cycleKey'] as String
+                    : null,
+              ) !=
+              GameAccountOwnershipCondition.ownershipChanged) {
+        return PartyRaidStateOccupancyInspection.inconsistent(stateRef);
       }
     }
     if (data == null) {
@@ -75,6 +103,7 @@ class PartyRaidStateOccupancyInspector {
         characterId: characterId,
         raidId: raidId,
         isRaidState: true,
+        availabilityOnly: RaidStateAvailability.isStub(data),
       );
       if (condition == GameAccountOwnershipCondition.unknown) {
         return PartyRaidStateOccupancyInspection.inconsistent(stateRef);
@@ -86,6 +115,9 @@ class PartyRaidStateOccupancyInspector {
     }
 
     final statePlayerId = data['playerId'];
+    if (RaidStateAvailability.isStub(data) && ownership != null) {
+      return PartyRaidStateOccupancyInspection.none(stateRef);
+    }
     final stateCharacterId = data['characterId'];
     final stateRaidId = data['raidId'];
     final stateCycleKey = data['cycleKey'];

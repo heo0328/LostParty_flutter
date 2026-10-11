@@ -4,9 +4,9 @@ import { isDeepStrictEqual } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import {
   initializeTestEnvironment,
-  assertFails,
   assertSucceeds,
 } from '@firebase/rules-unit-testing';
+import { assertRulesDenied as assertFails } from './assert_rules_denied.mjs';
 import {
   collection,
   doc,
@@ -30,7 +30,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // It never authenticates to or deploys into the production Firebase project.
 const PROJECT_ID = 'demo-party-group-cutover';
 const rules = fs.readFileSync(
-  path.join(__dirname, '..', 'firestore.rules'),
+  process.env.PARTY_RULES_FILE || path.join(__dirname, '..', 'firestore.rules'),
   'utf8',
 );
 
@@ -778,7 +778,13 @@ async function removeApprovedMemberTxn(
     if (successorRef) {
       tx.update(successorRef, { canApproveApplications: true, updatedAt: serverTimestamp() });
     }
-    if (recruitment.visibility === 'group') {
+    if (recruitment.visibility === 'group' && process.env.R1_LISTING === '1' && !legacyListingOnly) {
+      tx.set(doc(db, 'groups', recruitment.groupId, 'raidListings', recruitmentId), {
+        ...recruitment, ...lifecycleMarkerConsumptionPatch(recruitment), ...composition,
+        revision: nextRevision, updatedAt: serverTimestamp(),
+        memberCount: tamperListingCount ? 99 : remainingSlots.length, ...listingOverrides,
+      });
+    } else if (recruitment.visibility === 'group') {
       tx.update(
         doc(db, 'groups', recruitment.groupId, 'raidListings', recruitmentId),
         {
@@ -1035,14 +1041,15 @@ async function verifyCharacterPlacement(testEnv, db, applicantDb) {
   const newStateRef = doc(applicantDb, 'players', joinerPlayerId, 'raidStates', `${replacementId}_${raidId}`);
   async function change({ partyIndex = 0, slotIndex = 3, tamperOther = false,
     mismatch = false, skipOldDelete = false, staleRevision = false,
-    tamperTarget = false } = {}) {
+    tamperTarget = false, omitListing = false, forgedGeneration = false } = {}) {
     return runTransaction(applicantDb, async (tx) => {
       const before = (await tx.get(recruitmentRef)).data();
       await tx.get(memberRef);
       await tx.get(newStateRef);
       await tx.get(listingRef);
       const slots = before.partySlots.map((s) => s.playerId === joinerPlayerId
-        ? { ...s, characterId: replacementId, classKey: '버서커', role: 'dealer', partyIndex, slotIndex }
+        ? { ...s, characterId: replacementId, classKey: '버서커', role: 'dealer', partyIndex, slotIndex,
+          ...(forgedGeneration ? { ownershipRevision: 999 } : {}) }
         : tamperOther && s.playerId === playerId ? { ...s, classKey: '위조' } : s);
       const patch = {
         ...lifecycleMarkerConsumptionPatch(before), partySlots: slots,
@@ -1067,7 +1074,7 @@ async function verifyCharacterPlacement(testEnv, db, applicantDb) {
         status: 'active', source: 'party', recruitmentId,
         revision: 1, updatedAt: serverTimestamp(),
       });
-      tx.set(listingRef, { ...before, ...patch });
+      if (!omitListing) tx.set(listingRef, { ...before, ...patch });
       const eventId = `characterChanged_${recruitmentId}_${patch.revision}`;
       tx.set(doc(applicantDb, 'partyEvents', eventId), {
         schemaVersion: 1, eventId, recruitmentId, type: 'characterChanged',
@@ -1078,11 +1085,39 @@ async function verifyCharacterPlacement(testEnv, db, applicantDb) {
     });
   }
   const original = (await getDoc(recruitmentRef)).data();
+  if (process.env.R1_PLACEMENT_PROBE) {
+    // Reload only the Rules, preserving seeded data and clearing setup coverage.
+    const probeEnv = await initializeTestEnvironment({ projectId: PROJECT_ID,
+      firestore: { host: '127.0.0.1', port: 8080, rules } });
+    const options = JSON.parse(process.env.R1_PLACEMENT_PROBE);
+    let error;
+    try { await change(options); } catch (caught) { error = caught; }
+    const directory = process.env.R1_PROBE_DIR;
+    if (!directory) throw new Error('R1_PROBE_DIR is required');
+    fs.mkdirSync(directory, { recursive: true });
+    fs.writeFileSync(path.join(directory, 'request-result.json'), JSON.stringify({
+      options, allowed: !error, error: error?.message ?? null,
+    }, null, 2));
+    const response = await fetch(`http://127.0.0.1:8080/emulator/v1/projects/${PROJECT_ID}:ruleCoverage`);
+    if (!response.ok) throw new Error(`Coverage failed: ${response.status}`);
+    const chunks = []; let length = 0;
+    for await (const chunk of response.body) {
+      length += chunk.length;
+      if (length > 64 * 1024 * 1024) throw new Error('Single-request coverage exceeds 64 MiB');
+      chunks.push(chunk);
+    }
+    fs.writeFileSync(path.join(directory, 'coverage.json'), Buffer.concat(chunks));
+    console.log(JSON.stringify({ probe: options, allowed: !error, coverageBytes: length,
+      budgetError: /maximum|evaluation limit|service call error/i.test(error?.message ?? '') }));
+    await probeEnv.cleanup();
+    return;
+  }
   console.log('test: BUG-017 max-eight rejects occupied/out-of-range/other-slot changes');
   for (const options of [
     { partyIndex: 1, slotIndex: 2 }, { partyIndex: 2 },
     { tamperOther: true }, { skipOldDelete: true },
     { tamperTarget: true }, { staleRevision: true },
+    ...(process.env.R1_LISTING === '1' ? [{ omitListing: true }, { forgedGeneration: true }] : []),
   ]) {
     console.log('test: BUG-017 reject', JSON.stringify(options));
     await assertFails(change(options));
@@ -1111,8 +1146,26 @@ async function verifyCharacterPlacement(testEnv, db, applicantDb) {
   }
   // Eight members: a dealer/support swap can repair the composition, but this
   // command changes only the character. Repositioning remains a leader command.
+  if (process.env.BUG024_RUNTIME === '1') {
+    const window = cycleWindow(cycleKey);
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'players', joinerPlayerId, 'raidStates', `${replacementId}_${raidId}`), {
+        playerId: joinerPlayerId, characterId: replacementId, raidId, ownershipRevision: 0,
+        guardSchemaVersion: 1, guardRecruitmentId: 'prior-certification-room',
+        guardRoomRevision: 1, guardCycleKey: cycleKey, guardSlotIndex: 0,
+        guardCycleStartedAt: Timestamp.fromDate(window.startedAt),
+        guardCycleEndsAt: Timestamp.fromDate(window.endsAt), guardCheckedAt: serverTimestamp(),
+      });
+    });
+  }
   console.log('test: BUG-017 max-eight in-place replacement');
   await assertSucceeds(change());
+  if (process.env.BUG024_RUNTIME === '1') {
+    if (Object.keys((await getDoc(newStateRef)).data()).some(key => key.startsWith('guard'))) {
+      throw new Error('Normal character replacement did not invalidate certification');
+    }
+    console.log('PASS: BUG-024 max-eight active character change replaces exact availability stub');
+  }
   console.log('PASS: BUG-017 max-eight in-place change with no automatic swap');
   await testEnv.withSecurityRulesDisabled(async (context) => {
     const admin = context.firestore();
@@ -1483,15 +1536,15 @@ async function completeActiveMemberTxn(
       ? doc(db, 'recruitments', recruitmentId, 'members', remainingIds[0])
       : null;
     const successor = successorRef ? (await tx.get(successorRef)).data() : null;
-    const groupRef = recruitment.groupId
+    const groupRef = recruitment.visibility === 'group' && recruitment.groupId
       ? doc(db, 'groups', recruitment.groupId) : null;
     const group = groupRef ? (await tx.get(groupRef)).data() : null;
-    const groupListingRef = recruitment.groupId
+    const groupListingRef = recruitment.visibility === 'group' && recruitment.groupId
       ? doc(db, 'groups', recruitment.groupId, 'raidListings', recruitmentId)
       : null;
     const nextRevision = recruitment.revision + 1;
     const eventId = `memberLeft_${recruitmentId}_${nextRevision}`;
-    tx.update(recruitmentRef, {
+    const recruitmentPatch = {
       ...(remainingIds.length === 0 ? {
         status: 'disbanded', manualRecruitmentEnabled: false,
         hasAvailableSlot: false,
@@ -1523,7 +1576,8 @@ async function completeActiveMemberTxn(
       lastCommandActorPlayerId: actorPlayerId,
       lastCommandAt: serverTimestamp(),
       revision: nextRevision, updatedAt: serverTimestamp(),
-    });
+    };
+    tx.update(recruitmentRef, recruitmentPatch);
     tx.delete(memberRef);
     if (successorRef) {
       tx.update(successorRef, {
@@ -1539,6 +1593,8 @@ async function completeActiveMemberTxn(
         updatedAt: serverTimestamp(),
       });
       tx.delete(groupListingRef);
+    } else if (groupListingRef && process.env.R1_LISTING === '1') {
+      tx.set(groupListingRef, { ...recruitment, ...recruitmentPatch });
     } else if (groupListingRef) {
       tx.update(groupListingRef, {
         memberCount: remainingIds.length,
@@ -1578,6 +1634,48 @@ async function main(rulesOverride = rules) {
       await verifyCharacterPlacement(
         testEnv, db, testEnv.authenticatedContext(joinerAuthUid).firestore(),
       );
+      return;
+    }
+    if (process.env.PARTY_RULES_CASE === 'r1-active-listing') {
+      if (process.env.R1_LISTING !== '1') throw new Error('R1 candidate required');
+      const applicantDb = testEnv.authenticatedContext(joinerAuthUid).firestore();
+      await testEnv.clearFirestore();
+      await seedBase(testEnv);
+      await seedJoiner(testEnv);
+      // Match the authoritative ownership fixture used by character-placement.
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const admin = context.firestore();
+        for (const character of (await getDocs(collection(admin, 'characters'))).docs) {
+          const data = character.data();
+          await setDoc(doc(admin, 'gameAccounts', data.gameAccountId), {
+            ownerPlayerId: data.ownerPlayerId, status: 'active',
+          });
+        }
+      });
+      await assertSucceeds(createPublicRecruitmentTxn(db));
+      await seedGroupLinkedRoom(testEnv, db, { includeJoinerGroupMember: true });
+      const listingRef = doc(db, 'groups', 'group-room-1', 'raidListings', recruitmentId);
+      const beforeListing = (await getDoc(listingRef)).data();
+      await assertSucceeds(applicationTxn(applicantDb, 'apply'));
+      if (!isDeepStrictEqual((await getDoc(listingRef)).data(), beforeListing)) {
+        throw new Error('Application counter exception unexpectedly changed listing');
+      }
+      console.log('PASS R1: group application counters require no listing write');
+      await assertSucceeds(approvePublicApplicationTxn(db));
+      await assertGroupJoinResult(applicantDb, 2);
+      console.log('PASS R1: group approval binds canonical listing');
+      await seedExpandedApprovedRoom(testEnv, 8);
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const admin = context.firestore();
+        const sourceRef = doc(admin, 'recruitments', recruitmentId);
+        await updateDoc(sourceRef, { approvalPolicy: { mode: 'directJoin' } });
+        await setDoc(doc(admin, 'groups', 'group-room-1', 'raidListings', recruitmentId),
+          (await getDoc(sourceRef)).data());
+      });
+      await assertSucceeds(kickApprovedMemberTxn(db));
+      await assertSucceeds(directRejoinAfterKickTxn(applicantDb));
+      await assertGroupJoinResult(applicantDb, 8);
+      console.log('PASS R1: max-eight removal and direct rejoin bind canonical listing');
       return;
     }
     await testEnv.clearFirestore();

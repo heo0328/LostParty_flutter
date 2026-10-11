@@ -1,6 +1,8 @@
+import '../../../recruitment_list/data/mappers/party_raid_listing_document.dart';
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../recruitment_list/data/mappers/raid_state_availability.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../recruitment_list/data/mappers/party_atomic_document_mapper.dart';
@@ -490,7 +492,7 @@ class FirestoreWeeklyRaidStatusCommandRepository
 
     DocumentReference<Map<String, dynamic>>? groupRef;
     int? groupCountAfter;
-    final groupId = aggregate.groupId;
+    final groupId = aggregate.visibility == 'group' ? aggregate.groupId : null;
     if (aggregate.memberCount == 1 && groupId != null) {
       groupRef = _firestore.collection('groups').doc(groupId);
       final group = await transaction.get(groupRef);
@@ -588,11 +590,15 @@ class FirestoreWeeklyRaidStatusCommandRepository
       if (aggregate.memberCount == 1) {
         transaction.delete(listingRef);
       } else {
-        transaction.update(listingRef, {
-          'memberCount': aggregate.memberCount - 1,
-          'sourceRevision': aggregate.revision + 1,
-          'updatedAt': now,
-        });
+        if (aggregate.visibility == 'group') {
+          transaction.set(
+            listingRef,
+            partyRaidListingDocument(
+              currentRecruitment: raw,
+              recruitmentPatch: recruitmentPatch,
+            ),
+          );
+        }
       }
     }
     if (groupRef case final ref?) {
@@ -1027,6 +1033,21 @@ class FirestoreWeeklyRaidStatusCommandRepository
     String? cycleKey,
   }) {
     if (data == null) return null;
+    if (isState && RaidStateAvailability.isStub(data)) {
+      final condition = PartyOwnershipRecordPolicy.classify(
+        ownership: ownership,
+        data: data,
+        playerId: playerId,
+        characterId: characterId,
+        raidId: raidId,
+        isRaidState: true,
+        availabilityOnly: true,
+      );
+      if (condition == GameAccountOwnershipCondition.unknown) {
+        throw const _WeeklyRaidStateContractException();
+      }
+      return null;
+    }
     final recordCycle = data['cycleKey'];
     if (recordCycle is! String || recordCycle.isEmpty) {
       throw const _WeeklyRaidStateContractException();

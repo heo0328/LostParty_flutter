@@ -1,3 +1,4 @@
+import '../mappers/party_raid_listing_document.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -104,14 +105,25 @@ class PartyAtomicCycleCommandAdapter implements PartyCycleCommandRepository {
             PartyCycleFailure.recruitmentClosed,
           );
         }
-        transaction.update(
-          ref,
-          PartyCycleWritePlan.recurrence(
-            continueTogether: command.continueTogether,
-            revision: command.expectedRecruitmentRevision,
-            serverTimestamp: FieldValue.serverTimestamp(),
-          ),
+        final patch = PartyCycleWritePlan.recurrence(
+          continueTogether: command.continueTogether,
+          revision: command.expectedRecruitmentRevision,
+          serverTimestamp: FieldValue.serverTimestamp(),
         );
+        transaction.update(ref, patch);
+        if (data['visibility'] == 'group') {
+          transaction.set(
+            _firestore
+                .collection('groups')
+                .doc(data['groupId'] as String)
+                .collection('raidListings')
+                .doc(command.recruitmentId),
+            partyRaidListingDocument(
+              currentRecruitment: data,
+              recruitmentPatch: patch,
+            ),
+          );
+        }
         return const PartyCycleResult.success();
       });
     } on FirebaseException catch (error) {

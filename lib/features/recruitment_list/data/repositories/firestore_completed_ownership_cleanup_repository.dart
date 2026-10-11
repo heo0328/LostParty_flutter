@@ -1,3 +1,4 @@
+import '../mappers/party_raid_listing_document.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../domain/entities/completed_ownership_cleanup.dart';
@@ -296,7 +297,10 @@ class FirestoreCompletedOwnershipCleanupRepository
     final patch = observation.patch(room, now);
     if (observation.kind == CompletedCleanupKind.disband) {
       final groupId = room['groupId'];
-      if (groupId is String && groupId.isNotEmpty) {
+      if (room['visibility'] == 'group' &&
+          room['status'] == 'active' &&
+          groupId is String &&
+          groupId.isNotEmpty) {
         final groupRef = firestore.collection('groups').doc(groupId);
         final group = (await tx.get(groupRef)).data();
         final count = group?['activeRecruitmentCount'];
@@ -329,13 +333,16 @@ class FirestoreCompletedOwnershipCleanupRepository
       });
     }
     if (room['visibility'] == 'group') {
-      tx.update(
+      tx.set(
         firestore
             .collection('groups')
             .doc(room['groupId'] as String)
             .collection('raidListings')
             .doc(observation.roomId),
-        observation.listingPatch(patch),
+        partyRaidListingDocument(
+          currentRecruitment: room,
+          recruitmentPatch: patch,
+        ),
       );
     }
     tx.set(

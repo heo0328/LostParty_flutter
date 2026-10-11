@@ -26,6 +26,33 @@ GroupMember _member({
 
 void main() {
   group('GroupMemberDisplayBuilder.fromMember', () {
+    test(
+      'rejects bad snapshot and fallback numbers while cleaning fallback text',
+      () {
+        for (final invalid in [double.nan, double.infinity, -1.0]) {
+          final display = GroupMemberDisplayBuilder.fromMember(
+            member: _member(
+              itemLevelSnapshot: invalid,
+              combatPowerSnapshot: invalid,
+            ),
+            characterData: {
+              'status': 'active',
+              'characterClassName': '  워\n로드 ',
+              'itemAvgLevel': invalid.toString(),
+              'combatPower': invalid,
+            },
+          );
+          expect(display.itemLevel, isNull);
+          expect(display.combatPower, isNull);
+          expect(display.className, '워 로드');
+        }
+        final valid = GroupMemberDisplayBuilder.fromMember(
+          member: _member(),
+          characterData: {'status': 'active', 'itemAvgLevel': '1,700.25'},
+        );
+        expect(valid.itemLevel, 1700.25);
+      },
+    );
     test('uses membership snapshot when present', () {
       final display = GroupMemberDisplayBuilder.fromMember(
         member: _member(
@@ -40,24 +67,27 @@ void main() {
       expect(display.combatPower, 2500);
     });
 
-    test('falls back to character document when snapshot combat power is null', () {
-      final display = GroupMemberDisplayBuilder.fromMember(
-        member: _member(
-          displayClassNameSnapshot: '워로',
-          itemLevelSnapshot: 1700,
-        ),
-        characterData: const {
-          'status': 'active',
-          'characterClassName': 'ignored',
-          'itemAvgLevel': 1600,
-          'combatPower': 2400,
-        },
-      );
+    test(
+      'falls back to character document when snapshot combat power is null',
+      () {
+        final display = GroupMemberDisplayBuilder.fromMember(
+          member: _member(
+            displayClassNameSnapshot: '워로',
+            itemLevelSnapshot: 1700,
+          ),
+          characterData: const {
+            'status': 'active',
+            'characterClassName': 'ignored',
+            'itemAvgLevel': 1600,
+            'combatPower': 2400,
+          },
+        );
 
-      expect(display.className, '워로');
-      expect(display.itemLevel, 1700);
-      expect(display.combatPower, 2400);
-    });
+        expect(display.className, '워로');
+        expect(display.itemLevel, 1700);
+        expect(display.combatPower, 2400);
+      },
+    );
 
     test('uses legacy character document when class snapshot is missing', () {
       final display = GroupMemberDisplayBuilder.fromMember(

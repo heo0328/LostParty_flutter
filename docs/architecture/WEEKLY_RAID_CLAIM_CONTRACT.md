@@ -14,6 +14,20 @@
 - 파티 밖 수동 완료는 `status: completed`, `source: manual`인 `raidState`를 사용한다. 활성 파티에서 수동 완료하면 모집 탈퇴·필요한 승계 또는 단독 해산과 같은 Transaction에서 기존 state를 `completed`로 전환한다.
 - `weeklyRaidClaims`와 `activeRaidAssignments`는 전환 전 데이터의 호환 원본이다. 신규 파티·수동 명령에서 함께 복제 쓰지 않는다.
 
+#### BUG-024 인증 확장 (2026-10-07)
+
+주차 전환 전 단건 인증은 기존 state에 여덟 `guard*` 필드만 추가하거나, state가 없으면
+신원·소유권 차수와 인증 필드만 있는 정확한 availability-only stub을 저장한다.
+stub에는 `status/source/cycleKey/revision`이 없으며 참가·완료 원장으로 해석하지 않는다.
+현재 소유권 검증은 별도로 유지한다. 손상 자료를 stub으로 간주하지 않는다.
+정확한 필드와 전환 불변식은 [Spark C 계약](RECURRING_CYCLE_SPARK_ALTERNATIVE_DESIGN.md)을 따른다.
+
+기존 개인 완료·참가 명령은 원래 권한·점유 검사를 통과한 경우에만 stub을 정상 state로 대체하거나
+인증 여덟 필드를 전부 제거한다. 일부 표식 제거·변조는 금지한다. 현재 주차 equality query는
+cycleKey 없는 stub을 반환하지 않는다. 관찰 토큰에는 인증 필드도 포함해 확인 이후 변경을 감지한다.
+legacy Claim 신규 생성은 현재 소유권 차수를 검증한다. 차수 누락은 실제 현재 차수0일 때만 허용하며,
+이전 차수 자료의 호환 읽기와 해제 계약은 유지한다.
+
 ### 0.2 화면 판정과 과거 데이터 호환
 
 동일 Character·raidId의 **현재 주차** 상태는 Claim 객체로 억지 변환하지 않고 `none | active | completed | legacyCompleted | legacyActive | inconsistent`인 별도 Projection으로 판정한다. `raidState` 문서 ID에는 주차가 없으므로 반드시 문서의 `cycleKey`가 현재 주차인지 확인하며, 이전 주차 state는 현재 체크·참가 제한에 사용하지 않는다.
@@ -36,7 +50,7 @@
 - **내 계정 수동 완료**는 자기 Character 한 명만 대상으로 한다. 활성 참가 중이면 영향 안내 뒤 본인 membership 제거, 필요 시 파티장 승계 또는 단독 해산, 본인 `raidState` 완료 전환을 하나의 핵심 Transaction에서 처리한다.
 - **모집 상세 파티 전체 완료**는 파티장·공대장이 현재 Aggregate의 모든 `raidState`를 `completed`로 바꾸는 기존 원자 lifecycle 명령이다. 내 계정 수동 완료의 참가 차단 조건을 이 명령에 적용하지 않는다.
 - 개인 체크 해제는 출처와 관계없이 자기 완료 state와 호환 완료 Claim만 제거하고 모집의 공동 완료 Snapshot은 바꾸지 않는 기존 UX를 유지한다. 둘이 함께 존재하면 한 번의 사용자 동작으로 검증된 두 완료 근거를 함께 정리한다. active state·assignment·membership이 함께 있으면 이를 보존한다. 개인 해제는 과거 파티를 복원하지 않으며 공동 완료 취소 명령도 발생시키지 않는다.
-- 반복방의 다음 주차 전환은 개인 해제로 이전 완료 state가 없어도 현재 membership을 기준으로 새 주차 `active` state를 생성할 수 있어야 한다. 문서가 있으면 같은 반복방의 직전 주차 state일 때만 갱신한다. 새 주차 수동 완료나 다른 모집의 active state가 이미 있으면 덮어쓰지 않고 전환 전체를 거절한다.
+- 반복방의 다음 주차 전환은 현재 membership을 기준으로 대상별 Rules 인증 후 전원 `active`를 원자 확정한다. 기록 없음은 인증 stub을 거치며, 유효한 이전 주차 완료는 다른 방·역할·난이도 기록도 현재 슬롯으로 전환할 수 있다. 같은 방의 유효한 active 전환도 유지한다. 새 주차 완료·다른 방의 활성 점유·소유권 불일치·미확인 기록은 덮어쓰지 않고 핵심 전환 전체를 거절한다. 준비 변경은 기존 완료 기록과 이벤트를 보존한다. 정상 전환에서 통합 state는 갱신되며 과거 완료 명단은 완료 당시 이벤트로 보존한다.
 - 정상적인 현재 상태와 과거 데이터 불일치를 같은 권한 오류로 표시하지 않는다.
 
 ### 0.4 원자성·후처리 경계

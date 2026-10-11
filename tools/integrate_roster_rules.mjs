@@ -9,6 +9,9 @@ import { simplifyGroupDisplay } from './rules_group_display_candidate.mjs';
 import { stripRulesComments } from './rules_strip_comments.mjs';
 import { compactExecutableRules } from './rules_executable_compact.mjs';
 import { completionRoleCompatibility } from './rules_completion_role.mjs';
+import { nextWeekPreparation } from './rules_next_week_preparation.mjs';
+import { availabilityRuntime } from './rules_availability_runtime.mjs';
+import { indentRules } from './rules_indent.mjs';
 const target = new URL('../firestore.rules', import.meta.url);
 const baseline = integratedBaseline();
 const repaired = preserveExistingSlots(baseline);
@@ -17,13 +20,34 @@ const readable = stripRulesComments(scopeFunctions(simplifyGroupDisplay(targetSc
 assert.ok(readable.includes('function deGenerationUpdate('));
 assert.ok(readable.includes('function deLastCompletedDisband('));
 assert.ok(readable.includes('function deReplacePriorState('));
-const compatible = completionRoleCompatibility(readable);
-const compact = compactExecutableRules(compatible);
-const result = compact.source;
+const compatible = availabilityRuntime(nextWeekPreparation(completionRoleCompatibility(readable)));
+const candidate = process.argv.includes('--listing-candidate');
+const localized = !candidate && !process.argv.includes('--legacy-baseline');
+assert.ok(!(candidate && localized), 'Choose one integration mode');
+const localization = localized ? (await import('./rules_localization_pipeline.mjs')).localizationPipeline(compatible) : null;
+const reviewed = localization?.source ?? (candidate ? (await import('./rules_listing_candidate.mjs')).canonicalListings(compatible) : compatible);
+const compact = compactExecutableRules(reviewed);
+const result = localized ? indentRules(compact.source) : compact.source;
+if (localized) {
+  fs.mkdirSync('coverage/rules-localization', {recursive:true});
+  fs.writeFileSync('coverage/rules-localization/readable.rules', reviewed);
+  fs.writeFileSync('coverage/rules-localization/candidate.rules', result);
+  fs.writeFileSync('coverage/rules-localization/manifest.json', JSON.stringify(localization.stages,null,2));
+  if (process.argv.includes('--candidate-only')) {
+    console.log(JSON.stringify(localization.stages));process.exit(0);
+  }
+}
+if (candidate) {
+  fs.mkdirSync('coverage/rules-listing', {recursive: true});
+  fs.writeFileSync('coverage/rules-listing/candidate.rules', result);
+  fs.writeFileSync('coverage/rules-listing/readable.rules', reviewed);
+  console.log(JSON.stringify({candidate: true, bytes: Buffer.byteLength(result), sha256: createHash('sha256').update(result).digest('hex')}));
+  process.exit(0);
+}
 if (process.argv.includes('--review')) {
   const directory = new URL('../coverage/rules-executable/review/', import.meta.url);
   fs.mkdirSync(directory, { recursive: true });
-  fs.writeFileSync(new URL('readable.rules', directory), compatible);
+  fs.writeFileSync(new URL('readable.rules', directory), reviewed);
   fs.writeFileSync(new URL('symbols.json', directory), JSON.stringify({
     functions: compact.functions, locals: compact.locals,
     renamedBindings: compact.renamedBindings,

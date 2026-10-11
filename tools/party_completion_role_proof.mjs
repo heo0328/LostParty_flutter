@@ -3,16 +3,18 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { initializeTestEnvironment } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField } from 'firebase/firestore';
-import { authUid, recruitmentId, raidId, seedGroupLinkedRoom } from './party_group_cutover_rules_test.mjs';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { authUid, recruitmentId, raidId, seedGroupLinkedRoom, cycleKey, cycleWindow } from './party_group_cutover_rules_test.mjs';
 
 process.env.ROSTER_TRACKED_RULES = '1';
-process.env.ROSTER_COMPLEXITY_RULES_FILE = 'firestore.rules';
+process.env.ROSTER_COMPLEXITY_RULES_FILE = process.env.COMPLETION_RULES_FILE || 'firestore.rules';
 const { seedRoom, lifecycle, inspectAll } = await import('./roster_ownership_rules_proof.mjs');
 const baseline = execFileSync('git', ['show', '223e852:firestore.rules'], { encoding: 'utf8' });
-const candidate = fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8');
+const candidate = fs.readFileSync(process.env.COMPLETION_RULES_FILE || new URL('../firestore.rules', import.meta.url), 'utf8');
 const results = [];
+const listingCandidate = process.env.R1_LISTING === '1';
 for (const [version, rules] of [['baseline', baseline], ['candidate', candidate]]) {
+  if (listingCandidate) process.env.R1_LISTING = version === 'candidate' ? '1' : '0';
   const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutover',
     firestore: { host: '127.0.0.1', port: 8080, rules } });
   const db = env.authenticatedContext(authUid).firestore();
@@ -49,17 +51,33 @@ for (const [version, rules] of [['baseline', baseline], ['candidate', candidate]
         if (invalid === 'missing-document') await deleteDoc(ref);
       }
     });
+    if (type === 'advanceCycle' && version === 'candidate' && process.env.BUG024_RUNTIME === '1') {
+      const room = (await getDoc(doc(db, 'recruitments', recruitmentId))).data();
+      const window = cycleWindow(cycleKey);
+      for (const [index, slot] of room.partySlots.entries()) await setDoc(doc(db, 'players', slot.playerId, 'raidStates', `${slot.characterId}_${raidId}`), {
+        playerId: slot.playerId, characterId: slot.characterId, raidId, ownershipRevision: slot.ownershipRevision ?? 0,
+        guardSchemaVersion: 1, guardRecruitmentId: recruitmentId, guardRoomRevision: room.revision,
+        guardCycleKey: cycleKey, guardSlotIndex: index, guardCheckedAt: serverTimestamp(),
+        guardCycleStartedAt: Timestamp.fromDate(window.startedAt), guardCycleEndsAt: Timestamp.fromDate(window.endsAt),
+      }, { merge: true });
+    }
     const before = await inspectAll(env);
     let error;
     try { await lifecycle(db, type, { completionRole: version === 'candidate', tamper }); }
     catch (caught) { error = caught; }
     const after = await inspectAll(env);
     const allowed = !error;
+    if (!allowed && version === 'candidate') {
+      assert.equal(error.code, 'permission-denied', `${label}: unexpected failure`);
+      assert.doesNotMatch(error.message, /maximum|evaluation limit|service call error|1000 expressions/i,
+        `${label}: budget exhaustion is not a policy denial`);
+    }
     if (!allowed) assert.deepEqual(after, before, `${label}: rejected write changed data`);
     assert.equal(allowed, expected, `${version}/${label}: ${error?.message ?? 'unexpected allow'}`);
     if (allowed) {
       assert.equal(after.room.revision, before.room.revision + 1);
-      assert.equal(after.listing.sourceRevision, after.room.revision);
+      if (listingCandidate && version === 'candidate') assert.deepEqual(after.listing, after.room);
+      else assert.equal(after.listing.sourceRevision, after.room.revision);
       assert.ok(after.states.every((state, index) => state.role === after.room.partySlots[index].role));
       assert.ok(after.states.every(state => state.status === (type === 'complete' ? 'completed' : 'active')));
     }
