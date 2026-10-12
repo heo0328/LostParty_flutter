@@ -39,6 +39,7 @@ void main() {
                   rules: rules,
                   playerId: 'leader',
                   newCharacterId: sameCharacter ? 'original' : 'replacement',
+                  previousRaidStateRevision: sameCharacter ? 3 : null,
                   newClassKey: nextRole == PartyRole.support
                       ? '바드:지원'
                       : '바드:공격',
@@ -48,12 +49,8 @@ void main() {
                   membershipPatch: {'role': nextRole.name},
                   serverTimestamp: timestamp,
                 );
-            if (sameCharacter) {
-              // Runtime currently rejects same-character role-only mutation.
-              expect(build, throwsStateError);
-              return;
-            }
             final plan = build();
+            expect(plan.nextRaidState['revision'], sameCharacter ? 4 : 1);
             expect(plan.nextRaidState['role'], nextRole.name);
             expect(
               (plan.recruitmentPatch['partySlots'] as List).single['role'],
@@ -150,6 +147,51 @@ void main() {
       ),
       throwsStateError,
     );
+  });
+
+  test('같은 캐릭터의 준비 역할 변경은 참가 경로를 보존하고 빈자리로 배치한다', () {
+    final plan = PartyAtomicNextWeekCharacterChangeWritePlan(
+      aggregate: _aggregate(cycleStatus: PartyRaidStateStatus.completed),
+      rules: rules,
+      playerId: 'member',
+      newCharacterId: 'old-character',
+      newClassKey: '버서커',
+      newRole: PartyRole.support,
+      raidId: 'raid-1',
+      difficultyId: 'hard',
+      ownershipRevision: 5,
+      membershipPatch: {'characterId': 'old-character', 'role': 'support'},
+      serverTimestamp: timestamp,
+    );
+    expect(plan.membershipPatch['partyIndex'], 1);
+    expect(plan.membershipPatch['slotIndex'], 1);
+    expect(
+      (plan.recruitmentPatch['raidStateTargets'] as List)[1]['stateId'],
+      'old-character_raid-1',
+    );
+    expect(plan.event['previousCharacterId'], plan.event['nextCharacterId']);
+  });
+
+  test('현재 역할 그대로 또는 revision 없는 동일 캐릭터 갱신은 거절한다', () {
+    for (final role in PartyRole.values) {
+      expect(
+        () => PartyAtomicCharacterChangeWritePlan(
+          aggregate: _aggregate(),
+          rules: rules,
+          playerId: 'member',
+          newCharacterId: 'old-character',
+          newClassKey: '버서커',
+          newRole: role,
+          raidId: 'raid-1',
+          difficultyId: 'hard',
+          ownershipRevision: 5,
+          membershipPatch: {},
+          serverTimestamp: timestamp,
+          previousRaidStateRevision: role == PartyRole.dealer ? 2 : null,
+        ),
+        throwsStateError,
+      );
+    }
   });
 
   test('빈자리 이동은 한 명, 점유 자리 교환은 두 명만 갱신한다', () {

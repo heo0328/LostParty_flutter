@@ -69,6 +69,7 @@ async function snapshot() {
   assert.ok(result); return result;
 }
 async function check(name, work) {
+  if (process.env.PERSONAL_CASE_FILTER && !new RegExp(process.env.PERSONAL_CASE_FILTER).test(name)) return;
   if (dispatchOnly && !name.startsWith('dispatch ')) return;
   if (focused && !['normal leader completion preserves others', 'missing event rolls back completion'].includes(name)) return;
   beforeOperation = undefined;

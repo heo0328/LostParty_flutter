@@ -15,6 +15,8 @@ import {sharedAdvanceValidation} from './rules_advance_shared.mjs';
 import {deduplicatePreparation} from './rules_prep_dedup.mjs';
 import {restructureProduction} from './rules_production_restructure.mjs';
 import {groupDisplayContract} from './rules_group_display_contract.mjs';
+import {sameCharacterRole} from './rules_same_character_role.mjs';
+import {stateUpdateDispatch} from './rules_state_update_dispatch.mjs';
 
 export function localizationPipeline(input){
   const stages=[];
@@ -37,5 +39,7 @@ export function localizationPipeline(input){
   source=measure('deduplicate-preparation',deduplicatePreparation(source));
   source=measure('production-common-gates',restructureProduction(source));
   source=measure('group-display-contract',groupDisplayContract(source));
+  source=measure('same-character-role',sameCharacterRole(source));
+  source=measure('state-update-dispatch',stateUpdateDispatch(source));
   return {source,stages};
 }

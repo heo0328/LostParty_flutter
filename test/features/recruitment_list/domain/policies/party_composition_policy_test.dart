@@ -348,6 +348,39 @@ void main() {
   });
 
   group('PartyCompositionPolicy 캐릭터 변경 배치 계획', () {
+    test('서포터가 있는 1파티에서 일반 멤버는 2파티 빈자리로 이동하고 리더는 고정한다', () {
+      final members = [
+        _occupied('leader', '바드', partyIndex: 0, slotIndex: 0, isLeader: true),
+        _occupied('member', '환수사', partyIndex: 0, slotIndex: 1),
+        _occupied(
+          'support',
+          '도화가',
+          role: PartyRole.support,
+          partyIndex: 0,
+          slotIndex: 2,
+        ),
+      ];
+      final memberPlan = _eightPlayerPolicy.planReplacement(
+        replaceMemberId: 'member',
+        className: '바드',
+        role: PartyRole.support,
+        existing: members,
+      );
+      expect(memberPlan.disposition, PartyReplacementDisposition.moveToEmpty);
+      expect(
+        memberPlan.destination,
+        const PartySlot(partyIndex: 1, slotIndex: 0),
+      );
+      final leaderPlan = _eightPlayerPolicy.planReplacement(
+        replaceMemberId: 'leader',
+        className: '바드',
+        role: PartyRole.support,
+        existing: members,
+      );
+      expect(leaderPlan.canChange, isFalse);
+      expect(leaderPlan.failure, PartyCompositionFailure.supportSlotsFull);
+    });
+
     test('현재 파티가 중복이면 다른 파티의 첫 유효 빈자리로 이동한다', () {
       final plan = _eightPlayerPolicy.planReplacement(
         replaceMemberId: 'member',
@@ -424,32 +457,14 @@ void main() {
 }
 
 List<OccupiedPartyMember> _fullRaidMembers() => [
-  _occupied(
-    'leader',
-    '발키리',
-    partyIndex: 0,
-    slotIndex: 0,
-    isLeader: true,
-  ),
+  _occupied('leader', '발키리', partyIndex: 0, slotIndex: 0, isLeader: true),
   _occupied('member', '소서리스', partyIndex: 0, slotIndex: 1),
   _occupied('d2', '아르카나', partyIndex: 0, slotIndex: 2),
-  _occupied(
-    's1',
-    '바드',
-    role: PartyRole.support,
-    partyIndex: 0,
-    slotIndex: 3,
-  ),
+  _occupied('s1', '바드', role: PartyRole.support, partyIndex: 0, slotIndex: 3),
   _occupied('d4', '브레이커', partyIndex: 1, slotIndex: 0),
   _occupied('d5', '디스트로이어', partyIndex: 1, slotIndex: 1),
   _occupied('d6', '서머너', partyIndex: 1, slotIndex: 2),
-  _occupied(
-    's2',
-    '도화가',
-    role: PartyRole.support,
-    partyIndex: 1,
-    slotIndex: 3,
-  ),
+  _occupied('s2', '도화가', role: PartyRole.support, partyIndex: 1, slotIndex: 3),
 ];
 
 final _fourPlayerPolicy = PartyCompositionPolicy(

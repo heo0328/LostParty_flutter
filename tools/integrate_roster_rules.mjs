@@ -12,6 +12,7 @@ import { completionRoleCompatibility } from './rules_completion_role.mjs';
 import { nextWeekPreparation } from './rules_next_week_preparation.mjs';
 import { availabilityRuntime } from './rules_availability_runtime.mjs';
 import { indentRules } from './rules_indent.mjs';
+import { readableExecutableRules } from './rules_readable_executable.mjs';
 const target = new URL('../firestore.rules', import.meta.url);
 const baseline = integratedBaseline();
 const repaired = preserveExistingSlots(baseline);
@@ -27,12 +28,19 @@ assert.ok(!(candidate && localized), 'Choose one integration mode');
 const localization = localized ? (await import('./rules_localization_pipeline.mjs')).localizationPipeline(compatible) : null;
 const reviewed = localization?.source ?? (candidate ? (await import('./rules_listing_candidate.mjs')).canonicalListings(compatible) : compatible);
 const compact = compactExecutableRules(reviewed);
-const result = localized ? indentRules(compact.source) : compact.source;
+const readableExecutable = readableExecutableRules(reviewed);
+const result = indentRules(readableExecutable.source);
 if (localized) {
   fs.mkdirSync('coverage/rules-localization', {recursive:true});
   fs.writeFileSync('coverage/rules-localization/readable.rules', reviewed);
   fs.writeFileSync('coverage/rules-localization/candidate.rules', result);
   fs.writeFileSync('coverage/rules-localization/manifest.json', JSON.stringify(localization.stages,null,2));
+  fs.writeFileSync('coverage/rules-localization/deployment.json', JSON.stringify({
+    format: 'meaningful-identifiers', bytes: Buffer.byteLength(result),
+    sha256: createHash('sha256').update(result).digest('hex'),
+    functions: readableExecutable.functions,
+    historicalCompactSha256: createHash('sha256').update(compact.source).digest('hex'),
+  }, null, 2));
   if (process.argv.includes('--candidate-only')) {
     console.log(JSON.stringify(localization.stages));process.exit(0);
   }
@@ -47,10 +55,11 @@ if (candidate) {
 if (process.argv.includes('--review')) {
   const directory = new URL('../coverage/rules-executable/review/', import.meta.url);
   fs.mkdirSync(directory, { recursive: true });
-  fs.writeFileSync(new URL('readable.rules', directory), reviewed);
+  fs.writeFileSync(new URL('readable.rules', directory), result);
   fs.writeFileSync(new URL('symbols.json', directory), JSON.stringify({
-    functions: compact.functions, locals: compact.locals,
-    renamedBindings: compact.renamedBindings,
+    format: 'meaningful-identifiers', functions: readableExecutable.functions,
+    renamedBindings: 0,
+    historicalCompact: {functions: compact.functions, locals: compact.locals},
   }, null, 2));
 }
 assert.ok(Buffer.byteLength(result) < 256 * 1024, 'Rules source size limit');

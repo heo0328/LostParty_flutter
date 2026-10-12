@@ -1259,6 +1259,8 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
           partyRules: summary.partyRules,
           occupiedMembers: occupiedMembers,
           replacingMemberId: widget.playerId,
+          replacingCharacterId: me.characterId,
+          recruitmentId: summary.id,
           allowPositionChanges: summary.supportsPositionChanges,
         ),
       );
@@ -1287,7 +1289,7 @@ class _PartyReadDetailPageState extends State<PartyReadDetailPage> {
       for (final option in candidate.roles.where(
         (option) => option.canSelect,
       )) {
-        if (me.characterId == serverId) continue;
+        if (me.characterId == serverId && me.role == option.role) continue;
         eligible.add((candidate: candidate, option: option));
       }
     }

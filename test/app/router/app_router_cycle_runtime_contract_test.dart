@@ -7,7 +7,8 @@ void main() {
     final source = File('lib/app/router/app_router.dart').readAsStringSync();
 
     expect(source, contains('refreshListenable: cycleRuntime'));
-    expect(source, contains('cycleKey: cycleRuntime.current.key'));
+    expect(source, contains('cycleKey: cycle.key'));
+    expect('=> CycleBoundPage('.allMatches(source).length, 3);
     expect(source, contains('currentCycleKey: cycleRuntime.refreshAndGetKey'));
     expect(
       source,

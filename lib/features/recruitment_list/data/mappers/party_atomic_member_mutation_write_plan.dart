@@ -10,6 +10,7 @@ class PartyAtomicCharacterChangeWritePlan {
     required RecruitmentPartyRules rules,
     required String playerId,
     required String newCharacterId,
+    int? previousRaidStateRevision,
     required String newClassKey,
     required PartyRole newRole,
     required String raidId,
@@ -22,6 +23,7 @@ class PartyAtomicCharacterChangeWritePlan {
          rules: rules,
          playerId: playerId,
          newCharacterId: newCharacterId,
+         previousRaidStateRevision: previousRaidStateRevision,
          newClassKey: newClassKey,
          newRole: newRole,
          raidId: raidId,
@@ -45,6 +47,7 @@ class PartyAtomicCharacterChangeWritePlan {
     required RecruitmentPartyRules rules,
     required String playerId,
     required String newCharacterId,
+    int? previousRaidStateRevision,
     required String newClassKey,
     required PartyRole newRole,
     required String raidId,
@@ -115,8 +118,12 @@ class PartyAtomicCharacterChangeWritePlan {
       characterId: newCharacterId,
       raidId: raidId,
     );
-    if (previousRaidStateId == nextRaidStateId) {
-      throw StateError('현재 캐릭터와 같은 캐릭터로 변경할 수 없습니다.');
+    if (previousRaidStateId == nextRaidStateId &&
+        (old.role == newRole ||
+            (!nextWeekPrep &&
+                (previousRaidStateRevision == null ||
+                    previousRaidStateRevision < 1)))) {
+      throw StateError('역할 변경에는 다른 역할과 현재 참가 기록 revision이 필요합니다.');
     }
     final eventId = 'characterChanged_${aggregate.recruitmentId}_$nextRevision';
     return _CharacterChangeValues(
@@ -171,7 +178,9 @@ class PartyAtomicCharacterChangeWritePlan {
               'status': 'active',
               'source': 'party',
               'recruitmentId': aggregate.recruitmentId,
-              'revision': 1,
+              'revision': previousRaidStateId == nextRaidStateId
+                  ? previousRaidStateRevision! + 1
+                  : 1,
               'updatedAt': serverTimestamp,
             }),
       event: {

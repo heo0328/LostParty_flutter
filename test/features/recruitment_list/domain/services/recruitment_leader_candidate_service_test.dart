@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_snapshot.dart';
@@ -20,8 +22,126 @@ import 'package:lost_party/features/recruitment_list/domain/repositories/active_
 import 'package:lost_party/features/recruitment_list/domain/policies/party_composition_policy.dart';
 import 'package:lost_party/features/recruitment_list/domain/services/candidate_participation_status.dart';
 import 'package:lost_party/features/recruitment_list/domain/services/recruitment_leader_candidate_service.dart';
+import 'package:lost_party/features/recruitment_list/domain/services/recruitment_runtime.dart';
+import 'package:lost_party/features/recruitment_list/domain/policies/raid_cycle_schedule.dart';
+import 'package:lost_party/features/recruitment_list/domain/policies/weekly_raid_reset_policy.dart';
 
 void main() {
+  test('역할 변경 후보는 같은 방의 본인 active만 점유 예외로 처리한다', () async {
+    for (final kind in [
+      WeeklyRaidStatusKind.active,
+      WeeklyRaidStatusKind.completed,
+      WeeklyRaidStatusKind.legacyActive,
+      WeeklyRaidStatusKind.inconsistent,
+    ]) {
+      for (final room in ['current-room', 'other-room']) {
+        final service = RecruitmentLeaderCandidateService(
+          accountRepository: _AccountRepository(),
+          weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+          session: FakeUserSession('applicant'),
+          clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 23)),
+          assignmentRepository: InMemoryActiveRaidAssignmentRepository(),
+          assignmentLookup: const _BlockingAssignmentLookup(),
+          recruitmentRepository: InMemoryRecruitmentStateRepository(),
+          weeklyRaidStatusRepository: _StatusRepository(
+            kind,
+            recruitmentId: room,
+          ),
+          claimPlayerId: 'applicant',
+        );
+        final result = await service.load(
+          RecruitmentLeaderCandidateQuery(
+            raidId: 'serca',
+            difficultyId: 'normal',
+            minItemLevel: 1700,
+            startAt: DateTime.utc(2026, 8, 23),
+            maxPlayHours: 3,
+            replacingMemberId: 'applicant',
+            replacingCharacterId: 'AbCdEfGhIjKlMnOpQrSt',
+            recruitmentId: 'current-room',
+          ),
+        );
+        expect(
+          result.first.canSelect,
+          kind == WeeklyRaidStatusKind.active && room == 'current-room',
+          reason: '$kind/$room',
+        );
+      }
+    }
+  });
+
+  test('후보 조회는 최대 4개 동시 실행하며 순서와 실패를 보존한다', () async {
+    for (final fail in [false, true]) {
+      final accounts = _ConcurrentAccountRepository(fail: fail);
+      final service = RecruitmentLeaderCandidateService(
+        accountRepository: accounts,
+        weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+        session: FakeUserSession('applicant'),
+        clock: FakeRecruitmentClock(DateTime.utc(2026, 8, 23)),
+        assignmentRepository: InMemoryActiveRaidAssignmentRepository(),
+        recruitmentRepository: InMemoryRecruitmentStateRepository(),
+      );
+      final pending = service.load(_query());
+      final verification = fail
+          ? expectLater(pending, throwsStateError)
+          : expectLater(
+              pending.then(
+                (items) => items.map((item) => item.localCharacterId).toList(),
+              ),
+              completion(List.generate(8, (index) => index + 1)),
+            );
+      try {
+        await accounts.firstBatch.future.timeout(const Duration(seconds: 2));
+        expect(accounts.started, 4);
+      } finally {
+        accounts.release.complete();
+      }
+      await verification;
+      expect(accounts.maximumActive, 4);
+      expect(accounts.started, fail ? 4 : 8);
+    }
+  });
+
+  test('같은 후보 서비스가 주차 경계 이후 새 주차의 완료 제한을 읽는다', () async {
+    for (final scenario in [
+      (
+        schedule: const RaidCycleSchedule(
+          resetWeekday: DateTime.wednesday,
+          resetHour: 6,
+        ),
+        boundary: DateTime.utc(2026, 10, 13, 21),
+      ),
+      (
+        schedule: const RaidCycleSchedule(
+          resetWeekday: DateTime.sunday,
+          resetHour: 15,
+        ),
+        boundary: DateTime.utc(2026, 10, 11, 6),
+      ),
+    ]) {
+      final policy = WeeklyRaidResetPolicy(schedule: scenario.schedule);
+      var now = scenario.boundary.subtract(const Duration(seconds: 1));
+      final oldKey = policy.weekFor(now).key;
+      final newKey = policy.weekFor(scenario.boundary).key;
+      final statuses = _CycleStatusRepository(newKey);
+      final service = RecruitmentLeaderCandidateService(
+        accountRepository: _AccountRepository(),
+        weeklyClearRepository: InMemoryWeeklyRaidClearRepository(),
+        session: FakeUserSession('local-user'),
+        clock: SystemRecruitmentClock(now: () => now),
+        resetPolicy: policy,
+        assignmentRepository: InMemoryActiveRaidAssignmentRepository(),
+        recruitmentRepository: InMemoryRecruitmentStateRepository(),
+        weeklyRaidStatusRepository: statuses,
+        claimPlayerId: 'local-user',
+      );
+      expect((await service.load(_query())).first.canSelect, isTrue);
+      now = scenario.boundary;
+      expect((await service.load(_query())).first.canSelect, isFalse);
+      expect(statuses.requestedCycles, [oldKey, newKey]);
+    }
+  });
+
   test('본계정과 부계정의 표시 캐릭터만 역할 세팅과 함께 제공한다', () async {
     final service = RecruitmentLeaderCandidateService(
       accountRepository: _AccountRepository(),
@@ -480,9 +600,10 @@ class _ClaimRepository implements WeeklyRaidClaimRepository {
 }
 
 class _StatusRepository implements WeeklyRaidStatusRepository {
-  const _StatusRepository(this.kind);
+  const _StatusRepository(this.kind, {this.recruitmentId});
 
   final WeeklyRaidStatusKind kind;
+  final String? recruitmentId;
 
   @override
   Stream<List<WeeklyRaidStatusProjection>> watchCurrentCycleStatuses({
@@ -495,8 +616,34 @@ class _StatusRepository implements WeeklyRaidStatusRepository {
       raidId: 'serca',
       cycleKey: cycleKey,
       kind: kind,
+      recruitmentId: recruitmentId,
     ),
   ]);
+}
+
+class _CycleStatusRepository implements WeeklyRaidStatusRepository {
+  _CycleStatusRepository(this.completedCycle);
+
+  final String completedCycle;
+  final requestedCycles = <String>[];
+
+  @override
+  Stream<List<WeeklyRaidStatusProjection>> watchCurrentCycleStatuses({
+    required String playerId,
+    required String cycleKey,
+  }) {
+    requestedCycles.add(cycleKey);
+    return Stream.value([
+      if (cycleKey == completedCycle)
+        WeeklyRaidStatusProjection(
+          playerId: playerId,
+          characterId: 'AbCdEfGhIjKlMnOpQrSt',
+          raidId: 'serca',
+          cycleKey: cycleKey,
+          kind: WeeklyRaidStatusKind.completed,
+        ),
+    ]);
+  }
 }
 
 RecruitmentLeaderCandidateQuery _query({
@@ -519,6 +666,59 @@ RecruitmentLeaderCandidateQuery _query({
   occupiedMembers: occupiedMembers,
   replacingMemberId: replacingMemberId,
 );
+
+class _ConcurrentAccountRepository extends _AccountRepository {
+  _ConcurrentAccountRepository({required this.fail});
+  final bool fail;
+  final firstBatch = Completer<void>();
+  final release = Completer<void>();
+  int started = 0;
+  int active = 0;
+  int maximumActive = 0;
+
+  @override
+  Future<List<LocalGameAccount>> loadAccounts() async => [
+    LocalGameAccount(
+      id: 1,
+      label: '동시 조회',
+      isMain: true,
+      lookupCharacterName: '캐릭터1',
+      representativeCharacterId: 1,
+      displayLimit: 8,
+      characters: List.generate(
+        8,
+        (index) => LocalAccountCharacter(
+          id: index + 1,
+          serverName: '루페온',
+          characterName: '캐릭터${index + 1}',
+          characterLevel: 70,
+          characterClassName: '바드',
+          itemLevel: 1750,
+          combatPower: 300000,
+          isVisible: true,
+          displayOrder: index,
+        ),
+      ),
+    ),
+  ];
+
+  @override
+  Future<List<CharacterBuildSnapshot>> loadCharacterBuildSnapshots(
+    int characterId,
+  ) async {
+    started++;
+    active++;
+    if (active > maximumActive) maximumActive = active;
+    if (started == 4) firstBatch.complete();
+    try {
+      await release.future;
+      if (fail && characterId == 1) throw StateError('조회 실패');
+      return await super.loadCharacterBuildSnapshots(characterId);
+    } finally {
+      active--;
+    }
+  }
+}
 
 class _AccountRepository implements AccountRepository {
   _AccountRepository({this.includeSubBuild = true});

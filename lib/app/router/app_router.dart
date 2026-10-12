@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'cycle_bound_page.dart';
 import '../../features/recruitment_list/data/repositories/firestore_completed_ownership_cleanup_repository.dart';
 
 import 'package:flutter/material.dart';
@@ -107,6 +108,7 @@ import '../../features/recruitment_list/presentation/pages/recruitment_list_page
 import '../../features/recruitment_list/presentation/pages/recruitment_create_page.dart';
 import '../../features/recruitment_list/presentation/pages/recruitment_detail_page.dart';
 import '../../features/recruitment_list/data/fakes/fake_recruitment_runtime.dart';
+import '../../features/recruitment_list/domain/services/recruitment_runtime.dart';
 import '../../features/recruitment_list/data/fakes/in_memory_recruitment_state_repository.dart';
 import '../../features/recruitment_list/data/fakes/in_memory_weekly_raid_clear_repository.dart';
 import '../../features/recruitment_list/data/fakes/in_memory_active_raid_assignment_repository.dart';
@@ -386,7 +388,7 @@ GoRouter createAppRouter({
   );
   final recruitmentCommandService = RecruitmentCommandService(
     session: FakeUserSession(playerSession.playerId),
-    clock: FakeRecruitmentClock(DateTime.now()),
+    clock: SystemRecruitmentClock(),
     idGenerator: SequentialRecruitmentIdGenerator(),
     repository: recruitmentRepository,
     weeklyClearRepository: weeklyRaidClearRepository,
@@ -447,34 +449,39 @@ GoRouter createAppRouter({
             routes: [
               GoRoute(
                 path: '/raid-status',
-                builder: (context, state) => RaidStatusPage(
-                  completedOwnershipCleanupRepository:
-                      FirestoreCompletedOwnershipCleanupRepository(
-                        firestore: FirebaseFirestore.instance,
-                        auth: FirebaseAuth.instance,
-                      ),
-                  key: ValueKey('raid-status-${cycleRuntime.current.key}'),
-                  partyReadRepository: partyReadRepositoryOrDefault,
-                  accountDatabase: accountDatabase,
-                  eventSyncService: partyEventSyncServiceOrDefault,
-                  playerId: playerSession.playerId,
-                  cycleKey: cycleRuntime.current.key,
-                  raidCatalogRepository: raidCatalogRepository,
-                  groupReadRepository: groupReadRepositoryForRoute(),
-                  activityCharactersRepository:
-                      activityCharactersRepositoryOrDefault,
-                  characterSearchRepository:
-                      characterSearchRepositoryForRoute(),
-                  onInitialLoadComplete: () {
-                    unawaited(startupCharacterRefreshRunnerOrDefault.runOnce());
-                  },
-                  refreshSignal: raidStatusRefreshSignal,
-                  cycleReconciler: lazyCycleReconciler,
-                  applicationCleanupRepository:
-                      FirestorePartyApplicationCleanupRepository(
-                        firestore: FirebaseFirestore.instance,
-                        firebaseAuth: FirebaseAuth.instance,
-                      ),
+                builder: (context, state) => CycleBoundPage(
+                  runtime: cycleRuntime,
+                  builder: (context, cycle) => RaidStatusPage(
+                    completedOwnershipCleanupRepository:
+                        FirestoreCompletedOwnershipCleanupRepository(
+                          firestore: FirebaseFirestore.instance,
+                          auth: FirebaseAuth.instance,
+                        ),
+                    key: ValueKey('raid-status-${cycle.key}'),
+                    partyReadRepository: partyReadRepositoryOrDefault,
+                    accountDatabase: accountDatabase,
+                    eventSyncService: partyEventSyncServiceOrDefault,
+                    playerId: playerSession.playerId,
+                    cycleKey: cycle.key,
+                    raidCatalogRepository: raidCatalogRepository,
+                    groupReadRepository: groupReadRepositoryForRoute(),
+                    activityCharactersRepository:
+                        activityCharactersRepositoryOrDefault,
+                    characterSearchRepository:
+                        characterSearchRepositoryForRoute(),
+                    onInitialLoadComplete: () {
+                      unawaited(
+                        startupCharacterRefreshRunnerOrDefault.runOnce(),
+                      );
+                    },
+                    refreshSignal: raidStatusRefreshSignal,
+                    cycleReconciler: lazyCycleReconciler,
+                    applicationCleanupRepository:
+                        FirestorePartyApplicationCleanupRepository(
+                          firestore: FirebaseFirestore.instance,
+                          firebaseAuth: FirebaseAuth.instance,
+                        ),
+                  ),
                 ),
                 routes: [
                   GoRoute(
@@ -548,30 +555,34 @@ GoRouter createAppRouter({
             routes: [
               GoRoute(
                 path: '/account',
-                builder: (context, state) => MyAccountPage(
-                  key: ValueKey('account-${cycleRuntime.current.key}'),
-                  apiTokenStore: apiTokenStore,
-                  accountRepository: accountRepository,
-                  summarySyncService: characterSummarySyncService,
-                  representativeSyncService: representativeSyncService,
-                  weeklyRaidClaimRepository: weeklyRaidClaimRepositoryOrDefault,
-                  weeklyRaidStatusRepository:
-                      weeklyRaidStatusRepositoryOrDefault,
-                  weeklyRaidDisplayRepository:
-                      weeklyRaidDisplayRepositoryOrDefault,
-                  raidCatalogRepository: raidCatalogRepository,
-                  playerId: playerSession.playerId,
-                  cycleKey: cycleRuntime.current.key,
-                  cycleStartedAt: cycleRuntime.current.startedAt,
-                  cycleEndsAt: cycleRuntime.current.endsAt,
-                  weeklyRaidClaimCommandRepository:
-                      weeklyRaidClaimCommandRepositoryOrDefault,
-                  manualCharacterRefreshRunner:
-                      startupCharacterRefreshRunnerOrDefault
-                          is ManualCharacterRefreshRunner
-                      ? startupCharacterRefreshRunnerOrDefault
-                            as ManualCharacterRefreshRunner
-                      : null,
+                builder: (context, state) => CycleBoundPage(
+                  runtime: cycleRuntime,
+                  builder: (context, cycle) => MyAccountPage(
+                    key: ValueKey('account-${cycle.key}'),
+                    apiTokenStore: apiTokenStore,
+                    accountRepository: accountRepository,
+                    summarySyncService: characterSummarySyncService,
+                    representativeSyncService: representativeSyncService,
+                    weeklyRaidClaimRepository:
+                        weeklyRaidClaimRepositoryOrDefault,
+                    weeklyRaidStatusRepository:
+                        weeklyRaidStatusRepositoryOrDefault,
+                    weeklyRaidDisplayRepository:
+                        weeklyRaidDisplayRepositoryOrDefault,
+                    raidCatalogRepository: raidCatalogRepository,
+                    playerId: playerSession.playerId,
+                    cycleKey: cycle.key,
+                    cycleStartedAt: cycle.startedAt,
+                    cycleEndsAt: cycle.endsAt,
+                    weeklyRaidClaimCommandRepository:
+                        weeklyRaidClaimCommandRepositoryOrDefault,
+                    manualCharacterRefreshRunner:
+                        startupCharacterRefreshRunnerOrDefault
+                            is ManualCharacterRefreshRunner
+                        ? startupCharacterRefreshRunnerOrDefault
+                              as ManualCharacterRefreshRunner
+                        : null,
+                  ),
                 ),
                 routes: [
                   GoRoute(
@@ -611,24 +622,27 @@ GoRouter createAppRouter({
             routes: [
               GoRoute(
                 path: '/recruitments',
-                builder: (context, state) => RecruitmentListPage(
-                  key: ValueKey('recruitments-${cycleRuntime.current.key}'),
-                  partyReadRepository: partyReadRepositoryOrDefault,
-                  cycleKey: cycleRuntime.current.key,
-                  currentPlayerId: playerSession.playerId,
-                  accountDatabase: accountDatabase,
-                  filterStore: DriftRaidStatusFilterStore(accountDatabase),
-                  raidCatalogRepository: raidCatalogRepository,
-                  groupReadRepository: groupReadRepositoryForRoute(),
-                  activityCharactersRepository:
-                      activityCharactersRepositoryOrDefault,
-                  characterSearchRepository:
-                      characterSearchRepositoryForRoute(),
-                  backfillOwnGroupListings: backfillOwnGroupListings == null
-                      ? null
-                      : () => backfillOwnGroupListings(
-                          playerId: playerSession.playerId,
-                        ),
+                builder: (context, state) => CycleBoundPage(
+                  runtime: cycleRuntime,
+                  builder: (context, cycle) => RecruitmentListPage(
+                    key: ValueKey('recruitments-${cycle.key}'),
+                    partyReadRepository: partyReadRepositoryOrDefault,
+                    cycleKey: cycle.key,
+                    currentPlayerId: playerSession.playerId,
+                    accountDatabase: accountDatabase,
+                    filterStore: DriftRaidStatusFilterStore(accountDatabase),
+                    raidCatalogRepository: raidCatalogRepository,
+                    groupReadRepository: groupReadRepositoryForRoute(),
+                    activityCharactersRepository:
+                        activityCharactersRepositoryOrDefault,
+                    characterSearchRepository:
+                        characterSearchRepositoryForRoute(),
+                    backfillOwnGroupListings: backfillOwnGroupListings == null
+                        ? null
+                        : () => backfillOwnGroupListings(
+                            playerId: playerSession.playerId,
+                          ),
+                  ),
                 ),
                 routes: [
                   GoRoute(

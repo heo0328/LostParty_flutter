@@ -37,6 +37,8 @@
 
 ## Architecture
 
+- [참가 상태 정합성 복구 설계](architecture/PARTY_PARTICIPATION_CONSISTENCY_REPAIR_DESIGN.md): 후보 시계·조회 및 같은 캐릭터 역할 변경 로컬 구현. 역할 Rules 운영 게시 실패로 인수 대기; 다른 캐릭터 변경·금주 참가 표시·수동 완료 조사 잔여. 구현/확인 범위와 부작용 구분.
+
 - [운영 Rules 전체 구조 재설계](architecture/RULES_PRODUCTION_RESTRUCTURE_DESIGN.md): §14 B1+A2 전체 기능본 테스트 게시 성공·활성SHA일치. 그룹 표시 검증 로컬 이전/중복 분기 통합 완료, 운영 lost-party도 14:17 KST 게시 성공·활성SHA일치. 실기기 인수 대기.
 
 - [전체 Rules 세 방향 간소화 설계](architecture/RULES_SIMPLIFICATION_THREE_TRACK_DESIGN.md): 최신 후속 설계. 중복 검사·표시 로컬 이전·호출 단순화, 기존 기능/부작용/회귀와 구간별 범위. 사용자 요청으로 구간별 수정 중단·보존. 게시 정상화 미완료; 중단 체크포인트 참조.

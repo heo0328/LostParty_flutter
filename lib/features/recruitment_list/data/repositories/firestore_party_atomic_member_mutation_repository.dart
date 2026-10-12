@@ -213,6 +213,22 @@ class FirestorePartyAtomicMemberMutationRepository
             PartyMembershipFailure.participationConflict,
           );
         case ExistingRaidStateOccupancyDecision.currentActive:
+          if (!nextWeekPrep &&
+              oldCharacterId == command.newCharacterId &&
+              previousStateData?['recruitmentId'] == command.recruitmentId &&
+              previousStateData?['cycleKey'] == aggregate.currentCycleKey &&
+              previousStateData?['role'] == oldRole.name &&
+              aggregate.partySlots.any(
+                (slot) =>
+                    slot.playerId == playerId &&
+                    slot.characterId == oldCharacterId &&
+                    slot.role == oldRole,
+              )) {
+            break;
+          }
+          return const PartyMembershipResult.failure(
+            PartyMembershipFailure.participationConflict,
+          );
         case ExistingRaidStateOccupancyDecision.participationConflict:
           return const PartyMembershipResult.failure(
             PartyMembershipFailure.participationConflict,
@@ -333,6 +349,7 @@ class FirestorePartyAtomicMemberMutationRepository
         return const PartyMembershipResult.success();
       }
       final plan = PartyAtomicCharacterChangeWritePlan(
+        previousRaidStateRevision: previousStateData?['revision'] as int?,
         ownershipRevision: ownership.revision!,
         aggregate: aggregate,
         rules: _rules(raw),
@@ -347,7 +364,9 @@ class FirestorePartyAtomicMemberMutationRepository
       );
       transaction.update(recruitmentRef, plan.recruitmentPatch);
       transaction.update(memberRef, plan.membershipPatch);
-      transaction.delete(previousRaidStateRef);
+      if (previousRaidStateRef.path != nextRaidStateRef.path) {
+        transaction.delete(previousRaidStateRef);
+      }
       if (kDebugMode) {
         debugPrint(
           'PartyAtomicMemberMutation id=$diagnosticId phase=character-change-plan '
@@ -357,7 +376,15 @@ class FirestorePartyAtomicMemberMutationRepository
           'keys=${plan.nextRaidState.keys.join(',')} commit=pending',
         );
       }
-      transaction.set(nextRaidStateRef, plan.nextRaidState);
+      if (previousRaidStateRef.path == nextRaidStateRef.path) {
+        transaction.update(nextRaidStateRef, {
+          'role': plan.nextRaidState['role'],
+          'revision': plan.nextRaidState['revision'],
+          'updatedAt': now,
+        });
+      } else {
+        transaction.set(nextRaidStateRef, plan.nextRaidState);
+      }
       listing.write(
         transaction: transaction,
         currentRecruitment: partyRecruitmentMap(raw),
@@ -508,11 +535,21 @@ class FirestorePartyAtomicMemberMutationRepository
         'aborted' => PartyMembershipFailure.temporarilyUnavailable,
         _ => PartyMembershipFailure.unknown,
       });
-    } on FormatException {
+    } on FormatException catch (error) {
+      if (kDebugMode) {
+        debugPrint(
+          'PartyAtomicMemberMutation id=$diagnosticId phase=invalid-data reason=${error.message}',
+        );
+      }
       return const PartyMembershipResult.failure(
         PartyMembershipFailure.invalidRequest,
       );
-    } on StateError {
+    } on StateError catch (error) {
+      if (kDebugMode) {
+        debugPrint(
+          'PartyAtomicMemberMutation id=$diagnosticId phase=invalid-state reason=${error.message}',
+        );
+      }
       return const PartyMembershipResult.failure(
         PartyMembershipFailure.invalidComposition,
       );

@@ -114,6 +114,8 @@ class RecruitmentLeaderCandidateQuery {
     this.partyRules,
     this.occupiedMembers = const [],
     this.replacingMemberId,
+    this.replacingCharacterId,
+    this.recruitmentId,
     this.allowPositionChanges = false,
     this.evaluateRaidConstraints = true,
     this.purpose = RecruitmentCandidatePurpose.currentCycle,
@@ -134,6 +136,8 @@ class RecruitmentLeaderCandidateQuery {
 
   /// 캐릭터 변경 시 교체 대상 PlayerId. 신청·즉시 가입에서는 null이다.
   final String? replacingMemberId;
+  final String? replacingCharacterId;
+  final String? recruitmentId;
   final bool allowPositionChanges;
 
   /// 모집 생성 첫 진입처럼 레이드가 아직 선택되지 않았을 때는 Character와
@@ -191,7 +195,7 @@ class RecruitmentLeaderCandidateService {
       repository: activityCharactersRepository,
       playerId: claimPlayerId,
     );
-    final candidates = <RecruitmentLeaderCandidate>[];
+    final candidateLoads = <Future<RecruitmentLeaderCandidate> Function()>[];
     final seenCharacters = <String>{};
 
     for (final account in accounts) {
@@ -203,201 +207,222 @@ class RecruitmentLeaderCandidateService {
         final key =
             '${character.serverName.trim().toLowerCase()}::${character.characterName.trim().toLowerCase()}';
         if (!seenCharacters.add(key)) continue;
-        final serverCharacterId = character.serverCharacterId;
-        final serverStatus =
-            !query.evaluateRaidConstraints || serverCharacterId == null
-            ? null
-            : serverStatuses
-                  .where(
-                    (status) =>
-                        status.characterId == serverCharacterId &&
-                        status.raidId == query.raidId,
-                  )
-                  .firstOrNull;
-        final hasServerAssignmentForSameRaid =
-            query.evaluateRaidConstraints &&
-            serverCharacterId != null &&
-            (serverStatus == null ||
-                serverStatus.kind == WeeklyRaidStatusKind.active) &&
-            assignmentLookup != null &&
-            await assignmentLookup!.blocksCandidate(
-              playerId: userId,
-              characterId: serverCharacterId,
-              raidId: query.raidId,
-              cycleKey: weekKey,
-            );
-        final snapshots = await accountRepository.loadCharacterBuildSnapshots(
-          character.id,
-        );
-        final roles = <RecruitmentLeaderRoleOption>[];
-        final partyRules = query.partyRules;
-        final compositionPolicy = partyRules == null
-            ? null
-            : PartyCompositionPolicy(partyRules);
-        for (final snapshot in snapshots) {
-          final role = switch (snapshot.role) {
-            CharacterBuildRole.dealer => PartyRole.dealer,
-            CharacterBuildRole.support => PartyRole.support,
-          };
-          final itemLevel = snapshot.itemLevel ?? character.itemLevel;
-          final reasons = <String>[];
-          if (query.evaluateRaidConstraints &&
-              (itemLevel == null || itemLevel < query.minItemLevel)) {
-            reasons.add('입장 레벨 ${query.minItemLevel} 미달');
-          }
-          if (query.evaluateRaidConstraints && compositionPolicy != null) {
-            final compositionFailure = _compositionFailure(
-              policy: compositionPolicy,
-              userId: userId,
-              className: character.characterClassName,
-              role: role,
-              occupiedMembers: query.occupiedMembers,
-              replacingMemberId: query.replacingMemberId,
-              allowPositionChanges: query.allowPositionChanges,
-            );
-            if (compositionFailure != null) {
-              reasons.add(_compositionReason(compositionFailure));
-            }
-          }
-          if (query.evaluateRaidConstraints) {
-            final combatPowerDecision = _minimumCombatPowerPolicy.evaluate(
-              minimum: query.minCombatPower,
-              actual: snapshot.combatPower ?? character.combatPower,
-            );
-            switch (combatPowerDecision) {
-              case MinimumCombatPowerDecision.missing:
-                reasons.add(
-                  '전투력 정보 없음 · 최소 전투력 '
-                  '${DisplayNumberFormatter.integer(query.minCombatPower!)} 필요',
-                );
-              case MinimumCombatPowerDecision.belowMinimum:
-                reasons.add(
-                  '최소 전투력 '
-                  '${DisplayNumberFormatter.integer(query.minCombatPower!)} 미달',
-                );
-              case MinimumCombatPowerDecision.unrestricted:
-              case MinimumCombatPowerDecision.satisfied:
-                break;
-            }
-          }
-          roles.add(
-            RecruitmentLeaderRoleOption(
-              role: role,
-              itemLevel: itemLevel,
-              combatPower: snapshot.combatPower ?? character.combatPower,
-              rejectionReasons: List.unmodifiable(reasons),
-              gemValidation: _gemValidationFor(snapshot),
-              buildIntegrity: buildIntegritySnapshotFromBuild(snapshot),
-            ),
-          );
-        }
-        roles.sort((left, right) {
-          final preferred = character.preferredRole;
-          if (preferred == null) return 0;
-          final leftPreferred = left.role.name == preferred.name;
-          final rightPreferred = right.role.name == preferred.name;
-          return leftPreferred == rightPreferred
-              ? 0
-              : leftPreferred
-              ? -1
-              : 1;
-        });
-
-        final statuses = <CandidateParticipationStatus>[];
-        final rejectionReasons = <String>[];
-        if (roles.isEmpty) rejectionReasons.add('저장된 역할 세팅이 없습니다.');
-        if (serverStatus?.isCompleted == true) {
-          statuses.add(
-            const CandidateParticipationStatus(
-              type: CandidateParticipationStatusType.weeklyRaidClear,
-            ),
-          );
-          if (query.purpose !=
-              RecruitmentCandidatePurpose.nextWeekPreparation) {
-            rejectionReasons.add('이번 주 동일 레이드 완료');
-          }
-        }
-        if (serverStatus?.kind == WeeklyRaidStatusKind.legacyActive) {
-          statuses.add(
-            const CandidateParticipationStatus(
-              type: CandidateParticipationStatusType.activeSameRaid,
-            ),
-          );
-          rejectionReasons.add('동일 레이드 참가 중');
-        } else if (serverStatus?.isInconsistent == true) {
-          statuses.add(
-            const CandidateParticipationStatus(
-              type: CandidateParticipationStatusType.raidStateInconsistent,
-            ),
-          );
-          rejectionReasons.add('레이드 참가·완료 상태 확인 필요');
-        }
-        final pendingCount = query.evaluateRaidConstraints
-            ? await recruitmentRepository.countPendingApplications(
-                applicantUserId: userId,
-                characterId: character.characterName,
+        candidateLoads.add(() async {
+          final serverCharacterId = character.serverCharacterId;
+          final serverStatus =
+              !query.evaluateRaidConstraints || serverCharacterId == null
+              ? null
+              : serverStatuses
+                    .where(
+                      (status) =>
+                          status.characterId == serverCharacterId &&
+                          status.raidId == query.raidId,
+                    )
+                    .firstOrNull;
+          final isOwnActiveParticipation =
+              query.replacingMemberId == userId &&
+              query.replacingCharacterId == serverCharacterId &&
+              query.recruitmentId != null &&
+              serverStatus?.kind == WeeklyRaidStatusKind.active &&
+              serverStatus?.playerId == userId &&
+              serverStatus?.cycleKey == weekKey &&
+              serverStatus?.recruitmentId == query.recruitmentId;
+          final hasServerAssignmentForSameRaid =
+              query.evaluateRaidConstraints &&
+              !isOwnActiveParticipation &&
+              serverCharacterId != null &&
+              (serverStatus == null ||
+                  serverStatus.kind == WeeklyRaidStatusKind.active) &&
+              assignmentLookup != null &&
+              await assignmentLookup!.blocksCandidate(
+                playerId: userId,
+                characterId: serverCharacterId,
                 raidId: query.raidId,
-              )
-            : 0;
-        if (pendingCount > 0) {
-          statuses.add(
-            CandidateParticipationStatus(
-              type: CandidateParticipationStatusType.pendingSameRaid,
-              count: pendingCount,
-            ),
+                cycleKey: weekKey,
+              );
+          final snapshots = await accountRepository.loadCharacterBuildSnapshots(
+            character.id,
           );
-        }
-        final decision = query.evaluateRaidConstraints
-            ? conflictPolicy.evaluate(
-                proposed: ActiveRaidAssignment(
-                  userId: userId,
+          final roles = <RecruitmentLeaderRoleOption>[];
+          final partyRules = query.partyRules;
+          final compositionPolicy = partyRules == null
+              ? null
+              : PartyCompositionPolicy(partyRules);
+          for (final snapshot in snapshots) {
+            final role = switch (snapshot.role) {
+              CharacterBuildRole.dealer => PartyRole.dealer,
+              CharacterBuildRole.support => PartyRole.support,
+            };
+            final itemLevel = snapshot.itemLevel ?? character.itemLevel;
+            final reasons = <String>[];
+            if (query.evaluateRaidConstraints &&
+                (itemLevel == null || itemLevel < query.minItemLevel)) {
+              reasons.add('입장 레벨 ${query.minItemLevel} 미달');
+            }
+            if (query.evaluateRaidConstraints && compositionPolicy != null) {
+              final compositionFailure = _compositionFailure(
+                policy: compositionPolicy,
+                userId: userId,
+                className: character.characterClassName,
+                role: role,
+                occupiedMembers: query.occupiedMembers,
+                replacingMemberId: query.replacingMemberId,
+                allowPositionChanges: query.allowPositionChanges,
+              );
+              if (compositionFailure != null) {
+                reasons.add(_compositionReason(compositionFailure));
+              }
+            }
+            if (query.evaluateRaidConstraints) {
+              final combatPowerDecision = _minimumCombatPowerPolicy.evaluate(
+                minimum: query.minCombatPower,
+                actual: snapshot.combatPower ?? character.combatPower,
+              );
+              switch (combatPowerDecision) {
+                case MinimumCombatPowerDecision.missing:
+                  reasons.add(
+                    '전투력 정보 없음 · 최소 전투력 '
+                    '${DisplayNumberFormatter.integer(query.minCombatPower!)} 필요',
+                  );
+                case MinimumCombatPowerDecision.belowMinimum:
+                  reasons.add(
+                    '최소 전투력 '
+                    '${DisplayNumberFormatter.integer(query.minCombatPower!)} 미달',
+                  );
+                case MinimumCombatPowerDecision.unrestricted:
+                case MinimumCombatPowerDecision.satisfied:
+                  break;
+              }
+            }
+            roles.add(
+              RecruitmentLeaderRoleOption(
+                role: role,
+                itemLevel: itemLevel,
+                combatPower: snapshot.combatPower ?? character.combatPower,
+                rejectionReasons: List.unmodifiable(reasons),
+                gemValidation: _gemValidationFor(snapshot),
+                buildIntegrity: buildIntegritySnapshotFromBuild(snapshot),
+              ),
+            );
+          }
+          roles.sort((left, right) {
+            final preferred = character.preferredRole;
+            if (preferred == null) return 0;
+            final leftPreferred = left.role.name == preferred.name;
+            final rightPreferred = right.role.name == preferred.name;
+            return leftPreferred == rightPreferred
+                ? 0
+                : leftPreferred
+                ? -1
+                : 1;
+          });
+
+          final statuses = <CandidateParticipationStatus>[];
+          final rejectionReasons = <String>[];
+          if (roles.isEmpty) rejectionReasons.add('저장된 역할 세팅이 없습니다.');
+          if (serverStatus?.isCompleted == true) {
+            statuses.add(
+              const CandidateParticipationStatus(
+                type: CandidateParticipationStatusType.weeklyRaidClear,
+              ),
+            );
+            if (query.purpose !=
+                RecruitmentCandidatePurpose.nextWeekPreparation) {
+              rejectionReasons.add('이번 주 동일 레이드 완료');
+            }
+          }
+          if (serverStatus?.kind == WeeklyRaidStatusKind.legacyActive) {
+            statuses.add(
+              const CandidateParticipationStatus(
+                type: CandidateParticipationStatusType.activeSameRaid,
+              ),
+            );
+            rejectionReasons.add('동일 레이드 참가 중');
+          } else if (serverStatus?.isInconsistent == true) {
+            statuses.add(
+              const CandidateParticipationStatus(
+                type: CandidateParticipationStatusType.raidStateInconsistent,
+              ),
+            );
+            rejectionReasons.add('레이드 참가·완료 상태 확인 필요');
+          }
+          final pendingCount = query.evaluateRaidConstraints
+              ? await recruitmentRepository.countPendingApplications(
+                  applicantUserId: userId,
                   characterId: character.characterName,
                   raidId: query.raidId,
-                  difficultyId: query.difficultyId,
-                  recruitmentId: 'new-recruitment-candidate',
-                  schedule: RaidParticipationSchedule(
-                    startAt: query.startAt,
-                    expectedEndAt: query.maxPlayHours == null
-                        ? null
-                        : query.startAt.add(
-                            Duration(hours: query.maxPlayHours!),
-                          ),
-                  ),
-                ),
-                activeAssignments: activeAssignments,
-              )
-            : const ParticipationConflictDecision([]);
-        if (hasServerAssignmentForSameRaid) {
-          statuses.add(
-            const CandidateParticipationStatus(
-              type: CandidateParticipationStatusType.activeSameRaid,
-            ),
-          );
-          rejectionReasons.add('동일 레이드 참가 중');
-        }
-        for (final conflict in decision.conflicts) {
-          final (type, reason) = switch (conflict.type) {
-            ParticipationConflictType.sameCharacterAndRaid => (
-              CandidateParticipationStatusType.activeSameRaid,
-              '동일 레이드 참가 중',
-            ),
-            ParticipationConflictType.overlappingSchedule ||
-            ParticipationConflictType.sameUserInRecruitment => (
-              CandidateParticipationStatusType.overlappingSchedule,
-              '동시간대 다른 파티 참가 중',
-            ),
-            ParticipationConflictType.uncertainSchedule => (
-              CandidateParticipationStatusType.uncertainSchedule,
-              '참가 일정 확인 필요',
-            ),
-          };
-          if (statuses.every((status) => status.type != type)) {
-            statuses.add(CandidateParticipationStatus(type: type));
+                )
+              : 0;
+          if (pendingCount > 0) {
+            statuses.add(
+              CandidateParticipationStatus(
+                type: CandidateParticipationStatusType.pendingSameRaid,
+                count: pendingCount,
+              ),
+            );
           }
-          if (!rejectionReasons.contains(reason)) rejectionReasons.add(reason);
-        }
-        candidates.add(
-          RecruitmentLeaderCandidate(
+          final decision = query.evaluateRaidConstraints
+              ? conflictPolicy.evaluate(
+                  proposed: ActiveRaidAssignment(
+                    userId: userId,
+                    characterId: character.characterName,
+                    raidId: query.raidId,
+                    difficultyId: query.difficultyId,
+                    recruitmentId: 'new-recruitment-candidate',
+                    schedule: RaidParticipationSchedule(
+                      startAt: query.startAt,
+                      expectedEndAt: query.maxPlayHours == null
+                          ? null
+                          : query.startAt.add(
+                              Duration(hours: query.maxPlayHours!),
+                            ),
+                    ),
+                  ),
+                  activeAssignments: isOwnActiveParticipation
+                      ? activeAssignments
+                            .where(
+                              (assignment) =>
+                                  assignment.recruitmentId !=
+                                      query.recruitmentId ||
+                                  assignment.characterId !=
+                                      character.characterName,
+                            )
+                            .toList()
+                      : activeAssignments,
+                )
+              : const ParticipationConflictDecision([]);
+          if (hasServerAssignmentForSameRaid) {
+            statuses.add(
+              const CandidateParticipationStatus(
+                type: CandidateParticipationStatusType.activeSameRaid,
+              ),
+            );
+            rejectionReasons.add('동일 레이드 참가 중');
+          }
+          for (final conflict in decision.conflicts) {
+            final (type, reason) = switch (conflict.type) {
+              ParticipationConflictType.sameCharacterAndRaid => (
+                CandidateParticipationStatusType.activeSameRaid,
+                '동일 레이드 참가 중',
+              ),
+              ParticipationConflictType.overlappingSchedule ||
+              ParticipationConflictType.sameUserInRecruitment => (
+                CandidateParticipationStatusType.overlappingSchedule,
+                '동시간대 다른 파티 참가 중',
+              ),
+              ParticipationConflictType.uncertainSchedule => (
+                CandidateParticipationStatusType.uncertainSchedule,
+                '참가 일정 확인 필요',
+              ),
+            };
+            if (statuses.every((status) => status.type != type)) {
+              statuses.add(CandidateParticipationStatus(type: type));
+            }
+            if (!rejectionReasons.contains(reason)) {
+              rejectionReasons.add(reason);
+            }
+          }
+          return RecruitmentLeaderCandidate(
             characterId: character.characterName,
             serverCharacterId: character.serverCharacterId,
             localCharacterId: character.id,
@@ -412,9 +437,18 @@ class RecruitmentLeaderCandidateService {
             roles: List.unmodifiable(roles),
             participationStatuses: List.unmodifiable(statuses),
             rejectionReasons: List.unmodifiable(rejectionReasons),
-          ),
-        );
+          );
+        });
       }
+    }
+    final candidates = <RecruitmentLeaderCandidate>[];
+    // Bound concurrent server lookups and preserve the original account order.
+    for (var start = 0; start < candidateLoads.length; start += 4) {
+      candidates.addAll(
+        await Future.wait(
+          candidateLoads.skip(start).take(4).map((load) => load()),
+        ),
+      );
     }
     return List.unmodifiable(candidates);
   }
