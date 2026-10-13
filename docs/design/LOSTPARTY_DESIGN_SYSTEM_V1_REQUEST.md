@@ -1,5 +1,7 @@
 # LostParty UI / Design System v1 설계 요청서
 
+> 기존 서비스 전용 항목은 [원문·출처 기록](../../legacy/firebase/extracted/docs/design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md)으로 분리했다. 남은 제품/협업 문맥의 신규 서버 적용 여부는 별도 설계에서 판단한다.
+
 ## 적용 상태와 확정 기준
 
 이 문서는 LostParty에 실제 적용할 Design System v1 계약이다. 최초 요청서의 후보 가운데 다음 값을 v1 기준으로 확정한다.
@@ -14,7 +16,6 @@ Theme·Bottom Navigation·공개 모집 대표 Card 시범 적용 결과를 사�
 - radius는 Small `6`, Medium `12`, Large `16`, Pill `999`다.
 - 일반 Card는 흰색 Surface, Large radius, 약한 `#E8E4EC` border와 elevation 0을 기본으로 한다.
 - Bottom Navigation은 흰색 Surface와 Lavender 선택 Pill을 유지한다.
-- 공개 모집 목록에서 사용하는 Firestore `PublicRecruitmentSummary` 기반 카드를 대표 RecruitmentCard로 삼는다.
 - 상태색은 v1에서 success·warning·error·neutral의 최소 semantic 집합만 둔다. Dealer·Support 전용 색상은 실제 역할 Chip 적용 단계에서 확정한다.
 - 화면 밀도는 Utility App에 맞춘 중간 밀도를 사용한다. 화면 좌우와 Card 내부는 기본 16, 주요 정보 간격은 8, 밀접한 metadata 간격은 4~6을 기준으로 한다.
 
@@ -25,7 +26,6 @@ Theme·Bottom Navigation·공개 모집 대표 Card 시범 적용 결과를 사�
 3. 공개 모집 대표 Card의 정보 계층·Badge·Surface 적용
 4. 자동 테스트와 Android 실기기 확인
 
-전체 화면으로 자동 확장하지 않는다. 시범 적용을 사용자가 확인한 뒤 다음 화면 적용 여부를 결정한다. 공개 모집 Firestore 페이징은 이 시범 디자인 완료 후 확정된 Card를 사용해 구현한다.
 
 ## 1. 목적
 

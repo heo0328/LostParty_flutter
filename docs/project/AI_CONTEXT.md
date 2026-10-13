@@ -1,227 +1,33 @@
 # AI CONTEXT (2026)
 
-## 최신 — 운영 전체 구조 재설계 (2026-10-11)
+## 최신 — 기존 서비스 문서 보관 정리 (2026-10-13)
 
-**B1+A2 구현·테스트 게시 성공:** 13:57 KST 전체 기능본f7ce11cf/181935bytes, 컴파일·생성·활성화200/경고0.
-13:58 KST 활성SHA일치 확인. 함수272·최대깊이5. 그룹 표시 검증을 앱으로 이전하고 그룹 수정 중복 함수5개 순감소.
-14:17 KST 운영 lost-party 게시1회 성공(컴파일·생성·활성화200/경고0), 활성SHA f7ce11cf 일치. 성공본 커밋bca158d. 새 파서 포함 앱 설치/실기기 인수는 미확인이다. push/merge/dev 반영 없음. 아래 설계·실패 기록은 이전 이력이며 최신 결과는 설계§14.
+사용자 요청으로 Firebase 전용 문서26개를 루트 legacy/firebase/docs에 이동하고 혼합 문서28개의 관련 항목을 extracted에 출처와 함께 분리했다. 일부 지침/과거 실행 문맥은 additional 발췌로 이어진다. 로컬 Notion 발췌는 private 추적 제외를 유지한다. [보관 지도](../../legacy/firebase/README.md)와 [출처 대장](../../legacy/firebase/PROVENANCE.md)을 따른다. 이번 신규 서버 backend-migration13문서는 내용·위치 모두 유지했고 앱/Rules/설정·운영 데이터/배포 변경은 없다. 현재 문서 브랜치 미커밋·dev 미반영·push/merge 없음.
 
-후속 비교 설계§13 완료. 다음은 그룹 순수 표시 검증의 로컬 이전(B1)과 그룹 수정 분기 통합(A2)이다.
-기존 필드/Writer/조회 유지, Mapper와 Character fallback 선행 보완. payload map/목록 문서 삭제/파티 전면 재구성은 제외.
-이번 비교에서는 기능 코드·Rules 변경/게시 없음. 실제 순감소와 게시 성공은 구현 후 확인한다.
+> 기존 서비스 전용 항목은 [원문·출처 기록](../../legacy/firebase/extracted/docs/project/AI_CONTEXT.md)으로 분리했다. 남은 제품/협업 문맥의 신규 서버 적용 여부는 별도 설계에서 판단한다.
 
-[설계](../architecture/RULES_PRODUCTION_RESTRUCTURE_DESIGN.md) 작성 완료. 기존 스키마 유지·공통 진입점/명령별 차이 통합을 우선한다.
-그룹 가입/그룹 상태/파티 상태를 기능 포함 전체 후보로 연결한 뒤 테스트→운영 전환한다. 국소 수정 반복 계획 대체.
-후속 승인으로 공통 검사/중복 분기 통합 후보5f415791 구현.189056→185651bytes, 로컬 이전0.
-로컬 권한 확인 후 테스트1회 게시했지만 컴파일200/경고0·생성200 후 활성화400/fallback409 실패.
-당시 테스트 활성e64f152d 유지, 운영 게시0. 후속 B1+A2로 테스트 활성본이 변경됐다. 설계§12~14·NEXT_WORK 참조.
-아래 기존 중단/다음 순서 표현은 이력이며 이번 설계가 최신이다.
+## 최신 — 빈 데이터 신규 서버 설계 (2026-10-13)
 
+사용자가 기존 Firebase 사용자·데이터 이관 없이 새 서버를 빈 상태로 시작한다고 확정했다. [09 결정 기록](../backend-migration/09-migration-decisions.md),10 모듈형 모놀리스/원자명령,11 신규 OAuth·자체session/인가,12 첫backend 작업 패키지를 작성한다. 기존9분석문서의linking/export/import 계획을 제거·재분류했다. 기존Firebase 실제삭제/Flutter로컬파괴적초기화·backend/API/DDL구현·배포는미실행이다. user/identity/gameownership 분리·guest회원없음은기준이며publicfield/token수명/로컬보존/제공자등록은제안/미확정이다. 현재docs/backend-migration-analysis 유지·문서미커밋/push·dev미반영. 상세는09~12/NEXT_WORK를따른다.
 
-## 최신 진단 — 2026-10-11 00:11 KST
+## 현재 — 백엔드 이전 사전 분석 문서 (2026-10-13)
 
-사용자 지시로 다른 그룹 함수8개/호출10곳을 제거·비활성화한 테스트 전용본e64f152d를1회 게시했다.
-컴파일/생성/활성화 모두200·활성SHA일치. 이전 인증 함수군을 유지해도 성공해 전체 조합 총량 가설을 추가 지지한다.
-운영/전체 Rules 무변경. 테스트 프로젝트는 기능 제외 진단본 활성. 상세 통합 설계의 최신 진단 참조.
-기존 구간별 구현 중단은 유지한다. 아래 중단 이후 이번 진단1회만 별도로 승인됐다.
-
-## 최신 — 구간별 Rules 수정 중단·보존 커밋
-
-사용자 요청으로 추가 구현/실험/게시 중단. 누적3f683e9b/189056bytes는49acce8보다1191bytes 증가,
-함수285→279·깊이5 유지·이번 구간 신규 로컬 이전0. 전체본 게시 정상화 미달이다.
-마지막 활성화400/fallback409, 운영 마지막 확인7a441b1f 사용자 삭제본 유지. 운영 기능 인수 미완료.
-3-1 이후는 보류. 새 지시 전 재개하지 않는다. 상세 통합 설계의 중단 체크포인트·NEXT_WORK 참조.
-아래 다음 단계 표현은 과거 이력이다.
-
-
-## 이전 — 2-2 표시 대조 후보 미채택
-
-방장 표시 원본 대조2개를 타입/길이4개로 바꾸면58bytes 증가, 함수/조회 제거0을 확인했다.
-게시 구조 절감 근거가 없어 앱/Rules 미변경·게시0. 누적3f683e9b 유지. 로컬 이전 완료가 아니다.
-다음3-1도 실질적인 제거 가치 먼저 판정. 상세 통합 설계·NEXT_WORK 참조.
-
-
-## 이전 — 2-1 준비 검사 중복 제거
-
-누적3f683e9b/189056bytes(-59), 중복 검사3곳 제거. 필수 문서 연결 유지·로컬 이전0.
-관련 검증 통과. 23:43 KST 운영1회 게시: 컴파일200/경고0·생성200 후 활성화400 INVALID_ARGUMENT/CLI fallback409 ALREADY_EXISTS 실패. 활성7a441b1f 유지, 재시도/복구 없음.
-다음2-2 표시 로컬 이전. 게시 정상화 미완료. 상세 NEXT_WORK·통합 설계 참조.
-
-
-> 최신 운영 상태: 사용자 직접 게시로19:10 KST 활성본7a441b1f로 변경됨. 함수 정의11개 삭제·미정의 호출151곳 잔존 확인. 게시 성공이나 기능 보존 미확인 상태이므로 이 변경의 영향/복구 판단을1-2보다 먼저 다룬다. 로컬 전체본e4a6c4cc는 보존. 상세 통합 설계의 사용자 직접 게시본 확인 절 참조.
-
-## 이전 — 1-2 전환 출력 통합 (2026-10-10 23:38 KST)
-
-누적본2ba47bd8/189115bytes, 직전보다767bytes 감소. 전환2함수→1, 중복 출력 본문/소유 차수 비교1개 제거.
-함수279·깊이5, 앱/로컬 이전0. 관련 회귀32개와 정적 확인 통과.
-운영1회 게시: 컴파일200/경고0·생성200 뒤 활성화400/fallback409 실패. 활성7a441b1f 유지.
-게시 정상화 미완료. 다음2-1 준비 변경 책임 정리. 상세 NEXT_WORK·통합 설계·DEV_LOG 참조.
-
-## 이전 — 주차 인증·전환 호출 정리 (2026-10-10 21:05 KST)
-
-sealAuditUpdate 통합·짧은 검사 직접식화로 정의3개/호출14곳, 중복 lifecycle 검사2개 제거.
-로컬 e9287f2c/189882bytes(+686), compact147270bytes, 함수280·깊이5. 로컬 이전/앱 변경0.
-관련32개 회귀 및 생성/preflight/diff 통과. 운영 게시1회는 컴파일200/경고0·생성200 후 활성화400/fallback409 실패.
-활성7a441b1f 유지, 미정의 호출 영향과 운영 정상화 미완료. 자동 재게시/복구 없음.
-다음은1-2 잔여 중복 검사·분기 정리 판정이며 같은 inline 확대 반복은 피한다. NEXT_WORK와 통합 설계 참조.
-
-## 공통 권한 호출 최소화 — 2026-10-10
-
-사용자 지시로7개 공통 함수 내부 사용자 호출27곳을 직접식으로 교체하고 wrapper2개를 제거했다.
-로컬4987ed9c/189196bytes(직전보다1438 증가), 함수283·최대깊이5. 권한 동등성/기존 인증 회귀 통과.
-운영1회 게시: 컴파일200/경고0·생성200, 활성화400/CLI fallback409 실패. 운영은 사용자 삭제본7a441b1f 유지.
-이 부분 변경만으로는 게시 문제가 해결되지 않았다. 전체 구조 간소화는 진행 중이며 자동 재게시 없음.
-상세 세 방향 설계의 직접식 구현/게시 결과, 다음 NEXT_WORK 참조.
-
-## 세 방향 간소화 설계 — 2026-10-10
-
-[중복 검사·로컬 이전·호출 단순화 통합 설계](../architecture/RULES_SIMPLIFICATION_THREE_TRACK_DESIGN.md)를 작성했다.
-실제 함수/Writer/Mapper/DI를 대조하고 문서별 책임·부작용·회귀 범위·전환/복구를 구분했다.
-1-1 인증 검사 정리 로컬 완료: 중복 비교3개·조회 표현2곳 제거, 전체e4a6c4cc/187758bytes(-107), 깊이5.
-인증 관련23개 시나리오 통과. e4a6c4cc 운영 게시1회는 컴파일200/경고0 후 활성화400/CLI fallback409로 실패, 기존36b5920e 유지 확인.
-다음1-2 실행 대기. 수정마다 게시1회·결과 확인 방침으로 변경. 상세 통합 설계§9~10.
-
-## 최신 진단 — 2026-10-10
-
-보존 커밋49acce8의 전체 Rules는 유지. 1순위 함수5개를 제거한20dfcdeb를 rules-test-1-81e31에1회 게시해 활성화200·SHA 일치를 확인했다.
-제거본은 경고5개. 이어 함수군5개+보조19개 단독본aae06656도 경고0·게시200·활성 SHA 일치를 확인했다.
-현재 테스트 활성본은 단독 진단본이며 전체 조합 복잡도/호출 결합을 우선 조사한다. 운영 정상화는 미완료다. 상세는 실행 계획의 두 실험 결과를 따른다.
-
-## 현재 실행 방침 변경 — 2026-10-10
-
-사용자 지시에 따라 D-X1 기능별 이식을 중단하고 불필요한 서버 검사 삭제·로컬 이전 중심으로 전환한다.
-핵심 목표는 크기 감소 자체가 아니라 장시간 수정·반복 시도 없는 Rules 게시와 그 상태 유지다.
-최초 전체본 게시 결과와 후속 실제 업데이트의 게시 안정성을 확인하며, 운영 미확인 상태는 전체 완료가 아니다.
-[통합 실행 계획](../architecture/RULES_LOCALIZATION_EXECUTION_PLAN.md)에 구현 범위와 확인 범위를 분리했다.
-감소율 목표는 폐기했으며 문서·검사 도구 반영을 완료했다. 지정한 작은 단위별로 진행한다.
-3-2까지 로컬 구현·검증·변경/영향/복구 문서 완료. 실제 Rules는 줄맞춤 후fd90aa93/187865bytes·깊이5, 내용 기준8b39db36과 동일하며 생성 결과 일치.
-4번 게시1회 실행: 원격 컴파일200/경고0·생성200, 활성화400 뒤 CLI fallback409로 실패. 운영36b5920e 유지 확인.
-요청/구조 조사 완료: 성공·실패 요청 형식 동일, 과거 별도 프로젝트 재현 확인. 준비/guard 추가 검증의 내부 크기·복잡도를 우선 가설로 좁혔다.
-재시도하지 않았으며 게시 정상화·새 Rules 실기기 인수는 미완료다. 상세는 실행 계획4-1/4-2 결과를 따른다.
-아래 D-X1 결과는 보존 이력이며 추가 기능 이식의 자동 실행 지시가 아니다. 최신 순서는 NEXT_WORK를 따른다.
-
-## 보존 이력 — BUG-024와 Rules 축소 (2026-10-09)
-
-아래 감소율 목표·예산·다음 순서는 당시 기록이며 현재 완료 기준이나 실행 지시가 아니다.
-
-목표는 Spark 무료를 유지하며 Rules의 양·복잡도·호출 깊이를 줄이고 기존 기능과 권한을 보존하는 것이다.
-앱 업데이트·데이터 이행은 설계 전제로 허용됐지만 운영 적용과 최종 인수는 아직 완료되지 않았다.
-
-- **B-F1 로컬 복구 완료:** 개인 완료 분기를 선두로 이동한 e2a8a7e6에서 개인18/18·방장 정리16/16·분기4/4·정적2/2 통과.
-  기존 검사 불변, A2 대비2bytes 증가·최대깊이6 유지. 추적본/운영 승격 전의 후속 로컬 기준이다.
-- **B 재판정 완료:** B-F1 위 b6b4003a를 로컬 채택했다. 최대깊이6→5·41bytes 감소, 서버60건·정적3건 통과.
-  과거 A2 기반 a1883020는 미채택 이력이다. C1 18cf2c09 로컬 채택:2600bytes 감소·깊이5 유지, 서버26건·정적3건 통과. legacy 읽기/소비삭제 유지(§34).
-  동일 캐릭터 역할 변경은 제품 정책과 실제 WritePlan의 기존 불일치로 별도 미완료다(축소 설계 §33).
-- **기존 성과:** R1 목록 형식 통합·writer 정리와 A2 방별 backfill 오류 분리를 로컬 구현했다.
-  R2 legacy 제거·R3 정리 통합은 조사 후 미적용/미채택이다. 대폭 축소 목표의 달성 근거는 아직 없다.
-- **D 판정:** 3e45b9a7/144842bytes 조건부 후보, C1 대비1352bytes 감소·깊이5 유지·후보 서버41건 통과.
-  누적4.35%로 목표 미달. 추가키 과거 자료 호환은 미확인, 기본 기준 C1 유지.
-- **D-X1 진행 중:** 단일 roster·모집 요약 설계(§36)의 완료 전용 로컬 probe에서 central/event 책임분리 각31건 통과(§37).
-  접근 한도 교정4건 확인. 공개방 생성/참가61건 통과(§38), 초기1000식 초과를 책임 분산으로 해소.
-  §39 기본 캐릭터/역할60건 검증 후 발견한 재배치 호환 차이는 §40에서 해소했다.
-  e922fc4d/25522bytes·깊이4: 변경/자리103건(실제 Domain14건 포함)·생성/참가61건 통과.
-  §41 공개방 개인완료/마지막1인 통합8f009d3d/30749bytes·깊이4, 개인58건+기존164건 통과.
-  §42 전체완료 통합7a3a3e26/35391bytes·깊이4:49건+기존222건 통과. 교체 예산5962bytes 초과.
-  §43 준비 변경 기본60건+기존271건 통과:0d13d7e0/39080bytes·깊이4, 예산9651bytes 초과.
-  §44 준비 배치 추가25건 통과(동일 후보 누적356건).
-  §45 인증/advance1a5d402c/47007bytes·깊이4:58건+기존356건 통과, 교체 예산17578bytes 초과.
-  §46 인증 stub 생성/참가/승인 교체3dafcf0a/47557bytes·깊이4:49건+기존414건 통과, 교체 예산18128bytes 초과.
-  §47 Claim 결합f2741903/49905bytes·깊이4:후보520건·C1 대조42건·변이2건 통과.
-  §48 C1·369bytes 최소본에서도 동일 오류 재현, 에뮬레이터 동시 조회 문제로 추정. 운영 동시성 인수는 미완료. 다음 일반 변경 대상 stub 교체.
-  §49 일반 변경 대상 stub 교체04097987/49898bytes·깊이4:신규52+기존520=572건·변이2건 통과,7bytes 감소.
-  §50 active 개인완료 guard 보존39건·기존 개인58건 통과, Rules 불변·동일 후보 누적611건.
-  §51 파티 밖 stub 수동완료 cbb2b909/51189bytes·깊이4:신규70+기존611=681건, C1 대조67건·변이2건 통과.
-  다음 수동완료 일반 생성·이전 소유 차수 교체. 소유권 정리도 남아 있다. 운영·추적본 승격은 아니다.
-  전체 명령·읽기·그룹/이력 통합은 미완료, 30% 효과 미입증·X2 진입 보류.
-- **후속:** X1 proof → X2 앱 연결 → X3 reader/이행 도구 → E 통합·이행 → F 게시·실기기 인수.
-  중첩 unknown·부분/잔여 목록·혼합버전 자료 확인은 E의 미완료 조건이다.
-- **운영 마지막 확인:** 10월8일11:16 KST 성공본36b5920e 복원·활성 SHA 일치. 이번 문서 작업에서 재조회하지 않았다.
-  BUG-024 준비/인증 확장은 운영 미반영이며 반복 게시 실패 해결도 미완료다.
-- **로컬 기준:** 추적 Rules408f163f, 비교 R1 17471d0f, 비교 A2 6f549385, B-F1 비교본 e2a8a7e6, B 비교본 b6b4003a, 새 로컬 기준 C1 18cf2c09.
-  작업 브랜치 fix/recurring-next-week-character-change의 체크포인트는b63f105이며 dev/main 미통합이다.
-- **현재 상태:** B-F1/B/C1 도구·검증·문서를 미커밋으로 보존한다. 브랜치 생성·커밋·푸시·머지·운영 변경 없음.
-
-실행 범위는 [NEXT_WORK](NEXT_WORK.md), 설계·판정은 [축소 설계 §25~36](../architecture/FIRESTORE_RULES_REDUCTION_DESIGN.md),
-검증·완료 이력은 [DEV_LOG](DEV_LOG.md)를 따른다. 과거 누적 설명은
-[문서 이력](archive/RULES_REDUCTION_2026-10-09_WORK_HISTORY.md)에 보존했다.
-
-## 최신 공개 릴리즈 — Android 1.1.1+3 (2026-10-06)
-
-v1.1.1 태그6f3876e, KST 수요일06:00 초기화. BUG-023 수정 포함.
-Actions37449901609 빌드·영구 서명·앱 ID/버전 검사·공개 게시 성공, APK 체크섬 일치.
-[릴리즈](https://github.com/heo0328/LostParty_flutter/releases/tag/v1.1.1),
-[설명](../releases/v1.1.1.md), [기록](DEV_LOG.md). 아래1.1.0 내용은 이전 릴리즈 이력이다.
-
-## 최근 완료 — 반복 모집 완료 실패 BUG-023 (2026-10-06)
-
-캐릭터 변경 raidState.role 누락 수정·제한 CI27건·운영 게시/활성 해시 일치까지 확인했다.
-사용자가 두 실제 방 모두 이번 주 완료 성공을 확인하여 이번 수정 구간을 완료 판정했다.
-dev/main에 통합·push했다. 기존 공개 APK1.1.0에 새 수정이 자동 포함되는 것은 아니다.
-[조사 근거](BUG_REPORTS.md), [수정·누락 경위·검증·통합 기록](DEV_LOG.md), [후속 작업](NEXT_WORK.md).
-
-## 현재 상태 — 완료·공개 릴리즈 (2026-10-05)
-
-장기 버그 수정 구간은 완료하여 dev/main에 반영했다. Android1.1.0+2 공개 게시 완료,
-v1.1.0 태그8405555, 초기화KST 수요일06시. 빌드·서명·앱ID/버전·첨부 체크섬 확인.
-[사용자 변경 안내](ROSTER_REAUTH_CHANGE_GUIDE.md), [릴리즈 설명](../releases/v1.1.0.md), [완료 이력](DEV_LOG.md).
-
-10월5일 Rules23702cbc/134048bytes는 당시 운영 활성 해시 일치. 현재는 BUG-023 보완본
-36b5920e/134301bytes가 10월6일 활성 해시 일치 확인된 최신본이다. 함수 범위 조정과 최종 식별자 축약 후
-게시 차단 해소. 실패본 내부 크기는 미확인이므로 모든503의 정확한 용량 초과 원인을 확정하지 않는다.
-[Rules 해결과 유지보수 기준](ROSTER_RULES_PUBLISH_DIAGNOSIS.md).
-
-BUG-024 이후 예정 작업은 **복구키로 기존 Player 복구**, **이전 소유자에게 남은 고아 관계 처리** 두 개다.
-둘 다 후속 설계 대상으로 아직 착수하지 않는다. [상세 범위·결정 사항](NEXT_WORK.md).
-동일 캐릭터 중복은 후속 고아 관계 조사에 포함한다. 그룹 반복방 자리 교환 오류는 재발 관찰로 보존한다.
-기존 전체 실패22/analyze51·전체 회귀 생략을 무결함으로 바꾸지 않는다. 실기기 범위는 DEV_LOG를 따른다.
-과거 진행 상태는 [보관 기록](archive/ROSTER_REAUTH_2026-10-05_WORK_HISTORY.md)에 있다.
+dev e24baab에서 docs/backend-migration-analysis를 분기하여 [9문서](../backend-migration/00-overview.md)를 작성한다. 실제 Firebase62파일·snapshot21호출·복합index16선언과 Router/Writer/Rules를 코드 근거로 조사한다. Flutter/향후 Swift + FastAPI/PostgreSQL, guest UID/회원 없는 공개 읽기·OAuth 자체 token은 이번 사용자 목표 정책이며 아직 구현되지 않았다. 중단한 fix/party-participation-consistency f3836dd의 변경은 포함하지 않는다. 원격 Firebase/데이터/배포 미조회·미변경, 앱 코드/설정 변경 없음. API/SQL 구현과 실제 Issues 생성·커밋/push/merge는 제외한다. 아래 운영 인수/재설계 문구는 이전 이력이다. 상세/미확인 범위는 분석 문서와 NEXT_WORK를 따른다.
 
 ## 현재 제품 축
 
-### Character와 인증
-
-- 앱 실행 후 내 레이드 현황 초기 로딩과 충돌하지 않게 적격 Character를 앱 수명당 한 번 갱신한다. 공통 사용 레벨 정책은 현재 1700이며 나이스단 판정과 공유한다.
-- 서버 관계가 없고 로컬 인증 표시만 남은 경우 서버 불일치로 안내한다. 자동 재귀속이나 자동 로컬 삭제는 하지 않으며 앱 데이터 초기화·재인증을 기본 복구 절차로 유지한다.
-- 활동 Character 8→15 저장에서 Rules 문서 접근 한도로 `permission-denied`가 발생한 문제를 작은 묶음의 차이 저장으로 보완했고, 저장·재실행·후보 반영·기존 관계 보존을 실기기에서 확인했다.
-- 장비 인증 Challenge는 의도적으로 Gateway 메모리에만 두고 앱 프로세스 종료 시 함께 종료한다. 인증 진행 카드에 앱 종료 시도 종료와 인게임 즉시 조작 권장을 안내하며, 시작 시 무기·방어구 5부위 중 하나라도 미장착이면 일반 정보 실패와 구분한 전용 착용 안내를 표시한다. 자동·실기기 검증을 완료했다.
-- 계약: [`../architecture/GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT.md`](../architecture/GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT.md), [`../architecture/GAME_ACCOUNT_VERIFICATION_CONTRACT.md`](../architecture/GAME_ACCOUNT_VERIFICATION_CONTRACT.md), [`../architecture/CHARACTER_INTERACTION_AUTO_REFRESH_CONTRACT.md`](../architecture/CHARACTER_INTERACTION_AUTO_REFRESH_CONTRACT.md)
-
-### Character Build 무결성
-
-- 깨달음·아크그리드 질서 해/달 14P·보석 Tooltip 직업을 기본 검사한다. 별과 혼돈은 필수 판정에서 제외한다.
-- 2026-09-12 제품 합의에서 빨간 확정 오류를 `보석 11개 미만`, `타 직업 보석`, `API 스킬·등록 특수 스킬 양쪽에 없는 보석`, `질서 해·달 누락/각 14P 미만`, `아크그리드 요구 아크패시브 불충족`으로 고정했다. 카탈로그 미등록은 중립 사유가 아니며 사용자가 정상 특수 스킬을 점진적으로 추가한다. API·Tooltip 자체의 정보 부족만 중립이다.
-- 확정 오류 v2의 아이콘 fallback 제거와 오류 전용 표시 보정을 구현·자동 검증했다. 정상 근거는 `ArmorySkills OR 승인 카탈로그`로 제한하고 정상·판정 불능은 비표기, 확정 오류만 빨간색으로 표시한다. 복수 캐릭터 진단 도구도 OS 임시 원본 저장과 미등록 후보 추출을 지원한다.
-- 카탈로그 `2026.09.12`에는 사용자 확인을 거쳐 환수사 `야성`의 `둔갑 금술 스킬`, 가디언나이트 `드레드 로어`의 `가디언 피어`, 데모닉 `멈출 수 없는 충동`의 `블러드 제노사이드`를 정상 특수 보석 대상으로 추가했다.
-- 같은 카탈로그에 차원술사 `시간 관리자`의 `시간선 스킬`도 사용자 확인 정상 대상으로 추가했다.
-- 27직업 108캐릭터의 실제 API 표본을 추가 교차검증해 카탈로그 `2026.09.12.2`를 30직업의 현재 깨달음 1티어 분기로 확장했다. `ArmorySkills`에 없고 Tooltip 직업이 일치한 특수 보석만 등록했으며, 인파이터의 브레이커 보석과 데빌헌터의 바드 보석 표본은 타 직업 오류로 유지한다.
-- 실기기에서 확인한 새 파티장 membership의 보석 Snapshot 누락과 참가 Character 변경 목록의 통합 표시 누락을 보완했다. 새 파티장에는 기존 보석 최소 요약을 저장하고 변경 목록은 로컬 통합 상태로 보석·아크그리드 오류를 함께 표시한다. 표적 테스트 63건과 변경 파일 분석이 통과했고 Rules·권한·점유 순서는 변경하지 않았다. 사용자가 그룹 레이드 생성 파티장의 오류 표시를 실기기에서 확인해 기능 구현을 완료 판정했다.
-- 신청·즉시 참가 Character 선택 목록에도 같은 로컬 통합 오류 표시를 적용했다. 과거 파티 마이그레이션은 현재 단독 테스트 단계에서 불필요하다는 사용자 결정으로 제외했다.
-- 릴리즈 실기기에서 확인한 후보의 아크그리드·아크패시브 오류 전달 누락을 보완했다. 기존 보석 전용 Snapshot을 유지하면서 통합 `buildIntegritySnapshot`을 신청·membership에 dual-write하고, 승인 시 신청 당시 값을 복사하며 과거 문서는 기존 보석 경고로 호환한다. 운영 활성 Rules와 로컬 소스 일치 및 실기기 지속 표시를 확인했다.
-- 계약: [`../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md`](../architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md)
-
-### 그룹과 레이드
-
-- 그룹 membership·초대코드·그룹장 이전/해산 계약과 레이드 명령·읽기·주간 Claim 계약이 구현돼 있다.
-- 진행 중 레이드 카드의 방별 unread 배지는 레이드 현황 탭 재선택 갱신으로 보완했다. 모든 방의 실시간 Listener는 추가하지 않았다.
-- 8인 공격대 자리 이동과 점유 자리 교환, 동일 파티 중복 직업 교환 차단은 구현됐고 실기기에서 확인했다. Character 변경 자동 이동·파란 안내 제거와 알림의 일부 실기기 확인은 남아 있다.
-- BUG-022의 A1 현재 그룹 count 검증과 A2 참가자 제거 listing 수정은 운영 게시됐고, 기존 문제 방 추방도 실기기에서 성공했다. F6-F는 지난 주차 1회성 방을 `raidState` 삭제 없이 `incompleteEnded`로 전환해 운영 문제 방에서 실제 동작을 확인했다. F6-G는 참가 Character 후보와 최종 Transaction의 점유 판정을 공용 정책으로 정렬하고 기존 단일 고아 정리 UX를 연결했다. 자동 삭제·자동 변경이나 Rules 수정 없이, 실기기에서 정리 안내 후 수동 재선택·Character 변경 성공까지 확인해 완료했다. 그룹방 재가입 C는 별도 과제이며, DE의 최신 목표는 원정대 재인증 후 새 사용자 정상 이용과 이전 무효 관계의 제한 정리다. 로그인 연결·기존 Player 복구는 이번 범위에서 제외한다. 최신 실행 기준은 아래 다음 작업을 따른다. 설계: [`../architecture/BUG_022_REMAINING_FIX_DESIGN.md`](../architecture/BUG_022_REMAINING_FIX_DESIGN.md), 실행 계획: [`NEXT_WORK.md`](NEXT_WORK.md)
-- 기존 `release/1.0.0` 후보는 다인 명령 확장성 결함으로 폐기하고 이력용으로만 보존한다. 현재 우선 작업은 `BUG-018` 단일 보정이 아니라 파티·그룹 Firestore 명령, Player별 이벤트 fan-out과 Rules 접근 구조의 재설계다. 서버 후처리 단계는 사용하지 않고 현재 최대 8인의 핵심 상태를 제한된 원자 명령으로 확정하며, assignment·주간 Claim은 통합 `raidState`로 교체하는 방향이다. 종료 하위 문서 정리는 정확성과 분리한다. 기준: [`../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](../architecture/PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md)
-- 계약: [`../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md), [`../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md`](../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md), [`../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md), [`../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md`](../architecture/WEEKLY_RAID_CLAIM_CONTRACT.md)
+> 기존 자료는 [출처가 기록된 레거시 발췌](../../legacy/firebase/extracted/docs/project/AI_CONTEXT.md#source-0009)로 이동했다.
 
 ## 차후 제품 후보
 
-- Character Build 오류·상태 정의, 기본 판정, 파티 생성 리더 Snapshot 및 참가 Character 변경 목록 표시 보완은 완료됐다.
-- 기존 membership 보석 Snapshot을 통합 Build 상태로 이행할지 여부는 별도 후보다.
-- 약 60개 직업·분기의 특수 보석 카탈로그 조사는 캐릭터명 기반 진단 도구와 사용자 승인을 반복하는 상시 관리 작업이다. 절차는 [`../integrations/LOST_ARK_API.md`](../integrations/LOST_ARK_API.md)를 따른다.
-- 직업·깨달음·질서 해/달/별 계층 메모, `망소빙` 같은 Build 별칭과 버전형 JSON 공유: [`../product/BUILD_MEMO_SHARING.md`](../product/BUILD_MEMO_SHARING.md)
-- 직업 시너지 선택·필터: [`../product/CLASS_SYNERGY_CATALOG.md`](../product/CLASS_SYNERGY_CATALOG.md)
-- 진행 중 내 Character 필터와 진행 중/레이드 모집의 참가 인원 로컬 정렬·남은 자리 2차 필터는 구현·실기기 확인했다. 계약: [`../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md`](../architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md) §14
-- 테스트 데이터의 고아 `raidState`/신청 참조를 안전하게 진단·정리하는 도구는 별도 후속 작업이다. 모집 원본만 콘솔에서 단독 삭제하거나 Firebase 전체를 초기화하지 않는다. 실행 순서는 [`NEXT_WORK.md`](NEXT_WORK.md)의 F6 범위 밖 백로그를 따른다.
-- FCM, 유료 서비스, 서버 상시 스케줄러는 별도 승인 전까지 제외한다.
+> 기존 자료는 [출처가 기록된 레거시 발췌](../../legacy/firebase/extracted/docs/project/AI_CONTEXT.md#source-0010)로 이동했다.
 
 ## 문서와 운영 주의
 
-- Firestore Rules 변경 섹션은 로컬 검증 후 AI가 실제 배포를 한 번만 시도한다. 실패하면 반복 배포·기능 삭제를 멈추고 실패 단계와 콘솔 활성 소스를 먼저 조사하며, 재시도는 사용자의 새 지시가 있을 때만 한 번 수행한다.
-- CLI 503은 실패 단계(`/test`, `/rulesets`, `/releases`)와 콘솔 활성 게시본을 함께 확인한다. 503만으로 Rules 복잡도나 특정 기능을 원인으로 확정하거나 기능을 제거하지 않는다.
-- Firebase 콘솔 복사본은 로컬 대조 자료일 뿐 배포 원본은 `firebase.json`이 지정한 `firestore.rules`다.
-- 상세 완료 이력은 [`DEV_LOG.md`](DEV_LOG.md), Rules 장애·경고 이력은 [`TASK-11-FIRESTORE-RULES-COMPLEXITY.md`](TASK-11-FIRESTORE-RULES-COMPLEXITY.md)를 따른다.
+> 기존 자료는 [출처가 기록된 레거시 발췌](../../legacy/firebase/extracted/docs/project/AI_CONTEXT.md#source-0011)로 이동했다.
+
+
+기존 실행/상태 이력의 추가 발췌: [출처 기록](../../legacy/firebase/extracted/additional/docs/project/AI_CONTEXT.md).
+# 최신 Git 통합 상태 (2026-10-13)
+
+사용자 후속 지시로 신규 서버 분석·설계와 기존 자료 보관 문서를 커밋하여 dev에 통합하고 원격 dev에 반영한다. 아래 미커밋·dev 미반영 표기는 이전 단계의 상태 기록이다. 앱 코드·설정·배포 변경은 포함하지 않으며 기존 로컬 실험·백업은 보존한다.

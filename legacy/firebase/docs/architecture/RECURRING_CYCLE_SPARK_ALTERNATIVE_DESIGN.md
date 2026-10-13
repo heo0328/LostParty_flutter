@@ -1,0 +1,306 @@
+# BUG-024 Spark 무료 범위 대안 재설계
+
+> 원본 문서: `docs/architecture/RECURRING_CYCLE_SPARK_ALTERNATIVE_DESIGN.md` · 이동일:2026-10-13. 기존 서비스의 보관 문서이며 신규 서버의 실행 기준이 아니다.
+
+2026-10-07. 사용자가 **Spark 무료 유지·현재 서버안 중단·무료 범위 대안 재설계**를 선택했다.
+이 문서는 무료 대안의 조사·검증 순서를 정한다. 8인 통과가 입증된 구현 설계라는 뜻은 아니다.
+서버안의 Blaze 전제를 확인하지 않은 채 구현 가능한 상태로 설명한 판단을 정정한다.
+[기존 제품·보존 계약](RECURRING_NEXT_WEEK_CHARACTER_CHANGE_DESIGN.md)은 유지한다.
+
+## 2026-10-07 실제 앱 도입 계약 — 최신 기준
+
+사용자가 디바이스 준비 후 실기기 테스트 전까지 실제 수정을 승인했다.
+805429c/d987bbd에서 strict stub 분류·소유권/점유 조회·개인 완료·참가 호환과
+advance 인증 선행 처리를 앱에 연결했고, C와 A를 추적 Rules 생성 pipeline에 반영했다.
+구체 실행 상태와 운영 게시 여부는 [NEXT_WORK](../../../../docs/project/NEXT_WORK.md), 검증 이력은
+[DEV_LOG](../../../../docs/project/DEV_LOG.md)를 따른다. 아래 A/C의 미구현·미게시 표현은 당시 이력이다.
+
+- 준비 변경은 본인 membership·구성·필수 목록·이벤트만 원자 갱신한다. state/Claim/기존 완료 이벤트는 보존한다.
+- 후보 목적은 준비 변경에만 전달하며 생성·신청·즉시 참가의 완료 차단을 유지한다. 최종 요청도 같은 정책을 쓴다.
+- advance의 공개 명령·DI는 유지한다. 각 인증 transaction은 binding과 같은 revision의 방을 다시 읽고
+  슬롯별 blind merge를 수행한다. 타인의 private 원장 읽기는 추가하지 않는다.
+- 기존 state 인증은 core 상태·완료 정보·revision을 보존한다. strict stub은 참가·완료가 아니다.
+  인증 일부 성공 후 실패하면 인증 자료만 남을 수 있고 핵심 구성·참가·완료는 전환되지 않는다.
+- 최종 한 transaction에서 방·8인 state·필수 목록·이벤트를 확정한다. 최신 소유권·구성·window와
+  인증 일치를 다시 검사한다. 다른 방 active·현재 완료·손상 기록은 덮어쓰지 않는다.
+- 개인 완료/참가 writer는 원래 권한/점유 검사를 통과할 때만 stub 대체 또는 인증 전체 제거를 허용한다.
+  인증 일부 제거·변조와 표식 제거+legacy Claim 우회는 거절한다. 새 legacy Claim은 live 차수를 검사하며
+  누락 차수는 실제0일 때만 허용한다. 기존 이전 차수 자료 읽기 호환은 유지한다.
+- 인증 없는 구버전 advance는 서버에서 거절된다. 최신 작업 브랜치 앱과 운영 Rules를 함께 사용한다.
+  permissionDenied는 최신 앱·새로고침·진단 ID 안내로 표시한다. 기존 공개 APK에는 새 코드가 자동 포함되지 않는다.
+- 진행 중 캐릭터 변경은 기존 전용 검증기로 직접 dispatch해 불필요한 fallback 평가를 줄인다.
+  소유권·자리·원자성·목록·이벤트 검사는 그대로 유지한다.
+- 준비 시 완료 기록 보존과 정상 주차 전환 시 통합 state 갱신 수명은 구분한다.
+  이전 완료 당시 명단은 기존 완료 이벤트에 남는다. Functions/결제 변경은 하지 않는다.
+
+## 확정한 제약과 현재 근거
+
+- Functions·Cloud Run·결제 연결·유료 전환은 하지 않는다. 현재 lost-party는 billingEnabled=false다.
+- 기존 브랜치와 초기화 설정의 로컬 상태를 보존한다. 운영 데이터·Rules는 변경하지 않았다.
+- 이번 후보는 BUG-024 22/30 성공, 8개 실패다. 완료 대상 준비 변경과 8인 전환의 문서 접근 오류,
+  기존 정상 전환 및 최대 8인 구성의 빈자리 이동 평가 한도 실패 때문에 배포 불가다.
+- 구 Claim과 legacy 점유의 고유 접근 경로를 모두 줄인 진단본에서만 첫 8인 전환이 통과했다.
+  진단본은 실제 대상 기록을 검사하지 않으므로 제품에 적용할 수 없다.
+- 현재 한도 초과는 입증했지만 모든 무료 구조가 불가능하다는 증명은 아니다.
+  실제 접근 횟수와 캐시 효과를 추정해 성공으로 판단하지 않는다.
+
+Rules 문서 접근 제한은 원자 요청 전체 20회와 각 쓰기 10회다. 평가 식 한도도 별도로 검사한다.
+[공식 Rules 조건 문서](https://firebase.google.com/docs/firestore/security/rules-conditions).
+
+## 반드시 보존할 동작
+
+준비 변경은 모집·본인 membership·기존 필수 목록·변경 이벤트를 한 transaction에서 확정한다.
+이전/새 state와 Claim, 완료 시각·완료자·완료 이벤트는 쓰지 않는다. A→B→C와 유효 빈자리 이동,
+공대장 고정석을 유지하고 타인을 자동 교환하지 않는다. 같은 캐릭터의 역할만 변경은 추가하지 않는다.
+이번 주 완료만 준비 후보에서 제외하지 않으며 소유권·미확인 자료·다른 방 활성 점유·구성 제한은 유지한다.
+
+다음 주 예약을 만들지 않는다. 전환은 최신 구성·소유권·현재 주차 완료·legacy 점유를 다시 검사한다.
+대상 state 없음, 같은/다른 방의 이전 완료, 다른 역할·난이도의 이전 완료를 처리해야 한다.
+현재 주차 완료·다른 방의 유효 활성 기록·소유권 불일치·미확인 기록은 덮어쓰지 않는다.
+한 명의 충돌도 방/목록/전원 state 전체 무변경으로 끝나야 한다.
+
+기존 진행 중 캐릭터 변경·자동 이동·BUG-023 전체 완료·개인 완료/해제·정상 주차 넘김을 보존한다.
+검사를 앱으로만 옮기기, client proof 신뢰, 완료/점유 검사 삭제, 무조건 completed 허용,
+여러 transaction으로 핵심 상태 나눠 쓰기, 참가자 자동 제거는 대안으로 채택하지 않는다.
+
+## A. 현재 저장 구조에서 먼저 증명할 최소 변경
+
+배포 불가 후보의 허용 분기를 계속 덧대지 않는다. 운영 성공본과 일치하는 생성기 조합을
+격리 검증 기준으로 복원하고 정상 전환·전체 완료·제자리 변경·빈자리 이동의 기준 결과를 확보한다.
+추적 Rules를 원복하거나 배포한다는 뜻이 아니다. 후보와 비교할 읽기 전용 기준을 만든다.
+
+준비 변경은 동일 원자 요청 내 **Rules 책임 분산**을 먼저 조사한다. 핵심 쓰기를 나누지 않는다.
+
+| 필수 쓰기 | 검사 책임 후보 | 반드시 증명할 결합 |
+|---|---|---|
+| 모집 | 완료 반복방, revision, 본인 한 명의 구성/targets/방장 표시 변경, 필수 member/listing/event 존재 | 타인 슬롯·권한·회차·완료 필드 불변, 나머지 필수 쓰기 없으면 거절 |
+| 본인 membership | 이전/새 캐릭터 현재 소유권, 자격, 변경 허용 필드, legacy 점유 | 모집의 동일 요청·revision과 정확히 일치 |
+| characterChanged 이벤트 | 이전/새 state·Claim 불변, immutable 이벤트/audience | 실제 변경 전후의 정확한 캐릭터/주차, 중복 이벤트 불가 |
+| 필수 listing | 기존 목록 존재, 원본과 정확한 revision·구성 일치 | 없는 목록 재생성 불가, 다른 명령의 공용 writer 불변 |
+
+구성/소유권/기록 검사를 어떤 문서로 옮기든 필수 쓰기 강제가 먼저 입증돼야 한다.
+이벤트가 있는지만 검사하고 보존 검사 실행을 보장하지 못하면 채택하지 않는다.
+일반방에도 이벤트가 필수이므로 그룹 목록에만 보호 검사를 의존하지 않는다.
+before/after 접근이 모두 필요한 경로, 다른 allow/legacy 분기 우회와 per-write 10회를 함께 계산한다.
+완료 Claim·state를 같은 요청에 끼워 넣는 공격도 포함한다.
+
+이 안이 준비 변경을 해결하더라도 **8인 전환까지 해결한 것으로 보지 않는다**.
+전환에서 각 대상마다 새로 읽는 소유권 2문서와 Claim·legacy 점유 검사는 책임 위치만 바꿔도
+요청 전체의 고유 문서 수가 줄지 않을 수 있다. 준비 변경의 분산을 전환에 기계적으로 적용하지 않는다.
+현재 구조의 8인 전환에서 중복 접근 제거만으로 모든 보호가 통과하는지 별도 증명한다.
+같은 가설의 미세 변경이 반복 실패하면 A는 중단하고 B의 저장 계약 검토로 넘어간다.
+
+## B. A의 8인 전환이 실패하면 검토할 단일 원장 구조
+
+검사 생략 대신 **소유권에 연결된 캐릭터별 제한 원장**으로 참가·완료·호환 상태를 통합하는 구조를
+검토한다. 외부 문서 조회가 아니라 각 원장 쓰기의 resource로 이전 점유/완료를 판정할 수 있는지 확인한다.
+원정대의 현재 소유자·차수는 계속 live authority로 검증한다. 최신 소유권을 복제한 snapshot만 믿지 않는다.
+
+가능성 조사 대상은 캐릭터의 제한된 raid별 상태 map을 가진 private 원장이다.
+한 캐릭터의 여러 레이드가 무제한으로 커지지 않도록 현재 카탈로그와 명시적 크기 제한이 필요하다.
+공개 캐릭터 문서에 개인 참가/완료 원장을 넣어 타인의 private 데이터가 노출되는 방식은 제외한다.
+캐릭터 활성 상태·gameAccountId·owner/revision과 원장의 관계를 서버 Rules에서 강제해야 한다.
+원장 삭제/재생성·캐릭터 상태 변경·원정대 이전으로 과거 완료/점유가 살아나거나 사라지면 실패다.
+
+필수 설계 조건:
+
+1. 단 하나의 canonical 원장을 정한다. 기존 raidStates·Claim·assignment와 병렬 원장을 만들고
+   어느 쪽이 최신인지 앱이 임의로 고르는 방식은 사용하지 않는다.
+2. 현재/과거 기록을 단건 transaction으로 검증해 수렴시키는 명령과 이행 표식을 설계한다.
+   이행 표식은 client 선언으로 만들 수 없으며 원본 기록과 Rules가 대조해야 한다.
+   손상·알 수 없는 자료는 자동 삭제/무시하지 않는다. 완료 기록 보존 의미도 별도로 확인한다.
+3. 이행 후에도 구버전 명령이 구 Claim/assignment/state를 새로 써서 보존 검사를 우회하지 못하게 한다.
+   구 쓰기 차단과 새 원장 적용을 결합한다. 확인하지 않은 미래 주차 Claim이 없다고 가정하지 않는다.
+4. 이행 자료가 없는 캐릭터는 정상으로 추정해 통과시키지 않는다. 준비 변경 자체에 다음 주 예약을
+   만들지 않으며 전환 시 유효한 최신 원장만 사용한다.
+5. 생성·신청·승인·즉시 참가·활성 변경·전체 완료·개인 체크/해제·해산·소유권 이전·구독/후보가
+   같은 원장을 사용해야 한다. 구 writer 하나라도 살아 있으면 전환 correctness가 성립하지 않는다.
+6. 모집 원본이 전원 원장 쓰기를 강제하고 각 원장이 정확한 본인 대상·새 회차를 검사해야 한다.
+   방만 전환, 한 명 누락, 타인 대상 추가, 다른 레이드 map 변경을 전부 거절한다.
+7. 8인에서 root의 전원 쓰기 확인과 각 원장의 live authority 읽기까지 포함해 20/10/평가 한도를
+   실제 Emulator로 먼저 증명한다. 합계 추정이나 동일 경로 캐시 가정으로 구현 가능을 선언하지 않는다.
+
+B는 후보 구조이며 아직 채택·구현하지 않는다. 기존 여러 명령과 조회 계약을 바꾸므로
+작은 BUG-024 패치가 아니라 원장 이행 작업이 된다. 이 범위와 구버전 영향을 별도 확정한 뒤 구현한다.
+입증되지 않은 B를 “무료 서버안”으로 설명하거나 유료 서비스로 몰래 대체하지 않는다.
+
+## 검증·반영 순서와 중단 기준
+
+1. 운영 성공본과 후보 diff, 실제 Rules get/getAfter/exists 호출 및 allow 우회를 표로 고정한다.
+2. 격리된 A에서 준비 변경의 책임 분산을 증명하고, 8인 전환의 현재 구조 가능 여부를 확인한다.
+   기존 정상 전환·활성 변경·빈자리 이동·전체 완료는 함께 회귀 보호한다.
+3. A가 모두 통과하면 최소 앱/Rules 변경안과 정확한 저장·권한 계약을 갱신해 구현한다.
+   준비만 통과하면 “부분 가능·전환 미해결”로 기록하고 B를 검토한다.
+4. B가 필요하면 원장 경로·스키마·이행·모든 writer/reader·소유권/구버전 영향과 작업 단위를 확정한다.
+   8인 핵심 proof가 통과하지 않으면 전체 앱 개편을 시작하지 않는다.
+5. 최종 추적본 생성 일치·권한/원자성·회귀·한도·경고 0개가 확보된 뒤에만 운영 Rules 1회 배포 정책을 적용한다.
+   실패 시 반복 배포하지 않는다. 사용자의 두 실제 방 확인 전 BUG-024 종료·dev/main 통합하지 않는다.
+
+## A 실행 결과 — 2026-10-07
+
+사용자가 Spark 유지 상태에서 수정을 지시해 `957c11a`에서 격리 후보와 검증 도구를 구현했다.
+후보는 `tools/bug024_spark_preparation_candidate.mjs`가 ignored coverage에만 생성한다.
+추적 firestore.rules·실제 앱 writer·공개 명령은 변경하지 않았다.
+필수 변경 이벤트에 이전/새 characterId·새 ownershipRevision·cycleKey를 추가하고 모집이 이를
+서버에서 읽은 이전/새 membership과 정확히 대조한다. event Rules가 state/Claim 불변을 검사하고,
+member Rules가 live ownership·legacy 점유를 검사한다. 핵심 쓰기는 하나의 transaction이다.
+
+[Actions 37572942042](https://github.com/heo0328/LostParty_flutter/actions/runs/37572942042):
+
+| 대상 | 결과 | 해석 |
+|---|---|---|
+| 운영 성공본 전체 완료·정상 전환 | 27건 통과 | 기존 정상 전환은 기준본에서 통과 |
+| 운영 성공본 캐릭터 배치 | 8인 제자리 변경 통과, 7인 빈자리 이동 평가 한도 실패 | 이 빈자리 실패를 이번 후보만의 회귀로 단정한 이전 판단 정정. 실기기 정상/이상 여부는 미확인 |
+| 준비 검사 분산 후보 | 30건 중 25건 통과, 5건 실패 | 준비 변경·기록 보존·부정 경계는 진행되지만 5개 정상 전환에서 접근 한도 실패 |
+
+실패 5건은 대상 없음/같은 방 완료/다른 방 완료/다른 역할·난이도 완료/manual 완료에서
+준비 변경 후 advanceCycle의 state 쓰기로 넘어간 단계다. 준비 성공만으로 이 5건을 통과로 바꾸지 않는다.
+이벤트 metadata 위조의 추가 부정 검증과 준비 경로의 모든 손상 자료 검증도 운영 채택 전에 필요하다.
+
+부정 사례의 Service call error를 정상 거절 성공에서 제외하도록 6f938d7에서 판정을 강화했다.
+[Actions37573598192](https://github.com/heo0328/LostParty_flutter/actions/runs/37573598192)에서 영향받는 부정25건만
+재실행해23건 성공·2건 실패다. 준비 후 legacy 점유/현재 Claim 발생의 두 사례가 접근 오류로 끝났다.
+따라서 앞 표의 최초25개 harness 성공 중2개는 유효한 정책 거절 증명으로 인정하지 않는다.
+최종 해석은 기존30개 중23개 인정·5개 정상 전환 실패·2개 부정 전환 미입증이다.
+이 보완은 이전 도구가 service 접근 오류를 정상 거절로 셀 수 있었던 한계를 정정한다.
+현재 A는 **준비 경로의 일부 개선 가능, 전체 수정 불성립**이다. 운영 게시 0회다.
+동일한 분산 방식과 작은 조건 변경을 전환에 반복 적용하지 않는다.
+
+## C. B의 전체 원장 개편 전에 검토할 최소 상태 확장 — 상세 설계·8인 선행 검증 승인
+
+8인 전환 때 매번 읽는 legacy Claim/assignment를 임의로 생략하지 않고, 기존 canonical raidState의
+Rules가 검증한 호환성 표식을 사용할 수 있는지 설계한다. 새 private 원장으로 전 기능을 옮기기 전에
+검토할 후보이며, 한도 통과나 안전성이 입증된 수정안은 아니다.
+
+제안 데이터는 기존 `players/{playerId}/raidStates/{characterId}_{raidId}` 안에 둔다.
+
+| 형태 | 제안 필드와 의미 |
+|---|---|
+| 기존 active/completed | status·cycleKey·완료 정보·revision은 그대로, 별도 호환성 metadata만 추가 |
+| 기존 state 없음 | 새 schema의 idle 형태. 참가·완료가 아니라 검증 표식만 존재. active/가짜 completed로 만들지 않음 |
+| 호환성 metadata | 검증 protocolVersion, 대상 주차, 방 ID·방 revision, 소유권 차수, 검증 시각 |
+
+제안 처리 순서:
+
+1. 전환 직전에 각 대상 한 명의 Claim·legacy 점유·현재 ownership·기존 state를 Rules로 검사한다.
+   기존 유효 점유/대상 주차 Claim/손상 데이터가 있으면 표식 생성 자체를 거절한다.
+   Claim 삭제와 표식 생성을 끼워 넣는 우회는 before 검사로 거절한다.
+2. 최대 8개의 단건 검사는 참가/완료/방 회차를 바꾸지 않는 준비 작업이다. 중간 실패 시에도
+   active 예약·완료 해제·방 일부 전환이 생기지 않아야 한다. 표식은 독점 예약이 아니다.
+   방장에게 타인의 private state 읽기 권한을 주지 않는 blind metadata 쓰기가 가능한지 검증한다.
+3. 표식이 유효한 동안 legacy writer가 같은 대상의 Claim/assignment를 뒤늦게 만들거나 바꾸지 못하게
+   해당 Rules를 결합한다. 다른 canonical 명령이 표식을 제거하면 다음 전환은 다시 검사를 요구한다.
+   현재 검사하지 않은 미래 주차 자료를 안전하다고 추정하지 않는다.
+4. 최종 전환은 한 transaction에서 여전히 전원 state·방·목록·이벤트를 확정한다.
+   각 state Rules가 자신의 이전 resource에 있는 표식과 live ownership을 검증한다.
+   방 revision/대상/소유권/현재 완료가 바뀌면 표식이 있어도 거절한다.
+5. 새 idle은 모든 read/후보/개인 완료·해제/가입·변경 writer에서 명시적으로 처리해야 한다.
+   누락/손상 문서를 idle로 간주하지 않는다. idle에서 수동 완료·참가 전환도 기존 권한 검사를 유지한다.
+   구버전 앱의 해석 불가와 legacy 쓰기 차단 영향을 먼저 확정한다.
+
+주요 위험은 idle 호환성, 기존 state 삭제/덮어쓰기로 표식 수명이 바뀌는 경우,
+legacy writer 하나가 차단에서 빠지는 경우, 이전/새 소유권 차수의 표식 재사용이다.
+metadata를 저장했다고 신뢰하지 않고, 생성·변경·무효화·삭제·재생성 경계를 Rules proof로 먼저 검사해야 한다.
+metadata 단건 작업을 핵심 전환의 분할 저장으로 바꾸는 구현은 금지한다.
+
+C는 저장 스키마와 기존 reader/writer 계약을 바꾸므로 A의 최소 조건 수정 범위를 벗어난다.
+2026-10-07 사용자가 C의 상세 설계·격리된 8인 선행 proof를 승인했다.
+승인 범위는 실현 가능성 검증까지이며 앱·추적 Rules·운영 데이터에는 도입하지 않는다.
+실패 시 B 전체 개편을 자동 시작하지 않는다.
+
+현재 결론은 **A 전체 수정 실패, C 상세 설계·격리된 8인 선행 검증 통과**다.
+기능 코드·추적 Rules·운영 데이터·결제 설정에는 이번 격리 후보를 반영하지 않았다.
+
+### C 선행 proof의 구체 계약
+
+canonical state에 `guardSchemaVersion=1`, `guardRecruitmentId`, `guardRoomRevision`,
+`guardCycleKey`, `guardCycleStartedAt`, `guardCycleEndsAt`, `guardSlotIndex`, `guardCheckedAt`을 추가한다. 기존 state는 이 여덟 필드만
+변경할 수 있다. state가 없으면 playerId·characterId·raidId·ownershipRevision과 여덟 필드만
+있는 availability-only stub을 만든다. stub에는 status/source/cycleKey/revision이 없으며,
+실제 참가·완료 또는 손상 문서와 구별하는 정확한 key 집합을 갖는다.
+
+단건 인증은 방장만 요청하고 해당 슬롯·방 revision·날짜 형식·live ownership을 검사한다.
+방은 before/after가 완전히 같아야 한다. 검사 시점은 대상 7일 window 안이며 window 시작은 기존 회차 종료 이후다.
+최종 전환의 window가 인증 window와 정확히 같아야 한다. Claim 차단도 인증 window가 끝나면 종료한다.
+대상 주차의 before Claim과 before legacy assignment가
+없거나 엄격한 이전 소유권 자료여야 한다. 기존 state는 같은 소유권의 유효한 이전 주차 completed,
+같은 방의 이전 active 또는 정확한 stub만 허용한다. 완료 정보와 state revision은 변경하지 않는다.
+방장은 타인의 private state를 읽지 않고 room 슬롯으로 blind merge한다.
+
+legacy Claim 생성은 canonical state의 before/after 인증 표식을 함께 확인한다.
+Claim은 인증 대상 주차에 차단한다. assignment 생성/수정은 기존 Rules에서 이미 무조건 금지하며 그대로 유지한다. 표식 삭제+legacy 쓰기와
+Claim 삭제+인증을 같은 요청에 넣어 우회할 수 없어야 한다. 인증은 미래 주차 전체를 인증하지 않는다.
+다른 canonical 명령이 표식을 제거하면 인증을 다시 받아야 한다.
+
+최종 전환은 이전 resource의 인증과 live ownership, 최신 슬롯의 player/character/role/generation,
+방 revision+1, 대상 주차를 검증한다. 인증 필드는 전부 불변이다. 기존 완료와 stub 각각의 제한 경로에서
+전환하며 인증 없는 absent→active는 거절한다. 핵심 방·전원 state·목록·이벤트의 원자 계약은 유지한다.
+개별 인증 성공 후 다른 슬롯 인증이 실패해도 핵심 상태는 전환되지 않는다.
+
+필수 검증은 8인 최종 전환·전체 완료, absent/같은 방/다른 방/다른 역할·난이도/manual 완료,
+완료 보존, 위조 인증·부분 전환·오래된 revision·소유권 상실·현재 완료/Claim/legacy 점유 거절이다.
+접근/evaluation 오류는 올바른 거절로 세지 않는다. 모든 정상 8인 사례가 통과해야 구현 가능성을 인정한다.
+
+앱 도입 전 별도 확정할 영향은 RaidState codec/조회 projection/후보 정책의 stub 처리,
+개인 완료·해제와 참가/변경/해산 writer의 표식 보존 또는 무효화, 구버전 앱 쓰기 차단과 재조회 안내다.
+선행 proof만으로 이러한 호환성 작업이나 BUG-024 전체 수정이 완료됐다고 판정하지 않는다.
+
+### C 선행 proof 당시 앱 도입 후속 상세 설계 (실제 도입은 위 최신 절 참조)
+
+| 실제 연결/경로 | 영향과 도입 계약 |
+|---|---|
+| `lib/app/router/app_router.dart`의 Atomic repository → Cycle adapter | 기존 DI와 공개 명령은 유지. advance 요청에 한해 동일 expectedRevision/대상/window로 단건 인증 후 최종 transaction을 실행. 타인의 state 읽기를 추가하지 않음 |
+| `firestore_party_atomic_command_repository.dart` | 인증 도중 실패 시 핵심 쓰기를 시작하지 않음. 최종 revision 충돌은 재조회 안내. 다른 모드로 자동 재실행하지 않음 |
+| `party_ownership_record_policy.dart`, `party_raid_state_occupancy_inspector.dart` | 정확한 stub만 별도 판별한 후 live ownership/generation을 대조. stub은 참가·완료 없음으로 해석하며 손상 자료를 stub으로 추정하지 않음 |
+| `firestore_weekly_raid_status_repository.dart` | 현재 cycleKey equality query는 cycleKey가 없는 stub을 반환하지 않음. 기존 active/completed projection은 보존. 다른 전체/직접 읽기 경로의 stub 처리는 따로 필요 |
+| `firestore_weekly_raid_status_command_repository.dart` | 개인 완료/해제의 실제 canonical writer에 stub→완료와 인증 무효화를 연결. Claim/점유/소유권 검사는 그대로 유지 |
+| 생성·신청·승인·즉시 참가·활성 변경·삭제 writer | stub→정상 state는 원래 참가 권한과 점유 정책을 충족해야 함. 기존 state 변경은 인증을 보존하거나 여덟 필드를 모두 제거하여 무효화. 일부만 삭제/변조 불가 |
+| 준비 변경 event/member Rules | 인증 이후 재선택할 때 exact stub도 ‘기록 없음’으로 처리할 제한 경로 필요. state/Claim 불변·본인 ownership·타인 자동 교환 금지는 유지 |
+
+stub을 기존 `PartyRaidStateStatus`나 방의 `currentCycleStatus`에 추가하지 않는다.
+참가 기록과 인증만 있는 자료는 별도 타입/strict parser로 구별하여 기존 active/completed의 의미를 보존한다.
+소유권 이전 후의 오래된 stub은 strict identity 검증 뒤 기존 generation 분류로 무효 판정하며,
+고아 데이터 일괄 삭제나 이전 소유자의 자료 자동 정리는 추가하지 않는다.
+
+격리 proof는 인증 변경을 audit 전용으로 제한한다. 실제 앱 도입 시에는 기존 정상 명령이 검증된
+canonical 상태를 쓰면서 인증 **전체 제거**를 할 수 있는 제한 경로를 별도 검증해야 한다.
+stub→개인 완료/참가도 각 원래 create 정책을 update 상황에 결합하는 전용 경계가 필요하다.
+인증 제거와 legacy Claim 생성을 한 요청에 결합하는 것은 before 표식으로 계속 거절한다.
+정상 canonical 쓰기가 인증을 무효화한 뒤에는 다음 advance가 반드시 다시 인증을 받아야 한다.
+
+인증은 현재 전환 window에서만 생성하고 core state를 점유하지 않는다. 해당 window 동안의 legacy Claim
+쓰기 차단은 기존 canonical 완료 명령을 대체하지 않으며, 새 앱의 개인 완료가 정상 인증 무효화 경로를
+사용할 수 있어야 한다. 이 경로를 구현하지 않은 채 격리 후보를 운영 게시하면 정상 기능을 막게 된다.
+
+구버전 advance에 인증 없는 우회 경로를 남길 수 없다. 따라서 새 앱 배포와 Rules 적용 순서,
+구버전 advance/개인 완료가 거절됐을 때 재조회·업데이트 안내를 실제 구현 전에 확정한다.
+격리 proof 통과는 이 호환성·롤아웃 문제까지 해결했다는 뜻이 아니다.
+
+### C 선행 검증 결과 — 2026-10-07
+
+최종 도구 커밋 `c844d95`, [Actions37575254780](https://github.com/heo0328/LostParty_flutter/actions/runs/37575254780): **25/25 통과**.
+`tools/bug024_spark_seal_candidate.mjs`는 A readable에서 ignored demo 후보만 생성한다.
+`tools/bug024_spark_seal_proof.mjs`가 기존 seed/준비/최종 전환 fixture를 재사용한다.
+
+| 구분 | 확인한 결과 |
+|---|---|
+| 8인 정상 6건 | A→B→C→B 후 absent stub, 같은 방 완료, 다른 방 완료, 다른 역할·난이도 완료, 개인 완료, 같은 방 active 각각 인증→전환→전체 완료 성공 |
+| 보존 | 준비 중 모든 state/Claim/기존 완료 이벤트 불변. 인증 중 기존 state는 인증 필드 외 전부 불변, room/member/listing/event/Claim 불변. absent stub에는 참가/완료 필드 없음 |
+| 부정 경계 19건 | 현재 완료·타방 active·손상 기록·현재 Claim·legacy 점유, Claim 삭제+인증, 인증 revision/slot/generation/schema/record/future 위조, 비방장·타인 private 읽기, 미인증·부분/오래된 전환, 인증 후 구성 revision/소유권/현재 완료 변경, 완료 해제/타인 역할 변경 끼워넣기, 후발 Claim 및 표식 삭제+Claim/인증+Claim 거절 |
+| 한도 | 정상 8인 핵심 요청이 접근/evaluation 오류 없이 통과. Service call error·maximum/evaluation limit를 올바른 거절로 인정하지 않는 harness 사용 |
+
+첫 실행37574747640은19/20 성공: active 충돌 fixture가 준비 단계에서 먼저 거절돼 인증 검증에 도달하지 못했다.
+active를 준비 뒤 타방 점유로 배치하도록 바로잡았다. 다음37575063658은23/25 성공:
+정상 active 전환의 범용 분기에서1000식 한도 실패, 타인 역할 위조 fixture가 기존과 같은 역할을 써 변경 없음이었다.
+active→active advance는 기존 `validAtomicRaidStateUpdate`에 직접 dispatch하도록 해 모든 기존 검사는 보존했다.
+역할 fixture는 현재 슬롯의 반대 역할을 쓰도록 수정했다. 권한 완화나 정상 코드 삭제로 통과시키지 않았다.
+
+coverage 수집은 별도 한계가 있다. 첫 요청은Emulator500, 최종 응답은429
+(`gRPC message exceeds maximum size 104857600: 128998507`)다. 이 요청은25건 실행 완료 뒤의
+진단 자료 수집이며 Rules write 평가 실패가 아니다. results.json·CI log·생성 후보·debug log는 보존했다.
+따라서 정밀 호출/식 수와 한도 여유 수치는 확보하지 못했으며 임의로 추정하지 않는다.
+운영 compiler 경고0개·최종 추적본 생성 일치·전체 앱 회귀는 아직 검증 대상이다.
+
+이로써 C의 핵심 방식은 선행 검증을 통과했다. **앱 도입 완료·모든 사이드 이펙트 해소·운영 게시 가능을 뜻하지 않는다.**
+위 호환 설계를 구현·검증하고 롤아웃 범위를 확정하는 단계는 남아 있다. 추적 Rules·Flutter 코드·결제·Functions 변경0회,
+운영 게시0회, dev/main 미통합, BUG-024 미종료를 유지한다.
