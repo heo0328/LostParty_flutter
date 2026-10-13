@@ -34,6 +34,8 @@ if (localized) {
   fs.mkdirSync('coverage/rules-localization', {recursive:true});
   fs.writeFileSync('coverage/rules-localization/readable.rules', reviewed);
   fs.writeFileSync('coverage/rules-localization/candidate.rules', result);
+  fs.writeFileSync('coverage/rules-localization/before-group-source.rules',
+    indentRules(readableExecutableRules(localization.beforeGroupSource).source));
   fs.writeFileSync('coverage/rules-localization/manifest.json', JSON.stringify(localization.stages,null,2));
   fs.writeFileSync('coverage/rules-localization/deployment.json', JSON.stringify({
     format: 'meaningful-identifiers', bytes: Buffer.byteLength(result),

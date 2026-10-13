@@ -8,7 +8,8 @@ import { initializeTestEnvironment, assertSucceeds, assertFails as legacyAssertF
 import { assertRulesDenied } from './assert_rules_denied.mjs';
 const assertFails = process.env.R3_CLEANUP === '1' ? assertRulesDenied : legacyAssertFails;
 import { doc, getDoc, getDocs, collection, setDoc, updateDoc, deleteDoc,
-  runTransaction, serverTimestamp } from 'firebase/firestore';
+  serverTimestamp } from 'firebase/firestore';
+import {runTransaction} from './group_source_transaction_fixture.mjs';
 import { completedCleanupCandidate } from './roster_completed_cleanup_candidate.mjs';
 import { seedRoom, lifecycle, inspectAll } from './roster_ownership_rules_proof.mjs';
 import { authUid, playerId, recruitmentId, raidId, seedGroupLinkedRoom, removeApprovedMemberTxn } from './party_group_cutover_rules_test.mjs';

@@ -21,7 +21,6 @@ class RecruitmentListPage extends StatefulWidget {
     required this.partyReadRepository,
     required this.cycleKey,
     required this.currentPlayerId,
-    this.backfillOwnGroupListings,
     this.accountDatabase,
     this.filterStore,
     this.raidCatalogRepository,
@@ -34,7 +33,6 @@ class RecruitmentListPage extends StatefulWidget {
   final PartyReadRepository partyReadRepository;
   final String cycleKey;
   final String currentPlayerId;
-  final Future<void> Function()? backfillOwnGroupListings;
   final AccountDatabase? accountDatabase;
   final RaidStatusFilterStore? filterStore;
   final RaidCatalogRepository? raidCatalogRepository;
@@ -57,7 +55,6 @@ class _RecruitmentListPageState extends State<RecruitmentListPage> {
       repository: widget.partyReadRepository,
       cycleKey: widget.cycleKey,
       currentPlayerId: widget.currentPlayerId,
-      backfillOwnGroupListings: widget.backfillOwnGroupListings,
       filterStore:
           widget.filterStore ??
           (database == null ? null : DriftRaidStatusFilterStore(database)),

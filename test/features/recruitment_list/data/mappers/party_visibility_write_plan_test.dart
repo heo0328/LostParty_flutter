@@ -4,7 +4,7 @@ import 'package:lost_party/features/recruitment_list/domain/entities/party_creat
 import 'package:lost_party/features/recruitment_list/domain/entities/party_visibility_command.dart';
 
 void main() {
-  test('그룹 전용으로 바꾸면 listing을 만들고 모집 visibility만 패치한다', () {
+  test('그룹 전용 전환은 원본 visibility와 revision을 패치한다', () {
     final plan = PartyVisibilityWritePlan.change(
       visibility: RecruitmentVisibility.group,
       recruitmentRevision: 4,
@@ -19,13 +19,9 @@ void main() {
 
     expect(plan.recruitmentPatch['visibility'], RecruitmentVisibility.group);
     expect(plan.recruitmentPatch['revision'], 5);
-    expect(plan.deleteListing, isFalse);
-    expect(plan.listingDocument?['visibility'], RecruitmentVisibility.group);
-    expect(plan.listingDocument?['groupId'], 'group-1');
-    expect(plan.listingDocument?['title'], '방');
   });
 
-  test('전체 공개로 바꾸면 listing을 삭제한다', () {
+  test('전체 공개 전환은 원본 visibility를 패치한다', () {
     final plan = PartyVisibilityWritePlan.change(
       visibility: RecruitmentVisibility.public,
       recruitmentRevision: 2,
@@ -37,8 +33,6 @@ void main() {
     );
 
     expect(plan.recruitmentPatch['visibility'], RecruitmentVisibility.public);
-    expect(plan.listingDocument, isNull);
-    expect(plan.deleteListing, isTrue);
   });
 
   test('비그룹원은 그룹 전용에선 못 보고, 해제하면 보이며, 다시 켜면 숨는다', () {
@@ -49,10 +43,8 @@ void main() {
       'status': 'active',
       'revision': 1,
     };
-    Map<String, Object?>? listing = Map<String, Object?>.from(recruitment);
 
     expect(_visibleToNonGroupMember(recruitment), isFalse);
-    expect(listing?['visibility'], RecruitmentVisibility.group);
 
     final toPublic = PartyVisibilityWritePlan.change(
       visibility: RecruitmentVisibility.public,
@@ -61,9 +53,7 @@ void main() {
       currentRecruitment: recruitment,
     );
     recruitment = {...recruitment, ...toPublic.recruitmentPatch};
-    listing = toPublic.deleteListing ? null : listing;
     expect(_visibleToNonGroupMember(recruitment), isTrue);
-    expect(listing, isNull);
 
     final toGroup = PartyVisibilityWritePlan.change(
       visibility: RecruitmentVisibility.group,
@@ -72,10 +62,7 @@ void main() {
       currentRecruitment: recruitment,
     );
     recruitment = {...recruitment, ...toGroup.recruitmentPatch};
-    listing = toGroup.listingDocument;
     expect(_visibleToNonGroupMember(recruitment), isFalse);
-    expect(listing?['visibility'], RecruitmentVisibility.group);
-    expect(toGroup.deleteListing, isFalse);
   });
 
   test('잘못된 visibility는 거절한다', () {

@@ -60,7 +60,7 @@ void main() {
     expect(joinRepo, contains('PartyAtomicJoinWritePlan.fromBase'));
     expect(joinRepo, contains('PartyAtomicApprovalWritePlan'));
     expect(joinRepo, contains('PartyAtomicApplicationRejectWritePlan'));
-    expect(joinRepo, contains('PartyRaidListingTx'));
+    expect(joinRepo, isNot(contains('PartyRaidListingTx')));
     expect(joinRepo, contains('currentApprovalCount'));
     expect(joinRepo, contains('final occupancy = playerId == actorPlayerId'));
     expect(joinRepo, contains(".collection('raidStates')"));
@@ -88,10 +88,7 @@ void main() {
   });
 
   test('캐릭터 변경은 공용 raidState 점유 판정과 고아 결과를 사용한다', () {
-    expect(
-      mutationRepo,
-      contains('PartyRaidStateOccupancyInspector.inspect'),
-    );
+    expect(mutationRepo, contains('PartyRaidStateOccupancyInspector.inspect'));
     expect(
       mutationRepo,
       contains('ExistingRaidStateOccupancyDecision.currentOrphanActive'),

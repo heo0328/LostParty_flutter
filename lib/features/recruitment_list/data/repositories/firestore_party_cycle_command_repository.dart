@@ -12,7 +12,6 @@ import '../mappers/party_cycle_assignment_write_plan.dart';
 import '../mappers/party_cycle_write_plan.dart';
 import '../mappers/party_event_write_plan.dart';
 import '../mappers/party_lifecycle_event_writer.dart';
-import '../mappers/party_raid_listing_sync.dart';
 
 class FirestorePartyCycleCommandRepository
     implements PartyCycleCommandRepository {
@@ -163,12 +162,7 @@ class FirestorePartyCycleCommandRepository
           ),
         );
       }
-      final listing = await PartyRaidListingTx.read(
-        transaction: transaction,
-        firestore: _firestore,
-        groupId: r['groupId'],
-        recruitmentId: command.recruitmentId,
-      );
+
       final now = FieldValue.serverTimestamp();
       if (cycle.exists) {
         transaction.update(
@@ -208,11 +202,7 @@ class FirestorePartyCycleCommandRepository
         serverTimestamp: now,
       );
       transaction.update(recruitmentRef, completePatch);
-      listing.write(
-        transaction: transaction,
-        currentRecruitment: partyRecruitmentMap(r),
-        recruitmentPatch: completePatch,
-      );
+
       for (final orphan in orphanClaimReads) {
         if (!orphan.exists) continue;
         if (!PartyCompleteClaimWritePlan.isOrphanPartyOwnerClaim(
@@ -286,23 +276,14 @@ class FirestorePartyCycleCommandRepository
           PartyCycleFailure.recruitmentClosed,
         );
       }
-      final listing = await PartyRaidListingTx.read(
-        transaction: transaction,
-        firestore: _firestore,
-        groupId: r['groupId'],
-        recruitmentId: command.recruitmentId,
-      );
+
       final recurrencePatch = PartyCycleWritePlan.recurrence(
         continueTogether: command.continueTogether,
         revision: command.expectedRecruitmentRevision,
         serverTimestamp: FieldValue.serverTimestamp(),
       );
       transaction.update(ref, recurrencePatch);
-      listing.write(
-        transaction: transaction,
-        currentRecruitment: partyRecruitmentMap(r),
-        recruitmentPatch: recurrencePatch,
-      );
+
       return const PartyCycleResult.success();
     });
   }
@@ -399,12 +380,7 @@ class FirestorePartyCycleCommandRepository
           action: action,
         ));
       }
-      final listing = await PartyRaidListingTx.read(
-        transaction: transaction,
-        firestore: _firestore,
-        groupId: r?['groupId'],
-        recruitmentId: command.recruitmentId,
-      );
+
       final now = FieldValue.serverTimestamp();
       if (!cycle.exists) {
         transaction.set(
@@ -456,11 +432,7 @@ class FirestorePartyCycleCommandRepository
         timestamp: (date) => Timestamp.fromDate(date),
       );
       transaction.update(recruitmentRef, advancePatch);
-      listing.write(
-        transaction: transaction,
-        currentRecruitment: partyRecruitmentMap(r),
-        recruitmentPatch: advancePatch,
-      );
+
       for (final assignment in assignmentReads) {
         switch (assignment.action) {
           case PartyCycleAssignmentAction.create:
@@ -613,12 +585,6 @@ class FirestorePartyCycleCommandRepository
             : characterNames[applicantId];
       }
 
-      final listing = await PartyRaidListingTx.read(
-        transaction: transaction,
-        firestore: _firestore,
-        groupId: r['groupId'],
-        recruitmentId: command.recruitmentId,
-      );
       final now = FieldValue.serverTimestamp();
       final nextRevision = command.expectedRecruitmentRevision + 1;
       for (final current in memberSnapshots) {
@@ -638,11 +604,7 @@ class FirestorePartyCycleCommandRepository
         serverTimestamp: now,
       );
       transaction.update(recruitmentRef, disbandPatch);
-      listing.write(
-        transaction: transaction,
-        currentRecruitment: partyRecruitmentMap(r),
-        recruitmentPatch: disbandPatch,
-      );
+
       PartyLifecycleEventWriter.writeToRecipients(
         transaction: transaction,
         firestore: _firestore,

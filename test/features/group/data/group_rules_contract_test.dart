@@ -135,30 +135,14 @@ void main() {
     expect(rules, contains('allow update, delete: if false;'));
   });
 
-  test('그룹 전용 레이드 목록 Projection은 경로의 그룹원만 list한다', () {
-    expect(rules, contains('function validGroupRaidListingCreate('));
+  test('그룹 모집 원본 list는 단건 audience 권한을 공유하고 복사 경로를 닫는다', () {
+    final start = rules.indexOf('function canListRecruitment(');
+    final end = rules.indexOf('function canReadRecruitment(', start);
     expect(
-      rules,
-      contains('data.diff(recruitment).affectedKeys().size() == 0'),
+      rules.substring(start, end),
+      contains('canAccessRecruitmentByAudience(data)'),
     );
-    expect(rules, contains('match /raidListings/{recruitmentId}'));
-    expect(
-      rules,
-      contains('allow get, list: if isCurrentGroupMember(groupId);'),
-    );
-    expect(rules, contains('allow create: if validGroupRaidListingCreate('));
-    expect(rules, contains('function validGroupRaidListingBackfill('));
-    expect(rules, contains('|| validGroupRaidListingBackfill('));
-    expect(rules, contains('function validGroupRaidListingDelete('));
-    expect(
-      rules,
-      contains(
-        'allow delete: if validGroupRaidListingDelete(groupId, recruitmentId)',
-      ),
-    );
-    expect(rules, contains('|| validAtomicLifecycleListingDelete('));
-    expect(rules, contains('allow update: if validGroupRaidListingCreate('));
-    expect(rules, contains('|| validAtomicLifecycleListingUpdate('));
+    expect(rules, isNot(contains('match /raidListings/')));
   });
 
   test('Unit 4는 초대코드 생성·폐기·정확한 get을 열고 list·update는 막는다', () {
@@ -329,7 +313,10 @@ void main() {
     expect(rules, contains('data.requestedByPlayerId == currentPlayerId()'));
     expect(rules, contains('playerId != currentPlayerId()'));
     expect(rules, contains('isCurrentGroupMember(groupId)'));
-    expect(rules, contains('data.applicationAttempt == previousApplicationAttempt'));
+    expect(
+      rules,
+      contains('data.applicationAttempt == previousApplicationAttempt'),
+    );
   });
 
   test('가입 신청은 본인만 만들고 applicantStats 횟수와 함께 맞춘다', () {
@@ -361,7 +348,10 @@ void main() {
         '      data',
       ),
     );
-    expect(rules, contains('data.applicationCount == previousApplicationCount + 1'));
+    expect(
+      rules,
+      contains('data.applicationCount == previousApplicationCount + 1'),
+    );
     expect(rules, contains("relation.kind == 'application'"));
     expect(
       rules,
@@ -473,10 +463,7 @@ void main() {
       rules,
       contains('allow create, update: if playerId != currentPlayerId()'),
     );
-    expect(
-      rules,
-      contains("request.resource.data.relation == 'member'"),
-    );
+    expect(rules, contains("request.resource.data.relation == 'member'"));
     expect(
       rules,
       contains('validGroupMemberLeaveRelationDelete(playerId, groupId)'),
@@ -758,10 +745,7 @@ void main() {
     expect(rules, contains('function validGroupMemberSnapshotsFromRelation'));
     expect(rules, contains('function validGroupMemberSelfSnapshotRefresh('));
     expect(rules, contains("'combatPowerSnapshot'"));
-    expect(
-      rules,
-      contains(') || validGroupMemberSelfSnapshotRefresh('),
-    );
+    expect(rules, contains(') || validGroupMemberSelfSnapshotRefresh('));
   });
 
   test('그룹 쿼리에 필요한 복합 인덱스를 고정한다', () {

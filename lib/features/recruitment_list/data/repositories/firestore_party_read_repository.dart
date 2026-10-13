@@ -31,26 +31,26 @@ class FirestorePartyReadRepository implements PartyReadRepository {
     required String currentPlayerId,
     int limit = publicRecruitmentPageSize,
   }) {
-    return _watchFirstPageWithGroupListings(
+    return _watchFirstPageWithGroupRecruitments(
       cycleKey: cycleKey,
       currentPlayerId: currentPlayerId,
       limit: limit,
     ).transform(_errorTransformer());
   }
 
-  Stream<PublicRecruitmentPage> _watchFirstPageWithGroupListings({
+  Stream<PublicRecruitmentPage> _watchFirstPageWithGroupRecruitments({
     required String cycleKey,
     required String currentPlayerId,
     required int limit,
   }) {
     late StreamController<PublicRecruitmentPage> controller;
     StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
-        stateSubscription;
+    stateSubscription;
     StreamSubscription<PublicRecruitmentPage>? pagesSubscription;
 
     void listenPages(List<String> groupIds) {
       pagesSubscription?.cancel();
-      pagesSubscription = _watchMergedListingPages(
+      pagesSubscription = _watchMergedRecruitmentPages(
         cycleKey: cycleKey,
         currentPlayerId: currentPlayerId,
         groupIds: groupIds,
@@ -83,15 +83,15 @@ class FirestorePartyReadRepository implements PartyReadRepository {
     return controller.stream;
   }
 
-  Stream<PublicRecruitmentPage> _watchMergedListingPages({
+  Stream<PublicRecruitmentPage> _watchMergedRecruitmentPages({
     required String cycleKey,
     required String currentPlayerId,
     required List<String> groupIds,
     required int limit,
   }) {
-    final public = _publicRecruitmentsQuery(cycleKey)
-        .limit(limit)
-        .snapshots(includeMetadataChanges: true);
+    final public = _publicRecruitmentsQuery(
+      cycleKey,
+    ).limit(limit).snapshots(includeMetadataChanges: true);
     if (groupIds.isEmpty) {
       return public.map(
         (snapshot) => _toPublicPage(
@@ -106,7 +106,7 @@ class FirestorePartyReadRepository implements PartyReadRepository {
     final subscriptions =
         <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
     QuerySnapshot<Map<String, dynamic>>? latestPublic;
-    final latestListings = List<QuerySnapshot<Map<String, dynamic>>?>.filled(
+    final latestGroups = List<QuerySnapshot<Map<String, dynamic>>?>.filled(
       groupIds.length,
       null,
     );
@@ -118,9 +118,7 @@ class FirestorePartyReadRepository implements PartyReadRepository {
         controller.add(
           _toMergedPublicPage(
             publicSnapshot: publicSnapshot,
-            listingSnapshots: [
-              for (final snapshot in latestListings) ?snapshot,
-            ],
+            groupSnapshots: [for (final snapshot in latestGroups) ?snapshot],
             cycleKey: cycleKey,
             limit: limit,
             currentPlayerId: currentPlayerId,
@@ -143,16 +141,23 @@ class FirestorePartyReadRepository implements PartyReadRepository {
           final groupIndex = index;
           subscriptions.add(
             _firestore
-                .collection('groups')
-                .doc(groupIds[groupIndex])
-                .collection('raidListings')
+                .collection('recruitments')
+                .where('groupId', isEqualTo: groupIds[groupIndex])
+                .where('visibility', isEqualTo: 'group')
+                .where('schemaVersion', isEqualTo: 2)
+                .where('status', isEqualTo: 'active')
+                .where('manualRecruitmentEnabled', isEqualTo: true)
+                .where('hasAvailableSlot', isEqualTo: true)
                 .snapshots(includeMetadataChanges: true)
                 .listen(
                   (snapshot) {
-                    latestListings[groupIndex] = snapshot;
+                    latestGroups[groupIndex] = snapshot;
                     emit();
                   },
-                  onError: (_, _) {},
+                  onError: (_, _) {
+                    latestGroups[groupIndex] = null;
+                    emit();
+                  },
                 ),
           );
         }
@@ -179,7 +184,7 @@ class FirestorePartyReadRepository implements PartyReadRepository {
 
   PublicRecruitmentPage _toMergedPublicPage({
     required QuerySnapshot<Map<String, dynamic>> publicSnapshot,
-    required List<QuerySnapshot<Map<String, dynamic>>> listingSnapshots,
+    required List<QuerySnapshot<Map<String, dynamic>>> groupSnapshots,
     required String cycleKey,
     required int limit,
     required String currentPlayerId,
@@ -196,12 +201,13 @@ class FirestorePartyReadRepository implements PartyReadRepository {
       }
       byId[doc.id] = _mapper.toPublicRecruitment(document);
     }
-    for (final snapshot in listingSnapshots) {
+    for (final snapshot in groupSnapshots) {
       isFromCache = isFromCache || snapshot.metadata.isFromCache;
       for (final doc in snapshot.docs) {
         try {
           final document = _document(doc);
-          if (!_listingIsOpenForCycle(document.data, cycleKey)) continue;
+          if (!_groupRecruitmentIsOpenForCycle(document.data, cycleKey))
+            continue;
           if (_mapper.isCurrentPlayerOwnPublicRecruitment(
             document,
             currentPlayerId: currentPlayerId,
@@ -221,8 +227,9 @@ class FirestorePartyReadRepository implements PartyReadRepository {
         return right.id.compareTo(left.id);
       });
     final hasMore = publicSnapshot.docs.length >= limit;
-    final lastDocument =
-        publicSnapshot.docs.isEmpty ? null : publicSnapshot.docs.last;
+    final lastDocument = publicSnapshot.docs.isEmpty
+        ? null
+        : publicSnapshot.docs.last;
     return PublicRecruitmentPage(
       items: items,
       nextCursor: hasMore && lastDocument != null
@@ -233,7 +240,10 @@ class FirestorePartyReadRepository implements PartyReadRepository {
     );
   }
 
-  bool _listingIsOpenForCycle(Map<String, Object?> data, String cycleKey) {
+  bool _groupRecruitmentIsOpenForCycle(
+    Map<String, Object?> data,
+    String cycleKey,
+  ) {
     return data['schemaVersion'] == 2 &&
         data['visibility'] == 'group' &&
         data['status'] == 'active' &&
@@ -254,10 +264,9 @@ class FirestorePartyReadRepository implements PartyReadRepository {
       throw const PartyReadException(PartyReadFailureType.unknown);
     }
     try {
-      final snapshot = await _publicRecruitmentsQuery(cycleKey)
-          .startAfterDocument(cursor.snapshot)
-          .limit(limit)
-          .get();
+      final snapshot = await _publicRecruitmentsQuery(
+        cycleKey,
+      ).startAfterDocument(cursor.snapshot).limit(limit).get();
       return _toPublicPage(
         snapshot,
         limit: limit,
@@ -408,20 +417,22 @@ class FirestorePartyReadRepository implements PartyReadRepository {
   }
 
   @override
-  Stream<PartyReadSnapshot<PartyApplicationSummary>> watchRecruitmentApplications(
-    String recruitmentId,
-  ) {
+  Stream<PartyReadSnapshot<PartyApplicationSummary>>
+  watchRecruitmentApplications(String recruitmentId) {
     return _firestore
         .collection('recruitments')
         .doc(recruitmentId)
         .collection('applications')
         .snapshots(includeMetadataChanges: true)
         .map((snapshot) {
-          final items = snapshot.docs
-              .map(_document)
-              .map(_mapper.toApplication)
-              .toList(growable: false)
-            ..sort((left, right) => right.updatedAt.compareTo(left.updatedAt));
+          final items =
+              snapshot.docs
+                  .map(_document)
+                  .map(_mapper.toApplication)
+                  .toList(growable: false)
+                ..sort(
+                  (left, right) => right.updatedAt.compareTo(left.updatedAt),
+                );
           return PartyReadSnapshot(
             items: items,
             isFromCache: snapshot.metadata.isFromCache,
@@ -513,7 +524,10 @@ class FirestorePartyReadRepository implements PartyReadRepository {
 
       try {
         final byId = <String, ActiveRaidSummary>{};
-        for (final document in [...ownedSnapshot.docs, ...joinedSnapshot.docs]) {
+        for (final document in [
+          ...ownedSnapshot.docs,
+          ...joinedSnapshot.docs,
+        ]) {
           byId[document.id] = _mapper.toActiveRaid(
             _document(document),
             currentPlayerId: playerId,
@@ -536,20 +550,14 @@ class FirestorePartyReadRepository implements PartyReadRepository {
 
     controller = StreamController<PartyReadSnapshot<ActiveRaidSummary>>(
       onListen: () {
-        ownedSubscription = owned.listen(
-          (snapshot) {
-            latestOwned = snapshot;
-            emit();
-          },
-          onError: controller.addError,
-        );
-        joinedSubscription = joined.listen(
-          (snapshot) {
-            latestJoined = snapshot;
-            emit();
-          },
-          onError: controller.addError,
-        );
+        ownedSubscription = owned.listen((snapshot) {
+          latestOwned = snapshot;
+          emit();
+        }, onError: controller.addError);
+        joinedSubscription = joined.listen((snapshot) {
+          latestJoined = snapshot;
+          emit();
+        }, onError: controller.addError);
       },
       onCancel: () async {
         await ownedSubscription?.cancel();
@@ -579,18 +587,17 @@ PartyReadException _mapError(Object error) {
     return const PartyReadException(PartyReadFailureType.contract);
   }
   if (error is FirebaseException) {
-    return PartyReadException(
-      switch (error.code) {
-        'permission-denied' => PartyReadFailureType.permissionDenied,
-        'unavailable' => PartyReadFailureType.unavailable,
-        _ => PartyReadFailureType.unknown,
-      },
-    );
+    return PartyReadException(switch (error.code) {
+      'permission-denied' => PartyReadFailureType.permissionDenied,
+      'unavailable' => PartyReadFailureType.unavailable,
+      _ => PartyReadFailureType.unknown,
+    });
   }
   return const PartyReadException(PartyReadFailureType.unknown);
 }
 
-class _FirestorePublicRecruitmentPageCursor extends PublicRecruitmentPageCursor {
+class _FirestorePublicRecruitmentPageCursor
+    extends PublicRecruitmentPageCursor {
   const _FirestorePublicRecruitmentPageCursor(this.snapshot);
 
   final DocumentSnapshot<Map<String, dynamic>> snapshot;
@@ -610,4 +617,3 @@ int _compareActiveRaids(ActiveRaidSummary left, ActiveRaidSummary right) {
   final byUpdated = right.updatedAt.compareTo(left.updatedAt);
   return byUpdated != 0 ? byUpdated : left.id.compareTo(right.id);
 }
-

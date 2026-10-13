@@ -3,7 +3,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-
     function bindingPath(authUid) {
       return /databases/$(database)/documents/authBindings/$(authUid);
     }
@@ -11,8 +10,6 @@ service cloud.firestore {
     function playerPath(playerId) {
       return /databases/$(database)/documents/players/$(playerId);
     }
-
-
 
     function hasActiveBinding() {
       let binding = /databases/$(database)/documents/authBindings/$(request.auth.uid);
@@ -39,14 +36,6 @@ service cloud.firestore {
     function recruitmentMemberPath(recruitmentId, playerId) {
       return /databases/$(database)/documents/recruitments/$(recruitmentId)/members/$(playerId);
     }
-
-
-
-
-
-
-
-
 
     function assignmentPath(playerId, assignmentId) {
       return /databases/$(database)/documents/players/$(playerId)/activeRaidAssignments/$(assignmentId);
@@ -127,8 +116,6 @@ service cloud.firestore {
       return /databases/$(database)/documents/groups/$(groupId)/members/$(playerId);
     }
 
-
-
     function groupRelationPath(playerId, groupId) {
       return /databases/$(database)/documents/players/$(playerId)/groupRelations/$(groupId);
     }
@@ -136,12 +123,6 @@ service cloud.firestore {
     function groupJoinRelationPath(groupId, playerId) {
       return /databases/$(database)/documents/groups/$(groupId)/joinRelations/$(playerId);
     }
-
-
-
-
-
-
 
     function isCurrentPlayerActive() {
       let binding = /databases/$(database)/documents/authBindings/$(request.auth.uid);
@@ -155,93 +136,6 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(get(binding).data.playerId));
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     function isActiveGroupLeader(groupId) {
       let binding = /databases/$(database)/documents/authBindings/$(request.auth.uid);
       let callerId = get(binding).data.playerId;
@@ -250,36 +144,10 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/groups/$(groupId)).data.leaderPlayerId == callerId;
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
     function validJoinCodeId(code) {
       return code is string
         && code.matches('^([2-9A-HJ-NP-Z]{6}|[2-9A-HJ-NP-Z]{20})$');
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     function canApproveApplications(recruitmentId) {
       let recruitment = get(/databases/$(database)/documents/recruitments/$(recruitmentId)).data;
@@ -289,10 +157,6 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/recruitments/$(recruitmentId)/members/$(playerId)).data.canApproveApplications == true);
     }
 
-
-
-
-
     function atomicRaidStatePath(target) {
       return /databases/$(database)/documents/players/$(target.playerId)/raidStates/$(target.stateId);
     }
@@ -300,12 +164,6 @@ service cloud.firestore {
     function atomicRaidStateDocPath(playerId, stateId) {
       return /databases/$(database)/documents/players/$(playerId)/raidStates/$(stateId);
     }
-
-
-
-
-
-
 
     function isAvailabilityOnlyState(data) {
       return data.keys().hasOnly(['playerId', 'characterId', 'raidId', 'ownershipRevision',
@@ -428,7 +286,6 @@ service cloud.firestore {
         && ownershipManualCurrentOwnership(data);
     }
 
-
     function isPreparationAssignmentAvailable(data) {
       let path = assignmentPath(data.playerId, data.characterId + '_' + data.raidId);
       return !existsAfter(path) || ownershipOlderRecord(getAfter(path).data,
@@ -459,10 +316,7 @@ service cloud.firestore {
         && documentUnchangedAfterWrite(weeklyRaidClaimPath(data.actorPlayerId, data.cycleKey, data.previousCharacterId, room.raidId))
         && documentUnchangedAfterWrite(weeklyRaidClaimPath(data.actorPlayerId, data.cycleKey, data.nextCharacterId, room.raidId));
     }
-    function validPreparationListing(before, after) {
-      let path = /databases/$(database)/documents/groups/$(before.groupId)/raidListings/$(before.recruitmentId);
-      return exists(path) && getAfter(path).data == after;
-    }
+
     function validPreparationEvent(before, after, oldMember, member) {
       let id = 'characterChanged_' + before.recruitmentId + '_' + string(after.revision);
       let path = /databases/$(database)/documents/partyEvents/$(id);
@@ -505,8 +359,7 @@ service cloud.firestore {
         && after.updatedAt == request.time && atomicAggregateSizesMatch(after)
         && atomicLifecycleMarkerConsumedOrPreserved(before, after)
         && validPreparationMemberPair(before, after, get(path).data, getAfter(path).data)
-        && validPreparationEvent(before, after, get(path).data, getAfter(path).data)
-        && (before.visibility != 'group' || validPreparationListing(before, after));
+        && validPreparationEvent(before, after, get(path).data, getAfter(path).data);
     }
     function validPreparationMembership(roomId, playerId, oldMember, member) {
       let before = get(recruitmentPath(roomId)).data;
@@ -543,40 +396,11 @@ service cloud.firestore {
           && newData.lastCommandAt == oldData.lastCommandAt);
     }
 
-    function atomicTargetStateMatches(data, state) {
-      return state.recruitmentId == data.recruitmentId
-        && state.cycleKey == data.currentCycleKey
-        && ((data.lastCommandType == 'complete' && state.status == 'completed')
-          || (data.lastCommandType == 'advanceCycle'
-            && state.status == 'active'));
-    }
-
-
-
-    function atomicExpectedTargetStateMatches(data, state, expectedStatus) {
+    function atomicTargetStateMatches(data, state, expectedStatus) {
       return state.recruitmentId == data.recruitmentId
         && state.cycleKey == data.currentCycleKey
         && state.status == expectedStatus;
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     function ownershipLastCompletedDisband(before, after) {
       let slot = before.partySlots[0];
@@ -592,8 +416,6 @@ service cloud.firestore {
         && after.commandTargets == []
         && getAfter(memberPath).data == get(memberPath).data
         && ownershipCleanupStateUnchanged(slot, before.raidId)
-        && (before.visibility != 'group'
-          || !existsAfter(/databases/$(database)/documents/groups/$(before.groupId)/raidListings/$(before.recruitmentId)))
         && !exists(eventPath)
         && event.recruitmentId == before.recruitmentId
         && event.eventId == after.lastCommandId && event.commandId == after.lastCommandId
@@ -603,10 +425,6 @@ service cloud.firestore {
         && event.occurredAt == request.time;
     }
 
-
-
-
-
     function atomicAdvanceStateMatchesSlotAt(recruitment, data, index) {
       return index < recruitment.partySlots.size()
         && recruitment.partySlots[index].playerId == data.playerId
@@ -614,8 +432,6 @@ service cloud.firestore {
         && recruitment.partySlots[index].role == data.role
         && recruitment.partySlots[index].get('ownershipRevision', 0) == data.get('ownershipRevision', 0);
     }
-
-
 
     function ownershipOwnershipMatches(data, character, account) {
       let generation = character.get('ownershipRevision', 0);
@@ -633,12 +449,6 @@ service cloud.firestore {
       let account = get(/databases/$(database)/documents/gameAccounts/$(character.gameAccountId)).data;
       return ownershipOwnershipMatches(data, character, account);
     }
-
-
-
-
-
-
 
     function atomicEventTargetMatches(data, recruitment, index) {
       return index >= recruitment.partySlots.size()
@@ -713,12 +523,6 @@ service cloud.firestore {
         && data.occurredAt == request.time;
     }
 
-
-
-
-
-
-
     function personalCompletionTargetsCurrentPlayer(recruitment) {
       return (recruitment.keys().hasAll([
             'lastCommandType', 'lastCommandActorPlayerId', 'commandTargets'
@@ -734,36 +538,12 @@ service cloud.firestore {
         && recruitment.lastCommandAt == request.time;
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
     function atomicRaidStateListedInTargets(recruitment, playerId, stateId) {
       let targets = recruitment.raidStateTargets;
       let count = targets.size();
       let expected = {'playerId': playerId, 'stateId': stateId};
       return (count > 0 && ((targets[0].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 1 && ((targets[1].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 2 && ((targets[2].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 3 && ((targets[3].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 4 && ((targets[4].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 5 && ((targets[5].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 6 && ((targets[6].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId'])) || (count > 7 && ((targets[7].diff(expected).unchangedKeys().hasAll(['playerId', 'stateId']))))))))))))))))));
     }
-
-
-
-
-
-
-
-
-
-
-
-
 
     function atomicIsMembershipEventType(type) {
       return type == 'partyCreated'
@@ -850,30 +630,12 @@ service cloud.firestore {
       <= data.pendingApplicationCount;
     }
 
-
-
-
-
-
-
-
-
-
     function ownershipLeaderCleanupTransition(before, after) {
       return after.get('lastCommandType', '') == 'cleanupCompletedLeaderOwnership'
         && before.revision + 1 == after.revision
         && after.ownershipCleanup.expectedRevision == before.revision
         && after.lastCommandActorPlayerId == currentPlayerId()
         && after.lastCommandAt == request.time;
-    }
-
-
-
-    function ownershipLeaderCleanupComposition(data, room) {
-      return ownershipCleanupComposition(data, room)
-        && data.leaderPlayerId == room.leaderPlayerId
-        && data.leaderCharacterNameSnapshot == room.leaderCharacterNameSnapshot
-        && data.leaderClassNameSnapshot == room.leaderClassNameSnapshot;
     }
 
     function ownershipLeaderCleanupEvent(before, after) {
@@ -938,18 +700,8 @@ service cloud.firestore {
           'leaderPlayerId', 'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot'])
         && ownershipCleanupAggregateUpdate(before, after, target, remaining)
         && !existsAfter(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(target.playerId))
-        && (before.visibility != 'group' || ownershipLeaderCleanupComposition(
-          getAfter(/databases/$(database)/documents/groups/$(before.groupId)/raidListings/$(before.recruitmentId)).data, after))
         && getAfter(/databases/$(database)/documents/partyEvents/$(after.lastCommandId)).data == ownershipLeaderCleanupEvent(before, after);
     }
-
-
-
-
-
-
-
-
 
     function ownershipPeerCleanupTransition(before, after) {
       return after.get('lastCommandType', '') == 'cleanupCompletedPeerOwnership'
@@ -958,9 +710,6 @@ service cloud.firestore {
         && after.lastCommandActorPlayerId == currentPlayerId()
         && after.lastCommandAt == request.time;
     }
-
-
-
 
     function ownershipPeerCleanupEvent(before, after) {
       let command = after.ownershipCleanup;
@@ -1003,17 +752,8 @@ service cloud.firestore {
         && ownershipCleanupAggregateUpdate(before, after, target, remaining)
         && exists(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(target.playerId))
         && !existsAfter(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(target.playerId))
-        && (before.visibility != 'group' || ownershipCleanupComposition(
-          getAfter(/databases/$(database)/documents/groups/$(before.groupId)/raidListings/$(before.recruitmentId)).data, after))
         && getAfter(/databases/$(database)/documents/partyEvents/$(after.lastCommandId)).data == ownershipPeerCleanupEvent(before, after);
     }
-
-
-
-
-
-
-
 
     function ownershipPeerCommand(roomId) {
       let before = get(recruitmentPath(roomId)).data;
@@ -1049,10 +789,6 @@ service cloud.firestore {
       return exists(path)
         ? getAfter(path).data == get(path).data
         : !existsAfter(path);
-    }
-
-    function ownershipCleanupComposition(data, room) {
-      return data == room;
     }
 
     function ownershipCleanupEvent(before, after) {
@@ -1094,16 +830,8 @@ service cloud.firestore {
         && ownershipCleanupAggregateUpdate(before, after, target, remaining)
         && !existsAfter(/databases/$(database)/documents/recruitments/$(before.recruitmentId)/members/$(target.playerId))
         && ownershipCleanupStateUnchanged(target, before.raidId)
-        && (before.visibility != 'group' || ownershipCleanupComposition(
-          getAfter(/databases/$(database)/documents/groups/$(before.groupId)/raidListings/$(before.recruitmentId)).data, after))
         && getAfter(/databases/$(database)/documents/partyEvents/$(after.lastCommandId)).data == ownershipCleanupEvent(before, after);
     }
-
-
-
-
-
-
 
     function validAtomicRecruitmentMemberRemoval(oldData, newData) {
       let removed = oldData.memberPlayerIds.toSet().difference(
@@ -1137,8 +865,6 @@ service cloud.firestore {
 
         && newData.updatedAt == request.time;
     }
-
-
 
     function validPersonalCompletionSuccessor(oldData, newData) {
       let successor = getAfter(recruitmentMemberPath(
@@ -1292,30 +1018,6 @@ service cloud.firestore {
               && newData.leaderPlayerId == oldData.leaderPlayerId)));
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     function atomicCharacterSlot(member, countedAsNonGroupMember) {
       return member.keys().hasAny(['ownershipRevision'])
         ? {
@@ -1361,30 +1063,6 @@ service cloud.firestore {
             && atomicCharacterDestinationFreeAt(others, member, 6)));
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     function validApplicationWeeklyCompletion(playerId, oldData, newData) {
       return hasActiveBinding()
         && playerId == currentPlayerId()
@@ -1405,58 +1083,6 @@ service cloud.firestore {
         get(recruitmentPath(oldData.recruitmentId)).data.raidId
       );
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     match /authBindings/{authUid} {
       function validActiveBinding(data) {
@@ -2050,8 +1676,6 @@ service cloud.firestore {
             || atomicAdvanceStateMatchesSlotAt(recruitment, data, 7);
         }
 
-
-
         function availabilityAuditRemoved(before, data) {
           return before.keys().hasAny(['guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardCycleStartedAt', 'guardCycleEndsAt', 'guardSlotIndex', 'guardCheckedAt']) && !data.keys().hasAny(['guardSchemaVersion', 'guardRecruitmentId', 'guardRoomRevision', 'guardCycleKey', 'guardCycleStartedAt', 'guardCycleEndsAt', 'guardSlotIndex', 'guardCheckedAt']);
         }
@@ -2070,10 +1694,6 @@ service cloud.firestore {
             && data.playerId == before.playerId && data.characterId == before.characterId && data.raidId == before.raidId
             && ownershipFreshParticipation(data) && validAtomicRaidStateCreate(playerId, stateId, data);
         }
-
-
-
-
 
         function validAtomicRoleUpdate(playerId, stateId, oldData, newData) {
           let before = get(recruitmentPath(oldData.recruitmentId)).data;
@@ -2455,40 +2075,6 @@ service cloud.firestore {
       }
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     match /accountVerificationChallenges/{challengeId} {
       allow read, write: if false;
     }
@@ -2810,11 +2396,6 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-
-
-
-
-
     function ownershipPersonalCommand(roomId) {
       let room = getAfter(recruitmentPath(roomId)).data;
       return room.get('lastCommandType', '') == 'personalComplete' && room.lastCommandAt == request.time;
@@ -2838,14 +2419,9 @@ service cloud.firestore {
         && event.commandRevision == after.revision
         && event.actorPlayerId == target.playerId && event.targetPlayerId == target.playerId
         && (before.leaderPlayerId == after.leaderPlayerId
-          || getAfter(recruitmentMemberPath(before.recruitmentId, after.leaderPlayerId)).data.updatedAt == request.time)
-        && (!(before.groupId is string) || ownershipPersonalCompletionListing(before, after));
+          || getAfter(recruitmentMemberPath(before.recruitmentId, after.leaderPlayerId)).data.updatedAt == request.time);
     }
-    function ownershipPersonalCompletionListing(before, after) {
-      let path = /databases/$(database)/documents/groups/$(before.groupId)/raidListings/$(before.recruitmentId);
-      return before.visibility != 'group' || (after.memberCount == 0
-          ? !existsAfter(path) : getAfter(path).data == after);
-    }
+
     function ownershipManualCurrentOwnership(data) {
       let character = get(characterPath(data.characterId)).data;
       let account = get(/databases/$(database)/documents/gameAccounts/$(character.gameAccountId)).data;
@@ -2879,8 +2455,6 @@ service cloud.firestore {
         && getAfter(eventPath).data.type == kind;
     }
 
-
-
     function ownershipSlotMemberGeneration(roomId, slot) {
       let member = getAfter(/databases/$(database)/documents/recruitments/$(roomId)/members/$(slot.playerId)).data;
       return member.playerId == slot.playerId && member.characterId == slot.characterId
@@ -2897,10 +2471,6 @@ service cloud.firestore {
         && data.get('ownershipRevision', 0) <= 9007199254740991
         && data.ownerPlayerId is string && data.ownerPlayerId.size() > 0;
     }
-
-
-
-
 
     match /gameAccounts/{gameAccountId} {
       function ownershipGenerationUpdate(before, after) {
@@ -3088,50 +2658,30 @@ service cloud.firestore {
               && currentPlayerId() == oldData.leaderPlayerId));
       }
 
-      function atomicTargetMatchesTransition(data, index) {
+      function atomicTargetMatchesTransition(data, index, expectedStatus) {
         return index >= data.commandTargets.size()
           || (data.lastCommandType == 'disband'
-            && !existsAfter(atomicRaidStatePath(data.commandTargets[index])))
-          || (data.lastCommandType != 'disband'
-            && atomicTargetStateMatches(
-            data,
-            getAfter(atomicRaidStatePath(data.commandTargets[index])).data
-        ));
-      }
-
-      function atomicExpectedTargetMatches(data, index, expectedStatus) {
-        return index >= data.commandTargets.size()
-          || atomicExpectedTargetStateMatches(data,
-          getAfter(atomicRaidStatePath(data.commandTargets[index])).data, expectedStatus);
-      }
-
-      function atomicAllExpectedTargetsMatch(data, expectedStatus) {
-        return atomicExpectedTargetMatches(data, 0, expectedStatus)
-          && atomicExpectedTargetMatches(data, 1, expectedStatus)
-          && atomicExpectedTargetMatches(data, 2, expectedStatus)
-          && atomicExpectedTargetMatches(data, 3, expectedStatus)
-          && atomicExpectedTargetMatches(data, 4, expectedStatus)
-          && atomicExpectedTargetMatches(data, 5, expectedStatus)
-          && atomicExpectedTargetMatches(data, 6, expectedStatus)
-          && atomicExpectedTargetMatches(data, 7, expectedStatus);
+            ? !existsAfter(atomicRaidStatePath(data.commandTargets[index]))
+            : atomicTargetStateMatches(data,
+            getAfter(atomicRaidStatePath(data.commandTargets[index])).data, expectedStatus));
       }
 
       function atomicAllTargetsMatch(data) {
+        let expectedStatus = data.lastCommandType == 'complete' ? 'completed' : 'active';
         return data.commandTargets.size() <= 8
           && (data.commandTargets.size() >= 1
             || data.lastCommandType == 'incompleteEnd'
             || (data.lastCommandType == 'disband'
               && data.currentCycleStatus == 'completed'))
-          && ((data.lastCommandType == 'complete' || data.lastCommandType == 'advanceCycle')
-            ? atomicAllExpectedTargetsMatch(data, data.lastCommandType == 'complete' ? 'completed' : 'active')
-            : (atomicTargetMatchesTransition(data, 0)
-              && atomicTargetMatchesTransition(data, 1)
-              && atomicTargetMatchesTransition(data, 2)
-              && atomicTargetMatchesTransition(data, 3)
-              && atomicTargetMatchesTransition(data, 4)
-              && atomicTargetMatchesTransition(data, 5)
-              && atomicTargetMatchesTransition(data, 6)
-              && atomicTargetMatchesTransition(data, 7)));
+          && (data.commandTargets.size() == 0 || data.lastCommandType in ['complete', 'advanceCycle', 'disband'])
+          && (atomicTargetMatchesTransition(data, 0, expectedStatus)
+            && atomicTargetMatchesTransition(data, 1, expectedStatus)
+            && atomicTargetMatchesTransition(data, 2, expectedStatus)
+            && atomicTargetMatchesTransition(data, 3, expectedStatus)
+            && atomicTargetMatchesTransition(data, 4, expectedStatus)
+            && atomicTargetMatchesTransition(data, 5, expectedStatus)
+            && atomicTargetMatchesTransition(data, 6, expectedStatus)
+            && atomicTargetMatchesTransition(data, 7, expectedStatus));
       }
 
       function atomicValidLifecycleShape(oldData, newData) {
@@ -3225,8 +2775,6 @@ service cloud.firestore {
             && oldData.status == 'active');
       }
 
-
-
       function atomicValidGroupLifecycleCount(oldData, newData) {
         return oldData.visibility == 'group' && atomicClosesActiveGroupRecruitment(oldData, newData)
           ? atomicValidClosingGroupLifecycleCount(oldData, newData)
@@ -3255,15 +2803,6 @@ service cloud.firestore {
           && slot.countedAsNonGroupMember == false;
       }
 
-      function r1InitialListing(after) {
-        return after.visibility != 'group' || getAfter(/databases/$(database)/documents/groups/$(after.groupId)/raidListings/$(after.recruitmentId)).data == after;
-      }
-      function r1ListingTransition(before, after) {
-        return (after.visibility != 'group' && before.visibility != 'group')
-          || ((after.visibility != 'group' || after.status in ['completed', 'disbanded', 'incompleteEnded'])
-            ? !existsAfter(/databases/$(database)/documents/groups/$(after.groupId)/raidListings/$(after.recruitmentId))
-            : getAfter(/databases/$(database)/documents/groups/$(after.groupId)/raidListings/$(after.recruitmentId)).data == after);
-      }
       function validAtomicInitialRecruitment(recruitmentId, data) {
         let playerId = currentPlayerId();
         let member = getAfter(recruitmentMemberPath(recruitmentId, playerId)).data;
@@ -3468,7 +3007,7 @@ service cloud.firestore {
 
       function canListRecruitment(data) {
         return hasActiveBinding()
-          && (data.visibility == 'public'
+          && (canAccessRecruitmentByAudience(data)
             || data.leaderPlayerId == currentPlayerId()
             || currentPlayerId() in data.memberPlayerIds);
       }
@@ -3519,23 +3058,23 @@ service cloud.firestore {
       allow create: if validAtomicInitialRecruitment(
         recruitmentId,
         request.resource.data
-      ) && r1InitialListing(request.resource.data);
-      allow update: if (request.resource.data.get('lastCommandType', '') == 'personalComplete' && request.resource.data.lastCommandAt == request.time) ? (ownershipPersonalCompletionBoundary(resource.data, request.resource.data) && validPersonalCompletionRecruitmentUpdate(resource.data, request.resource.data)) : ((request.resource.data.get('lastCommandType', '') == 'cleanupCompletedLeaderOwnership' && request.resource.data.lastCommandAt == request.time) ? (ownershipLeaderCleanupAggregate(resource.data, request.resource.data)) : ((request.resource.data.get('lastCommandType', '') in ['advanceCycle', 'complete', 'disband', 'incompleteEnd'] && request.resource.data.lastCommandAt == request.time) ? (((validAtomicLifecycleUpdate(resource.data, request.resource.data) && r1ListingTransition(resource.data, request.resource.data))
+      );
+      allow update: if (request.resource.data.get('lastCommandType', '') == 'personalComplete' && request.resource.data.lastCommandAt == request.time) ? (ownershipPersonalCompletionBoundary(resource.data, request.resource.data) && validPersonalCompletionRecruitmentUpdate(resource.data, request.resource.data)) : ((request.resource.data.get('lastCommandType', '') == 'cleanupCompletedLeaderOwnership' && request.resource.data.lastCommandAt == request.time) ? (ownershipLeaderCleanupAggregate(resource.data, request.resource.data)) : ((request.resource.data.get('lastCommandType', '') in ['advanceCycle', 'complete', 'disband', 'incompleteEnd'] && request.resource.data.lastCommandAt == request.time) ? (((validAtomicLifecycleUpdate(resource.data, request.resource.data))
                 && (!(request.resource.data.lastCommandType == 'disband'
                     && resource.data.memberCount == 1 && resource.data.currentCycleStatus == 'completed')
-                  || ownershipLastCompletedDisband(resource.data, request.resource.data)))) : ((isNextWeekMemberPreparation(resource.data, request.resource.data)) ? (validPreparationRecruitment(resource.data, request.resource.data)) : ((!(request.resource.data.get('lastCommandType', '') in ['complete', 'advanceCycle', 'incompleteEnd', 'disband']) || request.resource.data.lastCommandAt == request.time || (validRecurrenceChange(resource.data, request.resource.data) && r1InitialListing(request.resource.data))) && ((ownershipChangedSlotGenerations(resource.data, request.resource.data)
+                  || ownershipLastCompletedDisband(resource.data, request.resource.data)))) : ((isNextWeekMemberPreparation(resource.data, request.resource.data)) ? (validPreparationRecruitment(resource.data, request.resource.data)) : ((!(request.resource.data.get('lastCommandType', '') in ['complete', 'advanceCycle', 'incompleteEnd', 'disband']) || request.resource.data.lastCommandAt == request.time || (validRecurrenceChange(resource.data, request.resource.data))) && ((ownershipChangedSlotGenerations(resource.data, request.resource.data)
                     && (!(request.resource.data.get('lastCommandType', '') == 'disband'
                         && resource.data.memberCount == 1
                         && resource.data.currentCycleStatus == 'completed') && ((request.resource.data.get('lastCommandType', '') == 'cleanupCompletedPeerOwnership') ? (ownershipPeerCleanupAggregate(resource.data, request.resource.data)) : ((resource.data.currentCycleStatus == 'active' && request.resource.data.memberCount == resource.data.memberCount - 1 && (validAtomicRecruitmentMemberRemoval(
                               resource.data,
                               request.resource.data
-                            ) && r1ListingTransition(resource.data, request.resource.data))) || (request.resource.data.get('lastCommandType', '') == 'cleanupCompletedOwnership' && ownershipCleanupAggregate(resource.data, request.resource.data)) || (validRecurrenceChange(
+                        ))) || (request.resource.data.get('lastCommandType', '') == 'cleanupCompletedOwnership' && ownershipCleanupAggregate(resource.data, request.resource.data)) || (validRecurrenceChange(
                             resource.data,
                             request.resource.data
-                          ) && r1InitialListing(request.resource.data)) || (resource.data.currentCycleStatus == 'active' && (validAtomicPendingApplicationUpdate(
+                        )) || (resource.data.currentCycleStatus == 'active' && (validAtomicPendingApplicationUpdate(
                               resource.data,
                               request.resource.data
-                            ) || (r1ListingTransition(resource.data, request.resource.data) && (validAtomicRecruitmentJoin(
+                            ) || ((validAtomicRecruitmentJoin(
                                   resource.data,
                                   request.resource.data
                                 ) || validAtomicCharacterRevisionUpdate(
@@ -3552,11 +3091,6 @@ service cloud.firestore {
       allow delete: if false;
 
       match /members/{playerId} {
-
-
-
-
-
 
         function ownershipLeaderCleanupMemberDelete(roomId, playerId, data) {
           let before = get(recruitmentPath(roomId)).data;
@@ -3734,8 +3268,6 @@ service cloud.firestore {
             after.raidId, newData.get('ownershipRevision', 0)
           );
         }
-
-
 
         function validApprovalPermissionChange(recruitmentId, playerId, oldData, newData) {
           let recruitment = get(recruitmentPath(recruitmentId)).data;
@@ -4069,22 +3601,6 @@ service cloud.firestore {
           && get(groupPath(groupId)).data.leaderPlayerId == currentPlayerId();
       }
 
-      function validGroupDisplayName(name) {
-        return name is string
-          && name.size() >= 1
-          && name.size() <= 20
-          && !name.matches('(?s).*[\\x00-\\x1f\\x7f].*');
-      }
-
-      function validGroupSearchProjection(data) {
-        return data.normalizedName is string
-          && data.normalizedName.size() >= 1
-          && data.normalizedName.size() <= 20
-          && data.normalizedRepresentativeCharacterName is string
-          && data.normalizedRepresentativeCharacterName.size() >= 1
-          && data.normalizedRepresentativeCharacterName.size() <= 40;
-      }
-
       function validInitialGroup(groupId, data) {
         let playerId = currentPlayerId();
         let member = getAfter(groupMemberPath(groupId, playerId)).data;
@@ -4102,8 +3618,6 @@ service cloud.firestore {
         ])
           && data.schemaVersion == 1
           && data.status == 'active'
-          && validGroupDisplayName(data.name)
-          && validGroupSearchProjection(data)
           && data.leaderPlayerId == playerId
           && data.memberCount == 1
           && data.activeRecruitmentCount == 0
@@ -4131,10 +3645,6 @@ service cloud.firestore {
             || resource.data.status == 'active'
             || isCurrentGroupMember(groupId));
       }
-
-
-
-
 
       function validGroupMemberLeaveUpdate(groupId, oldData, newData) {
         return isCurrentPlayerActive()
@@ -4192,8 +3702,6 @@ service cloud.firestore {
                   && getAfter(groupMemberPath(groupId, currentPlayerId())).data.joinSequence == newData.memberCount)))
             : (isCurrentGroupMember(groupId) || existsAfter(groupRelationPath(currentPlayerId(), groupId))));
       }
-
-
 
       function validGroupJoinCodeFlagUpdate(oldData, newData) {
         return isCurrentPlayerActive()
@@ -4274,8 +3782,6 @@ service cloud.firestore {
           && newData.lastRecruitmentId == recruitment.recruitmentId;
       }
 
-
-
       function validAtomicGroupRecruitmentOpenBody(
         groupId,
         oldData,
@@ -4353,10 +3859,6 @@ service cloud.firestore {
               'revision', 'createdAt', 'updatedAt'
           ]);
         }
-
-
-
-
 
         function validGroupMemberSelfSnapshotRefresh(
           groupId,
@@ -4547,49 +4049,6 @@ service cloud.firestore {
           playerId,
           resource.data
         );
-      }
-
-      match /raidListings/{recruitmentId} {
-        function r1ListingCopy(data, room) {
-          return room.groupId == groupId && room.visibility == 'group'
-            && data == room && data.keys().hasOnly(['schemaVersion', 'recruitmentId', 'title', 'leaderPlayerId', 'leaderCharacterNameSnapshot', 'leaderClassNameSnapshot', 'memberPlayerIds', 'raidCatalogVersion', 'raidId', 'difficultyId', 'raidNameSnapshot', 'difficultyNameSnapshot', 'difficultyAliasSnapshot', 'gateCount', 'minItemLevel', 'minCombatPower', 'experienceLevel', 'maxPlayHours', 'raidStartAt', 'status', 'visibility', 'groupId', 'approvalPolicy', 'continueTogether', 'manualRecruitmentEnabled', 'hasAvailableSlot', 'currentCycleKey', 'targetCycleKey', 'currentCycleStatus', 'cycleStartedAt', 'cycleEndsAt', 'partyCount', 'membersPerParty', 'supportsPerParty', 'maxDealersPerClassPerParty', 'slotLedgerVersion', 'memberCount', 'maxMemberCount', 'dealerCount', 'supportCount', 'revision', 'createdAt', 'updatedAt', 'completedAt', 'completedByPlayerId', 'partySlots', 'nonGroupMemberCount', 'pendingApplicationCount', 'pendingNonGroupApplicantCount', 'raidStateTargets', 'commandTargets', 'groupActiveRecruitmentCountAfter', 'lastCommandId', 'lastCommandType', 'lastCommandActorPlayerId', 'lastCommandAt', 'ownershipCleanup']);
-        }
-        function r1ListingWrite(data) {
-          let path = recruitmentPath(recruitmentId);
-          let after = getAfter(path).data;
-          return hasActiveBinding() && r1ListingCopy(data, after)
-            && after.updatedAt == request.time
-            && (!exists(path) ? after.revision == 1
-              : after.revision == get(path).data.revision + 1);
-        }
-        function r1ListingBackfill(data) {
-          let path = recruitmentPath(recruitmentId);
-          let before = get(path).data;
-          return isCurrentGroupMember(groupId)
-            && currentPlayerId() in before.memberPlayerIds
-            && before.status == 'active' && before.currentCycleStatus != 'disbanded'
-            && getAfter(path).data == before && r1ListingCopy(data, before);
-        }
-        function r1ListingCreate(data) {
-          let path = recruitmentPath(recruitmentId);
-          return r1ListingWrite(data) && (!exists(path)
-              || get(path).data.visibility != 'group'
-              || (data.memberCount >= get(path).data.memberCount
-                && data.currentCycleStatus != 'completed'
-                && !(data.get('lastCommandType', '') in ['complete', 'advanceCycle'])));
-        }
-        function r1ListingDelete() {
-          let path = recruitmentPath(recruitmentId);
-          let before = get(path).data;
-          let after = getAfter(path).data;
-          return hasActiveBinding() && before.groupId == groupId && after.groupId == groupId
-            && after.revision == before.revision + 1 && after.updatedAt == request.time
-            && (after.visibility == 'public' || after.status in ['completed', 'disbanded', 'incompleteEnded']);
-        }
-        allow get, list: if isCurrentGroupMember(groupId);
-        allow create: if r1ListingCreate(request.resource.data) || r1ListingBackfill(request.resource.data);
-        allow update: if r1ListingWrite(request.resource.data);
-        allow delete: if r1ListingDelete();
       }
 
       match /joinRelations/{playerId} {

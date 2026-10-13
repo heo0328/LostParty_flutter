@@ -14,7 +14,6 @@ import '../mappers/weekly_raid_claim_document_id.dart';
 import 'firestore_weekly_raid_status_command_repository.dart';
 import '../../../recruitment_list/data/mappers/party_membership_event_writer.dart';
 import '../../../recruitment_list/data/mappers/party_membership_write_plan.dart';
-import '../../../recruitment_list/data/mappers/party_raid_listing_sync.dart';
 import '../../../recruitment_list/domain/entities/party_event.dart';
 
 class FirestoreWeeklyRaidClaimRepository
@@ -122,18 +121,15 @@ class FirestoreWeeklyRaidClaimRepository
             }
           },
         );
-        eventsSub = eventsQuery.snapshots().listen(
-          (snapshot) {
-            final shouldRefresh = snapshot.docChanges.any((change) {
-              if (change.type != DocumentChangeType.added) return false;
-              final type = change.doc.data()?['type'];
-              return type == 'partyCompleted' ||
-                  type == 'partyCompletionCancelled';
-            });
-            if (shouldRefresh) unawaited(refreshFromServer());
-          },
-          onError: (_) {},
-        );
+        eventsSub = eventsQuery.snapshots().listen((snapshot) {
+          final shouldRefresh = snapshot.docChanges.any((change) {
+            if (change.type != DocumentChangeType.added) return false;
+            final type = change.doc.data()?['type'];
+            return type == 'partyCompleted' ||
+                type == 'partyCompletionCancelled';
+          });
+          if (shouldRefresh) unawaited(refreshFromServer());
+        }, onError: (_) {});
       },
       onCancel: () async {
         await claimsSub?.cancel();
@@ -189,8 +185,7 @@ class FirestoreWeeklyRaidClaimRepository
   Future<WeeklyRaidClaimCommandResult> createManualClaim(
     CreateManualWeeklyRaidClaimCommand command, {
     bool resolveConflicts = false,
-  }
-  ) async {
+  }) async {
     if (_firebaseAuth.currentUser == null) {
       return const WeeklyRaidClaimCommandResult.failure(
         WeeklyRaidClaimCommandFailure.unauthenticated,
@@ -249,8 +244,12 @@ class FirestoreWeeklyRaidClaimRepository
               WeeklyRaidClaimCommandFailure.invalidRequest,
             );
           }
-          recruitmentRef = _firestore.collection('recruitments').doc(recruitmentId);
-          memberRef = recruitmentRef.collection('members').doc(command.playerId);
+          recruitmentRef = _firestore
+              .collection('recruitments')
+              .doc(recruitmentId);
+          memberRef = recruitmentRef
+              .collection('members')
+              .doc(command.playerId);
           final recruitment = await transaction.get(recruitmentRef);
           final member = await transaction.get(memberRef);
           recruitmentData = recruitment.data();
@@ -289,15 +288,6 @@ class FirestoreWeeklyRaidClaimRepository
             pendingApplications.add(candidate);
           }
         }
-        PartyRaidListingTx? listing;
-        if (assignment.exists) {
-          listing = await PartyRaidListingTx.read(
-            transaction: transaction,
-            firestore: _firestore,
-            groupId: recruitmentData?['groupId'],
-            recruitmentId: recruitmentRef!.id,
-          );
-        }
         final now = FieldValue.serverTimestamp();
         if (assignment.exists) {
           final r = recruitmentData!;
@@ -315,26 +305,23 @@ class FirestoreWeeklyRaidClaimRepository
           final nextLeaderClassName = nextLeaderId == oldLeader
               ? r['leaderClassNameSnapshot'] as String?
               : nextLeaderData?['classNameSnapshot'] as String?;
-          final recruitmentPatch = PartyMembershipWritePlan.removeFromRecruitment(
-            memberPlayerIds: beforeMembers,
-            targetPlayerId: command.playerId,
-            memberCount: r['memberCount'] as int,
-            dealerCount: r['dealerCount'] as int,
-            supportCount: r['supportCount'] as int,
-            targetRole: m['role'] as String,
-            maxMemberCount: r['maxMemberCount'] as int,
-            revision: r['revision'] as int,
-            nextLeaderPlayerId: nextLeaderId,
-            nextLeaderCharacterName: nextLeaderCharacterName,
-            nextLeaderClassName: nextLeaderClassName,
-            serverTimestamp: now,
-          );
+          final recruitmentPatch =
+              PartyMembershipWritePlan.removeFromRecruitment(
+                memberPlayerIds: beforeMembers,
+                targetPlayerId: command.playerId,
+                memberCount: r['memberCount'] as int,
+                dealerCount: r['dealerCount'] as int,
+                supportCount: r['supportCount'] as int,
+                targetRole: m['role'] as String,
+                maxMemberCount: r['maxMemberCount'] as int,
+                revision: r['revision'] as int,
+                nextLeaderPlayerId: nextLeaderId,
+                nextLeaderCharacterName: nextLeaderCharacterName,
+                nextLeaderClassName: nextLeaderClassName,
+                serverTimestamp: now,
+              );
           transaction.update(recruitmentRef!, recruitmentPatch);
-          listing?.write(
-            transaction: transaction,
-            currentRecruitment: partyRecruitmentMap(r),
-            recruitmentPatch: recruitmentPatch,
-          );
+
           transaction.delete(memberRef!);
           transaction.delete(assignmentRef);
           if (nextLeaderId != null && nextLeaderId != oldLeader) {

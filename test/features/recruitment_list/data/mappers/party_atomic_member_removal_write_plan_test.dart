@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lost_party/features/recruitment_list/data/mappers/party_raid_listing_document.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_atomic_member_removal_write_plan.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_atomic_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
@@ -75,14 +74,11 @@ void main() {
       'currentCycleKey': '2026-09-09',
       'continueTogether': true,
     };
-    final listing = partyRaidListingDocument(
-      currentRecruitment: current,
-      recruitmentPatch: plan.recruitmentPatch,
-    );
-    expect(listing, {...current, ...plan.recruitmentPatch});
-    expect(listing['revision'], 5);
-    expect(listing.containsKey('sourceRevision'), isFalse);
-    expect(plan.maximumWriteCount, 5);
+    final after = {...current, ...plan.recruitmentPatch};
+    expect(after, {...current, ...plan.recruitmentPatch});
+    expect(after['revision'], 5);
+    expect(after.containsKey('sourceRevision'), isFalse);
+    expect(plan.maximumWriteCount, 4);
   });
 
   test('참가 뒤 그룹을 탈퇴한 멤버도 참가 당시 집계 Snapshot으로 제거한다', () {
@@ -112,7 +108,7 @@ void main() {
     );
 
     expect(plan.recruitmentPatch['nonGroupMemberCount'], 0);
-    expect(plan.maximumWriteCount, 5);
+    expect(plan.maximumWriteCount, 4);
   });
 
   test('추방 권한과 마지막 한 명의 일반 탈퇴를 거절한다', () {

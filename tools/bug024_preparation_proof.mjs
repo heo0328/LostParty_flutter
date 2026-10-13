@@ -1,9 +1,10 @@
+import {runTransaction} from './group_source_transaction_fixture.mjs';
 // Uses only a demo Emulator and the exact tracked deployment Rules.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { initializeTestEnvironment } from '@firebase/rules-unit-testing';
 import { doc, collection, getDocs, getDoc, setDoc, updateDoc, deleteDoc,
-  runTransaction, serverTimestamp, increment, deleteField, Timestamp } from 'firebase/firestore';
+   serverTimestamp, increment, deleteField, Timestamp } from 'firebase/firestore';
 import { authUid, playerId, recruitmentId, raidId, cycleKey, cycleWindow,
   seedGroupLinkedRoom } from './party_group_cutover_rules_test.mjs';
 const rulesPath = process.env.BUG024_RULES_FILE || 'firestore.rules';
@@ -11,7 +12,7 @@ const evidenceDir = process.env.BUG024_EVIDENCE_DIR || 'coverage/bug024';
 process.env.ROSTER_TRACKED_RULES = '1';
 process.env.ROSTER_COMPLEXITY_RULES_FILE = rulesPath;
 const { seedRoom, lifecycle } = await import('./roster_ownership_rules_proof.mjs');
-const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutover',
+const env = await initializeTestEnvironment({ projectId: process.env.GROUP_SOURCE_PROJECT_ID || 'demo-party-group-cutover',
   firestore: { host: '127.0.0.1', port: 8080, rules: fs.readFileSync(rulesPath, 'utf8') } });
 const db = env.authenticatedContext(authUid).firestore();
 const replacement = 'bug024replacement001';

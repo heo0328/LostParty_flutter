@@ -147,6 +147,18 @@
         { "fieldPath": "targetIdentityKey", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "recruitments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "groupId", "order": "ASCENDING" },
+        { "fieldPath": "visibility", "order": "ASCENDING" },
+        { "fieldPath": "schemaVersion", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "manualRecruitmentEnabled", "order": "ASCENDING" },
+        { "fieldPath": "hasAvailableSlot", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

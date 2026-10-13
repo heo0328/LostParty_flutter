@@ -19,7 +19,6 @@ void main() {
     expect(plan.recruitmentPatch['visibility'], 'group');
     expect(plan.recruitmentPatch['revision'], 8);
     expect(plan.groupPatch['activeRecruitmentCount'], 2);
-    expect(plan.deleteListing, isFalse);
   });
 
   test('그룹 전용에서 공개 전환은 listing 삭제와 활성 수 감소를 함께 계획한다', () {
@@ -32,7 +31,6 @@ void main() {
     );
 
     expect(plan.groupPatch['activeRecruitmentCount'], 0);
-    expect(plan.deleteListing, isTrue);
   });
 
   test('비그룹 참가자 또는 신청자가 있으면 그룹 전용 전환을 거절한다', () {

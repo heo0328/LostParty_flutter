@@ -262,7 +262,7 @@ class PartyAtomicRepositionWritePlan {
   Map<String, Map<String, Object?>> get membershipPatches =>
       _values.membershipPatches;
   Map<String, Object?> get event => _values.event;
-  int get maximumWriteCount => 1 + membershipPatches.length + 1 + 1;
+  int get maximumWriteCount => 1 + membershipPatches.length + 1;
 
   static _RepositionValues _build({
     required PartyCommandAggregate aggregate,

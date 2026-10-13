@@ -1,5 +1,24 @@
 # Firestore Rules 복잡도 — 전면 조사와 기능 보존 설계
 
+## 2026-10-12 P2 그룹 이름 품질 책임 로컬 이전
+
+validGroupDisplayName/validGroupSearchProjection 정의2·호출2·검사 본문을 실제 삭제했다. 생성기 동일 반영, 앱 name 읽기 fallback 보완.
+P1 대비223007→222313bytes, compact142758→142294, 함수270→268·깊이5 유지. 정적 감소를 compiled 비용이나 게시 원인으로 단정하지 않는다.
+전체 Rules 변경 전후 권한/소유권/부분 생성/가입 한도 보존·정보 품질4경계만 허용 전환 확인. 앱 표적 검사/변경 파일 analyze·생성/preflight 통과.
+후속 사용자 지시로20:38 KST 운영1회: /test200·응답{}·경고0, /rulesets200·eff8978a 생성 뒤 활성화PATCH400 INVALID_ARGUMENT/같은 CLI fallback409 ALREADY_EXISTS 실패.
+20:38:55 KST 실제 활성f7ce11cf/2419f77b 유지·후보 미활성 확인. 추가 시도 없음·실기기 인수/게시 정상화 미완료.
+상세 흐름·변경된 검색 품질 보증·증거는 [단일 분석 문서 P2](../architecture/USER_ACTION_RULES_FLOW_ANALYSIS.md)를 따른다.
+
+## 2026-10-12 P1 lifecycle 대상 검사 통합·포맷
+
+후보f96186c1/223007bytes·compact142758bytes, 함수270·전체깊이5(lifecycle5→4).
+expected-target 전용3helper를 공통 target 경로로 통합하고 생성기에서 연속 빈 줄을1개로 제한했다.
+첫 통합의8인 평가 한도 회귀는 기준선 대조 후 중복 OR→ternary 선택으로 수정·최종 전체 경계 검증 통과.
+최초 승인 차단 후 사용자 게시 승인으로20:00 KST 운영1회 실행: /test200·응답{}·경고0 및 /rulesets200,
+/releases PATCH400 INVALID_ARGUMENT·같은 CLI fallback POST409 ALREADY_EXISTS 실패.
+활성f7ce11cf/2419f77b 유지 읽기 확인, 후보 미활성·추가 시도 없음. 내부 원인은 미확정·실기기 인수 미완료.
+상세 근거: [행동 분석의 P1 구현 결과](../architecture/USER_ACTION_RULES_FLOW_ANALYSIS.md), 다음 기준 NEXT_WORK.
+
 > 최신 실행 기준은 NEXT_WORK다. 전체 구조 재설계 후 f7ce11cf 운영 게시 성공, 참가 복구 작업에서45e47e23의 활성화 실패까지 진행됐다. 아래 과거 실행 순서는 이력이다.
 
 ## 2026-10-11 참가 역할 변경 후속

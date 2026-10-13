@@ -45,7 +45,7 @@ class GroupCreateWritePlan {
     final rawName = command.usesDefaultName
         ? normalizer.defaultName(characterName)
         : normalizer.displayName(command.name!);
-    // Rules validGroupDisplayName 상한 20자에 맞춘다.
+    // 기본 이름도 앱의 그룹명 입력 정책인 20자 상한에 맞춘다.
     final name = rawName.length <= GroupCreateCommand.maxNameLength
         ? rawName
         : rawName.substring(0, GroupCreateCommand.maxNameLength);

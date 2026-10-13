@@ -1,10 +1,11 @@
+import {runTransaction} from './group_source_transaction_fixture.mjs';
 // DE2 feasibility only. Never deploys or edits tracked production Rules.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, getDoc, getDocs, collection, setDoc, updateDoc, deleteDoc, runTransaction,
+import { doc, getDoc, getDocs, collection, setDoc, updateDoc, deleteDoc,
   serverTimestamp, Timestamp, increment, deleteField } from 'firebase/firestore';
 import { seedGroupLinkedRoom, disbandApprovedRoomTxn, removeApprovedMemberTxn, seedBase, seedJoiner, createPublicRecruitmentTxn, applicationTxn,
   approvePublicApplicationTxn, seedExpandedApprovedRoom, cycleWindow,

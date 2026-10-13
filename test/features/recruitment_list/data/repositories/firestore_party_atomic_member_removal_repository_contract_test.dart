@@ -42,14 +42,6 @@ void main() {
     expect(repository, contains('transaction.delete(raidStateRef)'));
   });
 
-  test('그룹방 참가자 제거는 같은 계획의 참가 구성으로 listing을 갱신한다', () {
-    expect(repository, contains(".collection('raidListings')"));
-    expect(repository, contains('partyRaidListingDocument('));
-    expect(repository, contains('currentRecruitment: raw'));
-    expect(repository, contains('recruitmentPatch: plan.recruitmentPatch'));
-    expect(repository, isNot(contains('transaction.get(listingRef)')));
-  });
-
   test('운영 Router에 원자 탈퇴 Repository를 연결한다', () {
     expect(router, contains('FirestorePartyAtomicMemberRemovalRepository'));
   });

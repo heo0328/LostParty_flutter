@@ -1,4 +1,3 @@
-import 'party_raid_listing_document.dart';
 import '../../domain/entities/party_atomic_command.dart';
 import '../../domain/entities/party_create_command.dart';
 import '../../domain/entities/party_recruitment.dart';
@@ -51,12 +50,8 @@ class PartyAtomicCreateWritePlan {
     raidId: raidState['raidId']! as String,
   );
 
-  Map<String, Object?>? get groupRaidListing =>
-      recruitment['visibility'] == RecruitmentVisibility.group
-      ? partyRaidListingDocument(currentRecruitment: recruitment)
-      : null;
-
-  int get groupActiveRecruitmentDelta => groupRaidListing == null ? 0 : 1;
+  int get groupActiveRecruitmentDelta =>
+      recruitment['visibility'] == RecruitmentVisibility.group ? 1 : 0;
 
   static Map<String, Object?> _recruitment({
     required PartyCreateWritePlan base,

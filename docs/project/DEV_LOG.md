@@ -1,5 +1,127 @@
 # 개발 이력
 
+## 2026-10-13 현재 브랜치 작업 중단·복구 커밋/push
+
+- 사용자 지시: 현재 작업을 중단하고 문서 기록 후 커밋·push. P1/P2/L1의 앱·Rules·인덱스·관련 계약/테스트/생성기와 직접 검증 자료를 작업 브랜치에 보존한다. 기존 6e7bd11 위의 복구 체크포인트이며 dev/main 통합은 아니다.
+- 새로 가능해진 흐름(로컬): 그룹 모집 원본 조회, listing 복사 의존 제거, 그룹 이름 fallback 및 서버 품질 검사 로컬 책임화, lifecycle 대상 검사 통합. 기존 참가 복구/주차 직접 구독/후보 조회 개선은 선행 복구 커밋에 포함돼 있다. 운영 이용 가능으로 판정하지 않는다.
+- 보존 확인한 기존 흐름: 기존 P1/P2/L1 표적 검증 결과를 재사용한다. L1 서버43건/정적2건·생성/preflight 통과, 전체 Flutter1213통과/88실패 중 문자열 기대1건 수정 후 표적 통과; 나머지 기존 실패 잔존. 분석 error0/warning1/info50. 코드가 바뀌지 않아 전체 검증을 반복하지 않는다.
+- 미확인: 전체본 게시 정상화, 새 앱/Rules/인덱스 전환 및 실기기 인수. 사용자 분할 게시 결과는 아래 이력대로 보존하며 원인 확정 자료로 과장하지 않는다. 운영 활성 원격 재조회·게시·실기기 조작 없음.
+- 제외·로컬 보존: 임시 주간 초기화 일요일15시 변경, firestore.rules-backup1012/1013와 독립 미추적 실험 자료. 테스트용 분할 Rules는 삭제 상태 유지. 직접 P1/P2/L1 생성/검증 의존 파일은 커밋한다.
+- 이번 검증: staged diff/내용·의존 파일 확인 및 git diff --check. 복구 commit/push 후 원격 작업 브랜치 일치를 확인한다. 현재 브랜치 유지·dev/main 미반영, 새 지시 전 작업 중단.
+
+## 2026-10-13 테스트용 Rules 파일 삭제
+
+- 사용자 명시 요청으로 남은 firestore.test1.rules 및 firestore.test3.rules 삭제. 테스트2는 이미 없었다. 삭제 확인 및 원본 firestore.rules SHA 불변 확인. 설정/백업·기존 미커밋 작업 보존.
+- 로컬 분할 파일 정리만 수행했다. 서버 활성 Rules/Release 변경·게시·테스트 실행·커밋/push/merge 없음. 현재 브랜치 유지·문서 미커밋·dev 미반영.
+
+## 2026-10-13 groups 절반을 테스트1에 이식
+
+- 사용자 보고: groups 제외 통합 테스트1 게시 성공. 사용자 검증 근거이며 에이전트 원격 조회 없음.
+- groups30613bytes 중15184bytes(49.6%)를 테스트1에 추가: 그룹 문서 get/list/create/update/delete 및 해당16함수, applicantStats/blockedPlayers 전체 하위 match. 테스트1은201020bytes다. 테스트3에서 이 경로의 allow와 전용 함수는 제거하고 members/joinRelations 및 필요한 그룹 스코프5함수762bytes를 유지해81911bytes가 됐다. 양쪽에 필요한 보조함수만 중복 보존했다.
+- 추가 외 테스트1 바이트 동일성, 원본과 하위 match/함수/allow 본문 동일성, 경로 중복 없는 분배, 남은 함수 의존성 closure, 공통 최상위97함수 유지 및 괄호 균형 확인. 원본 Rules/Firebase 설정 바이트 불변. 테스트2는 시작 시 이미 없었으므로 재생성하지 않았다.
+- 새 분할 진단 구성 준비 완료, 사용자 게시 검증 대기. 분할 원자 쓰기의 기능 동등성은 주장하지 않으며 Emulator 허용/거부·원격 컴파일/게시·실기기 검증은 미실행이다. 현재 브랜치 유지·기존 미커밋 변경 보존·dev 미반영·커밋/push/merge 없음.
+
+## 2026-10-13 테스트1과 테스트2 통합
+
+- 사용자 요청으로 테스트2의 groupJoinCodes 및 collection-group applications 전체 블록1939bytes를 테스트1에 추가했다. 공통97함수는 중복 없이 유지, 최종 테스트1은185836bytes/최상위15경로(groups 제외)다. 테스트2/3은 비교용으로 보존했다.
+- 추가 외 테스트1 바이트 동일성, 추가 본문 원본 일치, 공통 함수 단일 포함·괄호 균형 확인. 테스트2/3 및 원본 Rules/Firebase 설정 바이트 불변 확인. 기존 정상 흐름의 동적 회귀 검증과 새 구성의 게시 성공은 미확인이다.
+- 새 통합 진단본 준비 완료, 사용자 게시 검증 대기. Emulator·배포·원격 조회·실기기 검증 없음. 현재 브랜치 유지·미커밋·dev 미반영·커밋/push/merge 없음.
+
+## 2026-10-13 groups를 테스트3으로 분리
+
+- 사용자 보고: groups를 추가한 테스트1 구성에서 게시 오류 발생. 로그/실패 단계 미확인, 특정 함수 또는 compiled 한도 문제로 단정하지 않는다.
+- 지시대로 테스트1에서 직전 groups 전체30613bytes를 제거하고 `firestore.test3.rules`에 공통97함수와 함께 포함했다. 테스트1은183897bytes/13경로로 이전 구성 복구, 테스트3은96296bytes/1경로(groups 및 하위 match)다. 테스트2는67611bytes/2경로 그대로다.
+- 이동 본문 원본 일치·공통 함수 본문 유지·이동 외 테스트1 바이트 동일성·괄호 균형 확인. 테스트2/원본 Rules/Firebase 설정 바이트 불변 확인. 기존 앱 정상 흐름의 동적 회귀 검증은 수행하지 않았으며 분할 원자 쓰기 한계는 유지한다.
+- 새로 준비된 진단은 groups 단독 구성 게시 비교이며, Emulator/원격 컴파일/게시·실기기 확인은 미실행이다. 사용자 검증 대기. 현재 브랜치/기존 미커밋 변경 보존, 커밋/push/merge·dev 반영 없음.
+
+## 2026-10-13 분할 테스트 2단계 — groups를 2번에서 1번으로 이동
+
+- 사용자 추가 이동 요청으로 `/groups/{groupId}` 전체30613bytes(하위 match/함수 포함)를 테스트2에서 테스트1로 옮겼다. 테스트1은214510bytes/최상위14경로, 테스트2는67611bytes/2경로(groupJoinCodes,collection-group applications)다.
+- 이동 외 기존 바이트 불변, 이동 본문 원본 일치, 괄호 균형과 원본 Rules/Firebase 설정 불변 확인. 공통 함수와 기존 보안 검사 본문 변경 없음. 새 조합의 게시·Emulator 동작·실기기 결과는 미확인이며 사용자 검증 대기다. 이전 이동 조합의 게시 결과는 아직 별도 보고받지 않았다.
+- 기존 브랜치/미커밋 변경 보존. 배포·원격 조회·커밋/push/merge·dev 반영 없음.
+
+## 2026-10-13 분할 테스트 1단계 — recruitments를 2번에서 1번으로 이동
+
+- 사용자 보고: 초기 테스트1/2 각각 테스트 프로젝트 게시 성공. 에이전트 원격 확인은 하지 않았다.
+- `/recruitments/{recruitmentId}` 전체 블록(하위 match/함수 포함,50126bytes)을 테스트2에서 제거하고 테스트1 마지막 경로 뒤로 이동했다. 테스트1은183897bytes/최상위13경로, 테스트2는98224bytes/3경로(groups,groupJoinCodes,collection-group applications)다.
+- 이동 외 두 파일의 기존 바이트 동일성, 이동 본문과 원본 동일성, 공통 함수 목록·괄호 균형, 원본 Rules/Firebase 설정 불변 확인. 새 조합의 게시·Emulator 허용/거부·실기기 결과는 미확인이며 사용자 게시 검증 대기다. 원자 쓰기의 분할 한계는 유지한다.
+- 기존 브랜치/미커밋 변경 보존. 에이전트 배포·원격 조회·커밋/push/merge·dev 반영 없음.
+
+## 2026-10-13 테스트 Rules 2개 분할
+
+- 사용자 요청으로 `firestore.test1.rules`(133771bytes), `firestore.test2.rules`(148350bytes)를 생성했다. 원본 c23925b0의 순서대로 최상위 match12개(인증/Player/계정/이벤트)와4개(모집/그룹/초대코드/신청 조회)를 분배했다. 공통 최상위97함수는 양쪽에 그대로 포함해 크기가 정확한 절반은 아니다.
+- 새로 가능해진 흐름: 두 독립 Rules 소스를 사용한 후속 분할 진단 준비. 포함된 match와 공통 함수 본문 바이트 동일성,16경로의 중복 없는 분배 및 원본/설정 SHA 불변을 정적으로 확인했다. 전체 기능 동등성이나 실제 허용·거부 동작 검증은 아니다.
+- 보존 확인: 원본 `firestore.rules` SHA256 c23925b0cb34902bdb8e67e6ade4b614d768e8dedb0113e91c2096eac4a5ae31, `firebase.json` f749adf73003f9ca2b545e9e8984e7040e7babe381d476d3fc5c8ae5ee6badca, `.firebaserc` ee88291c5008ba863d02cae8f11b07abe3b8e52518e4c714eea59204a43ce3b4 불변. 기존 미커밋 변경 보존.
+- 제외된 경로는 기본 거절이며 두 파일에 걸친 원자 쓰기는 실패할 수 있다. 운영용으로 사용하지 않는다. Emulator 로딩/허용·거부 테스트·원격 컴파일·배포·Release 조회 및 실기기 검증은 미실행이다. 게시 성공/compiled 크기는 미확인이다.
+- 브랜치 fix/party-participation-consistency 유지, 이번 파일/문서 미커밋·dev 미반영·push/merge 없음.
+
+## 2026-10-12 23:53 KST L1 Rules 운영 게시 1회 실패
+
+- 사용자 「게시 실행」 승인으로 lost-party의 firestore.rules 후보c23925b0(216090bytes,257함수)를 정확히1회 게시했다. 기존43서버/2정적 검사 및 분석 결과를 재사용하고 SHA·브랜치·diff·firebase.json 경로·대상 프로젝트를 재확인했다. dry-run/인덱스/앱/Functions/Hosting 배포 없음.
+- `/test`200·응답{}·컴파일 경고0, `/rulesets`200으로 `0d9fa6b2-aaf6-4a23-a505-6407ba49b243` 생성. `/releases/cloud.firestore` PATCH400 INVALID_ARGUMENT, 같은 CLI 실행 내부 fallback POST409 ALREADY_EXISTS로 종료1. 명령 재실행·Rules 완화 없음.
+- 실패 후 읽기 확인: 활성ruleset `2419f77b-9535-479a-a519-3ddd8f7a6005`, SHA `f7ce11cf23b740f301efb0f5ceb837fa85ac625efeaee66172613d5af8dc2e55`, release updateTime `2026-10-11T05:17:14.085611Z` 유지. 후보는 운영 미활성이다. 기존 성공본과 다른 로컬 후보의 L1 차이는 앞선 구현 기록을 따르며, 이번11함수 제거도 게시 실패를 해결하지 못했다. 서버 내부 원인은 미확정이다.
+- 근거: `coverage/rules-group-source/production-deploy.log`, `production-active.json`. 새로 가능해진 운영 흐름 없음·기존 활성 Rules 보존 확인·실기기 인수 미확인. fix/party-participation-consistency 미커밋·dev 미반영·push/merge 없음·브랜치 유지.
+
+## 2026-10-12 L1 그룹 모집 복사 문서 제거 — 로컬 구현·검증
+
+- 새로 가능해진 흐름: 복사본이 없거나 오래돼도 가입 그룹의 모집 원본 조회. 모든 앱 명령의 복사본 쓰기와 backfill 의존 제거. 새 앱 전환·구버전 종료는 사용자 선택이며 구버전의 복사본 포함 요청은 거절된다.
+- 보존 확인: 원본 권한/소유권/원자성 관련 본문은 복사 조건만 제거. 실제 Rules에서 조회 권한·탈퇴/재가입·최대8인 준비/전환/완료/해산·개인완료/승계·소유권 정리·중복 요청·부분 쓰기 거절 등43건 통과. 정적2건·생성/preflight 통과. Rules268→257함수,222313→216090bytes, 깊이5. 상세 미검증 범위는 분석 문서 L1 결과에 명시했다.
+- Flutter 전체1213통과·88실패. 변경 전 비교 후 L1의 오래된 문자열 기대1건 수정·표적 통과; 나머지 기존 실패는 범위 밖으로 보존. analyze 오류0/경고1/info50. 전체 green으로 판정하지 않는다.
+- 미확인 실기기: 가입 그룹 목록/공개 목록 합치기·주차/탈퇴·재가입, 생성·공개범위·참가/승인·변경·완료·해산·소유권 정리와 재진입. 에뮬레이터는 실제 운영 인덱스·배포 성공을 검증하지 않는다.
+- fix/party-participation-consistency 미커밋. 기존 P1/P2·임시 일요일15시와 실험 자료 보존. dev 미반영·push/merge/배포/데이터 이행 없음, 브랜치 유지. 운영 정상화 완료 주장은 하지 않는다.
+
+## 2026-10-12 Rules 수정의 새 채팅 인계 문서 작성
+
+- 사용자 요청으로 기존 단일 분석 문서 앞에 H1~H5 인계 절을 추가했다. 현재 후보/Git·보존할 미커밋 변경·첫 추천 L1·미결정 정책·생성기/실제 앱 연결·검증/게시 경계·복사용 시작 문구를 기록하고 NEXT_WORK/AI_CONTEXT/README를 연결했다.
+- 새 기능/운영 흐름 없음. Rules SHA5c8da2b9와 기존 코드 변경 보존 확인. 문서 검토·git diff --check 수행; Flutter/Rules 테스트·원격 조회/게시 없음. 실기기 인수·운영 데이터/지원 버전은 계속 미확인.
+- fix/party-participation-consistency에서 문서 미커밋, dev 미반영·push/merge 없음, 브랜치 유지. 새 채팅 생성/메시지 발송은 수행하지 않았다.
+
+## 2026-10-12 Rules 제거·로컬 이전 후보 조사
+
+- 최신 요청에 따라 조사·문서화만 진행. 현재 후보5c8da2b9의268함수·118allow·33match를 대조하고 allow 미도달 정의가 없음을 정적으로 확인했다. 실행 횟수/컴파일 비용으로 해석하지 않는다.
+- 단일 분석 문서에 깊은 호출 구조부터8후보를 정리. 그룹 모집 복사본 제거(전용9정의+간접2정의 조건부), 완료 이력 검사 분리(2정의/대체 audience 검사 필요), 대표 활동 정책(전용2정의 조건부)과 표시/대기 조건 절만 감소하는 항목을 구분했다. 권한·원자성·읽기 비용·구버전·주간 전환 영향/미확인을 기록했다.
+- 새 기능/운영 흐름 없음. Rules SHA와 임시 일요일15시 설정을 보존 확인. 문서 내용 검토·git diff --check 수행. 기능 코드/Rules/생성기 변경·테스트·원격 조회/게시 없음. 실기기/성능/운영 데이터·지원 앱 버전은 미확인.
+- 현재 fix/party-participation-consistency, 문서 미커밋. 기존 코드 변경/실험 자료 보존, dev 미반영·push/merge 없음, 브랜치 유지.
+
+## 2026-10-12 P2 후속 승인·운영 게시1회 실패
+
+- 사용자 「게시 시도까지 작업을 진행」으로 최신 검증 후보5c8da2b9의 lost-party Firestore Rules1회 게시 승인. 브랜치/실제diff·firebase.json 경로/프로젝트/후보 SHA·생성/preflight·검증 결과 대조 후 코드 불변으로 테스트 재사용.
+- 20:38 KST 운영1회: /test200·응답{}·경고0, /rulesets200·eff8978a-b707-4a73-8cd3-073462bbed8f 생성(원문SHA일치), 활성화PATCH400 INVALID_ARGUMENT 및 같은 CLI fallbackPOST409 ALREADY_EXISTS 실패. 재시도0회.
+- 20:38:55 KST 활성 조회: 기존f7ce11cf/181935bytes·ruleset2419f77b 유지, 후보 미활성. 실제 함수2개 삭제로도 이번 게시 실패는 해결되지 않음. 특정 함수·내부 복잡도를 확정 원인으로 판정하지 않음.
+- 새 운영 흐름 없음·기존 활성본 보존 확인. 실기기 생성/검색·게시 정상화 미완료. 실패 뒤 코드/권한 변경·자동복구 없음. 미커밋·dev/main 미반영·push/merge 없음. 근거는 단일 분석 문서 P2 게시 결과.
+
+## 2026-10-12 P2 그룹 이름·검색키 품질 검사 삭제
+
+- 사용자 지시로 표시 품질2함수와 호출·검사 본문을 실제 삭제. 기존 앱의 이름 검증/정규화 재사용, GroupDocumentMapper name 정제/fallback 보완. 상세 계약/영향은 단일 분석 문서 P2.
+- 새로 가능한 로컬 흐름: malformed/누락 그룹 이름을 기본 문구로 표시해 목록 전체 오류 방지. 정상 생성·검색 조건/한도·소유권/가입 원자성 보존. 임의 클라이언트의 불량 검색키는 검색 누락/오탐이 가능하며 자동 이행/전체 다운로드는 추가하지 않음.
+- 후보5c8da2b9/222313bytes, compact142294bytes·268함수·전체깊이5. 변경 전후 실제 전체 Rules 권한/원자성·한도·품질 경계 확인, Mapper/WritePlan/Validator/Normalizer 검사, 변경 파일 analyze·생성/preflight·토큰/diff 확인 통과.
+- 운영 게시·재조회 없음. 새 원격 경고/활성화·실기기 생성/검색 인수 미확인, 게시 정상화 미완료. 미커밋·dev/main 미반영·push/merge 없음. 임시 초기화·기존 미커밋/실험 보존.
+
+## 2026-10-12 P1 후보 명시 승인·운영 게시1회 실패
+
+- 최초 자동 승인 차단 후 사용자가 「게시 진행」으로 정확한f96186c1 전체 후보의 lost-party 운영 Rules1회 게시를 명시 승인했다. 브랜치/배포 경로/프로젝트/diff·기존 검증SHA·재생성 일치와 게시 전 활성f7ce11cf를 확인했다. 코드 불변이므로 동일 테스트 재실행 없음.
+- 20:00 KST firestore.rules만1회 배포: /test200·응답{}·issues/경고0, /rulesets200·52413dbc-d74c-451b-bbf1-a1ad66fd711b 생성 뒤 /releases PATCH400 INVALID_ARGUMENT·같은 CLI fallback POST409 ALREADY_EXISTS로 실패.
+- 20:00:33 KST 활성 재조회: ruleset2419f77b-9535-479a-a519-3ddd8f7a6005·SHA f7ce11cf23b740f301efb0f5ceb837fa85ac625efeaee66172613d5af8dc2e55·181935bytes 유지. 후보f96186c1은 미활성. 추가 배포/자동복구/추측 기능 삭제 없음.
+- 새 운영 흐름 없음. 기존 활성본 보존은 서버 읽기로 확인했다. 로컬 구현 경계 검증은 이전 결과를 재사용하며 실제 기기 인수·게시 정상화는 미완료다. 함수/깊이 감소를 실패 원인 확정이나 정상화 완료로 해석하지 않는다.
+- 근거 coverage/rules-lifecycle-targets/production-deploy.log·active-before/after·production-result 및 단일 분석 문서의 후속 게시 결과. fix/party-participation-consistency 유지·미커밋·dev/main 미반영·커밋/push/merge 없음. 임시 초기화·기존 실험 자료 보존.
+
+## 2026-10-12 P1 lifecycle 대상 검사 통합·빈 줄 정리
+
+- 사용자 진행 지시로 첫 명령군만 구현. atomicExpectedTargetStateMatches/ExpectedTargetMatches/AllExpectedTargetsMatch3helper 제거, complete/advance/disband 고정8식 공통화. expectedStatus 한 번 계산·방/주차/최종status·disband 부재·빈 target 예외 보존. 다른 actor/guard/ownership/event/listing/group 검사·앱/스키마 불변.
+- 생성 pipeline 마지막 단계와 formatter에 반영. 연속 빈 줄 최대1개, 공백 외 토큰 보존. 전체source224586→223007bytes, compact143337→142758bytes, 함수273→270, lifecycle깊이5→4·전체최대5 유지. 내부 compiled 크기/실행 횟수로 해석하지 않는다.
+- 최초 통합 후보의 실제8인 전환1000식 한도 회귀를6e7bd11 대조로 확인하고 대상별 중복 OR를 ternary 선택으로 수정했다. 실패 후보 미게시. 최종f96186c168fdfe9a580d99afbc71a79ebfb9f56e05353887c19cbf96d811d286의 동일 경계 통과.
+- 보존 확인: 원문 predicate 변경 전후8인·마지막target 위조/부재·빈/초과/unknown 결정, 실제 전체 Rules8인 준비→인증→advance→complete, 비방장/private읽기·미인증/부분/stale 거절 및 원자 보존, 활성8인/완료방 해산·지난1회성 incompleteEnd. 생성/preflight·본문 변경 범위·포맷 토큰·diff 공백 확인. 앱 불변으로 전체 Flutter 반복 없음.
+- 새로 가능해진 제품 흐름 없음. 미확인: 실기기 전환/완료/종료 인수, 후보 원격 경고/게시/활성SHA. 운영 게시 요청은 자동 승인 심사가 최초 게시 금지·정확한 운영 배포 승인 부족으로 실행 전에 거절했다. 명령 실행/원격조회0회·우회/재시도0회.
+- 상세 단일 분석 문서의 P1 구현 결과, 증거 coverage/rules-lifecycle-targets. fix/party-participation-consistency 유지·미커밋·dev/main 미반영·커밋/push/merge 없음. 임시 일요일15시 설정·기존 실험 자료 보존. 다음 운영 게시 승인 여부는 NEXT_WORK를 따른다.
+
+## 2026-10-12 Rules 사용자 흐름 조사·복잡도 감소 기획
+
+- 복구 커밋6e7bd11과 실제 후보4afc0727·firebase.json 배포 경로를 대조하고 실제 Router/DI 기반 행동 흐름과 전체273함수/118allow/33하위match를 단일 분석 문서에 정리했다.
+- 후속 조사로 lifecycle/state·개인 완료·준비/자리·listing/event·권한/legacy의 감소 작업을 복잡한 흐름부터 기록했다. 기존 로컬 이전·중복 통합을 신규 성과로 세지 않고 서버 유지 경계·공동 사용·영향·선행 조건·후속 완료 기준을 구분했다.
+- 상세: `../architecture/USER_ACTION_RULES_FLOW_ANALYSIS.md`. 다음 실행 권한과 범위는 NEXT_WORK 최신 지시를 따른다. 정책·이행·구형 지원 선택은 미결정이다.
+- 새로 가능해진 앱/운영 흐름 없음. 실제 코드 연결과 검사 구조를 정적으로 확인했으며 기능 회귀 테스트 통과로 확대하지 않는다. 게시 정상화·실기기 인수·운영 자료 분포·내부 compiled 비용은 미확인이다.
+- 문서 공백·근거 위치·내용과 Git diff를 확인했다. 코드/Rules·기존 일요일15시 임시 설정/실험 자료 보존. 테스트/게시 실험·커밋/push/merge 없음. fix/party-participation-consistency에서 문서 미커밋, dev/main 미반영.
+
 ## 2026-10-12 참가 복구 작업 브랜치 복구 지점
 
 - 사용자 지시로 현재 구현·설계·검증 결과·게시 실패 상태를 작업 브랜치 커밋과 원격 push 대상으로 정리했다. 이 항목을 포함하는 커밋이 복구 지점이며 dev/main 통합·추가 게시는 하지 않는다.

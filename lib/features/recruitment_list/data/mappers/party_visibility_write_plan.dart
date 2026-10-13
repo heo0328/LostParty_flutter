@@ -1,12 +1,7 @@
 import '../../domain/entities/party_create_command.dart';
-import 'party_raid_listing_sync.dart';
 
 class PartyVisibilityWritePlan {
-  const PartyVisibilityWritePlan({
-    required this.recruitmentPatch,
-    this.listingDocument,
-    this.deleteListing = false,
-  });
+  const PartyVisibilityWritePlan({required this.recruitmentPatch});
 
   factory PartyVisibilityWritePlan.change({
     required String visibility,
@@ -22,18 +17,8 @@ class PartyVisibilityWritePlan {
       'revision': recruitmentRevision + 1,
       'updatedAt': serverTimestamp,
     };
-    final listing = PartyRaidListingSyncPlan.afterRecruitmentChange(
-      currentRecruitment: currentRecruitment,
-      recruitmentPatch: patch,
-    );
-    return PartyVisibilityWritePlan(
-      recruitmentPatch: patch,
-      listingDocument: listing.listingDocument,
-      deleteListing: listing.deleteListing,
-    );
+    return PartyVisibilityWritePlan(recruitmentPatch: patch);
   }
 
   final Map<String, Object?> recruitmentPatch;
-  final Map<String, Object?>? listingDocument;
-  final bool deleteListing;
 }

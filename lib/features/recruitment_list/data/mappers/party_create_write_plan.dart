@@ -8,7 +8,6 @@ class PartyCreateWritePlan {
     required this.recruitment,
     required this.leaderMembership,
     required this.assignment,
-    this.groupRaidListing,
   });
 
   factory PartyCreateWritePlan.fromCommand({
@@ -104,18 +103,12 @@ class PartyCreateWritePlan {
         'createdAt': serverTimestamp,
         'updatedAt': serverTimestamp,
       },
-      groupRaidListing:
-          command.visibility == RecruitmentVisibility.group &&
-              command.groupId != null
-          ? recruitment
-          : null,
     );
   }
 
   final Map<String, Object?> recruitment;
   final Map<String, Object?> leaderMembership;
   final Map<String, Object?> assignment;
-  final Map<String, Object?>? groupRaidListing;
 
   static Map<String, Object?> _approvalPolicy(PartyCreateCommand command) => {
     'mode': command.approvalPolicy.mode.name,

@@ -15,7 +15,6 @@ import '../../domain/services/party_ownership_record_policy.dart';
 import '../mappers/party_atomic_document_mapper.dart';
 import '../mappers/party_atomic_member_mutation_write_plan.dart';
 import '../mappers/party_membership_write_plan.dart';
-import '../mappers/party_raid_listing_sync.dart';
 import 'party_raid_state_occupancy_inspector.dart';
 import 'party_character_ownership_reader.dart';
 
@@ -267,8 +266,9 @@ class FirestorePartyAtomicMemberMutationRepository
         );
       }
 
-      PartyRaidListingTx listing = PartyRaidListingTx.empty;
-      if (aggregate.visibility == 'group' && aggregate.groupId != null) {
+      if (nextWeekPrep &&
+          aggregate.visibility == 'group' &&
+          aggregate.groupId != null) {
         final groupMember = await transaction.get(
           _firestore
               .collection('groups')
@@ -276,29 +276,11 @@ class FirestorePartyAtomicMemberMutationRepository
               .collection('members')
               .doc(playerId),
         );
-        if (groupMember.exists) {
-          listing = await PartyRaidListingTx.read(
-            transaction: transaction,
-            firestore: _firestore,
-            groupId: aggregate.groupId,
-            recruitmentId: command.recruitmentId,
-          );
-        } else if (!nextWeekPrep) {
-          listing = PartyRaidListingTx.forWrite(
-            firestore: _firestore,
-            groupId: aggregate.groupId!,
-            recruitmentId: command.recruitmentId,
+        if (!groupMember.exists) {
+          return const PartyMembershipResult.failure(
+            PartyMembershipFailure.unauthorized,
           );
         }
-      }
-
-      if (nextWeekPrep &&
-          aggregate.visibility == 'group' &&
-          aggregate.groupId != null &&
-          listing.snapshot?.exists != true) {
-        return const PartyMembershipResult.failure(
-          PartyMembershipFailure.stateInconsistent,
-        );
       }
       final now = FieldValue.serverTimestamp();
       final membershipPatch = PartyMembershipWritePlan.changeCharacter(
@@ -328,11 +310,7 @@ class FirestorePartyAtomicMemberMutationRepository
         );
         transaction.update(recruitmentRef, plan.recruitmentPatch);
         transaction.update(memberRef, plan.membershipPatch);
-        listing.write(
-          transaction: transaction,
-          currentRecruitment: partyRecruitmentMap(raw),
-          recruitmentPatch: plan.recruitmentPatch,
-        );
+
         transaction.set(
           _firestore
               .collection('partyEvents')
@@ -385,11 +363,7 @@ class FirestorePartyAtomicMemberMutationRepository
       } else {
         transaction.set(nextRaidStateRef, plan.nextRaidState);
       }
-      listing.write(
-        transaction: transaction,
-        currentRecruitment: partyRecruitmentMap(raw),
-        recruitmentPatch: plan.recruitmentPatch,
-      );
+
       transaction.set(
         _firestore
             .collection('partyEvents')
@@ -432,15 +406,6 @@ class FirestorePartyAtomicMemberMutationRepository
           PartyMembershipFailure.unauthorized,
         );
       }
-      PartyRaidListingTx listing = PartyRaidListingTx.empty;
-      if (aggregate.visibility == 'group' && aggregate.groupId != null) {
-        listing = await PartyRaidListingTx.read(
-          transaction: transaction,
-          firestore: _firestore,
-          groupId: aggregate.groupId,
-          recruitmentId: command.recruitmentId,
-        );
-      }
       final now = FieldValue.serverTimestamp();
       final plan = PartyAtomicRepositionWritePlan(
         aggregate: aggregate,
@@ -467,11 +432,7 @@ class FirestorePartyAtomicMemberMutationRepository
           entry.value,
         );
       }
-      listing.write(
-        transaction: transaction,
-        currentRecruitment: partyRecruitmentMap(raw),
-        recruitmentPatch: plan.recruitmentPatch,
-      );
+
       transaction.set(
         _firestore
             .collection('partyEvents')

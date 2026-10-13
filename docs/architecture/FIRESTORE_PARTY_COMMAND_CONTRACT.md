@@ -1,5 +1,13 @@
 # Spark Firestore 파티 명령 계약
 
+## L1 변경 계약 — 모집 복사 쓰기 제거 (2026-10-12, 로컬 구현)
+
+아래 과거 `raidListings` 동기화 계약을 대체한다. 실제 Router와 보존된 Repository의 생성·가입·승인·공개범위·변경·제거·개인완료·회차·소유권 정리 명령은 모집 원본/member/state/event 및 필요한 그룹 count만 원자적으로 쓴다. listing 읽기·쓰기·삭제와 복사본 DTO/복구 서비스를 제거했다. 그룹 count의 증감은 원본 visibility를 기준으로 유지한다.
+
+Rules의 복사 전용 11함수와 원본 쓰기의 복사본 존재·동등성·삭제 conjunct를 제거했다. 원본 actor/ownership/revision/guard/target/state/member/event/count 검사는 보존한다. 다음 주 준비의 기존 앱 membership 확인도 유지하며 복사본 존재를 요구하지 않는다. 이 앱 확인을 새 서버 membership 제한으로 설명하지 않는다.
+
+사용자가 새 앱 전환과 구버전 지원 종료를 선택했다. 기존 앱의 listing 포함 요청은 전체 거절된다. 새 앱이 이전 Rules와 호환된다고 보장하지 않는다. 운영 전환 전 인덱스 준비, 최소 지원 버전과 앱/Rules 전환 순서를 확정해야 한다. 이번 작업은 로컬 구현·검증이며 배포·데이터 이행을 하지 않았다.
+
 > 2026-09-14 확장성 재설계 착수: 이 문서는 현재 구현 계약의 근거로 유지하지만, 인원수에 비례하는 Transaction·개인 event fan-out은 [`PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md`](PARTY_GROUP_COMMAND_SCALABILITY_REDESIGN.md)의 단계별 새 계약으로 교체한다. 새 구현에서 이 문서의 대규모 원자 처리 방식을 그대로 복제하지 않는다.
 
 ## 1. 운영 제약과 신뢰 경계

@@ -17,7 +17,6 @@ import '../../../raid_status/domain/services/raid_list_sort.dart';
 import '../../../raid_status/domain/services/raid_status_filter.dart';
 import '../../../raid_status/presentation/viewmodels/raid_filter_sheet_host.dart';
 import '../../domain/entities/party_read_models.dart';
-import '../../domain/entities/party_raid_listing_backfill_failure.dart';
 import '../../domain/entities/recruitment_aggregate.dart';
 import '../../domain/repositories/party_read_repository.dart';
 
@@ -128,7 +127,6 @@ class PublicRecruitmentListViewModel extends ChangeNotifier
     GroupReadRepository? groupReadRepository,
     ActivityCharactersRepository? activityCharactersRepository,
     GroupCharacterSearchRepository? characterSearchRepository,
-    Future<void> Function()? backfillOwnGroupListings,
   }) : _repository = repository,
        _cycleKey = cycleKey,
        _currentPlayerId = currentPlayerId,
@@ -136,8 +134,7 @@ class PublicRecruitmentListViewModel extends ChangeNotifier
        _catalogRepository = catalogRepository,
        _groupReadRepository = groupReadRepository,
        _activityCharactersRepository = activityCharactersRepository,
-       _characterSearchRepository = characterSearchRepository,
-       _backfillOwnGroupListings = backfillOwnGroupListings;
+       _characterSearchRepository = characterSearchRepository;
 
   final PartyReadRepository _repository;
   final String _cycleKey;
@@ -150,7 +147,6 @@ class PublicRecruitmentListViewModel extends ChangeNotifier
   final GroupReadRepository? _groupReadRepository;
   final ActivityCharactersRepository? _activityCharactersRepository;
   final GroupCharacterSearchRepository? _characterSearchRepository;
-  final Future<void> Function()? _backfillOwnGroupListings;
 
   StreamSubscription<PublicRecruitmentPage>? _subscription;
   StreamSubscription<GroupReadSnapshot<GroupRelation>>? _groupsSubscription;
@@ -234,19 +230,6 @@ class PublicRecruitmentListViewModel extends ChangeNotifier
           limit: pageSize,
         )
         .listen(_onFirstPage, onError: _onFirstPageError);
-    final backfill = _backfillOwnGroupListings;
-    if (backfill != null) {
-      unawaited(() async {
-        try {
-          await backfill();
-        } catch (error) {
-          // Keep the normal list subscription; do not log document payloads.
-          debugPrint(
-            '모집 목록 보정 실패: ${error is PartyRaidListingBackfillFailure ? error : error.runtimeType}',
-          );
-        }
-      }());
-    }
   }
 
   @override

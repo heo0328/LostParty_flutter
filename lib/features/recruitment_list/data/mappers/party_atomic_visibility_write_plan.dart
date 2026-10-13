@@ -22,7 +22,6 @@ class PartyAtomicVisibilityWritePlan {
 
   Map<String, Object?> get recruitmentPatch => _values.recruitmentPatch;
   Map<String, Object?> get groupPatch => _values.groupPatch;
-  bool get deleteListing => _values.deleteListing;
 
   static _PartyAtomicVisibilityValues _build({
     required PartyCommandAggregate aggregate,
@@ -67,7 +66,6 @@ class PartyAtomicVisibilityWritePlan {
     return _PartyAtomicVisibilityValues(
       recruitmentPatch: recruitmentPatch,
       groupPatch: groupPlan.groupPatch,
-      deleteListing: nextVisibility == RecruitmentVisibility.public,
     );
   }
 }
@@ -76,10 +74,8 @@ class _PartyAtomicVisibilityValues {
   const _PartyAtomicVisibilityValues({
     required this.recruitmentPatch,
     required this.groupPatch,
-    required this.deleteListing,
   });
 
   final Map<String, Object?> recruitmentPatch;
   final Map<String, Object?> groupPatch;
-  final bool deleteListing;
 }

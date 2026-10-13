@@ -6,10 +6,7 @@ import { rulesFunction } from './roster_complexity_candidate.mjs';
 // until the complete R1 acceptance gate passes (reduction design section 17).
 
 export function canonicalListings(source) {
-  const dart = fs.readFileSync(new URL('../lib/features/recruitment_list/data/mappers/party_raid_listing_document.dart', import.meta.url), 'utf8');
-  const fieldBlock = dart.match(/const partyRaidListingFields = <String>\{([\s\S]*?)\};/);
-  assert.ok(fieldBlock, 'listing field contract');
-  const fields = [...fieldBlock[1].matchAll(/'([^']+)'/g)].map(m => m[1]);
+  const fields = JSON.parse(fs.readFileSync(new URL('./fixtures/legacy_raid_listing_fields.json', import.meta.url), 'utf8'));
   assert.equal(fields.length, new Set(fields).size);
   const replaceFunction = (name, text) => {
     const f = rulesFunction(source, name);

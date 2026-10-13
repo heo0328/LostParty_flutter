@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lost_party/features/recruitment_list/data/mappers/party_raid_listing_document.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_atomic_write_plan.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_atomic_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
@@ -147,7 +146,6 @@ void main() {
         incrementOne: incrementOne,
       );
       expect(plan.closesActiveGroupRecruitment, isFalse);
-      expect(plan.groupListingAction, PartyGroupListingWriteAction.none);
       expect(
         plan.recruitmentPatch.containsKey('groupActiveRecruitmentCountAfter'),
         isFalse,
@@ -212,11 +210,10 @@ void main() {
       {'playerId': 'player-0', 'characterId': 'character-0'},
     ]);
     expect(plan.closesActiveGroupRecruitment, isTrue);
-    expect(plan.groupListingAction, PartyGroupListingWriteAction.delete);
-    expect(plan.maximumWriteCount, 4);
+    expect(plan.maximumWriteCount, 3);
   });
 
-  test('8인 완료 반복방 승계는 실제 쓰기 Snapshot으로 listing을 갱신한다', () {
+  test('8인 완료 반복방 승계는 실제 쓰기 Snapshot으로 after을 갱신한다', () {
     final slots = List.generate(
       8,
       (index) => PartyAggregateSlot(
@@ -291,27 +288,23 @@ void main() {
       'cycleStartedAt': Timestamp.fromDate(next.nextCycleStartedAt!),
       'cycleEndsAt': Timestamp.fromDate(next.nextCycleEndsAt!),
     };
-    final listing = partyRaidListingDocument(
-      currentRecruitment: current,
-      recruitmentPatch: applied,
-    );
+    final after = {...current, ...applied};
 
     // 목록은 원본에 실제 적용할 Timestamp 변환 patch까지 같아야 한다.
-    expect(listing, {...current, ...applied});
-    expect(listing['currentCycleKey'], '2026-09-16');
-    expect(listing['targetCycleKey'], '2026-09-16');
-    expect(listing['cycleStartedAt'], isA<Timestamp>());
-    expect(listing['cycleEndsAt'], isA<Timestamp>());
-    expect(listing['currentCycleStatus'], 'active');
-    expect(listing['completedAt'], isNull);
-    expect(listing['completedByPlayerId'], isNull);
-    expect(listing['continueTogether'], isTrue);
-    expect(listing['manualRecruitmentEnabled'], isFalse);
-    expect(listing['hasAvailableSlot'], isFalse);
-    expect(listing['memberPlayerIds'], hasLength(8));
-    expect(plan.maximumWriteCount, 11);
+    expect(after, {...current, ...applied});
+    expect(after['currentCycleKey'], '2026-09-16');
+    expect(after['targetCycleKey'], '2026-09-16');
+    expect(after['cycleStartedAt'], isA<Timestamp>());
+    expect(after['cycleEndsAt'], isA<Timestamp>());
+    expect(after['currentCycleStatus'], 'active');
+    expect(after['completedAt'], isNull);
+    expect(after['completedByPlayerId'], isNull);
+    expect(after['continueTogether'], isTrue);
+    expect(after['manualRecruitmentEnabled'], isFalse);
+    expect(after['hasAvailableSlot'], isFalse);
+    expect(after['memberPlayerIds'], hasLength(8));
+    expect(plan.maximumWriteCount, 10);
     expect(plan.raidStateWrites, hasLength(8));
-    expect(plan.groupListingAction, PartyGroupListingWriteAction.update);
     expect(plan.closesActiveGroupRecruitment, isFalse);
     expect(current['currentCycleKey'], '2026-09-09');
     expect(applied, isNot(contains('sourceRevision')));
@@ -362,7 +355,6 @@ void main() {
     );
 
     expect(plan.closesActiveGroupRecruitment, isFalse);
-    expect(plan.groupListingAction, PartyGroupListingWriteAction.none);
     expect(plan.maximumWriteCount, 2);
   });
 
@@ -435,14 +427,13 @@ void main() {
       incrementOne: incrementOne,
     );
 
-    expect(plan.maximumWriteCount, 12);
+    expect(plan.maximumWriteCount, 11);
     expect(plan.raidStateWrites, hasLength(8));
     expect(
       plan.eventDocument['completionTargets'],
       isA<List<Object?>>().having((value) => value.length, 'length', 8),
     );
     expect(plan.closesActiveGroupRecruitment, isTrue);
-    expect(plan.groupListingAction, PartyGroupListingWriteAction.delete);
   });
 
   test('오래된 revision 또는 다른 모집 Aggregate는 계획 전에 거절한다', () {

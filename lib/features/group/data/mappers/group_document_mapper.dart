@@ -33,7 +33,7 @@ class GroupDocumentMapper {
     _requireSchema(data);
     return GroupPublicSummary(
       groupId: document.id,
-      name: _string(data, 'name'),
+      name: _displayText(data['name']) ?? '이름 없는 그룹',
       status: _status(data),
       representativeCharacterNameSnapshot:
           _displayText(data['representativeCharacterNameSnapshot']) ??

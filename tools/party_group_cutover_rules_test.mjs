@@ -1,3 +1,4 @@
+import {runTransaction} from './group_source_transaction_fixture.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
@@ -16,7 +17,6 @@ import {
   deleteDoc,
   getDoc,
   query,
-  runTransaction,
   serverTimestamp,
   deleteField,
   increment,

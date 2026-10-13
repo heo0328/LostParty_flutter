@@ -136,10 +136,9 @@ void main() {
 
     expect(plan.recruitment['groupId'], 'group-1');
     expect(plan.recruitment['visibility'], RecruitmentVisibility.group);
-    expect(plan.groupRaidListing, same(plan.recruitment));
   });
 
-  test('omits a group listing for public raids', () {
+  test('public raids retain public source visibility', () {
     final plan = PartyCreateWritePlan.fromCommand(
       command: _command(),
       playerId: 'player-1',
@@ -148,8 +147,7 @@ void main() {
       verifiedClassName: '바드',
       verifiedItemLevel: 1715.25,
     );
-
-    expect(plan.groupRaidListing, isNull);
+    expect(plan.recruitment['visibility'], RecruitmentVisibility.public);
   });
 }
 

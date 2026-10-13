@@ -173,7 +173,6 @@ void main() {
     final aggregate = PartyAtomicDocumentMapper.aggregate(plan.recruitment);
     expect(aggregate.memberCount, 1);
     expect(aggregate.nonGroupMemberCount, 0);
-    expect(plan.groupRaidListing, isNotNull);
   });
 
   test('가입은 고정 슬롯과 raidState를 추가하고 공용 이벤트 한 건을 만든다', () {

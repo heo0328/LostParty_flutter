@@ -16,7 +16,6 @@ import '../mappers/party_atomic_application_write_plan.dart';
 import '../mappers/party_atomic_document_mapper.dart';
 import '../mappers/party_atomic_membership_write_plan.dart';
 import '../mappers/party_join_write_plan.dart';
-import '../mappers/party_raid_listing_sync.dart';
 import 'party_raid_state_occupancy_inspector.dart';
 import 'party_character_ownership_reader.dart';
 
@@ -331,15 +330,6 @@ class FirestorePartyAtomicJoinCommandRepository
         }
       }
 
-      final listingGroupId = raw['visibility'] == 'group'
-          ? raw['groupId']
-          : null;
-      final listing = await PartyRaidListingTx.read(
-        transaction: transaction,
-        firestore: _firestore,
-        groupId: listingGroupId,
-        recruitmentId: recruitmentId,
-      );
       final itemLevel = _parseItemLevel(characterData?['itemAvgLevel']);
       final name = characterData?['characterName'];
       final className = characterData?['characterClassName'];
@@ -453,11 +443,7 @@ class FirestorePartyAtomicJoinCommandRepository
           approvalPlan.membership,
         );
         transaction.set(raidStateRef, approvalPlan.raidState);
-        listing.write(
-          transaction: transaction,
-          currentRecruitment: partyRecruitmentMap(raw),
-          recruitmentPatch: approvalPlan.recruitmentPatch,
-        );
+
         transaction.set(
           _firestore
               .collection('partyEvents')
@@ -473,11 +459,7 @@ class FirestorePartyAtomicJoinCommandRepository
         joinPlan.membership,
       );
       transaction.set(raidStateRef, joinPlan.raidState);
-      listing.write(
-        transaction: transaction,
-        currentRecruitment: partyRecruitmentMap(raw),
-        recruitmentPatch: joinPlan.recruitmentPatch,
-      );
+
       transaction.set(
         _firestore
             .collection('partyEvents')

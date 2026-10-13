@@ -353,13 +353,6 @@ class FirestorePartyAtomicCreateRepository implements PartyCreateRepository {
               serverTimestamp: now,
             );
             transaction.update(groupRef, groupPlan.groupPatch);
-            final listing = plan.groupRaidListing;
-            if (listing != null) {
-              transaction.set(
-                groupRef.collection('raidListings').doc(command.recruitmentId),
-                listing,
-              );
-            }
           }
 
           transaction.set(recruitmentRef, plan.recruitment);

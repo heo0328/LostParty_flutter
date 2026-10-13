@@ -10,7 +10,6 @@ import '../../domain/repositories/party_membership_command_repository.dart';
 import '../../domain/services/party_membership_command_validator.dart';
 import '../mappers/party_membership_event_writer.dart';
 import '../mappers/party_membership_write_plan.dart';
-import '../mappers/party_raid_listing_sync.dart';
 
 class FirestorePartyMembershipCommandRepository
     implements PartyMembershipCommandRepository {
@@ -169,12 +168,7 @@ class FirestorePartyMembershipCommandRepository
           PartyMembershipFailure.unknown,
         );
       }
-      final listing = await PartyRaidListingTx.read(
-        transaction: transaction,
-        firestore: _firestore,
-        groupId: r['groupId'],
-        recruitmentId: command.recruitmentId,
-      );
+
       final now = FieldValue.serverTimestamp();
       final nextRevision = command.expectedRecruitmentRevision + 1;
       final beforeMembers = List<String>.from(r['memberPlayerIds'] as List);
@@ -257,11 +251,6 @@ class FirestorePartyMembershipCommandRepository
           supportCount: supportCount,
         );
         transaction.update(recruitmentRef, patch);
-        listing.write(
-          transaction: transaction,
-          currentRecruitment: partyRecruitmentMap(r),
-          recruitmentPatch: patch,
-        );
       } else {
         final patch = <String, Object?>{
           'dealerCount': dealerCount,
@@ -270,11 +259,6 @@ class FirestorePartyMembershipCommandRepository
           'updatedAt': now,
         };
         transaction.update(recruitmentRef, patch);
-        listing.write(
-          transaction: transaction,
-          currentRecruitment: partyRecruitmentMap(r),
-          recruitmentPatch: patch,
-        );
       }
       PartyMembershipEventWriter.writeToRecipients(
         transaction: transaction,
@@ -434,12 +418,7 @@ class FirestorePartyMembershipCommandRepository
             leaderData?['characterNameSnapshot'] as String?;
         nextLeaderClassName = leaderData?['classNameSnapshot'] as String?;
       }
-      final listing = await PartyRaidListingTx.read(
-        transaction: transaction,
-        firestore: _firestore,
-        groupId: r?['groupId'],
-        recruitmentId: command.recruitmentId,
-      );
+
       final recruitmentPatch = PartyMembershipWritePlan.removeFromRecruitment(
         memberPlayerIds: List<String>.from(r?['memberPlayerIds'] as List),
         targetPlayerId: command.targetPlayerId,
@@ -455,11 +434,7 @@ class FirestorePartyMembershipCommandRepository
         serverTimestamp: now,
       );
       transaction.update(recruitmentRef, recruitmentPatch);
-      listing.write(
-        transaction: transaction,
-        currentRecruitment: partyRecruitmentMap(r),
-        recruitmentPatch: recruitmentPatch,
-      );
+
       transaction.delete(targetRef);
       final targetPartyIndex = m?['partyIndex'];
       final targetSlotIndex = m?['slotIndex'];
@@ -727,12 +702,7 @@ class FirestorePartyMembershipCommandRepository
           PartyMembershipFailure.invalidComposition,
         );
       }
-      final listing = await PartyRaidListingTx.read(
-        transaction: transaction,
-        firestore: _firestore,
-        groupId: recruitment?['groupId'],
-        recruitmentId: command.recruitmentId,
-      );
+
       final now = FieldValue.serverTimestamp();
       final nextRevision = command.expectedRecruitmentRevision + 1;
       final patch = <String, Object?>{
@@ -740,11 +710,7 @@ class FirestorePartyMembershipCommandRepository
         'updatedAt': now,
       };
       transaction.update(recruitmentRef, patch);
-      listing.write(
-        transaction: transaction,
-        currentRecruitment: partyRecruitmentMap(recruitment),
-        recruitmentPatch: patch,
-      );
+
       transaction.update(
         recruitmentRef.collection('members').doc(command.sourcePlayerId),
         {

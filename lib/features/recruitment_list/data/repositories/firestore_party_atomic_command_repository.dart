@@ -1,4 +1,3 @@
-import '../mappers/party_raid_listing_document.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -154,23 +153,6 @@ class FirestorePartyAtomicCommandRepository
               'revision': FieldValue.increment(1),
               'updatedAt': FieldValue.serverTimestamp(),
             });
-          }
-          final listingRef = _firestore
-              .collection('groups')
-              .doc(groupId)
-              .collection('raidListings')
-              .doc(command.recruitmentId);
-          if (plan.groupListingAction == PartyGroupListingWriteAction.delete) {
-            transaction.delete(listingRef);
-          } else if (plan.groupListingAction ==
-              PartyGroupListingWriteAction.update) {
-            transaction.set(
-              listingRef,
-              partyRaidListingDocument(
-                currentRecruitment: raw,
-                recruitmentPatch: recruitmentPatch,
-              ),
-            );
           }
         }
 

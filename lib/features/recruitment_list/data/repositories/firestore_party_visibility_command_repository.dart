@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../domain/entities/party_create_command.dart';
 import '../../domain/entities/party_visibility_command.dart';
 import '../../domain/repositories/party_visibility_command_repository.dart';
-import '../mappers/party_raid_listing_sync.dart';
 import '../mappers/party_visibility_write_plan.dart';
 
 class FirestorePartyVisibilityCommandRepository
@@ -30,12 +29,13 @@ class FirestorePartyVisibilityCommandRepository
         .doc(command.recruitmentId);
     List<QueryDocumentSnapshot<Map<String, dynamic>>> pending = const [];
     try {
-      pending = (await recruitmentRef
-              .collection('applications')
-              .where('status', isEqualTo: 'pending')
-              .limit(20)
-              .get())
-          .docs;
+      pending =
+          (await recruitmentRef
+                  .collection('applications')
+                  .where('status', isEqualTo: 'pending')
+                  .limit(20)
+                  .get())
+              .docs;
     } on FirebaseException catch (error) {
       return PartyVisibilityResult.failure(_map(error.code));
     }
@@ -113,12 +113,6 @@ class FirestorePartyVisibilityCommandRepository
         }
       }
 
-      final listing = await PartyRaidListingTx.read(
-        transaction: transaction,
-        firestore: _firestore,
-        groupId: groupId,
-        recruitmentId: command.recruitmentId,
-      );
       final plan = PartyVisibilityWritePlan.change(
         visibility: command.visibility,
         recruitmentRevision: command.expectedRecruitmentRevision,
@@ -126,11 +120,7 @@ class FirestorePartyVisibilityCommandRepository
         currentRecruitment: Map<String, Object?>.from(data),
       );
       transaction.update(recruitmentRef, plan.recruitmentPatch);
-      listing.write(
-        transaction: transaction,
-        currentRecruitment: Map<String, Object?>.from(data),
-        recruitmentPatch: plan.recruitmentPatch,
-      );
+
       return const PartyVisibilityResult.success();
     });
   }
@@ -172,7 +162,9 @@ class FirestorePartyVisibilityCommandRepository
     } on FirebaseException catch (error) {
       return PartyVisibilityResult.failure(_map(error.code));
     } catch (_) {
-      return const PartyVisibilityResult.failure(PartyVisibilityFailure.unknown);
+      return const PartyVisibilityResult.failure(
+        PartyVisibilityFailure.unknown,
+      );
     }
   }
 

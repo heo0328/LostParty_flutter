@@ -19,7 +19,7 @@ export function indentRules(source) {
     return result;
   });
   assert.equal(depth, 0, 'Unbalanced Rules delimiters');
-  const result = lines.join('\n') + '\n';
+  const result = lines.join('\n').replace(/\n{3,}/g, '\n\n') + '\n';
   assert.deepEqual(tokens(result), tokens(source), 'Formatting changed Rules tokens');
   return result;
 }

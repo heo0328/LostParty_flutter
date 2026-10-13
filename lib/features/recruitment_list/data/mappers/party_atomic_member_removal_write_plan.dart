@@ -57,10 +57,7 @@ class PartyAtomicMemberRemovalWritePlan {
   Map<String, Object?>? get successorMembershipPatch =>
       _values.successorMembershipPatch;
 
-  int get maximumWriteCount =>
-      4 +
-      (successorPlayerId == null ? 0 : 1) +
-      (_values.updatesGroupListing ? 1 : 0);
+  int get maximumWriteCount => 4 + (successorPlayerId == null ? 0 : 1);
 
   static _PartyAtomicMemberRemovalValues _build({
     required PartyCommandAggregate aggregate,
@@ -173,7 +170,6 @@ class PartyAtomicMemberRemovalWritePlan {
               'canApproveApplications': true,
               'updatedAt': serverTimestamp,
             }),
-      updatesGroupListing: aggregate.visibility == RecruitmentVisibility.group,
       event: Map.unmodifiable({
         'schemaVersion': 1,
         'eventId': eventId,
@@ -199,7 +195,6 @@ class _PartyAtomicMemberRemovalValues {
     required this.targetRaidStateId,
     required this.successorPlayerId,
     required this.successorMembershipPatch,
-    required this.updatesGroupListing,
     required this.event,
   });
 
@@ -208,6 +203,5 @@ class _PartyAtomicMemberRemovalValues {
   final String targetRaidStateId;
   final String? successorPlayerId;
   final Map<String, Object?>? successorMembershipPatch;
-  final bool updatesGroupListing;
   final Map<String, Object?> event;
 }

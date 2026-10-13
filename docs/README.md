@@ -37,6 +37,8 @@
 
 ## Architecture
 
+- [사용자 행동별 Rules 흐름 분석·복잡도 감소 작업 기획](architecture/USER_ACTION_RULES_FLOW_ANALYSIS.md): 문서 앞의 새 채팅 인계 H1~H5에 수정 재개 기준·기존 변경 보존·추천 순서·검증/게시 경계·시작 문구 기록. 최신5c8da2b9/268함수의8후보와 기준선 전수 표·P1/P2 실패 이력 포함. 게시 정상화 미완료.
+
 - [참가 상태 정합성 복구 설계](architecture/PARTY_PARTICIPATION_CONSISTENCY_REPAIR_DESIGN.md): 후보 시계·조회 및 같은 캐릭터 역할 변경 로컬 구현. 역할 Rules 운영 게시 실패로 인수 대기; 다른 캐릭터 변경·금주 참가 표시·수동 완료 조사 잔여. 구현/확인 범위와 부작용 구분.
 
 - [운영 Rules 전체 구조 재설계](architecture/RULES_PRODUCTION_RESTRUCTURE_DESIGN.md): §14 B1+A2 전체 기능본 테스트 게시 성공·활성SHA일치. 그룹 표시 검증 로컬 이전/중복 분기 통합 완료, 운영 lost-party도 14:17 KST 게시 성공·활성SHA일치. 실기기 인수 대기.

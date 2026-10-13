@@ -205,17 +205,6 @@ class FirestorePartyCreateRepository implements PartyCreateRepository {
           transaction.delete(assignmentRef);
         }
         transaction.set(assignmentRef, plan.assignment);
-        final listing = plan.groupRaidListing;
-        if (groupId != null && listing != null) {
-          transaction.set(
-            _firestore
-                .collection('groups')
-                .doc(groupId)
-                .collection('raidListings')
-                .doc(command.recruitmentId),
-            listing,
-          );
-        }
         return PartyCreateResult.success(command.recruitmentId);
       });
     } on FirebaseException catch (error) {

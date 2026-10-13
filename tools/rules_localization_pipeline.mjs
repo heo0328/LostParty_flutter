@@ -17,6 +17,9 @@ import {restructureProduction} from './rules_production_restructure.mjs';
 import {groupDisplayContract} from './rules_group_display_contract.mjs';
 import {sameCharacterRole} from './rules_same_character_role.mjs';
 import {stateUpdateDispatch} from './rules_state_update_dispatch.mjs';
+import {unifyLifecycleTargets} from './rules_lifecycle_targets.mjs';
+import {localizeGroupNames} from './rules_group_name_local.mjs';
+import {groupSourceRead} from './rules_group_source_read.mjs';
 
 export function localizationPipeline(input){
   const stages=[];
@@ -41,5 +44,9 @@ export function localizationPipeline(input){
   source=measure('group-display-contract',groupDisplayContract(source));
   source=measure('same-character-role',sameCharacterRole(source));
   source=measure('state-update-dispatch',stateUpdateDispatch(source));
-  return {source,stages};
+  source=measure('lifecycle-shared-targets',unifyLifecycleTargets(source));
+  source=measure('group-name-quality-local',localizeGroupNames(source));
+  const beforeGroupSource=source;
+  source=measure('group-source-read',groupSourceRead(source));
+  return {source,stages,beforeGroupSource};
 }

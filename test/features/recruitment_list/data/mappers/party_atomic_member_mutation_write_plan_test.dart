@@ -215,9 +215,9 @@ void main() {
     );
 
     expect(emptyMove.membershipPatches.keys, ['member']);
-    expect(emptyMove.maximumWriteCount, 4);
+    expect(emptyMove.maximumWriteCount, 3);
     expect(swap.membershipPatches.keys, containsAll(['member', 'other']));
-    expect(swap.maximumWriteCount, 5);
+    expect(swap.maximumWriteCount, 4);
     for (final plan in [emptyMove, swap]) {
       final slots = plan.recruitmentPatch['partySlots']! as List;
       expect(

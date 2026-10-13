@@ -1,5 +1,15 @@
 # Task-11 Firestore 그룹 생성·가입 계약
 
+## 2026-10-12 그룹 이름·검색키 검사 로컬 책임화 — 구현 구간, 운영 미반영
+
+그룹 생성의 이름 타입/길이/제어문자 검사와 normalizedName/normalizedRepresentativeCharacterName 타입/길이 검사를 Rules에서 제거한다.
+정상 앱의 GroupCreateCommandValidator/GroupNameNormalizer/GroupCreateWritePlan은 기존 입력 정책과 정규화 검색키 생성을 유지한다.
+그룹 원본 name의 읽기는 표시 정제와 `이름 없는 그룹` fallback을 사용한다. ID/status/count/권한 필드는 엄격하게 읽는다.
+검색키는 접근 권한의 근거가 아니다. status/prefix/limit 검색·인덱스는 유지하며 전체 다운로드나 로컬 검색으로 바꾸지 않는다.
+임의 클라이언트의 잘못된 검색키는 검색 누락/오탐을 만들 수 있다. 기존 검사도 원본과 정규화 값의 동일성을 보증하지 않았다.
+대표 Character 소유권·생성 주체·가입 한도·group/member/membershipState/relation 원자성은 서버에 유지한다.
+아래10월11일의 그룹 name/검색키 제외 문구는 이번 후보에서 대체된다. 운영 활성본에는 아직 적용하지 않았다.
+
 ## 2026-10-11 그룹 표시 검증 로컬 이전 — 운영 게시 완료, 실기기 인수 대기
 
 그룹 대표/방장/멤버/가입관계/본인 관계/신청통계/차단의 순수 표시 이름·직업·서버명·레벨·전투력·보석 값은

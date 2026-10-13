@@ -1,4 +1,3 @@
-import '../../../recruitment_list/data/mappers/party_raid_listing_document.dart';
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -581,26 +580,6 @@ class FirestoreWeeklyRaidStatusCommandRepository
       'updatedAt': now,
     });
     if (assignmentData != null) transaction.delete(assignmentRef);
-    if (groupId != null) {
-      final listingRef = _firestore
-          .collection('groups')
-          .doc(groupId)
-          .collection('raidListings')
-          .doc(aggregate.recruitmentId);
-      if (aggregate.memberCount == 1) {
-        transaction.delete(listingRef);
-      } else {
-        if (aggregate.visibility == 'group') {
-          transaction.set(
-            listingRef,
-            partyRaidListingDocument(
-              currentRecruitment: raw,
-              recruitmentPatch: recruitmentPatch,
-            ),
-          );
-        }
-      }
-    }
     if (groupRef case final ref?) {
       transaction.update(ref, {
         'activeRecruitmentCount': groupCountAfter!,

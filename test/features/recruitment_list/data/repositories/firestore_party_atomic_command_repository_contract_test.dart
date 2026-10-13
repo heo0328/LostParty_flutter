@@ -20,27 +20,8 @@ void main() {
     expect(repository, contains(".collection('partyEvents')"));
   });
 
-  test('listing은 원본과 같은 Timestamp 변환 후 patch를 원자 set한다', () {
-    expect(repository, contains('partyRaidListingDocument('));
-    expect(repository, contains('currentRecruitment: raw'));
-    expect(repository, contains('recruitmentPatch: recruitmentPatch'));
-    expect(
-      repository.indexOf(
-        "recruitmentPatch['cycleEndsAt'] = Timestamp.fromDate",
-      ),
-      lessThan(repository.indexOf('partyRaidListingDocument(')),
-    );
-    expect(repository, isNot(contains('transaction.get(listingRef)')));
-    expect(
-      repository,
-      contains('transaction.update(recruitmentRef, recruitmentPatch)'),
-    );
-  });
-
-  test('그룹 1회성 완료는 활성 수와 listing을 닫고 완료 후 해산은 이중 감소하지 않는다', () {
+  test('그룹 1회성 완료는 활성 수를 닫고 완료 후 해산은 이중 감소하지 않는다', () {
     expect(repository, contains('plan.closesActiveGroupRecruitment'));
-    expect(repository, contains('PartyGroupListingWriteAction.delete'));
-    expect(repository, contains('transaction.delete(listingRef)'));
   });
 
   test('기존 assignment Claim 개인 event fan-out을 사용하지 않는다', () {

@@ -1,5 +1,13 @@
 # Firestore 파티 읽기 모델 계약
 
+## L1 변경 계약 — 그룹 모집 원본 조회 (2026-10-12, 로컬 구현)
+
+이 절은 아래 과거 `raidListings` 조회 계약보다 우선한다. 가입 그룹마다 `recruitments`를 `groupId`, `visibility == group`, `schemaVersion == 2`, `status == active`, `manualRecruitmentEnabled == true`, `hasAvailableSlot == true`로 구독한다. Rules는 active binding과 현재 그룹 membership을 검사한다. 비참가 그룹원도 조회할 수 있고 비그룹원·다른 그룹·범위 없는 query는 거절한다.
+
+현재 주차 또는 target 주차 일치, 본인 방 제외, ID 중복 제거와 정렬은 앱에서 유지한다. 공개 목록의 20개 페이지와 cursor는 그대로이며 그룹 목록은 기존과 같이 제한 없는 별도 구독이다. 주차 OR는 서버 필터가 아니므로 다른 주차의 열린 그룹방도 읽은 뒤 제외할 수 있다. 원본 문서의 다른 필드 변경도 구독 갱신을 일으킨다. 문서 수·그룹 수에 따른 비용 상한을 새로 보장하지 않는다. 그룹 구독 오류 시 해당 그룹의 이전 결과를 비운다.
+
+복사본 누락·구형 데이터는 원본 조회를 막지 않는다. listing backfill·화면 callback·DI는 제거했다. 복사본 경로는 기본 거절하며 서버의 기존 복사 데이터를 삭제하지 않는다. `firestore.indexes.json`에 위 여섯 필드의 복합 인덱스를 추가했지만 배포하지 않았다. 실제 인덱스 준비 및 앱/Rules 동시 전환은 별도 운영 단계다.
+
 ## 1. 목적과 적용 범위
 
 이 문서는 `레이드 모집`, `레이드 현황 > 진행 중`, `레이드 현황 > 신청 중`에 필요한 Firestore 읽기 계약을 정의한다.

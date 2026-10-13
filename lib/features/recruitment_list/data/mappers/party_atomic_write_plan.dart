@@ -2,8 +2,6 @@ import '../../domain/entities/party_atomic_command.dart';
 
 enum PartyRaidStateWriteAction { update, upsert, delete }
 
-enum PartyGroupListingWriteAction { none, update, delete }
-
 class PartyRaidStateWrite {
   const PartyRaidStateWrite({
     required this.target,
@@ -88,22 +86,8 @@ class PartyAtomicWritePlan {
           (command.type == PartyAtomicCommandType.disband &&
               aggregate.status == PartyRecruitmentStatus.active));
 
-  PartyGroupListingWriteAction get groupListingAction {
-    if (aggregate.groupId == null || aggregate.visibility != 'group') {
-      return PartyGroupListingWriteAction.none;
-    }
-    return closesActiveGroupRecruitment ||
-            command.type == PartyAtomicCommandType.disband
-        ? PartyGroupListingWriteAction.delete
-        : PartyGroupListingWriteAction.update;
-  }
-
   int get maximumWriteCount =>
-      1 +
-      command.targets.length +
-      1 +
-      (groupListingAction == PartyGroupListingWriteAction.none ? 0 : 1) +
-      (closesActiveGroupRecruitment ? 1 : 0);
+      1 + command.targets.length + 1 + (closesActiveGroupRecruitment ? 1 : 0);
 
   bool raidStateDocumentsAllow(Map<String, Map<String, Object?>> documents) {
     if (documents.length != command.targets.length) return false;

@@ -58,6 +58,23 @@ void main() {
     expect(summary.lastActivityAt, lastActivityAt);
   });
 
+  test('잘못된 그룹 이름은 목록을 실패시키지 않고 로컬에서 정제한다', () {
+    for (final value in [null, '', 42, <String, Object?>{}, '\u0000  ']) {
+      final summary = mapper.toPublicSummary(
+        GroupDocumentDto(id: 'group-1', data: {...groupData(), 'name': value}),
+      );
+      expect(summary.name, '이름 없는 그룹');
+      expect(summary.groupId, 'group-1');
+    }
+    final summary = mapper.toPublicSummary(
+      GroupDocumentDto(
+        id: 'group-1',
+        data: {...groupData(), 'name': '  로파\n길드  '},
+      ),
+    );
+    expect(summary.name, '로파 길드');
+  });
+
   test('공개 요약은 활성 코드 플래그와 멤버 표시 정책을 읽는다', () {
     final summary = mapper.toPublicSummary(
       GroupDocumentDto(
@@ -109,8 +126,8 @@ void main() {
     );
   });
 
-  test('필수 문자열·숫자·시각 누락을 계약 오류로 구분한다', () {
-    for (final field in ['name']) {
+  test('필수 상태·숫자·시각 누락을 계약 오류로 구분한다', () {
+    for (final field in ['status']) {
       expect(
         () => mapper.toPublicSummary(
           GroupDocumentDto(id: 'group-1', data: {...groupData(), field: ''}),
