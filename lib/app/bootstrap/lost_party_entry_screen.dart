@@ -5,9 +5,14 @@ import 'package:flutter/material.dart';
 const lostPartyEntryAnimationDuration = Duration(milliseconds: 2200);
 
 class LostPartyEntryScreen extends StatefulWidget {
-  const LostPartyEntryScreen({this.onAnimationCompleted, super.key});
+  const LostPartyEntryScreen({
+    this.onAnimationCompleted,
+    this.embedded = false,
+    super.key,
+  });
 
   final VoidCallback? onAnimationCompleted;
+  final bool embedded;
 
   @override
   State<LostPartyEntryScreen> createState() => _LostPartyEntryScreenState();
@@ -45,58 +50,57 @@ class _LostPartyEntryScreenState extends State<LostPartyEntryScreen>
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        backgroundColor: const Color(0xFF211747),
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            final coverScale = math.max(
-              constraints.maxWidth / _designSize.width,
-              constraints.maxHeight / _designSize.height,
-            );
+    final screen = Scaffold(
+      backgroundColor: const Color(0xFF211747),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final coverScale = math.max(
+            constraints.maxWidth / _designSize.width,
+            constraints.maxHeight / _designSize.height,
+          );
 
-            return ClipRect(
-              child: SizedBox.expand(
-                child: OverflowBox(
-                  alignment: Alignment.center,
-                  minWidth: _designSize.width,
-                  maxWidth: _designSize.width,
-                  minHeight: _designSize.height,
-                  maxHeight: _designSize.height,
-                  child: Transform.scale(
-                    scale: coverScale,
-                    child: RepaintBoundary(
-                      key: const ValueKey('lostPartyEntryScreen'),
-                      child: SizedBox.fromSize(
-                        size: _designSize,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Image.asset(
-                              'assets/images/lost_party_loading_screen.png',
-                              width: _designSize.width,
-                              height: _designSize.height,
-                              fit: BoxFit.fill,
-                              filterQuality: FilterQuality.high,
-                            ),
-                            _LogoGlow(controller: _controller),
-                            IgnorePointer(
-                              child: _TwinkleLayer(controller: _controller),
-                            ),
-                            _LogoShine(controller: _controller),
-                          ],
-                        ),
+          return ClipRect(
+            child: SizedBox.expand(
+              child: OverflowBox(
+                alignment: Alignment.center,
+                minWidth: _designSize.width,
+                maxWidth: _designSize.width,
+                minHeight: _designSize.height,
+                maxHeight: _designSize.height,
+                child: Transform.scale(
+                  scale: coverScale,
+                  child: RepaintBoundary(
+                    key: const ValueKey('lostPartyEntryScreen'),
+                    child: SizedBox.fromSize(
+                      size: _designSize,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.asset(
+                            'assets/images/lost_party_loading_screen.png',
+                            width: _designSize.width,
+                            height: _designSize.height,
+                            fit: BoxFit.fill,
+                            filterQuality: FilterQuality.high,
+                          ),
+                          _LogoGlow(controller: _controller),
+                          IgnorePointer(
+                            child: _TwinkleLayer(controller: _controller),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
+    return widget.embedded
+        ? screen
+        : MaterialApp(debugShowCheckedModeBanner: false, home: screen);
   }
 }
 
@@ -182,62 +186,6 @@ class _TwinkleLayer extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-class _LogoShine extends StatelessWidget {
-  const _LogoShine({required this.controller});
-
-  final AnimationController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      key: const ValueKey('lostPartyEntryShine'),
-      left: 93,
-      top: 485,
-      width: 755,
-      height: 690,
-      child: ClipRect(
-        child: AnimatedBuilder(
-          animation: controller,
-          builder: (context, child) {
-            final progress = _interval(controller.value, 0.22, 0.78);
-            final opacity = math.sin(progress * math.pi).clamp(0.0, 1.0);
-            return Stack(
-              children: [
-                Positioned(
-                  left: -145 + (progress * 1010),
-                  top: -75,
-                  width: 74,
-                  height: 820,
-                  child: Opacity(
-                    opacity: opacity,
-                    child: Transform.rotate(angle: -0.18, child: child),
-                  ),
-                ),
-              ],
-            );
-          },
-          child: const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  Color(0x00FFFFFF),
-                  Color(0x20FFFFFF),
-                  Color(0x66FFFFFF),
-                  Color(0x45DAB8FF),
-                  Color(0x00FFFFFF),
-                ],
-                stops: [0, 0.24, 0.5, 0.7, 1],
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

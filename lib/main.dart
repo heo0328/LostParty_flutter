@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'app/bootstrap/app_bootstrap.dart';
-import 'app/bootstrap/app_services_initializer.dart';
-import 'app/bootstrap/lost_party_entry_screen.dart';
+import 'app/backend_app.dart';
+
 import 'app/router/app_router.dart';
 import 'app/theme/app_theme.dart';
 import 'features/account/data/local/account_database.dart';
@@ -27,15 +26,7 @@ import 'features/recruitment_list/domain/services/party_cycle_runtime.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(
-    AppBootstrap<PlayerSession>(
-      initialize: initializeAppServices,
-      minimumLoadingDuration: lostPartyEntryAnimationDuration,
-      transitionDuration: const Duration(milliseconds: 280),
-      loadingBuilder: (_) => const LostPartyEntryScreen(),
-      appBuilder: (_, playerSession) => MyApp(playerSession: playerSession),
-    ),
-  );
+  runApp(const BackendApp());
 }
 
 class MyApp extends StatefulWidget {

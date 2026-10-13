@@ -12,7 +12,7 @@ void main() {
 
     expect(find.byKey(const ValueKey('lostPartyEntryScreen')), findsOneWidget);
     expect(find.byKey(const ValueKey('lostPartyEntryGlow')), findsOneWidget);
-    expect(find.byKey(const ValueKey('lostPartyEntryShine')), findsOneWidget);
+    expect(find.byKey(const ValueKey('lostPartyEntryShine')), findsNothing);
 
     await tester.pump(lostPartyEntryAnimationDuration);
     await tester.pump(const Duration(milliseconds: 1));
