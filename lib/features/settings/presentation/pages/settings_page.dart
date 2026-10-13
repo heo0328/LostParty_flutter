@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../operator_access/domain/repositories/operator_access_repository.dart';
+import '../../../auth/domain/auth_session_controller.dart';
+import '../../../auth/presentation/login_page.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({this.operatorAccessRepository, super.key});
+  const SettingsPage({this.operatorAccessRepository, this.auth, super.key});
 
   final OperatorAccessRepository? operatorAccessRepository;
+  final AuthSessionController? auth;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -23,6 +26,59 @@ class _SettingsPageState extends State<SettingsPage> {
       appBar: AppBar(title: const Text('설정')),
       body: ListView(
         children: [
+          if (widget.auth case final auth?)
+            ListenableBuilder(
+              listenable: auth,
+              builder: (context, _) => Column(
+                children: [
+                  ListTile(
+                    title: Text(
+                      auth.isAuthenticated ? 'Google 로그인 연결됨' : 'Google 로그인',
+                    ),
+                    subtitle: Text(
+                      auth.isBusy
+                          ? '로그인 상태 확인 중'
+                          : (auth.isAuthenticated
+                                ? '로그인 유지: ${auth.remember ? "사용" : "사용 안 함"}'
+                                : '로컬 기능은 로그인 없이 이용할 수 있습니다.'),
+                    ),
+                    onTap: auth.isBusy || auth.isAuthenticated
+                        ? null
+                        : () => context.push('/login'),
+                  ),
+                  if (auth.isAuthenticated)
+                    ListTile(
+                      title: const Text('로그아웃'),
+                      onTap: () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (dialogContext) => AlertDialog(
+                            title: const Text('로그아웃할까요?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.pop(dialogContext, false),
+                                child: const Text('취소'),
+                              ),
+                              FilledButton(
+                                onPressed: () =>
+                                    Navigator.pop(dialogContext, true),
+                                child: const Text('로그아웃'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true) await auth.logout();
+                      },
+                    ),
+                  if (auth.errorCode != null)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(authErrorMessage(auth.errorCode!)),
+                    ),
+                ],
+              ),
+            ),
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
             child: Text('로스트아크 연동'),

@@ -28,6 +28,7 @@ class RecruitmentListPage extends StatefulWidget {
     this.groupReadRepository,
     this.activityCharactersRepository,
     this.characterSearchRepository,
+    this.backendConnectionPending = false,
     super.key,
   });
 
@@ -41,6 +42,7 @@ class RecruitmentListPage extends StatefulWidget {
   final GroupReadRepository? groupReadRepository;
   final ActivityCharactersRepository? activityCharactersRepository;
   final GroupCharacterSearchRepository? characterSearchRepository;
+  final bool backendConnectionPending;
 
   @override
   State<RecruitmentListPage> createState() => _RecruitmentListPageState();
@@ -95,6 +97,13 @@ class _RecruitmentListPageState extends State<RecruitmentListPage> {
     appBar: AppBar(title: const Text('파티 모집')),
     body: Column(
       children: [
+        if (widget.backendConnectionPending)
+          const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text(
+              '공개 모집 조회 API 연결을 준비 중입니다. 모집 화면·필터에는 로그인 없이 접근할 수 있습니다.',
+            ),
+          ),
         RaidStatusFilterBar(
           label: _viewModel.filterBarLabel,
           onOpen: _openFilter,

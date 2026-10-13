@@ -18,6 +18,8 @@
 
 ## 이번 변경과 테스트 안내
 
+- [로그인·세션 인수 검증과 테스트 전환 계획](project/NEXT_WORK.md): Firebase 전용 테스트 제거·Git 이력 보존, 공통 정책 유지/이식, 관련 CI 경로 및 사용자 인수 기준. 기획 완료·실행 대기.
+
 
 
 ## 문서 읽는 순서
@@ -50,6 +52,8 @@
 - [`feature-definitions/LOSTPARTY_CORE_USER_FLOW_OVERVIEW.md`](feature-definitions/LOSTPARTY_CORE_USER_FLOW_OVERVIEW.md): 게임 계정·원정대 인증부터 일반 레이드, 그룹과 그룹 전용방까지 이어지는 핵심 사용자 흐름 통합 지도
 
 ## Architecture
+
+- [Google 로그인 연동 정책](architecture/GOOGLE_LOGIN_CONTRACT.md): Android 신규 Backend 인증, 비로그인 로컬 기능 보존, 로그인 유지·접근 제어 및 계약 인계 게이트.
 
 
 

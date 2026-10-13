@@ -3567,3 +3567,97 @@
 - 보존 확인: 기존 앱 코드·설정과 backend-migration 보관 제외 정책, 추적 제외된 private 자료 및 로컬 실험·백업.
 - 검증: 전용 문서 원문 비교, 상대링크·발췌 앵커·코드펜스 검사와 git diff --check 통과. 순수 문서 작업으로 Flutter 테스트·실기기 확인은 수행하지 않았다.
 - 실제 서비스 배포·데이터 변경 없음. 통합 커밋과 원격 반영 결과는 Git 이력에서 확인한다.
+
+## 2026-10-13 — Google 로그인 구현 준비·Backend 계약 대기
+
+- 사용자 Google 로그인 작업 시작 지시로 feature/google-login을 재사용했다. Android·신규 Backend, 비로그인 로컬 기능 유지, 원정대 인증은 로그인 후, 통합 가입/로그인, 사용자 선택형 로그인 유지·원래 화면 복귀 정책을 GOOGLE_LOGIN_CONTRACT와 NEXT_WORK에 기록했다.
+- Backend 요청 Issue #2 생성·조회 근거를 연결했다. bfc51e4d9a8a5ced360247a8c60bf370f7ca84ad 확인 시 댓글 0개, OpenAPI 0.1.0은 GET /health만 존재한다. 인증 방식/DTO·세션 정책·Google 등록·개발 접속 주소·서비스 정책 URL이 아직 없어 실제 연동 코드는 착수하지 않았다.
+- 조사: main/bootstrap은 필수 PlayerSession, Router/DI는 Firebase UID/binding을 사용한다. 신규 user ID를 Firebase playerId로 대입하지 않으며 공개/로컬 회귀와 세션 수명·계정 격리 검증 목록을 준비했다.
+- 새로 가능해진 흐름: 실행 계획·회귀 보호·Backend 인계 입력 확인. 실제 Google 로그인/앱 흐름 추가는 아직 없음.
+- 보존 확인: 앱 코드·설정·의존성 변경 없음. 기존 raid_cycle_schedule 변경 표시와 미추적 실험/백업을 보존했다. 런타임 회귀 통과를 주장하지 않는다.
+- 검증: git diff --check와 문서 diff/상대링크·내용 검토. 문서만 변경하여 flutter test/analyze는 실행하지 않았다.
+- 미확인 실기기: 실제 Google 계정 선택/인증·재실행·로그인 유지·로그아웃·기존 공개/로컬 흐름. API 계약 인계 후 구현·자동 검증을 마치고 사용자 확인 예정.
+- feature/google-login 유지·준비 문서 미커밋, dev 미반영·push/merge 없음. Backend 코드/운영 데이터/배포 및 추가 Issue 변경 없음.
+
+## 2026-10-14 — Android Google 요청별 nonce bridge
+
+- 사용자 다음 작업 지시로 feature/google-login에서 API와 독립적인 Google 인증 증거 획득 모듈을 구현했다. Flutter MethodChannel→Android Credential Manager Google 버튼 흐름으로 매 호출의 serverClientId/nonce를 전달한다. 반환은 ID token 증거이며 회원/session 생성과 로그인 성공 상태는 Backend가 소유한다.
+- 확인된 Google 프로젝트/Web client·현재 package/debug SHA 일치·프로덕션/외부·빈 권한목록, 최소 프로필 제외·이메일·로컬 서버/에뮬레이터 우선·익명 공급자 중지 정책을 계약에 기록하고 Backend #2 댓글6149284949로 인계했다. Backend OpenAPI는 여전히 /health만 있으며 새 댓글 없음 확인.
+- 새로 가능해진 흐름: 호출별 nonce와 Google 증거 획득 native bridge/credential state 해제, 중복·취소·잘못된 결과·민감 오류 제거. 화면/실제 Backend 회원 로그인은 아직 불가.
+- 보존 확인: 기존 main/bootstrap/Router·Firestore·공개/로컬 화면과 pubspec.lock은 변경하지 않았다. 기존 raid_cycle_schedule 변경 표시와 미추적 실험/백업 보존. 익명 공급자 중지 후 기존 앱 실행 실패 가능 상태는 남아 있으며 우회 로그인 구현 없음.
+- 검증: Dart format, 경계 테스트6개 통과, 표적 flutter analyze 이슈0, Gradle :app:compileDebugKotlin 통과, git diff --check 통과. GoogleID1.2.1의 Kotlin metadata2.4/현재compiler2.2 호환 오류를 실제 로그로 확인 후1.2.0으로 조정해 통과했다. Credentials1.6.0, Kotlin/AGP 설정 유지.
+- 첫 묶음 테스트 출력이 잘려 결과를 확정하기 위해 --no-pub --reporter expanded로 재확인했다. Router/공용세션 미변경 구간이므로 전체 Flutter 검증은 후속 연결 최종 상태로 남겼다.
+- 미확인: 실제 Google UI·ID token nonce claim/서버 검증·release 서명 매칭·에뮬레이터/WSL 접속·실기기/HTTPS. 서버 challenge/API 인계 후 사용자 기기 인수 진행. 설치·기기조작·실인증을 에이전트가 수행하지 않았다.
+- 브랜치 유지·코드/문서 미커밋·dev 미반영·push/merge 없음. Backend에는 공개 등록 정보와 구현 선택만 댓글로 전달했고 서버코드/데이터/배포 변경 없음.
+
+## 2026-10-14 — 合의된 API 검토안 기준 Flutter 로그인·세션 연결
+
+- 사용자 #2 최종 검토안 동의 및 API가 합의대로 작성된다는 가정의 Flutter 구현 승인. 실제 OpenAPI SHA는 아직 미인계이며 소비 기준은 댓글6149545526/동의6149615842다.
+- 새로 가능해진 흐름: BackendApp으로 익명회원/Player 생성 없이 실행, 로컬 계정 탭 접근, Google 통합 가입·로그인/유지 선택/설정·로그아웃, /v1 인증6API adapter와 DTO, origin별 secure 단일JSON·pending/횟수 기록·single-flight/60초미만 총3회복구, 409/401/403/일시장애 구분·epoch 늦은응답 격리. 실제 서버/Google 성공은 미확인이다.
+- 보존 확인: 로컬 AccountRepository·캐릭터·빌드·LostArk 토큰 설정과 원본 DB 사용. 새 entry에서 Firebase 초기화/익명 호출과 private gateway를 사용하지 않고 과거소유권badge는 표시하지 않는다. 기존 MyApp/Router는 레거시 기준용으로 보존한다. Firebase 데이터/설정·기존 raid_cycle_schedule 변경 표시·미추적 실험/백업은 불변.
+- 서버 의존성: 공개 모집은 기존 필터/목록UI+준비안내/unavailable 상태이며 실제조회는 후속 public API 필요. 원정대/그룹/private 기능은 로그인알럿/준비화면이다. 빈 성공결과·Firebase fallback·가짜회원로그인은 없다. 약관/개인정보 링크는 설정된 실제HTTPS URL만 사용한다.
+- 의존성: 기존crypto3.0.7을직접의존성으로전환, 다른 Dart 패키지업그레이드없음. debug만10.0.2.2/localhost/127.0.0.1의로컬HTTP허용, release는HTTPS필수. 설정/실행방법은 GOOGLE_LOGIN_CONTRACT에기록.
+- 검증: 인증경계25개통과, 변경파일분석0이슈, Android 최종 compileDebugKotlin/processDebugMainManifest통과, format/diff검토/git diff --check통과.
+- 최종전체 flutter test:1224통과/109실패. HEAD원본을임시폴더에git archive로추출해1199통과/109실패를확인했고, 실패109개의식별자는최종상태와전부동일했다. 기존Rules계약/레거시Firebase core/no-app등을이번그룹에서수정하지않는다. 추가25테스트전부통과이며새실패없음.
+- 전체flutter analyze는coverage의과거baseline/실험복사본·기존테스트오류까지포함해227건을보고했다. 변경된auth파일블록스타일1건은보완했고최종변경파일분석은0이슈다. 다른기존경고/보관코드오류는범위외로유지한다.
+- 미확인사용자기기: localhost↔WSL↔10.0.2.2접속, Google선택/취소·서명/nonce실검증, 유지선택별새실행·local/보호화면회귀·서버recovery·실기기/release。Backend구현/실OpenAPI인계후대조·인수하며에이전트설치/기기조작없음。
+- feature/google-login의코드·문서미커밋,dev/push/merge미반영·브랜치유지。실제서버개발/배포·Firebase삭제변경없음。
+
+## 2026-10-14 — Debug 시작 Base URL 입력
+
+- 사용자 요청으로 debug 앱의 새 실행마다 Base URL 알럿과 텍스트 필드를 추가했다. BACKEND_BASE_URL이 있으면 표시하고 없거나 입력이 비면 http://10.0.2.2:8000을 사용한다. 유효한 HTTP/HTTPS 주소를 확인한 뒤 해당 주소로 서비스·세션을 초기화한다. 주소는 이번 실행에만 적용하며 저장하지 않는다.
+- 새로 가능해진 흐름: 빌드 변경 없이 개발 서버 주소를 입력해 사용. origin별 안전 보관 키를 그대로 사용한다.
+- 보존 확인: release의 알럿 없음·HTTPS 필수 정책과 기존 로컬/로그인 화면 유지. 사용자 런타임 입력을 지원하기 위해 debug 전용 network config만 HTTP 개발 주소를 허용했다. 선택 전 DB/Dio/세션 복원 요청은 시작하지 않는다.
+- 검증: Dart format, 변경 파일 flutter analyze 이슈0, 기존 API/주소 정책 테스트4개 통과, git diff --check. 작은 초기 UI 변경으로 전체 Flutter 테스트·Android 빌드는 반복하지 않았다.
+- 미확인 사용자 기기: 새 앱 실행 기본값 표시, 빈 입력, 잘못된 주소 안내, 입력 주소의 실제 API 접속. 새 프로세스 실행에서 확인하며 hot reload만으로 알럿을 다시 표시하지 않는다.
+- feature/google-login 유지·미커밋·dev/push/merge 미반영. 기존 변경·실험/백업 보존.
+
+## 2026-10-14 — 로딩 중앙 빛 스윕 제거
+
+- 사용자 요청으로 LostPartyEntryScreen의 _LogoShine 호출과 전용 구현을 제거했다.
+- 새로 가능해진 흐름: 중앙을 가로지르는 빛 효과 없이 로딩 연출 표시.
+- 보존 확인: 배경 이미지·LogoGlow·상단 별 반짝임, 2200ms 타이밍과 한 번만 실행되는 완료 콜백. Google 로그인·debug URL 초기화는 수정하지 않았다.
+- 검증: 기존 표적 테스트1개 통과, 표적 flutter analyze 이슈0, Dart format/git diff --check 통과. 작은 시각 변경으로 전체 Flutter 검증은 반복하지 않았다.
+- 미확인 기기 항목: 로딩 화면의 실제 표시. 에이전트 기기 설치/조작 없음.
+- feature/google-login 유지·변경 미커밋·dev/push/merge 미반영, 기존 작업 결과 보존.
+
+## 2026-10-14 — 로그인 성공 후 pushed 화면 복귀 수정
+
+- 사용자 신고: Google 선택 후 빨간 오류는 사라졌으나 로그인 화면에 머묾. 서버 최근 challenge201/Google교환200을 확인하고 pushed 로그인+auth Router refresh 최소 테스트에서 화면 복귀 실패를 재현했다. 직접 로그인 진입 fallback은 기존에도 통과했다.
+- 원인/수정: 성공 콜백이 ListenableBuilder의 갱신 context에서 즉시 탐색했다. State의 context에서 Router를 확보하고 인증 갱신 후 post-frame에 pop/fallback go를 수행하도록 해당 처리만 수정했다. mounted/로그인 상태를 재확인하여 화면 이탈·로그아웃 뒤 탐색하지 않는다.
+- 새로 가능해진 흐름: 로그인 성공 시 원래 화면으로 복귀, 직접 진입은 /account로 이동. 쓰기 자동 실행 없음.
+- 보존 확인: 인증 API·nonce·세션 수명·취소/실패 처리와 로그인 유지·로컬 데이터 정책 불변.
+- 검증: 수정 전 pushed 복귀 테스트 실패/직접 진입 통과 → 수정 후 둘 다 통과. 기존 인증 경계 포함27개 통과, 변경파일 분석·format/git diff --check 통과. 한정된 탐색 수정으로 전체 Flutter 검증은 반복하지 않음.
+- 미확인 사용자 기기: 수정 빌드에서 실제 Google 로그인 후 이전 화면 복귀·설정의 로그인 상태. 서버 코드/설정 변경과 에이전트 기기 설치/조작 없음.
+- feature/google-login 유지·미커밋·dev/push/merge 미반영, 이전 변경 보존.
+
+## 2026-10-14 — Backend 시작 로딩 배경 복구
+
+- 사용자 로그인 성공 확인 후 로딩 배경 누락 신고. 이미지 파일은 불변이고 main의 BackendApp 전환에서 기존 entry 호출이 빠진 직접 원인을 확인했다.
+- 수정: LostPartyEntryScreen에 embedded 옵션을 추가하고 신규 시작 화면에 연결했다. debug URL 선택 알럿 뒤에도 배경을 표시하며, 세션 복원·2200ms 연출 완료 후 Router로 전환한다. 중첩 MaterialApp 없이 기존 효과를 재사용한다.
+- 새로 가능해진 흐름: 새 bootstrap의 로딩 배경·연출 표시 복구.
+- 보존 확인: 중앙 Shine 제거 상태, Glow·별·원본 이미지·완료 콜백, debug Base URL 알럿과 익명 회원 무생성 정책. 사용자 Google 로그인 정상 확인은 이 수정 이전 결과이며 이후 기기 회귀는 미확인이다.
+- 검증: 실제 BackendApp 첫 프레임 배경+URL 알럿·MaterialApp1개 재현 테스트와 기존 연출 테스트2개 통과, 표적 analyze 이슈0·format/git diff --check 통과, 이미지 diff 없음. 한정된 로딩 연결로 전체 검증은 반복하지 않았다.
+- 미확인 사용자 기기: 새 실행의 배경/알럿·로딩 완료 후 화면 전환. 에이전트 설치·기기 조작 없음.
+- feature/google-login 유지·미커밋·dev/push/merge 미반영, 이전 작업 결과 보존.
+
+## 2026-10-14 — 로그인·세션 인수 검증과 테스트 전환 기획
+
+- 사용자 확정: Firebase 폐기·빈 서버 시작·기존 사용자/테스터 데이터 이관 없음. Firebase 전용 테스트는 Git 이력에 남기고 제거하며 유효한 공통 정책은 유지/이식, 로컬·신규 인증 테스트는 유지한다.
+- NEXT_WORK를 다음 단일 작업 그룹으로 정리했다. 파일별 분류 대장, helper/fixture/Firestore CI 실행 경로, 서버 계약 근거, 인수 체크리스트와 최종 전체 검증·Git 종료 조건을 설계했다. 조사 시점 test의 *_test.dart는 218개이며 전수 분류/삭제 목록 확정은 실행 단계다.
+- AI_CONTEXT의 과거 미구현·미통합 상태를 현재 상태와 구분해 최신 지도에 정리했다. 사용자 로그인 성공은 확인 완료, 세션 유지·만료·로그아웃과 최신 로딩 화면은 인수 대기로 기록했다.
+- 새로 가능해진 흐름: 다음 구간의 실행 기준과 검증 책임을 문서에서 확인할 수 있다. 이번에는 앱 기능을 변경하지 않았다.
+- 보존 확인: 기존 코드·테스트·CI·설정과 미커밋 실험/백업을 수정하거나 삭제하지 않았다. Firebase SDK/소스 전체 제거와 원격 데이터 삭제는 이번 범위에서 제외했다.
+- 미확인: 파일별 최종 분류, 실제 서버 계약 revision과 기기 인수 항목. 이번 기획으로 검증 통과나 Firebase 완전 제거를 선언하지 않는다.
+- 검증: 문서 내용·상대 링크 확인과 git diff --check. 순수 문서 기획으로 Flutter 테스트/분석·기기 조작을 반복하지 않았다. feature/google-login 미커밋, dev 반영·push 없음.
+
+## 2026-10-14 — Google 로그인 구현·다음 구간 기획 dev 통합
+
+- 사용자 dev 병합·push 지시로 feature/google-login의 인증 구현·관련 테스트·debug URL 알럿·로딩 복구·정책 문서와 다음 작업 계획을 하나의 복구 지점으로 기록한다. 최신 origin/dev는 64b09bf로 추가 변경이 없었다.
+- 새로 가능해진 흐름: 현재 Google 로그인 구현과 다음 작업 기준을 dev에서 공유한다. 테스트 전환·세션 인수 그룹 자체의 실행/완료를 의미하지 않는다.
+- 보존 확인: 별도 Rules 실험·백업과 기존 raid_cycle_schedule 변경 표시를 staging에서 제외했다. 테스트 삭제·Firebase SDK/데이터 삭제·main 변경·운영 배포는 수행하지 않는다.
+- 최종 전체 flutter test: 1227개 통과/109개 실패. 보관된 HEAD 기준 로그와 실패 식별자 109개를 대조해 차이 0개를 확인했다. 인증·화면 복귀·로딩 테스트는 통과했으며 전체 테스트 통과로 판정하지 않는다.
+- 최종 flutter analyze: 224건. 과거 coverage 사본·기존 테스트/소스·별도 실험 문제를 포함한다. 병합 대상 Dart 파일의 분석 결과는 별도로 확인했다. 포맷 검사에서 안내 문구 줄바꿈 1곳을 정리했고 동작 변화는 없다. git diff --check 통과.
+- 첫 sandbox Flutter 실행은 진행되지 않아 중단하고 SDK 접근 권한으로 재실행했다. 실제 검증 로그는 추적 제외된 tools/google_login_premerge_test.log·google_login_premerge_analyze.log에 보관한다. 원격/로그에 인증정보를 추가하지 않았다.
+- 미확인 기기: 로그인 유지·만료·로그아웃 및 최신 로딩 화면. 사용자 Google 로그인 성공 확인은 보존하고 NEXT_WORK의 체크리스트를 다음 구간으로 유지한다.
+- 최종 병합 커밋과 origin/dev 동기화는 Git 이력으로 확인한다. 작업 브랜치는 유지하며 별도 실험/백업이 남아 있으므로 작업 트리 전체가 깨끗하다고 보고하지 않는다.

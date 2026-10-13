@@ -39,6 +39,7 @@ class MyAccountPage extends StatefulWidget {
     this.cycleEndsAt,
     this.weeklyRaidClaimCommandRepository,
     this.manualCharacterRefreshRunner,
+    this.showServerOwnership = true,
     super.key,
   });
 
@@ -56,6 +57,7 @@ class MyAccountPage extends StatefulWidget {
   final DateTime? cycleEndsAt;
   final WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository;
   final ManualCharacterRefreshRunner? manualCharacterRefreshRunner;
+  final bool showServerOwnership;
 
   @override
   State<MyAccountPage> createState() => _MyAccountPageState();
@@ -561,14 +563,16 @@ class _MyAccountPageState extends State<MyAccountPage> {
                             visualDensity: VisualDensity.compact,
                             label: Text(account.isMain ? '본계정' : '부계정'),
                           ),
-                          if (account.hasActiveOwnership)
+                          if (widget.showServerOwnership &&
+                              account.hasActiveOwnership)
                             const Chip(
                               key: ValueKey('verifiedGameAccountChip'),
                               visualDensity: VisualDensity.compact,
                               avatar: Icon(Icons.verified, size: 16),
                               label: Text('계정 인증 완료'),
                             )
-                          else if (account.hasLostOwnership)
+                          else if (widget.showServerOwnership &&
+                              account.hasLostOwnership)
                             Chip(
                               key: const ValueKey('lostOwnershipChip'),
                               visualDensity: VisualDensity.compact,
