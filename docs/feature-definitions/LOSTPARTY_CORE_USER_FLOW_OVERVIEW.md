@@ -1,5 +1,7 @@
 # LOSTPARTY 핵심 사용자 흐름 통합 지도
 
+> 기존 서비스 전용 항목은 [원문·출처 기록](../../legacy/firebase/extracted/docs/feature-definitions/LOSTPARTY_CORE_USER_FLOW_OVERVIEW.md)으로 분리했다. 남은 제품/협업 문맥의 신규 서버 적용 여부는 별도 설계에서 판단한다.
+
 > 기준일: 2026-09-25
 > 성격: 제품 흐름을 한눈에 파악하고 외부 도식으로 옮기기 위한 상위 문서
 > 상태 표기: `확인됨` · `구현됨/실기기 미확인` · `작업 브랜치` · `미해결` · `정책 보류`
@@ -23,23 +25,7 @@
 
 ### 2.1 관계
 
-```text
-Firebase AuthUid
-  -> Auth binding
-LOSTPARTY PlayerId
-  -> 소유
-GameAccountId (게임 계정 / 원정대)
-  -> 포함
-CharacterId (실제 레이드 참가 단위)
-```
 
-| 식별자 | 의미 | 주 사용처 |
-|---|---|---|
-| `AuthUid` | 현재 Firebase 인증 주체 | 로그인 상태와 Player binding 확인 |
-| `PlayerId` | LOSTPARTY에서 한 사람을 나타내는 영속 사용자 ID | 파티장·공대장·그룹장 권한, 신청자·멤버 중복 판정 |
-| `GameAccountId` | 등록·인증한 하나의 로스트아크 원정대 | 원정대 소유 관계와 Character 묶음 |
-| `CharacterId` | 원정대에 속한 실제 Character | 모집 생성·신청·참가·완료 단위 |
-| 로컬 Character 행 ID | 현재 기기의 Drift 데이터 식별자 | 화면 표시와 로컬 데이터 연결만 담당 |
 
 ### 2.2 반드시 구분할 개념
 
@@ -336,7 +322,6 @@ Lost Ark API 키 등록
 
 ### 5.5 그룹 해산
 
-현재 Spark 클라이언트 Transaction은 최대 50명의 데이터를 한 번에 순회 정리하지 않는다. 1차 그룹 해산은 다음 조건을 모두 만족할 때만 허용한다.
 
 - 호출자가 현재 그룹장
 - 그룹 상태가 active
@@ -522,11 +507,6 @@ Lost Ark API 키 등록
 
 현재 브랜치 `fix/bug-022-party-permissions`에는 다음 수정이 존재한다.
 
-| 문제 | 상태 |
-|---|---|
-| 모집 생성 당시 그룹 인원수 Snapshot 때문에 오래된 그룹방 해산이 거절됨 | 현재 그룹 count의 `N -> N-1`을 검증하도록 수정, CI 근거 확보 |
-| 그룹방 추방·탈퇴 때 `raidListings` 갱신이 거절됨 | 참가자 제거용 listing 검증 추가, CI 근거 확보 |
-| 그룹방에서 추방·탈퇴 후 같은 방 재가입 | Firestore Rules 1,000 표현식 한도로 미해결 |
 
 - 앞의 두 수정은 아직 운영 배포와 현재 사용자 디바이스 확인 전이다.
 - 재가입을 막는 제품 정책은 없다. 같은 방 재가입은 허용돼야 하므로 현재 실패는 미해결 결함이다.
@@ -542,20 +522,13 @@ Lost Ark API 키 등록
 
 ## 11. 기존 문서와의 정합성 주의
 
-- 과거 `FIREBASE_PARTY_PRODUCT_FLOW.md`에는 하단 네 번째 탭이 설정으로 남아 있지만 현재 앱은 그룹 탭을 사용한다. 설정은 내 계정에서 진입한다.
 - `GROUP_PRODUCT_FLOW.md`의 일부 오래된 결정표에는 그룹장 이전을 대상 수락 방식으로 적은 행이 남아 있다. 최신 본문, 전용 계약과 현재 기준은 대상 수락 없는 즉시 이전이다.
 - 오래된 로컬 `activeRaidAssignments` 설명은 현재 `raidState` 통합 이전의 이력일 수 있다. 현재 참가·주간 완료의 최신 원장은 해당 파티 명령 계약을 우선한다.
-- 구현 완료, 자동 검증, 운영 Rules 게시와 실기기 확인은 서로 다른 상태다. 이 문서는 이를 같은 의미로 사용하지 않는다.
 
 ## 12. 관련 상세 계약
 
-- [`GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT.md`](../architecture/GAME_ACCOUNT_CHARACTER_FIREBASE_CONTRACT.md): GameAccount·Character 식별자와 소유 관계
 - [`GAME_ACCOUNT_VERIFICATION_CONTRACT.md`](../architecture/GAME_ACCOUNT_VERIFICATION_CONTRACT.md): 장비 변경 원정대 인증
 - [`../product/PARTY_PARTICIPATION_RULES.md`](../product/PARTY_PARTICIPATION_RULES.md): 신청·참가·Character 변경 제품 규칙
-- [`FIRESTORE_PARTY_COMMAND_CONTRACT.md`](../architecture/FIRESTORE_PARTY_COMMAND_CONTRACT.md): 파티 원자 명령과 권한
-- [`FIRESTORE_PARTY_READ_MODEL_CONTRACT.md`](../architecture/FIRESTORE_PARTY_READ_MODEL_CONTRACT.md): 모집·진행 중·신청 중 읽기
 - [`../product/GROUP_PRODUCT_FLOW.md`](../product/GROUP_PRODUCT_FLOW.md): 그룹 제품 정책
-- [`FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md`](../architecture/FIRESTORE_GROUP_MEMBERSHIP_CONTRACT.md): 그룹 생성·가입·membership 계약
 - [`GROUP_LEADER_EXIT_DISBAND_CONTRACT.md`](../architecture/GROUP_LEADER_EXIT_DISBAND_CONTRACT.md): 그룹장 이전·탈퇴·해산
-- [`FIREBASE_PARTY_PRODUCT_FLOW.md`](../architecture/FIREBASE_PARTY_PRODUCT_FLOW.md): 반복방·완료·이벤트를 포함한 파티 제품 흐름
-- [`BUG_022_REMAINING_FIX_DESIGN.md`](../architecture/BUG_022_REMAINING_FIX_DESIGN.md): 현재 권한 오류와 별도 복구 작업의 상태
+- [`BUG_022_REMAINING_FIX_DESIGN.md`](../../legacy/firebase/docs/architecture/BUG_022_REMAINING_FIX_DESIGN.md): 현재 권한 오류와 별도 복구 작업의 상태

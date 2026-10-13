@@ -1,5 +1,7 @@
 # 활동 캐릭터와 레이드 현황 필터 계약
 
+> 기존 서비스 전용 항목은 [원문·출처 기록](../../legacy/firebase/extracted/docs/architecture/ACTIVITY_CHARACTER_AND_RAID_FILTER_CONTRACT.md)으로 분리했다. 남은 제품/협업 문맥의 신규 서버 적용 여부는 별도 설계에서 판단한다.
+
 ## 1. 문서 상태
 
 - 작성일: 2026-09-02
@@ -48,13 +50,10 @@
 ### 4.1 저장 위치와 소유 경계
 
 - `activityEnabled`는 전역 Character 정체성이 아니라 현재 Player가 소유한 Character의 앱 사용 설정이다.
-- 확정 저장 위치는 `players/{playerId}/characterActivity/{characterId}`다. 활동 Character마다 문서가 하나씩 있다. 가변 ID 목록을 한 문서에 넣지 않는다. Firestore Rules는 재귀와 가변 길이 목록 순회를 허용하지 않기 때문이다.
 - 문서 필드: `schemaVersion`, `playerId`, `characterId`, `gameAccountId`, `updatedAt`. Character의 `ownerPlayerId`·`status`·인증 필드는 이 명령으로 쓰지 않는다.
 - `characterActivity/{characterId}` 문서가 있는 Character만 활동 상태다. 문서가 없으면 비활동이다. 하위 컬렉션이 비어 있으면 아직 설정되지 않은 상태다.
 - 각 쓰기는 `characters/{characterId}`의 소유자·상태·`gameAccountId`와 `playerGameAccounts/{playerId}_{gameAccountId}` 소유권을 확인한다. 같은 계정의 서버 대표 Character 활동 문서가 같이 있어야 한다.
-- Repository는 최종 선택 전체를 먼저 검증한 뒤 Firestore Rules 문서 접근 한도보다 작은 묶음으로 차이만 저장한다. 대표 포함 추가, 나머지 추가·갱신, 비활성 삭제 순서를 지켜 부분 실패가 기존 활동·대표 상태를 먼저 훼손하지 않게 하며, 재시도로 같은 최종 상태에 수렴한다. 클라이언트 Repository는 보안 경계가 아니므로 각 묶음의 Rules 소유권 검증은 유지한다.
 - active 소유자인 Player 본인만 값을 변경할 수 있다.
-- 다른 그룹원 화면의 활동 Character 후보는 `characterActivity` ID 목록과 기존 `characters/{characterId}` 표시 필드를 조합한다. Rules 복잡도 한도 때문에 별도 Projection 컬렉션과 그룹 교집합 검사는 쓰지 않는다.
 - `characterActivity`의 `get`/`list`는 활성 Auth binding이 있는 사용자에게 허용한다. 쓰기는 계속 본인만 가능하다.
 - 표시명·서버·직업·아이템레벨·전투력은 이미 공개 조회되는 Character 문서를 쓴다. `gameAccountId`는 활동 문서에 남아 있으나 그룹 UI는 이 값을 화면에 쓰지 않는다.
 - 다른 그룹원 화면에서 인증 활성 Character 전체를 대체 자료로 노출하지 않는다. 활동 문서가 없으면 빈 목록이다.
@@ -65,14 +64,12 @@
 - 서버 대표 Character는 활동 캐릭터여야 한다.
 - 각 활동 Character ID는 현재 Player가 active 소유한 GameAccount에 속해야 하며 본·부계정 Character를 함께 선택할 수 있다.
 - 허용 필드 외 Character 인증·소유권 필드는 활동 설정 명령으로 바꿀 수 없다.
-- 복수 선택 저장은 최종 상태 전체를 먼저 검증한다. 임의 개수 전체를 단일 Transaction으로 쓰면 Rules 접근 20회 한도를 넘으므로 작은 묶음으로 반영하며, 추가를 삭제보다 먼저 수행해 중간 상태에서도 0명이나 비활동 대표가 관찰되지 않게 한다. 일부 묶음 실패 시 성공으로 확정하지 않고 재시도로 수렴한다.
 
 ### 4.3 기존 데이터 처리
 
 - 현재 운영 데이터는 사용자 단독 테스트 데이터이므로 과거 사용자 자동 마이그레이션과 호환 배치는 구현하지 않는다.
 - `characterActivity` 하위 문서가 없으면 활동 Character는 아직 설정되지 않은 상태다. 누락 필드를 true로 간주하지 않는다.
 - 새 계약 적용 시 테스트 데이터 재설정: 앱에서 사용할 캐릭터를 다시 저장하면 캐릭터별 활동 문서가 만들어진다. 기존 Character·소유권·membership·Claim 문서는 삭제하지 않는다.
-- 실제 테스트 데이터 삭제와 Rules 배포는 이 저장 단위에서 하지 않는다.
 - 신규 계정의 최초 활동 Character 선택 흐름과 기본값은 캐릭터 관리 UI 단위에서 명시하되, 서버 저장 전 최소 1명과 대표 포함을 반드시 만족한다.
 
 ## 5. 캐릭터 관리 UI 계약
@@ -100,7 +97,6 @@
 - 마지막 활동 Character의 해제 터치를 로컬 UI에서 막는다.
 - UI 오류로 선택이 0명이 되더라도 저장 요청을 만들지 않는다.
 - 0명 상태에서 저장을 누르면 `앱에서 사용할 캐릭터를 최소 1명 선택해 주세요.`를 표시한다.
-- Repository는 빈 선택과 대표 누락 저장 명령을 거절한다. Rules는 각 캐릭터 쓰기에서 소유권과 해당 계정 대표 활동 문서 존재를 확인하고, 대표 활동 문서 삭제를 거절한다.
 
 ### 5.3 선택된 캐릭터 관리
 
@@ -247,10 +243,7 @@ AND
 
 ### A. 계약·저장 기반
 
-- 실제 Character 문서와 Rules를 대조해 `players/{playerId}/characterActivity/{characterId}`에 캐릭터별 활동 문서를 저장한다
 - Domain·DTO·Repository 명령과 원자 저장 계약
-- 소유권·대표 활동 존재·대표 삭제 거절 Rules와 Firebase Emulator 실제 요청 테스트
-- 테스트 데이터 재설정 절차 문서화. 실제 삭제·Rules 배포는 이 단계에서 하지 않는다
 
 ### B. 캐릭터 관리 UI
 
@@ -276,7 +269,6 @@ AND
 ## 11. 완료 조건
 
 - 인증 원정대 전체와 활동 Character가 데이터·UI·권한에서 구분된다.
-- 최소 1명과 대표 포함 불변조건이 UI·Repository·Rules에서 모두 보장된다.
 - 활동 Character만 새 레이드·그룹 후보와 일반 전투력 보강에 사용된다.
 - 기존 참가 Character 비활성화가 membership·Claim·완료 기록을 훼손하지 않는다.
 - 진행 중 필터가 공개 조건·레이드·난이도·그룹원·Character 조합을 정의대로 계산한다.
@@ -326,8 +318,6 @@ AND
 - 기존 조회 조건·정렬·중복 제거·자기 방 제외를 유지한다. 필터 때문에 `recruitments` 그룹 전용 list 쿼리를 새로 만들지 않는다.
 - 레이드·난이도·groupId는 기존 목록 데이터로 판정 가능하다. 참가 Player ID는 현재 공개 mapper가 내 방 제외에만 사용하므로 목록 모델에 전달할 경로를 추가한다.
 - public 원본과 group listing의 참가 ID 필드 정합성을 검증한다. 누락/조회 실패를 정상적인 참가자 없음으로 간주하지 않는다.
-- 기존 Rules는 활성 Player 연결 사용자에게 공개 파티 membership 읽기를, 해당 그룹원에게 그룹 전용 파티 membership 읽기를 허용한다. 레이드 가입 자체는 선행조건이 아니다.
-- 위 권한을 재사용하며 읽기 범위를 확대하거나 비가입 그룹의 비공개 파티를 우회 조회하지 않는다. 실제 배포 Rules 차이가 있으면 권한 오류로 보고한다.
 
 ### 13.5 참가 Character 조회와 일치 판정
 
@@ -373,7 +363,6 @@ AND
 
 ### 14.2 로컬 우선 처리
 
-- Firestore query, 문서 필드, Rules와 Indexes를 변경하지 않는다. 서버에서 이미 받은 원본 목록만 필터·정렬한다.
 - 처리 순서는 `서버 데이터 수신/병합 → 상단 화면 필터 → 남은 자리 2차 필터 → 참가 인원 정렬 → 표시`다.
 - 다음 페이지가 추가되거나 실시간 첫 페이지가 바뀌면 recruitment ID 기준으로 원본을 병합한 뒤 현재 필터와 정렬을 전체 로컬 목록에 다시 적용한다.
 - 아직 내려받지 않은 서버 페이지까지 포함한 전역 순서를 보장하지 않는다. 정렬 범위는 현재 로컬에 확보된 목록이며, 페이지가 추가될수록 새 로컬 전체를 다시 정렬한다.

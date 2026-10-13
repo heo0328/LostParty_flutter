@@ -1,5 +1,7 @@
 # Character Build 기본 무결성 검증 계약
 
+> 기존 서비스 전용 항목은 [원문·출처 기록](../../legacy/firebase/extracted/docs/architecture/CHARACTER_BUILD_INTEGRITY_CONTRACT.md)으로 분리했다. 남은 제품/협업 문맥의 신규 서버 적용 여부는 별도 설계에서 판단한다.
+
 ## 1. 목적과 책임 범위
 
 이 문서는 Lost Ark API의 전투력만으로 실제 사용 가능한 세팅을 단정하지 않고, 앱이 유지 가능한 범위에서 Character Build의 기본 무결성을 검증하는 기준이다.
@@ -144,7 +146,6 @@ Tooltip 직업 자체를 읽을 수 없는 응답은 다른 직업으로 단정�
 - 승인 경로는 신청 Snapshot을 재사용하고, 직접 참가·참가 Character 변경·그룹 생성·초대코드 가입·그룹 본인 표시 갱신은 선택 Character의 최신 로컬 Build Snapshot에서 같은 v2 최소 필드를 만든다.
 - 기존 문서에 필드가 없으면 검증 요약을 `null`로 읽어 기존 UI와 호환한다.
 - 보석 이름, Tooltip 원문과 전체 장비 JSON은 서버에 올리지 않는다.
-- 보석 요약은 클라이언트가 산출한 표시 정보라 Firestore Rules가 진위를 보장할 수 없다. Rules 복잡도와 Ruleset 저장 실패를 피하기 위해 이 다섯 필드의 스키마 검증을 추가하지 않고, 공식 앱의 쓰기 생성기와 방어적 읽기에서 완결성·타입·상태를 처리한다. 파티 Character 변경과 그룹 본인 Snapshot 갱신 Rules의 `affectedKeys` allowlist에 `gemValidationSnapshot`만 추가한다. 신청 권한·Character 소유권 등 기존 서버 경계는 그대로 유지한다.
 - 앱 시작 갱신 결과와 파티 신청 시점 Snapshot의 시각이 다를 수 있으므로 검증 시각을 함께 보존한다.
 - Character 문서의 통합 무결성 요약은 성공한 계정 데이터 갱신이 만든 로컬 Build Snapshot에서만 보강한다. 기존 아이템 레벨·전투력 최소 표시 동기화 Transaction에 함께 넣고 별도 그룹 진입 쓰기를 만들지 않는다. 로컬 값 부재·동기화 실패·오래된 `checkedAt`은 기존 정상 값을 덮지 않으며 동일값은 쓰지 않는다.
 - `buildIntegritySnapshot`은 `clean/review/error/unavailable`, 역할, 원본 Snapshot 시각, 카탈로그 버전과 복수 issue code를 보존한다. 초기 오류 영역은 다른 직업 보석과 아크그리드 최소/조건 불충족이며, 둘이 동시에 있으면 두 코드를 모두 저장한다.
@@ -154,12 +155,10 @@ Tooltip 직업 자체를 읽을 수 없는 응답은 다른 직업으로 단정�
 - 파티 상세의 참가 Character 변경 후보는 소유자 기기의 로컬 `CharacterBuildSnapshot`에서 `buildIntegritySnapshot`을 계산해 보석·아크그리드 오류를 함께 안내한다. 오류는 선택 또는 참가 자격을 차단하지 않는다.
 - 2026-09-13 릴리즈 테스트에서 후보 표시 전용 경계 때문에 아크그리드·아크패시브 오류가 신청자와 참가 후 구성원 카드에서 사라지는 문제가 확인됐다. 기존 보석 최소 요약을 구버전 호환용으로 유지하면서 신청의 `submittedBuildSnapshot.buildIntegritySnapshot`과 membership의 `buildIntegritySnapshot`에 같은 통합 최소 map을 함께 저장하도록 보완했다.
 - 파티 생성 리더·신청·직접 참가·신청 승인·참가 Character 변경의 모든 신규 쓰기가 통합 Snapshot을 전달한다. 신청자·구성원 읽기는 누락·불완전·알 수 없는 schema를 `null`로 낮춰 과거 카드의 이름·직업·수치와 명령을 유지한다. 기존 문서 일괄 이행은 하지 않는다.
-- Character 변경 Rules는 허용 변경 필드에 `buildIntegritySnapshot`만 추가한다. 생성·신청·승인 경로의 기존 소유권, 활동 Character, 역할, 점유, Claim과 파티 구성 조건은 완화하지 않고 Rules 계약 테스트로 보존한다.
 - 활동 Character 목록의 필드 부재·불완전 맵·알 수 없는 값은 무결성 정보만 `null`로 낮춘다. Character명·직업·아이템 레벨·전투력과 목록 전체는 계속 표시한다. 활동 해제는 기존 교집합에서만 제외하며 Character 문서와 기존 레이드·membership Snapshot을 삭제하지 않는다.
 
 ## 9. 구현 순서
 
-진행 상태: 2026-09-08 1~7단계와 8단계의 파티 신청자 카드 구간을 구현하고 자동·실기기 검증했다. 이후 Rules 경고 제거본도 2026-09-10 정상 배포했다. 2026-09-10 파티 membership·구성원 카드 전파를 구현하고 최신 Rules를 정상 배포했다. 그룹 membership 전파는 2026-09-11 Rules 콘솔 게시·실기기 회귀 후 `dev`에 병합됐다. 그룹원 활동 Character 목록의 통합 Build 무결성 상태(`buildIntegritySnapshot`)는 2026-09-11 구현·자동 검증·실기기 확인 후 `dev`에 병합됐다. 2026-09-12 확정 오류 v2의 아이콘 fallback 제거·오류 전용 표시와 복수 캐릭터 진단 도구를 구현·자동 검증했다. 파티 생성 리더의 보석 Snapshot과 참가 Character 변경 목록의 통합 오류 표시를 보완했고, 사용자가 그룹 레이드 생성 파티장 오류 표시를 실기기에서 확인해 완료 판정했다. 2026-09-13에는 신청·직접 참가·승인·Character 변경 이후에도 통합 오류가 유지되도록 신청·membership dual-write와 방어적 읽기를 구현해 자동 검증했다. 이 마지막 Rules 변경의 운영 배포와 실기기 확인은 남아 있다.
 
 1. 실제 API 진단 도구에 깨달음 1·4티어, 아크그리드 해·달 존재/포인트·조건, API 스킬과 보석 종합 결과를 추가한다.
 2. Tooltip 직업 추출과 슬롯 연결을 운영 분석기로 옮긴다.
@@ -167,7 +166,6 @@ Tooltip 직업 자체를 읽을 수 없는 응답은 다른 직업으로 단정�
 4. 2026-09-08 실제 결과로 4직업 특수 대상명과 회귀 fixture를 교정한다.
 5. 정상, 같은 직업·대상 불일치, 다른 직업 보석과 정보 부족 상태를 분리한다. (2026-09-12 확정 오류 의미 개편 완료)
 6. 내 계정 화면에 본인용 검증 결과를 적용한다.
-7. 최소 서버 Snapshot과 Rules 변경안을 별도 검토한다. (완료)
 8. 승인된 경우 신청자·파티 구성원·그룹 Character 간략 카드에 요약 경고를 적용한다. (신청자·파티·그룹 membership 목록 행과 그룹 활동 Character 목록에 v2 확정 오류 의미 적용 완료)
 9. 여러 일반 딜러 직업으로 같은 기준을 실계정 검증한다.
 
@@ -236,9 +234,7 @@ classId
 - 현재 파티 신청 `submittedBuildSnapshot`은 itemLevel·combatPower만 저장한다.
 - 현재 파티 membership과 그룹 표시 Snapshot도 직업·역할·아이템 레벨·전투력을 중심으로 하며 깨달음 분기와 아크그리드 코어명을 포함하지 않는다.
 - 따라서 타인의 카드에서 Build 별칭을 다시 계산할 수 없다. 전체 rawJson을 서버에 올리지 않고 소유자 기기에서 계산한 `buildAliasId`, `buildAliasLabel`, `buildCatalogVersion`, `buildValidatedAt` 정도의 최소 결과만 신청·membership Snapshot에 추가하는 방안을 검토한다.
-- 이 추가는 Firestore 쓰기 필드 allowlist, Rules, write plan, read model과 구버전 null 호환 수정이 필요하므로 별도 승인 구간이다.
 
-서버 변경량이 커지거나 기존 파티 명령의 Rules 복잡도를 유의미하게 높이면 타인 카드 별칭 표시는 보류하고 내 계정의 로컬 표시까지만 구현한다.
 
 ## 11. 차후 확장 — 사용자 개인 직업 메모
 
@@ -258,12 +254,10 @@ classId
 
 - 카드에 이미 `classNameSnapshot`이 있으므로 타인의 추가 Build 데이터를 읽지 않아도 직업 메모를 찾을 수 있다.
 - 메모는 로컬 Drift에 `playerId + classId`를 키로 저장한다.
-- Firestore에 업로드하거나 다른 사용자에게 공개하지 않는다.
 - 표시 문자열 대신 게임 카탈로그의 안정적인 `classId`를 키로 사용하고 알 수 없는 직업은 API 직업명 fallback을 둔다.
 - 파티 신청자·파티 구성원 카드에서는 메모 전체를 상시 길게 노출하지 않고 메모 아이콘 또는 한 줄 요약으로 표시한다.
 - 기기 삭제·앱 재설치 시 사라지는 개인 메모라는 점을 명시한다. 동기화·백업은 별도 요구가 생기기 전에는 만들지 않는다.
 
-이 범위는 로컬 테이블·Repository·간단한 편집 UI와 카드 조회 연결만 필요하며 Firestore 스키마·Rules 변경은 필요하지 않다.
 
 ### 2차 후보 — 깨달음 분기 또는 Build 별칭별 메모
 
@@ -279,6 +273,5 @@ classId
 2. 실제 사례가 생길 때마다 Build 별칭 카탈로그 엔트리를 점진적으로 추가한다.
 3. 내 계정에서 로컬 별칭 판정이 안정적인지 검증한다.
 4. 직업 단위 개인 메모는 서버 변경 없는 독립 작업으로 판단한다.
-5. 타인 카드 Build 별칭에 필요한 최소 Snapshot·Rules 변경량을 산정한다.
 6. 변경량이 허용될 때만 파티 신청·membership 카드 별칭을 구현한다.
 7. 분기/별칭별 개인 메모는 최소 Snapshot 구현 후 다시 결정한다.
