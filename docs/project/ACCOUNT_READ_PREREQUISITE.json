@@ -1,0 +1,887 @@
+{
+  "base": "a52492f",
+  "source_branch": "refactor/firebase-removal",
+  "note": "Uncommitted approved prerequisite copied without modifying original. Hashes distinguish baseline removal from new query feature.",
+  "files": [
+    {
+      "path": ".firebaserc",
+      "sha256": null
+    },
+    {
+      "path": "android/app/build.gradle.kts",
+      "sha256": "22e490f27519c4e3652e31474fc078a8ee7b254419b1d76cfe496d881042e4b4"
+    },
+    {
+      "path": "android/app/google-services.json",
+      "sha256": null
+    },
+    {
+      "path": "android/settings.gradle.kts",
+      "sha256": "4d438e37bd80ccc48ded4892c9026994cabe8cfb9c20d2947a609248495c869b"
+    },
+    {
+      "path": "firebase.json",
+      "sha256": null
+    },
+    {
+      "path": "firestore.indexes.json",
+      "sha256": null
+    },
+    {
+      "path": "firestore.rules",
+      "sha256": null
+    },
+    {
+      "path": "lib/app/bootstrap/anonymous_auth_initializer.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/app/bootstrap/app_bootstrap.dart",
+      "sha256": "26c831e6903ca0cf173b74823ab72fbce09290fa6b18b968835d78ce47e9e1f6"
+    },
+    {
+      "path": "lib/app/bootstrap/app_services_initializer.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/app/bootstrap/firebase_app_initializer.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/app/router/app_router.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/account/data/gateways/firestore_account_ownership_status_gateway.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/account/data/gateways/firestore_character_combat_power_sync_gateway.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/account/data/gateways/firestore_character_minimum_display_sync_gateway.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/account/data/gateways/firestore_character_summary_sync_gateway.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/account/data/gateways/firestore_representative_character_sync_gateway.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/account/data/gateways/local_game_account_verification_gateway.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/account/data/mappers/activity_characters_firebase_mapper.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/account/data/repositories/firestore_activity_characters_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/account/data/repositories/firestore_weekly_raid_claim_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/account/data/repositories/firestore_weekly_raid_status_command_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/account/data/repositories/firestore_weekly_raid_status_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/account/presentation/pages/game_account_verification_page.dart",
+      "sha256": "2ec41b82df2387a48f38e4b8295a17f5e39870f1e4f519f9f6947eee90fd33fb"
+    },
+    {
+      "path": "lib/features/group/data/repositories/firestore_group_application_command_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/group/data/repositories/firestore_group_character_search_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/group/data/repositories/firestore_group_create_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/group/data/repositories/firestore_group_join_code_command_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/group/data/repositories/firestore_group_join_command_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/group/data/repositories/firestore_group_read_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/group/data/repositories/group_command_runner.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/group/presentation/viewmodels/group_join_view_model.dart",
+      "sha256": "c08266867604bd952262d900f715b27764bfbd449fc7fbad7f020356f67cdd44"
+    },
+    {
+      "path": "lib/features/manual_verification/data/firestore_manual_verification_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/manual_verification/presentation/pages/operator_manual_verification_detail_page.dart",
+      "sha256": "446b54064493debab347690f2d8628777cb8d36f205fa829719d6036ec0c6f99"
+    },
+    {
+      "path": "lib/features/operator_access/data/repositories/firestore_operator_access_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/player/data/datasources/firestore_player_binding_store.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/player/data/datasources/player_binding_store.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/player/data/repositories/firestore_player_activity_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/player/data/repositories/player_binding_repository_impl.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/player/domain/entities/player_session.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/player/domain/repositories/player_activity_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/player/domain/repositories/player_binding_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/raid_status/data/repositories/firestore_party_event_read_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/raid_status/data/services/firestore_party_event_sync_service.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/mappers/party_application_event_writer.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/mappers/party_create_write_plan.dart",
+      "sha256": "5196f259fb807eb748ba7612b392bcb24d056cc64477e63b38b507117cb0747a"
+    },
+    {
+      "path": "lib/features/recruitment_list/data/mappers/party_lifecycle_event_writer.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/mappers/party_membership_event_writer.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/mappers/party_raid_listing_sync.dart",
+      "sha256": "eb80fc774ff7c3323401b8ceb67aab5a14b321237eb506427692ef1342258f9d"
+    },
+    {
+      "path": "lib/features/recruitment_list/data/mappers/raid_state_availability.dart",
+      "sha256": "ea40af3ebbfd6650f6789ebcd78e2776781682af8b493a41ecae5aff81364a55"
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/completed_cleanup_journal.dart",
+      "sha256": "154ca597483e5d515a526191a7b87d0517d38e4db339d59389458d8e83386d2c"
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_active_raid_assignment_lookup.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_completed_ownership_cleanup_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_lazy_cycle_reconciliation_gateway.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_party_application_cleanup_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_party_application_command_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_party_atomic_application_command_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_party_atomic_command_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_party_atomic_create_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_party_atomic_join_command_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_party_atomic_member_mutation_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_party_atomic_member_removal_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_party_atomic_visibility_command_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_party_create_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_party_cycle_command_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_party_join_command_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_party_membership_command_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_party_raid_listing_backfill.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_party_read_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/firestore_party_visibility_command_repository.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/party_atomic_cycle_command_adapter.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/party_character_ownership_reader.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/party_raid_listing_backfill_batch.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/data/repositories/party_raid_state_occupancy_inspector.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/features/recruitment_list/presentation/pages/recruitment_create_page.dart",
+      "sha256": "da723443de7d2005324d3b3b22e8c8534571567609e7c46bae39a17ba3972e3c"
+    },
+    {
+      "path": "lib/features/recruitment_list/presentation/pages/recruitment_detail_page.dart",
+      "sha256": "bd8fd5142c48f993653cec99b63d4f2b64096f161b333d9518629d695e1e6a68"
+    },
+    {
+      "path": "lib/firebase_options.dart",
+      "sha256": null
+    },
+    {
+      "path": "lib/main.dart",
+      "sha256": "fff3d709447bd27e50deaae2ab9a294be7f414581481ffd3289096dfe997c747"
+    },
+    {
+      "path": "lib/shared/character_build/character_optional_display_preservation.dart",
+      "sha256": "f4f606c6fe58d4e1ccdf0279193f786d6b2a938fae3e02a641e6fbef47a51c3c"
+    },
+    {
+      "path": "macos/Flutter/GeneratedPluginRegistrant.swift",
+      "sha256": "ebd8bd19ead7e169ab7c851c56683725a32860414b4afb840ca499711db76855"
+    },
+    {
+      "path": "pubspec.lock",
+      "sha256": "4dac28d49fea2ef6450274d9a280ef094be687de1f45654d73921a04793456de"
+    },
+    {
+      "path": "pubspec.yaml",
+      "sha256": "2a99491837ae891e710c7103a91317ed6321376f83a8f2200cf7c7a042d99194"
+    },
+    {
+      "path": "test/app/bootstrap/app_bootstrap_test.dart",
+      "sha256": "ad2c949a87a208c4fd3f86be884a0915c5d8b93a428ba85f72e9b3908b2b14f6"
+    },
+    {
+      "path": "test/features/account/data/gateways/local_game_account_verification_gateway_test.dart",
+      "sha256": null
+    },
+    {
+      "path": "test/features/account/domain/completed_cleanup_recovery_test.dart",
+      "sha256": "b7ce9e0180877bce1f97e18e3d372568594324f89db91c4c64a1e1cac36d5922"
+    },
+    {
+      "path": "test/features/account/presentation/viewmodels/character_management_view_model_test.dart",
+      "sha256": "8c51574f4d09238bee13ca0e4ef9742aedb3819f248cd621522e21de1db60a42"
+    },
+    {
+      "path": "test/features/group/presentation/group_failure_messages_test.dart",
+      "sha256": "726e877c817fd85cb7bf6add188b4f5072cfd6efead889b3efee94bb331c87a9"
+    },
+    {
+      "path": "test/features/recruitment_list/data/mappers/party_atomic_write_plan_test.dart",
+      "sha256": "e413756ec110d568fb10d65061d63713718f68befde317c5b40835c02a7cec7e"
+    },
+    {
+      "path": "test/features/recruitment_list/data/mappers/raid_state_availability_test.dart",
+      "sha256": "f1078da2d02c841fd0d5160b4dd954f3d269089ba0ec94d411c4127b435296b3"
+    },
+    {
+      "path": "test/features/recruitment_list/presentation/recruitment_create_flow_test.dart",
+      "sha256": "51561aff60bbad54472a58264b1e7d5626112cad9d041ddb5efa40b48de22611"
+    },
+    {
+      "path": "test/shared/character_build/character_optional_display_preservation_test.dart",
+      "sha256": "f4674ecb019452e871654a8e5f8f19bc36513ef645cf3d3f4657171d1f32485c"
+    },
+    {
+      "path": "tools/assert_rules_denied.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/bug024_advance_budget_diagnosis.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/bug024_preparation_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/bug024_regression_runner.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/bug024_runtime_regression_runner.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/bug024_spark_feasibility_runner.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/bug024_spark_preparation_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/bug024_spark_seal_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/bug024_spark_seal_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/character_activity_rules_test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/compact_rules_source.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/fixtures/roster_reauth_preintegration.rules",
+      "sha256": null
+    },
+    {
+      "path": "tools/gen_removed_group_id_rules.js",
+      "sha256": null
+    },
+    {
+      "path": "tools/group_leave_rules_test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/integrate_roster_rules.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/manual_verification_rules_test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/package-lock.json",
+      "sha256": null
+    },
+    {
+      "path": "tools/package.json",
+      "sha256": null
+    },
+    {
+      "path": "tools/party_completion_role_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/party_group_cutover_rules_test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/party_join_v3_firebase.json",
+      "sha256": null
+    },
+    {
+      "path": "tools/party_join_v3_proof.rules",
+      "sha256": null
+    },
+    {
+      "path": "tools/party_join_v3_rules_test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/party_scalability_firebase.json",
+      "sha256": null
+    },
+    {
+      "path": "tools/party_scalability_proof.rules",
+      "sha256": null
+    },
+    {
+      "path": "tools/party_scalability_rules_test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/patch_group_leave_rules.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/prune_r7_unused_rules_functions.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/removed_active_group_id.rules.txt",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_completed_cleanup_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_completed_cleanup_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_complexity_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_complexity_candidate.test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_complexity_differential.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_dispatch_rules_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_generation_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_generation_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_last_member_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_last_member_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_leader_cleanup_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_leader_cleanup_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_legacy_rules_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_legacy_rules_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_lifecycle_boundary_diagnosis.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_lifecycle_coverage_summary.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_lifecycle_predicate_diagnosis.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_manual_completion_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_manual_completion_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_occupancy_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_occupancy_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_orphan_cleanup_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_orphan_cleanup_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_ownership_rules_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_participation_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_participation_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_peer_cleanup_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_peer_cleanup_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_personal_completion_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_personal_completion_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_personal_dedup.test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_personal_differential.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_position_differential.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/roster_target_rules_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_advance_shared.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_audit.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_audit_cause.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_auth_direct.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_auth_direct_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_availability_runtime.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_baseline_audit.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_call_depth_audit.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_cleanup_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_cleanup_candidate.test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_cleanup_design_audit.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_cleanup_diagnosis.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_cleanup_event_design_audit.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_completion_role.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_completion_role.test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_contract_size_audit.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_depth_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_depth_candidate.test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_depth_recheck_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_depth_recheck_candidate.test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_executable_compact.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_executable_compact.test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_group_count_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_group_display_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_group_display_candidate.test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_group_display_contract.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_group_update_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_indent.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_leader_budget_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_leader_budget_candidate.test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_leader_budget_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_legacy_size_audit.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_listing_boundary_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_listing_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_listing_candidate.test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_listing_safety_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_local_display.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_local_display_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_localization_pipeline.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_member_retirement_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_member_retirement_candidate.test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_member_retirement_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_next_week_preparation.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_personal_budget_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_personal_budget_candidate.test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_prep_dedup.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_prep_dedup_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_production_restructure.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_production_restructure_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_publication_budget.json",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_publication_preflight.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_removal_candidate.test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_removal_proof.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_removal_rejection_audit.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_removal_rejection_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_removal_rejection_candidate.test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_scope_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_scope_candidate.test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_seal_direct.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_strip_comments.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_target_scan_candidate.mjs",
+      "sha256": null
+    },
+    {
+      "path": "tools/rules_target_scan_candidate.test.mjs",
+      "sha256": null
+    },
+    {
+      "path": "windows/flutter/generated_plugin_registrant.cc",
+      "sha256": "98c9cab1da5ffb8dd02bc128c35f10e182118eb545f2e78f12049fa69855096d"
+    },
+    {
+      "path": "windows/flutter/generated_plugins.cmake",
+      "sha256": "c3ccbc927f16753a9d2986de7ba06025b2a8b453185ec2cf87d3f0b8e540a477"
+    },
+    {
+      "path": "lib/features/account/data/gateways/equipment_verification_preview.dart",
+      "sha256": "11dac27379dd82d1b9395da3910a410232638a2715abb0bb7a6e3405346eadd7"
+    },
+    {
+      "path": "test/features/account/data/gateways/equipment_verification_preview_test.dart",
+      "sha256": "5c36ce8630e4e590ab07d3a2eb184e902b13ada96efea2304735dca9d3748747"
+    }
+  ]
+}
