@@ -29,3 +29,6 @@ POST/PATCH에서 이름 미입력/빈 값으로 자동 이름을 선택할 수 �
 ## 현재 서버 확정 계약·다음 연결 (2026-10-14)
 
 Backend #4의 구현/원본 계약d3cb697은 dev에 통합됐다. POST 생략/빈값/공백은 label="", PATCH 생략은 유지/명시 빈값은 clear, null은 거절하며 응답은 저장 label이다. 전체 GET created_at ASC·registration_id ASC 순서의 모든 부계정(지정 이름 포함)을 세어 빈값에 부계정 N, 본계정의 빈값에 메인 계정을 표시한다. 페이지별 번호 초기화와 본부전환의 이름값 교환은 하지 않는다. 앞선 인계 대기 기록은 과거 상태이고 Flutter의 새 wire/DTO/표시 연결은 아직 미구현이다. 상세 순서/범위/검증·완료 조건은 NEXT_WORK에 둔다.
+## Flutter 새 계약 연결
+
+소비 SHA d3cb697bb6ebb988b63bd99c588bc1b64a93650d, 원본 snapshot contracts/issue4-d3cb697.openapi.json(SHA256 ec4e6b785dffa28cf89a9ba1400a86e11cef5804ecdaf4fe409bee2e26b27d77). 기존 label만 빈값 요청/응답을 허용하고 null/잘못된 타입/40자 초과는 허용하지 않는다. 서버 GET 전체 순서를 AccountLabelPolicy.serverLabels에 전달해 지정 이름 부계정까지 번호에 포함한다. DTO의 저장 label과 UI 표시값을 분리하여 수정란은 저장값만 사용한다. 갱신 안내는 성공/결과수/조회시각, 목록과 수정·삭제·상태 확인은 자동/지정 표시 이름을 사용한다. schema/Router/DI/서버 API 변경 없음.

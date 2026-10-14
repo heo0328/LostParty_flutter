@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../domain/account_read_session.dart';
 import '../../domain/server_account_models.dart';
 import '../../domain/server_account_read_repository.dart';
+import '../../domain/policies/account_label_policy.dart';
 import '../viewmodels/server_account_read_view_model.dart';
 import '../viewmodels/server_registration_view_model.dart';
 import '../widgets/server_accounts_panel.dart';
@@ -74,7 +75,10 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
     _dialogOpen = true;
     final result = await showDialog<(String, bool)>(
       context: context,
-      builder: (_) => _ServerRegistrationEditDialog(account: account),
+      builder: (_) => _ServerRegistrationEditDialog(
+        account: account,
+        displayLabel: _reads.displayLabelFor(account),
+      ),
     );
     _dialogOpen = false;
     if (!mounted || result == null) return;
@@ -94,7 +98,7 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
       builder: (context) => AlertDialog(
         title: const Text('서버 등록 제거'),
         content: Text(
-          '${account.label}의 서버 등록을 제거할까요? 기기에 저장한 캐릭터와 빌드는 유지됩니다.',
+          '${_reads.displayLabelFor(account)}의 서버 등록을 제거할까요? 기기에 저장한 캐릭터와 빌드는 유지됩니다.',
         ),
         actions: [
           TextButton(
@@ -123,13 +127,14 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
     final result = await widget.writes.review();
     if (!mounted || result == null || !widget.writes.canFinishReview) return;
     _dialogOpen = true;
+    final labels = AccountLabelPolicy.serverLabels(result);
     final accepted = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('현재 서버 등록 확인'),
         content: SingleChildScrollView(
           child: Text(
-            '${result.isEmpty ? '등록된 계정이 없습니다.' : result.map((a) => '${a.label} · ${a.isMain ? '메인' : '부계정'} · 캐릭터 ${a.characterCount}명').join('\n')}\n\n'
+            '${result.isEmpty ? '등록된 계정이 없습니다.' : result.map((a) => '${labels[a.registrationId]} · ${a.isMain ? '메인' : '부계정'} · 캐릭터 ${a.characterCount}명').join('\n')}\n\n'
             '이 목록을 기준으로 이전 요청 확인을 종료할까요? 처리 중인 요청은 나중에 반영될 수 있으므로 같은 동작을 바로 새로 제출하지 마세요.',
           ),
         ),
@@ -230,7 +235,7 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
                     maxLength: 40,
                     decoration: const InputDecoration(
                       labelText: '계정 표시명',
-                      hintText: '비워두면 메인 계정 또는 부계정',
+                      hintText: '비워두면 현재 본·부계정 위치에 따라 표시',
                     ),
                   ),
                   SwitchListTile(
@@ -278,7 +283,7 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            '${a.label} · ${a.isMain ? '메인 계정' : '부계정'}',
+                            '${_reads.displayLabelFor(a)} · ${a.isMain ? '메인 계정' : '부계정'}',
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           Text(serverOwnershipLabel(a.ownershipStatus)),
@@ -337,8 +342,12 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
 }
 
 class _ServerRegistrationEditDialog extends StatefulWidget {
-  const _ServerRegistrationEditDialog({required this.account});
+  const _ServerRegistrationEditDialog({
+    required this.account,
+    required this.displayLabel,
+  });
   final ServerAccountRegistration account;
+  final String displayLabel;
   @override
   State<_ServerRegistrationEditDialog> createState() =>
       _ServerRegistrationEditDialogState();
@@ -363,14 +372,17 @@ class _ServerRegistrationEditDialogState
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('서버 계정 수정'),
+    title: Text('${widget.displayLabel} 수정'),
     content: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         TextField(
           controller: label,
           maxLength: 40,
-          decoration: const InputDecoration(labelText: '표시명'),
+          decoration: const InputDecoration(
+            labelText: '표시명',
+            helperText: '비워두면 현재 본·부계정 위치에 따라 표시합니다.',
+          ),
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,

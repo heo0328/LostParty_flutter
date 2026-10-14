@@ -173,7 +173,7 @@ class ServerRegistrationViewModel extends ChangeNotifier {
       'POST',
       {
         'lookup_character_name': previewName!,
-        'label': label.trim().isEmpty ? (isMain ? '메인 계정' : '부계정') : label,
+        'label': label,
         'is_main': isMain,
       },
       {},
@@ -212,7 +212,11 @@ class ServerRegistrationViewModel extends ChangeNotifier {
     if (!canWrite) return;
     try {
       if (body.containsKey('label')) {
-        body['label'] = _text(body['label'] as String, 40);
+        final label = (body['label'] as String).trim();
+        if (label.runes.length > 40) {
+          throw const AccountReadException('INVALID_REQUEST');
+        }
+        body['label'] = label;
       }
       _pending = _RegistrationCommand(
         accountReadScope(session),
@@ -286,7 +290,7 @@ class ServerRegistrationViewModel extends ChangeNotifier {
         _retryAt = null;
         notice = refreshed == null
             ? '요청이 처리되었습니다. 현재 상태는 서버 목록에서 다시 확인해 주세요.'
-            : '정보 갱신 완료 · ${refreshed.registration.label}\n'
+            : '정보 갱신 완료\n'
                   '새 캐릭터 ${refreshed.addedCount}명 · 확인 필요 ${refreshed.suspectCount}명\n'
                   '서버 조회 시각: ${serverRegistrationTimeLabel(refreshed.registration.serverFetchedAt)}'
                   '${refreshed.requiresRefresh ? '\n추가 정보 갱신이 필요합니다.' : ''}';

@@ -3869,3 +3869,21 @@
 - 사용자 지시로 NEXT_WORK를 다음 단일 구간의 근거·포함/제외·계약/데이터 흐름·순서·회귀·완료 조건으로 재정리했다. Backend d3cb697 새 빈 이름 연결을 우선하고 전투력·장비/활동은 후속으로 둔다. 이름 계약20과 AI_CONTEXT에 최신 인계 상태를 반영했다.
 - 새로 가능: 다음 착수 시 기존 feature/account-backend-registration 재사용 판단부터 새 wire/DTO/전체목록표시·신규인수·Issue회신까지 진행 기준 확인. 기존 코드·등록/로그인 흐름과 확인 결과는 변경하지 않았다. 신규 미확인 실기기 항목은 이름미입력/clear·본부전환/번호이며 아직 실행하지 않았다.
 - 문서만 변경해 내용 검토/diff check 수행, Flutter 테스트/빌드 반복 없음. docs/my-account-backend-phase1에서 관련 문서4개만 커밋·최신 dev 일반 병합·push하고 원격 일치를 확인한다. 기존 실험/백업36개·브랜치 유지, 기능·새Backend요청/테스트·Issue종료·main/배포 변경 없음.
+
+## 2026-10-14 — 서버 빈 이름 계약 Flutter 연결 구현
+
+- 사용자 작업 진행 지시로 기존 feature/account-backend-registration을 dev44d6cde로 fast-forward 재사용. 원본 d3cb697 snapshot/sha256 기록, 기존 스키마 차이는 RegisterIn/PatchIn/RegistrationOut 및 label 정책뿐임을 대조했다.
+- 새로 가능: 서버 빈label 등록/clear·빈응답 DTO·전체 GET 순서 자동 번호, 지정 이름 유지, 목록/수정/삭제·상태확인 표시. 저장값과 표시값 분리, 이름 입력창은 저장label 사용. 기존 공통 AccountLabelPolicy를 사용하며 새 칼럼/DBmigration/이관·이름패턴판별 없음.
+- 보존 확인: 전체1193테스트/lib-test분석0·포맷/diffcheck. 신규7개는 페이지/번호/본부전환/삭제·빈PATCH동일key재시도/빈응답·불량label/다른필수값, 기존 로그인·등록/TTL·204·갱신/세션경계 함께 통과. Router/DI·DB/HTTP추가 없이 계정공통모델/정책 영향 검증으로 전체를 최종1회 실행했다. 기존 실험/백업36개 hash동일.
+- Debug APK33.4초 빌드 성공, 사용자기기설치/조작 없음. 미확인 실기기: 이름미입력등록·지정이름/clear·본부전환·지정이름포함 부계정번호. 이전 등록/재로그인·갱신 통과는 반복 요구하지 않는다. 전투력/장비/활동은 범위 밖.
+- [Issue4 회신6166099894](https://github.com/heo0328/lostparty-backend/issues/4#issuecomment-6166099894) 게시·본문일치 재조회. 소비SHA/자동검증과 실제인수대기·미커밋/미push 상태를 구분했고 새 Backend 작업/테스트는 요구하지 않았다. 새Fluttercommit없음, feature브랜치 유지·dev미반영·미push로 사용자 인수 대기.
+
+## 사용자 인수 완료 (2026-10-14)
+
+사용자가 신규 이름 확인4항목을 전부 정상 작동으로 확인했다. 미입력 등록/자동표시·지정이름/clear·본부전환·지정이름 포함 번호 인수 완료. [Issue4 결과 회신](https://github.com/heo0328/lostparty-backend/issues/4#issuecomment-6166283832) 게시·본문재조회 일치 확인. 코드 변화 없이 전체1193테스트/분석0/debug빌드 결과를 재사용한다. 현재 feature/account-backend-registration의 기능/문서 미커밋·dev미반영·미push, 다음은 Git정리·통합 인계다. 장비/전투력/활동은 후속으로 유지한다.
+
+## 2026-10-14 — 서버 자동 이름 사용자 인수 결과 Git 통합
+
+- 사용자 진행 지시로 구현·snapshot·테스트·관련 문서를 커밋해 dev에 일반 merge·push한다. 전체1193테스트/분석0/debug33.4초 및 신규 이름4흐름 사용자 통과를 재사용하고 코드 변화가 없어 반복 검증하지 않는다. 내용/diff/staged검토와 원격dev 최신 여부를 확인한다.
+- 현재 새로 가능한 서버 빈이름/clear·본부전환/전체목록번호 흐름 완료. 기존 등록/세션/갱신 검증 보존, 미확인 장비·전투력·활동/대표 등은 후속으로 둔다. NEXT_WORK를 전투력 협업 설계 후보로 정리했으며 새API 요청·구현을 시작하지 않았다.
+- 통합 적용 SHA와 소비계약d3cb697을 Backend #4에 회신하고 재조회 확인한다. feature브랜치는 유지/삭제 후보, dev/origin/dev일치·추적변경없음으로 마무리한다. 실험/백업36개 제외, main/운영배포·원격DB 변경 없음.
