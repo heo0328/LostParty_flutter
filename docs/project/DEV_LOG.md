@@ -3763,3 +3763,15 @@
 - 최종 소스는 기존1159테스트/분석0 통과 작업 트리와 byte/줄바꿈 정규화 비교 일치했고 기본 경로 Android debug 빌드·kernel3마커를 확인했다. 코드가 바뀌지 않아 전체 검증을 반복하지 않았다. 문서 diff/스테이징 목록/고정 계약hash와 기존 미추적36개hash를 검증한다.
 - 기존 미추적 실험·백업36개는 커밋/삭제/이동하지 않고 그대로 보존한다. phantom 수정으로 표시되던 raid_cycle_schedule.dart는 실제 diff가 없으며 파일 내용을 변경하지 않는다. 원래 worktree·main·기존 local/remote 브랜치는 삭제하거나 갱신하지 않는다. 순수 관련 문서와 검증된 코드만 통합하고 운영 배포/Backend DB 변경/새 API 쓰기 없음.
 - 현재 작업 feature/account-backend-read는 통합 후 삭제 후보로만 분류하며 자동 삭제하지 않는다. 별도 원본 worktree에는 미커밋 snapshot이 있어 보존/정리 지시 전 그대로 유지한다. 현재 기본 checkout은 dev로 종료하며 추적 변경 없음과 기존 미추적 보존을 구분해서 보고한다.
+
+## 2026-10-14 — 등록 관리 Backend 요청·조회 결과 인계
+
+- 사용자가 지시한 Backend 요청 작업을 사용 한도 중단 뒤 재개했다. 최신 #3의 6161587868 Flutter 결과 요청을 확인하고 [회신/작업 요청](https://github.com/heo0328/lostparty-backend/issues/3#issuecomment-6161970774)을 게시했다. 소비 Backend SHA254cb5d와 Flutter dev 통합3cedd9d·조회 구현6f97190, 1159 자동 검증과 사용자1·2·4 인수, 등록 자료가 필요한3번 및 아직 미연결인 쓰기 범위를 구분했다.
+- 새로 가능해진 흐름: Backend가 다음 등록 관리 구간의 필요 준비와 Flutter 검증 근거를 이슈에서 확인할 수 있다. 기존5개 등록 API 재개발을 요청하지 않고 로컬 실행 버전/0002·서버 Lost Ark key 준비 여부(값 제외)·실 preview/등록 시험 조건·계약 차이가 있을 때만 최소 보완과 변경 SHA 인계를 요청했다. 실제 등록/장비/활동 인수를 완료로 보고하지 않았다.
+- 보존: Flutter 기능 코드·설정·기존 로컬 자료·원본 worktree·미추적 실험/백업을 수정하지 않았다. Backend 코드/DB·운영 배포·자료 초기화·provider 증거 우회는 요청하지 않았다. 서버 키 준비·실 provider와 등록된 캐릭터 화면의 사용자 인수는 후속이다.
+- 검증: 요청 문서/고정 계약·현재 Git 및 최신 댓글 대조, 게시 본문과 body-file 일치 재조회, 문서 diff check. 코드 변경이 없어 Flutter 테스트/analyze/빌드를 반복하지 않았다.
+- 기존 docs/my-account-backend-phase1을 dev3cedd9d로 fast-forward해 재사용했다. 요청17 및 관련 지도/계획/로그는 미커밋·dev 미반영·미push, 브랜치 유지. 이전 구현 구간 dev/origin/dev 통합·push 완료와 이번 문서 상태를 구분한다.
+
+## 2026-10-14 — Backend 요청 문서 통합 승인
+
+사용자가 현재 작업의 커밋·dev 병합·push와 이후 내 계정 디자인 수정을 지시했다. 게시 검증된 요청17과 관련 문서5개만 커밋하며 기존 미추적 실험36개는 제외·보존한다. 순수 문서 diff 검토/diff check를 재사용하고 최신 origin/dev를 확인해 통합한다. 새 화면 작업은 메인 계정→부계정→기타 기능 순서 재배치 완료를 종료 조건으로 별도 목적 브랜치에서 진행한다. Git 최종 SHA/동기화는 실행 결과가 기준이다.
