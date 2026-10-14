@@ -62,7 +62,7 @@ Backend 구현254cb5d/인계406004e의 작업브랜치 게시와 원본 계약�
 | #3 계정 Backend 기반 | Backend254cb5d·보완db0f3ae·dev e807a6f, 자동114개/별도후속10개. Flutter 조회6f97190·등록98ebbff 및 사용자 등록/삭제/재로그인 확인. [서버 완료](https://github.com/heo0328/lostparty-backend/issues/3#issuecomment-6162460687) | 서버 기반 요청을 종료. 장비·활동 Flutter 연결/실provider 인수가 끝났다는 뜻이 아니며 ACCOUNT-01~03으로 명시 이관 |
 | #4 등록관리/빈 이름 | Backend d3cb697/dev a6d25aa, Flutter5fe636e/dev266a7e2·push, 사용자 이름4흐름/등록·삭제·재로그인·갱신 확인. [양측 인계 확인](https://github.com/heo0328/lostparty-backend/issues/4#issuecomment-6166402144) | 요청 완료로 종료. 삭제 후 로컬 보존의 미확인 실인수는 QA-01로 분리 |
 | #5 수동 전투력 | Backend39188d5/dev8775153, Flutter6beb55e/devccc6b23·push, 전체1204/후속국소70·분석0 및 사용자3흐름. [양측 인계 확인](https://github.com/heo0328/lostparty-backend/issues/5#issuecomment-6168169896) | 요청 완료로 종료. 자동 빌드 갱신은 POWER-01, 설정 API는 #6 |
-| #6 회원 나이스단 설정 | [착수 회신6168785700](https://github.com/heo0328/lostparty-backend/issues/6#issuecomment-6168785700), 아직 실제 구현/OpenAPI 게시SHA 미인계 | OPEN 유지, 현재 구간에서 추적 |
+| #6 회원 나이스단 설정 | Backend79255f0/Flutter2e0764f·dev5cee964/push·사용자3흐름완료, [최종회신6170736672](https://github.com/heo0328/lostparty-backend/issues/6#issuecomment-6170736672) | CLOSED. 자동빌드/전체환경복원은POWER-01/RESTORE-01 |
 
 #3은 원문 전체 제품 흐름이 끝난 것으로 판정하지 않는다. 사용자 지시에 따라 완료된 서버 기반 요청을 종료하고 아직 미구현·미인수인 연결 범위를 별도 Flutter 과제로 분리한 것이다. 과거 문서/댓글의 #3/#4/#5 OPEN 유지 문구는 당시 상태 이력이다.
 
@@ -80,4 +80,6 @@ Backend 구현254cb5d/인계406004e의 작업브랜치 게시와 원본 계약�
 | RESTORE-01 / #3/#4/#5/#6 | 동일 로그인 환경 복원: 역할별 저장빌드·선호역할·표시순서/개수 등 서버 저장 범위/형식 미확정 | 현재 서버 제공 항목을 확인해 복원 항목/우선순위·Snapshot 형식/버전·저장 충돌을 사용자와 설계. 확정 구간만 Backend 새 요청. #6 허용값 복원만으로 전체환경복원 완료로 표시하지 않음 |
 | AUTH-01 / 이미 종료한 #2 | 탈퇴/재가입·약관 운영 정책, Android 실기기/release OAuth·HTTPS/운영 인수는 후속. 기본 로그인·유지선택별 재실행·로그아웃 사용자 통과와 구분 | 해당 제품/릴리즈 구간에서 정책·실제 기기/네트워크 장애 인수 범위를 설계하고 필요한 Backend 변경만 별도 요청. 완료된 기본 로그인 인수를 다시 요구하지 않음 |
 
-현재 순서는 POWER-01/#6·RESTORE-01 설계이며, 나머지는 다음 승인 그룹 후보/해당 릴리즈 점검이다. 새 Backend 요청은 과제별 실제 서버 변경·계약 질문이 확정될 때 만들고, 종료한 Issue는 기존 근거 링크로만 사용한다. 종료는 미완료 기능을 완료로 바꾸거나 보류 정책을 없애는 조치가 아니다.
+현재 #6은 완료·종료했고 다음 순서는 DB 재점검24의 복원 범위 확정과 POWER-01/RESTORE-01 설계이며, 나머지는 다음 승인 그룹 후보/해당 릴리즈 점검이다. 새 Backend 요청은 과제별 실제 서버 변경·계약 질문이 확정될 때 만들고, 종료한 Issue는 기존 근거 링크로만 사용한다. 종료는 미완료 기능을 완료로 바꾸거나 보류 정책을 없애는 조치가 아니다.
+
+2026-10-14 전체DB점검의추가후속 DB-03: 격리메모리DB에서FK0·missing캐릭터삭제뒤build/weekly고아행을재현했다. Flutter담당별도최소정합성수정그룹으로영향/삭제경로확인후수정하며이번조사에서코드는변경하지않았다. 상세근거/전체과제는[보고서24](24-database-design-review.md)를따른다.
