@@ -140,7 +140,11 @@ class ServerAccountRegistration {
       ],
     );
     registrationId = _uuid(json['registration_id']);
-    label = _text(json['label']);
+    final rawLabel = json['label'];
+    if (rawLabel is! String || rawLabel.runes.length > 40) {
+      throw const FormatException('Invalid label.');
+    }
+    label = rawLabel;
     isMain = _boolean(json['is_main']);
     version = _integer(json['version']);
     gameAccountId = json['game_account_id'] == null

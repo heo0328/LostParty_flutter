@@ -177,7 +177,7 @@ void main() {
       expect(requests[0].headers.containsKey('Idempotency-Key'), false);
       expect(requests[1].data, {
         'lookup_character_name': 'sample',
-        'label': '메인 계정',
+        'label': '',
         'is_main': true,
       });
       expect(
@@ -198,6 +198,39 @@ void main() {
     expect(requests.length, 1);
     expect(model.failure!.code, 'PREVIEW_EXPIRED');
   });
+  test(
+    'blank PATCH retries identical empty label and accepts empty response',
+    () async {
+      handle = (o, h) {
+        if (requests.length == 1) {
+          h.reject(DioException(requestOptions: o));
+        } else {
+          h.resolve(
+            Response(
+              requestOptions: o,
+              statusCode: 200,
+              data: registrationJson()..['label'] = '',
+            ),
+          );
+        }
+      };
+      await model.edit(account, '   ', false);
+      expect(requests.single.data, {
+        'expected_version': 1,
+        'label': '',
+        'is_main': false,
+      });
+      expect(model.hasPending, true);
+      await model.retry();
+      expect(requests[1].data, requests[0].data);
+      expect(
+        requests[1].headers['Idempotency-Key'],
+        requests[0].headers['Idempotency-Key'],
+      );
+      expect(model.failure, isNull);
+      expect(model.hasPending, false);
+    },
+  );
   for (final scenario in ['duplicate', 'unknown', 'missing', 'null']) {
     test('malformed preview $scenario cannot enable registration', () async {
       final data = preview();

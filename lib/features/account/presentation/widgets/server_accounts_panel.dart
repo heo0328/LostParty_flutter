@@ -105,7 +105,7 @@ class ServerAccountsPanel extends StatelessWidget {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(
-                    '${account.label}${account.isMain ? ' · 본계정' : ' · 부계정'}',
+                    '${viewModel.displayLabelFor(account)}${account.isMain ? ' · 본계정' : ' · 부계정'}',
                   ),
                   subtitle: Text(
                     '${serverOwnershipLabel(account.ownershipStatus)} · '

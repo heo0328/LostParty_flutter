@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../../domain/account_read_session.dart';
 import '../../domain/server_account_models.dart';
 import '../../domain/server_account_read_repository.dart';
+import '../../domain/policies/account_label_policy.dart';
 
 /// Owns only a private read snapshot, never the local account database.
 class ServerAccountReadViewModel extends ChangeNotifier {
@@ -27,6 +28,8 @@ class ServerAccountReadViewModel extends ChangeNotifier {
   int _request = 0;
   (String?, int, bool)? _sessionKey;
   bool get canRead => session.isAuthenticated;
+  String displayLabelFor(ServerAccountRegistration account) =>
+      AccountLabelPolicy.serverLabels(registrations)[account.registrationId]!;
 
   void _onSession() {
     final key = (session.userId, session.generation, session.isAuthenticated);

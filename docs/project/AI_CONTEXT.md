@@ -1,6 +1,6 @@
 # AI CONTEXT — 현재 프로젝트 상태
 
-갱신: 2026-10-14. 기본 경로 D:/dev/projects/lost_party_flutter. 통합 기준 dev. 서버 등록 관리·로컬 빈 이름 자동 표시·정보 갱신 응답/안내 수정은 구현·자동 검증 완료. 사용자가 서버 등록·삭제·재로그인 뒤 원정대 표시 및 최신 갱신 안내 정상 동작을 확인했다. 기존 구현은 dev0427232·협업 규칙2bc70d8에 통합·push 완료했다. 다음 우선 구간은 #4 서버 빈 이름 계약d3cb697의 Flutter 연결이며 현재는 설계·문서만 정리한다. 전투력 수집·갱신 연결은 후속 필요로 기록했으며 구현은 시작하지 않는다. 상세 실행 기준은 [NEXT_WORK](NEXT_WORK.md), 완료 경과는 [DEV_LOG](DEV_LOG.md).
+갱신: 2026-10-14. 기본 경로 D:/dev/projects/lost_party_flutter. 통합 기준 dev. 서버 등록 관리·로컬 빈 이름 자동 표시·정보 갱신 응답/안내 수정은 구현·자동 검증 완료. 사용자가 서버 등록·삭제·재로그인 뒤 원정대 표시 및 최신 갱신 안내 정상 동작을 확인했다. 기존 구현은 dev0427232·협업 규칙2bc70d8에 통합·push 완료했다. #4 서버 빈 이름 계약d3cb697 Flutter 연결 구현과 전체1193테스트/분석0 완료, 신규 이름4흐름 사용자 인수 완료다. 사용자 인수 완료한 결과를 feature/account-backend-registration에서 dev에 통합·push하며 다음 기능 지시를 기다린다. 전투력 수집·갱신 연결은 후속 필요로 기록했으며 구현은 시작하지 않는다. 상세 실행 기준은 [NEXT_WORK](NEXT_WORK.md), 완료 경과는 [DEV_LOG](DEV_LOG.md).
 
 ## 현재 구현과 인수
 
@@ -27,6 +27,6 @@
 
 ## 후속 상태
 
-- 로컬 빈 이름 자동 표시 완료: 기존 label/schema13 사용, 미입력은 현재 본·부계정 위치별 자동 이름, 입력값은 그대로 표시. [이름 계약20](../backend-migration/20-account-auto-label-contract.md). Backend #4 새 빈 이름 계약d3cb697은 게시·dev 통합 완료했고 Flutter 연결은 아직 남아 있다. 우선 작업은 NEXT_WORK를 따른다.
+- 로컬 빈 이름 자동 표시 완료: 기존 label/schema13 사용, 미입력은 현재 본·부계정 위치별 자동 이름, 입력값은 그대로 표시. [이름 계약20](../backend-migration/20-account-auto-label-contract.md). Backend #4 새 빈 이름 계약d3cb697은 게시·dev 통합 완료했고 Flutter 연결 구현·전체1193테스트/분석0 완료이며 실제 이름4흐름도 사용자 정상 확인 완료다. 우선 작업은 NEXT_WORK를 따른다.
 - RefreshOut.registration 응답 처리와 갱신 수/서버 조회 시각 안내 완료, 사용자 정상 동작 확인. [등록 계약19](../backend-migration/19-account-registration-flutter-contract.md).
 - 전투력 표시 UI는 존재하지만 일반 원정대 조회에서 전체 캐릭터 전투력을 수집·갱신하는 연결은 미구현. 서버/로컬 데이터 출처와 후속 범위는 NEXT_WORK에 기록했다. 장비 인증·활동/대표 저장도 후속이며 이번 통합을 #3 전체 완료로 취급하지 않는다.
