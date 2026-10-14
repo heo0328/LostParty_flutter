@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../shared/formatters/korea_time_formatter.dart';
@@ -65,25 +64,13 @@ class _OperatorManualVerificationDetailPageState
       if (mounted) {
         var message = error.message ?? error.code;
         if (error.code == 'permission-denied') {
-          final readiness =
-              await widget.operatorAccessRepository.loadWriteReadiness();
+          final readiness = await widget.operatorAccessRepository
+              .loadWriteReadiness();
           message = '$message\n${readiness.diagnosticSummary}';
         }
         setState(() {
           _message = message;
         });
-      }
-    } on FirebaseException catch (error) {
-      if (mounted) {
-        var message = error.code == 'permission-denied'
-            ? (error.message ?? error.code)
-            : '요청을 처리하지 못했습니다. 네트워크를 확인해 주세요.';
-        if (error.code == 'permission-denied') {
-          final readiness =
-              await widget.operatorAccessRepository.loadWriteReadiness();
-          message = '$message\n${readiness.diagnosticSummary}';
-        }
-        setState(() => _message = message);
       }
     } catch (_) {
       if (mounted) {
@@ -333,10 +320,7 @@ class _OperatorManualVerificationDetailPageState
 }
 
 class _DetailState {
-  const _DetailState.denied()
-    : allowed = false,
-      request = null,
-      review = null;
+  const _DetailState.denied() : allowed = false, request = null, review = null;
 
   const _DetailState.allowed({required this.request, required this.review})
     : allowed = true;

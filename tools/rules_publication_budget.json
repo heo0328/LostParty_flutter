@@ -1,8 +1,0 @@
-{
-  "baselineSourceBytes": 151427,
-  "maximumSourceBytes": 146524,
-  "maximumUserFunctionDepth": 5,
-  "referenceSha256": "e8c13d7b94a11e859cb34256ff5f66d0c46dfd687a550b982d9a25d0a5a54025",
-  "publicationVerified": false,
-  "note": "Preparation removes 2 repeated binding calls required by bug24PrepState and 1 playerId equality protected by affectedKeys. Cross-document coupling retained; local guard only, publication unverified."
-}

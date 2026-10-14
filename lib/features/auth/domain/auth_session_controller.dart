@@ -49,6 +49,20 @@ class AuthSessionController extends ChangeNotifier {
   bool get isBusy =>
       status == AuthStatus.restoring || status == AuthStatus.authenticating;
   String? get userId => _user?.id;
+
+  /// Changes on login/restore/logout, including same-user reauthentication.
+  int get sessionGeneration => _epoch;
+
+  Future<void> rejectSessionResponse(
+    int generation,
+    AuthApiException error,
+  ) async {
+    if (error.status == 401 ||
+        (error.status == 403 && error.code == 'ACCOUNT_DISABLED')) {
+      await _handleFailure(generation, error);
+    }
+  }
+
   bool get remember => _tokens?.session.remember ?? false;
 
   void _emit(AuthStatus value, [String? code]) {

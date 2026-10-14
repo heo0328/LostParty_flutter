@@ -1,4 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/data/repositories/completed_cleanup_journal.dart';
@@ -26,14 +27,20 @@ CompletedOwnershipCleanup request({
   targetIndex: 0,
   actorIndex: 0,
   observedRevision: 3,
-  memberUpdatedAt: Timestamp(12345, 987654321),
+  memberUpdatedAt: DateTime.fromMicrosecondsSinceEpoch(
+    12345987654,
+    isUtc: true,
+  ),
   eventId: event,
   kind: kind,
   successorIndex: 1,
   successorId: 'next',
   successorName: '후임',
   successorClass: '클래스',
-  successorUpdatedAt: Timestamp(98765, 123456789),
+  successorUpdatedAt: DateTime.fromMicrosecondsSinceEpoch(
+    98765123456,
+    isUtc: true,
+  ),
   leaderIndex: 0,
   observedLeaderRevision: 4,
   targetName: '기존 캐릭터',
@@ -41,6 +48,27 @@ CompletedOwnershipCleanup request({
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('legacy journal envelopes are rejected and never replayed', () async {
+    final oldEnvelope =
+        jsonDecode(CompletedCleanupJournal.encode(request()))
+            as Map<String, dynamic>;
+    oldEnvelope['version'] = 1;
+    expect(
+      () => CompletedCleanupJournal.decode(jsonEncode(oldEnvelope)),
+      throwsFormatException,
+    );
+    FlutterSecureStorage.setMockInitialValues({
+      'completed_cleanup_v1/old/event': jsonEncode(oldEnvelope),
+    });
+    expect(await const CompletedCleanupJournal().pending('old'), isEmpty);
+    expect(
+      await const FlutterSecureStorage().read(
+        key: 'completed_cleanup_v1/old/event',
+      ),
+      isNotNull,
+    );
+  });
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
 
   test(
@@ -89,7 +117,10 @@ void main() {
         CompletedCleanupJournal.encode(r),
         CompletedCleanupJournal.encode(original),
       );
-      expect(r.memberUpdatedAt, Timestamp(12345, 987654321));
+      expect(
+        r.memberUpdatedAt,
+        DateTime.fromMicrosecondsSinceEpoch(12345987654, isUtc: true),
+      );
       await first.remove(r);
       expect((await first.pending('old')).single.eventId, 'second');
       expect((await first.pending('other')).single.actorId, 'other');

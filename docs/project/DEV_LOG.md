@@ -3701,3 +3701,65 @@
 - 미추적 실험/백업 파일은 hash 대조로 보존한다. 전체 분석 통과0건이라고 보고하지 않으며 남은3건을 숨기려고 tools 전체 exclude나 사용자 파일 수정을 하지 않았다.
 - 사용자 기기: 안내한4개 인수 전부 통과 기록을 재사용한다. 이번에는 정상 런타임 흐름 변경 없이 테스트/분석 경계만 정리해 중복 기기 테스트를 요청하지 않는다. 신규 업무 API·동일캐릭터 역할 지원·Firebase 최종 SDK 제거·운영 배포는 미구현/미실행이다.
 - Git: 사용자 승인 범위대로 전환·안정화 변경을 의미별 커밋으로 남겨 최신 origin/dev와 병합·push한다. 최종 커밋/동기화는 Git 이력에서 확인하고 별도 실험·백업의 dirty 상태를 분리해 보고한다. main·기존 브랜치는 유지한다.
+
+## 2026-10-14 — 내 계정 Backend 1차 지시서 작성·Issue #3 게시
+
+- 사용자 최신 요청으로 Firebase SDK 제거 전 내 계정 탭 복원을 위한 설계·Backend 구현 요청을 우선했다. dev a52492f의 Repository/DI·로컬 데이터·장비 인증·활동/대표 정책과 #2 확정 계약/최신 인계 댓글을 대조했다.
+- docs/my-account-backend-phase1 생성: 내 계정 Backend 지시서·Issue 게시가 끝나면 종료되는 독립 문서 작업. 기존 계정/인증·분석 브랜치는 다른 완료 범위라 재사용하지 않았고 기존 dirty 실험/백업을 보존했다.
+- 새로 가능해진 흐름: Backend가 13-my-account-backend-phase1-request의 명시적 요구로 계정 등록/summary·서버 장비 challenge/소유권·활동/대표 저장을 단계별 구현/계약 인계할 수 있다. 12개 기능/API 제안과 기본 칼럼·ID/권한/수명·오류·원자성·pytest·기록 방법을 작성했다.
+- 게시: https://github.com/heo0328/lostparty-backend/issues/3 — [API] 내 계정 탭 1차 복원: 원정대 인증·캐릭터 조회·활동 선택 Backend 구현 요청. #1/#2 외 중복 요청 없음 확인 후 새 Issue를 생성했고 제목/본문을 로컬 지시서와 대조했다. 기존 Issue/PR·Backend 코드·DB는 변경하지 않았다.
+- 보존 확인: 비로그인 로컬 기능·캐릭터/빌드/표시순서/토큰, Google 인증6API·내부 principal, 빈 신규 서버 정책. Firebase 과거 ID/사용자·테스터 데이터를 연결하지 않으며 조회/인증/활동 상태를 구분했다. 대표5분·최초seed예외 및 최초 unconfigured·ownership transfer 적용은 Backend 검토 전 제안으로 인계한다.
+- 정확한 REST/DTO/DDL·identity 식별/충돌·provider key 준비·동시 인증/대표·등록 제거 의미는 Backend 검토/계약 인계 필요. 업체 응답/실제 장비 인증·신규 API·Flutter UI 연결은 미구현·미검증이다.
+- 검증: 문서 내용/상대링크·git diff --check, Issue read-back 비교. 문서·Issue만 변경해 Flutter 테스트/analyze·기기 조작을 반복하지 않았다.
+- 현재 계획/문서 지도를 내 계정 Backend 요청 우선으로 갱신했고 Firebase 실행 코드·SDK/플랫폼 제거는 후속으로 남겼다. 문서 미커밋, dev 반영/push 없음; docs/my-account-backend-phase1 유지.
+
+## 2026-10-14 — Backend Issue #3 추가 계약 회신
+
+- 사용자 확인: Firebase 제거 신규 APK에서 로그인·재실행·로그아웃 정상, 로컬 캐릭터 표시. 빌드 편집/저장·다른 OS 인수까지 확대 해석하지 않는다.
+- 추가 요구6159800130을 확인하고 [회신](https://github.com/heo0328/lostparty-backend/issues/3#issuecomment-6159847616) 게시 후 body-file과 게시 본문 일치를 재조회로 검증했다. 전체 settings/page 분리·세 version/revision 일치·expected_roster_revision·409 사용자 재확인, suspect 비자격/재구성·로컬 보존·실 provider 근거 전 자동 missing/불완전 roster 이전 보류 방향을 회신했다. DELETE replay 및 만료 challenge 현재 상태 복구 보완 요청. key 준비·실 provider는 미확인.
+- 새로 가능: Backend 추가 정의에 Flutter 소비 방향 전달. 기존 로그인·로컬 표시 보존은 사용자 확인; 신규 #3 API/권한/실 provider 인수는 아직 안 됐다.
+- 문서만 기록, diff check·게시 본문 검증. 코드/설정/Backend DB 변경·Flutter 테스트 반복·commit/dev 통합/push 없음. docs/my-account-backend-phase1 미커밋 유지, 별도 Firebase 작업 트리도 미커밋 유지.
+
+## 2026-10-14 — Backend 인계 후 Flutter 대응 작업 순서 확정
+
+- 사용자 지시로 Backend 협의 구현 뒤 로컬 대응 계획을 기록했다. #3 최신 댓글·원격 dev OpenAPI 확인: 인증6API/health만 있고 업무 API/구현 SHA는 아직 미인계. 기존 AuthSessionController의 accessToken/refresh와 BackendApp의 로컬 AccountRepository/Router/DI를 조사했다.
+- 14-my-account-flutter-integration-plan에 조회→등록→인증→활동/대표 순서, 첫 단일 그룹의 경계·권한·pagination/revision·private 세션 격리·기존 로컬 보존·검증을 기록하고 NEXT_WORK를 교체했다. 조회 계약이 먼저 인계되면 전체 Backend 완성을 기다리지 않고 해당 그룹부터 진행한다.
+- 새로 가능: Backend 인계 후 Flutter 실행 범위/순서가 명확해짐. 보존: 기능 코드·SDK 제거 작업 트리·로컬 원본·별도 실험 변경 없음. 실제 #3 연결/기기 확인 미실행. 문서 검토·diff check만 실행, Flutter 테스트 반복 없음.
+- docs/my-account-backend-phase1 미커밋 유지, dev 미반영·미push. Backend 댓글 추가 게시나 자동 작업 예약은 하지 않았다.
+
+## 2026-10-14 — Backend #3 결과 확인·테스트 준비
+
+- 이슈6160605157의 로컬12업무API/11테이블·114pytest 보고를 확인, Backend 보고와 직접 수행을 분리했다. 미커밋/미push·원격dev계약은 기존인증만이라 #2를 업무DTO로 대체하지 않는다.
+- 직접읽기 확인: Windows localhost:8000 health200, 미인증GET등록401, /openapi.json404. WSL distro 조회는 sandbox 접근거절로 반환돼 재시도/설정변경하지 않았다. 로컬Backend checkout 두 후보경로 없음. 소스/개발문서를 확보했다고 주장하지 않는다.
+- 새로 가능: 테스트 매트릭스·준비조건·실행순서/안전한결과기록 정의(15-my-account-test-readiness). 코드/Backend DB 변경·로그인/Bearer 입력·업무쓰기·기기조작 없음. 원격/로컬계약 인수와 Flutter조회연결이 다음실행 조건이다.
+- 보존: 기존로그인/로컬자료/Firebase제거 작업트리·실험 변경없음. 실provider pending증거/roster보류/키없는503을 예상제한으로 명시. 업무API기기인수 미실행. 문서diff검사만, Flutter기존테스트 반복없음.
+- docs/my-account-backend-phase1 미커밋/dev미반영·미push, 브랜치유지. Issue 댓글 추가게시 없음.
+
+## 2026-10-14 — 에뮬레이터 서버 영역 부재: 기본 실행 경로 정렬
+
+- 사용자화면:API토큰카드부터표시,서버에등록한계정영역없음. 기본source에주입없고기본APKkernel에서ServerAccountsPanel/DioBackendAccountReadApi/서버문구3마커모두없음,조회APK에는모두존재함을직접확인. 설치기기APK는읽거나조작하지않아단정하지않는다. 별도worktree와기본경로차이를충분히안내하지않은실행정렬문제다.
+- 최소복구:기존feature/account-backend-read를기본workspace로재배치(조회worktree는동일HEAD detached,파일보존). 동일base·대상diff충돌검사후검증된source/제거결과개별복제. 새조회파일/테스트/고정계약추가,기존문서/미추적실험은보존. ignored.dart_tool에이전문서4개·미추적hash보관.
+- 새로가능:기본프로젝트에서빌드/실행해도내계정API토큰카드위에서버등록영역연결. Domain/UI조회로직은검증된원본과byte일치,소스테스트1159/분석0기존결과재사용. 로컬DB/키·원격DB·Google설정변경없음. 앱삭제뒤서버조회는회원등록관계에따르며기기자료자동복구/옛Firebase이관과구분한다.
+- 미확인:기본새APK의기기화면/신규Backend회원등록조회. 사용자에게카드존재1항목부터확인하도록명확히전달한다. 기기설치/삭제/ADB조회·인증된서버요청없음. Git미커밋/dev미반영·미push유지.
+
+- 복구최종검증:기본경로Androiddebug빌드61.9초성공,APKkernel기능3마커존재·Firebase플러그인부재,기존미추적39개hash보존확인. 식별쉬운동일APK사본 lostparty-account-read-debug.apk 제공,표준app-debug.apk와SHA256일치. 소스논리수정없어기존1159검증재사용·diffcheck.
+
+## 2026-10-14 — 서버 계정 조회 구간 사용자 인수 1·2·4 통과
+
+- 사용자 보고: 로그인하면 서버 등록 없음 안내, 로그아웃하면 로그인 후 서버 계정을 볼 수 있다는 안내. 안내한 1·2·4번 모두 정상 확인했다. 기본 프로젝트 실행 경로 복구 후 서버 영역 표시와 로그인/guest 전환의 실기기 확인이다.
+- 새로 가능해진 흐름: 신규 회원의 서버 빈 등록 목록을 앱에서 정상 조회하고 로그인 상태에 따라 서버 영역을 전환한다. 사용자가 1번을 포함해 통과라고 확인한 로컬 화면 보존을 기록한다. 빌드 편집/저장, 키 보존, 유지 선택 재실행까지 새로 수동 통과했다고 확대 해석하지 않는다.
+- 3번 등록된 계정의 전체 캐릭터 화면은 등록이 없어 미확인이다. Backend에는 고정 계약의 preview/등록 CRUD API가 있으며 Flutter 등록 관리 UI/쓰기 연결이 아직 없다. 'Backend 등록 시스템 없음'으로 기록하지 않고 다음 등록 관리 구간에서 계정 생성 후 확인한다.
+- 자동 검증은 기존 조회 소스1159테스트/분석0 결과와 기본경로 APK 빌드 성공·기능마커 검증을 재사용한다. 이번에는 코드 변경 없이 문서만 반영, diff check만 실행한다. 서버 DB/설정·기기 조작·Issue 댓글 게시·commit/dev 통합/push 없음.
+- 현재 조회 구간은 구현·자동 검증·가용한 사용자 1·2·4 인수 완료. 등록 자료가 필요한 3번은 후속 인수로 분리한다. Git은 feature/account-backend-read 미커밋·dev 미반영·미push 상태이며 통합 전 브랜치를 유지한다.
+
+## 2026-10-14 — Firebase 제거 복구 지점 커밋
+
+사용자가 문서 최신화·dev 병합·push를 승인했다. 검증된 선행 Firebase 제거/UTC 공통 정책 이식·플랫폼/Rules 도구 정리를 현재 feature/account-backend-read에서 별도 의미의 커밋으로 분리한다. 제거 원본은 dev a52492f, source/test 원본 복구 목록은 FIREBASE_REMOVAL_MANIFEST, 후속 조회 기반 hash는 ACCOUNT_READ_PREREQUISITE다. Google OAuth/비밀 설정·로컬 DB·기기 설치/원격 DB 변경 없음. 원본 제거1134테스트 및 최종 조회1159검증은 각 당시 결과로 구분하며 현재 코드 동일성과 사용자 인수를 근거로 재사용한다.
+
+## 2026-10-14 — 완료 구간 문서 최신화·dev 통합 마감
+
+- 사용자 명시 승인에 따라 Firebase 제거 a160c6f, 서버 계정 조회 6f97190을 별도 의미의 커밋으로 기록하고 요구·연결/테스트 준비·인수 문서를 최신화한다. 원격 origin/dev는 시작 기준 a52492f와 같았다. 문서 커밋 후 최신 원격을 다시 확인해 feature/account-backend-read를 dev에 일반 merge하고 push한다. 최종 결과는 Git HEAD/dev/origin/dev와 종료 보고로 확인한다.
+- 새로 가능해진 흐름은 Firebase SDK 없는 BackendApp과 로그인 회원의 서버 등록/전체 캐릭터/settings 읽기다. 사용자1·2·4 통과, 서버 등록API는 구현돼 있지만 Flutter 등록/인증/활동쓰기는 다음 그룹이며 3번 실제 등록 캐릭터는 후속 인수다.
+- 최종 소스는 기존1159테스트/분석0 통과 작업 트리와 byte/줄바꿈 정규화 비교 일치했고 기본 경로 Android debug 빌드·kernel3마커를 확인했다. 코드가 바뀌지 않아 전체 검증을 반복하지 않았다. 문서 diff/스테이징 목록/고정 계약hash와 기존 미추적36개hash를 검증한다.
+- 기존 미추적 실험·백업36개는 커밋/삭제/이동하지 않고 그대로 보존한다. phantom 수정으로 표시되던 raid_cycle_schedule.dart는 실제 diff가 없으며 파일 내용을 변경하지 않는다. 원래 worktree·main·기존 local/remote 브랜치는 삭제하거나 갱신하지 않는다. 순수 관련 문서와 검증된 코드만 통합하고 운영 배포/Backend DB 변경/새 API 쓰기 없음.
+- 현재 작업 feature/account-backend-read는 통합 후 삭제 후보로만 분류하며 자동 삭제하지 않는다. 별도 원본 worktree에는 미커밋 snapshot이 있어 보존/정리 지시 전 그대로 유지한다. 현재 기본 checkout은 dev로 종료하며 추적 변경 없음과 기존 미추적 보존을 구분해서 보고한다.

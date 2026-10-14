@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_raid_listing_document.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_atomic_write_plan.dart';
@@ -276,7 +275,7 @@ void main() {
       'currentCycleKey': '2026-09-09',
       'targetCycleKey': '2026-09-09',
       'currentCycleStatus': 'completed',
-      'completedAt': Timestamp.fromDate(DateTime.utc(2026, 9, 10)),
+      'completedAt': (DateTime.utc(2026, 9, 10)).toUtc(),
       'completedByPlayerId': 'player-0',
       'continueTogether': true,
       'manualRecruitmentEnabled': false,
@@ -288,8 +287,8 @@ void main() {
     };
     final applied = {
       ...plan.recruitmentPatch,
-      'cycleStartedAt': Timestamp.fromDate(next.nextCycleStartedAt!),
-      'cycleEndsAt': Timestamp.fromDate(next.nextCycleEndsAt!),
+      'cycleStartedAt': (next.nextCycleStartedAt!).toUtc(),
+      'cycleEndsAt': (next.nextCycleEndsAt!).toUtc(),
     };
     final listing = partyRaidListingDocument(
       currentRecruitment: current,
@@ -300,8 +299,8 @@ void main() {
     expect(listing, {...current, ...applied});
     expect(listing['currentCycleKey'], '2026-09-16');
     expect(listing['targetCycleKey'], '2026-09-16');
-    expect(listing['cycleStartedAt'], isA<Timestamp>());
-    expect(listing['cycleEndsAt'], isA<Timestamp>());
+    expect(listing['cycleStartedAt'], isA<DateTime>());
+    expect(listing['cycleEndsAt'], isA<DateTime>());
     expect(listing['currentCycleStatus'], 'active');
     expect(listing['completedAt'], isNull);
     expect(listing['completedByPlayerId'], isNull);

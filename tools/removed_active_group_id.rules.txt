@@ -1,4 +1,0 @@
-    function removedActiveGroupId(previousIds, newIds) {
-      let removedIds = previousIds.removeAll(newIds);
-      return removedIds.size() == 1 ? removedIds[0] : '';
-    }

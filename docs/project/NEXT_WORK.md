@@ -1,31 +1,27 @@
-# NEXT WORK — Firebase 실행 코드·SDK·플랫폼 설정 최종 제거
+# NEXT WORK — 서버 계정 등록 관리 연결
 
-2026-10-14. 상태: 다음 구간 기획·실행 대기. 직전 테스트 전환/안정화는 DEV_LOG와 [분류 대장](TEST_TRANSITION_INVENTORY.md)에 기록했다. 사용자 수동4항목 통과·전체1134테스트 통과. 추적 활성 lib/test/tool 분석 진단0, 전체 분석은 미추적 실험3info가 남는다.
+2026-10-14. 기본 프로젝트 D:/dev/projects/lost_party_flutter, 통합 기준 dev. 첫 조회 그룹 구현·자동 검증 및 사용자 1·2·4 인수 완료. 상세 완료 이력은 DEV_LOG, 고정 조회 계약은 [계약16](../backend-migration/16-account-read-flutter-contract.md).
 
-## 목표와 원칙
+## 다음 그룹의 목표와 범위
 
-신규 BackendApp과 로컬 기능·Google Credential Manager를 보존하면서 폐기 Firebase 실행 경로/SDK/플랫폼 결합을 제거한다. 기존 Firebase 사용자·서버 데이터·테스터 자료는 이관하지 않는다. 로컬 계정·캐릭터·빌드·Lost Ark 키를 파괴하거나 신규 회원 소유로 승계하지 않는다.
+[연결 계획14](../backend-migration/14-my-account-flutter-integration-plan.md)의 2번 등록 관리: 캐릭터명 preview → 본/부계정 등록 → 서버 목록에서 등록 캐릭터 확인 → label/본계정 수정·등록 제거·요약 갱신. Backend 구현254cb5d/인계406004e와 원본 contracts/issue3-254cb5d.openapi.json을 사용한다. 서버 API는 구현됐으며 Flutter의 등록 화면·쓰기 adapter가 후속 대상이다.
 
-Google 로그인에 사용하는 기존 Google Cloud/OAuth 프로젝트·Android/Web client 등록은 유지한다. Firebase SDK 제거와 Google OAuth 프로젝트 삭제는 별개다. 콘솔·원격 데이터/제공자 설정을 이번 앱 정리 승인으로 삭제하지 않는다.
+조회 인수 후 사용자가 문서 정리·dev 병합·push를 승인했다. 이번 마감에서 신규 등록 기능 코드는 작성하지 않았다. 다음 진행 시 API 원본 DTO/오류·Repository·세션·멱등 수명을 조사하고 구체적 설계를 먼저 보완한 뒤 단일 그룹으로 연결한다.
 
-## 포함·제외
+## 보호와 구현 전 확인
 
-포함 후보: lib/main.dart의 미사용 MyApp/구 Router·initializer, Firestore adapter·DTO·binding과 SDK 의존성, 폐기 Firebase 전용 tools/배포 실행 경로, Android/iOS 등 Firebase 플랫폼 설정·생성 파일·pubspec/lock. 직접 참조와 실제 사용처를 확인해 파일별 제거/유지/분리 계획을 먼저 확정한다.
+- 로컬 계정/캐릭터/빌드/키와 서버 UUID·등록 관계를 분리한다. 로컬 자료를 자동 등록하거나 인증 증거로 제출하지 않는다.
+- preview는 인증/소유권·활동 생성이 아니다. 등록 후 미인증 상태를 표시하고 본계정 변경·version/삭제 의미를 기존 계약으로 소비한다.
+- Idempotency-Key와 payload를 같은 사용자/동작·재전송 동안 유지한다. 응답 유실/REQUEST_IN_PROGRESS/TTL·hash 충돌에서 자동 새 key 쓰기를 하지 않고 동일 요청 복구/GET으로 판별한다.
+- 401 세션과 업무403을 구분하고 로그아웃/같은 회원 재로그인/이전 요청 응답을 격리한다. 기존 GET·빈 목록·guest 안내를 보존한다.
+- provider key가 없으면 외부 조회에503 UPSTREAM_UNAVAILABLE가 예상된다. 준비 여부는 안전한 방식으로 확인하고 값을 Issue/로그에 출력하거나 Flutter 개인 키를 서버로 자동 업로드하지 않는다.
 
-제외: 원격 Firebase 프로젝트/데이터·OAuth client 삭제, Backend 업무 API 구현, 동일캐릭터 역할 변경 신규 지원, DB 초기화/마이그레이션, 운영 배포·릴리즈·main 통합, 기존 미추적 실험/백업의 일괄 삭제.
+제외: 장비 인증/소유권 이전·활동/대표 PUT는 다음 별도 그룹, Backend DB/API 변경·배포·데이터 이관/초기화·기기 설치/조작·기존 실험 변경.
 
-## 구현 전 조사와 순서
+## 후속 검증과 현재 Git
 
-1. 최신 dev·기존 목적 브랜치·미커밋 소유를 확인한다. 현재/기존 목적 브랜치가 적합하면 재사용하며 dev에서 직접 수정하지 않는다.
-2. Firebase import·DI/Router/SDK·Gradle/플랫폼·도구 참조를 현재 호출 경로와 대조한다. 기존 코드가 사용 중이라는 이유만으로 폐기를 미결정으로 되돌리지 않되, 공통 기능과 혼합된 정책을 임의 삭제하지 않는다.
-3. 대장의 이식 대기5파일과 Firebase 타입을 소비하는 공통 정책을 재검토한다. 필요한 정책은 순수 Domain/새 DTO 경계로 분리하며 의미를 유지한다. 새 업무 계약이 없으면 추측 DTO/API를 구현하지 않고 대체 검증 책임을 기록한다.
-4. 제거 순서·영향 파일·회귀 보호·완료 조건을 기록한 뒤 코드·의존성·플랫폼 설정을 정리한다. Google nonce bridge·client ID·origin별 세션 저장·로컬 DB/토큰 경계는 유지한다.
-5. 최종 format·diff, 전체 flutter test/analyze와 Android 컴파일을 영향에 맞게 확인한다. 설치·기기 조작은 사용자가 수행하며 코드 변경 없는 수동 통과 항목을 반복 요청하지 않는다.
-6. 문서·실행 명령을 최신화하고 사용자 승인된 Git 흐름에 따라 dev 통합·push 결과와 별도 미추적 실험 상태를 보고한다.
+자동 검증은 멱등 요청 고정·응답 유실/충돌·회원 변경의 늦은 결과·실패 시 서버/로컬 성공 위장 방지에 집중한다. 등록 UI 연결 후 사용자가 신규 등록·수정·제거와 로컬 보존을 확인한다. 이전 조회 3번(등록 계정의 캐릭터 화면)은 등록이 생긴 후 그 구간의 인수로 확인한다.
 
-## 보호·완료 조건
+현재 사용자 확인: 로그인 서버 빈 목록, 로그아웃 로그인 안내, 1·2·4 통과. 기존 조회 소스 전체1159테스트·분석0, 기본경로 APK 빌드/기능마커 확인은 완료했다. 이번 문서만 변경하므로 Flutter 검증은 반복하지 않는다.
 
-- 비로그인 로컬 기능, 선택형 로그인 유지·복원/로그아웃, 보호 기능 안내, 시작 배경·debug URL, release HTTPS 경계가 유지된다.
-- 신규 실행·빌드의 Firebase SDK/초기화 참조가 제거되고 retained 테스트가 공통 정책을 검증한다. Firebase 제거와 모집/그룹 API 구현 완료를 혼동하지 않는다.
-- 같은 캐릭터 반대 역할은 제품 요구로 유지하되 현재 폐기 writer에서 미지원이다. Backend 동일 state 원자 update 설계와 함께 구현해야 하며 이 SDK 정리 구간에서 지원 완료로 처리하지 않는다.
-- 원격 설정/데이터·Google 등록과 기존 로컬 DB를 삭제하지 않는다. 필요한 사용자 기기 확인과 미추적 분석 한계는 별도 기록한다.
+기준 구현 커밋: Firebase 제거 a160c6f, 서버 조회 6f97190. 사용자 승인으로 현재 문서까지 커밋한 뒤 dev에 병합·push하는 마감 범위다. 최종 dev/origin/dev 일치는 Git에서 확인한다. 다음 등록 작업은 최신 dev와 목적 브랜치·권한 계약을 다시 확인한 뒤 진행한다. 기존 미추적 실험36개와 원본 작업 트리는 보존하며 다음 기능 승인이나 Git 통합으로 자동 삭제하지 않는다.

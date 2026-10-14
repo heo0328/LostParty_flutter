@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 /// An authenticated availability record contains no participation or completion.
 /// This parser classifies stored data; ownership is checked separately.
 class RaidStateAvailability {
@@ -54,9 +52,9 @@ class RaidStateAvailability {
         RegExp(
           r'^\d{4}-\d{2}-\d{2}$',
         ).hasMatch(data['guardCycleKey'] as String) &&
-        start is Timestamp &&
-        end is Timestamp &&
-        end.toDate().difference(start.toDate()) == const Duration(days: 7) &&
-        data['guardCheckedAt'] is Timestamp;
+        start is DateTime &&
+        end is DateTime &&
+        end.difference(start) == const Duration(days: 7) &&
+        data['guardCheckedAt'] is DateTime;
   }
 }

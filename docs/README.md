@@ -4,6 +4,13 @@
 
 ## 백엔드 이전 사전 분석
 
+- [현재 Flutter 서버계정 조회](backend-migration/16-account-read-flutter-contract.md): 기본프로젝트실행경로·고정계약·서버/로컬분리·API카드인수.
+
+
+- [내 계정 테스트 준비](backend-migration/15-my-account-test-readiness.md): Backend 결과·직접 smoke·자동/사용자/provider 검증 범위와 현재 제한.
+- [내 계정 Flutter 연결 계획](backend-migration/14-my-account-flutter-integration-plan.md): Backend #3 인계 후 조회·등록·인증·활동 설정 연결 순서 및 첫 구현 그룹.
+- [내 계정 Backend 1차 작업 지시서](backend-migration/13-my-account-backend-phase1-request.md): 등록/캐릭터 조회·장비 인증·활동/대표 선택 API 및 서버 검증·인계 요청. 계약 경로/DDL는 Backend 검토 전 제안.
+
 - [빈 데이터 신규 서버 정책·설계](backend-migration/09-migration-decisions.md): 기존 사용자/데이터 이관 없음 확정. 10 서버 구조·11 인증/권한·12 첫 구현 패키지 연결. endpoint/DTO/SQL 최종 계약은 별도 backend 저장소가 소유한다.
 
 - [백엔드 이전 분석 문서 지도](backend-migration/00-overview.md): dev e24baab 기준 Firebase 호출 전수·Firestore 모델·인증/권한·구독·화면·API 기능 요구·위험·단계 계획 9문서. 분석/문서화 전용이며 서버 endpoint/SQL schema·운영 데이터/배포 상태를 확정하지 않는다.
@@ -18,8 +25,8 @@
 
 ## 이번 변경과 테스트 안내
 
-- [현재 다음 작업](project/NEXT_WORK.md): Firebase 실행 코드·SDK·플랫폼 설정 최종 제거 조사와 회귀 보호 기준.
-- [파일별 테스트 전환 대장](project/TEST_TRANSITION_INVENTORY.md): Firebase 테스트 제거 근거와 공통 검증 보존·안정화 결과. 전체1134테스트 통과, 수동4항목 통과; 완료 이력은 DEV_LOG.
+- [현재 다음 작업](project/NEXT_WORK.md): 서버 조회 1·2·4 인수 완료 후 Flutter 등록 관리 연결 준비.
+- [파일별 테스트 전환 대장](project/TEST_TRANSITION_INVENTORY.md): Firebase 테스트 제거 근거와 공통 검증 보존·안정화 결과. 제거 구간1134테스트와 조회 연결1159테스트 통과, 조회 사용자1·2·4 통과. 등록자료가 필요한3번은 후속 인수; 상세 이력은 DEV_LOG.
 
 
 

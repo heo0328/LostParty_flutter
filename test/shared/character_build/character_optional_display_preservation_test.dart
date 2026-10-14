@@ -1,10 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/shared/character_build/character_optional_display_preservation.dart';
 
 void main() {
   test('유효한 combatPower와 buildIntegritySnapshot을 보존한다', () {
-    final checkedAt = Timestamp.fromDate(DateTime.utc(2026, 9, 11));
+    final checkedAt = (DateTime.utc(2026, 9, 11)).toUtc();
     final preserved = preservedOptionalCharacterDisplayFields({
       'characterName': '캐릭터',
       'combatPower': 320000.5,
@@ -37,16 +36,14 @@ void main() {
           'status': 'broken',
           'issueCodes': <String>[],
           'role': 'dealer',
-          'checkedAt': Timestamp.fromDate(DateTime.utc(2026, 9, 11)),
+          'checkedAt': (DateTime.utc(2026, 9, 11)).toUtc(),
           'catalogVersion': null,
         },
       }),
       isEmpty,
     );
     expect(
-      preservedOptionalCharacterDisplayFields({
-        'combatPower': -1,
-      }),
+      preservedOptionalCharacterDisplayFields({'combatPower': -1}),
       isEmpty,
     );
   });
@@ -70,9 +67,6 @@ void main() {
       },
     });
     expect(onlyIntegrity.containsKey('combatPower'), isFalse);
-    expect(
-      (onlyIntegrity['buildIntegritySnapshot'] as Map)['status'],
-      'clean',
-    );
+    expect((onlyIntegrity['buildIntegritySnapshot'] as Map)['status'], 'clean');
   });
 }

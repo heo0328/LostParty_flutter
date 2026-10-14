@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/game_account_ownership_snapshot.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/raid_state_availability.dart';
@@ -16,9 +15,9 @@ void main() {
     'guardRoomRevision': 8,
     'guardCycleKey': '2026-10-07',
     'guardSlotIndex': 7,
-    'guardCycleStartedAt': Timestamp.fromDate(start),
-    'guardCycleEndsAt': Timestamp.fromDate(start.add(const Duration(days: 7))),
-    'guardCheckedAt': Timestamp.fromDate(start),
+    'guardCycleStartedAt': (start).toUtc(),
+    'guardCycleEndsAt': (start.add(const Duration(days: 7))).toUtc(),
+    'guardCheckedAt': (start).toUtc(),
   };
   final owner = GameAccountOwnershipSnapshot.inspect(
     playerId: 'owner',
@@ -45,7 +44,7 @@ void main() {
         {'revision': 1},
         {'guardCheckedAt': null},
         {'guardSlotIndex': 8},
-        {'guardCycleEndsAt': Timestamp.fromDate(start)},
+        {'guardCycleEndsAt': (start).toUtc()},
       ]) {
         expect(RaidStateAvailability.isStub({...stub(), ...patch}), isFalse);
       }

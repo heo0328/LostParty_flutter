@@ -314,7 +314,7 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
     );
     if (confirmed != true || !mounted || _notifying) return;
     setState(() => _notifying = true);
-    _message('Firebase 알림 서버 연결 후 사용할 수 있습니다.');
+    _message('알림 서버 연결 후 사용할 수 있습니다.');
     if (mounted) setState(() => _notifying = false);
   }
 

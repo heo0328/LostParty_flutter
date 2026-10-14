@@ -40,6 +40,7 @@ class MyAccountPage extends StatefulWidget {
     this.weeklyRaidClaimCommandRepository,
     this.manualCharacterRefreshRunner,
     this.showServerOwnership = true,
+    this.serverAccountsSection,
     super.key,
   });
 
@@ -58,6 +59,7 @@ class MyAccountPage extends StatefulWidget {
   final WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository;
   final ManualCharacterRefreshRunner? manualCharacterRefreshRunner;
   final bool showServerOwnership;
+  final Widget? serverAccountsSection;
 
   @override
   State<MyAccountPage> createState() => _MyAccountPageState();
@@ -417,6 +419,10 @@ class _MyAccountPageState extends State<MyAccountPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (widget.serverAccountsSection != null) ...[
+                widget.serverAccountsSection!,
+                const SizedBox(height: 12),
+              ],
               if (_viewModel.isLoadingTokenStatus)
                 const LinearProgressIndicator(),
               _buildTokenStatusPanel(context),

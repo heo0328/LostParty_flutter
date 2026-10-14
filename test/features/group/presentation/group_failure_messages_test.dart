@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lost_party/features/group/data/repositories/group_command_runner.dart';
 import 'package:lost_party/features/group/domain/entities/group_create_result.dart';
 import 'package:lost_party/features/group/domain/entities/group_join_command.dart';
 import 'package:lost_party/features/group/domain/entities/group_relation.dart';
@@ -120,27 +119,6 @@ void main() {
     });
   });
 
-  group('groupFirebaseFailure', () {
-    test('permission-denied / failed-precondition / unavailable을 구분한다', () {
-      expect(
-        groupFirebaseFailure('permission-denied'),
-        GroupJoinFailure.permissionDenied,
-      );
-      expect(
-        groupFirebaseFailure('failed-precondition'),
-        GroupJoinFailure.revisionConflict,
-      );
-      expect(
-        groupFirebaseFailure('unavailable'),
-        GroupJoinFailure.temporarilyUnavailable,
-      );
-      expect(
-        groupFirebaseFailure('aborted'),
-        GroupJoinFailure.temporarilyUnavailable,
-      );
-    });
-  });
-
   group('groupCreateFailureMessage', () {
     test('서버 Character 문서 소실을 일반 캐릭터 검증 실패와 구분한다', () {
       expect(
@@ -198,10 +176,7 @@ void main() {
         createdAt: DateTime(2019),
         updatedAt: DateTime(2019),
       );
-      expect(
-        groupRequestStatusLabel(relation, now: DateTime(2026)),
-        '만료',
-      );
+      expect(groupRequestStatusLabel(relation, now: DateTime(2026)), '만료');
       expect(
         isActionableGroupInvitation(relation, now: DateTime(2026)),
         isFalse,
@@ -221,10 +196,7 @@ void main() {
         createdAt: DateTime(2026),
         updatedAt: DateTime(2026),
       );
-      expect(
-        groupRequestStatusLabel(relation, now: DateTime(2026)),
-        '대기 중',
-      );
+      expect(groupRequestStatusLabel(relation, now: DateTime(2026)), '대기 중');
       expect(
         isActionableGroupInvitation(relation, now: DateTime(2026)),
         isTrue,

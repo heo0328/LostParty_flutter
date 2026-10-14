@@ -570,7 +570,7 @@ void main() {
       find.byKey(const ValueKey('confirmNotifyPartyMembersButton')),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Firebase 알림 서버 연결 후 사용할 수 있습니다.'), findsOneWidget);
+    expect(find.text('알림 서버 연결 후 사용할 수 있습니다.'), findsOneWidget);
   });
 
   testWidgets('파티장이 전체 모집 수정 내용을 검토한 뒤 저장한다', (tester) async {

@@ -6,7 +6,7 @@
 
 - 제거: 익명 Firebase 인증·AuthUid↔Player binding, Firestore Rules/Repository/경로·소스 문자열 계약과 기존 MyApp 전용 통합 테스트. 새 회원/세션은 `test/features/auth/`, 시작 화면은 `test/app/bootstrap/backend_loading_screen_test.dart`가 검증한다. MyApp의 그룹·서버 UI는 새 진입점에서 아직 제공하지 않으며 사용자 인수/후속 API 작업으로 분리한다.
 - 유지: 로컬 DB·캐릭터·빌드·Lost Ark API·카탈로그·공통 정책/Validator/ViewModel 검증. 이름에 firestore가 있어도 실제 API 대신 fake repository로 제품 흐름을 검증하면 유지한다.
-- 이식 대기: 유효한 정책과 Timestamp/레거시 저장 수명 결합이 남은 파일. 이번에는 제거하지 않고 실행을 유지한다. 신규 업무 계약이 정해지면 타입/서버 저장 경계를 분리하며 현재 Backend 업무 기능을 검증한다고 주장하지 않는다.
+- 이식 완료(2026-10-14 Firebase 제거 구간): 아래 당시 대장의 이식 대기5파일은 UTC DateTime·장비 preview·journal v2로 분리했다. 신규 Backend 업무 API 검증은 별도다.
 - Rules 원자성·권한·최대 8인·마지막 1인 해산·승계 정책은 기존 Domain/Validator 검증으로 보존한다. 실제 FastAPI 업무 권한/동시성은 후속 Backend API와 함께 pytest에서 검증해야 한다. 현재 인증 pytest는 업무 기능의 대체 검증이 아니다.
 
 아래 책임은 각 파일의 import/검증 대상에 근거한다. 기본 보존 근거는 `7db7bde:<경로>`이며 제거 후에도 유효하다. 같은 파일의 공통 정책/로컬 검증은 유지한다. 제거한 소스 문자열 계약의 정책 행동 검증은 유지한 Validator/Write Plan 테스트로 이어지며 서버 구현 증거는 후속이다.
@@ -249,131 +249,131 @@
 
 | 추적 도구 경로 | 분류 | 근거/후속 |
 |---|---|---|
-| `tools/assert_rules_denied.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/bug024_advance_budget_diagnosis.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/bug024_preparation_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/bug024_regression_runner.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/bug024_runtime_regression_runner.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/bug024_spark_feasibility_runner.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/bug024_spark_preparation_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/bug024_spark_seal_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/bug024_spark_seal_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/character_activity_rules_test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/compact_rules_source.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/fixtures/roster_reauth_preintegration.rules` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/gen_removed_group_id_rules.js` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/group_leave_rules_test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/integrate_roster_rules.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/manual_verification_rules_test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/package-lock.json` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/package.json` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/party_completion_role_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/party_group_cutover_rules_test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/party_join_v3_firebase.json` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/party_join_v3_proof.rules` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/party_join_v3_rules_test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/party_scalability_firebase.json` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/party_scalability_proof.rules` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/party_scalability_rules_test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/patch_group_leave_rules.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/prune_r7_unused_rules_functions.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/removed_active_group_id.rules.txt` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_completed_cleanup_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_completed_cleanup_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_complexity_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_complexity_candidate.test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_complexity_differential.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_dispatch_rules_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_generation_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_generation_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_last_member_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_last_member_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_leader_cleanup_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_leader_cleanup_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_legacy_rules_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_legacy_rules_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_lifecycle_boundary_diagnosis.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_lifecycle_coverage_summary.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_lifecycle_predicate_diagnosis.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_manual_completion_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_manual_completion_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_occupancy_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_occupancy_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_orphan_cleanup_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_orphan_cleanup_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_ownership_rules_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_participation_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_participation_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_peer_cleanup_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_peer_cleanup_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_personal_completion_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_personal_completion_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_personal_dedup.test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_personal_differential.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_position_differential.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/roster_target_rules_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_advance_shared.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_audit.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_audit_cause.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_auth_direct.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_auth_direct_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_availability_runtime.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_baseline_audit.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_call_depth_audit.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_cleanup_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_cleanup_candidate.test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_cleanup_design_audit.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_cleanup_diagnosis.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_cleanup_event_design_audit.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_completion_role.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_completion_role.test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_contract_size_audit.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_depth_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_depth_candidate.test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_depth_recheck_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_depth_recheck_candidate.test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_executable_compact.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_executable_compact.test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_group_count_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_group_display_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_group_display_candidate.test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_group_display_contract.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_group_update_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_indent.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_leader_budget_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_leader_budget_candidate.test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_leader_budget_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_legacy_size_audit.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_listing_boundary_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_listing_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_listing_candidate.test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_listing_safety_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_local_display.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_local_display_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_localization_pipeline.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_member_retirement_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_member_retirement_candidate.test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_member_retirement_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_next_week_preparation.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_personal_budget_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_personal_budget_candidate.test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_prep_dedup.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_prep_dedup_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_production_restructure.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_production_restructure_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_publication_budget.json` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_publication_preflight.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_removal_candidate.test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_removal_proof.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_removal_rejection_audit.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_removal_rejection_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_removal_rejection_candidate.test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_scope_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_scope_candidate.test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_seal_direct.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_strip_comments.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_target_scan_candidate.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
-| `tools/rules_target_scan_candidate.test.mjs` | 보존·실행 종료 | 폐기 Rules 도구 의존성·과거 근거; 신규 서버 검증 아님, 최종 제거 후속 |
+| `tools/assert_rules_denied.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/bug024_advance_budget_diagnosis.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/bug024_preparation_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/bug024_regression_runner.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/bug024_runtime_regression_runner.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/bug024_spark_feasibility_runner.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/bug024_spark_preparation_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/bug024_spark_seal_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/bug024_spark_seal_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/character_activity_rules_test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/compact_rules_source.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/fixtures/roster_reauth_preintegration.rules` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/gen_removed_group_id_rules.js` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/group_leave_rules_test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/integrate_roster_rules.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/manual_verification_rules_test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/package-lock.json` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/package.json` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/party_completion_role_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/party_group_cutover_rules_test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/party_join_v3_firebase.json` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/party_join_v3_proof.rules` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/party_join_v3_rules_test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/party_scalability_firebase.json` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/party_scalability_proof.rules` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/party_scalability_rules_test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/patch_group_leave_rules.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/prune_r7_unused_rules_functions.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/removed_active_group_id.rules.txt` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_completed_cleanup_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_completed_cleanup_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_complexity_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_complexity_candidate.test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_complexity_differential.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_dispatch_rules_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_generation_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_generation_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_last_member_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_last_member_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_leader_cleanup_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_leader_cleanup_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_legacy_rules_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_legacy_rules_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_lifecycle_boundary_diagnosis.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_lifecycle_coverage_summary.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_lifecycle_predicate_diagnosis.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_manual_completion_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_manual_completion_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_occupancy_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_occupancy_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_orphan_cleanup_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_orphan_cleanup_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_ownership_rules_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_participation_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_participation_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_peer_cleanup_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_peer_cleanup_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_personal_completion_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_personal_completion_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_personal_dedup.test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_personal_differential.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_position_differential.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/roster_target_rules_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_advance_shared.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_audit.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_audit_cause.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_auth_direct.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_auth_direct_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_availability_runtime.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_baseline_audit.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_call_depth_audit.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_cleanup_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_cleanup_candidate.test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_cleanup_design_audit.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_cleanup_diagnosis.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_cleanup_event_design_audit.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_completion_role.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_completion_role.test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_contract_size_audit.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_depth_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_depth_candidate.test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_depth_recheck_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_depth_recheck_candidate.test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_executable_compact.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_executable_compact.test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_group_count_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_group_display_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_group_display_candidate.test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_group_display_contract.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_group_update_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_indent.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_leader_budget_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_leader_budget_candidate.test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_leader_budget_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_legacy_size_audit.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_listing_boundary_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_listing_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_listing_candidate.test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_listing_safety_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_local_display.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_local_display_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_localization_pipeline.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_member_retirement_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_member_retirement_candidate.test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_member_retirement_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_next_week_preparation.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_personal_budget_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_personal_budget_candidate.test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_prep_dedup.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_prep_dedup_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_production_restructure.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_production_restructure_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_publication_budget.json` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_publication_preflight.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_removal_candidate.test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_removal_proof.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_removal_rejection_audit.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_removal_rejection_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_removal_rejection_candidate.test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_scope_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_scope_candidate.test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_seal_direct.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_strip_comments.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_target_scan_candidate.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
+| `tools/rules_target_scan_candidate.test.mjs` | 제거 완료 | Firebase 제거 구간에서 폐기; 원본 dev a52492f/Git 이력 |
 
 
 ## 신규 검증과 보조 자료
@@ -394,3 +394,14 @@
 - 테스트2경고는 불필요 import/null-aware 연산만 정리한다. 분석의 coverage 과거소스 사본은 .gitignore에 이미 제외된 생성물이라 coverage/** 분석 제외를 명시하고 lib/test/tool은 검증에 유지한다.
 - 폐기 예정 Firestore adapter4파일의49개 중괄호 lint만 수정했다. 중괄호·공백을 제외한 원본과 변경본의 모든 문자가 동일함을 확인해 분기/반환/쓰기 순서를 보존한다. 이 lint 정리는 Firebase 제거 완료를 의미하지 않는다.
 - 미추적 `tools/roster_rebalance_domain_fixtures.dart`의3개 lint는 이전 산출물을 수정하지 않고 전체 분석 결과에 명시한다. tools 전체를 분석에서 제외하지 않는다.
+
+## Firebase SDK 제거 구간의 이식 결과
+
+- 당시 이식 대기5파일 모두 활성 실행 유지. local_game_account_verification_gateway_test는 equipment_verification_preview_test로 이름을 변경하고 소유권 쓰기와 SDK fake를 분리했다. 6슬롯 장비 조건·불완전/형식 오류 검증은 유지한다. 실제 서버 인증은 Issue #3 책임이다.
+- optional display, raid guard와 party atomic plan은 UTC DateTime을 사용하며 필드·7일 guard·표시 보존 조건을 유지한다.
+- completed_cleanup_recovery는 v2 UTC 시각의 관찰값·사용자/event 격리·저장 실패/불확실 재전송 수명 검증을 유지한다. v1 거절·과거 키 보존/재전송 제외 검증1개 추가. Firebase 전용 오류 mapping 검증1개 제거, Domain UI 오류 안내 검증 유지. 전체 테스트1134개 통과.
+- generic bootstrap는 익명 PlayerSession 없이 String으로 준비/재시도/최소 로딩 시간 검증을 유지한다. 모든 Firebase SDK import는 제거했다.
+
+## 서버 조회 연결 검증 (2026-10-14)
+
+Firebase 타입 이식5테스트는 실행 유지하며 새 회원별 조회 경계25개를 추가했다. 소스 전체1159개 통과·분석0진단과 기본 프로젝트 APK 빌드/소스 동일성 확인을 근거로 한다. 기존 미추적 실험은 별도 자료로 보존하며 그 내용의 검증 통과를 주장하지 않는다. 서버 조회 사용자1·2·4 통과, 등록자료가 필요한3번은 다음 등록 관리 인수로 넘긴다.

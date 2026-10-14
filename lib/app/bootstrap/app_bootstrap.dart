@@ -69,7 +69,7 @@ class _AppBootstrapState<T extends Object> extends State<AppBootstrap<T>> {
               widget.loadingBuilder?.call(context) ??
               const _BootstrapFrame(
                 child: CircularProgressIndicator(
-                  key: Key('firebase-bootstrap-loading'),
+                  key: Key('app-bootstrap-loading'),
                 ),
               );
         } else if (snapshot.hasError || services == null) {
@@ -88,7 +88,7 @@ class _AppBootstrapState<T extends Object> extends State<AppBootstrap<T>> {
                 ),
                 const SizedBox(height: 20),
                 FilledButton(
-                  key: const Key('firebase-bootstrap-retry'),
+                  key: const Key('app-bootstrap-retry'),
                   onPressed: _retry,
                   child: const Text('다시 시도'),
                 ),
