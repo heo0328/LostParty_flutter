@@ -3755,3 +3755,11 @@
 ## 2026-10-14 — Firebase 제거 복구 지점 커밋
 
 사용자가 문서 최신화·dev 병합·push를 승인했다. 검증된 선행 Firebase 제거/UTC 공통 정책 이식·플랫폼/Rules 도구 정리를 현재 feature/account-backend-read에서 별도 의미의 커밋으로 분리한다. 제거 원본은 dev a52492f, source/test 원본 복구 목록은 FIREBASE_REMOVAL_MANIFEST, 후속 조회 기반 hash는 ACCOUNT_READ_PREREQUISITE다. Google OAuth/비밀 설정·로컬 DB·기기 설치/원격 DB 변경 없음. 원본 제거1134테스트 및 최종 조회1159검증은 각 당시 결과로 구분하며 현재 코드 동일성과 사용자 인수를 근거로 재사용한다.
+
+## 2026-10-14 — 완료 구간 문서 최신화·dev 통합 마감
+
+- 사용자 명시 승인에 따라 Firebase 제거 a160c6f, 서버 계정 조회 6f97190을 별도 의미의 커밋으로 기록하고 요구·연결/테스트 준비·인수 문서를 최신화한다. 원격 origin/dev는 시작 기준 a52492f와 같았다. 문서 커밋 후 최신 원격을 다시 확인해 feature/account-backend-read를 dev에 일반 merge하고 push한다. 최종 결과는 Git HEAD/dev/origin/dev와 종료 보고로 확인한다.
+- 새로 가능해진 흐름은 Firebase SDK 없는 BackendApp과 로그인 회원의 서버 등록/전체 캐릭터/settings 읽기다. 사용자1·2·4 통과, 서버 등록API는 구현돼 있지만 Flutter 등록/인증/활동쓰기는 다음 그룹이며 3번 실제 등록 캐릭터는 후속 인수다.
+- 최종 소스는 기존1159테스트/분석0 통과 작업 트리와 byte/줄바꿈 정규화 비교 일치했고 기본 경로 Android debug 빌드·kernel3마커를 확인했다. 코드가 바뀌지 않아 전체 검증을 반복하지 않았다. 문서 diff/스테이징 목록/고정 계약hash와 기존 미추적36개hash를 검증한다.
+- 기존 미추적 실험·백업36개는 커밋/삭제/이동하지 않고 그대로 보존한다. phantom 수정으로 표시되던 raid_cycle_schedule.dart는 실제 diff가 없으며 파일 내용을 변경하지 않는다. 원래 worktree·main·기존 local/remote 브랜치는 삭제하거나 갱신하지 않는다. 순수 관련 문서와 검증된 코드만 통합하고 운영 배포/Backend DB 변경/새 API 쓰기 없음.
+- 현재 작업 feature/account-backend-read는 통합 후 삭제 후보로만 분류하며 자동 삭제하지 않는다. 별도 원본 worktree에는 미커밋 snapshot이 있어 보존/정리 지시 전 그대로 유지한다. 현재 기본 checkout은 dev로 종료하며 추적 변경 없음과 기존 미추적 보존을 구분해서 보고한다.
