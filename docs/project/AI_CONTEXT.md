@@ -12,6 +12,10 @@
 - [등록 관리 Backend 요청17](../backend-migration/17-account-registration-backend-request.md): 조회 결과를 #3에 인계하고 실행 버전·서버 키 준비 여부·실 provider 등록 시험 조건과 필요한 최소 보완을 요청한다. 기존 API를 중복 개발하지 않는다.
 - [새 등록 구간 제안18](../backend-migration/18-account-registration-integration-proposal.md), [Backend #4](https://github.com/heo0328/lostparty-backend/issues/4): #3 보완db0f3ae/계약254cb5d 유지 인계를 근거로 키 준비·실 provider/등록 검증과 필요한 보완을 별도 추적한다. 후속 키 준비/실provider 인수는 #4에서 추적한다.
 
+## 협업 채널
+
+다른 공유 방식 채택 전까지 Backend GitHub Issues를 협업 채널로 사용한다. 피드백·테스트 요청은 필요시만 하며 모든 작업마다 요구하지 않는다. 협업 요청에 대응한 결과와 필요한 인계는 기록하고 회신한다. 현재 승인 구간의 관련 댓글 회신은 상시 승인된다. [공통 협업·콜백 규칙](ai_rules.md#8-2-flutter--backend-github-issues-협업콜백).
+
 ## 기준과 보존 정책
 
 - 기존 Firebase 사용자/서버/테스터 자료는 이관하지 않는다. 로컬 자료는 보존하지만 앱 삭제 시 기기 자료가 사라질 수 있고 Google 로그인만으로 로컬 자료가 복원되지는 않는다. [이전 정책](../backend-migration/09-migration-decisions.md).
