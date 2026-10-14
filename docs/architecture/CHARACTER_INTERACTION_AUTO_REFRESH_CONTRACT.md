@@ -2,6 +2,10 @@
 
 > 기존 서비스 전용 항목은 [원문·출처 기록](../../legacy/firebase/extracted/docs/architecture/CHARACTER_INTERACTION_AUTO_REFRESH_CONTRACT.md)으로 분리했다. 남은 제품/협업 문맥의 신규 서버 적용 여부는 별도 설계에서 판단한다.
 
+## 현재 Backend 적용 상태 (2026-10-14)
+
+기존 앱 실행1회/나이스단 정책의 기록과 현재 구현을 구분한다. BackendApp에는 시작/수동 갱신 runner·나이스단 설정 저장 Repository가 연결되지 않아 이 자동 갱신은 실행되지 않는다. 전투력 수동조회/표시 연결39188d5는별도사용자인수완료이며전체Armory/역할Build자동갱신을복원한것이아니다. 다음설정저장/트리거/갱신범위 설계는 [NEXT_WORK](../project/NEXT_WORK.md)를따른다. 아래 A~E완료기록을현재Backend실행완료로해석하지않는다.
+
 ## 0. 2026-09-05 앱 실행 1회 갱신으로 방향 전환 (A~E 반영)
 
 실기기에서 교류 직전 자동 갱신이 거의 항상 실패(기존 Snapshot 계속 확인)하고 Armory 자동 갱신이 매우 느리다는 사용자 보고가 있었다. 나이스단 허용 UI는 정상이다. 통신 로그로 원인을 확정하지는 않았다.

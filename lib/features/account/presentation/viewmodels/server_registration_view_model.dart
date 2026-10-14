@@ -6,6 +6,7 @@ import '../../domain/account_read_session.dart';
 import '../../domain/server_account_models.dart';
 import '../../domain/server_account_read_repository.dart';
 import '../../domain/server_registration_api.dart';
+import '../../domain/server_combat_power.dart';
 
 String _newKey() {
   final bytes = base64Url
@@ -59,6 +60,8 @@ class ServerRegistrationViewModel extends ChangeNotifier {
   DateTime? _retryAt;
   Timer? _retryTimer;
   _RegistrationCommand? _pending;
+  List<ServerPowerResult> powerResults = const [];
+  bool powerContext = false;
   bool get hasPending => _pending != null;
   bool get canWrite =>
       session.isAuthenticated &&
@@ -81,6 +84,8 @@ class ServerRegistrationViewModel extends ChangeNotifier {
     _scopeKey = key;
     _ticket++;
     _pending = null;
+    powerResults = const [];
+    powerContext = false;
     preview = null;
     previewName = null;
     failure = null;
@@ -118,6 +123,7 @@ class ServerRegistrationViewModel extends ChangeNotifier {
 
   Future<void> search(String name) async {
     if (!canWrite) return;
+    powerContext = false;
     final scope = accountReadScope(session);
     final ticket = ++_ticket;
     busy = true;
@@ -202,6 +208,37 @@ class ServerRegistrationViewModel extends ChangeNotifier {
   Future<void> refresh(ServerAccountRegistration account) =>
       _begin('${_path(account)}/refresh', 'POST', {}, {}, 200);
 
+  Future<void> refreshPower(
+    ServerAccountRegistration account,
+    List<Map<String, String>> targets,
+  ) async {
+    if (!canWrite) return;
+    if (targets.isEmpty ||
+        targets.length > 20 ||
+        targets.any(
+          (t) =>
+              t.length != 2 ||
+              !t.containsKey('server_name') ||
+              !t.containsKey('character_name') ||
+              t.values.any((v) => v.trim().isEmpty || v.runes.length > 64),
+        )) {
+      failure = const AccountReadException('INVALID_REQUEST');
+      notifyListeners();
+      return;
+    }
+    await _begin(
+      '${_path(account)}/combat-power/refresh',
+      'POST',
+      {
+        'characters': List.unmodifiable(
+          targets.map((t) => Map<String, String>.unmodifiable(t)),
+        ),
+      },
+      {},
+      200,
+    );
+  }
+
   Future<void> _begin(
     String path,
     String method,
@@ -227,6 +264,8 @@ class ServerRegistrationViewModel extends ChangeNotifier {
         status,
         now(),
       );
+      powerResults = const [];
+      powerContext = path.endsWith('/combat-power/refresh');
       await _send();
     } on AccountReadException catch (error) {
       failure = error;
@@ -270,7 +309,13 @@ class ServerRegistrationViewModel extends ChangeNotifier {
       );
       requireAccountReadScope(session, command.scope);
       ServerRegistrationRefresh? refreshed;
-      if (command.status != 204) {
+      List<ServerPowerResult>? powers;
+      if (command.path.endsWith('/combat-power/refresh')) {
+        powers = ServerPowerResult.decode(
+          json!,
+          (command.body['characters'] as List).cast<Map<String, String>>(),
+        );
+      } else if (command.status != 204) {
         if (command.path.endsWith('/refresh')) {
           refreshed = ServerRegistrationRefresh.fromJson(json!);
         }
@@ -284,11 +329,19 @@ class ServerRegistrationViewModel extends ChangeNotifier {
         }
       }
       if (_valid(ticket, command.scope)) {
+        powerResults = powers ?? const [];
         _pending = null;
         preview = null;
         previewName = null;
         _retryAt = null;
-        notice = refreshed == null
+        notice = powers != null
+            ? '전투력 확인 완료 · 갱신 ${powers.where((p) => p.status == 'updated').length}명 · '
+                  '캐시 ${powers.where((p) => p.status == 'cached').length}명\n'
+                  '미제공 ${powers.where((p) => p.status == 'unavailable').length}명 · '
+                  '실패 ${powers.where((p) => p.status == 'failed').length}명 · '
+                  '제외 ${powers.where((p) => p.status == 'skipped').length}명 · '
+                  '미처리 ${powers.where((p) => p.status == 'deferred').length}명'
+            : refreshed == null
             ? '요청이 처리되었습니다. 현재 상태는 서버 목록에서 다시 확인해 주세요.'
             : '정보 갱신 완료\n'
                   '새 캐릭터 ${refreshed.addedCount}명 · 확인 필요 ${refreshed.suspectCount}명\n'

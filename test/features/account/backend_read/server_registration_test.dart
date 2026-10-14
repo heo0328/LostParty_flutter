@@ -63,6 +63,122 @@ void main() {
     'suspect_count': 0,
     'requires_refresh': false,
   };
+  Map<String, dynamic> powerResult() => {
+    'server_name': 'sample-server',
+    'character_name': 'sample',
+    'combat_power': '0',
+    'power_fetched_at': serverTime,
+    'power_checked_at': serverTime,
+    'power_stale': false,
+    'power_status': 'available',
+    'power_reason': null,
+    'status': 'updated',
+    'reason': null,
+  };
+  const powerTargets = [
+    {'server_name': 'sample-server', 'character_name': 'sample'},
+  ];
+  test(
+    'power timeout and replay keep immutable key/body and accept real zero',
+    () async {
+      handle = (o, h) {
+        if (requests.length == 1) {
+          h.reject(DioException(requestOptions: o));
+        } else {
+          h.resolve(
+            Response(
+              requestOptions: o,
+              statusCode: 200,
+              data: {
+                'items': [powerResult()],
+              },
+            ),
+          );
+        }
+      };
+      await model.refreshPower(account, powerTargets);
+      expect(requests.single.receiveTimeout, const Duration(seconds: 30));
+      expect(requests.single.data, {'characters': powerTargets});
+      await model.edit(account, 'blocked', false);
+      expect(requests.length, 1);
+      await model.retry();
+      expect(requests[0].data, requests[1].data);
+      expect(
+        requests[0].headers['Idempotency-Key'],
+        requests[1].headers['Idempotency-Key'],
+      );
+      expect(model.powerResults.single.power.value, 0);
+      expect(model.hasPending, false);
+      expect(model.failure, isNull);
+      await model.refresh(account);
+      expect(requests.last.receiveTimeout, isNot(const Duration(seconds: 30)));
+    },
+  );
+  for (final scenario in [
+    'wrong_name',
+    'extra',
+    'missing',
+    'negative',
+    'infinite',
+    'null_status',
+  ]) {
+    test('invalid power response $scenario remains unresolved', () async {
+      final row = powerResult();
+      if (scenario == 'wrong_name') row['character_name'] = 'other';
+      if (scenario == 'extra') row['other'] = true;
+      if (scenario == 'missing') row.remove('power_checked_at');
+      if (scenario == 'negative') row['combat_power'] = '-1';
+      if (scenario == 'infinite') row['combat_power'] = 'Infinity';
+      if (scenario == 'null_status') row['power_status'] = null;
+      handle = (o, h) => h.resolve(
+        Response(
+          requestOptions: o,
+          statusCode: 200,
+          data: {
+            'items': [row],
+          },
+        ),
+      );
+      await model.refreshPower(account, powerTargets);
+      expect(model.failure?.code, 'INVALID_RESPONSE');
+      expect(model.hasPending, true);
+      expect(model.powerResults, isEmpty);
+      expect(model.notice, isNull);
+    });
+  }
+  test(
+    'power partial result has explicit failed/deferred counts and no automatic new request',
+    () async {
+      final targets = [
+        ...powerTargets,
+        {'server_name': 'sample-server', 'character_name': 'next'},
+      ];
+      final failed = powerResult()
+        ..['status'] = 'failed'
+        ..['power_status'] = 'failed'
+        ..['power_stale'] = true
+        ..['reason'] = 'UPSTREAM_UNAVAILABLE'
+        ..['power_reason'] = 'UPSTREAM_UNAVAILABLE';
+      final deferred = powerResult()
+        ..['character_name'] = 'next'
+        ..['status'] = 'deferred'
+        ..['reason'] = 'TIME_BUDGET_EXCEEDED';
+      handle = (o, h) => h.resolve(
+        Response(
+          requestOptions: o,
+          statusCode: 200,
+          data: {
+            'items': [failed, deferred],
+          },
+        ),
+      );
+      await model.refreshPower(account, targets);
+      expect(model.failure, isNull);
+      expect(model.notice, contains('실패 1명'));
+      expect(model.notice, contains('미처리 1명'));
+      expect(requests.length, 1);
+    },
+  );
   test(
     'refresh decodes wrapper, accepts zero added count and completes command',
     () async {

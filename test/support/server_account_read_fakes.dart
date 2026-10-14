@@ -37,6 +37,9 @@ Map<String, dynamic> characterJson({
   'eligible': true,
   'power_stale': true,
   'power_fetched_at': null,
+  'power_checked_at': null,
+  'power_status': 'unknown',
+  'power_reason': null,
 };
 Map<String, dynamic> charactersJson({
   String? cursor,

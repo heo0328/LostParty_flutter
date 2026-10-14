@@ -14,6 +14,7 @@ class AccountCharacterCard extends StatelessWidget {
     this.weeklyRaids = const [],
     this.representativeCombatPower,
     this.overrideRepresentativeCombatPower = false,
+    this.combatPowerNote,
     this.gemValidationSummary,
     this.showWeeklyRaidEditor = false,
     this.weeklyRaidHiddenByPreference = false,
@@ -29,6 +30,7 @@ class AccountCharacterCard extends StatelessWidget {
   final List<WeeklyRaidStatusItem> weeklyRaids;
   final double? representativeCombatPower;
   final bool overrideRepresentativeCombatPower;
+  final String? combatPowerNote;
   final GemValidationSummary? gemValidationSummary;
   final bool showWeeklyRaidEditor;
   final bool weeklyRaidHiddenByPreference;
@@ -88,7 +90,8 @@ class AccountCharacterCard extends StatelessWidget {
                 style: theme.textTheme.bodySmall,
               ),
               Text(
-                '전투력 ${_formatNumber(overrideRepresentativeCombatPower ? representativeCombatPower : character.combatPower)}',
+                '전투력 ${_formatNumber(overrideRepresentativeCombatPower ? representativeCombatPower : character.combatPower)}'
+                '${combatPowerNote == null ? '' : ' · $combatPowerNote'}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall,
