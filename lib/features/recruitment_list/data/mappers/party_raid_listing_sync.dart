@@ -1,5 +1,4 @@
 import 'party_raid_listing_document.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../domain/entities/party_create_command.dart';
 
@@ -47,71 +46,3 @@ class PartyRaidListingSyncPlan {
   final Map<String, Object?>? listingDocument;
   final bool deleteListing;
 }
-
-class PartyRaidListingTx {
-  const PartyRaidListingTx._(this.ref, this.snapshot);
-
-  /// 그룹 listing을 읽지 않을 때 쓰기 no-op용.
-  static const empty = PartyRaidListingTx._(null, null);
-
-  /// A source-authorized participant may update its derived listing without
-  /// obtaining group-only read permission. Rules validate the source transition.
-  static PartyRaidListingTx forWrite({
-    required FirebaseFirestore firestore,
-    required String groupId,
-    required String recruitmentId,
-  }) => PartyRaidListingTx._(
-    firestore
-        .collection('groups')
-        .doc(groupId)
-        .collection('raidListings')
-        .doc(recruitmentId),
-    null,
-  );
-
-  final DocumentReference<Map<String, dynamic>>? ref;
-  final DocumentSnapshot<Map<String, dynamic>>? snapshot;
-
-  static Future<PartyRaidListingTx> read({
-    required Transaction transaction,
-    required FirebaseFirestore firestore,
-    required Object? groupId,
-    required String recruitmentId,
-  }) async {
-    if (groupId is! String || groupId.isEmpty) {
-      return const PartyRaidListingTx._(null, null);
-    }
-    final listingRef = firestore
-        .collection('groups')
-        .doc(groupId)
-        .collection('raidListings')
-        .doc(recruitmentId);
-    return PartyRaidListingTx._(listingRef, await transaction.get(listingRef));
-  }
-
-  void write({
-    required Transaction transaction,
-    required Map<String, Object?> currentRecruitment,
-    required Map<String, Object?> recruitmentPatch,
-  }) {
-    final listingRef = ref;
-    if (listingRef == null) return;
-    final plan = PartyRaidListingSyncPlan.afterRecruitmentChange(
-      currentRecruitment: currentRecruitment,
-      recruitmentPatch: recruitmentPatch,
-    );
-    if (plan.deleteListing) {
-      if (snapshot?.exists == true) {
-        transaction.delete(listingRef);
-      }
-      return;
-    }
-    final document = plan.listingDocument;
-    if (document != null) {
-      transaction.set(listingRef, document);
-    }
-  }
-}
-
-Map<String, Object?> partyRecruitmentMap(Map<String, dynamic>? data) =>
-    data == null ? const {} : Map<String, Object?>.from(data);

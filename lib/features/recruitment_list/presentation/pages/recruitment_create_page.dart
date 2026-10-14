@@ -128,7 +128,8 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
                 ),
           )
           .firstOrNull;
-      final role = leader?.resolveSelectedRole(
+      final role =
+          leader?.resolveSelectedRole(
             usable: (option) => _eligibilityPolicy
                 .eligibleRaids(catalog: catalog, itemLevel: option.itemLevel)
                 .isNotEmpty,
@@ -713,9 +714,9 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     final raid = _raid;
     final difficulty = _difficulty;
     if (raid == null || difficulty == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('레이드와 난이도를 선택해주세요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('레이드와 난이도를 선택해주세요.')));
       return;
     }
     final leader = _leader;
@@ -795,7 +796,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     );
     final partyCreateRepository = widget.partyCreateRepository;
     if (partyCreateRepository != null) {
-      await _saveToFirestore(
+      await _saveToServer(
         repository: partyCreateRepository,
         title: title,
         metadata: metadata,
@@ -838,7 +839,7 @@ class _RecruitmentCreatePageState extends State<RecruitmentCreatePage> {
     }
   }
 
-  Future<void> _saveToFirestore({
+  Future<void> _saveToServer({
     required PartyCreateRepository repository,
     required String title,
     required RecruitmentMetadata metadata,

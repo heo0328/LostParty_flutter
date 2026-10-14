@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../../domain/entities/party_create_command.dart';
 import '../../domain/policies/party_cycle_policy.dart';
 
@@ -41,9 +39,7 @@ class PartyCreateWritePlan {
       'minCombatPower': metadata.minCombatPower,
       'experienceLevel': metadata.experienceLevel?.name,
       'maxPlayHours': metadata.maxPlayHours,
-      'raidStartAt': metadata.raidStartAt == null
-          ? null
-          : Timestamp.fromDate(metadata.raidStartAt!.toUtc()),
+      'raidStartAt': metadata.raidStartAt?.toUtc(),
       'status': 'active',
       'visibility': command.visibility,
       'groupId': command.groupId,
@@ -54,8 +50,8 @@ class PartyCreateWritePlan {
       'currentCycleKey': command.cycleKey,
       'targetCycleKey': command.cycleKey,
       'currentCycleStatus': 'active',
-      'cycleStartedAt': Timestamp.fromDate(cycle.startedAt),
-      'cycleEndsAt': Timestamp.fromDate(cycle.endsAt),
+      'cycleStartedAt': cycle.startedAt.toUtc(),
+      'cycleEndsAt': cycle.endsAt.toUtc(),
       'partyCount': rules.partyCount,
       'membersPerParty': rules.membersPerParty,
       'supportsPerParty': rules.supportsPerParty,

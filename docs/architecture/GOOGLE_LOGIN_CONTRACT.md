@@ -9,7 +9,7 @@
 
 사용자가 [최종 검토안](https://github.com/heo0328/lostparty-backend/issues/2#issuecomment-6149545526)에 [동의](https://github.com/heo0328/lostparty-backend/issues/2#issuecomment-6149615842)하고 동일 API가 작성된다고 가정한 Flutter 작업을 승인했다. 아래 구현은 승인된 검토안으로 시작했고, 후속 검증에서 확정 Backend 계약과 대조했다. 소비 SHA·대조 결과는 아래 확정 계약 절을 따른다.
 
-- `main()`은 신규 BackendApp을 실행한다. Firebase SDK 초기화·익명 로그인·Player 생성·실행 기록 없이 로컬 계정 탭으로 진입한다. 기존 MyApp/Router는 레거시 테스트·과거 기준용으로 보존했으며 새 entry에서 호출하지 않는다.
+- `main()`은 신규 BackendApp을 실행한다. Firebase SDK 초기화·익명 로그인·Player 생성·실행 기록 없이 로컬 계정 탭으로 진입한다. Firebase 제거 구간에서 구 MyApp/Router·익명 Player/Firestore adapter·SDK·플랫폼 설정을 삭제했다. 기존 Google OAuth 프로젝트·Credential Manager 연결은 유지한다.
 - 실제 HTTP adapter는 `/v1` challenge/login/me/session/refresh/logout 6API의 합의된 snake_case DTO를 사용한다. transaction secret과 refresh request ID는 안전 난수32바이트의43자base64url, challenge hash는 전달ASCII문자열의SHA-256소문자hex64다. Google proof 교환은 자동 재시도하지 않는다.
 - 로그인 화면의 한 Google 버튼과 유지checkbox·가입 안내를 연결했다. 성공 후 이전 화면으로 pop하며 작업 자동 제출 없음. 설정에서 로그인상태/유지선택/로그아웃을 제공한다. 정책 URL은 실제HTTPS설정이 있을 때만 링크를 표시하고 미설정 개발버전에는 준비 안내를 표시한다. 정책/탈퇴 미확정 상태를 정식 배포 완료로 판정하지 않는다.
 - 앱 공통 세션은 Backend 내부회원과 자체token만 사용한다. 복원에는/me확인을 사용하고access만료에는single-flight refresh, 종료·정지에는credential해제하며silent Google 로그인으로 재생성하지 않는다.

@@ -68,7 +68,7 @@ String groupDisbandFailureMessage(GroupJoinFailure failure) =>
       GroupJoinFailure.joinCodeActive =>
         '활성 초대코드가 있습니다. 초대코드 화면에서 폐기한 뒤 다시 해산하세요.',
       GroupJoinFailure.permissionDenied =>
-        '그룹 해산 권한을 확인하지 못했습니다. 최신 Firestore Rules 적용 상태를 확인해 주세요.',
+        '그룹 해산 권한을 확인하지 못했습니다. 새로고침 후 다시 시도해 주세요.',
       _ => groupJoinFailureMessage(failure),
     };
 
@@ -80,8 +80,7 @@ String groupLeaveFailureMessage(GroupJoinFailure failure) => switch (failure) {
   GroupJoinFailure.activeGroupRaidExists =>
     '아직 그룹만 공개인 레이드 방의 파티장입니다. 전체 공개로 바꾸거나 해산한 뒤 탈퇴해 주세요.',
   GroupJoinFailure.notGroupMember => '그룹원만 탈퇴할 수 있습니다.',
-  GroupJoinFailure.permissionDenied =>
-    '그룹 탈퇴를 처리하지 못했습니다. Firestore Rules 배포 후 다시 시도해 주세요.',
+  GroupJoinFailure.permissionDenied => '그룹 탈퇴를 처리하지 못했습니다. 새로고침 후 다시 시도해 주세요.',
   GroupJoinFailure.revisionConflict ||
   GroupJoinFailure.temporarilyUnavailable => groupJoinFailureMessage(failure),
   GroupJoinFailure.groupNotFound => '그룹을 찾을 수 없습니다.',
@@ -99,9 +98,11 @@ String groupTransferFailureMessage(GroupJoinFailure failure) =>
         GroupJoinFailure.transferTargetInvalid,
       ),
       GroupJoinFailure.permissionDenied =>
-        '그룹장 이전 권한을 확인하지 못했습니다. 최신 Firestore Rules 적용 상태를 확인해 주세요.',
+        '그룹장 이전 권한을 확인하지 못했습니다. 새로고침 후 다시 시도해 주세요.',
       GroupJoinFailure.revisionConflict ||
-      GroupJoinFailure.temporarilyUnavailable => groupJoinFailureMessage(failure),
+      GroupJoinFailure.temporarilyUnavailable => groupJoinFailureMessage(
+        failure,
+      ),
       GroupJoinFailure.groupNotFound => '그룹을 찾을 수 없습니다.',
       GroupJoinFailure.groupClosed => '종료된 그룹입니다.',
       GroupJoinFailure.unauthenticated ||

@@ -1,10 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:lost_party/features/account/data/datasources/lost_ark_character_remote_data_source.dart';
-import 'package:lost_party/features/account/data/gateways/local_game_account_verification_gateway.dart';
+import 'package:lost_party/features/account/data/gateways/equipment_verification_preview.dart';
 import 'package:lost_party/features/account/domain/repositories/game_account_verification_gateway.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token_store.dart';
@@ -18,19 +16,17 @@ void main() {
       '/armories/characters/${Uri.encodeComponent(characterName)}';
 
   late DioAdapter adapter;
-  late LocalGameAccountVerificationGateway gateway;
+  late EquipmentVerificationPreview gateway;
 
   setUp(() async {
     final dio = Dio();
     adapter = DioAdapter(dio: dio);
     final tokenStore = _InMemoryApiTokenStore();
     await tokenStore.write(ApiToken('token'));
-    gateway = LocalGameAccountVerificationGateway(
+    gateway = EquipmentVerificationPreview(
       remoteDataSource: LostArkCharacterRemoteDataSource(
         apiClient: LostArkApiClient(apiTokenStore: tokenStore, dio: dio),
       ),
-      firestore: _UnusedFirestore(),
-      firebaseAuth: _UnusedFirebaseAuth(),
     );
   });
 
@@ -123,7 +119,3 @@ class _InMemoryApiTokenStore implements ApiTokenStore {
   @override
   Future<void> delete() async => _token = null;
 }
-
-class _UnusedFirestore extends Fake implements FirebaseFirestore {}
-
-class _UnusedFirebaseAuth extends Fake implements FirebaseAuth {}

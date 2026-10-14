@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 import 'build_integrity_snapshot.dart';
 
 /// 재인증 Character 전체 `set` 때 기존 선택 표시 필드를 보존한다.
@@ -28,9 +26,7 @@ Map<String, Object?> preservedOptionalCharacterDisplayFields(
   );
   if (parsed != null && integrityRaw is Map) {
     preserved['buildIntegritySnapshot'] = Map<String, Object?>.from(
-      integrityRaw.map(
-        (key, value) => MapEntry(key.toString(), value),
-      ),
+      integrityRaw.map((key, value) => MapEntry(key.toString(), value)),
     );
   }
 
@@ -39,7 +35,6 @@ Map<String, Object?> preservedOptionalCharacterDisplayFields(
 
 DateTime? _parseCheckedAt(Object? value) {
   return switch (value) {
-    Timestamp timestamp => timestamp.toDate().toUtc(),
     DateTime dateTime => dateTime.toUtc(),
     String text => DateTime.tryParse(text)?.toUtc(),
     _ => null,

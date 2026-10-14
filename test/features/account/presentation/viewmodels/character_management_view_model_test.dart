@@ -194,7 +194,7 @@ void main() {
     final activity = _FakeActivityCharactersRepository()
       ..saveError = const ActivityCharactersSaveException(
         ActivityCharactersSaveFailure.permissionDenied,
-        '캐릭터 활동 설정을 저장할 권한이 없습니다. 최신 Firestore Rules가 배포됐는지 확인해 주세요.',
+        '캐릭터 활동 설정을 저장할 권한이 없습니다. 새로고침 후 다시 시도해 주세요.',
       );
     final viewModel = CharacterManagementViewModel(
       accountRepository: repository,
@@ -208,7 +208,7 @@ void main() {
     await viewModel.save();
 
     expect(repository.visibilityUpdates, isEmpty);
-    expect(viewModel.message, contains('Firestore Rules'));
+    expect(viewModel.message, contains('새로고침'));
     expect(viewModel.hasUnsavedChanges, isTrue);
   });
 

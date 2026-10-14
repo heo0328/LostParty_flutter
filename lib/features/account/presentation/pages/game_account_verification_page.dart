@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 
 import '../../../../shared/lost_ark_api/client/lost_ark_api_exception.dart';
 import '../../domain/entities/game_account_verification.dart';
@@ -186,14 +185,6 @@ class _GameAccountVerificationPageState
     } on LostArkApiException catch (error) {
       if (mounted) {
         setState(() => _message = _apiErrorMessage(error.type));
-      }
-    } on FirebaseException catch (error) {
-      if (mounted) {
-        setState(
-          () => _message = error.code == 'permission-denied'
-              ? 'Firebase 인증 권한이 없습니다. 앱을 다시 시작해 로그인 상태를 확인해 주세요.'
-              : 'Firebase 계정 정보를 저장하지 못했습니다. 네트워크 연결을 확인해 주세요.',
-        );
       }
     } on FormatException {
       if (mounted) {

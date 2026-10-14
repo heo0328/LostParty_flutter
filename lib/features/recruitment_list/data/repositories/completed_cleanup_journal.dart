@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../domain/entities/completed_ownership_cleanup.dart';
@@ -12,7 +11,7 @@ class CompletedCleanupJournal {
   }) : _storage = storage;
 
   final FlutterSecureStorage _storage;
-  static const _prefix = 'completed_cleanup_v1/';
+  static const _prefix = 'completed_cleanup_v2/';
   String _key(CompletedOwnershipCleanup request) =>
       '$_prefix${Uri.encodeComponent(request.actorId)}/${request.eventId}';
 
@@ -47,18 +46,17 @@ class CompletedCleanupJournal {
 
   static Object? _time(Object? value) {
     if (value == null) return null;
-    if (value is! Timestamp) {
+    if (value is! DateTime) {
       throw const FormatException('지원하지 않는 참가 기록 시각입니다.');
     }
-    return [value.seconds, value.nanoseconds];
+    return value.toUtc().toIso8601String();
   }
 
-  static Timestamp? _restoreTime(dynamic value) => value == null
-      ? null
-      : Timestamp((value as List)[0] as int, value[1] as int);
+  static DateTime? _restoreTime(dynamic value) =>
+      value == null ? null : DateTime.parse(value as String).toUtc();
 
   static String encode(CompletedOwnershipCleanup r) => jsonEncode({
-    'version': 1,
+    'version': 2,
     'targetName': r.targetName,
     'roomId': r.roomId,
     'actorId': r.actorId,
@@ -82,7 +80,7 @@ class CompletedCleanupJournal {
 
   static CompletedOwnershipCleanup decode(String value) {
     final d = jsonDecode(value) as Map<String, dynamic>;
-    if (d['version'] != 1) throw const FormatException('지원하지 않는 요청 버전입니다.');
+    if (d['version'] != 2) throw const FormatException('지원하지 않는 요청 버전입니다.');
     return CompletedOwnershipCleanup(
       targetName: d['targetName'] as String?,
       roomId: d['roomId'] as String,
