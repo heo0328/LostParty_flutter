@@ -34,10 +34,11 @@ class FirestorePartyCycleCommandRepository
     );
     if (invalid != null) return PartyCycleResult.failure(invalid);
     final members = await _loadMembers(command.recruitmentId);
-    if (members == null)
+    if (members == null) {
       return const PartyCycleResult.failure(
         PartyCycleFailure.temporarilyUnavailable,
       );
+    }
     return _run((transaction, playerId) async {
       final recruitmentRef = _recruitment(command.recruitmentId);
       final cycleRef = recruitmentRef
@@ -52,13 +53,15 @@ class FirestorePartyCycleCommandRepository
         command.expectedRecruitmentRevision,
       );
       if (failure != null) return PartyCycleResult.failure(failure);
-      if (r?['leaderPlayerId'] != playerId)
+      if (r?['leaderPlayerId'] != playerId) {
         return const PartyCycleResult.failure(PartyCycleFailure.unauthorized);
+      }
       if (r?['currentCycleStatus'] != 'active' ||
-          (cycle.exists && cycle.data()?['status'] != 'completionCancelled'))
+          (cycle.exists && cycle.data()?['status'] != 'completionCancelled')) {
         return const PartyCycleResult.failure(
           PartyCycleFailure.alreadyCompleted,
         );
+      }
       final snapshot = await _memberSnapshot(transaction, members);
       if (snapshot == null || snapshot.length != r?['memberCount']) {
         return const PartyCycleResult.failure(
@@ -267,14 +270,17 @@ class FirestorePartyCycleCommandRepository
       final ref = _recruitment(command.recruitmentId);
       final recruitment = await transaction.get(ref);
       final r = recruitment.data();
-      if (r == null)
+      if (r == null) {
         return const PartyCycleResult.failure(PartyCycleFailure.notFound);
-      if (r['revision'] != command.expectedRecruitmentRevision)
+      }
+      if (r['revision'] != command.expectedRecruitmentRevision) {
         return const PartyCycleResult.failure(
           PartyCycleFailure.revisionConflict,
         );
-      if (r['leaderPlayerId'] != playerId)
+      }
+      if (r['leaderPlayerId'] != playerId) {
         return const PartyCycleResult.failure(PartyCycleFailure.unauthorized);
+      }
       if (r['status'] != 'active') {
         return const PartyCycleResult.failure(
           PartyCycleFailure.recruitmentClosed,
@@ -312,10 +318,11 @@ class FirestorePartyCycleCommandRepository
     final invalid = const PartyCycleCommandValidator().validateAdvance(command);
     if (invalid != null) return PartyCycleResult.failure(invalid);
     final members = await _loadMembers(command.recruitmentId);
-    if (members == null)
+    if (members == null) {
       return const PartyCycleResult.failure(
         PartyCycleFailure.temporarilyUnavailable,
       );
+    }
     return _run((transaction, playerId) async {
       final recruitmentRef = _recruitment(command.recruitmentId);
       final cycleRef = recruitmentRef
@@ -330,8 +337,9 @@ class FirestorePartyCycleCommandRepository
         command.expectedRecruitmentRevision,
       );
       if (failure != null) return PartyCycleResult.failure(failure);
-      if (!(r?['memberPlayerIds'] as List).contains(playerId))
+      if (!(r?['memberPlayerIds'] as List).contains(playerId)) {
         return const PartyCycleResult.failure(PartyCycleFailure.unauthorized);
+      }
       final currentWindow = const PartyCyclePolicy().fromKey(
         command.expectedCycleKey,
       )!;
@@ -339,15 +347,17 @@ class FirestorePartyCycleCommandRepository
         command.nextCycleKey,
       )!;
       if (nextWindow.startedAt.isBefore(currentWindow.endsAt) ||
-          (_now ?? DateTime.now)().toUtc().isBefore(currentWindow.endsAt))
+          (_now ?? DateTime.now)().toUtc().isBefore(currentWindow.endsAt)) {
         return const PartyCycleResult.failure(
           PartyCycleFailure.notReadyForAdvance,
         );
+      }
       final snapshot = await _memberSnapshot(transaction, members);
-      if (snapshot == null || snapshot.length != r?['memberCount'])
+      if (snapshot == null || snapshot.length != r?['memberCount']) {
         return const PartyCycleResult.failure(
           PartyCycleFailure.revisionConflict,
         );
+      }
       final continueTogether = r?['continueTogether'] == true;
       final raidId = r?['raidId'] as String?;
       if (raidId == null || raidId.isEmpty) {
@@ -861,8 +871,9 @@ class FirestorePartyCycleCommandRepository
     Future<PartyCycleResult> Function(Transaction, String) action,
   ) async {
     final uid = _firebaseAuth.currentUser?.uid;
-    if (uid == null)
+    if (uid == null) {
       return const PartyCycleResult.failure(PartyCycleFailure.unauthenticated);
+    }
     try {
       return await _firestore.runTransaction((transaction) async {
         final binding = await transaction.get(
@@ -901,8 +912,9 @@ PartyCycleFailure? _validateCurrent(
 ) {
   if (data == null) return PartyCycleFailure.notFound;
   if (data['revision'] != revision) return PartyCycleFailure.revisionConflict;
-  if (data['currentCycleKey'] != cycleKey)
+  if (data['currentCycleKey'] != cycleKey) {
     return PartyCycleFailure.cycleMismatch;
+  }
   if (data['status'] != 'active') return PartyCycleFailure.recruitmentClosed;
   return null;
 }

@@ -1,15 +1,15 @@
-import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/data/local/account_database.dart';
 import 'package:lost_party/features/raid_status/domain/services/party_event_sync_service.dart';
 import 'package:lost_party/features/raid_status/presentation/viewmodels/party_notification_view_model.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_event.dart';
+import '../../../support/fixed_clock_account_database.dart';
 
 void main() {
   late AccountDatabase database;
 
   setUp(() {
-    database = AccountDatabase(NativeDatabase.memory());
+    database = FixedClockAccountDatabase();
   });
 
   tearDown(() async {
@@ -98,9 +98,18 @@ void main() {
     final rows = await database.loadRecentPartyNotifications('player');
 
     expect(updated, 1);
-    expect(rows.singleWhere((row) => row.eventId == 'room-event').readAt, isNotNull);
-    expect(rows.singleWhere((row) => row.eventId == 'other-room').readAt, isNull);
-    expect(rows.singleWhere((row) => row.eventId == 'other-type').readAt, isNull);
+    expect(
+      rows.singleWhere((row) => row.eventId == 'room-event').readAt,
+      isNotNull,
+    );
+    expect(
+      rows.singleWhere((row) => row.eventId == 'other-room').readAt,
+      isNull,
+    );
+    expect(
+      rows.singleWhere((row) => row.eventId == 'other-type').readAt,
+      isNull,
+    );
   });
 }
 

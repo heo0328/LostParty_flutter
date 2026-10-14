@@ -18,7 +18,8 @@
 
 ## 이번 변경과 테스트 안내
 
-- [로그인·세션 인수 검증과 테스트 전환 계획](project/NEXT_WORK.md): Firebase 전용 테스트 제거·Git 이력 보존, 공통 정책 유지/이식, 관련 CI 경로 및 사용자 인수 기준. 기획 완료·실행 대기.
+- [현재 다음 작업](project/NEXT_WORK.md): Firebase 실행 코드·SDK·플랫폼 설정 최종 제거 조사와 회귀 보호 기준.
+- [파일별 테스트 전환 대장](project/TEST_TRANSITION_INVENTORY.md): Firebase 테스트 제거 근거와 공통 검증 보존·안정화 결과. 전체1134테스트 통과, 수동4항목 통과; 완료 이력은 DEV_LOG.
 
 
 

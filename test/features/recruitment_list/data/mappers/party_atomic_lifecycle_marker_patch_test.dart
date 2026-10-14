@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/data/mappers/party_atomic_lifecycle_marker_patch.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_atomic_command.dart';
 import 'package:lost_party/features/recruitment_list/domain/entities/party_recruitment.dart';
-import 'package:lost_party/features/recruitment_list/domain/policies/party_composition_policy.dart';
 
 void main() {
   test('advanceCycle 마커는 다음 정상 Aggregate 명령에서만 소진한다', () {

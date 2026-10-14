@@ -24,8 +24,9 @@ class FirestorePartyCreateRepository implements PartyCreateRepository {
   Future<PartyCreateResult> create(PartyCreateCommand command) async {
     const validator = PartyCreateCommandValidator();
     final requestFailure = validator.validate(command);
-    if (requestFailure != null)
+    if (requestFailure != null) {
       return PartyCreateResult.failure(requestFailure);
+    }
     final authUid = _firebaseAuth.currentUser?.uid;
     if (authUid == null) {
       return const PartyCreateResult.failure(

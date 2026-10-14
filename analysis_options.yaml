@@ -30,3 +30,6 @@ linter:
 analyzer:
   exclude:
     - legacy/**
+    # Generated local evidence includes copies of old source/test trees.
+    # These are already ignored by Git and are not product compilation inputs.
+    - coverage/**
