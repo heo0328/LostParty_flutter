@@ -1,13 +1,13 @@
 # AI CONTEXT — 현재 프로젝트 상태
 
-갱신: 2026-10-14. 기본 경로 D:/dev/projects/lost_party_flutter. 통합 기준 dev. Firebase 제거 a160c6f와 Backend 조회 연결 6f97190 및 인수 문서를 dev/origin/dev 3cedd9d에 통합·push 완료했다. 등록 관리 Backend 요청을 Issue #3에 게시하고 사용자 승인으로 관련 문서의 dev 통합·push를 진행한다. 다음은 내 계정 화면 디자인 재배치이며 별도 목적 브랜치에서 진행한다.
+갱신: 2026-10-14. 기본 경로 D:/dev/projects/lost_party_flutter. 통합 기준 dev. Firebase 제거 a160c6f와 Backend 조회 연결 6f97190 및 인수 문서를 dev/origin/dev 3cedd9d에 통합·push 완료했다. 등록 관리 Backend 요청 문서를 dev/origin/dev 06758d1에 통합·push 완료했다. 내 계정 화면의 메인 계정→부계정→계정 도구 배치를 사용자가 확정했고 커밋·dev 통합·push를 승인했다. 페이지 테스트10개·변경 파일 분석 통과 결과를 재사용한다. 최종 Git 상태는 dev/origin/dev 확인이 기준이다. 다음 그룹은 현재 디자인을 유지한 서버 등록 관리 연결이다.
 
 ## 현재 구현과 인수
 
 - Google Credential Manager·Backend 자체 세션·로그인 유지/로그아웃을 사용한다. Firebase SDK/구 MyApp/Router·익명 Player/Firestore 실행 경로를 제거했다. OAuth 등록·로컬 캐릭터/빌드/키는 유지한다.
 - Backend #3 구현254cb5d/인계406004e의 원본 계약을 고정하고 서버 등록 목록·등록별 전체 캐릭터/settings 조회를 연결했다. 서버 UUID·상태·private 메모리는 로컬 SQL/정수 PK와 구분한다. [Flutter 조회 계약16](../backend-migration/16-account-read-flutter-contract.md).
 - 별도 작업 트리와 기본 프로젝트의 빌드 불일치를 복구했고, 기본 경로에서 조회 기능 포함 APK 빌드를 확인했다. 사용자 1·2·4 통과: 로그인 서버 빈 등록 안내, 로그아웃 로그인 안내와 로컬 화면 보존. 등록이 없어 3번 캐릭터 조회는 후속 인수로 분리했다.
-- 기존 조회 소스 전체1159테스트·분석0과 기본 경로 APK 빌드/마커 검증을 기록했다. 기본 경로의 기존 미추적 실험은 보존했으며 소스 동일성으로 자동 검증을 재사용한다. 이번 수동 결과 이후 코드 변경 없음.
+- 기존 조회 소스 전체1159테스트·분석0과 기본 경로 APK 빌드/마커 검증을 기록했다. 기본 경로의 기존 미추적 실험은 보존했으며 소스 동일성으로 자동 검증을 재사용한다. 이 결과는 조회 구현의 검증 기록이며, 이후 화면 배치 변경은 별도 페이지10개 테스트/분석으로 검증했다.
 - 서버에는 등록 API가 있으며 Flutter 등록·수정·제거 UI/쓰기가 다음 그룹이다. 서버 장비 인증 및 활동·대표 저장 UI는 그다음이다. 다음 실행 근거는 [NEXT_WORK](NEXT_WORK.md), 전체 단계는 [연결 계획14](../backend-migration/14-my-account-flutter-integration-plan.md), 완료 경과는 [DEV_LOG](DEV_LOG.md).
 - [등록 관리 Backend 요청17](../backend-migration/17-account-registration-backend-request.md): 조회 결과를 #3에 인계하고 실행 버전·서버 키 준비 여부·실 provider 등록 시험 조건과 필요한 최소 보완을 요청한다. 기존 API를 중복 개발하지 않는다.
 

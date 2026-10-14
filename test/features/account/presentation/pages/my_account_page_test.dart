@@ -16,7 +16,7 @@ import 'package:lost_party/shared/lost_ark_api/auth/api_token.dart';
 import 'package:lost_party/shared/lost_ark_api/auth/api_token_store.dart';
 
 void main() {
-  testWidgets('모바일 폭에서 인증과 조회 액션을 두 개의 compact 행으로 배치한다', (
+  testWidgets('모바일 폭에서 캐릭터를 먼저 표시하고 계정 도구와 부계정 추가를 분리한다', (
     WidgetTester tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(360, 800));
@@ -67,11 +67,23 @@ void main() {
     );
     expect(
       find.descendant(
-        of: lookupActions,
+        of: find.byKey(const ValueKey('subAccountsSectionHeader')),
         matching: find.byKey(const ValueKey('addSubAccountButton')),
       ),
       findsOneWidget,
     );
+    final characters = find.byKey(const ValueKey('mainAccountCharacterGrid'));
+    final subAccounts = find.byKey(const ValueKey('subAccountsSectionHeader'));
+    final tools = find.byKey(const ValueKey('accountToolsSectionTitle'));
+    expect(
+      tester.getTopLeft(characters).dy,
+      lessThan(tester.getTopLeft(subAccounts).dy),
+    );
+    expect(
+      tester.getTopLeft(subAccounts).dy,
+      lessThan(tester.getTopLeft(tools).dy),
+    );
+    expect(tester.getBottomRight(characters).dy, lessThan(800));
     expect(tester.takeException(), isNull);
   });
 
@@ -202,6 +214,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('loadAccountDataButton')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('loadAccountDataButton')));
     await tester.pumpAndSettle();
 
@@ -241,6 +257,10 @@ void main() {
       find.byKey(const ValueKey('representativeCharacterNameField')),
       '',
     );
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('loadAccountDataButton')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('loadAccountDataButton')));
     await tester.pumpAndSettle();
 
@@ -260,6 +280,10 @@ void main() {
           accountRepository: _FakeAccountRepository(),
         ),
       ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('addSubAccountButton')),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('addSubAccountButton')));
