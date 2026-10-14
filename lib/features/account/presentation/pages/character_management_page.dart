@@ -11,6 +11,8 @@ import '../../domain/repositories/activity_characters_repository.dart';
 import '../../domain/repositories/nice_group_auto_refresh_settings_repository.dart';
 import '../../domain/repositories/representative_character_sync_gateway.dart';
 import '../viewmodels/character_management_view_model.dart';
+import '../viewmodels/member_settings_view_model.dart';
+import '../widgets/member_settings_controls.dart';
 
 class CharacterManagementPage extends StatefulWidget {
   const CharacterManagementPage({
@@ -20,6 +22,8 @@ class CharacterManagementPage extends StatefulWidget {
     this.niceGroupSettingsRepository,
     this.playerId,
     this.accountId,
+    this.memberSettings,
+    this.onLogin,
     super.key,
   });
 
@@ -29,6 +33,8 @@ class CharacterManagementPage extends StatefulWidget {
   final NiceGroupAutoRefreshSettingsRepository? niceGroupSettingsRepository;
   final String? playerId;
   final int? accountId;
+  final MemberSettingsViewModel? memberSettings;
+  final VoidCallback? onLogin;
 
   @override
   State<CharacterManagementPage> createState() =>
@@ -50,6 +56,7 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
       accountId: widget.accountId,
     )..addListener(_onChanged);
     _viewModel.initialize();
+    widget.memberSettings?.reload();
   }
 
   @override
@@ -153,18 +160,26 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
                     AppSpacing.sm,
                   ),
                   sliver: SliverToBoxAdapter(
-                    child: SwitchListTile(
-                      key: const ValueKey('niceGroupAutoRefreshSwitch'),
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('나이스단 자동 갱신'),
-                      subtitle: Text(
-                        '${_viewModel.niceGroupResult.classNames.join(', ')} 직업군 전체에 적용됩니다. 설정을 끄면 기존 수동 스냅샷을 사용합니다.',
-                      ),
-                      value: _viewModel.draftNiceGroupAutoRefreshEnabled,
-                      onChanged: _viewModel.isSaving
-                          ? null
-                          : _viewModel.setNiceGroupAutoRefreshEnabled,
-                    ),
+                    child: widget.memberSettings != null
+                        ? MemberSettingsControls(
+                            model: widget.memberSettings!,
+                            classes: _viewModel.niceGroupResult.classNames.join(
+                              ', ',
+                            ),
+                            onLogin: widget.onLogin,
+                          )
+                        : SwitchListTile(
+                            key: const ValueKey('niceGroupAutoRefreshSwitch'),
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('나이스단 자동 갱신'),
+                            subtitle: Text(
+                              '${_viewModel.niceGroupResult.classNames.join(', ')} 직업군 전체에 적용됩니다. 설정을 끄면 기존 수동 스냅샷을 사용합니다.',
+                            ),
+                            value: _viewModel.draftNiceGroupAutoRefreshEnabled,
+                            onChanged: _viewModel.isSaving
+                                ? null
+                                : _viewModel.setNiceGroupAutoRefreshEnabled,
+                          ),
                   ),
                 ),
                 const SliverToBoxAdapter(child: Divider(height: 1)),

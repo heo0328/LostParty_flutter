@@ -3925,3 +3925,60 @@
 - 사용자문서최신화/commit·push/2번준비지시. 신규3흐름인수와Backend확인6167564129를현재완료상태로반영하고NEXT_WORK를나이스단설정·앱실행1회설계준비로교체했다. 이전조건/현재미연결구분·설정회원key/저장위치·실행가드·profile전투력과전체Build책임을확인항목으로둔다. 기능구현/새Backend요청없음.
 - 전투력새로가능/보존흐름은계약22와사용자3흐름통과근거를재사용한다. 전체1204뒤국소70/최종분석0·debug11.4초이후기능코드변화없음,테스트/빌드반복없이diff/staged/최신origin-dev·36백업hash검증으로통합한다. 미확인모든provider원본/실장애·나이스단자동실행은후속으로남긴다.
 - feature/character-combat-power구현/테스트/원본snapshot/직접관련문서만커밋·원격작업브랜치push→dev일반merge·push. 적용SHA·소비39188d5와완료/미확인을Issue5회신·재조회한다. 작업브랜치유지/삭제후보,dev/origin-dev일치·추적변경없음확인. 기존실험/백업36개·main/원격DB·운영설정유지.
+
+## 2026-10-14 — 나이스단 자동갱신 기존 구조 조사·UX협의 설계
+
+- 사용자설계지시와기능적UX사전협의조건을적용. Firebase제거직전a52492f28c0046a90c3a8d35df00e0c14f241fe6의main/router·설정Repository/DB·Coordinator·로컬draft저장·Firestore최소표시Gateway를git show로대조해문서23에원본경로/동작을기록했다. 실제순서는레이드초기로딩/첫frame→앱1회→active/serverID/1700·나이스판정→Flutter종합Armory→역할Snapshot로컬저장→서버최소표시다. 설정도로컬Player별DB였음을확인했다.
+- 새로가능:과거전투력갱신이전체빌드갱신에포함됐고서버는최소값만저장했다는근거로복원범위를협의할수있다. 대상은화면표시/활동선택으로제외하지않았고전체수동은나이스단항상제외였다. UX범위/시점/설정/수동처리4항목은미확정이다.
+- 기존동작보존:기능코드/Backend/API·DB·기기/테스트변경없음,기존資料이관없음. #5최신6168169896에서Git인계해소/새요구없음을확인했으며새반복댓글/요청은게시하지않았다.
+- 검증은내용/역사소스대조·diffcheck. docs/my-account-backend-phase1을devccc6b23에서ff재사용,문서미커밋/dev미반영/미push·브랜치유지. 실기기추가인수없음/기존실험·백업유지.
+
+## 2026-10-14 — 빌드 갱신 범위·나이스단 서버 설정 사용자 확정
+
+- 사용자가자동갱신범위를전체빌드로확정하고나이스단허용기본OFF·서버회원별저장을요구했다. 기기변경/재설치/데이터삭제뒤동일Google회원로그인으로같은설정/데이터환경복원을목표로기록했다. 기존Firebase이관과구분한다.
+- 문서23/NEXT_WORK/AI_CONTEXT에서미확정항목을갱신하고설정미조회와저장false구분·회원격리·최소설정API검토를설계했다. 전체동일환경에는로컬역할Snapshot/선호역할/표시순서등별도복원설계가필요함을분리했다. 실행/저장실패·수동UX는협의전으로유지한다.
+- 기능코드/서버요청/API·DB변경없음,문서내용/diffcheck만검증. docs/my-account-backend-phase1미커밋·dev미반영/미push·기존실험유지,새실기기항목없음.
+
+## 2026-10-14 — 나이스단 회원 설정 Backend Issue6 요청
+
+- 사용자 지시로 최신 Issue 목록/Issue5 회신과 Backend dev 4eb23f5 OpenAPI를 확인했다. 기존 원정대 활동/대표 설정과 회원 공통 허용값을 구분하고 중복 Issue가 없는 것을 확인했다.
+- https://github.com/heo0328/lostparty-backend/issues/6 생성: 기본false·회원별 서버 GET/수정·동일Google회원의 새세션/기기/재설치 복원, 회원격리·재시도/동시수정 계약과 실제 구현/OpenAPI SHA·push/적용/서버검증 인계 요청. 전체Armory/역할빌드·표시환경복원은 후속 계약 제안이며 일괄구현 요청이 아니다.
+- 새로 가능: Backend가 확정된 설정 요구를 기준으로 구현할 협업 요청을 게시했다. 구현/연동 완료는 아니다. 보존: Flutter 기능코드·기존 수동전투력/로그인/등록 흐름 변경없음. 미확인: 신규서버설정/API/기기복원은 Backend회신·Flutter연결 후 검증한다.
+- 검증: Issue 본문 게시 확인·문서 내용 검토·git diff --check. 순수문서/협업요청으로 Flutter테스트/빌드 반복없음. docs/my-account-backend-phase1 유지·문서 미커밋·dev미반영/미push, 기존 미추적 백업/실험은 유지.
+
+## 2026-10-14 — 완료 Backend Issue 정리·Flutter 주도 후속 이관
+
+- 사용자 지시로 전체6개 Issue와 원래 요청/완료·최신회신, 관련 계약/실제 BackendApp Router를 대조했다. #1/#2는 기존CLOSED. #3 서버기반 구현·Flutter조회/등록은 완료이나 장비route pending/활동저장 미연결·실provider증거 보류가 남아 전체제품완료가 아닌 후속분리 종료로 판단. #4 등록/이름·#5 수동전투력은 양측구현/게시·인계와사용자확인완료로 종료했다. #6은 착수회신6168785700·구현SHA대기로OPEN유지.
+- 완료근거/미완료항목/Flutter주관·다음행동·로컬문서미게시상태를 각 종료댓글에 명시하고 게시본문을 재조회·일치확인한 뒤 Completed로 닫았다. #3 댓글6168888648, #4 댓글6168889958, #5 종료댓글은 각 Issue 최신댓글. 기존 과거 OPEN문구는 당시 이력으로 보존한다.
+- 작업대장은 새 파일을 늘리지 않고 연결계획14#flutter-follow-up-20261014에 기록: ACCOUNT-01장비Flutter연결, ACCOUNT-02실provider/이전/감소roster증거, ACCOUNT-03활동/대표연결, QA-01등록제거뒤로컬보존의미확인인수, POWER-01앱실행전체빌드, RESTORE-01빌드/표시환경복원, AUTH-01인증정책/실기기release운영후속. 각각 출처·상태·담당·다음행동·완료조건을 명시했다. 현재우선순위POWER-01/#6·RESTORE-01설계유지.
+- ai_rules협업절에 완료요청과후속범위분리·Flutter주관기록·필요Backend변경별도요청·승인범위종료기준을 기록했다. NEXT_WORK/AI_CONTEXT의 오래된전투력Git대기/이름미인수문구를정정하고 후속대장으로연결했다.
+- 새로가능: 완료된협업요청이후속때문에대기하지않고Flutter대장에서후속착수근거를추적. 보존: 기능코드/기존인수·API/DB/보류정책변경없음. 미확인: 대장의미구현/미인수를통과로바꾸지않음. 검증: Issue종료상태·게시본문재조회/대장검토·git diff --check. 순수문서/Issue관리라Flutter테스트/빌드반복없음.
+- docs/my-account-backend-phase1 유지, 이번/기존설계문서미커밋·dev미반영·미push. 기존미추적백업/실험보존. 코드구현·main/배포·기기/서버조작없음.
+
+
+## 2026-10-14 — Issue6 계약 직접 확인·설정 UX 협의
+
+- 사용자 다음진행 지시로 Backend 연결요청6168992033과 immutable79255f0의 원본OpenAPI/연결문서를 직접확인. GET/PUT회원설정·엄격DTO/version/멱등·GET실패와false구분·회원격리를설계23에기록하고NEXT_WORK/AI_CONTEXT의인계대기를정정했다.
+- 회원공통앱설정위치/즉시저장·저장중차단·실패/재시도를추천하고기존캐릭터관리/별도저장대안을질문했다. 사용자UX응답대기이며추천안을확정하거나기능코드를수정하지않았다. Backend에는계약확인·UX협의상태를Issue6에회신/재조회했다.
+- 새로가능: 게시계약기준으로설정연결을계획가능. 보존: 기존기능/API/DB변경없음. 미확인: Flutter설정연결/새환경복원인수. 검증: 문서검토·diffcheck,순수문서라Flutter테스트/빌드반복없음. docs/my-account-backend-phase1 유지·미커밋/dev미반영/미push.
+
+## 2026-10-14 — 회원 나이스단 설정 Flutter 연결 완료·인수 대기
+
+- 사용자 UX 선택은 기존 캐릭터관리 위치·변경즉시저장. feature/member-settings를 생성해 종료조건을 설정연결/검증으로 정의했고 기존 미커밋 문서/미추적 실험을 보존했다. 실행계획을 설계23에 먼저 기록했다.
+- 새 MemberSettingsViewModel/Controls, BackendApp 공유DI와기존캐릭터관리나이스단영역을연결했다. 본·부계정회원공통값·하단캐릭터저장취소와독립즉시PUT,로그인/새세션GET복원·미조회/실패와false구분·게스트무요청/로그인안내. 기존로컬관리optional경로·활동/대표/표시저장·등록/수동전투력·Google세션은유지했다.
+- 소비Backend79255f0/원본snapshot issue6-79255f0.openapi.json SHA256 6659943b2064e15fd054f7a98426afc432d8d33b53ccb3806c3ac3e3d049ffd3. 기존인증/계정DTO·DB불변,새설정만엄격2필드boolean/intversion. key/body/version/회원세대/기한불변명령·유실/RetryAfter·기한/멱등충돌reviewGET/명시종료·revision충돌GET/사용자새선택·성공replay뒤GET현재값·lateGET/PUT격리.
+- 검증: 초기관련29개통과(초기parser테스트의teardown미초기화는수정). 응답불일치/PUT뒤GET실패경계추가후전체1219테스트/제품lib-test분석0. 최종검토에서GET실패가이전RetryAfter대기를해제하는국소경계보완1개후관련32/최종분석0통과. 전체1220통과로확대하지않는다. 초기root분석의새curly안내4개수정,기존미추적tools3개info는손대지않고제품lib/test최종0확인. 최종debugAPK9.4초빌드성공·포맷/diffcheck/구현diff검토완료. 초기APK26.9초는이전상태이며최종APK기준은9.4초다.
+- 새로가능: 기존캐릭터관리에서회원설정을즉시서버저장하고GET복원할앱연결. 보존확인:기존캐릭터관리테스트/전체회귀,로컬DB/빌드·등록/인증코드불변. 미확인:실Backend설정쓰기/ONOFF·화면재진입·재로그인/재설치같은회원복원은사용자인수대기. 전체빌드자동실행/전체환경복원미구현을화면/문서에서구분했다. 에이전트기기설치/조작/DB쓰기없음.
+- Issue6에소비SHA·구현/자동검증·인수/미실행과Git상태를회신하고본문재조회일치확인했다. 신규Backend수정/이미통과한시험재요청없음. 현재feature/member-settings,기능/문서미커밋·dev미반영/미push,기존미추적실험보존/브랜치유지. 사용자확인후결과콜백과Git정리가남는다.
+
+## 2026-10-14 — 회원 설정 사용자1/2/3성공·앱 시작 API순서 조사
+
+- 사용자ON/OFF즉시저장·관리재진입·동일Google회원재로그인복원3항목성공. 별도재설치/새기기인수미확인은유지. Issue6에결과와코드변경없음/Git미게시상태를회신·본문재조회일치확인.
+- 앱초기설정OFF→서버ON복원전자동갱신경쟁질문을실제BackendApp/Auth/회원설정/등록읽기/전투력VM/MyAccount/summary/남은runner로조사. 인증restore와애니메이션후화면표시이며설정/roster완료대기없음. signedIn뒤privateGET은병렬,전투력은캐시GET뿐. 개인키있을때siblings로컬요약자동갱신은별도이며전체Armory/빌드갱신아님. 현재runOnce호출/DI없으므로설정GET전전체빌드자동실행경로없음.
+- 향후위험: 남은구runner는설정await후예외를false로바꾸고runOnceFuture를보관한다. 그대로연결하면서버ON의설정실패를OFF로제외한채1회를소진할수있음. 설정미조회null/실패와명시false를구분하고회원설정GET성공+전체roster준비뒤동일회원세대/나이스판정→실행하는순서를설계23/NEXT_WORK에기록. 등록목록중복GET은후속호출정리후보로만기록하며현재정상코드재작성없음.
+- 새로가능: 현재실제API흐름과미래갱신선행조건을검토가능. 보존:기능코드/API/DB변경없음·기존사용자인수/자동검증유지. 미확인:전체빌드실행/시작게이트미구현과별도새환경복원. 검증:read-only코드검색/호출부대조·문서내용검토/diffcheck. 코드불변으로테스트/빌드/기기조작반복없음. feature/member-settings유지·미커밋/dev미반영/미push.
+
+
+## 2026-10-14 — Issue6 최종Git정리·전체DB설계점검 착수계획
+
+사용자Issue6마무리지시로회원설정/계약/자동검증/3흐름성공을정리해commit/dev통합/push·최종Issue콜백/종료를진행한다. 전체1219후국소32·최종분석0/APK9.4초이후코드변경없어재검증재사용. 기존독립문서협업정리는별도커밋으로분리하고미추적실험36개/기존브랜치·main보존. 이후문서브랜치에서전체Drift/보안저장/메모리·Backendmodels/migrations/API를대조하고복원/회원ID/수명/소유·미구현경계를보고하는단일조사그룹을계획했다. 코드/DDL/실데이터변경없음.
