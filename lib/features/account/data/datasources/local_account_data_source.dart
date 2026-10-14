@@ -10,6 +10,7 @@ import '../../domain/entities/character_build_snapshot.dart';
 import '../../domain/entities/character_profile.dart';
 import '../../domain/entities/character_summary.dart';
 import '../../domain/entities/local_game_account.dart';
+import '../../domain/policies/account_label_policy.dart';
 import '../../domain/entities/roster_summary_apply_result.dart';
 import '../../domain/entities/server_account_identity_binding.dart';
 import '../../domain/repositories/character_summary_sync_gateway.dart';
@@ -103,8 +104,12 @@ class LocalAccountDataSource {
       return left.id.compareTo(right.id);
     });
     final result = <LocalGameAccount>[];
+    var subAccountNumber = 0;
     for (final account in accounts) {
-      result.add(await _loadAccount(account));
+      if (!account.isMain) subAccountNumber++;
+      result.add(
+        await _loadAccount(account, subAccountNumber: subAccountNumber),
+      );
     }
     return List.unmodifiable(result);
   }
@@ -168,7 +173,10 @@ class LocalAccountDataSource {
     Map<int, String> statusesByLocalAccountId,
   ) => _database.updateServerOwnershipStatuses(statusesByLocalAccountId);
 
-  Future<LocalGameAccount> _loadAccount(GameAccount account) async {
+  Future<LocalGameAccount> _loadAccount(
+    GameAccount account, {
+    int subAccountNumber = 1,
+  }) async {
     final characters = await (_database.select(
       _database.accountCharacters,
     )..where((table) => table.accountId.equals(account.id))).get();
@@ -176,7 +184,12 @@ class LocalAccountDataSource {
       id: account.id,
       serverGameAccountId: account.serverGameAccountId,
       serverOwnershipStatus: account.serverOwnershipStatus,
-      label: account.label,
+      label: AccountLabelPolicy.display(
+        customLabel: account.label.trim().isEmpty ? null : account.label,
+        isMain: account.isMain,
+        subAccountNumber: subAccountNumber,
+      ),
+      usesAutomaticLabel: account.label.trim().isEmpty,
       isMain: account.isMain,
       lookupCharacterName: account.lookupCharacterName,
       representativeCharacterId: account.representativeCharacterId,

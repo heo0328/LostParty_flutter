@@ -1,23 +1,23 @@
-# NEXT WORK — 서버 계정 등록 관리 연결
+# NEXT WORK — 현재 구간 통합 후 대기
 
-2026-10-14. 기본 경로 D:/dev/projects/lost_party_flutter, 통합 기준 dev. 내 계정 디자인은 사용자 승인으로 메인 계정 등록 현황 → 부계정 등록 현황 → 계정 도구 순서를 확정했다. 디자인 완료/검증 이력은 DEV_LOG, 장기 배치 기준은 [디자인 계약](../design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md). 이후 등록 기능은 현재 배치를 유지한다.
+2026-10-14. 사용자 지시: 현재 서버 등록 관리·로컬 자동 이름·갱신 처리/안내 변경을 문서 정리 후 dev에 커밋·머지·푸시하고 대기한다. 전투력 구현이나 새 Backend 요청은 이번에 시작하지 않는다. 완료 경과는 [DEV_LOG](DEV_LOG.md), 구현 기준은 [등록 계약19](../backend-migration/19-account-registration-flutter-contract.md)와 [이름 계약20](../backend-migration/20-account-auto-label-contract.md).
 
-## 다음 그룹의 목표·범위
+## 다음 작업 필요 — 캐릭터 전투력 수집·갱신
 
-[연결 계획14](../backend-migration/14-my-account-flutter-integration-plan.md)의 등록 관리: 캐릭터명 preview → 본/부계정 등록 → 등록 캐릭터 조회 → label/본계정 수정·등록 제거·요약 갱신. Backend 구현254cb5d/인계406004e와 원본 contracts/issue3-254cb5d.openapi.json을 기준으로 한다. 기존5개 API는 구현됐고 Flutter 등록 UI/쓰기 adapter가 후속 대상이다.
+- 증상: 캐릭터 이름·아이템 레벨은 보이지만 전투력은 `-` 또는 `미확인`이다. 표시 UI/nullable DTO는 존재하며 원정대 전체 전투력 수집 연결이 남아 있다.
+- 확인 근거: Backend dev e807a6f002222cdff7beb07bfbe5cae65b97df43의 app/game_accounts/observations.py는 일반 siblings 목록을 combat_power=None으로 매핑한다. proof 조회에서만 검색 캐릭터의 ArmoryProfile.CombatPower를 채운다. service.py는 없는 전투력을 기존 값으로 유지하며 power_fetched_at/power_stale을 반환한다. 이 확인은 해당 소스 버전 기준이며 이후 Backend 변경은 다음 착수 시 다시 확인한다.
+- Flutter 로컬도 sibling DTO에 전투력 파싱이 없고, 별도 프로필 조회는 검색 캐릭터 중심이다. 서버 값이 채워져도 로컬 카드에 자동 반영되는 연결로 간주하지 않는다. 서버 캐릭터 화면과 로컬 내 계정 카드의 데이터 출처를 먼저 구분한다.
+- 후속 포함 후보: Backend 캐릭터별 상세 조회·전투력 저장/갱신 → 응답 combat_power/power_fetched_at/power_stale → Flutter 표시 연결. 요청량·조회 실패/부분 성공·갱신 수명과 역할별 빌드 전투력 관계는 착수 설계에서 확정한다.
+- 완료 조건 후보: 신규 등록과 정보 갱신 후 실제 전투력 표시, 값 미제공/조회 실패 시 0이나 성공으로 위장하지 않는 표시, 기존 로그인·등록·재로그인·갱신 흐름 유지. 기존 사용자/테스터 데이터 이관은 하지 않는다.
+- 현재 승인 범위는 필요 작업 기록까지만이다. Backend Issue 게시·API/DB 변경·Flutter 구현·테스트 추가는 다음 지시를 기다린다.
 
-[요청17](../backend-migration/17-account-registration-backend-request.md)을 [이슈 #3](https://github.com/heo0328/lostparty-backend/issues/3#issuecomment-6161970774)에 게시·본문 검증 완료했다. 다음 작업 시작 시 최신 회신의 실행 버전/0002·서버 provider key 준비 여부(값 제외)·실 preview/등록 시험 조건과 필요한 계약 보완 SHA를 확인한다. 현재 디자인 통합에서 Backend 회신 조회나 신규 등록 구현을 진행하지 않는다.
+## 나머지 후속과 인수 범위
 
-## 구현 순서·보호
+- 서버 빈 이름 계약은 Backend #4 인계 후 연결한다. 로컬은 미입력값에 위치별 자동 이름, 입력값에 사용자 이름을 표시하며 schema13/기존 label을 사용한다.
+- 사용자 확인: 서버 등록·삭제·같은 회원 로그아웃/재로그인 뒤 등록 원정대 표시, 로컬 본·부계정 전환의 순서/표기, 최신 정보 갱신 안내 정상 동작. 전투력 미표시는 위 후속으로 분리한다.
+- 서버 표시명/본계정 수정 전체, 삭제 후 로컬 자료 보존, 재설치·장비 인증/소유권 이전·활동/대표 저장의 실제 인수까지 완료로 확대하지 않는다. #3 전체 완료/Issue 종료는 이번 범위가 아니다.
+- 최신 전체1178테스트·lib/test 분석0 이후 국소 갱신 수정은 Backend 읽기/등록 대상50개·변경파일 분석0·debug APK 빌드19.9초로 검증했다. 이번 문서 변경에는 해당 결과를 재사용한다.
 
-1. Backend 원본 DTO·오류/멱등·본계정/version·등록 제거 의미와 Flutter Repository/세션 연결을 조사하고 구체적 설계를 먼저 기록한다.
-2. 등록 관리 단일 그룹만 연결한다. 로컬 정수 PK/자료와 서버 UUID·등록 관계를 분리하며 로컬 캐릭터/빌드/키를 자동 업로드하거나 삭제하지 않는다. preview/등록을 소유 인증 완료로 취급하지 않는다.
-3. 같은 사용자/동작 재전송에 key와 payload를 고정한다. 응답 유실·진행중/TTL·hash 충돌에 자동 새 key 쓰기를 하지 않고 동일 요청 복구와 GET으로 판별한다.
-4. 401 세션과 업무403을 구분하고 회원/로그아웃/같은 회원 재로그인의 늦은 응답을 격리한다. 기존 GET·빈 목록·guest 안내와 현재 메인/부계정/도구 배치를 보존한다.
-5. 멱등·응답 유실/충돌·회원 전환·실패 시 성공 위장 방지 경계를 검증한 뒤 사용자가 등록·수정·제거·갱신/로컬 보존과 등록된 캐릭터 화면을 확인한다. 조회3번은 실제 등록이 생긴 이 구간에서 인수한다.
+## Git 마무리
 
-서버 key가 없으면 외부조회503 UPSTREAM_UNAVAILABLE가 예상된다. 값은 Issue/로그에 게시하지 않고 provider 증거 보류를 우회하지 않는다. 제외: 장비 인증/소유권 이전·활동/대표 PUT, Backend DB/API 변경·배포·데이터 이관/초기화·기기 설치/조작·기존 실험 변경.
-
-## Git 기준
-
-Firebase 제거 a160c6f·조회6f97190 dev 통합3cedd9d, Backend 요청 문서 통합06758d1은 push 완료했다. 이번 사용자 승인 범위는 내 계정 디자인과 관련 테스트/문서의 커밋·dev 병합·push이며 최종 SHA/원격 일치는 Git 확인이 기준이다. 작업 브랜치 feature/account-character-dashboard는 병합 후 보존/삭제 후보이며 자동 삭제하지 않는다. 다음 기능은 최신 dev에서 목적 브랜치를 확인한다. 기존 미추적 실험/백업36개와 원본 worktree는 그대로 보존한다.
+feature/account-backend-registration의 승인된 코드·테스트·관련 문서만 커밋한다. 최신 origin/dev 확인 후 일반 merge와 push, dev/origin/dev 일치를 확인한다. 기존 미추적 실험/백업36개는 커밋·삭제하지 않는다. 작업 브랜치는 유지/삭제 후보로만 분류한다. main 병합·운영 배포는 하지 않는다. 통합 후 신규 작업 없이 대기한다.
