@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/lost_ark_api/client/api_cooldown.dart';
 
 import '../../../../shared/formatters/display_number_formatter.dart';
 
@@ -13,11 +14,13 @@ class CharacterDetailPage extends StatefulWidget {
   const CharacterDetailPage({
     required this.character,
     required this.accountRepository,
+    this.apiCooldown,
     super.key,
   });
 
   final LocalAccountCharacter character;
   final AccountRepository accountRepository;
+  final ApiCooldown? apiCooldown;
 
   @override
   State<CharacterDetailPage> createState() => _CharacterDetailPageState();
@@ -29,6 +32,7 @@ class _CharacterDetailPageState extends State<CharacterDetailPage> {
   @override
   void initState() {
     super.initState();
+    widget.apiCooldown?.addListener(_onChanged);
     _viewModel = CharacterDetailViewModel(
       character: widget.character,
       accountRepository: widget.accountRepository,
@@ -39,6 +43,7 @@ class _CharacterDetailPageState extends State<CharacterDetailPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_onChanged);
+    widget.apiCooldown?.removeListener(_onChanged);
     _viewModel.dispose();
     super.dispose();
   }
@@ -73,7 +78,9 @@ class _CharacterDetailPageState extends State<CharacterDetailPage> {
         FilledButton.icon(
           key: const ValueKey('saveCharacterBuildButton'),
           onPressed:
-              _viewModel.selectedRole == null || _viewModel.isFetchingDraft
+              _viewModel.selectedRole == null ||
+                  _viewModel.isFetchingDraft ||
+                  widget.apiCooldown?.active == true
               ? null
               : _requestBuildDraft,
           icon: _viewModel.isFetchingDraft
@@ -91,6 +98,10 @@ class _CharacterDetailPageState extends State<CharacterDetailPage> {
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         ],
+        if (widget.apiCooldown?.active == true)
+          Text(
+            '호출 한도에 도달했습니다. 약 ${widget.apiCooldown!.seconds}초 후 다시 시도해 주세요.',
+          ),
         const SizedBox(height: 20),
         _buildSnapshotStatus(),
         if (snapshot != null) ...[

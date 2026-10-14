@@ -32,6 +32,9 @@ import '../features/account/presentation/pages/my_account_page.dart';
 import '../features/account/presentation/pages/character_management_page.dart';
 import '../features/account/presentation/pages/character_detail_page.dart';
 import '../features/account/presentation/pages/api_token_settings_page.dart';
+import '../features/account/presentation/pages/member_key_page.dart';
+import '../features/account/presentation/viewmodels/member_lostark_key.dart';
+import '../shared/lost_ark_api/client/api_cooldown.dart';
 import '../features/settings/presentation/pages/settings_page.dart';
 import '../features/recruitment_list/data/repositories/pending_backend_party_read_repository.dart';
 import '../features/recruitment_list/presentation/pages/recruitment_list_page.dart';
@@ -66,7 +69,9 @@ class BackendApp extends StatefulWidget {
   State<BackendApp> createState() => _BackendAppState();
 }
 
-class _BackendAppState extends State<BackendApp> {
+class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
+  MemberLostArkKey? _memberKey;
+  ApiCooldown? _cooldown;
   AccountDatabase? _database;
   AuthSessionController? _auth;
   ServerAccountReadViewModel? _serverReads;
@@ -83,6 +88,7 @@ class _BackendAppState extends State<BackendApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     const configured = String.fromEnvironment('BACKEND_BASE_URL');
     final base = configured.isNotEmpty
         ? configured
@@ -149,7 +155,19 @@ class _BackendAppState extends State<BackendApp> {
   GoRouter _createRouter() {
     final auth = _auth!;
     final readSession = AuthAccountReadSession(auth);
-    final accountApi = DioBackendAccountReadApi(_dio!, readSession);
+    _cooldown = ApiCooldown();
+    final accountApi = DioBackendAccountReadApi(
+      _dio!,
+      readSession,
+      cooldown: _cooldown,
+    );
+    _memberKey = MemberLostArkKey(
+      accountApi,
+      readSession,
+      SecureMemberKeyStorage(Uri.parse(_dio!.options.baseUrl).origin),
+      SecureApiTokenStore(),
+      _cooldown!,
+    );
     _memberSettings = MemberSettingsViewModel(accountApi, readSession);
     final serverAccounts = ServerAccountReadRepository(accountApi, readSession);
     _serverReads = ServerAccountReadViewModel(serverAccounts, readSession);
@@ -157,15 +175,25 @@ class _BackendAppState extends State<BackendApp> {
       accountApi,
       serverAccounts,
       readSession,
+      cooldown: _cooldown,
     );
     _serverPowers = ServerCombatPowerViewModel(
       serverAccounts,
       _serverWrites!,
       readSession,
     );
-    final tokenStore = SecureApiTokenStore();
+    final tokenStore = _memberKey!;
     final remote = LostArkCharacterRemoteDataSource(
-      apiClient: LostArkApiClient(apiTokenStore: tokenStore),
+      apiClient: LostArkApiClient(
+        apiTokenStore: tokenStore,
+        cooldown: _cooldown,
+        scopeIdentity: () => (
+          readSession.userId,
+          readSession.generation,
+          readSession.isAuthenticated,
+          _memberKey?.value?.version,
+        ),
+      ),
     );
     final catalog = GameCatalogRepositoryImpl(
       dataSource: AssetGameCatalogDataSource(),
@@ -218,6 +246,7 @@ class _BackendAppState extends State<BackendApp> {
                   path: '/account',
                   builder: (context, _) => MyAccountPage(
                     apiTokenStore: tokenStore,
+                    apiCooldown: _cooldown,
                     accountRepository: accounts,
                     summarySyncService: summary,
                     showServerOwnership: false,
@@ -274,6 +303,7 @@ class _BackendAppState extends State<BackendApp> {
                         }
                         return CharacterDetailPage(
                           character: character,
+                          apiCooldown: _cooldown,
                           accountRepository: accounts,
                         );
                       },
@@ -345,8 +375,19 @@ class _BackendAppState extends State<BackendApp> {
           routes: [
             GoRoute(
               path: 'api-token',
-              builder: (_, _) =>
-                  ApiTokenSettingsPage(apiTokenStore: tokenStore),
+              builder: (context, _) => MemberKeyPage(
+                model: tokenStore,
+                onLogin: () => showLoginRequired(context, auth),
+              ),
+            ),
+            GoRoute(
+              path: 'device-api-token',
+              builder: (context, _) => auth.isAuthenticated
+                  ? MemberKeyPage(
+                      model: tokenStore,
+                      onLogin: () => showLoginRequired(context, auth),
+                    )
+                  : ApiTokenSettingsPage(apiTokenStore: tokenStore),
             ),
             GoRoute(
               path: 'game-account-verification',
@@ -363,12 +404,20 @@ class _BackendAppState extends State<BackendApp> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(_memberKey?.reload());
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _router?.dispose();
     _serverReads?.dispose();
     _serverPowers?.dispose();
     _memberSettings?.dispose();
     _serverWrites?.dispose();
+    _memberKey?.dispose();
+    _cooldown?.dispose();
     _auth?.dispose();
     _dio?.close(force: true);
     _cycle?.dispose();

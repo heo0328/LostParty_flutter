@@ -67,7 +67,7 @@ class _ServerAccountCharactersPageState
     listenable: viewModel,
     builder: (context, _) => Scaffold(
       appBar: AppBar(
-        title: const Text('서버 계정 캐릭터'),
+        title: const Text('원정대 캐릭터'),
         actions: [
           IconButton(
             tooltip: '캐릭터 다시 조회',
@@ -117,7 +117,7 @@ class _ServerAccountCharactersPageState
           ),
         Text(serverOwnershipLabel(roster.ownershipStatus)),
         Text(serverConfigurationLabel(settings.configurationState)),
-        Text('활동 선택 ${settings.activityCharacterIds.length}명'),
+        Text('선택한 활동 캐릭터 ${settings.activityCharacterIds.length}명'),
         if (settings.ineligibleCharacterIds.isNotEmpty)
           const Text('확인이 필요한 캐릭터가 있습니다. 기존 선택은 보존되며 현재 사용 자격이 제한됩니다.'),
         if (settings.nextChangeAt != null)
@@ -135,7 +135,7 @@ class _ServerAccountCharactersPageState
               '${character.power.displayState}'
               '${character.powerFetchedAt == null ? '' : ' · ${character.powerFetchedAt!.toLocal()}'}\n'
               '${_status(character.rosterStatus)}'
-              '${character.eligible ? '' : ' · 현재 서버 활동 자격 없음'}'
+              '${character.eligible ? '' : ' · 현재 활동 조건 미충족'}'
               '${character.requiresRefresh ? ' · 정보 갱신 필요' : ''}',
             ),
             trailing: Column(

@@ -4,6 +4,8 @@
 
 ## 백엔드 이전 사전 분석
 
+- [회원별 Lost Ark API 키 서버 저장·호출 전환 요청](backend-migration/25-member-lostark-key-request.md): 회원키 등록/복원·기기저장·호출제한 UX 연결, Backend9e1a255b 소비·자동 검증/현재 기능 사용자 확인 완료.
+
 - [전체 데이터베이스 설계 재점검](backend-migration/24-database-design-review.md): Backend19개/Flutter8개테이블·저장소/회원ID/복원경계·로컬삭제정합성재현과다음설계결정.
 
 - [나이스단 자동 갱신 설계·기존 구조 조사](backend-migration/23-nice-group-auto-refresh-design.md): 회원설정79255f0연결/사용자3흐름완료·시작API순서조사와전체빌드자동갱신후속설계.
@@ -39,7 +41,7 @@
 
 ## 이번 변경과 테스트 안내
 
-- [현재 다음 작업](project/NEXT_WORK.md): Issue6종료·DB재점검완료,복원범위확정과로컬정합성후속.
+- [현재 다음 작업](project/NEXT_WORK.md): 회원키 연결 완료,다음 전체빌드 자동갱신 시작순서 설계·문구점검 등 후속.
 - [파일별 테스트 전환 대장](project/TEST_TRANSITION_INVENTORY.md): Firebase 테스트 제거 근거와 공통 검증 보존·안정화 결과. 제거 구간1134테스트와 조회 연결1159테스트 통과, 조회 사용자1·2·4 통과. 등록자료가 필요한3번은 후속 인수; 상세 이력은 DEV_LOG.
 
 

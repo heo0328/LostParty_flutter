@@ -11,11 +11,13 @@ class AccountReadException implements Exception {
     this.status,
     this.requestId,
     this.retryAfter,
+    this.retryAt,
   });
   final String code;
   final int? status;
   final String? requestId;
   final Duration? retryAfter;
+  final DateTime? retryAt;
   @override
   String toString() => 'AccountReadException($code)';
 }

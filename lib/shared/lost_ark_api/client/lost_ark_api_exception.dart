@@ -14,7 +14,12 @@ enum LostArkApiErrorType {
 }
 
 class LostArkApiException implements Exception {
-  const LostArkApiException({required this.type, this.statusCode});
+  const LostArkApiException({
+    required this.type,
+    this.statusCode,
+    this.retryAt,
+  });
+  final DateTime? retryAt;
 
   factory LostArkApiException.fromDio(DioException exception) {
     final statusCode = exception.response?.statusCode;

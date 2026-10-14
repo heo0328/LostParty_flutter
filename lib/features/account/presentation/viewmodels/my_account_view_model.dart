@@ -71,6 +71,8 @@ class MyAccountViewModel extends ChangeNotifier {
   StreamSubscription<List<WeeklyRaidStatusProjection>>? _statusSubscription;
 
   bool _isLoadingTokenStatus = false;
+  bool _disposed = false;
+  int _tokenTicket = 0;
   bool _isFetchingCharacters = false;
   bool _isAutoSyncing = false;
   bool _hasApiToken = false;
@@ -412,10 +414,14 @@ class MyAccountViewModel extends ChangeNotifier {
   }
 
   Future<void> loadTokenStatus() async {
+    if (_disposed) return;
+    final ticket = ++_tokenTicket;
     _isLoadingTokenStatus = true;
     notifyListeners();
 
-    _hasApiToken = await _apiTokenStore.read() != null;
+    final ready = await _apiTokenStore.read() != null;
+    if (_disposed || ticket != _tokenTicket) return;
+    _hasApiToken = ready;
     _isLoadingTokenStatus = false;
     notifyListeners();
   }
@@ -489,6 +495,7 @@ class MyAccountViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     unawaited(_claimSubscription?.cancel());
     unawaited(_statusSubscription?.cancel());
     super.dispose();

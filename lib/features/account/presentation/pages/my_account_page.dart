@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../../shared/lost_ark_api/auth/api_token_store.dart';
 import '../../../../shared/lost_ark_api/client/lost_ark_api_exception.dart';
+import '../../../../shared/lost_ark_api/client/api_cooldown.dart';
 import '../../../../shared/widgets/clearable_text_form_field.dart';
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/entities/weekly_raid_claim_command.dart';
@@ -44,6 +45,7 @@ class MyAccountPage extends StatefulWidget {
     this.showServerOwnership = true,
     this.serverAccountsSection,
     this.serverPowers,
+    this.apiCooldown,
     super.key,
   });
 
@@ -64,6 +66,7 @@ class MyAccountPage extends StatefulWidget {
   final bool showServerOwnership;
   final Widget? serverAccountsSection;
   final ServerCombatPowerViewModel? serverPowers;
+  final ApiCooldown? apiCooldown;
 
   @override
   State<MyAccountPage> createState() => _MyAccountPageState();
@@ -100,6 +103,10 @@ class _MyAccountPageState extends State<MyAccountPage> {
     );
     _viewModel.addListener(_onViewModelChanged);
     widget.serverPowers?.addListener(_onViewModelChanged);
+    widget.apiCooldown?.addListener(_onViewModelChanged);
+    if (widget.apiTokenStore case final Listenable source) {
+      source.addListener(_tokenChanged);
+    }
     _manualRefreshSubscription = widget.manualCharacterRefreshRunner?.states
         .listen((state) {
           if (mounted && _manualRefreshRunning) {
@@ -114,6 +121,10 @@ class _MyAccountPageState extends State<MyAccountPage> {
     _characterNameController.dispose();
     _viewModel.removeListener(_onViewModelChanged);
     widget.serverPowers?.removeListener(_onViewModelChanged);
+    widget.apiCooldown?.removeListener(_onViewModelChanged);
+    if (widget.apiTokenStore case final Listenable source) {
+      source.removeListener(_tokenChanged);
+    }
     _viewModel.dispose();
     unawaited(_manualRefreshSubscription?.cancel());
     super.dispose();
@@ -124,6 +135,10 @@ class _MyAccountPageState extends State<MyAccountPage> {
     if (mounted) {
       setState(() {});
     }
+  }
+
+  void _tokenChanged() {
+    if (mounted) unawaited(_viewModel.loadTokenStatus());
   }
 
   void _prefillLookupCharacterNameIfNeeded() {
@@ -269,6 +284,10 @@ class _MyAccountPageState extends State<MyAccountPage> {
   }
 
   Future<void> _requestAccountData() async {
+    if (widget.apiCooldown?.active == true) {
+      await _showApiErrorDialog(LostArkApiErrorType.rateLimited);
+      return;
+    }
     if (!_viewModel.hasApiToken) {
       await _showMissingTokenDialog();
       return;
@@ -379,7 +398,8 @@ class _MyAccountPageState extends State<MyAccountPage> {
     final message = switch (errorType) {
       LostArkApiErrorType.unauthorized => 'API 토큰이 올바르지 않거나 만료되었습니다.',
       LostArkApiErrorType.notFound => '캐릭터를 찾을 수 없습니다.',
-      LostArkApiErrorType.rateLimited => 'API 호출 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.',
+      LostArkApiErrorType.rateLimited =>
+        '호출 한도에 도달했습니다. 약 ${widget.apiCooldown?.seconds ?? 60}초 후 다시 시도해 주세요.',
       LostArkApiErrorType.timeout => '요청 시간이 초과되었습니다.',
       LostArkApiErrorType.network => '네트워크 연결을 확인해 주세요.',
       LostArkApiErrorType.server => 'Lost Ark API 서버에서 오류가 발생했습니다.',
@@ -499,6 +519,10 @@ class _MyAccountPageState extends State<MyAccountPage> {
               if (_viewModel.isLoadingTokenStatus)
                 const LinearProgressIndicator(),
               _buildTokenStatusPanel(context),
+              if (widget.apiCooldown?.active == true)
+                Text(
+                  '호출 한도에 도달했습니다. 약 ${widget.apiCooldown!.seconds}초 후 다시 시도해 주세요.',
+                ),
               const SizedBox(height: 12),
               Row(
                 key: const ValueKey('accountLookupActions'),
@@ -527,7 +551,9 @@ class _MyAccountPageState extends State<MyAccountPage> {
                     height: 56,
                     child: FilledButton.icon(
                       key: const ValueKey('loadAccountDataButton'),
-                      onPressed: _viewModel.isNetworkBusy
+                      onPressed:
+                          _viewModel.isNetworkBusy ||
+                              widget.apiCooldown?.active == true
                           ? null
                           : _requestAccountData,
                       icon: _viewModel.isNetworkBusy

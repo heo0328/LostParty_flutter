@@ -7,6 +7,7 @@ import '../../domain/server_account_models.dart';
 import '../../domain/server_account_read_repository.dart';
 import '../../domain/server_registration_api.dart';
 import '../../domain/server_combat_power.dart';
+import '../../../../shared/lost_ark_api/client/api_cooldown.dart';
 
 String _newKey() {
   final bytes = base64Url
@@ -42,7 +43,9 @@ class ServerRegistrationViewModel extends ChangeNotifier {
     this.reads,
     this.session, {
     DateTime Function()? now,
+    this.cooldown,
   }) : now = now ?? DateTime.now {
+    cooldown?.addListener(_cooldownChanged);
     session.addListener(_onSession);
     _scopeKey = (session.userId, session.generation, session.isAuthenticated);
   }
@@ -50,6 +53,21 @@ class ServerRegistrationViewModel extends ChangeNotifier {
   final ServerAccountReadRepository reads;
   final AccountReadSession session;
   final DateTime Function() now;
+  final ApiCooldown? cooldown;
+  void _cooldownChanged() {
+    if (!_disposed) notifyListeners();
+  }
+
+  int get retrySeconds {
+    final own = _retryAt == null
+        ? 0
+        : (_retryAt!.difference(now()).inMilliseconds / 1000).ceil().clamp(
+            0,
+            86400,
+          );
+    return own > (cooldown?.seconds ?? 0) ? own : (cooldown?.seconds ?? 0);
+  }
+
   ServerRegistrationPreview? preview;
   String? previewName;
   AccountReadException? failure;
@@ -67,6 +85,7 @@ class ServerRegistrationViewModel extends ChangeNotifier {
       session.isAuthenticated &&
       !busy &&
       !hasPending &&
+      cooldown?.active != true &&
       (_retryAt == null || !now().isBefore(_retryAt!));
   bool get canRetry =>
       session.isAuthenticated &&
@@ -334,18 +353,34 @@ class ServerRegistrationViewModel extends ChangeNotifier {
         preview = null;
         previewName = null;
         _retryAt = null;
+        for (final power in powerResults) {
+          if (power.retryAt != null) {
+            if (power.reason == 'UPSTREAM_RATE_LIMITED') {
+              cooldown?.observe(power.retryAt!);
+            }
+            _setFailure(
+              AccountReadException(
+                power.reason!,
+                retryAfter: power.retryAfter,
+                retryAt: power.retryAt,
+              ),
+            );
+          } else if (power.reason == 'LOSTARK_KEY_REJECTED') {
+            failure = const AccountReadException('LOSTARK_KEY_REJECTED');
+          }
+        }
         notice = powers != null
-            ? '전투력 확인 완료 · 갱신 ${powers.where((p) => p.status == 'updated').length}명 · '
-                  '캐시 ${powers.where((p) => p.status == 'cached').length}명\n'
-                  '미제공 ${powers.where((p) => p.status == 'unavailable').length}명 · '
+            ? '전투력 확인을 마쳤습니다. 새로 확인 ${powers.where((p) => p.status == 'updated').length}명 · '
+                  '최근 정보 사용 ${powers.where((p) => p.status == 'cached').length}명\n'
+                  '정보 없음 ${powers.where((p) => p.status == 'unavailable').length}명 · '
                   '실패 ${powers.where((p) => p.status == 'failed').length}명 · '
                   '제외 ${powers.where((p) => p.status == 'skipped').length}명 · '
-                  '미처리 ${powers.where((p) => p.status == 'deferred').length}명'
+                  '다음에 확인 ${powers.where((p) => p.status == 'deferred').length}명'
             : refreshed == null
-            ? '요청이 처리되었습니다. 현재 상태는 서버 목록에서 다시 확인해 주세요.'
+            ? '변경 사항을 저장했습니다.'
             : '정보 갱신 완료\n'
                   '새 캐릭터 ${refreshed.addedCount}명 · 확인 필요 ${refreshed.suspectCount}명\n'
-                  '서버 조회 시각: ${serverRegistrationTimeLabel(refreshed.registration.serverFetchedAt)}'
+                  '마지막 확인: ${serverRegistrationTimeLabel(refreshed.registration.serverFetchedAt)}'
                   '${refreshed.requiresRefresh ? '\n추가 정보 갱신이 필요합니다.' : ''}';
       }
     } on AccountReadException catch (error) {
@@ -357,6 +392,12 @@ class ServerRegistrationViewModel extends ChangeNotifier {
                 error.status == 403 ||
                 error.status == 404 ||
                 error.status == 429 ||
+                {
+                  'LOSTARK_KEY_NOT_CONFIGURED',
+                  'LOSTARK_KEY_REJECTED',
+                  'LOSTARK_KEY_CHANGED',
+                  'UPSTREAM_RATE_LIMITED',
+                }.contains(error.code) ||
                 error.code == 'REVISION_CONFLICT') &&
             error.code != 'REQUEST_IN_PROGRESS') {
           _pending = null;
@@ -377,9 +418,16 @@ class ServerRegistrationViewModel extends ChangeNotifier {
   void _setFailure(AccountReadException error) {
     failure = error;
     _retryTimer?.cancel();
-    _retryAt = error.retryAfter == null ? null : now().add(error.retryAfter!);
-    if (error.retryAfter != null) {
-      _retryTimer = Timer(error.retryAfter!, () {
+    final candidate =
+        error.retryAt ??
+        (error.retryAfter == null ? null : now().add(error.retryAfter!));
+    if (candidate != null &&
+        (_retryAt == null || candidate.isAfter(_retryAt!))) {
+      _retryAt = candidate;
+    }
+    if (retrySeconds > 0) {
+      _retryTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (retrySeconds == 0) timer.cancel();
         if (!_disposed) notifyListeners();
       });
     }
@@ -428,6 +476,7 @@ class ServerRegistrationViewModel extends ChangeNotifier {
     _retryTimer?.cancel();
     _ticket++;
     session.removeListener(_onSession);
+    cooldown?.removeListener(_cooldownChanged);
     super.dispose();
   }
 }

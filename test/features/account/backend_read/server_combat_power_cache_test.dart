@@ -163,6 +163,8 @@ void main() {
                     'power_stale': false,
                     'power_status': 'available',
                     'power_reason': null,
+                    'retry_after_seconds': null,
+                    'retry_at': null,
                     'status': 'updated',
                     'reason': null,
                   },
