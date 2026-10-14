@@ -72,6 +72,8 @@ void main() {
     'power_stale': false,
     'power_status': 'available',
     'power_reason': null,
+    'retry_after_seconds': null,
+    'retry_at': null,
     'status': 'updated',
     'reason': null,
   };
@@ -175,7 +177,7 @@ void main() {
       await model.refreshPower(account, targets);
       expect(model.failure, isNull);
       expect(model.notice, contains('실패 1명'));
-      expect(model.notice, contains('미처리 1명'));
+      expect(model.notice, contains('다음에 확인 1명'));
       expect(requests.length, 1);
     },
   );

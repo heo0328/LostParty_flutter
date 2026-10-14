@@ -159,12 +159,12 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
   Widget build(BuildContext context) {
     final writes = widget.writes;
     return Scaffold(
-      appBar: AppBar(title: const Text('서버 계정 등록 관리')),
+      appBar: AppBar(title: const Text('원정대 관리')),
       body: !widget.session.isAuthenticated
           ? Center(
               child: TextButton(
                 onPressed: widget.onLogin,
-                child: const Text('로그인 후 서버 계정을 등록할 수 있습니다.'),
+                child: const Text('로그인하면 원정대를 등록할 수 있습니다.'),
               ),
             )
           : ListView(
@@ -195,19 +195,25 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
                 if (writes.failure != null)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text(_message(writes.failure!)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (writes.failure!.code.startsWith('LOSTARK_KEY_'))
+                          AccountReadFailure(failure: writes.failure!)
+                        else
+                          Text(_message(writes.failure!)),
+                      ],
+                    ),
                   ),
-                if (writes.failure?.requestId != null)
-                  Text('문의 식별자: ${writes.failure!.requestId}'),
-                if (writes.failure?.retryAfter != null)
+                if (writes.retrySeconds > 0)
                   Text(
-                    '${writes.failure!.retryAfter!.inSeconds}초 이상 기다린 뒤 재시도해 주세요.',
+                    '호출 한도에 도달했습니다. 약 ${writes.retrySeconds}초 후 다시 시도해 주세요.',
                   ),
                 if (writes.notice != null) Text(writes.notice!),
                 if (writes.hasPending) ...[
                   const Text('결과 확인이 필요한 요청이 남아 있습니다. 입력을 바꾸어 재전송하지 않습니다.'),
                   OutlinedButton(
-                    onPressed: !writes.busy
+                    onPressed: writes.canRetry
                         ? () => _perform(writes.retry)
                         : null,
                     child: const Text('같은 요청 다시 시도'),

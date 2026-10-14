@@ -59,7 +59,7 @@ local namespace 변경/보관/archive/삭제 구현·앱 schema migration은 fro
 | O01 | Discord/Google/Apple 제공자 등록·우선순위·모바일 redirect/client registration | 세 제공자 adapter interface를 설계하되 첫 실제 통합은 등록 가능한 제공자1개. 전부 검증 전 완료 주장 금지 |
 | O02 | public Character 이름/그룹 공개 요약 범위 | D04의 최소 공개 제안,확정 API 계약 전에 검토 |
 | O03 | 기존 로컬 build/계정/설정 유지/보관/삭제 | 삭제 없이 보존·격리 제안,실제 초기화 없음 |
-| O04 | Lost Ark API credential 운영 | 현재 local 사용자JWT를 유지할지 server credential로 전환할지 미결정. 비밀을 공개 client/server 로그에 복사하지 않음 |
+| O04 | Lost Ark API credential 운영 | 2026-10-15 사용자확정: 회원별개인JWT를서버암호화저장·해당회원의provider호출에사용. 공용테스트키fallback없음. 한번등록해서버·기기보안저장,새기기로그인본인키복원후직접조회유지. [요청25](25-member-lostark-key-request.md)/Issue7 |
 | O05 | 신규 사용자 탈퇴/정지·데이터 수명,세션수/TTL |11 제안 기준을 backend에서 검토. 과거 Firebase 보존 의무를 신규 서비스 retention으로 혼합하지 않음 |
 | O06 | dev 기준과 별도 branch 기능 채택 | 현재 dev 계약을 기준. 중단 branch 자동 merge/채택 없음 |
 | O07 | 신규 운영 전환 시 구버전 종료·Firebase 실제 삭제 | 운영 시점 별도 승인. 신구 사용자는 별도 세계이며 데이터 rollback/승계 약속 없음 |

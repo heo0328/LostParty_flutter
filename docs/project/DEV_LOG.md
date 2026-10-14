@@ -4003,3 +4003,70 @@
 ## 2026-10-15 — 등록 목록 중복 조회 dev 통합
 
 사용자완료작업commit/dev병합·push지시에따라feature/account-backend-read의잔여항목을확인했다. 구현/자동검증/관련문서는완료,미확인실기기패킷계수는새UI필수인수가아니므로대기사유로두지않는다. 최종전체1227/분석0·포맷/diff를재사용하며코드불변이라검증을반복하지않는다. 최신origin/dev확인후코드/신규7개경계/관련문서를같은단위로commit·일반merge/push한다. NEXT_WORK를다음자동빌드실행순서설계로교체했고UI/설정/실패재시도는사용자협의전구현하지않는다. Backend수정/Issue콜백이필요한새계약/요청이없어종료이슈에독립로컬개선댓글을추가하지않는다. main/DB/기기와기존미추적Rules/tools를변경하지않고작업브랜치는유지/삭제후보로둔다. 최종적용/통합SHA·원격일치는실행후보고한다.
+
+## 2026-10-15 — 회원 개인 Lost Ark API 키 서버 저장·호출 전환 요청
+
+- 사용자 요구로 자동갱신설계보다 회원개인키구간을 우선했다. dev2dd821f(중복조회1c294d6통합완료)에서기존문서브랜치 docs/my-account-backend-phase1을FF재사용했다. FlutterAPI토큰화면/기기secure store와Backend dev4eb23f5 provider/observations/router/power_service를소스로확인. 서버공용LOSTARK_API_TOKEN/조회name기준cache와provider-global quota를확인했으며실제키값/환경파일은읽지않았다.
+- 요청25와신규Backend Issue7(https://github.com/heo0328/lostparty-backend/issues/7)에user UUID당개인JWT암호화저장/상태GET·명시등록교체삭제·원문미반환/로그·오류·멱등result노출금지·모든provider회원키사용·공용fallback0·키오류와앱401분리·cache/lease/quota·교체삭제중version/late결과·회원격리/동일회원재로그인을요청. 정확한wire/DDL/validation은Backend검토회신대기다. 본문게시후재조회일치확인.
+- Flutter진입점/로컬직접호출키와서버저장UX는계약후사용자협의,현재기기키자동전송/서버키원문다운로드없음. 로컬직접호출/비로그인기능은임의제거하지않았다. 09의O04미결정사항을최신확정으로갱신하고NEXT_WORK/AI_CONTEXT/문서지도·DB24후속을연결했다.
+- 새로가능: Backend가회원별credential저장/실제호출전환을구현할검토가능요청. 아직구현/인수완료아님. 보존:Flutter기능·현재인증/설정/등록/수동전투력·실제DB/환경/키불변. 미확인:새schema/API·서버암호화키준비/두회원격리/Flutter UI연동은후속. 검증:원본소스/중복Issue확인·게시본문대조·문서내용/diffcheck,순수요구문서라Flutter테스트/빌드반복없음. 현재docs/my-account-backend-phase1미커밋/dev미반영/미push,기존Rules/tools실험보존.
+
+## 2026-10-15 — 회원 키 계약 수용·공용 테스트 키 제거 요청
+
+- 사용자 동의로 Issue7 제안6172016640의 저장/유효성 분리와 메타데이터·버전/멱등·회원 키 호출/캐시/오류 계약을 수용했다. 댓글6172158382로 Backend 구현 착수와 현재 공용 테스트 JWT의 설정 원천/실행 제거·해당 API 적용을 요청하고 게시 본문을 대조했다. 키값/환경파일을 조회하거나 게시하지 않았다.
+- 사용자도 직접 개인 키를 등록한다. 기존 공용/기기 키의 자동 등록은 없으며 미등록 새 외부 호출은 공용 캐시와 무관하게 차단한다. 기존 저장 자료 GET·Google 세션·회원 설정·원정대 데이터는 유지하는 계약이다. 외부 발급 키 자체의 폐기나 DB 초기화는 요청하지 않았다.
+- 새로 가능: 수용된 계약에 따른 Backend 구현 및 공용 키 없는 UX 시험 준비. 보존 확인: Flutter lib/test 무변경·기존 미추적 실험 보존. 미확인: Backend 실제 공용 키 제거/실행 반영·암호화/API 구현·개인 키 UX 연동. 검증: 게시 본문 일치·문서 검토/diffcheck, 순수 문서라 Flutter 테스트/빌드 미반복. docs/my-account-backend-phase1 미커밋/dev미반영/미push이며 Backend 완료로 간주하지 않는다.
+
+## 2026-10-15 — Backend 대기 중 회원 키 UX 설계 초안
+
+- 사용자 요청으로 기존 API 토큰 화면/설정/내 계정 진입 및 기기 전용 ApiTokenStore 연결을 확인하고 요청25에 UX 초안을 기록했다. 등록 상태 확인/오류/명시 저장·교체·삭제/응답 유실·회원 및 서버 전환·실제 키 거절을 구분하고 성공을 유효성 인증으로 표시하지 않는다. 내 계정 캐릭터 목록 위에 큰 영역을 추가하지 않는 안이다.
+- 서버 등록 기본·기기용 별도 관리와 이중 저장/서버 전환의 선택을 사용자에게 협의 요청했다. 나머지 화면 유지·복귀 시 자동 명령 재실행 없음 등도 초안이며 미확정이다. Backend 수용6172211262 이후 구현/공용 키 제거 인계는 대기다. UX 초안을 완료 API로 오인할 테스트 요청/불필요한 Issue 댓글은 추가하지 않았다.
+- 새로 가능: 사용자와 검토할 화면/상태/연결 설계. 보존 확인: 제품 코드/lib/test·기기 키/서버 설정 무변경. 미확인: UX 사용자 확정·Backend 구현·실기기. 검증: 관련 코드/문서 검토·diffcheck, 문서만 변경해 Flutter 테스트/빌드 생략. 기존 docs/my-account-backend-phase1 유지·미커밋/dev미반영/미push, 미추적 Rules/tools 보존.
+
+## 2026-10-15 — 서버 호출 제한 사용자 안내·기기 키 복원 협업 요청
+
+- 공식 가이드의429/Limit·Remaining·Reset(epoch) 확인을 기반으로 사용자 지시를 반영했다. Backend6172571002/38d66dad 인계와 게시 개발 안내를 확인해 기존 key API/공용 키 제거 완료와 아직 없는 재시도 시각/원문 복원 계약을 구분했다.
+- 6172594991에 provider429의 키별 대기·단건/HTTP200 batch별 retry metadata·누락/비정상 시 유한 대기와 Flutter 안내/명시 재시도를 요청했다. 기존 서버80/min과 외부100/min을 구분하며 전체 호출량 동기화 서비스나 실키 한도소진 시험은 추가하지 않았다. 사용자 제시 서버·기기 동시 저장 및 본인 키 새기기 복원 방향도 별도 최소 계약 검토로 전달, 기존 metadata GET 변경을 확정하지 않았다. 게시 본문 일치 확인.
+- 요청25/NEXT_WORK/AI_CONTEXT에서 앞선 원문 다운로드 없음/Backend 미구현 문구를 최신 후속으로 명시 대체했다. 새로 가능: 양측이 구현할 제한 안내와 키 복원 계약 검토. 보존 확인: Flutter 코드·실제키/환경 변경 없음. 미확인: 보완 계약/구현·Flutter 실연동·실기기. 검증: 공식 문서/게시 개발 안내 확인·댓글 대조·diffcheck, 문서 작업으로 테스트/빌드 생략. docs/my-account-backend-phase1 미커밋/dev미반영/미push, 기존 미추적 실험 보존.
+
+## 2026-10-15 — Issue7 추가 계약 검토·수용 회신
+
+- 최신6172711200과 Flutter PowerResult strict 필드 검사를 대조하고 공식 usage-guide의 UNIX Reset 예시를 확인했다. 서버429 deadline/단건·batch retry metadata 및 POST 본인 키 restore/version/no-dedup이 요청 UX에 맞아6172746952로 수용·구현 진행을 회신, 게시 일치 확인했다.
+- 성공 Remaining0은 현재 성공을 유지하고 다음 호출부터 대기, 늦은 제한 정보의 token/deadline max와 업무 fencing 유지, 현 Flutter 빌드와 PowerResult 새 필드 비호환을 인계했다. 새로 가능: 양측 추가 계약 확정과 Backend 구현 착수. 보존 확인: lib/test·키/환경 무변경. 미확인: Backend 보완 구현·새 OpenAPI SHA·Flutter 연결/실기기. 검증: 공식 문서·최신 Issue·관련 DTO 검토/diffcheck, 코드 불변으로 테스트/빌드 생략. 현재 docs/my-account-backend-phase1 미커밋/dev미반영/미push·기존 실험 보존.
+
+## 2026-10-15 — Issue7 보완 구현 인계 확인
+
+Backend6172992882의SHA9e1a255b87b430bca314e8f718fb4176bfe322c8 원본OpenAPI를 받아 restore 및 optional오류/required nullable PowerResult 시간 필드를 대조했다. 합의 일치·다음Flutter담당을6173015145로 회신. 새로 가능: 확정 구현계약 기준 Flutter 연결 착수 준비. 보존 확인: lib/test·키/환경 무변경. 미확인: Flutter 연결/자동검증·실키복원/provider헤더/기기·서버내부독립검증. Backend는 mock151/24/4 각실행·로컬0006/API·작업브랜치push/dev미병합 보고. 검증: 원본계약 대조·문서diffcheck,코드불변으로Flutter시험 미반복. docs/my-account-backend-phase1 미커밋/dev미반영/미push,기존실험보존.
+
+## 2026-10-15 — Flutter 회원 키 관리·복원·호출 제한 연결
+
+- 사용자구현승인으로feature/member-lostark-key 생성(종료조건:회원키/기기복원/제한UX연결과검증·인수준비). 기존목적브랜치없음·origin/dev2dd821f직접확인,기존문서미커밋과Rules/tools36개보존. 문서25를현재계약으로정리하고구현전NEXT_WORK에흐름/소유권·범위/회귀/완료조건을기록했다.
+- Backend9e1a255b87b430bca314e8f718fb4176bfe322c8 소비. 고정OpenAPI사본SHA2565217dcedeca895c96ed014b8df13b80be291165871a013f2cbaaf3f16030aded. 기존ApiTokenStore/인증session·등록API재사용. MemberLostArkKey와회원/서버별securestorage·MemberKeyPage를기존route에연결,원문보안응답/로그미출력·서버저장과유효성분리·명시등록교체삭제·GET→restore·기기부분실패와재복원. 로그인/재실행/페이지/foreground재확인,logout이전회원기기정리·서버보존·직렬화/세대·키버전late응답차단. guest키는회원키와별도이며자동업로드하지않는다.
+- ApiCooldown의Remaining0/429·epoch초/최대미래300초/비정상60초fallback·deadline max·같은키유지/다른키분리. 직접조회·상세갱신/서버preview·전투력batch에안내/명시retry. GameErrorDetail시간·PowerResult required nullable시간쌍·신규keyreason연결. Google로그아웃으로변환하지않고저장자료열람/숫자·Snapshot유지. 응답유실동일명령/24h·버전충돌과상태GET실패알수없음을구분한다. DB/Backend/자동전체빌드갱신은변경없음.
+- 검증: 최초전체1242PASS+새mock1실패(임의JSON응답헤더누락),해당content-type수정후표적58PASS·최종전체1246PASS(41초). 이후metadataGET실패시이전버전조작금지국소보완+신규1경계,관련12PASS. 전체재반복대신직접영향검증재사용,최종lib/test분석0(4.1초)·debugAPK build8.7초·포맷/diffcheck/最終diff검토. SDK제한환경resolvedExecutable오류는승인된정상SDK실행으로해결. 분석의중괄호14스타일은해당조건문만fix한뒤0확인. 로그.dart_tool/member-key-final-tests.log,member-key-metadata-final.log,member-key-final-analyze.log,member-key-build.log.
+- 새로가능:앱에서서버개인키등록/복원·기기저장과제한대기흐름. 보존확인:기존Google/회원설정·등록/이름/전투력·역할Snapshot/guest회귀시험. 미확인:실제개인키·provider/기기연동·再설치/다른디바이스·OS저장실패·운영TLS. 기기설치/조작·실키한도소진/원문자료요청없음. 수동3흐름은NEXT_WORK에구체화했다.
+- 이슈6173350024로소비SHA·미커밋/미push·자동/실미확인·次행동회신,게시본문재조회일치. feature/member-lostark-key 유지·미커밋/dev미반영/미push·main불변. 사용자commit/push지시없는현재단계에서는실행하지않았다. Backend에불필요한재시험/추가수정요청·Issue종료없음.
+
+## 2026-10-15 — 사용자 인수 피드백·안내 문구 정리
+
+사용자는 키 등록/삭제가 제대로 되는 것으로 보인다고 보고했다. 재로그인/재설치/다른기기와 나머지 조회 인수까지 통과로 확대하지 않는다. 원정대 상세의 문의식별자 UUID와 개발/서버 중심 문구를 지적해 동일 feature/member-lostark-key에서 연결 화면의 표시만 수정했다.
+
+- 문의식별자는 서버 오류요청 추적용 request_id다. 일반화면의 UUID 노출 2곳을 제거하고 오류 모델/API 식별정보는 유지했다. 미구현 문의 버튼/외부 전송은 추가하지 않았다.
+- 서버계정캐릭터→원정대캐릭터,서버계정관리→원정대관리,미인증→원정대인증전,활동설정전→활동캐릭터선택전으로 목적을 명시했다. 전투력 버튼은 전투력갱신으로 짧게 두고 대상1700/최대20명은 설명으로 분리했다. 캐시는최근정보사용·미처리는다음에확인,키저장성공은API키를등록했습니다로정리했다. 인증/등록/실제키유효성의동작은변경없고사용자에게유효성보증으로표시하지않는다.
+- 새로가능: 내계정 관련화면의 개발용 표현/추적번호 없는 사용자 안내. 보존확인: API/권한/저장·키등록삭제/멱등 흐름불변. 미확인: 문구 최종 실기기 표시와 남은 사용자 인수. 검증:관련기존46개PASS·최종lib/test분석0(18초)·포맷/diffcheck/문구검토. 순수표시수정으로전체1246/후속12 기능검증을반복하지않았다. 디버그APK재생성결과는최종로그참조. 기존사용자미추적실험보존,미커밋/dev미반영/미push·브랜치유지.
+
+문구정리최종debugAPK15.5초PASS. [사용자부분확인·문구회신6173742113](https://github.com/heo0328/lostparty-backend/issues/7#issuecomment-6173742113) 게시·재조회본문일치완료. Backend재시험요청없음.
+
+## 2026-10-15 — 회원 키 구간 사용자 정상 보고·키 사용 경로 확인
+
+사용자는 캐릭터검색등현재구현구간이정상작동한다고보고했다. 등록/삭제앞선결과와함께수용하며키저장위치/HTTP내부구분을추가수동인수로요구하지않는다. BackendApp의MemberLostArkKey→LostArkApiClient→fetchSiblings/Armory 직접경로,로그인restore기기키read와서버명령Bearer경로를재확인했다. 키원문/실패킷관찰은미실행이며Backend회원키선택은인계계약/검증보고기준이다.
+
+새로확인:현재구현기능일반사용정상보고. 보존:제품코드/실제키불변·기존자동결과재사용. 미확인:조건별재설치/별도기기·실제provider한도,보고없는상세시험을개별통과로확대하지않음. 문서/diffcheck검증만수행,코드불변이라테스트/빌드반복없음. 이슈최신6173751445확인후6173934017로결과/키경로/미확인·미커밋미push상태를회신하고게시일치확인. 전체앱문구점검은후속이다. 다음사용자지시로Git정리/실제SHA인계,feature/member-lostark-key유지·dev미반영·Issue종료/Backend재시험요청없음.
+
+## 2026-10-15 — 회원 키 완료 단위 문서 정리·dev 통합
+
+사용자가 문서정리·commit/merge/push를 지시했다. 작업 기준과 최신 origin/dev가 모두2dd821f임을fetch로확인했고추가코드/충돌은없다. 사용자 기본기능정상보고와 자동 전체1246/국소12·문구46/분석0/debug15.5초를재사용한다. 코드는불변이라실행시험을반복하지않고문서/diffcheck·stage검토만진행한다.
+
+NEXT_WORK를완료로그에서다음전체빌드자동갱신시작순서설계로교체했다. 키metadata/restore가추가돼과거시작3+N은당시기준임을명시했다. AI_CONTEXT/README/09/24/25의이전미결정·원문복원불가·미구현표현을최신계약/사용자정상보고로정리했다. 전체앱문구점검·재설치/다른기기·실provider한도는별도후속/미확인으로유지한다. 새로운기능/서버설정/Issue종료는수행하지않는다.
+
+코드·경계시험·고정OpenAPI·연결문서를같은기능단위로commit하고작업브랜치에복구지점을push한뒤,최신origin/dev재확인→일반merge→devpush/원격일치검증을수행한다. 최종SHA는Git이력과Issue7최종회신으로추적한다. 기존문서준비자료는이번회원키계약/후속연결범위이며사용자Rules백업2개/tools34개는stage하지않는다. 브랜치는유지/통합후삭제후보,main불변이다. 새로가능:완료기능의공유된dev기준. 보존확인:기존인수/자동검증동일코드·실험자료. 미확인실기기는앞선보고범위를유지한다.

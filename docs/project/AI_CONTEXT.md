@@ -1,6 +1,6 @@
 # AI CONTEXT — 현재 프로젝트 상태
 
-2026-10-14. 기준 D:/dev/projects/lost_party_flutter, 통합 dev. Issue6 회원 설정의 문서/Git/최종인계·종료와 전체 데이터베이스 설계 점검을 완료했다. [DB 재점검24](../backend-migration/24-database-design-review.md)를 기준으로 다음 복원 범위를 사용자와 확정한다. DB 점검은 조사·문서 전용이며 코드/DDL/실데이터를 변경하지 않는다. 상세 실행은 [NEXT_WORK](NEXT_WORK.md), 완료 이력은 [DEV_LOG](DEV_LOG.md).
+2026-10-15. 기준 D:/dev/projects/lost_party_flutter, 통합 dev. 회원 키 등록·기기 복원·호출 제한 연결을 구현/자동 검증했고 사용자가 현재 구간 정상 동작을 보고했다. 다음은 전체 빌드 자동 갱신 시작 순서 설계 준비다. 상세 실행은 [NEXT_WORK](NEXT_WORK.md), 완료 이력은 [DEV_LOG](DEV_LOG.md), 현재 키 계약은 [25](../backend-migration/25-member-lostark-key-request.md).
 
 ## 완료된 앱 연결
 
@@ -32,4 +32,12 @@ Backend heo0328/lostparty-backend GitHub Issues가공식협업채널이다. 필�
 
 [보고서24](../backend-migration/24-database-design-review.md): Backend게시0004기준19개모델·Flutter schema13/8개테이블과보안저장/메모리를대조했다. 서버회원설정/등록과기기공용계정/빌드·표시환경은별도이며전체환경복원계약이남아있다. 격리메모리DB에서FK0·missing캐릭터삭제후빌드/주간표시고아각1행을재현했고실기기는미검증이다. 복원정답/ID/필드설계와로컬삭제정합성을분리후속으로기록했다. 이번에기능코드/DDL/실자료를바꾸지않았다.
 
-2026-10-15 현재그룹: 사용자순차진행의첫구간인시작등록목록중복조회개선완료. 기존feature/account-backend-read를dev70880bf로FF재사용. 초기등록패널/전투력VM만진행전체목록을회원·세션별공유,명시/쓰기후GET은공유하지않음. 전체1227테스트·lib/test분석0완료,사용자지시로현재완료브랜치를dev에통합·push한다. 다음은자동빌드시작순서설계,이후서버/로컬정답·복원범위UX협의. BackendAPI/DB변경없음.
+2026-10-15 현재그룹: 사용자순차진행의첫구간인시작등록목록중복조회개선완료. 기존feature/account-backend-read를dev70880bf로FF재사용. 초기등록패널/전투력VM만진행전체목록을회원·세션별공유,명시/쓰기후GET은공유하지않음. 전체1227테스트·lib/test분석0완료,사용자지시로현재완료브랜치를dev에통합·push한다. 중복조회1c294d6/dev2dd821f통합·push완료. 사용자최신지시로회원개인LostArk키서버저장/호출전환이자동갱신설계보다선행한다. BackendAPI/DB변경없음.
+
+## 회원별 Lost Ark API 키 — 완료 구간
+
+2026-10-15 Backend9e1a255b 소비. [연결 계약25](../backend-migration/25-member-lostark-key-request.md): 한 번 등록해 서버·회원/서버별 기기에 저장, 로그인/재실행·화면/앱 복귀 시 본인 키 복원, 부분 실패/버전·멱등/늦은 응답 격리. 직접 조회와 서버 회원 키 호출·429/부분결과 대기 안내·명시 재시도 및 새 strict DTO 연결. 공용키 제거는 Backend 인계로 확인했다.
+
+전체1246PASS 후 국소12PASS·문구46PASS, 최종 분석0·debugAPK15.5초. 사용자 등록/삭제·캐릭터 검색 등 현재 기능 정상 보고를 수용했고 내부 키 사용 경로는 코드로 확인했다. 재설치/다른 기기·실provider 한도/헤더는 별도 미확인이며 현재 구간을 반복 대기시키지 않는다. 전체 앱 문구 점검은 후속이다.
+
+사용자 지시로 feature/member-lostark-key 완료 단위를 dev에 일반 병합·push한다. 적용 SHA와 원격 일치는 Git 이력/Issue7 최종 인계에서 추적한다. 작업 브랜치는 유지/삭제 후보, 사용자 Rules/tools 실험은 보존, main/Backend 환경 변경 없음. 다음은 NEXT_WORK의 자동 갱신 시작 순서 설계이며 이번에 새 기능을 추가하지 않는다.

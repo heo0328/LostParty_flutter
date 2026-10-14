@@ -50,6 +50,8 @@ class ServerPowerResult {
       'power_reason',
       'status',
       'reason',
+      'retry_after_seconds',
+      'retry_at',
     };
     if (json.length != keys.length || !keys.every(json.containsKey)) {
       throw const FormatException('Invalid power result.');
@@ -67,9 +69,22 @@ class ServerPowerResult {
       throw const FormatException('Invalid result status.');
     }
     reason = _reason(json['reason']);
+    final seconds = json['retry_after_seconds'];
+    retryAt = _time(json['retry_at']);
+    if ((seconds == null) != (retryAt == null) ||
+        (seconds != null && (seconds is! int || seconds < 1)) ||
+        ({'RATE_LIMITED', 'UPSTREAM_RATE_LIMITED'}.contains(reason) &&
+            retryAt == null) ||
+        (!{'RATE_LIMITED', 'UPSTREAM_RATE_LIMITED'}.contains(reason) &&
+            retryAt != null)) {
+      throw const FormatException('Invalid retry metadata');
+    }
+    retryAfter = seconds == null ? null : Duration(seconds: seconds as int);
   }
   late final ServerPowerObservation power;
   late final String status;
+  late final Duration? retryAfter;
+  late final DateTime? retryAt;
   late final String? reason;
 
   static List<ServerPowerResult> decode(

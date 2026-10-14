@@ -162,3 +162,5 @@ Issue6최종회신/종료: [6170736672](https://github.com/heo0328/lostparty-bac
 
 
 2026-10-15 후속: 시작등록목록중복GET은feature/account-backend-read에서진행조회공유로개선했다. 인증복원초기소비자만명시공유하고쓰기뒤/명시재조회는새GET이다. 전체1227테스트·분석0완료,사용자지시로dev통합·push대상이다. 이보고서DB-01~07의범위/설계결정이나자동빌드게이트를함께수정하지않았다.
+
+2026-10-15 신규회원데이터요구: 사용자개인LostArkJWT를user_id에연결해암호화저장하고서버provider가회원키를사용하는요구가확정됐다. 이보고서의19개모델은0004기준이며이후Backend9e1a255b/0005·0006에서credential/cache/lease와limiter추가를인계했다. [연결계약25](25-member-lostark-key-request.md)/Issue7참조. metadata GET은원문없이유지하고사용자최신방향에따라별도본인POST restore로기기에키를복원한다. 이추가로DB-01~07후속이완료되는것은아니다.

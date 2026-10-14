@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../../shared/lost_ark_api/client/api_cooldown.dart';
 
 import '../../auth/domain/backend_auth_models.dart';
 import '../domain/account_read_session.dart';
@@ -8,7 +9,8 @@ import '../domain/server_registration_api.dart';
 
 class DioBackendAccountReadApi
     implements BackendAccountReadApi, BackendRegistrationApi {
-  const DioBackendAccountReadApi(this.dio, this.session);
+  const DioBackendAccountReadApi(this.dio, this.session, {this.cooldown});
+  final ApiCooldown? cooldown;
   final Dio dio;
   final AccountReadSession session;
 
@@ -62,6 +64,15 @@ class DioBackendAccountReadApi
     int expectedStatus = 200,
   }) async {
     final scope = accountReadScope(session);
+    if (cooldown?.active == true &&
+        (path.endsWith('/refresh') || path.endsWith('/preview'))) {
+      throw AccountReadException(
+        'UPSTREAM_RATE_LIMITED',
+        status: 503,
+        retryAfter: Duration(seconds: cooldown!.seconds),
+        retryAt: cooldown!.until,
+      );
+    }
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
         final access = await session.accessToken();
@@ -129,13 +140,36 @@ class DioBackendAccountReadApi
             rawId is String && RegExp(r'^[a-zA-Z0-9_-]{1,128}$').hasMatch(rawId)
             ? rawId
             : null;
-        final seconds = int.tryParse(
+        final headerSeconds = int.tryParse(
           response?.headers.value('retry-after') ?? '',
         );
+        final bodySeconds = detail is Map
+            ? detail['retry_after_seconds']
+            : null;
+        final candidateSeconds =
+            bodySeconds is int && bodySeconds >= 1 && bodySeconds <= 86400
+            ? bodySeconds
+            : headerSeconds;
+        final seconds =
+            candidateSeconds != null &&
+                candidateSeconds >= 0 &&
+                candidateSeconds <= 86400
+            ? candidateSeconds
+            : null;
+        final rawTime = detail is Map ? detail['retry_at'] : null;
+        final retryAt = rawTime is String
+            ? DateTime.tryParse(rawTime)?.toUtc()
+            : null;
+        if (code == 'UPSTREAM_RATE_LIMITED') {
+          cooldown?.observe(
+            retryAt ?? DateTime.now().add(Duration(seconds: seconds ?? 60)),
+          );
+        }
         throw AccountReadException(
           code,
           status: response?.statusCode,
           requestId: id,
+          retryAt: retryAt,
           retryAfter: seconds != null && seconds >= 0 && seconds <= 86400
               ? Duration(seconds: seconds)
               : null,
