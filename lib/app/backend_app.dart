@@ -13,6 +13,7 @@ import '../features/auth/presentation/login_page.dart';
 import '../features/account/data/local/account_database.dart';
 import '../features/account/data/backend_account_read_api.dart';
 import '../features/account/presentation/viewmodels/server_registration_view_model.dart';
+import '../features/account/presentation/viewmodels/server_combat_power_view_model.dart';
 import '../features/account/presentation/pages/server_registration_page.dart';
 import '../features/account/domain/account_read_session.dart';
 import '../features/account/domain/server_account_read_repository.dart';
@@ -69,6 +70,7 @@ class _BackendAppState extends State<BackendApp> {
   AuthSessionController? _auth;
   ServerAccountReadViewModel? _serverReads;
   ServerRegistrationViewModel? _serverWrites;
+  ServerCombatPowerViewModel? _serverPowers;
   GoRouter? _router;
   PartyCycleRuntime? _cycle;
   Dio? _dio;
@@ -153,6 +155,11 @@ class _BackendAppState extends State<BackendApp> {
       serverAccounts,
       readSession,
     );
+    _serverPowers = ServerCombatPowerViewModel(
+      serverAccounts,
+      _serverWrites!,
+      readSession,
+    );
     final tokenStore = SecureApiTokenStore();
     final remote = LostArkCharacterRemoteDataSource(
       apiClient: LostArkApiClient(apiTokenStore: tokenStore),
@@ -211,12 +218,14 @@ class _BackendAppState extends State<BackendApp> {
                     accountRepository: accounts,
                     summarySyncService: summary,
                     showServerOwnership: false,
+                    serverPowers: _serverPowers,
                     serverAccountsSection: ServerAccountsPanel(
                       viewModel: _serverReads!,
                       onLogin: () => showLoginRequired(context, auth),
                       onManage: () async {
                         await context.push('/account/server-management');
                         await _serverReads!.load();
+                        await _serverPowers!.reload();
                       },
                       onOpen: (id) => context.push('/account/server/$id'),
                     ),
@@ -239,6 +248,7 @@ class _BackendAppState extends State<BackendApp> {
                         repository: serverAccounts,
                         session: readSession,
                         onLogin: () => showLoginRequired(context, auth),
+                        powers: _serverPowers,
                       ),
                     ),
                     GoRoute(
@@ -351,6 +361,7 @@ class _BackendAppState extends State<BackendApp> {
   void dispose() {
     _router?.dispose();
     _serverReads?.dispose();
+    _serverPowers?.dispose();
     _serverWrites?.dispose();
     _auth?.dispose();
     _dio?.close(force: true);

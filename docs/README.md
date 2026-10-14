@@ -4,6 +4,10 @@
 
 ## 백엔드 이전 사전 분석
 
+- [Flutter 전투력 연결 계약](backend-migration/22-character-combat-power-flutter-contract.md): 소비39188d5·Strict DTO·단일 요청복구·서버/로컬 카드·회원격리·인수 범위.
+
+- [전투력 수집·갱신 Backend 요청](backend-migration/21-character-combat-power-backend-request.md): Issue5, 미인증/인증 등록 캐릭터 전투력 캐시·대상 갱신과 서버/로컬 표시 연결 범위.
+
 - [빈 이름 자동 표시](backend-migration/20-account-auto-label-contract.md): 미입력은 본·부계정 위치로 계산, 직접 입력 이름은 그대로 표시.
 
 - [Flutter 서버 등록 관리 연결](backend-migration/19-account-registration-flutter-contract.md): preview/등록 CRUD·멱등/세션 경계·Router 연결과 사용자 인수 항목.

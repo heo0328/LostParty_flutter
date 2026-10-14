@@ -1,4 +1,6 @@
-// Models of Backend 254cb5d OpenAPI; never map these UUIDs to local PKs.
+// Models of Backend 39188d5 OpenAPI; never map these UUIDs to local PKs.
+import 'server_combat_power.dart';
+
 class ServerCharacterSummary {
   ServerCharacterSummary.fromJson(Map<String, dynamic> json) {
     _shape(
@@ -220,6 +222,9 @@ class ServerAccountCharacter {
         'eligible',
         'power_stale',
         'power_fetched_at',
+        'power_checked_at',
+        'power_status',
+        'power_reason',
       ],
       [
         'server_name',
@@ -234,6 +239,9 @@ class ServerAccountCharacter {
         'requires_refresh',
         'eligible',
         'power_fetched_at',
+        'power_checked_at',
+        'power_status',
+        'power_reason',
       ],
     );
     serverName = _text(json['server_name']);
@@ -265,6 +273,10 @@ class ServerAccountCharacter {
     powerFetchedAt = json['power_fetched_at'] == null
         ? null
         : _time(json['power_fetched_at']);
+    power = ServerPowerObservation.fromJson({
+      ...json,
+      'power_stale': powerStale,
+    });
   }
   late final String serverName;
   late final String characterName;
@@ -280,6 +292,7 @@ class ServerAccountCharacter {
   late final bool eligible;
   late final bool powerStale;
   late final DateTime? powerFetchedAt;
+  late final ServerPowerObservation power;
 }
 
 class ServerCharacterPage {

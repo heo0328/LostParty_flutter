@@ -3887,3 +3887,41 @@
 - 사용자 진행 지시로 구현·snapshot·테스트·관련 문서를 커밋해 dev에 일반 merge·push한다. 전체1193테스트/분석0/debug33.4초 및 신규 이름4흐름 사용자 통과를 재사용하고 코드 변화가 없어 반복 검증하지 않는다. 내용/diff/staged검토와 원격dev 최신 여부를 확인한다.
 - 현재 새로 가능한 서버 빈이름/clear·본부전환/전체목록번호 흐름 완료. 기존 등록/세션/갱신 검증 보존, 미확인 장비·전투력·활동/대표 등은 후속으로 둔다. NEXT_WORK를 전투력 협업 설계 후보로 정리했으며 새API 요청·구현을 시작하지 않았다.
 - 통합 적용 SHA와 소비계약d3cb697을 Backend #4에 회신하고 재조회 확인한다. feature브랜치는 유지/삭제 후보, dev/origin/dev일치·추적변경없음으로 마무리한다. 실험/백업36개 제외, main/운영배포·원격DB 변경 없음.
+
+## 2026-10-14 — 전투력 수집·갱신 Backend 협업 요청
+
+- 사용자 진행 지시로 최신 #4/Backend dev78a5494를 확인했다. 기존 이름/Git인계는 상대확인6166402144로 해소됐고 새처리요구없음. 최신observations/service/provider의 일반combat_power=None/proof만수집·미인증power정보·canonical캐시·quota/동시성/timeout 경로를 대조했다.
+- 새로 가능: 요청21과 [Issue5](https://github.com/heo0328/lostparty-backend/issues/5) 생성·본문일치 재조회로 프로필전투력/미인증캐시·필요대상작은묶음·부분실패/미제공·GET반환·최소API확정/구현 인계를 요청했다. 상한6/TTL30분은 제안이다. main로컬카드도 서버화면과별도연결해야함과 역할Snapshot 비덮어쓰기·회원격리를 명시했다.
+- 보존: 기존 이름/등록·인증·DB/Flutter코드 변경 없음. 미확인 실제provider/앱표시·Backend새계약은 인계후이며 테스트 통과로 확대하지 않는다. 작업은 설계/Issue요청만으로 문서내용/diffcheck/본문검증, Flutter테스트/빌드/업무API호출 반복 없음.
+- docs/my-account-backend-phase1을 최신dev266a7e2에서재사용, 관련문서미커밋·dev미반영·미push. 기존 실험/백업 유지. #3/#4종료·main/배포·원격초기화 없음.
+
+## 2026-10-14 — Issue5提案 소비 검토 회신
+
+- 최신Backend6166675659확인,기존Flutter1700상수·Dio10초·StrictGET DTO대조. 20명/20초 및부분상태소비가능,전투력만30초타임아웃연결과deferred/replay규칙을6166739099로회신·재조회일치확인. 정확한DTO/GET상태/서버총예산·구현계약SHA인계대기.
+- Backend22테스트는상수/parser보고이며전체REST/실provider완료아님. 문서/회신만변경,Flutter코드/테스트/빌드·서버DB변경없음. diffcheck/내용검토, docs/my-account-backend-phase1미커밋/dev미반영/미push유지.
+
+## 2026-10-14 — Issue5 구현·로컬적용 보고 확인
+
+- Backend6166983632확인: REST/cache0003·GET새필수3필드·대상42/후속3별도·실profile미인수·미커밋/미push. FlutterStrictDTO새필드거절영향과게시SHA대기를6167001322회신/본문일치확인했다. 문서/diffcheck만,기능/테스트/빌드변경없음. 기존문서브랜치미커밋/dev미반영/미push유지.
+
+## 2026-10-14 — 39188d5 전투력 Flutter 연결
+
+- 사용자Backend게시/재개지시로Issue5최신6167071680와원본39188d5를확인하고snapshot고정. docs브랜치미커밋요청/회신문서를유지한채feature/character-combat-power생성(dev266a7e2기반),정확한범위/데이터흐름/회귀를NEXT_WORK에먼저명시했다.
+- 새로가능:GET새필수3필드/POSTStrict검증·power요청만30초·기존등록VM불변key/본문/단일pending재사용·실제0/부분결과안내·GET표시캐시,서버화면/내계정머리글속도계·로컬카드server/name매칭·선호역할Snapshot우선·회원세대리셋/lateGET폐기. 초기GET만하며POST자동polling없음,로컬DB/roleSnapshot쓰기없음.
+- 검증:새전투력경계와기존읽기/등록68통과→전체1204/lib-test분석0. 최종검토새등록직후cache목록누락/조회중회원변경보완·신규2경계후관련70/최종분석0통과. 국소보완뒤전체를반복하지않으며전체1206통과로확대하지않는다. fakeDio로부분결과/불량형식/숫자·대상/동일key·timeout·0·선호role/서버명매칭·회원변경·1700/20명순서를확인했다.
+- 보존:기존등록/빈이름/204/세션·GET정책/로컬빌드는테스트/diff로확인. 포맷범위를넓게실행해7개무관파일도포맷된것을확인했다. 초기clean/순수공백trailingcomma비교증명뒤HEAD복구,추가리팩터링없음. 기존실험/백업36개hash동일. 미확인실제profiles/사용자카드표시는새APK인수로남긴다.
+- 최종debug빌드/Issue회신뒤feature브랜치미커밋/dev미반영·미push로인수대기. 서버서비스·DB·기기조작/원격배포·main/Issue종료·장비/활동확대없음.
+
+최종APK11.4초빌드성공. [Issue5 구현 회신6167414628](https://github.com/heo0328/lostparty-backend/issues/5#issuecomment-6167414628) 게시·본문일치재조회확인. 실제전투력수집/카드표시는사용자인수전,새Fluttercommit없음/feature브랜치미커밋·dev미반영·미push상태다.
+
+## 사용자 전투력 인수·기존 자동갱신 조사 (2026-10-14)
+
+사용자가새APK1/2/3서버수치·로컬카드/역할우선·로그아웃재로그인표시캐시를모두정상확인했다. [Issue5결과6167529348](https://github.com/heo0328/lostparty-backend/issues/5#issuecomment-6167529348) 회신·재조회일치확인. 코드변화없이기존검증재사용,미커밋/dev미반영/미push이며Git정리대기.
+
+사용자브리핑요청으로기존StartupCharacterRefreshOrchestrator/NiceGroupPolicy/eligibility·AppShell/BackendApp을조사했다. 기존정책은페이지매진입이아니라앱수명1회(runOnce)이며active소유/서버CharacterID/1700이상/이탈제외,동일직업2명이상나이스단·허용OFF제외/ON포함,전체ArmoryBuild draft검증/역할Snapshot갱신이다. 현재BackendApp은AppShell startup runner·MyAccount manual runner·CharacterManagement nice설정repository/playerId를주입하지않아미연결이다. 내계정initialize의자동sync는siblings요약이며전투력수집아니다. 이번ServerCombatPower는GET캐시+명시POST수동이고나이스정책과연동하지않는다. 자동갱신복원은추가후속으로만기록,이번조사는코드수정/새Backend요청/테스트반복없이수행했다.
+
+## 2026-10-14 — 전투력 구간 dev 통합·자동갱신 설계 준비
+
+- 사용자문서최신화/commit·push/2번준비지시. 신규3흐름인수와Backend확인6167564129를현재완료상태로반영하고NEXT_WORK를나이스단설정·앱실행1회설계준비로교체했다. 이전조건/현재미연결구분·설정회원key/저장위치·실행가드·profile전투력과전체Build책임을확인항목으로둔다. 기능구현/새Backend요청없음.
+- 전투력새로가능/보존흐름은계약22와사용자3흐름통과근거를재사용한다. 전체1204뒤국소70/최종분석0·debug11.4초이후기능코드변화없음,테스트/빌드반복없이diff/staged/최신origin-dev·36백업hash검증으로통합한다. 미확인모든provider원본/실장애·나이스단자동실행은후속으로남긴다.
+- feature/character-combat-power구현/테스트/원본snapshot/직접관련문서만커밋·원격작업브랜치push→dev일반merge·push. 적용SHA·소비39188d5와완료/미확인을Issue5회신·재조회한다. 작업브랜치유지/삭제후보,dev/origin-dev일치·추적변경없음확인. 기존실험/백업36개·main/원격DB·운영설정유지.

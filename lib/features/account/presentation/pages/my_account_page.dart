@@ -22,6 +22,8 @@ import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_reposit
 import '../models/weekly_raid_status_item.dart';
 import '../viewmodels/my_account_view_model.dart';
 import '../widgets/account_character_card.dart';
+import '../viewmodels/server_combat_power_view_model.dart';
+import '../widgets/server_power_controls.dart';
 
 class MyAccountPage extends StatefulWidget {
   const MyAccountPage({
@@ -41,6 +43,7 @@ class MyAccountPage extends StatefulWidget {
     this.manualCharacterRefreshRunner,
     this.showServerOwnership = true,
     this.serverAccountsSection,
+    this.serverPowers,
     super.key,
   });
 
@@ -60,6 +63,7 @@ class MyAccountPage extends StatefulWidget {
   final ManualCharacterRefreshRunner? manualCharacterRefreshRunner;
   final bool showServerOwnership;
   final Widget? serverAccountsSection;
+  final ServerCombatPowerViewModel? serverPowers;
 
   @override
   State<MyAccountPage> createState() => _MyAccountPageState();
@@ -95,6 +99,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
       weeklyRaidClaimCommandRepository: widget.weeklyRaidClaimCommandRepository,
     );
     _viewModel.addListener(_onViewModelChanged);
+    widget.serverPowers?.addListener(_onViewModelChanged);
     _manualRefreshSubscription = widget.manualCharacterRefreshRunner?.states
         .listen((state) {
           if (mounted && _manualRefreshRunning) {
@@ -108,6 +113,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
   void dispose() {
     _characterNameController.dispose();
     _viewModel.removeListener(_onViewModelChanged);
+    widget.serverPowers?.removeListener(_onViewModelChanged);
     _viewModel.dispose();
     unawaited(_manualRefreshSubscription?.cancel());
     super.dispose();
@@ -483,6 +489,13 @@ class _MyAccountPageState extends State<MyAccountPage> {
                 widget.serverAccountsSection!,
                 const SizedBox(height: 12),
               ],
+              if (widget.serverPowers case final powers?)
+                ServerPowerControls(
+                  model: powers,
+                  onRefresh: () => powers.refreshLocalCharacters(
+                    _viewModel.accounts.expand((a) => a.visibleCharacters),
+                  ),
+                ),
               if (_viewModel.isLoadingTokenStatus)
                 const LinearProgressIndicator(),
               _buildTokenStatusPanel(context),
@@ -665,6 +678,17 @@ class _MyAccountPageState extends State<MyAccountPage> {
               onPressed: () => _showEditAccountDialog(account),
               icon: const Icon(Icons.edit_outlined),
             ),
+            if (widget.serverPowers case final powers?
+                when powers.session.isAuthenticated)
+              IconButton(
+                tooltip: '이 계정 서버 전투력 확인',
+                onPressed: powers.canRefresh
+                    ? () => powers.refreshLocalCharacters(
+                        account.visibleCharacters,
+                      )
+                    : null,
+                icon: const Icon(Icons.speed),
+              ),
             IconButton(
               tooltip: '캐릭터 관리',
               onPressed: () => _openCharacterManagement(account),
@@ -778,10 +802,18 @@ class _MyAccountPageState extends State<MyAccountPage> {
                 width: itemWidth,
                 child: AccountCharacterCard(
                   character: character,
-                  representativeCombatPower: _viewModel
-                      .representativeCombatPowerFor(character),
+                  representativeCombatPower:
+                      widget.serverPowers?.displayPowerFor(
+                        character,
+                        _viewModel.representativeCombatPowerFor(character),
+                      ) ??
+                      _viewModel.representativeCombatPowerFor(character),
                   overrideRepresentativeCombatPower:
-                      character.preferredRole != null,
+                      character.preferredRole != null ||
+                      widget.serverPowers?.powerFor(character)?.value != null,
+                  combatPowerNote: character.preferredRole != null
+                      ? null
+                      : widget.serverPowers?.powerFor(character)?.displayState,
                   gemValidationSummary: _viewModel.gemValidationSummaryFor(
                     character,
                   ),

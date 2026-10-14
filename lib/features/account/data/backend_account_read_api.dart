@@ -73,6 +73,9 @@ class DioBackendAccountReadApi
           options: Options(
             followRedirects: false,
             method: method,
+            receiveTimeout: path.endsWith('/combat-power/refresh')
+                ? const Duration(seconds: 30)
+                : null,
             headers: {
               'Authorization': 'Bearer $access',
               'Idempotency-Key': ?idempotencyKey,

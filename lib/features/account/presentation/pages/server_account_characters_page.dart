@@ -4,6 +4,8 @@ import '../../domain/account_read_session.dart';
 import '../../domain/server_account_read_repository.dart';
 import '../viewmodels/server_account_read_view_model.dart';
 import '../widgets/server_accounts_panel.dart';
+import '../widgets/server_power_controls.dart';
+import '../viewmodels/server_combat_power_view_model.dart';
 
 class ServerAccountCharactersPage extends StatefulWidget {
   const ServerAccountCharactersPage({
@@ -11,12 +13,14 @@ class ServerAccountCharactersPage extends StatefulWidget {
     required this.repository,
     required this.session,
     required this.onLogin,
+    this.powers,
     super.key,
   });
   final String registrationId;
   final ServerAccountReadRepository repository;
   final AccountReadSession session;
   final VoidCallback onLogin;
+  final ServerCombatPowerViewModel? powers;
   @override
   State<ServerAccountCharactersPage> createState() =>
       _ServerAccountCharactersPageState();
@@ -32,6 +36,7 @@ class _ServerAccountCharactersPageState
       widget.repository,
       widget.session,
       registrationId: widget.registrationId,
+      onRoster: widget.powers?.store,
     );
   }
 
@@ -46,6 +51,7 @@ class _ServerAccountCharactersPageState
         widget.repository,
         widget.session,
         registrationId: widget.registrationId,
+        onRoster: widget.powers?.store,
       );
     }
   }
@@ -98,6 +104,17 @@ class _ServerAccountCharactersPageState
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if (widget.powers case final powers?)
+          ServerPowerControls(
+            model: powers,
+            onRefresh: () async {
+              await powers.refreshServerRoster(
+                widget.registrationId,
+                viewModel.roster!.characters,
+              );
+              if (mounted) await viewModel.load();
+            },
+          ),
         Text(serverOwnershipLabel(roster.ownershipStatus)),
         Text(serverConfigurationLabel(settings.configurationState)),
         Text('활동 선택 ${settings.activityCharacterIds.length}명'),
@@ -115,6 +132,8 @@ class _ServerAccountCharactersPageState
               '${character.serverName} · ${character.className}\n'
               '아이템 레벨 ${character.itemLevel ?? '미확인'} · 전투력 ${character.combatPower ?? '미확인'}'
               '${character.powerStale ? ' (최근 확인 필요)' : ''}\n'
+              '${character.power.displayState}'
+              '${character.powerFetchedAt == null ? '' : ' · ${character.powerFetchedAt!.toLocal()}'}\n'
               '${_status(character.rosterStatus)}'
               '${character.eligible ? '' : ' · 현재 서버 활동 자격 없음'}'
               '${character.requiresRefresh ? ' · 정보 갱신 필요' : ''}',

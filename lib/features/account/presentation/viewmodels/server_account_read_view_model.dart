@@ -12,6 +12,7 @@ class ServerAccountReadViewModel extends ChangeNotifier {
     this.repository,
     this.session, {
     this.registrationId,
+    this.onRoster,
   }) {
     session.addListener(_onSession);
     _onSession();
@@ -19,6 +20,7 @@ class ServerAccountReadViewModel extends ChangeNotifier {
   final ServerAccountReadRepository repository;
   final AccountReadSession session;
   final String? registrationId;
+  final void Function(String, ServerAccountRoster)? onRoster;
   List<ServerAccountRegistration> registrations = const [];
   ServerAccountRoster? roster;
   AccountReadException? failure;
@@ -63,7 +65,10 @@ class ServerAccountReadViewModel extends ChangeNotifier {
         if (_valid(ticket, key)) registrations = result;
       } else {
         final result = await repository.loadCharacters(id);
-        if (_valid(ticket, key)) roster = result;
+        if (_valid(ticket, key)) {
+          roster = result;
+          onRoster?.call(id, result);
+        }
       }
       if (_valid(ticket, key)) loaded = true;
     } on AccountReadException catch (error) {
