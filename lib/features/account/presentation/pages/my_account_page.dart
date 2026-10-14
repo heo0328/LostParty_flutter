@@ -419,6 +419,66 @@ class _MyAccountPageState extends State<MyAccountPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Text(
+                '메인 계정 등록 현황',
+                key: const ValueKey('mainAccountSectionTitle'),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              if (_viewModel.mainAccount == null)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text('등록한 메인 계정이 없습니다. 아래 계정 도구에서 캐릭터를 불러와 주세요.'),
+                ),
+              for (final account in _viewModel.accounts.where(
+                (account) => account.isMain,
+              ))
+                _buildAccountSection(account),
+              const SizedBox(height: 24),
+              Row(
+                key: const ValueKey('subAccountsSectionHeader'),
+                children: [
+                  Expanded(
+                    child: Text(
+                      '부계정 등록 현황',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  if (_viewModel.accounts.isNotEmpty)
+                    TextButton.icon(
+                      key: const ValueKey('addSubAccountButton'),
+                      onPressed: _viewModel.isNetworkBusy
+                          ? null
+                          : _showAddAccountDialog,
+                      icon: const Icon(
+                        Icons.person_add_alt_1_outlined,
+                        size: 18,
+                      ),
+                      label: const Text('추가'),
+                    ),
+                ],
+              ),
+              if (!_viewModel.accounts.any((account) => !account.isMain))
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text('등록한 부계정이 없습니다.'),
+                ),
+              for (final account in _viewModel.accounts.where(
+                (account) => !account.isMain,
+              )) ...[
+                const SizedBox(height: 8),
+                _buildAccountSection(account),
+                const SizedBox(height: 16),
+              ],
+              const SizedBox(height: 24),
+              const Divider(),
+              const SizedBox(height: 16),
+              Text(
+                '계정 도구',
+                key: const ValueKey('accountToolsSectionTitle'),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
               if (widget.serverAccountsSection != null) ...[
                 widget.serverAccountsSection!,
                 const SizedBox(height: 12),
@@ -468,20 +528,6 @@ class _MyAccountPageState extends State<MyAccountPage> {
                       ),
                     ),
                   ),
-                  if (_viewModel.accounts.isNotEmpty) ...[
-                    const SizedBox(width: 4),
-                    SizedBox(
-                      height: 56,
-                      child: IconButton.outlined(
-                        key: const ValueKey('addSubAccountButton'),
-                        tooltip: '부계정 추가',
-                        onPressed: _viewModel.isNetworkBusy
-                            ? null
-                            : _showAddAccountDialog,
-                        icon: const Icon(Icons.person_add_alt_1_outlined),
-                      ),
-                    ),
-                  ],
                 ],
               ),
               if (_viewModel.hasFetchedCharacters) ...[
@@ -517,142 +563,143 @@ class _MyAccountPageState extends State<MyAccountPage> {
                   const SizedBox(height: 24),
                 ],
               ],
-              for (final account in _viewModel.accounts) ...[
-                SizedBox(height: account.isMain ? 36 : 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        account.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ),
-                    if (account.isMain &&
-                        widget.manualCharacterRefreshRunner != null)
-                      if (_manualRefreshRunning)
-                        Row(
-                          key: const ValueKey('manualCharacterRefreshProgress'),
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const SizedBox.square(
-                              dimension: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              '갱신 중 ${_manualRefreshState.completedCount}/${_manualRefreshState.totalCount}',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                        )
-                      else
-                        IconButton.filledTonal(
-                          key: const ValueKey('manualCharacterRefreshButton'),
-                          tooltip: '사용 캐릭터 전체 갱신',
-                          onPressed: _requestManualRefresh,
-                          icon: const Icon(Icons.refresh),
-                        ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Chip(
-                            visualDensity: VisualDensity.compact,
-                            label: Text(account.isMain ? '본계정' : '부계정'),
-                          ),
-                          if (widget.showServerOwnership &&
-                              account.hasActiveOwnership)
-                            const Chip(
-                              key: ValueKey('verifiedGameAccountChip'),
-                              visualDensity: VisualDensity.compact,
-                              avatar: Icon(Icons.verified, size: 16),
-                              label: Text('계정 인증 완료'),
-                            )
-                          else if (widget.showServerOwnership &&
-                              account.hasLostOwnership)
-                            Chip(
-                              key: const ValueKey('lostOwnershipChip'),
-                              visualDensity: VisualDensity.compact,
-                              avatar: Icon(
-                                Icons.gpp_bad_outlined,
-                                size: 16,
-                                color: Theme.of(context).colorScheme.error,
-                              ),
-                              label: const Text('인증 상실'),
-                            )
-                          else if (account.hasServerMismatch)
-                            Chip(
-                              key: const ValueKey('serverMismatchChip'),
-                              visualDensity: VisualDensity.compact,
-                              avatar: Icon(
-                                Icons.sync_problem_outlined,
-                                size: 16,
-                                color: Theme.of(context).colorScheme.error,
-                              ),
-                              label: const Text('서버 데이터 불일치 · 앱 재실행 또는 재인증 필요'),
-                            ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      '${account.visibleCharacters.length}/${account.characters.length}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    IconButton(
-                      tooltip: '계정 수정',
-                      onPressed: () => _showEditAccountDialog(account),
-                      icon: const Icon(Icons.edit_outlined),
-                    ),
-                    IconButton(
-                      tooltip: '캐릭터 관리',
-                      onPressed: () => _openCharacterManagement(account),
-                      icon: const Icon(Icons.tune),
-                    ),
-                    if (!account.isMain)
-                      IconButton(
-                        key: ValueKey('deleteAccountButton-${account.id}'),
-                        tooltip: '부계정 삭제',
-                        onPressed: () => _confirmDeleteAccount(account),
-                        icon: const Icon(Icons.delete_outline),
-                      ),
-                  ],
-                ),
-                if (_viewModel.canEditWeeklyRaidDisplay) ...[
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      key: ValueKey(
-                        'rosterWeeklyRaidDisplayButton-${account.id}',
-                      ),
-                      onPressed: () => _editRosterWeeklyRaidDisplay(account),
-                      icon: const Icon(Icons.checklist_outlined, size: 18),
-                      label: const Text('원정대 주간레이드수정'),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 8),
-                if (account.characters
-                    .where((character) => character.isRosterMissing)
-                    .isNotEmpty) ...[
-                  _buildMissingCharactersWarning(account),
-                  const SizedBox(height: 8),
-                ],
-                _buildCharacterGrid(account),
-              ],
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAccountSection(LocalGameAccount account) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                account.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            if (account.isMain && widget.manualCharacterRefreshRunner != null)
+              if (_manualRefreshRunning)
+                Row(
+                  key: const ValueKey('manualCharacterRefreshProgress'),
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '갱신 중 ${_manualRefreshState.completedCount}/${_manualRefreshState.totalCount}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                )
+              else
+                IconButton.filledTonal(
+                  key: const ValueKey('manualCharacterRefreshButton'),
+                  tooltip: '사용 캐릭터 전체 갱신',
+                  onPressed: _requestManualRefresh,
+                  icon: const Icon(Icons.refresh),
+                ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Chip(
+                    visualDensity: VisualDensity.compact,
+                    label: Text(account.isMain ? '본계정' : '부계정'),
+                  ),
+                  if (widget.showServerOwnership && account.hasActiveOwnership)
+                    const Chip(
+                      key: ValueKey('verifiedGameAccountChip'),
+                      visualDensity: VisualDensity.compact,
+                      avatar: Icon(Icons.verified, size: 16),
+                      label: Text('계정 인증 완료'),
+                    )
+                  else if (widget.showServerOwnership &&
+                      account.hasLostOwnership)
+                    Chip(
+                      key: const ValueKey('lostOwnershipChip'),
+                      visualDensity: VisualDensity.compact,
+                      avatar: Icon(
+                        Icons.gpp_bad_outlined,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      label: const Text('인증 상실'),
+                    )
+                  else if (account.hasServerMismatch)
+                    Chip(
+                      key: const ValueKey('serverMismatchChip'),
+                      visualDensity: VisualDensity.compact,
+                      avatar: Icon(
+                        Icons.sync_problem_outlined,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      label: const Text('서버 데이터 불일치 · 앱 재실행 또는 재인증 필요'),
+                    ),
+                ],
+              ),
+            ),
+            Text(
+              '${account.visibleCharacters.length}/${account.characters.length}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            IconButton(
+              tooltip: '계정 수정',
+              onPressed: () => _showEditAccountDialog(account),
+              icon: const Icon(Icons.edit_outlined),
+            ),
+            IconButton(
+              tooltip: '캐릭터 관리',
+              onPressed: () => _openCharacterManagement(account),
+              icon: const Icon(Icons.tune),
+            ),
+            if (!account.isMain)
+              IconButton(
+                key: ValueKey('deleteAccountButton-${account.id}'),
+                tooltip: '부계정 삭제',
+                onPressed: () => _confirmDeleteAccount(account),
+                icon: const Icon(Icons.delete_outline),
+              ),
+          ],
+        ),
+        if (_viewModel.canEditWeeklyRaidDisplay) ...[
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              key: ValueKey('rosterWeeklyRaidDisplayButton-${account.id}'),
+              onPressed: () => _editRosterWeeklyRaidDisplay(account),
+              icon: const Icon(Icons.checklist_outlined, size: 18),
+              label: const Text('원정대 주간레이드수정'),
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        if (account.characters
+            .where((character) => character.isRosterMissing)
+            .isNotEmpty) ...[
+          _buildMissingCharactersWarning(account),
+          const SizedBox(height: 8),
+        ],
+        _buildCharacterGrid(account),
+      ],
     );
   }
 
