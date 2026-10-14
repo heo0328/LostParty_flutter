@@ -52,7 +52,7 @@ void main() {
     Map<String, Object?>? listing = Map<String, Object?>.from(recruitment);
 
     expect(_visibleToNonGroupMember(recruitment), isFalse);
-    expect(listing?['visibility'], RecruitmentVisibility.group);
+    expect(listing['visibility'], RecruitmentVisibility.group);
 
     final toPublic = PartyVisibilityWritePlan.change(
       visibility: RecruitmentVisibility.public,

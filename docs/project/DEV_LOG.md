@@ -3661,3 +3661,43 @@
 - 첫 sandbox Flutter 실행은 진행되지 않아 중단하고 SDK 접근 권한으로 재실행했다. 실제 검증 로그는 추적 제외된 tools/google_login_premerge_test.log·google_login_premerge_analyze.log에 보관한다. 원격/로그에 인증정보를 추가하지 않았다.
 - 미확인 기기: 로그인 유지·만료·로그아웃 및 최신 로딩 화면. 사용자 Google 로그인 성공 확인은 보존하고 NEXT_WORK의 체크리스트를 다음 구간으로 유지한다.
 - 최종 병합 커밋과 origin/dev 동기화는 Git 이력으로 확인한다. 작업 브랜치는 유지하며 별도 실험/백업이 남아 있으므로 작업 트리 전체가 깨끗하다고 보고하지 않는다.
+
+## 2026-10-14 — 테스트 전환 실행·인증 계약 소비 확인
+
+- 현재 dev 7db7bde를 기존 feature/google-login에 fast-forward하여 다음 승인 구간을 시작했다. 변경·미추적 Rules 실험/백업의 소유를 보존하며 새 브랜치·commit/push는 만들지 않았다.
+- 새로 가능해진 흐름: 기본 flutter test에서 Firebase 익명 인증/Player binding·Firestore Rules/adapter·폐기 MyApp 검증을 제외하고 현재 검증 책임을 분류 대장에서 확인한다. Firebase 전용 테스트41개·전용 GitHub Actions3개·미사용 Firestore transaction fake1개를 Git 원본 확인 후 제거했다. legacy 이동·skip·분석 exclude 변경 없음.
+- 기존218개를 분류: 제거41, 유지172, 신규 업무 계약 후 이식 대기5(실행 유지). 신규 auth_session_store_test 1파일/3검증을 추가해 남은 테스트178파일. Node/Rules 수동 도구는 전용 CI 호출을 종료하고 의존성·미추적 실험 보호를 위해 원본을 보존했다. 도구·Firebase 실행 소스/SDK 최종 제거는 후속이다.
+- 보존 확인: 로컬 AccountDatabase·캐릭터·빌드·Lost Ark API·공통 정책/Validator·Write Plan 테스트, 모집 fake 검증, 공통 party_read_fakes·fixture, Android release workflow, 앱/SDK/설정·데이터 모두 불변. 삭제한 테스트/helper를 참조하는 남은 테스트 파일0개 확인.
+- 계약 소비: Backend519c609495966a3d785c6671c09bf513b28875a6, 추적OpenAPI hash7e62e9def16c5388760e1b3877ef52e618d254a4b32ab708305e850c39e434b0. checkoute6c72e4 clean, 6API/DTO·오류·session TTL·nonce/hash·복구상한을 Flutter와 대조했다. Backend46개 통과는 서버 기록된 결과이며 이번에 DB/서버 테스트를 반복하지 않았다. Windows localhost:8000은 연결 실패; 서비스 시작/DB/설정 수정/Issue 게시 없음.
+- 검증: 전체 flutter test --no-pub 1126통과/8실패. 추가된 origin별 저장격리·새 인스턴스 복원·Lost Ark 키 보존3건과 기존 auth27건 모두 통과. 남은 실패8개의 식별자는 이전109실패 목록에 모두 포함돼 새 실패없음. 전체 통과나 기기 인수 완료로 판정하지 않는다.
+- 전체 flutter analyze --no-pub 224건: coverage 과거사본170, lib기존49, test기존2, tools실험3. 신규 저장 검증 파일의 분석 결과0. broad exclude/소스 정리로 기존 분석 문제를 감추지 않았다. 신규 파일 format·문서 링크/diff 검사 완료. 검증 로그는 추적 제외 tools/google_login_transition_test.log·google_login_transition_analyze.log.
+- 유지한 실패: 로컬 notification receipt2, notification ViewModel2, raid status page2, party detail page2. 알림 fixture의 고정된2026-09-23 만료시각과 실제 now 조회는 후속 테스트 수명 검토 근거다. 반대 역할 후보 위젯 미발견은 별도 정책/fixture 대조가 필요하며 현재 인증 경계의 직접 원인으로 확인하지 않았다. 관련 정상 코드와 테스트를 임의로 삭제·수정하지 않았다.
+- 미확인 기기: 유지 선택별 앱 완전 종료/재실행, 일시 서버 장애 후 복원·만료/로그아웃, 보호 기능 취소/복귀·자동 제출 없음, 로컬 데이터 보존·로딩 배경/debug URL. 사용자 설치/조작이 필요한 현재 구간 인수이며 에이전트가 수행하지 않았다.
+- 작업 구간은 자동 정리 구현 완료·기존 실패/사용자 인수 남음. feature/google-login 미커밋·이번 변경dev미반영/push없음, 브랜치 유지. 기존 인증 구현의 dev7db7bde 통합은 유효하다.
+
+- 추가 확인: 전체 로그의 파일별 출력에 신규 storage 테스트가 나타나지 않아 해당 파일을 표적으로 재확인했고 3건 모두 통과했다. 코드 변경 없이 전체 묶음은 반복하지 않았다.
+
+## 2026-10-14 — 로그인 유지 선택·해제별 재실행 사용자 인수 통과
+
+- 사용자 보고로 로그인 유지 선택 시 앱 재실행의 로그인 복원, 해제 시 재실행의 비로그인 결과를 각각 통과로 기록했다. NEXT_WORK 체크리스트와 AI_CONTEXT를 갱신했다.
+- 이번 확인은 유지 선택별 로그인 상태에 한정한다. 로그아웃 후 재실행, 만료·정지·일시 장애, origin 변경 기기 확인, 로컬 데이터 보존과 최신 로딩 화면은 별도 미확인 상태를 유지한다.
+- 기능 코드·테스트 변경 없음. 기존 자동 검증 결과를 재사용하고 git diff --check·문서 변경 내용으로 확인했다. 기존 8개 테스트 실패·분석224건의 상태는 바뀌지 않는다.
+- feature/google-login 유지·현재 구간 미커밋, dev 반영/push 없음. 기존 변경·실험·백업 보존.
+
+## 2026-10-14 — 안내한 수동 인수 항목 전체 통과 정정
+
+- 사용자가 “다 통과”라고 정정했다. 앞서 전달한 4개 항목 전체(로그인 유지 선택/해제별 재실행, 로그아웃 후 재실행, 로컬 캐릭터·빌드 보존 및 로딩 배경·URL 알럿)를 사용자 수동 통과로 기록한다. 직전 답변에서 두 항목만 통과로 제한한 해석을 정정하며 같은 항목을 재요청하지 않는다.
+- 사용자에게 해당 4개로 안내하지 않은 만료·정지·위조/동시성·origin 변경 등 상세 경계는 기존 자동 검증/별도 근거와 구분한다. 사용자 통과 보고를 자동 테스트8실패·분석224건 통과로 확대하지 않는다.
+- NEXT_WORK·AI_CONTEXT 갱신, 문서 내용 및 git diff --check 확인. 코드/테스트 변경과 Flutter 검증 반복 없음. feature/google-login 미커밋·이번 변경dev미반영/push없음, 기존 산출물 보존.
+
+## 2026-10-14 — 유지 테스트 안정화·검증 기준 정리 완료
+
+- 사용자 승인으로 이전 테스트 전환의 후속 실패8개와 분석224건을 정리했다. 기존 feature/google-login에서 미커밋 전환 변경을 보존·재사용했으며 안내한 수동4항목 전체 통과 결과를 다시 요청하지 않았다.
+- 원인: 알림7실패는 fixture 만료일2026-09-23/10-06 이후 실제시각으로 조회한 테스트 수명 문제다. DB 직접 조회에 기존 now 인자를 명시하고 UI/ViewModel은 실제 SQL에 cutoff만 고정하는 FixedClockAccountDatabase를 사용한다. 기본2026-09-10은 fixture 발생 뒤·만료 전이며 임의 장기 만료나 조회 결과 fake로 우회하지 않았다.
+- 나머지1실패는 제품 요구(같은 캐릭터 반대 역할 변경)와 현재 UI/원자 WritePlan의 미지원이 불일치했다. b3461cb diff·WritePlan 거절과 legacy DEV_LOG source-0508/0509의 미완료 기록을 확인하고 UI 테스트를 현재 거절 경계·타캐릭터 후보 보존·무명령 전송 검증으로 맞췄다. 제품 요구를 폐기하지 않으며 신규 Backend 동일 state update 계약으로 인계한다. 동작을 열어 서버 실패를 유발하는 UI만의 수정은 하지 않았다.
+- 분석: coverage 과거 baseline 사본170건은 Git 제외 생성물이며 analyzer coverage/** 경계를 명시했다. 활성 lib/test/tool을 제외하지 않았다. 추적 Firestore adapter4파일49개의 중괄호 lint와 test2개 경고를 정리했다. adapter 변경은 중괄호/공백을 제거한 원본·변경본 문자 대조가 모두 동일해 분기/반환/쓰기 순서 보존 확인. 제품 정책·서버 요청·DB 스키마 변화 없음.
+- 새로 가능해진 흐름: 날짜 경과에도 유지 테스트 전체 검증을 재현하며 현재 지원/미지원 범위를 구분한다. 보존 확인: 알림 멱등·읽음·수신자·방·만료 경계, 타캐릭터 역할 변경·구성/WritePlan 정책, 로그인·시작 화면 및 로컬 데이터. 기존41테스트/3CI/1helper 제거와 신규origin저장3검증도 함께 검증됐다.
+- 검증: 수정 후 관련95테스트 통과. 최종 전체 flutter test --no-pub 1134개 모두 통과. 최종 flutter analyze --no-pub는3건(info)으로 종료1이며 전부 기존 미추적 tools/roster_rebalance_domain_fixtures.dart의 상대lib import2/print1이다. 추적 활성 lib/test/tool 진단0, 신규 오류없음. 포맷12파일 변경0·git diff --check·문서 링크 확인.
+- 미추적 실험/백업 파일은 hash 대조로 보존한다. 전체 분석 통과0건이라고 보고하지 않으며 남은3건을 숨기려고 tools 전체 exclude나 사용자 파일 수정을 하지 않았다.
+- 사용자 기기: 안내한4개 인수 전부 통과 기록을 재사용한다. 이번에는 정상 런타임 흐름 변경 없이 테스트/분석 경계만 정리해 중복 기기 테스트를 요청하지 않는다. 신규 업무 API·동일캐릭터 역할 지원·Firebase 최종 SDK 제거·운영 배포는 미구현/미실행이다.
+- Git: 사용자 승인 범위대로 전환·안정화 변경을 의미별 커밋으로 남겨 최신 origin/dev와 병합·push한다. 최종 커밋/동기화는 Git 이력에서 확인하고 별도 실험·백업의 dirty 상태를 분리해 보고한다. main·기존 브랜치는 유지한다.

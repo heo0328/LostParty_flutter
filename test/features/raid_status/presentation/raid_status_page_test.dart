@@ -28,6 +28,7 @@ import 'package:lost_party/shared/raid_catalog/domain/entities/raid_catalog.dart
 import 'package:lost_party/shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
 
 import '../../../support/party_read_fakes.dart';
+import '../../../support/fixed_clock_account_database.dart';
 
 void main() {
   Future<FakePartyEventSyncService> pumpPage(
@@ -158,7 +159,7 @@ void main() {
   });
 
   testWidgets('진행 중 카드에 방별 읽지 않은 이벤트 수를 표시한다', (tester) async {
-    final database = AccountDatabase(NativeDatabase.memory());
+    final database = FixedClockAccountDatabase();
     addTearDown(database.close);
     for (var index = 0; index < 2; index++) {
       await database.syncPartyNotificationReceipt(
@@ -191,7 +192,7 @@ void main() {
   });
 
   testWidgets('진행 중 목록을 아래로 당기면 방별 읽지 않은 수를 다시 읽는다', (tester) async {
-    final database = AccountDatabase(NativeDatabase.memory());
+    final database = FixedClockAccountDatabase();
     addTearDown(database.close);
     await pumpPage(
       tester,

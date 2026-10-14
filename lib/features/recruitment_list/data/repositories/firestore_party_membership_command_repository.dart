@@ -30,15 +30,17 @@ class FirestorePartyMembershipCommandRepository
       command,
     );
     if (invalid != null) return PartyMembershipResult.failure(invalid);
-    if (_firebaseAuth.currentUser == null)
+    if (_firebaseAuth.currentUser == null) {
       return const PartyMembershipResult.failure(
         PartyMembershipFailure.unauthenticated,
       );
+    }
     final knownMembers = await _members(command.recruitmentId);
-    if (knownMembers == null)
+    if (knownMembers == null) {
       return const PartyMembershipResult.failure(
         PartyMembershipFailure.temporarilyUnavailable,
       );
+    }
     return _run((transaction, playerId) async {
       final recruitmentRef = _firestore
           .collection('recruitments')
@@ -50,21 +52,24 @@ class FirestorePartyMembershipCommandRepository
       final m = member.data();
       final common = _validateActive(r, command.expectedRecruitmentRevision);
       if (common != null) return PartyMembershipResult.failure(common);
-      if (!member.exists)
+      if (!member.exists) {
         return const PartyMembershipResult.failure(
           PartyMembershipFailure.notFound,
         );
+      }
       final oldCharacterId = m?['characterId'];
       final oldRole = _role(m?['role']);
       final newRole = command.newRole;
-      if (oldCharacterId == command.newCharacterId && oldRole == newRole)
+      if (oldCharacterId == command.newCharacterId && oldRole == newRole) {
         return const PartyMembershipResult.failure(
           PartyMembershipFailure.alreadyCurrentCharacter,
         );
-      if (oldCharacterId is! String || oldRole == null)
+      }
+      if (oldCharacterId is! String || oldRole == null) {
         return const PartyMembershipResult.failure(
           PartyMembershipFailure.unknown,
         );
+      }
       // 반복 파티 완료 후 변경은 다음 회차 준비 구성이다. 이번 주 Claim·assignment는 건드리지 않는다.
       final isNextWeekPrep =
           r?['continueTogether'] == true &&
@@ -101,14 +106,16 @@ class FirestorePartyMembershipCommandRepository
                   ),
             );
       final c = character.data();
-      if (!character.exists || c?['status'] != 'active')
+      if (!character.exists || c?['status'] != 'active') {
         return const PartyMembershipResult.failure(
           PartyMembershipFailure.invalidCharacter,
         );
-      if (c?['ownerPlayerId'] != playerId)
+      }
+      if (c?['ownerPlayerId'] != playerId) {
         return const PartyMembershipResult.failure(
           PartyMembershipFailure.ownershipLost,
         );
+      }
       if (isNextWeekPrep) {
         // 완료 후 assignment는 이미 없다. 남은 orphan만 정리하고 새로 만들지 않는다.
         if (oldAssignmentRef.path != newAssignmentRef.path &&
@@ -141,10 +148,11 @@ class FirestorePartyMembershipCommandRepository
       if (itemLevel == null ||
           itemLevel < (r?['minItemLevel'] as num? ?? double.infinity) ||
           name is! String ||
-          className is! String)
+          className is! String) {
         return const PartyMembershipResult.failure(
           PartyMembershipFailure.invalidCharacter,
         );
+      }
       final replacementPlan = await _replacementPlan(
         transaction,
         knownMembers,
@@ -153,10 +161,11 @@ class FirestorePartyMembershipCommandRepository
         replacementRole: newRole,
         recruitment: r!,
       );
-      if (replacementPlan == null || !replacementPlan.canChange)
+      if (replacementPlan == null || !replacementPlan.canChange) {
         return const PartyMembershipResult.failure(
           PartyMembershipFailure.invalidComposition,
         );
+      }
       final destination = replacementPlan.destination;
       if (destination != null && r['slotLedgerVersion'] != 2) {
         return const PartyMembershipResult.failure(
@@ -353,10 +362,11 @@ class FirestorePartyMembershipCommandRepository
       final m = target.data();
       final common = _validateActive(r, command.expectedRecruitmentRevision);
       if (common != null) return PartyMembershipResult.failure(common);
-      if (!target.exists)
+      if (!target.exists) {
         return const PartyMembershipResult.failure(
           PartyMembershipFailure.notFound,
         );
+      }
       if (mode == _PartyRemoveMode.lostGroupQualification) {
         final groupId = r?['groupId'];
         if (r?['visibility'] != 'group' ||
@@ -563,14 +573,16 @@ class FirestorePartyMembershipCommandRepository
       final common = _validateActive(r, command.expectedRecruitmentRevision);
       if (common != null) return PartyMembershipResult.failure(common);
       if (r?['leaderPlayerId'] != actorPlayerId ||
-          command.targetPlayerId == actorPlayerId)
+          command.targetPlayerId == actorPlayerId) {
         return const PartyMembershipResult.failure(
           PartyMembershipFailure.unauthorized,
         );
-      if (!target.exists)
+      }
+      if (!target.exists) {
         return const PartyMembershipResult.failure(
           PartyMembershipFailure.notFound,
         );
+      }
       final now = FieldValue.serverTimestamp();
       transaction.update(
         targetRef,
@@ -909,10 +921,11 @@ class FirestorePartyMembershipCommandRepository
     Future<PartyMembershipResult> Function(Transaction, String) action,
   ) async {
     final uid = _firebaseAuth.currentUser?.uid;
-    if (uid == null)
+    if (uid == null) {
       return const PartyMembershipResult.failure(
         PartyMembershipFailure.unauthenticated,
       );
+    }
     try {
       return await _firestore.runTransaction((transaction) async {
         final binding = await transaction.get(
@@ -922,10 +935,11 @@ class FirestorePartyMembershipCommandRepository
         final playerId = data?['playerId'];
         if (data?['status'] != 'active' ||
             playerId is! String ||
-            playerId.isEmpty)
+            playerId.isEmpty) {
           return const PartyMembershipResult.failure(
             PartyMembershipFailure.playerBindingMissing,
           );
+        }
         return action(transaction, playerId);
       });
     } on FirebaseException catch (error) {
@@ -953,10 +967,12 @@ PartyMembershipFailure? _validateActive(
   int revision,
 ) {
   if (data == null) return PartyMembershipFailure.notFound;
-  if (data['revision'] != revision)
+  if (data['revision'] != revision) {
     return PartyMembershipFailure.revisionConflict;
-  if (data['status'] != 'active')
+  }
+  if (data['status'] != 'active') {
     return PartyMembershipFailure.recruitmentClosed;
+  }
   return null;
 }
 

@@ -1,13 +1,13 @@
 # Google 로그인 — Flutter 연동 정책
 
-작성: 2026-10-13, 갱신: 2026-10-14. 상태: Flutter 인증·세션·UI 구현 및 사용자 Google 로그인 성공 확인. 계약 revision 고정·세션 인수 검증 대기.
+작성: 2026-10-13, 갱신: 2026-10-14. 상태: 확정 Backend 계약 소비 확인, 사용자 Google 로그인 및 안내한 수동4항목 통과. 테스트 전환·안정화 완료; 고급 서버 경계·신규 업무 API는 별도 근거/후속 범위.
 작업 브랜치: `feature/google-login`. 신규 서버 인증 요구는 [Backend Issue #2](https://github.com/heo0328/lostparty-backend/issues/2)로 전달했다.
 
 ## 사용자 확정 정책
 
 ### 2026-10-14 합의안 기준 Flutter 연결
 
-사용자가 [최종 검토안](https://github.com/heo0328/lostparty-backend/issues/2#issuecomment-6149545526)에 [동의](https://github.com/heo0328/lostparty-backend/issues/2#issuecomment-6149615842)하고 동일 API가 작성된다고 가정한 Flutter 작업을 승인했다. 아래는 실제 계약 SHA가 아닌 승인된 검토안 소비 기록이다. 서버 준비 후 OpenAPI와 대조한다.
+사용자가 [최종 검토안](https://github.com/heo0328/lostparty-backend/issues/2#issuecomment-6149545526)에 [동의](https://github.com/heo0328/lostparty-backend/issues/2#issuecomment-6149615842)하고 동일 API가 작성된다고 가정한 Flutter 작업을 승인했다. 아래 구현은 승인된 검토안으로 시작했고, 후속 검증에서 확정 Backend 계약과 대조했다. 소비 SHA·대조 결과는 아래 확정 계약 절을 따른다.
 
 - `main()`은 신규 BackendApp을 실행한다. Firebase SDK 초기화·익명 로그인·Player 생성·실행 기록 없이 로컬 계정 탭으로 진입한다. 기존 MyApp/Router는 레거시 테스트·과거 기준용으로 보존했으며 새 entry에서 호출하지 않는다.
 - 실제 HTTP adapter는 `/v1` challenge/login/me/session/refresh/logout 6API의 합의된 snake_case DTO를 사용한다. transaction secret과 refresh request ID는 안전 난수32바이트의43자base64url, challenge hash는 전달ASCII문자열의SHA-256소문자hex64다. Google proof 교환은 자동 재시도하지 않는다.
@@ -34,6 +34,15 @@ Backend실행후사용자가에뮬레이터에서앱실행·Google선택/취소�
 - 가입·로그인은 한 화면/Google 버튼으로 통합한다. 첫 인증 성공은 신규 가입, 재로그인은 동일 회원을 사용한다. 별도 닉네임·비밀번호 입력과 최초 동의 전용 화면은 두지 않는다. 가입 안내와 서비스 약관·개인정보 처리방침 링크는 제공한다.
 - 로그인 유지 여부는 사용자가 선택한다. 선택한 경우 기기 안전 저장소로 복원 정보를 보관하고 다음 실행에서 Backend로 세션을 확인한다. 미선택은 인증정보를 메모리에만 보관하고 새 앱 실행을 비로그인으로 시작한다. 화면 이동·일시적 백그라운드 전환은 로그아웃하지 않는다.
 - 기존 로컬 데이터는 삭제하지 않는다. 과거 서버 ID와 로컬 캐릭터 정보는 새 회원의 소유권 증거가 아니다.
+
+
+### 2026-10-14 확정 Backend 계약 대조
+
+- 소비 계약: Backend `519c609495966a3d785c6671c09bf513b28875a6`, [추적 OpenAPI](https://github.com/heo0328/lostparty-backend/blob/519c609495966a3d785c6671c09bf513b28875a6/openapi/openapi.yaml). 파일 SHA-256 `7e62e9def16c5388760e1b3877ef52e618d254a4b32ab708305e850c39e434b0`.
+- 확인한 Backend checkout은 `e6c72e48276bf43367284cbbc36163d57389ca5d`이며 dirty 없음. 계약 인계 기록은 [Issue 댓글](https://github.com/heo0328/lostparty-backend/issues/2#issuecomment-6151318353). 과거 /health만 존재·계약 미인계 문구는 아래 이력의 당시 상태다.
+- challenge 201, Google 로그인 200, me/session 200, refresh 200/복구409, logout 204와 request/response snake_case 필드를 Flutter adapter/모델과 대조했다. canonical 32-byte base64url·ASCII SHA-256·Bearer·회원 상태와 세션 날짜 필드가 일치한다. challenge 300초, access 600초, remember 절대30일/idle7일, 미유지 절대12시간/idle2시간, recovery60초/추가2회도 합의와 일치한다.
+- `tests/test_auth.py`는 로그인/무guest, TTL, canonical/strict DTO, refresh 복구·재사용 폐기·동시성·원자 rollback·logout·위조/정지/만료를 검증한다. `tests/test_google.py`는 서명/claims/nonce/허용 azp·제공자 실패·민감정보 로그 제외를 검증한다. Backend 문서의 46개 통과는 Backend 기록된 결과이며 이번 Flutter 작업에서 DB 테스트를 반복 실행하지 않았다.
+- 현재 Windows localhost:8000 조회는 연결 실패했다. 서버를 임의로 시작하거나 DB/설정 변경하지 않았다. 추적된 계약 소비 확인과 현재 실행 서버 응답 검증을 구분하며 실제 세션 인수는 서버 실행 후 사용자가 진행한다.
 
 ## 화면과 인증 경계
 

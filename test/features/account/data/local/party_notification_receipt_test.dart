@@ -42,13 +42,13 @@ void main() {
       syncedAt: DateTime.utc(2026, 8, 26, 12, 10),
     );
 
-    final rows = await database.loadRecentPartyNotifications('leader');
+    final rows = await database.loadRecentPartyNotifications(
+      'leader',
+      now: DateTime.utc(2026, 8, 27),
+    );
     expect(rows, hasLength(1));
     expect(rows.single.readAt!.toUtc(), DateTime.utc(2026, 8, 26, 12, 5));
-    expect(
-      rows.single.lastSyncedAt.toUtc(),
-      DateTime.utc(2026, 8, 26, 12, 10),
-    );
+    expect(rows.single.lastSyncedAt.toUtc(), DateTime.utc(2026, 8, 26, 12, 10));
     expect(rows.single.characterNameSnapshot, '곰곰');
   });
 
@@ -80,10 +80,7 @@ void main() {
       expiresAt: DateTime.utc(2026, 7, 29),
     );
 
-    expect(
-      await database.countUnreadPartyNotifications('player', now: now),
-      1,
-    );
+    expect(await database.countUnreadPartyNotifications('player', now: now), 1);
     final recent = await database.loadRecentPartyNotifications(
       'player',
       now: now,
@@ -117,7 +114,10 @@ void main() {
     );
 
     final history = await database.loadRaidHistory('player');
-    final notifications = await database.loadRecentPartyNotifications('player');
+    final notifications = await database.loadRecentPartyNotifications(
+      'player',
+      now: DateTime.utc(2026, 8, 27),
+    );
     expect(history, hasLength(1));
     expect(notifications, hasLength(1));
     expect(history.single.eventId, eventId);

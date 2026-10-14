@@ -75,22 +75,26 @@ class FirestorePartyJoinCommandRepository
       final application = await transaction.get(applicationRef);
       final r = recruitment.data();
       final a = application.data();
-      if (!recruitment.exists || !application.exists)
+      if (!recruitment.exists || !application.exists) {
         return const PartyJoinResult.failure(PartyJoinFailure.notFound);
+      }
       if (!await _canApprove(
         transaction,
         command.recruitmentId,
         r,
         actorPlayerId,
-      ))
+      )) {
         return const PartyJoinResult.failure(PartyJoinFailure.unauthorized);
+      }
       if (r?['revision'] != command.expectedRecruitmentRevision ||
-          a?['revision'] != command.expectedApplicationRevision)
+          a?['revision'] != command.expectedApplicationRevision) {
         return const PartyJoinResult.failure(PartyJoinFailure.revisionConflict);
-      if (a?['status'] != 'pending')
+      }
+      if (a?['status'] != 'pending') {
         return const PartyJoinResult.failure(
           PartyJoinFailure.applicationNotPending,
         );
+      }
       final now = FieldValue.serverTimestamp();
       final nextRevision = command.expectedApplicationRevision + 1;
       final rejectionCount = (a?['rejectionCount'] as int? ?? 0) + 1;
@@ -160,16 +164,20 @@ class FirestorePartyJoinCommandRepository
     return _run((transaction, actorPlayerId) async {
       final recruitment = await transaction.get(recruitmentRef);
       final r = recruitment.data();
-      if (!recruitment.exists)
+      if (!recruitment.exists) {
         return const PartyJoinResult.failure(PartyJoinFailure.notFound);
-      if (r?['revision'] != expectedRecruitmentRevision)
+      }
+      if (r?['revision'] != expectedRecruitmentRevision) {
         return const PartyJoinResult.failure(PartyJoinFailure.revisionConflict);
-      if (r?['status'] != 'active' || r?['manualRecruitmentEnabled'] != true)
+      }
+      if (r?['status'] != 'active' || r?['manualRecruitmentEnabled'] != true) {
         return const PartyJoinResult.failure(
           PartyJoinFailure.recruitmentClosed,
         );
-      if (r?['hasAvailableSlot'] != true)
+      }
+      if (r?['hasAvailableSlot'] != true) {
         return const PartyJoinResult.failure(PartyJoinFailure.capacityFull);
+      }
 
       final playerId = applicantPlayerId ?? actorPlayerId;
       Map<String, dynamic>? applicationData;
@@ -177,28 +185,33 @@ class FirestorePartyJoinCommandRepository
       Map<String, Object?>? gemValidationFields = gemValidation?.toFields();
       Map<String, Object?>? buildIntegrityFields = buildIntegrity?.toFields();
       if (requiresDirectJoin) {
-        if ((r?['approvalPolicy'] as Map?)?['mode'] != 'directJoin')
+        if ((r?['approvalPolicy'] as Map?)?['mode'] != 'directJoin') {
           return const PartyJoinResult.failure(
             PartyJoinFailure.approvalModeMismatch,
           );
+        }
       } else {
-        if (!await _canApprove(transaction, recruitmentId, r, actorPlayerId))
+        if (!await _canApprove(transaction, recruitmentId, r, actorPlayerId)) {
           return const PartyJoinResult.failure(PartyJoinFailure.unauthorized);
+        }
         applicationRef = recruitmentRef
             .collection('applications')
             .doc(playerId);
         final application = await transaction.get(applicationRef);
         applicationData = application.data();
-        if (!application.exists)
+        if (!application.exists) {
           return const PartyJoinResult.failure(PartyJoinFailure.notFound);
-        if (applicationData?['status'] != 'pending')
+        }
+        if (applicationData?['status'] != 'pending') {
           return const PartyJoinResult.failure(
             PartyJoinFailure.applicationNotPending,
           );
-        if (applicationData?['revision'] != expectedApplicationRevision)
+        }
+        if (applicationData?['revision'] != expectedApplicationRevision) {
           return const PartyJoinResult.failure(
             PartyJoinFailure.revisionConflict,
           );
+        }
         requestedCharacterId = applicationData?['characterId'] as String?;
         requestedRole = _role(applicationData?['requestedRole']);
         requestedCycleKey = applicationData?['cycleKey'] as String?;
@@ -215,12 +228,14 @@ class FirestorePartyJoinCommandRepository
               );
         }
       }
-      if ((r?['memberPlayerIds'] as List?)?.contains(playerId) == true)
+      if ((r?['memberPlayerIds'] as List?)?.contains(playerId) == true) {
         return const PartyJoinResult.failure(PartyJoinFailure.alreadyMember);
+      }
       if (requestedCharacterId == null ||
           requestedRole == null ||
-          requestedCycleKey != r?['targetCycleKey'])
+          requestedCycleKey != r?['targetCycleKey']) {
         return const PartyJoinResult.failure(PartyJoinFailure.invalidRequest);
+      }
       final characterId = requestedCharacterId!;
       final role = requestedRole!;
       final cycleKey = requestedCycleKey!;
@@ -265,10 +280,12 @@ class FirestorePartyJoinCommandRepository
         );
       }
       final c = character.data();
-      if (!character.exists || c?['status'] != 'active')
+      if (!character.exists || c?['status'] != 'active') {
         return const PartyJoinResult.failure(PartyJoinFailure.invalidCharacter);
-      if (c?['ownerPlayerId'] != playerId)
+      }
+      if (c?['ownerPlayerId'] != playerId) {
         return const PartyJoinResult.failure(PartyJoinFailure.ownershipLost);
+      }
       final canReplaceLegacyAssignment =
           const LegacyEndedAssignmentReplacementPolicy().canReplace(
             assignmentExists: assignment.exists,
@@ -306,8 +323,9 @@ class FirestorePartyJoinCommandRepository
       if (itemLevel == null ||
           itemLevel < (r?['minItemLevel'] as num? ?? double.infinity) ||
           name is! String ||
-          className is! String)
+          className is! String) {
         return const PartyJoinResult.failure(PartyJoinFailure.invalidCharacter);
+      }
 
       final existing = <OccupiedPartyMember>[];
       for (final known in knownMembers.docs) {
@@ -482,8 +500,9 @@ class FirestorePartyJoinCommandRepository
     Future<PartyJoinResult> Function(Transaction, String) action,
   ) async {
     final uid = _firebaseAuth.currentUser?.uid;
-    if (uid == null)
+    if (uid == null) {
       return const PartyJoinResult.failure(PartyJoinFailure.unauthenticated);
+    }
     try {
       return await _firestore.runTransaction((transaction) async {
         final binding = await transaction.get(
@@ -493,10 +512,11 @@ class FirestorePartyJoinCommandRepository
         final playerId = data?['playerId'];
         if (data?['status'] != 'active' ||
             playerId is! String ||
-            playerId.isEmpty)
+            playerId.isEmpty) {
           return const PartyJoinResult.failure(
             PartyJoinFailure.playerBindingMissing,
           );
+        }
         return action(transaction, playerId);
       });
     } on FirebaseException catch (error) {

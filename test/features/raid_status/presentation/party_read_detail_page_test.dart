@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:drift/native.dart';
 import 'package:lost_party/features/account/data/local/account_database.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_analysis.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_catalog_detection.dart';
@@ -48,6 +47,7 @@ import 'package:lost_party/features/recruitment_list/domain/services/lazy_cycle_
 import 'package:lost_party/shared/character_build/build_integrity_snapshot.dart';
 
 import '../../../support/party_read_fakes.dart';
+import '../../../support/fixed_clock_account_database.dart';
 
 void main() {
   Future<void> pumpPage(
@@ -201,7 +201,7 @@ void main() {
   });
 
   testWidgets('방 진입 즉시 이벤트를 읽음 처리하고 구성 옆 팝업에 표시한다', (tester) async {
-    final database = AccountDatabase(NativeDatabase.memory());
+    final database = FixedClockAccountDatabase();
     addTearDown(database.close);
     await database.syncPartyNotificationReceipt(
       eventId: 'event-room',
@@ -1149,9 +1149,7 @@ void main() {
     expect(find.text('참가 캐릭터를 변경했습니다.'), findsOneWidget);
   });
 
-  testWidgets('종료 방의 고아 점유는 명시적 정리 후 캐릭터 변경을 자동 재시도하지 않는다', (
-    tester,
-  ) async {
+  testWidgets('종료 방의 고아 점유는 명시적 정리 후 캐릭터 변경을 자동 재시도하지 않는다', (tester) async {
     const orphan = PartyOrphanedRaidParticipation(
       characterId: 'server-character-2',
       raidId: 'kazeros_act4',
@@ -1307,7 +1305,7 @@ void main() {
     );
   });
 
-  testWidgets('같은 참가 캐릭터의 반대 역할 설정으로 바로 변경할 수 있다', (tester) async {
+  testWidgets('현재 원자 writer가 미지원하는 동일 캐릭터 역할 변경은 후보에서 제외한다', (tester) async {
     final membership = _RecordingMembershipRepository();
     await pumpPage(
       tester,
@@ -1344,14 +1342,22 @@ void main() {
       find.byKey(const ValueKey('changeParticipatingCharacterButton')),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('change-candidate-1-support')));
-    await tester.pumpAndSettle();
-
-    expect(membership.changeCommands.single.newRole, PartyRole.support);
+    // Product policy requires role-only changes, but the retired writer rejects
+    // a previous/next raidState with the same ID. Keep this unsupported boundary
+    // explicit until the new Backend defines an in-place update contract.
     expect(
-      membership.changeCommands.single.newCharacterId,
-      'server-character-1',
+      find.byKey(const ValueKey('change-candidate-1-support')),
+      findsNothing,
     );
+    expect(
+      find.byKey(const ValueKey('change-candidate-1-dealer')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('change-candidate-2-support')),
+      findsOneWidget,
+    );
+    expect(membership.changeCommands, isEmpty);
   });
 
   testWidgets('같은 State에서 recruitmentId가 바뀌면 새 방 제목을 구독한다', (tester) async {
