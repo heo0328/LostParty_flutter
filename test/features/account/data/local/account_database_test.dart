@@ -198,47 +198,47 @@ void main() {
     );
   });
 
-  test('assigns the next available default sub account label', () async {
-    final fetchedAt = DateTime.utc(2026, 8, 24);
-    await database.saveMainAccountSnapshot(
-      lookupCharacterName: '본캐',
-      characters: [_snapshot('본캐', fetchedAt)],
-    );
-    await database.addAccountSnapshot(
-      label: '',
-      lookupCharacterName: '첫부캐',
-      characters: [
-        AccountCharacterSnapshot(
-          serverName: '카단',
-          characterName: '첫부캐',
-          characterLevel: 70,
-          characterClassName: '바드',
-          itemLevel: 1700,
-          fetchedAt: fetchedAt,
-        ),
-      ],
-    );
-    await database.addAccountSnapshot(
-      label: '',
-      lookupCharacterName: '둘째부캐',
-      characters: [
-        AccountCharacterSnapshot(
-          serverName: '아만',
-          characterName: '둘째부캐',
-          characterLevel: 70,
-          characterClassName: '바드',
-          itemLevel: 1700,
-          fetchedAt: fetchedAt,
-        ),
-      ],
-    );
+  test(
+    'stores blank names without materializing automatic display labels',
+    () async {
+      final fetchedAt = DateTime.utc(2026, 8, 24);
+      await database.saveMainAccountSnapshot(
+        lookupCharacterName: '본캐',
+        characters: [_snapshot('본캐', fetchedAt)],
+      );
+      await database.addAccountSnapshot(
+        label: '',
+        lookupCharacterName: '첫부캐',
+        characters: [
+          AccountCharacterSnapshot(
+            serverName: '카단',
+            characterName: '첫부캐',
+            characterLevel: 70,
+            characterClassName: '바드',
+            itemLevel: 1700,
+            fetchedAt: fetchedAt,
+          ),
+        ],
+      );
+      await database.addAccountSnapshot(
+        label: '',
+        lookupCharacterName: '둘째부캐',
+        characters: [
+          AccountCharacterSnapshot(
+            serverName: '아만',
+            characterName: '둘째부캐',
+            characterLevel: 70,
+            characterClassName: '바드',
+            itemLevel: 1700,
+            fetchedAt: fetchedAt,
+          ),
+        ],
+      );
 
-    final accounts = await database.select(database.gameAccounts).get();
-    expect(
-      accounts.map((account) => account.label),
-      containsAll(['부계정1', '부계정2']),
-    );
-  });
+      final accounts = await database.select(database.gameAccounts).get();
+      expect(accounts.map((account) => account.label), everyElement(isEmpty));
+    },
+  );
 
   test('rejects a duplicate custom account label', () async {
     final fetchedAt = DateTime.utc(2026, 8, 24);
@@ -836,21 +836,24 @@ void main() {
     expect(account.serverOwnershipStatus, 'ownershipLost');
   });
 
-  test('stores a confirmed server mismatch separately from ownership loss', () async {
-    final fetchedAt = DateTime.utc(2026, 8, 25);
-    await database.saveMainAccountSnapshot(
-      lookupCharacterName: '대표캐릭터',
-      characters: [_snapshot('대표캐릭터', fetchedAt)],
-    );
-    final account = await database.select(database.gameAccounts).getSingle();
+  test(
+    'stores a confirmed server mismatch separately from ownership loss',
+    () async {
+      final fetchedAt = DateTime.utc(2026, 8, 25);
+      await database.saveMainAccountSnapshot(
+        lookupCharacterName: '대표캐릭터',
+        characters: [_snapshot('대표캐릭터', fetchedAt)],
+      );
+      final account = await database.select(database.gameAccounts).getSingle();
 
-    await database.updateServerOwnershipStatuses({
-      account.id: 'serverMismatch',
-    });
+      await database.updateServerOwnershipStatuses({
+        account.id: 'serverMismatch',
+      });
 
-    final updated = await database.select(database.gameAccounts).getSingle();
-    expect(updated.serverOwnershipStatus, 'serverMismatch');
-  });
+      final updated = await database.select(database.gameAccounts).getSingle();
+      expect(updated.serverOwnershipStatus, 'serverMismatch');
+    },
+  );
 
   test('rejects server ID remapping without partial writes', () async {
     final fetchedAt = DateTime.utc(2026, 8, 25);
@@ -886,41 +889,44 @@ void main() {
     expect(storedCharacter.serverCharacterId, 'character-1');
   });
 
-  test('repairs server IDs only after a server mismatch is confirmed', () async {
-    final fetchedAt = DateTime.utc(2026, 8, 25);
-    await database.saveMainAccountSnapshot(
-      lookupCharacterName: '조회캐릭터',
-      characters: [_snapshot('조회캐릭터', fetchedAt)],
-    );
-    final account = await database.select(database.gameAccounts).getSingle();
-    final character = await database
-        .select(database.accountCharacters)
-        .getSingle();
-    await database.bindServerIdentity(
-      localAccountId: account.id,
-      serverGameAccountId: 'old-game-account',
-      serverCharacterIdsByLocalId: {character.id: 'old-character'},
-    );
-    await database.updateServerOwnershipStatuses({
-      account.id: 'serverMismatch',
-    });
+  test(
+    'repairs server IDs only after a server mismatch is confirmed',
+    () async {
+      final fetchedAt = DateTime.utc(2026, 8, 25);
+      await database.saveMainAccountSnapshot(
+        lookupCharacterName: '조회캐릭터',
+        characters: [_snapshot('조회캐릭터', fetchedAt)],
+      );
+      final account = await database.select(database.gameAccounts).getSingle();
+      final character = await database
+          .select(database.accountCharacters)
+          .getSingle();
+      await database.bindServerIdentity(
+        localAccountId: account.id,
+        serverGameAccountId: 'old-game-account',
+        serverCharacterIdsByLocalId: {character.id: 'old-character'},
+      );
+      await database.updateServerOwnershipStatuses({
+        account.id: 'serverMismatch',
+      });
 
-    await database.bindServerIdentity(
-      localAccountId: account.id,
-      serverGameAccountId: 'new-game-account',
-      serverCharacterIdsByLocalId: {character.id: 'new-character'},
-    );
+      await database.bindServerIdentity(
+        localAccountId: account.id,
+        serverGameAccountId: 'new-game-account',
+        serverCharacterIdsByLocalId: {character.id: 'new-character'},
+      );
 
-    final repairedAccount = await database
-        .select(database.gameAccounts)
-        .getSingle();
-    final repairedCharacter = await database
-        .select(database.accountCharacters)
-        .getSingle();
-    expect(repairedAccount.serverGameAccountId, 'new-game-account');
-    expect(repairedAccount.serverOwnershipStatus, 'active');
-    expect(repairedCharacter.serverCharacterId, 'new-character');
-  });
+      final repairedAccount = await database
+          .select(database.gameAccounts)
+          .getSingle();
+      final repairedCharacter = await database
+          .select(database.accountCharacters)
+          .getSingle();
+      expect(repairedAccount.serverGameAccountId, 'new-game-account');
+      expect(repairedAccount.serverOwnershipStatus, 'active');
+      expect(repairedCharacter.serverCharacterId, 'new-character');
+    },
+  );
 
   test('rejects a character that belongs to another local account', () async {
     final fetchedAt = DateTime.utc(2026, 8, 25);

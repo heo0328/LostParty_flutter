@@ -63,6 +63,74 @@ void main() {
 
   tearDown(() => database.close());
 
+  test(
+    'empty names follow main/sub position after promotion and deletion',
+    () async {
+      final main = await database.createAccount(
+        label: '',
+        isMain: true,
+        lookupCharacterName: 'one',
+      );
+      final sub = await database.createAccount(
+        label: '',
+        isMain: false,
+        lookupCharacterName: 'two',
+      );
+      final third = await database.createAccount(
+        label: '',
+        isMain: false,
+        lookupCharacterName: 'three',
+      );
+      expect((await repository.loadAccounts()).map((a) => a.label), [
+        '메인 계정',
+        '부계정 1',
+        '부계정 2',
+      ]);
+      await repository.updateAccount(accountId: sub, label: '', isMain: true);
+      final promoted = await repository.loadAccounts();
+      expect(promoted.map((a) => a.id), [sub, main, third]);
+      expect(promoted.map((a) => a.label), ['메인 계정', '부계정 1', '부계정 2']);
+      expect(promoted.every((a) => a.customLabel == null), true);
+      await repository.deleteAccount(main);
+      expect((await repository.loadAccounts()).map((a) => a.label), [
+        '메인 계정',
+        '부계정 1',
+      ]);
+    },
+  );
+  test(
+    'entered names display unchanged; clearing an entered name selects automatic',
+    () async {
+      final main = await database.createAccount(
+        label: '레이드용',
+        isMain: true,
+        lookupCharacterName: 'one',
+      );
+      final sub = await database.createAccount(
+        label: '부계정1',
+        isMain: false,
+        lookupCharacterName: 'two',
+      );
+      await repository.updateAccount(
+        accountId: sub,
+        label: '부계정1',
+        isMain: true,
+      );
+      expect((await repository.loadAccounts()).map((a) => a.label), [
+        '부계정1',
+        '레이드용',
+      ]);
+      await repository.updateAccount(accountId: main, label: '', isMain: false);
+      expect((await repository.loadAccounts()).map((a) => a.label), [
+        '부계정1',
+        '부계정 1',
+      ]);
+      final rows = await database.select(database.gameAccounts).get();
+      expect(rows.singleWhere((a) => a.id == main).label, '');
+      expect(rows.singleWhere((a) => a.id == sub).label, '부계정1');
+    },
+  );
+
   test('saves siblings as the main account snapshot', () async {
     dioAdapter.onGet(
       requestPath,
@@ -142,51 +210,56 @@ void main() {
     },
   );
 
-  test('persists a confirmed missing server relationship as a mismatch', () async {
-    final now = DateTime.utc(2026, 9, 8);
-    final accountId = await database.createAccount(
-      label: '메인 계정',
-      isMain: true,
-      lookupCharacterName: lookupCharacterName,
-      now: now,
-    );
-    final characterId = await database.into(database.accountCharacters).insert(
-      AccountCharactersCompanion.insert(
-        accountId: accountId,
-        serverName: '루페온',
-        characterName: lookupCharacterName,
-        characterLevel: 70,
-        characterClassName: '바드',
-        itemLevel: const Value(1750),
-        lastSummaryFetchedAt: now,
-      ),
-    );
-    await database.bindServerIdentity(
-      localAccountId: accountId,
-      serverGameAccountId: 'game-account-1',
-      serverCharacterIdsByLocalId: {characterId: 'character-1'},
-    );
-    final checkedRepository = AccountRepositoryImpl(
-      remoteDataSource: LostArkCharacterRemoteDataSource(
-        apiClient: LostArkApiClient(
-          apiTokenStore: _InMemoryApiTokenStore(),
-          dio: dio,
+  test(
+    'persists a confirmed missing server relationship as a mismatch',
+    () async {
+      final now = DateTime.utc(2026, 9, 8);
+      final accountId = await database.createAccount(
+        label: '메인 계정',
+        isMain: true,
+        lookupCharacterName: lookupCharacterName,
+        now: now,
+      );
+      final characterId = await database
+          .into(database.accountCharacters)
+          .insert(
+            AccountCharactersCompanion.insert(
+              accountId: accountId,
+              serverName: '루페온',
+              characterName: lookupCharacterName,
+              characterLevel: 70,
+              characterClassName: '바드',
+              itemLevel: const Value(1750),
+              lastSummaryFetchedAt: now,
+            ),
+          );
+      await database.bindServerIdentity(
+        localAccountId: accountId,
+        serverGameAccountId: 'game-account-1',
+        serverCharacterIdsByLocalId: {characterId: 'character-1'},
+      );
+      final checkedRepository = AccountRepositoryImpl(
+        remoteDataSource: LostArkCharacterRemoteDataSource(
+          apiClient: LostArkApiClient(
+            apiTokenStore: _InMemoryApiTokenStore(),
+            dio: dio,
+          ),
         ),
-      ),
-      localDataSource: LocalAccountDataSource(
-        database: database,
-        gameCatalogRepository: _FakeGameCatalogRepository(catalog),
-      ),
-      ownershipStatusGateway: const _OwnershipStatusGateway(
-        {'game-account-1': 'serverMismatch'},
-      ),
-    );
+        localDataSource: LocalAccountDataSource(
+          database: database,
+          gameCatalogRepository: _FakeGameCatalogRepository(catalog),
+        ),
+        ownershipStatusGateway: const _OwnershipStatusGateway({
+          'game-account-1': 'serverMismatch',
+        }),
+      );
 
-    final account = (await checkedRepository.loadAccounts()).single;
+      final account = (await checkedRepository.loadAccounts()).single;
 
-    expect(account.hasServerMismatch, isTrue);
-    expect(account.hasActiveOwnership, isFalse);
-  });
+      expect(account.hasServerMismatch, isTrue);
+      expect(account.hasActiveOwnership, isFalse);
+    },
+  );
 
   test('creates an analyzed draft without changing local data', () async {
     dioAdapter.onGet(

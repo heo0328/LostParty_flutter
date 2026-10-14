@@ -4,8 +4,10 @@ import '../../auth/domain/backend_auth_models.dart';
 import '../domain/account_read_session.dart';
 import '../domain/server_account_models.dart';
 import '../domain/server_account_read_repository.dart';
+import '../domain/server_registration_api.dart';
 
-class DioBackendAccountReadApi implements BackendAccountReadApi {
+class DioBackendAccountReadApi
+    implements BackendAccountReadApi, BackendRegistrationApi {
   const DioBackendAccountReadApi(this.dio, this.session);
   final Dio dio;
   final AccountReadSession session;
@@ -47,22 +49,39 @@ class DioBackendAccountReadApi implements BackendAccountReadApi {
     }
   }
 
-  Future<Map<String, dynamic>> _get(String path, {String? cursor}) async {
+  Future<Map<String, dynamic>> _get(String path, {String? cursor}) async =>
+      (await request(path, query: {'limit': 100, 'cursor': ?cursor}))!;
+
+  @override
+  Future<Map<String, dynamic>?> request(
+    String path, {
+    String method = 'GET',
+    Map<String, dynamic>? body,
+    Map<String, dynamic>? query,
+    String? idempotencyKey,
+    int expectedStatus = 200,
+  }) async {
     final scope = accountReadScope(session);
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
         final access = await session.accessToken();
         requireAccountReadScope(session, scope);
-        final response = await dio.get<Object?>(
+        final response = await dio.request<Object?>(
           path,
-          queryParameters: {'limit': 100, 'cursor': ?cursor},
+          queryParameters: query,
+          data: body,
           options: Options(
             followRedirects: false,
-            headers: {'Authorization': 'Bearer $access'},
+            method: method,
+            headers: {
+              'Authorization': 'Bearer $access',
+              'Idempotency-Key': ?idempotencyKey,
+            },
           ),
         );
         requireAccountReadScope(session, scope);
-        if (response.statusCode != 200 ||
+        if (response.statusCode == 204 && expectedStatus == 204) return null;
+        if (response.statusCode != expectedStatus ||
             response.data is! Map<String, dynamic>) {
           throw const AccountReadException('INVALID_RESPONSE');
         }

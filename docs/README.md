@@ -4,6 +4,11 @@
 
 ## 백엔드 이전 사전 분석
 
+- [빈 이름 자동 표시](backend-migration/20-account-auto-label-contract.md): 미입력은 본·부계정 위치로 계산, 직접 입력 이름은 그대로 표시.
+
+- [Flutter 서버 등록 관리 연결](backend-migration/19-account-registration-flutter-contract.md): preview/등록 CRUD·멱등/세션 경계·Router 연결과 사용자 인수 항목.
+
+- [서버 등록 관리 후속 제안](backend-migration/18-account-registration-integration-proposal.md): 신규 Backend 이슈 #4의 실 API 검증·Flutter 연동 인계 제안. #3 완료 근거를 재사용한다.
 - [등록 관리 Backend 요청](backend-migration/17-account-registration-backend-request.md): Flutter 조회 결과 인계·기존 등록 API 소비·서버/provider 테스트 준비와 필요한 보완 요청.
 - [현재 Flutter 서버계정 조회](backend-migration/16-account-read-flutter-contract.md): 기본프로젝트실행경로·고정계약·서버/로컬분리·API카드인수.
 
@@ -26,7 +31,7 @@
 
 ## 이번 변경과 테스트 안내
 
-- [현재 다음 작업](project/NEXT_WORK.md): 서버 조회 1·2·4 인수 완료 후 Flutter 등록 관리 연결 준비.
+- [현재 다음 작업](project/NEXT_WORK.md): 등록 관리·갱신 구간 통합 후 대기, 전투력 수집·갱신 후속 필요.
 - [파일별 테스트 전환 대장](project/TEST_TRANSITION_INVENTORY.md): Firebase 테스트 제거 근거와 공통 검증 보존·안정화 결과. 제거 구간1134테스트와 조회 연결1159테스트 통과, 조회 사용자1·2·4 통과. 등록자료가 필요한3번은 후속 인수; 상세 이력은 DEV_LOG.
 
 

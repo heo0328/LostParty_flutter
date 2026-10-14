@@ -12,6 +12,8 @@ import '../features/auth/domain/auth_session_controller.dart';
 import '../features/auth/presentation/login_page.dart';
 import '../features/account/data/local/account_database.dart';
 import '../features/account/data/backend_account_read_api.dart';
+import '../features/account/presentation/viewmodels/server_registration_view_model.dart';
+import '../features/account/presentation/pages/server_registration_page.dart';
 import '../features/account/domain/account_read_session.dart';
 import '../features/account/domain/server_account_read_repository.dart';
 import '../features/account/presentation/viewmodels/server_account_read_view_model.dart';
@@ -66,6 +68,7 @@ class _BackendAppState extends State<BackendApp> {
   AccountDatabase? _database;
   AuthSessionController? _auth;
   ServerAccountReadViewModel? _serverReads;
+  ServerRegistrationViewModel? _serverWrites;
   GoRouter? _router;
   PartyCycleRuntime? _cycle;
   Dio? _dio;
@@ -142,11 +145,14 @@ class _BackendAppState extends State<BackendApp> {
   GoRouter _createRouter() {
     final auth = _auth!;
     final readSession = AuthAccountReadSession(auth);
-    final serverAccounts = ServerAccountReadRepository(
-      DioBackendAccountReadApi(_dio!, readSession),
+    final accountApi = DioBackendAccountReadApi(_dio!, readSession);
+    final serverAccounts = ServerAccountReadRepository(accountApi, readSession);
+    _serverReads = ServerAccountReadViewModel(serverAccounts, readSession);
+    _serverWrites = ServerRegistrationViewModel(
+      accountApi,
+      serverAccounts,
       readSession,
     );
-    _serverReads = ServerAccountReadViewModel(serverAccounts, readSession);
     final tokenStore = SecureApiTokenStore();
     final remote = LostArkCharacterRemoteDataSource(
       apiClient: LostArkApiClient(apiTokenStore: tokenStore),
@@ -208,10 +214,24 @@ class _BackendAppState extends State<BackendApp> {
                     serverAccountsSection: ServerAccountsPanel(
                       viewModel: _serverReads!,
                       onLogin: () => showLoginRequired(context, auth),
+                      onManage: () async {
+                        await context.push('/account/server-management');
+                        await _serverReads!.load();
+                      },
                       onOpen: (id) => context.push('/account/server/$id'),
                     ),
                   ),
                   routes: [
+                    GoRoute(
+                      path: 'server-management',
+                      builder: (context, _) => ServerRegistrationPage(
+                        writes: _serverWrites!,
+                        reads: serverAccounts,
+                        session: readSession,
+                        onLogin: () => showLoginRequired(context, auth),
+                        onOpen: (id) => context.push('/account/server/$id'),
+                      ),
+                    ),
                     GoRoute(
                       path: 'server/:registrationId',
                       builder: (context, state) => ServerAccountCharactersPage(
@@ -331,6 +351,7 @@ class _BackendAppState extends State<BackendApp> {
   void dispose() {
     _router?.dispose();
     _serverReads?.dispose();
+    _serverWrites?.dispose();
     _auth?.dispose();
     _dio?.close(force: true);
     _cycle?.dispose();

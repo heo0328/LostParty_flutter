@@ -1288,8 +1288,8 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
           fieldKey: const ValueKey('accountLabelField'),
           controller: _labelController,
           labelText: '계정 표시명',
-          hintText: '비워두면 부계정1처럼 자동 지정',
-          helperText: '같은 이름이 있으면 다음 번호를 사용합니다.',
+          hintText: '비워두면 위치에 따라 부계정 1처럼 표시',
+          helperText: '입력한 이름은 본·부계정 변경에도 그대로 표시합니다.',
         ),
         ClearableTextFormField(
           fieldKey: const ValueKey('subAccountCharacterNameField'),
@@ -1333,7 +1333,9 @@ class _EditAccountDialogState extends State<_EditAccountDialog> {
   @override
   void initState() {
     super.initState();
-    _labelController = TextEditingController(text: widget.account.label);
+    _labelController = TextEditingController(
+      text: widget.account.customLabel ?? '',
+    );
     _makeMain = widget.account.isMain;
   }
 
@@ -1353,7 +1355,7 @@ class _EditAccountDialogState extends State<_EditAccountDialog> {
           fieldKey: const ValueKey('editAccountLabelField'),
           controller: _labelController,
           labelText: '계정 표시명',
-          helperText: '비워두면 현재 이름을 유지합니다.',
+          helperText: '비워두면 메인 계정 또는 부계정 순서에 맞춰 표시합니다.',
         ),
         SwitchListTile(
           key: const ValueKey('mainAccountSwitch'),

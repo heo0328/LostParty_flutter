@@ -4,6 +4,7 @@ class LocalGameAccount {
   const LocalGameAccount({
     required this.id,
     required this.label,
+    this.usesAutomaticLabel = false,
     required this.isMain,
     required this.lookupCharacterName,
     required this.representativeCharacterId,
@@ -22,6 +23,8 @@ class LocalGameAccount {
   bool get hasLostOwnership => serverOwnershipStatus == 'ownershipLost';
   bool get hasServerMismatch => serverOwnershipStatus == 'serverMismatch';
   final String label;
+  final bool usesAutomaticLabel;
+  String? get customLabel => usesAutomaticLabel ? null : label;
   final bool isMain;
   final String lookupCharacterName;
   final int? representativeCharacterId;
@@ -40,6 +43,7 @@ class LocalGameAccount {
     return localRepresentative?.serverCharacterId ==
         serverRepresentativeCharacterId;
   }
+
   final List<LocalAccountCharacter> characters;
 
   List<LocalAccountCharacter> get visibleCharacters {

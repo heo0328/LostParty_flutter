@@ -890,7 +890,7 @@ class AccountDatabase extends _$AccountDatabase {
       }
       final storedAccounts = await select(gameAccounts).get();
       final normalizedLabel = _resolveAccountLabel(
-        requestedLabel: label.trim().isEmpty ? account.label : label,
+        requestedLabel: label,
         storedAccounts: storedAccounts,
         excludedAccountId: accountId,
       );
@@ -956,22 +956,16 @@ class AccountDatabase extends _$AccountDatabase {
     required List<GameAccount> storedAccounts,
     int? excludedAccountId,
   }) {
+    final requested = requestedLabel.trim();
+    if (requested.isEmpty) return '';
     final usedLabels = storedAccounts
         .where((account) => account.id != excludedAccountId)
         .map((account) => account.label.trim().toLowerCase())
         .toSet();
-    final requested = requestedLabel.trim();
-    if (requested.isNotEmpty) {
-      if (usedLabels.contains(requested.toLowerCase())) {
-        throw StateError('The account label is already in use.');
-      }
-      return requested;
+    if (usedLabels.contains(requested.toLowerCase())) {
+      throw StateError('The account label is already in use.');
     }
-    var sequence = 1;
-    while (usedLabels.contains('부계정$sequence')) {
-      sequence++;
-    }
-    return '부계정$sequence';
+    return requested;
   }
 
   Future<void> setRepresentativeCharacter({
@@ -1188,7 +1182,7 @@ class AccountDatabase extends _$AccountDatabase {
       final accountId =
           existingAccount?.id ??
           await createAccount(
-            label: '메인 계정',
+            label: '',
             isMain: true,
             lookupCharacterName: lookupCharacterName,
             now: timestamp,

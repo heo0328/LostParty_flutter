@@ -47,10 +47,12 @@ class ServerAccountsPanel extends StatelessWidget {
     required this.viewModel,
     required this.onLogin,
     required this.onOpen,
+    this.onManage,
     super.key,
   });
   final ServerAccountReadViewModel viewModel;
   final VoidCallback onLogin;
+  final VoidCallback? onManage;
   final void Function(String) onOpen;
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -77,6 +79,15 @@ class ServerAccountsPanel extends StatelessWidget {
                   ),
               ],
             ),
+            if (viewModel.canRead && onManage != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: onManage,
+                  icon: const Icon(Icons.manage_accounts_outlined),
+                  label: const Text('서버 계정 등록·관리'),
+                ),
+              ),
             if (!viewModel.canRead) ...[
               const Text('로그인하면 서버에 등록한 계정을 확인할 수 있습니다.'),
               Align(
