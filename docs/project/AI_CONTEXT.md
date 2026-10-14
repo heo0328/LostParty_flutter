@@ -31,3 +31,5 @@ Backend heo0328/lostparty-backend GitHub Issues가공식협업채널이다. 필�
 ## DB 재점검 결과
 
 [보고서24](../backend-migration/24-database-design-review.md): Backend게시0004기준19개모델·Flutter schema13/8개테이블과보안저장/메모리를대조했다. 서버회원설정/등록과기기공용계정/빌드·표시환경은별도이며전체환경복원계약이남아있다. 격리메모리DB에서FK0·missing캐릭터삭제후빌드/주간표시고아각1행을재현했고실기기는미검증이다. 복원정답/ID/필드설계와로컬삭제정합성을분리후속으로기록했다. 이번에기능코드/DDL/실자료를바꾸지않았다.
+
+2026-10-15 현재그룹: 사용자순차진행의첫구간인시작등록목록중복조회개선완료. 기존feature/account-backend-read를dev70880bf로FF재사용. 초기등록패널/전투력VM만진행전체목록을회원·세션별공유,명시/쓰기후GET은공유하지않음. 전체1227테스트·lib/test분석0완료,사용자지시로현재완료브랜치를dev에통합·push한다. 다음은자동빌드시작순서설계,이후서버/로컬정답·복원범위UX협의. BackendAPI/DB변경없음.

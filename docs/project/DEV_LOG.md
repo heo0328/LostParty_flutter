@@ -3991,3 +3991,15 @@
 - 실제검증은격리NativeDatabase.memory한개probe1개. PRAGMA foreign_keys=0, deleteMissingCharacter이후빌드1행/주간표시1행잔존을재현했다. probe통과는문제재현관찰이고정상화통과가아님. 실제기기DB상태/재현미실행,별도최소정합성수정DB-03으로기록. 임시파일/로그는.dart_tool만사용해제품코드/기존DB미변경.
 - 새로가능: 현재저장구조·소유/ID/복원범위와미구현·재현문제를보고서24에서검토가능. 보존:기능코드/기존인수·서버DDL/실자료불변. 미확인:운영DB/실기기FK·새환경복원·서버전체동시성/탈퇴정책. 검증:소스/고정계약대조·메모리probe1·diffcheck/문서검토. 이미검증된회원설정기능전체테스트/빌드를반복하지않음.
 - 문서/후속대장·AI_CONTEXT/NEXT_WORK를최신화해다음은복원범위/정답저장소확정과DB-03별도후속으로둔다. 문서최종검증후dev통합/push해보고서를공유하며Backend새기능요청/DB변경은하지않는다.
+
+## 2026-10-15 — 시작 등록 목록 중복 조회 개선
+
+- 사용자 순차진행지시의 첫그룹으로 시작 중복GET을 선택했다. AGENTS/ai_rules/NEXT_WORK/AI_CONTEXT/문서지도·기존조회/소비VM·쓰기뒤review/페이지명시재조회 흐름과 #5최신종료회신을확인했다. 기존feature/account-backend-read를dev70880bf에서FF재사용,새브랜치/Backend요청/기존실험수정없음.
+- ServerAccountReadRepository의초기opt-in shareInFlight만회원+세션세대별진행Future를공유한다. 전체pagination/검증후불변결과공유·성공/실패정리,새세션은공유안함. 등록/전투력VM의인증상태초기load만opt-in. 기본load/reload·쓰기후/멱등상태확인은항상새GET이라이전진행응답을재사용하지않는다. 결과TTL/백그라운드polling/DTO/DB/Router변경없음.
+- 새로가능: 정상단일페이지로그인시등록목록HTTP2→1,전체Backend시작4+N→3+N(토큰유효/실패없음기준). 보존확인:초기공유VM결과·페이지전체성·성공재조회/실패복구·회원/새세션/늦은응답·쓰기후신규GET과기존등록/이름/전투력/회원설정전체회귀.
+- 검증: 신규7개포함전체1227테스트통과(.dart_tool/registration-flight-tests.log,56초),제품lib/test분석0(.dart_tool/registration-flight-analyze.log,45.6초),변경파일포맷/diffcheck/최종diff검토. 실제기기패킷개수측정은미실행,전체빌드자동갱신/서버환경복원은미구현유지. UI/API계약변경없어성공한기기인수/Backend시험·APK빌드반복없음.
+- feature/account-backend-read 유지·미커밋/dev미반영/미push,기존Rules/tools미추적실험보존. 다음그룹은자동빌드시작순서설계와그뒤서버/로컬정답/복원범위협의이며이번구현에다른DB정합성수정을섞지않았다.
+
+## 2026-10-15 — 등록 목록 중복 조회 dev 통합
+
+사용자완료작업commit/dev병합·push지시에따라feature/account-backend-read의잔여항목을확인했다. 구현/자동검증/관련문서는완료,미확인실기기패킷계수는새UI필수인수가아니므로대기사유로두지않는다. 최종전체1227/분석0·포맷/diff를재사용하며코드불변이라검증을반복하지않는다. 최신origin/dev확인후코드/신규7개경계/관련문서를같은단위로commit·일반merge/push한다. NEXT_WORK를다음자동빌드실행순서설계로교체했고UI/설정/실패재시도는사용자협의전구현하지않는다. Backend수정/Issue콜백이필요한새계약/요청이없어종료이슈에독립로컬개선댓글을추가하지않는다. main/DB/기기와기존미추적Rules/tools를변경하지않고작업브랜치는유지/삭제후보로둔다. 최종적용/통합SHA·원격일치는실행후보고한다.

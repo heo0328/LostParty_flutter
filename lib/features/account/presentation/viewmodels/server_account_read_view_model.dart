@@ -44,10 +44,10 @@ class ServerAccountReadViewModel extends ChangeNotifier {
     loaded = false;
     loading = false;
     notifyListeners();
-    if (canRead) unawaited(load());
+    if (canRead) unawaited(load(shareInFlight: true));
   }
 
-  Future<void> load() async {
+  Future<void> load({bool shareInFlight = false}) async {
     if (_disposed || loading || !canRead) return;
     final ticket = ++_request;
     final key = _sessionKey;
@@ -61,7 +61,9 @@ class ServerAccountReadViewModel extends ChangeNotifier {
     try {
       final id = registrationId;
       if (id == null) {
-        final result = await repository.loadRegistrations();
+        final result = await repository.loadRegistrations(
+          shareInFlight: shareInFlight,
+        );
         if (_valid(ticket, key)) registrations = result;
       } else {
         final result = await repository.loadCharacters(id);
