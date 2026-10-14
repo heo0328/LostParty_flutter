@@ -1,32 +1,29 @@
 # AI CONTEXT — 현재 프로젝트 상태
 
-갱신: 2026-10-14. 기본 경로 D:/dev/projects/lost_party_flutter. 통합 기준 dev. 서버 등록 관리·로컬 빈 이름 자동 표시·정보 갱신 응답/안내 수정은 구현·자동 검증 완료. 사용자가 서버 등록·삭제·재로그인 뒤 원정대 표시 및 최신 갱신 안내 정상 동작을 확인했다. 기존 구현은 dev0427232·협업 규칙2bc70d8에 통합·push 완료했다. #4 서버 빈 이름 계약d3cb697 Flutter 연결 구현과 전체1193테스트/분석0 완료, 신규 이름4흐름 사용자 인수 완료다. 이름 구현5fe636e는 dev266a7e2에 통합·push했고 Backend 인계확인도 완료했다. [전투력 연결22](../backend-migration/22-character-combat-power-flutter-contract.md)는 Backend39188d5로 구현·전체1204/이후국소70·분석0까지 완료했고 전투력신규3흐름도사용자정상확인완료이며feature/character-combat-power결과를dev에통합·push한다. 다음은나이스단설정/앱실행자동갱신설계준비이며기능구현전이다. 상세 실행 기준은 [NEXT_WORK](NEXT_WORK.md), 완료 경과는 [DEV_LOG](DEV_LOG.md).
+2026-10-14. 기준 D:/dev/projects/lost_party_flutter, 통합 dev. 현재 사용자 지시: Issue6 회원 설정을 문서/Git/최종인계로 마무리한 뒤 Flutter·Backend 전체 데이터베이스 설계를 다시 점검한다. DB 점검은 조사·문서 전용이며 코드/DDL/실데이터를 변경하지 않는다. 상세 실행은 [NEXT_WORK](NEXT_WORK.md), 완료 이력은 [DEV_LOG](DEV_LOG.md).
 
-## 현재 구현과 인수
+## 완료된 앱 연결
 
-- Google Credential Manager·Backend 자체 세션·로그인 유지/로그아웃을 사용한다. Firebase SDK/구 MyApp/Router·익명 Player/Firestore 실행 경로를 제거했다. OAuth 등록·로컬 캐릭터/빌드/키는 유지한다.
-- Backend #3 구현254cb5d/인계406004e의 원본 계약을 고정하고 서버 등록 목록·등록별 전체 캐릭터/settings 조회를 연결했다. 서버 UUID·상태·private 메모리는 로컬 SQL/정수 PK와 구분한다. [Flutter 조회 계약16](../backend-migration/16-account-read-flutter-contract.md).
-- 별도 작업 트리와 기본 프로젝트의 빌드 불일치를 복구했고, 기본 경로에서 조회 기능 포함 APK 빌드를 확인했다. 사용자 1·2·4 통과: 로그인 서버 빈 등록 안내, 로그아웃 로그인 안내와 로컬 화면 보존. 당시 등록 자료가 없어 3번 캐릭터 조회는 후속 인수로 분리했고, 이후 등록 관리 구간에서 사용자가 등록 원정대 캐릭터 표시를 확인했다. 전체 페이지/세 revision의 실제 데이터 검증까지 확대하지 않는다.
-- 기존 조회 소스 전체1159테스트·분석0과 기본 경로 APK 빌드/마커 검증을 기록했다. 기본 경로의 기존 미추적 실험은 보존했으며 소스 동일성으로 자동 검증을 재사용한다. 이 결과는 조회 구현의 검증 기록이며, 이후 화면 배치 변경은 별도 페이지10개 테스트/분석으로 검증했다.
-- Flutter preview/등록·수정·제거·갱신 UI/쓰기를 연결했다. [등록 연결 계약19](../backend-migration/19-account-registration-flutter-contract.md). 사용자가 서버 등록·삭제·재로그인 후 등록 원정대 캐릭터 표시를 확인했으며 정보 갱신 안내도 정상 확인했고, 서버 표시명/본계정 수정의 전체 인수와 #3 장비/활동 기능 인수는 남아 있다. 서버 장비 인증 및 활동·대표 저장 UI는 그다음이다. 다음 실행 근거는 [NEXT_WORK](NEXT_WORK.md), 전체 단계는 [연결 계획14](../backend-migration/14-my-account-flutter-integration-plan.md), 완료 경과는 [DEV_LOG](DEV_LOG.md).
-- [등록 관리 Backend 요청17](../backend-migration/17-account-registration-backend-request.md): 조회 결과를 #3에 인계하고 실행 버전·서버 키 준비 여부·실 provider 등록 시험 조건과 필요한 최소 보완을 요청한다. 기존 API를 중복 개발하지 않는다.
-- [새 등록 구간 제안18](../backend-migration/18-account-registration-integration-proposal.md), [Backend #4](https://github.com/heo0328/lostparty-backend/issues/4): #3 보완db0f3ae/계약254cb5d 유지 인계를 근거로 키 준비·실 provider/등록 검증과 필요한 보완을 별도 추적한다. 후속 키 준비/실provider 인수는 #4에서 추적한다.
+- Google Credential Manager·Backend 자체 회원/세션·로그인 유지/로그아웃 사용. Firebase 실행 경로 제거, 기존 Firebase 사용자/테스터 자료 이관 없음. 기본 로그인/유지선택별 재실행/로그아웃 사용자 확인 완료.
+- 서버 등록/전체 원정대 조회·preview/등록·수정·삭제·refresh 연결. 조회6f97190, 등록98ebbff/dev0427232, 빈 label 계약 d3cb697 소비 구현5fe636e/dev266a7e2. 사용자 등록/삭제·재로그인 캐릭터 표시·갱신 안내 및 이름4흐름 확인 완료. [조회16](../backend-migration/16-account-read-flutter-contract.md), [등록19](../backend-migration/19-account-registration-flutter-contract.md), [이름20](../backend-migration/20-account-auto-label-contract.md).
+- 수동 전투력 캐시/갱신과 내계정 카드 연결: Backend39188d5, Flutter6beb55e/devccc6b23·push. 전체1204/후속국소70·분석0 및 사용자3흐름 확인. 선호역할Snapshot 우선·회원별서버표시캐시 격리. [계약22](../backend-migration/22-character-combat-power-flutter-contract.md).
+- 회원 나이스단 설정: Backend79255f0의 GET/PUT /v1/me/settings. 기존 캐릭터관리 위치·스위치즉시저장, 기본OFF·회원서버저장·같은회원로그인GET복원. Flutter 전체1219/이후국소32·최종lib-test분석0/debug9.4초. 사용자ON/OFF·관리재진입·재로그인복원3흐름 확인. 별도재설치/새기기 전체인수는미확인. 사용자지시로현재feature/member-settings를Git통합/최종인계한다. [설계23](../backend-migration/23-nice-group-auto-refresh-design.md).
 
-## 협업 채널
+## 데이터·실행 경계
 
-다른 공유 방식 채택 전까지 Backend GitHub Issues를 협업 채널로 사용한다. 피드백·테스트 요청은 필요시만 하며 모든 작업마다 요구하지 않는다. 협업 요청에 대응한 결과와 필요한 인계는 기록하고 회신한다. 현재 승인 구간의 관련 댓글 회신은 상시 승인된다. [공통 협업·콜백 규칙](ai_rules.md#8-2-flutter--backend-github-issues-협업콜백).
+- Backend 회원/user UUID와 서버 registration/canonical Character UUID, Flutter 로컬 정수PK는 별개다. 현재 서버 표시값은 로컬계정/역할빌드의완전한복원자료가아니다.
+- 현재 로컬캐릭터·dealer/supportSnapshot·선호역할·표시순서/개수·개인API키 등이 남아 있다. Google로그인만으로이전체자료가복원되지는않으며RESTORE-01 설계대상이다. 기존자료이관요청이아니다.
+- 회원설정GET/등록GET/전투력캐시GET은병렬. 개인키의siblings요약자동갱신은별도다. 전체Armory/역할빌드runOnce는현재BackendApp에미연결이다. 향후설정GET성공+전체roster준비→같은회원/세션확인→나이스단판정→자동빌드실행을설계해야한다. 조회실패를OFF로바꾸거나실행1회를소진하지않는다.
+- 서버계정소유인증과Google회원인증은별개. 장비/이전의PROVIDER_EVIDENCE_PENDING/ROSTER_EVIDENCE_PENDING·누락suspect보류는유지한다. 장비/활동/대표Flutter연결은후속이며현재완료로간주하지않는다.
 
-## 기준과 보존 정책
+## 협업·후속
 
-- 기존 Firebase 사용자/서버/테스터 자료는 이관하지 않는다. 로컬 자료는 보존하지만 앱 삭제 시 기기 자료가 사라질 수 있고 Google 로그인만으로 로컬 자료가 복원되지는 않는다. [이전 정책](../backend-migration/09-migration-decisions.md).
-- Google 앱 회원 인증과 게임 계정 소유 인증은 별개다. [Google 로그인 계약](../architecture/GOOGLE_LOGIN_CONTRACT.md), [신규 서버 인증 설계](../backend-migration/11-auth-and-access-design.md).
-- Backend endpoint/DTO/SQL·권한은 heo0328/lostparty-backend가 소유한다. [Issue #3](https://github.com/heo0328/lostparty-backend/issues/3), [원본 계약 snapshot](../backend-migration/contracts/issue3-254cb5d.openapi.json). 실제 provider 증거/키·장비/소유권 이전 인수는 Backend 보류 정책과 별도 공동 검증 대상이다.
-- [테스트 준비15](../backend-migration/15-my-account-test-readiness.md)는 초기 준비 기록과 후속 인계를 구분한다. 모집/파티/그룹/주간·운영 기능 연결은 아직 후속이다.
-- Firebase 제거 원본과 조회 원본 작업 트리, 미추적 Rules 실험·백업은 보존한다. 조회 원본은 기본 경로로 브랜치를 옮긴 뒤 detached 상태다. Git 정리 전에 소유/목적과 충돌 여부를 확인한다.
-- 기존 서비스 전용 문서는 [레거시 지도](../../legacy/firebase/README.md)에서 보관하며 과거 실행 지시를 신규 서버 승인으로 사용하지 않는다. 전체 문서 지도는 [docs/README](../README.md).
+Backend heo0328/lostparty-backend GitHub Issues가공식협업채널이다. 필요한질문/작업/인수만요청하고결과를같은Issue로콜백한다. 완료요청은연계후속때문에열어두지않고Flutter가후속을주관한다. [협업규칙](ai_rules.md#8-2-flutter--backend-github-issues-협업콜백).
 
-## 후속 상태
+#1/#2/#3/#4/#5종료. #3은서버기반완료와장비/활동Flutter미완료를분리종료했다. #6회원설정은양측구현·사용자3흐름완료,이번사용자지시로Git인계후종료한다. Backend마지막회신상feat/member-settings push·로컬0004적용·dev미병합이며원격상태를마무리/DB조사시재확인한다.
 
-- 로컬 빈 이름 자동 표시 완료: 기존 label/schema13 사용, 미입력은 현재 본·부계정 위치별 자동 이름, 입력값은 그대로 표시. [이름 계약20](../backend-migration/20-account-auto-label-contract.md). Backend #4 새 빈 이름 계약d3cb697은 게시·dev 통합 완료했고 Flutter 연결 구현·전체1193테스트/분석0 완료이며 실제 이름4흐름도 사용자 정상 확인 완료다. 우선 작업은 NEXT_WORK를 따른다.
-- RefreshOut.registration 응답 처리와 갱신 수/서버 조회 시각 안내 완료, 사용자 정상 동작 확인. [등록 계약19](../backend-migration/19-account-registration-flutter-contract.md).
-- 전투력 표시 UI는 존재하지만 등록된1700이상 대상의 수집·캐시/상태와 로컬 카드 연결을 구현했고 서버수치·로컬카드/역할우선·회원캐시3흐름은사용자정상확인완료다. 서버/로컬 데이터 출처와 후속 범위는 NEXT_WORK에 기록했다. 장비 인증·활동/대표 저장도 후속이며 이번 통합을 #3 전체 완료로 취급하지 않는다.
+[Flutter주도후속대장14](../backend-migration/14-my-account-flutter-integration-plan.md#flutter-follow-up-20261014): ACCOUNT-01장비UI/API연결,ACCOUNT-02실provider/소유권/roster증거,ACCOUNT-03활동대표,QA-01등록제거후로컬보존인수,POWER-01전체빌드자동갱신,RESTORE-01환경복원,AUTH-01정책/릴리즈인수. 필요한 Backend 변경은 Flutter 설계 후 별도 Issue로 요청한다.
+
+## 보관 자료
+
+[문서지도](../README.md), [이전결정09](../backend-migration/09-migration-decisions.md), [Google계약](../architecture/GOOGLE_LOGIN_CONTRACT.md), [레거시지도](../../legacy/firebase/README.md). 과거미인계/미인수/OPEN문구는당시이력이며현재실행근거는NEXT_WORK와최신상태다. 사용자미추적Rules백업/tools실험·기존worktree는별도지시없이변경하지않는다.

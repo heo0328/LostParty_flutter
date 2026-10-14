@@ -14,6 +14,7 @@ import '../features/account/data/local/account_database.dart';
 import '../features/account/data/backend_account_read_api.dart';
 import '../features/account/presentation/viewmodels/server_registration_view_model.dart';
 import '../features/account/presentation/viewmodels/server_combat_power_view_model.dart';
+import '../features/account/presentation/viewmodels/member_settings_view_model.dart';
 import '../features/account/presentation/pages/server_registration_page.dart';
 import '../features/account/domain/account_read_session.dart';
 import '../features/account/domain/server_account_read_repository.dart';
@@ -71,6 +72,7 @@ class _BackendAppState extends State<BackendApp> {
   ServerAccountReadViewModel? _serverReads;
   ServerRegistrationViewModel? _serverWrites;
   ServerCombatPowerViewModel? _serverPowers;
+  MemberSettingsViewModel? _memberSettings;
   GoRouter? _router;
   PartyCycleRuntime? _cycle;
   Dio? _dio;
@@ -148,6 +150,7 @@ class _BackendAppState extends State<BackendApp> {
     final auth = _auth!;
     final readSession = AuthAccountReadSession(auth);
     final accountApi = DioBackendAccountReadApi(_dio!, readSession);
+    _memberSettings = MemberSettingsViewModel(accountApi, readSession);
     final serverAccounts = ServerAccountReadRepository(accountApi, readSession);
     _serverReads = ServerAccountReadViewModel(serverAccounts, readSession);
     _serverWrites = ServerRegistrationViewModel(
@@ -253,9 +256,11 @@ class _BackendAppState extends State<BackendApp> {
                     ),
                     GoRoute(
                       path: 'characters/manage',
-                      builder: (_, state) => CharacterManagementPage(
+                      builder: (context, state) => CharacterManagementPage(
                         accountRepository: accounts,
                         accountId: state.extra as int?,
+                        memberSettings: _memberSettings,
+                        onLogin: () => showLoginRequired(context, auth),
                       ),
                     ),
                     GoRoute(
@@ -362,6 +367,7 @@ class _BackendAppState extends State<BackendApp> {
     _router?.dispose();
     _serverReads?.dispose();
     _serverPowers?.dispose();
+    _memberSettings?.dispose();
     _serverWrites?.dispose();
     _auth?.dispose();
     _dio?.close(force: true);
