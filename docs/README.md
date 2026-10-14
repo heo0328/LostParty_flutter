@@ -4,6 +4,7 @@
 
 ## 백엔드 이전 사전 분석
 
+- [등록 관리 Backend 요청](backend-migration/17-account-registration-backend-request.md): Flutter 조회 결과 인계·기존 등록 API 소비·서버/provider 테스트 준비와 필요한 보완 요청.
 - [현재 Flutter 서버계정 조회](backend-migration/16-account-read-flutter-contract.md): 기본프로젝트실행경로·고정계약·서버/로컬분리·API카드인수.
 
 
