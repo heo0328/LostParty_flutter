@@ -159,3 +159,6 @@ flowchart LR
 이점검의새검증은메모리DB한개에서외래키상태/삭제종속행을출력한1개probe이며**문제를재현한관찰**이다. probePASS는삭제정합성이정상이라는뜻이아니다. 기능코드변경없이문서diffcheck/내용검토,이전회원설정전체1219후국소32·분석0/APK9.4초를재사용했다. Backend서버전체테스트/운영DB/실기기·재설치를다시검증하지않았다.
 
 Issue6최종회신/종료: [6170736672](https://github.com/heo0328/lostparty-backend/issues/6#issuecomment-6170736672). Flutter구현2e0764f/dev5cee964·push,이후DB점검은기존 docs/my-account-backend-phase1을dev에서fast-forward해분리기록했다. main/기능코드/SQL·실데이터/기기조작·원격Backend브랜치변경은없다.
+
+
+2026-10-15 후속: 시작등록목록중복GET은feature/account-backend-read에서진행조회공유로개선했다. 인증복원초기소비자만명시공유하고쓰기뒤/명시재조회는새GET이다. 전체1227테스트·분석0완료,사용자지시로dev통합·push대상이다. 이보고서DB-01~07의범위/설계결정이나자동빌드게이트를함께수정하지않았다.

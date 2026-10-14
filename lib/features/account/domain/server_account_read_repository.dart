@@ -10,12 +10,34 @@ abstract interface class BackendAccountReadApi {
 }
 
 class ServerAccountReadRepository {
-  const ServerAccountReadRepository(this.api, this.session);
+  ServerAccountReadRepository(this.api, this.session);
   final BackendAccountReadApi api;
   final AccountReadSession session;
+  final Map<AccountReadScope, Future<List<ServerAccountRegistration>>>
+  _registrationFlights = {};
 
-  Future<List<ServerAccountRegistration>> loadRegistrations() async {
+  Future<List<ServerAccountRegistration>> loadRegistrations({
+    bool shareInFlight = false,
+  }) async {
     final scope = accountReadScope(session);
+    // Only initial read consumers opt in. Explicit refreshes, including
+    // post-write verification, must start a new request.
+    if (!shareInFlight) return _collectRegistrations(scope);
+    final existing = _registrationFlights[scope];
+    if (existing != null) return existing;
+    late final Future<List<ServerAccountRegistration>> flight;
+    flight = _collectRegistrations(scope).whenComplete(() {
+      if (identical(_registrationFlights[scope], flight)) {
+        _registrationFlights.remove(scope);
+      }
+    });
+    _registrationFlights[scope] = flight;
+    return flight;
+  }
+
+  Future<List<ServerAccountRegistration>> _collectRegistrations(
+    AccountReadScope scope,
+  ) async {
     final items = <ServerAccountRegistration>[];
     final ids = <String>{};
     final cursors = <String>{};

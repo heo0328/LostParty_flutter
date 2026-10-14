@@ -45,13 +45,13 @@ class ServerCombatPowerViewModel extends ChangeNotifier {
     failure = null;
     loading = false;
     notifyListeners();
-    if (session.isAuthenticated) unawaited(reload());
+    if (session.isAuthenticated) unawaited(reload(shareInFlight: true));
   }
 
   bool _valid(int ticket) =>
       !_disposed && ticket == _ticket && session.isAuthenticated;
 
-  Future<void> reload() async {
+  Future<void> reload({bool shareInFlight = false}) async {
     if (loading || !session.isAuthenticated || _disposed) return;
     final ticket = ++_ticket;
     loading = true;
@@ -60,7 +60,9 @@ class ServerCombatPowerViewModel extends ChangeNotifier {
     _rosters.clear();
     notifyListeners();
     try {
-      final accounts = await reads.loadRegistrations();
+      final accounts = await reads.loadRegistrations(
+        shareInFlight: shareInFlight,
+      );
       final rosters = <String, ServerAccountRoster>{};
       for (final account in accounts) {
         if (!_valid(ticket)) {
