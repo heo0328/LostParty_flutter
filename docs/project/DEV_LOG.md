@@ -3982,3 +3982,12 @@
 ## 2026-10-14 — Issue6 최종Git정리·전체DB설계점검 착수계획
 
 사용자Issue6마무리지시로회원설정/계약/자동검증/3흐름성공을정리해commit/dev통합/push·최종Issue콜백/종료를진행한다. 전체1219후국소32·최종분석0/APK9.4초이후코드변경없어재검증재사용. 기존독립문서협업정리는별도커밋으로분리하고미추적실험36개/기존브랜치·main보존. 이후문서브랜치에서전체Drift/보안저장/메모리·Backendmodels/migrations/API를대조하고복원/회원ID/수명/소유·미구현경계를보고하는단일조사그룹을계획했다. 코드/DDL/실데이터변경없음.
+
+## 2026-10-14 — Issue6 종료·전체 DB 설계 재점검 완료
+
+- 독립협업정리61acebd와회원설정기능/계약/검증2e0764f를분리커밋했다. origin/dev ccc6b23최신확인후feature/member-settings push·일반merge dev5cee9648fe53ff259f967e402edfebd1f0a9a001/push·local/origin일치확인. 기존미추적Rules/tools36개와브랜치보존,main불변. [Issue6 최종회신6170736672](https://github.com/heo0328/lostparty-backend/issues/6#issuecomment-6170736672)본문재조회후CLOSED확인. 사용자3흐름과전체1219뒤국소32/분석0/APK9.4초재사용,새기기별도인수미확인유지.
+- 문서브랜치 docs/my-account-backend-phase1을dev에서FF재사용해다음단일조사를수행. Backend dev4eb23f5와게시79255f0/0004원본의auth/game/member모델·migration0001~0004·cleanup/서비스/멱등·OpenAPI와Flutter schema13/8개테이블·SecureStorage·메모리/DI를대조. PostgreSQL업무19개(관리테이블제외),로컬8개를보고서24에매핑했다. 실서버DB접속/자료덤프/키출력/DDL변경없음.
+- 발견: 서버설정/등록과로컬기기공용계정/빌드·표시환경이별도이며복원연결/회원scope·안정ID/역할Snapshot서버저장계약이남아있음. 전체빌드자동갱신선행조건·비활성schema/모집주간미구현·서버보관수명/삭제를정리. 현재서버구조전면재설계근거로확대하지않음.
+- 실제검증은격리NativeDatabase.memory한개probe1개. PRAGMA foreign_keys=0, deleteMissingCharacter이후빌드1행/주간표시1행잔존을재현했다. probe통과는문제재현관찰이고정상화통과가아님. 실제기기DB상태/재현미실행,별도최소정합성수정DB-03으로기록. 임시파일/로그는.dart_tool만사용해제품코드/기존DB미변경.
+- 새로가능: 현재저장구조·소유/ID/복원범위와미구현·재현문제를보고서24에서검토가능. 보존:기능코드/기존인수·서버DDL/실자료불변. 미확인:운영DB/실기기FK·새환경복원·서버전체동시성/탈퇴정책. 검증:소스/고정계약대조·메모리probe1·diffcheck/문서검토. 이미검증된회원설정기능전체테스트/빌드를반복하지않음.
+- 문서/후속대장·AI_CONTEXT/NEXT_WORK를최신화해다음은복원범위/정답저장소확정과DB-03별도후속으로둔다. 문서최종검증후dev통합/push해보고서를공유하며Backend새기능요청/DB변경은하지않는다.
