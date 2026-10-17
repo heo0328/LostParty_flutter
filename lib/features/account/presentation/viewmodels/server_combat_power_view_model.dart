@@ -1,3 +1,4 @@
+import '../../domain/services/account_detail_access.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../domain/account_read_session.dart';
@@ -28,8 +29,23 @@ class ServerCombatPowerViewModel extends ChangeNotifier {
       session.isAuthenticated &&
       !loading &&
       writes.canWrite &&
+      registrations.any((a) => detailsAllowed(a.registrationId)) &&
       _sessionKey ==
           (session.userId, session.generation, session.isAuthenticated);
+
+  bool detailsAllowed(String id) {
+    final account = registrations
+        .where((a) => a.registrationId == id)
+        .firstOrNull;
+    return session.isAuthenticated &&
+        account != null &&
+        hasAccountDetailAccess(
+          ownershipStatus: account.ownershipStatus,
+          accountId: account.gameAccountId,
+          ownershipRevision: account.ownershipRevision,
+        ) &&
+        _rosters[id]?.ownershipStatus == 'owned';
+  }
 
   void _changed() {
     if (!_disposed) notifyListeners();
@@ -103,7 +119,9 @@ class ServerCombatPowerViewModel extends ChangeNotifier {
       return null;
     }
     ServerPowerObservation? latest;
-    for (final roster in _rosters.values) {
+    for (final entry in _rosters.entries) {
+      if (!detailsAllowed(entry.key)) continue;
+      final roster = entry.value;
       for (final row in roster.characters) {
         if (row.serverName != character.serverName ||
             row.characterName != character.characterName) {
@@ -124,9 +142,11 @@ class ServerCombatPowerViewModel extends ChangeNotifier {
   double? displayPowerFor(
     LocalAccountCharacter character,
     double? roleSnapshot,
-  ) => character.preferredRole != null
-      ? roleSnapshot
-      : powerFor(character)?.value ?? character.combatPower;
+  ) {
+    final current = powerFor(character);
+    if (current == null) return null;
+    return character.preferredRole != null ? roleSnapshot : current.value;
+  }
 
   static List<Map<String, String>> targets(
     Iterable<ServerAccountCharacter> rows,
@@ -135,7 +155,8 @@ class ServerCombatPowerViewModel extends ChangeNotifier {
     final eligible = rows
         .where(
           (c) =>
-              !['missing', 'suspect'].contains(c.rosterStatus) &&
+              c.rosterStatus == 'confirmed' &&
+              c.eligible &&
               policy.isInUsageRange(double.tryParse(c.itemLevel ?? '')),
         )
         .toList();
@@ -172,6 +193,7 @@ class ServerCombatPowerViewModel extends ChangeNotifier {
         .map((c) => (c.serverName, c.characterName))
         .toSet();
     for (final account in registrations) {
+      if (!detailsAllowed(account.registrationId)) continue;
       final roster = _rosters[account.registrationId];
       if (roster == null) continue;
       final selected = targets(
@@ -194,12 +216,19 @@ class ServerCombatPowerViewModel extends ChangeNotifier {
     String registrationId,
     Iterable<ServerAccountCharacter> rows,
   ) async {
-    if (!canRefresh) return;
+    if (!session.isAuthenticated || loading || !writes.canWrite || _disposed) {
+      return;
+    }
     final key = _sessionKey;
     if (!registrations.any((a) => a.registrationId == registrationId)) {
       await reload();
     }
     if (_disposed || key != _sessionKey || !canRefresh) return;
+    if (!detailsAllowed(registrationId)) {
+      failure = const AccountReadException('OWNERSHIP_REQUIRED');
+      notifyListeners();
+      return;
+    }
     final selected = targets(rows);
     for (final account in registrations) {
       if (account.registrationId == registrationId && selected.isNotEmpty) {

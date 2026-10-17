@@ -9,7 +9,6 @@ class SecureApiTokenStore implements ApiTokenStore {
   }) : _storage = storage;
 
   static const _storageKey = 'lost_ark_api_jwt';
-
   final FlutterSecureStorage _storage;
 
   @override

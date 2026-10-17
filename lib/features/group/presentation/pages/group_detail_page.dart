@@ -1,3 +1,4 @@
+import '../../../../shared/formatters/display_number_formatter.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -383,7 +384,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                             ),
                             if (character.buildIntegritySnapshot
                                 case final integrity?
-                                  when integrity.displayLabels.isNotEmpty) ...[
+                                when integrity.displayLabels.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               BuildIntegrityStatusLine(
                                 snapshot: integrity,
@@ -394,7 +395,8 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                           ],
                         ),
                         isThreeLine:
-                            character.buildIntegritySnapshot
+                            character
+                                .buildIntegritySnapshot
                                 ?.displayLabels
                                 .isNotEmpty ??
                             false,
@@ -593,10 +595,10 @@ String _formatDate(DateTime value) {
 }
 
 String _formatLevel(double? value) =>
-    value == null ? '아이템 레벨 -' : '아이템 ${value.toStringAsFixed(0)}';
+    value == null ? '아이템 레벨 -' : '아이템 ${DisplayNumberFormatter.integer(value)}';
 
 String _formatCombatPower(double? value) =>
-    value == null ? '전투력 -' : '전투력 ${value.toStringAsFixed(0)}';
+    value == null ? '전투력 -' : '전투력 ${DisplayNumberFormatter.integer(value)}';
 
 class _MemberSection extends StatelessWidget {
   const _MemberSection({

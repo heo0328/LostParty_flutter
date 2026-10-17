@@ -257,29 +257,21 @@ class CharacterAutoRefreshCoordinator implements CharacterAutoRefreshGateway {
     CharacterBuildDraft draft,
     CharacterBuildRole? expectedRole,
   ) {
-    final fixedRole = const CharacterBuildRolePolicy().fixedRole(
+    final decision = const CharacterBuildRolePolicy().automaticRole(
       draft.profile.characterClassName,
+      draft.analysis,
     );
-    if (fixedRole != null) {
-      return _DraftValidation(role: fixedRole);
-    }
-    final analysis = draft.analysis;
-    final detection = analysis.catalogDetection;
-    if (detection == null ||
-        detection.status == CharacterBuildDetectionStatus.unsupportedClass) {
+    final detection = draft.analysis.catalogDetection;
+    if (decision.role == null &&
+        (detection == null ||
+            detection.status ==
+                CharacterBuildDetectionStatus.unsupportedClass)) {
       return _DraftValidation(
         role: expectedRole,
         message: expectedRole == null ? '현재 역할을 판별할 수 없습니다.' : null,
       );
     }
-    if (detection.status != CharacterBuildDetectionStatus.detected ||
-        detection.detectedRole == null) {
-      return const _DraftValidation(message: '현재 역할을 하나로 판별할 수 없습니다.');
-    }
-    if (detection.matchedRelatedNodes.isEmpty) {
-      return const _DraftValidation(message: '현재 역할의 4티어 노드를 확인할 수 없습니다.');
-    }
-    return _DraftValidation(role: detection.detectedRole);
+    return _DraftValidation(role: decision.role, message: decision.message);
   }
 
   Future<CharacterAutoRefreshResult> _excludedResult(

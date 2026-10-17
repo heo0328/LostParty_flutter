@@ -7,12 +7,15 @@ import '../../../../shared/formatters/display_number_formatter.dart';
 
 import '../../domain/entities/local_game_account.dart';
 import '../../domain/repositories/account_repository.dart';
+import '../../domain/repositories/character_management_gateway.dart';
 import '../../domain/repositories/activity_characters_repository.dart';
 import '../../domain/repositories/nice_group_auto_refresh_settings_repository.dart';
 import '../../domain/repositories/representative_character_sync_gateway.dart';
+import '../../domain/services/character_usage_level_policy.dart';
 import '../viewmodels/character_management_view_model.dart';
 import '../viewmodels/member_settings_view_model.dart';
 import '../widgets/member_settings_controls.dart';
+import '../widgets/representative_crown.dart';
 
 class CharacterManagementPage extends StatefulWidget {
   const CharacterManagementPage({
@@ -23,17 +26,23 @@ class CharacterManagementPage extends StatefulWidget {
     this.playerId,
     this.accountId,
     this.memberSettings,
+    this.automaticRefreshAvailable = false,
     this.onLogin,
+    this.managementGateway,
+    this.onSaved,
     super.key,
   });
 
   final AccountRepository accountRepository;
+  final CharacterManagementGateway? managementGateway;
+  final Future<void> Function()? onSaved;
   final RepresentativeCharacterSyncGateway? representativeSyncGateway;
   final ActivityCharactersRepository? activityCharactersRepository;
   final NiceGroupAutoRefreshSettingsRepository? niceGroupSettingsRepository;
   final String? playerId;
   final int? accountId;
   final MemberSettingsViewModel? memberSettings;
+  final bool automaticRefreshAvailable;
   final VoidCallback? onLogin;
 
   @override
@@ -54,6 +63,7 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
       niceGroupSettingsRepository: widget.niceGroupSettingsRepository,
       playerId: widget.playerId,
       accountId: widget.accountId,
+      managementGateway: widget.managementGateway,
     )..addListener(_onChanged);
     _viewModel.initialize();
     widget.memberSettings?.reload();
@@ -72,15 +82,55 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
     }
   }
 
+  Future<void> _chooseRepresentative(LocalAccountCharacter character) async {
+    if (!_viewModel.canSetRepresentative(character)) return;
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('대표 캐릭터 변경'),
+        content: Text('${character.characterName} 캐릭터로 대표 캐릭터를 변경하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('변경'),
+          ),
+        ],
+      ),
+    );
+    if (mounted &&
+        accepted == true &&
+        _viewModel.canSetRepresentative(character)) {
+      _viewModel.setRepresentative(character);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final account = _viewModel.account;
     return Scaffold(
-      appBar: AppBar(title: const Text('캐릭터 관리')),
+      appBar: AppBar(
+        title: const Text('캐릭터 관리'),
+        actions: [
+          if (widget.managementGateway != null)
+            IconButton(
+              tooltip: '캐릭터 설정 다시 조회',
+              onPressed: _viewModel.isSaving || _viewModel.isLoading
+                  ? null
+                  : _viewModel.initialize,
+              icon: const Icon(Icons.refresh),
+            ),
+        ],
+      ),
       body: SafeArea(
         child: switch ((_viewModel.isLoading, account)) {
           (true, _) => const Center(child: CircularProgressIndicator()),
-          (false, null) => const Center(child: Text('저장된 계정이 없습니다.')),
+          (false, null) => Center(
+            child: Text(_viewModel.message ?? '저장된 계정이 없습니다.'),
+          ),
           (false, final _) => _buildContent(),
         },
       ),
@@ -118,7 +168,9 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 sliver: SliverToBoxAdapter(
                   child: Text(
-                    '선택한 캐릭터만 레이드, 그룹 및 전투력 동기화에 사용됩니다.',
+                    _viewModel.isMemberManagement
+                        ? '아이템 레벨 ${CharacterUsageLevelPolicy.minimumItemLevel.toStringAsFixed(0)} 이상이며 현재 소유가 확인된 캐릭터를 사용할 수 있습니다. 선택한 캐릭터는 자동 상세 검사 대상입니다.'
+                        : '선택한 캐릭터만 레이드, 그룹 및 전투력 동기화에 사용됩니다.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.textSecondary,
                     ),
@@ -163,9 +215,13 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
                     child: widget.memberSettings != null
                         ? MemberSettingsControls(
                             model: widget.memberSettings!,
-                            classes: _viewModel.niceGroupResult.classNames.join(
-                              ', ',
-                            ),
+                            automaticRefreshAvailable:
+                                widget.automaticRefreshAvailable,
+                            classes: _viewModel.isMemberManagement
+                                ? '나이스단으로 분류한'
+                                : _viewModel.niceGroupResult.classNames.join(
+                                    ', ',
+                                  ),
                             onLogin: widget.onLogin,
                           )
                         : SwitchListTile(
@@ -176,7 +232,9 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
                               '${_viewModel.niceGroupResult.classNames.join(', ')} 직업군 전체에 적용됩니다. 설정을 끄면 기존 수동 스냅샷을 사용합니다.',
                             ),
                             value: _viewModel.draftNiceGroupAutoRefreshEnabled,
-                            onChanged: _viewModel.isSaving
+                            onChanged:
+                                _viewModel.isSaving ||
+                                    _viewModel.isMemberManagement
                                 ? null
                                 : _viewModel.setNiceGroupAutoRefreshEnabled,
                           ),
@@ -239,7 +297,7 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
                         character,
                       ),
                       onSetRepresentative: () =>
-                          _viewModel.setRepresentative(character),
+                          _chooseRepresentative(character),
                       dragHandle: ReorderableDragStartListener(
                         index: index,
                         child: const Padding(
@@ -265,7 +323,7 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
                       IconButton(
                         tooltip: '표시 개수 줄이기',
                         onPressed:
-                            _viewModel.isSaving ||
+                            !_viewModel.canEditDraft ||
                                 _viewModel.draftDisplayLimit <= 1
                             ? null
                             : () => _viewModel.changeDisplayLimit(-1),
@@ -282,7 +340,7 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
                       IconButton(
                         tooltip: '표시 개수 늘리기',
                         onPressed:
-                            _viewModel.isSaving ||
+                            !_viewModel.canEditDraft ||
                                 _viewModel.draftDisplayLimit >=
                                     _viewModel.maxDisplayLimit
                             ? null
@@ -309,7 +367,7 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
               Expanded(
                 child: OutlinedButton(
                   onPressed:
-                      _viewModel.isSaving || !_viewModel.hasUnsavedChanges
+                      !_viewModel.canEditDraft || !_viewModel.hasUnsavedChanges
                       ? null
                       : _viewModel.discardChanges,
                   child: const Text('취소'),
@@ -319,7 +377,16 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
               Expanded(
                 child: FilledButton(
                   key: const ValueKey('characterManagementSaveButton'),
-                  onPressed: _viewModel.isSaving ? null : _viewModel.save,
+                  onPressed: _viewModel.canSave
+                      ? () async {
+                          await _viewModel.save();
+                          if (mounted &&
+                              _viewModel.message == null &&
+                              widget.managementGateway?.current == true) {
+                            await widget.onSaved?.call();
+                          }
+                        }
+                      : null,
                   child: const Text('저장'),
                 ),
               ),
@@ -459,12 +526,13 @@ class _SelectedCharacterTile extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(
-              tooltip: isRepresentative ? '현재 대표 캐릭터' : '대표 캐릭터로 설정',
+            RepresentativeCrown(
+              selected: isRepresentative,
+              busy: false,
+              label: isRepresentative ? '현재 대표 캐릭터' : '대표 캐릭터로 설정',
               onPressed: isEnabled && isRepresentativeEnabled
                   ? onSetRepresentative
                   : null,
-              icon: Icon(isRepresentative ? Icons.star : Icons.star_border),
             ),
             dragHandle,
           ],
@@ -476,7 +544,7 @@ class _SelectedCharacterTile extends StatelessWidget {
   String _formatItemLevel(double? value) {
     return value == null
         ? '아이템 Lv. -'
-        : '아이템 Lv. ${DisplayNumberFormatter.fixed(value)}';
+        : '아이템 Lv. ${DisplayNumberFormatter.integer(value)}';
   }
 }
 

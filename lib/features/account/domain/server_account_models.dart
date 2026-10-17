@@ -1,3 +1,4 @@
+import 'services/account_detail_access.dart';
 // Models of Backend 39188d5 OpenAPI; never map these UUIDs to local PKs.
 import 'server_combat_power.dart';
 
@@ -170,7 +171,18 @@ class ServerAccountRegistration {
     settings = ServerCharacterSettings.fromJson(_map(json['settings']));
     representativeSummary = json['representative_summary'] == null
         ? null
-        : ServerCharacterSummary.fromJson(_map(json['representative_summary']));
+        : ServerCharacterSummary.fromJson(
+            hasAccountDetailAccess(
+                  ownershipStatus: ownershipStatus,
+                  accountId: gameAccountId,
+                  ownershipRevision: ownershipRevision,
+                )
+                ? _map(json['representative_summary'])
+                : {
+                    ..._map(json['representative_summary']),
+                    'combat_power': null,
+                  },
+          );
     characterCount = _integer(json['character_count']);
     serverFetchedAt = _time(json['server_fetched_at']);
   }
@@ -204,7 +216,10 @@ class ServerRegistrationPage {
 }
 
 class ServerAccountCharacter {
-  ServerAccountCharacter.fromJson(Map<String, dynamic> json) {
+  ServerAccountCharacter.fromJson(
+    Map<String, dynamic> json, {
+    bool basicOnly = false,
+  }) {
     _shape(
       json,
       [
@@ -249,9 +264,10 @@ class ServerAccountCharacter {
     className = _text(json['class_name']);
     characterLevel = _integer(json['character_level']);
     itemLevel = json['item_level'] == null ? null : _text(json['item_level']);
-    combatPower = json['combat_power'] == null
+    final rawPower = json['combat_power'] == null
         ? null
         : _text(json['combat_power']);
+    combatPower = basicOnly ? null : rawPower;
     characterId = json['character_id'] == null
         ? null
         : _uuid(json['character_id']);
@@ -267,16 +283,21 @@ class ServerAccountCharacter {
         : _time(json['last_confirmed_at']);
     requiresRefresh = _boolean(json['requires_refresh']);
     eligible = _boolean(json['eligible']);
-    powerStale = _boolean(
+    final rawStale = _boolean(
       (json.containsKey('power_stale') ? json['power_stale'] : true),
     );
-    powerFetchedAt = json['power_fetched_at'] == null
+    powerStale = basicOnly ? true : rawStale;
+    final rawFetched = json['power_fetched_at'] == null
         ? null
         : _time(json['power_fetched_at']);
-    power = ServerPowerObservation.fromJson({
+    powerFetchedAt = basicOnly ? null : rawFetched;
+    final fullPower = ServerPowerObservation.fromJson({
       ...json,
-      'power_stale': powerStale,
+      'power_stale': rawStale,
     });
+    power = basicOnly
+        ? ServerPowerObservation.fromJson(basicCharacterObservation(json))
+        : fullPower;
   }
   late final String serverName;
   late final String characterName;
@@ -296,10 +317,18 @@ class ServerAccountCharacter {
 }
 
 class ServerCharacterPage {
-  ServerCharacterPage.fromJson(Map<String, dynamic> json) {
+  ServerCharacterPage.fromJson(
+    Map<String, dynamic> json, {
+    bool basicOnly = false,
+  }) {
     _shape(json, ['items', 'next_cursor'], ['items', 'next_cursor']);
     items = _list(json['items'])
-        .map((value) => ServerAccountCharacter.fromJson(_map(value)))
+        .map(
+          (value) => ServerAccountCharacter.fromJson(
+            _map(value),
+            basicOnly: basicOnly,
+          ),
+        )
         .toList(growable: false);
     nextCursor = json['next_cursor'] == null
         ? null
@@ -328,13 +357,19 @@ class ServerCharactersResponse {
         'server_fetched_at',
       ],
     );
-    characters = ServerCharacterPage.fromJson(_map(json['characters']));
     settings = ServerCharacterSettings.fromJson(_map(json['settings']));
     ownershipStatus = _enum(json['ownership_status'], [
       'unverified',
       'owned',
       'ownership_lost',
     ]);
+    characters = ServerCharacterPage.fromJson(
+      _map(json['characters']),
+      basicOnly:
+          ownershipStatus != 'owned' ||
+          settings.ownershipRevision == null ||
+          settings.ownershipRevision! < 1,
+    );
     rosterRevision = _integer(json['roster_revision']);
     serverFetchedAt = _time(json['server_fetched_at']);
   }

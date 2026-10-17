@@ -1,3 +1,4 @@
+import '../../../../shared/formatters/display_number_formatter.dart';
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/group_blocked_player.dart';
@@ -69,9 +70,7 @@ class _GroupApplicationsPageState extends State<GroupApplicationsPage> {
           if (pending.isEmpty &&
               expired.isEmpty &&
               data.blockedPlayers.isEmpty) {
-            return const _GroupApplicationsMessage(
-              message: '들어온 가입 신청이 없습니다.',
-            );
+            return const _GroupApplicationsMessage(message: '들어온 가입 신청이 없습니다.');
           }
           return ListView(
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -222,7 +221,7 @@ class _ApplicationTile extends StatelessWidget {
           Text(
             '${relation.serverNameSnapshot} · '
             '${relation.characterClassNameSnapshot}'
-            '${itemLevel == null ? '' : ' · Lv ${itemLevel.toStringAsFixed(2)}'}',
+            '${itemLevel == null ? '' : ' · Lv ${DisplayNumberFormatter.integer(itemLevel)}'}',
           ),
           Text(
             expired
@@ -234,7 +233,9 @@ class _ApplicationTile extends StatelessWidget {
             children: [
               if (onApprove != null)
                 FilledButton(
-                  key: ValueKey('approveApplication-${relation.targetPlayerId}'),
+                  key: ValueKey(
+                    'approveApplication-${relation.targetPlayerId}',
+                  ),
                   onPressed: busy ? null : onApprove,
                   child: const Text('승인'),
                 ),

@@ -43,9 +43,12 @@ class MyAccountPage extends StatefulWidget {
     this.weeklyRaidClaimCommandRepository,
     this.manualCharacterRefreshRunner,
     this.showServerOwnership = true,
+    this.basicOnly = false,
+    this.onAuthenticate,
     this.serverAccountsSection,
     this.serverPowers,
     this.apiCooldown,
+    this.title = '내 계정',
     super.key,
   });
 
@@ -64,9 +67,12 @@ class MyAccountPage extends StatefulWidget {
   final WeeklyRaidClaimCommandRepository? weeklyRaidClaimCommandRepository;
   final ManualCharacterRefreshRunner? manualCharacterRefreshRunner;
   final bool showServerOwnership;
+  final bool basicOnly;
+  final VoidCallback? onAuthenticate;
   final Widget? serverAccountsSection;
   final ServerCombatPowerViewModel? serverPowers;
   final ApiCooldown? apiCooldown;
+  final String title;
 
   @override
   State<MyAccountPage> createState() => _MyAccountPageState();
@@ -89,6 +95,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
     _viewModel = MyAccountViewModel(
       apiTokenStore: widget.apiTokenStore,
       accountRepository: widget.accountRepository,
+      basicOnly: widget.basicOnly,
       summarySyncService: widget.summarySyncService,
       representativeSyncService: widget.representativeSyncService,
       weeklyRaidClaimRepository: widget.weeklyRaidClaimRepository,
@@ -429,7 +436,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('내 계정'),
+        title: Text(widget.title),
         actions: [
           IconButton(
             key: const ValueKey('myAccountSettingsButton'),
@@ -509,13 +516,14 @@ class _MyAccountPageState extends State<MyAccountPage> {
                 widget.serverAccountsSection!,
                 const SizedBox(height: 12),
               ],
-              if (widget.serverPowers case final powers?)
-                ServerPowerControls(
-                  model: powers,
-                  onRefresh: () => powers.refreshLocalCharacters(
-                    _viewModel.accounts.expand((a) => a.visibleCharacters),
+              if (!widget.basicOnly && widget.serverPowers != null)
+                if (widget.serverPowers case final powers?)
+                  ServerPowerControls(
+                    model: powers,
+                    onRefresh: () => powers.refreshLocalCharacters(
+                      _viewModel.accounts.expand((a) => a.visibleCharacters),
+                    ),
                   ),
-                ),
               if (_viewModel.isLoadingTokenStatus)
                 const LinearProgressIndicator(),
               _buildTokenStatusPanel(context),
@@ -610,6 +618,37 @@ class _MyAccountPageState extends State<MyAccountPage> {
   }
 
   Widget _buildAccountSection(LocalGameAccount account) {
+    if (widget.basicOnly) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(account.label, style: Theme.of(context).textTheme.titleLarge),
+          if (widget.onAuthenticate != null)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton(
+                onPressed: widget.onAuthenticate,
+                child: const Text('원정대 인증'),
+              ),
+            ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final character in account.visibleCharacters)
+                SizedBox(
+                  width: 160,
+                  child: AccountCharacterCard(
+                    character: character,
+                    basicOnly: true,
+                    isRepresentative: false,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1314,7 +1353,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
       return '-';
     }
 
-    return DisplayNumberFormatter.fixed(value);
+    return DisplayNumberFormatter.integer(value);
   }
 }
 

@@ -5,18 +5,24 @@ import '../../domain/account_read_session.dart';
 import '../viewmodels/server_account_read_view_model.dart';
 
 String serverOwnershipLabel(String state) => switch (state) {
-  'owned' => '원정대 인증 완료',
+  'owned' => '',
   'ownership_lost' => '원정대 재인증 필요',
-  _ => '원정대 인증 전',
+  _ => '원정대 인증 필요',
 };
 String serverConfigurationLabel(String state) => switch (state) {
-  'configured' => '활동 캐릭터 선택 완료',
+  'configured' => '',
   'needs_reconfiguration' => '활동 캐릭터를 다시 선택해 주세요',
-  _ => '활동 캐릭터 선택 전',
+  _ => '활동 캐릭터 미선택',
 };
+
+String serverAccountActionLabel(String ownership, String configuration) => [
+  serverOwnershipLabel(ownership),
+  serverConfigurationLabel(configuration),
+].where((label) => label.isNotEmpty).join(' · ');
 
 String accountReadErrorMessage(AccountReadException failure) =>
     switch (failure.code) {
+      'ALREADY_VERIFIED' => '이미 인증된 원정대입니다.',
       'CURSOR_STALE' ||
       'REVISION_CONFLICT' => '조회 중 계정 정보가 변경되었습니다. 다시 조회해 주세요.',
       'OWNERSHIP_REQUIRED' => '이 계정의 현재 소유 권한이 필요합니다.',
@@ -125,8 +131,8 @@ class ServerAccountsPanel extends StatelessWidget {
                     '${viewModel.displayLabelFor(account)}${account.isMain ? ' · 본계정' : ' · 부계정'}',
                   ),
                   subtitle: Text(
-                    '${serverOwnershipLabel(account.ownershipStatus)} · '
-                    '${serverConfigurationLabel(account.settings.configurationState)}\n'
+                    '${serverAccountActionLabel(account.ownershipStatus, account.settings.configurationState)}'
+                    '${serverAccountActionLabel(account.ownershipStatus, account.settings.configurationState).isEmpty ? '' : '\n'}'
                     '캐릭터 ${account.characterCount}명'
                     '${account.representativeSummary == null ? '' : ' · 대표 ${account.representativeSummary!.characterName}'}',
                   ),

@@ -12,6 +12,9 @@ import '../features/auth/domain/auth_session_controller.dart';
 import '../features/auth/presentation/login_page.dart';
 import '../features/account/data/local/account_database.dart';
 import '../features/account/data/backend_account_read_api.dart';
+import '../features/account/data/server_account_verification_client.dart';
+import '../features/account/presentation/pages/server_verification_page.dart';
+import '../features/account/presentation/viewmodels/server_verification_view_model.dart';
 import '../features/account/presentation/viewmodels/server_registration_view_model.dart';
 import '../features/account/presentation/viewmodels/server_combat_power_view_model.dart';
 import '../features/account/presentation/viewmodels/member_settings_view_model.dart';
@@ -30,11 +33,12 @@ import '../features/account/domain/entities/local_game_account.dart';
 import '../features/account/domain/services/character_summary_sync_service.dart';
 import '../features/account/presentation/pages/my_account_page.dart';
 import '../features/account/presentation/pages/character_management_page.dart';
-import '../features/account/presentation/pages/character_detail_page.dart';
+import '../features/account/data/scoped_character_management_gateway.dart';
 import '../features/account/presentation/pages/api_token_settings_page.dart';
 import '../features/account/presentation/pages/member_key_page.dart';
 import '../features/account/presentation/viewmodels/member_lostark_key.dart';
 import '../shared/lost_ark_api/client/api_cooldown.dart';
+import '../shared/lost_ark_api/auth/secure_api_token_store.dart';
 import '../features/settings/presentation/pages/settings_page.dart';
 import '../features/recruitment_list/data/repositories/pending_backend_party_read_repository.dart';
 import '../features/recruitment_list/presentation/pages/recruitment_list_page.dart';
@@ -43,12 +47,16 @@ import '../shared/game_catalog/data/datasources/asset_game_catalog_data_source.d
 import '../shared/game_catalog/data/repositories/game_catalog_repository_impl.dart';
 import '../shared/raid_catalog/data/datasources/asset_raid_catalog_data_source.dart';
 import '../shared/raid_catalog/data/repositories/raid_catalog_repository_impl.dart';
-import '../shared/lost_ark_api/auth/secure_api_token_store.dart';
 import '../shared/lost_ark_api/client/lost_ark_api_client.dart';
 import 'shell/app_shell.dart';
 import 'theme/app_theme.dart';
 import 'bootstrap/debug_base_url_dialog.dart';
 import 'bootstrap/lost_party_entry_screen.dart';
+import 'backend_account_lifecycle.dart';
+import 'backend_member_account.dart';
+import '../features/account/presentation/pages/member_account_page.dart';
+import '../features/account/presentation/scoped_account_routes.dart';
+import '../features/account/presentation/widgets/scoped_server_accounts_panel.dart';
 
 bool allowedAuthBaseUrl(String value, {required bool debug}) {
   final uri = Uri.tryParse(value);
@@ -78,6 +86,11 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
   ServerRegistrationViewModel? _serverWrites;
   ServerCombatPowerViewModel? _serverPowers;
   MemberSettingsViewModel? _memberSettings;
+  ServerVerificationViewModel? _verification;
+  BackendAccountLifecycle? _accountLifecycle;
+  BackendMemberAccount? _memberAccount;
+  final _managementGateways =
+      <(String, String, int, String), ScopedCharacterManagementGateway>{};
   GoRouter? _router;
   PartyCycleRuntime? _cycle;
   Dio? _dio;
@@ -143,7 +156,12 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
             '574337852234-vdkvdobbq8es2rdpumc1icqt6ja3a3cr.apps.googleusercontent.com',
       ),
     );
-    _router = _createRouter();
+    try {
+      _router = _createRouter();
+    } on AccountReadException {
+      _configurationError = '서버 연결 주소를 확인하지 못했습니다. 연결 설정을 확인한 뒤 앱을 다시 실행해 주세요.';
+      return;
+    }
     unawaited(_restoreSession());
   }
 
@@ -169,13 +187,26 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       _cooldown!,
     );
     _memberSettings = MemberSettingsViewModel(accountApi, readSession);
+    _verification = ServerVerificationViewModel(
+      ServerAccountVerificationClient(accountApi, readSession),
+      cooldown: _cooldown,
+    );
     final serverAccounts = ServerAccountReadRepository(accountApi, readSession);
-    _serverReads = ServerAccountReadViewModel(serverAccounts, readSession);
+    final lifecycle = _accountLifecycle = BackendAccountLifecycle(
+      api: accountApi,
+      registrations: serverAccounts,
+      allowHttp: kDebugMode,
+    );
+    if (!lifecycle.enabled) {
+      _serverReads = ServerAccountReadViewModel(serverAccounts, readSession);
+    }
     _serverWrites = ServerRegistrationViewModel(
       accountApi,
       serverAccounts,
       readSession,
       cooldown: _cooldown,
+      onCommandStarted: lifecycle.onCommandStarted,
+      onCommandFinished: lifecycle.onCommandFinished,
     );
     _serverPowers = ServerCombatPowerViewModel(
       serverAccounts,
@@ -183,6 +214,27 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       readSession,
     );
     final tokenStore = _memberKey!;
+    Future<void> reloadServerState() async {
+      if (!readSession.isAuthenticated) return;
+      final scope = accountReadScope(readSession);
+      if (lifecycle.enabled) {
+        await lifecycle.refresh(scope);
+      } else {
+        await _serverReads!.load();
+      }
+      if (lifecycle.isCurrent(scope)) await _serverPowers!.reload();
+    }
+
+    Future<void> manageServerAccounts(BuildContext context) async {
+      final scope = readSession.isAuthenticated
+          ? accountReadScope(readSession)
+          : null;
+      await context.push('/account/server-management');
+      if (scope != null && lifecycle.isCurrent(scope)) {
+        await reloadServerState();
+      }
+    }
+
     final remote = LostArkCharacterRemoteDataSource(
       apiClient: LostArkApiClient(
         apiTokenStore: tokenStore,
@@ -198,7 +250,19 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     final catalog = GameCatalogRepositoryImpl(
       dataSource: AssetGameCatalogDataSource(),
     );
+    if (lifecycle.enabled) {
+      _memberAccount = BackendMemberAccount(
+        lifecycle: lifecycle,
+        settings: _memberSettings!,
+        key: _memberKey!,
+        remote: remote,
+        catalog: catalog,
+        cooldown: _cooldown!,
+      );
+      _memberAccount!.initialize();
+    }
     final accounts = AccountRepositoryImpl(
+      basicOnly: true,
       remoteDataSource: remote,
       localDataSource: LocalAccountDataSource(
         database: _database!,
@@ -212,6 +276,12 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       )).map((dto) => dto.toDomain()).toList(),
       syncGateway: null,
     );
+    Future<void> openCharacters(BuildContext context, String id) async {
+      final session = accountReadScope(readSession);
+      await context.push('/account/characters/manage?registrationId=$id');
+      if (lifecycle.isCurrent(session)) await _memberAccount?.model.refresh();
+    }
+
     final raidCatalog = RaidCatalogRepositoryImpl(
       dataSource: AssetRaidCatalogDataSource(),
     );
@@ -225,12 +295,44 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       protected: protected,
       alertOnEntry: alertOnEntry,
     );
+    Widget localAccounts(BuildContext context) => MyAccountPage(
+      basicOnly: true,
+      onAuthenticate: () => readSession.isAuthenticated
+          ? context.push('/settings/game-account-verification')
+          : showLoginRequired(context, auth),
+      apiTokenStore: tokenStore,
+      apiCooldown: _cooldown,
+      accountRepository: accounts,
+      summarySyncService: summary,
+      showServerOwnership: false,
+      serverAccountsSection: lifecycle.model != null
+          ? ScopedServerAccountsPanel(
+              model: lifecycle.model!,
+              onLogin: () => showLoginRequired(context, auth),
+              onManage: () => manageServerAccounts(context),
+              onOpen: (id) async {
+                await context.push('/account/server/$id');
+              },
+              onHistory: () async {
+                await context.push('/account/character-retirements');
+              },
+            )
+          : ServerAccountsPanel(
+              viewModel: _serverReads!,
+              onLogin: () => showLoginRequired(context, auth),
+              onManage: () => manageServerAccounts(context),
+              onOpen: (id) => context.push('/account/server/$id'),
+            ),
+    );
     return GoRouter(
       initialLocation: '/account',
       refreshListenable: auth,
       routes: [
         StatefulShellRoute.indexedStack(
-          builder: (context, state, shell) => AppShell(navigationShell: shell),
+          builder: (context, state, shell) => AppShell(
+            navigationShell: shell,
+            scopedStartupRefresh: _memberAccount?.runner,
+          ),
           branches: [
             StatefulShellBranch(
               routes: [
@@ -244,24 +346,24 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
               routes: [
                 GoRoute(
                   path: '/account',
-                  builder: (context, _) => MyAccountPage(
-                    apiTokenStore: tokenStore,
-                    apiCooldown: _cooldown,
-                    accountRepository: accounts,
-                    summarySyncService: summary,
-                    showServerOwnership: false,
-                    serverPowers: _serverPowers,
-                    serverAccountsSection: ServerAccountsPanel(
-                      viewModel: _serverReads!,
-                      onLogin: () => showLoginRequired(context, auth),
-                      onManage: () async {
-                        await context.push('/account/server-management');
-                        await _serverReads!.load();
-                        await _serverPowers!.reload();
-                      },
-                      onOpen: (id) => context.push('/account/server/$id'),
-                    ),
-                  ),
+                  builder: (context, _) =>
+                      _memberAccount != null && readSession.isAuthenticated
+                      ? MemberAccountPage(
+                          model: _memberAccount!.model,
+                          settings: _memberSettings!,
+                          onSettings: () => context.push('/settings'),
+                          onKey: () => context.push('/settings/api-token'),
+                          onVerify: () => context.push(
+                            '/settings/game-account-verification',
+                          ),
+                          onManage: () => manageServerAccounts(context),
+                          onHistory: () =>
+                              context.push('/account/character-retirements'),
+                          onServerStatus: (id) =>
+                              context.push('/account/server/$id'),
+                          onCharacters: (id) => openCharacters(context, id),
+                        )
+                      : localAccounts(context),
                   routes: [
                     GoRoute(
                       path: 'server-management',
@@ -271,26 +373,64 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                         session: readSession,
                         onLogin: () => showLoginRequired(context, auth),
                         onOpen: (id) => context.push('/account/server/$id'),
+                        onVerify: (id) => context.push(
+                          '/settings/game-account-verification?registrationId=$id',
+                        ),
                       ),
                     ),
-                    GoRoute(
-                      path: 'server/:registrationId',
-                      builder: (context, state) => ServerAccountCharactersPage(
-                        registrationId: state.pathParameters['registrationId']!,
-                        repository: serverAccounts,
-                        session: readSession,
-                        onLogin: () => showLoginRequired(context, auth),
-                        powers: _serverPowers,
-                      ),
+                    ...serverAccountReadRoutes(
+                      model: lifecycle.model,
+                      legacyCharacters: (context, id) =>
+                          ServerAccountCharactersPage(
+                            registrationId: id,
+                            repository: serverAccounts,
+                            session: readSession,
+                            onLogin: () => showLoginRequired(context, auth),
+                            powers: _serverPowers,
+                          ),
+                      onLogin: (context) => showLoginRequired(context, auth),
                     ),
                     GoRoute(
                       path: 'characters/manage',
-                      builder: (context, state) => CharacterManagementPage(
-                        accountRepository: accounts,
-                        accountId: state.extra as int?,
-                        memberSettings: _memberSettings,
-                        onLogin: () => showLoginRequired(context, auth),
-                      ),
+                      builder: (context, state) {
+                        final id = state.uri.queryParameters['registrationId'];
+                        final runtime = lifecycle.runtime;
+                        if (id != null &&
+                            runtime != null &&
+                            readSession.isAuthenticated) {
+                          final member = accountReadScope(readSession);
+                          final key = (
+                            runtime.baseUrl,
+                            member.userId,
+                            member.generation,
+                            id,
+                          );
+                          final gateway = _managementGateways.putIfAbsent(
+                            key,
+                            () => ScopedCharacterManagementGateway(
+                              runtime,
+                              id,
+                              otherWorkPending: () =>
+                                  _memberAccount?.model.managementBlocked ??
+                                  true,
+                            ),
+                          );
+                          return CharacterManagementPage(
+                            accountRepository: accounts,
+                            managementGateway: gateway,
+                            onSaved: () => _memberAccount!.model.refresh(),
+                            memberSettings: _memberSettings,
+                            automaticRefreshAvailable: true,
+                          );
+                        }
+                        return _BasicCharacterAccessPage(
+                          onAuthenticate: () => readSession.isAuthenticated
+                              ? context.push(
+                                  '/settings/game-account-verification',
+                                )
+                              : showLoginRequired(context, auth),
+                        );
+                      },
                     ),
                     GoRoute(
                       path: 'characters/:characterId',
@@ -301,10 +441,12 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                             body: Center(child: Text('캐릭터 정보를 찾을 수 없습니다.')),
                           );
                         }
-                        return CharacterDetailPage(
-                          character: character,
-                          apiCooldown: _cooldown,
-                          accountRepository: accounts,
+                        return _BasicCharacterAccessPage(
+                          onAuthenticate: () => readSession.isAuthenticated
+                              ? context.push(
+                                  '/settings/game-account-verification',
+                                )
+                              : showLoginRequired(context, auth),
                         );
                       },
                     ),
@@ -391,7 +533,43 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
             ),
             GoRoute(
               path: 'game-account-verification',
-              builder: (_, _) => pending('원정대 인증', alertOnEntry: true),
+              builder: (context, state) => ServerVerificationPage(
+                model: _verification!,
+                accounts: serverAccounts,
+                onLogin: () => showLoginRequired(context, auth),
+                onVerified: reloadServerState,
+                onRegister: () => manageServerAccounts(context),
+                onCompleted: () {
+                  if (!context.mounted) return;
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/account');
+                  }
+                },
+                initialRegistrationId:
+                    state.uri.queryParameters['registrationId'],
+                onVerifiedRegistration: lifecycle.enabled
+                    ? (id) async {
+                        final runtime = lifecycle.runtime!;
+                        final member = accountReadScope(readSession),
+                            scope = runtime.scope;
+                        final roster = await runtime.loadMemberRoster();
+                        runtime.requireCurrent(member, scope);
+                        final owned = roster.rosters.any(
+                          (r) =>
+                              r.registration.registrationId == id &&
+                              r.registration.ownershipStatus == 'owned' &&
+                              r.registration.accountId != null,
+                        );
+                        if (!owned) {
+                          throw const AccountReadException(
+                            'OWNERSHIP_REQUIRED',
+                          );
+                        }
+                      }
+                    : null,
+              ),
             ),
             GoRoute(
               path: 'manual-verification',
@@ -410,11 +588,17 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    for (final gateway in _managementGateways.values) {
+      gateway.dispose();
+    }
     WidgetsBinding.instance.removeObserver(this);
     _router?.dispose();
+    _memberAccount?.dispose();
+    unawaited(_accountLifecycle?.close());
     _serverReads?.dispose();
     _serverPowers?.dispose();
     _memberSettings?.dispose();
+    _verification?.dispose();
     _serverWrites?.dispose();
     _memberKey?.dispose();
     _cooldown?.dispose();
@@ -513,6 +697,27 @@ class _PendingFeaturePageState extends State<_PendingFeaturePage> {
             ],
           ),
         ),
+      ),
+    ),
+  );
+}
+
+class _BasicCharacterAccessPage extends StatelessWidget {
+  const _BasicCharacterAccessPage({required this.onAuthenticate});
+  final VoidCallback onAuthenticate;
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('캐릭터 사용 안내')),
+    body: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            '기기 조회 목록은 소유 인증 자료가 아닙니다.\n소유 인증 후 회원 캐릭터에서 상세 정보를 확인해 주세요.',
+            textAlign: TextAlign.center,
+          ),
+          FilledButton(onPressed: onAuthenticate, child: const Text('원정대 인증')),
+        ],
       ),
     ),
   );

@@ -23,29 +23,29 @@ class OperatorWriteReadiness {
       return '로그인 상태를 확인할 수 없습니다.';
     }
     if (playerId == null || playerId!.isEmpty) {
-      return 'authBindings에서 PlayerId를 찾을 수 없습니다.';
+      return '로그인한 사용자의 연결 정보를 확인할 수 없습니다.';
     }
     if (!bindingActive) {
-      return 'authBindings/$authUid status가 active가 아닙니다.';
+      return '로그인한 사용자의 연결이 비활성 상태입니다.';
     }
     if (!playerExists) {
-      return 'players/$playerId 문서가 없습니다. Firebase Console에서 생성해 주세요.';
+      return '사용자 정보를 확인할 수 없습니다. 서버의 사용자 상태를 확인해 주세요.';
     }
     if (!playerActive) {
-      return 'players/$playerId status가 active가 아닙니다.';
+      return '현재 사용자가 비활성 상태입니다.';
     }
     if (!assignmentActive) {
-      return 'operatorAssignments/$playerId status가 active가 아닙니다.';
+      return '운영자 권한이 활성화되지 않았습니다.';
     }
     return null;
   }
 
   List<String> get summaryLines => [
-    'Auth ${authUid ?? '-'}',
-    'Player ${playerId ?? '-'}',
-    'binding ${bindingActive ? 'active' : 'blocked'}',
-    'players ${playerExists ? (playerActive ? 'active' : 'inactive') : 'missing'}',
-    'operatorAssignments ${assignmentActive ? 'active' : 'inactive'}',
+    '로그인 ${authUid ?? '-'}',
+    '사용자 ${playerId ?? '-'}',
+    '사용자 연결 ${bindingActive ? '활성' : '확인 필요'}',
+    '사용자 상태 ${playerExists ? (playerActive ? '활성' : '비활성') : '미확인'}',
+    '운영자 권한 ${assignmentActive ? '활성' : '비활성'}',
   ];
 
   String get diagnosticSummary {

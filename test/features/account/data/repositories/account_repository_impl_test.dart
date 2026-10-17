@@ -1,3 +1,4 @@
+import 'package:lost_party/features/account/domain/account_read_session.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -62,6 +63,127 @@ void main() {
   });
 
   tearDown(() => database.close());
+
+  Future<AccountRepositoryImpl> basicRepository() async {
+    final token = _InMemoryApiTokenStore();
+    await token.write(ApiToken('jwt-value'));
+    return AccountRepositoryImpl(
+      basicOnly: true,
+      remoteDataSource: LostArkCharacterRemoteDataSource(
+        apiClient: LostArkApiClient(apiTokenStore: token, dio: dio),
+      ),
+      localDataSource: LocalAccountDataSource(
+        database: database,
+        gameCatalogRepository: _FakeGameCatalogRepository(catalog),
+      ),
+    );
+  }
+
+  test(
+    'basic lookup saves siblings only; profile and draft requests are rejected before network',
+    () async {
+      final basic = await basicRepository();
+      dioAdapter.onGet(
+        requestPath,
+        (server) => server.reply(200, [
+          {
+            'ServerName': '카단',
+            'CharacterName': lookupCharacterName,
+            'CharacterLevel': 70,
+            'CharacterClassName': '바드',
+            'ItemAvgLevel': '1,700.00',
+          },
+        ]),
+      );
+      await basic.fetchCharacters(lookupCharacterName);
+      final stored = await database
+          .select(database.accountCharacters)
+          .getSingle();
+      expect(stored.characterLevel, 0);
+      expect(stored.itemLevel, 1700);
+      expect(stored.combatPower, isNull);
+      await expectLater(
+        basic.fetchCharacterProfile(lookupCharacterName),
+        throwsA(
+          isA<AccountReadException>().having(
+            (e) => e.code,
+            'code',
+            'OWNERSHIP_REQUIRED',
+          ),
+        ),
+      );
+      await expectLater(
+        basic.createCharacterBuildDraft(
+          characterId: stored.id,
+          characterName: lookupCharacterName,
+        ),
+        throwsA(isA<AccountReadException>()),
+      );
+      expect(await basic.loadCharacterBuildSnapshots(stored.id), isEmpty);
+    },
+  );
+
+  test(
+    'basic cached display suppresses old power, role and ownership without deleting original rows',
+    () async {
+      final now = DateTime.utc(2026, 10, 16);
+      final id = await database.createAccount(
+        label: 'old',
+        isMain: true,
+        lookupCharacterName: 'old',
+        now: now,
+      );
+      await database
+          .into(database.accountCharacters)
+          .insert(
+            AccountCharactersCompanion.insert(
+              accountId: id,
+              serverName: 'sample',
+              characterName: 'old',
+              characterLevel: 70,
+              characterClassName: '바드',
+              itemLevel: const Value(1700),
+              combatPower: const Value(555),
+              lastSummaryFetchedAt: now,
+            ),
+          );
+      final basic = await basicRepository();
+      final row = (await basic.loadAccounts()).single.characters.single;
+      expect(row.combatPower, isNull);
+      expect(row.preferredRole, isNull);
+      expect(
+        (await basic.loadMainAccount())!.characters.single.combatPower,
+        isNull,
+      );
+      expect(
+        (await database.select(database.accountCharacters).getSingle())
+            .combatPower,
+        555,
+      );
+      expect(
+        (await repository.loadAccounts()).single.characters.single.combatPower,
+        555,
+      );
+      await expectLater(
+        Future.sync(
+          () => basic.saveCharacterBuildSnapshot(
+            characterId: row.id,
+            role: CharacterBuildRole.dealer,
+            rawJson: '{}',
+            itemLevel: 1700,
+            combatPower: 777,
+            capturedAt: now,
+          ),
+        ),
+        throwsA(isA<AccountReadException>()),
+      );
+      expect(
+        (await database.select(database.accountCharacters).getSingle())
+            .combatPower,
+        555,
+      );
+    },
+  );
 
   test(
     'empty names follow main/sub position after promotion and deletion',

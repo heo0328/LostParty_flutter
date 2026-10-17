@@ -18,6 +18,7 @@ Theme·Bottom Navigation·공개 모집 대표 Card 시범 적용 결과를 사�
 - Bottom Navigation은 흰색 Surface와 Lavender 선택 Pill을 유지한다.
 - 상태색은 v1에서 success·warning·error·neutral의 최소 semantic 집합만 둔다. Dealer·Support 전용 색상은 실제 역할 Chip 적용 단계에서 확정한다.
 - 화면 밀도는 Utility App에 맞춘 중간 밀도를 사용한다. 화면 좌우와 Card 내부는 기본 16, 주요 정보 간격은 8, 밀접한 metadata 간격은 4~6을 기준으로 한다.
+- 확인 알럿의 취소/부정 버튼은 왼쪽, 동의/긍정 버튼은 오른쪽에 둔다(2026-10-15 사용자 확정). 대표 빠른 선택의 왕관/상태 설계는 [계약27](../backend-migration/27-representative-quick-selection-ux.md)을 따른다. 관련 없는 기존 화면 일괄 수정은 별도 작업이다.
 
 ### v1 시범 적용 범위
 
@@ -635,3 +636,7 @@ LostParty의 디자인 목표는 화려함이 아니다.
 LostParty의 시각적 아이덴티티는 다음을 중심으로 구축한다.
 
 > Neutral Surface + Soft Lavender Accent + Muted Purple Primary
+
+## 숫자·원정대 상태 공통 표시 원칙 (2026-10-17)
+
+아이템레벨·전투력은 소수점 이하를 버린 정수부와 천 단위 쉼표로 표시한다. 시간은 초까지만 표시한다. 원본/API/서버·로컬 저장 및 정렬·자격 판정에는 소수점 정밀도를 유지하며 표시 문자열을 다시 저장하지 않는다. 미확인 값은 기존 미확인 안내를 유지한다. 원정대 상태는 인증·활동 선택 완료 문구를 반복하지 않고 인증 필요/활동 캐릭터 미선택·재선택처럼 필요한 행동만 표시한다. 로그인 회원의 미인증 등록도 서버에 저장되며 같은 회원의 다른 기기/재설치 로그인에서 조회된다.

@@ -1,3 +1,4 @@
+import '../../../../shared/formatters/display_number_formatter.dart';
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/group_request_character.dart';
@@ -86,7 +87,7 @@ class _GroupInvitePageState extends State<GroupInvitePage> {
           title: Text(candidate.characterName),
           subtitle: Text(
             '${candidate.serverName} · ${candidate.characterClassName}'
-            '${candidate.itemLevel == null ? '' : ' · Lv ${candidate.itemLevel!.toStringAsFixed(2)}'}',
+            '${candidate.itemLevel == null ? '' : ' · Lv ${DisplayNumberFormatter.integer(candidate.itemLevel!)}'}',
           ),
           trailing: FilledButton(
             onPressed: _busy ? null : () => _invite(candidate),

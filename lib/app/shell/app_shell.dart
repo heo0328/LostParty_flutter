@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/account/domain/services/startup_character_refresh_orchestrator.dart';
+import '../../features/account/presentation/viewmodels/scoped_startup_refresh_controller.dart';
 import '../../features/manual_verification/domain/entities/manual_verification_request.dart';
 import '../../features/manual_verification/domain/repositories/manual_verification_repository.dart';
 import '../../features/manual_verification/presentation/manual_verification_dispute_alert.dart';
@@ -13,6 +14,7 @@ class AppShell extends StatefulWidget {
     required this.navigationShell,
     this.manualVerificationRepository,
     this.startupCharacterRefreshRunner,
+    this.scopedStartupRefresh,
     this.onRaidStatusSelected,
     super.key,
   });
@@ -20,6 +22,7 @@ class AppShell extends StatefulWidget {
   final StatefulNavigationShell navigationShell;
   final ManualVerificationRepository? manualVerificationRepository;
   final StartupCharacterRefreshRunner? startupCharacterRefreshRunner;
+  final ScopedStartupRefreshController? scopedStartupRefresh;
   final VoidCallback? onRaidStatusSelected;
 
   @override
@@ -36,6 +39,9 @@ class _AppShellState extends State<AppShell> {
   @override
   void initState() {
     super.initState();
+    widget.scopedStartupRefresh?.addListener(_scopedRefreshChanged);
+    _isStartupCharacterRefreshRunning =
+        widget.scopedStartupRefresh?.isBusy ?? false;
     final refreshRunner = widget.startupCharacterRefreshRunner;
     if (refreshRunner != null) {
       _isStartupCharacterRefreshRunning = refreshRunner.state.isRunning;
@@ -48,18 +54,39 @@ class _AppShellState extends State<AppShell> {
     }
     final repository = widget.manualVerificationRepository;
     if (repository == null) return;
-    _disputeSubscription = repository.watchIncomingDisputes().listen(
-      (disputes) {
-        if (!mounted) return;
-        setState(() => _incomingDisputes = disputes);
-      },
-      onError: (_) {},
-    );
+    _disputeSubscription = repository.watchIncomingDisputes().listen((
+      disputes,
+    ) {
+      if (!mounted) return;
+      setState(() => _incomingDisputes = disputes);
+    }, onError: (_) {});
+  }
+
+  void _scopedRefreshChanged() {
+    if (!mounted) return;
+    final running = widget.scopedStartupRefresh?.isBusy ?? false;
+    if (running != _isStartupCharacterRefreshRunning) {
+      setState(() => _isStartupCharacterRefreshRunning = running);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant AppShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.scopedStartupRefresh != widget.scopedStartupRefresh) {
+      oldWidget.scopedStartupRefresh?.removeListener(_scopedRefreshChanged);
+      widget.scopedStartupRefresh?.addListener(_scopedRefreshChanged);
+      _isStartupCharacterRefreshRunning =
+          widget.scopedStartupRefresh?.isBusy ??
+          widget.startupCharacterRefreshRunner?.state.isRunning ??
+          false;
+    }
   }
 
   @override
   void dispose() {
     _disputeSubscription?.cancel();
+    widget.scopedStartupRefresh?.removeListener(_scopedRefreshChanged);
     _refreshSubscription?.cancel();
     final refreshRunner = widget.startupCharacterRefreshRunner;
     if (refreshRunner != null) {

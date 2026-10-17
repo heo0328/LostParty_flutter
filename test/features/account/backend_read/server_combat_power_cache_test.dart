@@ -34,7 +34,9 @@ void main() {
   late ServerCombatPowerViewModel model;
   setUp(() {
     session = ReadSessionFake();
-    api = ReadApiFake();
+    api = ReadApiFake()
+      ..onRegistrations = (_) async =>
+          ServerRegistrationPage.fromJson(registrationPageJson());
     dio = Dio();
     final reads = ServerAccountReadRepository(api, session);
     writes = ServerRegistrationViewModel(
@@ -66,12 +68,30 @@ void main() {
   }
 
   test(
+    'unverified cached power cannot leak or become a refresh target',
+    () async {
+      await Future<void>.delayed(Duration.zero);
+      final json = registrationPageJson();
+      (json['items'] as List).single['ownership_status'] = 'unverified';
+      api.onRegistrations = (_) async => ServerRegistrationPage.fromJson(json);
+      await model.reload();
+      model.store(registrationId, roster(power: '777'));
+      expect(model.powerFor(local()), isNull);
+      expect(model.displayPowerFor(local(), 999), isNull);
+      expect(model.canRefresh, isFalse);
+    },
+  );
+
+  test(
     'server/name exact match and preferred role snapshot always wins',
     () async {
       await Future<void>.delayed(Duration.zero);
       model.store(registrationId, roster(power: '0'));
       expect(model.displayPowerFor(local(), null), 0);
-      expect(model.displayPowerFor(local(server: 'other-server'), null), 5);
+      expect(
+        model.displayPowerFor(local(server: 'other-server'), null),
+        isNull,
+      );
       expect(
         model.displayPowerFor(local(role: CharacterBuildRole.support), 99),
         99,
@@ -82,7 +102,7 @@ void main() {
       );
       session.change(authenticated: false);
       expect(model.powerFor(local()), isNull);
-      expect(model.displayPowerFor(local(), null), 5);
+      expect(model.displayPowerFor(local(), null), isNull);
     },
   );
   test('late GET from previous member never fills new member cache', () async {
@@ -115,7 +135,7 @@ void main() {
                 : i == 1
                 ? '1699'
                 : '1700'
-            ..['roster_status'] = i == 2 ? 'missing' : 'preview',
+            ..['roster_status'] = i == 2 ? 'missing' : 'confirmed',
         ),
       );
       final first = ServerCombatPowerViewModel.targets(rows);

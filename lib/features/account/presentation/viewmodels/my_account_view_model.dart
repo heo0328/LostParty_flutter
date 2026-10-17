@@ -29,6 +29,7 @@ class MyAccountViewModel extends ChangeNotifier {
   MyAccountViewModel({
     required ApiTokenStore apiTokenStore,
     required AccountRepository accountRepository,
+    this.basicOnly = false,
     CharacterSummarySyncService? summarySyncService,
     RepresentativeCharacterSyncService? representativeSyncService,
     WeeklyRaidClaimRepository? weeklyRaidClaimRepository,
@@ -54,6 +55,7 @@ class MyAccountViewModel extends ChangeNotifier {
        _cycleEndsAt = cycleEndsAt,
        _weeklyRaidClaimCommandRepository = weeklyRaidClaimCommandRepository;
 
+  final bool basicOnly;
   final ApiTokenStore _apiTokenStore;
   final AccountRepository _accountRepository;
   final CharacterSummarySyncService? _summarySyncService;
@@ -507,7 +509,7 @@ class MyAccountViewModel extends ChangeNotifier {
     if (_representativeSyncService != null) {
       _accounts = await _accountRepository.loadAccounts();
     }
-    await _loadPreferredCombatPowers();
+    if (!basicOnly) await _loadPreferredCombatPowers();
     notifyListeners();
   }
 
@@ -573,9 +575,11 @@ class MyAccountViewModel extends ChangeNotifier {
         }
       }
       try {
-        _lookupProfile = await _accountRepository.fetchCharacterProfile(
-          characterName,
-        );
+        if (!basicOnly) {
+          _lookupProfile = await _accountRepository.fetchCharacterProfile(
+            characterName,
+          );
+        }
       } on LostArkApiException {
         // Roster sync can succeed even if the optional profile card fails.
       }

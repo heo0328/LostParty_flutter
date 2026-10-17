@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../shared/formatters/local_date_time_formatter.dart';
 import '../viewmodels/member_lostark_key.dart';
 import '../widgets/server_accounts_panel.dart';
 
@@ -86,7 +87,7 @@ class _MemberKeyPageState extends State<MemberKeyPage> {
                   : '등록된 키가 없습니다',
             ),
             if (model.value?.updatedAt case final time?)
-              Text('마지막 변경: ${time.toLocal()}'),
+              Text('마지막 변경: ${localDateTimeToSeconds(time)}'),
             Text(
               model.localReady
                   ? '이 기기에 키가 저장되어 있습니다'
