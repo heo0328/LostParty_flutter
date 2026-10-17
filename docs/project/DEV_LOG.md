@@ -1,5 +1,11 @@
 # 개발 이력
 
+## 2026-10-17 — 사용자 승인 현재 개발 시점 dev·main 동기화
+
+사용자는 관리 진입/회원 캐릭터 복원·인증 버튼 배치 미완료, 타인 소유 챌린지의 분쟁/소유권 이전 미완료, 자동 갱신 기본 OFF를 확인한 뒤 현재 시점을 dev에 push하고 main에도 동일하게 병합하도록 명시 지시했다. 이번은 해당 개발 시점 보존 지시를 적용하며 미완료 항목을 완료로 바꾸지 않는다. NEXT_WORK의 후속 순서를 유지한다.
+
+통합 전 dev39c532a·원격dev일치와 main e4f8e0f가dev조상임을확인했다. 기능코드/DB/schema·flag/키/자료 변경 없이 이 기록만 기존 기능 브랜치에 추가한다. dev에 문서를 통합·push한 뒤 main을 같은 커밋으로 fast-forward·push하고 로컬/원격 두 브랜치 일치를 확인한다. 최종 SHA·수행 결과는 Git/사용자 최종 보고를 기준으로 한다. 기능 검증은 전체1,591PASS·lib/test 분석0을 재사용하고 문서diffcheck를 수행한다. 새릴리즈태그/배포·기기조작·Issue종료·기존백업/tools 변경은 수행하지 않는다.
+
 ## 2026-10-17 — 완료 구간 dev 통합·push 및 후속 경로 분석
 
 기능209ce85(feature/scoped-account-cache)·dev병합0a11b71을push했고로컬dev/origin/dev/원격refs동일을확인했다. 병합tree는기능커밋과같아최종전체1,591PASS/분석0을재사용했다. 114파일은완료된회원캐시/인증/설정/표시·문서·자동생성DB/OpenAPIfixture를포함하며기존백업2개/tools는커밋하지않았다. 보존해시53개일치. main/서버/DB/키/자료/flag·기기조작·Issue종료없음. [109번째Git·분석인계](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6228853681)로원격기능커밋을공유했다.
