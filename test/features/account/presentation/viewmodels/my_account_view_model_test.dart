@@ -19,6 +19,18 @@ void main() {
     tokenStore = _InMemoryApiTokenStore();
   });
 
+  test('basic mode never invokes the optional profile lookup', () async {
+    final model = MyAccountViewModel(
+      apiTokenStore: tokenStore,
+      accountRepository: _BasicProfileTrap(),
+      basicOnly: true,
+    );
+    await model.fetchCharacters('이슈아이');
+    expect(model.hasFetchedCharacters, isTrue);
+    expect(model.lookupProfile, isNull);
+    model.dispose();
+  });
+
   test('loads the token registration status', () async {
     await tokenStore.write(ApiToken('jwt-value'));
     final viewModel = MyAccountViewModel(
@@ -308,4 +320,11 @@ class _InMemoryApiTokenStore implements ApiTokenStore {
   Future<void> delete() async {
     _token = null;
   }
+}
+
+class _BasicProfileTrap extends _FakeAccountRepository {
+  _BasicProfileTrap() : super(characters: [_createCharacterSummary()]);
+  @override
+  Future<CharacterProfile> fetchCharacterProfile(String name) async =>
+      throw StateError('Basic mode must never request detail');
 }

@@ -11,6 +11,7 @@ class AccountCharacterCard extends StatelessWidget {
   const AccountCharacterCard({
     required this.character,
     required this.isRepresentative,
+    this.basicOnly = false,
     this.weeklyRaids = const [],
     this.representativeCombatPower,
     this.overrideRepresentativeCombatPower = false,
@@ -27,6 +28,7 @@ class AccountCharacterCard extends StatelessWidget {
 
   final LocalAccountCharacter character;
   final bool isRepresentative;
+  final bool basicOnly;
   final List<WeeklyRaidStatusItem> weeklyRaids;
   final double? representativeCombatPower;
   final bool overrideRepresentativeCombatPower;
@@ -89,50 +91,52 @@ class AccountCharacterCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall,
               ),
-              Text(
-                '전투력 ${_formatNumber(overrideRepresentativeCombatPower ? representativeCombatPower : character.combatPower)}'
-                '${combatPowerNote == null ? '' : ' · $combatPowerNote'}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall,
-              ),
-              if (_gemValidationItems case final items
-                  when items.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Column(
-                  key: ValueKey('gemValidation-${character.id}'),
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (final item in items)
-                      Row(
-                        children: [
-                          Icon(
-                            item.isError
-                                ? Icons.error_outline
-                                : Icons.info_outline,
-                            size: 14,
-                            color: item.isError
-                                ? theme.colorScheme.error
-                                : theme.colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              item.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: item.isError
-                                    ? theme.colorScheme.error
-                                    : theme.colorScheme.onSurfaceVariant,
+              if (!basicOnly)
+                Text(
+                  '전투력 ${_formatNumber(overrideRepresentativeCombatPower ? representativeCombatPower : character.combatPower)}'
+                  '${combatPowerNote == null ? '' : ' · $combatPowerNote'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall,
+                ),
+              if (!basicOnly)
+                if (_gemValidationItems case final items
+                    when items.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Column(
+                    key: ValueKey('gemValidation-${character.id}'),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final item in items)
+                        Row(
+                          children: [
+                            Icon(
+                              item.isError
+                                  ? Icons.error_outline
+                                  : Icons.info_outline,
+                              size: 14,
+                              color: item.isError
+                                  ? theme.colorScheme.error
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                item.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: item.isError
+                                      ? theme.colorScheme.error
+                                      : theme.colorScheme.onSurfaceVariant,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ],
+                          ],
+                        ),
+                    ],
+                  ),
+                ],
               if (showRaidChrome) ...[
                 const SizedBox(height: 8),
                 const Divider(height: 1),
@@ -241,7 +245,7 @@ class AccountCharacterCard extends StatelessWidget {
     if (value == null) {
       return '-';
     }
-    return DisplayNumberFormatter.fixed(value);
+    return DisplayNumberFormatter.integer(value);
   }
 
   List<_GemValidationDisplayItem> get _gemValidationItems {

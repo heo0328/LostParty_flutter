@@ -1,8 +1,11 @@
+import '../../../../shared/formatters/display_number_formatter.dart';
 import 'package:flutter/material.dart';
+import '../../../../shared/formatters/local_date_time_formatter.dart';
 import '../../domain/account_read_session.dart';
 import '../../domain/server_account_models.dart';
 import '../../domain/server_account_read_repository.dart';
 import '../../domain/policies/account_label_policy.dart';
+import '../../domain/services/roster_character_order.dart';
 import '../viewmodels/server_account_read_view_model.dart';
 import '../viewmodels/server_registration_view_model.dart';
 import '../widgets/server_accounts_panel.dart';
@@ -14,6 +17,7 @@ class ServerRegistrationPage extends StatefulWidget {
     required this.session,
     required this.onLogin,
     required this.onOpen,
+    this.onVerify,
     super.key,
   });
   final ServerRegistrationViewModel writes;
@@ -21,6 +25,7 @@ class ServerRegistrationPage extends StatefulWidget {
   final AccountReadSession session;
   final VoidCallback onLogin;
   final void Function(String) onOpen;
+  final void Function(String)? onVerify;
   @override
   State<ServerRegistrationPage> createState() => _ServerRegistrationPageState();
 }
@@ -170,9 +175,7 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                const Text(
-                  '캐릭터 검색으로 원정대를 확인한 뒤 메인/부계정으로 등록합니다. 소유 인증과 활동 선택은 별도 단계입니다.',
-                ),
+                const Text('미인증 원정대는 등록 후 인증해 주세요.'),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _name,
@@ -220,19 +223,22 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
                   ),
                   TextButton(
                     onPressed: !writes.busy ? _review : null,
-                    child: const Text('서버 상태 확인'),
+                    child: const Text('등록 결과 다시 확인'),
                   ),
                 ],
                 if (writes.preview case final preview?) ...[
                   const SizedBox(height: 12),
                   Text('미리보기 캐릭터 ${preview.characters.length}명 · 미인증'),
-                  Text('유효 시각: ${preview.expiresAt.toLocal()}'),
-                  for (final c in preview.characters)
+                  Text('유효 시각: ${localDateTimeToSeconds(preview.expiresAt)}'),
+                  for (final c in rosterByItemLevel(
+                    preview.characters,
+                    (c) => c.itemLevel,
+                  ))
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(c.characterName),
                       subtitle: Text(
-                        '${c.serverName} · ${c.className} · 아이템 ${c.itemLevel ?? '미확인'}',
+                        '${c.serverName} · ${c.className} · 아이템 ${DisplayNumberFormatter.whole(c.itemLevel)}',
                       ),
                     ),
                   TextField(
@@ -260,7 +266,7 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
                             () => writes.register(_label.text, _main),
                           )
                         : null,
-                    child: const Text('서버에 등록'),
+                    child: const Text('조회 목록에 저장'),
                   ),
                 ],
                 const SizedBox(height: 24),
@@ -292,7 +298,10 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
                             '${_reads.displayLabelFor(a)} · ${a.isMain ? '메인 계정' : '부계정'}',
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
-                          Text(serverOwnershipLabel(a.ownershipStatus)),
+                          if (serverOwnershipLabel(
+                            a.ownershipStatus,
+                          ).isNotEmpty)
+                            Text(serverOwnershipLabel(a.ownershipStatus)),
                           Text('캐릭터 ${a.characterCount}명'),
                           Text(
                             '서버 조회 시각: ${serverRegistrationTimeLabel(a.serverFetchedAt)}',
@@ -300,6 +309,15 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
                           Wrap(
                             spacing: 8,
                             children: [
+                              if (a.ownershipStatus != 'owned' &&
+                                  widget.onVerify != null)
+                                FilledButton(
+                                  onPressed: writes.busy
+                                      ? null
+                                      : () =>
+                                            widget.onVerify!(a.registrationId),
+                                  child: const Text('원정대 인증'),
+                                ),
                               TextButton(
                                 onPressed: writes.busy
                                     ? null

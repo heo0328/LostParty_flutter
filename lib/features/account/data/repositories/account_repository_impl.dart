@@ -1,3 +1,4 @@
+import '../../domain/account_read_session.dart';
 import 'dart:convert';
 
 import '../../../../shared/lost_ark_api/client/lost_ark_api_exception.dart';
@@ -26,10 +27,53 @@ class AccountRepositoryImpl
     required LostArkCharacterRemoteDataSource remoteDataSource,
     required LocalAccountDataSource localDataSource,
     AccountOwnershipStatusGateway? ownershipStatusGateway,
+    this.basicOnly = false,
   }) : _remoteDataSource = remoteDataSource,
        _localDataSource = localDataSource,
        _ownershipStatusGateway = ownershipStatusGateway;
 
+  final bool basicOnly;
+  void _requireDetails() {
+    if (basicOnly) throw const AccountReadException('OWNERSHIP_REQUIRED');
+  }
+
+  CharacterSummary _summary(CharacterSummary c) => !basicOnly
+      ? c
+      : CharacterSummary(
+          serverName: c.serverName,
+          characterName: c.characterName,
+          characterLevel: 0,
+          characterClassName: c.characterClassName,
+          itemLevel: c.itemLevel,
+        );
+  LocalGameAccount _account(LocalGameAccount a) => !basicOnly
+      ? a
+      : LocalGameAccount(
+          id: a.id,
+          label: a.label,
+          usesAutomaticLabel: a.usesAutomaticLabel,
+          isMain: a.isMain,
+          lookupCharacterName: a.lookupCharacterName,
+          representativeCharacterId: null,
+          displayLimit: a.displayLimit,
+          characters: a.characters
+              .map(
+                (c) => LocalAccountCharacter(
+                  id: c.id,
+                  serverName: c.serverName,
+                  characterName: c.characterName,
+                  characterLevel: 0,
+                  characterClassName: c.characterClassName,
+                  itemLevel: c.itemLevel,
+                  combatPower: null,
+                  isVisible: c.isVisible,
+                  displayOrder: c.displayOrder,
+                  isRosterMissing: c.isRosterMissing,
+                  lastSummaryFetchedAt: c.lastSummaryFetchedAt,
+                ),
+              )
+              .toList(growable: false),
+        );
   final LostArkCharacterRemoteDataSource _remoteDataSource;
   final LocalAccountDataSource _localDataSource;
   final AccountOwnershipStatusGateway? _ownershipStatusGateway;
@@ -40,7 +84,7 @@ class AccountRepositoryImpl
 
     try {
       final characters = dtos
-          .map((dto) => dto.toDomain())
+          .map((dto) => _summary(dto.toDomain()))
           .toList(growable: false);
       if (characters.isEmpty) {
         throw const LostArkApiException(
@@ -67,6 +111,7 @@ class AccountRepositoryImpl
 
   @override
   Future<CharacterProfile> fetchCharacterProfile(String characterName) async {
+    _requireDetails();
     final dto = await _remoteDataSource.fetchCharacterProfile(characterName);
 
     try {
@@ -81,13 +126,15 @@ class AccountRepositoryImpl
   }
 
   @override
-  Future<LocalGameAccount?> loadMainAccount() {
-    return _localDataSource.loadMainAccount();
+  Future<LocalGameAccount?> loadMainAccount() async {
+    final value = await _localDataSource.loadMainAccount();
+    return value == null ? null : _account(value);
   }
 
   @override
   Future<List<LocalGameAccount>> loadAccounts() async {
     final accounts = await _localDataSource.loadAccounts();
+    if (basicOnly) return accounts.map(_account).toList(growable: false);
     final gateway = _ownershipStatusGateway;
     if (gateway == null) return accounts;
     final boundAccounts = accounts.where(
@@ -122,7 +169,7 @@ class AccountRepositoryImpl
     return _localDataSource.applyRosterSummarySync(
       accountId: accountId,
       lookupCharacterName: lookupCharacterName,
-      summaries: summaries,
+      summaries: summaries.map(_summary).toList(growable: false),
       fetchedAt: fetchedAt,
     );
   }
@@ -135,7 +182,7 @@ class AccountRepositoryImpl
     final normalizedName = lookupCharacterName.trim();
     final dtos = await _remoteDataSource.fetchSiblings(normalizedName);
     try {
-      final characters = dtos.map((dto) => dto.toDomain()).toList();
+      final characters = dtos.map((dto) => _summary(dto.toDomain())).toList();
       if (characters.isEmpty) {
         throw const LostArkApiException(
           type: LostArkApiErrorType.invalidResponse,
@@ -146,8 +193,10 @@ class AccountRepositoryImpl
         lookupCharacterName: normalizedName,
         characters: characters,
       );
-      return (await _localDataSource.loadAccounts()).singleWhere(
-        (account) => account.id == accountId,
+      return _account(
+        (await _localDataSource.loadAccounts()).singleWhere(
+          (account) => account.id == accountId,
+        ),
       );
     } on FormatException {
       throw const LostArkApiException(
@@ -193,6 +242,7 @@ class AccountRepositoryImpl
     required double? combatPower,
     required DateTime capturedAt,
   }) {
+    _requireDetails();
     return _localDataSource.saveCharacterBuildSnapshot(
       characterId: characterId,
       role: role,
@@ -207,6 +257,7 @@ class AccountRepositoryImpl
   Future<List<CharacterBuildSnapshot>> loadCharacterBuildSnapshots(
     int characterId,
   ) {
+    if (basicOnly) return Future.value(const []);
     return _localDataSource.loadCharacterBuildSnapshots(characterId);
   }
 
@@ -215,6 +266,7 @@ class AccountRepositoryImpl
     required int characterId,
     required String characterName,
   }) async {
+    _requireDetails();
     final response = await _remoteDataSource.fetchCharacterArmory(
       characterName,
     );
@@ -247,6 +299,7 @@ class AccountRepositoryImpl
     required CharacterBuildDraft draft,
     required CharacterBuildRole role,
   }) async {
+    _requireDetails();
     await _localDataSource.commitCharacterBuildDraft(draft: draft, role: role);
     final snapshots = await _localDataSource.loadCharacterBuildSnapshots(
       draft.characterId,

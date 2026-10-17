@@ -2,13 +2,29 @@
 
 > 기존 서비스 전용 항목은 [원문·출처 기록](../legacy/firebase/extracted/docs/README.md)으로 분리했다. 남은 제품/협업 문맥의 신규 서버 적용 여부는 별도 설계에서 판단한다.
 
+## 현재 채택한 등록·인증 UX
+
+[정책09 D10](backend-migration/09-migration-decisions.md)·[핵심 흐름 지도](feature-definitions/LOSTPARTY_CORE_USER_FLOW_OVERVIEW.md): 비로그인 기본 로컬 검색, 로그인 미인증 조회용 서버 저장, 현재 소유 인증 후 상세/전투력·선택 후 활동. Flutter R1 전체1542PASS/분석0, Backend D10 power/cache 보완59b8c23·256PASS/현재8000 반영 보고. **기존 캐릭터 관리 화면의 현재 서버 연결·초기 대표1회/공통1700·인증 후 전환 완료**, 최종 전체1560PASS/분석0. 별도 선택/복구 화면 없음. [연결 인계](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6209931176). 기본flag OFF 유지. 실제 소유 증거/실기기 인수는 별도 미확인. [Issue8 최종 대조](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6209491349)·[작업 순서](project/NEXT_WORK.md). 현재 환경/개발자료를 유지한다.
+
 ## 백엔드 이전 사전 분석
+
+- [Flutter 제품 설정·UX 공유 기준](backend-migration/31-app-product-policy-handoff.md): 기능/UX 유지·Firebase 전용 구현 제거, Backend에 필요한 설정 의미·연결/미완료 범위만 공유. D 별도 저장 연결은 철회·원래 연결 복구, 현재 환경/개발자료로 개발 계속. 최신 검증은 NEXT_WORK.
+
+- [회원·환경별 캐시 저장·writer 분리 계약](backend-migration/30-scoped-storage-write-contract.md): S1~S3/A1/A2/B를 C 앱 수명/회원 주목록·진행 UI에 연결. schema3/기기 schema13 보존, 기본 flag OFF. 현재 환경에서 개발 계속, 별도 빈 환경·기초 재인수 선행 절차 철회.
+
+- [회원·환경별 서버 캐릭터 연결 설계](backend-migration/29-scoped-character-identity-design.md): 실제 mapping/writer 조사·출처와 ID/세대 연결 계약, Backend L1a 기반/L1b 상태 읽기 구현 인계·live 퇴역 비활성 범위.
+
+- [원정대 인증 클라이언트·화면 연결](backend-migration/28-verification-client-preparation.md): 인증4경로·대상 ID 전달/인증 성공 후 기존 관리 화면 연결 완료. 최신 전체1560PASS/분석0, 실제 소유·실기기 인수는 미확인.
+
+- [대표 캐릭터 빠른 선택 UX](backend-migration/27-representative-quick-selection-ux.md): 파스텔 왕관·확인 알럿/취소좌·변경우. Backend 대표 API P2 소비·Flutter E1 왕관/확인/쓰기/복구 연결, 활동 전체 편집은 기존 관리 화면의 현재 서버 연결 완료.
+
+- [원정대 캐릭터 변경·소멸 이력·이름 재사용 설계](backend-migration/26-roster-character-lifecycle-design.md): 사용자 정책·Backend 공식 조사 수신/증거 보류, 신규 ID/기존 파티 보존. L1 착수 범위는29/Issue8 최신 요청 참조.
 
 - [회원별 Lost Ark API 키 서버 저장·호출 전환 요청](backend-migration/25-member-lostark-key-request.md): 회원키 등록/복원·기기저장·호출제한 UX 연결, Backend9e1a255b 소비·자동 검증/현재 기능 사용자 확인 완료.
 
 - [전체 데이터베이스 설계 재점검](backend-migration/24-database-design-review.md): Backend19개/Flutter8개테이블·저장소/회원ID/복원경계·로컬삭제정합성재현과다음설계결정.
 
-- [나이스단 자동 갱신 설계·기존 구조 조사](backend-migration/23-nice-group-auto-refresh-design.md): 회원설정79255f0연결/사용자3흐름완료·시작API순서조사와전체빌드자동갱신후속설계.
+- [나이스단 자동 갱신 설계·기존 구조 조사](backend-migration/23-nice-group-auto-refresh-design.md): 활성 전체 상세1회/나이스단OFF 예외·B 실행/C 앱 수명·회원 주목록·진행 화면 연결 완료. D 정리 완료, 현재 환경에서 개발 계속·실제 소유 증거가 필요한 전체 인수는 별도 미확인이다.
 
 - [Flutter 전투력 연결 계약](backend-migration/22-character-combat-power-flutter-contract.md): 소비39188d5·Strict DTO·단일 요청복구·서버/로컬 카드·회원격리·인수 범위.
 
@@ -24,10 +40,10 @@
 
 
 - [내 계정 테스트 준비](backend-migration/15-my-account-test-readiness.md): Backend 결과·직접 smoke·자동/사용자/provider 검증 범위와 현재 제한.
-- [내 계정 Flutter 연결 계획](backend-migration/14-my-account-flutter-integration-plan.md): Backend #3 인계 후 조회·등록·인증·활동 설정 연결 순서 및 첫 구현 그룹.
+- [내 계정 Flutter 연결 계획](backend-migration/14-my-account-flutter-integration-plan.md): 초기 연결 계획과 최신 후속 대장. 인증 화면·자동 갱신/복원 코드 완료, 기존 관리/활동·대표 연결 완료와 실환경 인수·별도 후속을 구분.
 - [내 계정 Backend 1차 작업 지시서](backend-migration/13-my-account-backend-phase1-request.md): 등록/캐릭터 조회·장비 인증·활동/대표 선택 API 및 서버 검증·인계 요청. 계약 경로/DDL는 Backend 검토 전 제안.
 
-- [빈 데이터 신규 서버 정책·설계](backend-migration/09-migration-decisions.md): 기존 사용자/데이터 이관 없음 확정. 10 서버 구조·11 인증/권한·12 첫 구현 패키지 연결. endpoint/DTO/SQL 최종 계약은 별도 backend 저장소가 소유한다.
+- [빈 데이터 신규 서버 정책·설계](backend-migration/09-migration-decisions.md): 기존 자료 승계 없음·현재 개발/베타 전 전체 초기화/베타→운영 자료 보존 정책 확정. 10 서버 구조·11 인증/권한·12 첫 구현 패키지 연결. endpoint/DTO/SQL 최종 계약은 별도 backend 저장소가 소유한다.
 
 - [백엔드 이전 분석 문서 지도](backend-migration/00-overview.md): dev e24baab 기준 Firebase 호출 전수·Firestore 모델·인증/권한·구독·화면·API 기능 요구·위험·단계 계획 9문서. 분석/문서화 전용이며 서버 endpoint/SQL schema·운영 데이터/배포 상태를 확정하지 않는다.
 
@@ -41,7 +57,7 @@
 
 ## 이번 변경과 테스트 안내
 
-- [현재 다음 작업](project/NEXT_WORK.md): 회원키 연결 완료,다음 전체빌드 자동갱신 시작순서 설계·문구점검 등 후속.
+- [현재 다음 작업](project/NEXT_WORK.md): 현재 환경·개발자료로 개발 계속. 기존 관리/인증 전환 연결 후 실제 소유 조건과 연동 확인 순서. 기본 flag OFF.
 - [파일별 테스트 전환 대장](project/TEST_TRANSITION_INVENTORY.md): Firebase 테스트 제거 근거와 공통 검증 보존·안정화 결과. 제거 구간1134테스트와 조회 연결1159테스트 통과, 조회 사용자1·2·4 통과. 등록자료가 필요한3번은 후속 인수; 상세 이력은 DEV_LOG.
 
 

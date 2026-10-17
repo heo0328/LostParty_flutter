@@ -6,11 +6,13 @@ class MemberSettingsControls extends StatelessWidget {
     required this.model,
     required this.classes,
     this.onLogin,
+    this.automaticRefreshAvailable = false,
     super.key,
   });
   final MemberSettingsViewModel model;
   final String classes;
   final VoidCallback? onLogin;
+  final bool automaticRefreshAvailable;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -29,6 +31,8 @@ class MemberSettingsControls extends StatelessWidget {
                 ? '서버 설정 확인·저장 중입니다.'
                 : model.value == null
                 ? '설정을 불러오지 못했습니다. 다시 확인해 주세요.'
+                : automaticRefreshAvailable
+                ? '$classes 직업군 전체에 적용됩니다. 변경 즉시 저장됩니다.\n앱 실행 중 회원별 1회 상세 정보를 갱신합니다. OFF인 나이스단은 자동 검사에서 제외하며 기존 정보를 유지합니다.'
                 : '$classes 직업군 전체에 적용됩니다. 변경 즉시 저장됩니다.\n현재는 허용 설정을 저장하며 자동 빌드 갱신은 준비 중입니다.',
           ),
           value: model.value?.enabled ?? false,

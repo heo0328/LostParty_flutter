@@ -111,7 +111,7 @@ class CharacterActivityWritePlan {
       ActivityCharactersSaveFailure.invalidCharacterId =>
         '활동 캐릭터 ID가 올바르지 않습니다.',
       ActivityCharactersSaveFailure.notOwned =>
-        '현재 Player가 active 소유한 캐릭터만 선택할 수 있습니다.',
+        '현재 사용자가 소유한 활성 캐릭터만 선택할 수 있습니다.',
       ActivityCharactersSaveFailure.inactiveCharacter =>
         '활성 캐릭터만 앱에서 사용할 수 있습니다.',
       ActivityCharactersSaveFailure.inactiveOwnership =>
@@ -121,7 +121,7 @@ class CharacterActivityWritePlan {
       ActivityCharactersSaveFailure.incompleteDisplay =>
         '캐릭터 표시 정보가 부족합니다. 내 계정에서 정보를 새로고침한 뒤 다시 저장해 주세요.',
       ActivityCharactersSaveFailure.permissionDenied =>
-        '캐릭터 활동 설정을 저장할 권한이 없습니다. 최신 Firestore Rules가 배포됐는지 확인해 주세요.',
+        '캐릭터 활동 설정을 저장할 권한이 없습니다. 로그인과 캐릭터 소유 상태를 다시 확인해 주세요.',
       ActivityCharactersSaveFailure.unavailable =>
         '서버에 연결하지 못했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.',
     };

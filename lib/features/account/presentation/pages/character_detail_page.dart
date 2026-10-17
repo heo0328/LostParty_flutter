@@ -502,6 +502,6 @@ class _CharacterDetailPageState extends State<CharacterDetailPage> {
   String _two(int value) => value.toString().padLeft(2, '0');
 
   String _formatNumber(double? value) {
-    return value == null ? '-' : DisplayNumberFormatter.fixed(value);
+    return value == null ? '-' : DisplayNumberFormatter.integer(value);
   }
 }

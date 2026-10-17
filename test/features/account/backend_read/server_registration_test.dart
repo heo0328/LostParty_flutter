@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/data/backend_account_read_api.dart';
 import 'package:lost_party/features/account/domain/server_account_models.dart';
 import 'package:lost_party/features/account/domain/server_account_read_repository.dart';
 import 'package:lost_party/features/account/presentation/viewmodels/server_registration_view_model.dart';
+import 'package:lost_party/features/account/presentation/pages/server_registration_page.dart'
+    as registration_ui;
 import '../../../support/server_account_read_fakes.dart';
 
 void main() {
@@ -13,12 +16,14 @@ void main() {
   late ServerRegistrationViewModel model;
   late DateTime clock;
   late List<RequestOptions> requests;
+  bool currentOwned = true;
   late void Function(RequestOptions, RequestInterceptorHandler) handle;
   setUp(() {
     clock = DateTime.utc(2026, 10, 14);
     dio = Dio(BaseOptions(baseUrl: 'https://backend.invalid'));
     session = ReadSessionFake();
     requests = [];
+    currentOwned = true;
     final api = DioBackendAccountReadApi(dio, session);
     model = ServerRegistrationViewModel(
       api,
@@ -32,6 +37,17 @@ void main() {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (o, h) {
+          if (o.method == 'GET' &&
+              o.path == '/v1/me/game-accounts' &&
+              model.powerContext) {
+            final page = registrationPageJson();
+            if (!currentOwned) {
+              (page['items'] as List).single['ownership_status'] =
+                  'ownership_lost';
+            }
+            h.resolve(Response(requestOptions: o, statusCode: 200, data: page));
+            return;
+          }
           requests.add(o);
           handle(o, h);
         },
@@ -80,6 +96,100 @@ void main() {
   const powerTargets = [
     {'server_name': 'sample-server', 'character_name': 'sample'},
   ];
+  testWidgets(
+    'owned re-registration uses new ID and never offers another verification',
+    (tester) async {
+      var saved = false;
+      String? opened;
+      var verificationRequests = 0;
+      final restored = registrationJson()
+        ..['registration_id'] = secondCharacterId
+        ..['settings'] = (settingsJson()
+          ..['configuration_state'] = 'unconfigured'
+          ..['activity_character_ids'] = <String>[]
+          ..['representative_character_id'] = null);
+      handle = (o, h) {
+        Object data;
+        var status = 200;
+        if (o.method == 'GET') {
+          data = {
+            'items': saved ? [restored] : [],
+            'next_cursor': null,
+          };
+        } else if (o.path.endsWith('/preview')) {
+          data = preview();
+        } else {
+          saved = true;
+          status = 201;
+          data = restored;
+        }
+        h.resolve(Response(requestOptions: o, statusCode: status, data: data));
+      };
+      final api = DioBackendAccountReadApi(dio, session);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: registration_ui.ServerRegistrationPage(
+            writes: model,
+            reads: ServerAccountReadRepository(api, session),
+            session: session,
+            onLogin: () {},
+            onOpen: (id) => opened = id,
+            onVerify: (_) {
+              verificationRequests++;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'sample');
+      await tester.tap(find.text('원정대 미리보기'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('조회 목록에 저장'));
+      await tester.tap(find.text('조회 목록에 저장'));
+      await tester.pumpAndSettle();
+      expect(model.notice, '인증된 원정대를 등록했습니다.');
+      expect(model.failure, isNull);
+      expect(find.text('원정대 인증'), findsNothing);
+      expect(verificationRequests, 0);
+      await tester.ensureVisible(find.text('캐릭터 보기'));
+      await tester.tap(find.text('캐릭터 보기'));
+      expect(opened, secondCharacterId);
+      expect(
+        requests.where((o) => o.path.contains('game-account-verifications')),
+        isEmpty,
+      );
+      expect(
+        requests.where(
+          (o) => o.path == '/v1/me/game-accounts' && o.method == 'POST',
+        ),
+        hasLength(1),
+      );
+    },
+  );
+
+  test('unverified power requests are rejected without a mutation', () async {
+    final unverified = ServerAccountRegistration.fromJson(
+      registrationJson()..['ownership_status'] = 'unverified',
+    );
+    await model.refreshPower(unverified, powerTargets);
+    expect(model.failure?.code, 'OWNERSHIP_REQUIRED');
+    expect(requests, isEmpty);
+  });
+  test(
+    'power retry rechecks current ownership before resending the old key',
+    () async {
+      handle = (o, h) => h.reject(DioException(requestOptions: o));
+      await model.refreshPower(account, powerTargets);
+      expect(model.hasPending, isTrue);
+      expect(requests, hasLength(1));
+      currentOwned = false;
+      await model.retry();
+      expect(requests, hasLength(1));
+      expect(model.failure?.code, 'OWNERSHIP_REQUIRED');
+      expect(model.powerResults, isEmpty);
+    },
+  );
+
   test(
     'power timeout and replay keep immutable key/body and accept real zero',
     () async {

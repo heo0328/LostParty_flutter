@@ -4,5 +4,5 @@ class CharacterUsageLevelPolicy {
   static const double minimumItemLevel = 1700;
 
   bool isInUsageRange(double? itemLevel) =>
-      itemLevel != null && itemLevel >= minimumItemLevel;
+      itemLevel != null && itemLevel.isFinite && itemLevel >= minimumItemLevel;
 }

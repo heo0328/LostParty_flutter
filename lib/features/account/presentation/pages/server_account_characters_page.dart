@@ -1,7 +1,10 @@
+import '../../../../shared/formatters/display_number_formatter.dart';
 import 'package:flutter/material.dart';
+import '../../../../shared/formatters/local_date_time_formatter.dart';
 
 import '../../domain/account_read_session.dart';
 import '../../domain/server_account_read_repository.dart';
+import '../../domain/services/roster_character_order.dart';
 import '../viewmodels/server_account_read_view_model.dart';
 import '../widgets/server_accounts_panel.dart';
 import '../widgets/server_power_controls.dart';
@@ -104,36 +107,42 @@ class _ServerAccountCharactersPageState
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        if (widget.powers case final powers?)
-          ServerPowerControls(
-            model: powers,
-            onRefresh: () async {
-              await powers.refreshServerRoster(
-                widget.registrationId,
-                viewModel.roster!.characters,
-              );
-              if (mounted) await viewModel.load();
-            },
-          ),
-        Text(serverOwnershipLabel(roster.ownershipStatus)),
-        Text(serverConfigurationLabel(settings.configurationState)),
+        if (roster.ownershipStatus == 'owned')
+          if (widget.powers case final powers?)
+            ServerPowerControls(
+              model: powers,
+              onRefresh: () async {
+                await powers.refreshServerRoster(
+                  widget.registrationId,
+                  viewModel.roster!.characters,
+                );
+                if (mounted) await viewModel.load();
+              },
+            ),
+        if (serverOwnershipLabel(roster.ownershipStatus).isNotEmpty)
+          Text(serverOwnershipLabel(roster.ownershipStatus)),
+        if (serverConfigurationLabel(settings.configurationState).isNotEmpty)
+          Text(serverConfigurationLabel(settings.configurationState)),
         Text('선택한 활동 캐릭터 ${settings.activityCharacterIds.length}명'),
         if (settings.ineligibleCharacterIds.isNotEmpty)
           const Text('확인이 필요한 캐릭터가 있습니다. 기존 선택은 보존되며 현재 사용 자격이 제한됩니다.'),
         if (settings.nextChangeAt != null)
-          Text('대표 변경 가능 시각: ${settings.nextChangeAt!.toLocal()}'),
+          Text(
+            '대표 변경 가능 시각: ${localDateTimeToSeconds(settings.nextChangeAt!)}',
+          ),
         const SizedBox(height: 12),
         if (roster.characters.isEmpty) const Text('조회된 캐릭터가 없습니다.'),
-        for (final character in roster.characters)
+        for (final character in rosterByItemLevel(
+          roster.characters,
+          (c) => c.itemLevel,
+        ))
           ListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(character.characterName),
             subtitle: Text(
               '${character.serverName} · ${character.className}\n'
-              '아이템 레벨 ${character.itemLevel ?? '미확인'} · 전투력 ${character.combatPower ?? '미확인'}'
-              '${character.powerStale ? ' (최근 확인 필요)' : ''}\n'
-              '${character.power.displayState}'
-              '${character.powerFetchedAt == null ? '' : ' · ${character.powerFetchedAt!.toLocal()}'}\n'
+              '아이템 레벨 ${DisplayNumberFormatter.whole(character.itemLevel)}'
+              '${roster.ownershipStatus != 'owned' ? '\n소유 인증 후 상세 확인 가능' : ' · 전투력 ${DisplayNumberFormatter.whole(character.combatPower)}${character.powerStale ? ' (최근 확인 필요)' : ''}\n${character.power.displayState}${character.powerFetchedAt == null ? '' : ' · ${localDateTimeToSeconds(character.powerFetchedAt!)}'}'}\n'
               '${_status(character.rosterStatus)}'
               '${character.eligible ? '' : ' · 현재 활동 조건 미충족'}'
               '${character.requiresRefresh ? ' · 정보 갱신 필요' : ''}',

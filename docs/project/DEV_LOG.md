@@ -1,5 +1,292 @@
 # 개발 이력
 
+## 2026-10-17 — 사용자 실기기 결과·dev 통합 지시
+
+사용자가 상태 문구/정수 표시/시간 초 단위 정상과 새 기기 로그인에서 같은 회원의 서버 원정대 목록·인증 상태 표시를 확인했다. [108번째 Flutter 결과](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6228832537)로 회신했다. 전체 캐릭터/활동 설정·역할 요약의 로컬 복원과 자동 상세 갱신 통과로 확대하지 않았다.
+
+이름 변경·활동 캐릭터 선택 진입 누락, 인증 버튼의 이름 바로 오른쪽 절반 크기/긴 이름 두 줄, 구 기기 공용 자료가 있는 새 기기의 서버→로컬 회원 데이터 연결은 사용자 지시 순서대로 **현재 완료 구간 커밋·dev merge·push 이후 분석**한다. NEXT_WORK에 빠뜨리지 않고 기록했다. 기존 기능이 있다는 문서와 실제 진입 가능은 별개로 판별한다. 후속 코드는 이번 통합에 추가하지 않는다.
+
+최종 전체1,591PASS·lib/test 분석0 이후 코드 변경 없음으로 검증 재사용·diffcheck. 기존 Rules 백업/tools는 해시 대장으로 보존하고 현재 기능 관련 docs/lib/test만 커밋한다. 실제 통합/원격 확인 결과는 후속 Git 보고를 기준으로 한다. main/서버/DB/키/자료/flag·기기조작·Issue종료는 변경하지 않는다.
+
+## 2026-10-17 — 원정대 상태·숫자 표시 간결화
+
+사용자 화면 지시와 등록19/실제 회원 GET·POST/표시 경로를 대조했다. 미인증 로그인 회원의 등록도 서버에 남고 같은 회원 조회로 복원하는 구조다. 재설치/다른 기기 실험을 새로 수행한 것은 아니다. NEXT_WORK에 표시 계층/원본 보존·경계/순서를 기록한 후 구현했다.
+
+- 새로 가능: 조회용 저장→원정대 인증 필요, owned/활동 configured의 완료 안내 숨김, 활동 캐릭터 미선택·재인증/재선택 필요 표시. 기존/회원 원정대 목록·상세/등록에서 동일 적용했다. 기기/회원 카드·관리·상세·인증 후보·등록 미리보기·현재/퇴역·그룹 레벨/전투력에 공통 정수 표시를 적용했다.
+- 보존 확인: formatter만 정수부를 표시하며 API 문자열/수치·DB/schema·서버/로컬 원본과 정렬/판정·활동/대표/인증 정책은 그대로다. null/잘못된 값은 기존 미확인 문구를 사용한다. 시간 초 단위 정책 유지.
+- 검증: wire 문자열/콤마·소수점 버림·미확인/비유한값 경계 추가, 기존 UI 기대값만 정수로 갱신했다. 최종 전체 **1,591PASS**, lib/test 분석0·format/diffcheck. 여러 feature의 공통 표시 영향으로 전체 검증을 1회 실행했다. 로그 `.dart_tool/number-ui-full-final.log`, `number-ui-analysis-final.log`. 초기 편집의 formatter 파일 인코딩 오류를 UTF-8로 수정한 후 최종 검증했다. 폴더 format이 만든 무관한 3개 파일의 변경은 정확한 해당 텍스트만 되돌렸다(HEAD 덮어쓰기는 자동 승인 검토가 거절해 수행하지 않음).
+- 미확인 실기기: 새 화면 안내/정수 표시·다른 기기/재설치. 사용자 기기 설치·조작/서버·DB/자료/flag 변경은 수행하지 않았다.
+- 협업: [107번째 Flutter 표시 결과](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6228564592) 본문/순번 확인. Backend 응답의 정수화 불필요·추가 작업/회신 요청 없음. feature/scoped-account-cache 유지, 미커밋·미push·dev 미반영·기존 변경 보존.
+
+## 2026-10-17 — 서버 재인증 차단·동일회원 재등록 복구 연결
+
+Backend105번째19c2dcc 고정 계약/OpenAPI와 기존 인증·등록·Router를 대조하고 NEXT_WORK에 범위/회귀 보호를 먼저 기록했다. 성공 DTO는 기존 fixture와 동일했다.
+
+- 새로 가능: 409 ALREADY_VERIFIED 확정 거절은 원명령 대기/재전송을 종료하고 이미 인증 안내·현재 목록을 갱신한다. 필요하면 기존 원정대 등록 관리로 진입한다. 재등록201 owned/verified는 인증 복원 안내·새 등록ID/현재GET으로 표시하고 인증 버튼을 제공하지 않는다. unconfigured·활동0·대표null을 정상 상태로 둔다.
+- 보존 확인: 기발급 challenge의 실제 pending(현재GET 실패 포함), 임의 성공/취소·성공 이동 방지, 완료된 원명령 동일key/body ACK 복구→현재GET, 회원 전환/late 차단 및 기존 소유상실/타소유 도전. 기존 성공 후 이전페이지 복귀도 유지한다.
+- 검증: 신규 경계 검증을 포함한 최종 전체 **1,590PASS**, lib/test 분석0·format/diffcheck. 첫 결합 실행의 등록 테스트 import 이름 충돌은 UI alias로 수정하고 해당37PASS 후 전체를 검증했다. 최종 분석의 테스트 중괄호 info1건을 정리해 분석0을 재확인했다. 로그 `.dart_tool/auth-owner-full-final.log`, `auth-owner-analyze-final.log`. 이전 결과와 합산하지 않는다.
+- 미확인 실기기: 새 안내/목록 갱신과 두 서버 응답의 실제 기기 조합. 기존 실제 인증 성공을 초기 인수로 되돌리지 않으며 반복 실인증/자료 삭제·재등록을 요구하지 않았다. 소유 이전/24시간 분쟁·앱종료후 명령 복구는 별도다.
+- 협업: [106번째 Flutter 결과](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6228427796) 게시·본문/실제 순번 확인. 추가 Backend 선행 작업/제품 결정 요청 없음. feature/scoped-account-cache HEADcc6a0b0·기존 변경 보존·미커밋/미push/dev미반영·브랜치 유지. 서버/DB/키/flag·개발자료·기기 설치/조작·배포·Issue종료/Git통합 없음.
+
+## 2026-10-16 — 앱 실행1회 provider 목록 갱신 선행 연결
+
+사용자 연결 지시/82번째Backend3c8e799에 따라고정안내/OpenAPI·기존source/runtime/controller/회원UI를대조하고NEXT_WORK설계후구현했다. StartupRosterRefresh가현재owned등록별기존POSTrefresh({},UUIDv4key)를실행하고source.prepare는ACK후read generation무효화/전체canonical재조회뒤batch를생성한다. 데이터계층의원정대진행을선택적Domain인터페이스로controller/UI에전달해기존fake/실행정책을보존했다.
+
+- 새로가능: 실제API목록갱신→서버반영/재조회→현재활동대상→상세검사. 부분실패/ACK후GET실패는준비1회미소진·전체상세보류, 앱수명고정명령/ACK로동일요청/미완료만재시도하고성공원정대provider재호출0. 원정대목록진행·신규/확인필요수·실패와상세/서버저장대기를구분한다. requires_refresh는suspect표시다.
+- 보존확인: 일반GET의DB조회, 사용자/복수원정대/소속·활동·표시분리, OFF상세제외/목록갱신·빌드보존, 기존1회/준비실패미소진·역할/개인outbox/회원전환fence·관리/왕관/인증. DB/키/자료/flag/환경불변.
+- 검증: 신규7경계로순서/상세재시도POST0·유실동일명령/재로그인·ACK후GET실패·429고정기한/자동재시도0·로그아웃late·복수원정대실패성공분보존·suspect제외/신규UUID자동선택0. 초기직접45PASS/8실패(공유GET횟수+미해제fixture·새revision/presentation·옛조회fencing기대)를원인대조후fixture/기대보완, 회원직접18PASS. 최종전체 **1567PASS**, lib/test분석0·format/diffcheck. 중간분석중괄호info2건수정. logs .dart_tool/startup-roster-full-final.log / startup-roster-analysis-final.log. 고정3c8e799와7027f0b원본paths/schemas동일직접확인.
+- 미확인: 실provider/게임/기기·ON전체사용자인수/새기기. 명령보존은앱수명, 새영속journal아님. Backend장비재인증/타소유pending·퇴역/claim해제/물리정리·24시간분쟁은별도이며이번완료로표시하지않음.
+- 협업: [82번째요청소비결과](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6214686634)게시·본문/순번확인. 추가API/제품결정요청없고Backend독립후속을계속할수있음. feature/scoped-account-cache HEADcc6a0b0·기존변경/사용자Rules/tools보존·미커밋/미push/dev미반영·브랜치유지. 새원격FlutterSHA·기기조작/서버재시작/배포·자료초기화/이관/환경전환·Issue종료·Git통합없음.
+
+## 2026-10-16 — 핵심 데이터 정의 Backend 보충 인계
+
+78번째 Backend의76·77번째 수용을 확인하고 사용자1명/복수 실제 원정대·서버 저장의 반복호출 절감/파티·그룹 기반·활동/표시 분리를 [79번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6213474915)로 보충했다. 게시본문 일치/순번 확인·문서diffcheck. 다음 Backend 목록갱신 구현→Flutter 실행연결 유지, 코드/시험/환경/flag·Git통합 변경 없음.
+
+## 2026-10-16 — 핵심 사용자/원정대/API/서버 저장 개념 영구 기록
+
+사용자가 반드시 기억할 핵심으로 확정한 사용자1명→복수 실제 게임 원정대→API 소속 전체 목록, 서버의 반복 API 호출 절감/저장·향후 파티/그룹/활동 데이터 제공 책임을 정책09 D11에 기록했다. 사용자 귀속/인증·원정대 구성·활동 선택·표시 설정을 분리하고 원정대 인증의 특정 캐릭터 의존 금지·실행1회 실제 목록 갱신을 명시했다. AI_CONTEXT/NEXT_WORK에 원본 확인 지점을 추가했다. 기능 코드·API·DB/자료·flag·시험 결과 변경 없음, 문서diffcheck/내용 검토. 기존 미커밋/미push·dev미반영·feature/scoped-account-cache 유지.
+
+## 2026-10-16 — 원정대 인증 유지/API 목록 기준 확정·자동 목록 갱신 누락 인계
+
+사용자는 인증대상C의 소멸과 B원정대 인증을 분리하고 ‘원정대 구성은 로스트아크 API 목록, 그외 확인 없음’으로 답변했다. [75번째 정정](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6212808011)에 이어 [76번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6212824900)로 본인 갱신 정책 질문 대기를 해소했다. 관찰되지 않은 동명 재생성의 API 한계를 설명하되 외부 영구세대 근거를 일상 갱신의 필수 조건으로 추가하지 않는다. 내부 소유/충돌 검사·새이름 신규ID/이상 즉시차단·타회원/종료ID 권한 승계 금지는 유지한다.
+
+추가 사용자 지시로 앱 실행1회 실제 source/runtime 경로를 확인했다. 자동 prepare의loadMemberRoster는 서버 저장 metadata/V2 GET이며 이후Armory상세만 조회하고 provider siblings 갱신 명령이 없음을 확인했다. [77번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6212848615)로 Backend 본인refresh→Flutter 목록갱신 선행/재조회/활성대상확정/상세검사 순서를 인계했다. 나이스단OFF는 상세 제외/목록은갱신, 실패부분응답 자료보존·인증유지/미완료를 명시했다. 아직 선행 연결 구현 완료 아님.
+
+새 앱 흐름 없음(정책/조사/문서/회신), 기존 코드/DB/자료/키·환경/flag 보존. 이전1560PASS/분석0은 기존결과로 유지하고 새 목록선행 검증으로 확대하지 않음·시험 반복 없음. 문서diffcheck·댓글본문/순번 확인, 실기기/게임·서버적용/배포·Issue종료/Git통합 없음. feature/scoped-account-cache·기존 미커밋/미push/dev미반영 유지.
+
+## 2026-10-16 — 73번째 본인 갱신/타소유 pending 계약 대조
+
+사용자 진행 지시로 정책26/연결29와 실제 인증 client·VM·화면을 대조했다. 새이름 신규UUID·누락 suspect·기존대표/활동 자동쓰기 없음은 기존 방향과 일치하나 같은 서버/이름의 관찰 사이 삭제/재생성 미식별 수용은 명시 근거를 찾지 못해 사용자에게 범위 한정 허용(추천)/근거 확보 전 보류를 질문했다. 답변 전 승인으로 회신하지 않았다. 타소유 도전 발급/장비 확인 후 pending·ACCOUNT_BINDING_EVIDENCE_PENDING은 현재 parser/상태·취소·만료·verified만 이동과 호환돼 독립 Backend 진행 가능으로 [74번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6212641213)에 회신했다. 현재 전용 문구 부재는 일반 보류 처리와 구분했다.
+
+13d9f68 게시 OpenAPI를7027f0b와 직접 비교해 paths/schemas 동일. 새 앱 흐름 없음/기존 코드·DB·자료/flag/환경 보존,1560PASS/분석0은 기존 결과로 재사용·시험 반복 없음. 문서diffcheck·게시본문/순번 확인. 미확인: 사용자 선택/본인 연결 허용·실게임/기기·타소유 서버 구현. feature/scoped-account-cache·기존 미커밋/미push/dev 미반영 유지, 배포/Issue종료/Git통합 없음.
+
+## 2026-10-16 — Issue8 기존 장비 인증 구현 자료 회신
+
+66번째 Backend6210508071 요청/사용자 지시로 실제 과거8f4209d Gateway와 현재 preview/UI/제품 장비 계약, Task-044/086·2026-09-13의 필요한 이력만 대조했다. 최신 siblings/전체Armory·6부위/랜덤1~3해제·Type/Name/Grade·10분·재확인·프로세스 수명, 과거 클라이언트 판정/소유 반영과 현재 서버 최종 판정의 차이를 근거 링크와 함께 회신했다. 조회 실패·parser 느슨함/confirm 이후 기한 미검사·당시 서버 감사 challenge 미구현을 새 서버에서 그대로 복제할 기준과 구분했다. 과거 Android 인증 성공/안내 경험은 확인했지만 raw 응답/반영 지연과 현재 live 통과는 미확인이다.
+
+다른 회원 인증 원정대의 도전 이력을 누락하지 않는 사용자 기준을 인계했다. 과거 자동 장비 인증의 소유 이전과 운영자 수동 인증의24시간 방어/분쟁이 별개임을 설명했다. Firebase 전용 writer·자료 승계/이름 기반 ID 재사용은 재도입하지 않고 현재 서버 challenge에 요청 회원·대상서버/이름·원정대·시도/만료/결과를 기록하고 confirm 재조회/최종 검증하는 책임을 전달했다. 인계 https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6210605354 , 다음 Backend 재사용/보완 설계·구현. 댓글 순번/작성 측/단계/다음 담당을 구분한다.
+
+새 앱 흐름 없음(조사/문서/회신), 기존 코드/DB·자료/키/flag/환경·Router 보존. 기존1560PASS/분석0 재사용·Flutter 시험 반복 없음, 문서diffcheck/소스·Git/댓글 본문 대조. 실제 게임/기기 관찰·서버 적용/배포·Issue 종료·Git통합 없음. feature/scoped-account-cache HEAD/origin-dev cc6a0b0·기존 미커밋/미push·dev 미반영·브랜치 유지.
+
+## 2026-10-16 — 기존 캐릭터 관리/초기 대표·1700·인증 후 전환 연결
+
+Backend6209623492/47a2ce4 인계와 사용자 진행 지시로 기존 CharacterManagementPage/ViewModel에 scoped gateway를 연결했다. 화면 안 정수 ID는 UUID의 임시 투영이고 로컬 계정 DB/소유 매핑에는 쓰지 않는다. 현재 소유·전체 canonical·revision 재조회와 기존 활동 전체집합+대표 원자 PUT, shared runtime 잠금/CAS를 사용한다. 대표 없을 때만 현재 선택집합 안 최고 유효 후보, 빈 선택이면 전체 최고 유효1명만 draft에 제시하고 명시 저장한다. 기존 대표/부적격 선택은 자동 교체·삭제하지 않는다. 공통1700 정책에 finite 검사를 추가하고 lifecycle/claim 검사와 함께 적용했다.
+
+새로 가능: 회원 목록/상태→기존 관리 UI→현재 서버의 활동/대표 저장, P2 기존 영속 outbox로 순서/count 저장(선호역할/visible 보존), 인증 대상 ID 전달→성공 결과 ID의 현재 소유/전체 목록 확인→해당 본·부원정대 관리 화면 전환. 왕관/취소좌·변경우 재사용. 응답 유실/ACK 후 GET·개인설정·최종 재조회 실패는 같은 앱 수명 key/body/저장 흐름으로 확인하며 늦은 회원 결과와 과거 ACK 후 개인설정 덮어쓰기를 막는다. 예전 인증 성공으로 새 페이지를 이동시키지 않고 전환 실패 재확인을 제공한다.
+
+보존 확인: R1 기본 조회/상세 비노출, 현재 owned 수동 상세/전투력·역할, 자동 회원별1회/OFF 제외·기존 빌드/표시·키·대표 왕관·기존 관리 로컬 흐름. DB/schema/키/자료/주소/기본flag는 유지했다. 불확실 전체설정은 앱 수명 메모리이며 새 journal/복구 UI·E1 원 PUT 종결 보장 신설은 아님. 기존 선택 UUID가 현재 목록에 없으면 임의 삭제하지 않고 오류로 차단한다.
+
+검증: 신규18개 경계. 직접 영향66PASS→최초 전체1558PASS, 이후 최종 재조회 실패·과거 ACK 경계2개와 보존 보완 후 직접14PASS→최종 전체1560PASS, lib/test 분석0·format/diffcheck. 중간 분석의pushReplacement void await1오류/중괄호info·미사용import를 수정했다. 로그 .dart_tool/character-management-full-tests-final.log / character-management-analysis-final.log.47a2ce4 게시 원본과7027f0b fixture paths/schemas 동일 직접 확인.
+
+미확인 실기기: 실제 소유/provider·새 기기/재설치/ON 빌드 전체 UX. 기능은 회원/canonical ON 경로이며 기본flag OFF 실행에 노출된 것으로 보고하지 않는다. 실제 소유/연속성·퇴역 보류 유지, 초기 환경/로그인 재인수 요청 없음. 인계 https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6209931176 . 추가 Backend API/사용자 결정 요청 없음.
+
+feature/scoped-account-cache HEADcc6a0b0/미커밋·미push·dev 미반영·브랜치 유지. 기존 변경/사용자 Rules/tools 보존, 새 원격 Flutter SHA 없음. DB/자료 초기화·환경 재구축·배포/서버 조작·flag ON·기기 설치·Issue 종료·Git 통합 없음.
+
+## 2026-10-16 — Issue8 병렬 회신 최종 대조·순서 통합
+
+최신 사용자 UX6209360031와 Backend6209379848까지 대조했다. 서버59b8c23의 미인증/소유상실 power·replay 차단/기본 응답 비노출256PASS·push·기존8000/DB0009·자료 유지 반영 보고를 확인했다. 고정 OpenAPI와7027f0b fixture를 직접 구조 비교해 paths/schemas 동일·combat_power 정책 주석3개 추가만 확인했다. 과거 서버 power/cache 수정 대기는 해소됐지만 live 소유 증거/원정대 연속성·퇴역 확정 미완료는 별도로 유지한다.
+
+NEXT_WORK의 과거 복구 시스템 우선/별도E2 화면 계획을 제거하고 기존 관리 UI→현재 회원/canonical 원자 설정 저장→초기 최고레벨1회/공통1700 양측 경계→인증 후 해당 화면 전환으로 순서를 통합했다. 대표 존재 시 유지·확정 실패 기존값, 응답 유실 내부 일관성만 최소 보완. 서버 초기 선정/활동 저장1700 직접 강제 미구현을 전투력 수집 필터와 분리했다. 새8001/빈 환경/기초 재인수는 철회 상태로 유지한다. 공식 회신: https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6209491349 .
+
+새 앱 흐름 없음(문서/회신만), 기존 코드/DB/키·기본flag/환경 보존. R1 전체1542PASS/분석0과 Backend256PASS는 기존 결과로 구분해 인용, Flutter 시험 반복 없음. 이번 서버 실호출/실provider·실기기 미확인. 검증은 게시 원본/댓글 대조·문서 내용 검토·git diff --check. feature/scoped-account-cache/기존 변경 보존·미커밋·미push·dev 미반영·브랜치 유지. 자료 초기화/배포/Issue 종료/Git 통합 없음.
+
+## 2026-10-16 — 기존 캐릭터 관리 UI 재사용·대표 초기1회 UX 정정
+
+사용자가 별도 대표 복구 UX/평행 캐릭터 선택 화면 제안을 정정했다. 실제 CharacterManagementPage/ViewModel의 ‘앱에서 사용할 캐릭터’·대표·표시순서/개수 및 기존 활동 Repository 연결점을 확인했다. 공통 CharacterUsageLevelPolicy.minimumItemLevel=1700도 확인했다. 기존 대표 유지, 대표가 없을 때만 유효 사용 대상 중 최고 아이템레벨 초기1회 선정, 변경 성공 전 기존 표시/확정 실패 기존 유지 기준을09/27/NEXT_WORK/AI_CONTEXT에 기록했다. 별도 새 복구 화면/사용자 단계 선제 추가를 철회하되 응답 유실을 원 PUT 실패로 오인하지 않는 서버 일관성은 유지한다. 초기 대표 저장은 활동 집합 내 대표 제약과 기존 저장 흐름을 대조하며 전체 활동 자동추가/메인 전환을 함께 만들지 않는다.
+
+Backend https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6209360031 정책 인계·원격 본문 확인. 이번은 기존 코드 조사·설계 축소 정정으로 신규 앱 흐름 없음/정상 코드 변경 없음. R1 전체1542PASS/분석0 재사용, 문서 diffcheck만 수행. 실서버·실기기·연결 구현 미확인. feature/scoped-account-cache/미커밋·미push·dev미반영·브랜치 유지, 기존 자료·사용자 Rules/tools 보존. DB/키/기기/환경/flag·배포/Issue 상태 변경 없음.
+
+
+## 2026-10-16 — R1 이전 Backend 회신 항목별 확인 답변
+
+사용자 요청으로 완료보고 이전 Backend6208988839를 재확인했다. 해당 회신은 R1에 이미 반영한 근거이며 별도 항목별 답변을 https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6209178794 에 게시·본문 일치 확인했다. 조회용 저장 유지, 미인증 power/replay 서버 권한·과거 cache 응답 투영 미완료, 최소 profile DTO와 전체Armory/인증 내부 장비조회 구분, owned/선택 전 분리와 파티/그룹 미래 서버 요구를 명시했다. Flutter 투영값은 현재 소비값이며 Backend 최종 계약 강제가 아님을 설명하고 실제 값/오류/필요 계약 차이·구현SHA 인계를 요청했다.
+
+새 구현 흐름 없음/기존 기능 변경 없음. R1 전체1542PASS·분석0 재사용, 코드/테스트 변경 없어 반복 실행하지 않음. 미확인 실서버/기기 및 E1/E2/인증 전환 경계 유지. 문서·회신만 수정·diffcheck, feature/scoped-account-cache/기존 미커밋 변경 보존·미push·dev미반영·브랜치 유지. 서버/자료/flag·배포/Issue 상태 변경 없음.
+
+
+## 2026-10-16 — D10 R1 기본 조회·상세 접근 분리 구현
+
+사용자 진행 지시로 R1만 구현했다. Backend6208988839의 미인증 전투력 갱신/replay·과거 cache 노출 변경 필요 회신을 확인했고 기존8000/DB/자료로 개발을 계속했다.
+
+- 새로 가능: 실제 BackendApp 기기 공용 DI의 basicOnly Repository/화면. siblings 검색 후 profile/전체Armory 추가 호출 생략, 기본 필드만 신규 저장. 실제 전투레벨은 수집값 대신 필수컬럼0, 기술 ID/서버/원정대 관계는 유지. 기기 공용 cache의 전투력/역할/소유 매핑은 반환값에서 제외하고 snapshot 조회는 빈 결과, profile/draft/빌드 저장·갱신은 거절. 과거 DB 행/키 삭제·새 DB 생성 없음.
+- 실제 UI/Router: 기기 기본 카드에 이름/직업/아이템레벨만 표시, 인증 안내. legacy 상세/관리 deep link는 소유 안내로 차단, 일반 상세/관리 구현 자체는 삭제하지 않음. 미인증 서버 저장 문구를 조회용 저장으로 구분. 인증 성공→선택 연결은 E2 후속이며 이번 완료 주장 없음.
+- V1/V2 응답 엄격 검증 뒤 미인증/소유상실 power/시각/상태 안전 투영. metadata 대표 요약도 소유/canonical/revision 확인 없으면power제외. 원본 응답/DB 비파괴. 소유 canonical 회원 상세는 현재 소유·관찰 상태를 확인하고 과거 cache/로딩·실패 상태에서 상세 노출하지 않음.
+- 수동 전투력 최초 요청/재시도/결과 반영 전 최신 소유 재검사. 소유 없는 대상 POST0·재시도0, 현재 권한 없어도 local power fallback 하는 이전 표시 제거. 서버의 최종 권한·replay 검증은 별도 필요. 실제 소유 서버 구현 완료로 확대하지 않음.
+- 보존 확인: 정상 owned V1 전투력·canonical 회원 상세/역할 저장·대표 E1·자동1회/나이스단OFF·표시/키·기본 검색·소유 인증 내부 장비 조회와 현재 환경. 기존 key/DB 경로/기본feature flag 변경 없음. 미인증이던 정상 기능은 이번 D10 승인 범위에서 제한.
+- 검증: 최초 전체1538PASS/4실패(과거 preview power 보존 기대2/소유 metadata fixture·첫 갱신 진입 경계). 제한 대상 기대값과 fixture/진입 수정, 소유 값 기대는 보존. 직접 영향149PASS/분석0 뒤 공용 DTO/Router 최종 전체 **1542PASS**, lib/test 분석 **0**, format/diffcheck 통과. 신규10개 경계 검증. 로그 .dart_tool/basic-access-r1-tests-final.log 및 basic-access-r1-analysis-final.log.
+- 미확인 실기기: 실제 소유/canonical 성공·서버 D10 권한/응답 반영과 실기기 화면/로그아웃/재실행·전송 경계. 기존 로그인/키 초기 재인수·기기 설치·게임 관찰 요청 없음. 기능 섹션 연결 후 사용자 테스트로 묶는다.
+- 협업: https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6209153163 회신·본문 일치 확인. Backend 미인증 power/cache/replay 및 live 소유 증거 후속 유지. 다음은 E1 미확정 명령 복구 최소 보완, E2 및 인증 전환 연결이며 R1 완료로 대체하지 않음.
+- Git: feature/scoped-account-cache HEADcc6a0b0, 이전 변경/사용자 Rules/tools 보존. R1 포함 미커밋·미push·dev미반영·브랜치 유지. DB/자료삭제·새환경·배포·flag ON·Issue종료·Git통합 없음.
+
+
+## 2026-10-16 — D10 조회용 저장·인증 후 상세/활동 정책 채택과 구현 준비
+
+사용자가 ‘미인증 조회용 서버 등록 유지, 인증 후 상세/활동 허용’ 안을 채택하고 구현 완료 뒤 테스트로 재확인하기로 했다. 현재 환경·개발자료 유지 기준으로 필수 문서/Git·관련 코드/최신Issue를 대조해 설계·준비만 진행했다.
+
+- 확정 제품 정책은09 D10, 사용자 화면 흐름은 핵심 흐름 지도에 반영. guest 이름/직업/아이템레벨 로컬 기본 목록, 로그인 미인증 조회용 저장/복원·인증필요 표시, 인증 후 본·부원정대 사용 subset+대표 명시 선택과 상세·조건부 활동. 주 ‘인증하고 사용하기’/보조 ‘조회 목록에 저장’. 인증만으로 자동 메인/활동/대표 선택 없음. 자동 상세1회·NiceGroup OFF 예외·visible/count 분리 유지.
+- 실제 차이: MyAccountViewModel.fetchCharacters의 siblings 후 fetchCharacterProfile, remote data source의 전체Armory 호출 및 AccountRepositoryImpl의 profile 로컬 저장 확인. UI만 숨기지 않고 Router·서비스·쓰기/캐시/기본flag OFF·늦은 응답 경계를 변경할 범위를 R1에 기록. 기존 정상 owned 분석/저장 기능·원래 DB/키·현재 데이터는 유지한다.
+- 이후 구간: E1 미확정 명령 종결/재진입 최소 보완, E2 atomic 활동 선택과 인증 대상 전달·성공 registration_id→선택 화면 연결. 기능 섹션 구현/자동 경계 검증 후 사용자 실기기 체크리스트를 묶으며 초기 로그인/환경 재인수로 되돌리지 않음.
+- Backend에 https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6208967265 로 사용자 채택·제품 경계·담당과 미인증 수동 전투력/상세 API·응답 권한 차이 대조를 요청했다. 게시 본문 일치 확인. 내부 인증용 장비 조회는 유지하며 새 API/DTO/DB 구조·lease 값을 임의 확정하지 않음. 서버 회신 대기는 해당 차이만 추적하며 독립 Flutter 준비/개발을 중단하는 조건이 아니다.
+- 새로 가능해진 앱 흐름: 없음(정책/계획 준비). 기존 흐름 코드 변경 없음. 미확인: 새 정책 실제 호출/저장 제한·인증→E2·실소유/실기기 전체. 검증은 문서/관련 코드 대조·git diff --check; 기능 코드를 수정하지 않아 Flutter 시험/분석 반복 없음.
+- feature/scoped-account-cache HEADcc6a0b0/origin-dev조회cc6a0b0, 기존 미커밋82항목/사용자 Rules/tools 보존. 정책/문서 포함 미커밋·미push·dev미반영·브랜치 유지. DB/키 삭제·이전/별도환경·배포/서버조작·flag ON·기기 설치·Issue 종료·Git 통합 없음.
+
+
+## 2026-10-16 — 등록/인증/사용 캐릭터 재검토 회신
+
+Backend6208702210의5개 연결 질문과6208670274의E1 복구 질문을 실제 Router/화면/ViewModel/client·기존 시험으로 대조해 https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6208744179 에 답변했다.
+
+- 등록·소유 상태/설정 상태 별도 표시·등록/직접 입력 인증4경로·지정 장비/남은 시간/취소/명시 재시도·증거 보류를 인증 완료로 표시하지 않는 흐름은 연결돼 있다.
+- 누락: 등록별 인증 진입 registration_id 사전선택 전달, verified 결과 registration_id→해당 소유 본·부원정대 canonical/활동 편집 진입, E2 활동 전체 집합+대표 atomic 편집/저장과 draft/충돌 복구. 현재 일반 재조회만 하는 성공 callback을 위 전환 완료로 해석하지 않음.
+- E1: 동일 옛 GET은 pending 유지. 하지만 GET revision 변화로 해제, 광범위4xx/409 명확 실패 분류, 세션/재실행 미보존은 보완 필요. 앞선 ‘재실행만 부족’ 사용자 요약도 불충분해 실제 조건 전체를 회신했다. 서버 CAS만으로 안전하다고 확정하지 않음.
+- 기존 인증 전체1282/후속1524·E1 전체1531통과/fixture1실패→직접영향18PASS/분석0 이력을 재사용. 원 PUT 종결·재진입 안전성/E2 편집/인증 성공→E2 전환·실서버/실기기 검증 완료로 확대하지 않음. 이번 코드/테스트 변경·반복 실행 없음. 새 흐름 구현 없음, 기존 정상 흐름 변경 없음.
+- NEXT_WORK에 최소 보완/독립 E2/전환 연결을 구분 기록. 사용자 제품 정책 추가 결정·새 API 요구·새 환경·기초 재인수 요청 없음. 실제 소유 증거 Backend 후속과 실게임 관찰 나중 기준 유지.
+- feature/scoped-account-cache HEADcc6a0b0, 기존 변경 보존/미커밋·미push·dev미반영·브랜치 유지. DB/자료/주소/flag·기기·서버·배포/Issue 상태 변경 없음.
+
+
+## 2026-10-16 — E1 회원 메인 원정대 대표 왕관 연결
+
+현재 환경·개발자료 유지 지시와 Backend6207867594를 확인하고 ACCOUNT-03 중 대표 전용 빠른 선택만 연결했다. 활동 전체 편집은 다음 E2이며 새 환경·기초 재인수로 돌아가지 않는다.
+
+- 새로 가능: MemberAccountPage의 메인 원정대 표시 목록에 채움/윤곽18px 왕관(48px hit target), 취소좌/변경우 확인, 대상 진행 표시, 대표 전용 GET/PUT·현재 상태 확인/동일 명령 재시도·Retry-After 초 표시. 엄격 P2 DTO/UUID·4종 revision·멱등 key/body. 서버 확인 후 회원 목록과 대표 우선 정렬 반영.
+- 권한/수명: 본인 메인 원정대·활동/confirmed/active/usable·표시 설정 확인/실제 표시 후보만 변경. cached/GET 실패/숨김/현재 대표 재클릭 차단. 알럿 뒤 재검증·직전 최신 roster 확인, 연타/중복 알럿 차단. 회원/환경/세션/관찰 세대가 바뀐 늦은 결과 차단. 불명확 결과는 앱 수명 동안 명령 고정, 재실행은 GET+서버 CAS로 확인. 최근 GET revision 진전이면 오래된 미완료 명령 해소.
+- 보존 확인: 기존 Google 로그인/키·회원 표시/선호/count/역할·자동1회와 NiceGroup OFF 제외·숨김 캐릭터 검사 정책·상세 진입·원래 DB/guest 키. 대표 전용 쓰기는 활동 전체·표시/빌드·파티 참가를 변경하지 않는다. API 주소·DB/schema·기본 flag OFF·서버/환경 변경 없음.
+- 검증: 최초 전체 flutter test 실행1531PASS/신규 fixture1실패. 오류는 모의 JSON의 계약 차단 코드/Map 타입으로 확인하고 fixture 수정. 최종 직접 영향 member_account_integration_test **18/18PASS(신규8)**, lib/test 정적 분석0, 포맷·diffcheck. 마지막 표시 후보 제한 보완 후 같은18개/분석 재검증. 넓은 코드 경계 변경이 없어 전체 재실행 대신 직접 영향 묶음으로 해소했다.
+- 미확인 실기기: 실제 소유/canonical·실서버 변경/다기기 충돌·시각/터치/알럿·응답 유실 UI는 사용자가 해당 조건 준비 후 확인. fixture 성공을 실사용 통과로 판정하지 않음. 이전 기본 기능 전체 재인수 요청 없음.
+- 인계: https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6208245362 결과 회신·원격 본문 일치 확인. 추가 Backend 계약/정책 변경·반복 검토 요청 없음. 다음 E2는 NEXT_WORK.
+- Git: feature/scoped-account-cache HEAD cc6a0b0 유지. 이전 변경·사용자 Rules/tools 보존. E1 포함 미커밋·미push·dev미반영, 브랜치 유지. 배포/기기 조작/데이터 삭제/Issue 종료 없음.
+
+
+## 2026-10-16 — 현재 개발환경 유지 정정·저장 연결 복구
+
+자료 미승계를 별도 빈 개발환경/저장공간·기초 재인수 절차로 확대한 Flutter 판단을 철회했다. 현재 환경·개발자료로 계속 개발하고 베타 직전에 DB 내용만 비운다. 기능·환경 재구축을 요구하지 않는다.
+
+- 바로잡은 흐름: BackendApp의 AccountDatabase/SecureApiTokenStore 원래 연결 복구. 잘못 추가한 BackendLocalData/helper·전용 테스트4개 제거. 실제 DB/키 내용 복사·삭제 없음.
+- 보존 확인: 회원 scoped 저장/키·자동1회/OFF 제외·C 화면/로컬 기능·권한 경계 및 Firebase 전용 안내 정리 유지. API 주소·flag·서버 설정 변경 없음.
+- 검증: 전체 flutter test 1524PASS, flutter analyze lib test 문제0, Dart format 변경0, git diff --check 통과. 과거1528은 철회한 전용4개를 포함한 당시 이력.
+- 미확인 실기기: 설치/조작·실서버 소유 증명·전체 자동갱신 인수를 실행한 결과가 아니다. 기존 완료 흐름의 기초 재인수는 요구하지 않는다.
+- 협업: https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6207542428 정정/완료 결과 반영·원격 본문 일치 확인. 과거 통합6207398915에도 철회 표시. Backend에 현재 환경 개발 계속 전달. 별도 환경 삭제 요청/실행 없음.
+- Git: feature/scoped-account-cache, 미커밋·미push·dev미반영. 이전 기능/문서·사용자 Rules/tools 보존, 브랜치 유지.
+
+
+## 2026-10-16 통합 정리 검토 수신·Backend 구현/HEAD 표기 보완
+
+- 사용자 검토 회신 확인 요청으로 [Backend 검토6207472610](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6207472610)을 확인했다. 작업 순서/정책 이견·추가 질문/P2 변경 요청은 없고 기본 준비와 실제 증거 후속의 독립성/전체 인수 보류를 수용했다.
+- Backend 구현/구성 기준4bdaea6976d209c85e0388e7a2b56ecab8a4b9a2는 불변, 최신 원격HEAD ee0023a2744ab63fc3feeccf6e5f98c608767d6c를 직접 ref/compare로 확인했다. 후속1커밋은 NEXT_WORK/AI_CONTEXT/DEV_LOG3문서만 변경이다. 기존 통합 댓글6207398915의 표기를 같은 댓글에서 보완·본문 일치 확인하고 중복 수신 댓글을 게시하지 않았다.
+- NEXT_WORK·AI_CONTEXT에 수신·표기와 다음 순서를 반영했다. 남은 기본 준비는 대상 플랫폼/기기·호스트 접근 방식 결정→해당 /health 도달→실제 Base URL 확정이다. 호스트 loopback8001을 실기기 LAN 공개로 취급하지 않는다. 실제 관찰은 사용자 결정대로 나중이며 D 원격SHA/기기 결과는 여전히 미확인이다.
+- 코드·실서버/포트·앱설정/설치·flag·DB/자료·배포·Issue 상태 변경 없음. 문서 diffcheck·내용 검토, Flutter 시험 반복 없음. 기존 D1528PASS/Backend65PASS 자동 근거 및 실인수 미확인 보존. feature/scoped-account-cache 유지·미커밋/미push/dev미반영이다.
+
+## 2026-10-16 Issue8 시간순·최신 실행기준 통합 게시
+
+- 사용자 `수정/토의/각자 결과 순서가 섞여 있으니 최신 답글로 순차 정리` 요청. 본문·전체41댓글의 게시 시각/구간과 최신6207306535를 대조했다. KST로 대표/L1/V2/S1~S3→P1/P2→A1/A2/B/C→정책 정정/제품 수용→D→새 환경/도구 순서의 주요 경과를 정리했다. 과거 계약 검토·구현/준비·실인수 상태를 혼합하지 않았다.
+- Backend6207306535 수신: SHA4bdaea6976d209c85e0388e7a2b56ecab8a4b9a2의 새 환경 안내/관찰 도구 안내/compose.fresh 원문을 읽어 보고와 대조했다. 별도 fresh 프로젝트/volume/network·호스트8001/DB0009·health/P2 7027f0b OpenAPI 일치·준비 당시 주요테이블0건은 Backend 보고이며 Flutter 모바일 직접 검증으로 주장하지 않았다. 기존8000/DB0006 유지다.
+- Backend 최신65PASS는 도구/격리 시험이며 사용자 JWT/게임 관찰·실소유 서버 구현은 미완료다. 사용자 결정은 도구 준비 후 실제 검증은 나중이다. ready_for_review/새DB/flag/fixture가 proof/canonical·전체 인수를 의미하지 않는다.
+- [Issue8 최신 통합 정리6207398915](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6207398915) 게시·원격 본문 일치 확인. 현재 정책/완료 결과·원본/실행환경/Git·다음 기본 인수 준비→사용자 기본 결과 / 독립 증거 관찰·서버 구현 / 조건 충족 후 전체 인수를 통합했다. D 미실행/새 환경 미구성/제품 회신 대기/보존 화면 필수 등은 이전 상태라고 명시했다. 실제 변경 결과만 후속 회신하고 정책 검토를 반복 요구하지 않는다.
+- NEXT_WORK·AI_CONTEXT·공유31에 최신 기준 링크와 새 환경 수신/실소유 보류를 반영했다. 새로 가능: 흩어진 댓글을 실행 순서와 담당·완료 조건으로 한 번에 파악할 수 있다. 기존 제품 합의/코드·검증 근거·구 자료 미승계/사용자 자료는 보존했다.
+- 순수 문서/협업 정리라 Flutter 시험은 반복하지 않았다. 기존 D1528PASS/lib-test분석0 로그 재확인·git diff --check·문서/링크/본문 검토. 실기기/실provider·소유 서버 구현/전체 인수는 미확인. 이번에는 코드·실DB/기기/자료·서버 구성/재시작·배포·기능ON·Git/Issue 상태 변경 없음. feature/scoped-account-cache/cc6a0b0 유지·미커밋/미push/dev미반영이다.
+
+## 2026-10-16 Flutter D 구 자료 승계 진입 분리·신규 로컬 저장 연결
+
+- 사용자 `진행 가능한 작업을 진행합니다` 승인으로 필수 문서/실제 main→BackendApp/Router·DB/키/모집 소비·정책09/공유31과 최신 Backend6207049997을 대조하고 NEXT_WORK에 실제 D 설계/포함·제외·순서·회귀 게이트를 먼저 기록했다. feature/scoped-account-cache/HEAD·최신 origin/dev cc6a0b0 및 이전 변경/사용자 Rules·tools를 보존했다.
+- 조사: 활성 lib/pubspec/Android 빌드에 Firebase SDK/실행 호출은 이미 없었다. 남은 구 서비스 자동 채택 지점은 BackendApp의 기본 lost_party DB/기존 guest key, 회원 화면의 device-characters 진입과 전용 복구 안내였다. 로컬 화면/DB·정수ID/분석 mapper·모집의 로컬 소비는 제품 기능에 필요하므로 유지했다.
+- 새로 가능해진 흐름: BackendLocalData가 Backend origin+API path를 안정적SHA256으로 식별해 환경별 새 DB/guest secure key를 주입한다. 같은 환경 재실행 유지·다른 서버/경로/프로토콜/포트 격리. 구 lost_party DB·lost_ark_api_jwt를 읽기/검색/복사/import/삭제하지 않는다. BackendApp·OFF/guest 조회·관리/상세/분석·모집은 새 executor/store를 실제 소비한다. 회원ON 주목록은 기존 scoped 경로다.
+- device-characters route·onLegacy/기존 기기자료 버튼을 제거했다. 활동/운영자 readiness의 Firebase Console/Rules·기존 저장소 전용 복구 안내를 제품/서버 상태 표현으로 바꿨으며 실제 권한 허용·쓰기 판정은 변경하지 않았다. 순수 로컬 DB 기본 생성자/기존 standalone 테스트는 남지만 main 실행은 새 factory를 사용한다.
+- 보존 확인: 제품 조회/관리·상세/분석/비로그인 허용·모집 UI, 로컬 schema13·정수ID·순수 모델, 신규 Backend Google/session·회원키·설정·V1·S1~S3/A1/A2/B/C·역할/선호/표시·영속전송·자동1회/OFF·권한/수명/멱등. P2 7027f0b/API·scoped schema3/기기 schema13 변경과 새 권한/API 요청은 없다. 구 데이터 호환/승계 자체를 제품 완료 조건으로 유지하지 않는다.
+- 검증: 최종 전체 **1528PASS(기존1524+신규4)**(52초), lib/test 분석0. 로그 `.dart_tool/d-full-test.log`, `d-analysis.log`. 관련 Dart format·git diff --check·diff/신규파일/UTF-8·문서 링크 검토. 신규 시험은 실제 임시 SQLite의 구/새 파일 분리·새 로컬 생성/재실행·환경 분리와 secure store의 구 키 미채택·새 키 유지/다른 환경 삭제 격리·잘못된 namespace 거절이다. 서로 다른 임시 파일/독립 executor를 쓰는 동시DB 시험에서 Drift 중복 인스턴스 경고는 출력됐으나 통과했다. 초기 format은 파일 반영 후 SDK telemetry 경로 권한 오류를 출력했고 최종 허용된 SDK test/analyze·포맷 상태/diff를 확인했다. 사용자 tools의 기존 전체분석 info3건은 변경하지 않았다.
+- [Backend6207154064](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6207154064) 착수/우선순위도 수신했다. 실제 소유 증거를 최우선으로 하고 새 DB/API 준비와 Flutter D를 독립 진행한다는 인계이며 인증/환경 준비 완료로 표시하지 않았다. [Flutter D 결과6207225790](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6207225790) 게시·원격 본문 일치 확인, 추가 계약 수정/반복시험 요청 없음.
+- 미확인 실기기: 실제 모바일 새 DB/secure 경로·guest 신규 키/조회·새 회원 기본 흐름·실provider·재설치. canonical/실소유/roster·서버 활동 대상이 필요한 전체 저장·자동갱신·복원은 Backend 증거 후속 준비 전 보류다. 빈0건/fixture/이름/bool/DB seed로 우회하지 않는다. 다음은 새 환경 API/구현 revision 인계 확인→기본 인수, 증거/활동 대상 준비 후 전체 인수다.
+- 비실행/Git: 기본 flag OFF 유지. 구 파일/키·DB/볼륨/Firebase/기기자료 삭제·베타 초기화·API 재시작/서버 구성/배포·기기 설치/조작·proof/퇴역/claim해제 보류 해제·파티/운영/왕관/활동 신규 구현·Issue종료·Git통합 없음. 이전 인증/S1~S3/A1/A2/B/C/문서·사용자 Rules/tools 보존. feature/scoped-account-cache 유지, D 포함 미커밋·미push·dev미반영·새 인계SHA없음이다.
+
+## 2026-10-16 Backend 제품/UX 검토 수용 확인
+
+- 사용자 `회신을 확인합니다`에 따라 [Backend6207049997](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6207049997)을 확인했다. 기능/guest UX 유지·Firebase 전용/구 자료 승계 의존 제거 방향과 P2 7027f0b 일치 수용, 추가 제품 질문/계약 수정 불필요, 앞선 기본/전체 인수 구분 답변 대기 해소를 명시했다.
+- NEXT_WORK·AI_CONTEXT·공유31에 수용을 기록했다. D 방향 검토 정보는 충분하고 사용자 착수 지시에 따라 독립 구현 가능하다. live proof/전체 실인수 보류와 Backend 새 DB/API 준비는 별도로 유지한다. 같은 정책 회신은 반복하지 않고 실제 D 결과/새 계약 차이에만 콜백한다.
+- 문서/수신 확인만 수행했다. D 코드·DB/기기/자료·API/배포·Issue종료·Git 변경 없음. git diff --check·문서 검토, Flutter 재시험 없음. 기존 C1524PASS 모의 근거/미확인 실인수 그대로다. feature/scoped-account-cache 유지·미커밋/미push/dev미반영이다.
+
+## 2026-10-16 앱 제품 설정·UX 공유 / Firebase 전용 구현 제거 기준
+
+- 사용자 지시: Flutter의 장기 개발에서 확정된 앱 설정 중 Backend에 필요한 제품 정보는 공유한다. 기능/UI·UX는 동일하게 유지하고 Firebase 전용 구현·설계는 제거·미승계한다. 정책09 D09·공유 기준31을 작성하고 NEXT_WORK/AI_CONTEXT/문서 지도를 연결했다.
+- 현재 SettingsPage·BackendApp·AppShell·회원 설정 controls와 대표 UX/현재 파티 제품 제약을 대조했다. 공유31에는 제품 정책/저장·복원 경계·현재 구현/후속 상태만 추출했다. 나이스단/자동1회·키/회원·역할 오류·visible/선호/순서/count·대표/활동 구분·회원1자리/이상 캐릭터 명시 변경·공통 확인/실패 UX를 공유했다. 과거 저장 기술/권한 규칙·호환 원장·운영/배포 구현은 새 계약으로 인계하지 않았다.
+- D 범위 보완: 구 자료 승계 진입/전용 의존 제거는 기능 삭제 지시가 아니다. 조회·관리/상세 분석/설정·비로그인 허용 기능과 UX는 새 경계로 유지·대체한다. Drift/정수ID/화면·순수 mapper는 그 자체가 Firebase 전용이 아니며 실제 참조·제품 역할로 분류한 뒤 제거 범위를 정한다. 기존 D 문구를 화면/로컬 저장 일괄 폐기로 읽지 않도록 정정했다.
+- [Backend 제품 공유6206946439](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6206946439) 게시·본문 일치 확인. 현재 UI 메뉴와 신규 Backend 연결 완료를 구분했다. 예: 수동 인증은 pending route/운영자 설정 repository 미주입이다. 새 기능 전체 착수·API 변경 요청은 없고 P2 원본7027f0b·소유 증거 보류/기본 인수 구분을 유지한다.
+- 새로 가능: Backend가 필요한 제품 설정과 Flutter 실제 소비/미완료 범위를 기존 전용 기술과 혼합하지 않고 대조할 수 있다. 사용자 기능·UX·현재 코드/설정·권한 경계는 보존했다. 새 기능/실환경·실기기 완료를 주장하지 않는다.
+- 문서/소통만 변경해 Flutter 시험은 반복하지 않고 기존 C1524PASS/lib-test분석0 근거를 유지한다. git diff --check·신규 문서 공백/UTF-8·링크/내용 검토를 수행했다. 코드·DB/자료·기기·배포/기능ON·Issue종료·Git통합 없음. feature/scoped-account-cache 유지·미커밋/미push/dev미반영이다.
+
+## 2026-10-16 착수 전 Backend 회신 확인·새 회원 소유 증거 인수 경계
+
+- 사용자 `작업을 시작하기전에 백엔드와 소통부터 / 회신확인`에 따라 이슈8 최신6206816156을 확인했다. 양측 개발/베타/운영 정책과 구 보존형 전환 폐기·새 기능 유지 기준은 일치했고 Backend는 새 빈 DB의 canonical 인수 준비1건을 질문했다.
+- Backend 보고: live adapter가 proof_validated를 생성하지 않고 confirm은 PROVIDER_EVIDENCE_PENDING이며 preview로 canonical·소유/활동 자격을 만들지 않는다. Flutter runtime/설정 store의 owned/account·canonical/수명 guard와 기존 보류 안내를 대조했다. 새 DB/ON만으로 전체 실인수가 가능하다는 단순 순서를 바로잡았다.
+- [Flutter 회신6206873992](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6206873992) 게시·본문 일치 확인. 환경 준비 후 새 로그인/키/회원설정·등록 preview/조회·빈목록/인증 시작·조회·취소·보류 안내는 기본 인수 후보, canonical/소유·현재 roster/활동 대상 준비 후 역할/개인설정 저장·전체상세/OFF제외·영속명령·기기 복원은 별도 인수 보류로 구분했다. count는 metadata 계약이지만 유효 등록/account·소유수명 자격이 필요하다. 빈0건/기본값/fixture를 실사용자 통과로 보지 않는다.
+- NEXT_WORK·AI_CONTEXT에 barrier와 담당을 반영했다. D는 범위 기록만 있으며 새 회원 진입/UI 구현은 아직 없다. D 구 의존 정리와 Backend 새 DB 구성 준비는 독립 진행 가능하고 proof 후속은 Backend가 추적한다. Flutter가 fixture/이름/bool/DB seed나 새 우회 API로 증거를 대신하지 않는다.
+- 새로 가능: 기본 인수/소유 증거 필요한 인수/독립 진행 구간을 구분해 작업 상호대기를 방지한다. 기존 제품 기능/권한 경계·C1524PASS 모의 근거는 유지한다. 실환경/실provider·실기기 인수는 미확인이다.
+- 이번에는 소통·문서만 변경했다. git diff --check·문서/링크 검토, Flutter 재시험 없음. 코드·DB/볼륨/Firebase/기기 조작/배포·기능ON·Issue종료·Git통합 없음. feature/scoped-account-cache 유지, 미커밋/미push/dev미반영이다.
+
+## 2026-10-16 개발·베타·운영 데이터 수명 확정 / 보존형 전환 전제 정정
+
+- 사용자가 현재1단계 개발·자료 생성/삭제→베타 모집/준비→베타 전 개발 사용자/서버기록 전체 초기화→큰 이슈가 없으면 베타 자료를 보존해 운영하는 흐름을 직접 확정했다. 정책09 D08을 장기 기준으로 추가했다. 실제 데이터 삭제/초기화는 실행하지 않았다.
+- 조사한 이슈 요청6185091368의 backfill/migration은 신규 PostgreSQL 내부 구조 변경이었다. 0007의 기존행 상태/NameClaim 채움, 0008/0009의 신규 테이블 생성 코드에 Firebase import는 없었다. 그러나 이것만으로 개발자료 보존형 작업이 필요하다고 판단할 수는 없다. Backend 회신6206662757은 기존 테스트 DB 백업/격리복원/보존 migration 리허설로 확장한 것이 Backend 판단 오류였고 그 계획을 폐기했다고 명시했다. Flutter의 P1/P2 구조 관리 코드 요청과 해당 확장을 구분해 기록한다.
+- 새로 가능한 협업: 개발자료 보존/구 시스템 호환을 필수 조건에서 제외하고 새 빈 DB/최신 API·Flutter 환경을 기준으로 준비한다. 정책09·NEXT_WORK·AI_CONTEXT·설계23/계약30·문서 지도를 정정했다. 다음 D 후보로 `/account/device-characters`·구 목록/정수ID 관리/상세 routes·AccountDatabase/Repository/summary DI·모집 목록 소비의 구 의존 분리와 관련 조건 정리를 기록했다. 이번 정책 정리에서 D 코드 제거가 완료됐다고 표시하지 않았다.
+- 유지 범위: 새 회원 scoped 저장/환경·UUID·소유수명/권한·멱등, 역할요약/개인설정·로컬 상세/영속대기·자동1회/OFF 제외·재로그인/기기 간 복원. 합의 API7027f0b 변경 필요는 현재 발견하지 않았다. 구 자료를 가져오지 않는 것과 새 시스템의 정상 자료 저장 기능을 제거하는 것은 구분한다.
+- [Flutter 정책 수용·범위 회신6206739088](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6206739088) 게시·본문 일치 확인. Backend에는 새 DB 구성/실행 revision·API 준비, Flutter에는 D 정리 후 구 상태 미채택 테스트 환경/ON 빌드 조건을 각각 기록했다. 새 환경 준비 완료 회신과 실기기 인수는 미확인이다.
+- 검증: 문서 내용/링크·git diff --check. 기능 코드 불변으로 기존 C1524PASS/lib-test분석0을 재사용하고 Flutter 시험은 반복하지 않았다. DB/볼륨/Firebase/기기 삭제·초기화/배포·기능ON·Issue종료·Git통합 없음. feature/scoped-account-cache/cc6a0b0 유지, 기존 변경/사용자 자료 보존·미커밋/미push/dev미반영이다.
+
+## 2026-10-16 현재 상태 문서 정합성 갱신
+
+- 사용자 `일단 현재 상황까지 문서 최신화` 요청에 따라 기능 코드 변경 없이 현재 문서·Git·검증 로그·Issue8을 대조했다. Issue8은 OPEN/댓글32개, 최신 C 결과6197881822 이후 추가 회신 없음, HEAD·읽기 조회한 origin/dev cc6a0b0를 확인했다.
+- AI_CONTEXT를 현재 상태/기능 지도 중심으로 정리하고 오래된 ‘자동 실행 미연결·복원 계약 없음’ 상태를 제거했다. 상세 완료 과정은 아래 기존 A1/A2/B/C 이력에 보존한다. NEXT_WORK는 실제 환경 준비→ON 빌드 수동 인수의 담당·범위·완료 조건과 C 회신 링크를 명시했다.
+- 후속 대장14의 인증 화면/POWER-01/RESTORE-01을 코드·자동검증 완료/실환경 미확인으로 바로잡고 활동/대표·왕관·live 증거/구 DB 정합성·릴리즈 인수와 분리했다. DB 조사24·인증28·ID29는 당시 조사/브랜치/수치와 현재 적용 상태를 구분하고 문서 지도도 갱신했다.
+- 새로 가능해진 흐름: 코드 완료/실환경 대기/별도 후속을 문서 진입점과 대장에서 일관되게 파악할 수 있다. 기존 기능·합의·코드/테스트/사용자 Rules·tools는 보존했다.
+- 검증: 기존 최종 전체1524PASS·lib/test분석0 및 전체 analyze의 사용자 tools info3건 로그를 재확인했다. 문서만 변경하므로 Flutter 검증은 반복하지 않고 git diff --check·변경 문서 링크/내용 검토를 수행했다. 실제 API/provider·기기/재설치 수동 인수는 미확인 그대로다.
+- 협업: C 결과/대기 상태가 이미 회신됐고 새로운 계약·구현·테스트 결과가 없어 중복 Issue 댓글은 게시하지 않았다. 배포·기능ON·Issue종료·Git통합은 하지 않았다. feature/scoped-account-cache 유지, 미커밋·미push·dev미반영이다.
+
+## 2026-10-16 Flutter C 앱 수명·회원별 주목록/진행 UI 연결
+
+- 사용자 `진행합니다` 승인으로 설계23에 실제 DI/Router·데이터 흐름·소유·포함/제외·회귀 게이트를 먼저 기록했다. 최신 Issue8 B 회신6197379381과 origin/dev cc6a0b0를 확인했으며 새로운 Backend 실환경 준비 회신은 없었다.
+- 새로 가능해진 흐름: BackendApp가 같은 lifecycle/runtime/API/session/remote/catalog/cooldown과 실제 설정/키/gate로 앱 소유 BackendMemberAccount를 한 번 생성·initialize한다. AppShell 진행 표시와 ON 로그인 회원 주목록·기존 기기 자료 별도 경로, 회원별 역할 수치/오류/시각·로컬 상세/원본 없음, P2 선호/표시/순서/count 편집·숨김 캐릭터 재접근을 연결했다. 첫 화면 비차단·준비 해결/처리수/전체수·미완료 상세/서버 저장 별도 재시도·대기시간·충돌/명시 서버값 수용·설정 snapshot 안내를 제공한다.
+- 전체 준비는 회원/session/readGeneration별 B/복원이 공유하고 profile 하나로 양역할/P2 설정을 관찰한다. 캐시는 표시만 허용하고 새 쓰기는 fresh plan/현재 소유수명·guard/CAS로 진행한다. 로컬 선반영/서버 실패 pending을 유지하며 개별 역할 해결도 배치 대기 수에 반영한다. 키 없음/OFF 제외여도 서버 최소요약/설정은 복원한다. 열린 확인창은 회원/session 재검사·취소좌/긍정우, 페이지 폐기는 앱 runner를 종료하지 않는다.
+- 보존 확인한 기존 흐름: 기기 schema13/정수PK·기존 목록/상세/관리·자료 무이전/무삭제, scoped schema3/8테이블 및 S1~S3/A1/A2/B, 양역할·나이스단OFF 예외·키/인증·V1·기본 OFF/guest 새 DB/V2 무호출. 자동 상세 대상은 표시 숨김/count와 독립이다. P2 원본7027f0b/API·서버 schema 변경은 없다.
+- 검증: 신규 실제 SQLite/모의 HTTP 연결 경계10PASS 후 최종 전체 **1524PASS(기존1514+신규10)**·lib/test 분석0. 최종 role 재시도 대기시간 표시까지 반영해 전체1524를 다시 확정했다. 로그 `.dart_tool/c-integration.log`, `c-full-test.log`(38초), `c-lib-test-analysis.log`, `c-full-analysis.log`. 전체 flutter analyze는 기존 사용자 tools/roster_rebalance_domain_fixtures.dart의 info3건(상대 lib import2/print1)만 남는다. 해당 파일은 수정하지 않았다. 관련 Dart format·git diff --check·신규파일 공백/변경 검토 완료.
+- 신규 검증: 공유 준비/전체 상세·프로필 복원 경합, 키 없음, OFF 숨김 복원, 로컬 선반영·같은 key/body 재시도, 로그아웃 지연 응답, 미확정 설정 보존, 계정 변경 gate의 지연 ACK 차단·명령 보존, 개별 서버 해결 집계, 회원 전환 중 열린 확인창 저장 차단, 상세 페이지 폐기 후 앱 runner 보존. 초기 시험 실패는 fixture가 기존 나이스단 레벨 조건/실제 personal-preferences 경로를 따르지 않은 오류로 수정했고 제품 정책은 바꾸지 않았다.
+- [Issue8 C 결과6197881822](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6197881822) 게시·원격 본문 일치 확인. 추가 Backend 코드 수정/반복 mock 시험·제품 선택을 요청하지 않았다. 직접 다음은 실제 대상 API·DB 준비 확인→ON 빌드 사용자 수동 인수이며 NEXT_WORK에 체크리스트를 정리했다.
+- 미확인 실기기 항목: 실제 P1/P2/V2 API/provider·기기 디스크 경로·재설치/새 기기·설정 복원/앱 재실행1회·OFF 제외·수동 실패/재시도·회원 전환/기존 기기 자료 인수. 기본 BACKEND_LIFECYCLE_READS_ENABLED=false 유지, 실제 DB0007~0009 적용·API 재시작/환경전환/배포·기기 설치/조작·실자료 이관/삭제·live proof/퇴역/claim해제 보류 해제·Issue종료는 수행하지 않았다.
+- Git: feature/scoped-account-cache/HEAD 및 최신 origin/dev cc6a0b0 유지. 이전 인증/S1~S3/A1/A2/B/문서·사용자 Rules/tools 보존, C 포함 미커밋·미push·dev미반영·새 인계SHA없음. 실환경 인수/별도 Git 정리 전까지 브랜치 유지다.
+
+
+## 2026-10-16 Flutter B UUID 상세 자동 갱신 실행부
+
+- 사용자 `진행`으로 B만 구현했다. AGENTS/ai_rules/NEXT_WORK/AI_CONTEXT/지도·설계23/저장30/직접 관련 이력과 실제 Git·기존 int-ID startup/나이스단·설정/키/remote/runtime을 대조했고 설계23에 B 포함/제외·순서/완료·회귀 경계를 먼저 기록했다. 소비 계약7027f0b/새 API·DB schema 없음, C 실제 app/Router·화면 주입은 제외했다.
+- 새로 가능해진 흐름: ScopedRefreshTarget/Batch·전체 roster 순수 projection, RuntimeStartupRefreshSource·ScopedStartupRefreshController를 추가했다. 현재 설정 GET/키 version·카탈로그/전체 등록·소유 roster 준비 뒤 환경+회원별 앱수명1회 선점, 부분/준비 실패 미소진, 동시진입/재진입 공유·대상0 종료·같은회원 새세션 자동반복0·회원별 결과 분리를 구현했다.
+- 활성 UUID 전체의 Armory→기존 역할/무결성 분석→A1 원자 저장→요약 전송을 연결했다. 표시/상위 개수·별도1700 필터로 활성 대상을 줄이지 않는다. NiceGroupPolicy의 기존 정규화/사용레벨·2명 분류만 NiceGroupCandidate 공용 입력으로 추출해 전체 현재 active roster(활동 미선택 포함)에 적용했다. OFF는 상세/덮어쓰기0·정책 제외이며 실패/부정이 아니다. 역할불명은 보존·장비오류는 확정 계열+경고 저장·반대역할/선호는 보존한다.
+- 시작 설정/대상 고정·설정변경 안내·미완료만 최신 조건 재시도/성공·신규·기존제외 미편입, 429 공용 deadline/자동 재호출 없음·미완료 보존, 서버 저장만 별도 재시도를 제공한다. 로컬 저장/서버pending은 상세 미완료와 구분한다. commit 완료 통지 후 취소라도 이미 저장된 결과는 보존하며 다른 회원 화면에 노출하지 않는다.
+- 키/세션/현재 관찰·run guard를 A1 transaction에 전달하고 runtime.readGeneration을 추가했다. invalidateReads가 계정 요청 시작 시 DB row가 바뀌기 전에도 이전 배치의 늦은 저장을 막는다. accountChangesPending 준비 gate·source.changes와 app 단일 initialize/dispose 소유 계약을 설계23에 기록했다. source의 VM readiness callback과 actual BackendApp/Router 주입은 C가 담당한다.
+- 보존 확인: 기존 startup/나이스단 결과·기기 공용 schema13/구 정수PK 자료, scoped schema3/8테이블/S1~S3/A1/A2·원자성/멱등/양역할, 키/인증/V1/기본 OFF·guest0호출. 실제 runtime/SQLite·모의 backend/provider로 저장/요약 전송·실패/키교체/등록변경/관찰무효화 후 지연 저장 차단을 확인했다.
+- 검증: 초기에 신규 모델/adapter/controller만 분석해 nullable 접근2건을 수정하고 스타일을 정리한 뒤 B33PASS. gate/무효화2경계 보강 후 **전체1514PASS(기존1479+신규35)**, 이후 서버 저장만 재시도할 때 상세 정책 변경을 독립 처리하도록 좁게 보강하고 **최종 B35PASS/lib·test분석0**. format/diffcheck·변경/공백 검토 완료. `.dart_tool/b-final-tests.log`(40초), `b-final-boundary-tests.log`, `b-final-analysis.log`. 실행별 수치를 합산하지 않는다. dart fix의 복수 경로 인수는 허용되지 않아 한 디렉터리씩 실행했고 분석의 불필요 null 단언1건도 정리했다.
+- [Issue8 B 회신6197379381](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6197379381) 게시·원격 본문 일치 확인. 최신 Backend 회신은 P2 완료이며 추가 Backend 수정/반복시험·실환경 전환을 요청하지 않았다.
+- 미확인/후속: C의 실제 app 수명/DI/Router·회원별 단일 주목록/기존 기기자료 별도 경로·P2 설정/역할 표시·진행/재시도/충돌 해결 UI. B는 명시 생성/initialize 기반이며 아직 디바이스 인수 단계가 아니다. 실제 V2/P1/P2 API/provider/기기·DB0007~0009 적용/배포/자료이관·삭제·live proof/퇴역/claim해제·Issue종료는 없다.
+- Git: feature/scoped-account-cache/HEAD 및 최신 origin/dev cc6a0b0 확인, 이전 인증/S1~S3/A1/A2/문서·사용자 Rules/tools 보존. B 포함 미커밋·미push·dev미반영·새 인계SHA없음. C 후속을 위해 브랜치 유지한다.
+
+## 2026-10-16 Flutter A2 개인설정·원정대 표시 저장/복원
+
+- 사용자 `a2 진행합니다` 승인. P2 7027f0b 개발문서/최신 Issue8·원본 OpenAPI 전체를 P1과 대조했다. 기존 paths와 역할 schema는 불변, profile의 preferences 참조만 실제 설정으로 교체·옛 가상 schema 제거/새5schema·2paths/3operations·profile policy 변경이다. 정확한 원본은 contracts/issue8-7027f0b.openapi.yaml, SHA256 fe78017938fc4c3ac7c66e5b6f7a756b676f381abd0d21cf4fb0786afeb765c1. 코드 전에 NEXT_WORK에 A2 범위/순서/완료·회귀 경계를 기록했다.
+- 새로 가능해진 흐름: strict P2 선호역할/visible/display_order 및 원정대 visible_count GET/PUT·정확한 ACK, 실제 preferences profile 복원·기본값 no-op/version·저장시각. scoped DB schema3에 설정기록/명령2테이블을 추가하고 현재 등록/소유수명·캐릭터/세션·외부 guard/CAS로 로컬 초안+명령을 원자 저장했다. 발송 명령 불변·후속 초안/정확한 ACK·같은 key/body 재실행·429 수신 deadline/24시간 검토·충돌/명시 서버값 수용을 구현했다. UUIDv4 key 생성만 A1/A2 공용 순수 helper로 추출했다.
+- 원정대 count는 metadata만 요구하고 비메인/일부 suspect를 막지 않는다. 개인설정은 현재 complete roster/캐릭터 근거를 사용한다. 삭제된 등록 경로는 차단하고 같은 소유수명 재등록 시 확정 설정만 현재 GET으로 복원하며 옛 명령은 새 경로로 이식하지 않는다. label 변경 후 원래 명령 replay와 최신 GET의 등록 version을 구분했다. 개별 rank ACK는 해당 캐릭터만 확정한다.
+- runtime 같은 DB/API/session에 명시 prepare/readCached/read/save/sync/useServer를 연결했다. 네트워크 없는 캐시 복원은 fromCache 표시 관찰이며 새 쓰기 plan/ACK가 아니다. 미수집은 null이다. 순수 원정대 표시 projection은 visible→대표→rank→아이템레벨내림차순→이름→UUID 후 count 제한이며 hidden 대표·중복 rank를 보존한다. 실제 화면/자동 실행은 켜지 않았다.
+- 보존 확인: 기존6캐시/역할 테이블·schema1/2 실제 기존행 migration·기기 공용 schema13/구 정수PK 자료, A1 역할 outbox/양역할·활동/대표·나이스단bool, S1~S3·키/인증/V1/기본 OFF·guest 무호출. profile parser만 P2 실제 설정으로 전환했으며 가상 기본값을 저장 성공으로 이관하지 않았다.
+- 검증: A2+직접 영향106PASS 후 경계 추가, **전체1479PASS(기존1432+신규47)/최종 lib·test 분석0**, 관련 format·diffcheck/원본/변경 검토. 로그 `.dart_tool/a2-final-tests.log`(41초)/`a2-final-analysis.log`. 전체 후 테스트 스타일6건 정리로 신규47PASS(15초), 전송 직전 session guard 보강으로 직접 회원 경계2PASS(1초)·lib/test 분석0. 각 실행을 합산하지 않는다. Windows flutter.bat의 정규식 파이프 인수 해석으로 한 실행이 테스트 시작 전 실패했고 단일 member 필터로 바로잡았다. schema 생성은 해당 Drift 파일만 build_runner로 수행했다.
+- [Issue8 A2 회신6196639685](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6196639685) 게시·원격 본문 일치 확인. 추가 Backend 수정/반복 시험·실환경 전환은 요청하지 않았다. Backend143PASS는 격리/mock 보고로만 보존한다.
+- 미확인/후속: B 활성 전체 상세1회·나이스단OFF 제외 controller, C 회원별 주목록·진행/재시도 UI·실제 DI/Router 및 최종 인수. 아직 디바이스 테스트 단계가 아니다. 실제 P2/V2 서버/provider/기기경로·실DB0007/0008/0009 적용/배포·자료 이관/삭제·live proof/퇴역·claim해제 보류 해제·Issue종료는 없다.
+- Git: feature/scoped-account-cache/HEAD·최신 origin/dev cc6a0b0 확인. 이전 인증/S1~S3/A1/문서·사용자 Rules/tools 보존. A2 포함 미커밋·미push·dev미반영·새 인계SHA없음, B/C 후속을 위해 브랜치 유지.
+
+## 2026-10-16 Flutter A1 역할 요약·로컬 상세/영속 전송 대기
+
+- 사용자 ‘백엔드 대기 동안 가능한 작업 진행’ 승인으로 앞서 확정한 저장 정책의 A1만 구현했다. 소비 원본은 Backend P1 6e4f625이며 새 제품 정책/전체 자동갱신 마스터 설정은 추가하지 않았다.
+- 새로 가능해진 흐름: strict P1 GET/역할 PUT·기존 분석/역할 정책 projection, scope+UUID+소유수명+role별 상세 원본/요약·서버 확정 상태/최신 초안·전송 대기 저장. scoped DB schema1→2 두 테이블/복합FK·row CAS·세션/키/run/현재 관찰 guard, 원자 저장/rollback, 불변 key/body·재실행/응답 유실 복구·429 deadline·24시간 보수 중단/충돌·지연 ACK 후 새 초안 보존을 구현했다. runtime의 같은 DB/API/session에 명시 호출 API를 연결했으며 화면/자동 호출은 아직 없다.
+- 보존 확인: 기존4조회캐시/실제 schema1 기존행 migration·기기 공용 schema13/정수PK 자료, 양역할/선호 설정·이전 역할 판정 흐름, 키/인증·V1 전투력·S1~S3와 기본 OFF/guest 무호출. P1 가상 preferences를 실제 설정 복원으로 적용하지 않았다. 새 자동 projection은 지원 직업의 현재 패시브/카탈로그 근거 없이 선호역할을 대체 근거로 쓰지 않는다.
+- 검증: 최종 전체 Flutter **1432PASS(기존1394+신규38), lib/test 분석0**·관련 Dart format·git diff --check·변경 검토. 로그 `.dart_tool/role-a1-final-tests.log`(60초)/`role-a1-final-analysis.log`. 초기 신규27개 국소 통과 후 경계 보강, 초기 전체1431PASS/1FAIL은 OFF 진입의 동기 예외를 Future matcher에 직접 전달한 테스트 오류여서 closure로 수정했다. 분석 스타일2건도 정리 후 최종 전체1432로 확정했다. 실행별 수치를 합산하지 않는다. build_runner는 schema변경마다 scoped 생성 파일만 재생성했다.
+- [Issue8 결과6196135272](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6196135272) 게시·원격 본문 일치 확인. 추가 Backend 수정/반복 시험·실환경 전환을 요청하지 않았다.
+- 작업 중 [P2 완료6195735441](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6195735441) 수신. 원본7027f0b 확보/hash는 NEXT_WORK에 기록했다. 댓글 수신/원본 확보이며 전체 P2 대조/구현은 다음 A2다. P1 const preferences가 실제 설정으로 교체되는 호환 변경을 다음 단계에서 명시 소비한다. Backend143PASS는 격리/mock 결과이며 Flutter 수치와 별개다.
+- 미확인/후속: A2 개인설정·원정대표시/복원, B 자동 상세1회·나이스단OFF 제외 controller, C 회원별 주목록·진행/해결 UI. 현재는 디바이스 인수 단계가 아니다. 실제 P1/P2 서버/provider·기기 경로/실기기, DB0007/0008/0009 적용·배포/실자료 정리·live proof/퇴역·claim해제는 실행하지 않았다.
+- feature/scoped-account-cache/HEAD cc6a0b0 유지, 최신 origin/dev도 같은 SHA. 이전 인증/S1~S3/문서·사용자 Rules/tools 보존, A1 포함 미커밋·미push·dev미반영·새 인계SHA없음. 후속을 위해 브랜치 유지한다.
+
 ## 2026-10-13 기존 서비스 문서 레거시 분리
 
 - 사용자 요청으로 legacy/firebase를 만들고 전용문서26개를 원래 docs 분류 경로로 이동했다. 혼합28문서의834항목과 추가정리8발췌은 원본 파일/절/분리직전행/내용SHA를 기록해 보관했다. 일반 제품·공용 협업 정책은 유지했고 옛 실행/배포자료가 새 서버의 자동 지시가 되지 않도록 지도·지침을 정리했다.
@@ -4070,3 +4357,321 @@ Backend6172992882의SHA9e1a255b87b430bca314e8f718fb4176bfe322c8 원본OpenAPI를
 NEXT_WORK를완료로그에서다음전체빌드자동갱신시작순서설계로교체했다. 키metadata/restore가추가돼과거시작3+N은당시기준임을명시했다. AI_CONTEXT/README/09/24/25의이전미결정·원문복원불가·미구현표현을최신계약/사용자정상보고로정리했다. 전체앱문구점검·재설치/다른기기·실provider한도는별도후속/미확인으로유지한다. 새로운기능/서버설정/Issue종료는수행하지않는다.
 
 코드·경계시험·고정OpenAPI·연결문서를같은기능단위로commit하고작업브랜치에복구지점을push한뒤,최신origin/dev재확인→일반merge→devpush/원격일치검증을수행한다. 최종SHA는Git이력과Issue7최종회신으로추적한다. 기존문서준비자료는이번회원키계약/후속연결범위이며사용자Rules백업2개/tools34개는stage하지않는다. 브랜치는유지/통합후삭제후보,main불변이다. 새로가능:완료기능의공유된dev기준. 보존확인:기존인수/자동검증동일코드·실험자료. 미확인실기기는앞선보고범위를유지한다.
+
+## 2026-10-15 — 자동 빌드 갱신 UX 합의·역할 저장 경계 확인
+
+사용자가 보석/아크패시브/아크그리드 근거로 dealer/support에 맞게 저장할 준비를 재확인하도록 요청했다. 공통 분석기·Coordinator·수동 상세 저장·로컬 DB·역할별 표시와 기존 테스트를 대조했다. 자동 경로의 역할별 저장과 반대 역할/선호 역할 보존, 오류 검출과 저장 차단의 구분을 확인했다. 수동 상세는 선택 역할 저장이며 판정 실패의 expectedRole fallback은 새 자동 경로에서 허용하지 않는 설계가 필요하다.
+
+사용자 선택으로 회원별 앱 실행1회, 준비 후 자동 시작(준비 실패는1회 미소진), 비차단 탭/완료수 표시, 미완료 명시 재시도와 제한 대기시간, 역할 확정시 오류 요약과 해당계열 저장, 시작설정 고정, 회원전환 중단/늦은 저장 차단을 확정했다. 상세 계약은 설계23의 현재 기준에 한 번만 기록했고 NEXT_WORK는 남은 기술 설계로 정리했다. 회원키 Flutter8644c81/devcc6a0b0 및 Backend dev72f6301 통합·push 회신, Backend가 닫은 #7의Completed종료(API/CLI 확인,2026-10-15 11:29 KST)로 오래된 대기를 정정했다. CLI 인증도 정상 확인했다. 이번에 새 Issue/댓글/서버 변경은 없다.
+
+새로 가능해진 흐름: 구현 전 사용할 사용자 합의 UX/역할 저장 기준 확보이며 실행 기능은 아직 미구현. 보존 확인한 기존 흐름: 코드/테스트/DB/main·사용자 Rules/tools 실험 불변. 미확인 실기기 항목: 새 자동 실행/진행/실패·중단 UX 전체이며 기존 회원키·설정 인수를 반복 대기로 바꾸지 않음. 검증: 관련 코드·테스트 내용/문서 검토와 git diff --check, 순수 문서라 Flutter 테스트/빌드 재실행 없음. 기존 docs/my-account-backend-phase1을dev까지FF재사용, 문서 미커밋·dev미반영·미push. 이후 준비/ID/세션·키 변경/저장 직전 검증·재시도/수동 충돌을 기술 설계한다.
+
+### 원정대 변경 선행 설계로 순서 조정
+
+사용자는 로컬 저장 공간 자동 생성 선택보다 캐릭터명 변경·삭제 대응을 먼저 해결하도록 지시했다. Flutter summary 적용/누락 수동 삭제와 Backend immutable72f6301의service/observations/provider를읽어현재서버명+이름대조·개명자동연결없음·live누락suspect/증거보류를확인했다. 로컬은빠진행을missing으로남기며비어있지않은부분응답/역순응답의누락처리와조회기준캐릭터개명후조회복구가설계경계다. 누락행명시삭제의종속빌드/주간고아정리는기존DB-03과직접연결된다. 설계23/NEXT_WORK에근거와선행범위를기록하고사용자확인승계/기기삭제정책을질문했다. 아직응답전이므로자동병합·자료승계/삭제·새Backend요청은확정/실행하지않았다. 코드/DDL·실자료/키·실provider불변,문서검토/diffcheck만수행하고미커밋상태를유지한다.
+
+### 소멸 이력·신규 등록·미완료 파티/이름 재사용 정책 확정
+
+사용자는 인증 원정대 새 이름을 신규로 등록하고, 정상 전체 조회에서 사라짐이 확인된 기존 캐릭터는 서버/이름/직업/마지막전투력/아이템레벨의 간략 이력만 남긴 뒤 개인자료를 정리하도록 확정했다. 개명 전후 빌드/설정 승계는 하지 않는다. 파티/완료 Snapshot은 보존하며 미완료 파티는 기존 회원 자리/당시정보·확인필요 경고를 유지하고 본인이 유효한 캐릭터로 명시 변경/탈퇴한다는 선택을 받았다. 다른 원정대가 옛 이름을 사용할 때 참가/권한이 넘어가지 않는 설계를 요구했다.
+
+Backend72f6301 models.py의 서버+이름 전역unique와 service의기존관찰키/canonical추론을확인해새이름생명주기계약필요를확인했다. 기존Flutter파티WritePlan은playerId/characterId와표시Snapshot·raidState를분리하지만신규Backend파티는pending미구현임을대조했다. 확정정책/현재공백/ID참조보존·이름재사용/조회순서·지연응답·8인파티상태경계·최소검증을계약26에분리하고README/설계23/NEXT_WORK/AI_CONTEXT를연결했다. 물리이력/전체성증거/FK·API는Backend검토전이며새Issue/구현을시작하지않았다.
+
+새로가능:확정된원정대생명주기와미래파티연결의설계기준. 보존확인:제품코드/DB/키/실험자료불변. 미확인실기기:전체새정책·실provider누락증거·신규Backend파티기능이며기존완료를확대하지않음. 검증은원본코드/문서내용·git diff --check,Flutter시험반복없음. docs/my-account-backend-phase1에서문서미커밋·dev미반영·미push를유지한다.
+
+### 이상 캐릭터 즉시 사용 차단과 기존 참가 복구 명확화
+
+사용자는 기존 파티의 모든 참가자에게 캐릭터 이상을 표시하고, 본인은 새 이름b를 포함한 조건을만족하는다른본인캐릭터로변경할수있어야하며, 이전a는이상감지순간신규파티/신청/그룹에사용불가임을명확히했다. 계약26/NEXT_WORK에 이상감지즉시사용차단과정상전체조회소멸확정후삭제의두단계,서버최종명령검증·기존회원membership기반변경/탈퇴허용을추가했다. 단순조회실패를캐릭터별이상/소멸로확정하지않고Backend감지/해소계약은검토대기다. 문서내용/diffcheck만검증했으며코드/DB/Issue변경·시험반복·commit/push없음.
+
+## 2026-10-15 — 원정대 생명주기 Backend Issue8 계약 검토 요청 게시
+
+사용자가 다음 단계인새Backend계약검토요청게시를승인했다. 필수진입문서/Git/현재계약과기존Issue목록을대조해동일요청이없고#1~#7완료임을확인했다. 최신Backenddev821c7581e022393e86174258a35235a4891b9cc8와조사72f6301의compare는#7종료기록문서4개뿐이며관련소스불변이다. 기존docs/my-account-backend-phase1과설계미커밋/사용자Rules·tools를보존했다.
+
+https://github.com/heo0328/lostparty-backend/issues/8 에정상전체성/이상즉시사용차단·확정소멸정리/이력·이름재사용ID/소유추론·참조·최소API/원자성/멱등과단계별구현범위의검토를게시했다. 미래파티의회원별자리·경고/명시교체·동시간대중복금지와이름재사용권한격리를인계하되파티전체구현은제외했다. 이번은검토요청이며기능구현/DDL적용·실자료삭제·운영배포승인이아님을명시했다. 로컬설계26이아직미커밋/미push임을밝히고상대가읽을필수요구/질문/완료조건은이슈본문에실었다.
+
+인증복구된gh CLI로게시후원격본문을파일과개행정규화대조해일치/OPEN/댓글0확인. NEXT_WORK/AI_CONTEXT/계약26/README에같은링크·Backend담당/회신대기·다음최신댓글확인절차를기록했다. 자동감시없음. 새로가능:Backend가검토할공식요청과담당/완료조건확보. 보존확인:기존앱·DB·키·완료Issue·main/기존실험자료불변. 미확인:새계약/기능/실provider/실기기미구현·미검증. 검증:원격기준/중복·게시본문재조회/문서diffcheck,문서/협업만변경해Flutter시험반복없음. 문서는현재브랜치미커밋/dev미반영/미push,브랜치유지다.
+
+## 2026-10-15 — Issue8 Backend 검토안 수신·보완 질문 회신
+
+사용자 회신확인 지시로6183753309의A/B/C제안을전문조회했다. lifecycle3상태/NameClaim/퇴역이력·V2 read/refresh/복구/이력과V1차단제안은아직문서초안이며Backend기능/OpenAPI/migration/새자동검증없음이다. 정책방향은일치하나live전체성/세대연속성증거부족으로추가·퇴역·복구가보류돼실제제공기능을분리해야함을확인했다. 대표재구성cooldown우회는새제품예외미수용,이력전투력은서버profile값이며로컬선호역할Snapshot과다를수있다.
+
+6183781483(https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6183781483)으로실제근거확보/조사종료조건·분기가능성,대표cooldown경계,V1/V2전환/IDmapping/캐시선행범위의보완을회신하고원격본문일치를재조회했다. 구현착수/전체계약수용·실자료삭제·배포승인이아님을명시,계약26/NEXT_WORK는보완회신대기로갱신했다. 코드/DB/키불변·신규시험미실행,검증은원격댓글/문서대조·diffcheck다. 현재설계브랜치미커밋/dev미반영/미push를유지한다.
+
+## 2026-10-15 — 메인 원정대 대표 왕관 UI/UX·공통 알럿 배치 확정
+
+사용자는내계정에서보이도록선택한메인원정대캐릭터의대표를노란파스텔채움왕관·나머지를윤곽왕관으로표시하고터치시대표변경확인알럿의취소좌/변경우를지정했다. 이취소/긍정배치를앱공통규칙으로확정했다. 기존카드이름오른쪽대표별표·visibleCharacters대표우선정렬·로컬대표ID와BackendApp미주입representativesync를대조해계약27에범위/상태·선택자격·요청유실/충돌·관리draft공유·API논리요구를설계했다. 회원전체대표/부계정빠른선택으로확대하지않고실제기능코드는바꾸지않았다.
+
+Backend6183888735의UX요청과6183941103보완을확인했다. 신규추가긍정증거/소멸전체성분리·퇴역V1목록제외·P0~P3/mapping/cache전환제안은별도미수용으로기록하고,대표5분제한폐지/전용API방향에맞춘UX를6183971014(https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6183971014)로회신했다. 게시본문재조회일치,정확한대표API계약회신대기. 계약27/설계시스템/ai_rules의버튼배치와NEXT_WORK/AI_CONTEXT/README/계약26을갱신했다. 기존알럿일괄수정/Backend전체계약수용·구현/DDL/배포요청없음.
+
+새로가능:대표빠른선택의검토가능UX/API요구확보. 보존확인:앱코드/DB/main·기존사용자Rules/tools자료불변. 미확인실기기:새왕관/알럿/저장상태/서버연결전체. 검증:관련소스/계약검토·댓글본문일치·git diff --check,순수설계라Flutter시험/빌드반복없음. 현재docs/my-account-backend-phase1미커밋/dev미반영/미push·브랜치유지다.
+
+## 2026-10-15 — 대표 전용 API 검토안 수신 확인
+
+사용자답변확인지시로Issue8의Backend6184022477(https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6184022477)을읽고계약27/NEXT_WORK와대조했다. 신규representative GET/PUT·필수5입력/10응답필드·등록/설정/소유/roster검사·메인한정/활동보존·기존PUT cooldown제거·GET복구/no-op/replay는왕관UX방향과일치한다. 현재실소유인증/활동설정·안전한serverIDmapping준비가사용선행조건이며API구현만으로모든현재사용자가사용가능해지지않음을구분했다. 제안은Backend미커밋/미push·기능/OpenAPI/DB/시험·새SHA없음이다. 이번은답변확인/로컬검토기록이며구현착수요청·전체lifecycle수용/배포승인으로전달하지않았다. 코드/DB/키불변,문서diffcheck만검증하고미커밋/dev미반영/미push상태를유지한다.
+
+## 2026-10-15 — 대표 API 계약 수용·Backend 독립 구현 요청·Flutter 의존성 조사
+
+사용자가양측고착해소의단계진행을승인했다. 최신Issue8에새변경/중복요청이없는것을확인한뒤6184022477대표API계약을수용하고6184322765(https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6184322765)로GET/PUT·네revision/자격·활동보존·기존PUT포함5분제한제거·멱등/현재GET복구의독립구현/표적검증을요청했다. Backend는Flutter왕관/인증연결을기다리지않도록명시,구현/원본OpenAPI SHA·commit/push/dev/검증인계를완료조건으로요청했다. 게시본문재조회일치확인. 실제착수/구현완료는아직미회신이다.
+
+Flutter는BackendApp인증pending/관리화면의서버활동repo·대표gateway미주입·로컬대표저장,AccountRepository의IdentityMapping/DB.bindServerIdentity존재와현재검증된연결실행흐름부재를대조했다. 계약27에읽기준비→인증/증거→명시ID매핑→원정대별활동/공유설정version→게시대표API/왕관의담당/완료조건을기록했다. 기존playerId전역/Firebase gateway재연결·이름기반자동매핑/삭제는하지않는다. Backend API구현은선행실사용준비와독립이며실제왕관인수완료와구분한다.
+
+NEXT_WORK현재실행을양측담당분리로바꾸고원정대전체설계는후속보존,AI_CONTEXT/계약26에도독립수용링크를남겼다. 새로가능:공식수용/구현요청으로Backend대기원인해소·Flutter선행작업조사정리. 보존확인:제품코드/DB/키/main/사용자Rules·tools불변. 미확인:Backend새구현/계약SHA·Flutter인증/활동/ID실사용·왕관전체미구현. 검증:관련소스/댓글본문·문서검토/diffcheck,코드불변으로시험반복없음. 설계docs/my-account-backend-phase1미커밋/dev미반영/미push,브랜치유지다. lifecycle전체/배포·migration적용/실자료삭제·Issue종료는승인/요청하지않았다.
+
+## 2026-10-15 — Backend 대기와 독립한 원정대 인증 클라이언트 구현
+
+사용자가진행가능한부분수행을지시했다. 게시9e1a255원본OpenAPI의4경로/StartIn·VerificationOut과Backend schemas.py의source_matches를대조해데이터/불변명령·호출계층을독립구간으로정의하고구현전계약28/NEXT_WORK에기록했다. 기존목적브랜치목록을확인한뒤종료조건을인증클라이언트/경계검증완료로정한feature/account-verification-client를devcc6a0b0에서생성/확인했다. 이채팅설계미커밋/사용자Rules·tools는보존했다.
+
+ServerAccountVerification strict8응답/nullable·UUID/UTC/status·보류code,ServerVerificationCommand의등록/직접입력상호배타·회원/세션·key/body불변,ServerAccountVerificationClient의기존HTTP재사용/응답대상·전후scope/late오류차단을추가했다. UI/DI/Router/DB·옛verificationGateway/소유binding·증거보류는변경없음. 제한환경의Dart포맷실행경로오류후wrapper를중단하고정상SDK권한에서format성공,표적신규13+기존HTTP/세션11=24PASS·세파일분석0·diffcheck완료. 공용실행/라우터/DB변경없어전체Flutter시험/빌드는반복하지않았다.
+
+관련Issue8의6184482730(https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6184482730)으로실제구현/자동검증과미커밋·미push·새SHA없음/UI미연결을구분회신하고원격본문일치를확인했다. Backend대표독립구현은계속진행하도록담당경계를유지했으며추가서버수정/재시험요청없음. 새로가능:추후화면/상태기계에서재사용할인증4경로기반. 보존확인:기존HTTP/실제auth세션표적시험·제품런타임/로컬자료불변. 미확인실기기:새인증UI·실장비/proof·ID연결/활동/왕관전체. 다음은인증화면/상태기계UX설계다. 현재feature/account-verification-client미커밋/dev미반영/미push·브랜치유지,main/배포/실자료/키변경없음.
+
+## 2026-10-15 — 서버 인증 화면·상태 관리·Router 연결
+
+사용자가 추가 제품 결정 없이 진행 가능한 선행 작업을 승인했다. feature/account-verification-client를 재사용하고 계약28에 먼저 포함/제외·데이터/권한·작업 순서·회귀/완료 조건을 기록했다. Backend 대표 완료6184483999의 cd3e003 원격 구현 안내와 dev/main 미통합·개발 API 적용 상태를 확인했다. 추가 공식 schema 조사6184587789도 수신했으며 schema 접근조사 완료와 영구 ID/생성세대·소멸/전체성 보장 미기재를 구분해 계약26에 기록했다. L1 전체 수용이나 장비 proof/자동 퇴역 live 보류 해제는 하지 않았다.
+
+ServerVerificationViewModel은 앱 서비스 수명의 불변 요청/UUIDv4 키와 challenge, 서버 남은 시간·호출 제한·명시 재시도를 관리한다. 성공/replay/DELETE204 뒤 현재 GET, 실패한 GET 재조회, GET만으로 미확정 명령 해제 금지, 멱등 충돌/만료 후 GET으로 복구 제한이 풀리지 않는 경계와 24시간 재시도 상한을 적용했다. 회원/세션 변경·late 성공/오류/소유자 dispose를 차단한다. ServerVerificationPage는 등록 원정대/직접 입력·지정 부위 안내·명시 확인/취소/만료·증거 보류와 취소 알럿 좌우를 표시한다. BackendApp의 기존 설정 진입점에 DI/Router 연결, verified 후 서버 목록 재조회만 수행한다. 로컬 소유/ID/활동 저장과 자동 polling/confirm은 없다.
+
+검증: 초기 전체1279PASS 후 멱등 오류 뒤 GET이 재전송 제한을 해제할 수 있는 경계를 보완하고 신규 회귀를 추가, 최종 전체1282PASS(이전1246+클라이언트13+신규 상태23). 최종 lib/test 분석0, format/git diff --check 및 diff 검토 완료. 초기 분석의 중괄호 안내8개는 수정했다. 로그 .dart_tool/verification-ui-final-tests.log 및 verification-ui-final-analyze.log. 실제 provider/장비/기기 설치·조작/서버 자료 쓰기는 수행하지 않았다.
+
+새로 가능해진 흐름: 설정→내 게임계정 인증에서 서버 인증 명령과 진행/보류·재진입·같은 요청 복구를 사용. 보존 확인한 기존 흐름: 전체 회귀시험과 기존 Google/회원키/등록·로컬 DB/legacy 인증·양 역할 자료 무변경. 미확인 실기기: 등록선택/직접입력·장비 안내/보류·취소 알럿·재진입/회원 전환/대기시간 실제 표시 및 실장비 인증. 이 화면 구현을 소유 검증이나 ID/활동/왕관 완료로 확대하지 않는다. 다음은 서버/로컬 ID의 회원·환경·revision 소유 경계 설계와 이후 서버 활동 선택 연결이다.
+
+공식 결과 회신: https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6184636914 . Backend 인계/조사 수신·실제 Flutter 변경/검증·미확인을 구분하고 추가 Backend 수정/시험은 요청하지 않았다. 현재 feature/account-verification-client 유지, 코드/관련 문서 미커밋·미push·dev 미반영. 기존 설계 미커밋/사용자 firestore.rules-backup1012/1013·tools는 보존, main/배포/DB·migration/자료삭제/Issue 종료는 변경하지 않았다.
+
+## 2026-10-15 — 회원·환경별 서버 ID 연결 설계·L1a/L1b 구현 인계
+
+사용자가 Backend에 착수 요청된 미완료 작업이 없다는 확인 뒤 `진행합시다`로 서버 ID 설계/L1 대조·회신을 승인했다. AGENTS/ai_rules/NEXT_WORK/AI_CONTEXT/README와 관련26/24·Issue8 본문/최신댓글을 확인했다. 현재feature/account-verification-client/HEAD와origin-dev cc6a0b0·기존 local/origin 목적 브랜치를 대조하고, 인증 직접 후속의 계약 설계이므로 브랜치를 재사용했다. 기존 미커밋 인증/설계·사용자Rules 백업/tools는 유지했다.
+
+schema13 GameAccounts/AccountCharacters·ServerAccountIdentityBinding/Repository·DB.bindServerIdentity·summary/profile writer·서버 power 표시/등록 전체페이지 read·Backend cd3e003 models를 읽었다. 기존 mapping에는 회원/환경/revision provenance가 없고 mismatch 재매핑/active 저장 예외가 있으며, 로컬 이름 기반 writer와 서버 표시 대조는 세대 동일성 증거가 아님을 확인했다. 기존 원자성/중복/소속/재매핑 시험은 보존 근거이며 현대 scope 검증 통과로 확대하지 않았다.
+
+계약29에 환경(정규화 API base URI)/회원/등록관계/canonical ID·lifecycle/세션과 서버 자격·기기 metadata 수명을 분리했다. 출처 없는 기존 행/같은 이름 빌드 승계·자동연결/삭제 금지, 새 ID 빈 개인 공간, V1 앞뒤 등록/전체페이지 revision 대조와 V2 실제계약 후 소비, 저장 전 scope/local revision·기기 transaction 및 최종 서버 자격 재검증을 설계했다. exact Drift schema·writer 분리/DI·활동·왕관은 별도 다음 단위다. 로그인 주목록 교체·게스트 가져오기/전체복원은 새로 채택하지 않았다.
+
+공식 schema 조사6184587789와 보완6183941103의 긍정관찰/부재증거 분리·보장 미기재 판정을 수용했다. Backend L1a 기존 UUID/NameClaim·이력 기반/이름 단독 소유·복구 차단/캐시·전경로 fencing, L1b V2 현재characters·이력 GET의 개발브랜치 코드/migration 파일·격리 PostgreSQL 검증/원격계약 인계를6185091368(https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6185091368)로 명시 요청하고 본문 일치를 재조회했다. Backend는 Flutter UI/저장 연결을 기다리지 않으며 L1a부터 독립 게시할 수 있다. V1 shape 보존/의도된 보수적 제한 수용·외부 호출/네트워크 lock·기존대표/5분제한폐지 보호와 구체 검증/담당/완료조건을 인계했다. liveproof·퇴역/claim해제/소유추정·L2/L3/개발·운영DB적용/backfill/자료삭제·API재기동/배포/파티전체/Issue종료는 제외했다.
+
+NEXT_WORK를 현재 단일범위/담당/대기·다음scoped storage설계로 교체하고 완료 상세의 중복 누적을 줄였다. AI_CONTEXT의 중복·과거 미회신 상태를 최신 요약으로 정리하고 README/26/29에 수용/실제요청 링크를 반영했다. 실제 Backend 착수/완료는 아직 미회신이다.
+
+새로 가능해진 흐름: Flutter 연결 설계와 구체 L1 착수 범위가 원격에서 읽히므로 Backend의 미요청 대기 원인을 해소. 보존 확인: 기능코드/DB/기기/키·기존 인증/양 역할 빌드/회원자료 무변경, 출처 없는 과거 자료 역귀속 없음. 검증: 코드·문서·원격 댓글/Backend모델 대조, 게시본문일치·문서 diffcheck/링크 점검. 기능 변경이 없어 전체1282PASS/lib-test분석0은 이전 인증 구간 근거로 보존하고 반복 실행하지 않았다. 미확인실기기: 실제 소유/서버ID연결·활동/왕관, L1 구현/계약/DB시험은 상대 후속이다. 현재브랜치유지·설계/인증미커밋·미push·dev미반영,main불변.
+
+## 2026-10-15 — 회원·환경별 캐시 DB·writer 분리 세부 설계
+
+사용자가 다음 scoped storage/writer 설계를 진행하도록 승인했다. 필수 진입 문서와 계약29·실제 schema13/빌드·summary/profile/관리·자동갱신/삭제 경로를 대조하고 feature/account-verification-client/HEAD·origin-dev cc6a0b0·기존 목적 브랜치·미커밋 상태를 확인했다. 현재 목적 브랜치를 재사용하고 이전 인증/설계 및 사용자Rules/tools는 보존했다. Issue8 최신은 L1요청6185091368이며 신규Backend착수/완료회신은 없었다.
+
+계약30에 기존 lost_party/schema13과 별도 ScopedAccountCacheDatabase/lost_party_server_cache·초기schema1의 scope/등록/accounthead/character4캐시 테이블을 설계했다. 환경키/회원·typed scoped ref·immutable UUID/account관계·composite FK/RESTRICT, 등록/캐릭터 미관찰 snapshot sequence·metadata_only/complete 및 source/nullable·local/server revision·CAS·전체페이지 원자 적용을 정의했다. 등록 요약만 있는 상태를 빈 전체 원정대 성공으로 보지 않는다. 기존 데이터 역귀속/빌드 자동복사·name fallback·가짜정수ID·서버자격 생성은 없다.
+
+runtime receipt/session fence·요청sequence·row version을 분리하고 조회/쓰기 전후 검사·rollback·commit/session 경합의 한계를 명시했다. 이전scope commit이 먼저완료될수있어도새회원scope에저장/노출하지않으며persisted usable/owned로명령을열지않는다. 같은ID의lifecycle revision변경은개인빌드보존/재검증,새ID는다른공간으로구분했다. profile/summary/bind/build/관리/coordinator/power/삭제 writer별 legacy보존과신규경계를정의했다. 역할정책순수분석은재사용하고양역할/선호보존은후속writer에서검증한다. 개인build/preference테이블은키/수명만정하고초기4테이블구현에선제생성하지않는다.
+
+다음구현S1은실행DI/네트워크/화면없이새저장소·typed fence/read/apply/CAS와메모리DB경계시험만수행할수있도록종료조건을확정했다. Backend L1b원본계약은S2adapter의선행이며S1구현을막지않는다. 문서29/README/AI_CONTEXT를연결하고NEXT_WORK를S1단일계획으로교체했다. 설계결과6185868981(https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6185868981)을게시·원격본문일치확인,기존L1요청을유지하고추가Backend수정/시험을요청하지않았다.
+
+새로가능:독립S1저장기반구현의키/제약·검증/회귀·완료조건확정. 보존확인:이번기능코드/DDL·schema13/기기자료/키/Router/DI무변경·기존양역할자료보존. 미확인실기기:실제scope저장/API/활동/왕관·소유장비인수는아직미구현/미확인. 검증은소스/문서대조·링크/whitespace/gitdiffcheck·회신본문일치이며기존인증1282PASS/분석0은이전결과로보존하고재실행하지않았다. 현재feature/account-verification-client유지·코드/문서미커밋/dev미반영/미push,실DB/삭제/배포/Issue종료없음.
+
+## 2026-10-15 — S1 회원·환경별 격리 캐시 DB 구현
+
+사용자가API연결선행진행을승인했다. 필수문서/계약30·실제기준/최신Issue8과Git/목적브랜치목록을대조했다. 기존feature/account-verification-client는인증목적이고scoped/cache기존브랜치가없어,S1저장기반/메모리검증을마치면종료하는feature/scoped-account-cache를cc6a0b0에서생성·확인했다. 이전인증코드/설계미커밋과사용자Rules/tools를이동·stage·덮어쓰기하지않고보존했다. NEXT_WORK에구현순서/최종검증범위를먼저기록했다.
+
+새5파일은domain/scoped_cache_models.dart, data/local/scoped_account_cache_database.dart와해당Drift생성물, data/repositories/scoped_character_cache_repository.dart, test/features/account/backend_read/scoped_character_cache_test.dart다. 내부StorageScope/typed refs·정규화immutable snapshot/UTC·UUID·source/null·별도schema1/4테이블·FK/RESTRICT·기본디스크연결없음을구현했다. build_runner는새g.dart한개filter로생성했고기존AccountDatabase/생성물/Router/DI를변경하지않았다. 내부모델/fixture는Backend wire DTO가아니다.
+
+Repository는회원/환경·runtime/session/조회순서token·등록/head local-version CAS·전체등록/원정대transaction/read·receipt를구현했다. metadata_only/complete·현재snapshot미관찰은분리하고기존행을파괴하지않는다. 소유revision가림후하한값보존·새소유수명의settings reset과후퇴구분·동일캐릭터ID/account·이름불변/퇴역ID부활거절·새이름ID별도행을적용했다. 같은ID의lifecycle revision변경은관찰갱신이며개인자료테이블은추가하지않았다. source/구조가일치하는최신complete관찰의표시payload를반환해ownership-lost preview fresh수치와소유/사용자격을분리했다. retained readCharacter는과거관찰일수있어최신허가로사용하지않도록문서화했다.
+
+자동검증: 초기생성타입컴파일범위분석에서중괄호info2개수정, 표적25PASS후lib/test분석의unused import1개제거. ID개명/부활·unknown lifecycle경계보완후전체1310PASS, preview표시payload보존경계수정/시험추가후 **최종전체1311PASS(기존1282+신규29)**·**lib/test분석0**·format/diffcheck완료. 둘을합산하지않는다. 메모리SQLite의4테이블/schema1/FK활성·legacyDB별도보존,scope분리·참조/재할당/후퇴/부활,transaction중도failure rollback·독립RepositoryCAS·queuedDB작업중회원전환·새runtime receipt거절을확인했다. 로그 .dart_tool/scoped-cache-final-tests.log / scoped-cache-final-analyze.log. 전체최종검증뒤코드는변경하지않았다.
+
+Backend L1a6f3d029/6186038066과L1bc91af2e/6186143574의구현/원본게시수신을기록하고, dev/main미통합·실DB0007미적용/실행API미전환·별도185/113/57시험결과/proof보류를구분했다. 결과6187076006(https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6187076006)을게시·원격본문일치확인했다. 추가Backend수정/실키/반복시험·DB적용/재배포/삭제/Issue종료요청은없다. NEXT_WORK를S2정확한L1b현재캐릭터/이력조회adapter·DTO/페이지/오류/정규화캐시연결구간으로교체했다.
+
+새로가능:독립된S1 격리 캐시의typedread/apply/CAS/receipt를S2에서재사용. 보존확인:전체회귀와기존DB/양역할·표시/주간자료·인증/키·Router/DI무변경. 미확인실기기:새캐시runtime/UI/네트워크/API소비·실장비/소유·활동/왕관모두후속이다. 앱에새DB가자동생성되도록연결하거나기기설치/조작하지않았다. 현재feature/scoped-account-cache유지·S1/기존인증/문서미커밋·미push·dev미반영,main·실서버/DB/키자료불변이다.
+
+## 2026-10-15 — S2 현재 캐릭터·퇴역 이력 조회 API adapter
+
+사용자 `연결 진행합니다` 승인으로 필수 진입 문서/계약30·Git/기존 목적 브랜치와 Issue8 최신 댓글을 대조했다. S1에 직접 종속되는 조회/캐시 adapter이므로 feature/scoped-account-cache/cc6a0b0를 재사용했다. origin/dev도 cc6a0b0를 유지함을 확인했다. 이전 인증/설계·S1과 사용자 Rules/tools 미커밋은 보존했다. NEXT_WORK에 구현 순서·정합성/회귀 보호를 먼저 기록했다.
+
+Backend c91af2e003877daacb833aaa0c109eae11b72816 OpenAPI를 contracts/issue8-c91af2e.openapi.json에 고정했다. 신규 domain/server_character_lifecycle.dart의 4DTO는 모든 필수/nullable·enum/UUID/UTC·revision을 검사하며 기존 SettingsOut/관찰 parser를 재사용한다. selection_complete optional true 기본값·수치 문자열/null을 보존한다. source service.reg_out와 lifecycle_reads.characters를 대조해 preview의 V1 roster_revision=null→V2 registration.version generation만 명시 매핑했고 canonical 누락은 거절한다.
+
+신규 data/server_character_lifecycle_client.dart는 기존 Bearer transport로 GET2개를 호출한다. V1 등록 전체→S1 metadata→roster token→V2 전체페이지 구조/현재 metadata 대조→S1 원자 적용을 연결했다. 등록/account/main/소유/roster/전체 settings·중복ID/이름/반복cursor/최대200·오류/부분결과·늦은 회원/환경을 거절한다. power 관찰 시각/값은 구조 revision 불변 내 차이를 허용한다. preview/소유상실은 canonical ID/revision null과 usable=false를 유지하고 fresh 표시값만 보존한다. 이름 재사용 새 ID와 과거 미관찰 ID는 분리하며 기존 개인자료 writer를 호출하지 않는다.
+
+퇴역 이력은 명시 한 페이지/최대50 조회·typed DTO와 client/회원/세션/환경/history revision에 묶인 일회용 continuation이다. 새 순회/중복/늦은 결과를 차단한다. 중복 검사용 연속 순회10000건의 메모리 상한은 로컬 읽기 한도이며 서버 보관기간이 아니다. 이력 영속 저장·삭제/ACK·무제한 자동 수집을 추가하지 않았다.
+
+검증: 신규 server_character_lifecycle_client_test.dart 초기33개 중 fixture cascade 범위 오류2개를 바로잡아33PASS 후 경계를 보강해42PASS. 최종 **전체1353PASS(기존1311+신규42)**·**lib/test분석0**·format/diffcheck와 신규 파일 공백/원본 snapshot 대조를 완료했다. 4DTO 필수속성 전수누락/추가·UTC/null/type·preview fresh·구조/권한/cursor/최대200·부분 batch 무반영·401 단일 refresh·409/403/404/429 code/status/request ID/retry metadata·네트워크 보존·회원/동일회원 재로그인/환경/late/latest·이름 재사용·history continuation을 모의 HTTP/메모리SQLite에서 검증했다. 최종 로그 .dart_tool/lifecycle-final-tests.log(41초)/lifecycle-final-analyze.log. 전체 검증 뒤 기능 코드는 변경하지 않았다.
+
+결과 [6187403079](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6187403079)를 같은 Issue8에 게시하고 원격 본문 일치를 확인했다. 추가 Backend 수정/반복시험·배포/실DB적용/삭제·증거 보류 해제/Issue종료 요청은 없다. 계약30/README/AI_CONTEXT를 갱신하고 NEXT_WORK는 S3 실행 연결 설계로 전환했다.
+
+새로 가능: opt-in V2 현재 roster 조회→S1 검증 캐시 적용/receipt와 회원별 퇴역 이력 페이지 조회. 보존 확인: 전체 기존 회귀와 V1/인증/키/전투력·S1/기존DB·역할/주간자료·실행 Router/DI 불변. 미확인 실기기: 실행 DI/기본 디스크/화면·실제 V2 서버/provider·소유/장비proof/퇴역·활동/왕관 인수는 미연결/미확인이다. 실제 Backend DB0007/실행 API 미전환을 유지하며 설치/조작·자료 이관/파괴정리하지 않았다. 현재 feature/scoped-account-cache 유지·신규/기존 변경 미커밋·미push·dev미반영·main 불변, 브랜치 유지가 필요하다.
+
+## 2026-10-15 — S3 app runtime·서버 조회 실행 연결 설계
+
+사용자 `설계 진행` 지시에 따라 문서 설계만 수행했다. 필수 진입 문서·계약29/30과 현재 BackendApp/_createRouter/readSession·MyAccountPage 서버 영역·V1 Read/Registration/Power/Verification 및 S1/S2를 대조했다. Issue8 최신은 Backend L1b6186143574와 Flutter S2 회신6187403079이며 새 Backend 변경 요청은 없었다. feature/scoped-account-cache/HEAD·origin-dev cc6a0b0·관련 기존 local/origin 브랜치와 미커밋을 확인해 S1/S2 직접 후속 설계로 같은 브랜치를 재사용했다.
+
+계약30 §8에 수명/소유·등록 metadata/선택 roster queue·실제 URI·회원/세션 fence·hydration/receipt/preview·이력/오류·배포 준비 조건을 확정했다. 기존 serverAccountsSection만 새 서버 경로 대상으로 삼고 local 캐릭터 주목록/빌드·표시·주간은 보존한다. S3b는 V2 현재 상태 상세를 연결하며 기존 V1 전투력 화면은 보조 route로 유지한다. 이름 기반 power cache에 V2를 합치지 않는다. 다음 S3a는 주입 가능한 runtime/controller·별도 DB factory와 S2 공유 registration Repository/성공 typed metadata 반환만 구현하고, 실제 BackendApp/Router/gated UI 연결은 S3b 단위다.
+
+조사에서 확인한 경계: V1 초기 목록은 기존 공용 Repository가 공유하지만 S2는 별도 Repository를 생성하므로 주입 경계가 필요하다. S1의 account-null preview는 head/receipt·complete가 없어 이번 조회 성공 stamp를 controller에 별도로 둔다. 디스크 empty는 서버 empty가 아니며 부분/오류를 삭제/퇴역으로 저장하지 않는다. S2 history continuation은 전송 전에 일회 소비되므로 실패 시 처음부터 재조회한다. Dio5.9.2 options.dart의 baseUrl+path/중복슬래시 축약을 확인해 URI 의도와 실제가 다른 설정은 runtime 구성에서 거절하도록 했다. 기존 인증/키 origin 분리 한계는 cache base-path 격리와 구분한다.
+
+활성화는 S3b 시작 설정 BACKEND_LIFECYCLE_READS_ENABLED 기본false다. OFF 기존 V1 유지, ON V2 오류를 V1 성공으로 바꾸지 않는다. 현재 상태/이력 GET은 개인 API 키·나이스단 설정 완료를 새로 기다리지 않는다. Flutter S3a/S3b 코드·모의검증은 Backend 배포를 기다릴 필요가 없고, 실환경 ON/사용자 인수만 별도 승인과 대상 코드/DB0007/실행 API 준비 확인 후다. 추가 제품 결정이나 Backend API 변경은 필요하지 않다. 실배포/DB적용·live proof/퇴역·claim해제·자료 삭제/ACK는 계속 제외한다.
+
+S3a/S3b 자동검증·한 번의 사용자 수동 확인 항목과 종료 조건을 계약30에 기록하고 NEXT_WORK를 S3a 단일 구현 범위로 교체했다. AI_CONTEXT의 선행 S1/S2 상세를 축약하고 README의 오래된 다음 작업 문구를 바로잡았다. [설계 회신6187560938](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6187560938)을 게시하고 원격 본문 일치를 확인했다. Backend 새 수정/반복시험·DB전환/배포 요청은 없다.
+
+새로 가능: S3a를 추가 제품 결정/Backend 변경 없이 구현할 수 있는 경계·단계/완료조건이 확정됐다. 보존 확인: 기능코드/설정/DDL·실제 DB/키/서버·기존 local/역할 흐름은 무변경이며 BackendApp/S1/S2/직접 관련 테스트의 시작/종료 SHA256 일치도 확인했다. 미확인 실기기: runtime/UI·실제 V2/API/디스크·소유/장비·활동/왕관은 아직 미구현 또는 미인수다. 검증은 문서/소스/원본·링크·git diff --check이며 이전 최종전체1353PASS/lib-test분석0을 반복 실행하지 않았다. 현재 feature/scoped-account-cache 유지·이번 문서/이전 인증/S1/S2 미커밋·미push·dev미반영·main 불변, 브랜치 유지 필요.
+
+## 2026-10-15 — S3a 서버 캐시 runtime/controller 구현
+
+사용자 `다음 작업을 진행합니다` 승인으로 S3a를 구현했다. 필수 문서/계약30 §8·실제 S1/S2/세션/초기 조회 공유와 기존 경계 시험, Issue8 최신6187560938을 대조했다. feature/scoped-account-cache를 직접 후속으로 재사용하고 HEAD·origin-dev cc6a0b0·관련 local/origin 브랜치와 이전 인증/설계/S1/S2·사용자 Rules/tools 미커밋을 확인·보존했다. NEXT_WORK에 착수/실제 API 최소 확장·검증 순서를 먼저 기록했다.
+
+신규 data/scoped_account_runtime.dart는 같은 readSession/accountApi·공용 registration Repository, 불변 환경/실제 request URI·HTTP debug 정책, 주입 factory/lazy 단일 connection·별도 drift_flutter DB 이름, 세션/호출 전후 fence를 제공한다. 생성/게스트/비활성은 새 DB/HTTP0이다. runtime factory connection은 ownsDatabase=true일 때 진행 tracked 작업 종료 후 한 번 닫고 false의 외부 connection과 Dio/인증 세션은 보존한다. 즉시 논리 무효화와 이미 실행 중인 DB/HTTP 종료 대기를 구분한다. DB 실패를 빈 성공·삭제/자동 재생성으로 바꾸지 않는다. AccountDatabase/Drift schema·생성물은 변경하지 않았다.
+
+S2 ServerCharacterLifecycleClient는 공용 ServerAccountReadRepository 선택적 주입/동일 API-session 검사, refreshRegistrations shareInFlight와 성공 typed metadata 반환만 보완했다. 초기 진행 중 GET 공유·명시 새 GET·count/대표 요약과 기존 wire/오류/preview 정책을 보존한다. S1 ScopedCharacterCacheRepository에는 관찰을 남기고 token/receipt를 동기 폐기하는 invalidateReads()만 추가했다. FK/CAS/정규화/역할·권한 정책을 복제하지 않았다.
+
+신규 ScopedAccountViewModel은 명시 initialize 후 세션별 초기화, 캐시 hydrate/서버 empty 구분·metadata/선택 roster queue/동일 작업 공유·명시 invalidation/현재 선택 재조회·canonical receipt와 null-head preview 성공 stamp·이전 관찰/오류·fixed deadline을 관리한다. 회원/동일회원 새세대·로그아웃은 private rows/selection/history/error/timer를 즉시 비우고 queued/늦은 결과를 억제한다. metadata 중간 변경과 외부 token 충돌은 오래된 snapshot 재적용 없이 재조회로 복구한다. 이력은 명시 open/restart/loadMore/close 한 페이지·DB미사용이며 소비된 continuation 실패는 불완전 prefix+needsRestart다. timer는 표시만 갱신한다. 미선택 원정대/이력·키/provider 자동 조회나 서버 ACK·자료 정리는 없다.
+
+검증: 신규 scoped_account_runtime_test.dart 초기27개 포함 S1/S2 표적98PASS. 분석 미사용 helper/스타일10건을 정리하고 서로 다른 account queue·같은 세션 외부 무효화2경계를 보강했다. 최종 **전체1382PASS(선행1353+신규29)**·**lib/test분석0**·format/diffcheck·신규 공백 검토. 두 실행은 합산하지 않는다. 비활성/guest0·초기 공유/재진입·typed count·disk empty/server empty·canonical/preview·부분/제거·metadata-roster 경합/account queue·same/different session/late factory·URI/환경·history restart/late/deadline·DB실패/소유close·실제 임시 SQLite 재실행 stale 관찰을 확인했다. .dart_tool/scoped-runtime-final-tests.log(79초)/scoped-runtime-final-analyze.log. 최종 검증 뒤 기능코드는 변경하지 않았다.
+
+[결과 회신6189141597](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6189141597)을 같은 Issue8에 게시하고 원격 본문 일치를 확인했다. 계약30/29·README/AI_CONTEXT 상태를 갱신하고 NEXT_WORK를 S3b 단일 실행 DI/Router·서버 현재 상태/이력 화면 연결로 전환했다. 추가 Backend API 변경/반복시험·실DB적용/배포·proof/퇴역 보류 해제/Issue종료 요청은 없다. 실제 Backend DB0007/실행 API 전환·실환경 플래그ON/사용자 인수는 별도 승인/준비 확인 후다.
+
+새로 가능: S3b에서 동일 app runtime/state에 서버 현재 상태와 이력 UI·명시 관리/인증 callback을 연결할 실행 기반. 보존 확인: 최종 전체 기존 회귀·V1/인증/키/전투력·기존DB/schema13/양역할·주간자료·기존 실행 BackendApp/Router/화면(이번 변경 기준). 미확인 실기기: 실제 gated DI/기본 drift_flutter 디스크 경로·V2 서버/provider·장비 소유·활동/왕관 인수는 후속이다. 앱의 기본 factory 호출/실자료/기기 설치·조작은 하지 않았다. 현재 feature/scoped-account-cache/cc6a0b0 유지·신규/기존 변경 미커밋·미push·dev미반영·main 불변, 다음 S3b를 위해 브랜치 유지 필요.
+
+## 2026-10-15 — S3b gated 앱 DI·현재 상태/이력 화면 연결
+
+사용자 `진행합니다` 승인으로 S3b를 진행했다. 필수 진입 문서·계약30 §8·최신 Issue8과 실제 API/Router/DI/쓰기 흐름을 대조하고 NEXT_WORK에 포함·제외/순서/회귀 보호 목록을 먼저 기록했다. feature/scoped-account-cache/HEAD·origin-dev cc6a0b0를 재확인해 재사용했으며 이전 인증/설계/S1/S2/S3a와 사용자 Rules/tools 미커밋을 보존했다. 최신 Backend 회신은 L1b6186143574/원본c91af2e이며 새 변경 요청은 없다.
+
+BackendAccountLifecycle이 같은 session/API/공유 registration Repository의 runtime/state와 DB 수명을 소유한다. BACKEND_LIFECYCLE_READS_ENABLED 기본false로 OFF 기존 V1 서버 패널/상세·전투력과 새 DB/V2 0호출을 유지한다. ON은 서버 패널·현재 상태 상세, 기존 V1 전투력 보조 /power, 회원 이력 /account/character-retirements다. 과거 관찰/metadata-only·현재 canonical/preview·확인 시각·소유/설정·캐릭터 이상/오류/대기를 구분하고 조회 실패를 빈 성공이나 V1 성공으로 바꾸지 않는다. 등록0개 이력 진입·명시 더 보기/처음부터 재조회·나가기 폐기, 회원 전환/늦은 응답 차단을 연결했다. 새 로컬 writer·역할/식별자 합치기·이력 DB/ACK는 없다.
+
+기존 ServerRegistrationViewModel에 scope가 붙은 시작/종료 callback만 최소 추가했다. 시작은 현재성을 무효화하고 겹친 GET을 막으며 종료는 metadata/선택 roster를 재조회한다. 쓰기의 결과 불확실 pending은 읽기 성공으로 확정하지 않는다. 관리/인증 복귀는 이전 진행 GET을 새 성공으로 재사용하지 않고 명시 무효화 후 새로 조회한다. 같은 회원/다른 회원 세대 fence·app close 소유를 유지하고 history dispose는 무통지 정리로 build 중 notify를 피했다.
+
+검증: 신규 scoped_account_ui_test.dart 최종12개. 기본OFF 무IO/생산 route·V1 전투력 경로·V2 404 실패 유지·등록0개 이력·로그아웃 즉시 제거/이력 무DB·이탈 뒤 late/dispose·쓰기 중 GET 차단/실제 명령 성공과 불확실 pending 보존·이전회원 callback·인증 callback/진행 GET 경합을 검증했다. 위젯 테스트의 fake/real 비동기 구간을 분리해 모의 SQLite/Completer 대기를 바로잡았다. 초기 전체1393PASS/분석0 뒤 최종 검토에서 인증 GET 경합을 보완·1경계를 추가했으며 최종 **전체1394PASS(선행1382+신규12)**·**lib/test분석0**·format/diffcheck·diff 검토다. 실행별 결과를 합산하지 않는다. 최종 로그 .dart_tool/scoped-ui-final-tests.log(67초)/scoped-ui-final-analyze.log(8.3초). 최종 전체 검사 이후 기능코드 변경 없음.
+
+[Issue8 결과6190026125](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6190026125)을 게시하고 원격 본문 일치를 확인했다. README/AI_CONTEXT/계약29·30을 현재 상태로 맞추고 NEXT_WORK에 실제 대상 환경 준비·승인/한 번의 사용자 수동 체크리스트·미커밋 정리/dev 통합을 남겼다. Backend 추가 수정/반복시험·DB 전환/배포·Issue 종료 요청은 없다.
+
+새로 가능해진 흐름: ON 구성에서 앱 서버 원정대 현재 상태/회원 이력과 관리·인증 후 새 조회, 기존 전투력 보조 진입을 사용할 코드 연결. 보존 확인한 기존 흐름: 최종 전체회귀의 V1/전투력·인증/키/로컬 빌드/양역할·주간/schema13·S1/S2/S3a와 기본OFF 무IO. 미확인 실기기 항목: 실제 gated 화면 인수·기본 디스크 경로/재실행·실제 V2 서버/provider·장비 소유/활동/왕관. 모의 HTTP/SQLite 통과이며 실제 대상 코드·DB0007/실행 API 준비와 별도 승인 전에는 실환경 ON으로 안내하지 않는다. 기기 설치·조작/서버 배포·실DB/실자료·키 변경은 없다.
+
+현재 feature/scoped-account-cache/cc6a0b0 유지·이번/이전 변경 미커밋·미push·dev미반영·main 불변이다. 코드·자동검증 구간은 완료됐지만 저장소 통합/실환경 인수는 미완료이며 브랜치 유지가 필요하다.
+
+## 2026-10-15 — 자동 갱신 다음 구간 기획·저장 개념 재확인 우선
+
+사용자는 S3b 조회 연결을 전체 자동 갱신 완료/디바이스 테스트 단계로 설명한 오류를 지적했고, 다음 자동 갱신 구간의 기획·UX 동의 필요 여부를 확인하도록 지시했다. 필수 문서·실제 저장/분석/준비 소스·최신 Issue8(6190026125)과 Git을 대조했다. 기능코드/DB/플래그는 변경하지 않았다. 기존 자동1회/진행/미완료 재시도·경고 저장/설정 시작값·회원 전환 UX는 유지한다.
+
+설계23에 설정 의미(나이스단 포함 허용값과 별도 V2 개발 플래그), 회원별 역할 저장/판정 A→준비/실행 B→화면/최종검증 C를 검토안으로 기록했다. 구 int-ID Coordinator·기기 공용 commit을 그대로 startup에 연결하지 않고 scope/UUID 역할 저장과 transaction guard가 선행해야 한다. 새 전체 마스터 설정/API나 Backend 변경 요청은 만들지 않았다. S3b의1394PASS/분석0은 조회 연결 결과이며 자동 갱신 완료를 뜻하지 않는다.
+
+추가 UI 질문은 결과를 서버 원정대 영역에 표시할지, 기존 주목록의 회원별 전환까지 포함할지 1건이었다. 사용자 회신은 ‘일단 캐릭터의 저장되는 개념부터 작업 전에 확인’이므로 A/B 선택을 추정하지 않았다. NEXT_WORK를 저장 개념 재확인으로 바꾸고 설계23에 Backend 회원 소속/ID, 기기 공용 정수PK 캐릭터·역할 빌드, 새 회원별4테이블 조회 캐시와 미구현 역할 저장 대조를 기록했다. 두 목록 유지를 최종 UX로 정한 것도 아니며 저장/복원 개념 확인 후 화면·구현 범위를 확정한다.
+
+새로 가능해진 흐름: 자동 갱신 구현 전에 실제 저장과 제안을 구분해 검토할 문서/단계 기준. 보존 확인: 기능코드/기존 자료·설정·키·실환경 무변경. 미확인 실기기: 자동 실행은 미연결이며 지금 사용자 테스트를 요청하지 않는다. 검증은 직접 소스/계약/문서·git diff --check이며 문서만 변경해 Flutter 검사를 반복하지 않았다. Issue8에 대한 새 요청 대응이 아닌 독립 Flutter 기획이므로 변화 없는 회신/Backend 재시험 요청은 게시하지 않았다.
+
+현재 feature/scoped-account-cache/HEAD·origin-dev cc6a0b0를 재확인해 직접 후속 설계에 재사용했다. 이전 미커밋·Rules/tools를 보존했고 이번 문서도 미커밋·미push·dev미반영이다. 브랜치 유지·실자료/배포 변경 없음.
+
+## 2026-10-15 — 사용자 교정: 활성 캐릭터 전체 상세 검사·나이스단 OFF 필수 예외
+
+사용자는 앱 사용 활성 캐릭터 모두를 실행당1회 상세 조회해 오류를 검사해야 하며, 동일 직업 캐릭터 간 보석 공유/종료 전 창고 보관 UX상 나이스단 OFF는 반드시 자동 검사 제외로 유지해야 한다고 명확히 교정했다. 상세 화면 진입까지 분석을 미루거나 예외 대상을 파티 행동 시 강제 검사하는 제안은 요구와 달라 철회했다.
+
+설계23 상단에 최신 우선 규칙과 대상 공식(앱 활동 활성 집합에서 OFF 나이스단 제외)을 기록하고 본문의 대상 판정/상세 조회 단계를 바로잡았다. NEXT_WORK/AI_CONTEXT에도 동기화했다. 활성과 표시 개수는 별개이며 비활성 대상/추가 미합의 레벨 필터를 넣지 않는다. OFF 대상은 호출·덮어쓰기 없이 기존 빌드/오류/확인 시각을 유지하고 실패·부정 판정·미완료 재시도에 자동 포함하지 않는다. 소유/활동의 기존 서버 권한과 새 검사 의무를 혼동하지 않는다.
+
+새로 가능: 요구에 맞춘 자동 조회 대상/예외/시점 설계 기준. 보존: 나이스단 설정/수동 저장 UX와 기능코드·DB·실자료 무변경. 미확인: 저장/복원 설계·전체 자동 실행은 미구현이며 사용자 기기 테스트 요청 없음. 문서 검토/diffcheck만 수행하고 기능 테스트는 반복하지 않았다. feature/scoped-account-cache 유지, 문서/이전 변경 미커밋·미push·dev미반영. Backend 변경/배포 요청 없음.
+
+## 2026-10-15 — 서버 최소 복원·로컬 저장 대기·회원별 단일 주목록 확정
+
+사용자가 세 추천안을 모두 선택했다. 서버에는 역할별 핵심 수치·오류 요약/확인 시각과 선호역할/표시 설정을 복원용으로 보관하고 상세 원본은 로컬에 둔다. 서버 저장 실패 시 유효한 로컬 결과를 먼저 표시하되 서버 저장 대기 상태로 유지해 같은 회원의 유효 자료만 재전송한다. 로그인 주목록은 회원별 하나이며 기존 기기 공용 자료는 별도 경로로 보존하고 자동 연결/이관/삭제하지 않는다. 활성 캐릭터 전체 상세1회·나이스단OFF 필수 제외는 유지한다.
+
+설계23에 최소 필드·로컬 원자 snapshot+영속 대기, 회원/환경/캐릭터 수명·version/멱등 경합·새 기기/원본 없음/로컬 pending와 서버 확정값 구분을 기록했다. OFF 대상은 새 기기에서도 서버 마지막 요약을 복원할 뿐 강제 상세 검사하지 않는다. 로그인 주목록 전환/서버 요약 복원은 이제 승인된 설계 범위이며 과거 S3b의 주목록 미변경/새 API 없음은 그 단계의 이력이다. NEXT_WORK/AI_CONTEXT/README/계약30을 맞췄다.
+
+게시 c91af2e OpenAPI의 전체 paths와 Character/Lifecycle/Settings/Power 관련 schemas를 대조했다. character-settings는 활동/대표/revision, member-settings는 나이스단 bool/version이므로 역할별 오류 요약·선호/표시 복원용 read/write 계약이 없다. 새로운 필드를 기존 endpoint에 임의 송신하거나 provider 전투력 관찰로 취급하지 않는다. [이슈8 계약 검토 요청6191438610](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6191438610)을 게시하고 원격 본문과 로컬 원문 일치를 확인했다. Backend 담당의 기존/신규 계약 범위·정확한 원본/상한·소유/수명·version/멱등·다른 기기 충돌 회신을 대기한다. 계약 검토 요청이며 구현/DB적용·배포·Issue종료 승인이 아니다. Flutter 공통 실행·저장/화면 설계는 계속 정리 가능하고 새 wire adapter만 회신에 의존한다.
+
+새로 가능: 저장/복원·동기화와 주목록 UX를 확정 기준으로 설계 가능. 보존 확인: 기능코드/DB·활성 대상과OFF예외·기존 자료/키/실환경 무변경. 미확인: 자동 실행/새 저장 API·주목록·영속대기는 아직 구현 전이며 기기 시험 요청 없음. 문서/소스·원본 대조·git diff --check만 검증했고 이전 전체1394PASS/분석0은 S3b 조회 연결 결과로만 보존했다. feature/scoped-account-cache/HEAD cc6a0b0 유지·이번/이전 변경 미커밋·미push·dev미반영, 사용자 Rules/tools 보존·브랜치 유지다.
+
+## 2026-10-15 — Backend 저장·복원 계약안 대조·부분 수용 회신
+
+사용자 ‘검토 회신 확인’ 지시로 이슈8 최신6191634445 원문 전체를 확보해 검토했다. Backend는 구현/OpenAPI c91af2e·작업HEAD dc09901, 새 구현/DDL/게시 원본 없는 미합의 제안이라고 명시했다. 이를 API 구현 완료/실환경 준비로 확대하지 않았다. 역할별 nullable 수치·요약/개인설정 분리·회원/소유수명 격리·version/멱등/영속대기와 별도 provider 관찰 보호 방향은 수용 가능하다.
+
+실제 CharacterProfileDto/CharacterBuildSnapshot에는 dealer/support 모두 CombatPower/ItemAvgLevel만 있어 별도 버프력 metrics는 요구하지 않았다. BuildIntegritySnapshot/mapper는 clean/review/error/unavailable·catalogVersion을 가지며 issues가 비어 있어도 unavailable이 가능해 outcome success/warning만으로 정상 복원을 보장하지 못한다. typed 무결성 상태/동등 표현·카탈로그 출처 보존을 보완 요청했다. notice의 소문자/slot/정보성 안내를 그대로 strict issues로 보내지 않고 기존 통합7종 및 고정 범주로 정규화/중복제거·severity 매핑하는 adapter가 필요하다.
+
+현재 GameAccounts.displayLimit 기본6개와 원정대별 대표/사용자순서/아이템레벨/이름 정렬을 확인했다. 회원 주목록 하나라는 선택을 전역 rank/기본 전체표시 변경 승인으로 해석하지 않았다. 기존 원정대별 표시 개수/정렬 복원으로 Backend 제안 수정을 요청했다. 부분 rank ACK는 저장 대기를 분리해 수용 가능하며 새 atomic batch는 요청하지 않았다. 나이스단 OFF는 기존 회원 공통 bool로 분류된 직업군을 제외한다는 뜻이고 캐릭터별 새 bool/override를 요구한 것이 아니라고 정정했다.
+
+[Flutter 회신6192838766](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6192838766)을 게시하고 원격 본문 일치를 확인했다. 설계23/NEXT_WORK/AI_CONTEXT에 부분 수용·두 보완·수정 계약 회신 대기를 기록했다. 제품 세 선택을 다시 묻지 않으며 공통 실행/저장·화면 설계는 계속 가능하고 새 wire adapter만 합의/게시 계약 이후다. Backend 구현/실DB/배포 승인이 아니다.
+
+새로 가능: 실제 분석 출력/기존 화면과 맞는 계약 수정 기준을 인계했다. 보존 확인: 기능코드/DB/플래그·기존 UX·활성전체/OFF예외·회원 공통 설정·실자료 무변경. 미확인: 새 기능/API/자동 실행은 아직 미구현·기기 인수 없음. 소스/계약/문서·diffcheck만 수행하고 Flutter 검사를 반복하지 않았다. feature/scoped-account-cache 유지·이번/이전 변경 미커밋·미push·dev미반영이며 사용자 Rules/tools와 브랜치를 보존했다.
+
+## 2026-10-15 — 수정 계약 수용·Backend P1 역할요약 구현 요청
+
+사용자 ‘진행합니다’ 승인으로 최신 이슈8 수정6193183186을 확인·대조했다. outcome 제거/무결성4상태·nullable catalog, 원정대별7필드 표시 DTO·기본6개/1~200·기존 정렬/등록해제경계, 회원 나이스단bool 유지가 두 보완 요청을 충족한다. 기존 캐릭터 관리 표시 개수는1 이상이고 visible 필터가 대표 우선보다 먼저라 숨긴 대표를 강제로 보이게 하지 않는 안과도 부합한다. 정확한 분석 실패/경고 저장·수치/소유수명/멱등·부분 ACK 원칙을 함께 수용했다.
+
+[계약 수용/P1 구현 요청6193638580](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6193638580)을 게시하고 원격 본문 일치를 확인했다. 담당 Backend의 이번 범위는 역할요약 GET/PUT·기반 additive migration 코드/권한·양역할독립version·멱등/원자ACK 최소 격리검증·OpenAPI 불변원본/SHA와 원격push·제공 P1/P2 범위 인계다. P2 개인표시/선호는 계약 수용됐지만 P1 인계 후 다음 단위로 요청한다. 실DB migration 실행/서버 재시작·API환경전환/배포·자료 이관/삭제·live 증거 보류 해제·기기 설치/조작/Issue종료는 승인·요청하지 않았다.
+
+설계23/NEXT_WORK/AI_CONTEXT/README에 계약 합의 완료·실제P1 구현게시 대기 상태를 기록했다. Flutter A1 준비는 scope+canonical UUID+ownership_revision(+role) 개인자료, lifecycle 관찰 fence, 로컬 상세/요약초안+outbox 원자 저장, 발송명령/새초안 분리·ACK의 정확한명령 정리,4상태/카탈로그/분석규칙 매핑과 최소 경계다. 게시 OpenAPI 전 예상 wire DTO/adapter·실제 DB migration을 구현하지 않는다. A1 뒤 P2 인계/A2 개인표시·B 실행/C 단일 주목록이 남으며 P1 인계만으로 전체 자동 갱신/디바이스 테스트 단계라고 보고하지 않는다.
+
+새로 가능: 합의된 계약의 Backend P1 구현 인계와 Flutter A1의 구체적 저장/동기화 검증 순서. 보존 확인: 기능코드/DB/플래그·기존 자료/키·활성전체/OFF예외·단일 회원주목록 합의 불변. 미확인: P1 실제 API/자동 실행/새 저장·기기 인수는 미제공/미구현 상태. 검증은 수정원문·실제 정책 대조/문서/diffcheck이며 기능 테스트를 반복하지 않았다. feature/scoped-account-cache/cc6a0b0 유지·이번/이전 변경 미커밋·미push·dev미반영, Rules/tools 보존·브랜치 유지다.
+
+## 2026-10-15 — Backend P1 원본 수신·대조 / Flutter A1 연결 가능
+
+사용자 ‘문서 회신 확인’ 지시로 Backend P1완료6194881739를 확인했다. 불변 구현/원본6e4f625c3b62c92ec412373b33ed8a3441af8149의 openapi/openapi.yaml과 ISSUE_8_ROLE_SUMMARIES_DEVELOPMENT를 API로 확보했다. 원본바이트 snapshot contracts/issue8-6e4f625.openapi.yaml의 SHA256은52a2c491c293a97813cf46ce4eff487b889ba0481de0654f4fcf0b5cc9c9cd6b다. 원격브랜치는b31e7c85로전진했으나6e4f625의후속1개·인계문서만변경한commit임을compare API로확인했다. 제공 구현SHA는6e4f625고dev/main미통합이다.
+
+일회성 Dart/YAML 파서로 이전 c91af2e JSON snapshot과 전체 기존 paths/components를 비교했다. JSON/YAML의1/1.0수치형표기를의미상동등정규화한뒤기존항목변경0, 새경로2/schema7추가를확인했다. 실제개인자료조회8필드/역할PUT입력4·응답7/summary11필드와필수nullable·무결성4상태/카탈로그·strict·숫자패턴(정수/소수예시)을대조했다. preferences는P2미구현고정가상기본값(const version1/null/true/null/null)이고저장ACK/복원완료가아니다. 미래P2스키마로확대하거나기존개인설정을이기본값으로덮지않는다.
+
+Backend보고최종171PASS(79.99초)는격리PostgreSQL/mockprovider결과이며이전108과합산하지않았다. 실제서버는대표구간/DB0007·0008·P1/V2미전환이므로원본게시를실API/실기기준비완료로보고하지않는다. Flutter A1 모의구현·검증은가능하다. 이번은회신확인단계라기능코드를수정하거나Flutter테스트·실API/DB·플래그를실행하지않았다.
+
+[수신회신/P2구현요청6195124835](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6195124835)을게시하고원격본문일치를확인했다. 앞서합의한P1인계후별도P2순서에따라개인선호/표시·원정대표시계약/정리경계코드·격리검증·정확한OpenAPI/불변SHA게시를요청했다. 실DBmigration실행/API전환·배포·실자료정리·live증거보류해제·기기인수/Issue종료는승인/요청하지않았다. P2대기는P1소비A1을막지않는다.
+
+NEXT_WORK/AI_CONTEXT/README/설계23·계약30을Flutter A1 strict역할요약adapter·scoped상세/서버요약·영속대기·오류충돌연결가능으로갱신했다. 새로가능: 미게시wire추측없이P1기반A1구현착수가능. 보존확인: 기능코드/기존DB·자료·활성전체상세1회/나이스단OFF예외·회원별주목록합의불변. 미확인: Flutter자동실행/새저장연결·P2·실환경/기기인수는후속이다. 검증은원본/문서/구조비교·diffcheck이며기능시험을반복하지않았다. feature/scoped-account-cache/cc6a0b0유지·이번/이전변경미커밋·미push·dev미반영, 사용자Rules/tools보존·브랜치유지다.
+
+
+## 2026-10-16 — 인증 대상 선택·응답 유실 UX 조사
+
+사용자 실기기 보고로 등록 경로 인증 캐릭터 선택 누락과 start 미확정 시 선택영역 은폐·재진입 지속을 확인했다. CTA 세 곳을 원정대 인증으로 변경했다. 새로 가능해진 흐름은 문구 통일뿐이며 인증 picker/복구 동작은 아직 구현하지 않았다. 기존 인증 요청·판정·소유/세션 흐름은 변경하지 않았다. 고정3c8e799 StartIn의 상호배타 입력을 확인해 Issue8 84번째 Flutter 댓글 https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6215164426 에 등록+대상 캐릭터 계약/불확정 start 회수 경로 확인을 요청했다. NEXT_WORK에 UX 검토안·회귀 경계 기록. 최초 네트워크 오류 원인·실인증/재진입 수정 검증은 미확인이다. 문구/문서 변경으로 전체 Flutter 시험 반복 없이 diffcheck·문구 검토. feature/scoped-account-cache 유지·기존 변경 보존·미커밋/미push/dev 미반영.
+
+
+## 2026-10-16 — 인증 계약 제안 대조·수용 회신
+
+Issue8 85번째 Backend 회신과 고정3c8e799 StartIn·Flutter 등록version/캐릭터주소·불변명령/실행후현재GET을 대조했다. target_character+expected_registration_version 제안을 수용하고 86번째 Flutter 댓글 https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6215477051 에 다음 Backend 구현/검증/OpenAPI 게시를 인계했다. 새로 가능해진 것은 추가 사용자 결정 없는 다음 계약 구현 착수이며 새 picker/복구 기능 완료가 아니다. 기존 동일POST/key/body→ID회수→현재GET 경로를 재사용하고 새 결과조회 API/journal은 요구하지 않았다. 구형digest/strict8필드응답·미게시필드전송금지와 대상/버전오류 인계를 명시했다. 보존 확인: 기능코드·소유/활동/1700/세션/기존자동목록갱신 불변. 미확인: Backend 새계약/본인재인증/타소유pending 실제구현·실provider/기기·최초연결오류원인. 검증은 원본/코드/회신대조·원격댓글본문/순번검증·diffcheck이며 문서만 변경해 Flutter시험 반복 없음. feature/scoped-account-cache/cc6a0b0·기존변경보존·미커밋/미push/dev미반영·브랜치유지.
+
+
+## 2026-10-16 — 인증 재진입·응답 유실 복구 UX 선행 보완
+
+사용자 진행 승인 후 필수문서/현재Git·Issue8 최신86번째를 확인했다. 새target/version 미게시이므로 기존API를 유지하고 NEXT_WORK에 선행 범위/회귀/검증을 먼저 기록했다. 앱 공용 ServerVerificationViewModel에 불변 표시문맥(원정대표시명/등록ID 또는 직접이름)과 pendingAction을 두고 세션 변경 시 제거한다. Page에 재진입 대상요약·시작/확인/취소 진행/미확정, ACK후GET실패 안내·ID없는복구불가 안내를 연결하고 제목도 원정대 인증으로 통일했다. UI문맥은 서버body에 추가하지 않는다. 등록대상은 기존운영조회기준이므로 캐릭터명을 추정하지 않는다.
+
+새로 가능: 화면을 나갔다 다른원정대경로로 다시 들어와도 원명령대상과 복구단계를 확인하고 기존같은요청으로 이어가기. 보존 확인: 실제 인증 handoff/상태/client42PASS의 중복/Retry-After·confirm/cancel/replay/현재GET·세션late/성공관리전환. 신규3경계는 재진입원대상/동일keybody→GET/새wire없음, ACK후GET실패/재진입POST0·로그아웃정보제거, ID없는멱등복구불가에서없는조회/새시작차단이다. 변경3파일 분석0·format/diffcheck·검토 완료. 로그 .dart_tool/auth-recovery-tests.log, auth-recovery-analyze.log. View/표시문맥에 한정되고 Router/DI/공용wire/schema변경없어 전체Flutter시험 반복 없음.
+
+미확인: Backend새계약·본인재인증/타소유pending·캐릭터picker연결·실provider/기기·최초연결오류원인. 복구UI선행완료와 인증전체완료를 구분했다. Issue8 87번째 https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6215781843 에 결과/다음담당을 회신하고 원격본문/순번검증. feature/scoped-account-cache/cc6a0b0·기존변경보존·미커밋/미push/dev미반영·브랜치유지. flag/서버/키/DB/개발자료·환경/배포/기기조작·Issue종료 변경없음.
+
+
+## 2026-10-16 — 원정대 인증 캐릭터 선택 연결·내 계정 문구 삭제
+
+사용자 보고로 원정대선택후목록누락을 재확인했다. 기존 Page는 등록목록만읽었으며 Backend90번째cc372bfa가 게시한 새 target/version을 아직소비하지않았다. 필수문서/Git·최신댓글과 고정OpenAPI StartIn/VerificationTarget를 대조하고 NEXT_WORK에 범위/회귀/순서를 기록했다. 내계정 basicOnly의 기기조회/소유인증전 Text를삭제했으며 기존권한제한은보존했다.
+
+새 ServerVerificationSelectionViewModel은 기존 Repository의 최신등록/해당전체캐릭터조회·계정표시정책을재사용하고 조회세대/회원fence·선택무효화를소유한다. Page에 원정대별후보/이름·서버·직업·아이템레벨선택과미선택시시작불가를연결했다. 후보는활동/대표/표시/1700·previewUUID로제한하지않는다. domain VerificationTarget와 paired version검사·중첩불변body를추가하고구형/direct요청body는유지했다. 서버등록/주소/revision/identity거절은명시재조회·재선택으로복귀하며자동대체시작하지않는다. 원명령요약에선택주소를보존하고binding보류는현재GET코드도유지해소유성공으로오인하지않게했다.
+
+검증: 선행48PASS뒤 버전거절실제페이지재조회/새version전송과binding보류경계를추가해 최종50PASS·lib/test분석0·format/diffcheck. 실행합산없음. 신규/보완시험은 중첩불변/짝/범위·preview저레벨·조회전환/로그아웃late·실패/무효선택차단·실제picker유실재진입동일명령·버전거절후새목록명시선택/새version·보류비승격이다. 기존인증상태/client/성공관리handoff도통과했다. 로그 .dart_tool/auth-target-tests-final.log, auth-target-analyze-final.log. 인증로컬domain/선택/UI에한정되고Router/DI/schema변경없어전체Flutter시험반복없음.
+
+새로가능: 등록원정대내캐릭터를선택해해당주소/최신등록version으로인증시작·재진입복구. 보존확인: 구registration/directwire·중복/Retry-After/replay후GET·confirm/cancel·세션late·성공관리 연결. 미확인: 실게임/provider/기기·최초연결오류원인. 사용자확인은NEXT_WORK에정리했다. Issue8 91번째 https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6216421322 에90번째소비결과/한계를회신하고원격본문/순번검증. feature/scoped-account-cache/cc6a0b0·기존변경보존·미커밋/미push/dev미반영·브랜치유지. 환경/자료/키/DB/flag·서버재시작/배포/기기조작/Issue종료변경없음.
+
+
+## 2026-10-16 — 인증 장비 변경 후 갱신 필수 안내 강조
+
+사용자 요청으로 ServerVerificationPage 장비 변경 대기의 ‘API 정보 갱신에 도움이 됩니다’ 안내를 ‘장비 변경 이후 캐릭터 선택창으로 이동하여 캐릭터 정보를 갱신하여야 합니다.’로 교체하고 별도 Text에 빨간색/굵게 적용했다. 비지정부위 변경금지 안내는 일반색으로 분리했다. 새로 가능해진 표시는 갱신이 필수라는 안내의 시각적 강조이며 인증 요청/판정/시간/복구·버튼 동작은 변경하지 않았다. 실기기 빨간문구/줄바꿈은 미확인이다. 표현/스타일만 변경해 format·diffcheck/소스검토로 검증하며 기능시험은 반복하지 않는다. feature/scoped-account-cache 유지·기존 변경 보존·미커밋/미push/dev미반영·브랜치유지.
+
+
+## 2026-10-16 — 서버 원정대·인증 후보 기본 아이템레벨 정렬
+
+사용자 요청으로 인증 후보/서버캐릭터·등록미리보기·현재상태 목록을 공통 rosterByItemLevel의 숫자 내림차순으로 표시했다. 콤마 숫자 파싱·null/비정상/비유한 값 후순위·동률 입력순서 유지이며 원본 리스트를 정렬/저장하지 않는다. 인증 selection의 표시 getter·기존V1/V2/preview 조회표시에만 적용해 사용자 displayOrder/rank를 소유한 내계정/관리/활동저장에는 영향이 없다. NEXT_WORK에 포함/제외와 회귀를 먼저 기록하고 필수문서/Git·기존 개인순서 정책·97번째 Backend 파서인계를 확인했다. 이번은 서버 변경/협업요청이 필요한 구간이 아니므로 반복 확인댓글은 게시하지 않았다.
+
+새로가능: 전체조회·인증후보의 높은 아이템레벨 우선표시. 보존확인: 기존 로컬 개인순서/관리draft/selection/session·scopedUI 34PASS. 변경6파일 최종정적분석0·format/diffcheck/소스검토. 초기분석의LifecycleCharacter전용getter차이를 기존wire접근으로바로잡고최종분석통과했다. 로그 .dart_tool/roster-order-tests.log, roster-order-analyze-final.log. 표시에한정되어새동일UI시험/전체시험반복없음. 미확인: 실제화면순서/기기. feature/scoped-account-cache 유지·기존변경보존·미커밋/미push/dev미반영·브랜치유지, API/DB/schema/flag/키/자료/인증판정변경없음.
+
+
+## 2026-10-16 — 실제인증 성공 수신·이전페이지복귀/안내간결화
+
+사용자가 실제장비인증1회성공과 성공후화면잔류/과한텍스트를보고했다. 필수문서/Git·98번째Backend start201/confirm200·VERIFIED/소유연결/감사1개를대조했다. lifecycleOFF에는성공후이동이없고ON에서는관리화면강제전환이었다. NEXT_WORK에새UX/회귀를기록하고Page에성공완료콜백/이전Navigator복귀를연결했다. BackendApp은현재상태/현재회원·소유검증을유지한뒤이전경로pop·직접진입시/account복귀로바꾸었다. 과거verified재진입과로그아웃/화면이탈late이동차단은유지한다.
+
+대상/해제부위/남은시간/필요한오류·복구행동만남기고중복설명·구현문구를삭제/축약했다. 빨간갱신안내는유지했다. 인증화면의외부조회실패/연결실패도간결하게구분했다. 미래문구에도핵심행동/상태만간결하게쓰며인게임표현은사용자가조정한다는원칙을ai_rules에기록했다. 앱전체기능/문구일괄개편은하지않았다.
+
+새로가능: 성공후원래페이지로복귀·짧은인증안내. 보존확인: 새성공조회/1회복귀경계와기존과거성공재진입/회원late·미확정/replay/보류·현재소유검증, 인증관련51PASS. Router콜백변경영향으로최종전체1579PASS·lib/test분석0·format/diffcheck·검토. 로그 .dart_tool/auth-return-full.log, auth-return-analyze.log. 미확인: 이번새복귀/간결화UI실기기. 사용자의기존실인증1회성공은수신완료이며전체활동/대표/자동갱신/분쟁인수로확대하지않는다.
+
+Issue8 99번째 https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6217416791 에성공수신/후속UX결과를회신하고원격본문/순번검증. feature/scoped-account-cache/cc6a0b0·기존변경보존·미커밋/미push/dev미반영·브랜치유지. 서버/DB/키/자료/flag/계약·배포/재시작/추가POST·기기조작/Issue종료변경없음.
+
+
+## 2026-10-16 — 원정대 등록·인증 완료/누락 점검
+
+사용자 요청으로 필수문서·등록19/인증28/후속14·실제 Router/reload/성공복귀·메모리복구/수동인증placeholder·최신Issue8 98/99와Git/기존검증로그를 대조했다. 등록·삭제·재로그인/갱신의기존사용자확인과실제장비인증1회/VERIFIED·현재소유연결이확인됐고최신전체1579PASS/분석0이다. 확인범위에서기본흐름필수구현누락은발견하지못했다. 새복귀/간결화·기본정렬실기기확인·기존미커밋Git통합이잔여이며기능재구축대기로해석하지않는다.
+
+후속14 ACCOUNT-02의실장비미인수/ACCOUNT-03의활동UI미구현표현이현재코드/실제결과와달라 최신상태로정정했다. 타소유이전/24시간분쟁·앱종료후명령자동회수·live퇴역은별도미구현, 활동/대표/자동갱신실인수는다음구간으로구분했다. QA-01삭제후로컬보존확인은기존별도릴리즈점검이며미재현결함으로유지한다. 코드/서버/자료변경없고문서diffcheck/검토로검증·Flutter시험반복없음. feature/scoped-account-cache/cc6a0b0·기존변경보존·미커밋/미push/dev미반영·브랜치유지.
+
+
+## 2026-10-16 — 인증 유지 중 재인증 제외·검색/복구 UX
+
+사용자최신정책과100/101번째삭제재등록/direct보류점검을대조하고102번째Backend요청을게시했다. owned는회색이름-인증됨/선택불가로남기며ownership_lost과거verified는차단하지않는다. selection의load·시작전fresh등록/version확인과캐릭터검색의현재owned전체저장목록이름대조를추가해알려진인증대상은POST0으로알린다. 실패/로그아웃late는새시작을허용하지않는다. 새서버wire없이표시용ALREADY_VERIFIED를사용한다. 정상pending조회버튼을숨기고인증결과재확인/원명령재시도, 등록결과재확인/대표재조회로버튼목적을명시했다. 기존불변key/body·replay후GET·제한/세션·성공복귀는유지한다.
+
+검증: 최종관련56PASS·lib/test분석0·format/diffcheck. 신규5경계는owned행/검색POST0·lost후보·소유변경차단/선택무효화·검색logoutlate·정상조회숨김/실패시복구다. 초기신규시험의FormField.items접근은내부DropdownButton검사로수정, 분석info4건중괄호수정후최종통과. 로그 .dart_tool/auth-no-repeat-tests-final.log / auth-no-repeat-analyze-final.log. 한정된selection/화면·표시변경으로Router/DI/schema/서버DTO불변, 전체1579시험반복없음.
+
+새로가능: 현재인증목록을다시선택하지않고검색중알려진본인원정대안내. 보존확인: 기존인증/복구/성공복귀회귀. 미확인: 새UI기기/미관찰이름·동시변경의서버차단, 삭제재등록연결공백. 이번103번째 https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6217851176 에선행결과/서버미완료를회신하고102번째/결과본문과순번검증했다. feature/scoped-account-cache/cc6a0b0·기존변경보존·미커밋/미push/dev미반영·브랜치유지. 서버/DB/키/자료/flag/배포·기기조작/Issue종료변경없음.
+
+
+## 2026-10-16 — 서버 시각 표시 소수점 제거
+
+사용자 요청으로 서버 등록/조회·전투력 확인·대표 변경 가능·회원키 변경·역할요약 확인/미리보기 유효시각의 raw DateTime 표시를 초 단위로 통일했다. 공통 localDateTimeToSeconds를 추가하고 기존 scopedTime/serverRegistrationTimeLabel도 동일함수에 위임했다. 날짜/기기현지시각은 유지하며 서버/저장/전송의 UTC/정밀도·계산은 변경하지 않는다. 앞으로도 소수점초를 사용자에게 노출하지 않는 원칙을 ai_rules에 기록했다. 새로가능: 과한 소수점 없는 시각표시. 보존확인: 날짜/현지시간·기존 초단위표시/서버DTO/시간판정 불변. 미확인: 새기기화면표시. 변경7파일정적분석0·format/diffcheck/소스검토, 표시만변경해 기능/전체시험반복없음. 로그 .dart_tool/time-seconds-analyze.log. feature/scoped-account-cache 유지·기존변경보존·미커밋/미push/dev미반영·브랜치유지, 서버/자료/DB/키/flag변경없음.

@@ -1,5 +1,9 @@
 # Flutter 전투력 API 연결 계약
 
+> 최신 대조(2026-10-16): Flutter R1 전체1542PASS/분석0. Backend59b8c23의 D10 미인증 power/replay 차단·기본 응답 비노출은256PASS·기존8000 반영 보고로 완료됐다. 게시 OpenAPI 직접 비교상7027f0b 대비 paths/schemas 동일·정책 주석3개 추가뿐이다. 다음은 기존 관리 UI의 현재 서버 저장·초기 대표1회/공통1700·인증 성공 전환 연결이며 새 선택/복구 화면은 만들지 않는다. 실제 소유 증거/실기기 인수는 미확인. [최종 대조](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6209491349)·[NEXT_WORK](../project/NEXT_WORK.md).
+
+> 2026-10-16 D10 사용자 채택: 비로그인·로그인 미인증은 기본 정보만 제공하며 본인 전투력/전체 빌드 기능은 소유 인증 후 허용한다. 아래 미인증 전투력/로그아웃 로컬 전투력 표시는 과거 계약·검증 이력이다. 현재 양측 기본/상세 접근 보완은 위 최신 대조를 따르며 아래 당시 준비 문구는 이력이다. [D10](09-migration-decisions.md)·[NEXT_WORK](../project/NEXT_WORK.md).
+
 2026-10-14. Backend 구현/OpenAPI 39188d5dca2d394f4e8b3fcbfe332274812285bf. 원본 snapshot contracts/issue5-39188d5.openapi.json, SHA256 fc166a5e0c2466cc41e19eb5480d5a0600d7a600065740e6e36a670f1c544638. Backend dev에는 아직 병합되지 않았으며 게시 작업브랜치 구현과 로컬 적용보고를 기준으로 한다. #5 게시회신6167071680, 요청21을 재사용한다.
 
 ## 연결

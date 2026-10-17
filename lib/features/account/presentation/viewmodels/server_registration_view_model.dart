@@ -1,3 +1,5 @@
+import '../../domain/services/account_detail_access.dart';
+import '../../../../shared/formatters/local_date_time_formatter.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
@@ -44,6 +46,8 @@ class ServerRegistrationViewModel extends ChangeNotifier {
     this.session, {
     DateTime Function()? now,
     this.cooldown,
+    this.onCommandStarted,
+    this.onCommandFinished,
   }) : now = now ?? DateTime.now {
     cooldown?.addListener(_cooldownChanged);
     session.addListener(_onSession);
@@ -54,6 +58,8 @@ class ServerRegistrationViewModel extends ChangeNotifier {
   final AccountReadSession session;
   final DateTime Function() now;
   final ApiCooldown? cooldown;
+  final void Function(AccountReadScope)? onCommandStarted;
+  final void Function(AccountReadScope)? onCommandFinished;
   void _cooldownChanged() {
     if (!_disposed) notifyListeners();
   }
@@ -232,6 +238,15 @@ class ServerRegistrationViewModel extends ChangeNotifier {
     List<Map<String, String>> targets,
   ) async {
     if (!canWrite) return;
+    if (!hasAccountDetailAccess(
+      ownershipStatus: account.ownershipStatus,
+      accountId: account.gameAccountId,
+      ownershipRevision: account.ownershipRevision,
+    )) {
+      failure = const AccountReadException('OWNERSHIP_REQUIRED');
+      notifyListeners();
+      return;
+    }
     if (targets.isEmpty ||
         targets.length > 20 ||
         targets.any(
@@ -308,6 +323,28 @@ class ServerRegistrationViewModel extends ChangeNotifier {
     }
   }
 
+  Future<void> _requirePowerOwnership(
+    _RegistrationCommand command,
+    int ticket,
+  ) async {
+    if (!command.path.endsWith('/combat-power/refresh')) return;
+    final current = await reads.loadRegistrations();
+    requireAccountReadScope(session, command.scope);
+    if (!_valid(ticket, command.scope)) {
+      throw const AccountReadException('STALE_READ');
+    }
+    final id = command.path.split('/')[4];
+    final account = current.where((a) => a.registrationId == id).firstOrNull;
+    if (account == null ||
+        !hasAccountDetailAccess(
+          ownershipStatus: account.ownershipStatus,
+          accountId: account.gameAccountId,
+          ownershipRevision: account.ownershipRevision,
+        )) {
+      throw const AccountReadException('OWNERSHIP_REQUIRED', status: 403);
+    }
+  }
+
   Future<void> _send() async {
     final command = _pending!;
     requireAccountReadScope(session, command.scope);
@@ -316,8 +353,10 @@ class ServerRegistrationViewModel extends ChangeNotifier {
     failure = null;
     notice = null;
     _reviewed = false;
+    onCommandStarted?.call(command.scope);
     notifyListeners();
     try {
+      await _requirePowerOwnership(command, ticket);
       final json = await api.request(
         command.path,
         method: command.method,
@@ -327,7 +366,11 @@ class ServerRegistrationViewModel extends ChangeNotifier {
         expectedStatus: command.status,
       );
       requireAccountReadScope(session, command.scope);
+      await _requirePowerOwnership(command, ticket);
+      requireAccountReadScope(session, command.scope);
+      if (!_valid(ticket, command.scope)) return;
       ServerRegistrationRefresh? refreshed;
+      ServerAccountRegistration? savedRegistration;
       List<ServerPowerResult>? powers;
       if (command.path.endsWith('/combat-power/refresh')) {
         powers = ServerPowerResult.decode(
@@ -341,6 +384,7 @@ class ServerRegistrationViewModel extends ChangeNotifier {
         final result =
             refreshed?.registration ??
             ServerAccountRegistration.fromJson(json!);
+        savedRegistration = result;
         if (result.version < 1 ||
             (command.path != '/v1/me/game-accounts' &&
                 result.registrationId != command.path.split('/')[4])) {
@@ -377,7 +421,12 @@ class ServerRegistrationViewModel extends ChangeNotifier {
                   '제외 ${powers.where((p) => p.status == 'skipped').length}명 · '
                   '다음에 확인 ${powers.where((p) => p.status == 'deferred').length}명'
             : refreshed == null
-            ? '변경 사항을 저장했습니다.'
+            ? (command.method == 'POST' &&
+                      command.path == '/v1/me/game-accounts' &&
+                      savedRegistration?.ownershipStatus == 'owned' &&
+                      savedRegistration?.verificationStatus == 'verified'
+                  ? '인증된 원정대를 등록했습니다.'
+                  : '변경 사항을 저장했습니다.')
             : '정보 갱신 완료\n'
                   '새 캐릭터 ${refreshed.addedCount}명 · 확인 필요 ${refreshed.suspectCount}명\n'
                   '마지막 확인: ${serverRegistrationTimeLabel(refreshed.registration.serverFetchedAt)}'
@@ -410,6 +459,7 @@ class ServerRegistrationViewModel extends ChangeNotifier {
     } finally {
       if (_valid(ticket, command.scope)) {
         busy = false;
+        onCommandFinished?.call(command.scope);
         notifyListeners();
       }
     }
@@ -482,4 +532,4 @@ class ServerRegistrationViewModel extends ChangeNotifier {
 }
 
 String serverRegistrationTimeLabel(DateTime value) =>
-    value.toLocal().toString().split('.').first;
+    localDateTimeToSeconds(value);

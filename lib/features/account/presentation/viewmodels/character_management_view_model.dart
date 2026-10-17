@@ -4,9 +4,11 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/local_game_account.dart';
+import '../../domain/account_read_session.dart';
 import '../../domain/entities/nice_group_policy_result.dart';
 import '../../domain/entities/save_activity_characters_command.dart';
 import '../../domain/repositories/account_repository.dart';
+import '../../domain/repositories/character_management_gateway.dart';
 import '../../domain/repositories/activity_characters_repository.dart';
 import '../../domain/repositories/nice_group_auto_refresh_settings_repository.dart';
 import '../../domain/repositories/representative_character_sync_gateway.dart';
@@ -22,13 +24,38 @@ class CharacterManagementViewModel extends ChangeNotifier {
     String? playerId,
     DateTime Function()? clock,
     this.accountId,
+    this.managementGateway,
   }) : _accountRepository = accountRepository,
        _representativeSyncGateway = representativeSyncGateway,
        _activityCharactersRepository = activityCharactersRepository,
        _niceGroupSettingsRepository = niceGroupSettingsRepository,
        _niceGroupPolicy = niceGroupPolicy,
        _playerId = playerId?.trim() ?? '',
-       _clock = clock ?? DateTime.now;
+       _clock = clock ?? DateTime.now {
+    managementGateway?.addListener(_managementChanged);
+  }
+
+  final CharacterManagementGateway? managementGateway;
+  CharacterManagementSnapshot? _management;
+  bool _disposed = false;
+  bool _explicitRepresentative = false;
+  bool get canEditDraft => !_draftLocked;
+  bool get isMemberManagement => managementGateway != null;
+  bool get canSave =>
+      !_isSaving && (managementGateway == null || managementGateway!.current);
+  bool get _draftLocked =>
+      _isSaving ||
+      (managementGateway != null &&
+          (!managementGateway!.current || managementGateway!.pending));
+  void _managementChanged() {
+    if (_disposed) return;
+    if (managementGateway?.current == false && !_isLoading) {
+      _account = null;
+      _roster = const [];
+      _message = '현재 회원의 소유 정보를 다시 확인해 주세요.';
+    }
+    notifyListeners();
+  }
 
   final AccountRepository _accountRepository;
   final RepresentativeCharacterSyncGateway? _representativeSyncGateway;
@@ -71,7 +98,8 @@ class CharacterManagementViewModel extends ChangeNotifier {
   int get draftDisplayLimit => _draftDisplayLimit;
   int? get draftRepresentativeId => _draftRepresentativeId;
   NiceGroupPolicyResult get niceGroupResult => _niceGroupResult;
-  bool get hasNiceGroupCharacters => !_niceGroupResult.isEmpty;
+  bool get hasNiceGroupCharacters =>
+      _management?.hasNiceGroup ?? !_niceGroupResult.isEmpty;
   bool get draftNiceGroupAutoRefreshEnabled =>
       _draftNiceGroupAutoRefreshEnabled;
 
@@ -114,6 +142,13 @@ class CharacterManagementViewModel extends ChangeNotifier {
   }
 
   bool canToggleActivity(LocalAccountCharacter character) {
+    if (isMemberManagement) {
+      if (_draftLocked) return false;
+      if (_draftSelectedIds.contains(character.id)) {
+        return character.id != _draftRepresentativeId;
+      }
+      return _management!.usableIds.contains(character.id);
+    }
     if (_isSaving || character.serverCharacterId == null) {
       return false;
     }
@@ -127,6 +162,12 @@ class CharacterManagementViewModel extends ChangeNotifier {
   }
 
   bool canSetRepresentative(LocalAccountCharacter character) {
+    if (isMemberManagement) {
+      return !_draftLocked &&
+          _draftSelectedIds.contains(character.id) &&
+          _draftRepresentativeId != character.id &&
+          _management!.usableIds.contains(character.id);
+    }
     if (_isSaving ||
         !_draftSelectedIds.contains(character.id) ||
         _draftRepresentativeId == character.id) {
@@ -141,6 +182,20 @@ class CharacterManagementViewModel extends ChangeNotifier {
   Future<void> initialize() async {
     _isLoading = true;
     notifyListeners();
+    if (managementGateway case final gateway?) {
+      try {
+        final snapshot = await gateway.load();
+        if (!_disposed) _applyManagement(snapshot);
+      } catch (e) {
+        if (!_disposed) _message = _managementError(e);
+      } finally {
+        if (!_disposed) {
+          _isLoading = false;
+          notifyListeners();
+        }
+      }
+      return;
+    }
     await _reloadAccounts();
     await _loadNiceGroupSetting();
     await _synchronizeRepresentative();
@@ -165,6 +220,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
       _draftSelectedIds = {..._draftSelectedIds, character.id};
       _draftOrderedIds = _insertRestoredOrder(character.id);
     }
+    _seedInitialRepresentative();
     _clampDisplayLimit();
     notifyListeners();
   }
@@ -174,11 +230,13 @@ class CharacterManagementViewModel extends ChangeNotifier {
       return;
     }
     _message = null;
+    if (isMemberManagement) _explicitRepresentative = true;
     _draftRepresentativeId = character.id;
     notifyListeners();
   }
 
   void changeDisplayLimit(int change) {
+    if (_draftLocked) return;
     final maxLimit = math.max(1, _draftSelectedIds.length);
     final nextLimit = (_draftDisplayLimit + change).clamp(1, maxLimit);
     if (nextLimit == _draftDisplayLimit) {
@@ -197,7 +255,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
   }
 
   void reorder(int oldIndex, int newIndex) {
-    if (_isSaving || oldIndex == newIndex) {
+    if (_draftLocked || oldIndex == newIndex) {
       return;
     }
     if (newIndex > oldIndex) {
@@ -221,6 +279,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
   }
 
   void discardChanges() {
+    if (_draftLocked) return;
     final baseline = _baseline;
     if (baseline == null) {
       return;
@@ -230,6 +289,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
     _draftRepresentativeId = baseline.representativeId;
     _draftDisplayLimit = baseline.displayLimit;
     _draftNiceGroupAutoRefreshEnabled = baseline.niceGroupAutoRefreshEnabled;
+    _explicitRepresentative = false;
     _message = null;
     notifyListeners();
   }
@@ -245,6 +305,34 @@ class CharacterManagementViewModel extends ChangeNotifier {
   Future<void> save() async {
     final account = _account;
     if (account == null || _isSaving) {
+      return;
+    }
+    if (managementGateway case final gateway?) {
+      if (!canSave) return;
+      _isSaving = true;
+      _message = null;
+      notifyListeners();
+      try {
+        _seedInitialRepresentative();
+        final representative = _draftRepresentativeId;
+        if (representative == null) {
+          _message = '앱에서 사용할 캐릭터와 대표를 선택해 주세요.';
+        } else {
+          final snapshot = await gateway.save(
+            selectedIds: List.of(_draftOrderedIds),
+            representativeId: representative,
+            displayLimit: _draftDisplayLimit,
+          );
+          if (!_disposed) _applyManagement(snapshot);
+        }
+      } catch (e) {
+        if (!_disposed) _message = _managementError(e);
+      } finally {
+        if (!_disposed) {
+          _isSaving = false;
+          notifyListeners();
+        }
+      }
       return;
     }
     if (_draftSelectedIds.isEmpty) {
@@ -354,6 +442,79 @@ class CharacterManagementViewModel extends ChangeNotifier {
       account.characters,
       account.representativeCharacterId,
     );
+  }
+
+  String _managementError(Object e) {
+    final pending = managementGateway?.pending == true;
+    if (pending) {
+      return '저장 결과 또는 표시 설정을 확인하지 못했습니다. 저장 버튼으로 같은 요청을 다시 확인해 주세요.';
+    }
+    if (e is AccountReadException && e.code == 'REQUEST_IN_PROGRESS') {
+      return '다른 갱신 또는 저장을 처리 중입니다. 완료 후 다시 저장해 주세요.';
+    }
+    if (e is AccountReadException && e.code == 'CHARACTER_UNUSABLE') {
+      return '현재 사용할 수 없는 캐릭터가 선택돼 있습니다. 사용 대상과 대표를 변경해 주세요.';
+    }
+    return '현재 소유·캐릭터 자격 또는 다른 변경을 확인해 주세요. 기존 서버 설정은 유지됩니다.';
+  }
+
+  void _applyManagement(CharacterManagementSnapshot snapshot) {
+    if (_disposed || managementGateway?.current != true) return;
+    _management = snapshot;
+    _explicitRepresentative = false;
+    _account = snapshot.account;
+    _allAccounts = [snapshot.account];
+    _roster = _sortedRoster(
+      snapshot.account.characters,
+      snapshot.account.representativeCharacterId,
+    );
+    _rememberedOrder = {
+      for (final c in _roster)
+        if (c.displayOrder != null) c.id: c.displayOrder!,
+    };
+    _draftSelectedIds = {...snapshot.selectedIds};
+    _draftOrderedIds = [
+      for (final c in _roster)
+        if (_draftSelectedIds.contains(c.id)) c.id,
+    ];
+    _draftRepresentativeId = snapshot.account.representativeCharacterId;
+    _draftDisplayLimit = snapshot.account.displayLimit;
+    _baseline = _snapshot();
+    // Initial proposal only: never write from GET or replace an existing rep.
+    if (_draftSelectedIds.isEmpty && _draftRepresentativeId == null) {
+      final candidate = _highestUsable(snapshot.usableIds);
+      if (candidate != null) {
+        _draftSelectedIds = {candidate.id};
+        _draftOrderedIds = [candidate.id];
+      }
+    }
+    _seedInitialRepresentative();
+  }
+
+  LocalAccountCharacter? _highestUsable(Set<int> ids) {
+    final candidates =
+        _roster
+            .where(
+              (c) =>
+                  ids.contains(c.id) && _management!.usableIds.contains(c.id),
+            )
+            .toList()
+          ..sort((a, b) {
+            final level = b.itemLevel!.compareTo(a.itemLevel!);
+            return level != 0
+                ? level
+                : a.serverCharacterId!.compareTo(b.serverCharacterId!);
+          });
+    return candidates.firstOrNull;
+  }
+
+  void _seedInitialRepresentative() {
+    if (!isMemberManagement ||
+        _explicitRepresentative ||
+        _account?.representativeCharacterId != null) {
+      return;
+    }
+    _draftRepresentativeId = _highestUsable(_draftSelectedIds)?.id;
   }
 
   Future<void> _loadNiceGroupSetting() async {
@@ -692,6 +853,8 @@ class CharacterManagementViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
+    managementGateway?.removeListener(_managementChanged);
     _cooldownTimer?.cancel();
     super.dispose();
   }
