@@ -2,6 +2,8 @@
 
 ## 2026-10-18 — 성능 변경 복구 지점 및 일괄 복원 API 착수 승인
 
+복구 커밋 `a8cef4db29fc7b950851d152e054a26f5403acff`를 push 후 ls-remote로 동일 SHA 확인했다. 이어 Backend7ba6297 실제 OpenAPI의 일괄 경로 부재/144번째 V2분쟁 인계를 확인하고, [Issue8 시간순145번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6247415075)에 첫 화면 일괄 조회 API 구현·정합성/권한·고정 계약/실행 인계 요청을 게시했다. 원격 본문·순번을 재조회했다. 기존 테이블 기반/읽기 전용·외부 provider0·미인증 투영 보호·소유한 활동 전체profile/주간·비활동 기본목록·부분/대규모/주차경계와 검증 조건을 제시했다. API 경로 후보는 제안이며 미확정, 새 코드/연결/실기기 개선 검증은 아직 없다. 다음 Backend 계약 인계 후 Flutter 연결이다. 이번 추가 변경은 설계/인계 문서뿐이라 diffcheck·내용검토만 하며 Flutter 시험은 반복하지 않는다.
+
 사용자 SM F956N 첨부32d2fffd에서 initialCache562ms, 최초 displayReady4305ms, 대상 weekly356ms가 automaticRefresh 시작보다 앞섬을 확인했다. 자동 상세6475ms/24요청, 후속 displayReady2739ms·weekly319ms다. 사용자는 일부 체감 개선을 보고했으며 완전 인수로 확대하지 않는다. 최초 계정22+초기 주간2+대상 주간 세 번6+자동24+후속 계정22=기록된 Backend76시도다. 직접 LostArk HTTP와 계측 밖 호출은 미포함이며 첫 paint 시각은 측정하지 않았다.
 
 코드 대조: 계정22회는 등록목록1/캐릭터목록1/대표1/표시설정1/개인profile18(활동9·비활동9)이다. 상세 대상5개의 각4회는 prepare profile GET→업로드 prepare GET→role PUT→현재 profile GET이며 직접 LostArk armory는 별도다. 사용자 승인에 따라 현재 로컬 계측·최대2worker·기본/주간 우선 순서 변경14파일을 기존 기능 브랜치에 먼저 커밋·push해 비교 기준을 보존한다. 검증은 최종 코드와 동일한 기존 표적81PASS/45PASS/진단6PASS 및 분석0을 재사용하며 중복 시험·전체시험·기기 대행은 하지 않는다. 사용자 백업/tools/DevTools/플랫폼 변경은 제외한다. dev/main 통합이 아닌 진행 중 복구 지점이다.

@@ -1,5 +1,17 @@
 # NEXT WORK — 회원 화면·관리 진입·서버 복원 사용자 확인
 
+## 현재 단일 작업 — 첫 화면 일괄 조회 API 실험
+
+요청 게시·본문/순번 재확인: [Issue8 시간순145번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6247415075). **다음 담당 Backend**: 기존 테이블 일괄 조회 구현·고정 OpenAPI·권한/정합성 표적검증·실행 반영 범위 인계. Flutter는 계약 수신 후 연결/비교, 현재 새 API 테스트는 대기다. 이 대기는 이미 확인한 로그인/키/소유 인증을 다시 요구하는 것이 아니다.
+
+사용자 승인: 현재 성능 변경을 먼저 커밋·push해 보존하고 기존 테이블을 묶어 읽는 API를 구현·비교한다. 복구 기준 `a8cef4db29fc7b950851d152e054a26f5403acff`, feature/scoped-account-cache 원격 동일 SHA 확인. 기존 관련81PASS/45PASS/진단6PASS·분석0은 동일 코드 결과를 재사용했고 전체 시험/기기 대행은 하지 않았다. dev/main 미병합·사용자 백업/tools/플랫폼 변경 제외 보존.
+
+실기기 최신 로그32d2fffd: cache562ms → 기본복원4305ms → 주간356ms → 자동상세6475ms 순서 확인, 사용자 일부 개선 보고. 기록된 Backend76요청(직접 LostArk/계측 밖 제외). 기존 계정22개별조회와 상세후22재조회가 주요 축이다. API1회는 서버 DB1조회라는 뜻이 아니며 새 중복 테이블은 만들지 않는다.
+
+포함/제외·회귀·완료 조건은 [계약30 마지막 절](../backend-migration/30-scoped-storage-write-contract.md#첫-화면-일괄-조회-api--승인된-다음-실험-2026-10-18)에 먼저 기록했다. 현재 실제 Backend7ba6297 OpenAPI에는 일괄 endpoint가 없어 공식 Issue8로 구현/고정계약·권한/정합성 검증을 요청한다. 계약 수신 전 추정 endpoint/DTO를 앱에 연결하지 않는다. 받은 뒤 strict adapter→기존 scoped writer/현재성 경계 재사용→VM/binding 연결→표적검증→사용자 동일 기기 비교 순서다. 새 API 연결은 아직 미구현이며 호출수/속도 개선도 미검증이다. 개인별 상세 저장 GET3+PUT1 최적화는 이번 범위 밖이다.
+
+별도 인계: Issue8 [시간순144번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6245920315) Backend7ba6297의 V2분쟁 구현/push/로컬8000 반영 보고 수신. 본문/고정 OpenAPI 존재 확인만 했으며 Flutter 소비·실기기 검증은 미완료다. 이번 일괄 API와 섞지 않는다. 아래 미커밋/미push·143번째대기 등은 당시 작업 경과이며 위 현재 상태가 우선한다.
+
 ## 화면·주간 체크 먼저/자동 상세 나중 연결 완료 — 실기기 확인 대기
 
 현재회원저장서버원정대·선택셀/수치/기존역할요약복원과현재대상주간조회완료뒤에자동Armory2worker를시작하도록binding/controllergate연결. initialCache는먼저표시하되cache준비신호만으로자동을시작하지않는다. weekly는완료signature/관찰generation·회원epoch를고정해빈목록/옛대상/회원응답준비오인을차단한다. 새회원전환에도같은순서, 조회실패는안내/쓰기차단유지후시도완료로인정해무한대기없음. blocked키상태를모든notify마다재시도하지않도록준비false→true경계만재개한다.
