@@ -13,6 +13,7 @@ class BackendAccountLifecycle {
     required ServerAccountReadRepository registrations,
     bool enabled = configuredEnabled,
     bool allowHttp = false,
+    bool bootstrapEnabled = false,
     ScopedCacheDatabaseFactory databaseFactory = openScopedAccountCacheDatabase,
   }) {
     runtime = enabled
@@ -21,6 +22,7 @@ class BackendAccountLifecycle {
             registrations: registrations,
             enabled: true,
             allowHttp: allowHttp,
+            bootstrapEnabled: bootstrapEnabled,
             databaseFactory: databaseFactory,
           )
         : null;

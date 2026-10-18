@@ -11,6 +11,7 @@ import '../../data/repositories/scoped_role_repository.dart';
 import '../../data/repositories/scoped_settings_repository.dart';
 import '../../data/scoped_account_runtime.dart';
 import '../../data/representative_client.dart';
+import '../../data/account_bootstrap.dart';
 import '../../data/scoped_character_management_gateway.dart';
 import '../../domain/account_read_session.dart';
 import '../../domain/entities/character_build_analysis.dart';
@@ -437,6 +438,7 @@ class MemberAccountViewModel extends ChangeNotifier {
     required bool server,
     bool activeCacheOnly = false,
     ScopedMemberRoster? confirmedRoster,
+    AccountBootstrap? bootstrap,
     required void Function() guard,
   }) async {
     final result = <MemberAccountSection>[];
@@ -556,6 +558,10 @@ class MemberAccountViewModel extends ChangeNotifier {
           preferences: prefs,
           dealer: dealer,
           support: support,
+          failure: bootstrap?.registrations
+              .where((r) => r.snapshot.registrationId == reg.registrationId)
+              .firstOrNull
+              ?.unavailable[c.characterId],
           cached: !(confirmedCache || view?.validated == true),
         );
         rows.add(row);
@@ -645,6 +651,7 @@ class MemberAccountViewModel extends ChangeNotifier {
         Future<void>(
           () => LoadTiming.run(LoadStage.accountRefresh, () async {
             try {
+              var bootstrapped = false;
               await LoadTiming.run(LoadStage.displayReady, () async {
                 if (_sections.isEmpty) {
                   await LoadTiming.run(LoadStage.initialCache, () async {
@@ -667,6 +674,100 @@ class MemberAccountViewModel extends ChangeNotifier {
                   guard();
                   _initialDisplayReady = true;
                   _emit();
+                }
+                if (runtime.bootstrapEnabled) {
+                  AppliedAccountBootstrap? applied;
+                  try {
+                    applied = await LoadTiming.run(
+                      LoadStage.accountBootstrap,
+                      () => runtime.restoreBootstrap(
+                        guard: () {
+                          guard();
+                          if (_writes.isNotEmpty) {
+                            throw const AccountReadException('STALE_READ');
+                          }
+                        },
+                      ),
+                    );
+                  } on AccountReadException catch (e) {
+                    guard();
+                    if (e.status != 404 &&
+                        !(e.status == 409 &&
+                            {
+                              'BOOTSTRAP_LIMIT_EXCEEDED',
+                              'BOOTSTRAP_RESPONSE_TOO_LARGE',
+                            }.contains(e.code))) {
+                      rethrow;
+                    }
+                  }
+                  if (applied != null &&
+                      !applied.data.registrations.any(
+                        (r) =>
+                            r.snapshot.ownershipStatus == 'owned' &&
+                            (r.snapshot.settings.state == 'unconfigured' ||
+                                _initializers[r.snapshot.registrationId]
+                                        ?.pending ==
+                                    true),
+                      )) {
+                    final snapshots = applied.data.registrations
+                        .map(
+                          (r) => CacheRosterSnapshot(r.snapshot, [
+                            for (final c in r.characters.items)
+                              if (c.characterId != null)
+                                CacheCharacterObservation(
+                                  characterId: c.characterId!,
+                                  accountId: r.snapshot.accountId!,
+                                  serverName: c.serverName,
+                                  characterName: c.characterName,
+                                  lifecycleState: c.lifecycleState,
+                                  lifecycleRevision: c.lifecycleRevision,
+                                  usable: c.usable,
+                                  blockedReason: c.blockedReason,
+                                  profile: c.wire,
+                                ),
+                          ]),
+                        )
+                        .toList();
+                    for (final r in applied.data.registrations) {
+                      if (r.representative != null) {
+                        _representatives[r.snapshot.registrationId] =
+                            r.representative!;
+                        final id = r.snapshot.registrationId,
+                            value = r.representative!;
+                        final pending = _representativePending[id];
+                        if (pending != null &&
+                            (value.settingsVersion >
+                                    pending.before.settingsVersion ||
+                                value.registrationVersion !=
+                                    pending.before.registrationVersion ||
+                                value.ownershipRevision !=
+                                    pending.before.ownershipRevision ||
+                                value.rosterRevision !=
+                                    pending.before.rosterRevision)) {
+                          _representativePending.remove(id);
+                          _representativeRetryAt.remove(id);
+                        }
+                        _representativeFailures.remove(id);
+                      }
+                    }
+                    _sections = await _readSections(
+                      applied.data.registrations
+                          .map((r) => r.snapshot)
+                          .toList(),
+                      server: false,
+                      guard: guard,
+                      confirmedRoster: ScopedMemberRoster(
+                        applied.data.registrations.map((r) => r.snapshot),
+                        snapshots,
+                      ),
+                      bootstrap: applied.data,
+                    );
+                    guard();
+                    loading = false;
+                    bootstrapped = true;
+                    _emit();
+                    return;
+                  }
                 }
                 var roster = await LoadTiming.run(
                   LoadStage.roster,
@@ -742,6 +843,7 @@ class MemberAccountViewModel extends ChangeNotifier {
                 loading = false;
                 _emit();
               });
+              if (bootstrapped) return;
               final backgroundEpoch = ++_backgroundEpoch;
               void backgroundGuard() {
                 guard();

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'account_bootstrap.dart';
 
 import 'package:dio/dio.dart';
 import 'package:drift_flutter/drift_flutter.dart';
@@ -60,6 +61,7 @@ class ScopedAccountRuntime {
     this.enabled = false,
     this.allowHttp = false,
     this.ownsDatabase = true,
+    this.bootstrapEnabled = false,
   }) : baseUrl = api.dio.options.baseUrl {
     _validateEnvironment();
     _client = ServerCharacterLifecycleClient(api, registrations: registrations);
@@ -68,6 +70,18 @@ class ScopedAccountRuntime {
   final ScopedCacheDatabaseFactory databaseFactory;
   final String baseUrl;
   final bool enabled, allowHttp, ownsDatabase;
+  final bool bootstrapEnabled;
+  AppliedAccountBootstrap? _bootstrap;
+  AppliedAccountBootstrap? get bootstrap {
+    final value = _bootstrap;
+    return canRead &&
+            value?.scope == scope &&
+            value?.sessionGeneration == session.generation &&
+            value?.generation == readGeneration
+        ? value
+        : null;
+  }
+
   late final ServerCharacterLifecycleClient _client;
   ScopedAccountCacheDatabase? _database;
   ScopedCharacterCacheRepository? _cache;
@@ -216,11 +230,109 @@ class ScopedAccountRuntime {
   }
 
   void invalidateReads() {
+    _bootstrap = null;
     _readGeneration++;
     _cache?.invalidateReads();
     _roles?.store.invalidate();
     _settings?.store.invalidate();
   }
+
+  /// Explicit snapshot import. Every existing writer retains its CAS/pending fence.
+  Future<AppliedAccountBootstrap> restoreBootstrap({void Function()? guard}) =>
+      _withCache((cache) async {
+        final member = accountReadScope(session),
+            storage = scope,
+            generation = readGeneration;
+        void current() {
+          requireCurrent(member, storage);
+          if (generation != readGeneration || characterSettingsBusy) {
+            throw const AccountReadException('STALE_READ');
+          }
+          guard?.call();
+        }
+
+        current();
+        _bootstrap = null;
+        final read = await cache.beginRegistrations();
+        current();
+        final json = await api.request('/v2/me/account-bootstrap');
+        current();
+        final receivedAt = DateTime.now().toUtc();
+        late AccountBootstrap data;
+        try {
+          data = AccountBootstrap.fromJson(json!);
+        } on FormatException {
+          throw const AccountReadException('INVALID_RESPONSE');
+        } on TypeError {
+          throw const AccountReadException('INVALID_RESPONSE');
+        }
+        current();
+        await cache.applyRegistrations(
+          read,
+          data.registrations.map((r) => r.snapshot),
+        );
+        for (final r in data.registrations) {
+          current();
+          final ref = ScopedRegistrationRef(storage, r.snapshot.registrationId);
+          final token = await cache.beginRoster(ref);
+          current();
+          await cache.applyRoster(
+            token,
+            CacheRosterSnapshot(r.snapshot, [
+              for (final c in r.characters.items)
+                if (c.characterId != null)
+                  CacheCharacterObservation(
+                    characterId: c.characterId!,
+                    accountId: r.snapshot.accountId!,
+                    serverName: c.serverName,
+                    characterName: c.characterName,
+                    lifecycleState: c.lifecycleState,
+                    lifecycleRevision: c.lifecycleRevision,
+                    usable: c.usable,
+                    blockedReason: c.blockedReason,
+                    profile: c.wire,
+                  ),
+            ]),
+          );
+          current();
+          if (r.presentation != null) {
+            await _withSettings((s) async {
+              await s.store.observe(
+                ref,
+                presentation: r.presentation,
+                guard: current,
+              );
+            }, guard: current);
+          }
+          for (final profile in r.profiles) {
+            current();
+            final character = ScopedCharacterRef(
+              storage,
+              accountId: profile.accountId,
+              characterId: profile.characterId,
+            );
+            await _withRoles((s) async {
+              await s.store.observe(ref, character, profile, guard: current);
+            }, guard: current);
+            await _withSettings((s) async {
+              await s.store.observe(
+                ref,
+                profile: profile,
+                character: character,
+                guard: current,
+              );
+            }, guard: current);
+          }
+        }
+        current();
+        return _bootstrap = AppliedAccountBootstrap(
+          data,
+          storage,
+          member.generation,
+          generation,
+          receivedAt,
+        );
+      }, guard: guard);
 
   /// Shared current full roster preparation. Consumers supply their own guards
   /// after the session/observation-bound flight, never another consumer's key.

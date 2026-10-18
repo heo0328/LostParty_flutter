@@ -99,7 +99,6 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
   Dio? _dio;
   String? _configurationError;
   final _setupNavigatorKey = GlobalKey<NavigatorState>();
-  bool _restorationComplete = false;
   final _entryGate = StartupEntryGate();
   @override
   void initState() {
@@ -115,17 +114,6 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
 
   void _entryReady() {
     if (mounted) setState(() {});
-  }
-
-  void _updateEntryReadiness() {
-    final auth = _auth;
-    _entryGate.update(
-      sessionResolved: _restorationComplete,
-      displayReady:
-          auth != null &&
-          (!auth.isAuthenticated ||
-              _memberAccount?.model.initialDisplayReady == true),
-    );
   }
 
   void _initializeServices(String base) {
@@ -167,8 +155,6 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
   Future<void> _restoreSession() async {
     await _auth!.restore();
     if (!mounted) return;
-    _restorationComplete = true;
-    _updateEntryReadiness();
   }
 
   GoRouter _createRouter() {
@@ -198,6 +184,10 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       registrations: serverAccounts,
       enabled: true,
       allowHttp: kDebugMode,
+      bootstrapEnabled: const bool.fromEnvironment(
+        'BACKEND_ACCOUNT_BOOTSTRAP_ENABLED',
+        defaultValue: true,
+      ),
     );
     if (!lifecycle.enabled) {
       _serverReads = ServerAccountReadViewModel(serverAccounts, readSession);
@@ -338,7 +328,6 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
         catalog: catalog,
         cooldown: _cooldown!,
       );
-      _memberAccount!.model.addListener(_updateEntryReadiness);
       _memberAccount!.initialize();
     }
     final accounts = AccountRepositoryImpl(
@@ -691,7 +680,6 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     _router?.dispose();
     _entryGate.removeListener(_entryReady);
     _entryGate.dispose();
-    _memberAccount?.model.removeListener(_updateEntryReadiness);
     _memberAccount?.dispose();
     unawaited(_accountLifecycle?.close());
     _serverReads?.dispose();
@@ -717,12 +705,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
         theme: AppTheme.light,
         home: _configurationError != null
             ? Scaffold(body: Center(child: Text(_configurationError!)))
-            : LostPartyEntryScreen(
-                embedded: true,
-                onAnimationCompleted: () {
-                  _entryGate.animationCompleted();
-                },
-              ),
+            : const LostPartyEntryScreen(embedded: true),
       );
     }
     return MaterialApp.router(

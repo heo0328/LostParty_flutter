@@ -56,8 +56,8 @@ String? lifecycleCursor(Object? value) {
   return cursor;
 }
 
-List<dynamic> _items(Object? value) {
-  _require(value is List && value.length <= 50);
+List<dynamic> _items(Object? value, {int maximum = 50}) {
+  _require(value is List && value.length <= maximum);
   return value as List;
 }
 
@@ -150,7 +150,10 @@ class LifecycleCharacter {
 }
 
 class LifecycleCharacterPage {
-  LifecycleCharacterPage.fromJson(Map<String, dynamic> json) {
+  LifecycleCharacterPage.fromJson(
+    Map<String, dynamic> json, {
+    int maximumItems = 50,
+  }) {
     _shape(
       json,
       'registration_id game_account_id is_main registration_version ownership_status ownership_revision roster_revision settings items next_cursor server_fetched_at',
@@ -181,8 +184,9 @@ class LifecycleCharacterPage {
               'next_change_at': settings.nextChangeAt?.toIso8601String(),
             })
             as Map<String, dynamic>;
+    _require(maximumItems == 50 || maximumItems == 200);
     items = List.unmodifiable(
-      _items(json['items']).map(
+      _items(json['items'], maximum: maximumItems).map(
         (item) => LifecycleCharacter.fromJson(
           _map(item),
           basicOnly: ownershipStatus != 'owned',

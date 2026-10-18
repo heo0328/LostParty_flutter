@@ -122,6 +122,8 @@ class MemberWeeklyViewModel extends ChangeNotifier {
   int? _signatureGeneration;
   String? _settledSignature;
   int? _settledGeneration;
+  Object? _usedBootstrap;
+  Object? _signatureBootstrap;
   DateTime? _receivedAt, _retryAt;
   Timer? _cycleTimer, _retryTimer;
   Future<void>? _flight;
@@ -166,12 +168,19 @@ class MemberWeeklyViewModel extends ChangeNotifier {
         for (final c in s.visible)
           if (c.observation.lifecycleState == 'active' ||
               c.observation.lifecycleState == 'suspect')
-            c,
+            if (!{
+              'CHARACTER_UNUSABLE',
+              'IDENTITY_CONFLICT',
+            }.contains(c.failure))
+              c,
   ];
   String _targets() => [
     for (final s in model.sections)
       if (!s.cached && s.registration.ownershipStatus == 'owned')
-        for (final c in s.visible)
+        for (final c in s.visible.where(
+          (c) =>
+              !{'CHARACTER_UNUSABLE', 'IDENTITY_CONFLICT'}.contains(c.failure),
+        ))
           '${s.registration.accountId}/${s.registration.ownershipRevision}/'
               '${c.ref.characterId}/${c.observation.lifecycleRevision}/'
               '${c.observation.profileJson}',
@@ -199,6 +208,8 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       _signatureGeneration = null;
       _settledSignature = null;
       _settledGeneration = null;
+      _usedBootstrap = null;
+      _signatureBootstrap = null;
       _entries = {};
       _display = {};
       _pending = null;
@@ -215,17 +226,21 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     if (!_active ||
         next == null ||
         model.loading ||
+        (model.runtime.bootstrapEnabled && !model.initialDisplayReady) ||
         model.failure != null ||
         writing) {
       return;
     }
     final signature = _targets();
+    final bootstrap = model.runtime.bootstrap;
     if (signature == _signature &&
-        _signatureGeneration == model.runtime.readGeneration) {
+        _signatureGeneration == model.runtime.readGeneration &&
+        identical(_signatureBootstrap, bootstrap)) {
       return;
     }
     _signature = signature;
     _signatureGeneration = model.runtime.readGeneration;
+    _signatureBootstrap = bootstrap;
     unawaited(refresh());
   }
 
@@ -341,12 +356,6 @@ class MemberWeeklyViewModel extends ChangeNotifier {
                 );
                 guard();
               }
-              final publicCycle = await LoadTiming.run(
-                LoadStage.cycle,
-                client.cycle,
-              );
-              guard();
-              final received = now().toUtc();
               final ids =
                   _characters.map((c) => c.ref.characterId).toSet().toList()
                     ..sort();
@@ -363,14 +372,36 @@ class MemberWeeklyViewModel extends ChangeNotifier {
                     .firstOrNull;
                 if (row != null) ids.add(pending.character);
               }
+              final snapshot = model.runtime.bootstrap;
+              final supplied =
+                  snapshot != null &&
+                      !identical(_usedBootstrap, snapshot) &&
+                      ids.every(
+                        (id) => snapshot.data.registrations
+                            .expand((r) => r.profiles)
+                            .any((p) => p.characterId == id),
+                      )
+                  ? snapshot
+                  : null;
+              if (supplied != null) _usedBootstrap = supplied;
+              final publicCycle =
+                  supplied?.data.weekly.cycle ??
+                  await LoadTiming.run<MemberRaidCycle>(
+                    LoadStage.cycle,
+                    client.cycle,
+                  );
+              guard();
+              final received = supplied?.receivedAt ?? now().toUtc();
               final entries = <String, MemberWeeklyEntry>{};
               final raidIds = catalog!.raids.map((r) => r.raidId).toSet();
               for (var i = 0; i < ids.length; i += 50) {
                 final chunk = ids.skip(i).take(50).toList();
-                final batch = await LoadTiming.run(
-                  LoadStage.weeklyBatch,
-                  () => client.states(chunk),
-                );
+                final batch =
+                    supplied?.data.weekly ??
+                    await LoadTiming.run<MemberWeeklyBatch>(
+                      LoadStage.weeklyBatch,
+                      () => client.states(chunk),
+                    );
                 guard();
                 if (batch.catalogVersion != catalog!.catalogVersion) {
                   throw const AccountReadException('CATALOG_VERSION_CONFLICT');
@@ -384,6 +415,9 @@ class MemberWeeklyViewModel extends ChangeNotifier {
                     for (final raid in raidIds) '$id:$raid',
                 };
                 for (final entry in batch.entries) {
+                  if (supplied != null && !chunk.contains(entry.characterId)) {
+                    continue;
+                  }
                   if (entry.cycleKey != publicCycle.key ||
                       !expected.remove(entry.key) ||
                       entries.containsKey(entry.key)) {

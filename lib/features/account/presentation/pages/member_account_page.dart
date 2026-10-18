@@ -1,6 +1,7 @@
 import '../../../../shared/formatters/display_number_formatter.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../../../shared/diagnostics/ui_timing.dart';
 import '../../../../shared/formatters/local_date_time_formatter.dart';
 
 import '../../data/repositories/scoped_settings_repository.dart';
@@ -177,116 +178,122 @@ class MemberAccountPage extends StatelessWidget {
   final void Function(String)? onCharacters, onEdit, onVerifyRegistration;
   final bool automaticRefreshAvailable;
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([
-      model,
-      settings,
-      ?weekly,
-      model.runner.source.cooldown,
-    ]),
-    builder: (context, _) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('내 계정'),
-          flexibleSpace: IgnorePointer(
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: model.loading || model.restoring || weekly?.busy == true
-                  ? const LinearProgressIndicator(
-                      key: ValueKey('member-network-progress'),
-                      minHeight: 2,
-                    )
-                  : const SizedBox.shrink(),
+  Widget build(BuildContext context) => UiFrameProbe(
+    child: ListenableBuilder(
+      listenable: Listenable.merge([
+        model,
+        settings,
+        ?weekly,
+        model.runner.source.cooldown,
+      ]),
+      builder: (context, _) => UiTiming.measure(UiWork.pageWidgets, () {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('내 계정'),
+            flexibleSpace: IgnorePointer(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: model.loading || model.restoring || weekly?.busy == true
+                    ? const LinearProgressIndicator(
+                        key: ValueKey('member-network-progress'),
+                        minHeight: 2,
+                      )
+                    : const SizedBox.shrink(),
+              ),
             ),
-          ),
-          actions: [
-            IconButton(
-              onPressed: onSettings,
-              icon: const Icon(Icons.settings_outlined),
-              tooltip: '설정',
-            ),
-          ],
-        ),
-        body: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              if (automaticRefreshAvailable) _progress(context),
-              if (weekly != null) _weeklyStatus(context, weekly!),
-              if (model.failure != null)
-                Text(
-                  memberAccountFailure(model.failure),
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              if (model.restoreRetrySeconds > 0)
-                Text('${model.restoreRetrySeconds}초 후 다시 시도해 주세요.'),
-              if (model.sections.isEmpty &&
-                  !model.loading &&
-                  model.failure == null)
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('등록한 원정대가 없습니다.'),
-                ),
-              for (final section in model.sections.where(
-                (s) => s.registration.isMain,
-              ))
-                _section(context, section),
-              for (final section in model.sections.where(
-                (s) => !s.registration.isMain,
-              ))
-                _section(context, section),
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        '계정 도구',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          TextButton.icon(
-                            onPressed: onManage,
-                            icon: const Icon(Icons.manage_accounts_outlined),
-                            label: const Text('원정대 등록·관리'),
-                          ),
-                          TextButton(
-                            onPressed: onVerify,
-                            child: const Text('원정대 인증'),
-                          ),
-                          TextButton(
-                            onPressed: onKey,
-                            child: const Text('로스트아크 API 관리'),
-                          ),
-                          TextButton(
-                            onPressed: onHistory,
-                            child: const Text('사라진 캐릭터명 기록'),
-                          ),
-                          TextButton(
-                            onPressed: model.canRefresh ? model.refresh : null,
-                            child: const Text('서버 정보 다시 불러오기'),
-                          ),
-                        ],
-                      ),
-                      const Divider(),
-                      MemberSettingsControls(
-                        model: settings,
-                        classes: '나이스단으로 분류한',
-                        automaticRefreshAvailable: automaticRefreshAvailable,
-                      ),
-                    ],
-                  ),
-                ),
+            actions: [
+              IconButton(
+                onPressed: onSettings,
+                icon: const Icon(Icons.settings_outlined),
+                tooltip: '설정',
               ),
             ],
           ),
-        ),
-      );
-    },
+          body: SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                if (automaticRefreshAvailable) _progress(context),
+                if (weekly != null) _weeklyStatus(context, weekly!),
+                if (model.failure != null)
+                  Text(
+                    memberAccountFailure(model.failure),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                if (model.restoreRetrySeconds > 0)
+                  Text('${model.restoreRetrySeconds}초 후 다시 시도해 주세요.'),
+                if (model.sections.isEmpty &&
+                    !model.loading &&
+                    model.failure == null)
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('등록한 원정대가 없습니다.'),
+                  ),
+                for (final section in model.sections.where(
+                  (s) => s.registration.isMain,
+                ))
+                  _section(context, section),
+                for (final section in model.sections.where(
+                  (s) => !s.registration.isMain,
+                ))
+                  _section(context, section),
+                const SizedBox(height: 16),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          '계정 도구',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            TextButton.icon(
+                              onPressed: onManage,
+                              icon: const Icon(Icons.manage_accounts_outlined),
+                              label: const Text('원정대 등록·관리'),
+                            ),
+                            TextButton(
+                              onPressed: onVerify,
+                              child: const Text('원정대 인증'),
+                            ),
+                            TextButton(
+                              onPressed: onKey,
+                              child: const Text('로스트아크 API 관리'),
+                            ),
+                            TextButton(
+                              onPressed: onHistory,
+                              child: const Text('사라진 캐릭터명 기록'),
+                            ),
+                            TextButton(
+                              onPressed: model.canRefresh
+                                  ? model.refresh
+                                  : null,
+                              child: const Text('서버 정보 다시 불러오기'),
+                            ),
+                          ],
+                        ),
+                        const Divider(),
+                        MemberSettingsControls(
+                          model: settings,
+                          classes: '나이스단으로 분류한',
+                          automaticRefreshAvailable: automaticRefreshAvailable,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }),
+    ),
   );
   Widget _progress(BuildContext context) {
     final r = model.runner, cooldown = r.source.cooldown;

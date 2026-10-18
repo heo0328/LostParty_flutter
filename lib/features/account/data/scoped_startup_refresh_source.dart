@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../../shared/diagnostics/ui_timing.dart';
 
 import '../../../shared/character_build/build_integrity_snapshot.dart';
 import '../../../shared/game_catalog/domain/repositories/game_catalog_repository.dart';
@@ -190,11 +191,14 @@ class RuntimeStartupRefreshSource
       target.character.characterName,
     );
     current();
-    final draft = analyzeScopedRoleBuild(
-      armory: raw,
-      catalog: batch.catalog,
-      lifecycleRevision: plan.profile.lifecycleRevision,
-      fetchedAt: now().toUtc(),
+    final draft = UiTiming.measure(
+      UiWork.buildAnalysis,
+      () => analyzeScopedRoleBuild(
+        armory: raw,
+        catalog: batch.catalog,
+        lifecycleRevision: plan.profile.lifecycleRevision,
+        fetchedAt: now().toUtc(),
+      ),
     );
     final local = await runtime.saveRoleBuild(plan, draft, guard: current);
     final saved = ScopedRefreshItem(

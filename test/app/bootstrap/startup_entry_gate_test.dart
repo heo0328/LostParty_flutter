@@ -5,28 +5,11 @@ import 'package:lost_party/app/bootstrap/startup_entry_gate.dart';
 
 void main() {
   testWidgets(
-    'ready cache enters after animation without waiting for network',
+    'fixed four seconds without readiness or animation dependencies',
     (tester) async {
       final gate = StartupEntryGate()..start();
       addTearDown(gate.dispose);
-      gate.update(sessionResolved: true, displayReady: true);
-      expect(gate.canEnter, isFalse);
-      gate.animationCompleted();
-      expect(gate.canEnter, isTrue);
-      gate.update(sessionResolved: false, displayReady: false);
-      await tester.pump(const Duration(seconds: 10));
-      expect(gate.canEnter, isTrue);
-    },
-  );
-
-  testWidgets(
-    'deadline releases presentation even when session is unresolved',
-    (tester) async {
-      final gate = StartupEntryGate()..start();
-      addTearDown(gate.dispose);
-      gate.animationCompleted();
-      gate.update(sessionResolved: false, displayReady: true);
-      await tester.pump(const Duration(milliseconds: 5999));
+      await tester.pump(const Duration(milliseconds: 3999));
       expect(gate.canEnter, isFalse);
       gate.start(); // Re-entry must not extend the original deadline.
       await tester.pump(const Duration(milliseconds: 1));
@@ -34,34 +17,22 @@ void main() {
     },
   );
 
-  testWidgets('member change invalidates ready cache before entry', (
+  testWidgets('not started stays closed and completed gate notifies once', (
     tester,
   ) async {
-    final gate = StartupEntryGate()..start();
+    final gate = StartupEntryGate();
     addTearDown(gate.dispose);
-    gate.update(sessionResolved: true, displayReady: true);
-    gate.update(sessionResolved: false, displayReady: false);
-    gate.animationCompleted();
+    var notifications = 0;
+    gate.addListener(() => notifications++);
+    await tester.pump(const Duration(seconds: 5));
     expect(gate.canEnter, isFalse);
-    gate.update(sessionResolved: true, displayReady: true);
+    gate.start();
+    await tester.pump(const Duration(seconds: 4));
+    gate.start();
+    await tester.pump(const Duration(seconds: 4));
     expect(gate.canEnter, isTrue);
+    expect(notifications, 1);
   });
-
-  testWidgets(
-    'animation completed before service setup does not skip readiness',
-    (tester) async {
-      final gate = StartupEntryGate()..animationCompleted();
-      addTearDown(gate.dispose);
-      await tester.pump(const Duration(seconds: 10));
-      expect(gate.canEnter, isFalse);
-      gate.start();
-      gate.update(
-        sessionResolved: true,
-        displayReady: true,
-      ); // Guest is ready too.
-      expect(gate.canEnter, isTrue);
-    },
-  );
 
   testWidgets('disposing presentation neither notifies late nor cancels work', (
     tester,
@@ -71,10 +42,8 @@ void main() {
     var notifications = 0;
     final gate = StartupEntryGate()..start();
     gate.addListener(() => notifications++);
-    gate.animationCompleted();
     gate.dispose();
-    await tester.pump(const Duration(seconds: 10));
-    gate.update(sessionResolved: true, displayReady: true);
+    await tester.pump(const Duration(seconds: 5));
     result.complete(7);
     expect(await work, 7);
     expect(notifications, 0);

@@ -473,13 +473,23 @@ slot선택/cursor증가는await없는동기영역·캐릭터ID별결과를즉시
 
 ## 내 계정 표시 우선·상세 갱신 후행 (2026-10-18 최신 사용자 지시)
 
-초기캐시는먼저표시하되그준비신호만으로최신Armory작업을시작하지않는다. 앱binding은현재회원의저장서버원정대/선택·역할요약복원(model.loading=false)과같은대상의주간상태조회완료뒤에자동runner를초기화한다. 기존주간VM조회는회원요약복원뒤진행하므로레이드체크가게임상세보다뒤로밀리지않는다. 이후자동상세는기존최대2worker·로컬/서버저장으로진행한다. 앱초기2.2초애니메이션/6초상한은별도이며자료준비가실제프레임paint를측정한것이라는뜻아니다.
+진입 표시 정책 후속 정정: 사용자 요청으로 애니메이션은 보류하고 기존 정적이미지를 서비스초기화부터4초 표시한 뒤 준비 여부와 무관하게 router로 전환한다. 아래2.2초애니메이션/6초상한 설명은 과거이며 더는 적용하지 않는다. 초기캐시·일괄복원·기본/주간먼저→자동상세나중의데이터순서는유지하고화면이전환돼도앱수명API작업은계속한다.
+
+초기캐시는먼저표시하되그준비신호만으로최신Armory작업을시작하지않는다. 앱binding은현재회원의저장서버원정대/선택·역할요약복원(model.loading=false)과같은대상의주간상태조회완료뒤에자동runner를초기화한다. 기존주간VM조회는회원요약복원뒤진행하므로레이드체크가게임상세보다뒤로밀리지않는다. 이후자동상세는기존최대2worker·로컬/서버저장으로진행한다. 현재정적이미지4초전환은별도이며자료준비가실제프레임paint를측정한것이라는뜻아니다.
 
 weekly.initialDisplaySettled는현재회원epoch·대상signature·runtime.readGeneration의조회시도완료다. 현재주차GET성공/쓰기권한의대체가아니며이전회원/초기빈목록/무효화된조회로준비완료를만들지않는다. 조회실패는기존오류/체크쓰기차단을유지하고초기화만영원히막지않는다. 성공한기존_entries는후속조회/빌드갱신중에도지우지않는다. 일반위젯배치·수동완료/i/주차/권한·캐시schema는그대로다.
 
 자동시작gate는Controller.startIfReady에적용돼이미runner가초기화된뒤회원전환에도같은순서를지킨다. binding은화면준비false→true변화만재개신호로사용해키미준비같은blocked상태를모든notify마다재시도하지않는다. source의기존설정/키준비변경은기존신호를사용한다. 사용자명시미완료/서버저장재시도규칙은유지. model/weekly listen은앱수명소유·dispose에서해제,기존회원/권한/세대guard·미확정명령보존을완화하지않았다.
 
 ## 첫 화면 일괄 조회 API — 승인된 다음 실험 (2026-10-18)
+
+### 실제 계약 소비·연결 결과 (이하 요청 초안보다 우선)
+
+Backend8d03e962/Issue8시간순146번째의GET `/v2/me/account-bootstrap`을소비한다. strict최상위`server_now complete registrations weekly_states`와등록별기존DTO/명시unavailable배열,전체목록next_cursor=null/최대200·등록20·주간character/ownership/lifecycle/cycle일치를검사한다. 미인증/소유상실은기존basic투영을유지하며profile/설정null제약을검증한다. unavailable캐릭터는기존기본행을차단상태/실패로보이며주간대상에서제외한다. 부분/누락/중복을빈정상으로취급하지않는다.
+
+실제binding은bootstrap기본true(비교복귀define `BACKEND_ACCOUNT_BOOTSTRAP_ENABLED=false`), runtime의읽기값을기존cache.applyRegistrations/applyRoster/role.store.observe/settings.store.observe로가져온뒤VM기존캐시독자를통해표시한다. per-account기존원자성·revisionregression/CAS·역할raw/미전송command보존을재사용하며회원전체새DBtransaction/schema는도입하지않았다. 회원/환경/세대·명령busyguard를import전후확인하고스냅샷주간자료도해당scope/generation에만제공한다. 형식검증완료전DB반영0,일부원정대적용후다른자료실패시기존검증된원정대캐시는보존하지만전체표시확정/새weekly공급은완료하지않는다.
+
+정상복원은private GET1회이며기존활동별/비활동전수profileGET과대표/표시단건GET을생략한다. 주간VM은동일snapshot을한번소비해별도cycle/batch를생략하되최초카탈로그GET1은별도다. 명시주간refresh/쓰기뒤재조회는현재GET이며동일generation의새응답도별도로소비한다. 상한/크기409·미지원404만기존경로대체,unconfigured와미확정초기gateway는기존처리로이어가므로해당상태는GET1보장대상아니다. 이후실게임목록/상세·개별쓰기GET3+PUT1·나이스단정책·카드/왕관·체크/i·초기캐시/기본먼저순서는유지한다. 표적155PASS 이후 최종 전체1,662PASS·lib/test 분석0을 확인했다. 사용자 SM F956N 비교 로그에서 기록 Backend76→29요청·기본/주간 단계합4661→2883ms를 관찰했고 현재 개선을 수용했다. 단일 실행 비교로 평균/첫paint 보장이 아니며, 남은 UI긴프레임 최적화는 보류다. 새 기기·회원 변경·실패 복구 등 미확인 실기기 범위는 DEV_LOG 최신 마감 기록을 따른다.
 
 사용자는 현재 성능 변경을 원격 복구 지점으로 보존한 뒤 일괄 조회 API를 구현·비교 시험하는 순서를 승인했다. 복구 기준은 Flutter `a8cef4db29fc7b950851d152e054a26f5403acff` / `feature/scoped-account-cache`다. Backend `7ba6297` 실제 OpenAPI에 해당 일괄 endpoint는 없으므로 Backend 구현·고정 계약 인계가 선행한다. 아래는 요청 범위이며 아직 실행 계약이 아니다.
 

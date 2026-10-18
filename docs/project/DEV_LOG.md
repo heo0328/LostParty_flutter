@@ -1,5 +1,73 @@
 # 개발 이력
 
+## 2026-10-18 — scoped-account-cache 마감·dev/main 통합 승인
+
+사용자가 현재 브랜치의 문서 최신화·커밋·푸시·dev 병합과 main 동일 시점 반영을 명시 승인했다. 시작점은 feature/scoped-account-cache/b68a123, 원격dev/main은모두5eef0d2로확인했다. 과거c6332dd/799711a/a8cef4d/b68a123의복구기록도이번통합에포함하며새인증V2작업은시작하지않는다. 성능버벅임은관측했지만추가개선/애니메이션은사용자지시로후속보류,이는운영배포가아닌개발체크포인트통합이다.
+
+새로가능한흐름: 기존캐시표시→회원일괄GET1/기존writer→활동설정/양역할요약/주간복원→실제LostArk목록/상세최대2worker,정적이미지4초후진입·앱수명작업지속,debug프레임·페이지생성/분석집계다. 보존확인은최종전체회귀의회원/환경·late결과·pending/outbox/권한·기존수동주간/대표/활동·기존페이지흐름이다. 화면디자인·DB/schema·서버권한/API단건쓰기/자료수명은바꾸지않았다.
+
+최종검증: `flutter test --no-pub` **1,662PASS/55초**, `flutter analyze --no-pub lib test` **문제0/31.1초**. 기존사용자tools는대상에서제외했다. 이미완료한표적155/4/23/38시험을합산하지않고최종전체결과로기록한다. 포맷·diffcheck·선별diff를대조하고코드동일상태에서시험반복하지않는다. 로그 .dart_tool/scoped-final-all-tests.log/scoped-final-analyze.log. 기기빌드/설치/조작은하지않았다.
+
+사용자관찰: SM F956N에서일괄조회소비/정상29요청·기본/주간단축과추가실행UI긴프레임을기록했고사용자가현재개선과4초를수용했다. 미확인실기기는새기기/재설치/회원변경·실패복구·모든설정조작/미완료파티관계등이며완료로확대하지않는다. 다음직접기능인V2인증/분쟁/방어안내는별도새목적브랜치·새이슈에서진행한다. Issue8은OPEN이며종료/새이슈생성은이번마감에포함하지않는다.
+
+NEXT_WORK/AI_CONTEXT의누적현재·대기문구를현재/다음작업중심으로정리하고원문은history/scoped-account-cache-2026-10-18.md에보존했다. 제품핵심/API목록기준/나이스단·1700초기기본/저레벨수동선택·한도/통계·파티별도/DB-03·QA/AUTH후속을유지했다. 사용자백업/tools/DevTools와기존플랫폼생성3파일은커밋제외·원본바이트백업/해시검증대상이다. 작업브랜치는삭제하지않고통합완료후보로보존한다. 실제통합SHA·push결과는아래후속기록/Git그래프를따른다.
+
+## 2026-10-18 — 성능 개선 보류·Issue8 미완료 범위 재점검
+
+사용자가구현우선으로성능개선을차후보류했다. Issue8원본문/144V2·146bootstrap인계/최신150까지조회·Flutter V2경로호출미존재와MemberCharacterPage개별갱신누락을대조했다. 주요직접잔여는V2 DTO/명령/VM/UI/라우터연결,proof목록새기기복원·24시간분쟁/방어·현재GET/상태복원과앱내방어안내/실인수다. Backend의현재공급API는인계됐고일괄복원도구현돼있으므로기초로그인/키/첫인증반복을새선행조건으로두지않는다. 실제파티후처리adapter미구현/review_required안전보류는별도파티연결후속으로분리했다. 성능개선/외부push/운영자도구/개별세팅갱신복구를현재V2구현완료로혼동하지않는다.
+
+일괄API76→29요청/단계시간단축·사용자‘괜찮게개선’수용,정적4초‘괜찮음’확인을기록하고남은화면조작전체인수와구분한다. 이번은조사/문서만·코드/시험/이슈종료/커밋push없음. 기존기능브랜치미커밋/사용자백업·도구보존,다음우선후보V2연결을보고한다.
+
+## 2026-10-18 — 실제 프레임 지연 관측 / 분석만으로 원인 설명 불가
+
+사용자552ee8f9 SM F956N debug로그수신. 첫기본displayReady1443ms(cache431/일괄587·HTTP85),weekly61ms/catalogHTTP1·9ms,자동6507ms/24요청(준비952),후속displayReady1383ms/GET1·HTTP82,weekly8ms/HTTP0. 기록된Backend29회·오류0로통신경로는정상이며이수치를화면부드러움의근거로대체하지않는다.
+
+UiTiming4창:2009ms/75프레임/UImax501.294(16.667초과8)/rastermax30.763(초과1)/vsync43.671/page6회총26.406최대11.215/분석1회31.265ms.2020ms/144프레임/UImax66.674(초과4)/raster9.325(초과0)/vsync60.269/page5회총12.977최대3.720/분석3회145.736최대55.658.1977ms/164프레임/UImax89.136(초과3)/raster12.912(초과0)/vsync36.132/page2회총15.739최대13.645/분석0.1995ms/8프레임/UImax94.701(초과1)/raster3.925(초과0)/vsync11.357/page0/분석0. 중복없는관측계391프레임·16.667초과UI16/raster1(실제drop수아님),page13회55.122ms/분석4회177.001ms. 페이지표시전분석은계측밖일수있으므로자동5개전체분석시간으로확대하지않는다.
+
+판정: 긴UI프레임과31~56ms동기분석을관측했으나501ms원인을분석단독/최상위위젯생성단독으로확정할수없다. 분석0창에도89~95msUI가보고되고pageWidgets는하위build/layout를측정하지않으며engine보고는지연배치다. 초기글꼴/debug·하위카드layout/TextPainter·다른미계측작업기여가미분리다. 코드에서원정대Wrap전체카드와이름자동크기의0.5단위TextPainter반복을확인했지만원인으로단정하거나2줄이름/카드디자인을바꾸지않았다. 다음범위는변경없는카드/동일이름·폭·스타일·textScale의중복레이아웃을보호하며세부경로를좁히는후보다. 서버추가작업근거없음·이번은분석/문서/회신만,기존진단23/38PASS·분석0을재사용·코드/시험/기기대행없음·현재미커밋보존.
+
+## 2026-10-18 — 백엔드 선행 확인 후 UI 버벅임 진단 연결
+
+[Issue8 시간순149번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6248625555)에선행요청없음/진단범위·표적검증·미커밋상태와다음사용자로그를회신,원격본문/순번확인했다.
+
+사용자 지시로 Issue8최신146~148을재조회했다. 148번째에실기기일괄조회결과를이미회신했고추가Backend요청/본화면프레임진단의서버선행작업은없다. 현재작업은실측없는구조변경대신debug한정진단이다.
+
+UiFrameProbe가내계정에서engine FrameTiming buildDuration/rasterDuration/vsyncOverhead의최대값·8.333/16.667ms초과관측수를2초에한번집계한다. threshold는가변주사율/실제drop프레임확정값이아니다. ListenableBuilder에서동기위젯생성호출/총·최대시간을별도계측(하위build/layout/paint미포함)하고source의동기analyzeScopedRoleBuild에도같은집계를연결했다. debug외진단IO0·식별자/원본/error내용출력0,비활성route/TickerMode는pause,dispose시timer/enginecallback해제·진단출력실패와원래예외는독립이다. engine보고는배치되므로창별상관을특정작업의프레임원인으로즉시단정하지않는다.
+
+회귀보존:기존내계정전체디자인/리스트/설정/체크/i/로딩표시·API순서/횟수·저장/키/권한·나이스단/최대2worker/4초진입은불변이다. 페이지diff는측정wrapper/들여쓰기로발생했으며카드구조를분리하거나레이아웃을바꾸지않았다. 새진단3경계+기존runtimeSource20=23PASS,새진단3+회원연결35=38PASS로각검증(중복3합산안함),변경4Dart분석0·format/diffcheck. SDKdeprecated TickerMode.of는현재valuesOf.enabled로수정하고불필요import제거후분석0확인했다. 전체시험/기기대행/서버·DB변경은하지않았다.
+
+미확인:실제프레임병목·분석기여·debug오버헤드/실기기동작. 다음사용자debug재실행에서갱신중/완료후스크롤과UiTiming+LoadTiming을비교한뒤최소수정여부를판단한다. feature/scoped-account-cache/b68a123위기존일괄API/정적4초변경을보존하고이번진단도미커밋/미push/dev/main미반영이다.
+
+## 2026-10-18 — 사용자 승인 정적 로딩 이미지·4초 고정 전환
+
+변경5Dart정적분석0·포맷/diffcheck완료. 기능변경없는문서정리뒤시험은반복하지않았다.
+
+사용자는 애니메이션 재적용을 차후로 보류하고 지금은4초 후 전환하도록 지시했다. 기존 이미지/배경/cover배치/RepaintBoundary는 유지하고 별/광채와AnimationController·완료콜백을 제거했다. StartupEntryGate는서비스초기화의start에서4초타이머한번만시작하고인증/캐시준비와무관하게진입한다. start재호출기한연장0·dispose후notify0,앱수명로그인/일괄API/주간/자동상세작업은화면전환으로중단하지않는다. 기존BackendApp의준비상태listener/완료gate연결을제거했으며서버/DB/API/카드와저장정책은변경하지않았다.
+
+기존진입관련시험을새정책으로정정해2파일4PASS(3999ms이전차단/4000ms전환·재진입/알림1회·폐기와별도작업지속·정적이미지/효과없음)를확인했다. 기존일괄API155PASS는코드동일영역으로반복하지않고전체시험/기기대행은하지않았다. 실기기실제4초전환/정적화면은사용자다음재실행에서확인한다. feature/scoped-account-cache/b68a123위기존미커밋변경보존·이번도미커밋/미push/dev/main미반영. 독립Flutter표시변경이라Backend수정/회신요청은추가하지않는다.
+
+## 2026-10-18 — 일괄 조회 실기기 로그: 요청76→29 / 기본·주간4.66→2.88초
+
+[Issue8 시간순148번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6248323346)로 로그 결과와 미확인 화면/조작·미커밋 상태를 회신, 본문·순번 재확인했다.
+
+사용자첨부9825cb97/SM F956N: run1 initialCache631ms(HTTP0),accountBootstrap1494ms/GET1·HTTP101ms,displayReady2745ms/1요청,account2753ms. run2 weekly138ms/catalog1·HTTP21ms,cycle/batch없음후run3자동시작. run3 prepare1361ms/4·HTTP1021ms,상세5개2worker종료2505/2580/1852/2611/1483ms(중첩),자동7222ms/24·HTTP2613ms. 준비중run4weekly230ms/2·HTTP210ms는병행하므로자동전체에더하지않는다. run5후속bootstrap870ms/GET1·HTTP65ms,displayReady1409ms/account1410ms;run6weekly9ms/HTTP0. 모든기록statusok/HTTP오류0. 합산Backend29시도(1+1+24+2+1+0),직접LostArk/계측밖통신제외·부모/자식중복제외다.
+
+직전32d2fffd대비첫기본4305→2745ms,그후weekly356→138ms,두단계합4661→2883ms(1778ms/약38%감소). 요청76→29(47회/약62%감소). 자동6475→7222ms(747ms늘어남),후속displayReady2739→1409ms(약49%감소). 1회관찰이며평균/전체런치첫paint·모든동작인수로확대하지않는다. 실제인증된일괄API정상경로/초회별도cycle·batch제거/기본·주간선행은로그에서확인했지만사용자화면확인/체크·설정조작은별도다.
+
+남은초회bootstrap1494ms중계측HTTP101ms를뺀1393ms는DTO검증/로컬writer·guard/DB대기등을포함하며SQL단독시간이아니다. 후속캐시읽기/스케줄링도displayReady에포함된다. 현재로컬서버통신만으로남은지연을설명할수없지만세부원인측정없이guard제거/DB개편/병렬증가를진행하지않는다. 이번은분석·기록/회신만,코드/Flutter검증반복없음·기존155PASS/분석0재사용·feature/scoped-account-cache/b68a123위미커밋/미push유지.
+
+## 2026-10-18 — 첫 화면 일괄 조회 실제 앱 연결·155PASS
+
+인계 회신: [Issue8 시간순147번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6247814903). 원격본문을작성파일과대조하고순번을재확인했다. private GET1/카탈로그별도·155PASS/분석0·실회원/기기미확인·기능브랜치미커밋/미push를구분하고,추가Backend수정/반복기초검증요청없이동일기기비교대기로회신했다.
+
+Backend Issue8시간순146번째의8d03e962b48917c4b0f0dec28d285ca993b9de2d 실제OpenAPI/개발안내/합성예시를대조했다. AccountBootstrap strict envelope·기존nestedDTO·등록/소유/설정/profile/lifecycle/주간정합성·누락/중복/unavailable를검사하고, runtime.restoreBootstrap에서기존registration/roster writer와role/settings.observe를재사용한다. 스키마변경/이중저장/조회중PUT·게임외부HTTP없음. 기존단건50행검사는유지하고일괄에만명시200행허용,예시는원본SHA출처파일로testfixtures보존했다.
+
+새로 가능한 흐름: BackendApp→Lifecycle의bootstrap기본true→초기캐시표시→일괄GET1→캐시관찰/기존MemberAccount카드→같은응답weekly소비→기존자동2worker다. 자동완료후회원복원에도같은GET을사용해전체22회재조회를대체한다. 비활동profile자동전수복원은생략하고기본전체목록/보존캐시는유지,초기미설정/미확정gateway는기존명령/재조회로이어간다. API404또는409명시상한/크기오류만기존경로로대체한다. 잘못된/권한/서비스응답을빈목록성공으로변환하지않는다. 주간은카탈로그·기한·명시refresh/쓰기후조회·pending/outbox·i의참가의미를보존하고같은generation새bootstrap도소비한다. 카탈로그없는첫회공개1조회는별도여서앱전체HTTP1회라고보고하지않는다.
+
+보존 확인: 회원/관찰세대변경중지연응답차단·미전송설정보존/GET쓰기0·명시주간refresh현재GET·부분/외래/중복/누락거절·빈계정/404·명시409대체·원래회원설정/주간/자동guard·별도단건50한도를직접확인했다. 최초컴파일의nullablegeneric추론오류는타입명시로수정,새테스트teardownFakeSource의중복dispose4실패는테스트정리만수정했다. 최종6파일155PASS/변경9Dart분석0·포맷/diffcheck. 최종시험뒤테스트중괄호스타일만보완·분석0재확인했으며전체시험/기기설치·조작은하지않았다.
+
+미확인: 실제회원인증서버응답/SM F956N성능·첫paint·기존체크/수치사용인수. 다음은같은계정/설정/USB조건완전재실행후LoadTiming비교다. feature/scoped-account-cache/b68a123위이번구현미커밋/미push/dev/main미반영·기존사용자백업/DevTools/tools/플랫폼변경보존. 이번연결은현재사용자승인범위이며V2분쟁/상단안내UI는별도다.
+
 ## 2026-10-18 — 성능 변경 복구 지점 및 일괄 복원 API 착수 승인
 
 복구 커밋 `a8cef4db29fc7b950851d152e054a26f5403acff`를 push 후 ls-remote로 동일 SHA 확인했다. 이어 Backend7ba6297 실제 OpenAPI의 일괄 경로 부재/144번째 V2분쟁 인계를 확인하고, [Issue8 시간순145번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6247415075)에 첫 화면 일괄 조회 API 구현·정합성/권한·고정 계약/실행 인계 요청을 게시했다. 원격 본문·순번을 재조회했다. 기존 테이블 기반/읽기 전용·외부 provider0·미인증 투영 보호·소유한 활동 전체profile/주간·비활동 기본목록·부분/대규모/주차경계와 검증 조건을 제시했다. API 경로 후보는 제안이며 미확정, 새 코드/연결/실기기 개선 검증은 아직 없다. 다음 Backend 계약 인계 후 Flutter 연결이다. 이번 추가 변경은 설계/인계 문서뿐이라 diffcheck·내용검토만 하며 Flutter 시험은 반복하지 않는다.

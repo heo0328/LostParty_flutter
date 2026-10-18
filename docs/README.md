@@ -2,6 +2,12 @@
 
 > 기존 서비스 전용 항목은 [원문·출처 기록](../legacy/firebase/extracted/docs/README.md)으로 분리했다. 남은 제품/협업 문맥의 신규 서버 적용 여부는 별도 설계에서 판단한다.
 
+## 현재 개발 체크포인트 (2026-10-18)
+
+회원별 캐시·원정대/설정/주간 복원, 앱 수명 자동 갱신 최대2worker, [일괄 조회 연결30](backend-migration/30-scoped-storage-write-contract.md), 정적 이미지4초 진입과debug진단까지 마감·dev/main 동일 시점 반영 구간이다. 최종 검증은 전체1,662PASS/lib·test분석0이다. 실기기에서 일괄GET1회/계측요청76→29·단계시간단축과4초진입 사용자 수용을 받았다. 추가 성능 개선/애니메이션은 보류한다.
+
+다음 독립 기능은 원정대 인증·분쟁V2의Flutter연결/새기기진행복원·24시간방어다. Backend구현을재요청하지않고새브랜치·새이슈로분리한다. 실제현재조건은 [NEXT_WORK](project/NEXT_WORK.md), 기능지도는 [AI_CONTEXT](project/AI_CONTEXT.md), 완료/실측·미확인은 [DEV_LOG](project/DEV_LOG.md)를 따른다. 아래 과거 단계별 테스트 수/대기 표현은 당시 기록이다.
+
 ## 주간 이용 통계 설계
 
 [사용자·그룹 주간 통계35](backend-migration/35-weekly-member-and-group-statistics.md): KST수요일06시 주차별 공개/그룹 이용·완료/미완료종료·함께하기 집계 요구. 수동체크 제외, 주중 고유 참가·미완료 회차 마감·마감 시 함께하기 기준 확정·미구현.

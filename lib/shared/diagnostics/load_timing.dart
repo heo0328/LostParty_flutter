@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 enum LoadStage {
+  accountBootstrap,
   accountRefresh,
   initialCache,
   roster,
