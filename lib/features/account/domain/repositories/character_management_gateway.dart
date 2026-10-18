@@ -10,10 +10,12 @@ class CharacterManagementSnapshot {
     required this.selectedIds,
     required this.usableIds,
     required this.hasNiceGroup,
+    this.initialSelectionRequired = false,
   });
   final LocalGameAccount account;
   final Set<int> selectedIds, usableIds;
   final bool hasNiceGroup;
+  final bool initialSelectionRequired;
 }
 
 abstract class CharacterManagementGateway implements Listenable {
@@ -25,5 +27,6 @@ abstract class CharacterManagementGateway implements Listenable {
     required List<int> selectedIds,
     required int representativeId,
     required int displayLimit,
+    bool saveDisplayOrder = true,
   });
 }

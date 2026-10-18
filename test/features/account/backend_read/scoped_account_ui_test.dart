@@ -254,7 +254,7 @@ void main() {
       final routes = router(enabled: true);
       await tester.pumpWidget(MaterialApp.router(routerConfig: routes));
       await tester.pumpAndSettle();
-      expect(find.text('원정대 현재 상태'), findsOneWidget);
+      expect(find.text('원정대 캐릭터'), findsOneWidget);
       expect(find.text('legacy:$registrationId'), findsNothing);
       expect(requests(rosterPath), 1);
       expect(requests('/v1/me/game-accounts/$registrationId/characters'), 0);
@@ -321,7 +321,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('등록한 원정대가 없습니다.'), findsOneWidget);
-      final entry = find.text('사라진 캐릭터 기록');
+      final entry = find.text('사라진 캐릭터명 기록');
       expect(entry, findsOneWidget);
       await tester.tap(entry);
       await tester.pumpAndSettle();

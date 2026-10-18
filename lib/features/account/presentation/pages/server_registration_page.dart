@@ -9,6 +9,7 @@ import '../../domain/services/roster_character_order.dart';
 import '../viewmodels/server_account_read_view_model.dart';
 import '../viewmodels/server_registration_view_model.dart';
 import '../widgets/server_accounts_panel.dart';
+import '../widgets/server_registration_edit_dialog.dart';
 
 class ServerRegistrationPage extends StatefulWidget {
   const ServerRegistrationPage({
@@ -77,15 +78,12 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
 
   Future<void> _edit(ServerAccountRegistration account) async {
     final scope = accountReadScope(widget.session);
-    _dialogOpen = true;
-    final result = await showDialog<(String, bool)>(
-      context: context,
-      builder: (_) => _ServerRegistrationEditDialog(
-        account: account,
-        displayLabel: _reads.displayLabelFor(account),
-      ),
+    final result = await showServerRegistrationEditDialog(
+      context,
+      account: account,
+      displayLabel: _reads.displayLabelFor(account),
+      session: widget.session,
     );
-    _dialogOpen = false;
     if (!mounted || result == null) return;
     if (!widget.session.isAuthenticated ||
         widget.session.userId != scope.userId ||
@@ -228,19 +226,6 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
                 ],
                 if (writes.preview case final preview?) ...[
                   const SizedBox(height: 12),
-                  Text('미리보기 캐릭터 ${preview.characters.length}명 · 미인증'),
-                  Text('유효 시각: ${localDateTimeToSeconds(preview.expiresAt)}'),
-                  for (final c in rosterByItemLevel(
-                    preview.characters,
-                    (c) => c.itemLevel,
-                  ))
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(c.characterName),
-                      subtitle: Text(
-                        '${c.serverName} · ${c.className} · 아이템 ${DisplayNumberFormatter.whole(c.itemLevel)}',
-                      ),
-                    ),
                   TextField(
                     controller: _label,
                     enabled: writes.canWrite,
@@ -268,6 +253,20 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
                         : null,
                     child: const Text('조회 목록에 저장'),
                   ),
+                  const SizedBox(height: 12),
+                  Text('미리보기 캐릭터 ${preview.characters.length}명 · 미인증'),
+                  Text('유효 시각: ${localDateTimeToSeconds(preview.expiresAt)}'),
+                  for (final c in rosterByItemLevel(
+                    preview.characters,
+                    (c) => c.itemLevel,
+                  ))
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(c.characterName),
+                      subtitle: Text(
+                        '${c.serverName} · ${c.className} · 아이템 ${DisplayNumberFormatter.whole(c.itemLevel)}',
+                      ),
+                    ),
                 ],
                 const SizedBox(height: 24),
                 Row(
@@ -363,68 +362,4 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
     'REVISION_CONFLICT' => '계정 정보가 변경되었습니다. 최신 목록을 확인한 뒤 다시 수정해 주세요.',
     _ => accountReadErrorMessage(error),
   };
-}
-
-class _ServerRegistrationEditDialog extends StatefulWidget {
-  const _ServerRegistrationEditDialog({
-    required this.account,
-    required this.displayLabel,
-  });
-  final ServerAccountRegistration account;
-  final String displayLabel;
-  @override
-  State<_ServerRegistrationEditDialog> createState() =>
-      _ServerRegistrationEditDialogState();
-}
-
-class _ServerRegistrationEditDialogState
-    extends State<_ServerRegistrationEditDialog> {
-  late final TextEditingController label;
-  late bool main;
-  @override
-  void initState() {
-    super.initState();
-    label = TextEditingController(text: widget.account.label);
-    main = widget.account.isMain;
-  }
-
-  @override
-  void dispose() {
-    label.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: Text('${widget.displayLabel} 수정'),
-    content: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        TextField(
-          controller: label,
-          maxLength: 40,
-          decoration: const InputDecoration(
-            labelText: '표시명',
-            helperText: '비워두면 현재 본·부계정 위치에 따라 표시합니다.',
-          ),
-        ),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('메인 계정'),
-          value: main,
-          onChanged: (value) => setState(() => main = value),
-        ),
-      ],
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('취소'),
-      ),
-      FilledButton(
-        onPressed: () => Navigator.pop(context, (label.text.trim(), main)),
-        child: const Text('저장'),
-      ),
-    ],
-  );
 }

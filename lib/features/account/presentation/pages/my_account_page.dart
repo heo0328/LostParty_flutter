@@ -1,3 +1,4 @@
+import '../widgets/roster_account_header.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -622,15 +623,10 @@ class _MyAccountPageState extends State<MyAccountPage> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(account.label, style: Theme.of(context).textTheme.titleLarge),
-          if (widget.onAuthenticate != null)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton(
-                onPressed: widget.onAuthenticate,
-                child: const Text('원정대 인증'),
-              ),
-            ),
+          RosterAccountHeader(
+            label: account.label,
+            onVerify: widget.onAuthenticate,
+          ),
           Wrap(
             spacing: 8,
             runSpacing: 8,

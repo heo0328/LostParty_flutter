@@ -7,11 +7,13 @@ class RepresentativeCrown extends StatelessWidget {
     required this.busy,
     required this.label,
     required this.onPressed,
+    this.unselectedOpacity = 1,
     super.key,
   });
   final bool selected, busy;
   final String label;
   final VoidCallback? onPressed;
+  final double unselectedOpacity;
   @override
   Widget build(BuildContext context) => Semantics(
     selected: selected,
@@ -25,7 +27,13 @@ class RepresentativeCrown extends StatelessWidget {
               dimension: 18,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : CustomPaint(size: const Size(18, 18), painter: _Crown(selected)),
+          : Opacity(
+              opacity: selected ? 1 : unselectedOpacity,
+              child: CustomPaint(
+                size: const Size(18, 18),
+                painter: _Crown(selected),
+              ),
+            ),
     ),
   );
 }

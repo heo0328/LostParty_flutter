@@ -117,7 +117,7 @@ class _ScopedServerAccountPageState extends State<ScopedServerAccountPage> {
       final characters = view == null ? null : scopedRosterCharacters(view);
       return Scaffold(
         appBar: AppBar(
-          title: const Text('원정대 현재 상태'),
+          title: const Text('원정대 캐릭터'),
           actions: [
             IconButton(
               tooltip: '캐릭터 다시 조회',
@@ -159,7 +159,7 @@ class _ScopedServerAccountPageState extends State<ScopedServerAccountPage> {
                             ? null
                             : () => _navigate(widget.onHistory),
                         icon: const Icon(Icons.history),
-                        label: const Text('사라진 캐릭터 기록'),
+                        label: const Text('사라진 캐릭터명 기록'),
                       ),
                     ],
                   ),
@@ -250,7 +250,7 @@ class _ScopedServerAccountPageState extends State<ScopedServerAccountPage> {
       subtitle: Text(
         '${c.serverName} · ${c.wire['class_name']}\n'
         '아이템 레벨 ${DisplayNumberFormatter.whole(c.wire['item_level'])}'
-        '${details ? ' · 전투력 ${DisplayNumberFormatter.whole(c.wire['combat_power'])}${c.wire['power_stale'] == true ? ' · 최근 확인 필요' : ''}' : ' · 소유 상태 확인 후 상세 가능'}\n'
+        '${details ? ' · 전투력 ${DisplayNumberFormatter.whole(c.wire['combat_power'])}${c.wire['power_stale'] == true ? ' · 최근 확인 필요' : ''}' : ' · 최신 정보 확인 필요'}\n'
         '${switch (c.blockedReason) {
           'OWNERSHIP_REQUIRED' => '미인증 미리보기 · 현재 사용 불가',
           'IDENTITY_CONFLICT' => '캐릭터 정보 충돌 · 현재 사용 불가',

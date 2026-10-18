@@ -9,6 +9,8 @@ class WeeklyRaidStatusItem {
     this.statusKind,
     this.hasActiveEvidence = false,
     this.hasCompletedEvidence = false,
+    this.toggleAllowed = true,
+    this.statusOverride,
   });
 
   final String raidId;
@@ -18,17 +20,22 @@ class WeeklyRaidStatusItem {
   final WeeklyRaidStatusKind? statusKind;
   final bool hasActiveEvidence;
   final bool hasCompletedEvidence;
+  final bool toggleAllowed;
+  final String? statusOverride;
 
   bool get canToggle =>
-      statusKind != WeeklyRaidStatusKind.inconsistent ||
-      hasActiveEvidence ||
-      hasCompletedEvidence;
+      toggleAllowed &&
+      (statusKind != WeeklyRaidStatusKind.inconsistent ||
+          hasActiveEvidence ||
+          hasCompletedEvidence);
 
-  String? get statusMessage => switch (statusKind) {
-    WeeklyRaidStatusKind.active ||
-    WeeklyRaidStatusKind.legacyActive => '현재 참가 중인 레이드입니다.',
-    WeeklyRaidStatusKind.completed => '완료 처리된 레이드입니다.',
-    WeeklyRaidStatusKind.inconsistent => '레이드 참가·완료 상태 확인이 필요합니다.',
-    _ => null,
-  };
+  String? get statusMessage =>
+      statusOverride ??
+      switch (statusKind) {
+        WeeklyRaidStatusKind.active ||
+        WeeklyRaidStatusKind.legacyActive => '현재 참가 중인 레이드입니다.',
+        WeeklyRaidStatusKind.completed => '완료 처리된 레이드입니다.',
+        WeeklyRaidStatusKind.inconsistent => '레이드 참가·완료 상태 확인이 필요합니다.',
+        _ => null,
+      };
 }

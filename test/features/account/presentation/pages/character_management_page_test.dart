@@ -85,36 +85,35 @@ void main() {
     expect(find.text('2 / 2'), findsOneWidget);
   });
 
-  testWidgets('shows and saves the nice-group-wide auto-refresh switch', (
-    tester,
-  ) async {
-    final settings = _FakeNiceGroupSettingsRepository();
-    await tester.pumpWidget(
-      _wrap(
-        CharacterManagementPage(
-          accountRepository: _FakeAccountRepository(niceGroup: true),
-          activityCharactersRepository: _FakeActivityCharactersRepository(),
-          niceGroupSettingsRepository: settings,
-          playerId: 'player-1',
+  testWidgets(
+    'does not expose or change the account-level nice-group setting',
+    (tester) async {
+      final settings = _FakeNiceGroupSettingsRepository();
+      await tester.pumpWidget(
+        _wrap(
+          CharacterManagementPage(
+            accountRepository: _FakeAccountRepository(niceGroup: true),
+            activityCharactersRepository: _FakeActivityCharactersRepository(),
+            niceGroupSettingsRepository: settings,
+            playerId: 'player-1',
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    final switchFinder = find.byKey(
-      const ValueKey('niceGroupAutoRefreshSwitch'),
-    );
-    expect(switchFinder, findsOneWidget);
-    expect(find.textContaining('바드 직업군 전체'), findsOneWidget);
+      final switchFinder = find.byKey(
+        const ValueKey('niceGroupAutoRefreshSwitch'),
+      );
+      expect(switchFinder, findsNothing);
+      expect(find.textContaining('바드 직업군 전체'), findsNothing);
+      await tester.tap(
+        find.byKey(const ValueKey('characterManagementSaveButton')),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(switchFinder);
-    await tester.tap(
-      find.byKey(const ValueKey('characterManagementSaveButton')),
-    );
-    await tester.pumpAndSettle();
-
-    expect(settings.enabled, isTrue);
-  });
+      expect(settings.enabled, isFalse);
+    },
+  );
 }
 
 Widget _wrap(Widget child) {

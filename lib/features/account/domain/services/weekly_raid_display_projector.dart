@@ -15,7 +15,7 @@ class WeeklyRaidDisplayCandidate {
   String get raidId => raid.raidId;
   String get label => raid.displayName;
   String get difficultyId => difficulty.difficultyId;
-  int get minItemLevel => difficulty.minItemLevel;
+  num get minItemLevel => difficulty.requiredItemLevel;
 }
 
 /// 입장 가능 후보·기본 추천·사용자 설정을 카드 표시 목록으로 투영한다.
@@ -33,7 +33,7 @@ class WeeklyRaidDisplayProjector {
     for (final raid in catalog.raids.where((raid) => raid.isActive)) {
       final difficulties = raid.difficulties.where(
         (difficulty) =>
-            difficulty.isActive && difficulty.minItemLevel <= itemLevel,
+            difficulty.isActive && difficulty.requiredItemLevel <= itemLevel,
       );
       if (difficulties.isEmpty) continue;
       final selected = difficulties.reduce((left, right) {

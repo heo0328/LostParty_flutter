@@ -110,7 +110,7 @@ class _ScopedServerAccountsPanelState extends State<ScopedServerAccountsPanel> {
                           ? null
                           : () => _navigate(widget.onHistory),
                       icon: const Icon(Icons.history),
-                      label: const Text('사라진 캐릭터 기록'),
+                      label: const Text('사라진 캐릭터명 기록'),
                     ),
                   ],
                 ),

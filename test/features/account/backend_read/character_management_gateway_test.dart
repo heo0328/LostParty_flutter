@@ -224,21 +224,49 @@ void main() {
       calls.where((r) => r.path.endsWith('/character-settings')).toList();
 
   test(
-    'initial highest is draft only; selected UUIDs and representative save atomically',
+    'activity-only save avoids display writes and redundant roster reloads',
+    () async {
+      settings = settingsJson();
+      await model.initialize();
+      final other = model.rosterCharacters.firstWhere(
+        (c) => c.serverCharacterId == secondCharacterId,
+      );
+      model.toggleActivity(other);
+      calls.clear();
+      await model.save();
+      final counts = <String, int>{};
+      for (final call in calls) {
+        final key = '${call.method} ${call.path}';
+        counts[key] = (counts[key] ?? 0) + 1;
+      }
+      // ignore: avoid_print
+      print('Management save calls: ${calls.length} $counts');
+      expect(model.message, isNull);
+      expect(
+        calls.where(
+          (r) => r.method == 'PUT' && r.path.endsWith('/personal-preferences'),
+        ),
+        isEmpty,
+      );
+      expect(calls.where((r) => r.path.endsWith('/characters')), hasLength(2));
+      expect(calls.length, lessThanOrEqualTo(10));
+    },
+  );
+
+  test(
+    'initial eligible selection is draft only; highest representative saves atomically',
     () async {
       await model.initialize();
       expect(model.message, isNull);
       expect(
-        model.selectedCharacters.single.serverCharacterId,
-        secondCharacterId,
+        model.selectedCharacters.map((c) => c.serverCharacterId),
+        containsAll([characterId, secondCharacterId]),
       );
-      expect(model.draftRepresentativeId, model.selectedCharacters.single.id);
+      final highest = model.selectedCharacters.firstWhere(
+        (c) => c.serverCharacterId == secondCharacterId,
+      );
+      expect(model.draftRepresentativeId, highest.id);
       expect(writes(), isEmpty);
-      model.toggleActivity(
-        model.rosterCharacters.firstWhere(
-          (c) => c.serverCharacterId == characterId,
-        ),
-      );
       await model.save();
       expect(model.message, isNull);
       expect(writes(), hasLength(1));
@@ -298,31 +326,51 @@ void main() {
   );
 
   test(
-    'minimum and lifecycle eligibility are separate; old invalid selections are preserved',
+    'initial default skips low levels but manual selection can include them',
     () async {
-      settings = settingsJson();
-      items[0] = {...items[0], 'item_level': '1699.99'};
+      items[0] = {...items[0], 'item_level': '1600.00', 'eligible': false};
       await model.initialize();
-      expect(model.selectedCount, 1);
-      expect(writes(), isEmpty);
-      await model.save();
-      expect(writes(), isEmpty);
-      expect(settings['activity_character_ids'], [characterId]);
-      final other = model.rosterCharacters.firstWhere(
-        (c) => c.serverCharacterId == secondCharacterId,
+      expect(model.selectedCharacters.map((c) => c.serverCharacterId), [
+        secondCharacterId,
+      ]);
+      final low = model.rosterCharacters.firstWhere(
+        (c) => c.serverCharacterId == characterId,
       );
-      model.toggleActivity(other);
-      model.setRepresentative(other);
-      model.toggleActivity(
-        model.rosterCharacters.firstWhere(
-          (c) => c.serverCharacterId == characterId,
-        ),
-      );
+      expect(model.canToggleActivity(low), isTrue);
+      model.toggleActivity(low);
       await model.save();
       expect(model.message, isNull);
-      expect(settings['activity_character_ids'], [secondCharacterId]);
+      expect(
+        settings['activity_character_ids'],
+        containsAll([characterId, secondCharacterId]),
+      );
     },
   );
+
+  test('low level manual selections remain valid and can be saved', () async {
+    settings = settingsJson();
+    items[0] = {...items[0], 'item_level': '1699.99'};
+    await model.initialize();
+    expect(model.selectedCount, 1);
+    expect(writes(), isEmpty);
+    await model.save();
+    expect(model.message, isNull);
+    expect(writes(), hasLength(1));
+    expect(settings['activity_character_ids'], [characterId]);
+    final other = model.rosterCharacters.firstWhere(
+      (c) => c.serverCharacterId == secondCharacterId,
+    );
+    model.toggleActivity(other);
+    model.setRepresentative(other);
+    model.toggleActivity(
+      model.rosterCharacters.firstWhere(
+        (c) => c.serverCharacterId == characterId,
+      ),
+    );
+    await model.save();
+    expect(model.message, isNull);
+    expect(settings['activity_character_ids'], [secondCharacterId]);
+  });
 
   test(
     'lost ownership between editor load and save never sends a settings PUT',
@@ -394,6 +442,7 @@ void main() {
     'preference failure retains activity ACK and durable pending preferences',
     () async {
       await model.initialize();
+      model.reorder(0, 2);
       var failPreference = true;
       respond = (r) {
         if (failPreference && r.path.endsWith('/personal-preferences')) {
@@ -416,6 +465,7 @@ void main() {
     'a final reload failure retains the acknowledged command without another PUT',
     () async {
       await model.initialize();
+      model.reorder(0, 2);
       respond = (r) {
         final result = serve(r);
         if (r.method == 'PUT' && r.path.endsWith('/personal-preferences')) {

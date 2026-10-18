@@ -8,6 +8,7 @@ import 'package:lost_party/features/account/data/backend_account_read_api.dart';
 import 'package:lost_party/features/account/data/datasources/lost_ark_character_remote_data_source.dart';
 import 'package:lost_party/features/account/data/local/scoped_account_cache_database.dart';
 import 'package:lost_party/features/account/data/scoped_account_runtime.dart';
+import 'package:lost_party/features/account/data/scoped_character_management_gateway.dart';
 import 'package:lost_party/app/backend_account_lifecycle.dart';
 import 'package:lost_party/app/backend_member_account.dart';
 import 'package:lost_party/features/account/presentation/viewmodels/member_lostark_key.dart';
@@ -18,8 +19,12 @@ import 'package:lost_party/features/account/domain/account_read_session.dart';
 import 'package:lost_party/features/account/domain/scoped_cache_models.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_role.dart';
 import 'package:lost_party/features/account/presentation/pages/member_account_page.dart';
+import 'package:lost_party/features/account/presentation/widgets/account_character_card.dart';
 import 'member_lostark_key_test.dart' as key_fixture;
 import 'member_settings_test.dart' as settings_fixture;
+import 'member_weekly_test.dart' as weekly_fixture;
+import 'package:lost_party/features/account/data/member_raid_client.dart';
+import 'package:lost_party/features/account/presentation/viewmodels/member_weekly_view_model.dart';
 
 import 'package:lost_party/features/account/domain/server_account_read_repository.dart';
 import 'package:lost_party/features/account/presentation/viewmodels/scoped_startup_refresh_controller.dart';
@@ -31,7 +36,9 @@ import 'package:lost_party/shared/lost_ark_api/client/api_cooldown.dart';
 import 'package:lost_party/shared/lost_ark_api/client/lost_ark_api_client.dart';
 
 import '../../../support/server_account_read_fakes.dart';
-import 'scoped_role_sync_test.dart' as fixtures show catalog, armory;
+import 'scoped_role_sync_test.dart'
+    as fixtures
+    show catalog, armory, summaryJson;
 import 'server_character_lifecycle_client_test.dart' as wire show item, roster;
 
 const member = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -250,6 +257,51 @@ void main() {
     throw StateError('Unexpected ${r.path}');
   }
 
+  void initialSelectionServer({bool empty = false, bool loseAck = false}) {
+    var configured = false;
+    var lost = false;
+    Map<String, dynamic> currentSettings() => {
+      ...settings(),
+      'configuration_state': configured ? 'configured' : 'unconfigured',
+      'activity_character_ids': configured ? [secondCharacterId] : <String>[],
+      'representative_character_id': configured ? secondCharacterId : null,
+      'selection_complete': true,
+    };
+    apiRespond = (r) {
+      if (r.path.endsWith('/character-settings') && r.method == 'PUT') {
+        if (!configured) {
+          configured = true;
+          selectionVersion++;
+          selectedRepresentative = secondCharacterId;
+        }
+        if (loseAck && !lost) {
+          lost = true;
+          throw failure(r);
+        }
+        return currentSettings();
+      }
+      final data = serve(r);
+      if (r.path == '/v1/me/game-accounts') {
+        (data['items'] as List).first['settings'] = currentSettings();
+      } else if (r.path.endsWith('/characters')) {
+        data['settings'] = currentSettings();
+        if (empty) {
+          for (final row in data['items'] as List) {
+            row['item_level'] = '1600.00';
+          }
+        }
+      } else if (r.path.endsWith('/representative')) {
+        data['configuration_state'] = configured
+            ? 'configured'
+            : 'unconfigured';
+        data['representative_character_id'] = configured
+            ? secondCharacterId
+            : null;
+      }
+      return data;
+    };
+  }
+
   setUp(() {
     clock = DateTime.utc(2026, 10, 16);
     registrationVersion = selectionVersion = 1;
@@ -344,6 +396,7 @@ void main() {
     settingsModel = MemberSettingsViewModel(settingsApi, session);
     binding = BackendMemberAccount(
       lifecycle: lifecycle,
+      automaticRefreshEnabled: true,
       settings: settingsModel,
       key: key,
       remote: LostArkCharacterRemoteDataSource(
@@ -389,6 +442,452 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 10));
     await until(() => !model.loading && !controller.isBusy);
   }
+
+  void restorationOnly() {
+    final remote = binding.source.remote;
+    binding.dispose();
+    binding = BackendMemberAccount(
+      lifecycle: lifecycle,
+      automaticRefreshEnabled: false,
+      settings: settingsModel,
+      key: key,
+      remote: remote,
+      catalog: Catalog(),
+      cooldown: cooldown,
+    );
+    model = binding.model;
+    controller = binding.runner;
+  }
+
+  test(
+    'startup publishes cache before server roster and initialization is once',
+    () async {
+      restorationOnly();
+      await model.refresh();
+      restorationOnly();
+      final release = Completer<void>();
+      addTearDown(() {
+        if (!release.isCompleted) release.complete();
+      });
+      var rosterRequests = 0;
+      apiRespond = (r) async {
+        if (r.path == '/v1/me/game-accounts') {
+          rosterRequests++;
+          await release.future;
+        }
+        return serve(r);
+      };
+      var notifications = 0;
+      void pageListener() => notifications++;
+      model.addListener(pageListener);
+      binding.initialize();
+      await until(() => model.initialDisplayReady && rosterRequests == 1);
+      expect(model.sections, isNotEmpty);
+      expect(model.sections.single.cached, isTrue);
+      expect(model.loading, isTrue);
+      // Leaving the page only detaches its observer, not the app-owned work.
+      model.removeListener(pageListener);
+      final before = notifications;
+      binding.initialize();
+      release.complete();
+      await model.refresh();
+      await until(() => !model.restoring);
+      expect(rosterRequests, 1);
+      expect(notifications, before);
+      expect(model.sections.single.cached, isFalse);
+      expect(model.canEdit, isTrue);
+      expect(model.failure, isNull);
+    },
+  );
+
+  test(
+    'logout clears startup readiness and blocks a delayed roster result',
+    () async {
+      restorationOnly();
+      await model.refresh();
+      restorationOnly();
+      final release = Completer<void>();
+      addTearDown(() {
+        if (!release.isCompleted) release.complete();
+      });
+      var started = false;
+      apiRespond = (r) async {
+        if (r.path == '/v1/me/game-accounts') {
+          started = true;
+          await release.future;
+        }
+        return serve(r);
+      };
+      binding.initialize();
+      await until(() => model.initialDisplayReady && started);
+      final work = model.refresh();
+      session.change(authenticated: false);
+      expect(model.initialDisplayReady, isFalse);
+      expect(model.sections, isEmpty);
+      release.complete();
+      await work;
+      expect(model.sections, isEmpty);
+      expect(model.initialDisplayReady, isFalse);
+    },
+  );
+
+  test(
+    'profile restore is capped at three and active characters finish before inactive reads',
+    () async {
+      restorationOnly();
+      final ids = [
+        characterId,
+        secondCharacterId,
+        '00000000-0000-4000-8000-000000000003',
+        '00000000-0000-4000-8000-000000000004',
+        '00000000-0000-4000-8000-000000000005',
+      ];
+      final active = ids.take(4).toList();
+      final releases = {for (final id in ids) id: Completer<void>()};
+      addTearDown(() {
+        for (final release in releases.values) {
+          if (!release.isCompleted) release.complete();
+        }
+      });
+      final started = <String>[];
+      var inFlight = 0, maximum = 0;
+      apiRespond = (r) async {
+        final data = serve(r);
+        if (r.path == '/v1/me/game-accounts') {
+          (data['items'] as List).first['settings'] = {
+            ...settings(),
+            'activity_character_ids': active,
+          };
+        } else if (r.path.endsWith('/characters')) {
+          data['settings'] = {...settings(), 'activity_character_ids': active};
+          data['items'] = [
+            for (final id in ids) wire.item(id: id, name: id.substring(24)),
+          ];
+        } else if (r.path.endsWith('/personal-profile')) {
+          final id = r.path.split('/')[4];
+          started.add(id);
+          inFlight++;
+          if (inFlight > maximum) maximum = inFlight;
+          await releases[id]!.future;
+          inFlight--;
+        }
+        return data;
+      };
+      final work = model.refresh();
+      await until(() => started.length == 3);
+      expect(started.every(active.contains), isTrue);
+      expect(maximum, 3);
+      for (final id in started.toList()) {
+        releases[id]!.complete();
+      }
+      await until(() => started.length == 4);
+      expect(started.toSet(), active.toSet());
+      releases[started.last]!.complete();
+      await until(() => started.length == 5);
+      expect(model.loading, isFalse);
+      expect(model.restoring, isTrue);
+      expect(model.canEdit, isTrue);
+      expect(model.sections.single.visible, hasLength(4));
+      final published = model.sections.single;
+      // A write cancels older inactive reads; their late result cannot replace UI.
+      await model.savePreferences(
+        runtime.reference(registrationId),
+        model.sections.single.characters.first.ref,
+        PreferenceValues(
+          preferredRole: CharacterBuildRole.dealer,
+          visible: false,
+          displayOrder: null,
+        ),
+      );
+      final edited = model.sections.single;
+      releases[ids.last]!.complete();
+      await work;
+      expect(maximum, 3);
+      expect(identical(edited, model.sections.single), isTrue);
+      expect(identical(published, edited), isFalse);
+      expect(
+        model
+            .character(edited.characters.first.ref)!
+            .preferences!
+            .preferences
+            .visible,
+        isFalse,
+      );
+      expect(model.failure, isNull);
+      expect(model.restoring, isFalse);
+    },
+  );
+
+  testWidgets(
+    'fixed dealer hides support and dual-role classes use direct choices',
+    (tester) async {
+      restorationOnly();
+      for (final name in ['기상술사', '바드', '도화가', '홀리나이트', '발키리']) {
+        className = name;
+        await tester.runAsync(() => model.refresh());
+        final row = model.sections.single.characters.first;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MemberCharacterPage(
+              model: model,
+              registration: runtime.reference(registrationId),
+              ref: row.ref,
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(
+          find.byType(ChoiceChip),
+          name == '기상술사' ? findsNothing : findsNWidgets(2),
+        );
+        if (name == '기상술사') {
+          expect(find.text('서포터'), findsNothing);
+        }
+        expect(find.text('선호 역할·표시 설정'), findsNothing);
+        expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
+    },
+  );
+
+  test(
+    'default member restore reads persisted summaries with no key or activities during provider cooldown',
+    () async {
+      restorationOnly();
+      keyApi.token = null;
+      await key.reload();
+      cooldown.observe(clock.add(const Duration(minutes: 5)));
+      roleSummaries[characterId] = {
+        'version': 2,
+        'summary': {
+          ...fixtures.summaryJson(),
+          'combat_power': '4344.63',
+          'combat_power_observed_at': serverTime,
+          'item_level': '1770.83',
+          'item_level_observed_at': serverTime,
+        },
+        'saved_at': serverTime,
+      };
+      Map<String, dynamic> unconfigured() => {
+        ...settings(),
+        'configuration_state': 'needs_reconfiguration',
+        'activity_character_ids': <String>[],
+        'representative_character_id': null,
+      };
+      apiRespond = (r) {
+        final data = serve(r);
+        if (r.path == '/v1/me/game-accounts') {
+          (data['items'] as List).first['settings'] = unconfigured();
+        } else if (r.path.endsWith('/characters')) {
+          data['settings'] = unconfigured();
+        } else if (r.path.endsWith('/representative')) {
+          data['configuration_state'] = 'needs_reconfiguration';
+          data['representative_character_id'] = null;
+        }
+        return data;
+      };
+      binding.initialize();
+      await model.refresh();
+      expect(model.failure, isNull);
+      expect(model.sections.single.characters, hasLength(2));
+      expect(model.sections.single.registration.settings.activityIds, isEmpty);
+      expect(
+        model.sections.single.registration.settings.representativeId,
+        isNull,
+      );
+      expect(
+        model.sections.single.displayReady,
+        isTrue,
+        reason:
+            '${model.sections.single.failure} / ${model.sections.single.characters.map((r) => r.failure).toList()}',
+      );
+      final ref = ScopedCharacterRef(
+        runtime.scope,
+        accountId: account,
+        characterId: characterId,
+      );
+      final cached = await runtime.readCachedRoleBuild(
+        runtime.reference(registrationId),
+        ref,
+        CharacterBuildRole.dealer,
+      );
+      expect(cached!.displaySummary!.combatPower, '4344.63');
+      expect(cached.displaySummary!.itemLevel, '1770.83');
+      expect(cached.rawJson, isNull);
+      expect(controller.consumed, isFalse);
+      expect(armoryCalls, isEmpty);
+      expect(apiCalls.every((r) => r.method == 'GET'), isTrue);
+    },
+  );
+
+  test(
+    'unconfigured owned roster selects all eligible characters once without provider calls',
+    () async {
+      restorationOnly();
+      initialSelectionServer();
+      await model.refresh();
+      expect(model.failure, isNull);
+      expect(model.sections.single.registration.settings.activityIds, [
+        secondCharacterId,
+      ]);
+      expect(
+        model.sections.single.registration.settings.representativeId,
+        secondCharacterId,
+      );
+      final puts = apiCalls
+          .where((r) => r.path.endsWith('/character-settings'))
+          .toList();
+      expect(puts, hasLength(1));
+      expect((puts.single.data as Map)['activity_character_ids'], [
+        secondCharacterId,
+      ]);
+      expect(
+        apiCalls.where(
+          (r) => r.path.endsWith('/preferences') && r.method == 'PUT',
+        ),
+        isEmpty,
+      );
+      await model.refresh();
+      expect(
+        apiCalls.where((r) => r.path.endsWith('/character-settings')),
+        hasLength(1),
+      );
+      expect(armoryCalls, isEmpty);
+    },
+  );
+  test(
+    'unconfigured roster without eligible characters does not save an empty selection',
+    () async {
+      restorationOnly();
+      initialSelectionServer(empty: true);
+      await model.refresh();
+      expect(model.failure, isNull);
+      expect(model.sections.single.registration.settings.activityIds, isEmpty);
+      expect(apiCalls.every((r) => r.method == 'GET'), isTrue);
+    },
+  );
+  test(
+    'initial selection lost ACK retries the same command even after the server is configured',
+    () async {
+      restorationOnly();
+      initialSelectionServer(loseAck: true);
+      await model.refresh();
+      expect(model.failure, isNotNull);
+      await model.refresh();
+      expect(model.failure, isNull);
+      final puts = apiCalls
+          .where((r) => r.path.endsWith('/character-settings'))
+          .toList();
+      expect(puts, hasLength(2));
+      expect(
+        puts[0].headers['Idempotency-Key'],
+        puts[1].headers['Idempotency-Key'],
+      );
+      expect(puts[0].data, puts[1].data);
+    },
+  );
+
+  test(
+    'management return reuses confirmed profiles and never fetches the full roster again',
+    () async {
+      restorationOnly();
+      await model.refresh();
+      final gateway = ScopedCharacterManagementGateway(
+        runtime,
+        registrationId,
+        otherWorkPending: () => false,
+      );
+      await gateway.load();
+      addTearDown(gateway.dispose);
+      final before = apiCalls.length;
+      await model.restoreAfterManagement(gateway);
+      expect(model.failure, isNull);
+      final calls = apiCalls.skip(before).toList();
+      expect(calls, hasLength(1));
+      expect(calls.single.path, endsWith('/representative'));
+      expect(
+        model.detailsAvailable(model.sections.single.characters.first.ref),
+        isTrue,
+      );
+    },
+  );
+  test(
+    'management return never promotes invalidated disk observations into current access',
+    () async {
+      restorationOnly();
+      await model.refresh();
+      final gateway = ScopedCharacterManagementGateway(
+        runtime,
+        registrationId,
+        otherWorkPending: () => false,
+      );
+      await gateway.load();
+      addTearDown(gateway.dispose);
+      runtime.invalidateReads();
+      await model.restoreAfterManagement(gateway);
+      expect(model.sections.single.cached, isTrue);
+      expect(
+        model.detailsAvailable(model.sections.single.characters.first.ref),
+        isFalse,
+      );
+    },
+  );
+
+  test(
+    'restoration-only binding cannot invoke provider preparation even when key and settings are ready',
+    () async {
+      restorationOnly();
+      await until(() => !key.busy && !settingsModel.busy);
+      binding.initialize();
+      await model.refresh();
+      final reads = apiCalls.length;
+      await controller.startIfReady();
+      await controller.retryIncomplete();
+      await controller.retryServerSaved();
+      expect(apiCalls, hasLength(reads));
+      expect(armoryCalls, isEmpty);
+      expect(apiCalls.every((r) => r.method == 'GET'), isTrue);
+      expect(controller.consumed, isFalse);
+      expect(model.sections.single.displayReady, isTrue);
+    },
+  );
+
+  test(
+    'server read Retry-After blocks explicit restoration retries but provider cooldown does not',
+    () async {
+      restorationOnly();
+      var limited = true;
+      apiRespond = (r) {
+        if (limited && r.path == '/v1/me/game-accounts') {
+          throw DioException.badResponse(
+            statusCode: 429,
+            requestOptions: r,
+            response: Response(
+              requestOptions: r,
+              statusCode: 429,
+              data: {
+                'error': {'code': 'RATE_LIMITED', 'retry_after_seconds': 3},
+              },
+            ),
+          );
+        }
+        return serve(r);
+      };
+      binding.initialize();
+      await model.refresh();
+      expect(model.failure, 'RATE_LIMITED');
+      expect(model.restoreRetrySeconds, 3);
+      final calls = apiCalls.length;
+      await model.refresh();
+      expect(apiCalls, hasLength(calls));
+      limited = false;
+      clock = clock.add(const Duration(seconds: 4));
+      await model.refresh();
+      expect(model.failure, isNull);
+      expect(model.sections.single.characters, hasLength(2));
+      expect(armoryCalls, isEmpty);
+    },
+  );
 
   test(
     'app binding shares roster preparation; full checks and profile restore converge',
@@ -909,6 +1408,222 @@ void main() {
         ),
         isEmpty,
       );
+    },
+  );
+
+  testWidgets(
+    'weekly save keeps card geometry and shows progress only in AppBar',
+    (tester) async {
+      restorationOnly();
+      await tester.runAsync(
+        () => model.refresh().timeout(const Duration(seconds: 5)),
+      );
+      final catalog = weekly_fixture.catalogWire();
+      final cycle = {
+        'server_time': clock.toIso8601String(),
+        'cycle_key': '2026-10-14',
+        'starts_at': '2026-10-13T21:00:00Z',
+        'ends_at': '2026-10-20T21:00:00Z',
+        'timezone': 'Asia/Seoul',
+      };
+      apiRespond = (r) async {
+        if (r.path == '/v1/raid-catalog') return catalog;
+        if (r.path == '/v1/raid-cycle') return cycle;
+        if (r.path == '/v1/me/raid-weekly-states') {
+          return {
+            'current_cycle': cycle,
+            'cycle_key': '2026-10-14',
+            'catalog_version': catalog['catalog_version'],
+            'entries': [
+              for (final id in r.queryParameters['character_id'] as List)
+                for (final raid in catalog['raids'] as List)
+                  {
+                    'character_id': id,
+                    'raid_id': raid['raid_id'],
+                    'cycle_key': '2026-10-14',
+                    'revision': 1,
+                    'ownership_revision': 1,
+                    'lifecycle_revision': 1,
+                    'state': 'incomplete',
+                    'completion_sources': <dynamic>[],
+                    'participation': null,
+                    'can_mark_completed': true,
+                    'can_clear_manual_completion': false,
+                    'mark_blocked_reason': null,
+                  },
+            ],
+          };
+        }
+        return serve(r);
+      };
+      late final MemberWeeklyViewModel weekly;
+      await tester.runAsync(() async {
+        weekly = MemberWeeklyViewModel(
+          model: model,
+          client: MemberRaidClient(runtime.api),
+          store: weekly_fixture.WeeklyMemoryStore(),
+          now: () => clock,
+        );
+        await weekly.refresh().timeout(const Duration(seconds: 5));
+      });
+      addTearDown(weekly.dispose);
+      expect(weekly.failure, isNull);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MemberAccountPage(
+            model: model,
+            settings: settingsModel,
+            weekly: weekly,
+            automaticRefreshAvailable: false,
+            onSettings: () {},
+            onKey: () {},
+            onVerify: () {},
+            onManage: () {},
+            onHistory: () {},
+            onServerStatus: (_) {},
+          ),
+        ),
+      );
+      final cards = find.byType(AccountCharacterCard);
+      final before = [
+        for (final e in cards.evaluate())
+          tester.getRect(find.byWidget(e.widget)),
+      ];
+      for (final phase in ['put', 'get', 'idle']) {
+        weekly.writing = phase == 'put';
+        weekly.loading = phase == 'get';
+        weekly.notifyListeners();
+        await tester.pump();
+        expect(
+          [
+            for (final e in cards.evaluate())
+              tester.getRect(find.byWidget(e.widget)),
+          ],
+          before,
+          reason: phase,
+        );
+        expect(find.byIcon(Icons.info_outline), findsNothing, reason: phase);
+        expect(find.text('주간 레이드 저장 확인 필요'), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(ListView),
+            matching: find.byType(LinearProgressIndicator),
+          ),
+          findsNothing,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(AppBar),
+            matching: find.byType(LinearProgressIndicator),
+          ),
+          phase == 'idle' ? findsNothing : findsOneWidget,
+        );
+        if (phase == 'idle') await tester.pumpAndSettle();
+      }
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'cancelling a focused visible-count dialog closes safely without writes',
+    (tester) async {
+      await tester.runAsync(run);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MemberAccountPage(
+            model: model,
+            settings: settingsModel,
+            onSettings: () {},
+            onKey: () {},
+            onVerify: () {},
+            onManage: () {},
+            onHistory: () {},
+            onServerStatus: (_) {},
+          ),
+        ),
+      );
+      final cards = find.byType(AccountCharacterCard);
+      expect(cards, findsNWidgets(2));
+      expect(
+        find.byKey(const ValueKey('weeklyRaidReservedArea')),
+        findsNWidgets(2),
+      );
+      expect(
+        tester
+            .getSize(find.byKey(const ValueKey('weeklyRaidReservedArea')).first)
+            .height,
+        78,
+      );
+      expect(
+        tester.getTopLeft(cards.first).dy,
+        tester.getTopLeft(cards.last).dy,
+      );
+      expect(
+        tester.getTopLeft(cards.first).dx,
+        lessThan(tester.getTopLeft(cards.last).dx),
+      );
+      final before = apiCalls.where((r) => r.method != 'GET').length;
+      for (final close in ['cancel', 'back', 'outside']) {
+        await tester.ensureVisible(find.text('표시 2명'));
+        await tester.tap(find.text('표시 2명'));
+        await tester.pumpAndSettle();
+        final slider = tester.widget<Slider>(find.byType(Slider));
+        expect(slider.min, 1);
+        expect(slider.max, 2);
+        slider.onChanged!(1);
+        if (close == 'cancel') {
+          await tester.tap(find.text('취소'));
+        } else if (close == 'back') {
+          await tester.binding.handlePopRoute();
+        } else {
+          await tester.tapAt(const Offset(10, 10));
+        }
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: close);
+        expect(find.text('표시할 캐릭터 수'), findsNothing);
+        expect(apiCalls.where((r) => r.method != 'GET'), hasLength(before));
+        expect(model.sections.single.presentation!.visibleCount, 6);
+      }
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'focused character preferences cancel keeps the route and saved settings intact',
+    (tester) async {
+      await tester.runAsync(run);
+      final row = model.sections.single.characters.first;
+      final before = apiCalls.where((r) => r.method != 'GET').length;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (ctx) => Scaffold(
+              body: TextButton(
+                onPressed: () => editMemberPreferences(
+                  ctx,
+                  model,
+                  runtime.reference(registrationId),
+                  row,
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('비활성'));
+      await tester.tap(find.text('취소'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('open'), findsOneWidget);
+      expect(apiCalls.where((r) => r.method != 'GET'), hasLength(before));
+      expect(
+        model.character(row.ref)!.preferences!.preferences.displayOrder,
+        isNull,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
     },
   );
 

@@ -67,7 +67,7 @@ class _MemberKeyPageState extends State<MemberKeyPage> {
   Widget build(BuildContext context) {
     final model = widget.model;
     return Scaffold(
-      appBar: AppBar(title: const Text('로스트아크 API 키')),
+      appBar: AppBar(title: const Text('로스트아크 API 관리')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

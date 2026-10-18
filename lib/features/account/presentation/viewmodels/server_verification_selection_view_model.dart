@@ -7,6 +7,7 @@ import '../../domain/policies/account_label_policy.dart';
 import '../../domain/server_account_models.dart';
 import '../../domain/server_account_read_repository.dart';
 import '../../domain/server_account_verification.dart';
+import '../../domain/services/character_lookup_name.dart';
 import '../../domain/services/roster_character_order.dart';
 
 /// Owns a complete saved roster for selection, independently of activity filters.
@@ -174,7 +175,9 @@ class ServerVerificationSelectionViewModel extends ChangeNotifier {
           if (current.ownershipStatus != 'owned') {
             throw const AccountReadException('REVISION_CONFLICT');
           }
-          if (current.characters.any((c) => c.characterName == name)) {
+          if (current.characters.any(
+            (c) => matchesCharacterLookupName(name, c.characterName),
+          )) {
             throw const AccountReadException('ALREADY_VERIFIED');
           }
         }

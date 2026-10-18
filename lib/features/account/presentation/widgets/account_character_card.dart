@@ -6,6 +6,7 @@ import '../../domain/entities/local_game_account.dart';
 import '../../domain/entities/character_build_analysis.dart';
 import '../../domain/entities/weekly_raid_status_projection.dart';
 import '../models/weekly_raid_status_item.dart';
+import 'character_name_label.dart';
 
 class AccountCharacterCard extends StatelessWidget {
   const AccountCharacterCard({
@@ -23,6 +24,9 @@ class AccountCharacterCard extends StatelessWidget {
     this.onWeeklyRaidChanged,
     this.onEditWeeklyRaids,
     this.busyRaidIds = const {},
+    this.representativeControl,
+    this.status,
+    this.reservedWeeklyRaidRows = 0,
     super.key,
   });
 
@@ -41,6 +45,8 @@ class AccountCharacterCard extends StatelessWidget {
   onWeeklyRaidChanged;
   final VoidCallback? onEditWeeklyRaids;
   final Set<String> busyRaidIds;
+  final Widget? representativeControl, status;
+  final int reservedWeeklyRaidRows;
 
   static const double raidRowHeight = 26;
 
@@ -50,7 +56,8 @@ class AccountCharacterCard extends StatelessWidget {
     final showRaidChrome =
         weeklyRaids.isNotEmpty ||
         weeklyRaidHiddenByPreference ||
-        showWeeklyRaidEditor;
+        showWeeklyRaidEditor ||
+        reservedWeeklyRaidRows > 0;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -63,15 +70,10 @@ class AccountCharacterCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Expanded(
-                    child: Text(
-                      character.characterName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleMedium,
-                    ),
-                  ),
-                  if (isRepresentative)
+                  Expanded(child: CharacterNameLabel(character.characterName)),
+                  if (representativeControl != null)
+                    representativeControl!
+                  else if (isRepresentative)
                     const Tooltip(
                       message: '대표 캐릭터',
                       child: Icon(Icons.star, size: 18),
@@ -137,6 +139,7 @@ class AccountCharacterCard extends StatelessWidget {
                     ],
                   ),
                 ],
+              if (status != null) ...[const SizedBox(height: 4), status!],
               if (showRaidChrome) ...[
                 const SizedBox(height: 8),
                 const Divider(height: 1),
@@ -146,7 +149,7 @@ class AccountCharacterCard extends StatelessWidget {
                     Expanded(
                       child: Text('주간 레이드', style: theme.textTheme.labelSmall),
                     ),
-                    if (showWeeklyRaidEditor && onEditWeeklyRaids != null)
+                    if (showWeeklyRaidEditor)
                       IconButton(
                         key: ValueKey('editWeeklyRaids-${character.id}'),
                         tooltip: '표기 레이드 수정',
@@ -232,6 +235,13 @@ class AccountCharacterCard extends StatelessWidget {
                         ],
                       ),
                     ),
+                  ),
+                if (reservedWeeklyRaidRows > weeklyRaids.length)
+                  SizedBox(
+                    key: const ValueKey('weeklyRaidReservedArea'),
+                    height:
+                        raidRowHeight *
+                        (reservedWeeklyRaidRows - weeklyRaids.length),
                   ),
               ],
             ],

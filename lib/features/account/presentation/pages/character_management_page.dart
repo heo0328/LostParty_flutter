@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/character_name_label.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_radius.dart';
@@ -11,10 +12,8 @@ import '../../domain/repositories/character_management_gateway.dart';
 import '../../domain/repositories/activity_characters_repository.dart';
 import '../../domain/repositories/nice_group_auto_refresh_settings_repository.dart';
 import '../../domain/repositories/representative_character_sync_gateway.dart';
-import '../../domain/services/character_usage_level_policy.dart';
 import '../viewmodels/character_management_view_model.dart';
 import '../viewmodels/member_settings_view_model.dart';
-import '../widgets/member_settings_controls.dart';
 import '../widgets/representative_crown.dart';
 
 class CharacterManagementPage extends StatefulWidget {
@@ -66,7 +65,6 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
       managementGateway: widget.managementGateway,
     )..addListener(_onChanged);
     _viewModel.initialize();
-    widget.memberSettings?.reload();
   }
 
   @override
@@ -169,7 +167,7 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
                 sliver: SliverToBoxAdapter(
                   child: Text(
                     _viewModel.isMemberManagement
-                        ? '아이템 레벨 ${CharacterUsageLevelPolicy.minimumItemLevel.toStringAsFixed(0)} 이상이며 현재 소유가 확인된 캐릭터를 사용할 수 있습니다. 선택한 캐릭터는 자동 상세 검사 대상입니다.'
+                        ? '앱에서 사용할 캐릭터를 선택해 주세요.'
                         : '선택한 캐릭터만 레이드, 그룹 및 전투력 동기화에 사용됩니다.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.textSecondary,
@@ -203,45 +201,7 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
                 ),
               ),
               const SliverToBoxAdapter(child: Divider(height: 1)),
-              if (_viewModel.hasNiceGroupCharacters) ...[
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md,
-                    AppSpacing.md,
-                    AppSpacing.md,
-                    AppSpacing.sm,
-                  ),
-                  sliver: SliverToBoxAdapter(
-                    child: widget.memberSettings != null
-                        ? MemberSettingsControls(
-                            model: widget.memberSettings!,
-                            automaticRefreshAvailable:
-                                widget.automaticRefreshAvailable,
-                            classes: _viewModel.isMemberManagement
-                                ? '나이스단으로 분류한'
-                                : _viewModel.niceGroupResult.classNames.join(
-                                    ', ',
-                                  ),
-                            onLogin: widget.onLogin,
-                          )
-                        : SwitchListTile(
-                            key: const ValueKey('niceGroupAutoRefreshSwitch'),
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text('나이스단 자동 갱신'),
-                            subtitle: Text(
-                              '${_viewModel.niceGroupResult.classNames.join(', ')} 직업군 전체에 적용됩니다. 설정을 끄면 기존 수동 스냅샷을 사용합니다.',
-                            ),
-                            value: _viewModel.draftNiceGroupAutoRefreshEnabled,
-                            onChanged:
-                                _viewModel.isSaving ||
-                                    _viewModel.isMemberManagement
-                                ? null
-                                : _viewModel.setNiceGroupAutoRefreshEnabled,
-                          ),
-                  ),
-                ),
-                const SliverToBoxAdapter(child: Divider(height: 1)),
-              ],
+
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.md,
@@ -290,6 +250,7 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
                     return _SelectedCharacterTile(
                       key: ValueKey(character.id),
                       character: character,
+                      shaded: index.isOdd,
                       isRepresentative:
                           _viewModel.draftRepresentativeId == character.id,
                       isEnabled: !_viewModel.isSaving,
@@ -320,33 +281,22 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
                   child: Row(
                     children: [
                       const Expanded(child: Text('메인 화면 표시 개수')),
-                      IconButton(
-                        tooltip: '표시 개수 줄이기',
-                        onPressed:
-                            !_viewModel.canEditDraft ||
-                                _viewModel.draftDisplayLimit <= 1
-                            ? null
-                            : () => _viewModel.changeDisplayLimit(-1),
-                        icon: const Icon(Icons.remove_circle_outline),
-                      ),
-                      SizedBox(
-                        width: 32,
-                        child: Text(
-                          '${_viewModel.draftDisplayLimit}',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.titleMedium,
+                      Text('${_viewModel.draftDisplayLimit}명'),
+                      if (_viewModel.maxDisplayLimit > 1)
+                        Expanded(
+                          child: Slider(
+                            value: _viewModel.draftDisplayLimit.toDouble(),
+                            min: 1,
+                            max: _viewModel.maxDisplayLimit.toDouble(),
+                            divisions: _viewModel.maxDisplayLimit - 1,
+                            label: '${_viewModel.draftDisplayLimit}명',
+                            onChanged: _viewModel.canEditDraft
+                                ? (v) => _viewModel.changeDisplayLimit(
+                                    v.round() - _viewModel.draftDisplayLimit,
+                                  )
+                                : null,
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        tooltip: '표시 개수 늘리기',
-                        onPressed:
-                            !_viewModel.canEditDraft ||
-                                _viewModel.draftDisplayLimit >=
-                                    _viewModel.maxDisplayLimit
-                            ? null
-                            : () => _viewModel.changeDisplayLimit(1),
-                        icon: const Icon(Icons.add_circle_outline),
-                      ),
                     ],
                   ),
                 ),
@@ -460,10 +410,8 @@ class _ActivitySelectCard extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
+                      child: CharacterNameLabel(
                         character.characterName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.titleSmall?.copyWith(
                           color: isSelected
                               ? AppColors.primaryStrong
@@ -504,6 +452,7 @@ class _SelectedCharacterTile extends StatelessWidget {
     required this.isRepresentativeEnabled,
     required this.onSetRepresentative,
     required this.dragHandle,
+    this.shaded = false,
     super.key,
   });
 
@@ -513,11 +462,14 @@ class _SelectedCharacterTile extends StatelessWidget {
   final bool isRepresentativeEnabled;
   final VoidCallback onSetRepresentative;
   final Widget dragHandle;
+  final bool shaded;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.surface,
+      color: shaded
+          ? Theme.of(context).colorScheme.surfaceContainerHighest
+          : AppColors.surface,
       child: ListTile(
         title: Text(character.characterName),
         subtitle: Text(

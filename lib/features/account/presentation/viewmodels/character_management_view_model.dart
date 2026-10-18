@@ -13,6 +13,7 @@ import '../../domain/repositories/activity_characters_repository.dart';
 import '../../domain/repositories/nice_group_auto_refresh_settings_repository.dart';
 import '../../domain/repositories/representative_character_sync_gateway.dart';
 import '../../domain/services/nice_group_policy.dart';
+import '../../domain/services/character_usage_level_policy.dart';
 
 class CharacterManagementViewModel extends ChangeNotifier {
   CharacterManagementViewModel({
@@ -39,6 +40,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
   CharacterManagementSnapshot? _management;
   bool _disposed = false;
   bool _explicitRepresentative = false;
+  bool _orderChanged = false;
   bool get canEditDraft => !_draftLocked;
   bool get isMemberManagement => managementGateway != null;
   bool get canSave =>
@@ -271,6 +273,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
     final characterId = reordered.removeAt(oldIndex);
     reordered.insert(newIndex, characterId);
     _draftOrderedIds = reordered;
+    _orderChanged = true;
     for (var index = 0; index < reordered.length; index++) {
       _rememberedOrder[reordered[index]] = index;
     }
@@ -290,6 +293,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
     _draftDisplayLimit = baseline.displayLimit;
     _draftNiceGroupAutoRefreshEnabled = baseline.niceGroupAutoRefreshEnabled;
     _explicitRepresentative = false;
+    _orderChanged = false;
     _message = null;
     notifyListeners();
   }
@@ -322,6 +326,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
             selectedIds: List.of(_draftOrderedIds),
             representativeId: representative,
             displayLimit: _draftDisplayLimit,
+            saveDisplayOrder: _orderChanged,
           );
           if (!_disposed) _applyManagement(snapshot);
         }
@@ -461,6 +466,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
   void _applyManagement(CharacterManagementSnapshot snapshot) {
     if (_disposed || managementGateway?.current != true) return;
     _management = snapshot;
+    _orderChanged = false;
     _explicitRepresentative = false;
     _account = snapshot.account;
     _allAccounts = [snapshot.account];
@@ -478,15 +484,21 @@ class CharacterManagementViewModel extends ChangeNotifier {
         if (_draftSelectedIds.contains(c.id)) c.id,
     ];
     _draftRepresentativeId = snapshot.account.representativeCharacterId;
-    _draftDisplayLimit = snapshot.account.displayLimit;
+    _clampDisplayLimit(initial: snapshot.account.displayLimit);
     _baseline = _snapshot();
     // Initial proposal only: never write from GET or replace an existing rep.
-    if (_draftSelectedIds.isEmpty && _draftRepresentativeId == null) {
-      final candidate = _highestUsable(snapshot.usableIds);
-      if (candidate != null) {
-        _draftSelectedIds = {candidate.id};
-        _draftOrderedIds = [candidate.id];
-      }
+    if (snapshot.initialSelectionRequired) {
+      _draftSelectedIds = {
+        for (final c in _roster)
+          if (snapshot.usableIds.contains(c.id) &&
+              const CharacterUsageLevelPolicy().isInUsageRange(c.itemLevel))
+            c.id,
+      };
+      _draftOrderedIds = [
+        for (final c in _roster)
+          if (_draftSelectedIds.contains(c.id)) c.id,
+      ];
+      _clampDisplayLimit();
     }
     _seedInitialRepresentative();
   }

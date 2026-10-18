@@ -90,6 +90,9 @@ void main() {
       expect(await model.checkStart(characterName: ' sample '), isFalse);
       expect(model.failure!.code, 'ALREADY_VERIFIED');
       expect(await model.checkStart(characterName: 'new-name'), isTrue);
+      expect(await model.checkStart(characterName: ' SAMPLE '), isFalse);
+      expect(model.failure!.code, 'ALREADY_VERIFIED');
+      expect(await model.checkStart(characterName: 'sample-other'), isTrue);
     },
   );
 

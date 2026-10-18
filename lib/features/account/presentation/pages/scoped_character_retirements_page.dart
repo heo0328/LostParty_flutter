@@ -66,7 +66,7 @@ class _ScopedCharacterRetirementsPageState
       final busy = h.loading || m.historyRetrySeconds > 0;
       return Scaffold(
         appBar: AppBar(
-          title: const Text('사라진 캐릭터 기록'),
+          title: const Text('사라진 캐릭터명 기록'),
           actions: [
             IconButton(
               tooltip: '이력 처음부터 다시 조회',
@@ -95,7 +95,7 @@ class _ScopedCharacterRetirementsPageState
                       seconds: m.historyRetrySeconds,
                     ),
                   if (h.loaded && h.current && h.items.isEmpty)
-                    const Text('사라진 캐릭터 기록이 없습니다.'),
+                    const Text('사라진 캐릭터명 기록이 없습니다.'),
                   for (final row in h.items)
                     Card(
                       child: ListTile(

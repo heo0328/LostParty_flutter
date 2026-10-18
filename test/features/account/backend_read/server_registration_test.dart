@@ -416,6 +416,46 @@ void main() {
       expect(model.preview, isNull);
     },
   );
+  test(
+    'mixed case lookup preserves API spelling and original preview key',
+    () async {
+      final result = preview();
+      (result['characters'] as List).single['character_name'] = 'SaMpLe';
+      handle = (o, h) => h.resolve(
+        Response(
+          requestOptions: o,
+          statusCode: o.path.endsWith('preview') ? 200 : 201,
+          data: o.path.endsWith('preview') ? result : registrationJson(),
+        ),
+      );
+      await model.search(' sample ');
+      expect(model.failure, isNull);
+      expect(model.preview!.characters.single.characterName, 'SaMpLe');
+      expect(model.previewName, 'sample');
+      await model.register('', true);
+      expect(requests[0].data, {'character_name': 'sample'});
+      expect(requests[1].data['lookup_character_name'], 'sample');
+      expect(model.hasPending, isFalse);
+    },
+  );
+  test('unrelated or ambiguous lookup results cannot be registered', () async {
+    for (final names in [
+      ['other'],
+      ['sample', 'SaMpLe'],
+    ]) {
+      final result = preview();
+      final template = (result['characters'] as List).single as Map;
+      result['characters'] = [
+        for (final name in names) {...template, 'character_name': name},
+      ];
+      handle = (o, h) =>
+          h.resolve(Response(requestOptions: o, statusCode: 200, data: result));
+      await model.search('sample');
+      expect(model.failure!.code, 'INVALID_RESPONSE');
+      expect(model.preview, isNull);
+    }
+    expect(requests, hasLength(2));
+  });
   test('expired preview never sends registration', () async {
     handle = (o, h) => h.resolve(
       Response(requestOptions: o, statusCode: 200, data: preview()),

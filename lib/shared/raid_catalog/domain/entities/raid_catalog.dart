@@ -50,6 +50,7 @@ class RaidDifficultyDefinition {
     required this.clearGold,
     required this.boundGold,
     required this.isActive,
+    this.exactMinItemLevel,
   });
 
   final String difficultyId;
@@ -57,6 +58,12 @@ class RaidDifficultyDefinition {
   final String displayAlias;
   final int displayOrder;
   final int minItemLevel;
+
+  /// Preserves the backend decimal string; legacy asset catalogs use integers.
+  final String? exactMinItemLevel;
+  num get requiredItemLevel => exactMinItemLevel == null
+      ? minItemLevel
+      : double.parse(exactMinItemLevel!);
   final int clearGold;
   final int boundGold;
   final bool isActive;

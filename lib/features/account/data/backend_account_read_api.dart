@@ -1,3 +1,4 @@
+import '../../../../shared/diagnostics/load_timing.dart';
 import 'package:dio/dio.dart';
 import '../../../../shared/lost_ark_api/client/api_cooldown.dart';
 
@@ -77,20 +78,22 @@ class DioBackendAccountReadApi
       try {
         final access = await session.accessToken();
         requireAccountReadScope(session, scope);
-        final response = await dio.request<Object?>(
-          path,
-          queryParameters: query,
-          data: body,
-          options: Options(
-            followRedirects: false,
-            method: method,
-            receiveTimeout: path.endsWith('/combat-power/refresh')
-                ? const Duration(seconds: 30)
-                : null,
-            headers: {
-              'Authorization': 'Bearer $access',
-              'Idempotency-Key': ?idempotencyKey,
-            },
+        final response = await LoadTiming.http(
+          () => dio.request<Object?>(
+            path,
+            queryParameters: query,
+            data: body,
+            options: Options(
+              followRedirects: false,
+              method: method,
+              receiveTimeout: path.endsWith('/combat-power/refresh')
+                  ? const Duration(seconds: 30)
+                  : null,
+              headers: {
+                'Authorization': 'Bearer $access',
+                'Idempotency-Key': ?idempotencyKey,
+              },
+            ),
           ),
         );
         requireAccountReadScope(session, scope);

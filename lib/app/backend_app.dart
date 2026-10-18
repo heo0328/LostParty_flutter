@@ -23,6 +23,8 @@ import '../features/account/domain/account_read_session.dart';
 import '../features/account/domain/server_account_read_repository.dart';
 import '../features/account/presentation/viewmodels/server_account_read_view_model.dart';
 import '../features/account/presentation/widgets/server_accounts_panel.dart';
+import '../features/account/presentation/widgets/server_registration_edit_dialog.dart';
+import '../features/account/domain/policies/account_label_policy.dart';
 import '../features/account/presentation/pages/server_account_characters_page.dart';
 
 import '../features/account/data/datasources/local_account_data_source.dart';
@@ -34,6 +36,7 @@ import '../features/account/domain/services/character_summary_sync_service.dart'
 import '../features/account/presentation/pages/my_account_page.dart';
 import '../features/account/presentation/pages/character_management_page.dart';
 import '../features/account/data/scoped_character_management_gateway.dart';
+import '../features/account/data/member_weekly_store.dart';
 import '../features/account/presentation/pages/api_token_settings_page.dart';
 import '../features/account/presentation/pages/member_key_page.dart';
 import '../features/account/presentation/viewmodels/member_lostark_key.dart';
@@ -50,8 +53,8 @@ import '../shared/raid_catalog/data/repositories/raid_catalog_repository_impl.da
 import '../shared/lost_ark_api/client/lost_ark_api_client.dart';
 import 'shell/app_shell.dart';
 import 'theme/app_theme.dart';
-import 'bootstrap/debug_base_url_dialog.dart';
 import 'bootstrap/lost_party_entry_screen.dart';
+import 'bootstrap/startup_entry_gate.dart';
 import 'backend_account_lifecycle.dart';
 import 'backend_member_account.dart';
 import '../features/account/presentation/pages/member_account_page.dart';
@@ -97,37 +100,32 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
   String? _configurationError;
   final _setupNavigatorKey = GlobalKey<NavigatorState>();
   bool _restorationComplete = false;
-  bool _entryAnimationComplete = false;
+  final _entryGate = StartupEntryGate();
   @override
   void initState() {
     super.initState();
+    _entryGate.addListener(_entryReady);
     WidgetsBinding.instance.addObserver(this);
     const configured = String.fromEnvironment('BACKEND_BASE_URL');
     final base = configured.isNotEmpty
         ? configured
         : (kDebugMode ? 'http://10.0.2.2:8000' : '');
-    if (kDebugMode) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _selectBaseUrl(base));
-    } else {
-      _initializeServices(base);
-    }
+    _initializeServices(base);
   }
 
-  Future<void> _selectBaseUrl(String initialUrl) async {
-    if (!mounted) return;
-    final url = await showDialog<String>(
-      context: _setupNavigatorKey.currentContext!,
-      barrierDismissible: false,
-      builder: (_) => DebugBaseUrlDialog(
-        initialUrl: initialUrl,
-        defaultUrl: 'http://10.0.2.2:8000',
-        validate: (value) => allowedAuthBaseUrl(value, debug: true),
-      ),
+  void _entryReady() {
+    if (mounted) setState(() {});
+  }
+
+  void _updateEntryReadiness() {
+    final auth = _auth;
+    _entryGate.update(
+      sessionResolved: _restorationComplete,
+      displayReady:
+          auth != null &&
+          (!auth.isAuthenticated ||
+              _memberAccount?.model.initialDisplayReady == true),
     );
-    if (!mounted) return;
-    setState(() {
-      _initializeServices(url ?? 'http://10.0.2.2:8000');
-    });
   }
 
   void _initializeServices(String base) {
@@ -162,12 +160,15 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       _configurationError = '서버 연결 주소를 확인하지 못했습니다. 연결 설정을 확인한 뒤 앱을 다시 실행해 주세요.';
       return;
     }
+    _entryGate.start();
     unawaited(_restoreSession());
   }
 
   Future<void> _restoreSession() async {
     await _auth!.restore();
-    if (mounted) setState(() => _restorationComplete = true);
+    if (!mounted) return;
+    _restorationComplete = true;
+    _updateEntryReadiness();
   }
 
   GoRouter _createRouter() {
@@ -195,6 +196,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     final lifecycle = _accountLifecycle = BackendAccountLifecycle(
       api: accountApi,
       registrations: serverAccounts,
+      enabled: true,
       allowHttp: kDebugMode,
     );
     if (!lifecycle.enabled) {
@@ -235,6 +237,81 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       }
     }
 
+    var editingRegistration = false;
+    Future<void> editServerAccount(BuildContext context, String id) async {
+      if (editingRegistration) return;
+      if (!_serverWrites!.canWrite) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _serverWrites!.hasPending
+                  ? '등록 관리에서 변경 결과를 확인해 주세요.'
+                  : '잠시 후 다시 시도해 주세요.',
+            ),
+            action: _serverWrites!.hasPending
+                ? SnackBarAction(
+                    label: '등록 관리',
+                    onPressed: () => manageServerAccounts(context),
+                  )
+                : null,
+          ),
+        );
+        return;
+      }
+      editingRegistration = true;
+      final scope = accountReadScope(readSession);
+      try {
+        final registrations = await serverAccounts.loadRegistrations();
+        if (!context.mounted || !lifecycle.isCurrent(scope)) return;
+        final account = registrations
+            .where((r) => r.registrationId == id)
+            .firstOrNull;
+        if (account == null) {
+          throw const AccountReadException('REGISTRATION_NOT_FOUND');
+        }
+        final result = await showServerRegistrationEditDialog(
+          context,
+          account: account,
+          displayLabel: AccountLabelPolicy.serverLabels(registrations)[id]!,
+          session: readSession,
+        );
+        if (result == null || !context.mounted || !lifecycle.isCurrent(scope)) {
+          return;
+        }
+        await _serverWrites!.edit(account, result.$1, result.$2);
+        if (!context.mounted || !lifecycle.isCurrent(scope)) return;
+        await reloadServerState();
+        await _memberAccount?.model.refresh();
+        if (!context.mounted || !lifecycle.isCurrent(scope)) return;
+        final writes = _serverWrites!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              writes.failure != null
+                  ? accountReadErrorMessage(writes.failure!)
+                  : writes.hasPending
+                  ? '변경 결과 확인 필요'
+                  : '원정대 정보를 저장했습니다.',
+            ),
+            action: writes.hasPending
+                ? SnackBarAction(
+                    label: '등록 관리',
+                    onPressed: () => manageServerAccounts(context),
+                  )
+                : null,
+          ),
+        );
+      } on AccountReadException catch (error) {
+        if (context.mounted && lifecycle.isCurrent(scope)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(accountReadErrorMessage(error))),
+          );
+        }
+      } finally {
+        editingRegistration = false;
+      }
+    }
+
     final remote = LostArkCharacterRemoteDataSource(
       apiClient: LostArkApiClient(
         apiTokenStore: tokenStore,
@@ -252,6 +329,8 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     );
     if (lifecycle.enabled) {
       _memberAccount = BackendMemberAccount(
+        automaticRefreshEnabled: true,
+        weeklyStore: const SecureMemberWeeklyStore(),
         lifecycle: lifecycle,
         settings: _memberSettings!,
         key: _memberKey!,
@@ -259,6 +338,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
         catalog: catalog,
         cooldown: _cooldown!,
       );
+      _memberAccount!.model.addListener(_updateEntryReadiness);
       _memberAccount!.initialize();
     }
     final accounts = AccountRepositoryImpl(
@@ -277,9 +357,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       syncGateway: null,
     );
     Future<void> openCharacters(BuildContext context, String id) async {
-      final session = accountReadScope(readSession);
       await context.push('/account/characters/manage?registrationId=$id');
-      if (lifecycle.isCurrent(session)) await _memberAccount?.model.refresh();
     }
 
     final raidCatalog = RaidCatalogRepositoryImpl(
@@ -331,7 +409,10 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
         StatefulShellRoute.indexedStack(
           builder: (context, state, shell) => AppShell(
             navigationShell: shell,
-            scopedStartupRefresh: _memberAccount?.runner,
+            scopedStartupRefresh:
+                _memberAccount?.automaticRefreshEnabled == true
+                ? _memberAccount!.runner
+                : null,
           ),
           branches: [
             StatefulShellBranch(
@@ -350,6 +431,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                       _memberAccount != null && readSession.isAuthenticated
                       ? MemberAccountPage(
                           model: _memberAccount!.model,
+                          weekly: _memberAccount!.weekly,
                           settings: _memberSettings!,
                           onSettings: () => context.push('/settings'),
                           onKey: () => context.push('/settings/api-token'),
@@ -357,6 +439,18 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                             '/settings/game-account-verification',
                           ),
                           onManage: () => manageServerAccounts(context),
+                          automaticRefreshAvailable:
+                              _memberAccount!.automaticRefreshEnabled,
+                          onEdit: (id) => editServerAccount(context, id),
+                          onVerifyRegistration: (id) => context
+                              .push(
+                                '/settings/game-account-verification?registrationId=$id',
+                              )
+                              .then((_) async {
+                                if (readSession.isAuthenticated) {
+                                  await _memberAccount?.model.refresh();
+                                }
+                              }),
                           onHistory: () =>
                               context.push('/account/character-retirements'),
                           onServerStatus: (id) =>
@@ -418,9 +512,11 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                           return CharacterManagementPage(
                             accountRepository: accounts,
                             managementGateway: gateway,
-                            onSaved: () => _memberAccount!.model.refresh(),
+                            onSaved: () => _memberAccount!.model
+                                .restoreAfterManagement(gateway),
                             memberSettings: _memberSettings,
-                            automaticRefreshAvailable: true,
+                            automaticRefreshAvailable:
+                                _memberAccount!.automaticRefreshEnabled,
                           );
                         }
                         return _BasicCharacterAccessPage(
@@ -593,6 +689,9 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     }
     WidgetsBinding.instance.removeObserver(this);
     _router?.dispose();
+    _entryGate.removeListener(_entryReady);
+    _entryGate.dispose();
+    _memberAccount?.model.removeListener(_updateEntryReadiness);
     _memberAccount?.dispose();
     unawaited(_accountLifecycle?.close());
     _serverReads?.dispose();
@@ -612,7 +711,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final router = _router;
-    if (router == null || !_restorationComplete || !_entryAnimationComplete) {
+    if (router == null || !_entryGate.canEnter) {
       return MaterialApp(
         navigatorKey: _setupNavigatorKey,
         theme: AppTheme.light,
@@ -621,7 +720,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
             : LostPartyEntryScreen(
                 embedded: true,
                 onAnimationCompleted: () {
-                  if (mounted) setState(() => _entryAnimationComplete = true);
+                  _entryGate.animationCompleted();
                 },
               ),
       );

@@ -13,8 +13,17 @@ import '../../domain/scoped_startup_refresh.dart';
 import '../../domain/services/character_build_role_policy.dart';
 import '../viewmodels/member_account_view_model.dart';
 import '../viewmodels/member_settings_view_model.dart';
+import '../viewmodels/member_weekly_view_model.dart';
+import '../models/weekly_raid_status_item.dart';
+import '../widgets/member_weekly_display_dialog.dart';
 import '../widgets/member_settings_controls.dart';
 import '../widgets/representative_crown.dart';
+import '../widgets/account_character_card.dart';
+import '../../domain/entities/local_game_account.dart';
+import '../../domain/services/weekly_raid_display_projector.dart';
+import '../widgets/roster_account_header.dart';
+import '../widgets/server_accounts_panel.dart';
+import '../../domain/policies/account_label_policy.dart';
 
 String memberAccountFailure(String? code) => switch (code) {
   'SETTINGS_NOT_READY' => '회원 설정을 확인해 주세요.',
@@ -34,6 +43,29 @@ String memberAccountFailure(String? code) => switch (code) {
 };
 String roleLabel(CharacterBuildRole role) =>
     role == CharacterBuildRole.dealer ? '딜러' : '서포터';
+CharacterBuildRole memberDisplayRole(MemberCharacterState row) {
+  final className =
+      (jsonDecode(row.observation.profileJson) as Map)['class_name']
+          as String? ??
+      '';
+  final fixed = const CharacterBuildRolePolicy().fixedRole(className);
+  return fixed ??
+      row.preferences?.preferences.preferredRole ??
+      (row.support?.displaySummary != null && row.dealer?.displaySummary == null
+          ? CharacterBuildRole.support
+          : CharacterBuildRole.dealer);
+}
+
+String memberPresentationToken(MemberAccountSection section) => jsonEncode([
+  section.registration.version,
+  section.registration.settings.version,
+  section.registration.ownershipRevision,
+  section.registration.rosterRevision,
+  section.presentation?.displayValues,
+  for (final c in section.characters)
+    [c.ref.characterId, c.preferences?.displayValues],
+]);
+
 String integrityLabel(RoleSummary? summary) =>
     switch (summary?.integrity.name) {
       'clean' => '확인된 경고 없음',
@@ -124,6 +156,7 @@ class MemberAccountPage extends StatelessWidget {
   const MemberAccountPage({
     required this.model,
     required this.settings,
+    this.weekly,
     required this.onSettings,
     required this.onKey,
     required this.onVerify,
@@ -131,25 +164,41 @@ class MemberAccountPage extends StatelessWidget {
     required this.onHistory,
     required this.onServerStatus,
     this.onCharacters,
+    this.onEdit,
+    this.onVerifyRegistration,
+    this.automaticRefreshAvailable = true,
     super.key,
   });
   final MemberAccountViewModel model;
   final MemberSettingsViewModel settings;
+  final MemberWeeklyViewModel? weekly;
   final VoidCallback onSettings, onKey, onVerify, onManage, onHistory;
   final void Function(String) onServerStatus;
-  final void Function(String)? onCharacters;
+  final void Function(String)? onCharacters, onEdit, onVerifyRegistration;
+  final bool automaticRefreshAvailable;
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: Listenable.merge([
       model,
       settings,
+      ?weekly,
       model.runner.source.cooldown,
     ]),
     builder: (context, _) {
-      final r = model.runner;
       return Scaffold(
         appBar: AppBar(
           title: const Text('내 계정'),
+          flexibleSpace: IgnorePointer(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: model.loading || model.restoring || weekly?.busy == true
+                  ? const LinearProgressIndicator(
+                      key: ValueKey('member-network-progress'),
+                      minHeight: 2,
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ),
           actions: [
             IconButton(
               onPressed: onSettings,
@@ -162,54 +211,77 @@ class MemberAccountPage extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              _progress(context),
-              if (model.loading) const LinearProgressIndicator(),
+              if (automaticRefreshAvailable) _progress(context),
+              if (weekly != null) _weeklyStatus(context, weekly!),
               if (model.failure != null)
                 Text(
                   memberAccountFailure(model.failure),
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
-              Wrap(
-                spacing: 8,
-                children: [
-                  TextButton.icon(
-                    onPressed: onManage,
-                    icon: const Icon(Icons.manage_accounts_outlined),
-                    label: const Text('원정대 등록·관리'),
-                  ),
-                  TextButton(onPressed: onVerify, child: const Text('원정대 인증')),
-                  TextButton(onPressed: onKey, child: const Text('개인 API 키')),
-                  TextButton(
-                    onPressed: onHistory,
-                    child: const Text('사라진 캐릭터 기록'),
-                  ),
-                  TextButton(
-                    onPressed:
-                        model.loading || r.isBusy || r.source.cooldown.active
-                        ? null
-                        : model.refresh,
-                    child: const Text('목록·저장 정보 다시 확인'),
-                  ),
-                ],
-              ),
-              ExpansionTile(
-                title: const Text('자동 갱신 설정'),
-                children: [
-                  MemberSettingsControls(
-                    model: settings,
-                    classes: '나이스단으로 분류한',
-                    automaticRefreshAvailable: true,
-                  ),
-                ],
-              ),
-              if (model.sections.isEmpty && !model.loading)
+              if (model.restoreRetrySeconds > 0)
+                Text('${model.restoreRetrySeconds}초 후 다시 시도해 주세요.'),
+              if (model.sections.isEmpty &&
+                  !model.loading &&
+                  model.failure == null)
                 const Padding(
                   padding: EdgeInsets.all(16),
-                  child: Text(
-                    '등록한 원정대가 없거나 아직 확인하지 못했습니다. 원정대를 등록한 뒤 목록을 다시 확인해 주세요.',
+                  child: Text('등록한 원정대가 없습니다.'),
+                ),
+              for (final section in model.sections.where(
+                (s) => s.registration.isMain,
+              ))
+                _section(context, section),
+              for (final section in model.sections.where(
+                (s) => !s.registration.isMain,
+              ))
+                _section(context, section),
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        '계정 도구',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          TextButton.icon(
+                            onPressed: onManage,
+                            icon: const Icon(Icons.manage_accounts_outlined),
+                            label: const Text('원정대 등록·관리'),
+                          ),
+                          TextButton(
+                            onPressed: onVerify,
+                            child: const Text('원정대 인증'),
+                          ),
+                          TextButton(
+                            onPressed: onKey,
+                            child: const Text('로스트아크 API 관리'),
+                          ),
+                          TextButton(
+                            onPressed: onHistory,
+                            child: const Text('사라진 캐릭터명 기록'),
+                          ),
+                          TextButton(
+                            onPressed: model.canRefresh ? model.refresh : null,
+                            child: const Text('서버 정보 다시 불러오기'),
+                          ),
+                        ],
+                      ),
+                      const Divider(),
+                      MemberSettingsControls(
+                        model: settings,
+                        classes: '나이스단으로 분류한',
+                        automaticRefreshAvailable: automaticRefreshAvailable,
+                      ),
+                    ],
                   ),
                 ),
-              for (final section in model.sections) _section(context, section),
+              ),
             ],
           ),
         ),
@@ -294,6 +366,17 @@ class MemberAccountPage extends StatelessWidget {
     );
   }
 
+  String _label(MemberAccountSection section) => AccountLabelPolicy.display(
+    customLabel: section.registration.label,
+    isMain: section.registration.isMain,
+    subAccountNumber:
+        model.sections
+            .where((s) => !s.registration.isMain)
+            .toList()
+            .indexOf(section) +
+        1,
+  );
+
   Widget _section(BuildContext context, MemberAccountSection section) {
     final reg = ScopedRegistrationRef(
       model.runtime.scope,
@@ -306,25 +389,41 @@ class MemberAccountPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              '${section.registration.label.isEmpty ? (section.registration.isMain ? '본계정' : '부계정') : section.registration.label}${section.registration.isMain ? ' · 본계정' : ' · 부계정'}',
-              style: Theme.of(context).textTheme.titleMedium,
+            RosterAccountHeader(
+              label: _label(section),
+              showEdit: onEdit != null,
+              showCharacters:
+                  onCharacters != null &&
+                  section.registration.ownershipStatus == 'owned',
+              showVerify: section.registration.ownershipStatus != 'owned',
+              onEdit: onEdit == null || model.managementBlocked
+                  ? null
+                  : () => onEdit!(reg.registrationId),
+              onCharacters:
+                  onCharacters == null ||
+                      model.managementBlocked ||
+                      section.registration.ownershipStatus != 'owned'
+                  ? null
+                  : () => onCharacters!(reg.registrationId),
+              onVerify:
+                  section.registration.ownershipStatus == 'owned' ||
+                      model.managementBlocked
+                  ? null
+                  : () => onVerifyRegistration != null
+                        ? onVerifyRegistration!(reg.registrationId)
+                        : onVerify(),
             ),
-            if (section.cached) const Text('이 기기의 이전 확인 정보'),
-            if (onCharacters != null &&
-                section.registration.ownershipStatus == 'owned')
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: model.managementBlocked
-                      ? null
-                      : () => onCharacters!(reg.registrationId),
-                  icon: const Icon(Icons.manage_accounts_outlined),
-                  label: const Text('캐릭터 관리'),
+            if (section.cached) const Text('이전 확인 정보'),
+            if (serverAccountActionLabel(
+              section.registration.ownershipStatus,
+              section.registration.settings.state,
+            ).isNotEmpty)
+              Text(
+                serverAccountActionLabel(
+                  section.registration.ownershipStatus,
+                  section.registration.settings.state,
                 ),
               ),
-            if (section.registration.ownershipStatus != 'owned')
-              const Text('소유 인증 후 회원별 캐릭터를 사용할 수 있습니다.'),
             if (section.failure != null)
               Text(memberAccountFailure(section.failure)),
             if (section.registration.isMain &&
@@ -358,14 +457,22 @@ class MemberAccountPage extends StatelessWidget {
                 ],
               ),
             if (!section.displayReady && section.characters.isNotEmpty)
-              const Text('표시 설정 확인 전 · 캐릭터의 확인 상태를 표시합니다.'),
+              const Text('표시 설정 확인 필요'),
             Wrap(
               children: [
-                TextButton(
-                  onPressed: () =>
-                      onServerStatus(section.registration.registrationId),
-                  child: const Text('서버 원정대 상태'),
-                ),
+                if (weekly != null)
+                  OutlinedButton.icon(
+                    key: ValueKey('member-roster-weekly-${reg.registrationId}'),
+                    onPressed: weekly!.canEditRosterDisplay(reg.registrationId)
+                        ? () => editMemberRosterWeeklyDisplay(
+                            context,
+                            weekly!,
+                            reg.registrationId,
+                          )
+                        : null,
+                    icon: const Icon(Icons.checklist_outlined, size: 18),
+                    label: const Text('원정대 주간레이드수정'),
+                  ),
                 if (section.characters.isNotEmpty)
                   TextButton(
                     onPressed: () => _displaySettings(
@@ -378,17 +485,24 @@ class MemberAccountPage extends StatelessWidget {
                   TextButton(
                     onPressed:
                         model.canEdit &&
-                            !model.busy('count:${reg.registrationId}')
-                        ? () => _count(context, reg, count.visibleCount)
+                            !model.busy('count:${reg.registrationId}') &&
+                            section.registration.settings.activityIds.isNotEmpty
+                        ? () => _count(
+                            context,
+                            reg,
+                            count.visibleCount,
+                            section.registration.settings.activityIds.length,
+                          )
                         : null,
-                    child: Text('표시 ${count.visibleCount}명'),
+                    child: Text(
+                      '표시 ${section.registration.settings.activityIds.isEmpty ? 0 : count.visibleCount.clamp(1, section.registration.settings.activityIds.length)}명',
+                    ),
                   ),
               ],
             ),
             if (count?.hasPending == true)
               _pendingSettings(context, reg, count!),
-            for (final row in section.visible)
-              _character(context, reg, row, main: section.registration.isMain),
+            _characterGrid(context, reg, section),
             if (section.displayReady &&
                 section.visible.isEmpty &&
                 section.characters.isNotEmpty)
@@ -399,6 +513,39 @@ class MemberAccountPage extends StatelessWidget {
     );
   }
 
+  Widget _characterGrid(
+    BuildContext context,
+    ScopedRegistrationRef reg,
+    MemberAccountSection section,
+  ) => LayoutBuilder(
+    builder: (context, constraints) {
+      const spacing = 8.0;
+      final columns = switch (constraints.maxWidth) {
+        < 600 => 2,
+        < 900 => 3,
+        _ => 4,
+      };
+      final width = (constraints.maxWidth - spacing * (columns - 1)) / columns;
+      return Wrap(
+        key: ValueKey('member-character-grid-${reg.registrationId}'),
+        spacing: spacing,
+        runSpacing: spacing,
+        children: [
+          for (final row in section.visible)
+            SizedBox(
+              width: width,
+              child: _character(
+                context,
+                reg,
+                row,
+                main: section.registration.isMain,
+              ),
+            ),
+        ],
+      );
+    },
+  );
+
   Widget _character(
     BuildContext context,
     ScopedRegistrationRef reg,
@@ -406,45 +553,86 @@ class MemberAccountPage extends StatelessWidget {
     required bool main,
   }) {
     final preferred = row.preferences?.preferences.preferredRole;
-    final role =
-        preferred ??
-        (row.dealer?.displaySummary != null ||
-                row.support?.displaySummary == null
-            ? CharacterBuildRole.dealer
-            : CharacterBuildRole.support);
-    final summary = model.detailsAvailable(row.ref)
-        ? row.role(role)?.displaySummary
-        : null;
-    return ListTile(
+    final role = memberDisplayRole(row);
+    // Last confirmed member-scoped summaries are display data, not write access.
+    final summary = row.role(role)?.displaySummary;
+    final profile =
+        jsonDecode(row.observation.profileJson) as Map<String, dynamic>;
+    final selected = main
+        ? model.representative(reg.registrationId)?.characterId ==
+              row.ref.characterId
+        : model.sections
+                  .where(
+                    (s) => s.registration.registrationId == reg.registrationId,
+                  )
+                  .firstOrNull
+                  ?.registration
+                  .settings
+                  .representativeId ==
+              row.ref.characterId;
+    // View data only. Server actions below always retain the scoped UUID ref.
+    final display = LocalAccountCharacter(
+      id: 0,
+      serverCharacterId: row.ref.characterId,
+      serverName: row.observation.serverName,
+      characterName: row.observation.characterName,
+      characterLevel: profile['character_level'] as int? ?? 0,
+      characterClassName: profile['class_name'] as String? ?? '직업 미확인',
+      itemLevel: double.tryParse(
+        (profile['item_level'] as String? ?? '').replaceAll(',', ''),
+      ),
+      combatPower: double.tryParse(summary?.combatPower ?? ''),
+      isVisible: true,
+      displayOrder: row.preferences?.preferences.displayOrder,
+      preferredRole: preferred,
+    );
+    return AccountCharacterCard(
       key: ValueKey('member-character-${row.ref.characterId}'),
-      title: Row(
-        children: [
-          Flexible(child: Text(row.observation.characterName)),
-          if (main)
-            RepresentativeCrown(
-              selected:
-                  model.representative(reg.registrationId)?.characterId ==
-                  row.ref.characterId,
+      character: display,
+      isRepresentative: selected,
+      representativeControl: main
+          ? RepresentativeCrown(
+              selected: selected,
+              unselectedOpacity: 0.5,
               busy:
                   model.busy('representative:${reg.registrationId}') &&
                   model.representativeTarget(reg.registrationId) ==
                       row.ref.characterId,
-              label:
-                  model.representative(reg.registrationId)?.characterId ==
-                      row.ref.characterId
+              label: selected
                   ? '대표 캐릭터'
                   : '${row.observation.characterName}을 대표 캐릭터로 변경',
               onPressed: model.representativeChoice(reg, row.ref) == null
                   ? null
                   : () => _representative(context, reg, row),
-            ),
-        ],
+            )
+          : null,
+      combatPowerNote: preferred == null && summary == null
+          ? null
+          : roleLabel(role),
+      status: Text(
+        '${summary == null ? '상세 조회 필요' : integrityLabel(summary)}${row.cached ? ' · 이전 확인 정보' : ''}${row.preferences == null ? ' · 표시 설정 확인 필요' : ''}${row.observation.lifecycleState != 'active' ? ' · 기존 캐릭터 확인 필요' : ''}',
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.bodySmall,
       ),
-      subtitle: Text(
-        '${row.observation.serverName} · ${preferred == null && summary == null ? '저장 역할 미확인' : roleLabel(role)} · 전투력 ${DisplayNumberFormatter.whole(summary?.combatPower, missing: '저장 정보 없음')}\n${integrityLabel(summary)}${row.cached ? ' · 이전 확인 정보' : ''}${row.preferences == null ? ' · 표시 설정 확인 필요' : ''}${row.observation.lifecycleState != 'active' ? ' · 기존 캐릭터 확인 필요' : ''}',
-      ),
-      isThreeLine: true,
-      trailing: const Icon(Icons.chevron_right),
+      weeklyRaids: weekly?.items(row.ref) ?? const [],
+      showWeeklyRaidEditor: weekly?.catalog != null,
+      weeklyRaidHiddenByPreference:
+          weekly?.preference(row.ref.characterId)?.displayCount == 0,
+      onEditWeeklyRaids: weekly?.canEditDisplay(row.ref) != true
+          ? null
+          : () => editMemberWeeklyDisplay(context, weekly!, row.ref),
+      onWeeklyRaidChanged: weekly == null
+          ? null
+          : (raid, completed) =>
+                _weeklyChange(context, row.ref, raid, completed),
+      busyRaidIds: weekly?.pendingCharacter == row.ref.characterId
+          ? {weekly!.pendingRaid!}
+          : const {},
+      reservedWeeklyRaidRows:
+          weekly?.preference(row.ref.characterId)?.displayCount == 0
+          ? 0
+          : WeeklyRaidDisplayProjector.defaultDisplayCount,
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute<void>(
@@ -456,6 +644,82 @@ class MemberAccountPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _weeklyStatus(BuildContext context, MemberWeeklyViewModel state) {
+    if (state.busy || (state.failure == null && !state.hasPending)) {
+      return const SizedBox.shrink();
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (state.failure != null) Text(memberWeeklyFailure(state.failure)),
+        if (state.hasPending) const Text('주간 레이드 저장 확인 필요'),
+        if (state.retrySeconds > 0)
+          Text('${state.retrySeconds}초 후 다시 시도해 주세요.'),
+        if (!state.loading)
+          Wrap(
+            children: [
+              TextButton(
+                onPressed: state.writing || state.retrySeconds > 0
+                    ? null
+                    : () => state.refresh(reloadCatalog: true),
+                child: const Text('주간 레이드 다시 불러오기'),
+              ),
+              if (state.hasPending && !state.pendingFailed)
+                TextButton(
+                  onPressed: state.canRetry ? state.retry : null,
+                  child: const Text('저장 재시도'),
+                ),
+              if (state.canUseCurrent)
+                TextButton(
+                  onPressed: state.useCurrent,
+                  child: const Text('현재 상태 유지'),
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Future<void> _weeklyChange(
+    BuildContext context,
+    ScopedCharacterRef ref,
+    WeeklyRaidStatusItem raid,
+    bool completed,
+  ) async {
+    final state = weekly;
+    if (state == null || !state.canChange(ref, raid.raidId)) return;
+    final member = accountReadScope(model.runtime.session),
+        before = state.entry(ref, raid.raidId);
+    final name = model.character(ref)?.observation.characterName ?? '';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(completed ? '레이드 완료 처리' : '레이드 완료 해제'),
+        content: Text(
+          completed
+              ? '$name 캐릭터의 ${raid.label} 레이드를 완료 처리할까요?'
+              : '$name 캐릭터의 ${raid.label} 수동 완료를 해제할까요?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(completed ? '완료 처리' : '완료 해제'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true &&
+        _sameMember(model, member) &&
+        identical(before, state.entry(ref, raid.raidId)) &&
+        state.canChange(ref, raid.raidId)) {
+      await state.change(ref, raid, completed);
+    }
   }
 
   Future<void> _representative(
@@ -527,19 +791,140 @@ class MemberAccountPage extends StatelessWidget {
     BuildContext context,
     ScopedRegistrationRef reg,
     int old,
+    int maximum,
   ) async {
     final member = accountReadScope(model.runtime.session);
-    final text = TextEditingController(text: '$old');
-    String? error;
+    if (maximum == 0) return;
+    var value = old.clamp(1, maximum);
     final count = await showDialog<int>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) => AlertDialog(
           title: const Text('표시할 캐릭터 수'),
-          content: TextField(
-            controller: text,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: '1~200명', errorText: error),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('$value명'),
+              if (maximum > 1)
+                Slider(
+                  value: value.toDouble(),
+                  min: 1,
+                  max: maximum.toDouble(),
+                  divisions: maximum - 1,
+                  label: '$value명',
+                  onChanged: (next) => set(() => value = next.round()),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, value),
+              child: const Text('변경'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (count != null && _sameMember(model, member)) {
+      await model.saveCount(reg, count);
+    }
+  }
+
+  Future<void> _displaySettings(BuildContext context, String id) async {
+    final member = accountReadScope(model.runtime.session);
+    final section = model.sections
+        .where((s) => s.registration.registrationId == id)
+        .firstOrNull;
+    if (section == null || !section.displayReady || !model.canEdit) return;
+    final token = memberPresentationToken(section);
+    final rows = section.ordered
+        .where(
+          (c) => section.registration.settings.activityIds.contains(
+            c.ref.characterId,
+          ),
+        )
+        .toList();
+    final draft = {
+      for (final row in rows) row.ref.characterId: row.preferences!.preferences,
+    };
+    var reordered = false;
+    final result = await showDialog<Map<String, PreferenceValues>>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, set) => AlertDialog(
+          title: const Text('캐릭터 표시 설정'),
+          content: SizedBox(
+            width: 440,
+            height: 400,
+            child: rows.isEmpty
+                ? const Center(child: Text('사용할 캐릭터를 선택해 주세요.'))
+                : ReorderableListView.builder(
+                    buildDefaultDragHandles: false,
+                    itemCount: rows.length,
+                    onReorder: (from, to) => set(() {
+                      if (to > from) to--;
+                      rows.insert(to, rows.removeAt(from));
+                      reordered = true;
+                    }),
+                    itemBuilder: (ctx, index) {
+                      final row = rows[index],
+                          value = draft[row.ref.characterId]!;
+                      return Material(
+                        key: ValueKey(row.ref.characterId),
+                        color: index.isEven
+                            ? Theme.of(ctx).colorScheme.surfaceContainerLow
+                            : Theme.of(ctx).colorScheme.surfaceContainerHighest,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${row.ref.characterId == section.registration.settings.representativeId ? '♛ ' : ''}${row.observation.characterName}',
+                                    ),
+                                    RadioGroup<bool>(
+                                      groupValue: value.visible,
+                                      onChanged: (v) => set(() {
+                                        draft[row
+                                            .ref
+                                            .characterId] = PreferenceValues(
+                                          preferredRole: value.preferredRole,
+                                          visible: v!,
+                                          displayOrder: value.displayOrder,
+                                        );
+                                      }),
+                                      child: Row(
+                                        children: [
+                                          const Radio<bool>(value: true),
+                                          const Text('활성'),
+                                          const Radio<bool>(value: false),
+                                          const Text('비활성'),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              ReorderableDragStartListener(
+                                index: index,
+                                child: const Padding(
+                                  padding: EdgeInsets.all(8),
+                                  child: Icon(Icons.drag_handle),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
           actions: [
             TextButton(
@@ -548,93 +933,43 @@ class MemberAccountPage extends StatelessWidget {
             ),
             FilledButton(
               onPressed: () {
-                final value = int.tryParse(text.text);
-                if (value == null || value < 1 || value > 200) {
-                  set(() => error = '1~200 사이의 정수를 입력해 주세요.');
-                  return;
+                if (reordered) {
+                  for (var i = 0; i < rows.length; i++) {
+                    final key = rows[i].ref.characterId,
+                        old = draft[rows[i].ref.characterId]!;
+                    draft[key] = PreferenceValues(
+                      preferredRole: old.preferredRole,
+                      visible: old.visible,
+                      displayOrder: i,
+                    );
+                  }
                 }
-                Navigator.pop(ctx, value);
+                Navigator.pop(ctx, draft);
               },
-              child: const Text('변경'),
+              child: const Text('저장'),
             ),
           ],
         ),
       ),
     );
-    text.dispose();
-    if (count != null && _sameMember(model, member)) {
-      await model.saveCount(reg, count);
+    if (result != null && _sameMember(model, member)) {
+      final current = model.sections
+          .where((s) => s.registration.registrationId == id)
+          .firstOrNull;
+      if (current == null || token != memberPresentationToken(current)) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('정보가 변경됐습니다. 다시 선택해 주세요.')),
+          );
+        }
+        return;
+      }
+      await model.saveDisplaySettings(
+        ScopedRegistrationRef(model.runtime.scope, id),
+        result,
+      );
     }
   }
-
-  Future<void> _displaySettings(
-    BuildContext context,
-    String id,
-  ) => showDialog<void>(
-    context: context,
-    builder: (ctx) => ListenableBuilder(
-      listenable: model,
-      builder: (ctx, _) {
-        final section = model.sections
-            .where((s) => s.registration.registrationId == id)
-            .firstOrNull;
-        return AlertDialog(
-          title: const Text('캐릭터 표시 설정'),
-          content: SizedBox(
-            width: 440,
-            height: 400,
-            child: ListView(
-              children: [
-                if (section == null) const Text('현재 회원 정보를 다시 확인해 주세요.'),
-                for (final row
-                    in section?.characters ?? <MemberCharacterState>[])
-                  Column(
-                    children: [
-                      ListTile(
-                        title: Text(row.observation.characterName),
-                        subtitle: Text(
-                          row.preferences == null
-                              ? '설정 확인 필요'
-                              : row.preferences!.preferences.visible
-                              ? '표시 · 순서 ${row.preferences!.preferences.displayOrder ?? '자동'}'
-                              : '숨김',
-                        ),
-                        trailing: const Icon(Icons.tune),
-                        onTap:
-                            row.preferences != null &&
-                                model.canEdit &&
-                                !model.busy('prefs:${row.ref.characterId}')
-                            ? () => editMemberPreferences(
-                                ctx,
-                                model,
-                                ScopedRegistrationRef(row.ref.scope, id),
-                                row,
-                              )
-                            : null,
-                      ),
-                      if (row.preferences?.hasPending == true)
-                        memberPendingSettings(
-                          ctx,
-                          model,
-                          ScopedRegistrationRef(row.ref.scope, id),
-                          row.preferences!,
-                          ref: row.ref,
-                        ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('닫기'),
-            ),
-          ],
-        );
-      },
-    ),
-  );
 }
 
 Future<void> editMemberPreferences(
@@ -648,11 +983,8 @@ Future<void> editMemberPreferences(
   final multiRole = const CharacterBuildRolePolicy().supportsMultipleRoles(
     (jsonDecode(row.observation.profileJson) as Map)['class_name'] as String,
   );
-  var role = values.preferredRole, visible = values.visible;
-  String? error;
-  final order = TextEditingController(
-    text: values.displayOrder?.toString() ?? '',
-  );
+  var role = multiRole ? memberDisplayRole(row) : CharacterBuildRole.dealer;
+  var visible = values.visible;
   final result = await showDialog<PreferenceValues>(
     context: context,
     builder: (ctx) => StatefulBuilder(
@@ -662,37 +994,28 @@ Future<void> editMemberPreferences(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              DropdownButtonFormField<String>(
-                initialValue: role?.name ?? 'auto',
-                decoration: const InputDecoration(labelText: '선호 역할'),
-                items: [
-                  const DropdownMenuItem(value: 'auto', child: Text('자동 선택')),
-                  const DropdownMenuItem(value: 'dealer', child: Text('딜러')),
-                  if (multiRole || role == CharacterBuildRole.support)
-                    DropdownMenuItem(
-                      value: 'support',
-                      enabled: multiRole,
-                      child: const Text('서포터'),
-                    ),
-                ],
-                onChanged: (v) => set(
-                  () => role = v == 'auto'
-                      ? null
-                      : CharacterBuildRole.values.byName(v!),
+              if (multiRole)
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final choice in CharacterBuildRole.values)
+                      ChoiceChip(
+                        label: Text(roleLabel(choice)),
+                        selected: role == choice,
+                        onSelected: (_) => set(() => role = choice),
+                      ),
+                  ],
                 ),
-              ),
-              CheckboxListTile(
-                value: visible,
-                title: const Text('내 계정에 표시'),
+              RadioGroup<bool>(
+                groupValue: visible,
                 onChanged: (v) => set(() => visible = v!),
-              ),
-              TextField(
-                controller: order,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: '표시 순서',
-                  helperText: '비우면 자동 정렬 · 0~2147483647',
-                  errorText: error,
+                child: const Row(
+                  children: [
+                    Radio<bool>(value: true),
+                    Text('활성'),
+                    Radio<bool>(value: false),
+                    Text('비활성'),
+                  ],
                 ),
               ),
             ],
@@ -705,19 +1028,12 @@ Future<void> editMemberPreferences(
           ),
           FilledButton(
             onPressed: () {
-              final raw = order.text.trim(),
-                  rank = int.tryParse(order.text.trim());
-              if (raw.isNotEmpty &&
-                  (rank == null || rank < 0 || rank > 2147483647)) {
-                set(() => error = '허용 범위의 정수를 입력해 주세요.');
-                return;
-              }
               Navigator.pop(
                 ctx,
                 PreferenceValues(
                   preferredRole: role,
                   visible: visible,
-                  displayOrder: raw.isEmpty ? null : rank,
+                  displayOrder: values.displayOrder,
                 ),
               );
             },
@@ -727,8 +1043,17 @@ Future<void> editMemberPreferences(
       ),
     ),
   );
-  order.dispose();
   if (result != null && _sameMember(model, member)) {
+    final latest = model.character(row.ref)?.preferences?.preferences;
+    if (latest == null ||
+        jsonEncode(latest.toJson()) != jsonEncode(values.toJson())) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('정보가 변경됐습니다. 다시 선택해 주세요.')),
+        );
+      }
+      return;
+    }
     await model.savePreferences(reg, row.ref, result);
   }
 }
@@ -759,6 +1084,40 @@ class MemberCharacterPage extends StatelessWidget {
                 children: [
                   if (row.observation.lifecycleState != 'active')
                     const Text('기존 캐릭터 확인 필요 · 새로운 사용 전에 원정대를 확인해 주세요.'),
+                  if (row.preferences != null &&
+                      const CharacterBuildRolePolicy().supportsMultipleRoles(
+                        (jsonDecode(row.observation.profileJson)
+                                    as Map)['class_name']
+                                as String? ??
+                            '',
+                      ))
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        for (final role in CharacterBuildRole.values)
+                          ChoiceChip(
+                            label: Text(roleLabel(role)),
+                            selected: memberDisplayRole(row) == role,
+                            onSelected:
+                                model.canEdit &&
+                                    !model.busy('prefs:${ref.characterId}')
+                                ? (_) => model.savePreferences(
+                                    registration,
+                                    ref,
+                                    PreferenceValues(
+                                      preferredRole: role,
+                                      visible:
+                                          row.preferences!.preferences.visible,
+                                      displayOrder: row
+                                          .preferences!
+                                          .preferences
+                                          .displayOrder,
+                                    ),
+                                  )
+                                : null,
+                          ),
+                      ],
+                    ),
                   if (row.preferences != null)
                     TextButton(
                       onPressed:
@@ -771,7 +1130,7 @@ class MemberCharacterPage extends StatelessWidget {
                               row,
                             )
                           : null,
-                      child: const Text('선호 역할·표시 설정'),
+                      child: const Text('표시 설정'),
                     ),
                   if (row.preferences?.hasPending == true)
                     memberPendingSettings(
@@ -785,8 +1144,7 @@ class MemberCharacterPage extends StatelessWidget {
                     Text(memberAccountFailure(row.failure)),
                   if (model.failure != null)
                     Text(memberAccountFailure(model.failure)),
-                  for (final role in CharacterBuildRole.values)
-                    _role(context, row, role),
+                  _role(context, row, memberDisplayRole(row)),
                 ],
               ),
       );

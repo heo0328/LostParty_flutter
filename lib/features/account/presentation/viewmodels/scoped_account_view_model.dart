@@ -17,6 +17,11 @@ enum ScopedRosterCoverage { metadataOnly, canonical, preview }
 class ScopedReadFailure {
   ScopedReadFailure(Object error, DateTime receivedAt) {
     final api = error is AccountReadException ? error : null;
+    if (kDebugMode) {
+      debugPrint(
+        'Roster read failed: code=${api?.code ?? error.runtimeType}, status=${api?.status}',
+      );
+    }
     code =
         api?.code ??
         (error is ScopedCacheException ? error.code : 'CACHE_UNAVAILABLE');

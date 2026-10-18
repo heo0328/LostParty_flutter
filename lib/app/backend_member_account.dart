@@ -1,4 +1,7 @@
 import 'package:flutter/foundation.dart';
+import '../features/account/data/member_raid_client.dart';
+import '../features/account/data/member_weekly_store.dart';
+import '../features/account/presentation/viewmodels/member_weekly_view_model.dart';
 
 import '../features/account/data/datasources/lost_ark_character_remote_data_source.dart';
 import '../features/account/data/scoped_startup_refresh_source.dart';
@@ -14,11 +17,13 @@ import 'backend_account_lifecycle.dart';
 class BackendMemberAccount {
   BackendMemberAccount({
     required BackendAccountLifecycle lifecycle,
+    this.automaticRefreshEnabled = BackendAccountLifecycle.configuredEnabled,
     required MemberSettingsViewModel settings,
     required MemberLostArkKey key,
     required LostArkCharacterRemoteDataSource remote,
     required GameCatalogRepository catalog,
     required ApiCooldown cooldown,
+    MemberWeeklyStore? weeklyStore,
   }) {
     final gate = lifecycle.model!, runtime = lifecycle.runtime!;
     final changes = Listenable.merge([settings, key, gate]);
@@ -59,19 +64,47 @@ class BackendMemberAccount {
       gateChanges: gate,
       commandPending: pending,
     );
+    if (weeklyStore != null) {
+      weekly = MemberWeeklyViewModel(
+        model: model,
+        client: MemberRaidClient(runtime.api),
+        store: weeklyStore,
+      );
+    }
   }
+  final bool automaticRefreshEnabled;
   late final RuntimeStartupRefreshSource source;
   late final ScopedStartupRefreshController runner;
   late final MemberAccountViewModel model;
-  bool _disposed = false;
+  MemberWeeklyViewModel? weekly;
+  bool _disposed = false, _initialized = false, _automaticInitialized = false;
   void initialize() {
+    if (_disposed || _initialized) return;
+    _initialized = true;
+    weekly?.initialize();
     model.initialize();
+    if (automaticRefreshEnabled) {
+      model.addListener(_startAutomaticWhenDisplayReady);
+      _startAutomaticWhenDisplayReady();
+    }
+  }
+
+  void _startAutomaticWhenDisplayReady() {
+    if (_disposed ||
+        _automaticInitialized ||
+        (!model.initialDisplayReady && model.failure == null)) {
+      return;
+    }
+    _automaticInitialized = true;
+    model.removeListener(_startAutomaticWhenDisplayReady);
     runner.initialize();
   }
 
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    model.removeListener(_startAutomaticWhenDisplayReady);
+    weekly?.dispose();
     model.dispose();
     runner.dispose();
     source.dispose();

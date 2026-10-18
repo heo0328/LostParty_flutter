@@ -8,7 +8,6 @@ import '../domain/repositories/character_management_gateway.dart';
 import '../domain/role_summary.dart';
 import '../domain/scoped_cache_models.dart';
 import '../domain/server_account_models.dart';
-import '../domain/services/character_usage_level_policy.dart';
 import '../domain/services/nice_group_policy.dart';
 import 'local/scoped_command_key.dart';
 import 'scoped_account_runtime.dart';
@@ -37,6 +36,15 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
   bool _acknowledged = false, _busy = false, _disposed = false;
   int _ticket = 0;
   CharacterManagementSnapshot? _loaded;
+  ScopedMemberRoster? _confirmedRoster;
+  int? _confirmedGeneration;
+  ScopedMemberRoster? get confirmedRoster =>
+      current &&
+          !pending &&
+          !busy &&
+          _confirmedGeneration == runtime.readGeneration
+      ? _confirmedRoster
+      : null;
   int? _pendingCount;
   List<int>? _pendingOrder;
   @override
@@ -79,14 +87,19 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
   @override
   Future<CharacterManagementSnapshot> load() => _load();
 
-  Future<CharacterManagementSnapshot> _load({bool fresh = false}) async {
+  Future<CharacterManagementSnapshot> _load({
+    bool fresh = false,
+    ScopedMemberRoster? confirmedRoster,
+    bool cachedSettings = false,
+  }) async {
     if (_busy) throw const AccountReadException('REQUEST_IN_PROGRESS');
     if (!fresh && pending && current && _loaded != null) return _loaded!;
     final ticket = _ticket,
         member = accountReadScope(runtime.session),
         scope = runtime.scope;
     void guard() => _guard(ticket, member, scope);
-    final roster = await runtime.loadMemberRoster(guard: guard);
+    final roster =
+        confirmedRoster ?? await runtime.loadMemberRoster(guard: guard);
     guard();
     final reg = roster.registrations
         .where((r) => r.registrationId == registrationId)
@@ -103,8 +116,13 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
       throw const AccountReadException('INVALID_PREPARATION');
     }
     final ref = runtime.reference(registrationId);
-    final plan = await runtime.preparePersonalSettings(ref, guard: guard);
-    final presentation = await runtime.readPersonalSettings(plan, guard: guard);
+    var presentation = cachedSettings
+        ? await runtime.readCachedPersonalSettings(ref, guard: guard)
+        : null;
+    if (presentation == null) {
+      final plan = await runtime.preparePersonalSettings(ref, guard: guard);
+      presentation = await runtime.readPersonalSettings(plan, guard: guard);
+    }
     final characters = <LocalAccountCharacter>[];
     final mapping = <int, CacheCharacterObservation>{};
     final usable = <int>{};
@@ -119,15 +137,22 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
         accountId: row.accountId,
         characterId: row.characterId,
       );
-      final p = await runtime.preparePersonalSettings(
-        ref,
-        character: character,
-        guard: guard,
-      );
-      final values = (await runtime.readPersonalSettings(
-        p,
-        guard: guard,
-      )).preferences;
+      var pref = cachedSettings
+          ? await runtime.readCachedPersonalSettings(
+              ref,
+              character: character,
+              guard: guard,
+            )
+          : null;
+      if (pref == null) {
+        final p = await runtime.preparePersonalSettings(
+          ref,
+          character: character,
+          guard: guard,
+        );
+        pref = await runtime.readPersonalSettings(p, guard: guard);
+      }
+      final values = pref.preferences;
       final level = double.tryParse('${profile['item_level']}');
       if (_usable(row)) usable.add(id);
       mapping[id] = row;
@@ -203,8 +228,11 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
           ],
         ),
     ];
+    _confirmedRoster = roster;
+    _confirmedGeneration = runtime.readGeneration;
     return _loaded = CharacterManagementSnapshot(
       account: account,
+      initialSelectionRequired: reg.settings.state == 'unconfigured',
       selectedIds: selected,
       usableIds: usable,
       hasNiceGroup: !const NiceGroupPolicy().evaluate(niceAccounts).isEmpty,
@@ -213,13 +241,13 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
 
   bool _usable(CacheCharacterObservation row) {
     final p = jsonDecode(row.profileJson) as Map;
-    return row.usable == true &&
+    final level = double.tryParse('${p['item_level']}');
+    return level != null &&
+        level.isFinite &&
+        level >= 0 &&
+        row.usable == true &&
         row.lifecycleState == 'active' &&
-        p['eligible'] == true &&
-        p['roster_status'] == 'confirmed' &&
-        const CharacterUsageLevelPolicy().isInUsageRange(
-          double.tryParse('${p['item_level']}'),
-        );
+        p['roster_status'] == 'confirmed';
   }
 
   @override
@@ -227,6 +255,8 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
     required List<int> selectedIds,
     required int representativeId,
     required int displayLimit,
+    bool initializeSelection = false,
+    bool saveDisplayOrder = true,
   }) async {
     if (!current) throw const AccountReadException('STALE_READ');
     if (_busy || otherWorkPending()) {
@@ -238,11 +268,16 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
     runtime.lockCharacterSettings(lock);
     _busy = true;
     notifyListeners();
+    ScopedMemberRoster? confirmed;
     try {
       if (_retryAt != null && DateTime.now().isBefore(_retryAt!)) {
         throw AccountReadException('REQUEST_IN_PROGRESS', retryAt: _retryAt);
       }
       if (!pending) {
+        if (initializeSelection &&
+            _registration!.settings.state != 'unconfigured') {
+          throw const AccountReadException('REVISION_CONFLICT');
+        }
         if (selectedIds.isEmpty ||
             selectedIds.length != selectedIds.toSet().length ||
             !selectedIds.contains(representativeId) ||
@@ -280,7 +315,9 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
           'expected_ownership_revision': reg.ownershipRevision,
           'expected_roster_revision': reg.rosterRevision,
         });
-        _pendingOrder = List.of(selectedIds);
+        _pendingOrder = initializeSelection || !saveDisplayOrder
+            ? []
+            : List.of(selectedIds);
         _pendingCount = displayLimit;
         _key = newScopedCommandKey();
       }
@@ -314,6 +351,7 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
       }
       // A replay ACK is historical. Only a new complete read supplies UI values.
       final fresh = await runtime.loadMemberRoster(guard: guard);
+      confirmed = fresh;
       final reg = fresh.registrations
           .where((r) => r.registrationId == registrationId)
           .firstOrNull;
@@ -350,10 +388,11 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
           character: c,
           guard: guard,
         );
-        final old = (await runtime.readPersonalSettings(
-          plan,
-          guard: guard,
-        )).preferences;
+        final before = await runtime.readPersonalSettings(plan, guard: guard);
+        final old = before.preferences;
+        if (old.displayOrder == i && !before.hasPending) {
+          continue;
+        }
         if (old.displayOrder != i) {
           await runtime.saveCharacterPreferences(
             plan,
@@ -383,9 +422,11 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
           guard: guard,
         );
       }
-      final synced = await runtime.syncPersonalSettings(ref, guard: guard);
-      if (synced.failure != null) {
-        throw AccountReadException(synced.failure!.code);
+      if (old.visibleCount != _pendingCount || old.hasPending) {
+        final synced = await runtime.syncPersonalSettings(ref, guard: guard);
+        if (synced.failure != null) {
+          throw AccountReadException(synced.failure!.code);
+        }
       }
     } catch (e) {
       guard();
@@ -413,7 +454,11 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
       if (!_disposed) notifyListeners();
     }
     guard();
-    final value = await _load(fresh: true);
+    final value = await _load(
+      fresh: true,
+      confirmedRoster: confirmed,
+      cachedSettings: true,
+    );
     guard();
     _clearPending();
     return value;

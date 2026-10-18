@@ -1,3 +1,4 @@
+import '../../../../shared/diagnostics/load_timing.dart';
 import '../../domain/services/account_detail_access.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -10,6 +11,7 @@ import '../../data/repositories/scoped_role_repository.dart';
 import '../../data/repositories/scoped_settings_repository.dart';
 import '../../data/scoped_account_runtime.dart';
 import '../../data/representative_client.dart';
+import '../../data/scoped_character_management_gateway.dart';
 import '../../domain/account_read_session.dart';
 import '../../domain/entities/character_build_analysis.dart';
 import '../../domain/entities/character_build_role.dart';
@@ -73,20 +75,27 @@ class MemberAccountSection {
   final bool cached;
   final String? failure;
   bool get displayReady =>
-      presentation != null && characters.every((c) => c.preferences != null);
-  List<MemberCharacterState> get visible {
-    if (!displayReady || characters.isEmpty) return characters;
+      presentation != null &&
+      characters
+          .where(
+            (c) =>
+                registration.settings.activityIds.contains(c.ref.characterId),
+          )
+          .every((c) => c.preferences != null);
+  List<MemberCharacterState> get ordered {
+    if (characters.isEmpty) return characters;
     final projected = projectScopedAccountPresentation(
       items: characters
           .map(
             (c) => ScopedPresentationItem(
               c.ref,
               c.observation,
-              c.preferences!.preferences,
+              PreferenceValues(
+                visible: true,
+                displayOrder: c.preferences?.preferences.displayOrder,
+              ),
               itemLevel: double.tryParse(
-                (jsonDecode(c.observation.profileJson) as Map)['item_level']
-                        as String? ??
-                    '',
+                '${(jsonDecode(c.observation.profileJson) as Map)['item_level']}',
               ),
             ),
           )
@@ -94,16 +103,21 @@ class MemberAccountSection {
       scope: characters.first.ref.scope,
       accountId: registration.accountId!,
       representativeId: registration.settings.representativeId,
-      visibleCount: presentation!.visibleCount,
+      visibleCount: 200,
     );
     return projected
-        .map(
-          (p) => characters.firstWhere(
-            (c) => c.ref.characterId == p.ref.characterId,
-          ),
-        )
-        .toList(growable: false);
+        .map((p) => characters.firstWhere((c) => c.ref == p.ref))
+        .toList();
   }
+
+  List<MemberCharacterState> get visible => ordered
+      .where(
+        (c) =>
+            registration.settings.activityIds.contains(c.ref.characterId) &&
+            (c.preferences?.preferences.visible ?? true),
+      )
+      .take(presentation?.visibleCount ?? 200)
+      .toList();
 }
 
 class RepresentativeChoice {
@@ -148,9 +162,12 @@ class MemberAccountViewModel extends ChangeNotifier {
       _refreshAfter = false,
       _wasRunnerBusy = false,
       _wasGate = false;
+  bool _initialDisplayReady = false;
+  bool get initialDisplayReady => _initialDisplayReady;
   int _epoch = 0;
   Future<void>? _flight;
   final Map<String, Future<void>> _writes = {};
+  final Map<String, ScopedCharacterManagementGateway> _initializers = {};
   final Map<String, RepresentativeState> _representatives = {};
   final Map<String, RepresentativeCommand> _representativePending = {};
   final Map<String, DateTime> _representativeRetryAt = {};
@@ -185,7 +202,43 @@ class MemberAccountViewModel extends ChangeNotifier {
   List<MemberAccountSection> _sections = [];
   List<MemberAccountSection> get sections => List.unmodifiable(_sections);
   bool loading = false;
+  bool restoring = false;
+  int _backgroundEpoch = 0;
   String? failure;
+  DateTime? _restoreRetryAt;
+  Timer? _restoreRetryTimer;
+  int get restoreRetrySeconds => _restoreRetryAt == null
+      ? 0
+      : (_restoreRetryAt!
+                    .difference(runner.source.cooldown.now())
+                    .inMilliseconds /
+                1000)
+            .ceil()
+            .clamp(0, 86400);
+  bool get canRefresh =>
+      signedIn &&
+      !loading &&
+      !runner.isBusy &&
+      !commandPending() &&
+      restoreRetrySeconds == 0;
+  void _observeReadFailure(Object error) {
+    LoadTiming.failure();
+    if (error is! AccountReadException || error.status != 429) return;
+    final until =
+        error.retryAt ??
+        runner.source.cooldown.now().add(
+          error.retryAfter ?? const Duration(seconds: 60),
+        );
+    if (_restoreRetryAt == null || until.isAfter(_restoreRetryAt!)) {
+      _restoreRetryAt = until;
+    }
+    _restoreRetryTimer?.cancel();
+    _restoreRetryTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_disposed || restoreRetrySeconds == 0) timer.cancel();
+      if (!_disposed) _emit();
+    });
+  }
+
   bool get signedIn => !_disposed && runtime.canRead;
   bool get canEdit =>
       signedIn &&
@@ -193,7 +246,10 @@ class MemberAccountViewModel extends ChangeNotifier {
       !loading &&
       !runner.isBusy &&
       !commandPending() &&
-      !_writes.keys.any((key) => key.startsWith('representative:')) &&
+      !_writes.keys.any(
+        (key) =>
+            key.startsWith('representative:') || key.startsWith('display:'),
+      ) &&
       !runner.source.cooldown.active;
   bool busy(String key) => _writes.containsKey(key);
   bool get managementBlocked =>
@@ -253,7 +309,10 @@ class MemberAccountViewModel extends ChangeNotifier {
     );
     if (next == _session) return;
     _session = next;
+    _initialDisplayReady = false;
     _epoch++;
+    _backgroundEpoch++;
+    restoring = false;
     _flight = null;
     _writes.clear();
     _representatives.clear();
@@ -263,6 +322,8 @@ class MemberAccountViewModel extends ChangeNotifier {
     _representativeTimer?.cancel();
     _representativeTimer = null;
     _representativeDialog = null;
+    _restoreRetryAt = null;
+    _restoreRetryTimer?.cancel();
     _sections = [];
     loading = false;
     failure = null;
@@ -315,16 +376,77 @@ class MemberAccountViewModel extends ChangeNotifier {
       throw const AccountReadException('ACCOUNT_OBSERVATION_CHANGED');
     }
   };
+  Future<List<MemberCharacterState>> _restoreRows(
+    CacheRegistrationSnapshot reg,
+    List<MemberCharacterState> rows, {
+    required void Function() guard,
+    required bool active,
+  }) async {
+    final result = List<MemberCharacterState>.of(rows);
+    final indices = [
+      for (var i = 0; i < rows.length; i++)
+        if (reg.settings.activityIds.contains(rows[i].ref.characterId) ==
+            active)
+          i,
+    ];
+    final registration = runtime.reference(reg.registrationId);
+    for (var offset = 0; offset < indices.length; offset += 3) {
+      guard();
+      if (restoreRetrySeconds > 0) break;
+      await Future.wait(
+        indices.skip(offset).take(3).map((i) async {
+          final row = rows[i];
+          try {
+            guard();
+            final fresh = await runtime.restoreCharacterPersonalData(
+              registration,
+              row.ref,
+              guard: guard,
+            );
+            guard();
+            result[i] = MemberCharacterState(
+              row.ref,
+              row.observation,
+              preferences: fresh.preferences,
+              dealer: fresh.dealer,
+              support: fresh.support,
+              cached: false,
+            );
+          } catch (e) {
+            guard();
+            _observeReadFailure(e);
+            result[i] = MemberCharacterState(
+              row.ref,
+              row.observation,
+              preferences: row.preferences,
+              dealer: row.dealer,
+              support: row.support,
+              failure: _code(e),
+              cached: row.cached,
+            );
+          }
+        }),
+      );
+    }
+    guard();
+    return result;
+  }
+
   Future<List<MemberAccountSection>> _readSections(
     List<CacheRegistrationSnapshot> regs, {
     required bool server,
+    bool activeCacheOnly = false,
+    ScopedMemberRoster? confirmedRoster,
     required void Function() guard,
   }) async {
     final result = <MemberAccountSection>[];
     for (final reg in regs) {
       guard();
       final ref = runtime.reference(reg.registrationId);
-      if (server && reg.isMain && reg.ownershipStatus == 'owned') {
+      if (server &&
+          restoreRetrySeconds == 0 &&
+          reg.isMain &&
+          reg.ownershipStatus == 'owned') {
         try {
           final value = await RepresentativeClient(
             runtime.api,
@@ -347,21 +469,43 @@ class MemberAccountViewModel extends ChangeNotifier {
           _representativeFailures.remove(reg.registrationId);
         } catch (e) {
           guard();
+          _observeReadFailure(e);
           _representativeFailures[reg.registrationId] = _code(e);
         }
       }
       final view = await runtime.readRoster(ref, guard: guard);
+      final proof = confirmedRoster?.rosters
+          .where((r) => r.registration.registrationId == reg.registrationId)
+          .firstOrNull;
+      final confirmedCache =
+          view != null &&
+          proof != null &&
+          view.registration.sameStructure(proof.registration) &&
+          view.characters.length == proof.characters.length &&
+          view.characters.every(
+            (c) => proof.characters.any(
+              (p) =>
+                  p.characterId == c.characterId &&
+                  p.lifecycleRevision == c.lifecycleRevision &&
+                  p.lifecycleState == c.lifecycleState &&
+                  p.usable == c.usable &&
+                  p.profileJson == c.profileJson,
+            ),
+          );
       var presentation = await runtime.readCachedPersonalSettings(
         ref,
         guard: guard,
       );
       String? accountFailure;
-      if (server && reg.ownershipStatus == 'owned') {
+      if (server &&
+          restoreRetrySeconds == 0 &&
+          reg.ownershipStatus == 'owned') {
         try {
           final p = await runtime.preparePersonalSettings(ref, guard: guard);
           presentation = await runtime.readPersonalSettings(p, guard: guard);
         } catch (e) {
           guard();
+          _observeReadFailure(e);
           accountFailure = _code(e);
         }
       }
@@ -372,6 +516,11 @@ class MemberAccountViewModel extends ChangeNotifier {
           accountId: c.accountId,
           characterId: c.characterId,
         );
+        if (activeCacheOnly &&
+            !reg.settings.activityIds.contains(c.characterId)) {
+          rows.add(MemberCharacterState(character, c, cached: true));
+          continue;
+        }
         final prefs = await runtime.readCachedPersonalSettings(
           ref,
           character: character,
@@ -395,43 +544,18 @@ class MemberAccountViewModel extends ChangeNotifier {
           preferences: prefs,
           dealer: dealer,
           support: support,
+          cached: !(confirmedCache || view?.validated == true),
         );
-        if (server) {
-          try {
-            final fresh = await runtime.restoreCharacterPersonalData(
-              ref,
-              character,
-              guard: guard,
-            );
-            guard();
-            row = MemberCharacterState(
-              character,
-              c,
-              preferences: fresh.preferences,
-              dealer: fresh.dealer,
-              support: fresh.support,
-              cached: false,
-            );
-          } catch (e) {
-            guard();
-            row = MemberCharacterState(
-              character,
-              c,
-              preferences: prefs,
-              dealer: dealer,
-              support: support,
-              failure: _code(e),
-            );
-          }
-        }
         rows.add(row);
       }
       result.add(
         MemberAccountSection(
           reg,
-          rows,
+          server
+              ? await _restoreRows(reg, rows, guard: guard, active: true)
+              : rows,
           presentation: presentation,
-          cached: !server,
+          cached: !(server || confirmedCache || view?.validated == true),
           failure: accountFailure,
         ),
       );
@@ -440,55 +564,219 @@ class MemberAccountViewModel extends ChangeNotifier {
     return result;
   }
 
+  /// The management gateway has already fetched and validated the saved roster.
+  /// Reuse those receipts/settings instead of restoring every server profile again.
+  Future<void> restoreAfterManagement(
+    ScopedCharacterManagementGateway gateway,
+  ) async {
+    _backgroundEpoch++;
+    final registrationId = gateway.registrationId;
+    if (!identical(gateway.runtime, runtime)) return;
+    final proof = gateway.confirmedRoster;
+    if (!signedIn || commandPending()) return;
+    final member = accountReadScope(runtime.session), scope = runtime.scope;
+    final guard = _guard(_epoch, member, scope, runtime.readGeneration);
+    try {
+      final regs = await runtime.readRegistrations(guard: guard);
+      final reg = regs
+          .where((r) => r.registrationId == registrationId)
+          .firstOrNull;
+      if (reg?.ownershipStatus == 'owned' && reg!.isMain) {
+        final value = await RepresentativeClient(
+          runtime.api,
+        ).get(runtime.reference(registrationId), guard: guard);
+        guard();
+        if (!value.matches(reg)) {
+          throw const AccountReadException('REVISION_CONFLICT');
+        }
+        _representatives[registrationId] = value;
+        _representativeFailures.remove(registrationId);
+      }
+      _sections = await _readSections(
+        regs,
+        server: false,
+        confirmedRoster: proof,
+        guard: guard,
+      );
+      guard();
+      failure = null;
+      _emit();
+    } catch (e) {
+      if (!_disposed &&
+          signedIn &&
+          accountReadScope(runtime.session) == member) {
+        failure = _code(e);
+        _emit();
+      }
+    }
+  }
+
   Future<void> refresh() {
     if (_writes.keys.any((key) => key.startsWith('representative:'))) {
       return Future.value();
     }
-    if (!signedIn || commandPending() || runner.source.cooldown.active) {
+    if (!signedIn || commandPending() || restoreRetrySeconds > 0) {
       return Future.value();
     }
     if (_flight case final pending?) return pending;
     final epoch = _epoch,
         member = accountReadScope(runtime.session),
         scope = runtime.scope,
-        generation = runtime.readGeneration;
-    final guard = _guard(epoch, member, scope, generation);
+        initialGeneration = runtime.readGeneration;
+    var generation = initialGeneration;
+    void guard() => _guard(epoch, member, scope, generation)();
     loading = true;
+    restoring = true;
     failure = null;
     late final Future<void> flight;
     flight =
-        Future<void>(() async {
-          try {
-            if (_sections.isEmpty) {
-              final cached = await runtime.readRegistrations(guard: guard);
-              _sections = await _readSections(
-                cached,
-                server: false,
-                guard: guard,
-              );
-              _emit();
+        Future<void>(
+          () => LoadTiming.run(LoadStage.accountRefresh, () async {
+            try {
+              await LoadTiming.run(LoadStage.displayReady, () async {
+                if (_sections.isEmpty) {
+                  await LoadTiming.run(LoadStage.initialCache, () async {
+                    final cached = await runtime.readRegistrations(
+                      guard: guard,
+                    );
+                    _sections = await _readSections(
+                      cached,
+                      server: false,
+                      activeCacheOnly: true,
+                      guard: guard,
+                    );
+                    guard();
+                    _initialDisplayReady = true;
+                    _emit();
+                  });
+                }
+                if (!_initialDisplayReady) {
+                  guard();
+                  _initialDisplayReady = true;
+                  _emit();
+                }
+                var roster = await LoadTiming.run(
+                  LoadStage.roster,
+                  () => runtime.loadMemberRoster(guard: guard),
+                );
+                await LoadTiming.run(LoadStage.initialSelection, () async {
+                  for (final reg in roster.registrations) {
+                    if (reg.ownershipStatus != 'owned' ||
+                        (reg.settings.state != 'unconfigured' &&
+                            _initializers[reg.registrationId]?.pending !=
+                                true)) {
+                      continue;
+                    }
+                    final gateway = _initializers.putIfAbsent(
+                      reg.registrationId,
+                      () => ScopedCharacterManagementGateway(
+                        runtime,
+                        reg.registrationId,
+                        otherWorkPending: () =>
+                            commandPending() || runner.isBusy,
+                      ),
+                    );
+                    final snapshot = await gateway.load();
+                    guard();
+                    if (!snapshot.initialSelectionRequired &&
+                        !gateway.pending) {
+                      continue;
+                    }
+                    final candidates =
+                        snapshot.account.characters
+                            .where(
+                              (c) =>
+                                  snapshot.usableIds.contains(c.id) &&
+                                  const CharacterUsageLevelPolicy()
+                                      .isInUsageRange(c.itemLevel),
+                            )
+                            .toList()
+                          ..sort(
+                            (a, b) => b.itemLevel!.compareTo(a.itemLevel!),
+                          );
+                    if (candidates.isEmpty) continue;
+                    try {
+                      await gateway.save(
+                        selectedIds: candidates.map((c) => c.id).toList(),
+                        representativeId: candidates.first.id,
+                        displayLimit: candidates.length.clamp(1, 200),
+                        initializeSelection: true,
+                      );
+                    } finally {
+                      generation = runtime.readGeneration;
+                    }
+                    guard();
+                    roster = await runtime.loadMemberRoster(guard: guard);
+                  }
+                });
+                _sections = await LoadTiming.run(
+                  LoadStage.displayCache,
+                  () => _readSections(
+                    roster.registrations,
+                    server: false,
+                    guard: guard,
+                  ),
+                );
+                _emit();
+                _sections = await LoadTiming.run(
+                  LoadStage.activeRestore,
+                  () => _readSections(
+                    roster.registrations,
+                    server: true,
+                    guard: guard,
+                  ),
+                );
+                loading = false;
+                _emit();
+              });
+              final backgroundEpoch = ++_backgroundEpoch;
+              void backgroundGuard() {
+                guard();
+                if (backgroundEpoch != _backgroundEpoch ||
+                    _writes.isNotEmpty ||
+                    runtime.characterSettingsBusy) {
+                  throw const AccountReadException('STALE_READ');
+                }
+              }
+
+              // Inactive results update only their cache. Never replace an editing
+              // screen or active row from this older snapshot.
+              await LoadTiming.run(LoadStage.inactiveRestore, () async {
+                for (final section in _sections.toList()) {
+                  if (section.cached ||
+                      section.registration.ownershipStatus != 'owned') {
+                    continue;
+                  }
+                  await _restoreRows(
+                    section.registration,
+                    section.characters,
+                    guard: backgroundGuard,
+                    active: false,
+                  );
+                }
+              });
+            } catch (e) {
+              LoadTiming.failure();
+              if (!_disposed && epoch == _epoch) {
+                final code = _code(e);
+                if (loading ||
+                    !{
+                      'STALE_READ',
+                      'ACCOUNT_OBSERVATION_CHANGED',
+                    }.contains(code)) {
+                  _observeReadFailure(e);
+                  failure = code;
+                }
+              }
+            } finally {
+              if (!_disposed && epoch == _epoch) {
+                restoring = false;
+                loading = false;
+                _emit();
+              }
             }
-            final roster = await runtime.loadMemberRoster(guard: guard);
-            _sections = await _readSections(
-              roster.registrations,
-              server: false,
-              guard: guard,
-            );
-            _emit();
-            _sections = await _readSections(
-              roster.registrations,
-              server: true,
-              guard: guard,
-            );
-          } catch (e) {
-            if (!_disposed && epoch == _epoch) failure = _code(e);
-          } finally {
-            if (!_disposed && epoch == _epoch) {
-              loading = false;
-              _emit();
-            }
-          }
-        }).whenComplete(() {
+          }, root: true),
+        ).whenComplete(() {
           if (!identical(_flight, flight)) return;
           _flight = null;
           if (_refreshAfter) {
@@ -595,11 +883,13 @@ class MemberAccountViewModel extends ChangeNotifier {
 
   bool _representativeEligible(CacheCharacterObservation row) {
     final profile = jsonDecode(row.profileJson) as Map;
-    return profile['eligible'] == true &&
+    final level = double.tryParse('${profile['item_level']}');
+    return row.usable == true &&
+        row.lifecycleState == 'active' &&
         profile['roster_status'] == 'confirmed' &&
-        const CharacterUsageLevelPolicy().isInUsageRange(
-          double.tryParse('${profile['item_level']}'),
-        );
+        level != null &&
+        level.isFinite &&
+        level >= 0;
   }
 
   Future<void> _sendRepresentative(
@@ -711,6 +1001,7 @@ class MemberAccountViewModel extends ChangeNotifier {
     Future<void> Function(void Function()) action,
   ) {
     if (!canEdit) return Future.value();
+    _backgroundEpoch++;
     if (_writes[key] case final active?) return active;
     final epoch = _epoch,
         member = accountReadScope(runtime.session),
@@ -734,6 +1025,59 @@ class MemberAccountViewModel extends ChangeNotifier {
     _emit();
     return flight;
   }
+
+  Future<void> saveDisplaySettings(
+    ScopedRegistrationRef reg,
+    Map<String, PreferenceValues> values,
+  ) => _write('display:${reg.registrationId}', (guard) async {
+    cacheRequire(reg.scope == runtime.scope, 'SCOPE_CHANGED');
+    for (final entry in values.entries) {
+      guard();
+      final section = sections.firstWhere(
+        (s) => s.registration.registrationId == reg.registrationId,
+      );
+      final row = section.characters.firstWhere(
+        (c) => c.ref.characterId == entry.key,
+      );
+      cacheRequire(
+        section.registration.settings.activityIds.contains(entry.key),
+        'CHARACTER_UNUSABLE',
+      );
+      final old = row.preferences!.preferences;
+      if (old.preferredRole == entry.value.preferredRole &&
+          old.visible == entry.value.visible &&
+          old.displayOrder == entry.value.displayOrder) {
+        continue;
+      }
+      final plan = await runtime.preparePersonalSettings(
+        reg,
+        character: row.ref,
+        guard: guard,
+      );
+      final local = await runtime.saveCharacterPreferences(
+        plan,
+        entry.value,
+        guard: guard,
+      );
+      guard();
+      _setCharacter(row.ref, character(row.ref)!.withPreferences(local));
+      final synced = await runtime.syncPersonalSettings(
+        reg,
+        character: row.ref,
+        guard: guard,
+      );
+      guard();
+      if (synced.state != null) {
+        _setCharacter(
+          row.ref,
+          character(row.ref)!.withPreferences(synced.state!),
+        );
+      }
+      if (synced.failure != null) {
+        throw AccountReadException(synced.failure!.code);
+      }
+    }
+  });
 
   Future<void> savePreferences(
     ScopedRegistrationRef reg,
@@ -871,9 +1215,14 @@ class MemberAccountViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    for (final gateway in _initializers.values) {
+      gateway.dispose();
+    }
+    _initializers.clear();
     if (_disposed) return;
     _disposed = true;
     _representativeTimer?.cancel();
+    _restoreRetryTimer?.cancel();
     _epoch++;
     runtime.session.removeListener(_sessionChanged);
     runner.removeListener(_runnerChanged);

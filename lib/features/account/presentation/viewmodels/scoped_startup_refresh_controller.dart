@@ -1,3 +1,4 @@
+import '../../../../shared/diagnostics/load_timing.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -195,8 +196,14 @@ class ScopedStartupRefreshController extends ChangeNotifier {
     _recheck = false;
     // Assign before notifications, including reentrant listeners.
     late final Future<void> operation;
-    operation = Future<void>(() => _execute(epoch, identity, retry))
-        .whenComplete(() {
+    operation =
+        Future<void>(
+          () => LoadTiming.run(
+            LoadStage.automaticRefresh,
+            () => _execute(epoch, identity, retry),
+            root: true,
+          ),
+        ).whenComplete(() {
           if (!identical(_flight, operation)) return;
           _flight = null;
           final again = _recheck && !consumed && !_disposed;
@@ -230,7 +237,10 @@ class ScopedStartupRefreshController extends ChangeNotifier {
     _MemberRun? run;
     try {
       guard();
-      final prepared = await source.prepare();
+      final prepared = await LoadTiming.run(
+        LoadStage.prepareRefresh,
+        source.prepare,
+      );
       activeBatch = prepared;
       guard();
       final previous = _runs[prepared.scope];
@@ -280,12 +290,13 @@ class ScopedStartupRefreshController extends ChangeNotifier {
           break;
         }
         try {
-          final value = await source.refresh(prepared, item.target, guard, (
-            saved,
-          ) {
-            if (identical(_runs[prepared.scope], run)) run!.items[id] = saved;
-            _publish(epoch, identity);
-          });
+          final value = await LoadTiming.run(
+            LoadStage.characterRefresh,
+            () => source.refresh(prepared, item.target, guard, (saved) {
+              if (identical(_runs[prepared.scope], run)) run!.items[id] = saved;
+              _publish(epoch, identity);
+            }),
+          );
           guard();
           run.items[id] = value;
         } on LostArkApiException catch (error) {
@@ -363,6 +374,7 @@ class ScopedStartupRefreshController extends ChangeNotifier {
       _markInterrupted(run);
       _phase = ScopedRefreshPhase.completed;
     } catch (error) {
+      LoadTiming.failure();
       if (run != null) _markInterrupted(run);
       if (!_disposed && epoch == _epoch && identity == _currentIdentity()) {
         _phase = run == null

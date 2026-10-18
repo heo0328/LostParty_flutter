@@ -2,6 +2,22 @@
 
 > 기존 서비스 전용 항목은 [원문·출처 기록](../legacy/firebase/extracted/docs/README.md)으로 분리했다. 남은 제품/협업 문맥의 신규 서버 적용 여부는 별도 설계에서 판단한다.
 
+## 주간 이용 통계 설계
+
+[사용자·그룹 주간 통계35](backend-migration/35-weekly-member-and-group-statistics.md): KST수요일06시 주차별 공개/그룹 이용·완료/미완료종료·함께하기 집계 요구. 수동체크 제외, 주중 고유 참가·미완료 회차 마감·마감 시 함께하기 기준 확정·미구현.
+
+## 사용자별 이용 한도 설계
+
+[한도·방 제한34](backend-migration/34-member-limits-and-room-restrictions.md): 계정별 그룹/모집 한도·감소 시 진행 제한과 탈퇴/추방 회복. BM은 미도입이며 현재 그룹장 정원15/가입5/참가 모집 합산10을 기본값으로 확정했다.
+
+## Backend 선행 API 분야별 요청
+
+[요청32·분야/순서 인덱스](backend-migration/32-backend-domain-prework-requests.md): #10 카탈로그/주차 → #11 주간 상태·#12 그룹 → #13 모집/파티. #10/#11 첫 구간 인계를 수신했고 [주간 체크박스 연결33](backend-migration/33-weekly-raid-flutter-integration.md)을 구현했다. 전체1622PASS·분석0, 실제 서버 쓰기/기기 확인은 대기다. #12/#13 후속과 미확정 정책은 해당 기능만 분리하고 현재 개발환경/자료를 유지한다.
+
+## 최신 연결 — 회원 화면·관리·서버 복원
+
+[회원 화면·관리 진입·서버 복원 설계](backend-migration/30-scoped-storage-write-contract.md#회원-화면관리-진입서버-복원-연결-설계-2026-10-17): 로그인 회원 저장 정보 복원과 자동 provider 실행을 분리하고 기존 관리 버튼·이름 옆 인증 버튼을 연결한다. **R1/R2 연결·전체1,596PASS/분석0 완료**, 새 화면 실기기 확인 대기. Backend110번째 기준 추가 서버 대기 없음. 구현 존재와 기본 화면 접근 가능은 구분한다. 현재 실행 순서/검증은 [NEXT_WORK](project/NEXT_WORK.md)를 따른다.
+
 ## 현재 채택한 등록·인증 UX
 
 [정책09 D10](backend-migration/09-migration-decisions.md)·[핵심 흐름 지도](feature-definitions/LOSTPARTY_CORE_USER_FLOW_OVERVIEW.md): 비로그인 기본 로컬 검색, 로그인 미인증 조회용 서버 저장, 현재 소유 인증 후 상세/전투력·선택 후 활동. Flutter R1 전체1542PASS/분석0, Backend D10 power/cache 보완59b8c23·256PASS/현재8000 반영 보고. **기존 캐릭터 관리 화면의 현재 서버 연결·초기 대표1회/공통1700·인증 후 전환 완료**, 최종 전체1560PASS/분석0. 별도 선택/복구 화면 없음. [연결 인계](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6209931176). 기본flag OFF 유지. 실제 소유 증거/실기기 인수는 별도 미확인. [Issue8 최종 대조](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6209491349)·[작업 순서](project/NEXT_WORK.md). 현재 환경/개발자료를 유지한다.

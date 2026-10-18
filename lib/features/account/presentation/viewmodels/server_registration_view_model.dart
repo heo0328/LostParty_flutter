@@ -1,4 +1,5 @@
 import '../../domain/services/account_detail_access.dart';
+import '../../domain/services/character_lookup_name.dart';
 import '../../../../shared/formatters/local_date_time_formatter.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
@@ -166,8 +167,13 @@ class ServerRegistrationViewModel extends ChangeNotifier {
       );
       requireAccountReadScope(session, scope);
       final result = ServerRegistrationPreview.fromJson(json!);
-      if (!result.characters.any((c) => c.characterName == checked)) {
-        throw const FormatException('Missing lookup character.');
+      if (result.characters
+              .where(
+                (c) => matchesCharacterLookupName(checked, c.characterName),
+              )
+              .length !=
+          1) {
+        throw const FormatException('Missing or ambiguous lookup character.');
       }
       if (_valid(ticket, scope)) {
         preview = result;
