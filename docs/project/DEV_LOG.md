@@ -4964,3 +4964,8 @@ V1Preview3필드/Verification8필드/commandconfirm빈body·DELETE204/client단�
 보존확인: 최종전체1641PASS(47초)·lib/test analyze0(45.7초), 변경Dart46파일format0변경·git diff --check. 기존회원/환경/소유·revision/늦은결과·멱등·나이스단설정/앱수명흐름·UI회귀관련시험을포함. 넓은공용연결변경의최종복구지점이라현재전체시험을한번실행했으며문서만수정후반복하지않는다.
 
 미확인/후속: 실제기기전체주간/새UI·앱수명/회원전환성능, 주간조회앞당기기/회원상세개별수동갱신복구미구현. Backend143번째는142번째최종검토/상단안내접수·구현준비이며아직API/worker/DDL추가완료아님. 다음Backend실계약인계후Flutter최소UI설계/연결. Git은사용자승인현재코드복구커밋·동일원격브랜치push단계로진행하고최종SHA/원격일치는종료보고에명시한다.
+
+
+### 복구 지점 Git 결과
+
+구현/설계커밋 `c6332dd28dc68ee762149f2762365277756e3486`(feat: checkpoint member account and weekly raid integration), 65파일·6326추가/700삭제를 feature/scoped-account-cache에push했다. git ls-remote원격SHA/HEAD일치확인. dev/main미병합·5eef0d2유지. 남은작업트리는사용자보존파일7항목(플랫폼자동생성3개/DevTools설정/Rules백업2개/tools)뿐이며제품코드·시험·설계변경누락없음. 최종Git상태기록을담은이문서후속커밋도같은브랜치push대상이며코드변화없어1641PASS/분석0재사용. 신규서버/DB/배포·기기작업없음.

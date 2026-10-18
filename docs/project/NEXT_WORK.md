@@ -8,7 +8,7 @@
 
 최신협업: [143번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6245466325)는142번째기술검토와상단안내요구수용/Backend구현준비이며코드/API/worker구현·반영완료아님. 다음Backend구현·자동검증/고정계약인계→Flutter기존화면최소설계·연결. 별도미완료는주간조회앞당기기/회원캐릭터상세수동갱신복구이며이커밋이해결한것아님. 이하‘미커밋/대기’와개별시험숫자는각시점기록이며현재Git/최종검증은이절·DEV_LOG복구지점절기준이다.
 
-최종검증: 전체flutter test 1641PASS(47초), lib/test analyze 이상0(45.7초), 변경Dart46파일포맷0변경·git diff --check. 서버/DB/기기설치·배포변경없음. 검증된현재상태를작업브랜치복구커밋으로남기고push후원격SHA일치를확인한다.
+최종검증: 전체flutter test 1641PASS(47초), lib/test analyze 이상0(45.7초), 변경Dart46파일포맷0변경·git diff --check. 서버/DB/기기설치·배포변경없음. 구현/설계복구커밋 c6332dd28dc68ee762149f2762365277756e3486 을 feature/scoped-account-cache에push했고원격SHA일치를확인했다. dev/main은5eef0d2유지·미병합. 백업/tools/DevTools설정·플랫폼자동생성파일만작업트리에보존. 이실제Git결과를기록한문서후속커밋도같은브랜치에push한다.
 
 
 ## 141번째 최종 소비 검토 완료 — Backend 구현 인계 대기
