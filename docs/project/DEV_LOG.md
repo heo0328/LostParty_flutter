@@ -2,6 +2,8 @@
 
 ## 2026-10-18 — scoped-account-cache 마감·dev/main 통합 승인
 
+구현 마감 `54bacd2021d60de6641bdf4fb9682368225ea341`의 원격 feature push를 확인했고, [Issue8 시간순151번째 인계](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6248792000)를 게시·본문/순서 대조했다. 이번 문서 마감 커밋까지 포함해 feature→dev→main을 fast-forward로 같은 위치에 맞추며, 최종 원격 일치 확인 결과는 작업 종료 보고와 Git 참조를 기준으로 한다. 별도 서버 변경 요청은 없고 V2 후속·성능 보류를 명시했다.
+
 사용자가 현재 브랜치의 문서 최신화·커밋·푸시·dev 병합과 main 동일 시점 반영을 명시 승인했다. 시작점은 feature/scoped-account-cache/b68a123, 원격dev/main은모두5eef0d2로확인했다. 과거c6332dd/799711a/a8cef4d/b68a123의복구기록도이번통합에포함하며새인증V2작업은시작하지않는다. 성능버벅임은관측했지만추가개선/애니메이션은사용자지시로후속보류,이는운영배포가아닌개발체크포인트통합이다.
 
 새로가능한흐름: 기존캐시표시→회원일괄GET1/기존writer→활동설정/양역할요약/주간복원→실제LostArk목록/상세최대2worker,정적이미지4초후진입·앱수명작업지속,debug프레임·페이지생성/분석집계다. 보존확인은최종전체회귀의회원/환경·late결과·pending/outbox/권한·기존수동주간/대표/활동·기존페이지흐름이다. 화면디자인·DB/schema·서버권한/API단건쓰기/자료수명은바꾸지않았다.

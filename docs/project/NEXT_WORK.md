@@ -4,6 +4,8 @@
 
 2026-10-18 사용자가 `feature/scoped-account-cache`의 문서 최신화·커밋·푸시·dev 병합과 main 동일 시점 반영을 승인했다. 현재 개발 체크포인트 통합이며 서비스 운영 배포/DB 초기화나 미완료 기능의 완료 승인이 아니다. 실제 최종 SHA/원격 동기화는 Git 확인 결과를 따른다.
 
+구현 마감 `54bacd2`는 원격 feature에 보존했고 [Issue8 시간순151번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6248792000)로 인계했다. 이번 문서 마감까지 포함한 동일 커밋을 dev/main에 반영한다. 아래 다음 독립 작업은 이번 마감에 착수하지 않는다.
+
 이번 완료 범위는 회원별 캐시·서버 목록/요약/표시 복원, 기존 계정 관리·대표/활동 선택, 주간 체크 연결, 앱 수명 자동 갱신/최대2worker, 일괄 조회, 정적 로딩 이미지4초 전환과 debug 진단이다. 동작·검증·사용자 관찰은 [DEV_LOG](DEV_LOG.md) 최신 마감 절과 [저장 계약30](../backend-migration/30-scoped-storage-write-contract.md)에 기록한다. 성능 추가 개선은 사용자 지시로 보류했다.
 
 - 일괄 API 원본: Backend `8d03e962b48917c4b0f0dec28d285ca993b9de2d`, [Issue8 시간순146번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6247620588).
