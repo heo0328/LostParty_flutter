@@ -15,7 +15,6 @@ import 'package:lost_party/features/account/presentation/viewmodels/member_losta
 import 'package:lost_party/features/account/presentation/viewmodels/member_settings_view_model.dart';
 import 'package:lost_party/features/account/presentation/viewmodels/member_account_view_model.dart';
 import 'package:lost_party/features/account/domain/role_summary.dart';
-import 'package:lost_party/features/account/domain/account_read_session.dart';
 import 'package:lost_party/features/account/domain/scoped_cache_models.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_role.dart';
 import 'package:lost_party/features/account/presentation/pages/member_account_page.dart';
@@ -459,6 +458,115 @@ void main() {
     controller = binding.runner;
   }
 
+  for (final failWeekly in [false, true]) {
+    test(
+      'saved screen and weekly read precede armories (failure=$failWeekly)',
+      () async {
+        final remote = binding.source.remote;
+        binding.dispose();
+        binding = BackendMemberAccount(
+          lifecycle: lifecycle,
+          automaticRefreshEnabled: true,
+          settings: settingsModel,
+          key: key,
+          remote: remote,
+          catalog: Catalog(),
+          cooldown: cooldown,
+          weeklyStore: weekly_fixture.WeeklyMemoryStore(),
+        );
+        model = binding.model;
+        controller = binding.runner;
+        final readEntered = Completer<void>(), readRelease = Completer<void>();
+        final armoryEntered = Completer<void>(),
+            armoryRelease = Completer<void>();
+        addTearDown(() {
+          if (!readRelease.isCompleted) readRelease.complete();
+          if (!armoryRelease.isCompleted) armoryRelease.complete();
+        });
+        final catalog = weekly_fixture.catalogWire();
+        final raid = (catalog['raids'] as List).first['raid_id'] as String;
+        final cycle = {
+          'server_time': clock.toIso8601String(),
+          'cycle_key': '2026-10-14',
+          'starts_at': '2026-10-13T21:00:00Z',
+          'ends_at': '2026-10-20T21:00:00Z',
+          'timezone': 'Asia/Seoul',
+        };
+        apiRespond = (r) async {
+          if (r.path == '/v1/raid-catalog') return catalog;
+          if (r.path == '/v1/raid-cycle') return cycle;
+          if (r.path == '/v1/me/raid-weekly-states') {
+            if (!readEntered.isCompleted) readEntered.complete();
+            await readRelease.future;
+            if (failWeekly) throw failure(r);
+            return {
+              'current_cycle': cycle,
+              'cycle_key': '2026-10-14',
+              'catalog_version': catalog['catalog_version'],
+              'entries': [
+                for (final id in r.queryParameters['character_id'] as List)
+                  for (final definition in catalog['raids'] as List)
+                    {
+                      'character_id': id,
+                      'raid_id': definition['raid_id'],
+                      'cycle_key': '2026-10-14',
+                      'revision': 1,
+                      'ownership_revision': 1,
+                      'lifecycle_revision': 1,
+                      'state': 'completed',
+                      'completion_sources': [
+                        {
+                          'source': 'manual',
+                          'completed_at': clock.toIso8601String(),
+                          'difficulty_id': null,
+                          'party_id': null,
+                        },
+                      ],
+                      'participation': null,
+                      'can_mark_completed': true,
+                      'can_clear_manual_completion': true,
+                      'mark_blocked_reason': null,
+                    },
+              ],
+            };
+          }
+          return serve(r);
+        };
+        armoryRespond = (r) async {
+          if (!armoryEntered.isCompleted) armoryEntered.complete();
+          await armoryRelease.future;
+          return fixtures.armory(
+            name: Uri.decodeComponent(r.path.split('/').last),
+            className: className,
+          );
+        };
+        binding.initialize();
+        await readEntered.future.timeout(const Duration(seconds: 5));
+        expect(model.loading, isFalse);
+        expect(model.sections.single.visible, hasLength(2));
+        expect(model.sections.single.cached, isFalse);
+        expect(armoryCalls, isEmpty);
+        expect(controller.consumed, isFalse);
+        readRelease.complete();
+        await armoryEntered.future.timeout(const Duration(seconds: 5));
+        final weekly = binding.weekly!;
+        if (failWeekly) {
+          expect(weekly.failure, isNotNull);
+          expect(weekly.ready, isFalse);
+        } else {
+          final row = model.sections.single.characters.last;
+          expect(weekly.entry(row.ref, raid)!.completed, isTrue);
+          expect(weekly.items(row.ref).where((r) => r.isCompleted), isNotEmpty);
+        }
+        expect(controller.isBusy, isTrue);
+        armoryRelease.complete();
+        await until(
+          () => controller.consumed && !controller.isBusy && !model.loading,
+        );
+        expect(controller.savedCount, 2);
+      },
+    );
+  }
   test(
     'startup publishes cache before server roster and initialization is once',
     () async {
@@ -890,7 +998,7 @@ void main() {
   );
 
   test(
-    'app binding shares roster preparation; full checks and profile restore converge',
+    'app binding shares the initial roster read before starting full checks',
     () async {
       final entered = Completer<void>(), release = Completer<void>();
       apiRespond = (r) async {
@@ -903,19 +1011,14 @@ void main() {
       binding.initialize();
       await entered.future;
       final joined = runtime.loadMemberRoster();
-      final fenced = expectLater(
-        joined,
-        throwsA(
-          anyOf(isA<ScopedCacheException>(), isA<AccountReadException>()),
-        ),
-      );
       await Future<void>.delayed(const Duration(milliseconds: 10));
       expect(
         apiCalls.where((r) => r.path == '/v1/me/game-accounts'),
-        hasLength(2), // Provider preparation then the shared current read.
+        hasLength(1), // No provider preparation before the saved screen read.
       );
+      expect(armoryCalls, isEmpty);
       release.complete();
-      await fenced;
+      await joined;
       await run();
       expect(controller.savedCount, 2);
       expect(armoryCalls, hasLength(2));

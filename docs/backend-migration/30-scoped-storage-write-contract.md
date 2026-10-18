@@ -422,6 +422,9 @@ S3a 최소 자동검증은 주입 DB open/close 소유·게스트/비활성0호�
 
 ## 로딩 시간 진단 (2026-10-17)
 
+2026-10-18 한정 보완: `event=local work=registrations|roster|presentation|preferences|dealer|support|listeners calls=N total_ms=N max_ms=N`을해당span종료때종류별1줄로집계한다. calls는VM의고수준읽기횟수이며SQL쿼리수가아니다. total/max는기기캐시호출전체경과(트랜잭션대기·lazy DB open/guard/디코드·스케줄링포함), listeners는notifyListeners의동기콜백경과로Flutter build/layout/paint시간이아니다. 자식async작업/병렬작업/중첩run시간을독립수치로합산하지않는다. 계측없는run/release는집계/출력없으며출력실패/원예외/반환값을보존한다. 여러작업의경합기여도는실제앱로그로판별하고33ms단독측정과범위를맞춘뒤비교한다.
+
+
 디버그 빌드에서만 `[LoadTiming]` 로그를 기록한다. 진단은 기존 요청/화면/저장/권한 순서를 바꾸지 않는다. 고정 단계명과 실행번호만 사용하며 URL/query/body/회원·캐릭터UUID/이름/키/토큰/예외원문을 받거나 출력하지 않는다. 출력실패는 원래 결과/예외에 영향을 주지 않는다.
 
 - `displayReady`: 회원복원 시작부터 loading 해제/화면사용가능 상태 게시까지. 실제 프레임 paint 측정은 아니다.
@@ -459,3 +462,19 @@ S3a 최소 자동검증은 주입 DB open/close 소유·게스트/비활성0호�
 ### 에뮬레이터 개발 URL 직접 시작
 
 2026-10-17 사용자지시로debug Base URL선택알럿을실행경로에서제거했다. BACKEND_BASE_URL명시값이있으면우선사용하고, 미지정debug는http://10.0.2.2:8000으로즉시초기화한다. release는기존HTTPS/명시설정검증을유지한다. 이전알럿선택대기시간제외설명은당시흐름이며현재는선택단계가없다. 시작6초상한은서비스초기화에서, LoadTiming은각단계시작에서각각측정하며서로같은전체런치타이머가아니다. 인증/캐시/원장/API동작과개인키는변경하지않았다.
+
+
+## 자동 상세 갱신 동시 2개 한정 실행 (2026-10-18)
+
+사용자승인으로ScopedStartupRefreshController의대상작업배정을2개worker로변경했다. 각worker는기존캐릭터체인(현재원정대/선택/claim검증→role준비→LostArk상세→분석→로컬+미확정명령저장→서버업로드)을그대로실행하며하나가끝나면다음queued대상을배정한다. 순차원정대목록준비/나이스단OFF제외·회원별1회/초기캐시/후속회원복원/서버저장만재시도는불변이다. ‘2’는캐릭터체인상한으로앱전체동시HTTP2개라는뜻아니다.
+
+slot선택/cursor증가는await없는동기영역·캐릭터ID별결과를즉시반영한다. 모든worker가끝나야전체완료를발행해후속회원복원이진행중저장을추월하지않는다. source.cooldown/429·키실패·stale공통오류는새작업배정을멈추고진행중작업은기존guard와호출제한에따라완료/로컬보존·서버대기를유지한다. 회원/키/세션변경·dispose는기존guard로모든늦은commit을차단하고이미commit된로컬결과만보존한다. 실기기비교는동일로그인/캐릭터/나이스설정의앱완전재실행1회, automaticRefresh총경과로판단하며겹친characterRefresh시간을더하지않는다. API/DBschema/전투력계산·저장정책/동시쓰기guard를바꾸지않았다.
+
+
+## 내 계정 표시 우선·상세 갱신 후행 (2026-10-18 최신 사용자 지시)
+
+초기캐시는먼저표시하되그준비신호만으로최신Armory작업을시작하지않는다. 앱binding은현재회원의저장서버원정대/선택·역할요약복원(model.loading=false)과같은대상의주간상태조회완료뒤에자동runner를초기화한다. 기존주간VM조회는회원요약복원뒤진행하므로레이드체크가게임상세보다뒤로밀리지않는다. 이후자동상세는기존최대2worker·로컬/서버저장으로진행한다. 앱초기2.2초애니메이션/6초상한은별도이며자료준비가실제프레임paint를측정한것이라는뜻아니다.
+
+weekly.initialDisplaySettled는현재회원epoch·대상signature·runtime.readGeneration의조회시도완료다. 현재주차GET성공/쓰기권한의대체가아니며이전회원/초기빈목록/무효화된조회로준비완료를만들지않는다. 조회실패는기존오류/체크쓰기차단을유지하고초기화만영원히막지않는다. 성공한기존_entries는후속조회/빌드갱신중에도지우지않는다. 일반위젯배치·수동완료/i/주차/권한·캐시schema는그대로다.
+
+자동시작gate는Controller.startIfReady에적용돼이미runner가초기화된뒤회원전환에도같은순서를지킨다. binding은화면준비false→true변화만재개신호로사용해키미준비같은blocked상태를모든notify마다재시도하지않는다. source의기존설정/키준비변경은기존신호를사용한다. 사용자명시미완료/서버저장재시도규칙은유지. model/weekly listen은앱수명소유·dispose에서해제,기존회원/권한/세대guard·미확정명령보존을완화하지않았다.

@@ -22,6 +22,16 @@ enum LoadStage {
   characterRefresh,
 }
 
+enum LocalLoadWork {
+  registrations,
+  roster,
+  presentation,
+  preferences,
+  dealer,
+  support,
+  listeners,
+}
+
 /// Client elapsed time only. Never accepts URLs, identifiers or error text.
 class LoadTiming {
   static final _key = Object();
@@ -29,6 +39,41 @@ class LoadTiming {
 
   static List<_Span> get _spans =>
       Zone.current[_key] as List<_Span>? ?? const [];
+
+  /// Elapsed local work, including DB/guard/wait time; not SQL execution time.
+  static Future<T> local<T>(
+    LocalLoadWork kind,
+    Future<T> Function() action,
+  ) async {
+    final spans = _spans;
+    if (!kDebugMode || spans.isEmpty) return action();
+    final clock = Stopwatch()..start();
+    try {
+      return await action();
+    } finally {
+      clock.stop();
+      for (final span in spans) {
+        span.recordLocal(kind, clock.elapsedMicroseconds);
+      }
+    }
+  }
+
+  static void listeners(void Function() action) {
+    final spans = _spans;
+    if (!kDebugMode || spans.isEmpty) {
+      action();
+      return;
+    }
+    final clock = Stopwatch()..start();
+    try {
+      action();
+    } finally {
+      clock.stop();
+      for (final span in spans) {
+        span.recordLocal(LocalLoadWork.listeners, clock.elapsedMicroseconds);
+      }
+    }
+  }
 
   static Future<T> run<T>(
     LoadStage stage,
@@ -60,6 +105,7 @@ class LoadTiming {
       rethrow;
     } finally {
       span.clock.stop();
+      span.emitLocal();
       span.emit('end');
     }
   }
@@ -119,6 +165,33 @@ class _Span {
   final clock = Stopwatch()..start();
   int requests = 0, httpMicros = 0, httpErrors = 0;
   bool failed = false;
+  final local = <LocalLoadWork, ({int count, int micros, int maxMicros})>{};
+
+  void recordLocal(LocalLoadWork kind, int micros) {
+    final previous = local[kind];
+    local[kind] = (
+      count: (previous?.count ?? 0) + 1,
+      micros: (previous?.micros ?? 0) + micros,
+      maxMicros: micros > (previous?.maxMicros ?? 0)
+          ? micros
+          : (previous?.maxMicros ?? 0),
+    );
+  }
+
+  void emitLocal() {
+    for (final entry in local.entries) {
+      try {
+        sink(
+          '[LoadTiming] run=$run stage=${stage.name} event=local '
+          'work=${entry.key.name} calls=${entry.value.count} '
+          'total_ms=${entry.value.micros ~/ 1000} '
+          'max_ms=${entry.value.maxMicros ~/ 1000}',
+        );
+      } catch (_) {
+        // Logging must not affect the measured work.
+      }
+    }
+  }
 
   void emit(String event) {
     try {

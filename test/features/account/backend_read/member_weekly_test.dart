@@ -343,6 +343,26 @@ void main() {
   }
 
   test(
+    'display readiness belongs to current targets and observation generation',
+    () async {
+      expect(weekly.initialDisplaySettled, isFalse);
+      model.setCount(0);
+      await load();
+      expect(weekly.initialDisplaySettled, isTrue);
+      model.setCount(2);
+      expect(weekly.initialDisplaySettled, isFalse);
+      await load();
+      expect(weekly.initialDisplaySettled, isTrue);
+      runtime.invalidateReads();
+      expect(weekly.initialDisplaySettled, isFalse);
+      await load();
+      expect(weekly.initialDisplaySettled, isTrue);
+      session.change(authenticated: false);
+      expect(weekly.initialDisplaySettled, isFalse);
+    },
+  );
+
+  test(
     'public catalog/cycle never requests tokens and preserves decimal levels',
     () async {
       session.change(authenticated: false);

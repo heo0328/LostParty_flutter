@@ -119,6 +119,9 @@ class MemberWeeklyViewModel extends ChangeNotifier {
   AccountReadScope? _session;
   StorageScope? _scope;
   String? _signature;
+  int? _signatureGeneration;
+  String? _settledSignature;
+  int? _settledGeneration;
   DateTime? _receivedAt, _retryAt;
   Timer? _cycleTimer, _retryTimer;
   Future<void>? _flight;
@@ -142,6 +145,14 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       retrySeconds == 0;
   bool get canUseCurrent => hasPending && pendingFailed && _current && !busy;
   bool get ready => _current && !loading && _cycleCurrent;
+
+  /// The current member/targets had their weekly read attempted, even on failure.
+  /// This is display sequencing only and never grants write permission.
+  bool get initialDisplaySettled =>
+      model.signedIn &&
+      !loading &&
+      _settledSignature == _targets() &&
+      _settledGeneration == model.runtime.readGeneration;
   bool get _cycleCurrent =>
       cycle != null &&
       _receivedAt != null &&
@@ -185,6 +196,9 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       _scope = scope;
       _loaded = false;
       _signature = null;
+      _signatureGeneration = null;
+      _settledSignature = null;
+      _settledGeneration = null;
       _entries = {};
       _display = {};
       _pending = null;
@@ -206,8 +220,12 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       return;
     }
     final signature = _targets();
-    if (signature == _signature) return;
+    if (signature == _signature &&
+        _signatureGeneration == model.runtime.readGeneration) {
+      return;
+    }
     _signature = signature;
+    _signatureGeneration = model.runtime.readGeneration;
     unawaited(refresh());
   }
 
@@ -408,6 +426,11 @@ class MemberWeeklyViewModel extends ChangeNotifier {
               }
             } finally {
               if (!_disposed && epoch == _epoch) {
+                if (generation == model.runtime.readGeneration &&
+                    signature == _targets()) {
+                  _settledSignature = signature;
+                  _settledGeneration = generation;
+                }
                 loading = false;
                 _emit();
               }

@@ -292,7 +292,7 @@ class MemberAccountViewModel extends ChangeNotifier {
   }
 
   void _emit() {
-    if (!_disposed) notifyListeners();
+    if (!_disposed) LoadTiming.listeners(notifyListeners);
   }
 
   void initialize() {
@@ -473,7 +473,10 @@ class MemberAccountViewModel extends ChangeNotifier {
           _representativeFailures[reg.registrationId] = _code(e);
         }
       }
-      final view = await runtime.readRoster(ref, guard: guard);
+      final view = await LoadTiming.local(
+        LocalLoadWork.roster,
+        () => runtime.readRoster(ref, guard: guard),
+      );
       final proof = confirmedRoster?.rosters
           .where((r) => r.registration.registrationId == reg.registrationId)
           .firstOrNull;
@@ -492,9 +495,9 @@ class MemberAccountViewModel extends ChangeNotifier {
                   p.profileJson == c.profileJson,
             ),
           );
-      var presentation = await runtime.readCachedPersonalSettings(
-        ref,
-        guard: guard,
+      var presentation = await LoadTiming.local(
+        LocalLoadWork.presentation,
+        () => runtime.readCachedPersonalSettings(ref, guard: guard),
       );
       String? accountFailure;
       if (server &&
@@ -521,22 +524,31 @@ class MemberAccountViewModel extends ChangeNotifier {
           rows.add(MemberCharacterState(character, c, cached: true));
           continue;
         }
-        final prefs = await runtime.readCachedPersonalSettings(
-          ref,
-          character: character,
-          guard: guard,
+        final prefs = await LoadTiming.local(
+          LocalLoadWork.preferences,
+          () => runtime.readCachedPersonalSettings(
+            ref,
+            character: character,
+            guard: guard,
+          ),
         );
-        final dealer = await runtime.readCachedRoleBuild(
-          ref,
-          character,
-          CharacterBuildRole.dealer,
-          guard: guard,
+        final dealer = await LoadTiming.local(
+          LocalLoadWork.dealer,
+          () => runtime.readCachedRoleBuild(
+            ref,
+            character,
+            CharacterBuildRole.dealer,
+            guard: guard,
+          ),
         );
-        final support = await runtime.readCachedRoleBuild(
-          ref,
-          character,
-          CharacterBuildRole.support,
-          guard: guard,
+        final support = await LoadTiming.local(
+          LocalLoadWork.support,
+          () => runtime.readCachedRoleBuild(
+            ref,
+            character,
+            CharacterBuildRole.support,
+            guard: guard,
+          ),
         );
         var row = MemberCharacterState(
           character,
@@ -636,8 +648,9 @@ class MemberAccountViewModel extends ChangeNotifier {
               await LoadTiming.run(LoadStage.displayReady, () async {
                 if (_sections.isEmpty) {
                   await LoadTiming.run(LoadStage.initialCache, () async {
-                    final cached = await runtime.readRegistrations(
-                      guard: guard,
+                    final cached = await LoadTiming.local(
+                      LocalLoadWork.registrations,
+                      () => runtime.readRegistrations(guard: guard),
                     );
                     _sections = await _readSections(
                       cached,

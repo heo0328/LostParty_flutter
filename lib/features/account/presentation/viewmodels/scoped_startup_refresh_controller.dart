@@ -18,8 +18,9 @@ class _MemberRun {
 /// App-owned lifetime. Pages observe this controller and never dispose it.
 /// Construct/initialize once; reconnecting the same member never resets _runs.
 class ScopedStartupRefreshController extends ChangeNotifier {
-  ScopedStartupRefreshController(this.source);
+  ScopedStartupRefreshController(this.source, {this.canStartAutomatically});
   final ScopedStartupRefreshSource source;
+  final bool Function()? canStartAutomatically;
   final Map<StorageScope, _MemberRun> _runs = {};
   Future<void>? _flight;
   Object? _identity;
@@ -170,7 +171,12 @@ class ScopedStartupRefreshController extends ChangeNotifier {
   }
 
   Future<void> startIfReady() {
-    if (_disposed || !_initialized || consumed) return Future.value();
+    if (_disposed ||
+        !_initialized ||
+        consumed ||
+        canStartAutomatically?.call() == false) {
+      return Future.value();
+    }
     return _start(retry: false);
   }
 
@@ -276,102 +282,120 @@ class ScopedStartupRefreshController extends ChangeNotifier {
           code: target.exclusion,
         );
       }
-      run = _MemberRun(prepared, result);
+      final running = _MemberRun(prepared, result);
+      run = running;
       // The per-member once flag is this synchronous insertion after readiness.
-      _runs[prepared.scope] = run;
+      _runs[prepared.scope] = running;
       _phase = ScopedRefreshPhase.running;
       _publish(epoch, identity);
-      for (final id in selected) {
-        guard();
-        final item = run.items[id]!;
-        if (item.status != ScopedRefreshStatus.queued) continue;
-        if (source.cooldown.active) {
-          _failure = 'RATE_LIMITED';
-          break;
-        }
-        try {
-          final value = await LoadTiming.run(
-            LoadStage.characterRefresh,
-            () => source.refresh(prepared, item.target, guard, (saved) {
-              if (identical(_runs[prepared.scope], run)) run!.items[id] = saved;
-              _publish(epoch, identity);
-            }),
-          );
+      final queue = selected.toList();
+      var next = 0;
+      var stopScheduling = false;
+      Future<void> worker() async {
+        while (!stopScheduling && next < queue.length) {
+          // No await between choosing an ID and advancing the shared cursor.
+          final id = queue[next++];
           guard();
-          run.items[id] = value;
-        } on LostArkApiException catch (error) {
-          guard();
-          run.items[id] = ScopedRefreshItem(
-            item.target,
-            ScopedRefreshStatus.failed,
-            code: 'ARMORY_${error.type.name.toUpperCase()}',
-          );
-          if (error.type == LostArkApiErrorType.rateLimited) {
-            source.cooldown.observe(
-              error.retryAt ??
-                  source.cooldown.now().add(const Duration(seconds: 60)),
-            );
+          final item = running.items[id]!;
+          if (item.status != ScopedRefreshStatus.queued) continue;
+          if (source.cooldown.active) {
             _failure = 'RATE_LIMITED';
+            stopScheduling = true;
             break;
           }
-          if ({
-            LostArkApiErrorType.unauthorized,
-            LostArkApiErrorType.missingToken,
-            LostArkApiErrorType.cancelled,
-          }.contains(error.type)) {
-            _failure = 'KEY_NOT_READY';
-            break;
-          }
-        } on AccountReadException catch (error) {
-          guard();
-          if (run.items[id]!.status != ScopedRefreshStatus.saved) {
-            run.items[id] = ScopedRefreshItem(
+          try {
+            final value = await LoadTiming.run(
+              LoadStage.characterRefresh,
+              () => source.refresh(prepared, item.target, guard, (saved) {
+                if (identical(_runs[prepared.scope], running)) {
+                  running.items[id] = saved;
+                }
+                _publish(epoch, identity);
+              }),
+            );
+            guard();
+            running.items[id] = value;
+          } on LostArkApiException catch (error) {
+            guard();
+            running.items[id] = ScopedRefreshItem(
               item.target,
               ScopedRefreshStatus.failed,
-              code: error.code,
+              code: 'ARMORY_${error.type.name.toUpperCase()}',
             );
+            if (error.type == LostArkApiErrorType.rateLimited) {
+              source.cooldown.observe(
+                error.retryAt ??
+                    source.cooldown.now().add(const Duration(seconds: 60)),
+              );
+              _failure = 'RATE_LIMITED';
+              stopScheduling = true;
+              break;
+            }
+            if ({
+              LostArkApiErrorType.unauthorized,
+              LostArkApiErrorType.missingToken,
+              LostArkApiErrorType.cancelled,
+            }.contains(error.type)) {
+              _failure = 'KEY_NOT_READY';
+              stopScheduling = true;
+              break;
+            }
+          } on AccountReadException catch (error) {
+            guard();
+            if (running.items[id]!.status != ScopedRefreshStatus.saved) {
+              running.items[id] = ScopedRefreshItem(
+                item.target,
+                ScopedRefreshStatus.failed,
+                code: error.code,
+              );
+            }
+            if (error.status == 429) {
+              source.cooldown.observe(
+                error.retryAt ??
+                    source.cooldown.now().add(
+                      error.retryAfter ?? const Duration(seconds: 60),
+                    ),
+              );
+              _failure = 'RATE_LIMITED';
+              stopScheduling = true;
+              break;
+            }
+          } on ScopedCacheException catch (error) {
+            guard();
+            if (running.items[id]!.status != ScopedRefreshStatus.saved) {
+              running.items[id] = ScopedRefreshItem(
+                item.target,
+                ScopedRefreshStatus.failed,
+                code: error.code,
+              );
+            }
+            if ({
+              'STALE_WRITE',
+              'REGISTRATION_NOT_CURRENT',
+              'SCOPE_CHANGED',
+            }.contains(error.code)) {
+              _failure = error.code;
+              stopScheduling = true;
+              break;
+            }
+          } catch (_) {
+            guard();
+            if (running.items[id]!.status != ScopedRefreshStatus.saved) {
+              running.items[id] = ScopedRefreshItem(
+                item.target,
+                ScopedRefreshStatus.failed,
+                code: 'ANALYSIS_FAILED',
+              );
+            }
           }
-          if (error.status == 429) {
-            source.cooldown.observe(
-              error.retryAt ??
-                  source.cooldown.now().add(
-                    error.retryAfter ?? const Duration(seconds: 60),
-                  ),
-            );
-            _failure = 'RATE_LIMITED';
-            break;
-          }
-        } on ScopedCacheException catch (error) {
-          guard();
-          if (run.items[id]!.status != ScopedRefreshStatus.saved) {
-            run.items[id] = ScopedRefreshItem(
-              item.target,
-              ScopedRefreshStatus.failed,
-              code: error.code,
-            );
-          }
-          if ({
-            'STALE_WRITE',
-            'REGISTRATION_NOT_CURRENT',
-            'SCOPE_CHANGED',
-          }.contains(error.code)) {
-            _failure = error.code;
-            break;
-          }
-        } catch (_) {
-          guard();
-          if (run.items[id]!.status != ScopedRefreshStatus.saved) {
-            run.items[id] = ScopedRefreshItem(
-              item.target,
-              ScopedRefreshStatus.failed,
-              code: 'ANALYSIS_FAILED',
-            );
-          }
+          _publish(epoch, identity);
         }
-        _publish(epoch, identity);
       }
+
+      // Retain at most two full character chains; await both before completion.
+      await Future.wait([worker(), worker()]);
       guard();
-      _markInterrupted(run);
+      _markInterrupted(running);
       _phase = ScopedRefreshPhase.completed;
     } catch (error) {
       LoadTiming.failure();

@@ -1,5 +1,56 @@
 # NEXT WORK — 회원 화면·관리 진입·서버 복원 사용자 확인
 
+## 화면·주간 체크 먼저/자동 상세 나중 연결 완료 — 실기기 확인 대기
+
+현재회원저장서버원정대·선택셀/수치/기존역할요약복원과현재대상주간조회완료뒤에자동Armory2worker를시작하도록binding/controllergate연결. initialCache는먼저표시하되cache준비신호만으로자동을시작하지않는다. weekly는완료signature/관찰generation·회원epoch를고정해빈목록/옛대상/회원응답준비오인을차단한다. 새회원전환에도같은순서, 조회실패는안내/쓰기차단유지후시도완료로인정해무한대기없음. blocked키상태를모든notify마다재시도하지않도록준비false→true경계만재개한다.
+
+검증: 직접회원binding연결/weekly/controller3파일81PASS·변경6파일분석0·format/diffcheck. 주간batch지연시gameArmory0·확정완료entry/표시이후Armory시작/실패해도영구대기없음·현재대상/세대·회원전환gate·기존수동설정저장/미확정명령회귀확인. 기존동시초기roster무효화기대는‘기본읽기먼저공유’로정정, 조기blocked반복이설정재시도를가로막은중간회귀는준비전이감지로해결후최종통과. 전체시험/빌드/기기대행/API·DB/서버작업없음. 캐시schema/레이드쓰기/i/카드디자인/나이스정책/최대2worker미변경.
+
+다음사용자: 동일실기기/계정/설정에서완전종료후debug재실행, ①원정대/활동캐릭터·아이템/전투력·기존빌드요약을표시 ②주간완료체크표시 ③그후자동상세진행표시·개별결과반영,이동안체크초기화/본문이동없는지확인. LoadTiming에서초기회원displayReady와대상있는weeklyBatch완료가automaticRefresh시작보다앞서는지비교. 첫paint/절대속도개선은실기기미확정. feature/scoped-account-cache/799711a유지·기존계측/2worker와이번변경미커밋/미push/dev미반영. 독립Flutter순서변경으로Backend선행API/반복검토요청없음.
+
+## 최신 비교 — 동시2개 실행 확인/성능 개선 미미
+
+SM F956N동일회원사용자첨부1322dee6: initialCache647ms(직전577), 준비1672ms(1471)·HTTP4/1258ms(633), 자동전체6886ms(7079)/HTTP24·3156ms(1788)·오류0. charstart2개중첩→종료마다다음배정·5개end2141/2239/1644/1950/1319ms(개별합9293ms,병렬이므로합산이총시간아님). 자동에서준비를뺀대상처리벽시계약5214ms(직전5608), 감소394ms/약7%. 자동전체감소193ms/약2.7%뿐이다.
+
+후속displayReady3279ms(직전2843), 회원전체4528ms(3965), displayCache594ms(481)/active2214ms(1907). local120회1156ms(958), HTTP13/1549ms(1578), weekly352ms(319)·후순위1245ms병행. 자동+후속displayReady경로합10165ms(9922)로이번1회는243ms늘었다. 앱런치첫paint총시간은아니며단일비교로항상느려짐/평균개선율확정안함. 최초run2interrupted는기존자동관찰generation갱신경계와일치·HTTP오류없음. HTTP0/각단계ok를모든서버저장ACK/화면결과완료로확대하지않는다.
+
+분석: 동시2개작동/대상5개는확인됐으나개별작업이길어져기대만큼단축없음. 고정전체쿼터/CPU/DB/서버중한원인으로단정불가(순차준비HTTP대기도변함). 다음추천단일구간은자동source의role준비/LostArk직접조회/동기분석/로컬저장/서버업로드를고정단계로분리측정해직렬대기·CPU·I/O기여확인. 동시수추가증가/Isolate·DB개편/guard제거/병렬원복을추측으로수행하지않음. 이번은분석/문서만·코드/시험/서버작업변경없음. 기존45PASS/분석0재사용·feature/scoped-account-cache/799711a·미커밋/미push/dev미반영.
+
+
+## 자동 상세 갱신 최대2개 적용 완료 — 동일 실기기 비교 대기
+
+사용자승인범위만Controller작업배정1→2worker로변경했다. 기존캐릭터조회/분석/로컬저장/서버업로드·현재성guard·나이스단OFF/회원별1회·원정대준비·후속회원복원은불변. 하나완료시다음queued배정·모든worker정리후전체완료. retryIncomplete도2개상한/서버저장만재시도는순차유지. 429/키실패/stale공통오류시새배정중단, 이미진행중인대상의유효로컬결과는보존·늦은권한쓰기차단. 캐시재사용/일괄저장/API/DB/화면개편미포함.
+
+검증: 직접Controller/runtimeSource두파일45PASS·변경3파일분석0·format/diffcheck. 같은원정대2캐릭터실제runtime동시armory대기후각역할저장·업로드/outbox정리,2개상한/빈자리즉시배정/마지막peer기다림·429후3번째배정없음/peer보존을추가확인. 순차1개가정의기존fixture는2개진행에맞게barrier/호출수만정정하고키/세션/dispose·이미commit결과보존검증은유지했다. 전체시험/빌드/기기대행/서버변경없음.
+
+다음사용자: 같은SM F956N/같은로그인계정·사용캐릭터/나이스설정·캐시유지, 앱완전종료뒤기존debug USB명령으로재실행(로그아웃/앱삭제불필요·HotReload만으로회원별1회재실행안됨). [LoadTiming]전체로직전prepare1471ms/5개순차합5598ms/automatic7079ms·후속displayReady2843ms와비교. 새로그의두characterRefresh start중첩과총automatic경과·오류/저장대기·처리대상수를함께확인하며동시개별시간단순합산안함. 효과는실측전확정안함. feature/scoped-account-cache/799711a유지·기존진단포함미커밋/미push/dev미반영. 독립Flutter배정변경이라새Backend API/검토요청추가없음.
+
+## 최신 실기기 로그 — 연결 정상/자동 직렬 상세 갱신 우선
+
+사용자SM F956N첨부f8a10486: 최초cache577ms/HTTP0(local등록135/roster58/presentation25/prefs52/dealer179/support116/listeners2), 자동prepare1471ms+캐릭터5개1434/1113/1048/1020/983ms(합5598), 자동전체7079ms/HTTP24·1788ms/오류0. 이어회원roster445ms,displayCache481ms,activeRestore1907ms,displayReady2843ms/HTTP13·1578ms,후순위1118ms/HTTP9·1532ms/회원전체3965ms. weekly후속319ms/HTTP2·304ms. 실제USB앱서버통신정상확인, 이전VMService로그만으로판정하지않던연결성공을이번로그로구분한다.
+
+회원후속local120회958ms(이전에뮬레이터4391ms), displayCache60회477ms/active60회479ms. listener회원총7ms. 실기기에서도중복읽기존재하나우선병목은자동5캐릭터순차5598ms+준비1471ms후회원복원2843ms가직렬로이어지는구조. source.refresh는현재성/개인role준비→LostArk직접armory→분석→로컬저장→서버업로드이며우리서버HTTP1788ms를뺀5291ms를SQL/서버/분석중하나로단정하지않는다. 조건/통신경로도달라에뮬레이터대비차이를디바이스효과만으로계산하지않는다. displayedReady는최초프레임이아니며자동+복원약9.92초는그작업경로합계/런치전체계측아님.
+
+후속추천우선순위정정: 최신상세갱신직후동일결과/원정대자료를다시읽는경로를좁게설계해중복복원축소→필요한추가측정으로직접게임API/분석/저장을분리한뒤작은동시상한검토. 호출한도/나이스단OFF·회원별1회/원정대현재목록/소유revision/명시편집·보류명령보호는보존. 실제동시수증가/guard제거/새API/구조개편을이로그분석에서실행하지않는다. 이번코드/추가계측·시험/서버작업없음·문서diffcheck만. feature/scoped-account-cache/799711a유지·기존진단미커밋/미push/dev미반영.
+
+
+## USB 실기기 연결 읽기 전용 점검
+
+사용자가SM F956N/127.0.0.1:8000실행실패를보고해조회만수행. 제한환경의socket/ADB접근오류는재조회로분리했고권한있는조회에서실기기SM_F956N=device·에뮬레이터동시인식, adb -d reverse --list에UsbFfs tcp:8000 tcp:8000존재, PC8000listen/health200(databaseok)확인. debug manifest는cleartext허용·INTERNET있고Backend명시URL우선/httpdebug허용. 현재휴대폰오류로그미확보라앱통신성공/실패원인확정은아니다. 기기설치/실행/포트변경/서버재시작은대행안함.
+
+다음사용자: 기존flutter실행완전종료→adb -s 실제기기ID reverse tcp:8000 tcp:8000→flutter run --debug -d 실제ID --dart-define=BACKEND_BASE_URL=http://127.0.0.1:8000직접실행. 여전히실패시이번실기기콘솔의http_error/category/status/오류문구로비교. 명령의기기이름매칭실패를원인으로확정하지않는다. UI/네트워크코드/시험추가변경없음.
+
+
+## 현재 작업 — 초기 로딩 사용자 실측 분석 완료/최소 최적화 범위 제안
+
+사용자33ms는SQLite캐시를읽고닫고다시읽는반복측정이며앱의전체복원동등측정은아니다. 새로그b651fce6에서run4 displayCache2117ms/HTTP0, 로컬60호출2106ms. activeRestore6851ms/HTTP11·2844ms, 로컬60호출2284ms. 두단계로원정대3/캐릭터18의prefs/dealer/support각36회·roster/presentation각6회=120고수준호출4391ms(부모span반올림)이며displayReady9783ms의약44.9%다. HTTP13누적3153ms약32.2%, 나머지2239ms는기타대기/가공/저장등으로현계측상미분리. 로컬호출은SQL단일쿼리가아니고검증/transaction내여러query포함이다. 단순DB엔진/서버만의원인으로판정하지않는다.
+
+automaticRefresh20719ms/HTTP24·4961ms/오류0뒤run4회원복원이시작됐고total13393ms/HTTP22·5424ms, 주간actual후속523ms/HTTP2·488ms가inactive3603ms와병행. 원문에initialCache후반/roster/run3초반행누락과중간‘vent=end...’절단이있어초기cache총시간/최초화면시각/앱시작총시간은산출불가. 보이는initial등록읽기230ms/roster3회45ms/presentation3회45ms/prefs9회181ms만으로초기cache전체를판정하지않는다.
+
+listeners는run4 displayReady총4ms·accountRefresh7ms, automatic16회1ms로동기통지자체가수초원인아님. Flutterbuild/layout/paint는미계측이므로Skipped72/41frames·debug에뮬레이터경고를이수치로배제하거나특정위젯결함으로단정하지않는다. 자동character각수초와HTTP차이에는LostArk직접호출/분석/저장/스케줄링이포함돼서SQL/CPU로동일시불가.
+
+추천다음단일구간: 같은회원/원정대/ownership/lifecycle·편집세대의로컬관찰과설정/역할요약을원정대단위로읽어반복guard DB조회·displayCache/activeRestore재읽기축소. 권한/낡은응답/보류명령/사용자편집은보존하며캐시를검증된쓰기근거로승격하지않음. 우선로컬읽기만수정후같은사용자1회실측으로효과비교, 자동runner병렬수/갱신재실행·주간조기조회는독립후속으로분리. 이번턴은로그분석/문서만, 기능코드/추가계측/시험/서버작업변경없음. 기존진단6PASS/분석0은직전결과재사용·전체시험반복없음. feature/scoped-account-cache/799711a유지·기존미커밋/미push/dev미반영.
+
 ## 2026-10-18 현재 진행 복구 지점 커밋·작업 브랜치 push
 
 사용자 지시로 feature/scoped-account-cache의 현재 코드/테스트/제품·협업 문서를 복구 지점으로 커밋하고 같은 원격 작업 브랜치에 push한다. dev/main 병합은 이번 요청에 포함하지 않는다. origin작업브랜치/dev는착수시5eef0d2·HEAD대비0/0확인. 사용자Rules백업2개/tools/DevTools설정·플랫폼자동생성줄바꿈만변경은제외·보존한다.

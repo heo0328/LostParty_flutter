@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import '../features/account/data/member_raid_client.dart';
 import '../features/account/data/member_weekly_store.dart';
@@ -56,7 +58,10 @@ class BackendMemberAccount {
         );
       },
     );
-    runner = ScopedStartupRefreshController(source);
+    runner = ScopedStartupRefreshController(
+      source,
+      canStartAutomatically: _automaticPresentationReady,
+    );
     model = MemberAccountViewModel(
       runtime: runtime,
       runner: runner,
@@ -78,6 +83,7 @@ class BackendMemberAccount {
   late final MemberAccountViewModel model;
   MemberWeeklyViewModel? weekly;
   bool _disposed = false, _initialized = false, _automaticInitialized = false;
+  bool _displayWasReady = false;
   void initialize() {
     if (_disposed || _initialized) return;
     _initialized = true;
@@ -85,25 +91,35 @@ class BackendMemberAccount {
     model.initialize();
     if (automaticRefreshEnabled) {
       model.addListener(_startAutomaticWhenDisplayReady);
+      weekly?.addListener(_startAutomaticWhenDisplayReady);
       _startAutomaticWhenDisplayReady();
     }
   }
 
+  bool _automaticPresentationReady() =>
+      model.initialDisplayReady &&
+      !model.loading &&
+      (model.failure != null || weekly?.initialDisplaySettled != false);
+
   void _startAutomaticWhenDisplayReady() {
-    if (_disposed ||
-        _automaticInitialized ||
-        (!model.initialDisplayReady && model.failure == null)) {
-      return;
+    if (_disposed) return;
+    final ready = _automaticPresentationReady();
+    final becameReady = ready && !_displayWasReady;
+    _displayWasReady = ready;
+    if (!ready) return;
+    if (!_automaticInitialized) {
+      _automaticInitialized = true;
+      runner.initialize();
+    } else if (becameReady && !runner.consumed && !runner.isBusy) {
+      unawaited(runner.startIfReady());
     }
-    _automaticInitialized = true;
-    model.removeListener(_startAutomaticWhenDisplayReady);
-    runner.initialize();
   }
 
   void dispose() {
     if (_disposed) return;
     _disposed = true;
     model.removeListener(_startAutomaticWhenDisplayReady);
+    weekly?.removeListener(_startAutomaticWhenDisplayReady);
     weekly?.dispose();
     model.dispose();
     runner.dispose();

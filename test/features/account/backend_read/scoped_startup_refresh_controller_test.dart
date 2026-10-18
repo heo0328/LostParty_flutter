@@ -199,6 +199,118 @@ void main() {
     c.dispose();
     source.dispose();
   });
+  test('automatic display gate also protects a later member login', () async {
+    c.dispose();
+    var displayed = false;
+    c = ScopedStartupRefreshController(
+      source,
+      canStartAutomatically: () => displayed,
+    );
+    c.initialize();
+    await settle(c);
+    expect(source.preparations, 0);
+    displayed = true;
+    source.changed();
+    await settle(c);
+    expect(c.savedCount, 2);
+    displayed = false;
+    source.session.change(authenticated: true, user: other);
+    await settle(c);
+    expect(source.details, hasLength(2));
+    expect(c.consumed, isFalse);
+    displayed = true;
+    source.changed();
+    await settle(c);
+    expect(c.savedCount, 2);
+    expect(source.details, hasLength(4));
+  });
+  test(
+    'two workers refill an available slot and await the final worker',
+    () async {
+      final ids = [characterId, secondCharacterId, registration2, other];
+      source.rosters = [roster(ids.map(character).toList())];
+      final release = {for (final id in ids) id: Completer<void>()};
+      final entered = {for (final id in ids) id: Completer<void>()};
+      var active = 0, maximum = 0;
+      source.onRefresh = (b, t, g, saved) async {
+        active++;
+        if (active > maximum) maximum = active;
+        entered[t.ref.characterId]!.complete();
+        try {
+          await release[t.ref.characterId]!.future;
+          g();
+          final result = ScopedRefreshItem(t, ScopedRefreshStatus.saved);
+          saved(result);
+          return result;
+        } finally {
+          active--;
+        }
+      };
+      c.initialize();
+      final flight = c.startIfReady();
+      await Future.wait([entered[ids[0]]!.future, entered[ids[1]]!.future]);
+      expect(source.details, ids.take(2));
+      release[ids[1]]!.complete();
+      await entered[ids[2]]!.future;
+      expect(c.savedCount, 1);
+      expect(active, 2);
+      release[ids[2]]!.complete();
+      await entered[ids[3]]!.future;
+      release[ids[3]]!.complete();
+      await Future<void>.delayed(Duration.zero);
+      expect(c.isBusy, isTrue);
+      release[ids[0]]!.complete();
+      await flight;
+      expect(maximum, 2);
+      expect(source.details.toSet(), ids.toSet());
+      expect(source.details, hasLength(4));
+      expect(c.processedCount, 4);
+      expect(c.savedCount, 4);
+      expect(c.isBusy, isFalse);
+    },
+  );
+  test(
+    '429 stops unstarted work but retains a valid in-flight peer save',
+    () async {
+      source.rosters = [
+        roster([
+          character(characterId),
+          character(secondCharacterId),
+          character(registration2),
+        ]),
+      ];
+      final entered = Completer<void>(),
+          limited = Completer<void>(),
+          peer = Completer<void>();
+      source.onRefresh = (b, t, g, saved) async {
+        if (t.ref.characterId == characterId) {
+          await limited.future;
+          throw LostArkApiException(type: LostArkApiErrorType.rateLimited);
+        }
+        entered.complete();
+        await peer.future;
+        g();
+        final result = ScopedRefreshItem(t, ScopedRefreshStatus.saved);
+        saved(result);
+        return result;
+      };
+      c.initialize();
+      final flight = c.startIfReady();
+      await entered.future;
+      limited.complete();
+      await Future<void>.delayed(Duration.zero);
+      expect(source.cooldown.active, isTrue);
+      expect(source.details, hasLength(2));
+      expect(c.isBusy, isTrue);
+      peer.complete();
+      await flight;
+      expect(source.details, hasLength(2));
+      expect(c.savedCount, 1);
+      expect(c.incompleteCount, 2);
+      expect(c.items.last.status, ScopedRefreshStatus.interrupted);
+      expect(c.failure, 'RATE_LIMITED');
+    },
+  );
   test(
     'construct is IO-free; initialization and reentrant starts share one operation',
     () async {
@@ -367,7 +479,7 @@ void main() {
       bool fail = true;
       source.onRefresh = (batch, t, guard, saved) async {
         if (t.ref.characterId == characterId) {
-          entered.complete();
+          if (!entered.isCompleted) entered.complete();
           await release.future;
           guard();
         }
@@ -458,7 +570,7 @@ void main() {
       final entered = Completer<void>(), release = Completer<void>();
       int committed = 0;
       source.onRefresh = (b, t, g, s) async {
-        entered.complete();
+        if (!entered.isCompleted) entered.complete();
         await release.future;
         g();
         committed++;
@@ -476,7 +588,7 @@ void main() {
       expect(c.consumed, isTrue);
       source.onRefresh = null;
       await c.startIfReady();
-      expect(source.details, hasLength(1));
+      expect(source.details, hasLength(2));
       await c.retryIncomplete();
       expect(c.savedCount, 2);
     },
@@ -505,7 +617,7 @@ void main() {
     () async {
       final entered = Completer<void>(), release = Completer<void>();
       source.onRefresh = (b, t, g, s) async {
-        entered.complete();
+        if (!entered.isCompleted) entered.complete();
         await release.future;
         g();
         return ScopedRefreshItem(t, ScopedRefreshStatus.saved);
@@ -517,7 +629,7 @@ void main() {
       release.complete();
       await flight;
       expect(c.incompleteCount, 2);
-      expect(source.details, hasLength(1));
+      expect(source.details, hasLength(2));
       source.onRefresh = null;
       await c.retryIncomplete();
       expect(c.savedCount, 2);
@@ -535,10 +647,11 @@ void main() {
           warning: true,
           serverPending: true,
         );
-        s(item);
-        entered.complete();
+        if (t.ref.characterId == characterId) s(item);
+        if (!entered.isCompleted) entered.complete();
         await release.future;
         g();
+        if (t.ref.characterId != characterId) s(item);
         return item;
       };
       c.initialize();
@@ -559,7 +672,7 @@ void main() {
       await c.retryServerSaved();
       expect(source.uploads, 1);
       expect(c.pendingServerCount, 0);
-      expect(source.details, hasLength(1));
+      expect(source.details, hasLength(2));
     },
   );
   test(
@@ -567,7 +680,7 @@ void main() {
     () async {
       final entered = Completer<void>(), release = Completer<void>();
       source.onRefresh = (b, t, g, s) async {
-        entered.complete();
+        if (!entered.isCompleted) entered.complete();
         await release.future;
         final item = ScopedRefreshItem(
           t,
@@ -575,6 +688,7 @@ void main() {
           role: CharacterBuildRole.dealer,
           serverPending: true,
         );
+        if (t.ref.characterId != characterId) g();
         s(item);
         g();
         return item;
@@ -611,13 +725,13 @@ void main() {
       await settle(c);
       expect(c.incompleteCount, 2);
       expect(c.canRetry, isFalse);
-      expect(source.details, hasLength(1));
+      expect(source.details, hasLength(2));
       await c.retryIncomplete();
-      expect(source.details, hasLength(1));
+      expect(source.details, hasLength(2));
       source.clock = source.clock.add(const Duration(seconds: 10));
       source.cooldown.observe(source.cooldown.until!);
       await Future<void>.delayed(Duration.zero);
-      expect(source.details, hasLength(1));
+      expect(source.details, hasLength(2));
       expect(c.canRetry, isTrue);
       limited = false;
       await c.retryIncomplete();
@@ -646,7 +760,7 @@ void main() {
       final entered = Completer<void>(), release = Completer<void>();
       int writes = 0;
       source.onRefresh = (b, t, g, s) async {
-        entered.complete();
+        if (!entered.isCompleted) entered.complete();
         await release.future;
         g();
         writes++;

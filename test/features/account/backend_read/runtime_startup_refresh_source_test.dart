@@ -309,6 +309,43 @@ void main() {
     },
   );
   test(
+    'same-roster concurrent armories commit independent role rows and uploads',
+    () async {
+      final bothEntered = Completer<void>(), release = Completer<void>();
+      var entered = 0;
+      armoryRespond = (r) async {
+        if (++entered == 2) bothEntered.complete();
+        await release.future;
+        return fixtures.armory(
+          name: Uri.decodeComponent(r.path.split('/').last),
+          className: className,
+        );
+      };
+      controller.initialize();
+      final flight = controller.startIfReady();
+      try {
+        await bothEntered.future.timeout(const Duration(seconds: 5));
+        expect(controller.isBusy, isTrue);
+        expect(controller.savedCount, 0);
+        expect(armoryCalls, hasLength(2));
+      } finally {
+        release.complete();
+        await flight;
+      }
+      expect(controller.savedCount, 2);
+      expect(controller.pendingServerCount, 0);
+      expect(apiCalls.where((r) => r.method == 'PUT'), hasLength(2));
+      final rows = await db.select(db.scopedRoleRecords).get();
+      expect(
+        rows.where(
+          (r) => r.role == 'dealer' && jsonDecode(r.payload)['raw'] != null,
+        ),
+        hasLength(2),
+      );
+      expect(await db.select(db.scopedRoleCommands).get(), isEmpty);
+    },
+  );
+  test(
     'provider list refresh precedes canonical read and details; detail retry never refreshes again',
     () async {
       final events = <String>[];
@@ -434,7 +471,7 @@ void main() {
       final entered = Completer<void>(), release = Completer<void>();
       apiRespond = (r) async {
         if (r.path.endsWith('/refresh')) {
-          entered.complete();
+          if (!entered.isCompleted) entered.complete();
           await release.future;
         }
         return serve(r);
@@ -693,7 +730,7 @@ void main() {
     () async {
       final entered = Completer<void>(), release = Completer<void>();
       armoryRespond = (r) async {
-        entered.complete();
+        if (!entered.isCompleted) entered.complete();
         await release.future;
         return fixtures.armory(name: 'sample');
       };
@@ -724,7 +761,7 @@ void main() {
     () async {
       final entered = Completer<void>(), release = Completer<void>();
       armoryRespond = (r) async {
-        entered.complete();
+        if (!entered.isCompleted) entered.complete();
         await release.future;
         return fixtures.armory(name: 'sample');
       };
@@ -738,7 +775,7 @@ void main() {
       expect(controller.savedCount, 0);
       expect(controller.incompleteCount, 2);
       expect(await db.select(db.scopedRoleCommands).get(), isEmpty);
-      expect(armoryCalls, hasLength(1));
+      expect(armoryCalls, hasLength(2));
     },
   );
   test(
@@ -779,7 +816,7 @@ void main() {
     () async {
       final entered = Completer<void>(), release = Completer<void>();
       armoryRespond = (r) async {
-        entered.complete();
+        if (!entered.isCompleted) entered.complete();
         await release.future;
         return fixtures.armory(name: 'sample');
       };

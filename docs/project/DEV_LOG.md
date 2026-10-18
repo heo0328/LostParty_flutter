@@ -1,5 +1,13 @@
 # 개발 이력
 
+## 2026-10-18 — 성능 변경 복구 지점 및 일괄 복원 API 착수 승인
+
+사용자 SM F956N 첨부32d2fffd에서 initialCache562ms, 최초 displayReady4305ms, 대상 weekly356ms가 automaticRefresh 시작보다 앞섬을 확인했다. 자동 상세6475ms/24요청, 후속 displayReady2739ms·weekly319ms다. 사용자는 일부 체감 개선을 보고했으며 완전 인수로 확대하지 않는다. 최초 계정22+초기 주간2+대상 주간 세 번6+자동24+후속 계정22=기록된 Backend76시도다. 직접 LostArk HTTP와 계측 밖 호출은 미포함이며 첫 paint 시각은 측정하지 않았다.
+
+코드 대조: 계정22회는 등록목록1/캐릭터목록1/대표1/표시설정1/개인profile18(활동9·비활동9)이다. 상세 대상5개의 각4회는 prepare profile GET→업로드 prepare GET→role PUT→현재 profile GET이며 직접 LostArk armory는 별도다. 사용자 승인에 따라 현재 로컬 계측·최대2worker·기본/주간 우선 순서 변경14파일을 기존 기능 브랜치에 먼저 커밋·push해 비교 기준을 보존한다. 검증은 최종 코드와 동일한 기존 표적81PASS/45PASS/진단6PASS 및 분석0을 재사용하며 중복 시험·전체시험·기기 대행은 하지 않는다. 사용자 백업/tools/DevTools/플랫폼 변경은 제외한다. dev/main 통합이 아닌 진행 중 복구 지점이다.
+
+다음 승인 범위는 기존 테이블을 읽어 첫 화면 정보를 응답 하나로 묶는 Backend API와 Flutter 연결·비교 시험이다. 이중 DB 저장/새 캐시 스키마/개별 쓰기·권한 검증 제거/활동 정책·화면 변경은 포함하지 않는다. Backend 계약 확정 전 임의 endpoint를 실행 경로에 연결하지 않는다.
+
 ## 2026-10-18 — 정상 HTTP 실측/USB 접속·주간 체크 순서/개별 갱신 누락 조사
 
 사용자에뮬레이터로그초기cache971ms, automaticRefresh19633ms/24시도·오류0(prepare3834ms+캐릭터5개순차), 뒤회원displayReady10162ms/전체13918ms·22시도·오류0, 실제weekly662ms/2시도·오류0확인. 전체1회자동/후복원에주간조회가묶여뒤늦게체크되는Flutter흐름을확인했다. weeklyStore는display/pending만보존하고model.loading이주간read를지연한다. 권한/현재주차검증과저장표시를구분한후속필요, 아직코드미수정이다.
@@ -4969,3 +4977,58 @@ V1Preview3필드/Verification8필드/commandconfirm빈body·DELETE204/client단�
 ### 복구 지점 Git 결과
 
 구현/설계커밋 `c6332dd28dc68ee762149f2762365277756e3486`(feat: checkpoint member account and weekly raid integration), 65파일·6326추가/700삭제를 feature/scoped-account-cache에push했다. git ls-remote원격SHA/HEAD일치확인. dev/main미병합·5eef0d2유지. 남은작업트리는사용자보존파일7항목(플랫폼자동생성3개/DevTools설정/Rules백업2개/tools)뿐이며제품코드·시험·설계변경누락없음. 최종Git상태기록을담은이문서후속커밋도같은브랜치push대상이며코드변화없어1641PASS/분석0재사용. 신규서버/DB/배포·기기작업없음.
+
+
+## 2026-10-18 앱 조합 시 초기 로딩 누적 지연 한정 진단
+
+사용자단독캐시33ms대비앱3~5초관찰을받고반복읽기/앱수명갱신경합을좁게조사. VM_readSections가캐릭터마다3종캐시를직렬로읽고role/settingsRepository가매번원정대/캐릭터검증조회하는것, 초기/display/active복원의재읽기·자동runner완료뒤refresh를확인. 원인별실지연비중/33ms측정동등성은확정안함.
+
+새로가능: LoadTiming local집계로고수준읽기종류별횟수/전체·최대경과및notifyListeners동기경과를span별비교. 관련production2파일계측만/개별캐릭터로그미추가·이름/UUID/키미출력. 보존확인: read순서/원예외/반환/회원guard·독립run·계측실패/비활성경계. 좁은진단시험한파일6PASS/변경3파일분석0/format·diffcheck, 사용자지시로전체Flutter시험/빌드/기기·서버작업안함.
+
+미확인: 사용자실앱1회로그로3~5초가실제어느읽기/통지/경합인지확정필요. listeners는paint아님/캐시호출경과는SQL시간아님·중첩span합산금지. 다음앱완전종료후평소debug실행[LoadTiming]전체수집. feature/scoped-account-cache/799711a유지·미커밋/미push/dev미반영, 독립로컬계측이라Backend불필요한새요청없음.
+
+
+## 2026-10-18 로컬 읽기 집계 사용자 로그 분석
+
+첨부b651fce6단일debug실행: displayCache2117ms중local60회2106ms, activeRestore6851ms중local60회2284ms·HTTP11/2844ms. 두단계합쳐원정대3/캐릭터18설정·역할반복읽기120호출/4391ms(상위span반올림), displayReady9783ms의44.9%. HTTP13/3153ms32.2%, 나머지2239ms기타미분리. Repo.readCached마다등록/캐릭터현재성확인query반복코드와대조해캐시엔진단일읽기보다작업조합누적이실제병목인것을확인. 33ms는사용자별도SQLite열기/읽기/닫기반복측정으로범위상이.
+
+자동갱신20719ms/24HTTP·4961ms뒤회원run4가추가시작, 회원전체13393ms·후순위3603ms/HTTP9·2270ms, weekly523ms병행. 오류0. 첨부초기cache후반/초기run종료·자동준비등일부행누락/절단으로첫캐시총시간/최초화면/런치전체시간은확정안함. 부모/자식시간합산안함. sync통지는displayReady4ms/회원전체7ms/자동1ms로작지만실제프레임paint를배제하는근거아님. Skippedframesdebug/에뮬레이터경고만으로근본원인단정안함.
+
+새로확인: 반복local읽기120회4.39초실측·자동뒤복원순서. 미확인: 최초cache전체/직접LostArk·분석/저장/프레임각기여. 다음추천은동일세대원정대단위캐시읽기재사용/중복검증조회축소단일구간, 자동병렬확대/전체UI개편은섞지않음. 이번기능코드/계측추가·시험/서버/기기작업없음·문서diffcheck만. feature/scoped-account-cache/799711a유지·기존진단미커밋/미push/dev미반영.
+
+
+## 2026-10-18 USB 실기기 개발서버 연결 점검
+
+읽기전용ADB기기목록/실기기reverse목록·PChealth/listen·debug manifest대조. 삼성SM_F956N정상인식·USB8000reverse존재·PChealth200/DBok확인. 첫제한환경socket/daemon오류는권한있는같은조회에서정상으로확인돼사용자서버장애로오인하지않음. 해당시점휴대폰오류로그미확보/실기기HTTP직접성공미검증. 정확기기ID/--debug/명시127주소로사용자가재실행하고실패행수집하도록안내. 에이전트설치/실행/포트설정/서버·DB재시작/코드변경/시험없음. 성능은활동6.851초중HTTP2.844/local2.284, 자동20.719초중우리서버HTTP4.961와직접게임API등미분리로구분해설명. 기존진단미커밋/미push유지.
+
+
+## 2026-10-18 USB 실기기 로딩 로그 정상 수신
+
+SM F956N첨부f8a10486은HTTP오류0/정상진행으로앱USB서버접속확인. initialCache577ms, 자동준비1471ms+직렬5캐릭터5598ms/전체7079ms·우리서버HTTP24/1788ms, 뒤회원displayReady2843ms/13HTTP1578ms·전체3965ms/22HTTP3110ms, 후순위1118ms와weekly319ms병행. 로컬읽기120회958ms로이전에뮬레이터4391ms대비감소, 조건차이를기기효과만으로단정안함. 자동5회순차await/직접게임API→분석/저장/업로드와후속refresh코드근거대조. 실기기에서는자동후중복복원작업과직렬상세가우선병목, SQLite엔진/우리서버단일원인아님. direct게임호출/분석/저장기여미분리. 첫cache577ms는초기paint측정아님.
+
+추천은우선자동결과의현재scope/수명검증을유지해후속재읽기줄이는한정설계, 이후필요하면직접API/분석/저장분리측정뒤동시상한검토. 이번분석으로병렬수/정책/API/DB/코드안바꿈·추가시험없음/문서diffcheck만. feature/scoped-account-cache/799711a·기존계측미커밋/미push/dev미반영.
+
+
+## 2026-10-18 자동 상세 갱신 worker 최대2개 적용
+
+사용자승인으로Controller의기존for/await작업배정만shared cursor+worker2개/Future.wait로변경. source/domain/role저장/HTTPAPI·원정대준비/나이스정책/초기캐시/후속복원미변경. 각완료즉시다음배정·개별저장보존·모든worker정리후완료발행, 재시도도2개상한/업로드전용은기존순차. 429/공통실패는새배정중단, 세션/키/회원/disposeguard유지. 세부계약30.
+
+새로가능: 최대2캐릭터조회·분석·저장체인대기중첩. 보존확인: 실제같은원정대2캐릭터동시provider대기/각row저장/서버PUT·outbox정리·권한/rowversion,2개상한·outoforder빈자리배정·마지막peer대기·429시새배정차단/기존peer결과보존. 직접Controller/runtimeSource두시험파일45PASS·변경3파일분석0·format/diffcheck. 최초중간검증의nullable run캡처컴파일문제는불변running참조로해결했고순차1개가정기존시험5건은2개진행/재진입barrier에맞게정정. 최종권한/늦은저장/보류명령보존검증은축소하지않았다. 전체Flutter시험/빌드/서버·DB·기기대행안함.
+
+미확인실기기: 동일기기/회원·활동캐릭터/나이스설정·캐시유지·앱완전재실행에서직전자동7079ms/초기577/후속2843ms와비교, 개별단계중첩/실제완료·업로드대기/오류0확인. 처리량효과는아직미확정. feature/scoped-account-cache/799711a유지·기존진단과이번작업미커밋/미push/dev미반영. 독립Flutter스케줄변경이라Backend반복요청없음.
+
+
+## 2026-10-18 동시2개 실제기기 비교 결과
+
+1322dee6로그: source자동start2중첩·끝난slot다음배정/5개end확인. 자동7079→6886ms(193ms/2.7%감소), 준비1471→1672ms, 준비제외대상처리벽시계5608→5214ms. 개별char합5598→9293ms는병렬중첩이므로전체합산금지. 이번우리서버HTTP24누적1788→3156ms/오류0이며미변경순차준비HTTP도633→1258ms로달라조건변동/자원대기영향분리미확인. 개별단계1.0~1.4→1.3~2.2초로길어짐을보고하되CPU/DB/외부API원인확정안함.
+
+후속화면복원2843→3279ms, local120회958→1156ms, 자동+후속작업합9922→10165ms라이번실행체감개선판정불가. 캐시초기577→647ms, 전체회원3965→4528ms, weekly319→352ms/후순위병행. 단일비교/첫paint아님·각HTTP0/ok는모든저장ACK확인아님. 다음추천은source내직접API/분석/로컬저장/업로드구간분리계측,동시수확대/새구조변경안함. 이번코드/추가시험/서버변경없음·문서diffcheck만, 기존45PASS/분석0유지·feature/scoped-account-cache/799711a·미커밋/미push/dev미반영.
+
+
+## 2026-10-18 화면 기본정보/주간완료 우선·자동 상세 후행
+
+사용자가화면체크가마지막에바뀌는문제를지적해initialDisplayReady만으로runner를시작하던binding을수정. 기존서버요약복원완료+현재대상weekly조회시도완료뒤Armory실행,Controller자동준비predicate를연결해새회원도같은순서. weekly는signature/관찰generation/회원epoch에묶인완료표시추가,실패는오류와쓰기불가유지·시작영구대기없음. 후속갱신중기존완료_entries보존. 현재순서는저장기본원정대/활동셀·수치/빌드요약→weekly완료→최신게임상세2worker다.
+
+새로가능: 주간batch응답이오기전Armory0·완료entry/체크표시이후상세시작,기기/회원전환도동일gate. 보존:기존수동완료/i/주차·캐시schema·UI카드/진입·본인소유검증·개인설정미확정명령·키/나이스설정/1회/최대2worker. 직접binding·weekly·controller3시험파일81PASS/변경6파일분석0/format·diffcheck. 기존초기동시관찰무효화기대는새선행공유순서로정정했고blocked키가notify마다재시도돼설정재시도를막은중간회귀를false→true준비전이감지로해결했다. 완성후전체Flutter시험/빌드/기기대행/서버변경안함.
+
+미확인실기기: 셀/수치·기존오류요약/완료체크가먼저안정적으로보이고그후상세진행·개별결과갱신,체크초기화/본문이동안함. 실제firstpaint/속도는아직미계측. 동일기기1회[LoadTiming]으로displayReady/대상weeklyBatch가automaticRefresh보다앞서는지확인. feature/scoped-account-cache/799711a·이전계측/2worker포함미커밋/미push/dev미반영. 독립앱순서변경이라Backend반복검토요청없음.

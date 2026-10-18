@@ -5,6 +5,59 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/shared/diagnostics/load_timing.dart';
 
 void main() {
+  test(
+    'local work aggregates calls and preserves errors and root isolation',
+    () async {
+      final lines = <String>[];
+      final error = StateError('private name and token');
+      await LoadTiming.run(LoadStage.initialCache, () async {
+        expect(await LoadTiming.local(LocalLoadWork.dealer, () async => 7), 7);
+        await expectLater(
+          LoadTiming.local<void>(LocalLoadWork.dealer, () async => throw error),
+          throwsA(same(error)),
+        );
+        LoadTiming.listeners(() {});
+        await LoadTiming.run(
+          LoadStage.automaticRefresh,
+          () async {
+            await LoadTiming.local(LocalLoadWork.support, () async => 1);
+          },
+          root: true,
+          sink: lines.add,
+        );
+      }, sink: lines.add);
+      expect(
+        lines.where(
+          (s) =>
+              s.contains('stage=initialCache event=local work=dealer calls=2'),
+        ),
+        hasLength(1),
+      );
+      expect(
+        lines.where(
+          (s) => s.contains(
+            'stage=initialCache event=local work=listeners calls=1',
+          ),
+        ),
+        hasLength(1),
+      );
+      expect(
+        lines.where(
+          (s) => s.contains('stage=initialCache event=local work=support'),
+        ),
+        isEmpty,
+      );
+      expect(lines.join(), isNot(contains('private')));
+      var notified = false;
+      LoadTiming.listeners(() => notified = true);
+      expect(notified, isTrue);
+      await expectLater(
+        LoadTiming.local<void>(LocalLoadWork.roster, () async => throw error),
+        throwsA(same(error)),
+      );
+    },
+  );
+
   test('disabled timing preserves exact failure without emitting', () async {
     final lines = <String>[];
     final error = StateError('private token and character name');
