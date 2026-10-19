@@ -2,9 +2,10 @@
 
 ## 현재 기준
 
-2026-10-19 사용자 승인으로 원정대 인증·분쟁 V2 D1~D4 구현 구간을 마감하고 dev에 통합한다. Backend 작업으로 현재 분쟁 결과의 실서버·디바이스 검증은 불가능하므로 차후 인수로 분리했다. 실기기 통과를 뜻하지 않으며, 인수 대기만으로 현재 브랜치를 계속 열린 구현 작업으로 두지 않는다. 최종 커밋·dev/push 근거는 DEV_LOG를 따른다.
+2026-10-19 사용자 승인으로 원정대 인증·분쟁 V2 D1~D4 구현 구간을 마감했다. 구현 `43cd4e9`를 dev에 fast-forward 병합·origin/dev 푸시한 뒤 통합 기록을 정리했다. Backend 작업으로 현재 분쟁 결과의 실서버·디바이스 검증은 불가능하므로 차후 인수로 분리했다. 실기기 통과를 뜻하지 않으며, 인수 대기만으로 현재 브랜치를 계속 열린 구현 작업으로 두지 않는다. 최종 커밋·dev/push 근거는 DEV_LOG를 따른다.
 
 - 공식 추적 [Issue15](https://github.com/heo0328/lostparty-backend/issues/15), 구현/계약과 후속 체크는 [설계36](../backend-migration/36-roster-ownership-dispute-flutter-design.md#9-backend-준비-후-후속-실기기-인수).
+- [구현 마감·실기기 후속 이관 회신](https://github.com/heo0328/lostparty-backend/issues/15#issuecomment-6260104075) 게시·재조회 완료. Backend 준비 후 사용자 인수를 재개한다.
 - 검증은 D1~D4 직접 영향 테스트·변경 파일 분석 결과를 재사용한다. D4 최종68고유PASS·변경18파일분석0, 코드 변경 없이 문서/Git만 마감하므로 Flutter 시험을 반복하지 않는다.
 - 기존 UI·V1 미완료·회원/환경/명령 복구·현재 GET 후 소유 반영과 PARTY_IMPACT_REVIEW_REQUIRED 안전 보류를 보존한다. 배포·DB 변경/자료 삭제·기기 설치/조작·main 반영은 이번 지시에 포함하지 않는다.
 - 사용자 백업/tools/DevTools/플랫폼 생성 변경 및 별도 통계 문서 변경은 소유를 보존해 현재 분쟁 커밋에서 제외한다.

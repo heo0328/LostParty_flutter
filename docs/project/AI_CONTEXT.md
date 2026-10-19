@@ -1,6 +1,6 @@
 # AI CONTEXT — 프로젝트 현재 상태
 
-기준2026-10-19. 원정대 인증·분쟁 V2 D1~D4 구현/표적 검증을 마쳤고 사용자 승인으로 현재 구현 구간을 마감·dev 통합한다. D4 최종68고유PASS·변경18파일분석0이다. Backend 작업으로 분쟁 실서버/디바이스 인수가 불가능해 차후 후속으로 이관했으며 통과로 확대하지 않는다. 최종 커밋/통합 상태는 DEV_LOG, 계약·후속 인수는 [설계36](../backend-migration/36-roster-ownership-dispute-flutter-design.md), 다음 독립 후보는 [NEXT_WORK](NEXT_WORK.md)를 따른다.
+기준2026-10-19. 원정대 인증·분쟁 V2 D1~D4 구현/표적 검증을 마쳤고 사용자 승인으로 현재 구현 구간을 마감하고 구현 43cd4e9를 dev에 병합·푸시했다. D4 최종68고유PASS·변경18파일분석0이다. Backend 작업으로 분쟁 실서버/디바이스 인수가 불가능해 차후 후속으로 이관했으며 통과로 확대하지 않는다. 최종 커밋/통합 상태는 DEV_LOG, 계약·후속 인수는 [설계36](../backend-migration/36-roster-ownership-dispute-flutter-design.md), 다음 독립 후보는 [NEXT_WORK](NEXT_WORK.md)를 따른다.
 
 ## 핵심 제품·자료 개념
 
