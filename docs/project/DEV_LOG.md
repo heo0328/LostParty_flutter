@@ -5396,3 +5396,10 @@ Backend33번째6269041117/설계1e2f706 로컬·미push의 원본행/정규화·
 새로가능해진흐름:협의/최신결정/미정과Penpot→UI선행인계가문서로공유됨,실행UI변화없음. 보존확인:기존코드/API/DB·디자인파일변경없음. 미확인:실제시간표저장·다른기기복원/예약·신규UI실기기와Backend최종계약/구현. 순수문서변경이므로내용/상대링크·공백/diff검사만수행하고Flutter시험/분석을반복하지않는다.
 
 선택커밋범위:docs/README.md,backend-migration/32·37·38,project/NEXT_WORK·AI_CONTEXT·DEV_LOG. 기존통계35/플랫폼생성·DevTools/백업/tools 41개파일은SHA256스냅샷으로보존확인하고커밋에서제외한다. main/서버/DB/자료는변경하지않는다. 실제통합SHA/원격일치는후속마감기록과종료보고에남긴다.
+
+
+### 문서 구간 통합 결과
+
+협의문서마감 `50286b356e974871d42960779f17993c77090f38`을dev에fast-forward병합·origin/devpush완료,git ls-remote와local dev/origin/dev의SHA일치확인. 실제반영파일은승인문서7개뿐이며코드/플랫폼/통계35없음. 링크·신규37/38공백검사/최종staged diff --check통과. AI_CONTEXT끝빈줄1건은커밋전수정후재검증했다. Flutter시험/분석미실행(문서전용).
+
+기존무관41개파일의SHA256동일확인. 작업트리에는이들기존변경만남아있어저장소전체clean으로보고하지않는다. 문서구간은완료,docs/raid-contract-review는병합후삭제가능후보로분류하되보존한다. 이마감기록은문서전용후속커밋으로dev에같이통합하고최신dev에서feature/raid-recruitment-scheduling을분기한다. main반영/기존브랜치삭제/실제UI구현없음.
