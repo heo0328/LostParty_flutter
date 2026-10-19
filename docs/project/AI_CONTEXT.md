@@ -1,5 +1,11 @@
 # AI CONTEXT — 프로젝트 현재 상태
 
+**현재 우선 기준:** 내 계정 시간표·모집 조건·수동/조율 일정·회원시간점유·다일/다중레이드의통합목표를유지한다. 문서협의구간을dev에통합한뒤 `feature/raid-recruitment-scheduling`에서첫구간으로Penpot기준내계정시간설정UI를선행한다. 메모리기반미리보기허용이며실제API/영속복원·예약연결완료가아니다. 이전축소1차계획38은이력이다.
+
+현재제품기준은 [설계37 상단표·§19~22](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md),40번째대조는§23,최신Backend접수/Penpot·UI인계는§24다. [Backend43번째R0초안](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6271860507)35dd5f9로컬·미push보고수신,실제Router/DI/Repository·구자료대조와전체회신은미완료다. G1~G7추천을사용자확정으로승격하지않는다.
+
+Penpot ‘LostParty 앱 디자인’/‘03 변경 예정·흐름’/‘내 계정 시간 설정·변경안v2·2026-10-20’의접힘·편집·익일휠·저장실패4상태를읽기검수했다. 파일편집없음. 기존라벤더카드·계정그리드/하단탭유지,5분·복수구간/저장취소후접힘이UI기준이다. 실제신규Flutter코드는아직없으며상세범위/검증은NEXT_WORK를따른다.
+
 2026-10-19 로그인 후 내 계정 화면 재구성 수정 구현·직접 영향43PASS/변경3파일분석0 및 사용자 디바이스3항목 통과. 기존 디자인·4초 진입·앱 소유 복원 보존. fix/account-auth-screen-selection 수정분의 dev 통합/push를 마감하며 상세 근거는 DEV_LOG, 다음 독립 후보는 NEXT_WORK를 따른다. 분쟁 결과 인수는 별도 보류다.
 
 기준2026-10-19. 원정대 인증·분쟁 V2 D1~D4 구현/표적 검증을 마쳤고 사용자 승인으로 현재 구현 구간을 마감하고 구현 43cd4e9를 dev에 병합·푸시했다. D4 최종68고유PASS·변경18파일분석0이다. Backend 작업으로 분쟁 실서버/디바이스 인수가 불가능해 차후 후속으로 이관했으며 통과로 확대하지 않는다. 최종 커밋/통합 상태는 DEV_LOG, 계약·후속 인수는 [설계36](../backend-migration/36-roster-ownership-dispute-flutter-design.md), 다음 독립 후보는 [NEXT_WORK](NEXT_WORK.md)를 따른다.

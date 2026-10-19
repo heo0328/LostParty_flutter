@@ -18,6 +18,12 @@
 
 ## Backend 선행 API 분야별 요청
 
+현재 #13은 [Backend R0계약초안43번째](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6271860507)35dd5f9로컬·미push보고를수신했고최종소비대조/합의가남아있다. 모집·시간설정통합목표를유지하며문서dev통합후 `feature/raid-recruitment-scheduling`에서내계정시간설정UI메모리미리보기를선행한다. 최신제품기준/미정분기는 [설계37 상단표·§19~24](backend-migration/37-raid-scheduling-and-multi-raid-planning.md),실행순서/완료조건은NEXT_WORK다. Penpotv2 4상태읽기검수완료/디자인파일수정없음,실제API·영속저장미연결이다.
+
+- [이전 축소 1차 계획 기록38](backend-migration/38-account-availability-and-role-power-phase1.md): 폐기된 범위의 변경 이력. 현재 통합 목표와 UI 선행/계약 대조는 설계37 §24/NEXT_WORK를 따른다.
+
+- [모집 시간·역할별 전투력·그룹 범위·다중 레이드 요구37](backend-migration/37-raid-scheduling-and-multi-raid-planning.md): 사용자 확정 요구/추가 아이디어·추천·미정을 분리한 기획 문서. 구현 전 정리 단계다.
+
 [요청32·분야/순서 인덱스](backend-migration/32-backend-domain-prework-requests.md): #10 카탈로그/주차 → #11 주간 상태·#12 그룹 → #13 모집/파티. #10/#11 첫 구간 인계를 수신했고 [주간 체크박스 연결33](backend-migration/33-weekly-raid-flutter-integration.md)을 구현했다. 전체1622PASS·분석0, 실제 서버 쓰기/기기 확인은 대기다. #12/#13 후속과 미확정 정책은 해당 기능만 분리하고 현재 개발환경/자료를 유지한다.
 
 ## 최신 연결 — 회원 화면·관리·서버 복원
