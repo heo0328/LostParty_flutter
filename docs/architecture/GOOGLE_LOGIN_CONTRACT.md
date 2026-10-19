@@ -20,9 +20,9 @@
 
 #### 실행 설정·인수
 
-신규 BackendApp의 시작 화면에는 기존 로딩 배경·Glow·별 반짝임을 연결한다. debug URL 알럿은 이 배경 위에 표시하며, 주소 선택과 세션 복원 및 기존 2200ms 연출이 모두 완료된 뒤 앱 화면으로 전환한다. 중앙을 가로지르는 Shine 효과는 제거 상태를 유지한다.
+현재 시작 정책은 [scoped 복원 계약30](../backend-migration/30-scoped-storage-write-contract.md)의 후속 정정을 따른다. 기존 정적 이미지를 서비스 초기화부터4초 표시한 뒤 인증/자료 준비와 무관하게 앱으로 진입하며 앱 소유 복원 작업은 계속한다. 애니메이션 추가는 보류다. 과거2200ms·인증완료 대기·debug URL 알럿 정책은 적용하지 않는다.
 
-Debug 빌드는 새 앱 실행마다 Base URL 입력 알럿을 먼저 표시한다. `BACKEND_BASE_URL` 설정값이 있으면 미리 채우고, 없으면 Android 에뮬레이터용 `http://10.0.2.2:8000`을 표시한다. 빈 입력도 이 기본값을 사용한다. 확인한 HTTP/HTTPS 주소는 이번 실행에만 적용하며, 입력 전에 Dio/DB/세션 복원을 시작하지 않는다. debug 전용 네트워크 설정은 런타임 개발 주소의 HTTP를 허용한다. release에는 알럿이 없고 `BACKEND_BASE_URL`의 HTTPS 주소가 필수다. `GOOGLE_SERVER_CLIENT_ID`는 확인된 공개 Web client가 기본값이다. `TERMS_URL`·`PRIVACY_URL`에는 확정된 HTTPS 주소를 설정한다. 앱 비밀키는 dart-define에 넣지 않는다.
+Debug는 `BACKEND_BASE_URL` 명시값을 우선 사용하고 미지정 시 Android 에뮬레이터용 `http://10.0.2.2:8000`으로 즉시 초기화한다. 주소 입력 알럿은 없다. debug 전용 네트워크 설정은 개발 HTTP를 허용한다. release에는 `BACKEND_BASE_URL`의 HTTPS 주소가 필수다. `GOOGLE_SERVER_CLIENT_ID`는 확인된 공개 Web client가 기본값이다. `TERMS_URL`·`PRIVACY_URL`에는 확정된 HTTPS 주소를 설정한다. 앱 비밀키는 dart-define에 넣지 않는다. 인증정보는 origin별 저장이므로 접속 주소가 달라지면 동일 서버라도 기존 로그인 저장값을 자동 공유하지 않는다.
 
 Backend실행후사용자가에뮬레이터에서앱실행·Google선택/취소·최초가입/재로그인·유지선택별앱재시작·응답유실복구·로그아웃·로컬빌드를검증한다. Windows→WSL접속과서버nonce claim/서명검증·release등록은별도확인이다. 에이전트는기기설치/조작하지않았다.
 
@@ -104,7 +104,7 @@ Backend OpenAPI 0.1.0은 2026-10-14 재조회 시에도 GET /health만 있다. #
 - 로컬 원본/과거 ID는 유지하되 신규 소유권으로 인정하지 않는다. 로그인 후에도 미인증 원정대·권한 거절 조건을 유지한다.
 - 첫 가입/재로그인·취소, 알럿 연타, 원래 화면 복귀·자동 제출 없음, 유지 선택별 새 실행, 만료·일시 장애·갱신 실패, 계정 전환·로그아웃 중 응답을 확인한다.
 - 기존 관련 테스트는 `test/app/bootstrap`, `test/app/router`, account Repository/ViewModel 및 public_recruitment_list_view_model 영역이다. 익명 회원 생성 기대는 신규 경로에서 guest 무생성 기대와 구분한다.
-- 자동 테스트는 세션 복원/갱신 동시성·폐기/늦은 응답·저장 경계에 집중한다. Router/DI·공용 세션 전환 후 최종 상태에서 전체 flutter test와 flutter analyze를 실행한다.
+- 자동 테스트는 세션 복원/갱신 동시성·폐기/늦은 응답·저장 경계에 집중한다. Router/DI라는 이름만으로 전체 시험을 실행하지 않고 `ai_rules.md` §8-1의 영향 기반 검증을 따른다. 현재 화면 선택 복구의 표적 범위와 전체 시험 생략 조건은 NEXT_WORK에 기록한다.
 - Google 선택창·callback·재실행·백그라운드·정상 화면 회귀는 사용자가 Android 실기기로 확인한다. 에이전트가 설치·조작하지 않는다.
 
 일반 인증 설계 근거는 [신규 인증 설계](../backend-migration/11-auth-and-access-design.md), 현재 실행 순서는 [NEXT_WORK](../project/NEXT_WORK.md), 준비·검증 이력은 [DEV_LOG](../project/DEV_LOG.md)를 따른다.
