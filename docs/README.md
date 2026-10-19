@@ -6,7 +6,7 @@
 
 회원별 캐시·원정대/설정/주간 복원, 앱 수명 자동 갱신 최대2worker, [일괄 조회 연결30](backend-migration/30-scoped-storage-write-contract.md), 정적 이미지4초 진입과debug진단까지 마감·dev/main 동일 시점 반영 구간이다. 최종 검증은 전체1,662PASS/lib·test분석0이다. 실기기에서 일괄GET1회/계측요청76→29·단계시간단축과4초진입 사용자 수용을 받았다. 추가 성능 개선/애니메이션은 보류한다.
 
-다음 독립 기능은 원정대 인증·분쟁V2의Flutter연결/새기기진행복원·24시간방어다. Backend구현을재요청하지않고새브랜치·새이슈로분리한다. 실제현재조건은 [NEXT_WORK](project/NEXT_WORK.md), 기능지도는 [AI_CONTEXT](project/AI_CONTEXT.md), 완료/실측·미확인은 [DEV_LOG](project/DEV_LOG.md)를 따른다. 아래 과거 단계별 테스트 수/대기 표현은 당시 기록이다.
+2026-10-19 원정대 인증·분쟁V2는 `feature/roster-ownership-dispute`·[Issue15](https://github.com/heo0328/lostparty-backend/issues/15)의 D1~D4 코드/자동 검증 완료다(D4 직접 영향68고유PASS·변경18파일분석0). 공통 상단 안내와 기존 인증 화면을 연결했으며 사용자 승인으로 현재 구현 구간을 마감·dev 통합한다. Backend 작업으로 불가능한 실서버/디바이스 인수는 차후 후속으로 이관했다. 최종 통합 커밋은 DEV_LOG를 따른다. 기존 V1 미완료 요청은 보존한다. 최소 UI 추가 기준은 [설계36](backend-migration/36-roster-ownership-dispute-flutter-design.md), 수동 체크/다음 작업은 [NEXT_WORK](project/NEXT_WORK.md), 상태는 [AI_CONTEXT](project/AI_CONTEXT.md), 결과/미확인은 [DEV_LOG](project/DEV_LOG.md)를 따른다. 기존 캐릭터 일괄 조회/상세 갱신은 유지하며 추가 Backend구현을재요청하지않는다. 아래 과거 단계별 수치/대기는 당시 기록이다.
 
 ## 주간 이용 통계 설계
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../account/presentation/widgets/ownership_notice_title.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../shared/raid_catalog/domain/repositories/raid_catalog_repository.dart';
@@ -94,7 +95,7 @@ class _RecruitmentListPageState extends State<RecruitmentListPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('파티 모집')),
+    appBar: AppBar(title: const OwnershipNoticeTitle(child: Text('파티 모집'))),
     body: Column(
       children: [
         if (widget.backendConnectionPending)

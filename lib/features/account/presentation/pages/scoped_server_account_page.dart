@@ -2,6 +2,7 @@ import '../../../../shared/formatters/display_number_formatter.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../widgets/ownership_notice_title.dart';
 
 import '../../domain/account_read_session.dart';
 import '../../domain/scoped_cache_models.dart';
@@ -117,7 +118,7 @@ class _ScopedServerAccountPageState extends State<ScopedServerAccountPage> {
       final characters = view == null ? null : scopedRosterCharacters(view);
       return Scaffold(
         appBar: AppBar(
-          title: const Text('원정대 캐릭터'),
+          title: const OwnershipNoticeTitle(child: Text('원정대 캐릭터')),
           actions: [
             IconButton(
               tooltip: '캐릭터 다시 조회',

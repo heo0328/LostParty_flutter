@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ownership_notice_title.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/formatters/local_date_time_formatter.dart';
 import '../viewmodels/member_lostark_key.dart';
@@ -67,7 +68,9 @@ class _MemberKeyPageState extends State<MemberKeyPage> {
   Widget build(BuildContext context) {
     final model = widget.model;
     return Scaffold(
-      appBar: AppBar(title: const Text('로스트아크 API 관리')),
+      appBar: AppBar(
+        title: const OwnershipNoticeTitle(child: Text('로스트아크 API 관리')),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

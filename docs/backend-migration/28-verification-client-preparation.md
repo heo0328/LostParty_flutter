@@ -2,7 +2,7 @@
 
 ## 현재 인계 상태 (2026-10-18)
 
-Backend는 Issue8 시간순144번째에서 V2 구현 `7ba6297c5a574aa14c214bb9d3bf30edb692fc8f`를 인계했다. 아래141번째의 서버 구현 대기는 당시 기록이며 현재 선행 조건이 아니다. Flutter의 V2 DTO·명령·진행 복원·24시간 도전/방어·앱내 안내 연결은 다음 독립 작업이다. 현재 기본 인증과 일괄 계정 복원 완료를 V2 연결 완료로 해석하지 않는다. 다음 범위와 순서는 [NEXT_WORK](../project/NEXT_WORK.md)를 따른다.
+Backend는 Issue8 시간순144번째에서 V2 구현 `7ba6297c5a574aa14c214bb9d3bf30edb692fc8f`를 인계했다. 아래141번째의 서버 구현 대기는 당시 기록이며 현재 선행 조건이 아니다. Flutter는 `feature/roster-ownership-dispute`·[Issue15](https://github.com/heo0328/lostparty-backend/issues/15)에서 2026-10-19 D1~D4 코드/자동 검증을 마쳤다. D4 직접 영향68고유PASS·변경18파일분석0, 사용자 승인으로 현재 구현 구간을 마감·dev 통합한다. 기존 V1 미완료 요청은 보존하며 공통 상단 안내도 연결했다. Backend 작업으로 현재 불가능한 실제 서버/기기 인수는 차후 후속이며 통과로 확대하지 않는다. 최종 커밋은 DEV_LOG를 따른다. [설계36](36-roster-ownership-dispute-flutter-design.md)과 [NEXT_WORK](../project/NEXT_WORK.md)를 따른다.
 
 ## 2026-10-18 141번째 보완안 소비 검토·앱 상단 방어 안내 요구
 

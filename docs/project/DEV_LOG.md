@@ -1,5 +1,96 @@
 # 개발 이력
 
+## 2026-10-19 — 분쟁 구현 구간 마감·실기기 인수 후속 이관
+
+사용자가 현재 Backend 작업으로 분쟁 결과의 실제 테스트가 불가능함을 알리고, 실기기 검증은 차후로 이관한 뒤 현재 작업을 완료·문서 최신화·dev 병합/푸시하도록 지시했다. 이 지시는 실기기 통과나 main/배포·자료 삭제 승인이 아니다.
+
+- 새로 가능해진 흐름: D1~D4 구현 구간을 완료 단위로 마감하고 실기기 미인수만으로 현재 기능 브랜치를 열린 구현 작업으로 유지하지 않는다. 상세 수동 체크는 설계36 §9에 보존했다. 다음 독립 후보는 #13 Q1~Q3 검토이며 아직 착수하지 않았다.
+- 보존 확인한 기존 흐름: D1~D4의 기존 UI·V1 미완료·현재 GET/회원·환경·journal·소유/주간 경계와 PARTY_IMPACT_REVIEW_REQUIRED를 그대로 유지한다. 이번 마감에서 기능 코드는 변경하지 않았다.
+- 검증: 원격 dev fetch 후 HEAD와 기준 일치 확인. D4 최종 안내/controller33PASS + 동일 코드 회귀35PASS=68고유PASS·변경18파일분석0과 D1~D3 근거를 재사용했다. 문서/Git만 변경하므로 Flutter 시험/분석을 반복하지 않고 diffcheck·대상 diff/스테이징 범위를 확인한다.
+- 미확인: Backend 준비 후 실제 서버/게임 장비·24시간/공통기한·일괄 방어·새 기기/계정 전환·실제 화면 인수. 사용자 결과를 받으면 별도 최소 수정 작업으로 대응한다. 현재 dev 통합의 차단 조건에서 분리했으며 성공으로 기록하지 않는다.
+- 제외/보존: 플랫폼 생성3파일·DevTools·백업2개·tools와 별도 통계 문서 변경은 현재 분쟁 커밋에 넣거나 이동/삭제하지 않는다. main·배포·DB는 변경하지 않는다. feature/roster-ownership-dispute는 통합 후에도 삭제 없이 보존한다.
+
+## 2026-10-19 — D4 공통 상단 안내·탐색 연결/코드 검증 마감
+
+사용자가 D4가 구현·검증과 실제 기기 확인을 포함함을 확인하고 구현을 지시했다. 필수 진입 문서·설계36 §3/디자인 공통 기준·Issue15 본문/최신 D3 댓글·Git 및 실제 Backend route/AppBar를 대조했다. 기존 feature/roster-ownership-dispute·기준 deb2884를 유지하고 사용자 미커밋 파일을 보존했다.
+
+- 새로 가능해진 흐름: Backend MaterialApp builder에 앱 controller/명시 이동만 제공하는 OwnershipNoticeScope를 두고 실제 Backend 탭·원정대/캐릭터 관리/상세/이력·설정/키·V1/V2 인증의 공통 제목 안내를 연결했다. 여유 공간은 제목 아래 작은 ‘원정대 방어 필요 · 확인’, 폭/글꼴이 안 맞으면 48px 경고 아이콘으로 축약한다. 처리 중/확인 필요를 구분하고 읽기 라벨·접근성 실행·키보드 조작을 제공한다. 제목 생성/구독은 새 API 호출0이다.
+- 탐색/권한: 단일 owner는 명시 disputeId, 복수는 명시 선택 페이지로 진입한다. GoRouter.state.uri를 사용해 URL 표시 옵션과 독립적으로 실제 현재 페이지를 판별하고 연타/이미 인증 페이지에서는 중복 push하지 않는다. 원래 화면 뒤로가기를 보존하며 자동 방어 POST는 없다. 현재 GET에 실패한 방어 proof는 오래된 pending만으로 방어 가능으로 표시하지 않고 확인 필요로 남긴다.
+- 보존 확인: 안내가 없거나 scope 없는 기존/테스트 화면은 원래 child를 그대로 반환한다. AppBar 높이·leading/actions·내 계정 통신 flexibleSpace·본문 시작점을 유지했다. 로그인/초기 진입/모달에 강제 배너를 만들지 않고 회원 전환/로그아웃은 기존 controller 격리를 따른다. 캐릭터 bootstrap·일괄 조회/상세 갱신·계정/주간 쓰기·그룹/모집 정책은 변경0이다.
+- 검증: 직접 영향7파일을 한 번 묶어 67PASS/신규 접근성 검사1FAIL을 확인했다. AppBar 제목과 합쳐지는 접근성 라벨은 포함 검사로 보정하고 SemanticsHandle을 테스트 종료 전에 정리해 해당1건PASS. 방어 proof 조회 실패를 확인 필요로 명확히 구분한 최종 안내/controller2파일33PASS와 나머지 동일 코드5파일35PASS를 재사용해 **총68 고유 테스트**를 확인했다. 안내·폭/큰 글꼴·본문/버튼 위치·키보드·단일/복수/중복 진입/복귀·controller/인증/V1 인계·scoped 계정/모집/관리 화면 범위다. 변경18파일 분석에서 중괄호 안내만 해당2파일 수정·분석0, 최종 controller2파일도 분석0으로 최종 문제0이다. 포맷/diffcheck·diff 검토 완료. 표시/명시 탐색에 한정되고 저장/쓰기/자동갱신 계약을 바꾸지 않아 전체 Flutter 시험은 미실행이며 D1~D3 동일 코드 결과는 재사용했다.
+- 근거 로그: .dart_tool/ownership-d4-targeted-tests.log, ownership-d4-narrow-final.log, ownership-d4-final-notice-tests.log, ownership-d4-analyze.log, ownership-d4-final-analyze.log, ownership-d4-final-controller-analyze.log.
+- 미확인 실기기: 실제 API/게임 장비·24시간/공통 방어기한·다른 캐릭터/일괄 방어·새 기기/재실행·회원 전환/통신 실패와 실제 화면/큰 글꼴 인수. 사용자 수동 체크를 NEXT_WORK에 한 묶음으로 남겼다. 기기 설치/조작·배포·DB 변경/초기화/삭제는 수행하지 않았다. PARTY_IMPACT_REVIEW_REQUIRED는 실제 파티 후처리 후속의 안전 보류로 유지한다.
+
+D1~D4 코드/자동 검증 완료이며 실제 인수와 Git 마감은 남아 있다. [Issue15 D4 결과](https://github.com/heo0328/lostparty-backend/issues/15#issuecomment-6259481437)를 게시·재조회했다. 브랜치 유지·미커밋/미push·dev/main 미반영이고 추가 Backend 구현/기초 인증 재시험 요청은 없다.
+
+## 2026-10-19 — D3 기존 인증 화면의 V2 도전/방어 연결
+
+사용자가 다음 단계 설명을 확인하고 구현을 지시했다. AGENTS/협업 규칙/NEXT_WORK/AI_CONTEXT·문서지도·설계36/디자인 공통 원칙, Issue15 최신 댓글과 실제 Git/코드 경로를 대조했다. feature/roster-ownership-dispute를 재사용하고 사용자 백업/도구/플랫폼 생성 변경을 보존했다.
+
+- 새로 가능해진 흐름: 실제 기존 인증 route에 앱 소유 V2 controller를 주입했다. 같은 선택/검색/장비 카드에서 preview→claim·명시 confirm/cancel, 도전/방어 현재 상태·기한/보류 사유·복수 진행/전체 이력·명시 proofId/disputeId 조회를 연결했다. 일반 인증의 ‘인증 시작’을 유지하고 타소유일 때만 24시간 안내 후 명시 시작한다. URL ID 충돌/형식은 쓰기를 막고 권한은 서버 GET으로 확인한다.
+- 방어: 기존 strict LifecycleCharacterPage를 끝까지 읽어 구조/revision·중복/cursor/200한도를 검사하고 usable 캐릭터만 레벨순으로 선택한다. 저레벨/비활동·비대표를 배제하지 않는다. 현재 canonical ID와 등록/소유/목록/생명주기 revision을 immutable 명령으로 보낸다. 준비/선택은 POST0이며 명시 시작만 방어 proof를 만든다.
+- 복원/보존: 기존 V1 미확정/진행은 V1에서 해소하고 취소/만료 후 V2로 전환한다. 페이지 종료는 서버 취소/journal 삭제가 아니다. 원key 복구·ACK후GET·검토/명시 재조정과 조회실패/Retry-After를 구분했다. verified/defended만 기존 성공 복귀하며 dispute_opened/settle 접수는 인증 성공이 아니다. 앱 controller 동기화를 재사용하고 standalone만 onVerified fallback을 사용한다. 후속 GET과 성공 복귀 예약 경합을 보호하며 회원 변경 시 늦은 이동·선택/이력 대화상자를 차단한다. 기존 캐릭터 bootstrap/일괄 API·상세 갱신·주간/그룹/파티 저장은 변경0이다.
+- 검증: 최초 5파일 묶음에서 기존 직접 회귀3파일59PASS, 신규 테스트 fake 인수/뷰 콜백 반환의 컴파일 오류2파일을 확인했다. 해당2파일만 수정·재실행해 신규 조율9+기존V1인계12=21PASS. 추가 화면 경계4건 중 모의 journal 비동기/타이머 정리와 active 목록에 종료 proof를 넣은 fixture 오류를 구분·수정했으며 현재 GET 재조회와 성공 복귀 예약 경합도 보완했다. 최종 영향 화면2파일16PASS·나머지 동일 코드68PASS를 재사용해 **총84 고유 테스트**다. 변경7파일 최종 분석 문제0, 포맷/diffcheck·diff 검토 완료. 실제 영향이 인증 페이지/조율/controller에 한정돼 전체 Flutter 시험은 미실행이다.
+- 로그: .dart_tool/ownership-d3-targeted-tests.log, ownership-d3-retry-tests.log, ownership-d3-boundary-tests.log, ownership-d3-handoff-state.log(잘못된 active fixture 근거), ownership-d3-boundary-final.log 및 최종 ownership-d3-final-ui-boundaries.log/ownership-d3-final-analyze.log. 실패 후 전체 묶음 반복 없이 실패/직접 영향 파일만 재실행했다.
+- 미확인 실기기: 실제 Backend/장비 조작·24시간 도전/일괄 방어·다른 기기 복원/로그인 전환·원래 화면 복귀와 화면 크기/큰 글꼴. D4 공통 상단 안내는 아직 미연결이며 디바이스 설치/조작·배포·자료 삭제/초기화를 수행하지 않았다. 다음은 D4이며 수동 체크는 최종 구간에 묶는다.
+
+현재 브랜치 유지·D1~D3 미커밋/미push·dev/main 미반영이다. [Issue15 D3 결과](https://github.com/heo0328/lostparty-backend/issues/15#issuecomment-6259370128)를 게시·재조회했다. Backend 추가 구현/기초 인증 재시험 요청은 없다.
+
+## 2026-10-19 — 관련 Backend 이슈 회신
+
+사용자 요청으로 #12/#13/#16/#17/#18/#19의 최신 댓글·관련 계약을 확인하고 각 이슈에 인계 접수, 미완료 범위, 다음 담당과 미확정 정책을 회신했다. 댓글 6건을 재조회해 원문 일치를 확인했으며 링크/대기는 NEXT_WORK 후속 대장에 기록했다. #15에는 기존 D2 회신 이후 새 요청이 없어 중복 게시하지 않았다.
+
+- 새로 가능해진 흐름: 협업 상태 추적 보완. 기능 코드 변경 없음.
+- 보존 확인한 기존 흐름: 현재 #15 D3 우선순위와 기존 UI 유지 원칙, 실제 파티 원천 전 안전 보류, 통계 사용자 확정/제안 구분. 기능 재검증을 뜻하지 않는다.
+- 미확인: 각 후속 Flutter 연결·실서버/실기기 인수. Backend G3 148 PASS는 상대 보고이며 직접 실행 결과가 아니다.
+- 검증: 댓글 게시 후 재조회·문서 내용 검토·git diff --check. 문서/회신만 변경해 Flutter 시험은 반복하지 않았다. 기존 브랜치 유지·미커밋/미push·dev 미반영.
+
+## 2026-10-19 — D2 인증·분쟁 앱 수명 발견/복원 내부 연결
+
+사용자는 D2가 캐릭터 초기 호출 통합이 아니라 인증/분쟁 연결임을 확인한 뒤 진행을 지시했다. 필수 문서·Issue15 본문/최신 D1 댓글·Git·실제 BackendApp/계정 lifecycle와 D1 코드·journal을 대조하고 feature/roster-ownership-dispute를 재사용했다. HEAD/dev/origin-dev 추적 ref deb2884·기존 미커밋 상태를 확인했으며 사용자 자료/플랫폼 생성파일은 보존했다.
+
+- 새로 가능해진 흐름: 앱 소유 OwnershipDisputeController·단일 secure command store를 실제 BackendApp 로그인/복귀에 연결했다. proof/분쟁/journal 독립 single-flight·전체 페이지 원자 적용·revision/중복ID/cursor 순환 검사·CURSOR_STALE 첫 페이지 재수집1회·단일 진행 현재GET 복원/여러 건 명시 선택·known active 누락의 종료 GET 확인을 구현했다. 실패/404는 마지막 관찰을 유지하고 현재 동작 권한을 내린다. 상태는 환경/회원/세션/읽기 세대로 격리하고 D1 client에도 환경 guard를 연결했다.
+- 복구/수명: 시작·복귀는 자동 POST0. 원명령 recover는 명시 요청만, ACK후 실패는 GET만 재개한다. 24h/멱등·revision/terminal 거절의 review→명시 확인은 원명령을 reconciled 기록으로 보존하고 ACK/성공·최근 목록과의 연결을 추정하지 않는다. 같은 key는 이후에도 재송신 불가다. Retry-After 최소 대기·서버시각+단조 경과·단발 기한 조회를 구현하고 상시 polling/자동 자료삭제는 없다.
+- 현재 결과/보존: 현재GET verified/defended/transferred/OWNER_CHANGED만 기존 lifecycle command gate/read generation을 무효화하고 계정/설정·역할/주간 재조회에 연결한다. 기존 writer와 경합하면 stale 읽기를 우선 막고 재조회 대기를 남긴다. 결과 ID/version 중복 및 같은 이벤트의 실패 반복을 막는다. 도전 개시/settle ACK로 이전 owner의 권한을 미리 제거하지 않는다. 기존 캐릭터 일괄 API/상세 갱신 알고리즘·키 복원/4초 진입·V1 인증 페이지·SQL/개인자료/파티/그룹은 변경0. 기존 사용자 화면은 V1을 유지한다.
+- 검증: D2 종료 때 직접 영향8파일 묶음을 실행했다. 신규 controller 반환 record의 List 타입 추론 오류로 해당 파일만 컴파일 실패했고 나머지7파일149PASS를 확인했다. 반환 타입을 명시해 controller20PASS/기한 fixture1FAIL을 확인한 뒤 가상 시간 pump(Duration.zero)를 수정해 실패 사례1PASS. 중복 결과 동기화 방지와 확정 revision 거절 재조정 경계를 보완한 최종 controller25+V2client21, **2파일46PASS**를 확인했다. 나머지 동일 코드6파일128PASS를 재사용해 **총174 고유 테스트**이며 시도별 중복 수치는 합산하지 않는다. 변경5파일 분석은 테스트 중괄호 안내1건 수정 후 해당 파일 분석0을 확인해 최종 문제0. 포맷·diffcheck·diff 검토 완료. 전체 Flutter 시험/전체 분석은 미실행이다.
+- 로그: `.dart_tool/ownership-d2-targeted-tests.log`(초기 신규파일 컴파일 실패·나머지149PASS), `ownership-d2-controller-tests.log`, `ownership-d2-deadline-test.log`, `ownership-d2-final-targeted-tests.log`(최종46PASS), `ownership-d2-analyze.log` 및 `ownership-d2-final-test-analyze.log`(마지막 스타일 해소). SDK 사용자 캐시/통계 접근은 기존 승인 경로로 수행했다.
+- 미확인: 실제 Backend V2 HTTP·실게임 장비/24h·새 기기/계정전환 실인수, D3 기존 인증 UI의 V2 상태/명시 버튼·성공복귀, D4 상단 안내/좁은 폭·큰 글꼴. 기기 설치/조작·배포·서버 자료삭제/초기화는 수행하지 않았다. D2의 모의HTTP/내부 연결을 V2 전체 제품 완료로 확대하지 않는다.
+
+[Issue15 D2 결과](https://github.com/heo0328/lostparty-backend/issues/15#issuecomment-6259074435)를 게시·재조회했다. D1/D2 미커밋/미push·dev/main미반영·원격구현SHA없음과 UI/실인수 미완료를 명시했다. 추가 Backend/기초 로그인·키·장비 재시험 요청 없음. 현재 feature/roster-ownership-dispute 유지·D2 로컬 완료/D3 미착수, 사용자 요청 없는 커밋/push·병합은 수행하지 않았다.
+
+## 2026-10-19 — D1 인증·분쟁 V2 API/명령/secure journal 기반 구현
+
+사용자 구현 지시로 feature/roster-ownership-dispute를 재사용했다. 착수 시 필수 문서·Git/동일 목적 브랜치·Issue15 최신 댓글·현재 V1 client/VM/BackendApp DI·secure 주간 저장을 대조했다. 기존 기준 HEAD/dev/origin-dev 추적 ref는 deb2884이며 이번에는 커밋/push·병합을 요청받지 않아 진행하지 않았다. 사용자 플랫폼 생성3파일·백업/DevTools/tools는 보존했다.
+
+- 새로 가능해진 흐름: 고정 Backend7ba6297의 실제 OpenAPI(원본 blob b23e2fc2b161d78f135f15277aea15829177b826) 발췌 snapshot과 V2 11동작 strict DTO/client·단일 페이지 envelope·등록/방어 revision 입력·불변 명령 기반을 추가했다. purpose/장비상태/소유결과·nullable/enum/UUID/UTC·중복/actions·결과 조합을 검증한다. UI·앱 수명 controller에는 아직 연결하지 않았다.
+- 원명령 보존: 회원+환경별 별도 secure namespace/schema1, 전송 전 저장·저장 실패 시 HTTP0·원key/body/시각 고정·미확정ACK/ACK후현재GET/재조정필요 단계·같은회원 새세션 명시복구·다른회원/환경/late 차단. ACK뒤GET실패는GET만 재개하고 일반GET/빈목록으로미확정명령해제0. 24h경과·멱등충돌은 blind replay/새key우회0. settle200을이전완료로변환하지않는다. 토큰/회원API키/장비원본·기존주간/SQL자료는 journal에 저장하지 않는다.
+- 보존 확인: 기존 V1 DTO/client·인증 페이지·Router/DI·앱 수명·SQL/저장자료 코드는 변경0. 직접 연관된 기존 V1·공통 인증 HTTP·세션 테스트를 신규 V2와 함께 확인했다. 기존 UI 전반의 실기기 회귀 통과로 확대하지 않는다.
+- 검증: 신규V2 model/client + 기존 server_account_verification_client/backend_account_read_api/account_read_session, 5개 테스트 파일을 D1 종료 시 한 번 묶어 **55PASS**. 실제 Dio+모의HTTP로11동작 경로/status/body/header, immutable·journal 실패/응답유실/ACK-GET·회원/세션/환경/late·cursor/filter를 확인했다. 변경 코드/테스트8파일 분석 **문제0**·format·diffcheck·diff검토. 로그 `.dart_tool/ownership-d1-targeted-tests.log`, `.dart_tool/ownership-d1-analyze.log`. 초기 분석에서 생성 enum 참조2곳/Matcher import 충돌·스타일 문제를 수정한 뒤 표적시험과 최종분석이 통과했다. SDK통계파일/캐시 권한 때문에 제한 실행을 중단하고 승인된 SDK 접근으로 완료했다.
+- 테스트 전략: 기존 전체1662PASS를 반복하지 않았다. 새 독립 기반이며 기존 V1/공용 runtime/DB를 교체하지 않아 표적시험으로 영향 경계를 확인했다. 사용자 재확인에 따라 ai_rules §8-1에 수정 파일 수/Domain·Router라는 명칭만으로 전체 시험을 자동선택하지 않고 실제 공유 계약·저장·호출자 영향으로 정하는 기준을 명확히 했다. 다음 구간은 필요 표적시험, 최종 연결은 실제 파급으로 전체시험 필요성을 판단하고 동일코드 결과를 재사용한다.
+- 미확인: D2 controller의 복수페이지/cursor 재수집·새기기목록 발견·reconciliationRequired의 서버조회/명시조정·현재소유반영, D3기존UI/D4상단/route연결, 실제서버·실장비/24h·기기별인수. 앱소유 단일store/client와 환경교체 fencing은 D2에서 연결한다. 실기기 설치/조작·외부API 쓰기·배포·자료삭제는 하지 않았다.
+
+[Issue15 D1 결과](https://github.com/heo0328/lostparty-backend/issues/15#issuecomment-6258843502)를 게시·재조회했다. 연결도구의 댓글 쓰기는403이어서 기존 사용자 gh keyring 인증으로 승인된 결과 댓글만 게시했다. 미커밋/미push·dev/main미반영·상대가가져갈원격SHA없음과 미연결범위를 명시했고 추가Backend/기초로그인·키·장비재시험은 요구하지 않았다. 현재 브랜치 유지·D1로컬완료/D2미착수, 통합 완료 상태는 아니다.
+
+## 2026-10-19 — D1 착수 전 문서 최신화·기존 인증 UI 유지 기준
+
+Issue15 본문/최신 Backend 댓글과 실제 Issue8 CLOSED 상태를 확인했다. 원본8의 주제별 이관·보관 종료를 NEXT_WORK/AI_CONTEXT/설계36에 반영했으며 V2 미완료 요구는15에서 계속한다. D1은 strict DTO/client·불변 명령·secure journal이며 기능 구현 미착수다. 사용자는 기존 인증 페이지 디자인/동작을 유지하고 분쟁 발생 때 설명·버튼을 추가하는 방식을 요청했다. 현재 ServerVerificationPage를 대조해 같은 카드 스타일의 owner 방어/challenger 진행 상태와 최소 동작 추가안을 설계36 §2-1에 기록했다. 아이콘/세부 문구는 브리핑 제안이며 UI 구현은 아니다.
+
+새로 가능해진 흐름: 최신 협업 상태와 UI 보존 기준의 문서 인계. 보존 확인: 기능 코드 변경0, 기존 선택/장비 카드·빨간 안내·성공 복귀 경로를 코드로 확인했다(실행 회귀 확인 아님). 검증: 문서 diff 검토·git diff --check. 미확인 실기기: V2 UI/분쟁 전체이며 기능 연결 후 사용자 확인 대상으로 유지한다. 문서만 변경해 Flutter 시험/빌드는 실행하지 않았다. feature/roster-ownership-dispute 유지·미커밋/미push·dev 미반영, 기존 사용자 변경 보존.
+
+## 2026-10-18 — 인증·분쟁 V2 전용 브랜치·Issue15와 D0 설계
+
+사용자 지시로 `feature/roster-ownership-dispute`를 `dev/deb2884dfcba6d105781036d174b2e085118606e`에서 분기했다. 기존 dev/main/origin 일치·동일 목적 신규 브랜치 부재·옛 V1 브랜치의 통합 여부를 확인했다. 앞선 계정 마감은 실제 원격 dev/main 동일 SHA로 완료됐으며 사용자 플랫폼 생성3파일·백업/DevTools/tools는 원형 보존했다.
+
+Backend Issue8 시간순144번째 `7ba6297`의 실제 OpenAPI·V2 계약/개발 문서와 현재 V1 strict client/VM/선택/페이지·BackendApp DI/route·AppShell·기존 secure 주간 저장 패턴을 대조했다. V2 11동작/VerificationV2 필수18필드·DisputeOut16필드·목록/actions·cancel POST200·settle 예약200을 확인했다. 장비 통과/분쟁 개시/최종 소유·10분/24시간/공통 방어기한을 분리하고 server 목록 기반 새 기기 복원·secure 원명령 복구·회원/환경/late/ownership 경계를 설계36에 기록했다. 기존 V1 pending을 V2로 변환하지 않고 현재 소유·개인자료·그룹/파티 권한 승계 금지를 유지한다.
+
+사용자는 상단 안내를 ‘기존 제목 아래 작은 원정대 방어 필요 · 확인, 좁으면 경고 아이콘’으로 확정했다. 기존 AppBar 높이·뒤로가기/action·본문 위치를 유지하며 제목 위젯만 감싼다. 안내 터치로 명시 분쟁 조회·캐릭터 선택 후 방어하며 클릭만으로 자동 방어하지 않는다. 최종 이전/방어 이전에는 기존 소유자의 권한을 제거하지 않는다. 설계 순서는 D1 DTO/client/명령journal→D2 앱수명 발견/복원→D3 기존 화면→D4 상단/route·검증이며 실제 room adapter·운영자고정/push·성능/DB초기화는 제외했다.
+
+공식 [Issue15](https://github.com/heo0328/lostparty-backend/issues/15) 본문을 게시·원문 일치/OPEN 확인하고, [Issue8 시간순153번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6249286430)로 출처/후속을 연결했다. 추가 Backend 구현/로그인·키·장비 재시험/새 환경을 요청하지 않았고 #8도 종료하지 않았다.
+
+게시 직전 Backend152번째 통합 완료 회신이 추가되어 인계 댓글의 순번을153번째로 정정·재조회했다. Backend dev/main `77a1fe53875ddbe1a972361c90468106815c6f5b` 일치·기존 V27ba6297/일괄8d03e962 계약 불변·다음 G3 명세를 확인했다. 설계/서버 작업 범위 변화는 없다.
+
+이번 새로 가능해진 것은 구현 범위·승인된 안내·후속 담당의 문서/이슈 추적이다. **기능 코드/앱 동작 변화0, 자동시험/빌드/기기조작 없음**이며 기존1662PASS/분석0을 V2 검증으로 보고하지 않는다. 문서 diffcheck/계약·링크 대조만 수행한다. 문서 미커밋·미push/dev·main 미반영, 현재 전용 브랜치 유지. 미확인 기기는 구현 종료 후 설계36의 복원/도전/방어/기한·좁은 폭/큰 글꼴 등을 묶어 사용자에게 전달한다.
+
 ## 2026-10-18 — scoped-account-cache 마감·dev/main 통합 승인
 
 구현 마감 `54bacd2021d60de6641bdf4fb9682368225ea341`의 원격 feature push를 확인했고, [Issue8 시간순151번째 인계](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6248792000)를 게시·본문/순서 대조했다. 이번 문서 마감 커밋까지 포함해 feature→dev→main을 fast-forward로 같은 위치에 맞추며, 최종 원격 일치 확인 결과는 작업 종료 보고와 Git 참조를 기준으로 한다. 별도 서버 변경 요청은 없고 V2 후속·성능 보류를 명시했다.

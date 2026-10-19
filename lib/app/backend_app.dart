@@ -13,6 +13,9 @@ import '../features/auth/presentation/login_page.dart';
 import '../features/account/data/local/account_database.dart';
 import '../features/account/data/backend_account_read_api.dart';
 import '../features/account/data/server_account_verification_client.dart';
+import '../features/account/data/ownership_command_store.dart';
+import '../features/account/presentation/widgets/ownership_notice_title.dart';
+import '../features/account/presentation/viewmodels/ownership_dispute_controller.dart';
 import '../features/account/presentation/pages/server_verification_page.dart';
 import '../features/account/presentation/viewmodels/server_verification_view_model.dart';
 import '../features/account/presentation/viewmodels/server_registration_view_model.dart';
@@ -90,11 +93,13 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
   ServerCombatPowerViewModel? _serverPowers;
   MemberSettingsViewModel? _memberSettings;
   ServerVerificationViewModel? _verification;
+  OwnershipDisputeController? _ownership;
   BackendAccountLifecycle? _accountLifecycle;
   BackendMemberAccount? _memberAccount;
   final _managementGateways =
       <(String, String, int, String), ScopedCharacterManagementGateway>{};
   GoRouter? _router;
+  OwnershipNoticeNavigation? _ownershipNavigation;
   PartyCycleRuntime? _cycle;
   Dio? _dio;
   String? _configurationError;
@@ -144,6 +149,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     );
     try {
       _router = _createRouter();
+      _ownershipNavigation = OwnershipNoticeNavigation(_router!, _ownership!);
     } on AccountReadException {
       _configurationError = '서버 연결 주소를 확인하지 못했습니다. 연결 설정을 확인한 뒤 앱을 다시 실행해 주세요.';
       return;
@@ -330,6 +336,43 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       );
       _memberAccount!.initialize();
     }
+    _ownership = OwnershipDisputeController(
+      api: accountApi,
+      session: readSession,
+      baseUrl: _dio!.options.baseUrl,
+      currentBaseUrl: () => _dio!.options.baseUrl,
+      allowHttp: kDebugMode,
+      commands: OwnershipCommandStore(const SecureOwnershipJournalStorage()),
+      onAccountStateChanged: (scope) async {
+        requireAccountReadScope(readSession, scope);
+        if (lifecycle.model?.commandInProgress == true ||
+            lifecycle.runtime?.characterSettingsBusy == true) {
+          // Current ownership changed: fence old reads immediately even when
+          // an existing account writer must finish before reconciliation.
+          lifecycle.model?.invalidate();
+          throw const AccountReadException(
+            'REQUEST_IN_PROGRESS',
+            retryAfter: Duration(seconds: 2),
+          );
+        }
+        final gate = lifecycle.model;
+        if (gate != null) {
+          gate.beginCommand();
+          await gate.finishCommand();
+        } else {
+          await reloadServerState();
+        }
+        requireAccountReadScope(readSession, scope);
+        if (lifecycle.model?.failure case final failure?) {
+          throw AccountReadException(failure.code);
+        }
+        await _memberAccount?.model.refresh();
+        requireAccountReadScope(readSession, scope);
+        if (_memberAccount?.model.failure case final failure?) {
+          throw AccountReadException(failure);
+        }
+      },
+    )..initialize();
     final accounts = AccountRepositoryImpl(
       basicOnly: true,
       remoteDataSource: remote,
@@ -620,6 +663,9 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
               path: 'game-account-verification',
               builder: (context, state) => ServerVerificationPage(
                 model: _verification!,
+                ownership: _ownership!,
+                proofId: state.uri.queryParameters['proofId'],
+                disputeId: state.uri.queryParameters['disputeId'],
                 accounts: serverAccounts,
                 onLogin: () => showLoginRequired(context, auth),
                 onVerified: reloadServerState,
@@ -668,7 +714,10 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) unawaited(_memberKey?.reload());
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_memberKey?.reload());
+      unawaited(_ownership?.resume());
+    }
   }
 
   @override
@@ -681,6 +730,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     _entryGate.removeListener(_entryReady);
     _entryGate.dispose();
     _memberAccount?.dispose();
+    _ownership?.dispose();
     unawaited(_accountLifecycle?.close());
     _serverReads?.dispose();
     _serverPowers?.dispose();
@@ -712,6 +762,11 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       title: 'LOSTPARTY',
       theme: AppTheme.light,
       routerConfig: router,
+      builder: (context, child) => OwnershipNoticeScope(
+        controller: _ownership!,
+        onOpen: _ownershipNavigation!.onOpen,
+        child: child!,
+      ),
     );
   }
 }
@@ -748,7 +803,7 @@ class _PendingFeaturePageState extends State<_PendingFeaturePage> {
     listenable: widget.auth,
     builder: (context, _) => Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: OwnershipNoticeTitle(child: Text(widget.title)),
         actions: [
           IconButton(
             onPressed: () => context.push('/settings'),
@@ -789,7 +844,7 @@ class _BasicCharacterAccessPage extends StatelessWidget {
   final VoidCallback onAuthenticate;
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('캐릭터 사용 안내')),
+    appBar: AppBar(title: const OwnershipNoticeTitle(child: Text('캐릭터 사용 안내'))),
     body: Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,

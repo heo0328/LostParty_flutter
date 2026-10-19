@@ -1,6 +1,6 @@
 # AI CONTEXT — 프로젝트 현재 상태
 
-기준2026-10-18. 현재 기능 브랜치 `feature/scoped-account-cache` 마감·dev/main 동일 개발 체크포인트 통합을 사용자가 승인했다. 최종 커밋/원격 상태는 Git과 DEV_LOG 최신 통합 기록을 따른다. 현재 실행 순서는 [NEXT_WORK](NEXT_WORK.md) 하나로 관리하며 과거 원문을 새 지시로 적용하지 않는다.
+기준2026-10-19. 원정대 인증·분쟁 V2 D1~D4 구현/표적 검증을 마쳤고 사용자 승인으로 현재 구현 구간을 마감·dev 통합한다. D4 최종68고유PASS·변경18파일분석0이다. Backend 작업으로 분쟁 실서버/디바이스 인수가 불가능해 차후 후속으로 이관했으며 통과로 확대하지 않는다. 최종 커밋/통합 상태는 DEV_LOG, 계약·후속 인수는 [설계36](../backend-migration/36-roster-ownership-dispute-flutter-design.md), 다음 독립 후보는 [NEXT_WORK](NEXT_WORK.md)를 따른다.
 
 ## 핵심 제품·자료 개념
 
@@ -30,8 +30,8 @@
 
 ## 다음 독립 작업·협업
 
-- Flutter V2인증/proof새기기복원·24시간도전/방어·앱내방어안내는미연결이다. Backend7ba6297/[Issue8시간순144번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6245920315)는구현/push/로컬반영인계이며Flutter완료아니다. 다음새브랜치/새이슈로분리하고기초로그인·키·첫인증을재개발하지않는다.
-- Backendbootstrap [시간순146번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6247620588)→Flutter연결147/실기기148/진단149/실측150까지회신. 현재추가Backend대기없음, #8은후속이관/별도승인전OPEN유지.
+- Flutter V2의 D1~D4 구현 마감. Backend 작업으로 현재 불가능한 실서버·사용자 실기기 인수는 차후 후속으로 분리했다. 현재 GET의 최종 결과만 기존 계정/설정·주간 재조회와 성공 복귀로 연결하며 캐릭터 초기 조회/일괄 API는 변경하지 않았다. 상단 안내는 ‘제목아래작은문구,좁으면아이콘’으로 연결했고 사용자 수동 체크는 NEXT_WORK에 묶었다.
+- Backendbootstrap [시간순146번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6247620588)→Flutter연결147/실기기148/진단149/실측150/마감151 이후 [시간순153번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6249286430)에V2후속Issue15를연결했다. [Issue15 최신 회신](https://github.com/heo0328/lostparty-backend/issues/15#issuecomment-6249415434) 기준 추가Backend대기없음. #8은 주제별 이관 후 보관 종료됐고 V2는 #15에서 계속한다.
 - 그룹 #12/모집·파티 #13, 한도15/5/10·통계는 [32](../backend-migration/32-backend-domain-prework-requests.md)·[34](../backend-migration/34-member-limits-and-room-restrictions.md)·[35](../backend-migration/35-weekly-member-and-group-statistics.md)를기준으로최신인계후연결한다. G1의과거미게시문구로현재상태를되돌리지않는다.
 - 실제active파티소유이전후처리adapter는서버후속이며없으면review_required로보류한다. 기존회원자리/Snapshot·경고·유효캐릭터명시변경은해당파티기능에서구현한다.
 - 개별캐릭터세팅갱신버튼복구, DB-03/QA-01/AUTH-01과새기기/재설치/OFF·계정전환실인수는NEXT_WORK의별도후속대장에남긴다.

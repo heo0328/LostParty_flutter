@@ -1,5 +1,6 @@
 import '../../../../shared/formatters/display_number_formatter.dart';
 import 'package:flutter/material.dart';
+import '../widgets/ownership_notice_title.dart';
 import '../../../../shared/formatters/local_date_time_formatter.dart';
 import '../../domain/account_read_session.dart';
 import '../../domain/server_account_models.dart';
@@ -162,7 +163,7 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
   Widget build(BuildContext context) {
     final writes = widget.writes;
     return Scaffold(
-      appBar: AppBar(title: const Text('원정대 관리')),
+      appBar: AppBar(title: const OwnershipNoticeTitle(child: Text('원정대 관리'))),
       body: !widget.session.isAuthenticated
           ? Center(
               child: TextButton(

@@ -1,6 +1,7 @@
 import '../../../../shared/formatters/display_number_formatter.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../widgets/ownership_notice_title.dart';
 import '../../../../shared/diagnostics/ui_timing.dart';
 import '../../../../shared/formatters/local_date_time_formatter.dart';
 
@@ -189,7 +190,7 @@ class MemberAccountPage extends StatelessWidget {
       builder: (context, _) => UiTiming.measure(UiWork.pageWidgets, () {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('내 계정'),
+            title: const OwnershipNoticeTitle(child: Text('내 계정')),
             flexibleSpace: IgnorePointer(
               child: Align(
                 alignment: Alignment.bottomCenter,
@@ -1081,7 +1082,11 @@ class MemberCharacterPage extends StatelessWidget {
     builder: (context, _) {
       final row = model.character(ref);
       return Scaffold(
-        appBar: AppBar(title: Text(row?.observation.characterName ?? '캐릭터')),
+        appBar: AppBar(
+          title: OwnershipNoticeTitle(
+            child: Text(row?.observation.characterName ?? '캐릭터'),
+          ),
+        ),
         body: row == null || !model.detailsAvailable(ref)
             ? const Center(
                 child: Text('현재 소유와 캐릭터 사용 자격을 확인한 후 상세 정보를 볼 수 있습니다.'),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../account/presentation/widgets/ownership_notice_title.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../operator_access/domain/repositories/operator_access_repository.dart';
@@ -23,7 +24,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('설정')),
+      appBar: AppBar(title: const OwnershipNoticeTitle(child: Text('설정'))),
       body: ListView(
         children: [
           if (widget.auth case final auth?)

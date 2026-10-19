@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ownership_notice_title.dart';
 
 import '../../../../shared/widgets/clearable_text_form_field.dart';
 
@@ -106,7 +107,7 @@ class _ApiTokenSettingsPageState extends State<ApiTokenSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('API 토큰')),
+      appBar: AppBar(title: const OwnershipNoticeTitle(child: Text('API 토큰'))),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),

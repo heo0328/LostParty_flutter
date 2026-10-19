@@ -1,5 +1,6 @@
 import '../../../../shared/formatters/display_number_formatter.dart';
 import 'package:flutter/material.dart';
+import '../widgets/ownership_notice_title.dart';
 import '../../../../shared/formatters/local_date_time_formatter.dart';
 
 import '../../domain/account_read_session.dart';
@@ -70,7 +71,7 @@ class _ServerAccountCharactersPageState
     listenable: viewModel,
     builder: (context, _) => Scaffold(
       appBar: AppBar(
-        title: const Text('원정대 캐릭터'),
+        title: const OwnershipNoticeTitle(child: Text('원정대 캐릭터')),
         actions: [
           IconButton(
             tooltip: '캐릭터 다시 조회',

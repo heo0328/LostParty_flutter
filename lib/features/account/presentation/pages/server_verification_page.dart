@@ -2,6 +2,7 @@ import '../../../../shared/formatters/display_number_formatter.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../widgets/ownership_notice_title.dart';
 
 import '../../domain/account_read_session.dart';
 import '../../domain/server_account_read_repository.dart';
@@ -9,6 +10,8 @@ import '../../domain/server_account_verification.dart';
 import '../viewmodels/server_verification_selection_view_model.dart';
 import '../viewmodels/server_verification_view_model.dart';
 import '../widgets/server_accounts_panel.dart';
+import '../viewmodels/ownership_dispute_controller.dart';
+import 'ownership_verification_body.dart';
 
 class ServerVerificationPage extends StatefulWidget {
   const ServerVerificationPage({
@@ -20,9 +23,14 @@ class ServerVerificationPage extends StatefulWidget {
     this.onVerifiedRegistration,
     this.onCompleted,
     this.onRegister,
+    this.ownership,
+    this.proofId,
+    this.disputeId,
     super.key,
   });
   final ServerVerificationViewModel model;
+  final OwnershipDisputeController? ownership;
+  final String? proofId, disputeId;
   final ServerAccountReadRepository accounts;
   final VoidCallback onLogin;
   final Future<void> Function() onVerified;
@@ -46,10 +54,18 @@ class _ServerVerificationPageState extends State<ServerVerificationPage>
   bool _dialogOpen = false;
   bool _handoffBusy = false, _handoffFailed = false;
   bool _handledAlreadyVerified = false;
+  late bool _legacy;
 
   @override
   void initState() {
     super.initState();
+    _legacy =
+        widget.ownership == null ||
+        widget.model.hasPending ||
+        (widget.model.hasChallenge &&
+            (widget.model.value == null ||
+                widget.model.value?.status ==
+                    ServerVerificationStatus.pending));
     WidgetsBinding.instance.addObserver(this);
     _scope = (widget.model.session.userId, widget.model.session.generation);
     // App-owned verification state may still contain an earlier success.
@@ -63,10 +79,24 @@ class _ServerVerificationPageState extends State<ServerVerificationPage>
     );
     _accounts.addListener(_changed);
     widget.model.addListener(_changed);
-    if (widget.model.canReload) unawaited(widget.model.reload());
+    if (_legacy && widget.model.canReload) unawaited(widget.model.reload());
   }
 
   void _changed() {
+    if (_legacy &&
+        widget.ownership != null &&
+        !widget.model.hasPending &&
+        !widget.model.busy &&
+        {
+          ServerVerificationStatus.cancelled,
+          ServerVerificationStatus.expired,
+        }.contains(widget.model.value?.status)) {
+      _legacy = false;
+    }
+    if (!_legacy) {
+      if (mounted) setState(() {});
+      return;
+    }
     final scope = (
       widget.model.session.userId,
       widget.model.session.generation,
@@ -227,7 +257,9 @@ class _ServerVerificationPageState extends State<ServerVerificationPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && widget.model.canReload) {
+    if (_legacy &&
+        state == AppLifecycleState.resumed &&
+        widget.model.canReload) {
       unawaited(widget.model.reload());
     }
   }
@@ -244,6 +276,25 @@ class _ServerVerificationPageState extends State<ServerVerificationPage>
 
   @override
   Widget build(BuildContext context) {
+    if (!_legacy) {
+      return OwnershipVerificationBody(
+        key: ValueKey((
+          widget.initialRegistrationId,
+          widget.proofId,
+          widget.disputeId,
+        )),
+        controller: widget.ownership!,
+        proofId: widget.proofId,
+        disputeId: widget.disputeId,
+        registrationId: widget.initialRegistrationId,
+        selection: _accounts,
+        onLogin: widget.onLogin,
+        onVerified: widget.onVerified,
+        onVerifiedRegistration: widget.onVerifiedRegistration,
+        onCompleted: widget.onCompleted,
+        onRegister: widget.onRegister,
+      );
+    }
     final model = widget.model, snapshot = model.value;
     final available = _accounts.registrations;
     final selected =
@@ -251,7 +302,7 @@ class _ServerVerificationPageState extends State<ServerVerificationPage>
         ? _accounts.registrationId
         : null;
     return Scaffold(
-      appBar: AppBar(title: const Text('원정대 인증')),
+      appBar: AppBar(title: const OwnershipNoticeTitle(child: Text('원정대 인증'))),
       body: !model.signedIn
           ? Center(
               child: FilledButton(

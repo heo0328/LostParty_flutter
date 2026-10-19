@@ -2,6 +2,7 @@ import '../widgets/roster_account_header.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../widgets/ownership_notice_title.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../shared/formatters/display_number_formatter.dart';
@@ -437,7 +438,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: OwnershipNoticeTitle(child: Text(widget.title)),
         actions: [
           IconButton(
             key: const ValueKey('myAccountSettingsButton'),

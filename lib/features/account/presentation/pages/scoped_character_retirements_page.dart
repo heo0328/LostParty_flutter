@@ -2,6 +2,7 @@ import '../../../../shared/formatters/display_number_formatter.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../widgets/ownership_notice_title.dart';
 
 import '../../domain/account_read_session.dart';
 import '../viewmodels/scoped_account_view_model.dart';
@@ -66,7 +67,7 @@ class _ScopedCharacterRetirementsPageState
       final busy = h.loading || m.historyRetrySeconds > 0;
       return Scaffold(
         appBar: AppBar(
-          title: const Text('사라진 캐릭터명 기록'),
+          title: const OwnershipNoticeTitle(child: Text('사라진 캐릭터명 기록')),
           actions: [
             IconButton(
               tooltip: '이력 처음부터 다시 조회',

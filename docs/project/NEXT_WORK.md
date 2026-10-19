@@ -1,42 +1,35 @@
-# NEXT WORK — 현재 구간 마감 및 다음 작업 분리
+# NEXT WORK — 분쟁 구현 마감·분리된 후속
 
-## 이번 지시: 기능 브랜치 마감·dev/main 동일 시점 통합
+## 현재 기준
 
-2026-10-18 사용자가 `feature/scoped-account-cache`의 문서 최신화·커밋·푸시·dev 병합과 main 동일 시점 반영을 승인했다. 현재 개발 체크포인트 통합이며 서비스 운영 배포/DB 초기화나 미완료 기능의 완료 승인이 아니다. 실제 최종 SHA/원격 동기화는 Git 확인 결과를 따른다.
+2026-10-19 사용자 승인으로 원정대 인증·분쟁 V2 D1~D4 구현 구간을 마감하고 dev에 통합한다. Backend 작업으로 현재 분쟁 결과의 실서버·디바이스 검증은 불가능하므로 차후 인수로 분리했다. 실기기 통과를 뜻하지 않으며, 인수 대기만으로 현재 브랜치를 계속 열린 구현 작업으로 두지 않는다. 최종 커밋·dev/push 근거는 DEV_LOG를 따른다.
 
-구현 마감 `54bacd2`는 원격 feature에 보존했고 [Issue8 시간순151번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6248792000)로 인계했다. 이번 문서 마감까지 포함한 동일 커밋을 dev/main에 반영한다. 아래 다음 독립 작업은 이번 마감에 착수하지 않는다.
+- 공식 추적 [Issue15](https://github.com/heo0328/lostparty-backend/issues/15), 구현/계약과 후속 체크는 [설계36](../backend-migration/36-roster-ownership-dispute-flutter-design.md#9-backend-준비-후-후속-실기기-인수).
+- 검증은 D1~D4 직접 영향 테스트·변경 파일 분석 결과를 재사용한다. D4 최종68고유PASS·변경18파일분석0, 코드 변경 없이 문서/Git만 마감하므로 Flutter 시험을 반복하지 않는다.
+- 기존 UI·V1 미완료·회원/환경/명령 복구·현재 GET 후 소유 반영과 PARTY_IMPACT_REVIEW_REQUIRED 안전 보류를 보존한다. 배포·DB 변경/자료 삭제·기기 설치/조작·main 반영은 이번 지시에 포함하지 않는다.
+- 사용자 백업/tools/DevTools/플랫폼 생성 변경 및 별도 통계 문서 변경은 소유를 보존해 현재 분쟁 커밋에서 제외한다.
 
-이번 완료 범위는 회원별 캐시·서버 목록/요약/표시 복원, 기존 계정 관리·대표/활동 선택, 주간 체크 연결, 앱 수명 자동 갱신/최대2worker, 일괄 조회, 정적 로딩 이미지4초 전환과 debug 진단이다. 동작·검증·사용자 관찰은 [DEV_LOG](DEV_LOG.md) 최신 마감 절과 [저장 계약30](../backend-migration/30-scoped-storage-write-contract.md)에 기록한다. 성능 추가 개선은 사용자 지시로 보류했다.
+## 다음 독립 작업 후보 — Issue13 Q1~Q3 검토
 
-- 일괄 API 원본: Backend `8d03e962b48917c4b0f0dec28d285ca993b9de2d`, [Issue8 시간순146번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6247620588).
-- 실제 기기 비교: 기록 Backend76→29요청, 기본/주간 단계합4661→2883ms. 단일 비교이며 첫paint/평균 성능이 아니다. 사용자 개선 수용·4초 진입 수용 기록은 DEV_LOG.
-- 본인 서버 일괄 저장 조회는1회, 첫 카탈로그와 실제 LostArk 목록·상세 검사/개별 쓰기는 별도다. 404/명시 상한·크기409만 기존 경로 대체. 로그인/회원/소유·revision·pending/outbox 보호를 유지한다.
-- 남은 UI긴프레임/동기분석 부담은 진단으로 관측했지만 최적화하지 않았다. debug 로그는 보존하고 이를 이유로 V2 기능 구현을 지연하지 않는다.
-- 사용자 백업/DevTools/tools와 기존 플랫폼 생성 파일3개는 커밋에서 제외해 보존한다. 작업 브랜치는 통합 뒤 보존·삭제 후보이며 임의 삭제하지 않는다.
+아직 착수하지 않았다. 별도 작업 승인이 있으면 적합한 목적 브랜치를 확인한 뒤 기존 문서/코드와 대조하는 검토만 진행한다. 분쟁 브랜치에 모집 기능 구현을 섞지 않는다.
 
-## 다음 독립 작업 — 원정대 인증·분쟁 V2 Flutter 연결
+- 근거: [#13 시간순12번째 계약 제안](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6259336924), [13번째 F1 내부 기반 보고](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6259515470).
+- Q1: 종료 미정·주차를 넘는 일정의 기존 소비/사용자 흐름과 초기 지원 범위 대조.
+- Q2: 딜러·서포터 최소 전투력의 실제 수치·출처 대조. 임의 P1 분석값을 서버 검증 증거로 사용하지 않는다.
+- Q3: 그룹 탈퇴 후 기존 방 잔류·조회·탈퇴/파티장 이전의 권한/최소 회복 범위 대조.
+- 완료 조건: 기존 확정 정책과 충돌하는 지점/기존 기준으로 회신 가능한 내용/사용자 새 결정 필요 항목을 분리해 #13에 회신한다. 신규 API/Flutter 구현·실기기 시험·정책 임의 확정은 제외한다.
 
-**담당 Flutter / 상태 미착수.** 새 작업은 새 브랜치와 새 이슈로 구분한다. 예정 이름은 `feature/roster-ownership-dispute`, 제목은 ‘원정대 인증 V2·진행 복원·24시간 도전/방어 Flutter 연결’이다. 아직 생성하지 않았으며 이번 마감에서 V2 구현을 시작하지 않는다. 기존 #8은 계약/구현 출처로 연결하고, 후속 이슈가 실제 생성되면 링크와 범위 이관을 기록한다. #8 종료는 별도 승인 없이 하지 않는다.
+## 후속 인수 — 현재 구현 마감과 분리
 
-### 근거·포함 범위
-
-- Backend [#8 시간순144번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6245920315), 구현/계약 `7ba6297c5a574aa14c214bb9d3bf30edb692fc8f`. 실제 OpenAPI 원본을 다음 착수 시 최신 인계와 대조한다. 구현된 서버를 다시 만들거나 기초 로그인/키/첫 인증 시험을 반복하는 작업이 아니다.
-- V2 strict DTO/명령·회원 수명 VM/라우터 연결: 진행 proof 목록 발견→현재 조회→새 기기/앱 재실행 복원, 같은 미확정 명령 key/body 유지. V1 DTO와 분리한다.
-- 타소유 원정대의 장비 확인 성공 후24시간 도전, 양측 목록/상세·현재기한/actions, 같은 원정대의 다른 유효 캐릭터 명시 방어. 1700/활동/표시를 방어 조건으로 추가하지 않는다.
-- 최대3건/같은 현재소유권 일괄방어·선성립 우선/공통기한·예약ACK와최종소유결과 구분, 이전회원/관찰 세대의 늦은 결과 차단. 상세는 [인증 계약28](../backend-migration/28-verification-client-preparation.md).
-- 앱내 방어 안내/진입은 기존 요구이며 구체 배치는 기존 타이틀/뒤로가기/본문을 보존해 최소 UX 설계 후 확정한다. 원래 사용자 ‘바로 구현 아님’ 범위를 무시하지 않는다.
-
-### 순서·완료 조건
-
-1. 목적 브랜치·전용 이슈의 범위/담당/완료 조건을 확정하고 #8 출처 링크를 연결한다.
-2. 고정 실행 OpenAPI의 DTO/nullable/actions/오류·proof/분쟁 발견 계약을 대조하고 기존 화면 보호 목록을 기록한다.
-3. 명령·불명확 결과 복원 → 기존 화면 최소 연결 → 주어진 API를 사용한 방어 안내 연결 순서로 진행한다.
-4. 회원/권한/기한/중복/late 응답 등 필요한 표적 검증, 사용자 기기 확인은 기능 구간 완료 후 묶어 진행한다.
-5. 새 이슈에 실제 SHA/푸시·미확인 범위를 회신하고 별도 통합한다.
-
-외부push·운영자고정/Discord 도구·파티 전체 후처리·성능 리팩터링·DB초기화·자료이전·운영배포는 포함하지 않는다. 실제 active 파티의 room 후처리 adapter가 없으면 서버가 PARTY_IMPACT_REVIEW_REQUIRED로 보류한다. 파티 경고/회원 자리 유지·본인 유효 캐릭터 교체는 모집/파티 기능에서 별도 연결한다.
+담당은 Backend 준비 후 사용자 실제 조작, Flutter는 결과 기록과 발견된 문제의 최소 수정이다. 재개 시 최신 실행 Backend 계약·사용자 인수 가능 상태를 확인하고 [설계36 §9](../backend-migration/36-roster-ownership-dispute-flutter-design.md#9-backend-준비-후-후속-실기기-인수)의 한 묶음을 사용한다. 실제 장비·24시간/공통기한·일괄 방어·새 기기/재실행·계정 전환·좁은 화면/큰 글꼴은 아직 통과하지 않았다. 이미 통과한 기존 정상 흐름은 반복 요구하지 않는다.
 
 ## 분리된 후속 대장
+
+2026-10-19 협업 회신 게시·재조회 완료: [G1/G2 #12](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6259124455), [모집 #13](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6259125080), [G3 #16](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6259125692), [소멸/이름재사용 #17](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6259126286), [첫 기준레벨/수동 제외 #18](https://github.com/heo0328/lostparty-backend/issues/18#issuecomment-6259126990), [통계 #19](https://github.com/heo0328/lostparty-backend/issues/19#issuecomment-6259127594). 현재 #15는 D1~D4 코드/자동 검증을 마쳤고 실제 인수 대기다.
+
+- G1/G2는 Backend 통합 보고를 접수했으며 Flutter 연결은 미완료다. G3 고정 `332a8ab9697ca1a8e0d2ebcc147169c54ce9161c`의 SPEC/OpenAPI와 기존 그룹장 계약을 대조했다. 최소 ACK→현재 GET·즉시 이전 후 별도 탈퇴를 소비하며 실제 모집 원천 전 조건부 해산은 비활성이다. G3는 Backend 작업 브랜치 push 완료·main/dev 미통합 보고 상태다.
+- #17은 Backend의 소멸 근거/한계와 최소 계약 검토, #18은 영속 정책/DTO·동시성 초안 인계가 다음 행동이다. 자료 삭제나 과거 미선택 일괄 활성화는 승인하지 않았다.
+- #19는 Backend 최종 초안에서 확정 기준과 제안을 분리해 예시를 제시한 뒤 검토한다. 최초 참가 type 고정·함께 집계의 경계 참가/해산 조건·평균 분모·그룹 조회 권한 상세는 미확정이며 #13 독립 구현을 차단하지 않는다.
 
 | 범위 | 현재 상태/다음 행동 |
 |---|---|

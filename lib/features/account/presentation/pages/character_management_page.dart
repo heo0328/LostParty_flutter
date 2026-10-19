@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ownership_notice_title.dart';
 import '../widgets/character_name_label.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -111,7 +112,7 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
     final account = _viewModel.account;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('캐릭터 관리'),
+        title: const OwnershipNoticeTitle(child: Text('캐릭터 관리')),
         actions: [
           if (widget.managementGateway != null)
             IconButton(
