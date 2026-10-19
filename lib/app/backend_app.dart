@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'account_session_view.dart';
 
 import '../features/auth/data/android_google_authentication_gateway.dart';
 import '../features/auth/data/auth_session_store.dart';
@@ -459,37 +460,40 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
               routes: [
                 GoRoute(
                   path: '/account',
-                  builder: (context, _) =>
-                      _memberAccount != null && readSession.isAuthenticated
-                      ? MemberAccountPage(
-                          model: _memberAccount!.model,
-                          weekly: _memberAccount!.weekly,
-                          settings: _memberSettings!,
-                          onSettings: () => context.push('/settings'),
-                          onKey: () => context.push('/settings/api-token'),
-                          onVerify: () => context.push(
-                            '/settings/game-account-verification',
-                          ),
-                          onManage: () => manageServerAccounts(context),
-                          automaticRefreshAvailable:
-                              _memberAccount!.automaticRefreshEnabled,
-                          onEdit: (id) => editServerAccount(context, id),
-                          onVerifyRegistration: (id) => context
-                              .push(
-                                '/settings/game-account-verification?registrationId=$id',
-                              )
-                              .then((_) async {
-                                if (readSession.isAuthenticated) {
-                                  await _memberAccount?.model.refresh();
-                                }
-                              }),
-                          onHistory: () =>
-                              context.push('/account/character-retirements'),
-                          onServerStatus: (id) =>
-                              context.push('/account/server/$id'),
-                          onCharacters: (id) => openCharacters(context, id),
-                        )
-                      : localAccounts(context),
+                  builder: (context, _) => AccountSessionView(
+                    session: readSession,
+                    localBuilder: localAccounts,
+                    memberBuilder: _memberAccount != null
+                        ? (context) => MemberAccountPage(
+                            model: _memberAccount!.model,
+                            weekly: _memberAccount!.weekly,
+                            settings: _memberSettings!,
+                            onSettings: () => context.push('/settings'),
+                            onKey: () => context.push('/settings/api-token'),
+                            onVerify: () => context.push(
+                              '/settings/game-account-verification',
+                            ),
+                            onManage: () => manageServerAccounts(context),
+                            automaticRefreshAvailable:
+                                _memberAccount!.automaticRefreshEnabled,
+                            onEdit: (id) => editServerAccount(context, id),
+                            onVerifyRegistration: (id) => context
+                                .push(
+                                  '/settings/game-account-verification?registrationId=$id',
+                                )
+                                .then((_) async {
+                                  if (readSession.isAuthenticated) {
+                                    await _memberAccount?.model.refresh();
+                                  }
+                                }),
+                            onHistory: () =>
+                                context.push('/account/character-retirements'),
+                            onServerStatus: (id) =>
+                                context.push('/account/server/$id'),
+                            onCharacters: (id) => openCharacters(context, id),
+                          )
+                        : null,
+                  ),
                   routes: [
                     GoRoute(
                       path: 'server-management',
