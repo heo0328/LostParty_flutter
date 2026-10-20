@@ -304,6 +304,17 @@ class MemberAccountPage extends StatelessWidget {
   );
   Widget _progress(BuildContext context) {
     final r = model.runner, cooldown = r.source.cooldown;
+    if (model.automaticRefreshResultHidden) {
+      return Align(
+        alignment: Alignment.centerRight,
+        child: TextButton.icon(
+          key: const ValueKey('show-automatic-refresh-result'),
+          onPressed: model.showAutomaticRefreshResult,
+          icon: const Icon(Icons.history, size: 18),
+          label: const Text('자동 갱신 결과 보기'),
+        ),
+      );
+    }
     final title = switch (r.phase) {
       ScopedRefreshPhase.preparing => '자동 갱신 준비 중',
       ScopedRefreshPhase.running => '캐릭터 자동 갱신 중',
@@ -317,7 +328,23 @@ class MemberAccountPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                if (model.canDismissAutomaticRefreshResult)
+                  IconButton(
+                    key: const ValueKey('dismiss-automatic-refresh-result'),
+                    onPressed: model.dismissAutomaticRefreshResult,
+                    icon: const Icon(Icons.close),
+                    tooltip: '결과 닫기',
+                  ),
+              ],
+            ),
             if (r.isBusy) const LinearProgressIndicator(),
             if (r.rosterProgress.isNotEmpty) ...[
               Text(

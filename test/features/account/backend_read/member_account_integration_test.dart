@@ -452,6 +452,56 @@ void main() {
     await until(() => !model.loading && !controller.isBusy);
   }
 
+  test(
+    'closing a completed result is presentation only even during another API read',
+    () async {
+      failPut = true;
+      await run();
+      expect(controller.pendingServerCount, greaterThan(0));
+      expect(model.canDismissAutomaticRefreshResult, isTrue);
+      final retainedItems = controller.items;
+      final phase = controller.phase;
+      final pending = controller.pendingServerCount;
+      final retryable = controller.canRetryServer;
+      final entered = Completer<void>(), release = Completer<void>();
+      addTearDown(() {
+        if (!release.isCompleted) release.complete();
+      });
+      apiRespond = (r) async {
+        if (r.path == '/v1/me/game-accounts' && !entered.isCompleted) {
+          entered.complete();
+          await release.future;
+        }
+        return serve(r);
+      };
+      final reading = model.refresh();
+      await entered.future;
+      expect(model.loading, isTrue);
+      final callsBeforeClose = apiCalls.length,
+          providerBeforeClose = armoryCalls.length;
+      model.dismissAutomaticRefreshResult();
+      expect(model.automaticRefreshResultHidden, isTrue);
+      expect(controller.phase, phase);
+      expect(controller.items, retainedItems);
+      expect(controller.pendingServerCount, pending);
+      expect(controller.canRetryServer, retryable);
+      expect(apiCalls, hasLength(callsBeforeClose));
+      expect(armoryCalls, hasLength(providerBeforeClose));
+      model.showAutomaticRefreshResult();
+      expect(model.automaticRefreshResultHidden, isFalse);
+      model.dismissAutomaticRefreshResult();
+      release.complete();
+      await reading;
+      expect(model.automaticRefreshResultHidden, isTrue);
+      failPut = false;
+      await controller.retryServerSaved();
+      expect(model.automaticRefreshResultHidden, isFalse);
+      model.dismissAutomaticRefreshResult();
+      session.change(authenticated: false);
+      expect(model.automaticRefreshResultHidden, isFalse);
+    },
+  );
+
   void restorationOnly() {
     final remote = binding.source.remote;
     binding.dispose();

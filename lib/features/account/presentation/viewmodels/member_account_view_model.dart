@@ -18,6 +18,7 @@ import '../../domain/entities/character_build_analysis.dart';
 import '../../domain/entities/character_build_role.dart';
 import '../../domain/role_summary.dart';
 import '../../domain/scoped_cache_models.dart';
+import '../../domain/scoped_startup_refresh.dart';
 import '../../domain/services/scoped_account_presentation.dart';
 import '../../domain/services/character_usage_level_policy.dart';
 import 'scoped_startup_refresh_controller.dart';
@@ -165,6 +166,25 @@ class MemberAccountViewModel extends ChangeNotifier {
       _wasGate = false;
   bool _initialDisplayReady = false;
   bool get initialDisplayReady => _initialDisplayReady;
+  bool _automaticRefreshResultHidden = false;
+  bool get canDismissAutomaticRefreshResult =>
+      !_disposed && runner.phase == ScopedRefreshPhase.completed;
+  bool get automaticRefreshResultHidden =>
+      canDismissAutomaticRefreshResult && _automaticRefreshResultHidden;
+
+  // Presentation only: never signal the runner or mutate its retained result.
+  void dismissAutomaticRefreshResult() {
+    if (!canDismissAutomaticRefreshResult) return;
+    _automaticRefreshResultHidden = true;
+    _emit();
+  }
+
+  void showAutomaticRefreshResult() {
+    if (_disposed) return;
+    _automaticRefreshResultHidden = false;
+    _emit();
+  }
+
   int _epoch = 0;
   Future<void>? _flight;
   final Map<String, Future<void>> _writes = {};
@@ -311,6 +331,7 @@ class MemberAccountViewModel extends ChangeNotifier {
     if (next == _session) return;
     _session = next;
     _initialDisplayReady = false;
+    _automaticRefreshResultHidden = false;
     _epoch++;
     _backgroundEpoch++;
     restoring = false;
@@ -347,6 +368,7 @@ class MemberAccountViewModel extends ChangeNotifier {
 
   void _runnerChanged() {
     final busy = runner.isBusy;
+    if (busy) _automaticRefreshResultHidden = false;
     if (!busy && _wasRunnerBusy && runner.consumed && signedIn) {
       if (_flight != null) {
         _refreshAfter = true;

@@ -52,6 +52,7 @@ class CharacterManagementPage extends StatefulWidget {
 
 class _CharacterManagementPageState extends State<CharacterManagementPage> {
   late final CharacterManagementViewModel _viewModel;
+  bool _completingSave = false;
 
   @override
   void initState() {
@@ -78,6 +79,27 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
   void _onChanged() {
     if (mounted) {
       setState(() {});
+    }
+  }
+
+  void _close() {
+    if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+      Navigator.of(context).maybePop();
+    }
+  }
+
+  Future<void> _saveAndClose() async {
+    if (_completingSave || !_viewModel.canSave) return;
+    setState(() => _completingSave = true);
+    final gateway = widget.managementGateway;
+    bool current() => mounted && (gateway == null || gateway.current);
+    try {
+      await _viewModel.save();
+      if (!current() || _viewModel.message != null) return;
+      if (gateway != null) await widget.onSaved?.call();
+      if (current()) _close();
+    } finally {
+      if (mounted) setState(() => _completingSave = false);
     }
   }
 
@@ -317,10 +339,12 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed:
-                      !_viewModel.canEditDraft || !_viewModel.hasUnsavedChanges
+                  onPressed: !_viewModel.canEditDraft || _completingSave
                       ? null
-                      : _viewModel.discardChanges,
+                      : () {
+                          _viewModel.discardChanges();
+                          _close();
+                        },
                   child: const Text('취소'),
                 ),
               ),
@@ -328,15 +352,8 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
               Expanded(
                 child: FilledButton(
                   key: const ValueKey('characterManagementSaveButton'),
-                  onPressed: _viewModel.canSave
-                      ? () async {
-                          await _viewModel.save();
-                          if (mounted &&
-                              _viewModel.message == null &&
-                              widget.managementGateway?.current == true) {
-                            await widget.onSaved?.call();
-                          }
-                        }
+                  onPressed: _viewModel.canSave && !_completingSave
+                      ? _saveAndClose
                       : null,
                   child: const Text('저장'),
                 ),

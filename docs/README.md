@@ -18,7 +18,7 @@
 
 ## Backend 선행 API 분야별 요청
 
-현재 #13은 [Backend R5 인계](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6287055201)의66244da 기준 내 계정 개인 시간표 카드·GET/PUT·앱DI 연결을 구현했다. 고유48PASS/변경9파일분석0·시간 설정 기능 커밋 보관/미push·dev미반영, [구현·검증 회신](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6287470514) 완료·실서버/기기 인수 대기다. [필터 입력 회신](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6287178945)에 따른 Backend 정렬·자리 wire/커서 보완 및 Flutter 모집 생성/상세·방표/예약 연결은 남았다. `feature/raid-recruitment-scheduling` 유지·최신 근거는 [설계37 §34](backend-migration/37-raid-scheduling-and-multi-raid-planning.md), 다음은 NEXT_WORK다. Penpot03은 사용자 승인으로 디자인 참고 기준이며 원본 편집은 하지 않았다.
+현재 #13은 Backend66244da 기준 내 계정 개인 시간표 카드·GET/PUT·앱DI 연결을 구현했다. 고유48PASS/변경9파일분석0·로컬 커밋6ecb81d/미push·dev미반영이다. 최초 등록·수정·동일 일자 추가·재시작 후 동일 계정 복원은 [사용자 수동 확인 결과](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6291576691)로 기록했다. 다른 기기 복원도 통과했으며 와이파이 전환 후 마지막 저장 데이터 정상 기록은 사용자 관찰로 추가했다(상세 DEV_LOG). 회원 격리·익일24h·취소/실패 복구 세부 경계는 미확인이다. [Backend61번째 검색 보완](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6291232832)의 cc003e9를 수신했으며 Flutter 검색 매핑·모집 생성/상세·방표/예약 연결은 남았다. `feature/raid-recruitment-scheduling` 유지·최신 근거는 [설계37 §34](backend-migration/37-raid-scheduling-and-multi-raid-planning.md), 다음은 NEXT_WORK다. Penpot03은 사용자 승인으로 디자인 참고 기준이며 원본 편집은 하지 않았다.
 
 - [이전 축소 1차 계획 기록38](backend-migration/38-account-availability-and-role-power-phase1.md): 폐기된 범위의 변경 이력. 현재 통합 목표와 UI 선행/계약 대조는 설계37 §24/NEXT_WORK를 따른다.
 
