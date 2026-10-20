@@ -1,14 +1,21 @@
-# NEXT WORK — 통합 모집·일정 / 내 계정 시간 설정 UI 선행
+# NEXT WORK — 통합 모집·일정 / Backend 구현 인계 대기
 
-기준: 2026-10-20. 통합 목표는 유지하고 첫 구현 구간으로 **내 계정 시간 설정 UI 미리보기**를 진행한다. 협의문서50286b3의dev통합/push·원격일치확인을마쳤다. 마감기록까지dev반영후 `feature/raid-recruitment-scheduling`을분기한다. 서버 계약/실제 저장은 별도 대조가 남아 있다.
+기준: 2026-10-20. 현재는 **Backend R3~R5 구현·통합 인계 대기**다. 통합 목표를 유지하며 `feature/raid-recruitment-scheduling`을 사용한다. 협의문서50286b3·마감6d3f617은 dev 통합/push 완료, 이후 소비 대조와 디자인 기록은 현재 브랜치의 문서 커밋으로 보관한다. 내 계정 시간 설정 메모리 UI 선행은 승인된 선택지이나 아직 구현하지 않았다. 문서 커밋을 UI/통합 기능 완료로 표시하지 않는다.
 
 ## 기준과 상태
 
-- [설계37](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)의상단최신표·§19~22가제품기준,§23이40번째전체대조,§24가이번마감/디자인/구현인계다. [설계38](../backend-migration/38-account-availability-and-role-power-phase1.md)은폐기된축소계획의변경이력이다.
-- Penpot ‘LostParty 앱 디자인’/‘03 변경 예정·흐름’/‘내 계정 시간 설정·변경안v2·2026-10-20’의접힘·편집·익일휠·실패초안4상태를읽기검수했다. 파일·page/board UUID는설계37 §24.2다. Penpot파일수정없음.
-- [Backend43번째 R0초안](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6271860507)35dd5f9/feat/raid-recruitment 로컬·미push 보고수신. 실제Router/DI/Repository·구자료대조/전체소비회신미완료,최종API활성화아니다. [직전40번째대조회신](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6271574011)과구분한다.
+- [설계37](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)의 상단표·§19~22·§27~28이 제품 기준이다. §27의 사용자 결정과 §28의 N1 확정이 앞선 G 미정/반대 추천보다 우선한다. §24는 UI 인계, §25~26·28은 소비 대조다. [설계38](../backend-migration/38-account-availability-and-role-power-phase1.md)은 폐기된 축소계획의 이력이다.
+- Penpot 내 계정 시간 설정의 접힘·편집·익일휠·실패초안4상태는 읽기 검수만 했다. 내 계정 보드 원본/UUID는 설계37 §24.2, 모집v2 직접 수정은 §30~31.1이다. 모집은 현재27개 화면/상태·기존3페이지 유지다. 필터는 인라인 단일 펼침과 즉시 노출 다중선택, 앱 Material 접힘/펼침 아이콘을 사용한다. Flutter 코드 구현 완료가 아니다.
+- [50번째 보완4판](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6283620362)의 필터/명령context를 대조하고 [마감회신6283811575](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6283811575)을 게시했다. 제시 제품 결정과 두 기술 경계 설계 대조는 완료다. Backend의 정확한 OpenAPI/구현·측정 인계 대기이며 최종 API 동작 인수는 아니다. 상세는 §29다.
+- 최신 확인은 [Backend56번째 R2-C](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6285392591), 841503d/feat/raid-recruitment 로컬·미push 보고다. R1-A/B·R2-A/B/C의 저장/참가 내부 기반과 미활성 HTTP 구현 보고를 수신했다. 일정이 완전 미정인 경로만 성공하며 일정 입력은 R3 전503 gate다. 범위 축소나 Flutter 재설계/시험 요청이 아니다. 상세 근거·대기 조건은 설계37 §32다.
 
-## 이번 UI 구간 포함
+## Backend 인계 후 순서
+
+1. Issue13 최신 회신과 실제 전달 commit/push·최종 OpenAPI·API/DB 준비 상태를 확인한다. 미활성 draft나 로컬 테스트 보고만으로 선연결하지 않는다.
+2. 기존 UI/필터·개인표 초안/저장 및 신청·승인/예약·명령 context를 최종 계약에 대조하고 실제 Router/DI adapter 연결 단위를 기록한다. 합의된 제품 결정을 반복 협의하지 않는다.
+3. 승인된 기능 구간을 연결하고 영향 경계의 표적 검증을 묶어 수행한 뒤 사용자 실기기 확인 항목을 전달한다. 정상 UI 검증과 무관한 전체 Flutter 시험을 반복하지 않는다.
+
+## 별도 선행 가능한 내 계정 UI 범위 — 미착수
 
 1. 기존회원계정페이지/테마·인증원정대노출조건·카드/그리드·하단탭을확인하고결과창과메인계정사이에접힌시간카드를배치한다.
 2. 펼칠때기존메모리저장값으로초안생성,수~화선택·요일복수행/+−·5분단위24시간/익일/한구간24h를편집한다. 기존정책을재사용하고미정서버상한을발명하지않는다.
@@ -17,7 +24,7 @@
 
 ## 제외
 
-실제API·DBschema/서버활성화·bootstrap확대·기기설치/자동조작,시간표방복사/예약/투표/모집·그룹API연결,무관개별갱신복구/분쟁·성능개선/통계35,Penpot디자인파일편집. 샘플원정대/시간을실제회원자료처럼끼워넣지않는다. Backend G추천을임의채택하지않는다.
+현재 문서 정리와 UI 선행에서는 실제API·DBschema/서버활성화·bootstrap확대·기기설치/자동조작,시간표방복사/예약/투표/모집·그룹API연결,무관개별갱신복구/분쟁·성능개선/통계35를 제외한다. Penpot 편집은 승인된 모집v2 수정(§30~31.1)까지 완료했으며 임의 추가 편집은 하지 않는다. 샘플원정대/시간을실제회원자료처럼끼워넣지않는다. Backend추천을임의채택하지않는다.
 
 ## 구현 전 조사·검증
 
@@ -28,9 +35,9 @@
 
 ## 병행 후속 계약 대조
 
-Backend R0의G1~G7(타임별투표/N1·마감경계·혼합슬롯/부분완료·choice/자동개시설정·P1nullable버전·기술상한)을추천/사용자결정과구분해실제Router/DI/Repository·구자료에대조한다. UI미리보기는서버계약최종합의게이트의유일한선행허용범위이며실예약/권한기능구현을먼저열지않는다.
+소비 설계 대조는 §29로 마감했다. Backend의 다음 순서는 R3 일정/예약·투표/확인·다음주 → R4 완료/탈퇴·종료/검색·권한/AEAD context → R5 통합 검증·최종 OpenAPI/main/DB·commit/push/원격 확인과 Flutter 인계다. 최종 검색 명세에는 기존 레이드/난이도·정렬/자리 필터를 보존한다. 현재 Flutter에 답변/시험을 요구한 내용은 없어 단순 수신 댓글을 반복 게시하지 않는다. UI 미리보기 선행은 유지하며 실예약/권한 기능은 최종 명세와 연결한다.
 
-## 완료 조건
+## 향후 UI 구간 완료 조건
 
 기존계정UX를보존하면서Penpot4상태와편집동작을직접확인할수있고메모리상태/서버미연결이구분돼야한다. API저장/실예약·통합목표전체완료로보고하지않는다. 완료구간에맞춰검증/미확인과Git상태를기록한다.
 

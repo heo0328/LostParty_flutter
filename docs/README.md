@@ -18,7 +18,7 @@
 
 ## Backend 선행 API 분야별 요청
 
-현재 #13은 [Backend R0계약초안43번째](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6271860507)35dd5f9로컬·미push보고를수신했고최종소비대조/합의가남아있다. 모집·시간설정통합목표를유지하며문서dev통합후 `feature/raid-recruitment-scheduling`에서내계정시간설정UI메모리미리보기를선행한다. 최신제품기준/미정분기는 [설계37 상단표·§19~24](backend-migration/37-raid-scheduling-and-multi-raid-planning.md),실행순서/완료조건은NEXT_WORK다. Penpotv2 4상태읽기검수완료/디자인파일수정없음,실제API·영속저장미연결이다.
+현재 #13은 보완4판의 [소비 설계 대조를 마감](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6283811575)했고 [Backend56번째 R2-C 구현 보고](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6285392591)까지 확인했다. 로컬·미push/미활성 HTTP 보고이며 다음은 R3 → R4 → R5 통합·정확한 OpenAPI/원격 인계다. Flutter 답변/시험 요청은 없고 실제 API 인수는 별도다. `feature/raid-recruitment-scheduling`을 유지하며 내 계정 메모리 UI 선행은 승인됐으나 미착수다. 최신 제품/소비·구현 대기는 [설계37 §27~29·32](backend-migration/37-raid-scheduling-and-multi-raid-planning.md), 실행 순서는 NEXT_WORK다. Penpot 내 계정4상태는 읽기 검수만 했고 모집v2는 직접 수정해27상태/3페이지다(§30~31.1). 실제 Flutter/API·영속 저장은 미연결이다.
 
 - [이전 축소 1차 계획 기록38](backend-migration/38-account-availability-and-role-power-phase1.md): 폐기된 범위의 변경 이력. 현재 통합 목표와 UI 선행/계약 대조는 설계37 §24/NEXT_WORK를 따른다.
 
