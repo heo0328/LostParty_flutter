@@ -1,8 +1,8 @@
 # 모집 조건·플레이 가능 시간·레이드 일정·다중 레이드 요구 정리
 
-2026-10-20 / 상태: **제시 제품 결정·보완4판의 소비 설계 대조 완료, 정확한 OpenAPI/구현 인계 대기, 내 계정 UI 미리보기 선행 승인**. `feature/raid-recruitment-scheduling`에서 모집·시간 설정을 하나의 기능 범위로 진행한다. 기존 정상 UI/UX를 임의 변경하거나 아직 없는 서버 API를 활성화하지 않는다. 최종 API 동작 인수는 별도다.
+2026-10-20 / 상태: **Backend66244da 기준 내 계정 개인표 UI/API·실제DI 구현/자동검증 완료·실서버/기기 인수 대기**. `feature/raid-recruitment-scheduling`에서 모집·시간 설정 통합 목표를 유지한다. 고유48PASS·변경9파일분석0·시간 설정 기능 커밋 보관/미push·dev미반영, 모집방 복사/생성·상세/예약은 미연결이며 전체 통합 완료가 아니다. 최신 구현/경계는 §34다.
 
-Penpot 모집 v2의 최신 배치/다중선택·문구는 §30~31.1, Backend R2-C까지의 구현 보고와 인계 대기는 §32다. 현재 디자인27상태/기존3페이지이며 Flutter 화면 구현/서버 연결 완료는 아니다. 이후 절의 미커밋/미push는 해당 작업 당시 기록이고 현재 Git 정리는 DEV_LOG의 최신 문서 점검 기록을 따른다.
+Penpot 모집 v2의 최신 배치/다중선택·문구는 §30~31.1, Backend R2-C 당시 보고는 §32, 최신 R5 인계·기존 필터 입력 회신과 실제 연결 상태는 §33이다. 현재 디자인27상태/기존3페이지이며 Flutter 화면 구현/서버 연결 완료는 아니다. 이후 절의 미커밋/미push는 해당 작업 당시 기록이고 현재 Git 정리는 DEV_LOG의 최신 문서 점검 기록을 따른다.
 
 ## 현재 기준 — 이 표를 먼저 적용
 
@@ -923,5 +923,45 @@ R2-C의 현재 성공 경로는 schedule_groups=[]인 완전 미정 상태다. i
 2. Backend R4: 나머지 완료/탈퇴·종료, 권한/목록검색과 기존 필터 결합, AEAD 명령 context.
 3. Backend R5: 실제 준비·원본 OpenAPI/main/DB 통합 검증, commit/push·원격 확인과 필요한 Flutter 소비/동작 인계.
 4. Flutter: 인계된 정확한 계약·준비 범위를 확인한 뒤 adapter/Router·UI 연결과 영향 검증을 진행한다. 미활성 draft/로컬 보고만으로 선연결하지 않는다. 승인된 내 계정 메모리 UI 선행은 별도 가능하나 현재 코드 구현은 미착수다.
+
+## 33. Backend R5 인계 수신·실제 Flutter 연결 조사 (2026-10-20)
+
+사용자 요청으로 현재 문서·Issue13 최신 회신과 실제 코드를 조사했다. 기능 코드 구현·실서버/실기기 인수는 수행하지 않았다. §32의 미push·미활성 HTTP/일정503·DB0016은 당시 상태이며 현재 대기로 적용하지 않는다.
+
+- [전체58번째 Backend R5 인계](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6287055201): 구현66244da7201cb115a384f4b712fd56f01adfaed7/feat/raid-recruitment push 보고. 원격 브랜치 HEAD514e465e85e2ec5ca8b8ea6b7f9f246e7f3bf98a는 문서만 변경한 후행 인계 기록임을 GitHub API로 확인했다.
+- 해당 구현 SHA의 원본 openapi/openapi.yaml과 docs/ISSUE_13_R3_R5_IMPLEMENTATION.md를 직접 읽었다. 개인표 GET/PUT, 방 제출표, 생성/참가 context·신청/승인·plan, 일정/투표·확인/예약, 완료/종료·재개/미래선택, 권한 context·검색이 공개 계약에 존재한다. Backend는 개발API8000/DB0023 반영·실행 schema 일치를 보고했다. Flutter에서 실행 서버·DB를 직접 확인한 것은 아니다.
+- Backend 검증은 격리 PostgreSQL/합성 HTTP다. 전체1133PASS/1FAIL 이후 실패한 과거 사용량 기대값 수정·관련75PASS/추가54PASS 보고이며 중복 합산/최종전체1134PASS로 확대하지 않는다. 기존49표 중 game_account_requests는90행 유지/지문차이로 원문동등성 증명 한계가 보고됐다. 실회원 쓰기/기기 인수는 별도다.
+
+### 33.1 기존 필터 입력 회신
+
+[전체57번째 Backend 요청](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6286046186)에 대해 [Flutter 회신6287178945](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6287178945)을 게시·본문 재조회 일치 확인했다. 근거는 raid_list_sort_selection.dart, remaining_slots_filter_selection.dart, raid_list_sort.dart 및 PublicRecruitmentListViewModel._emit과 기존 테스트다. 새 필터 기획이 아니다.
+
+| 기존 로컬 입력 | 의미 |
+|---|---|
+| criterion=memberCount / direction=ascending 또는 descending | 참가 인원 절대값 정렬. 기본descending. 동률은 입력 인덱스 보존이며 별도created_at/id 2차 키는 Flutter가 지정하지 않음 |
+| slotCounts=[] 또는1~7의 집합 | 기본제한없음, 복수선택OR·정확일치. 남은자리=max(0,maxMemberCount-memberCount). 제한없음이면0석도 이 단계에서 유지 |
+| 결합 | 기존 레이드/난이도·그룹/회원/캐릭터 → 남은자리 → 참가인원 정렬. 서버 연결 시 페이지 전 적용·안정 커서가 필요 |
+
+위 키는 로컬 저장 형식이며 기존 서버 wire가 아니다. 파티번호/역할별·직업별 자리 필터는 이 타입에 없다. 구현66244da의 Search에는 정렬·남은자리 입력이 없으므로 Backend가 최종 wire/동률·커서 결합을 반영·검증하고 적용 SHA/실행 API 범위를 회신할 차례다. 이 항목을 전체 검색 완료로 표시하지 않는다.
+
+### 33.2 실제 연결과 다음 작업
+
+- lib/app/backend_app.dart의 /recruitments는 PendingBackendPartyReadRepository·backendConnectionPending=true, create/상세는 pending 화면이다. 기존 생성/상세 파일 존재를 실제 연결로 보지 않는다. 기존 생성 화면의 clock.now()/maxPlayHours=null도 새 일정 입력 구현이 아니다.
+- MemberAccountPage/ViewModel에는 새 개인 시간표 기능이 없다. 인계된 GET/PUT /v1/me/play-availability는 Asia/Seoul, expected_version·Idempotency-Key, weekday/start/end/end_day_offset과 원본/정규화 구간을 제공한다. UI 초안과 서버 정규화 결과를 분리하고 회원/환경 변경·늦은 완료를 보호해야 한다. 요일 정수 의미 등 세부 매핑은 adapter 작성 전 서버 validator/원본 계약에서 확인하며 추정하지 않는다.
+- 기본미정·수동 단일출발/자동조율·개인표와 방제출표 분리, 명시참가의 중복경고/자동후보의 busy 회피, 세션별 정족수·N1명시확인·미동의자초록확인대기/본인확인=예약, 부분완료와 전체종료/다음주선택 분리 등 제품 합의는 유지한다. 오래된 일반 참가 규칙의 전역 시간중복금지를 새 명시참가에 재적용하지 않는다.
+- 제안 순서: 개인 시간카드와 저장경계 → 생성/목록·검색/신청·승인과 실제 Router/DI → 상세의 일정/투표·확인/완료/종료·재개. 각 기능 구간은 별도 포함/제외·회귀 보호와 표적 검증을 먼저 기록하고 연결한다. 이번 조사로 모든 코드를 일괄 구현하거나 기존 메모리 UI 승인을 서버영속구현 완료로 바꾸지 않는다.
+
+다음 Flutter 동작 회신은 실제 사용 Backend SHA·적용/미적용 구간·검증 결과를 구분해 같은 Issue13에 남긴다. 현재는 필터 입력 회신/계약 조사만 완료이며 API 동작·실기기 검증 요청은 연결 구간 완료 후 수행한다. 현재 브랜치 유지·문서 미커밋/미push·dev 미반영, 기존 통계35/플랫폼 생성/백업·tools 변경은 보존한다.
+
+## 34. 내 계정 개인 시간표 UI·API 연결 (2026-10-20)
+
+사용자가 첫 구현 구간 진행을 승인했다. Penpot03의 시안은100%강제 기준이 아니라 의도/디자인 참고이며 기능/계약에 맞춰 조정 가능하다는 사용자 정정을 적용했다. 기존 메모리 미리보기 계획을 현재 인계된 실제 개인표 API 연결로 진행하며 모집 통합 전체로 확장하지 않았다.
+
+- Backend 기준66244da의 availability.py/availability_schemas.py·원본 OpenAPI. ISO월요일1~일요일7, 화면수~화 순서, Asia/Seoul·5분·익일offset0/1·0초과24h이하를 연결한다. 원본 intervals의 편집행은 유지하고 normalized_intervals의 합쳐진 영역으로 대체하지 않는다. 신규요일/추가행은 빈 입력으로 시작한다.
+- BackendMemberAccount가 개인표 ViewModel을 소유하고 기존 AccountReadSession·등록 상세접근 정책을 사용한다. 인증원정대 회원 범위가 준비되면 GET1회, 화면재진입/접기·펼치기에 반복조회하지 않는다. 회원/session 또는 인증상실시 초안/결과/요청 참조를 비우고 늦은응답·이전행 모달 적용을 막는다. 기존 결과영역과 계정카드 사이에 카드만 추가하며 계정카드/주간/자동갱신 수명은 유지한다.
+- 저장은 GET/PUT /v1/me/play-availability의 expected_version·UUIDv4멱등키를 사용한다. 실패초안 유지/결과불명은 같은키·본문 재전송, Retry-After 존중·24h이후 직접재전송금지. 명시 저장값확인으로 최신정보를 읽고 사용자 재저장을 기다린다. 확정409는 자동덮어쓰기/자동재저장하지 않는다. 닫기/탭이동은 실행요청을 취소한 것으로 표시하지 않는다.
+- 개인표 Repository/모델과 카드·시간휠을 분리했다. 신규 localDB/설정파일/상시polling/bootstrap 확대·provider 호출·방제출표/예약 부작용은 없다. API키/나이스단 준비를 개인표 저장 선행조건으로 추가하지 않는다.
+
+자동검증은 신규10PASS/기존계정통합35PASS/세션화면3PASS=고유48PASS·변경9파일분석0·format/diffcheck 통과다. 실제API8000/실회원쓰기·다른기기복원/사용자기기시각·조작은 미확인이다. [Issue13 회신6287470514](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6287470514) 게시/본문재조회 일치. Flutter결과는미커밋/미push이며원격에서소비가능한구현SHA로인계하지않았다. 모집방복사·생성/상세·예약/투표·완료/종료는후속이다. 수동확인/다음행동은NEXT_WORK,검증/장애이력은DEV_LOG를따른다.
 
 최신 보고에는 Flutter 재설계 답변/시험 요청이 없고 기존 제품 결정 회신 대기도 아니다. 현재는 수신 상태를 문서에 반영하며 변화 없는 확인 댓글·재시험 요청을 추가하지 않는다. 이 문서 점검에서는 기능코드/Penpot/서버·DB를 수정하지 않고 기존 통계35/플랫폼 생성·DevTools/백업/tools 변경을 보존한다.

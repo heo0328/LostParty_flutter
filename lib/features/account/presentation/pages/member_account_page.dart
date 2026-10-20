@@ -2,6 +2,8 @@ import '../../../../shared/formatters/display_number_formatter.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../widgets/ownership_notice_title.dart';
+import '../widgets/play_availability_card.dart';
+import '../viewmodels/play_availability_view_model.dart';
 import '../../../../shared/diagnostics/ui_timing.dart';
 import '../../../../shared/formatters/local_date_time_formatter.dart';
 
@@ -159,6 +161,7 @@ class MemberAccountPage extends StatelessWidget {
     required this.model,
     required this.settings,
     this.weekly,
+    this.availability,
     required this.onSettings,
     required this.onKey,
     required this.onVerify,
@@ -174,6 +177,7 @@ class MemberAccountPage extends StatelessWidget {
   final MemberAccountViewModel model;
   final MemberSettingsViewModel settings;
   final MemberWeeklyViewModel? weekly;
+  final PlayAvailabilityViewModel? availability;
   final VoidCallback onSettings, onKey, onVerify, onManage, onHistory;
   final void Function(String) onServerStatus;
   final void Function(String)? onCharacters, onEdit, onVerifyRegistration;
@@ -232,6 +236,8 @@ class MemberAccountPage extends StatelessWidget {
                     padding: EdgeInsets.all(16),
                     child: Text('등록한 원정대가 없습니다.'),
                   ),
+                if (availability != null)
+                  PlayAvailabilityCard(model: availability!),
                 for (final section in model.sections.where(
                   (s) => s.registration.isMain,
                 ))

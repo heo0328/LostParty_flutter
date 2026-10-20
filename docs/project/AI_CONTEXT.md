@@ -1,14 +1,14 @@
 # AI CONTEXT — 프로젝트 현재 상태
 
-**현재 우선 기준:** 통합 모집·일정 목표를 유지하며 `feature/raid-recruitment-scheduling`에서 Backend 구현 인계를 기다린다. 내 계정 시간 설정 메모리 UI 선행은 승인됐으나 아직 구현하지 않았다. 실제 API/영속복원·예약 연결 완료가 아니며 이전축소1차계획38은이력이다.
+**현재 우선 기준:** 통합 모집·일정 목표와 `feature/raid-recruitment-scheduling`을 유지한다. Backend66244da 기준 내 계정 개인 시간표 카드·GET/PUT·실제DI 연결/자동검증을 완료했고 실서버·사용자 기기 인수 대기다. 고유48PASS·변경9파일분석0, 시간 설정 기능 커밋으로 보관·미push·dev미반영(실제SHA는Git이력참조). 모집방 복사·생성/상세/예약은 미연결이며 전체 통합 완료가 아니다. 다음 행동은 NEXT_WORK·상세는 설계37 §34/DEV_LOG다.
 
-현재 제품 기준은 [설계37 상단표·§19~22·§27~28](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md), UI 인계는 §24, 소비 설계 대조 마감은 §29다. Backend50번째 보완4판의 필터/명령context를 확인하고 [회신6283811575](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6283811575)을 게시했다. 제시 제품 결정/N1과 두 기술 경계 설계 대조는 완료다. 다음 Backend가 정확한 OpenAPI/구현·이행/측정을 인계하고 Flutter가 연결한다. 기존 검색 필터를 최종 명세에 보존하며 실제 API 동작 인수/구현 완료는 아니다.
+현재 제품 기준은 [설계37 상단표·§19~22·§27~28](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md), UI 인계는 §24, 소비 설계 대조 마감은 §29다. Backend50번째 보완4판의 필터/명령context를 확인하고 [회신6283811575](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6283811575)을 게시했다. 제시 제품 결정/N1과 두 기술 경계 설계 대조는 완료다. 이후 R5 원본 OpenAPI/구현 인계를 받았고 Flutter가 연결할 차례다(§33). 기존 검색 필터의 미반영 입력 보완과 실제 API 동작 인수는 별도다.
 
-Penpot ‘LostParty 앱 디자인’/‘03 변경 예정·흐름’/‘내 계정 시간 설정·변경안v2·2026-10-20’의접힘·편집·익일휠·저장실패4상태를읽기검수했다. 파일편집없음. 기존라벤더카드·계정그리드/하단탭유지,5분·복수구간/저장취소후접힘이UI기준이다. 실제신규Flutter코드는아직없으며상세범위/검증은NEXT_WORK를따른다.
+Penpot ‘03 변경 예정·흐름’의 내 계정 시간 설정v2를 참고해 접힘·복수구간/5분익일휠·실패초안유지 카드를 구현했다. 사용자는 시안을100%강제하지 않고 기능/계약상 조정을 허용했다. 신규행은 빈 입력, 저장불명/충돌은 명시 복구 흐름이며 기존 계정그리드/하단탭/자동갱신을 유지한다. Penpot 원본은 편집하지 않았다. 실제 기기 시각·저장 인수는 별도다.
 
 모집v2 디자인은 사용자 승인으로 직접 보완했다(설계37 §30~31.1). 현재27개 화면/상태·기존 느낌/3페이지를 유지한다. 인라인 필터는 단일 펼침 안에서 다중선택 칩을 바로 표시하고 앱 Material 접힘/펼침 아이콘을 사용한다. 내계정 보드는 수정하지 않았고 Flutter/API 구현 완료도 아니다. 최신 PNG 시각 검수는 완료했으나 마지막 전체 경계 API 조회는 timeout으로 미완료다.
 
-Issue13 최신 확인은 [Backend56번째 R2-C](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6285392591)·841503d 로컬/미push 보고다. R1~R2 내부 기반·미활성 HTTP를 구현했고 다음은 R3 → R4 → R5 통합/원격 인계다. 실제 API8000·개발DB/공개 OpenAPI 적용 및 Flutter 시험 요청은 없다. 상세 상태/범위는 설계37 §32, 다음 행동은 NEXT_WORK를 따른다.
+Issue13 최신은 [Backend58번째 R5 인계](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6287055201)다. 구현66244da·원본 OpenAPI를 읽고 원격HEAD514e465가 후행 문서임을 확인했다. 개발API8000/DB0023 반영은 Backend 보고이며 Flutter 실행/실기기 인수와 구분한다. [57번째 필터 입력 요청](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6286046186)은 [회신6287178945](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6287178945)으로 대응했으며 Backend 최종 정렬·자리 wire/커서 보완 대기다. 이전 R2 미활성/일정503은 당시 상태다. 실제 모집 Router/DI는 pending, 상세 근거는 설계37 §33·다음 행동은 NEXT_WORK다.
 
 2026-10-19 로그인 후 내 계정 화면 재구성 수정 구현·직접 영향43PASS/변경3파일분석0 및 사용자 디바이스3항목 통과. 기존 디자인·4초 진입·앱 소유 복원 보존. fix/account-auth-screen-selection 수정분의 dev 통합/push를 마감하며 상세 근거는 DEV_LOG, 다음 독립 후보는 NEXT_WORK를 따른다. 분쟁 결과 인수는 별도 보류다.
 

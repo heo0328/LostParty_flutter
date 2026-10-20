@@ -466,6 +466,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                     memberBuilder: _memberAccount != null
                         ? (context) => MemberAccountPage(
                             model: _memberAccount!.model,
+                            availability: _memberAccount!.availability,
                             weekly: _memberAccount!.weekly,
                             settings: _memberSettings!,
                             onSettings: () => context.push('/settings'),

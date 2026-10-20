@@ -198,6 +198,16 @@ void main() {
       };
       return presentation;
     }
+    if (r.path == '/v1/me/play-availability') {
+      return {
+        'exists': false,
+        'version': 1,
+        'timezone': 'Asia/Seoul',
+        'intervals': <Object>[],
+        'normalized_intervals': <Object>[],
+        'updated_at': null,
+      };
+    }
     final id = r.path.split('/')[4];
     if (r.path.endsWith('/personal-profile')) {
       return {
