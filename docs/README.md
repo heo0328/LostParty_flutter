@@ -2,7 +2,13 @@
 
 > 기존 서비스 전용 항목은 [원문·출처 기록](../legacy/firebase/extracted/docs/README.md)으로 분리했다. 남은 제품/협업 문맥의 신규 서버 적용 여부는 별도 설계에서 판단한다.
 
-## 현재 개발 체크포인트 (2026-10-18)
+## 현재 개발 체크포인트 — 2주 레이드 현황 (2026-10-21)
+
+모집/내 계정/참가 현황을 **이번 주·다음 주 직접 선택**으로 확장하는 제품 기획을 채택했다. 같은 방의 주차별 참가·설정·일정·공대장을 분리하며, 기존 참가자의 다음 주 바로 참가와 충돌 복구, N 활성화 공대장의 참가·주차별 탈퇴/자동 승계·직접 위임이 포함된다. 수06시 주차 전환·해당 수10시 이후 완료, 계정3열 체크와 우측i·4/8인 자리 번호를 유지한다.
+
+기획/시안 반영과 실제 구현은 구분한다. 현재 앱은 개인표와 v1 모집 생성/기본상세 단계이며, **2주차 UI/API·주차별 공대장 기능은 미구현**이다. Backend73 설계1판에 최신 정책을 정정 전달했고 전체 계약 보완을 기다린다. 현재 정책은 [설계37](backend-migration/37-raid-scheduling-and-multi-raid-planning.md), 흐름은 [사용자 흐름 지도](feature-definitions/LOSTPARTY_CORE_USER_FLOW_OVERVIEW.md), 다음 행동/미정은 [NEXT_WORK](project/NEXT_WORK.md), 완료 이력은 [DEV_LOG](project/DEV_LOG.md)를 따른다.
+
+## 이전 안정화 기준 (2026-10-18~19)
 
 회원별 캐시·원정대/설정/주간 복원, 앱 수명 자동 갱신 최대2worker, [일괄 조회 연결30](backend-migration/30-scoped-storage-write-contract.md), 정적 이미지4초 진입과debug진단까지 마감·dev/main 동일 시점 반영 구간이다. 최종 검증은 전체1,662PASS/lib·test분석0이다. 실기기에서 일괄GET1회/계측요청76→29·단계시간단축과4초진입 사용자 수용을 받았다. 추가 성능 개선/애니메이션은 보류한다.
 
@@ -18,11 +24,11 @@
 
 ## Backend 선행 API 분야별 요청
 
-현재 #13은 Backend66244da 기준 내 계정 개인 시간표 카드·GET/PUT·앱DI 연결을 구현했다. 고유48PASS/변경9파일분석0·로컬 커밋6ecb81d/미push·dev미반영이다. 최초 등록·수정·동일 일자 추가·재시작 후 동일 계정 복원은 [사용자 수동 확인 결과](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6291576691)로 기록했다. 다른 기기 복원도 통과했으며 와이파이 전환 후 마지막 저장 데이터 정상 기록은 사용자 관찰로 추가했다(상세 DEV_LOG). 회원 격리·익일24h·취소/실패 복구 세부 경계는 미확인이다. [Backend61번째 검색 보완](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6291232832)의 cc003e9를 수신했으며 Flutter 검색 매핑·모집 생성/상세·방표/예약 연결은 남았다. `feature/raid-recruitment-scheduling` 유지·최신 근거는 [설계37 §34](backend-migration/37-raid-scheduling-and-multi-raid-planning.md), 다음은 NEXT_WORK다. Penpot03은 사용자 승인으로 디자인 참고 기준이며 원본 편집은 하지 않았다.
+#13의 개인표6ecb81d·계정UI4198f1a는 사용자 정상 확인 완료다. 생성/기본상세는 v1 연결·자동검증 기록이 있는 미커밋 구현이고 목록은 Pending이다. 작업 브랜치에 문서 체크포인트를 남기며 dev 통합/실기기 전체 인수는 아직 아니다. 다음은 최신 2주차 계약 보완을 받은 뒤 주차 메타/계정 → 생성/상세 → 검색·신청/승인 → 다음주 참가·주차별 관리 → 일정/예약/완료 순서로 작은 단위를 준비한다. 상세 상태와 검증 근거는 [AI_CONTEXT](project/AI_CONTEXT.md)·[NEXT_WORK](project/NEXT_WORK.md)·[DEV_LOG](project/DEV_LOG.md)를 따른다.
 
 - [이전 축소 1차 계획 기록38](backend-migration/38-account-availability-and-role-power-phase1.md): 폐기된 범위의 변경 이력. 현재 통합 목표와 UI 선행/계약 대조는 설계37 §24/NEXT_WORK를 따른다.
 
-- [모집 시간·역할별 전투력·그룹 범위·다중 레이드 요구37](backend-migration/37-raid-scheduling-and-multi-raid-planning.md): 사용자 확정 요구/추가 아이디어·추천·미정을 분리한 기획 문서. 구현 전 정리 단계다.
+- [모집 시간·역할별 전투력·그룹 범위·다중 레이드 요구37](backend-migration/37-raid-scheduling-and-multi-raid-planning.md): 모집·일정의 현재 제품 계약과 디자인/Backend 인계, 개인표 구현 및 모집 후속 범위를 관리한다.
 
 [요청32·분야/순서 인덱스](backend-migration/32-backend-domain-prework-requests.md): #10 카탈로그/주차 → #11 주간 상태·#12 그룹 → #13 모집/파티. #10/#11 첫 구간 인계를 수신했고 [주간 체크박스 연결33](backend-migration/33-weekly-raid-flutter-integration.md)을 구현했다. 전체1622PASS·분석0, 실제 서버 쓰기/기기 확인은 대기다. #12/#13 후속과 미확정 정책은 해당 기능만 분리하고 현재 개발환경/자료를 유지한다.
 
