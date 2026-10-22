@@ -16,7 +16,7 @@
 
 | 구분 | 현재 상태 |
 |---|---|
-| 커밋 기반 | feature/raid-recruitment-scheduling에 선행 v1복구17f8675·F1 af9e9d3 이후 F2/F3 구간 복구 커밋을 보관. 개인표6ecb81d/계정UI4198f1a 포함. dev6d3f617 미반영·구간별 푸시, 최종SHA는 Git/DEV_LOG 인계 참조 |
+| 커밋 기반 | feature/raid-recruitment-scheduling에 선행 v1복구17f8675·F1 af9e9d3·F2 e42f780·F3 독립 구현121fad3을 보관/원격일치 확인. [F3 결과6337065372](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6337065372) 본문 재조회일치. dev6d3f617 미반영·브랜치 유지, 최종문서SHA는 Git 참조 |
 | 기존 앱 | 개인표 등록·수정/복원과 계정 설정 복귀/결과 닫기 사용자 확인 완료. v1 생성/기본상세·시간/입장 정책은17f8675에 보관·기존 자동검증 기록 있음. 인증 회원 목록은 F3 v2검색, 비로그인 기존 Pending 유지 |
 | 2주차 Flutter | F1 실제주차/선택기·계정summary/3열+i·본인목록/기본 읽기상세·캐시 격리 구현. F1 고유123PASS/14파일 분석0에 이어 F2 고유95PASS/10파일 분석0. 실제 DI는 v2생성/context·같은방T상세/편성 읽기까지 연결. F3 검색/일반 참가·신청/승인/거절/철회·캐릭터 변경 연결, 전체 캐릭터 필터 대기. F4~F6 미구현/전체 기능 인수 미완료 |
 | Penpot03 | v3 주차선택5화면과 v4 공대장/번호3화면 반영. 계정 체크/i·v4 실제PNG 검수. 상세 식별자/기준은 설계37·NEXT_WORK |

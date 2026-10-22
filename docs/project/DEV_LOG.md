@@ -9,7 +9,7 @@
 - 검증: 첫 섹션6파일112건은110PASS/승인·거절2FAIL이었다. 테스트 detail fixture의 dynamic map spread가 Map<dynamic,dynamic>이 된 원인을 확인해 명시 String map으로 수정했고 생산 DTO 검증은 완화하지 않았다. 신규 상호작용/계정 49건 재실행 통과 후 출처 room/변경 scope 차단1건을 추가했다. 최종 상호작용27PASS, C/N 생성 ACK 갱신 목록 확인을 보강한 생성2파일41PASS, 앞선 계정23/주간·세션23 결과를 재사용해 **고유114PASS=신규28+기존86**다. 변경Dart17파일 분석0·포맷/diff·Router/권한/CAS 검토. 저장·인증 정책을 바꾸지 않는 직접 호출 범위에 집중해 무관한 전체 시험은 반복하지 않았다. 모두 mocked HTTP/로컬검증이며 서버 DB 경합/원자성 시험을 대신하지 않는다.
 - 남은 F3/협업: [후보 계약 요청6336402066](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6336402066) 게시본문 재조회 일치 확인. filter-context/그룹원·방별projection에 전체 활성 캐릭터 후보 출처가 없어 Backend의 권한 있는 후보 계약을 대기한다. 그룹원별2열/내부레벨순 캐릭터 필터는 미구현이며 F3 전체 완료로 보고하지 않는다. 실서버 준비를 다시 대기로 돌리지 않고 해당 부족 계약만 요청했다. 독립 구현 결과/실제 commit·push와 미확인은 같은 Issue13에 인계한다.
 - 미확인 실기기 항목: 정상인증HTTP·실회원 참가/신청·승인/거절/철회·캐릭터 변경, 실제 필터/페이지/좁은 화면·T전환/계정i·성능, 회원전환·원요청 복구다. 설치/조작·실회원 쓰기·DB/키/서버 변경은 하지 않았다. F4~F6도 미구현이다. 정상 UI 확인은 전체 기능섹션 인수에 묶는다.
-- Git: feature/raid-recruitment-scheduling에 코드/시험·문서 복구 지점을 커밋/푸시한다. 최종 SHA는 Git/인계 댓글을 따른다. dev6d3f617 미병합·브랜치 유지, 통계35·플랫폼생성/DevTools/백업/tools 등 무관한 미커밋은 제외/보존한다.
+- Git/인계 마감: feature/raid-recruitment-scheduling의 구현121fad3f565b4a85897a61efe6160f8983c036e0을 commit/push하고 원격 SHA 일치를 확인했다. [F3 결과6337065372](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6337065372)에 적용/제외·실제 SHA/검증·후보 계약 대기·실서버/기기 미확인을 회신하고 게시본문 재조회 일치를 확인했다. 인계 식별자 문서도 같은 브랜치에 보관한다. dev6d3f617 미병합·브랜치 유지, 통계35·플랫폼생성/DevTools/백업/tools 등 무관한 미커밋은 제외/보존한다.
 
 ## 2026-10-22 — F2 v2 생성·같은 방 주차별 상세 구현 마감
 
