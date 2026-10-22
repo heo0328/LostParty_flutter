@@ -1,13 +1,14 @@
 # 2주 레이드 현황·모집 조건·일정 통합 설계
 
-기준: 2026-10-21. **제품 정책/디자인은 이번 주·다음 주 지원으로 확정, 기능 구현은 기존 v1 현재주차 단계**다. 이 문서의 현재 기준과 §36을 우선한다. §1~35의 current-only/자동 유지·전역 공대장 설명은 해당 시점의 조사·계약 이력이며 새2주차 구현 계약으로 그대로 사용하지 않는다.
+기준: 2026-10-22. **제품 정책/디자인은 두 주차 지원으로 확정, Backend 개발 서버 전환/읽기 인계 완료 보고·Flutter F1 읽기 구현·자동검증/실기기 미확인, F2~F6 미구현**다. 이 문서의 현재 기준과 §36을 우선한다. §1~35의 current-only/자동 유지·전역 공대장 설명은 해당 시점의 조사·계약 이력이며 새2주차 구현 계약으로 그대로 사용하지 않는다.
 
 - 제품: 언제든 C/N 직접 선택, 같은 room UUID의 회차/참가·캐릭터/자리/일정/권한 분리. 수06시 주차 전환·수10시 이후 완료.
 - 함께하기: C 공대장 명시 활성화로 본인이 N 첫 참가자/공대장. 다른 C 실제 참가자는 본인 선택 시 같은 캐릭터/역할로 바로 확정(승인제 재승인 없음). 충돌 복구는 §36.7.
 - 공대장: 열린 N을 OFF로 철회하는 대신 본인 N 탈퇴·참가 순서 자동 승계, 해당 T 참가자 직접 위임. C/N 관리 영향 분리. 정확한 정책은 §36.9.
-- 앱 상태: 개인표6ecb81d/계정UI4198f1a 사용자 정상 확인 완료. 생성/기본상세·로컬 시간/입장 정책 복구는 기존 미커밋 작업, 목록은 Pending. 2주차 기능은 미구현이다. 과거 검증 수치·미확인은 DEV_LOG, 실행 계획은 NEXT_WORK.
+- 최신 추천안 채택: 마지막1인 N탈퇴는 N만종료·명시재개허용(L1핵심), 제목/공개범위는C공대장우선(G1), 초기명시개방만·매주자동개방보류(A1). §36.11이 앞선 미정 표현보다 우선한다.
+- 앱 상태: 개인표6ecb81d/계정UI4198f1a 사용자 정상 확인 완료. 생성/기본상세·로컬 시간/입장 정책은 선행 복구17f8675에 보관, 공개목록은 Pending. F1 계정 C/N·본인목록/기본 읽기상세를 구현했고 F2~F6은 미구현이다. 과거 검증 수치·미확인은 DEV_LOG, 실행 계획은 NEXT_WORK.
 - 디자인: Penpot03의 v2 카드/필터, v3 주차선택5화면, v4 번호/공대장3화면. 시안 반영이 실제 앱 연결을 뜻하지 않는다.
-- 협업: Backend73 설계1판 수신 후 검토6296514170·주차별 공대장 정정6297004407 전달. 최종 전체 DTO/권한·이행/성능 보완 전이며 /v2·저장구조는 기술 제안이다. 기능·서버/DB·배포를 이번 문서 점검에서 변경하지 않는다.
+- 협업: Backend92의 개발DB/API 전환·읽기구간 인계를 수신했다. 계약0.4.1/policy4·명세검토마감은§36.14, 디바이스 전 네이티브 설계/F1~F6은§37을 따른다. 서버 전환 보고와 Flutter 정상인증HTTP/디바이스 인수는 구분하며 F1 적용 결과는 §37.9와 DEV_LOG에 기록한다.
 
 ## 현재 기준 — 이 표를 먼저 적용
 
@@ -23,10 +24,10 @@
 | 참가/동의/확인 | 방 구성원은 모집 레이드를 함께 간다는 전제, 임의 이번주 불참 모드 없음. 일정별 정족수 후 제안 전체 원자 적용. N1기존일정변경은본인명시확인, N2=2/N3·4=2/N5·6=3/N7·8=4·공대장찬성포함. 미동의자초록확인대기·본인확인=참가확인+예약, 자동동의/추방없음. 자동조율추가인원최소1유지 |
 | 마감 | 실제 확정출발−30분 정각부터 신규신청/즉시참가/최종승인 마감. 최초확정 내부명령 예외와 기존회원 본인확인은 구분 |
 | 예약기간 | 명시기간10분~24h/5분우선. 미지정만 난이도10/20/30분 대체, 가산금지. 한 타임의 묶음 유효기간 합계도 최대24h, 여러 타임은 각각 계산 |
-| 주차/함께하기 | 언제든C/N 직접 선택. N 활성화 공대장 최초 참가, 다른 인원 직접 선택·즉시 확정. 열린N OFF철회 대신 본인탈퇴/주차별승계. 매주 새N 자동개방은미정(§36.9) |
+| 주차/함께하기 | 언제든C/N 직접 선택. N 활성화 공대장 최초 참가, 다른 인원 직접 선택·즉시 확정. 열린N OFF철회 대신 본인탈퇴/주차별승계. 초기명시개방만·매주자동개방보류(§36.11) |
 | 완료/종료 | 대상T=C·수10시이후만완료류허용. 개인A완료는해당참가/예약만정리하고다른항목/주차보존. 완료를N자동가입/취소로변환하지않음. 함께하기방이번주미완료종료는C실제참가자권한·N보존 |
 | 묶음/다일 | 혼합앱4는기존4인딜러3/서포터1·동일직업제한, 단독8인2파티유지. item단독탈퇴없고전체탈퇴. 레이드자체참가와다회시도필수/선택타임을구분 |
-| 공대장/편성 | T별공대장·승인/관리권한. 본인N탈퇴시N참가순서승계/직접위임. 4인1~4·8인1-1~2-4실제자리번호. 전역공통자원권한은Backend보완대기 |
+| 공대장/편성 | T별공대장·승인/관리권한. 본인N탈퇴시N참가순서승계/직접위임. 4인1~4·8인1-1~2-4실제자리번호. 공통설정C우선/G1·마지막1인N종료와명시재개(§36.11) |
 | 저장범위 | 기존미인증조회용등록유지.새시간표/모집은인증회원.기존자료자동삭제없음 |
 
 §27의 사용자 채택과 §28의 N1 확정은 더 이상 G 제품 미정으로 되돌리지 않는다. 방 구성원의 레이드 참가 전제는 유지한다. 필터 의미·일괄 명령 context의 소비 대조는 §29에서 마감했다. 정확한 OpenAPI·P1 성공값/버전 보존 구현·기술 상한/측정·이행/동시성 검증은 Backend 후속이다. 아래 과거 추천/미정은 변경 이력으로 보존한다.
@@ -1128,3 +1129,161 @@ R2-C의 현재 성공 경로는 schedule_groups=[]인 완전 미정 상태다. i
 회귀/후속 검증: N 활성화 공대장 참가 중복/C 충돌 무영향, 활성화 재전송 멱등, N 자동승계 중 동시 탈퇴/후보 변경, 마지막1인 범위, C/N 서로 다른 공대장의 교차 명령 거절, 직접 위임 권한·대상 이탈 경합, 원ACK복구, 슬롯 누락/중간 빈자리와8인 번호. 이번은 설계·시안 단계이며 기능 구현/서버 이행 승인이 아니다.
 
 전달/시안: [Backend 계약 정정6297004407](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6297004407) 게시/재조회 완료. Penpot03 기존07의 이름 첫 글자4개를 번호로 교체하고 `주차별 공대장 · 자리 번호 v4 · 2026-10-21` 보드(id12e99482-847a-803e-8008-d1daccf18a9f)의 W06/W07/W08에4인·8인·탈퇴/위임 예시를 추가했다. 세 화면 경계 이탈0·번호열과 실제 PNG 시각 검수. 앱의 같은 첫 글자 아바타는 후속 구현 시 실제 편성 projection으로 교체하며 회원 배열 순번으로 대체하지 않는다.
+
+### 36.10 Backend 공대장·승계 보완2판 수신/소비검토
+
+2026-10-21 [전체76번째6307589155](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6307589155) 수신, [Flutter검토6307642641](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6307642641) 회신. 보완은 설계/검토명세이며 Backend문서 로컬 미커밋·미push, 원본OpenAPI·서버/DB 미변경 보고다. 기존 §36.7/36.9 사용자 확정은 유지한다.
+
+소비대조 결과: T별 실제 참가관계/책임자·revision/권한, N개방+본인최초참가 원자처리/충돌무변경·대체선택·열린N멱등noop, N탈퇴+참가순서자동승계/직접위임과C보존이 확정 의도에 부합한다. 성공 참가순번 직렬화·재참가 새순번, 후보변경 시 재확인, 승계/위임이 자동슬롯교환·예약동의를 만들지 않는 방향도 소비 가능하다. 후보부적격/복구·completed관리권·동시성/원ACK는 후속실행 검증 대상이다.
+
+이전질문 해소: Conflict의required nullable room_title/권한제한, C완료·미완료종료 후 실제이력/관계보존 시 특례유지 vs 명시취소/탈퇴·추방/06시지난옛소스 특례불가, 신규참가 confirmation_pending/본인명시확인 후예약, 실제 party/slot과빈자리·unplaced 및공대장독립배지 projection이 제시됐다. 답변수신을 제품 전체구현 완료로 확대하지 않는다.
+
+아직 제품 제안: L1=마지막N1인탈퇴는N만cancelled/명시C공대장재개·별도방관계종료로한도회복, G1=C공대장공통관리우선(대안G2=C/N합의,G3=별도공통관리자), A1=초기명시개방만/자동개방보류. 열린N OFF철회 대신본인탈퇴는확정이며 추가OFF특례차단은미승인. L1/G1/A1추천을사용자확정으로기록하지않는다. #19사전취소통계도별도다.
+
+기술보완요청: joined_order 저장bigint의JSON전송정밀도상한/형식, 신규N Target의prospective ID/필수expected_round_revision·weeklyrevision 초기출처/성공·거절예시, 전체detail/plan의leadership/target_leadership명칭통일. core외전체DTO/원본OpenAPI·보존이행·성능은최종인계전이다.
+
+첨부delta를73core에병합해11경로/39schema·내부참조누락0·operationID중복0을확인했다. 단독delta는완성OpenAPI가아니며정식validator/서버·DB·성능시험은수행하지않았다. 이번은수신/검토/기록만으로기능코드·Penpot·DB/배포변경없다.
+
+### 36.11 사용자 채택 — 마지막1인 주차종료/명시재개·공통설정C우선·자동개방보류
+
+2026-10-21 사용자가 직전 브리핑의 세 추천안을 채택했다. 이 절은 §36.8~36.10과 다른 문서의 해당 미정 표현보다 우선한다. 이번 채택은 제품 정책 확정/문서·Backend 전달이며 실제 기능·DB/배포 변경 지시가 아니다.
+
+1. **L1 핵심 채택:** 마지막1인의 N탈퇴는 그 N회차만 취소/종료한다. N의참가/점유·예약/미결신청·일정은 해당범위에서 정리하며 C의공대장/참가·완료/예약과Room전역종료는 건드리지 않는다. 미래예정취소를 실제 게임완료나 C미완료종료로 기록하지 않는다. 이후 C공대장이 새개방context로 본인참가까지 명시확인하면 같은N을 재개할 수 있다. 단순조회/신규신청·ON재전송으로 자동부활시키지 않으며 과거취소인원·예약/동의를 자동복구하지 않는다. RoomCycle UUID보존/새generation·Round세대 및멱등/보존이행은 Backend가 정확한wire와 원자경계로 고정한다.
+2. **G1 채택:** 공통제목·공개범위는 실제C공대장이 우선관리한다. C회차자체가없고 열린N만있으면N공대장이관리한다. 변경시C/N공통영향을 context/확인창에 명시하고 기존그룹자격·CAS를검사한다. C가있지만책임자review/회차종료인경우 N권한을자동확장하지않고 관리복구/권한계약을 따른다. 연결그룹불변을 유지하며 그룹교체기능은추가하지않는다. 전역해산은 기존안전한전체마지막1인 조건만 유지하고 다른실제T참가자가있으면거절한다. N위임은C권한이나전역leader를덮지않는다. G2합의관리/G3별도공통관리자는채택하지않는다.
+3. **A1 채택:** 초기에는 사용자의명시개방만제공한다. 매주자동새N개방은보류하며 기존auto_open_enabled=true를 새자동동의로해석하지않는다. 이미열린N은수06시에같은UUID/리더/예약으로C가되지만 그즉시새N을자동생성/가입시키지않는다. 열린N을OFF로철회하거나기존참가특례를끊는추가조작은도입하지않고 본인탈퇴/승계를사용한다.
+
+채택 범위 구분: 위세정책의실행전제에필요한Backend전체DTO/권한·보존/동시성/한도효과는확인해야한다. 별도'방관계종료'새진입점/연속확인UX까지이번에포괄채택했다고확대하지않는다. 지속관계가남는N탈퇴만으로자동한도회복을가정하지않고 C나과거이력무단삭제도없다. #19사전참가취소통계는여전히별도다.
+
+다음은확정세정책과6307642641의기술보완(순번전송정밀도·prospective Target revision출처·전체필드명)을Backend최종계약에반영받는것이다. 이세정책의채택여부를다시질문하지않는다.
+
+### 36.12 Backend 전체 계약 후보3판 소비검토 — 최종 고정 전 수정
+
+2026-10-21 [전체79번째6308319220](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6308319220) 수신. L1/G1/A1/열린N OFF철회금지와기존leave/end사용·신규방관계종료UX제외는확정요구에부합한다. joined_order는signedbigint범위의양의십진string, opening intent/예정ID·revision출처, data.leadership·target역할도보완됐다. 원본OpenAPI/서버DB미변경·미구현후보이며실행준비완료가아니다.
+
+재현: generator전문을읽고별도visualization검토폴더에서cc003e9원본과73core+76delta를입력으로실행했다. Windows UTF-8모드와/tmp중간route-map의검토폴더출력위치만조정했다. 입력canonical hash검사통과,53경로/56operation/196schema·canonicalSHA256 `a8c9d2c8e1fbe816113ec9d61bdd39dc99210e83de4401abb28ebfefa1f27020`가Backend본문과일치,전체내부ref누락/operationID중복0이다. Python환경에jsonschema/정식OpenAPI validator가없어첨부16fixture validation통과는직접검증하지않았다. 재현동일성과사용가능계약은별개다.
+
+[Flutter검토6308381113](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6308381113)의수정사항:
+
+1. **제목schema불가능:** generator clean(v)가schema annotation뿐아니라properties사전의실제title도pop한다. Input_contract3_post__v2_raid-rooms/CommonSettingsCommand/B_Card는required title·properties title없음·additionalProperties=false가동시에있어유효인스턴스가없다. 실제필드보존/생성·제목수정·카드사례추가후새후보/hash필요.
+2. **전역leave/end CAS출처:** persistent만남아도leave가능한본문과달리요청은expected_cycle_member_revision·non-null expected_target_revision/members/plan을필수요구한다. common-context는persistent revision과impact만주며해당members/plan/본인cycle_member버전출처가없다. 영향0/부재T/전체실제관계정리의합법계약으로분리하고임의1추정금지.
+3. **승인된생성UX차이:** continuation.enabled=false만허용하고C생성후명시N활성화로옮긴것은기존생성checkbox/사용자단계변경이다. A1은자동매주보류이지기존선택기제거승인아니다. 명시선택UX를보존할계약/분리API라면N사전검증·C성공/N실패·결과불명·원키복구/중복생성방지를제시받고최종대조한다. 임의리디자인없음.
+4. **숙련도다중검색누락:** POSTsearch/GET목록입력에숙련도filter가없다. §31.2의다중OR·빈필터/무제한모집구분·cursor/SQL페이지전결합을wire로고정요청했다. 생성숙련도단일값과별개며페이지후로컬필터대체금지.
+
+정책채택은유지하지만위4항목해소전전체명세최종소비승인은아니다. 다음은수정명세/예시만좁혀재대조하며기능코드·Penpot·실서버/DB·배포변경없음,실기기시험도없다.
+
+### 36.13 계약4판 재현 검토·생성 원자성/이후 독립 재확정
+
+2026-10-21 [Backend81번째6309446458](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6309446458)의 첨부 세 도구를 읽고 앱/서버 밖 격리 검토 폴더에서 원문 그대로 재현했다. 입력은 cc003e9 원본과73core/76delta·79예시다. 입력hash검사 통과,53경로/56동작/202schema·canonical SHA256 `d6aa245c29fb533525fa136ce6ab43c06f34774e52d8d70c183b9ffa8ee0c030` 일치, JSON Schema 합성70사례·전역context/요청 CAS출처6쌍 통과, required/property모순은3판3→4판0이다. jsonschema는 검토 폴더에만 설치했으며 앱 의존성은 변경하지 않았다. 정식 OpenAPI validator/실제 FastAPI·HTTP·DB원자성/성능·기기 검증과는 구분한다.
+
+§36.12의 네 수정은 설계/스키마상 해소됐다. 실제title보존·기존앱기본제목, target-free전역leave/end와persistent CAS출처, 생성checkbox한번조작, 숙련도다중OR/실제null전용unrestricted·페이지전SQL/커서계약을 소비할 수 있다. `experience_levels` 생략/[]는필터없음이며 생성숙련도는기존5값또는null을유지한다.
+
+**사용자 재확정:** C선택+생성함께하기체크는 한POST로 같은Room의C/N회차와본인첫실참가/공대장을 모두확정하거나 모두실패한다. N실패시C도rollback,결과불명은원키/불변본문으로원ACK를복구한다. 이후 N만탈퇴/참가순서자동승계·직접위임/마지막1인N만종료가가능하며C리더·참가·예약·완료를보존한다. C완료가N완료/취소를만들지않으며완료류T=C·수10시guard유지다. 다른참가자는직접N참가선택,복사일정자동확인/예약·매주새N자동개방은없다. T=N생성은N만생성하고C+14를열지않는다. 정상캐릭터재선택은추가하지않고N충돌시대체캐릭터선택/권한내기존방확인/닫기·새사전검토를사용한다.
+
+**남은 응답 계약 한 항목:** 공통설정 context는GlobalScope, CommonSettingsCommand는target-free지만 PUT common-settings의200은 여전히Ack→Scope+AckData로target_cycle_key/playable_from/phase를필수요구한다. 공통변경의응답대상/출처가고정되지않았다. 70예시의공통제목성공은요청검증이며해당200검증사례는없다. [Flutter검토6309858607](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6309858607)에GlobalScope+전용공통ACK또는authorization_cycle_key와명시연결,C/N공존·N만존재의context→요청→응답사례를요청했다. 기존네항목재요청은아니며이응답정리후전체계약을고정한다. Backend독립W1준비/제품확정은유지하나기능구현·실행준비완료로확대하지않는다.
+
+### 36.14 공통설정 ACK 보완 재대조·명세 소비 검토 마감
+
+2026-10-21 [Backend83번째6310051618](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6310051618)의 보완 도구를 읽고 격리 폴더에서81번째 원문 도구에 적용/재현했다. 53경로/56동작/204schema·합성84사례·global CAS출처6쌍·실제 common-context GET200→PUT요청→PUT200 흐름2개 검증 통과,canonical SHA256 `fb4c7d065594a9a0e7e8288e5f73179f90b078b68ac4323d1aade5c7a63b42f1` 일치다. 독립 diff로 기존schema변경0/공통ACK2개추가,변경path는common-settings하나만확인했다.
+
+실제200은CommonSettingsAck→GlobalScope/CommonSettingsAckData로연결됐다. target를임의추정하지않고수행후room_revision/실제affected_cycle_keys를받는다. C/N공존은[C,N],C행부재/N만존재는[N],noop은revision유지/[]이며권한근거authorization_cycle_key와응답대상을혼동하지않는다. 원키/불변본문replay는당시scope/revision/영향목록을그대로복구하며현재권한증거가아니다. 기존생성원자성·이후T별독립은변경없다.
+
+[Flutter84번째6310097083](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6310097083)에남은명세소비충돌없음/계약0.4.1·policy4기준고정가능을회신했다. Backend실제기능/원본OpenAPI/DB·실행SHA인계와별개이며정식OpenAPI validator/FastAPI·HTTP/DB경합·멱등저장소/성능/기기시험은미실행이다. 다음은서버준비대조후주차메타·계정summary/선택기작은단위준비다. 이번에는기능코드를수정하지않았다.
+
+## 37. 네이티브 구현 준비 — 디바이스 인수 전 설계 (2026-10-22)
+
+### 37.1 범위·실행 기준
+
+이번 사용자 승인은 디바이스 테스트 전 네이티브 작업의 **기획·설계**다. 아래 F1~F6은 구현 순서/완료 조건이며 이번에 구현하거나 설치·기기 조작·실회원 쓰기·서버/DB 변경·커밋/푸시를 수행하지 않는다. 제품 계약은 §36의 확정 정책, 화면은 Penpot03 v2/v3/v4를 유지한다. API 연결을 이유로 버튼/카드·확인 단계를 새로 설계하지 않는다.
+
+[Backend92번째 인계](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6332478347)는 개발DB0029/API8000 two-cycle factory167경로 전환·health/자료보존 완료 보고다. 게시SHA는 `3c26cdb6fd8a17c0bf0d7afaa3bbd93d1f4f3176`, 기능소스 기준은 `f27634246a6e54988d815cb8009fd02ec621b6b7`, 실행이미지는 `ccc787cb9ccb…`이며 이를 같은 종류의 SHA로 혼용하지 않는다. 게시SHA의 `openapi/two-cycle.openapi.yaml`을 직접 읽어167경로와 아래 API/필드를 대조했다. 실제 정상 로그인 HTTP/기기·Flutter 연결은 미확인이다. 소비 계약0.4.1/policy4·고정53경로56동작204schema 해시는 §36.14와 동일하다.
+
+과거7방은 C/N 밖이어서 현재 공개 검색0건이 정상이다. persistent 관계/한도·이력은 보존되며 이를 활성참가/i로 승격하거나 자동탈퇴/삭제/현재주 복제하지 않는다. 기본앱116경로/구실행114경로와 전환앱167경로는 각각 다른 기준이다.
+
+### 37.2 현재 코드와 변경 책임
+
+| 실제 연결 | 구현 시 변경·보존 |
+|---|---|
+| `lib/app/backend_app.dart`의 앱소유 VM/세션·Router | 공통 주차/선택 상태를 앱 수명으로 주입. 기존 account lifecycle·로그인·자동갱신/4초진입 유지. 라우트는 room+실제T를 전달하고 state.extra 유실/직접 진입도 재조회로 복구 |
+| `lib/app/backend_member_account.dart` | 계정·개인표·주간VM 소유/해제 책임 유지. 주간실패가 원정대 목록/다른 주차 정상자료를 지우거나 자동Armory 재수집을 시작하지 않음 |
+| `MemberRaidClient`·`member_raid_models.dart` | 기존 v1 공개 catalog/cycle와 인증 v2 cycles를 구분. v2 모델/Repository 추가는 기능 경계에 두며 문자열 prefix만 변경하거나 모든 공용DTO를 전면 교체하지 않음 |
+| `MemberWeeklyViewModel`·`MemberWeeklyStore` | 현재 단일cycle/character:raid 키를 실제T 포함 조회 모델로 확장. 환경/회원 store·session epoch/readGeneration·오래된응답차단 보존. 기존 표시설정과 미결 명령을 일괄 삭제하지 않음 |
+| `member_account_page.dart`·`account_character_card.dart` | 실제 카드는 현재 세로 raid행. 승인된3열 균등폭/체크 자체 중앙/i우측으로 연결. 왕관·관리·캐릭터 선택·표시개수 설정은 그대로 |
+| `BackendRecruitmentRepository`·생성/상세VM | 현재 v1 경로·단일T 없는 모델을 v2 명시T/세대/context로 단계 이행. 초안/연타차단/원ACK·결과불명/생성 후 상세 실패 복구·최고가능난이도 정책 재사용 |
+| 모집 목록의 `PendingBackendPartyReadRepository`·내 참가 `/raid-status` Pending 화면 | 오래된 로컬 PlayerId/정수PK 모델에 서버UUID를 끼우지 않음. v2 전용 조회 adapter로 기존 페이지 디자인/탭·카드를 연결하고 필요한 DI만 교체 |
+
+작업은 현재 `feature/raid-recruitment-scheduling`을 재사용하고 기존 미커밋 기능·통계35/플랫폼 생성·DevTools/백업/tools를 보존한다. 새로운 파일/모델 이름은 구현 때 확정하되 현재 역할을 중복 소유하는 두 개의 주차상태 저장소를 만들지 않는다.
+
+### 37.3 주차·데이터 흐름과 실패 상태
+
+1. 정상 로그인 세션+환경의 `AccountReadSession`/`StorageScope`를 획득 → 인증 GET cycles → 기존 계정/활동·소유검증된 캐릭터UUID 선택 → summary 제한batch → 내계정 projection/선택T 본인목록이다. public catalog/캐릭터 bootstrap은 재사용하며 두주차 때문에 전체 캐릭터·장비·provider를 두번 읽지 않는다.
+2. 메타 `current/next.cycle_key,starts_at,ends_at,playable_from`과 서버시각을 권위로 삼는다. 화면 기본은C, 화면별 선택은 실제키로 앱수명 보관·환경/회원/세션 변경 시 초기화한다. 목록→생성/상세, i→상세는 출처T를 명시 승계한다. 열린 확인창은 다른 화면 선택에 의해 대상을 바꾸지 않는다.
+3. 계정 summary는 최대50캐릭터/2주차·500entry 내 batch이며 읽기POST에 Idempotency-Key를 붙이지 않는다. 초기 C/N을 한 batch로 받아 계정 전환에는 재사용한다. 소유검증된 조회대상0이면 summary를 보내지 않고 기존 미인증/빈 원정대 화면을 유지한다. 큰 계정은 제한batch로 분할하고 누락/중복/다른회원·다른T·catalog 불일치를0상태로 처리하지 않는다.
+4. 키는 환경+회원+session generation+실제T+캐릭터/raid 또는 room/generation+필터·정렬/커서다. HTTP no-store를 지키고 초기에는 v2 조회 snapshot을 디스크에 추가 저장하지 않는다. 공통 표시선호는 기존 환경/회원 범위이며 주차별로 중복 저장하지 않는다. 읽기 in-flight 중복은 동일 범위에서 합치고 늦은 응답은 session/readGeneration/요청시점 선택·소유근거로 차단한다.
+5. 각T는 loading/ready(empty 포함)/stale/error를 분리한다. 오류가 빈 결과/미완료/미참가가 아니며 cached/stale는 쓰기권한이 아니다. 한T만 실패하면 다른T의 확인된 자료는 유지한다. 401은 기존 refresh/세션거절 정책, 403은 접근/소유 근거 재조회, 409주차·cursor/context는 해당범위 재확인, 429/503은 서버retry정보를 사용한다. 무한재시도/자동새키는 없다.
+6. 수06시·앱복귀 시 서버 메타를 재확인한다. 선택 실제T가 새C라면 자료/UUID는 그대로 라벨만 변경하고 권한/커서를 새로 확인한다. 선택T가 C/N 밖이면 지난자료를 기록으로 보존하고 C를 기본조회한다. 열린초안/확인창은 자동다음주 이월하지 않는다. 수10시/next_change_at은 로컬 표시 갱신의 계기이며 최종 쓰기는 서버가 재검증한다.
+7. 미결 명령은 operation버전/원method·path/actualT/불변본문·원키와 ACK단계를 구분한다. 구 v1 명령을 새 v2 명령으로 변환/자동새키 재송하지 않는다. 원ACK 우선 복구·확정 CLIENT_UPGRADE_REQUIRED 후 현재 조회/초안 보존·명시 새시도 정책을 적용한다. 기존 SecureMemberWeeklyStore schema1의 표시선호/미결명령은 읽기 호환을 보존하고 새 명령 형식 추가 때 별도 버전/이행을 검증한다. 전체 앱종료 후 모집 명령 복구는 기존 미확인 범위이며 구현했다고 가정하지 않는다.
+
+### 37.4 화면별 소비와 권한
+
+| 화면/조작 | 보존할 UX·상태 |
+|---|---|
+| 내계정 | 상단 이번주/다음주+날짜. raid3열 균등분배·4+/7+ 다중행, 체크만 중앙 고정/i우측 여유폭 축소. 완료는 completion_sources의 manual/party 근거, i는 실제 participation으로 각각 판정. review_required는 확인필요 상태와 연결권한을 구분하고 미선택/declined/legacy_intent에는 확정 i를 붙이지 않음 |
+| i 상세 | can_view_detail/view_participation 허용 시 room+T 읽기상세로 이동. 불가하면 권한내 짧은 안내만, v1 이번주 상세로 잘못 연결하지 않음. F1에 이 읽기 진입까지 포함하며 관리/일정 조작은 이후 단계 |
+| 모집 생성 | 목록T승계/단독C기본. 캐릭터→가능raid→최고가능난이도·제목 기본값·조건/수동시각/필터스타일 유지. T변경은 초안 보존/context폐기·시간 재검사, 결과불명 중 대상변경 금지. 함께하기C/N원자 생성·N선택시N만, 실패주차/대체캐릭터·원ACK 확인 후 선택T 상세 |
+| 공개/그룹 목록 | 선택T 페이지 지연조회, 정렬문구 터치↑↓·우측남은자리OR·숙련도다중OR. 그룹원별2열 작은캐릭터카드·대표명/직업/계열/레벨/전투력, 각그룹원 내부레벨순. 페이지후 로컬필터 금지/숨은T전페이지조회 없음 |
+| 내 참가/신청 | 기존탭 안에서 실제참가/승인대기/완료·기록·확인필요 구분. persistent만/과거7관계는 not_selected이고 현재좌석으로 집계하지 않음. room=null/미개시를 빈확정방으로 만들지 않고 기존 기록/관계 표시와 현재상세 불가를 구분 |
+| 상세/파티 관리 | 같은room C/N 탭, 실제4인1~4/8인1-1~2-4·자리미정/공대장별도배지. target_role/leadership+서버permission이 기준, C리더권한으로N명령 불가. N본인탈퇴·승계·직접위임/마지막N종료와재개, G1공통설정과전역leave/end는 명시영향을 구분하며 새 관리화면/연속확인 진입점은 만들지 않음 |
+| 일정/완료 | 개인표 명시복사/방제출·공통후보/제안·투표·미확인초록상태/본인예약을 단계 연결. 참가·복사·위임이 자동일정동의가 아님. 개인item 완료/미완료종료/현재주재개·정정은 해당T/수10시·원장근거 유지, N/다른item예약과과거완료 보존 |
+
+CycleMeta의 read/create/admit/complete는 시간정책 요약이며 캐릭터 자격/자리·실제command permission을 대신하지 않는다. summary의 `permissions.mark_completed/clear_manual_completion/view_participation` 및 상세context의 allowed/reason/next_change_at을 소비한다. 첫 읽기 단계에서 기존 C 수동완료는 적법한 v1 경로/불변 pending을 보존하되 N은 항상 비활성, party완료를 수동해제로 지우지 않는다. 계정v2 수동완료 명령 이행은 F6에서 현재 summary revision/명시T와 함께 묶어 검증한다.
+
+### 37.5 디바이스 전 구현 순서/완료 조건
+
+| 단위 | 포함/완료 조건 | 아직 포함하지 않음 |
+|---|---|---|
+| F1 주차/계정 읽기 | 인증메타/summary·실제T 모델/캐시/선택기·3열체크+i, target 본인참가/신청 목록 읽기·i의기본상세 조회, Router/DI·세션/늦은응답/06시 경계. read-only POST 구분·미개시/과거관계 처리. 조회실패에도 계정원본/정상T 보존 | 신규모집/참가·승인·일정·관리쓰기. 기존C 수동체크는보존 |
+| F2 생성/상세 | v2초안/context/원자C/N생성·원ACK/재진입·로컬시간/최고가능난이도, 같은방T상세·상세탭 완성. v1위험쓰기 전환오류 처리 | 공개목록 검색·신규참가 |
+| F3 목록/신청·승인 | 실제T 검색/필터·정렬/자리·서버페이지와 target본인목록, 신규join/apply/승인·거절/철회·일반캐릭터변경. 8인마지막자리 충돌/상태 갱신 | 기존인원N특례/관리·일정 |
+| F4 다음주/관리 | 기존인원N바로참가·중복B안내/대체·decline, N탈퇴/자동승계·직접위임·명시재개·편성/설정·추방, G1공통ACK와전체leave/end의영향·한도. C/N격리 | 일정제안·완료류 |
+| F5 일정/예약 | 제출표/다시가져오기·busy/겹침·후보/그룹편집·제안/투표·정족수·본인세션확인/예약·재참가후재동의, 다중세션 일괄적용 | 완료/현재주재개 |
+| F6 완료/통합 | manual/party/개인item 완료·정정/미완료종료·현재주재개, 수06/10시·N보존/재참가·이력/원ACK, 구v1pending·cache이행/상호영향 최종 검증 | 통계19/매주자동개방/운영배포 |
+
+각 단위는 별도 범위/검증 후 다음 단위로 진행한다. 전체 F1~F6을 한 번에 구현하도록 승인됐다는 뜻이 아니다. 첫 실제 구현 후보는F1이다. 실제 미완료 구간을 사용가능처럼 보이는 버튼으로 노출하거나 v1위험쓰기로 우회하지 않으며, 기존 승인된 영역·진입 위치는 보존한다.
+
+### 37.6 첫 F1의 API·모델 계약
+
+| API | 실제 wire/화면 |
+|---|---|
+| GET /v2/raid-cycles | 인증필수. server_now,current,next,policy_version. CycleMeta의cycle_key/starts_at/ends_at/playable_from/permissions. 기존 MemberRaidClient의public _public을 재사용하지 않고 인증 request 경로 사용 |
+| POST /v2/me/raid-weekly-summary | character_ids[1..50],target_cycle_keys[1..2],둘다unique. 원응답 server_now/current_cycle_key/target_cycle_keys/catalog_version/entries. summary는scope/data wrapper가 아님 |
+| SummaryEntry | character_id/raid_id/target_cycle_key+weekly/ownership/lifecycle revision, completion_sources[], participation(nullable),continuation_state,permissions. 수동/파티완료 출처를 압축boolean만으로 잃지 않음 |
+| GET /v2/me/raid-room-memberships | 필수target_cycle_key, state=current/ended/all,limit1..50(default20),cursor. scope/data→items/membership_head/next_cursor/evaluated_at. actualtarget·generation·nullable cycle_member/room, joined_order십진string/BigInt. 첫페이지+명시더보기 |
+| GET /v2/me/raid-room-applications | 필수target_cycle_key, state=pending/accepted/rejected/withdrawn/expired/cancelled/all(default pending),limit1..50(default20),cursor로읽기. pending은좌석아님/공대장권한아님. 읽기페이지마다불필요한전수조회/상세N+1 없음 |
+| GET /v2/raid-rooms/{room_id} 및 상세 읽기 | 출처T명시, scope의실제T/세대와data대조. i에서read가능한최소상세만요청·private plan 자동조회없음. TARGET_NOT_OPEN은미개시/과거관계로안내 |
+
+F1 DTO는실행OpenAPI의정확한필수/nullable/enum을기준으로추가한다. 요청한캐릭터×raid×T의중복/누락·부정날짜/서버C변경·소유/카탈로그근거불일치가확인되면INVALID_RESPONSE/재조회로구분한다. 초기bootstrap의weekly current를v2 summary처럼캐스팅하지않고프로필/카탈로그만재사용한다.
+
+### 37.7 회귀 보호·자동 검증 계획
+
+- 직접보호: 정상계정 카드/대표왕관·관리저장/취소복귀·표시개수선호, 개인표복원/회원별자동갱신1회/4초진입, C수동체크의원ACK/미결명령, 1770벨가르딘하드/불가난이도제외·신규만들기재진입/초안, 기존비로그인검색.
+- F1표적: `test/features/account/backend_read/member_weekly_test.dart`·`member_account_integration_test.dart`·`test/app/account_session_view_test.dart`·주간projection/display정책을기반으로 authenticated메타/summary본문/읽기POST키없음·필수/nullable/다른T/중복/누락거절·50초과분할/0명·C/N전환/한T실패/원정대원본보존·로그아웃/다른회원/동일회원새세션·06/10시/오래된dialog·권한false·persistent/review/i/완료분리 경계를 검증한다.
+- F2이후는 `backend_recruitment_test.dart`·start/eligibility정책·기존파티읽기/페이지session테스트중 실제호출영향만보호한다. 구DTO/로컬저장소의시험을모두복사하지않고새wire·불변요청/원ACK·늦은응답/주차격리·목록cursor충돌에집중한다.
+- 변경중format/diffcheck·필요최소컴파일, 각기능단위끝표적test/analyze1회. account/Router·공용주차변경의호출영향이광범위하면F6최종전체flutter test/analyze1회,표적으로충분하면근거기록. 서버DB원자성/권한·경합은Backend근거를사용하며Flutter mock통과로대체하지않는다. 동일8인반복인원시험/정상UI자동시험은늘리지않는다.
+
+### 37.8 디바이스 인수 전달 게이트
+
+기획승인→해당단위구현/자동검증→최종diff/연결상태·API기준/미확인기록→사용자가설치·조작할체크리스트순서다. F1만연결했으면읽기구간완료로보고하고모집/예약전체완료로확대하지않는다. 세부중간단계마다디바이스시험을반복요청하지않고실제전달가능기능섹션단위로묶는다.
+
+첫읽기인수: 기존정상로그인으로메타/summary성공, C/N날짜/체크+i·review/빈상태·과거관계, target본인목록/i상세, 계정전환/로그아웃시자료격리, 기존카드/개인표·자동갱신보존이다. 이후전체인수는생성원자성·목록필터/승인·N특례/탈퇴·승계/위임·일정확인/예약·개인완료/종료/재개·06/10시를한체크리스트로추가한다. 실제인증성공/실회원쓰기·기기성능은Backend격리시험과별도로미확인을유지한다. 정상세션외테스트JWT발급·DB토큰추출/새가짜회원을실기기인수전제로하지않는다. 문제시request_id/오류코드·실제T/해당단계만수집하고키/토큰/민감응답은게시하지않는다.
+
+Backend92요청의진행상태·소비SHA/적용·미적용과검증/미확인은Issue13에회신한다. 기획단계의회신은준비완료와미실행상태만기록하며정상HTTP/기기통과로표시하지않는다.
+
+### 37.9 F1 구현 경계 — 2026-10-22
+
+앱의 BackendMemberAccount에서만 twoCycleEnabled를 켜고 기존 MemberWeeklyViewModel에 인증 CycleMeta/summary 읽기를 연결했다. `member_cycle_models.dart`는 실제 주차/권한 DTO, `cycle_read_repository.dart`는 target 본인목록/기본카드와 scope 검증, `cycle_read_view_model.dart`는 페이지별 cursor·세션/요청 경계, `cycle_own_rooms_page.dart`는 본인목록/읽기상세를 담당한다. Router의 target_cycle_key가 있는 상세는 v2 읽기만 사용하며 private plan은 자동 조회하지 않는다. 신규 생성/검색·참가/관리/일정/완료 쓰기는 F2~F6에 남긴다.
+
+summary는 요청 캐릭터×raid×T 전체 검증 후 반영하고 50캐릭터·500entry 제한에 맞춰 분할한다. 캐시는 환경/회원/세션·readGeneration/실제T와 소유·lifecycle에 묶으며 한T 실패 시 기존 다른T 읽기를 보존하되 쓰기 권한은 닫는다. 주차 경계 오류는 메타부터 한 번만 재시도한다. 06시 전환·10시 권한 변경/앱복귀에 재조회하고 기존 프로필/Armory 전체 재수집은 추가하지 않는다. 체크/i는 독립 근거를 쓰며 3열 중앙 체크·우측 축소i·여러 행을 적용한다.
+
+적법한 C v1 수동완료와 pending schema1/원키·원본문을 유지하고 N 완료는 막는다. 공개목록/target 없는 생성·상세의 v1 이행은 아직 남아 있으므로 새 서버에서 전체 모집 기능이 사용 가능하다는 뜻은 아니다. 현재 생성의 CLIENT_UPGRADE_REQUIRED를 자동 새 v2 명령으로 우회하지 않는다. 과거 관계를 현재 참가로 바꾸거나 한도를 자동 회복하지 않는다.
+
+검증은 신규 읽기 경계22/기존 직접영향101 고유123PASS·변경14파일 분석0이다. 실제 정상인증HTTP·회원 쓰기·화면/기기 성능은 미확인이다. 상세 결과/회신과 보존 항목은 DEV_LOG, 다음 F2 범위·수동 확인 항목은 NEXT_WORK를 따른다.

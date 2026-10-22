@@ -545,48 +545,76 @@ void main() {
         });
         final catalog = weekly_fixture.catalogWire();
         final raid = (catalog['raids'] as List).first['raid_id'] as String;
-        final cycle = {
-          'server_time': clock.toIso8601String(),
-          'cycle_key': '2026-10-14',
-          'starts_at': '2026-10-13T21:00:00Z',
-          'ends_at': '2026-10-20T21:00:00Z',
-          'timezone': 'Asia/Seoul',
-        };
         apiRespond = (r) async {
           if (r.path == '/v1/raid-catalog') return catalog;
-          if (r.path == '/v1/raid-cycle') return cycle;
-          if (r.path == '/v1/me/raid-weekly-states') {
+          Map<String, dynamic> permission(bool allowed) => {
+            'allowed': allowed,
+            'reason': allowed ? null : 'PLAY_NOT_STARTED',
+            'next_change_at': null,
+          };
+          Map<String, dynamic> cycleMeta(String key) => {
+            'cycle_key': key,
+            'starts_at': DateTime.parse(
+              '${key}T00:00:00Z',
+            ).subtract(const Duration(hours: 3)).toIso8601String(),
+            'ends_at': DateTime.parse('${key}T00:00:00Z')
+                .add(const Duration(days: 7))
+                .subtract(const Duration(hours: 3))
+                .toIso8601String(),
+            'playable_from': '${key}T01:00:00Z',
+            'permissions': {
+              for (final k in ['read', 'create', 'admit', 'complete'])
+                k: permission(k != 'complete' || key == '2026-10-14'),
+            },
+          };
+          if (r.path == '/v2/raid-cycles') {
+            return {
+              'server_now': clock.toIso8601String(),
+              'current': cycleMeta('2026-10-14'),
+              'next': cycleMeta('2026-10-21'),
+              'policy_version': 'two-cycle-contract-4',
+            };
+          }
+          if (r.path == '/v2/me/raid-weekly-summary') {
             if (!readEntered.isCompleted) readEntered.complete();
             await readRelease.future;
             if (failWeekly) throw failure(r);
+            final body = r.data as Map;
             return {
-              'current_cycle': cycle,
-              'cycle_key': '2026-10-14',
+              'server_now': clock.toIso8601String(),
+              'current_cycle_key': '2026-10-14',
+              'target_cycle_keys': body['target_cycle_keys'],
               'catalog_version': catalog['catalog_version'],
               'entries': [
-                for (final id in r.queryParameters['character_id'] as List)
-                  for (final definition in catalog['raids'] as List)
-                    {
-                      'character_id': id,
-                      'raid_id': definition['raid_id'],
-                      'cycle_key': '2026-10-14',
-                      'revision': 1,
-                      'ownership_revision': 1,
-                      'lifecycle_revision': 1,
-                      'state': 'completed',
-                      'completion_sources': [
-                        {
-                          'source': 'manual',
-                          'completed_at': clock.toIso8601String(),
-                          'difficulty_id': null,
-                          'party_id': null,
+                for (final t in body['target_cycle_keys'])
+                  for (final id in body['character_ids'])
+                    for (final definition in catalog['raids'] as List)
+                      {
+                        'character_id': id,
+                        'raid_id': definition['raid_id'],
+                        'target_cycle_key': t,
+                        'weekly_revision': 1,
+                        'ownership_revision': 1,
+                        'lifecycle_revision': 1,
+                        'completion_sources': [
+                          if (t == '2026-10-14')
+                            {
+                              'source': 'manual',
+                              'completed_at': clock.toIso8601String(),
+                              'difficulty_id': null,
+                              'party_id': null,
+                            },
+                        ],
+                        'participation': null,
+                        'continuation_state': 'not_selected',
+                        'permissions': {
+                          'mark_completed': permission(t == '2026-10-14'),
+                          'clear_manual_completion': permission(
+                            t == '2026-10-14',
+                          ),
+                          'view_participation': permission(false),
                         },
-                      ],
-                      'participation': null,
-                      'can_mark_completed': true,
-                      'can_clear_manual_completion': true,
-                      'mark_blocked_reason': null,
-                    },
+                      },
               ],
             };
           }

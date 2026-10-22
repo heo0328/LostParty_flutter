@@ -3,12 +3,36 @@ import 'package:dio/dio.dart';
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../domain/account_read_session.dart';
 import '../domain/member_raid_models.dart';
+import '../domain/member_cycle_models.dart';
 import '../domain/role_summary.dart';
 import 'backend_account_read_api.dart';
 
 class MemberRaidClient {
   MemberRaidClient(this.api);
   final DioBackendAccountReadApi api;
+  Future<MemberCycles> cycles() => _decode(
+    () async => MemberCycles.fromJson((await api.request('/v2/raid-cycles'))!),
+  );
+  Future<MemberCycleSummary> summary(List<String> ids, List<String> targets) =>
+      _decode(() async {
+        roleCheck(
+          ids.isNotEmpty &&
+              ids.length <= 50 &&
+              ids.toSet().length == ids.length &&
+              targets.isNotEmpty &&
+              targets.length <= 2 &&
+              targets.toSet().length == targets.length,
+        );
+        ids.forEach(roleId);
+        targets.forEach(raidCycleKey);
+        return MemberCycleSummary.fromJson(
+          (await api.request(
+            '/v2/me/raid-weekly-summary',
+            method: 'POST',
+            body: {'character_ids': ids, 'target_cycle_keys': targets},
+          ))!,
+        );
+      });
   Future<T> _decode<T>(Future<T> Function() action) async {
     try {
       return await action();

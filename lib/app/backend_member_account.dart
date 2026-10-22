@@ -91,6 +91,7 @@ class BackendMemberAccount {
         model: model,
         client: MemberRaidClient(runtime.api),
         store: weeklyStore,
+        twoCycleEnabled: true,
       );
     }
   }

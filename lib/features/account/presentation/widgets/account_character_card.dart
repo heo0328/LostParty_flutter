@@ -27,6 +27,8 @@ class AccountCharacterCard extends StatelessWidget {
     this.representativeControl,
     this.status,
     this.reservedWeeklyRaidRows = 0,
+    this.weeklyColumns = 1,
+    this.onWeeklyRaidInfo,
     super.key,
   });
 
@@ -47,6 +49,8 @@ class AccountCharacterCard extends StatelessWidget {
   final Set<String> busyRaidIds;
   final Widget? representativeControl, status;
   final int reservedWeeklyRaidRows;
+  final int weeklyColumns;
+  final void Function(WeeklyRaidStatusItem)? onWeeklyRaidInfo;
 
   static const double raidRowHeight = 26;
 
@@ -174,79 +178,188 @@ class AccountCharacterCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                for (final raid in weeklyRaids)
-                  SizedBox(
-                    height: raidRowHeight,
-                    child: InkWell(
-                      onTap:
-                          onWeeklyRaidChanged == null ||
-                              !raid.canToggle ||
-                              busyRaidIds.contains(raid.raidId)
-                          ? null
-                          : () => onWeeklyRaidChanged!(raid, !raid.isCompleted),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 28,
-                            height: raidRowHeight,
-                            child: Checkbox(
-                              key: ValueKey(
-                                'weeklyRaidClaim-${character.serverCharacterId}-${raid.raidId}',
-                              ),
-                              value: raid.isCompleted,
-                              onChanged:
-                                  onWeeklyRaidChanged == null ||
-                                      !raid.canToggle ||
-                                      busyRaidIds.contains(raid.raidId)
-                                  ? null
-                                  : (value) => onWeeklyRaidChanged!(
-                                      raid,
-                                      value ?? false,
-                                    ),
-                              visualDensity: VisualDensity.compact,
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              raid.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall,
-                            ),
-                          ),
-                          if (raid.statusMessage case final message?)
-                            Tooltip(
-                              message: message,
-                              child: Icon(
-                                raid.statusKind ==
-                                        WeeklyRaidStatusKind.inconsistent
-                                    ? Icons.error_outline
-                                    : Icons.info_outline,
-                                size: 16,
-                                color:
-                                    raid.statusKind ==
-                                        WeeklyRaidStatusKind.inconsistent
-                                    ? theme.colorScheme.error
-                                    : theme.colorScheme.primary,
+                if (weeklyColumns == 3)
+                  _weeklyGrid(context)
+                else ...[
+                  for (final raid in weeklyRaids)
+                    SizedBox(
+                      height: raidRowHeight,
+                      child: InkWell(
+                        onTap:
+                            onWeeklyRaidChanged == null ||
+                                !raid.canToggle ||
+                                busyRaidIds.contains(raid.raidId)
+                            ? null
+                            : () =>
+                                  onWeeklyRaidChanged!(raid, !raid.isCompleted),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 28,
+                              height: raidRowHeight,
+                              child: Checkbox(
+                                key: ValueKey(
+                                  'weeklyRaidClaim-${character.serverCharacterId}-${raid.raidId}',
+                                ),
+                                value: raid.isCompleted,
+                                onChanged:
+                                    onWeeklyRaidChanged == null ||
+                                        !raid.canToggle ||
+                                        busyRaidIds.contains(raid.raidId)
+                                    ? null
+                                    : (value) => onWeeklyRaidChanged!(
+                                        raid,
+                                        value ?? false,
+                                      ),
+                                visualDensity: VisualDensity.compact,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
                               ),
                             ),
-                        ],
+                            Expanded(
+                              child: Text(
+                                raid.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ),
+                            if (raid.statusMessage case final message?)
+                              Tooltip(
+                                message: message,
+                                child: Icon(
+                                  raid.statusKind ==
+                                          WeeklyRaidStatusKind.inconsistent
+                                      ? Icons.error_outline
+                                      : Icons.info_outline,
+                                  size: 16,
+                                  color:
+                                      raid.statusKind ==
+                                          WeeklyRaidStatusKind.inconsistent
+                                      ? theme.colorScheme.error
+                                      : theme.colorScheme.primary,
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                if (reservedWeeklyRaidRows > weeklyRaids.length)
-                  SizedBox(
-                    key: const ValueKey('weeklyRaidReservedArea'),
-                    height:
-                        raidRowHeight *
-                        (reservedWeeklyRaidRows - weeklyRaids.length),
-                  ),
+                  if (reservedWeeklyRaidRows > weeklyRaids.length)
+                    SizedBox(
+                      key: const ValueKey('weeklyRaidReservedArea'),
+                      height:
+                          raidRowHeight *
+                          (reservedWeeklyRaidRows - weeklyRaids.length),
+                    ),
+                ],
               ],
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _weeklyGrid(BuildContext context) {
+    final count = weeklyRaids.length > reservedWeeklyRaidRows
+        ? weeklyRaids.length
+        : reservedWeeklyRaidRows;
+    return Column(
+      children: [
+        for (var offset = 0; offset < count; offset += 3)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var col = 0; col < 3; col++)
+                Expanded(
+                  child: offset + col >= weeklyRaids.length
+                      ? const SizedBox(height: 54)
+                      : _weeklyCell(context, weeklyRaids[offset + col]),
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _weeklyCell(BuildContext context, WeeklyRaidStatusItem raid) {
+    final allowed =
+        onWeeklyRaidChanged != null &&
+        raid.canToggle &&
+        !busyRaidIds.contains(raid.raidId);
+    return SizedBox(
+      height: 54,
+      child: Column(
+        children: [
+          SizedBox(
+            height: 20,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                raid.label,
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+            ),
+          ),
+          LayoutBuilder(
+            builder: (context, box) => SizedBox(
+              height: 30,
+              child: Stack(
+                children: [
+                  Align(
+                    alignment: Alignment.center,
+                    child: SizedBox(
+                      width: 26,
+                      height: 28,
+                      child: Checkbox(
+                        key: ValueKey(
+                          'weeklyRaidClaim-${character.serverCharacterId}-${raid.raidId}',
+                        ),
+                        value: raid.isCompleted,
+                        onChanged: allowed
+                            ? (v) => onWeeklyRaidChanged!(raid, v ?? false)
+                            : null,
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                  ),
+                  if (raid.statusMessage != null)
+                    Positioned(
+                      left: box.maxWidth / 2 + 14,
+                      right: 0,
+                      top: 5,
+                      bottom: 5,
+                      child: Tooltip(
+                        message: raid.statusMessage!,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: onWeeklyRaidInfo == null
+                              ? null
+                              : () => onWeeklyRaidInfo!(raid),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Icon(
+                              raid.statusKind ==
+                                      WeeklyRaidStatusKind.inconsistent
+                                  ? Icons.error_outline
+                                  : Icons.info_outline,
+                              size: 16,
+                              color:
+                                  raid.statusKind ==
+                                      WeeklyRaidStatusKind.inconsistent
+                                  ? Theme.of(context).colorScheme.error
+                                  : Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

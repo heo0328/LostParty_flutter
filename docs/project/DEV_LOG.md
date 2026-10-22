@@ -1,5 +1,71 @@
 # 개발 이력
 
+## 2026-10-22 — 구간별 문서·커밋/푸시 보관 방식 확정
+
+사용자가 머지 시점과 별개로 완료한 작업 구간마다 문서를 최신화하고 작업 브랜치에 커밋·푸시해 복구 지점을 남기도록 상시 승인했다. AGENTS/ai_rules에 반영해 매 구간 승인 재요청이나 소규모 작업의 푸시 생략으로 해석하지 않도록 했다.
+
+- 보관 범위: F1 Router가 의존하는 기존 v1 생성/상세·시간/입장 정책/시험을 선행17f8675로 분리했고, 다음 F1 커밋에 읽기 코드/테스트·최신 설계/인계/협업규칙을 묶는다. 이 두 커밋을 feature/raid-recruitment-scheduling 복구 지점으로 푸시하며 dev6d3f617은 유지한다. 최종 커밋 식별은 브랜치/원격 Git 이력을 기준으로 한다.
+- 검증: 기능 코드는 변경하지 않았다. F1 고유123PASS/변경14파일 분석0과 기존 v1 검증을 재사용하고 stage/diff/포함파일·원격 선행SHA를 대조했다. 새 UI 흐름·실회원HTTP·실기기 검증은 없으며 앞선 미확인을 유지한다.
+- 보존: 통계35·플랫폼 생성파일/DevTools/백업/tools는 제외했다. 작업 구간 보관과 dev 통합/전체2주차 완료를 구분하며 브랜치는 후속F2를 위해 유지한다.
+
+## 2026-10-22 — F1 주차·계정/본인목록 읽기 구현·자동검증 마감
+
+사용자 승인으로 첫 F1만 구현했다. 중단 재개 뒤 필수문서/Git·Issue13 최신92/93을 다시 확인했으며 새 Backend 회신은 없었다. 기준은 게시SHA3c26cdb6의 실행OpenAPI167경로·계약0.4.1/policy4·canonical hash fb4c7d065594a9a0e7e8288e5f73179f90b078b68ac4323d1aade5c7a63b42f1이다.
+
+- 새로 가능해진 흐름: 인증 C/N메타와 제한summary·실제 날짜 선택기, 계정3열 균등폭/체크중앙·i우측/다중행, target 본인참가/신청/기록의 명시 페이지와 i의 기본 읽기상세를 Router/DI에 연결했다. 완료 source와 actual 참가를 분리하고 legacy/not_selected는 확정i·현재좌석으로 승격하지 않는다. 50초과/500entry 분할·0명 미요청, scope/소유/lifecycle/누락·중복 검증, 회원/환경/세션/읽기세대·늦은응답 폐기, 부분실패·06/10시/앱복귀 재조회와 경계오류1회재시도를 포함했다.
+- 보존 확인한 기존 흐름: 기존계정 통합/세션·주간 projection/display·C수동완료와 pending schema1/원키·원본문, 생성/입장·시간 정책의 직접영향 시험을 보호했다. 기존 카드/왕관·관리/개인표·자동갱신 구조와 무관한 미커밋 파일은 유지했다. C수동완료 성공 후 v2재조회·N불변도 mock으로 확인했다. 별도 원정대 재수집/새영속스키마·실제DB/서버/키 변경은 없다.
+- 검증: 섹션 직접영향9파일123건 실행에서121PASS/신규2FAIL이었다. 원인은 새 테스트 interceptor가 기존 DioException의 response/code를 지운 것이며 기존 예외를 보존하도록 fixture만 수정했다. 신규22건 재실행 전부PASS, 앞서 통과한 기존101건은 변경 없이 재사용하여 **고유123PASS**다. 변경Dart14파일 분석0·포맷·diff검토/공백검사. 신규세션·주차/정책경계는 mocked HTTP/로컬검증이며 Backend 원자성/권한 인수로 확대하지 않는다. F1 전용소비·기존VM호출/세션/생성정책 경계로 영향범위를 설명할 수 있고 저장/인증/타feature정책 변경이 없어 무관한 전체flutter test는 반복하지 않았다.
+- 미확인 실기기: 정상인증HTTP·Google/provider·실회원쓰기, 실제3열/i의 좁은화면·다중행/글자크기, C/N·계정전환/복귀·개인표/설정 보존·성능이다. 설치/기기조작은 하지 않았다. F2~F6 미구현이며 전체2주차/신규생성·관리/일정/완료쓰기 인수완료가 아니다. 과거7관계/현재검색0건은 정상정책 유지.
+- 협업: [F1 구현회신6335276652](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6335276652)에 사용계약·적용/제외·자동검증/실제HTTP/기기 미확인·다음F2를 기록하고 게시본문 재조회 일치를 확인했다. 새 Backend 수정/동일시험 반복 요청은 없다. 다음 독립단위는 NEXT_WORK의 F2이고 이번에 착수하지 않았다.
+- Git: feature/raid-recruitment-scheduling·HEAD1ad192a 유지. F1 코드/테스트/관련문서 미커밋·미push/dev6d3f617 미반영, 브랜치 유지. 사용자/기존 미커밋 기능·통계35/플랫폼생성/DevTools/백업/tools를 임의 정리하지 않았다.
+
+## 2026-10-22 — Backend92 읽기 인계 수신·디바이스 전 네이티브 기획/설계
+
+사용자 요청으로 구현 없이 디바이스 전 네이티브 계획을 정리했다. 필수진입문서·설계37/제품·디자인과 최신Issue13 92번째, 게시SHA3c26cdb6의 실제전환기록/OpenAPI167경로를 읽고 계정/주간VM·저장소/인증API·카드·모집Repo·Router와 직접대조했다. 로컬/원격작업브랜치1ad192a·dev6d3f617 일치확인. Backend공개114/기본소스116/전환167과게시SHA·기능소스f276342·실행image ccc787cb9ccb의종류를구분했다.
+
+- 새로 준비된 흐름: 설계37 §37에 F1읽기→F2생성/상세→F3검색/신청/승인→F4N특례/주차관리→F5일정/예약→F6완료/통합,각포함/제외·완료/회귀/자동검증·디바이스전달게이트를기록했다. 첫F1은인증메타/summary·3열체크+i/주차선택·대상본인목록과i읽기상세·캐시격리다. 실제앱추가는없다.
+- 보존 확인: 기존Penpot v2/v3/v4·계정왕관/관리·개인표/자동갱신·C수동완료/미결원키본문·생성초안/최고가능난이도,무관미커밋작업을변경하지않았다. 구v1pending자동v2변환/새키우회·과거7관계자동활성화/탈퇴없음. 신규명령저장소·DB/인증키·서버/이미지변경없음.
+- 협업: [Flutter93번째6332679079](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6332679079)에준비범위/적용전·미실행/후속을회신하고본문재조회일치를확인했다. Backend수정/반복시험·정책재채택은재요청하지않으며실서버준비완료보고를대기로되돌리지않는다.
+- 검증/미확인: 문서/API필드·호출책임·실제파일존재·상호링크/diff검토.순수설계여서Flutter test/analyze/기기설치·실회원조회/쓰기미실행,메타/summary정상인증HTTP와최종기기인수는미확인이다. 대용량GitHub기본content빈값은raw응답으로읽었고직렬화/쉘인수실패는독립검토스크립트로전환해해결했다.
+- Git: feature/raid-recruitment-scheduling·HEAD1ad192a유지,이번문서미커밋/미push/dev미반영·브랜치유지. 기존통계35·플랫폼생성/DevTools/백업/tools·앱/시험코드보존.
+
+## 2026-10-21 — Issue13 83번 공통ACK 보완 검토 마감
+
+[Backend6310051618](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6310051618)의마지막공통ACK보완을격리재현했다.53경로/56동작/204schema·합성84사례/global CAS6쌍/실제endpoint흐름2개통과·본문hash일치,독립diff에서기존schema변경0/공통ACK2개추가·변경path1개만확인했다. §36.13의공통설정응답target강제문제가해소됐으며[Flutter6310097083](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6310097083)에현재명세소비충돌없음/계약고정가능을회신했다.
+
+- 새로 가능: 첫계약검토구간마감,다음은실제서버인계대조후주차메타·계정summary/선택기준비다. 실제앱추가없음.
+- 보존 확인: 기존네수정/L1·G1·A1/생성만C/N원자·이후T별독립유지.앱코드/Penpot/서버·DB/기존무관변경보존.
+- 미확인: 명세/예시검증만이며정식OpenAPI validator/FastAPI·HTTP·DB경합/멱등저장소/성능·기기인수는미실행이다.실제Backend소비가능SHA/경로준비인계는후속.
+- 검증/Git: 문서diff검토·git diff --check,코드변경없어Flutter test/analyze반복없음.회신게시후본문재조회일치확인. feature/raid-recruitment-scheduling·HEAD1ad192a유지·문서미커밋/미push/dev미반영·브랜치유지.최초Git조회가검토폴더에서실패한것은저장소cwd에서재조회해확인했다.
+
+## 2026-10-21 — 첫 구간: 계약4판 재현·네 수정 해소/공통ACK 추가 확인
+
+사용자가 첫 작업 구간인 계약 최종 검토를 승인했다. 필수 진입문서·관련설계/최신Issue13과 실제Router/v1생성·상세/목록Pending, 현재Git을 대조했다. [Backend81번째6309446458](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6309446458)의 원문 생성기·예시 생성기·validator를 격리 검토 폴더에서 실행했다. 입력hash통과,53경로/56동작/202schema와canonical SHA256 d6aa245c29fb533525fa136ce6ab43c06f34774e52d8d70c183b9ffa8ee0c030 일치,합성70사례/CAS출처6쌍 통과,3판닫힌객체required/property모순3→4판0이다. 검토폴더에만jsonschema설치,앱의존성변경없음.
+
+- 새로 가능해진 흐름: 실제 앱 추가는 없다. 제목/전역CAS/생성checkbox/숙련도다중검색 네 계약수정의 소비대조를 마쳤다. 사용자가 재확정한 '생성만C/N원자·이후탈퇴/승계/위임/완료T별독립'을설계37 §36.13에기록했다.
+- 보존 확인: L1/G1/A1·기존계정/개인표/최고가능난이도·생성초안/원ACK의기준과기능코드·Penpot·서버DB/원본OpenAPI·별도통계35/플랫폼생성/DevTools/백업/tools를변경하지않았다.
+- 남은 계약/협업: common-settings의target-free공통명령과target필수200 Ack의출처가미고정이며해당응답예시도없다. [검토6309858607](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6309858607)에네항목해소와공통ACK한항목보완/C공존·N만존재성공예시를요청했다. 전체최종고정은보완후좁혀재대조,독립W1준비는가능하다. 게시후본문을재조회해작성본문과일치를확인했다.
+- 미확인 실기기: 실제2주차API/DB경합·원자성/권한·성능/기기인수는아직이다. 이번검증은schema/설계이며실제서버시험으로확대하지않는다. 정식OpenAPI validator/FastAPI대조도미실행이다.
+- 검증/Git: 문서diff/공백검토,기능코드변화없어Flutter test/analyze반복없음. 원격조회로dev6d3f617·작업브랜치1ad192a 일치확인. feature/raid-recruitment-scheduling·HEAD1ad192a 유지,이번결과미커밋·미push·dev미반영/브랜치유지. 첫게시시존재하지않는payload파일을참조해실행전실패했고body-file명령으로바꿔1회게시했다.
+
+## 2026-10-21 — Issue13 전체79번째 계약후보3판 재현·소비검토
+
+[6308319220](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6308319220)의 L1/G1/A1·순번string/개방예정값·공대장필드 보완을확인했다. generator전문검토후격리검토폴더에서고정원본/73core+76delta로전체후보를재현해53경로/56operation/196schema·본문canonical해시일치/내부ref누락0·operationID중복0을확인했다. 처음Windows cp949읽기실패는-Xutf8로해결,JS재직렬화로1.0→1입력해시차이가난것은원문을Python으로직접병합해해결했다. runtime/입력hash검사를우회하지않았다.
+
+재현결과title실제필드삭제3schema·전역leave/end의부재T필수CAS/출처불일치·생성함께하기UI단계변경·숙련도다중검색누락을발견해 [6308381113](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6308381113)에수정요청했다. 최종전체계약승인/기능완료아님. 새실제앱흐름없음/기존코드·시안/무관변경보존. 문서diff/내용·게시본문재조회,정식validator/첨부16fixture·FastAPI/DB·성능·기기시험미실행. 코드변경없어Flutter시험반복없음. feature/raid-recruitment-scheduling·HEAD1ad192a유지,이번검토문서미커밋/미push·dev미반영/브랜치유지. 설계37 §36.12/NEXT_WORK에수정회신대기를기록했다.
+
+## 2026-10-21 — 마지막1인 주차종료/명시재개·G1·A1 사용자 채택
+
+사용자가직전추천세안을채택했다. 설계37 §36.11에 마지막1인N탈퇴시N만취소/종료와C공대장명시재개, 제목/공개범위C공대장우선(G1,C자체없고열린N만이면N), 초기명시개방만/매주자동개방보류(A1)를확정했다. C/N독립·전역해산안전조건·기존그룹불변/옛auto값보존을유지한다. 별도방관계종료진입점/연속확인UX나#19통계까지승인으로확대하지않는다.
+
+[Backend확정전달6307975683](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6307975683)에게시하고본문재조회로전달을검증한다. NEXT_WORK/AI_CONTEXT/현재정책표에반영, 전체DTO/권한·이행보완대기. 실제신규앱흐름없음·기존코드/시안·무관변경보존. 문서내용/diff검증만,코드변경없어Flutter시험반복없음·실서버/디바이스미구현/미확인. feature/raid-recruitment-scheduling·HEAD1ad192a유지,이번문서미커밋/미push·dev미반영·브랜치유지.
+
+## 2026-10-21 — Issue13 전체76번째 공대장·승계 보완2판 소비검토
+
+[Backend6307589155](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6307589155) 본문/명세delta를 확인했다. T별공대장/원자개방·본인참가·N자동승계/위임·C보존, 충돌제목/소스자격·참가확인분리·자리projection이 §36.7/36.9에 부합한다. L1마지막1인·명시재개/관계한도정리,G1~G3공통권한,A1명시개방우선/자동보류는미정제품제안으로유지했다. 순번JSON정밀도·prospective Target revision출처·전체DTO필드명 보완과소비결과를 [6307642641](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6307642641)에회신했다. GitHub연결도구는쓰기403으로미게시였고기존gh인증으로정상게시했다.
+
+검증: 73core+76delta JSON병합11경로/39schema·내부참조누락0·operationID중복0, 문서diff/내용·게시본문재조회. 정식OpenAPI/기능·DB·성능시험 미실행이다. 실제앱신규흐름없음·기존코드/시안·무관변경보존,실기기미구현/미확인. 코드변경없어Flutter시험반복없음. feature/raid-recruitment-scheduling·HEAD1ad192a유지,이번검토문서미커밋/미push·dev미반영/브랜치유지. 사용자에게남은제품결정을설명후최종전체계약을고정하며선구현하지않는다.
+
 ## 2026-10-21 — 2주 레이드 현황 문서 통합 점검·작업 브랜치 체크포인트
 
 사용자가 전체 기획 최신화·재점검과 커밋/푸시를 승인했다. NEXT_WORK를 과거 진행 경과 누적에서 현재 단일 준비 작업/계약 보완/후속 순서로 교체하고 AI_CONTEXT·문서 지도를 줄였다. 설계37 상단과 §36.2~36.3을 현재 C/N 흐름으로 통합해 상세 탭/기존 참가자 즉시확정/주차별 공대장·탈퇴·승계/위임·수10시 완료·체크/i를 일치시켰다. 핵심 사용자 흐름 §4/§9.2와 화면 역할, 참가 규칙의 신규 서버 적용 우선순위, 한도34와 파티 구성 디자인도 연결했다. 기존 00시gate·유지의사만 저장/자동 입장·전역 공대장·전체 시간중복금지를 현재 정책으로 재사용하지 않게 구분했다.

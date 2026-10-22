@@ -2,11 +2,11 @@
 
 > 기존 서비스 전용 항목은 [원문·출처 기록](../legacy/firebase/extracted/docs/README.md)으로 분리했다. 남은 제품/협업 문맥의 신규 서버 적용 여부는 별도 설계에서 판단한다.
 
-## 현재 개발 체크포인트 — 2주 레이드 현황 (2026-10-21)
+## 현재 개발 체크포인트 — 2주 레이드 현황 (2026-10-22)
 
 모집/내 계정/참가 현황을 **이번 주·다음 주 직접 선택**으로 확장하는 제품 기획을 채택했다. 같은 방의 주차별 참가·설정·일정·공대장을 분리하며, 기존 참가자의 다음 주 바로 참가와 충돌 복구, N 활성화 공대장의 참가·주차별 탈퇴/자동 승계·직접 위임이 포함된다. 수06시 주차 전환·해당 수10시 이후 완료, 계정3열 체크와 우측i·4/8인 자리 번호를 유지한다.
 
-기획/시안 반영과 실제 구현은 구분한다. 현재 앱은 개인표와 v1 모집 생성/기본상세 단계이며, **2주차 UI/API·주차별 공대장 기능은 미구현**이다. Backend73 설계1판에 최신 정책을 정정 전달했고 전체 계약 보완을 기다린다. 현재 정책은 [설계37](backend-migration/37-raid-scheduling-and-multi-raid-planning.md), 흐름은 [사용자 흐름 지도](feature-definitions/LOSTPARTY_CORE_USER_FLOW_OVERVIEW.md), 다음 행동/미정은 [NEXT_WORK](project/NEXT_WORK.md), 완료 이력은 [DEV_LOG](project/DEV_LOG.md)를 따른다.
+기획/시안 반영과 실제 구현은 구분한다. 현재 앱은 개인표와 v1 모집 생성/기본상세 단계이며, **F1 계정/본인목록의 주차별 읽기 UI/API를 구현·자동 검증했고 실기기 인수는 미확인**이다. F2~F6 생성/검색·참가·공대장 관리/일정/완료 신규 쓰기는 미구현이다. Backend92에서 개발DB/API 전환·읽기구간을 인계했다. 실행OpenAPI/현재Flutter와 대조한 디바이스 전 네이티브 F1~F6 설계는 설계37 §37이며, F1 주차메타·계정summary/선택기·본인목록/읽기상세·캐시격리의 결과는 §37.9이며 다음 독립 단위는 F2 생성/상세다. 정상인증HTTP/Flutter·기기인수는 미확인이다. 생성은 C/N을 함께 확정하되 이후 탈퇴·위임·완료는 주차별 독립이다. 현재 정책은 [설계37](backend-migration/37-raid-scheduling-and-multi-raid-planning.md), 흐름은 [사용자 흐름 지도](feature-definitions/LOSTPARTY_CORE_USER_FLOW_OVERVIEW.md), 다음 행동/미정은 [NEXT_WORK](project/NEXT_WORK.md), 완료 이력은 [DEV_LOG](project/DEV_LOG.md)를 따른다.
 
 ## 이전 안정화 기준 (2026-10-18~19)
 
@@ -24,7 +24,7 @@
 
 ## Backend 선행 API 분야별 요청
 
-#13의 개인표6ecb81d·계정UI4198f1a는 사용자 정상 확인 완료다. 생성/기본상세는 v1 연결·자동검증 기록이 있는 미커밋 구현이고 목록은 Pending이다. 작업 브랜치에 문서 체크포인트를 남기며 dev 통합/실기기 전체 인수는 아직 아니다. 다음은 최신 2주차 계약 보완을 받은 뒤 주차 메타/계정 → 생성/상세 → 검색·신청/승인 → 다음주 참가·주차별 관리 → 일정/예약/완료 순서로 작은 단위를 준비한다. 상세 상태와 검증 근거는 [AI_CONTEXT](project/AI_CONTEXT.md)·[NEXT_WORK](project/NEXT_WORK.md)·[DEV_LOG](project/DEV_LOG.md)를 따른다.
+#13의 개인표6ecb81d·계정UI4198f1a는 사용자 정상 확인 완료다. 생성/기본상세 v1 연결·시간/입장 정책은 선행 복구17f8675에 보관했고 공개목록은 Pending이다. F1 target 본인목록·기본 읽기상세는 v2로 연결됐다. 구간별 문서·코드·테스트를 커밋·작업 브랜치 푸시로 보관하며 dev 통합/실기기 전체 인수는 아직 아니다. 다음은 F1 읽기 결과를 기준으로 생성/상세 → 검색·신청/승인 → 다음주 참가·주차별 관리 → 일정/예약/완료 순서로 작은 단위를 준비한다. 상세 상태와 검증 근거는 [AI_CONTEXT](project/AI_CONTEXT.md)·[NEXT_WORK](project/NEXT_WORK.md)·[DEV_LOG](project/DEV_LOG.md)를 따른다.
 
 - [이전 축소 1차 계획 기록38](backend-migration/38-account-availability-and-role-power-phase1.md): 폐기된 범위의 변경 이력. 현재 통합 목표와 UI 선행/계약 대조는 설계37 §24/NEXT_WORK를 따른다.
 

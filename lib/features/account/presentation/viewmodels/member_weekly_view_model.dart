@@ -8,6 +8,7 @@ import '../../data/member_raid_client.dart';
 import '../../data/member_weekly_store.dart';
 import '../../domain/account_read_session.dart';
 import '../../domain/member_raid_models.dart';
+import '../../domain/member_cycle_models.dart';
 import '../../domain/role_summary.dart';
 import '../../domain/scoped_cache_models.dart';
 import '../../domain/entities/character_weekly_raid_display_preference.dart';
@@ -17,6 +18,7 @@ import '../../domain/entities/weekly_raid_status_projection.dart';
 import 'member_account_view_model.dart';
 
 String memberWeeklyFailure(String? code) => switch (code) {
+  'PLAY_NOT_STARTED' => '해당 주 수요일 10시부터 완료할 수 있습니다.',
   'PARTICIPATION_CONFIRMATION_REQUIRED' => '참가 중인 레이드는 아직 여기서 완료 처리할 수 없습니다.',
   'CYCLE_CHANGED' => '주차가 바뀌었습니다. 다시 확인해 주세요.',
   'REVISION_CONFLICT' ||
@@ -95,6 +97,7 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     required this.model,
     required this.client,
     required this.store,
+    this.twoCycleEnabled = false,
     DateTime Function()? now,
   }) : now = now ?? DateTime.now {
     model.addListener(_modelChanged);
@@ -103,6 +106,24 @@ class MemberWeeklyViewModel extends ChangeNotifier {
   final MemberAccountViewModel model;
   final MemberRaidClient client;
   final MemberWeeklyStore store;
+  final bool twoCycleEnabled;
+  MemberCycles? cycles;
+  String? _selectedCycle;
+  final Map<String, Map<String, MemberWeeklyEntry>> _cycleEntries = {};
+  String? get selectedCycleKey => _selectedCycle ?? cycles?.current.key;
+  bool get selectedIsCurrent => selectedCycleKey == cycles?.current.key;
+  void selectCycle(String key) {
+    if (writing ||
+        hasPending ||
+        cycles?.find(key) == null ||
+        selectedCycleKey == key) {
+      return;
+    }
+    _selectedCycle = key;
+    _emit();
+    if (!_cycleEntries.containsKey(key)) unawaited(refresh());
+  }
+
   final DateTime Function() now;
   RaidCatalog? catalog;
   MemberRaidCycle? cycle;
@@ -146,7 +167,11 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       !pendingFailed &&
       retrySeconds == 0;
   bool get canUseCurrent => hasPending && pendingFailed && _current && !busy;
-  bool get ready => _current && !loading && _cycleCurrent;
+  bool get ready =>
+      _current &&
+      !loading &&
+      _cycleCurrent &&
+      (!twoCycleEnabled || _cycleEntries.containsKey(selectedCycleKey));
 
   /// The current member/targets had their weekly read attempted, even on failure.
   /// This is display sequencing only and never grants write permission.
@@ -211,6 +236,9 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       _usedBootstrap = null;
       _signatureBootstrap = null;
       _entries = {};
+      _cycleEntries.clear();
+      cycles = null;
+      _selectedCycle = null;
       _display = {};
       _pending = null;
       failure = null;
@@ -238,6 +266,7 @@ class MemberWeeklyViewModel extends ChangeNotifier {
         identical(_signatureBootstrap, bootstrap)) {
       return;
     }
+    if (twoCycleEnabled && signature != _signature) _cycleEntries.clear();
     _signature = signature;
     _signatureGeneration = model.runtime.readGeneration;
     _signatureBootstrap = bootstrap;
@@ -372,6 +401,10 @@ class MemberWeeklyViewModel extends ChangeNotifier {
                     .firstOrNull;
                 if (row != null) ids.add(pending.character);
               }
+              if (twoCycleEnabled) {
+                await _readTwoCycles(ids, guard);
+                return;
+              }
               final snapshot = model.runtime.bootstrap;
               final supplied =
                   snapshot != null &&
@@ -481,6 +514,111 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     _flight = flight;
     _emit();
     return flight;
+  }
+
+  Future<void> _readTwoCycles(List<String> ids, void Function() guard) async {
+    try {
+      await _readTwoCyclesOnce(ids, guard);
+    } on AccountReadException catch (e) {
+      if (!{'CYCLE_CHANGED', 'TARGET_CYCLE_OUT_OF_RANGE'}.contains(e.code)) {
+        rethrow;
+      }
+      // A batch can straddle 06:00. Re-read metadata once, never relabel a write.
+      guard();
+      await _readTwoCyclesOnce(ids, guard);
+    }
+  }
+
+  Future<void> _readTwoCyclesOnce(
+    List<String> ids,
+    void Function() guard,
+  ) async {
+    final meta = await client.cycles();
+    guard();
+    final selected = meta.find(selectedCycleKey ?? '')?.key ?? meta.current.key;
+    final targets =
+        _cycleEntries.isEmpty ||
+            cycles?.current.key != meta.current.key ||
+            cycles?.current.permissions['complete']?.allowed !=
+                meta.current.permissions['complete']?.allowed
+        ? meta.values.map((v) => v.key).toList()
+        : [selected];
+    final received = now().toUtc();
+    final values = {for (final t in targets) t: <String, MemberWeeklyEntry>{}};
+    final raids = catalog!.raids.map((r) => r.raidId).toSet();
+    final size = raids.isEmpty
+        ? 50
+        : (500 ~/ (raids.length * targets.length)).clamp(1, 50);
+    for (var i = 0; i < ids.length; i += size) {
+      final chunk = ids.skip(i).take(size).toList();
+      final batch = await client.summary(chunk, targets);
+      guard();
+      if (batch.currentKey != meta.current.key ||
+          batch.targets.length != targets.length ||
+          !batch.targets.containsAll(targets)) {
+        throw const AccountReadException('CYCLE_CHANGED');
+      }
+      if (batch.catalogVersion != catalog!.catalogVersion) {
+        throw const AccountReadException('CATALOG_VERSION_CONFLICT');
+      }
+      final expected = {
+        for (final t in targets)
+          for (final id in chunk)
+            for (final raid in raids) '$t:$id:$raid',
+      };
+      for (final e in batch.entries) {
+        if (!expected.remove('${e.cycleKey}:${e.characterId}:${e.raidId}')) {
+          throw const AccountReadException('INVALID_RESPONSE');
+        }
+        final row = _characters
+            .where((c) => c.ref.characterId == e.characterId)
+            .firstOrNull;
+        if (row != null &&
+            (row.ref.scope != model.runtime.scope ||
+                row.observation.lifecycleRevision != e.lifecycleRevision ||
+                !model.sections.any(
+                  (s) =>
+                      s.registration.accountId == row.ref.accountId &&
+                      s.registration.ownershipRevision == e.ownershipRevision,
+                ))) {
+          throw const AccountReadException('STALE_READ');
+        }
+        values[e.cycleKey]![e.key] = e;
+      }
+      if (expected.isNotEmpty) {
+        throw const AccountReadException('INVALID_RESPONSE');
+      }
+    }
+    guard();
+    final estimated = meta.serverNow.add(now().toUtc().difference(received));
+    if (!estimated.isBefore(meta.current.endsAt)) {
+      throw const AccountReadException('CYCLE_CHANGED');
+    }
+    cycles = meta;
+    _selectedCycle = meta.find(_selectedCycle ?? '')?.key ?? selected;
+    _cycleEntries.removeWhere((k, _) => meta.find(k) == null);
+    _cycleEntries.addAll(values);
+    if (!_cycleEntries.containsKey(selectedCycleKey)) _refreshAgain = true;
+    _entries = _cycleEntries[meta.current.key] ?? {};
+    cycle = meta.legacyCurrent;
+    _receivedAt = received;
+    _current = true;
+    _cycleTimer?.cancel();
+    final changes = [
+      meta.current.endsAt,
+      meta.current.playableFrom,
+      for (final v in meta.values)
+        for (final p in v.permissions.values)
+          if (p.nextChange != null) p.nextChange!,
+    ].where((d) => d.isAfter(estimated)).toList()..sort();
+    if (changes.isNotEmpty) {
+      _cycleTimer = Timer(changes.first.difference(estimated), () {
+        if (_disposed) return;
+        _current = false;
+        _emit();
+        unawaited(refresh());
+      });
+    }
   }
 
   CharacterWeeklyRaidDisplayPreference? preference(String character) =>
@@ -616,11 +754,20 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     }
   }
 
-  MemberWeeklyEntry? entry(ScopedCharacterRef ref, String raid) =>
-      _entries['${ref.characterId}:$raid'];
+  MemberWeeklyEntry? entry(ScopedCharacterRef ref, String raid) {
+    final values = twoCycleEnabled ? _cycleEntries[selectedCycleKey] : _entries;
+    return values == null ? null : values['${ref.characterId}:$raid'];
+  }
+
   bool canChange(ScopedCharacterRef ref, String raid) {
     final value = entry(ref, raid);
     return ready &&
+        (!twoCycleEnabled ||
+            (selectedIsCurrent &&
+                cycles != null &&
+                !cycles!.serverNow
+                    .add(now().toUtc().difference(_receivedAt!))
+                    .isBefore(cycles!.current.playableFrom))) &&
         !busy &&
         !hasPending &&
         retrySeconds == 0 &&
@@ -643,7 +790,9 @@ class MemberWeeklyViewModel extends ChangeNotifier {
         difficultyId: c.difficultyId,
         label: c.label,
         isCompleted: entry(ref, c.raidId)?.completed ?? false,
-        statusKind: entry(ref, c.raidId) == null && !busy && failure != null
+        statusKind: entry(ref, c.raidId)?.reviewRequired == true
+            ? WeeklyRaidStatusKind.inconsistent
+            : entry(ref, c.raidId) == null && !busy && failure != null
             ? WeeklyRaidStatusKind.inconsistent
             : entry(ref, c.raidId)?.participating == true
             ? WeeklyRaidStatusKind.active

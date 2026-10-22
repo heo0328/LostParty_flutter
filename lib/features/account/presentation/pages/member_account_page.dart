@@ -20,6 +20,7 @@ import '../viewmodels/member_settings_view_model.dart';
 import '../viewmodels/member_weekly_view_model.dart';
 import '../models/weekly_raid_status_item.dart';
 import '../widgets/member_weekly_display_dialog.dart';
+import '../widgets/member_cycle_selector.dart';
 import '../widgets/member_settings_controls.dart';
 import '../widgets/representative_crown.dart';
 import '../widgets/account_character_card.dart';
@@ -172,6 +173,7 @@ class MemberAccountPage extends StatelessWidget {
     this.onEdit,
     this.onVerifyRegistration,
     this.automaticRefreshAvailable = true,
+    this.onParticipation,
     super.key,
   });
   final MemberAccountViewModel model;
@@ -182,6 +184,7 @@ class MemberAccountPage extends StatelessWidget {
   final void Function(String) onServerStatus;
   final void Function(String)? onCharacters, onEdit, onVerifyRegistration;
   final bool automaticRefreshAvailable;
+  final void Function(String roomId, String target)? onParticipation;
   @override
   Widget build(BuildContext context) => UiFrameProbe(
     child: ListenableBuilder(
@@ -219,6 +222,13 @@ class MemberAccountPage extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               children: [
                 if (automaticRefreshAvailable) _progress(context),
+                if (weekly?.cycles case final meta?)
+                  MemberCycleSelector(
+                    cycles: meta,
+                    value: weekly!.selectedCycleKey!,
+                    enabled: !weekly!.writing && !weekly!.hasPending,
+                    onChanged: weekly!.selectCycle,
+                  ),
                 if (weekly != null) _weeklyStatus(context, weekly!),
                 if (model.failure != null)
                   Text(
@@ -657,6 +667,16 @@ class MemberAccountPage extends StatelessWidget {
         style: Theme.of(context).textTheme.bodySmall,
       ),
       weeklyRaids: weekly?.items(row.ref) ?? const [],
+      weeklyColumns: weekly?.twoCycleEnabled == true ? 3 : 1,
+      onWeeklyRaidInfo: (raid) {
+        final value = weekly?.entry(row.ref, raid.raidId);
+        final target = weekly?.selectedCycleKey;
+        if (value?.canViewParticipation == true &&
+            value?.roomId != null &&
+            target != null) {
+          onParticipation?.call(value!.roomId!, target);
+        }
+      },
       showWeeklyRaidEditor: weekly?.catalog != null,
       weeklyRaidHiddenByPreference:
           weekly?.preference(row.ref.characterId)?.displayCount == 0,

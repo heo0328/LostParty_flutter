@@ -50,6 +50,8 @@ import '../features/settings/presentation/pages/settings_page.dart';
 import '../features/recruitment_list/data/repositories/pending_backend_party_read_repository.dart';
 import '../features/recruitment_list/presentation/pages/recruitment_list_page.dart';
 import '../features/recruitment_list/data/backend_recruitment_repository.dart';
+import '../features/recruitment_list/data/cycle_read_repository.dart';
+import '../features/recruitment_list/presentation/pages/cycle_own_rooms_page.dart';
 import '../features/recruitment_list/presentation/pages/backend_recruitment_create_page.dart';
 import '../features/recruitment_list/presentation/pages/backend_recruitment_detail_page.dart';
 import '../features/recruitment_list/presentation/viewmodels/backend_recruitment_create_view_model.dart';
@@ -403,6 +405,9 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     final raidCatalog = RaidCatalogRepositoryImpl(
       dataSource: AssetRaidCatalogDataSource(),
     );
+    final cycleReads = CycleReadRepository(accountApi);
+    String cycleScopeKey() =>
+        '${_dio!.options.baseUrl}/${readSession.userId}/${readSession.generation}/${lifecycle.runtime?.readGeneration}';
     final recruitmentGateway = BackendRecruitmentRepository(
       api: accountApi,
       accounts: serverAccounts,
@@ -479,7 +484,17 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
               routes: [
                 GoRoute(
                   path: '/raid-status',
-                  builder: (_, _) => pending('레이드 현황'),
+                  builder: (context, _) => _memberAccount?.weekly == null
+                      ? pending('레이드 현황')
+                      : CycleOwnRoomsPage(
+                          weekly: _memberAccount!.weekly!,
+                          repository: cycleReads,
+                          scopeKey: cycleScopeKey,
+                          onLogin: () => showLoginRequired(context, auth),
+                          onRoom: (id, t) => context.push(
+                            '/recruitments/$id?target_cycle_key=$t',
+                          ),
+                        ),
                 ),
               ],
             ),
@@ -495,6 +510,9 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                             model: _memberAccount!.model,
                             availability: _memberAccount!.availability,
                             weekly: _memberAccount!.weekly,
+                            onParticipation: (id, t) => context.push(
+                              '/recruitments/$id?target_cycle_key=$t',
+                            ),
                             settings: _memberSettings!,
                             onSettings: () => context.push('/settings'),
                             onKey: () => context.push('/settings/api-token'),
@@ -636,7 +654,26 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                     ),
                     GoRoute(
                       path: ':recruitmentId',
-                      builder: (context, state) => BackendRecruitmentDetailPage(
+                      builder: (context, state) =>
+                          state.uri.queryParameters.containsKey(
+                            'target_cycle_key',
+                          )
+                          ? CycleRoomReadPage(
+                              key: ValueKey((
+                                state.pathParameters['recruitmentId'],
+                                state.uri.queryParameters['target_cycle_key'],
+                              )),
+                              repository: cycleReads,
+                              roomId: state.pathParameters['recruitmentId']!,
+                              target: state
+                                  .uri
+                                  .queryParameters['target_cycle_key']!,
+                              scopeKey: cycleScopeKey,
+                              changes: _memberAccount?.model ?? auth,
+                              catalog: _memberAccount?.weekly?.catalog,
+                              onLogin: () => showLoginRequired(context, auth),
+                            )
+                          : BackendRecruitmentDetailPage(
                               key: ValueKey(
                                 state.pathParameters['recruitmentId'],
                               ),
@@ -761,6 +798,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       unawaited(_memberKey?.reload());
       unawaited(_ownership?.resume());
+      unawaited(_memberAccount?.weekly?.refresh());
     }
   }
 
