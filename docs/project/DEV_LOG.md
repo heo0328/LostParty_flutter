@@ -1,5 +1,14 @@
 # 개발 이력
 
+## 2026-10-23 — Backend109 사전 참가 표시 초안1 소비 검토
+
+사용자의 회신 확인 요청으로 [Issue13 Backend109/6343766208](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343766208)의 계약 전문/JSON Schema/합성예시를 검토했다. 필수 진입문서·현재cd2c26c/원격일치·dev6d3f617·기존무관dirty, 소비0afd879 router와 Flutter reader/명령본문을 대조했다.
+
+- 검토 결과: opt-in 닫힌 표시DTO·실제일정/미생성미리보기·prospective 세대/원ACK·동의/예약 분리는 기존 기획과 양립한다. 초안 표와 JSON x-extension.paths의 continuation/opening에서 /me/가 빠진 두 경로를 정정 요청한다. 새 alias/endpoint 요청은 아니다. 1MiB 전체응답 상한/초과413 제안은 수용하며 잘라내기·false 자동대체는 하지 않는다. 상세 소비 경계는 설계37 §37.16이다.
+- 상태/다음: Backend5cf76f1은 로컬·미push/API미구현이다. Backend 경로정정 → 구현/격리검증 → push·개발 실행 OpenAPI/소비SHA 인계 후 Flutter 후속을 진행한다. 현재0afd879/168경로와 F5 독립 구현을 유지하며 F6/실제 인수는 미완료다. 같은Issue에 실질 소비검토/정정사항과 다음 담당을 회신한다.
+- 검증: 직접 JSON 파싱·8개 정의의 닫힌객체 선언/로컬ref 해소·11합성예시 존재 확인, 실제 router/Flutter 경로 및 diff/content 검토다. Backend 보고의 전체Schema/11거절fixture를 독립 재현한 것은 아니다. 선택 검증 도구의 jsonschema 모듈 부재·PowerShell 인라인 인용 실패 뒤 저장된 Python 구조검사로 범위를 제한했다. 기능코드 변경이 없어 Flutter 시험을 반복하지 않았다.
+- 새로 가능해진 앱 흐름 없음. 보존 확인: 기존 F4/F5 코드·검증 기록/원명령·무관dirty 유지. 미확인: 정상인증HTTP/실회원·기기/새계약 서버권한·DB/성능 전부. 문서만 작업브랜치 commit/push, dev 미병합·브랜치 유지다.
+
 ## 2026-10-22 — Backend108 사전 참가 표시 메타 요청접수 확인
 
 사용자의 Backend 회신 확인 요청으로 [Issue13 Backend108/6343260776](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343260776)을 확인했다. 필수문서·설계37 §37.15/현재1feefe7·원격일치/dev6d3f617·기존무관dirty와 실제 context 소비필드를 대조했다.

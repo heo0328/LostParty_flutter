@@ -1374,3 +1374,15 @@ Backend0afd879의 실행 OpenAPI168경로와 cycle_times/planning/schedule_servi
 **사전 참가 시간 표시의 남은 계약 차이:** continuation/opening context는 target_session_ids만 제공한다. 일반 admission session_choices의 session_id/required/join_deadline/permission도 시작/종료/미정 상태를 완전하게 표현하지 않는다. 공개detail의 출발목록은 session ID가 없고 private plan은 해당T 실제참가 전 거절될 수 있으므로 순서·C시간으로 N을 추정하지 않는다. Backend에 사전 참가권한 내 ID별 실제T/시각·상태/필요revision 표시 메타와 write binding·게시SHA/실행계약을 요청하고 확정된 보완만 후속 소비한다. F4 기존명시 ID체크는 유지하나 이 사전표시까지 완료로 보지 않는다.
 
 신규27+기존직접영향103 고유130PASS(최초127묶음/최종신규27 재실행·기존103 재사용), 변경Dart7파일 분석0·포맷/diff검토. 실제 정상로그인HTTP/실회원/기기·서버정족수/예약경합 인수는 미확인이다. 코드연결/검증 마감과 사전표시보완·실제인수를 구분하며 F6는 미구현이다. 최신Git/Issue·다음행동은 DEV_LOG/NEXT_WORK를 따른다.
+
+### 37.16 사전 참가 표시 계약 초안1 소비 검토 — 2026-10-23
+
+[Backend109/6343766208](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343766208)의 5cf76f1은 로컬·미push/API미구현이다. 아래는 구현 전 검토 기준이며 현재0afd879/168경로 실행계약을 대체하지 않는다.
+
+- 기존 GET에 include_session_display=true로 요청했을 때만 data.session_display를 추가한다. 생략/false의 필드부재·기존 닫힌 DTO/token/미결본문을 유지한다. 사용자 설정/조회 단계를 추가하지 않는다. 초안 표와 JSON x-extension.paths의 continuation/opening은 실제 `/v2/me/raid-rooms/{room_id}/continuation-context`, `/v2/me/raid-rooms/{room_id}/opening-context`로 정정해야 한다. admission은 기존 `/v2/raid-rooms/{room_id}/admission-context`다.
+- existing/select_session_ids는 실제T/현재세대·활성계획의 ID별 시각/nullable·상태/required/permission·revision이다. admission은 기존 session_choices와 정확한 ID집합 일치를 검증한다. continuation의 기존 target_session_ids=[]는 선택지 목록이 아니므로 후속 Flutter는 새 sessions에서 명시 선택한 ID만 기존 POST에 보낸다. 전체 자동체크·권한false 승격·순서 매칭은 하지 않는다.
+- opening_preview는 prospective_room_cycle_id/prospective_generation, plan_revision=null, 실제 session_id=null인 의도다. 대상N 실제 날짜·미정/끝 미산정·조율대기·수동복수후보를 그대로 표시하며 선택할 실제세션으로 만들지 않는다. opening POST target_session_ids=[]를 유지하고 preview refs/null을 보내지 않는다. 개방 본인의 참가관계 연결과 시간확정 동의/예약은 별개다. 원ACK 후 권한 있는 plan에서 실제ID를 새로 읽는다. none은 decline/already_open의 정상 무선택이고 조회권한 실패를 숨기는 빈결과가 아니다.
+- display_revision은 불투명 표시 digest이며 새 DB CAS가 아니다. 표시 snapshot을 기존 token·일정revision/세대에 결합하고 변경 시 기존 확정거절로 재확인한다. 결과불명은 원method/body/key/token을 고정하고 새 context로 교체하지 않는다. 원ACK 재생이 우선이며 생략/false의 기존 token 경로는 유지한다.
+- 전체 opt-in 응답 UTF-8 1MiB 초과413 RESPONSE_TOO_LARGE 제안을 수용한다. 실제세션 최대64·미리보기 전체성을 유지하고 임의 잘라내기/false 재조회로 대체하지 않는다. SQL/배치·응답크기·token/본문 상한은 Backend 구현 단계 검증 대상이다. private plan/개인표·다른방 자료 공개/권한확대·DDL/쓰기효과 추가는 없다.
+
+JSON 파싱·8개 정의의 닫힌객체 선언/로컬ref 해소와 11예시 존재를 직접 확인했다. 이는 JSON Schema 전체검증/11거절fixture 재현이나 실제HTTP/DB/token·성능 검증이 아니다. 경로 정정 뒤 Backend 구현/격리검증·게시 및 실제실행 OpenAPI/소비SHA 인계를 받아 후속 Flutter DTO/선택/확인서명·원pending 회귀를 연결한다. 기능코드는 아직 변경하지 않았다.

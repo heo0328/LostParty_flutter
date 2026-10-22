@@ -28,7 +28,7 @@
 
 ## 3. 다음 작업 — F5 사전 참가 시간 표시 계약 보완
 
-최신 수신: [Backend108 요청접수6343260776](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343260776). 표시 메타 부족/private plan 선조회·목록순서 추정 불가를 인정했고, **Backend가 기존 context 권한 안의 ID별 실제T/시각(nullable)/상태·표시revision과 token/일정revision/generation 결합·prospective 경계를 설계한다.** 아직 새 wire/경로 확정·구현/실행계약 인계는 없다. opening은 현재 prospective 준비에서 target_session_ids=[]를 반환함도 확인했다. 기존 F5 독립 구현을 유지하며 사전 시간표시만 보완계약 대기다. 새 필드 추정/코드 변경·기존시험 반복 요청은 하지 않는다.
+최신 수신/검토(2026-10-23): [Backend109 계약 초안1/6343766208](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343766208). Backend5cf76f1은 로컬·미push이며 API 미구현이다. 기존 GET의 include_session_display=true에만 닫힌 existing/opening_preview/none 표시정보를 더하는 방향은 수용한다. **초안 표와 JSON x-extension.paths의 continuation/opening 경로 두 곳은 실제 /v2/me/raid-rooms/{room_id}/…로 정정해야 한다.** admission은 /v2/raid-rooms/{room_id}/admission-context를 유지한다. 실제 router/Flutter 소비와 대조했으며 새 경로/alias 요청이 아니다. 표시/원ACK·prospective·동의/예약 경계는 설계37 §37.16에 기록했다. 다음 담당 Backend: 경로 정정 → 구현/격리검증 → push·개발 실행 OpenAPI/소비SHA 인계. 현재0afd879/168경로와 F5 독립 구현은 유지하고 Flutter 기능코드는 아직 변경하지 않는다.
 
 현재 인계: 구현 **f2e09c9d05d5456ab508072a425d4d04bd72ed80** commit/push·실제 원격일치 확인. [Flutter F5 결과/Backend 보완 요청6343179198](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343179198)에 사용계약/구현·130PASS/분석0·미확인/표시메타 담당·완료조건을 회신하고 게시본문 재조회 일치를 확인했다. 다음 착수는 같은Issue의 Backend 답변부터 확인한다. 기존 F4 인계6342159361은 보존한다.
 
@@ -40,7 +40,7 @@
 - 같은Issue13에 Backend가 사전 참가권한 범위에서 일정 ID→실제T/시각·미정 상태를 제공할 방법·읽기/쓰기 binding·시안용 메타의 계약/게시SHA를 회신하도록 요청한다. 실제 C/N 가입자 전용 시간표/다른 회원 busy를 공개해 달라는 요청이 아니다.
 
 후속 순서/완료 조건:
-1. 최신Issue13 회신과 실행 OpenAPI를 확인해 허용된 표시용 메타·nullable/미정·revision/권한/일정변경 binding을 대조한다. 새계약이 확정되기 전 임의필드/응답완화를 넣지 않는다.
+1. Backend109 경로 정정과 구현/게시·실행 인계를 받은 뒤 실제 OpenAPI/SHA에서 opt-in 표시용 메타·nullable/미정·revision/권한/일정변경 binding을 대조한다. 초안 수용을 실행 준비 완료로 취급하지 않으며 새계약 확정 전 임의필드/응답완화를 넣지 않는다.
 2. F3 일반참가/캐릭터변경·F4 N특례/개방의 사전확인에 실제T·ID별 날짜/시각/미정을 연결한다. 미정/삭제/변경·권한상실·늦은응답과 기존 원키/ACK를 표적검증한다.
 3. 전체 F5 자동검증/문서·같은Issue 회신·작업브랜치 commit/push로 보관하고 F6 완료/정정/현재주 종료·재개/통합으로 진행한다. F6의 독립조사는 가능하지만 현재 승인 구간에서 구현하지 않는다.
 

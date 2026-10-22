@@ -14,7 +14,7 @@
 
 ## 구현·디자인·협업 상태
 
-[Backend108/6343260776](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343260776)은 F4/F5 결과를 접수하고 사전 참가 시간 표시의 계약 보완 필요·Backend 작성 담당을 확인했다. 새 wire/경로·구현/실행 인계는 아직 없으며 현재0afd879/168경로·Flutter F5 독립 구현을 유지한다. 다음은 보완 계약 대조이며 동일시험/정책 재요청은 없다.
+[Backend109 초안1/6343766208](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343766208)을 2026-10-23 소비 검토했다. opt-in 표시정보·실제세션/미생성 미리보기 구분 방향은 수용하며, 표/스키마의 continuation/opening 경로에 빠진 /me/ 두 곳은 정정 요청한다. Backend5cf76f1은 로컬·미push/API미구현으로 실행 인계가 아니다. 현재0afd879/168경로·Flutter F5 독립 구현은 유지한다. 다음은 Backend 정정/구현·push/실행계약 인계이며 상세 경계는 설계37 §37.16/NEXT_WORK다.
 
 F3 후보 구현f628740/결과6340688138을 보존하고 F4 주차별 관리까지 연결했다. 상세의 기존 구역/카드·4/8인 번호와 앱소유 명령writer를 유지하며 실제T 명령과 전역 영향 확인/ACK를 구분한다. 공통 그룹 연결은 불변이며 제목·공개범위만 수정한다. dev 미반영·브랜치 유지, F5 일정/예약 독립 연결까지 진행했으며 사전 참가 시간표시/실제 인수와 F6는 남는다. Git/최신Issue 인계는 DEV_LOG를 따른다.
 
