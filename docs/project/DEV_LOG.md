@@ -1,5 +1,14 @@
 # 개발 이력
 
+## 2026-10-23 — Backend111 경로정정·112 사전 참가 표시 구현 인계 확인
+
+사용자의 Issue13 회신 확인 요청으로 [Backend111/6344566106](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6344566106)과 [Backend112/6345290060](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345290060)를 확인했다. 필수문서·설계37 §37.16/관련최신로그, 현재a328ef2/원격일치·dev6d3f617·기존무관dirty를 대조했다.
+
+- 새 상태: 경로 /me 누락은 정정됐고 Backend 구현/검증/개발 반영 인계를 받았다. 고정소비SHA07c2b671d67e5dfcef5f873ef55ffcb54f87b365의 개발 안내와 게시OpenAPI를 직접 읽어 168경로·실제세GET·include_session_display true/false/defaultfalse·응답DTO 및 닫힌3분기를 확인했다. 원격feat/raid-recruitment는00db6c8이며 compare로 소비SHA 포함/후속문서1커밋을 확인했다. 새 앱 흐름은 없으며 Flutter는 아직0afd879 소비/F5 독립구간 그대로다.
+- Backend 보고: 고유48PASS(최종격리47+현재DB연계1)·이미지404cf8c4…/API8000 healthy·DB0029/기존자료·키 보존·168경로 실행계약 일치. Flutter가 직접 서버/DB/정상인증회원HTTP·시험/성능을 재현한 것은 아니다. 사전표시/F6·실회원/기기·운영 인수는 미완료다.
+- 다음/회신: Backend 보완 대기를 해제하고 Flutter의 고정계약 opt-in DTO·실제ID/시간/미정·명시선택/미리보기·변경재확인/원pending 연결을 NEXT_WORK에 기록했다. [Flutter 확인6345378281](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345378281)에 직접대조/보고수신 경계와 다음담당을 회신하고 게시본문 재조회 원문 일치를 확인했다. 동일정책/기존시험 재요청·기능코드변경·서버/DB/키변경은 하지 않았다.
+- 보존/검증: 기존 코드/검증 기록·무관dirty를 유지하고 게시계약/원격compare·문서diff/content를 확인했다. 순수문서 구간으로 Flutter 시험은 반복하지 않았다. 미확인 실기기 항목은 기존 전체섹션 인수를 유지한다. 같은feature/raid-recruitment-scheduling에 문서commit/push·dev미병합/브랜치유지다.
+
 ## 2026-10-23 — Backend109 사전 참가 표시 초안1 소비 검토
 
 사용자의 회신 확인 요청으로 [Issue13 Backend109/6343766208](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343766208)의 계약 전문/JSON Schema/합성예시를 검토했다. 필수 진입문서·현재cd2c26c/원격일치·dev6d3f617·기존무관dirty, 소비0afd879 router와 Flutter reader/명령본문을 대조했다.

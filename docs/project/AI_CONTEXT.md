@@ -1,6 +1,6 @@
 # AI CONTEXT — 2주 레이드 현황 기획과 현재 구현 상태
 
-기준: 2026-10-22. **F1~F4 및 F5 일정/예약 독립 연결 코드·자동검증을 마쳤고, F5 사전 참가 시간표시 계약 보완 1건이 남았다.** 신규일정27+기존직접영향103 고유130PASS·변경Dart7파일 분석0. 실제 정상인증HTTP·실회원/실기기 인수와 F6는 미확인/미구현이다. Backend0afd879/실제168경로를 소비하며 다음은 NEXT_WORK의 사전 참가 메타 보완, 구현 경계는 설계37 §37.15/DEV_LOG다.
+기준: 2026-10-23. **F1~F4 및 F5 일정/예약 독립 연결 코드·자동검증을 마쳤고, F5 사전 참가 시간표시의 Flutter 연결이 남았다.** 신규일정27+기존직접영향103 고유130PASS·변경Dart7파일 분석0. 실제 정상인증HTTP·실회원/실기기 인수와 F6는 미확인/미구현이다. Backend0afd879/실제168경로를 소비하며 다음은 NEXT_WORK의 사전 참가 표시 연결, 구현 경계는 설계37 §37.15/DEV_LOG다.
 
 ## 현재 우선 기준
 
@@ -14,7 +14,7 @@
 
 ## 구현·디자인·협업 상태
 
-[Backend109 초안1/6343766208](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343766208)을 2026-10-23 소비 검토했다. opt-in 표시정보·실제세션/미생성 미리보기 구분 방향은 수용하며, 표/스키마의 continuation/opening 경로에 빠진 /me/ 두 곳은 정정 요청한다. Backend5cf76f1은 로컬·미push/API미구현으로 실행 인계가 아니다. 현재0afd879/168경로·Flutter F5 독립 구현은 유지한다. 다음은 Backend 정정/구현·push/실행계약 인계이며 상세 경계는 설계37 §37.16/NEXT_WORK다.
+[Backend112 구현 인계6345290060](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345290060)를 확인했다. Backend111에서 /me 경로 정정 완료, 고정소비SHA07c2b671/168경로의 세 GET·opt-in/닫힌 표시응답을 게시OpenAPI로 직접 대조했다. Backend48PASS/이미지404cf8c4… 개발반영·자료보존은 보고 수신이며 Flutter 정상인증HTTP/기기 인수로 확대하지 않는다. Backend 대기는 해제하고 다음은 Flutter 표시/선택 연결이다. 현재 앱0afd879/F5 독립 구현은 유지하며 이번에는 기능코드를 변경하지 않았다. [Flutter 확인6345378281](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345378281), 상세 범위는 NEXT_WORK/설계37 §37.16이다.
 
 F3 후보 구현f628740/결과6340688138을 보존하고 F4 주차별 관리까지 연결했다. 상세의 기존 구역/카드·4/8인 번호와 앱소유 명령writer를 유지하며 실제T 명령과 전역 영향 확인/ACK를 구분한다. 공통 그룹 연결은 불변이며 제목·공개범위만 수정한다. dev 미반영·브랜치 유지, F5 일정/예약 독립 연결까지 진행했으며 사전 참가 시간표시/실제 인수와 F6는 남는다. Git/최신Issue 인계는 DEV_LOG를 따른다.
 

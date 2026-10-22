@@ -1,6 +1,6 @@
-# NEXT WORK — F5 일정/예약 연결·사전 참가 시간 표시 보완 대기
+# NEXT WORK — F5 사전 참가 시간 표시 연결 준비
 
-기준: 2026-10-22. F1~F4 코드/자동검증 완료. **F5 제출표·방 일정/후보/제안·투표/본인확인·예약상태 독립 연결을 구현했고 사전 참가 확인창의 시간 표시 정보 1건은 Backend 보완이 필요하다.** 신규27+기존 F2~F4 93/개인표10 고유130PASS·변경Dart7파일 분석0. 실제 정상인증HTTP·실회원/기기 인수는 미확인이다. 작업브랜치 feature/raid-recruitment-scheduling에 문서/코드/시험을 commit/push로 보관하고 dev6d3f617 미병합·기존무관dirty를 유지한다. F6 완료/정정·통합은 아직 미착수다.
+기준: 2026-10-23. F1~F4 코드/자동검증 완료. **F5 제출표·방 일정/후보/제안·투표/본인확인·예약상태 독립 연결을 구현했고, Backend112로 사전 참가 표시 보완의 구현 인계를 받았다. 다음은 Flutter 표시 연결이다.** 기존 신규27+F2~F4 93/개인표10 고유130PASS·변경Dart7파일 분석0을 보존한다. 새 표시는 아직 미연결이며 실제 정상인증HTTP·실회원/기기 인수는 미확인이다. 작업브랜치 feature/raid-recruitment-scheduling에 문서/코드/시험을 commit/push로 보관하고 dev6d3f617 미병합·기존무관dirty를 유지한다. F6 완료/정정·통합은 아직 미착수다.
 
 ## 1. 현재 근거·준비 상태
 
@@ -26,21 +26,22 @@
 | 한도/통계 | 같은 방 C/N은 고유room1개·기본10. 미래 참가/완료를 C 통계에 섞지 않음. 사전취소 통계는 #19 별도 결정 |
 | 전환/예약 | 수06시 같은 UUID/실제cycle 유지, 라벨 전환·권한 재검사. N 변경/취소가 C 예약·완료를 정리하지 않음. 실제 참가와 일정 확인은 별개 |
 
-## 3. 다음 작업 — F5 사전 참가 시간 표시 계약 보완
+## 3. 다음 작업 — F5 사전 참가 시간 표시 연결
 
-최신 수신/검토(2026-10-23): [Backend109 계약 초안1/6343766208](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343766208). Backend5cf76f1은 로컬·미push이며 API 미구현이다. 기존 GET의 include_session_display=true에만 닫힌 existing/opening_preview/none 표시정보를 더하는 방향은 수용한다. **초안 표와 JSON x-extension.paths의 continuation/opening 경로 두 곳은 실제 /v2/me/raid-rooms/{room_id}/…로 정정해야 한다.** admission은 /v2/raid-rooms/{room_id}/admission-context를 유지한다. 실제 router/Flutter 소비와 대조했으며 새 경로/alias 요청이 아니다. 표시/원ACK·prospective·동의/예약 경계는 설계37 §37.16에 기록했다. 다음 담당 Backend: 경로 정정 → 구현/격리검증 → push·개발 실행 OpenAPI/소비SHA 인계. 현재0afd879/168경로와 F5 독립 구현은 유지하고 Flutter 기능코드는 아직 변경하지 않는다.
+최신 수신/확인(2026-10-23): [Backend111 경로 정정6344566106](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6344566106) 및 [Backend112 구현/개발 반영 인계6345290060](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345290060). **Backend 보완 대기는 해소됐고 다음 담당은 Flutter다.** 고정 소비SHA07c2b671d67e5dfcef5f873ef55ffcb54f87b365의 개발 안내/게시OpenAPI를 직접 대조해 실제 세 GET·opt-in query/표시응답·168경로를 확인했다. 원격00db6c8은 해당SHA 뒤 문서1커밋이며 코드변경이 아니다. Backend는 고유48PASS·이미지404cf8c4…/API8000·DB0029 개발반영/자료보존을 보고했다. Flutter의 정상인증HTTP·서버시험 독립재현 근거는 아니며 현재 앱은0afd879 소비/F5 독립 구현 그대로다. 이번 요청은 회신확인으로 기능코드는 변경하지 않았다. 표시/원ACK·prospective·동의/예약 경계는 설계37 §37.16을 따른다.
 
-현재 인계: 구현 **f2e09c9d05d5456ab508072a425d4d04bd72ed80** commit/push·실제 원격일치 확인. [Flutter F5 결과/Backend 보완 요청6343179198](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343179198)에 사용계약/구현·130PASS/분석0·미확인/표시메타 담당·완료조건을 회신했다. 후속 [Flutter 초안1 소비검토/경로 정정 요청6344221859](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6344221859)은 문서a0ff9a9 원격 보관 후 게시하고 본문 재조회 일치를 확인했다. 다음 착수는 같은Issue의 Backend 정정/구현 인계부터 확인한다. 기존 F4 인계6342159361은 보존한다.
+현재 인계: 구현 **f2e09c9d05d5456ab508072a425d4d04bd72ed80** commit/push·실제 원격일치 확인. [Flutter F5 결과/Backend 보완 요청6343179198](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343179198)에 사용계약/구현·130PASS/분석0·미확인/표시메타 담당·완료조건을 회신했다. 후속 [Flutter 초안1 소비검토/경로 정정 요청6344221859](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6344221859)은 문서a0ff9a9 원격 보관 후 게시하고 본문 재조회 일치를 확인했다. Backend112 구현 인계를 확인했고, 다음 착수는 Flutter 표시 연결이다. 기존 F4 인계6342159361은 보존한다.
 
 현재 구간은 사용자 승인으로 4ef5188/원격·dev6d3f617·최신Issue13 F4결과6342159361(신규Backend변경없음),0afd879 실행168경로/cycle_times·planning·schedule_service·proposals와 개인표 원본/상세DI를 대조한 뒤 진행했다. 구현 전 포함/제외·데이터소유/실제T·기존writer 재사용·회귀와 표적검증을 기록했다. 독립 구현/검증 경과는 DEV_LOG, 장기 경계는 설계37 §37.15로 이동했다.
 
-남은 계약 차이:
-- continuation/opening context는 target_session_ids만 있고 ID별 starts_at/ends_at/state가 없다. 일반 admission session_choices도 session_id/required/join_deadline/permission 중심이다. 공개 detail의 정렬된 출발 목록에는 session ID가 없어 순서로 정확히 매칭할 수 없다.
-- 참가 전에는 private plan이 WEEKLY_PARTICIPANT_REQUIRED로 거절될 수 있다. 이를 우회 호출하거나 C시간/목록순서로 N일정을 추정하지 않는다. F4의 기존 명시 ID 체크는 유지하지만 사전 참가 확인창의 실제 시간 표시까지 완료했다고 보고하지 않는다.
-- 같은Issue13에 Backend가 사전 참가권한 범위에서 일정 ID→실제T/시각·미정 상태를 제공할 방법·읽기/쓰기 binding·시안용 메타의 계약/게시SHA를 회신하도록 요청한다. 실제 C/N 가입자 전용 시간표/다른 회원 busy를 공개해 달라는 요청이 아니다.
+남은 Flutter 연결/회귀 범위:
+- 기존 세 context 요청에 include_session_display=true와 닫힌 DTO를 함께 적용한다. 실제T/현재세대 existing은 ID별 시각/미정·state/required/permission/revision을 검증하고 admission choices와 일치시킨다. continuation 기존 target_session_ids=[]는 선택지 목록이 아니며 명시 선택한 실제ID만 POST한다.
+- opening_preview는 prospective cycle/generation·plan_revision=null·session_id=null이며 읽기 미리보기만 표시한다. 수동복수후보/조율·미정/끝미산정·none/noop를 구분하고 opening POST []·원ACK 후 권한 있는 plan의 실제ID 조회를 유지한다. private plan 우회·C시각/순서 추정·참가관계를 시간동의/예약으로 해석하지 않는다.
+- 표시 revision을 확인서명에 포함하고 변경 확정거절은 재확인한다. 결과불명 원본문/key/method/token과 원ACK 우선순위, 회원scope/주차/지연응답 폐기를 보존한다. opt-in 필드 누락/null·ID 불일치/권한상실·1MiB 초과413을 잘라내기/false 대체로 숨기지 않는다.
+- 표적검증은 위 새 표시/선택/세대/서명·pending 경계와 직접영향 F3/F4/F5에 한정한다. 기존 통과 코드를 그대로 두었다면 무관 전체시험/같은 Backend시험을 반복 요구하지 않는다. 실제 정상UI/기기 인수는 전체 기능섹션에 묶는다.
 
 후속 순서/완료 조건:
-1. Backend109 경로 정정과 구현/게시·실행 인계를 받은 뒤 실제 OpenAPI/SHA에서 opt-in 표시용 메타·nullable/미정·revision/권한/일정변경 binding을 대조한다. 초안 수용을 실행 준비 완료로 취급하지 않으며 새계약 확정 전 임의필드/응답완화를 넣지 않는다.
+1. Backend112 고정SHA의 실제 DTO·token/쓰기 binding 및 기존 Flutter reader/controller/확인창 호출자를 구현 직전 대조하고 포함 파일/회귀를 고정한다. 이미 받은 구현 인계를 새 Backend 대기로 되돌리지 않는다.
 2. F3 일반참가/캐릭터변경·F4 N특례/개방의 사전확인에 실제T·ID별 날짜/시각/미정을 연결한다. 미정/삭제/변경·권한상실·늦은응답과 기존 원키/ACK를 표적검증한다.
 3. 전체 F5 자동검증/문서·같은Issue 회신·작업브랜치 commit/push로 보관하고 F6 완료/정정/현재주 종료·재개/통합으로 진행한다. F6의 독립조사는 가능하지만 현재 승인 구간에서 구현하지 않는다.
 
