@@ -1388,3 +1388,51 @@ Backend0afd879의 실행 OpenAPI168경로와 cycle_times/planning/schedule_servi
 JSON 파싱·8개 정의의 닫힌객체 선언/로컬ref 해소와 11예시 존재를 직접 확인했다. 이는 JSON Schema 전체검증/11거절fixture 재현이나 실제HTTP/DB/token·성능 검증이 아니다. 경로 정정 뒤 Backend 구현/격리검증·게시 및 실제실행 OpenAPI/소비SHA 인계를 받아 후속 Flutter DTO/선택/확인서명·원pending 회귀를 연결한다. 기능코드는 아직 변경하지 않았다.
 
 **구현 인계 수신(2026-10-23):** [Backend111 정정6344566106](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6344566106)·[Backend112 구현6345290060](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345290060)로 위 경로 정정/Backend 구현 대기는 해소됐다. 고정소비SHA07c2b671d67e5dfcef5f873ef55ffcb54f87b365의 개발 안내와 게시OpenAPI168경로에서 세 GET의 문자열 true/false·기본false 및 AdmissionDisplayContext/ContinuationDisplayContext/OpeningDisplayContext·닫힌 세 표시분기를 직접 확인했다. 원격00db6c8은 소비SHA 이후 문서1커밋이다. Backend48PASS·개발이미지404cf8c4…/DB0029·기존자료보존은 보고 수신이며 Flutter의 실제회원HTTP/서버시험 독립재현은 아니다. 다음은 이 고정계약을 Flutter에 연결하는 작업이고 현재 앱0afd879/F5 코드는 유지한다. 세부 실행/검증 계획은 NEXT_WORK, 확인회신6345378281/보관은 DEV_LOG를 따른다.
+
+### 37.17 F5 사전 참가 표시 연결의 구현 전 설계 점검 — 2026-10-23
+
+§37.16의 합의는 유지한다. Backend112/소비07c2b671의 session_display.py·session_display_schemas.py·cycle_continuation.py, 실제 Flutter reader/본문·controller/확인창 및 backend_app의 DI를 대조했다. 새 제품 결정/Backend 보완 대기는 없다. 이번은 문서 설계이며 기능코드를 변경하지 않았다.
+
+#### 사용자 흐름과 표시
+
+기존 상세 → 참가/신청·캐릭터 변경 또는 다음 주 참가/개방 → 기존 확인창 → 명시 확인 → 결과 흐름을 유지한다. 별도 조회 화면/설정·자동 참가/자동 시간동의는 추가하지 않는다. 확인창의 실제 대상 주차 날짜와 캐릭터/역할을 고정하고 취소는 좌측·긍정 동작은 우측이다.
+
+| 대상 | 표시/선택 | 쓰기 경계 |
+|---|---|---|
+| 일반 참가·신청·캐릭터 변경 | existing의 실제 일정별 KST 날짜/시작~종료, 필수/선택·확정/미확정·서버 참가마감/불가 사유. 미확정에 시각이 있어도 확정으로 표시하지 않고 null 쌍은 시간 미정 | 사용자가 고른 허용 ID만 전송. 기존 필수 일정 누락/마감 검사 유지. admission session_choices의 ID·required/deadline/permission과 교차검증 |
+| 기존 참가자의 N 바로 참가 | existing의 실제 N 일정으로 같은 명시 선택. 기존 target_session_ids=[]를 일정 없음/전체 선택으로 해석하지 않음 | 새 sessions의 필수/허용 집합으로 검증하고 고른 ID만 기존 POST target_session_ids에 전송. 기존 재승인 없음/캐릭터 충돌·대체 선택 유지 |
+| N 생성/재개방 | opening_preview 그룹별 필수/선택·each/one_of 의도를 유지. 실제 N 날짜의 예정 구간, 시작만 있으면 종료 미정, 시간 없으면 시간 미정. 수동 복수후보는 후보 선택 후 확정, 조율은 조율 대기, unscheduled는 일정 미지정으로 짧게 표시 | 실제 session이 아니므로 체크박스/자동 선택 없음. preview refs/null을 전송하지 않고 기존 opening [] 유지. 개방 본인 참가관계와 시간확정 동의/예약은 별개 |
+| decline·already_open | none의 무선택 상태. 이미 개방됨/기존 거절 확인 및 permission/noop 흐름 유지 | 가상 일정 선택/개방 재생성·새 쓰기효과를 만들지 않음 |
+
+그룹/세션 배열은 서버의 ID/ref 기준으로 연결하고 기본 서버 순서를 유지한다. 시간순 배열의 위치로 식별자를 추정하지 않는다. 실제시각은 UTC 원값 보존/KST 표시이며 익일 종료는 양쪽 날짜, 수요일 새벽은 서버가 계산한 실제 날짜를 표시한다. 기기 현지 시간대·C 시각+7일·레이드별 예상 duration으로 보정하지 않는다. 원본 정밀도/전송값은 유지하고 소수점 초는 화면에 노출하지 않는다. 주차 전체 조율의 alternatives=[]는 주차 전체·조율 대기로, source 그룹 없는 previews=[]는 일정 미지정으로 표시한다. 조회실패를 빈목록으로 표시하지 않는다. 별도 개수 상한이 없는 미리보기는 기존 스크롤 영역 안에서 전부 접근할 수 있게 하고 임의 개수 제한/절단을 추가하지 않는다.
+
+#### 데이터·권한·수명
+
+- 표시 전용 공통 DTO/검증은 모집 feature 안의 cycle_session_display.dart로 분리해 두 reader/확인창에서 공유한다. sealed 종류와 내부 리스트/맵을 불변으로 보관하며 표시 digest를 쓰기 CAS/클라이언트 권한 근거로 만들지 않는다. UUID·양의revision/64hex digest·닫힌 필드·enum·시각 쌍/선후관계·중복/정렬·문맥별 kind/selection_mode를 검증한다. actual은 최대64/confirmed 시각필수, preview만 start_only를 허용한다. 의미 검증은 §37.16/Backend 원계약 재사용이며 정족수/개방가능시간 정책을 새로 구현하지 않는다.
+- existing/none은 실제 scope의 target/room_cycle_id/generation을 비교한다. admission은 plan_revision도 직접 일치시킨다. opening_preview는 과거/닫힌 scope 대신 prospective_room_cycle_id/prospective_generation과 비교하고 plan_revision=null을 요구한다. private plan 선조회·다른방/개인표 공개는 없다.
+- CycleInteractionRepository.admission과 CycleManagementReader의 continue/decline/open/reopen만 기술 opt-in을 붙인다. true를 요청한 새 parser는 필드 누락/null을 거절하며 임의 optional 허용으로 완화하지 않는다. 다른 관리 context에는 새 필드를 요구하지 않는다. 기존 생략/false 서버 호환과 오래된 원명령 재송은 유지한다.
+- 표시 snapshot·선택은 현재 확인창/인증회원·환경/실제T/캐릭터·역할 수명 안에만 둔다. 변경/재조회 시작 시 이전 snapshot의 실행을 막고 선택을 비운다. 성공한 새 snapshot에서도 자동 체크하지 않는다. 회원/권한/주차 변경·창 닫힘 뒤 늦은응답은 기존 epoch/binding으로 버린다. 새 영속 캐시/개인정보 로그/DB·Router·DI 변경은 없다.
+
+#### 제출과 재확인
+
+현재 admission 서명은 표시정보가 없고, management body는 기존 target_session_ids를 그대로 전송한다. 후속 구현에서 admission 확인서명에 표시 snapshot을 포함하고 management 기존 data 서명에도 새 표시가 포함되게 한다. 단순 서버시각/토큰 재발급 시각은 기존처럼 비교에서 제외한다. 새로운 표시 변경을 허용하기 위해 기존 membership/leadership·plan/target 검사를 제거하지 않는다.
+
+버튼 제출 순간 선택 Set/List/입력을 깊은 복사한 뒤 fresh context를 조회한다. 화면에서 확인한 snapshot과 의미서명이 같을 때만 고정 입력을 검증·본문 생성한다. 다르면 POST 없이 재확인을 안내하고 새 snapshot에서 다시 명시 선택한다. 입력변경/캐릭터변경과 fresh 응답이 섞이지 않도록 로딩 중 변경을 막고 방어적으로 입력을 고정한다. 필수 일정이 불가하면 확인할 수 없으며 미정이라고 permission을 허용으로 바꾸지 않는다. 일정0개는 권한/기존 본문 규칙에 따라 처리하고 최소1개 정책을 새로 만들지 않는다.
+
+POST 후 결과불명은 기존 앱소유 writer의 원method/path/encoded body/key/token만 재송한다. 표시 재조회나 유사 GET 상태로 pending을 교체/해제하지 않는다. 이미 성공한 명령의 원ACK 우선순위를 유지하고, 확정409/400/403/404/413은 기존 오류분류로 종료·재확인한다. 표시 조회 실패/413은 제출 차단·간결한 오류/재시도이며 false 자동재조회/잘라내기·가짜 일정으로 우회하지 않는다. opening ACK 후 기존 onMutation/상세 갱신을 유지하고 권한 있는 현재T plan에서 실제ID를 읽으며 미리보기와 이름/순서로 연결하지 않는다. 앱 종료 후 관리 pending 영속복구는 이 구간 밖이다.
+
+#### 구현 책임과 검증
+
+| 파일/영역 | 허용 변경 |
+|---|---|
+| data/cycle_session_display.dart (신규) | 모집 범위 표시DTO·의미검증/ID 연결; 외부 라이브러리/공용 저장구조 없음 |
+| data/cycle_interaction_repository.dart·cycle_management.dart | 해당 GET opt-in/닫힌 확장·문맥 검증/서명·continue 선택본문. 다른 관리명령 계약 보존 |
+| presentation/widgets/cycle_participation_widgets.dart·cycle_management_widgets.dart | 기존 확인창의 날짜/상태·실제 선택과 읽기 미리보기, 캐릭터/역할 변경 시 초기화. 공통 표시 조각이 필요하면 같은 widgets 범위에만 분리 |
+| presentation/viewmodels/cycle_participation_controller.dart | admission/management 입력을 첫 await 전에 고정. 원명령 저장/ACK 종류·기존 일정 PUT 경계는 유지 |
+| test/features/recruitment_list | 표시 DTO 표적검증 추가와 interaction/management의 신규 opt-in fixture·명시선택/서명·pending 회귀 보강 |
+
+자동 검증은 잘못된 scope/세대·누락/null/중복/불일치·actual/preview 시각 조합·권한false/필수누락·continue 부분선택/불가ID·none/noop·표시변경 POST0건·fresh 중 입력변조·결과불명 동일본문/키·늦은응답/원ACK를 묶어 확인한다. 최대64 경계/수요일 새벽·미정duration/조율빈후보를 DTO 최소 사례로 포함한다. 새로운 HTTP/DB·HMAC/정족수/성능 시험을 Flutter mock으로 대체했다고 주장하지 않는다.
+
+기능섹션 최종 상태에서 새 표시시험 + cycle_interaction_test/cycle_management_test/cycle_schedule_test + 변경Dart 분석/포맷/diff를 한 번 묶는다. 개인표 원본/저장·인증/Router/DI가 바뀌지 않으므로 무관 전체 Flutter 시험은 기본 실행하지 않는다. 실제로 공유 경계가 바뀌면 범위를 다시 판단한다. 현재 설계 구간은 문서diff/content만 검증하고 기존시험을 반복하지 않는다. 정상 확인창의 가독성/스크롤·캐릭터변경·기기 글자크기/익일 표시·실회원HTTP는 전체 기능섹션의 사용자 수동 인수로 남긴다.
+
+완료 조건은 세 문맥 표시/선택과 재확인·원pending 보존의 구현/표적검증, 문서 최신화·같은 Issue13에 소비SHA/구현SHA·검증/미확인 회신·작업브랜치 push다. 완료/정정·종료/재개(F6), 모집생성 계약·필터/계정 카드 리디자인, 통계19·서버/DB/키/운영배포 및 기기 자동조작은 포함하지 않는다.

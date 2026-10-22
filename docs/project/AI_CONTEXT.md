@@ -16,6 +16,8 @@
 
 [Backend112 구현 인계6345290060](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345290060)를 확인했다. Backend111에서 /me 경로 정정 완료, 고정소비SHA07c2b671/168경로의 세 GET·opt-in/닫힌 표시응답을 게시OpenAPI로 직접 대조했다. Backend48PASS/이미지404cf8c4… 개발반영·자료보존은 보고 수신이며 Flutter 정상인증HTTP/기기 인수로 확대하지 않는다. Backend 대기는 해제하고 다음은 Flutter 표시/선택 연결이다. 현재 앱0afd879/F5 독립 구현은 유지하며 이번에는 기능코드를 변경하지 않았다. [Flutter 확인6345378281](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345378281), 상세 범위는 NEXT_WORK/설계37 §37.16이다.
 
+2026-10-23 사용자 요청으로 구현 전 설계를 재점검했다. 실제 controller/확인창·DI/본문과 고정 Backend 소스를 대조하고 continue 명시ID 전송·표시서명·입력고정/선택초기화·화면별 표시/미리보기·파일책임·회귀/완료 조건을 **설계37 §37.17/NEXT_WORK**에 확정했다. 새 정책 결정/Backend 대기는 없으며 설계만 완료, 기능코드 미변경·구현은 다음 구간이다.
+
 F3 후보 구현f628740/결과6340688138을 보존하고 F4 주차별 관리까지 연결했다. 상세의 기존 구역/카드·4/8인 번호와 앱소유 명령writer를 유지하며 실제T 명령과 전역 영향 확인/ACK를 구분한다. 공통 그룹 연결은 불변이며 제목·공개범위만 수정한다. dev 미반영·브랜치 유지, F5 일정/예약 독립 연결까지 진행했으며 사전 참가 시간표시/실제 인수와 F6는 남는다. Git/최신Issue 인계는 DEV_LOG를 따른다.
 
 | 구분 | 현재 상태 |

@@ -1,5 +1,14 @@
 # 개발 이력
 
+## 2026-10-23 — F5 사전 참가 표시 연결 기획·설계 재점검
+
+사용자의 다음 작업 설계/기존 설계 재확인 요청으로 필수문서·설계37 §37.16/최신로그·현재316e3de/원격일치·dev6d3f617·기존무관dirty 및 최신Issue13(Backend112/Flutter113 이후 새 Backend 회신 없음)을 확인했다. 고정소비07c2b671의 session_display.py/session_display_schemas.py/cycle_continuation.py와 실제 Flutter reader/body/controller/확인창·backend_app DI를 대조했다.
+
+- 설계 결과: 기존 기획/계약을 유지하고 §37.17에 화면별 날짜/시각/미정/권한·실제 선택/읽기 미리보기/none, scope/prospective·불변DTO/수명·제출/재확인·파일책임/표적검증·완료/제외를 구체화했다. 현재 continue body가 기존 target_session_ids를 그대로 보내는 점, admission 서명의 표시 누락, fresh 조회 전 입력고정·캐릭터/역할 변경 시 선택초기화를 실제 수정지점으로 고정했다. 새로운 UX 단계/Backend 변경·추가 결정/대기는 없다.
+- 다음: DTO/reader/continue 본문 → 기존 확인창·controller 입력고정 → 새 표시/직접영향 interaction/management/schedule 최종 묶음검증·분석/문서/Issue 적용결과·작업브랜치 보관이다. 상세 실행은 NEXT_WORK에 두고 완료/정정·종료/재개(F6)/계정·필터 리디자인/서버·DB·기기조작은 제외한다.
+- 새로 가능해진 앱 흐름 없음/설계만 완료. 보존 확인: 기존 F1~F5 코드·자동검증 기록과 사용자 확인 개인표/계정·입장정책·무관dirty 유지. 미확인 실기기: 새 표시/선택/스크롤·익일/KST/글자크기·실회원HTTP는 전체섹션 사용자 인수로 남는다. 문서diff/content·소스대조만 수행하고 기능코드/시험 변경이나 Flutter 시험 재실행은 하지 않았다.
+- 협업/Git: 소비계약·Backend 담당 변경이 없어 동일 ACK/시험요청 댓글은 추가하지 않는다. 기존 Flutter113/6345378281을 유지하고 실제 연결 결과는 구현 뒤 회신한다. 문서 최신화·같은 feature/raid-recruitment-scheduling commit/push, dev미병합·브랜치유지다.
+
 ## 2026-10-23 — Backend111 경로정정·112 사전 참가 표시 구현 인계 확인
 
 사용자의 Issue13 회신 확인 요청으로 [Backend111/6344566106](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6344566106)과 [Backend112/6345290060](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345290060)를 확인했다. 필수문서·설계37 §37.16/관련최신로그, 현재a328ef2/원격일치·dev6d3f617·기존무관dirty를 대조했다.
