@@ -412,11 +412,13 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       api: accountApi,
       accounts: serverAccounts,
       raids: MemberRaidClient(accountApi),
+      twoCycleEnabled: true,
     );
     final recruitmentCreate = _recruitmentCreate =
         BackendRecruitmentCreateViewModel(
           gateway: recruitmentGateway,
           session: readSession,
+          scopeKey: cycleScopeKey,
           accessChanges: _memberAccount?.model ?? auth,
           hasVerifiedAccount: () =>
               _memberAccount?.model.sections.any(
@@ -647,42 +649,29 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                   routes: [
                     GoRoute(
                       path: 'create',
-                      builder: (context, _) => BackendRecruitmentCreatePage(
+                      builder: (context, state) => BackendRecruitmentCreatePage(
                         model: recruitmentCreate,
+                        initialTarget:
+                            state.uri.queryParameters['target_cycle_key'],
                         onLogin: () => showLoginRequired(context, auth),
                       ),
                     ),
                     GoRoute(
                       path: ':recruitmentId',
-                      builder: (context, state) =>
-                          state.uri.queryParameters.containsKey(
-                            'target_cycle_key',
-                          )
-                          ? CycleRoomReadPage(
-                              key: ValueKey((
-                                state.pathParameters['recruitmentId'],
-                                state.uri.queryParameters['target_cycle_key'],
-                              )),
-                              repository: cycleReads,
-                              roomId: state.pathParameters['recruitmentId']!,
-                              target: state
-                                  .uri
-                                  .queryParameters['target_cycle_key']!,
-                              scopeKey: cycleScopeKey,
-                              changes: _memberAccount?.model ?? auth,
-                              catalog: _memberAccount?.weekly?.catalog,
-                              onLogin: () => showLoginRequired(context, auth),
-                            )
-                          : BackendRecruitmentDetailPage(
-                              key: ValueKey(
-                                state.pathParameters['recruitmentId'],
-                              ),
-                              gateway: recruitmentGateway,
-                              session: readSession,
-                              roomId: state.pathParameters['recruitmentId']!,
-                              onLogin: () => showLoginRequired(context, auth),
-                              onCreateAnother: recruitmentCreate.startAnother,
-                            ),
+                      builder: (context, state) => BackendRecruitmentDetailPage(
+                        key: ValueKey((
+                          state.pathParameters['recruitmentId'],
+                          state.uri.queryParameters['target_cycle_key'],
+                        )),
+                        target: state.uri.queryParameters['target_cycle_key'],
+                        accessChanges: _memberAccount?.model ?? auth,
+                        scopeKey: cycleScopeKey,
+                        gateway: recruitmentGateway,
+                        session: readSession,
+                        roomId: state.pathParameters['recruitmentId']!,
+                        onLogin: () => showLoginRequired(context, auth),
+                        onCreateAnother: recruitmentCreate.startAnother,
+                      ),
                     ),
                   ],
                 ),
@@ -799,6 +788,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       unawaited(_memberKey?.reload());
       unawaited(_ownership?.resume());
       unawaited(_memberAccount?.weekly?.refresh());
+      unawaited(_recruitmentCreate?.refreshCycles());
     }
   }
 

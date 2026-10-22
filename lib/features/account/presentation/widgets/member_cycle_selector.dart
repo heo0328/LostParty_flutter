@@ -24,12 +24,15 @@ class MemberCycleSelector extends StatelessWidget {
             ButtonSegment(value: cycles.current.key, label: const Text('이번 주')),
             ButtonSegment(value: cycles.next.key, label: const Text('다음 주')),
           ],
-          selected: {value},
+          selected: cycles.find(value) == null ? {} : {value},
+          emptySelectionAllowed: cycles.find(value) == null,
           onSelectionChanged: enabled ? (v) => onChanged(v.single) : null,
         ),
         const SizedBox(height: 6),
         Text(
-          '$value ~ ${cycles.find(value)!.endsAt.add(const Duration(hours: 9)).subtract(const Duration(days: 1)).toIso8601String().substring(0, 10)}',
+          cycles.find(value) == null
+              ? '대상 주차 $value · 주차를 다시 선택해 주세요.'
+              : '$value ~ ${cycles.find(value)!.endsAt.add(const Duration(hours: 9)).subtract(const Duration(days: 1)).toIso8601String().substring(0, 10)}',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall,
         ),

@@ -6,6 +6,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../../../account/presentation/widgets/ownership_notice_title.dart';
+import '../../../account/presentation/widgets/member_cycle_selector.dart';
 import '../../domain/backend_recruitment.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
 import '../widgets/recruitment_section.dart';
@@ -15,10 +16,12 @@ class BackendRecruitmentCreatePage extends StatefulWidget {
   const BackendRecruitmentCreatePage({
     required this.model,
     required this.onLogin,
+    this.initialTarget,
     super.key,
   });
   final BackendRecruitmentCreateViewModel model;
   final VoidCallback onLogin;
+  final String? initialTarget;
   @override
   State<BackendRecruitmentCreatePage> createState() =>
       _BackendRecruitmentCreatePageState();
@@ -35,7 +38,7 @@ class _BackendRecruitmentCreatePageState
     m.addListener(_changed);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        unawaited(m.activate());
+        unawaited(m.activate(target: widget.initialTarget));
         _changed();
       }
     });
@@ -55,7 +58,9 @@ class _BackendRecruitmentCreatePageState
       _opened = id;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && m.createdRoomId == id) {
-          context.pushReplacement('/recruitments/$id');
+          context.pushReplacement(
+            '/recruitments/$id${m.createdTargetKey == null ? '' : '?target_cycle_key=${m.createdTargetKey}'}',
+          );
         }
       });
     }
@@ -104,8 +109,9 @@ class _BackendRecruitmentCreatePageState
   String _dayLabel(int weekday) {
     const names = {3: '수', 4: '목', 5: '금', 6: '토', 7: '일', 1: '월', 2: '화'};
     final date = BackendRecruitmentCreateViewModel.startPolicy.dateForDay(
-      m.now(),
+      m.serverNow,
       weekday,
+      targetCycleKey: m.draft.targetCycleKey,
     );
     return '${names[weekday]} ${date.month}/${date.day}';
   }
@@ -116,7 +122,18 @@ class _BackendRecruitmentCreatePageState
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
       children: [
-        if (m.hasPending) _pending(),
+        if (m.cycles != null && d.targetCycleKey != null && !m.hasPending)
+          MemberCycleSelector(
+            cycles: m.cycles!,
+            value: d.targetCycleKey!,
+            enabled: m.editable,
+            onChanged: (t) => m.selectCycle(t),
+          ),
+        if (m.hasPending) ...[
+          if (d.targetCycleKey != null)
+            Text('생성 대상 주차 · ${d.targetCycleKey}', textAlign: TextAlign.center),
+          _pending(),
+        ],
         AbsorbPointer(
           absorbing: !m.editable,
           child: Column(
@@ -179,7 +196,7 @@ class _BackendRecruitmentCreatePageState
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    '이번 레이드 주차의 날짜예요. 지난 요일을 다음 주로 넘기지 않아요.\n'
+                    '선택한 레이드 주차의 날짜예요. 지난 요일을 다음 주로 넘기지 않아요.\n'
                     '수동 출발은 생성 시점부터 30분 이후이며, 선택일마다 진행은 모든 날짜가 유효해야 해요.',
                     style: TextStyle(fontSize: 12),
                   ),
@@ -408,6 +425,29 @@ class _BackendRecruitmentCreatePageState
                         ),
                       ),
                     ),
+                  for (final prospective
+                      in m.selection?.prospective ?? <Map<String, dynamic>>[])
+                    if ((prospective['permission'] as Map)['allowed'] !=
+                        true) ...[
+                      Text(
+                        '${prospective['target_cycle_key']} 주차 · ${recruitmentFailureMessage((prospective['permission'] as Map)['reason'] as String?)}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.error,
+                        ),
+                      ),
+                      for (final conflict in prospective['conflicts'] as List)
+                        if (conflict['can_view_detail'] == true &&
+                            conflict['room_id'] != null)
+                          TextButton(
+                            onPressed: () => context.push(
+                              '/recruitments/${conflict['room_id']}?target_cycle_key=${conflict['target_cycle_key']}',
+                            ),
+                            child: Text(
+                              conflict['room_title'] as String? ?? '기존 참가 확인',
+                            ),
+                          ),
+                    ],
                 ],
               ),
               RecruitmentSection(
@@ -472,7 +512,11 @@ class _BackendRecruitmentCreatePageState
                       style: TextStyle(fontSize: 12),
                     ),
                     value: d.continueTogether,
-                    onChanged: (v) => m.update(d.copy(continueTogether: v)),
+                    onChanged:
+                        d.targetCycleKey != null &&
+                            d.targetCycleKey != m.cycles?.current.key
+                        ? null
+                        : (v) => m.update(d.copy(continueTogether: v)),
                   ),
                 ],
               ),
@@ -538,16 +582,18 @@ class _BackendRecruitmentCreatePageState
           spacing: 8,
           children: [
             TextButton(
-              onPressed: () =>
-                  context.push('/recruitments/${m.recoveryRooms[i]}'),
+              onPressed: () => context.push(
+                '/recruitments/${m.recoveryRooms[i]}${m.draft.targetCycleKey == null ? '' : '?target_cycle_key=${m.draft.targetCycleKey}'}',
+              ),
               child: Text('참가 모집 ${i + 1} 상세'),
             ),
-            TextButton(
-              onPressed: m.busy
-                  ? null
-                  : () => m.confirmRecoveredRoom(m.recoveryRooms[i]),
-              child: const Text('이 모집으로 결과 확인'),
-            ),
+            if (m.cycleGateway == null)
+              TextButton(
+                onPressed: m.busy
+                    ? null
+                    : () => m.confirmRecoveredRoom(m.recoveryRooms[i]),
+                child: const Text('이 모집으로 결과 확인'),
+              ),
           ],
         ),
     ],

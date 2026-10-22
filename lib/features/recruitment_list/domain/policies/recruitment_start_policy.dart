@@ -18,8 +18,10 @@ class RecruitmentStartPolicy {
   int? defaultMinutes(String difficultyId) => _defaults[difficultyId];
 
   /// Calendar coordinates in KST, independent of the device timezone.
-  DateTime dateForDay(DateTime now, int weekday) {
-    final start = _reset.weekFor(now).startedAt.add(_schedule.utcOffset);
+  DateTime dateForDay(DateTime now, int weekday, {String? targetCycleKey}) {
+    final start = targetCycleKey == null
+        ? _reset.weekFor(now).startedAt.add(_schedule.utcOffset)
+        : DateTime.parse('${targetCycleKey}T06:00:00Z');
     return DateTime.utc(
       start.year,
       start.month,
@@ -32,6 +34,7 @@ class RecruitmentStartPolicy {
     required int weekday,
     required int minute,
     required int? durationMinutes,
+    String? targetCycleKey,
   }) {
     if (weekday < 1 ||
         weekday > 7 ||
@@ -44,16 +47,26 @@ class RecruitmentStartPolicy {
       return false;
     }
     final week = _reset.weekFor(now);
+    final cycleStart = targetCycleKey == null
+        ? week.startedAt
+        : DateTime.parse(
+            '${targetCycleKey}T06:00:00Z',
+          ).subtract(_schedule.utcOffset);
+    if (cycleStart != week.startedAt &&
+        cycleStart != week.startedAt.add(_schedule.cycleLength)) {
+      return false;
+    }
     final start = dateForDay(
       now,
       weekday,
+      targetCycleKey: targetCycleKey,
     ).add(Duration(minutes: minute)).subtract(_schedule.utcOffset);
     final end = start.add(Duration(minutes: durationMinutes));
-    final cycleEnd = week.startedAt.add(_schedule.cycleLength);
-    final maintenanceEnd = week.startedAt.add(const Duration(hours: 4));
+    final cycleEnd = cycleStart.add(_schedule.cycleLength);
+    final maintenanceEnd = cycleStart.add(const Duration(hours: 4));
     return !start.isBefore(now.toUtc().add(const Duration(minutes: 30))) &&
-        !start.isBefore(week.startedAt) &&
+        !start.isBefore(cycleStart) &&
         !end.isAfter(cycleEnd) &&
-        !(start.isBefore(maintenanceEnd) && end.isAfter(week.startedAt));
+        !(start.isBefore(maintenanceEnd) && end.isAfter(cycleStart));
   }
 }

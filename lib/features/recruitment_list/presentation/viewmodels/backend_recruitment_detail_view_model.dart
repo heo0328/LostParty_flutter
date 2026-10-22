@@ -3,19 +3,47 @@ import 'package:flutter/foundation.dart';
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../../../account/domain/account_read_session.dart';
 import '../../domain/backend_recruitment.dart';
+import '../../../account/domain/member_cycle_models.dart';
 
 class BackendRecruitmentDetailViewModel extends ChangeNotifier {
   BackendRecruitmentDetailViewModel({
     required this.gateway,
     required this.session,
     required this.roomId,
+    this.target,
+    this.accessChanges,
+    this.scopeKey,
   }) {
     session.addListener(_sessionChanged);
+    accessChanges?.addListener(_sessionChanged);
+    _scopeBinding = scopeKey?.call();
     _binding = (session.userId, session.generation);
   }
   final RecruitmentGateway gateway;
   final AccountReadSession session;
   final String roomId;
+  final Listenable? accessChanges;
+  final String Function()? scopeKey;
+  String? _scopeBinding;
+  String? target;
+  MemberCycles? cycles;
+  Timer? _cycleTimer;
+  final notOpen = <String>{};
+  CycleRecruitmentGateway? get cycleGateway =>
+      gateway is CycleRecruitmentGateway &&
+          (gateway as CycleRecruitmentGateway).twoCycleEnabled
+      ? gateway as CycleRecruitmentGateway
+      : null;
+  void selectCycle(String t) {
+    if (cycles?.find(t) == null || target == t) return;
+    _epoch++;
+    loading = false;
+    target = t;
+    value = null;
+    groupName = null;
+    unawaited(load());
+  }
+
   late (String?, int) _binding;
   bool _disposed = false, loading = false;
   int _epoch = 0;
@@ -25,10 +53,17 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
   String? groupName;
   void _sessionChanged() {
     final binding = (session.userId, session.generation);
-    if (binding == _binding && session.isAuthenticated) return;
+    if (binding == _binding &&
+        session.isAuthenticated &&
+        _scopeBinding == scopeKey?.call()) {
+      return;
+    }
+    _scopeBinding = scopeKey?.call();
     _binding = binding;
     _epoch++;
     value = null;
+    cycles = null;
+    notOpen.clear();
     catalog = null;
     groupName = null;
     loading = false;
@@ -41,7 +76,8 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
       !_disposed &&
       epoch == _epoch &&
       session.isAuthenticated &&
-      _binding == (session.userId, session.generation);
+      _binding == (session.userId, session.generation) &&
+      _scopeBinding == scopeKey?.call();
   Future<void> load() async {
     if (_disposed || loading || !session.isAuthenticated) return;
     final epoch = ++_epoch;
@@ -49,9 +85,26 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     failure = null;
     notifyListeners();
     try {
-      final detail = await gateway.detail(roomId);
+      if (cycleGateway != null) {
+        final meta = await cycleGateway!.cycles();
+        if (!_current(epoch)) return;
+        cycles = meta;
+        _cycleTimer?.cancel();
+        _cycleTimer = Timer(
+          meta.current.endsAt.difference(meta.serverNow),
+          () => unawaited(load()),
+        );
+        target ??= meta.current.key;
+        if (meta.find(target!) == null) {
+          throw const AccountReadException('TARGET_CYCLE_OUT_OF_RANGE');
+        }
+      }
+      final detail = cycleGateway == null
+          ? await gateway.detail(roomId)
+          : await cycleGateway!.cycleDetail(roomId, target!);
       if (!_current(epoch)) return;
       value = detail;
+      notOpen.remove(target);
       if (detail.room['group_id'] != null) {
         try {
           final groups = await gateway.groups();
@@ -75,6 +128,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     } on AccountReadException catch (e) {
       if (_current(epoch)) {
         failure = e.code;
+        if (e.code == 'TARGET_NOT_OPEN' && target != null) notOpen.add(target!);
         value = null;
       }
     } catch (_) {
@@ -94,7 +148,9 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _epoch++;
+    _cycleTimer?.cancel();
     session.removeListener(_sessionChanged);
+    accessChanges?.removeListener(_sessionChanged);
     super.dispose();
   }
 }

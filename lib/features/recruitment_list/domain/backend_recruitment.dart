@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../../account/domain/member_raid_models.dart';
+import '../../account/domain/member_cycle_models.dart';
 import '../../account/domain/role_summary.dart';
 import '../../account/domain/services/character_build_role_policy.dart';
 
@@ -49,6 +50,7 @@ class RecruitmentItemDraft {
 class RecruitmentDraft {
   RecruitmentDraft({
     this.characterId,
+    this.targetCycleKey,
     this.role = 'dealer',
     this.title = '',
     this.groupId,
@@ -69,7 +71,7 @@ class RecruitmentDraft {
   }) : items = List.unmodifiable(items),
        startsByDay = Map.unmodifiable(startsByDay),
        weekdays = Set.unmodifiable(weekdays);
-  final String? characterId, groupId, experience;
+  final String? characterId, groupId, experience, targetCycleKey;
   final String role, title, sharedMinimum, dealerMinimum, supportMinimum;
   final bool groupOnly, directJoin, sharedPower, continueTogether, eachDay;
   final List<RecruitmentItemDraft> items;
@@ -83,6 +85,7 @@ class RecruitmentDraft {
   // Use an explicit clone so the app-owned editor survives route recreation.
   RecruitmentDraft copy({
     String? characterId,
+    String? targetCycleKey,
     String? role,
     String? title,
     String? groupId,
@@ -105,6 +108,7 @@ class RecruitmentDraft {
     bool? eachDay,
   }) => RecruitmentDraft(
     characterId: characterId ?? this.characterId,
+    targetCycleKey: targetCycleKey ?? this.targetCycleKey,
     role: role ?? this.role,
     title: title ?? this.title,
     groupId: clearGroup ? null : groupId ?? this.groupId,
@@ -126,6 +130,8 @@ class RecruitmentDraft {
 
   String get selectionSignature => jsonEncode({
     'character': characterId,
+    if (targetCycleKey != null) 'target': targetCycleKey,
+    if (targetCycleKey != null) 'continuation': continueTogether,
     'role': role,
     'group': groupId,
     'items': items.map((i) => i.choice).toList(),
@@ -242,7 +248,16 @@ class RecruitmentDraft {
         'dealer_min': minimum(sharedPower ? sharedMinimum : dealerMinimum),
         'support_min': minimum(sharedPower ? sharedMinimum : supportMinimum),
       },
-      'continuation': {'enabled': continueTogether, 'auto_open_enabled': false},
+      'continuation': context.targetKey == null
+          ? {'enabled': continueTogether, 'auto_open_enabled': false}
+          : {
+              'enabled': continueTogether,
+              'next_selection': context.nextSelection,
+            },
+      if (context.targetKey != null) ...{
+        'target_cycle_key': context.targetKey,
+        'expected_target_revision': context.targetRevision,
+      },
       'schedule_groups': schedules,
       'expected_cycle_key': context.cycleKey,
       'expected_catalog_version': context.catalogVersion,
@@ -257,8 +272,9 @@ String minuteClock(int minute) =>
 class RecruitmentCreationContext {
   RecruitmentCreationContext.fromJson(
     Map<String, dynamic> json,
-    RecruitmentDraft draft,
-  ) : signature = draft.selectionSignature {
+    RecruitmentDraft draft, {
+    bool cycle = false,
+  }) : signature = draft.selectionSignature {
     roleShape(
       json,
       'expected_cycle_key server_time catalog_version policy_snapshot context_token selection targets group_revision settings_defaults comparison permissions',
@@ -267,7 +283,11 @@ class RecruitmentCreationContext {
     serverTime = roleUtc(json['server_time']);
     catalogVersion = raidText(json['catalog_version']);
     token = raidText(json['context_token']);
-    roleCheck(RegExp(r'^s1\.[a-f0-9]{64}$').hasMatch(token));
+    roleCheck(
+      cycle
+          ? token.isNotEmpty && token.length <= 4096
+          : RegExp(r'^s1\.[a-f0-9]{64}$').hasMatch(token),
+    );
     final selected = roleMap(json['selection']);
     roleShape(
       selected,
@@ -336,14 +356,135 @@ class RecruitmentCreationContext {
       roleCheck(RegExp(r'^[0-9]+(?:\.[0-9]+)?$').hasMatch(actualPower!));
     }
   }
+  factory RecruitmentCreationContext.fromCycleJson(
+    Map<String, dynamic> j,
+    RecruitmentDraft draft,
+  ) {
+    const oldKeys =
+        'expected_cycle_key server_time catalog_version policy_snapshot context_token selection targets group_revision settings_defaults comparison permissions';
+    roleShape(
+      j,
+      '$oldKeys target_cycle_key expected_target_revision issued_at expires_at prospective_room_id target_creation next_cycle_creation continuation_effect',
+    );
+    final value = RecruitmentCreationContext.fromJson(
+      {for (final k in oldKeys.split(' ')) k: j[k]},
+      draft,
+      cycle: true,
+    );
+    CyclePermission.fromJson(roleMap(roleMap(j['permissions'])['create']));
+    value.targetKey = raidCycleKey(j['target_cycle_key']);
+    roleCheck(value.targetKey == draft.targetCycleKey);
+    value.targetRevision = j['expected_target_revision'] == null
+        ? null
+        : rolePositive(j['expected_target_revision']);
+    roleCheck(value.targetRevision == null);
+    value.prospectiveRoomId = roleId(j['prospective_room_id']);
+    final issued = roleUtc(j['issued_at']);
+    value.expiresAt = roleUtc(j['expires_at']);
+    roleCheck(
+      !issued.isAfter(value.serverTime) &&
+          value.expiresAt!.isAfter(value.serverTime),
+    );
+    final nextKey = DateTime.parse(
+      '${value.cycleKey}T00:00:00Z',
+    ).add(const Duration(days: 7)).toIso8601String().substring(0, 10);
+    roleCheck(value.targetKey == value.cycleKey || value.targetKey == nextKey);
+    roleCheck(!draft.continueTogether || value.targetKey == value.cycleKey);
+    final effect = draft.continueTogether
+        ? 'target_and_next'
+        : value.targetKey == nextKey
+        ? 'target_is_next'
+        : 'target_only';
+    roleCheck(j['continuation_effect'] == effect);
+    value.effect = effect;
+    Map<String, dynamic> prospective(Object? raw, String t) {
+      final p = roleMap(raw);
+      roleShape(
+        p,
+        'target_cycle_key room_cycle_id generation initial_target_revision selection targets permission conflicts',
+      );
+      roleCheck(
+        raidCycleKey(p['target_cycle_key']) == t &&
+            p['generation'] == 1 &&
+            p['initial_target_revision'] == 1,
+      );
+      roleId(p['room_cycle_id']);
+      final selection = roleMap(p['selection']);
+      roleShape(selection, value.selection.keys.join(' '));
+      roleCheck(
+        selection['character_id'] == draft.characterId &&
+            selection['selected_role'] == draft.role &&
+            selection['registration_id'] == value.selection['registration_id'],
+      );
+      for (final k in selection.keys.where((k) => k.startsWith('expected_'))) {
+        rolePositive(selection[k]);
+      }
+      final targets = raidList(p['targets']);
+      roleCheck(targets.length == draft.items.length);
+      for (var i = 0; i < targets.length; i++) {
+        final item = roleMap(targets[i]);
+        roleShape(
+          item,
+          'item_id round_id raid_id difficulty_id party_no expected_round_revision expected_weekly_revision',
+        );
+        roleId(item['item_id']);
+        roleId(item['round_id']);
+        roleCheck(
+          item['raid_id'] == draft.items[i].raidId &&
+              item['difficulty_id'] == draft.items[i].difficultyId &&
+              item['party_no'] == 1 &&
+              item['expected_round_revision'] == 1,
+        );
+        rolePositive(item['expected_weekly_revision']);
+      }
+      final permission = CyclePermission.fromJson(roleMap(p['permission']));
+      final conflicts = raidList(p['conflicts']);
+      roleCheck(conflicts.length <= 5);
+      for (final raw in conflicts) {
+        final c = roleMap(raw);
+        roleShape(
+          c,
+          'room_id target_cycle_key raid_id character_id can_view_detail room_title',
+        );
+        roleCheck(c['target_cycle_key'] == t);
+        roleId(c['character_id']);
+        raidIdentifier(c['raid_id']);
+        raidBool(c['can_view_detail']);
+        if (c['room_id'] != null) roleId(c['room_id']);
+        if (c['room_title'] != null) raidText(c['room_title']);
+      }
+      if (!permission.allowed) {
+        value.allowed = false;
+        value.reason = permission.reason;
+      }
+      return Map.unmodifiable(p);
+    }
+
+    value.prospective = [prospective(j['target_creation'], value.targetKey!)];
+    if (draft.continueTogether) {
+      final n = prospective(j['next_cycle_creation'], nextKey);
+      value.nextSelection = Map.unmodifiable(roleMap(n['selection']));
+      value.prospective!.add(n);
+    } else {
+      roleCheck(j['next_cycle_creation'] == null);
+    }
+    return value;
+  }
+  String? targetKey, prospectiveRoomId, effect;
+  int? targetRevision;
+  DateTime? expiresAt;
+  Map<String, dynamic>? nextSelection;
+  List<Map<String, dynamic>>? prospective;
   final String signature;
   late final String cycleKey, catalogVersion, token;
   late final DateTime serverTime;
   late final Map<String, dynamic> selection;
   late final List<Map<String, dynamic>> targets;
   late final int? groupRevision;
-  late final bool allowed, hasBuildWarning;
-  late final String? reason, actualPower;
+  late bool allowed;
+  late final bool hasBuildWarning;
+  late String? reason;
+  late final String? actualPower;
 }
 
 class RecruitmentCreationAck {
@@ -363,6 +504,66 @@ class RecruitmentCreationAck {
     roleCheck(rooms.length == 1);
     roomId = rooms.single;
   }
+  RecruitmentCreationAck.fromCycleJson(
+    Map<String, dynamic> j,
+    String key,
+    Map<String, dynamic> body,
+  ) {
+    roleShape(
+      j,
+      'command_id outcome executed_at room_id target_cycle_key revisions created_cycles continuation_effect',
+    );
+    roleCheck(
+      roleId(j['command_id']) == key &&
+          {'applied', 'recorded', 'noop'}.contains(j['outcome']),
+    );
+    roleUtc(j['executed_at']);
+    roomId = roleId(j['room_id']);
+    targetKey = raidCycleKey(j['target_cycle_key']);
+    roleCheck(targetKey == body['target_cycle_key']);
+    final together = roleMap(body['continuation'])['enabled'] == true;
+    final expected = <String>{
+      targetKey!,
+      if (together)
+        DateTime.parse(
+          '${targetKey}T00:00:00Z',
+        ).add(const Duration(days: 7)).toIso8601String().substring(0, 10),
+    };
+    effect = j['continuation_effect'] as String;
+    roleCheck(
+      effect ==
+          (together
+              ? 'target_and_next'
+              : body['expected_cycle_key'] == targetKey
+              ? 'target_only'
+              : 'target_is_next'),
+    );
+    created = raidList(j['created_cycles']).map((raw) {
+      final c = roleMap(raw);
+      roleShape(
+        c,
+        'target_cycle_key room_cycle_id generation target_revision leader_cycle_member_id',
+      );
+      roleCheck(expected.remove(raidCycleKey(c['target_cycle_key'])));
+      roleId(c['room_cycle_id']);
+      roleId(c['leader_cycle_member_id']);
+      rolePositive(c['generation']);
+      rolePositive(c['target_revision']);
+      return Map<String, dynamic>.unmodifiable(c);
+    }).toList();
+    roleCheck(expected.isEmpty);
+    final roomRevisions = <String>[];
+    for (final raw in raidList(j['revisions'])) {
+      final v = roleMap(raw);
+      roleShape(v, 'resource id revision');
+      roleId(v['id']);
+      rolePositive(v['revision']);
+      if (v['resource'] == 'room') roomRevisions.add(v['id'] as String);
+    }
+    roleCheck(roomRevisions.length == 1 && roomRevisions.single == roomId);
+  }
+  String? targetKey, effect;
+  List<Map<String, dynamic>>? created;
   late final String roomId;
 }
 
@@ -418,11 +619,20 @@ class BackendRecruitmentDetail {
     );
     roleCheck(roleMap(json['access'])['state'] == 'allowed');
   }
+  String? targetKey;
+  List<Map<String, dynamic>> formation = const [];
   late final Map<String, dynamic> room;
   late final String title;
   late final int capacity, memberCount;
   late final List<Map<String, dynamic>> members;
   late final List<DateTime> starts;
+}
+
+abstract interface class CycleRecruitmentGateway implements RecruitmentGateway {
+  bool get twoCycleEnabled;
+  Future<MemberCycles> cycles();
+  Future<BackendRecruitmentDetail> cycleDetail(String id, String target);
+  Future<List<String>> roomIdsFor(String target);
 }
 
 abstract interface class RecruitmentGateway {

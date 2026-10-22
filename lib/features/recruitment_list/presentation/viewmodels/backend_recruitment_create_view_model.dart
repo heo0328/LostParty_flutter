@@ -7,14 +7,16 @@ import '../../../../shared/raid_catalog/domain/policies/raid_eligibility_policy.
 import '../../../account/data/local/scoped_command_key.dart';
 import '../../../account/domain/account_read_session.dart';
 import '../../domain/backend_recruitment.dart';
+import '../../../account/domain/member_cycle_models.dart';
 import '../../domain/policies/recruitment_start_policy.dart';
 
 class _CreationCommand {
-  _CreationCommand(Map<String, dynamic> body, this.createdAt)
+  _CreationCommand(Map<String, dynamic> body, this.createdAt, this.context)
     : encoded = jsonEncode(body),
       key = newScopedCommandKey();
   final String key, encoded;
   final DateTime createdAt;
+  final RecruitmentCreationContext context;
 }
 
 /// App-owned: leaving the route does not change the draft, key or request body.
@@ -25,10 +27,12 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     required this.accessChanges,
     required this.hasVerifiedAccount,
     DateTime Function()? now,
+    this.scopeKey,
   }) : now = now ?? DateTime.now {
     session.addListener(_access);
     accessChanges.addListener(_access);
     _binding = (session.userId, session.generation);
+    _scopeBinding = scopeKey?.call();
     _eligible = session.isAuthenticated && hasVerifiedAccount();
   }
   final RecruitmentGateway gateway;
@@ -36,6 +40,80 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
   final Listenable accessChanges;
   final bool Function() hasVerifiedAccount;
   final DateTime Function() now;
+  final String Function()? scopeKey;
+  String? _scopeBinding;
+  MemberCycles? cycles;
+  DateTime? _metaReceived;
+  Timer? _cycleTimer;
+  bool _readingMeta = false;
+  String? createdTargetKey;
+  CycleRecruitmentGateway? get cycleGateway =>
+      gateway is CycleRecruitmentGateway &&
+          (gateway as CycleRecruitmentGateway).twoCycleEnabled
+      ? gateway as CycleRecruitmentGateway
+      : null;
+  DateTime get serverNow => cycles == null || _metaReceived == null
+      ? now().toUtc()
+      : cycles!.serverNow.add(now().toUtc().difference(_metaReceived!));
+  Future<void> selectCycle(String key) async {
+    if (!editable || cycles?.find(key) == null || key == draft.targetCycleKey) {
+      return;
+    }
+    update(
+      draft.copy(
+        targetCycleKey: key,
+        continueTogether: key == cycles!.current.key
+            ? draft.continueTogether
+            : false,
+      ),
+    );
+  }
+
+  void _acceptMeta(MemberCycles meta) {
+    cycles = meta;
+    _metaReceived = now().toUtc();
+    _cycleTimer?.cancel();
+    final remaining = meta.current.endsAt.difference(meta.serverNow);
+    if (remaining > Duration.zero) {
+      _cycleTimer = Timer(remaining, () => unawaited(refreshCycles()));
+    }
+  }
+
+  Future<void> refreshCycles() async {
+    if (cycleGateway == null ||
+        !eligible ||
+        hasPending ||
+        busy ||
+        _readingMeta) {
+      return;
+    }
+    final epoch = _epoch;
+    _readingMeta = true;
+    try {
+      final meta = await cycleGateway!.cycles();
+      if (!_current(epoch)) return;
+      final changed = cycles?.current.key != meta.current.key;
+      _acceptMeta(meta);
+      if (changed) {
+        selection = null;
+        _contextGeneration++;
+      }
+    } on AccountReadException catch (e) {
+      if (_current(epoch)) {
+        selection = null;
+        _fail(e);
+      }
+    } catch (_) {
+      if (_current(epoch)) {
+        selection = null;
+        failure = 'INVALID_RESPONSE';
+      }
+    } finally {
+      _readingMeta = false;
+      if (_current(epoch)) _emit();
+    }
+  }
+
   static const _eligibility = RaidEligibilityPolicy();
   static const startPolicy = RecruitmentStartPolicy();
   late (String?, int) _binding;
@@ -143,7 +221,7 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
 
   bool canStart(int minute, {int? day}) {
     final days = day == null ? draft.weekdays : {day};
-    final instant = now();
+    final instant = cycleGateway == null ? now() : serverNow;
     return days.isNotEmpty &&
         days.every(
           (d) => startPolicy.allows(
@@ -151,6 +229,7 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
             weekday: d,
             minute: minute,
             durationMinutes: durationMinutes,
+            targetCycleKey: draft.targetCycleKey,
           ),
         );
   }
@@ -161,6 +240,17 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
   ).any((minute) => canStart(minute, day: day));
 
   String? get validationMessage {
+    if (cycleGateway != null &&
+        (cycles == null ||
+            cycles!.find(draft.targetCycleKey ?? '') == null ||
+            !serverNow.isBefore(cycles!.current.endsAt))) {
+      return '주차 정보를 다시 불러와 주세요.';
+    }
+    if (cycleGateway != null &&
+        cycles!.find(draft.targetCycleKey!)!.permissions['create']?.allowed !=
+            true) {
+      return '선택 주차에 모집을 만들 수 없습니다.';
+    }
     final input = draft.validate();
     if (input != null) return input;
     if (durationMinutes != null && durationMinutes! > 1440) {
@@ -184,20 +274,30 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
       epoch == _epoch &&
       eligible &&
       _binding == (session.userId, session.generation) &&
-      hasVerifiedAccount();
+      hasVerifiedAccount() &&
+      _scopeBinding == scopeKey?.call();
 
   void _access() {
     final binding = (session.userId, session.generation);
     final available = session.isAuthenticated && hasVerifiedAccount();
-    if (binding == _binding && available == _eligible) return;
+    if (binding == _binding &&
+        available == _eligible &&
+        _scopeBinding == scopeKey?.call()) {
+      return;
+    }
+    _scopeBinding = scopeKey?.call();
     _binding = binding;
     _eligible = available;
     _epoch++;
     _contextGeneration++;
     _timer?.cancel();
+    _cycleTimer?.cancel();
     _retryAt = null;
     _pending = null;
     draft = RecruitmentDraft();
+    cycles = null;
+    _metaReceived = null;
+    createdTargetKey = null;
     catalog = null;
     characters = [];
     groups = [];
@@ -209,12 +309,20 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     if (_activated && eligible) unawaited(load());
   }
 
-  Future<void> activate() async {
+  Future<void> activate({String? target}) async {
     _activated = true;
     // A successful command belongs to the detail route. A new create-route
     // entry starts a new draft; unfinished and unknown commands remain intact.
     if (!hasPending && !busy && createdRoomId != null) _resetCompleted();
     if (catalog == null && eligible) await load();
+    if (target != null && editable && cycles?.find(target) != null) {
+      await selectCycle(target);
+    } else if (target != null && editable && cycles != null) {
+      draft = draft.copy(targetCycleKey: target, continueTogether: false);
+      selection = null;
+      failure = 'TARGET_CYCLE_OUT_OF_RANGE';
+      _emit();
+    }
   }
 
   Future<void> load() async {
@@ -224,6 +332,16 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     failure = null;
     _emit();
     try {
+      if (cycleGateway != null) {
+        final meta = await cycleGateway!.cycles();
+        if (!_current(epoch)) return;
+        _acceptMeta(meta);
+        final t = draft.targetCycleKey ?? meta.current.key;
+        draft = draft.copy(
+          targetCycleKey: t,
+          continueTogether: t == meta.current.key && draft.continueTogether,
+        );
+      }
       final c = await gateway.catalog();
       if (!_current(epoch)) return;
       final candidates = await gateway.characters();
@@ -256,6 +374,13 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
 
   void update(RecruitmentDraft value) {
     if (!editable) return;
+    if (cycleGateway != null) {
+      if (cycles?.find(value.targetCycleKey ?? '') == null) return;
+      if (value.targetCycleKey != cycles!.current.key &&
+          value.continueTogether) {
+        value = value.copy(continueTogether: false);
+      }
+    }
     if (value.characterId != draft.characterId ||
         value.selectionSignature != draft.selectionSignature) {
       value = _normalizeItems(value);
@@ -358,14 +483,42 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     final snapshot = draft;
     try {
       // A preview is never write authority. Every new command gets a fresh context.
+      if (cycleGateway != null) {
+        final meta = await cycleGateway!.cycles();
+        if (!_current(epoch)) return;
+        _acceptMeta(meta);
+        if (meta.find(snapshot.targetCycleKey ?? '') == null) {
+          selection = null;
+          failure = 'TARGET_CYCLE_OUT_OF_RANGE';
+          return;
+        }
+        if (validationMessage != null) {
+          selection = null;
+          notice = validationMessage;
+          return;
+        }
+      }
       final context = await gateway.context(snapshot);
       if (!_current(epoch)) return;
+      if (cycleGateway != null && context.cycleKey != cycles!.current.key) {
+        failure = 'CYCLE_CHANGED';
+        selection = null;
+        return;
+      }
       selection = context;
       if (!context.allowed) {
         failure = context.reason ?? 'PERMISSION_DENIED';
         return;
       }
-      _pending = _CreationCommand(snapshot.body(context, defaultTitle), now());
+      if (context.expiresAt != null && !context.expiresAt!.isAfter(serverNow)) {
+        failure = 'SELECTION_CONTEXT_CHANGED';
+        return;
+      }
+      _pending = _CreationCommand(
+        snapshot.body(context, defaultTitle),
+        now(),
+        context,
+      );
       await _send(epoch);
     } on AccountReadException catch (e) {
       if (_current(epoch)) _fail(e);
@@ -403,6 +556,27 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
         jsonDecode(command.encoded) as Map<String, dynamic>,
       );
       if (!_current(epoch)) return;
+      if (command.context.targetKey != null) {
+        final expected = command.context;
+        if (ack.roomId != expected.prospectiveRoomId ||
+            ack.targetKey != expected.targetKey ||
+            ack.effect != expected.effect ||
+            ack.created?.length != expected.prospective?.length) {
+          throw const AccountReadException('INVALID_RESPONSE');
+        }
+        for (final p in expected.prospective!) {
+          final c = ack.created!
+              .where((v) => v['target_cycle_key'] == p['target_cycle_key'])
+              .firstOrNull;
+          if (c == null ||
+              c['room_cycle_id'] != p['room_cycle_id'] ||
+              c['generation'] != p['generation'] ||
+              c['target_revision'] != p['initial_target_revision']) {
+            throw const AccountReadException('INVALID_RESPONSE');
+          }
+        }
+      }
+      createdTargetKey = ack.targetKey;
       createdRoomId = ack.roomId;
       _pending = null;
       selection = null;
@@ -435,7 +609,9 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     loading = true;
     _emit();
     try {
-      final ids = await gateway.currentRoomIds();
+      final ids = cycleGateway == null
+          ? await gateway.currentRoomIds()
+          : await cycleGateway!.roomIdsFor(_pending!.context.targetKey!);
       if (_current(epoch)) recoveryRooms = ids;
     } on AccountReadException catch (e) {
       if (_current(epoch)) _fail(e);
@@ -451,6 +627,11 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
 
   Future<void> confirmRecoveredRoom(String id) async {
     if (!eligible || busy || !hasPending || !recoveryRooms.contains(id)) return;
+    if (cycleGateway != null) {
+      notice = '생성 결과는 원래 요청으로 다시 확인해 주세요.';
+      _emit();
+      return;
+    }
     final epoch = _epoch, command = _pending!;
     loading = true;
     _emit();
@@ -511,6 +692,7 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     _timer?.cancel();
     _retryAt = null;
     createdRoomId = null;
+    createdTargetKey = null;
     draft = RecruitmentDraft();
     selection = null;
     characters = [];
@@ -536,6 +718,7 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     _disposed = true;
     _epoch++;
     _timer?.cancel();
+    _cycleTimer?.cancel();
     session.removeListener(_access);
     accessChanges.removeListener(_access);
     super.dispose();
@@ -543,6 +726,9 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
 }
 
 String recruitmentFailureMessage(String? code) => switch (code) {
+  'CLIENT_UPGRADE_REQUIRED' => '이전 생성 요청은 다시 전송해 결과를 확인해 주세요.',
+  'TARGET_CYCLE_OUT_OF_RANGE' => '대상 주차가 바뀌었습니다. 주차를 다시 선택해 주세요.',
+  'TARGET_NOT_OPEN' => '이 주차에는 열린 모집이 없습니다.',
   'NETWORK_UNAVAILABLE' => '연결을 확인한 뒤 다시 시도해 주세요.',
   'WEEKLY_ALREADY_COMPLETED' ||
   'RAID_WEEKLY_COMPLETED' ||

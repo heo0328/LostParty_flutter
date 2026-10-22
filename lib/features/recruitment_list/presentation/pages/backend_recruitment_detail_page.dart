@@ -5,6 +5,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../../account/domain/account_read_session.dart';
 import '../../../account/presentation/widgets/ownership_notice_title.dart';
+import '../../../account/presentation/widgets/member_cycle_selector.dart';
 import '../../domain/backend_recruitment.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
 import '../viewmodels/backend_recruitment_detail_view_model.dart';
@@ -17,11 +18,17 @@ class BackendRecruitmentDetailPage extends StatefulWidget {
     required this.roomId,
     required this.onLogin,
     required this.onCreateAnother,
+    this.target,
+    this.accessChanges,
+    this.scopeKey,
     super.key,
   });
   final RecruitmentGateway gateway;
   final AccountReadSession session;
   final String roomId;
+  final String? target;
+  final Listenable? accessChanges;
+  final String Function()? scopeKey;
   final VoidCallback onLogin, onCreateAnother;
   @override
   State<BackendRecruitmentDetailPage> createState() =>
@@ -29,23 +36,34 @@ class BackendRecruitmentDetailPage extends StatefulWidget {
 }
 
 class _BackendRecruitmentDetailPageState
-    extends State<BackendRecruitmentDetailPage> {
+    extends State<BackendRecruitmentDetailPage>
+    with WidgetsBindingObserver {
   late final BackendRecruitmentDetailViewModel m;
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     m = BackendRecruitmentDetailViewModel(
       gateway: widget.gateway,
       session: widget.session,
       roomId: widget.roomId,
+      target: widget.target,
+      accessChanges: widget.accessChanges,
+      scopeKey: widget.scopeKey,
     );
     unawaited(m.load());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     m.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(m.load());
   }
 
   @override
@@ -62,39 +80,57 @@ class _BackendRecruitmentDetailPageState
           ),
         ],
       ),
-      body: !widget.session.isAuthenticated
-          ? Center(
-              child: FilledButton(
-                onPressed: widget.onLogin,
-                child: const Text('로그인 후 확인'),
+      body: Column(
+        children: [
+          if (m.cycles != null &&
+              m.target != null &&
+              widget.session.isAuthenticated)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: MemberCycleSelector(
+                cycles: m.cycles!,
+                value: m.target!,
+                onChanged: m.selectCycle,
               ),
-            )
-          : m.value == null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: m.loading
-                    ? const CircularProgressIndicator()
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            m.failure == 'ROOM_NOT_FOUND' ||
-                                    m.failure == 'ROOM_MEMBERSHIP_REQUIRED'
-                                ? '현재 이 모집을 확인할 수 없습니다.'
-                                : recruitmentFailureMessage(m.failure),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 12),
-                          FilledButton(
-                            onPressed: m.load,
-                            child: const Text('상세 다시 불러오기'),
-                          ),
-                        ],
-                      ),
-              ),
-            )
-          : RefreshIndicator(onRefresh: m.load, child: _detail()),
+            ),
+          Expanded(
+            child: !widget.session.isAuthenticated
+                ? Center(
+                    child: FilledButton(
+                      onPressed: widget.onLogin,
+                      child: const Text('로그인 후 확인'),
+                    ),
+                  )
+                : m.value == null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: m.loading
+                          ? const CircularProgressIndicator()
+                          : Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  m.failure == 'ROOM_NOT_FOUND' ||
+                                          m.failure ==
+                                              'ROOM_MEMBERSHIP_REQUIRED'
+                                      ? '현재 이 모집을 확인할 수 없습니다.'
+                                      : recruitmentFailureMessage(m.failure),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 12),
+                                FilledButton(
+                                  onPressed: m.load,
+                                  child: const Text('상세 다시 불러오기'),
+                                ),
+                              ],
+                            ),
+                    ),
+                  )
+                : RefreshIndicator(onRefresh: m.load, child: _detail()),
+          ),
+        ],
+      ),
     ),
   );
 
@@ -176,7 +212,7 @@ class _BackendRecruitmentDetailPageState
           ],
         ),
         RecruitmentSection(
-          title: '이번 주 진행 일정',
+          title: m.target == null ? '이번 주 진행 일정' : '선택 주차 진행 일정',
           children: [
             if (value.starts.isEmpty)
               const Text(
@@ -217,10 +253,14 @@ class _BackendRecruitmentDetailPageState
           ],
         ),
         RecruitmentSection(
-          title: '진행 · 다음 주',
+          title: m.cycles != null && m.target == m.cycles!.next.key
+              ? '다음 주 참가 예정'
+              : '진행 · 다음 주',
           children: [
             Text(
-              room['continuation_enabled'] == true
+              m.cycles != null && m.target == m.cycles!.next.key
+                  ? '선택 주차 수요일 10시부터 완료할 수 있어요.'
+                  : room['continuation_enabled'] == true
                   ? '다음 주도 함께하기 ON'
                   : '다음 주도 함께하기 OFF',
               style: const TextStyle(fontSize: 12),
@@ -240,7 +280,9 @@ class _BackendRecruitmentDetailPageState
         TextButton(
           onPressed: () {
             widget.onCreateAnother();
-            context.push('/recruitments/create');
+            context.push(
+              '/recruitments/create${m.target == null ? '' : '?target_cycle_key=${m.target}'}',
+            );
           },
           child: const Text('새 모집 만들기'),
         ),
@@ -268,11 +310,14 @@ class _BackendRecruitmentDetailPageState
               color: AppColors.primarySubtle,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Text(
-              name.substring(0, 1),
-              style: const TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.bold,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                valueSlot(member),
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -316,6 +361,30 @@ class _BackendRecruitmentDetailPageState
         ],
       ),
     );
+  }
+
+  String valueSlot(Map<String, dynamic> member) {
+    if (m.value?.targetKey == null) return '자리 미정';
+    final ids = (member['assignments'] as List)
+        .map((a) => a['assignment_id'])
+        .toSet();
+    final slots = m.value!.formation
+        .where(
+          (s) => s['assignment_id'] != null && ids.contains(s['assignment_id']),
+        )
+        .toList();
+    final labels = slots.map((s) {
+      final item = (m.value!.room['items'] as List)
+          .where((i) => i['round_id'] == s['round_id'])
+          .firstOrNull;
+      final size = item?['game_party_size'];
+      return size == 8
+          ? '${s['party_no']}-${s['slot_no']}'
+          : size == 4
+          ? '${s['slot_no']}'
+          : '자리 미정';
+    }).toSet();
+    return labels.length == 1 ? labels.single : '자리 미정';
   }
 
   String _time(DateTime utc) {
