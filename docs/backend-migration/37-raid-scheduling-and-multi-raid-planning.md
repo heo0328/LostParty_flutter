@@ -1340,3 +1340,19 @@ group_character_candidates.dart는 닫힌 후보DTO·역할별 nullable/출처·
 새 optional 검색token은 있을 때만 포함하고 null을 전송하지 않는다. 후보/문맥 stale에서 첫페이지 새token+기존ref/UUID/필터/실제T·cursor=null 검색을 최대1회 수행한다. 후보 다음페이지 stale도 같은 한정 복구를 사용한다. 200/items=[]는 선택유효·일치방0이고 목록 전페이지 로드/참가확정과 분리한다. 반복거절/400/404/복구실패는 선택보류·명시수정으로 멈추며 UUID삭제/빈배열·token생략 우회가 없다. 후보실패를 정상 빈 방 목록으로 숨기지 않는다. 실행 error.details nullable은 기존 공통 Dio parser가 수용하므로 초안 전용 parser를 추가하지 않았다.
 
 신규 후보21+기존 F3 27 고유48PASS·변경Dart7파일 분석0·포맷/diff검토다. 기존 전체114건 재실행/합산과 구분한다. 코드/자동검증 완료이며 실제 정상로그인HTTP·회원 쓰기/기기 표시/성능은 미확인이다. F4~F6는 다음 범위, Git/인계는 DEV_LOG를 따른다.
+
+### 37.14 F4 다음 주 참가·주차별 관리 연결 — 2026-10-22
+
+Backend0afd879의 실제OpenAPI168경로/실행소스를 소비한다. CycleManagementReader/Preview는 continuation/opening/cancellation/transfer context, 선택T settings/detail, GlobalScope common-context를 읽는다. 기존 상세의 진행/다음주 구역에서 명시 진입할 때만 조회하며 별도 private plan 자동수집이나 새writer/저장스키마는 추가하지 않는다. 각 요청의 실제T/room_cycle_id/generation·sourceC/선택/권한/leadership/영향/만료를 검사하고 쓰기 직전 재조회해 변경됐으면 재확인을 요구한다. 상세 access.evaluated_at만 재계산되는 것은 권한/CAS 변경으로 보지 않는다.
+
+| 명령 | 소비/쓰기 경계 |
+|---|---|
+| N참가/거절 | continuation-context의 원래 캐릭터/역할·targets/필수session ID를 사용해 continuation-participations/declines. 기존 C참가자는 승인제도 재승인 없음. 필수session은 명시체크. 충돌 시 B유지/A미선택·대체캐릭터 query로 같은특례 재조회/B확인/닫기 |
+| N개방/재개 | opening-context의 prospective_room_cycle_id/generation으로 원ACK를 확인. 본인만 첫참가/공대장. 열린N OFF 없음·다른인원 자동복사/매주자동개방 없음 |
+| 선택T탈퇴/위임 | cancellation impact/mode/successor를 표시하고 context/leadership CAS 전송. 마지막1인N은 N만종료, 자동승계는 서버순서 사용. transfer-context 최대8후보의 cycle_member_id/revision·64bit joined_order 문자열 보존. 위임만으로 본인 탈퇴 안 함 |
+| 편성/설정/추방 | 기존 실제 자리4인1~4/8인1-1~2-4. BPlacement는 **cycle_member_id/expected_cycle_member_revision/item_id/party_no/slot_no**이며 지속membership CAS가 아니다. 현재 active assignment 전체·중복자리/게임·앱 정원 범위를 확인한다. 역할/직업·최종권한과 동시성은 서버가 검증한다. 설정은 경험/역할별 Decimal 최소값/참가방식, 추방은 actor/removed cycle_member revision과 leadership CAS |
+| 공통/전역 | common-context의 G1 서버권한·영향C/N/인원·예약을 확인하고 GlobalScope 명령/ACK 사용. 공통은 제목/공개범위만 수정, 그룹연결 불변·기존group revision 보존. 빈제목은 기존제목. common noop의 affected=[]는 정상원ACK. 전체탈퇴/종료는 persistent membership revision·context로 실행하고 실제영향T를 각각 갱신 |
+
+기존 앱소유 CycleParticipationController의 불변 encoded body/key에 method/ACK종류/영향T를 확장했다. 원ACK만 성공으로 처리하며 개방의 이전generation/다른T/다른방·전역영향누락ACK는 pending 유지다. 400/403/404/413 및 확정409는 보류를 해제해 재확인하고, 결과불명/진행중은 기존키/본문/HTTP method로만 재전송한다. 로그아웃/회원scope 변경의 늦은context/ACK는 폐기하고 관리창 개인정보도 가린다. 앱종료 후 관리 pending 영속복구는 미구현이다.
+
+F4 신규28+F3 48/F2 17 최종 단일실행93PASS, 변경Dart7파일 분석0·포맷/diff검토다. 실제 정상인증HTTP/실회원/기기 표시는 미확인. 필수session ID 명시확인까지 F4이며 실제일정/시각 표시·제안/투표/예약은 F5, 완료·정정/종료·재개통합은 F6다. 기존 C수동완료/schema1·인증/개인표/카드·Router/DI는 유지한다. Git/Issue 결과는 DEV_LOG를 따른다.

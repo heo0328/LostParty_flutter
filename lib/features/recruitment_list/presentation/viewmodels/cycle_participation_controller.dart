@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../../../account/data/local/scoped_command_key.dart';
 import '../../../account/domain/account_read_session.dart';
 import '../../data/cycle_interaction_repository.dart';
+import '../../data/cycle_management.dart';
 import '../../domain/backend_recruitment.dart';
 
 class _CycleCommand {
@@ -18,11 +19,17 @@ class _CycleCommand {
     required Map<String, dynamic> evidence,
     this.applicationId,
     this.applicationState,
+    this.method = 'POST',
+    this.globalAck,
+    this.affectedTargets,
   }) : evidence = Map.unmodifiable(evidence),
        encoded = jsonEncode(body),
        key = newScopedCommandKey();
   final String path, encoded, key, room, target;
   final String? applicationId, applicationState;
+  final String method;
+  final String? globalAck;
+  final List<String>? affectedTargets;
   final bool applicationAck;
   final int status;
   final DateTime createdAt;
@@ -115,6 +122,60 @@ class CycleParticipationController extends ChangeNotifier {
   }
 
   Future<List<RecruitmentCharacter>?> characters() => _read(gateway.characters);
+  Future<CycleManagementPreview?> management(
+    String room,
+    String target,
+    String action, {
+    Map<String, dynamic> query = const {},
+  }) => _read(() => gateway.management(room, target, action, query: query));
+
+  Future<void> manage(
+    CycleManagementPreview preview,
+    Map<String, dynamic> input,
+  ) async {
+    if (!canAct) return;
+    final e = _epoch;
+    busy = true;
+    failure = notice = null;
+    _emit();
+    try {
+      final fresh = await gateway.management(
+        preview.room,
+        preview.target,
+        preview.action,
+        query: preview.query,
+      );
+      if (!_valid(e)) return;
+      if (fresh.signature != preview.signature) {
+        throw const AccountReadException('REVISION_CONFLICT');
+      }
+      final body = fresh.body(input);
+      _pending = _CycleCommand(
+        path: fresh.path,
+        body: body,
+        room: fresh.room,
+        target: fresh.target,
+        applicationAck: false,
+        status: 200,
+        createdAt: now(),
+        evidence: fresh.evidence,
+        method: fresh.method,
+        globalAck: fresh.global ? fresh.action : null,
+        affectedTargets: List.unmodifiable(fresh.affected),
+      );
+      await _send(e);
+    } on AccountReadException catch (error) {
+      if (_valid(e)) _fail(error);
+    } catch (_) {
+      if (_valid(e)) failure = 'INVALID_RESPONSE';
+    } finally {
+      if (_valid(e)) {
+        busy = false;
+        _emit();
+      }
+    }
+  }
+
   Future<CycleAdmissionPreview?> preview(
     String room,
     String target,
@@ -275,12 +336,18 @@ class CycleParticipationController extends ChangeNotifier {
         applicationId: command.applicationId,
         applicationState: command.applicationState,
         status: command.status,
+        method: command.method,
+        globalAck: command.globalAck,
+        affectedTargets: command.affectedTargets,
       );
       if (!_valid(e)) return;
       _pending = null;
       _retryAt = null;
       failure = null;
-      await changed(command.room, command.target);
+      for (final target in command.affectedTargets ?? [command.target]) {
+        if (!_valid(e)) return;
+        await changed(command.room, target);
+      }
     } on AccountReadException catch (error) {
       if (!_valid(e)) return;
       _fail(error);
@@ -292,7 +359,10 @@ class CycleParticipationController extends ChangeNotifier {
               }.contains(error.code))) {
         _pending = null;
         notice = '현재 상태를 다시 확인한 뒤 시도해 주세요.';
-        await changed(command.room, command.target, applied: false);
+        for (final target in command.affectedTargets ?? [command.target]) {
+          if (!_valid(e)) return;
+          await changed(command.room, target, applied: false);
+        }
       }
     } catch (_) {
       if (_valid(e)) failure = 'INVALID_RESPONSE';

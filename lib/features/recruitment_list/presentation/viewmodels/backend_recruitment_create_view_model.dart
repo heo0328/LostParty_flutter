@@ -745,6 +745,14 @@ String recruitmentFailureMessage(String? code) => switch (code) {
   'GROUP_NOT_FOUND' => '현재 이 그룹에 접근할 수 없습니다.',
   'RESPONSE_TOO_LARGE' => '조회 범위가 큽니다. 잠시 후 다시 확인해 주세요.',
   'PERMISSION_DENIED' || 'ROOM_LEADER_REQUIRED' => '현재 이 작업을 진행할 권한이 없습니다.',
+  'COMMON_LEADER_REQUIRED' ||
+  'COMMON_AUTHORITY_UNAVAILABLE' => '현재 이 작업을 진행할 공대장 권한이 없습니다.',
+  'SOURCE_PARTICIPATION_REQUIRED' => '이번 주 참가 상태를 먼저 확인해 주세요.',
+  'ROOM_COMPOSITION_CONFLICT' => '자리 중복과 파티별 직업·역할 구성을 확인해 주세요.',
+  'ROOM_ITEMS_CHANGED' => '참가자나 레이드 구성이 변경되었습니다. 다시 확인해 주세요.',
+  'ROOM_LAST_MEMBER_REQUIRED' => '다른 참가자가 남아 있어 모집 전체를 종료할 수 없습니다.',
+  'LEADERSHIP_RESOLUTION_REQUIRED' => '영향받는 주차의 공대장 승계를 먼저 확인해 주세요.',
+  'ROOM_REVIEW_REQUIRED' => '참가자 상태를 확인한 뒤 다시 시도해 주세요.',
   'CLIENT_UPGRADE_REQUIRED' => '이전 생성 요청은 다시 전송해 결과를 확인해 주세요.',
   'TARGET_CYCLE_OUT_OF_RANGE' => '대상 주차가 바뀌었습니다. 주차를 다시 선택해 주세요.',
   'TARGET_NOT_OPEN' => '이 주차에는 열린 모집이 없습니다.',
@@ -764,6 +772,7 @@ String recruitmentFailureMessage(String? code) => switch (code) {
   'OWNERSHIP_REQUIRED' || 'CHARACTER_NOT_ACTIVE' => '캐릭터 인증과 활동 선택을 확인해 주세요.',
   'REQUEST_IN_PROGRESS' => '요청을 처리 중입니다. 잠시 후 결과를 다시 확인해 주세요.',
   'SELECTION_CONTEXT_CHANGED' ||
+  'COMMAND_CONTEXT_EXPIRED' ||
   'REVISION_CONFLICT' ||
   'CYCLE_CHANGED' ||
   'CATALOG_VERSION_CONFLICT' => '선택 정보가 변경되었습니다. 최신 내용을 확인해 주세요.',

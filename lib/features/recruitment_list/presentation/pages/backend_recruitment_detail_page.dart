@@ -12,6 +12,7 @@ import '../viewmodels/backend_recruitment_detail_view_model.dart';
 import '../widgets/recruitment_section.dart';
 import '../viewmodels/cycle_participation_controller.dart';
 import '../widgets/cycle_participation_widgets.dart';
+import '../widgets/cycle_management_widgets.dart';
 
 class BackendRecruitmentDetailPage extends StatefulWidget {
   const BackendRecruitmentDetailPage({
@@ -140,6 +141,28 @@ class _BackendRecruitmentDetailPageState
                                   onPressed: m.load,
                                   child: const Text('상세 다시 불러오기'),
                                 ),
+                                if (widget.participation != null &&
+                                    m.cycles != null &&
+                                    m.target == m.cycles!.next.key) ...[
+                                  for (final action in ['open', 'reopen'])
+                                    TextButton(
+                                      onPressed: () => showCycleManagement(
+                                        context,
+                                        widget.participation!,
+                                        room: m.roomId,
+                                        target: m.target!,
+                                        action: action,
+                                      ),
+                                      child: Text(
+                                        action == 'open'
+                                            ? '다음 주도 함께하기'
+                                            : '선택 주차 모집 재개',
+                                      ),
+                                    ),
+                                  CycleCommandBanner(
+                                    controller: widget.participation!,
+                                  ),
+                                ],
                               ],
                             ),
                     ),
@@ -331,12 +354,21 @@ class _BackendRecruitmentDetailPageState
             Text(
               m.cycles != null && m.target == m.cycles!.next.key
                   ? '선택 주차 수요일 10시부터 완료할 수 있어요.'
-                  : room['continuation_enabled'] == true
-                  ? '다음 주도 함께하기 ON'
-                  : '다음 주도 함께하기 OFF',
+                  : '다음 주 참가는 별도로 선택합니다.',
               style: const TextStyle(fontSize: 12),
             ),
             const SizedBox(height: 6),
+            if (widget.participation != null &&
+                m.cycles != null &&
+                m.target != null)
+              CycleManagementActions(
+                controller: widget.participation!,
+                room: m.roomId,
+                target: m.target!,
+                current: m.cycles!.current.key,
+                next: m.cycles!.next.key,
+                role: room['my_target_role'] as String? ?? 'none',
+              ),
             const Wrap(
               spacing: 8,
               children: [

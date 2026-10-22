@@ -8,6 +8,7 @@ import '../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../domain/backend_recruitment.dart';
 import 'cycle_read_repository.dart';
 import 'group_character_candidates.dart';
+import 'cycle_management.dart';
 
 String cycleStableJson(Object? value) {
   Object? canonical(Object? v) {
@@ -447,6 +448,12 @@ class CycleApplicationView {
 }
 
 abstract interface class CycleInteractionGateway {
+  Future<CycleManagementPreview> management(
+    String room,
+    String target,
+    String action, {
+    Map<String, dynamic> query,
+  });
   Future<MemberCycles> cycles();
   Future<RaidCatalog> catalog();
   Future<List<RecruitmentGroupChoice>> groups();
@@ -494,6 +501,9 @@ abstract interface class CycleInteractionGateway {
     String? applicationState,
     Map<String, dynamic>? expectedScope,
     int status = 200,
+    String method = 'POST',
+    String? globalAck,
+    List<String>? affectedTargets,
   });
 }
 
@@ -501,6 +511,16 @@ class CycleInteractionRepository implements CycleInteractionGateway {
   CycleInteractionRepository({required this.api, required this.recruitment});
   final BackendRegistrationApi api;
   final CycleRecruitmentGateway recruitment;
+  @override
+  Future<CycleManagementPreview> management(
+    String room,
+    String target,
+    String action, {
+    Map<String, dynamic> query = const {},
+  }) => _decode(
+    () =>
+        CycleManagementReader(api).preview(room, target, action, query: query),
+  );
   Future<T> _decode<T>(Future<T> Function() action) async {
     try {
       return await action();
@@ -744,17 +764,69 @@ class CycleInteractionRepository implements CycleInteractionGateway {
     String? applicationState,
     Map<String, dynamic>? expectedScope,
     int status = 200,
+    String method = 'POST',
+    String? globalAck,
+    List<String>? affectedTargets,
   }) => _decode(() async {
     roleId(key);
     final j = (await api.request(
       path,
-      method: 'POST',
+      method: method,
       body: body,
       idempotencyKey: key,
       expectedStatus: status,
     ))!;
     roleShape(j, 'scope data');
     final scope = roleMap(j['scope']);
+    if (globalAck != null) {
+      roleShape(scope, 'server_now current_cycle_key policy_version');
+      roleUtc(scope['server_now']);
+      raidCycleKey(scope['current_cycle_key']);
+      roleCheck(scope['policy_version'] == twoCyclePolicy);
+      final d = roleMap(j['data']);
+      roleShape(
+        d,
+        globalAck == 'common'
+            ? 'command_id outcome executed_at room_id room_revision affected_cycle_keys'
+            : 'command_id outcome executed_at room_id membership_id persistent_membership_revision affected_cycle_keys room_ended revisions',
+      );
+      roleCheck(
+        roleId(d['command_id']) == key &&
+            roleId(d['room_id']) == room &&
+            (globalAck == 'common'
+                    ? {'applied', 'recorded', 'noop'}
+                    : {'applied', 'noop'})
+                .contains(d['outcome']),
+      );
+      roleUtc(d['executed_at']);
+      final affected = raidList(
+        d['affected_cycle_keys'],
+      ).map(raidCycleKey).toSet();
+      roleCheck(
+        affected.length == raidList(d['affected_cycle_keys']).length &&
+            ((globalAck == 'common' &&
+                    d['outcome'] == 'noop' &&
+                    affected.isEmpty) ||
+                (affected.length == (affectedTargets ?? []).length &&
+                    affected.containsAll(affectedTargets ?? []))),
+      );
+      if (globalAck == 'common') {
+        rolePositive(d['room_revision']);
+      } else {
+        roleId(d['membership_id']);
+        rolePositive(d['persistent_membership_revision']);
+        raidBool(d['room_ended']);
+        roleCheck(d['room_ended'] == (globalAck == 'end'));
+        for (final raw in raidList(d['revisions'])) {
+          final r = roleMap(raw);
+          roleShape(r, 'resource id revision');
+          raidText(r['resource']);
+          roleId(r['id']);
+          rolePositive(r['revision']);
+        }
+      }
+      return;
+    }
     CycleReadScope(scope, target);
     if (expectedScope != null) {
       roleCheck(
