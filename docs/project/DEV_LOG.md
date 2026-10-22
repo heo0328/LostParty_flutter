@@ -9,6 +9,7 @@
 - 검증: 신규 관리28+기존 F3 48/F2 17, 최종 단일실행 **93PASS**. 변경Dart7파일 분석0·포맷/diff검토. 초기 신규fixture에서 v1두필드permission/좁은Map타입 때문에 관리3건/공통1건이 실패했고 실제3필드permission·명시dynamicMap으로 수정했다. 실행 BPlacement는 cycle_member_id/expected_cycle_member_revision임을 재대조해 최초 작성 중의 지속membership 기반 매핑을 교정했다. common noop/affected=[]·연결그룹불변도 소스로 확인했다. 권한평가시각만 갱신되는 상세를 CAS충돌로 오판하지 않도록 보호했다. mock검증이며 BackendDB/HMAC·경합/원자성·실서버인수를 재현하지 않는다. 공유저장/인증/DI/타feature를 바꾸지 않아 전체시험은 반복하지 않았다.
 - 미확인 실기기 항목: 실제 정상로그인 HTTP/실회원쓰기·주차별 탈퇴/승계/위임/개방·확인창/8인편성 표시·계정i/예약조회 갱신·성능. 설치/조작은 사용자에게 남기며 중간 반복인수는 요청하지 않았다. 필수session ID의 명시체크만 연결했고 실제 시각/일정·제안 상세는 다음F5, 완료/정정/통합은F6다. 앱 종료 후 관리명령 영속복구는 미구현이다.
 - Git/협업: feature/raid-recruitment-scheduling에 코드·시험/문서를 보관하고 dev6d3f617 미병합·브랜치유지. 통계35·플랫폼생성/DevTools/백업/tools는 제외한다. 실제 커밋/원격 일치 확인 후 같은Issue13에 사용SHA/자동검증·미확인·다음F5를 회신하며 기존 Backend 구현/동일시험은 재요청하지 않는다.
+- 인계 마감: 구현 **0c85029404a3863e320d6d7a60b2b982f7c46668** commit/push·실제 원격 SHA 일치 확인. [Flutter F4 결과6342159361](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6342159361)에 사용계약/연결·93PASS/분석0·실서버/기기 미확인/다음F5를 회신하고 게시본문 재조회 완전일치를 확인했다. dev/local·origin6d3f617은 유지/미병합, 기존 무관dirty는 보존한다.
 
 ## 2026-10-22 — F3 그룹 활동 캐릭터 후보 연결·자동검증 마감
 
