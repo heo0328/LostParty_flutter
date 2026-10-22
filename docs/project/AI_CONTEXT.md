@@ -2,7 +2,7 @@
 
 기준: 2026-10-22. Backend 개발 서버 전환/읽기 인계, Flutter F1/F2 코드·자동검증 완료. **F3 검색/일반 참가 흐름 연결·고유114PASS/변경17파일 분석0, 그룹원 전체 캐릭터 필터 계약은 대기**다. F3 전체 완료·실서버/실기기 인수는 아니며 F4~F6은 미구현이다. 설계37 §37.11·NEXT_WORK를 따른다.
 
-[Backend98 회신6337703638](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6337703638): 후보 API 부재 확인, Backend 보완 계약 초안/공개 범위 협의 대기. 새 API/소비 SHA·서버 변경은 없으며 기존 roster 비공개 경계 확대를 이번 확인으로 승인하지 않는다.
+[Backend101 초안1](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6338175041) 소비 검토: 현재 그룹 회원 사이의 인증 소유·활동 캐릭터 allowlist 공개/nullable·출처/Flutter30직업 계열 표시/페이지·검색token은 소비 가능. 기존 선택이 재취득 첫페이지에 없는 경우의 검증 경계 보완 회신과 Backend 구현/소비SHA 인계를 대기한다. 새 API는 미구현·실제0.4.1/policy4/서버 불변이다. 상세는 설계37 §37.12/NEXT_WORK.
 
 ## 현재 우선 기준
 

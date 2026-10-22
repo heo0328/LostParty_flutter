@@ -1312,3 +1312,16 @@ Draft 실제T/함께하기를 selectionSignature에 포함하고 대상 전환 �
 그룹 다중 선택/공개범위 및 단일 그룹 context의 대표명/member_ref 필터는 연결했다. **그룹원 전체 캐릭터 후보는 미구현**이다. 실행 filter-context는 member_ref/aliases/display만, 기존 그룹원 조회는 대표만, 방별 projections는 지정 방 참가자만 제공하므로 전체 후보를 조립할 출처가 없다. [Backend 요청6336402066](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6336402066)에 후보 UUID/표시/레벨·역할 전투력 출처/context·권한 경계를 요청했다. 허가된 계약 확보 후 그룹원별2열 작은 카드·각 그룹원 내부 아이템레벨 안정 정렬을 연결해야 F3를 마감할 수 있다. 읽은 방 페이지/로컬 PlayerId/가상 데이터로 대체하지 않는다.
 
 자동검증은 신규28(상호작용27/영향T summary1)+기존 직접영향86, 고유114PASS·변경Dart17파일 분석0이다. 실제 서버 권한/원자성·정상인증HTTP/실회원 쓰기·디바이스 표시/성능은 미확인이다. F4 N특례·탈퇴/승계·위임/관리, F5 일정/예약, F6 완료는 이번 구현에 없다. 현재 실행/대기와 회귀·Git/회신은 NEXT_WORK/DEV_LOG를 따른다.
+
+
+### 37.12 그룹 캐릭터 후보 초안1 소비 검토 — 2026-10-22
+
+[Backend101](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6338175041)은 미구현 검토 계약이며 f1b198f는 미push, 기존0.4.1/policy4/167경로·서버는 불변이다. 사용자가 확정한 그룹원 캐릭터 필터에 필요한 현재 단일 그룹 회원 사이의 인증 소유·활동 캐릭터 allowlist 공개를 수용한다. 별도 공개 설정·추가 동의 단계는 만들지 않고 개인 visible/count/order와 분리한다. 비회원/외부 참가자·비활동/미인증·소유상실/전체 roster/장비·분석 원문은 포함하지 않는다. 대표표시는 기존 그룹 snapshot/null이지 현재 원정대 대표 보증이 아니다.
+
+role_family=null은 Flutter ClassSynergyCatalog.version=2026.09.03.user.v1의30직업/supportedRoles로 표시 가능하다. 바드·도화가·홀리나이트·발키리는 딜러/서포터 지원 계열, 등록된 나머지26직업은 딜러 계열이다. unknown/null은 미상이며 기존 fixedRole의 미등록 dealer 기본값을 적용하지 않는다. 이는 실제 세팅/참가 역할 판별이 아니다. 역할별 전투력은 원래 역할/nullable·unavailable/not_disclosed/client_submitted·현재 소유/lifecycle 출처를 유지하며 다른 역할 복사/0/자동 역할 선택이 없다. 소스1249c5b·바이트SHA256 fbf7e41dffcdb8fd46166a7780278fc6570e22d96564ef5013a078ecaa6a45e7, 빌드 분석용 asset2026.09.12.2와 구분한다.
+
+회원UUID ASC/회원 내부 Decimal DESC·null LAST/UUID ASC, empty marker·조각 연속 플래그와 동일scope/token/limit의 명시 더보기를 소비한다. 전체 자동 페이지 수집·로컬 페이지후 검색은 없다. 미래 검색 optional token은 서버 인계 후에만 추가하고 생략/null을 구분한다. stale에서는 원 ref/UUID를 보존하고 다른 UUID/빈배열로 대체하지 않는다.
+
+보완 대기 한 항목: 갱신된 첫페이지에 기존2페이지 선택 X가 없으면 아직 미로드이지 소멸로 단정할 수 없다. 권장안은 첫페이지 새token과 기존 ref/UUID로 동일조건 검색을 최대1회 수행하고 서버가 전체 현재 후보에서 검증해 성공하면 선택 유효로 확정하는 것이다. 오류/검증 전은 보류·명시 수정, 후보 UI 페이지는 명시 더보기로 유지한다. 이 방식이 초안 §5의 재대조를 충족하는지 Backend가 명시해야 하며 신규 endpoint 추가를 필수로 요구하지 않는다. Backend 구현/격리검증·게시/실행계약/소비SHA 인계 후 Flutter 후보 UI·경계검증을 진행한다.
+
+게시 wire의6응답·합성 거절8·검색binding4·local ref16 해석은 독립 확인했다. schema로 권한·페이지 연속성·SQL/HMAC/성능을 증명하지 않으며 기능코드·실회원HTTP/DB/기기 검증은 없었다. 검토 인계/최종 식별자는 DEV_LOG를 따른다.

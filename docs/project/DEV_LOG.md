@@ -1,5 +1,16 @@
 # 개발 이력
 
+## 2026-10-22 — 그룹 활동 캐릭터 후보 초안1 소비 검토
+
+사용자가 첫 계약 검토 구간을 승인했다. 필수문서/설계37 §37.11·최신Issue13 [Backend101 초안](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6338175041), 현재383b7ad/동일목적브랜치와 무관dirty·기존 직업 분류/검색/선택 수명을 대조했다. 기능 코드는 수정하지 않았다.
+
+- 새로 가능: 실제 앱 추가 없음. 현재 그룹 회원끼리 인증 소유·활동 캐릭터 allowlist 공개/nullable 출처·회원 경계 페이지·새 검색token은 소비 가능한 설계로 검토했다. 기존 사용자 확정 필터 범위 안에서 별도 동의/설정 단계는 추가하지 않으며 전체 roster/외부 공개로 확대하지 않는다. role_family=null은 ClassSynergyCatalog 2026.09.03.user.v1/30직업 supportedRoles로 표시 가능, 미상은 미상이고 실제 참가 역할과 분리한다. 장기 경계는 설계37 §37.12에 기록했다.
+- 보완 요청: 새token 첫페이지에 기존 선택 UUID가 없을 때 미로드를 소멸로 오인하지 않도록, 원 ref/UUID 보존+새token 동일조건 검색의 서버 전체후보 검증으로 유효성을 확인할 수 있는지 Backend에 명시 요청한다. 빈배열 전환/다른 UUID/토큰 생략 우회·자동 전페이지 수집은 없다.
+- 검증: 게시 JSON을 Draft2020-12/format checker로 독립검토해6응답 예시/합성 거절8/optional 검색binding4·local ref16 해석 확인. 거절은 미정의필드·token누락/형식·빈cursor·role_family 비null·잘못된레벨·revision0·unavailable/value 혼합이며 Backend 원래 시험 재현으로 보고하지 않는다. 추출 재직렬화JSON SHA256 229edc9b40608090b91ebf75c664c5ac196dfb46c954a4d2633054833c8fdaff. 초기 Python jsonschema 미발견은 기존 격리 vendor를 재사용해 해결했고 앱 의존성/서버는 변경하지 않았다. 문서 diff/공백검사, 코드 변경 없어 Flutter test/analyze 반복 없음.
+- 보존/미확인: F1/F2·F3 구현121fad3/기존27PASS, 개인표·계정/시안·현재0.4.1/policy4/실제167경로·서버/DB/키 및 무관파일 유지. 새 후보 API는 미구현, Backend f1b198f 미push를 소비 SHA로 쓰지 않았다. 페이지 연속성·권한/SQL/HMAC/DB경합·크기/성능·정상인증HTTP/실회원쓰기/기기 인수는 미확인이다. 실제 완료로 확대하지 않는다.
+- Git/다음: feature/raid-recruitment-scheduling 문서만 커밋/푸시·브랜치 유지, dev6d3f617 미반영. 보완 회신→Backend 구현/검증·원격/실행 계약/소비SHA 인계→Flutter 후보 연결 순서이며 F4는 착수하지 않았다.
+- 협업: [검토 회신6339166701](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6339166701)에 제한 공개 수용/Flutter 카탈로그 버전·미상 처리, nullable/페이지·토큰 소비와 재취득 첫페이지의 미로드 선택 검증 보완을 전달했다. 게시본문 재조회 일치를 확인했고 전체 계약 확정/실제 서버 인수로 확대하지 않았다.
+
 ## 2026-10-22 — 사용자 요청 F3 첫 구간 검증
 
 - 범위/근거: 필수문서·설계37 §37.11·현재7923aae와 원격/무관dirty·최신Issue13 Backend98/Flutter99를 대조했다. 새 후보 API 계약은 없고 기능코드는121fad3 이후 동일하다. 사용자의 명시 검증 요청에 따라 기존 `cycle_interaction_test.dart`만 실행했다.
