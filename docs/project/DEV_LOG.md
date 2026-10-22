@@ -1,5 +1,13 @@
 # 개발 이력
 
+## 2026-10-22 — Backend108 사전 참가 표시 메타 요청접수 확인
+
+사용자의 Backend 회신 확인 요청으로 [Issue13 Backend108/6343260776](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343260776)을 확인했다. 필수문서·설계37 §37.15/현재1feefe7·원격일치/dev6d3f617·기존무관dirty와 실제 context 소비필드를 대조했다.
+
+- 확인 결과: Backend는 F4/F5 Flutter 결과를 접수했으나 독립 재현/실제회원·기기 인수로 확인한 것은 아니다. SessionChoice/continuation의 표시 메타 부족과 private plan/공개순서 우회불가를 인정했고, opening은 현재 prospective 준비에서 target_session_ids=[]임을 명확히 했다. Backend가 기존context 권한 내 실제T/ID·nullable 시각·상태/표시revision, token/일정revision/generation 결합 및 변경/삭제·미정·접근상실·prospective 선택 경계를 설계한다.
+- 상태/다음: 새 wire/경로는 미확정이며 새 API 구현·실행계약/서버·DB변경·추가시험 요청은 없다. F5 독립 구현은 유지하고 사전 참가 표시만 Backend 계약 보완 대기다. 확정 계약/게시·실행SHA를 받은 뒤 Flutter 소비를 진행하며 F6/실제HTTP·기기 인수는 미완료다. 변화 없는 수신 확인만을 반복 댓글로 게시하지 않고 받은 회신 링크와 담당/대기를 문서에 기록했다.
+- 검증/Git: 새로 가능해진 앱 흐름/기능코드 변경 없음. 기존 F4/F5·검증결과와 무관dirty를 보존하고 문서 diff/content만 확인했다. Flutter 시험은 반복하지 않는다. 같은 작업브랜치에 문서 commit/push로 보관하며 dev 미병합·브랜치유지다.
+
 ## 2026-10-22 — F5 일정/예약 독립 연결·사전 참가 시간 메타 보완 요청
 
 사용자 다음구간 승인으로 F5를 진행했다. 필수문서/설계37 §36/37·실제4ef5188/원격/dev6d3f617·기존무관dirty, 최신Issue13 F4결과6342159361 이후 신규Backend변경없음을 확인했다. Backend0afd879의 실제168경로와 cycle_times/planning/schedule_service/proposals/member_reads·기존 개인표 원본/상세DI를 대조하고 구현 전 NEXT_WORK에 데이터소유/권한·식별자/수명·포함/제외·회귀/검증을 기록했다.

@@ -28,6 +28,8 @@
 
 ## 3. 다음 작업 — F5 사전 참가 시간 표시 계약 보완
 
+최신 수신: [Backend108 요청접수6343260776](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343260776). 표시 메타 부족/private plan 선조회·목록순서 추정 불가를 인정했고, **Backend가 기존 context 권한 안의 ID별 실제T/시각(nullable)/상태·표시revision과 token/일정revision/generation 결합·prospective 경계를 설계한다.** 아직 새 wire/경로 확정·구현/실행계약 인계는 없다. opening은 현재 prospective 준비에서 target_session_ids=[]를 반환함도 확인했다. 기존 F5 독립 구현을 유지하며 사전 시간표시만 보완계약 대기다. 새 필드 추정/코드 변경·기존시험 반복 요청은 하지 않는다.
+
 현재 인계: 구현 **f2e09c9d05d5456ab508072a425d4d04bd72ed80** commit/push·실제 원격일치 확인. [Flutter F5 결과/Backend 보완 요청6343179198](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343179198)에 사용계약/구현·130PASS/분석0·미확인/표시메타 담당·완료조건을 회신하고 게시본문 재조회 일치를 확인했다. 다음 착수는 같은Issue의 Backend 답변부터 확인한다. 기존 F4 인계6342159361은 보존한다.
 
 현재 구간은 사용자 승인으로 4ef5188/원격·dev6d3f617·최신Issue13 F4결과6342159361(신규Backend변경없음),0afd879 실행168경로/cycle_times·planning·schedule_service·proposals와 개인표 원본/상세DI를 대조한 뒤 진행했다. 구현 전 포함/제외·데이터소유/실제T·기존writer 재사용·회귀와 표적검증을 기록했다. 독립 구현/검증 경과는 DEV_LOG, 장기 경계는 설계37 §37.15로 이동했다.
