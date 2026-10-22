@@ -21,7 +21,7 @@
 | 2주차 Flutter | F1 실제주차/선택기·계정summary/3열+i·본인목록/기본 읽기상세·캐시 격리 구현. F1 고유123PASS/14파일 분석0에 이어 F2 고유95PASS/10파일 분석0. 실제 DI는 v2생성/context·같은방T상세/편성 읽기까지 연결. F3~F6 미구현/전체 기능 인수 미완료 |
 | Penpot03 | v3 주차선택5화면과 v4 공대장/번호3화면 반영. 계정 체크/i·v4 실제PNG 검수. 상세 식별자/기준은 설계37·NEXT_WORK |
 | Backend | [92번째 실제전환/읽기인계6332478347](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6332478347): 개발DB0029/API8000 factory167경로·자료/키 보존 완료 보고. 계약0.4.1/policy4 유지 |
-| 계약/다음 | [F1 구현회신6335276652](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6335276652). 사용계약/실행OpenAPI 대조·로컬 구현/자동검증 결과 전달. 정상인증HTTP/실회원쓰기·기기 인수 미확인. #19통계별도 |
+| 계약/다음 | [F2 인계6335852339](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6335852339). 구현e42f780 원격일치/사용계약·검증·제한 전달/본문 재조회일치. 다음F3·정상인증HTTP/실회원쓰기·기기 인수 미확인. #19통계별도 |
 
 기존 자동검증과 수동확인은 [DEV_LOG](DEV_LOG.md)에 보존한다. 사용자 확인한 가능 레이드/최고 난이도 기본 선택은 다시 대기로 두지 않는다. F2로 선택T 시간 제한·v2생성/상세를 연결했으며 실제 유효시각 생성 및 2주차 기능의 실서버/실기기 인수는 남는다. 문서 체크포인트와 기능 전체 완료/dev 통합을 구분한다. 기존 미커밋 기능·플랫폼 생성/DevTools·백업/tools·통계35의 별도 검토는 보존한다.
 
