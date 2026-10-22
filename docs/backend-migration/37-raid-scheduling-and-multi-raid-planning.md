@@ -1356,3 +1356,21 @@ Backend0afd879의 실제OpenAPI168경로/실행소스를 소비한다. CycleMana
 기존 앱소유 CycleParticipationController의 불변 encoded body/key에 method/ACK종류/영향T를 확장했다. 원ACK만 성공으로 처리하며 개방의 이전generation/다른T/다른방·전역영향누락ACK는 pending 유지다. 400/403/404/413 및 확정409는 보류를 해제해 재확인하고, 결과불명/진행중은 기존키/본문/HTTP method로만 재전송한다. 로그아웃/회원scope 변경의 늦은context/ACK는 폐기하고 관리창 개인정보도 가린다. 앱종료 후 관리 pending 영속복구는 미구현이다.
 
 F4 신규28+F3 48/F2 17 최종 단일실행93PASS, 변경Dart7파일 분석0·포맷/diff검토다. 실제 정상인증HTTP/실회원/기기 표시는 미확인. 필수session ID 명시확인까지 F4이며 실제일정/시각 표시·제안/투표/예약은 F5, 완료·정정/종료·재개통합은 F6다. 기존 C수동완료/schema1·인증/개인표/카드·Router/DI는 유지한다. Git/Issue 결과는 DEV_LOG를 따른다.
+
+### 37.15 F5 일정/예약 독립 연결·사전 참가 시간 메타 차이 — 2026-10-22
+
+Backend0afd879의 실행 OpenAPI168경로와 cycle_times/planning/schedule_service/proposals/member_reads를 소비한다. 기존 상세 일정구역의 진입을 유지하며 `CycleScheduleReader/View/Preview`는 실제T plan/제출표/일정context·익명busy/본인overlaps·후보를 조회한다. `CycleParticipationController`의 앱소유 원명령writer에 연결하며 새저장/캐시스키마·Router/DI는 만들지 않는다.
+
+| 영역 | 연결/검증 경계 |
+|---|---|
+| 제출표 | v1 개인표의 원본 intervals/source version을 명시 가져오기. 같은 원본을 방별·실제T submission으로 복사하며 개인표 이후 변경은 명시 다시가져오기. PUT body는 personal/submission/cycle-member/target CAS, 원Scoped Submission 응답은 scope/ID·source version/원본행/예상revision으로 검증. command_id ACK로 위장하거나 GET로 결과불명을 해제하지 않음 |
+| 일정/시간표 | plan의 실제 session 시작/종료·필수/선택, 미확인 초록/확인됨·예약 active/partial/released/none·시간밖/겹침 안내. context는 방별 제출표/미제출/조회불가와 익명busy만, 다른방 제목/멤버십을 붙이지 않음. overlaps는 본인 실제T·limit20/명시더보기이며 빈결과와 실패 구분 |
+| 그룹/후보 | 확정전 그룹만 편집, 필수최소1·one_of/each·manual/coordinated/unscheduled·주차전체/요일·조율필요인원·레이드순서. 수동 실제날짜는 기존 시간정책/주차정책 재사용·마지막수06시전 별도날짜. candidate ready/no_candidate/search_limited를 분리하고 manual은 coordinated GET을 호출하지 않음. 선택은 최신 group/plan/members/leadership/target CAS |
+| 제안/투표 | 여러session의 시각/아이템시간을 하나의 명령으로 제안. DTO proposed_sessions는 입력 BProposedSession이 아니라 출력 BSegmentSet이므로 실제segments의 시각/끝을 표시. 대상별 서버 eligible/accepted/required/satisfied와 본인응답을 사용하고 클라이언트정족수로 적용하지 않음. 다인 제안자 동의 기록/1인별도응답 안내. 오래된 obsolete 제안의 과거session은 현재plan과 달라도 표시하되 새응답 불가 |
+| 본인동의/예약 | confirm은 실제session/schedule/participation/cycle-member/target CAS. 재참가/개인표복사만으로 기존 수동 일정동의를 승계하지 않음. 초기 coordinated 조건충족 시 자동확정/예약될 수 있음을 개인표 제출 확인에 표시. 최종권한·시간/인원/직업/예약 경합은 서버가 검증 |
+
+확인창은 실제T/날짜를 고정한다. 쓰기 직전 fresh snapshot과 허용/역할/revision/시각영향을 비교하며 server_now/server_time/evaluated_at의 단순 재계산만 제외한다. 입력은 조회 전 복제하고 원 HTTP method/path/body/key를 유지해 결과불명만 동일키 재송한다. 원ACK의 다른방/T/generation·잘못된 제출행은 pending 유지, 확정거절은 재확인, 회원scope/로그아웃·06시 지연응답은 폐기한다. 앱종료 후 명령영속복구는 미구현이다.
+
+**사전 참가 시간 표시의 남은 계약 차이:** continuation/opening context는 target_session_ids만 제공한다. 일반 admission session_choices의 session_id/required/join_deadline/permission도 시작/종료/미정 상태를 완전하게 표현하지 않는다. 공개detail의 출발목록은 session ID가 없고 private plan은 해당T 실제참가 전 거절될 수 있으므로 순서·C시간으로 N을 추정하지 않는다. Backend에 사전 참가권한 내 ID별 실제T/시각·상태/필요revision 표시 메타와 write binding·게시SHA/실행계약을 요청하고 확정된 보완만 후속 소비한다. F4 기존명시 ID체크는 유지하나 이 사전표시까지 완료로 보지 않는다.
+
+신규27+기존직접영향103 고유130PASS(최초127묶음/최종신규27 재실행·기존103 재사용), 변경Dart7파일 분석0·포맷/diff검토. 실제 정상로그인HTTP/실회원/기기·서버정족수/예약경합 인수는 미확인이다. 코드연결/검증 마감과 사전표시보완·실제인수를 구분하며 F6는 미구현이다. 최신Git/Issue·다음행동은 DEV_LOG/NEXT_WORK를 따른다.

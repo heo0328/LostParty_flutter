@@ -5,6 +5,7 @@ import '../../../account/data/local/scoped_command_key.dart';
 import '../../../account/domain/account_read_session.dart';
 import '../../data/cycle_interaction_repository.dart';
 import '../../data/cycle_management.dart';
+import '../../data/cycle_schedule.dart';
 import '../../domain/backend_recruitment.dart';
 
 class _CycleCommand {
@@ -22,6 +23,7 @@ class _CycleCommand {
     this.method = 'POST',
     this.globalAck,
     this.affectedTargets,
+    this.submissionAck,
   }) : evidence = Map.unmodifiable(evidence),
        encoded = jsonEncode(body),
        key = newScopedCommandKey();
@@ -30,6 +32,7 @@ class _CycleCommand {
   final String method;
   final String? globalAck;
   final List<String>? affectedTargets;
+  final Map<String, dynamic>? submissionAck;
   final bool applicationAck;
   final int status;
   final DateTime createdAt;
@@ -122,6 +125,70 @@ class CycleParticipationController extends ChangeNotifier {
   }
 
   Future<List<RecruitmentCharacter>?> characters() => _read(gateway.characters);
+  Future<CycleScheduleView?> scheduleRead(
+    String room,
+    String target,
+    String kind, {
+    String? id,
+    String? cursor,
+  }) => _read(
+    () => gateway.scheduleRead(room, target, kind, id: id, cursor: cursor),
+  );
+  Future<CycleSchedulePreview?> schedulePreview(
+    String room,
+    String target,
+    String action, {
+    String? id,
+  }) => _read(() => gateway.schedulePreview(room, target, action, id: id));
+  Future<void> scheduleCommand(
+    CycleSchedulePreview preview,
+    Map<String, dynamic> input,
+  ) async {
+    if (!canAct) return;
+    final e = _epoch;
+    busy = true;
+    failure = notice = null;
+    _emit();
+    try {
+      final frozenInput = jsonDecode(jsonEncode(input)) as Map<String, dynamic>;
+      final fresh = await gateway.schedulePreview(
+        preview.plan.room,
+        preview.plan.target,
+        preview.action,
+        id: preview.id,
+      );
+      if (!_valid(e)) return;
+      if (fresh.signature != preview.signature) {
+        throw const AccountReadException('REVISION_CONFLICT');
+      }
+      final body = fresh.body(frozenInput);
+      _pending = _CycleCommand(
+        path: fresh.path,
+        body: body,
+        room: fresh.plan.room,
+        target: fresh.plan.target,
+        applicationAck: false,
+        status: 200,
+        createdAt: now(),
+        evidence: fresh.plan.scope,
+        method: fresh.method,
+        submissionAck: fresh.submissionEvidence,
+      );
+      await _send(e);
+    } on FormatException {
+      if (_valid(e)) failure = 'INVALID_REQUEST';
+    } on AccountReadException catch (error) {
+      if (_valid(e)) _fail(error);
+    } catch (_) {
+      if (_valid(e)) failure = 'INVALID_RESPONSE';
+    } finally {
+      if (_valid(e)) {
+        busy = false;
+        _emit();
+      }
+    }
+  }
+
   Future<CycleManagementPreview?> management(
     String room,
     String target,
@@ -339,6 +406,7 @@ class CycleParticipationController extends ChangeNotifier {
         method: command.method,
         globalAck: command.globalAck,
         affectedTargets: command.affectedTargets,
+        submissionAck: command.submissionAck,
       );
       if (!_valid(e)) return;
       _pending = null;

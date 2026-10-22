@@ -1,5 +1,17 @@
 # 개발 이력
 
+## 2026-10-22 — F5 일정/예약 독립 연결·사전 참가 시간 메타 보완 요청
+
+사용자 다음구간 승인으로 F5를 진행했다. 필수문서/설계37 §36/37·실제4ef5188/원격/dev6d3f617·기존무관dirty, 최신Issue13 F4결과6342159361 이후 신규Backend변경없음을 확인했다. Backend0afd879의 실제168경로와 cycle_times/planning/schedule_service/proposals/member_reads·기존 개인표 원본/상세DI를 대조하고 구현 전 NEXT_WORK에 데이터소유/권한·식별자/수명·포함/제외·회귀/검증을 기록했다.
+
+- 새로 가능해진 흐름: 기존 상세의 일정 버튼에서 실제T plan·원본 개인표 명시복사/다시가져오기·공대원 제출표/익명busy·본인겹침 명시페이지·그룹편집/후보조회·선택·다중세션 제안/서버 대상별 정족수·투표·본인 참가확인/예약상태를 연결했다. 미제출/조회불가/후보없음/계산제한과 미확인초록·예약 없음/해제/일부를 구분한다. 일정변경안 버튼은 직접 편집창을 연다. 시간조율 초기 자동확정/예약과 수동설정/후보선택의 본인동의, 1인일정의 별도응답도 확인창에 표시한다. 구현 경계는 설계37 §37.15다.
+- 데이터/명령: PlayAvailability 원본 intervals·익일행/source version을 보존하며 개인표를 수정하거나 다른T로 자동제출하지 않는다. 제출PUT은 command_id가 없는 Scoped Submission 원응답이므로 같은원HTTP의 scope/cycle-member·source version/행/예상revision을 검증한다. 다른명령은 원 command_id/room/T/generation ACK다. 기존 앱소유 writer에 ACK종류만 확장하고 입력을 fresh plan 조회 전 복제·pending은 불변본문/키/method를 유지한다. 재참가/일정·참가/공대장revision·수06시 변경은 재확인이 필요하며 GET유사상태로 pending을 해제하지 않는다. 조율/정족수/최종예약 경합은 서버권한이다.
+- 보존 확인한 기존 흐름: 기존 F2~F4 93건/개인표10건을 보호했다. 계정/개인표 편집·원본/왕관·자동갱신, F3 검색/후보2열/숙련다중/정렬·일반참가/신청·F4 N특례/탈퇴·승계/위임·생성/원ACK·실제4/8인번호·취소좌/확인우·과거7관계/저장/인증/Router/DI와 무관dirty를 유지했다. 사전참가 권한으로 private N plan을 우회하지 않으며 서버 busy의 다른방 정보를 만들지 않는다.
+- 검증: 최초 신규24+기존103 최종묶음127PASS. 이후 입력 freeze/06시/1인 제안 경계를 추가하고 직접영향 일정27PASS를 확인해 **고유130PASS**이며 130건 단일실행이 아니다. 변경Dart7파일 분석0·포맷/diff/연결검토다. 시험 실패는 없었고 중간분석의 불필요!·중괄호/null-aware lint를 수정했다. 실행계약의 BSegmentSet 제안표시·planned segment·실제permission 이름과 수동후보의 candidate GET불가를 소스로 재대조했다. 공유저장/인증/Router/DI 변경이 없어 무관전체시험을 반복하지 않았다. 전부mock이며 BackendDB/HMAC·정족수/원자성/경합/성능 인수를 재현한 것은 아니다.
+- 남은 계약 차이: continuation/opening-context에 target_session_ids만 있고 ID별 날짜/시각/상태가 없다. 일반 session_choices도 실제시각 표시가 제한되고 공개 detail의 출발목록에는 session ID가 없다. 참가 전 private plan은 WEEKLY_PARTICIPANT_REQUIRED일 수 있어 목록순서/C시간을 N에 추정매칭하지 않는다. 사전 참가 확인창의 시간표시 완료로 확대하지 않으며 같은Issue13에 표시전용 메타/권한·revision binding/실행계약 보완을 요청한다. 이미 참가한 방의 일정/제안/본인확인은 원plan의 실제시각을 표시한다.
+- 미확인 실기기: 정상로그인HTTP/실회원 쓰기·조율자동확정/정족수·재참가재동의·다중세션 일괄적용/예약·겹침더보기/미확인색·회원/주차전환/기기성능. 설치/조작·서버/DB/키변경은 하지 않았고 전체 기능섹션 수동 인수에 묶는다. 앱종료 후 관리/일정 pending 영속복구·F6 완료/정정/통합은 미구현이다.
+- Git/협업: feature/raid-recruitment-scheduling에 코드·시험/문서를 commit/push로 보관하고 실제 원격SHA 확인 후 #13에 사용SHA/검증·미확인·표시메타 보완을 회신한다. dev6d3f617 미병합·브랜치유지, 기존 통계35·플랫폼생성/DevTools/백업/tools는 제외한다. F5 독립 구현과 사전참가 표시의 미완료를 구분한다.
+
 ## 2026-10-22 — F4 다음 주 참가·주차별 관리 연결/자동검증
 
 사용자 다음구간 승인으로 F4만 진행했다. 필수문서·설계37 §36/37, 기존2f8301e/원격과 dev6d3f617·무관dirty, 최신Issue13 결과6340688138(신규Backend회신 없음)을 대조했다. Backend0afd879의 실제OpenAPI168경로와 cycle_management/common/schemas/wire 소스를 대조하고 NEXT_WORK에 포함/제외·기존흐름 회귀·검증을 먼저 기록했다.

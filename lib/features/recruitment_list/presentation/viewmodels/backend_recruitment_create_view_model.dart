@@ -733,6 +733,18 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
 }
 
 String recruitmentFailureMessage(String? code) => switch (code) {
+  'INVALID_REQUEST' => '입력한 조건과 시간을 확인해 주세요.',
+  'PERSONAL_AVAILABILITY_REQUIRED' => '내 계정에서 개인 시간표를 먼저 설정해 주세요.',
+  'WEEKLY_PARTICIPANT_REQUIRED' => '선택 주차의 참가 상태를 확인해 주세요.',
+  'NO_SCHEDULE_CANDIDATE' => '현재 공통 후보가 없습니다. 미제출 시간표도 확인해 주세요.',
+  'SCHEDULE_PROPOSAL_REQUIRED' => '확정된 일정은 일정 변경안으로 조정해 주세요.',
+  'SCHEDULE_NOT_CONFIRMED' => '아직 확정된 일정이 아닙니다.',
+  'SCHEDULE_TIME_REQUIRED' => '출발 시간 또는 조율 방식을 먼저 설정해 주세요.',
+  'TARGET_LEADER_REQUIRED' => '선택 주차의 공대장만 변경할 수 있습니다.',
+  'SCHEDULE_ENDED' || 'PARTICIPATION_ENDED' => '이 일정의 진행 또는 본인 참가가 종료되었습니다.',
+  'PROPOSAL_NOT_PENDING' ||
+  'PROPOSAL_TARGET_REQUIRED' => '변경안 상태와 응답 권한을 다시 확인해 주세요.',
+  'REQUIRED_SESSION_REQUIRED' => '필수 일정을 하나 이상 선택해 주세요.',
   'ROOM_FULL' ||
   'PARTY_FULL' ||
   'ROLE_CAPACITY_EXCEEDED' => '참가할 자리가 없습니다. 최신 구성을 확인해 주세요.',

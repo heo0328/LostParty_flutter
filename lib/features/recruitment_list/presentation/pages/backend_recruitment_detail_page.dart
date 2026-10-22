@@ -13,6 +13,7 @@ import '../widgets/recruitment_section.dart';
 import '../viewmodels/cycle_participation_controller.dart';
 import '../widgets/cycle_participation_widgets.dart';
 import '../widgets/cycle_management_widgets.dart';
+import '../widgets/cycle_schedule_widgets.dart';
 
 class BackendRecruitmentDetailPage extends StatefulWidget {
   const BackendRecruitmentDetailPage({
@@ -337,7 +338,20 @@ class _BackendRecruitmentDetailPageState
                 ),
               ),
             const SizedBox(height: 8),
-            const OutlinedButton(onPressed: null, child: Text('공대원 일정 전체 확인')),
+            OutlinedButton(
+              onPressed:
+                  widget.participation != null &&
+                      m.target != null &&
+                      {'leader', 'member'}.contains(room['my_target_role'])
+                  ? () => showCycleSchedule(
+                      context,
+                      widget.participation!,
+                      room: m.roomId,
+                      target: m.target!,
+                    )
+                  : null,
+              child: const Text('공대원 일정 전체 확인'),
+            ),
           ],
         ),
         RecruitmentSection(
@@ -369,12 +383,26 @@ class _BackendRecruitmentDetailPageState
                 next: m.cycles!.next.key,
                 role: room['my_target_role'] as String? ?? 'none',
               ),
-            const Wrap(
+            Wrap(
               spacing: 8,
               children: [
-                TextButton(onPressed: null, child: Text('일정 변경안')),
+                TextButton(
+                  onPressed:
+                      widget.participation != null &&
+                          m.target != null &&
+                          room['my_target_role'] == 'leader'
+                      ? () => showCycleScheduleCommand(
+                          context,
+                          widget.participation!,
+                          room: m.roomId,
+                          target: m.target!,
+                          action: 'propose',
+                        )
+                      : null,
+                  child: const Text('일정 변경안'),
+                ),
 
-                TextButton(onPressed: null, child: Text('레이드 완료')),
+                const TextButton(onPressed: null, child: Text('레이드 완료')),
               ],
             ),
           ],

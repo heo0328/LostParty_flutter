@@ -9,6 +9,7 @@ import '../domain/backend_recruitment.dart';
 import 'cycle_read_repository.dart';
 import 'group_character_candidates.dart';
 import 'cycle_management.dart';
+import 'cycle_schedule.dart';
 
 String cycleStableJson(Object? value) {
   Object? canonical(Object? v) {
@@ -448,6 +449,19 @@ class CycleApplicationView {
 }
 
 abstract interface class CycleInteractionGateway {
+  Future<CycleScheduleView> scheduleRead(
+    String room,
+    String target,
+    String kind, {
+    String? id,
+    String? cursor,
+  });
+  Future<CycleSchedulePreview> schedulePreview(
+    String room,
+    String target,
+    String action, {
+    String? id,
+  });
   Future<CycleManagementPreview> management(
     String room,
     String target,
@@ -504,6 +518,7 @@ abstract interface class CycleInteractionGateway {
     String method = 'POST',
     String? globalAck,
     List<String>? affectedTargets,
+    Map<String, dynamic>? submissionAck,
   });
 }
 
@@ -511,6 +526,27 @@ class CycleInteractionRepository implements CycleInteractionGateway {
   CycleInteractionRepository({required this.api, required this.recruitment});
   final BackendRegistrationApi api;
   final CycleRecruitmentGateway recruitment;
+  @override
+  Future<CycleScheduleView> scheduleRead(
+    String room,
+    String target,
+    String kind, {
+    String? id,
+    String? cursor,
+  }) => _decode(
+    () => CycleScheduleReader(
+      api,
+    ).read(room, target, kind, id: id, cursor: cursor),
+  );
+  @override
+  Future<CycleSchedulePreview> schedulePreview(
+    String room,
+    String target,
+    String action, {
+    String? id,
+  }) => _decode(
+    () => CycleScheduleReader(api).preview(room, target, action, id: id),
+  );
   @override
   Future<CycleManagementPreview> management(
     String room,
@@ -767,6 +803,7 @@ class CycleInteractionRepository implements CycleInteractionGateway {
     String method = 'POST',
     String? globalAck,
     List<String>? affectedTargets,
+    Map<String, dynamic>? submissionAck,
   }) => _decode(() async {
     roleId(key);
     final j = (await api.request(
@@ -778,6 +815,10 @@ class CycleInteractionRepository implements CycleInteractionGateway {
     ))!;
     roleShape(j, 'scope data');
     final scope = roleMap(j['scope']);
+    if (submissionAck != null) {
+      validateSubmissionAck(j, room, target, submissionAck, expectedScope!);
+      return;
+    }
     if (globalAck != null) {
       roleShape(scope, 'server_now current_cycle_key policy_version');
       roleUtc(scope['server_now']);
