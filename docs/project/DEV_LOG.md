@@ -11,6 +11,7 @@
 - 남은 계약 차이: continuation/opening-context에 target_session_ids만 있고 ID별 날짜/시각/상태가 없다. 일반 session_choices도 실제시각 표시가 제한되고 공개 detail의 출발목록에는 session ID가 없다. 참가 전 private plan은 WEEKLY_PARTICIPANT_REQUIRED일 수 있어 목록순서/C시간을 N에 추정매칭하지 않는다. 사전 참가 확인창의 시간표시 완료로 확대하지 않으며 같은Issue13에 표시전용 메타/권한·revision binding/실행계약 보완을 요청한다. 이미 참가한 방의 일정/제안/본인확인은 원plan의 실제시각을 표시한다.
 - 미확인 실기기: 정상로그인HTTP/실회원 쓰기·조율자동확정/정족수·재참가재동의·다중세션 일괄적용/예약·겹침더보기/미확인색·회원/주차전환/기기성능. 설치/조작·서버/DB/키변경은 하지 않았고 전체 기능섹션 수동 인수에 묶는다. 앱종료 후 관리/일정 pending 영속복구·F6 완료/정정/통합은 미구현이다.
 - Git/협업: feature/raid-recruitment-scheduling에 코드·시험/문서를 commit/push로 보관하고 실제 원격SHA 확인 후 #13에 사용SHA/검증·미확인·표시메타 보완을 회신한다. dev6d3f617 미병합·브랜치유지, 기존 통계35·플랫폼생성/DevTools/백업/tools는 제외한다. F5 독립 구현과 사전참가 표시의 미완료를 구분한다.
+- 인계 마감: 구현 **f2e09c9d05d5456ab508072a425d4d04bd72ed80** commit/push·실제 원격 SHA 일치 확인. [F5 결과/표시메타 보완 요청6343179198](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343179198)에 사용SHA/코드연결·고유130PASS/분석0·실서버/기기 미확인과 Backend 담당/필요계약·완료조건을 회신했고 게시본문 재조회 완전일치를 확인했다. 다음은 Backend 사전참가 시간메타 회신 대조/소비이며 dev6d3f617 유지·기존무관dirty 보존이다.
 
 ## 2026-10-22 — F4 다음 주 참가·주차별 관리 연결/자동검증
 
