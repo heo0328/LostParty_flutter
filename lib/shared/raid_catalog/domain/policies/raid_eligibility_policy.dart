@@ -7,9 +7,8 @@ class EligibleRaidOption {
   final List<RaidDifficultyDefinition> difficulties;
 
   RaidDifficultyDefinition get highestDifficulty => difficulties.reduce(
-    (current, candidate) => candidate.displayOrder > current.displayOrder
-        ? candidate
-        : current,
+    (current, candidate) =>
+        candidate.displayOrder > current.displayOrder ? candidate : current,
   );
 }
 
@@ -22,22 +21,23 @@ class RaidEligibilityPolicy {
   }) =>
       itemLevel != null &&
       difficulty.isActive &&
-      itemLevel >= difficulty.minItemLevel;
+      itemLevel >= difficulty.requiredItemLevel;
 
   List<RaidDifficultyDefinition> eligibleDifficulties({
     required RaidDefinition raid,
     required double? itemLevel,
   }) {
     if (!raid.isActive || itemLevel == null) return const [];
-    final result = raid.difficulties
-        .where(
-          (difficulty) => canEnter(
-            itemLevel: itemLevel,
-            difficulty: difficulty,
-          ),
-        )
-        .toList(growable: false)
-      ..sort((left, right) => left.displayOrder.compareTo(right.displayOrder));
+    final result =
+        raid.difficulties
+            .where(
+              (difficulty) =>
+                  canEnter(itemLevel: itemLevel, difficulty: difficulty),
+            )
+            .toList(growable: false)
+          ..sort(
+            (left, right) => left.displayOrder.compareTo(right.displayOrder),
+          );
     return List.unmodifiable(result);
   }
 

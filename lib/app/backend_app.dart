@@ -49,6 +49,12 @@ import '../shared/lost_ark_api/auth/secure_api_token_store.dart';
 import '../features/settings/presentation/pages/settings_page.dart';
 import '../features/recruitment_list/data/repositories/pending_backend_party_read_repository.dart';
 import '../features/recruitment_list/presentation/pages/recruitment_list_page.dart';
+import '../features/recruitment_list/data/backend_recruitment_repository.dart';
+import '../features/recruitment_list/presentation/pages/backend_recruitment_create_page.dart';
+import '../features/recruitment_list/presentation/pages/backend_recruitment_detail_page.dart';
+import '../features/recruitment_list/presentation/viewmodels/backend_recruitment_create_view_model.dart';
+import '../features/account/data/member_raid_client.dart';
+import '../features/account/domain/services/account_detail_access.dart';
 import '../features/recruitment_list/domain/services/party_cycle_runtime.dart';
 import '../shared/game_catalog/data/datasources/asset_game_catalog_data_source.dart';
 import '../shared/game_catalog/data/repositories/game_catalog_repository_impl.dart';
@@ -97,6 +103,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
   OwnershipDisputeController? _ownership;
   BackendAccountLifecycle? _accountLifecycle;
   BackendMemberAccount? _memberAccount;
+  BackendRecruitmentCreateViewModel? _recruitmentCreate;
   final _managementGateways =
       <(String, String, int, String), ScopedCharacterManagementGateway>{};
   GoRouter? _router;
@@ -396,6 +403,26 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     final raidCatalog = RaidCatalogRepositoryImpl(
       dataSource: AssetRaidCatalogDataSource(),
     );
+    final recruitmentGateway = BackendRecruitmentRepository(
+      api: accountApi,
+      accounts: serverAccounts,
+      raids: MemberRaidClient(accountApi),
+    );
+    final recruitmentCreate = _recruitmentCreate =
+        BackendRecruitmentCreateViewModel(
+          gateway: recruitmentGateway,
+          session: readSession,
+          accessChanges: _memberAccount?.model ?? auth,
+          hasVerifiedAccount: () =>
+              _memberAccount?.model.sections.any(
+                (s) => hasAccountDetailAccess(
+                  ownershipStatus: s.registration.ownershipStatus,
+                  accountId: s.registration.accountId,
+                  ownershipRevision: s.registration.ownershipRevision,
+                ),
+              ) ??
+              false,
+        );
     Widget pending(
       String title, {
       bool protected = true,
@@ -602,11 +629,23 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                   routes: [
                     GoRoute(
                       path: 'create',
-                      builder: (_, _) => pending('모집 만들기', alertOnEntry: true),
+                      builder: (context, _) => BackendRecruitmentCreatePage(
+                        model: recruitmentCreate,
+                        onLogin: () => showLoginRequired(context, auth),
+                      ),
                     ),
                     GoRoute(
                       path: ':recruitmentId',
-                      builder: (_, _) => pending('모집 상세', protected: false),
+                      builder: (context, state) => BackendRecruitmentDetailPage(
+                              key: ValueKey(
+                                state.pathParameters['recruitmentId'],
+                              ),
+                              gateway: recruitmentGateway,
+                              session: readSession,
+                              roomId: state.pathParameters['recruitmentId']!,
+                              onLogin: () => showLoginRequired(context, auth),
+                              onCreateAnother: recruitmentCreate.startAnother,
+                            ),
                     ),
                   ],
                 ),
@@ -734,6 +773,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     _router?.dispose();
     _entryGate.removeListener(_entryReady);
     _entryGate.dispose();
+    _recruitmentCreate?.dispose();
     _memberAccount?.dispose();
     _ownership?.dispose();
     unawaited(_accountLifecycle?.close());
