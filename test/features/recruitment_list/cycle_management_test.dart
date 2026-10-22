@@ -10,6 +10,7 @@ import '../../support/server_account_read_fakes.dart';
 import '../account/backend_read/member_cycles_test.dart' as f1;
 import 'backend_recruitment_test.dart' as v1;
 import 'cycle_recruitment_test.dart' as f2;
+import 'session_display_fixtures.dart' as sd;
 
 const c = f1.current, n = f1.next, room = v1.roomId;
 String id(int i) => '12345678-1234-4234-8234-${i.toString().padLeft(12, '0')}';
@@ -190,11 +191,27 @@ Map<String, dynamic> managementWire(String action, {String target = n}) {
     };
     return detail;
   }
-  return f2.envelope(
+  final result = f2.envelope(
     target,
     context,
     created: !{'open', 'reopen'}.contains(action),
   );
+  if ({'continue', 'decline', 'open', 'reopen'}.contains(action)) {
+    final opening = {'open', 'reopen'}.contains(action);
+    context['session_display'] = sd.displayWire(
+      {
+        ...result['scope'] as Map,
+        if (opening) 'room_cycle_id': context['prospective_room_cycle_id'],
+        if (opening) 'target_generation': context['prospective_generation'],
+      },
+      kind: opening
+          ? 'opening_preview'
+          : action == 'continue'
+          ? 'existing'
+          : 'none',
+    );
+  }
+  return result;
 }
 
 void main() {
@@ -297,6 +314,99 @@ void main() {
   List<Map<String, dynamic>> writes() =>
       api.requests.where((r) => r['method'] != 'GET').toList();
   test(
+    'continue opt-in explicitly selects a subset and freezes input during fresh GET',
+    () async {
+      action = 'continue';
+      wire = managementWire(action);
+      wire['data']['session_display']['sessions'] = [
+        sd.actualDisplay(id(1)),
+        sd.actualDisplay(id(2)),
+      ];
+      final p = (await controller.management(room, n, action))!;
+      expect(api.requests.last['query']['include_session_display'], 'true');
+      final entered = <String, dynamic>{
+        'sessions': [id(2)],
+      };
+      final gate = Completer<Map<String, dynamic>>();
+      api.respond = (path, query) async =>
+          api.requests.last['method'] == 'GET' ? gate.future : ack();
+      final task = controller.manage(p, entered);
+      await f1.settled(() => api.requests.length == 2);
+      entered['sessions'].clear();
+      gate.complete(copy(wire));
+      await task;
+      expect(writes().single['body']['target_session_ids'], [id(2)]);
+    },
+  );
+  test(
+    'continue changed display blocks POST; unknown result retries original token and body',
+    () async {
+      final p = await preview('continue');
+      wire['data']['session_display']['display_revision'] = List.filled(
+        64,
+        'c',
+      ).join();
+      await controller.manage(p, {});
+      expect(writes(), isEmpty);
+      expect(controller.failure, 'REVISION_CONFLICT');
+      final fresh = (await controller.management(room, n, 'continue'))!;
+      loseAck = true;
+      await controller.manage(fresh, {});
+      expect(controller.hasPending, true);
+      final original = jsonEncode(writes().single);
+      final reads = api.requests.where((r) => r['method'] == 'GET').length;
+      wire['data']['context_token'] = 'new-token-must-not-replace-pending';
+      wire['data']['session_display']['display_revision'] = List.filled(
+        64,
+        'd',
+      ).join();
+      await controller.retry();
+      expect(jsonEncode(writes().last), original);
+      expect(api.requests.where((r) => r['method'] == 'GET'), hasLength(reads));
+      expect(controller.hasPending, false);
+    },
+  );
+  test(
+    'opening preview refs are never submitted and actual scope generation is not prospective',
+    () async {
+      action = 'reopen';
+      wire = managementWire(action);
+      wire['data']['session_display']['previews'] = [sd.previewGroup(count: 2)];
+      final p = (await controller.management(room, n, action))!;
+      expect(p.display!.kind, 'opening_preview');
+      await controller.manage(p, {
+        'sessions': [id(1)],
+      });
+      expect(writes(), isEmpty);
+      await controller.manage(p, {});
+      final body = writes().single['body'] as Map;
+      expect(body['target_session_ids'], isEmpty);
+      expect(jsonEncode(body), isNot(contains('preview_ref')));
+    },
+  );
+  test(
+    'already-open and decline consume none while null display fails closed',
+    () async {
+      action = 'open';
+      wire = managementWire(action);
+      wire['scope'] = f2.envelope(n, {}, created: true)['scope'];
+      wire['data']['opening_effect'] = 'already_open';
+      wire['data']['session_display'] = sd.displayWire(
+        wire['scope'] as Map,
+        kind: 'none',
+      );
+      expect(
+        (await controller.management(room, n, action))!.display!.kind,
+        'none',
+      );
+      wire['data']['session_display'] = null;
+      expect(await controller.management(room, n, action), isNull);
+      expect(controller.failure, 'INVALID_RESPONSE');
+      final declined = await preview('decline');
+      expect(declined.display!.kind, 'none');
+    },
+  );
+  test(
     'last next participant cancels N only and preserves C/global relationship',
     () async {
       final p = await preview('cancel');
@@ -370,7 +480,9 @@ void main() {
     () async {
       action = 'continue';
       wire = managementWire(action);
-      wire['data']['target_session_ids'] = [v1.itemId];
+      wire['data']['session_display']['sessions'] = [
+        sd.actualDisplay(v1.itemId, required: true),
+      ];
       final p = (await controller.management(room, n, action))!;
       await controller.manage(p, {});
       expect(writes(), isEmpty);

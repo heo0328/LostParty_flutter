@@ -11,6 +11,7 @@ import '../../support/server_account_read_fakes.dart';
 import '../account/backend_read/member_cycles_test.dart' as f1;
 import 'backend_recruitment_test.dart' as v1;
 import 'cycle_recruitment_test.dart' as f2;
+import 'session_display_fixtures.dart' as sd;
 
 const c = f1.current, n = f1.next, room = v1.roomId, app = v1.membershipId;
 final ref = List.filled(64, 'm').join(), token = List.filled(64, 't').join();
@@ -23,7 +24,7 @@ Map<String, dynamic> admissionWire(
   int revision = 1,
 }) {
   final selected = f2.creation(v1.draft().copy(targetCycleKey: target));
-  return f2.envelope(target, {
+  final result = f2.envelope(target, {
     'room_id': room,
     'room_revision': revision,
     'members_revision': 1,
@@ -66,6 +67,18 @@ Map<String, dynamic> admissionWire(
     'expires_at': '2026-10-22T03:05:00Z',
     'leadership': (f2.detail(target)['data'] as Map)['leadership'],
   }, created: true);
+  final data = result['data'] as Map;
+  data['session_display'] = sd.displayWire(
+    result['scope'] as Map,
+    sessions: [
+      for (final s in data['session_choices'] as List)
+        {
+          ...sd.actualDisplay(s['session_id'] as String),
+          ...s as Map<String, dynamic>,
+        },
+    ],
+  );
+  return result;
 }
 
 Map<String, dynamic> searchWire(
@@ -424,6 +437,8 @@ void main() {
       expect(() => p.body({app}), throwsFormatException);
       final j = admissionWire(n, required: true);
       j['data']['session_choices'][0]['join_deadline'] = f2.nowStamp;
+      j['data']['session_display']['sessions'][0]['join_deadline'] =
+          f2.nowStamp;
       final expired = CycleAdmissionPreview(
         j,
         room: room,
@@ -450,6 +465,7 @@ void main() {
           intent,
         );
         expect(p, isNotNull);
+        expect(api.requests.last['query']['include_session_display'], 'true');
         await controller.admit(p!, {});
         expect(controller.hasPending, false);
         expect(controller.failure, null);
@@ -490,6 +506,67 @@ void main() {
       expect(controller.failure, 'REVISION_CONFLICT');
       expect(controller.hasPending, false);
       expect(api.requests.where((r) => r['method'] == 'POST'), isEmpty);
+    },
+  );
+  test(
+    'admission display change and omitted opt-in data block commands',
+    () async {
+      final p = (await controller.preview(
+        room,
+        n,
+        characterId,
+        'dealer',
+        'join',
+      ))!;
+      api.respond = (path, q) async {
+        final j = admissionWire(n);
+        j['data']['session_display']['display_revision'] = List.filled(
+          64,
+          'b',
+        ).join();
+        return j;
+      };
+      await controller.admit(p, {});
+      expect(controller.failure, 'REVISION_CONFLICT');
+      expect(api.requests.where((r) => r['method'] == 'POST'), isEmpty);
+      api.respond = (path, q) async =>
+          admissionWire(n)..['data'].remove('session_display');
+      expect(
+        await controller.preview(room, n, characterId, 'dealer', 'join'),
+        isNull,
+      );
+      expect(controller.failure, 'INVALID_RESPONSE');
+    },
+  );
+  test(
+    'admission freezes selected IDs before a delayed fresh context',
+    () async {
+      final j = admissionWire(n, required: true);
+      api.respond = (path, q) async =>
+          api.requests.last['method'] == 'GET' ? j : respond(path, q);
+      final p = (await controller.preview(
+        room,
+        n,
+        characterId,
+        'dealer',
+        'join',
+      ))!;
+      final gate = Completer<Map<String, dynamic>>();
+      api.respond = (path, q) async =>
+          api.requests.last['method'] == 'GET' ? gate.future : respond(path, q);
+      final chosen = <String>{v1.itemId};
+      final task = controller.admit(p, chosen);
+      await f1.settled(() => api.requests.length == 2);
+      chosen.clear();
+      gate.complete(j);
+      await task;
+      expect(controller.failure, isNull);
+      expect(
+        api.requests.singleWhere(
+          (r) => r['method'] == 'POST',
+        )['body']['target_session_ids'],
+        [v1.itemId],
+      );
     },
   );
   test(

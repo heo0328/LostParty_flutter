@@ -201,6 +201,7 @@ class CycleParticipationController extends ChangeNotifier {
     Map<String, dynamic> input,
   ) async {
     if (!canAct) return;
+    final frozenInput = jsonDecode(jsonEncode(input)) as Map<String, dynamic>;
     final e = _epoch;
     busy = true;
     failure = notice = null;
@@ -216,7 +217,7 @@ class CycleParticipationController extends ChangeNotifier {
       if (fresh.signature != preview.signature) {
         throw const AccountReadException('REVISION_CONFLICT');
       }
-      final body = fresh.body(input);
+      final body = fresh.body(frozenInput);
       _pending = _CycleCommand(
         path: fresh.path,
         body: body,
@@ -271,6 +272,7 @@ class CycleParticipationController extends ChangeNotifier {
     Set<String> sessions,
   ) async {
     if (!canAct) return;
+    final frozenSessions = Set<String>.unmodifiable(sessions);
     final e = _epoch;
     busy = true;
     failure = notice = null;
@@ -288,8 +290,8 @@ class CycleParticipationController extends ChangeNotifier {
         throw const AccountReadException('REVISION_CONFLICT');
       }
       final body = fresh.intent == 'change_character'
-          ? await gateway.characterBody(fresh, sessions)
-          : fresh.body(sessions);
+          ? await gateway.characterBody(fresh, frozenSessions)
+          : fresh.body(frozenSessions);
       if (!_valid(e)) return;
       final apply = fresh.intent == 'apply';
       _pending = _CycleCommand(

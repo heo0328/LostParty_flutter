@@ -6,6 +6,7 @@ import '../../domain/backend_recruitment.dart';
 import '../viewmodels/cycle_participation_controller.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
 import 'cycle_participation_widgets.dart';
+import 'cycle_session_display_widgets.dart';
 
 class CycleManagementActions extends StatelessWidget {
   const CycleManagementActions({
@@ -133,6 +134,8 @@ class _ManagementDialogState extends State<_ManagementDialog> {
     setState(() {
       loading = true;
       error = null;
+      preview = null;
+      sessions.clear();
     });
     final p = await widget.controller.management(
       widget.room,
@@ -238,9 +241,12 @@ class _ManagementDialogState extends State<_ManagementDialog> {
       Navigator.pop(context);
       return;
     }
+    final failure = widget.controller.failure;
+    if (p.continuation || p.opening) await load();
+    if (!mounted) return;
     setState(() {
       loading = false;
-      error = widget.controller.failure;
+      error = failure;
     });
   }
 
@@ -281,9 +287,7 @@ class _ManagementDialogState extends State<_ManagementDialog> {
           : (!{'transfer', 'remove'}.contains(p.action) || candidate != null) &&
                 (!(p.opening || p.action == 'continue') ||
                     (d!['selection'] != null &&
-                        (d['target_session_ids'] as List).every(
-                          sessions.contains,
-                        )));
+                        (p.opening || p.display!.selectionReady(sessions))));
       return AlertDialog(
         title: Text(cycleManagementLabels[widget.action]!),
         content: SizedBox(
@@ -301,6 +305,8 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                 if (loading) const LinearProgressIndicator(),
                 if (error != null) text(recruitmentFailureMessage(error)),
                 if (p != null) ...[
+                  if (p.opening && d!['opening_effect'] == 'already_open')
+                    text('이미 개방된 주차입니다.'),
                   if (!allowed)
                     text(
                       recruitmentFailureMessage(
@@ -409,27 +415,17 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                                 },
                         ),
                     ],
-                    if (p.action != 'decline')
-                      for (final id
-                          in (d['target_session_ids'] as List).cast<String>())
-                        CheckboxListTile(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(
-                            '필수 일정 ${(d['target_session_ids'] as List).indexOf(id) + 1} 참가 확인',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          value: sessions.contains(id),
-                          onChanged: loading
-                              ? null
-                              : (v) => setState(() {
-                                  if (v == true) {
-                                    sessions.add(id);
-                                  } else {
-                                    sessions.remove(id);
-                                  }
-                                }),
-                        ),
+                    CycleSessionDisplayView(
+                      display: p.display!,
+                      chosen: sessions,
+                      onChanged: loading || !widget.controller.canAct
+                          ? null
+                          : (v) => setState(() {
+                              sessions
+                                ..clear()
+                                ..addAll(v);
+                            }),
+                    ),
                   ],
                   if ({'transfer', 'remove'}.contains(p.action))
                     DropdownButtonFormField<String>(

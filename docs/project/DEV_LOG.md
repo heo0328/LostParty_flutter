@@ -1,5 +1,16 @@
 # 개발 이력
 
+## 2026-10-23 — F5 사전 참가 실제 시간 표시·선택 연결
+
+사용자 설계구현 승인으로 필수문서/§37.17·현재c501425/원격·dev6d3f617·최신Issue13 Flutter113 이후 새Backend회신없음·무관dirty를 확인했다. Backend07c2b671의 고정 표시계약/소스와 실제 reader/controller/확인창·기존 F3/F4 fixture를 대조하고 승인 범위로 구현했다.
+
+- 새로 가능해진 흐름: 일반참가/신청·캐릭터변경·다음주참가 확인창에서 실제ID별 KST 날짜/요일·시작~끝/미정·필수/선택·확정/미확정/마감·불가 사유를 보고 고른다. 개방/재개방은 실제N의 그룹·후보별 읽기 미리보기와 시간/종료미정·조율/일정미지정이며 체크/preview refs 전송이 없다. 이미개방·decline은 무선택으로 구분한다. 상세/필터/계정 디자인과 진입 단계는 유지한다. 구현책임/경계는 설계37 §37.18이다.
+- 계약/보호: opt-in 세GET·닫힌DTO/actual·prospective scope/ID집합·불변 표시·서명/continue 명시ID본문, 첫await 전 선택/입력복사를 연결했다. 재조회·캐릭터변경 체크초기화/늦은응답 격리·표시변경POST0건/재확인을 적용하고 원method/body/key/token·원ACK/기존일정PUT 경계를 유지한다. private plan 참가전우회/권한확대·새POST필드/영속저장/Router/DI·서버/DB/키변경은 없다. 개방원ACK 뒤 기존 일정진입은 권한있는 현재T plan의 실제ID를 사용한다.
+- 보존 확인: 기존 interaction27·management28·schedule27을 포함해 검색/일반참가/신청/승인·철회/캐릭터변경·N특례/충돌/관리/공통영향·일정/투표/예약·원요청/주차·회원 격리를 검증했다. 기존 개인표/계정/생성/필터·8인번호와 사용자확인 기능/무관dirty는 수정하지 않았다.
+- 검증: 신규 표시18+controller6/기존82, **4파일 최종단일106mock PASS**·변경Dart11파일 최종분석0·포맷/diff/호출·본문검토. 동작불변 중괄호3곳과 이미개방 안내문구 정리 후 분석0이며 같은시험을 반복하지 않았다. 최초포맷 후 telemetry 파일권한 오류는 suppress-analytics로 정상종료했고 시험실패는 없다. 개인표/공용저장/인증/DI 불변이므로 무관 전체시험은 실행하지 않았다. 과거 F5 고유130과 새106을 합산하지 않는다.
+- 미확인 실기기: 정상로그인HTTP/실회원쓰기·실제확인창 가독성/스크롤/글자크기·N새벽/익일표시·기기성능은 전체기능섹션 사용자 인수로 유지한다. BackendDB/HMAC/권한·경합/원자성·성능시험을 mock으로 대체하지 않는다. 앱종료 후 관리pending영속복구·F6는 미구현이다. 이번 구간은 코드/자동검증 완료이며 dev통합/기능전체인수는 아니다.
+- 협업/Git: 같은Issue13에 고정소비/구현SHA·push/검증/미확인·다음F6를 인계한다. 문서/코드/시험을 기존feature/raid-recruitment-scheduling에 commit/push로 보관·dev미병합/브랜치유지, 무관dirty는 제외한다.
+
 ## 2026-10-23 — F5 사전 참가 표시 연결 기획·설계 재점검
 
 사용자의 다음 작업 설계/기존 설계 재확인 요청으로 필수문서·설계37 §37.16/최신로그·현재316e3de/원격일치·dev6d3f617·기존무관dirty 및 최신Issue13(Backend112/Flutter113 이후 새 Backend 회신 없음)을 확인했다. 고정소비07c2b671의 session_display.py/session_display_schemas.py/cycle_continuation.py와 실제 Flutter reader/body/controller/확인창·backend_app DI를 대조했다.

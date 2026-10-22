@@ -10,6 +10,7 @@ import 'cycle_read_repository.dart';
 import 'group_character_candidates.dart';
 import 'cycle_management.dart';
 import 'cycle_schedule.dart';
+import 'cycle_session_display.dart';
 
 String cycleStableJson(Object? value) {
   Object? canonical(Object? v) {
@@ -242,7 +243,7 @@ class CycleAdmissionPreview {
     data = Map.unmodifiable(roleMap(j['data']));
     roleShape(
       data,
-      'room_id room_revision members_revision plan_revision expected_cycle_key server_time catalog_version policy_snapshot context_token selection targets session_choices comparison permissions target_cycle_key expected_target_revision issued_at expires_at leadership',
+      'room_id room_revision members_revision plan_revision expected_cycle_key server_time catalog_version policy_snapshot context_token selection targets session_choices comparison permissions target_cycle_key expected_target_revision issued_at expires_at leadership session_display',
     );
     roleCheck(
       roleId(data['room_id']) == room &&
@@ -297,7 +298,7 @@ class CycleAdmissionPreview {
       rolePositive(t['expected_round_revision']);
       rolePositive(t['expected_weekly_revision']);
     }
-    sessions = raidList(data['session_choices']).map((raw) {
+    final choices = raidList(data['session_choices']).map((raw) {
       final s = roleMap(raw);
       roleShape(s, 'session_id required join_deadline permission');
       roleId(s['session_id']);
@@ -307,10 +308,13 @@ class CycleAdmissionPreview {
       return Map<String, dynamic>.unmodifiable(s);
     }).toList();
     roleCheck(
-      sessions.length <= 64 &&
-          sessions.map((s) => s['session_id']).toSet().length ==
-              sessions.length,
+      choices.length <= 64 &&
+          choices.map((s) => s['session_id']).toSet().length == choices.length,
     );
+    display = CycleSessionDisplay(data['session_display']);
+    display.bind(scope, kind: 'existing', planRevision: data['plan_revision']);
+    display.matchChoices(choices);
+    sessions = display.sessions;
     final perms = roleMap(data['permissions']);
     roleCheck(perms.keys.every({'join', 'apply', 'change_character'}.contains));
     for (final v in perms.values) {
@@ -329,6 +333,7 @@ class CycleAdmissionPreview {
   final String room, target, character, role, intent;
   late final Map<String, dynamic> scope, data;
   late final CyclePermission permission;
+  late final CycleSessionDisplay display;
   late final List<Map<String, dynamic>> sessions;
   String get confirmationSignature => cycleStableJson({
     for (final k in [
@@ -341,11 +346,12 @@ class CycleAdmissionPreview {
       'selection',
       'targets',
       'session_choices',
+      'session_display',
       'target_cycle_key',
       'expected_target_revision',
       'leadership',
     ])
-      k: data[k],
+      k: k == 'session_display' ? display.wire : data[k],
   });
   Map<String, dynamic> body(Set<String> chosen) {
     if (!permission.allowed) {
@@ -645,6 +651,7 @@ class CycleInteractionRepository implements CycleInteractionGateway {
         'character_id': character,
         'selected_role': role,
         'intent': intent,
+        'include_session_display': 'true',
       },
     ))!;
     return CycleAdmissionPreview(

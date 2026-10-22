@@ -1436,3 +1436,14 @@ POST 후 결과불명은 기존 앱소유 writer의 원method/path/encoded body/
 기능섹션 최종 상태에서 새 표시시험 + cycle_interaction_test/cycle_management_test/cycle_schedule_test + 변경Dart 분석/포맷/diff를 한 번 묶는다. 개인표 원본/저장·인증/Router/DI가 바뀌지 않으므로 무관 전체 Flutter 시험은 기본 실행하지 않는다. 실제로 공유 경계가 바뀌면 범위를 다시 판단한다. 현재 설계 구간은 문서diff/content만 검증하고 기존시험을 반복하지 않는다. 정상 확인창의 가독성/스크롤·캐릭터변경·기기 글자크기/익일 표시·실회원HTTP는 전체 기능섹션의 사용자 수동 인수로 남긴다.
 
 완료 조건은 세 문맥 표시/선택과 재확인·원pending 보존의 구현/표적검증, 문서 최신화·같은 Issue13에 소비SHA/구현SHA·검증/미확인 회신·작업브랜치 push다. 완료/정정·종료/재개(F6), 모집생성 계약·필터/계정 카드 리디자인, 통계19·서버/DB/키/운영배포 및 기기 자동조작은 포함하지 않는다.
+
+### 37.18 F5 사전 참가 표시 연결 구현 — 2026-10-23
+
+사용자 승인으로 §37.17을 구현했다. 소비 Backend07c2b671/168경로·고정0.4.1/policy4를 사용하며 새 경로·POST 필드·권한/영속저장·Router/DI 변경은 없다.
+
+- cycle_session_display.dart는 닫힌 existing/opening_preview/none과 실제/preview 시각 조합·최대64/정렬·중복·양의revision/64hex·actual/prospective scope를 검증하고 내부 목록/맵을 깊이 불변으로 보관한다. admission choices와 ID/required/deadline/permission을 직접 교차검증한다. true 응답의 누락/null은 거절하며 다른 관리 context에는 표시를 요구하지 않는다.
+- 기존 admission과 continue/decline/open/reopen GET에만 include_session_display=true를 연결했다. admission 표시 snapshot을 확인서명에 넣고 management 기존 data 서명에도 불변 표시값을 사용한다. continuation은 기존 빈 target_session_ids와 별개로 사용자가 선택한 실제ID를 필수/permission/마감 검증 뒤 정렬해 전송한다. opening은 [] 유지·preview refs/null 전송 금지다.
+- 기존 두 확인창에 공통 표시 조각을 연결했다. 실제 일정은 KST 양쪽 날짜/요일·시작/끝·필수/선택·확정/미확정·참가마감/불가 사유와 명시 체크다. 개방은 그룹/후보별 읽기 미리보기·종료미정/시간미정·조율/후보선택후확정·일정미지정이며 체크를 만들지 않는다. 이미 개방됨은 별도 짧은 문구, none에는 일정 선택이 없다. 기존 카드/필터/계정·취소좌/긍정우를 유지한다.
+- 두 제출경로는 첫 await 전에 입력을 복사한다. management 재조회/캐릭터·역할변경은 이전 preview와 체크를 비우고 실행을 막는다. 표시변경은 POST 전에 재확인이며 확정실패 뒤 새 context를 읽는다. 결과불명은 기존 원method/path/body/key/token 그대로 재송하고 원ACK·기존 무효화/실제T 갱신을 유지한다. 개방 후 기존 일정 화면에서 권한 있는 실제T plan을 읽으며 preview와 실제ID를 이름/순서로 연결하지 않는다. private plan을 참가 전에 추가 조회하지 않는다.
+- 검증: 새 표시18/추가 controller6 + 기존 interaction27/management28/schedule27, 최종 네 파일 **106mock PASS**. 새24개와 기존82개이며 과거 F5 고유130과 합산하지 않는다. 이후 동작불변 중괄호/이미개방 문구만 정리해 기존 시험결과를 재사용하고 최종 변경Dart11파일 분석0·포맷/diff·본문/호출 검토를 마쳤다. 최초 포맷은 결과 저장 뒤 telemetry 파일권한 오류가 있었고 suppress-analytics로 정상 종료했다. 시험 실패는 없다.
+- 미확인: 정상인증회원HTTP/실회원쓰기·새 확인창의 실제 기기 가독성/스크롤/글자크기·성능, Backend DB/HMAC/권한·정족수/원자성·경합 독립재현은 하지 않았다. 새 preview/선택 mock은 서버 인수 근거가 아니다. 앱종료 후 관리 pending 영속복구·F6는 미구현이다. 문서/코드/시험·Issue13 회신·작업브랜치 보관은 DEV_LOG, 다음 구간은 NEXT_WORK를 따른다.

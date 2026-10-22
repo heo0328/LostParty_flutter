@@ -8,6 +8,7 @@ import '../../domain/backend_recruitment.dart';
 import '../viewmodels/cycle_participation_controller.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
 import 'recruitment_section.dart';
+import 'cycle_session_display_widgets.dart';
 
 class CycleCommandBanner extends StatelessWidget {
   const CycleCommandBanner({required this.controller, super.key});
@@ -152,11 +153,7 @@ class _CycleAdmissionSheetState extends State<_CycleAdmissionSheet> {
           : widget.intent == 'join'
           ? '바로 참가'
           : '내 캐릭터 변경';
-      final requiredSelected =
-          p != null &&
-          p.sessions
-              .where((s) => s['required'] == true)
-              .every((s) => chosen.contains(s['session_id']));
+      final requiredSelected = p != null && p.display.selectionReady(chosen);
       return SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
@@ -277,53 +274,18 @@ class _CycleAdmissionSheetState extends State<_CycleAdmissionSheet> {
                 recruitmentFailureMessage(p.permission.reason),
                 style: const TextStyle(color: AppColors.error, fontSize: 12),
               ),
-            if (p != null && p.sessions.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              const Text(
-                '참가할 일정',
-                style: TextStyle(fontWeight: FontWeight.w600),
+            if (p != null)
+              CycleSessionDisplayView(
+                display: p.display,
+                chosen: chosen,
+                onChanged: !c.canAct || loading
+                    ? null
+                    : (v) => setState(() {
+                        chosen
+                          ..clear()
+                          ..addAll(v);
+                      }),
               ),
-              for (var i = 0; i < p.sessions.length; i++)
-                Builder(
-                  builder: (context) {
-                    final s = p.sessions[i],
-                        permission = CyclePermission.fromJson(
-                          roleMap(s['permission']),
-                        );
-                    final deadline = s['join_deadline'] == null
-                        ? null
-                        : DateTime.parse(
-                            s['join_deadline'] as String,
-                          ).add(const Duration(hours: 9));
-                    return CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                      value: chosen.contains(s['session_id']),
-                      onChanged: !c.canAct || !permission.allowed
-                          ? null
-                          : (v) => setState(() {
-                              if (v == true) {
-                                chosen.add(s['session_id'] as String);
-                              } else {
-                                chosen.remove(s['session_id']);
-                              }
-                            }),
-                      title: Text(
-                        '${s['required'] == true ? '필수' : '선택'} 일정 ${i + 1}',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      subtitle: Text(
-                        permission.allowed
-                            ? (deadline == null
-                                  ? '모집 마감 미정'
-                                  : '모집 마감 ${deadline.toIso8601String().substring(5, 16).replaceAll('T', ' ')}')
-                            : recruitmentFailureMessage(permission.reason),
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                    );
-                  },
-                ),
-            ],
             CycleCommandBanner(controller: c),
             const SizedBox(height: 12),
             FilledButton(

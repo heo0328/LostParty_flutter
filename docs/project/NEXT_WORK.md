@@ -1,6 +1,6 @@
-# NEXT WORK — F5 사전 참가 표시 설계 점검 완료·구현 준비
+# NEXT WORK — F5 사전 표시 구현 마감·F6 준비
 
-기준: 2026-10-23. F1~F4 코드/자동검증 완료. **F5 제출표·방 일정/후보/제안·투표/본인확인·예약상태 독립 연결을 구현했고, Backend112로 사전 참가 표시 보완의 구현 인계를 받았다. 다음은 Flutter 표시 연결이다.** 기존 신규27+F2~F4 93/개인표10 고유130PASS·변경Dart7파일 분석0을 보존한다. 새 표시는 아직 미연결이며 실제 정상인증HTTP·실회원/기기 인수는 미확인이다. 작업브랜치 feature/raid-recruitment-scheduling에 문서/코드/시험을 commit/push로 보관하고 dev6d3f617 미병합·기존무관dirty를 유지한다. F6 완료/정정·통합은 아직 미착수다.
+기준: 2026-10-23. **F1~F5 코드/자동검증을 마쳤고 Backend07c2b671의 사전 참가 표시까지 연결했다.** 신규표시24+기존직접영향82의 최종단일106mock PASS·변경Dart11파일 분석0이다. 과거 F5 독립구간 고유130 기록과 합산하지 않는다. 실제 정상인증HTTP·실회원/기기 인수는 미확인이며 전체 기능섹션에 묶는다. feature/raid-recruitment-scheduling에 코드/시험/문서를 commit/push 보관하고 dev6d3f617 미병합·기존무관dirty를 유지한다. 다음은 F6 완료/정정·선택T 종료/재개 설계와 구현 준비이며 아직 구현하지 않았다.
 
 ## 1. 현재 근거·준비 상태
 
@@ -26,30 +26,19 @@
 | 한도/통계 | 같은 방 C/N은 고유room1개·기본10. 미래 참가/완료를 C 통계에 섞지 않음. 사전취소 통계는 #19 별도 결정 |
 | 전환/예약 | 수06시 같은 UUID/실제cycle 유지, 라벨 전환·권한 재검사. N 변경/취소가 C 예약·완료를 정리하지 않음. 실제 참가와 일정 확인은 별개 |
 
-## 3. 다음 작업 — F5 사전 참가 시간 표시 연결
+## 3. 다음 작업 — F6 완료/정정·선택 주차 종료/재개 준비
 
-최신 수신/확인(2026-10-23): [Backend111 경로 정정6344566106](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6344566106) 및 [Backend112 구현/개발 반영 인계6345290060](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345290060). **Backend 보완 대기는 해소됐고 다음 담당은 Flutter다.** 고정 소비SHA07c2b671d67e5dfcef5f873ef55ffcb54f87b365의 개발 안내/게시OpenAPI를 직접 대조해 실제 세 GET·opt-in query/표시응답·168경로를 확인했다. 원격00db6c8은 해당SHA 뒤 문서1커밋이며 코드변경이 아니다. Backend는 고유48PASS·이미지404cf8c4…/API8000·DB0029 개발반영/자료보존을 보고했다. Flutter의 정상인증HTTP·서버시험 독립재현 근거는 아니며 현재 앱은0afd879 소비/F5 독립 구현 그대로다. 인계확인 단계에서는 기능코드를 변경하지 않았다. 표시/원ACK·prospective·동의/예약 경계는 설계37 §37.16을 따른다.
+현재근거: [Backend112/6345290060](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345290060)의 고정소비07c2b671/168경로 및 [Flutter113 확인6345378281](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345378281). 사전표시/선택 구현은 설계37 §37.18·DEV_LOG에 마감했다. Backend 보완 대기는 없고 실제 차이가 있을 때만 같은Issue에 근거를 회신한다. 표시계약 수용/기존시험을 다시 요청하지 않는다.
 
-설계 재점검(2026-10-23): 사용자 요청으로 기존 §37.16을 Backend112의 표시/continuation 소스·스키마와 실제 reader/body/controller/확인창·backend_app DI에 다시 대조했다. 제품 흐름 변경/새 Backend 대기 없이 **설계37 §37.17**에 화면별 표시·DTO/수명·명시 선택/입력고정·파일 책임·검증/완료 조건을 구체화했다. 현재 관리본문은 기존 target_session_ids를 그대로 보내므로 continue만 실제 선택ID 전송으로 보완해야 한다. admission 표시서명과 첫 await 전 입력고정·캐릭터/역할 변경 시 선택초기화도 후속 포함이다. 이번은 설계만이며 기능코드/시험은 변경하지 않는다.
+다음 작업은 설계37 §36/§37.5~37.8의 F6를 실제API/코드와 먼저 대조하는 것이다. 이번 F5 승인으로 F6 코드까지 구현하지 않는다.
 
-기존 F5 구현f2e09c9/인계6343179198·소비검토6344221859·Backend112 확인6345378281은 DEV_LOG/§37.15~37.16에 보존한다. 현재 앱은 기존소비 그대로이며 새 표시 연결 완료로 취급하지 않는다.
+1. 최신Issue13/고정소비의 완료·정정·선택T 미완료종료/재개 context·write/권한·CAS·원ACK와 기존 계정 수동완료/원pending 경로를 조사한다. 실제 Router/DI/호출자·계정summary/상세·일정/예약의 영향 범위를 먼저 기록한다.
+2. 실제T=C/수10시 허용·N거절·같은방 C/N 완료/탈퇴/예약 독립과 수정/취소된 일정·재참가·마지막인원/종료/새generation 경계를 대조한다. F4의 N 개방/재개와 F6의 종료/재개를 혼동하거나 전역동작으로 연결하지 않는다. 이미 완성된 개인표·계정/필터/카드·파티번호/공대장 위임/일정·투표 흐름은 보호한다.
+3. 가장 작은 구현단위·파일책임/회귀·최종표적검증 및 전체시험 필요 근거·완료조건을 고정한 뒤 승인된 구간만 구현한다. 전체기능 디바이스 인수/최종dev 통합 시점은 별도 판단하고 현재 브랜치 보관과 구분한다.
 
-남은 Flutter 연결/회귀 범위:
-- 기존 세 context 요청에 include_session_display=true와 닫힌 DTO를 함께 적용한다. 실제T/현재세대 existing은 ID별 시각/미정·state/required/permission/revision을 검증하고 admission choices와 일치시킨다. continuation 기존 target_session_ids=[]는 선택지 목록이 아니며 명시 선택한 실제ID만 POST한다.
-- opening_preview는 prospective cycle/generation·plan_revision=null·session_id=null이며 읽기 미리보기만 표시한다. 수동복수후보/조율·미정/끝미산정·none/noop를 구분하고 opening POST []·원ACK 후 권한 있는 plan의 실제ID 조회를 유지한다. private plan 우회·C시각/순서 추정·참가관계를 시간동의/예약으로 해석하지 않는다.
-- 표시 revision을 확인서명에 포함하고 변경 확정거절은 재확인한다. 결과불명 원본문/key/method/token과 원ACK 우선순위, 회원scope/주차/지연응답 폐기를 보존한다. opt-in 필드 누락/null·ID 불일치/권한상실·1MiB 초과413을 잘라내기/false 대체로 숨기지 않는다.
-- 표적검증은 위 새 표시/선택/세대/서명·pending 경계와 직접영향 F3/F4/F5에 한정한다. 기존 통과 코드를 그대로 두었다면 무관 전체시험/같은 Backend시험을 반복 요구하지 않는다. 실제 정상UI/기기 인수는 전체 기능섹션에 묶는다.
+실기기/실회원 수동인수는 전체 기능섹션에 묶는다: 기존 계정/개인표·검색/생성/일반참가·N특례/관리, 그룹2열필터·실제4/8인번호, 새사전표시/명시선택/개방미리보기·익일/KST/글자크기·스크롤, 주차별제출/다시가져오기·busy/겹침더보기·조율/제안/투표·재동의/예약·회원전환·06/10시·결과불명재시도. 설치/조작은 사용자가 하며 중간마다 반복 요청하지 않는다.
 
-후속 순서/완료 조건:
-1. **표시DTO/읽기·본문 연결:** data/cycle_session_display.dart 신규·cycle_interaction_repository.dart/cycle_management.dart의 해당GET opt-in/닫힌 확장·scope/prospective 검증/서명·continue 명시ID본문. 다른 관리/기존 opening []와 서버 권한은 보존한다.
-2. **기존 확인창 연결:** cycle_participation_widgets.dart/cycle_management_widgets.dart의 실제KST 구간/미정·선택과 그룹별 읽기 미리보기/none. cycle_participation_controller.dart는 첫 await 전 입력복사, 표시변경 POST차단/재확인·원pending/ACK를 보존한다. 새 Router/DI/영속저장·공용 API 변경은 없다.
-3. **기능섹션 최종검증·보관:** 신규 표시 DTO 시험 및 cycle_interaction_test/cycle_management_test/cycle_schedule_test를 한 번 묶고 변경Dart 분석/포맷·diff를 확인한다. 누락/null/불일치·최대64/시각 조합·prospective·권한/필수선택·continue 부분선택·입력변조/06시/회원변경·결과불명 원키/본문·원ACK를 보호한다. 기존 개인표/저장/인증/DI가 그대로면 무관 전체시험은 반복하지 않는다. 문서·같은Issue 적용SHA/결과회신·작업브랜치 commit/push까지 구간완료다. F6는 이 구현 범위 밖이며 후속으로 진행한다.
-
-이미 연결한 F5: 개인표 원본 intervals/source version 명시복사·다시가져오기, 실제T plan/익명 busy/본인겹침 명시페이지, 그룹편집/후보선택, 다중세션 변경안/대상별 정족수·1인별도응답·투표, 본인 session/schedule/participation/cycle_member CAS 확인/예약상태. 기존 상세의 일정 버튼을 사용하고 변경안 버튼은 직접 편집창에 연결한다. 조율 초기 자동확정/예약 가능성을 제출 확인창에 표시한다. 최초127건 묶음 통과 후 신규 경계3건을 보강해 일정27건 통과, 기존103건은 재사용한 고유130건이며 130건 단일실행이 아니다.
-
-미확인/제외: 정상로그인HTTP·실회원쓰기/기기 표시·실제 예약/경합/DB원자성·성능, 앱종료 후 관리/일정명령 영속복구, F6/통계19/서버·DB/키변경·기기 자동조작. 원본 개인표/저장스키마/인증/Router/DI와 과거7관계는 유지한다. 신규일정·F4/F3/F2·개인표 직접영향 시험을 사용했고 공유저장/인증/DI가 바뀌지 않아 무관한 전체시험은 반복하지 않았다.
-
-수동 인수는 전체 기능섹션에 묶는다: 기존 계정/개인표·검색/생성/일반참가·N특례/관리, 2열 필터·실제4/8인 번호, 주차별 제출/다시가져오기·익명 busy·겹침 더보기·후보/미제출·조율 정족수/자동확정·다중일정 제안/투표·미확인초록·재참가 재동의·본인 예약/계정i·회원전환·06/10시와 결과불명 재시도. 사용자 설치/조작이며 중간 반복시험을 요청하지 않는다.
+제외/미확인: 정상로그인HTTP·실회원쓰기/기기성능, BackendDB/HMAC·권한·정족수/예약경합/원자성 독립재현, 앱종료후관리pending영속복구, 통계19/서버·DB/키변경·운영배포/기기자동조작. 과거7관계·개인표원본/저장/인증은 보존한다. F5표시 최종시험은 새24/기존82의106이며 코드가 바뀌지 않으면 같은시험을 반복하지 않는다.
 
 ## 4. 디바이스 전 후속 순서와 협업
 

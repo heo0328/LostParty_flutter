@@ -6,6 +6,7 @@ import '../../account/domain/role_summary.dart';
 import '../../account/domain/server_registration_api.dart';
 import '../domain/backend_recruitment.dart';
 import 'cycle_read_repository.dart';
+import 'cycle_session_display.dart';
 
 const cycleManagementLabels = {
   'continue': '다음 주 참가',
@@ -172,8 +173,8 @@ class CycleManagementPreview {
         roleShape(
           data,
           opening
-              ? 'room_id source selection targets target_session_ids leadership context_token issued_at expires_at opening_effect permission conflicts prospective_room_cycle_id prospective_generation prospective_target_revision item_settings'
-              : 'room_id action source selection targets target_session_ids context_token issued_at expires_at permission conflicts',
+              ? 'room_id source selection targets target_session_ids leadership context_token issued_at expires_at opening_effect permission conflicts prospective_room_cycle_id prospective_generation prospective_target_revision item_settings session_display'
+              : 'room_id action source selection targets target_session_ids context_token issued_at expires_at permission conflicts session_display',
         );
         roleCheck(scope['phase'] == 'future');
         final src = roleMap(data['source']);
@@ -269,6 +270,19 @@ class CycleManagementPreview {
         for (final id in sessions) {
           roleId(id);
         }
+        roleCheck(sessions.isEmpty);
+        display = CycleSessionDisplay(data['session_display']);
+        final preview = opening && data['opening_effect'] != 'already_open';
+        display!.bind(
+          scope,
+          kind: preview
+              ? 'opening_preview'
+              : action == 'continue'
+              ? 'existing'
+              : 'none',
+          cycleId: preview ? data['prospective_room_cycle_id'] : null,
+          generation: preview ? data['prospective_generation'] : null,
+        );
         final conflicts = raidList(data['conflicts']);
         roleCheck(conflicts.length <= 5);
         for (final v in conflicts) {
@@ -395,6 +409,7 @@ class CycleManagementPreview {
   final String room, target, action;
   final Map<String, dynamic> wire, query;
   late final Map<String, dynamic> scope, data;
+  CycleSessionDisplay? display;
   late final List<String> affected;
   bool get global => {'common', 'leave', 'end'}.contains(action);
   bool get continuation => {'continue', 'decline'}.contains(action);
@@ -423,7 +438,9 @@ class CycleManagementPreview {
     'data': {
       for (final e in data.entries)
         if (!{'context_token', 'issued_at', 'expires_at'}.contains(e.key))
-          e.key: e.key == 'access'
+          e.key: e.key == 'session_display'
+              ? display!.wire
+              : e.key == 'access'
               ? {
                   for (final a in roleMap(e.value).entries)
                     if (a.key != 'evaluated_at') a.key: a.value,
@@ -477,10 +494,15 @@ class CycleManagementPreview {
     }
     if (continuation || opening) {
       if (action == 'decline') return base;
-      final sessions = raidList(data['target_session_ids']).cast<String>();
-      roleCheck(
-        (input['sessions'] as List? ?? []).toSet().containsAll(sessions),
-      );
+      final selected = raidList(input['sessions'] ?? <String>[]).cast<String>();
+      roleCheck(selected.toSet().length == selected.length);
+      final sessions = opening
+          ? <String>[]
+          : display!.selectedIds(
+              selected.toSet(),
+              roleUtc(scope['server_now']),
+            );
+      if (opening) roleCheck(selected.isEmpty);
       roleCheck(
         data['selection'] != null && raidList(data['targets']).isNotEmpty,
       );
@@ -676,6 +698,8 @@ class CycleManagementReader {
         if ({'continue', 'decline'}.contains(action))
           'action': action == 'continue' ? 'join' : 'decline',
         if ({'open', 'reopen'}.contains(action)) 'intent': action,
+        if ({'continue', 'decline', 'open', 'reopen'}.contains(action))
+          'include_session_display': 'true',
         ...query,
       },
     ))!;
