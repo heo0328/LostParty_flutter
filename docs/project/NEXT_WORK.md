@@ -36,7 +36,7 @@ F1/F2 완료 경과는 [DEV_LOG](DEV_LOG.md), F3 구현 경계는 설계37 §37.
 3. 일반 join/apply·승인/거절/본인 철회·캐릭터 변경을 실제T context/권한·CAS와 연결했다. 요구 세션도 사용자가 명시 선택하며 승인 대기는 좌석/i가 아니다. 캐릭터 변경 시에만 본인 plan에서 assignment revision을 읽는다.
 4. 앱 소유 불변 원키/본문·24h/Retry-After·원ACK의 room/T/세대 검증, 늦은응답/세션 격리. 성공/확정 거절 뒤 영향T의 검색·본인목록/계정summary를 갱신한다. C/N 생성은 ACK에 실제 포함된 두T 모두 갱신하며 이후 명령은 한T만 갱신한다. 신규 영속 outbox는 없다.
 
-**남은 F3 필수 항목:** [Backend 후보 계약 확인/보완 요청6336402066](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6336402066). filter-context는 member_ref/aliases/문자열 display만 있고 기존 그룹원 API는 대표만, room-member-projections는 명시 room_ids 참가자만 제공한다. 전체 활성 캐릭터의 권한 있는 후보 출처가 없다. Backend가 후보 UUID·대표명/캐릭터명/직업·역할/아이템레벨/역할별 전투력(nullable 출처)·context/ref와 권한 변경 경계를 인계하면, 그룹원별 최소2열 작은 카드와 그룹원 내부 아이템레벨 안정 정렬을 연결하고 이 계약 경계를 검증한다. 현재 요청에 대한 새 Backend 회신은 아직 없다. 이 항목을 해결하기 전 F4로 넘어가거나 F3 완료로 표기하지 않는다.
+**남은 F3 필수 항목:** [Backend 후보 계약 확인/보완 요청6336402066](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6336402066). filter-context는 member_ref/aliases/문자열 display만 있고 기존 그룹원 API는 대표만, room-member-projections는 명시 room_ids 참가자만 제공한다. 전체 활성 캐릭터의 권한 있는 후보 출처가 없다. Backend가 후보 UUID·대표명/캐릭터명/직업·역할/아이템레벨/역할별 전투력(nullable 출처)·context/ref와 권한 변경 경계를 인계하면, 그룹원별 최소2열 작은 카드와 그룹원 내부 아이템레벨 안정 정렬을 연결하고 이 계약 경계를 검증한다. Backend98 회신6337703638이 출처 부재를 확인했으며, Backend의 보완 계약 초안과 공개 범위 협의를 대기한다. 이 항목을 해결하기 전 F4로 넘어가거나 F3 완료로 표기하지 않는다.
 
 검증: 신규 F3 경계27 + F1 영향T 갱신1, 기존 직접영향86을 합친 **고유114PASS**. 최종 변경Dart17파일 분석0·포맷/diff검토. 구체 실행/fixture 수정은 DEV_LOG. 서버 DB 권한/경합·실기기 성공을 mock으로 대신하지 않는다. 호출 영향에 집중했고 저장/인증 정책 변경이 없어 전체 Flutter 시험은 반복하지 않았다.
 
@@ -48,7 +48,7 @@ F1/F2 완료 경과는 [DEV_LOG](DEV_LOG.md), F3 구현 경계는 설계37 §37.
 
 F1/F2 코드·자동검증 완료 후 F3목록·신규참가/신청/승인 → F4다음주특례·탈퇴/승계·위임/편성·공통관리 → F5일정/투표·확인/예약 → F6완료/정정·재개/통합. 세부완료조건·회귀는 설계37 §37.5~37.8, 기존사용자흐름/디자인은 §36이다. 단위별범위를고정하고정상UI디바이스시험을중간마다반복요청하지않는다.
 
-[F1 회신6335276652](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6335276652)·[F2 회신6335852339](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6335852339)은 게시본문 재조회 일치를 확인했다. F3는 [후보 계약 요청](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6336402066)의 답변을 대기하고, 독립 구현 결과/실제 원격 커밋·검증/실제 HTTP·기기 미확인을 같은 Issue13에 회신한다. 실서버 준비 완료 보고를 다시 대기로 돌리거나 이미 완료한 시험을 반복 요청하지 않는다.
+[F1 회신6335276652](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6335276652)·[F2 회신6335852339](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6335852339)·F3 결과6337065372의 게시본문 재조회 일치를 확인했다. [Backend 전체98번째6337703638](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6337703638)은 기존 후보 출처 부재를 확인했고 Backend가 보완 계약을 작성한다. 기존 전체 roster 비공개 경계와 달라지는 공개 범위는 계약 초안에서 명시·협의하며 이번 수신만으로 신규 공개 권한을 승인하지 않는다. 현재 서버/계약0.4.1/policy4 유지, 새 경로/DTO·소비 SHA는 아직 없다. 대기는 단순 답변 대기에서 Backend 후보 계약 초안/공개 범위 협의 대기로 갱신한다. 실서버 준비 완료 보고를 다시 대기로 돌리거나 이미 완료한 시험을 반복 요청하지 않는다.
 
 ## 5. 기존 구현과 인수 보존
 
