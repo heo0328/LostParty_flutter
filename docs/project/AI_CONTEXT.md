@@ -14,6 +14,8 @@
 
 ## 구현·디자인·협업 상태
 
+F3 후보 구현f628740은 원격 작업 브랜치 일치 확인, [결과6340688138](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6340688138) 인계/본문 재조회일치 완료다. dev 미반영·브랜치 유지, 실제 인수와 F4~F6는 남는다.
+
 | 구분 | 현재 상태 |
 |---|---|
 | 커밋 기반 | feature/raid-recruitment-scheduling에 선행 v1복구17f8675·F1 af9e9d3·F2 e42f780·F3 독립 구현121fad3을 보관/원격일치 확인. [F3 결과6337065372](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6337065372) 본문 재조회일치. dev6d3f617 미반영·브랜치 유지, 최종문서SHA는 Git 참조 |

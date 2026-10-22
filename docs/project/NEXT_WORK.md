@@ -28,6 +28,8 @@
 
 ## 3. 다음 독립 구간 F4 — 다음주 참가·주차별 관리
 
+F3 후보 구현f6287404afd6273218255037c6cb4e419fb0313e을 작업 브랜치에 푸시하고 원격 SHA 일치를 확인했다. [Flutter 결과6340688138](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6340688138)에 사용계약·구현/검증·실서버/기기 미확인과 다음F4를 전달하고 게시본문 재조회 일치를 확인했다.
+
 F3 후보 연결 결과는 [DEV_LOG](DEV_LOG.md), 장기 경계는 설계37 §37.13이다. [Backend104 인계](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6340348412)의0afd87932ab9b89a5d0976cf634daa5d6ef5a408·실제168경로를 소비했다. 후보GET/optional 검색token·회원별2열·레벨순/명시더보기·최대1회 stale 재검증을 연결했다. 후보21+기존 F3 27, 고유48PASS·변경Dart7파일 분석0이다. 기존 전체114건을 이번47건과 합산해 새 전체시험 수로 보고하지 않는다. 계약 초안/선택 재검증 대기는 해소됐으며 Backend 구현을 다시 요청하지 않는다.
 
 다음 F4 목표/포함:
