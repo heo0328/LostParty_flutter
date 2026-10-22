@@ -263,6 +263,21 @@ void main() {
       ),
     );
   });
+  test(
+    'mutation refresh reads only affected actual T without moving selected account week',
+    () async {
+      await weekly.refresh();
+      final before = calls.length;
+      await weekly.refreshTarget(next);
+      final summaries = calls
+          .skip(before)
+          .where((r) => r.path == '/v2/me/raid-weekly-summary')
+          .toList();
+      expect(summaries.length, 1);
+      expect((summaries.single.data as Map)['target_cycle_keys'], [next]);
+      expect(weekly.selectedCycleKey, current);
+    },
+  );
   tearDown(() async {
     weekly.dispose();
     model.dispose();

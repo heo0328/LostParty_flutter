@@ -50,6 +50,9 @@ import '../features/settings/presentation/pages/settings_page.dart';
 import '../features/recruitment_list/data/repositories/pending_backend_party_read_repository.dart';
 import '../features/recruitment_list/presentation/pages/recruitment_list_page.dart';
 import '../features/recruitment_list/data/backend_recruitment_repository.dart';
+import '../features/recruitment_list/data/cycle_interaction_repository.dart';
+import '../features/recruitment_list/presentation/pages/cycle_recruitment_list_page.dart';
+import '../features/recruitment_list/presentation/viewmodels/cycle_participation_controller.dart';
 import '../features/recruitment_list/data/cycle_read_repository.dart';
 import '../features/recruitment_list/presentation/pages/cycle_own_rooms_page.dart';
 import '../features/recruitment_list/presentation/pages/backend_recruitment_create_page.dart';
@@ -106,6 +109,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
   BackendAccountLifecycle? _accountLifecycle;
   BackendMemberAccount? _memberAccount;
   BackendRecruitmentCreateViewModel? _recruitmentCreate;
+  CycleParticipationController? _participation;
   final _managementGateways =
       <(String, String, int, String), ScopedCharacterManagementGateway>{};
   GoRouter? _router;
@@ -414,6 +418,19 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       raids: MemberRaidClient(accountApi),
       twoCycleEnabled: true,
     );
+    final cycleInteractions = CycleInteractionRepository(
+      api: accountApi,
+      recruitment: recruitmentGateway,
+    );
+    final participation = _participation = CycleParticipationController(
+      gateway: cycleInteractions,
+      session: readSession,
+      changes: _memberAccount?.model ?? auth,
+      scopeKey: cycleScopeKey,
+      onMutation: (t) async {
+        await _memberAccount?.weekly?.refreshTarget(t);
+      },
+    );
     final recruitmentCreate = _recruitmentCreate =
         BackendRecruitmentCreateViewModel(
           gateway: recruitmentGateway,
@@ -490,6 +507,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                       ? pending('레이드 현황')
                       : CycleOwnRoomsPage(
                           weekly: _memberAccount!.weekly!,
+                          mutations: participation,
                           repository: cycleReads,
                           scopeKey: cycleScopeKey,
                           onLogin: () => showLoginRequired(context, auth),
@@ -638,19 +656,37 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
               routes: [
                 GoRoute(
                   path: '/recruitments',
-                  builder: (_, _) => RecruitmentListPage(
-                    partyReadRepository: PendingBackendPartyReadRepository(),
-                    backendConnectionPending: true,
-                    cycleKey: _cycle!.current.key,
-                    currentPlayerId: '',
-                    accountDatabase: _database,
-                    raidCatalogRepository: raidCatalog,
-                  ),
+                  builder: (context, _) => readSession.isAuthenticated
+                      ? CycleRecruitmentListPage(
+                          gateway: cycleInteractions,
+                          session: readSession,
+                          changes: _memberAccount?.model ?? auth,
+                          scopeKey: cycleScopeKey,
+                          mutations: participation,
+                          onRoom: (id, t) => context.push(
+                            '/recruitments/$id?target_cycle_key=$t',
+                          ),
+                          onCreate: (t) => context.push(
+                            '/recruitments/create${t == null ? '' : '?target_cycle_key=$t'}',
+                          ),
+                          onLogin: () => showLoginRequired(context, auth),
+                        )
+                      : RecruitmentListPage(
+                          partyReadRepository:
+                              PendingBackendPartyReadRepository(),
+                          backendConnectionPending: true,
+                          cycleKey: _cycle!.current.key,
+                          currentPlayerId: '',
+                          accountDatabase: _database,
+                          raidCatalogRepository: raidCatalog,
+                        ),
                   routes: [
                     GoRoute(
                       path: 'create',
                       builder: (context, state) => BackendRecruitmentCreatePage(
                         model: recruitmentCreate,
+                        onCreated: (id, t) =>
+                            unawaited(participation.changed(id, t)),
                         initialTarget:
                             state.uri.queryParameters['target_cycle_key'],
                         onLogin: () => showLoginRequired(context, auth),
@@ -667,6 +703,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                         accessChanges: _memberAccount?.model ?? auth,
                         scopeKey: cycleScopeKey,
                         gateway: recruitmentGateway,
+                        participation: participation,
                         session: readSession,
                         roomId: state.pathParameters['recruitmentId']!,
                         onLogin: () => showLoginRequired(context, auth),
@@ -802,6 +839,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     _entryGate.removeListener(_entryReady);
     _entryGate.dispose();
     _recruitmentCreate?.dispose();
+    _participation?.dispose();
     _memberAccount?.dispose();
     _ownership?.dispose();
     unawaited(_accountLifecycle?.close());

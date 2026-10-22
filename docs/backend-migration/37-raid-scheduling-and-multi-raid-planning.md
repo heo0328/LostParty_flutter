@@ -1299,3 +1299,16 @@ Draft 실제T/함께하기를 selectionSignature에 포함하고 대상 전환 �
 상세는 기존 카드/조건·일정/파티 구성 위치를 유지하고 C/N·실제 날짜·대상 인원/캐릭터·공대장과 formation_slots 근거를 소비한다. 실제 자리4인1~4/8인1-1~2-4, 근거가 없거나 묶음별 자리가 다르면 자리 미정이며 이름 첫글자를 자리처럼 사용하지 않는다. private plan은 자동 조회하지 않고 N탭에서 C+14 함께하기가 열린 것처럼 안내하지 않는다. 신규 참가/승인·위임·탈퇴/편성쓰기·일정/완료는 F3~F6에 남아 있다.
 
 검증은 신규17/기존 직접영향78 고유95PASS·변경10파일 분석0·포맷/diff 검사다. 첫 섹션93건 중 신규 재시도 시계fixture가6일을 건너24h제한을 넘긴1건 실패를 경계 전후3시간대로 수정했고 신규17건 재실행 통과, 기존78은 코드 영향이 없는 범위에서 재사용했다. 서버 원자성/멱등/권한 DB시험이나 실제 로그인 HTTP/실회원 생성·실기기 화면 인수로 확대하지 않는다. 다음은 F3이며 정확한 계획/보류는 NEXT_WORK, 완료경과와 Git/회신은 DEV_LOG를 따른다.
+
+
+### 37.11 F3 독립 구현 부분과 남은 후보 계약 — 2026-10-22
+
+인증 목록 DI는 CycleInteractionRepository/CycleSearchViewModel로 실제T의 읽기 POST `/v2/raid-rooms/search`를 소비한다(멱등키 없음). category/scope·group_ids/member_conditions·레이드/난이도/숙련도 OR·참가인원 sort·남은자리 OR를 서버 페이지 전에 보낸다. 20개 첫페이지/명시 더보기, scope/digest/cursor 루프·중복/늦은응답과 회원/실제T별 캐시를 검증한다. 인라인 작은 필터·문구 터치 정렬과 기존 카드/색감을 유지하고 서버 순서를 로컬에서 재정렬하지 않는다. 목록에서 선택한 실제T를 생성/상세로 전달한다.
+
+앱 소유 CycleParticipationController는 admission-context의 선택/권한·회차/세대/원장·session_choices와 기한을 검증한다. 필수 세션도 명시 동의 후 join/applications/character-changes를 보낸다. 캐릭터 변경 진입 때만 본인 plan의 assignment/cycle_member revision을 읽는다. approval/reject는 최신 BReview와 같은T 상세의 members/plan/leadership revision을 대조하고, withdraw는 본인 ApplicationView/scope를 쓴다. 신청 확인은 출처 room과 실제T에 묶고 이미 처리됨/권한없음을 안내한다. 승인은 확정 참가, 대기는 좌석/i가 아니다.
+
+불변 path/body/key·발급scope/시간은 앱 수명 메모리에 보관한다. 네트워크/5xx·잘못된 ACK는 원요청을 유지하고 24h·Retry-After 이후 동일 요청만 재전송한다. ACK room/T/command/회차·세대 불일치를 성공으로 보지 않는다. 성공·확정 거절은 영향T만 목록/계정 summary를 갱신하며, 생성 ACK의 C/N 실제 생성 목록은 두T 모두 갱신한다. 다른 주차의 참가/예약/완료를 변경하지 않으며 새 영속 outbox는 없다.
+
+그룹 다중 선택/공개범위 및 단일 그룹 context의 대표명/member_ref 필터는 연결했다. **그룹원 전체 캐릭터 후보는 미구현**이다. 실행 filter-context는 member_ref/aliases/display만, 기존 그룹원 조회는 대표만, 방별 projections는 지정 방 참가자만 제공하므로 전체 후보를 조립할 출처가 없다. [Backend 요청6336402066](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6336402066)에 후보 UUID/표시/레벨·역할 전투력 출처/context·권한 경계를 요청했다. 허가된 계약 확보 후 그룹원별2열 작은 카드·각 그룹원 내부 아이템레벨 안정 정렬을 연결해야 F3를 마감할 수 있다. 읽은 방 페이지/로컬 PlayerId/가상 데이터로 대체하지 않는다.
+
+자동검증은 신규28(상호작용27/영향T summary1)+기존 직접영향86, 고유114PASS·변경Dart17파일 분석0이다. 실제 서버 권한/원자성·정상인증HTTP/실회원 쓰기·디바이스 표시/성능은 미확인이다. F4 N특례·탈퇴/승계·위임/관리, F5 일정/예약, F6 완료는 이번 구현에 없다. 현재 실행/대기와 회귀·Git/회신은 NEXT_WORK/DEV_LOG를 따른다.

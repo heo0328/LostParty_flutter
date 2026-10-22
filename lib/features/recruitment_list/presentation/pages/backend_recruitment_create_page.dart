@@ -17,11 +17,13 @@ class BackendRecruitmentCreatePage extends StatefulWidget {
     required this.model,
     required this.onLogin,
     this.initialTarget,
+    this.onCreated,
     super.key,
   });
   final BackendRecruitmentCreateViewModel model;
   final VoidCallback onLogin;
   final String? initialTarget;
+  final void Function(String, String)? onCreated;
   @override
   State<BackendRecruitmentCreatePage> createState() =>
       _BackendRecruitmentCreatePageState();
@@ -56,6 +58,9 @@ class _BackendRecruitmentCreatePageState
     final id = m.createdRoomId;
     if (id != null && _opened != id) {
       _opened = id;
+      for (final target in m.createdTargetKeys) {
+        widget.onCreated?.call(id, target);
+      }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && m.createdRoomId == id) {
           context.pushReplacement(

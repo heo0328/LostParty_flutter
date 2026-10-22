@@ -5,6 +5,8 @@ import '../../../account/presentation/widgets/member_cycle_selector.dart';
 import '../../data/cycle_read_repository.dart';
 import '../viewmodels/cycle_read_view_model.dart';
 import '../widgets/recruitment_section.dart';
+import '../viewmodels/cycle_participation_controller.dart';
+import '../widgets/cycle_participation_widgets.dart';
 
 String cycleReadFailure(String? code) => switch (code) {
   'TARGET_NOT_OPEN' => '이 주차에는 열린 모집이 없습니다.',
@@ -22,9 +24,11 @@ class CycleOwnRoomsPage extends StatefulWidget {
     required this.scopeKey,
     required this.onLogin,
     required this.onRoom,
+    this.mutations,
     super.key,
   });
   final MemberWeeklyViewModel weekly;
+  final CycleParticipationController? mutations;
   final CycleReadRepository repository;
   final String Function() scopeKey;
   final VoidCallback onLogin;
@@ -35,6 +39,7 @@ class CycleOwnRoomsPage extends StatefulWidget {
 
 class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
   late final CycleReadViewModel m;
+  int _mutationVersion = 0;
   @override
   void initState() {
     super.initState();
@@ -45,7 +50,16 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
           '${widget.scopeKey()}/${widget.weekly.cycles?.current.key}',
     );
     widget.weekly.addListener(_meta);
+    _mutationVersion = widget.mutations?.mutationVersion ?? 0;
+    widget.mutations?.addListener(_mutated);
     _meta();
+  }
+
+  void _mutated() {
+    final c = widget.mutations!;
+    if (c.mutationVersion == _mutationVersion) return;
+    _mutationVersion = c.mutationVersion;
+    if (c.lastTarget != null) m.invalidateTarget(c.lastTarget!);
   }
 
   void _meta() {
@@ -58,6 +72,7 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
   @override
   void dispose() {
     widget.weekly.removeListener(_meta);
+    widget.mutations?.removeListener(_mutated);
     m.dispose();
     super.dispose();
   }
@@ -132,6 +147,8 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
                       padding: EdgeInsets.all(24),
                       child: Text('표시할 내역이 없습니다.', textAlign: TextAlign.center),
                     ),
+                  if (widget.mutations != null)
+                    CycleCommandBanner(controller: widget.mutations!),
                   for (final row in m.rows)
                     Card(
                       child: ListTile(
@@ -152,7 +169,27 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
                               ? '미완료 종료'
                               : '${row.card?.count ?? 0}/${row.card?.capacity ?? 0}명',
                         ),
-                        trailing: row.canView
+                        trailing:
+                            m.tab == 1 &&
+                                row.state == 'pending' &&
+                                widget.mutations != null
+                            ? ListenableBuilder(
+                                listenable: widget.mutations!,
+                                builder: (context, _) => TextButton(
+                                  onPressed: widget.mutations!.canAct
+                                      ? () => showCycleApplicationDecision(
+                                          context,
+                                          widget.mutations!,
+                                          row.id,
+                                          m.target!,
+                                          'withdraw',
+                                          room: row.roomId,
+                                        )
+                                      : null,
+                                  child: const Text('신청 철회'),
+                                ),
+                              )
+                            : row.canView
                             ? const Icon(Icons.chevron_right)
                             : null,
                         onTap: row.canView

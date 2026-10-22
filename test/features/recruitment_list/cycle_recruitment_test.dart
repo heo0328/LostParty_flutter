@@ -247,6 +247,7 @@ void main() {
       );
       expect(body['continuation'].containsKey('auto_open_enabled'), false);
       expect(model.createdTargetKey, c);
+      expect(model.createdTargetKeys, [c, n]);
       expect(model.createdRoomId, v1.roomId);
       await model.activate(target: n);
       expect(model.draft.targetCycleKey, n);
@@ -258,6 +259,7 @@ void main() {
         'next_selection': null,
       });
       expect(model.createdTargetKey, n);
+      expect(model.createdTargetKeys, [n]);
     },
   );
   test(

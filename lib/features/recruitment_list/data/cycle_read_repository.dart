@@ -108,6 +108,7 @@ class CycleRoomCard {
 class CycleOwnRow {
   CycleOwnRow(Map<String, dynamic> j, String target, bool application) {
     if (application) {
+      applicationData = Map.unmodifiable(j);
       roleShape(
         j,
         'application_id room_id revision state created_at expires_at ended_at character_id selected_role display admission_origin target_cycle_key target_generation',
@@ -177,6 +178,7 @@ class CycleOwnRow {
     state = raidText(j['state']);
   }
   late final String id, roomId, state;
+  Map<String, dynamic>? applicationData;
   String? participationState;
   CycleRoomCard? card;
   late final bool canView;

@@ -10,6 +10,8 @@ import '../../domain/backend_recruitment.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
 import '../viewmodels/backend_recruitment_detail_view_model.dart';
 import '../widgets/recruitment_section.dart';
+import '../viewmodels/cycle_participation_controller.dart';
+import '../widgets/cycle_participation_widgets.dart';
 
 class BackendRecruitmentDetailPage extends StatefulWidget {
   const BackendRecruitmentDetailPage({
@@ -21,12 +23,14 @@ class BackendRecruitmentDetailPage extends StatefulWidget {
     this.target,
     this.accessChanges,
     this.scopeKey,
+    this.participation,
     super.key,
   });
   final RecruitmentGateway gateway;
   final AccountReadSession session;
   final String roomId;
   final String? target;
+  final CycleParticipationController? participation;
   final Listenable? accessChanges;
   final String Function()? scopeKey;
   final VoidCallback onLogin, onCreateAnother;
@@ -39,6 +43,7 @@ class _BackendRecruitmentDetailPageState
     extends State<BackendRecruitmentDetailPage>
     with WidgetsBindingObserver {
   late final BackendRecruitmentDetailViewModel m;
+  int _mutationVersion = 0;
   @override
   void initState() {
     super.initState();
@@ -51,12 +56,24 @@ class _BackendRecruitmentDetailPageState
       accessChanges: widget.accessChanges,
       scopeKey: widget.scopeKey,
     );
+    _mutationVersion = widget.participation?.mutationVersion ?? 0;
+    widget.participation?.addListener(_changed);
     unawaited(m.load());
+  }
+
+  void _changed() {
+    final c = widget.participation!;
+    if (c.mutationVersion == _mutationVersion) return;
+    _mutationVersion = c.mutationVersion;
+    if (c.lastRoom == widget.roomId && c.lastTarget == m.target) {
+      unawaited(m.load());
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    widget.participation?.removeListener(_changed);
     m.dispose();
     super.dispose();
   }
@@ -211,6 +228,60 @@ class _BackendRecruitmentDetailPageState
             ),
           ],
         ),
+        if (widget.participation != null) ...[
+          CycleCommandBanner(controller: widget.participation!),
+          ListenableBuilder(
+            listenable: widget.participation!,
+            builder: (context, _) => Wrap(
+              spacing: 8,
+              children: [
+                if (room['my_target_role'] == 'none')
+                  FilledButton(
+                    onPressed: widget.participation!.canAct
+                        ? () => showCycleAdmission(
+                            context,
+                            widget.participation!,
+                            room: widget.roomId,
+                            target: m.target!,
+                            intent: room['admission_mode'] == 'direct_join'
+                                ? 'join'
+                                : 'apply',
+                          )
+                        : null,
+                    child: Text(
+                      room['admission_mode'] == 'direct_join'
+                          ? '바로 참가'
+                          : '참가 신청',
+                    ),
+                  ),
+                if ({'leader', 'member'}.contains(room['my_target_role']))
+                  TextButton(
+                    onPressed: widget.participation!.canAct
+                        ? () => showCycleAdmission(
+                            context,
+                            widget.participation!,
+                            room: widget.roomId,
+                            target: m.target!,
+                            intent: 'change_character',
+                          )
+                        : null,
+                    child: const Text('내 캐릭터 변경'),
+                  ),
+              ],
+            ),
+          ),
+          if (room['my_target_role'] == 'leader')
+            CycleRoomApplications(
+              key: ValueKey((
+                widget.roomId,
+                m.target,
+                room['target_generation'],
+              )),
+              controller: widget.participation!,
+              room: widget.roomId,
+              target: m.target!,
+            ),
+        ],
         RecruitmentSection(
           title: m.target == null ? '이번 주 진행 일정' : '선택 주차 진행 일정',
           children: [
@@ -270,7 +341,7 @@ class _BackendRecruitmentDetailPageState
               spacing: 8,
               children: [
                 TextButton(onPressed: null, child: Text('일정 변경안')),
-                TextButton(onPressed: null, child: Text('내 캐릭터 변경')),
+
                 TextButton(onPressed: null, child: Text('레이드 완료')),
               ],
             ),

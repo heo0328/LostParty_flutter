@@ -47,6 +47,7 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
   Timer? _cycleTimer;
   bool _readingMeta = false;
   String? createdTargetKey;
+  List<String> createdTargetKeys = const [];
   CycleRecruitmentGateway? get cycleGateway =>
       gateway is CycleRecruitmentGateway &&
           (gateway as CycleRecruitmentGateway).twoCycleEnabled
@@ -298,6 +299,7 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     cycles = null;
     _metaReceived = null;
     createdTargetKey = null;
+    createdTargetKeys = const [];
     catalog = null;
     characters = [];
     groups = [];
@@ -577,6 +579,10 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
         }
       }
       createdTargetKey = ack.targetKey;
+      createdTargetKeys = List.unmodifiable(
+        ack.created?.map((v) => v['target_cycle_key'] as String) ??
+            (ack.targetKey == null ? <String>[] : [ack.targetKey!]),
+      );
       createdRoomId = ack.roomId;
       _pending = null;
       selection = null;
@@ -693,6 +699,7 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     _retryAt = null;
     createdRoomId = null;
     createdTargetKey = null;
+    createdTargetKeys = const [];
     draft = RecruitmentDraft();
     selection = null;
     characters = [];
@@ -726,6 +733,15 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
 }
 
 String recruitmentFailureMessage(String? code) => switch (code) {
+  'ROOM_FULL' ||
+  'PARTY_FULL' ||
+  'ROLE_CAPACITY_EXCEEDED' => '참가할 자리가 없습니다. 최신 구성을 확인해 주세요.',
+  'APPLICATION_STATE_CHANGED' ||
+  'APPLICATION_NOT_PENDING' => '신청 상태가 변경되었습니다. 다시 확인해 주세요.',
+  'SESSION_SELECTION_REQUIRED' => '참가할 필수 일정을 선택해 주세요.',
+  'CURSOR_STALE' ||
+  'FILTER_CONTEXT_STALE' => '목록이나 그룹 정보가 변경되었습니다. 다시 불러와 주세요.',
+  'PERMISSION_DENIED' || 'ROOM_LEADER_REQUIRED' => '현재 이 작업을 진행할 권한이 없습니다.',
   'CLIENT_UPGRADE_REQUIRED' => '이전 생성 요청은 다시 전송해 결과를 확인해 주세요.',
   'TARGET_CYCLE_OUT_OF_RANGE' => '대상 주차가 바뀌었습니다. 주차를 다시 선택해 주세요.',
   'TARGET_NOT_OPEN' => '이 주차에는 열린 모집이 없습니다.',

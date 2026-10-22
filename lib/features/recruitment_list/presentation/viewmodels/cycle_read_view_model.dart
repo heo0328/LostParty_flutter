@@ -48,6 +48,16 @@ class CycleReadViewModel extends ChangeNotifier {
     if (signedIn && target != null) unawaited(load());
   }
 
+  void invalidateTarget(String t) {
+    _pages.removeWhere((k, _) => k.$1 == t);
+    if (target == t) {
+      _epoch++;
+      loading = false;
+      _cursors.clear();
+      unawaited(load());
+    }
+  }
+
   void select(String t, {int section = 0}) {
     if (target == t && tab == section) return;
     _epoch++;

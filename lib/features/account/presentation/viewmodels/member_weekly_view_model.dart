@@ -110,6 +110,15 @@ class MemberWeeklyViewModel extends ChangeNotifier {
   MemberCycles? cycles;
   String? _selectedCycle;
   final Map<String, Map<String, MemberWeeklyEntry>> _cycleEntries = {};
+  final _targetRefreshes = <String, int>{};
+  int _targetRefreshVersion = 0;
+  Future<void> refreshTarget(String target) {
+    if (_disposed || !model.signedIn) return Future.value();
+    raidCycleKey(target);
+    _targetRefreshes[target] = ++_targetRefreshVersion;
+    return refresh();
+  }
+
   String? get selectedCycleKey => _selectedCycle ?? cycles?.current.key;
   bool get selectedIsCurrent => selectedCycleKey == cycles?.current.key;
   void selectCycle(String key) {
@@ -237,6 +246,7 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       _signatureBootstrap = null;
       _entries = {};
       _cycleEntries.clear();
+      _targetRefreshes.clear();
       cycles = null;
       _selectedCycle = null;
       _display = {};
@@ -536,12 +546,18 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     final meta = await client.cycles();
     guard();
     final selected = meta.find(selectedCycleKey ?? '')?.key ?? meta.current.key;
+    final requested = Map<String, int>.of(_targetRefreshes);
+    final changedTargets = requested.keys
+        .where((t) => meta.find(t) != null)
+        .toList();
     final targets =
         _cycleEntries.isEmpty ||
             cycles?.current.key != meta.current.key ||
             cycles?.current.permissions['complete']?.allowed !=
                 meta.current.permissions['complete']?.allowed
         ? meta.values.map((v) => v.key).toList()
+        : changedTargets.isNotEmpty
+        ? changedTargets
         : [selected];
     final received = now().toUtc();
     final values = {for (final t in targets) t: <String, MemberWeeklyEntry>{}};
@@ -598,6 +614,10 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     _selectedCycle = meta.find(_selectedCycle ?? '')?.key ?? selected;
     _cycleEntries.removeWhere((k, _) => meta.find(k) == null);
     _cycleEntries.addAll(values);
+    for (final t in targets) {
+      if (_targetRefreshes[t] == requested[t]) _targetRefreshes.remove(t);
+    }
+    _targetRefreshes.removeWhere((t, _) => meta.find(t) == null);
     if (!_cycleEntries.containsKey(selectedCycleKey)) _refreshAgain = true;
     _entries = _cycleEntries[meta.current.key] ?? {};
     cycle = meta.legacyCurrent;

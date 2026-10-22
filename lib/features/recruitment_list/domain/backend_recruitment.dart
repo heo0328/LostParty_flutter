@@ -581,8 +581,8 @@ class BackendRecruitmentDetail {
     memberCount = raidNonnegative(room['app_member_count']);
     roleCheck({4, 8}.contains(capacity) && memberCount <= capacity);
     raidCycleKey(room['cycle_key']);
-    rolePositive(json['members_revision']);
-    rolePositive(json['plan_revision']);
+    membersRevision = rolePositive(json['members_revision']);
+    planRevision = rolePositive(json['plan_revision']);
     members = List.unmodifiable(
       raidList(json['members']).map((raw) {
         final m = roleMap(raw);
@@ -624,6 +624,7 @@ class BackendRecruitmentDetail {
   late final Map<String, dynamic> room;
   late final String title;
   late final int capacity, memberCount;
+  late final int membersRevision, planRevision;
   late final List<Map<String, dynamic>> members;
   late final List<DateTime> starts;
 }
