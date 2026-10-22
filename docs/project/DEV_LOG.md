@@ -8,6 +8,7 @@
 - 상태/다음: Backend5cf76f1은 로컬·미push/API미구현이다. Backend 경로정정 → 구현/격리검증 → push·개발 실행 OpenAPI/소비SHA 인계 후 Flutter 후속을 진행한다. 현재0afd879/168경로와 F5 독립 구현을 유지하며 F6/실제 인수는 미완료다. 같은Issue에 실질 소비검토/정정사항과 다음 담당을 회신한다.
 - 검증: 직접 JSON 파싱·8개 정의의 닫힌객체 선언/로컬ref 해소·11합성예시 존재 확인, 실제 router/Flutter 경로 및 diff/content 검토다. Backend 보고의 전체Schema/11거절fixture를 독립 재현한 것은 아니다. 선택 검증 도구의 jsonschema 모듈 부재·PowerShell 인라인 인용 실패 뒤 저장된 Python 구조검사로 범위를 제한했다. 기능코드 변경이 없어 Flutter 시험을 반복하지 않았다.
 - 새로 가능해진 앱 흐름 없음. 보존 확인: 기존 F4/F5 코드·검증 기록/원명령·무관dirty 유지. 미확인: 정상인증HTTP/실회원·기기/새계약 서버권한·DB/성능 전부. 문서만 작업브랜치 commit/push, dev 미병합·브랜치 유지다.
+- 인계 마감: 검토문서a0ff9a9 commit/push 후 [Flutter 소비검토6344221859](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6344221859)에 두 경로 정정·수용 경계/검증 한계·다음 Backend 담당을 회신하고 게시본문을 재조회해 원문 일치를 확인했다. 링크 마감도 같은 브랜치에 보관한다.
 
 ## 2026-10-22 — Backend108 사전 참가 표시 메타 요청접수 확인
 

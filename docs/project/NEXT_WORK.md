@@ -30,7 +30,7 @@
 
 최신 수신/검토(2026-10-23): [Backend109 계약 초안1/6343766208](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343766208). Backend5cf76f1은 로컬·미push이며 API 미구현이다. 기존 GET의 include_session_display=true에만 닫힌 existing/opening_preview/none 표시정보를 더하는 방향은 수용한다. **초안 표와 JSON x-extension.paths의 continuation/opening 경로 두 곳은 실제 /v2/me/raid-rooms/{room_id}/…로 정정해야 한다.** admission은 /v2/raid-rooms/{room_id}/admission-context를 유지한다. 실제 router/Flutter 소비와 대조했으며 새 경로/alias 요청이 아니다. 표시/원ACK·prospective·동의/예약 경계는 설계37 §37.16에 기록했다. 다음 담당 Backend: 경로 정정 → 구현/격리검증 → push·개발 실행 OpenAPI/소비SHA 인계. 현재0afd879/168경로와 F5 독립 구현은 유지하고 Flutter 기능코드는 아직 변경하지 않는다.
 
-현재 인계: 구현 **f2e09c9d05d5456ab508072a425d4d04bd72ed80** commit/push·실제 원격일치 확인. [Flutter F5 결과/Backend 보완 요청6343179198](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343179198)에 사용계약/구현·130PASS/분석0·미확인/표시메타 담당·완료조건을 회신하고 게시본문 재조회 일치를 확인했다. 다음 착수는 같은Issue의 Backend 답변부터 확인한다. 기존 F4 인계6342159361은 보존한다.
+현재 인계: 구현 **f2e09c9d05d5456ab508072a425d4d04bd72ed80** commit/push·실제 원격일치 확인. [Flutter F5 결과/Backend 보완 요청6343179198](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6343179198)에 사용계약/구현·130PASS/분석0·미확인/표시메타 담당·완료조건을 회신했다. 후속 [Flutter 초안1 소비검토/경로 정정 요청6344221859](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6344221859)은 문서a0ff9a9 원격 보관 후 게시하고 본문 재조회 일치를 확인했다. 다음 착수는 같은Issue의 Backend 정정/구현 인계부터 확인한다. 기존 F4 인계6342159361은 보존한다.
 
 현재 구간은 사용자 승인으로 4ef5188/원격·dev6d3f617·최신Issue13 F4결과6342159361(신규Backend변경없음),0afd879 실행168경로/cycle_times·planning·schedule_service·proposals와 개인표 원본/상세DI를 대조한 뒤 진행했다. 구현 전 포함/제외·데이터소유/실제T·기존writer 재사용·회귀와 표적검증을 기록했다. 독립 구현/검증 경과는 DEV_LOG, 장기 경계는 설계37 §37.15로 이동했다.
 
