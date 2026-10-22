@@ -30,6 +30,8 @@
 
 현재근거: [Backend112/6345290060](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345290060)의 고정소비07c2b671/168경로 및 [Flutter113 확인6345378281](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345378281). 사전표시/선택 구현은 설계37 §37.18·DEV_LOG에 마감했다. Backend 보완 대기는 없고 실제 차이가 있을 때만 같은Issue에 근거를 회신한다. 표시계약 수용/기존시험을 다시 요청하지 않는다.
 
+현재 인계: 구현1a909e7 commit/push·원격일치 확인, [Flutter F5 사전표시 결과6345894901](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345894901)에 소비/구현SHA·106mock/분석0·미확인·다음담당을 회신하고 게시본문 재조회 일치를 확인했다. dev통합/실제인수 완료가 아니며 다음 착수 때 최신Issue13부터 확인한다.
+
 다음 작업은 설계37 §36/§37.5~37.8의 F6를 실제API/코드와 먼저 대조하는 것이다. 이번 F5 승인으로 F6 코드까지 구현하지 않는다.
 
 1. 최신Issue13/고정소비의 완료·정정·선택T 미완료종료/재개 context·write/권한·CAS·원ACK와 기존 계정 수동완료/원pending 경로를 조사한다. 실제 Router/DI/호출자·계정summary/상세·일정/예약의 영향 범위를 먼저 기록한다.
