@@ -11,6 +11,7 @@ import '../viewmodels/cycle_search_view_model.dart';
 import '../viewmodels/cycle_participation_controller.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
 import '../widgets/cycle_participation_widgets.dart';
+import '../widgets/group_candidate_filter.dart';
 
 class CycleRecruitmentListPage extends StatefulWidget {
   const CycleRecruitmentListPage({
@@ -252,34 +253,8 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
                                     recruitmentFailureMessage(m.groupFailure),
                                     style: const TextStyle(fontSize: 11),
                                   ),
-                                if (m.groupContext != null) ...[
-                                  const Text(
-                                    '그룹원 · 대표 캐릭터',
-                                    style: TextStyle(fontSize: 11),
-                                  ),
-                                  chips<String>(
-                                    {
-                                      for (final member
-                                          in m.groupContext!.members)
-                                        member['member_ref'] as String:
-                                            ((member['display']
-                                                        as Map?)?['character_name'] ??
-                                                    (member['display']
-                                                        as Map?)?['representative_character_name'] ??
-                                                    '대표 캐릭터 미설정')
-                                                as String,
-                                    },
-                                    m.filter.members.keys.toSet(),
-                                    (refs) => m.update(
-                                      m.filter.copy(
-                                        members: {
-                                          for (final ref in refs)
-                                            ref: m.filter.members[ref] ?? {},
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                if (m.filter.groupId != null)
+                                  GroupCandidateFilter(model: m),
                               ],
                               Align(
                                 alignment: Alignment.centerRight,
@@ -373,6 +348,11 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
                       ),
                     ),
                   if (!m.loading &&
+                      !m.candidateLoading &&
+                      !m.groupLoading &&
+                      !m.selectionPending &&
+                      m.candidateFailure == null &&
+                      m.groupFailure == null &&
                       m.failure == null &&
                       m.rows.isEmpty &&
                       widget.session.isAuthenticated)

@@ -741,6 +741,9 @@ String recruitmentFailureMessage(String? code) => switch (code) {
   'SESSION_SELECTION_REQUIRED' => '참가할 필수 일정을 선택해 주세요.',
   'CURSOR_STALE' ||
   'FILTER_CONTEXT_STALE' => '목록이나 그룹 정보가 변경되었습니다. 다시 불러와 주세요.',
+  'GROUP_CHARACTER_CANDIDATES_STALE' => '캐릭터 정보가 변경되었습니다. 선택을 다시 확인해 주세요.',
+  'GROUP_NOT_FOUND' => '현재 이 그룹에 접근할 수 없습니다.',
+  'RESPONSE_TOO_LARGE' => '조회 범위가 큽니다. 잠시 후 다시 확인해 주세요.',
   'PERMISSION_DENIED' || 'ROOM_LEADER_REQUIRED' => '현재 이 작업을 진행할 권한이 없습니다.',
   'CLIENT_UPGRADE_REQUIRED' => '이전 생성 요청은 다시 전송해 결과를 확인해 주세요.',
   'TARGET_CYCLE_OUT_OF_RANGE' => '대상 주차가 바뀌었습니다. 주차를 다시 선택해 주세요.',

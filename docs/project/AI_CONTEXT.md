@@ -1,8 +1,6 @@
 # AI CONTEXT — 2주 레이드 현황 기획과 현재 구현 상태
 
-기준: 2026-10-22. Backend 개발 서버 전환/읽기 인계, Flutter F1/F2 코드·자동검증 완료. **F3 검색/일반 참가 흐름 연결·고유114PASS/변경17파일 분석0, 그룹원 전체 캐릭터 필터 계약은 대기**다. F3 전체 완료·실서버/실기기 인수는 아니며 F4~F6은 미구현이다. 설계37 §37.11·NEXT_WORK를 따른다.
-
-[Backend101 초안1](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6338175041) 소비 검토: 현재 그룹 회원 사이의 인증 소유·활동 캐릭터 allowlist 공개/nullable·출처/Flutter30직업 계열 표시/페이지·검색token은 소비 가능. 기존 선택이 재취득 첫페이지에 없는 경우의 검증 경계 보완 회신과 Backend 구현/소비SHA 인계를 대기한다. 새 API는 미구현·실제0.4.1/policy4/서버 불변이다. 상세는 설계37 §37.12/NEXT_WORK.
+기준: 2026-10-22. **Flutter F1~F3 코드/자동검증 완료**, 실제 정상인증HTTP·실회원/실기기 인수는 미확인이다. 그룹 캐릭터 후보21+기존 F3 27 고유48PASS·변경7파일 분석0, F4~F6 미구현이다. [Backend104](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6340348412)의0afd879/실제168경로를 소비했고 기존 후보 계약 대기는 해소됐다. 다음은 NEXT_WORK의F4, 후보 구현 경계는 설계37 §37.13이다.
 
 ## 현재 우선 기준
 
@@ -20,10 +18,10 @@
 |---|---|
 | 커밋 기반 | feature/raid-recruitment-scheduling에 선행 v1복구17f8675·F1 af9e9d3·F2 e42f780·F3 독립 구현121fad3을 보관/원격일치 확인. [F3 결과6337065372](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6337065372) 본문 재조회일치. dev6d3f617 미반영·브랜치 유지, 최종문서SHA는 Git 참조 |
 | 기존 앱 | 개인표 등록·수정/복원과 계정 설정 복귀/결과 닫기 사용자 확인 완료. v1 생성/기본상세·시간/입장 정책은17f8675에 보관·기존 자동검증 기록 있음. 인증 회원 목록은 F3 v2검색, 비로그인 기존 Pending 유지 |
-| 2주차 Flutter | F1 실제주차/선택기·계정summary/3열+i·본인목록/기본 읽기상세·캐시 격리 구현. F1 고유123PASS/14파일 분석0에 이어 F2 고유95PASS/10파일 분석0. 실제 DI는 v2생성/context·같은방T상세/편성 읽기까지 연결. F3 검색/일반 참가·신청/승인/거절/철회·캐릭터 변경 연결, 전체 캐릭터 필터 대기. F4~F6 미구현/전체 기능 인수 미완료 |
+| 2주차 Flutter | F1 실제주차/선택기·계정summary/3열+i·본인목록/기본 읽기상세·캐시 격리 구현. F1 고유123PASS/14파일 분석0에 이어 F2 고유95PASS/10파일 분석0. 실제 DI는 v2생성/context·같은방T상세/편성 읽기까지 연결. F3 검색/일반 참가·신청/승인/거절/철회·캐릭터 변경 연결, 그룹 캐릭터 필터/선택token·명시더보기 연결. F4~F6 미구현/전체 기능 인수 미완료 |
 | Penpot03 | v3 주차선택5화면과 v4 공대장/번호3화면 반영. 계정 체크/i·v4 실제PNG 검수. 상세 식별자/기준은 설계37·NEXT_WORK |
 | Backend | [92번째 실제전환/읽기인계6332478347](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6332478347): 개발DB0029/API8000 factory167경로·자료/키 보존 완료 보고. 계약0.4.1/policy4 유지 |
-| 계약/다음 | [F2 인계6335852339](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6335852339). 구현e42f780 원격일치/사용계약·검증·제한 전달/본문 재조회일치. F3 독립 부분 구현/검증 후 [그룹 캐릭터 후보 계약](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6336402066) 대기. 정상인증HTTP/실회원쓰기·기기 인수 미확인. #19통계별도 |
+| 계약/다음 | [F2 인계6335852339](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6335852339). 구현e42f780 원격일치/사용계약·검증·제한 전달/본문 재조회일치. F3 후보까지 연결/검증 완료, Backend0afd879/168경로 인계 수신. 다음F4. 정상인증HTTP/실회원쓰기·기기 인수 미확인. #19통계별도 |
 
 기존 자동검증과 수동확인은 [DEV_LOG](DEV_LOG.md)에 보존한다. 사용자 확인한 가능 레이드/최고 난이도 기본 선택은 다시 대기로 두지 않는다. F2로 선택T 시간 제한·v2생성/상세를 연결했으며 실제 유효시각 생성 및 2주차 기능의 실서버/실기기 인수는 남는다. 문서 체크포인트와 기능 전체 완료/dev 통합을 구분한다. 기존 미커밋 기능·플랫폼 생성/DevTools·백업/tools·통계35의 별도 검토는 보존한다.
 

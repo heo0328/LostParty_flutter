@@ -7,6 +7,7 @@ import '../../account/domain/server_registration_api.dart';
 import '../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../domain/backend_recruitment.dart';
 import 'cycle_read_repository.dart';
+import 'group_character_candidates.dart';
 
 String cycleStableJson(Object? value) {
   Object? canonical(Object? v) {
@@ -28,6 +29,7 @@ class CycleSearchFilter {
     String? groupId,
     Set<String> groupIds = const {},
     this.token,
+    this.candidateToken,
     Set<String> raids = const {},
     Set<String> difficulties = const {},
     Set<String> experiences = const {},
@@ -44,7 +46,7 @@ class CycleSearchFilter {
            e.key: Set<String>.unmodifiable(e.value),
        });
   final String category;
-  final String? admissionScope, token;
+  final String? admissionScope, token, candidateToken;
   final Set<String> groupIds;
   String? get groupId => groupIds.length == 1 ? groupIds.single : null;
   final Set<String> raids, difficulties, experiences;
@@ -59,6 +61,8 @@ class CycleSearchFilter {
     Set<String>? groupIds,
     bool clearGroup = false,
     String? token,
+    String? candidateToken,
+    bool clearCandidateToken = false,
     Set<String>? raids,
     Set<String>? difficulties,
     Set<String>? experiences,
@@ -76,6 +80,9 @@ class CycleSearchFilter {
             ? {groupId}
             : this.groupIds),
     token: clearGroup ? null : token ?? this.token,
+    candidateToken: clearGroup || clearCandidateToken
+        ? null
+        : candidateToken ?? this.candidateToken,
     raids: raids ?? this.raids,
     difficulties: difficulties ?? this.difficulties,
     experiences: experiences ?? this.experiences,
@@ -92,6 +99,10 @@ class CycleSearchFilter {
       roleId(id);
     }
     roleCheck(members.isEmpty || (groupId != null && token != null));
+    if (candidateToken != null) {
+      candidateHex(candidateToken);
+      roleCheck(groupId != null && token != null);
+    }
     for (final e in members.entries) {
       roleCheck(e.key.length == 64);
       for (final id in e.value) {
@@ -110,7 +121,11 @@ class CycleSearchFilter {
       'category': category,
       'admission_scope': admissionScope,
       'group_ids': groupIds.toList()..sort(),
-      'filter_context_token': members.isEmpty ? null : token,
+      'filter_context_token': members.isEmpty && candidateToken == null
+          ? null
+          : token,
+      if (candidateToken != null)
+        'group_character_candidates_token': candidateToken,
       'member_conditions': [
         for (final ref in refs)
           {'member_ref': ref, 'character_ids': members[ref]!.toList()..sort()},
@@ -167,7 +182,7 @@ class CycleFilterContext {
     );
     token = raidText(j['filter_context_token']);
     roleCheck(token.length == 64);
-    raidText(j['scope_digest']);
+    scopeDigest = raidText(j['scope_digest']);
     roleUtc(j['evaluated_at']);
     final groups = raidList(j['groups']);
     roleCheck(groups.length == 1);
@@ -199,8 +214,13 @@ class CycleFilterContext {
       members.map((m) => m['member_ref']).toSet().length == members.length,
     );
   }
-  late final String token;
+  late final String token, scopeDigest;
   late final List<Map<String, dynamic>> members;
+  Map<String, String> get aliases => {
+    for (final m in members)
+      m['member_ref'] as String:
+          (m['aliases'] as List).single['group_membership_id'] as String,
+  };
 }
 
 class CycleAdmissionPreview {
@@ -432,6 +452,11 @@ abstract interface class CycleInteractionGateway {
   Future<List<RecruitmentGroupChoice>> groups();
   Future<List<RecruitmentCharacter>> characters();
   Future<CycleFilterContext> filterContext(String group);
+  Future<CandidatePage> candidates(
+    String group,
+    CycleFilterContext context, {
+    String? cursor,
+  });
   Future<CycleSearchPage> search(
     String target,
     CycleSearchFilter filter, {
@@ -505,6 +530,29 @@ class CycleInteractionRepository implements CycleInteractionGateway {
         },
       ))!,
       group,
+    );
+  });
+  @override
+  Future<CandidatePage> candidates(
+    String group,
+    CycleFilterContext context, {
+    String? cursor,
+  }) => _decode(() async {
+    roleId(group);
+    candidateHex(context.token);
+    return CandidatePage(
+      (await api.request(
+        '/v2/groups/$group/raid-room-character-candidates',
+        query: {
+          'filter_context_token': context.token,
+          'limit': 50,
+          'cursor': ?cursor,
+        },
+      ))!,
+      group: group,
+      contextToken: context.token,
+      scopeDigest: context.scopeDigest,
+      aliases: context.aliases,
     );
   });
   @override

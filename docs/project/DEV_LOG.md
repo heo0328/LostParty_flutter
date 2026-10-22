@@ -1,5 +1,15 @@
 # 개발 이력
 
+## 2026-10-22 — F3 그룹 활동 캐릭터 후보 연결·자동검증 마감
+
+사용자 다음 구간 승인으로 남은 후보 부분만 구현했다. 필수문서/설계37·최신Issue13 [Backend104](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6340348412),0afd879의 실제개발안내/OpenAPI168경로와 Router/기존 검색·context·회원scope를 대조했다. 현재3dc026e/원격·dev6d3f617과 무관dirty를 확인하고 구현 전 NEXT_WORK에 범위·회귀/표적검증을 기록했다.
+
+- 새로 가능해진 흐름: 권한 있는 단일그룹 후보GET→회원별2열 작은 카드/대표칩·Decimal 내부레벨순/명시더보기·동일회원 조각병합→member_ref/UUID+optional 검색token 연결. C/N공통후보·T별조건/페이지, 페이지밖선택의 새첫token 검색 최대1회·200빈결과유효·반복거절보류, 정확한membership alias 재결합/재가입거절·로그아웃/늦은응답 격리를 연결했다. 역할가능성 카탈로그/역할별 출처·없음/비공개를 구분한다. 상세는 설계37 §37.13.
+- 보존 확인: 기존 F3검색/숙련도 다중·참가인원 문구정렬/남은자리·서버페이지·일반참가/신청/승인/거절/철회·캐릭터변경/원ACK 27건을 회귀 보호했다. F1/F2·계정/개인표·Router/DI·저장 스키마와 무관dirty는 변경하지 않았다. 자동전페이지수집·다른역할/0대체·token생략/빈배열확대·실제참가/i 자동생성·서버/DB/키 변경 없음.
+- 검증: 신규 후보21건+기존 F3 27건 고유 **48PASS**, 변경Dart7파일 분석0·포맷/diff 검토. 첫 실행은 새fixture의 존재하지 않는 scoped/signOut 도우미 컴파일 실패였고 기존27PASS였다. 실제 f2.envelope/session.change 도우미로 고쳐 신규17PASS, 추가 회원alias/재가입·C/N/더보기stale3건을 포함한 신규20PASS/기존27PASS의 최종47PASS 후, 지연context의 최신필터 보존을 보강한 후보21PASS를 확인해 고유48PASS다. 불필요한 import/중괄호 lint·미사용변수도 해소했다. mock 검증이며 Backend29PASS/DB원자성 인수를 재현한 것은 아니다. 저장/인증/타feature를 바꾸지 않아 무관한 전체시험은 반복하지 않았다.
+- 미확인 실기기: 정상로그인 후보HTTP/실회원 검색·실제2열/긴이름/글자크기·more/stale·회원전환과 성능이다. 설치/조작·실회원쓰기/DB/서버변경은 하지 않았다. 최종 기능섹션 수동 목록은 NEXT_WORK에 묶었으며 F3 코드/자동검증 마감과 실제 인수를 구분한다. F4~F6 미구현/미착수다.
+- 협업/Git: Backend104의 후보부족/계약대기를 해소했다. 실제 구현 commit/push·사용SHA/검증·미확인을 같은Issue13에 회신한다. feature/raid-recruitment-scheduling에 코드/시험·관련문서 복구커밋을 보관하고 dev6d3f617 미병합·브랜치유지, 통계35·플랫폼생성/DevTools/백업/tools는 제외한다.
+
 ## 2026-10-22 — 그룹 활동 캐릭터 후보 초안1 소비 검토
 
 사용자가 첫 계약 검토 구간을 승인했다. 필수문서/설계37 §37.11·최신Issue13 [Backend101 초안](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6338175041), 현재383b7ad/동일목적브랜치와 무관dirty·기존 직업 분류/검색/선택 수명을 대조했다. 기능 코드는 수정하지 않았다.

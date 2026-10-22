@@ -1325,3 +1325,18 @@ role_family=null은 Flutter ClassSynergyCatalog.version=2026.09.03.user.v1의30�
 보완 대기 한 항목: 갱신된 첫페이지에 기존2페이지 선택 X가 없으면 아직 미로드이지 소멸로 단정할 수 없다. 권장안은 첫페이지 새token과 기존 ref/UUID로 동일조건 검색을 최대1회 수행하고 서버가 전체 현재 후보에서 검증해 성공하면 선택 유효로 확정하는 것이다. 오류/검증 전은 보류·명시 수정, 후보 UI 페이지는 명시 더보기로 유지한다. 이 방식이 초안 §5의 재대조를 충족하는지 Backend가 명시해야 하며 신규 endpoint 추가를 필수로 요구하지 않는다. Backend 구현/격리검증·게시/실행계약/소비SHA 인계 후 Flutter 후보 UI·경계검증을 진행한다.
 
 게시 wire의6응답·합성 거절8·검색binding4·local ref16 해석은 독립 확인했다. schema로 권한·페이지 연속성·SQL/HMAC/성능을 증명하지 않으며 기능코드·실회원HTTP/DB/기기 검증은 없었다. 검토 인계/최종 식별자는 DEV_LOG를 따른다.
+
+
+### 37.13 F3 그룹 캐릭터 후보 연결 마감 — 2026-10-22
+
+[Backend104](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6340348412)의 구현0afd87932ab9b89a5d0976cf634daa5d6ef5a408·개발안내/실제OpenAPI168경로를 대조해 연결했다. Backend103이 §37.12의 선택 검증 보완을 수용했고 이 계약 대기는 해소됐다. 기반0.4.1/policy4/canonical SHA는 유지하며 후보추가 실행SHA/168경로·검증이미지66e69545를 과거167경로/ccc787cb9ccb와 구분한다.
+
+group_character_candidates.dart는 닫힌 후보DTO·역할별 nullable/출처·현재 owned/selected/active·회원alias/실제group/context/digest/token을 검증한다. Decimal은 BigInt 정수부와 소수 문자열 비교로 정밀도 손실 없이 회원 내부 DESC/null LAST·동률 UUID ASC를 확인하며 서버 순서를 유지한다. 회원UUID 순서/empty marker·조각 연속/중복·완료시회원누락을 검사한다. 후보GET은 limit50·첫cursor생략/다음명시cursor, 읽기 멱등키/target/room 없음이다.
+
+기존 인라인 필터 안의 GroupCandidateFilter는 그룹 대표칩과 각 회원의 작은2열 카드(대표명 작게/캐릭터·직업/계열·레벨/각역할 전투력)를 표시한다. ClassSynergyCatalog2026.09.03.user.v1만으로 역할 가능성을 표시하고 unknown/null은미상, 실제 역할/선호·더큰값으로 추정하지 않는다. unavailable/비공개를 분리하며0/타역할 복사 없음. UI공간에서 딜/서폿 수치를 각각 축소 표시한다. 마지막 캐릭터 선택 해제는 해당회원 조건을 제거하며 자동 회원전체 조건으로 바꾸지 않는다. 회원전체는 대표칩의 명시선택이다.
+
+후보/회원선택은 앱 페이지수명·회원/환경/session 범위이고 C/N 공통 후보와 실제T별 필터/목록을 분리한다. 명시더보기만 호출하고 token/연속회원/전체UUID를 검증해 붙인다. group/context 변경 시 현재membership alias가 정확히 일치할 때만 ref를 갱신하며 탈퇴·재가입의 새membership/이름으로 승계하지 않는다. 로그아웃/권한세대·그룹전환 지연응답은 폐기한다.
+
+새 optional 검색token은 있을 때만 포함하고 null을 전송하지 않는다. 후보/문맥 stale에서 첫페이지 새token+기존ref/UUID/필터/실제T·cursor=null 검색을 최대1회 수행한다. 후보 다음페이지 stale도 같은 한정 복구를 사용한다. 200/items=[]는 선택유효·일치방0이고 목록 전페이지 로드/참가확정과 분리한다. 반복거절/400/404/복구실패는 선택보류·명시수정으로 멈추며 UUID삭제/빈배열·token생략 우회가 없다. 후보실패를 정상 빈 방 목록으로 숨기지 않는다. 실행 error.details nullable은 기존 공통 Dio parser가 수용하므로 초안 전용 parser를 추가하지 않았다.
+
+신규 후보21+기존 F3 27 고유48PASS·변경Dart7파일 분석0·포맷/diff검토다. 기존 전체114건 재실행/합산과 구분한다. 코드/자동검증 완료이며 실제 정상로그인HTTP·회원 쓰기/기기 표시/성능은 미확인이다. F4~F6는 다음 범위, Git/인계는 DEV_LOG를 따른다.

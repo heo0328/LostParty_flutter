@@ -6,6 +6,7 @@ import '../../../account/domain/role_summary.dart';
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../../domain/backend_recruitment.dart';
 import '../../data/cycle_read_repository.dart';
+import '../../data/group_character_candidates.dart';
 import '../../data/cycle_interaction_repository.dart';
 import 'cycle_participation_controller.dart';
 
@@ -35,6 +36,129 @@ class CycleSearchViewModel extends ChangeNotifier {
   RaidCatalog? catalog;
   List<RecruitmentGroupChoice> groups = [];
   CycleFilterContext? groupContext;
+  List<CandidateMember> candidateMembers = [];
+  String? candidateCursor, candidateFailure;
+  bool candidateLoading = false, selectionPending = false;
+  final _candidateCursors = <String>{};
+  final _candidateCache =
+      <String, (CycleFilterContext, List<CandidateMember>, String?, String)>{};
+
+  void _clearCandidates() {
+    candidateMembers = [];
+    candidateCursor = candidateFailure = null;
+    candidateLoading = false;
+    selectionPending = false;
+    _candidateCursors.clear();
+  }
+
+  void selectMember(String ref, bool selected) {
+    final members = Map<String, Set<String>>.of(filter.members);
+    if (selected) {
+      members[ref] = {};
+    } else {
+      members.remove(ref);
+    }
+    selectionPending = false;
+    update(filter.copy(members: members));
+  }
+
+  void selectCharacter(String ref, String id) {
+    final members = Map<String, Set<String>>.of(filter.members);
+    final ids = {...?members[ref]};
+    if (!ids.add(id)) ids.remove(id);
+    if (ids.isEmpty) {
+      members.remove(ref);
+    } else {
+      members[ref] = ids;
+    }
+    selectionPending = false;
+    update(filter.copy(members: members));
+  }
+
+  Future<void> loadCandidates({bool more = false}) async {
+    final group = filter.groupId, context = groupContext;
+    if (_disposed ||
+        candidateLoading ||
+        groupLoading ||
+        group == null ||
+        context == null ||
+        (more && candidateCursor == null)) {
+      return;
+    }
+    final e = _groupEpoch,
+        binding = _binding,
+        oldCursor = more ? candidateCursor : null;
+    candidateLoading = true;
+    candidateFailure = null;
+    _emit();
+    try {
+      final page = await gateway.candidates(group, context, cursor: oldCursor);
+      if (_disposed || e != _groupEpoch || binding != scopeKey()) return;
+      if (more &&
+          (page.token != filter.candidateToken ||
+              (page.cursor != null &&
+                  (page.cursor == oldCursor ||
+                      _candidateCursors.contains(page.cursor))))) {
+        throw const AccountReadException('CURSOR_STALE');
+      }
+      final combined = page.appendTo(more ? candidateMembers : []);
+      if (page.cursor == null) {
+        roleCheck(combined.length == context.members.length);
+      }
+      candidateMembers = combined;
+      candidateCursor = page.cursor;
+      if (!more) _candidateCursors.clear();
+      if (page.cursor != null) _candidateCursors.add(page.cursor!);
+      filter = filter.copy(candidateToken: page.token);
+      _filters[target!] = filter;
+      _candidateCache[group] = (
+        context,
+        candidateMembers,
+        candidateCursor,
+        page.token,
+      );
+    } on AccountReadException catch (error) {
+      if (!_disposed && e == _groupEpoch && binding == scopeKey()) {
+        if (more &&
+            {'CURSOR_STALE', 'FILTER_CONTEXT_STALE'}.contains(error.code)) {
+          candidateLoading = false;
+          await selectGroup(group, preserve: true, recovered: true);
+          return;
+        }
+        candidateFailure = error.code;
+        selectionPending = filter.members.isNotEmpty;
+        if ({
+          'CURSOR_STALE',
+          'FILTER_CONTEXT_STALE',
+          'GROUP_NOT_FOUND',
+        }.contains(error.code)) {
+          candidateMembers = [];
+          candidateCursor = null;
+          _candidateCache.remove(group);
+          _pages.clear();
+          rows = [];
+          cursor = null;
+          if (error.code != 'CURSOR_STALE') groupContext = null;
+        }
+      }
+    } catch (_) {
+      if (!_disposed && e == _groupEpoch && binding == scopeKey()) {
+        candidateFailure = 'INVALID_RESPONSE';
+      }
+    } finally {
+      if (!_disposed && e == _groupEpoch && binding == scopeKey()) {
+        candidateLoading = false;
+        _emit();
+      }
+    }
+  }
+
+  Future<void> refreshCandidates() async {
+    final group = filter.groupId;
+    if (group == null || candidateLoading || groupLoading) return;
+    await selectGroup(group, preserve: true);
+  }
+
   String? target, failure, cursor, groupFailure;
   String? _digest;
   List<CycleRoomCard> rows = [];
@@ -57,6 +181,8 @@ class CycleSearchViewModel extends ChangeNotifier {
     _epoch++;
     _groupEpoch++;
     _filters.clear();
+    _clearCandidates();
+    _candidateCache.clear();
     _pages.clear();
     _cursors.clear();
     cycles = null;
@@ -142,7 +268,15 @@ class CycleSearchViewModel extends ChangeNotifier {
     groupContext = null;
     _groupEpoch++;
     groupLoading = false;
-    if (filter.groupId != null) {
+    _clearCandidates();
+    final cached = _candidateCache[filter.groupId];
+    if (cached != null) {
+      groupContext = cached.$1;
+      candidateMembers = cached.$2;
+      candidateCursor = cached.$3;
+      filter = filter.copy(token: cached.$1.token, candidateToken: cached.$4);
+      _select();
+    } else if (filter.groupId != null) {
       unawaited(selectGroup(filter.groupId, preserve: true));
     } else {
       _select();
@@ -154,6 +288,7 @@ class CycleSearchViewModel extends ChangeNotifier {
     if (next.category != filter.category && next.category != 'group_linked') {
       _groupEpoch++;
       groupContext = null;
+      _clearCandidates();
       groupLoading = false;
       groupFailure = null;
     }
@@ -168,6 +303,7 @@ class CycleSearchViewModel extends ChangeNotifier {
       return;
     }
     _groupEpoch++;
+    _clearCandidates();
     groupContext = null;
     groupFailure = null;
     groupLoading = false;
@@ -189,15 +325,23 @@ class CycleSearchViewModel extends ChangeNotifier {
     if (page == null) unawaited(search());
   }
 
-  Future<void> selectGroup(String? group, {bool preserve = false}) async {
-    final previous = filter;
+  Future<void> selectGroup(
+    String? group, {
+    bool preserve = false,
+    bool recovered = false,
+  }) async {
+    final previous = filter,
+        previousContext = groupContext ?? _candidateCache[group]?.$1;
     final e = ++_groupEpoch;
     groupContext = null;
+    _clearCandidates();
     groupFailure = null;
-    filter = filter.copy(
-      clearGroup: true,
-      category: group == null ? filter.category : 'group_linked',
-    );
+    if (!preserve) {
+      filter = filter.copy(
+        clearGroup: true,
+        category: group == null ? filter.category : 'group_linked',
+      );
+    }
     if (group == null) {
       groupLoading = false;
       update(filter);
@@ -205,6 +349,7 @@ class CycleSearchViewModel extends ChangeNotifier {
     }
     filter = filter.copy(groupId: group);
     groupLoading = true;
+    selectionPending = preserve && previous.members.isNotEmpty;
     _epoch++;
     loading = false;
     rows = [];
@@ -215,27 +360,48 @@ class CycleSearchViewModel extends ChangeNotifier {
       final context = await gateway.filterContext(group);
       if (_disposed || e != _groupEpoch || binding != scopeKey()) return;
       groupContext = context;
-      if (preserve &&
-          !context.members
-              .map((m) => m['member_ref'])
-              .toSet()
-              .containsAll(previous.members.keys)) {
-        filter = previous;
-        throw const AccountReadException('FILTER_CONTEXT_STALE');
+      final members = <String, Set<String>>{};
+      for (final selected
+          in preserve
+              ? previous.members.entries
+              : <MapEntry<String, Set<String>>>[]) {
+        final oldAlias = previousContext?.aliases[selected.key];
+        final ref = oldAlias == null
+            ? (context.aliases.containsKey(selected.key) ? selected.key : null)
+            : context.aliases.entries
+                  .where((v) => v.value == oldAlias)
+                  .firstOrNull
+                  ?.key;
+        if (ref == null) {
+          throw const AccountReadException('FILTER_CONTEXT_STALE');
+        }
+        members[ref] = selected.value;
       }
-      filter = filter.copy(
-        groupId: group,
-        token: context.token,
-        members: preserve ? previous.members : {},
-      );
+      filter = filter
+          .copy(clearGroup: true, category: 'group_linked')
+          .copy(groupId: group, token: context.token, members: members);
       groupLoading = false;
-      update(filter);
+      await loadCandidates();
+      if (_disposed || e != _groupEpoch || binding != scopeKey()) return;
+      if (candidateFailure != null) return;
+      _filters[target!] = filter;
+      await search(recovered: recovered);
     } on AccountReadException catch (error) {
-      if (!_disposed && e == _groupEpoch) groupFailure = error.code;
+      if (!_disposed && e == _groupEpoch && binding == scopeKey()) {
+        groupFailure = error.code;
+        selectionPending = preserve && previous.members.isNotEmpty;
+        if (preserve) filter = previous;
+        if (error.code == 'GROUP_NOT_FOUND') {
+          _candidateCache.remove(group);
+          _pages.clear();
+        }
+      }
     } catch (_) {
-      if (!_disposed && e == _groupEpoch) groupFailure = 'INVALID_RESPONSE';
+      if (!_disposed && e == _groupEpoch && binding == scopeKey()) {
+        groupFailure = 'INVALID_RESPONSE';
+      }
     } finally {
-      if (!_disposed && e == _groupEpoch) {
+      if (!_disposed && e == _groupEpoch && binding == scopeKey()) {
         groupLoading = false;
         _emit();
       }
@@ -259,10 +425,15 @@ class CycleSearchViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> search({bool more = false}) async {
+  Future<void> search({bool more = false, bool recovered = false}) async {
     if (_disposed ||
         loading ||
         groupLoading ||
+        candidateLoading ||
+        (filter.groupId != null &&
+            (groupContext == null ||
+                candidateFailure != null ||
+                groupFailure != null)) ||
         !session.isAuthenticated ||
         target == null ||
         (more && cursor == null)) {
@@ -287,6 +458,7 @@ class CycleSearchViewModel extends ChangeNotifier {
       }
       final combined = more ? [...rows, ...page.rows] : page.rows;
       roleCheck(combined.map((r) => r.id).toSet().length == combined.length);
+      selectionPending = false;
       rows = List.unmodifiable(combined);
       cursor = page.cursor;
       _digest = page.digest;
@@ -295,7 +467,31 @@ class CycleSearchViewModel extends ChangeNotifier {
       _pages[(t, f.signature)] = (rows, cursor, _digest);
     } on AccountReadException catch (error) {
       if (_valid(e)) {
+        if (f.candidateToken != null &&
+            {
+              'GROUP_CHARACTER_CANDIDATES_STALE',
+              'FILTER_CONTEXT_STALE',
+            }.contains(error.code) &&
+            !recovered) {
+          loading = false;
+          selectionPending = f.members.isNotEmpty;
+          _pages.removeWhere((k, _) => k.$1 == t);
+          await selectGroup(f.groupId, preserve: true, recovered: true);
+          return;
+        }
         failure = error.code;
+        if (f.candidateToken != null) {
+          selectionPending = f.members.isNotEmpty;
+          rows = [];
+          cursor = null;
+          _pages.remove((t, f.signature));
+          if (error.code == 'GROUP_NOT_FOUND') {
+            _candidateCache.remove(f.groupId);
+            candidateMembers = [];
+            candidateCursor = null;
+            groupContext = null;
+          }
+        }
         if ({
           'CURSOR_STALE',
           'FILTER_CONTEXT_STALE',
