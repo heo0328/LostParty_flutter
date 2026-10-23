@@ -1,4 +1,4 @@
-# NEXT WORK — D22 구현·자동검증 완료 / E23 양주차 추방 연결
+# NEXT WORK — E23 참가자 추방 설계 점검 완료 / 구현 대기
 
 ## 현재 상태 (2026-10-23)
 
@@ -8,9 +8,13 @@ D22 개인 완료 후 해당T 탈퇴를 구현했다. 실제Router/DI·Context�
 
 ## 다음 첫 그룹 — E23 카드의 현재/양T 내보내기
 
-사용자다음구간지시후[설계37 §37.32](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)의E23을진행한다. [Backend23/6362447457](https://github.com/heo0328/lostparty-backend/issues/23#issuecomment-6362447457) 최종계약에보완대기는없다. 기존카드X고정membership/CM/sourceT,반대none/review/actor없음nullable·option별permission/token/current_only영향서명·both각T권한을연결하고취소/현재만/함께3선택을지원한다. 기존단일T원pending은원API복구,불가both를현재만/옛API로자동대체하지않는다. ACKsource순효과T만무효화한다.
+사용자 설계 지시로 기존 §37.32와 D22 후 실제 코드/DI·Issue23 최신 댓글을 다시 대조하고 **[설계37 §37.34](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)에 E23 착수 상세를 확정했다. 이번은 기능/시험 코드 불변·설계 완료이며 다음 구현 지시 후 E23만 진행한다.** [Backend23/6362447457](https://github.com/heo0328/lostparty-backend/issues/23#issuecomment-6362447457) 이후 새 Backend 답변·계약 보완 대기는 없다. 동일 설계 수용/시험 요청 댓글은 반복하지 않고 구현 결과를 같은 Issue23에 회신한다.
 
-순서: RemovalPreview/reader·최소공용효과검증 → Controller선택option재확인·전용원명령/ACK → 카드확인창/정확T갱신 → cycle_removal/공용모델+기존management/interaction/recruitment 직접시험·관련분석/문서·Issue23결과·commit/push. 서버DB원자성은Backend검증과구분하고앱은입출력/원ACK·양T정확타깃과회원/세대경계를검증한다. 정상UI/실기기는기능섹션최종사용자담당이다.
+목표는 기존 카드 빨간 X에서 고정한 membership/실제 CM/sourceT를 대상으로 전용 context를 읽고, 반대 관계가 없으면 취소/현재 주차만, 관계가 있거나 확인 필요이면 취소/현재 주차만/함께를 제공하는 것이다. N 화면에서는 ‘다음주만’으로 표시한다. 불가 option은 사유와 함께 비활성화하며 유효한 현재만 선택은 유지한다. 권한/정책은 서버가 소유한다. 기존 단일T 원pending은 원API로 복구하며 불가 both를 현재만/옛API로 자동 대체하지 않는다.
+
+순서: RemovalPreview/별도 CycleRemovalGateway·전용 reader/writer/ACK → controller 선택option 재확인·원명령 → 기존 카드 확인창/명령Key 결합 성공·현재 탭 유지/정확T 갱신 → 최종 검증·문서·Issue23 결과·commit/push. current_only 서명은 무관한 반대T 변화를 제외하고 both는 양T를 결합한다. source review의 실제 CM 매핑을 확인했으며 없는 ID를 합성하거나 일반 쓰기권한을 확대하지 않는다. source 첫 순서 ACK 효과T만 기존 changed/weekly/목록 무효화 경로로 통지하고, ACK 후 조회 실패를 재추방으로 바꾸지 않는다.
+
+검증: 신규 cycle_removal + 기존 management/interaction/recruitment 직접 회귀, D22 공유 코드 변경 시 departure/outcome도 한 번 묶는다. nullable/option 권한·선택별 의미/고정대상·회원/T 전환·원token 재송·N source ACK/효과 누락·정확T 갱신과 성공 후 읽기 실패를 확인한다. 서버 DB 원자성은 Backend 근거와 구분한다. 정상 UI/실기기는 최종 사용자 담당, 영향이 한정되면 무관 전체시험 반복 없이 관련 분석/포맷/diffcheck를 수행한다. 완료는 실제 카드→전용 ACK/복구/갱신 연결·자동 경계 검증·문서/Issue23 결과/원격 보관 확인이며 실회원/기기 미확인은 구분한다.
 
 **별도미완료 A/B:** §37.27의본인완료해제/schema1·2영속pending호환, current/ended/all·보관/복구읽기는따로유지한다. D22를완료해제까지해결된것으로표기하지않는다. 필요한reader/갱신은중복없이재사용하고새요청E23과동시확대하지않는다. E23/A/B/실기기인수전전체완료·dev/main통합/배포는하지않는다.
 

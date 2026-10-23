@@ -1,5 +1,7 @@
 # AI CONTEXT — 2주 레이드 현황 기획과 현재 구현 상태
 
+E23 설계 재점검(2026-10-23): D22 후 실제 카드 X/Controller/별도 Gateway·주차 갱신과 최신 Issue23 계약을 대조해 [설계37 §37.34](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)에 구현/검증 순서를 구체화했다. 기능 코드 불변·구현 지시 대기, Backend 추가 대기 없음. 실행 범위/후속 A/B는 NEXT_WORK를 따른다.
+
 D22 구현완료(2026-10-23): Backend0eed67c4의개인완료후T탈퇴/승계·Context표시/전용ACK·원재송·성공후목록실제T복귀연결,최종5파일133mock PASS/lib·test분석0. 상세§37.33/NEXT_WORK. E23양T추방과기존A완료해제/B보관은미완료,실회원/기기인수·dev/main통합대기. 아래과거설계/계약대기보다이상태우선.
 
 Issue22/23 최종설계(2026-10-23): Backend0eed67c4·174경로/DB0030/표시·source review보완인계확인,§37.32에D22(개인완료후탈퇴)→E23(양T추방) 파일/성공이탈/원ACK/검증설계확정. Backend대기는해소·Flutter구현대기,이번기능코드불변/앱소비2940824유지. 기존A/B는독립미완료이며NEXT_WORK가현재순서다.

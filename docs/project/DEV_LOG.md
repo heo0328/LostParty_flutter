@@ -1,5 +1,15 @@
 # 개발 이력
 
+## 2026-10-23 — E23 참가자 추방 착수 설계 재점검
+
+사용자 설계 지시에 따라 D22 후 ddf33b7d의 실제 카드 X→기존 단일T management, app-owned Controller/Repository·weekly/목록 갱신과 Issue23 최종6362447457/고정0eed67c4 계약을 대조했다. §37.32의 정책은 유지하고 [설계37 §37.34](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)에 실제 파일 책임·option별 재확인·원명령/전용 ACK·현재 탭 유지/정확T 갱신·회귀/완료 조건을 기록했다. Backend 최신 인계 뒤 새 답변/계약 대기는 없으며 같은 설계 수용 댓글은 반복하지 않는다. 구현 결과는 Issue23에 회신한다.
+
+- 새로 가능해진 앱 흐름: 없음. 이번은 설계 문서만이며 E23은 구현 대기다.
+- 보존 확인: D22 구현/원명령과 기존 관리 명령 복구 경로를 정적으로 대조했다. 기존 review_required의 실제 CM 매핑을 확인했고 일반 쓰기 권한 확대·가짜 ID 없이 전용 option을 사용하는 설계다. 공용 추출 시 D22 직접 회귀를 포함한다.
+- 검증: 최신 댓글·고정 schema/개발안내와 실제 Router/DI/카드/명령·갱신 경로 대조, 문서 내용/링크·diffcheck. 기능/의존성 변경이 없어 기존 Flutter 시험은 반복하지 않는다. 이전 133mock를 E23 통과로 표기하지 않는다.
+- 미확인 실기기: 카드 취소/현재만/함께·반대 주차 권한/다른 캐릭터·C/N 격리·현재 탭/목록 갱신·폴드/큰 글자는 구현 후 사용자 인수에 묶는다. 실회원HTTP/메모리·성능 측정·기기 조작 없음. 기존 A/B는 미완료로 유지한다.
+- Git: feature/raid-recruitment-scheduling 유지·문서 구간 commit/push 보관, dev/main 미반영. 통계35/플랫폼 생성/DevTools·백업/tools의 기존 무관 변경은 제외한다.
+
 ## 2026-10-23 — D22 개인 완료 후 해당 주차 탈퇴 구현
 
 D22 구현 `fece20032e6bfd8b6cd5d98a579d99e85564fc7a` commit/push·원격일치 후 [Issue22 결과6363334658](https://github.com/heo0328/lostparty-backend/issues/22#issuecomment-6363334658)에 소비SHA·133mock/분석0·실회원/기기미확인·다음구간을 회신하고 게시본문 MATCH를 확인했다.

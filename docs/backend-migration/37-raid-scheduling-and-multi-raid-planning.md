@@ -1847,3 +1847,50 @@ Controller는확인직후새context의의미서명을비교한다. token/발급/
 **검증:** 새24+기존직접109의 **5파일최종133mock PASS**, lib/test전체분석0·정확변경파일포맷/diffcheck/diff검토. 게시된합성personal5그룹을출처와함께fixture로보존했다. 일반/승계/후계없음/마지막completed/incomplete와null리더ACK,추가필드/표시불일치/중복ID/불가token·잘못된nullable·revision초과/다른주차/시각오버플로/offset,token단독변경서명·원응답유실재송/ACK불일치pending·표시변경쓰기0/중복명령/옛회원/확인중화면T전환,ACK후403조회콜백실패와원성공/이벤트보존을검증했다. 실제멱등DB/롤백은Backend근거이며Fluttermock로재입증하지않는다. 중간21PASS는최종수에합산하지않았다. 초기분석의중괄호lint를수정했고넓은format의무관2파일변경은검토후복구해범위에서제외했다.
 
 기존완료/참가/관리/주차상세의직접시험을보호했으며별도기능/스키마·기본Gateway writer인터페이스를바꾸지않아무관전체시험은생략했다. 정상UI이탈·폴드/큰글자·실회원일반/공대장완료후탈퇴/승계·다중raid의완료1/나머지취소·N보존·목록/계정완료표시는**사용자실기기미확인**이다. 설치·기기조작/실회원HTTP명령·서버/DB/배포는수행하지않았다. 다음은E23이며원본13의A완료해제/B보관소비는별도미완료,dev/main통합은보류한다.
+
+### 37.34 E23 참가자 추방 착수 설계 재점검 (2026-10-23)
+
+#### 현재 기준과 목적
+
+사용자 설계 지시에 따라 §37.32를 D22 구현 후 `ddf33b7d`의 실제 코드와 다시 대조했다. [Issue23 최종 인계6362447457](https://github.com/heo0328/lostparty-backend/issues/23#issuecomment-6362447457) 이후 새 Backend 회신은 없으며, 고정 소비 SHA `0eed67c453040b332653fd2071e6cd2e1eeed503`의 174경로/DB0030 계약을 그대로 사용한다. 계약 추가 요청·재수용은 필요 없다. 이번은 문서 설계만이며 기능 코드·실회원 데이터는 변경하지 않는다.
+
+사용자 문제는 카드에서 선택한 사람을 **현재 보고 있는 주차에서 바로 내보내고**, 반대 주차에도 같은 사람이 있을 때만 함께 처리 여부를 정하는 것이다. 주차와 대상 선택을 다른 관리 메뉴에서 반복하지 않는다. D22와 기존 A 완료 해제/B 목록·보관 작업을 동시에 수정하지 않는다.
+
+#### 확인창과 사용자 흐름
+
+1. 기존 파티 카드 우측 빨간 X를 유지한다. 터치 시 회원/환경 scope, room, 실제 sourceT, 카드 membership_id, 실제 cycle_member_id와 페이지 유효성을 고정한다. 서버가 같은 회원의 반대 주차 관계를 판단하며 이름·캐릭터로 매칭하지 않는다.
+2. 터치한 때만 전용 GET을 읽는다. 카드마다 선제 조회하거나 반대 주차 plan을 추가 조회하지 않는다. 확인창에 대상 캐릭터와 실제 날짜를 표시한다. 이름이 없으면 이름을 추정하지 않고 ‘선택한 참가자’와 날짜로 표시한다. 이름은 식별 근거가 아니다.
+3. 반대 관계 `none`은 **취소 / 이번주만 내보내기**(N 화면은 **다음주만 내보내기**). `participating` 또는 `review_required`이면 **취소 / 이번주만 내보내기(또는 다음주만) / 함께 내보내기**를 표시한다. 반대 대상 정보가 null이어도 관계 없음으로 숨기지 않는다. 함께 처리 날짜를 함께 안내하고, 정보 미확정·권한 부족은 해당 선택만 비활성화하고 짧은 사유를 보여준다. 취소는 왼쪽, 좁은 화면의 동작은 줄바꿈한다.
+4. 해당 option의 서버 permission/impact만 사용한다. current_only는 source 정리 권한, both는 양T 각각 현재 공대장 권한과 유효한 대상 증명을 요구한다. 자기 자신/공대장 추방·자동승계로의 대체는 하지 않는다. source review라도 실제 CM/양수 세대·관계/점유 근거가 확정된 허용 option은 유지한다. 구성할 수 없는 식별자는 만들지 않는다.
+5. 긍정 버튼에서 같은 고정 대상을 재조회하고 **선택한 option의 의미**만 비교한다. token/발급/만료·관측 시각만 변경됐으면 최신 token으로 명령을 고정한다. 대상/세대/권한/영향 변경은 POST 없이 새 상태를 보여주고 재확인받는다. 회원/페이지/주차 전환·dispose 후 응답은 현재 화면에 반영하거나 쓰지 않는다.
+6. 성공 ACK가 검증되면 확인창을 닫고 현재 상세 탭을 유지한다. 양T 추방도 임의로 반대 탭으로 이동하지 않는다. 후속 조회 실패는 ‘반영됨·갱신 필요’로 표시하며 추방을 다시 실행하지 않는다. 결과 불명은 새 명령이 아니라 원요청 재시도로 처리한다.
+
+#### 실제 코드 연결과 책임
+
+| 변경 지점 | 설계와 보존 경계 |
+|---|---|
+| `data/cycle_member_actions.dart` | D22의 불변 DTO 방식에 맞춰 별도 RemovalPreview/option별 본문·의미서명/전용 결과 검증을 추가한다. current_only 서명에서 무관한 opposite/both 변화는 제외하고, both에는 양T 증명을 포함한다. 동일한 기본 타입·시각·effect 검증만 최소 공유하고 departure 전용 정책을 추방으로 일반화하지 않는다. 공용 추출이 있으면 D22 직접 시험을 포함한다. |
+| `data/cycle_interaction_repository.dart` | 기존 CycleInteractionGateway/옛 write 시그니처를 유지하고 D22와 같은 별도 기능 인터페이스 CycleRemovalGateway를 실제 repository가 제공한다. GET `member-removal-context`의 target_cycle_key/target_cycle_member_id와 POST `member-removals`의 닫힌 10필드 원본문을 검증한다. 구 `/removals`로 fallback하지 않는다. |
+| `presentation/viewmodels/cycle_participation_controller.dart` | removal 읽기/선택 mode 재확인/불변 preview와 원본문·Key 보존·전용 writer 분기를 추가한다. command의 affectedTargets는 선택 option의 영향T 순서로 고정한다. ACK가 원명령과 정확히 일치한 뒤에만 pending 해제와 성공 통지를 한다. D22 departureSuccess를 추방 성공으로 재사용하지 않는다. 확인창 성공 판별은 원 명령Key에 결합해 다른 명령 성공/단순 pending 해제를 오인하지 않는다. |
+| `presentation/widgets/cycle_member_action_widgets.dart` | 기존 개인 완료 창을 유지하고 별도 추방 확인창을 추가한다. 읽기 상태/option별 거절·영향·재확인·중복 차단을 담당한다. 화면에서 API 직접 호출·권한 정책 재계산은 하지 않는다. |
+| `presentation/pages/backend_recruitment_detail_page.dart` | 현재 X의 showCycleManagement(remove, fixedMembership, fixedCycleMember) 진입을 새 확인창으로만 전환한다. 기존 공대장/자기 제외/실제 CM 존재 조건을 보존한다. reader가 participating/review_required의 실제 CM을 매핑하는 점을 확인했다. 리뷰 행 접근을 열기 위해 다른 일반 쓰기 권한을 넓히지 않는다. 필수 source가 없으면 쓰기를 차단하고 안내한다. |
+| 기존 관리창·명령 복구 | 새 카드 진입과 독립적으로 구 단일T pending의 원 path/body/key/ACK 분기를 보존한다. 새 both 거절을 current_only 또는 구 management 명령으로 자동 치환하지 않는다. |
+| Router/DI·갱신 | backend_app.dart의 동일 app-owned controller/repository와 weekly.refreshTarget 연결을 유지한다. 기존 changed(room,T) 이벤트를 선택 영향T마다 전달하고 own/search의 invalidateTarget, detail의 lastRoom/lastTarget 일치 시 재조회 경로를 사용한다. ACK 효과와 고정 영향T가 완전히 일치한 후 통지하므로 예상 외 T는 무효화하지 않는다. 보이지 않는 반대 탭의 저장자료를 로컬 합성·삭제하지 않고 그 실제T 캐시만 무효화한다. |
+
+서버가 관계·동일회원 판단·권한·lease·예약 해제·원자성과 원ACK를 소유한다. 앱은 새로 전역 사용자 저장소를 만들지 않고 확인창 수명의 불변 snapshot과 기존 주차별 조회 저장소를 사용한다. 캐릭터/완료 기록과 지속Member는 유지하고 참가/예약 상태를 optimistic으로 조작하지 않는다. context 재조회는 쓰기 직전의 신선도 확인이므로 단순 캐시 재사용으로 생략하지 않는다.
+
+#### 원명령·ACK와 실패 경계
+
+- option별 허용 시에만 impact/confirmation이 존재하고 거절은 둘 다 null이다. source와 scope의 실제T/room cycle/세대, 카드 membership/CM, 선택 mode·효과T·assignment 집합/예약 수의 관계를 닫힌 schema대로 검증한다. opposite none/null, review/null, participating/null을 각각 허용하며 필수 source null은 거절한다.
+- 원요청은 UUID4 Key와 POST path/body/token/선택 mode·영향 근거를 한 번 고정한다. token 만료·수요일 전환·응답 유실 후에도 원명령 재송에 새 context/token을 섞지 않는다. 모집 pending은 기존 메모리 수명이며 앱 종료 후 영속복구는 이번 범위가 아니다.
+- 전용 ActionResult는 action=member_removal, 원Key/room/subject membership, source 첫 순서의 affected_cycle_keys/effects, 실제 CM/세대·revision/리더 효과, removed 상태·completed=[]·취소/보존 집합을 대조한다. current_only는 source 1T, both는 source/opposite 2T이며 N source이면 N,C 순서다. 누락·중복·다른T·잘못된 ACK는 성공으로 확정하지 않고 pending을 보존한다.
+- 권한/대상 확정 거절은 재확인으로 돌아간다. REQUEST_IN_PROGRESS/Retry-After, 결과 불명, 24h 만료/명시 보류는 기존 복구 정책을 따른다. ACK 뒤 detail/weekly 갱신 실패는 성공 취소나 재POST의 사유가 아니다. 양T 일부 실패의 rollback은 서버 책임이며 앱이 두 개의 단일 추방 POST로 흉내 내지 않는다.
+
+#### 구현 순서·검증·완료 조건
+
+E23 한 그룹 안에서 **DTO/전용 GET·POST·ACK → controller 원명령/선택별 재확인·성공 → 기존 카드 확인창·정확T 갱신 → 최종 표적 검증·문서/Issue23 구현 회신·commit/push** 순으로 진행한다. 이번 설계만으로 구현을 시작하지 않는다.
+
+- 신규 cycle_removal_test와 게시 합성 예시에서 current_only/both/N source, opposite none/review/actor 없음/세대 미확정/권한 없음/대상 리더, source review 허용·불안전 lease 거절을 검증한다. 잘못된 nullable/필드·고정 대상·option 서명·ACK 순서와 집합·회원/주차 전환·재참가 CM 변경·원token 재송·잘못된 ACK pending·정확T 무효화/성공 후 갱신 실패를 경계로 둔다.
+- 직접 회귀는 cycle_management/interaction/recruitment이며 D22와 모델/전송/성공 분기를 공유·수정하면 cycle_departure/outcome도 포함한다. 실제 변경에 맞춰 한 번 묶고 수를 사전 확정하거나 Backend39PASS와 합산하지 않는다. 전역 스키마/DI 교체가 없는 한 무관한 전체 시험은 생략하고 영향이 넓어지면 근거를 남겨 확대한다.
+- 실기기는 사용자 담당이다. C·N 카드 고정대상/취소·현재만·함께, 반대 주차 다른 캐릭터인 동일회원·권한 차이, 현재만 처리 시 반대 참가 유지, 서버 성공 뒤 현재 탭/카드·목록 갱신, 폴드/큰 글자·거절 사유를 기능 섹션 마지막에 묶는다. 메모리/성능은 측정하지 않았으므로 개선·누수 없음으로 주장하지 않는다.
+- 기능 완료는 실제 Router에서 카드 진입부터 전용 ACK·원명령 복구·정확T 갱신까지 연결되고 표적 검증/분석·문서/Issue23 결과 회신·작업 브랜치 push가 확인된 상태다. 실회원/기기 인수는 별도 미확인으로 기록한다. A/B 및 전체 인수 전 dev/main 통합·배포는 하지 않는다.
