@@ -1,5 +1,14 @@
 # 개발 이력
 
+## 2026-10-24 — Issue24 보완1·Issue25 보완안2 소비 검토와 회신
+
+- 새로 정리한 흐름: Backend6369761914·6369762510/합성예시6369763243·6369763925를 앱 bce1f0d7과 대조했다. 24 기존 검색 shape/semantics·cursor/head를 수용하고, 25 옵션 접근격리·자원별 후상태/revision·명시 reader/recovery·옛Member 자기기록의 네 보완 차이가 해소됨을 확인했다. 추가 차단 계약 요구는 없다. 기능이 새로 동작하게 된 것은 아니다.
+- 실제 앱 후속: 기존 현재T리더+1인end 조회를 새 menu 근거로 교체, 전용 DTO/원Impact·ACK, 반대T만 해산시 현재 화면 유지·현재T/관계종료 성공1회 이탈, effects=[] 관계종료 알림을 별도로 연결한다. reader_profile/state/기록anchor를 캐시/Router로 전달하고 content=null의 wrapper 요약·명시복구/기록을 표시해야 한다. 상세는 설계37 §37.43.
+- 보존 확인: 검색필터/T·회원/환경격리·기존 정상content parser/readonly, 구 cancel/leave/end/D22/E23 원pending·24h ACK·일반 일정/완료·IF-001 미완료종료/재개 비활성을 변경하지 않았다. retained/resume_weekly를 서버에서 읽어도 재활성화하지 않는다. recover UI는 제품승인 별도 제안 상태다.
+- 협업: [24 검토6370137482](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6370137482)·[25 검토6370138718](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6370138718) 게시본문 MATCH. 다음은 Backend의 구현/검증·정확 SHA/실행 OpenAPI·개발API/DB 상태 인계, 이후 Flutter 연결이다. 기존 정책 재수용/전체시험·범위확대나 서버반영 지시는 하지 않았다.
+- 검증/미확인: 설명/JSON snapshot·49개 정의 목록/핵심 schema·37개 합성 예시 인덱스와 혼합역할/빈effects/기록·review 대표 값을 코드 소비 경계와 정적 대조했다. schema 전체/DB 검증을 새로 완료했다고 보고하지 않는다. 문서 diffcheck·내용/게시문 검토만 수행하고 Dart/의존성 불변으로 Flutter 시험/분석은 반복하지 않았다. 새 서버HTTP/권한·원자성/실회원·실기기와 dev/main 통합은 미완료다.
+- Git: feature/raid-recruitment-scheduling 유지·문서구간commit/push 보관. 통계35/플랫폼생성·DevTools/백업/tools의 기존 무관dirty는 보존/제외했다.
+
 ## 2026-10-24 — 미완료 종료·같은 주차 재개 비활성화
 
 구현 `ddf4bfd0` commit/push·원격일치. [Issue13 인계6370006371](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6370006371) 게시본문 MATCH. 이전 다일 노출 정책의 대체와 서버/기록 보존·담당/미확인·후속을 전달했다.

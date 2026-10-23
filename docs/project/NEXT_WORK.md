@@ -1,6 +1,14 @@
-# NEXT WORK — 탈퇴 자동승계·공대장 주차 해산 계약 갱신 / Backend 인계 대기
+# NEXT WORK — Issue24·25 보완 계약 소비 검토 완료 / Backend 구현 인계 대기
 
 ## 현재 상태 (2026-10-24)
+
+## 다음 작업 — Backend 구현·실행 계약 인계 확인
+
+24/6369761914·25/6369762510(합성 예시6369763243/6369763925)의 보완 계약을 현재 bce1f0d7의 검색/상세/실제 Router·원명령/ACK·목록/기록과 대조했다. 기존 네 소비 차이는 해소됐고 추가 차단 계약 요구는 없다. [24 검토6370137482](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6370137482)·[25 검토6370138718](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6370138718) 게시본문 MATCH. 상세는 [설계37 §37.43](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)이며 아래 과거 ‘계약 보완 대기’보다 이 상태가 우선한다. 새 기능/실행 OpenAPI·개발API/DB 반영 인계는 아직 없으며 37개 예시는 합성 설계 자료다.
+
+다음 Backend: 정의한 구현 구간의 정확 SHA/push·실행 OpenAPI/개발API·DB 여부/대표 실제 응답·직접 검증 결과를 인계한다. 이미 수용한 정책/합성 예시 검증을 반복 요청하지 않는다. 다음 Flutter는 그 인계와 구현 지시 후 (1)24 기존검색 갱신/제한된 커서 회복 (2)25 전용 DTO/원명령·ACK (3)실제 menu/성공1회 이탈·반대T만 해산시 현재화면 유지·빈effects 관계종료 알림 (4)명시 profile/옛 기록 anchor Router 연결을 독립 검증 단위로 구체화한다. old pending/24h ACK·일반 일정/완료·기존 readonly·회원/T 격리·IF-001 비활성은 보존한다. 복구 UI는 제안이며 추가 상시버튼/필수단계로 승인된 것이 아니다.
+
+이번 검토 완료 조건은 문서 diffcheck/소비 근거 대조·각 Issue 게시본문 재조회·작업브랜치 commit/push다. 기능코드/API/의존성 변경·반복 Flutter 시험/분석·서버/DB/기기 조작·dev/main 통합은 제외했다. 기존 N단독 생성 수정본·추가 인증 회원이 필요한 다인 실기기 인수와 IF-001 숨김 확인은 유지한다.
 
 ## 최신 완료 구간 — 미완료 종료·같은 주차 재개 비활성화
 

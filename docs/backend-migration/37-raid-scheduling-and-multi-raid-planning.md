@@ -2050,3 +2050,25 @@ UX 제안은 주차 탈퇴=현재 보이는 T만 나가기, 모집 해산=전체
 기존 원pending은 신규 진입과 분리하여 원본문/key/token/효과·ACK/최대24h 복구를 유지한다. DTO/Reader/writer/확인창·다일 판정/감사·완료 기록은 보존한다. 일반 plan·일정 응답은 공유하므로 그대로 사용하며 재개 제안과 혼동하지 않는다. 다음주 방 재개방(reopen), 일반 완료/개인완료후탈퇴·일정/예약, 새 Issue25 탈퇴/해산·리더 복구 제안은 별개다. 기존 중단 자료를 자동 해산/재개/완료시키지 않으며 서버 endpoint/DB 삭제·권한 변경은 없다.
 
 보존 회귀 시험은 테스트 전용 하위 클래스에서만 명시 활성화한다. 실제 앱 기본 차단0요청·stale 제출/정상완료, 비활성 상태 원pending ACK 복구·추가GET 생략을 포함해 outcome/resume/schedule/departure 4파일119mock PASS(신규3+기존116), 변경Dart6파일분석0·포맷/diffcheck. 현재/다음주·단일/다일 상세 버튼 숨김/정상 완료·일정·다음주 진입과 기존 중단 자료 표시는 사용자 실기기 확인 대기다. Issue13 최종 정책 인계·작업 브랜치 보관 후 기존24/25 계약 대기를 유지한다. dev/main 통합은 제외한다.
+
+### 37.43 Issue24 보완1·Issue25 보완안2 소비 검토 (2026-10-24)
+
+사용자 진행 승인으로 [24 보완1](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6369761914), [25 보완안2](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6369762510)와 예시6369763243/6369763925를 Flutter bce1f0d7의 실제 연결과 대조했다. §37.40에서 요청한 네 차이는 해소됐으며 추가 차단 계약 요구는 없다. **기술적 소비 가능 판단이며 새 기능·서버/DB/실행 OpenAPI 완료가 아니다.** JSON의49개 정의/37개 예시는 설계 자료로만 다루고 Backend 보고의 정적 검증을 실서버 시험 수치로 재사용하지 않는다.
+
+| 대상 | 소비 판단과 앱 후속 |
+|---|---|
+| 24 검색 | 기존 요청/응답 유지·선택T/현gen 본인참가를 SQL 정렬/페이지 전 제외하는 계약 수용. semantics 변경/대상head 변경은 CURSOR_STALE409, 위조/다른scope는 INVALID_REQUEST400. 새flag/선행GET/로컬후처리 불필요 |
+| 25 메뉴 | 활성 지속Member 입구와 각option 권한 분리 수용. C미참가/N리더의 현재T탈퇴=false·모두탈퇴=true·해산N만 벡터 소비 가능. 기존 현재T리더+1인end 사전조회 대신 실제 menu/visible/permission/원Impact를 연결 |
+| 25 결과 | planned target/gen/CM 후상태와 equal/increase/exact_after 규칙을 전용 ACK로 검증 가능. room/actor/CM/gen·영향T 집합/정렬·완료보존과 원실행C/viewT를 고정하고 모든revision을 임의+1 처리하지 않음 |
+| 25 reader | 명시 reader_profile=membership-actions-1의 wrapper와 기존 전체200 content를 분리. content가 있으면 기존 parser를 재사용하고 null이면 target/viewer/recovery로 요약·안내. gen미확정/role=none을 임의삭제·가짜리더/양수gen으로 보충하지 않음 |
+| 25 기록 | record_locator의 옛membership_id+cycle_member_id를 함께 전달. 재가입 새Member와 다른 조회키로 보관하고 RecordSnapshot/readonly로 표시. 구보관 DTO 확장으로 cancelled/removed를 위장하지 않음 |
+
+**현재 코드와 후속 경계:** CycleSearchViewModel._pages는 (T,filter.signature)별, 회원/환경 epoch로 격리된다. _mutation은 실제 lastTarget 페이지만 무효화하고 선택T면 갱신한다. 모집검색 CURSOR_STALE은 rows/cursor/cache 폐기+오류 표시이며 자동 첫페이지 재조회는 아직 없다. 그룹 캐릭터 후보의 별도 회복과 구분하며, 후속에서 동일scope/T/필터 최대1회 또는 명시 갱신을 사용한다. #25 effects=[]/actor_membership_ended=true는 changed(room,T) 루프만으로 통지가 누락되므로 별도 관계종료 알림으로 C/N 내목록·한도 캐시를 무효화한다. 서버효과T/head를 가짜로 추가하지 않는다.
+
+BackendApp의 /recruitments/:recruitmentId는 현재 room/T만 페이지에 전달하며 BackendRecruitmentDetailViewModel은 기존 cycleDetail과 1인end 조회를 사용한다. 새 reader/옛기록은 명시profile·state·record anchor를 Router/조회·캐시 식별자에 포함하는 연결이 필요하다. 목록의 CycleOwnRow/기존 Gateway parser로 새 wrapper를 강제cast하지 않는다. 동일방에 재가입했더라도 옛record는 옛Member/CM/세대이며 새Member로 권한을 살리지 않는다. record_locator=null인 relation_only에는 가짜기록 링크를 만들지 않는다. generic review와 explicit leadership_pending/review_remaining/unverified를 구분하고, 복구UI는 제안 상태로 유지한다.
+
+현재 상세의 departureSuccess는 현재room/T의 개인완료탈퇴 성공에만 1회 이탈한다. 새 명령에서는 현재T 참가/지속관계가 끝난 경우 이탈하고, 반대T만 해산해 현재T가 남으면 현재화면 유지·정확영향T 갱신으로 분기한다. ACK 뒤 plan403/404는 탈퇴 성공을 취소하는 근거가 아니다. _CycleCommand와 기존 globalAck strict parser는 그대로 보존하고 전용 새 writer/ACK 근거를 별도로 연결한다. 옛 method/path/body/key/token·효과/24hACK를 새효과로 치환하지 않는다.
+
+**비활성 기능과 분리:** §37.42/IF-001의 close_weekly·weekly_resume 비활성은 유지한다. 새 reader에 retained/resume_weekly/기존stopped 자료가 있어도 다시 켜지 않는다. 다음주 reopen·recover_leadership은 별개이며 후자의 UI 제품승인을 이번 기술 검토로 대신하지 않는다.
+
+**회신/다음 담당:** [24 검토6370137482](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6370137482)·[25 검토6370138718](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6370138718) 게시본문 MATCH. 다음 Backend는 정의한 구현 구간의 정확SHA/push·실행 OpenAPI·대표 실제 응답/직접검증·개발API/DB 여부를 인계한다. 그 뒤 Flutter는 기존검색 갱신/제한된커서회복, 새전용 DTO/원명령·ACK, 실제menu/성공화면·알림, profile/기록 Router를 검증 가능한 구간으로 나눠 연결한다. 이번 문서/정적소비검토에서는 Dart/API/의존성·서버/DB 불변, Flutter 시험/분석 반복 없이 diffcheck/내용/게시문 대조 후 작업브랜치 commit/push로 보관한다. 새서버 HTTP·실회원/실기기·dev/main통합은 미완료다.
