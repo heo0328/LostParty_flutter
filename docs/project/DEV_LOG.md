@@ -1,5 +1,13 @@
 # 개발 이력
 
+## 2026-10-23 — Issue22/23 최종 계약의 네이티브 구현 설계
+
+사용자 설계우선 지시로 Backend0eed67c453040b332653fd2071e6cd2e1eeed503의 고정 OpenAPI174경로/주요닫힌schema·개발안내·합성17그룹자료, 최종22/6362447014·23/6362447457회신과 실제Flutter Router/DI/Controller/ACK를 대조했다. 상세설계는설계37 §37.32,현재순서는NEXT_WORK다. §37.31의표시/source review계약대기는해소됐고Flutter구현대기로변경했다.
+
+- 새설계: D22의전용Context/표시/명령·최소공용ActionResult/ACK/성공이벤트·개인완료후상세이탈/내참가실제T복귀, E23의선택option별의미서명·권한/nullable·카드3선택/정확영향T무효화. 각각파일책임·순서/완료조건/직접시험·수동인수를명시했다. 원명령/원ACK·후속GET실패성공보존/회원·T·세대격리와기존정상흐름을보호한다.
+- 범위: 기능/테스트코드불변·앱소비2940824유지,새로가능해진앱행동없음. 기존A완료해제/B보관목록은별도미완료,새명령필수reader/null·갱신만재사용하고동시전체수정없음. 시간UI/통계/다인강제해산·모집영속pending·과거새화면/서버DB/기기/배포/dev/main제외.
+- 검증: 고정schema필드·path174/실제DI/흐름·문서/링크·diffcheck정적검토. yaml모듈미설치환경에서JSON형태OpenAPI를표준json으로읽었고대용량contents빈본문은git blob으로확보했다. 기존Flutter시험재실행없음·Backend39PASS는보고수신이며새Flutter/실회원·기기검증은미실행이다. 현작업브랜치문서commit/push·유지·무관dirty보존.
+
 ## 2026-10-23 — Backend22/23 제안1 소비 검토와 회신
 
 사용자승인으로Issue13 이관6361053787·22/23본문을현재673e7e46의실제OutcomeDialog/관리카드·preview/signature/원명령·ACK/changed/읽기경로에대조했다. [22회신6361482436](https://github.com/heo0328/lostparty-backend/issues/22#issuecomment-6361482436)·[23회신6361482811](https://github.com/heo0328/lostparty-backend/issues/23#issuecomment-6361482811)을게시하고줄바꿈정규화본문MATCH를확인했다. 상세판단은설계37 §37.31,담당/대기는NEXT_WORK다.

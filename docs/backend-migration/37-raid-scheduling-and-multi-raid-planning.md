@@ -1767,3 +1767,68 @@ B는 member_cycles/device_feedback/cycle_recruitment의 실제read경계와 cycl
 두Issue에최종closed OpenAPI/정확SHA·새상태/nullable/ACK대표예시와예정된격리검증·개발반영/DB여부인계를요청했다. 기존시험반복·자동감시/실회원명령요청은없다. 마지막1인해산유지는사용자확정이며다인양T강제해산요청이없음을정정했다. 전체방/주차일괄완료정책확대·추정API연결은제외한다.
 
 검증은계약본문/코드경로/문서·링크/diffcheck와게시뒤줄바꿈정규화본문MATCH다. 기능코드/의존성불변으로Flutter시험재실행없음. 새명령의실서버/자동경계·실회원/기기검증은미실행이며현재검토를기능완료로표기하지않는다. 완료정정/보관129의A/B소비는별도순서로남긴다. 현재feature/raid-recruitment-scheduling문서commit/push·브랜치유지,dev/main/운영·서버/DB/키변경없음.
+
+
+### 37.32 Issue22/23 최종 계약 기반 네이티브 구현 설계 (2026-10-23)
+
+#### 근거·상태·범위
+
+사용자 지시는 기획·설계 우선이며 이번에는 기능 코드를 변경하지 않는다. 현재 Flutter dd0cdbcb / feature/raid-recruitment-scheduling과 실제 Router/DI를 대조했다. 최종 계약은 Backend **0eed67c453040b332653fd2071e6cd2e1eeed503**의 실행 OpenAPI 174경로/DB0030이다. [22 인계6362447014](https://github.com/heo0328/lostparty-backend/issues/22#issuecomment-6362447014), [23 인계6362447457](https://github.com/heo0328/lostparty-backend/issues/23#issuecomment-6362447457), 같은 SHA의 개발 안내·합성 예시17그룹을 확보했다. OpenAPI의 DepartureContext/RemovalContext/DepartureCommand/RemovalCommand/ActionResult와 하위 display/impact/option/effect의 실제 필드를 직접 대조했다. §37.31의 두 보완 대기는 해소됐고 **Flutter 구현 대기**다. 현재 앱 소비2940824는 아직 전환하지 않았다. Backend39PASS/개발반영은 보고 수신이며 Flutter 시험·실회원 인수와 다르다.
+
+포함은 개인 완료 후 선택T 탈퇴·자동승계, 현재 카드의 현재/양T 동일회원 추방과 필요한 reader/ACK/갱신 경계다. 기존 개인 완료·단일 removals의 원명령, 주차 완료/탈퇴/마지막1인 해산, 다음주 유지, 선호역할/개별갱신은 보존한다. 시간 선택 UI·다인 강제해산·매주 자동개방·과거이력 새화면·통계·모집 pending의 앱종료 영속복구·DB/서버 조작·dev/main 통합·배포는 제외한다.
+
+#### 사용자 화면과 행동
+
+| 행동 | 확인과 처리 | 성공 후 |
+|---|---|---|
+| 나혼자 완료처리이후 탈퇴 | 기존 구성 아래 개인 완료 위치를 유지한다. 현재C/수10시 이후 참가자 대상. 기존 plan에서 active 본인raid 후보를 선택하되 최종 확인은 새 Context.display만 사용한다. 완료할1개/참가취소할나머지/기존완료보존·날짜/캐릭터·예약해제/후계자 또는마지막T종료를 표시한다 | 선택raid만 본인완료, 나머지 본인T참가는 취소·본인T탈퇴. N·타인·지속Member 보존. 성공ACK 뒤 해당 상세를 떠나 **선택T의 내 참가 목록 /raid-status로 이동**하고 계정완료·목록 갱신 |
+| 카드 빨간X | 카드의 membership/실제cycleMember/sourceT를 고정한다. 반대 실제관계none이면 취소/내보내기, participating 또는review면 취소/이번주만(또는다음주만)/함께내보내기의 기존 3선택. 불가option은 사유+비활성 | 선택된 효과T만 detail/plan·검색/본인목록·계정/후보/예약 근거 무효화. 현재 탭 유지·실제 결과 재조회 |
+| 실패/거절 | 후계자없음이면 완료/탈퇴 모두0. source세대/점유불확정·권한부족은 사유 안내. 확인 중 표시/영향/권한 변화는 쓰기없이 새확인. both 불가는 current_only/옛API로 바꾸지 않음 | 사용자 선택 보존 또는 명시 재확인. ACK 뒤 조회실패는 '반영됨·갱신 필요'로 구분 |
+
+같은 raid가1개면 불필요한 추가 선택창을 만들지 않고 바로 해당 후보 확인, 다중raid는 기존 완료 확인창 안에서 선택한다. 종료 대상 날짜는 실제 cycle key로 고정한다. '주차 완료'는 기존 선택raid 전원 완료를 유지하며 새 개인명령/방전체완료로 바꾸지 않는다. 확인창 취소는 왼쪽, 긍정은 오른쪽이며 좁은 화면은 줄바꿈한다. 서버가 제공한 자동승계 결과만 표시하고 앱에서 후계자를 다시 선정하지 않는다.
+
+#### 데이터 소유·파일별 책임
+
+| 파일/책임 | 구현 설계 |
+|---|---|
+| 신규 `recruitment_list/data/cycle_member_actions.dart` | DeparturePreview/RemovalPreview와 두 action 공용 ActionResult의 닫힌 DTO·관계 검증/명령본문/의미서명/reader. 같은 필드 구조의 확인token·영향결과만 최소 공유한다. 기존 outcome/management DTO를 임의 확장·캐스팅하지 않음 |
+| `cycle_interaction_repository.dart` / CycleInteractionGateway | departure(room,T,round), removal(room,T,cycleMember) 읽기와 새 action ACK validator 분기. 기존 인증transport·크기/오류 경계·전용 POST를 사용. 기존 write 인수/호출자 호환을 보존하며 가짜 GET/POST fallback 없음 |
+| `cycle_participation_controller.dart` | 새 preview 준비/선택option 재확인·최신 의미 비교/원명령 고정/전용ACK확정/영향T 갱신. _CycleCommand에 새명령종류·action/mode/subject/원scope·영향/effect 검증근거를 보존. 기존 명령 종류/path/body/key를 재작성하지 않음 |
+| 신규 `presentation/widgets/cycle_member_action_widgets.dart` | 기존 확인창 양식의 개인완료후탈퇴/카드추방 UI. Context display/impact·옵션권한만 표시하고 API를 직접 호출하거나 승계/추방정책을 재구현하지 않음 |
+| `cycle_outcome_widgets.dart` / `backend_recruitment_detail_page.dart` | 개인 완료 진입만 새명령으로 연결·요청이름 적용. 기존 전원완료/미완료종료/재개·위임/탈퇴/해산 위치 유지. X는 고정카드대상으로 새reader에 연결. 결과불명 복구 뒤에도 본인 departure 성공을 명시 식별해 상세 재조회 대신 1회 이탈 |
+| `backend_app.dart` / 주차 read ViewModel·계정 weekly | 기존 /recruitments/:id Router와 app-owned controller/회원scope 그대로. 기존 onMutation은 weekly.refreshTarget만이므로 CycleReadViewModel의 실제 무효화 연결도 확인·보완한다. 특정T 캐시를 지우고 보이는목록만 재조회, 모든화면 즉시전면조회는 안 함. /raid-status에 실제T 선택을 전달·복원 |
+| detail/plan/card reader | closed completed/null리더·review의 실제/누락 식별자를 정확히 읽는다. 필수source를 만들 수 없으면 X쓰기차단·사유, 정상source review는 current_only 접근을 유지. 기록상세/보관 읽기 변경 전체는 기존 §37.27 B와 중복 구현하지 않음 |
+
+서버가 원본 관계·권한/자동승계·원자성·예약 정리를 소유한다. 앱은 동일회원/레이드 이름을 추측 매칭하지 않고 표시·명령 근거의 관계를 검증한다. 새 상태를 optimistic으로 합성하거나 완료뒤cancel을 연달아 보내지 않는다. 조회는 버튼 터치시에만, 계획/Context는 확인창 수명에 한정하고 카드별 선제 Context/N+1은 만들지 않는다.
+
+#### 명령·확인·복구의 정확한 경계
+
+1. 진입에서 회원/환경·room/sourceT·CM/카드membership·선택round·화면읽기세대를 고정한다. 회원/실제T 전환·dispose·소유변경 후 늦은 응답은 폐기한다. UI 외부주차 전환과 선택변경이 기존 dialog에 다른T를 재타깃하지 않도록 원페이지 binding/세대도 비교한다.
+2. Departure의 subject/impact/display 배열은 UUID 중복없음·서로배타·같은 assignment/character/round/item 관계·complete1개/cancel최대4/preserve최대5·표시effect와일대일 대응을 검증한다. display_revision은64자리 서버식별자로 읽고 재계산하지 않는다. nullable은 character_name·successor·confirmation과 계약의 Leadership만 허용한다. permission=false이면confirmation=null/POST0이며후계자없음을성공탈퇴로표기하지않는다.
+3. Removal은 sourceT/카드CM/target_membership 고정, opposite none/null·review/null·participating/null을 구분한다. 허용 option만 impact/confirmation 존재, 거절은둘다null이다. current_only는 source+targetmembership+current_only impact/permission만 의미서명에 포함해 무관한opposite/both token·상태 변화를 제외한다. both는 두source/opposite의 실제대상·권한/영향을 포함한다. 새조회로 source의room/CM/세대·선택효과가 달라지면 POST없이 재확인한다.
+4. 긍정선택 직후 동일대상Context를 다시 읽는다. token/issued/expires만 바뀌면 최신token으로 새명령을 만들 수 있지만 display/subject/영향·권한/후계자·선택option 근거가 바뀌면 사용자 재확인한다. 허용 전제와 의미가 같을 때만 UUID4 Key/원 POST path/body/token을 고정한다. GET에는 Key/pending을 만들지 않는다.
+5. 기존 app-owned pending/연타차단을 재사용한다. 결과불명은 원method/path/body/key/token 그대로 재송하며 새Context로token을갈아끼우지 않는다. 원ACK는원C/sourceT/실제ID에검증하고현재주차로재라벨링하지않는다. REQUEST_IN_PROGRESS/RetryAfter·24h만료/명시보류와 확정거절을 분리한다. 현재모집pending은메모리수명이며앱종료복구를새로완성했다고표기하지않는다.
+6. ActionResult의 command_id/action/subject_membership_id/source첫순 affected_cycle_keys/effects와 원명령근거를 정확히 대조한다. departure는1T·state=cancelled·selected completed1개/나머지cancel/preserve집합, removal은mode별1/2T·state=removed·completed=[]와선택영향을검증한다. Csource both는C,N, Nsource both는N,C순이며중복T/누락효과/대상CM·세대불일치를거절한다. target/member/leadership revision은최종값과전이관계를최종wire·예시대로검증하고null리더를가짜ID로채우지않는다.
+7. ACK검증성공즉시pending을해제하고완료종류·원room/T/명령ID가있는성공이벤트를남긴다. departure는이이벤트로1회상세이탈하며회원이바뀌거나이미다른페이지에있으면강제이동하지않는다. 기존mutationVersion 이벤트만으로먼저detail GET을날리는경로와분리한다. 결과불명재송성공도같은이벤트로이탈한다. 후속GET403/404/실패는성공확정을뒤집지않고쓰기재실행0이다.
+8. departure는sourceT weekly/현재참가·목록/해당방reader·예약/후보근거를무효화한다. N저장자료를지우거나다시쓰지않고공통개방등파생권한만조회시재평가한다. 추방은ACK효과T만무효화한다. current_only는반대T 캐시까지일괄삭제하지않고both는양T다. 타기기push보장없음·서버는다음조회에서권한을재검사한다.
+
+시각/타입은 게시 schema의 UUID·양수revision상한2147483647·date·offset datetime·정규양수 joined_order문자열·배열상한·4096 UTF8bytes token/120초·32KiB입력/1MiB응답을 따른다. 기존 UTC전용parser를 전역 완화하지 않고 새DTO 시각 처리에 한정한다. 미지원추가필드/잘못된null·서로다른action의token/ACK는거절하며body 필드명은최종9/10개 DepartureCommand/RemovalCommand 그대로다.
+
+#### 독립 구현 순서와 완료 조건
+
+- **D22 (다음 신규 구현 그룹):** 공용 ActionResult 최소 모델+DepartureContext/표시/reader → controller 원명령·ACK/성공이벤트/선택T갱신 → 개인완료 확인창/이름·상세이탈 → 관련최종시험/문서·Issue22결과·작업브랜치commit/push. 공용기초만붙이고기존개인버튼을미연결상태로바꾸지않는다. 실제탈퇴/승계효과는서버가소유한다.
+- **E23 (D22 다음):** RemovalContext/options·source review/nullable/선택option의미서명 → 기존카드X/취소·현재만·함께3선택 → 전용ACK/선택T갱신 → 관련최종시험/문서·Issue23결과·commit/push. 구단일T pending은계속원API로복구,새흐름거절을구명령으로우회하지않는다.
+- **기존 A/B (§37.27):** 본인완료해제 durable pending schema호환과current/ended/all·보관/복구목록은별도미완료다. D/E와정책상강제선행관계는없고새명령에필수인reader/null/계정무효화만한번구현해재사용한다. 현재새요청의첫구현은D22이며A/B를동시확대하지않는다. 전체릴리즈인수전에는A/B·D/E의합동정합과기존결함해결을확인해야한다.
+
+각그룹완료는실제Router의연결·취소쓰기0/권한거절·세대격리·원ACK/재송·성공후갱신/이탈까지직접검증하고요청이름/카드위치가승인UX와일치한경우다. Backend39시험을Flutter통과로인용하거나기존52/144수치와합산하지않는다. 실기기기본흐름은D/E각중간마다반복요청하지않고기능섹션최종에아래항목을묶는다.
+
+#### 회귀 보호·검증 계획
+
+| 구간 | 자동 경계·표적 시험 | 수동 인수(사용자) |
+|---|---|---|
+| D22 | 신규 cycle_member_actions_test/cycle_departure_test:닫힌DTO/누락·추가·nullable·표시/impact 일대일·안정서명·후계없음/마지막null·현재C/수10/N·stale/중복·소유/회원/T변경·원token재송/rollover원ACK·ACK불일치·403/404 후 조회성공보존/1회이탈. 기존cycle_outcome/interaction/recruitment의직접영향만묶음 | 일반회원/공대장개인완료후탈퇴·승계/마지막T종료,다중raid완료1/나머지취소안내·N보존·계정완료/목록복귀 |
+| E23 | 신규 cycle_removal_test+공용모델:current_only/both·none/review/actor없음nullable·source review허용/불확정거절·양T각권한/both비활성·반대무관변경current_only서명불변·Nsource ACK순서/누락효과·재참가/대상CM변경·원ACK/정확영향T무효화. 기존cycle_management/interaction/recruitment 직접영향 | 카드X대상/취소·현재만·함께,반대주차다른캐릭터/권한차이,현재만의반대T보존·표시이후변경재확인·폴드줄바꿈 |
+
+앱에서서버의DB롤백/감사원자성을다시입증하는mock을만들지않는다. Backend격리39시험근거와앱의DTO/명령/이벤트/읽기경계를구분한다. 인원수는최대8인대표+다른상태인마지막1인만으로한정한다. 공용 Gateway/ACK확장호출자가다른feature에전파되면그해당회귀/분석을추가하고불필요한전체시험은반복하지않는다. 최종포맷·diffcheck·관련분석은각독립그룹에서1회묶는다.
+
+이번설계구간은원격고정OpenAPI의174경로와주요schema필드·개발안내/17그룹자료·기존Router/DI/실제Writer를정적으로대조했다. Python환경에yaml모듈이없어설치하지않고파일이JSON형태임을확인해표준json으로검토했다. GitHubcontents의대용량OpenAPI본문이비어있어고정blob API로자료를확보했으며계약누락으로추정하지않았다. 기능/시험코드·실서버쓰기/기기조작은변경/실행하지않았다. 순수문서검증은diffcheck·링크/내용검토,기존Flutter시험재실행없음이다.
