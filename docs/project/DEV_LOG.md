@@ -9,6 +9,8 @@
 - 검증: **6파일 단일156mock PASS(신규28+직접영향128)**·변경Dart7파일 분석0·포맷/diff/소스검토. 최초 새테스트의 nullable query/가짜세션 메서드 컴파일 오류 수정 후 좁은23PASS와 추가경계 포함 최종156PASS다. 분석 안내2건(null-aware 요소/mounted guard)도 최종0으로 정리했다. DI/저장 schema 불변·모집writer/실제T 갱신 한정으로 무관전체시험을 반복하지 않았고 F6최종 통합 시 영향으로 재판단한다.
 - 미확인 실기기 항목: 정상인증회원HTTP·실회원쓰기, 실제 완료/종료/예약해제와 다음 주 보존·계정표시, 확인창/글자크기/스크롤/기기성능이다. 전체 기능섹션 수동인수에 묶으며 설치·기기자동조작을 하지 않았다. Backend DB/HMAC/권한·CAS/경합·원자성 독립시험도 미수행이다.
 - 협업/다음: F6-C 재개 표시/생성 전 확인·응답 binding은 Backend116 계약안 대기다. 서버·DB·키/운영·관리pending 영속화·dev/main 통합은 제외했다. 코드/시험/문서를 기존 feature/raid-recruitment-scheduling에 commit/push 보관하고 실제 구현SHA/156mock/분석0·미확인·다음 담당을 Issue13에 회신한다. 기존 통계35·플랫폼 생성파일/DevTools/백업/tools 변경은 제외·보존, 작업브랜치 유지다.
+- 구현 **ea0c932f** commit/push·원격일치 확인. 인계 직전 새 [Backend118 제안1/6355880490](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355880490) 전문을 확인했다. F6-B에 영향 없는 C 미합의/미구현 제안이며 다음은 Flutter 소비 대조/회신이다. 검토3항목을 NEXT_WORK에 기록하고 이번 B 승인으로 C 수용/구현을 확대하지 않았다.
+- 인계 마감: [Flutter119 F6-B 결과6356041000](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6356041000)에 실제 구현SHA/원격일치·156mock/7파일분석0·미확인·Backend118 수신/다음 담당을 회신하고 게시본문 원문 재조회 MATCH를 확인했다. 이후 문서만 변경했으므로 Flutter 시험은 반복하지 않았다. 후속 링크/계약안 상태도 같은 작업브랜치에 보관한다.
 
 ## 2026-10-23 — F6-A 계정 수동 완료 v2·저장 요청 호환 구현
 

@@ -14,6 +14,8 @@
 
 ## 구현·디자인·협업 상태
 
+F6-B 마감 중 [Backend118 재개 계약 제안1/6355880490](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355880490)을 수신했다. 미합의·미구현이며 다음은 Flutter의 POST preview/opt-in 표시·응답 token/구소비 호환 대조·회신이다. 소비07c2b671 불변, 새 계약 구현 완료로 취급하지 않는다. 상세 검토 항목은 NEXT_WORK다.
+
 [Backend112 구현 인계6345290060](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345290060)의 고정소비07c2b671로 사전표시를 연결했다. 기존 두 확인창에 실제ID/날짜/미정·명시선택과 읽기 개방미리보기를 적용하고 닫힌DTO·실제/예정세대·표시서명/입력고정·원pending/ACK를 보호한다. F3 후보/F4 관리/F5 일정·예약 독립구간은 유지한다. 상세는 설계37 §37.18, 검증/Issue·Git 마감은 DEV_LOG다. Backend48PASS/개발반영은 보고수신이며 Flutter106mock 통과와 실제회원/기기 인수를 구분한다. F5 Backend 보완 대기는 없고 F6의 별도 확인은 아래를 따른다.
 
 F6-A 계정 manual v2/구pending 보존과 F6-B 방완료/본인완료·미완료종료를 구현했다. 기존 진행영역/확인창과 원명령 writer·실제T 갱신을 사용하며 N/다른item/기존완료를 격리한다. 상세는 §37.20/37.21·DEV_LOG다. [Backend116/6355428620](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355428620)에서 정정범위는 확정했고 현재주재개 표시/생성전확인 binding만 Backend 계약보완 대기다. dev통합/실회원/기기 인수는 남는다.
