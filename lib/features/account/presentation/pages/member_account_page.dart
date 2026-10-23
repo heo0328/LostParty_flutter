@@ -1,6 +1,7 @@
 import '../../../../shared/formatters/display_number_formatter.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../widgets/ownership_notice_title.dart';
 import '../widgets/play_availability_card.dart';
 import '../viewmodels/play_availability_view_model.dart';
@@ -1134,6 +1135,13 @@ class MemberCharacterPage extends StatelessWidget {
     listenable: Listenable.merge([model, model.runner.source.cooldown]),
     builder: (context, _) {
       final row = model.character(ref);
+      final supportsMultipleRoles =
+          row != null &&
+          const CharacterBuildRolePolicy().supportsMultipleRoles(
+            (jsonDecode(row.observation.profileJson) as Map)['class_name']
+                    as String? ??
+                '',
+          );
       return Scaffold(
         appBar: AppBar(
           title: OwnershipNoticeTitle(
@@ -1166,13 +1174,18 @@ class MemberCharacterPage extends StatelessWidget {
                           : '캐릭터 갱신',
                     ),
                   ),
-                  if (row.preferences != null &&
-                      const CharacterBuildRolePolicy().supportsMultipleRoles(
-                        (jsonDecode(row.observation.profileJson)
-                                    as Map)['class_name']
-                                as String? ??
-                            '',
-                      ))
+                  if (supportsMultipleRoles)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        '서포터 캐릭터의 경우 아크패시브 계열로 딜러와 서포터 계열이 자동 분류되어 저장됩니다.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  if (row.preferences != null && supportsMultipleRoles)
                     Wrap(
                       spacing: 8,
                       children: [
