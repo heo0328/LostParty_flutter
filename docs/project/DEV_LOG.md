@@ -1,5 +1,15 @@
 # 개발 이력
 
+## 2026-10-23 — F6-C 현재주 재개 확인·응답 연결
+
+사용자 구현 승인으로 필수문서/설계37 §37.22·55b2c853/원격일치·dev6d3f617·무관dirty와 [Backend121 인계6356827586](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6356827586)을 확인했다. 고정소비 **29408243192ed3a37a347ade046db26ad2d918b9/168경로·0.4.1/policy4**의 실제 OpenAPI(1699552bytes, preview 두200형태/opt-in flag/두token본문)·개발안내·resume_review_schemas/구현·actual role을 대조했다. Backend66고유격리PASS/개발반영은 보고수신이며 Flutter가 서버/DB/실회원 결과를 독립재현한 것은 아니다.
+
+- 새로 가능해진 흐름: 기존 상세 진행영역의 이번 주 재개 제안/제안 확인으로 진입한다. 일정 유지(null)·일정은 재개 후 설정([])을 명시 선택하고 서버 read-only preview의 실제T/요일·시각/미정·그룹/후보/조율·영향/제안자표를 확인한다. opt-in 제안별 표시·내 응답/집계/권한·수락/거절, 1인 별도응답/완료된제안자의 자동표없음을 처리한다. source/preview ID를 합성하지 않고 기록ACK와 실제적용ACK를 분리해 기존 실제T 상세/계정 summary·검색/본인목록 갱신을 사용한다. applied 원ACK 뒤 기존 현재T plan을 자동 조회해 새 실제ID/참가 확인 대기를 읽으며 조회실패도 쓰기 확정을 되돌리지 않는다.
+- 보존 확인: 기본 plan/일반 F5 응답·F6-B 완료/종료·F4 관리/F3 참가 writer를 직접회귀에 포함했다. preview 명령/key/pending0·원본문/CAS 입력고정·null/[]/순서·닫힌 review/실제 scope/round·token유효시각/최대120초·32KiB/1MiB·legacy/stale/권한/누락token 새응답 차단·변경재확인·중복/회원전환·잘못된 ACK/결과불명/원응답 rollover를 보호한다. 반대/미응답을 자동탈퇴로 처리하지 않고 참가 재연결과 수락자 시간동의만 구분한다. 완료이력/N/같은C·세대·구계정 schema·Router/DI는 불변이다.
+- 검증: 새재개37+기존직접영향116의 **5파일 단일153mock PASS**, 변경Dart7파일 최종분석0·포맷/diff/고정계약·소스검토. 공용 writer/화면 컴파일 위험으로 중간 새28건을 좁게 확인했고 이후 추가경계 포함152 뒤 적용ACK후 plan 자동조회/조회실패 경계를 보완해 최종153을 실행했으며 중복합산하지 않는다. 분석 안내(사용안함 import/중괄호)만 정리 뒤0이며 실행실패는 없다. 저장/DI/Router 불변·기존 모든 직접writer 경로와 실제T 알림 한정이라 무관 전체시험을 반복하지 않았다. 이후 공유변경/회귀 근거가 생길 때만 확장한다.
+- 미확인 실기기: 정상로그인회원HTTP·실회원쓰기, 확인창 크기/스크롤/큰글자·진입/1인/다인/미정/조율/후보·실제 새ID/참가/시간동의/예약·제출표·완료/N보존·성능이다. Backend 토큰/HMAC/DB/원자성·경합/정족수 독립시험은 미수행이다. 전체 기능섹션 사용자 인수에 묶으며 설치·기기조작/서버·DB·키·운영배포는 진행하지 않았다. 모집관리 pending 앱종료 후 영속복구는 후속이며 메모리 원요청재송을 영속복구 완료로 확대하지 않는다.
+- 다음/Git/협업: 전체 F1~F6 인수 준비/체크리스트·실제 조건 대조가 다음 단일 구간이다. 문서/코드/시험을 기존 feature/raid-recruitment-scheduling에 commit/push 보관·dev미병합/브랜치유지, 통계35·플랫폼생성/DevTools/백업/tools는 보존·제외한다. 같은 Issue13에 사용SHA/실제 구현SHA·자동검증/미확인·다음 담당을 회신하고 게시원문 재조회로 마감한다.
+
 ## 2026-10-23 — F6-C 재개 계약안 소비 대조·세 항목 수용
 
 사용자 진행 요청으로 필수문서·feature/raid-recruitment-scheduling 5af242be/원격일치·dev6d3f617·기존무관dirty·Backend118 제안1/Flutter119를 확인했다. 기능코드 수정 없이 Backend118 전문과 transport/닫힌 plan·일반응답/원명령·ACK 안내, 고정07c2b671 resume create/respond/apply/views를 대조했다. 현재 소비07c2b671/168경로·policy4는 불변이다.

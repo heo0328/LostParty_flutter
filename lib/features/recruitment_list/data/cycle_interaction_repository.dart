@@ -11,6 +11,7 @@ import 'group_character_candidates.dart';
 import 'cycle_management.dart';
 import 'cycle_schedule.dart';
 import 'cycle_outcome.dart';
+import 'cycle_resume.dart';
 import 'cycle_session_display.dart';
 
 String cycleStableJson(Object? value) {
@@ -456,6 +457,13 @@ class CycleApplicationView {
 }
 
 abstract interface class CycleInteractionGateway {
+  Future<CycleResumePlan> resumePlan(String room, String target);
+  Future<CycleResumePreview> resumePreview(
+    String room,
+    String target, {
+    String? proposalId,
+    List<dynamic>? groups,
+  });
   Future<CycleOutcomePreview> outcome(
     String room,
     String target,
@@ -532,6 +540,8 @@ abstract interface class CycleInteractionGateway {
     String? globalAck,
     List<String>? affectedTargets,
     Map<String, dynamic>? submissionAck,
+    String? resumeAck,
+    void Function(String)? onOutcome,
   });
 }
 
@@ -539,6 +549,20 @@ class CycleInteractionRepository implements CycleInteractionGateway {
   CycleInteractionRepository({required this.api, required this.recruitment});
   final BackendRegistrationApi api;
   final CycleRecruitmentGateway recruitment;
+  @override
+  Future<CycleResumePlan> resumePlan(String room, String target) =>
+      _decode(() => CycleResumeReader(api).read(room, target));
+  @override
+  Future<CycleResumePreview> resumePreview(
+    String room,
+    String target, {
+    String? proposalId,
+    List<dynamic>? groups,
+  }) => _decode(
+    () => CycleResumeReader(
+      api,
+    ).preview(room, target, proposalId: proposalId, groups: groups),
+  );
   @override
   Future<CycleOutcomePreview> outcome(
     String room,
@@ -827,6 +851,8 @@ class CycleInteractionRepository implements CycleInteractionGateway {
     String? globalAck,
     List<String>? affectedTargets,
     Map<String, dynamic>? submissionAck,
+    String? resumeAck,
+    void Function(String)? onOutcome,
   }) => _decode(() async {
     roleId(key);
     final j = (await api.request(
@@ -918,6 +944,12 @@ class CycleInteractionRepository implements CycleInteractionGateway {
       roleCheck(applicationState == null || d['state'] == applicationState);
     } else {
       roleCheck({'applied', 'recorded', 'noop'}.contains(d['outcome']));
+      if (resumeAck != null) {
+        roleCheck(
+          (resumeAck == 'create' ? {'recorded'} : {'recorded', 'applied'})
+              .contains(d['outcome']),
+        );
+      }
       if (path.endsWith('/completion') ||
           path.endsWith('/personal-completion') ||
           path.endsWith('/weekly-incomplete-closures')) {
@@ -929,6 +961,7 @@ class CycleInteractionRepository implements CycleInteractionGateway {
         roleId(r['id']);
         rolePositive(r['revision']);
       }
+      onOutcome?.call(d['outcome'] as String);
     }
   });
 }

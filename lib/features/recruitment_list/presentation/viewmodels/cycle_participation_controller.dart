@@ -7,6 +7,7 @@ import '../../data/cycle_interaction_repository.dart';
 import '../../data/cycle_management.dart';
 import '../../data/cycle_schedule.dart';
 import '../../data/cycle_outcome.dart';
+import '../../data/cycle_resume.dart';
 import '../../domain/backend_recruitment.dart';
 
 class _CycleCommand {
@@ -25,6 +26,7 @@ class _CycleCommand {
     this.globalAck,
     this.affectedTargets,
     this.submissionAck,
+    this.resumeAck,
   }) : evidence = Map.unmodifiable(evidence),
        encoded = jsonEncode(body),
        key = newScopedCommandKey();
@@ -34,6 +36,7 @@ class _CycleCommand {
   final String? globalAck;
   final List<String>? affectedTargets;
   final Map<String, dynamic>? submissionAck;
+  final String? resumeAck;
   final bool applicationAck;
   final int status;
   final DateTime createdAt;
@@ -126,6 +129,71 @@ class CycleParticipationController extends ChangeNotifier {
   }
 
   Future<List<RecruitmentCharacter>?> characters() => _read(gateway.characters);
+  Future<CycleResumePlan?> resumePlan(String room, String target) =>
+      _read(() => gateway.resumePlan(room, target));
+  Future<CycleResumePreview?> resumePreview(
+    String room,
+    String target, {
+    String? proposalId,
+    List<dynamic>? groups,
+  }) => _read(
+    () => gateway.resumePreview(
+      room,
+      target,
+      proposalId: proposalId,
+      groups: groups,
+    ),
+  );
+  Future<void> resume(CycleResumePreview preview, {String? response}) async {
+    if (!canAct) return;
+    final room = preview.plan.room,
+        target = preview.plan.target,
+        id = preview.proposalId;
+    final signature = preview.signature;
+    final groups =
+        jsonDecode(jsonEncode(preview.originalBody['schedule_groups']))
+            as List<dynamic>?;
+    final frozenResponse = response;
+    final e = _epoch;
+    busy = true;
+    failure = notice = null;
+    _emit();
+    try {
+      final fresh = await gateway.resumePreview(
+        room,
+        target,
+        proposalId: id,
+        groups: groups,
+      );
+      if (!_valid(e)) return;
+      if (signature != fresh.signature) {
+        throw const AccountReadException('REVISION_CONFLICT');
+      }
+      final body = fresh.body(response: frozenResponse);
+      _pending = _CycleCommand(
+        path: fresh.path,
+        body: body,
+        room: room,
+        target: target,
+        applicationAck: false,
+        status: 200,
+        createdAt: now(),
+        evidence: fresh.plan.scope,
+        resumeAck: id == null ? 'create' : 'respond',
+      );
+      await _send(e);
+    } on AccountReadException catch (error) {
+      if (_valid(e)) _fail(error);
+    } catch (_) {
+      if (_valid(e)) failure = 'INVALID_RESPONSE';
+    } finally {
+      if (_valid(e)) {
+        busy = false;
+        _emit();
+      }
+    }
+  }
+
   Future<CycleOutcomePreview?> outcome(
     String room,
     String target,
@@ -442,6 +510,7 @@ class CycleParticipationController extends ChangeNotifier {
   Future<void> _send(int e) async {
     final command = _pending!;
     try {
+      String? resumeOutcome;
       await gateway.write(
         command.path,
         command.key,
@@ -457,6 +526,8 @@ class CycleParticipationController extends ChangeNotifier {
         globalAck: command.globalAck,
         affectedTargets: command.affectedTargets,
         submissionAck: command.submissionAck,
+        resumeAck: command.resumeAck,
+        onOutcome: command.resumeAck == null ? null : (v) => resumeOutcome = v,
       );
       if (!_valid(e)) return;
       _pending = null;
@@ -464,7 +535,40 @@ class CycleParticipationController extends ChangeNotifier {
       failure = null;
       for (final target in command.affectedTargets ?? [command.target]) {
         if (!_valid(e)) return;
-        await changed(command.room, target);
+        await changed(
+          command.room,
+          target,
+          outcomeNotice: command.resumeAck == null
+              ? null
+              : resumeOutcome == 'applied'
+              ? '$target 주차가 재개되었습니다. 새 일정과 참가 확인 상태를 확인해 주세요.'
+              : command.resumeAck == 'create'
+              ? '재개 제안이 등록되었습니다. 참가자 응답을 기다립니다.'
+              : '응답이 기록되었습니다. 아직 재개되지 않았습니다.',
+        );
+      }
+      if (command.resumeAck != null &&
+          resumeOutcome == 'applied' &&
+          _valid(e)) {
+        // An original applied ACK is final even if reading the new graph fails.
+        try {
+          final plan = await gateway.scheduleRead(
+            command.room,
+            command.target,
+            'plan',
+          );
+          if (!_valid(e)) return;
+          final waiting = (plan.data['my_participations'] as List)
+              .where(
+                (p) =>
+                    p['state'] == 'active' &&
+                    p['confirmation_state'] != 'confirmed',
+              )
+              .length;
+          notice = '${notice ?? ''} 내 참가 확인 대기 $waiting건.';
+        } catch (_) {
+          if (_valid(e)) notice = '${notice ?? ''} 새 일정을 다시 불러와 주세요.';
+        }
       }
     } on AccountReadException catch (error) {
       if (!_valid(e)) return;
@@ -491,19 +595,22 @@ class CycleParticipationController extends ChangeNotifier {
     String room,
     String target, {
     bool applied = true,
+    String? outcomeNotice,
   }) async {
     if (_disposed || !session.isAuthenticated) return;
     final e = _epoch;
     lastRoom = room;
     lastTarget = target;
     mutationVersion++;
-    if (applied) notice = '$target 주차에 반영되었습니다.';
+    if (applied) notice = outcomeNotice ?? '$target 주차에 반영되었습니다.';
     _emit();
     try {
       await onMutation?.call(target);
     } catch (_) {
       if (_valid(e)) {
-        notice = applied
+        notice = outcomeNotice != null
+            ? '$outcomeNotice 최신 상태를 다시 불러와 주세요.'
+            : applied
             ? '요청은 반영되었습니다. 최신 상태를 다시 불러와 주세요.'
             : '최신 상태를 다시 불러와 주세요.';
       }

@@ -733,6 +733,9 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
 }
 
 String recruitmentFailureMessage(String? code) => switch (code) {
+  'PROPOSAL_CONTEXT_CHANGED' => '제안의 일정이나 조건이 바뀌었습니다. 공대장이 새 제안을 만들어 주세요.',
+  'CONTEXT_INVALID' => '확인 정보가 유효하지 않습니다. 최신 내용을 다시 확인해 주세요.',
+  'REQUEST_TOO_LARGE' => '일정 정보가 너무 큽니다. 선택한 내용을 줄여 다시 확인해 주세요.',
   'PLAY_NOT_STARTED' ||
   'TARGET_CYCLE_NOT_CURRENT' => '해당 주차 수요일 10시부터 완료·미완료 종료가 가능합니다.',
   'ROUND_NOT_ACTIVE' => '진행 중인 레이드가 없습니다. 최신 상태를 확인해 주세요.',
