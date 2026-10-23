@@ -1751,3 +1751,19 @@ B는 member_cycles/device_feedback/cycle_recruitment의 실제read경계와 cycl
 [Backend 보완 요청6360708926](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6360708926): 개인선택raid완료+선택T명시탈퇴·자동승계/마지막1인·다중raid나머지본인참가취소영향/다른T보존을한명령으로보장하는정확한context/impact/ACK·원재송/권한/CAS계약요청. 완료뒤cancel/leave두명령연속실행으로우회하지않는다. 양T추방/완료정정A/B와분리하며새기능을구현완료로표시하지않는다.
 
 검증: 관리/주차상세2파일최종52mock PASS, 변경feature presentation/두시험 분석0·포맷/diffcheck·diff검토. 신규2시험에서end권한거절/허용·읽기쓰기0/전역failure불변·다른회원응답차단,상세선택T전환후옛허용응답차단을확인했다. 최초분석의시험helper전방참조/불필요!를수정후최종통과했다. 기존144mock를합산/반복하지않았고정상UI자동시험/무관전체시험은추가하지않았다. 실기기한줄버튼/폴드큰글자·현재/반대T다른참가자시해산숨김/정상해산·완료/탈퇴는사용자미확인이다. 새API/writer·서버/DB/기기·dev/main변경없음.
+
+
+### 37.31 Issue22/23 제안1 Flutter 소비 검토·회신 (2026-10-23)
+
+[Backend6361053787](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6361053787)이 개인완료후탈퇴와 양T추방을 독립Issue22/23으로 이관했다. 기존기능폐기/완료가아니며 계약제안·새4경로미합의/미구현, 기존Backend8bbcfc8c/170경로·DB0030/Flutter소비2940824 유지다. 사용자검토회신승인으로 현재Flutter673e7e46의실제reader/확인창/Controller·ACK/갱신을대조했다.
+
+| 후속 | 수용한 방향 | 보완·다음 담당 |
+|---|---|---|
+| [22 회신6361482436](https://github.com/heo0328/lostparty-backend/issues/22#issuecomment-6361482436) | 선택active raid 본인1완료·잔여본인T취소/실제탈퇴, 적격후계자자동승계/없으면전체거절, 마지막T종료/null실행리더, 지속Member/타인/기존완료/N보존 | 현재Context는UUID영향목록만이어서기존plan의raid/난이도/캐릭터표시와같은관측으로결합할근거필요. Backend가최소표시요약또는plan/표시revision·매핑근거명시·구현인계. Flutter는완료/취소/보존대상확인과별도DTO/ACK·성공후member-only plan미의존/목록·계정이동 |
+| [23 회신6361482811](https://github.com/heo0328/lostparty-backend/issues/23#issuecomment-6361482811) | 같은회원내부식별·source고정/반대nullable, option별권한/impact/token, 양T각공대장검사·both불가표시/current_only유지·원자ACK | 기존카드X/후보는source review정리도포함하나새source는participating한정. Backend가source review의지원/거절사유·기존정리경로보존을명시. Flutter는option별의미서명/선택T만무효화·both불가자동단일대체없음 |
+
+현재CycleManagementPreview의전체wire signature를새추방전체응답에그대로복제하면반대T의무관한변경이current_only확인을막을수있다. source/선택option만의미서명으로묶고both는양T영향에결합한다. 서버가option별token/CAS를소유하며Flutter는동일정책을재구현하지않는다. 기존cycle_outcome는plan선조회/선택round/확인과기존ACK분기이고새action/effects를해석하지않으므로전용reader/preview/ACK검증이필요하다. 원ACK확정뒤read실패는성공취소/중복쓰기로바꾸지않는다. 닫힌completed의null리더는기존nullable파싱뿐아니라읽기접근/현재role·관계일관성까지확인하며가짜UUID를합성하지않는다.
+
+두Issue에최종closed OpenAPI/정확SHA·새상태/nullable/ACK대표예시와예정된격리검증·개발반영/DB여부인계를요청했다. 기존시험반복·자동감시/실회원명령요청은없다. 마지막1인해산유지는사용자확정이며다인양T강제해산요청이없음을정정했다. 전체방/주차일괄완료정책확대·추정API연결은제외한다.
+
+검증은계약본문/코드경로/문서·링크/diffcheck와게시뒤줄바꿈정규화본문MATCH다. 기능코드/의존성불변으로Flutter시험재실행없음. 새명령의실서버/자동경계·실회원/기기검증은미실행이며현재검토를기능완료로표기하지않는다. 완료정정/보관129의A/B소비는별도순서로남긴다. 현재feature/raid-recruitment-scheduling문서commit/push·브랜치유지,dev/main/운영·서버/DB/키변경없음.

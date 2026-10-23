@@ -1,5 +1,13 @@
 # 개발 이력
 
+## 2026-10-23 — Backend22/23 제안1 소비 검토와 회신
+
+사용자승인으로Issue13 이관6361053787·22/23본문을현재673e7e46의실제OutcomeDialog/관리카드·preview/signature/원명령·ACK/changed/읽기경로에대조했다. [22회신6361482436](https://github.com/heo0328/lostparty-backend/issues/22#issuecomment-6361482436)·[23회신6361482811](https://github.com/heo0328/lostparty-backend/issues/23#issuecomment-6361482811)을게시하고줄바꿈정규화본문MATCH를확인했다. 상세판단은설계37 §37.31,담당/대기는NEXT_WORK다.
+
+- 검토결과: 두처리방향은수용가능. 22는확인창의완료/취소raid표시와Context영향을같은스냅샷으로결합할근거,23은현재source review내보내기와새participating한정의보존차이를보완요청했다. Flutter의전용DTO/ACK·탈퇴후member-only plan미의존성공경로·current_only선택option의미서명/영향T별무효화를명시했다. 마지막1인해산유지확정/다인강제해산요청없음도정정전달했다.
+- 상태/보존: Backend보완/합의구현·정확OpenAPI/SHA·예시/검증·개발반영/DB인계대기. 새기능/경로구현완료가아니며실제앱동작/원pending·Backend170경로·Flutter소비2940824·선행52mock불변. 원본13완료정정/보관A/B와22/23을분리추적한다.
+- 검증/미확인: 문서/링크·계약대조·diffcheck·게시원문확인. 기능코드불변으로시험/분석재실행없음. 새경계/실서버·실회원/기기미실행. 문서작업브랜치commit/push·유지,dev/main미반영·기존무관dirty보존.
+
 ## 2026-10-23 — 개별 캐릭터 갱신의 서포터 역할 자동분류 안내
 
 사용자 요청으로 내 계정 카드에서 진입하는 MemberCharacterPage의 갱신 버튼 아래에 “서포터 캐릭터의 경우 아크패시브 계열로 딜러와 서포터 계열이 자동 분류되어 저장됩니다.”를 12pt 보조색 텍스트로 추가했다. 기존 CharacterBuildRolePolicy.supportsMultipleRoles(바드/도화가/홀리나이트/발키리)를 재사용하고 선호역할 칩과 같은 직업 판별값을 공유한다. 일반 딜러 직업에는 표시하지 않는다.

@@ -1,5 +1,13 @@
 # NEXT WORK — 상세 버튼 배치 완료·완료정정 Backend 인계 대조 예정
 
+## Issue22/23 제안1 소비 검토·회신 (2026-10-23)
+
+사용자 승인으로 [Issue13 이관6361053787](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6361053787)과22/23본문을현재673e7e46의확인/reader/명령·ACK/갱신경로에대조했다. 기능코드는변경하지않았다. 원본13의두요청을폐기하지않고아래후속으로추적한다.
+
+- [22 검토6361482436](https://github.com/heo0328/lostparty-backend/issues/22#issuecomment-6361482436): 선택1완료/잔여본인T취소·탈퇴/자동승계/적격자없음전체거절·마지막null리더·N보존방향수용. 확인창의raid/난이도·완료/취소표시를 UUID목록과동일스냅샷으로결합할최소요약또는plan/표시revision근거보완요청. 성공후member-only plan조회에의존하지않는Flutter별도ACK/목록·계정이동설계. **Backend보완/구현인계대기**.
+- [23 검토6361482811](https://github.com/heo0328/lostparty-backend/issues/23#issuecomment-6361482811): 동일회원·각T권한/nullable·option별token/current_only보존·양T원자ACK방향수용. 기존카드가허용하는source review정리와새participating한정의차이/보존경로·허용/거절명시요청. Flutter는선택option별의미서명/ACK·해당T만무효화,반대변화를current_onlyCAS에혼합하지않음. **Backend보완/구현인계대기**.
+- 두회신게시후줄바꿈정규화본문MATCH확인. 마지막1인해산유지확정·다인양T강제해산요청없음도정정전달했다. 현재기능완료·새4경로구현/합의완료아님. 22/23에서최종closed OpenAPI/SHA·예시/검증·개발반영/DB여부인계를받은뒤독립연결하며완료정정/보관A/B소비와분리한다. 검토근거는설계37 §37.31/DEV_LOG. 기존시험은코드불변이라반복하지않고문서diffcheck/내용을검증한다. 작업브랜치commit/push·dev/main미반영.
+
 ## 최신 UI 구간 결과와 서버 보완 대기 (2026-10-23)
 
 주차완료 primary/완료아이콘·한줄단독, 선택C/N의이번주/다음주탈퇴, **서버허용 마지막1인만**탈퇴/새모집사이중앙빨강·흰글씨/아이콘 모집해산으로반영했다. 사용자가다인강제해산확장없이마지막1인유지를확정했다. 상세는설계37 §37.30/DEV_LOG, 관리/주차상세2파일52mock PASS·변경presentation/시험분석0,실기기미확인이다.
