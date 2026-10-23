@@ -1,5 +1,15 @@
 # 개발 이력
 
+## 2026-10-23 — F6-C 재개 계약안 소비 대조·세 항목 수용
+
+사용자 진행 요청으로 필수문서·feature/raid-recruitment-scheduling 5af242be/원격일치·dev6d3f617·기존무관dirty·Backend118 제안1/Flutter119를 확인했다. 기능코드 수정 없이 Backend118 전문과 transport/닫힌 plan·일반응답/원명령·ACK 안내, 고정07c2b671 resume create/respond/apply/views를 대조했다. 현재 소비07c2b671/168경로·policy4는 불변이다.
+
+- 결정: 요청한 세 소비 방식(기존 POST read-only preview와 Key 분리, plan opt-in의 제안별 resume_review, 보호제안 token·구소비/미결 요청 호환)을 수용한다. 공통 adapter의 POST+query/body/Key 생략이 가능하고, 신규 재개 reader/DTO·응답분기/recorded-applied 안내를 추가하면 기존 기본조회/F5/F6-B를 보존할 수 있다. 근거·데이터흐름/권한/ID/수명·검증계획은 설계37 §37.22에 기록했다. 새 정책·endpoint·재시험 요구는 없다.
+- 새로 가능해진 흐름: 이번은 계약 소비 설계 확정이며 앱의 새 실행 흐름은 추가하지 않았다. 후속은 preview에서 일정/영향/제안자표를 확인→같은 본문+token 제출→제안별 일정 확인/응답→실제 재개/시간동의 상태 읽기다. null/[]/item순서·예정ID없음·legacy/stale 차단·1인별도응답·2인이상제안자accept를 구분한다.
+- 보존 확인: 코드/저장/Router·DI/기존 계정/모집 writer와 무관dirty는 변경하지 않았다. C 재개와 N 개방 분리, 완료이력/같은 C·세대/원명령 복구·거절/미응답 자동탈퇴 없음과 수락자 시간동의 경계를 설계로 대조했다. 실제 API 동작 보존 시험을 새로 수행한 결과는 아니다.
+- 검증/미확인: 문서 diff/내용·소스 정적대조만 수행한다. 코드/의존성 변화가 없어 Flutter 시험/분석을 반복하지 않았다. 제안 API의 실제 schema/HTTP/DB/토큰·원ACK/경합/크기 동작·실회원/기기/성능은 미검증이며 Backend 구현 인계 뒤 확인한다. 이번 승인으로 미구현API·서버/DB/키/배포/기기조작·dev통합을 진행하지 않았다.
+- 협업/다음: 같은 Issue13에 세 항목 수용·Flutter 후속 구현 차이·고정소비/정적검토·미확인·다음 Backend 합의확인/구현검증·새소비SHA 인계를 회신한다. 문서만 같은 작업브랜치 commit/push·dev미병합/브랜치 유지로 보관한다.
+
 ## 2026-10-23 — F6-B 방/본인 완료·이번 주 미완료 종료 연결
 
 사용자 구현 승인으로 필수문서/설계37 §37.19·현재 cff4cc8/원격일치·dev6d3f617/기존무관dirty·최신 Backend116/Flutter117을 확인했다. 소비07c2b671/168경로·policy4를 유지하며 outcome 원자성/권한은 서버 소유다. 실제 Router/DI·계정 갱신·상세/검색/본인목록 무효화와 pinned outcome/plan 소스를 대조했다.

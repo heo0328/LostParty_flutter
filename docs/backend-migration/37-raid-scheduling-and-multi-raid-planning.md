@@ -1513,3 +1513,21 @@ v2 원ACK 뒤 command.target만 refreshTarget으로 재조회해 N캐시를 덮�
 - 기존 onMutation(T)→weekly.refreshTarget(T)와 상세·검색·본인목록 무효화가 전파된다. Router/DI·계정 writer/저장 schema·N/다른item 쓰기와 기존 공통 관리/일정 writer는 변경하지 않는다. 앱종료 후 모집관리 pending 영속복구는 별도 후속이다.
 
 검증은 새 outcome28+기존직접영향128의 **6파일 단일156mock PASS**, 변경 Dart7파일 최종분석0·포맷/diff·고정 Backend outcome/plan/참가 revision/target_state 소스 대조다. 새 테스트 첫 컴파일의 nullable query와 fake session 메서드 오기를 고친 뒤 표적23PASS, 추가 경계를 포함한 최종묶음156PASS이며 재실행은 합산하지 않는다. 공용 DI/저장 schema 변화 없이 모집 writer/해당T 갱신에 한정돼 표적을 사용했고 F6 최종 통합 때 전체시험 필요를 재판단한다. 8인 server impact/본인1인, 권한/actor/공대장·표시/round/영향 변경, N/06·10시·회원전환/중복·결과불명/원ACK·타item을 보호했다. Flutter mock은 서버 DB/HMAC/원자성/경합·실회원/기기 인수의 증거가 아니다. 실회원HTTP·확인창 글자크기/스크롤·완료/종료 실제 반영·성능은 전체 기능섹션 사용자 인수에 남긴다. Git/Issue 마감은 DEV_LOG다.
+
+### 37.22 F6-C 재개 표시 계약 제안1 소비 대조 — 2026-10-23
+
+사용자 진행 승인으로 [Backend118 제안1/6355880490](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355880490) 전문과 현재 Flutter reader/preview/controller·공통 transport, 고정07c2b671의 resume create/respond/apply/views를 대조했다. **세 요청 모두 Flutter 소비 방식으로 수용 가능하다.** 이 절은 제안 수용/구현 전 설계이며 새 API 구현·실행/서버 배포 인계 또는 Flutter 기능 구현 완료가 아니다. 현재 실제 소비는07c2b671/168경로·policy4 그대로다.
+
+| 요청 | 소비 판단과 후속 구현 경계 |
+|---|---|
+| 기존 POST 읽기전용 preview | 수용. 공통 request는 POST+query+body와 Key 생략을 지원한다. 먼저 원 Resume 본문/CAS를 깊이 복사하고 `preview_only=true`로 읽는다. pending/key/명령 원장을 만들지 않고 닫힌 preview kind/ResumeReview를 읽는다. ready+permission.allowed+confirmation이 있어야 확인 후 같은 본문에 token만 추가·preview query 제거·새key로 실제 제출한다. 생성 전 proposal/revision/session은 null이며 실제 ID를 합성하지 않는다. null/[]/item순서를 보존하고 자료가 바뀌면 재확인한다. |
+| plan opt-in 제안별 표시 | 수용. 기존 plan reader는 닫힌 proposal shape이고 일반 respond는 target_session_ids가 있는 일정 제안으로 한정돼 있어 그대로 활성화하지 않는다. 재개 전용 opt-in reader/DTO·생성/응답 분기를 추가하고 일반 F5/F6-B의 기본flag없음 읽기를 유지한다. true에는 모든 weekly_resume의 resume_review 필수·일반 일정에는 금지, 누락/413에 flag없는 조회로 자동 후퇴하지 않는다. room/C/cycle/gen·proposal/두revision·basis/display digest·권한/확인근거를 결합하며 stale/legacy/null confirmation은 새 수락·거절 차단이다. |
+| token/구소비·미결 호환 | 수용. 신규 Flutter는 보호된 생성/응답만 새로 발급하고 token없음/null·실패를 구경로로 낮추지 않는다. 구형제안은 명시 새제안 안내만, 자동 재제안/덮어쓰기/삭제 없음이다. 구클라이언트의 보호제안 token없는 새응답 거절을 받아들이며 기존 원본문/key/원ACK 복구는 보존한다. 모집 pending은 현재 메모리 writer로 method/path/body/key/token을 고정해 재송한다. 앱종료 후 모집 pending 영속복구는 이번 계약의 구현 완료로 확대하지 않는다. |
+
+일정은 기존 catalog의 raid/difficulty/version으로 표시하고 그룹/대안 refs는 UI 식별에만 사용한다. item_ids 순서를 유지하며 source_round/session null을 새 실제 ID로 해석하지 않는다. 실제 UTC 시작/끝·bounded/start_only/undetermined와 on_apply/후보선택후/조율후/미지정 단계를 구분한다. 현재 plan.groups에서 제안 시각을 추정하거나 legacy duration을 채우지 않는다. 수요일00~05:55는 같은 C의 끝 날짜로 표시한다. 그룹없음/조율 alternatives없음도 정상이다. 서버 집계/현재 영향과 고정 의도를 구분하며 예측치가 실제 예약 성공을 보장한다고 표시하지 않는다.
+
+2명 이상 생성 시 제안자accept가 기록됨을 생성확인에 표시하고 1명은 별도 본인응답이다. 재개는 해당 주차 유효한 중단 참가관계의 재연결이며 거절/미응답의 자동탈퇴가 아니다. 수락자의 실제 대상 수동세션만 시간동의/예약 대상이고 나머지는 자동 시간동의하지 않는다. 생성ACK recorded·응답ACK recorded/applied를 C 전용 결과로 구분해야 하므로 기존 generic changed의 ‘반영’ 안내만으로 재개 성공을 표시하지 않는다. 원ACK 후 실제T plan에서 새 실제 ID/본인확인 상태를 다시 읽는다. 완료이력·N은 보존하고 같은 C/generation을 유지한다.
+
+제안서에 명시한 최대120초/주종료 전 token·actor/flow/원본문 hash/고정·현재근거 binding, 새 설정/원천 변화 시 거절/재확인, 현재 인증을 유지한 원 성공ACK 우선 복구·32KiB 요청/1MiB 응답·no-store를 수용한다. numeric bounds/nullable/enums와 preview/일반ACK 두200형태는 Backend가 게시할 닫힌 OpenAPI로 최종 대조하며 자체 필드를 만들지 않는다. 별도 endpoint·권한확대·새 정책/재시험 요구는 없다.
+
+다음 담당은 Backend의 합의 확인→schema/구현·격리 검증→commit/push/실행 소비SHA 인계다. Flutter는 인계 뒤 원문/실행 OpenAPI를 대조해 구현한다. 회귀 보호: 일반 plan/일정응답/F6-B·구원명령/회원전환, preview 쓰기0/key없음·두 응답구분, null/[]/정렬·stale/legacy/권한/expiry·제안자표/1인·기록/적용/실제ID·06/10시/완료/N 격리·잘못된 ACK/원응답·크기 거절을 표적으로 묶는다. 이번은 문서/정적검토만으로 Flutter 시험/HTTP·DB·기기 조작을 반복하지 않는다. 회신과 Git 마감은 DEV_LOG/NEXT_WORK다.

@@ -1,6 +1,6 @@
-# NEXT WORK — F6-B 구현 마감·F6-C 계약안 대조 준비
+# NEXT WORK — F6-C 계약 검토 완료·Backend 구현 인계 대기
 
-기준: 2026-10-23. **F1~F5와 F6-A/B 코드·자동검증 완료, F6-C는 Backend 계약 보완 대기다.** 고정소비07c2b671/168경로·policy4를 유지한다. B는 새28+직접영향128의 6파일 단일156mock PASS·변경Dart7파일 분석0이다. 이전 구간의 시험 수와 합산하지 않는다. 실제 정상인증HTTP·실회원/기기 인수는 전체 기능섹션에 묶으며 미확인이다. feature/raid-recruitment-scheduling 보관·dev6d3f617 미병합·기존무관dirty를 유지한다. B 상세는 설계37 §37.21/DEV_LOG, 다음 C의 계약 대기와 행동은 아래를 따른다.
+기준: 2026-10-23. **F1~F5와 F6-A/B 코드·자동검증 완료, F6-C는 Backend118 계약안의 세 소비 방식을 수용 회신하고 Backend 구현/새소비SHA 인계를 기다린다.** 고정소비07c2b671/168경로·policy4를 유지한다. B는 새28+직접영향128의 6파일 단일156mock PASS·변경Dart7파일 분석0이다. 이전 구간의 시험 수와 합산하지 않는다. 실제 정상인증HTTP·실회원/기기 인수는 전체 기능섹션에 묶으며 미확인이다. feature/raid-recruitment-scheduling 보관·dev6d3f617 미병합·기존무관dirty를 유지한다. B 상세는 설계37 §37.21/DEV_LOG, 다음 C의 계약 대기와 행동은 아래를 따른다.
 
 ## 1. 현재 근거·준비 상태
 
@@ -26,25 +26,18 @@
 | 한도/통계 | 같은 방 C/N은 고유room1개·기본10. 미래 참가/완료를 C 통계에 섞지 않음. 사전취소 통계는 #19 별도 결정 |
 | 전환/예약 | 수06시 같은 UUID/실제cycle 유지, 라벨 전환·권한 재검사. N 변경/취소가 C 예약·완료를 정리하지 않음. 실제 참가와 일정 확인은 별개 |
 
-## 3. 다음 작업 — F6 완료/정정·선택 주차 종료/재개 준비
+## 3. 다음 작업 — F6-C 합의 확인·구현 인계 뒤 연결
 
-현재근거: [Backend112/6345290060](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345290060)의 고정소비07c2b671/168경로 및 [Flutter113 확인6345378281](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345378281). 사전표시/선택 구현은 설계37 §37.18·DEV_LOG에 마감했다. F5 Backend 보완 대기는 해소됐고 F6 계약 차이의 확인은 아래에 분리한다. 표시계약 수용/기존시험을 다시 요청하지 않는다.
+현재 소비는07c2b671/168경로·policy4다. F6-A/B 결과와 커밋/회신은 DEV_LOG 및 설계37 §37.20/37.21을 따른다. B 구현ea0c932f·마감5af242be는 작업브랜치에 보관했으며 dev미병합이다.
 
-현재 인계: 구현1a909e7 commit/push·원격일치 확인, [Flutter F5 사전표시 결과6345894901](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345894901)에 소비/구현SHA·106mock/분석0·미확인·다음담당을 회신하고 게시본문 재조회 일치를 확인했다. dev통합/실제인수 완료가 아니며 다음 착수 때 최신Issue13부터 확인한다.
+**현재 검토 결과:** [Backend118 계약 제안1/6355880490](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355880490)의 ① POST 읽기전용 preview/Key 분리 ② plan opt-in 제안별 resume_review ③ 보호제안 token 필수·구형제안/구클라이언트/원pending·ACK 호환을 Flutter 소비 방식으로 모두 수용한다. 실제 adapter/닫힌 plan DTO·일반respond 필터/기존 writer·ACK 안내와 pinned resume 소스 대조 근거 및 후속 설계는 **설계37 §37.22**다. 기능코드/새API는 아직 없으며 제안 수용을 구현/실기기 인수로 취급하지 않는다.
 
-현재구간: F6-A 코드/표적검증 완료. 새 manual 명령만 명시T v2로 저장하고 schema1/v1 pending은 schema2/wire_version 이행 후에도 원경로/본문/key로 재송한다. 기존 표시선호·ACK뒤실제T 재조회·N/수10시/party근거 보호를 유지한다. 7파일 단일108mock PASS·최종5Dart분석0이며 새17건 좁은로그확인 재실행은 합산하지 않는다. 상세는 §37.20/DEV_LOG, 공통 설계는 §37.19다.
+**다음 담당/순서:** Backend가 수용 회신을 확인하고 닫힌 schema/OpenAPI·구현/격리검증·원ACK/호환/크기 경계, commit/push·개발실행/소비SHA를 인계한다. Flutter는 최신 Issue13→게시/실행계약 대조→기존 상세/일정 UI에 생성전확인/제안일정·영향/수락·거절/기록·적용 구분→표적검증/분석·문서/회신/작업브랜치 보관 순서다. 구현 인계 전 임의 endpoint/필드·fallback/자동재제안·재개 POST를 추가하지 않는다.
 
-현재 인계: 구현660433d commit/push·원격일치 확인, [Flutter F6-A 결과6355764602](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355764602)에 Backend116 확인/소비·구현SHA/108mock·분석0·미확인/다음담당을 회신하고 게시본문 재조회 일치를 확인했다. 다음 착수 때 최신Issue13부터 확인한다.
-
-**F6-B 마감:** 기존 상세 진행영역의 레이드 완료·나만 완료·이번 주 미완료 종료를 실제 plan/command-context에 연결했다. 서버 영향 확인→의미 재검사→네 필드 POST→원ACK→실제T 계정 summary/상세·검색/본인목록 무효화 경로다. 변경권한/actor/공대장·revision/round/영향은 POST 없이 재확인하고 결과불명은 원경로/본문/token/key를 재송한다. C·수10시·8인/본인1인·다른item/N 격리와 구간별 기존 writer/저장을 보호했다. 검증/새흐름·보존/미확인과 Git·Issue 회신은 DEV_LOG에 기록한다. 공용 DI/저장 schema 불변으로 표적 범위를 사용했으며 F6 최종 통합 때 전체시험 필요를 재판단한다.
-
-현재 인계: 구현ea0c932f commit/push·원격일치 확인, [Flutter119 F6-B 결과6356041000](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6356041000)에 156mock/분석0·미확인·Backend118 수신과 다음 Flutter 계약안 대조를 회신하고 게시본문 재조회 일치를 확인했다. dev미병합/브랜치 유지, 다음 착수는 최신 Issue13과 아래 세 검토항목부터다.
-
-**다음 F6-C 착수 조건/순서:** 최신 Issue13에서 Backend 재개 표시/생성전 확인·응답 binding 계약안을 받고 소비 SHA/OpenAPI/기존 pending 호환을 대조한다. 제안에 고정된 일정·실제 C/세대·시각/영향과 변경 시 거절/재확인 근거가 확정되기 전 UI/POST를 추정 구현하지 않는다. 인계 후 cycle_schedule DTO/preview·생성/응답과 기존 일정 UI를 설계37 §37.19 순서로 구현·표적검증/변경분석·문서/Issue/작업브랜치 보관한다. 통합/실회원·기기 인수는 별도 게이트다.
-
-**마감 시 새 회신 수신:** [Backend118 계약 제안1/6355880490](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355880490) 전문을 확인했다. 아직 미합의·미구현이며 소비07c2b671/168경로는 불변이다. 다음 담당 Flutter는 ① 기존 POST `preview_only=true`의 읽기전용/key불필요 응답과 실제 제출 분리 ② plan `include_resume_display=true`의 제안별 `resume_review`·일정/영향·null/[]·제안자표/별도응답 ③ 보호제안 token 필수·구형제안 새응답 차단/구클라이언트·원pending/ACK 호환의 소비 가능 여부/차이를 대조해 같은 Issue에 회신한다. 이번 B 승인으로 C 수용 확답/코드·Backend 구현/배포를 진행하지 않는다. 합의 후 Backend 구현·검증/새소비SHA 인계, 그 뒤 Flutter C 구현 순서다. 이제 계약안 작성 자체를 기다리는 상태가 아니다.
-
-**F6-C 현재주 재개 표시계약 대기:** [Backend116/6355428620](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355428620)이 정정은 본인manual근거 해제까지이고 party/assignment/참가·예약복구 역명령은 없음을 확답했다. 정정 의미 확인은 해소됐다. 제안에 고정된 schedule_groups/시각·현재duration/영향을 읽고 확인할 기존출처는 없으며, Backend가 응답자뿐 아니라 schedule_groups=null 생성전확인/제안자accept·생성/응답binding·구소비/원pending 호환까지 계약안을 작성한다. 새API 인계가 아니므로 C 새 생성/응답 UI만 대기한다. B 독립진행을 막지 않으며 current plan/F5 display를 제안원본으로 추정하지 않는다. 같은cycle/generation의 새round/assignment·completed이력, 1인별도응답·recorded/applied·시간동의/예약을 구분한다.
+- 구현 포함: 원 Resume 본문/CAS 복사와 preview 전용 reader(명령/key 생성 없음), 실제 제출의 token 추가/새key, opt-in ResumeReview DTO와 재개 전용 응답, 기존 generic notice 대신 recorded/applied 구분 및 실제T plan의 새 실제ID/본인 시간동의 상태 읽기다.
+- 보존: default plan/일반 일정 응답·F6-A/B·계정/개인표·원본문/key/token/ACK·C/N/세대 격리다. 같은 C/generation의 중단 참가관계 재연결과 수락자 시간동의만 구분한다. 거절/미응답은 자동탈퇴가 아니며 완료/N/다른item은 보호한다. 1인 별도응답·2명이상 제안자accept를 확인창에 설명한다.
+- 검증/완료: 설계37 §37.22의 preview 쓰기0/두200형태·null/[]/순서·stale/legacy/permission/expiry·원명령/ACK·기록/적용·새ID·06/10시·회원전환·크기 거절 및 기존 F5/F6 직접영향을 한 묶음으로 실행한다. 전체검증 필요는 실제 공유 변경 영향으로 결정한다. 이번 문서검토에는 Flutter 시험을 반복하지 않고 diff/정적내용을 검토한다.
+- 제외: 새 서버/DB/키·운영배포/기기조작·완료취소/참가·예약 자동복구·모집pending 영속화·통계19·dev/main 통합. 새 인계 전 C 기능 구현과 실제회원/기기 인수는 미완료다.
 
 실기기/실회원 수동인수는 전체 기능섹션에 묶는다: 기존 계정/개인표·검색/생성/일반참가·N특례/관리, 그룹2열필터·실제4/8인번호, 새사전표시/명시선택/개방미리보기·익일/KST/글자크기·스크롤, 주차별제출/다시가져오기·busy/겹침더보기·조율/제안/투표·재동의/예약·회원전환·06/10시·결과불명재시도. 설치/조작은 사용자가 하며 중간마다 반복 요청하지 않는다.
 
