@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'cycle_member_actions.dart';
+import 'membership_actions.dart';
 import '../../account/domain/account_read_session.dart';
 import '../../account/domain/member_cycle_models.dart';
 import '../../account/domain/member_raid_models.dart';
@@ -550,10 +551,45 @@ class CycleInteractionRepository
     implements
         CycleInteractionGateway,
         CycleDepartureGateway,
-        CycleRemovalGateway {
+        CycleRemovalGateway,
+        MembershipActionGateway {
   CycleInteractionRepository({required this.api, required this.recruitment});
   final BackendRegistrationApi api;
   final CycleRecruitmentGateway recruitment;
+  @override
+  Future<MembershipActionContext> membershipContext(String room, String view) =>
+      _decode(() async {
+        roleId(room);
+        raidCycleKey(view);
+        final raw = await api.request(
+          '/v2/raid-rooms/$room/membership-action-context',
+          query: {'target_cycle_key': view},
+        );
+        return MembershipActionContext(room, view, raw!);
+      });
+
+  @override
+  Future<MembershipActionResult> writeMembershipAction(
+    MembershipActionPreview preview,
+    String key,
+    Map<String, dynamic> body,
+  ) => _decode(() async {
+    roleId(key);
+    roleCheck(
+      RegExp(
+        r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+      ).hasMatch(key),
+    );
+    roleCheck(cycleStableJson(body) == cycleStableJson(preview.body()));
+    final raw = await api.request(
+      preview.path,
+      method: 'POST',
+      body: body,
+      idempotencyKey: key,
+    );
+    return MembershipActionResult(raw!, preview, key);
+  });
+
   @override
   Future<RemovalPreview> removal(String room, String target, String member) =>
       _decode(() async {

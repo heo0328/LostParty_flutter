@@ -1,6 +1,22 @@
-# NEXT WORK — Issue24·25 보완 계약 소비 검토 완료 / Backend 구현 인계 대기
+# NEXT WORK — Issue25 A 원명령 연결 완료 / B 메뉴·성공 흐름 연결
 
 ## 현재 상태 (2026-10-24)
+
+## 다음 구현 B — 실제 메뉴·성공 화면·관계 종료 알림
+
+Issue25 A 전용 Context/Preview/Result·Gateway/실제DI Repository·app-owned 원명령/ACK 연결 완료. 새46+기존직접131의 **고유177mock PASS**, 변경Dart4파일분석0·포맷/diffcheck. 최종 주차검증을 공통 PartyCyclePolicy로 재사용한 뒤 새46만 재확인했고 기존131은 재실행/중복합산하지 않았다. 상세는 설계37 §37.44/DEV_LOG. Backend176/DB0031 반영 대기는 해소됐으며 아래 과거 인계대기는 이 상태를 따른다. 실서버 로그인·기기 인수/버튼 전환은 아직 아니다.
+
+다음은 기존 상세 버튼 위치/중앙정렬·해산폭을 보존하며 새menu의 option별 visible/permission/영향T확인·재확인과 A명령을 연결한다. 현재T 탈퇴/관계종료는 성공1회 이탈, 반대T만 해산하면 현재화면유지, effects=[]도 membershipSuccess 원결과를 소비해 C/N 내목록·한도 관계종료 알림을 처리한다. 현재1인end조회/전역end를 새효과로재사용하지 않는다. old원pending/IF-001 비활성 유지. C의profile/옛기록Router와24검색회복은별도미완료이고 review/기록 정상인수는전체연결뒤묶는다. recover리더복구UI는제안이다.
+
+## 완료한 A의 설계·보존 범위 — Issue25 전용 context·원명령·ACK
+
+사용자 진행 승인. Backend 구현15e143ae/반영920cc059, [24 개발반영6371617690](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6371617690)·[25 개발반영6371618996](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6371618996)의 API176/DB0031 인계로 아래 과거 Backend미구현/미반영 대기는 해소됐다. 첫 독립 그룹은25 전용 모델/엄격 검증·Gateway/Repository·기존app-owned Controller 원요청복구 연결이다. 현재branch d555f2a8 재사용·기존무관dirty 보존. 생성/계정·구cancel/leave/end/D22/E23 원transport/ACK·24h/IF-001 비활성을 회귀보호한다.
+
+데이터/권한은 서버 context option/Impact가 원본이며 클라이언트는 선택옵션/actor/room/C/viewT·대상T/gen/ID/상태·revision규칙과 원ACK 일치만 검증한다. 확인후 최신context 재조회·선택옵션의 의미변경은POST0, token/발급시각만변경은새token으로발급. 원본문/key/Impact는 메모리pending에고정하고 retry는GET없이원명령만재송한다. 새endpoint를 구end/leave 또는 순차요청으로 치환하지 않는다.
+
+순서: 실행schema/합성DB예시 대조 → 불변Context/선택preview·전용ACK검증 → 현재DI의 Repository/Gateway·Controller 연결 → 원ACK/변조/옵션격리·혼합역할/빈effects/회원전환/중복/유효기한·직접기존 경계 묶음검증 → 문서·Issue25 인계/commit/push. 실제버튼/성공화면·관계종료알림은 B, profile/기록Router는 C, 검색커서/캐시는24 독립후속이다. A에서 성공사건은 원결과를 별도로 보관하고 빈effects에 가짜T알림을 발생시키지 않는다. 따라서 A완료를 정상버튼/빈effects 화면갱신까지 완료로표시하지 않는다.
+
+완료조건은 전용 HTTP 원명령/ACK·기존pending회귀 시험/변경파일분석·포맷/diffcheck와 코드리뷰·문서/원격보관이다. 저장/Router/사용자UI/서버권한 불변으로 표적시험을 사용하고 무관전체시험/실회원쓰기·기기조작/서버·DB/dev/main통합은 제외한다. recover_leadership은 계약검증만 보존하며 제품UI는 제안상태다.
 
 ## 다음 작업 — Backend 구현·실행 계약 인계 확인
 

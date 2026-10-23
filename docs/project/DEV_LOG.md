@@ -1,5 +1,14 @@
 # 개발 이력
 
+## 2026-10-24 — Issue25 A 전용 context·원명령/ACK 연결
+
+- 새로 가능해진 내부 흐름: Backend15e143ae/개발반영920cc059의 실제176/DB0031을 소비해 불변 MembershipActionContext/선택Preview/Result·전용Gateway를 추가했다. 실제 BackendApp DI의 CycleInteractionRepository가 구현하고 기존 Controller가 최신선택옵션 재검사→정확6필드 새Key/원Impact pending→전용ACK를 처리한다. 권한/후계자선정은서버소유이고앱은scope/ID/영향·후상태/revision규칙일치만검증한다. UI버튼은이번에전환하지않았다.
+- 회귀/수명: 구cancel/leave/end·D22/E23 원transport/ACK를 그대로두고 새명령만분기했다. 최대24h 원method/path/body/key/token/Impact 재송은GET없이진행한다. 의미변경/회원·화면전환/중복은POST0, token만갱신은허용. membershipSuccess에검증원결과를보관해B성공화면이탈/빈effects관계알림에서사용한다. 빈효과는가짜T갱신을하지않으며B소비는아직미구현이다. recoverUI는제안으로실행진입을열지않고IF-001도유지한다.
+- 모델/데이터근거: 실행OpenAPI176·서버schema와합성PostgreSQL실행예시중Context/Result6개를대조·출처를test/fixtures/membership_actions.json에보존했다. 토큰은원자료의비실행redacted값이며실회원/실서버응답이아니다. 주차경계는공통PartyCyclePolicy·시간파싱은기존actionTime을재사용했다. 저장/Router/다른feature/새라이브러리는변경하지않았다.
+- 검증: 신규46+직접기존departure/removal/management/interaction131의5파일고유177mock PASS. 최대양T각8인해산·후계불가탈퇴·빈effects,추가필드/다른회원/T/세대/리더/할당/후상태/각revision/완료보존위조,원재송/잘못ACK·24h/회원전환·뷰전환/중복/후속갱신실패를검증했다. 최초분석의중괄호스타일16건은수정후0,공통주차정책재사용최종변경후새46재확인/기존131재사용·변경Dart4파일분석0·포맷/diffcheck/diff검토. 공용저장/Router불변·새분기와직접기존시험으로범위를설명해무관전체시험은생략했다.
+- 미확인/다음: 실제버튼/확인창·성공1회이탈/반대T화면유지·빈effects관계알림은B,명시profile/옛기록Router는C,검색커서/캐시는24후속. 실서버정상로그인/실회원쓰기·기기인수는미실행이며사용자기기조작을대신하지않았다. 개발서버반영보고와Flutter인수를구분한다.
+- Git/협업: feature/raid-recruitment-scheduling 유지·코드/시험/문서commit/push후Issue25에정확SHA·결과/미확인·다음B를회신한다. dev/main통합·서버/DB변경없음, 기존통계35/플랫폼생성·DevTools/백업/tools dirty는보존/제외한다.
+
 ## 2026-10-24 — Issue24 보완1·Issue25 보완안2 소비 검토와 회신
 
 - 새로 정리한 흐름: Backend6369761914·6369762510/합성예시6369763243·6369763925를 앱 bce1f0d7과 대조했다. 24 기존 검색 shape/semantics·cursor/head를 수용하고, 25 옵션 접근격리·자원별 후상태/revision·명시 reader/recovery·옛Member 자기기록의 네 보완 차이가 해소됨을 확인했다. 추가 차단 계약 요구는 없다. 기능이 새로 동작하게 된 것은 아니다.

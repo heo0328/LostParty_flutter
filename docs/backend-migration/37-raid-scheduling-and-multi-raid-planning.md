@@ -2072,3 +2072,17 @@ BackendApp의 /recruitments/:recruitmentId는 현재 room/T만 페이지에 전�
 **비활성 기능과 분리:** §37.42/IF-001의 close_weekly·weekly_resume 비활성은 유지한다. 새 reader에 retained/resume_weekly/기존stopped 자료가 있어도 다시 켜지 않는다. 다음주 reopen·recover_leadership은 별개이며 후자의 UI 제품승인을 이번 기술 검토로 대신하지 않는다.
 
 **회신/다음 담당:** [24 검토6370137482](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6370137482)·[25 검토6370138718](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6370138718) 게시본문 MATCH. 다음 Backend는 정의한 구현 구간의 정확SHA/push·실행 OpenAPI·대표 실제 응답/직접검증·개발API/DB 여부를 인계한다. 그 뒤 Flutter는 기존검색 갱신/제한된커서회복, 새전용 DTO/원명령·ACK, 실제menu/성공화면·알림, profile/기록 Router를 검증 가능한 구간으로 나눠 연결한다. 이번 문서/정적소비검토에서는 Dart/API/의존성·서버/DB 불변, Flutter 시험/분석 반복 없이 diffcheck/내용/게시문 대조 후 작업브랜치 commit/push로 보관한다. 새서버 HTTP·실회원/실기기·dev/main통합은 미완료다.
+
+### 37.44 Issue25 A — 전용 Context/원명령·ACK 구현 (2026-10-24)
+
+Backend source15e143ae·반영920cc059와 [24 개발반영6371617690](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6371617690)/[25 개발반영6371618996](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6371618996)의 API176/DB0031을 소비한다. §37.43 당시 서버미구현/미반영대기는 해소됐다. 첫 그룹A는 모델·Repository/Controller 원명령 경계이고 기존 상세버튼/Router는 바꾸지 않았다.
+
+**선택 이유/소유:** 기존 엄격DTO·전용Gateway와 app-owned Controller/pending 구조를 재사용한다. 새모델 membership_actions.dart는 깊게고정한 Context/선택Preview/Result로 나누고 서버option/Impact를 원본으로 보관한다. 새권한/후계/리비전증분을 앱 정책으로 재계산하지 않는다. shareable 비교·ID/시각은 기존 helper, 주차는 PartyCyclePolicy를 재사용하고 새계층/라이브러리·전면리팩터링은 추가하지 않는다. 실제DI Repository가 MembershipActionGateway를 구현해 읽기(GET/noKey)·쓰기(POST/UUID4Key/6필드)를 제공하며 기존 end/leave ACK와 섞지 않는다.
+
+**확인/쓰기:** membershipContext(room,view)로 실제메뉴를읽고 select(action)의 허용옵션만 확인원본으로 고정한다. Controller.performMembershipAction은 최신context를다시읽고 같은room/actor/C/viewT·roomrevision/선택option permission·Impact서명을비교한다. 다른옵션변화는선택동의에합치지않고token/발급시각갱신만제외한다. 의미변화는REVISION_CONFLICT/POST0,회원·화면세대변화/중복도POST0이다. 새원명령은 method/path/body/key/token·원Impact를기존 메모리pending에저장하며최대24h재송은새GET/새token없이원명령만쓴다. 종료후앱재시작 영속복구를추가한것은아니다. recover_leadership은계약을읽되별도UX승인전Controller신규실행을열지않는다.
+
+**ACK:** 전용Result는원key/action/room/actor·당시C/viewT,실제C→N영향집합/세대,예정target/gen/CM후상태·리더/후계자·취소할당/완료보존ID를대조한다. equal/increase/exact_after를자원별로검사하며정확+1이아닌target/plan엄격증가도구분한다. 잘못ACK는pending을보존하고원ACK검증후pending을먼저정리한다. 그뒤갱신실패는명령실패로바꾸지않는다. effects=[]/actorEnded=true도성공이며가짜T갱신은없다. membershipSuccess=(원key,Result)를별도로보관하고회원scope변경때폐기한다. B가이를소비해현재T종료/관계종료의1회이탈·반대T만해산시현재화면유지·빈effects의C/N내목록/한도관계알림을연결한다. 현재기존페이지가새성공사건을처리하는것은아니다.
+
+**회귀/검증:** IF-001 비활성·구cancel/leave/end/D22/E23·일반참가/다음주reopen·회원/T격리와원24hACK를보호했다. 백엔드합성DB실행예시Context/Result6개를출처/비실행token표시와함께fixture로보존했다. 신규46+직접기존131의고유177mock PASS(5파일),변경Dart4파일분석0·포맷/diffcheck/검토. 최종공통주차정책재사용뒤새46만재확인하고기존131을재사용했다. 8인양T해산/후계없음탈퇴/빈효과·원재송·변조ACK·옵션격리/직전token갱신·계정/뷰/중복/24h·후속갱신실패를포함한다. 실서버로그인쓰기·실회원/기기·UI전환은미확인이다. 저장/Router불변으로무관전체시험은생략한다.
+
+다음은B 실제menu/확인/성공화면·관계알림, C profile/기록Router·24검색회복은별도후속이다. 작업브랜치에코드/시험/문서를commit/push하고Issue25에정확결과/미확인·다음담당을인계한다. dev/main통합·서버/DB·실기기조작은이번범위가아니다.

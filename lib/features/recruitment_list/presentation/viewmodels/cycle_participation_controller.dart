@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import '../../data/cycle_member_actions.dart';
+import '../../data/membership_actions.dart';
 import 'package:flutter/foundation.dart';
 import '../../../account/data/local/scoped_command_key.dart';
 import '../../../account/domain/account_read_session.dart';
@@ -31,6 +32,7 @@ class _CycleCommand {
     this.departure,
     this.removal,
     this.removalMode,
+    this.membership,
   }) : evidence = Map.unmodifiable(evidence),
        encoded = jsonEncode(body),
        key = newScopedCommandKey();
@@ -44,6 +46,7 @@ class _CycleCommand {
   final DeparturePreview? departure;
   final RemovalPreview? removal;
   final String? removalMode;
+  final MembershipActionPreview? membership;
   final bool applicationAck;
   final int status;
   final DateTime createdAt;
@@ -77,6 +80,7 @@ class CycleParticipationController extends ChangeNotifier {
   _CycleCommand? _pending;
   (String key, String room, String target)? departureSuccess;
   (String key, String room, String target, String member)? removalSuccess;
+  (String key, MembershipActionResult result)? membershipSuccess;
   DateTime? _retryAt;
   Timer? _retryTimer;
   bool get hasPending => _pending != null;
@@ -114,6 +118,7 @@ class CycleParticipationController extends ChangeNotifier {
     _pending = null;
     departureSuccess = null;
     removalSuccess = null;
+    membershipSuccess = null;
     busy = false;
     failure = notice = lastRoom = lastTarget = null;
     _retryAt = null;
@@ -144,6 +149,61 @@ class CycleParticipationController extends ChangeNotifier {
   }
 
   Future<List<RecruitmentCharacter>?> characters() => _read(gateway.characters);
+  Future<MembershipActionContext?> membershipContext(
+    String room,
+    String view,
+  ) => _read(
+    () => (gateway as MembershipActionGateway).membershipContext(room, view),
+  );
+
+  Future<String?> performMembershipAction(
+    MembershipActionPreview preview, {
+    required bool Function() isCurrent,
+  }) async {
+    // Leadership recovery UI remains a separate product proposal.
+    if (preview.action == 'recover_leadership' || !canAct || !isCurrent()) {
+      return null;
+    }
+    final e = _epoch;
+    String? key;
+    busy = true;
+    failure = notice = null;
+    _emit();
+    try {
+      final context = await (gateway as MembershipActionGateway)
+          .membershipContext(preview.room, preview.view);
+      if (!_valid(e) || !isCurrent()) return null;
+      final fresh = context.select(preview.action);
+      if (fresh.signature != preview.signature) {
+        throw const AccountReadException('REVISION_CONFLICT');
+      }
+      _pending = _CycleCommand(
+        path: fresh.path,
+        body: fresh.body(),
+        room: fresh.room,
+        target: fresh.view,
+        applicationAck: false,
+        status: 200,
+        createdAt: now(),
+        evidence: context.scope,
+        membership: fresh,
+        affectedTargets: fresh.affected,
+      );
+      key = _pending!.key;
+      await _send(e);
+    } on AccountReadException catch (error) {
+      if (_valid(e)) _fail(error);
+    } catch (_) {
+      if (_valid(e)) failure = 'INVALID_RESPONSE';
+    } finally {
+      if (_valid(e)) {
+        busy = false;
+        _emit();
+      }
+    }
+    return key;
+  }
+
   Future<CycleResumePlan?> resumePlan(String room, String target) =>
       weeklyInterruptionEnabled
       ? _read(() => gateway.resumePlan(room, target))
@@ -657,7 +717,15 @@ class CycleParticipationController extends ChangeNotifier {
     final command = _pending!;
     try {
       String? resumeOutcome;
-      if (command.removal != null) {
+      MembershipActionResult? membershipResult;
+      if (command.membership != null) {
+        membershipResult = await (gateway as MembershipActionGateway)
+            .writeMembershipAction(
+              command.membership!,
+              command.key,
+              jsonDecode(command.encoded) as Map<String, dynamic>,
+            );
+      } else if (command.removal != null) {
         await (gateway as CycleRemovalGateway).writeRemoval(
           command.removal!,
           command.removalMode!,
@@ -693,6 +761,10 @@ class CycleParticipationController extends ChangeNotifier {
         );
       }
       if (!_valid(e)) return;
+      if (membershipResult != null) {
+        membershipSuccess = (command.key, membershipResult);
+        notice = '요청이 반영되었습니다.';
+      }
       if (command.departure != null) {
         departureSuccess = (command.key, command.room, command.target);
       }

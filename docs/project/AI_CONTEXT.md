@@ -1,5 +1,7 @@
 # AI CONTEXT — 2주 레이드 현황 기획과 현재 구현 상태
 
+Issue24/25 개발반영 인계 수신·25 A 구현(2026-10-24): Backend15e143ae/반영920cc059·API176/DB0031로 과거 서버반영 대기는 해소. Flutter는 전용불변 context/preview/result·원6필드/ACK·기존app-owned 재송을 연결했다. 고유177mock PASS(새46+직접기존131)·변경4파일분석0. §37.44/NEXT_WORK가 현재기준이며 다음은 B 실제menu/성공화면·빈effects 관계알림, C profile/기록Router·24검색회복은별도후속이다. 사용자 버튼은 아직 구명령·실서버로그인/기기 미확인, IF-001 비활성·dev/main미반영 유지.
+
 Issue24 보완1/25 보완안2 소비 검토 완료(2026-10-24): 기존 네 차이 해소·추가 차단 요구 없음. [24/6370137482](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6370137482)·[25/6370138718](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6370138718) 게시본문MATCH. 새 명령/ACK와 opt-in reader·기록anchor/관계종료 알림은 앱 후속 연결 대상이며 현재 기능은 불변이다. 아래 과거 ‘계약 보완 대기’를 대체해 **Backend 구현·실행 계약 인계 대기**로 전환한다. 설계37 §37.43/NEXT_WORK. 복구UI 제품승인은 별도·IF-001 비활성 유지, 실서버/실기기·dev/main 통합 미완료.
 
 최신 제품 결정(2026-10-24): 미완료 종료·같은 주차 재개는 다일 일정에도 미사용. 앱 버튼/전용 신규 조회·preview·쓰기를 차단하고 원pending 복구·코드/기록은 보존했다. 아래 ‘다일만 노출·삭제 보류’는 당시 이력이다. 단일 기준은 [비활성 기능 대장 IF-001](INACTIVE_FEATURES.md)·설계37 §37.42. 직접4파일119mock PASS/변경6파일분석0, 실기기 미확인·dev/main 미반영. 일반 일정·완료/개인완료·다음주 개방/재개방은 별개다.
