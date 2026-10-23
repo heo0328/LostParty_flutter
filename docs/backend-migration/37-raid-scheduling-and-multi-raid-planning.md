@@ -1627,3 +1627,20 @@ v2 원ACK 뒤 command.target만 refreshTarget으로 재조회해 N캐시를 덮�
 직접영향8파일 최종 단일190mock PASS, lib/test 전체 analyze0, 변경 Dart 포맷·diffcheck. 신규9경계(후보/주차지연/양주차/재진입/역할/목록6 + 개별갱신 중복·업로드실패·provider실패3)를 포함하며 이전153/중간79/6과 합산하지 않는다. 중간 시험에서 구형 생성 오류의 재진입 보존 실패1개를 발견해 availability 재조회 대상을 새 gateway로 한정하고 최종190에서 통과했다. root analyze에는 기존 무관 untracked tools의 info3개가 있으므로 제품 lib/test 분석0과 구분한다.
 
 미확인 실기기: 폴드 외부화면 체크+i/큰글자, 캐릭터 상세 단건갱신/실제지원역할 전투력, C/N/함께생성 후보와 이미참가/완료 제외, 완료후 목록 갱신/다른주차 보존이다. 설치·조작은 사용자 담당이며 에이전트는 수행하지 않았다. 서버 완료정정/방수명 계약과 실제 HTTP·성능 인수는 남고 dev/main 통합·배포는 하지 않는다.
+
+### 37.26 완료 정정·방 보관 계약 제안1 소비 검토 (2026-10-23)
+
+[Backend126/6358628814](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6358628814)는 **검토안·미합의·미구현**으로 전달됐다. Flutter는 사용자 확정 정책과 현재84dac842 코드를 정적으로 대조하고 [검토 회신6358680312](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6358680312)에 두 방향을 수용했다(게시원문MATCH). 현재 실행소비2940824/168경로·policy4는 유지하며 구현완료/실기기해결로 표시하지 않는다. 이 절은 §37.25의 '새회신없음' 이후 상태다.
+
+- 개인 정정: 별도 GET completion-correction-context / POST completion-corrections와 새 전용ACK를 사용한다. 실제T<=C·현재수06~10시/과거T 취소 허용·미래거절, 현재 인증/소유·본인 WeeklyState/revision을 검증한다. 활동비활성/은퇴·현재raid/레벨/역할은 본인기록 정정 차단사유가 아니다. manual/party 유효출처를 함께 비우되 타인/다른T·raid 불변, 불변 완료사건/정정감사 보존·같은T 새완료는 새근거로 표시한다. 기존 완료생성/수동false 의미와 원pending을 유지하고 fallback하지 않는다.
+- 확인/저장: source/revision·actor/대상/T/C와 최대120초/수06시까지 token을 묶고 확인변경·CAS/만료는 재확인한다. 새ACK의 원command/대상/정정ID·출처[]·participation_restored=false를 검증하며 원method/path/body/key/token 복구·24h만료 보류를 유지한다. ACK성공후 C/N은 실제T summary, 과거는 context를 다시 읽고 재조회실패로 성공을 취소/재쓰기하지 않는다.
+- 방수명: 인원0·현재 generation/희망flag만으로 추정하지 않고 각현재raid의 전체완료 근거를 공통 판정한다. 개인투영 정정은 당시방 전체완료 증거를 취소하지 않으며 방/참가/좌석/일정/예약/N을 복원하지 않는다. 열린 후속N(open/review_required)은 그대로 보존하고, 없을때 서비스상 보관·기록보존/새쓰기차단한다. 다중raid 일부완료·미완료종료/불명확legacy는 보관 추정하지 않는다. stopped는 별도 기존재개를 유지한다.
+- 목록: current는 SQL페이지 전 실제T 활성참가/복구관계만, all은 기존전체관계, ended는 실제종료/보관관계까지 포함하는 의미를 수용한다. 단순not_selected를 종료참가이력으로 만들지 않는다. C완료가 열린N검색/참가목록을 제거하지 않으며 보관공개카드404와 기존회원 기록상세/plan은 분리한다. 기존자료도 같은 읽기판정으로 처리하며 GET쓰기/물리삭제는 없다.
+
+**최종 wire·구현 인계에서 확인할 구체 차이**
+
+1. 현재 CycleOwnRow.isActiveParticipation은 target_state=open만/nonnull card만 표시한다. review_required와 legacy generation 미확정의 명시복구관계까지 표시하려면 card/room-cycle/gen/revision nullable 정확한 스키마·예시가 필요하다. 현재 card parser는 이 ID/세대 양수를 요구하므로 없는값을 합성하지 않는다.
+2. 실제 상세 Router는 /v2/raid-rooms/{id}/detail, plan은 /v2/me/raid-rooms/{id}/plan이다. 공개 /v2/raid-rooms/{id} 404와 기존회원 기록상세 허용을 구분하는 실제 endpoint/permission/access·ended card/leadership/target 형태를 최종계약에 명시 요청했다.
+3. 현재 계정 canChange는 C/playable·detailsAvailable(활동)/manual.canClear와 catalog를 묶는다. 완료정정은 별도권한/reader/writer로 분리하고 완료생성/기존pending은 그대로 둔다. source가 있는 C/N카드는 새 context로 취소권한을 확인한다. 과거T/은퇴·비활성raid 지원 API와 현재 C/N계정화면의 노출범위는 구분하며 과거이력화면을 임의 신설하지 않는다. sources/permission/confirmation 결합·offset시각·원ACK전환 검증은 최종 닫힌 OpenAPI를 따른다.
+
+**다음 구간/검증 기준:** Backend가 두 구간 구현/직접경계검증 후 정확한 commit/push SHA·실행 OpenAPI·개발반영/migration 여부를 인계한다. Flutter는 새 context/ACK·원명령 영속호환과 권한·출처/CAS/만료/원ACK/회원·T 격리, current/ended/all SQL페이지·review복구/기록접근·보관방차단/열린N·stopped재개 직접영향을 연결한다. 기존190mock는 기능코드 불변으로 재실행하지 않았으며 이번은 문서/소비코드 정적대조·diffcheck다. 기능코드·서버/DB/키/기기조작·dev/main통합/배포 변경없음, 시간UI는 계속제외다.

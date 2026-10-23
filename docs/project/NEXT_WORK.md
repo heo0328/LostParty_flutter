@@ -1,4 +1,14 @@
-# NEXT WORK — 첫 디바이스 피드백 1차 수정
+# NEXT WORK — 완료 정정·방 보관 계약 검토 완료, Backend 구현 인계 대기
+
+## 최신 계약 검토 결과 (2026-10-23)
+
+[Backend126 제안6358628814](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6358628814)를 대조해 [Flutter 검토6358680312](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6358680312)에서 두 방향을 수용했다(게시원문MATCH). **계약 제안 단계·Backend 미구현/새소비SHA없음**, 현재2940824 유지다. 상세차이와 보호/검증은 설계37 §37.26을 따른다.
+
+- 다음 담당 Backend: 본인완료정정·방/목록수명 구현/경계검증·정확한 원격SHA/실행OpenAPI·개발/DB반영 여부 인계. review_required/legacy복구관계의 card/cycle/gen nullable 예시와 기존회원 기록detail/plan 접근·권한을 최종 wire에 명시한다.
+- 다음 Flutter: 인계 뒤 별도context/정정ACK·원pending호환/수동완료생성 보존, 취소권한 C/playable/활동/catalog 분리, current/ended/all·review복구/보관기록·stopped재개·열린N 격리를 직접영향으로 연결·검증한다. 구현 전 최종계약 확인, 미합의API/가짜성공 없음. 과거T API지원을 이유로 C/N선택기에 과거이력화면을 임의추가하지 않는다.
+- 이번 사용자 요청은 계약 확인으로 기능코드는 변경하지 않았다. 기존190시험 재실행 없음·정적대조/문서 diffcheck. 첫수정 실기기 인수·서버정책 실제해결·dev/main통합은 여전히 미완료이며 시간UI변경은 제외한다.
+
+아래 1차 수정 기록의 '계약 대기'는 위 제안 수용/최종 wire 보완·구현 인계 대기로 갱신된다.
 
 ## 2026-10-23 사용자 피드백에 따른 현재 작업
 

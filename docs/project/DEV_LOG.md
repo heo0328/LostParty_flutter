@@ -1,5 +1,13 @@
 # 개발 이력
 
+## 2026-10-23 — Backend126 완료 정정·보관 제안1 소비 대조
+
+사용자 계약확인 요청으로 feature/raid-recruitment-scheduling84dac842·원격일치/dev6d3f617·기존무관dirty와 최신 [Backend126/6358628814](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6358628814) 전문을 확인했다. 미합의·미구현 제안이며 기존 실행2940824/168경로·policy4 불변이다. [Flutter127 검토6358680312](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6358680312)로 수용/구체소비차이와 최종 wire·구현인계를 회신하고 게시원문MATCH를 확인했다.
+
+- 새로 정리: 본인 manual/party 동시정정·과거T/수06~10시허용/현재소유·타인불변/새ACK·기존manual호환·참가/예약비복원, 전체raid 완료/열린N보존·보관/stopped재개분리와 current/ended/all 의미를 소비 가능하다고 수용했다. 구현가능과 실제구현완료를 구분했다.
+- 정적보호 대조: MemberWeeklyViewModel.canChange의 C/playable/활동/manual권한 묶음은 새정정에 재사용할수없음, CycleOwnRow의open/non-null card 제한은 review_required/복구관계와 다름, 실제회원detail/plan은 공개카드endpoint와 다름을 확인했다. 없는gen/좌석합성 없이 최종nullable예시/접근permission을 인계받도록 요청했다. 현재C/N UI의 과거이력기능 임의확대 없음.
+- 문서/검증: 설계37 §37.26/NEXT_WORK/AI_CONTEXT 최신화, 전문·실제소비코드 대조와 diffcheck. 기능코드불변으로190mock/분석을 반복하지 않았다. 새로가능한앱흐름은 없고 기존첫수정/원pending·서버/DB/키·기기·dev/main불변이다. 미확인은 Backend 구현/격리검증·원격SHA/OpenAPI/개발반영·실회원/기기인수 전체다. 작업브랜치 문서commit/push·유지한다.
+
 ## 2026-10-23 — 첫 디바이스 피드백 Flutter 1차 수정·서버 정책 보완 요청
 
 구현 `2ba24d95b59db5cfc758c8c1de26ee96bfc4b200` commit/push·원격일치, [Issue13 결과6358397626](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6358397626) 게시원문MATCH까지 확인했다. 서버정책 대기와 dev미반영·브랜치유지는 변함없다.
