@@ -479,6 +479,7 @@ class _BackendRecruitmentDetailPageState
                 m.target == m.cycles!.current.key &&
                 m.cycles!.current.permissions['complete']?.allowed == true &&
                 room['continuation_enabled'] == true &&
+                value.hasMultipleScheduledDays &&
                 {'leader', 'member'}.contains(room['my_target_role']))
               CycleOutcomeActions(
                 showCompletion: false,
@@ -524,7 +525,9 @@ class _BackendRecruitmentDetailPageState
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Wrap(
+              alignment: WrapAlignment.center,
               spacing: 12,
+              runSpacing: 4,
               children: [
                 _managementButton(
                   'cancel',
@@ -555,6 +558,7 @@ class _BackendRecruitmentDetailPageState
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.error,
                     foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
                   ),
                   icon: const Icon(Icons.delete_forever_outlined),
                   label: const Text('모집 해산'),

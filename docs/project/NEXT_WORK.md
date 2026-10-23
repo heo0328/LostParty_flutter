@@ -2,7 +2,17 @@
 
 ## 현재 상태 (2026-10-24)
 
-## 현재 그룹 — Issue24·25 소비 검토 완료 / Backend 계약 보완 대기
+## 최신 UI 결과 — 탈퇴 중앙 정렬·해산 폭 확대 / 미완료 종료 다일 제한
+
+구현/검증 완료: 상세탈퇴 Wrap 중앙/줄바꿈 중앙, 해산 가로padding32/폭약20%확대, 확정KST출발일2개이상에서만 기존 미완료종료 노출. 관련2파일35mock PASS(새1+기존34)/변경Dart3파일분석0·포맷/diffcheck. 삭제검토/보존·근거는 [설계37 §37.41](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)·DEV_LOG. 실기기배치/큰글자·폴드/실제다일표시·기존중단재개는사용자확인대기다. Backend24/25 계약보완대기는아래와같이유지하며UI구간은작업브랜치commit/push로보관한다.
+
+사용자 요청으로 상세 하단의 이번주(선택N이면 다음주) 탈퇴/모두탈퇴를 가운데 정렬하고 해산 버튼 가로 여백을 늘려 기본 폭 대비 약20% 확대한다. 기존 위치·색/텍스트·아이콘·글자 크기/터치·원명령은 유지한다. Backend25 새 동작/권한/노출 계약을 먼저 구현한 것으로 표시하지 않는다.
+
+미완료 종료는 본인 탈퇴와 달리 파티 전체 남은C 진행/예약을 중단하고 같은C 재개를 가능하게 하므로 완전 삭제하지 않는다. 이번 UI는 서버 confirmed_starts_at의 **KST 출발일이 둘 이상**인 실제 다일 일정에서만 기존 미완료 종료를 노출한다. 후보중1회·날짜미정/단일일자/같은날복수타임/한타임익일종료를 다일로 추정하지 않는다. 새 판정 때문에 plan 추가GET/로컬 생성초안 참조·서버권한 복제는 하지 않는다. 기존 C/수10시/함께하기/실참가 조건과 미완료종료의 전체영향/확인·원pending·재개는 유지한다. 삭제 가능성·새탈퇴/해산과 차이는 설계37 후속절에 남긴다.
+
+회귀 보호: 기존 버튼 콜백/권한·C/N/회원 격리, 완료/개인완료후탈퇴·중단/재개·원요청복구/읽기전용 기록. 검증은 KST 날짜 경계의 좁은 predicate 시험+직접기존 outcome 경계, 변경파일 포맷/분석·diffcheck를 묶고 정상 배치/폴드·큰글자는 사용자 담당이다. 공유 저장/Router/서버계약 불변으로 무관전체시험 생략. 완료 후 UI/정책·제한을 문서/관련Issue에 필요한 범위로 인계하고 작업브랜치 commit/push, dev/main 통합 제외.
+
+## 병행 대기 — Issue24·25 소비 검토 완료 / Backend 계약 보완 대기
 
 사용자 ‘진행합니다’로 [Backend137 설계 인계6368822874](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6368822874)와 Issue24/25 설계안1을 실제 Router/DI·검색/캐시·상세/원명령·review/종료회원 기록과 대조했다. [24 회신6369170940](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6369170940)/[25 회신6369171307](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6369171307) 게시본문 MATCH를 확인했다. 상세 판단·코드 근거는 [설계37 §37.40](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md), 완료 이력은 DEV_LOG를 따른다. 기존174경로/DB0030·Dart/API/원pending/시험 결과는 유지한다.
 

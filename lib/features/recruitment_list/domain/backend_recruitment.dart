@@ -5,6 +5,7 @@ import '../../account/domain/member_raid_models.dart';
 import '../../account/domain/member_cycle_models.dart';
 import '../../account/domain/role_summary.dart';
 import '../../account/domain/services/character_build_role_policy.dart';
+import 'policies/raid_cycle_schedule.dart';
 
 const recruitmentExperiences = <String, String>{
   'tryLevel': '트라이',
@@ -622,6 +623,15 @@ class BackendRecruitmentDetail {
   late final int membersRevision, planRevision;
   late final List<Map<String, dynamic>> members;
   late final List<DateTime> starts;
+  bool get hasMultipleScheduledDays =>
+      starts
+          .map((start) {
+            final date = start.toUtc().add(const RaidCycleSchedule().utcOffset);
+            return (date.year, date.month, date.day);
+          })
+          .toSet()
+          .length >
+      1;
 }
 
 abstract interface class CycleRecruitmentGateway implements RecruitmentGateway {

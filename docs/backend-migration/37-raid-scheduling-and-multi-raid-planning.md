@@ -2028,3 +2028,13 @@ UX 제안은 주차 탈퇴=현재 보이는 T만 나가기, 모집 해산=전체
 - Flutter: 이번 구간은 조사/설계·각Issue회신/문서만 변경한다. 기존 Router·DI/서버API·Dart/저장·원pending/시험은 그대로다. 실제 code 근거는 위 파일들과 `CycleParticipationController._send/changed`, `CycleOwnRoomsPage._mutated`, `BackendRecruitmentDetailPage._changed`, `CycleScheduleView`다.
 - Backend: #24의 기존 검색shape·커서 의미/정렬전제 유지, #25의 위 보완·closed wire/대표예시와 구현 구간을 고정한다. 이번 소비대조 회신을 기능구현/개발DB 반영/실회원시험 지시로 바꾸지 않는다. 최종 구현 승인·인계 뒤 Flutter는 검색 → 새3행동/원ACK → 복구reader/기록·성공이탈 순으로 직접영향 검증을 묶는다.
 - 회귀 보호: N단독/C+N생성·C/N/회원격리·서버정렬/커서/그룹후보, 구원명령복구·기존완료정정/개인완료후탈퇴/카드추방·예약/비대상T·읽기전용기록. 새검증은 실제최종DTO/영향이 정해진 뒤 경계에 집중하며 정상UI는 사용자 기기 인수, 문서만 변경한 이번에는 diffcheck/내용 대조만 수행한다.
+
+### 37.41 상세 버튼 중앙 배치·미완료 종료 다일 제한/삭제 검토 (2026-10-24)
+
+사용자는 Backend24/25 대기 중 독립 UI 개선을 요청했다. 두 탈퇴버튼을 WrapAlignment.center로 가운데 배치하고 좁은폭/큰글자에서 줄바뀌어도 중앙 정렬을 유지한다. 모집 해산은 빨강/흰글씨·아이콘/폰트·기존위치를 유지하며 가로padding32로 기본 아이콘버튼 폭 대비 약20% 넓힌다. 글자/아이콘의 transform 확대나 고정폭은 사용하지 않는다. 기존 명령/서버권한·해산표시조건을 새25 계약 구현으로 바꾸는 구간은 아니다.
+
+**미완료 종료의 차이/삭제 판단:** 새 leave_target은 본인만 나가고 타인C/열린N을 보존한다. dissolve_led_targets는 본인이 공대장인T 전원을 탈퇴시키며 같은C의 중단참가 재개를 대체하지 않는다. 기존 close_weekly는 C의 미완료round/참가·예약을 파티 전체에 대해 중단(stopped)하고 완료근거/지속관계/N을 보존하며 현재주 재개제안으로 이어진다. 단일회차의 ‘C는 나가고 N은 유지’는 새탈퇴로 정리할 UX이지만, 여러날의 중단→같은C 재도전·부분완료보존/미해결재개제안과 원pending/ACK가 남아 있어 **기능/API·이력/재개까지 완전삭제하지 않는다**. 새탈퇴/해산은 여전히 Backend25 계약·구현 대기이며 이UI수정으로 대체동작이 이미 가능해진 것이 아니다.
+
+**이번 노출 제한:** 현재 detail의 schedule_summary.confirmed_starts_at만 재사용한다. `BackendRecruitmentDetail.hasMultipleScheduledDays`는 공통 RaidCycleSchedule.utcOffset으로 각 출발UTC를KST날짜에 투영해 서로다른 출발일이2개이상인지 판정한다. 해당경우에만 기존 미완료종료 진입을 노출하며 C/수10시/함께하기/실제참가·기존서버context/확인/쓰기조건은 그대로다. N탭의일정/C생성초안·occurrence_mode=each 또는 multiple 글자만으로 다일을추정하지않고, 후보one_of·미정·같은날복수타임/익일종료 한타임은 제외한다. 서버가 확정해준날짜가부족하면 숨김이며 원의도/미확정다일을 읽기위한 새planGET은 추가하지 않는다. 장기적으로 미확정 each까지 노출해야한다면 정확한다일의도 summary계약을별도로검토한다.
+
+**보존/검증:** 완료/나혼자완료후탈퇴·중단원요청/재개·기록·버튼콜백/중복방지/세션·C/N을 유지했다. device_feedback+cycle_outcome **최종2파일35mock PASS(새KST경계1+기존직접34)**, 변경3파일분석0·포맷/diffcheck/diff검토. 같은UTC일자/KST자정분리와 다른UTC일자/같은KST날짜를구분하고 후보/미정으로활성화하지않음을확인했다. 표시·중앙정렬/약20%폭·폴드외부/큰글자 정상화면은 사용자기기미확인이다. 공유저장/Router/DTO·서버명령권한불변으로 무관전체시험/정상UI자동시험은반복하지않았다. 서버측다일제한을구현/검증한것은아니며기존API권한은그대로다.

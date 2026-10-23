@@ -74,6 +74,31 @@ void main() {
     session.dispose();
   });
 
+  test('multi-day closure counts confirmed KST departure dates', () {
+    bool hasMultipleDays(List<String> starts, {String? occurrence}) {
+      final wire = v1.detailJson();
+      wire['room']['schedule_summary']['confirmed_starts_at'] = starts;
+      wire['room']['schedule_summary']['occurrence_mode'] = occurrence;
+      return BackendRecruitmentDetail.fromJson(
+        wire,
+        v1.roomId,
+      ).hasMultipleScheduledDays;
+    }
+
+    // Same UTC date, but the departures are on opposite sides of KST midnight.
+    expect(
+      hasMultipleDays(['2026-10-22T14:55:00Z', '2026-10-22T15:05:00Z']),
+      true,
+    );
+    // Different UTC dates can still be the same local date and must not qualify.
+    expect(
+      hasMultipleDays(['2026-10-22T23:00:00Z', '2026-10-23T00:00:00Z']),
+      false,
+    );
+    expect(hasMultipleDays(['2026-10-22T14:55:00Z']), false);
+    expect(hasMultipleDays([], occurrence: 'each'), false);
+    expect(hasMultipleDays([], occurrence: 'one_of'), false);
+  });
   test(
     'support preference initializes role; explicit other role remains allowed',
     () async {
