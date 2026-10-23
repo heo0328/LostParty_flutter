@@ -1,5 +1,7 @@
 # AI CONTEXT — 2주 레이드 현황 기획과 현재 구현 상태
 
+E23 구현완료(2026-10-23): 카드 X의 현재/양T 추방·전용 option/원명령/ACK·현재 탭 유지/정확T 갱신 연결. 신규45+직접기존133의 고유178mock PASS·lib/test분석0, [설계37 §37.35](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md). 실회원/기기·A완료해제/B보관·dev/main통합은 미완료다. 아래 설계/구현대기보다 이 상태가 우선하며 다음 순서는 NEXT_WORK다.
+
 E23 설계 재점검(2026-10-23): D22 후 실제 카드 X/Controller/별도 Gateway·주차 갱신과 최신 Issue23 계약을 대조해 [설계37 §37.34](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)에 구현/검증 순서를 구체화했다. 기능 코드 불변·구현 지시 대기, Backend 추가 대기 없음. 실행 범위/후속 A/B는 NEXT_WORK를 따른다.
 
 D22 구현완료(2026-10-23): Backend0eed67c4의개인완료후T탈퇴/승계·Context표시/전용ACK·원재송·성공후목록실제T복귀연결,최종5파일133mock PASS/lib·test분석0. 상세§37.33/NEXT_WORK. E23양T추방과기존A완료해제/B보관은미완료,실회원/기기인수·dev/main통합대기. 아래과거설계/계약대기보다이상태우선.

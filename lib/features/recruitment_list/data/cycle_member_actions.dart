@@ -15,6 +15,16 @@ abstract interface class CycleDepartureGateway {
   );
 }
 
+abstract interface class CycleRemovalGateway {
+  Future<RemovalPreview> removal(String room, String target, String member);
+  Future<void> writeRemoval(
+    RemovalPreview preview,
+    String mode,
+    String key,
+    Map<String, dynamic> body,
+  );
+}
+
 Object? _freeze(Object? v) => v is Map
     ? Map<String, dynamic>.unmodifiable(
         v.map((k, x) => MapEntry(k as String, _freeze(x))),
@@ -89,6 +99,307 @@ List<String> _ids(Object? v, int max) {
 
 bool _sameIds(Object? a, Object? b) =>
     scheduleStable(_ids(a, 5)..sort()) == scheduleStable(_ids(b, 5)..sort());
+
+/// A card-bound snapshot. Each option has independent confirmation evidence.
+class RemovalPreview {
+  RemovalPreview(this.room, this.target, this.member, Map<String, dynamic> raw)
+    : wire = _freeze(jsonDecode(jsonEncode(raw))) as Map<String, dynamic> {
+    roleId(room);
+    roleId(member);
+    raidCycleKey(target);
+    roleShape(wire, 'scope data');
+    scope = roleMap(wire['scope']);
+    CycleReadScope({
+      ...scope,
+      'server_now': actionTime(scope['server_now']).toIso8601String(),
+      'playable_from': actionTime(scope['playable_from']).toIso8601String(),
+    }, target);
+    data = roleMap(wire['data']);
+    roleShape(
+      data,
+      'action room_id target_membership_id source opposite_relation options',
+    );
+    roleCheck(data['action'] == 'member_removal' && data['room_id'] == room);
+    roleId(data['target_membership_id']);
+    source = roleMap(data['source']);
+    _target(source);
+    roleCheck(source['target_cycle_member_id'] == member);
+    for (final k in [
+      'target_cycle_key',
+      'room_cycle_id',
+      'target_generation',
+      'target_revision',
+    ]) {
+      roleCheck(source[k] == scope[k]);
+    }
+    opposite = roleMap(data['opposite_relation']);
+    roleShape(opposite, 'target_cycle_key status target');
+    final c = scope['current_cycle_key'] as String;
+    final n = DateTime.parse(
+      c,
+    ).add(const Duration(days: 7)).toIso8601String().substring(0, 10);
+    roleCheck(opposite['target_cycle_key'] == (target == c ? n : c));
+    roleCheck(
+      {'none', 'participating', 'review_required'}.contains(opposite['status']),
+    );
+    if (opposite['target'] != null) {
+      final other = roleMap(opposite['target']);
+      _target(other);
+      roleCheck(
+        opposite['status'] == 'participating' &&
+            other['target_cycle_key'] == opposite['target_cycle_key'] &&
+            other['room_cycle_id'] != source['room_cycle_id'] &&
+            other['target_cycle_member_id'] != member,
+      );
+    }
+    options = roleMap(data['options']);
+    roleShape(options, 'current_only both');
+    for (final mode in ['current_only', 'both']) {
+      final o = option(mode);
+      roleShape(o, 'permission impact confirmation');
+      final p = permission(mode);
+      roleCheck(
+        p.allowed ? p.reason == null : p.reason != null && p.reason!.isNotEmpty,
+      );
+      roleCheck(
+        p.allowed == (o['impact'] != null) &&
+            p.allowed == (o['confirmation'] != null),
+      );
+      if (!p.allowed) continue;
+      final targets = mode == 'both'
+          ? [source, roleMap(opposite['target'])]
+          : [source];
+      if (mode == 'both') roleCheck(opposite['status'] == 'participating');
+      final impact = roleMap(o['impact']);
+      roleShape(
+        impact,
+        'mode affected_cycle_keys targets preserves_completed preserves_global_membership',
+      );
+      roleCheck(
+        impact['mode'] == mode &&
+            impact['preserves_completed'] == true &&
+            impact['preserves_global_membership'] == true,
+      );
+      final keys = targets.map((t) => t['target_cycle_key']).toList();
+      roleCheck(
+        scheduleStable(impact['affected_cycle_keys']) == scheduleStable(keys),
+      );
+      final effects = raidList(impact['targets']);
+      roleCheck(effects.length == targets.length);
+      for (var i = 0; i < targets.length; i++) {
+        final t = targets[i],
+            effect = roleMap(effects[i]),
+            lead = roleMap(t['leadership']);
+        roleCheck(
+          lead['leader_cycle_member_id'] == t['actor_cycle_member_id'] &&
+              t['target_cycle_member_id'] != t['actor_cycle_member_id'] &&
+              lead['leader_membership_id'] != membership,
+        );
+        roleShape(
+          effect,
+          'target_cycle_key cycle_member_id cancel_assignment_ids preserved_completed_assignment_ids released_reservation_count',
+        );
+        roleCheck(
+          effect['target_cycle_key'] == t['target_cycle_key'] &&
+              effect['cycle_member_id'] == t['target_cycle_member_id'],
+        );
+        final all = [
+          ..._ids(effect['cancel_assignment_ids'], 5),
+          ..._ids(effect['preserved_completed_assignment_ids'], 5),
+        ];
+        roleCheck(all.length <= 5 && all.toSet().length == all.length);
+        raidNonnegative(effect['released_reservation_count']);
+      }
+      final confirmation = roleMap(o['confirmation']);
+      roleShape(confirmation, 'context_token issued_at expires_at');
+      final token = confirmation['context_token'];
+      roleCheck(
+        token is String &&
+            token.isNotEmpty &&
+            utf8.encode(token).length <= 4096,
+      );
+      final issued = actionTime(confirmation['issued_at']),
+          expires = actionTime(confirmation['expires_at']);
+      final end = DateTime.parse(
+        '${c}T00:00:00Z',
+      ).add(const Duration(days: 7)).subtract(const Duration(hours: 3));
+      roleCheck(
+        issued == actionTime(scope['server_now']) &&
+            expires.isAfter(issued) &&
+            expires.difference(issued) <= const Duration(seconds: 120) &&
+            !expires.isAfter(end),
+      );
+    }
+  }
+  final String room, target, member;
+  final Map<String, dynamic> wire;
+  late final Map<String, dynamic> scope, data, source, opposite, options;
+  String get membership => data['target_membership_id'] as String;
+  String get path => '/v2/raid-rooms/$room/member-removals';
+  Map<String, dynamic> option(String mode) {
+    roleCheck({'current_only', 'both'}.contains(mode));
+    return roleMap(options[mode]);
+  }
+
+  CyclePermission permission(String mode) {
+    final p = roleMap(option(mode)['permission']);
+    return CyclePermission.fromJson({
+      ...p,
+      if (p['next_change_at'] != null)
+        'next_change_at': actionTime(p['next_change_at']).toIso8601String(),
+    });
+  }
+
+  List<String> affected(String mode) => raidList(
+    roleMap(option(mode)['impact'])['affected_cycle_keys'],
+  ).cast<String>();
+  String signature(String mode) => scheduleStable({
+    'scope': {
+      for (final e in scope.entries)
+        if (e.key != 'server_now') e.key: e.value,
+    },
+    'room_id': room,
+    'target_membership_id': membership,
+    'source': source,
+    if (mode == 'both') 'opposite_relation': opposite,
+    'option': {
+      for (final e in option(mode).entries)
+        if (e.key != 'confirmation') e.key: e.value,
+    },
+  });
+  Map<String, dynamic> body(String mode) {
+    final p = permission(mode);
+    if (!p.allowed) throw AccountReadException(p.reason ?? 'PERMISSION_DENIED');
+    return {
+      'expected_cycle_key': scope['current_cycle_key'],
+      'target_cycle_key': target,
+      'room_cycle_id': source['room_cycle_id'],
+      'target_generation': source['target_generation'],
+      'expected_target_revision': source['target_revision'],
+      'context_token': option(mode)['confirmation']['context_token'],
+      'target_membership_id': membership,
+      'target_cycle_member_id': member,
+      'expected_target_cycle_member_revision':
+          source['target_cycle_member_revision'],
+      'mode': mode,
+    };
+  }
+
+  void _target(Map<String, dynamic> t) {
+    roleShape(
+      t,
+      'target_cycle_key room_cycle_id target_generation target_revision actor_cycle_member_id actor_cycle_member_revision target_cycle_member_id target_cycle_member_revision character_id character_name leadership',
+    );
+    raidCycleKey(t['target_cycle_key']);
+    for (final k in [
+      'room_cycle_id',
+      'actor_cycle_member_id',
+      'target_cycle_member_id',
+      'character_id',
+    ]) {
+      roleId(t[k]);
+    }
+    for (final k in [
+      'target_generation',
+      'target_revision',
+      'actor_cycle_member_revision',
+      'target_cycle_member_revision',
+    ]) {
+      _revision(t[k]);
+    }
+    _name(t['character_name']);
+    _lead(roleMap(t['leadership']));
+  }
+}
+
+void validateRemovalResult(
+  Map<String, dynamic> raw,
+  RemovalPreview p,
+  String mode,
+  String key,
+) {
+  roleShape(raw, 'scope data');
+  final scope = roleMap(raw['scope']), d = roleMap(raw['data']);
+  CycleReadScope({
+    ...scope,
+    'server_now': actionTime(scope['server_now']).toIso8601String(),
+    'playable_from': actionTime(scope['playable_from']).toIso8601String(),
+  }, p.target);
+  for (final k in [
+    'current_cycle_key',
+    'target_cycle_key',
+    'playable_from',
+    'phase',
+    'policy_version',
+    'room_cycle_id',
+    'target_generation',
+  ]) {
+    roleCheck(
+      k == 'playable_from'
+          ? actionTime(scope[k]) == actionTime(p.scope[k])
+          : scope[k] == p.scope[k],
+    );
+  }
+  roleCheck(scope['target_revision'] == p.scope['target_revision'] + 1);
+  roleShape(
+    d,
+    'command_id action outcome executed_at room_id subject_membership_id affected_cycle_keys effects',
+  );
+  roleCheck(
+    d['command_id'] == key &&
+        d['action'] == 'member_removal' &&
+        d['outcome'] == 'applied' &&
+        d['room_id'] == p.room &&
+        d['subject_membership_id'] == p.membership,
+  );
+  final executed = actionTime(d['executed_at']),
+      conf = roleMap(p.option(mode)['confirmation']);
+  roleCheck(
+    executed == actionTime(scope['server_now']) &&
+        !executed.isBefore(actionTime(conf['issued_at'])) &&
+        executed.isBefore(actionTime(conf['expires_at'])),
+  );
+  final impact = roleMap(p.option(mode)['impact']);
+  roleCheck(
+    scheduleStable(d['affected_cycle_keys']) ==
+        scheduleStable(impact['affected_cycle_keys']),
+  );
+  final effects = raidList(d['effects']),
+      expected = raidList(impact['targets']);
+  roleCheck(effects.length == expected.length);
+  for (var i = 0; i < effects.length; i++) {
+    final v = roleMap(effects[i]), e = roleMap(expected[i]);
+    final t = i == 0 ? p.source : roleMap(p.opposite['target']);
+    roleShape(
+      v,
+      'target_cycle_key room_cycle_id target_generation target_revision cycle_member_id cycle_member_revision state leadership completed_assignment_ids cancelled_assignment_ids preserved_completed_assignment_ids',
+    );
+    for (final k in [
+      'target_cycle_key',
+      'room_cycle_id',
+      'target_generation',
+    ]) {
+      roleCheck(v[k] == t[k]);
+    }
+    roleCheck(
+      _revision(v['target_revision']) == t['target_revision'] + 1 &&
+          v['cycle_member_id'] == t['target_cycle_member_id'] &&
+          _revision(v['cycle_member_revision']) ==
+              t['target_cycle_member_revision'] + 1 &&
+          v['state'] == 'removed',
+    );
+    _lead(roleMap(v['leadership']));
+    roleCheck(
+      scheduleStable(v['leadership']) == scheduleStable(t['leadership']) &&
+          _ids(v['completed_assignment_ids'], 1).isEmpty &&
+          _sameIds(v['cancelled_assignment_ids'], e['cancel_assignment_ids']) &&
+          _sameIds(
+            v['preserved_completed_assignment_ids'],
+            e['preserved_completed_assignment_ids'],
+          ),
+    );
+  }
+}
 
 /// Immutable confirmation evidence; never uses an independently fetched plan
 /// to supply the names or effects that the user approves.

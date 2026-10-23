@@ -1,24 +1,25 @@
-# NEXT WORK — E23 참가자 추방 설계 점검 완료 / 구현 대기
+# NEXT WORK — D22/E23 구현·자동검증 완료 / A 개인 완료 해제 연결
 
 ## 현재 상태 (2026-10-23)
 
-D22 구현 `fece20032e6bfd8b6cd5d98a579d99e85564fc7a` commit/push·원격일치 후 [Issue22 결과6363334658](https://github.com/heo0328/lostparty-backend/issues/22#issuecomment-6363334658)에 소비SHA·133mock/분석0·실회원/기기미확인·다음구간을 회신하고 게시본문 MATCH를 확인했다.
+D22 구현 fece2003·[Issue22 결과6363334658](https://github.com/heo0328/lostparty-backend/issues/22#issuecomment-6363334658)에 이어 E23 현재/양T 참가자 추방을 구현했다. Backend 소비0eed67c453040b332653fd2071e6cd2e1eeed503/174경로·DB0030이다. 카드 빨간 X의 고정대상·option별 권한/의미 재확인·원명령/전용 ACK·현재 탭 유지·효과T별 갱신이 연결됐다. **관련6파일 고유178mock PASS(신규45+직접기존133)·lib/test분석0**. 구현/검증 상세는 [설계37 §37.35](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)·DEV_LOG를 따른다. 실회원/기기 인수는 미확인, dev/main 미반영이다. 아래 과거 E23 설계/계약대기 문구보다 이 상태가 우선한다.
 
-D22 개인 완료 후 해당T 탈퇴를 구현했다. 실제Router/DI·Context표시/영향확인·원명령/전용ACK/재송·성공후상세이탈과내참가실제T복귀·계정/목록갱신이연결됐다. **5파일최종133mock PASS/lib·test분석0**, 상세는[설계37 §37.33](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)·DEV_LOG다. 정상실회원/기기인수는미확인이며dev/main미반영이다. Backend소비0eed67c453040b332653fd2071e6cd2e1eeed503(174경로/DB0030)의D22부분을사용하고기존명령/원pending을유지한다.
+## 다음 첫 그룹 — A 개인 완료 해제
 
-## 다음 첫 그룹 — E23 카드의 현재/양T 내보내기
+다음 사용자 구현 지시 시 [설계37 §37.27](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)의 A만 진행한다. Backend 완료정정/보관 인계 [6360251618](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6360251618)·8bbcfc8c/170경로·DB0030은 수신됐으며 재구현 대기가 아니다. 착수 때 Issue13 최신 회신과 최종 고정 wire/예시를 실제 계정 writer·영속 pending 경계와 대조한다. D22/E23 구현을 완료 해제/목록 보관까지 해결된 것으로 표기하지 않는다.
 
-사용자 설계 지시로 기존 §37.32와 D22 후 실제 코드/DI·Issue23 최신 댓글을 다시 대조하고 **[설계37 §37.34](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)에 E23 착수 상세를 확정했다. 이번은 기능/시험 코드 불변·설계 완료이며 다음 구현 지시 후 E23만 진행한다.** [Backend23/6362447457](https://github.com/heo0328/lostparty-backend/issues/23#issuecomment-6362447457) 이후 새 Backend 답변·계약 보완 대기는 없다. 동일 설계 수용/시험 요청 댓글은 반복하지 않고 구현 결과를 같은 Issue23에 회신한다.
+1. 완료해제 context/정정 ACK 및 원관계 nullable·회원 기록 접근의 최종 계약 대조.
+2. 별도 정정 DTO/GET·POST·계정 ViewModel 확인/제출/원ACK·실제T 갱신 연결. 카드별 사전조회 없이 해제 터치 시 context를 읽는다.
+3. durable pending schema3/명령version3를 추가하되 schema1/2·원PUT true/false/key/body/ACK를 보존한다. target 실제T와 관측C를 분리하고 과거T·C수06~10시 완료 취소 허용과 완료 생성 수10시 제한을 구분한다. 해제가 참가/좌석/예약 자동 복구를 의미하지 않는다.
+4. 새 정정 경계+member_manual_completion/member_weekly/member_cycles 직접 시험·관련 분석/포맷/diffcheck → 문서/같은 Issue13 결과 → commit/push. 직접 경계로 충분하면 무관 전체시험을 반복하지 않고 공용 영향이 넓어지면 그 근거로 확대한다.
 
-목표는 기존 카드 빨간 X에서 고정한 membership/실제 CM/sourceT를 대상으로 전용 context를 읽고, 반대 관계가 없으면 취소/현재 주차만, 관계가 있거나 확인 필요이면 취소/현재 주차만/함께를 제공하는 것이다. N 화면에서는 ‘다음주만’으로 표시한다. 불가 option은 사유와 함께 비활성화하며 유효한 현재만 선택은 유지한다. 권한/정책은 서버가 소유한다. 기존 단일T 원pending은 원API로 복구하며 불가 both를 현재만/옛API로 자동 대체하지 않는다.
+A 이후 B의 current/ended/all·보관/복구읽기·종료방 참가중 목록 정리를 독립 진행한다. 전체 정상 UI 인수는 사용자 담당으로 D/E/A/B 기능 섹션 종료에 묶고, 현재 완료 해제 불가·종료방 잔류 결함은 아직 남아 있음을 유지한다. 전체 결함/인수 정리 전 dev/main 통합·배포는 하지 않는다.
 
-순서: RemovalPreview/별도 CycleRemovalGateway·전용 reader/writer/ACK → controller 선택option 재확인·원명령 → 기존 카드 확인창/명령Key 결합 성공·현재 탭 유지/정확T 갱신 → 최종 검증·문서·Issue23 결과·commit/push. current_only 서명은 무관한 반대T 변화를 제외하고 both는 양T를 결합한다. source review의 실제 CM 매핑을 확인했으며 없는 ID를 합성하거나 일반 쓰기권한을 확대하지 않는다. source 첫 순서 ACK 효과T만 기존 changed/weekly/목록 무효화 경로로 통지하고, ACK 후 조회 실패를 재추방으로 바꾸지 않는다.
+## E23 수동 확인과 보존 경계
 
-검증: 신규 cycle_removal + 기존 management/interaction/recruitment 직접 회귀, D22 공유 코드 변경 시 departure/outcome도 한 번 묶는다. nullable/option 권한·선택별 의미/고정대상·회원/T 전환·원token 재송·N source ACK/효과 누락·정확T 갱신과 성공 후 읽기 실패를 확인한다. 서버 DB 원자성은 Backend 근거와 구분한다. 정상 UI/실기기는 최종 사용자 담당, 영향이 한정되면 무관 전체시험 반복 없이 관련 분석/포맷/diffcheck를 수행한다. 완료는 실제 카드→전용 ACK/복구/갱신 연결·자동 경계 검증·문서/Issue23 결과/원격 보관 확인이며 실회원/기기 미확인은 구분한다.
-
-**별도미완료 A/B:** §37.27의본인완료해제/schema1·2영속pending호환, current/ended/all·보관/복구읽기는따로유지한다. D22를완료해제까지해결된것으로표기하지않는다. 필요한reader/갱신은중복없이재사용하고새요청E23과동시확대하지않는다. E23/A/B/실기기인수전전체완료·dev/main통합/배포는하지않는다.
-
-현재branch feature/raid-recruitment-scheduling 유지·무관dirty보존. 시간UI/다인강제해산·매주자동개방/통계·과거새화면·모집pending앱종료영속복구·서버/DB/기기조작은제외한다. 아래과거'설계만/Backend계약대기/개인버튼옛동작'은§37.33의최신D22상태가우선한다.
+- 사용자 실기기 미확인: C/N 카드 고정대상/취소·현재만·함께, 반대 다른 캐릭터인 동일회원/주차별 권한 차이, current_only 반대 참가 보존·both 양T 실제 제거, 현재 탭/목록 갱신과 폴드/큰 글자.
+- 기존 단일T pending은 원API/원본문·Key로 복구한다. both 불가를 current_only/옛API로 자동 치환하지 않으며 잘못된 ACK는 pending을 유지한다. ACK 뒤 조회 실패는 재추방의 사유가 아니다. 모집 pending은 메모리 수명이며 앱종료 영속복구는 미구현이다.
+- feature/raid-recruitment-scheduling 유지·무관 dirty 보존. 시간UI/다인강제해산·매주자동개방/통계·과거 새화면·모집pending 영속복구·서버/DB/기기조작은 제외한다.
 
 ## 최신 UI 구간 결과와 서버 보완 대기 (2026-10-23)
 

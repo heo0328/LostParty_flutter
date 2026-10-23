@@ -547,10 +547,42 @@ abstract interface class CycleInteractionGateway {
 }
 
 class CycleInteractionRepository
-    implements CycleInteractionGateway, CycleDepartureGateway {
+    implements
+        CycleInteractionGateway,
+        CycleDepartureGateway,
+        CycleRemovalGateway {
   CycleInteractionRepository({required this.api, required this.recruitment});
   final BackendRegistrationApi api;
   final CycleRecruitmentGateway recruitment;
+  @override
+  Future<RemovalPreview> removal(String room, String target, String member) =>
+      _decode(() async {
+        roleId(room);
+        raidCycleKey(target);
+        roleId(member);
+        final raw = await api.request(
+          '/v2/raid-rooms/$room/member-removal-context',
+          query: {'target_cycle_key': target, 'target_cycle_member_id': member},
+        );
+        return RemovalPreview(room, target, member, raw!);
+      });
+  @override
+  Future<void> writeRemoval(
+    RemovalPreview preview,
+    String mode,
+    String key,
+    Map<String, dynamic> body,
+  ) => _decode(() async {
+    roleId(key);
+    roleCheck(cycleStableJson(body) == cycleStableJson(preview.body(mode)));
+    final raw = await api.request(
+      preview.path,
+      method: 'POST',
+      body: body,
+      idempotencyKey: key,
+    );
+    validateRemovalResult(raw!, preview, mode, key);
+  });
   @override
   Future<DeparturePreview> departure(
     String room,

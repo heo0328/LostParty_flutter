@@ -29,6 +29,8 @@ class _CycleCommand {
     this.submissionAck,
     this.resumeAck,
     this.departure,
+    this.removal,
+    this.removalMode,
   }) : evidence = Map.unmodifiable(evidence),
        encoded = jsonEncode(body),
        key = newScopedCommandKey();
@@ -40,6 +42,8 @@ class _CycleCommand {
   final Map<String, dynamic>? submissionAck;
   final String? resumeAck;
   final DeparturePreview? departure;
+  final RemovalPreview? removal;
+  final String? removalMode;
   final bool applicationAck;
   final int status;
   final DateTime createdAt;
@@ -72,6 +76,7 @@ class CycleParticipationController extends ChangeNotifier {
   String? failure, lastRoom, lastTarget, notice;
   _CycleCommand? _pending;
   (String key, String room, String target)? departureSuccess;
+  (String key, String room, String target, String member)? removalSuccess;
   DateTime? _retryAt;
   Timer? _retryTimer;
   bool get hasPending => _pending != null;
@@ -104,6 +109,7 @@ class CycleParticipationController extends ChangeNotifier {
     _epoch++;
     _pending = null;
     departureSuccess = null;
+    removalSuccess = null;
     busy = false;
     failure = notice = lastRoom = lastTarget = null;
     _retryAt = null;
@@ -206,6 +212,65 @@ class CycleParticipationController extends ChangeNotifier {
   ) => _read(
     () => (gateway as CycleDepartureGateway).departure(room, target, round),
   );
+
+  Future<RemovalPreview?> removal(String room, String target, String member) =>
+      _read(
+        () => (gateway as CycleRemovalGateway).removal(room, target, member),
+      );
+
+  Future<String?> removeMember(
+    RemovalPreview preview,
+    String mode, {
+    required String membership,
+    required bool Function() isCurrent,
+    void Function(String)? onPrepared,
+  }) async {
+    if (!canAct || !isCurrent()) return null;
+    final e = _epoch;
+    String? key;
+    busy = true;
+    failure = notice = null;
+    _emit();
+    try {
+      final fresh = await (gateway as CycleRemovalGateway).removal(
+        preview.room,
+        preview.target,
+        preview.member,
+      );
+      if (!_valid(e) || !isCurrent()) return null;
+      if (fresh.membership != membership ||
+          preview.membership != membership ||
+          fresh.signature(mode) != preview.signature(mode)) {
+        throw const AccountReadException('REVISION_CONFLICT');
+      }
+      _pending = _CycleCommand(
+        path: fresh.path,
+        body: fresh.body(mode),
+        room: fresh.room,
+        target: fresh.target,
+        applicationAck: false,
+        status: 200,
+        createdAt: now(),
+        evidence: fresh.scope,
+        removal: fresh,
+        removalMode: mode,
+        affectedTargets: List.unmodifiable(fresh.affected(mode)),
+      );
+      key = _pending!.key;
+      onPrepared?.call(key);
+      await _send(e);
+    } on AccountReadException catch (error) {
+      if (_valid(e)) _fail(error);
+    } catch (_) {
+      if (_valid(e)) failure = 'INVALID_RESPONSE';
+    } finally {
+      if (_valid(e)) {
+        busy = false;
+        _emit();
+      }
+    }
+    return key;
+  }
 
   Future<void> depart(
     DeparturePreview preview, {
@@ -581,7 +646,14 @@ class CycleParticipationController extends ChangeNotifier {
     final command = _pending!;
     try {
       String? resumeOutcome;
-      if (command.departure != null) {
+      if (command.removal != null) {
+        await (gateway as CycleRemovalGateway).writeRemoval(
+          command.removal!,
+          command.removalMode!,
+          command.key,
+          jsonDecode(command.encoded) as Map<String, dynamic>,
+        );
+      } else if (command.departure != null) {
         await (gateway as CycleDepartureGateway).writeDeparture(
           command.departure!,
           command.key,
@@ -612,6 +684,14 @@ class CycleParticipationController extends ChangeNotifier {
       if (!_valid(e)) return;
       if (command.departure != null) {
         departureSuccess = (command.key, command.room, command.target);
+      }
+      if (command.removal != null) {
+        removalSuccess = (
+          command.key,
+          command.room,
+          command.target,
+          command.removal!.member,
+        );
       }
       _pending = null;
       _retryAt = null;

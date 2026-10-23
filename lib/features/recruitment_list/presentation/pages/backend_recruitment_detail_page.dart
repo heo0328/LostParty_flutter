@@ -16,6 +16,7 @@ import '../widgets/cycle_management_widgets.dart';
 import '../widgets/cycle_schedule_widgets.dart';
 import '../widgets/cycle_outcome_widgets.dart';
 import '../widgets/cycle_resume_widgets.dart';
+import '../widgets/cycle_member_action_widgets.dart';
 
 class BackendRecruitmentDetailPage extends StatefulWidget {
   const BackendRecruitmentDetailPage({
@@ -669,16 +670,22 @@ class _BackendRecruitmentDetailPageState
                 tooltip: '$name님 내보내기',
                 icon: const Icon(Icons.close, color: Colors.red),
                 onPressed: widget.participation!.canAct && !m.loading
-                    ? () => showCycleManagement(
-                        context,
-                        widget.participation!,
-                        room: m.roomId,
-                        target: m.target!,
-                        action: 'remove',
-                        fixedMembership: member['membership_id'] as String,
-                        fixedCycleMember:
-                            m.value!.cycleMemberIds[member['membership_id']],
-                      )
+                    ? () {
+                        final target = m.target!;
+                        unawaited(
+                          showMemberRemoval(
+                            context,
+                            widget.participation!,
+                            room: m.roomId,
+                            target: target,
+                            membership: member['membership_id'] as String,
+                            member: m
+                                .value!
+                                .cycleMemberIds[member['membership_id']]!,
+                            isCurrent: () => mounted && m.target == target,
+                          ),
+                        );
+                      }
                     : null,
               ),
             ),

@@ -1894,3 +1894,17 @@ E23 한 그룹 안에서 **DTO/전용 GET·POST·ACK → controller 원명령/�
 - 직접 회귀는 cycle_management/interaction/recruitment이며 D22와 모델/전송/성공 분기를 공유·수정하면 cycle_departure/outcome도 포함한다. 실제 변경에 맞춰 한 번 묶고 수를 사전 확정하거나 Backend39PASS와 합산하지 않는다. 전역 스키마/DI 교체가 없는 한 무관한 전체 시험은 생략하고 영향이 넓어지면 근거를 남겨 확대한다.
 - 실기기는 사용자 담당이다. C·N 카드 고정대상/취소·현재만·함께, 반대 주차 다른 캐릭터인 동일회원·권한 차이, 현재만 처리 시 반대 참가 유지, 서버 성공 뒤 현재 탭/카드·목록 갱신, 폴드/큰 글자·거절 사유를 기능 섹션 마지막에 묶는다. 메모리/성능은 측정하지 않았으므로 개선·누수 없음으로 주장하지 않는다.
 - 기능 완료는 실제 Router에서 카드 진입부터 전용 ACK·원명령 복구·정확T 갱신까지 연결되고 표적 검증/분석·문서/Issue23 결과 회신·작업 브랜치 push가 확인된 상태다. 실회원/기기 인수는 별도 미확인으로 기록한다. A/B 및 전체 인수 전 dev/main 통합·배포는 하지 않는다.
+
+### 37.35 E23 현재/양주차 참가자 추방 구현 (2026-10-23)
+
+사용자 구현 지시로 §37.34의 E23을 연결했다. Backend 소비는 `0eed67c453040b332653fd2071e6cd2e1eeed503`의 전용 member-removal-context/member-removals·174경로/DB0030이다. 기존 파티 카드의 빨간 X에서 카드 membership/실제 CM/sourceT를 고정해 확인창을 연다. 반대 none이면 취소/이번주만(또는 다음주만), participating/review이면 취소/현재 주차만/함께를 표시한다. 반대 실제 target이 null이어도 관계를 숨기지 않으며, 서버 option이 허용하지 않는 선택은 사유와 함께 비활성화한다. 다른 캐릭터인 동일회원 판단과 양T 권한/원자성은 서버가 소유한다.
+
+**연결·데이터 책임:** 불변 RemovalPreview의 닫힌 DTO·source/반대 nullable/각 option의 permission-impact-confirmation·효과T 순서와 assignment 집합·시각/token을 검증한다. current_only 의미서명은 무관한 opposite/both 변화를 제외하고 both는 양쪽 증명을 포함한다. 전용 CycleRemovalGateway를 기존 Repository에 추가했으며 기존 Gateway/write 인수는 유지했다. 기존 private 타입/시각/리더/집합 검증만 공유하고 D22 정책은 바꾸지 않았다. Controller는 긍정 선택 직후 재조회·동일 카드 membership/선택 option 의미/화면 scope를 확인한 뒤 최신 token과 원 POST/body/key/영향T를 고정한다. 새 both 실패를 current_only 또는 옛 removals로 자동 대체하지 않는다. 기존 단일T pending은 원 writer로 복구한다.
+
+**성공·수명:** 원명령과 동일한 action/Key/subject·source 첫 순서 T/effect·CM/세대/revision/리더·완료 없음/취소/완료 보존 집합을 전용 ACK에서 검증한 뒤 pending을 해제한다. 명령Key/room/T/CM의 별도 removalSuccess로 현재 확인창만 1회 닫고 상세 탭을 유지한다. 기존 changed(room,T)와 weekly/검색·내 참가 캐시 무효화를 효과T마다 사용하며 current_only는 반대T를 갱신 대상으로 추가하지 않는다. 회원/주차 전환·dispose 후 응답을 쓰거나 현재 화면에 반영하지 않는다. ACK 뒤 조회 실패도 추방 성공을 취소하지 않는다. dialog listener는 dispose에서 해제하며 새 전역 캐시/타이머/영속 pending은 만들지 않았다. 성능·메모리 누수 없음은 측정하지 않았다.
+
+**검증:** 관련 6파일의 고유 **178mock PASS = E23 신규45 + 기존 직접133**, lib/test 분석0·변경 파일 포맷/diffcheck/diff 검토. 최초 합동 실행은177PASS/1실패였고, 실패는 source=null 시험 helper가 DTO에 도달하기 전에 null을 인덱싱한 것이었다. 고정한 진입 CM을 전달하도록 helper 호출을 수정한 후 신규45개를 재실행해 모두 통과했다. 기존133은 로직 불변으로 재사용하며 최초 실패를 통과로 합산하지 않았다. 초기 void callback 반환/중괄호 lint도 수정 후 분석0을 확인했다.
+
+게시 합성 removal 12그룹의 context/첫 ACK를 출처와 함께 fixture로 보존했다. N source 그룹에 혼재된 personal 요청/응답은 추방 계약의 근거로 사용하지 않고 실제 member_removal 응답만 추출했다. none/review/actor 없음·미확정gen·권한/리더 대상·source review 허용/불안전 lease 거절, current_only 반대 무관 변경·토큰 갱신 서명, 잘못된 nullable/필드/효과/ACK 순서·revision, 원 token/body/key 재송·잘못된 ACK pending·중복/회원/화면T 전환·성공 후 읽기 실패를 검증했다. 최대 인원 등 기존 관리 경계는 직접 회귀를 유지하며 서버 DB rollback/멱등 원자성은 Backend 검증 근거와 구분한다. 공용 저장·Router/DI 교체가 없고 직접 영향 6파일로 경계를 보호해 무관 전체 시험은 생략했다.
+
+**사용자 실기기 미확인:** C/N 카드 대상과 2/3선택·다른 캐릭터인 동일회원/주차별 권한·현재만일 때 반대 참가 유지·양T 실제 제거·현재 탭/목록 갱신·폴드/큰 글자 줄바꿈. 기기 설치/조작·정상 실회원 HTTP 쓰기·서버/DB/배포는 수행하지 않았다. 다음은 기존 §37.27 A 완료 해제, 이후 B 목록/보관 소비이며 dev/main 통합은 전체 결함/인수 정리 전 보류한다.

@@ -1,5 +1,15 @@
 # 개발 이력
 
+## 2026-10-23 — E23 현재/양주차 참가자 추방 구현
+
+사용자 구현 지시·설계37 §37.34에 따라 Backend0eed67c4/174경로/DB0030의 전용 추방 API를 기존 실제 카드·Repository/Controller/확인창에 연결했다. 상세 결과는 설계37 §37.35, 다음은 A완료해제→B목록/보관 소비다.
+
+- 새 흐름: 카드 빨간 X의 고정 membership/CM/sourceT → 서버 context → 반대 관계에 따라 취소/현재 주차만/함께 및 불가 사유 → 선택 option 최신 의미 재확인 → 원자 POST 1회/전용 원ACK → 현재 확인창만 닫기·상세 탭 유지·효과T만 갱신.
+- 보존: 기존 단일T writer/pending/원ACK, D22 완료후탈퇴/성공 이탈, 위임/탈퇴/마지막1인 해산·완료/재개 흐름. 불변 원token/body/key 재송, 회원/주차/CM 경계와 부정확 ACK pending, current_only 반대 무관변경 제외·both 양쪽 증명, ACK 뒤 조회 실패 성공 유지. 앱 정책 복제/추정ID/두 순차POST/fallback 없음.
+- 검증: 관련6파일 고유178mock PASS(신규45+기존133), lib/test분석0·포맷/diffcheck/diff 검토. 최초177PASS/1실패는 누락 source 시험helper의 null 인덱싱을 수정하고 신규45만 재실행했다. 기존 통과133은 변경 없는 경계로 재사용·중복 합산 없음. 초기 콜백 반환/lint 수정 후 분석0. fixture는 게시12그룹의 실제 member_removal 응답만 추출·출처 보존. 공용 저장/DI 교체가 없어 무관 전체시험 생략.
+- 미확인 실기기: C/N 2/3선택/권한·반대 다른 캐릭터/현재만 보존·양T 제거·현재 탭/목록 갱신·폴드/큰 글자. 정상 실회원HTTP/기기·성능/메모리 측정·서버/DB/배포 없음. A/B와 전체 인수·dev/main은 미완료다.
+- Git/협업: feature/raid-recruitment-scheduling에 코드·시험·문서 commit/push 후 Issue23에 소비SHA/결과/미확인을 회신한다. 무관 통계35/플랫폼 생성/DevTools/백업/tools는 보존·제외하고 브랜치를 유지한다.
+
 ## 2026-10-23 — E23 참가자 추방 착수 설계 재점검
 
 사용자 설계 지시에 따라 D22 후 ddf33b7d의 실제 카드 X→기존 단일T management, app-owned Controller/Repository·weekly/목록 갱신과 Issue23 최종6362447457/고정0eed67c4 계약을 대조했다. §37.32의 정책은 유지하고 [설계37 §37.34](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)에 실제 파일 책임·option별 재확인·원명령/전용 ACK·현재 탭 유지/정확T 갱신·회귀/완료 조건을 기록했다. Backend 최신 인계 뒤 새 답변/계약 대기는 없으며 같은 설계 수용 댓글은 반복하지 않는다. 구현 결과는 Issue23에 회신한다.
