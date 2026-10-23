@@ -1928,3 +1928,21 @@ MemberRaidClient가 기존 인증 transport/오류/크기 경계를 재사용해
 초기 실행의 새 테스트 teardown 메서드 오류를 실제 runtime.close로 수정했고, 회원변경 fixture의 비UUID를 정상 UUID로 수정해 알림 예외를 제거했다. 초기 lint를 보완했다. 최종94에는 중간28/51/기존60의 반복을 합산하지 않았다. 저장 형식 확장은 weekly store 한정이며 Router/DI/다른 도메인의 저장 스키마는 불변으로, 직접4파일 경계와 lib/test 분석으로 보호하고 무관 전체시험은 반복하지 않았다. 서버 동시성/감사 원자성은 Backend 검증 근거이며 앱 mock 결과와 구분한다.
 
 **미확인/다음:** 실회원 HTTP·실기기에서 파티완료 해제/취소·다른 캐릭터/주차/다른 참가자 보존·다시 완료/참가·재시작/화면 안내는 사용자 인수에 남긴다. 설치·기기조작·서버/DB/배포·성능/메모리 측정은 하지 않았다. 다음은 §37.27 B의 current/ended/all·복구/보관 기록 읽기이며 종료방 잔류를 A에서 해결했다고 보고하지 않는다. 전체 결함/인수 정리 전 dev/main 통합은 보류한다.
+
+### 37.37 B 참가/종료 목록·복구 관계·보관 기록 소비 (2026-10-23)
+
+사용자 진행 지시로 §37.27 B와 [Backend129/6360251618](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6360251618)의 고정8bbcfc8c/DB0030 계약을 소비했다. 현재 실행 확장0eed67c4와 기존 원명령 경로는 유지한다. 착수 시 최신 Issue13은 A결과6364089791이며 추가 Backend 회신/계약 대기는 없었다. Backend의 SQL 수명/보관 판정을 앱에서 중복 계산하거나 서버/자료를 삭제하지 않는다.
+
+**목록:** 기존 참가 중/신청 중/기록 3탭을 유지한다. ‘참가 중’은 current query와 현재 지속관계·history_only=false·실제 participating/review_required를 표시하며, 방이 active이고 주차가 open 또는 review_required인 카드를 허용한다. generation 미확정이지만 실제 CM이 있는 recovery_only review는 null-card 안내 행으로 보존한다. 실제 CM/room cycle/revision·null generation/순서·빈 assignment·none role·view_plan=false/ROOM_REVIEW_REQUIRED 조합을 검증하고 가짜 카드·리더·좌석·상세 링크를 만들지 않는다. row/card의 세대와 제공된 cycle/revision 불일치도 거절한다.
+
+‘기록’은 기존 all 대신 **ended** query를 사용한다. 서버의 all 관계 보존 의미는 바꾸지 않으며 새 전체관계 탭을 만들지 않는다. 표시 방어는 실제 completed/stopped/cancelled 또는 방/지속관계 종료·history_only 근거를 사용하고 단순 not_selected/legacy_intent를 참가이력으로 표시하지 않는다. 실제추방의 목록 cancelled 표기는 계약 그대로 소비한다. 페이지 원본·더보기/반복cursor·중복ID·회원/실제T 격리와 기존 캐시는 유지한다. 불명 관계를 정상 참가로 바꾸거나 단순히 현재 페이지에서 제거한 수를 전체 서버 결과로 간주하지 않는다.
+
+**보관 상세/계획:** 실제 Router의 /recruitments/:id?target_cycle_key=T는 기존 회원 전용 `/v2/raid-rooms/{id}/detail`을 바로 읽는다. 공개카드 GET404를 선행 조건으로 요구하지 않는다. 고정 합성 보관 detail과 `/v2/me/raid-rooms/{id}/plan`을 실제 파서에서 읽어 완료 참가자/assignment·원 cycle/gen/리더·formation_history와 읽기권한을 보존함을 확인했다. 기존 경로가 이미 계약을 읽었으므로 Repository/Router를 불필요하게 재작성하지 않았다.
+
+room.state=ended인 상세에서는 새 조건/공통 편집·참가/신청 승인·위임·캐릭터 변경/편성/카드추방·완료/재개·함께하기/탈퇴/해산 진입을 숨긴다. 별도 원명령 복구 배너와 새 모집 진입은 유지한다. ‘참가·완료 기록’과 ‘일정·완료 기록 확인’으로 읽기 의미를 표시하고 기존 일정 창에 readOnly를 전달해 시간표 가져오기/명령 진입을 차단한다. 기록 plan 읽기는 유지하고 그 화면을 위해 추가 list/context 사전 조회를 만들지 않는다. ViewModel도 ended 방에서는 다음주 참가 shortcut/마지막1인 해산 권한을 추가 조회하지 않는다. active 방의 stopped 재개·완료C와 열린N의 탭/주차별 관리는 기존처럼 유지되며 C완료만으로 방 전체를 읽기 전용으로 바꾸지 않는다.
+
+**검증:** 새 cycle_archive_test19 + 직접기존140의 **최종7파일159mock PASS**, lib/test 분석0·정확 변경파일 포맷/diffcheck/diff검토. 게시된 합성 review2형태/보관detail/plan4예시를 출처와 함께 fixture로 보존했다. review/null-card 표시와 잘못된 복구 조합/row-card 근거 혼합 거절, 완료/stopped/cancelled/미선택·지속종료/보관의 분리, current/ended query와 key없는 읽기, 반복cursor/회원전환 늦은응답, 공개카드 조회 없이 직접 보관 detail/plan을 검증했다. 기존 member_cycles/device_feedback/cycle_recruitment/cycle_schedule/cycle_outcome/cycle_resume가 다음주 격리·목록/일정·완료/재개 원명령 경계를 보호한다. 첫 분석에서 readOnly 분기 뒤의 nullable map 승격 오류6개를 확인해 명시적인 안전한 map 기본값으로 수정하고 최종 분석0을 확인했다. 기능동작/테스트는159에서 실패없으며 분석 전 통과/중간 수치를 반복 합산하지 않는다.
+
+변경은 기존 목록 reader/화면·상세 표시와 한정된 readOnly 매개변수이며 새 DB/영속 저장·Router/DI·writer 계약 변경은 없다. 직접7파일 및 lib/test 분석으로 영향 경계를 설명할 수 있어 무관 전체시험은 반복하지 않았다. 실제 DB의 SQL 페이지전 필터/보관·감사/멱등 원자성은 Backend 검증 근거이며 Flutter mock로 이를 입증했다고 주장하지 않는다. UI 정상 흐름은 자동 위젯 시험으로 중복하지 않고 사용자 실기기에 남긴다.
+
+**다음 전체 인수:** B/D22/E23/A 코드와 관련 자동 검증은 완료됐지만 정상 실회원 HTTP/사용자 기기에서 전체 연결을 인수한 것은 아니다. 사용자가 참가 중/신청 중/기록 C/N·보관 상세/읽기전용 일정·열린N·stopped 재개, 파티완료 수동해제/타인·N 보존·재완료, 개인완료후탈퇴/승계·카드 현재/양T추방을 기능 섹션으로 확인한다. 복구자료가 없으면 그 행만 조건 미충족으로 기록한다. 기기설치/조작·서버/DB/배포·메모리/성능측정 없음, 미확인 인수/잔여 결함 정리 전 dev/main 통합을 하지 않는다.

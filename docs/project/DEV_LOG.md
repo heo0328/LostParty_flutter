@@ -1,5 +1,15 @@
 # 개발 이력
 
+## 2026-10-23 — B 참가/종료 목록·복구 관계·보관 기록 소비
+
+사용자 진행 지시로 §37.27 B와 Backend129/8bbcfc8c·최신Issue13(A회신6364089791), 실제 읽기/Router/DI를 대조해 연결했다. 상세는 설계37 §37.37, 다음은 D22/E23/A/B 합동 사용자 실기기 인수다.
+
+- 새 흐름: 참가중은 active 방의 실제 open/review 주차 참가·명시 null-card CM 복구 안내, 기록은 ended query/실제종료 근거만 표시한다. 보관방은 공개카드404를 거치지 않는 기존 회원 detail/plan으로 열며 새쓰기 진입을 숨기고 읽기전용 일정·완료 기록을 제공한다. ended 방의 불필요한 N shortcut/해산권한 조회도 제외했다.
+- 보존: 기존 카드/탭·페이지/커서/중복검증·회원/실제T 격리와 캐시 무효화, active 방의 stopped 재개/열린N·원명령 복구·기존일정·완료 정책. 서버 보관/전raid완료/SQL판정을 중복 구현하거나 자료/관계를 삭제·추정복구하지 않는다. 기존 상세/plan 파서가 게시 보관 예시를 읽어 불필요한 Repository/Router 재작성을 하지 않았다.
+- 검증: 최종7파일159mock PASS(새19+직접기존140), lib/test분석0·변경파일포맷/diffcheck/diff검토. 합성 review2형태/보관detail/plan4예시 fixture 출처 보존. 복구조합/ID·card 근거/상태분리·current/ended query·cursor/회원변경·직접 보관읽기와 기존주차/일정/완료/재개를 확인했다. 첫 분석의 nullable 승격 오류6개를 안전한 map 기본값으로 수정 후0, 시험159에서 실패없음. 저장/Router/DI/writer 계약 불변으로 무관 전체시험 생략·Backend DB원자성 근거와 앱 mock를 구분했다.
+- 미확인 실기기: C/N 참가중/신청/기록·보관상세/읽기전용 일정·복구 안내·stopped 재개/열린N과 A/D/E 전체 정상연결. 실제 실회원 HTTP/기기설치·조작·서버/DB/배포·성능/메모리 측정 없음. 코드 완료와 전체 인수/dev/main 통합은 구분한다.
+- Git/협업: feature/raid-recruitment-scheduling 유지·구간 commit/push 후 Issue13에 소비SHA/결과/미확인·다음 합동인수를 회신한다. 기존 통계35/생성플랫폼·DevTools/백업/tools dirty는 보존/제외한다.
+
 ## 2026-10-23 — A 본인 완료 해제·영속 원명령 호환 구현
 
 구현 `e9d2783d51ba079c0a3fe6ae88f5a4099b58978a` commit/push·원격 일치 후 [Issue13 결과6364089791](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6364089791)에 소비계약/94mock·분석0/미확인·후속 B를 게시했다. 사용한도로 자동 승인 검토가 실패해 게시본문 재조회 명령만 실행되지 않았고, 사용자 재개 지시 후 원본문 MATCH와 원격 SHA를 확인했다. 기능 코드는 중단 전 이미 보관됐으며 재개로 생긴 코드/테스트 변경은 없다. 기존94PASS와 분석0을 재사용하고 인계 문서만 diffcheck/내용 검토했다.

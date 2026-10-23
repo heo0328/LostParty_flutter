@@ -181,11 +181,18 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
                     Card(
                       child: ListTile(
                         title: Text(
-                          row.card?.title ?? (m.tab == 1 ? '신청한 모집' : '참가 이력'),
+                          row.card?.title ??
+                              (row.recoveryOnly
+                                  ? '참가 정보 확인 필요'
+                                  : m.tab == 1
+                                  ? '신청한 모집'
+                                  : '참가 이력'),
                         ),
                         subtitle: Text(
-                          row.participationState == 'not_selected' ||
-                                  row.participationState == 'legacy_intent'
+                          row.recoveryOnly
+                              ? '주차 연결 정보를 확인해야 합니다. 최신 상태를 다시 불러와 주세요.'
+                              : row.participationState == 'not_selected' ||
+                                    row.participationState == 'legacy_intent'
                               ? '선택 주차 참가 없음 · 방 관계 보존'
                               : row.participationState == 'review_required'
                               ? '참가 정보 확인 필요'
@@ -195,6 +202,10 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
                               ? '완료'
                               : row.participationState == 'stopped'
                               ? '미완료 종료'
+                              : row.participationState == 'cancelled' ||
+                                    row.historyOnly ||
+                                    row.state == 'ended'
+                              ? '참가 종료'
                               : '${row.card?.count ?? 0}/${row.card?.capacity ?? 0}명',
                         ),
                         trailing:

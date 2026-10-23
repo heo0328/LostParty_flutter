@@ -113,6 +113,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
       value = detail;
       notOpen.remove(target);
       if (loadEndPermission != null &&
+          detail.room['state'] == 'active' &&
           cycleGateway != null &&
           detail.room['my_target_role'] == 'leader' &&
           detail.memberCount == 1) {
@@ -125,6 +126,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
         }
       }
       if (cycleGateway != null &&
+          detail.room['state'] == 'active' &&
           target == cycles!.current.key &&
           detail.room['continuation_enabled'] == true &&
           {'leader', 'member'}.contains(detail.room['my_target_role'])) {

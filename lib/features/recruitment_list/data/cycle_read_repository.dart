@@ -136,6 +136,13 @@ class CycleOwnRow {
       id = roleId(j['membership_id']);
       roomId = roleId(j['room_id']);
       participationState = raidText(j['target_participation_state']);
+      recoveryOnly = raidBool(j['recovery_only']);
+      historyOnly = raidBool(j['history_only']);
+      roleCheck({'current', 'ended'}.contains(j['state']));
+      roleCheck({'leader', 'member', 'none'}.contains(j['target_role']));
+      final permissions = roleMap(j['permissions']);
+      roleShape(permissions, 'view_plan');
+      final plan = CyclePermission.fromJson(roleMap(permissions['view_plan']));
       roleCheck(
         {
           'participating',
@@ -153,8 +160,27 @@ class CycleOwnRow {
           card!.id == roomId &&
               card!.wire['target_generation'] == j['target_generation'],
         );
+        for (final k in ['room_cycle_id', 'target_revision']) {
+          if (j[k] != null) roleCheck(card!.wire[k] == j[k]);
+        }
       }
       canView = card?.canView == true;
+      if (recoveryOnly) {
+        roleCheck(
+          card == null &&
+              j['target_generation'] == null &&
+              j['joined_order'] == null &&
+              j['target_role'] == 'none' &&
+              participationState == 'review_required' &&
+              raidList(j['assignments']).isEmpty &&
+              j['room_cycle_id'] != null &&
+              j['target_revision'] != null &&
+              j['cycle_member_id'] != null &&
+              j['cycle_member_revision'] != null &&
+              !plan.allowed &&
+              plan.reason == 'ROOM_REVIEW_REQUIRED',
+        );
+      }
       for (final k in ['cycle_member_id', 'room_cycle_id']) {
         if (j[k] != null) roleId(j[k]);
       }
@@ -180,13 +206,26 @@ class CycleOwnRow {
   late final String id, roomId, state;
   Map<String, dynamic>? applicationData;
   String? participationState;
+  bool recoveryOnly = false, historyOnly = false;
   CycleRoomCard? card;
   late final bool canView;
   bool get isActiveParticipation =>
+      state == 'current' &&
+      !historyOnly &&
       (participationState == 'participating' ||
           participationState == 'review_required') &&
-      card != null &&
-      card!.wire['target_state'] == 'open';
+      (recoveryOnly ||
+          (card != null &&
+              card!.wire['state'] == 'active' &&
+              {
+                'open',
+                'review_required',
+              }.contains(card!.wire['target_state'])));
+  bool get isEndedParticipation =>
+      state == 'ended' ||
+      historyOnly ||
+      card?.wire['state'] == 'ended' ||
+      {'completed', 'stopped', 'cancelled'}.contains(participationState);
 }
 
 class CycleOwnPage {
@@ -247,7 +286,7 @@ class CycleReadRepository {
         'state': applications
             ? 'pending'
             : history
-            ? 'all'
+            ? 'ended'
             : 'current',
         'limit': 20,
         'cursor': ?cursor,

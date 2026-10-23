@@ -43,12 +43,17 @@ Future<void> showCycleSchedule(
   CycleParticipationController controller, {
   required String room,
   required String target,
+  bool readOnly = false,
 }) async {
   if (!controller.canAct) return;
   await showDialog<void>(
     context: context,
-    builder: (_) =>
-        _ScheduleDialog(controller: controller, room: room, target: target),
+    builder: (_) => _ScheduleDialog(
+      controller: controller,
+      room: room,
+      target: target,
+      readOnly: readOnly,
+    ),
   );
 }
 
@@ -101,9 +106,11 @@ class _ScheduleDialog extends StatefulWidget {
     required this.controller,
     required this.room,
     required this.target,
+    this.readOnly = false,
   });
   final CycleParticipationController controller;
   final String room, target;
+  final bool readOnly;
   @override
   State<_ScheduleDialog> createState() => _ScheduleDialogState();
 }
@@ -200,6 +207,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
   }
 
   Future<void> action(String action, {String? id}) async {
+    if (widget.readOnly) return;
     setState(() => loading = true);
     final e = epoch;
     final p = await widget.controller.schedulePreview(
@@ -229,7 +237,9 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
     child: Text(text, style: const TextStyle(fontSize: 12)),
   );
   Widget button(String title, VoidCallback call) => TextButton(
-    onPressed: !loading && widget.controller.canAct ? call : null,
+    onPressed: !widget.readOnly && !loading && widget.controller.canAct
+        ? call
+        : null,
     child: Text(title, style: const TextStyle(fontSize: 12)),
   );
   @override
@@ -249,7 +259,8 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
           ],
         );
       }
-      final p = plan, d = p?.data;
+      final p = plan;
+      final d = p?.data ?? const <String, dynamic>{};
       return AlertDialog(
         title: Text('${widget.target} 일정 · 예약'),
         content: SizedBox(
@@ -262,17 +273,20 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
                 if (loading) const LinearProgressIndicator(),
                 if (error != null) note(recruitmentFailureMessage(error)),
                 if (p != null) ...[
-                  Wrap(
-                    children: [
-                      button('개인 시간표 가져오기', () => action('submission')),
-                      button('공대원 일정 전체 확인', () => read('context')),
-                      button('내 예약 겹침 확인', () => read('overlaps')),
-                      if (_allowed(d!, 'edit_schedule_groups'))
-                        button('일정 설정', () => action('groups')),
-                    ],
-                  ),
+                  if (!widget.readOnly)
+                    Wrap(
+                      children: [
+                        button('개인 시간표 가져오기', () => action('submission')),
+                        button('공대원 일정 전체 확인', () => read('context')),
+                        button('내 예약 겹침 확인', () => read('overlaps')),
+                        if (_allowed(d, 'edit_schedule_groups'))
+                          button('일정 설정', () => action('groups')),
+                      ],
+                    ),
                   note(
-                    '시간표를 가져와도 확정 일정은 자동 변경되지 않습니다. 새 참가·재참가 후에는 일정 참가 확인이 필요할 수 있습니다.',
+                    widget.readOnly
+                        ? '종료된 모집의 일정·완료 기록입니다.'
+                        : '시간표를 가져와도 확정 일정은 자동 변경되지 않습니다. 새 참가·재참가 후에는 일정 참가 확인이 필요할 수 있습니다.',
                   ),
                   for (final s in d['sessions'] as List) ...[
                     const Divider(),

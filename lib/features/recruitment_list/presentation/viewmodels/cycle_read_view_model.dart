@@ -27,6 +27,8 @@ class CycleReadViewModel extends ChangeNotifier {
   List<CycleOwnRow> rows = const [];
   List<CycleOwnRow> get visibleRows => tab == 0
       ? rows.where((row) => row.isActiveParticipation).toList(growable: false)
+      : tab == 2
+      ? rows.where((row) => row.isEndedParticipation).toList(growable: false)
       : rows;
   CycleRoomCard? card;
   String? cursor;
