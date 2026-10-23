@@ -109,6 +109,8 @@ LOSTPARTY는 로스트아크 유저를 위한 앱이다.
 
 ## 6. Architecture Principles
 
+사용자 이해·UI/UX를 우선하고, 패턴/책임·API와 캐시 사용을 근거로 판단하는 상세 기준은 [개발 품질·데이터 흐름·UX 기준](../architecture/DEVELOPMENT_QUALITY_AND_UX_STANDARD.md)을 따른다. 기존 구조를 쓰거나 다른 방식을 채택하는 이유·소유권/비동기 수명·회귀/측정 범위를 작업 규모에 맞게 설명한다. 관련 정상 기능의 전면 재작성이나 패턴·계층 수 증가를 기본 해법으로 삼지 않는다. 서비스 복구 릴리즈 배포 확인 시 같은 문서 §6의 main 기준 후속 최적화 가능 시점을 사용자에게 안내한다.
+
 Flutter + MVVM 기반
 
 - View: UI와 이벤트 전달

@@ -129,6 +129,8 @@
 
 ## Architecture
 
+- [개발 품질·데이터 흐름·UX 기준](architecture/DEVELOPMENT_QUALITY_AND_UX_STANDARD.md): 사용자 이해를 우선하는 패턴/책임·API/캐시·비동기/검증 기준, 대표 코드 검토와 서비스 복구 릴리즈 후 main 기준 최적화 검토 안내.
+
 - [Google 로그인 연동 정책](architecture/GOOGLE_LOGIN_CONTRACT.md): Android 신규 Backend 인증, 비로그인 로컬 기능 보존, 로그인 유지·접근 제어 및 계약 인계 게이트.
 
 
