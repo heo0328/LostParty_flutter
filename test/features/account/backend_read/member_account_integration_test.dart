@@ -453,6 +453,66 @@ void main() {
   }
 
   test(
+    'explicit character refresh fetches only selected UUID and deduplicates taps',
+    () async {
+      await run();
+      final row = model.sections.single.characters.first;
+      final registration = ScopedRegistrationRef(row.ref.scope, registrationId);
+      final before = armoryCalls.length;
+      final opposite = row.support;
+      final first = model.refreshCharacter(registration, row.ref);
+      final duplicate = model.refreshCharacter(registration, row.ref);
+      await Future.wait([first, duplicate]);
+      expect(model.failure, isNull);
+      expect(armoryCalls.length - before, 1);
+      expect(model.character(row.ref)!.dealer!.hasPending, isFalse);
+      expect(model.character(row.ref)!.support, same(opposite));
+      expect(model.characterRefreshing, isFalse);
+      expect(model.canRefreshCharacter(row.ref), isTrue);
+    },
+  );
+
+  test(
+    'explicit refresh keeps locally saved result when upload fails',
+    () async {
+      await run();
+      final row = model.sections.single.characters.first;
+      failPut = true;
+      await model.refreshCharacter(
+        ScopedRegistrationRef(row.ref.scope, registrationId),
+        row.ref,
+      );
+      expect(model.character(row.ref)!.dealer!.hasPending, isTrue);
+      expect(model.character(row.ref)!.dealer!.rawJson, isNotNull);
+      failPut = false;
+      await model.resolveRole(
+        ScopedRegistrationRef(row.ref.scope, registrationId),
+        row.ref,
+        CharacterBuildRole.dealer,
+      );
+      expect(model.character(row.ref)!.dealer!.hasPending, isFalse);
+    },
+  );
+
+  test(
+    'provider failure preserves both saved roles and releases refresh state',
+    () async {
+      await run();
+      final row = model.sections.single.characters.first;
+      final original = row.dealer;
+      armoryRespond = (r) => throw failure(r);
+      await model.refreshCharacter(
+        ScopedRegistrationRef(row.ref.scope, registrationId),
+        row.ref,
+      );
+      expect(model.failure, isNotNull);
+      expect(model.character(row.ref)!.dealer, same(original));
+      expect(model.character(row.ref)!.support, same(row.support));
+      expect(model.characterRefreshing, isFalse);
+    },
+  );
+
+  test(
     'closing a completed result is presentation only even during another API read',
     () async {
       failPut = true;

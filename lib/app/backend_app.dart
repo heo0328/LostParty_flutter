@@ -417,6 +417,18 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       accounts: serverAccounts,
       raids: MemberRaidClient(accountApi),
       twoCycleEnabled: true,
+      preferredRoles: () async {
+        final model = _memberAccount?.model;
+        if (model == null) return const <String, String>{};
+        // Join an outstanding account restore; no per-character profile reads.
+        if (model.sections.isEmpty || model.loading) await model.refresh();
+        return {
+          for (final section in model.sections)
+            for (final row in section.characters)
+              if (row.preferences?.preferences.preferredRole case final role?)
+                row.ref.characterId: role.name,
+        };
+      },
     );
     final cycleInteractions = CycleInteractionRepository(
       api: accountApi,

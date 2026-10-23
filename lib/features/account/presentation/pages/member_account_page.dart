@@ -1149,6 +1149,23 @@ class MemberCharacterPage extends StatelessWidget {
                 children: [
                   if (row.observation.lifecycleState != 'active')
                     const Text('기존 캐릭터 확인 필요 · 새로운 사용 전에 원정대를 확인해 주세요.'),
+                  TextButton.icon(
+                    onPressed: model.canRefreshCharacter(ref)
+                        ? () => model.refreshCharacter(registration, ref)
+                        : null,
+                    icon: model.busy('refresh:${ref.characterId}')
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.refresh),
+                    label: Text(
+                      model.busy('refresh:${ref.characterId}')
+                          ? '갱신 중'
+                          : '캐릭터 갱신',
+                    ),
+                  ),
                   if (row.preferences != null &&
                       const CharacterBuildRolePolicy().supportsMultipleRoles(
                         (jsonDecode(row.observation.profileJson)

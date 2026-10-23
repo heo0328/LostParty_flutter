@@ -126,6 +126,14 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
   RecruitmentDraft draft = RecruitmentDraft();
   RaidCatalog? catalog;
   List<RecruitmentCharacter> characters = [];
+  String? _availabilityKey;
+  Set<String> _unavailableRaids = const {};
+  List<String> _availabilityTargets(RecruitmentDraft value) => [
+    if (value.targetCycleKey != null) value.targetCycleKey!,
+    if (value.continueTogether && cycles != null) cycles!.next.key,
+  ];
+  String _availabilitySignature(RecruitmentDraft value) =>
+      '${value.characterId}/${_availabilityTargets(value).join('/')}';
   List<RecruitmentGroupChoice> groups = [];
   List<String> recoveryRooms = [];
   RecruitmentCreationContext? selection;
@@ -155,13 +163,25 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     final selected = characters
         .where((c) => c.id == value.characterId)
         .firstOrNull;
-    return _eligibility.eligibleRaids(
-      catalog: c,
-      itemLevel: double.tryParse(selected?.itemLevel ?? ''),
-    );
+    return _eligibility
+        .eligibleRaids(
+          catalog: c,
+          itemLevel: double.tryParse(selected?.itemLevel ?? ''),
+        )
+        .where(
+          (option) =>
+              _availabilityKey != _availabilitySignature(value) ||
+              !_unavailableRaids.contains(option.raid.raidId),
+        )
+        .toList();
   }
 
-  List<EligibleRaidOption> get raidOptions => optionsFor(draft);
+  bool get availabilityReady =>
+      cycleGateway == null ||
+      gateway is! RecruitmentAvailabilityGateway ||
+      _availabilityKey == _availabilitySignature(draft);
+  List<EligibleRaidOption> get raidOptions =>
+      availabilityReady ? optionsFor(draft) : const [];
 
   RecruitmentDraft _normalizeItems(RecruitmentDraft value) {
     final options = optionsFor(value);
@@ -242,6 +262,11 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
 
   String? get validationMessage {
     if (cycleGateway != null &&
+        gateway is RecruitmentAvailabilityGateway &&
+        _availabilityKey != _availabilitySignature(draft)) {
+      return '참가 가능한 레이드를 확인해 주세요.';
+    }
+    if (cycleGateway != null &&
         (cycles == null ||
             cycles!.find(draft.targetCycleKey ?? '') == null ||
             !serverNow.isBefore(cycles!.current.endsAt))) {
@@ -296,6 +321,8 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     _retryAt = null;
     _pending = null;
     draft = RecruitmentDraft();
+    _availabilityKey = null;
+    _unavailableRaids = const {};
     cycles = null;
     _metaReceived = null;
     createdTargetKey = null;
@@ -316,7 +343,12 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     // A successful command belongs to the detail route. A new create-route
     // entry starts a new draft; unfinished and unknown commands remain intact.
     if (!hasPending && !busy && createdRoomId != null) _resetCompleted();
-    if (catalog == null && eligible) await load();
+    if (catalog == null && eligible) {
+      await load();
+    } else if (editable && gateway is RecruitmentAvailabilityGateway) {
+      _availabilityKey = null;
+      await refreshContext();
+    }
     if (target != null && editable && cycles?.find(target) != null) {
       await selectCycle(target);
     } else if (target != null && editable && cycles != null) {
@@ -329,6 +361,8 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     if (!eligible || busy || hasPending || !delayPassed) return;
+    _availabilityKey = null;
+    _unavailableRaids = const {};
     final epoch = _epoch;
     loading = true;
     failure = null;
@@ -357,7 +391,9 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
       if (selected != null) {
         draft = draft.copy(
           characterId: selected.id,
-          role: selected.supportsBothRoles ? draft.role : 'dealer',
+          role: selected.id == draft.characterId
+              ? (selected.supportsBothRoles ? draft.role : 'dealer')
+              : selected.initialRole,
         );
       }
       draft = _normalizeItems(draft);
@@ -376,6 +412,12 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
 
   void update(RecruitmentDraft value) {
     if (!editable) return;
+    if (value.characterId != draft.characterId) {
+      final selected = characters
+          .where((c) => c.id == value.characterId)
+          .firstOrNull;
+      if (selected != null) value = value.copy(role: selected.initialRole);
+    }
     if (cycleGateway != null) {
       if (cycles?.find(value.targetCycleKey ?? '') == null) return;
       if (value.targetCycleKey != cycles!.current.key &&
@@ -419,17 +461,39 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
   }
 
   Future<void> refreshContext() async {
-    if (!eligible ||
-        busy ||
-        hasPending ||
-        draft.characterId == null ||
-        draft.items.isEmpty) {
+    if (!eligible || busy || hasPending || draft.characterId == null) {
       return;
     }
-    final epoch = _epoch, generation = ++_contextGeneration, snapshot = draft;
+    final epoch = _epoch, generation = ++_contextGeneration;
+    var snapshot = draft;
     contextLoading = true;
     _emit();
     try {
+      if (cycleGateway != null &&
+          gateway is RecruitmentAvailabilityGateway &&
+          catalog != null &&
+          _availabilityKey != _availabilitySignature(snapshot)) {
+        final unavailable = await (gateway as RecruitmentAvailabilityGateway)
+            .unavailableRaids(
+              snapshot.characterId!,
+              _availabilityTargets(snapshot),
+              catalog!,
+            );
+        if (!_current(epoch) ||
+            generation != _contextGeneration ||
+            snapshot.selectionSignature != draft.selectionSignature) {
+          return;
+        }
+        _availabilityKey = _availabilitySignature(snapshot);
+        _unavailableRaids = unavailable;
+        draft = _normalizeItems(snapshot);
+        snapshot = draft;
+      }
+      if (snapshot.items.isEmpty) {
+        selection = null;
+        notice = '이 캐릭터로 모집할 수 있는 레이드가 없습니다.';
+        return;
+      }
       final value = await gateway.context(snapshot);
       if (_current(epoch) &&
           generation == _contextGeneration &&
@@ -693,6 +757,8 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
   }
 
   void _resetCompleted() {
+    _availabilityKey = null;
+    _unavailableRaids = const {};
     _epoch++;
     _contextGeneration++;
     _timer?.cancel();

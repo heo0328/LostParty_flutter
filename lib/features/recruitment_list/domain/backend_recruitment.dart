@@ -23,12 +23,17 @@ class RecruitmentCharacter {
     required this.accountLabel,
     this.itemLevel,
     this.representative = false,
+    this.preferredRole,
   });
   final String id, registrationId, name, className, accountLabel;
   final String? itemLevel;
   final bool representative;
+  final String? preferredRole;
   bool get supportsBothRoles =>
       const CharacterBuildRolePolicy().supportsMultipleRoles(className);
+  String get initialRole => supportsBothRoles
+      ? (preferredRole == 'dealer' ? 'dealer' : 'support')
+      : 'dealer';
 }
 
 class RecruitmentGroupChoice {
@@ -634,6 +639,15 @@ abstract interface class CycleRecruitmentGateway implements RecruitmentGateway {
   Future<MemberCycles> cycles();
   Future<BackendRecruitmentDetail> cycleDetail(String id, String target);
   Future<List<String>> roomIdsFor(String target);
+}
+
+/// One summary read for a character and its actual selected cycle(s).
+abstract interface class RecruitmentAvailabilityGateway {
+  Future<Set<String>> unavailableRaids(
+    String character,
+    List<String> targets,
+    RaidCatalog catalog,
+  );
 }
 
 abstract interface class RecruitmentGateway {

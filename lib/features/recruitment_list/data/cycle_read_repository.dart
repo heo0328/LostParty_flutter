@@ -182,6 +182,11 @@ class CycleOwnRow {
   String? participationState;
   CycleRoomCard? card;
   late final bool canView;
+  bool get isActiveParticipation =>
+      (participationState == 'participating' ||
+          participationState == 'review_required') &&
+      card != null &&
+      card!.wire['target_state'] == 'open';
 }
 
 class CycleOwnPage {

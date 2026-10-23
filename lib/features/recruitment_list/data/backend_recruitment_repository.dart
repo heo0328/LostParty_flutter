@@ -12,16 +12,19 @@ import '../domain/backend_recruitment.dart';
 import '../../account/domain/member_cycle_models.dart';
 import 'cycle_read_repository.dart';
 
-class BackendRecruitmentRepository implements CycleRecruitmentGateway {
+class BackendRecruitmentRepository
+    implements CycleRecruitmentGateway, RecruitmentAvailabilityGateway {
   BackendRecruitmentRepository({
     required this.api,
     required this.accounts,
     required this.raids,
     this.twoCycleEnabled = false,
+    this.preferredRoles,
   });
   final BackendRegistrationApi api;
   final ServerAccountReadRepository accounts;
   final MemberRaidClient raids;
+  final Future<Map<String, String>> Function()? preferredRoles;
   @override
   final bool twoCycleEnabled;
   @override
@@ -41,8 +44,45 @@ class BackendRecruitmentRepository implements CycleRecruitmentGateway {
   Future<RaidCatalog> catalog() => raids.catalog();
 
   @override
+  Future<Set<String>> unavailableRaids(
+    String character,
+    List<String> targets,
+    RaidCatalog catalog,
+  ) async {
+    final scope = accountReadScope(accounts.session);
+    final summary = await raids.summary([character], targets);
+    requireAccountReadScope(accounts.session, scope);
+    roleCheck(
+      summary.targets.length == targets.length &&
+          summary.targets.containsAll(targets),
+    );
+    if (summary.catalogVersion != catalog.catalogVersion) {
+      throw const AccountReadException('CATALOG_VERSION_CONFLICT');
+    }
+    final expected = {
+      for (final t in targets)
+        for (final raid in catalog.raids) '$t:${raid.raidId}',
+    };
+    final unavailable = <String>{};
+    for (final entry in summary.entries) {
+      roleCheck(
+        entry.characterId == character &&
+            expected.remove('${entry.cycleKey}:${entry.raidId}'),
+      );
+      if (entry.manual || entry.party || entry.participating) {
+        unavailable.add(entry.raidId);
+      }
+    }
+    roleCheck(expected.isEmpty);
+    return Set.unmodifiable(unavailable);
+  }
+
+  @override
   Future<List<RecruitmentCharacter>> characters() async {
     final scope = accountReadScope(accounts.session);
+    final preferences =
+        await preferredRoles?.call() ?? const <String, String>{};
+    requireAccountReadScope(accounts.session, scope);
     final registrations = await accounts.loadRegistrations();
     final values = <RecruitmentCharacter>[];
     for (final r in registrations) {
@@ -81,6 +121,7 @@ class BackendRecruitmentRepository implements CycleRecruitmentGateway {
             name: c.characterName,
             className: c.className,
             itemLevel: c.itemLevel,
+            preferredRole: preferences[c.characterId],
             accountLabel: r.label.isEmpty
                 ? (r.isMain ? '본계정' : '부계정')
                 : r.label,

@@ -387,7 +387,12 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                             : (v) {
                                 setState(() {
                                   character = v;
-                                  role = 'dealer';
+                                  role =
+                                      characters
+                                          .where((c) => c.id == v)
+                                          .firstOrNull
+                                          ?.initialRole ??
+                                      'dealer';
                                 });
                                 unawaited(load());
                               },

@@ -103,6 +103,9 @@ class _CycleAdmissionSheetState extends State<_CycleAdmissionSheet> {
     character =
         characters.where((c) => c.representative).firstOrNull?.id ??
         characters.firstOrNull?.id;
+    role =
+        characters.where((c) => c.id == character).firstOrNull?.initialRole ??
+        'dealer';
     setState(() => loading = false);
     if (character != null) await _preview();
   }
@@ -198,7 +201,7 @@ class _CycleAdmissionSheetState extends State<_CycleAdmissionSheet> {
                       : () {
                           setState(() {
                             character = value.id;
-                            if (!value.supportsBothRoles) role = 'dealer';
+                            role = value.initialRole;
                             error = null;
                           });
                           unawaited(_preview());

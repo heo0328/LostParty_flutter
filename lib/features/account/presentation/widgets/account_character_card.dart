@@ -311,22 +311,27 @@ class AccountCharacterCard extends StatelessWidget {
                     child: SizedBox(
                       width: 26,
                       height: 28,
-                      child: Checkbox(
-                        key: ValueKey(
-                          'weeklyRaidClaim-${character.serverCharacterId}-${raid.raidId}',
+                      child: Transform.scale(
+                        scale: .8,
+                        transformHitTests: false,
+                        child: Checkbox(
+                          key: ValueKey(
+                            'weeklyRaidClaim-${character.serverCharacterId}-${raid.raidId}',
+                          ),
+                          value: raid.isCompleted,
+                          onChanged: allowed
+                              ? (v) => onWeeklyRaidChanged!(raid, v ?? false)
+                              : null,
+                          visualDensity: VisualDensity.compact,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
                         ),
-                        value: raid.isCompleted,
-                        onChanged: allowed
-                            ? (v) => onWeeklyRaidChanged!(raid, v ?? false)
-                            : null,
-                        visualDensity: VisualDensity.compact,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                     ),
                   ),
                   if (raid.statusMessage != null)
                     Positioned(
-                      left: box.maxWidth / 2 + 14,
+                      left: box.maxWidth / 2 + 10,
                       right: 0,
                       top: 5,
                       bottom: 5,
@@ -344,7 +349,7 @@ class AccountCharacterCard extends StatelessWidget {
                                       WeeklyRaidStatusKind.inconsistent
                                   ? Icons.error_outline
                                   : Icons.info_outline,
-                              size: 16,
+                              size: 18,
                               color:
                                   raid.statusKind ==
                                       WeeklyRaidStatusKind.inconsistent

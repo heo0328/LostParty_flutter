@@ -141,7 +141,7 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
                     ),
                   if (!m.loading &&
                       m.failure == null &&
-                      m.rows.isEmpty &&
+                      m.visibleRows.isEmpty &&
                       m.target != null)
                     const Padding(
                       padding: EdgeInsets.all(24),
@@ -149,7 +149,7 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
                     ),
                   if (widget.mutations != null)
                     CycleCommandBanner(controller: widget.mutations!),
-                  for (final row in m.rows)
+                  for (final row in m.visibleRows)
                     Card(
                       child: ListTile(
                         title: Text(

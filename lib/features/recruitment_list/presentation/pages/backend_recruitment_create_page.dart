@@ -178,10 +178,12 @@ class _BackendRecruitmentCreatePageState
                     name: 'title',
                   ),
                   const SizedBox(height: 8),
-                  if (d.items.isNotEmpty) _raidFields(0),
+                  if (d.items.isNotEmpty && m.availabilityReady) _raidFields(0),
                   if (m.raidOptions.isEmpty)
-                    const Text(
-                      '선택한 캐릭터의 아이템레벨로 입장 가능한 레이드가 없어요. 캐릭터 정보나 선택을 확인해 주세요.',
+                    Text(
+                      !m.availabilityReady
+                          ? '참가 가능한 레이드를 확인하고 있어요.'
+                          : '이 캐릭터로 모집할 수 있는 레이드가 없어요. 참가·완료 상태와 아이템 레벨을 확인해 주세요.',
                     ),
                 ],
               ),
@@ -704,6 +706,7 @@ class _BackendRecruitmentCreatePageState
 
   List<RaidDefinition> get _raids => m.raidOptions.map((o) => o.raid).toList();
   Widget _raidFields(int index) {
+    if (!m.availabilityReady) return const SizedBox.shrink();
     final item = m.draft.items[index];
     final used = {
       for (var i = 0; i < m.draft.items.length; i++)
@@ -871,12 +874,7 @@ class _BackendRecruitmentCreatePageState
         binding != (m.session.userId, m.session.generation, m.editGeneration)) {
       return;
     }
-    m.update(
-      m.draft.copy(
-        characterId: value.id,
-        role: value.supportsBothRoles ? m.draft.role : 'dealer',
-      ),
-    );
+    m.update(m.draft.copy(characterId: value.id, role: value.initialRole));
   }
 
   Future<void> _chooseGroup() async {

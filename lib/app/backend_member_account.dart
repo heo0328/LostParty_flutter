@@ -118,6 +118,7 @@ class BackendMemberAccount {
 
   bool _automaticPresentationReady() =>
       model.initialDisplayReady &&
+      !model.characterRefreshing &&
       !model.loading &&
       (model.failure != null || weekly?.initialDisplaySettled != false);
 

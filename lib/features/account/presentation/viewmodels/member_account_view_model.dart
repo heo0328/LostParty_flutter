@@ -261,8 +261,11 @@ class MemberAccountViewModel extends ChangeNotifier {
   }
 
   bool get signedIn => !_disposed && runtime.canRead;
+  bool get characterRefreshing =>
+      _writes.keys.any((key) => key.startsWith('refresh:'));
   bool get canEdit =>
       signedIn &&
+      !characterRefreshing &&
       !runtime.characterSettingsBusy &&
       !loading &&
       !runner.isBusy &&
@@ -652,7 +655,8 @@ class MemberAccountViewModel extends ChangeNotifier {
   }
 
   Future<void> refresh() {
-    if (_writes.keys.any((key) => key.startsWith('representative:'))) {
+    if (characterRefreshing ||
+        _writes.keys.any((key) => key.startsWith('representative:'))) {
       return Future.value();
     }
     if (!signedIn || commandPending() || restoreRetrySeconds > 0) {
@@ -1328,6 +1332,48 @@ class MemberAccountViewModel extends ChangeNotifier {
       if (!value.hasPending) runner.serverResolved(ref, role);
     }
   });
+  bool canRefreshCharacter(ScopedCharacterRef ref) =>
+      canEdit &&
+      detailsAvailable(ref) &&
+      !managementBlocked &&
+      character(ref)?.dealer?.hasPending != true &&
+      character(ref)?.support?.hasPending != true &&
+      runner.source is ScopedCharacterRefreshSource;
+
+  Future<void> refreshCharacter(
+    ScopedRegistrationRef registration,
+    ScopedCharacterRef ref,
+  ) async {
+    if (!canRefreshCharacter(ref)) return;
+    await _write('refresh:${ref.characterId}', (guard) async {
+      ScopedRefreshItem? saved;
+      try {
+        final result = await (runner.source as ScopedCharacterRefreshSource)
+            .refreshCharacter(
+              registration,
+              ref,
+              guard,
+              (value) => saved = value,
+            );
+        guard();
+        if (result.code != null) failure = result.code;
+      } finally {
+        if (saved?.role case final role?) {
+          final local = await runtime.readCachedRoleBuild(
+            registration,
+            ref,
+            role,
+            guard: guard,
+          );
+          guard();
+          final row = character(ref);
+          if (row != null) _setCharacter(ref, row.withRole(role, local));
+          if (local?.hasPending == false) runner.serverResolved(ref, role);
+        }
+      }
+    });
+  }
+
   Future<CharacterBuildAnalysis?> analysis(
     ScopedCharacterRef ref,
     CharacterBuildRole role,
