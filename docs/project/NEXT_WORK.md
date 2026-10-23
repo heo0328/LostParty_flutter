@@ -4,6 +4,8 @@
 
 ## 다음 구현 B — 실제 메뉴·성공 화면·관계 종료 알림
 
+A 구현 `6968f47a` commit/push·원격일치. [Issue25 결과6371981415](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6371981415) 게시본문 MATCH. 전용원명령 내부연결과 실제버튼/관계알림·profile/검색후속을 구분해 인계했으며 새Backend차단·반복시험요청은 없다.
+
 Issue25 A 전용 Context/Preview/Result·Gateway/실제DI Repository·app-owned 원명령/ACK 연결 완료. 새46+기존직접131의 **고유177mock PASS**, 변경Dart4파일분석0·포맷/diffcheck. 최종 주차검증을 공통 PartyCyclePolicy로 재사용한 뒤 새46만 재확인했고 기존131은 재실행/중복합산하지 않았다. 상세는 설계37 §37.44/DEV_LOG. Backend176/DB0031 반영 대기는 해소됐으며 아래 과거 인계대기는 이 상태를 따른다. 실서버 로그인·기기 인수/버튼 전환은 아직 아니다.
 
 다음은 기존 상세 버튼 위치/중앙정렬·해산폭을 보존하며 새menu의 option별 visible/permission/영향T확인·재확인과 A명령을 연결한다. 현재T 탈퇴/관계종료는 성공1회 이탈, 반대T만 해산하면 현재화면유지, effects=[]도 membershipSuccess 원결과를 소비해 C/N 내목록·한도 관계종료 알림을 처리한다. 현재1인end조회/전역end를 새효과로재사용하지 않는다. old원pending/IF-001 비활성 유지. C의profile/옛기록Router와24검색회복은별도미완료이고 review/기록 정상인수는전체연결뒤묶는다. recover리더복구UI는제안이다.

@@ -2,6 +2,8 @@
 
 ## 2026-10-24 — Issue25 A 전용 context·원명령/ACK 연결
 
+구현 `6968f47a` commit/push·원격일치. [Issue25 결과6371981415](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6371981415) 게시본문 MATCH. 정확소비/177mock·분석0와 UI미연결·실서버/기기미확인·다음B/별도C·24후속을회신했다.
+
 - 새로 가능해진 내부 흐름: Backend15e143ae/개발반영920cc059의 실제176/DB0031을 소비해 불변 MembershipActionContext/선택Preview/Result·전용Gateway를 추가했다. 실제 BackendApp DI의 CycleInteractionRepository가 구현하고 기존 Controller가 최신선택옵션 재검사→정확6필드 새Key/원Impact pending→전용ACK를 처리한다. 권한/후계자선정은서버소유이고앱은scope/ID/영향·후상태/revision규칙일치만검증한다. UI버튼은이번에전환하지않았다.
 - 회귀/수명: 구cancel/leave/end·D22/E23 원transport/ACK를 그대로두고 새명령만분기했다. 최대24h 원method/path/body/key/token/Impact 재송은GET없이진행한다. 의미변경/회원·화면전환/중복은POST0, token만갱신은허용. membershipSuccess에검증원결과를보관해B성공화면이탈/빈effects관계알림에서사용한다. 빈효과는가짜T갱신을하지않으며B소비는아직미구현이다. recoverUI는제안으로실행진입을열지않고IF-001도유지한다.
 - 모델/데이터근거: 실행OpenAPI176·서버schema와합성PostgreSQL실행예시중Context/Result6개를대조·출처를test/fixtures/membership_actions.json에보존했다. 토큰은원자료의비실행redacted값이며실회원/실서버응답이아니다. 주차경계는공통PartyCyclePolicy·시간파싱은기존actionTime을재사용했다. 저장/Router/다른feature/새라이브러리는변경하지않았다.
