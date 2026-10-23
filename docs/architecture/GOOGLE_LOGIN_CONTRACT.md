@@ -5,6 +5,10 @@
 
 ## 사용자 확정 정책
 
+### 계정 문의용 회원 ID 표시 (2026-10-23)
+
+설정의 Google 로그인 정보 아래에 로그인한 본인의 Backend 내부 회원 ID(`AuthSessionController.userId`/`AuthUser.id`) 전체 값과 복사 버튼, ‘계정 문의 시 회원 ID를 함께 알려주세요.’ 안내를 제공한다. 기존 인증 상태 값을 재사용하며 추가 API·별도 저장은 없다. 비로그인/인증 복원 중에는 숨긴다. 회원 ID는 문의 대상 식별용이며 소유권 인증이나 권한 증거로 사용하지 않는다. 세션 ID·토큰은 표시하지 않는다.
+
 ### 2026-10-14 합의안 기준 Flutter 연결
 
 사용자가 [최종 검토안](https://github.com/heo0328/lostparty-backend/issues/2#issuecomment-6149545526)에 [동의](https://github.com/heo0328/lostparty-backend/issues/2#issuecomment-6149615842)하고 동일 API가 작성된다고 가정한 Flutter 작업을 승인했다. 아래 구현은 승인된 검토안으로 시작했고, 후속 검증에서 확정 Backend 계약과 대조했다. 소비 SHA·대조 결과는 아래 확정 계약 절을 따른다.

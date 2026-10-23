@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../account/presentation/widgets/ownership_notice_title.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,6 +21,31 @@ class _SettingsPageState extends State<SettingsPage> {
   late final Future<bool> _isOperator =
       widget.operatorAccessRepository?.isCurrentPlayerOperator() ??
       Future.value(false);
+
+  Future<void> _copyMemberId(
+    AuthSessionController auth,
+    String memberId,
+  ) async {
+    if (!auth.isAuthenticated || auth.userId != memberId) return;
+    final generation = auth.sessionGeneration;
+    String message;
+    try {
+      await Clipboard.setData(ClipboardData(text: memberId));
+      message = '회원 ID를 복사했습니다.';
+    } catch (_) {
+      message = '회원 ID를 복사하지 못했습니다. 다시 시도해 주세요.';
+    }
+    if (!mounted ||
+        widget.auth != auth ||
+        !auth.isAuthenticated ||
+        auth.sessionGeneration != generation ||
+        auth.userId != memberId) {
+      return;
+    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,6 +73,28 @@ class _SettingsPageState extends State<SettingsPage> {
                         ? null
                         : () => context.push('/login'),
                   ),
+                  if (auth.isAuthenticated)
+                    if (auth.userId case final memberId?)
+                      ListTile(
+                        leading: const Icon(Icons.badge_outlined),
+                        title: const Text('회원 ID'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SelectableText(memberId),
+                            const SizedBox(height: 4),
+                            Text(
+                              '계정 문의 시 회원 ID를 함께 알려주세요.',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                        trailing: IconButton(
+                          tooltip: '회원 ID 복사',
+                          icon: const Icon(Icons.copy_outlined),
+                          onPressed: () => _copyMemberId(auth, memberId),
+                        ),
+                      ),
                   if (auth.isAuthenticated)
                     ListTile(
                       title: const Text('로그아웃'),
