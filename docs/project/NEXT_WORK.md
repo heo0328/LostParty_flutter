@@ -1,4 +1,4 @@
-# NEXT WORK — D22/E23 구현·자동검증 완료 / A 개인 완료 해제 연결
+# NEXT WORK — A 본인 완료 해제 구현·자동검증 완료 / B 목록·보관 소비
 
 ## 현재 상태 (2026-10-23)
 
@@ -6,16 +6,23 @@ E23 구현 `b6720079b363703d49c0a43e5f78142b1849ed34` commit/push·원격 일치
 
 D22 구현 fece2003·[Issue22 결과6363334658](https://github.com/heo0328/lostparty-backend/issues/22#issuecomment-6363334658)에 이어 E23 현재/양T 참가자 추방을 구현했다. Backend 소비0eed67c453040b332653fd2071e6cd2e1eeed503/174경로·DB0030이다. 카드 빨간 X의 고정대상·option별 권한/의미 재확인·원명령/전용 ACK·현재 탭 유지·효과T별 갱신이 연결됐다. **관련6파일 고유178mock PASS(신규45+직접기존133)·lib/test분석0**. 구현/검증 상세는 [설계37 §37.35](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)·DEV_LOG를 따른다. 실회원/기기 인수는 미확인, dev/main 미반영이다. 아래 과거 E23 설계/계약대기 문구보다 이 상태가 우선한다.
 
-## 다음 첫 그룹 — A 개인 완료 해제
+## 다음 첫 그룹 — B 참가/기록 목록·보관 방 읽기
 
-다음 사용자 구현 지시 시 [설계37 §37.27](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)의 A만 진행한다. Backend 완료정정/보관 인계 [6360251618](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6360251618)·8bbcfc8c/170경로·DB0030은 수신됐으며 재구현 대기가 아니다. 착수 때 Issue13 최신 회신과 최종 고정 wire/예시를 실제 계정 writer·영속 pending 경계와 대조한다. D22/E23 구현을 완료 해제/목록 보관까지 해결된 것으로 표기하지 않는다.
+다음 사용자 지시 시 [설계37 §37.27 B](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)의 current/ended/all·명시복구/보관 읽기를 진행한다. [Backend6360251618](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6360251618)·8bbcfc8c/170경로·DB0030 인계는 수신됐으며 이미 준비된 서버를 재구현 대기로 돌리지 않는다. 착수 때 최신 Issue13·실제 DTO/Reader/Router/권한과 대조하고 아래 범위만 연결한다.
 
-1. 완료해제 context/정정 ACK 및 원관계 nullable·회원 기록 접근의 최종 계약 대조.
-2. 별도 정정 DTO/GET·POST·계정 ViewModel 확인/제출/원ACK·실제T 갱신 연결. 카드별 사전조회 없이 해제 터치 시 context를 읽는다.
-3. durable pending schema3/명령version3를 추가하되 schema1/2·원PUT true/false/key/body/ACK를 보존한다. target 실제T와 관측C를 분리하고 과거T·C수06~10시 완료 취소 허용과 완료 생성 수10시 제한을 구분한다. 해제가 참가/좌석/예약 자동 복구를 의미하지 않는다.
-4. 새 정정 경계+member_manual_completion/member_weekly/member_cycles 직접 시험·관련 분석/포맷/diffcheck → 문서/같은 Issue13 결과 → commit/push. 직접 경계로 충분하면 무관 전체시험을 반복하지 않고 공용 영향이 넓어지면 그 근거로 확대한다.
+1. current는 실제선택T 활성/명시 review 복구 관계, ended는 실제종료/보관 관계로 소비한다. all의 단순 not_selected를 참가이력으로 잘못 표시하지 않는다. 페이지·커서/중복 검사와 서버 SQL판정은 보존한다.
+2. 명시세대 review와 세대미확정 실제 CM review의 nullable room/gen·recovery_only 안내를 정확히 읽는다. 없는 ID/card/자리/리더를 합성하지 않는다.
+3. 기존 회원 기록 detail/plan에 직접 진입하고 공개카드404로 이를 차단하지 않는다. 보관은 읽기만/새쓰기차단, stopped 재개·열린N 보존을 구분한다. 클라이언트에서 빈방을 추정삭제하지 않는다.
+4. 새 read 경계+member_cycles/device_feedback/cycle_recruitment·직접 outcome/resume 회귀를 영향에 맞춰 묶고 관련 분석/포맷/diffcheck → 문서/Issue13 결과 → commit/push한다. 과거 새화면/물리삭제/서버DB작업·dev/main 통합은 제외한다.
 
-A 이후 B의 current/ended/all·보관/복구읽기·종료방 참가중 목록 정리를 독립 진행한다. 전체 정상 UI 인수는 사용자 담당으로 D/E/A/B 기능 섹션 종료에 묶고, 현재 완료 해제 불가·종료방 잔류 결함은 아직 남아 있음을 유지한다. 전체 결함/인수 정리 전 dev/main 통합·배포는 하지 않는다.
+B 이후 D/E/A/B의 정상 UI 인수를 사용자 담당으로 묶는다. 종료방 잔류 결함·보관 읽기는 아직 남았으며 A 완료 해제가 이 문제까지 해결한 것은 아니다. 전체 결함/인수 정리 전 dev/main 통합·배포는 하지 않는다.
+
+## A 완료 해제 결과와 수동 확인
+
+기존 설계 §37.27 A를 실제 계약과 대조해 구현했다. Backend8bbcfc8c의 정정2경로/관련8schema는 현재0eed67c4와 동일함을 확인했다. 계정 party/manual 본인 완료의 전용 context·확인/재검사·schema3/v3 영속 요청·원ACK·실제T 갱신 연결, **4파일 단일94mock PASS(신규34+기존직접60)·lib/test분석0**. 상세는 [설계37 §37.36](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)와 DEV_LOG다. 아래 과거 A설계/계약대기는 이 상태로 대체한다.
+
+- 사용자 실기기 미확인: 파티완료 해제/취소, 다른 참가자·C/N 보존, 완료 재체크/재참가, 재시작·안내. 이전 모집방/자리/예약의 자동복구는 없다. 새 과거/은퇴 화면은 만들지 않았다.
+- 새 v3는 디스크 저장 후 POST하고 원본문/token/key를 보존하며 ACK 후 조회실패는 재정정으로 바꾸지 않는다. schema1/2 v1/v2 PUT true/false 원요청은 계속 원transport로 복구한다. 기존 새완료 C/수10시·활동/카탈로그 제한은 유지했다.
 
 ## E23 수동 확인과 보존 경계
 

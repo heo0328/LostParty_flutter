@@ -1908,3 +1908,23 @@ E23 한 그룹 안에서 **DTO/전용 GET·POST·ACK → controller 원명령/�
 게시 합성 removal 12그룹의 context/첫 ACK를 출처와 함께 fixture로 보존했다. N source 그룹에 혼재된 personal 요청/응답은 추방 계약의 근거로 사용하지 않고 실제 member_removal 응답만 추출했다. none/review/actor 없음·미확정gen·권한/리더 대상·source review 허용/불안전 lease 거절, current_only 반대 무관 변경·토큰 갱신 서명, 잘못된 nullable/필드/효과/ACK 순서·revision, 원 token/body/key 재송·잘못된 ACK pending·중복/회원/화면T 전환·성공 후 읽기 실패를 검증했다. 최대 인원 등 기존 관리 경계는 직접 회귀를 유지하며 서버 DB rollback/멱등 원자성은 Backend 검증 근거와 구분한다. 공용 저장·Router/DI 교체가 없고 직접 영향 6파일로 경계를 보호해 무관 전체 시험은 생략했다.
 
 **사용자 실기기 미확인:** C/N 카드 대상과 2/3선택·다른 캐릭터인 동일회원/주차별 권한·현재만일 때 반대 참가 유지·양T 실제 제거·현재 탭/목록 갱신·폴드/큰 글자 줄바꿈. 기기 설치/조작·정상 실회원 HTTP 쓰기·서버/DB/배포는 수행하지 않았다. 다음은 기존 §37.27 A 완료 해제, 이후 B 목록/보관 소비이며 dev/main 통합은 전체 결함/인수 정리 전 보류한다.
+
+### 37.36 A 본인 완료 해제·기존 영속 요청 보존 구현 (2026-10-23)
+
+사용자 ‘설계가 있으면 구현’ 지시에 따라 §37.27 A와 [Backend 인계6360251618](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6360251618)를 대조해 A만 구현했다. 고정 소비는 `8bbcfc8cb89e69eb1f9747a0fcf2e919e41c3b76`의 completion-correction-context/completion-corrections·DB0030이다. 해당170경로 OpenAPI를 blob으로 확보하고 현재 D22/E23 기반0eed67c4/174경로와 새2경로·관련8schema가 동일함을 확인했다. 새 추정 API/서버 작업 대기는 없고 B 목록·보관은 미구현으로 유지한다.
+
+**새 흐름:** 실제 내 계정의 완료 체크 해제 터치 → 그때만 본인 character/raid/실제T context GET → 기존 확인창에 캐릭터·레이드·날짜와 ‘이전 모집방 참가·자리·예약은 자동 복구되지 않음’ → 동의 후 동일 context 재조회 → 출처/권한/세revision/대상/관측C 의미가 같을 때 최신 token으로 정정 POST 1회 → 전용 ACK 확정/영속 보관 정리 → 실제T 재조회다. 본인 party/manual 출처를 함께 해제하며 타인·다른T·방의 완료사건을 앱에서 변경하지 않는다. 확인 취소는 쓰기·pending0이다. 확인 중 중복 준비/주차 변경을 막고 회원·환경·조회세대/소유 관찰이 바뀌면 쓰지 않는다. 완료없음 context는 성공으로 표시하지 않고 최신 조회가 필요함을 알린다.
+
+**책임·권한:** 신규 account/domain/member_completion_correction.dart가 불변 context·정확한6필드 본문/의미서명·전용 결과 검증을 소유한다. 과거T<=C/현재C수06~10시와 offset시각을 읽으며 기존 전역 UTC parser는 바꾸지 않았다. source manual→party 순서/중복·permission/null 확인·token4096 UTF8bytes/최대120초·현재C종료를 검증한다. 기존 계정 ViewModel에서 완료 해제 진입은 본인 완료/현재 소유·실제표시 범위로 판단하고 manual.canClear/활동 detailsAvailable/수10시 생성 조건은 사용하지 않는다. 최종 소유·출처/해제 권한은 context/서버가 결정한다. 새 완료 생성과 구 v1 흐름의 정책은 유지한다. 과거/은퇴/삭제raid의 계약 reader는 지원하지만 새 이력/은퇴 화면은 만들지 않았다.
+
+MemberRaidClient가 기존 인증 transport/오류/크기 경계를 재사용해 GET/POST를 담당하며 페이지는 API를 직접 호출하지 않는다. ViewModel은 확인 중 snapshot 하나만 보관하고 취소/완료 때 해제하며 별도 전역 캐시/서버 주간 데이터의 수정 가능한 복제본을 만들지 않는다. 성공 후 기존 실제T summary를 재조회하고 과거T 원명령 복구이면 context를 읽는다. 로컬 완료를 낙관적으로 비우지 않으며 원ACK 이후 새 완료가 생겼다면 최신 조회 결과를 사용한다.
+
+**저장·복구:** 기존 MemberWeeklyStore/회원·환경 키를 재사용한다. 새 v3 pending이 있을 때만 디스크 schema3이며 완료 정리/기존 명령은 기존 schema2를 쓴다. schema1/2와 wire_version1/2의 원PUT true/false·본문·key·started/ack/failed·표시설정은 그대로 읽고 복구한다. 새 v3는 wire_version=3, 원6필드body와 correction_context의 불변 원관측을 함께 보관해 원ACK를 검증한다. method/path는 이 버전의 전용 POST 경로로 결정하고 기존 버전을 재작성하지 않는다. 실제T는 body.target_cycle_key, 관측C는 expected_cycle_key로 분리했다. 저장 본문과 context의 명령 의미 불일치·손상schema는 차단하며 빈pending/새key로 덮지 않는다. 실제 POST보다 디스크 저장이 먼저이고 실패 시 전송0이다.
+
+전용 ACK는 원command/감사UUID·character/raid/T·당시C/시각·정확한 weekly revision+1·빈 completion_sources·participation_restored=false를 검증한다. 결과 불명은 새 context 없이 원본문/token/key/POST로 재송한다. 원ACK는 원context 시간과 검증하므로 지금의 C나 token 만료로 재라벨링하지 않는다. 확정 stale/만료/없음 등 새 정정 오류만 v3에서 failed 보류하고 기존 오류 분기를 무관하게 확대하지 않았다. 기존 24h/음수age 명시보류·현재 상태 확인 흐름을 유지한다. 성공 ACK를 저장한 뒤 새 정정 pending은 해제/디스크 정리하고 별도 조회하므로 조회실패가 원성공을 취소하거나 다음 완료를 다시 해제하지 않는다. 이때 ‘완료 해제는 반영됨·최신 조회 필요’로 구분한다. ACK/정리 저장 실패 시에는 원명령/ack 상태를 보존한다.
+
+**검증:** 최종 관련4파일 단일 **94mock PASS = 새34 + 기존 직접60**, lib/test 분석0·정확한 변경 파일 포맷/diffcheck/diff검토. fixture에는 고정 게시 합성 ready/없음/command/result4개와 출처만 보존했다. source manual/party/둘·순서/nullable/오류·과거T/수06~10시·원C/원ACK·token-only 갱신·세revision/관찰/회원 변경·취소/중복 준비·디스크 실패/손상schema3·v3 재시작 원요청 재송·이미 ack된 재시작·ACK후 조회실패·24h 보류를 확인했다. 기존 schema1 v1 true·schema2 v2 true/false 복구, 완료 생성의 C/수10시·현재주 갱신/다른주 보존을 직접 회귀했다. 기존 manual false 정상시험은 ‘이미 저장된 schema2 원명령’으로 옮겨 과거 PUT 의미를 계속 검증하고 새 클릭 정정과 구분했다.
+
+초기 실행의 새 테스트 teardown 메서드 오류를 실제 runtime.close로 수정했고, 회원변경 fixture의 비UUID를 정상 UUID로 수정해 알림 예외를 제거했다. 초기 lint를 보완했다. 최종94에는 중간28/51/기존60의 반복을 합산하지 않았다. 저장 형식 확장은 weekly store 한정이며 Router/DI/다른 도메인의 저장 스키마는 불변으로, 직접4파일 경계와 lib/test 분석으로 보호하고 무관 전체시험은 반복하지 않았다. 서버 동시성/감사 원자성은 Backend 검증 근거이며 앱 mock 결과와 구분한다.
+
+**미확인/다음:** 실회원 HTTP·실기기에서 파티완료 해제/취소·다른 캐릭터/주차/다른 참가자 보존·다시 완료/참가·재시작/화면 안내는 사용자 인수에 남긴다. 설치·기기조작·서버/DB/배포·성능/메모리 측정은 하지 않았다. 다음은 §37.27 B의 current/ended/all·복구/보관 기록 읽기이며 종료방 잔류를 A에서 해결했다고 보고하지 않는다. 전체 결함/인수 정리 전 dev/main 통합은 보류한다.

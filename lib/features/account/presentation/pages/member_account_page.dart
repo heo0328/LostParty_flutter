@@ -227,7 +227,7 @@ class MemberAccountPage extends StatelessWidget {
                   MemberCycleSelector(
                     cycles: meta,
                     value: weekly!.selectedCycleKey!,
-                    enabled: !weekly!.writing && !weekly!.hasPending,
+                    enabled: !weekly!.busy && !weekly!.hasPending,
                     onChanged: weekly!.selectCycle,
                   ),
                 if (weekly != null) _weeklyStatus(context, weekly!),
@@ -755,6 +755,41 @@ class MemberAccountPage extends StatelessWidget {
     final member = accountReadScope(model.runtime.session),
         before = state.entry(ref, raid.raidId);
     final name = model.character(ref)?.observation.characterName ?? '';
+    if (!completed && state.twoCycleEnabled) {
+      final correction = await state.prepareCorrection(ref, raid.raidId);
+      if (correction == null) return;
+      try {
+        if (!context.mounted || !state.correctionCurrent(correction)) return;
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('레이드 완료 해제'),
+            content: Text(
+              '$name 캐릭터의 ${raid.label} 완료를 해제할까요?\n대상 주차 · ${correction.target}\n이전 모집방의 참가·자리·예약은 자동 복구되지 않습니다.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('취소'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('완료 해제'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed == true &&
+            context.mounted &&
+            _sameMember(model, member) &&
+            state.correctionCurrent(correction)) {
+          await state.correct(correction);
+        }
+      } finally {
+        state.cancelCorrection(correction);
+      }
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -762,7 +797,7 @@ class MemberAccountPage extends StatelessWidget {
         content: Text(
           completed
               ? '$name 캐릭터의 ${raid.label} 레이드를 완료 처리할까요?'
-              : '$name 캐릭터의 ${raid.label} 수동 완료를 해제할까요?',
+              : '$name 캐릭터의 ${raid.label} 레이드 완료를 해제할까요?',
         ),
         actions: [
           TextButton(

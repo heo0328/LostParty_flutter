@@ -9,6 +9,7 @@ import '../../data/member_weekly_store.dart';
 import '../../domain/account_read_session.dart';
 import '../../domain/member_raid_models.dart';
 import '../../domain/member_cycle_models.dart';
+import '../../domain/member_completion_correction.dart';
 import '../../domain/role_summary.dart';
 import '../../domain/scoped_cache_models.dart';
 import '../../domain/entities/character_weekly_raid_display_preference.dart';
@@ -21,6 +22,11 @@ String memberWeeklyFailure(String? code) => switch (code) {
   'PLAY_NOT_STARTED' => '해당 주 수요일 10시부터 완료할 수 있습니다.',
   'PARTICIPATION_CONFIRMATION_REQUIRED' => '참가 중인 레이드는 아직 여기서 완료 처리할 수 없습니다.',
   'CYCLE_CHANGED' => '주차가 바뀌었습니다. 다시 확인해 주세요.',
+  'COMPLETION_NOT_FOUND' => '이미 완료가 해제되었습니다. 최신 상태를 확인해 주세요.',
+  'CORRECTION_REFRESH_FAILED' => '완료 해제는 반영되었습니다. 최신 상태를 다시 불러와 주세요.',
+  'COMPLETION_CONTEXT_CHANGED' ||
+  'COMMAND_CONTEXT_EXPIRED' ||
+  'CONTEXT_INVALID' => '완료 정보가 변경됐습니다. 다시 확인해 주세요.',
   'REVISION_CONFLICT' ||
   'CATALOG_VERSION_CONFLICT' => '정보가 변경됐습니다. 다시 불러와 주세요.',
   'OWNERSHIP_REQUIRED' ||
@@ -43,6 +49,7 @@ class _WeeklyCommand {
     this.wireVersion = 1,
     this.ack = false,
     this.failed = false,
+    this.correction,
   });
   factory _WeeklyCommand.fromJson(
     Map<String, dynamic> json, {
@@ -52,31 +59,46 @@ class _WeeklyCommand {
       json,
       schema == 1
           ? 'character raid key body started ack failed'
-          : 'character raid key body started ack failed wire_version',
+          : 'character raid key body started ack failed wire_version${schema == 3 && json['wire_version'] == 3 ? ' correction_context' : ''}',
     );
     final version = schema == 1 ? 1 : json['wire_version'];
-    roleCheck(version == 1 || version == 2);
+    roleCheck(version == 1 || version == 2 || (schema == 3 && version == 3));
     final body = roleMap(json['body']);
-    roleShape(
-      body,
-      'completed difficulty_id expected_cycle_key expected_catalog_version expected_revision expected_ownership_revision expected_lifecycle_revision${version == 2 ? ' target_cycle_key' : ''}',
-    );
-    final completed = raidBool(body['completed']);
-    if (body['difficulty_id'] != null) raidIdentifier(body['difficulty_id']);
-    roleCheck(completed || body['difficulty_id'] == null);
-    raidCycleKey(body['expected_cycle_key']);
-    if (version == 2) {
-      roleCheck(
-        raidCycleKey(body['target_cycle_key']) == body['expected_cycle_key'],
+    MemberCompletionCorrection? correction;
+    if (version == 3) {
+      correction = MemberCompletionCorrection(
+        roleId(json['character']),
+        raidIdentifier(json['raid']),
+        raidCycleKey(body['target_cycle_key']),
+        roleMap(json['correction_context']),
       );
-    }
-    raidText(body['expected_catalog_version']);
-    for (final k in [
-      'expected_revision',
-      'expected_ownership_revision',
-      'expected_lifecycle_revision',
-    ]) {
-      rolePositive(body[k]);
+      roleCheck(
+        correction.allowed &&
+            correctionStableJson(body) ==
+                correctionStableJson(correction.body()),
+      );
+    } else {
+      roleShape(
+        body,
+        'completed difficulty_id expected_cycle_key expected_catalog_version expected_revision expected_ownership_revision expected_lifecycle_revision${version == 2 ? ' target_cycle_key' : ''}',
+      );
+      final completed = raidBool(body['completed']);
+      if (body['difficulty_id'] != null) raidIdentifier(body['difficulty_id']);
+      roleCheck(completed || body['difficulty_id'] == null);
+      raidCycleKey(body['expected_cycle_key']);
+      if (version == 2) {
+        roleCheck(
+          raidCycleKey(body['target_cycle_key']) == body['expected_cycle_key'],
+        );
+      }
+      raidText(body['expected_catalog_version']);
+      for (final k in [
+        'expected_revision',
+        'expected_ownership_revision',
+        'expected_lifecycle_revision',
+      ]) {
+        rolePositive(body[k]);
+      }
     }
     final key = roleId(json['key']);
     roleCheck(key[14] == '4');
@@ -89,13 +111,17 @@ class _WeeklyCommand {
       wireVersion: version as int,
       ack: raidBool(json['ack']),
       failed: raidBool(json['failed']),
+      correction: correction,
     );
   }
   final String character, raid, key;
   final Map<String, dynamic> body;
   final DateTime started;
   final int wireVersion;
-  String get target => body['expected_cycle_key'] as String;
+  final MemberCompletionCorrection? correction;
+  String get target =>
+      body[wireVersion == 3 ? 'target_cycle_key' : 'expected_cycle_key']
+          as String;
   bool ack, failed;
   String get entryKey => '$character:$raid';
   Map<String, dynamic> toJson() => {
@@ -107,6 +133,7 @@ class _WeeklyCommand {
     'ack': ack,
     'failed': failed,
     'wire_version': wireVersion,
+    if (wireVersion == 3) 'correction_context': correction!.wire,
   };
 }
 
@@ -143,6 +170,8 @@ class MemberWeeklyViewModel extends ChangeNotifier {
   bool get selectedIsCurrent => selectedCycleKey == cycles?.current.key;
   void selectCycle(String key) {
     if (writing ||
+        preparingCorrection ||
+        _correction != null ||
         hasPending ||
         cycles?.find(key) == null ||
         selectedCycleKey == key) {
@@ -159,7 +188,11 @@ class MemberWeeklyViewModel extends ChangeNotifier {
   String? failure;
   bool loading = false, writing = false;
   bool _saving = false;
-  bool get busy => loading || writing || _saving;
+  bool get busy => loading || writing || _saving || preparingCorrection;
+  bool preparingCorrection = false;
+  MemberCompletionCorrection? _correction;
+  String? _correctionTargets;
+  int? _correctionGeneration, _correctionEpoch;
   bool _disposed = false,
       _active = false,
       _loaded = false,
@@ -271,6 +304,8 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       _selectedCycle = null;
       _display = {};
       _pending = null;
+      _correction = null;
+      preparingCorrection = false;
       failure = null;
       _current = false;
       loading = false;
@@ -312,7 +347,7 @@ class MemberWeeklyViewModel extends ChangeNotifier {
 
   Future<void> _persist(StorageScope scope) {
     final encoded = jsonEncode({
-      'schema': 2,
+      'schema': _pending?.wireVersion == 3 ? 3 : 2,
       'pending': _pending?.toJson(),
       'display': {
         for (final entry in _display.entries)
@@ -336,7 +371,9 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     if (raw != null) {
       final data = roleMap(jsonDecode(raw));
       roleShape(data, 'schema pending display');
-      roleCheck(data['schema'] == 1 || data['schema'] == 2);
+      roleCheck(
+        data['schema'] == 1 || data['schema'] == 2 || data['schema'] == 3,
+      );
       final prefs = <String, CharacterWeeklyRaidDisplayPreference>{};
       for (final e in roleMap(data['display']).entries) {
         roleId(e.key);
@@ -805,6 +842,23 @@ class MemberWeeklyViewModel extends ChangeNotifier {
 
   bool canChange(ScopedCharacterRef ref, String raid) {
     final value = entry(ref, raid);
+    if (twoCycleEnabled && value?.completed == true) {
+      return ready &&
+          !busy &&
+          !hasPending &&
+          _correction == null &&
+          retrySeconds == 0 &&
+          selectedIsCurrent &&
+          model.signedIn &&
+          model.character(ref) != null &&
+          ref.scope == model.runtime.scope &&
+          model.sections.any(
+            (s) =>
+                !s.cached &&
+                s.registration.accountId == ref.accountId &&
+                s.registration.ownershipStatus == 'owned',
+          );
+    }
     return ready &&
         (!twoCycleEnabled ||
             (selectedIsCurrent &&
@@ -825,6 +879,121 @@ class MemberWeeklyViewModel extends ChangeNotifier {
         value.lifecycleRevision ==
             model.character(ref)!.observation.lifecycleRevision &&
         (value.completed ? value.canClear : value.canMark);
+  }
+
+  Future<MemberCompletionCorrection?> prepareCorrection(
+    ScopedCharacterRef ref,
+    String raid,
+  ) async {
+    if (!twoCycleEnabled ||
+        entry(ref, raid)?.completed != true ||
+        !canChange(ref, raid)) {
+      return null;
+    }
+    final epoch = _epoch,
+        member = accountReadScope(model.runtime.session),
+        scope = model.runtime.scope;
+    final target = selectedCycleKey!,
+        signature = _targets(),
+        generation = model.runtime.readGeneration;
+    preparingCorrection = true;
+    failure = null;
+    _emit();
+    try {
+      final p = await client.correction(ref.characterId, raid, target);
+      _guard(epoch, member, scope);
+      if (target != selectedCycleKey ||
+          signature != _targets() ||
+          generation != model.runtime.readGeneration) {
+        throw const AccountReadException('STALE_READ');
+      }
+      if (!p.allowed) {
+        failure = 'COMPLETION_NOT_FOUND';
+        _current = false;
+        return null;
+      }
+      _correction = p;
+      _correctionEpoch = epoch;
+      _correctionTargets = signature;
+      _correctionGeneration = generation;
+      return p;
+    } catch (e) {
+      if (!_disposed && epoch == _epoch) {
+        failure = e is AccountReadException ? e.code : 'INVALID_RESPONSE';
+        if (e is AccountReadException) _cooldown(e);
+      }
+      return null;
+    } finally {
+      if (!_disposed && epoch == _epoch) {
+        preparingCorrection = false;
+        _emit();
+      }
+    }
+  }
+
+  bool correctionCurrent(MemberCompletionCorrection p) =>
+      !_disposed &&
+      model.signedIn &&
+      identical(p, _correction) &&
+      _epoch == _correctionEpoch &&
+      selectedCycleKey == p.target &&
+      _targets() == _correctionTargets &&
+      model.runtime.readGeneration == _correctionGeneration;
+
+  void cancelCorrection(MemberCompletionCorrection p) {
+    if (!identical(_correction, p)) return;
+    _correction = null;
+    _emit();
+  }
+
+  Future<void> correct(MemberCompletionCorrection original) async {
+    if (!correctionCurrent(original) ||
+        busy ||
+        hasPending ||
+        retrySeconds > 0) {
+      return;
+    }
+    final epoch = _epoch,
+        member = accountReadScope(model.runtime.session),
+        scope = model.runtime.scope;
+    preparingCorrection = true;
+    failure = null;
+    _emit();
+    try {
+      final fresh = await client.correction(
+        original.character,
+        original.raid,
+        original.target,
+      );
+      _guard(epoch, member, scope);
+      if (!correctionCurrent(original) ||
+          original.signature != fresh.signature) {
+        throw const AccountReadException('COMPLETION_CONTEXT_CHANGED');
+      }
+      _pending = _WeeklyCommand(
+        fresh.character,
+        fresh.raid,
+        newScopedCommandKey(),
+        Map.unmodifiable(fresh.body()),
+        now().toUtc(),
+        wireVersion: 3,
+        correction: fresh,
+      );
+      _correction = null;
+    } catch (e) {
+      if (!_disposed && epoch == _epoch) {
+        failure = e is AccountReadException ? e.code : 'INVALID_RESPONSE';
+        if (e is AccountReadException) _cooldown(e);
+      }
+    } finally {
+      if (!_disposed && epoch == _epoch) {
+        preparingCorrection = false;
+        _emit();
+      }
+    }
+    if (!_disposed && epoch == _epoch && _pending?.wireVersion == 3) {
+      await _send();
+    }
   }
 
   List<WeeklyRaidStatusItem> items(ScopedCharacterRef ref) => [
@@ -849,6 +1018,9 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     WeeklyRaidStatusItem raid,
     bool completed,
   ) async {
+    // New v2 clears require the context the user confirmed. Old PUT pending
+    // commands remain untouched and are recovered through their original path.
+    if (twoCycleEnabled && !completed) return;
     if (!canChange(ref, raid.raidId)) return;
     final value = entry(ref, raid.raidId)!;
     if (completed == value.completed) return;
@@ -913,26 +1085,32 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       await _persist(scope);
       guard();
       if (!command.ack) {
-        final ack =
-            await (command.wireVersion == 2 ? client.putTarget : client.put)(
-              command.character,
-              command.raid,
-              command.key,
-              command.body,
-            );
-        guard();
-        roleCheck(
-          ack.characterId == command.character &&
-              ack.raidId == command.raid &&
-              ack.cycleKey == command.target &&
-              ack.ownershipRevision ==
-                  command.body['expected_ownership_revision'] &&
-              ack.lifecycleRevision ==
-                  command.body['expected_lifecycle_revision'] &&
-              ack.revision >= (command.body['expected_revision'] as int) &&
-              ack.revision <= (command.body['expected_revision'] as int) + 1 &&
-              ack.manual == command.body['completed'],
-        );
+        if (command.wireVersion == 3) {
+          await client.correct(command.correction!, command.key, command.body);
+          guard();
+        } else {
+          final ack =
+              await (command.wireVersion == 2 ? client.putTarget : client.put)(
+                command.character,
+                command.raid,
+                command.key,
+                command.body,
+              );
+          guard();
+          roleCheck(
+            ack.characterId == command.character &&
+                ack.raidId == command.raid &&
+                ack.cycleKey == command.target &&
+                ack.ownershipRevision ==
+                    command.body['expected_ownership_revision'] &&
+                ack.lifecycleRevision ==
+                    command.body['expected_lifecycle_revision'] &&
+                ack.revision >= (command.body['expected_revision'] as int) &&
+                ack.revision <=
+                    (command.body['expected_revision'] as int) + 1 &&
+                ack.manual == command.body['completed'],
+          );
+        }
         command.ack = true;
         await _persist(scope);
         guard();
@@ -947,20 +1125,28 @@ class MemberWeeklyViewModel extends ChangeNotifier {
         failure = code;
         if (e is AccountReadException) _cooldown(e);
         if ({
-          'REVISION_CONFLICT',
-          'CATALOG_VERSION_CONFLICT',
-          'CYCLE_CHANGED',
-          'TARGET_CYCLE_NOT_CURRENT',
-          'TARGET_CYCLE_OUT_OF_RANGE',
-          'PLAY_NOT_STARTED',
-          'PARTICIPATION_CONFIRMATION_REQUIRED',
-          'RAID_INACTIVE',
-          'CHARACTER_UNUSABLE',
-          'CHARACTER_NOT_FOUND',
-          'OWNERSHIP_REQUIRED',
-          'IDEMPOTENCY_CONFLICT',
-          'IDEMPOTENCY_EXPIRED',
-        }.contains(code)) {
+              'REVISION_CONFLICT',
+              'CATALOG_VERSION_CONFLICT',
+              'CYCLE_CHANGED',
+              'TARGET_CYCLE_NOT_CURRENT',
+              'TARGET_CYCLE_OUT_OF_RANGE',
+              'PLAY_NOT_STARTED',
+              'PARTICIPATION_CONFIRMATION_REQUIRED',
+              'RAID_INACTIVE',
+              'CHARACTER_UNUSABLE',
+              'CHARACTER_NOT_FOUND',
+              'OWNERSHIP_REQUIRED',
+              'IDEMPOTENCY_CONFLICT',
+              'IDEMPOTENCY_EXPIRED',
+            }.contains(code) ||
+            (command.wireVersion == 3 &&
+                {
+                  'COMPLETION_CONTEXT_CHANGED',
+                  'COMMAND_CONTEXT_EXPIRED',
+                  'COMPLETION_NOT_FOUND',
+                  'CONTEXT_INVALID',
+                  'INVALID_REQUEST',
+                }.contains(code))) {
           command.failed = true;
           try {
             await _persist(scope);
@@ -977,6 +1163,42 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     }
     if (_disposed || epoch != _epoch) return;
     if (command.ack) {
+      if (command.wireVersion == 3) {
+        // A persisted original ACK is final. A failed subsequent read cannot
+        // turn this into another correction of a newly completed raid.
+        _pending = null;
+        try {
+          await _persist(scope);
+          guard();
+        } catch (_) {
+          if (!_disposed && epoch == _epoch) {
+            _pending = command;
+            failure = 'LOCAL_STORAGE_FAILED';
+          }
+          return;
+        }
+        if (cycles?.find(command.target) != null) {
+          await refreshTarget(command.target);
+        } else {
+          try {
+            await client.correction(
+              command.character,
+              command.raid,
+              command.target,
+            );
+            guard();
+          } catch (_) {
+            if (!_disposed && epoch == _epoch) {
+              failure = 'CORRECTION_REFRESH_FAILED';
+            }
+          }
+        }
+        if (!_disposed && epoch == _epoch && failure != null) {
+          failure = 'CORRECTION_REFRESH_FAILED';
+          _emit();
+        }
+        return;
+      }
       if (twoCycleEnabled) {
         await refreshTarget(command.target);
       } else {

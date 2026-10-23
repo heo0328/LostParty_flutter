@@ -340,7 +340,7 @@ void main() {
     );
   }
   test(
-    'manual clear preserves party evidence and never restores participation',
+    'legacy schema2 manual false pending preserves party evidence and transport',
     () async {
       await load();
       final ref = model.sections.single.characters.first.ref,
@@ -354,7 +354,31 @@ void main() {
         'party_id': f1.room,
       });
       await weekly.refreshTarget(current);
-      await weekly.change(ref, weekly.items(ref).first, false);
+      store.data[runtime.scope] = jsonEncode({
+        'schema': 2,
+        'pending': {
+          'character': ref.characterId,
+          'raid': raid.raidId,
+          'key': '12345678-1234-4234-8234-123456789012',
+          'body': {
+            'completed': false,
+            'difficulty_id': null,
+            'expected_cycle_key': current,
+            'target_cycle_key': current,
+            'expected_catalog_version': '2026.08.20',
+            'expected_revision': states[k]!['revision'],
+            'expected_ownership_revision': 1,
+            'expected_lifecycle_revision': 1,
+          },
+          'started': clock.toIso8601String(),
+          'ack': false,
+          'failed': false,
+          'wire_version': 2,
+        },
+        'display': {},
+      });
+      await restart();
+      await weekly.retry();
       expect((writes().last.data as Map)['completed'], false);
       expect((writes().last.data as Map)['difficulty_id'], null);
       final e = weekly.entry(ref, raid.raidId)!;
@@ -362,7 +386,9 @@ void main() {
       expect(e.party, true);
       expect(e.completed, true);
       expect(e.participating, false);
-      expect(weekly.canChange(ref, raid.raidId), false);
+      // A new explicit correction is now available for the remaining party
+      // projection, but must not change the original PUT semantics above.
+      expect(weekly.canChange(ref, raid.raidId), true);
     },
   );
   for (final mutation in <String, void Function(Map<String, dynamic>)>{
