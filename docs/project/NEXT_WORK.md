@@ -8,6 +8,8 @@
 
 ## 완료 구간 B — 실제 메뉴·성공 화면·관계 종료 알림
 
+구현 `0487788a` commit/push·원격일치. [Issue25 결과6372783376](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6372783376) 게시본문 MATCH를 확인했다. 실제 UI 연결/295mock·분석0과 C/24후속·정상로그인/실기기 미확인을 구분해 인계했으며 새 Backend 요청은 없다.
+
 기존 설계/Issue25 최신6371981415까지 확인해 B를 구현했다. 실제 상세의 기존 두 탈퇴/해산 버튼은 이제 전용 menu option별 visible/permission·최신 Impact 확인과 A의 원명령을 사용한다. 현재T 본인관계 또는 지속관계 종료는 원key당1회 선택T 내목록으로 복귀하고, 반대T만 해산해 현재참가가 남으면 현재상세를 유지한다. effects=[]도 별도 관계종료 이벤트로 C/N 내목록/계정을 갱신하며 가짜T효과를 만들지 않는다. 계정 갱신은 이미 실제효과로 요청한 T를 중복 요청하지 않고 한도는 기존 신규명령 context의 서버 원본을 사용한다.
 
 직접10파일 고유295mock PASS(178+별도116+신규1; 마지막추가 뒤 membership49만 재확인·중복합산 없음), 변경Dart9파일 최종분석0·포맷/diffcheck/리뷰. 원pending/구명령·완료/추방/개인완료탈퇴/읽기전용·IF-001 비활성, 중앙탈퇴/기존빨간해산폭을 보존했다. 세부 결과/근거와 실회원·실기기 미확인은 [설계37 §37.45](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)와 DEV_LOG가 기준이다. 현재 feature/raid-recruitment-scheduling 유지·기존무관dirty 보존·dev/main 미반영, 구간 commit/push로 보관한다. Backend source15e143ae·API176/DB0031과 계약 차이/새차단 요청은 없다.

@@ -2,6 +2,8 @@
 
 ## 2026-10-24 — Issue25 B 실제 버튼·확인·성공 이동/목록 갱신
 
+구현 `0487788a` commit/push·원격일치. [Issue25 결과6372783376](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6372783376) 게시본문 MATCH 확인. 실제 UI 연결·고유295mock/분석0과 실서버/실회원/기기 미확인·다음 C/24후속을 회신했으며 새로운 Backend 구현/반복시험 요청은 없다.
+
 - 새로 가능해진 흐름: 상세의 기존 두 탈퇴/해산 위치에서 전용 menu option별 권한·최신 Impact 확인과 A 원명령을 호출한다. 현재T 일반/미참가·반대T 공대장도 독립 권한을 읽는다. 실제 날짜/영향 인원·전원 탈퇴·자동 승계/마지막1인 종료·완료 보존을 안내한다. 원key당 현재T/지속관계 종료1회 이탈, 반대T만 해산하면 현재상세 유지·menu 재조회다.
 - 데이터/UX 근거: 상세 ViewModel은 menu 수명/epoch, 확인창은 고정 snapshot/원key, app-owned Controller는 원pending/ACK·관계종료 이벤트를 소유한다. 저장/서버정책을 복제하거나 새계층/라이브러리를 만들지 않았다. effects=[] 관계종료도 C/N 내목록/계정을 갱신하되 가짜target 효과는 없고 이미 갱신한 실제효과T는 중복 조회하지 않는다. 별도 한도 캐시가 없어 기존 context의 서버 limits/usage 근거를 사용한다. 상세는 설계37 §37.45다.
 - 보존 확인: 구cancel/leave/end 원복구·개인완료탈퇴/추방·완료·읽기전용 목록/보관, 회원/T 격리·원24h ACK, IF-001 비활성·탈퇴 중앙/빨간 해산padding32를 유지했다. unrelated 통계35/플랫폼/도구 dirty는 보존했다.
