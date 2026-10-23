@@ -1,6 +1,6 @@
-# NEXT WORK — F5 사전 표시 구현 마감·F6 준비
+# NEXT WORK — F6 설계 점검·F6-A 구현 준비
 
-기준: 2026-10-23. **F1~F5 코드/자동검증을 마쳤고 Backend07c2b671의 사전 참가 표시까지 연결했다.** 신규표시24+기존직접영향82의 최종단일106mock PASS·변경Dart11파일 분석0이다. 과거 F5 독립구간 고유130 기록과 합산하지 않는다. 실제 정상인증HTTP·실회원/기기 인수는 미확인이며 전체 기능섹션에 묶는다. feature/raid-recruitment-scheduling에 코드/시험/문서를 commit/push 보관하고 dev6d3f617 미병합·기존무관dirty를 유지한다. 다음은 F6 완료/정정·선택T 종료/재개 설계와 구현 준비이며 아직 구현하지 않았다.
+기준: 2026-10-23. **F1~F5 코드/자동검증을 마쳤고 Backend07c2b671의 사전 참가 표시까지 연결했다.** 신규표시24+기존직접영향82의 최종단일106mock PASS·변경Dart11파일 분석0이다. 과거 F5 독립구간 고유130 기록과 합산하지 않는다. 실제 정상인증HTTP·실회원/기기 인수는 미확인이며 전체 기능섹션에 묶는다. feature/raid-recruitment-scheduling에 코드/시험/문서를 commit/push 보관하고 dev6d3f617 미병합·기존무관dirty를 유지한다. F6 설계는 §37.19에 재점검했고 다음 첫 구현은 F6-A 계정 manual v2/구pending 보호다. F6 기능코드는 아직 변경하지 않았다.
 
 ## 1. 현재 근거·준비 상태
 
@@ -28,15 +28,22 @@
 
 ## 3. 다음 작업 — F6 완료/정정·선택 주차 종료/재개 준비
 
-현재근거: [Backend112/6345290060](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345290060)의 고정소비07c2b671/168경로 및 [Flutter113 확인6345378281](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345378281). 사전표시/선택 구현은 설계37 §37.18·DEV_LOG에 마감했다. Backend 보완 대기는 없고 실제 차이가 있을 때만 같은Issue에 근거를 회신한다. 표시계약 수용/기존시험을 다시 요청하지 않는다.
+현재근거: [Backend112/6345290060](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345290060)의 고정소비07c2b671/168경로 및 [Flutter113 확인6345378281](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345378281). 사전표시/선택 구현은 설계37 §37.18·DEV_LOG에 마감했다. F5 Backend 보완 대기는 해소됐고 F6 계약 차이의 확인은 아래에 분리한다. 표시계약 수용/기존시험을 다시 요청하지 않는다.
 
 현재 인계: 구현1a909e7 commit/push·원격일치 확인, [Flutter F5 사전표시 결과6345894901](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345894901)에 소비/구현SHA·106mock/분석0·미확인·다음담당을 회신하고 게시본문 재조회 일치를 확인했다. dev통합/실제인수 완료가 아니며 다음 착수 때 최신Issue13부터 확인한다.
 
-다음 작업은 설계37 §36/§37.5~37.8의 F6를 실제API/코드와 먼저 대조하는 것이다. 이번 F5 승인으로 F6 코드까지 구현하지 않는다.
+설계 점검 완료(2026-10-23): 설계37 **§37.19**를 실행기준으로 사용한다. 소비07c2b671의 outcome/manual/resume 입력/출력·cycle_outcomes/cycle_resume와 실제 계정durable writer/schema1·모집plan/controller/확인창·DI를 대조했다. 이번은 설계만이며 새 Flutter 시험/기능코드 변경은 없다.
 
-1. 최신Issue13/고정소비의 완료·정정·선택T 미완료종료/재개 context·write/권한·CAS·원ACK와 기존 계정 수동완료/원pending 경로를 조사한다. 실제 Router/DI/호출자·계정summary/상세·일정/예약의 영향 범위를 먼저 기록한다.
-2. 실제T=C/수10시 허용·N거절·같은방 C/N 완료/탈퇴/예약 독립과 수정/취소된 일정·재참가·마지막인원/종료/새generation 경계를 대조한다. F4의 N 개방/재개와 F6의 종료/재개를 혼동하거나 전역동작으로 연결하지 않는다. 이미 완성된 개인표·계정/필터/카드·파티번호/공대장 위임/일정·투표 흐름은 보호한다.
-3. 가장 작은 구현단위·파일책임/회귀·최종표적검증 및 전체시험 필요 근거·완료조건을 고정한 뒤 승인된 구간만 구현한다. 전체기능 디바이스 인수/최종dev 통합 시점은 별도 판단하고 현재 브랜치 보관과 구분한다.
+**다음 첫 구현 F6-A — 계정 수동 완료 v2·기존 pending 보호**
+
+- 포함: MemberRaidClient의 명시 v2 manual writer/닫힌 scope+data 결과DTO, MemberWeeklyViewModel의 신규명령 target 고정·schema2 wire_version/원경로 구분 및 schema1 읽기이행, 기존 계정 확인/체크·서버summary 권한/실제T 재조회. 같은 저장키/display 선호와 원key/본문/started/ack/failed 보존.
+- 새 명령만 v2에 target_cycle_key를 추가한다. 저장된 schema1/v1 pending은 원v1경로/본문/key로 재송하고 새v2로 변조하지 않는다. N/수10시전 완료불가·manual/party 출처·참가중 mark거절을 유지하며 수동해제가 party/assignment/예약을 복구하지 않게 한다. 기존 결과불명/ACK뒤조회실패/회원전환·늦은응답/로컬저장실패를 보호한다.
+- 검증: account backend_read member_weekly/member_cycles와 실제영향 integration/session·주간출처/표시정책 표적묶음, 변경Dart 분석/포맷/diff. schema1→2/구v1원본문·신규v2 scope+ACK·C/N격리·06/10시·권한/캐릭터소유·party근거보존·디스크실패를 포함한다. 공용DI/저장갱신 변경의 전파가 넓어지면 최종전체 검증 필요를 재판단하고 기록한다. 실기기 정상UI 중복시험은 추가하지 않는다.
+- 완료: F6-A 구현/표적검증·문서최신화/Issue13 결과·실제구현SHA 회신·기존 작업브랜치 commit/push. 방완료/재개를 함께 구현하거나 구pending을 삭제하지 않는다.
+
+**후속 F6-B — 방 전체/본인 item 완료·미완료 종료**: command-context의 실제room/T/round·actor/leadership/token·server impact를 기존 상세 진행영역에 연결하고 기존 앱소유 writer/원ACK를 재사용한다. C/수10시·실제참가/공대장/함께하기 조건·다른item/N/완료이력/예약 격리를 검증한다. 새 data/cycle_outcome.dart + 관련 reader/controller/상세·확인창 책임은 §37.19를 따른다. F6-A 뒤 별도 승인구간이다.
+
+**F6-C 현재주 재개·정정 의미 확인**: [Backend 확인요청6355333496](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355333496)에 (1) 정정은 현재 manual 근거 해제까지인지/party 완료취소 기존계약 유무 (2) 재개 제안에 고정된 schedule_groups/시각·영향을 권한있는 참가자가 읽고 응답할 출처/표시binding을 질문했다. 현재 BResumeProposal은 IDs/counts만 있어 현재plan으로 제안원본을 추정하지 않는다. 해당부분 새 생성/응답 UI만 회신대기이며 F6-A/B 독립계획을 막지 않는다. 같은cycle/generation의 새round/assignment·completed이력 보존, 1인별도응답·recorded/applied·시간동의/예약을 구분한다. N opening/reopen과 혼용하지 않는다.
 
 실기기/실회원 수동인수는 전체 기능섹션에 묶는다: 기존 계정/개인표·검색/생성/일반참가·N특례/관리, 그룹2열필터·실제4/8인번호, 새사전표시/명시선택/개방미리보기·익일/KST/글자크기·스크롤, 주차별제출/다시가져오기·busy/겹침더보기·조율/제안/투표·재동의/예약·회원전환·06/10시·결과불명재시도. 설치/조작은 사용자가 하며 중간마다 반복 요청하지 않는다.
 

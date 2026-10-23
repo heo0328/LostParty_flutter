@@ -1447,3 +1447,44 @@ POST 후 결과불명은 기존 앱소유 writer의 원method/path/encoded body/
 - 두 제출경로는 첫 await 전에 입력을 복사한다. management 재조회/캐릭터·역할변경은 이전 preview와 체크를 비우고 실행을 막는다. 표시변경은 POST 전에 재확인이며 확정실패 뒤 새 context를 읽는다. 결과불명은 기존 원method/path/body/key/token 그대로 재송하고 원ACK·기존 무효화/실제T 갱신을 유지한다. 개방 후 기존 일정 화면에서 권한 있는 실제T plan을 읽으며 preview와 실제ID를 이름/순서로 연결하지 않는다. private plan을 참가 전에 추가 조회하지 않는다.
 - 검증: 새 표시18/추가 controller6 + 기존 interaction27/management28/schedule27, 최종 네 파일 **106mock PASS**. 새24개와 기존82개이며 과거 F5 고유130과 합산하지 않는다. 이후 동작불변 중괄호/이미개방 문구만 정리해 기존 시험결과를 재사용하고 최종 변경Dart11파일 분석0·포맷/diff·본문/호출 검토를 마쳤다. 최초 포맷은 결과 저장 뒤 telemetry 파일권한 오류가 있었고 suppress-analytics로 정상 종료했다. 시험 실패는 없다.
 - 미확인: 정상인증회원HTTP/실회원쓰기·새 확인창의 실제 기기 가독성/스크롤/글자크기·성능, Backend DB/HMAC/권한·정족수/원자성·경합 독립재현은 하지 않았다. 새 preview/선택 mock은 서버 인수 근거가 아니다. 앱종료 후 관리 pending 영속복구·F6는 미구현이다. 문서/코드/시험·Issue13 회신·작업브랜치 보관은 DEV_LOG, 다음 구간은 NEXT_WORK를 따른다.
+
+### 37.19 F6 완료·정정/미완료 종료·현재주 재개 설계 점검 — 2026-10-23
+
+사용자 설계 요청으로 §37.5의 F6를 소비07c2b671 OpenAPI/cycle_outcomes.py/cycle_resume.py 및 실제 MemberWeeklyViewModel/MemberRaidClient/MemberWeeklyStore·모집 상세/controller/plan DTO·투표 UI/DI와 대조했다. 이번은 설계만이며 기능코드/시험은 변경하지 않는다. 기존 F1~F5·무관dirty를 보존한다.
+
+#### 확정 흐름·계약과 소유
+
+| 동작 | 현재 계약/권한 | 표시/효과 |
+|---|---|---|
+| 내계정 수동 완료/해제 | PUT `/v2/me/characters/{character_id}/raid-weekly-states/{raid_id}/manual-completion`. 기존 v1 본문에 target_cycle_key 추가. 응답은 scope/data(BWeeklyEntry)이며 일반 command ACK가 아님 | 기존3열 체크/i·확인창 유지. 서버 summary의 mark/clear 권한과 수10시 허용을 사용. 활성참가 상태의 manual 완료는 기존 PARTICIPATION_CONFIRMATION_REQUIRED 거절이며 방 개인완료로 무단 치환하지 않음. 해제는 manual 근거만 제거하고 party 근거/참가관계·예약을 복구하지 않음 |
+| 레이드 전체 완료 | GET `/v2/raid-rooms/{room_id}/command-context` command=complete_item, round_id=실제 선택 round → POST `/v2/raid-rounds/{round_id}/completion` | 선택T 실제 공대장만. 해당 item/round의 활성 assignment/예약 구간을 완료/해제하고 party 근거 기록. 묶음 나머지item·N/기존완료 보존 |
+| 나만 완료 | 같은 context command=personal_completion → POST `/v2/raid-rounds/{round_id}/personal-completion` | 실제 해당T 참가자 본인의 선택item만 완료·manual 근거, 본인 해당assignment 예약 해제. 다른참가자/다른item·N 보존. 완료는 탈퇴가 아니며 상태를 서버 결과로 재조회 |
+| 이번 주 미완료 종료 | 같은 context command=close_weekly, round_id 없음 → POST `/v2/raid-rooms/{room_id}/weekly-incomplete-closures` | continuation_enabled 방의 실제 현재 참가자 누구나. 기존 공대장 전용 정책으로 되돌리지 않음. 남은 활성round/assignment·예약 구간을 종료/해제하며 완료 근거를 새로 만들지 않음. 완료이력/지속관계·다음주 구성 보존 |
+| 현재주 재개 제안/응답 | POST `/v2/raid-rooms/{room_id}/weekly-resume-proposals` 및 기존 `/v2/raid-schedule-proposals/{proposal_id}/responses` | C/수10시·함께하기·closed/stopped 대상의 실제 공대장 제안. 제안 기록과 적용은 별개. 서버 eligible/accepted/required/my_response/permission 사용, 1인은 별도 본인응답. 제안에 고정된 일정 표시 근거 확인 전 새 생성/응답 UI 연결 대기 |
+
+완료류와 manual은 서버 target=C 및 playable_from(수10시)를 최종 검사한다. 기기 현재시각으로 C/N을 바꾸거나 N 완료를 허용하지 않는다. CycleMeta.complete는 시간 요약이고 각 context/summary 권한을 대신하지 않는다. 명령 확인은 실제T 날짜·레이드/난이도·대상 캐릭터 또는 대상인원·effect_scope·서버 impact의 예약구간수/기존완료 보존을 표시한다. 영향수는 초대인원·배열위치로 추정하지 않는다. 기존 상세 ‘진행·다음 주’/비활성 ‘레이드 완료’ 위치와 계정 확인창을 사용하며 새 중간관리화면/자동완료·전원투표를 추가하지 않는다. 취소좌/긍정우·계정체크 중앙/i우측·필터/파티번호를 유지한다.
+
+#### 쓰기·식별자/권한·수명
+
+- command-context BContext는 room/T·command/target_round_id/effect_scope/impact·actor_membership/cycle_member/leadership 및 revision/token/유효시각을 닫힌 검증한다. round는 현재 scope/세대의 실제 item round를 plan에서 선택한다. 신청/legacy/persistent-only·과거round를 활성참가자로 만들지 않는다. 실제 데이터의 누락/권한거절은 제출을 막고 빈정상영향으로 숨기지 않는다.
+- 완료/개인완료/종료 본문은 expected_cycle_key/context_token/target_cycle_key/expected_target_revision 네 필드다. context 조회 직후 서버권한·의미서명을 비교하고 화면 확인 대상·입력을 첫 await 전에 복사한다. room/T·round·actor/leadership/impact/revision 변화는 POST 없이 재확인한다. 원명령 생성 뒤에는 같은 method/path/본문/key/token만 재송하고 GET 유사상태로 성공판단하지 않는다. 실제 command_id/room/T/generation 원ACK 검증은 기존 CycleParticipationController writer를 재사용한다. definitively rejected/결과불명·회원전환/06시/권한상실은 기존 경계를 보존한다.
+- 계정 manual 새 명령은 기존 MemberWeeklyViewModel의 앱소유 durable writer에서 v2로 발급한다. 현 저장은 schema1의 v1 본문/ACK만 있어 경로를 전역치환하지 않는다. schema2는 pending에 wire_version(1/2)·고정 target/기존 원본문·key·started/ack/failed를 보관하고 기존 display 선호값을 보존한다. schema1 로드는 v1 pending으로 식별해 같은 v1 경로/본문/key만 재송, 새 target 필드를 붙이지 않는다. 새 v2 pending만 v2 경로/본문으로 재송한다. 같은 저장키 유지/읽기1→쓰기2·손상자료 덮어쓰기 금지/지속 실패 시 원pending 보존을 검증한다.
+- 새 manual 응답은 scope/data의 실제T/현재·권한 시점과 기존 BWeeklyEntry ID/raid/주차·소유/lifecycle·manual 결과/revision으로 검증한다. 원ACK 후 새 summary를 target별 재조회해 현재표시를 갱신하며 party+manual 근거를 단순boolean 역전으로 지우지 않는다. C 작업이 N선택 중 끝나도 N 캐시를 덮지 않는다. 실패한 보존pending을 무조건 삭제/새키로 바꾸지 않는다.
+- 방명령 원ACK 뒤 기존 onMutation(T)→weekly.refreshTarget(T)/상세·본인목록 무효화 경로를 사용한다. 계정 manual 변화가 열린 상세/모집표시에 영향을 주는 호출자도 확인해 회원scope/T 기반 알림을 연결한다. shared event나 DI 변경이 필요하면 포함파일/검증범위를 재확정하며 계정 전체 로딩/자동 roster 조회를 재실행하지 않는다. 새 계정저장 이행은 명시된 부분만, 모집 관리 pending 영속화는 별도후속이다.
+
+#### 재개와 정정의 확인 필요 경계
+
+**현재주 재개는 N opening/reopen이 아니다.** cycle_resume.apply는 같은 cycle/generation에서 stopped round를 새 UUID로 교체하고 새 assignment/일정자료를 만들며 completed round는 보존한다. N개방처럼 generation+1을 강제하지 않는다. 검색floor=실행+30분·자격/점유·자료 재검증은 서버가 담당한다. 제출표는 재개 시 정리될 수 있고 accept한 인원의 확정시각 동의가 생성될 수 있으므로, 재개 동의를 단순 방 열기로 안내하지 않는다. recorded ACK는 제안기록이며 applied 원결과/조회 후의 재개상태와 구분한다.
+
+현재 plan의 BResumeProposal은 target_round_ids·집계/my_response만 제공하며 제안 content의 schedule_groups/시각을 반환하지 않는다. schedule_groups=null도 제안시 retained 값을 content에 고정하므로 현재 plan.groups를 제안 당시 일정으로 추정할 수 없다. F5는 이 DTO의 최소형태만 읽고 UI/응답은 target_session_ids 있는 일정변경안으로 한정한다. 재개 일정표시/서명과 서버 응답 binding 출처 확인 전 새 재개 제안/응답을 활성화하지 않는다. 다른 기존 일정제안/응답은 유지한다.
+
+현재 게시API에는 완료취소/party 역명령이 없다. manual completed=false는 manual 근거만 해제하며 completed assignment/party 근거·예약 복구가 아니다. F6 정정은 우선 수동근거 해제로 한정하고, party/개인완료 역전 지원의 기존 계약 여부를 Backend에 확인한다. 없는 역명령/자동예약복구·완료이력삭제를 구현하지 않는다. [Issue13 확인요청6355333496](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355333496)에 위 두 차이와 담당/완료조건을 남겼다. 첫 두 독립구간은 설계 준비 가능하며 이 질문으로 F6 전체를 대기시키지 않는다.
+
+#### 작업 순서·파일책임·검증/완료 조건
+
+1. **F6-A 계정 manual v2·구pending 보호:** MemberRaidClient/MemberWeeklyViewModel/관련 DTO·store 읽기이행·기존 계정확인창 연결. summary/완료출처·N차단 유지. 새 MemberManualCompletionResult 같은 범위 DTO를 추가하고 일반모집ACK와 혼용하지 않는다. 신규 v2/기존 v1 원경로 재송·schema1→2/display보존·디스크실패/ACK후조회실패/회원전환/06·10시·party근거보존을 표적검증한다.
+2. **F6-B 방 완료/본인완료·미완료 종료:** 모집 data/cycle_outcome.dart 신규 reader/preview/body + CycleInteractionRepository/CycleParticipationController의 기존 writer 연결·기존 상세/진행구역 확인창. 선택round와 server impact를 고정하고 완료/종료 효과를 구분한다. 8인 최대 대표·본인1인/다른item·N 보존, 권한false/공대장변경·낡은round/target·중복/결과불명/원ACK를 검증한다. 수동해제·전체end·탈퇴·N개방 명령으로 우회하지 않는다.
+3. **F6-C 현재주 재개:** 위 Backend 확인/소비계약 대조 후 cycle_schedule의 재개 DTO/새 snapshot·respond 분기/기존 일정UI에 연결한다. 재개 생성본문은 room/members/plan/cycle-member/leadership/target CAS + schedule_groups 필수nullable이며 독자 token 필드를 만들지 않는다. 확인 가능한 제안일정/영향·시각동의와 서버 counts·1인별도응답·old/new round·현재세대/완료이력·원ACK를 검증한다. 계약을 받기 전 preview 구조를 추정해 코딩하지 않는다.
+4. 각 독립구간은 승인 후 구현하며 코드/시험/문서·Issue13 결과/구현SHA 회신·작업브랜치 push로 마감한다. F6 최종은 실제 공용계정/저장·DI 전파와 테스트 차이를 검토해 전체 flutter test/analyze 필요 여부를 결정한다. 기본은 account backend_read의 member_weekly/member_cycles·account integration/session 및 해당 모집 outcome/interaction/management/schedule 표적묶음이며 무관시험을 각구간 반복하지 않는다. schema/공유갱신 영향이 넓어 표적으로 설명되지 않으면 최종 전체 lib/test 검증1회로 확장한다. 이미 무변경 통과시험은 재사용하고 수치를 중복합산하지 않는다.
+
+첫 구현은 F6-A를 기준으로 하고 B/C·통합을 한 번에 확대하지 않는다. 서버DB/HMAC·권한·정족수/원자성·예약경합을 Flutter mock으로 통과했다고 보고하지 않는다. 실회원HTTP/실기기 설치·표시/글자크기·주차전환·성능은 사용자 전체 기능섹션 수동인수로 유지한다. 디자인 변경·통계19/알림·서버/DB/키·운영배포·기기자동조작은 제외다. dev/main 통합은 기능검증 완료와 별도 게이트이며 설계/작업브랜치 보관을 전체완료로 취급하지 않는다.

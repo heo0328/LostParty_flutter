@@ -1,6 +1,6 @@
 # AI CONTEXT — 2주 레이드 현황 기획과 현재 구현 상태
 
-기준: 2026-10-23. **F1~F5 코드/자동검증을 마쳤고 사전 참가 표시/선택까지 연결했다.** Backend07c2b671/168경로 소비·표시최종4파일106mock PASS·변경Dart11파일 분석0이다. 과거 F5 독립130 기록과 합산하지 않는다. 실제 정상인증HTTP·실회원/실기기 인수와 F6는 미확인/미구현이다. 다음은 NEXT_WORK의 F6 설계/준비, 구현 경계는 설계37 §37.18/DEV_LOG다.
+기준: 2026-10-23. **F1~F5 코드/자동검증을 마쳤고 사전 참가 표시/선택까지 연결했다.** Backend07c2b671/168경로 소비·표시최종4파일106mock PASS·변경Dart11파일 분석0이다. 과거 F5 독립130 기록과 합산하지 않는다. 실제 정상인증HTTP·실회원/실기기 인수와 F6는 미확인/미구현이다. F6 설계 점검은 §37.19에 마쳤고 다음 첫 구현은 NEXT_WORK의 F6-A 계정 manual v2/구pending 보호, 구현 경계는 설계37 §37.18/DEV_LOG다.
 
 ## 현재 우선 기준
 
@@ -14,7 +14,9 @@
 
 ## 구현·디자인·협업 상태
 
-[Backend112 구현 인계6345290060](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345290060)의 고정소비07c2b671로 사전표시를 연결했다. 기존 두 확인창에 실제ID/날짜/미정·명시선택과 읽기 개방미리보기를 적용하고 닫힌DTO·실제/예정세대·표시서명/입력고정·원pending/ACK를 보호한다. F3 후보/F4 관리/F5 일정·예약 독립구간은 유지한다. 상세는 설계37 §37.18, 검증/Issue·Git 마감은 DEV_LOG다. Backend48PASS/개발반영은 보고수신이며 Flutter106mock 통과와 실제회원/기기 인수를 구분한다. Backend 대기는 없고 F6는 후속이다.
+[Backend112 구현 인계6345290060](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345290060)의 고정소비07c2b671로 사전표시를 연결했다. 기존 두 확인창에 실제ID/날짜/미정·명시선택과 읽기 개방미리보기를 적용하고 닫힌DTO·실제/예정세대·표시서명/입력고정·원pending/ACK를 보호한다. F3 후보/F4 관리/F5 일정·예약 독립구간은 유지한다. 상세는 설계37 §37.18, 검증/Issue·Git 마감은 DEV_LOG다. Backend48PASS/개발반영은 보고수신이며 Flutter106mock 통과와 실제회원/기기 인수를 구분한다. F5 Backend 보완 대기는 없고 F6의 별도 확인은 아래를 따른다.
+
+F6 기획을 고정 Backend outcome/manual/resume 소스와 계정durable pending/schema1·실제DI에 대조했다. 설계37 §37.19에 A계정manual v2/구pending 보존 → B방완료/본인완료·미완료종료 → C현재주재개를 분리했다. [Issue13 확인6355333496](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355333496)의 정정범위·재개 제안일정 표시근거만 Backend 확인대기이며 첫 독립구간을 막지 않는다. 설계만 완료/코드미변경, 전체인수·dev통합은 남는다.
 
 | 구분 | 현재 상태 |
 |---|---|

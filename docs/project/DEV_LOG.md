@@ -1,5 +1,14 @@
 # 개발 이력
 
+## 2026-10-23 — F6 완료/정정·현재주 종료/재개 기획 설계 점검
+
+사용자 설계 요청으로 필수문서·§37.5~37.8/최신 F5로그·현재e910231/원격일치·dev6d3f617·최신Issue13(Flutter114 이후 새Backend회신없음)/기존무관dirty를 확인했다. 고정소비07c2b671 OpenAPI/cycle_outcomes.py/cycle_resume.py와 MemberWeeklyViewModel/MemberRaidClient/MemberWeeklyStore(schema1)·기존모집 plan/controller/진행구역·실제DI를 대조했다.
+
+- 설계결과: §37.19에 A계정manual v2/구pending 보존 → B방전체/본인 item완료·미완료종료 → C현재주재개를 분리했다. manual v2는 명시target+scope/data응답이며 일반ACK와 다르고, 저장된v1 pending은 원경로/본문/key 유지·schema1→2 wire_version 이행으로 보호한다. context 권한/영향·C/수10시·타item/N/완료이력·원ACK·회원/주차/지연응답 검증과 파일책임/완료조건을 기록했다. 첫구현은 A이며 코드는 변경하지 않았다.
+- 발견/협업: 현재 party완료 취소 API는 없고 manual해제는 party/assignment·예약복구가 아니다. 현재주재개는 동일cycle/generation에 새round/assignment를 만들며 제안 accept의 시간동의 영향이 있지만 BResumeProposal에는 고정schedule_groups/시각이 없다. [Issue13 확인6355333496](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355333496)에 정정 의미/기존계약 및 제안일정 읽기·표시binding 출처를 질문하고 게시본문 재조회일치를 확인했다. 해당 C/party역명령만 확인대기, 독립 A/B 설계를 계속하며 동일시험/정책재요청은 없다.
+- 새로 가능해진 앱 흐름 없음/설계완료. 보존확인: F1~F5 코드·106mock/11파일분석0 등 기존기록·사용자확인 개인표/계정/입장정책·무관dirty를 유지했다. 미확인: 정상회원HTTP/실회원·기기/성능·서버DB/권한·원자성 독립재현은 그대로다. 이번 검증은 게시OpenAPI/소스·호출/저장흐름 대조와 문서diff/content이며 Flutter시험을 반복하지 않았다. 탐색 중 존재하지 않는 cycle_outcome_service.py 요청404는 실제 cycle_outcomes.py로 범위를 확인해 대조했다.
+- Git/다음: 문서만 기존feature/raid-recruitment-scheduling에 commit/push, dev미병합·브랜치유지다. NEXT_WORK에 첫구간의 포함/제외·표적검증과 Backend담당/질문대기를 기록했고 구현은 후속 승인구간이다. 운영/서버/DB/키·기기조작은 하지 않았다.
+
 ## 2026-10-23 — F5 사전 참가 실제 시간 표시·선택 연결
 
 사용자 설계구현 승인으로 필수문서/§37.17·현재c501425/원격·dev6d3f617·최신Issue13 Flutter113 이후 새Backend회신없음·무관dirty를 확인했다. Backend07c2b671의 고정 표시계약/소스와 실제 reader/controller/확인창·기존 F3/F4 fixture를 대조하고 승인 범위로 구현했다.
