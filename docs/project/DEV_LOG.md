@@ -2,6 +2,8 @@
 
 ## 2026-10-24 — Issue25 C 명시 profile·주차별 자기기록 연결
 
+구현 `0c5ae941` commit/push·원격일치. [Issue25 결과6373322164](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6373322164) 게시본문 MATCH 확인. 413mock/분석0과 실제 소속확정/profile·가입 전 기본조회·고정기록 연결/미확인 범위를 구분해 인계했으며 추가 Backend 구현/반복시험 요청은 없다.
+
 - 새로 가능해진 흐름: 내 참가/기록·계정i·생성 성공/복구·자기 충돌 진입에 profile을 명시하고 detail/plan/내목록의 실제 viewer/recovery/권한·불변 자기기록을 읽는다. 같은Member의 다중CM을 별도 행으로 유지하고 옛 Member+CM 기록을 Router/page/cache와 일정 조회에 고정한다. 기록은 당시 캐릭터/레이드·완료/종료시각·본인 일정만 표시하며 신규menu/preview/write는0, 주차 전환 뒤도 고정기록으로 읽는다. 상세는 설계37 §37.46.
 - 소유/선택 근거: Repository가 닫힌 wrapper/원record를 검증하고 상세·일정 ViewModel이 read scope/epoch·리스너 수명을 소유한다. 정상content는 기존 parser를 재사용한다. Backend profile은 활성Member 전용이므로 소속확정 진입만 명시profile을 사용하고 가입 전 검색 상세 기본조회는 유지했다. 새profile 오류를 기본조회로 바꾸지 않는다. 요청 수/메모리 성능은 측정하지 않았다.
 - 보존 확인: 기본detail/신청·쓰기용reader·원pending/24hACK·B성공이탈/반대T보존/관계알림·기존 일정/완료/개인완료탈퇴/추방·IF-001 비활성. 기존 UI 배치·원정대/계정 저장과 무관dirty는 유지했다. 공대장복구 실행UX와24검색회복·BUG-025는 구현하지 않았다.

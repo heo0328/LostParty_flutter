@@ -16,6 +16,8 @@
 
 ## 완료 구간 C — 명시 조회·본인 기록 연결
 
+구현 `0c5ae941` commit/push·원격일치. [Issue25 결과6373322164](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6373322164) 게시본문 MATCH 확인. 실제 C연결/413mock·분석0과 가입 전 기본조회 보존·실회원/기기 미확인·24검색후속을 인계했으며 새 Backend 요청은 없다.
+
 사용자 승인 계획을 먼저 기록하고 상세/일정/내목록의 전용 불변 profile·Member+CM 기록 anchor/Router·캐시/표시를 연결했다. 정상 content는 기존 parser를 재사용하며 새profile 오류의 기본조회 fallback은 없다. Backend profile은 활성Member 전용이므로 내참가/기록·계정i·생성 성공/자기충돌처럼 소속확정 진입에만 명시하고, 가입 전 검색 상세 기본조회/신청·쓰기용reader·원pending을 보존했다.
 
 현재 참가/복구상태와 고정 자기기록을 분리하고 같은Member 재참가CM을 별도 행으로 유지한다. 기록은 당시 캐릭터/레이드·완료/종료·본인 일정만 읽고 신규menu/preview/write0, 일정도 같은anchor다. 정확기록은 주차 전환 뒤 유지되며 관계만 있는 행에는 가짜기록 링크를 만들지 않는다. B 성공1회이탈/반대T 유지·관계알림·IF-001 비활성을 보존했다.
