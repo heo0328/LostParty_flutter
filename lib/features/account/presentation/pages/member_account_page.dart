@@ -268,14 +268,26 @@ class MemberAccountPage extends StatelessWidget {
                           '계정 도구',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
+                        const SizedBox(height: 12),
+                        FilledButton.icon(
+                          onPressed: onManage,
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(48),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                          ),
+                          icon: const Icon(
+                            Icons.manage_accounts_outlined,
+                            size: 24,
+                          ),
+                          label: const Text('원정대 등록·관리'),
+                        ),
+                        const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
                           children: [
-                            TextButton.icon(
-                              onPressed: onManage,
-                              icon: const Icon(Icons.manage_accounts_outlined),
-                              label: const Text('원정대 등록·관리'),
-                            ),
                             TextButton(
                               onPressed: onVerify,
                               child: const Text('원정대 인증'),

@@ -2,6 +2,8 @@
 
 ## 현재 상태 (2026-10-23)
 
+사용자 신규계정 인수 피드백 반영 완료: 내 계정 ‘계정 도구’의 원정대 등록·관리 진입을 첫 줄의 전체 폭 단독 FilledButton.icon으로 변경했다. 기존 onManage/Router·등록·인증/저장 흐름과 다른 도구는 유지한다. 아이콘24·최소높이48/가변 텍스트 높이를 사용한다. 포맷/해당파일 분석0/diffcheck·호출연결 검토 완료, 실기기에서 신규/기존계정의 버튼 표시·터치/기존관리 진입·폴드/큰글자 확인은 사용자 담당이다. API/권한 변경이 없어 Backend 계약 요청과 정상 UI 자동시험은 추가하지 않았다. 아래 합동 인수 대기를 유지한다.
+
 B 구현 `797c16b3cfcffda849428593fe6c12502eb27499` commit/push·원격 일치 후 [Issue13 결과6364976336](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6364976336)에 소비계약/159mock·분석0/미확인·합동인수 순서를 회신하고 게시본문 MATCH를 확인했다.
 
 A 구현 `e9d2783d51ba079c0a3fe6ae88f5a4099b58978a` commit/push·원격 일치 후 [Issue13 결과6364089791](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6364089791)에 계약/94mock·분석0/미확인·다음 B를 회신했다. 한도로 중단됐던 게시본문 재조회도 재개해 MATCH를 확인했다. 코드 변화가 없어 통과한 시험은 반복하지 않았다.
