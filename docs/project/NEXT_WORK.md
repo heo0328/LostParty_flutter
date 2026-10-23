@@ -32,6 +32,8 @@
 
 **현재 검토 결과:** [Backend118 계약 제안1/6355880490](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355880490)의 ① POST 읽기전용 preview/Key 분리 ② plan opt-in 제안별 resume_review ③ 보호제안 token 필수·구형제안/구클라이언트/원pending·ACK 호환을 Flutter 소비 방식으로 모두 수용한다. 실제 adapter/닫힌 plan DTO·일반respond 필터/기존 writer·ACK 안내와 pinned resume 소스 대조 근거 및 후속 설계는 **설계37 §37.22**다. 기능코드/새API는 아직 없으며 제안 수용을 구현/실기기 인수로 취급하지 않는다.
 
+인계: 문서31ddf157 commit/push 후 [Flutter120 수용 회신6356264877](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6356264877)에 세 항목 수용·소비 차이·미확인·다음 Backend 구현/새소비SHA 인계를 기록했다. 게시본문 재조회 MATCH 확인, 다음 착수 시 해당 회신 이후 최신 Issue13부터 확인한다.
+
 **다음 담당/순서:** Backend가 수용 회신을 확인하고 닫힌 schema/OpenAPI·구현/격리검증·원ACK/호환/크기 경계, commit/push·개발실행/소비SHA를 인계한다. Flutter는 최신 Issue13→게시/실행계약 대조→기존 상세/일정 UI에 생성전확인/제안일정·영향/수락·거절/기록·적용 구분→표적검증/분석·문서/회신/작업브랜치 보관 순서다. 구현 인계 전 임의 endpoint/필드·fallback/자동재제안·재개 POST를 추가하지 않는다.
 
 - 구현 포함: 원 Resume 본문/CAS 복사와 preview 전용 reader(명령/key 생성 없음), 실제 제출의 token 추가/새key, opt-in ResumeReview DTO와 재개 전용 응답, 기존 generic notice 대신 recorded/applied 구분 및 실제T plan의 새 실제ID/본인 시간동의 상태 읽기다.
