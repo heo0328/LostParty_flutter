@@ -4,6 +4,8 @@
 
 ## 최신 완료 구간 — 미완료 종료·같은 주차 재개 비활성화
 
+구현 `ddf4bfd0` commit/push·원격일치. [Issue13 최종 정책6370006371](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6370006371) 게시본문 MATCH 확인. Backend에는 활성 기능 문서의 비활성 보존 분리만 인계했고 endpoint/기록 삭제·새24/25 범위 확대는 요청하지 않았다.
+
 구현/직접 검증 완료: 앱 기본 컨트롤러에서 버튼/전용 신규 조회·preview·쓰기를 차단했고 기존 원pending 재송은 보존했다. outcome/resume/schedule/departure 4파일119mock PASS(신규3+기존116), 변경Dart6파일분석0·포맷/diffcheck. [비활성 기능 대장 IF-001](INACTIVE_FEATURES.md) 신설·문서 지도/제품 흐름 연결 완료. 실서버/실기기 숨김·정상 기능 인수는 사용자 확인 대기이며 다음 담당은 기존 Backend24/25 계약 보완이다. 구간 commit/push로 보관하고 dev/main 통합은 제외한다.
 
 사용자 최종 결정으로 다일 일정에도 미완료 종료/같은 주차 재개를 사용하지 않는다. 아래 §37.41 당시의 ‘다일만 노출/삭제 보류’보다 이번 결정이 우선한다. 구현은 보존하며 앱 버튼과 전용 신규 조회·preview·쓰기 진입을 막는다. 기존 원pending 재송/ACK·기록 조회는 유지한다. 일반 일정 변경, 완료/개인완료, 다음주 개방·탈퇴/해산은 별개다.

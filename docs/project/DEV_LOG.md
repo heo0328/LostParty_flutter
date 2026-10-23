@@ -2,6 +2,8 @@
 
 ## 2026-10-24 — 미완료 종료·같은 주차 재개 비활성화
 
+구현 `ddf4bfd0` commit/push·원격일치. [Issue13 인계6370006371](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6370006371) 게시본문 MATCH. 이전 다일 노출 정책의 대체와 서버/기록 보존·담당/미확인·후속을 전달했다.
+
 - 새로 적용한 흐름: 사용자 최종 결정으로 단일/다일 모두 close_weekly·weekly_resume를 미사용으로 전환했다. 공통 UI에서 버튼을 숨기고 컨트롤러 기본 false로 전용 신규 조회/preview·생성/응답과 stale preview 제출을 차단했다. 재개 ACK 뒤 선택적 추가 조회도 생략한다. 새 사용자 설정·API·저장/Router 변경은 없다.
 - 보존 확인: 일반 주차 완료·개인완료후탈퇴/일정·예약, 다음주 개방/재개방은 별개다. 기존 메모리 pending의 원method/path/body/key/token·ACK/24h 복구, DTO/Repository/확인창/다일 판정과 완료/감사 기록을 보존한다. 직전 탈퇴 중앙 정렬/해산 폭은 유지한다. 보존 계약 시험만 명시적 테스트 하위 클래스에서 활성화하며 실제 DI는 기본 비활성 컨트롤러다.
 - 문서: 전용 비활성 대장이 없어 INACTIVE_FEATURES.md(IF-001)를 신설했다. 구현 후 미사용 협의·앱 비활성/완전삭제 구분과 API/보존 경계·검증/재검토 조건을 모으고 README/AI_CONTEXT/흐름 지도/설계37 §37.42/NEXT_WORK에 연결했다. §37.41은 당시 이력으로 보존한다.
