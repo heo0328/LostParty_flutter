@@ -1,5 +1,14 @@
 # 개발 이력
 
+## 2026-10-24 — 미완료 종료·같은 주차 재개 비활성화
+
+- 새로 적용한 흐름: 사용자 최종 결정으로 단일/다일 모두 close_weekly·weekly_resume를 미사용으로 전환했다. 공통 UI에서 버튼을 숨기고 컨트롤러 기본 false로 전용 신규 조회/preview·생성/응답과 stale preview 제출을 차단했다. 재개 ACK 뒤 선택적 추가 조회도 생략한다. 새 사용자 설정·API·저장/Router 변경은 없다.
+- 보존 확인: 일반 주차 완료·개인완료후탈퇴/일정·예약, 다음주 개방/재개방은 별개다. 기존 메모리 pending의 원method/path/body/key/token·ACK/24h 복구, DTO/Repository/확인창/다일 판정과 완료/감사 기록을 보존한다. 직전 탈퇴 중앙 정렬/해산 폭은 유지한다. 보존 계약 시험만 명시적 테스트 하위 클래스에서 활성화하며 실제 DI는 기본 비활성 컨트롤러다.
+- 문서: 전용 비활성 대장이 없어 INACTIVE_FEATURES.md(IF-001)를 신설했다. 구현 후 미사용 협의·앱 비활성/완전삭제 구분과 API/보존 경계·검증/재검토 조건을 모으고 README/AI_CONTEXT/흐름 지도/설계37 §37.42/NEXT_WORK에 연결했다. §37.41은 당시 이력으로 보존한다.
+- 검증: outcome/resume/schedule/departure 4파일119mock PASS(신규3+직접기존116), 변경 Dart6파일분석0·포맷/diffcheck/diff검토. 신규 요청0건·stale 제출 차단/정상 완료, 비활성 뒤 원미완료종료 ACK와 재개 recorded/applied ACK 재송·추가GET 없음 경계를 확인했다. 저장/Router/공용 DTO 변경 없이 무관 전체시험과 정상UI 자동시험은 추가하지 않았다.
+- 미확인 실기기: 현재/다음주·단일/다일에서 미완료종료/재개 버튼 숨김, 주차완료/개인완료·일정/다음주 참가 진입과 기존 중단 자료의 표시/정리. 실서버 검증·기기 설치/조작은 미실행이며 사용자 담당이다. 서버 endpoint/자료 삭제·자동 상태변환은 없다.
+- Git/협업: feature/raid-recruitment-scheduling 유지·구간commit/push, dev/main 미반영. Issue13에 이전 다일 노출 보류 결정을 대체하는 최종 정책/앱 범위와 보존 사항을 인계한다. Issue24/25 계약 보완 대기와 무관 dirty는 유지한다.
+
 ## 2026-10-24 — 상세 탈퇴 중앙 정렬·해산 폭 확대/미완료 종료 다일 제한
 
 구현 `e25e7ca2` commit/push·원격일치, [Issue13 결과6369674584](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6369674584) 게시본문MATCH. 표시제한/완전삭제보류·기존API/원pending보존과미확인/다음행동을인계했다.

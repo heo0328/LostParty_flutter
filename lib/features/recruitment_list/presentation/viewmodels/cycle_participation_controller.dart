@@ -80,6 +80,10 @@ class CycleParticipationController extends ChangeNotifier {
   DateTime? _retryAt;
   Timer? _retryTimer;
   bool get hasPending => _pending != null;
+
+  /// Retained implementation only; see docs/project/INACTIVE_FEATURES.md (IF-001).
+  /// Production has no switch to re-enable new closure/resume commands.
+  bool get weeklyInterruptionEnabled => false;
   bool get canAct =>
       !_disposed &&
       session.isAuthenticated &&
@@ -141,22 +145,26 @@ class CycleParticipationController extends ChangeNotifier {
 
   Future<List<RecruitmentCharacter>?> characters() => _read(gateway.characters);
   Future<CycleResumePlan?> resumePlan(String room, String target) =>
-      _read(() => gateway.resumePlan(room, target));
+      weeklyInterruptionEnabled
+      ? _read(() => gateway.resumePlan(room, target))
+      : Future.value(null);
   Future<CycleResumePreview?> resumePreview(
     String room,
     String target, {
     String? proposalId,
     List<dynamic>? groups,
-  }) => _read(
-    () => gateway.resumePreview(
-      room,
-      target,
-      proposalId: proposalId,
-      groups: groups,
-    ),
-  );
+  }) => weeklyInterruptionEnabled
+      ? _read(
+          () => gateway.resumePreview(
+            room,
+            target,
+            proposalId: proposalId,
+            groups: groups,
+          ),
+        )
+      : Future.value(null);
   Future<void> resume(CycleResumePreview preview, {String? response}) async {
-    if (!canAct) return;
+    if (!weeklyInterruptionEnabled || !canAct) return;
     final room = preview.plan.room,
         target = preview.plan.target,
         id = preview.proposalId;
@@ -321,9 +329,12 @@ class CycleParticipationController extends ChangeNotifier {
     String target,
     String action, {
     String? round,
-  }) => _read(() => gateway.outcome(room, target, action, round: round));
+  }) => action == 'close_weekly' && !weeklyInterruptionEnabled
+      ? Future.value(null)
+      : _read(() => gateway.outcome(room, target, action, round: round));
 
   Future<void> complete(CycleOutcomePreview preview) async {
+    if (preview.action == 'close_weekly' && !weeklyInterruptionEnabled) return;
     if (!canAct) return;
     final room = preview.plan.room, target = preview.plan.target;
     final action = preview.action,
@@ -710,7 +721,8 @@ class CycleParticipationController extends ChangeNotifier {
               : '응답이 기록되었습니다. 아직 재개되지 않았습니다.',
         );
       }
-      if (command.resumeAck != null &&
+      if (weeklyInterruptionEnabled &&
+          command.resumeAck != null &&
           resumeOutcome == 'applied' &&
           _valid(e)) {
         // An original applied ACK is final even if reading the new graph fails.

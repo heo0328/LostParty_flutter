@@ -1,5 +1,7 @@
 # AI CONTEXT — 2주 레이드 현황 기획과 현재 구현 상태
 
+최신 제품 결정(2026-10-24): 미완료 종료·같은 주차 재개는 다일 일정에도 미사용. 앱 버튼/전용 신규 조회·preview·쓰기를 차단하고 원pending 복구·코드/기록은 보존했다. 아래 ‘다일만 노출·삭제 보류’는 당시 이력이다. 단일 기준은 [비활성 기능 대장 IF-001](INACTIVE_FEATURES.md)·설계37 §37.42. 직접4파일119mock PASS/변경6파일분석0, 실기기 미확인·dev/main 미반영. 일반 일정·완료/개인완료·다음주 개방/재개방은 별개다.
+
 상세 UI 후속(2026-10-24): 탈퇴2버튼 중앙·해산 가로폭약20%확대, 미완료종료는 확정KST출발일2개이상의다일일정에서만표시. 전체중단/같은C재개는본인탈퇴와달라완전삭제보류·기존API/원pending/이력보존. 설계37 §37.41, 직접35mock PASS/변경3파일분석0·실기기미확인. Backend24/25새계약대기와dev/main미반영은유지한다.
 
 Issue24/25 소비검토 완료(2026-10-24): 검색은 기존요청/DTO 재사용 가능·앱 커서/주차캐시 회복 경계, 새탈퇴/해산은 전용6필드/ACK·옵션별 접근/후상태revision·review/null리더/종료회원 기록wire 보완을 회신했다. [24/6369170940](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6369170940)·[25/6369171307](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6369171307) 본문MATCH, 설계37 §37.40/NEXT_WORK. Backend closed 계약/대표예시·구현구간 보완 대기이며 Dart/API/서버·DB0030/원pending 불변, 복구 UI는 제안·새구현/실기기/dev/main통합 미완료다.

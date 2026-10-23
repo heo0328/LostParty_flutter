@@ -1,5 +1,7 @@
 # LOSTPARTY 핵심 사용자 흐름 통합 지도
 
+> 2026-10-24 최신 결정: 이번주 미완료 종료→같은 주차 재개는 사용자 조작을 단순화하기 위해 앱에서 비활성화했다. 코드·원pending·기록은 보존하며 아래 과거 구현 설명으로 다시 활성화하지 않는다. [비활성 기능 대장 IF-001](../project/INACTIVE_FEATURES.md). 다음주 방 개방/재개방·일반 일정 변경은 유지한다.
+
 > 최신 연결(2026-10-16): 기존 관리 UI의 현재 회원/canonical 저장·초기 최고 후보/공통1700·인증 후 해당 화면 전환까지 연결했다. 최종 전체1560PASS·lib/test 분석0. Backend47a2ce4 활동/대표1700 검증 완료 보고를 소비한다. 기본flag OFF/실제 소유·실기기 미확인 유지. [연결 인계](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6209931176)·[NEXT_WORK](../project/NEXT_WORK.md).
 
 > 기존 서비스 전용 항목은 [원문·출처 기록](../../legacy/firebase/extracted/docs/feature-definitions/LOSTPARTY_CORE_USER_FLOW_OVERVIEW.md)으로 분리했다. 남은 제품/협업 문맥의 신규 서버 적용 여부는 별도 설계에서 판단한다.

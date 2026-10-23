@@ -7,6 +7,7 @@ import 'package:lost_party/features/recruitment_list/data/cycle_interaction_repo
 import 'package:lost_party/features/recruitment_list/data/cycle_resume.dart';
 import 'package:lost_party/features/recruitment_list/presentation/viewmodels/cycle_participation_controller.dart';
 import '../../support/server_account_read_fakes.dart';
+import '../../support/retained_weekly_interruption_controller.dart';
 import '../account/backend_read/member_cycles_test.dart' as f1;
 import 'backend_recruitment_test.dart' as v1;
 import 'cycle_recruitment_test.dart' as f2;
@@ -211,7 +212,7 @@ void main() {
       if (wrongAck) ack['scope']['target_generation'] = 9;
       return ack;
     };
-    controller = CycleParticipationController(
+    controller = RetainedWeeklyInterruptionController(
       gateway: repo,
       session: session,
       changes: changes,
@@ -229,6 +230,47 @@ void main() {
       repo.resumePreview(room, c, groups: groups);
   Future<CycleResumePreview> respond() =>
       repo.resumePreview(room, c, proposalId: pid);
+
+  test(
+    'production blocks resume index, preview, creation and response without HTTP',
+    () async {
+      final staleCreate = await create(), staleResponse = await respond();
+      controller.dispose();
+      controller = CycleParticipationController(
+        gateway: repo,
+        session: session,
+        changes: changes,
+        scopeKey: () => '${session.userId}/${session.generation}',
+      );
+      api.requests.clear();
+      expect(controller.weeklyInterruptionEnabled, isFalse);
+      expect(await controller.resumePlan(room, c), isNull);
+      expect(await controller.resumePreview(room, c), isNull);
+      expect(await controller.resumePreview(room, c, proposalId: pid), isNull);
+      await controller.resume(staleCreate);
+      await controller.resume(staleResponse, response: 'accept');
+      expect(api.requests, isEmpty);
+      expect(controller.hasPending, isFalse);
+    },
+  );
+
+  test(
+    'disabled resume preserves original applied ACK retry without optional follow-up GET',
+    () async {
+      lost = true;
+      applied = true;
+      await controller.resume(await respond(), response: 'accept');
+      expect(controller.hasPending, isTrue);
+      final original = copy(writes().single), count = api.requests.length;
+      (controller as RetainedWeeklyInterruptionController).enabled = false;
+      await controller.retry();
+      expect(api.requests.length, count + 1);
+      expect(writes().last, original);
+      expect(controller.hasPending, isFalse);
+      expect(controller.failure, isNull);
+      expect(refreshes, [c]);
+    },
+  );
 
   test(
     'single member and completed creator do not imply automatic creator accept',
@@ -430,6 +472,7 @@ void main() {
       final first = copy(writes().single), length = api.requests.length;
       review['confirmation']['context_token'] = 'changed';
       review['display']['display_revision'] = ref('e');
+      (controller as RetainedWeeklyInterruptionController).enabled = false;
       await controller.retry();
       expect(api.requests.length, length + 1);
       expect(writes().last, first);

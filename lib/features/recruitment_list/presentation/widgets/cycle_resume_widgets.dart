@@ -29,7 +29,8 @@ class CycleResumeActions extends StatelessWidget {
     builder: (context, _) => Wrap(
       spacing: 8,
       children: [
-        if (continuation &&
+        if (controller.weeklyInterruptionEnabled &&
+            continuation &&
             target == current &&
             {'leader', 'member'}.contains(role)) ...[
           if (role == 'leader' && state == 'stopped_incomplete')

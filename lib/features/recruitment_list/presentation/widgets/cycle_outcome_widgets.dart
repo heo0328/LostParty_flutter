@@ -46,6 +46,7 @@ class CycleOutcomeActions extends StatelessWidget {
                   showCompletion &&
                   {'leader', 'member'}.contains(role)) ||
               (action == 'close_weekly' &&
+                  controller.weeklyInterruptionEnabled &&
                   showClosure &&
                   continuation &&
                   {'leader', 'member'}.contains(role)))

@@ -8,6 +8,7 @@ import 'package:lost_party/features/recruitment_list/data/cycle_outcome.dart';
 import 'package:lost_party/features/recruitment_list/data/cycle_schedule.dart';
 import 'package:lost_party/features/recruitment_list/presentation/viewmodels/cycle_participation_controller.dart';
 import '../../support/server_account_read_fakes.dart';
+import '../../support/retained_weekly_interruption_controller.dart';
 import '../account/backend_read/member_cycles_test.dart' as f1;
 import 'backend_recruitment_test.dart' as v1;
 import 'cycle_recruitment_test.dart' as f2;
@@ -134,7 +135,7 @@ void main() {
       final j = copy(recorded[key]!);
       return changeAck?.call(j) ?? j;
     };
-    controller = CycleParticipationController(
+    controller = RetainedWeeklyInterruptionController(
       gateway: repository,
       session: session,
       changes: changes,
@@ -153,6 +154,38 @@ void main() {
     c,
     action,
     round: action == 'close_weekly' ? null : round,
+  );
+
+  test(
+    'production blocks closure reads and stale submission but keeps completion',
+    () async {
+      final stale = await preview('close_weekly');
+      controller.dispose();
+      controller = CycleParticipationController(
+        gateway: repository,
+        session: session,
+        changes: changes,
+        scopeKey: () => '${session.userId}/${session.generation}',
+        now: () => DateTime.parse(f2.nowStamp),
+      );
+      api.requests.clear();
+      expect(controller.weeklyInterruptionEnabled, isFalse);
+      expect(await controller.outcome(room, c, 'close_weekly'), isNull);
+      await controller.complete(stale);
+      expect(api.requests, isEmpty);
+      expect(controller.hasPending, isFalse);
+      final completion = await controller.outcome(
+        room,
+        c,
+        'complete_item',
+        round: round,
+      );
+      expect(completion, isNotNull);
+      await controller.complete(completion!);
+      expect(getWrites(), hasLength(1));
+      expect(controller.hasPending, isFalse);
+      expect(controller.failure, isNull);
+    },
   );
 
   for (final action in cycleOutcomeLabels.keys) {
@@ -395,6 +428,7 @@ void main() {
       loseAck = true;
       await controller.complete(p);
       plan['scope']['server_now'] = '2026-10-27T21:00:00Z';
+      (controller as RetainedWeeklyInterruptionController).enabled = false;
       await controller.retry();
       expect(controller.hasPending, isFalse);
       expect(getWrites().map((r) => r['body']['target_cycle_key']), [c, c]);

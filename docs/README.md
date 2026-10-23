@@ -1,5 +1,7 @@
 # LOSTPARTY 문서 안내
 
+2026-10-24 제품 결정: 이번주 미완료 종료·같은 주차 재개는 구현을 보존한 채 앱에서 비활성화했다. 이전 F6 구현 기록/다일 노출 설명보다 [비활성 기능 대장 IF-001](project/INACTIVE_FEATURES.md)이 우선한다.
+
 > 기존 서비스 전용 항목은 [원문·출처 기록](../legacy/firebase/extracted/docs/README.md)으로 분리했다. 남은 제품/협업 문맥의 신규 서버 적용 여부는 별도 설계에서 판단한다.
 
 ## 현재 개발 체크포인트 — 2주 레이드 현황 (2026-10-23)
@@ -161,6 +163,7 @@
 현재 작업 상태, 개발 이력과 작업 규칙을 관리한다.
 
 - [`project/NEXT_WORK.md`](project/NEXT_WORK.md): 다음 작업의 단일 기준
+- [`project/INACTIVE_FEATURES.md`](project/INACTIVE_FEATURES.md): 구현 후 협의로 사용하지 않는 기능과 비활성·보존 경계
 - [`project/AI_CONTEXT.md`](project/AI_CONTEXT.md): 프로젝트 전체 현재 상태
 - [`project/DEV_LOG.md`](project/DEV_LOG.md): 완료 작업 누적 이력
 - [`project/BUG_REPORTS.md`](project/BUG_REPORTS.md): 실기기·사용 중 발견 버그와 조사 메모
