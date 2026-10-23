@@ -1,6 +1,6 @@
 # AI CONTEXT — 2주 레이드 현황 기획과 현재 구현 상태
 
-기준: 2026-10-23. **F1~F5 코드/자동검증을 마쳤고 사전 참가 표시/선택까지 연결했다.** Backend07c2b671/168경로 소비·표시최종4파일106mock PASS·변경Dart11파일 분석0이다. 과거 F5 독립130 기록과 합산하지 않는다. 실제 정상인증HTTP·실회원/실기기 인수와 F6는 미확인/미구현이다. F6 설계 점검은 §37.19에 마쳤고 다음 첫 구현은 NEXT_WORK의 F6-A 계정 manual v2/구pending 보호, 구현 경계는 설계37 §37.18/DEV_LOG다.
+기준: 2026-10-23. **F1~F5 코드/자동검증을 마쳤고 사전 참가 표시/선택까지 연결했다.** Backend07c2b671/168경로 소비·표시최종4파일106mock PASS·변경Dart11파일 분석0이다. 과거 F5 독립130 기록과 합산하지 않는다. 실제 정상인증HTTP·실회원/실기기 인수와 F6-B/C는 미확인/미구현이다. F6-A manual v2/구pending 보존은 §37.20에 구현/검증했고(7파일108mock·5Dart분석0), 다음 첫구간은 NEXT_WORK의 F6-B다. B/C와 실제인수는 미완료다.
 
 ## 현재 우선 기준
 
@@ -16,13 +16,13 @@
 
 [Backend112 구현 인계6345290060](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6345290060)의 고정소비07c2b671로 사전표시를 연결했다. 기존 두 확인창에 실제ID/날짜/미정·명시선택과 읽기 개방미리보기를 적용하고 닫힌DTO·실제/예정세대·표시서명/입력고정·원pending/ACK를 보호한다. F3 후보/F4 관리/F5 일정·예약 독립구간은 유지한다. 상세는 설계37 §37.18, 검증/Issue·Git 마감은 DEV_LOG다. Backend48PASS/개발반영은 보고수신이며 Flutter106mock 통과와 실제회원/기기 인수를 구분한다. F5 Backend 보완 대기는 없고 F6의 별도 확인은 아래를 따른다.
 
-F6 기획을 고정 Backend outcome/manual/resume 소스와 계정durable pending/schema1·실제DI에 대조했다. 설계37 §37.19에 A계정manual v2/구pending 보존 → B방완료/본인완료·미완료종료 → C현재주재개를 분리했다. [Issue13 확인6355333496](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355333496)의 정정범위·재개 제안일정 표시근거만 Backend 확인대기이며 첫 독립구간을 막지 않는다. 설계만 완료/코드미변경, 전체인수·dev통합은 남는다.
+F6-A 계정 새 수동명령 v2/명시T·scope/data 결과검증 및 schema1→2/wire_version 기반 원v1 pending/표시선호 보존을 구현했다. 원ACK 뒤 실제T만 갱신·수06시/10시·N/party근거·저장실패를 보호한다. 상세는 §37.20/DEV_LOG, 다음은 F6-B 방완료/본인완료·미완료종료다. [Backend116/6355428620](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355428620)에서 정정범위는 확정했고 현재주재개 표시/생성전확인 binding만 Backend 계약보완 대기다. dev통합/실회원/기기 인수는 남는다.
 
 | 구분 | 현재 상태 |
 |---|---|
 | 커밋 기반 | feature/raid-recruitment-scheduling에 선행 v1복구17f8675·F1 af9e9d3·F2 e42f780·F3 독립 구현121fad3을 보관/원격일치 확인. [F3 결과6337065372](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6337065372) 본문 재조회일치. dev6d3f617 미반영·브랜치 유지, 최종문서SHA는 Git 참조 |
 | 기존 앱 | 개인표 등록·수정/복원과 계정 설정 복귀/결과 닫기 사용자 확인 완료. v1 생성/기본상세·시간/입장 정책은17f8675에 보관·기존 자동검증 기록 있음. 인증 회원 목록은 F3 v2검색, 비로그인 기존 Pending 유지 |
-| 2주차 Flutter | F1 실제주차/선택기·계정summary/3열+i·본인목록/기본 읽기상세·캐시 격리 구현. F1 고유123PASS/14파일 분석0에 이어 F2 고유95PASS/10파일 분석0. 실제 DI는 v2생성/context·같은방T상세/편성 읽기까지 연결. F3 검색/일반 참가·신청/승인/거절/철회·캐릭터 변경 연결, 그룹 캐릭터 필터/선택token·명시더보기 연결. F4 N참가/주차별 탈퇴·승계/위임·편성/공통관리 연결. F5 일정/예약·사전 참가 시간표시 연결 완료. F6 미구현/전체 기능 인수 미완료 |
+| 2주차 Flutter | F1 실제주차/선택기·계정summary/3열+i·본인목록/기본 읽기상세·캐시 격리 구현. F1 고유123PASS/14파일 분석0에 이어 F2 고유95PASS/10파일 분석0. 실제 DI는 v2생성/context·같은방T상세/편성 읽기까지 연결. F3 검색/일반 참가·신청/승인/거절/철회·캐릭터 변경 연결, 그룹 캐릭터 필터/선택token·명시더보기 연결. F4 N참가/주차별 탈퇴·승계/위임·편성/공통관리 연결. F5 일정/예약·사전 참가 시간표시 연결 완료. F6-A 수동명령 이행완료/B·C 미구현·전체 기능 인수 미완료 |
 | Penpot03 | v3 주차선택5화면과 v4 공대장/번호3화면 반영. 계정 체크/i·v4 실제PNG 검수. 상세 식별자/기준은 설계37·NEXT_WORK |
 | Backend | [92번째 실제전환/읽기인계6332478347](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6332478347): 개발DB0029/API8000 factory167경로·자료/키 보존 완료 보고. 계약0.4.1/policy4 유지 |
 | 계약/다음 | [F2 인계6335852339](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6335852339). 구현e42f780 원격일치/사용계약·검증·제한 전달/본문 재조회일치. F4까지 연결/검증 완료, Backend07c2b671/168경로 소비. F5 사전 참가 표시까지 연결 완료/F6 준비. 정상인증HTTP/실회원쓰기·기기 인수 미확인. #19통계별도 |

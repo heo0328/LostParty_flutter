@@ -1488,3 +1488,17 @@ POST 후 결과불명은 기존 앱소유 writer의 원method/path/encoded body/
 4. 각 독립구간은 승인 후 구현하며 코드/시험/문서·Issue13 결과/구현SHA 회신·작업브랜치 push로 마감한다. F6 최종은 실제 공용계정/저장·DI 전파와 테스트 차이를 검토해 전체 flutter test/analyze 필요 여부를 결정한다. 기본은 account backend_read의 member_weekly/member_cycles·account integration/session 및 해당 모집 outcome/interaction/management/schedule 표적묶음이며 무관시험을 각구간 반복하지 않는다. schema/공유갱신 영향이 넓어 표적으로 설명되지 않으면 최종 전체 lib/test 검증1회로 확장한다. 이미 무변경 통과시험은 재사용하고 수치를 중복합산하지 않는다.
 
 첫 구현은 F6-A를 기준으로 하고 B/C·통합을 한 번에 확대하지 않는다. 서버DB/HMAC·권한·정족수/원자성·예약경합을 Flutter mock으로 통과했다고 보고하지 않는다. 실회원HTTP/실기기 설치·표시/글자크기·주차전환·성능은 사용자 전체 기능섹션 수동인수로 유지한다. 디자인 변경·통계19/알림·서버/DB/키·운영배포·기기자동조작은 제외다. dev/main 통합은 기능검증 완료와 별도 게이트이며 설계/작업브랜치 보관을 전체완료로 취급하지 않는다.
+
+**Backend116 확인(6355428620):** [회신](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355428620)에서 정정은 본인 manual 근거 해제까지이며 personal_completion의 manual 근거를 지워도 completed assignment·party 근거·참가/예약은 복원하지 않음을 확답했다. 정정 의미 질문은 해소됐다. 재개는 기존 고정일정 표시출처가 없고 생성 전 확인/제안자 자동accept·응답시 표시binding까지 Backend 보완 계약을 작성한다. 신규API 인계가 아니며 C만 대기, A/B는 독립 진행한다.
+
+### 37.20 F6-A 계정 수동 완료 v2·기존 요청 보존 — 2026-10-23
+
+사용자 승인으로 F6-A만 구현했다. 실제 앱 twoCycleEnabled의 새 명령은 MemberRaidClient.putTarget의 v2 PUT에 target_cycle_key를 명시하고, 기존 put(v1)은 보존했다. MemberManualCompletionResult는 scope/data의 실제 target/current·KST수06시 주차/10시 playable·policy·room 식별자 null 및 기존 BWeeklyEntry를 검증한다. 일반모집 command ACK로 바꾸지 않으며 원응답의 character/raid/T·소유/lifecycle·revision/manual 결과 검증 후에만 ack를 기록한다. 원ACK의 server_now는 원실행 시각으로 검증하며 재송 현재시각으로 N/C를 재지정하지 않는다.
+
+MemberWeeklyViewModel은 같은 저장키에 schema2와 pending.wire_version(1/2)을 저장한다. schema1을 읽으면 v1로 식별하고 원본문/key/started/ack/failed·표시선호를 보존한 채 다음 저장부터 schema2로 기록한다. schema2의 v1도 계속 v1로 재송한다. 새 v2만 명시target이 있는 원본문으로 재송하며 경로를 전역치환하지 않는다. 선호/명령은 전체 검증 후 메모리에 반영하고 손상자료를 기본값으로 덮지 않는다. 저장 실패는 HTTP 전 차단/원명령 유지, ACK저장/뒤조회 실패는 ack 플래그를 보존해 읽기만 복구한다.
+
+v2 원ACK 뒤 command.target만 refreshTarget으로 재조회해 N캐시를 덮지 않는다. 수06시 뒤 원ACK가 돌아오면 이전T를 새C로 이식하지 않고 현재 메타/summary 확인 후 이미 C/N 밖인 원명령을 마감할 수 있다. 확정된 TARGET_CYCLE_NOT_CURRENT/OUT_OF_RANGE·PLAY_NOT_STARTED 거절도 실패명령으로 보관해 명시 재확인한다. N/수10시전·참가중 mark/party근거를 지우지 않는 기존 권한·확인창의 회원/entry 동일성·카드3열/i·캐릭터/원정대/개인표·Router/DI는 유지한다. 파티 완료취소/참가복구·방완료/종료/재개는 구현하지 않았다.
+
+검증은 신규17+기존직접영향91, **7파일 단일108mock PASS**(manual/weekly/cycles/account integration/account session/주간출처·표시projector)다. 마지막 새 파일17건 실행로그 확인을 위해 좁게 재확인했으며 108에 합산하지 않는다. 스타일 중괄호3건만 정리한 뒤 변경Dart5파일 분석0·포맷/diff/원계약 scope 소스 대조다. 공유계정 저장의 변경은 주간 키/schema 경계에 한정되고 회원/DI·공용캐시 불변이므로 무관전체시험을 반복하지 않았다. F6최종통합 시 영향으로 전체검증 필요를 재판단한다.
+
+실제 정상로그인HTTP·실회원쓰기/재설치·기기/성능·서버DB/권한/CAS·원자성 독립재현은 미확인이다. 자동시험은 mock/메모리 저장이며 실제 secure storage/서버 재생 결과로 확대하지 않는다. 기존 v1/회원전환·ACK후조회실패와 새 v2/주차전환·schema이행/손상자료/저장실패·party보존을 보호했다. Git/Issue 마감은 DEV_LOG, 다음 첫 구간 F6-B는 NEXT_WORK를 따른다.

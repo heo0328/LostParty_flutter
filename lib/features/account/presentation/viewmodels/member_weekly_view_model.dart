@@ -40,20 +40,36 @@ class _WeeklyCommand {
     this.key,
     this.body,
     this.started, {
+    this.wireVersion = 1,
     this.ack = false,
     this.failed = false,
   });
-  factory _WeeklyCommand.fromJson(Map<String, dynamic> json) {
-    roleShape(json, 'character raid key body started ack failed');
+  factory _WeeklyCommand.fromJson(
+    Map<String, dynamic> json, {
+    required int schema,
+  }) {
+    roleShape(
+      json,
+      schema == 1
+          ? 'character raid key body started ack failed'
+          : 'character raid key body started ack failed wire_version',
+    );
+    final version = schema == 1 ? 1 : json['wire_version'];
+    roleCheck(version == 1 || version == 2);
     final body = roleMap(json['body']);
     roleShape(
       body,
-      'completed difficulty_id expected_cycle_key expected_catalog_version expected_revision expected_ownership_revision expected_lifecycle_revision',
+      'completed difficulty_id expected_cycle_key expected_catalog_version expected_revision expected_ownership_revision expected_lifecycle_revision${version == 2 ? ' target_cycle_key' : ''}',
     );
     final completed = raidBool(body['completed']);
     if (body['difficulty_id'] != null) raidIdentifier(body['difficulty_id']);
     roleCheck(completed || body['difficulty_id'] == null);
     raidCycleKey(body['expected_cycle_key']);
+    if (version == 2) {
+      roleCheck(
+        raidCycleKey(body['target_cycle_key']) == body['expected_cycle_key'],
+      );
+    }
     raidText(body['expected_catalog_version']);
     for (final k in [
       'expected_revision',
@@ -70,6 +86,7 @@ class _WeeklyCommand {
       key,
       Map.unmodifiable(body),
       roleUtc(json['started']),
+      wireVersion: version as int,
       ack: raidBool(json['ack']),
       failed: raidBool(json['failed']),
     );
@@ -77,6 +94,8 @@ class _WeeklyCommand {
   final String character, raid, key;
   final Map<String, dynamic> body;
   final DateTime started;
+  final int wireVersion;
+  String get target => body['expected_cycle_key'] as String;
   bool ack, failed;
   String get entryKey => '$character:$raid';
   Map<String, dynamic> toJson() => {
@@ -87,6 +106,7 @@ class _WeeklyCommand {
     'started': started.toUtc().toIso8601String(),
     'ack': ack,
     'failed': failed,
+    'wire_version': wireVersion,
   };
 }
 
@@ -292,7 +312,7 @@ class MemberWeeklyViewModel extends ChangeNotifier {
 
   Future<void> _persist(StorageScope scope) {
     final encoded = jsonEncode({
-      'schema': 1,
+      'schema': 2,
       'pending': _pending?.toJson(),
       'display': {
         for (final entry in _display.entries)
@@ -316,7 +336,7 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     if (raw != null) {
       final data = roleMap(jsonDecode(raw));
       roleShape(data, 'schema pending display');
-      roleCheck(data['schema'] == 1);
+      roleCheck(data['schema'] == 1 || data['schema'] == 2);
       final prefs = <String, CharacterWeeklyRaidDisplayPreference>{};
       for (final e in roleMap(data['display']).entries) {
         roleId(e.key);
@@ -330,10 +350,14 @@ class MemberWeeklyViewModel extends ChangeNotifier {
         roleCheck(pref.isValid);
         prefs[e.key] = pref;
       }
-      _display = prefs;
-      _pending = data['pending'] == null
+      final pending = data['pending'] == null
           ? null
-          : _WeeklyCommand.fromJson(roleMap(data['pending']));
+          : _WeeklyCommand.fromJson(
+              roleMap(data['pending']),
+              schema: data['schema'] as int,
+            );
+      _display = prefs;
+      _pending = pending;
     }
     _loaded = true;
   }
@@ -832,6 +856,7 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       'completed': completed,
       'difficulty_id': completed ? raid.difficultyId : null,
       'expected_cycle_key': cycle!.key,
+      if (twoCycleEnabled) 'target_cycle_key': selectedCycleKey!,
       'expected_catalog_version': catalog!.catalogVersion,
       'expected_revision': value.revision,
       'expected_ownership_revision': value.ownershipRevision,
@@ -843,6 +868,7 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       newScopedCommandKey(),
       body,
       now().toUtc(),
+      wireVersion: twoCycleEnabled ? 2 : 1,
     );
     await _send();
   }
@@ -887,17 +913,18 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       await _persist(scope);
       guard();
       if (!command.ack) {
-        final ack = await client.put(
-          command.character,
-          command.raid,
-          command.key,
-          command.body,
-        );
+        final ack =
+            await (command.wireVersion == 2 ? client.putTarget : client.put)(
+              command.character,
+              command.raid,
+              command.key,
+              command.body,
+            );
         guard();
         roleCheck(
           ack.characterId == command.character &&
               ack.raidId == command.raid &&
-              ack.cycleKey == command.body['expected_cycle_key'] &&
+              ack.cycleKey == command.target &&
               ack.ownershipRevision ==
                   command.body['expected_ownership_revision'] &&
               ack.lifecycleRevision ==
@@ -923,6 +950,9 @@ class MemberWeeklyViewModel extends ChangeNotifier {
           'REVISION_CONFLICT',
           'CATALOG_VERSION_CONFLICT',
           'CYCLE_CHANGED',
+          'TARGET_CYCLE_NOT_CURRENT',
+          'TARGET_CYCLE_OUT_OF_RANGE',
+          'PLAY_NOT_STARTED',
           'PARTICIPATION_CONFIRMATION_REQUIRED',
           'RAID_INACTIVE',
           'CHARACTER_UNUSABLE',
@@ -947,9 +977,18 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     }
     if (_disposed || epoch != _epoch) return;
     if (command.ack) {
-      await refresh();
+      if (twoCycleEnabled) {
+        await refreshTarget(command.target);
+      } else {
+        await refresh();
+      }
       if (_disposed || epoch != _epoch) return;
-      if (_current && _entries.containsKey(command.entryKey)) {
+      final settled = twoCycleEnabled
+          ? cycles?.find(command.target) == null ||
+                _cycleEntries[command.target]?.containsKey(command.entryKey) ==
+                    true
+          : _entries.containsKey(command.entryKey);
+      if (_current && settled) {
         writing = true;
         _pending = null;
         try {

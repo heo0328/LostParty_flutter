@@ -635,7 +635,7 @@ void main() {
     expect(() => CycleReadScope(far, '2026-11-04'), throwsFormatException);
   });
   test(
-    'current manual completion keeps original v1 command and refreshes v2 summary only',
+    'new current manual completion uses target v2 command and refreshes its summary only',
     () async {
       var saved = false;
       await weekly.refresh();
@@ -645,25 +645,28 @@ void main() {
         if (r.path.endsWith('/manual-completion')) {
           saved = true;
           return {
-            'character_id': ref.characterId,
-            'raid_id': raid.raidId,
-            'cycle_key': current,
-            'revision': 2,
-            'ownership_revision': 1,
-            'lifecycle_revision': 1,
-            'state': 'completed',
-            'completion_sources': [
-              {
-                'source': 'manual',
-                'completed_at': '2026-10-22T03:00:00Z',
-                'difficulty_id': raid.difficultyId,
-                'party_id': null,
-              },
-            ],
-            'participation': null,
-            'can_mark_completed': true,
-            'can_clear_manual_completion': true,
-            'mark_blocked_reason': null,
+            'scope': scope(current),
+            'data': {
+              'character_id': ref.characterId,
+              'raid_id': raid.raidId,
+              'cycle_key': current,
+              'revision': 2,
+              'ownership_revision': 1,
+              'lifecycle_revision': 1,
+              'state': 'completed',
+              'completion_sources': [
+                {
+                  'source': 'manual',
+                  'completed_at': '2026-10-22T03:00:00Z',
+                  'difficulty_id': raid.difficultyId,
+                  'party_id': null,
+                },
+              ],
+              'participation': null,
+              'can_mark_completed': true,
+              'can_clear_manual_completion': true,
+              'mark_blocked_reason': null,
+            },
           };
         }
         final j = serve(r);
@@ -695,6 +698,8 @@ void main() {
       final writes = calls.where((r) => r.method == 'PUT').toList();
       expect(writes.length, 1);
       expect((writes.single.data as Map)['expected_cycle_key'], current);
+      expect((writes.single.data as Map)['target_cycle_key'], current);
+      expect(writes.single.path, startsWith('/v2/me/characters/'));
       expect(writes.single.headers['Idempotency-Key'], isNotEmpty);
       weekly.selectCycle(next);
       expect(weekly.entry(ref, raid.raidId)?.manual, false);

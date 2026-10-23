@@ -1,5 +1,15 @@
 # 개발 이력
 
+## 2026-10-23 — F6-A 계정 수동 완료 v2·저장 요청 호환 구현
+
+사용자 F6-A 진행 승인으로 필수문서/§37.19·현재9a4112e/원격일치·dev6d3f617·기존무관dirty와 최신 [Backend116/6355428620](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355428620)을 확인했다. manual해제의 범위 확답/재개표시 Backend 보완대기를 수신하고 A만 구현했다. 고정07c2b671의 manual/creation.scope·기존 weekly writer/저장·확인창과 관련시험을 대조했다.
+
+- 새로 가능해진 흐름: 계정 이번주 수동완료·해제를 새 v2 PUT/명시target으로 저장하고 scope/data 원결과를 검증한다. 같은 주간저장키의 schema2/wire_version으로 새v2·기존v1 요청을 구분하고 schema1의 원경로/본문/key·started/ack/failed·표시선호를 보존한다. ACK뒤 실제T만 summary갱신, 수06시 원ACK도 원T를 새C로 바꾸지 않고 현재조회 후 마감한다. 상세는 §37.20이다.
+- 보존 확인: 기존 v1 요청의 원재송·ACK뒤읽기복구/회원전환·디스크실패, 새v2 응답유실/재시작/주차전환·C/N격리·수10시/N차단·manual해제의party근거보존·손상저장덮기방지를 검증했다. 계정3열/i·확인창 회원/entry동일성·캐릭터/원정대/개인표·앱DI/Router·모집F1~F5와 무관dirty는 수정하지 않았다. 파티완료취소/참가·예약복구 및 B/C는 제외다.
+- 검증: 새manual17+기존직접영향91, **7파일 단일108mock PASS**. 출력에서 새파일 후반시험명이 생략돼 해당 파일만 좁게 재확인해17PASS를 확인했으며 재실행은 합산하지 않는다. 스타일 중괄호3곳 정리 후 변경Dart5파일 분석0·포맷/diff/백엔드scope소스·호출/본문검토다. 실패시험은 없다. 주간저장키/schema·명령에 영향이 한정되고 DI/공용캐시는 불변이므로 표적범위로 검증했으며 F6최종 전체시험 필요는 후속영향으로 재판단한다.
+- 미확인 실기기: 정상인증회원HTTP·실회원쓰기/실제secure storage 재설치/기기·성능과 서버DB/권한·CAS/원자성 독립재현은 하지 않았다. 기존 자동검증과 수동인수 경계를 유지하며 중간기기시험은 요청하지 않는다.
+- 다음/협업: Backend116 정정질문은 해소·현재주재개표시/생성전확인 binding 계약안 대기다. 다음Flutter 첫구간은 F6-B 방전체/본인item완료·미완료종료이며 A승인으로 확대하지 않는다. 구현/검증·소비SHA/실제구현SHA를 Issue13에 회신하고 문서/코드/시험을 같은feature/raid-recruitment-scheduling에 commit/push로 보관한다. dev미병합·브랜치유지/서버·DB·키·기기조작 없음이다.
+
 ## 2026-10-23 — F6 완료/정정·현재주 종료/재개 기획 설계 점검
 
 사용자 설계 요청으로 필수문서·§37.5~37.8/최신 F5로그·현재e910231/원격일치·dev6d3f617·최신Issue13(Flutter114 이후 새Backend회신없음)/기존무관dirty를 확인했다. 고정소비07c2b671 OpenAPI/cycle_outcomes.py/cycle_resume.py와 MemberWeeklyViewModel/MemberRaidClient/MemberWeeklyStore(schema1)·기존모집 plan/controller/진행구역·실제DI를 대조했다.

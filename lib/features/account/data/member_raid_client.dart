@@ -4,6 +4,7 @@ import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../domain/account_read_session.dart';
 import '../domain/member_raid_models.dart';
 import '../domain/member_cycle_models.dart';
+import '../domain/member_manual_completion_result.dart';
 import '../domain/role_summary.dart';
 import 'backend_account_read_api.dart';
 
@@ -103,5 +104,27 @@ class MemberRaidClient {
         idempotencyKey: key,
       ))!,
     );
+  });
+
+  Future<MemberWeeklyEntry> putTarget(
+    String character,
+    String raid,
+    String key,
+    Map<String, dynamic> body,
+  ) => _decode(() async {
+    roleId(character);
+    raidIdentifier(raid);
+    roleId(key);
+    final target = raidCycleKey(body['target_cycle_key']);
+    roleCheck(target == body['expected_cycle_key']);
+    return MemberManualCompletionResult(
+      (await api.request(
+        '/v2/me/characters/$character/raid-weekly-states/$raid/manual-completion',
+        method: 'PUT',
+        body: body,
+        idempotencyKey: key,
+      ))!,
+      target,
+    ).entry;
   });
 }
