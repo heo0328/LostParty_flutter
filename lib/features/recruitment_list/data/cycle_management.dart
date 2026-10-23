@@ -411,6 +411,21 @@ class CycleManagementPreview {
   late final Map<String, dynamic> scope, data;
   CycleSessionDisplay? display;
   late final List<String> affected;
+  String? removalCandidate(String membership, String cycleMember) {
+    if (action != 'remove') return null;
+    final matches = raidList(data['members'])
+        .map(roleMap)
+        .where(
+          (m) =>
+              m['membership_id'] == membership &&
+              m['cycle_member_id'] == cycleMember &&
+              m['is_me'] == false &&
+              m['target_role'] == 'member' &&
+              {'participating', 'review_required'}.contains(m['target_state']),
+        );
+    return matches.length == 1 ? cycleMember : null;
+  }
+
   bool get global => {'common', 'leave', 'end'}.contains(action);
   bool get continuation => {'continue', 'decline'}.contains(action);
   bool get opening => {'open', 'reopen'}.contains(action);

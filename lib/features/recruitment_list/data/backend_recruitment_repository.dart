@@ -398,6 +398,16 @@ class BackendRecruitmentRepository
       'members': members,
     }, id);
     value.targetKey = target;
+    value.cycleMemberIds = Map.unmodifiable({
+      for (final raw in raidList(data['members']))
+        if (roleMap(raw)['cycle_member_id'] != null &&
+            {
+              'participating',
+              'review_required',
+            }.contains(roleMap(raw)['target_state']))
+          roleMap(raw)['membership_id'] as String:
+              roleMap(raw)['cycle_member_id'] as String,
+    });
     final slotKeys = <String>{}, assignmentKeys = <String>{};
     value.formation = raidList(data['formation_slots']).map((raw) {
       final f = roleMap(raw);

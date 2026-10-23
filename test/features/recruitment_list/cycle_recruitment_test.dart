@@ -475,6 +475,45 @@ void main() {
     });
     tearDown(() => dio.close(force: true));
     test(
+      'next participation shortcut requires opened next target and no existing participation',
+      () async {
+        var enabled = false;
+        var nextRole = 'none';
+        api.respond = (path, query) async {
+          final t = query!['target_cycle_key'] as String;
+          final value = detail(t);
+          (value['data']['room'] as Map)['continuation_enabled'] = enabled;
+          if (t == n) {
+            (value['data']['room'] as Map)['my_target_role'] = nextRole;
+            value['data']['my_target_role'] = nextRole;
+          }
+          return value;
+        };
+        gateway.onCycleDetail = (t) => repo.cycleDetail(v1.roomId, t);
+        final state = BackendRecruitmentDetailViewModel(
+          gateway: gateway,
+          session: session,
+          roomId: v1.roomId,
+          target: c,
+        );
+        addTearDown(state.dispose);
+        await state.load();
+        expect(state.nextParticipationAvailable, false);
+        expect(
+          api.requests.where(
+            (r) => (r['query'] as Map?)?['target_cycle_key'] == n,
+          ),
+          isEmpty,
+        );
+        enabled = true;
+        await state.load();
+        expect(state.nextParticipationAvailable, true);
+        nextRole = 'member';
+        await state.load();
+        expect(state.nextParticipationAvailable, false);
+      },
+    );
+    test(
       'v2 context query, read no idempotency, create201 and bound scope',
       () async {
         final d = v1.draft().copy(targetCycleKey: c, continueTogether: true);

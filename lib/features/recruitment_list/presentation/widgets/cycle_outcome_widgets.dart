@@ -16,12 +16,17 @@ class CycleOutcomeActions extends StatelessWidget {
     required this.playable,
     required this.continuation,
     required this.raidLabel,
+    this.showCompletion = true,
+    this.showClosure = true,
+    this.completeLabel = '레이드 완료',
     super.key,
   });
   final CycleParticipationController controller;
   final String room, target, current, role;
   final bool playable, continuation;
   final String Function(Map) raidLabel;
+  final bool showCompletion, showClosure;
+  final String completeLabel;
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
@@ -29,10 +34,14 @@ class CycleOutcomeActions extends StatelessWidget {
       spacing: 8,
       children: [
         for (final action in cycleOutcomeLabels.keys)
-          if (action == 'complete_item' ||
+          if ((action == 'complete_item' &&
+                  showCompletion &&
+                  role == 'leader') ||
               (action == 'personal_completion' &&
+                  showCompletion &&
                   {'leader', 'member'}.contains(role)) ||
               (action == 'close_weekly' &&
+                  showClosure &&
                   continuation &&
                   {'leader', 'member'}.contains(role)))
             TextButton(
@@ -53,7 +62,11 @@ class CycleOutcomeActions extends StatelessWidget {
                       ),
                     )
                   : null,
-              child: Text(cycleOutcomeLabels[action]!),
+              child: Text(
+                action == 'complete_item'
+                    ? completeLabel
+                    : cycleOutcomeLabels[action]!,
+              ),
             ),
       ],
     ),

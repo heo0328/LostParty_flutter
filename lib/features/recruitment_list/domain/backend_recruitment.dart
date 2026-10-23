@@ -626,6 +626,7 @@ class BackendRecruitmentDetail {
   }
   String? targetKey;
   List<Map<String, dynamic>> formation = const [];
+  Map<String, String> cycleMemberIds = const {};
   late final Map<String, dynamic> room;
   late final String title;
   late final int capacity, memberCount;

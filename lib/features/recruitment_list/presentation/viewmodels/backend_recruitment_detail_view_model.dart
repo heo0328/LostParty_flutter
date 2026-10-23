@@ -48,6 +48,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
   bool _disposed = false, loading = false;
   int _epoch = 0;
   BackendRecruitmentDetail? value;
+  bool nextParticipationAvailable = false;
   RaidCatalog? catalog;
   String? failure;
   String? groupName;
@@ -62,6 +63,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     _binding = binding;
     _epoch++;
     value = null;
+    nextParticipationAvailable = false;
     cycles = null;
     notOpen.clear();
     catalog = null;
@@ -81,6 +83,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
   Future<void> load() async {
     if (_disposed || loading || !session.isAuthenticated) return;
     final epoch = ++_epoch;
+    nextParticipationAvailable = false;
     loading = true;
     failure = null;
     notifyListeners();
@@ -105,6 +108,23 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
       if (!_current(epoch)) return;
       value = detail;
       notOpen.remove(target);
+      if (cycleGateway != null &&
+          target == cycles!.current.key &&
+          detail.room['continuation_enabled'] == true &&
+          {'leader', 'member'}.contains(detail.room['my_target_role'])) {
+        try {
+          final next = await cycleGateway!.cycleDetail(
+            roomId,
+            cycles!.next.key,
+          );
+          if (!_current(epoch)) return;
+          nextParticipationAvailable =
+              next.room['target_state'] == 'open' &&
+              next.room['my_target_role'] == 'none';
+        } catch (_) {
+          // Unknown or unopened next-cycle state never exposes a join shortcut.
+        }
+      }
       if (detail.room['group_id'] != null) {
         try {
           final groups = await gateway.groups();

@@ -16,10 +16,12 @@ class CycleManagementActions extends StatelessWidget {
     required this.current,
     required this.next,
     required this.role,
+    this.nextParticipationAvailable = false,
     super.key,
   });
   final CycleParticipationController controller;
   final String room, target, current, next, role;
+  final bool nextParticipationAvailable;
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
@@ -28,23 +30,15 @@ class CycleManagementActions extends StatelessWidget {
       children: [
         if (target == current && {'leader', 'member'}.contains(role)) ...[
           if (role == 'leader') button(context, 'open', next),
-          button(context, 'continue', next),
-          button(context, 'decline', next),
+          if (nextParticipationAvailable) ...[
+            button(context, 'continue', next),
+            button(context, 'decline', next),
+          ],
         ],
-        if ({'leader', 'member'}.contains(role))
-          button(context, 'cancel', target),
         if (role == 'leader') ...[
-          for (final action in [
-            'transfer',
-            'formation',
-            'remove',
-            'settings',
-            'common',
-            'end',
-          ])
+          for (final action in ['formation', 'settings', 'common', 'end'])
             button(context, action, target),
         ],
-        if (role != 'none') button(context, 'leave', target),
         if (target == next) button(context, 'reopen', target),
       ],
     ),
@@ -72,6 +66,8 @@ Future<void> showCycleManagement(
   required String room,
   required String target,
   required String action,
+  String? fixedMembership,
+  String? fixedCycleMember,
 }) => showDialog<void>(
   context: context,
   builder: (_) => _ManagementDialog(
@@ -79,6 +75,8 @@ Future<void> showCycleManagement(
     room: room,
     target: target,
     action: action,
+    fixedMembership: fixedMembership,
+    fixedCycleMember: fixedCycleMember,
   ),
 );
 
@@ -88,9 +86,13 @@ class _ManagementDialog extends StatefulWidget {
     required this.room,
     required this.target,
     required this.action,
+    this.fixedMembership,
+    this.fixedCycleMember,
   });
   final CycleParticipationController controller;
   final String room, target, action;
+  final String? fixedMembership;
+  final String? fixedCycleMember;
   @override
   State<_ManagementDialog> createState() => _ManagementDialogState();
 }
@@ -148,6 +150,15 @@ class _ManagementDialogState extends State<_ManagementDialog> {
     if (!mounted || e != generation) return;
     if (p != null && !initialized) {
       initialized = true;
+      if (p.action == 'remove' && widget.fixedMembership != null) {
+        candidate = widget.fixedCycleMember == null
+            ? null
+            : p.removalCandidate(
+                widget.fixedMembership!,
+                widget.fixedCycleMember!,
+              );
+        if (candidate == null) error = 'REVISION_CONFLICT';
+      }
       if (p.action == 'settings') {
         final d = p.data, c = d['combat_requirement'] as Map;
         experience = d['experience_level'] as String? ?? '';
@@ -195,7 +206,13 @@ class _ManagementDialogState extends State<_ManagementDialog> {
     setState(() {
       preview = p;
       loading = false;
-      error = p == null ? widget.controller.failure : null;
+      error = p == null
+          ? widget.controller.failure
+          : p.action == 'remove' &&
+                widget.fixedMembership != null &&
+                candidate == null
+          ? 'REVISION_CONFLICT'
+          : null;
     });
   }
 
@@ -432,7 +449,12 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                             }),
                     ),
                   ],
-                  if ({'transfer', 'remove'}.contains(p.action))
+                  if (p.action == 'remove' && widget.fixedMembership != null)
+                    text(
+                      '이 주차에서 ${(d!['members'] as List).where((m) => m['membership_id'] == widget.fixedMembership).firstOrNull?['character']?['display']?['character_name'] ?? '선택한 참가자'}님을 내보내시겠습니까?',
+                    ),
+                  if (p.action == 'transfer' ||
+                      (p.action == 'remove' && widget.fixedMembership == null))
                     DropdownButtonFormField<String>(
                       key: ValueKey('candidate/$generation'),
                       initialValue: candidate,

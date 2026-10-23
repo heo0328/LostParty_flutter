@@ -789,6 +789,9 @@ void main() {
       });
       wire['data']['members'].add(other);
       final fresh = (await controller.management(room, n, 'remove'))!;
+      expect(fresh.removalCandidate(id(9), id(9)), id(9));
+      expect(fresh.removalCandidate(id(9), id(10)), isNull);
+      expect(fresh.removalCandidate(v1.membershipId, v1.membershipId), isNull);
       await controller.manage(fresh, {'candidate': id(9)});
       final b = writes().single['body'] as Map;
       expect(b['expected_cycle_member_revision'], 7);

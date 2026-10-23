@@ -280,19 +280,8 @@ class _BackendRecruitmentDetailPageState
                           : '참가 신청',
                     ),
                   ),
-                if ({'leader', 'member'}.contains(room['my_target_role']))
-                  TextButton(
-                    onPressed: widget.participation!.canAct
-                        ? () => showCycleAdmission(
-                            context,
-                            widget.participation!,
-                            room: widget.roomId,
-                            target: m.target!,
-                            intent: 'change_character',
-                          )
-                        : null,
-                    child: const Text('내 캐릭터 변경'),
-                  ),
+                if (room['my_target_role'] == 'leader')
+                  _managementButton('transfer', '공대장 위임'),
               ],
             ),
           ),
@@ -356,12 +345,56 @@ class _BackendRecruitmentDetailPageState
             ),
           ],
         ),
+        if (widget.participation != null &&
+            m.target != null &&
+            {'leader', 'member'}.contains(room['my_target_role']))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: ListenableBuilder(
+              listenable: widget.participation!,
+              builder: (context, _) => FilledButton.icon(
+                onPressed: widget.participation!.canAct && !m.loading
+                    ? () => showCycleAdmission(
+                        context,
+                        widget.participation!,
+                        room: widget.roomId,
+                        target: m.target!,
+                        intent: 'change_character',
+                      )
+                    : null,
+                icon: const Icon(Icons.manage_accounts_outlined),
+                label: const Text('내 캐릭터 변경'),
+              ),
+            ),
+          ),
         RecruitmentSection(
           title: '파티 구성',
           children: [
             for (final member in value.members) _member(member, group != null),
           ],
         ),
+        if (widget.participation != null &&
+            m.cycles != null &&
+            m.target == m.cycles!.current.key &&
+            m.cycles!.current.permissions['complete']?.allowed == true &&
+            {'leader', 'member'}.contains(room['my_target_role']))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: CycleOutcomeActions(
+              showClosure: false,
+              completeLabel: '주차 완료',
+              controller: widget.participation!,
+              room: m.roomId,
+              target: m.target!,
+              current: m.cycles!.current.key,
+              role: room['my_target_role'] as String,
+              playable:
+                  m.cycles!.find(m.target!)?.permissions['complete']?.allowed ==
+                  true,
+              continuation: room['continuation_enabled'] == true,
+              raidLabel: _raidLabel,
+            ),
+          ),
         RecruitmentSection(
           title: m.cycles != null && m.target == m.cycles!.next.key
               ? '다음 주 참가 예정'
@@ -384,6 +417,7 @@ class _BackendRecruitmentDetailPageState
                 current: m.cycles!.current.key,
                 next: m.cycles!.next.key,
                 role: room['my_target_role'] as String? ?? 'none',
+                nextParticipationAvailable: m.nextParticipationAvailable,
               ),
             Wrap(
               spacing: 8,
@@ -407,46 +441,57 @@ class _BackendRecruitmentDetailPageState
                         true,
                     raidLabel: _raidLabel,
                   ),
-                TextButton(
-                  onPressed:
-                      widget.participation != null &&
-                          m.target != null &&
-                          room['my_target_role'] == 'leader'
-                      ? () => showCycleScheduleCommand(
-                          context,
-                          widget.participation!,
-                          room: m.roomId,
-                          target: m.target!,
-                          action: 'propose',
-                        )
-                      : null,
-                  child: const Text('일정 변경안'),
-                ),
-
+                if (room['my_target_role'] == 'leader')
+                  TextButton(
+                    onPressed:
+                        widget.participation != null &&
+                            m.target != null &&
+                            room['my_target_role'] == 'leader'
+                        ? () => showCycleScheduleCommand(
+                            context,
+                            widget.participation!,
+                            room: m.roomId,
+                            target: m.target!,
+                            action: 'propose',
+                          )
+                        : null,
+                    child: const Text('일정 변경안'),
+                  ),
                 if (widget.participation != null &&
                     m.cycles != null &&
-                    m.target != null)
+                    m.target == m.cycles!.current.key &&
+                    m.cycles!.current.permissions['complete']?.allowed ==
+                        true &&
+                    room['continuation_enabled'] == true &&
+                    {'leader', 'member'}.contains(room['my_target_role']))
                   CycleOutcomeActions(
+                    showCompletion: false,
                     controller: widget.participation!,
                     room: m.roomId,
                     target: m.target!,
                     current: m.cycles!.current.key,
-                    role: room['my_target_role'] as String? ?? 'none',
-                    playable:
-                        m.cycles!
-                            .find(m.target!)
-                            ?.permissions['complete']
-                            ?.allowed ==
-                        true,
-                    continuation: room['continuation_enabled'] == true,
+                    role: room['my_target_role'] as String,
+                    playable: true,
+                    continuation: true,
                     raidLabel: _raidLabel,
-                  )
-                else
-                  const TextButton(onPressed: null, child: Text('레이드 완료')),
+                  ),
               ],
             ),
           ],
         ),
+        if (widget.participation != null &&
+            m.target != null &&
+            {'leader', 'member'}.contains(room['my_target_role']))
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Wrap(
+              spacing: 12,
+              children: [
+                _managementButton('cancel', '이 주차 탈퇴'),
+                _managementButton('leave', '모두 탈퇴'),
+              ],
+            ),
+          ),
         if (m.loading) const LinearProgressIndicator(minHeight: 2),
         TextButton(
           onPressed: () {
@@ -460,6 +505,22 @@ class _BackendRecruitmentDetailPageState
       ],
     );
   }
+
+  Widget _managementButton(String action, String label) => ListenableBuilder(
+    listenable: widget.participation!,
+    builder: (context, _) => OutlinedButton(
+      onPressed: widget.participation!.canAct && !m.loading && m.target != null
+          ? () => showCycleManagement(
+              context,
+              widget.participation!,
+              room: m.roomId,
+              target: m.target!,
+              action: action,
+            )
+          : null,
+      child: Text(label),
+    ),
+  );
 
   Widget _member(Map<String, dynamic> member, bool groupLinked) {
     final c = member['character'] as Map?;
@@ -529,6 +590,31 @@ class _BackendRecruitmentDetailPageState
           ),
           if (groupLinked)
             RecruitmentBadge(member['group_member'] == true ? '그룹원' : '비그룹'),
+          if (widget.participation != null &&
+              m.target != null &&
+              m.value!.room['my_target_role'] == 'leader' &&
+              member['is_me'] == false &&
+              member['room_role'] == 'member' &&
+              m.value!.cycleMemberIds.containsKey(member['membership_id']))
+            ListenableBuilder(
+              listenable: widget.participation!,
+              builder: (context, _) => IconButton(
+                tooltip: '$name님 내보내기',
+                icon: const Icon(Icons.close, color: Colors.red),
+                onPressed: widget.participation!.canAct && !m.loading
+                    ? () => showCycleManagement(
+                        context,
+                        widget.participation!,
+                        room: m.roomId,
+                        target: m.target!,
+                        action: 'remove',
+                        fixedMembership: member['membership_id'] as String,
+                        fixedCycleMember:
+                            m.value!.cycleMemberIds[member['membership_id']],
+                      )
+                    : null,
+              ),
+            ),
         ],
       ),
     );
