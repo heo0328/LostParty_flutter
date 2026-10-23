@@ -515,9 +515,11 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
               routes: [
                 GoRoute(
                   path: '/raid-status',
-                  builder: (context, _) => _memberAccount?.weekly == null
+                  builder: (context, state) => _memberAccount?.weekly == null
                       ? pending('레이드 현황')
                       : CycleOwnRoomsPage(
+                          initialTarget:
+                              state.uri.queryParameters['target_cycle_key'],
                           weekly: _memberAccount!.weekly!,
                           mutations: participation,
                           repository: cycleReads,

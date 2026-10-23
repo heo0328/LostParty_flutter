@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'cycle_member_actions.dart';
 import '../../account/domain/account_read_session.dart';
 import '../../account/domain/member_cycle_models.dart';
 import '../../account/domain/member_raid_models.dart';
@@ -545,10 +546,43 @@ abstract interface class CycleInteractionGateway {
   });
 }
 
-class CycleInteractionRepository implements CycleInteractionGateway {
+class CycleInteractionRepository
+    implements CycleInteractionGateway, CycleDepartureGateway {
   CycleInteractionRepository({required this.api, required this.recruitment});
   final BackendRegistrationApi api;
   final CycleRecruitmentGateway recruitment;
+  @override
+  Future<DeparturePreview> departure(
+    String room,
+    String target,
+    String round,
+  ) => _decode(() async {
+    roleId(room);
+    raidCycleKey(target);
+    roleId(round);
+    final raw = await api.request(
+      '/v2/raid-rooms/$room/personal-completion-departure-context',
+      query: {'target_cycle_key': target, 'round_id': round},
+    );
+    return DeparturePreview(room, target, round, raw!);
+  });
+  @override
+  Future<void> writeDeparture(
+    DeparturePreview preview,
+    String key,
+    Map<String, dynamic> body,
+  ) => _decode(() async {
+    roleId(key);
+    roleCheck(cycleStableJson(body) == cycleStableJson(preview.body()));
+    final raw = await api.request(
+      preview.path,
+      method: 'POST',
+      body: body,
+      idempotencyKey: key,
+    );
+    validateDepartureResult(raw!, preview, key);
+  });
+
   @override
   Future<CycleResumePlan> resumePlan(String room, String target) =>
       _decode(() => CycleResumeReader(api).read(room, target));

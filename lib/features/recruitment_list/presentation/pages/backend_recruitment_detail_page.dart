@@ -48,6 +48,7 @@ class _BackendRecruitmentDetailPageState
     with WidgetsBindingObserver {
   late final BackendRecruitmentDetailViewModel m;
   int _mutationVersion = 0;
+  String? _departureKey;
   @override
   void initState() {
     super.initState();
@@ -61,6 +62,7 @@ class _BackendRecruitmentDetailPageState
       scopeKey: widget.scopeKey,
       loadEndPermission: widget.participation?.canEndRoom,
     );
+    _departureKey = widget.participation?.departureSuccess?.$1;
     _mutationVersion = widget.participation?.mutationVersion ?? 0;
     widget.participation?.addListener(_changed);
     unawaited(m.load());
@@ -70,6 +72,26 @@ class _BackendRecruitmentDetailPageState
     final c = widget.participation!;
     if (c.mutationVersion == _mutationVersion) return;
     _mutationVersion = c.mutationVersion;
+    final departure = c.departureSuccess;
+    if (departure != null &&
+        departure.$1 != _departureKey &&
+        departure.$2 == widget.roomId &&
+        departure.$3 == m.target) {
+      _departureKey = departure.$1;
+      final binding = c.scopeKey();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || binding != c.scopeKey() || m.target != departure.$3) {
+          return;
+        }
+        final uri = GoRouter.of(context).routeInformationProvider.value.uri;
+        if (uri.path != '/recruitments/${widget.roomId}') return;
+        Navigator.of(
+          context,
+        ).popUntil((route) => route == ModalRoute.of(context));
+        context.go('/raid-status?target_cycle_key=${departure.$3}');
+      });
+      return;
+    }
     if (c.lastRoom == widget.roomId && c.lastTarget == m.target) {
       unawaited(m.load());
     }
@@ -412,6 +434,8 @@ class _BackendRecruitmentDetailPageState
             child: CycleOutcomeActions(
               showClosure: false,
               completeLabel: '주차 완료',
+              isCurrent: () =>
+                  mounted && m.target == m.cycles?.current.key && !m.loading,
               controller: widget.participation!,
               room: m.roomId,
               target: m.target!,

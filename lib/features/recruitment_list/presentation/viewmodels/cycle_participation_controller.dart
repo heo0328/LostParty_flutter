@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import '../../data/cycle_member_actions.dart';
 import 'package:flutter/foundation.dart';
 import '../../../account/data/local/scoped_command_key.dart';
 import '../../../account/domain/account_read_session.dart';
@@ -27,6 +28,7 @@ class _CycleCommand {
     this.affectedTargets,
     this.submissionAck,
     this.resumeAck,
+    this.departure,
   }) : evidence = Map.unmodifiable(evidence),
        encoded = jsonEncode(body),
        key = newScopedCommandKey();
@@ -37,6 +39,7 @@ class _CycleCommand {
   final List<String>? affectedTargets;
   final Map<String, dynamic>? submissionAck;
   final String? resumeAck;
+  final DeparturePreview? departure;
   final bool applicationAck;
   final int status;
   final DateTime createdAt;
@@ -68,6 +71,7 @@ class CycleParticipationController extends ChangeNotifier {
   int _epoch = 0, mutationVersion = 0;
   String? failure, lastRoom, lastTarget, notice;
   _CycleCommand? _pending;
+  (String key, String room, String target)? departureSuccess;
   DateTime? _retryAt;
   Timer? _retryTimer;
   bool get hasPending => _pending != null;
@@ -99,6 +103,7 @@ class CycleParticipationController extends ChangeNotifier {
     _binding = scopeKey();
     _epoch++;
     _pending = null;
+    departureSuccess = null;
     busy = false;
     failure = notice = lastRoom = lastTarget = null;
     _retryAt = null;
@@ -180,6 +185,58 @@ class CycleParticipationController extends ChangeNotifier {
         createdAt: now(),
         evidence: fresh.plan.scope,
         resumeAck: id == null ? 'create' : 'respond',
+      );
+      await _send(e);
+    } on AccountReadException catch (error) {
+      if (_valid(e)) _fail(error);
+    } catch (_) {
+      if (_valid(e)) failure = 'INVALID_RESPONSE';
+    } finally {
+      if (_valid(e)) {
+        busy = false;
+        _emit();
+      }
+    }
+  }
+
+  Future<DeparturePreview?> departure(
+    String room,
+    String target,
+    String round,
+  ) => _read(
+    () => (gateway as CycleDepartureGateway).departure(room, target, round),
+  );
+
+  Future<void> depart(
+    DeparturePreview preview, {
+    bool Function()? isCurrent,
+  }) async {
+    if (!canAct) return;
+    final e = _epoch;
+    busy = true;
+    failure = notice = null;
+    _emit();
+    try {
+      final fresh = await (gateway as CycleDepartureGateway).departure(
+        preview.room,
+        preview.target,
+        preview.round,
+      );
+      if (!_valid(e)) return;
+      if (isCurrent?.call() == false) return;
+      if (fresh.signature != preview.signature) {
+        throw const AccountReadException('REVISION_CONFLICT');
+      }
+      _pending = _CycleCommand(
+        path: fresh.path,
+        body: fresh.body(),
+        room: fresh.room,
+        target: fresh.target,
+        applicationAck: false,
+        status: 200,
+        createdAt: now(),
+        evidence: fresh.scope,
+        departure: fresh,
       );
       await _send(e);
     } on AccountReadException catch (error) {
@@ -524,25 +581,38 @@ class CycleParticipationController extends ChangeNotifier {
     final command = _pending!;
     try {
       String? resumeOutcome;
-      await gateway.write(
-        command.path,
-        command.key,
-        jsonDecode(command.encoded) as Map<String, dynamic>,
-        room: command.room,
-        target: command.target,
-        applicationAck: command.applicationAck,
-        expectedScope: command.evidence,
-        applicationId: command.applicationId,
-        applicationState: command.applicationState,
-        status: command.status,
-        method: command.method,
-        globalAck: command.globalAck,
-        affectedTargets: command.affectedTargets,
-        submissionAck: command.submissionAck,
-        resumeAck: command.resumeAck,
-        onOutcome: command.resumeAck == null ? null : (v) => resumeOutcome = v,
-      );
+      if (command.departure != null) {
+        await (gateway as CycleDepartureGateway).writeDeparture(
+          command.departure!,
+          command.key,
+          jsonDecode(command.encoded) as Map<String, dynamic>,
+        );
+      } else {
+        await gateway.write(
+          command.path,
+          command.key,
+          jsonDecode(command.encoded) as Map<String, dynamic>,
+          room: command.room,
+          target: command.target,
+          applicationAck: command.applicationAck,
+          expectedScope: command.evidence,
+          applicationId: command.applicationId,
+          applicationState: command.applicationState,
+          status: command.status,
+          method: command.method,
+          globalAck: command.globalAck,
+          affectedTargets: command.affectedTargets,
+          submissionAck: command.submissionAck,
+          resumeAck: command.resumeAck,
+          onOutcome: command.resumeAck == null
+              ? null
+              : (v) => resumeOutcome = v,
+        );
+      }
       if (!_valid(e)) return;
+      if (command.departure != null) {
+        departureSuccess = (command.key, command.room, command.target);
+      }
       _pending = null;
       _retryAt = null;
       failure = null;

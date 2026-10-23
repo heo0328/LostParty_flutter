@@ -1,5 +1,14 @@
 # 개발 이력
 
+## 2026-10-23 — D22 개인 완료 후 해당 주차 탈퇴 구현
+
+사용자구현승인·설계37 §37.32에따라D22만연결했다. Backend0eed67c4 고정174경로/최종22인계를대조했고소비결과는§37.33,다음구간은NEXT_WORK의E23이다.
+
+- 새흐름: 구성아래나혼자완료처리이후탈퇴→단일/다중본인raid선택→서버같은관측display의완료1/나머지참가취소/기존완료유지·날짜/캐릭터·예약/후계자/마지막T확인→한명령→전용ACK성공→상세이탈/내참가실제T복귀·weekly/목록갱신. 후계자없음은쓰기0. N과타인/기존완료보존은서버명령이담당한다.
+- 보존: 기존CycleInteractionGateway/옛writer와명령path/body/key불변,별도DepartureGateway·불변preview/전용ACK검증. 확인재조회에서표시/영향변경차단·token/시각만갱신허용,응답유실원명령재송/불량ACKpending,회원/T/화면·세대격리·연타차단. ACK후조회실패성공보존/plan후조회없음. 모집pending은메모리수명·앱종료영속복구미구현. 전원완료·미완료종료/재개·관리·단일추방/탈퇴·해산위치유지.
+- 검증: 새24+직접기존109의최종5파일133mock PASS·lib/test분석0·포맷/diffcheck/diff검토. 게시합성personal5그룹fixture/nullable·관계/시각/서명·원ACK/중복/틀린ACK·화면T/회원변경·성공뒤403갱신실패를직접시험. 중간21PASS합산없음. 초기lint보완·넓은format의무관2파일은복구후범위제외,새저장/기존Gateway전역변경없어무관전체시험생략.
+- 미확인실기기: 실제일반/공대장완료후탈퇴·승계/마지막종료/후계없음,다중raid안내/타인·N보존,폴드/큰글자·성공목록/계정표시·이탈. 기기설치/조작·실회원HTTP명령/서버DB/키·배포없음. E23/A/B/인수/dev/main통합미완료·현feature브랜치commit/push보관·유지·무관dirty보존.
+
 ## 2026-10-23 — Issue22/23 최종 계약의 네이티브 구현 설계
 
 설계 d3a328e7 commit/push·원격일치 후 [22 결과6362922606](https://github.com/heo0328/lostparty-backend/issues/22#issuecomment-6362922606)·[23 결과6362922968](https://github.com/heo0328/lostparty-backend/issues/23#issuecomment-6362922968)에 기능구현전 설계/다음담당·미실행 범위를 회신하고 게시본문 MATCH를 확인했다.

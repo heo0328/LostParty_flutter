@@ -1,0 +1,1008 @@
+{
+  "source": "Backend 0eed67c453040b332653fd2071e6cd2e1eeed503 docs/design/issue22-23-atomic-member-actions.examples.json; synthetic; token redacted",
+  "examples": {
+    "personal_member": {
+      "test": "test_departure_one_complete_rest_cancel_successor_preserve_n_ack[False]",
+      "responses": [
+        {
+          "scope": {
+            "server_now": "2026-10-23T09:59:01.638388Z",
+            "current_cycle_key": "2026-10-21",
+            "target_cycle_key": "2026-10-21",
+            "playable_from": "2026-10-21T01:00:00Z",
+            "phase": "current",
+            "target_revision": 2,
+            "policy_version": "two-cycle-contract-4",
+            "room_cycle_id": "9d97d066-0891-5d6f-8cbc-61a23ca4a9c4",
+            "target_generation": 1
+          },
+          "data": {
+            "action": "personal_completion_departure",
+            "room_id": "cff28b70-8479-4590-993e-4fc0cc3a1f29",
+            "subject": {
+              "membership_id": "99dc1f40-9b39-4b7b-a7bd-6ca29e3a3288",
+              "cycle_member_id": "de1d83d1-edb2-4938-948a-be64df3a776e",
+              "cycle_member_revision": 1,
+              "character_id": "b42a1432-8701-4f30-ab16-8635b7f4f28b",
+              "round_id": "99a235e4-6352-5201-970f-cf1182cff0ad",
+              "assignment_id": "7a21cc7a-999a-462f-8fa9-56cb2a31705d",
+              "assignment_revision": 1
+            },
+            "leadership": {
+              "leader_cycle_member_id": "7f18fee2-06de-4aec-a4d8-0ffcccac6be4",
+              "leadership_revision": 1,
+              "leader_membership_id": "fc99fe16-22c3-42e3-bf58-c4877fc20ac7"
+            },
+            "impact": {
+              "complete_assignment_ids": [
+                "7a21cc7a-999a-462f-8fa9-56cb2a31705d"
+              ],
+              "cancel_assignment_ids": [
+                "e6324561-b148-40c8-85eb-62806858f487"
+              ],
+              "preserved_completed_assignment_ids": [],
+              "released_reservation_count": 0,
+              "departure_effect": "leave",
+              "successor": null,
+              "preserves_other_cycles": true,
+              "preserves_global_membership": true
+            },
+            "display": {
+              "character_id": "b42a1432-8701-4f30-ab16-8635b7f4f28b",
+              "character_name": "sample-0",
+              "assignments": [
+                {
+                  "assignment_id": "7a21cc7a-999a-462f-8fa9-56cb2a31705d",
+                  "round_id": "99a235e4-6352-5201-970f-cf1182cff0ad",
+                  "item_id": "72922d7f-f1a4-5fc1-896d-660f132393ec",
+                  "character_id": "b42a1432-8701-4f30-ab16-8635b7f4f28b",
+                  "character_name": "sample-0",
+                  "raid_id": "horizon_cathedral",
+                  "raid_name": "지평의 성당",
+                  "difficulty_id": "stage1",
+                  "difficulty_name": "1단계",
+                  "catalog_version": "2026.08.20",
+                  "effect": "complete"
+                },
+                {
+                  "assignment_id": "e6324561-b148-40c8-85eb-62806858f487",
+                  "round_id": "9e27f495-19db-5823-8bd8-8f3da1fceddf",
+                  "item_id": "c1e88d56-be79-560b-84be-8953102744b4",
+                  "character_id": "b42a1432-8701-4f30-ab16-8635b7f4f28b",
+                  "character_name": "sample-0",
+                  "raid_id": "kazeros_act4",
+                  "raid_name": "4막",
+                  "difficulty_id": "normal",
+                  "difficulty_name": "노말",
+                  "catalog_version": "2026.08.20",
+                  "effect": "cancel"
+                }
+              ],
+              "display_revision": "bcd9b065d9aaa2df6eea18710737df304693d0cbe7f06a437a446effe3f867cb"
+            },
+            "permission": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "confirmation": {
+              "context_token": "<opaque-redacted>",
+              "issued_at": "2026-10-23T09:59:01.638388Z",
+              "expires_at": "2026-10-23T10:01:01.638388Z"
+            }
+          }
+        },
+        {
+          "scope": {
+            "server_now": "2026-10-23T09:59:01.965348Z",
+            "current_cycle_key": "2026-10-21",
+            "target_cycle_key": "2026-10-21",
+            "playable_from": "2026-10-21T01:00:00Z",
+            "phase": "current",
+            "target_revision": 2,
+            "policy_version": "two-cycle-contract-4",
+            "room_cycle_id": "9d97d066-0891-5d6f-8cbc-61a23ca4a9c4",
+            "target_generation": 1
+          },
+          "data": {
+            "action": "personal_completion_departure",
+            "room_id": "cff28b70-8479-4590-993e-4fc0cc3a1f29",
+            "subject": {
+              "membership_id": "99dc1f40-9b39-4b7b-a7bd-6ca29e3a3288",
+              "cycle_member_id": "de1d83d1-edb2-4938-948a-be64df3a776e",
+              "cycle_member_revision": 1,
+              "character_id": "b42a1432-8701-4f30-ab16-8635b7f4f28b",
+              "round_id": "99a235e4-6352-5201-970f-cf1182cff0ad",
+              "assignment_id": "7a21cc7a-999a-462f-8fa9-56cb2a31705d",
+              "assignment_revision": 1
+            },
+            "leadership": {
+              "leader_cycle_member_id": "7f18fee2-06de-4aec-a4d8-0ffcccac6be4",
+              "leadership_revision": 1,
+              "leader_membership_id": "fc99fe16-22c3-42e3-bf58-c4877fc20ac7"
+            },
+            "impact": {
+              "complete_assignment_ids": [
+                "7a21cc7a-999a-462f-8fa9-56cb2a31705d"
+              ],
+              "cancel_assignment_ids": [
+                "e6324561-b148-40c8-85eb-62806858f487"
+              ],
+              "preserved_completed_assignment_ids": [],
+              "released_reservation_count": 0,
+              "departure_effect": "leave",
+              "successor": null,
+              "preserves_other_cycles": true,
+              "preserves_global_membership": true
+            },
+            "display": {
+              "character_id": "b42a1432-8701-4f30-ab16-8635b7f4f28b",
+              "character_name": "sample-0",
+              "assignments": [
+                {
+                  "assignment_id": "7a21cc7a-999a-462f-8fa9-56cb2a31705d",
+                  "round_id": "99a235e4-6352-5201-970f-cf1182cff0ad",
+                  "item_id": "72922d7f-f1a4-5fc1-896d-660f132393ec",
+                  "character_id": "b42a1432-8701-4f30-ab16-8635b7f4f28b",
+                  "character_name": "sample-0",
+                  "raid_id": "horizon_cathedral",
+                  "raid_name": "지평의 성당",
+                  "difficulty_id": "stage1",
+                  "difficulty_name": "1단계",
+                  "catalog_version": "2026.08.20",
+                  "effect": "complete"
+                },
+                {
+                  "assignment_id": "e6324561-b148-40c8-85eb-62806858f487",
+                  "round_id": "9e27f495-19db-5823-8bd8-8f3da1fceddf",
+                  "item_id": "c1e88d56-be79-560b-84be-8953102744b4",
+                  "character_id": "b42a1432-8701-4f30-ab16-8635b7f4f28b",
+                  "character_name": "sample-0",
+                  "raid_id": "kazeros_act4",
+                  "raid_name": "4막",
+                  "difficulty_id": "normal",
+                  "difficulty_name": "노말",
+                  "catalog_version": "2026.08.20",
+                  "effect": "cancel"
+                }
+              ],
+              "display_revision": "bcd9b065d9aaa2df6eea18710737df304693d0cbe7f06a437a446effe3f867cb"
+            },
+            "permission": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "confirmation": {
+              "context_token": "<opaque-redacted>",
+              "issued_at": "2026-10-23T09:59:01.965348Z",
+              "expires_at": "2026-10-23T10:01:01.965348Z"
+            }
+          }
+        },
+        {
+          "scope": {
+            "server_now": "2026-10-23T09:59:02.045629Z",
+            "current_cycle_key": "2026-10-21",
+            "target_cycle_key": "2026-10-21",
+            "playable_from": "2026-10-21T01:00:00Z",
+            "phase": "current",
+            "target_revision": 3,
+            "policy_version": "two-cycle-contract-4",
+            "room_cycle_id": "9d97d066-0891-5d6f-8cbc-61a23ca4a9c4",
+            "target_generation": 1
+          },
+          "data": {
+            "command_id": "dd666298-4a16-4b13-aca4-740144563f9b",
+            "action": "personal_completion_departure",
+            "outcome": "applied",
+            "executed_at": "2026-10-23T09:59:02.045629Z",
+            "room_id": "cff28b70-8479-4590-993e-4fc0cc3a1f29",
+            "subject_membership_id": "99dc1f40-9b39-4b7b-a7bd-6ca29e3a3288",
+            "affected_cycle_keys": [
+              "2026-10-21"
+            ],
+            "effects": [
+              {
+                "target_cycle_key": "2026-10-21",
+                "room_cycle_id": "9d97d066-0891-5d6f-8cbc-61a23ca4a9c4",
+                "target_generation": 1,
+                "target_revision": 3,
+                "cycle_member_id": "de1d83d1-edb2-4938-948a-be64df3a776e",
+                "cycle_member_revision": 2,
+                "state": "cancelled",
+                "leadership": {
+                  "leader_cycle_member_id": "7f18fee2-06de-4aec-a4d8-0ffcccac6be4",
+                  "leadership_revision": 1,
+                  "leader_membership_id": "fc99fe16-22c3-42e3-bf58-c4877fc20ac7"
+                },
+                "completed_assignment_ids": [
+                  "7a21cc7a-999a-462f-8fa9-56cb2a31705d"
+                ],
+                "cancelled_assignment_ids": [
+                  "e6324561-b148-40c8-85eb-62806858f487"
+                ],
+                "preserved_completed_assignment_ids": []
+              }
+            ]
+          }
+        },
+        {
+          "data": {
+            "action": "personal_completion_departure",
+            "effects": [
+              {
+                "state": "cancelled",
+                "leadership": {
+                  "leadership_revision": 1,
+                  "leader_membership_id": "fc99fe16-22c3-42e3-bf58-c4877fc20ac7",
+                  "leader_cycle_member_id": "7f18fee2-06de-4aec-a4d8-0ffcccac6be4"
+                },
+                "room_cycle_id": "9d97d066-0891-5d6f-8cbc-61a23ca4a9c4",
+                "cycle_member_id": "de1d83d1-edb2-4938-948a-be64df3a776e",
+                "target_revision": 3,
+                "target_cycle_key": "2026-10-21",
+                "target_generation": 1,
+                "cycle_member_revision": 2,
+                "cancelled_assignment_ids": [
+                  "e6324561-b148-40c8-85eb-62806858f487"
+                ],
+                "completed_assignment_ids": [
+                  "7a21cc7a-999a-462f-8fa9-56cb2a31705d"
+                ],
+                "preserved_completed_assignment_ids": []
+              }
+            ],
+            "outcome": "applied",
+            "room_id": "cff28b70-8479-4590-993e-4fc0cc3a1f29",
+            "command_id": "dd666298-4a16-4b13-aca4-740144563f9b",
+            "executed_at": "2026-10-23T09:59:02.045629Z",
+            "affected_cycle_keys": [
+              "2026-10-21"
+            ],
+            "subject_membership_id": "99dc1f40-9b39-4b7b-a7bd-6ca29e3a3288"
+          },
+          "scope": {
+            "phase": "current",
+            "server_now": "2026-10-23T09:59:02.045629Z",
+            "playable_from": "2026-10-21T01:00:00Z",
+            "room_cycle_id": "9d97d066-0891-5d6f-8cbc-61a23ca4a9c4",
+            "policy_version": "two-cycle-contract-4",
+            "target_revision": 3,
+            "target_cycle_key": "2026-10-21",
+            "current_cycle_key": "2026-10-21",
+            "target_generation": 1
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "path": "/v2/raid-rooms/cff28b70-8479-4590-993e-4fc0cc3a1f29/personal-completion-departures",
+        "headers": {
+          "Idempotency-Key": "dd666298-4a16-4b13-aca4-740144563f9b"
+        },
+        "body": {
+          "expected_cycle_key": "2026-10-21",
+          "target_cycle_key": "2026-10-21",
+          "room_cycle_id": "9d97d066-0891-5d6f-8cbc-61a23ca4a9c4",
+          "target_generation": 1,
+          "expected_target_revision": 2,
+          "context_token": "<opaque-redacted>",
+          "actor_cycle_member_id": "de1d83d1-edb2-4938-948a-be64df3a776e",
+          "expected_cycle_member_revision": 1,
+          "round_id": "99a235e4-6352-5201-970f-cf1182cff0ad"
+        }
+      }
+    },
+    "personal_automatic_successor": {
+      "test": "test_departure_one_complete_rest_cancel_successor_preserve_n_ack[True]",
+      "responses": [
+        {
+          "scope": {
+            "server_now": "2026-10-23T09:59:15.305149Z",
+            "current_cycle_key": "2026-10-21",
+            "target_cycle_key": "2026-10-21",
+            "playable_from": "2026-10-21T01:00:00Z",
+            "phase": "current",
+            "target_revision": 2,
+            "policy_version": "two-cycle-contract-4",
+            "room_cycle_id": "ba87901f-a577-5b4f-bf76-7c6745989bc9",
+            "target_generation": 1
+          },
+          "data": {
+            "action": "personal_completion_departure",
+            "room_id": "8a0ad61b-042a-4bfc-9aad-ca7539664822",
+            "subject": {
+              "membership_id": "f0ae91ab-34a2-458a-a7e2-c1b79d770d85",
+              "cycle_member_id": "ae9bd7dc-3b78-4ba4-b8dd-b36062bc1ee8",
+              "cycle_member_revision": 1,
+              "character_id": "2faefb22-41f1-4031-9cab-1a0e6e72308e",
+              "round_id": "663436f6-5ce8-5180-8cf0-18c719a27bae",
+              "assignment_id": "3318a458-da5c-45de-8bb5-0c85759c7913",
+              "assignment_revision": 1
+            },
+            "leadership": {
+              "leader_cycle_member_id": "ae9bd7dc-3b78-4ba4-b8dd-b36062bc1ee8",
+              "leadership_revision": 1,
+              "leader_membership_id": "f0ae91ab-34a2-458a-a7e2-c1b79d770d85"
+            },
+            "impact": {
+              "complete_assignment_ids": [
+                "3318a458-da5c-45de-8bb5-0c85759c7913"
+              ],
+              "cancel_assignment_ids": [
+                "590fbb81-f5a7-4d58-808d-c34bafb8ce9b"
+              ],
+              "preserved_completed_assignment_ids": [],
+              "released_reservation_count": 2,
+              "departure_effect": "automatic_successor",
+              "successor": {
+                "cycle_member_id": "b00b64fd-ec39-4738-aabd-3799baa2fcd7",
+                "revision": 1,
+                "joined_order": "2",
+                "character_id": "0bca2fbb-5541-42aa-b7f4-985d1ea5a2a8",
+                "character_name": "sample-0"
+              },
+              "preserves_other_cycles": true,
+              "preserves_global_membership": true
+            },
+            "display": {
+              "character_id": "2faefb22-41f1-4031-9cab-1a0e6e72308e",
+              "character_name": "sample-0",
+              "assignments": [
+                {
+                  "assignment_id": "3318a458-da5c-45de-8bb5-0c85759c7913",
+                  "round_id": "663436f6-5ce8-5180-8cf0-18c719a27bae",
+                  "item_id": "513f718f-3687-5c11-9e5d-2f9b9e532a2a",
+                  "character_id": "2faefb22-41f1-4031-9cab-1a0e6e72308e",
+                  "character_name": "sample-0",
+                  "raid_id": "kazeros_act4",
+                  "raid_name": "4막",
+                  "difficulty_id": "normal",
+                  "difficulty_name": "노말",
+                  "catalog_version": "2026.08.20",
+                  "effect": "complete"
+                },
+                {
+                  "assignment_id": "590fbb81-f5a7-4d58-808d-c34bafb8ce9b",
+                  "round_id": "aeef3c75-b03a-5ef5-8fbf-c1b9d96a45ad",
+                  "item_id": "d7b43a85-3537-505a-882d-f0f075bdb458",
+                  "character_id": "2faefb22-41f1-4031-9cab-1a0e6e72308e",
+                  "character_name": "sample-0",
+                  "raid_id": "horizon_cathedral",
+                  "raid_name": "지평의 성당",
+                  "difficulty_id": "stage1",
+                  "difficulty_name": "1단계",
+                  "catalog_version": "2026.08.20",
+                  "effect": "cancel"
+                }
+              ],
+              "display_revision": "6a47f205b3717a20fddcc8eb030b7379ad22a8b09e9a02c94e6315324dac2858"
+            },
+            "permission": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "confirmation": {
+              "context_token": "<opaque-redacted>",
+              "issued_at": "2026-10-23T09:59:15.305149Z",
+              "expires_at": "2026-10-23T10:01:15.305149Z"
+            }
+          }
+        },
+        {
+          "scope": {
+            "server_now": "2026-10-23T09:59:15.702386Z",
+            "current_cycle_key": "2026-10-21",
+            "target_cycle_key": "2026-10-21",
+            "playable_from": "2026-10-21T01:00:00Z",
+            "phase": "current",
+            "target_revision": 2,
+            "policy_version": "two-cycle-contract-4",
+            "room_cycle_id": "ba87901f-a577-5b4f-bf76-7c6745989bc9",
+            "target_generation": 1
+          },
+          "data": {
+            "action": "personal_completion_departure",
+            "room_id": "8a0ad61b-042a-4bfc-9aad-ca7539664822",
+            "subject": {
+              "membership_id": "f0ae91ab-34a2-458a-a7e2-c1b79d770d85",
+              "cycle_member_id": "ae9bd7dc-3b78-4ba4-b8dd-b36062bc1ee8",
+              "cycle_member_revision": 1,
+              "character_id": "2faefb22-41f1-4031-9cab-1a0e6e72308e",
+              "round_id": "663436f6-5ce8-5180-8cf0-18c719a27bae",
+              "assignment_id": "3318a458-da5c-45de-8bb5-0c85759c7913",
+              "assignment_revision": 1
+            },
+            "leadership": {
+              "leader_cycle_member_id": "ae9bd7dc-3b78-4ba4-b8dd-b36062bc1ee8",
+              "leadership_revision": 1,
+              "leader_membership_id": "f0ae91ab-34a2-458a-a7e2-c1b79d770d85"
+            },
+            "impact": {
+              "complete_assignment_ids": [
+                "3318a458-da5c-45de-8bb5-0c85759c7913"
+              ],
+              "cancel_assignment_ids": [
+                "590fbb81-f5a7-4d58-808d-c34bafb8ce9b"
+              ],
+              "preserved_completed_assignment_ids": [],
+              "released_reservation_count": 2,
+              "departure_effect": "automatic_successor",
+              "successor": {
+                "cycle_member_id": "b00b64fd-ec39-4738-aabd-3799baa2fcd7",
+                "revision": 1,
+                "joined_order": "2",
+                "character_id": "0bca2fbb-5541-42aa-b7f4-985d1ea5a2a8",
+                "character_name": "sample-0"
+              },
+              "preserves_other_cycles": true,
+              "preserves_global_membership": true
+            },
+            "display": {
+              "character_id": "2faefb22-41f1-4031-9cab-1a0e6e72308e",
+              "character_name": "sample-0",
+              "assignments": [
+                {
+                  "assignment_id": "3318a458-da5c-45de-8bb5-0c85759c7913",
+                  "round_id": "663436f6-5ce8-5180-8cf0-18c719a27bae",
+                  "item_id": "513f718f-3687-5c11-9e5d-2f9b9e532a2a",
+                  "character_id": "2faefb22-41f1-4031-9cab-1a0e6e72308e",
+                  "character_name": "sample-0",
+                  "raid_id": "kazeros_act4",
+                  "raid_name": "4막",
+                  "difficulty_id": "normal",
+                  "difficulty_name": "노말",
+                  "catalog_version": "2026.08.20",
+                  "effect": "complete"
+                },
+                {
+                  "assignment_id": "590fbb81-f5a7-4d58-808d-c34bafb8ce9b",
+                  "round_id": "aeef3c75-b03a-5ef5-8fbf-c1b9d96a45ad",
+                  "item_id": "d7b43a85-3537-505a-882d-f0f075bdb458",
+                  "character_id": "2faefb22-41f1-4031-9cab-1a0e6e72308e",
+                  "character_name": "sample-0",
+                  "raid_id": "horizon_cathedral",
+                  "raid_name": "지평의 성당",
+                  "difficulty_id": "stage1",
+                  "difficulty_name": "1단계",
+                  "catalog_version": "2026.08.20",
+                  "effect": "cancel"
+                }
+              ],
+              "display_revision": "6a47f205b3717a20fddcc8eb030b7379ad22a8b09e9a02c94e6315324dac2858"
+            },
+            "permission": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "confirmation": {
+              "context_token": "<opaque-redacted>",
+              "issued_at": "2026-10-23T09:59:15.702386Z",
+              "expires_at": "2026-10-23T10:01:15.702386Z"
+            }
+          }
+        },
+        {
+          "scope": {
+            "server_now": "2026-10-23T09:59:15.794189Z",
+            "current_cycle_key": "2026-10-21",
+            "target_cycle_key": "2026-10-21",
+            "playable_from": "2026-10-21T01:00:00Z",
+            "phase": "current",
+            "target_revision": 3,
+            "policy_version": "two-cycle-contract-4",
+            "room_cycle_id": "ba87901f-a577-5b4f-bf76-7c6745989bc9",
+            "target_generation": 1
+          },
+          "data": {
+            "command_id": "65ddb43d-7424-4865-9e8c-5ab918dbd942",
+            "action": "personal_completion_departure",
+            "outcome": "applied",
+            "executed_at": "2026-10-23T09:59:15.794189Z",
+            "room_id": "8a0ad61b-042a-4bfc-9aad-ca7539664822",
+            "subject_membership_id": "f0ae91ab-34a2-458a-a7e2-c1b79d770d85",
+            "affected_cycle_keys": [
+              "2026-10-21"
+            ],
+            "effects": [
+              {
+                "target_cycle_key": "2026-10-21",
+                "room_cycle_id": "ba87901f-a577-5b4f-bf76-7c6745989bc9",
+                "target_generation": 1,
+                "target_revision": 3,
+                "cycle_member_id": "ae9bd7dc-3b78-4ba4-b8dd-b36062bc1ee8",
+                "cycle_member_revision": 2,
+                "state": "cancelled",
+                "leadership": {
+                  "leader_cycle_member_id": "b00b64fd-ec39-4738-aabd-3799baa2fcd7",
+                  "leadership_revision": 2,
+                  "leader_membership_id": "f9fa8fa4-203d-4694-ab00-e307e0cd70b1"
+                },
+                "completed_assignment_ids": [
+                  "3318a458-da5c-45de-8bb5-0c85759c7913"
+                ],
+                "cancelled_assignment_ids": [
+                  "590fbb81-f5a7-4d58-808d-c34bafb8ce9b"
+                ],
+                "preserved_completed_assignment_ids": []
+              }
+            ]
+          }
+        },
+        {
+          "data": {
+            "action": "personal_completion_departure",
+            "effects": [
+              {
+                "state": "cancelled",
+                "leadership": {
+                  "leadership_revision": 2,
+                  "leader_membership_id": "f9fa8fa4-203d-4694-ab00-e307e0cd70b1",
+                  "leader_cycle_member_id": "b00b64fd-ec39-4738-aabd-3799baa2fcd7"
+                },
+                "room_cycle_id": "ba87901f-a577-5b4f-bf76-7c6745989bc9",
+                "cycle_member_id": "ae9bd7dc-3b78-4ba4-b8dd-b36062bc1ee8",
+                "target_revision": 3,
+                "target_cycle_key": "2026-10-21",
+                "target_generation": 1,
+                "cycle_member_revision": 2,
+                "cancelled_assignment_ids": [
+                  "590fbb81-f5a7-4d58-808d-c34bafb8ce9b"
+                ],
+                "completed_assignment_ids": [
+                  "3318a458-da5c-45de-8bb5-0c85759c7913"
+                ],
+                "preserved_completed_assignment_ids": []
+              }
+            ],
+            "outcome": "applied",
+            "room_id": "8a0ad61b-042a-4bfc-9aad-ca7539664822",
+            "command_id": "65ddb43d-7424-4865-9e8c-5ab918dbd942",
+            "executed_at": "2026-10-23T09:59:15.794189Z",
+            "affected_cycle_keys": [
+              "2026-10-21"
+            ],
+            "subject_membership_id": "f0ae91ab-34a2-458a-a7e2-c1b79d770d85"
+          },
+          "scope": {
+            "phase": "current",
+            "server_now": "2026-10-23T09:59:15.794189Z",
+            "playable_from": "2026-10-21T01:00:00Z",
+            "room_cycle_id": "ba87901f-a577-5b4f-bf76-7c6745989bc9",
+            "policy_version": "two-cycle-contract-4",
+            "target_revision": 3,
+            "target_cycle_key": "2026-10-21",
+            "current_cycle_key": "2026-10-21",
+            "target_generation": 1
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "path": "/v2/raid-rooms/8a0ad61b-042a-4bfc-9aad-ca7539664822/personal-completion-departures",
+        "headers": {
+          "Idempotency-Key": "65ddb43d-7424-4865-9e8c-5ab918dbd942"
+        },
+        "body": {
+          "expected_cycle_key": "2026-10-21",
+          "target_cycle_key": "2026-10-21",
+          "room_cycle_id": "ba87901f-a577-5b4f-bf76-7c6745989bc9",
+          "target_generation": 1,
+          "expected_target_revision": 2,
+          "context_token": "<opaque-redacted>",
+          "actor_cycle_member_id": "ae9bd7dc-3b78-4ba4-b8dd-b36062bc1ee8",
+          "expected_cycle_member_revision": 1,
+          "round_id": "663436f6-5ce8-5180-8cf0-18c719a27bae"
+        }
+      }
+    },
+    "personal_successor_unavailable": {
+      "test": "test_successor_unavailable_no_partial_completion",
+      "responses": [
+        {
+          "scope": {
+            "server_now": "2026-10-23T09:50:23.047223Z",
+            "current_cycle_key": "2026-10-21",
+            "target_cycle_key": "2026-10-21",
+            "playable_from": "2026-10-21T01:00:00Z",
+            "phase": "current",
+            "target_revision": 2,
+            "policy_version": "two-cycle-contract-4",
+            "room_cycle_id": "4ebd5b02-0734-5ad9-b2a8-cf1dfcb60c58",
+            "target_generation": 1
+          },
+          "data": {
+            "action": "personal_completion_departure",
+            "room_id": "f341b6be-1eac-4b58-ab5a-7e66f62bde46",
+            "subject": {
+              "membership_id": "ea732a57-8a51-43dc-a1e2-34595eb0449d",
+              "cycle_member_id": "39f12979-2146-482c-9e63-7e20618d2d2d",
+              "cycle_member_revision": 1,
+              "character_id": "e8a6637d-65e3-4653-852e-54908aa213d1",
+              "round_id": "eb46763d-bca0-5004-b785-f4b3d177c0ae",
+              "assignment_id": "dbec90d5-3a0b-4392-8795-c72df4ad6555",
+              "assignment_revision": 1
+            },
+            "leadership": {
+              "leader_cycle_member_id": "39f12979-2146-482c-9e63-7e20618d2d2d",
+              "leadership_revision": 1,
+              "leader_membership_id": "ea732a57-8a51-43dc-a1e2-34595eb0449d"
+            },
+            "impact": {
+              "complete_assignment_ids": [
+                "dbec90d5-3a0b-4392-8795-c72df4ad6555"
+              ],
+              "cancel_assignment_ids": [
+                "c859513e-c735-431e-990d-5a041d976823"
+              ],
+              "preserved_completed_assignment_ids": [],
+              "released_reservation_count": 2,
+              "departure_effect": "automatic_successor",
+              "successor": null,
+              "preserves_other_cycles": true,
+              "preserves_global_membership": true
+            },
+            "display": {
+              "character_id": "e8a6637d-65e3-4653-852e-54908aa213d1",
+              "character_name": "sample-0",
+              "assignments": [
+                {
+                  "assignment_id": "dbec90d5-3a0b-4392-8795-c72df4ad6555",
+                  "round_id": "eb46763d-bca0-5004-b785-f4b3d177c0ae",
+                  "item_id": "32e1307c-7093-5576-81d5-f5b33fb40d4a",
+                  "character_id": "e8a6637d-65e3-4653-852e-54908aa213d1",
+                  "character_name": "sample-0",
+                  "raid_id": "horizon_cathedral",
+                  "raid_name": "지평의 성당",
+                  "difficulty_id": "stage1",
+                  "difficulty_name": "1단계",
+                  "catalog_version": "2026.08.20",
+                  "effect": "complete"
+                },
+                {
+                  "assignment_id": "c859513e-c735-431e-990d-5a041d976823",
+                  "round_id": "a84a6ae0-e0e4-5ddd-8e25-ca216e80fe34",
+                  "item_id": "360917f2-a0f5-508e-8363-b51aec41113e",
+                  "character_id": "e8a6637d-65e3-4653-852e-54908aa213d1",
+                  "character_name": "sample-0",
+                  "raid_id": "kazeros_act4",
+                  "raid_name": "4막",
+                  "difficulty_id": "normal",
+                  "difficulty_name": "노말",
+                  "catalog_version": "2026.08.20",
+                  "effect": "cancel"
+                }
+              ],
+              "display_revision": "8fd61e64f71762240ec5c1ac500b2f87e2649791bf0b4cc13ea2487c66a0ad05"
+            },
+            "permission": {
+              "allowed": false,
+              "reason": "SUCCESSOR_UNAVAILABLE",
+              "next_change_at": null
+            },
+            "confirmation": null
+          }
+        }
+      ]
+    },
+    "personal_last_completed": {
+      "test": "test_last_member_close_with_null_leader_and_completed_preserved[True]",
+      "responses": [
+        {
+          "scope": {
+            "server_now": "2026-10-23T09:50:10.276892Z",
+            "current_cycle_key": "2026-10-21",
+            "target_cycle_key": "2026-10-21",
+            "playable_from": "2026-10-21T01:00:00Z",
+            "phase": "current",
+            "target_revision": 2,
+            "policy_version": "two-cycle-contract-4",
+            "room_cycle_id": "c8442b43-4c8f-5968-9352-823e4d5843d6",
+            "target_generation": 1
+          },
+          "data": {
+            "action": "personal_completion_departure",
+            "room_id": "cc906f42-6914-44fa-8bd5-8acfe6a3577a",
+            "subject": {
+              "membership_id": "e4d6a409-bd4c-4f79-9464-b2887304262a",
+              "cycle_member_id": "6d4fecc9-2f7c-411d-8a01-707f241ce3e7",
+              "cycle_member_revision": 2,
+              "character_id": "9e4d9351-c906-4839-9546-435acc735d91",
+              "round_id": "027935bd-d269-5dc9-9e92-15befc9a7677",
+              "assignment_id": "948b1476-c5b4-455c-9537-e65875d0c85d",
+              "assignment_revision": 1
+            },
+            "leadership": {
+              "leader_cycle_member_id": "6d4fecc9-2f7c-411d-8a01-707f241ce3e7",
+              "leadership_revision": 1,
+              "leader_membership_id": "e4d6a409-bd4c-4f79-9464-b2887304262a"
+            },
+            "impact": {
+              "complete_assignment_ids": [
+                "948b1476-c5b4-455c-9537-e65875d0c85d"
+              ],
+              "cancel_assignment_ids": [],
+              "preserved_completed_assignment_ids": [
+                "0d41f8d9-2858-4d7f-8a34-887fb3ff8b12"
+              ],
+              "released_reservation_count": 1,
+              "departure_effect": "close_completed",
+              "successor": null,
+              "preserves_other_cycles": true,
+              "preserves_global_membership": true
+            },
+            "display": {
+              "character_id": "9e4d9351-c906-4839-9546-435acc735d91",
+              "character_name": "sample-0",
+              "assignments": [
+                {
+                  "assignment_id": "948b1476-c5b4-455c-9537-e65875d0c85d",
+                  "round_id": "027935bd-d269-5dc9-9e92-15befc9a7677",
+                  "item_id": "5ec23b26-e0a3-535d-b95b-95b6b19cf1bd",
+                  "character_id": "9e4d9351-c906-4839-9546-435acc735d91",
+                  "character_name": "sample-0",
+                  "raid_id": "horizon_cathedral",
+                  "raid_name": "지평의 성당",
+                  "difficulty_id": "stage1",
+                  "difficulty_name": "1단계",
+                  "catalog_version": "2026.08.20",
+                  "effect": "complete"
+                },
+                {
+                  "assignment_id": "0d41f8d9-2858-4d7f-8a34-887fb3ff8b12",
+                  "round_id": "ee85c987-5008-540f-b5c4-504a222dfb58",
+                  "item_id": "98e639c2-2cde-5e4a-86b7-b4aaa752f244",
+                  "character_id": "9e4d9351-c906-4839-9546-435acc735d91",
+                  "character_name": "sample-0",
+                  "raid_id": "kazeros_act4",
+                  "raid_name": "4막",
+                  "difficulty_id": "normal",
+                  "difficulty_name": "노말",
+                  "catalog_version": "2026.08.20",
+                  "effect": "preserve_completed"
+                }
+              ],
+              "display_revision": "0d12dacde48b5b312f99c9e753734869946ffa9a52f355d90ba7941b8edf32ce"
+            },
+            "permission": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "confirmation": {
+              "context_token": "<opaque-redacted>",
+              "issued_at": "2026-10-23T09:50:10.276892Z",
+              "expires_at": "2026-10-23T09:52:10.276892Z"
+            }
+          }
+        },
+        {
+          "scope": {
+            "server_now": "2026-10-23T09:50:10.352618Z",
+            "current_cycle_key": "2026-10-21",
+            "target_cycle_key": "2026-10-21",
+            "playable_from": "2026-10-21T01:00:00Z",
+            "phase": "current",
+            "target_revision": 3,
+            "policy_version": "two-cycle-contract-4",
+            "room_cycle_id": "c8442b43-4c8f-5968-9352-823e4d5843d6",
+            "target_generation": 1
+          },
+          "data": {
+            "command_id": "7a8fb89d-b915-4ac2-a15d-065bcf199bba",
+            "action": "personal_completion_departure",
+            "outcome": "applied",
+            "executed_at": "2026-10-23T09:50:10.352618Z",
+            "room_id": "cc906f42-6914-44fa-8bd5-8acfe6a3577a",
+            "subject_membership_id": "e4d6a409-bd4c-4f79-9464-b2887304262a",
+            "affected_cycle_keys": [
+              "2026-10-21"
+            ],
+            "effects": [
+              {
+                "target_cycle_key": "2026-10-21",
+                "room_cycle_id": "c8442b43-4c8f-5968-9352-823e4d5843d6",
+                "target_generation": 1,
+                "target_revision": 3,
+                "cycle_member_id": "6d4fecc9-2f7c-411d-8a01-707f241ce3e7",
+                "cycle_member_revision": 3,
+                "state": "cancelled",
+                "leadership": {
+                  "leader_cycle_member_id": null,
+                  "leadership_revision": 2,
+                  "leader_membership_id": null
+                },
+                "completed_assignment_ids": [
+                  "948b1476-c5b4-455c-9537-e65875d0c85d"
+                ],
+                "cancelled_assignment_ids": [],
+                "preserved_completed_assignment_ids": [
+                  "0d41f8d9-2858-4d7f-8a34-887fb3ff8b12"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "path": "/v2/raid-rooms/cc906f42-6914-44fa-8bd5-8acfe6a3577a/personal-completion-departures",
+        "headers": {
+          "Idempotency-Key": "7a8fb89d-b915-4ac2-a15d-065bcf199bba"
+        },
+        "body": {
+          "expected_cycle_key": "2026-10-21",
+          "target_cycle_key": "2026-10-21",
+          "room_cycle_id": "c8442b43-4c8f-5968-9352-823e4d5843d6",
+          "target_generation": 1,
+          "expected_target_revision": 2,
+          "context_token": "<opaque-redacted>",
+          "actor_cycle_member_id": "6d4fecc9-2f7c-411d-8a01-707f241ce3e7",
+          "expected_cycle_member_revision": 2,
+          "round_id": "027935bd-d269-5dc9-9e92-15befc9a7677"
+        }
+      }
+    },
+    "personal_last_incomplete": {
+      "test": "test_last_member_close_with_null_leader_and_completed_preserved[False]",
+      "responses": [
+        {
+          "scope": {
+            "server_now": "2026-10-23T09:49:57.074688Z",
+            "current_cycle_key": "2026-10-21",
+            "target_cycle_key": "2026-10-21",
+            "playable_from": "2026-10-21T01:00:00Z",
+            "phase": "current",
+            "target_revision": 1,
+            "policy_version": "two-cycle-contract-4",
+            "room_cycle_id": "791e8aba-20ad-5387-bfaf-05e15903faf9",
+            "target_generation": 1
+          },
+          "data": {
+            "action": "personal_completion_departure",
+            "room_id": "4a2ff4ad-189e-44ef-9e7c-22a178b7596b",
+            "subject": {
+              "membership_id": "d957c558-9f0d-479e-9791-89aab35cbf8e",
+              "cycle_member_id": "9974df90-53ab-4110-b406-fec725664a9f",
+              "cycle_member_revision": 1,
+              "character_id": "91b0f4b5-1c23-4f7d-bfea-ab97a1095b07",
+              "round_id": "ce819869-9135-5d51-a67a-40a1b639405c",
+              "assignment_id": "7d262331-3b61-4779-8ef1-ef33a3f66fa9",
+              "assignment_revision": 1
+            },
+            "leadership": {
+              "leader_cycle_member_id": "9974df90-53ab-4110-b406-fec725664a9f",
+              "leadership_revision": 1,
+              "leader_membership_id": "d957c558-9f0d-479e-9791-89aab35cbf8e"
+            },
+            "impact": {
+              "complete_assignment_ids": [
+                "7d262331-3b61-4779-8ef1-ef33a3f66fa9"
+              ],
+              "cancel_assignment_ids": [
+                "36701572-b807-4345-a88c-41496d1d01a9"
+              ],
+              "preserved_completed_assignment_ids": [],
+              "released_reservation_count": 2,
+              "departure_effect": "close_incomplete",
+              "successor": null,
+              "preserves_other_cycles": true,
+              "preserves_global_membership": true
+            },
+            "display": {
+              "character_id": "91b0f4b5-1c23-4f7d-bfea-ab97a1095b07",
+              "character_name": "sample-0",
+              "assignments": [
+                {
+                  "assignment_id": "7d262331-3b61-4779-8ef1-ef33a3f66fa9",
+                  "round_id": "ce819869-9135-5d51-a67a-40a1b639405c",
+                  "item_id": "c815b123-a7cb-5d49-9149-94160b0c7f5f",
+                  "character_id": "91b0f4b5-1c23-4f7d-bfea-ab97a1095b07",
+                  "character_name": "sample-0",
+                  "raid_id": "horizon_cathedral",
+                  "raid_name": "지평의 성당",
+                  "difficulty_id": "stage1",
+                  "difficulty_name": "1단계",
+                  "catalog_version": "2026.08.20",
+                  "effect": "complete"
+                },
+                {
+                  "assignment_id": "36701572-b807-4345-a88c-41496d1d01a9",
+                  "round_id": "05054801-8396-57eb-8cdb-449d20cc283f",
+                  "item_id": "ec2315aa-b989-5e5a-9d1f-f2013f2707cc",
+                  "character_id": "91b0f4b5-1c23-4f7d-bfea-ab97a1095b07",
+                  "character_name": "sample-0",
+                  "raid_id": "kazeros_act4",
+                  "raid_name": "4막",
+                  "difficulty_id": "normal",
+                  "difficulty_name": "노말",
+                  "catalog_version": "2026.08.20",
+                  "effect": "cancel"
+                }
+              ],
+              "display_revision": "dec07feafaa1e05e81ded3f4a9e8313f9850bd5026ece7e91b6b7625733c4dd2"
+            },
+            "permission": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "confirmation": {
+              "context_token": "<opaque-redacted>",
+              "issued_at": "2026-10-23T09:49:57.074688Z",
+              "expires_at": "2026-10-23T09:51:57.074688Z"
+            }
+          }
+        },
+        {
+          "scope": {
+            "server_now": "2026-10-23T09:49:57.150466Z",
+            "current_cycle_key": "2026-10-21",
+            "target_cycle_key": "2026-10-21",
+            "playable_from": "2026-10-21T01:00:00Z",
+            "phase": "current",
+            "target_revision": 2,
+            "policy_version": "two-cycle-contract-4",
+            "room_cycle_id": "791e8aba-20ad-5387-bfaf-05e15903faf9",
+            "target_generation": 1
+          },
+          "data": {
+            "command_id": "dc91e2f5-4cd8-48c2-b484-a338466f8891",
+            "action": "personal_completion_departure",
+            "outcome": "applied",
+            "executed_at": "2026-10-23T09:49:57.150466Z",
+            "room_id": "4a2ff4ad-189e-44ef-9e7c-22a178b7596b",
+            "subject_membership_id": "d957c558-9f0d-479e-9791-89aab35cbf8e",
+            "affected_cycle_keys": [
+              "2026-10-21"
+            ],
+            "effects": [
+              {
+                "target_cycle_key": "2026-10-21",
+                "room_cycle_id": "791e8aba-20ad-5387-bfaf-05e15903faf9",
+                "target_generation": 1,
+                "target_revision": 2,
+                "cycle_member_id": "9974df90-53ab-4110-b406-fec725664a9f",
+                "cycle_member_revision": 2,
+                "state": "cancelled",
+                "leadership": {
+                  "leader_cycle_member_id": null,
+                  "leadership_revision": 2,
+                  "leader_membership_id": null
+                },
+                "completed_assignment_ids": [
+                  "7d262331-3b61-4779-8ef1-ef33a3f66fa9"
+                ],
+                "cancelled_assignment_ids": [
+                  "36701572-b807-4345-a88c-41496d1d01a9"
+                ],
+                "preserved_completed_assignment_ids": []
+              }
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "path": "/v2/raid-rooms/4a2ff4ad-189e-44ef-9e7c-22a178b7596b/personal-completion-departures",
+        "headers": {
+          "Idempotency-Key": "dc91e2f5-4cd8-48c2-b484-a338466f8891"
+        },
+        "body": {
+          "expected_cycle_key": "2026-10-21",
+          "target_cycle_key": "2026-10-21",
+          "room_cycle_id": "791e8aba-20ad-5387-bfaf-05e15903faf9",
+          "target_generation": 1,
+          "expected_target_revision": 1,
+          "context_token": "<opaque-redacted>",
+          "actor_cycle_member_id": "9974df90-53ab-4110-b406-fec725664a9f",
+          "expected_cycle_member_revision": 1,
+          "round_id": "ce819869-9135-5d51-a67a-40a1b639405c"
+        }
+      }
+    }
+  }
+}

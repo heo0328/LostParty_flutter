@@ -1832,3 +1832,18 @@ B는 member_cycles/device_feedback/cycle_recruitment의 실제read경계와 cycl
 앱에서서버의DB롤백/감사원자성을다시입증하는mock을만들지않는다. Backend격리39시험근거와앱의DTO/명령/이벤트/읽기경계를구분한다. 인원수는최대8인대표+다른상태인마지막1인만으로한정한다. 공용 Gateway/ACK확장호출자가다른feature에전파되면그해당회귀/분석을추가하고불필요한전체시험은반복하지않는다. 최종포맷·diffcheck·관련분석은각독립그룹에서1회묶는다.
 
 이번설계구간은원격고정OpenAPI의174경로와주요schema필드·개발안내/17그룹자료·기존Router/DI/실제Writer를정적으로대조했다. Python환경에yaml모듈이없어설치하지않고파일이JSON형태임을확인해표준json으로검토했다. GitHubcontents의대용량OpenAPI본문이비어있어고정blob API로자료를확보했으며계약누락으로추정하지않았다. 기능/시험코드·실서버쓰기/기기조작은변경/실행하지않았다. 순수문서검증은diffcheck·링크/내용검토,기존Flutter시험재실행없음이다.
+
+
+### 37.33 D22 개인 완료 후 선택 주차 탈퇴 구현 (2026-10-23)
+
+사용자 구현 승인으로 §37.32의 D22만 구현했다. Backend 소비0eed67c453040b332653fd2071e6cd2e1eeed503의 DepartureContext/Command/ActionResult를 사용하며 E23/A/B는 구현하지 않았다. 현재 개인 버튼은 **나혼자 완료처리이후 탈퇴**다. plan은 active 본인raid 후보를 고르는 용도로만 먼저 읽으며 최종 영향/캐릭터·raid/난이도는 같은 관측의 Context.display에서 표시한다. 단일후보에는 별도선택단계가 없고 다중후보는 같은확인창 안에서 선택한다. 완료1/나머지참가취소/기존완료보존·실제날짜·예약해제와후계자/마지막T종료를 안내한다. 후계자없음은거절사유를표시하고쓰기0이다.
+
+**실제 연결:** cycle_member_actions.dart의 불변DeparturePreview/닫힌 필드·배타 UUID집합/표시effect 일대일·revision/시각/token/permission관계·전용ACK validator를추가했다. 서버정책·승계자선정은재구현하지않는다. 기존CycleInteractionGateway와옛writer시그니처를바꾸지않고CycleDepartureGateway 기능인터페이스를CycleInteractionRepository에추가해실제DI가새GET/POST를제공한다. 액션의진입ID/원본문동등성·ACK의원Key/action/subject/실제T·CM/세대/최종revision/완료취소보존집합·리더효과를검증한다. 새시각파서는offset을정규화하고잘못된달력/시각을거절하며기존전역UTC파서는유지한다.
+
+Controller는확인직후새context의의미서명을비교한다. token/발급/만료와서버관측시각만바뀌면최신token으로원본문을고정하지만표시/영향/후계자/권한·세대변경이면POST없이재확인한다. 화면T변경도새context반영후쓰기전에차단한다. _CycleCommand에불변preview근거를보존해응답유실시원method/path/body/key/token만재송한다. 새context로원명령을대체하지않고잘못된ACK는pending을유지한다. 모집pending은기존메모리수명이며앱종료복구가새로추가된것은아니다.
+
+전용ACK검증후pending을해제하고명령Key/room/T의departureSuccess를생성한뒤기존changed/onMutation을통지한다. 상세는옛회원/현재T·현재Router경로를확인하고중복성공을제외해확인창과상세를떠나 /raid-status?target_cycle_key=T 로이동한다. 별도member-only plan후조회는하지않으며그조회권한이사라져도성공을취소하지않는다. 기존목록은mutation으로정확T캐시를무효화하고새성공의선택T로복귀하며라우트initialTarget도지원한다. 기존weekly.refreshTarget이계정완료를갱신한다. 원ACK복구로성공한경우도동일이탈이벤트를사용하고화면이이미다른경로/주차이면강제이동하지않는다. N저장자료/선택과다른사용자의완료·참가를로컬에서수정하지않는다.
+
+**검증:** 새24+기존직접109의 **5파일최종133mock PASS**, lib/test전체분석0·정확변경파일포맷/diffcheck/diff검토. 게시된합성personal5그룹을출처와함께fixture로보존했다. 일반/승계/후계없음/마지막completed/incomplete와null리더ACK,추가필드/표시불일치/중복ID/불가token·잘못된nullable·revision초과/다른주차/시각오버플로/offset,token단독변경서명·원응답유실재송/ACK불일치pending·표시변경쓰기0/중복명령/옛회원/확인중화면T전환,ACK후403조회콜백실패와원성공/이벤트보존을검증했다. 실제멱등DB/롤백은Backend근거이며Fluttermock로재입증하지않는다. 중간21PASS는최종수에합산하지않았다. 초기분석의중괄호lint를수정했고넓은format의무관2파일변경은검토후복구해범위에서제외했다.
+
+기존완료/참가/관리/주차상세의직접시험을보호했으며별도기능/스키마·기본Gateway writer인터페이스를바꾸지않아무관전체시험은생략했다. 정상UI이탈·폴드/큰글자·실회원일반/공대장완료후탈퇴/승계·다중raid의완료1/나머지취소·N보존·목록/계정완료표시는**사용자실기기미확인**이다. 설치·기기조작/실회원HTTP명령·서버/DB/배포는수행하지않았다. 다음은E23이며원본13의A완료해제/B보관소비는별도미완료,dev/main통합은보류한다.

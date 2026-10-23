@@ -6,6 +6,7 @@ import '../../data/cycle_schedule.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
 import '../viewmodels/cycle_participation_controller.dart';
 import 'cycle_participation_widgets.dart';
+import 'cycle_member_action_widgets.dart';
 
 class CycleOutcomeActions extends StatelessWidget {
   const CycleOutcomeActions({
@@ -20,6 +21,7 @@ class CycleOutcomeActions extends StatelessWidget {
     this.showCompletion = true,
     this.showClosure = true,
     this.completeLabel = '레이드 완료',
+    this.isCurrent,
     super.key,
   });
   final CycleParticipationController controller;
@@ -28,6 +30,7 @@ class CycleOutcomeActions extends StatelessWidget {
   final String Function(Map) raidLabel;
   final bool showCompletion, showClosure;
   final String completeLabel;
+  final bool Function()? isCurrent;
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
@@ -59,16 +62,25 @@ class CycleOutcomeActions extends StatelessWidget {
         {'leader', 'member'}.contains(role) &&
         (action != 'complete_item' || role == 'leader');
     final VoidCallback? onPressed = enabled
-        ? () => showDialog<void>(
-            context: context,
-            builder: (_) => _OutcomeDialog(
-              controller: controller,
-              room: room,
-              target: target,
-              action: action,
-              raidLabel: raidLabel,
-            ),
-          )
+        ? () => action == 'personal_completion'
+              ? showDeparture(
+                  context,
+                  controller,
+                  room: room,
+                  target: target,
+                  raidLabel: raidLabel,
+                  isCurrent: isCurrent ?? () => true,
+                )
+              : showDialog<void>(
+                  context: context,
+                  builder: (_) => _OutcomeDialog(
+                    controller: controller,
+                    room: room,
+                    target: target,
+                    action: action,
+                    raidLabel: raidLabel,
+                  ),
+                )
         : null;
     if (action == 'complete_item') {
       return SizedBox(
@@ -88,7 +100,11 @@ class CycleOutcomeActions extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: TextButton(
         onPressed: onPressed,
-        child: Text(cycleOutcomeLabels[action]!),
+        child: Text(
+          action == 'personal_completion'
+              ? '나혼자 완료처리이후 탈퇴'
+              : cycleOutcomeLabels[action]!,
+        ),
       ),
     );
   }

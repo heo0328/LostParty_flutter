@@ -25,9 +25,11 @@ class CycleOwnRoomsPage extends StatefulWidget {
     required this.onLogin,
     required this.onRoom,
     this.mutations,
+    this.initialTarget,
     super.key,
   });
   final MemberWeeklyViewModel weekly;
+  final String? initialTarget;
   final CycleParticipationController? mutations;
   final CycleReadRepository repository;
   final String Function() scopeKey;
@@ -40,6 +42,8 @@ class CycleOwnRoomsPage extends StatefulWidget {
 class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
   late final CycleReadViewModel m;
   int _mutationVersion = 0;
+  bool _initialApplied = false;
+  String? _departureKey;
   @override
   void initState() {
     super.initState();
@@ -50,6 +54,7 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
           '${widget.scopeKey()}/${widget.weekly.cycles?.current.key}',
     );
     widget.weekly.addListener(_meta);
+    _departureKey = widget.mutations?.departureSuccess?.$1;
     _mutationVersion = widget.mutations?.mutationVersion ?? 0;
     widget.mutations?.addListener(_mutated);
     _meta();
@@ -60,12 +65,35 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
     if (c.mutationVersion == _mutationVersion) return;
     _mutationVersion = c.mutationVersion;
     if (c.lastTarget != null) m.invalidateTarget(c.lastTarget!);
+    final departure = c.departureSuccess;
+    if (departure != null && departure.$1 != _departureKey) {
+      _departureKey = departure.$1;
+      if (widget.weekly.cycles?.find(departure.$3) != null) {
+        m.select(departure.$3);
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant CycleOwnRoomsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTarget != widget.initialTarget) {
+      _initialApplied = false;
+      _meta();
+    }
   }
 
   void _meta() {
     final c = widget.weekly.cycles;
     if (c != null && m.signedIn) {
-      m.select(c.find(m.target ?? '')?.key ?? c.current.key, section: m.tab);
+      final requested = !_initialApplied
+          ? c.find(widget.initialTarget ?? '')?.key
+          : null;
+      _initialApplied = true;
+      m.select(
+        requested ?? c.find(m.target ?? '')?.key ?? c.current.key,
+        section: requested == null ? m.tab : 0,
+      );
     }
   }
 

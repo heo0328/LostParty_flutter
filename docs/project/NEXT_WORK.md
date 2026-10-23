@@ -1,20 +1,18 @@
-# NEXT WORK — D22 개인 완료 후 탈퇴 구현 준비·E23 추방 후속
+# NEXT WORK — D22 구현·자동검증 완료 / E23 양주차 추방 연결
 
-## 현재 계획 (2026-10-23)
+## 현재 상태 (2026-10-23)
 
-설계 d3a328e7 commit/push·원격일치 후 [22 결과6362922606](https://github.com/heo0328/lostparty-backend/issues/22#issuecomment-6362922606)·[23 결과6362922968](https://github.com/heo0328/lostparty-backend/issues/23#issuecomment-6362922968)에 기능구현전 설계/다음담당·미실행 범위를 회신하고 게시본문 MATCH를 확인했다.
+D22 개인 완료 후 해당T 탈퇴를 구현했다. 실제Router/DI·Context표시/영향확인·원명령/전용ACK/재송·성공후상세이탈과내참가실제T복귀·계정/목록갱신이연결됐다. **5파일최종133mock PASS/lib·test분석0**, 상세는[설계37 §37.33](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)·DEV_LOG다. 정상실회원/기기인수는미확인이며dev/main미반영이다. Backend소비0eed67c453040b332653fd2071e6cd2e1eeed503(174경로/DB0030)의D22부분을사용하고기존명령/원pending을유지한다.
 
-사용자 지시로 **기능 코드 없이** Issue22/23 최종계약의 파일별 책임·확인/원명령·ACK/성공후이탈·영향T무효화·검증 설계를 [설계37 §37.32](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)에 확정했다. 현재작업브랜치 feature/raid-recruitment-scheduling을재사용하고무관dirty는보존한다.
+## 다음 첫 그룹 — E23 카드의 현재/양T 내보내기
 
-최종인계는 [22/6362447014](https://github.com/heo0328/lostparty-backend/issues/22#issuecomment-6362447014)·[23/6362447457](https://github.com/heo0328/lostparty-backend/issues/23#issuecomment-6362447457), 고정Backend `0eed67c453040b332653fd2071e6cd2e1eeed503`·174경로/DB0030이다. 요청한표시스냅샷/source review보완은해소됐으며 **Backend 구현대기가아닌Flutter 구현대기**다. 앱소비2940824는아직변경하지않았다. 아래과거이력의22/23미합의·Backend대기문구보다이최신상태가우선한다.
+사용자다음구간지시후[설계37 §37.32](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)의E23을진행한다. [Backend23/6362447457](https://github.com/heo0328/lostparty-backend/issues/23#issuecomment-6362447457) 최종계약에보완대기는없다. 기존카드X고정membership/CM/sourceT,반대none/review/actor없음nullable·option별permission/token/current_only영향서명·both각T권한을연결하고취소/현재만/함께3선택을지원한다. 기존단일T원pending은원API복구,불가both를현재만/옛API로자동대체하지않는다. ACKsource순효과T만무효화한다.
 
-1. **다음 신규구현 D22:** 최소공용ActionResult+DeparturePreview/reader → 기존Controller원명령/ACK별도분기·성공이벤트/선택T갱신 → 개인완료확인창/요청이름·성공후 /raid-status 실제T 복귀 → 직접표적시험·분석/문서·Issue22결과·commit/push. 선택1완료/나머지본인T취소·승계·후계없음전체거절·마지막null리더·N보존을보호한다.
-2. **그다음 E23:** option별권한/token·source review/nullable·선택option의미서명 → 카드고정대상의취소/현재만/함께3선택 → 원ACK/선택효과T무효화 → 직접시험/문서·Issue23결과·commit/push. current_only에반대무관변경을혼합하지않고both불가자동대체/구명령fallback없음.
-3. **기존 A/B 별도미완료:** 완료해제/schema1·2 pending호환과목록·보관은§37.27기준을보존한다. D/E정책상선행필수는아니며필수reader/null·갱신경계만중복없이재사용한다. 이번22/23설계/차후D22에계정정정전체를동시에섞지않고전체릴리즈전합동정합을확인한다.
+순서: RemovalPreview/reader·최소공용효과검증 → Controller선택option재확인·전용원명령/ACK → 카드확인창/정확T갱신 → cycle_removal/공용모델+기존management/interaction/recruitment 직접시험·관련분석/문서·Issue23결과·commit/push. 서버DB원자성은Backend검증과구분하고앱은입출력/원ACK·양T정확타깃과회원/세대경계를검증한다. 정상UI/실기기는기능섹션최종사용자담당이다.
 
-새명령성공은전용ACK확정이며탈퇴후plan403/404를성공조건으로삼지않는다. 원pending/key/body/token·rollover원ACK·옛회원/T/카드세대차단·연타/취소쓰기0를보존한다. 카드별Context사전조회/N+1없음. 서버정책을UI조건문으로복제하지않고서버권한/영향을소비한다. 모집pending앱종료영속복구/시간UI/다인강제해산·통계·과거새화면·서버/DB/실회원/기기조작/dev/main병합·배포는제외한다.
+**별도미완료 A/B:** §37.27의본인완료해제/schema1·2영속pending호환, current/ended/all·보관/복구읽기는따로유지한다. D22를완료해제까지해결된것으로표기하지않는다. 필요한reader/갱신은중복없이재사용하고새요청E23과동시확대하지않는다. E23/A/B/실기기인수전전체완료·dev/main통합/배포는하지않는다.
 
-실행할표적시험·기존보호·수동인수/전체시험확대조건은§37.32표를따른다. 이번순수문서는계약/코드정적대조·diffcheck만실행,Flutter시험반복없음. 기기정상인수는사용자담당이며섹션최종에묶는다. 구현착수는사용자다음구간지시후D22부터이며,현재는문서commit/push보관·dev/main미반영이다.
+현재branch feature/raid-recruitment-scheduling 유지·무관dirty보존. 시간UI/다인강제해산·매주자동개방/통계·과거새화면·모집pending앱종료영속복구·서버/DB/기기조작은제외한다. 아래과거'설계만/Backend계약대기/개인버튼옛동작'은§37.33의최신D22상태가우선한다.
 
 ## 최신 UI 구간 결과와 서버 보완 대기 (2026-10-23)
 
