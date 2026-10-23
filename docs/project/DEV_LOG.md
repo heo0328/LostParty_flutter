@@ -2,6 +2,8 @@
 
 ## 2026-10-23 — 첫 디바이스 피드백 Flutter 1차 수정·서버 정책 보완 요청
 
+구현 `2ba24d95b59db5cfc758c8c1de26ee96bfc4b200` commit/push·원격일치, [Issue13 결과6358397626](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6358397626) 게시원문MATCH까지 확인했다. 서버정책 대기와 dev미반영·브랜치유지는 변함없다.
+
 feature/raid-recruitment-scheduling·원격기준0a64bbb/dev6d3f617와 기존무관dirty를 대조했고 오류중단 뒤 동일 변경을 이어서 마감했다. 시간선택 UI는 사용자 최신 회신에 따라 구현하지 않고 Penpot 비교 A하단패널/B현재선택형 여백 개선 제안만 설계37 §37.25에 남겼다.
 
 - 새로 가능: 실제 회원 캐릭터 상세의 단건 Armory 갱신(기존 분석/로컬저장/서버요약 재사용), 생성/신청/직접참가/캐릭터변경·N충돌 대체의 선호역할 초기값, C/N·함께생성의 참가/완료raid 후보 제외(캐릭터/선택주차당 summary1회), 참가중 실제주차 활성관계만 표시. 체크 시각20%축소·중앙/터치영역 유지·i공간 확대.
