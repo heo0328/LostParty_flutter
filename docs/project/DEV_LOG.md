@@ -2,13 +2,15 @@
 
 ## 2026-10-23 — A 본인 완료 해제·영속 원명령 호환 구현
 
+구현 `e9d2783d51ba079c0a3fe6ae88f5a4099b58978a` commit/push·원격 일치 후 [Issue13 결과6364089791](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6364089791)에 소비계약/94mock·분석0/미확인·후속 B를 게시했다. 사용한도로 자동 승인 검토가 실패해 게시본문 재조회 명령만 실행되지 않았고, 사용자 재개 지시 후 원본문 MATCH와 원격 SHA를 확인했다. 기능 코드는 중단 전 이미 보관됐으며 재개로 생긴 코드/테스트 변경은 없다. 기존94PASS와 분석0을 재사용하고 인계 문서만 diffcheck/내용 검토했다.
+
 사용자 ‘설계가 있으면 구현’ 지시로 §37.27 A와 최신 Issue13/Backend6360251618·고정8bbcfc8c의 실제 개발안내/OpenAPI/합성 예시를 대조해 구현했다. 현재0eed67c4 확장 계약과 정정2경로/8schema가 동일함을 확인했다. 상세 구현/검증은 설계37 §37.36, 다음은 B 목록/보관 소비다.
 
 - 새 흐름: 계정의 본인 party/manual 완료 해제 터치 → 그때만 context → 실제T/캐릭터/레이드·참가/자리/예약 자동복구 없음 확인 → 최신 동일의미 재검사 → 디스크 원명령 저장 → 전용 POST/ACK → pending 정리/실제T 조회. 취소·완료없음·의미변경은 쓰기0이다.
 - 보존: 새 완료 생성 C/수10시·활동/카탈로그 정책, 구 schema1/2와 wire1/2 원PUT true/false/key/body/ack·표시설정. 새 schema3/v3는 불변 correction_context+정확6필드body를 저장하고 실제T/관측C를 분리한다. 손상저장을 새명령으로 대체하지 않고 저장실패 전송0·원응답 유실 재송·원ACK 뒤 조회실패 재정정0·24h 보류를 보호한다. 회수·방/타인/N 자료는 로컬 합성하지 않는다.
 - 검증: 관련4파일 최종94mock PASS(신규34+직접기존60), lib/test분석0·포맷/diffcheck/diff 검토. 초기 teardown의 미존재 dispose를 close로 수정·회원fixture 비UUID를 정상값으로 수정해 알림예외 제거·lint 보완 후 최종확인했다. 중간28/51/60 수는 합산하지 않는다. 기존 manual false 시험을 이미 저장된 schema2 원PUT 복구 사례로 유지했다. 한정된 weekly 저장/명령 경계로 무관 전체시험은 생략했다.
 - 미확인 실기기: 본인 파티완료 해제/취소·타인/다른T·새완료/재참가·재시작/문구와 UI 인수. 정상 실회원HTTP/기기·성능/메모리측정·서버/DB/배포 없음. B종료방 목록·보관 읽기와 전체 인수·dev/main은 미완료다.
-- Git/협업: feature/raid-recruitment-scheduling 유지·구간 commit/push 후 Issue13에 계약/구현/검증/미확인을 회신한다. 기존 무관 통계35/생성 플랫폼파일·DevTools·백업/tools는 보존/제외한다.
+- Git/협업: feature/raid-recruitment-scheduling 유지·구간 commit/push 후 Issue13에 계약/구현/검증/미확인 회신과 게시본문 확인을 완료했다. 기존 무관 통계35/생성 플랫폼파일·DevTools·백업/tools는 보존/제외한다.
 
 ## 2026-10-23 — E23 현재/양주차 참가자 추방 구현
 
