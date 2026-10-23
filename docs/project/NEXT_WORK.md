@@ -2,6 +2,8 @@
 
 ## 현재 상태 (2026-10-23)
 
+D22 구현 `fece20032e6bfd8b6cd5d98a579d99e85564fc7a` commit/push·원격일치 후 [Issue22 결과6363334658](https://github.com/heo0328/lostparty-backend/issues/22#issuecomment-6363334658)에 소비SHA·133mock/분석0·실회원/기기미확인·다음구간을 회신하고 게시본문 MATCH를 확인했다.
+
 D22 개인 완료 후 해당T 탈퇴를 구현했다. 실제Router/DI·Context표시/영향확인·원명령/전용ACK/재송·성공후상세이탈과내참가실제T복귀·계정/목록갱신이연결됐다. **5파일최종133mock PASS/lib·test분석0**, 상세는[설계37 §37.33](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)·DEV_LOG다. 정상실회원/기기인수는미확인이며dev/main미반영이다. Backend소비0eed67c453040b332653fd2071e6cd2e1eeed503(174경로/DB0030)의D22부분을사용하고기존명령/원pending을유지한다.
 
 ## 다음 첫 그룹 — E23 카드의 현재/양T 내보내기
