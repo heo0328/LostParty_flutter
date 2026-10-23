@@ -10,6 +10,7 @@ import 'cycle_read_repository.dart';
 import 'group_character_candidates.dart';
 import 'cycle_management.dart';
 import 'cycle_schedule.dart';
+import 'cycle_outcome.dart';
 import 'cycle_session_display.dart';
 
 String cycleStableJson(Object? value) {
@@ -455,6 +456,12 @@ class CycleApplicationView {
 }
 
 abstract interface class CycleInteractionGateway {
+  Future<CycleOutcomePreview> outcome(
+    String room,
+    String target,
+    String action, {
+    String? round,
+  });
   Future<CycleScheduleView> scheduleRead(
     String room,
     String target,
@@ -532,6 +539,15 @@ class CycleInteractionRepository implements CycleInteractionGateway {
   CycleInteractionRepository({required this.api, required this.recruitment});
   final BackendRegistrationApi api;
   final CycleRecruitmentGateway recruitment;
+  @override
+  Future<CycleOutcomePreview> outcome(
+    String room,
+    String target,
+    String action, {
+    String? round,
+  }) => _decode(
+    () => CycleOutcomeReader(api).preview(room, target, action, round: round),
+  );
   @override
   Future<CycleScheduleView> scheduleRead(
     String room,
@@ -902,6 +918,11 @@ class CycleInteractionRepository implements CycleInteractionGateway {
       roleCheck(applicationState == null || d['state'] == applicationState);
     } else {
       roleCheck({'applied', 'recorded', 'noop'}.contains(d['outcome']));
+      if (path.endsWith('/completion') ||
+          path.endsWith('/personal-completion') ||
+          path.endsWith('/weekly-incomplete-closures')) {
+        roleCheck({'applied', 'noop'}.contains(d['outcome']));
+      }
       for (final raw in raidList(d['revisions'])) {
         final r = roleMap(raw);
         roleShape(r, 'resource id revision');

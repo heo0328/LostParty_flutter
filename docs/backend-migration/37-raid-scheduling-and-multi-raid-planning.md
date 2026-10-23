@@ -1501,4 +1501,15 @@ v2 원ACK 뒤 command.target만 refreshTarget으로 재조회해 N캐시를 덮�
 
 검증은 신규17+기존직접영향91, **7파일 단일108mock PASS**(manual/weekly/cycles/account integration/account session/주간출처·표시projector)다. 마지막 새 파일17건 실행로그 확인을 위해 좁게 재확인했으며 108에 합산하지 않는다. 스타일 중괄호3건만 정리한 뒤 변경Dart5파일 분석0·포맷/diff/원계약 scope 소스 대조다. 공유계정 저장의 변경은 주간 키/schema 경계에 한정되고 회원/DI·공용캐시 불변이므로 무관전체시험을 반복하지 않았다. F6최종통합 시 영향으로 전체검증 필요를 재판단한다.
 
-실제 정상로그인HTTP·실회원쓰기/재설치·기기/성능·서버DB/권한/CAS·원자성 독립재현은 미확인이다. 자동시험은 mock/메모리 저장이며 실제 secure storage/서버 재생 결과로 확대하지 않는다. 기존 v1/회원전환·ACK후조회실패와 새 v2/주차전환·schema이행/손상자료/저장실패·party보존을 보호했다. Git/Issue 마감은 DEV_LOG, 다음 첫 구간 F6-B는 NEXT_WORK를 따른다.
+실제 정상로그인HTTP·실회원쓰기/재설치·기기/성능·서버DB/권한/CAS·원자성 독립재현은 미확인이다. 자동시험은 mock/메모리 저장이며 실제 secure storage/서버 재생 결과로 확대하지 않는다. 기존 v1/회원전환·ACK후조회실패와 새 v2/주차전환·schema이행/손상자료/저장실패·party보존을 보호했다. Git/Issue 마감은 DEV_LOG, 현재 다음 구간은 NEXT_WORK를 따른다.
+
+### 37.21 F6-B 방/본인 완료·미완료 종료 구현 — 2026-10-23
+
+사용자 F6-B 승인으로 고정소비07c2b671/168경로·Backend116을 대조하고 기존 상세의 진행영역에 연결했다. F6-C 현재주 재개는 보완 계약 대기이며 N개방/재개·탈퇴·전역종료를 대신 호출하지 않는다.
+
+- `cycle_outcome.dart`의 닫힌 reader/preview는 실제 scoped plan과 command-context를 교차 검증한다. room/T/현재 cycle·세대/revision·actor membership/cycle member/leadership·round·effect_scope·impact·권한/유효시각을 고정한다. C/수10시·활성 round와 실제 본인 assignment를 확인하며 불일치/누락을 정상 빈값으로 바꾸지 않는다. context 원본/impact는 깊은 읽기전용, 확인 의미서명은 생성 시 고정한다.
+- 기존 상세 진행영역의 레이드 완료 위치를 활성화하고 나만 완료·함께하기 방의 이번 주 미완료 종료를 구분했다. 확인창은 실제 대상 주차, 선택 레이드/난이도, 서버 대상인원·참가건수·해제 예약구간/기존완료 보존과 효과를 표시한다. 실제 plan의 활성 item/round를 선택하며 공대장 전체완료·실제참가자 개인완료/미완료종료 권한을 구분한다. N/수10시전 UI는 비활성이고 서버 context가 최종 권한이다. 취소좌/확인우, 기존 파티/주차/계정 카드/필터 디자인은 보존한다.
+- `CycleInteractionRepository.outcome`/`CycleParticipationController.complete`가 확인 직전 room/T/action/round/서명을 첫 await 전에 고정한다. plan/context 재조회 의미가 바뀌면 POST 없이 재확인한다. 새 token/발급시각만 바뀌고 의미가 같으면 새 token으로 네 필드 명령을 발급한다. 원명령은 기존 app소유 writer의 불변 path/body/key/token으로 재송하며 GET 상태를 원ACK 대신 사용하지 않는다. outcome ACK에서 `recorded`를 적용 성공으로 취급하지 않고 실제 command/room/T/세대 ACK를 검증한다.
+- 기존 onMutation(T)→weekly.refreshTarget(T)와 상세·검색·본인목록 무효화가 전파된다. Router/DI·계정 writer/저장 schema·N/다른item 쓰기와 기존 공통 관리/일정 writer는 변경하지 않는다. 앱종료 후 모집관리 pending 영속복구는 별도 후속이다.
+
+검증은 새 outcome28+기존직접영향128의 **6파일 단일156mock PASS**, 변경 Dart7파일 최종분석0·포맷/diff·고정 Backend outcome/plan/참가 revision/target_state 소스 대조다. 새 테스트 첫 컴파일의 nullable query와 fake session 메서드 오기를 고친 뒤 표적23PASS, 추가 경계를 포함한 최종묶음156PASS이며 재실행은 합산하지 않는다. 공용 DI/저장 schema 변화 없이 모집 writer/해당T 갱신에 한정돼 표적을 사용했고 F6 최종 통합 때 전체시험 필요를 재판단한다. 8인 server impact/본인1인, 권한/actor/공대장·표시/round/영향 변경, N/06·10시·회원전환/중복·결과불명/원ACK·타item을 보호했다. Flutter mock은 서버 DB/HMAC/원자성/경합·실회원/기기 인수의 증거가 아니다. 실회원HTTP·확인창 글자크기/스크롤·완료/종료 실제 반영·성능은 전체 기능섹션 사용자 인수에 남긴다. Git/Issue 마감은 DEV_LOG다.

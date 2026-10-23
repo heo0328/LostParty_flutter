@@ -1,5 +1,15 @@
 # 개발 이력
 
+## 2026-10-23 — F6-B 방/본인 완료·이번 주 미완료 종료 연결
+
+사용자 구현 승인으로 필수문서/설계37 §37.19·현재 cff4cc8/원격일치·dev6d3f617/기존무관dirty·최신 Backend116/Flutter117을 확인했다. 소비07c2b671/168경로·policy4를 유지하며 outcome 원자성/권한은 서버 소유다. 실제 Router/DI·계정 갱신·상세/검색/본인목록 무효화와 pinned outcome/plan 소스를 대조했다.
+
+- 새로 가능해진 흐름: 기존 상세 진행영역에서 선택 item/round 레이드 완료(공대장), 나만 완료(본인), 함께하기 방 이번 주 미완료 종료(실제참가자)를 구분한다. 확인창에 실제T·레이드/난이도·server impact 대상인원/참가/예약구간/완료보존을 보여주고 C/수10시·context permission으로 제출을 제한한다. 닫힌 outcome reader/preview와 기존 writer가 plan/context 의미 재검사→네 필드 POST→원ACK→실제T summary/상세·검색·본인목록 갱신을 연결한다. 재개/완료취소를 임의 구현하지 않았다.
+- 보존 확인한 기존 흐름: 새28건과 기존 interaction/management/schedule·manual/cycles128건으로 원본문/key/token 재송·기존 v1/v2 수동pending/표시·N/다른item 격리·관리/일정 writer를 보호했다. stale 권한/actor/공대장/raid/round/impact/revision은 POST0건, 중복/회원전환/06·10시/결과불명·잘못된 ACK/recorded·원응답 rollover를 확인했다. 실제 API/DB의 다른item/N 자료 보존을 직접 재현한 결과로 확대하지 않는다.
+- 검증: **6파일 단일156mock PASS(신규28+직접영향128)**·변경Dart7파일 분석0·포맷/diff/소스검토. 최초 새테스트의 nullable query/가짜세션 메서드 컴파일 오류 수정 후 좁은23PASS와 추가경계 포함 최종156PASS다. 분석 안내2건(null-aware 요소/mounted guard)도 최종0으로 정리했다. DI/저장 schema 불변·모집writer/실제T 갱신 한정으로 무관전체시험을 반복하지 않았고 F6최종 통합 시 영향으로 재판단한다.
+- 미확인 실기기 항목: 정상인증회원HTTP·실회원쓰기, 실제 완료/종료/예약해제와 다음 주 보존·계정표시, 확인창/글자크기/스크롤/기기성능이다. 전체 기능섹션 수동인수에 묶으며 설치·기기자동조작을 하지 않았다. Backend DB/HMAC/권한·CAS/경합·원자성 독립시험도 미수행이다.
+- 협업/다음: F6-C 재개 표시/생성 전 확인·응답 binding은 Backend116 계약안 대기다. 서버·DB·키/운영·관리pending 영속화·dev/main 통합은 제외했다. 코드/시험/문서를 기존 feature/raid-recruitment-scheduling에 commit/push 보관하고 실제 구현SHA/156mock/분석0·미확인·다음 담당을 Issue13에 회신한다. 기존 통계35·플랫폼 생성파일/DevTools/백업/tools 변경은 제외·보존, 작업브랜치 유지다.
+
 ## 2026-10-23 — F6-A 계정 수동 완료 v2·저장 요청 호환 구현
 
 사용자 F6-A 진행 승인으로 필수문서/§37.19·현재9a4112e/원격일치·dev6d3f617·기존무관dirty와 최신 [Backend116/6355428620](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355428620)을 확인했다. manual해제의 범위 확답/재개표시 Backend 보완대기를 수신하고 A만 구현했다. 고정07c2b671의 manual/creation.scope·기존 weekly writer/저장·확인창과 관련시험을 대조했다.

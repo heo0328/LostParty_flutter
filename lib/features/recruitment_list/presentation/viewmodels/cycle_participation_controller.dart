@@ -6,6 +6,7 @@ import '../../../account/domain/account_read_session.dart';
 import '../../data/cycle_interaction_repository.dart';
 import '../../data/cycle_management.dart';
 import '../../data/cycle_schedule.dart';
+import '../../data/cycle_outcome.dart';
 import '../../domain/backend_recruitment.dart';
 
 class _CycleCommand {
@@ -125,6 +126,53 @@ class CycleParticipationController extends ChangeNotifier {
   }
 
   Future<List<RecruitmentCharacter>?> characters() => _read(gateway.characters);
+  Future<CycleOutcomePreview?> outcome(
+    String room,
+    String target,
+    String action, {
+    String? round,
+  }) => _read(() => gateway.outcome(room, target, action, round: round));
+
+  Future<void> complete(CycleOutcomePreview preview) async {
+    if (!canAct) return;
+    final room = preview.plan.room, target = preview.plan.target;
+    final action = preview.action,
+        round = preview.round,
+        signature = preview.signature;
+    final e = _epoch;
+    busy = true;
+    failure = notice = null;
+    _emit();
+    try {
+      final fresh = await gateway.outcome(room, target, action, round: round);
+      if (!_valid(e)) return;
+      if (fresh.signature != signature) {
+        throw const AccountReadException('REVISION_CONFLICT');
+      }
+      final body = fresh.body();
+      _pending = _CycleCommand(
+        path: fresh.path,
+        body: body,
+        room: room,
+        target: target,
+        applicationAck: false,
+        status: 200,
+        createdAt: now(),
+        evidence: fresh.scope,
+      );
+      await _send(e);
+    } on AccountReadException catch (error) {
+      if (_valid(e)) _fail(error);
+    } catch (_) {
+      if (_valid(e)) failure = 'INVALID_RESPONSE';
+    } finally {
+      if (_valid(e)) {
+        busy = false;
+        _emit();
+      }
+    }
+  }
+
   Future<CycleScheduleView?> scheduleRead(
     String room,
     String target,

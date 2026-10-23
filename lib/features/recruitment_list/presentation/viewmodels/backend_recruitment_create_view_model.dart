@@ -733,6 +733,10 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
 }
 
 String recruitmentFailureMessage(String? code) => switch (code) {
+  'PLAY_NOT_STARTED' ||
+  'TARGET_CYCLE_NOT_CURRENT' => '해당 주차 수요일 10시부터 완료·미완료 종료가 가능합니다.',
+  'ROUND_NOT_ACTIVE' => '진행 중인 레이드가 없습니다. 최신 상태를 확인해 주세요.',
+  'CONTINUATION_REQUIRED' => '함께하기 모집에서만 미완료 종료할 수 있습니다.',
   'INVALID_REQUEST' => '입력한 조건과 시간을 확인해 주세요.',
   'PERSONAL_AVAILABILITY_REQUIRED' => '내 계정에서 개인 시간표를 먼저 설정해 주세요.',
   'WEEKLY_PARTICIPANT_REQUIRED' => '선택 주차의 참가 상태를 확인해 주세요.',

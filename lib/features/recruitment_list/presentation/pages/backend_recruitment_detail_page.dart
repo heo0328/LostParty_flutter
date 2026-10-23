@@ -14,6 +14,7 @@ import '../viewmodels/cycle_participation_controller.dart';
 import '../widgets/cycle_participation_widgets.dart';
 import '../widgets/cycle_management_widgets.dart';
 import '../widgets/cycle_schedule_widgets.dart';
+import '../widgets/cycle_outcome_widgets.dart';
 
 class BackendRecruitmentDetailPage extends StatefulWidget {
   const BackendRecruitmentDetailPage({
@@ -402,7 +403,26 @@ class _BackendRecruitmentDetailPageState
                   child: const Text('일정 변경안'),
                 ),
 
-                const TextButton(onPressed: null, child: Text('레이드 완료')),
+                if (widget.participation != null &&
+                    m.cycles != null &&
+                    m.target != null)
+                  CycleOutcomeActions(
+                    controller: widget.participation!,
+                    room: m.roomId,
+                    target: m.target!,
+                    current: m.cycles!.current.key,
+                    role: room['my_target_role'] as String? ?? 'none',
+                    playable:
+                        m.cycles!
+                            .find(m.target!)
+                            ?.permissions['complete']
+                            ?.allowed ==
+                        true,
+                    continuation: room['continuation_enabled'] == true,
+                    raidLabel: _raidLabel,
+                  )
+                else
+                  const TextButton(onPressed: null, child: Text('레이드 완료')),
               ],
             ),
           ],

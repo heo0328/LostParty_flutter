@@ -1,6 +1,6 @@
-# NEXT WORK — F6-A 구현 마감·F6-B 준비
+# NEXT WORK — F6-B 구현 마감·F6-C 계약 대기
 
-기준: 2026-10-23. **F1~F5 코드/자동검증을 마쳤고 Backend07c2b671의 사전 참가 표시까지 연결했다.** 신규표시24+기존직접영향82의 최종단일106mock PASS·변경Dart11파일 분석0이다. 과거 F5 독립구간 고유130 기록과 합산하지 않는다. 실제 정상인증HTTP·실회원/기기 인수는 미확인이며 전체 기능섹션에 묶는다. feature/raid-recruitment-scheduling에 코드/시험/문서를 commit/push 보관하고 dev6d3f617 미병합·기존무관dirty를 유지한다. F6-A 계정 manual v2/구pending 보호를 구현했다(§37.20). 직접영향7파일108mock PASS·변경Dart5파일분석0이며 다음 첫구간은 F6-B다. B/C·실회원/기기 인수는 미완료다.
+기준: 2026-10-23. **F1~F5와 F6-A/B 코드·자동검증 완료, F6-C는 Backend 계약 보완 대기다.** 고정소비07c2b671/168경로·policy4를 유지한다. B는 새28+직접영향128의 6파일 단일156mock PASS·변경Dart7파일 분석0이다. 이전 구간의 시험 수와 합산하지 않는다. 실제 정상인증HTTP·실회원/기기 인수는 전체 기능섹션에 묶으며 미확인이다. feature/raid-recruitment-scheduling 보관·dev6d3f617 미병합·기존무관dirty를 유지한다. B 상세는 설계37 §37.21/DEV_LOG, 다음 C의 계약 대기와 행동은 아래를 따른다.
 
 ## 1. 현재 근거·준비 상태
 
@@ -36,12 +36,9 @@
 
 현재 인계: 구현660433d commit/push·원격일치 확인, [Flutter F6-A 결과6355764602](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355764602)에 Backend116 확인/소비·구현SHA/108mock·분석0·미확인/다음담당을 회신하고 게시본문 재조회 일치를 확인했다. 다음 착수 때 최신Issue13부터 확인한다.
 
-**다음 첫 구현 F6-B — 방 전체/본인 item 완료·미완료 종료**
+**F6-B 마감:** 기존 상세 진행영역의 레이드 완료·나만 완료·이번 주 미완료 종료를 실제 plan/command-context에 연결했다. 서버 영향 확인→의미 재검사→네 필드 POST→원ACK→실제T 계정 summary/상세·검색/본인목록 무효화 경로다. 변경권한/actor/공대장·revision/round/영향은 POST 없이 재확인하고 결과불명은 원경로/본문/token/key를 재송한다. C·수10시·8인/본인1인·다른item/N 격리와 구간별 기존 writer/저장을 보호했다. 검증/새흐름·보존/미확인과 Git·Issue 회신은 DEV_LOG에 기록한다. 공용 DI/저장 schema 불변으로 표적 범위를 사용했으며 F6 최종 통합 때 전체시험 필요를 재판단한다.
 
-- 포함: command-context의 실제room/T/선택round·actor/leadership/token·server impact를 기존 상세 진행영역/확인창에 연결한다. 모집 data/cycle_outcome.dart 신규 reader/preview/body + CycleInteractionRepository/CycleParticipationController의 기존 writer/원ACK·실제T 갱신을 재사용한다. 계정 수동writer·저장스키마·N opening/reopen과 혼용하지 않는다.
-- 본문은 expected_cycle_key/context_token/target_cycle_key/expected_target_revision 네 필드다. 공대장의 complete_item과 실제참가자 personal_completion/함께하기 방 close_weekly를 별도동작으로 표시한다. 전체/본인영향·완료근거·예약구간해제/기존완료 보존을 server impact로 확인한다. C/수10시·실제참가/공대장/함께하기 조건·다른item/N/완료이력을 보호한다.
-- 검증: 새로운 outcome DTO/body/원ACK·권한false/오래된round·표시/impact/공대장revision변경 POST0건·입력고정·중복/결과불명 원본문/key·06/10시/회원전환·8인최대대표/본인1인·타item/N 보존과 기존 interaction/management/schedule 직접영향을 묶는다. 변경Dart 분석/포맷/diff와 실제 계정갱신 전파를 확인한다. 공용DI/저장갱신이 넓어지면 F6최종전체검증 필요를 재판단한다.
-- 완료: B구현/표적검증·문서최신화/Issue13 결과·소비/구현SHA 회신·기존 작업브랜치 commit/push. F6-A 뒤의 별도 승인구간이며 재개/통합·모집관리pending영속복구는 확대하지 않는다.
+**다음 F6-C 착수 조건/순서:** 최신 Issue13에서 Backend 재개 표시/생성전 확인·응답 binding 계약안을 받고 소비 SHA/OpenAPI/기존 pending 호환을 대조한다. 제안에 고정된 일정·실제 C/세대·시각/영향과 변경 시 거절/재확인 근거가 확정되기 전 UI/POST를 추정 구현하지 않는다. 인계 후 cycle_schedule DTO/preview·생성/응답과 기존 일정 UI를 설계37 §37.19 순서로 구현·표적검증/변경분석·문서/Issue/작업브랜치 보관한다. 통합/실회원·기기 인수는 별도 게이트다.
 
 **F6-C 현재주 재개 표시계약 대기:** [Backend116/6355428620](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355428620)이 정정은 본인manual근거 해제까지이고 party/assignment/참가·예약복구 역명령은 없음을 확답했다. 정정 의미 확인은 해소됐다. 제안에 고정된 schedule_groups/시각·현재duration/영향을 읽고 확인할 기존출처는 없으며, Backend가 응답자뿐 아니라 schedule_groups=null 생성전확인/제안자accept·생성/응답binding·구소비/원pending 호환까지 계약안을 작성한다. 새API 인계가 아니므로 C 새 생성/응답 UI만 대기한다. B 독립진행을 막지 않으며 current plan/F5 display를 제안원본으로 추정하지 않는다. 같은cycle/generation의 새round/assignment·completed이력, 1인별도응답·recorded/applied·시간동의/예약을 구분한다.
 
