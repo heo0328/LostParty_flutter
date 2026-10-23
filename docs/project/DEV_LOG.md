@@ -2,6 +2,8 @@
 
 ## 2026-10-23 — Issue22/23 최종 계약의 네이티브 구현 설계
 
+설계 d3a328e7 commit/push·원격일치 후 [22 결과6362922606](https://github.com/heo0328/lostparty-backend/issues/22#issuecomment-6362922606)·[23 결과6362922968](https://github.com/heo0328/lostparty-backend/issues/23#issuecomment-6362922968)에 기능구현전 설계/다음담당·미실행 범위를 회신하고 게시본문 MATCH를 확인했다.
+
 사용자 설계우선 지시로 Backend0eed67c453040b332653fd2071e6cd2e1eeed503의 고정 OpenAPI174경로/주요닫힌schema·개발안내·합성17그룹자료, 최종22/6362447014·23/6362447457회신과 실제Flutter Router/DI/Controller/ACK를 대조했다. 상세설계는설계37 §37.32,현재순서는NEXT_WORK다. §37.31의표시/source review계약대기는해소됐고Flutter구현대기로변경했다.
 
 - 새설계: D22의전용Context/표시/명령·최소공용ActionResult/ACK/성공이벤트·개인완료후상세이탈/내참가실제T복귀, E23의선택option별의미서명·권한/nullable·카드3선택/정확영향T무효화. 각각파일책임·순서/완료조건/직접시험·수동인수를명시했다. 원명령/원ACK·후속GET실패성공보존/회원·T·세대격리와기존정상흐름을보호한다.

@@ -2,6 +2,8 @@
 
 ## 현재 계획 (2026-10-23)
 
+설계 d3a328e7 commit/push·원격일치 후 [22 결과6362922606](https://github.com/heo0328/lostparty-backend/issues/22#issuecomment-6362922606)·[23 결과6362922968](https://github.com/heo0328/lostparty-backend/issues/23#issuecomment-6362922968)에 기능구현전 설계/다음담당·미실행 범위를 회신하고 게시본문 MATCH를 확인했다.
+
 사용자 지시로 **기능 코드 없이** Issue22/23 최종계약의 파일별 책임·확인/원명령·ACK/성공후이탈·영향T무효화·검증 설계를 [설계37 §37.32](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)에 확정했다. 현재작업브랜치 feature/raid-recruitment-scheduling을재사용하고무관dirty는보존한다.
 
 최종인계는 [22/6362447014](https://github.com/heo0328/lostparty-backend/issues/22#issuecomment-6362447014)·[23/6362447457](https://github.com/heo0328/lostparty-backend/issues/23#issuecomment-6362447457), 고정Backend `0eed67c453040b332653fd2071e6cd2e1eeed503`·174경로/DB0030이다. 요청한표시스냅샷/source review보완은해소됐으며 **Backend 구현대기가아닌Flutter 구현대기**다. 앱소비2940824는아직변경하지않았다. 아래과거이력의22/23미합의·Backend대기문구보다이최신상태가우선한다.
