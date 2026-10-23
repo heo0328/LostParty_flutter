@@ -1644,3 +1644,46 @@ v2 원ACK 뒤 command.target만 refreshTarget으로 재조회해 N캐시를 덮�
 3. 현재 계정 canChange는 C/playable·detailsAvailable(활동)/manual.canClear와 catalog를 묶는다. 완료정정은 별도권한/reader/writer로 분리하고 완료생성/기존pending은 그대로 둔다. source가 있는 C/N카드는 새 context로 취소권한을 확인한다. 과거T/은퇴·비활성raid 지원 API와 현재 C/N계정화면의 노출범위는 구분하며 과거이력화면을 임의 신설하지 않는다. sources/permission/confirmation 결합·offset시각·원ACK전환 검증은 최종 닫힌 OpenAPI를 따른다.
 
 **다음 구간/검증 기준:** Backend가 두 구간 구현/직접경계검증 후 정확한 commit/push SHA·실행 OpenAPI·개발반영/migration 여부를 인계한다. Flutter는 새 context/ACK·원명령 영속호환과 권한·출처/CAS/만료/원ACK/회원·T 격리, current/ended/all SQL페이지·review복구/기록접근·보관방차단/열린N·stopped재개 직접영향을 연결한다. 기존190mock는 기능코드 불변으로 재실행하지 않았으며 이번은 문서/소비코드 정적대조·diffcheck다. 기능코드·서버/DB/키/기기조작·dev/main통합/배포 변경없음, 시간UI는 계속제외다.
+
+### 37.27 완료 정정·방 수명 Flutter 구현 설계 (2026-10-23)
+
+사용자 '이미 기획됐다면 작업 진행' 지시로 §37.26과 실제 저장/Router를 재점검했다. 최신 Issue13은 Flutter127까지이며 Backend126은 명시 미구현 제안이다. 정책 수용은 끝났지만 최종wire/소비SHA·개발반영 인계가 없다. 이 구간에서는 실행 가능한 파일별 설계·호환/검증을 확정한다. 추정 API를 활성화하거나 기존 수동false/방삭제로 우회하지 않는다. 현재 feature/raid-recruitment-scheduling aef4f873/원격일치·dev6d3f617, 무관dirty 유지다.
+
+#### A. 개인 완료 해제 (첫 구현 단위)
+
+| 책임/대상 | 구현 내용 | 보존/완료 조건 |
+|---|---|---|
+| 신규 account/domain/member_completion_correction.dart | 최종계약의 context/command/전용ACK DTO·대상/출처 의미서명, 실제T와 관측C를 별도 필드로 검증 | 기존 MemberManualCompletionResult/MemberWeeklyEntry를 정정ACK로 재사용하지 않음. 날짜/시각/revision상한·정확필드/nullable·2출처순서/중복·permission/confirmation·token크기/만료/전체크기는 최종OpenAPI와 대조 |
+| account/data/member_raid_client.dart | read-only context GET와 correction POST. 현재 인증transport/세션오류/429처리 재사용 | context에 key/원장/pending 없음. POST에만 새key·고정본문, 과거T를 C로 바꾸지 않음. offset시각은 새DTO에서 명시검증/UTC변환하며 기존 roleUtc 규칙을 무관하게 완화하지 않음 |
+| account/presentation/viewmodels/member_weekly_view_model.dart | 새 완료생성과 완료취소 분기, context준비/재검사·정정원명령저장/재송/ACK확정/실제T갱신 | 기존 생성 C/수10시·활동/카탈로그/소유조건 유지. 취소는 화면의 본인대상·source존재를 진입조건으로 삼고 최종권한은 새context가 결정. 기존 manual.canClear/현재활동/detailsAvailable/playable를 취소권한으로 사용하지 않음 |
+| account/presentation/pages/member_account_page.dart | 기존 체크를 누르면 완료/해제에 맞는 VM 경로 호출. 기존 확인창 배치 유지 | 해제문구 '수동 완료'→'레이드 완료', 캐릭터·raid·실제주차·이전방/예약자동복구없음 표시. context읽기중 체크/주차전환·중복확인 차단, 취소면 쓰기0 |
+| 기존 MemberWeeklyStore/회원scope | 별도 저장소/DB테이블 없이 현재 durable pending 확장 | 회원·환경격리/원요청 보존, 쓰기전 디스크저장 실패시 POST0. 기존 pending존재시 새명령 생성0 |
+
+**확인→제출 흐름:** 완료체크 터치 → 실제character/raid/T·회원/환경/관찰세대 고정 → context GET → 권한/source/confirmation 확인 → 기존 확인창 → 동의 후 context 재조회 → source/revision/현재C·대상 의미가 바뀌면 POST없이 재확인. token/시각만 갱신되고 의미가 같으면 최신 확인본문으로 고정 → 새key·원command 디스크저장 → POST → 전용ACK 검증/ack저장 → 현재T조회. 확인 중 회원/선택T/소유·관찰세대 변경은 이전확인을 폐기한다. 다른T로 자동재타깃하지 않는다. permission=false/완료없음은 쓰기없이 현재상태를 안내/재조회한다. 카드마다 context를 사전조회하지 않아 N+1을 만들지 않는다.
+
+**영속 호환 설계:** 현재 디스크schema1/2와 _WeeklyCommand.wireVersion1/2는 그대로 읽고 기존method/path/body/key·started/ack/failed를 보존한다. 새schema3에 `wire_version=3`(정정명령) 분기를 추가하는 안으로 구현한다. 현재 target getter는 expected_cycle_key를 반환하지만 정정은 expected_cycle_key=관측C, target_cycle_key=실제T이므로 분리한다. v3는 정확한6필드 correction본문과 POST경로를 고정하고 기존v1/v2 PUT을 정정으로 변환하지 않는다. 미지원/손상schema를 빈pending으로 초기화하거나 새로운key로 재작성하지 않는다. 저장 포맷의 최종필드는 구현시닫힌schema/원본문동등성 시험으로 고정한다.
+
+**원ACK/오류 설계:** 정정ACK는 original key/character/raid/T·정정UUID/applied·weekly revision=원expected+1·sources[]/participation_restored=false를 확인한다. 원성공ACK의 current_cycle/server_now는 원응답 시점으로 검증하고 지금의C와 같기를 강제하지 않는다. 원ACK 복구에 새context·새token을 선행하지 않는다. 결과불명은 원method/path/body/key/token을 재송하고 expiry/24h경과·음수age는 명시보류/현재상태확인으로 처리한다. CAS/source변경/만료/C변경의 확정실패는 기존pending 보류·현재상태 재조회 뒤 사용자가 해제/재확인한다. 확정실패와 응답유실을 같은실패로 취급하지 않는다. 올바른ACK를 저장한 뒤 후속GET 실패는 재전송/중복정정0이며 '완료해제 성공·현재상태 조회실패'로 구분한다. 구체오류 우선순위/ack범위는 최종인계로 고정한다.
+
+**범위:** 기존 C/N 계정 UI의 실제노출된 본인완료 해제부터 연결한다. 과거T/비활성raid/은퇴 API 허용은 DTO·reader에서 지원하되 새 과거목록/은퇴목록 화면을 임의추가하지 않는다. 숨겨진 본인기록의 UX 진입은 별도후속이다. 완료후 재참가는 새명령이며 기존방/좌석·동의·예약을 되살리지 않는다.
+
+#### B. 참가/기록 목록·보관 방 (A 다음 독립 단위)
+
+| 책임/대상 | 변경/검증 |
+|---|---|
+| recruitment_list/data/cycle_read_repository.dart | 최종 SQL current/ended/all 의미와 row/card/nullable를 소비. open뿐 아니라 명시review_required/복구근거를 보존하며 recovery_only·history_only·권한을 모델로 읽음. 단순legacy/not_selected·completed/stopped/cancelled/removed는 active표시 금지. 세대미확정의 card/null표현은 최종wire 없이는 정하지 않음 |
+| cycle_read_view_model.dart / cycle_own_rooms_page.dart | 참가중은 서버current·실제T근거만. 현재 기록탭은 all조회이므로 기록을 ended로 바꿀지는 최종계약과 stopped/보관 접근을 대조해 정하고 단순미선택이 참가이력으로 표시되지 않게 함. 서버페이지/원본중복검사/커서 stale·더보기/empty state 유지 |
+| backend_recruitment_repository.dart / backend_recruitment_detail_view_model.dart / backend_recruitment_detail_page.dart | 기록→기존 /v2/raid-rooms/{id}/detail와 /v2/me/raid-rooms/{id}/plan 직접연결. 공개card404를 먼저 요구하지 않음. ended는 상세읽기 가능/새쓰기차단, stopped는 기존재개가능, C완료여도 열린N탭/권한 유지. client가인원0으로방삭제·새enum합성하지않음 |
+| 기존 검색/참가controller·갱신콜백 | 서버보관판정이 검색/current에 적용된 결과를 읽음. 완료/정정ACK 뒤 기존 actualT갱신·목록캐시무효화를 재사용. 다른T 자료/완료/열린N을 optimistic으로 지우지 않음. 보관후 완료해제로 과거방자동복원0 |
+
+B 완료조건은 실제복구관계 표시·완료/미선택 활성목록제외, 기록상세/plan 열람과 쓰기차단, stopped재개·열린N 보존, 최종closedDTO/페이지정합성이다. Backend가공통SQL수명판정을소유하며Flutter에전레이드완료판정/관계종료를중복구현하지않는다.
+
+#### 검증 계획·회귀 보호
+
+A는 새 correction DTO/client·실제VM+메모리store 경계시험과 기존 member_manual_completion_test/member_weekly_test/member_cycles_test를 직접연결한다. source manual/party/둘/없음·거절확인null·offset/크기/타겟·T<C/현재06~10/미래·stale확인/rollover·중복터치/타회원·CAS/만료·원ACK/오류우선·schema1/2기존true/false pending·v3재시작/원본문·저장실패/ACK후GET실패·24h경계를 최소대표로 검증한다. 새완료생성은기존제약유지·다른회원/주차/역할snapshot불변이다.
+
+B는 member_cycles/device_feedback/cycle_recruitment의 실제read경계와 cycle_outcome/cycle_resume의 직접영향을 보호한다. 카드review/명시복구/null조건, cancelled/removed/보관·stopped차이, current/ended/all과더보기/중복cursor·SQL은Backend근거와구분, 공개404/회원기록상세·닫힌쓰기/원ACK·열린N을 검증한다. 4/8인정상UI를 반복자동시험하지 않는다.
+
+새DB스키마/의존성/라우터주소변경없이한정된weekly writer/목록reader 영향이므로A/B각최종직접시험+변경분분석을기본으로한다. 공용전파/컴파일위험이확인되면그범위에한해확대한다. 이번설계작업은기능코드불변이라기존190시험반복없음·내용/실제파일/링크·diffcheck만확인했다. 최종자동검증후사용자수동항목은본인파티완료해제·다른참가자/C/N·재참가, 기록/보관·N유지/stopped재개를한번묶어전달한다. 설치/기기조작은사용자담당이다.
+
+**착수 게이트:** Backend의 최종closed OpenAPI/정확한원격SHA·개발반영·migration여부와 §37.26의2개 wire차이가 해결되면 위A부터 별도승인재요청없이 진행한다. 현재는제안126/검토127 이후구현인계가없어설계완료·구현대기다. 시간선택UI·과거이력새화면·통계19·모집관리pending별도확대·실데이터정리·dev/main통합/운영배포는제외한다.

@@ -1,5 +1,14 @@
 # 개발 이력
 
+## 2026-10-23 — 완료 정정·방 보관 수정 구현 설계 구체화
+
+사용자 설계/기존설계체크 후 진행 지시로 aef4f873/동일원격·dev6d3f617·무관dirty와 §37.26/실제코드를 대조했다. 최신Issue13은126제안·127검토까지로 새실행SHA/최종wire·Backend구현 인계는 없다. 정책수용은 끝났으나 파일/상태전이/저장호환 상세가 부족해 §37.27과 NEXT_WORK에 보완했다. 제품결정·수용회신/동일시험을 반복 요구하지 않았다.
+
+- 새로 정리: A 개인완료정정 DTO/client·실제계정/VM 확인→재검사→디스크원명령→새ACK→실제T조회, schema1/2 pending을보존하는schema3/명령v3·관측C/실제T분리·원ACK/만료/조회실패 설계. B는current/ended/all·명시복구/기록상세·보관쓰기차단/stopped재개·열린N 읽기로 분리했다.
+- 보호 대조: 기존 canChange의playable/활동/manual권한은취소에재사용하지않고 완료생성은유지, 원PUT true/false pending·key/body/ack·회원/환경/T격리, 카드N+1조회·가짜낙관취소/방복구없음, 기록경로는공개card와분리, 없는gen/좌석합성없음. finalnullable/wire전에는호출코드를추측하지않는다.
+- 검증: 실제 _WeeklyCommand/schema1/2·target getter/MemberManualCompletionResult/MemberRaidClient·계정확인창/목록DTO·Router/시험파일이름을대조하고문서내용/diffcheck를확인했다. 기능코드불변으로기존190/분석을반복하지않았다. 새로가능해진앱흐름은없음·실기기/정상HTTP/Backend경계독립재현미확인이다.
+- 다음: Backend최종SHA/OpenAPI·개발/DB반영과복구nullable/기록권한인계후A부터별도승인재요청없이진행, 직접시험/문서/결과회신/구간commit/push. 시간UI·과거이력화면신설·서버/DB/키·기기설치/조작·dev/main통합/배포는변경하지않았다. 현재설계구간은작업브랜치commit/push·유지한다.
+
 ## 2026-10-23 — Backend126 완료 정정·보관 제안1 소비 대조
 
 사용자 계약확인 요청으로 feature/raid-recruitment-scheduling84dac842·원격일치/dev6d3f617·기존무관dirty와 최신 [Backend126/6358628814](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6358628814) 전문을 확인했다. 미합의·미구현 제안이며 기존 실행2940824/168경로·policy4 불변이다. [Flutter127 검토6358680312](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6358680312)로 수용/구체소비차이와 최종 wire·구현인계를 회신하고 게시원문MATCH를 확인했다.

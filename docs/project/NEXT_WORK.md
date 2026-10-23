@@ -1,4 +1,17 @@
-# NEXT WORK — 완료 정정·방 보관 계약 검토 완료, Backend 구현 인계 대기
+# NEXT WORK — 완료 정정 A 구현 설계 완료·최종 Backend 인계 대기
+
+## 첫 구현 단위 — A 개인 완료 해제
+
+사용자 설계/진행 지시로 정책검토 §37.26을 다시 대조하고 **파일별 구현·저장 호환·검증 설계 §37.27**을 확정했다. 최신Issue는127이며 Backend126은 여전히 미구현 제안이므로 실행 API 연결은 최종인계 후 시작한다. 같은 수용/시험 요청을 반복 댓글로 남기지 않는다.
+
+1. 최종 SHA/OpenAPI·실행/DB상태와 복구관계 nullable/회원기록 접근 인계 확인.
+2. 새 정정DTO·MemberRaidClient GET/POST·MemberWeeklyViewModel의 확인/제출/ACK/실제T조회, 기존 계정 확인창 연결. 카드마다 사전조회하지 않고 완료해제 터치시에만 context를 읽는다.
+3. durable pending schema3/명령version3를 추가하되 schema1/2·원PUT true/false/key/body/ack는 보존한다. target=실제T와 expected_cycle=관측C를 분리하고 원ACK 복구가 현재C/token만료로 막히지 않게 한다.
+4. 기능구간 최종 표적시험: 새정정 경계 + member_manual_completion_test/member_weekly_test/member_cycles_test, 변경분분석·포맷/diffcheck. 제한된writer/read전파로 무관전체시험 반복없음; 공용영향이 확인되면 그때 확대한다. 완료 후 문서/같은Issue결과·commit/push.
+
+A 다음 **B 목록·보관방 읽기**에서 실제current/ended/all·review복구/기록detail/plan·stopped재개/열린N을 최종wire로 연결한다. A/B를 추정스키마로 한꺼번에 구현하지 않는다. 구체 상태전이·회귀/완료조건은 §37.27을 단일기준으로 삼는다. 시간UI·과거목록 신설·서버/DB조작·dev/main병합은 제외한다.
+
+이번은 부족했던 구현상세 설계를 보완한 문서구간이며 기능코드/190mock상태는 그대로다. 정상실기기 검증은 A/B완결 후 사용자 담당으로 묶는다.
 
 ## 최신 계약 검토 결과 (2026-10-23)
 
