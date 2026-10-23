@@ -59,6 +59,7 @@ class _BackendRecruitmentDetailPageState
       target: widget.target,
       accessChanges: widget.accessChanges,
       scopeKey: widget.scopeKey,
+      loadEndPermission: widget.participation?.canEndRoom,
     );
     _mutationVersion = widget.participation?.mutationVersion ?? 0;
     widget.participation?.addListener(_changed);
@@ -498,11 +499,40 @@ class _BackendRecruitmentDetailPageState
             child: Wrap(
               spacing: 12,
               children: [
-                _managementButton('cancel', '이 주차 탈퇴'),
+                _managementButton(
+                  'cancel',
+                  m.cycles != null && m.target == m.cycles!.next.key
+                      ? '다음주 탈퇴'
+                      : '이번주 탈퇴',
+                ),
                 _managementButton('leave', '모두 탈퇴'),
-                if (room['my_target_role'] == 'leader')
-                  _managementButton('end', '모집 전체 종료'),
               ],
+            ),
+          ),
+        if (widget.participation != null && m.endAvailable)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Center(
+              child: ListenableBuilder(
+                listenable: widget.participation!,
+                builder: (context, _) => FilledButton.icon(
+                  onPressed: widget.participation!.canAct && !m.loading
+                      ? () => showCycleManagement(
+                          context,
+                          widget.participation!,
+                          room: m.roomId,
+                          target: m.target!,
+                          action: 'end',
+                        )
+                      : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.error,
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.delete_forever_outlined),
+                  label: const Text('모집 해산'),
+                ),
+              ),
             ),
           ),
         if (m.loading) const LinearProgressIndicator(minHeight: 2),

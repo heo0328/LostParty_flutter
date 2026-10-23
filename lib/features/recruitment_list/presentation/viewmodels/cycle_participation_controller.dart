@@ -305,6 +305,19 @@ class CycleParticipationController extends ChangeNotifier {
     }
   }
 
+  /// Visibility hint only; the dialog rechecks the current global permission.
+  Future<bool> canEndRoom(String room, String target) async {
+    if (_disposed || !session.isAuthenticated) return false;
+    final epoch = _epoch;
+    try {
+      final preview = await gateway.management(room, target, 'end');
+      return _valid(epoch) &&
+          (preview.data['permission'] as Map)['allowed'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<CycleManagementPreview?> management(
     String room,
     String target,

@@ -475,6 +475,45 @@ void main() {
     });
     tearDown(() => dio.close(force: true));
     test(
+      'end button waits for global permission and discards old cycle result',
+      () async {
+        api.respond = (_, query) async =>
+            detail(query!['target_cycle_key'] as String);
+        gateway.onCycleDetail = (t) => repo.cycleDetail(v1.roomId, t);
+        var allowed = false;
+        Completer<bool>? gate;
+        var permissionReads = 0;
+        final state = BackendRecruitmentDetailViewModel(
+          gateway: gateway,
+          session: session,
+          roomId: v1.roomId,
+          target: c,
+          loadEndPermission: (_, target) async {
+            permissionReads++;
+            return target == c && gate != null ? gate.future : allowed;
+          },
+        );
+        addTearDown(state.dispose);
+        await state.load();
+        expect(state.endAvailable, false);
+        allowed = true;
+        await state.load();
+        expect(state.endAvailable, true);
+        gate = Completer<bool>();
+        final old = state.load();
+        await f1.settled(() => permissionReads == 3);
+        allowed = false;
+        state.selectCycle(n);
+        expect(state.endAvailable, false);
+        gate.complete(true);
+        await old;
+        await f1.settled(() => !state.loading);
+        expect(state.endAvailable, false);
+        expect(state.target, n);
+        expect(state.failure, null);
+      },
+    );
+    test(
       'next participation shortcut requires opened next target and no existing participation',
       () async {
         var enabled = false;

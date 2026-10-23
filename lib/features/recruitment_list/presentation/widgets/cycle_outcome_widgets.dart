@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../data/cycle_outcome.dart';
 import '../../data/cycle_schedule.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
@@ -30,8 +31,9 @@ class CycleOutcomeActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
-    builder: (context, _) => Wrap(
-      spacing: 8,
+    builder: (context, _) => Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (final action in cycleOutcomeLabels.keys)
           if ((action == 'complete_item' &&
@@ -44,33 +46,52 @@ class CycleOutcomeActions extends StatelessWidget {
                   showClosure &&
                   continuation &&
                   {'leader', 'member'}.contains(role)))
-            TextButton(
-              onPressed:
-                  controller.canAct &&
-                      target == current &&
-                      playable &&
-                      {'leader', 'member'}.contains(role) &&
-                      (action != 'complete_item' || role == 'leader')
-                  ? () => showDialog<void>(
-                      context: context,
-                      builder: (_) => _OutcomeDialog(
-                        controller: controller,
-                        room: room,
-                        target: target,
-                        action: action,
-                        raidLabel: raidLabel,
-                      ),
-                    )
-                  : null,
-              child: Text(
-                action == 'complete_item'
-                    ? completeLabel
-                    : cycleOutcomeLabels[action]!,
-              ),
-            ),
+            _action(context, action),
       ],
     ),
   );
+
+  Widget _action(BuildContext context, String action) {
+    final enabled =
+        controller.canAct &&
+        target == current &&
+        playable &&
+        {'leader', 'member'}.contains(role) &&
+        (action != 'complete_item' || role == 'leader');
+    final VoidCallback? onPressed = enabled
+        ? () => showDialog<void>(
+            context: context,
+            builder: (_) => _OutcomeDialog(
+              controller: controller,
+              room: room,
+              target: target,
+              action: action,
+              raidLabel: raidLabel,
+            ),
+          )
+        : null;
+    if (action == 'complete_item') {
+      return SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+          ),
+          icon: const Icon(Icons.task_alt),
+          label: Text(completeLabel),
+        ),
+      );
+    }
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton(
+        onPressed: onPressed,
+        child: Text(cycleOutcomeLabels[action]!),
+      ),
+    );
+  }
 }
 
 class _OutcomeDialog extends StatefulWidget {

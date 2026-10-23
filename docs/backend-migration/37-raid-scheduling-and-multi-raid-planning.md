@@ -1732,3 +1732,22 @@ B는 member_cycles/device_feedback/cycle_recruitment의 실제read경계와 cycl
 검증: 변경Dart2파일 포맷·분석0, diffcheck·diff검토/단일 호출자·이동 전후 노출/명령 대상 대조. 첫 format은 적용 뒤 telemetry 파일의 sandbox 쓰기 오류가 발생해 동일 파일 포맷/분석을 허용된 재실행으로 최종 성공했다. 저장/권한/Controller/Repository 변경이 없어 이전144mock·전체시험은 반복하지 않았고 정상UI 자동시험을 추가하지 않았다. 실기기 폴드/큰글자 줄바꿈·각 역할/주차의 실제 배치/버튼 조작은 미확인이다.
 
 착수 확인에서 [Backend6360251618](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6360251618)의 완료정정/보관 구현 `8bbcfc8cb89e69eb1f9747a0fcf2e919e41c3b76`·170경로/DB0030 인계를 수신했다. 이전 §37.26~27의 Backend 구현인계 대기를 Flutter wire 대조/소비 예정으로 갱신한다. 이번 배치에서 해당 API를 연결하거나 검증하지 않았으며 앱 소비2940824는 유지한다. 개발반영/서버 시험은 Backend 보고수신으로 실회원/기기 인수와 구분한다. 별도 함께추방 계약은 아직 없다.
+
+
+### 37.30 완료·탈퇴·마지막 1인 해산의 실제 의미와 표시 (2026-10-23)
+
+사용자가 버튼의 실제 의미를 재확인하고 완료/해산 디자인을 지정했다. `8bbcfc8c`의 cycle_outcomes.execute와 cycle_common.context/execute를 정적으로 대조했다(실서버 명령 미실행). 현재 단일raid 방의 complete_item은 선택T·선택raid/round의 참가자 전원 완료이며, 여러raid 전체를 한 번에 완료하는 명령은 아니다. personal_completion은 본인 선택assignment 완료/점유·예약 해제, 남은active가없으면 주차참가completed다. 방의 명시탈퇴·공대장자동승계를 보장하지 않는다. 단일cancel은선택T탈퇴/리더자동승계·마지막1인T종료, globalleave는C/N본인지속관계탈퇴이나열린주리더이면LEADERSHIP_RESOLUTION_REQUIRED로먼저위임이필요하다. globalend는공통관리권한+마지막지속회원1인조건이며다른참가자강제해산이아니다.
+
+| 버튼 | 현재 반영/제약 |
+|---|---|
+| 주차 완료 | 기존 선택raid 전원완료·확인창/대상선택 유지, primary 보라배경/흰글씨/task_alt 아이콘의 전체폭 한 줄 단독 FilledButton |
+| 나만 완료 | 사용자 요구는 '나혼자 완료처리이후 탈퇴'·해당T탈퇴/리더승계까지. 현재 API가 보장하지 않아 기존이름/명령 유지·Backend 보완 대기 |
+| 이번주 탈퇴 / 다음주 탈퇴 | 실제 선택C/N에 맞게 표시. 다른T보존/기존cancel preview 자동승계 유지 |
+| 모두 탈퇴 | C/N 본인 관계 전역종료, 열린주공대장이면위임선행이라는현제약 유지. 자동승계를보장하는것으로표기하지않음 |
+| 모집 해산 | 사용자가 마지막1인종료유지를확정. 모든공대장에게상시보이던것을삭제하고실제허용때만표시. 두탈퇴버튼아래/새모집위·중앙단독·error빨강/흰글씨/delete_forever_outlined 아이콘. 다인양주차해산확장없음 |
+
+**읽기/책임:** 상세VM은현재T인원1인공대장후보에서만Controller의 canEndRoom을통해기존management(end)context를조건부1회조회한다. 이context는반대T·지속회원·공통권한까지검사하므로화면인원만으로'혼자'를추정하지않는다. Controller는표시권한읽기에pending/key/전역busy/failure를만들지않고오류시false,scope/회원epoch변경시거절한다. VM도선택T/read epoch·회원/환경을검사하고갱신시표시권한을초기화한다. 매build/카드별조회없음. 실행시기존관리확인창에서최신context/의미서명/CAS를다시검사하므로표시권한이쓰기를대신하지않는다. 실제동시추가참가/권한변경은최종서버검증대상이다.
+
+[Backend 보완 요청6360708926](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6360708926): 개인선택raid완료+선택T명시탈퇴·자동승계/마지막1인·다중raid나머지본인참가취소영향/다른T보존을한명령으로보장하는정확한context/impact/ACK·원재송/권한/CAS계약요청. 완료뒤cancel/leave두명령연속실행으로우회하지않는다. 양T추방/완료정정A/B와분리하며새기능을구현완료로표시하지않는다.
+
+검증: 관리/주차상세2파일최종52mock PASS, 변경feature presentation/두시험 분석0·포맷/diffcheck·diff검토. 신규2시험에서end권한거절/허용·읽기쓰기0/전역failure불변·다른회원응답차단,상세선택T전환후옛허용응답차단을확인했다. 최초분석의시험helper전방참조/불필요!를수정후최종통과했다. 기존144mock를합산/반복하지않았고정상UI자동시험/무관전체시험은추가하지않았다. 실기기한줄버튼/폴드큰글자·현재/반대T다른참가자시해산숨김/정상해산·완료/탈퇴는사용자미확인이다. 새API/writer·서버/DB/기기·dev/main변경없음.

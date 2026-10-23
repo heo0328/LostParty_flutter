@@ -13,6 +13,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     this.target,
     this.accessChanges,
     this.scopeKey,
+    this.loadEndPermission,
   }) {
     session.addListener(_sessionChanged);
     accessChanges?.addListener(_sessionChanged);
@@ -24,6 +25,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
   final String roomId;
   final Listenable? accessChanges;
   final String Function()? scopeKey;
+  final Future<bool> Function(String room, String target)? loadEndPermission;
   String? _scopeBinding;
   String? target;
   MemberCycles? cycles;
@@ -48,7 +50,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
   bool _disposed = false, loading = false;
   int _epoch = 0;
   BackendRecruitmentDetail? value;
-  bool nextParticipationAvailable = false;
+  bool nextParticipationAvailable = false, endAvailable = false;
   RaidCatalog? catalog;
   String? failure;
   String? groupName;
@@ -64,6 +66,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     _epoch++;
     value = null;
     nextParticipationAvailable = false;
+    endAvailable = false;
     cycles = null;
     notOpen.clear();
     catalog = null;
@@ -84,6 +87,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     if (_disposed || loading || !session.isAuthenticated) return;
     final epoch = ++_epoch;
     nextParticipationAvailable = false;
+    endAvailable = false;
     loading = true;
     failure = null;
     notifyListeners();
@@ -108,6 +112,18 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
       if (!_current(epoch)) return;
       value = detail;
       notOpen.remove(target);
+      if (loadEndPermission != null &&
+          cycleGateway != null &&
+          detail.room['my_target_role'] == 'leader' &&
+          detail.memberCount == 1) {
+        try {
+          final allowed = await loadEndPermission!(roomId, target!);
+          if (!_current(epoch)) return;
+          endAvailable = allowed;
+        } catch (_) {
+          // A missing global permission never implies a one-person room.
+        }
+      }
       if (cycleGateway != null &&
           target == cycles!.current.key &&
           detail.room['continuation_enabled'] == true &&

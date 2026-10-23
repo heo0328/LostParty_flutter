@@ -302,6 +302,32 @@ void main() {
     changes.dispose();
     session.dispose();
   });
+  test(
+    'room end visibility reads global permission without writes or failure',
+    () async {
+      wire = managementWire('end');
+      wire['data']['permission'] = {
+        'allowed': false,
+        'reason': 'ROOM_LAST_MEMBER_REQUIRED',
+        'next_change_at': null,
+      };
+      expect(await controller.canEndRoom(room, n), false);
+      expect(api.requests.where((r) => r['method'] != 'GET'), isEmpty);
+      expect(controller.failure, null);
+      expect(controller.hasPending, false);
+      wire['data']['permission'] = f1.permit();
+      expect(await controller.canEndRoom(room, n), true);
+      final gate = Completer<Map<String, dynamic>>();
+      api.respond = (_, _) => gate.future;
+      final old = controller.canEndRoom(room, n);
+      session.userId = 'another-user';
+      session.generation++;
+      session.notifyListeners();
+      gate.complete(copy(wire));
+      expect(await old, false);
+      expect(api.requests.where((r) => r['method'] != 'GET'), isEmpty);
+    },
+  );
   Future<CycleManagementPreview> preview(
     String a, {
     Map<String, dynamic> query = const {},
