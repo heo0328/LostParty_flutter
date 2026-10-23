@@ -395,11 +395,7 @@ class RecruitmentCreationContext {
     ).add(const Duration(days: 7)).toIso8601String().substring(0, 10);
     roleCheck(value.targetKey == value.cycleKey || value.targetKey == nextKey);
     roleCheck(!draft.continueTogether || value.targetKey == value.cycleKey);
-    final effect = draft.continueTogether
-        ? 'target_and_next'
-        : value.targetKey == nextKey
-        ? 'target_is_next'
-        : 'target_only';
+    final effect = draft.continueTogether ? 'target_and_next' : 'target_only';
     roleCheck(j['continuation_effect'] == effect);
     value.effect = effect;
     Map<String, dynamic> prospective(Object? raw, String t) {
@@ -535,14 +531,7 @@ class RecruitmentCreationAck {
         ).add(const Duration(days: 7)).toIso8601String().substring(0, 10),
     };
     effect = j['continuation_effect'] as String;
-    roleCheck(
-      effect ==
-          (together
-              ? 'target_and_next'
-              : body['expected_cycle_key'] == targetKey
-              ? 'target_only'
-              : 'target_is_next'),
-    );
+    roleCheck(effect == (together ? 'target_and_next' : 'target_only'));
     created = raidList(j['created_cycles']).map((raw) {
       final c = roleMap(raw);
       roleShape(

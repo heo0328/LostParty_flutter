@@ -1,5 +1,7 @@
 # AI CONTEXT — 2주 레이드 현황 기획과 현재 구현 상태
 
+2차 실기기 피드백(2026-10-23): N 단독 생성의 effect 오검증을 서버 target_only 계약에 맞춰 수정·직접21mock PASS/변경2파일 분석0. C/C+N 생성·마지막1인 해산은 사용자 정상 보고, 다인 가입/승계는 자료 미충족이다. 검색의 본인 선택T 참가 제외는 서버 페이지 전 필터 요청, C 단일탈퇴는 앱/문서와 실제 next_only 서버 제한의 불일치로 보완 요청한다. N 마지막1인 탈퇴 허용/global leave 리더 제한/end 전체 마지막1인을 구분한다. 상세 설계37 §37.38, 현재 후속/미확인은 NEXT_WORK를 따른다. dev/main 미반영.
+
 B 목록·보관 소비 구현(2026-10-23): 참가중의 실제 active/review/null-card 복구 안내·기록 ended query·보관 회원 detail/plan 직접 조회와 새쓰기 진입 차단 연결. 7파일159mock PASS/lib·test분석0, [설계37 §37.37](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md). D22/E23/A/B 코드·자동경계 완료, 전체 실회원/사용자 기기 인수·dev/main 통합은 미완료다. 아래 B대기 문구보다 이 상태가 우선하며 다음은 NEXT_WORK의 합동 인수다.
 
 A 본인 완료 해제 구현(2026-10-23): Backend8bbcfc8c의 전용 정정 context/POST·원ACK와 실제 계정 확인창 연결, schema3/v3 영속복구·기존 schema1/2 원PUT 보존. 최종4파일94mock PASS/lib·test분석0, [설계37 §37.36](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md). 실회원/기기와 B목록/보관은 미완료이며 dev/main 미반영, 다음은 NEXT_WORK다. 아래 A설계/대기 표기보다 이 상태가 우선한다.

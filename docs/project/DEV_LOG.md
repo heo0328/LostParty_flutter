@@ -1,5 +1,14 @@
 # 개발 이력
 
+## 2026-10-23 — 2차 실기기 결과·N 단독 생성 응답 검증 복구
+
+- 사용자 결과: ‘1. 통과’는 보고 범위만 수용했다. C 단독/C+N 생성·마지막1인 모집 해산 정상, N 단독 일반 오류·참가한 방의 모집 검색 잔류를 수신했다. 신규 인증 원정대/회원이 없어 가입·다인 탈퇴/승계는 미실행이며 정상/실패로 단정하지 않는다.
+- 새로 가능해진 흐름: unchecked N 단독 생성 context/201 ACK의 continuation_effect=target_only를 읽는다. 앱이 N이면 무조건 target_is_next를 요구한 오류를 제거했다. Backend0eed67c4 cycle_creation.preflight/생성시험의 실제 의미는 target_only=함께하기 미선택(C/N 공통), target_is_next=N+enabled=true 특례다. 앱은 N선택 시 함께하기를 false로 유지한다. 합성 fixture도 잘못된 같은 가정을 담고 있어 바로잡았다.
+- 보존 확인: C/C+N 원자 생성, 실제T 성공 상세/새 생성, C+14·N+함께하기 차단, 주차 변경/원본문·Key 재송·잘못된ACK pending 보존. Repository/DI/저장/서버 권한을 변경하지 않았다. 최신 Backend e4bfe9c4의 생성/탈퇴/검색/공통4소스가 고정 소비0eed67c4와 동일함도 대조했다.
+- 검증: cycle_recruitment_test 단일21mock PASS(새2+직접기존19), 변경2파일 분석0·포맷/diffcheck/diff 검토. 새 HTTP adapter N context/201과 잘못된 effect 거절을 추가했다. 실제 정상회원 HTTP/DB원자성·사용자 수정본 N 생성 인수는 미확인이다. 공용 저장/Router/권한 불변으로 무관 전체시험은 반복하지 않았다.
+- 별도 서버 보완: 검색은 선택T 본인의 실제 참가를 SQL 페이지 전에 제외하는 방향을 채택해 요청한다. 로컬 필터는 페이지/정렬/캐시를 불완전하게 만들므로 추가하지 않았다. C 단일탈퇴는 cycle_leadership.prepare_cancel(next_only=True)로 거절되어 기존 C/N 정책/노출과 불일치한다. N 마지막1인 close_target은 허용, global leave는 열린T 리더에게 LEADERSHIP_RESOLUTION_REQUIRED, end는 전체 마지막1인 조건으로 서로 다르다. 미승인 다인 강제해산/명령 연속실행·자동 대체는 추가하지 않는다. 버튼 숨김/통합은 UX 제안으로 남긴다.
+- Git/협업: feature/raid-recruitment-scheduling 구간 commit/push 보관 후 Issue13에 결과·원인/담당/완료조건을 회신한다. 브랜치 유지·dev/main 미반영·무관 dirty 보존. 후속 대기는 NEXT_WORK/설계37 §37.38에서 추적한다.
+
 ## 2026-10-23 — 설정 계정 문의용 회원 ID 표시·복사
 
 - 새로 가능해진 흐름: 로그인한 본인의 회원 ID 전체 값과 복사 아이콘을 Google 로그인 정보 아래에 표시하고 계정 문의 안내를 추가했다. 긴 ID는 줄바꿈/텍스트 선택을 지원한다.

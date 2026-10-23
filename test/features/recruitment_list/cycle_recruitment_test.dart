@@ -56,8 +56,6 @@ Map<String, dynamic> creation(RecruitmentDraft d) {
     'next_cycle_creation': d.continueTogether ? prospective(n) : null,
     'continuation_effect': d.continueTogether
         ? 'target_and_next'
-        : d.targetCycleKey == n
-        ? 'target_is_next'
         : 'target_only',
   });
   return j;
@@ -87,9 +85,7 @@ Map<String, dynamic> ack(String key, Map<String, dynamic> body) => {
   ],
   'continuation_effect': (body['continuation'] as Map)['enabled'] == true
       ? 'target_and_next'
-      : body['target_cycle_key'] == c
-      ? 'target_only'
-      : 'target_is_next',
+      : 'target_only',
 };
 Map<String, dynamic> envelope(
   String t,
@@ -282,6 +278,35 @@ void main() {
       expect(model.draft.targetCycleKey, n);
       model.update(model.draft.copy(continueTogether: true));
       expect(model.draft.continueTogether, false);
+    },
+  );
+  test(
+    'N without continuation rejects the checked-N effect in context and ACK',
+    () {
+      final d = v1.draft().copy(targetCycleKey: n, continueTogether: false);
+      final context = creation(d)..['continuation_effect'] = 'target_only';
+      final parsed = RecruitmentCreationContext.fromCycleJson(context, d);
+      final body = d.body(parsed, '모집');
+      final result = ack(characterId, body)
+        ..['continuation_effect'] = 'target_only';
+      expect(
+        RecruitmentCreationAck.fromCycleJson(
+          result,
+          characterId,
+          body,
+        ).targetKey,
+        n,
+      );
+      context['continuation_effect'] = 'target_is_next';
+      expect(
+        () => RecruitmentCreationContext.fromCycleJson(context, d),
+        throwsFormatException,
+      );
+      result['continuation_effect'] = 'target_is_next';
+      expect(
+        () => RecruitmentCreationAck.fromCycleJson(result, characterId, body),
+        throwsFormatException,
+      );
     },
   );
   test(
@@ -575,6 +600,46 @@ void main() {
         await repo.create(characterId, d.body(context, '모집'));
         expect(api.requests.last['path'], '/v2/raid-rooms');
         expect(api.requests.last['status'], 201);
+      },
+    );
+    test(
+      'N-only repository accepts server target_only context and 201 ACK without C or third week',
+      () async {
+        // Backend 0eed67c4 cycle_creation.preflight / test_n_target_does_not_create_third_week:
+        // unchecked future target uses target_only; target_is_next requires enabled=true.
+        final d = v1.draft().copy(targetCycleKey: n, continueTogether: false);
+        api.respond = (p, q) async {
+          if (p.endsWith('creation-context')) {
+            return envelope(
+              n,
+              creation(d)..['continuation_effect'] = 'target_only',
+            );
+          }
+          final request = api.requests.last;
+          return envelope(
+            n,
+            ack(
+              request['key'] as String,
+              request['body'] as Map<String, dynamic>,
+            )..['continuation_effect'] = 'target_only',
+            created: true,
+          );
+        };
+        final context = await repo.context(d);
+        expect(api.requests.single['query']['target_cycle_key'], n);
+        expect(api.requests.single['query']['continuation_enabled'], false);
+        expect(api.requests.single['key'], null);
+        final result = await repo.create(
+          characterId,
+          d.body(context, '다음주 모집'),
+        );
+        expect(result.targetKey, n);
+        expect(result.created!.map((row) => row['target_cycle_key']), [n]);
+        expect(result.effect, 'target_only');
+        expect(api.requests.last['body']['continuation'], {
+          'enabled': false,
+          'next_selection': null,
+        });
       },
     );
     test(

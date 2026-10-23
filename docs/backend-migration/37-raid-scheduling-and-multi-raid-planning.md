@@ -1946,3 +1946,17 @@ room.state=ended인 상세에서는 새 조건/공통 편집·참가/신청 승�
 변경은 기존 목록 reader/화면·상세 표시와 한정된 readOnly 매개변수이며 새 DB/영속 저장·Router/DI·writer 계약 변경은 없다. 직접7파일 및 lib/test 분석으로 영향 경계를 설명할 수 있어 무관 전체시험은 반복하지 않았다. 실제 DB의 SQL 페이지전 필터/보관·감사/멱등 원자성은 Backend 검증 근거이며 Flutter mock로 이를 입증했다고 주장하지 않는다. UI 정상 흐름은 자동 위젯 시험으로 중복하지 않고 사용자 실기기에 남긴다.
 
 **다음 전체 인수:** B/D22/E23/A 코드와 관련 자동 검증은 완료됐지만 정상 실회원 HTTP/사용자 기기에서 전체 연결을 인수한 것은 아니다. 사용자가 참가 중/신청 중/기록 C/N·보관 상세/읽기전용 일정·열린N·stopped 재개, 파티완료 수동해제/타인·N 보존·재완료, 개인완료후탈퇴/승계·카드 현재/양T추방을 기능 섹션으로 확인한다. 복구자료가 없으면 그 행만 조건 미충족으로 기록한다. 기기설치/조작·서버/DB/배포·메모리/성능측정 없음, 미확인 인수/잔여 결함 정리 전 dev/main 통합을 하지 않는다.
+
+### 37.38 2차 실기기 — N 단독 생성 복구·검색 제외/C 탈퇴 보완 (2026-10-23)
+
+사용자는 C 단독/C+N 생성과 마지막1인 모집 해산 정상, N 단독 생성 일반 오류와 본인 참가 방의 모집 검색 노출을 보고했다. 추가 인증 원정대/회원 부재로 가입/다인 탈퇴는 조건 미충족이다. 마지막1인 탈퇴가 전체적으로 불가능한 정책인지 질문했으며 정상 인수로 확대하지 않는다.
+
+**N 단독 원인/수정:** 고정 Backend0eed67c4 `cycle_creation.preflight`와 `tests/test_recruitment_cycle_creation.py::test_n_target_does_not_create_third_week`에서 continuation=false인 N도 continuation_effect=target_only다. target_is_next는 N에서 enabled=true를 보낸 특례이며 N 이후 C+14 개방을 뜻하지 않는다. 앱은 N선택 시 enabled=false를 보내면서 context/ACK에는 target_is_next를 요구해 정상 응답을 INVALID_RESPONSE로 거절했다. context/ACK의 기대 효과를 실제 enabled에 맞추고 잘못된 fixture를 정정했다. N+함께하기를 새로 허용하지 않으며 C/C+N/실제T·원요청/원ACK·C+14 방어를 유지한다. 최신 Backend e4bfe9c4의 생성/리더십/검색/공통4소스가 고정소비와 동일함을 확인했다.
+
+직접 `cycle_recruitment_test` 최종21mock PASS(신규2+직접기존19), 변경2파일 분석0·포맷/diffcheck/diff검토. HTTP adapter의 N context/201·false/null continuation·N만 생성과 잘못된 target_is_next 거절을 명시했다. 실제 수정본 사용자 생성 인수/실회원HTTP는 미확인, 무관 전체시험은 저장/DI/공용권한 불변으로 생략했다.
+
+**검색 제외 설계/다음 담당 Backend:** 모집 탐색은 실제 선택T·현재generation에서 본인이 실제 참가/복구 중인 방을 페이지 나누기 전에 제외하는 방향을 채택한다. 반대T에만 참가한 방/단순 지속관계·미선택/취소를 선택T 참가로 간주하지 않는다. `cycle_queries.search`에는 이 제외가 없으며 앱이 카드의 my_target_role로 페이지 이후 필터하면 빈 페이지/정렬·캐시 누락이 생길 수 있다. 추가 카드별 GET/내 참가 전체조회·로컬 캐시 조합은 만들지 않는다. 검색 reader에 한정해 SQL/커서 변경과 실제 상태 조건·비로그인/그룹필터·상세/내참가 보존을 검증하고 정확SHA/실행 반영을 인계하도록 요청한다. 변경 계약 인계 전 앱에 미합의 flag를 보내지 않는다.
+
+**탈퇴 불일치/다음 담당 Backend:** §36.11/§37.30의 선택T 탈퇴 설명과 달리 실제 `cycle_leadership.prepare_cancel`은 `target_row(...next_only=True)`여서 C에서는 TARGET_CYCLE_NOT_FUTURE다. 1인/다인 조건에 앞선 제한이며 앱은 C에도 ‘이번주 탈퇴’를 표시한다. N은 leader/다른실참가0이면 close_target으로 N만 종료하며 지속관계를 보존한다. 전역 `cycle_common.context(kind=leave)`는 열린T 리더가 본인이면 LEADERSHIP_RESOLUTION_REQUIRED, end는 전체 마지막지속회원1인+권한 조건이다. ‘모두 탈퇴’는 자동승계를 포함하는 주차 cancel과 동일하지 않다. C 단일탈퇴·자동승계/마지막T종료를 기존 합의와 정합화하고 C/N 타인·점유/예약·원ACK를 보존하는 정확한 context/오류/권한 계약을 요청한다. 완료로 위장하거나 cancel→leave/end를 연속 실행하지 않는다.
+
+UX 제안은 주차 탈퇴=현재 보이는 T만 나가기, 모집 해산=전체 마지막1인 전역 종료로 유지하고, 실행 불가능한 모두 탈퇴의 노출/설명을 정리하는 것이다. 버튼 통합/숨김·새 정책은 확정 구현으로 기록하지 않는다. 기존 모집 해산 정상 동작과 다인강제해산 제외는 유지한다. C/N 각각1인이어도 지속관계1인과 다른T 참가자를 구분해야 하므로 단순 현재화면 인원수로 전역 허용을 추정하지 않는다.
