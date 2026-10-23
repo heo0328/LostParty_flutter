@@ -34,6 +34,8 @@
 
 현재구간: F6-A 코드/표적검증 완료. 새 manual 명령만 명시T v2로 저장하고 schema1/v1 pending은 schema2/wire_version 이행 후에도 원경로/본문/key로 재송한다. 기존 표시선호·ACK뒤실제T 재조회·N/수10시/party근거 보호를 유지한다. 7파일 단일108mock PASS·최종5Dart분석0이며 새17건 좁은로그확인 재실행은 합산하지 않는다. 상세는 §37.20/DEV_LOG, 공통 설계는 §37.19다.
 
+현재 인계: 구현660433d commit/push·원격일치 확인, [Flutter F6-A 결과6355764602](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6355764602)에 Backend116 확인/소비·구현SHA/108mock·분석0·미확인/다음담당을 회신하고 게시본문 재조회 일치를 확인했다. 다음 착수 때 최신Issue13부터 확인한다.
+
 **다음 첫 구현 F6-B — 방 전체/본인 item 완료·미완료 종료**
 
 - 포함: command-context의 실제room/T/선택round·actor/leadership/token·server impact를 기존 상세 진행영역/확인창에 연결한다. 모집 data/cycle_outcome.dart 신규 reader/preview/body + CycleInteractionRepository/CycleParticipationController의 기존 writer/원ACK·실제T 갱신을 재사용한다. 계정 수동writer·저장스키마·N opening/reopen과 혼용하지 않는다.
