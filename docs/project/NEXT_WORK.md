@@ -4,6 +4,8 @@
 
 ## 현재 승인 그룹 — 2차 실기기 피드백 원인 확인·N 단독 생성 복구
 
+구현 `407328ef` commit/push·원격 일치. [Issue13 회신6366977367](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6366977367)에 N 원인/21mock·분석0·실기기 미확인과 검색 SQL 제외/C 탈퇴 보완의 담당·완료조건을 인계하고 게시본문 MATCH를 확인했다. 다음 담당은 Backend 계약/구현 인계이며 앱 수정본 N 단독 생성은 사용자 재확인 대기다.
+
 - 사용자 결과: 1번 통과(개별 세부 항목까지 확대하지 않음), C 단독/C+N 생성·마지막1인 모집 해산 정상. N 단독 생성은 일반 오류, 참가한 방이 모집 검색에 노출됨. 추가 인증 원정대/회원이 없어 가입·다인 탈퇴/승계 인수는 조건 미충족이다.
 - 확인 근거: Backend0eed67c4 cycle_creation.preflight 및 test_n_target_does_not_create_third_week는 continuation=false인 N도 effect=target_only다. 앱 context/ACK·합성 fixture는 N이면 target_is_next로 잘못 가정했다. 기존 C/C+N·원요청 재송·실제T/C+14 방어를 보존하며 N 단독의 효과 검증/fixture를 고친다. Repository HTTP 회귀와 잘못된 effect 거절을 추가하고 cycle_recruitment_test·변경파일 분석/포맷/diffcheck를 한 번 묶는다. 공용 저장/Router/권한 불변으로 전체시험은 생략한다.
 - 검색 제외는 서버 SQL 페이지 전 실제 선택T의 본인 CycleMember 참가를 제외하는 방향으로 요청한다. 로컬 목록/캐시·페이지 이후 필터로 대체하지 않으며 반대T 참가만으로 숨기지 않는다. Backend 인계 후 소비/실기기를 확인한다.

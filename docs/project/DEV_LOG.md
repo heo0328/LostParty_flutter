@@ -2,6 +2,8 @@
 
 ## 2026-10-23 — 2차 실기기 결과·N 단독 생성 응답 검증 복구
 
+구현 `407328ef` commit/push·원격 일치, [Issue13 회신6366977367](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6366977367) 게시본문 MATCH. GitHub connector 쓰기403 뒤 기존 CLI 인증으로 승인된 댓글만 게시·재조회했다. 검색 제외/C 탈퇴 계약·구현 인계는 Backend 대기, 수정본 N 생성/다인 인수는 사용자 대기다.
+
 - 사용자 결과: ‘1. 통과’는 보고 범위만 수용했다. C 단독/C+N 생성·마지막1인 모집 해산 정상, N 단독 일반 오류·참가한 방의 모집 검색 잔류를 수신했다. 신규 인증 원정대/회원이 없어 가입·다인 탈퇴/승계는 미실행이며 정상/실패로 단정하지 않는다.
 - 새로 가능해진 흐름: unchecked N 단독 생성 context/201 ACK의 continuation_effect=target_only를 읽는다. 앱이 N이면 무조건 target_is_next를 요구한 오류를 제거했다. Backend0eed67c4 cycle_creation.preflight/생성시험의 실제 의미는 target_only=함께하기 미선택(C/N 공통), target_is_next=N+enabled=true 특례다. 앱은 N선택 시 함께하기를 false로 유지한다. 합성 fixture도 잘못된 같은 가정을 담고 있어 바로잡았다.
 - 보존 확인: C/C+N 원자 생성, 실제T 성공 상세/새 생성, C+14·N+함께하기 차단, 주차 변경/원본문·Key 재송·잘못된ACK pending 보존. Repository/DI/저장/서버 권한을 변경하지 않았다. 최신 Backend e4bfe9c4의 생성/탈퇴/검색/공통4소스가 고정 소비0eed67c4와 동일함도 대조했다.
