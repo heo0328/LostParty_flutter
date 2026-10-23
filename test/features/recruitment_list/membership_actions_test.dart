@@ -182,6 +182,7 @@ void main() {
   late bool loseAck, wrongAck, refreshFail;
   Completer<void>? pause;
   final refreshed = <String>[];
+  final relationRefreshes = <List<String>>[];
   List<Map<String, dynamic>> writes() =>
       api.requests.where((r) => r['method'] == 'POST').toList();
   setUp(() {
@@ -191,6 +192,7 @@ void main() {
     loseAck = wrongAck = refreshFail = false;
     pause = null;
     refreshed.clear();
+    relationRefreshes.clear();
     api = base.Api();
     session = ReadSessionFake();
     changes = ChangeNotifier();
@@ -220,6 +222,10 @@ void main() {
       onMutation: (t) async {
         refreshed.add(t);
         if (refreshFail) throw StateError('refresh');
+      },
+      onRelationEnded: (targets) async {
+        relationRefreshes.add(targets);
+        if (refreshFail) throw StateError('relation refresh');
       },
     );
   });
@@ -261,6 +267,10 @@ void main() {
       );
       expect(controller.membershipSuccess!.$2.actorEnded, isTrue);
       expect(refreshed, isEmpty);
+      expect(relationRefreshes, [
+        ['2026-10-21', '2026-10-28'],
+      ]);
+      expect(controller.relationEnded!.$3, ['2026-10-21', '2026-10-28']);
       expect(controller.hasPending, isFalse);
       expect(controller.failure, isNull);
     },
@@ -274,7 +284,68 @@ void main() {
     );
     expect(controller.membershipSuccess, isNotNull);
     expect(controller.failure, isNull);
+    expect(controller.relationEnded, isNull);
+    expect(relationRefreshes, isEmpty);
   });
+  test(
+    'empty ACK is visible with pending cleared before any read callback',
+    () async {
+      scenario = 'empty-effects';
+      wire = fixture('$scenario-context');
+      var observed = 0;
+      String? prepared;
+      controller.addListener(() {
+        if (controller.membershipSuccess == null) return;
+        observed++;
+        expect(controller.hasPending, false);
+        expect(controller.membershipSuccess!.$1, prepared);
+        expect(controller.relationEnded!.$1, prepared);
+      });
+      await controller.performMembershipAction(
+        context(wire).select('leave_all'),
+        isCurrent: () => true,
+        onPrepared: (value) => prepared = value,
+      );
+      expect(observed, greaterThan(0));
+      expect(controller.mutationVersion, 0); // no fictional target effect
+      final count = writes().length;
+      await controller.retry();
+      expect(writes().length, count);
+      expect(relationRefreshes, hasLength(1));
+    },
+  );
+  test('relation refresh failure cannot undo empty successful ACK', () async {
+    scenario = 'empty-effects';
+    wire = fixture('$scenario-context');
+    refreshFail = true;
+    await controller.performMembershipAction(
+      context(wire).select('leave_all'),
+      isCurrent: () => true,
+    );
+    expect(controller.hasPending, false);
+    expect(controller.failure, isNull);
+    expect(controller.membershipSuccess!.$2.actorEnded, true);
+    expect(controller.notice, contains('요청은 반영'));
+  });
+  test(
+    'member change at ACK notification fences all later refresh callbacks',
+    () async {
+      controller.addListener(() {
+        if (controller.membershipSuccess != null) {
+          session.change(authenticated: true, user: 'other');
+        }
+      });
+      await controller.performMembershipAction(
+        context(wire).select('dissolve_led_targets'),
+        isCurrent: () => true,
+      );
+      expect(writes(), hasLength(1));
+      expect(controller.membershipSuccess, isNull);
+      expect(controller.relationEnded, isNull);
+      expect(refreshed, isEmpty);
+      expect(relationRefreshes, isEmpty);
+    },
+  );
   for (final badAck in [false, true]) {
     test(
       'unknown result preserves original HTTP/body/key/Impact without GET ($badAck)',

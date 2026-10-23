@@ -11,6 +11,7 @@ import '../../data/cycle_schedule.dart';
 import '../../data/cycle_outcome.dart';
 import '../../data/cycle_resume.dart';
 import '../../domain/backend_recruitment.dart';
+import '../../domain/policies/party_cycle_policy.dart';
 
 class _CycleCommand {
   _CycleCommand({
@@ -61,6 +62,7 @@ class CycleParticipationController extends ChangeNotifier {
     required this.changes,
     required this.scopeKey,
     this.onMutation,
+    this.onRelationEnded,
     DateTime Function()? now,
   }) : now = now ?? DateTime.now {
     _binding = scopeKey();
@@ -72,6 +74,7 @@ class CycleParticipationController extends ChangeNotifier {
   final Listenable changes;
   final String Function() scopeKey;
   final Future<void> Function(String)? onMutation;
+  final Future<void> Function(List<String>)? onRelationEnded;
   final DateTime Function() now;
   late String _binding;
   bool _disposed = false, busy = false;
@@ -81,6 +84,7 @@ class CycleParticipationController extends ChangeNotifier {
   (String key, String room, String target)? departureSuccess;
   (String key, String room, String target, String member)? removalSuccess;
   (String key, MembershipActionResult result)? membershipSuccess;
+  (String key, String room, List<String> targets)? relationEnded;
   DateTime? _retryAt;
   Timer? _retryTimer;
   bool get hasPending => _pending != null;
@@ -119,6 +123,7 @@ class CycleParticipationController extends ChangeNotifier {
     departureSuccess = null;
     removalSuccess = null;
     membershipSuccess = null;
+    relationEnded = null;
     busy = false;
     failure = notice = lastRoom = lastTarget = null;
     _retryAt = null;
@@ -159,6 +164,7 @@ class CycleParticipationController extends ChangeNotifier {
   Future<String?> performMembershipAction(
     MembershipActionPreview preview, {
     required bool Function() isCurrent,
+    void Function(String key)? onPrepared,
   }) async {
     // Leadership recovery UI remains a separate product proposal.
     if (preview.action == 'recover_leadership' || !canAct || !isCurrent()) {
@@ -190,6 +196,7 @@ class CycleParticipationController extends ChangeNotifier {
         affectedTargets: fresh.affected,
       );
       key = _pending!.key;
+      onPrepared?.call(key);
       await _send(e);
     } on AccountReadException catch (error) {
       if (_valid(e)) _fail(error);
@@ -779,6 +786,21 @@ class CycleParticipationController extends ChangeNotifier {
       _pending = null;
       _retryAt = null;
       failure = null;
+      if (membershipResult != null) {
+        // Publish the final ACK before any optional read. Empty effects still end
+        // a persistent relation; this is not a fabricated target mutation.
+        if (membershipResult.actorEnded) {
+          final c = command.evidence['current_cycle_key'] as String;
+          const policy = PartyCyclePolicy();
+          relationEnded = (
+            command.key,
+            command.room,
+            List.unmodifiable([c, policy.keyFor(policy.fromKey(c)!.endsAt)]),
+          );
+        }
+        _emit();
+        if (!_valid(e)) return;
+      }
       for (final target in command.affectedTargets ?? [command.target]) {
         if (!_valid(e)) return;
         await changed(
@@ -792,6 +814,19 @@ class CycleParticipationController extends ChangeNotifier {
               ? '재개 제안이 등록되었습니다. 참가자 응답을 기다립니다.'
               : '응답이 기록되었습니다. 아직 재개되지 않았습니다.',
         );
+      }
+      if (membershipResult?.actorEnded == true && _valid(e)) {
+        try {
+          await onRelationEnded?.call(
+            List.unmodifiable(
+              relationEnded!.$3.where(
+                (t) => !membershipResult!.affected.contains(t),
+              ),
+            ),
+          );
+        } catch (_) {
+          if (_valid(e)) notice = '요청은 반영되었습니다. 최신 상태를 다시 불러와 주세요.';
+        }
       }
       if (weeklyInterruptionEnabled &&
           command.resumeAck != null &&

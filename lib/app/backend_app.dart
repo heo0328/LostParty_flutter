@@ -442,6 +442,11 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       onMutation: (t) async {
         await _memberAccount?.weekly?.refreshTarget(t);
       },
+      onRelationEnded: (targets) async {
+        for (final t in targets) {
+          await _memberAccount?.weekly?.refreshTarget(t);
+        }
+      },
     );
     final recruitmentCreate = _recruitmentCreate =
         BackendRecruitmentCreateViewModel(

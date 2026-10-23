@@ -1,4 +1,4 @@
-# NEXT WORK — Issue25 A 원명령 연결 완료 / B 메뉴·성공 흐름 연결
+# NEXT WORK — Issue25 B 실제 UI 연결 완료 / C reader·기록 후속
 
 ## 현재 상태 (2026-10-24)
 
@@ -6,13 +6,17 @@
 
 사용자 요청으로 [BUG-025](BUG_REPORTS.md#bug-025-최초-자동-빌드-갱신-완료-후-캐릭터-카드-전투력-미표시-2026-10-24-후속-조사ux-검증-대기)에 최초 빈 캐릭터의 자동 갱신 완료/전투력 미표시 관찰과 자동·수동 경로 차이, 조사/UX 정의·테스트/필요 시 최소 수정 순서를 등록했다. 원인은 미확정·코드수정/실기기 재현은 미실행이다. 저장 성공뿐 아니라 카드 반영·완료 안내/실패·재시도까지 검증하고, 릴리즈 인수에서 필수 수정 여부를 판단한다. 이번은 문서 등록만이며 아래 B 구현을 진행한 것이 아니다. 상세는 BUG-025가 단일 기준이고 기존 B/C·24후속과 IF-001 비활성은 유지한다.
 
-## 다음 구현 B — 실제 메뉴·성공 화면·관계 종료 알림
+## 완료 구간 B — 실제 메뉴·성공 화면·관계 종료 알림
 
-A 구현 `6968f47a` commit/push·원격일치. [Issue25 결과6371981415](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6371981415) 게시본문 MATCH. 전용원명령 내부연결과 실제버튼/관계알림·profile/검색후속을 구분해 인계했으며 새Backend차단·반복시험요청은 없다.
+기존 설계/Issue25 최신6371981415까지 확인해 B를 구현했다. 실제 상세의 기존 두 탈퇴/해산 버튼은 이제 전용 menu option별 visible/permission·최신 Impact 확인과 A의 원명령을 사용한다. 현재T 본인관계 또는 지속관계 종료는 원key당1회 선택T 내목록으로 복귀하고, 반대T만 해산해 현재참가가 남으면 현재상세를 유지한다. effects=[]도 별도 관계종료 이벤트로 C/N 내목록/계정을 갱신하며 가짜T효과를 만들지 않는다. 계정 갱신은 이미 실제효과로 요청한 T를 중복 요청하지 않고 한도는 기존 신규명령 context의 서버 원본을 사용한다.
 
-Issue25 A 전용 Context/Preview/Result·Gateway/실제DI Repository·app-owned 원명령/ACK 연결 완료. 새46+기존직접131의 **고유177mock PASS**, 변경Dart4파일분석0·포맷/diffcheck. 최종 주차검증을 공통 PartyCyclePolicy로 재사용한 뒤 새46만 재확인했고 기존131은 재실행/중복합산하지 않았다. 상세는 설계37 §37.44/DEV_LOG. Backend176/DB0031 반영 대기는 해소됐으며 아래 과거 인계대기는 이 상태를 따른다. 실서버 로그인·기기 인수/버튼 전환은 아직 아니다.
+직접10파일 고유295mock PASS(178+별도116+신규1; 마지막추가 뒤 membership49만 재확인·중복합산 없음), 변경Dart9파일 최종분석0·포맷/diffcheck/리뷰. 원pending/구명령·완료/추방/개인완료탈퇴/읽기전용·IF-001 비활성, 중앙탈퇴/기존빨간해산폭을 보존했다. 세부 결과/근거와 실회원·실기기 미확인은 [설계37 §37.45](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)와 DEV_LOG가 기준이다. 현재 feature/raid-recruitment-scheduling 유지·기존무관dirty 보존·dev/main 미반영, 구간 commit/push로 보관한다. Backend source15e143ae·API176/DB0031과 계약 차이/새차단 요청은 없다.
 
-다음은 기존 상세 버튼 위치/중앙정렬·해산폭을 보존하며 새menu의 option별 visible/permission/영향T확인·재확인과 A명령을 연결한다. 현재T 탈퇴/관계종료는 성공1회 이탈, 반대T만 해산하면 현재화면유지, effects=[]도 membershipSuccess 원결과를 소비해 C/N 내목록·한도 관계종료 알림을 처리한다. 현재1인end조회/전역end를 새효과로재사용하지 않는다. old원pending/IF-001 비활성 유지. C의profile/옛기록Router와24검색회복은별도미완료이고 review/기록 정상인수는전체연결뒤묶는다. recover리더복구UI는제안이다.
+## 다음 구간 C — 명시 reader·옛 기록 연결
+
+§37.43의 명시 reader_profile=membership-actions-1 wrapper/전체200 content·옛 membership_id+cycle_member_id record_locator 설계를 실제 Router·detail/plan/내목록 reader와 다시 대조한 뒤 별도 구현한다. 실제 target/viewer/access/recovery/permissions를 사용하고 가짜 리더/양수세대나 새Member 권한으로 옛기록을 복원하지 않는다. content가 있으면 기존 parser를 재사용하고 null이면 명시 상태로 읽기전용 안내한다. profile·state·기록 anchor를 회원/환경/실제T 캐시와 Router에 보존한다. relation_only의 null locator에 가짜 링크를 만들지 않는다.
+
+이번 B는 C를 구현한 것이 아니며 기존 기본 reader는 그대로다. recover_leadership UX는 제품 승인 전 제안이고 네번째 상시버튼/자동승계나 IF-001 재활성화는 제외한다. Issue24의 검색 CURSOR_STALE 제한 회복/캐시는 C와 독립 후속, BUG-025는 별도 조사 대장이다. 코드의 정상 로그인/전체 디바이스·성능 인수와 dev/main 통합은 미완료다. 실기기 정상 흐름은 C/검색후속 연결 뒤 체크리스트에 묶고 동일 자동시험을 반복하지 않는다.
 
 ## 완료한 A의 설계·보존 범위 — Issue25 전용 context·원명령·ACK
 

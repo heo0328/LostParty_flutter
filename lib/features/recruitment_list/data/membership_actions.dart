@@ -535,6 +535,20 @@ class MembershipActionResult {
   String get view => roleMap(wire['scope'])['view_cycle_key'] as String;
   String get action => data['action'] as String;
   bool get actorEnded => data['actor_membership_ended'] as bool;
+
+  /// Only explicit cancellation/removal of the actor ends the viewed participation.
+  /// A different target's closure must not navigate away from a preserved target.
+  bool exitsTarget(String target) =>
+      actorEnded ||
+      (data['effects'] as List).any(
+        (effect) =>
+            effect['target_cycle_key'] == target &&
+            (effect['members'] as List).any(
+              (member) =>
+                  member['membership_id'] == data['actor_membership_id'] &&
+                  {'cancelled', 'removed'}.contains(member['state']),
+            ),
+      );
   List<String> get affected =>
       List<String>.unmodifiable(data['affected_cycle_keys'] as List);
 }

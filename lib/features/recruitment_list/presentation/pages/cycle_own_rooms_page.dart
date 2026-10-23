@@ -44,6 +44,7 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
   int _mutationVersion = 0;
   bool _initialApplied = false;
   String? _departureKey;
+  String? _relationKey;
   @override
   void initState() {
     super.initState();
@@ -55,6 +56,7 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
     );
     widget.weekly.addListener(_meta);
     _departureKey = widget.mutations?.departureSuccess?.$1;
+    _relationKey = widget.mutations?.relationEnded?.$1;
     _mutationVersion = widget.mutations?.mutationVersion ?? 0;
     widget.mutations?.addListener(_mutated);
     _meta();
@@ -62,6 +64,13 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
 
   void _mutated() {
     final c = widget.mutations!;
+    final relation = c.relationEnded;
+    if (relation != null && relation.$1 != _relationKey) {
+      _relationKey = relation.$1;
+      for (final target in relation.$3) {
+        m.invalidateTarget(target);
+      }
+    }
     if (c.mutationVersion == _mutationVersion) return;
     _mutationVersion = c.mutationVersion;
     if (c.lastTarget != null) m.invalidateTarget(c.lastTarget!);

@@ -4,6 +4,7 @@ import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../../../account/domain/account_read_session.dart';
 import '../../domain/backend_recruitment.dart';
 import '../../../account/domain/member_cycle_models.dart';
+import '../../data/membership_actions.dart';
 
 class BackendRecruitmentDetailViewModel extends ChangeNotifier {
   BackendRecruitmentDetailViewModel({
@@ -14,6 +15,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     this.accessChanges,
     this.scopeKey,
     this.loadEndPermission,
+    this.membershipGateway,
   }) {
     session.addListener(_sessionChanged);
     accessChanges?.addListener(_sessionChanged);
@@ -26,6 +28,9 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
   final Listenable? accessChanges;
   final String Function()? scopeKey;
   final Future<bool> Function(String room, String target)? loadEndPermission;
+  final MembershipActionGateway? membershipGateway;
+  MembershipActionContext? membershipMenu;
+  String? membershipFailure;
   String? _scopeBinding;
   String? target;
   MemberCycles? cycles;
@@ -42,6 +47,8 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     loading = false;
     target = t;
     value = null;
+    membershipMenu = null;
+    membershipFailure = null;
     groupName = null;
     unawaited(load());
   }
@@ -65,6 +72,8 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     _binding = binding;
     _epoch++;
     value = null;
+    membershipMenu = null;
+    membershipFailure = null;
     nextParticipationAvailable = false;
     endAvailable = false;
     cycles = null;
@@ -88,6 +97,8 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     final epoch = ++_epoch;
     nextParticipationAvailable = false;
     endAvailable = false;
+    membershipMenu = null;
+    membershipFailure = null;
     loading = true;
     failure = null;
     notifyListeners();
@@ -104,6 +115,24 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
         target ??= meta.current.key;
         if (meta.find(target!) == null) {
           throw const AccountReadException('TARGET_CYCLE_OUT_OF_RANGE');
+        }
+      }
+      // Menu entry is based on the persistent membership, independent of the
+      // viewed target's role or whether its default detail is currently readable.
+      if (membershipGateway != null && cycleGateway != null) {
+        try {
+          final menu = await membershipGateway!.membershipContext(
+            roomId,
+            target!,
+          );
+          if (!_current(epoch)) return;
+          membershipMenu = menu;
+        } on AccountReadException catch (e) {
+          if (!_current(epoch)) return;
+          membershipFailure = e.code;
+        } catch (_) {
+          if (!_current(epoch)) return;
+          membershipFailure = 'INVALID_RESPONSE';
         }
       }
       final detail = cycleGateway == null

@@ -17,6 +17,8 @@ import '../widgets/cycle_schedule_widgets.dart';
 import '../widgets/cycle_outcome_widgets.dart';
 import '../widgets/cycle_resume_widgets.dart';
 import '../widgets/cycle_member_action_widgets.dart';
+import '../../data/membership_actions.dart';
+import '../widgets/cycle_membership_widgets.dart';
 
 class BackendRecruitmentDetailPage extends StatefulWidget {
   const BackendRecruitmentDetailPage({
@@ -50,6 +52,8 @@ class _BackendRecruitmentDetailPageState
   late final BackendRecruitmentDetailViewModel m;
   int _mutationVersion = 0;
   String? _departureKey;
+  String? _membershipKey;
+  bool _leaving = false;
   @override
   void initState() {
     super.initState();
@@ -61,16 +65,34 @@ class _BackendRecruitmentDetailPageState
       target: widget.target,
       accessChanges: widget.accessChanges,
       scopeKey: widget.scopeKey,
-      loadEndPermission: widget.participation?.canEndRoom,
+      membershipGateway:
+          widget.participation?.gateway is MembershipActionGateway
+          ? widget.participation!.gateway as MembershipActionGateway
+          : null,
     );
     _departureKey = widget.participation?.departureSuccess?.$1;
+    _membershipKey = widget.participation?.membershipSuccess?.$1;
     _mutationVersion = widget.participation?.mutationVersion ?? 0;
     widget.participation?.addListener(_changed);
     unawaited(m.load());
   }
 
   void _changed() {
+    if (_leaving) return;
     final c = widget.participation!;
+    final membership = c.membershipSuccess;
+    if (membership != null && membership.$1 != _membershipKey) {
+      _membershipKey = membership.$1;
+      final result = membership.$2;
+      if (result.room == widget.roomId && result.view == m.target) {
+        if (result.exitsTarget(result.view)) {
+          _exitToTarget(c, result.view);
+          return;
+        }
+        // Opposite-week effects preserve this screen but invalidate its menu.
+        unawaited(m.load());
+      }
+    }
     if (c.mutationVersion == _mutationVersion) return;
     _mutationVersion = c.mutationVersion;
     final departure = c.departureSuccess;
@@ -79,23 +101,33 @@ class _BackendRecruitmentDetailPageState
         departure.$2 == widget.roomId &&
         departure.$3 == m.target) {
       _departureKey = departure.$1;
-      final binding = c.scopeKey();
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || binding != c.scopeKey() || m.target != departure.$3) {
-          return;
-        }
-        final uri = GoRouter.of(context).routeInformationProvider.value.uri;
-        if (uri.path != '/recruitments/${widget.roomId}') return;
-        Navigator.of(
-          context,
-        ).popUntil((route) => route == ModalRoute.of(context));
-        context.go('/raid-status?target_cycle_key=${departure.$3}');
-      });
+      _exitToTarget(c, departure.$3);
       return;
     }
     if (c.lastRoom == widget.roomId && c.lastTarget == m.target) {
       unawaited(m.load());
     }
+  }
+
+  void _exitToTarget(CycleParticipationController c, String target) {
+    _leaving = true;
+    final binding = c.scopeKey();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (binding != c.scopeKey() || m.target != target) {
+        _leaving = false;
+        return;
+      }
+      final uri = GoRouter.of(context).routeInformationProvider.value.uri;
+      if (uri.path != '/recruitments/${widget.roomId}') {
+        _leaving = false;
+        return;
+      }
+      Navigator.of(
+        context,
+      ).popUntil((route) => route == ModalRoute.of(context));
+      context.go('/raid-status?target_cycle_key=$target');
+    });
   }
 
   @override
@@ -168,6 +200,8 @@ class _BackendRecruitmentDetailPageState
                                   onPressed: m.load,
                                   child: const Text('상세 다시 불러오기'),
                                 ),
+                                if (m.membershipMenu != null)
+                                  _membershipActions(),
                                 if (widget.participation != null &&
                                     m.cycles != null &&
                                     m.target == m.cycles!.next.key) ...[
@@ -519,52 +553,12 @@ class _BackendRecruitmentDetailPageState
                 ),
             ],
           ),
-        if (_canManage &&
-            m.target != null &&
+        if (m.membershipMenu != null) _membershipActions(),
+        if (m.membershipFailure != null &&
             {'leader', 'member'}.contains(room['my_target_role']))
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 12,
-              runSpacing: 4,
-              children: [
-                _managementButton(
-                  'cancel',
-                  m.cycles != null && m.target == m.cycles!.next.key
-                      ? '다음주 탈퇴'
-                      : '이번주 탈퇴',
-                ),
-                _managementButton('leave', '모두 탈퇴'),
-              ],
-            ),
-          ),
-        if (_canManage && m.endAvailable)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Center(
-              child: ListenableBuilder(
-                listenable: widget.participation!,
-                builder: (context, _) => FilledButton.icon(
-                  onPressed: widget.participation!.canAct && !m.loading
-                      ? () => showCycleManagement(
-                          context,
-                          widget.participation!,
-                          room: m.roomId,
-                          target: m.target!,
-                          action: 'end',
-                        )
-                      : null,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.error,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                  ),
-                  icon: const Icon(Icons.delete_forever_outlined),
-                  label: const Text('모집 해산'),
-                ),
-              ),
-            ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Text('탈퇴·해산 메뉴를 불러오지 못했습니다. 새로고침해 주세요.'),
           ),
         if (m.loading) const LinearProgressIndicator(minHeight: 2),
         TextButton(
@@ -595,6 +589,19 @@ class _BackendRecruitmentDetailPageState
       child: Text(label),
     ),
   );
+
+  Widget _membershipActions() {
+    final menu = m.membershipMenu!;
+    return CycleMembershipActions(
+      controller: widget.participation!,
+      menu: menu,
+      isCurrent: () =>
+          mounted &&
+          !m.loading &&
+          m.target == menu.view &&
+          identical(m.membershipMenu, menu),
+    );
+  }
 
   Widget _member(Map<String, dynamic> member, bool groupLinked) {
     final c = member['character'] as Map?;
