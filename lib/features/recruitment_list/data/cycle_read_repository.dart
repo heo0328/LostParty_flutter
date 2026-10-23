@@ -3,6 +3,7 @@ import '../../account/domain/account_read_session.dart';
 import '../../account/domain/member_cycle_models.dart';
 import '../../account/domain/member_raid_models.dart';
 import '../../account/domain/role_summary.dart';
+import 'membership_readers.dart';
 
 class CycleReadScope {
   CycleReadScope(Map<String, dynamic> j, String target) {
@@ -106,6 +107,26 @@ class CycleRoomCard {
 }
 
 class CycleOwnRow {
+  CycleOwnRow.profile(this.profile, String target) {
+    final p = profile!;
+    id = p.viewer['membership_id'] as String;
+    roomId = p.room;
+    state = p.viewer['membership_state'] == 'ended' ? 'ended' : 'current';
+    participationState = p.viewer['cycle_member_state'] as String;
+    historyOnly = p.isRecord;
+    recoveryOnly = p.mode == 'recovery';
+    canView = p.allowed('view_detail');
+    if (p.content != null) {
+      final legacy = CycleOwnRow(p.content!, target, false);
+      roleCheck(
+        legacy.id == id &&
+            legacy.roomId == roomId &&
+            p.content!['cycle_member_id'] == p.viewer['cycle_member_id'] &&
+            p.content!['target_generation'] == p.target['target_generation'],
+      );
+      card = legacy.card;
+    }
+  }
   CycleOwnRow(Map<String, dynamic> j, String target, bool application) {
     if (application) {
       applicationData = Map.unmodifiable(j);
@@ -205,30 +226,52 @@ class CycleOwnRow {
   }
   late final String id, roomId, state;
   Map<String, dynamic>? applicationData;
+  MembershipProjection? profile;
+  Object get identity => profile?.identity ?? id;
+  String? get title => profile?.target['title'] as String? ?? card?.title;
   String? participationState;
   bool recoveryOnly = false, historyOnly = false;
   CycleRoomCard? card;
   late final bool canView;
-  bool get isActiveParticipation =>
-      state == 'current' &&
-      !historyOnly &&
-      (participationState == 'participating' ||
-          participationState == 'review_required') &&
-      (recoveryOnly ||
-          (card != null &&
-              card!.wire['state'] == 'active' &&
-              {
-                'open',
-                'review_required',
-              }.contains(card!.wire['target_state'])));
+  bool get isActiveParticipation => profile != null
+      ? !profile!.isRecord &&
+            profile!.viewer['membership_state'] == 'active' &&
+            {'participating', 'review_required'}.contains(participationState) &&
+            {
+              'open',
+              'review_required',
+            }.contains(profile!.target['target_state'])
+      : state == 'current' &&
+            !historyOnly &&
+            (participationState == 'participating' ||
+                participationState == 'review_required') &&
+            (recoveryOnly ||
+                (card != null &&
+                    card!.wire['state'] == 'active' &&
+                    {
+                      'open',
+                      'review_required',
+                    }.contains(card!.wire['target_state'])));
   bool get isEndedParticipation =>
       state == 'ended' ||
       historyOnly ||
       card?.wire['state'] == 'ended' ||
-      {'completed', 'stopped', 'cancelled'}.contains(participationState);
+      {
+        'completed',
+        'stopped',
+        'cancelled',
+        'removed',
+      }.contains(participationState);
 }
 
 class CycleOwnPage {
+  CycleOwnPage.profile(String target, Map<String, dynamic> raw) {
+    final page = MembershipReadPage(target, raw);
+    rows = List.unmodifiable(
+      page.items.map((p) => CycleOwnRow.profile(p, target)),
+    );
+    cursor = page.cursor;
+  }
   CycleOwnPage(Map<String, dynamic> j, String target, bool application) {
     roleShape(j, 'scope data');
     CycleReadScope(roleMap(j['scope']), target);
@@ -258,8 +301,9 @@ class CycleOwnPage {
 }
 
 class CycleReadRepository {
-  CycleReadRepository(this.api);
+  CycleReadRepository(this.api, {this.membershipProfile = false});
   final DioBackendAccountReadApi api;
+  final bool membershipProfile;
   Future<T> _read<T>(Future<T> Function() f) async {
     try {
       return await f();
@@ -290,9 +334,13 @@ class CycleReadRepository {
             : 'current',
         'limit': 20,
         'cursor': ?cursor,
+        if (membershipProfile && !applications)
+          'reader_profile': membershipReaderProfile,
       },
     ))!;
-    return CycleOwnPage(j, target, applications);
+    return membershipProfile && !applications
+        ? CycleOwnPage.profile(target, j)
+        : CycleOwnPage(j, target, applications);
   });
   Future<CycleRoomCard> room(String id, String target) => _read(() async {
     roleId(id);

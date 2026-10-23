@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/cycle_management.dart';
+import '../../data/membership_readers.dart';
 import '../../domain/backend_recruitment.dart';
 import '../viewmodels/cycle_participation_controller.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
@@ -370,7 +371,10 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                                   final router = GoRouter.of(context);
                                   Navigator.pop(context);
                                   router.push(
-                                    '/recruitments/${conflict['room_id']}?target_cycle_key=${conflict['target_cycle_key']}',
+                                    membershipDetailLocation(
+                                      conflict['room_id'] as String,
+                                      conflict['target_cycle_key'] as String,
+                                    ),
                                   );
                                 },
                           child: const Text('기존 참가 확인'),

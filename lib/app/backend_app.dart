@@ -54,6 +54,7 @@ import '../features/recruitment_list/data/cycle_interaction_repository.dart';
 import '../features/recruitment_list/presentation/pages/cycle_recruitment_list_page.dart';
 import '../features/recruitment_list/presentation/viewmodels/cycle_participation_controller.dart';
 import '../features/recruitment_list/data/cycle_read_repository.dart';
+import '../features/recruitment_list/data/membership_readers.dart';
 import '../features/recruitment_list/presentation/pages/cycle_own_rooms_page.dart';
 import '../features/recruitment_list/presentation/pages/backend_recruitment_create_page.dart';
 import '../features/recruitment_list/presentation/pages/backend_recruitment_detail_page.dart';
@@ -409,7 +410,8 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     final raidCatalog = RaidCatalogRepositoryImpl(
       dataSource: AssetRaidCatalogDataSource(),
     );
-    final cycleReads = CycleReadRepository(accountApi);
+    final cycleReads = CycleReadRepository(accountApi, membershipProfile: true);
+    final membershipReads = MembershipReadRepository(accountApi);
     String cycleScopeKey() =>
         '${_dio!.options.baseUrl}/${readSession.userId}/${readSession.generation}/${lifecycle.runtime?.readGeneration}';
     final recruitmentGateway = BackendRecruitmentRepository(
@@ -530,8 +532,10 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                           repository: cycleReads,
                           scopeKey: cycleScopeKey,
                           onLogin: () => showLoginRequired(context, auth),
-                          onRoom: (id, t) => context.push(
-                            '/recruitments/$id?target_cycle_key=$t',
+                          onRoom: (id, t) =>
+                              context.push(membershipDetailLocation(id, t)),
+                          onRecord: (id, t, anchor) => context.push(
+                            membershipDetailLocation(id, t, anchor: anchor),
                           ),
                         ),
                 ),
@@ -549,9 +553,8 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                             model: _memberAccount!.model,
                             availability: _memberAccount!.availability,
                             weekly: _memberAccount!.weekly,
-                            onParticipation: (id, t) => context.push(
-                              '/recruitments/$id?target_cycle_key=$t',
-                            ),
+                            onParticipation: (id, t) =>
+                                context.push(membershipDetailLocation(id, t)),
                             settings: _memberSettings!,
                             onSettings: () => context.push('/settings'),
                             onKey: () => context.push('/settings/api-token'),
@@ -713,21 +716,40 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                     ),
                     GoRoute(
                       path: ':recruitmentId',
-                      builder: (context, state) => BackendRecruitmentDetailPage(
-                        key: ValueKey((
-                          state.pathParameters['recruitmentId'],
-                          state.uri.queryParameters['target_cycle_key'],
-                        )),
-                        target: state.uri.queryParameters['target_cycle_key'],
-                        accessChanges: _memberAccount?.model ?? auth,
-                        scopeKey: cycleScopeKey,
-                        gateway: recruitmentGateway,
-                        participation: participation,
-                        session: readSession,
-                        roomId: state.pathParameters['recruitmentId']!,
-                        onLogin: () => showLoginRequired(context, auth),
-                        onCreateAnother: recruitmentCreate.startAnother,
-                      ),
+                      builder: (context, state) {
+                        MembershipRecordAnchor? anchor;
+                        try {
+                          anchor = MembershipRecordAnchor.fromQuery(state.uri);
+                        } on FormatException {
+                          return const Scaffold(
+                            body: Center(child: Text('기록 링크를 확인해 주세요.')),
+                          );
+                        }
+                        final memberReader =
+                            anchor != null ||
+                            state.uri.queryParameters['reader_profile'] ==
+                                membershipReaderProfile;
+                        return BackendRecruitmentDetailPage(
+                          key: ValueKey((
+                            state.pathParameters['recruitmentId'],
+                            state.uri.queryParameters['target_cycle_key'],
+                            anchor?.membership,
+                            anchor?.cycleMember,
+                            memberReader,
+                          )),
+                          target: state.uri.queryParameters['target_cycle_key'],
+                          accessChanges: _memberAccount?.model ?? auth,
+                          scopeKey: cycleScopeKey,
+                          reader: memberReader ? membershipReads : null,
+                          recordAnchor: anchor,
+                          gateway: recruitmentGateway,
+                          participation: participation,
+                          session: readSession,
+                          roomId: state.pathParameters['recruitmentId']!,
+                          onLogin: () => showLoginRequired(context, auth),
+                          onCreateAnother: recruitmentCreate.startAnother,
+                        );
+                      },
                     ),
                   ],
                 ),

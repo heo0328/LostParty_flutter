@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../data/membership_readers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -64,7 +65,7 @@ class _BackendRecruitmentCreatePageState
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && m.createdRoomId == id) {
           context.pushReplacement(
-            '/recruitments/$id${m.createdTargetKey == null ? '' : '?target_cycle_key=${m.createdTargetKey}'}',
+            membershipDetailLocation(id, m.createdTargetKey),
           );
         }
       });
@@ -448,7 +449,10 @@ class _BackendRecruitmentCreatePageState
                             conflict['room_id'] != null)
                           TextButton(
                             onPressed: () => context.push(
-                              '/recruitments/${conflict['room_id']}?target_cycle_key=${conflict['target_cycle_key']}',
+                              membershipDetailLocation(
+                                conflict['room_id'] as String,
+                                conflict['target_cycle_key'] as String,
+                              ),
                             ),
                             child: Text(
                               conflict['room_title'] as String? ?? '기존 참가 확인',
@@ -590,7 +594,10 @@ class _BackendRecruitmentCreatePageState
           children: [
             TextButton(
               onPressed: () => context.push(
-                '/recruitments/${m.recoveryRooms[i]}${m.draft.targetCycleKey == null ? '' : '?target_cycle_key=${m.draft.targetCycleKey}'}',
+                membershipDetailLocation(
+                  m.recoveryRooms[i],
+                  m.draft.targetCycleKey,
+                ),
               ),
               child: Text('참가 모집 ${i + 1} 상세'),
             ),

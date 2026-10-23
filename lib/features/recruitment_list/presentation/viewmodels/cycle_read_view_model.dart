@@ -32,7 +32,7 @@ class CycleReadViewModel extends ChangeNotifier {
       : rows;
   CycleRoomCard? card;
   String? cursor;
-  final _pages = <(String, int), (List<CycleOwnRow>, String?)>{};
+  final _pages = <(String, int, bool), (List<CycleOwnRow>, String?)>{};
   final _cursors = <String>{};
   bool get signedIn => repository.api.session.isAuthenticated;
   bool _valid(int e) =>
@@ -72,7 +72,7 @@ class CycleReadViewModel extends ChangeNotifier {
     failure = null;
     card = null;
     _cursors.clear();
-    final cached = _pages[(t, section)];
+    final cached = _pages[(t, section, repository.membershipProfile)];
     rows = cached?.$1 ?? const [];
     cursor = cached?.$2;
     notifyListeners();
@@ -110,14 +110,14 @@ class CycleReadViewModel extends ChangeNotifier {
           throw const AccountReadException('INVALID_RESPONSE');
         }
         final items = more ? [...rows, ...value.rows] : value.rows;
-        if (items.map((r) => r.id).toSet().length != items.length) {
+        if (items.map((r) => r.identity).toSet().length != items.length) {
           throw const AccountReadException('INVALID_RESPONSE');
         }
         if (!more) _cursors.clear();
         if (value.cursor != null) _cursors.add(value.cursor!);
         rows = List.unmodifiable(items);
         cursor = value.cursor;
-        _pages[(t, section)] = (rows, cursor);
+        _pages[(t, section, repository.membershipProfile)] = (rows, cursor);
       }
     } on AccountReadException catch (e2) {
       if (_valid(e)) {
@@ -127,7 +127,7 @@ class CycleReadViewModel extends ChangeNotifier {
           'FILTER_CONTEXT_STALE',
           'CYCLE_CHANGED',
         }.contains(failure)) {
-          _pages.remove((t, section));
+          _pages.remove((t, section, repository.membershipProfile));
           rows = const [];
           cursor = null;
           _cursors.clear();

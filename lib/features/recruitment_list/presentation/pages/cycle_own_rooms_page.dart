@@ -7,6 +7,8 @@ import '../viewmodels/cycle_read_view_model.dart';
 import '../widgets/recruitment_section.dart';
 import '../viewmodels/cycle_participation_controller.dart';
 import '../widgets/cycle_participation_widgets.dart';
+import '../../data/membership_readers.dart';
+import '../widgets/membership_record_view.dart';
 
 String cycleReadFailure(String? code) => switch (code) {
   'TARGET_NOT_OPEN' => '이 주차에는 열린 모집이 없습니다.',
@@ -26,6 +28,7 @@ class CycleOwnRoomsPage extends StatefulWidget {
     required this.onRoom,
     this.mutations,
     this.initialTarget,
+    this.onRecord,
     super.key,
   });
   final MemberWeeklyViewModel weekly;
@@ -35,6 +38,7 @@ class CycleOwnRoomsPage extends StatefulWidget {
   final String Function() scopeKey;
   final VoidCallback onLogin;
   final void Function(String, String) onRoom;
+  final void Function(String, String, MembershipRecordAnchor)? onRecord;
   @override
   State<CycleOwnRoomsPage> createState() => _CycleOwnRoomsPageState();
 }
@@ -188,9 +192,10 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
                     CycleCommandBanner(controller: widget.mutations!),
                   for (final row in m.visibleRows)
                     Card(
+                      key: ValueKey(row.identity),
                       child: ListTile(
                         title: Text(
-                          row.card?.title ??
+                          row.title ??
                               (row.recoveryOnly
                                   ? '참가 정보 확인 필요'
                                   : m.tab == 1
@@ -198,7 +203,10 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
                                   : '참가 이력'),
                         ),
                         subtitle: Text(
-                          row.recoveryOnly
+                          row.profile?.recovery['state'] != null &&
+                                  row.profile!.recovery['state'] != 'none'
+                              ? membershipRecoveryLabel(row.profile!)
+                              : row.recoveryOnly
                               ? '주차 연결 정보를 확인해야 합니다. 최신 상태를 다시 불러와 주세요.'
                               : row.participationState == 'not_selected' ||
                                     row.participationState == 'legacy_intent'
@@ -215,6 +223,8 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
                                     row.historyOnly ||
                                     row.state == 'ended'
                               ? '참가 종료'
+                              : row.profile != null && row.card == null
+                              ? '참가 중'
                               : '${row.card?.count ?? 0}/${row.card?.capacity ?? 0}명',
                         ),
                         trailing:
@@ -237,12 +247,10 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
                                   child: const Text('신청 철회'),
                                 ),
                               )
-                            : row.canView
+                            : _canOpen(row)
                             ? const Icon(Icons.chevron_right)
                             : null,
-                        onTap: row.canView
-                            ? () => widget.onRoom(row.roomId, m.target!)
-                            : null,
+                        onTap: _canOpen(row) ? () => _open(row) : null,
                       ),
                     ),
                   if (m.cursor != null)
@@ -255,6 +263,20 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
       );
     },
   );
+
+  bool _recordRow(CycleOwnRow row) =>
+      row.profile != null && (m.tab == 2 || row.profile!.isRecord);
+  bool _canOpen(CycleOwnRow row) =>
+      row.canView &&
+      (!_recordRow(row) ||
+          row.profile!.locator != null && widget.onRecord != null);
+  void _open(CycleOwnRow row) {
+    if (_recordRow(row)) {
+      widget.onRecord!(row.roomId, m.target!, row.profile!.locator!.anchor);
+    } else {
+      widget.onRoom(row.roomId, m.target!);
+    }
+  }
 }
 
 class CycleRoomReadPage extends StatefulWidget {

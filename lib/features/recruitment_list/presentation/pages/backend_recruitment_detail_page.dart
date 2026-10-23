@@ -19,6 +19,8 @@ import '../widgets/cycle_resume_widgets.dart';
 import '../widgets/cycle_member_action_widgets.dart';
 import '../../data/membership_actions.dart';
 import '../widgets/cycle_membership_widgets.dart';
+import '../../data/membership_readers.dart';
+import '../widgets/membership_record_view.dart';
 
 class BackendRecruitmentDetailPage extends StatefulWidget {
   const BackendRecruitmentDetailPage({
@@ -31,6 +33,8 @@ class BackendRecruitmentDetailPage extends StatefulWidget {
     this.accessChanges,
     this.scopeKey,
     this.participation,
+    this.reader,
+    this.recordAnchor,
     super.key,
   });
   final RecruitmentGateway gateway;
@@ -38,6 +42,8 @@ class BackendRecruitmentDetailPage extends StatefulWidget {
   final String roomId;
   final String? target;
   final CycleParticipationController? participation;
+  final MembershipReadGateway? reader;
+  final MembershipRecordAnchor? recordAnchor;
   final Listenable? accessChanges;
   final String Function()? scopeKey;
   final VoidCallback onLogin, onCreateAnother;
@@ -65,6 +71,8 @@ class _BackendRecruitmentDetailPageState
       target: widget.target,
       accessChanges: widget.accessChanges,
       scopeKey: widget.scopeKey,
+      reader: widget.reader,
+      recordAnchor: widget.recordAnchor,
       membershipGateway:
           widget.participation?.gateway is MembershipActionGateway
           ? widget.participation!.gateway as MembershipActionGateway
@@ -78,7 +86,7 @@ class _BackendRecruitmentDetailPageState
   }
 
   void _changed() {
-    if (_leaving) return;
+    if (_leaving || m.readOnly) return;
     final c = widget.participation!;
     final membership = c.membershipSuccess;
     if (membership != null && membership.$1 != _membershipKey) {
@@ -159,7 +167,8 @@ class _BackendRecruitmentDetailPageState
       ),
       body: Column(
         children: [
-          if (m.cycles != null &&
+          if (!m.readOnly &&
+              m.cycles != null &&
               m.target != null &&
               widget.session.isAuthenticated)
             Padding(
@@ -178,6 +187,8 @@ class _BackendRecruitmentDetailPageState
                       child: const Text('로그인 후 확인'),
                     ),
                   )
+                : m.profile != null && m.value == null
+                ? _projectionDetail()
                 : m.value == null
                 ? Center(
                     child: Padding(
@@ -202,7 +213,8 @@ class _BackendRecruitmentDetailPageState
                                 ),
                                 if (m.membershipMenu != null)
                                   _membershipActions(),
-                                if (widget.participation != null &&
+                                if (!m.readOnly &&
+                                    widget.participation != null &&
                                     m.cycles != null &&
                                     m.target == m.cycles!.next.key) ...[
                                   for (final action in ['open', 'reopen'])
@@ -246,7 +258,59 @@ class _BackendRecruitmentDetailPageState
   }
 
   bool get _canManage =>
-      widget.participation != null && m.value?.room['state'] != 'ended';
+      !m.readOnly &&
+      m.profile?.projection.readOnly != true &&
+      widget.participation != null &&
+      m.value?.room['state'] != 'ended';
+
+  bool get _canLead =>
+      _canManage &&
+      m.value?.room['my_target_role'] == 'leader' &&
+      (m.profile == null || m.profile!.projection.allowed('manage_target'));
+
+  Widget _projectionDetail() {
+    final p = m.profile!.projection;
+    return RefreshIndicator(
+      onRefresh: m.load,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          RecruitmentSection(
+            title: p.target['title'] as String,
+            children: [
+              Text('대상 주차 · ${m.target}'),
+              const SizedBox(height: 8),
+              if (p.record != null)
+                MembershipRecordView(record: p.record!, raidLabel: _raidLabel)
+              else
+                Text(membershipRecoveryLabel(p)),
+              if (p.allowed('view_plan') &&
+                  widget.reader != null &&
+                  widget.participation != null)
+                OutlinedButton(
+                  onPressed: !m.loading
+                      ? () => showCycleSchedule(
+                          context,
+                          widget.participation!,
+                          room: m.roomId,
+                          target: m.target!,
+                          reader: widget.reader,
+                          anchor: m.recordIdentity,
+                          readOnly: m.readOnly,
+                        )
+                      : null,
+                  child: const Text('일정 확인'),
+                ),
+            ],
+          ),
+          if (!m.readOnly && m.membershipMenu != null) _membershipActions(),
+          if (!m.readOnly && widget.participation != null)
+            CycleCommandBanner(controller: widget.participation!),
+        ],
+      ),
+    );
+  }
 
   Widget _detail() {
     final value = m.value!, room = value.room;
@@ -313,7 +377,7 @@ class _BackendRecruitmentDetailPageState
                 color: AppColors.textSecondary,
               ),
             ),
-            if (_canManage && room['my_target_role'] == 'leader')
+            if (_canLead)
               Wrap(
                 spacing: 8,
                 children: [
@@ -350,12 +414,11 @@ class _BackendRecruitmentDetailPageState
                           : '참가 신청',
                     ),
                   ),
-                if (room['my_target_role'] == 'leader')
-                  _managementButton('transfer', '공대장 위임'),
+                if (_canLead) _managementButton('transfer', '공대장 위임'),
               ],
             ),
           ),
-          if (room['my_target_role'] == 'leader')
+          if (_canLead)
             CycleRoomApplications(
               key: ValueKey((
                 widget.roomId,
@@ -410,13 +473,15 @@ class _BackendRecruitmentDetailPageState
                       room: m.roomId,
                       target: m.target!,
                       readOnly: room['state'] == 'ended',
+                      reader: widget.reader,
+                      anchor: widget.recordAnchor,
                     )
                   : null,
               child: Text(
                 room['state'] == 'ended' ? '일정·완료 기록 확인' : '공대원 일정 전체 확인',
               ),
             ),
-            if (_canManage && room['my_target_role'] == 'leader')
+            if (_canLead)
               TextButton(
                 onPressed:
                     _canManage &&
@@ -459,8 +524,7 @@ class _BackendRecruitmentDetailPageState
         RecruitmentSection(
           title: room['state'] == 'ended' ? '참가·완료 기록' : '파티 구성',
           children: [
-            if (_canManage && room['my_target_role'] == 'leader')
-              _managementButton('formation', '파티 편성 조정'),
+            if (_canLead) _managementButton('formation', '파티 편성 조정'),
             for (final member in value.members) _member(member, group != null),
           ],
         ),
@@ -673,7 +737,7 @@ class _BackendRecruitmentDetailPageState
             RecruitmentBadge(member['group_member'] == true ? '그룹원' : '비그룹'),
           if (_canManage &&
               m.target != null &&
-              m.value!.room['my_target_role'] == 'leader' &&
+              _canLead &&
               member['is_me'] == false &&
               member['room_role'] == 'member' &&
               m.value!.cycleMemberIds.containsKey(member['membership_id']))

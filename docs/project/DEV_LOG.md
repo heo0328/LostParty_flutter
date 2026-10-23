@@ -1,5 +1,15 @@
 # 개발 이력
 
+## 2026-10-24 — Issue25 C 명시 profile·주차별 자기기록 연결
+
+- 새로 가능해진 흐름: 내 참가/기록·계정i·생성 성공/복구·자기 충돌 진입에 profile을 명시하고 detail/plan/내목록의 실제 viewer/recovery/권한·불변 자기기록을 읽는다. 같은Member의 다중CM을 별도 행으로 유지하고 옛 Member+CM 기록을 Router/page/cache와 일정 조회에 고정한다. 기록은 당시 캐릭터/레이드·완료/종료시각·본인 일정만 표시하며 신규menu/preview/write는0, 주차 전환 뒤도 고정기록으로 읽는다. 상세는 설계37 §37.46.
+- 소유/선택 근거: Repository가 닫힌 wrapper/원record를 검증하고 상세·일정 ViewModel이 read scope/epoch·리스너 수명을 소유한다. 정상content는 기존 parser를 재사용한다. Backend profile은 활성Member 전용이므로 소속확정 진입만 명시profile을 사용하고 가입 전 검색 상세 기본조회는 유지했다. 새profile 오류를 기본조회로 바꾸지 않는다. 요청 수/메모리 성능은 측정하지 않았다.
+- 보존 확인: 기본detail/신청·쓰기용reader·원pending/24hACK·B성공이탈/반대T보존/관계알림·기존 일정/완료/개인완료탈퇴/추방·IF-001 비활성. 기존 UI 배치·원정대/계정 저장과 무관dirty는 유지했다. 공대장복구 실행UX와24검색회복·BUG-025는 구현하지 않았다.
+- 검증: 14파일 단일413mock PASS(신규49 포함·이전295 합산 없음), 변경Dart14파일의 style9건을 수정하고 해당3파일 재분석 최종0·포맷/diffcheck/리뷰. 새anchor/profile/캐시·늦은응답/회원·주차전환, 실제기록위젯/일정2GET·신규메뉴/쓰기0, 직접기존 parser·관리/일정/완료/원복구 경계를 보호했다. 표적 영향으로 무관 전체시험 생략. 합성 설계/DB fixture를 실회원 검증으로 보고하지 않는다.
+- 발견/처리: 첫 테스트에서 fixture 상수명을 수정했고 Dio 비동기 페이지 시험은 기존 settled helper로 완료를 기다리도록 정정했다. 원 설계 records page의 동일CM/다른상태3행은 원문을 보존해 중복 거절로 확인하고 정상다중CM은 명시 파생 자료로 검증했다. source/권한을 우회하거나 서버 수정 요청을 만들지 않았다.
+- 미확인 실기기: 정상 로그인 개발API·실회원 쓰기/읽기, 그룹탈퇴/재가입 기록·실제승계대기, 원래 C/N 정상가입/일정/완료와 B 탈퇴·해산의 실제 이동, 폴드/큰글자·성능 인수는 사용자 전체인수에 묶는다. dev/main통합·서버/DB/기기조작 없음.
+- Git/협업: feature/raid-recruitment-scheduling 구간 commit/push·원격일치 보관 후 정확SHA/결과/미확인·다음담당을 Issue25에 회신하고 본문 재조회한다. 브랜치 유지·dev/main 미반영, 기존 통계35/플랫폼/도구 dirty 보존.
+
 ## 2026-10-24 — Issue25 B 실제 버튼·확인·성공 이동/목록 갱신
 
 구현 `0487788a` commit/push·원격일치. [Issue25 결과6372783376](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6372783376) 게시본문 MATCH 확인. 실제 UI 연결·고유295mock/분석0과 실서버/실회원/기기 미확인·다음 C/24후속을 회신했으며 새로운 Backend 구현/반복시험 요청은 없다.

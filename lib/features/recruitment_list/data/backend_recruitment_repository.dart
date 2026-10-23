@@ -283,16 +283,23 @@ class BackendRecruitmentRepository
   });
 
   @override
-  Future<BackendRecruitmentDetail> cycleDetail(
+  Future<BackendRecruitmentDetail> cycleDetail(String id, String target) =>
+      _decode(() async {
+        roleId(id);
+        raidCycleKey(target);
+        final j = (await api.request(
+          '/v2/raid-rooms/$id/detail',
+          query: {'target_cycle_key': target},
+        ))!;
+        return parseCycleDetail(j, id, target);
+      });
+
+  /// Parses an existing full envelope, including one nested in a reader profile.
+  static BackendRecruitmentDetail parseCycleDetail(
+    Map<String, dynamic> j,
     String id,
     String target,
-  ) => _decode(() async {
-    roleId(id);
-    raidCycleKey(target);
-    final j = (await api.request(
-      '/v2/raid-rooms/$id/detail',
-      query: {'target_cycle_key': target},
-    ))!;
+  ) {
     roleShape(j, 'scope data');
     final scope = roleMap(j['scope']), data = roleMap(j['data']);
     CycleReadScope(scope, target);
@@ -452,5 +459,5 @@ class BackendRecruitmentRepository
       return Map<String, dynamic>.unmodifiable(f);
     }).toList();
     return value;
-  });
+  }
 }

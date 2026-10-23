@@ -1,4 +1,4 @@
-# NEXT WORK — Issue25 B 실제 UI 연결 완료 / C reader·기록 후속
+# NEXT WORK — Issue25 C 조회·기록 완료 / 검색 회복·전체 인수 후속
 
 ## 현재 상태 (2026-10-24)
 
@@ -14,11 +14,21 @@
 
 직접10파일 고유295mock PASS(178+별도116+신규1; 마지막추가 뒤 membership49만 재확인·중복합산 없음), 변경Dart9파일 최종분석0·포맷/diffcheck/리뷰. 원pending/구명령·완료/추방/개인완료탈퇴/읽기전용·IF-001 비활성, 중앙탈퇴/기존빨간해산폭을 보존했다. 세부 결과/근거와 실회원·실기기 미확인은 [설계37 §37.45](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)와 DEV_LOG가 기준이다. 현재 feature/raid-recruitment-scheduling 유지·기존무관dirty 보존·dev/main 미반영, 구간 commit/push로 보관한다. Backend source15e143ae·API176/DB0031과 계약 차이/새차단 요청은 없다.
 
-## 다음 구간 C — 명시 reader·옛 기록 연결
+## 완료 구간 C — 명시 조회·본인 기록 연결
 
-§37.43의 명시 reader_profile=membership-actions-1 wrapper/전체200 content·옛 membership_id+cycle_member_id record_locator 설계를 실제 Router·detail/plan/내목록 reader와 다시 대조한 뒤 별도 구현한다. 실제 target/viewer/access/recovery/permissions를 사용하고 가짜 리더/양수세대나 새Member 권한으로 옛기록을 복원하지 않는다. content가 있으면 기존 parser를 재사용하고 null이면 명시 상태로 읽기전용 안내한다. profile·state·기록 anchor를 회원/환경/실제T 캐시와 Router에 보존한다. relation_only의 null locator에 가짜 링크를 만들지 않는다.
+사용자 승인 계획을 먼저 기록하고 상세/일정/내목록의 전용 불변 profile·Member+CM 기록 anchor/Router·캐시/표시를 연결했다. 정상 content는 기존 parser를 재사용하며 새profile 오류의 기본조회 fallback은 없다. Backend profile은 활성Member 전용이므로 내참가/기록·계정i·생성 성공/자기충돌처럼 소속확정 진입에만 명시하고, 가입 전 검색 상세 기본조회/신청·쓰기용reader·원pending을 보존했다.
 
-이번 B는 C를 구현한 것이 아니며 기존 기본 reader는 그대로다. recover_leadership UX는 제품 승인 전 제안이고 네번째 상시버튼/자동승계나 IF-001 재활성화는 제외한다. Issue24의 검색 CURSOR_STALE 제한 회복/캐시는 C와 독립 후속, BUG-025는 별도 조사 대장이다. 코드의 정상 로그인/전체 디바이스·성능 인수와 dev/main 통합은 미완료다. 실기기 정상 흐름은 C/검색후속 연결 뒤 체크리스트에 묶고 동일 자동시험을 반복하지 않는다.
+현재 참가/복구상태와 고정 자기기록을 분리하고 같은Member 재참가CM을 별도 행으로 유지한다. 기록은 당시 캐릭터/레이드·완료/종료·본인 일정만 읽고 신규menu/preview/write0, 일정도 같은anchor다. 정확기록은 주차 전환 뒤 유지되며 관계만 있는 행에는 가짜기록 링크를 만들지 않는다. B 성공1회이탈/반대T 유지·관계알림·IF-001 비활성을 보존했다.
+
+직접14파일413mock PASS(신규49 포함·이전295 합산 없음), 변경Dart14파일분석의 style9건 수정 후 해당3파일 재분석 최종0·포맷/diffcheck/리뷰. 실제기록위젯/일정2GET·신규쓰기0을 포함한다. 상세 근거/회귀·원설계 중복CM 예시의 거절·현재/기록식별자와 실회원 미확인은 [설계37 §37.46](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)/DEV_LOG가 기준이다. 현재 feature/raid-recruitment-scheduling 유지·무관dirty 보존·구간commit/push, dev/main 미반영이다.
+
+## 별도 다음 구간 — Issue24 검색 회복 / 전체 사용자 인수
+
+Issue25 A/B/C 코드·직접경계 자동검증을 연결했으며 정상 로그인 개발API·실회원/실기기/성능 인수는 미확인이다. 다음은 별도 승인 구간에서 Issue24의 기존 검색 CURSOR_STALE 시 동일 회원/환경·실제T·필터를 보존한 첫페이지 제한 회복과 캐시 무효화를 점검/연결한다. 구페이지 이어붙이기·반복재시도·필터초기화/다른주차 이동은 하지 않는다. 설계37 §37.43과 실제 검색 ViewModel을 다시 대조하고 최신 Issue24부터 확인한다. 이번 C에 검색 코드를 섞지 않았다.
+
+전체 연결 인수는 가입 전 검색/단독·C+N생성→내참가/계정i→정상상세/일정→B 탈퇴·혼합권한해산/승계→기록·재참가/그룹탈퇴→회원/주차전환과 폴드/큰글자 순서로 사용자에게 묶어서 전달한다. 자료/시각이 없는 실제복구·다인/전환 행만 조건 미충족으로 구분하며 서버/DB 조작·가짜인증으로 만들지 않는다. 실제차이는 대상T/기대·실제/오류code·request_id로 분류하고 관련 Issue에 회신한다. 기존 자동검증을 변화 없이 반복하지 않는다.
+
+recover_leadership 실행UX는 제품 승인 전 제안, IF-001은 비활성이다. BUG-025와 통계/기타 기능·모집pending 영속화·새과거주차검색은 별도후속이며 dev/main통합·배포는 인수/필수결함 판정 전 수행하지 않는다.
 
 ## 완료한 A의 설계·보존 범위 — Issue25 전용 context·원명령·ACK
 

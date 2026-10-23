@@ -6,6 +6,9 @@ import '../../data/cycle_schedule.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
 import '../viewmodels/cycle_participation_controller.dart';
 import 'cycle_participation_widgets.dart';
+import '../../data/membership_readers.dart';
+import '../viewmodels/membership_plan_view_model.dart';
+import 'membership_record_view.dart';
 
 String scheduleTime(Object? raw) {
   if (raw == null) return '미정';
@@ -44,8 +47,14 @@ Future<void> showCycleSchedule(
   required String room,
   required String target,
   bool readOnly = false,
+  MembershipReadGateway? reader,
+  MembershipRecordAnchor? anchor,
 }) async {
-  if (!controller.canAct) return;
+  if (reader == null
+      ? !controller.canAct
+      : !controller.session.isAuthenticated) {
+    return;
+  }
   await showDialog<void>(
     context: context,
     builder: (_) => _ScheduleDialog(
@@ -53,6 +62,8 @@ Future<void> showCycleSchedule(
       room: room,
       target: target,
       readOnly: readOnly,
+      reader: reader,
+      anchor: anchor,
     ),
   );
 }
@@ -107,15 +118,21 @@ class _ScheduleDialog extends StatefulWidget {
     required this.room,
     required this.target,
     this.readOnly = false,
+    this.reader,
+    this.anchor,
   });
   final CycleParticipationController controller;
   final String room, target;
   final bool readOnly;
+  final MembershipReadGateway? reader;
+  final MembershipRecordAnchor? anchor;
   @override
   State<_ScheduleDialog> createState() => _ScheduleDialogState();
 }
 
 class _ScheduleDialogState extends State<_ScheduleDialog> {
+  MembershipPlanViewModel? readModel;
+  bool get readOnly => widget.readOnly || readModel?.readOnly == true;
   CycleScheduleView? plan, contextView, overlaps;
   final pairs = <Map<String, dynamic>>[];
   String? error;
@@ -126,34 +143,55 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
   void initState() {
     super.initState();
     binding = widget.controller.scopeKey();
+    if (widget.reader != null) {
+      readModel = MembershipPlanViewModel(
+        reader: widget.reader!,
+        session: widget.controller.session,
+        scopeKey: widget.controller.scopeKey,
+        room: widget.room,
+        target: widget.target,
+        anchor: widget.anchor,
+        changes: widget.controller,
+      );
+    }
     unawaited(load());
   }
 
   @override
   void dispose() {
     epoch++;
+    readModel?.dispose();
     super.dispose();
   }
 
   Future<void> load() async {
     final e = ++epoch;
     setState(() => loading = true);
-    final p = await widget.controller.scheduleRead(
-      widget.room,
-      widget.target,
-      'plan',
-    );
+    CycleScheduleView? p;
+    if (readModel != null) {
+      await readModel!.load();
+      p = readModel!.value;
+    } else {
+      p = await widget.controller.scheduleRead(
+        widget.room,
+        widget.target,
+        'plan',
+      );
+    }
     if (!mounted || e != epoch) return;
     setState(() {
       plan = p;
       contextView = overlaps = null;
       pairs.clear();
       loading = false;
-      error = p == null ? widget.controller.failure : null;
+      error =
+          readModel?.failure ??
+          (readModel == null && p == null ? widget.controller.failure : null);
     });
   }
 
   Future<void> read(String kind, {String? id, bool more = false}) async {
+    if (readOnly) return;
     final e = epoch;
     setState(() => loading = true);
     final v = await widget.controller.scheduleRead(
@@ -207,7 +245,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
   }
 
   Future<void> action(String action, {String? id}) async {
-    if (widget.readOnly) return;
+    if (readOnly) return;
     setState(() => loading = true);
     final e = epoch;
     final p = await widget.controller.schedulePreview(
@@ -237,9 +275,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
     child: Text(text, style: const TextStyle(fontSize: 12)),
   );
   Widget button(String title, VoidCallback call) => TextButton(
-    onPressed: !widget.readOnly && !loading && widget.controller.canAct
-        ? call
-        : null,
+    onPressed: !readOnly && !loading && widget.controller.canAct ? call : null,
     child: Text(title, style: const TextStyle(fontSize: 12)),
   );
   @override
@@ -260,6 +296,26 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
         );
       }
       final p = plan;
+      final projection = readModel?.profile?.projection;
+      if (projection != null && p == null) {
+        return AlertDialog(
+          title: Text('${widget.target} 일정·기록'),
+          content: SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: projection.record != null
+                  ? MembershipRecordView(record: projection.record!)
+                  : Text(membershipRecoveryLabel(projection)),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('닫기'),
+            ),
+          ],
+        );
+      }
       final d = p?.data ?? const <String, dynamic>{};
       return AlertDialog(
         title: Text('${widget.target} 일정 · 예약'),
@@ -273,7 +329,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
                 if (loading) const LinearProgressIndicator(),
                 if (error != null) note(recruitmentFailureMessage(error)),
                 if (p != null) ...[
-                  if (!widget.readOnly)
+                  if (!readOnly)
                     Wrap(
                       children: [
                         button('개인 시간표 가져오기', () => action('submission')),
@@ -284,7 +340,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
                       ],
                     ),
                   note(
-                    widget.readOnly
+                    readOnly
                         ? '종료된 모집의 일정·완료 기록입니다.'
                         : '시간표를 가져와도 확정 일정은 자동 변경되지 않습니다. 새 참가·재참가 후에는 일정 참가 확인이 필요할 수 있습니다.',
                   ),

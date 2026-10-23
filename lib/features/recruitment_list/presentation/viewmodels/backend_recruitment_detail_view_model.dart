@@ -5,6 +5,8 @@ import '../../../account/domain/account_read_session.dart';
 import '../../domain/backend_recruitment.dart';
 import '../../../account/domain/member_cycle_models.dart';
 import '../../data/membership_actions.dart';
+import '../../data/membership_readers.dart';
+import '../../data/backend_recruitment_repository.dart';
 
 class BackendRecruitmentDetailViewModel extends ChangeNotifier {
   BackendRecruitmentDetailViewModel({
@@ -16,6 +18,8 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     this.scopeKey,
     this.loadEndPermission,
     this.membershipGateway,
+    this.reader,
+    this.recordAnchor,
   }) {
     session.addListener(_sessionChanged);
     accessChanges?.addListener(_sessionChanged);
@@ -29,6 +33,14 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
   final String Function()? scopeKey;
   final Future<bool> Function(String room, String target)? loadEndPermission;
   final MembershipActionGateway? membershipGateway;
+  final MembershipReadGateway? reader;
+  final MembershipRecordAnchor? recordAnchor;
+  MembershipRecordAnchor? _resolvedRecordAnchor;
+  MembershipRecordAnchor? get recordIdentity =>
+      recordAnchor ?? _resolvedRecordAnchor;
+  MembershipReadView? profile;
+  bool get readOnly =>
+      recordIdentity != null || profile?.projection.isRecord == true;
   MembershipActionContext? membershipMenu;
   String? membershipFailure;
   String? _scopeBinding;
@@ -42,11 +54,13 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
       ? gateway as CycleRecruitmentGateway
       : null;
   void selectCycle(String t) {
+    if (readOnly) return;
     if (cycles?.find(t) == null || target == t) return;
     _epoch++;
     loading = false;
     target = t;
     value = null;
+    profile = null;
     membershipMenu = null;
     membershipFailure = null;
     groupName = null;
@@ -70,8 +84,10 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     }
     _scopeBinding = scopeKey?.call();
     _binding = binding;
+    _resolvedRecordAnchor = null;
     _epoch++;
     value = null;
+    profile = null;
     membershipMenu = null;
     membershipFailure = null;
     nextParticipationAvailable = false;
@@ -95,6 +111,10 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
   Future<void> load() async {
     if (_disposed || loading || !session.isAuthenticated) return;
     final epoch = ++_epoch;
+    if (reader != null) {
+      value = null;
+      profile = null;
+    }
     nextParticipationAvailable = false;
     endAvailable = false;
     membershipMenu = null;
@@ -103,7 +123,10 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     failure = null;
     notifyListeners();
     try {
-      if (cycleGateway != null) {
+      if (recordIdentity != null && (target == null || reader == null)) {
+        throw const AccountReadException('INVALID_REQUEST');
+      }
+      if (cycleGateway != null && recordIdentity == null) {
         final meta = await cycleGateway!.cycles();
         if (!_current(epoch)) return;
         cycles = meta;
@@ -117,9 +140,31 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
           throw const AccountReadException('TARGET_CYCLE_OUT_OF_RANGE');
         }
       }
-      // Menu entry is based on the persistent membership, independent of the
-      // viewed target's role or whether its default detail is currently readable.
-      if (membershipGateway != null && cycleGateway != null) {
+      if (reader != null) {
+        final result = await reader!.detail(
+          roomId,
+          target!,
+          anchor: recordIdentity,
+        );
+        if (!_current(epoch)) return;
+        profile = result;
+        if (result.projection.isRecord) {
+          _resolvedRecordAnchor = result.projection.locator!.anchor;
+        }
+        final content = result.projection.content;
+        value = content == null
+            ? null
+            : BackendRecruitmentRepository.parseCycleDetail(
+                content,
+                roomId,
+                target!,
+              );
+      }
+      // An explicit historical profile never enters the current-member menu.
+      if (membershipGateway != null &&
+          cycleGateway != null &&
+          !readOnly &&
+          (reader == null || profile!.projection.canReadMenu)) {
         try {
           final menu = await membershipGateway!.membershipContext(
             roomId,
@@ -135,11 +180,24 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
           membershipFailure = 'INVALID_RESPONSE';
         }
       }
-      final detail = cycleGateway == null
+      final detail = reader != null
+          ? value
+          : cycleGateway == null
           ? await gateway.detail(roomId)
           : await cycleGateway!.cycleDetail(roomId, target!);
       if (!_current(epoch)) return;
       value = detail;
+      if (detail == null) {
+        if (profile?.projection.record != null) {
+          try {
+            final labels = await gateway.catalog();
+            if (_current(epoch)) catalog = labels;
+          } catch (_) {
+            /* Keep original identifiers when catalog is unavailable. */
+          }
+        }
+        return;
+      }
       notOpen.remove(target);
       if (loadEndPermission != null &&
           detail.room['state'] == 'active' &&
@@ -154,20 +212,31 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
           // A missing global permission never implies a one-person room.
         }
       }
-      if (cycleGateway != null &&
+      if (!readOnly &&
+          cycleGateway != null &&
           detail.room['state'] == 'active' &&
           target == cycles!.current.key &&
           detail.room['continuation_enabled'] == true &&
           {'leader', 'member'}.contains(detail.room['my_target_role'])) {
         try {
-          final next = await cycleGateway!.cycleDetail(
-            roomId,
-            cycles!.next.key,
-          );
+          if (reader != null) {
+            final next = await reader!.detail(roomId, cycles!.next.key);
+            if (!_current(epoch)) return;
+            nextParticipationAvailable =
+                !next.projection.isRecord &&
+                next.projection.target['target_state'] == 'open' &&
+                next.projection.viewer['cycle_member_state'] == 'not_selected';
+          } else {
+            final next = await cycleGateway!.cycleDetail(
+              roomId,
+              cycles!.next.key,
+            );
+            if (!_current(epoch)) return;
+            nextParticipationAvailable =
+                next.room['target_state'] == 'open' &&
+                next.room['my_target_role'] == 'none';
+          }
           if (!_current(epoch)) return;
-          nextParticipationAvailable =
-              next.room['target_state'] == 'open' &&
-              next.room['my_target_role'] == 'none';
         } catch (_) {
           // Unknown or unopened next-cycle state never exposes a join shortcut.
         }
@@ -195,12 +264,14 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     } on AccountReadException catch (e) {
       if (_current(epoch)) {
         failure = e.code;
+        profile = null;
         if (e.code == 'TARGET_NOT_OPEN' && target != null) notOpen.add(target!);
         value = null;
       }
     } catch (_) {
       if (_current(epoch)) {
         failure = 'INVALID_RESPONSE';
+        profile = null;
         value = null;
       }
     } finally {

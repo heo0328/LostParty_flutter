@@ -2102,3 +2102,23 @@ Backend source15e143ae·반영920cc059와 [24 개발반영6371617690](https://gi
 **회귀/검증:** 10개 직접 영향 파일의 고유 **295 mock PASS**(첫6파일178 + 별도4파일116 + ACK 직후 회원전환 신규1; 마지막 수정 후 membership49만 재확인하고 앞 결과를 중복 합산하지 않음). 새 비동기/표시 경계10개와 기존 정확 ACK/원재송·메뉴 권한/영향 변경·후계 없음·양T8인 해산·현재/반대T·개인완료탈퇴/추방·목록/보관·완료/IF-001 비활성을 포함한다. 변경 Dart9파일 분석의 두 중괄호 안내를 수정하고 해당2파일·추가시험 파일을 재분석해 최종0, 포맷/diffcheck/diff 검토. 새 라이브러리/저장/Router/서버 권한 변경이 없고 호출 전파가 위 경계로 한정돼 무관한 전체 시험은 생략했다.
 
 **미확인/다음:** 위 수치는 합성 fixture/mock이며 정상 로그인 실서버 신규명령·실회원/디바이스/성능 인수가 아니다. 실제 버튼/확인창·현재T 이탈/반대T 유지·폴드/큰글자는 전체 연결 뒤 사용자 인수에 묶는다. C의 명시 reader_profile/옛 Member+CM 기록 anchor Router·24 검색 회복은 별도 미완료이며 recover_leadership UX는 제안, IF-001은 비활성이다. BUG-025 조사/수정은 이번 범위가 아니다. 문서/Issue25 인계와 작업브랜치 commit/push로 보관하고 dev/main 통합·서버/DB/기기 조작은 하지 않는다.
+
+### 37.46 Issue25 C — 명시 조회 프로필·본인 참가 기록 연결 (2026-10-24)
+
+사용자가 승인한 C 계획을 NEXT_WORK에 먼저 기록하고 d39d1902에서 구현했다. 최신 Issue25/6372783376·Backend15e143ae의 membership_readers/실행 DTO·개발반영176/DB0031을 대조했으며 추가 서버 구현 대기는 없다.
+
+**조회/권한 소유:** 불변 MembershipProjection/ReadView/Page·RecordLocator/Anchor/Snapshot과 MembershipReadGateway/Repository를 추가했다. scope의 실제C/대상T/profile/kind와 wrapper/content/record의 room/Member/CM/세대·상태·권한/읽기전용을 검증한다. 지원하지 않는 profile·잘못된 anchor/응답은 기본조회로 fallback하지 않는다. 상세는 기존 ViewModel, 일정은 dialog 수명의 MembershipPlanViewModel이 조회·회원/환경 epoch와 해제를 소유한다. 정상 content는 기존 상세 parser를 순수 함수로 분리해 그대로 재사용하고 일정 CycleScheduleView·목록 CycleOwnRow parser도 보존했다. schema/DB/쓰기API·공용 저장·기존 원pending을 바꾸지 않았다.
+
+**가입 전 조회 보존:** Backend membership_readers.get은 활성 지속Member 입구이며, 기존 detail은 참가 전 공개 모집 탐색도 허용한다. 따라서 새 프로필을 모든 인증 상세에 일괄 붙이지 않는다. 내 참가/기록·계정i·생성 성공/복구·자기 참가 충돌 진입은 URI에 reader_profile을 명시하고, 검색/가입 전의 기존 기본 detail은 유지한다. Router는 요청 전에 profile/중복query/반쪽 Member·CM·실제T를 검증하고 page key에 profile 선택과 두 ID를 넣는다. 이는 사전 capability 선택이며 새profile 실패 뒤 구GET으로 우회하는 동작이 아니다. 공개카드 선행조회나 카드별 상세GET은 추가하지 않는다.
+
+**목록/기록:** 실제 DI의 내 참가·기록 목록만 명시profile로 전환하고 신청은 기존 계약이다. 주차+지속Member+CM 조합으로 중복·페이지 이어붙이기를 판정하며 cache에는 profile/state(T·tab)를 포함한다. 같은 Member의 재참가 CM은 서로 다른 행이고, 같은 정확 CM을 중복 표시하지 않는다. 상태는 outer viewer/권한이 기준이며 actual review는 유지하고 cancelled/removed/completed·record를 참가중으로 섞지 않는다. content 없는 행도 실제 제목·명시 recovery를 표시하며 가짜0/0명 카드를 만들지 않는다. 기록 탭은 locator의 Member+CM을 함께 전달하고 locator 없는 관계에 가짜 기록 링크를 만들지 않는다.
+
+기록 상세는 실제 날짜·당시 캐릭터명·레이드/난이도·완료/참가종료·완료출처/완료·종료시각과 본인 일정만 표시한다. 새 Member/현재 캐릭터로 재연결하거나 다른 과거 참가자의 개인정보를 확장하지 않는다. 정확 anchor는 C/N 범위 밖이 되어도 서버의 자기기록 접근을 사용하며 주차 선택을 막는다. 일반 unanchored C/N 상세가 기록으로 판정돼도 그 화면의 CM을 고정해 재조회·일정에서 재가입 최신CM과 섞지 않는다. 기록 페이지에는 신규 메뉴/미리보기/쓰기·새모집 진입이 없으며 일정도 같은 anchor로 GET한다. 기록 읽기로 완료 해제·참가/자리/예약 복구를 하지 않는다.
+
+**복구/비동기:** leadership_pending/review_remaining/unverified를 구분하고 null리더만으로 자동복구를 추정하지 않는다. current recovery의 content가 읽기전용이어도 명시 read_action_menu/menu_access가 허용한 자기정리 메뉴는 읽을 수 있다. record는 모든 신규 메뉴/변경 진입을 막는다. relation_only는 선택T 참가 없음이며 허용메뉴만 사용한다. normal content의 관리 버튼은 wrapper manage_target과 기존 자격/명령 검증을 함께 사용한다. 회원·주차·기록간 늦은 응답을 폐기하고 dispose 시 listener/timer를 해제한다. B의 성공1회이탈·반대T유지·관계종료 갱신은 보존하고 기록 화면은 현재관계 성공 알림으로 새참가 화면으로 이동하지 않는다. 읽기 실패는 이미 받은 원ACK를 재실행하지 않는다.
+
+**검증/근거:** 직접14파일 **413 mock PASS**(신규 membership_readers49 포함, 이전 B295를 더하지 않음), 변경Dart14파일 분석의 style안내9건을 수정하고 해당3파일 재분석 최종0·포맷/diffcheck/diff리뷰. 정상 content 재사용·회복/null세대·같은Member 다중CM·재가입/고정기록·지연/회원전환·주차전환·원오류/무fallback·명시profile 페이지/캐시, 기록 상세/일정의 정확anchor GET만2건·신규메뉴/쓰기0을 포함한다. 기존 상세/생성·목록/보관·관리·일정/사전표시·완료/IF-001·D22/E23·B 원명령/성공 경계를 함께 보호했다. Flutter whole-suite는 실행하지 않았다. Router/DI의 모집 상세·내목록/자기기록 소비로 영향이 한정돼 위 표적 범위를 사용했다.
+
+fixture는 Backend 설계12개와 실제 합성DB 실행 자기기록 plan1개이며 실회원 자료가 아니다. 원 설계 ended_records_page는 세 상태 예시가 같은 CM ID를 반복하므로 원문은 보존하고 중복 거절을 확인했다. 실제 다중CM 시험은 서로 다른 CM을 명시한 파생 자료다. unknown-generation의 nullable locator/읽기전용·메뉴권한도 구분해 소비한다. 정상 UI·성능/메모리·실서버HTTP 통과로 확대하지 않는다.
+
+**다음/인계:** 실제 로그인 개발서버·실회원/디바이스/성능 인수는 미확인이다. 기존 화면배치·기록/재가입·C/N/회원전환·B의 탈퇴/해산은 전체 인수에 묶는다. Issue24 검색 CURSOR_STALE 제한 회복/캐시는 독립 후속, recover_leadership 실행UX/IF-001 재활성화·BUG-025는 제외한다. 구간 commit/push·Issue25 결과 게시/본문 재조회로 보관하며 dev/main 통합·서버/DB/기기 변경은 하지 않는다.
