@@ -2,6 +2,8 @@
 
 ## 현재 상태 (2026-10-23)
 
+B 구현 `797c16b3cfcffda849428593fe6c12502eb27499` commit/push·원격 일치 후 [Issue13 결과6364976336](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6364976336)에 소비계약/159mock·분석0/미확인·합동인수 순서를 회신하고 게시본문 MATCH를 확인했다.
+
 A 구현 `e9d2783d51ba079c0a3fe6ae88f5a4099b58978a` commit/push·원격 일치 후 [Issue13 결과6364089791](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6364089791)에 계약/94mock·분석0/미확인·다음 B를 회신했다. 한도로 중단됐던 게시본문 재조회도 재개해 MATCH를 확인했다. 코드 변화가 없어 통과한 시험은 반복하지 않았다.
 
 E23 구현 `b6720079b363703d49c0a43e5f78142b1849ed34` commit/push·원격 일치 후 [Issue23 결과6363846643](https://github.com/heo0328/lostparty-backend/issues/23#issuecomment-6363846643)에 사용 계약/검증·실회원/기기 미확인·다음 A/B를 회신하고 게시본문 MATCH를 확인했다.
