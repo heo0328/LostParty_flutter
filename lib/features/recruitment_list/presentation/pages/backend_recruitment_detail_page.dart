@@ -252,6 +252,15 @@ class _BackendRecruitmentDetailPageState
                 color: AppColors.textSecondary,
               ),
             ),
+            if (widget.participation != null &&
+                room['my_target_role'] == 'leader')
+              Wrap(
+                spacing: 8,
+                children: [
+                  _managementButton('settings', '모집 조건 변경'),
+                  _managementButton('common', '공통 정보 변경'),
+                ],
+              ),
           ],
         ),
         if (widget.participation != null) ...[
@@ -343,6 +352,22 @@ class _BackendRecruitmentDetailPageState
                   : null,
               child: const Text('공대원 일정 전체 확인'),
             ),
+            if (room['my_target_role'] == 'leader')
+              TextButton(
+                onPressed:
+                    widget.participation != null &&
+                        m.target != null &&
+                        room['my_target_role'] == 'leader'
+                    ? () => showCycleScheduleCommand(
+                        context,
+                        widget.participation!,
+                        room: m.roomId,
+                        target: m.target!,
+                        action: 'propose',
+                      )
+                    : null,
+                child: const Text('일정 변경안'),
+              ),
           ],
         ),
         if (widget.participation != null &&
@@ -370,6 +395,9 @@ class _BackendRecruitmentDetailPageState
         RecruitmentSection(
           title: '파티 구성',
           children: [
+            if (widget.participation != null &&
+                room['my_target_role'] == 'leader')
+              _managementButton('formation', '파티 편성 조정'),
             for (final member in value.members) _member(member, group != null),
           ],
         ),
@@ -395,10 +423,51 @@ class _BackendRecruitmentDetailPageState
               raidLabel: _raidLabel,
             ),
           ),
+        Wrap(
+          spacing: 8,
+          children: [
+            if (widget.participation != null &&
+                m.cycles != null &&
+                m.target != null)
+              CycleResumeActions(
+                controller: widget.participation!,
+                room: m.roomId,
+                target: m.target!,
+                current: m.cycles!.current.key,
+                role: room['my_target_role'] as String? ?? 'none',
+                state: room['target_state'] as String? ?? '',
+                continuation: room['continuation_enabled'] == true,
+                playable:
+                    m.cycles!
+                        .find(m.target!)
+                        ?.permissions['complete']
+                        ?.allowed ==
+                    true,
+                raidLabel: _raidLabel,
+              ),
+            if (widget.participation != null &&
+                m.cycles != null &&
+                m.target == m.cycles!.current.key &&
+                m.cycles!.current.permissions['complete']?.allowed == true &&
+                room['continuation_enabled'] == true &&
+                {'leader', 'member'}.contains(room['my_target_role']))
+              CycleOutcomeActions(
+                showCompletion: false,
+                controller: widget.participation!,
+                room: m.roomId,
+                target: m.target!,
+                current: m.cycles!.current.key,
+                role: room['my_target_role'] as String,
+                playable: true,
+                continuation: true,
+                raidLabel: _raidLabel,
+              ),
+          ],
+        ),
         RecruitmentSection(
           title: m.cycles != null && m.target == m.cycles!.next.key
               ? '다음 주 참가 예정'
-              : '진행 · 다음 주',
+              : '다음 주 함께하기',
           children: [
             Text(
               m.cycles != null && m.target == m.cycles!.next.key
@@ -419,64 +488,6 @@ class _BackendRecruitmentDetailPageState
                 role: room['my_target_role'] as String? ?? 'none',
                 nextParticipationAvailable: m.nextParticipationAvailable,
               ),
-            Wrap(
-              spacing: 8,
-              children: [
-                if (widget.participation != null &&
-                    m.cycles != null &&
-                    m.target != null)
-                  CycleResumeActions(
-                    controller: widget.participation!,
-                    room: m.roomId,
-                    target: m.target!,
-                    current: m.cycles!.current.key,
-                    role: room['my_target_role'] as String? ?? 'none',
-                    state: room['target_state'] as String? ?? '',
-                    continuation: room['continuation_enabled'] == true,
-                    playable:
-                        m.cycles!
-                            .find(m.target!)
-                            ?.permissions['complete']
-                            ?.allowed ==
-                        true,
-                    raidLabel: _raidLabel,
-                  ),
-                if (room['my_target_role'] == 'leader')
-                  TextButton(
-                    onPressed:
-                        widget.participation != null &&
-                            m.target != null &&
-                            room['my_target_role'] == 'leader'
-                        ? () => showCycleScheduleCommand(
-                            context,
-                            widget.participation!,
-                            room: m.roomId,
-                            target: m.target!,
-                            action: 'propose',
-                          )
-                        : null,
-                    child: const Text('일정 변경안'),
-                  ),
-                if (widget.participation != null &&
-                    m.cycles != null &&
-                    m.target == m.cycles!.current.key &&
-                    m.cycles!.current.permissions['complete']?.allowed ==
-                        true &&
-                    room['continuation_enabled'] == true &&
-                    {'leader', 'member'}.contains(room['my_target_role']))
-                  CycleOutcomeActions(
-                    showCompletion: false,
-                    controller: widget.participation!,
-                    room: m.roomId,
-                    target: m.target!,
-                    current: m.cycles!.current.key,
-                    role: room['my_target_role'] as String,
-                    playable: true,
-                    continuation: true,
-                    raidLabel: _raidLabel,
-                  ),
-              ],
-            ),
           ],
         ),
         if (widget.participation != null &&
@@ -489,6 +500,8 @@ class _BackendRecruitmentDetailPageState
               children: [
                 _managementButton('cancel', '이 주차 탈퇴'),
                 _managementButton('leave', '모두 탈퇴'),
+                if (room['my_target_role'] == 'leader')
+                  _managementButton('end', '모집 전체 종료'),
               ],
             ),
           ),

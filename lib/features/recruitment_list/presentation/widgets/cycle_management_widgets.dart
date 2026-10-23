@@ -35,10 +35,6 @@ class CycleManagementActions extends StatelessWidget {
             button(context, 'decline', next),
           ],
         ],
-        if (role == 'leader') ...[
-          for (final action in ['formation', 'settings', 'common', 'end'])
-            button(context, action, target),
-        ],
         if (target == next) button(context, 'reopen', target),
       ],
     ),
