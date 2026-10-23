@@ -1,8 +1,16 @@
 # NEXT WORK — 탈퇴 자동승계·공대장 주차 해산 계약 갱신 / Backend 인계 대기
 
-## 현재 상태 (2026-10-23)
+## 현재 상태 (2026-10-24)
 
-## 현재 승인 그룹 — 탈퇴·해산 제품 정책 갱신
+## 현재 그룹 — Issue24·25 소비 검토 완료 / Backend 계약 보완 대기
+
+사용자 ‘진행합니다’로 [Backend137 설계 인계6368822874](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6368822874)와 Issue24/25 설계안1을 실제 Router/DI·검색/캐시·상세/원명령·review/종료회원 기록과 대조했다. [24 회신6369170940](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6369170940)/[25 회신6369171307](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6369171307) 게시본문 MATCH를 확인했다. 상세 판단·코드 근거는 [설계37 §37.40](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md), 완료 이력은 DEV_LOG를 따른다. 기존174경로/DB0030·Dart/API/원pending/시험 결과는 유지한다.
+
+- 다음 Backend: #24 기존검색shape/semantics·CURSOR_STALE·directory head 경계를 고정한다. #25 menu 옵션별 접근격리(현재T미참가/반대T리더 포함), Impact→ACK의 후상태/revision 규칙, review/null리더의 명시 reader·표시근거, 종료회원 자기기록 detail/plan/목록의 closed wire/대표예시·기존클라이언트 호환을 보완하고 구현 구간을 고정한다. 이미 확정한3행동/동일시험 재수용 대기가 아니다.
+- 다음 Flutter: Backend 보완 수신 시 위 차이 해소 여부 검토. 구현 승인·정확한 인계 후 기존검색의 제한된 첫페이지 회복/영향T 캐시와 새전용6필드/ACK·빈effects 회원관계종료/1회이탈·복구/기록 reader를 연결한다. 복구 기능은 기존3행동의 필수단계로 만들지 않고 기존 review 안내 영역의 명시진입 UX 제안으로 남긴다. 제품/UI 최종 승인과 기술적 소비가능을 구분한다.
+- 완료 조건/제외: 이번 문서 구간은 diffcheck/내용·호출대조와 각Issue 회신/본문재조회·commit/push로 보관한다. 미합의 endpoint 호출/기능코드·서버/DB/기기조작·반복 전체시험·dev/main통합 없음. 새기능 구현/DB반영 승인은 별도 단계다. 기존 N단독 생성 수정본/다인 실기기 조건 대기도 유지한다.
+
+## 직전 확정 그룹 — 탈퇴·해산 제품 정책 갱신
 
 사용자 최신 지시와 추가 답변으로 확정했다. 상세 단일 기준은 [설계37 §37.39](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)다. 기존 ‘공대장 사전위임 필요/마지막1인만 해산/다인해산 제외/버튼 숨김 제안’은 이 구간의 최신 정책으로 대체하며, 이전 구현이 이미 변경된 것으로 표시하지 않는다.
 

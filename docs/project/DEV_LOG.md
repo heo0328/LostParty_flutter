@@ -1,5 +1,15 @@
 # 개발 이력
 
+## 2026-10-24 — Issue24/25 설계안1 Flutter 소비 검토·회신
+
+[24 회신6369170940](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6369170940)/[25 회신6369171307](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6369171307) 게시본문 MATCH를 확인했다. Backend137/6368822874의 후속 분리와 설계 전문·댓글0 상태에서 사용자 진행 승인을 받아 수행했다.
+
+- 새로 정리한 흐름: §37.40에 기존검색 재사용/최대1회 또는 명시 커서회복·영향T캐시, 새메뉴/전용6필드·날짜C→N ACK·빈effects 회원종료/성공1회이탈·복구안내/기록 소비 범위를 기록했다. 기능이 새로 실행 가능해진 것은 아니다.
+- 검토 결과/다음 Backend: #24 blocking API 변경요청 없음. #25는 옵션별 접근격리·후상태/revision 불변조건·명시 review/null리더 reader/기록 detail/plan/목록 및 기존클라이언트 호환을 closed schema/대표예시로 보완해야 한다. 이미 합의한 정책/시험 반복이나 기능구현·개발반영 지시는 아니다. 복구보조 UI는 기존안내 영역에 명시진입을 두는 제안으로 남겼다.
+- 보존 확인: 실제 BackendApp Router/DI, 생성 createdTargetKeys 통지, CycleSearchViewModel 캐시/커서, DetailViewModel 1인end조회, Controller 원pending/이벤트, 회원목록/상세 성공이탈·기록 parser를 정적으로 대조했다. N단독 생성407328ef·21mock와 D22/E23/A/B·구 end/leave/cancel/24hACK·저장/계정·주차 격리는 변경하지 않았다.
+- 검증/미확인: 문서 diffcheck·내용/코드근거·상대Issue 원문/게시문 대조. Dart/API/의존성 불변으로 Flutter 시험/분석 반복 없음. 새closed wire·Backend 구현/서버·DB/실회원/기기·복구UX 최종승인·dev/main통합은 미완료다.
+- Git: feature/raid-recruitment-scheduling에 문서구간 commit/push 보관·브랜치 유지. 통계35/플랫폼생성·DevTools/백업/tools의 무관 dirty는 보존/제외한다.
+
 ## 2026-10-23 — 사용자 탈퇴 자동승계·공대장 주차 해산 정책 확정
 
 [Issue13 정책 갱신6367266418](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6367266418) 게시본문 MATCH. 이전6366977367 요청2 제한을 대체함과 검색 제외 요청 유지를 명시하고, Backend의 새 계약/구현/직접검증·실행SHA 인계 후 Flutter 연결 순서로 전달했다.

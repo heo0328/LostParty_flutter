@@ -1994,3 +1994,37 @@ UX 제안은 주차 탈퇴=현재 보이는 T만 나가기, 모집 해산=전체
 5. **직접 검증:** 최대8인 대표 자동승계/전원해산, 별도상태인 마지막1인·C/N리더 혼합/양T리더/타T보존, 동시탈퇴/리더변경·review후계자·소유상실, 원ACK/멱등·계정전환/확인중T변경·기록/완료/한도 보존을 계약에 맞춰 최소 사례로 검증한다. 정상 표시/알럿/성공목록은 사용자 기기 인수로 묶는다. 전체 시험은 실제 공용계약 전파를 확인한 뒤 영향으로 판단한다.
 
 이번 구간은 사용자 정책 확정·구현 순서/Backend 인계 전용이다. Dart/서버/DB/실회원 명령·기기조작은 변경/실행하지 않았고 문서 검토/diffcheck로 검증한다. N 단독 생성 수정407328ef/21mock는 그대로이며 반복하지 않는다. 검색의 본인 참가 제외 요청과 추가 인증 회원 조건 미충족은 계속 별도 추적한다.
+
+### 37.40 Issue24·25 설계안1 Flutter 소비 대조 (2026-10-24)
+
+[Backend137/6368822874](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6368822874)의 [Issue24](https://github.com/heo0328/lostparty-backend/issues/24)·[Issue25](https://github.com/heo0328/lostparty-backend/issues/25) 본문을 검토했다. 둘 다 설계 제안·미구현/미배포, 현재 소비0eed67c4/174경로·DB0030 유지다. 사용자 진행 승인은 이번 소비검토·회신에 적용하며 새 endpoint 구현/실서버 실행이나 복구 UI의 제품 확정을 뜻하지 않는다.
+
+결과는 [24 회신6369170940](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6369170940)·[25 회신6369171307](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6369171307)에 게시하고 원문 MATCH를 확인했다. 아래 구체 소비차이의 Backend closed 계약/대표예시 보완이 다음 단계다.
+
+#### Issue24 — 기존 요청 재사용 가능 / 앱 담당 경계
+
+검색 요청/응답·필터·정렬을 그대로 두고 선택T/현gen의 실제 participating/review를 SQL 페이지 전에 제외하는 안은 현재 소비와 맞는다. 새 flag·본인전체목록/카드별 GET·로컬 후처리를 추가할 이유가 없다. CURSOR_STALE409와 정책 digest 표식도 기존 오류 경계에서 읽을 수 있다. 원래 인원수/남은자리 집계를 줄이지 않으며 반대T만 참가·legacy/미선택·신청·종료관계는 선택T 참가로 오인하지 않는다.
+
+- 근거: `CycleSearchViewModel`의 scopeKey/회원 변경 시 전체 캐시 폐기, `(실제T,filter.signature)` 페이지 캐시, `_mutation`의 lastTarget별 폐기/refresh를 확인했다. 실제 생성도 `BackendRecruitmentCreatePage._changed → BackendApp.onCreated → participation.changed`로 createdTargetKeys 각각을 통지한다. 새 검색의 DTO/Repository 교체는 불필요하다.
+- 현재 search의 CURSOR_STALE 경로는 rows/cursor/캐시를 비우고 failure를 표시하며 첫페이지를 자동 재요청하지 않는다. 후속 앱 연결에서는 같은 필터/선택T·회원/환경을 유지해 첫페이지 회복을 최대1회로 한정하거나 기존 명시 재조회 진입을 사용한다. 재시도 반복/다른T 이동·필터초기화/구페이지 이어붙이기를 하지 않는다. 서버 정책 변경 전 메모리 캐시는 다음 유효 refresh 때 교체하며 실시간 타기기 push를 보장하지 않는다.
+- 가입/탈퇴·주차별 해산 후 영향T의 검색 페이지/목록/계정i를 무효화한다. 서버는 directory head·구cursor의 의미 변경을 같은 transaction에 반영하고 기존 응답shape·순서를 보존한다. 최종 OpenAPI 동작설명·정확SHA·개발반영/직접페이지 경계 결과 인계 후 앱의 직접 영향만 검증한다. 설계 단계에서 새 시험을 반복하지 않는다.
+
+#### Issue25 — 새 전용 command/ACK 필요 / 구체 보완 요청
+
+새 menu GET와 6필드 POST, option별token·C→N 정렬의 전용 Result, nullable리더/후계대기·빈효과 모두탈퇴, 종료회원의 본인기록 읽기/쓰기분리 방향은 소비 가능하다. 기존 `CycleManagementPreview`·공통 `ActionResult`로 cast하지 않고 별도 불변 DTO/preview/원명령 근거를 둔다. 기존 end/leave/cancel/D22/E23 원method/path/body/key/token과 source-first ACK는 계속 원transport로 복구한다. 최대24h 복구·모집pending 메모리수명도 유지한다.
+
+확정 wire/대표 예시에서 다음 차이를 닫아야 한다.
+
+1. **option별 권한/실패 격리:** 현재화면 일반/미참가·반대T리더일 때도 menu가 반대T 해산/모두탈퇴 권한을 읽을 수 있어야 한다. recover의 ‘같은T actual회원만’ 조건을 menu GET 전체의 403으로 적용하면 다른3행동이 막힌다. leave_target=false/leave_all=true/dissolve=반대T만/recover=false의 예시, 각 option의 visible/permission/impact/null confirmation 규칙을 고정한다. 인원/후계상태를 두 탈퇴버튼 숨김 근거로 재사용하지 않는다.
+2. **원Impact와 ACK 후상태 검증:** TargetPlan.transition/leadership_after만으로 recover 후 다른review가 남는 target/generation 상태와 revision 증분을 모두 판정할 수는 없다. 상태별 planned target/generation state 및 room/actor/CM/target/leadership revision의 유지/증가 규칙을 closed schema 또는 명시 불변조건으로 고정한다. old revision을 앱이 임의로 모두+1 처리하지 않는다. applied와 빈effects의 지속관계종료, review리더복구/다른review잔존을 각각 예시로 받는다.
+3. **후계보류 reader와 표시 근거:** 기존 card는 nullable리더 ID를 일부 허용하지만 `cycleDetail`은 role=none을 참가카드에서 제외하고 members.target_state에 cancelled/removed를 허용하지 않는다. 현재 review/null-card UI는 원인 구분 없이 ‘참가 정보 확인 필요’다. plan/my_membership도 실제CM을 전제한다. 따라서 새리더복구 상태/사유·가능한행동을 어떤 명시필드/기존menu option으로 읽을지, detail/plan/내참가의 null/role·쓰기 permission과 DTO 변경/기존클라이언트 호환 방식을 고정해야 한다. null리더만으로 복구대기라고 추정하지 않는다.
+4. **종료회원 기록:** 기존 Router는 회원detail 직접조회라 공개card를 선행하지 않는다. 그러나 current parser는 allowed view_detail/access와 해당 members·my_membership 형식을 요구한다. ended Member/cancelled·removed CM·그룹탈퇴/재가입의 자기기록 detail/plan·ended 목록 대표 응답과 읽기권한 근거를 실제닫힌wire로 받는다. ended방의 새쓰기0·완료/감사보존, 그룹 일반검색·타인의기록/새membership 권한 확대 없음과 자기기록을 구분한다. 일반관리plan을 탈퇴 성공의 조건으로 사용하지 않는다.
+5. **이벤트/성공이탈:** 현재 Controller는 affectedTargets마다 changed를 호출하고 검색/내목록은 lastTarget을 소비한다. effects=[]·actor_membership_ended=true면 단순 foreach로는 알림0이므로 새 room/회원관계 종료효과를 별도로 소비해 내목록 C/N 캐시·한도를 무효화해야 한다. 가짜 영향T를 ACK에 만들지 않는다. 현재T 비대상/본인참가 유지인 해산이면 화면유지, 현재T에서나갔으면 원명령ID 기반1회이탈·선택T목록복귀. ACK뒤 GET403/404/실패와 명령 실패를 분리한다.
+
+메뉴 읽기는 화면의 room/실제viewT·회원/환경에 결합해 소유하며 기존 마지막1인 end 사전조회를 대체한다. 카드별 GET/새네번째 상시메뉴/복구 선택의 필수단계는 만들지 않는다. 사용자의3행동 위치/색/해산확인은 확정이고, 복구보조는 기존 review 안내 영역에서 상태/자격정리 안내와 명시 ‘공대장 복구’ 진입으로 연결하는 **UX 제안**으로 남긴다. GET으로 승계하지 않고 recover POST는 서버의 첫적격자 규칙을 따른다. 기술적 소비 가능과 복구 UI 제품 승인은 구분한다.
+
+#### 다음 담당·완료 조건
+
+- Flutter: 이번 구간은 조사/설계·각Issue회신/문서만 변경한다. 기존 Router·DI/서버API·Dart/저장·원pending/시험은 그대로다. 실제 code 근거는 위 파일들과 `CycleParticipationController._send/changed`, `CycleOwnRoomsPage._mutated`, `BackendRecruitmentDetailPage._changed`, `CycleScheduleView`다.
+- Backend: #24의 기존 검색shape·커서 의미/정렬전제 유지, #25의 위 보완·closed wire/대표예시와 구현 구간을 고정한다. 이번 소비대조 회신을 기능구현/개발DB 반영/실회원시험 지시로 바꾸지 않는다. 최종 구현 승인·인계 뒤 Flutter는 검색 → 새3행동/원ACK → 복구reader/기록·성공이탈 순으로 직접영향 검증을 묶는다.
+- 회귀 보호: N단독/C+N생성·C/N/회원격리·서버정렬/커서/그룹후보, 구원명령복구·기존완료정정/개인완료후탈퇴/카드추방·예약/비대상T·읽기전용기록. 새검증은 실제최종DTO/영향이 정해진 뒤 경계에 집중하며 정상UI는 사용자 기기 인수, 문서만 변경한 이번에는 diffcheck/내용 대조만 수행한다.
