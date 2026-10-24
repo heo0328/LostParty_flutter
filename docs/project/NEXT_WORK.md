@@ -2,6 +2,8 @@
 
 ## 최신 사용자 인수 — 재신청 승인 성공 (2026-10-24)
 
+문서 `184e636c` commit/push. [Issue13 결과6380750571](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6380750571)·[Issue24 결과6380750772](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6380750772) 게시본문 MATCH 확인. 새 Backend 요청 없이 추가참가자 인수를 계속한다.
+
 사용자 실제 결과: C/N 동시생성·각 주차 단독생성 정상, 생성자 본인 참가방 검색 제외 정상. 최초 신청 승인 실패 보고 뒤 오류문구 확인을 위해 재신청했을 때 **수락 성공**을 확인했다. 사용자는 최초 신청이 동일 직업이었을 가능성을 제시했고 당시 오류문구는 기억하지 못한다. 추가 참가자의 검색 제외/다인 후속 인수 전체를 통과로 확대하지 않는다.
 
 현재 f56aae65/feature/raid-recruitment-scheduling의 UI→review/application GET→decisionBody→원POST/ACK와 Backend15e143ae의 cycle_commands.application/process를 정적으로 대조했다. 승인 permissions는 신청자 selection/targets·현재 자격·주간점유·자리·일정을 재검사하고 거절은 별도 조건이다. 앱은 approve/reject를 같은 사전검증 경로로 처리하되 승인만 일반 cycle ACK를 사용한다. 현재 사용자 오류문구·버튼상태/code/request_id가 없어 실패단계와 원인은 미확정이다. UI가 approve.allowed=false의 reason을 일반 권한안내로 가리는 경로는 확인했지만 실제 원인으로 단정하거나 권한검사를 우회하지 않는다.
