@@ -2150,3 +2150,9 @@ Backend source15e143ae의 preflight apply→admit_bundle(validate_only=true,pend
 Backend는 기존 구성 validator를 읽기전용 재사용해 context의 permissions.apply와 실제신청POST 양쪽에서 거절해야 한다. context만 고치거나 pending을 실제확정으로 취급하지 않는다. 기존ROOM_COMPOSITION_CONFLICT reason/오류와 DTO를 재사용 가능한지 확인하고, 불필요한 새flag·멤버전체GET·클라이언트 정책복제를 만들지 않는다. 신청 후 구성변경/경쟁은 승인에서 다시 검사한다. 확정구성 변경 없이 pending만 동일직업인 여러 신청은 기존대로 자리를 점유하지 않는다.
 
 Flutter는 현재 admission context의 permission/사유표시·신청버튼 비활성, confirm후 fresh preview/본문검증을 사용한다. 서버 인계 후 이 기존 소비와 직접POST 차단·원pending/ACK 보존을 점검하고 필요한 부분만 고친다. 현재 앱코드만 바꿔 서버검증 완료로 표시하지 않는다. 직접 서버 검증은 동일4인파티/다른직업·8인유효반대파티, C/N격리, 위조POST·context후 구성변경/승인 재검사, 신청자 미점유/예약미생성과 기존정상 신청·거절·철회를 대상으로 한다. 정확SHA/실행계약·개발반영 인계와 실제 사용자 신청차단은 후속미완료다.
+
+### 37.49 신청카드의 일반상세 진입 복구 (2026-10-24)
+
+신청대기자는 활성참가 Member와 다르다. 내신청카드는 실제room/T를 보존해 가입전 기본상세로 열고 membership-actions-1 reader를 붙이지 않는다. 참가중 카드는 명시profile, 자기기록은 profile+옛Member/CM anchor를 유지한다. 서버권한 오류 뒤 fallback이 아니라 카드관계에 맞는 사전경로 선택이다.
+
+사용자 N신청카드의 상세정보누락/함께하기 실패화면은 C연결의 공용onRoom이 신청까지 회원reader로 보내던 회귀로 확인했다. CycleOwnRoomsPage의 필수onApplicationRoom callback을 분리하고 BackendApp에서 기본 `/recruitments/:room?target_cycle_key=T`로 연결했다. 기존상세/일정·철회/승인·서버권한/실패화면은 수정하지 않는다. 직접4파일117mock PASS(실제카드 C/N2건 포함), 변경3Dart분석0·포맷/diffcheck/리뷰. 실제N상세 멤버/정보·일정과 승인후내참가·철회는 사용자확인대기. §37.48 서버계약후속·IF-001비활성/dev/main미반영은 유지한다.

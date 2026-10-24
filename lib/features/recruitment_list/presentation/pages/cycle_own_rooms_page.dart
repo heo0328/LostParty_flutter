@@ -26,6 +26,7 @@ class CycleOwnRoomsPage extends StatefulWidget {
     required this.scopeKey,
     required this.onLogin,
     required this.onRoom,
+    required this.onApplicationRoom,
     this.mutations,
     this.initialTarget,
     this.onRecord,
@@ -38,6 +39,7 @@ class CycleOwnRoomsPage extends StatefulWidget {
   final String Function() scopeKey;
   final VoidCallback onLogin;
   final void Function(String, String) onRoom;
+  final void Function(String, String) onApplicationRoom;
   final void Function(String, String, MembershipRecordAnchor)? onRecord;
   @override
   State<CycleOwnRoomsPage> createState() => _CycleOwnRoomsPageState();
@@ -273,6 +275,8 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
   void _open(CycleOwnRow row) {
     if (_recordRow(row)) {
       widget.onRecord!(row.roomId, m.target!, row.profile!.locator!.anchor);
+    } else if (m.tab == 1) {
+      widget.onApplicationRoom(row.roomId, m.target!);
     } else {
       widget.onRoom(row.roomId, m.target!);
     }

@@ -534,6 +534,12 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                           onLogin: () => showLoginRequired(context, auth),
                           onRoom: (id, t) =>
                               context.push(membershipDetailLocation(id, t)),
+                          onApplicationRoom: (id, t) => context.push(
+                            Uri(
+                              path: '/recruitments/$id',
+                              queryParameters: {'target_cycle_key': t},
+                            ).toString(),
+                          ),
                           onRecord: (id, t, anchor) => context.push(
                             membershipDetailLocation(id, t, anchor: anchor),
                           ),

@@ -1,5 +1,13 @@
 # NEXT WORK — Issue24 검색 회복 완료 / 전체 사용자 인수
 
+## 완료 수정 — 신청목록 카드의 대상주차 상세 연결
+
+사용자 다음주 신청카드 진입시 멤버/정보 누락·다음주 개방버튼 노출을 보고했다. 실제 BackendApp의 CycleOwnRoomsPage.onRoom이 모든 탭에 membershipDetailLocation을 적용해 신청자까지 활성Member 전용reader로 보내는 회귀를 확인했다. 신청목록에는 별도의 일반상세 callback을 전달하고 선택한 실제T를 보존한다. 참가중/기록의 profile·anchor, 신청철회/원요청/필터/캐시는 유지한다. 조회실패화면의 무조건open/reopen 노출은 이 잘못된진입의 부수증상이며 이번은 신청경로 직접원인만 수정한다.
+
+구현순서: 명시 신청callback/일반상세경로 → 실제 선택T/신청·참가·기록 경로분리 경계검증 → 관련직접 reader/목록·신청 시험/변경분석·포맷/diffcheck → 문서·Issue13 결과회신·구간commit/push. Router/DI의 국소callback 변경이므로 무관전체시험은 생략하고 파급증거가 있으면 확대한다. 후보목록 서버계약 보완은 별도대기로 유지하고 서버/DB·디바이스조작/dev/main통합은 제외한다.
+
+실제 onApplicationRoom 필수callback을 분리해 `/recruitments/:room?target_cycle_key=T` 기본상세로 연결했다. 참가/기록의 명시profile/anchor는 보존했다. 직접4파일 단일117mock PASS(신규 실제목록위젯 C/N2건 포함), 변경Dart3파일분석0·포맷/diffcheck/리뷰. 다음 사용자 재확인: 다음주 신청카드→신청한N 상세의 실제멤버/레이드·일정 표시, 이번주로 잘못이동하거나 참가전용조회 오류화면이 나오지 않음. 이 실제인수는 미확인이고 후보목록 계약대기는 아래대로 유지한다.
+
 ## 현재 단일 후속 — 신청 시 동일 딜러 직업 구성 검사 (2026-10-24)
 
 후보목록 UX 문서 `c59aefbd` commit/push. [Issue13 후보계약 보완6380816312](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6380816312) 게시본문 MATCH 확인. Backend 일괄후보 계약 제안/기존신청검사 보완 대기이며 Flutter 목록제외는 아직 미구현이다.

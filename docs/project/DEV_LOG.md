@@ -1,5 +1,12 @@
 # 개발 이력
 
+## 2026-10-24 — 신청목록에서 실제 주차 일반상세로 연결 복구
+
+- 사용자관찰/원인: N신청 카드 진입시 실제멤버/방정보 대신 함께하기 버튼 등 실패화면이 표시됐다. C구간 BackendApp이 CycleOwnRoomsPage.onRoom을 참가/신청 모두 membershipDetailLocation으로 연결한 회귀다. membership reader는 활성Member전용이므로 신청관계만으로 조회할 수 없다. 기존 검색 일반상세는 정상인 별개경로다.
+- 새로 가능해진 흐름: onApplicationRoom을 필수callback으로 분리하고 신청탭만 actualroom/target_cycle_key의 기본상세로 연다. 서버불가를 기본reader로 사후fallback하는 방식이 아니라 진입관계에 맞게 요청 전에 reader를 선택한다. ViewModel/서버권한·기존실패UI/일정·원명령을 재작성하지 않았다.
+- 보존확인/검증: 실제위젯 C/N 카드 각1건이 일반상세 callback/정확room/T로만 이동하고 멤버/기록callback 미호출·신청목록profile미전송을 확인. 직접4파일117mock PASS(신규2+기존115), 변경Dart3파일분석0·포맷/diffcheck/리뷰. 회원기록/프로필·목록/보관·신청/승인·철회와 원요청 직접시험을 함께 보호했다. 국소Router callback변경으로 무관전체시험 생략, 순수스타일외 추가수정 없음.
+- 미확인실기기/다음: 사용자 N신청카드→신청N상세 실제멤버/레이드/일정표시·철회와 승인후참가중 경로를 재확인한다. 서버/DB/기기조작 없고 별도신청후보계약/구성검사보완 대기는 유지한다. 문서/Issue13결과·작업브랜치commit/push, dev/main미통합·무관dirty보존.
+
 ## 2026-10-24 — 신청 캐릭터 선택목록의 사전 제외 UX 확정
 
 문서 `c59aefbd` commit/push. [Issue13 후보계약 보완6380816312](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6380816312) 게시본문 MATCH 확인. 선택후 비활성만이 아닌 목록사전제외·일괄계약/유효역할·빈목록/오류·최종검증 보존과 다음담당을 전달했다.
