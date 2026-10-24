@@ -2,6 +2,8 @@
 
 ## 현재 인계 — Issue26 신청 표시 프로필 제안1 소비 검토
 
+소비 기준 `84b132a2` commit/push, [Issue26 수용6384902537](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6384902537) 회신·게시본문 MATCH 확인. 다음 담당은 Backend 읽기 구현/실행 인계이며 같은 정책 재수용이나 전체시험 반복은 요구하지 않았다. 현재 작업 브랜치 유지·dev/main 미반영이다.
+
 사용자 진행 지시로 [Backend 제안6384757210](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6384757210), source `f0c7665c`의 계약 문서/closed schema·작성22응답을 현재 Repository/Router/ViewModel/카드와 대조했다. **제안1을 소비 가능으로 수용하며 Backend 읽기 구현·실행 계약 인계를 기다린다.** 아직 앱/서버에 새 프로필이 구현됐다는 의미는 아니다. 기존2d94d462/feature/raid-recruitment-scheduling을 재사용하며 무관 dirty를 보존한다.
 
 - 새 `application-display-1`은 공대장 신청 목록과 일반 상세에만 사용한다. 기존 기본·쓰기 조회/본인 신청 목록·단건review/`membership-actions-1`·기록 경로를 유지하고 두 프로필을 결합하거나 자동 fallback하지 않는다. 닫힌 모델에서 추가 필드를 검증한 후 기존 기본 항목/상세 파서를 재사용할 수 있다. 일반 상세 선택은 현재 reader==null 경계, 참가·기록 reader 경로는 유지한다.

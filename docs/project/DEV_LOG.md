@@ -2,6 +2,8 @@
 
 ## 2026-10-24 — Issue26 신청 표시 프로필 제안1 소비 검토·수용
 
+문서 `84b132a2` 작업 브랜치 commit/push. [Issue26 수용6384902537](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6384902537) 게시·본문 MATCH 확인, Backend 구현·직접 검증/실행 인계 대기로 정리했다. dev/main 미반영·무관 dirty 보존이다.
+
 Backend [6384757210](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6384757210)/sourcef0c7665c의 문서·closed schema와 작성22응답의 구조/시나리오를 확인하고 현재 cycle_interaction_repository.applicationPage/CycleOwnPage, parseCycleDetail, 상세 ViewModel/Router의 reader 분기, 신청 카드 표시와 대조했다. 제안은 소비 가능하며 구현을 막는 추가 필드/제품 결정 차이를 발견하지 않았다. 별도 typed 프로필 경계에서 확장3필드/my_application을 검증하고 기본 파서만 재사용하면 기존 기본/쓰기·membership-actions-1/기록 계약을 바꾸지 않고 연결할 수 있다.
 
 목록은 각 페이지 시점의 역할별 마지막 성공 comparison과 현재 analysis/오류·display_reason을 분리한다. analysis없음/성공없음·소유변경·조회실패를 구별하고 전체 승인 가능으로 확대하지 않는다. 후보API와 달리 전페이지 분석snapshot 동일성을 요구하지 않는다. 본인 상태는 참가 우선→유효pending 안내→기존 조건이며 accepted이력만으로 참가 추정·만료/필드누락/실패를 자동허용하지 않는다. 원pending/ACK·거절/철회·권한/회원·주차 격리/기록읽기전용·기존 카드/갱신 정책은 보존 조건이다.
