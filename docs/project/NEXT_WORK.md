@@ -1,5 +1,15 @@
 # NEXT WORK — Issue24 검색 회복 완료 / 전체 사용자 인수
 
+## 최신 사용자 인수 — 재신청 승인 성공 (2026-10-24)
+
+사용자 실제 결과: C/N 동시생성·각 주차 단독생성 정상, 생성자 본인 참가방 검색 제외 정상. 최초 신청 승인 실패 보고 뒤 오류문구 확인을 위해 재신청했을 때 **수락 성공**을 확인했다. 사용자는 최초 신청이 동일 직업이었을 가능성을 제시했고 당시 오류문구는 기억하지 못한다. 추가 참가자의 검색 제외/다인 후속 인수 전체를 통과로 확대하지 않는다.
+
+현재 f56aae65/feature/raid-recruitment-scheduling의 UI→review/application GET→decisionBody→원POST/ACK와 Backend15e143ae의 cycle_commands.application/process를 정적으로 대조했다. 승인 permissions는 신청자 selection/targets·현재 자격·주간점유·자리·일정을 재검사하고 거절은 별도 조건이다. 앱은 approve/reject를 같은 사전검증 경로로 처리하되 승인만 일반 cycle ACK를 사용한다. 현재 사용자 오류문구·버튼상태/code/request_id가 없어 실패단계와 원인은 미확정이다. UI가 approve.allowed=false의 reason을 일반 권한안내로 가리는 경로는 확인했지만 실제 원인으로 단정하거나 권한검사를 우회하지 않는다.
+
+추가 확인: Backend15e143ae participation_core._slot은 같은 **4인 파티 내부의 동일 딜러 직업 중복**, 서포터 중복/딜러3석 초과를 ROOM_COMPOSITION_CONFLICT로 거절한다. 8인은 다른 파티의 동일 직업까지 금지하는 조건이 아니다. 선택된 party_no 기준이며 신청대기 자체는 자리확정이 아니다. 이 제한은 현 계약/설계37의 기존 정책이다. 이번 실제 실패가 이 코드였는지는 원요청 근거가 없어 확정하지 않는다.
+
+다음: 추가 참가자의 선택T 검색 제외·내참가/계정i 갱신부터 전체 인수를 계속한다. 같은 파티의 중복 없는 유효한 캐릭터도 승인 실패하면 그때 오류문구·대상T/code/request_id로 단계 구분 후 최소 수정한다. 현재 기능코드/정책·서버/DB 불변, 근거 없는 우회수정/기존126 시험 반복은 없다. 사용자 성공/최초실패 미확정·정책근거를 Issue13, 생성자 검색 통과/추가참가자 미확인을 Issue24에 회신한다. 실기기 전체인수·dev/main통합은 미완료다.
+
 ## 다음 단일 작업 — 정상 로그인·전체 디바이스 인수
 
 구현 `0d6d960b` commit/push·원격일치. [Issue24 결과6380382368](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6380382368) 게시본문 MATCH 확인. 126mock/분석0·구현범위와 정상로그인/기기 미확인·다음담당을 인계했으며 새 Backend 요청은 없다.
