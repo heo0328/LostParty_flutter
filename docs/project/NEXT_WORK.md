@@ -1,4 +1,33 @@
-# NEXT WORK — Issue25 C 조회·기록 완료 / 검색 회복·전체 인수 후속
+# NEXT WORK — Issue24 검색 회복·캐시 구현 준비 / 전체 인수 후속
+
+## 현재 단일 작업 — Issue24 구현 설계 확정 (2026-10-24)
+
+사용자 ‘1번 구간 작업 준비’에 따라 최신 Issue24 본문/댓글과 실제 검색 Repository·ViewModel/화면·Controller/DI·직접 시험을 대조했다. **이번은 준비/문서 작업이며 기능 코드와 테스트는 변경하지 않는다. 다음 구현 지시 후 아래 한 구간을 진행한다.** 아래 누적 과거의 Backend 대기·다른 다음 순서보다 이 항목이 우선한다.
+
+### 근거·소유와 현재 차이
+
+- 현재 `feature/raid-recruitment-scheduling`·기준 `55547375`와 origin 일치, dev/origin/dev `6d3f6170` 미통합. 기존 통계35·플랫폼 생성·DevTools/백업/tools dirty는 보존한다.
+- [Backend 최신 개발 인계6371617690](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6371617690): source `15e143ae`/반영 `920cc059`·API176/DB0031. 추가 Backend 구현 대기는 없다. 선택 실제T/현gen 본인 participating/review+활성Member 제외는 서버 SQL 페이지 전 책임이며 앱은 기존 search 요청/응답·필터·정렬/집계를 그대로 소비한다. 새flag/선행 본인목록GET/카드별GET·앱 후처리 제외는 추가하지 않는다.
+- `CycleSearchViewModel`이 화면 수명의 rows/cursor/digest·(T,filter.signature) 메모리 캐시/epoch를 소유한다. 실제 `cycleScopeKey`는 API환경/회원/세션generation/readGeneration이다. Repository는 기존 읽기 POST `/v2/raid-rooms/search`와 엄격 parser를 담당한다. 새 계층/공용 저장소/의존성은 필요 없다.
+- 현재 search의 CURSOR_STALE은 rows/cursor/캐시 폐기+오류 표시까지만 한다. 서버 만료뿐 아니라 로컬 반복cursor/digest 불일치도 같은 code로 만든다. **서버 HTTP409 만료 회복과 로컬 응답 무결성 실패를 구분**해야 기존 잘못된 응답 거절을 약화시키지 않는다.
+- `CycleParticipationController.changed`의 실제T mutation은 해당T 모든 필터 캐시를 폐기하고 선택T만 refresh한다. 생성은 createdTargetKeys별, 새 탈퇴/해산은 실제 affectedTargets별로 통지한다. effects=[]의 관계종료는 B의 내목록/계정 갱신이며 가짜 검색 영향T를 만들지 않는다. 현재 연결을 재작성하지 않는다.
+
+### 구현 범위·처리 순서
+
+1. 검색 실행의 회원/환경 scope·epoch·실제T·필터를 고정한다. 더보기의 기존 cursor를 보낸 요청이 **서버 status409/code CURSOR_STALE**로 실패했고 같은 실행이 유효할 때만 자동 회복한다. cursor 없는 첫페이지 실패, 로컬 반복cursor/페이지digest 불일치·INVALID_RESPONSE, 다른scope/위조 INVALID_REQUEST400·권한/통신오류·CYCLE_CHANGED는 자동 회복하지 않는다.
+2. 만료된 검색의 rows/cursor/digest/커서 방문집합과 해당 (T,filter.signature) 캐시를 먼저 폐기한다. 같은 고정T/필터로 cursor=null인 첫페이지를 **최대1회** 요청하고 성공한 새 페이지로 교체한다. 구페이지 이어붙이기/다른T 이동·필터 초기화/주차 메타GET/재귀 무한 재시도는 없다. 로딩은 회복을 포함한 한 실행 동안 유지해 더보기/갱신 중복을 막는다.
+3. 기존 그룹 후보/필터context 재획득과 검색cursor 회복을 별도 원인으로 구분하되, 한 사용자 검색 실행에서 자동 회복들이 서로 재진입해 무제한 요청을 만들지 않게 공통 실행 경계에 묶는다. 단순 검색cursor 만료는 후보/context를 추가 조회하지 않는다. 후보 실패·재획득/selectionPending의 기존 안전 조건은 보존한다.
+4. 회복 실패는 최신 오류를 기존 오류/재시도 UI로 표시하고 비운 목록/커서를 유지한다. 사용자의 명시 갱신은 별도 실행이다. 회원/환경/readGeneration 변경·로그아웃, 필터/주차 선택·mutation 갱신·dispose가 실행을 무효화하면 이전 응답과 finally가 새 rows/loading/failure를 변경하지 못한다. scope 변경 뒤 회복 요청을 시작하지 않는다.
+5. 기존 실제영향T 캐시 무효화와 선택T만 refresh를 보호한다. C/N 양쪽 효과·숨은 반대T·여러 필터 캐시와 진행 중 조회를 검증한다. 주차 경계의 CYCLE_CHANGED를 다른 실제T로 자동 치환하지 않으며 기존 메타/선택기 갱신 흐름을 사용한다. 타기기 실시간push/새 자동 polling은 추가하지 않는다.
+
+### 회귀·검증과 완료 조건
+
+- 주 변경 후보: `cycle_search_view_model.dart`, 직접 경계 `cycle_interaction_test.dart`; 그룹 회복 전파가 있으면 `group_character_candidates_test.dart`. 실제 화면/Repository/Controller/Router는 필요한 근거가 없는 한 수정하지 않는다.
+- 자동 표적: 서버409 더보기→첫페이지1회/요청T·필터 동일/구행 미병합, 첫페이지 재실패와 일반오류 재시도0, 로컬 반복cursor·digest 오류 기존 거절, 회복 중 회원/환경·실제T/필터 전환·늦은응답/dispose, 중복 더보기, 영향T 캐시만 폐기·다중T 알림/구조회 격리, 그룹context/후보 회복의 유한 경계.
+- 최종 직접 영향 묶음은 `cycle_interaction_test.dart`·`group_character_candidates_test.dart`·`membership_actions_test.dart`·`membership_presentation_test.dart`를 기본으로 한다. 신규 실행 전 기존 시험과 중복을 검토하고 변경이 직접 전파된 파일만 확대한다. 변경파일 분석·포맷·diffcheck/diff리뷰를 수행한다. 저장/공용Domain/Router·서버계약은 불변이므로 전체 Flutter 시험/분석 반복은 기본값으로 하지 않는다.
+- 사용자 정상 디바이스 확인은 이번 코드 구간 종료 후 전체 연결 인수에 묶는다: 선택T 참가 방 검색 제외/탈퇴 뒤 기존조건에 따른 재노출, 반대T 보존, 필터/정렬·더보기/갱신, C/N·회원 전환. 자동/mock 통과를 정상 로그인 개발API/실회원·실기기/성능 통과로 표현하지 않는다.
+- 구현 종료 후 문서 최신화·작업브랜치 commit/push·Issue24 결과 회신/게시본문 확인. 추가 Backend 요청은 실제 계약 차이/재현이 있을 때만 한다. 이번 준비 자체는 새 서버 요청/반복 시험 회신을 만들지 않는다.
+- 제외: Issue25 기록/명령 재구현, recover_leadership 실행UX, IF-001 활성화, BUG-025 수정, 시간picker 재디자인, 서버/DB/디바이스 조작·dev/main통합/배포. 준비 완료는 구현/인수 완료가 아니다.
 
 ## 현재 상태 (2026-10-24)
 

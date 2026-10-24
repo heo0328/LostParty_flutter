@@ -1,5 +1,13 @@
 # 개발 이력
 
+## 2026-10-24 — Issue24 검색 회복·캐시 구현 준비
+
+- 사용자 ‘1번 구간 작업 준비’에 따라 필수 진입 문서·설계37 §37.40/37.43/37.46, Issue24 본문과 최신6371617690, 실제 검색 Repository/ViewModel·화면/DI·Controller/직접 시험을 대조했다. 현재 feature/raid-recruitment-scheduling `55547375`/origin 일치, dev/origin/dev `6d3f6170`, 기존 무관dirty 보존을 확인했다.
+- 새로 정리한 흐름: NEXT_WORK 최상단에 동일scope/실제T/필터의 서버409 더보기cursor 만료→기존페이지 폐기→첫페이지 최대1회 회복, 실패시 기존 명시 재시도와 비동기 격리·그룹회복 유한 경계를 기록했다. 아직 새 기능이 실행되는 것은 아니다.
+- 보존 확인: 실제영향T 모든필터 캐시 무효화/선택T refresh와 B의 effects=[] 별도 관계알림, 서버 SQL 페이지 전 본인참가 제외·기존 요청/응답/정렬, 로컬 반복cursor/digest 무결성 거절, 가입 전 기본조회/기록·원명령/IF-001 비활성을 정적으로 대조했다. source15e143ae/반영920cc059/API176·DB0031 인계 뒤 추가 Backend 대기는 없다.
+- 검증: 문서 내용/코드 경계 대조·diffcheck/diff검토. Dart/의존성·테스트 변경이 없어 Flutter 시험/분석은 반복하지 않는다. 실회원 개발API·기기/성능은 미실행이며 사용자 전체 연결 인수에 묶는다.
+- 다음: 구현 지시 후 NEXT_WORK의 단일 구간을 구현·직접 경계 검증·문서/Issue24 결과 회신·작업브랜치 보관한다. 이번 준비는 문서 commit/push이며 새 Backend 요청·서버/DB/디바이스 변경·dev/main통합은 없다.
+
 ## 2026-10-24 — Issue25 C 명시 profile·주차별 자기기록 연결
 
 구현 `0c5ae941` commit/push·원격일치. [Issue25 결과6373322164](https://github.com/heo0328/lostparty-backend/issues/25#issuecomment-6373322164) 게시본문 MATCH 확인. 413mock/분석0과 실제 소속확정/profile·가입 전 기본조회·고정기록 연결/미확인 범위를 구분해 인계했으며 추가 Backend 구현/반복시험 요청은 없다.
