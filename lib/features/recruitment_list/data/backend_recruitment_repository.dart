@@ -11,9 +11,13 @@ import '../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../domain/backend_recruitment.dart';
 import '../../account/domain/member_cycle_models.dart';
 import 'cycle_read_repository.dart';
+import 'application_display.dart';
 
 class BackendRecruitmentRepository
-    implements CycleRecruitmentGateway, RecruitmentAvailabilityGateway {
+    implements
+        CycleRecruitmentGateway,
+        RecruitmentAvailabilityGateway,
+        ApplicationDisplayGateway {
   BackendRecruitmentRepository({
     required this.api,
     required this.accounts,
@@ -22,6 +26,11 @@ class BackendRecruitmentRepository
     this.preferredRoles,
   });
   final BackendRegistrationApi api;
+  @override
+  Future<ApplicationDisplayDetail> applicationDisplayDetail(
+    String room,
+    String target,
+  ) => ApplicationDisplayReader(api).applicationDisplayDetail(room, target);
   final ServerAccountReadRepository accounts;
   final MemberRaidClient raids;
   final Future<Map<String, String>> Function()? preferredRoles;

@@ -7,6 +7,7 @@ import '../../data/cycle_interaction_repository.dart';
 import '../../domain/backend_recruitment.dart';
 import '../viewmodels/cycle_participation_controller.dart';
 import '../viewmodels/admission_selection_view_model.dart';
+import '../viewmodels/application_display_view_model.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
 import 'recruitment_section.dart';
 import 'recruitment_character_card.dart';
@@ -388,84 +389,31 @@ class CycleRoomApplications extends StatefulWidget {
 }
 
 class _CycleRoomApplicationsState extends State<CycleRoomApplications> {
-  List<Map<String, dynamic>> rows = [];
-  String? cursor, error;
-  bool loading = false, opened = false;
-  int mutation = 0, generation = 0;
-  final cursors = <String>{};
+  late final ApplicationDisplayViewModel m;
+  bool get loading => m.loading;
+  bool get opened => m.opened;
+  String? get error => m.failure;
+  String? get cursor => m.cursor;
+  Future<void> _load({bool more = false}) => m.load(more: more);
   @override
   void initState() {
     super.initState();
-    mutation = widget.controller.mutationVersion;
-    widget.controller.addListener(_changed);
+    m = ApplicationDisplayViewModel(
+      controller: widget.controller,
+      room: widget.room,
+      target: widget.target,
+    );
+    m.addListener(_changed);
   }
 
   void _changed() {
-    final c = widget.controller;
-    if (!c.busy && c.mutationVersion != mutation) {
-      mutation = c.mutationVersion;
-      if (opened &&
-          c.lastRoom == widget.room &&
-          c.lastTarget == widget.target) {
-        unawaited(_load());
-      }
-    }
     if (mounted) setState(() {});
-  }
-
-  Future<void> _load({bool more = false}) async {
-    if (loading || !widget.controller.canAct || (more && cursor == null)) {
-      return;
-    }
-    final g = ++generation, next = more ? cursor : null;
-    setState(() {
-      opened = true;
-      loading = true;
-      error = null;
-    });
-    try {
-      final raw = await widget.controller.applications(
-        widget.room,
-        widget.target,
-        cursor: next,
-      );
-      if (!mounted || g != generation) return;
-      if (raw == null) {
-        setState(() => error = widget.controller.failure);
-        return;
-      }
-      final d = raw['data'] as Map,
-          added = (d['items'] as List).cast<Map<String, dynamic>>();
-      final newCursor = d['next_cursor'] as String?;
-      if (more &&
-          newCursor != null &&
-          (newCursor == next || cursors.contains(newCursor))) {
-        throw const FormatException('Cursor loop');
-      }
-      final combined = more ? [...rows, ...added] : added;
-      if (combined.map((r) => r['application_id']).toSet().length !=
-          combined.length) {
-        throw const FormatException('Duplicate application');
-      }
-      if (!more) cursors.clear();
-      if (newCursor != null) cursors.add(newCursor);
-      setState(() {
-        rows = combined;
-        cursor = newCursor;
-      });
-    } catch (_) {
-      if (mounted && g == generation) {
-        setState(() => error = 'INVALID_RESPONSE');
-      }
-    } finally {
-      if (mounted && g == generation) setState(() => loading = false);
-    }
   }
 
   @override
   void dispose() {
-    generation++;
-    widget.controller.removeListener(_changed);
+    m.removeListener(_changed);
+    m.dispose();
     super.dispose();
   }
 
@@ -487,18 +435,21 @@ class _CycleRoomApplicationsState extends State<CycleRoomApplications> {
         ),
       if (loading) const LinearProgressIndicator(),
       if (error != null) Text(recruitmentFailureMessage(error)),
-      if (opened && !loading && error == null && rows.isEmpty)
+      if (opened && !loading && error == null && m.rows.isEmpty)
         const Text('대기 중인 신청이 없습니다.'),
-      for (final row in rows)
+      for (final item in m.rows)
         RecruitmentCharacterCard(
           name:
-              (row['display'] as Map)['character_name'] as String? ?? '신청 캐릭터',
+              (item.wire['display'] as Map)['character_name'] as String? ??
+              '신청 캐릭터',
           className:
-              (row['display'] as Map)['class_name'] as String? ?? '직업 미확인',
-          role: row['selected_role'] == 'support' ? '서포터' : '딜러',
-          itemLevel: (row['display'] as Map)['item_level'],
-          power: null,
-          status: '승인 대기 · 좌석 미확정\n오류 상태 · 확인 필요',
+              (item.wire['display'] as Map)['class_name'] as String? ??
+              '직업 미확인',
+          role: item.wire['selected_role'] == 'support' ? '서포터' : '딜러',
+          itemLevel: (item.wire['display'] as Map)['item_level'],
+          power: item.comparison?['actual'],
+          status: '승인 대기 · 좌석 미확정\n${item.status}',
+          warning: item.warning,
           actions: Row(
             children: [
               for (final action in ['reject', 'approve'])
@@ -507,11 +458,11 @@ class _CycleRoomApplicationsState extends State<CycleRoomApplications> {
                     padding: EdgeInsets.only(right: action == 'reject' ? 8 : 0),
                     child: action == 'approve'
                         ? FilledButton(
-                            onPressed: widget.controller.canAct
+                            onPressed: widget.controller.canAct && !loading
                                 ? () => showCycleApplicationDecision(
                                     context,
                                     widget.controller,
-                                    row['application_id'] as String,
+                                    item.row.id,
                                     widget.target,
                                     action,
                                     room: widget.room,
@@ -520,11 +471,11 @@ class _CycleRoomApplicationsState extends State<CycleRoomApplications> {
                             child: const Text('승인'),
                           )
                         : OutlinedButton(
-                            onPressed: widget.controller.canAct
+                            onPressed: widget.controller.canAct && !loading
                                 ? () => showCycleApplicationDecision(
                                     context,
                                     widget.controller,
-                                    row['application_id'] as String,
+                                    item.row.id,
                                     widget.target,
                                     action,
                                     room: widget.room,

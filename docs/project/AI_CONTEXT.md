@@ -1,5 +1,7 @@
 # AI CONTEXT — 2주 레이드 현황 기획과 현재 구현 상태
 
+Issue26 표시 연결 구현(2026-10-24): source06ea4b21의 전용 application-display-1 DTO/조회·목록 VM/카드 실전투력·분석/일반 상세 본인pending 안내·신청 숨김 연결. 기본/쓰기·membership/기록·원ACK/기존 갱신시점 보존, 신규68+회귀345=413PASS/변경10파일 분석0. 작성 상세8예시의 항목참조 불일치는 기존 검증으로 거절/별도 정합한 합성 자료로 상태검증, Backend에 원자료 보완 요청. 자세한 결과 NEXT_WORK/DEV_LOG·§37.58. 새프로필 개발 미반영·기기 미확인, 다음은 정확 반영 후 소수인수다. 서버/DB/기기/dev/main 변경 없음.
+
 Issue26 표시 읽기 구현 인계/Flutter 준비(2026-10-24): [Backend6385227653](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6385227653)/source06ea4b21·격리28PASS/실행계약 확인. 새 application-display-1은 개발서버 미반영(기존484ca171/177 유지)이며 Flutter 준비만 완료했다. 다음은 전용 DTO/Gateway→신청표시 VM/카드 실데이터→일반상세 pending/버튼→직접회귀 순서, 상세 NEXT_WORK. 참가·기록/쓰기용 조회·원ACK/기존목록 갱신정책 보존, 이번 기능코드·시험/서버·DB·기기·dev/main 변경 없음.
 
 Issue26 신청 표시 제안1 소비 검토(2026-10-24): sourcef0c7665c/6384757210의 application-display-1을 일반 상세·공대장 신청 목록 전용으로 수용, Backend 구현/실행 인계 대기다. 목록 역할전투력/현재분석·자료불가와 상세본인신청을 기존 닫힌파서/참가·기록 profile과 분리해 소비 가능하다. 페이지별 분석시점 차이를 허용하고 전체승인 자격/accepted 참가 추정·필드누락 fallback은 하지 않는다. 상세 NEXT_WORK/설계37 §37.57·DEV_LOG, 이번은 문서·협업만/기능코드·실서버·시험반복 없음.

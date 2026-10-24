@@ -77,7 +77,27 @@ class AdmissionRoleEvaluation {
     roleCheck(
       allowed ? reason == null : admissionExclusionReasons.contains(reason),
     );
-    final p = roleMap(wire['comparison']);
+    final p = AdmissionPowerComparison(roleMap(wire['comparison']), role).wire;
+    final state = p['state'];
+    roleCheck(!allowed || state == 'unrestricted' || state == 'meets');
+    roleCheck(
+      reason != 'COMBAT_POWER_REQUIRED' ||
+          state == 'missing' ||
+          state == 'below',
+    );
+    comparison = p;
+  }
+  final Map<String, dynamic> wire;
+  late final bool supported, allowed;
+  late final String? reason;
+  late final Map<String, dynamic>? comparison;
+}
+
+/// Shared wire validation only; this does not grant admission permission.
+class AdmissionPowerComparison {
+  AdmissionPowerComparison(Map<String, dynamic> raw, String role)
+    : wire = _snapshot(raw) {
+    final p = wire;
     roleShape(
       p,
       'selected_role requirement actual state source trust current_summary_version success_summary_version power_revision observed_at success_saved_at success_issues current_issues',
@@ -117,18 +137,8 @@ class AdmissionRoleEvaluation {
             compareCandidateLevels(actual, requirement) <= 0,
       _ => false,
     });
-    roleCheck(!allowed || state == 'unrestricted' || state == 'meets');
-    roleCheck(
-      reason != 'COMBAT_POWER_REQUIRED' ||
-          state == 'missing' ||
-          state == 'below',
-    );
-    comparison = p;
   }
   final Map<String, dynamic> wire;
-  late final bool supported, allowed;
-  late final String? reason;
-  late final Map<String, dynamic>? comparison;
 }
 
 class AdmissionCandidate {

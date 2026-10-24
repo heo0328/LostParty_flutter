@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:lost_party/features/recruitment_list/data/application_display.dart';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -168,7 +169,16 @@ Map<String, dynamic> detail(String t) {
   return envelope(t, j, created: true);
 }
 
-class CycleGateway extends v1.Gateway implements CycleRecruitmentGateway {
+class CycleGateway extends v1.Gateway
+    implements CycleRecruitmentGateway, ApplicationDisplayGateway {
+  @override
+  Future<ApplicationDisplayDetail> applicationDisplayDetail(
+    String id,
+    String target,
+  ) async => ApplicationDisplayDetail(
+    detail: await cycleDetail(id, target),
+    application: null,
+  );
   @override
   bool get twoCycleEnabled => true;
   Map<String, dynamic> meta = f1.cycles();

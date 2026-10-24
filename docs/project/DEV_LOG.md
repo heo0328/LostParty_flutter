@@ -1,5 +1,15 @@
 # 개발 이력
 
+## 2026-10-24 — 신청 카드 실데이터·본인 승인 대기 연결 구현
+
+- 새로 가능해진 흐름: Backend06ea4b21/실행177계약 application-display-1을 전용 DTO/Reader 및 기존 두 Repository의 별도 인터페이스로 연결했다. 불변 목록/분석·PowerComparison/본인신청/상세 모델이 필수nullable·역할/정밀값/버전·issues/시각·연결사유/방·T·세대/1MiB를 검증한다. PowerComparison wire 검증만 후보 모델에서 추출해 함께 재사용하며 표시자료를 승인 자격으로 사용하지 않는다. 기존 기본 파서는 확장필드를 뺀 복사본에만 재사용한다.
+- 카드/상세: 신청 카드는 저장된 이름/직업·역할/레벨과 현재 페이지의 마지막 성공 전투력·현재 분석 상태/오류·경고 수를 분리한다. current오류+retained성공·head/성공없음·소유/자료연결불가를 구분하고 0/다른역할/옛 build로 대체하지 않는다. 일반 v2 상세만 새프로필을 선택해 현재참가 우선→유효pending 승인 대기안내→기존신청조건 순으로 표시한다. accepted이력은 참가가 아니며 누락/조회 실패/로딩·로컬시간 경과로 신청진입을 열지 않는다.
+- 상태 소유/갱신: 신청 표시 VM이 rows/cursor/opened/epoch와 접근수명을 소유한다. 회원/환경/session/readGeneration·room/T/dispose·지연응답, 같은T 명령 후 진행중 옛조회 도착을 격리한다. 기존 신청자 확인/새로고침·더보기/같은기기 명령 후 갱신 시점을 보존했다. 페이지별 분석시점·최소값 변경에 따른 target_revision 차이는 수용하고 신청 revision/세대·프로필 cursor/중복·빈 후속페이지·서비스실패는 혼합하지 않는다. 추가 카드별GET/context·전체내신청조회/provider·자동갱신은 없다.
+- 보존 확인: 기본 cycleDetail/applicationPage·승인 decisionBody/변경 등 쓰기 전 검증과 POST/멱등·원pending/ACK·거절/철회, 본인신청목록/단건review, membership-actions-1/record anchor·읽기전용/주차격리, 기존 생성·참가/관리·완료/탈퇴·해산 연결의 직접시험. Router/DI 경로·카드/버튼 모양은 유지했다. 실시간/웹소켓/알림·목록갱신 정책/IF-001/BUG-025·일반오류 추정수정·서버/DB/기기/dev/main은 제외했다.
+- 발견/검증: 초기 시험 helper의 반환타입/세션 인수를 수정했고 광역 포맷으로만 바뀐 이번 구간 외의 기존 clean 파일들은 원복했다. 원본 작성22예시 중 상세8개는 room.items/game_items=[]에 Assignment/formation 참조가 있어 기존파서가 거절한다. 원본 fixture를 보존하고 이8개를 음성시험으로 유지했으며, 상태/HTTP 시험에는 참조 항목을 가진 별도 합성 자료를 사용했다. 목록9개는 수용, 오류envelope5개는 새 성공 예시로 집계하지 않았다. Backend 정적 스키마 통과를 실제앱 수용/실서버 결함으로 확대하지 않으며 작성자료 보완을 요청한다.
+- 최종 자동 검증: 신규 application_display **68PASS** + 기존 직접11파일 **345PASS** = **413PASS**. interaction/신청상세경로/membership readers·표시/기본 생성·상세/후보/관리/완료·탈퇴·해산 및 ACK회귀를 묶었다. 변경 구현8+시험2파일 analyze 문제0·포맷·diffcheck/diff검토. 표적 범위로 영향이 설명되어 전체시험은 반복하지 않았다. Backend28·작성22/15·이전Flutter 시험을 합산하지 않았다.
+- 미확인 실기기/다음 행동: 새query/응답은 실제개발484ca171/fdd256ea/177경로·DB0031에 미반영 기준이다. 서버 정확 반영 이후 카드값·현재오류/미확인, pending 재진입 버튼숨김, 철회/만료/수락 후 기존 흐름을 소수 항목으로 사용자 확인한다. 구현을 서버반영·일반오류 원인수정/릴리즈완료로 표시하지 않는다. 기존 작업 브랜치 commit/push·Issue26 구현/발견/미확인 회신으로 보관하며 무관 dirty는 보존한다.
+
 ## 2026-10-24 — Issue26 표시 프로필 실행 인계 확인·Flutter 작업 준비
 
 준비 문서 `2bdf9976` commit/push, [Issue26 수신·준비6385307413](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6385307413) 회신·본문 MATCH 확인. 다음 Flutter 구현/별도 서버 반영 후 기기 인수로 분리했으며 dev/main 미반영·기존 작업 브랜치 유지다.

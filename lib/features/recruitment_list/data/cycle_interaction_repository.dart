@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'admission_candidates.dart';
+import 'application_display.dart';
 import 'cycle_member_actions.dart';
 import 'membership_actions.dart';
 import '../../account/domain/account_read_session.dart';
@@ -554,9 +555,18 @@ class CycleInteractionRepository
         CycleDepartureGateway,
         CycleRemovalGateway,
         MembershipActionGateway,
-        AdmissionCandidatesGateway {
+        AdmissionCandidatesGateway,
+        ApplicationDisplayListGateway {
   CycleInteractionRepository({required this.api, required this.recruitment});
   final BackendRegistrationApi api;
+  @override
+  Future<ApplicationDisplayPage> applicationDisplayPage(
+    String room,
+    String target, {
+    String? cursor,
+  }) => ApplicationDisplayReader(
+    api,
+  ).applicationDisplayPage(room, target, cursor: cursor);
   final CycleRecruitmentGateway recruitment;
   @override
   Future<AdmissionCandidatePage> admissionCandidates(

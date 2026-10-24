@@ -395,9 +395,21 @@ class _BackendRecruitmentDetailPageState
             builder: (context, _) => Wrap(
               spacing: 8,
               children: [
-                if (room['my_target_role'] == 'none')
+                if (m.waitingForApproval && !m.loading)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      '공대장의 승인 대기중입니다.',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                if (room['my_target_role'] == 'none' && !m.waitingForApproval)
                   FilledButton(
-                    onPressed: widget.participation!.canAct
+                    onPressed:
+                        widget.participation!.canAct && m.canStartAdmission
                         ? () => showCycleAdmission(
                             context,
                             widget.participation!,

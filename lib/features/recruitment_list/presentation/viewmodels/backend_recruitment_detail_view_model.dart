@@ -7,6 +7,7 @@ import '../../../account/domain/member_cycle_models.dart';
 import '../../data/membership_actions.dart';
 import '../../data/membership_readers.dart';
 import '../../data/backend_recruitment_repository.dart';
+import '../../data/application_display.dart';
 
 class BackendRecruitmentDetailViewModel extends ChangeNotifier {
   BackendRecruitmentDetailViewModel({
@@ -60,6 +61,8 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     loading = false;
     target = t;
     value = null;
+    application = null;
+    applicationKnown = false;
     profile = null;
     membershipMenu = null;
     membershipFailure = null;
@@ -71,6 +74,16 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
   bool _disposed = false, loading = false;
   int _epoch = 0;
   BackendRecruitmentDetail? value;
+  OwnApplicationStatus? application;
+  bool applicationKnown = false;
+  bool get waitingForApproval =>
+      value?.room['my_target_role'] == 'none' && application?.pending == true;
+  bool get canStartAdmission =>
+      !loading &&
+      value?.room['my_target_role'] == 'none' &&
+      failure == null &&
+      !waitingForApproval &&
+      (reader != null || cycleGateway == null || applicationKnown);
   bool nextParticipationAvailable = false, endAvailable = false;
   RaidCatalog? catalog;
   String? failure;
@@ -85,6 +98,8 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     _scopeBinding = scopeKey?.call();
     _binding = binding;
     _resolvedRecordAnchor = null;
+    application = null;
+    applicationKnown = false;
     _epoch++;
     value = null;
     profile = null;
@@ -111,6 +126,8 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
   Future<void> load() async {
     if (_disposed || loading || !session.isAuthenticated) return;
     final epoch = ++_epoch;
+    application = null;
+    applicationKnown = false;
     if (reader != null) {
       value = null;
       profile = null;
@@ -180,11 +197,23 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
           membershipFailure = 'INVALID_RESPONSE';
         }
       }
+      ApplicationDisplayDetail? display;
+      if (reader == null && cycleGateway != null) {
+        final source = gateway;
+        if (source is! ApplicationDisplayGateway) {
+          throw const AccountReadException('INVALID_RESPONSE');
+        }
+        display = await (source as ApplicationDisplayGateway)
+            .applicationDisplayDetail(roomId, target!);
+        if (!_current(epoch)) return;
+        application = display.application;
+        applicationKnown = true;
+      }
       final detail = reader != null
           ? value
           : cycleGateway == null
           ? await gateway.detail(roomId)
-          : await cycleGateway!.cycleDetail(roomId, target!);
+          : display!.detail;
       if (!_current(epoch)) return;
       value = detail;
       if (detail == null) {
