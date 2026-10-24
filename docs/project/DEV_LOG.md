@@ -2,6 +2,8 @@
 
 ## 2026-10-24 — 신청 캐릭터 선택목록의 사전 제외 UX 확정
 
+문서 `c59aefbd` commit/push. [Issue13 후보계약 보완6380816312](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6380816312) 게시본문 MATCH 확인. 선택후 비활성만이 아닌 목록사전제외·일괄계약/유효역할·빈목록/오류·최종검증 보존과 다음담당을 전달했다.
+
 - 사용자 요구: 레벨미달 및 같은파티 동일딜러 직업으로 참가할 수 없는 캐릭터는 신청 캐릭터 목록에서 사전제외. 선택후 오류/버튼비활성만이 목표가 아니다.
 - 실제근거: RecruitmentRepository.characters()는 인증원정대의 eligible/confirmed 활동캐릭터만 반환하고 room/T를 받지 않는다. _CycleAdmissionSheet는 전체후보를 보여주고 선택한 캐릭터만 admission-context를 조회하므로 후보사전제외는 아직 없다.
 - 설계/다음: 기존 Issue13 요청을 보완해 서버 기존validator 재사용·일괄후보자격 계약을 고정한 뒤 Flutter에 연결한다. 캐릭터별context N회/다중멤버GET·로컬 정책복제는 피한다. 하나의 유효역할이 있으면 후보유지, 8인반대파티·실제T/레이드·난이도·묶음범위/정렬·선호역할/회원격리를 보호하고 빈목록과 조회실패를 구분한다. 최종신청POST/승인검증은 유지한다.
