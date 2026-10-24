@@ -2122,3 +2122,15 @@ Backend source15e143ae·반영920cc059와 [24 개발반영6371617690](https://gi
 fixture는 Backend 설계12개와 실제 합성DB 실행 자기기록 plan1개이며 실회원 자료가 아니다. 원 설계 ended_records_page는 세 상태 예시가 같은 CM ID를 반복하므로 원문은 보존하고 중복 거절을 확인했다. 실제 다중CM 시험은 서로 다른 CM을 명시한 파생 자료다. unknown-generation의 nullable locator/읽기전용·메뉴권한도 구분해 소비한다. 정상 UI·성능/메모리·실서버HTTP 통과로 확대하지 않는다.
 
 **다음/인계:** 실제 로그인 개발서버·실회원/디바이스/성능 인수는 미확인이다. 기존 화면배치·기록/재가입·C/N/회원전환·B의 탈퇴/해산은 전체 인수에 묶는다. Issue24 검색 CURSOR_STALE 제한 회복/캐시는 독립 후속, recover_leadership 실행UX/IF-001 재활성화·BUG-025는 제외한다. 구간 commit/push·Issue25 결과 게시/본문 재조회로 보관하며 dev/main 통합·서버/DB/기기 변경은 하지 않는다.
+
+### 37.47 Issue24 검색 커서 제한 회복·캐시 연결 (2026-10-24)
+
+사용자 구현 지시로 준비9fc30912와 최신 [Backend 개발 인계6371617690](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6371617690)를 실제 코드에 연결했다. source15e143ae/반영920cc059·API176/DB0031이며 추가 서버 구현 대기는 없다. 기존 검색 요청/응답·semantics=own-target-participation-excluded-v1·서버 SQL 페이지 전 본인참가 제외/인원집계는 그대로 소비한다.
+
+**처리/소유:** 화면 수명의 CycleSearchViewModel이 기존 scopeKey(API환경/회원/session/readGeneration)·epoch·실제T/필터와 로딩을 유지한 검색 실행 안에서 회복한다. 더보기 cursor를 보낸 요청의 서버 HTTP409/CURSOR_STALE에만 rows/cursor/digest/방문커서·해당(T,filter.signature) 캐시를 폐기하고 cursor=null 첫페이지를 최대1회 요청한다. 성공은 새 페이지로 교체하며 구행 이어붙이기/메타GET/다른T이동·필터초기화는 없다. API Repository/DTO/DI·View/Router·Controller/원명령은 변경하지 않는다.
+
+**실패/비동기:** 첫페이지 실패·INVALID_REQUEST400/권한·통신·CYCLE_CHANGED, 로컬 반복cursor/페이지digest 불일치는 자동회복 대상이 아니다. 회복 실패는 기존 오류/명시 갱신을 사용하고 비운 목록을 유지한다. 회복 중 더보기/refresh는 single-flight로 막는다. 회원/환경/권한세대·실제T/필터 변경, mutation/로그아웃·dispose로 무효화되면 이전 응답/finally를 반영하지 않는다. 그룹후보/context의 기존 회복표식과 cursor 회복표식으로 같은 실행의 연쇄 재진입을 막으며 단순cursor 만료에 후보/context GET은 없다.
+
+**보존/검증:** 실제영향T의 모든필터 캐시만 폐기하고 선택T만 refresh하는 기존 mutation 경로를 유지한다. 반대T 캐시/복수T 알림과 effects=[] 관계종료 구분을 보호한다. 직접4파일 단일126mock PASS(신규20 포함), 변경3Dart 최종분석0·포맷/diffcheck/diff리뷰. 서버409→동일T/필터 첫페이지1회·캐시교체/재실패·로컬 불일치/일반오류 무재시도, 회원/scope·T/필터·mutation/로그아웃·dispose의 늦은응답/중복, 기존그룹선택/후보 회복·B의 메뉴/ACK·관계종료/화면이탈을 확인했다. 저장/공용Domain/Router 불변의 국소 전파로 무관전체시험은 반복하지 않았다.
+
+정상 로그인 개발API/실회원·디바이스·성능/RAM은 미실행이다. 다음은 검색 제외/탈퇴 재노출·C/N/그룹·가입 전 탐색과 B/C 전체 연결 사용자 인수다. BUG-025/복구실행UX·IF-001/시간picker는 제외, dev/main 미통합·작업브랜치 보관/Issue24 결과 회신으로 인계한다. 타기기 push·성능 개선을 새로 보장하지 않는다.

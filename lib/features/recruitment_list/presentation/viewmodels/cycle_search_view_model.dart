@@ -325,6 +325,14 @@ class CycleSearchViewModel extends ChangeNotifier {
     if (page == null) unawaited(search());
   }
 
+  void _discardPage(String t, CycleSearchFilter f) {
+    rows = [];
+    cursor = null;
+    _digest = null;
+    _cursors.clear();
+    _pages.remove((t, f.signature));
+  }
+
   Future<void> selectGroup(
     String? group, {
     bool preserve = false,
@@ -446,23 +454,47 @@ class CycleSearchViewModel extends ChangeNotifier {
     loading = true;
     failure = null;
     _emit();
+    var cursorRecovered = false;
     try {
-      final page = await gateway.search(t, f, cursor: previous);
+      var append = more;
+      CycleSearchPage page;
+      while (true) {
+        if (!_valid(e)) return;
+        try {
+          page = await gateway.search(t, f, cursor: append ? previous : null);
+          break;
+        } on AccountReadException catch (error) {
+          if (!_valid(e)) return;
+          if (!append ||
+              recovered ||
+              cursorRecovered ||
+              error.status != 409 ||
+              error.code != 'CURSOR_STALE') {
+            rethrow;
+          }
+          // Recover only an expired server cursor, within this same execution.
+          // Local digest/cursor integrity checks below never enter this retry.
+          cursorRecovered = true;
+          append = false;
+          _discardPage(t, f);
+          _emit();
+        }
+      }
       if (!_valid(e)) return;
-      if (more &&
+      if (append &&
           (page.digest != _digest ||
               (page.cursor != null &&
                   (page.cursor == previous ||
                       _cursors.contains(page.cursor))))) {
         throw const AccountReadException('CURSOR_STALE');
       }
-      final combined = more ? [...rows, ...page.rows] : page.rows;
+      final combined = append ? [...rows, ...page.rows] : page.rows;
       roleCheck(combined.map((r) => r.id).toSet().length == combined.length);
       selectionPending = false;
       rows = List.unmodifiable(combined);
       cursor = page.cursor;
       _digest = page.digest;
-      if (!more) _cursors.clear();
+      if (!append) _cursors.clear();
       if (cursor != null) _cursors.add(cursor!);
       _pages[(t, f.signature)] = (rows, cursor, _digest);
     } on AccountReadException catch (error) {
@@ -472,7 +504,8 @@ class CycleSearchViewModel extends ChangeNotifier {
               'GROUP_CHARACTER_CANDIDATES_STALE',
               'FILTER_CONTEXT_STALE',
             }.contains(error.code) &&
-            !recovered) {
+            !recovered &&
+            !cursorRecovered) {
           loading = false;
           selectionPending = f.members.isNotEmpty;
           _pages.removeWhere((k, _) => k.$1 == t);
@@ -482,9 +515,7 @@ class CycleSearchViewModel extends ChangeNotifier {
         failure = error.code;
         if (f.candidateToken != null) {
           selectionPending = f.members.isNotEmpty;
-          rows = [];
-          cursor = null;
-          _pages.remove((t, f.signature));
+          _discardPage(t, f);
           if (error.code == 'GROUP_NOT_FOUND') {
             _candidateCache.remove(f.groupId);
             candidateMembers = [];
@@ -497,9 +528,7 @@ class CycleSearchViewModel extends ChangeNotifier {
           'FILTER_CONTEXT_STALE',
           'CYCLE_CHANGED',
         }.contains(error.code)) {
-          rows = [];
-          cursor = null;
-          _pages.remove((t, f.signature));
+          _discardPage(t, f);
           if (error.code == 'FILTER_CONTEXT_STALE') groupContext = null;
         }
       }

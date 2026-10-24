@@ -804,6 +804,253 @@ void main() {
       ),
     );
     tearDown(() => model.dispose());
+    Future<void> seedCursor() async {
+      gateway.onSearch = (t, f, cursor) async =>
+          CycleSearchPage(searchWire(t, cursor: 'old'), t);
+      await model.load();
+    }
+
+    test(
+      'server cursor expires: replace once with same target and filters',
+      () async {
+        await seedCursor();
+        model.update(model.filter.copy(descending: false, remaining: {2, 3}));
+        await f1.settled(() => !model.loading);
+        final signature = model.filter.signature;
+        final requests = <String?>[];
+        gateway.onSearch = (t, f, cursor) async {
+          expect(t, c);
+          expect(f.signature, signature);
+          requests.add(cursor);
+          if (cursor != null) {
+            throw const AccountReadException('CURSOR_STALE', status: 409);
+          }
+          expect(model.rows, isEmpty);
+          expect(model.cursor, isNull);
+          expect(model.loading, true);
+          return CycleSearchPage(searchWire(t, id: app, digest: 'fresh'), t);
+        };
+        await model.search(more: true);
+        expect(requests, ['old', null]);
+        expect(model.rows.single.id, app);
+        expect(model.failure, isNull);
+        gateway.onSearch = (t, f, cursor) async =>
+            CycleSearchPage(searchWire(t), t);
+        model.selectTarget(n);
+        await f1.settled(() => !model.loading);
+        final reads = gateway.searches;
+        model.selectTarget(c);
+        expect(gateway.searches, reads);
+        expect(model.rows.single.id, app);
+      },
+    );
+
+    for (final code in [
+      'CURSOR_STALE',
+      'NETWORK_ERROR',
+      'FILTER_CONTEXT_STALE',
+    ]) {
+      test(
+        'recovery failure $code stops, clears old cache and allows explicit refresh',
+        () async {
+          await seedCursor();
+          var calls = 0;
+          gateway.onSearch = (t, f, cursor) async {
+            calls++;
+            if (cursor != null) {
+              throw const AccountReadException('CURSOR_STALE', status: 409);
+            }
+            throw AccountReadException(code, status: 409);
+          };
+          await model.search(more: true);
+          expect(calls, 2);
+          expect(model.failure, code);
+          expect(model.rows, isEmpty);
+          expect(model.cursor, isNull);
+          expect(model.loading, false);
+          gateway.onSearch = (t, f, cursor) async {
+            expect(cursor, isNull);
+            return CycleSearchPage(searchWire(t, id: app), t);
+          };
+          await model.refresh();
+          expect(model.failure, isNull);
+          expect(model.rows.single.id, app);
+        },
+      );
+    }
+
+    for (final error in [
+      const AccountReadException('INVALID_REQUEST', status: 400),
+      const AccountReadException('PERMISSION_DENIED', status: 403),
+      const AccountReadException('CYCLE_CHANGED', status: 409),
+      const AccountReadException('CURSOR_STALE'),
+    ]) {
+      test('${error.code}/${error.status} never auto retries', () async {
+        await seedCursor();
+        var calls = 0;
+        gateway.onSearch = (t, f, cursor) async {
+          calls++;
+          throw error;
+        };
+        await model.search(more: true);
+        expect(calls, 1);
+        expect(model.failure, error.code);
+      });
+    }
+
+    test('first page CURSOR_STALE never retries', () async {
+      var calls = 0;
+      gateway.onSearch = (t, f, cursor) async {
+        calls++;
+        throw const AccountReadException('CURSOR_STALE', status: 409);
+      };
+      await model.load();
+      expect(calls, 1);
+      expect(model.failure, 'CURSOR_STALE');
+    });
+
+    test('local digest mismatch is rejected without recovery', () async {
+      await seedCursor();
+      var calls = 0;
+      gateway.onSearch = (t, f, cursor) async {
+        calls++;
+        return CycleSearchPage(searchWire(t, id: app, digest: 'changed'), t);
+      };
+      await model.search(more: true);
+      expect(calls, 1);
+      expect(model.failure, 'CURSOR_STALE');
+      expect(model.rows, isEmpty);
+    });
+
+    test(
+      'mutation discards every filter of affected target, preserves opposite cache',
+      () async {
+        await seedCursor();
+        model.update(model.filter.copy(remaining: {2}));
+        await f1.settled(() => !model.loading);
+        model.selectTarget(n);
+        await f1.settled(() => !model.loading);
+        var calls = 0;
+        gateway.onSearch = (t, f, cursor) async {
+          calls++;
+          return CycleSearchPage(searchWire(t, id: app), t);
+        };
+        await controller.changed(room, c);
+        expect(calls, 0);
+        model.selectTarget(c);
+        await f1.settled(() => !model.loading);
+        expect(calls, 1);
+        model.update(CycleSearchFilter());
+        await f1.settled(() => !model.loading);
+        expect(calls, 2);
+        model.selectTarget(n);
+        expect(calls, 2);
+        expect(model.rows.single.id, room);
+        await controller.changed(room, c);
+        await controller.changed(room, n);
+        await f1.settled(() => !model.loading);
+        expect(calls, 3);
+        expect(model.rows.single.id, app);
+      },
+    );
+
+    for (final change in ['target', 'filter', 'scope', 'logout', 'mutation']) {
+      test('late cursor recovery cannot overwrite newer $change', () async {
+        await seedCursor();
+        final wait = Completer<CycleSearchPage>();
+        var calls = 0;
+        gateway.onSearch = (t, f, cursor) async {
+          calls++;
+          if (calls == 1) {
+            throw const AccountReadException('CURSOR_STALE', status: 409);
+          }
+          if (calls == 2) return wait.future;
+          return CycleSearchPage(searchWire(t, id: app), t);
+        };
+        final loading = model.search(more: true);
+        await f1.settled(() => calls == 2);
+        await model.search(more: true);
+        await model.refresh();
+        expect(calls, 2); // single flight includes the recovery request
+        switch (change) {
+          case 'target':
+            model.selectTarget(n);
+          case 'filter':
+            model.update(model.filter.copy(remaining: {3}));
+          case 'scope':
+            authority++;
+            changes.notifyListeners();
+          case 'logout':
+            session.change(authenticated: false);
+          case 'mutation':
+            await controller.changed(room, c);
+        }
+        if (change != 'logout') await f1.settled(() => !model.loading);
+        wait.complete(CycleSearchPage(searchWire(c), c));
+        await loading;
+        expect(model.loading, false);
+        expect(model.failure, isNull);
+        if (change == 'logout') {
+          expect(model.rows, isEmpty);
+        } else {
+          expect(model.rows.single.id, app);
+        }
+      });
+    }
+
+    test(
+      'scope invalidation before stale response prevents recovery request',
+      () async {
+        await seedCursor();
+        final wait = Completer<CycleSearchPage>();
+        var calls = 0;
+        gateway.onSearch = (t, f, cursor) {
+          calls++;
+          return wait.future;
+        };
+        final loading = model.search(more: true);
+        session.change(authenticated: false);
+        wait.completeError(
+          const AccountReadException('CURSOR_STALE', status: 409),
+        );
+        await loading;
+        expect(calls, 1);
+        expect(model.rows, isEmpty);
+        expect(model.failure, isNull);
+      },
+    );
+
+    test(
+      'disposed recovery ignores result and notifies no listeners',
+      () async {
+        final other = CycleSearchViewModel(
+          gateway: gateway,
+          session: session,
+          changes: changes,
+          scopeKey: scope,
+        );
+        gateway.onSearch = (t, f, cursor) async =>
+            CycleSearchPage(searchWire(t, cursor: 'old'), t);
+        await other.load();
+        final wait = Completer<CycleSearchPage>();
+        var calls = 0, notifications = 0;
+        gateway.onSearch = (t, f, cursor) async {
+          calls++;
+          if (cursor != null) {
+            throw const AccountReadException('CURSOR_STALE', status: 409);
+          }
+          return wait.future;
+        };
+        final loading = other.search(more: true);
+        await f1.settled(() => calls == 2);
+        other.addListener(() => notifications++);
+        other.dispose();
+        wait.complete(CycleSearchPage(searchWire(c), c));
+        await loading;
+        expect(notifications, 0);
+        expect(other.rows, isEmpty);
+      },
+    );
     test(
       'toggle sort/remaining filters reset cursor and preserve server page order',
       () async {

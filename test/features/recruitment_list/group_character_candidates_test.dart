@@ -437,6 +437,45 @@ void main() {
     expect(model.filter.descending, false);
     expect(model.filter.candidateToken, candidateToken);
   });
+  for (final fail in [false, true]) {
+    test(
+      'group search cursor recovery preserves candidates, failure=$fail',
+      () async {
+        await selected();
+        gateway.onSearch = (t, f, cursor) async =>
+            CycleSearchPage(f3.searchWire(t, cursor: 'old'), t);
+        await model.search();
+        final signature = model.filter.signature;
+        final before = api.requests.length;
+        var calls = 0;
+        gateway.onSearch = (t, f, cursor) async {
+          calls++;
+          expect(f.signature, signature);
+          if (cursor != null) {
+            throw const AccountReadException('CURSOR_STALE', status: 409);
+          }
+          if (fail) {
+            throw const AccountReadException(
+              'GROUP_CHARACTER_CANDIDATES_STALE',
+              status: 409,
+            );
+          }
+          return CycleSearchPage(f3.searchWire(t), t);
+        };
+        await model.search(more: true);
+        expect(calls, 2);
+        expect(api.requests.length, before); // no context/candidate re-entry
+        expect(model.filter.signature, signature);
+        expect(model.filter.members[memberRef], {char1});
+        expect(model.candidateMembers, isNotEmpty);
+        expect(
+          model.failure,
+          fail ? 'GROUP_CHARACTER_CANDIDATES_STALE' : isNull,
+        );
+        expect(model.selectionPending, fail);
+      },
+    );
+  }
   test('logout discards late candidate page and private selection', () async {
     await model.load();
     final wait = Completer<Map<String, dynamic>>();

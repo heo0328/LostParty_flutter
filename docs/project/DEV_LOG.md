@@ -1,5 +1,14 @@
 # 개발 이력
 
+## 2026-10-24 — Issue24 검색 커서 1회 회복·캐시 경계 구현
+
+- 새로 가능해진 흐름: 기존 더보기에서 서버409/CURSOR_STALE이면 같은 회원/환경·실제T/필터로 첫페이지를 최대1회 읽어 목록을 교체한다. stale rows/cursor/digest/커서집합·해당필터 캐시를 폐기하며 새 응답 전까지 loading을 유지한다. 회복 실패는 기존 오류/명시갱신으로 연결하고 그룹context/후보 회복으로 다시 진입하지 않는다. 상세 §37.47.
+- 소유/선택 근거: 기존 화면 소유 CycleSearchViewModel의 epoch/scope와 search 실행 안에서 처리했다. SQL 제외·권한/정렬은 기존 서버 원본, Repository/Router/DI/화면·쓰기명령·의존성은 불변이다. 읽기POST의 cursor만 null로 바꾸며 새flag/선행GET/로컬행제외·성능/누수 개선을 주장하지 않는다.
+- 보존 확인: 로컬 반복cursor/digest 불일치·외부scope/위조400·권한·첫페이지 실패는 자동회복0. 기존 실제T 모든필터 캐시 무효화/반대T 캐시 보존·선택T갱신, C/N/회원/권한세대 변경·중복/늦은응답/dispose, 그룹후보/선택 유지, B 탈퇴/해산·effects=[] 관계알림/원요청·IF-001 비활성. 기존 무관dirty 보존.
+- 검증: 직접4파일 단일126mock PASS(기존106+신규20, 이전C413 합산 없음). 변경Dart3파일 분석의 style1건을 중괄호로 정리하고 해당시험파일 재분석 최종0, 3파일 포맷0변경·diffcheck/리뷰. formatter는 첫 실행 때 외부 telemetry 파일 쓰기 권한으로 exit1이었으나 포맷 자체는 적용됐고, 이후 허용된 실행에서 정상0을 확인했다. 저장/공용Domain/Router·서버계약 불변·국소 읽기전파로 무관전체시험 생략. 스타일수정 뒤 같은 시험 반복 없음.
+- 미확인 실기기: 정상 로그인 개발API·본인참가 SQL 제외/탈퇴 재노출·C/N 비교, 실제 더보기/필터/그룹과 B/C 전체연결·폴드/큰글자·성능은 사용자 인수에 묶는다. 서버/DB/기기 조작 없으며 추가 Backend 구현/반복 시험 요청은 없다. BUG-025 별도 원인/UX 조사·릴리즈 필수 수정 여부는 미확정이다.
+- Git/협업: feature/raid-recruitment-scheduling 구간 commit/push 후 실제SHA/126mock·분석0/미확인·다음담당을 Issue24에 회신하고 본문 재조회한다. dev/main 통합 전·브랜치 유지, 다음은 전체 인수다.
+
 ## 2026-10-24 — Issue24 검색 회복·캐시 구현 준비
 
 - 사용자 ‘1번 구간 작업 준비’에 따라 필수 진입 문서·설계37 §37.40/37.43/37.46, Issue24 본문과 최신6371617690, 실제 검색 Repository/ViewModel·화면/DI·Controller/직접 시험을 대조했다. 현재 feature/raid-recruitment-scheduling `55547375`/origin 일치, dev/origin/dev `6d3f6170`, 기존 무관dirty 보존을 확인했다.
