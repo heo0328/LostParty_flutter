@@ -1,5 +1,15 @@
 # NEXT WORK — Issue24 검색 회복 완료 / 전체 사용자 인수
 
+## 현재 단일 작업 — Issue26 후보계약 소비 검토·회신 (2026-10-24)
+
+[Backend6381161170](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6381161170)의 source6e0063c7/개발안내·제안문/closed schema·작성예시3개를 현재 Flutter0a0d2838의 characters()/RecruitmentCharacter·선택sheet/기존역할정책·페이지/scope와 대조했다. 기존신청검사 보완은 Backend 구현/격리고유25PASS지만 **실제 개발API176/DB0031 미반영**, 후보GET은 미합의·미구현이다. 아래 ‘Backend구현 전체대기’는 이 구분으로 갱신한다. 장기근거/소비차이는 [설계37 §37.51](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md).
+
+일괄조회·현재scope/불변snapshot·역할별Permission·raw/eligible count·빈화면/오류 구분은 소비 가능하다. 단 **일반직업 dealer고정/지원4직업만 복수역할**인 기존 UI와 ‘직업명 신규제한 없음/양역할판정’의 관계를 Backend가 닫아야 한다. 일반직업 support-only를 후보로 세면 화면에서 선택가능한역할이0이 된다. 기존제품역할로 후보/eligible count를 일치시키고 unsupported-role의 wire표현/거절코드를 제안/명시해 달라고 회신한다. 현재닫힌 enum에 임의코드를 만들거나 정상후보를 앱에서 조용히 추가제외하지 않는다. 4직업목록/원정대·선호역할 코드는 §37.51 근거를 따른다.
+
+Flutter소비안: UUID순 전송페이지는 동일snapshot/count/room·T/세대/catalog·중복/커서상한·누락을 확인해 전체수집 후 원정대별 레벨순으로 한번에 반영한다. 페이지단위 재정렬/첫페이지 대표임의선택·구snapshot 병합을 하지 않는다. 표시는 기존회원scope의 원정대표시/대표UUID·선호역할 자료를 ID로 결합해 재사용하고 권한판정 원본은 새서버후보이다. 표시자료가 없거나 엇갈리면 기존일괄계정갱신으로 회복하고 불일치를 숨겨 후보0건으로 만들지 않는다. 후보마다 context/원정대GET은 추가하지 않는다. 허용된선호역할 우선·불가면 유효역할, 일반직업 dealer고정과 4지원직업 역할전환은 보존한다. 최초로딩/실패와 raw0·eligible0를 구분하고 회원/환경/session/readGeneration·room/T/선택·dispose에 epoch 격리를 적용한다. snapshot token은 쓰기token이 아니다.
+
+다음 Backend: 역할일치 차이의 보완계약/예시를 회신하고 합의후 신규후보GET 구현·직접검증/정확SHA·실행계약·개발반영여부를 인계한다. 일반직업/복수역할·복수페이지 예시 보완만 요청하고 같은전체시험 재실행을 요구하지 않는다. Flutter는 그 인계 후 전용read상태/선택목록에 연결한다. 이번은 문서·정적소비검토/Issue26회신만이며 Dart/의존성/API·DB·디바이스 변경/시험반복·dev/main통합 없음. 웹소켓은 별도UX협의후속이고 신청상세 수정본 재인수는 유지한다.
+
 ## 별도 후속 등록 — 웹소켓 목록 갱신 사전 협의
 
 사용자 요청(2026-10-24)으로 [설계37 §37.50](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)에 웹소켓 기반 목록 갱신을 후속 등록했다. **첫 작업은 무엇을 언제 갱신하고 화면에서 어떻게 표현할지 사용자·Flutter·Backend가 협의하는 것**이며 구현/endpoint·구독/자동재조회 정책은 미확정이다. 이번은 기록만 하고 서버 구현 요청·기능코드 수정은 하지 않는다. 현재 신청후보 계약/상세 재인수 순서를 대체하지 않는다.
