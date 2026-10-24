@@ -1,5 +1,9 @@
 # NEXT WORK — Issue24 검색 회복 완료 / 전체 사용자 인수
 
+## 별도 후속 등록 — 웹소켓 목록 갱신 사전 협의
+
+사용자 요청(2026-10-24)으로 [설계37 §37.50](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)에 웹소켓 기반 목록 갱신을 후속 등록했다. **첫 작업은 무엇을 언제 갱신하고 화면에서 어떻게 표현할지 사용자·Flutter·Backend가 협의하는 것**이며 구현/endpoint·구독/자동재조회 정책은 미확정이다. 이번은 기록만 하고 서버 구현 요청·기능코드 수정은 하지 않는다. 현재 신청후보 계약/상세 재인수 순서를 대체하지 않는다.
+
 ## 완료 수정 — 신청목록 카드의 대상주차 상세 연결
 
 구현 `63b77872` commit/push. [Issue13 결과6380903829](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6380903829) 게시본문 MATCH 확인. 실제N신청 상세 재인수는 미확인, 별도후보계약 요청은 유지한다.
