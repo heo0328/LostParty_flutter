@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'admission_candidates.dart';
 import 'cycle_member_actions.dart';
 import 'membership_actions.dart';
 import '../../account/domain/account_read_session.dart';
@@ -552,10 +553,22 @@ class CycleInteractionRepository
         CycleInteractionGateway,
         CycleDepartureGateway,
         CycleRemovalGateway,
-        MembershipActionGateway {
+        MembershipActionGateway,
+        AdmissionCandidatesGateway {
   CycleInteractionRepository({required this.api, required this.recruitment});
   final BackendRegistrationApi api;
   final CycleRecruitmentGateway recruitment;
+  @override
+  Future<AdmissionCandidatePage> admissionCandidates(
+    String room,
+    String target,
+    String intent, {
+    String? cursor,
+  }) => _decode(
+    () => AdmissionCandidatesReader(
+      api,
+    ).admissionCandidates(room, target, intent, cursor: cursor),
+  );
   @override
   Future<MembershipActionContext> membershipContext(String room, String view) =>
       _decode(() async {

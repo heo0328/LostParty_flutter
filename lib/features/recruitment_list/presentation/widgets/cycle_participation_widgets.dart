@@ -6,6 +6,7 @@ import '../../../account/domain/role_summary.dart';
 import '../../data/cycle_interaction_repository.dart';
 import '../../domain/backend_recruitment.dart';
 import '../viewmodels/cycle_participation_controller.dart';
+import '../viewmodels/admission_selection_view_model.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
 import 'recruitment_section.dart';
 import 'cycle_session_display_widgets.dart';
@@ -83,66 +84,73 @@ class _CycleAdmissionSheet extends StatefulWidget {
 }
 
 class _CycleAdmissionSheetState extends State<_CycleAdmissionSheet> {
-  List<RecruitmentCharacter> characters = [];
-  String? character, error;
-  String role = 'dealer';
-  bool loading = true;
-  int generation = 0;
-  CycleAdmissionPreview? preview;
-  final chosen = <String>{};
+  late final AdmissionSelectionViewModel m;
+  bool _closing = false;
+  List<RecruitmentCharacter> get characters => m.characters;
+  String? get character => m.character;
+  String? get error => m.failure;
+  String get role => m.role;
+  bool get loading => m.loading || m.submitting;
+  CycleAdmissionPreview? get preview => m.preview;
+  Set<String> get chosen => m.chosen;
   @override
   void initState() {
     super.initState();
-    unawaited(_load());
-  }
-
-  Future<void> _load() async {
-    final values = await widget.controller.characters();
-    if (!mounted) return;
-    characters = values ?? [];
-    character =
-        characters.where((c) => c.representative).firstOrNull?.id ??
-        characters.firstOrNull?.id;
-    role =
-        characters.where((c) => c.id == character).firstOrNull?.initialRole ??
-        'dealer';
-    setState(() => loading = false);
-    if (character != null) await _preview();
-  }
-
-  Future<void> _preview() async {
-    if (character == null) return;
-    final g = ++generation;
-    setState(() {
-      loading = true;
-      preview = null;
-      chosen.clear();
-    });
-    final p = await widget.controller.preview(
-      widget.room,
-      widget.target,
-      character!,
-      role,
-      widget.intent,
+    m = AdmissionSelectionViewModel(
+      controller: widget.controller,
+      room: widget.room,
+      target: widget.target,
+      intent: widget.intent,
     );
-    if (!mounted || g != generation) return;
-    setState(() {
-      loading = false;
-      preview = p;
-    });
+    m.addListener(_changed);
+    unawaited(m.load());
+  }
+
+  void _changed() {
+    if (!mounted) return;
+    if (m.completed && !_closing) {
+      _closing = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.of(context).pop();
+      });
+    }
+    setState(() {});
   }
 
   Future<void> _confirm() async {
     final p = preview;
     if (p == null) return;
-    await widget.controller.admit(p, {...chosen});
-    if (!mounted) return;
-    if (!widget.controller.hasPending && widget.controller.failure == null) {
-      Navigator.of(context).pop();
-      return;
+    if (widget.intent == 'change_character') {
+      final selected = characters.singleWhere((v) => v.id == character);
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('참가 캐릭터 변경'),
+          content: Text(
+            '${widget.target} 주차 · ${selected.name} · ${role == 'support' ? '서포터' : '딜러'}\n${m.placementMessage}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('변경'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || ok != true || !identical(preview, p)) return;
     }
-    setState(() => error = widget.controller.failure);
-    if (!widget.controller.hasPending) await _preview();
+    await m.submit();
+  }
+
+  @override
+  void dispose() {
+    m.removeListener(_changed);
+    m.dispose();
+    super.dispose();
   }
 
   @override
@@ -181,8 +189,11 @@ class _CycleAdmissionSheetState extends State<_CycleAdmissionSheet> {
               style: const TextStyle(fontSize: 12),
             ),
             const SizedBox(height: 12),
-            if (characters.isEmpty && !loading)
-              const Text('인증한 활동 캐릭터를 확인해 주세요.'),
+            if (characters.isEmpty && !loading && error == null)
+              Text(m.emptyMessage),
+            if (characters.isEmpty && !loading && error == null)
+              for (final message in m.exclusionMessages)
+                Text(message, style: const TextStyle(fontSize: 12)),
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -198,14 +209,7 @@ class _CycleAdmissionSheetState extends State<_CycleAdmissionSheet> {
                 return InkWell(
                   onTap: loading || !c.canAct
                       ? null
-                      : () {
-                          setState(() {
-                            character = value.id;
-                            role = value.initialRole;
-                            error = null;
-                          });
-                          unawaited(_preview());
-                        },
+                      : () => unawaited(m.selectCharacter(value.id)),
                   child: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
@@ -250,20 +254,22 @@ class _CycleAdmissionSheetState extends State<_CycleAdmissionSheet> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'dealer', label: Text('딜러')),
-                    ButtonSegment(value: 'support', label: Text('서포터')),
+                  segments: [
+                    ButtonSegment(
+                      value: 'dealer',
+                      label: const Text('딜러'),
+                      enabled: m.roleAllowed('dealer'),
+                    ),
+                    ButtonSegment(
+                      value: 'support',
+                      label: const Text('서포터'),
+                      enabled: m.roleAllowed('support'),
+                    ),
                   ],
                   selected: {role},
                   onSelectionChanged: loading || !c.canAct
                       ? null
-                      : (v) {
-                          setState(() {
-                            role = v.single;
-                            error = null;
-                          });
-                          unawaited(_preview());
-                        },
+                      : (v) => unawaited(m.selectRole(v.single)),
                 ),
               ),
             if (loading) const LinearProgressIndicator(),
@@ -281,13 +287,7 @@ class _CycleAdmissionSheetState extends State<_CycleAdmissionSheet> {
               CycleSessionDisplayView(
                 display: p.display,
                 chosen: chosen,
-                onChanged: !c.canAct || loading
-                    ? null
-                    : (v) => setState(() {
-                        chosen
-                          ..clear()
-                          ..addAll(v);
-                      }),
+                onChanged: !c.canAct || loading ? null : m.chooseSessions,
               ),
             CycleCommandBanner(controller: c),
             const SizedBox(height: 12),
@@ -303,7 +303,7 @@ class _CycleAdmissionSheetState extends State<_CycleAdmissionSheet> {
             ),
             if (!loading && p == null && !c.hasPending)
               TextButton(
-                onPressed: c.canAct ? _preview : null,
+                onPressed: c.canAct ? () => m.load(preserve: true) : null,
                 child: const Text('참가 조건 다시 확인'),
               ),
           ],
@@ -333,9 +333,17 @@ Future<void> showCycleApplicationDecision(
     final p = preview.review?['permissions'] as Map?;
     if (p?[action] == null ||
         CyclePermission.fromJson(roleMap(p![action])).allowed != true) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('현재 이 신청을 처리할 권한이 없습니다.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            p?[action] == null
+                ? '현재 이 신청을 처리할 권한이 없습니다.'
+                : recruitmentFailureMessage(
+                    CyclePermission.fromJson(roleMap(p![action])).reason,
+                  ),
+          ),
+        ),
+      );
       return;
     }
   }

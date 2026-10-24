@@ -847,6 +847,10 @@ String recruitmentFailureMessage(String? code) => switch (code) {
   'WEEKLY_COMPLETED' => '이번 주 완료한 레이드가 포함되어 있습니다.',
   'RAID_ITEM_LEVEL_REQUIRED' => '선택한 난이도의 아이템레벨을 확인해 주세요.',
   'COMBAT_POWER_REQUIRED' => '선택 역할의 저장 전투력과 최소 조건을 확인해 주세요.',
+  'ROLE_NOT_SUPPORTED' => '이 직업에서 선택할 수 없는 역할입니다.',
+  'CHARACTER_DATA_UNAVAILABLE' => '캐릭터 정보를 확인하지 못했습니다. 갱신 후 다시 확인해 주세요.',
+  'ACCESS_CHANGED' => '로그인 상태가 변경되었습니다. 다시 열어 주세요.',
+  'SERVICE_UNAVAILABLE' => '정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
   'MEMBER_RAID_LIMIT_REACHED' => '참가 중인 모집방 수가 한도에 도달했습니다.',
   'MEMBER_GROUP_LIMIT_EXCEEDED' ||
   'GROUP_CAPACITY_EXCEEDED' ||

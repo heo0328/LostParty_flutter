@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import '../../../account/domain/member_raid_models.dart' show raidList;
+import '../../../account/domain/role_summary.dart' show roleMap;
 import '../../data/cycle_member_actions.dart';
+import '../../data/admission_candidates.dart';
 import '../../data/membership_actions.dart';
 import 'package:flutter/foundation.dart';
 import '../../../account/data/local/scoped_command_key.dart';
@@ -84,6 +87,7 @@ class CycleParticipationController extends ChangeNotifier {
   (String key, String room, String target)? departureSuccess;
   (String key, String room, String target, String member)? removalSuccess;
   (String key, MembershipActionResult result)? membershipSuccess;
+  (String key, String room, String target, String intent)? admissionSuccess;
   (String key, String room, List<String> targets)? relationEnded;
   DateTime? _retryAt;
   Timer? _retryTimer;
@@ -124,6 +128,7 @@ class CycleParticipationController extends ChangeNotifier {
     removalSuccess = null;
     membershipSuccess = null;
     relationEnded = null;
+    admissionSuccess = null;
     busy = false;
     failure = notice = lastRoom = lastTarget = null;
     _retryAt = null;
@@ -596,11 +601,13 @@ class CycleParticipationController extends ChangeNotifier {
     String target, {
     String? cursor,
   }) => _read(() => gateway.applicationPage(room, target, cursor: cursor));
-  Future<void> admit(
+  Future<String?> admit(
     CycleAdmissionPreview preview,
-    Set<String> sessions,
-  ) async {
-    if (!canAct) return;
+    Set<String> sessions, {
+    AdmissionCandidateActor? expectedActor,
+    bool Function()? isCurrent,
+  }) async {
+    if (!canAct || isCurrent?.call() == false) return null;
     final frozenSessions = Set<String>.unmodifiable(sessions);
     final e = _epoch;
     busy = true;
@@ -614,14 +621,52 @@ class CycleParticipationController extends ChangeNotifier {
         preview.role,
         preview.intent,
       );
-      if (!_valid(e)) return;
+      if (!_valid(e) || isCurrent?.call() == false) return null;
       if (fresh.confirmationSignature != preview.confirmationSignature) {
         throw const AccountReadException('REVISION_CONFLICT');
+      }
+      if (expectedActor != null) {
+        final candidateGateway = gateway;
+        if (candidateGateway is! AdmissionCandidatesGateway) {
+          throw const AccountReadException('INVALID_RESPONSE');
+        }
+        final current = await (candidateGateway as AdmissionCandidatesGateway)
+            .admissionCandidates(fresh.room, fresh.target, fresh.intent);
+        if (!_valid(e) || isCurrent?.call() == false) return null;
+        if (current.actor?.signature != expectedActor.signature ||
+            current.scope['room_cycle_id'] != fresh.scope['room_cycle_id'] ||
+            current.scope['target_generation'] !=
+                fresh.scope['target_generation'] ||
+            current.scope['target_revision'] !=
+                fresh.scope['target_revision']) {
+          throw const AccountReadException('REVISION_CONFLICT');
+        }
       }
       final body = fresh.intent == 'change_character'
           ? await gateway.characterBody(fresh, frozenSessions)
           : fresh.body(frozenSessions);
-      if (!_valid(e)) return;
+      if (!_valid(e) || isCurrent?.call() == false) return null;
+      if (expectedActor != null) {
+        final expected = [
+          for (final a in expectedActor.assignments)
+            {
+              'assignment_id': a['assignment_id'],
+              'expected_revision': a['revision'],
+            },
+        ];
+        final actual = raidList(body['assignments']).map(roleMap).toList();
+        int order(Map<String, dynamic> a, Map<String, dynamic> b) =>
+            (a['assignment_id'] as String).compareTo(
+              b['assignment_id'] as String,
+            );
+        expected.sort(order);
+        actual.sort(order);
+        if (cycleStableJson(actual) != cycleStableJson(expected) ||
+            body['expected_cycle_member_revision'] !=
+                expectedActor.wire['cycle_member_revision']) {
+          throw const AccountReadException('REVISION_CONFLICT');
+        }
+      }
       final apply = fresh.intent == 'apply';
       _pending = _CycleCommand(
         path:
@@ -639,7 +684,9 @@ class CycleParticipationController extends ChangeNotifier {
         createdAt: now(),
         evidence: fresh.scope,
       );
+      final key = _pending!.key;
       await _send(e);
+      return _valid(e) ? key : null;
     } on AccountReadException catch (error) {
       if (_valid(e)) _fail(error);
     } catch (_) {
@@ -650,6 +697,7 @@ class CycleParticipationController extends ChangeNotifier {
         _emit();
       }
     }
+    return null;
   }
 
   Future<void> decide(CycleApplicationView preview, String action) async {
@@ -768,6 +816,20 @@ class CycleParticipationController extends ChangeNotifier {
         );
       }
       if (!_valid(e)) return;
+      if (command.path.endsWith('/applications') ||
+          command.path.endsWith('/join') ||
+          command.path.endsWith('/character-changes')) {
+        admissionSuccess = (
+          command.key,
+          command.room,
+          command.target,
+          command.path.endsWith('/applications')
+              ? 'apply'
+              : command.path.endsWith('/join')
+              ? 'join'
+              : 'change_character',
+        );
+      }
       if (membershipResult != null) {
         membershipSuccess = (command.key, membershipResult);
         notice = '요청이 반영되었습니다.';
