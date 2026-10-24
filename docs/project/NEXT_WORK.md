@@ -1,5 +1,16 @@
 # NEXT WORK — 구간별 디바이스 인수 / 현재 2구간 가입
 
+## 현재 인계 — Issue26 신청 표시 프로필 제안1 소비 검토
+
+사용자 진행 지시로 [Backend 제안6384757210](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6384757210), source `f0c7665c`의 계약 문서/closed schema·작성22응답을 현재 Repository/Router/ViewModel/카드와 대조했다. **제안1을 소비 가능으로 수용하며 Backend 읽기 구현·실행 계약 인계를 기다린다.** 아직 앱/서버에 새 프로필이 구현됐다는 의미는 아니다. 기존2d94d462/feature/raid-recruitment-scheduling을 재사용하며 무관 dirty를 보존한다.
+
+- 새 `application-display-1`은 공대장 신청 목록과 일반 상세에만 사용한다. 기존 기본·쓰기 조회/본인 신청 목록·단건review/`membership-actions-1`·기록 경로를 유지하고 두 프로필을 결합하거나 자동 fallback하지 않는다. 닫힌 모델에서 추가 필드를 검증한 후 기존 기본 항목/상세 파서를 재사용할 수 있다. 일반 상세 선택은 현재 reader==null 경계, 참가·기록 reader 경로는 유지한다.
+- 목록 comparison/analysis/display_reason은 필수 nullable이다. 저장 display와 현재 페이지 evaluated_at의 역할 전투력/분석을 분리하고 성공본/현재 오류를 섞지 않는다. analysis가 없거나 연결 불가인 상태·실제 조회 실패를 구분한다. 카드 상태는 전체 승인 판정이 아니며 기존 review/POST를 계속 따른다. 페이지별 분석 시각 차이를 허용하고 후보API처럼 전페이지 동일 분석 snapshot을 요구하지 않는다. 프로필 cursor/회원·session/방/T·세대·신청 revision 경계/최대크기·no-store는 계약대로 검증한다.
+- 상세 my_application은 필수 nullable, 객체4필드 검증 후 현재 참가→유효pending→기존신청조건 순으로 표시한다. accepted는 참가 관계를 만들지 않는다. 만료 경계는 server_now, 조회실패/필드누락은 없음으로 취급하지 않는다. pending 만료·철회/수락 후 재진입도 최신 조회·기존 권한을 따르며 로컬 시각/옛 성공 힌트만으로 신청 진입을 열지 않는다.
+- 다음 Backend: 합의한 read-only/bulk 구현·직접 권한/소유·역할/세대·C/N·만료·자료 실패 경계와 기존DTO/ACK 회귀, 정확 SHA·실행 OpenAPI/개발 반영 여부 인계. 같은 전체시험 반복 요청은 아니다. 그 후 Flutter가 전용 조회 DTO/Gateway/시트·상세 상태 연결, 이전 카드 배치·원pending/ACK·기록/비동기 격리 보호와 직접 시험을 수행한다. 서버 교체는 별도 승인이다.
+
+이번 구간은 계약 검토·문서/Issue 회신만이며 기능 코드·API/DB/기기 변경·Flutter 시험 반복·dev/main통합은 없다. 신청 목록 진입/갱신 시점·실시간/웹소켓·일반오류 원인수정은 포함하지 않는다. 문서diffcheck와 코드·계약 내용대조만 수행하며 작성 예시를 실행시험으로 집계하지 않는다.
+
 ## 현재 작업 — 신청·파티 카드 및 대기 안내 UI (2026-10-24)
 
 구현 `c85715c5` 작업 브랜치 commit/push. [Issue26 인수 결과·조회 계약 요청6384482003](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6384482003) 회신·게시본문 MATCH 확인. Backend 담당: 카드 일괄 전투력/오류·상세 본인 pending 최소 투영/호환 계약 제안. Flutter는 계약 수신 후 실제 표시·대기 안내 연결, 사용자 카드 디자인 확인 대기다. 목록 갱신 정책은 후속 협의다.
