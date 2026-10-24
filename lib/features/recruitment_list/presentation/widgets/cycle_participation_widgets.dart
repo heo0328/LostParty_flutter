@@ -448,7 +448,7 @@ class _CycleRoomApplicationsState extends State<CycleRoomApplications> {
           role: item.wire['selected_role'] == 'support' ? '서포터' : '딜러',
           itemLevel: (item.wire['display'] as Map)['item_level'],
           power: item.comparison?['actual'],
-          status: '승인 대기 · 좌석 미확정\n${item.status}',
+          status: '승인 대기\n${item.status}',
           warning: item.warning,
           actions: Row(
             children: [

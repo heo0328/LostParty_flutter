@@ -147,7 +147,7 @@ class ApplicationDisplayItem {
     final a = analysis;
     if (a == null) return '분석 정보 없음';
     final label = switch (a.wire['integrity_status']) {
-      'clean' => '분석 정상',
+      'clean' => '세팅 이상 없음',
       'review' => '분석 확인 필요',
       'error' => '분석 오류',
       _ => '분석 정보 확인 불가',

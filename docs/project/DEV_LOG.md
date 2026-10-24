@@ -1,5 +1,13 @@
 # 개발 이력
 
+## 2026-10-25 — 신청 카드 문구 정리·아이템레벨 누락 경로 확인
+
+- 사용자 인수: Backend6386031663/반영6444c18b(API06ea4b21)의 새프로필 반영 후 카드 정보/본인pending 재진입1·2는 아이템레벨 ‘확인 필요’ 한 항목 외 정상이라고 보고했다. 이전 ‘새프로필 미반영’은 당시 기록이다. 이 보고를 아직 발생하지 않은 철회·만료/변경·C/N 상태 전체통과로 확대하지 않는다.
+- 표시 수정: 요청한 ‘분석 정상’을 바른 표기 ‘세팅 이상 없음’으로 바꾸고 ‘좌석 미확정’은 삭제했다. 승인대기/오류·경고/마지막 성공 전투력·미확인 의미/버튼·자격/원pending·ACK·주차·조회 갱신시점은 보존했다.
+- 레벨 조사: 실행06ea4b21의 cycle_commands에서 Application.display=admission.core.identity.display(selected_character), participation_core의 identity=groups.admission_core, 그 display 함수는 server_name/character_name/class_name만 반환한다. cycle_lists는 app.display 그대로 반환한다. 앱은 display.item_level만 읽고 작성 예시에는 이 필드가 있어 당시 실제snapshot 제공 여부를 잘못 판단했다. 기존 문서의 실제 display 레벨 제공 판단을 정정한다. 개인정보/실회원원본·서버/DB 조작 없이 정확source의 생성→목록→카드 경로를 대조한 근거다.
+- 다음 Backend: 아이템레벨 출처/표시를 보완하며 신규신청만 아니라 기존신청 snapshot 누락 처리까지 제안/구현·인계해야 한다. 과거없는 값을 임의복원하거나 현재값을 당시snapshot으로 단정하지 않고 소유revision/연결 불가/null·추가카드별조회/provider 금지·기존DTO/쓰기/타기능 영향을 보호한다. 앱은 임의 값/추가조회·계약외fallback을 붙이지 않았고 이 항목은 미해결로 기록한다.
+- 검증/보관: 변경2Dart파일 analyze 문제0·포맷/diffcheck/문구 및 diff 검토. 순수 문자열 수정은 기존 자동시험/전체시험을 반복하지 않았다. 문구 최종기기/아이템레벨 재확인 대기, 문서·Issue26 수동결과/구체원인·요청 회신 후 작업브랜치commit/push·dev/main미반영/무관dirty보존. 사용자에게 기존통과1·2 전체반복은 요청하지 않는다.
+
 ## 2026-10-24 — 신청 카드 실데이터·본인 승인 대기 연결 구현
 
 구현 `ac9fe621` commit/push. [Issue26 결과·작성예시 차이6385536441](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6385536441) 게시·본문 MATCH 확인. 작성 상세8예시 보완/실제 소비차이와 별도 개발 반영 후 인수로 인계했으며 dev/main 미반영·기존 브랜치 유지/무관 dirty 보존이다.
