@@ -2,6 +2,8 @@
 
 ## 2026-10-25 — Issue26 신청자 아이템레벨 출처 앱 실행 연결
 
+구현 13fb5848a50428600e6a778d746f084627fde345/feature/raid-recruitment-scheduling commit·push·origin 일치 확인. [Issue26 결과6386758343](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386758343) 게시 후 원문 재조회 MATCH. 소비 차이 없음/개발 미반영 및 필수키 없는 옛 항목 오류 처리·실회원/기기 대기를 인계했으며 배포 승인은 하지 않았다. dev/main 미반영·브랜치 유지·무관 dirty 보존.
+
 새로 가능해진 흐름: Backend6386634008/source f471e313의 실행 application_display.snapshot_level/level_display·합의 §37.61을 대조하고 신청자 카드 레벨에 snapshot ‘아이템 레벨 1700’, current_saved ‘아이템 레벨 1750 · 현재 저장 정보’, unavailable ‘아이템 레벨 조회 불가’를 연결했다. 원본 fetched_at은 UTC nullable로 보존하고 새 시각 행/확인·갱신 행동을 추가하지 않았다. 소수는 double 변환 없이 원 문자열로 표시한다.
 
 ApplicationDisplayItem에 전용 불변 ApplicationItemLevel을 추가해 필수3키, 64자 이내 비음수 decimal, 출처 enum·UTC/null, snapshot/current_saved 값 필수·시각 nullable, unavailable 값/시각 null을 검증한다. 소유/연결 불가 display_reason에서 current_saved는 거절하지만 실제 snapshot은 보존한다. 파서/화면이 서버 자격이나 소유 정책을 새로 계산하지 않는다. 공용 카드의 기존 기본 표시는 유지하고 신청자 소비자만 검증된 문구를 전달한다. 기존 ViewModel이 응답/페이지·회원/환경/T/epoch/dispose를 소유하며 새 요청/저장/리스너나 별도 수명은 만들지 않았다.

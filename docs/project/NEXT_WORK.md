@@ -2,6 +2,8 @@
 
 ## 현재 대기 — 신청자 레벨 앱 연결 완료 / 개발 서버 반영 후 소수 인수
 
+구현 **13fb5848** 작업브랜치 commit/push·origin SHA 일치. [Issue26 구현 인계6386758343](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386758343) 회신·게시본문 MATCH 확인. 다음은 Backend의 별도 승인된 개발 반영 인계 후 레벨/문구 소수 확인이다. dev/main 미반영·기존 브랜치 유지.
+
 2026-10-25 Backend [6386634008](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386634008)/source f471e3133ad60befcad77d7123e1107ba7501bb4의 실행 인계를 받아 앱의 application-display-1 레벨3키 검증/출처 표시를 연결했다. 아래 과거 구현 인계 대기/미구현 표현보다 이번 결과가 우선한다. 세부 구현/검증은 DEV_LOG·설계37 §37.61. 신규34+직접회귀124=고유158PASS(최초157PASS/fixture 기대1실패 후 해당 파일68PASS 재검증), 변경5파일 분석0·최종수정 시험파일 재분석0·포맷/diffcheck/검토. 원 작성 fixture는 보존했다.
 
 다음 Backend는 정확 개발 반영 source/image 인계와 직접 소비 차이가 있는 경우만 대응한다. **현재 실제 개발 서버는 기존06ea4b2/d24d7cbd·177/DB0031로 레벨 보완 미반영**이다. 앱의 새 reader는 필수3키가 없는 항목을 추정하거나 기본조회로 fallback하지 않고 오류로 처리하므로, 현재 서버에서 레벨 정상 표시/신청목록 인수가 가능하다고 안내하지 않는다. 서버 배포·DB/회원자료·기기/dev/main 변경은 하지 않았다.
