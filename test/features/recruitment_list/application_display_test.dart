@@ -24,7 +24,25 @@ final examples =
 Map<String, dynamic> copy(Object v) =>
     jsonDecode(jsonEncode(v)) as Map<String, dynamic>;
 Map<String, dynamic> wire([String name = 'role_success_precision']) =>
-    copy(examples.singleWhere((v) => v['name'] == name)['response']);
+    withLevelExtension(
+      copy(examples.singleWhere((v) => v['name'] == name)['response']),
+    );
+// Preserve the earlier authored fixture. State/HTTP tests use an explicit
+// synthetic extension; old profile responses themselves are rejected below.
+Map<String, dynamic> withLevelExtension(Map<String, dynamic> value) {
+  if ((value['data'] as Map).containsKey('items')) {
+    for (final item in value['data']['items']) {
+      final display = item['display'] as Map;
+      display['item_level'] = display['item_level'] as String?;
+      display['item_level_source'] = display['item_level'] == null
+          ? 'unavailable'
+          : 'application_snapshot';
+      display['item_level_fetched_at'] = null;
+    }
+  }
+  return value;
+}
+
 // The authored detail vectors omit room items while referencing assignments.
 // Keep them unchanged; use a separate internally coherent synthetic room for VM tests.
 Map<String, dynamic> detailWire(String name) {
@@ -86,7 +104,10 @@ void main() {
     test('authored contract vector ${e['name']} (not runtime)', () {
       final j = copy(e['response']);
       if ((j['data'] as Map).containsKey('items')) {
-        expect(page(j), isA<ApplicationDisplayPage>());
+        if ((j['data']['items'] as List).isNotEmpty) {
+          expect(() => page(j), throwsFormatException);
+        }
+        expect(page(withLevelExtension(j)), isA<ApplicationDisplayPage>());
       } else {
         expect(
           () => ApplicationDisplayDetail.fromJson(j, room, f2.c),

@@ -12,6 +12,7 @@ class RecruitmentCharacterCard extends StatelessWidget {
     required this.power,
     required this.status,
     this.warning = false,
+    this.itemLevelLabel,
     this.leading,
     this.trailing,
     this.actions,
@@ -19,6 +20,7 @@ class RecruitmentCharacterCard extends StatelessWidget {
   });
   final String name, className, role, status;
   final Object? itemLevel, power;
+  final String? itemLevelLabel;
   final bool warning;
   final Widget? leading, trailing, actions;
 
@@ -69,7 +71,7 @@ class RecruitmentCharacterCard extends StatelessWidget {
           runSpacing: 4,
           children: [
             Text(
-              '아이템레벨 ${itemLevel ?? '확인 필요'}',
+              itemLevelLabel ?? '아이템레벨 ${itemLevel ?? '확인 필요'}',
               style: const TextStyle(fontSize: 11),
             ),
             Text(

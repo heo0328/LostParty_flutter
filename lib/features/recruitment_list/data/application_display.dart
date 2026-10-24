@@ -54,6 +54,51 @@ class ApplicationAnalysis {
   late final List<AnalysisIssue> issues;
 }
 
+/// Validates the agreed display extension without changing legacy/write DTOs.
+class ApplicationItemLevel {
+  ApplicationItemLevel.fromDisplay(Map<String, dynamic> display) {
+    roleCheck(
+      [
+        'item_level',
+        'item_level_source',
+        'item_level_fetched_at',
+      ].every(display.containsKey),
+    );
+    final raw = display['item_level'];
+    roleCheck(
+      raw == null ||
+          raw is String &&
+              raw.length <= 64 &&
+              RegExp(r'^[0-9]+(?:\.[0-9]+)?$').hasMatch(raw),
+    );
+    roleCheck(
+      {
+        'application_snapshot',
+        'current_saved',
+        'unavailable',
+      }.contains(display['item_level_source']),
+    );
+    value = raw as String?;
+    source = display['item_level_source'] as String;
+    final stamp = display['item_level_fetched_at'];
+    fetchedAt = stamp == null ? null : roleUtc(stamp);
+    roleCheck(
+      source == 'unavailable'
+          ? value == null && fetchedAt == null
+          : value != null,
+    );
+  }
+  late final String? value;
+  late final String source;
+  late final DateTime? fetchedAt;
+
+  String get label => switch (source) {
+    'unavailable' => '아이템 레벨 조회 불가',
+    'current_saved' => '아이템 레벨 $value · 현재 저장 정보',
+    _ => '아이템 레벨 $value',
+  };
+}
+
 class ApplicationDisplayItem {
   ApplicationDisplayItem(
     Map<String, dynamic> raw,
@@ -82,6 +127,7 @@ class ApplicationDisplayItem {
     }
     final display = roleMap(wire['display']);
     roleCheck(display.values.every((v) => v == null || v is String));
+    itemLevel = ApplicationItemLevel.fromDisplay(display);
     final origin = roleMap(wire['admission_origin']);
     roleShape(origin, 'scope group_id');
     roleCheck({'public', 'group'}.contains(origin['scope']));
@@ -110,6 +156,7 @@ class ApplicationDisplayItem {
           ? comparison != null
           : comparison == null && analysis == null,
     );
+    roleCheck(itemLevel.source != 'current_saved' || reason == null);
     if (comparison case final p?) {
       roleCheck(
         raidList(p['current_issues']).length <= 20 &&
@@ -139,6 +186,7 @@ class ApplicationDisplayItem {
   late final CycleOwnRow row;
   late final Map<String, dynamic>? comparison;
   late final ApplicationAnalysis? analysis;
+  late final ApplicationItemLevel itemLevel;
   String get status {
     if (wire['display_reason'] == 'APPLICATION_CONTEXT_CHANGED') {
       return '신청 당시 소유 정보가 변경되어 확인이 필요합니다.';

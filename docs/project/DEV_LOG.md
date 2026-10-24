@@ -1,5 +1,18 @@
 # 개발 이력
 
+## 2026-10-25 — Issue26 신청자 아이템레벨 출처 앱 실행 연결
+
+새로 가능해진 흐름: Backend6386634008/source f471e313의 실행 application_display.snapshot_level/level_display·합의 §37.61을 대조하고 신청자 카드 레벨에 snapshot ‘아이템 레벨 1700’, current_saved ‘아이템 레벨 1750 · 현재 저장 정보’, unavailable ‘아이템 레벨 조회 불가’를 연결했다. 원본 fetched_at은 UTC nullable로 보존하고 새 시각 행/확인·갱신 행동을 추가하지 않았다. 소수는 double 변환 없이 원 문자열로 표시한다.
+
+ApplicationDisplayItem에 전용 불변 ApplicationItemLevel을 추가해 필수3키, 64자 이내 비음수 decimal, 출처 enum·UTC/null, snapshot/current_saved 값 필수·시각 nullable, unavailable 값/시각 null을 검증한다. 소유/연결 불가 display_reason에서 current_saved는 거절하지만 실제 snapshot은 보존한다. 파서/화면이 서버 자격이나 소유 정책을 새로 계산하지 않는다. 공용 카드의 기존 기본 표시는 유지하고 신청자 소비자만 검증된 문구를 전달한다. 기존 ViewModel이 응답/페이지·회원/환경/T/epoch/dispose를 소유하며 새 요청/저장/리스너나 별도 수명은 만들지 않았다.
+
+보존 확인: 전투력 마지막성공·현재분석/오류와 레벨 출처의 독립성, 프로필/페이지/HTTP 오류·회원/T·늦은 응답/dispose, 기본/쓰기·본인신청/단건review DTO, 원명령/ACK·승인/거절·철회, 신청 카드 일반상세 및 기록 읽기전용 연결. 새 reader가 필수키 없는 옛 항목을 기본조회/가짜 snapshot/정상 unavailable로 대체하지 않는 것을 검증했다. 기존 목록 갱신 시점/API/POST·키·승인자격은 불변이다.
+
+검증: 신규 application_item_level34 + 기존 application_display68/cycle_interaction/application_detail_navigation/membership_presentation56 = 최종 고유158PASS. 최초 묶음은157PASS/1실패였으며 빈 신청 목록도 옛 필드 누락으로 거절한다고 작성한 fixture 기대 오류였다. production 코드는 정상이었고 비어 있으면 item 레벨 검증 대상이 없도록 기대만 수정, 실패 파일68PASS로 재검증했다. 나머지 통과 결과는 코드 불변이므로 재사용했다. 기존 원 작성 fixture(application_display.json)는 보존하고 명시적인 복사 합성 확장으로 상태/HTTP 시험을 유지하며 원본 옛 item은 거절 확인한다. 변경5파일 분석0, 최종수정 시험파일 재분석0·명시포맷/diffcheck/diff검토. 공용 저장/Router/쓰기 변경이 없어 전체시험/정상 UI복제시험은 확대하지 않았다.
+
+미확인 실기기: 정상 로그인 실서버의 새 레벨/출처·좁은화면 줄바꿈은 대기다. Backend 격리35PASS/코드게시와 실제개발06ea4b2/d24d7cbd·177/DB0031 미반영을 구별하며 서버 교체/DB·회원자료/기기·dev/main 조작은 하지 않았다. 필수키 없는 기존 서버 응답은 오류이므로 정확 반영 인계 뒤 레벨/문구만 사용자 소수 확인한다. 기존 통과1/2 전체를 재요청하지 않는다. feature/raid-recruitment-scheduling에 관련 파일 commit/push 후 정확SHA/결과·미확인을 Issue26에 인계하며 기존 무관 dirty 보존.
+
+
 ## 2026-10-25 — Issue26 신청자 레벨 보완 소비 합의·회신
 
 Backend6386261019/b97eee2a 제안과 Flutter da50f972의 ApplicationDisplayItem(display string|null map)/신청 카드(item_level만 소비)를 대조했다. 세 키는 기존 map으로 수용 가능하며 기존 파서를 완화할 필요가 없다. 다만 출처/시각 의미 검증과 현재저장 표시 연결은 후속 구현이다. 사용자 승인으로 신규 신청 실제 snapshot 보존·기존 누락만 안전한 current_saved·연결불가 unavailable을 수용했고 snapshot/현재 저장/조회불가 문구를 설계37 §37.61에 확정했다. 추가 API·provider·SQL/DB backfill/원ACK 변경 없이 사용자 오해와 불가능한 확인 요구를 줄이는 선택이다.
