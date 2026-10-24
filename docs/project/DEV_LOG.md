@@ -2,6 +2,8 @@
 
 ## 2026-10-24 — 신청 카드 실데이터·본인 승인 대기 연결 구현
 
+구현 `ac9fe621` commit/push. [Issue26 결과·작성예시 차이6385536441](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6385536441) 게시·본문 MATCH 확인. 작성 상세8예시 보완/실제 소비차이와 별도 개발 반영 후 인수로 인계했으며 dev/main 미반영·기존 브랜치 유지/무관 dirty 보존이다.
+
 - 새로 가능해진 흐름: Backend06ea4b21/실행177계약 application-display-1을 전용 DTO/Reader 및 기존 두 Repository의 별도 인터페이스로 연결했다. 불변 목록/분석·PowerComparison/본인신청/상세 모델이 필수nullable·역할/정밀값/버전·issues/시각·연결사유/방·T·세대/1MiB를 검증한다. PowerComparison wire 검증만 후보 모델에서 추출해 함께 재사용하며 표시자료를 승인 자격으로 사용하지 않는다. 기존 기본 파서는 확장필드를 뺀 복사본에만 재사용한다.
 - 카드/상세: 신청 카드는 저장된 이름/직업·역할/레벨과 현재 페이지의 마지막 성공 전투력·현재 분석 상태/오류·경고 수를 분리한다. current오류+retained성공·head/성공없음·소유/자료연결불가를 구분하고 0/다른역할/옛 build로 대체하지 않는다. 일반 v2 상세만 새프로필을 선택해 현재참가 우선→유효pending 승인 대기안내→기존신청조건 순으로 표시한다. accepted이력은 참가가 아니며 누락/조회 실패/로딩·로컬시간 경과로 신청진입을 열지 않는다.
 - 상태 소유/갱신: 신청 표시 VM이 rows/cursor/opened/epoch와 접근수명을 소유한다. 회원/환경/session/readGeneration·room/T/dispose·지연응답, 같은T 명령 후 진행중 옛조회 도착을 격리한다. 기존 신청자 확인/새로고침·더보기/같은기기 명령 후 갱신 시점을 보존했다. 페이지별 분석시점·최소값 변경에 따른 target_revision 차이는 수용하고 신청 revision/세대·프로필 cursor/중복·빈 후속페이지·서비스실패는 혼합하지 않는다. 추가 카드별GET/context·전체내신청조회/provider·자동갱신은 없다.

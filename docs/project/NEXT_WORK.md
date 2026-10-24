@@ -2,6 +2,8 @@
 
 ## 구현 결과 — 신청 카드 실데이터·본인 승인 대기 연결
 
+구현 `ac9fe621` 작업 브랜치 commit/push, [Issue26 결과·예시 정합성6385536441](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6385536441) 회신·게시본문 MATCH 확인. Backend는 작성 상세8예시의 항목/배정 참조 보완과 실제 소비차이만 대응, 새프로필 실제 개발 반영은 별도 승인/인계 후다. Flutter 코드는 검증 완료·기기 인수 대기이며 dev/main 미반영·브랜치 유지다.
+
 Backend06ea4b21의 application-display-1을 전용 읽기 모델/Gateway로 연결했다. 신청 카드의 선택역할 마지막 성공 전투력·현재 분석/오류·소유연결 불가·미확인을 구분하고, v2 일반 상세는 본인 유효pending이면 신청버튼 대신 “공대장의 승인 대기중입니다.”를 표시한다. 참가관계 우선·accepted이력/만료·철회 후 기존 진입 조건을 보존한다. 기존 cycleDetail/applicationPage·쓰기용 재검사/DTO·내신청/단건review·membership/기록 경로는 유지한다.
 
 목록 전용 ViewModel이 표시 행/커서·접근수명/epoch를 소유하며 회원·환경/session/readGeneration·T/dispose/늦은 응답·명령 후 기존조회 도착을 격리한다. 기존 신청자 확인/새로고침/더보기·같은 기기 명령 후 갱신 시점은 유지했다. 페이지 분석시점과 최소값에 따른 target_revision 차이는 허용하되 방/T·세대/신청 revision·커서/중복·빈 후속페이지를 검증한다. 카드별 GET/전체내신청조회·provider/자동갱신·기본응답 fallback은 없다.
