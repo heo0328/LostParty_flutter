@@ -2,6 +2,8 @@
 
 ## 다음 구현 준비 완료 — Issue26 카드 실데이터·본인 승인 대기 연결
 
+준비 문서 `2bdf9976` 작업 브랜치 commit/push. [Issue26 실행 인계 수신·준비 결과6385307413](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6385307413) 회신·게시본문 MATCH 확인. 다음 담당은 Flutter 구현이며 새프로필 서버 반영/기기 인수는 별도 대기다. dev/main 미반영·기존 브랜치 유지다.
+
 근거: [Backend 구현 인계6385227653](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6385227653), source **06ea4b214591f475d422f4599ca10260cda83d08** / feat/raid-recruitment. 합의 문서/실행 OpenAPI의 두 GET 입력·ApplicationDisplay 모델과 검증집계를 확인했다. Backend는 고유28PASS(신규17+기존명령8+membership3), 기본116/후보177 계약 보존·DB오류503 SERVICE_UNAVAILABLE 정정을 인계했다. **실제 개발은 여전히 source484ca171/이미지fdd256ea·177경로/DB0031이며 새 프로필은 미반영**이다. 경로 수로 반영 여부를 판단하지 않는다. 아래 ‘Backend 구현 대기’는 해소됐고 현재는 Flutter 구현 착수 준비 상태다.
 
 이번 사용자 요청은 작업 준비이므로 기능 코드를 수정하지 않는다. 브랜치 feature/raid-recruitment-scheduling·기준fda8f3ad를 유지하고 무관 dirty를 보존한다. 준비 문서 검토·Issue 회신·commit/push만 수행하며 구현/실기기 성공을 주장하지 않는다.

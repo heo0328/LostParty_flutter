@@ -2,6 +2,8 @@
 
 ## 2026-10-24 — Issue26 표시 프로필 실행 인계 확인·Flutter 작업 준비
 
+준비 문서 `2bdf9976` commit/push, [Issue26 수신·준비6385307413](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6385307413) 회신·본문 MATCH 확인. 다음 Flutter 구현/별도 서버 반영 후 기기 인수로 분리했으며 dev/main 미반영·기존 작업 브랜치 유지다.
+
 [Backend6385227653](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6385227653)/source06ea4b214591f475d422f4599ca10260cda83d08의 합의 문서·검증집계와 실행 OpenAPI 두GET reader_profile/새 ApplicationDisplay 응답을 확인했다. Backend 고유28PASS(신규17/명령8/membership3), read-only bulk·기존DTO/쓰기shape 보존·SQL예외503 SERVICE_UNAVAILABLE 정정 인계다. 기존 실제개발은 source484ca171/이미지fdd256ea/177경로·DB0031이며 새query/응답은 미반영이다. 경로177이 같다는 이유로 동일계약으로 취급하지 않는다.
 
 현재 카드 power:null/오류 확인필요, 일반 상세 reader==null의 cycleDetail 기본조회, 승인 decisionBody의 cycleDetail 재검사, 신청 위젯의 rows/cursor·generation 소유를 대조했다. 표시용 전용 Gateway/DTO를 추가해 기존 쓰기용/참가·기록 조회를 보존하고, 목록 VM에 접근수명 격리·페이지/자료 실패를 모아 카드 표시를 연결하는 순서로 준비했다. pending은 참가관계 우선/서버시각·최신 조회/필수필드 검증 후 안내하며 accepted이력/로컬시각/실패로 참가나 신청허용을 만들지 않는다. 상세 구현순서·직접시험/완료조건은 NEXT_WORK다.
