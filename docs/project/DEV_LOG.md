@@ -2,6 +2,8 @@
 
 ## 2026-10-24 — Issue24 검색 커서 1회 회복·캐시 경계 구현
 
+구현 `0d6d960b` commit/push·원격일치. [Issue24 결과6380382368](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6380382368) 게시본문 MATCH 확인. 126mock/분석0과 정상로그인·실회원/기기 미확인·다음담당을 구분해 인계했다. 커밋 시 빈 index.lock이 발견됐으나 실행 중 Git 프로세스가 없음을 확인하고 해당 잔여 잠금만 제거해 정상 보관했다. 기존 무관dirty는 그대로다.
+
 - 새로 가능해진 흐름: 기존 더보기에서 서버409/CURSOR_STALE이면 같은 회원/환경·실제T/필터로 첫페이지를 최대1회 읽어 목록을 교체한다. stale rows/cursor/digest/커서집합·해당필터 캐시를 폐기하며 새 응답 전까지 loading을 유지한다. 회복 실패는 기존 오류/명시갱신으로 연결하고 그룹context/후보 회복으로 다시 진입하지 않는다. 상세 §37.47.
 - 소유/선택 근거: 기존 화면 소유 CycleSearchViewModel의 epoch/scope와 search 실행 안에서 처리했다. SQL 제외·권한/정렬은 기존 서버 원본, Repository/Router/DI/화면·쓰기명령·의존성은 불변이다. 읽기POST의 cursor만 null로 바꾸며 새flag/선행GET/로컬행제외·성능/누수 개선을 주장하지 않는다.
 - 보존 확인: 로컬 반복cursor/digest 불일치·외부scope/위조400·권한·첫페이지 실패는 자동회복0. 기존 실제T 모든필터 캐시 무효화/반대T 캐시 보존·선택T갱신, C/N/회원/권한세대 변경·중복/늦은응답/dispose, 그룹후보/선택 유지, B 탈퇴/해산·effects=[] 관계알림/원요청·IF-001 비활성. 기존 무관dirty 보존.
