@@ -1,5 +1,18 @@
 # 개발 이력
 
+## 2026-10-25 — 레이드 현황 참가 카드 정보 연결
+
+새로 가능해진 흐름: 정상 ‘참가 중’ 카드에 내 역할(모집정원4는 파티장/파티원,8은 공대장/공대원), 내 참가 캐릭터명, 항목별 레이드·난이도를 표시했다. 기존 membership-actions-1 viewer/assignments/items와 weekly.catalog를 재사용한다. MemberAccountViewModel의 전체 sections(표시숨김 캐릭터 포함)에서 현재 회원·환경 scope 및 ref/observation의 계정·캐릭터 UUID가 일치하는 이름만 인덱싱한다. 실제 T/CM·item/round가 맞는 active assignment만 연결하고 같은 캐릭터는 중복 표시하지 않는다. 이름이 없으면 사용자 최신 지정대로 **캐릭터명 확인 실패**로 표시하며 대표캐릭터나 다른 이름을 대입하지 않는다.
+
+표시 투영 CycleOwnCardInfo를 분리한 이유는 서버 조회/업무 자격·캐시 원본을 변경하지 않고 화면 표시 책임만 명확히 하기 위해서다. 원본은 기존 계정 VM이 소유하고 페이지는 재빌드마다 인덱스를 재사용한다. 계정 캐시 통지를 직접 구독하여 이름 변경을 표시하며 추가 GET/새 비동기 요청·영구 캐시는 없다. 기존 제목·인원/상태·카드 이동·주차·신청철회는 유지했고 좁은 화면에서 역할/이름은 줄바꿈 가능하게 배치했다. 신청·기록·복구/관계만 남은 행에는 현재 캐릭터/역할을 채우지 않는다.
+
+보존 확인: 기존 신청카드 실제 주차 일반상세 연결, 회원/CM 기록 분리·정확 anchor 읽기와 쓰기 없음, 목록 캐시·복구/종료 경계. 신규 표시 경계5 + 기존 직접회귀70 = **75PASS**(cycle_own_card_info/application_detail_navigation/membership_readers/cycle_archive). 변경 Dart3파일 분석 문제0, 명시파일 포맷·diffcheck/diff검토 완료. 공용 DTO/저장/명령/Router 변경이 없어 전체 시험은 확대하지 않았다.
+
+미확인 실기기 항목: 4/8인 역할·캐릭터·레이드/난이도 실제 표시, 폴드 외부화면 줄바꿈, C/N 전환 및 계정 캐릭터 갱신 후 표시. 자동 실기기 조작/서버·DB·dev/main 통합은 하지 않았다. feature/raid-recruitment-scheduling에 관련 파일만 commit/push하고 기존 무관 dirty는 보존한다.
+
+착수 중 최신 Issue26 Backend6386261019(b97eee2a)의 신청자 레벨 보완 제안도 확인했다. 실제 저장 누락을 확인하고 display3키/과거 snapshot과 current_saved 구분의 소비 검토를 요청한 상태다. 이번 참가카드 UI와 별개이므로 미합의·미구현 상태로 다음 협의에 남기고 서버 반영/해결로 표시하지 않는다. 자체 UI 변경이어서 별도 Backend 작업 요청 댓글은 만들지 않았다.
+
+
 ## 2026-10-25 — 레이드 현황 카드 추가 표시 데이터 조사·후속 등록
 
 사용자가 요청한 내 역할(4인은 파티장/파티원), 참가 캐릭터명, 레이드 이름·난이도의 데이터 포함 여부를 조사했다. 기존 CycleOwnRoomsPage는 제목/상태·인원만 표시하며 기본 `/v2/me/raid-room-memberships`에 membership-actions-1을 지정해 읽는다. 정상 content에는 target_role·room.my_target_role/app_capacity와 items의 raid_id/difficulty_id/game_party_size가 있고 profile.viewer.role도 있어 역할/레이드 표시에는 새 API가 필요하지 않다. weekly.catalog를 기존 이름 매핑에 재사용할 수 있다.

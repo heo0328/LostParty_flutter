@@ -1,19 +1,10 @@
 # NEXT WORK — 구간별 디바이스 인수 / 현재 2구간 가입
 
-## 보완 대기 — 레이드 현황 참가 카드 정보 확장 (2026-10-25 조사만)
+## 참가 카드 UI 연결 완료 / 다음은 표시 확인·신청 레벨 협의
 
-사용자 요청: 카드에 내 공대장/공대원(4인은 파티장/파티원), 내 참가 캐릭터명, 레이드 이름/난이도를 표시할 데이터가 있는지 먼저 확인하고 추가작업은 후속 기록한다. **이번 UI/모델/API 수정은 하지 않는다.** 현재 우선대기인 신청자 아이템레벨 보완과는 별개다.
+2026-10-25 정상 참가 카드의 역할·내 캐릭터·레이드/난이도 연결 완료. 기존 로컬 UUID·회원환경 scope/카탈로그 재사용, 이름 누락은 **캐릭터명 확인 실패**. 신규5+직접회귀70=75PASS/변경3파일 분석0·포맷/diffcheck. 자세한 변경/검증은 DEV_LOG·설계37 §37.60. 사용자 기기에서 카드 정보·좁은화면 줄바꿈과 C/N·캐시이름 갱신만 확인한다. 신청·기록·복구 표시/연결, 목록 갱신 시점·API/쓰기·서버/DB/dev/main은 유지했다. 작업브랜치 commit/push로 보관하고 기존 무관 dirty는 보존한다.
 
-| 항목 | 현재 정상 참가 목록의 근거 | 후속 작업 |
-|---|---|---|
-| 내 역할 | membership-actions-1 viewer.role, 기본 content.target_role/room.my_target_role=leader·member·none | 추가 API 없이 카드 표시 연결. 4/8인 모집 규모(app_capacity·raid game_party_size)를 확인해 파티장/파티원·공대장/공대원 문구를 정하고 현재 참가자 수로 규모를 추정하지 않음 |
-| 내 참가 캐릭터명 | content.assignments에 character_id/round/item/실제T/CM은 있으나 character_name/display는 없음 | 기존 회원별 내계정 자료의 정확 UUID 연결을 재사용할 수 있는지 먼저 확인. 누락·캐시수명·회원/T·여러Assignment/캐릭터 대응까지 안전하지 않으면 목록의 본인 표시 투영 계약 보완을 협의. 카드별 상세GET·다른 캐릭터/공대장 이름으로 대체 금지 |
-| 레이드·난이도 | content.room.items/game_items의 raid_id/difficulty_id/game_party_size, 앱 CycleRoomCard.items에 이미 보관 | widget.weekly.catalog(기존 계정 카탈로그)로 이름/난이도명 매핑·묶음이면 항목별 표시. 카드별 API 불필요 |
-
-현재 CycleOwnRoomsPage는 제목과 상태/인원만 표시한다. CycleOwnRow.profile은 content에서 card만 옮기고 assignments/target_role을 별도 표시 모델로 노출하지 않으므로 새 표시 getter/모델 연결이 필요하다. 역할은 profile.viewer에서 직접 알 수 있다. 실행06ea4b21의 membership_readers.legacy_membership 및 memberships는 assignments에 character_id만 넣고 이름을 주지 않는 것을 확인했다. 기록 단건의 record.assignments에는 character_name이 있지만 목록 entry에는 record가 없고, 과거/복구 행 content=null이면 정상 참가 card 데이터도 없다. 기록의 이름이 이미 목록에 있다고 해석하지 않는다.
-
-차후 범위는 우선 정상 ‘참가 중’ 카드 표시다. 신청 중은 아직 역할/좌석이 확정된 참가자가 아니며, 기록·relation_only/복구 content없음은 기존 상태 안내/식별자·읽기전용을 보존하고 현재 역할/현재 캐릭터를 과거에 대입하지 않는다. 전체3탭의 표시 범위/정렬·묶음·좁은화면은 구현 착수 설계에서 정한다. 서버 변경이 필요하면 그때 해당 기존 Issue와 협의하며 지금 새 구현을 요청하거나 추가 API를 만들지 않는다. 조사/문서diffcheck만·Flutter시험/실기기/서버·DB/dev/main 변경 없음.
-
+다음 별도 협의: [Backend6386261019](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386261019), source b97eee2aa813a330d740318026617005dbac1c5e는 실제 신청 레벨 저장 누락을 확인하고 display.item_level/source/fetched_at 제안을 전달했다. 신규 snapshot·기존 안전한 current_saved·unavailable 구분의 Flutter 소비 검토/회신이 필요하다. **아직 제안이며 서버 보완 구현/반영은 대기**다. 이번 참가 카드 UI에 신청자 레벨/새 프로필 변경을 섞지 않았다. 아래 기존 보완 요청 상태보다 이 최신 제안 수신 상태를 우선한다.
 ## 현재 작업 — 신청 카드 문구 정리·아이템레벨 미표시 확인 (2026-10-25)
 
 문구/기록 `58600023` 작업브랜치 commit/push, [Issue26 사용자 결과·레벨 누락6386174761](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386174761) 회신·게시본문 MATCH 확인. 다음 Backend는 기존신청 포함 레벨 출처/nullable·소유안전 보완 인계, Flutter는 해당항목만 후속 연결/확인이다. dev/main 미반영·기존 브랜치 유지다.

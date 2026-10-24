@@ -4,6 +4,7 @@ import '../../../account/presentation/viewmodels/member_weekly_view_model.dart';
 import '../../../account/presentation/widgets/member_cycle_selector.dart';
 import '../../data/cycle_read_repository.dart';
 import '../viewmodels/cycle_read_view_model.dart';
+import '../viewmodels/cycle_own_card_info.dart';
 import '../widgets/recruitment_section.dart';
 import '../viewmodels/cycle_participation_controller.dart';
 import '../widgets/cycle_participation_widgets.dart';
@@ -122,9 +123,17 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([m, widget.weekly]),
+    listenable: Listenable.merge([m, widget.weekly, widget.weekly.model]),
     builder: (context, _) {
       final cycles = widget.weekly.cycles;
+      final hasParticipant =
+          m.tab == 0 && m.visibleRows.any(CycleOwnCardInfo.supports);
+      final names = hasParticipant
+          ? scopedParticipationNames(
+              widget.weekly.model.sections.expand((s) => s.characters),
+              widget.weekly.model.runtime.scope,
+            )
+          : const <String, String>{};
       return Scaffold(
         appBar: AppBar(
           title: const Text('레이드 현황'),
@@ -204,30 +213,34 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
                                   ? '신청한 모집'
                                   : '참가 이력'),
                         ),
-                        subtitle: Text(
-                          row.profile?.recovery['state'] != null &&
-                                  row.profile!.recovery['state'] != 'none'
-                              ? membershipRecoveryLabel(row.profile!)
-                              : row.recoveryOnly
-                              ? '주차 연결 정보를 확인해야 합니다. 최신 상태를 다시 불러와 주세요.'
-                              : row.participationState == 'not_selected' ||
-                                    row.participationState == 'legacy_intent'
-                              ? '선택 주차 참가 없음 · 방 관계 보존'
-                              : row.participationState == 'review_required'
-                              ? '참가 정보 확인 필요'
-                              : m.tab == 1
-                              ? '승인 대기'
-                              : row.participationState == 'completed'
-                              ? '완료'
-                              : row.participationState == 'stopped'
-                              ? '미완료 종료'
-                              : row.participationState == 'cancelled' ||
-                                    row.historyOnly ||
-                                    row.state == 'ended'
-                              ? '참가 종료'
-                              : row.profile != null && row.card == null
-                              ? '참가 중'
-                              : '${row.card?.count ?? 0}/${row.card?.capacity ?? 0}명',
+                        subtitle: _cardSubtitle(
+                          row,
+                          names,
+                          Text(
+                            row.profile?.recovery['state'] != null &&
+                                    row.profile!.recovery['state'] != 'none'
+                                ? membershipRecoveryLabel(row.profile!)
+                                : row.recoveryOnly
+                                ? '주차 연결 정보를 확인해야 합니다. 최신 상태를 다시 불러와 주세요.'
+                                : row.participationState == 'not_selected' ||
+                                      row.participationState == 'legacy_intent'
+                                ? '선택 주차 참가 없음 · 방 관계 보존'
+                                : row.participationState == 'review_required'
+                                ? '참가 정보 확인 필요'
+                                : m.tab == 1
+                                ? '승인 대기'
+                                : row.participationState == 'completed'
+                                ? '완료'
+                                : row.participationState == 'stopped'
+                                ? '미완료 종료'
+                                : row.participationState == 'cancelled' ||
+                                      row.historyOnly ||
+                                      row.state == 'ended'
+                                ? '참가 종료'
+                                : row.profile != null && row.card == null
+                                ? '참가 중'
+                                : '${row.card?.count ?? 0}/${row.card?.capacity ?? 0}명',
+                          ),
                         ),
                         trailing:
                             m.tab == 1 &&
@@ -265,6 +278,53 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
       );
     },
   );
+
+  Widget _cardSubtitle(
+    CycleOwnRow row,
+    Map<String, String> names,
+    Widget status,
+  ) {
+    final info = m.tab == 0 && CycleOwnCardInfo.supports(row)
+        ? CycleOwnCardInfo.fromRow(row, names, widget.weekly.catalog)
+        : null;
+    if (info == null) return status;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  child: Text(
+                    info.role,
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                ),
+              ),
+              for (final name in info.characters) Text(name),
+            ],
+          ),
+          const SizedBox(height: 4),
+          for (final raid in info.raids) Text(raid),
+          const SizedBox(height: 4),
+          status,
+        ],
+      ),
+    );
+  }
 
   bool _recordRow(CycleOwnRow row) =>
       row.profile != null && (m.tab == 2 || row.profile!.isRecord);
