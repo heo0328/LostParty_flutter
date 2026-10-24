@@ -2,6 +2,8 @@
 
 ## 2026-10-24 — Issue26 신청·캐릭터 변경 통합 후보 연결
 
+구현 `f89c009f` commit/push 및 [Issue26 결과6382646003](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6382646003) 회신·본문 MATCH 확인. GitHub 연결 작성403으로 기존 CLI 인증을 사용했다. 작업 브랜치 유지·dev/main 미반영, 무관 dirty 보존이다.
+
 - 새로 가능해진 흐름: 실행계약177/Backend484ca171의 admission-character-candidates를 apply/change_character에 연결했다. 전용 Gateway/불변 DTO가 닫힌 구조·역할 전투력/actor·제외집계/응답 크기를 확인하고, 시트 ViewModel이 동일 snapshot 전페이지를 수집한 뒤 표시정보만 기존 characters()에 결합한다. 누락은 1회 재조회 후 오류이며 fallback/조용한 제외/자동 갱신은 없다. 원후보0·조건탈락·전투력 누락/미달·조회 실패를 구분한다.
 - 변경 UX: 기존 원정대별 카드/레벨 순서·대표/허용 선호 역할을 유지하고 불가 역할을 차단한다. 반대 파티 이동은 기존→대상 파티와 캐릭터·역할/주차를 확인받는다. 최신 context·actor/교체 revision이 바뀌면 POST0 후 후보·확인을 갱신한다. 신청 수락 불가는 사유 표시/대기 유지·거절/철회 가능을 보존한다.
 - 상태 소유: 후보·선택·미리보기는 시트, 원명령·ACK/재송은 app-owned Controller다. 회원/환경·세션/readGeneration·epoch/dispose를 격리하고, 원key/방/T/intent 일치 ACK만 시트를 닫는다. 결과 불명은 같은 본문/키로 재송하고 ACK 뒤 후속 조회 실패는 중복 쓰기하지 않는다. 전체 후보 수집 후의 역할 판정도 모든 페이지를 사용하도록 검수·보강했다.

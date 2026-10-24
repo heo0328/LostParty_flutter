@@ -2,6 +2,8 @@
 
 ## 구현 결과 — Issue26 통합 후보·자격 연결 (2026-10-24)
 
+구현 **`f89c009f`** 작업 브랜치 commit/push. [Issue26 결과6382646003](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6382646003)에 정확 SHA/493PASS·미확인 인수를 회신하고 게시본문 MATCH 확인했다. 연결 도구 작성403은 기존 GitHub CLI 인증으로 게시했다. 같은 정책 재수용/전체시험 반복은 요청하지 않았다. dev/main 미반영·작업 브랜치 유지다.
+
 신청·캐릭터 변경 두 intent의 후보 조회/선택·최신 확인·원ACK 성공 식별을 함께 구현했다. 실행 기준은 Backend `484ca171`의 계약177이며, 아래 착수 계획과 이전의 ‘문서만/구현 대기’ 상태는 이번 결과로 갱신한다. 전용 AdmissionCandidatesGateway/불변 DTO, 순차 전페이지 수집과 시트 소유 AdmissionSelectionViewModel을 추가했고 기존 쓰기 본문·멱등키·원pending 복구는 유지했다.
 
 - 자격은 신규 GET만 사용한다. 동일 snapshot/actor/정책/세대/계수·집계, UUID 순서·커서·최종 개수를 검사한 뒤 한 번에 표시하며 응답 1MiB를 제한한다. 기본 캐릭터 목록으로 대체하지 않는다. 기존 characters()는 표시·대표·선호 역할 결합용이며 UUID/등록 연결 누락 시 1회 재조회 후 명시 오류다.
