@@ -2,6 +2,8 @@
 
 ## 현재 단일 후속 — 신청 시 동일 딜러 직업 구성 검사 (2026-10-24)
 
+문서 `ef4ec432` commit/push. [Issue13 수정 요청6380773556](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6380773556) 게시본문 MATCH 확인. Backend 기존validator 재사용/실행 인계 대기이며 앱·서버 수정 완료가 아니다.
+
 사용자가 4인방의 동일딜러 직업 신청이었다고 보완했고, 승인시점이 아닌 **신청 단계부터 기존 구성상 불가능한 신청 차단**을 요청했다. 기존 실패의 원code는 없지만 서버15e143ae에서 실제 누락 경계를 확인했다. 상세 제품/협업 기준은 [설계37 §37.48](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md).
 
 현재 Backend cycle_commands.preflight는 apply에 pending=true로 cycle_admission.admit_bundle(validate_only=true)를 호출하며 그 경로는 core._slot을 건너뛴다. 실제 신청POST도 pending=true다. 그 때문에 확정 참가자와 동일딜러 직업이어도 신청이 생성될 수 있고 승인시에야 ROOM_COMPOSITION_CONFLICT가 발생한다. Flutter 신청UI·body/Controller는 서버 permission 거절을 이미 표시/차단하므로 앱에 멤버전체GET/별도 구성정책을 중복 추가하지 않는다.

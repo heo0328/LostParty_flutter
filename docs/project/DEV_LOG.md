@@ -2,6 +2,8 @@
 
 ## 2026-10-24 — 신청 단계 동일 딜러 직업 제한 보완 요청
 
+문서 `ef4ec432` commit/push. [Issue13 수정 요청6380773556](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6380773556) 게시본문 MATCH 확인. 사용자 확정 범위·서버누락 근거/담당/완료조건·pending미점유/8인반대파티 보존을 전달했다. 다음은 Backend 구현/개발반영 인계 후 Flutter 직접 소비 확인이다.
+
 - 사용자 정책: 당시 4인방의 동일딜러 직업 신청이었음을 보완했고 신청할 때부터 불가능해야 한다고 요청했다. 최초실패code는 여전히 없으나 별도의 서버 누락은 source15e143ae 정적대조로 확인했다.
 - 근거: cycle_commands.preflight(apply)와 admit(applying=true)는 cycle_admission.admit_bundle의 pending=true 경로이고, 해당 경로의 slot=None if pending이 기존 participation_core._slot의 동일파티 딜러직업 중복검사를 생략한다. Flutter p.permission.allowed 기반 비활성/사유표시·body/Controller 권한재검사는 존재한다.
 - 결정/다음: 설계37 §37.48/NEXT_WORK에 서버 context/실제신청POST의 기존구성검사 재사용·승인최종검사 유지·8인반대파티/C/N·pending미점유 보존과 인계조건을 기록하고 Issue13에 전달한다. 로컬 UI만막기/정책복제·대기신청끼리 자리선점/중복금지를 추가하지 않는다.
