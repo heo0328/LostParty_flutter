@@ -1,5 +1,14 @@
 # 개발 이력
 
+## 2026-10-25 — Issue26 신청자 레벨 보완 소비 합의·회신
+
+Backend6386261019/b97eee2a 제안과 Flutter da50f972의 ApplicationDisplayItem(display string|null map)/신청 카드(item_level만 소비)를 대조했다. 세 키는 기존 map으로 수용 가능하며 기존 파서를 완화할 필요가 없다. 다만 출처/시각 의미 검증과 현재저장 표시 연결은 후속 구현이다. 사용자 승인으로 신규 신청 실제 snapshot 보존·기존 누락만 안전한 current_saved·연결불가 unavailable을 수용했고 snapshot/현재 저장/조회불가 문구를 설계37 §37.61에 확정했다. 추가 API·provider·SQL/DB backfill/원ACK 변경 없이 사용자 오해와 불가능한 확인 요구를 줄이는 선택이다.
+
+[Issue26 합의6386405233](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386405233) 게시 후 본문 재조회 MATCH 확인. 다음 Backend는 구현·실제 POST→저장→HTTP 및 소유/누락/시각·기존 원ACK/조회불변 직접검증·정확 실행계약/개발 반영 여부 인계, Flutter는 인계 후 좁은 표시 연결/검증 담당이다. 새로 가능해진 것은 계약 합의/후속 책임 확정이며 앱 기능은 아직 변경하지 않았다. 기존 승인/거절·철회/목록 갱신·원명령/ACK는 수정하지 않았고 실회원/기기 레벨 성공은 미확인이다. 정상 통과1/2 전체를 반복 요청하지 않았다.
+
+이번은 기능 코드/의존성 불변·문서diffcheck/정적 소비 검토와 댓글 검증만 수행, Flutter시험은 반복하지 않았다. 서버/DB·기기/dev/main 변경 없음. feature/raid-recruitment-scheduling에 관련 문서만 commit/push해 보관하고 기존 무관 dirty는 보존한다.
+
+
 ## 2026-10-25 — 레이드 현황 참가 카드 정보 연결
 
 새로 가능해진 흐름: 정상 ‘참가 중’ 카드에 내 역할(모집정원4는 파티장/파티원,8은 공대장/공대원), 내 참가 캐릭터명, 항목별 레이드·난이도를 표시했다. 기존 membership-actions-1 viewer/assignments/items와 weekly.catalog를 재사용한다. MemberAccountViewModel의 전체 sections(표시숨김 캐릭터 포함)에서 현재 회원·환경 scope 및 ref/observation의 계정·캐릭터 UUID가 일치하는 이름만 인덱싱한다. 실제 T/CM·item/round가 맞는 active assignment만 연결하고 같은 캐릭터는 중복 표시하지 않는다. 이름이 없으면 사용자 최신 지정대로 **캐릭터명 확인 실패**로 표시하며 대표캐릭터나 다른 이름을 대입하지 않는다.

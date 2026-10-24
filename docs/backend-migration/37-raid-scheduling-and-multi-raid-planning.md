@@ -2271,3 +2271,12 @@ Backend06ea4b21의 합의 프로필을 공대장 신청목록/일반v2상세에 
 2026-10-25 사용자 승인: ‘참가 중’ 카드에 내 역할(모집정원4: 파티장/파티원,8: 공대장/공대원), 참가 캐릭터명, 항목별 레이드 이름/난이도를 표시한다. 기존 membership-actions-1 viewer.role/content.assignments와 room.items/app_capacity·계정 카탈로그를 사용하고 별도 카드별 조회를 하지 않는다. 현재 회원·환경의 전체 계정 캐시에서 정확 UUID와 관측자료 계정/캐릭터 연결이 일치하는 이름만 재사용하며 실제 주차/CM·item/round의 active assignment만 표시한다. 여러 항목의 같은 캐릭터는 중복 제거하고 다른 캐릭터는 모두 표시한다. 이름 매칭 실패는 ‘캐릭터명 확인 실패’이며 사용자 확인을 요구하는 문구/대표이름 대체를 하지 않는다.
 
 계정 캐시 변경은 기존 통지를 통해 표시만 갱신하고 서버 목록 갱신 시점은 바꾸지 않는다. 신청·과거 기록·복구/선택 주차 참가 없음에는 현재 캐릭터/역할을 대입하지 않는다. 제목·인원/상태·실제 주차와 기록 anchor 이동·신청철회/명령·승인자격은 보존한다. 정상 카드 역할/이름은 좁은 화면에서 줄바꿈 가능하게 표시한다. 데이터 원본과 쓰기 권한은 기존 Repository/VM이 유지하고 전용 표시 투영은 업무 정책이나 저장소를 새로 소유하지 않는다.
+### 37.61 신청자 아이템레벨 누락 보완의 출처·표시 합의
+
+2026-10-25 사용자 승인으로 Backend b97eee2a/6386261019 제안을 수용했다. application-display-1 display의 item_level(string|null), item_level_source(application_snapshot/current_saved/unavailable), item_level_fetched_at(원본확인 UTC시각|null)을 사용한다. 현재 동적 string|null map은 키 추가를 수용하며 후속 앱 연결은 의미/정합성 검증과 출처 구분 표시를 담당한다. 기존 닫힌 top-level/쓰기 DTO 검증을 완화하지 않는다. 이번은 합의이고 실행 구현/개발 반영은 별도 인계를 따른다.
+
+신규 신청은 실제 레벨·confirmed_at을 해당 모집 신청에서만 저장한다. 실제 저장 snapshot을 우선하고 성장 후 현재값으로 덮지 않는다. 기존 누락 신청은 신청자/캐릭터·ownership_revision/현재소유 및 confirmed/active가 모두 일치할 때만 기존 bulk 자료의 current_saved로 읽기 보완한다. 과거값을 만들어 DB에 채우거나 원신청 revision/ACK를 바꾸지 않는다. 소유/연결 불가·미확인/퇴역/값 없음은 unavailable이며 실제 DB 실패는 기존 오류다. display_reason은 분석 연결 의미를 유지한다.
+
+UI는 snapshot ‘아이템 레벨 1700’, current_saved ‘아이템 레벨 1750 · 현재 저장 정보’, unavailable ‘아이템 레벨 조회 불가’로 구분한다. 사용자가 해결할 수 없는 값 없음에 확인/갱신을 요구하지 않고 0·최소조건·전투력으로 대체하지 않는다. fetched_at을 신청 created_at으로 채우지 않으며 카드에 새 시각 행은 만들지 않는다. 현재 저장값을 최신 외부조회 결과나 신청 당시 값이라고 표현하지 않는다. 레벨 표시는 수락 가능 여부 판정이 아니며 기존 승인 검증/POST를 유지한다.
+
+기존 목록 응답만 소비하고 추가 카드별 조회/provider/자동갱신·SQL/migration이나 목록 갱신 시점 변경은 없다. Backend 실행 인계 후 앱의 의미 검증/표시를 연결하고 개발 반영 뒤 레벨/문구만 후속 확인한다. 기존 통과1/2 전체나 Flutter 전체시험을 이유 없이 반복하지 않는다. 합의 회신/담당·대기는 NEXT_WORK, 경과는 DEV_LOG를 따른다.

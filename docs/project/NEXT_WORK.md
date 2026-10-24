@@ -1,10 +1,14 @@
 # NEXT WORK — 구간별 디바이스 인수 / 현재 2구간 가입
 
-## 참가 카드 UI 연결 완료 / 다음은 표시 확인·신청 레벨 협의
+## 현재 대기 — 신청자 아이템레벨 보완 실행 인계
 
-2026-10-25 정상 참가 카드의 역할·내 캐릭터·레이드/난이도 연결 완료. 기존 로컬 UUID·회원환경 scope/카탈로그 재사용, 이름 누락은 **캐릭터명 확인 실패**. 신규5+직접회귀70=75PASS/변경3파일 분석0·포맷/diffcheck. 자세한 변경/검증은 DEV_LOG·설계37 §37.60. 사용자 기기에서 카드 정보·좁은화면 줄바꿈과 C/N·캐시이름 갱신만 확인한다. 신청·기록·복구 표시/연결, 목록 갱신 시점·API/쓰기·서버/DB/dev/main은 유지했다. 작업브랜치 commit/push로 보관하고 기존 무관 dirty는 보존한다.
+2026-10-25 사용자 승인으로 Backend6386261019/source b97eee2aa813a330d740318026617005dbac1c5e 제안을 수용하고 [Flutter 합의 회신6386405233](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386405233)에 소비 가능/표시 기준을 전달했다. 게시본문 MATCH 확인. **Backend 구현·검증/실행 계약/개발 반영 인계는 아직 대기**다. 아래 과거 소비검토 필요/미합의 표현보다 이 합의가 우선하며 실제 레벨 표시 문제를 해결 완료로 간주하지 않는다.
 
-다음 별도 협의: [Backend6386261019](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386261019), source b97eee2aa813a330d740318026617005dbac1c5e는 실제 신청 레벨 저장 누락을 확인하고 display.item_level/source/fetched_at 제안을 전달했다. 신규 snapshot·기존 안전한 current_saved·unavailable 구분의 Flutter 소비 검토/회신이 필요하다. **아직 제안이며 서버 보완 구현/반영은 대기**다. 이번 참가 카드 UI에 신청자 레벨/새 프로필 변경을 섞지 않았다. 아래 기존 보완 요청 상태보다 이 최신 제안 수신 상태를 우선한다.
+다음 Backend는 실제 POST→저장display→HTTP목록, 기존 누락·성장 후 snapshot 보존·소유/nullable/시각·기존 조회/쓰기/ACK를 검증하고 정확 source/실행 계약·개발 반영 여부를 인계한다. Flutter는 인계 후 기존 application-display-1의 동적 display 세 키 의미 검증과 출처 표시를 연결한다. 현재 모델은 string|null map이어서 키 추가를 수용하지만 카드에 출처 구분은 아직 구현되지 않았다. 문구는 snapshot ‘아이템 레벨 1700’, current_saved ‘아이템 레벨 1750 · 현재 저장 정보’, unavailable ‘아이템 레벨 조회 불가’로 확정했다. fetched_at은 원본시각으로 보존하고 신청시각과 섞지 않으며 새 시각 행은 추가하지 않는다. 자세한 장기 기준은 설계37 §37.61.
+
+후속 앱 완료 조건: 출처/값/nullable 정합성·snapshot/현재값 혼동·소유연결/실제조회 오류 구분의 직접 경계 검증, 승인/거절/철회·원ACK/목록 시점 보존. 개발 반영 뒤 레벨·문구만 소수 기기 확인한다. 추가 API/provider/자동갱신·SQL/migration/임의backfill·자격/원POST 변경·전체통과1/2 반복 요청은 없다. 이번은 합의/문서만이며 기능 코드·서버/DB·기기/dev/main 변경/Flutter시험 반복 없음, 문서diffcheck·내용/코드 대조 후 작업브랜치 commit/push로 보관한다.
+
+참가 카드 UI da50f972는 별도 완료/기기 표시 대기다(역할·로컬 캐릭터명·레이드/난이도, 75PASS/분석0). 이름 누락은 ‘캐릭터명 확인 실패’. 상세 DEV_LOG·설계37 §37.60. 기존 무관 dirty 보존·feature/raid-recruitment-scheduling 유지.
 ## 현재 작업 — 신청 카드 문구 정리·아이템레벨 미표시 확인 (2026-10-25)
 
 문구/기록 `58600023` 작업브랜치 commit/push, [Issue26 사용자 결과·레벨 누락6386174761](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386174761) 회신·게시본문 MATCH 확인. 다음 Backend는 기존신청 포함 레벨 출처/nullable·소유안전 보완 인계, Flutter는 해당항목만 후속 연결/확인이다. dev/main 미반영·기존 브랜치 유지다.
