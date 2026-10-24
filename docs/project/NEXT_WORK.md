@@ -1,5 +1,19 @@
 # NEXT WORK — 구간별 디바이스 인수 / 현재 2구간 가입
 
+## 보완 대기 — 레이드 현황 참가 카드 정보 확장 (2026-10-25 조사만)
+
+사용자 요청: 카드에 내 공대장/공대원(4인은 파티장/파티원), 내 참가 캐릭터명, 레이드 이름/난이도를 표시할 데이터가 있는지 먼저 확인하고 추가작업은 후속 기록한다. **이번 UI/모델/API 수정은 하지 않는다.** 현재 우선대기인 신청자 아이템레벨 보완과는 별개다.
+
+| 항목 | 현재 정상 참가 목록의 근거 | 후속 작업 |
+|---|---|---|
+| 내 역할 | membership-actions-1 viewer.role, 기본 content.target_role/room.my_target_role=leader·member·none | 추가 API 없이 카드 표시 연결. 4/8인 모집 규모(app_capacity·raid game_party_size)를 확인해 파티장/파티원·공대장/공대원 문구를 정하고 현재 참가자 수로 규모를 추정하지 않음 |
+| 내 참가 캐릭터명 | content.assignments에 character_id/round/item/실제T/CM은 있으나 character_name/display는 없음 | 기존 회원별 내계정 자료의 정확 UUID 연결을 재사용할 수 있는지 먼저 확인. 누락·캐시수명·회원/T·여러Assignment/캐릭터 대응까지 안전하지 않으면 목록의 본인 표시 투영 계약 보완을 협의. 카드별 상세GET·다른 캐릭터/공대장 이름으로 대체 금지 |
+| 레이드·난이도 | content.room.items/game_items의 raid_id/difficulty_id/game_party_size, 앱 CycleRoomCard.items에 이미 보관 | widget.weekly.catalog(기존 계정 카탈로그)로 이름/난이도명 매핑·묶음이면 항목별 표시. 카드별 API 불필요 |
+
+현재 CycleOwnRoomsPage는 제목과 상태/인원만 표시한다. CycleOwnRow.profile은 content에서 card만 옮기고 assignments/target_role을 별도 표시 모델로 노출하지 않으므로 새 표시 getter/모델 연결이 필요하다. 역할은 profile.viewer에서 직접 알 수 있다. 실행06ea4b21의 membership_readers.legacy_membership 및 memberships는 assignments에 character_id만 넣고 이름을 주지 않는 것을 확인했다. 기록 단건의 record.assignments에는 character_name이 있지만 목록 entry에는 record가 없고, 과거/복구 행 content=null이면 정상 참가 card 데이터도 없다. 기록의 이름이 이미 목록에 있다고 해석하지 않는다.
+
+차후 범위는 우선 정상 ‘참가 중’ 카드 표시다. 신청 중은 아직 역할/좌석이 확정된 참가자가 아니며, 기록·relation_only/복구 content없음은 기존 상태 안내/식별자·읽기전용을 보존하고 현재 역할/현재 캐릭터를 과거에 대입하지 않는다. 전체3탭의 표시 범위/정렬·묶음·좁은화면은 구현 착수 설계에서 정한다. 서버 변경이 필요하면 그때 해당 기존 Issue와 협의하며 지금 새 구현을 요청하거나 추가 API를 만들지 않는다. 조사/문서diffcheck만·Flutter시험/실기기/서버·DB/dev/main 변경 없음.
+
 ## 현재 작업 — 신청 카드 문구 정리·아이템레벨 미표시 확인 (2026-10-25)
 
 문구/기록 `58600023` 작업브랜치 commit/push, [Issue26 사용자 결과·레벨 누락6386174761](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386174761) 회신·게시본문 MATCH 확인. 다음 Backend는 기존신청 포함 레벨 출처/nullable·소유안전 보완 인계, Flutter는 해당항목만 후속 연결/확인이다. dev/main 미반영·기존 브랜치 유지다.

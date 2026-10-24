@@ -1,5 +1,15 @@
 # 개발 이력
 
+## 2026-10-25 — 레이드 현황 카드 추가 표시 데이터 조사·후속 등록
+
+사용자가 요청한 내 역할(4인은 파티장/파티원), 참가 캐릭터명, 레이드 이름·난이도의 데이터 포함 여부를 조사했다. 기존 CycleOwnRoomsPage는 제목/상태·인원만 표시하며 기본 `/v2/me/raid-room-memberships`에 membership-actions-1을 지정해 읽는다. 정상 content에는 target_role·room.my_target_role/app_capacity와 items의 raid_id/difficulty_id/game_party_size가 있고 profile.viewer.role도 있어 역할/레이드 표시에는 새 API가 필요하지 않다. weekly.catalog를 기존 이름 매핑에 재사용할 수 있다.
+
+참가 캐릭터는 실행06ea4b21 membership_readers.legacy_membership/content.assignments가 character_id/round·item/T·CM만 제공하고 이름/display는 없다. Flutter CycleOwnRow.profile은 card만 가져와 별도 역할/Assignment 표시 모델을 노출하지 않는다. 기록 단건 snapshot에는 character_name이 있지만 목록 entry에는 record가 없으며 과거/복구 content=null도 구별해야 한다. 현재 참가 목록에 캐릭터 이름까지 이미 있다고 판단하지 않았다.
+
+기존 회원별 내계정 UUID·이름 자료 재사용/접근수명을 먼저 확인하고 불완전하면 본인 목록 표시 투영을 협의하는 후속으로 기록했다. 카드별 상세GET/임의 공대장·현재 캐릭터 대입은 하지 않는다. 정상 참가 카드와 신청중/기록/복구 상태의 의미를 분리하고 현재 역할/캐릭터를 옛 기록으로 바꾸지 않는다. 정확 적용범위와 카드 디자인은 이후 구현 설계에서 확정한다.
+
+이번은 사용자 지시대로 조사·기록만이며 UI/모델/계약·서버/DB·기기·API 호출·Flutter시험/dev/main 변경이 없다. 문서diffcheck/코드·서버source 대조만 수행하고 기존 작업브랜치에 문서commit/push로 보관한다. 신규 Backend 구현 요청 댓글은 만들지 않았으며 현재 신청자 아이템레벨 대응 대기도 유지한다. 무관 dirty는 보존한다.
+
 ## 2026-10-25 — 신청 카드 문구 정리·아이템레벨 누락 경로 확인
 
 구현/문서 `58600023` commit/push. [Issue26 사용자 인수·누락 요청6386174761](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386174761) 게시·본문 MATCH 확인, 기존신청 포함 Backend 레벨 보완 인계 대기로 정리했다. dev/main 미반영·무관 dirty 보존이다.
