@@ -674,8 +674,14 @@ class _BackendRecruitmentDetailPageState
     final role = c?['selected_role'] == 'support' ? '서포터' : '딜러';
     final leader = member['room_role'] == 'leader';
     final comparison = member['comparison'] as Map?;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.outline),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -712,6 +718,13 @@ class _BackendRecruitmentDetailPageState
                 ),
                 Text(
                   '$role${leader ? ' · 공대장' : ''}${display?['class_name'] == null ? '' : ' · ${display!['class_name']}'}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                Text(
+                  '아이템레벨 ${display?['item_level'] ?? '확인 필요'}',
                   style: const TextStyle(
                     fontSize: 11,
                     color: AppColors.textSecondary,

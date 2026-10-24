@@ -9,6 +9,7 @@ import '../viewmodels/cycle_participation_controller.dart';
 import '../viewmodels/admission_selection_view_model.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
 import 'recruitment_section.dart';
+import 'recruitment_character_card.dart';
 import 'cycle_session_display_widgets.dart';
 
 class CycleCommandBanner extends StatelessWidget {
@@ -489,31 +490,49 @@ class _CycleRoomApplicationsState extends State<CycleRoomApplications> {
       if (opened && !loading && error == null && rows.isEmpty)
         const Text('대기 중인 신청이 없습니다.'),
       for (final row in rows)
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(
-            '${(row['display'] as Map)['character_name'] ?? '신청 캐릭터'} · ${row['selected_role'] == 'support' ? '서포터' : '딜러'}',
-            style: const TextStyle(fontSize: 12),
-          ),
-          subtitle: const Text(
-            '승인 대기 · 좌석 미확정',
-            style: TextStyle(fontSize: 11),
-          ),
-          trailing: Wrap(
+        RecruitmentCharacterCard(
+          name:
+              (row['display'] as Map)['character_name'] as String? ?? '신청 캐릭터',
+          className:
+              (row['display'] as Map)['class_name'] as String? ?? '직업 미확인',
+          role: row['selected_role'] == 'support' ? '서포터' : '딜러',
+          itemLevel: (row['display'] as Map)['item_level'],
+          power: null,
+          status: '승인 대기 · 좌석 미확정\n오류 상태 · 확인 필요',
+          actions: Row(
             children: [
               for (final action in ['reject', 'approve'])
-                TextButton(
-                  onPressed: widget.controller.canAct
-                      ? () => showCycleApplicationDecision(
-                          context,
-                          widget.controller,
-                          row['application_id'] as String,
-                          widget.target,
-                          action,
-                          room: widget.room,
-                        )
-                      : null,
-                  child: Text(action == 'approve' ? '승인' : '거절'),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: action == 'reject' ? 8 : 0),
+                    child: action == 'approve'
+                        ? FilledButton(
+                            onPressed: widget.controller.canAct
+                                ? () => showCycleApplicationDecision(
+                                    context,
+                                    widget.controller,
+                                    row['application_id'] as String,
+                                    widget.target,
+                                    action,
+                                    room: widget.room,
+                                  )
+                                : null,
+                            child: const Text('승인'),
+                          )
+                        : OutlinedButton(
+                            onPressed: widget.controller.canAct
+                                ? () => showCycleApplicationDecision(
+                                    context,
+                                    widget.controller,
+                                    row['application_id'] as String,
+                                    widget.target,
+                                    action,
+                                    room: widget.room,
+                                  )
+                                : null,
+                            child: const Text('거절'),
+                          ),
+                  ),
                 ),
             ],
           ),
