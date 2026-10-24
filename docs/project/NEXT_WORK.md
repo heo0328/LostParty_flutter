@@ -2,6 +2,8 @@
 
 ## 완료 수정 — 신청목록 카드의 대상주차 상세 연결
 
+구현 `63b77872` commit/push. [Issue13 결과6380903829](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6380903829) 게시본문 MATCH 확인. 실제N신청 상세 재인수는 미확인, 별도후보계약 요청은 유지한다.
+
 사용자 다음주 신청카드 진입시 멤버/정보 누락·다음주 개방버튼 노출을 보고했다. 실제 BackendApp의 CycleOwnRoomsPage.onRoom이 모든 탭에 membershipDetailLocation을 적용해 신청자까지 활성Member 전용reader로 보내는 회귀를 확인했다. 신청목록에는 별도의 일반상세 callback을 전달하고 선택한 실제T를 보존한다. 참가중/기록의 profile·anchor, 신청철회/원요청/필터/캐시는 유지한다. 조회실패화면의 무조건open/reopen 노출은 이 잘못된진입의 부수증상이며 이번은 신청경로 직접원인만 수정한다.
 
 구현순서: 명시 신청callback/일반상세경로 → 실제 선택T/신청·참가·기록 경로분리 경계검증 → 관련직접 reader/목록·신청 시험/변경분석·포맷/diffcheck → 문서·Issue13 결과회신·구간commit/push. Router/DI의 국소callback 변경이므로 무관전체시험은 생략하고 파급증거가 있으면 확대한다. 후보목록 서버계약 보완은 별도대기로 유지하고 서버/DB·디바이스조작/dev/main통합은 제외한다.
