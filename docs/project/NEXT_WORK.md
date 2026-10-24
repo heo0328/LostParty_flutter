@@ -2,6 +2,8 @@
 
 ## 현재 단일 작업 — Issue26 후보계약 소비 검토·회신 (2026-10-24)
 
+문서 `1501867b` commit/push. [Issue26 검토6381216870](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6381216870) 게시본문 MATCH 확인. 역할일치 보완1건과 나머지소비안·다음담당을 회신했으며 Backend 보완계약 회신대기다.
+
 [Backend6381161170](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6381161170)의 source6e0063c7/개발안내·제안문/closed schema·작성예시3개를 현재 Flutter0a0d2838의 characters()/RecruitmentCharacter·선택sheet/기존역할정책·페이지/scope와 대조했다. 기존신청검사 보완은 Backend 구현/격리고유25PASS지만 **실제 개발API176/DB0031 미반영**, 후보GET은 미합의·미구현이다. 아래 ‘Backend구현 전체대기’는 이 구분으로 갱신한다. 장기근거/소비차이는 [설계37 §37.51](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md).
 
 일괄조회·현재scope/불변snapshot·역할별Permission·raw/eligible count·빈화면/오류 구분은 소비 가능하다. 단 **일반직업 dealer고정/지원4직업만 복수역할**인 기존 UI와 ‘직업명 신규제한 없음/양역할판정’의 관계를 Backend가 닫아야 한다. 일반직업 support-only를 후보로 세면 화면에서 선택가능한역할이0이 된다. 기존제품역할로 후보/eligible count를 일치시키고 unsupported-role의 wire표현/거절코드를 제안/명시해 달라고 회신한다. 현재닫힌 enum에 임의코드를 만들거나 정상후보를 앱에서 조용히 추가제외하지 않는다. 4직업목록/원정대·선호역할 코드는 §37.51 근거를 따른다.

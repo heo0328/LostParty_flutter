@@ -2,6 +2,8 @@
 
 ## 2026-10-24 — Issue26 후보조회 제안1 소비 검토
 
+문서 `1501867b` commit/push. [Issue26 검토6381216870](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6381216870) 게시본문 MATCH 확인. 역할일치/unsupported wire 보완1건·기존메타재사용과 UUID페이지/기존화면정렬 소비안·상태/후속담당을 전달했다. Backend 보완계약 회신대기이며 신규후보API 구현/개발반영 인계는 아직 없다.
+
 - 검토근거: Backend6381161170/source6e0063c7의 제안문·closed schema·합성예시3/개발안내와 실제 characters()/RecruitmentCharacter·신청sheet/CharacterBuildRolePolicy·기존 Decimal정렬을 대조했다. 서버신청검사구현/격리25PASS와 실제176/0031 미반영·후보GET 미구현을 구분한다.
 - 발견/회신: 일괄후보/역할Permission·계수/정상0건과오류·scope/snapshot/페이지는 소비가능. 일반직업dealer고정/바드·발키리·도화가·홀리나이트만 복수역할인 기존앱과 제안양역할/eligible 정의의 관계가 미확정이다. 일반직업 support-only 후보가 선택불가능해지는 차이를 서버기준/닫힌wire로 보완요청한다. 구체근거/다음담당은 설계37 §37.51/NEXT_WORK다.
 - Flutter소비설계: 같은snapshot의 전체페이지를 count/중복·범위·커서검증 후 일괄반영해 기존원정대/레벨정렬을 유지, 기존회원scope 표시/대표·선호역할을 ID결합 재사용한다. 데이터누락을 조용히후보제외/가짜원정대명으로 채우지 않고 기존계정갱신/오류로 구분한다. 새후보가 자격원본이며 쓰기권한은 기존context/POST·승인에서 최종검증한다. 회원/환경/session/readGeneration/방T·dispose 격리와 빈화면/조회실패를 분리한다.
