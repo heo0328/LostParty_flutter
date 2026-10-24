@@ -1,15 +1,14 @@
 # NEXT WORK — 구간별 디바이스 인수 / 현재 2구간 가입
 
-## 현재 대기 — 신청자 레벨 앱 연결 완료 / 개발 서버 반영 후 소수 인수
+## 현재 상태 — 신청자 아이템레벨 보완 인수 수용
 
-구현 **13fb5848** 작업브랜치 commit/push·origin SHA 일치. [Issue26 구현 인계6386758343](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386758343) 회신·게시본문 MATCH 확인. 다음은 Backend의 별도 승인된 개발 반영 인계 후 레벨/문구 소수 확인이다. dev/main 미반영·기존 브랜치 유지.
+2026-10-25 [Backend6386808894](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386808894)의 실제개발 반영(source f471e313/이미지6d5857b3·177/DB0031, 근거6be5c6fe)을 확인했다. 이전 개발 미반영/레벨 테스트 대기는 해소됐다. 사용자가 레벨 정상 표시를 보고했고, current_saved/값없음은 코드 대응이 있으면 통과로 수용했다. [Flutter 결과6386859737](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386859737) 회신·본문 MATCH 확인. 세부 결과 DEV_LOG, 표시 계약 §37.61.
 
-2026-10-25 Backend [6386634008](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386634008)/source f471e3133ad60befcad77d7123e1107ba7501bb4의 실행 인계를 받아 앱의 application-display-1 레벨3키 검증/출처 표시를 연결했다. 아래 과거 구현 인계 대기/미구현 표현보다 이번 결과가 우선한다. 세부 구현/검증은 DEV_LOG·설계37 §37.61. 신규34+직접회귀124=고유158PASS(최초157PASS/fixture 기대1실패 후 해당 파일68PASS 재검증), 변경5파일 분석0·최종수정 시험파일 재분석0·포맷/diffcheck/검토. 원 작성 fixture는 보존했다.
+이번 레벨 보완 구간은 Flutter 구현13fb5848·고유158PASS/분석0과 사용자 정상 표시 결과 및 예외 분기 자동검증 기반 수용으로 마감한다. current_saved/조회불가 분기를 실제 기기에서 관찰한 것은 아니며 그 재현·회원자료변조·고의오류 테스트를 요구하지 않는다. ‘현재 레벨 표기’ 보고를 특정 출처 문구 확인으로 확대하지 않는다. 추가 Backend 수정/같은항목 재시험 요청은 없다. Issue26 OPEN·전체 모집 흐름 인수/최종 통합은 별개다.
 
-다음 Backend는 정확 개발 반영 source/image 인계와 직접 소비 차이가 있는 경우만 대응한다. **현재 실제 개발 서버는 기존06ea4b2/d24d7cbd·177/DB0031로 레벨 보완 미반영**이다. 앱의 새 reader는 필수3키가 없는 항목을 추정하거나 기본조회로 fallback하지 않고 오류로 처리하므로, 현재 서버에서 레벨 정상 표시/신청목록 인수가 가능하다고 안내하지 않는다. 서버 배포·DB/회원자료·기기/dev/main 변경은 하지 않았다.
+다음은 기존 수동 2구간 잔여와 연관 흐름의 후속 범위 확인이며 새 기능 구현을 자동 착수하지 않는다. 이미 통과한 레벨 항목·정상1/2 전체는 반복 요청하지 않는다. 기존 참가 카드 da50f972의 별도 기기표시 대기는 이 보고로 포괄 통과시키지 않는다. 코드/서버·DB·기기/dev/main 변경 없이 문서만 최신화·diffcheck/내용검토·작업브랜치 commit/push로 보관한다. feature/raid-recruitment-scheduling 유지·무관 dirty 보존.
 
-반영 인계 후 사용자 소수 확인: 공대장 신청자 카드에서 신청 당시 레벨/‘현재 저장 정보’/‘아이템 레벨 조회 불가’ 구분, 기존 분석·전투력/승인대기/승인·거절 버튼 유지, 좁은 화면 줄바꿈. 정상1/2 전체/전체Flutter시험 반복은 요청하지 않는다. 기존 참가 카드 da50f972 기기표시 대기는 별개다. 이름 누락은 ‘캐릭터명 확인 실패’를 유지한다. 작업브랜치 feature/raid-recruitment-scheduling 유지·관련 코드/검증/문서 commit/push·Issue26 구현 결과 회신, 기존 무관 dirty 보존.
-## 현재 작업 — 신청 카드 문구 정리·아이템레벨 미표시 확인 (2026-10-25)
+## 이전 기록 — 신청 카드 문구 정리·아이템레벨 미표시 확인 (2026-10-25)
 
 문구/기록 `58600023` 작업브랜치 commit/push, [Issue26 사용자 결과·레벨 누락6386174761](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386174761) 회신·게시본문 MATCH 확인. 다음 Backend는 기존신청 포함 레벨 출처/nullable·소유안전 보완 인계, Flutter는 해당항목만 후속 연결/확인이다. dev/main 미반영·기존 브랜치 유지다.
 

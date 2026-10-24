@@ -1,5 +1,16 @@
 # 개발 이력
 
+## 2026-10-25 — 신청자 레벨 표시 사용자 통과·예외 자동검증 수용
+
+Backend6386808894의 실제개발 반영 기록6be5c6fe/공개JSON을 확인했다. source f471e313·이미지6d5857b3/177·DB0031이며 기존자료/키·schema 불변/HTTP12·healthy는 Backend 반영 근거다. 과거 미반영 설명은 해당 시점 기록이며 현재 대기는 해소됐다. 이 에이전트가 서버 반영/DB/기기를 조작한 것은 아니다.
+
+새로 확인된 흐름: 사용자가 ‘1차적으로 현재 레벨이 표기됩니다’라고 보고해 신청자 레벨 정상 표시는 실기기 통과로 기록했다. 특정 source나 ‘현재 저장 정보’ 문구까지 관찰했다는 의미로 확대하지 않는다. 사용자는 current_saved/값없음의 실제 재현은 어렵지만 코드 대응이 있으면 통과로 수용했다. 구현13fb5848의 ApplicationItemLevel/신청카드 연결과 전용 시험의 출처 문구/정밀값·UTC/null/소유연결 정합성을 재확인해 기존 최종158PASS·분석0 근거로 해당 분기를 수용했다. 두 예외는 실제 기기 분기 관찰 미수행이며 자동검증 기반 사용자 인수로 명시한다. 추가 오류/회원자료변조 재현은 요청하지 않는다.
+
+보존한 기존 흐름은 코드 불변으로 기존 결과를 유지하며 정상1/2·전체모집/C/N·별도 참가 카드 표시 전체를 이번 결과로 포괄하지 않는다. 신청자 레벨 보완 구간만 인수 수용으로 마감, 추가 Backend 수정/동일 레벨 재시험 대기 없음. [Issue26 결과6386859737](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386859737) 회신 후 원문 재조회 MATCH 확인. Issue26 전체 종료/전체모집 인수·dev/main 통합은 별개다.
+
+이번은 문서·사용자 결과 회신만이며 Dart/의존성·서버/DB/실회원자료·기기/dev/main 변경이 없다. 문서diffcheck/내용 검토·기존 코드/시험 근거 대조만 수행하고 코드 불변이므로 Flutter시험을 반복하지 않았다. feature/raid-recruitment-scheduling 문서 commit/push·브랜치 유지, 기존 무관 dirty 보존.
+
+
 ## 2026-10-25 — Issue26 신청자 아이템레벨 출처 앱 실행 연결
 
 구현 13fb5848a50428600e6a778d746f084627fde345/feature/raid-recruitment-scheduling commit·push·origin 일치 확인. [Issue26 결과6386758343](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386758343) 게시 후 원문 재조회 MATCH. 소비 차이 없음/개발 미반영 및 필수키 없는 옛 항목 오류 처리·실회원/기기 대기를 인계했으며 배포 승인은 하지 않았다. dev/main 미반영·브랜치 유지·무관 dirty 보존.
