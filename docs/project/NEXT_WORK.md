@@ -1,5 +1,29 @@
 # NEXT WORK — 구간별 디바이스 인수 / 현재 2구간 가입
 
+## 다음 구현 준비 완료 — Issue26 카드 실데이터·본인 승인 대기 연결
+
+근거: [Backend 구현 인계6385227653](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6385227653), source **06ea4b214591f475d422f4599ca10260cda83d08** / feat/raid-recruitment. 합의 문서/실행 OpenAPI의 두 GET 입력·ApplicationDisplay 모델과 검증집계를 확인했다. Backend는 고유28PASS(신규17+기존명령8+membership3), 기본116/후보177 계약 보존·DB오류503 SERVICE_UNAVAILABLE 정정을 인계했다. **실제 개발은 여전히 source484ca171/이미지fdd256ea·177경로/DB0031이며 새 프로필은 미반영**이다. 경로 수로 반영 여부를 판단하지 않는다. 아래 ‘Backend 구현 대기’는 해소됐고 현재는 Flutter 구현 착수 준비 상태다.
+
+이번 사용자 요청은 작업 준비이므로 기능 코드를 수정하지 않는다. 브랜치 feature/raid-recruitment-scheduling·기준fda8f3ad를 유지하고 무관 dirty를 보존한다. 준비 문서 검토·Issue 회신·commit/push만 수행하며 구현/실기기 성공을 주장하지 않는다.
+
+### 구현 순서와 책임
+
+1. **전용 조회 모델/Gateway:** application-display-1 상수·불변 Analysis/PowerComparison/신청 항목·페이지/MyApplication/일반 상세 envelope 모델을 분리한다. 필수/nullable·닫힌 shape·방/T/세대·역할/versions/issues/시각·display_reason 정합성·1MiB를 검증한 후 확장 필드를 제거한 복사본으로 기존 CycleOwnRow/parseCycleDetail을 재사용한다. 원본을 수정하지 않는다. 기존 AnalysisIssue/정밀값·scope 검증을 재사용하되 후보API의 supported/allowed 모델을 표시용 자격판정으로 오용하지 않는다.
+2. **Repository 연결:** 기존 Repository가 별도 표시 조회 인터페이스를 구현한다. 목록 GET은 기존 실제T/state=pending/limit20/cursor에 reader_profile만 추가하고, 일반 상세 GET도 실제T/profile로 조회한다. 기존 CycleInteractionGateway.applicationPage·cycleDetail(승인 decisionBody 등 쓰기 전 조회 포함)/기본 DTO는 보존한다. 기존 내신청 목록/단건review·membership-actions-1/anchor·다른 일반 조회는 바꾸지 않는다. 새 조회 실패/미지원·누락을 기본응답으로 fallback하지 않는다.
+3. **목록 상태/카드:** 신청 표시 전용 ViewModel이 조회 rows/cursor/error/opened/epoch와 회원·환경/session/readGeneration/room/T/dispose 수명을 소유한다. 현 위젯은 로컬 rows와 generation만 소유하므로 표시 계약 연결 시 접근 변경에 남은 행과 늦은 응답도 격리한다. 기존 ‘신청자 확인/새로고침/더 보기·같은 기기 명령 후 갱신’ 시점은 유지한다. 동일 신청 중복·커서 순환·세대/신청 revision 혼합을 거절하고 실패한 더보기를 빈 성공으로 합치지 않는다. 페이지별 분석 evaluated_at은 달라도 허용한다. 카드별 GET/context/전체내신청조회·provider/자동분석은 추가하지 않는다.
+4. **카드 표현:** 기존 이름/직업·역할/레벨 snapshot·카드/승인거절 버튼을 유지하면서 실제 선택역할 마지막 성공 전투력과 현재 분석 clean/review/error/unavailable·issues를 구분한다. 현재 오류+마지막 성공값 동시 표시, head/성공 없음·소유/연결 불가·실제 조회 실패를 구분한다. 전투력 없음은0으로 바꾸지 않고 clean/meets를 승인가능 문구/버튼 자격으로 쓰지 않는다. 승인/거절은 기존 review/POST·원pending/ACK를 따른다.
+5. **상세 상태/안내:** BackendRecruitmentDetailViewModel의 v2 일반 상세(reader==null)만 전용 읽기를 선택한다. 기존 member/record reader와 Router 경로·식별자는 유지한다. 현재 참가/권한→유효pending 안내→기존 신청 진입 조건 순서로 노출하며 pending은 “공대장의 승인 대기중입니다.”로 신청버튼을 대체한다. accepted이력으로 참가를 만들지 않는다. 만료/철회·거절·취소/없음도 자동허용하지 않고 기존 조건/context를 따른다. 새 필드 누락/조회 실패/로딩·회원/T 변경에서는 이전 신청 진입을 열지 않는다. 로컬 시간 경과만으로 pending을 없애거나 신규 쓰기를 하지 않으며 기존 새로고침/재진입·수명 갱신으로 최신 상태를 확인한다.
+6. **검증·마감:** 아래 직접 시험을 최종 상태에서 묶고 변경 파일 분석·포맷/diffcheck/리뷰→문서 최신화/Issue26 정확 구현SHA·결과·미확인회신→작업브랜치commit/push로 보관한다. 코드 영향이 표적으로 설명되지 않을 때만 전체시험을 확대한다. 서버 교체·DB·기기·dev/main통합은 별도이며 이번 준비/후속 앱 구현에서 수행하지 않는다.
+
+### 회귀 보호 및 완료 조건
+
+- 계약: 추가 필드 누락/임의값·잘못된scope/역할·타인/T/세대·필수nullable/분석-비교 불일치·크기 초과 거절, current오류+retained 성공/소유변경/head없음과 서비스실패 구분. 기본/쓰기·본인신청목록·단건review·membership/기록 파서에 새 필드 강제 금지.
+- 상태: 현재참가/pending/null·terminal/accepted 후 탈퇴를 구분, 만료 경계는 서버시각. 회원·환경/session/readGeneration/T 전환·연속조회/dispose/늦은 응답·더보기 실패·접근권한 상실에서 자료/버튼 격리. 기록 진입은 기존 읽기전용 유지·신규 표시 조회/쓰기0.
+- 직접 기존 시험: cycle_interaction·application_detail_navigation·membership_readers/membership_presentation·backend_recruitment/cycle_recruitment 및 기존 admission_candidates의 원ACK/재송·승인/거절/철회 경계 중 호출 영향만 묶는다. 원ACK 성공 후 표시조회 실패는 쓰기를 다시 실행하지 않는다. 생성·캐릭터변경·일정/완료/해산·C/N 연관 영향이 발견되면 해당 기존 시험도 포함한다. 수동5구간은 구현/회귀 제외 기준이 아니다.
+- 서버 정확 반영 인계 후 사용자 소수 확인: (1) 공대장 카드의 전투력/현재분석·정보없음 구분 (2) 본인 pending 상세 재진입의 대기안내/신청버튼 없음 (3) 철회·만료 후 기존진입/수락 후 참가·변경 유지. 기존 통과3항목 전체를 이유없이 반복하지 않는다. 변경/반대파티·주차교차 관련 인수는 계속 추적한다.
+
+제외: 신청 목록 진입/갱신 정책 변경·자동 polling/실시간/웹소켓·알림, 일반오류 원인 추정수정, 리디자인/IF-001/BUG-025. 이번 준비 검증은 문서diffcheck/계약·호출자 대조만이며 Flutter시험/실회원 요청은 실행하지 않는다. Backend28·작성22/정적15·이전Flutter493/56은 새 시험으로 합산하지 않는다.
+
 ## 현재 인계 — Issue26 신청 표시 프로필 제안1 소비 검토
 
 소비 기준 `84b132a2` commit/push, [Issue26 수용6384902537](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6384902537) 회신·게시본문 MATCH 확인. 다음 담당은 Backend 읽기 구현/실행 인계이며 같은 정책 재수용이나 전체시험 반복은 요구하지 않았다. 현재 작업 브랜치 유지·dev/main 미반영이다.

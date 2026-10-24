@@ -1,5 +1,13 @@
 # 개발 이력
 
+## 2026-10-24 — Issue26 표시 프로필 실행 인계 확인·Flutter 작업 준비
+
+[Backend6385227653](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6385227653)/source06ea4b214591f475d422f4599ca10260cda83d08의 합의 문서·검증집계와 실행 OpenAPI 두GET reader_profile/새 ApplicationDisplay 응답을 확인했다. Backend 고유28PASS(신규17/명령8/membership3), read-only bulk·기존DTO/쓰기shape 보존·SQL예외503 SERVICE_UNAVAILABLE 정정 인계다. 기존 실제개발은 source484ca171/이미지fdd256ea/177경로·DB0031이며 새query/응답은 미반영이다. 경로177이 같다는 이유로 동일계약으로 취급하지 않는다.
+
+현재 카드 power:null/오류 확인필요, 일반 상세 reader==null의 cycleDetail 기본조회, 승인 decisionBody의 cycleDetail 재검사, 신청 위젯의 rows/cursor·generation 소유를 대조했다. 표시용 전용 Gateway/DTO를 추가해 기존 쓰기용/참가·기록 조회를 보존하고, 목록 VM에 접근수명 격리·페이지/자료 실패를 모아 카드 표시를 연결하는 순서로 준비했다. pending은 참가관계 우선/서버시각·최신 조회/필수필드 검증 후 안내하며 accepted이력/로컬시각/실패로 참가나 신청허용을 만들지 않는다. 상세 구현순서·직접시험/완료조건은 NEXT_WORK다.
+
+이번은 사용자 요청대로 준비 문서만 수정·diffcheck/내용검토했다. 기능 코드·Flutter/서버시험 반복·실회원 요청/DB·기기·배포/dev/main 변경 없음. Backend28/정적자료/과거Flutter 시험을 새 통과로 합산하지 않았다. 기존 UI/목록 진입·갱신/실시간 후속·원pending/ACK/IF-001·자료/키를 유지하고 일반 오류 관찰은 원인미확인 그대로다. 작업브랜치 fda8f3ad에서 준비 문서·공식 인계 회신을 commit/push하며 무관 dirty를 보존한다.
+
 ## 2026-10-24 — Issue26 신청 표시 프로필 제안1 소비 검토·수용
 
 문서 `84b132a2` 작업 브랜치 commit/push. [Issue26 수용6384902537](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6384902537) 게시·본문 MATCH 확인, Backend 구현·직접 검증/실행 인계 대기로 정리했다. dev/main 미반영·무관 dirty 보존이다.
