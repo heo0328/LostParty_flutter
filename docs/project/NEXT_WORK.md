@@ -1,5 +1,15 @@
 # NEXT WORK — Issue24 검색 회복 완료 / 전체 사용자 인수
 
+## 현재 단일 후속 — 신청 시 동일 딜러 직업 구성 검사 (2026-10-24)
+
+사용자가 4인방의 동일딜러 직업 신청이었다고 보완했고, 승인시점이 아닌 **신청 단계부터 기존 구성상 불가능한 신청 차단**을 요청했다. 기존 실패의 원code는 없지만 서버15e143ae에서 실제 누락 경계를 확인했다. 상세 제품/협업 기준은 [설계37 §37.48](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md).
+
+현재 Backend cycle_commands.preflight는 apply에 pending=true로 cycle_admission.admit_bundle(validate_only=true)를 호출하며 그 경로는 core._slot을 건너뛴다. 실제 신청POST도 pending=true다. 그 때문에 확정 참가자와 동일딜러 직업이어도 신청이 생성될 수 있고 승인시에야 ROOM_COMPOSITION_CONFLICT가 발생한다. Flutter 신청UI·body/Controller는 서버 permission 거절을 이미 표시/차단하므로 앱에 멤버전체GET/별도 구성정책을 중복 추가하지 않는다.
+
+다음 담당 Backend: 기존 동일4인파티 딜러직업/역할 구성 검사를 읽기전용으로 재사용해 apply context와 신청POST 양쪽에 적용하고, 현 확정참가자 기준 불가이면 기존 permission/reason·오류를 반환한다. 8인 반대파티 유효배치/기존 승인 재검사·경쟁보호는 유지한다. 대기신청 간 동일직업 금지/자리선점·주간점유/예약 생성/새정원정책은 요청하지 않는다. 직접 구성/위조POST·C/N/반대파티·미점유 경계 검증 후 정확SHA/실행계약·개발반영을 인계한다.
+
+다음 Flutter: 서버 인계 후 기존 reader/button/Controller 거절·요청0과 승인 재검증을 직접 확인하며 필요할 때만 최소 수정한다. 이번은 정책/확인근거·Issue13 서버 수정 요청/문서 보관이며 Dart/서버/DB 코드를 수정하지 않았다. 문서 diffcheck/내용대조만 수행하고 기존126mock/분석은 반복하지 않는다. 다른 정상캐릭터로 가능한 인수는 계속할 수 있으며 dev/main통합/배포는 미완료다.
+
 ## 최신 사용자 인수 — 재신청 승인 성공 (2026-10-24)
 
 문서 `184e636c` commit/push. [Issue13 결과6380750571](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6380750571)·[Issue24 결과6380750772](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6380750772) 게시본문 MATCH 확인. 새 Backend 요청 없이 추가참가자 인수를 계속한다.

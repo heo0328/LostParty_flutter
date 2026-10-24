@@ -1,5 +1,12 @@
 # 개발 이력
 
+## 2026-10-24 — 신청 단계 동일 딜러 직업 제한 보완 요청
+
+- 사용자 정책: 당시 4인방의 동일딜러 직업 신청이었음을 보완했고 신청할 때부터 불가능해야 한다고 요청했다. 최초실패code는 여전히 없으나 별도의 서버 누락은 source15e143ae 정적대조로 확인했다.
+- 근거: cycle_commands.preflight(apply)와 admit(applying=true)는 cycle_admission.admit_bundle의 pending=true 경로이고, 해당 경로의 slot=None if pending이 기존 participation_core._slot의 동일파티 딜러직업 중복검사를 생략한다. Flutter p.permission.allowed 기반 비활성/사유표시·body/Controller 권한재검사는 존재한다.
+- 결정/다음: 설계37 §37.48/NEXT_WORK에 서버 context/실제신청POST의 기존구성검사 재사용·승인최종검사 유지·8인반대파티/C/N·pending미점유 보존과 인계조건을 기록하고 Issue13에 전달한다. 로컬 UI만막기/정책복제·대기신청끼리 자리선점/중복금지를 추가하지 않는다.
+- 검증/미확인: 문서 diffcheck/코드·계약 대조. Dart/의존성·서버/DB/기기 불변으로 Flutter/Python 시험 반복 없음. Backend 새구현·개발반영과 실제 신청차단 인수는 미완료·회신대기, 기존 생성/재신청승인·생성자검색 통과는 유지한다. 작업브랜치 문서 commit/push·dev/main미반영·무관dirty 보존.
+
 ## 2026-10-24 — 사용자 생성·검색 인수 및 신청 승인 차단 조사
 
 문서 `184e636c` commit/push. [Issue13 결과6380750571](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6380750571)·[Issue24 결과6380750772](https://github.com/heo0328/lostparty-backend/issues/24#issuecomment-6380750772) 게시본문 MATCH 확인. 성공/미확정·다음 인수를 구분했고 Backend 수정 요청은 없다. 재발한 빈 index.lock도 Git 프로세스 없음 확인 후 해당 잠금만 제거했다.
