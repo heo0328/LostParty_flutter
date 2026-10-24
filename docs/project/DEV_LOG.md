@@ -1,5 +1,12 @@
 # 개발 이력
 
+## 2026-10-24 — 신청 캐릭터 선택목록의 사전 제외 UX 확정
+
+- 사용자 요구: 레벨미달 및 같은파티 동일딜러 직업으로 참가할 수 없는 캐릭터는 신청 캐릭터 목록에서 사전제외. 선택후 오류/버튼비활성만이 목표가 아니다.
+- 실제근거: RecruitmentRepository.characters()는 인증원정대의 eligible/confirmed 활동캐릭터만 반환하고 room/T를 받지 않는다. _CycleAdmissionSheet는 전체후보를 보여주고 선택한 캐릭터만 admission-context를 조회하므로 후보사전제외는 아직 없다.
+- 설계/다음: 기존 Issue13 요청을 보완해 서버 기존validator 재사용·일괄후보자격 계약을 고정한 뒤 Flutter에 연결한다. 캐릭터별context N회/다중멤버GET·로컬 정책복제는 피한다. 하나의 유효역할이 있으면 후보유지, 8인반대파티·실제T/레이드·난이도·묶음범위/정렬·선호역할/회원격리를 보호하고 빈목록과 조회실패를 구분한다. 최종신청POST/승인검증은 유지한다.
+- 검증/상태: UI/Repository·현재Issue13 원문 대조·문서 diffcheck만 수행, 코드/API·DB/서버·기기 불변·시험반복 없음. 후보endpoint/DTO 미합의·Backend회신/Flutter구현·실제선택목록 인수 미완료. 작업브랜치 문서 commit/push, dev/main미반영·기존무관dirty 보존.
+
 ## 2026-10-24 — 신청 단계 동일 딜러 직업 제한 보완 요청
 
 문서 `ef4ec432` commit/push. [Issue13 수정 요청6380773556](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6380773556) 게시본문 MATCH 확인. 사용자 확정 범위·서버누락 근거/담당/완료조건·pending미점유/8인반대파티 보존을 전달했다. 다음은 Backend 구현/개발반영 인계 후 Flutter 직접 소비 확인이다.
