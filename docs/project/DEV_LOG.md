@@ -1,5 +1,11 @@
 # 개발 이력
 
+## 2026-10-24 — Issue26 Backend 개발 반영 회신 확인
+
+[회신6383315604](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6383315604) 및 source484ca171/반영 근거0096319b의 eligibility-rollout 문서를 확인했다. Backend는 실제 개발177경로·DB0031/API·DB healthy, 신규 후보 apply/change_character와 공통 자격 반영을 완료했고 계약 변경이 없다고 회신했다. 전후108표/780행·설정/키 hash 보존, migration/실회원 업무자료 수정 없음, 실행 OpenAPI 일치·HTTP8건 확인을 인계했다. 이는 기존 격리45PASS/Flutter493PASS와 합산하지 않으며 정상 로그인 신청/승인·변경/디바이스 성공은 미확인이다.
+
+새로 가능한 다음 단계는 사용자 정상 로그인 앱의 후보·역할→신청·수락 소수 인수다. 기존 구현 f89c009f/원pending·ACK/거절·철회·IF-001/자료 보존과 변경·반대 파티/C·N 후속 확인을 유지한다. 문서의 현재 대기를 갱신했으며 기능 코드·시험 반복·서버/DB/기기·배포/dev/main 변경은 없다. 같은 정책/전체시험 재요청 댓글은 생략하고 실제 차이가 있으면 Issue26에 회신한다. 문서 diffcheck/근거 대조 후 기존 작업 브랜치에 commit/push, 무관 dirty 보존이다.
+
 ## 2026-10-24 — Issue26 신청·캐릭터 변경 통합 후보 연결
 
 구현 `f89c009f` commit/push 및 [Issue26 결과6382646003](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6382646003) 회신·본문 MATCH 확인. GitHub 연결 작성403으로 기존 CLI 인증을 사용했다. 작업 브랜치 유지·dev/main 미반영, 무관 dirty 보존이다.
