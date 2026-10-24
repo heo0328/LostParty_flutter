@@ -2,6 +2,8 @@
 
 ## 현재 작업 — 신청 카드 문구 정리·아이템레벨 미표시 확인 (2026-10-25)
 
+문구/기록 `58600023` 작업브랜치 commit/push, [Issue26 사용자 결과·레벨 누락6386174761](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386174761) 회신·게시본문 MATCH 확인. 다음 Backend는 기존신청 포함 레벨 출처/nullable·소유안전 보완 인계, Flutter는 해당항목만 후속 연결/확인이다. dev/main 미반영·기존 브랜치 유지다.
+
 두 문구 수정 완료: clean→‘세팅 이상 없음’, 카드의 ‘좌석 미확정’ 삭제·승인대기는 유지. 변경2파일 analyze 문제0·포맷/diffcheck/리뷰, 문자열 변경이어서 Flutter시험 반복 없음. Backend6386031663/6444c18b의 새프로필 개발반영 인계 후 사용자 보고1/2는 아이템레벨 외 정상 범위통과로 기록한다. 기존 미반영/전체기기미확인 표현은 당시 기록이다. 철회·만료 등 별도 상태의 포괄통과로 확대하지 않는다.
 
 아이템레벨 원인: 실행06ea4b21의 cycle_commands.apply 생성은 admission.core.identity.display를 저장하며 participation_core가 참조하는 groups.admission_core.display는 server_name/character_name/class_name만 반환한다. cycle_lists는 이 app.display를 그대로 제공한다. Flutter의 display.item_level 접근과 작성 예시에는 레벨이 있었지만 실제 저장 snapshot에는 없는 차이다. 이전 ‘실제 display에 레벨 제공’ 판단을 정정한다. 원본 실회원 응답 조회·DB 변경은 없으며 코드상 누락 경로를 근거로 Backend에 해당 항목 보완을 요청한다. 신규 신청 저장만 바꿔도 이미 존재하는 신청의 누락은 해소되지 않으므로 과거 snapshot/조회 보완의 출처·nullable·소유변경 안전성을 함께 인계받는다. 앱 추가조회/provider·타역할/최소조건 대입·임의 backfill은 하지 않는다. 이 항목은 Backend 대응/실제표시 재확인 대기다.

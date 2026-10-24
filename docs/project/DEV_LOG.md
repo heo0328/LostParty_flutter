@@ -2,6 +2,8 @@
 
 ## 2026-10-25 — 신청 카드 문구 정리·아이템레벨 누락 경로 확인
 
+구현/문서 `58600023` commit/push. [Issue26 사용자 인수·누락 요청6386174761](https://github.com/heo0328/lostparty-backend/issues/26#issuecomment-6386174761) 게시·본문 MATCH 확인, 기존신청 포함 Backend 레벨 보완 인계 대기로 정리했다. dev/main 미반영·무관 dirty 보존이다.
+
 - 사용자 인수: Backend6386031663/반영6444c18b(API06ea4b21)의 새프로필 반영 후 카드 정보/본인pending 재진입1·2는 아이템레벨 ‘확인 필요’ 한 항목 외 정상이라고 보고했다. 이전 ‘새프로필 미반영’은 당시 기록이다. 이 보고를 아직 발생하지 않은 철회·만료/변경·C/N 상태 전체통과로 확대하지 않는다.
 - 표시 수정: 요청한 ‘분석 정상’을 바른 표기 ‘세팅 이상 없음’으로 바꾸고 ‘좌석 미확정’은 삭제했다. 승인대기/오류·경고/마지막 성공 전투력·미확인 의미/버튼·자격/원pending·ACK·주차·조회 갱신시점은 보존했다.
 - 레벨 조사: 실행06ea4b21의 cycle_commands에서 Application.display=admission.core.identity.display(selected_character), participation_core의 identity=groups.admission_core, 그 display 함수는 server_name/character_name/class_name만 반환한다. cycle_lists는 app.display 그대로 반환한다. 앱은 display.item_level만 읽고 작성 예시에는 이 필드가 있어 당시 실제snapshot 제공 여부를 잘못 판단했다. 기존 문서의 실제 display 레벨 제공 판단을 정정한다. 개인정보/실회원원본·서버/DB 조작 없이 정확source의 생성→목록→카드 경로를 대조한 근거다.
