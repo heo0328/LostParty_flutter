@@ -94,11 +94,9 @@ bool allowedAuthBaseUrl(String value, {required bool debug}) {
 }
 
 class BackendApp extends StatefulWidget {
-  const BackendApp({
-    super.key,
-    this.recruitmentContractMode = RecruitmentContractMode.legacy,
-  });
-  final RecruitmentContractMode recruitmentContractMode;
+  const BackendApp({super.key});
+  final RecruitmentContractMode recruitmentContractMode =
+      RecruitmentContractMode.betaWire2;
   @override
   State<BackendApp> createState() => _BackendAppState();
 }

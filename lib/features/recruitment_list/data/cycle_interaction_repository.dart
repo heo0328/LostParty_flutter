@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'beta/beta_contract.dart';
 import 'beta/beta_read.dart';
+import 'beta/beta_interaction_api.dart';
 import 'admission_candidates.dart';
 import 'application_display.dart';
 import 'cycle_member_actions.dart';
@@ -567,6 +568,10 @@ class CycleInteractionRepository
   });
   final RecruitmentContractMode contractMode;
   final BackendRegistrationApi api;
+  late final BackendRegistrationApi interactionApi =
+      contractMode == RecruitmentContractMode.betaWire2
+      ? BetaInteractionApi(api)
+      : api;
   @override
   Future<ApplicationDisplayPage> applicationDisplayPage(
     String room,
@@ -585,7 +590,7 @@ class CycleInteractionRepository
     String? cursor,
   }) => _decode(
     () => AdmissionCandidatesReader(
-      api,
+      interactionApi,
     ).admissionCandidates(room, target, intent, cursor: cursor),
   );
   @override
@@ -593,7 +598,7 @@ class CycleInteractionRepository
       _decode(() async {
         roleId(room);
         raidCycleKey(view);
-        final raw = await api.request(
+        final raw = await interactionApi.request(
           '/v2/raid-rooms/$room/membership-action-context',
           query: {'target_cycle_key': view},
         );
@@ -613,7 +618,7 @@ class CycleInteractionRepository
       ).hasMatch(key),
     );
     roleCheck(cycleStableJson(body) == cycleStableJson(preview.body()));
-    final raw = await api.request(
+    final raw = await interactionApi.request(
       preview.path,
       method: 'POST',
       body: body,
@@ -628,7 +633,7 @@ class CycleInteractionRepository
         roleId(room);
         raidCycleKey(target);
         roleId(member);
-        final raw = await api.request(
+        final raw = await interactionApi.request(
           '/v2/raid-rooms/$room/member-removal-context',
           query: {'target_cycle_key': target, 'target_cycle_member_id': member},
         );
@@ -643,7 +648,7 @@ class CycleInteractionRepository
   ) => _decode(() async {
     roleId(key);
     roleCheck(cycleStableJson(body) == cycleStableJson(preview.body(mode)));
-    final raw = await api.request(
+    final raw = await interactionApi.request(
       preview.path,
       method: 'POST',
       body: body,
@@ -660,7 +665,7 @@ class CycleInteractionRepository
     roleId(room);
     raidCycleKey(target);
     roleId(round);
-    final raw = await api.request(
+    final raw = await interactionApi.request(
       '/v2/raid-rooms/$room/personal-completion-departure-context',
       query: {'target_cycle_key': target, 'round_id': round},
     );
@@ -674,7 +679,7 @@ class CycleInteractionRepository
   ) => _decode(() async {
     roleId(key);
     roleCheck(cycleStableJson(body) == cycleStableJson(preview.body()));
-    final raw = await api.request(
+    final raw = await interactionApi.request(
       preview.path,
       method: 'POST',
       body: body,
@@ -685,7 +690,7 @@ class CycleInteractionRepository
 
   @override
   Future<CycleResumePlan> resumePlan(String room, String target) =>
-      _decode(() => CycleResumeReader(api).read(room, target));
+      _decode(() => CycleResumeReader(interactionApi).read(room, target));
   @override
   Future<CycleResumePreview> resumePreview(
     String room,
@@ -694,7 +699,7 @@ class CycleInteractionRepository
     List<dynamic>? groups,
   }) => _decode(
     () => CycleResumeReader(
-      api,
+      interactionApi,
     ).preview(room, target, proposalId: proposalId, groups: groups),
   );
   @override
@@ -704,7 +709,9 @@ class CycleInteractionRepository
     String action, {
     String? round,
   }) => _decode(
-    () => CycleOutcomeReader(api).preview(room, target, action, round: round),
+    () => CycleOutcomeReader(
+      interactionApi,
+    ).preview(room, target, action, round: round),
   );
   @override
   Future<CycleScheduleView> scheduleRead(
@@ -715,7 +722,7 @@ class CycleInteractionRepository
     String? cursor,
   }) => _decode(
     () => CycleScheduleReader(
-      api,
+      interactionApi,
     ).read(room, target, kind, id: id, cursor: cursor),
   );
   @override
@@ -725,7 +732,9 @@ class CycleInteractionRepository
     String action, {
     String? id,
   }) => _decode(
-    () => CycleScheduleReader(api).preview(room, target, action, id: id),
+    () => CycleScheduleReader(
+      interactionApi,
+    ).preview(room, target, action, id: id),
   );
   @override
   Future<CycleManagementPreview> management(
@@ -734,8 +743,9 @@ class CycleInteractionRepository
     String action, {
     Map<String, dynamic> query = const {},
   }) => _decode(
-    () =>
-        CycleManagementReader(api).preview(room, target, action, query: query),
+    () => CycleManagementReader(
+      interactionApi,
+    ).preview(room, target, action, query: query),
   );
   Future<T> _decode<T>(Future<T> Function() action) async {
     try {
@@ -759,7 +769,7 @@ class CycleInteractionRepository
   Future<CycleFilterContext> filterContext(String group) => _decode(() async {
     roleId(group);
     return CycleFilterContext(
-      (await api.request(
+      (await interactionApi.request(
         '/v2/me/raid-room-filter-context',
         query: {
           'group_ids': jsonEncode([group]),
@@ -777,7 +787,7 @@ class CycleInteractionRepository
     roleId(group);
     candidateHex(context.token);
     return CandidatePage(
-      (await api.request(
+      (await interactionApi.request(
         '/v2/groups/$group/raid-room-character-candidates',
         query: {
           'filter_context_token': context.token,
@@ -825,7 +835,7 @@ class CycleInteractionRepository
     roleId(character);
     raidCycleKey(target);
     roleCheck({'apply', 'join', 'change_character'}.contains(intent));
-    final j = (await api.request(
+    final j = (await interactionApi.request(
       '/v2/raid-rooms/$room/admission-context',
       query: {
         'target_cycle_key': target,
@@ -849,7 +859,7 @@ class CycleInteractionRepository
       _decode(() async {
         roleId(id);
         return CycleApplicationView(
-          (await api.request('/v2/raid-room-applications/$id'))!,
+          (await interactionApi.request('/v2/raid-room-applications/$id'))!,
           id,
           expectedTarget: target,
         );
@@ -861,7 +871,7 @@ class CycleInteractionRepository
     String? cursor,
   }) => _decode(() async {
     roleId(room);
-    final j = (await api.request(
+    final j = (await interactionApi.request(
       '/v2/raid-rooms/$room/applications',
       query: {
         'target_cycle_key': target,
@@ -926,7 +936,7 @@ class CycleInteractionRepository
     CycleAdmissionPreview p,
     Set<String> sessions,
   ) => _decode(() async {
-    final j = (await api.request(
+    final j = (await interactionApi.request(
       '/v2/me/raid-rooms/${p.room}/plan',
       query: {'target_cycle_key': p.target},
     ))!;
@@ -997,7 +1007,7 @@ class CycleInteractionRepository
     void Function(String)? onOutcome,
   }) => _decode(() async {
     roleId(key);
-    final j = (await api.request(
+    final j = (await interactionApi.request(
       path,
       method: method,
       body: body,
