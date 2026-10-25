@@ -1,5 +1,7 @@
 # LOSTPARTY 문서 안내
 
+베타 계약 합의(2026-10-25): Backend267afe56의 beta-recruitment-wire-2/profile beta-recruitment-1를Flutter최종수용했다. 최신wire/수용·검토한계는 [설계37 §37.67](backend-migration/37-raid-scheduling-and-multi-raid-planning.md#3767-고정안2-최종-소비수용계약-합의-2026-10-25),다음기반구현설계는NEXT_WORK다. 계약합의를앱/Backend실구현·서버반영/디바이스인수로해석하지않는다.
+
 디자인 최신 지도(2026-10-25): Penpot **03은 최신 통합 목표 흐름**,02는 실제 구현 대조/섹션별 갱신,04는 기존03 원본 보관이다. 이전03 페이지ID는 현재04를 가리킨다. 새03·보드ID와 검수/운영 기준은 [설계37 §37.65](backend-migration/37-raid-scheduling-and-multi-raid-planning.md#3765-penpot-최신-통합-흐름보관구현-현황-페이지-정상화-2026-10-25)를 따른다. 시안의 승인/정리는 앱·서버 구현 완료가 아니다.
 
 2026-10-25 최신 베타 결정: **주차별 기본 출발 날짜·시간 필수 + 선택적 더 이른 출발 자동 조율**로 단순화한다. 다일·미정 생성은 베타 제외, 그래프/직접 제안·C/N 독립은 유지하고 주차별 모집번호/5자리 패스워드를 추가한다. 최신 정책은 [설계37 §37.63](backend-migration/37-raid-scheduling-and-multi-raid-planning.md#3763-베타-일정-단순화그래프제안-ux주차별-모집번호-확정-2026-10-25), 구현 전 계약/시안 보완 순서는 NEXT_WORK다. 이전 설계/구현 이력을 최종 정책 구현 완료로 읽지 않는다.

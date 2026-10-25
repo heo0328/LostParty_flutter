@@ -1,5 +1,15 @@
 # 개발 이력
 
+## 2026-10-25 — 베타 고정안2 최종 소비수용·계약 협의 마감 섹션
+
+사용자진행승인에따라Backend267afe56/6394448231의고정안2문서·전체wire66operation/387defs·118fixture·문자25벡터를읽고profile/reader·metadata위치·권한/null·원ACK/호환목록을현재Flutter기반과최종대조했다. 구현을막는잔여차이를발견하지못해[Issue13 최종수용6394870853](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6394870853) 한건회신·본문재조회MATCH확인. 계약은beta-recruitment-wire-2/profile beta-recruitment-1이며이전조건부수용대기는해소한다. 상세고정기준/검토한계는설계37 §37.67.
+
+- 새로가능: 확정된계약을기준으로Backend구현/격리검증과Flutter기반구현설계로넘어갈수있음. 새앱행동은아직없음.
+- 검증: 로컬JS로내부참조미해결0·method/path중복0·기존64profile필수/신규presets무profile·성공schema존재일치,문자25벡터독립판정/정규화25일치. 118fixture는구조자료/placeholder로검토했으며전체native parser/DB업무성공시험이아니다. Backend의48/118/ACK32/metadata거절3시험을전부재실행했다고주장하지않는다. 문서diffcheck·내용/참조·게시본문일치검토. Dart/Flutter시험·실서버/HTTP9/실회원/기기는미실행.
+- 보존확인: 코드·Penpot·DB/실행OpenAPI·dev/main불변,기존원요청/주차별권한/그래프·제안·로컬우선입력과계약호환을보존하는설계. 무관dirty보존.
+- 다음/미완료: Backend고정안구현·격리검증/소스/반영인계,Flutter원요청profile/query영속복구·전용DTO/접근/DI·C/Ndraft기반구현설계. 계약합의는구현/배포/통합인수완료가아님. 서버교체/DB초기화/자료삭제·배포/merge승인은포함하지않음.
+- Git: feature/raid-recruitment-scheduling유지,최종대조·협업회신·문서/다음작업정리를하나의섹션으로커밋/푸시한다. dev/main미반영·브랜치유지. 후속회신만의독립커밋/자동감시는없음.
+
 ## 2026-10-25 — 베타 계약 제안1 소비 대조·최종 입력정책 회신 섹션
 
 사용자 승인으로 Backend6393622793/ae0251d4의 제안문·닫힌component47종·examples48개와 별도문자6/HTTP9명세를 실제Flutter72c6687d의 생성·메모리pending/Gateway·closed표시DTO·characters1.4.1과 정적대조했다. profile/기존요청분리·기본promise/조기확정/기한·개인표·번호·검색·메모/저장문구 구조를 소비가능으로수용하고, 현재query미보존·영속복구미구현·C/N각각입력/시그니처·profile별파서를 네이티브후속으로기록했다.

@@ -1,6 +1,6 @@
 # 2주 레이드 현황·모집 조건·일정 통합 설계
 
-> **2026-10-25 계약 소비대조:** 최신 입력문자/로컬금칙어 정책과 Backend제안1 수용·보완은 §37.66이 우선한다. 수정 최종본 확인 전 전체계약합의/구현완료로 판단하지 않는다.
+> **2026-10-25 최종 계약:** Backend 고정267afe56의 beta-recruitment-wire-2(profile beta-recruitment-1)를 §37.67에서 Flutter 최종수용했다. 문자/로컬금칙어는 §37.66, 최종wire/소비상태는 §37.67이 우선한다. 계약합의와 실제구현/서버반영·기기인수는 구분한다.
 
 > **2026-10-25 베타 최신 정책:** 일정/생성/개인표/필터/인게임 모집표시는 아래 §37.63을 우선한다. 여러 날 진행과 출발 미정 방은 베타에서 제외하고, 필수 기본 출발 + 선택적 조기 출발 자동 조율로 변경했다. 기존 구현·과거 계약이 이미 수정된 것은 아니다.
 
@@ -2491,3 +2491,34 @@ Flutter는 아래 구조를 소비 가능한 방향으로 수용한다. 단 **�
 - Backend에 수정된 제안문/schema/문자벡터와 **실행 OpenAPI operation별 완결 입력·응답/오류·reader병용/record content-null·권한별 identity/null·memo 위치**를 요청한다. candidates/review 등 병용대상 profile 전달 목록, 원ACK보존/구클라이언트차단과안전명령 목록·원query/key 복구 예시도 명시한다. 구현전 판정 가능한 계약을 고정하되 전체런타임검증 통과를미리요구하지않는다.
 
 [Flutter 소비수용·최종입력정책 회신6393878499](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6393878499) 게시·본문재조회 MATCH 확인. 회신/현재 대기 링크는 NEXT_WORK, 섹션 결과는 DEV_LOG를 따른다. 이번은 문서/계약 소비 대조이며 앱/서버·DB·Penpot/기기·dev/main 변경과 Flutter시험 반복은 없다. 상대 최종계약확인/실행구현·push/개발반영을 각각 구분하고 변경된 입력정책은 제안1의 familyemoji허용·Unicode17분할 요구보다 우선한다.
+
+
+### 37.67 고정안2 최종 소비수용·계약 합의 (2026-10-25)
+
+#### 기준과 판정
+
+Backend [Issue13 고정안2 6394448231](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6394448231),267afe560033291df6317c2f712e395f13e68818의 beta-contract-wire.md·beta-recruitment-v2.wire.json·wire-examples.json·최신문자벡터를 최종 대조했다. 계약버전은 **beta-recruitment-wire-2**,요청profile은 **beta-recruitment-1**이다. Flutter https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6394870853 에 최종수용을 회신하고 게시본문 MATCH를 확인했다. 이전 §37.66의 조건부수용/수정최종본대기는 이 결과로 해소한다.
+
+이번 자료/소비대조에서 구현을 막는 잔여계약차이를 발견하지 못했다. Backend 고정안 제공과 Flutter 최종수용을 기준으로 계약협의단계를 마무리한다. **앱/Backend 구현·실행OpenAPI/DB반영·실회원/디바이스/통합인수 완료는 아니다.** Issue13 OPEN 유지/배포·자료변경·dev/main통합 없음.
+
+#### 최종 wire와 소비 방식
+
+- 기존64operation+presets GET/PUT2=66개,전체경로/입력/성공·오류·header/security/구버전 분류를 포함한다. 신규presets에는profile/실제T를주입하지않고,기존64개에는contract_profile을명시한다. candidates/review에도목록대로전달하며다른API에전역주입하지않는다.
+- 생성 context는beta_schedule_targets/개방context는beta_schedule_config이며저장session이없는데BetaScheduleView를합성하지않는다. 실제상세/room/plan/context·목록행에는고정안의정확한층으로beta_schedule을읽는다. 기본/실제출발·조율/처리대기/확인필요를구분한다.
+- membership-actions detail/plan의바깥data와content.data동일값,content=null의beta_schedule/identity=null,application-display의my_application/신청목록·review 메모위치를명시했다. 현재T참가자전용identity와기록/일반조회/pending/이탈후null·목록/ACK/로그미노출을지킨다. 기존closed모델검사를전역완화하지않고profile전용모델을쓴다.
+- GET검색의departure_windows/schedule_states는각단일JSON배열query,POST는배열body이며빈배열/null·중복key불가/생략만조건없음이다. 실제UTC날짜·반열린구간/자정·OR/AND와페이지전필터를그대로소비한다. 사용자단순필터를서버세부상태목록그대로나열하지않는다.
+- §37.66의허용문자/NFC후20코드포인트·로컬금칙어전용이반영됐다. rawMemo와저장Memo를분리해분해한글NFC입력·정상빈메모와빈preset차이를처리한다. 원본문byte상한·정규화전digest/재전송은보존한다.
+- 새profile과기존reader_profile은별개query다. 원profile없는pending에새query/필드/null을주입하지않고원ACK가새기한/CAS/구버전차단보다먼저재생되는계약을따른다. ACK후조회실패는조회만재시도한다. 안전관리/차단/IF-001비활성목록을명시구분하며needs_review미래제안은비활성weekly_resume가아니다.
+
+#### 수행한 검토·검증과 한계
+
+- 66operation·118합성fixture(요청35/성공본문75/오류본문8)의자료를확인하고metadata권한/nullable·profile/reader조합과현재Flutter모델의소비변경을검토했다. bundle내참조미해결0·method/path중복0·기존64profile필수/presets미사용/성공schema존재를로컬JS로대조했다.
+- 최신공통문자25벡터를로컬JS NFC/허용집합·앞뒤일반공백trim·코드포인트수·UTF-8 byte상한으로독립대조해25개기대판정/정규화값일치를확인했다. Dart UI/실서버문자처리실행은아니다.
+- fixture는placeholder/단순합성값을포함하는구조자료다. 기존native domain의날짜/기간/ID·관계검증을그대로통과하는업무성공자료라고해석하지않는다. 후속native시험은유효한관계의합성자료를작성하고원본을고쳐실제서버관측값으로주장하지않는다.
+- Backend보고의DTO/시간48·fixture118/ACK32동일성·잘못된metadata3거절을Flutter가전부독립재실행했다고기록하지않는다.이번에Flutter test/analyze/DB·HTTP기대9·실회원/기기는미실행이다. 문서diffcheck·참조/내용·실제게시본문일치를검증한다.
+
+#### 다음 작업 섹션
+
+Backend는고정안2구현/격리검증파트로진행하고정확소스·실행계약/자동검증·push·실제개발반영여부를분리인계한다. DB초기화·자료삭제/실서버교체·AWS배포·merge승인은이번계약합의에포함하지않는다.
+
+Flutter다음섹션은 **원요청복구·전용계약기반구현설계**다. operation/method/path/query(profile포함)/실제T/원본문/key저장수명·회원환경/세션격리,기존메모리pending무변형,Gateway전달·전용DTO/reader병용/record-null·Router/DI연결을먼저고정한다. C+N별기본출발/조율draft·context수명과승인된Penpot보완을그다음생성/가입/일정·메모연결섹션에이어붙인다. 실제지원미반영서버에새profile을자동전송하지않는다. 앱전체리팩토링/새권한완화/서버검사전용통신·polling을추가하지않는다.

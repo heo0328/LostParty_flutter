@@ -1,5 +1,7 @@
 # AI CONTEXT — 2주 레이드 현황 기획과 현재 구현 상태
 
+베타 계약 최종수용(2026-10-25): Backend267afe56/6394448231의 beta-recruitment-wire-2(profile beta-recruitment-1)를 [Flutter6394870853](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6394870853)에서최종수용·본문MATCH. 최신입력/로컬금칙어와완결DTO·권한/reader병용 반영으로조건부수용해소. 독립정적범위는66operation/118구조예시확인·참조/프로필검사·문자25일치이며런타임통과가아님. 다음원요청복구·전용계약기반설계는NEXT_WORK,최종기준§37.67. 앱/Backend구현·실행반영/기기인수·dev/main통합은아직이다. 이전문단의대기는당시상태다.
+
 베타 계약 소비수용·보완회신(2026-10-25): Backend ae0251d4/6393622793의 profile·기본약속/조기·기한·번호/저장문구 구조는 소비가능으로수용. 최신허용문자/20자·로컬전용금칙어로 제안1 emoji/Unicode17벡터를 정정 요청한 [회신6393878499](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6393878499) 게시·본문MATCH. 수정최종본/완결operation·reader병용 DTO확인 대기이며 전체합의/실구현·반영은아니다. 설계37 §37.66/NEXT_WORK, 로컬우선원칙은 DEVELOPMENT_QUALITY_AND_UX_STANDARD. 앱/서버·DB·Penpot/기기·dev/main불변.
 
 Penpot 정상화(2026-10-25): 기존03 원본ID를 유지한04보관 + 새03(47ddbf4d-1c1f-80fb-8008-d79613e99565)/최신통합17화면 구성. 단일기본출발·조기조율·필터/번호·신청메모/문구관리·공대장읽기·그래프/제안/응답을 통합,02는 실제앱재대조 안내/IF-001숨김보존. 최신 페이지지도/원본·검수 근거는 설계37 §37.65. 앱/Backend실행·디바이스 완료 아님, Issue13계약회신 대기. 디자인/관련 미커밋 메모협의 문서를 한 섹션으로 보관·dev/main 미반영.
