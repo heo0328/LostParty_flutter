@@ -543,7 +543,7 @@ class CycleSchedulePreview {
     };
     if (action == 'submission') {
       roleCheck(
-        personal!.exists &&
+        (personal!.exists || plan.betaData != null) &&
             extra!.data['cycle_member_id'] == mine['cycle_member_id'] &&
             extra!.data['cycle_member_revision'] ==
                 mine['cycle_member_revision'],
@@ -845,6 +845,16 @@ class CycleScheduleReader {
         betaData:
             betaFreeze({
                   'beta_schedule': decoded.metadata?['data']?['beta_schedule'],
+                  'availability_copy':
+                      decoded.metadata?['data']?['availability_copy'],
+                  if (kind == 'context')
+                    'availability_copies': {
+                      for (final member
+                          in (decoded.metadata?['data']?['members'] as List? ??
+                              []))
+                        member['cycle_member_id'] as String:
+                            member['submission']?['availability_copy'],
+                    },
                 })
                 as Map<String, dynamic>,
       );

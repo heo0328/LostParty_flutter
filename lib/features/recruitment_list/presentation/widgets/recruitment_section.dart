@@ -5,10 +5,12 @@ class RecruitmentSection extends StatelessWidget {
   const RecruitmentSection({
     required this.title,
     required this.children,
+    this.trailing,
     super.key,
   });
   final String title;
   final List<Widget> children;
+  final Widget? trailing;
   @override
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.only(bottom: 12),
@@ -21,9 +23,19 @@ class RecruitmentSection extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+          ],
         ),
         const SizedBox(height: 10),
         ...children,

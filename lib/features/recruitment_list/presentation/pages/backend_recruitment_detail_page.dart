@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'schedule_comparison_page.dart';
 import '../../data/beta/beta_read.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -455,6 +456,48 @@ class _BackendRecruitmentDetailPageState
         ],
         RecruitmentSection(
           title: m.target == null ? '이번 주 진행 일정' : '선택 주차 진행 일정',
+          trailing:
+              widget.participation != null &&
+                  m.target != null &&
+                  !m.readOnly &&
+                  {'leader', 'member'}.contains(room['my_target_role'])
+              ? Align(
+                  alignment: Alignment.centerRight,
+                  child: ListenableBuilder(
+                    listenable: widget.participation!,
+                    builder: (context, _) => OutlinedButton.icon(
+                      onPressed: widget.participation!.canAct
+                          ? () async {
+                              final c = widget.participation!,
+                                  target = m.target!;
+                              final success = await updateRoomTimetable(
+                                context,
+                                c,
+                                m.roomId,
+                                target,
+                              );
+                              if (!mounted ||
+                                  !context.mounted ||
+                                  (!success && c.failure == null)) {
+                                return;
+                              }
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    success
+                                        ? '내 일정을 갱신했습니다.'
+                                        : recruitmentFailureMessage(c.failure),
+                                  ),
+                                ),
+                              );
+                            }
+                          : null,
+                      icon: const Icon(Icons.sync, size: 18),
+                      label: const Text('내 일정 갱신'),
+                    ),
+                  ),
+                )
+              : null,
           children: [
             if (value.betaData != null) ...[
               Text(

@@ -1,16 +1,14 @@
 import 'dart:async';
+import '../pages/schedule_comparison_page.dart';
+import '../pages/schedule_command_page.dart';
 import '../../domain/beta_schedule_draft.dart';
 import 'beta_schedule_editor.dart';
 import 'package:flutter/material.dart';
-import '../../../../app/theme/app_colors.dart';
 import '../../../account/domain/play_availability.dart';
 import '../../data/cycle_schedule.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
 import '../viewmodels/cycle_participation_controller.dart';
-import 'cycle_participation_widgets.dart';
 import '../../data/membership_readers.dart';
-import '../viewmodels/membership_plan_view_model.dart';
-import 'membership_record_view.dart';
 
 String scheduleTime(Object? raw) {
   if (raw == null) return '미정';
@@ -57,15 +55,31 @@ Future<void> showCycleSchedule(
       : !controller.session.isAuthenticated) {
     return;
   }
-  await showDialog<void>(
-    context: context,
-    builder: (_) => _ScheduleDialog(
-      controller: controller,
-      room: room,
-      target: target,
-      readOnly: readOnly,
-      reader: reader,
-      anchor: anchor,
+  await Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => ScheduleComparisonPage(
+        controller: controller,
+        room: room,
+        target: target,
+        readOnly: readOnly,
+        reader: reader,
+        anchor: anchor,
+        onSettings: (ctx) => showCycleScheduleCommand(
+          ctx,
+          controller,
+          room: room,
+          target: target,
+          action: 'groups',
+        ),
+        onConfirm: (ctx, session) => showCycleScheduleCommand(
+          ctx,
+          controller,
+          room: room,
+          target: target,
+          action: 'confirm',
+          id: session,
+        ),
+      ),
     ),
   );
 }
@@ -107,404 +121,19 @@ Future<void> showCycleScheduleCommand(
     );
     return;
   }
+  if ({'propose', 'respond'}.contains(action)) {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) =>
+            ScheduleCommandPage(controller: controller, preview: preview),
+      ),
+    );
+    return;
+  }
   await showDialog<void>(
     context: context,
     builder: (_) =>
         _ScheduleCommandDialog(controller: controller, preview: preview),
-  );
-}
-
-class _ScheduleDialog extends StatefulWidget {
-  const _ScheduleDialog({
-    required this.controller,
-    required this.room,
-    required this.target,
-    this.readOnly = false,
-    this.reader,
-    this.anchor,
-  });
-  final CycleParticipationController controller;
-  final String room, target;
-  final bool readOnly;
-  final MembershipReadGateway? reader;
-  final MembershipRecordAnchor? anchor;
-  @override
-  State<_ScheduleDialog> createState() => _ScheduleDialogState();
-}
-
-class _ScheduleDialogState extends State<_ScheduleDialog> {
-  MembershipPlanViewModel? readModel;
-  bool get readOnly => widget.readOnly || readModel?.readOnly == true;
-  CycleScheduleView? plan, contextView, overlaps;
-  final pairs = <Map<String, dynamic>>[];
-  String? error;
-  bool loading = false;
-  int epoch = 0;
-  late final String binding;
-  @override
-  void initState() {
-    super.initState();
-    binding = widget.controller.scopeKey();
-    if (widget.reader != null) {
-      readModel = MembershipPlanViewModel(
-        reader: widget.reader!,
-        session: widget.controller.session,
-        scopeKey: widget.controller.scopeKey,
-        room: widget.room,
-        target: widget.target,
-        anchor: widget.anchor,
-        changes: widget.controller,
-      );
-    }
-    unawaited(load());
-  }
-
-  @override
-  void dispose() {
-    epoch++;
-    readModel?.dispose();
-    super.dispose();
-  }
-
-  Future<void> load() async {
-    final e = ++epoch;
-    setState(() => loading = true);
-    CycleScheduleView? p;
-    if (readModel != null) {
-      await readModel!.load();
-      p = readModel!.value;
-    } else {
-      p = await widget.controller.scheduleRead(
-        widget.room,
-        widget.target,
-        'plan',
-      );
-    }
-    if (!mounted || e != epoch) return;
-    setState(() {
-      plan = p;
-      contextView = overlaps = null;
-      pairs.clear();
-      loading = false;
-      error =
-          readModel?.failure ??
-          (readModel == null && p == null ? widget.controller.failure : null);
-    });
-  }
-
-  Future<void> read(String kind, {String? id, bool more = false}) async {
-    if (readOnly) return;
-    final e = epoch;
-    setState(() => loading = true);
-    final v = await widget.controller.scheduleRead(
-      widget.room,
-      widget.target,
-      kind,
-      id: id,
-      cursor: more ? overlaps?.data['next_cursor'] as String? : null,
-    );
-    if (!mounted || e != epoch) return;
-    setState(() {
-      loading = false;
-      error = v == null ? widget.controller.failure : null;
-      if (v != null && kind == 'context') contextView = v;
-      if (v != null && kind == 'overlaps') {
-        if (more && overlaps?.data['revision'] != v.data['revision']) {
-          error = 'CURSOR_STALE';
-          return;
-        }
-        if (!more) pairs.clear();
-        final ids = pairs.map((p) => p['pair_id']).toSet();
-        if ((v.data['items'] as List).any((p) => ids.contains(p['pair_id']))) {
-          error = 'INVALID_RESPONSE';
-          return;
-        }
-        pairs.addAll((v.data['items'] as List).cast<Map<String, dynamic>>());
-        overlaps = v;
-      }
-    });
-    if (v != null && kind == 'candidate' && mounted) {
-      await showDialog<void>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('공통 후보 시간'),
-          content: Text(
-            '${widget.target} 주차\n${v.data['state'] == 'ready'
-                ? '${scheduleTime(v.data['earliest_start'])} ~ ${scheduleTime(v.data['latest_start'])}'
-                : v.data['state'] == 'search_limited'
-                ? '후보 계산 범위를 초과했습니다.'
-                : '현재 공통 후보가 없습니다. 미제출 시간표도 확인해 주세요.'}',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('닫기'),
-            ),
-          ],
-        ),
-      );
-    }
-  }
-
-  Future<void> action(String action, {String? id}) async {
-    if (readOnly) return;
-    setState(() => loading = true);
-    final e = epoch;
-    final p = await widget.controller.schedulePreview(
-      widget.room,
-      widget.target,
-      action,
-      id: id,
-    );
-    if (!mounted || e != epoch) return;
-    setState(() {
-      loading = false;
-      error = p == null ? widget.controller.failure : null;
-    });
-    if (p == null) return;
-    await showDialog<void>(
-      context: context,
-      builder: (_) =>
-          _ScheduleCommandDialog(controller: widget.controller, preview: p),
-    );
-    if (mounted && !widget.controller.hasPending && widget.controller.canAct) {
-      await load();
-    }
-  }
-
-  Widget note(String text) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Text(text, style: const TextStyle(fontSize: 12)),
-  );
-  Widget button(String title, VoidCallback call) => TextButton(
-    onPressed: !readOnly && !loading && widget.controller.canAct ? call : null,
-    child: Text(title, style: const TextStyle(fontSize: 12)),
-  );
-  @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: widget.controller,
-    builder: (context, _) {
-      if (!widget.controller.session.isAuthenticated ||
-          binding != widget.controller.scopeKey()) {
-        return AlertDialog(
-          title: const Text('로그인 상태 변경'),
-          content: const Text('현재 계정으로 다시 확인해 주세요.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('닫기'),
-            ),
-          ],
-        );
-      }
-      final p = plan;
-      final projection = readModel?.profile?.projection;
-      if (projection != null && p == null) {
-        return AlertDialog(
-          title: Text('${widget.target} 일정·기록'),
-          content: SizedBox(
-            width: 520,
-            child: SingleChildScrollView(
-              child: projection.record != null
-                  ? MembershipRecordView(record: projection.record!)
-                  : Text(membershipRecoveryLabel(projection)),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('닫기'),
-            ),
-          ],
-        );
-      }
-      final d = p?.data ?? const <String, dynamic>{};
-      return AlertDialog(
-        title: Text('${widget.target} 일정 · 예약'),
-        content: SizedBox(
-          width: 520,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (loading) const LinearProgressIndicator(),
-                if (error != null) note(recruitmentFailureMessage(error)),
-                if (p != null) ...[
-                  if (!readOnly)
-                    Wrap(
-                      children: [
-                        button('개인 시간표 가져오기', () => action('submission')),
-                        button('공대원 일정 전체 확인', () => read('context')),
-                        button('내 예약 겹침 확인', () => read('overlaps')),
-                        if (_allowed(d, 'edit_schedule_groups'))
-                          button('일정 설정', () => action('groups')),
-                      ],
-                    ),
-                  note(
-                    readOnly
-                        ? '종료된 모집의 일정·완료 기록입니다.'
-                        : '시간표를 가져와도 확정 일정은 자동 변경되지 않습니다. 새 참가·재참가 후에는 일정 참가 확인이 필요할 수 있습니다.',
-                  ),
-                  for (final s in d['sessions'] as List) ...[
-                    const Divider(),
-                    note(
-                      '${s['required'] == true ? '필수' : '선택'} 일정 · ${scheduleTime(s['starts_at'])} – ${scheduleTime(s['ends_at'])}',
-                    ),
-                    for (final raw in d['my_participations'] as List)
-                      if (raw['session_id'] == s['session_id']) ...[
-                        Text(
-                          raw['confirmation_state'] == 'confirmation_pending'
-                              ? '일정 참가 미확인'
-                              : raw['confirmation_state'] == 'confirmed'
-                              ? '일정 참가 확인됨'
-                              : '시간 미확정',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color:
-                                raw['confirmation_state'] ==
-                                    'confirmation_pending'
-                                ? AppColors.success
-                                : AppColors.textSecondary,
-                          ),
-                        ),
-                        note(
-                          '내 예약: ${const {'active': '예약 중', 'partial': '일부 예약', 'released': '해제됨', 'none': '없음'}[raw['reservation_state']] ?? '확인 필요'}',
-                        ),
-                        if ((raw['warnings'] as List).isNotEmpty)
-                          note(
-                            (raw['warnings'] as List)
-                                .map(
-                                  (v) => v == 'TIME_OVERLAP'
-                                      ? '다른 예약과 겹침'
-                                      : '제출한 가능 시간 밖',
-                                )
-                                .join(' · '),
-                          ),
-                        if (_allowed(raw as Map, 'confirm_participation'))
-                          button(
-                            '이 일정 참가 확인',
-                            () => action(
-                              'confirm',
-                              id: s['session_id'] as String,
-                            ),
-                          ),
-                      ],
-                    button(
-                      '이 일정 기준 공대원 시간',
-                      () => read('context', id: s['session_id'] as String),
-                    ),
-                  ],
-                  if ((d['sessions'] as List).isEmpty) note('확정된 일정이 없습니다.'),
-                  if ((d['sessions'] as List).any(
-                    (s) => _allowed(s as Map, 'propose_schedule'),
-                  ))
-                    button('일정 변경안', () => action('propose')),
-                  for (final g in d['schedule_groups'] as List) ...[
-                    const Divider(),
-                    note(
-                      '${g['occurrence_mode'] == 'each' ? '선택일마다 진행' : '후보 중 1회'} · ${g['planning_mode'] == 'coordinated'
-                          ? '시간 조율'
-                          : g['planning_mode'] == 'manual'
-                          ? '출발 시각 지정'
-                          : '시간 미정'}',
-                    ),
-                    for (final a in g['alternatives'] as List)
-                      note(
-                        '${a['starts_local'] == null ? '${playWeekdayLabels[(a['weekday'] as int) - 1]} 미정' : scheduleTime(cycleScheduleStart(widget.target, a['weekday'] as int, a['starts_local'] as String).toIso8601String())}${a['leader_latest_start_local'] == null ? '' : ' · 출발 상한 ${a['leader_latest_start_local']}'}',
-                      ),
-                    if (g['planning_mode'] == 'coordinated')
-                      button(
-                        '공통 후보 확인',
-                        () => read('candidate', id: g['group_id'] as String),
-                      ),
-                    if (_allowed(g as Map, 'select'))
-                      button(
-                        '진행 후보 선택',
-                        () => action('select', id: g['group_id'] as String),
-                      ),
-                  ],
-                  for (final proposal in d['proposals'] as List)
-                    if (proposal.containsKey('target_session_ids')) ...[
-                      const Divider(),
-                      note(
-                        '일정 변경안 · ${const {'pending': '투표 중', 'applied': '반영됨', 'obsolete': '기한/상태 변경', 'cancelled': '취소됨'}[proposal['state']] ?? '확인 필요'}',
-                      ),
-                      for (final t in proposal['proposed_sessions'] as List)
-                        note('제안 ${_proposalTime(t as Map)}'),
-                      for (final v in proposal['votes'] as List)
-                        note(
-                          '동의 ${v['accepted_count']} / 필요 ${v['required_votes']} · 대상 ${v['eligible_count']}명',
-                        ),
-                      note(
-                        '내 응답: ${const {'pending': '미응답', 'accept': '동의', 'reject': '거절'}[proposal['my_response']['response']] ?? '확인 필요'}',
-                      ),
-                      if (_allowed(proposal as Map, 'respond_proposal'))
-                        button(
-                          '제안 확인 · 응답',
-                          () => action(
-                            'respond',
-                            id: proposal['proposal_id'] as String,
-                          ),
-                        ),
-                    ],
-                ],
-                if (contextView != null) ...[
-                  const Divider(),
-                  note(
-                    contextView!.id == null
-                        ? '공대원 제출 시간 · 예약 중인 시간'
-                        : '해당 일정 제외 예약 중인 시간',
-                  ),
-                  for (final m in contextView!.data['members'] as List) ...[
-                    note(
-                      m['display']?['character_name'] as String? ?? '캐릭터 미확인',
-                    ),
-                    note(
-                      m['submission']['state'] == 'missing'
-                          ? '미제출'
-                          : m['submission']['state'] == 'unavailable'
-                          ? '조회 불가'
-                          : _rows(m['submission']['intervals'] as List),
-                    ),
-                    note(
-                      m['anonymous_busy']['state'] == 'unavailable'
-                          ? '예약 시간 조회 불가'
-                          : (m['anonymous_busy']['intervals'] as List).isEmpty
-                          ? '예약 중인 시간 없음'
-                          : (m['anonymous_busy']['intervals'] as List)
-                                .map(
-                                  (i) =>
-                                      '예약 중 ${scheduleTime(i['starts_at'])}–${scheduleTime(i['ends_at'])}',
-                                )
-                                .join('\n'),
-                    ),
-                  ],
-                ],
-                if (overlaps != null) ...[
-                  const Divider(),
-                  note('내 예약 겹침 ${overlaps!.data['pair_count']}건'),
-                  for (final pair in pairs)
-                    note(
-                      '${pair['left']['room_title']} / ${pair['right']['room_title']}\n${scheduleTime(pair['starts_at'])}–${scheduleTime(pair['ends_at'])}',
-                    ),
-                  if (overlaps!.data['next_cursor'] != null)
-                    button('겹침 더 보기', () => read('overlaps', more: true)),
-                ],
-                CycleCommandBanner(controller: widget.controller),
-                button('최신 일정 다시 확인', load),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('닫기'),
-          ),
-        ],
-      );
-    },
   );
 }
 

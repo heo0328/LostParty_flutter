@@ -97,6 +97,8 @@ class CycleParticipationController extends ChangeNotifier {
   (String key, String room, List<String> targets)? relationEnded;
   DateTime? _retryAt;
   Timer? _retryTimer;
+  (String, String, String, String)? scheduleSuccess;
+  String? get pendingRequestKey => _pending?.key;
   bool get hasPending => _pending != null;
 
   /// Retained implementation only; see docs/project/INACTIVE_FEATURES.md (IF-001).
@@ -135,6 +137,7 @@ class CycleParticipationController extends ChangeNotifier {
     membershipSuccess = null;
     relationEnded = null;
     admissionSuccess = null;
+    scheduleSuccess = null;
     busy = false;
     failure = notice = lastRoom = lastTarget = null;
     _retryAt = null;
@@ -863,6 +866,16 @@ class CycleParticipationController extends ChangeNotifier {
           command.room,
           command.target,
           command.removal!.member,
+        );
+      }
+      if (command.path.endsWith('/schedule-proposals') ||
+          command.path.endsWith('/responses') ||
+          command.path.endsWith('/availability-submission')) {
+        scheduleSuccess = (
+          command.key,
+          command.room,
+          command.target,
+          command.path,
         );
       }
       _pending = null;
