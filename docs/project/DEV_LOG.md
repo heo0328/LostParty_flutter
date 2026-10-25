@@ -1,5 +1,15 @@
 # 개발 이력
 
+## 2026-10-25 — A 베타 계약 모델·요청 재전송 기반
+
+기준 a92a34b0, 기존 feature/raid-recruitment-scheduling에서 승인 A를 구현했다. 착수 범위/직접 회귀를 NEXT_WORK에 먼저 기록하고 Issue13 최종6394448231/6394870853의 확정안을 확인했다. 상세 소유/설계와 모듈은 설계37 §37.68.
+
+- 새로 가능: 명시 beta 주입에서 닫힌 wire/새 불변 모델·기존 의미 파서 재사용, C/N 독립 config 보관, 원요청을 전용 Drift DB로 복원/명시 재전송. 저장 실패 HTTP0·원문/key/query 보존·ACK 저장 후 성공·응답불명/중복/24시간·손상/회원환경·늦은 응답 격리. 생성/참가 Controller에 실제 app-owned DI 등록. 화면 자체의 새 기능은 이번 범위가 아니다.
+- 보존 확인: 기본 legacy, 기존 메모리 pending·생성/가입·신청/승인·일정·완료/탈퇴/해산·기록/주차와 ACK/후속 조회 처리. 기존 계정 DB/소유권 저장소·선택 query 없는 요청 형식을 유지했다. 무관 dirty 보존.
+- 검증: Drift 제한 build-filter 생성, 직접 영향15파일563PASS 후 새 신청/기록/원문/query 경계를 보강한 최종 신규33PASS. 두 수치를 중복 합산하지 않는다. 변경 파일 analyze 문제0·포맷·diffcheck/리뷰. 별도 DB 지연 개방·Controller 기존 동작 불변으로 전체 시험은 확대하지 않았다. 닫힌 파서가 거절하는 중복 식별자 예시는 원본을 보존하고 관계가 유효한 별도 합성 자료를 사용했다.
+- 미확인/제외: 실제 서버 beta 지원/런타임 HTTP·실회원/기기 성공·메모리 실측. 사용자 실기기 요청 없음. 생성/일정/메모 UI·금칙어 패키지/그래프·새 API 운영 활성화·서버 DB/배포·자료 변환·dev/main 통합 없음.
+- Git/협업: 코드·시험·본 문서와 [Issue13 A 결과6395265140](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6395265140)를 한 섹션 commit/push로 보관한다. 댓글의 정확 소스/push 상태는 구간 저장 후 같은 댓글에서 갱신한다. 브랜치 유지, dev/main 미반영. 이어질 화면 연결에서는 저장된 원요청을 새 draft/context로 바꾸지 않고 ACK 성공과 조회 갱신을 분리한다.
+
 ## 2026-10-25 — 베타 고정안2 최종 소비수용·계약 협의 마감 섹션
 
 사용자진행승인에따라Backend267afe56/6394448231의고정안2문서·전체wire66operation/387defs·118fixture·문자25벡터를읽고profile/reader·metadata위치·권한/null·원ACK/호환목록을현재Flutter기반과최종대조했다. 구현을막는잔여차이를발견하지못해[Issue13 최종수용6394870853](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6394870853) 한건회신·본문재조회MATCH확인. 계약은beta-recruitment-wire-2/profile beta-recruitment-1이며이전조건부수용대기는해소한다. 상세고정기준/검토한계는설계37 §37.67.

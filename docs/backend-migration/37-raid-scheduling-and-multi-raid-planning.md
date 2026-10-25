@@ -2493,6 +2493,21 @@ Flutter는 아래 구조를 소비 가능한 방향으로 수용한다. 단 **�
 [Flutter 소비수용·최종입력정책 회신6393878499](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6393878499) 게시·본문재조회 MATCH 확인. 회신/현재 대기 링크는 NEXT_WORK, 섹션 결과는 DEV_LOG를 따른다. 이번은 문서/계약 소비 대조이며 앱/서버·DB·Penpot/기기·dev/main 변경과 Flutter시험 반복은 없다. 상대 최종계약확인/실행구현·push/개발반영을 각각 구분하고 변경된 입력정책은 제안1의 familyemoji허용·Unicode17분할 요구보다 우선한다.
 
 
+### 37.68 A — 베타 계약 모델·요청 재전송 기반 (2026-10-25)
+
+사용자 승인 A 범위로 Backend267afe56의 beta-recruitment-wire-2를 구현했다. **운영 기본 legacy / 신규 화면 연결·실제 beta 활성화는 후속**이다. 기존 기본·membership-actions/application-display 파서와 Controller 메모리 pending은 바꾸지 않았다.
+
+- `data/beta/beta_contract.dart`: legacy/betaWire2 모드, 고정 64경로의 명시 profile·presets GET/PUT 무profile, 불변 생성 config/C·N 초안·일정/개인표 복사/번호·메모/계정 문구 모델. 고정 소스의 66 operation/387 정의를 검증 자료(`beta_wire_schema.g.dart`)로 보존한다. 기존 모델 387개를 재작성하거나 기존 파서를 전역 완화하는 대신, 닫힌 wire 검증 후 추가 metadata만 분리해 기존 의미·관계 파서를 재사용한다. 잘못된 층/누락/null/권한 없는 번호·record content-null을 검사하며 응답 없는 content나 참가관계를 합성하지 않는다. 기존 계약 fallback은 없다.
+- `RecruitmentCommand`: version1 로컬 envelope에 operation/method/path/query 원JSON·실제 주차 목록·원본문 문자열/key·생성/시도 시각·기대 status/계약 모드·상태와 ACK를 저장한다. absent/null·배열 순서·원문(분해한글/공백 포함)을 유지한다. 원문 memo byte 제한과 저장된 정규형 memo를 분리하며 UI 입력/NFC·금칙어 적용은 후속이다. 인증 토큰은 넣지 않는다.
+- `RecruitmentCommandDatabase` schema1은 별도 파일 `lost_party_recruitment_commands`를 지연 개방한다. 기존 `StorageScope`의 정규화 환경·회원 UUID와 owner(creation/participation/presets)를 복합 기본키로 사용한다. 각 영역 한 원요청을 보관하며 원요청 변형·중복 슬롯·미확인 요청 삭제를 거절한다. 계정 DB/소유권 journal은 수정하지 않았다.
+- `RecruitmentCommandTransport`: 최초·시도 저장 후에만 HTTP, 검증된 ACK 저장 후에만 성공 Future 반환. 불명/통신/파싱 실패는 원요청 유지. ACK 저장 실패 시 같은 실행 안에서는 저장만 재시도하고, 재시작 후에는 원 key로 서버 원응답 재생을 요청한다. 저장된 ACK는 HTTP 없이 소비한다. 화면 조회 실패가 명령 성공을 취소하지 않으며 소유 Controller가 성공을 소비한 뒤 ACK 슬롯을 명시 해제한다. 신규 요청으로 자동 대체하지 않는다.
+- 생성부터24시간 경계에서 전송을 막고 needsReview를 보관한다. 손상 자료도 빈 슬롯으로 덮지 않는다. 복원은 같은 환경/회원만 조회하며 자동 전송은 없다. session 세대·회원·환경·dispose 뒤 늦은 응답을 화면 성공으로 돌려주지 않는다. 실제 Dio 전송은 현재 로그인 토큰과 원본문/명시 query를 사용한다.
+- 실제 BackendApp DI에서 앱 수명으로 지연 store/transport를 만들고 생성·참가 Controller에 주입/종료 해제했다. **현재 화면의 기존 명령은 계속 기존 메모리 경로**를 사용한다. 새 복구 안내·버튼 연결 완료로 해석하지 않는다. Gateway.write의 선택 query는 기본 빈값이며 기존 전송에서는 종전처럼 null을 유지한다.
+
+검증: 직접 영향15파일 묶음563PASS 후 신규 모델/저장/전송 경계 보강 최종33PASS(중복 합산하지 않음), 변경 파일 analyze 문제0, 포맷/diffcheck·diff/생성자료 검토. 기존 생성/가입/신청·승인/일정·완료/탈퇴/해산·기록/주차 분리의 직접 회귀를 포함한다. 기록 예시의 중복 CM은 파서 완화 없이 별도 합성 관계 ID로 구성했으며 원본 fixture는 보존했다. 기존 Controller는 optional DI/query 외 동작을 바꾸지 않았고 DB 파일이 독립·지연 생성되므로 전체 Flutter시험 대신 표적 범위를 사용했다. 실서버 beta/HTTP 계약 실행·실회원·기기·RAM 실측은 확인하지 않았으며 이번 A의 실기기 시험 요청은 없다.
+
+다음은 생성 화면/주차별 draft·context와 원요청 성공/복구 소비를 연결할 후속 설계다. Backend 실제 반영 인계 이전에 운영 beta를 켜지 않는다. Penpot/그래프/일정·메모 화면/금칙어 패키지·IF-001/BUG-025·서버/DB 배포·dev/main 통합은 포함하지 않았다. 관련 구현/검증/Issue13 인계를 한 작업브랜치 섹션으로 보관한다.
+
 ### 37.67 고정안2 최종 소비수용·계약 합의 (2026-10-25)
 
 #### 기준과 판정

@@ -1,5 +1,7 @@
 # AI CONTEXT — 2주 레이드 현황 기획과 현재 구현 상태
 
+A 기반 구현(2026-10-25): wire2 전용 닫힌 모델/파서·64경로 profile/presets 무profile, C/N 초안, 원본문/query 보존과 회원/환경/세 소유영역별 모집 전용 Drift DB·명시 재전송/ACK 저장·24시간 확인필요·앱 DI를 구현했다. 기본 legacy/기존 Controller 메모리 명령은 유지, 새 화면·실제 beta 활성화·서버/DB 배포·기기 인수는 후속이다. 직접 영향 묶음563PASS와 보강한 최종 신규33PASS(중복 합산 없음)·분석0. 소유권/검증·한계는 설계37 §37.68/DEV_LOG, 다음 행동 NEXT_WORK.
+
 베타 계약 최종수용(2026-10-25): Backend267afe56/6394448231의 beta-recruitment-wire-2(profile beta-recruitment-1)를 [Flutter6394870853](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6394870853)에서최종수용·본문MATCH. 최신입력/로컬금칙어와완결DTO·권한/reader병용 반영으로조건부수용해소. 독립정적범위는66operation/118구조예시확인·참조/프로필검사·문자25일치이며런타임통과가아님. 다음원요청복구·전용계약기반설계는NEXT_WORK,최종기준§37.67. 앱/Backend구현·실행반영/기기인수·dev/main통합은아직이다. 이전문단의대기는당시상태다.
 
 베타 계약 소비수용·보완회신(2026-10-25): Backend ae0251d4/6393622793의 profile·기본약속/조기·기한·번호/저장문구 구조는 소비가능으로수용. 최신허용문자/20자·로컬전용금칙어로 제안1 emoji/Unicode17벡터를 정정 요청한 [회신6393878499](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6393878499) 게시·본문MATCH. 수정최종본/완결operation·reader병용 DTO확인 대기이며 전체합의/실구현·반영은아니다. 설계37 §37.66/NEXT_WORK, 로컬우선원칙은 DEVELOPMENT_QUALITY_AND_UX_STANDARD. 앱/서버·DB·Penpot/기기·dev/main불변.

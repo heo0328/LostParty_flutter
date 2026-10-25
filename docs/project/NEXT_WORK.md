@@ -1,25 +1,19 @@
-# NEXT WORK — 베타 계약 합의 완료 / 네이티브 계약 기반 구현 설계
+# NEXT WORK — A 기반 완료 / 후속 화면 연결 설계 준비
 
-## 현재 기준 (2026-10-25)
+## 현재 상태 (2026-10-25)
 
-Backend 고정267afe560033291df6317c2f712e395f13e68818의 **beta-recruitment-wire-2 / contract_profile=beta-recruitment-1**를 최종소비수용했다. [Backend6394448231](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6394448231)과 [Flutter최종수용6394870853](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6394870853)·본문MATCH가근거다. 제안1수정본대기/조건부수용은해소했고계약협의단계는마무리한다. 앱/Backend구현·실행OpenAPI/DB반영·실회원/디바이스인수는별개/아직미완료다. 상세wire/독립정적검토/한계는설계37 §37.67.
+A 구간의 베타 전용 계약 모델·원요청/ACK 보존·독립 모집 Drift DB/전송·실제 app-owned DI를 구현·검증했다. 운영 기본 legacy, 기존 생성·참가 Controller의 메모리 pending은 무변형이다. 상세 계약/검증/한계는 설계37 §37.68와 DEV_LOG, [Issue13 A 결과](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6395265140). 본 섹션을 코드·시험·문서와 한 커밋으로 작업 브랜치에 보관한다. dev/main 통합은 하지 않는다.
 
-## 다음 소분류 섹션 — 원요청복구·전용계약기반 구현 설계
+## 다음 소분류 섹션 — 생성·표시 연결의 구현 전 설계
 
-1. 기존경로64개의명시profile과신규presets2개의무profile을구분한조회/쓰기접근을설계한다. 현재Gateway.write의query전달과Controller메모리pending을확인하고operation/method/path/query/T/원본문/key저장·회원환경/세션격리/삭제수명·Router/DI를먼저고정한다. 기존무profile pending은무변형,원ACK뒤조회실패는조회만재시도한다.
-2. 생성전config/실제BetaSchedule·availability_copy·identity/memo·reader병용/record content-null을검증하는전용DTO/저장소/ViewModel소유를설계한다. 기존closed검사전역완화·가짜content/session·구조회fallback은없다.
-3. 직접회귀목록/검증경계를기록하고기반구현지시후코드에연결한다. 구현범위가넓어질때만전체시험판단,현재문서만으로Flutter시험반복하지않는다. 현재앱의영속복구가완성됐다고주장하지않는다.
-4. 후속생성/가입·일정/메모섹션에C/N별기본출발draft와context수명·조율확인/에러표시를연결한다. 최신Penpot03/로컬그래프·금칙어원칙은유지하고필요한시안차이는먼저설명한다.
+1. 최신 Issue13의 Backend 고정안2 구현·자동 검증·정확 소스/push/실제 개발 반영을 구분해 확인한다. 계약 기준은 267afe56 / beta-recruitment-wire-2이며 실제 beta 지원 인계 전에는 앱 기본 모드를 바꾸지 않는다.
+2. A의 C/N별 기본출발/조율 초안과 현재 생성 ViewModel·context 서명/수명을 연결할 범위를 먼저 설계한다. 원요청은 생성 당시 본문·query·key·검증 자료로 복원하고 새 draft/context로 덮지 않는다. 화면 성공 알림은 durable ACK 뒤, 조회 실패는 조회 재시도로 분리한다.
+3. 전용 beta metadata와 기본/기록/application-display 파서를 실제 화면 조회에 연결할 순서·권한/nullable/주차·늦은 응답 격리를 정한다. content-null이나 기록에는 가짜 현재 참가/메뉴를 만들지 않는다. 기존 생성·가입/캐릭터변경·일정·완료/탈퇴/해산·C/N 직접 회귀를 유지한다.
+4. 일정·메모/계정 문구·새 복구 안내는 후속 화면 섹션이다. 승인된 Penpot03·로컬 그래프/금칙어 원칙을 유지하며 구현 전에 소유·갱신·포함/제외·완료 조건을 기록한다. 현재 A에서 화면 연결/베타 인수까지 완료한 것으로 해석하지 않는다.
 
-현재요청에서는최종계약대조·회신/문서섹션까지만완료한다. 앱/서버·DB·Penpot·실기기·dev/main변경은없다. 새profile을서버미반영상태에서자동전송하지않는다.
+미확인/인수: 실제 beta 서버 HTTP·실회원/디바이스/메모리 실측. 이번 A의 실기기 시험 요청은 없다. 신규33PASS 및 직접 영향 묶음563PASS/변경 분석0은 자동 검증 범위이며 중복 합산하지 않는다. 기존 계정 DB·소유권 저장소·무관 dirty를 보존했다.
 
-## Backend 인계·협업 상태
-
-Backend 다음은 고정안2 구현/격리검증파트다. 정확소스/실행계약·검증결과·push/실제개발반영을구분해받는다. 배포/DB초기화·자료삭제·merge는이번합의승인에포함하지않는다. 새차이가실제로발견되면같은Issue13에구체근거로회신하며,계약합의완료를Issue전체인수/종료로확대하지않는다. 자동모니터링/반복댓글·회신한건마다독립커밋은하지않는다.
-
-금칙어는앱로컬전용,서버는실제저장요청의길이/허용문자만검증한다. 한글/호환자모·ASCII영문/숫자/일반공백과 `.,!?~()-_/@#&+`,NFC후앞뒤공백제거/내부공백포함20자다. 전체미설정/부분표/조회실패구분,C/N·명시동의·정족수/기한·모집번호권한은§37.63/66/67을따른다.
-
-이번최종대조는66operation/118구조fixture확인·참조/프로필목록정적검사·문자25벡터독립일치·문서diffcheck·게시본문검증을수행했다. 실제앱/DB·HTTP9/Flutter시험/실회원성공은아니다. 관련문서를한섹션커밋·작업브랜치푸시로보관하고무관dirty를보존한다. 아래이전완료/대기기록은당시상태이며현재상태는이상단을우선한다.
+제외 유지: 서버/DB 배포·자료 변환·dev/main 통합, 자동 재전송/서버 자동탐지·계약 fallback, 웹소켓/IF-001/BUG-025·차트/리디자인·금칙어 패키지 적용. Backend 협업 댓글은 같은 Issue13에 필요한 구체 결과만 회신하고 질문/댓글 하나마다 독립 커밋하지 않는다. 아래는 이전 섹션의 기록이며 현재 상태는 이 상단이 우선한다.
 
 ## Penpot 정상화 섹션 완료 (2026-10-25)
 

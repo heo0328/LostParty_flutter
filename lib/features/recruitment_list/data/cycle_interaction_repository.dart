@@ -541,6 +541,7 @@ abstract interface class CycleInteractionGateway {
     Map<String, dynamic>? expectedScope,
     int status = 200,
     String method = 'POST',
+    Map<String, dynamic> query = const {},
     String? globalAck,
     List<String>? affectedTargets,
     Map<String, dynamic>? submissionAck,
@@ -973,6 +974,7 @@ class CycleInteractionRepository
     Map<String, dynamic>? expectedScope,
     int status = 200,
     String method = 'POST',
+    Map<String, dynamic> query = const {},
     String? globalAck,
     List<String>? affectedTargets,
     Map<String, dynamic>? submissionAck,
@@ -984,6 +986,7 @@ class CycleInteractionRepository
       path,
       method: method,
       body: body,
+      query: query.isEmpty ? null : query,
       idempotencyKey: key,
       expectedStatus: status,
     ))!;

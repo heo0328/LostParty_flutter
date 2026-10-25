@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import '../../data/beta/recruitment_command_transport.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
@@ -28,6 +29,7 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     required this.hasVerifiedAccount,
     DateTime Function()? now,
     this.scopeKey,
+    this.commandTransport,
   }) : now = now ?? DateTime.now {
     session.addListener(_access);
     accessChanges.addListener(_access);
@@ -36,6 +38,9 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     _eligible = session.isAuthenticated && hasVerifiedAccount();
   }
   final RecruitmentGateway gateway;
+
+  /// Owned by the app; draft/UI beta wiring is a subsequent section.
+  final RecruitmentCommandTransport? commandTransport;
   final AccountReadSession session;
   final Listenable accessChanges;
   final bool Function() hasVerifiedAccount;

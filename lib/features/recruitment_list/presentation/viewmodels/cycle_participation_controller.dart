@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import '../../data/beta/recruitment_command_transport.dart';
 import '../../../account/domain/member_raid_models.dart' show raidList;
 import '../../../account/domain/role_summary.dart' show roleMap;
 import '../../data/cycle_member_actions.dart';
@@ -66,6 +67,7 @@ class CycleParticipationController extends ChangeNotifier {
     required this.scopeKey,
     this.onMutation,
     this.onRelationEnded,
+    this.commandTransport,
     DateTime Function()? now,
   }) : now = now ?? DateTime.now {
     _binding = scopeKey();
@@ -73,6 +75,9 @@ class CycleParticipationController extends ChangeNotifier {
     changes.addListener(_access);
   }
   final CycleInteractionGateway gateway;
+
+  /// Beta foundation only; legacy commands below retain their original memory journal.
+  final RecruitmentCommandTransport? commandTransport;
   final AccountReadSession session;
   final Listenable changes;
   final String Function() scopeKey;

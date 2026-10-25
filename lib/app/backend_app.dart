@@ -1,4 +1,7 @@
 import 'dart:async';
+import '../features/recruitment_list/data/beta/beta_contract.dart';
+import '../features/recruitment_list/data/beta/recruitment_command_store.dart';
+import '../features/recruitment_list/data/beta/recruitment_command_transport.dart';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -91,7 +94,11 @@ bool allowedAuthBaseUrl(String value, {required bool debug}) {
 }
 
 class BackendApp extends StatefulWidget {
-  const BackendApp({super.key});
+  const BackendApp({
+    super.key,
+    this.recruitmentContractMode = RecruitmentContractMode.legacy,
+  });
+  final RecruitmentContractMode recruitmentContractMode;
   @override
   State<BackendApp> createState() => _BackendAppState();
 }
@@ -111,6 +118,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
   BackendMemberAccount? _memberAccount;
   BackendRecruitmentCreateViewModel? _recruitmentCreate;
   CycleParticipationController? _participation;
+  RecruitmentCommandTransport? _recruitmentCommands;
   final _managementGateways =
       <(String, String, int, String), ScopedCharacterManagementGateway>{};
   GoRouter? _router;
@@ -411,6 +419,14 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       dataSource: AssetRaidCatalogDataSource(),
     );
     final cycleReads = CycleReadRepository(accountApi, membershipProfile: true);
+    final commandTransport = _recruitmentCommands = RecruitmentCommandTransport(
+      store: DriftRecruitmentCommandStore(),
+      session: readSession,
+      baseUrl: () => _dio!.options.baseUrl,
+      allowHttp: kDebugMode,
+      mode: widget.recruitmentContractMode,
+      send: DioRecruitmentCommandSender(_dio!, readSession).call,
+    );
     final membershipReads = MembershipReadRepository(accountApi);
     String cycleScopeKey() =>
         '${_dio!.options.baseUrl}/${readSession.userId}/${readSession.generation}/${lifecycle.runtime?.readGeneration}';
@@ -437,6 +453,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       recruitment: recruitmentGateway,
     );
     final participation = _participation = CycleParticipationController(
+      commandTransport: commandTransport,
       gateway: cycleInteractions,
       session: readSession,
       changes: _memberAccount?.model ?? auth,
@@ -452,6 +469,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     );
     final recruitmentCreate = _recruitmentCreate =
         BackendRecruitmentCreateViewModel(
+          commandTransport: commandTransport,
           gateway: recruitmentGateway,
           session: readSession,
           scopeKey: cycleScopeKey,
@@ -887,6 +905,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     _entryGate.dispose();
     _recruitmentCreate?.dispose();
     _participation?.dispose();
+    unawaited(_recruitmentCommands?.dispose());
     _memberAccount?.dispose();
     _ownership?.dispose();
     unawaited(_accountLifecycle?.close());
