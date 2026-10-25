@@ -5,7 +5,7 @@ import 'beta_contract.dart';
 
 enum RecruitmentCommandOwner { creation, participation, presets }
 
-enum RecruitmentCommandState { pending, acknowledged, needsReview }
+enum RecruitmentCommandState { pending, acknowledged, needsReview, rejected }
 
 /// Exact wire bytes and query are retained independently of mutable UI drafts.
 /// Authentication and in-memory preview objects must never enter this envelope.
@@ -25,7 +25,13 @@ class RecruitmentCommand {
     this.rawAck,
     this.contractMode = RecruitmentContractMode.betaWire2,
     this.expectedStatus = 200,
+    this.version = 1,
+    Map<String, dynamic>? validationSnapshot,
+    Map<String, dynamic>? rejection,
   }) : rawQuery = jsonEncode(query),
+       validationSnapshot =
+           betaFreeze(validationSnapshot) as Map<String, dynamic>?,
+       rejection = betaFreeze(rejection) as Map<String, dynamic>?,
        targetCycles = List.unmodifiable(targetCycles) {
     _validate();
   }
@@ -49,12 +55,16 @@ class RecruitmentCommand {
       contractMode = RecruitmentContractMode.values.byName(
         j['contract_mode'] as String,
       ),
-      expectedStatus = j['expected_status'] as int {
+      expectedStatus = j['expected_status'] as int,
+      version = j['version'] as int,
+      validationSnapshot =
+          betaFreeze(j['validation_snapshot']) as Map<String, dynamic>?,
+      rejection = betaFreeze(j['rejection']) as Map<String, dynamic>? {
     roleShape(
       j,
-      'version owner operation method path raw_query target_cycles raw_body key created_at attempted_at state raw_ack contract_mode expected_status',
+      'version owner operation method path raw_query target_cycles raw_body key created_at attempted_at state raw_ack contract_mode expected_status${version == 2 ? ' validation_snapshot rejection' : ''}',
     );
-    roleCheck(j['version'] == 1);
+    roleCheck(version == 1 || version == 2);
     _validate();
   }
   factory RecruitmentCommand.decode(String source) {
@@ -77,11 +87,26 @@ class RecruitmentCommand {
   final String? rawAck;
   final RecruitmentContractMode contractMode;
   final int expectedStatus;
+  final int version;
+  final Map<String, dynamic>? validationSnapshot, rejection;
   Map<String, dynamic> get query =>
       betaFreeze(jsonDecode(rawQuery)) as Map<String, dynamic>;
   bool expired(DateTime now) =>
       !now.isBefore(createdAt.add(const Duration(hours: 24)));
   void _validate() {
+    roleCheck(version == 1 || version == 2);
+    roleCheck(
+      version == 2 || (validationSnapshot == null && rejection == null),
+    );
+    roleCheck(
+      (state == RecruitmentCommandState.rejected) == (rejection != null),
+    );
+    if (rejection != null) {
+      roleShape(rejection!, 'status code');
+      roleCheck(
+        definiteRecruitmentRejection(rejection!['status'], rejection!['code']),
+      );
+    }
     roleId(key);
     roleCheck(
       RegExp(
@@ -127,6 +152,38 @@ class RecruitmentCommand {
       path != '/v2/raid-rooms' || owner == RecruitmentCommandOwner.creation,
     );
     final body = roleMap(jsonDecode(rawBody));
+    if (validationSnapshot != null) {
+      roleCheck(version == 2 && owner == RecruitmentCommandOwner.creation);
+      final e = validationSnapshot!;
+      roleShape(e, 'room_id target_cycle_key effect created_cycles');
+      roleId(e['room_id']);
+      roleCheck(e['target_cycle_key'] == body['target_cycle_key']);
+      roleCheck(
+        e['effect'] ==
+            (body['continuation']['enabled'] == true
+                ? 'target_and_next'
+                : 'target_only'),
+      );
+      final rows = raidList(e['created_cycles']);
+      roleCheck(rows.length == targetCycles.length);
+      final keys = <String>{}, ids = <String>{};
+      for (final raw in rows) {
+        final p = roleMap(raw);
+        roleShape(
+          p,
+          'target_cycle_key room_cycle_id generation target_revision',
+        );
+        roleCheck(
+          keys.add(raidCycleKey(p['target_cycle_key'])) &&
+              ids.add(roleId(p['room_cycle_id'])),
+        );
+        roleCheck(
+          rolePositive(p['generation']) <= 2147483647 &&
+              rolePositive(p['target_revision']) <= 2147483647,
+        );
+      }
+      roleCheck(keys.containsAll(targetCycles));
+    }
     for (final field in ['target_cycle_key', 'view_cycle_key']) {
       if (body[field] != null) roleCheck(targetCycles.contains(body[field]));
       if (query[field] != null) roleCheck(targetCycles.contains(query[field]));
@@ -157,7 +214,9 @@ class RecruitmentCommand {
   }
 
   Map<String, dynamic> toJson() => {
-    'version': 1,
+    'version': version,
+    if (version == 2) 'validation_snapshot': validationSnapshot,
+    if (version == 2) 'rejection': rejection,
     'owner': owner.name,
     'operation': operation,
     'method': method,
@@ -179,17 +238,69 @@ class RecruitmentCommand {
       ..remove('attempted_at')
       ..remove('state')
       ..remove('raw_ack');
-    return jsonEncode(original(this)) == jsonEncode(original(other));
+    // A validated rejection resolves the request; it does not alter its recipe.
+    final a = original(this)..remove('rejection'),
+        b = original(other)..remove('rejection');
+    return jsonEncode(a) == jsonEncode(b);
   }
 
   RecruitmentCommand transition({
     DateTime? attemptedAt,
     RecruitmentCommandState? state,
     String? rawAck,
+    Map<String, dynamic>? rejection,
   }) => RecruitmentCommand._({
     ...toJson(),
     if (attemptedAt != null) 'attempted_at': attemptedAt.toIso8601String(),
     if (state != null) 'state': state.name,
     'raw_ack': rawAck ?? this.rawAck,
+    if (version == 2) 'rejection': rejection ?? this.rejection,
   });
 }
+
+/// Closed set of known no-create outcomes. Unknown errors stay unresolved.
+bool definiteRecruitmentRejection(Object? status, Object? code) =>
+    const {400, 403, 404, 409, 413}.contains(status) &&
+    const {
+      'INVALID_REQUEST',
+      'PERMISSION_DENIED',
+      'NOT_FOUND',
+      'PAYLOAD_TOO_LARGE',
+      'SELECTION_CONTEXT_CHANGED',
+      'TARGET_CYCLE_OUT_OF_RANGE',
+      'RAID_ITEM_LEVEL_REQUIRED',
+      'CHARACTER_ALREADY_PARTICIPATING',
+      'RAID_ALREADY_COMPLETED',
+      'GROUP_ACCESS_REQUIRED',
+      'CLIENT_UPGRADE_REQUIRED',
+      'CONTEXT_EXPIRED',
+      'CHARACTER_NOT_ELIGIBLE',
+      'CONTEXT_INVALID',
+      'REQUEST_TOO_LARGE',
+      'COMMAND_CONTEXT_EXPIRED',
+      'REVISION_CONFLICT',
+      'CYCLE_CHANGED',
+      'CATALOG_VERSION_CONFLICT',
+      'RECRUITMENT_CLOSED',
+      'START_BEFORE_FLOOR',
+      'INVALID_START_TIME',
+      'SCHEDULE_BEFORE_FLOOR',
+      'SCHEDULE_IN_PAST',
+      'MAINTENANCE_WINDOW',
+      'SESSION_DURATION_EXCEEDED',
+      'WEEKLY_ALREADY_PARTICIPATING',
+      'WEEKLY_OCCUPANCY_CHANGED',
+      'WEEKLY_ALREADY_COMPLETED',
+      'RAID_WEEKLY_COMPLETED',
+      'WEEKLY_COMPLETED',
+      'COMBAT_POWER_REQUIRED',
+      'ROLE_NOT_SUPPORTED',
+      'CHARACTER_DATA_UNAVAILABLE',
+      'MEMBER_RAID_LIMIT_REACHED',
+      'GROUP_MEMBERSHIP_REQUIRED',
+      'OWNERSHIP_REQUIRED',
+      'CHARACTER_NOT_ACTIVE',
+      'ROOM_RESTRICTED',
+      'GROUP_CAPACITY_EXCEEDED',
+      'MEMBER_GROUP_LIMIT_EXCEEDED',
+    }.contains(code);

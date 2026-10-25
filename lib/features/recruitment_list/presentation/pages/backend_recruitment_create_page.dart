@@ -38,6 +38,7 @@ class _BackendRecruitmentCreatePageState
   @override
   void initState() {
     super.initState();
+    _opened = m.creationSuccessConsumed ? m.createdRoomId : null;
     m.addListener(_changed);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -67,6 +68,7 @@ class _BackendRecruitmentCreatePageState
           context.pushReplacement(
             membershipDetailLocation(id, m.createdTargetKey),
           );
+          unawaited(m.consumeCreatedSuccess());
         }
       });
     }
@@ -85,6 +87,8 @@ class _BackendRecruitmentCreatePageState
           )
         : m.loading && m.catalog == null
         ? const Center(child: CircularProgressIndicator())
+        : m.hasPending && m.catalog == null
+        ? ListView(padding: const EdgeInsets.all(16), children: [_pending()])
         : m.catalog == null
         ? _message(
             recruitmentFailureMessage(m.failure),
@@ -191,120 +195,132 @@ class _BackendRecruitmentCreatePageState
               RecruitmentSection(
                 title: '출발 일정',
                 children: [
-                  const Row(
-                    children: [
-                      Icon(
-                        Icons.schedule_outlined,
-                        size: 17,
-                        color: AppColors.primary,
-                      ),
-                      SizedBox(width: 6),
-                      Text('출발 시각 미정 또는 수동 설정', style: TextStyle(fontSize: 12)),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    '선택한 레이드 주차의 날짜예요. 지난 요일을 다음 주로 넘기지 않아요.\n'
-                    '수동 출발은 생성 시점부터 30분 이후이며, 선택일마다 진행은 모든 날짜가 유효해야 해요.',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 5,
-                    runSpacing: 5,
-                    children: [
-                      for (final day in const [3, 4, 5, 6, 7, 1, 2])
-                        FilterChip(
-                          label: Text(_dayLabel(day)),
-                          selected: d.weekdays.contains(day),
-                          visualDensity: VisualDensity.compact,
-                          onSelected:
-                              !d.weekdays.contains(day) && !m.canSelectDay(day)
-                              ? null
-                              : (selected) {
-                                  if (selected && !m.canSelectDay(day)) return;
-                                  final days = {...d.weekdays};
-                                  selected ? days.add(day) : days.remove(day);
-                                  m.update(
-                                    d.copy(
-                                      weekdays: days,
-                                      clearStart: days.isEmpty,
-                                    ),
-                                  );
-                                },
+                  if (m.betaEnabled)
+                    _betaSchedules()
+                  else ...[
+                    const Row(
+                      children: [
+                        Icon(
+                          Icons.schedule_outlined,
+                          size: 17,
+                          color: AppColors.primary,
                         ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (d.weekdays.length > 1)
-                    CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                      controlAffinity: ListTileControlAffinity.leading,
-                      value: d.sameStart,
-                      title: const Text(
-                        '요일별 동일 시각 적용',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                      onChanged: (v) => m.update(d.copy(sameStart: v)),
+                        SizedBox(width: 6),
+                        Text(
+                          '출발 시각 미정 또는 수동 설정',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ],
                     ),
-                  if (d.sameStart || d.weekdays.isEmpty)
-                    _fieldButton(
-                      '출발 시각 · KST',
-                      d.startMinute == null
-                          ? '미정'
-                          : minuteClock(d.startMinute!),
-                      () => _chooseStart(),
-                    )
-                  else
-                    for (final day in const [
-                      3,
-                      4,
-                      5,
-                      6,
-                      7,
-                      1,
-                      2,
-                    ].where(d.weekdays.contains))
+                    const SizedBox(height: 10),
+                    const Text(
+                      '선택한 레이드 주차의 날짜예요. 지난 요일을 다음 주로 넘기지 않아요.\n'
+                      '수동 출발은 생성 시점부터 30분 이후이며, 선택일마다 진행은 모든 날짜가 유효해야 해요.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 5,
+                      runSpacing: 5,
+                      children: [
+                        for (final day in const [3, 4, 5, 6, 7, 1, 2])
+                          FilterChip(
+                            label: Text(_dayLabel(day)),
+                            selected: d.weekdays.contains(day),
+                            visualDensity: VisualDensity.compact,
+                            onSelected:
+                                !d.weekdays.contains(day) &&
+                                    !m.canSelectDay(day)
+                                ? null
+                                : (selected) {
+                                    if (selected && !m.canSelectDay(day)) {
+                                      return;
+                                    }
+                                    final days = {...d.weekdays};
+                                    selected ? days.add(day) : days.remove(day);
+                                    m.update(
+                                      d.copy(
+                                        weekdays: days,
+                                        clearStart: days.isEmpty,
+                                      ),
+                                    );
+                                  },
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (d.weekdays.length > 1)
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        value: d.sameStart,
+                        title: const Text(
+                          '요일별 동일 시각 적용',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        onChanged: (v) => m.update(d.copy(sameStart: v)),
+                      ),
+                    if (d.sameStart || d.weekdays.isEmpty)
+                      _fieldButton(
+                        '출발 시각 · KST',
+                        d.startMinute == null
+                            ? '미정'
+                            : minuteClock(d.startMinute!),
+                        () => _chooseStart(),
+                      )
+                    else
+                      for (final day in const [
+                        3,
+                        4,
+                        5,
+                        6,
+                        7,
+                        1,
+                        2,
+                      ].where(d.weekdays.contains))
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: _fieldButton(
+                            '${const {3: '수', 4: '목', 5: '금', 6: '토', 7: '일', 1: '월', 2: '화'}[day]}요일 출발 · KST',
+                            d.timeForDay(day) == null
+                                ? '미정'
+                                : minuteClock(d.timeForDay(day)!),
+                            () => _chooseStart(day: day),
+                          ),
+                        ),
+                    if (d.weekdays.length > 1)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: _fieldButton(
-                          '${const {3: '수', 4: '목', 5: '금', 6: '토', 7: '일', 1: '월', 2: '화'}[day]}요일 출발 · KST',
-                          d.timeForDay(day) == null
-                              ? '미정'
-                              : minuteClock(d.timeForDay(day)!),
-                          () => _chooseStart(day: day),
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Wrap(
+                          spacing: 8,
+                          children: [
+                            ChoiceChip(
+                              label: const Text('아래 날짜 중 1회'),
+                              selected: !d.eachDay,
+                              onSelected: (_) =>
+                                  m.update(d.copy(eachDay: false)),
+                            ),
+                            ChoiceChip(
+                              label: const Text('선택일마다 진행'),
+                              selected: d.eachDay,
+                              onSelected: (_) =>
+                                  m.update(d.copy(eachDay: true)),
+                            ),
+                          ],
                         ),
                       ),
-                  if (d.weekdays.length > 1)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Wrap(
-                        spacing: 8,
-                        children: [
-                          ChoiceChip(
-                            label: const Text('아래 날짜 중 1회'),
-                            selected: !d.eachDay,
-                            onSelected: (_) => m.update(d.copy(eachDay: false)),
-                          ),
-                          ChoiceChip(
-                            label: const Text('선택일마다 진행'),
-                            selected: d.eachDay,
-                            onSelected: (_) => m.update(d.copy(eachDay: true)),
-                          ),
-                        ],
+                    const SizedBox(height: 10),
+                    Text(
+                      !d.hasManualTime
+                          ? '출발 미정 · 아직 시간 예약은 없어요.'
+                          : '확정 출발 30분 전부터 신규 모집이 마감돼요.',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
                       ),
                     ),
-                  const SizedBox(height: 10),
-                  Text(
-                    !d.hasManualTime
-                        ? '출발 미정 · 아직 시간 예약은 없어요.'
-                        : '확정 출발 30분 전부터 신규 모집이 마감돼요.',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
+                  ],
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton.icon(
@@ -570,6 +586,130 @@ class _BackendRecruitmentCreatePageState
     );
   }
 
+  Widget _betaSchedules() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      for (final target in m.betaTargets) ...[
+        Text(
+          target == m.cycles?.current.key ? '이번 주 출발 일정' : '다음 주 출발 일정',
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: [
+            for (final day in [3, 4, 5, 6, 7, 1, 2])
+              ChoiceChip(
+                label: Text(_betaDay(target, day)),
+                selected: m.betaInput(target).weekday == day,
+                onSelected:
+                    !List.generate(
+                      288,
+                      (i) => i * 5,
+                    ).any((minute) => m.canBetaStart(target, day, minute))
+                    ? null
+                    : (_) => m.updateBeta(
+                        target,
+                        m
+                            .betaInput(target)
+                            .copy(weekday: day, clearMinute: true),
+                      ),
+              ),
+          ],
+        ),
+        OutlinedButton.icon(
+          onPressed: m.betaInput(target).weekday == null
+              ? null
+              : () => _chooseBetaStart(target),
+          icon: const Icon(Icons.schedule),
+          label: Text(
+            m.betaInput(target).minute == null
+                ? '출발 시각 선택'
+                : '${(m.betaInput(target).minute! ~/ 60).toString().padLeft(2, '0')}:${(m.betaInput(target).minute! % 60).toString().padLeft(2, '0')} · KST',
+          ),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+          title: const Text(
+            '더 일찍 출발할 수 있으면 자동으로 조율',
+            style: TextStyle(fontSize: 12),
+          ),
+          value: m.betaInput(target).enabled,
+          onChanged: (v) =>
+              m.updateBeta(target, m.betaInput(target).copy(enabled: v)),
+        ),
+        if (m.betaInput(target).enabled)
+          DropdownButtonFormField<int>(
+            key: ValueKey(
+              '$target-${m.betaCapacity}-${m.betaInput(target).additional}',
+            ),
+            initialValue: m.betaInput(target).additional < m.betaCapacity
+                ? m.betaInput(target).additional
+                : null,
+            decoration: const InputDecoration(labelText: '공대장 외 추가 참가 인원'),
+            items: [
+              for (var i = 1; i < m.betaCapacity; i++)
+                DropdownMenuItem(value: i, child: Text('$i명')),
+            ],
+            onChanged: (v) {
+              if (v != null) {
+                m.updateBeta(target, m.betaInput(target).copy(additional: v));
+              }
+            },
+          ),
+        const SizedBox(height: 12),
+      ],
+      const Text(
+        '더 빠른 시간이 정해지지 않으면 기본 출발 시간에 진행해요. 출발 30분 전에 모집이 마감돼요.',
+        style: TextStyle(fontSize: 11),
+      ),
+    ],
+  );
+
+  String _betaDay(String target, int day) {
+    final date = BackendRecruitmentCreateViewModel.startPolicy.dateForDay(
+      m.serverNow,
+      day,
+      targetCycleKey: target,
+    );
+    return '${date.month}/${date.day}(${' 월화수목금토일'[day]})';
+  }
+
+  Future<void> _chooseBetaStart(String target) async {
+    final input = m.betaInput(target),
+        binding = (
+          m.session.userId,
+          m.session.generation,
+          m.editGeneration,
+          m.draft.selectionSignature,
+        );
+    final value = await showDialog<int>(
+      context: context,
+      builder: (_) => RecruitmentStartPicker(
+        initial: input.minute,
+        resetLabel: null,
+        allowed: (minute) => m.canBetaStart(target, input.weekday!, minute),
+      ),
+    );
+    if (!mounted ||
+        value == null ||
+        value < 0 ||
+        binding !=
+            (
+              m.session.userId,
+              m.session.generation,
+              m.editGeneration,
+              m.draft.selectionSignature,
+            )) {
+      return;
+    }
+    if (m.canBetaStart(target, input.weekday!, value)) {
+      m.updateBeta(target, input.copy(minute: value));
+    }
+  }
+
   Widget _pending() => RecruitmentSection(
     title: '생성 결과 확인',
     children: [
@@ -585,9 +725,18 @@ class _BackendRecruitmentCreatePageState
           child: const Text('같은 요청 다시 확인'),
         ),
       TextButton(
-        onPressed: !m.busy && m.delayPassed ? m.checkCurrentRooms : null,
+        onPressed: !m.busy && m.delayPassed
+            ? m.journalUnavailable
+                  ? () => context.go('/raid-status')
+                  : m.checkCurrentRooms
+            : null,
         child: const Text('현재 참가 모집 확인'),
       ),
+      if (m.journalUnavailable)
+        const Text(
+          '기기에 저장된 요청 정보를 읽지 못했습니다. 참가 현황을 확인해 주세요.',
+          style: TextStyle(fontSize: 12, color: AppColors.error),
+        ),
       for (var i = 0; i < m.recoveryRooms.length; i++)
         Wrap(
           spacing: 8,

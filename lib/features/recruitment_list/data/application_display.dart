@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'beta/beta_contract.dart';
+import 'beta/beta_read.dart';
 import '../../account/domain/account_read_session.dart';
 import '../../account/domain/member_raid_models.dart';
 import '../../account/domain/role_summary.dart';
@@ -328,7 +330,11 @@ abstract interface class ApplicationDisplayListGateway {
 
 class ApplicationDisplayReader
     implements ApplicationDisplayGateway, ApplicationDisplayListGateway {
-  ApplicationDisplayReader(this.api);
+  ApplicationDisplayReader(
+    this.api, {
+    this.contractMode = RecruitmentContractMode.legacy,
+  });
+  final RecruitmentContractMode contractMode;
   final BackendRegistrationApi api;
   Future<T> _read<T>(Future<T> Function() action) async {
     try {
@@ -347,14 +353,18 @@ class ApplicationDisplayReader
   ) => _read(() async {
     roleId(room);
     raidCycleKey(target);
-    final raw = await api.request(
-      '/v2/raid-rooms/$room/detail',
+    final result = await readRecruitment(
+      api: api,
+      mode: contractMode,
+      path: '/v2/raid-rooms/$room/detail',
       query: {
         'target_cycle_key': target,
         'reader_profile': applicationDisplayProfile,
       },
+      parse: (raw) => ApplicationDisplayDetail.fromJson(raw, room, target),
     );
-    return ApplicationDisplayDetail.fromJson(raw!, room, target);
+    result.value.detail.betaData = betaDisplayData(result.metadata);
+    return result.value;
   });
   @override
   Future<ApplicationDisplayPage> applicationDisplayPage(
@@ -364,8 +374,10 @@ class ApplicationDisplayReader
   }) => _read(() async {
     roleId(room);
     raidCycleKey(target);
-    final raw = await api.request(
-      '/v2/raid-rooms/$room/applications',
+    final result = await readRecruitment(
+      api: api,
+      mode: contractMode,
+      path: '/v2/raid-rooms/$room/applications',
       query: {
         'target_cycle_key': target,
         'reader_profile': applicationDisplayProfile,
@@ -373,7 +385,8 @@ class ApplicationDisplayReader
         'limit': 20,
         'cursor': ?cursor,
       },
+      parse: (raw) => ApplicationDisplayPage(raw, room, target),
     );
-    return ApplicationDisplayPage(raw!, room, target);
+    return result.value;
   });
 }

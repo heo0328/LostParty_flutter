@@ -1,4 +1,6 @@
 import '../../account/data/backend_account_read_api.dart';
+import 'beta/beta_contract.dart';
+import 'beta/beta_read.dart';
 import '../../account/domain/account_read_session.dart';
 import '../../account/domain/member_cycle_models.dart';
 import '../../account/domain/member_raid_models.dart';
@@ -39,6 +41,7 @@ class CycleReadScope {
 }
 
 class CycleRoomCard {
+  Map<String, dynamic>? betaData;
   CycleRoomCard(Map<String, dynamic> j, String target)
     : wire = Map.unmodifiable(j) {
     roleShape(
@@ -107,6 +110,7 @@ class CycleRoomCard {
 }
 
 class CycleOwnRow {
+  Map<String, dynamic>? betaData;
   CycleOwnRow.profile(this.profile, String target) {
     final p = profile!;
     id = p.viewer['membership_id'] as String;
@@ -301,7 +305,12 @@ class CycleOwnPage {
 }
 
 class CycleReadRepository {
-  CycleReadRepository(this.api, {this.membershipProfile = false});
+  CycleReadRepository(
+    this.api, {
+    this.membershipProfile = false,
+    this.contractMode = RecruitmentContractMode.legacy,
+  });
+  final RecruitmentContractMode contractMode;
   final DioBackendAccountReadApi api;
   final bool membershipProfile;
   Future<T> _read<T>(Future<T> Function() f) async {
@@ -321,8 +330,10 @@ class CycleReadRepository {
     String? cursor,
   }) => _read(() async {
     raidCycleKey(target);
-    final j = (await api.request(
-      applications
+    final result = await readRecruitment(
+      api: api,
+      mode: contractMode,
+      path: applications
           ? '/v2/me/raid-room-applications'
           : '/v2/me/raid-room-memberships',
       query: {
@@ -337,18 +348,31 @@ class CycleReadRepository {
         if (membershipProfile && !applications)
           'reader_profile': membershipReaderProfile,
       },
-    ))!;
-    return membershipProfile && !applications
-        ? CycleOwnPage.profile(target, j)
-        : CycleOwnPage(j, target, applications);
+      parse: (j) => membershipProfile && !applications
+          ? CycleOwnPage.profile(target, j)
+          : CycleOwnPage(j, target, applications),
+    );
+    if (result.metadata != null) {
+      final items = result.metadata!['items'] as List;
+      for (var i = 0; i < result.value.rows.length; i++) {
+        final row = result.value.rows[i];
+        row.betaData = betaDisplayData(roleMap(items[i]));
+        row.card?.betaData = row.betaData;
+      }
+    }
+    return result.value;
   });
   Future<CycleRoomCard> room(String id, String target) => _read(() async {
     roleId(id);
     raidCycleKey(target);
-    final j = (await api.request(
-      '/v2/raid-rooms/$id',
+    final result = await readRecruitment(
+      api: api,
+      mode: contractMode,
+      path: '/v2/raid-rooms/$id',
       query: {'target_cycle_key': target},
-    ))!;
+      parse: (j) => j,
+    );
+    final j = result.value;
     roleShape(j, 'scope data');
     CycleReadScope(roleMap(j['scope']), target);
     final value = CycleRoomCard(roleMap(j['data']), target);
@@ -359,6 +383,6 @@ class CycleReadRepository {
           value.wire['target_revision'] == scope['target_revision'] &&
           value.wire['target_generation'] == scope['target_generation'],
     );
-    return value;
+    return value..betaData = betaDisplayData(result.metadata);
   });
 }

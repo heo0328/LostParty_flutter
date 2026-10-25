@@ -100,11 +100,11 @@ class FaultStore implements RecruitmentCommandStore {
   }
 
   @override
-  Future<void> releaseAcknowledged(
+  Future<void> releaseResolved(
     StorageScope s,
     RecruitmentCommandOwner o,
     String k,
-  ) => inner.releaseAcknowledged(s, o, k);
+  ) => inner.releaseResolved(s, o, k);
   @override
   Future<void> close() => inner.close();
 }
@@ -680,10 +680,7 @@ void main() {
           transport.submit(command(id: otherKey), validateAck: validateAck),
           throwsA(isA<AccountReadException>()),
         );
-        await transport.releaseAcknowledged(
-          RecruitmentCommandOwner.presets,
-          key,
-        );
+        await transport.releaseResolved(RecruitmentCommandOwner.presets, key);
         expect(
           await transport.restore(RecruitmentCommandOwner.presets),
           isNull,
@@ -831,7 +828,7 @@ void main() {
         final c = command();
         await store.insert(scope(), c);
         await expectLater(
-          store.releaseAcknowledged(scope(), c.owner, c.key),
+          store.releaseResolved(scope(), c.owner, c.key),
           throwsStateError,
         );
         await expectLater(

@@ -2537,3 +2537,38 @@ Backend [Issue13 고정안2 6394448231](https://github.com/heo0328/lostparty-bac
 Backend는고정안2구현/격리검증파트로진행하고정확소스·실행계약/자동검증·push·실제개발반영여부를분리인계한다. DB초기화·자료삭제/실서버교체·AWS배포·merge승인은이번계약합의에포함하지않는다.
 
 Flutter다음섹션은 **원요청복구·전용계약기반구현설계**다. operation/method/path/query(profile포함)/실제T/원본문/key저장수명·회원환경/세션격리,기존메모리pending무변형,Gateway전달·전용DTO/reader병용/record-null·Router/DI연결을먼저고정한다. C+N별기본출발/조율draft·context수명과승인된Penpot보완을그다음생성/가입/일정·메모연결섹션에이어붙인다. 실제지원미반영서버에새profile을자동전송하지않는다. 앱전체리팩토링/새권한완화/서버검사전용통신·polling을추가하지않는다.
+
+
+### 37.69 B 구현 — 베타 모집 생성·기본 표시 연결 (2026-10-25)
+
+#### 적용 범위와 데이터 소유
+
+A12cd2e9a 위에서 Backend d95e3827 / beta-recruitment-wire-2를 연결했다. 앱 수명 DI의 명시 모드만 betaWire2를 켜며 운영 기본은 legacy다. 기존 생성 페이지/VM이 초안·context·화면 성공을 소유하고, 모집 전용 Drift 저장소/전송기가 원요청·ACK를 소유한다. 실제 서버 자동탐지·실패 후 fallback은 없다.
+
+BetaScheduleInput의 C/N 초안은 실제 주차별로 보관한다. 동시 생성은 위아래 두 영역에서 날짜 하나·기본 출발 시각과 조율을 각각 입력한다. 조율 기본OFF, ON일 때 공대장 외 추가인원은 4인1~3/8인1~7이다. 다음 주를 +7일로 자동복사하지 않으며 동시 생성 해제 시 N을 전송하지 않는다. 단독 N에는 next_*가 없다. 주차 변경 시 범위 밖 초안을 제거하며 기존 캐릭터/레이드/조건/그룹·진행시간과 시간 선택 컴포넌트를 유지한다.
+
+BetaCreationGateway는 실제 T별 beta_schedule_targets로 context/생성을 연결하고 schedule_groups를 제거한다. 시간·조율·추가인원·진행시간을 context 서명에 포함하고 반환 config/주차와 요청을 대조한다. 제출 전 최신 context가 원선택과 다르면 다른 조건을 자동 제출하지 않는다. 로컬 출발 가능시간 정책은 재사용한다.
+
+#### 원명령 복원·성공/거절
+
+Envelope v2는 원본문/query/key 외에 예상 room/T/effect와 created_cycles의 주차별 ID·세대/revision을 불변 검증자료로 저장한다. v1은 그대로 읽고 필수 증거 없는 beta 생성은 확인 필요로 남긴다. Drift 표 구조·계정 DB는 변경하지 않았다. 재시작/재로그인 자동 POST 없음, 회원·정규화 환경·조회 epoch를 격리한다.
+
+저장 성공 후 전송하며 원검증자료로 유효 ACK를 검증/저장한 뒤 성공을 반영한다. 닫힌 서버 오류 본문과 알려진 미적용 status/code가 확인된 경우에만 rejected를 저장하고 releaseResolved로 해제해 기존 입력 수정을 허용한다. 불명 응답/처리중/만료/알 수 없는 충돌은 보존한다. 저장실패 HTTP0, ACK 저장 실패 시 원명령 유지, 24시간 초과·손상은 확인 필요다. 유사 방 목록으로 성공을 추정하지 않는다.
+
+생성 성공 시 실제 주차 상세로 한 번 이동하고 ACK 소비로 새 생성 진입을 준비한다. 소비중/소비완료 성공을 새 생성의 성공 이벤트로 재처리하지 않는다. 새 화면 이동을 무관한 context 조회 완료에 종속시키지 않는다. 성공 뒤 상세 조회 실패는 조회만 재시도하며 생성 성공/원명령을 다시 실행하지 않는다.
+
+#### 조회·표시와 권한
+
+beta_read의 전용 파서가 명시 profile과 reader_profile을 함께 전달하고 기존 닫힌 의미 파서에 content를 넘긴다. 일반/신청표시/membership-actions 상세·plan, 검색/내 목록·카드에 서버 beta_schedule/identity metadata를 연결했다. 기록 content=null/당시 관계·실제 T/기록 식별자·늦은응답 격리를 보존한다. 기존 참가 쓰기 경로는 이 B에서 전체 beta 전환하지 않는다.
+
+목록·상세는 서버 effective 출발만 표시하며 후보 시각을 확정값으로 만들지 않는다. 직접 지정/조율중/자동조율 확정/기본시간 확정/제안 확정/처리대기/확인필요/종료를 구분한다. null을 출발 미정으로 합성하지 않는다. 카드마다 상세 요청을 추가하지 않는다.
+
+상세 주차 날짜 아래 첫 카드 위에 `모집번호 : 1 & 00009`를 표시한다. 서버가 해당 T 실제 참가자에게 준 값만 쓰고 선행0을 보존한다. 본인 참가 관계와 membership/cycle_member 연결을 검증하며 신청대기·이탈·기록·review_required에는 노출하지 않는다. 주차 전환 중 이전 identity를 가져오지 않는다.
+
+#### 검증·인계와 한계
+
+직접17파일598PASS 뒤 최종 A/B62PASS(신규B29+A33)를 보강 확인했다. 기존539를 포함한 고유601PASS이며 중첩 실행을 합산하지 않는다. legacy 생성45PASS 최종 재확인, 기능/DI/시험 분석0·포맷/diffcheck·리뷰. 실제 Gateway/Drift/VM·Router 재진입, C/N별 다른 설정·시간/인원/context, 원증거 변조·v1/재시작·늦은 계정응답·저장실패/ACK실패·손상/만료·유효/불명 Dio 오류, 번호권한/상태·검색 단일요청·기록 분리를 확인했다. 정상 UI는 후속 디바이스 인수와 분리한다.
+
+[Issue13 B 결과6396581847](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6396581847)에 정확 소스/push와 미확인을 같은 댓글로 인계한다. 진행 중 새 [Backend6396368027](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6396368027)·8724a457의 개발서버 d95e3827/DB0032 반영을 확인해 이전 미반영 대기는 해소했다. Backend 실제HTTP16은 정상회원 변경/Flutter·기기 인수가 아니며 Flutter 시험과 합산하지 않는다.
+
+앱 운영 기본 legacy 유지. 실회원 beta HTTP·기기·성능/메모리 인수는 미확인이다. 전체 참가명령 영속복구·일정 그래프/제안·개인표 미설정 안내·신청메모/저장문구/로컬 금칙어·검색필터·실제 beta 활성화는 후속이다. 서버/DB 배포·자료변환·dev/main 통합·IF-001/BUG-025·추가 리디자인은 하지 않았다. 다음 설계 순서는 NEXT_WORK에서 관리한다.

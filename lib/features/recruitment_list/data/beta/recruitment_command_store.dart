@@ -11,7 +11,7 @@ abstract interface class RecruitmentCommandStore {
   );
   Future<void> insert(StorageScope scope, RecruitmentCommand command);
   Future<void> replace(StorageScope scope, RecruitmentCommand command);
-  Future<void> releaseAcknowledged(
+  Future<void> releaseResolved(
     StorageScope scope,
     RecruitmentCommandOwner owner,
     String key,
@@ -85,6 +85,8 @@ class DriftRecruitmentCommandStore implements RecruitmentCommandStore {
           !old.sameOriginal(command) ||
           (old.state == RecruitmentCommandState.acknowledged &&
               (command.state != old.state || command.rawAck != old.rawAck)) ||
+          (old.state == RecruitmentCommandState.rejected &&
+              command.encode() != old.encode()) ||
           (old.state == RecruitmentCommandState.needsReview &&
               command.state == RecruitmentCommandState.pending)) {
         throw StateError('Recruitment request changed');
@@ -102,7 +104,7 @@ class DriftRecruitmentCommandStore implements RecruitmentCommandStore {
   }
 
   @override
-  Future<void> releaseAcknowledged(
+  Future<void> releaseResolved(
     StorageScope scope,
     RecruitmentCommandOwner owner,
     String key,
@@ -112,8 +114,11 @@ class DriftRecruitmentCommandStore implements RecruitmentCommandStore {
       final old = await read(scope, owner);
       if (old == null ||
           old.key != key ||
-          old.state != RecruitmentCommandState.acknowledged) {
-        throw StateError('Only acknowledged requests may be released');
+          !{
+            RecruitmentCommandState.acknowledged,
+            RecruitmentCommandState.rejected,
+          }.contains(old.state)) {
+        throw StateError('Only resolved requests may be released');
       }
       await (db.delete(db.recruitmentCommandRows)..where(
             (r) =>

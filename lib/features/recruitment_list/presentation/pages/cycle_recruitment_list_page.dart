@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../data/beta/beta_read.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../account/domain/account_read_session.dart';
@@ -432,7 +433,11 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
               ),
               const SizedBox(height: 5),
               Text(
-                '${room.starts.isEmpty ? '출발 미정' : room.starts.map((v) => v.add(const Duration(hours: 9)).toIso8601String().substring(5, 16).replaceAll('T', ' ')).join(' / ')} · ${recruitmentExperiences[room.wire['experience_level']] ?? '제한 없음'}${leader?['character_name'] == null ? '' : ' · ${leader!['character_name']}'}',
+                '${room.betaData != null
+                    ? betaDepartureText(room.betaData!)
+                    : room.starts.isEmpty
+                    ? '출발 미정'
+                    : room.starts.map((v) => v.add(const Duration(hours: 9)).toIso8601String().substring(5, 16).replaceAll('T', ' ')).join(' / ')} · ${recruitmentExperiences[room.wire['experience_level']] ?? '제한 없음'}${leader?['character_name'] == null ? '' : ' · ${leader!['character_name']}'}',
                 style: const TextStyle(
                   fontSize: 11,
                   color: AppColors.textSecondary,

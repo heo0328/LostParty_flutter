@@ -290,9 +290,22 @@ class BetaResponse<T> {
     if (raw['recruitment_identity'] != null) {
       final member = raw['my_membership'];
       final viewer = raw['viewer'];
+      final members = raw['members'];
+      final ownParticipating =
+          members is! List ||
+          (member is Map &&
+              members.any(
+                (m) =>
+                    m is Map &&
+                    m['is_me'] == true &&
+                    m['membership_id'] == member['membership_id'] &&
+                    m['cycle_member_id'] == member['cycle_member_id'] &&
+                    m['target_state'] == 'participating',
+              ));
       final memberAllowed =
           member is Map &&
           member['cycle_member_id'] != null &&
+          ownParticipating &&
           {'leader', 'member'}.contains(member['target_role']) &&
           raw['my_target_role'] == member['target_role'] &&
           (raw['room'] is Map

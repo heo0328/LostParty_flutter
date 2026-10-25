@@ -11,7 +11,7 @@ class RecruitmentStartPicker extends StatefulWidget {
   });
   final bool Function(int minute) allowed;
   final int? initial;
-  final String resetLabel;
+  final String? resetLabel;
 
   @override
   State<RecruitmentStartPicker> createState() => _RecruitmentStartPickerState();
@@ -121,10 +121,11 @@ class _RecruitmentStartPickerState extends State<RecruitmentStartPicker> {
         onPressed: () => Navigator.pop(context),
         child: const Text('취소'),
       ),
-      TextButton(
-        onPressed: () => Navigator.pop(context, -1),
-        child: Text(widget.resetLabel),
-      ),
+      if (widget.resetLabel != null)
+        TextButton(
+          onPressed: () => Navigator.pop(context, -1),
+          child: Text(widget.resetLabel!),
+        ),
       FilledButton(
         onPressed: !widget.allowed(_selected)
             ? null

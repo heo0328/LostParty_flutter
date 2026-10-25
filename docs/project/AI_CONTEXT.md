@@ -1,5 +1,7 @@
 # AI CONTEXT — 2주 레이드 현황 기획과 현재 구현 상태
 
+B 생성·기본 표시 연결 완료(2026-10-25): A12cd2e9a 기반으로 C/N 독립 필수 날짜/출발·조율 설정, 전용 beta 생성/조회와 실제 표시 시각/상태·참가자 전용 번호, v2 원요청 검증자료/확정거절·ACK와 성공 소비를 구현했다. 최종 A/B62+기존539=고유601PASS·분석0, legacy 생성 최종45PASS 재확인(중복 합산 없음). 운영 기본 legacy·기존 참가 쓰기/메모리 pending 유지, 실제 beta 회원/기기 인수는 후속이다. Backend6396368027/8724a457의 개발 d95e3827·DB0032 반영 인계를 받아 과거 서버 대기는 해소했다. Flutter가 서버 배포/DB변경·dev/main 통합을 한 것은 아니다. 상세 설계37 §37.69/[B 결과](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6396581847), 다음 범위는 NEXT_WORK. 아래 과거 단계별 상태보다 이 문단이 우선한다.
+
 A 기반 구현(2026-10-25): wire2 전용 닫힌 모델/파서·64경로 profile/presets 무profile, C/N 초안, 원본문/query 보존과 회원/환경/세 소유영역별 모집 전용 Drift DB·명시 재전송/ACK 저장·24시간 확인필요·앱 DI를 구현했다. 기본 legacy/기존 Controller 메모리 명령은 유지, 새 화면·실제 beta 활성화·서버/DB 배포·기기 인수는 후속이다. 직접 영향 묶음563PASS와 보강한 최종 신규33PASS(중복 합산 없음)·분석0. 소유권/검증·한계는 설계37 §37.68/DEV_LOG, 다음 행동 NEXT_WORK.
 
 베타 계약 최종수용(2026-10-25): Backend267afe56/6394448231의 beta-recruitment-wire-2(profile beta-recruitment-1)를 [Flutter6394870853](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6394870853)에서최종수용·본문MATCH. 최신입력/로컬금칙어와완결DTO·권한/reader병용 반영으로조건부수용해소. 독립정적범위는66operation/118구조예시확인·참조/프로필검사·문자25일치이며런타임통과가아님. 다음원요청복구·전용계약기반설계는NEXT_WORK,최종기준§37.67. 앱/Backend구현·실행반영/기기인수·dev/main통합은아직이다. 이전문단의대기는당시상태다.

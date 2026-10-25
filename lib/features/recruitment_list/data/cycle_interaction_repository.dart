@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'beta/beta_contract.dart';
+import 'beta/beta_read.dart';
 import 'admission_candidates.dart';
 import 'application_display.dart';
 import 'cycle_member_actions.dart';
@@ -558,7 +560,12 @@ class CycleInteractionRepository
         MembershipActionGateway,
         AdmissionCandidatesGateway,
         ApplicationDisplayListGateway {
-  CycleInteractionRepository({required this.api, required this.recruitment});
+  CycleInteractionRepository({
+    required this.api,
+    required this.recruitment,
+    this.contractMode = RecruitmentContractMode.legacy,
+  });
+  final RecruitmentContractMode contractMode;
   final BackendRegistrationApi api;
   @override
   Future<ApplicationDisplayPage> applicationDisplayPage(
@@ -567,6 +574,7 @@ class CycleInteractionRepository
     String? cursor,
   }) => ApplicationDisplayReader(
     api,
+    contractMode: contractMode,
   ).applicationDisplayPage(room, target, cursor: cursor);
   final CycleRecruitmentGateway recruitment;
   @override
@@ -788,16 +796,23 @@ class CycleInteractionRepository
     String target,
     CycleSearchFilter filter, {
     String? cursor,
-  }) => _decode(
-    () async => CycleSearchPage(
-      (await api.request(
-        '/v2/raid-rooms/search',
-        method: 'POST',
-        body: filter.body(target, cursor: cursor),
-      ))!,
-      target,
-    ),
-  );
+  }) => _decode(() async {
+    final result = await readRecruitment(
+      api: api,
+      mode: contractMode,
+      path: '/v2/raid-rooms/search',
+      method: 'POST',
+      body: filter.body(target, cursor: cursor),
+      parse: (j) => CycleSearchPage(j, target),
+    );
+    if (result.metadata != null) {
+      final items = result.metadata!['items'] as List;
+      for (var i = 0; i < result.value.rows.length; i++) {
+        result.value.rows[i].betaData = betaDisplayData(roleMap(items[i]));
+      }
+    }
+    return result.value;
+  });
   @override
   Future<CycleAdmissionPreview> admission(
     String room,

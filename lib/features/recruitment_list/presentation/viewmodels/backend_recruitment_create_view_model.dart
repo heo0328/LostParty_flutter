@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import '../../data/beta/recruitment_command_transport.dart';
+import '../../data/beta/recruitment_command.dart';
+import '../../data/beta/beta_creation_gateway.dart';
+import '../../domain/beta_schedule_draft.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
@@ -77,6 +80,15 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
 
   void _acceptMeta(MemberCycles meta) {
     cycles = meta;
+    if (betaEnabled && !hasPending) {
+      draft = draft.copy(
+        betaSchedules: {
+          for (final e in draft.betaSchedules.entries)
+            if (e.key == meta.current.key || e.key == meta.next.key)
+              e.key: e.value,
+        },
+      );
+    }
     _metaReceived = now().toUtc();
     _cycleTimer?.cancel();
     final remaining = meta.current.endsAt.difference(meta.serverNow);
@@ -128,6 +140,58 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
   Timer? _timer;
   DateTime? _retryAt;
   _CreationCommand? _pending;
+  RecruitmentCommand? _betaPending;
+  bool _journalBlocked = false;
+  bool get journalUnavailable => _journalBlocked;
+  bool get betaEnabled =>
+      gateway is BetaCreationGateway &&
+      (gateway as BetaCreationGateway).betaContractActive;
+  List<String> get betaTargets => [
+    if (draft.targetCycleKey != null) draft.targetCycleKey!,
+    if (draft.continueTogether && cycles != null) cycles!.next.key,
+  ];
+  BetaScheduleInput betaInput(String target) =>
+      draft.betaSchedules[target] ?? const BetaScheduleInput();
+  void updateBeta(String target, BetaScheduleInput input) {
+    if (!editable) return;
+    update(draft.copy(betaSchedules: {...draft.betaSchedules, target: input}));
+  }
+
+  bool canBetaStart(String target, int day, int minute) => startPolicy.allows(
+    now: serverNow,
+    weekday: day,
+    minute: minute,
+    durationMinutes: durationMinutes,
+    targetCycleKey: target,
+  );
+  String? get betaValidation {
+    for (final t in betaTargets) {
+      final i = betaInput(t);
+      if (i.weekday == null || i.minute == null) {
+        return '각 주차의 출발 날짜와 시각을 선택해 주세요.';
+      }
+      if (!canBetaStart(t, i.weekday!, i.minute!)) {
+        return '출발 가능한 날짜·시각을 다시 선택해 주세요.';
+      }
+      final capacity = betaCapacity;
+      if (i.enabled && (i.additional < 1 || i.additional >= capacity)) {
+        return '자동 조율 인원을 다시 선택해 주세요.';
+      }
+    }
+    return betaTargets.isEmpty ? '주차를 선택해 주세요.' : null;
+  }
+
+  int get betaCapacity => draft.items.length > 1
+      ? 4
+      : catalog?.raids
+                .where((r) => r.raidId == draft.items.firstOrNull?.raidId)
+                .firstOrNull
+                ?.partySize ??
+            8;
+  Future<void>? _consumingAck;
+  // A new route must not redisplay a result already handed to the detail route.
+  bool get creationSuccessConsumed =>
+      createdRoomId != null && (_consumingAck != null || !hasPending);
   RecruitmentDraft draft = RecruitmentDraft();
   RaidCatalog? catalog;
   List<RecruitmentCharacter> characters = [];
@@ -148,14 +212,20 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
       contextLoading = false,
       groupsLoading = false;
   bool get eligible => session.isAuthenticated && _eligible;
-  bool get hasPending => _pending != null;
+  bool get hasPending =>
+      _pending != null || _betaPending != null || _journalBlocked;
   int get editGeneration => _epoch;
   bool get busy => loading || saving;
   bool get editable =>
       eligible && !busy && !hasPending && createdRoomId == null;
   bool get retryExpired =>
+      _journalBlocked ||
+      (_betaPending != null &&
+          (_betaPending!.state == RecruitmentCommandState.needsReview ||
+              _betaPending!.validationSnapshot == null ||
+              _betaPending!.expired(now().toUtc()))) ||
       _pending != null &&
-      now().difference(_pending!.createdAt) >= const Duration(hours: 24);
+          now().difference(_pending!.createdAt) >= const Duration(hours: 24);
   bool get delayPassed => _retryAt == null || !now().isBefore(_retryAt!);
   bool get canRetry =>
       eligible && hasPending && !busy && !retryExpired && delayPassed;
@@ -284,6 +354,7 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     }
     final input = draft.validate();
     if (input != null) return input;
+    if (betaEnabled && betaValidation != null) return betaValidation;
     if (durationMinutes != null && durationMinutes! > 1440) {
       return '한 타임의 진행시간 합계는 24시간까지 설정할 수 있어요.';
     }
@@ -325,6 +396,8 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     _cycleTimer?.cancel();
     _retryAt = null;
     _pending = null;
+    _betaPending = null;
+    _journalBlocked = false;
     draft = RecruitmentDraft();
     _availabilityKey = null;
     _unavailableRaids = const {};
@@ -345,6 +418,45 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
 
   Future<void> activate({String? target}) async {
     _activated = true;
+    if (_consumingAck != null) await _consumingAck;
+    if (betaEnabled &&
+        commandTransport != null &&
+        _betaPending == null &&
+        !_journalBlocked) {
+      final epoch = _epoch;
+      try {
+        final saved = await commandTransport!.restore(
+          RecruitmentCommandOwner.creation,
+        );
+        if (!_current(epoch)) return;
+        if (saved != null) {
+          _betaPending = saved;
+          draft = draft.copy(targetCycleKey: saved.targetCycles.first);
+          if (saved.validationSnapshot == null) {
+            failure = 'REQUEST_REVIEW_REQUIRED';
+          }
+          if (saved.state == RecruitmentCommandState.acknowledged) {
+            _acceptBetaAck(
+              saved,
+              validateBetaCreationAck(
+                saved,
+                jsonDecode(saved.rawAck!) as Map<String, dynamic>,
+              ),
+            );
+            _emit();
+            return;
+          }
+          if (saved.state == RecruitmentCommandState.rejected) {
+            await _releaseBetaRejection(saved);
+          }
+        }
+      } catch (_) {
+        if (_current(epoch)) {
+          _journalBlocked = true;
+          failure = 'REQUEST_REVIEW_REQUIRED';
+        }
+      }
+    }
     // A successful command belongs to the detail route. A new create-route
     // entry starts a new draft; unfinished and unknown commands remain intact.
     if (!hasPending && !busy && createdRoomId != null) _resetCompleted();
@@ -499,6 +611,10 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
         notice = '이 캐릭터로 모집할 수 있는 레이드가 없습니다.';
         return;
       }
+      if (betaEnabled && betaValidation != null) {
+        selection = null;
+        return;
+      }
       final value = await gateway.context(snapshot);
       if (_current(epoch) &&
           generation == _contextGeneration &&
@@ -585,11 +701,21 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
         failure = 'SELECTION_CONTEXT_CHANGED';
         return;
       }
-      _pending = _CreationCommand(
-        snapshot.body(context, defaultTitle),
-        now(),
-        context,
-      );
+      if (betaEnabled) {
+        _betaPending = (gateway as BetaCreationGateway).prepareBetaCreation(
+          snapshot,
+          context,
+          defaultTitle,
+          newScopedCommandKey(),
+          now().toUtc(),
+        );
+      } else {
+        _pending = _CreationCommand(
+          snapshot.body(context, defaultTitle),
+          now(),
+          context,
+        );
+      }
       await _send(epoch);
     } on AccountReadException catch (e) {
       if (_current(epoch)) _fail(e);
@@ -620,6 +746,10 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
   }
 
   Future<void> _send(int epoch) async {
+    if (_betaPending != null) {
+      await _sendBeta(epoch);
+      return;
+    }
     final command = _pending!;
     try {
       final ack = await gateway.create(
@@ -678,7 +808,77 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     }
   }
 
+  void _acceptBetaAck(RecruitmentCommand command, RecruitmentCreationAck ack) {
+    createdRoomId = ack.roomId;
+    createdTargetKey = ack.targetKey;
+    createdTargetKeys = List.unmodifiable(
+      ack.created!.map((v) => v['target_cycle_key'] as String),
+    );
+    selection = null;
+    failure = null;
+  }
+
+  Future<void> consumeCreatedSuccess() => _consumingAck ??=
+      _consumeBetaSuccess().whenComplete(() => _consumingAck = null);
+  Future<void> _consumeBetaSuccess() async {
+    final command = _betaPending;
+    if (command == null || createdRoomId == null) return;
+    final epoch = _epoch;
+    try {
+      await commandTransport!.releaseResolved(command.owner, command.key);
+      if (_current(epoch)) _betaPending = null;
+    } catch (_) {
+      if (_current(epoch)) {
+        failure = 'REQUEST_STORAGE_FAILED';
+        _emit();
+      }
+    }
+  }
+
+  Future<void> _releaseBetaRejection(RecruitmentCommand command) async {
+    final epoch = _epoch;
+    await commandTransport!.releaseResolved(command.owner, command.key);
+    if (!_current(epoch)) return;
+    _betaPending = null;
+    selection = null;
+    notice = '입력과 현재 상태를 확인한 뒤 다시 생성해 주세요.';
+  }
+
+  Future<void> _sendBeta(int epoch) async {
+    final command = _betaPending!;
+    if (command.validationSnapshot == null) {
+      failure = 'REQUEST_REVIEW_REQUIRED';
+      _emit();
+      return;
+    }
+    try {
+      final raw = await commandTransport!.submit(
+        command,
+        validateAck: (j) => validateBetaCreationAck(command, j),
+      );
+      if (!_current(epoch)) return;
+      _acceptBetaAck(command, validateBetaCreationAck(command, raw));
+    } on AccountReadException catch (e) {
+      if (!_current(epoch)) return;
+      _fail(e);
+      try {
+        final stored = await commandTransport!.restore(command.owner);
+        if (!_current(epoch)) return;
+        if (stored?.state == RecruitmentCommandState.rejected) {
+          await _releaseBetaRejection(stored!);
+        }
+      } catch (_) {
+        if (_current(epoch)) failure = 'REQUEST_STORAGE_FAILED';
+      }
+    } on FormatException {
+      if (_current(epoch)) failure = 'INVALID_RESPONSE';
+    } catch (_) {
+      if (_current(epoch)) failure = 'REQUEST_STORAGE_FAILED';
+    }
+  }
+
   Future<void> checkCurrentRooms() async {
+    if (_journalBlocked) return;
     if (!eligible || busy || !hasPending || !delayPassed) return;
     final epoch = _epoch;
     loading = true;
@@ -686,7 +886,9 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     try {
       final ids = cycleGateway == null
           ? await gateway.currentRoomIds()
-          : await cycleGateway!.roomIdsFor(_pending!.context.targetKey!);
+          : await cycleGateway!.roomIdsFor(
+              _betaPending?.targetCycles.first ?? _pending!.context.targetKey!,
+            );
       if (_current(epoch)) recoveryRooms = ids;
     } on AccountReadException catch (e) {
       if (_current(epoch)) _fail(e);
@@ -804,6 +1006,8 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
 }
 
 String recruitmentFailureMessage(String? code) => switch (code) {
+  'REQUEST_REVIEW_REQUIRED' => '이전 생성 요청의 결과를 확인해야 합니다. 현재 참가 모집을 확인해 주세요.',
+  'REQUEST_STORAGE_FAILED' => '요청 정보를 기기에 저장하지 못했습니다. 같은 요청으로 다시 확인해 주세요.',
   'PROPOSAL_CONTEXT_CHANGED' => '제안의 일정이나 조건이 바뀌었습니다. 공대장이 새 제안을 만들어 주세요.',
   'CONTEXT_INVALID' => '확인 정보가 유효하지 않습니다. 최신 내용을 다시 확인해 주세요.',
   'REQUEST_TOO_LARGE' => '일정 정보가 너무 큽니다. 선택한 내용을 줄여 다시 확인해 주세요.',

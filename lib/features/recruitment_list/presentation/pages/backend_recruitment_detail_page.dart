@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../data/beta/beta_read.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -321,6 +322,14 @@ class _BackendRecruitmentDetailPageState
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
+        if (!m.readOnly && value.betaData?['recruitment_identity'] != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              '모집번호 : ${value.betaData!['recruitment_identity']['number']} & ${value.betaData!['recruitment_identity']['password']}',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+          ),
         RecruitmentSection(
           title: value.title,
           children: [
@@ -329,7 +338,9 @@ class _BackendRecruitmentDetailPageState
               runSpacing: 6,
               children: [
                 RecruitmentBadge(
-                  room['state'] == 'ended'
+                  value.betaData != null
+                      ? betaScheduleLabel(value.betaData!)
+                      : room['state'] == 'ended'
                       ? '종료'
                       : value.starts.isEmpty
                       ? '출발 미정'
@@ -445,34 +456,46 @@ class _BackendRecruitmentDetailPageState
         RecruitmentSection(
           title: m.target == null ? '이번 주 진행 일정' : '선택 주차 진행 일정',
           children: [
-            if (value.starts.isEmpty)
-              const Text(
-                '출발 미정 · 확정된 시간 예약은 없어요.',
-                style: TextStyle(fontSize: 13),
+            if (value.betaData != null) ...[
+              Text(
+                betaDepartureText(value.betaData!),
+                style: const TextStyle(fontSize: 13),
               ),
-            for (final start in value.starts)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _time(start),
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Text(
-                      '앱 모집 마감 ${_time(start.subtract(const Duration(minutes: 30)))}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
+              if (value.betaData!['beta_schedule'] != null)
+                Text(
+                  '앱 모집 마감 ${_time(DateTime.parse(value.betaData!['beta_schedule']['admission_deadline'] as String))}',
+                  style: const TextStyle(fontSize: 11),
                 ),
-              ),
+            ] else ...[
+              if (value.starts.isEmpty)
+                const Text(
+                  '출발 미정 · 확정된 시간 예약은 없어요.',
+                  style: TextStyle(fontSize: 13),
+                ),
+              for (final start in value.starts)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _time(start),
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        '앱 모집 마감 ${_time(start.subtract(const Duration(minutes: 30)))}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed:

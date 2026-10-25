@@ -27,20 +27,48 @@ class DioRecruitmentCommandSender {
     if (dio.options.baseUrl != environment) {
       throw const AccountReadException('ENVIRONMENT_CHANGED');
     }
-    final response = await dio.request<Object?>(
-      command.path,
-      data: command.rawBody,
-      queryParameters: command.query,
-      options: Options(
-        method: command.method,
-        followRedirects: false,
-        contentType: Headers.jsonContentType,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Idempotency-Key': command.key,
-        },
-      ),
-    );
+    late Response<Object?> response;
+    try {
+      response = await dio.request<Object?>(
+        command.path,
+        data: command.rawBody,
+        queryParameters: command.query,
+        options: Options(
+          method: command.method,
+          followRedirects: false,
+          contentType: Headers.jsonContentType,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Idempotency-Key': command.key,
+          },
+        ),
+      );
+    } on DioException catch (e) {
+      requireAccountReadScope(session, binding);
+      final data = e.response?.data;
+      if (data is Map<String, dynamic>) {
+        try {
+          BetaContract.definition('Error', data);
+          final code = (data['error'] as Map)['code'];
+          final seconds = int.tryParse(
+            e.response?.headers.value('retry-after') ?? '',
+          );
+          throw AccountReadException(
+            code as String,
+            status: e.response!.statusCode,
+            retryAfter: seconds != null && seconds > 0
+                ? Duration(seconds: seconds)
+                : null,
+          );
+        } on FormatException {
+          /* Unknown response keeps original request. */
+        }
+      }
+      throw AccountReadException(
+        e.response == null ? 'NETWORK_UNAVAILABLE' : 'INVALID_RESPONSE',
+        status: e.response?.statusCode,
+      );
+    }
     requireAccountReadScope(session, binding);
     if (response.statusCode != command.expectedStatus ||
         response.data is! Map<String, dynamic>) {
@@ -147,10 +175,27 @@ class RecruitmentCommandTransport {
       } else if (!saved.sameOriginal(command)) {
         throw const AccountReadException('UNRESOLVED_REQUEST_EXISTS');
       }
+      if (saved.owner == RecruitmentCommandOwner.creation &&
+          saved.contractMode == RecruitmentContractMode.betaWire2 &&
+          saved.validationSnapshot == null) {
+        if (saved.state == RecruitmentCommandState.pending) {
+          await store.replace(
+            scope,
+            saved.transition(state: RecruitmentCommandState.needsReview),
+          );
+        }
+        throw const AccountReadException('REQUEST_REVIEW_REQUIRED');
+      }
       if (saved.state == RecruitmentCommandState.acknowledged) {
         final ack = jsonDecode(saved.rawAck!) as Map<String, dynamic>;
         validateAck(ack);
         return betaFreeze(ack) as Map<String, dynamic>;
+      }
+      if (saved.state == RecruitmentCommandState.rejected) {
+        throw AccountReadException(
+          saved.rejection!['code'] as String,
+          status: saved.rejection!['status'] as int,
+        );
       }
       final ackKey = (scope, saved.key);
       var raw = _validated[ackKey];
@@ -166,7 +211,24 @@ class RecruitmentCommandTransport {
         saved = saved.transition(attemptedAt: clock());
         await store.replace(scope, saved);
         _current(binding, scope);
-        final ack = await send(saved, binding);
+        late Map<String, dynamic> ack;
+        try {
+          ack = await send(saved, binding);
+        } on AccountReadException catch (e) {
+          _current(binding, scope);
+          if (saved.version == 2 &&
+              definiteRecruitmentRejection(e.status, e.code)) {
+            await store.replace(
+              scope,
+              saved.transition(
+                state: RecruitmentCommandState.rejected,
+                rejection: {'status': e.status, 'code': e.code},
+              ),
+            );
+            _current(binding, scope);
+          }
+          rethrow;
+        }
         _current(binding, scope);
         if (mode == RecruitmentContractMode.betaWire2) {
           const BetaContract(
@@ -197,15 +259,15 @@ class RecruitmentCommandTransport {
     }
   }
 
-  /// Called after the owning controller has consumed success, never after an unknown result.
-  Future<void> releaseAcknowledged(
+  /// Consumes a persisted ACK or definite rejection, never an unknown result.
+  Future<void> releaseResolved(
     RecruitmentCommandOwner owner,
     String key,
   ) async {
     final binding = accountReadScope(session),
         scope = _scope(accountReadScope(session));
     _current(binding, scope);
-    await store.releaseAcknowledged(scope, owner, key);
+    await store.releaseResolved(scope, owner, key);
     _current(binding, scope);
   }
 

@@ -1,4 +1,8 @@
 import 'dart:convert';
+import 'beta/beta_contract.dart';
+import 'beta/beta_read.dart';
+import 'beta/beta_creation_gateway.dart';
+import 'beta/recruitment_command.dart';
 
 import '../../account/data/member_raid_client.dart';
 import '../../account/domain/account_read_session.dart';
@@ -17,6 +21,7 @@ class BackendRecruitmentRepository
     implements
         CycleRecruitmentGateway,
         RecruitmentAvailabilityGateway,
+        BetaCreationGateway,
         ApplicationDisplayGateway {
   BackendRecruitmentRepository({
     required this.api,
@@ -24,13 +29,29 @@ class BackendRecruitmentRepository
     required this.raids,
     this.twoCycleEnabled = false,
     this.preferredRoles,
+    this.contractMode = RecruitmentContractMode.legacy,
   });
   final BackendRegistrationApi api;
+  final RecruitmentContractMode contractMode;
+  @override
+  bool get betaContractActive =>
+      contractMode == RecruitmentContractMode.betaWire2;
+  @override
+  RecruitmentCommand prepareBetaCreation(
+    RecruitmentDraft draft,
+    RecruitmentCreationContext context,
+    String title,
+    String key,
+    DateTime createdAt,
+  ) => BetaCreationReader.prepare(draft, context, title, key, createdAt);
   @override
   Future<ApplicationDisplayDetail> applicationDisplayDetail(
     String room,
     String target,
-  ) => ApplicationDisplayReader(api).applicationDisplayDetail(room, target);
+  ) => ApplicationDisplayReader(
+    api,
+    contractMode: contractMode,
+  ).applicationDisplayDetail(room, target);
   final ServerAccountReadRepository accounts;
   final MemberRaidClient raids;
   final Future<Map<String, String>> Function()? preferredRoles;
@@ -188,6 +209,7 @@ class BackendRecruitmentRepository
   @override
   Future<RecruitmentCreationContext> context(RecruitmentDraft draft) =>
       _decode(() async {
+        if (betaContractActive) return BetaCreationReader(api).context(draft);
         roleId(draft.characterId);
         final result = (await api.request(
           twoCycleEnabled
@@ -296,11 +318,14 @@ class BackendRecruitmentRepository
       _decode(() async {
         roleId(id);
         raidCycleKey(target);
-        final j = (await api.request(
-          '/v2/raid-rooms/$id/detail',
+        final result = await readRecruitment(
+          api: api,
+          mode: contractMode,
+          path: '/v2/raid-rooms/$id/detail',
           query: {'target_cycle_key': target},
-        ))!;
-        return parseCycleDetail(j, id, target);
+          parse: (j) => parseCycleDetail(j, id, target),
+        );
+        return result.value..betaData = betaDisplayData(result.metadata);
       });
 
   /// Parses an existing full envelope, including one nested in a reader profile.

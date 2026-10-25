@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'beta/beta_contract.dart';
+import 'beta/beta_read.dart';
 import '../../account/domain/account_read_session.dart';
 import '../../account/domain/member_raid_models.dart';
 import '../../account/domain/role_summary.dart';
@@ -440,6 +442,7 @@ Map<String, dynamic> _scope(
 }
 
 class MembershipReadView {
+  Map<String, dynamic>? betaData;
   MembershipReadView(
     this.room,
     this.target,
@@ -546,7 +549,11 @@ abstract interface class MembershipReadGateway {
 }
 
 class MembershipReadRepository implements MembershipReadGateway {
-  MembershipReadRepository(this.api);
+  MembershipReadRepository(
+    this.api, {
+    this.contractMode = RecruitmentContractMode.legacy,
+  });
+  final RecruitmentContractMode contractMode;
   final BackendRegistrationApi api;
   Future<MembershipReadView> _read(
     String room,
@@ -557,17 +564,22 @@ class MembershipReadRepository implements MembershipReadGateway {
     try {
       roleId(room);
       raidCycleKey(target);
-      final raw = (await api.request(
-        kind == 'detail'
-            ? '/v2/raid-rooms/$room/detail'
-            : '/v2/me/raid-rooms/$room/plan',
+      final path = kind == 'detail'
+          ? '/v2/raid-rooms/$room/detail'
+          : '/v2/me/raid-rooms/$room/plan';
+      final result = await readRecruitment(
+        api: api,
+        mode: contractMode,
+        path: path,
         query: {
           'target_cycle_key': target,
           'reader_profile': membershipReaderProfile,
           ...?anchor?.query,
         },
-      ))!;
-      return MembershipReadView(room, target, kind, raw, anchor: anchor);
+        parse: (raw) =>
+            MembershipReadView(room, target, kind, raw, anchor: anchor),
+      );
+      return result.value..betaData = betaDisplayData(result.metadata);
     } on FormatException {
       throw const AccountReadException('INVALID_RESPONSE');
     } on TypeError {

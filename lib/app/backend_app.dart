@@ -418,7 +418,11 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     final raidCatalog = RaidCatalogRepositoryImpl(
       dataSource: AssetRaidCatalogDataSource(),
     );
-    final cycleReads = CycleReadRepository(accountApi, membershipProfile: true);
+    final cycleReads = CycleReadRepository(
+      accountApi,
+      membershipProfile: true,
+      contractMode: widget.recruitmentContractMode,
+    );
     final commandTransport = _recruitmentCommands = RecruitmentCommandTransport(
       store: DriftRecruitmentCommandStore(),
       session: readSession,
@@ -427,10 +431,14 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       mode: widget.recruitmentContractMode,
       send: DioRecruitmentCommandSender(_dio!, readSession).call,
     );
-    final membershipReads = MembershipReadRepository(accountApi);
+    final membershipReads = MembershipReadRepository(
+      accountApi,
+      contractMode: widget.recruitmentContractMode,
+    );
     String cycleScopeKey() =>
         '${_dio!.options.baseUrl}/${readSession.userId}/${readSession.generation}/${lifecycle.runtime?.readGeneration}';
     final recruitmentGateway = BackendRecruitmentRepository(
+      contractMode: widget.recruitmentContractMode,
       api: accountApi,
       accounts: serverAccounts,
       raids: MemberRaidClient(accountApi),
@@ -449,6 +457,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       },
     );
     final cycleInteractions = CycleInteractionRepository(
+      contractMode: widget.recruitmentContractMode,
       api: accountApi,
       recruitment: recruitmentGateway,
     );

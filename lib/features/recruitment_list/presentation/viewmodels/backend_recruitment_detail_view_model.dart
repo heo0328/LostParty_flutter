@@ -178,6 +178,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
               );
       }
       // An explicit historical profile never enters the current-member menu.
+      if (value != null && profile != null) value!.betaData = profile!.betaData;
       if (membershipGateway != null &&
           cycleGateway != null &&
           !readOnly &&

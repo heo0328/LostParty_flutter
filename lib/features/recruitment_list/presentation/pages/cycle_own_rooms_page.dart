@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../data/beta/beta_read.dart';
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../../../account/presentation/viewmodels/member_weekly_view_model.dart';
 import '../../../account/presentation/widgets/member_cycle_selector.dart';
@@ -284,10 +285,19 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
     Map<String, String> names,
     Widget status,
   ) {
+    if (row.historyOnly || row.profile?.isRecord == true) return status;
     final info = m.tab == 0 && CycleOwnCardInfo.supports(row)
         ? CycleOwnCardInfo.fromRow(row, names, widget.weekly.catalog)
         : null;
-    if (info == null) return status;
+    if (info == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (row.betaData != null) Text(betaDepartureText(row.betaData!)),
+          status,
+        ],
+      );
+    }
     return Padding(
       padding: const EdgeInsets.only(top: 6, bottom: 4),
       child: Column(
@@ -319,6 +329,7 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
           ),
           const SizedBox(height: 4),
           for (final raid in info.raids) Text(raid),
+          if (row.betaData != null) Text(betaDepartureText(row.betaData!)),
           const SizedBox(height: 4),
           status,
         ],
@@ -438,7 +449,9 @@ class _CycleRoomReadPageState extends State<CycleRoomReadPage> {
                             child: Text(_raidLabel(i)),
                           ),
                         Text(
-                          c.starts.isEmpty
+                          c.betaData != null
+                              ? betaDepartureText(c.betaData!)
+                              : c.starts.isEmpty
                               ? '출발 미정'
                               : c.starts
                                     .map(

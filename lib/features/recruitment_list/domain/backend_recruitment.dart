@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'beta_schedule_draft.dart';
 
 import '../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../../account/domain/member_raid_models.dart';
@@ -74,7 +75,9 @@ class RecruitmentDraft {
     this.sameStart = true,
     Map<int, int> startsByDay = const {},
     this.eachDay = false,
+    Map<String, BetaScheduleInput> betaSchedules = const {},
   }) : items = List.unmodifiable(items),
+       betaSchedules = Map.unmodifiable(betaSchedules),
        startsByDay = Map.unmodifiable(startsByDay),
        weekdays = Set.unmodifiable(weekdays);
   final String? characterId, groupId, experience, targetCycleKey;
@@ -84,6 +87,7 @@ class RecruitmentDraft {
   final Set<int> weekdays;
   final int? startMinute;
   final bool sameStart;
+  final Map<String, BetaScheduleInput> betaSchedules;
   final Map<int, int> startsByDay;
   int? timeForDay(int day) =>
       sameStart ? startMinute : startsByDay[day] ?? startMinute;
@@ -112,6 +116,7 @@ class RecruitmentDraft {
     Map<int, int>? startsByDay,
     bool clearStart = false,
     bool? eachDay,
+    Map<String, BetaScheduleInput>? betaSchedules,
   }) => RecruitmentDraft(
     characterId: characterId ?? this.characterId,
     targetCycleKey: targetCycleKey ?? this.targetCycleKey,
@@ -132,9 +137,16 @@ class RecruitmentDraft {
     sameStart: sameStart ?? this.sameStart,
     startsByDay: clearStart ? const {} : startsByDay ?? this.startsByDay,
     eachDay: eachDay ?? this.eachDay,
+    betaSchedules: betaSchedules ?? this.betaSchedules,
   );
 
   String get selectionSignature => jsonEncode({
+    if (betaSchedules.isNotEmpty)
+      'beta_durations': items.map((i) => i.minutes).toList(),
+    if (betaSchedules.isNotEmpty)
+      'beta_schedule_inputs': {
+        for (final e in betaSchedules.entries) e.key: e.value.toJson(),
+      },
     'character': characterId,
     if (targetCycleKey != null) 'target': targetCycleKey,
     if (targetCycleKey != null) 'continuation': continueTogether,
@@ -563,6 +575,7 @@ class RecruitmentCreationAck {
 }
 
 class BackendRecruitmentDetail {
+  Map<String, dynamic>? betaData;
   BackendRecruitmentDetail.fromJson(Map<String, dynamic> json, String id) {
     roleShape(
       json,
