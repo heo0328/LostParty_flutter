@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'application_memo_widgets.dart';
+import '../viewmodels/application_memo_draft.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../account/domain/member_cycle_models.dart';
@@ -87,6 +89,8 @@ class _CycleAdmissionSheet extends StatefulWidget {
 
 class _CycleAdmissionSheetState extends State<_CycleAdmissionSheet> {
   late final AdmissionSelectionViewModel m;
+  final memo = ApplicationMemoDraft();
+  late final String memoBinding;
   bool _closing = false;
   List<RecruitmentCharacter> get characters => m.characters;
   String? get character => m.character;
@@ -98,6 +102,12 @@ class _CycleAdmissionSheetState extends State<_CycleAdmissionSheet> {
   @override
   void initState() {
     super.initState();
+    memoBinding = widget.controller.scopeKey();
+    memo.addListener(_memoChanged);
+    if (widget.intent == 'apply') {
+      final messages = widget.controller.messages;
+      if (messages != null) unawaited(messages.load());
+    }
     m = AdmissionSelectionViewModel(
       controller: widget.controller,
       room: widget.room,
@@ -108,8 +118,16 @@ class _CycleAdmissionSheetState extends State<_CycleAdmissionSheet> {
     unawaited(m.load());
   }
 
+  void _memoChanged() {
+    if (mounted) setState(() {});
+  }
+
   void _changed() {
     if (!mounted) return;
+    if (memoBinding != widget.controller.scopeKey() &&
+        memo.input.text.isNotEmpty) {
+      memo.input.clear();
+    }
     if (m.completed && !_closing) {
       _closing = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -145,13 +163,18 @@ class _CycleAdmissionSheetState extends State<_CycleAdmissionSheet> {
       );
       if (!mounted || ok != true || !identical(preview, p)) return;
     }
-    await m.submit();
+    if (widget.intent == 'apply' && !memo.canSubmit) return;
+    await m.submit(
+      applicationMemo: widget.intent == 'apply' ? memo.validation.text : null,
+    );
   }
 
   @override
   void dispose() {
     m.removeListener(_changed);
     m.dispose();
+    memo.removeListener(_memoChanged);
+    memo.dispose();
     super.dispose();
   }
 
@@ -293,12 +316,19 @@ class _CycleAdmissionSheetState extends State<_CycleAdmissionSheet> {
               ),
             CycleCommandBanner(controller: c),
             const SizedBox(height: 12),
+            if (widget.intent == 'apply')
+              ApplicationMemoComposer(
+                draft: memo,
+                messages: c.messages,
+                enabled: !loading && c.canAct && memoBinding == c.scopeKey(),
+              ),
             FilledButton(
               onPressed:
                   !loading &&
                       c.canAct &&
                       p?.permission.allowed == true &&
-                      requiredSelected
+                      requiredSelected &&
+                      (widget.intent != 'apply' || memo.canSubmit)
                   ? _confirm
                   : null,
               child: Text('$label · ${widget.target}'),
@@ -359,7 +389,9 @@ Future<void> showCycleApplicationDecision(
     context: context,
     builder: (context) => AlertDialog(
       title: Text('$label 확인'),
-      content: Text('$target 주차 · $name\n이 신청을 $label하시겠습니까?'),
+      content: Text(
+        '$target 주차 · $name${preview.applicationMemo == null ? '' : '\n한마디 · ${preview.applicationMemo}'}\n이 신청을 $label하시겠습니까?',
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
@@ -451,6 +483,7 @@ class _CycleRoomApplicationsState extends State<CycleRoomApplications> {
           power: item.comparison?['actual'],
           status: '승인 대기\n${item.status}',
           warning: item.warning,
+          memo: item.applicationMemo,
           actions: Row(
             children: [
               for (final action in ['reject', 'approve'])

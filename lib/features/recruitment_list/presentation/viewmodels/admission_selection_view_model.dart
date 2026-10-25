@@ -337,7 +337,7 @@ class AdmissionSelectionViewModel extends ChangeNotifier {
     _emit();
   }
 
-  Future<void> submit() async {
+  Future<void> submit({String? applicationMemo}) async {
     final p = preview;
     if (_disposed ||
         loading ||
@@ -357,6 +357,7 @@ class AdmissionSelectionViewModel extends ChangeNotifier {
       _submittedKey = await controller.admit(
         p,
         {...chosen},
+        applicationMemo: applicationMemo,
         expectedActor: candidates?.actor,
         isCurrent: () => _valid(e),
       );

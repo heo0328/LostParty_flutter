@@ -12,6 +12,7 @@ class RecruitmentCharacterCard extends StatelessWidget {
     required this.power,
     required this.status,
     this.warning = false,
+    this.memo,
     this.itemLevelLabel,
     this.leading,
     this.trailing,
@@ -20,7 +21,7 @@ class RecruitmentCharacterCard extends StatelessWidget {
   });
   final String name, className, role, status;
   final Object? itemLevel, power;
-  final String? itemLevelLabel;
+  final String? itemLevelLabel, memo;
   final bool warning;
   final Widget? leading, trailing, actions;
 
@@ -88,6 +89,11 @@ class RecruitmentCharacterCard extends StatelessWidget {
             color: warning ? AppColors.warning : AppColors.textSecondary,
           ),
         ),
+        if (memo != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text('한마디 · $memo', style: const TextStyle(fontSize: 12)),
+          ),
         if (actions != null) ...[const SizedBox(height: 10), actions!],
       ],
     ),

@@ -102,12 +102,15 @@ class ApplicationItemLevel {
 }
 
 class ApplicationDisplayItem {
+  final String? applicationMemo;
   ApplicationDisplayItem(
     Map<String, dynamic> raw,
     String room,
     String target,
-    int generation,
-  ) : wire = _snapshot(raw) {
+    int generation, {
+    this.applicationMemo,
+  }) : wire = _snapshot(raw) {
+    if (applicationMemo != null) ApplicationMemo(applicationMemo!);
     roleShape(
       wire,
       'application_id room_id revision state created_at expires_at ended_at character_id selected_role display admission_origin target_cycle_key target_generation comparison analysis display_reason',
@@ -217,8 +220,12 @@ class ApplicationDisplayItem {
 }
 
 class ApplicationDisplayPage {
-  ApplicationDisplayPage(Map<String, dynamic> raw, String room, String target)
-    : wire = _snapshot(raw) {
+  ApplicationDisplayPage(
+    Map<String, dynamic> raw,
+    String room,
+    String target, {
+    Map<String, String?> memos = const {},
+  }) : wire = _snapshot(raw) {
     roleShape(wire, 'scope data');
     scope = roleMap(wire['scope']);
     CycleReadScope(scope, target);
@@ -231,7 +238,13 @@ class ApplicationDisplayPage {
     roleCheck(roleUtc(data['evaluated_at']) == roleUtc(scope['server_now']));
     items = List.unmodifiable(
       raidList(data['items']).map(
-        (v) => ApplicationDisplayItem(roleMap(v), room, target, generation),
+        (v) => ApplicationDisplayItem(
+          roleMap(v),
+          room,
+          target,
+          generation,
+          applicationMemo: memos[v['application_id']],
+        ),
       ),
     );
     roleCheck(
@@ -385,8 +398,16 @@ class ApplicationDisplayReader
         'limit': 20,
         'cursor': ?cursor,
       },
-      parse: (raw) => ApplicationDisplayPage(raw, room, target),
+      parse: (raw) => raw,
     );
-    return result.value;
+    return ApplicationDisplayPage(
+      result.value,
+      room,
+      target,
+      memos: {
+        for (final row in result.metadata?['items'] as List? ?? const [])
+          row['application_id'] as String: row['application_memo'] as String?,
+      },
+    );
   });
 }

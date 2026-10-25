@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import '../../domain/application_memo_policy.dart';
+import '../../data/application_messages.dart';
+import 'application_messages_controller.dart';
 import '../../data/beta/recruitment_command_transport.dart';
 import '../../data/beta/beta_contract.dart';
 import '../../../account/domain/member_raid_models.dart' show raidList;
@@ -72,12 +75,24 @@ class CycleParticipationController extends ChangeNotifier {
     DateTime Function()? now,
   }) : now = now ?? DateTime.now {
     _binding = scopeKey();
+    if (gateway is ApplicationMessagesGateway &&
+        (gateway as ApplicationMessagesGateway).applicationMessagesEnabled) {
+      messages = ApplicationMessagesController(
+        gateway: gateway as ApplicationMessagesGateway,
+        session: session,
+        scopeKey: scopeKey,
+        changes: changes,
+        transport: commandTransport,
+        now: this.now,
+      );
+    }
     session.addListener(_access);
     changes.addListener(_access);
   }
   final CycleInteractionGateway gateway;
+  ApplicationMessagesController? messages;
 
-  /// Beta foundation only; legacy commands below retain their original memory journal.
+  /// Presets use durable transport; participation commands keep their memory journal.
   final RecruitmentCommandTransport? commandTransport;
   final AccountReadSession session;
   final Listenable changes;
@@ -627,10 +642,19 @@ class CycleParticipationController extends ChangeNotifier {
   Future<String?> admit(
     CycleAdmissionPreview preview,
     Set<String> sessions, {
+    String? applicationMemo,
     AdmissionCandidateActor? expectedActor,
     bool Function()? isCurrent,
   }) async {
     if (!canAct || isCurrent?.call() == false) return null;
+    final memo = applicationMemo == null
+        ? null
+        : ApplicationMemoPolicy.check(applicationMemo);
+    if (memo != null && (preview.intent != 'apply' || !memo.valid)) {
+      failure = 'INVALID_REQUEST';
+      _emit();
+      return null;
+    }
     final frozenSessions = Set<String>.unmodifiable(sessions);
     final e = _epoch;
     busy = true;
@@ -691,6 +715,9 @@ class CycleParticipationController extends ChangeNotifier {
         }
       }
       final apply = fresh.intent == 'apply';
+      if (memo != null && memo.text.isNotEmpty) {
+        body['application_memo'] = memo.text;
+      }
       _pending = _CycleCommand(
         path:
             '/v2/raid-rooms/${fresh.room}/${apply
@@ -1007,6 +1034,7 @@ class CycleParticipationController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    messages?.dispose();
     _epoch++;
     _retryTimer?.cancel();
     session.removeListener(_access);

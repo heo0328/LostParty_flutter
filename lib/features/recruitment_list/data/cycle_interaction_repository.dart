@@ -4,6 +4,7 @@ import 'beta/beta_read.dart';
 import 'beta/beta_interaction_api.dart';
 import 'admission_candidates.dart';
 import 'application_display.dart';
+import 'application_messages.dart';
 import 'cycle_member_actions.dart';
 import 'membership_actions.dart';
 import '../../account/domain/account_read_session.dart';
@@ -403,11 +404,14 @@ class CycleAdmissionPreview {
 }
 
 class CycleApplicationView {
+  final String? applicationMemo;
   CycleApplicationView(
     Map<String, dynamic> j,
     String id, {
     String? expectedTarget,
+    this.applicationMemo,
   }) {
+    if (applicationMemo != null) ApplicationMemo(applicationMemo!);
     roleShape(j, 'scope data');
     scope = Map.unmodifiable(roleMap(j['scope']));
     final raw = roleMap(j['data']);
@@ -560,13 +564,20 @@ class CycleInteractionRepository
         CycleRemovalGateway,
         MembershipActionGateway,
         AdmissionCandidatesGateway,
-        ApplicationDisplayListGateway {
+        ApplicationDisplayListGateway,
+        ApplicationMessagesGateway {
   CycleInteractionRepository({
     required this.api,
     required this.recruitment,
     this.contractMode = RecruitmentContractMode.legacy,
   });
   final RecruitmentContractMode contractMode;
+  @override
+  bool get applicationMessagesEnabled =>
+      contractMode == RecruitmentContractMode.betaWire2;
+  @override
+  Future<ApplicationMessagePresets> applicationMessagePresets() =>
+      ApplicationMessagesReader(api).applicationMessagePresets();
   final BackendRegistrationApi api;
   late final BackendRegistrationApi interactionApi =
       contractMode == RecruitmentContractMode.betaWire2
@@ -858,8 +869,21 @@ class CycleInteractionRepository
   Future<CycleApplicationView> application(String id, String target) =>
       _decode(() async {
         roleId(id);
+        final path = '/v2/raid-room-applications/$id';
+        if (interactionApi is BetaInteractionApi) {
+          final decoded = await (interactionApi as BetaInteractionApi)
+              .requestDecoded(path);
+          final raw = decoded.metadata!['data'] as Map;
+          final app = (raw['application'] ?? raw) as Map;
+          return CycleApplicationView(
+            decoded.value,
+            id,
+            expectedTarget: target,
+            applicationMemo: app['application_memo'] as String?,
+          );
+        }
         return CycleApplicationView(
-          (await interactionApi.request('/v2/raid-room-applications/$id'))!,
+          (await interactionApi.request(path))!,
           id,
           expectedTarget: target,
         );

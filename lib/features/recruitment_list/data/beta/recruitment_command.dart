@@ -263,6 +263,8 @@ bool definiteRecruitmentRejection(Object? status, Object? code) =>
     const {400, 403, 404, 409, 413}.contains(status) &&
     const {
       'INVALID_REQUEST',
+      'APPLICATION_MEMO_TOO_LONG',
+      'APPLICATION_PRESET_LIMIT_EXCEEDED',
       'PERMISSION_DENIED',
       'NOT_FOUND',
       'PAYLOAD_TOO_LARGE',
