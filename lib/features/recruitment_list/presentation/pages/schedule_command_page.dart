@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../data/cycle_schedule.dart';
 import '../../domain/beta_schedule_draft.dart';
@@ -8,7 +9,9 @@ import '../viewmodels/cycle_participation_controller.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
 import '../widgets/beta_schedule_editor.dart';
 import '../widgets/cycle_participation_widgets.dart';
-import '../widgets/recruitment_section.dart';
+import '../widgets/schedule_design.dart';
+import '../widgets/recruitment_design.dart';
+import '../../domain/policies/recruitment_start_policy.dart';
 import '../widgets/schedule_timeline.dart';
 
 String scheduleStamp(Object? raw) {
@@ -43,7 +46,7 @@ class _ScheduleCommandPageState extends State<ScheduleCommandPage> {
   late final DateTime received;
   BetaScheduleInput input = const BetaScheduleInput();
   String? sessionId, error, requestKey;
-  bool sending = false, closing = false;
+  bool sending = false, closing = false, reviewing = false;
   String? successBefore;
   DateTime get serverNow => DateTime.parse(
     p.plan.scope['server_now'] as String,
@@ -108,7 +111,16 @@ class _ScheduleCommandPageState extends State<ScheduleCommandPage> {
           : null;
       input = BetaScheduleInput(
         weekday: widget.initialDay,
-        minute: widget.initialMinute,
+        minute:
+            widget.initialMinute ??
+            List.generate(288, (i) => i * 5)
+                .where((m) => allowed(widget.initialDay, m))
+                .where((m) => m >= 1200)
+                .firstOrNull ??
+            List.generate(
+              288,
+              (i) => i * 5,
+            ).where((m) => allowed(widget.initialDay, m)).firstOrNull,
       );
     }
     widget.controller.addListener(observe);
@@ -170,53 +182,7 @@ class _ScheduleCommandPageState extends State<ScheduleCommandPage> {
       final start =
           BetaScheduleEditor.config(p.plan.target, input)['base_starts_at']
               as String;
-      final accepted = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('이 시간으로 제안할까요?'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  scheduleStamp(start),
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                Text('진행 시간 $minutes분'),
-                const SizedBox(height: 12),
-                ...warnings().map(
-                  (w) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Text(
-                      w,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.warning,
-                      ),
-                    ),
-                  ),
-                ),
-                const Text(
-                  '시간표와 달라도 제안할 수 있어요. 공대원이 제안을 보고 직접 응답합니다.',
-                  style: TextStyle(fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('취소'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('제안 보내기'),
-            ),
-          ],
-        ),
-      );
-      if (!mounted || accepted != true || !ready) return;
+      if (!reviewing || !mounted || !ready) return;
       final session = p.plan.find('sessions', 'session_id', sessionId!);
       body = {
         'targets': [
@@ -249,159 +215,532 @@ class _ScheduleCommandPageState extends State<ScheduleCommandPage> {
   }
 
   Widget card(String title, List<Widget> children) =>
-      RecruitmentSection(title: title, children: children);
+      ScheduleCard(title: title, children: children);
+  DateTime date(int day) => const RecruitmentStartPolicy().dateForDay(
+    serverNow,
+    day,
+    targetCycleKey: p.plan.target,
+  );
+  bool allowed(int day, int minute) => const RecruitmentStartPolicy().allows(
+    now: serverNow,
+    weekday: day,
+    minute: minute,
+    durationMinutes: minutes,
+    targetCycleKey: p.plan.target,
+  );
+  String get proposedStart =>
+      BetaScheduleEditor.config(p.plan.target, input)['base_starts_at']
+          as String;
+  Widget currentCard() => card('현재 출발 약속', [
+    for (final s in p.plan.data['sessions'] as List)
+      if (s['state'] != 'cancelled' &&
+          (!responding ||
+              (p.plan.find(
+                        'proposals',
+                        'proposal_id',
+                        p.id!,
+                      )['target_session_ids']
+                      as List)
+                  .contains(s['session_id'])))
+        Text(
+          scheduleStamp(s['starts_at']),
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: AppColors.primary,
+          ),
+        ),
+  ]);
+  Widget footer() => Padding(
+    padding: const EdgeInsets.all(20),
+    child: Row(
+      children: [
+        Expanded(
+          child: ScheduleAction(
+            reviewing ? '시간 다시 고르기' : '취소',
+            secondary: true,
+            onPressed: sending
+                ? null
+                : () => reviewing
+                      ? setState(() => reviewing = false)
+                      : Navigator.maybePop(context),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: reviewing ? 1 : 2,
+          child: ScheduleAction(
+            reviewing ? '제안 보내기' : '제안 내용 확인',
+            onPressed: ready
+                ? () => reviewing ? submit() : setState(() => reviewing = true)
+                : null,
+          ),
+        ),
+      ],
+    ),
+  );
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: widget.controller,
-    builder: (context, _) => Scaffold(
-      appBar: AppBar(title: Text(responding ? '일정 제안 확인' : '일정 제안')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (!active)
-            const Text('로그인 상태가 변경되었습니다. 상세 화면에서 다시 확인해 주세요.')
-          else ...[
-            if (responding)
-              ...responseCards()
+    builder: (context, _) => PopScope(
+      canPop: !reviewing || closing,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && reviewing && !closing) {
+          setState(() => reviewing = false);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          leadingWidth: 36,
+          titleSpacing: 0,
+          leading: reviewing
+              ? BackButton(onPressed: () => setState(() => reviewing = false))
+              : null,
+          title: Text(
+            responding
+                ? '일정 제안 확인'
+                : reviewing
+                ? '제안 내용 확인'
+                : '일정 제안',
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          ),
+        ),
+        bottomNavigationBar: active && !responding
+            ? SafeArea(child: footer())
+            : null,
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            if (!active)
+              const Text('로그인 상태가 변경되었습니다. 상세 화면에서 다시 확인해 주세요.')
             else ...[
-              card('현재 출발', [
-                for (final s in p.plan.data['sessions'] as List)
-                  if (s['state'] == 'confirmed')
-                    Text(scheduleStamp(s['starts_at'])),
-              ]),
-              if (widget.comparison != null)
-                card('공대원 시간표', [
-                  ScheduleTimeline(
-                    comparison: widget.comparison!,
-                    weekday: input.weekday ?? widget.initialDay,
-                    selected: widget.selected,
-                    onTimeSelected: ready || requestKey == null && !sending
-                        ? (minute) =>
-                              setState(() => input = input.copy(minute: minute))
+              Text(
+                scheduleWeekLabel(
+                  p.plan.target,
+                  p.plan.scope['server_now'] as String?,
+                ),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (responding)
+                ...responseCards()
+              else ...[
+                if (!reviewing) ...[
+                  ScheduleDaySelector(
+                    target: p.plan.target,
+                    value: input.weekday ?? widget.initialDay,
+                    onChanged: !sending && requestKey == null
+                        ? (day) =>
+                              setState(() => input = input.copy(weekday: day))
                         : null,
+                    allowed: (day) => List.generate(
+                      288,
+                      (i) => i * 5,
+                    ).any((minute) => allowed(day, minute)),
                   ),
-                ]),
-              card('제안할 출발 시간', [
-                if (sessions.length > 1)
-                  DropdownButtonFormField<String>(
-                    initialValue: sessionId,
-                    decoration: const InputDecoration(labelText: '변경할 일정'),
-                    items: [
-                      for (final s in sessions)
-                        DropdownMenuItem(
-                          value: s['session_id'] as String,
-                          child: Text(scheduleStamp(s['starts_at'])),
+                  const SizedBox(height: 16),
+                ],
+                if (widget.comparison != null)
+                  ScheduleCard(
+                    title:
+                        '${date(input.weekday ?? widget.initialDay).month}월 ${date(input.weekday ?? widget.initialDay).day}일 ${' 월화수목금토일'[input.weekday ?? widget.initialDay]}요일',
+                    trailing: input.minute == null
+                        ? null
+                        : ScheduleTag('선택 ${clock(input.minute!)}'),
+                    children: [
+                      ScheduleTimeline(
+                        comparison: widget.comparison!,
+                        weekday: input.weekday ?? widget.initialDay,
+                        selected: widget.selected,
+                        selectedMinute: input.minute,
+                        onTimeSelected:
+                            !reviewing &&
+                                active &&
+                                requestKey == null &&
+                                !sending
+                            ? (minute) => setState(
+                                () => input = input.copy(minute: minute),
+                              )
+                            : null,
+                      ),
+                      if (reviewing)
+                        Text(
+                          '공대원 ${widget.selected.length}명 기준으로 비교 중',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                     ],
-                    onChanged: !sending && requestKey == null
-                        ? (v) => setState(() => sessionId = v)
-                        : null,
                   ),
-                BetaScheduleEditor(
-                  target: p.plan.target,
-                  now: serverNow,
-                  duration: minutes,
-                  capacity: p.plan.data['app_capacity'] as int,
-                  value: input,
-                  showCoordination: false,
-                  enabled: !sending && requestKey == null,
-                  onChanged: (v) => setState(() => input = v),
+                if (reviewing) ...[
+                  card('이 일정으로 제안할까요?', [
+                    Text(
+                      scheduleStamp(proposedStart),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    for (final s in p.plan.data['sessions'] as List)
+                      if (s['session_id'] == sessionId)
+                        Text(
+                          '${scheduleStamp(s['starts_at'])} → ${scheduleStamp(proposedStart)}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '예상 진행 시간 $minutes분',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ...warningWidgets(),
+                    const Text(
+                      '공대원은 시간표와 달라도 참가할 수 있어요.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ]),
+                ] else ...[
+                  card('제안할 일정', [
+                    Text(
+                      '${date(input.weekday ?? widget.initialDay).month}월 ${date(input.weekday ?? widget.initialDay).day}일 ${' 월화수목금토일'[input.weekday ?? widget.initialDay]}요일',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (sessions.length > 1)
+                      DropdownButtonFormField<String>(
+                        initialValue: sessionId,
+                        decoration: const InputDecoration(labelText: '변경할 일정'),
+                        items: [
+                          for (final s in sessions)
+                            DropdownMenuItem(
+                              value: s['session_id'] as String,
+                              child: Text(scheduleStamp(s['starts_at'])),
+                            ),
+                        ],
+                        onChanged: !sending && requestKey == null
+                            ? (v) => setState(() => sessionId = v)
+                            : null,
+                      ),
+                    _ScheduleTimeWheels(
+                      value: input.minute,
+                      enabled: !sending && requestKey == null,
+                      allowed: (m) =>
+                          allowed(input.weekday ?? widget.initialDay, m),
+                      onChanged: (minute) =>
+                          setState(() => input = input.copy(minute: minute)),
+                    ),
+                    const SizedBox(height: 12),
+                    if (input.minute != null &&
+                        !ready &&
+                        requestKey == null &&
+                        !sending)
+                      const Text(
+                        '선택한 시간에는 출발할 수 없어요. 다른 시간을 골라 주세요.',
+                        style: TextStyle(fontSize: 12, color: AppColors.error),
+                      ),
+                    ...warningWidgets(),
+                    Text(
+                      '예상 진행 시간 $minutes분 · 시간표 밖이어도 제안할 수 있어요.',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ]),
+                ],
+              ],
+              if (error != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    recruitmentFailureMessage(error),
+                    style: const TextStyle(color: AppColors.error),
+                  ),
                 ),
-                Text(
-                  '진행 시간 $minutes분 · KST',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '시간표 밖이나 다른 예약과 겹치는 시간도 제안할 수 있어요.',
-                  style: TextStyle(fontSize: 12),
-                ),
-              ]),
-              FilledButton.icon(
-                onPressed: ready ? () => submit() : null,
-                icon: const Icon(Icons.send_outlined),
-                label: const Text('제안 내용 확인'),
-              ),
+              if (sending) const LinearProgressIndicator(),
+              CycleCommandBanner(controller: widget.controller),
             ],
-            if (error != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  recruitmentFailureMessage(error),
-                  style: const TextStyle(color: AppColors.error),
-                ),
-              ),
-            if (sending) const LinearProgressIndicator(),
-            CycleCommandBanner(controller: widget.controller),
           ],
-        ],
+        ),
       ),
     ),
   );
+  List<Widget> warningWidgets() => [
+    if (warnings().isNotEmpty)
+      Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF4DF),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final warning in warnings())
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  warning,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF9C5D13),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+  ];
   List<Widget> responseCards() {
     final proposal = p.plan.find('proposals', 'proposal_id', p.id!);
     final allowed =
         proposal['permissions']?['respond_proposal']?['allowed'] == true &&
         proposal['state'] == 'pending';
     return [
-      card('현재 출발', [
-        for (final s in p.plan.data['sessions'] as List)
-          if ((proposal['target_session_ids'] as List).contains(
-            s['session_id'],
-          ))
-            Text(scheduleStamp(s['starts_at'])),
-      ]),
-      card('새로 제안된 시간', [
-        for (final set in proposal['proposed_sessions'] as List)
-          for (final seg in set['segments'] as List)
-            if (seg['state'] == 'planned')
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  '${scheduleStamp(seg['starts_at'])} – ${scheduleStamp(seg['ends_at'])}',
+      currentCard(),
+      ScheduleCard(
+        children: [
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: ScheduleTag('일정 제안'),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            '새로 제안된 시간',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+          for (final set in proposal['proposed_sessions'] as List)
+            for (final seg in set['segments'] as List)
+              if (seg['state'] == 'planned') ...[
+                Text(
+                  '${scheduleStamp(seg['starts_at'])} 출발',
                   style: const TextStyle(
-                    fontWeight: FontWeight.w600,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.primary,
                   ),
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  '${seg['duration_minutes'] == null ? '진행 시간 정보 없음' : '예상 진행 ${seg['duration_minutes']}분'} · 종료 ${scheduleStamp(seg['ends_at'])}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+          const SizedBox(height: 24),
+          const ScheduleTag('내 시간표 밖이어도 참가할 수 있다면 수락해 주세요.', warning: true),
+          const SizedBox(height: 24),
+          for (final vote in proposal['votes'] as List)
+            Text(
+              '동의 ${vote['accepted_count']} / 필요한 동의 ${vote['required_votes']} · 대상 ${vote['eligible_count']}명',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
               ),
-        for (final vote in proposal['votes'] as List)
+            ),
+          const SizedBox(height: 12),
           Text(
-            '동의 ${vote['accepted_count']} / 필요한 동의 ${vote['required_votes']} · 대상 ${vote['eligible_count']}명',
-            style: const TextStyle(fontSize: 12),
-          ),
-        const SizedBox(height: 12),
-        const Text(
-          '등록한 가능 시간과 달라도 수락할 수 있어요. 수락해도 내 계정의 시간표는 바뀌지 않습니다.',
-          style: TextStyle(fontSize: 12),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '내 응답: ${switch (proposal['my_response']?['response']) {
-            'accept' => '수락',
-            'reject' => '거절',
-            _ => '응답 대기',
-          }}',
-          style: const TextStyle(fontSize: 12),
-        ),
-      ]),
-      Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: ready && allowed ? () => submit('reject') : null,
-              child: const Text('거절'),
+            '내 응답: ${switch (proposal['my_response']?['response']) {
+              'accept' => '수락',
+              'reject' => '거절',
+              _ => '응답 대기',
+            }}',
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: RecruitmentPrimaryButton(
+                  label: '어려워요',
+                  secondary: true,
+                  onPressed: ready && allowed ? () => submit('reject') : null,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: RecruitmentPrimaryButton(
+                  label: '참가할게요',
+                  onPressed: ready && allowed ? () => submit('accept') : null,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+        child: Text(
+          '수락해도 내 계정 시간표는 바뀌지 않아요.\n시간표와 달라도 직접 동의할 수 있어요.',
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        ),
+      ),
+    ];
+  }
+}
+
+class _ScheduleTimeWheels extends StatefulWidget {
+  const _ScheduleTimeWheels({
+    required this.value,
+    required this.enabled,
+    required this.allowed,
+    required this.onChanged,
+  });
+  final int? value;
+  final bool enabled;
+  final bool Function(int) allowed;
+  final ValueChanged<int> onChanged;
+  @override
+  State<_ScheduleTimeWheels> createState() => _ScheduleTimeWheelsState();
+}
+
+class _ScheduleTimeWheelsState extends State<_ScheduleTimeWheels> {
+  late final FixedExtentScrollController hours, minutes;
+  bool syncing = false;
+  @override
+  void initState() {
+    super.initState();
+    final m = widget.value ?? 1200;
+    hours = FixedExtentScrollController(initialItem: m ~/ 60);
+    minutes = FixedExtentScrollController(initialItem: m % 60 ~/ 5);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ScheduleTimeWheels old) {
+    super.didUpdateWidget(old);
+    if (old.value != widget.value) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final m = widget.value ?? 1200;
+        syncing = true;
+        if (hours.hasClients && hours.selectedItem != m ~/ 60) {
+          hours.jumpToItem(m ~/ 60);
+        }
+        if (minutes.hasClients && minutes.selectedItem != m % 60 ~/ 5) {
+          minutes.jumpToItem(m % 60 ~/ 5);
+        }
+        syncing = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    hours.dispose();
+    minutes.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final minute = widget.value ?? 1200;
+    Widget wheel(bool isHour) => Expanded(
+      child: Column(
+        children: [
+          Text(
+            isHour ? '시' : '분',
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+            ),
+          ),
           Expanded(
-            child: FilledButton(
-              onPressed: ready && allowed ? () => submit('accept') : null,
-              child: const Text('수락'),
+            child: CupertinoPicker(
+              scrollController: isHour ? hours : minutes,
+              itemExtent: 38,
+              squeeze: 1.1,
+              onSelectedItemChanged: widget.enabled
+                  ? (i) {
+                      final current = widget.value ?? 1200;
+                      final next = isHour
+                          ? i * 60 + current % 60
+                          : current ~/ 60 * 60 + i * 5;
+                      if (!syncing && next != widget.value) {
+                        widget.onChanged(next);
+                      }
+                    }
+                  : null,
+              selectionOverlay: Container(
+                decoration: BoxDecoration(
+                  color: recruitmentSelectionFill.withValues(alpha: .15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              children: [
+                for (var i = 0; i < (isHour ? 24 : 12); i++)
+                  Center(
+                    child: Text(
+                      '${isHour ? i : (i * 5).toString().padLeft(2, '0')}',
+                      style: TextStyle(
+                        fontFamily: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.fontFamily,
+                        fontSize: 23,
+                        fontWeight: FontWeight.w700,
+                        color:
+                            widget.allowed(
+                              isHour
+                                  ? i * 60 + minute % 60
+                                  : minute ~/ 60 * 60 + i * 5,
+                            )
+                            ? AppColors.primary
+                            : AppColors.textDisabled,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ],
       ),
-    ];
+    );
+    return Container(
+      height: 126,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: AbsorbPointer(
+        absorbing: !widget.enabled,
+        child: Row(
+          children: [
+            wheel(true),
+            const Text(
+              ':',
+              style: TextStyle(fontSize: 22, color: AppColors.primary),
+            ),
+            wheel(false),
+          ],
+        ),
+      ),
+    );
   }
 }

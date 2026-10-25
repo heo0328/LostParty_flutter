@@ -9,7 +9,8 @@ import '../viewmodels/backend_recruitment_create_view_model.dart';
 import '../viewmodels/cycle_participation_controller.dart';
 import '../viewmodels/schedule_comparison_view_model.dart';
 import '../widgets/cycle_participation_widgets.dart';
-import '../widgets/recruitment_section.dart';
+import '../widgets/schedule_design.dart';
+import '../widgets/recruitment_design.dart';
 import '../widgets/membership_record_view.dart';
 import '../widgets/schedule_timeline.dart';
 import 'schedule_command_page.dart';
@@ -28,17 +29,25 @@ Future<bool> showUnsetScheduleNotice(
   var hide = false;
   final confirm = await showDialog<bool>(
     context: context,
+    barrierColor: const Color(0x33725A9F),
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setState) => AlertDialog(
-        title: const Text('가능 시간을 설정하지 않았어요'),
+        backgroundColor: Colors.white,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          '등록된 가능 시간이 없어요',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              '시간표가 없으면 어느 시간에 출발이 확정돼도 참가할 수 있는 것으로 조율합니다. 가능한 시간이 정해져 있다면 내 계정에서 시간표를 설정해 주세요.',
+              '시간표가 없으면 모든 시간에 참가 가능한 것으로 보고 출발 시간을 자동으로 정해요.\n\n가능한 시간이 정해져 있다면 내 계정에서 시간표를 설정해 주세요.',
               style: TextStyle(fontSize: 13),
             ),
             CheckboxListTile(
+              controlAffinity: ListTileControlAffinity.leading,
               contentPadding: EdgeInsets.zero,
               title: const Text('오늘은 다시 보지 않기', style: TextStyle(fontSize: 12)),
               value: hide,
@@ -47,9 +56,9 @@ Future<bool> showUnsetScheduleNotice(
           ],
         ),
         actions: [
-          FilledButton(
+          RecruitmentPrimaryButton(
+            label: '확인',
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('확인'),
           ),
         ],
       ),
@@ -194,7 +203,7 @@ class _ScheduleComparisonPageState extends State<ScheduleComparisonPage> {
   }
 
   Widget card(String title, List<Widget> children) =>
-      RecruitmentSection(title: title, children: children);
+      ScheduleCard(title: title, children: children);
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: model,
@@ -216,7 +225,13 @@ class _ScheduleComparisonPageState extends State<ScheduleComparisonPage> {
             );
         return Scaffold(
           appBar: AppBar(
-            title: const Text('공대원 일정'),
+            backgroundColor: Colors.white,
+            title: const Text(
+              '공대원 일정 전체 확인',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+            ),
+            leadingWidth: 36,
+            titleSpacing: 0,
             actions: [
               IconButton(
                 tooltip: '새로고침',
@@ -225,11 +240,22 @@ class _ScheduleComparisonPageState extends State<ScheduleComparisonPage> {
               ),
             ],
           ),
+          bottomNavigationBar: canPropose
+              ? SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: ScheduleAction('일정 제안', onPressed: () => propose()),
+                  ),
+                )
+              : null,
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
               Text(
-                '${widget.target} 주차 · KST',
+                scheduleWeekLabel(
+                  widget.target,
+                  p?.scope['server_now'] as String?,
+                ),
                 style: const TextStyle(
                   fontSize: 12,
                   color: AppColors.textSecondary,
@@ -252,6 +278,83 @@ class _ScheduleComparisonPageState extends State<ScheduleComparisonPage> {
                   model.profile!.projection.record == null)
                 Text(membershipRecoveryLabel(model.profile!.projection)),
               if (p != null) ...[
+                if (comparison != null) ...[
+                  ScheduleDaySelector(
+                    target: widget.target,
+                    value: model.weekday,
+                    onChanged: !model.loading ? model.selectDay : null,
+                  ),
+                  const SizedBox(height: 16),
+                  card(
+                    '${comparison.date(model.weekday).month}월 ${comparison.date(model.weekday).day}일 ${' 월화수목금토일'[model.weekday]}요일',
+                    [
+                      ScheduleTimeline(
+                        comparison: comparison,
+                        weekday: model.weekday,
+                        selected: Set.unmodifiable(model.selected),
+                      ),
+                    ],
+                  ),
+                  ScheduleCard(
+                    title: '비교할 공대원',
+                    trailing: Text(
+                      '${model.selected.length}/${comparison.members.length}명 선택',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    children: [
+                      const Text(
+                        '체크는 시간 비교에만 사용돼요.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      LayoutBuilder(
+                        builder: (context, box) => Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            for (final member in comparison.members)
+                              SizedBox(
+                                width: (box.maxWidth - 8) / 2,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: CheckboxListTile(
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                    ),
+                                    dense: true,
+                                    controlAffinity:
+                                        ListTileControlAffinity.leading,
+                                    value: model.selected.contains(member.id),
+                                    onChanged: !model.loading
+                                        ? (v) =>
+                                              model.toggle(member.id, v == true)
+                                        : null,
+                                    title: Text(
+                                      member.name,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 11),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  ...myTimetable(),
+                ],
                 card('현재 출발', [
                   for (final session in p.data['sessions'] as List)
                     if (session['state'] != 'cancelled')
@@ -309,126 +412,17 @@ class _ScheduleComparisonPageState extends State<ScheduleComparisonPage> {
                       ),
                   ],
                 ]),
-                if (comparison != null) ...[
-                  card('가능한 시간 비교', [
+                ScheduleCard(
+                  children: const [
                     Text(
-                      '${comparison.date(model.weekday).month}/${comparison.date(model.weekday).day}(${' 월화수목금토일'[model.weekday]})',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        for (final day in playWeekdays)
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 2,
-                              ),
-                              child: Semantics(
-                                selected: model.weekday == day,
-                                button: true,
-                                label: '${' 월화수목금토일'[day]}요일',
-                                child: Material(
-                                  color: model.weekday == day
-                                      ? AppColors.primarySubtle
-                                      : AppColors.surface,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    side: BorderSide(
-                                      color: model.weekday == day
-                                          ? AppColors.primary
-                                          : AppColors.outline,
-                                    ),
-                                  ),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: InkWell(
-                                    key: ValueKey('schedule-day-$day'),
-                                    onTap: !model.loading
-                                        ? () => model.selectDay(day)
-                                        : null,
-                                    child: SizedBox(
-                                      height: 36,
-                                      child: Center(
-                                        child: Text(
-                                          ' 월화수목금토일'[day],
-                                          style: TextStyle(
-                                            color: model.weekday == day
-                                                ? AppColors.primary
-                                                : AppColors.textSecondary,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    ScheduleTimeline(
-                      comparison: comparison,
-                      weekday: model.weekday,
-                      selected: Set.unmodifiable(model.selected),
-                    ),
-                  ]),
-                  card('비교할 공대원', [
-                    const Text(
-                      '체크는 시간 비교에만 사용돼요.',
+                      '시간표는 참고용이에요. 다른 시간도 제안할 수 있어요.',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    LayoutBuilder(
-                      builder: (context, box) => Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: [
-                          for (final member in comparison.members)
-                            SizedBox(
-                              width: (box.maxWidth - 8) / 2,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: AppColors.outline),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: CheckboxListTile(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                  ),
-                                  dense: true,
-                                  controlAffinity:
-                                      ListTileControlAffinity.leading,
-                                  value: model.selected.contains(member.id),
-                                  onChanged: !model.loading
-                                      ? (v) =>
-                                            model.toggle(member.id, v == true)
-                                      : null,
-                                  title: Text(
-                                    member.name,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 11),
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ]),
-                  ...myTimetable(),
-                ],
-                if (canPropose)
-                  FilledButton.icon(
-                    onPressed: () => propose(),
-                    icon: const Icon(Icons.edit_calendar_outlined),
-                    label: const Text('일정 제안하기'),
-                  ),
+                  ],
+                ),
                 if (widget.onSettings != null &&
                     p.data['permissions']?['edit_schedule_groups']?['allowed'] ==
                         true)
@@ -481,9 +475,9 @@ class _ScheduleComparisonPageState extends State<ScheduleComparisonPage> {
         .firstOrNull;
     if (row == null) return [];
     return [
-      RecruitmentSection(
+      ScheduleCard(
         title: '내 레이드 가능 시간',
-        trailing: OutlinedButton.icon(
+        trailing: ScheduleRefreshButton(
           onPressed:
               !model.readOnly &&
                   model.failure == null &&
@@ -491,8 +485,6 @@ class _ScheduleComparisonPageState extends State<ScheduleComparisonPage> {
                   widget.controller.canAct
               ? update
               : null,
-          icon: const Icon(Icons.sync, size: 18),
-          label: const Text('내 일정 갱신'),
         ),
         children: [
           const Text(

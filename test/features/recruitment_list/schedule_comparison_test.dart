@@ -477,7 +477,7 @@ void main() {
         );
         await tester.tap(find.text('제안 내용 확인'));
         await tester.pumpAndSettle();
-        expect(find.text('이 시간으로 제안할까요?'), findsOneWidget);
+        expect(find.text('이 일정으로 제안할까요?'), findsOneWidget);
         expect(find.textContaining('등록한 가능 시간 밖입니다.'), findsOneWidget);
         expect(
           tester
@@ -485,10 +485,86 @@ void main() {
               .onPressed,
           isNotNull,
         );
-        await tester.tap(find.text('취소'));
+        await tester.tap(find.text('시간 다시 고르기'));
         await tester.pumpAndSettle();
         expect(api.requests.where((r) => r['method'] != 'GET'), isEmpty);
         expect(controller.pendingRequestKey, isNull);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'proposal review back preserves draft; send closes only after its ACK',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 1300);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final preview = await controller.schedulePreview(
+          base.roomId,
+          cycles.n,
+          'propose',
+        );
+        final writes = <Map<String, dynamic>>[];
+        api.respond = (path, q) async {
+          final req = api.requests.last;
+          if (req['method'] == 'GET') return beta.betaPlan();
+          writes.add(req);
+          return cycles.envelope(cycles.n, {
+            'command_id': req['key'],
+            'outcome': 'applied',
+            'executed_at': cycles.nowStamp,
+            'room_id': base.roomId,
+            'target_cycle_key': cycles.n,
+            'revisions': [
+              {'resource': 'target', 'id': cycles.nextCycleId, 'revision': 2},
+            ],
+          }, created: true);
+        };
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light,
+            home: Builder(
+              builder: (ctx) => Scaffold(
+                body: FilledButton(
+                  onPressed: () => Navigator.push(
+                    ctx,
+                    MaterialPageRoute(
+                      builder: (_) => ScheduleCommandPage(
+                        controller: controller,
+                        preview: preview!,
+                        initialDay: 4,
+                        initialMinute: 1200,
+                      ),
+                    ),
+                  ),
+                  child: const Text('제안 열기'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('제안 열기'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('제안 내용 확인'));
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(find.text('이 일정으로 제안할까요?'), findsOneWidget);
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        expect(find.text('제안할 일정'), findsOneWidget);
+        expect(writes, isEmpty);
+        await tester.tap(find.text('제안 내용 확인'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('제안 보내기'));
+        await tester.pumpAndSettle();
+        expect(writes, hasLength(1));
+        expect(
+          writes.single['body']['targets'][0]['starts_at'],
+          '2026-10-29T11:00:00.000Z',
+        );
+        expect(controller.scheduleSuccess!.$1, writes.single['key']);
+        expect(find.text('제안 열기'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );
@@ -543,12 +619,14 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('일정 제안 확인'), findsOneWidget);
         await tester.scrollUntilVisible(
-          find.text('수락'),
+          find.text('참가할게요'),
           150,
           scrollable: find.byType(Scrollable).first,
         );
         expect(find.textContaining('필요한 동의 6'), findsWidgets);
-        await tester.tap(find.widgetWithText(FilledButton, '수락'));
+        await tester.ensureVisible(find.widgetWithText(FilledButton, '참가할게요'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(FilledButton, '참가할게요'));
         await tester.pumpAndSettle();
         expect(writes, hasLength(1));
         expect(writes.single['body']['response'], 'accept');
@@ -586,13 +664,19 @@ void main() {
           );
           await tester.tap(find.text('상세에서 일정 열기'));
           await tester.pumpAndSettle();
-          expect(find.text('공대원 일정'), findsOneWidget);
+          expect(find.text('공대원 일정 전체 확인'), findsOneWidget);
           expect(find.byType(AlertDialog), findsNothing);
           expect(find.byType(ScheduleTimeline), findsOneWidget);
           expect(tester.takeException(), isNull);
           expect(api.requests, hasLength(2));
           await tester.tap(find.byKey(const ValueKey('schedule-day-3')));
           await tester.pump();
+          expect(api.requests, hasLength(2));
+          await tester.drag(
+            find.byKey(const ValueKey('schedule-overview')),
+            const Offset(-100, 0),
+          );
+          await tester.pumpAndSettle();
           expect(api.requests, hasLength(2));
           await tester.pageBack();
           await tester.pumpAndSettle();

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../domain/schedule_comparison.dart';
+import 'schedule_design.dart';
+import 'recruitment_design.dart';
 
 class ScheduleTimeline extends StatefulWidget {
   const ScheduleTimeline({
@@ -9,11 +11,13 @@ class ScheduleTimeline extends StatefulWidget {
     required this.weekday,
     required this.selected,
     this.onTimeSelected,
+    this.selectedMinute,
   });
   final ScheduleComparison comparison;
   final int weekday;
   final Set<String> selected;
   final ValueChanged<int>? onTimeSelected;
+  final int? selectedMinute;
   @override
   State<ScheduleTimeline> createState() => _ScheduleTimelineState();
 }
@@ -30,52 +34,124 @@ class _ScheduleTimelineState extends State<ScheduleTimeline> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            '하루 전체 · 보고 싶은 시간대를 움직여 보세요.',
-            style: TextStyle(fontSize: 12),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 28,
-            child: CustomPaint(
-              painter: _TimelinePainter(
-                available: common ?? [],
-                busy: const [],
-                start: 0,
-                length: 1440,
-                viewport: TimeSpan(from, from + width),
-              ),
-            ),
-          ),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          const Wrap(
+            spacing: 8,
+            runSpacing: 6,
             children: [
-              Text('00시', style: TextStyle(fontSize: 10)),
-              Text('12시', style: TextStyle(fontSize: 10)),
-              Text('24시', style: TextStyle(fontSize: 10)),
+              ScheduleTag('가능 시간'),
+              ScheduleTag('다른 예약', warning: true),
+              ScheduleTag('공통 가능', common: true),
             ],
           ),
-          Slider(
-            value: from.toDouble(),
-            min: 0,
-            max: (1440 - width).toDouble(),
-            divisions: (1440 - width) ~/ 30,
-            label: '${clock(from)}–${clock(from + width)}',
-            onChanged: (v) => setState(() => start = v),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              for (final h in ['00', '06', '12', '18', '24'])
+                Text(
+                  h,
+                  style: TextStyle(fontSize: 9, color: AppColors.textSecondary),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          LayoutBuilder(
+            builder: (ctx, bar) {
+              void move(double x) => setState(
+                () => start =
+                    ((x / bar.maxWidth * 1440 - width / 2) / 30).round() * 30.0,
+              );
+              return Semantics(
+                label: '하루 전체 시간대 이동',
+                value: '${clock(from)}–${clock(from + width)}',
+                increasedValue:
+                    '${clock((from + 30).clamp(0, 1440 - width))}–${clock((from + 30).clamp(0, 1440 - width) + width)}',
+                decreasedValue:
+                    '${clock((from - 30).clamp(0, 1440 - width))}–${clock((from - 30).clamp(0, 1440 - width) + width)}',
+                onIncrease: () => setState(
+                  () => start = (from + 30).clamp(0, 1440 - width).toDouble(),
+                ),
+                onDecrease: () => setState(
+                  () => start = (from - 30).clamp(0, 1440 - width).toDouble(),
+                ),
+                child: GestureDetector(
+                  key: const ValueKey('schedule-overview'),
+                  onTapDown: (d) => move(d.localPosition.dx),
+                  onHorizontalDragUpdate: (d) => move(d.localPosition.dx),
+                  child: SizedBox(
+                    height: 32,
+                    child: CustomPaint(
+                      painter: _TimelinePainter(
+                        available: const [],
+                        busy: const [],
+                        start: 0,
+                        length: 1440,
+                        viewport: TimeSpan(from, from + width),
+                        overview: widget.comparison.members
+                            .map(
+                              (m) => (
+                                m.availableOn(widget.weekday),
+                                m.busyOn(date),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
           Row(
             children: [
-              const SizedBox(width: 88),
+              IconButton(
+                tooltip: '이전 시간대',
+                onPressed: from > 0
+                    ? () => setState(
+                        () => start = (from - 60)
+                            .clamp(0, 1440 - width)
+                            .toDouble(),
+                      )
+                    : null,
+                icon: const Icon(Icons.chevron_left, size: 20),
+              ),
+              Expanded(
+                child: Text(
+                  '${clock(from)}–${clock(from + width)}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: '다음 시간대',
+                onPressed: from < 1440 - width
+                    ? () => setState(
+                        () => start = (from + 60)
+                            .clamp(0, 1440 - width)
+                            .toDouble(),
+                      )
+                    : null,
+                icon: const Icon(Icons.chevron_right, size: 20),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              const SizedBox(width: 68),
               Expanded(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    for (var i = 0; i <= 3; i++)
+                    for (var i = 0; i <= width ~/ 60; i++)
                       Flexible(
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
-                            clock(from + width * i ~/ 3),
+                            '${(from ~/ 60) + i}',
                             style: const TextStyle(fontSize: 10),
                           ),
                         ),
@@ -92,7 +168,7 @@ class _ScheduleTimelineState extends State<ScheduleTimeline> {
               child: Row(
                 children: [
                   SizedBox(
-                    width: 88,
+                    width: 68,
                     child: Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: Column(
@@ -133,14 +209,17 @@ class _ScheduleTimelineState extends State<ScheduleTimeline> {
                     child: Opacity(
                       opacity: widget.selected.contains(member.id) ? 1 : .25,
                       child: SizedBox(
-                        height: 25,
+                        height: 24,
                         child: CustomPaint(
                           painter: _TimelinePainter(
                             available: member.availableOn(widget.weekday),
                             busy: member.busyOn(date),
                             start: from,
                             length: width,
-                            unknown: member.state == TimetableState.unavailable,
+                            unknown:
+                                member.state == TimetableState.unavailable ||
+                                !member.busyAvailable,
+                            marker: widget.selectedMinute,
                           ),
                         ),
                       ),
@@ -149,13 +228,13 @@ class _ScheduleTimelineState extends State<ScheduleTimeline> {
                 ],
               ),
             ),
-          const Divider(),
+          const SizedBox(height: 6),
           Row(
             children: [
               const SizedBox(
-                width: 88,
+                width: 68,
                 child: Text(
-                  '함께 가능한 시간',
+                  '공통',
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
                 ),
               ),
@@ -176,7 +255,7 @@ class _ScheduleTimelineState extends State<ScheduleTimeline> {
                                 5,
                           ),
                     child: SizedBox(
-                      height: 30,
+                      height: 24,
                       child: CustomPaint(
                         painter: _TimelinePainter(
                           available: common ?? [],
@@ -184,6 +263,8 @@ class _ScheduleTimelineState extends State<ScheduleTimeline> {
                           start: from,
                           length: width,
                           unknown: common == null,
+                          common: true,
+                          marker: widget.selectedMinute,
                         ),
                       ),
                     ),
@@ -200,20 +281,14 @@ class _ScheduleTimelineState extends State<ScheduleTimeline> {
                 ? '조회할 수 없는 공대원의 시간이 있어 공통 시간을 계산하지 못했습니다.'
                 : common.isEmpty
                 ? '선택한 공대원이 함께 가능한 시간은 없습니다.'
-                : common
-                      .map((s) => '${clock(s.start)}–${clock(s.end)}')
-                      .join(' · '),
-            style: const TextStyle(fontSize: 12),
+                : '${widget.selected.length}명 공통 가능 ${common.map((s) => '${clock(s.start)}–${clock(s.end)}').join(' · ')}',
+            style: const TextStyle(
+              fontSize: 12,
+              color: scheduleGreen,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 12),
-          const Wrap(
-            spacing: 12,
-            children: [
-              _Legend('가능 시간', AppColors.primary),
-              _Legend('예약 중', Color(0xFFDB9E6C)),
-              _Legend('조회 불가', Color(0xFFADADB5)),
-            ],
-          ),
           if (widget.onTimeSelected != null)
             const Padding(
               padding: EdgeInsets.only(top: 8),
@@ -231,28 +306,6 @@ class _ScheduleTimelineState extends State<ScheduleTimeline> {
 String clock(int minute) =>
     '${(minute ~/ 60).toString().padLeft(2, '0')}:${(minute % 60).toString().padLeft(2, '0')}';
 
-class _Legend extends StatelessWidget {
-  const _Legend(this.label, this.color);
-  final String label;
-  final Color color;
-  @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-      const SizedBox(width: 4),
-      Text(label, style: const TextStyle(fontSize: 10)),
-    ],
-  );
-}
-
 class _TimelinePainter extends CustomPainter {
   const _TimelinePainter({
     required this.available,
@@ -261,24 +314,29 @@ class _TimelinePainter extends CustomPainter {
     required this.length,
     this.viewport,
     this.unknown = false,
+    this.common = false,
+    this.marker,
+    this.overview = const [],
   });
   final List<TimeSpan> available, busy;
   final int start, length;
   final TimeSpan? viewport;
-  final bool unknown;
+  final bool unknown, common;
+  final int? marker;
+  final List<(List<TimeSpan>, List<TimeSpan>)> overview;
   @override
   void paint(Canvas canvas, Size size) {
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     canvas.drawRRect(
       RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(5)),
-      Paint()..color = const Color(0xFFF0EDF5),
+      Paint()..color = const Color(0xFFF4F1F7),
     );
-    for (var i = 0; i <= 6; i++) {
+    for (var i = 0; i <= length ~/ 60; i++) {
       canvas.drawLine(
-        Offset(size.width * i / 6, 0),
-        Offset(size.width * i / 6, size.height),
-        Paint()..color = const Color(0xFFE1DDE7),
+        Offset(size.width * i / (length ~/ 60), 0),
+        Offset(size.width * i / (length ~/ 60), size.height),
+        Paint()..color = const Color(0xFFE5DFEC),
       );
     }
     void bar(TimeSpan s, Color color, double inset) {
@@ -300,10 +358,10 @@ class _TimelinePainter extends CustomPainter {
     }
 
     for (final s in available) {
-      bar(s, AppColors.primary.withValues(alpha: .7), 4);
+      bar(s, common ? scheduleCommon : recruitmentSelectionFill, 0);
     }
     for (final s in busy) {
-      bar(s, const Color(0xFFDB9E6C), 7);
+      bar(s, scheduleBusy, 0);
     }
     if (unknown) {
       for (var x = -size.height; x < size.width; x += 10) {
@@ -315,6 +373,37 @@ class _TimelinePainter extends CustomPainter {
             ..strokeWidth = 1,
         );
       }
+    }
+    if (overview.isNotEmpty) {
+      final rowHeight = (size.height - 6) / overview.length;
+      for (var i = 0; i < overview.length; i++) {
+        for (final data in [
+          (overview[i].$1, recruitmentSelectionFill),
+          (overview[i].$2, scheduleBusy),
+        ]) {
+          for (final span in data.$1) {
+            canvas.drawRect(
+              Rect.fromLTWH(
+                span.start / 1440 * size.width,
+                3 + i * rowHeight,
+                (span.end - span.start) / 1440 * size.width,
+                rowHeight.clamp(1, 6).toDouble(),
+              ),
+              Paint()..color = data.$2,
+            );
+          }
+        }
+      }
+    }
+    if (marker != null && marker! >= start && marker! <= start + length) {
+      final x = (marker! - start) / length * size.width;
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x, size.height),
+        Paint()
+          ..color = AppColors.primary
+          ..strokeWidth = 2,
+      );
     }
     if (viewport != null) {
       canvas.drawRRect(

@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'schedule_comparison_page.dart';
+import '../widgets/schedule_design.dart';
+import '../widgets/recruitment_design.dart';
 import '../../data/beta/beta_read.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -454,7 +456,7 @@ class _BackendRecruitmentDetailPageState
               target: m.target!,
             ),
         ],
-        RecruitmentSection(
+        ScheduleCard(
           title: m.target == null ? '이번 주 진행 일정' : '선택 주차 진행 일정',
           trailing:
               widget.participation != null &&
@@ -465,7 +467,7 @@ class _BackendRecruitmentDetailPageState
                   alignment: Alignment.centerRight,
                   child: ListenableBuilder(
                     listenable: widget.participation!,
-                    builder: (context, _) => OutlinedButton.icon(
+                    builder: (context, _) => ScheduleRefreshButton(
                       onPressed: widget.participation!.canAct
                           ? () async {
                               final c = widget.participation!,
@@ -492,18 +494,28 @@ class _BackendRecruitmentDetailPageState
                               );
                             }
                           : null,
-                      icon: const Icon(Icons.sync, size: 18),
-                      label: const Text('내 일정 갱신'),
                     ),
                   ),
                 )
               : null,
           children: [
             if (value.betaData != null) ...[
-              Text(
-                betaDepartureText(value.betaData!),
-                style: const TextStyle(fontSize: 13),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: ScheduleTag(betaScheduleLabel(value.betaData!)),
               ),
+              const SizedBox(height: 18),
+              Text(
+                betaEffectiveStart(value.betaData) != null
+                    ? '${_time(betaEffectiveStart(value.betaData)!)} 출발'
+                    : betaScheduleLabel(value.betaData!),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 12),
               if (value.betaData!['beta_schedule'] != null)
                 Text(
                   '앱 모집 마감 ${_time(DateTime.parse(value.betaData!['beta_schedule']['admission_deadline'] as String))}',
@@ -540,7 +552,8 @@ class _BackendRecruitmentDetailPageState
                 ),
             ],
             const SizedBox(height: 8),
-            OutlinedButton(
+            RecruitmentPrimaryButton(
+              secondary: true,
               onPressed:
                   widget.participation != null &&
                       m.target != null &&
@@ -555,9 +568,7 @@ class _BackendRecruitmentDetailPageState
                       anchor: widget.recordAnchor,
                     )
                   : null,
-              child: Text(
-                room['state'] == 'ended' ? '일정·완료 기록 확인' : '공대원 일정 전체 확인',
-              ),
+              label: room['state'] == 'ended' ? '일정·완료 기록 확인' : '공대원 일정 전체 확인',
             ),
             if (_canLead)
               TextButton(
