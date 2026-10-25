@@ -62,7 +62,13 @@ class MembershipPlanViewModel extends ChangeNotifier {
       final content = result.projection.content;
       final parsed = content == null
           ? null
-          : CycleScheduleView(room, target, 'plan', content);
+          : CycleScheduleView(
+              room,
+              target,
+              'plan',
+              content,
+              betaData: result.betaData,
+            );
       profile = result;
       value = parsed;
     } on AccountReadException catch (error) {

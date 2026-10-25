@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import '../../data/beta/recruitment_command_transport.dart';
+import '../../data/beta/beta_contract.dart';
 import '../../../account/domain/member_raid_models.dart' show raidList;
 import '../../../account/domain/role_summary.dart' show roleMap;
 import '../../data/cycle_member_actions.dart';
@@ -527,6 +528,20 @@ class CycleParticipationController extends ChangeNotifier {
       return false;
     }
   }
+
+  bool get betaManagementEnabled =>
+      gateway is CycleInteractionRepository &&
+      (gateway as CycleInteractionRepository).contractMode ==
+          RecruitmentContractMode.betaWire2;
+
+  Future<CycleScheduleView?> openingSource(String room, String target) =>
+      _read(() async {
+        final cycles = await gateway.cycles();
+        if (target != cycles.next.key) {
+          throw const AccountReadException('TARGET_CYCLE_OUT_OF_RANGE');
+        }
+        return gateway.scheduleRead(room, cycles.current.key, 'plan');
+      });
 
   Future<CycleManagementPreview?> management(
     String room,

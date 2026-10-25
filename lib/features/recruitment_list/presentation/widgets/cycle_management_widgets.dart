@@ -1,4 +1,7 @@
 import 'dart:async';
+import '../../data/cycle_schedule.dart';
+import '../../domain/beta_schedule_draft.dart';
+import 'beta_schedule_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/cycle_management.dart';
@@ -110,6 +113,45 @@ class _ManagementDialogState extends State<_ManagementDialog> {
   final sessions = <String>{};
   final placements = <Map<String, dynamic>>[];
   bool initialized = false;
+  CycleScheduleView? openingSource;
+  DateTime? sourceReceivedAt;
+  BetaScheduleInput openingInput = const BetaScheduleInput();
+  bool get betaOpening =>
+      widget.controller.betaManagementEnabled &&
+      {'open', 'reopen'}.contains(widget.action);
+  DateTime get openingNow => DateTime.parse(
+    openingSource!.scope['server_now'] as String,
+  ).add(widget.controller.now().toUtc().difference(sourceReceivedAt!));
+  int get openingDuration {
+    final schedule = openingSource?.betaData?['beta_schedule'];
+    if (schedule != null) {
+      return DateTime.parse(schedule['base_ends_at'] as String)
+          .difference(DateTime.parse(schedule['base_starts_at'] as String))
+          .inMinutes;
+    }
+    final durations = <String, int>{};
+    for (final row in openingSource!.data['session_segments'] as List) {
+      for (final segment in row['segments'] as List) {
+        if (segment['state'] == 'planned' &&
+            segment['duration_minutes'] is int) {
+          durations[segment['item_id'] as String] =
+              segment['duration_minutes'] as int;
+        }
+      }
+    }
+    return durations.values.fold(0, (a, b) => a + b);
+  }
+
+  bool get openingReady =>
+      openingSource != null &&
+      BetaScheduleEditor.valid(
+        widget.target,
+        openingNow,
+        openingDuration,
+        openingSource!.data['app_capacity'] as int,
+        openingInput,
+      );
+
   int generation = 0;
   late final String binding;
   @override
@@ -136,13 +178,35 @@ class _ManagementDialogState extends State<_ManagementDialog> {
       preview = null;
       sessions.clear();
     });
+    if (betaOpening) {
+      if (openingSource == null) {
+        final source = await widget.controller.openingSource(
+          widget.room,
+          widget.target,
+        );
+        if (!mounted || e != generation) return;
+        openingSource = source;
+        sourceReceivedAt = widget.controller.now().toUtc();
+      }
+      if (!openingReady) {
+        setState(() {
+          loading = false;
+          error = openingSource == null ? widget.controller.failure : null;
+        });
+        return;
+      }
+    }
     final p = await widget.controller.management(
       widget.room,
       widget.target,
       widget.action,
-      query: alternative && character != null
-          ? {'character_id': character, 'selected_role': role}
-          : {},
+      query: {
+        if (alternative && character != null) 'character_id': character,
+        if (alternative && character != null) 'selected_role': role,
+        if (betaOpening)
+          ...BetaScheduleEditor.config(widget.target, openingInput)
+            ..removeWhere((k, v) => v == null),
+      },
     );
     if (!mounted || e != generation) return;
     if (p != null && !initialized) {
@@ -226,6 +290,8 @@ class _ManagementDialogState extends State<_ManagementDialog> {
 
   Map<String, dynamic> input() => {
     'sessions': sessions.toList(),
+    if (betaOpening && openingReady)
+      'beta_schedule': BetaScheduleEditor.config(widget.target, openingInput),
     'candidate': candidate,
     'title': title.text,
     'scope': visibility,
@@ -318,6 +384,29 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                 ),
                 if (loading) const LinearProgressIndicator(),
                 if (error != null) text(recruitmentFailureMessage(error)),
+                if (betaOpening && openingSource != null) ...[
+                  const Text(
+                    '다음 주 출발 일정',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  BetaScheduleEditor(
+                    target: widget.target,
+                    now: openingNow,
+                    duration: openingDuration,
+                    capacity: openingSource!.data['app_capacity'] as int,
+                    value: openingInput,
+                    enabled: !loading && !widget.controller.busy,
+                    onChanged: (v) {
+                      setState(() {
+                        openingInput = v;
+                        preview = null;
+                        error = null;
+                      });
+                      if (openingReady) unawaited(load());
+                    },
+                  ),
+                  text('다음 주 날짜와 출발 시각을 직접 선택해 주세요.'),
+                ],
                 if (p != null) ...[
                   if (p.opening && d!['opening_effect'] == 'already_open')
                     text('이미 개방된 주차입니다.'),

@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'beta/beta_interaction_api.dart';
+import 'beta/beta_contract.dart';
 import '../../account/domain/account_read_session.dart';
 import '../../account/domain/member_cycle_models.dart';
 import '../../account/domain/member_raid_models.dart';
@@ -77,6 +79,7 @@ class CycleScheduleView {
     this.kind,
     Map<String, dynamic> raw, {
     this.id,
+    this.betaData,
   }) : wire = jsonDecode(jsonEncode(raw)) as Map<String, dynamic> {
     roleId(room);
     raidCycleKey(target);
@@ -437,6 +440,7 @@ class CycleScheduleView {
   final String room, target, kind;
   final String? id;
   final Map<String, dynamic> wire;
+  final Map<String, dynamic>? betaData;
   late final Map<String, dynamic> scope, data;
   Map<String, dynamic> find(String field, String key, String id) =>
       raidList(data[field]).map(roleMap).where((m) => m[key] == id).single;
@@ -499,6 +503,7 @@ class CycleSchedulePreview {
   final PlayAvailability? personal;
   String get signature => scheduleStable({
     'plan': plan.wire,
+    'beta_schedule': plan.betaData?['beta_schedule'],
     'extra': extra?.wire,
     'personal_version': personal?.version,
     'personal_exists': personal?.exists,
@@ -586,6 +591,29 @@ class CycleSchedulePreview {
     });
     if (action == 'groups') {
       schedulePermit(roleMap(d['permissions'])['edit_schedule_groups']);
+      if (plan.betaData != null) {
+        final enabled = input['early_coordination_enabled'];
+        raidBool(enabled);
+        final additional = input['early_additional_members'];
+        roleCheck(
+          enabled == true
+              ? additional is int &&
+                    additional >= 1 &&
+                    additional < d['app_capacity']
+              : additional == null,
+        );
+        final immediate = input['accept_immediate_confirmation'];
+        raidBool(immediate);
+        if (enabled == true && immediate != true) {
+          throw const AccountReadException('IMMEDIATE_CONFIRMATION_REQUIRED');
+        }
+        return {
+          ...base,
+          'early_coordination_enabled': enabled,
+          'early_additional_members': additional,
+          'accept_immediate_confirmation': immediate,
+        };
+      }
       final groups = raidList(input['groups']);
       final keys = <String>{};
       roleCheck(groups.isEmpty || groups.any((g) => g['required'] == true));
@@ -797,15 +825,31 @@ class CycleScheduleReader {
         : kind == 'candidate'
         ? '/v2/raid-schedule-groups/$id/candidates'
         : '/v2/me/raid-rooms/$room/${{'plan': 'plan', 'submission': 'availability-submission', 'context': 'schedule-context'}[kind]}';
-    final raw = (await api.request(
-      path,
-      query: {
-        'target_cycle_key': target,
-        if (kind == 'context' && id != null) 'target_session_id': id,
-        if (kind == 'overlaps') 'limit': 20,
-        'cursor': ?cursor,
-      },
-    ))!;
+    final query = {
+      'target_cycle_key': target,
+      if (kind == 'context' && id != null) 'target_session_id': id,
+      if (kind == 'overlaps') 'limit': 20,
+      'cursor': ?cursor,
+    };
+    if (api is BetaInteractionApi) {
+      final decoded = await (api as BetaInteractionApi).requestDecoded(
+        path,
+        query: query,
+      );
+      return CycleScheduleView(
+        room,
+        target,
+        kind,
+        decoded.value,
+        id: id,
+        betaData:
+            betaFreeze({
+                  'beta_schedule': decoded.metadata?['data']?['beta_schedule'],
+                })
+                as Map<String, dynamic>,
+      );
+    }
+    final raw = (await api.request(path, query: query))!;
     return CycleScheduleView(room, target, kind, raw, id: id);
   }
 

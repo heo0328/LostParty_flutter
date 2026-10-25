@@ -1077,6 +1077,8 @@ String recruitmentFailureMessage(String? code) => switch (code) {
   'RECRUITMENT_CLOSED' ||
   'START_BEFORE_FLOOR' ||
   'INVALID_START_TIME' => '출발 시각과 모집 마감을 확인해 주세요.',
+  'IMMEDIATE_CONFIRMATION_REQUIRED' =>
+    '자동 조율 조건이 맞으면 즉시 출발 시간이 확정되는 것에 동의해 주세요.',
   'SCHEDULE_BEFORE_FLOOR' => '출발은 모집 생성 시점부터 최소 30분 이후로 설정해 주세요.',
   'SCHEDULE_IN_PAST' => '이미 지난 출발 시각이 포함되어 있어요. 선택한 요일과 시각을 확인해 주세요.',
   'MAINTENANCE_WINDOW' => '수요일 06~10시 점검 시간과 진행 구간이 겹치지 않도록 설정해 주세요.',

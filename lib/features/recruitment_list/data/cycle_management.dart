@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'beta/beta_interaction_api.dart';
+import 'beta/beta_contract.dart';
+import '../domain/policies/recruitment_start_policy.dart';
 import '../../account/domain/account_read_session.dart';
 import '../../account/domain/member_cycle_models.dart';
 import '../../account/domain/member_raid_models.dart';
@@ -79,6 +82,7 @@ class CycleManagementPreview {
     this.action,
     Map<String, dynamic> raw, {
     Map<String, dynamic> query = const {},
+    this.betaData,
   }) : wire = jsonDecode(jsonEncode(raw)) as Map<String, dynamic>,
        query = Map.unmodifiable(query) {
     roleId(room);
@@ -406,6 +410,7 @@ class CycleManagementPreview {
       CyclePermission.fromJson(roleMap(data['permission']));
     }
   }
+  final Map<String, dynamic>? betaData;
   final String room, target, action;
   final Map<String, dynamic> wire, query;
   late final Map<String, dynamic> scope, data;
@@ -450,6 +455,7 @@ class CycleManagementPreview {
       for (final e in scope.entries)
         if (e.key != 'server_now') e.key: e.value,
     },
+    'beta_schedule_config': betaData?['beta_schedule_config'],
     'data': {
       for (final e in data.entries)
         if (!{'context_token', 'issued_at', 'expires_at'}.contains(e.key))
@@ -463,6 +469,45 @@ class CycleManagementPreview {
               : e.value,
     },
   });
+
+  Map<String, dynamic> _openingSchedule(Map<String, dynamic> input) {
+    final schedule = BetaScheduleConfig(roleMap(input['beta_schedule']));
+    roleCheck(
+      _stable(schedule.wire) == _stable(betaData!['beta_schedule_config']),
+    );
+    roleCheck(
+      _stable(query['base_starts_at']) ==
+              _stable(schedule.wire['base_starts_at']) &&
+          query['early_coordination_enabled'] == schedule.enabled &&
+          query['early_additional_members'] == schedule.additionalMembers,
+    );
+    BetaCreationDraft({target: schedule});
+    roleCheck(
+      schedule.startsAt.second == 0 &&
+          schedule.startsAt.millisecond == 0 &&
+          schedule.startsAt.microsecond == 0,
+    );
+    final local = schedule.startsAt.add(const Duration(hours: 9));
+    final durations = raidList(data['item_settings']).map((v) {
+      final item = roleMap(v);
+      return item['duration_minutes'] ??
+          const RecruitmentStartPolicy().defaultMinutes(
+            item['difficulty_id'] as String,
+          );
+    });
+    roleCheck(durations.every((v) => v is int));
+    final duration = durations.cast<int>().fold(0, (a, b) => a + b);
+    if (!const RecruitmentStartPolicy().allows(
+      now: roleUtc(scope['server_now']),
+      weekday: local.weekday,
+      minute: local.hour * 60 + local.minute,
+      durationMinutes: duration,
+      targetCycleKey: target,
+    )) {
+      throw const AccountReadException('SCHEDULE_BEFORE_FLOOR');
+    }
+    return schedule.wire;
+  }
 
   Map<String, dynamic> body(Map<String, dynamic> input) {
     if (contextual) _permission(data['permission']);
@@ -527,6 +572,8 @@ class CycleManagementPreview {
         'target_items': data['targets'],
         'target_session_ids': sessions,
         if (opening) 'intent': action,
+        if (opening && betaData != null)
+          'beta_schedule': _openingSchedule(input),
       };
     }
     if (action == 'cancel') {
@@ -681,10 +728,18 @@ class CycleManagementReader {
     raidCycleKey(target);
     roleCheck(cycleManagementLabels.containsKey(action));
     roleCheck(
-      query.keys.every((k) => {'character_id', 'selected_role'}.contains(k)),
+      query.keys.every(
+        (k) => {
+          'character_id',
+          'selected_role',
+          'base_starts_at',
+          'early_coordination_enabled',
+          'early_additional_members',
+        }.contains(k),
+      ),
     );
     roleCheck(query.isEmpty || {'continue', 'open', 'reopen'}.contains(action));
-    if (query.isNotEmpty) {
+    if (query.containsKey('character_id')) {
       roleId(query['character_id']);
       roleCheck({'dealer', 'support'}.contains(query['selected_role']));
     }
@@ -704,22 +759,43 @@ class CycleManagementReader {
     final path = tail == null
         ? '/v2/raid-rooms/$room/detail'
         : '/v2/me/raid-rooms/$room/$tail';
-    final raw = (await api.request(
-      path,
-      query: {
-        if (!global) 'target_cycle_key': target,
-        if (global)
-          'command': action == 'common' ? 'edit_common_settings' : action,
-        if ({'continue', 'decline'}.contains(action))
-          'action': action == 'continue' ? 'join' : 'decline',
-        if ({'open', 'reopen'}.contains(action)) 'intent': action,
-        if ({'continue', 'decline', 'open', 'reopen'}.contains(action))
-          'include_session_display': 'true',
-        ...query,
-      },
-    ))!;
+    final requestQuery = {
+      if (!global) 'target_cycle_key': target,
+      if (global)
+        'command': action == 'common' ? 'edit_common_settings' : action,
+      if ({'continue', 'decline'}.contains(action))
+        'action': action == 'continue' ? 'join' : 'decline',
+      if ({'open', 'reopen'}.contains(action)) 'intent': action,
+      if ({'continue', 'decline', 'open', 'reopen'}.contains(action))
+        'include_session_display': 'true',
+      ...query,
+    };
+    Map<String, dynamic>? betaData;
+    late Map<String, dynamic> raw;
+    if (api is BetaInteractionApi) {
+      final decoded = await (api as BetaInteractionApi).requestDecoded(
+        path,
+        query: requestQuery,
+      );
+      raw = decoded.value;
+      betaData =
+          betaFreeze({
+                'beta_schedule_config':
+                    decoded.metadata?['data']?['beta_schedule_config'],
+              })
+              as Map<String, dynamic>;
+    } else {
+      raw = (await api.request(path, query: requestQuery))!;
+    }
     try {
-      return CycleManagementPreview(room, target, action, raw, query: query);
+      return CycleManagementPreview(
+        room,
+        target,
+        action,
+        raw,
+        query: query,
+        betaData: betaData,
+      );
     } on FormatException {
       throw const AccountReadException('INVALID_RESPONSE');
     } on TypeError {

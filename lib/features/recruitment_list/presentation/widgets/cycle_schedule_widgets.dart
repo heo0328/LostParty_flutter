@@ -1,4 +1,6 @@
 import 'dart:async';
+import '../../domain/beta_schedule_draft.dart';
+import 'beta_schedule_editor.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../account/domain/play_availability.dart';
@@ -523,12 +525,30 @@ class _ScheduleCommandDialogState extends State<_ScheduleCommandDialog> {
   final changes = <String, Map<String, dynamic>>{};
   String? alternative, error;
   String response = 'accept';
+  bool earlyEnabled = false, immediateConsent = false;
+  int additionalMembers = 1;
+  final proposalInputs = <String, BetaScheduleInput>{};
+  bool get beta => p.plan.betaData != null;
+  int proposalDuration(Map<String, dynamic> value) =>
+      (value['item_durations'] as List).fold<int>(
+        0,
+        (sum, v) => sum + (v['duration_minutes'] as int? ?? 0),
+      );
+  DateTime get serverNow => DateTime.parse(
+    p.plan.scope['server_now'] as String,
+  ).add(widget.controller.now().toUtc().difference(receivedAt));
+  late final DateTime receivedAt;
+
   bool sending = false;
   CycleSchedulePreview get p => widget.preview;
   @override
   void initState() {
     super.initState();
     binding = widget.controller.scopeKey();
+    receivedAt = widget.controller.now().toUtc();
+    final schedule = p.plan.betaData?['beta_schedule'];
+    earlyEnabled = schedule?['early_coordination_enabled'] == true;
+    additionalMembers = schedule?['early_additional_members'] as int? ?? 1;
     groups = [
       for (final g in p.plan.data['schedule_groups'] as List)
         {
@@ -639,6 +659,11 @@ class _ScheduleCommandDialogState extends State<_ScheduleCommandDialog> {
     });
     await widget.controller.scheduleCommand(p, {
       'groups': groups,
+      if (beta && p.action == 'groups') ...{
+        'early_coordination_enabled': earlyEnabled,
+        'early_additional_members': earlyEnabled ? additionalMembers : null,
+        'accept_immediate_confirmation': immediateConsent,
+      },
       'targets': changes.values.toList(),
       'alternative_id': alternative,
       'response': response,
@@ -666,7 +691,24 @@ class _ScheduleCommandDialogState extends State<_ScheduleCommandDialog> {
           widget.controller.session.isAuthenticated &&
           binding == widget.controller.scopeKey();
       final selectionReady =
-          (p.action != 'propose' || changes.isNotEmpty) &&
+          (p.action != 'groups' ||
+              !beta ||
+              !earlyEnabled ||
+              immediateConsent) &&
+          (p.action != 'propose' ||
+              changes.isNotEmpty &&
+                  (!beta ||
+                      changes.entries.every(
+                        (e) =>
+                            proposalInputs[e.key] != null &&
+                            BetaScheduleEditor.valid(
+                              p.plan.target,
+                              serverNow,
+                              proposalDuration(e.value),
+                              p.plan.data['app_capacity'] as int,
+                              proposalInputs[e.key]!,
+                            ),
+                      ))) &&
           (p.action != 'select' ||
               ((p.extra == null || p.extra!.data['state'] == 'ready') &&
                   (alternative != null ||
@@ -742,7 +784,60 @@ class _ScheduleCommandDialogState extends State<_ScheduleCommandDialog> {
                             : '제출한 가능 시간 밖입니다.',
                       ),
                   ],
-                  if (p.action == 'groups') ...[
+                  if (p.action == 'groups' && beta) ...[
+                    note('더 빠른 시간이 없으면 약속한 출발 시간에 진행합니다.'),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text(
+                        '더 일찍 출발할 수 있으면 자동으로 조율',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      value: earlyEnabled,
+                      onChanged: sending
+                          ? null
+                          : (v) => setState(() {
+                              earlyEnabled = v;
+                              immediateConsent = false;
+                            }),
+                    ),
+                    if (earlyEnabled) ...[
+                      DropdownButtonFormField<int>(
+                        initialValue: additionalMembers,
+                        decoration: const InputDecoration(
+                          labelText: '공대장 외 추가 참가 인원',
+                        ),
+                        items: [
+                          for (
+                            var i = 1;
+                            i < (p.plan.data['app_capacity'] as int);
+                            i++
+                          )
+                            DropdownMenuItem(value: i, child: Text('$i명')),
+                        ],
+                        onChanged: sending
+                            ? null
+                            : (v) => setState(() {
+                                additionalMembers = v!;
+                                immediateConsent = false;
+                              }),
+                      ),
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                        title: const Text(
+                          '조건이 맞으면 즉시 출발 시간이 확정되는 것에 동의합니다.',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        value: immediateConsent,
+                        onChanged: sending
+                            ? null
+                            : (v) =>
+                                  setState(() => immediateConsent = v == true),
+                      ),
+                    ],
+                    note('출발 날짜·시각을 바꾸려면 일정 변경안을 제안해 주세요.'),
+                  ],
+                  if (p.action == 'groups' && !beta) ...[
                     note(
                       '이미 확정된 일정은 변경안으로 조정합니다. 수동 일정 설정은 본인의 일정 참가 동의를 포함합니다.',
                     ),
@@ -849,6 +944,8 @@ class _ScheduleCommandDialogState extends State<_ScheduleCommandDialog> {
                                       'session_id',
                                       s['session_id'] as String,
                                     );
+                                    proposalInputs[s['session_id'] as String] =
+                                        const BetaScheduleInput();
                                     changes[s['session_id'] as String] = {
                                       'session_id': s['session_id'],
                                       'expected_schedule_revision':
@@ -871,14 +968,38 @@ class _ScheduleCommandDialogState extends State<_ScheduleCommandDialog> {
                                 }),
                         ),
                         if (changes.containsKey(s['session_id'])) ...[
-                          TextButton(
-                            onPressed: sending
-                                ? null
-                                : () => proposalTime(changes[s['session_id']]!),
-                            child: Text(
-                              '제안 출발 ${scheduleTime(changes[s['session_id']]!['starts_at'])}',
+                          if (beta)
+                            BetaScheduleEditor(
+                              target: p.plan.target,
+                              now: serverNow,
+                              duration: proposalDuration(
+                                changes[s['session_id']]!,
+                              ),
+                              capacity: p.plan.data['app_capacity'] as int,
+                              value: proposalInputs[s['session_id']]!,
+                              enabled: !sending,
+                              showCoordination: false,
+                              onChanged: (v) => setState(() {
+                                proposalInputs[s['session_id'] as String] = v;
+                                if (v.weekday != null && v.minute != null) {
+                                  changes[s['session_id']]!['starts_at'] =
+                                      BetaScheduleEditor.config(
+                                        p.plan.target,
+                                        v,
+                                      )['base_starts_at'];
+                                }
+                              }),
                             ),
-                          ),
+                          if (!beta)
+                            TextButton(
+                              onPressed: sending
+                                  ? null
+                                  : () =>
+                                        proposalTime(changes[s['session_id']]!),
+                              child: Text(
+                                '제안 출발 ${scheduleTime(changes[s['session_id']]!['starts_at'])}',
+                              ),
+                            ),
                           for (final duration
                               in changes[s['session_id']]!['item_durations']
                                   as List)

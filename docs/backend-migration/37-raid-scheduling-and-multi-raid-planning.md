@@ -2567,3 +2567,20 @@ CycleInteractionRepository 전용 BetaInteractionApi가 고정 계약 경로에�
 검증: 직접11파일413PASS 후 최종 신규11PASS(종전9 포함)로 보강, 고유415PASS·변경4파일 분석0·포맷/diffcheck/리뷰. 실제 기본 BackendApp 선택, 실제 Repository join/apply/change context/POST·반복본문/키, 탈퇴/해산 context/ACK, 잘못된본문 HTTP0·잘못된ACK 거절과 기존 생성/상세/기록·참가/일정 회귀를 확인했다. 실제 회원 서버명령·기기/성능 성공으로 확대하지 않는다.
 
 범위 한계: 새 입력이 필요한 일정/설정/개방의 기존 UI는 이후 승인 화면 연결에서 beta config를 받아야 한다. 계약에 없는 빈값/기본시간을 넣어 성공처럼 만들지 않는다. 그래프/제안 UX·개인표미설정 안내·신청메모/저장문구·필터 UI는 원래 후속이다. B 일반 생성/표시 연결과 전체 모집 기능 완료를 구분한다. 서버배포/DB변경/자료삭제·dev/main 통합은 하지 않았다. 현재 남은 일은 NEXT_WORK에 단일 관리하며 Issue13에 실제 소스와 결과를 인계한다.
+
+
+### 37.71 일정 조율 설정·다음주 개방 입력 연결
+
+기준c3c68d7e에서 후속 입력을 일반 앱 경로에 연결했다. 조건 설정 PUT은 기존 숙련도/역할전투력/가입방식이고, schedule-groups PUT은 early_coordination_enabled/early_additional_members/accept_immediate_confirmation이다. 기본 약속 날짜·시간은 이 PUT으로 바꾸지 않으며 실제 출발 변경은 기존 제안/동의 경로다. 앞선 '설정에서 날짜 변경' 브리핑을 이 계약에 맞게 정정한다.
+
+다음주 open/reopen은 출발 입력 전에 opening-context를 호출하지 않는다. 현재 원주차 plan의 용량/기존 진행기간과 최신 주차 메타를 읽어 안내에 쓰고, 단일 날짜/시각·조율 설정을 직접 입력한다. 입력이 완성되면 같은 config를 GET query로 보내고 응답 beta_schedule_config·context/선택·실제N/예정세대에 결합한다. 제출 직전 같은 query로 재조회해 서명이 다르면 POST0·재확인한다. 본문에 beta_schedule를 추가하며 '이번주+7일'/서버시각 등으로 날짜를 합성하지 않는다. 시간·미래/점검·주차/진행기간은 생성의 RecruitmentStartPolicy와 기존 picker를 재사용한다. null 기간은 기존 난이도 기본기간 정책을 재사용한다. 4인 추가1~3/8인1~7, OFF는 인원null이다.
+
+BetaInteractionApi의 requestDecoded로 검증된 metadata와 기존 의미파서용 본문을 한 번의 조회로 분리한다. CycleManagementPreview는 config를 불변 보관하고 서명에 포함한다. CycleScheduleView/Preview 및 membership plan VM은 beta_schedule을 같은 방식으로 전달해 일반 상세에서 옛 그룹/다일 편집이 나오지 않게 한다. 공유 무제한 metadata cache나 서버 추가 API는 만들지 않았다.
+
+자동조율 설정은 기존 일정 위치에서 ON/OFF·추가인원만 입력한다. ON 변경 시 조건 충족이면 즉시 확정될 수 있다는 명시 동의를 받으며 인원/ON 변경 뒤 동의를 다시 받는다. 출발 날짜/시각은 별도 일정 변경안의 단일 날짜/시간 입력으로 제안한다. 참가자 동의/거절·정족수·시간표밖 제안/수락·다른 예약 경고 정책은 기존대로다. 현재 텍스트 조회/제안 알럿을 최종 그래프 UX로 확정한 것이 아니며 승인된 전용 화면은 후속이다.
+
+원명령/동일 key/body·상태/권한·실제 주차 격리와 기존 ACK 후 상세/목록/계정 갱신을 유지한다. config를 재시도 중 새 값으로 덮지 않고 응답불명에서 원요청으로 재전송한다. 입력/회원·환경 변경/닫기·늦은 응답을 해당 화면/Controller의 기존 epoch·scope로 차단한다. 성공/취소/실패는 원래 동작을 유지하며 N 개방은 N 갱신만 한다. IF-001 신규진입은 비활성 유지다.
+
+검증: 직접13파일425PASS(신규10 포함) 후 개방 입력 정밀도/기본기간 경계 보완의 직접10PASS 재확인, 중복합산하지 않음. 일반 beta Reader→context/본문·metadata 불변/서명·잘못된 입력 HTTP0·최신변경 POST0·원요청 재전송/ACK·N갱신, 단일요일/시간정책·정원/동의·조율취소 PUT0 및 생성/참가/일정제안·응답·완료해산·기록/비활성 회귀를 확인했다. 변경9Dart+시험 분석에서 시험 경고2개만 수정하고 시험 재분석0, 포맷/diffcheck/리뷰 완료. 실제 서버 회원/기기·성능 인수는 미실행이다.
+
+그래프/인원비교·제안/수락 전용 전체화면·개인표 안내·메모/문구/필터는 후속. 서버배포/DB이행·자료삭제·dev/main 통합은 하지 않았다. 기존 개발자료 보존을 위한 우회/전환 계획을 추가하지 않았다. Issue13에 실제 소스/검증·한계를 같은 작업파트로 인계하고 브랜치에 보관한다.
