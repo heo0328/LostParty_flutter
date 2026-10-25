@@ -17,6 +17,7 @@ class CycleSearchViewModel extends ChangeNotifier {
     required this.changes,
     required this.scopeKey,
     this.mutations,
+    this.searchEnabled = true,
   }) {
     _binding = scopeKey();
     session.addListener(_access);
@@ -24,6 +25,7 @@ class CycleSearchViewModel extends ChangeNotifier {
     mutations?.addListener(_mutation);
   }
   final CycleInteractionGateway gateway;
+  final bool searchEnabled;
   final AccountReadSession session;
   final Listenable changes;
   final String Function() scopeKey;
@@ -197,7 +199,7 @@ class CycleSearchViewModel extends ChangeNotifier {
     loading = groupLoading = false;
     _timer?.cancel();
     _emit();
-    if (session.isAuthenticated) unawaited(load());
+    if (session.isAuthenticated && searchEnabled) unawaited(load());
   }
 
   void _mutation() {
@@ -313,6 +315,12 @@ class CycleSearchViewModel extends ChangeNotifier {
   }
 
   void _select() {
+    if (!searchEnabled) {
+      _epoch++;
+      failure = null;
+      _emit();
+      return;
+    }
     _epoch++;
     loading = false;
     failure = null;
@@ -323,6 +331,71 @@ class CycleSearchViewModel extends ChangeNotifier {
     _digest = page?.$3;
     _emit();
     if (page == null) unawaited(search());
+  }
+
+  CycleSearchViewModel draft() {
+    final d = CycleSearchViewModel(
+      gateway: gateway,
+      session: session,
+      changes: changes,
+      scopeKey: scopeKey,
+      searchEnabled: false,
+    );
+    d.cycles = cycles;
+    d.catalog = catalog;
+    d.target = target;
+    d.filter = filter;
+    d.groups = List.of(groups);
+    d.groupContext = groupContext;
+    d.candidateMembers = List.of(candidateMembers);
+    d.candidateCursor = candidateCursor;
+    d.selectionPending = selectionPending;
+    d._filters.addAll(_filters);
+    d._candidateCache.addAll(_candidateCache);
+    d._candidateCursors.addAll(_candidateCursors);
+    return d;
+  }
+
+  bool applyDraft(CycleSearchViewModel draft) {
+    final t = draft.target;
+    if (_disposed ||
+        draft._disposed ||
+        !session.isAuthenticated ||
+        draft._binding != scopeKey() ||
+        t == null ||
+        cycles?.find(t) == null ||
+        cycles?.current.key != draft.cycles?.current.key ||
+        draft.groupLoading ||
+        draft.candidateLoading ||
+        draft.selectionPending ||
+        draft.groupFailure != null ||
+        draft.candidateFailure != null) {
+      return false;
+    }
+    try {
+      draft.filter.body(t);
+    } catch (_) {
+      return false;
+    }
+    if (target != null) _filters[target!] = filter;
+    target = t;
+    filter = draft.filter;
+    _filters[t] = filter;
+    _groupEpoch++;
+    groupLoading = false;
+    groupFailure = null;
+    groupContext = draft.groupContext;
+    groups = List.of(draft.groups);
+    candidateMembers = List.of(draft.candidateMembers);
+    candidateCursor = draft.candidateCursor;
+    _candidateCursors
+      ..clear()
+      ..addAll(draft._candidateCursors);
+    candidateFailure = null;
+    selectionPending = false;
+    _candidateCache.addAll(draft._candidateCache);
+    _select();
+    return true;
   }
 
   void _discardPage(String t, CycleSearchFilter f) {
@@ -434,7 +507,8 @@ class CycleSearchViewModel extends ChangeNotifier {
   }
 
   Future<void> search({bool more = false, bool recovered = false}) async {
-    if (_disposed ||
+    if (!searchEnabled ||
+        _disposed ||
         loading ||
         groupLoading ||
         candidateLoading ||

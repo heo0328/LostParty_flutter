@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../domain/departure_search_selection.dart';
 import 'beta/beta_contract.dart';
 import 'beta/beta_read.dart';
 import 'beta/beta_interaction_api.dart';
@@ -38,6 +39,7 @@ String cycleStableJson(Object? value) {
 class CycleSearchFilter {
   CycleSearchFilter({
     this.category = 'all',
+    DepartureSearchSelection? departure,
     this.admissionScope,
     String? groupId,
     Set<String> groupIds = const {},
@@ -49,7 +51,8 @@ class CycleSearchFilter {
     Set<int> remaining = const {},
     this.descending = true,
     Map<String, Set<String>> members = const {},
-  }) : groupIds = Set.unmodifiable(groupId == null ? groupIds : {groupId}),
+  }) : departure = departure ?? DepartureSearchSelection(),
+       groupIds = Set.unmodifiable(groupId == null ? groupIds : {groupId}),
        raids = Set.unmodifiable(raids),
        difficulties = Set.unmodifiable(difficulties),
        experiences = Set.unmodifiable(experiences),
@@ -59,6 +62,7 @@ class CycleSearchFilter {
            e.key: Set<String>.unmodifiable(e.value),
        });
   final String category;
+  final DepartureSearchSelection departure;
   final String? admissionScope, token, candidateToken;
   final Set<String> groupIds;
   String? get groupId => groupIds.length == 1 ? groupIds.single : null;
@@ -68,6 +72,7 @@ class CycleSearchFilter {
   final Map<String, Set<String>> members;
   CycleSearchFilter copy({
     String? category,
+    DepartureSearchSelection? departure,
     String? admissionScope,
     bool clearScope = false,
     String? groupId,
@@ -84,6 +89,7 @@ class CycleSearchFilter {
     Map<String, Set<String>>? members,
   }) => CycleSearchFilter(
     category: category ?? this.category,
+    departure: departure ?? this.departure,
     admissionScope: clearScope ? null : admissionScope ?? this.admissionScope,
     groupIds:
         groupIds ??
@@ -130,6 +136,7 @@ class CycleSearchFilter {
     );
     final refs = members.keys.toList()..sort();
     return {
+      ...departure.wire(target),
       'target_cycle_key': raidCycleKey(target),
       'category': category,
       'admission_scope': admissionScope,

@@ -331,7 +331,15 @@ class _CycleAdmissionSheetState extends State<_CycleAdmissionSheet> {
                       (widget.intent != 'apply' || memo.canSubmit)
                   ? _confirm
                   : null,
-              child: Text('$label · ${widget.target}'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(44),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Text(
+                widget.intent == 'apply' ? '지원하기' : '$label · ${widget.target}',
+              ),
             ),
             if (!loading && p == null && !c.hasPending)
               TextButton(

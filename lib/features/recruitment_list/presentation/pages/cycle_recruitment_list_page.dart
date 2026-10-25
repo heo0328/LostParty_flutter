@@ -3,7 +3,6 @@ import '../../data/beta/beta_read.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../account/domain/account_read_session.dart';
-import '../../../account/presentation/widgets/member_cycle_selector.dart';
 import '../../../account/presentation/widgets/ownership_notice_title.dart';
 import '../../data/cycle_interaction_repository.dart';
 import '../../data/cycle_read_repository.dart';
@@ -12,7 +11,8 @@ import '../viewmodels/cycle_search_view_model.dart';
 import '../viewmodels/cycle_participation_controller.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
 import '../widgets/cycle_participation_widgets.dart';
-import '../widgets/group_candidate_filter.dart';
+import '../widgets/recruitment_design.dart';
+import 'recruitment_filter_page.dart';
 
 class CycleRecruitmentListPage extends StatefulWidget {
   const CycleRecruitmentListPage({
@@ -42,7 +42,6 @@ class CycleRecruitmentListPage extends StatefulWidget {
 class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
     with WidgetsBindingObserver {
   late final CycleSearchViewModel m;
-  bool expanded = false, remainingExpanded = false;
   @override
   void initState() {
     super.initState();
@@ -75,306 +74,190 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
     return next;
   }
 
-  Widget chips<T>(
-    Map<T, String> choices,
-    Set<T> selected,
-    void Function(Set<T>) change,
-  ) => Wrap(
-    spacing: 4,
-    runSpacing: 2,
-    children: [
-      for (final e in choices.entries)
-        FilterChip(
-          label: Text(e.value),
-          selected: selected.contains(e.key),
-          onSelected: (_) => change(toggle(selected, e.key)),
-          visualDensity: VisualDensity.compact,
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          labelStyle: const TextStyle(fontSize: 10),
-        ),
-    ],
-  );
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: m,
     builder: (context, _) => Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const OwnershipNoticeTitle(child: Text('파티 모집')),
+        title: const OwnershipNoticeTitle(child: Text('레이드 모집')),
         actions: [
           IconButton(
-            onPressed: m.loading ? null : () => m.refresh(),
+            onPressed: m.loading ? null : m.refresh,
             icon: const Icon(Icons.refresh),
             tooltip: '새로고침',
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => widget.onCreate(m.target),
-        icon: const Icon(Icons.add),
-        label: const Text('모집 만들기'),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: RecruitmentPrimaryButton(
+            label: '+ 모집 만들기',
+            onPressed: () => widget.onCreate(m.target),
+          ),
+        ),
       ),
-      body: Column(
-        children: [
-          if (m.cycles != null && m.target != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: MemberCycleSelector(
+      body: RefreshIndicator(
+        onRefresh: m.refresh,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            if (m.cycles != null)
+              RecruitmentWeekTabs(
                 cycles: m.cycles!,
-                value: m.target!,
+                value: m.target,
                 onChanged: m.selectTarget,
               ),
-            ),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: m.refresh,
-              child: ListView(
-                padding: const EdgeInsets.only(bottom: 90),
+            const SizedBox(height: 16),
+            RecruitmentDesignCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(value: 'all', label: Text('전체')),
-                        ButtonSegment(value: 'general', label: Text('일반')),
-                        ButtonSegment(value: 'group_linked', label: Text('그룹')),
-                      ],
-                      selected: {m.filter.category},
-                      onSelectionChanged: (s) {
-                        final v = s.single;
-                        m.update(
-                          m.filter.copy(
-                            category: v,
-                            clearGroup: v != 'group_linked',
-                          ),
-                        );
-                        if (v == 'group_linked') unawaited(m.loadGroups());
-                      },
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Card(
-                      color: AppColors.primarySubtle,
-                      child: Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            InkWell(
-                              onTap: () => setState(() => expanded = !expanded),
-                              child: Row(
-                                children: [
-                                  const Expanded(
-                                    child: Text(
-                                      '레이드 · 난이도 · 숙련도',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                  Icon(
-                                    expanded
-                                        ? Icons.expand_less
-                                        : Icons.expand_more,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (expanded) ...[
-                              const SizedBox(height: 8),
-                              chips<String>(
-                                {
-                                  for (final r in m.catalog?.raids ?? [])
-                                    if (r.isActive) r.raidId: r.displayName,
-                                },
-                                m.filter.raids,
-                                (s) => m.update(m.filter.copy(raids: s)),
-                              ),
-                              const SizedBox(height: 6),
-                              chips<String>(
-                                {
-                                  for (final r in m.catalog?.raids ?? [])
-                                    for (final d in r.difficulties)
-                                      if (d.isActive) d.difficultyId: d.name,
-                                },
-                                m.filter.difficulties,
-                                (s) => m.update(m.filter.copy(difficulties: s)),
-                              ),
-                              const SizedBox(height: 6),
-                              chips<String>(
-                                {
-                                  'unrestricted': '제한 없음',
-                                  ...recruitmentExperiences,
-                                },
-                                m.filter.experiences,
-                                (s) => m.update(m.filter.copy(experiences: s)),
-                              ),
-                              if (m.filter.category == 'group_linked') ...[
-                                const SizedBox(height: 8),
-                                const Text(
-                                  '연결 그룹',
-                                  style: TextStyle(fontSize: 11),
-                                ),
-                                chips<String>(
-                                  {for (final g in m.groups) g.id: g.name},
-                                  m.filter.groupIds,
-                                  m.selectGroups,
-                                ),
-                                Wrap(
-                                  spacing: 4,
-                                  children: [
-                                    for (final e in const {
-                                      '': '공개범위 전체',
-                                      'public': '전체 공개',
-                                      'group': '그룹 전용',
-                                    }.entries)
-                                      ChoiceChip(
-                                        label: Text(e.value),
-                                        labelStyle: const TextStyle(
-                                          fontSize: 10,
-                                        ),
-                                        selected:
-                                            (m.filter.admissionScope ?? '') ==
-                                            e.key,
-                                        onSelected: (_) => m.update(
-                                          m.filter.copy(
-                                            admissionScope: e.key,
-                                            clearScope: e.key.isEmpty,
-                                          ),
-                                        ),
-                                        visualDensity: VisualDensity.compact,
-                                      ),
-                                  ],
-                                ),
-                                if (m.groupLoading)
-                                  const LinearProgressIndicator(),
-                                if (m.groupFailure != null)
-                                  Text(
-                                    recruitmentFailureMessage(m.groupFailure),
-                                    style: const TextStyle(fontSize: 11),
-                                  ),
-                                if (m.filter.groupId != null)
-                                  GroupCandidateFilter(model: m),
-                              ],
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton(
-                                  onPressed: () =>
-                                      m.update(CycleSearchFilter()),
-                                  child: const Text('필터 초기화'),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextButton(
-                            style: TextButton.styleFrom(
-                              alignment: Alignment.centerLeft,
-                            ),
-                            onPressed: () => m.update(
-                              m.filter.copy(descending: !m.filter.descending),
-                            ),
-                            child: Text(
-                              '참가인원 정렬 ${m.filter.descending ? '↓ 많은 순' : '↑ 적은 순'}',
-                            ),
-                          ),
-                        ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      for (final entry in const {
+                        'all': '전체',
+                        'general': '일반',
+                        'group_linked': '그룹',
+                      }.entries)
                         TextButton(
-                          onPressed: () => setState(
-                            () => remainingExpanded = !remainingExpanded,
+                          onPressed: () => m.update(
+                            m.filter.copy(
+                              category: entry.key,
+                              clearGroup: entry.key != 'group_linked',
+                            ),
                           ),
                           child: Text(
-                            m.filter.remaining.isEmpty
-                                ? '남은 자리 전체 ▾'
-                                : '남은 자리 ${(m.filter.remaining.toList()..sort()).join('·')} ▾',
+                            entry.value,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.primary,
+                              fontWeight: m.filter.category == entry.key
+                                  ? FontWeight.w700
+                                  : FontWeight.w400,
+                            ),
                           ),
                         ),
-                      ],
+                    ],
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        alignment: Alignment.centerLeft,
+                        padding: EdgeInsets.zero,
+                      ),
+                      onPressed: m.target == null || m.catalog == null
+                          ? null
+                          : () => openRecruitmentFilter(context, m),
+                      child: const Text(
+                        '레이드 · 난이도 · 숙련도  ⌄',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
-                  if (remainingExpanded)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Wrap(
-                        spacing: 4,
-                        children: [
-                          FilterChip(
-                            label: const Text('전체'),
-                            selected: m.filter.remaining.isEmpty,
-                            onSelected: (_) =>
-                                m.update(m.filter.copy(remaining: {})),
-                          ),
-                          for (var n = 1; n <= 7; n++)
-                            FilterChip(
-                              label: Text('$n'),
-                              selected: m.filter.remaining.contains(n),
-                              onSelected: (_) => m.update(
-                                m.filter.copy(
-                                  remaining: toggle(m.filter.remaining, n),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  CycleCommandBanner(controller: widget.mutations),
-                  if (!widget.session.isAuthenticated)
-                    Center(
-                      child: FilledButton(
-                        onPressed: widget.onLogin,
-                        child: const Text('로그인 후 모집 확인'),
-                      ),
-                    ),
-                  if (m.loading) const LinearProgressIndicator(),
-                  if (m.failure != null)
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          Text(recruitmentFailureMessage(m.failure)),
-                          TextButton(
-                            onPressed: () => m.refresh(),
-                            child: const Text('다시 불러오기'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (!m.loading &&
-                      !m.candidateLoading &&
-                      !m.groupLoading &&
-                      !m.selectionPending &&
-                      m.candidateFailure == null &&
-                      m.groupFailure == null &&
-                      m.failure == null &&
-                      m.rows.isEmpty &&
-                      widget.session.isAuthenticated)
-                    const Padding(
-                      padding: EdgeInsets.all(36),
-                      child: Text(
-                        '조건에 맞는 모집이 없습니다.',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  for (final room in m.rows) _card(room),
-                  if (m.cursor != null)
-                    TextButton(
-                      onPressed: m.loading ? null : () => m.search(more: true),
-                      child: const Text('더 보기'),
-                    ),
                 ],
               ),
             ),
-          ),
-        ],
+            RecruitmentDesignCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            alignment: Alignment.centerLeft,
+                            padding: EdgeInsets.zero,
+                          ),
+                          onPressed: m.target == null
+                              ? null
+                              : () => m.update(
+                                  m.filter.copy(
+                                    descending: !m.filter.descending,
+                                  ),
+                                ),
+                          child: Text(
+                            '참가인원 정렬 ${m.filter.descending ? '↓' : '↑'}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: m.target == null
+                            ? null
+                            : () => showRecruitmentRemainingSlots(context, m),
+                        child: Text(
+                          m.filter.remaining.isEmpty
+                              ? '남은 자리 전체'
+                              : '남은 자리 ${(m.filter.remaining.toList()..sort()).join('·')}명',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  RecruitmentPrimaryButton(
+                    label: '날짜 · 시간대 · 일정 상태 ⌄',
+                    secondary: true,
+                    onPressed: m.target == null || m.catalog == null
+                        ? null
+                        : () => openRecruitmentFilter(context, m),
+                  ),
+                ],
+              ),
+            ),
+            CycleCommandBanner(controller: widget.mutations),
+            if (!widget.session.isAuthenticated)
+              Center(
+                child: FilledButton(
+                  onPressed: widget.onLogin,
+                  child: const Text('로그인 후 모집 확인'),
+                ),
+              ),
+            if (m.loading) const LinearProgressIndicator(),
+            if (m.failure != null)
+              Column(
+                children: [
+                  Text(recruitmentFailureMessage(m.failure)),
+                  TextButton(
+                    onPressed: m.refresh,
+                    child: const Text('다시 불러오기'),
+                  ),
+                ],
+              ),
+            if (!m.loading &&
+                !m.candidateLoading &&
+                !m.groupLoading &&
+                !m.selectionPending &&
+                m.candidateFailure == null &&
+                m.groupFailure == null &&
+                m.failure == null &&
+                m.rows.isEmpty &&
+                widget.session.isAuthenticated)
+              const Padding(
+                padding: EdgeInsets.all(36),
+                child: Text('조건에 맞는 모집이 없습니다.', textAlign: TextAlign.center),
+              ),
+            for (final room in m.rows) _card(room),
+            if (m.cursor != null)
+              TextButton(
+                onPressed: m.loading ? null : () => m.search(more: true),
+                child: const Text('더 보기'),
+              ),
+          ],
+        ),
       ),
     ),
   );
@@ -390,66 +273,111 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
     }
 
     final leader = room.wire['leader_display'] as Map?;
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: room.canView ? () => widget.onRoom(room.id, m.target!) : null,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      room.title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
+    final schedule = room.betaData?['beta_schedule'] as Map?;
+    final state = schedule?['coordination_state'];
+    final effective =
+        betaEffectiveStart(room.betaData) ?? room.starts.firstOrNull;
+    String departure = '일정 정보 없음';
+    if (effective != null) {
+      final local = effective.add(const Duration(hours: 9));
+      final suffix = state == 'coordinating' || state == 'base_committed'
+          ? '출발 예정'
+          : state == 'needs_review' || state == 'deadline_pending'
+          ? '기본 약속'
+          : '출발';
+      departure =
+          '${' 월화수목금토일'[local.weekday]} ${local.month.toString().padLeft(2, '0')}.${local.day.toString().padLeft(2, '0')} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')} $suffix';
+    }
+    final deadline = schedule?['admission_deadline'] as String?;
+    String? extra;
+    if (state == 'coordinating') {
+      final needed =
+          (schedule!['early_additional_members'] as int? ?? 0) + 1 - room.count;
+      extra = needed > 0 ? '$needed명 더 모이면 조율' : '공통 시간 조율 중';
+    } else if (deadline != null) {
+      final time = DateTime.parse(
+        deadline,
+      ).toUtc().add(const Duration(hours: 9));
+      extra =
+          '모집 마감 ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Material(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(15),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: room.canView ? () => widget.onRoom(room.id, m.target!) : null,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (schedule != null)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: recruitmentSelectionFill,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        betaScheduleLabel(room.betaData!),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
                   ),
-                  if (room.wire['group_id'] != null)
-                    const Text(
-                      '그룹',
-                      style: TextStyle(fontSize: 11, color: AppColors.primary),
-                    ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${room.count}/${room.capacity}명',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
+                Text(
+                  room.title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
                   ),
-                ],
-              ),
-              const SizedBox(height: 5),
-              Text(
-                room.items.map(label).join(' · '),
-                style: const TextStyle(fontSize: 12),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                '${room.betaData != null
-                    ? betaDepartureText(room.betaData!)
-                    : room.starts.isEmpty
-                    ? '출발 미정'
-                    : room.starts.map((v) => v.add(const Duration(hours: 9)).toIso8601String().substring(5, 16).replaceAll('T', ' ')).join(' / ')} · ${recruitmentExperiences[room.wire['experience_level']] ?? '제한 없음'}${leader?['character_name'] == null ? '' : ' · ${leader!['character_name']}'}',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textSecondary,
                 ),
-              ),
-              Text(
-                room.wire['admission_mode'] == 'direct_join'
-                    ? '바로 참가'
-                    : '공대장 승인',
-                style: const TextStyle(fontSize: 11, color: AppColors.primary),
-              ),
-            ],
+                const SizedBox(height: 10),
+                Text(
+                  '${room.items.map(label).join(' · ')} / ${recruitmentExperiences[room.wire['experience_level']] ?? '제한 없음'}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  departure,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '참가 ${room.count}/${room.capacity}${extra == null ? '' : ' · $extra'}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${room.wire['group_id'] == null ? '' : '그룹 · '}${room.wire['admission_mode'] == 'direct_join' ? '바로 참가' : '공대장 승인'}${leader?['character_name'] == null ? '' : ' · ${leader!['character_name']}'}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
