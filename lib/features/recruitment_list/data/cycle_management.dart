@@ -503,6 +503,7 @@ class CycleManagementPreview {
       minute: local.hour * 60 + local.minute,
       durationMinutes: duration,
       targetCycleKey: target,
+      precision: StartTimePrecision.minute,
     )) {
       throw const AccountReadException('SCHEDULE_BEFORE_FLOOR');
     }

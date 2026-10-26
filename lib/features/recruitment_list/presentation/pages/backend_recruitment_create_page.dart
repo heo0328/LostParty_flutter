@@ -12,6 +12,7 @@ import '../../domain/backend_recruitment.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
 import '../widgets/recruitment_section.dart';
 import '../widgets/recruitment_start_picker.dart';
+import '../widgets/recruitment_time_picker.dart';
 
 class BackendRecruitmentCreatePage extends StatefulWidget {
   const BackendRecruitmentCreatePage({
@@ -605,8 +606,8 @@ class _BackendRecruitmentCreatePageState
                 selected: m.betaInput(target).weekday == day,
                 onSelected:
                     !List.generate(
-                      288,
-                      (i) => i * 5,
+                      1440,
+                      (i) => i,
                     ).any((minute) => m.canBetaStart(target, day, minute))
                     ? null
                     : (_) => m.updateBeta(
@@ -629,6 +630,22 @@ class _BackendRecruitmentCreatePageState
                 : '${(m.betaInput(target).minute! ~/ 60).toString().padLeft(2, '0')}:${(m.betaInput(target).minute! % 60).toString().padLeft(2, '0')} · KST',
           ),
         ),
+        if (m.betaInput(target).weekday != null &&
+            m.betaInput(target).minute != null &&
+            m.betaStartFailure(
+                  target,
+                  m.betaInput(target).weekday!,
+                  m.betaInput(target).minute!,
+                ) !=
+                null)
+          Text(
+            m.betaStartFailure(
+              target,
+              m.betaInput(target).weekday!,
+              m.betaInput(target).minute!,
+            )!,
+            style: const TextStyle(color: AppColors.error, fontSize: 12),
+          ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           dense: true,
@@ -685,13 +702,9 @@ class _BackendRecruitmentCreatePageState
           m.editGeneration,
           m.draft.selectionSignature,
         );
-    final value = await showDialog<int>(
-      context: context,
-      builder: (_) => RecruitmentStartPicker(
-        initial: input.minute,
-        resetLabel: null,
-        allowed: (minute) => m.canBetaStart(target, input.weekday!, minute),
-      ),
+    final value = await showRecruitmentTimePicker(
+      context,
+      initial: input.minute,
     );
     if (!mounted ||
         value == null ||
@@ -705,9 +718,7 @@ class _BackendRecruitmentCreatePageState
             )) {
       return;
     }
-    if (m.canBetaStart(target, input.weekday!, value)) {
-      m.updateBeta(target, input.copy(minute: value));
-    }
+    m.updateBeta(target, input.copy(minute: value));
   }
 
   Widget _pending() => RecruitmentSection(

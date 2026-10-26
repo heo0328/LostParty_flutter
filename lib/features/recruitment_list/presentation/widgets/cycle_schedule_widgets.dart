@@ -599,6 +599,7 @@ class _ScheduleCommandDialogState extends State<_ScheduleCommandDialog> {
                         if (changes.containsKey(s['session_id'])) ...[
                           if (beta)
                             BetaScheduleEditor(
+                              scopeKey: widget.controller.scopeKey,
                               target: p.plan.target,
                               now: serverNow,
                               duration: proposalDuration(

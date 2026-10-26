@@ -342,6 +342,11 @@ class BetaScheduleConfig {
   BetaScheduleConfig(Map<String, dynamic> json)
     : wire = betaFreeze(json) as Map<String, dynamic> {
     BetaContract.definition('Proposed_BetaScheduleConfig', wire);
+    roleCheck(
+      startsAt.second == 0 &&
+          startsAt.millisecond == 0 &&
+          startsAt.microsecond == 0,
+    );
     roleCheck(enabled == (additionalMembers != null));
   }
   final Map<String, dynamic> wire;

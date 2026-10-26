@@ -458,7 +458,7 @@ void main() {
               controller: controller,
               preview: preview!,
               initialDay: 4,
-              initialMinute: 1200,
+              initialMinute: 1083,
               comparison: ScheduleComparison(cycles.n, [
                 row(
                   'a',
@@ -478,6 +478,7 @@ void main() {
         await tester.tap(find.text('제안 내용 확인'));
         await tester.pumpAndSettle();
         expect(find.text('이 일정으로 제안할까요?'), findsOneWidget);
+        expect(find.textContaining('18:03'), findsWidgets);
         expect(find.textContaining('등록한 가능 시간 밖입니다.'), findsOneWidget);
         expect(
           tester

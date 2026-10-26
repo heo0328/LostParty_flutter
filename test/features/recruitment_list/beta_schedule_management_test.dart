@@ -24,7 +24,7 @@ final config = BetaScheduleEditor.config(
   cycles.n,
   const BetaScheduleInput(
     weekday: 6,
-    minute: 1080,
+    minute: 1083,
     enabled: true,
     additional: 2,
   ),
@@ -60,6 +60,45 @@ Map<String, dynamic> betaPlan() {
 }
 
 void main() {
+  test(
+    'beta proposal preserves explicit minute, rejects seconds and legacy stays five-minute',
+    () async {
+      final api = base.Api()..respond = (_, _) async => betaPlan();
+      final plan = await CycleScheduleReader(
+        BetaInteractionApi(api),
+      ).read(base.roomId, cycles.n, 'plan');
+      final input = schedule.targets();
+      input[0]['starts_at'] = DateTime.parse(
+        input[0]['starts_at'],
+      ).add(const Duration(minutes: 3)).toIso8601String();
+      final preview = CycleSchedulePreview(plan, 'propose');
+      expect(
+        preview.body({'targets': input})['targets'][0]['starts_at'],
+        input[0]['starts_at'],
+      );
+      final legacy = CycleScheduleView(
+        base.roomId,
+        cycles.n,
+        'plan',
+        schedule.planWire(),
+      );
+      expect(
+        () => CycleSchedulePreview(legacy, 'propose').body({'targets': input}),
+        throwsFormatException,
+      );
+      input[0]['starts_at'] = DateTime.parse(
+        input[0]['starts_at'],
+      ).add(const Duration(seconds: 1)).toIso8601String();
+      expect(() => preview.body({'targets': input}), throwsFormatException);
+      expect(
+        () => BetaScheduleConfig({
+          ...config,
+          'base_starts_at': input[0]['starts_at'],
+        }),
+        throwsFormatException,
+      );
+    },
+  );
   for (final action in ['open', 'reopen']) {
     test('$action binds explicit N config to context and command', () async {
       final api = base.Api()..respond = (_, q) async => openingWire(action);

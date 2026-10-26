@@ -227,6 +227,9 @@ class _ScheduleCommandPageState extends State<ScheduleCommandPage> {
     minute: minute,
     durationMinutes: minutes,
     targetCycleKey: p.plan.target,
+    precision: p.plan.betaData == null
+        ? StartTimePrecision.fiveMinutes
+        : StartTimePrecision.minute,
   );
   String get proposedStart =>
       BetaScheduleEditor.config(p.plan.target, input)['base_starts_at']
@@ -442,6 +445,7 @@ class _ScheduleCommandPageState extends State<ScheduleCommandPage> {
                       ),
                     _ScheduleTimeWheels(
                       value: input.minute,
+                      step: p.plan.betaData == null ? 5 : 1,
                       enabled: !sending && requestKey == null,
                       allowed: (m) =>
                           allowed(input.weekday ?? widget.initialDay, m),
@@ -609,11 +613,13 @@ class _ScheduleCommandPageState extends State<ScheduleCommandPage> {
 class _ScheduleTimeWheels extends StatefulWidget {
   const _ScheduleTimeWheels({
     required this.value,
+    required this.step,
     required this.enabled,
     required this.allowed,
     required this.onChanged,
   });
   final int? value;
+  final int step;
   final bool enabled;
   final bool Function(int) allowed;
   final ValueChanged<int> onChanged;
@@ -629,7 +635,7 @@ class _ScheduleTimeWheelsState extends State<_ScheduleTimeWheels> {
     super.initState();
     final m = widget.value ?? 1200;
     hours = FixedExtentScrollController(initialItem: m ~/ 60);
-    minutes = FixedExtentScrollController(initialItem: m % 60 ~/ 5);
+    minutes = FixedExtentScrollController(initialItem: m % 60 ~/ widget.step);
   }
 
   @override
@@ -643,8 +649,9 @@ class _ScheduleTimeWheelsState extends State<_ScheduleTimeWheels> {
         if (hours.hasClients && hours.selectedItem != m ~/ 60) {
           hours.jumpToItem(m ~/ 60);
         }
-        if (minutes.hasClients && minutes.selectedItem != m % 60 ~/ 5) {
-          minutes.jumpToItem(m % 60 ~/ 5);
+        if (minutes.hasClients &&
+            minutes.selectedItem != m % 60 ~/ widget.step) {
+          minutes.jumpToItem(m % 60 ~/ widget.step);
         }
         syncing = false;
       });
@@ -681,7 +688,7 @@ class _ScheduleTimeWheelsState extends State<_ScheduleTimeWheels> {
                       final current = widget.value ?? 1200;
                       final next = isHour
                           ? i * 60 + current % 60
-                          : current ~/ 60 * 60 + i * 5;
+                          : current ~/ 60 * 60 + i * widget.step;
                       if (!syncing && next != widget.value) {
                         widget.onChanged(next);
                       }
@@ -694,10 +701,10 @@ class _ScheduleTimeWheelsState extends State<_ScheduleTimeWheels> {
                 ),
               ),
               children: [
-                for (var i = 0; i < (isHour ? 24 : 12); i++)
+                for (var i = 0; i < (isHour ? 24 : 60 ~/ widget.step); i++)
                   Center(
                     child: Text(
-                      '${isHour ? i : (i * 5).toString().padLeft(2, '0')}',
+                      '${isHour ? i : (i * widget.step).toString().padLeft(2, '0')}',
                       style: TextStyle(
                         fontFamily: Theme.of(
                           context,
@@ -708,7 +715,7 @@ class _ScheduleTimeWheelsState extends State<_ScheduleTimeWheels> {
                             widget.allowed(
                               isHour
                                   ? i * 60 + minute % 60
-                                  : minute ~/ 60 * 60 + i * 5,
+                                  : minute ~/ 60 * 60 + i * widget.step,
                             )
                             ? AppColors.primary
                             : AppColors.textDisabled,

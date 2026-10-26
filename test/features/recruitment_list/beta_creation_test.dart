@@ -35,10 +35,10 @@ RecruitmentDraft draft({String target = f.c, bool together = false}) =>
       targetCycleKey: target,
       continueTogether: together,
       betaSchedules: {
-        f.c: const BetaScheduleInput(weekday: 6, minute: 1080),
+        f.c: const BetaScheduleInput(weekday: 6, minute: 1083),
         f.n: const BetaScheduleInput(
           weekday: 1,
-          minute: 1200,
+          minute: 1217,
           enabled: true,
           additional: 2,
         ),
@@ -222,11 +222,11 @@ void main() {
         expect(model.createdTargetKeys, [f.c, f.n]);
         expect(
           body['beta_schedule_targets'][0]['base_starts_at'],
-          '2026-10-24T09:00:00.000Z',
+          '2026-10-24T09:03:00.000Z',
         );
         expect(
           body['beta_schedule_targets'][1]['base_starts_at'],
-          '2026-11-02T11:00:00.000Z',
+          '2026-11-02T11:17:00.000Z',
         );
         expect(c.query, {'contract_profile': BetaContract.profile});
         expect(
@@ -250,7 +250,7 @@ void main() {
         expect(model.validationMessage, isNotNull);
         model.update(model.draft.copy(betaSchedules: draft().betaSchedules));
         model.update(model.draft.copy(continueTogether: false));
-        expect(model.draft.betaSchedules[f.n]!.minute, 1200);
+        expect(model.draft.betaSchedules[f.n]!.minute, 1217);
         await model.submit();
         expect(sends.single.targetCycles, [f.c]);
       },

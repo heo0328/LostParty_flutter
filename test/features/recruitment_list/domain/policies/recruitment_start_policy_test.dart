@@ -3,6 +3,37 @@ import 'package:lost_party/features/recruitment_list/domain/policies/recruitment
 
 void main() {
   const policy = RecruitmentStartPolicy();
+  test(
+    'explicit minute precision preserves exact floor, maintenance and week end',
+    () {
+      String? reason(String now, int day, int minute, {int duration = 20}) =>
+          policy.failureReason(
+            now: DateTime.parse(now),
+            weekday: day,
+            minute: minute,
+            durationMinutes: duration,
+            precision: StartTimePrecision.minute,
+          );
+      expect(reason('2026-10-20T08:33:00Z', 2, 1083), isNull);
+      expect(reason('2026-10-20T08:33:01Z', 2, 1083), contains('30분'));
+      expect(reason('2026-10-20T21:00:00Z', 3, 599), contains('점검'));
+      expect(reason('2026-10-20T21:00:00Z', 3, 601), isNull);
+      expect(reason('2026-10-20T01:00:00Z', 2, 1439, duration: 361), isNull);
+      expect(
+        reason('2026-10-20T01:00:00Z', 2, 1439, duration: 362),
+        contains('주차'),
+      );
+      expect(
+        policy.allows(
+          now: DateTime.parse('2026-10-20T01:00:00Z'),
+          weekday: 2,
+          minute: 1083,
+          durationMinutes: 20,
+        ),
+        false,
+      );
+    },
+  );
   bool allows(String now, int day, int minute, {int? duration = 20}) =>
       policy.allows(
         now: DateTime.parse(now),

@@ -757,7 +757,7 @@ class CycleSchedulePreview {
       schedulePermit(roleMap(s['permissions'])['propose_schedule']);
       roleCheck(t['expected_schedule_revision'] == s['schedule_revision']);
       roleUtc(t['starts_at']);
-      _start(roleUtc(t['starts_at']));
+      _start(roleUtc(t['starts_at']), minutePrecision: plan.betaData != null);
       final durations = raidList(t['item_durations']);
       _unique(durations, 'item_id');
       final segments = plan.find(
@@ -788,7 +788,7 @@ class CycleSchedulePreview {
     return {...base, 'targets': targets};
   }
 
-  void _start(DateTime value) {
+  void _start(DateTime value, {bool minutePrecision = false}) {
     final week = const WeeklyRaidResetPolicy().weekFor(value);
     if (week.key != plan.target) {
       throw const AccountReadException('TARGET_CYCLE_OUT_OF_RANGE');
@@ -802,7 +802,7 @@ class CycleSchedulePreview {
       throw const AccountReadException('MAINTENANCE_WINDOW');
     }
     roleCheck(
-      value.minute % 5 == 0 &&
+      (minutePrecision || value.minute % 5 == 0) &&
           value.second == 0 &&
           value.millisecond == 0 &&
           value.microsecond == 0,

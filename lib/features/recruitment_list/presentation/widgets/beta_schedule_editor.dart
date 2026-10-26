@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../domain/beta_schedule_draft.dart';
 import '../../domain/policies/recruitment_start_policy.dart';
 import '../../data/cycle_schedule.dart';
-import 'recruitment_start_picker.dart';
+import 'recruitment_time_picker.dart';
 
 /// The same single-date and local start policy used by recruitment creation.
 class BetaScheduleEditor extends StatefulWidget {
@@ -16,6 +16,7 @@ class BetaScheduleEditor extends StatefulWidget {
     required this.onChanged,
     this.enabled = true,
     this.showCoordination = true,
+    this.scopeKey,
   });
   final String target;
   final DateTime now;
@@ -23,6 +24,7 @@ class BetaScheduleEditor extends StatefulWidget {
   final BetaScheduleInput value;
   final ValueChanged<BetaScheduleInput> onChanged;
   final bool enabled, showCoordination;
+  final Object? Function()? scopeKey;
 
   static bool valid(
     String target,
@@ -41,6 +43,7 @@ class BetaScheduleEditor extends StatefulWidget {
         minute: value.minute!,
         durationMinutes: duration,
         targetCycleKey: target,
+        precision: StartTimePrecision.minute,
       );
 
   static Map<String, dynamic> config(
@@ -66,28 +69,38 @@ class _BetaScheduleEditorState extends State<BetaScheduleEditor> {
     minute: minute,
     durationMinutes: widget.duration,
     targetCycleKey: widget.target,
+    precision: StartTimePrecision.minute,
   );
 
   Future<void> pick() async {
     final value = widget.value, target = widget.target;
-    final minute = await showDialog<int>(
-      context: context,
-      builder: (_) => RecruitmentStartPicker(
-        initial: value.minute,
-        resetLabel: null,
-        allowed: (m) => allowed(value.weekday!, m),
-      ),
+    final scope = widget.scopeKey?.call();
+    final minute = await showRecruitmentTimePicker(
+      context,
+      initial: value.minute,
     );
     if (!mounted ||
         !widget.enabled ||
         value != widget.value ||
         target != widget.target ||
+        scope != widget.scopeKey?.call() ||
         minute == null) {
       return;
     }
-    if (allowed(value.weekday!, minute)) {
-      widget.onChanged(value.copy(minute: minute));
-    }
+    widget.onChanged(value.copy(minute: minute));
+  }
+
+  String? get timeFailure {
+    final v = widget.value;
+    if (v.weekday == null || v.minute == null) return null;
+    return const RecruitmentStartPolicy().failureReason(
+      now: widget.now,
+      weekday: v.weekday!,
+      minute: v.minute!,
+      durationMinutes: widget.duration,
+      targetCycleKey: widget.target,
+      precision: StartTimePrecision.minute,
+    );
   }
 
   @override
@@ -104,10 +117,7 @@ class _BetaScheduleEditorState extends State<BetaScheduleEditor> {
               selected: widget.value.weekday == day,
               onSelected:
                   widget.enabled &&
-                      List.generate(
-                        288,
-                        (i) => i * 5,
-                      ).any((m) => allowed(day, m))
+                      List.generate(1440, (i) => i).any((m) => allowed(day, m))
                   ? (_) => widget.onChanged(
                       widget.value.copy(weekday: day, clearMinute: true),
                     )
@@ -124,6 +134,14 @@ class _BetaScheduleEditorState extends State<BetaScheduleEditor> {
               : '${(widget.value.minute! ~/ 60).toString().padLeft(2, '0')}:${(widget.value.minute! % 60).toString().padLeft(2, '0')} · KST',
         ),
       ),
+      if (timeFailure != null)
+        Text(
+          timeFailure!,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.error,
+            fontSize: 12,
+          ),
+        ),
       if (widget.showCoordination)
         SwitchListTile(
           contentPadding: EdgeInsets.zero,

@@ -159,13 +159,17 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     update(draft.copy(betaSchedules: {...draft.betaSchedules, target: input}));
   }
 
-  bool canBetaStart(String target, int day, int minute) => startPolicy.allows(
-    now: serverNow,
-    weekday: day,
-    minute: minute,
-    durationMinutes: durationMinutes,
-    targetCycleKey: target,
-  );
+  String? betaStartFailure(String target, int day, int minute) =>
+      startPolicy.failureReason(
+        now: serverNow,
+        weekday: day,
+        minute: minute,
+        durationMinutes: durationMinutes,
+        targetCycleKey: target,
+        precision: StartTimePrecision.minute,
+      );
+  bool canBetaStart(String target, int day, int minute) =>
+      betaStartFailure(target, day, minute) == null;
   String? get betaValidation {
     for (final t in betaTargets) {
       final i = betaInput(t);
@@ -173,7 +177,7 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
         return '각 주차의 출발 날짜와 시각을 선택해 주세요.';
       }
       if (!canBetaStart(t, i.weekday!, i.minute!)) {
-        return '출발 가능한 날짜·시각을 다시 선택해 주세요.';
+        return betaStartFailure(t, i.weekday!, i.minute!);
       }
       final capacity = betaCapacity;
       if (i.enabled && (i.additional < 1 || i.additional >= capacity)) {

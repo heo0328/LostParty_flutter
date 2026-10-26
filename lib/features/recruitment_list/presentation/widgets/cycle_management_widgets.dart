@@ -395,6 +395,7 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   BetaScheduleEditor(
+                    scopeKey: widget.controller.scopeKey,
                     target: widget.target,
                     now: openingNow,
                     duration: openingDuration,
