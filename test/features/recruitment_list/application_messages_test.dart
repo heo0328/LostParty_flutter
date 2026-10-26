@@ -19,6 +19,7 @@ import 'package:lost_party/features/recruitment_list/presentation/viewmodels/app
 import 'package:lost_party/features/recruitment_list/presentation/viewmodels/cycle_participation_controller.dart';
 import 'package:lost_party/features/recruitment_list/presentation/widgets/application_memo_widgets.dart';
 import 'package:lost_party/features/recruitment_list/presentation/widgets/recruitment_character_card.dart';
+import 'package:lost_party/features/recruitment_list/presentation/viewmodels/backend_recruitment_create_view_model.dart';
 import 'beta_foundation_test.dart' as foundation;
 import 'backend_recruitment_test.dart' as base;
 import 'cycle_interaction_test.dart' as interaction;
@@ -60,6 +61,63 @@ void main() {
       expect(ApplicationMemoPolicy.check(text).valid, isFalse, reason: text);
     }
   });
+  test(
+    'all printable keyboard ASCII is accepted locally and by stored memo DTO',
+    () {
+      for (var value = 0x21; value <= 0x7e; value++) {
+        final symbol = String.fromCharCode(value);
+        expect(
+          ApplicationMemoPolicy.check(symbol, required: true).valid,
+          isTrue,
+          reason: symbol,
+        );
+        expect(
+          () => BetaContract.definition('Proposed_MemoStored', symbol),
+          returnsNormally,
+          reason: symbol,
+        );
+      }
+      for (final value in [0, 9, 10, 13, 31, 127, 0xa0, 0xff01, 0x1f600]) {
+        expect(
+          ApplicationMemoPolicy.check(String.fromCharCode(value)).valid,
+          isFalse,
+        );
+      }
+    },
+  );
+  test(
+    'server errors distinguish action and cause without leaking arbitrary text',
+    () {
+      expect(
+        recruitmentFailureMessage('RAID_ITEM_LEVEL_REQUIRED'),
+        contains('입장 레벨보다 낮'),
+      );
+      expect(
+        recruitmentFailureMessage('MEMBER_RAID_LIMIT_REACHED'),
+        contains('모집방 수'),
+      );
+      expect(
+        recruitmentFailureMessage('INVALID_RESPONSE'),
+        contains('이미 처리됐을 수'),
+      );
+      expect(
+        recruitmentFailureMessage('NETWORK_UNAVAILABLE'),
+        contains('인터넷 연결'),
+      );
+      expect(
+        recruitmentFailureMessage('APPLICATION_MEMO_TOO_LONG'),
+        contains('20자'),
+      );
+      expect(
+        recruitmentFailureMessage('UNKNOWN_NEW_CODE'),
+        contains('UNKNOWN_NEW_CODE'),
+      );
+      expect(
+        recruitmentFailureMessage('private server exception text'),
+        isNot(contains('private')),
+      );
+    },
+  );
   test(
     'local Korean/English words, separator evasion, normal words not substrings',
     () {

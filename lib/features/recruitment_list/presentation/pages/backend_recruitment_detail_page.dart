@@ -702,6 +702,9 @@ class _BackendRecruitmentDetailPageState
                   current: m.cycles!.current.key,
                   next: m.cycles!.next.key,
                   role: room['my_target_role'] as String? ?? 'none',
+                  nextCycleOpen: m.target == m.cycles!.next.key
+                      ? room['target_state'] == 'open'
+                      : room['continuation_enabled'] == true,
                   nextParticipationAvailable: m.nextParticipationAvailable,
                 ),
             ],

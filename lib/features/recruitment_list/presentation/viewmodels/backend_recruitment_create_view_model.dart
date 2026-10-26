@@ -1006,22 +1006,39 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
 }
 
 String recruitmentFailureMessage(String? code) => switch (code) {
-  'REQUEST_REVIEW_REQUIRED' => '이전 생성 요청의 결과를 확인해야 합니다. 현재 참가 모집을 확인해 주세요.',
-  'REQUEST_STORAGE_FAILED' => '요청 정보를 기기에 저장하지 못했습니다. 같은 요청으로 다시 확인해 주세요.',
+  'INVALID_RESPONSE' =>
+    '서버 응답을 확인하지 못했습니다. 이미 처리됐을 수 있으니 요청 결과를 다시 확인해 주세요. (응답 형식 오류)',
+  'RECRUITMENT_COMMAND_NOT_READY' => '모집 기능을 준비 중입니다. 잠시 후 다시 시도해 주세요.',
+  'LOCAL_STORAGE_UNAVAILABLE' ||
+  'REQUEST_STORAGE_FAILED' => '요청 정보를 기기에 저장하거나 불러오지 못했습니다. 다시 시도해 주세요.',
+  'IDEMPOTENCY_EXPIRED' ||
+  'REQUEST_REVIEW_REQUIRED' => '이전 요청의 결과를 자동으로 확인할 수 없습니다. 문의 시 이 상태를 알려 주세요.',
+  'UNRESOLVED_REQUEST_EXISTS' => '이전 요청의 결과를 먼저 확인해 주세요.',
+  'APPLICATION_MEMO_TOO_LONG' => '공대장에게 보낼 메모는 20자까지 입력할 수 있습니다.',
+  'APPLICATION_PRESET_LIMIT_EXCEEDED' => '저장 문구는 최대 5개까지 등록할 수 있습니다.',
+  'APPLICATION_NOT_FOUND' => '신청 내역이 없거나 이미 종료되었습니다.',
+  'SESSION_NOT_FOUND' => '진행 일정이 없거나 삭제되었습니다.',
+  'ROOM_NOT_FOUND' || 'NOT_FOUND' => '모집방이 없거나 이미 종료되었습니다.',
+  'ADMISSION_MODE_CHANGED' => '모집의 참가 방식이 바뀌었습니다. 모집방을 다시 열어 주세요.',
+  'ROLE_SLOT_UNAVAILABLE' => '선택한 역할로 참가할 자리가 없습니다.',
+  'CHARACTER_NOT_ELIGIBLE' => '선택한 캐릭터는 현재 모집 조건을 충족하지 않습니다.',
+  'CHARACTER_ALREADY_PARTICIPATING' => '이 캐릭터는 같은 주차의 레이드에 이미 참가 중입니다.',
+  'ROOM_REVIEW_REQUIRED' =>
+    '모집방의 참가 또는 일정 정보가 서로 맞지 않습니다. 새로고침 후에도 같으면 문의해 주세요.',
   'PROPOSAL_CONTEXT_CHANGED' => '제안의 일정이나 조건이 바뀌었습니다. 공대장이 새 제안을 만들어 주세요.',
   'CONTEXT_INVALID' => '확인 정보가 유효하지 않습니다. 최신 내용을 다시 확인해 주세요.',
   'REQUEST_TOO_LARGE' => '일정 정보가 너무 큽니다. 선택한 내용을 줄여 다시 확인해 주세요.',
   'PLAY_NOT_STARTED' ||
-  'TARGET_CYCLE_NOT_CURRENT' => '해당 주차 수요일 10시부터 완료·미완료 종료가 가능합니다.',
+  'TARGET_CYCLE_NOT_CURRENT' => '해당 주차 수요일 10시부터 완료 처리할 수 있습니다.',
   'ROUND_NOT_ACTIVE' => '진행 중인 레이드가 없습니다. 최신 상태를 확인해 주세요.',
   'CONTINUATION_REQUIRED' => '함께하기 모집에서만 미완료 종료할 수 있습니다.',
-  'INVALID_REQUEST' => '입력한 조건과 시간을 확인해 주세요.',
+  'INVALID_REQUEST' => '입력한 내용이 서버의 허용 조건과 맞지 않습니다. 입력 내용을 확인해 주세요.',
   'PERSONAL_AVAILABILITY_REQUIRED' => '내 계정에서 개인 시간표를 먼저 설정해 주세요.',
   'WEEKLY_PARTICIPANT_REQUIRED' => '선택 주차의 참가 상태를 확인해 주세요.',
-  'NO_SCHEDULE_CANDIDATE' => '현재 공통 후보가 없습니다. 미제출 시간표도 확인해 주세요.',
+  'NO_SCHEDULE_CANDIDATE' => '선택한 인원 모두가 가능한 공통 시간이 없습니다.',
   'SCHEDULE_PROPOSAL_REQUIRED' => '확정된 일정은 일정 변경안으로 조정해 주세요.',
   'SCHEDULE_NOT_CONFIRMED' => '아직 확정된 일정이 아닙니다.',
-  'SCHEDULE_TIME_REQUIRED' => '출발 시간 또는 조율 방식을 먼저 설정해 주세요.',
+  'SCHEDULE_TIME_REQUIRED' => '출발 날짜와 시간을 지정해 주세요.',
   'TARGET_LEADER_REQUIRED' => '선택 주차의 공대장만 변경할 수 있습니다.',
   'SCHEDULE_ENDED' || 'PARTICIPATION_ENDED' => '이 일정의 진행 또는 본인 참가가 종료되었습니다.',
   'PROPOSAL_NOT_PENDING' ||
@@ -1046,21 +1063,22 @@ String recruitmentFailureMessage(String? code) => switch (code) {
   'ROOM_ITEMS_CHANGED' => '참가자나 레이드 구성이 변경되었습니다. 다시 확인해 주세요.',
   'ROOM_LAST_MEMBER_REQUIRED' => '다른 참가자가 남아 있어 모집 전체를 종료할 수 없습니다.',
   'LEADERSHIP_RESOLUTION_REQUIRED' => '영향받는 주차의 공대장 승계를 먼저 확인해 주세요.',
-  'ROOM_REVIEW_REQUIRED' => '참가자 상태를 확인한 뒤 다시 시도해 주세요.',
-  'CLIENT_UPGRADE_REQUIRED' => '이전 생성 요청은 다시 전송해 결과를 확인해 주세요.',
+  'CLIENT_UPGRADE_REQUIRED' => '앱과 서버의 기능 버전이 맞지 않습니다. 앱 버전을 확인해 주세요.',
   'TARGET_CYCLE_OUT_OF_RANGE' => '대상 주차가 바뀌었습니다. 주차를 다시 선택해 주세요.',
   'TARGET_NOT_OPEN' => '이 주차에는 열린 모집이 없습니다.',
-  'NETWORK_UNAVAILABLE' => '연결을 확인한 뒤 다시 시도해 주세요.',
+  'NETWORK_UNAVAILABLE' => '서버에 연결하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.',
+  'RAID_ALREADY_COMPLETED' ||
   'WEEKLY_ALREADY_COMPLETED' ||
   'RAID_WEEKLY_COMPLETED' ||
-  'WEEKLY_COMPLETED' => '이번 주 완료한 레이드가 포함되어 있습니다.',
-  'RAID_ITEM_LEVEL_REQUIRED' => '선택한 난이도의 아이템레벨을 확인해 주세요.',
+  'WEEKLY_COMPLETED' => '해당 주차에 이미 완료한 레이드가 포함되어 있습니다.',
+  'RAID_ITEM_LEVEL_REQUIRED' => '이 캐릭터는 선택한 난이도의 입장 레벨보다 낮습니다.',
   'COMBAT_POWER_REQUIRED' => '선택 역할의 저장 전투력과 최소 조건을 확인해 주세요.',
   'ROLE_NOT_SUPPORTED' => '이 직업에서 선택할 수 없는 역할입니다.',
   'CHARACTER_DATA_UNAVAILABLE' => '캐릭터 정보를 확인하지 못했습니다. 갱신 후 다시 확인해 주세요.',
   'ACCESS_CHANGED' => '로그인 상태가 변경되었습니다. 다시 열어 주세요.',
   'SERVICE_UNAVAILABLE' => '정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
-  'MEMBER_RAID_LIMIT_REACHED' => '참가 중인 모집방 수가 한도에 도달했습니다.',
+  'MEMBER_RAID_LIMIT_REACHED' =>
+    '동시에 참가할 수 있는 모집방 수에 도달했습니다. 참가 중인 방을 정리한 뒤 다시 시도해 주세요.',
   'MEMBER_GROUP_LIMIT_EXCEEDED' ||
   'GROUP_CAPACITY_EXCEEDED' ||
   'ROOM_RESTRICTED' => '그룹 또는 참가 한도 제한을 확인해 주세요.',
@@ -1083,6 +1101,9 @@ String recruitmentFailureMessage(String? code) => switch (code) {
   'SCHEDULE_IN_PAST' => '이미 지난 출발 시각이 포함되어 있어요. 선택한 요일과 시각을 확인해 주세요.',
   'MAINTENANCE_WINDOW' => '수요일 06~10시 점검 시간과 진행 구간이 겹치지 않도록 설정해 주세요.',
   'GROUP_MEMBERSHIP_REQUIRED' => '현재 가입한 그룹을 다시 확인해 주세요.',
-  'LOGIN_REQUIRED' || 'SESSION_CHANGED' => '로그인 상태를 확인해 주세요.',
-  _ => '현재 요청을 완료하지 못했습니다. 상태를 확인한 뒤 다시 시도해 주세요.',
+  'LOGIN_REQUIRED' ||
+  'SESSION_CHANGED' ||
+  'UNAUTHENTICATED' => '로그인이 만료되었습니다. 다시 로그인해 주세요.',
+  _ =>
+    '요청 결과를 확인하지 못했습니다.${code != null && RegExp(r"^[A-Z][A-Z0-9_]{0,79}$").hasMatch(code) ? ' (오류 코드: $code)' : ''} 다시 확인해 주세요.',
 };

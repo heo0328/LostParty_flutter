@@ -520,19 +520,27 @@ class CycleSchedulePreview {
       : action == 'respond'
       ? '/v2/raid-schedule-proposals/$id/responses'
       : '/v2/raid-rooms/${plan.room}/${action == 'groups' ? 'schedule-groups' : 'schedule-proposals'}';
-  Map<String, dynamic>? get submissionEvidence => action != 'submission'
-      ? null
-      : {
-          'membership_id': extra!.data['membership_id'],
-          'cycle_member_id': extra!.data['cycle_member_id'],
-          'cycle_member_revision': extra!.data['cycle_member_revision'],
-          'source_personal_version': personal!.version,
-          'intervals': personal!.intervals.map((r) => r.toJson()).toList(),
-          'revision':
-              extra!.data['source_personal_version'] == personal!.version
-              ? extra!.data['revision']
-              : rolePositive(extra!.data['revision']) + 1,
-        };
+  Map<String, dynamic>? get submissionEvidence {
+    if (action != 'submission') return null;
+    final beta = plan.betaData?['beta_schedule'] != null;
+    // Beta creation/admission already copies even an entirely unset personal table.
+    // Missing is a failed room copy, never an unrestricted personal timetable.
+    if (beta && extra!.data['state'] != 'ready') {
+      throw const AccountReadException('ROOM_REVIEW_REQUIRED');
+    }
+    return {
+      'membership_id': extra!.data['membership_id'],
+      'cycle_member_id': extra!.data['cycle_member_id'],
+      'cycle_member_revision': extra!.data['cycle_member_revision'],
+      'source_personal_version': personal!.version,
+      'intervals': personal!.intervals.map((r) => r.toJson()).toList(),
+      'revision':
+          beta || extra!.data['source_personal_version'] != personal!.version
+          ? rolePositive(extra!.data['revision']) + 1
+          : extra!.data['revision'],
+    };
+  }
+
   Map<String, dynamic> body(Map<String, dynamic> input) {
     final d = plan.data, mine = roleMap(d['my_membership']);
     roleCheck({'leader', 'member'}.contains(d['my_target_role']));

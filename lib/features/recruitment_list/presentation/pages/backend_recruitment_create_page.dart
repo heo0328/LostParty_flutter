@@ -76,7 +76,7 @@ class _BackendRecruitmentCreatePageState
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const OwnershipNoticeTitle(child: Text('모집 만들기'))),
+    appBar: AppBar(title: const OwnershipNoticeTitle(child: Text('공격대 생성'))),
     body: !m.session.isAuthenticated
         ? _message('로그인 후 모집을 만들 수 있어요.', action: widget.onLogin, label: '로그인')
         : !m.eligible

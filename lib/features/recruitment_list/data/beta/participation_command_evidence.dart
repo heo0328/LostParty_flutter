@@ -219,16 +219,18 @@ class ParticipationCommandEvidence {
     required String key,
     required int status,
     required RecruitmentContractMode mode,
+    required String rawBody,
   }) {
-    final j = mode == RecruitmentContractMode.betaWire2
+    final decoded = mode == RecruitmentContractMode.betaWire2
         ? BetaResponse.parse(
             method: method,
             path: path,
             status: status,
             json: raw,
             parseLegacy: (v) => v,
-          ).value
-        : raw;
+          )
+        : null;
+    final j = decoded?.value ?? raw;
     if (kind == 'membership') {
       return MembershipActionResult.fromEvidence(
         j,
@@ -244,6 +246,17 @@ class ParticipationCommandEvidence {
       validateDepartureEvidenceResult(j, DepartureAckEvidence(details), key);
       return null;
     }
+    final submission = wire['submission_ack'] == null
+        ? null
+        : Map<String, dynamic>.from(roleMap(wire['submission_ack']));
+    if (submission != null &&
+        decoded?.metadata['data']?['availability_copy'] != null) {
+      // Interpret the original beta write, including journals produced before the
+      // copy-revision fix. Do not rewrite its body, key or frozen evidence.
+      final original = roleMap(jsonDecode(rawBody));
+      submission['revision'] =
+          rolePositive(original['expected_submission_revision']) + 1;
+    }
     validateCycleWriteResult(
       j,
       path: path,
@@ -256,9 +269,7 @@ class ParticipationCommandEvidence {
       expectedScope: scope,
       globalAck: wire['global_ack'] as String?,
       affectedTargets: affected,
-      submissionAck: wire['submission_ack'] == null
-          ? null
-          : roleMap(wire['submission_ack']),
+      submissionAck: submission,
     );
     return null;
   }

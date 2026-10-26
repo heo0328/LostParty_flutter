@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
@@ -74,6 +75,22 @@ Map<String, dynamic> applicationAck(RecruitmentCommand cmd) =>
       'executed_at': cycles.nowStamp,
       'target_cycle_key': interaction.n,
     }, created: true);
+Map<String, dynamic> copiedSubmission({int revision = 1}) {
+  final j = schedule.submissionWire();
+  j['data'].addAll({
+    'state': 'ready',
+    'revision': revision,
+    'source_personal_version': 1,
+    'submitted_at': cycles.nowStamp,
+    'availability_copy': {
+      'state': 'unset',
+      'source_personal_version': 1,
+      'copied_at': cycles.nowStamp,
+    },
+  });
+  return j;
+}
+
 void main() {
   group('durable app-owned participation', () {
     late ReadSessionFake session;
@@ -628,9 +645,7 @@ void main() {
         api.respond = (path, q) async {
           if (path.endsWith('/plan')) return beta_schedule.betaPlan();
           if (path.endsWith('/play-availability')) return personal.response();
-          final j = schedule.submissionWire();
-          j['data']['availability_copy'] = null;
-          return j;
+          return copiedSubmission();
         };
         answer = (_) async =>
             throw const AccountReadException('NETWORK_UNAVAILABLE');
@@ -669,6 +684,71 @@ void main() {
         expect(next.hasPending, isFalse);
         expect(writes.last.sameOriginal(original), isTrue);
         expect(api.requests, isEmpty);
+        expect(mutations, [interaction.n]);
+      },
+    );
+    test(
+      'pre-fix submission journal recovers original ACK without rewriting evidence',
+      () async {
+        api.respond = (path, q) async {
+          if (path.endsWith('/plan')) return beta_schedule.betaPlan();
+          if (path.endsWith('/play-availability')) return personal.response();
+          return copiedSubmission();
+        };
+        answer = (_) async =>
+            throw const AccountReadException('NETWORK_UNAVAILABLE');
+        final c = await controller();
+        final p = await c.schedulePreview(
+          base.roomId,
+          interaction.n,
+          'submission',
+        );
+        await c.scheduleCommand(p!, {});
+        final original = writes.single;
+        final wire = jsonDecode(original.encode()) as Map<String, dynamic>;
+        final evidence = wire['validation_snapshot'] as Map<String, dynamic>;
+        evidence['submission_ack']['revision'] =
+            1; // The released app's old no-op expectation.
+        evidence['checksum'] = sha256
+            .convert(
+              utf8.encode(cycleStableJson({...evidence}..remove('checksum'))),
+            )
+            .toString();
+        wire['attempted_at'] = null;
+        final saved = RecruitmentCommand.decode(jsonEncode(wire));
+        stop(c);
+        await store.close();
+        store = JournalFaults(
+          DriftRecruitmentCommandStore(
+            databaseFactory: () =>
+                RecruitmentCommandDatabase(NativeDatabase.memory()),
+          ),
+        );
+        await store.insert(
+          StorageScope(baseUrl: baseUrl, userId: foundation.user),
+          saved,
+        );
+        api.requests.clear();
+        final next = await controller();
+        expect(writes, hasLength(1)); // No automatic replay.
+        answer = (_) async => copiedSubmission(revision: 3);
+        await next.retry();
+        expect(
+          next.hasPending,
+          isTrue,
+        ); // Never relax to an arbitrary higher revision.
+        answer = (_) async => copiedSubmission(revision: 2);
+        await next.retry();
+        expect(next.hasPending, isFalse);
+        expect(next.failure, isNull);
+        expect(writes.last.sameOriginal(saved), isTrue);
+        expect(writes.last.rawBody, original.rawBody);
+        expect(
+          writes.last.validationSnapshot!['submission_ack']['revision'],
+          1,
+        );
+        expect(api.requests, isEmpty);
+        expect(next.scheduleSuccess, isNull);
         expect(mutations, [interaction.n]);
       },
     );

@@ -591,7 +591,7 @@ void main() {
         router.go('/create');
         await tester.pumpAndSettle();
         expect(model.createdRoomId, isNull);
-        expect(find.text('모집 만들기'), findsOneWidget);
+        expect(find.text('공격대 생성'), findsOneWidget);
         expect(callbacks, 2);
         await tester.pumpWidget(const SizedBox());
         router.dispose();

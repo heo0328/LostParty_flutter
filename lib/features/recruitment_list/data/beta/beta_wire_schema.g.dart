@@ -1,4 +1,5 @@
 // Generated from Backend 267afe560033291df6317c2f712e395f13e68818.
+// Memo character range extended by user policy (2026-10-26); Backend sync: Issue13/6409130575.
 // beta-recruitment-wire-2: validation data only, not a runtime activation.
 const betaWireSchemaJson = r'''
 {
@@ -16498,14 +16499,14 @@ const betaWireSchemaJson = r'''
       "maxLength": 4096,
       "x-max-utf8-bytes": 4096,
       "x-normalization": "NFC then allowlist validation, trim U+0020 only; normalized code points <=20; empty memo to null",
-      "x-allowed-after-nfc": "U+AC00-D7A3,U+3131-3163,A-Z,a-z,0-9,U+0020,.,!?~()-_/@#&+",
+      "x-allowed-after-nfc": "U+AC00-D7A3,U+3131-3163,U+0020-007E",
       "description": "Raw input: decomposed Hangul allowed if NFC composes to allowed syllables. Semantic validation required; no silent character deletion."
     },
     "Proposed_MemoStored": {
       "type": "string",
       "maxLength": 20,
       "minLength": 1,
-      "pattern": "^(?! )(?!.* $)[가-힣ㄱ-ㅣA-Za-z0-9 .,!\\?~()_/@#&+\\-]+$",
+      "pattern": "^(?! )(?!.* $)[가-힣ㄱ-ㅣ\\x20-\\x7E]+$",
       "x-normalization": "Already NFC, no leading/trailing U+0020"
     },
     "Proposed_PresetItem": {

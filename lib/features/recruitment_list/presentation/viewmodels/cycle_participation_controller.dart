@@ -1069,6 +1069,7 @@ class CycleParticipationController extends ChangeNotifier {
               key: journal.key,
               status: journal.expectedStatus,
               mode: journal.contractMode,
+              rawBody: journal.rawBody,
             );
           },
         );
@@ -1084,6 +1085,7 @@ class CycleParticipationController extends ChangeNotifier {
           key: journal.key,
           status: journal.expectedStatus,
           mode: journal.contractMode,
+          rawBody: journal.rawBody,
         );
       } else if (command.membership != null) {
         membershipResult = await (gateway as MembershipActionGateway)

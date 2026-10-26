@@ -21,11 +21,12 @@ class CycleManagementActions extends StatelessWidget {
     required this.next,
     required this.role,
     this.nextParticipationAvailable = false,
+    this.nextCycleOpen = false,
     super.key,
   });
   final CycleParticipationController controller;
   final String room, target, current, next, role;
-  final bool nextParticipationAvailable;
+  final bool nextParticipationAvailable, nextCycleOpen;
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
@@ -44,7 +45,9 @@ class CycleManagementActions extends StatelessWidget {
     ),
   );
   Widget button(BuildContext context, String action, String t) => TextButton(
-    onPressed: controller.canAct
+    onPressed:
+        controller.canAct &&
+            !({'open', 'reopen'}.contains(action) && nextCycleOpen)
         ? () => showCycleManagement(
             context,
             controller,
