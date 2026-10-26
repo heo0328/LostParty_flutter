@@ -141,7 +141,7 @@ class RecruitmentCommandTransport {
     var command = await store.read(scope, owner);
     _current(binding, scope);
     if (command?.state == RecruitmentCommandState.pending &&
-        command!.expired(clock())) {
+        (command!.expired(clock()) || clock().isBefore(command.createdAt))) {
       command = command.transition(state: RecruitmentCommandState.needsReview);
       await store.replace(scope, command);
       _current(binding, scope);
@@ -175,8 +175,9 @@ class RecruitmentCommandTransport {
       } else if (!saved.sameOriginal(command)) {
         throw const AccountReadException('UNRESOLVED_REQUEST_EXISTS');
       }
-      if (saved.owner == RecruitmentCommandOwner.creation &&
-          saved.contractMode == RecruitmentContractMode.betaWire2 &&
+      if (((saved.owner == RecruitmentCommandOwner.creation &&
+                  saved.contractMode == RecruitmentContractMode.betaWire2) ||
+              saved.owner == RecruitmentCommandOwner.participation) &&
           saved.validationSnapshot == null) {
         if (saved.state == RecruitmentCommandState.pending) {
           await store.replace(
@@ -201,12 +202,20 @@ class RecruitmentCommandTransport {
       var raw = _validated[ackKey];
       if (raw == null) {
         if (saved.state == RecruitmentCommandState.needsReview ||
-            saved.expired(clock())) {
+            saved.expired(clock()) ||
+            clock().isBefore(saved.createdAt)) {
           await store.replace(
             scope,
             saved.transition(state: RecruitmentCommandState.needsReview),
           );
           throw const AccountReadException('REQUEST_REVIEW_REQUIRED');
+        }
+        if (saved.retryNotBefore != null &&
+            clock().isBefore(saved.retryNotBefore!)) {
+          throw AccountReadException(
+            'REQUEST_IN_PROGRESS',
+            retryAt: saved.retryNotBefore,
+          );
         }
         saved = saved.transition(attemptedAt: clock());
         await store.replace(scope, saved);
@@ -216,13 +225,22 @@ class RecruitmentCommandTransport {
           ack = await send(saved, binding);
         } on AccountReadException catch (e) {
           _current(binding, scope);
-          if (saved.version == 2 &&
+          if (saved.version >= 2 &&
               definiteRecruitmentRejection(e.status, e.code)) {
             await store.replace(
               scope,
               saved.transition(
                 state: RecruitmentCommandState.rejected,
                 rejection: {'status': e.status, 'code': e.code},
+              ),
+            );
+            _current(binding, scope);
+          } else if (saved.version == 3 &&
+              (e.retryAt != null || e.retryAfter != null)) {
+            await store.replace(
+              scope,
+              saved.transition(
+                retryNotBefore: e.retryAt ?? clock().add(e.retryAfter!),
               ),
             );
             _current(binding, scope);

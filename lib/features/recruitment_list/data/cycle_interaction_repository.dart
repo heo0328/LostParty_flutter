@@ -1046,106 +1046,141 @@ class CycleInteractionRepository
       idempotencyKey: key,
       expectedStatus: status,
     ))!;
-    roleShape(j, 'scope data');
-    final scope = roleMap(j['scope']);
-    if (submissionAck != null) {
-      validateSubmissionAck(j, room, target, submissionAck, expectedScope!);
-      return;
-    }
-    if (globalAck != null) {
-      roleShape(scope, 'server_now current_cycle_key policy_version');
-      roleUtc(scope['server_now']);
-      raidCycleKey(scope['current_cycle_key']);
-      roleCheck(scope['policy_version'] == twoCyclePolicy);
-      final d = roleMap(j['data']);
-      roleShape(
-        d,
-        globalAck == 'common'
-            ? 'command_id outcome executed_at room_id room_revision affected_cycle_keys'
-            : 'command_id outcome executed_at room_id membership_id persistent_membership_revision affected_cycle_keys room_ended revisions',
-      );
-      roleCheck(
-        roleId(d['command_id']) == key &&
-            roleId(d['room_id']) == room &&
-            (globalAck == 'common'
-                    ? {'applied', 'recorded', 'noop'}
-                    : {'applied', 'noop'})
-                .contains(d['outcome']),
-      );
-      roleUtc(d['executed_at']);
-      final affected = raidList(
-        d['affected_cycle_keys'],
-      ).map(raidCycleKey).toSet();
-      roleCheck(
-        affected.length == raidList(d['affected_cycle_keys']).length &&
-            ((globalAck == 'common' &&
-                    d['outcome'] == 'noop' &&
-                    affected.isEmpty) ||
-                (affected.length == (affectedTargets ?? []).length &&
-                    affected.containsAll(affectedTargets ?? []))),
-      );
-      if (globalAck == 'common') {
-        rolePositive(d['room_revision']);
-      } else {
-        roleId(d['membership_id']);
-        rolePositive(d['persistent_membership_revision']);
-        raidBool(d['room_ended']);
-        roleCheck(d['room_ended'] == (globalAck == 'end'));
-        for (final raw in raidList(d['revisions'])) {
-          final r = roleMap(raw);
-          roleShape(r, 'resource id revision');
-          raidText(r['resource']);
-          roleId(r['id']);
-          rolePositive(r['revision']);
-        }
-      }
-      return;
-    }
-    CycleReadScope(scope, target);
-    if (expectedScope != null) {
-      roleCheck(
-        scope['room_cycle_id'] == expectedScope['room_cycle_id'] &&
-            scope['target_generation'] == expectedScope['target_generation'],
-      );
-    }
+    final outcome = validateCycleWriteResult(
+      j,
+      path: path,
+      key: key,
+      room: room,
+      target: target,
+      applicationAck: applicationAck,
+      applicationId: applicationId,
+      applicationState: applicationState,
+      expectedScope: expectedScope,
+      globalAck: globalAck,
+      affectedTargets: affectedTargets,
+      submissionAck: submissionAck,
+      resumeAck: resumeAck,
+    );
+    if (outcome != null) onOutcome?.call(outcome);
+  });
+}
+
+/// The same frozen evidence validates a first response and a durable replay.
+String? validateCycleWriteResult(
+  Map<String, dynamic> j, {
+  required String path,
+  required String key,
+  required String room,
+  required String target,
+  required bool applicationAck,
+  String? applicationId,
+  String? applicationState,
+  Map<String, dynamic>? expectedScope,
+  String? globalAck,
+  List<String>? affectedTargets,
+  Map<String, dynamic>? submissionAck,
+  String? resumeAck,
+}) {
+  roleShape(j, 'scope data');
+  final scope = roleMap(j['scope']);
+  if (submissionAck != null) {
+    validateSubmissionAck(j, room, target, submissionAck, expectedScope!);
+    return null;
+  }
+  if (globalAck != null) {
+    roleShape(scope, 'server_now current_cycle_key policy_version');
+    roleUtc(scope['server_now']);
+    raidCycleKey(scope['current_cycle_key']);
+    roleCheck(scope['policy_version'] == twoCyclePolicy);
     final d = roleMap(j['data']);
     roleShape(
       d,
-      applicationAck
-          ? 'command_id room_id application_id revision state executed_at target_cycle_key'
-          : 'command_id outcome executed_at room_id target_cycle_key revisions',
+      globalAck == 'common'
+          ? 'command_id outcome executed_at room_id room_revision affected_cycle_keys'
+          : 'command_id outcome executed_at room_id membership_id persistent_membership_revision affected_cycle_keys room_ended revisions',
     );
     roleCheck(
       roleId(d['command_id']) == key &&
           roleId(d['room_id']) == room &&
-          d['target_cycle_key'] == target,
+          (globalAck == 'common'
+                  ? {'applied', 'recorded', 'noop'}
+                  : {'applied', 'noop'})
+              .contains(d['outcome']),
     );
     roleUtc(d['executed_at']);
-    if (applicationAck) {
-      roleId(d['application_id']);
-      rolePositive(d['revision']);
-      roleCheck(applicationId == null || d['application_id'] == applicationId);
-      roleCheck(applicationState == null || d['state'] == applicationState);
+    final affected = raidList(
+      d['affected_cycle_keys'],
+    ).map(raidCycleKey).toSet();
+    roleCheck(
+      affected.length == raidList(d['affected_cycle_keys']).length &&
+          ((globalAck == 'common' &&
+                  d['outcome'] == 'noop' &&
+                  affected.isEmpty) ||
+              (affected.length == (affectedTargets ?? []).length &&
+                  affected.containsAll(affectedTargets ?? []))),
+    );
+    if (globalAck == 'common') {
+      rolePositive(d['room_revision']);
     } else {
-      roleCheck({'applied', 'recorded', 'noop'}.contains(d['outcome']));
-      if (resumeAck != null) {
-        roleCheck(
-          (resumeAck == 'create' ? {'recorded'} : {'recorded', 'applied'})
-              .contains(d['outcome']),
-        );
-      }
-      if (path.endsWith('/completion') ||
-          path.endsWith('/personal-completion') ||
-          path.endsWith('/weekly-incomplete-closures')) {
-        roleCheck({'applied', 'noop'}.contains(d['outcome']));
-      }
+      roleId(d['membership_id']);
+      rolePositive(d['persistent_membership_revision']);
+      raidBool(d['room_ended']);
+      roleCheck(d['room_ended'] == (globalAck == 'end'));
       for (final raw in raidList(d['revisions'])) {
         final r = roleMap(raw);
         roleShape(r, 'resource id revision');
+        raidText(r['resource']);
         roleId(r['id']);
         rolePositive(r['revision']);
       }
-      onOutcome?.call(d['outcome'] as String);
     }
-  });
+    return null;
+  }
+  CycleReadScope(scope, target);
+  if (expectedScope != null) {
+    roleCheck(
+      scope['room_cycle_id'] == expectedScope['room_cycle_id'] &&
+          scope['target_generation'] == expectedScope['target_generation'],
+    );
+  }
+  final d = roleMap(j['data']);
+  roleShape(
+    d,
+    applicationAck
+        ? 'command_id room_id application_id revision state executed_at target_cycle_key'
+        : 'command_id outcome executed_at room_id target_cycle_key revisions',
+  );
+  roleCheck(
+    roleId(d['command_id']) == key &&
+        roleId(d['room_id']) == room &&
+        d['target_cycle_key'] == target,
+  );
+  roleUtc(d['executed_at']);
+  if (applicationAck) {
+    roleId(d['application_id']);
+    rolePositive(d['revision']);
+    roleCheck(applicationId == null || d['application_id'] == applicationId);
+    roleCheck(applicationState == null || d['state'] == applicationState);
+  } else {
+    roleCheck({'applied', 'recorded', 'noop'}.contains(d['outcome']));
+    if (resumeAck != null) {
+      roleCheck(
+        (resumeAck == 'create' ? {'recorded'} : {'recorded', 'applied'})
+            .contains(d['outcome']),
+      );
+    }
+    if (path.endsWith('/completion') ||
+        path.endsWith('/personal-completion') ||
+        path.endsWith('/weekly-incomplete-closures')) {
+      roleCheck({'applied', 'noop'}.contains(d['outcome']));
+    }
+    for (final raw in raidList(d['revisions'])) {
+      final r = roleMap(raw);
+      roleShape(r, 'resource id revision');
+      roleId(r['id']);
+      rolePositive(r['revision']);
+    }
+    return d['outcome'] as String;
+  }
+  return null;
 }

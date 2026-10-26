@@ -5,6 +5,8 @@ import '../../data/application_messages.dart';
 import 'application_messages_controller.dart';
 import '../../data/beta/recruitment_command_transport.dart';
 import '../../data/beta/beta_contract.dart';
+import '../../data/beta/recruitment_command.dart';
+import '../../data/beta/participation_command_evidence.dart';
 import '../../../account/domain/member_raid_models.dart' show raidList;
 import '../../../account/domain/role_summary.dart' show roleMap;
 import '../../data/cycle_member_actions.dart';
@@ -45,6 +47,96 @@ class _CycleCommand {
   }) : evidence = Map.unmodifiable(evidence),
        encoded = jsonEncode(body),
        key = newScopedCommandKey();
+  _CycleCommand.restored(
+    RecruitmentCommand saved,
+    ParticipationCommandEvidence info,
+  ) : journal = saved,
+      storedEvidence = info,
+      path = saved.path,
+      encoded = saved.rawBody,
+      key = saved.key,
+      room = info.room,
+      target = info.target,
+      createdAt = saved.createdAt,
+      method = saved.method,
+      status = saved.expectedStatus,
+      evidence = info.scope,
+      applicationAck = info.kind == 'application',
+      applicationId = info.wire['application_id'] as String?,
+      applicationState = info.wire['application_state'] as String?,
+      globalAck = info.wire['global_ack'] as String?,
+      affectedTargets = info.affected,
+      submissionAck = info.wire['submission_ack'] as Map<String, dynamic>?,
+      resumeAck = null,
+      departure = null,
+      removal = null,
+      removalMode = null,
+      membership = null;
+  RecruitmentCommand? journal;
+  ParticipationCommandEvidence? storedEvidence;
+  ParticipationCommandEvidence freeze(RecruitmentContractMode mode) {
+    if (storedEvidence != null) return storedEvidence!;
+    final contract = BetaContract(mode: mode),
+        query = contract.query(method, path, {});
+    final affected = affectedTargets ?? [target],
+        targets = <String>{target, ...affected}.toList();
+    final kind = membership != null
+        ? 'membership'
+        : removal != null
+        ? 'removal'
+        : departure != null
+        ? 'departure'
+        : submissionAck != null
+        ? 'submission'
+        : globalAck != null
+        ? 'global'
+        : applicationAck
+        ? 'application'
+        : 'basic';
+    final frozen = ParticipationCommandEvidence.create(
+      kind: kind,
+      room: room,
+      target: target,
+      scope: evidence,
+      applicationId: applicationId,
+      applicationState: applicationState,
+      affected: affected,
+      globalAck: globalAck,
+      submissionAck: submissionAck,
+      details: membership != null
+          ? MembershipAckEvidence.fromPreview(membership!).wire
+          : removal != null
+          ? RemovalAckEvidence.fromPreview(removal!, removalMode!).wire
+          : departure != null
+          ? DepartureAckEvidence.fromPreview(departure!).wire
+          : null,
+      method: method,
+      path: path,
+      rawQuery: jsonEncode(query),
+      rawBody: encoded,
+      key: key,
+      status: status,
+      targets: targets,
+    );
+    journal = RecruitmentCommand(
+      owner: RecruitmentCommandOwner.participation,
+      operation: contract.operation(method, path)['id'] as String,
+      method: method,
+      path: path,
+      query: query,
+      targetCycles: targets,
+      rawBody: encoded,
+      key: key,
+      createdAt: createdAt.toUtc(),
+      expectedStatus: status,
+      contractMode: mode,
+      version: 3,
+      validationSnapshot: frozen.wire,
+    );
+    storedEvidence = frozen;
+    return frozen;
+  }
+
   final String path, encoded, key, room, target;
   final String? applicationId, applicationState;
   final String method;
@@ -88,11 +180,14 @@ class CycleParticipationController extends ChangeNotifier {
     }
     session.addListener(_access);
     changes.addListener(_access);
+    if (commandTransport != null && session.isAuthenticated) {
+      unawaited(restorePending());
+    }
   }
   final CycleInteractionGateway gateway;
   ApplicationMessagesController? messages;
 
-  /// Presets use durable transport; participation commands keep their memory journal.
+  /// Production creation, participation and presets use independent durable slots.
   final RecruitmentCommandTransport? commandTransport;
   final AccountReadSession session;
   final Listenable changes;
@@ -105,6 +200,25 @@ class CycleParticipationController extends ChangeNotifier {
   int _epoch = 0, mutationVersion = 0;
   String? failure, lastRoom, lastTarget, notice;
   _CycleCommand? _pending;
+  bool restoring = false;
+  String? recoveryIssue;
+  String? _publishedKey;
+  bool _restoredRequest = false;
+  bool get needsReview =>
+      recoveryIssue == 'REQUEST_REVIEW_REQUIRED' ||
+      (_pending != null &&
+          !{
+            RecruitmentCommandState.acknowledged,
+            RecruitmentCommandState.rejected,
+          }.contains(_pending!.journal?.state) &&
+          (now().isBefore(_pending!.createdAt) ||
+              now().difference(_pending!.createdAt) >=
+                  const Duration(hours: 24)));
+  String? get pendingKind => _pending?.storedEvidence?.kind;
+  bool get pendingAcknowledged =>
+      _pending?.journal?.state == RecruitmentCommandState.acknowledged;
+  bool get waitingToRetry => _retryAt != null && now().isBefore(_retryAt!);
+
   (String key, String room, String target)? departureSuccess;
   (String key, String room, String target, String member)? removalSuccess;
   (String key, MembershipActionResult result)? membershipSuccess;
@@ -114,7 +228,7 @@ class CycleParticipationController extends ChangeNotifier {
   Timer? _retryTimer;
   (String, String, String, String)? scheduleSuccess;
   String? get pendingRequestKey => _pending?.key;
-  bool get hasPending => _pending != null;
+  bool get hasPending => _pending != null || recoveryIssue != null;
 
   /// Retained implementation only; see docs/project/INACTIVE_FEATURES.md (IF-001).
   /// Production has no switch to re-enable new closure/resume commands.
@@ -123,14 +237,29 @@ class CycleParticipationController extends ChangeNotifier {
       !_disposed &&
       session.isAuthenticated &&
       !busy &&
+      !restoring &&
       !hasPending &&
       (_retryAt == null || !now().isBefore(_retryAt!));
-  bool get canRetry =>
-      !busy &&
-      session.isAuthenticated &&
-      _pending != null &&
-      now().difference(_pending!.createdAt) < const Duration(hours: 24) &&
-      (_retryAt == null || !now().isBefore(_retryAt!));
+  bool get canRetry {
+    if (_disposed || busy || restoring || !session.isAuthenticated) {
+      return false;
+    }
+    if (recoveryIssue != null) {
+      return recoveryIssue == 'LOCAL_STORAGE_UNAVAILABLE' && _pending == null;
+    }
+    final command = _pending;
+    if (command == null) return false;
+    if ({
+      RecruitmentCommandState.acknowledged,
+      RecruitmentCommandState.rejected,
+    }.contains(command.journal?.state)) {
+      return true;
+    }
+    return !now().isBefore(command.createdAt) &&
+        now().difference(command.createdAt) < const Duration(hours: 24) &&
+        (_retryAt == null || !now().isBefore(_retryAt!));
+  }
+
   String? get pendingRoom => _pending?.room;
   String? get pendingTarget => _pending?.target;
   void _emit() {
@@ -147,6 +276,10 @@ class CycleParticipationController extends ChangeNotifier {
     _binding = scopeKey();
     _epoch++;
     _pending = null;
+    recoveryIssue = null;
+    _publishedKey = null;
+    _restoredRequest = false;
+    restoring = false;
     departureSuccess = null;
     removalSuccess = null;
     membershipSuccess = null;
@@ -158,9 +291,34 @@ class CycleParticipationController extends ChangeNotifier {
     _retryAt = null;
     _retryTimer?.cancel();
     _emit();
+    if (commandTransport != null && session.isAuthenticated) {
+      unawaited(restorePending());
+    }
   }
 
-  Future<T?> _read<T>(Future<T> Function() f) async {
+  Future<T?> _read<T>(
+    Future<T> Function() f, {
+    bool allowPending = false,
+  }) async {
+    if (allowPending) {
+      if (_disposed || !session.isAuthenticated) return null;
+      final e = _epoch;
+      try {
+        final value = await f();
+        return _valid(e) ? value : null;
+      } on AccountReadException catch (error) {
+        if (_valid(e)) {
+          failure = error.code;
+          _emit();
+        }
+      } catch (_) {
+        if (_valid(e)) {
+          failure = 'INVALID_RESPONSE';
+          _emit();
+        }
+      }
+      return null;
+    }
     if (!canAct) return null;
     final e = _epoch;
     busy = true;
@@ -478,6 +636,7 @@ class CycleParticipationController extends ChangeNotifier {
     String? cursor,
   }) => _read(
     () => gateway.scheduleRead(room, target, kind, id: id, cursor: cursor),
+    allowPending: true,
   );
   Future<CycleSchedulePreview?> schedulePreview(
     String room,
@@ -802,8 +961,82 @@ class CycleParticipationController extends ChangeNotifier {
     }
   }
 
+  Future<void> restorePending() async {
+    if (_disposed ||
+        !session.isAuthenticated ||
+        commandTransport == null ||
+        restoring) {
+      return;
+    }
+    final e = _epoch;
+    restoring = true;
+    _emit();
+    try {
+      final saved = await commandTransport!.restore(
+        RecruitmentCommandOwner.participation,
+      );
+      if (!_valid(e)) return;
+      if (saved == null) {
+        recoveryIssue = null;
+        failure = null;
+        return;
+      }
+      if (saved.version != 3 ||
+          saved.validationSnapshot == null ||
+          saved.path.contains('resume') ||
+          saved.path.contains('weekly-incomplete-closures')) {
+        recoveryIssue = 'REQUEST_REVIEW_REQUIRED';
+        return;
+      }
+      final info = ParticipationCommandEvidence(saved.validationSnapshot!);
+      _pending = _CycleCommand.restored(saved, info);
+      _restoredRequest = true;
+      _retryAt = saved.retryNotBefore;
+      if (saved.state == RecruitmentCommandState.needsReview) {
+        recoveryIssue = 'REQUEST_REVIEW_REQUIRED';
+        return;
+      }
+      recoveryIssue = null;
+      if (saved.state == RecruitmentCommandState.acknowledged) {
+        await _send(e);
+      } else if (saved.state == RecruitmentCommandState.rejected) {
+        await commandTransport!.releaseResolved(saved.owner, saved.key);
+        if (_valid(e)) {
+          _pending = null;
+          _restoredRequest = false;
+          _retryAt = null;
+          _retryTimer?.cancel();
+          notice = '이전 요청은 반영되지 않았습니다. 현재 상태를 확인한 뒤 다시 시도해 주세요.';
+        }
+      } else if (_retryAt != null && now().isBefore(_retryAt!)) {
+        _retryTimer?.cancel();
+        _retryTimer = Timer(_retryAt!.difference(now()), _emit);
+      }
+    } catch (error) {
+      if (_valid(e)) {
+        if (_pending?.journal?.state == RecruitmentCommandState.rejected) {
+          failure = 'LOCAL_STORAGE_UNAVAILABLE';
+          recoveryIssue = null;
+        } else {
+          recoveryIssue = error is FormatException
+              ? 'REQUEST_REVIEW_REQUIRED'
+              : 'LOCAL_STORAGE_UNAVAILABLE';
+        }
+      }
+    } finally {
+      if (_valid(e)) {
+        restoring = false;
+        _emit();
+      }
+    }
+  }
+
   Future<void> retry() async {
     if (!canRetry) return;
+    if (_pending == null) {
+      await restorePending();
+      return;
+    }
     final e = _epoch;
     busy = true;
     failure = null;
@@ -823,7 +1056,36 @@ class CycleParticipationController extends ChangeNotifier {
     try {
       String? resumeOutcome;
       MembershipActionResult? membershipResult;
-      if (command.membership != null) {
+      if (commandTransport != null) {
+        final info = command.freeze(commandTransport!.mode),
+            journal = command.journal!;
+        final raw = await commandTransport!.submit(
+          journal,
+          validateAck: (raw) {
+            info.validate(
+              raw,
+              method: journal.method,
+              path: journal.path,
+              key: journal.key,
+              status: journal.expectedStatus,
+              mode: journal.contractMode,
+            );
+          },
+        );
+        if (!_valid(e)) return;
+        command.journal = journal.transition(
+          state: RecruitmentCommandState.acknowledged,
+          rawAck: jsonEncode(raw),
+        );
+        membershipResult = info.validate(
+          raw,
+          method: journal.method,
+          path: journal.path,
+          key: journal.key,
+          status: journal.expectedStatus,
+          mode: journal.contractMode,
+        );
+      } else if (command.membership != null) {
         membershipResult = await (gateway as MembershipActionGateway)
             .writeMembershipAction(
               command.membership!,
@@ -866,9 +1128,10 @@ class CycleParticipationController extends ChangeNotifier {
         );
       }
       if (!_valid(e)) return;
-      if (command.path.endsWith('/applications') ||
-          command.path.endsWith('/join') ||
-          command.path.endsWith('/character-changes')) {
+      if (!_restoredRequest &&
+          (command.path.endsWith('/applications') ||
+              command.path.endsWith('/join') ||
+              command.path.endsWith('/character-changes'))) {
         admissionSuccess = (
           command.key,
           command.room,
@@ -881,13 +1144,19 @@ class CycleParticipationController extends ChangeNotifier {
         );
       }
       if (membershipResult != null) {
-        membershipSuccess = (command.key, membershipResult);
+        if (!_restoredRequest) {
+          membershipSuccess = (command.key, membershipResult);
+        }
         notice = '요청이 반영되었습니다.';
       }
-      if (command.departure != null) {
+      if (!_restoredRequest &&
+          (command.departure != null ||
+              command.storedEvidence?.kind == 'departure')) {
         departureSuccess = (command.key, command.room, command.target);
       }
-      if (command.removal != null) {
+      if (!_restoredRequest &&
+          (command.removal != null ||
+              command.storedEvidence?.kind == 'removal')) {
         removalSuccess = (
           command.key,
           command.room,
@@ -895,9 +1164,10 @@ class CycleParticipationController extends ChangeNotifier {
           command.removal!.member,
         );
       }
-      if (command.path.endsWith('/schedule-proposals') ||
-          command.path.endsWith('/responses') ||
-          command.path.endsWith('/availability-submission')) {
+      if (!_restoredRequest &&
+          (command.path.endsWith('/schedule-proposals') ||
+              command.path.endsWith('/responses') ||
+              command.path.endsWith('/availability-submission'))) {
         scheduleSuccess = (
           command.key,
           command.room,
@@ -905,7 +1175,19 @@ class CycleParticipationController extends ChangeNotifier {
           command.path,
         );
       }
-      _pending = null;
+      if (commandTransport != null && _publishedKey == command.key) {
+        await commandTransport!.releaseResolved(
+          RecruitmentCommandOwner.participation,
+          command.key,
+        );
+        if (_valid(e)) {
+          _pending = null;
+          _restoredRequest = false;
+          failure = null;
+        }
+        return;
+      }
+      if (commandTransport == null) _pending = null;
       _retryAt = null;
       failure = null;
       if (membershipResult != null) {
@@ -941,14 +1223,29 @@ class CycleParticipationController extends ChangeNotifier {
         try {
           await onRelationEnded?.call(
             List.unmodifiable(
-              relationEnded!.$3.where(
-                (t) => !membershipResult!.affected.contains(t),
-              ),
+              ([
+                command.evidence['current_cycle_key'] as String,
+                const PartyCyclePolicy().keyFor(
+                  const PartyCyclePolicy()
+                      .fromKey(command.evidence['current_cycle_key'] as String)!
+                      .endsAt,
+                ),
+              ]).where((t) => !membershipResult!.affected.contains(t)),
             ),
           );
         } catch (_) {
           if (_valid(e)) notice = '요청은 반영되었습니다. 최신 상태를 다시 불러와 주세요.';
         }
+      }
+      if (commandTransport != null && _valid(e)) {
+        _publishedKey = command.key;
+        await commandTransport!.releaseResolved(
+          RecruitmentCommandOwner.participation,
+          command.key,
+        );
+        if (!_valid(e)) return;
+        _pending = null;
+        _restoredRequest = false;
       }
       if (weeklyInterruptionEnabled &&
           command.resumeAck != null &&
@@ -977,6 +1274,37 @@ class CycleParticipationController extends ChangeNotifier {
     } on AccountReadException catch (error) {
       if (!_valid(e)) return;
       _fail(error);
+      if (commandTransport != null) {
+        if (error.code == 'REQUEST_REVIEW_REQUIRED') {
+          recoveryIssue = error.code;
+        }
+        if (definiteRecruitmentRejection(error.status, error.code)) {
+          try {
+            final saved = await commandTransport!.restore(
+              RecruitmentCommandOwner.participation,
+            );
+            if (!_valid(e)) return;
+            if (saved?.state == RecruitmentCommandState.rejected &&
+                saved?.key == command.key) {
+              command.journal = saved;
+              await commandTransport!.releaseResolved(
+                RecruitmentCommandOwner.participation,
+                command.key,
+              );
+              if (_valid(e)) {
+                _pending = null;
+                _restoredRequest = false;
+                _retryAt = null;
+                _retryTimer?.cancel();
+                notice = '현재 상태를 다시 확인한 뒤 시도해 주세요.';
+              }
+            }
+          } catch (_) {
+            if (_valid(e)) failure = 'LOCAL_STORAGE_UNAVAILABLE';
+          }
+        }
+        return;
+      }
       if ({400, 403, 404, 413}.contains(error.status) ||
           (error.status == 409 &&
               !{
@@ -990,8 +1318,19 @@ class CycleParticipationController extends ChangeNotifier {
           await changed(command.room, target, applied: false);
         }
       }
-    } catch (_) {
-      if (_valid(e)) failure = 'INVALID_RESPONSE';
+    } catch (error) {
+      if (_valid(e)) {
+        failure = 'INVALID_RESPONSE';
+        if (commandTransport != null &&
+            command.journal?.state == RecruitmentCommandState.acknowledged) {
+          if (error is FormatException) {
+            recoveryIssue = 'REQUEST_REVIEW_REQUIRED';
+          } else {
+            failure = 'LOCAL_STORAGE_UNAVAILABLE';
+            notice = '요청은 반영되었습니다. 결과 정리를 다시 시도해 주세요.';
+          }
+        }
+      }
     }
   }
 

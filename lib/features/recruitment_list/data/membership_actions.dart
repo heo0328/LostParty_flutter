@@ -420,14 +420,17 @@ class MembershipActionResult {
     Map<String, dynamic> raw,
     MembershipActionPreview p,
     String key,
+  ) : this.fromEvidence(raw, MembershipAckEvidence.fromPreview(p), key);
+  MembershipActionResult.fromEvidence(
+    Map<String, dynamic> raw,
+    MembershipAckEvidence p,
+    String key,
   ) : wire = _snapshot(raw) {
     roleId(key);
     roleShape(wire, 'scope data');
     final scope = roleMap(wire['scope']);
     _scope(scope, p.view);
-    roleCheck(
-      scope['current_cycle_key'] == p.context.scope['current_cycle_key'],
-    );
+    roleCheck(scope['current_cycle_key'] == p.scope['current_cycle_key']);
     data = roleMap(wire['data']);
     roleShape(
       data,
@@ -440,8 +443,7 @@ class MembershipActionResult {
           data['outcome'] == 'applied',
     );
     actionTime(data['executed_at']);
-    final actor = roleMap(p.context.data['actor']),
-        effect = roleMap(p.impact['room_effect']);
+    final actor = p.actor, effect = roleMap(p.impact['room_effect']);
     roleCheck(data['actor_membership_id'] == actor['membership_id']);
     _after(roleMap(effect['room_revision_rule']), data['room_revision']);
     _after(
@@ -551,4 +553,34 @@ class MembershipActionResult {
       );
   List<String> get affected =>
       List<String>.unmodifiable(data['affected_cycle_keys'] as List);
+}
+
+class MembershipAckEvidence {
+  MembershipAckEvidence(Map<String, dynamic> json) : wire = _snapshot(json) {
+    roleShape(wire, 'room view action scope actor impact');
+    roleId(room);
+    _scope(scope, view);
+    roleCheck(
+      membershipActionNames.contains(action) && action != 'recover_leadership',
+    );
+    roleId(actor['membership_id']);
+  }
+  factory MembershipAckEvidence.fromPreview(MembershipActionPreview p) =>
+      MembershipAckEvidence({
+        'room': p.room,
+        'view': p.view,
+        'action': p.action,
+        'scope': p.context.scope,
+        'actor': {'membership_id': p.context.data['actor']['membership_id']},
+        'impact': p.impact,
+      });
+  final Map<String, dynamic> wire;
+  String get room => wire['room'] as String;
+  String get view => wire['view'] as String;
+  String get action => wire['action'] as String;
+  Map<String, dynamic> get scope => roleMap(wire['scope']);
+  Map<String, dynamic> get actor => roleMap(wire['actor']);
+  Map<String, dynamic> get impact => roleMap(wire['impact']);
+  List<String> get affected =>
+      List<String>.from(impact['affected_cycle_keys'] as List);
 }

@@ -318,6 +318,18 @@ void validateRemovalResult(
   String mode,
   String key,
 ) {
+  validateRemovalEvidenceResult(
+    raw,
+    RemovalAckEvidence.fromPreview(p, mode),
+    key,
+  );
+}
+
+void validateRemovalEvidenceResult(
+  Map<String, dynamic> raw,
+  RemovalAckEvidence p,
+  String key,
+) {
   roleShape(raw, 'scope data');
   final scope = roleMap(raw['scope']), d = roleMap(raw['data']);
   CycleReadScope({
@@ -353,13 +365,13 @@ void validateRemovalResult(
         d['subject_membership_id'] == p.membership,
   );
   final executed = actionTime(d['executed_at']),
-      conf = roleMap(p.option(mode)['confirmation']);
+      conf = roleMap(p.option['confirmation']);
   roleCheck(
     executed == actionTime(scope['server_now']) &&
         !executed.isBefore(actionTime(conf['issued_at'])) &&
         executed.isBefore(actionTime(conf['expires_at'])),
   );
-  final impact = roleMap(p.option(mode)['impact']);
+  final impact = roleMap(p.option['impact']);
   roleCheck(
     scheduleStable(d['affected_cycle_keys']) ==
         scheduleStable(impact['affected_cycle_keys']),
@@ -655,6 +667,18 @@ void validateDepartureResult(
   DeparturePreview p,
   String key,
 ) {
+  validateDepartureEvidenceResult(
+    raw,
+    DepartureAckEvidence.fromPreview(p),
+    key,
+  );
+}
+
+void validateDepartureEvidenceResult(
+  Map<String, dynamic> raw,
+  DepartureAckEvidence p,
+  String key,
+) {
   roleShape(raw, 'scope data');
   final scope = roleMap(raw['scope']), d = roleMap(raw['data']);
   CycleReadScope({
@@ -757,3 +781,120 @@ void validateDepartureResult(
     }
   }
 }
+
+class RemovalAckEvidence {
+  RemovalAckEvidence(Map<String, dynamic> json)
+    : wire = _freeze(json) as Map<String, dynamic> {
+    roleShape(
+      wire,
+      'room target member membership scope source opposite option',
+    );
+    roleId(room);
+    roleId(member);
+    roleId(membership);
+    raidCycleKey(target);
+  }
+  factory RemovalAckEvidence.fromPreview(RemovalPreview p, String mode) =>
+      RemovalAckEvidence({
+        'room': p.room,
+        'target': p.target,
+        'member': p.member,
+        'membership': p.membership,
+        'scope': p.scope,
+        'source': _removalAckTarget(p.source),
+        'opposite': p.opposite['target'] == null
+            ? {}
+            : {'target': _removalAckTarget(roleMap(p.opposite['target']))},
+        'option': {
+          'confirmation': {
+            'issued_at': p.option(mode)['confirmation']['issued_at'],
+            'expires_at': p.option(mode)['confirmation']['expires_at'],
+          },
+          'impact': {
+            'affected_cycle_keys': p.option(
+              mode,
+            )['impact']['affected_cycle_keys'],
+            'targets': [
+              for (final t in raidList(p.option(mode)['impact']['targets']))
+                {
+                  for (final k in [
+                    'cancel_assignment_ids',
+                    'preserved_completed_assignment_ids',
+                  ])
+                    k: t[k],
+                },
+            ],
+          },
+        },
+      });
+  final Map<String, dynamic> wire;
+  String get room => wire['room'] as String;
+  String get target => wire['target'] as String;
+  String get member => wire['member'] as String;
+  String get membership => wire['membership'] as String;
+  Map<String, dynamic> get scope => roleMap(wire['scope']);
+  Map<String, dynamic> get source => roleMap(wire['source']);
+  Map<String, dynamic> get opposite => roleMap(wire['opposite']);
+  Map<String, dynamic> get option => roleMap(wire['option']);
+}
+
+class DepartureAckEvidence {
+  DepartureAckEvidence(Map<String, dynamic> json)
+    : wire = _freeze(json) as Map<String, dynamic> {
+    roleShape(wire, 'room target scope subject confirmation impact leadership');
+    roleId(room);
+    raidCycleKey(target);
+  }
+  factory DepartureAckEvidence.fromPreview(DeparturePreview p) =>
+      DepartureAckEvidence({
+        'room': p.room,
+        'target': p.target,
+        'scope': p.scope,
+        'subject': {
+          for (final k in [
+            'membership_id',
+            'cycle_member_id',
+            'cycle_member_revision',
+          ])
+            k: p.subject[k],
+        },
+        'confirmation': {
+          'issued_at': p.confirmation!['issued_at'],
+          'expires_at': p.confirmation!['expires_at'],
+        },
+        'impact': {
+          for (final k in [
+            'complete_assignment_ids',
+            'cancel_assignment_ids',
+            'preserved_completed_assignment_ids',
+            'departure_effect',
+          ])
+            k: p.impact[k],
+          'successor': p.impact['successor'] == null
+              ? null
+              : {'cycle_member_id': p.impact['successor']['cycle_member_id']},
+        },
+        'leadership': p.leadership,
+      });
+  final Map<String, dynamic> wire;
+  String get room => wire['room'] as String;
+  String get target => wire['target'] as String;
+  Map<String, dynamic> get scope => roleMap(wire['scope']);
+  Map<String, dynamic> get subject => roleMap(wire['subject']);
+  Map<String, dynamic>? get confirmation => roleMap(wire['confirmation']);
+  Map<String, dynamic> get impact => roleMap(wire['impact']);
+  Map<String, dynamic> get leadership => roleMap(wire['leadership']);
+}
+
+Map<String, dynamic> _removalAckTarget(Map<String, dynamic> t) => {
+  for (final k in [
+    'target_cycle_key',
+    'room_cycle_id',
+    'target_generation',
+    'target_revision',
+    'target_cycle_member_id',
+    'target_cycle_member_revision',
+    'leadership',
+  ])
+    k: t[k],
+};

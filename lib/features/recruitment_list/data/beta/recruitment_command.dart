@@ -2,6 +2,7 @@ import 'dart:convert';
 import '../../../account/domain/role_summary.dart';
 import '../../../account/domain/member_raid_models.dart';
 import 'beta_contract.dart';
+import 'participation_command_evidence.dart';
 
 enum RecruitmentCommandOwner { creation, participation, presets }
 
@@ -21,6 +22,7 @@ class RecruitmentCommand {
     required this.key,
     required this.createdAt,
     this.attemptedAt,
+    this.retryNotBefore,
     this.state = RecruitmentCommandState.pending,
     this.rawAck,
     this.contractMode = RecruitmentContractMode.betaWire2,
@@ -51,6 +53,9 @@ class RecruitmentCommand {
           ? null
           : roleUtc(j['attempted_at']),
       state = RecruitmentCommandState.values.byName(j['state'] as String),
+      retryNotBefore = j['retry_not_before'] == null
+          ? null
+          : roleUtc(j['retry_not_before']),
       rawAck = j['raw_ack'] as String?,
       contractMode = RecruitmentContractMode.values.byName(
         j['contract_mode'] as String,
@@ -62,9 +67,9 @@ class RecruitmentCommand {
       rejection = betaFreeze(j['rejection']) as Map<String, dynamic>? {
     roleShape(
       j,
-      'version owner operation method path raw_query target_cycles raw_body key created_at attempted_at state raw_ack contract_mode expected_status${version == 2 ? ' validation_snapshot rejection' : ''}',
+      'version owner operation method path raw_query target_cycles raw_body key created_at attempted_at state raw_ack contract_mode expected_status${version >= 2 ? ' validation_snapshot rejection' : ''}${version == 3 ? ' retry_not_before' : ''}',
     );
-    roleCheck(version == 1 || version == 2);
+    roleCheck(version == 1 || version == 2 || version == 3);
     _validate();
   }
   factory RecruitmentCommand.decode(String source) {
@@ -82,7 +87,7 @@ class RecruitmentCommand {
   final String operation, method, path, rawQuery, rawBody, key;
   final List<String> targetCycles;
   final DateTime createdAt;
-  final DateTime? attemptedAt;
+  final DateTime? attemptedAt, retryNotBefore;
   final RecruitmentCommandState state;
   final String? rawAck;
   final RecruitmentContractMode contractMode;
@@ -94,9 +99,9 @@ class RecruitmentCommand {
   bool expired(DateTime now) =>
       !now.isBefore(createdAt.add(const Duration(hours: 24)));
   void _validate() {
-    roleCheck(version == 1 || version == 2);
+    roleCheck(version == 1 || version == 2 || version == 3);
     roleCheck(
-      version == 2 || (validationSnapshot == null && rejection == null),
+      version >= 2 || (validationSnapshot == null && rejection == null),
     );
     roleCheck(
       (state == RecruitmentCommandState.rejected) == (rejection != null),
@@ -107,6 +112,7 @@ class RecruitmentCommand {
         definiteRecruitmentRejection(rejection!['status'], rejection!['code']),
       );
     }
+    roleCheck(retryNotBefore == null || retryNotBefore!.isUtc);
     roleId(key);
     roleCheck(
       RegExp(
@@ -152,7 +158,23 @@ class RecruitmentCommand {
       path != '/v2/raid-rooms' || owner == RecruitmentCommandOwner.creation,
     );
     final body = roleMap(jsonDecode(rawBody));
-    if (validationSnapshot != null) {
+    roleCheck(
+      version == 3
+          ? owner == RecruitmentCommandOwner.participation
+          : retryNotBefore == null,
+    );
+    if (version == 3 && validationSnapshot != null) {
+      ParticipationCommandEvidence(validationSnapshot!).bind(
+        method,
+        path,
+        rawQuery,
+        rawBody,
+        key,
+        expectedStatus,
+        targetCycles,
+      );
+    }
+    if (validationSnapshot != null && version != 3) {
       roleCheck(version == 2 && owner == RecruitmentCommandOwner.creation);
       final e = validationSnapshot!;
       roleShape(e, 'room_id target_cycle_key effect created_cycles');
@@ -215,8 +237,9 @@ class RecruitmentCommand {
 
   Map<String, dynamic> toJson() => {
     'version': version,
-    if (version == 2) 'validation_snapshot': validationSnapshot,
-    if (version == 2) 'rejection': rejection,
+    if (version >= 2) 'validation_snapshot': validationSnapshot,
+    if (version == 3) 'retry_not_before': retryNotBefore?.toIso8601String(),
+    if (version >= 2) 'rejection': rejection,
     'owner': owner.name,
     'operation': operation,
     'method': method,
@@ -237,7 +260,8 @@ class RecruitmentCommand {
     Map<String, dynamic> original(RecruitmentCommand c) => c.toJson()
       ..remove('attempted_at')
       ..remove('state')
-      ..remove('raw_ack');
+      ..remove('raw_ack')
+      ..remove('retry_not_before');
     // A validated rejection resolves the request; it does not alter its recipe.
     final a = original(this)..remove('rejection'),
         b = original(other)..remove('rejection');
@@ -246,15 +270,19 @@ class RecruitmentCommand {
 
   RecruitmentCommand transition({
     DateTime? attemptedAt,
+    DateTime? retryNotBefore,
     RecruitmentCommandState? state,
     String? rawAck,
     Map<String, dynamic>? rejection,
   }) => RecruitmentCommand._({
     ...toJson(),
+    if (version == 3)
+      'retry_not_before': (retryNotBefore ?? this.retryNotBefore)
+          ?.toIso8601String(),
     if (attemptedAt != null) 'attempted_at': attemptedAt.toIso8601String(),
     if (state != null) 'state': state.name,
     'raw_ack': rawAck ?? this.rawAck,
-    if (version == 2) 'rejection': rejection ?? this.rejection,
+    if (version >= 2) 'rejection': rejection ?? this.rejection,
   });
 }
 

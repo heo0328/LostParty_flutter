@@ -23,7 +23,10 @@ class CycleCommandBanner extends StatelessWidget {
     listenable: controller,
     builder: (context, _) {
       final c = controller;
-      if (!c.hasPending && c.failure == null && c.notice == null) {
+      if (!c.restoring &&
+          !c.hasPending &&
+          c.failure == null &&
+          c.notice == null) {
         return const SizedBox.shrink();
       }
       return Padding(
@@ -31,11 +34,24 @@ class CycleCommandBanner extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (c.restoring) const Text('이전 요청을 확인하고 있습니다.'),
             if (c.hasPending)
-              Text('요청 대상 주차 · ${c.pendingTarget}\n아직 결과를 확인하지 못했습니다.'),
+              Text(
+                c.needsReview
+                    ? '이전 요청의 결과를 확인해야 합니다. 새 요청은 아직 보낼 수 없습니다.'
+                    : c.pendingAcknowledged
+                    ? '요청은 반영되었습니다. 결과 정리를 다시 시도해 주세요.'
+                    : c.waitingToRetry
+                    ? '${c.pendingTarget ?? ''} 요청 · 잠시 후 같은 요청을 다시 확인할 수 있습니다.'
+                    : '${const {'application': '신청', 'membership': '탈퇴·해산', 'removal': '내보내기', 'departure': '완료 후 탈퇴', 'submission': '내 일정 갱신', 'global': '모집 설정', 'basic': '참가·일정 변경'}[c.pendingKind] ?? '참가'} 요청 · ${c.pendingTarget ?? '대상 날짜 확인 필요'}\n아직 결과를 확인하지 못했습니다.',
+              ),
             if (c.failure != null)
               Text(
-                recruitmentFailureMessage(c.failure),
+                c.failure == 'REQUEST_REVIEW_REQUIRED'
+                    ? '이전 참가 요청의 결과를 확인해야 합니다.'
+                    : c.failure == 'LOCAL_STORAGE_UNAVAILABLE'
+                    ? '저장된 요청을 불러오거나 정리하지 못했습니다. 다시 시도해 주세요.'
+                    : recruitmentFailureMessage(c.failure),
                 style: const TextStyle(fontSize: 12, color: AppColors.error),
               ),
             if (c.notice != null)
@@ -43,9 +59,14 @@ class CycleCommandBanner extends StatelessWidget {
             if (c.hasPending)
               TextButton(
                 onPressed: c.canRetry ? () => c.retry() : null,
-                child: const Text('같은 요청 다시 확인'),
+                child: Text(
+                  c.recoveryIssue == 'LOCAL_STORAGE_UNAVAILABLE'
+                      ? '이전 요청 다시 불러오기'
+                      : '같은 요청 다시 확인',
+                ),
               ),
-            if (c.busy) const LinearProgressIndicator(minHeight: 2),
+            if (c.busy || c.restoring)
+              const LinearProgressIndicator(minHeight: 2),
           ],
         ),
       );

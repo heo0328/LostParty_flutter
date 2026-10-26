@@ -404,7 +404,9 @@ void main() {
       wrongAck = true;
       await controller.scheduleCommand(p, {});
       expect(controller.hasPending, true);
-      expect(await controller.scheduleRead(room, n, 'submission'), null);
+      expect(await controller.scheduleRead(room, n, 'submission'), isNotNull);
+      expect(controller.hasPending, true);
+      expect(controller.canAct, false);
       expect(refreshed, isEmpty);
       wrongAck = false;
       await controller.retry();
