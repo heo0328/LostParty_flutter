@@ -32,6 +32,85 @@ class _Weekly extends ChangeNotifier implements MemberWeeklyViewModel {
 }
 
 void main() {
+  testWidgets(
+    'command return selects participating once even when cached records were open',
+    (tester) async {
+      final session = ReadSessionFake(), weekly = _Weekly();
+      final dio = Dio(BaseOptions(baseUrl: 'https://example.test/api'));
+      final calls = <RequestOptions>[];
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (request, handler) {
+            calls.add(request);
+            handler.resolve(
+              Response(
+                requestOptions: request,
+                statusCode: 200,
+                data: f2.envelope(f1.current, {
+                  'items': [],
+                  'membership_head': 1,
+                  'next_cursor': null,
+                  'evaluated_at': f2.nowStamp,
+                }),
+              ),
+            );
+          },
+        ),
+      );
+      final repository = CycleReadRepository(
+        DioBackendAccountReadApi(dio, session),
+      );
+      String? receipt;
+      late StateSetter rebuild;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              rebuild = setState;
+              return CycleOwnRoomsPage(
+                weekly: weekly,
+                repository: repository,
+                initialTarget: f1.current,
+                returnCommandKey: receipt,
+                scopeKey: () => session.userId!,
+                onLogin: () {},
+                onRoom: (_, _) {},
+                onApplicationRoom: (_, _) {},
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('기록'));
+      await tester.pumpAndSettle();
+      expect(calls.last.queryParameters['state'], 'ended');
+      rebuild(() => receipt = 'verified-command');
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<SegmentedButton<int>>(find.byType(SegmentedButton<int>))
+            .selected,
+        {0},
+      );
+      await tester.tap(find.text('기록'));
+      await tester.pumpAndSettle();
+      rebuild(() {});
+      weekly.notifyListeners();
+      await tester.pumpAndSettle();
+      // A retained URL receipt must not keep overriding later manual tab choices.
+      expect(
+        tester
+            .widget<SegmentedButton<int>>(find.byType(SegmentedButton<int>))
+            .selected,
+        {2},
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      weekly.dispose();
+      session.dispose();
+      dio.close(force: true);
+    },
+  );
   for (final target in [f1.current, f1.next]) {
     testWidgets(
       'application card opens general detail at exact $target, never member reader',

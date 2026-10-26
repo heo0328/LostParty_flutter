@@ -222,6 +222,7 @@ class CycleParticipationController extends ChangeNotifier {
   bool get waitingToRetry => _retryAt != null && now().isBefore(_retryAt!);
 
   (String key, String room, String target)? departureSuccess;
+  (String key, String room, String target)? completionSuccess;
   (String key, String room, String target, String member)? removalSuccess;
   (String key, MembershipActionResult result)? membershipSuccess;
   (String key, String room, String target, String intent)? admissionSuccess;
@@ -283,6 +284,7 @@ class CycleParticipationController extends ChangeNotifier {
     _restoredRequest = false;
     restoring = false;
     departureSuccess = null;
+    completionSuccess = null;
     removalSuccess = null;
     membershipSuccess = null;
     relationEnded = null;
@@ -1152,6 +1154,9 @@ class CycleParticipationController extends ChangeNotifier {
           membershipSuccess = (command.key, membershipResult);
         }
         notice = '요청이 반영되었습니다.';
+      }
+      if (!_restoredRequest && command.path.endsWith('/completion')) {
+        completionSuccess = (command.key, command.room, command.target);
       }
       if (!_restoredRequest &&
           (command.departure != null ||

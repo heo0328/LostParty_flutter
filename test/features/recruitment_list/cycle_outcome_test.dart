@@ -157,6 +157,27 @@ void main() {
   );
 
   test(
+    'only validated weekly completion publishes the current-page receipt',
+    () async {
+      final value = await preview('complete_item');
+      changeAck = (raw) {
+        raw['data']['command_id'] = v1.membershipId;
+        return raw;
+      };
+      await controller.complete(value);
+      expect(controller.completionSuccess, isNull);
+      expect(controller.hasPending, true);
+      changeAck = null;
+      await controller.retry();
+      expect(controller.completionSuccess, isNotNull);
+      expect(controller.completionSuccess!.$2, room);
+      expect(controller.completionSuccess!.$3, c);
+      final key = controller.completionSuccess!.$1;
+      await controller.retry();
+      expect(controller.completionSuccess!.$1, key);
+    },
+  );
+  test(
     'production blocks closure reads and stale submission but keeps completion',
     () async {
       final stale = await preview('close_weekly');

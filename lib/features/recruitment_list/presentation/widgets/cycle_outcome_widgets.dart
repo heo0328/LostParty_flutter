@@ -1,3 +1,4 @@
+import 'cycle_action_dialog_route.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -74,6 +75,7 @@ class CycleOutcomeActions extends StatelessWidget {
                 )
               : showDialog<void>(
                   context: context,
+                  routeSettings: cycleActionDialogRoute(room, target),
                   builder: (_) => _OutcomeDialog(
                     controller: controller,
                     room: room,

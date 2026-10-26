@@ -565,6 +565,8 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                       : CycleOwnRoomsPage(
                           initialTarget:
                               state.uri.queryParameters['target_cycle_key'],
+                          returnCommandKey:
+                              state.uri.queryParameters['return_command_key'],
                           weekly: _memberAccount!.weekly!,
                           mutations: participation,
                           onRefresh: () => unawaited(raidUsage.refresh()),

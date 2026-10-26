@@ -1,3 +1,4 @@
+import 'cycle_action_dialog_route.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../data/cycle_member_actions.dart';
@@ -236,6 +237,7 @@ Future<void> showDeparture(
   required bool Function() isCurrent,
 }) => showDialog<void>(
   context: context,
+  routeSettings: cycleActionDialogRoute(room, target),
   builder: (_) => _DepartureDialog(
     controller: controller,
     room: room,

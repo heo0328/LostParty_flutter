@@ -32,11 +32,13 @@ class CycleOwnRoomsPage extends StatefulWidget {
     this.mutations,
     this.onRefresh,
     this.initialTarget,
+    this.returnCommandKey,
     this.onRecord,
     super.key,
   });
   final MemberWeeklyViewModel weekly;
   final String? initialTarget;
+  final String? returnCommandKey;
   final CycleParticipationController? mutations;
   final VoidCallback? onRefresh;
   final CycleReadRepository repository;
@@ -96,7 +98,8 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
   @override
   void didUpdateWidget(covariant CycleOwnRoomsPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialTarget != widget.initialTarget) {
+    if (oldWidget.initialTarget != widget.initialTarget ||
+        oldWidget.returnCommandKey != widget.returnCommandKey) {
       _initialApplied = false;
       _meta();
     }
@@ -105,13 +108,15 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
   void _meta() {
     final c = widget.weekly.cycles;
     if (c != null && m.signedIn) {
+      final returnToParticipation =
+          !_initialApplied && widget.returnCommandKey != null;
       final requested = !_initialApplied
           ? c.find(widget.initialTarget ?? '')?.key
           : null;
       _initialApplied = true;
       m.select(
         requested ?? c.find(m.target ?? '')?.key ?? c.current.key,
-        section: requested == null ? m.tab : 0,
+        section: requested == null && !returnToParticipation ? m.tab : 0,
       );
     }
   }

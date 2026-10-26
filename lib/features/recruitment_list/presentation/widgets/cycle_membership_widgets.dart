@@ -1,3 +1,4 @@
+import 'cycle_action_dialog_route.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -43,6 +44,7 @@ class CycleMembershipActions extends StatelessWidget {
         final onPressed = enabled
             ? () => showDialog<void>(
                 context: context,
+                routeSettings: cycleActionDialogRoute(menu.room, menu.view),
                 builder: (_) => _MembershipDialog(
                   controller: controller,
                   room: menu.room,

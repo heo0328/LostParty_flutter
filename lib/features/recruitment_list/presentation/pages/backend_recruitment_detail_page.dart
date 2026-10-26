@@ -1,3 +1,4 @@
+import '../widgets/cycle_action_dialog_route.dart';
 import 'dart:async';
 import 'schedule_comparison_page.dart';
 import '../widgets/schedule_design.dart';
@@ -62,6 +63,7 @@ class _BackendRecruitmentDetailPageState
   late final BackendRecruitmentDetailViewModel m;
   int _mutationVersion = 0;
   String? _departureKey;
+  String? _completionKey;
   String? _membershipKey;
   bool _leaving = false;
   @override
@@ -83,6 +85,7 @@ class _BackendRecruitmentDetailPageState
           : null,
     );
     _departureKey = widget.participation?.departureSuccess?.$1;
+    _completionKey = widget.participation?.completionSuccess?.$1;
     _membershipKey = widget.participation?.membershipSuccess?.$1;
     _mutationVersion = widget.participation?.mutationVersion ?? 0;
     widget.participation?.addListener(_changed);
@@ -90,7 +93,7 @@ class _BackendRecruitmentDetailPageState
   }
 
   void _changed() {
-    if (_leaving || m.readOnly) return;
+    if (_leaving || widget.recordAnchor != null) return;
     final c = widget.participation!;
     final membership = c.membershipSuccess;
     if (membership != null && membership.$1 != _membershipKey) {
@@ -98,30 +101,43 @@ class _BackendRecruitmentDetailPageState
       final result = membership.$2;
       if (result.room == widget.roomId && result.view == m.target) {
         if (result.exitsTarget(result.view)) {
-          _exitToTarget(c, result.view);
+          _exitToTarget(c, result.view, membership.$1);
           return;
         }
         // Opposite-week effects preserve this screen but invalidate its menu.
         unawaited(m.load());
       }
     }
-    if (c.mutationVersion == _mutationVersion) return;
-    _mutationVersion = c.mutationVersion;
     final departure = c.departureSuccess;
     if (departure != null &&
         departure.$1 != _departureKey &&
         departure.$2 == widget.roomId &&
         departure.$3 == m.target) {
       _departureKey = departure.$1;
-      _exitToTarget(c, departure.$3);
+      _exitToTarget(c, departure.$3, departure.$1);
       return;
     }
+    final completion = c.completionSuccess;
+    if (completion != null &&
+        completion.$1 != _completionKey &&
+        completion.$2 == widget.roomId &&
+        completion.$3 == m.target) {
+      _completionKey = completion.$1;
+      _exitToTarget(c, completion.$3, completion.$1);
+      return;
+    }
+    if (m.readOnly || c.mutationVersion == _mutationVersion) return;
+    _mutationVersion = c.mutationVersion;
     if (c.lastRoom == widget.roomId && c.lastTarget == m.target) {
       unawaited(m.load());
     }
   }
 
-  void _exitToTarget(CycleParticipationController c, String target) {
+  void _exitToTarget(
+    CycleParticipationController c,
+    String target,
+    String key,
+  ) {
     _leaving = true;
     final binding = c.scopeKey();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -131,14 +147,22 @@ class _BackendRecruitmentDetailPageState
         return;
       }
       final uri = GoRouter.of(context).routeInformationProvider.value.uri;
-      if (uri.path != '/recruitments/${widget.roomId}') {
+      if (uri.path != '/recruitments/${widget.roomId}' ||
+          ModalRoute.of(context)?.isCurrent != true) {
         _leaving = false;
         return;
       }
-      Navigator.of(
-        context,
-      ).popUntil((route) => route == ModalRoute.of(context));
-      context.go('/raid-status?target_cycle_key=$target');
+      final router = GoRouter.of(context);
+      closeCycleActionDialogs(context, widget.roomId, target);
+      router.go(
+        Uri(
+          path: '/raid-status',
+          queryParameters: {
+            'target_cycle_key': target,
+            'return_command_key': key,
+          },
+        ).toString(),
+      );
     });
   }
 
