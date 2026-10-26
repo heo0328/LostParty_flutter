@@ -136,7 +136,16 @@ class _MembershipDialogState extends State<_MembershipDialog> {
     super.initState();
     binding = c.scopeKey();
     c.addListener(changed);
-    unawaited(load());
+    // This read emits app-owned busy state; don't notify retained pages while
+    // the dialog is still being mounted in the current build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!valid) {
+        setState(() => loading = false);
+        return;
+      }
+      unawaited(load());
+    });
   }
 
   void changed() {

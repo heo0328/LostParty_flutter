@@ -2806,5 +2806,14 @@ Backend172/source1800160d·개발반영e4137073(6414001866), join690f36f를 대�
 - 책임/재사용: RecruitmentStartPolicy에 StartTimePrecision과 failureReason을 추가해 기본5분/베타 명시분을 구분한다. 기존 시간/주차/점검/30분/진행시간 경계를 한 곳에서 재사용하고 생성 VM·BetaScheduleEditor·개방 최종검사·제안 명령에 연결했다. 자동조율/개인표/진행시간/구대안 검사는 전역 완화하지 않는다.
 - UI/수명: showRecruitmentTimePicker를 생성/개방에 공통 사용한다. Flutter SDK flutter_localizations(+intl 전이 의존성)만 추가해 대화상자만 한글화하고 앱 전체 locale은 바꾸지 않는다. 작은 배율의 최소높이 보호를 재사용하고320폭의12시간 입력 최소폭280/버튼 잘림을 로컬 여백으로 보완했다. 취소/다른 회원·주차/초안 변경 이후 늦은 반환은 무시한다. 불가 선택은 초안에 유지해 구체 사유/제출 비활성으로 안내하며 자동 보정하지 않는다.
 - 데이터: C/N context와 생성/개방 본문·제안 스크롤/확인/그래프 표시에 분 원값을 유지한다. 초·소수초는 거절한다. 저장된 원요청/키/본문/검증자료를 변환하지 않고 기존 ACK·재전송/성공 이동/갱신을 재사용한다. 제안 body의 베타 정밀도는 실제 betaData로 구분하며 기존 무프로필 경로는5분 검증을 유지한다.
-- Backend: [Issue13 인계](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6422070028)에 추천안 소비 수용·생성/개방 context/POST/config/install/set_times/최종검사·제안/수락/재평가/검토복구를 요청했다.18:03 기본기한17:33, 기존5분자동후보와 개인표·진행시간, 예약 겹침/인접·본인약속 제외/기존 동의 정책을 유지한다. 현재 구현/개발반영 후속 회신은 없으며 서버 성공/실회원 인수로 확대하지 않는다. 새 DB필드/자료변환·legacy 운영전환/기능 플래그를 추가하지 않는다.
-- 검증: 최종 직접252개 PASS·변경분석0·포맷/diff검토. 실제12시간 시계의 자정/정오/18:03·한글/입력전환/취소/320폭/작은배율, 불가 초안 유지/회원전환 후 반환 무시, C/N 독립context/POST와 비5분 개방·제안/초거절·구경로5분보존·개인표/원명령복구/상세복귀 포함. 새 UI 직접 시험으로 실제 좁은 시계 버튼 잘림을 찾아 해결했다. 서버 검증/기기는 미확인이다. 서버/DB/자료·배포·dev/main은 변경하지 않았다.
+- Backend: [Issue13 인계](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6422070028)에 추천안 소비 수용·생성/개방 context/POST/config/install/set_times/최종검사·제안/수락/재평가/검토복구를 요청했다.18:03 기본기한17:33, 기존5분자동후보와 개인표·진행시간, 예약 겹침/인접·본인약속 제외/기존 동의 정책을 유지한다. Backend420e057/a1d124e1의 구현/개발반영 회신6422693611을 수신했다. Native 제안 정밀도를 실제 BetaSchedule.session_id 기준으로 맞출 차이1건은 별도 보완 후 기기 확인한다. 서버 보고를 실회원/기기 인수로 확대하지 않는다. 새 DB필드/자료변환·legacy 운영전환/기능 플래그를 추가하지 않는다.
+- 검증: 최종 직접252개 PASS·변경분석0·포맷/diff검토. 실제12시간 시계의 자정/정오/18:03·한글/입력전환/취소/320폭/작은배율, 불가 초안 유지/회원전환 후 반환 무시, C/N 독립context/POST와 비5분 개방·제안/초거절·구경로5분보존·개인표/원명령복구/상세복귀 포함. 새 UI 직접 시험으로 실제 좁은 시계 버튼 잘림을 찾아 해결했다. Backend 직접17개 검증 보고를 수신했으며 Native 정상회원 기기는 미확인이다. 서버/DB/자료·배포·dev/main은 변경하지 않았다.
+
+
+### 37.87 해산 확인창 첫 build 중 상태 알림 수정 (2026-10-27)
+
+사용자 로그의 Controller during-build assertion을 전역 ListenableBuilder+실제 Controller+공통 해산 확인창으로 재현했다. initState에서 load→membershipContext→_read가 busy를 동기로 notify해 현재 build 중인 다른 구독 화면을 갱신했다. 한 번의 알림도 구독자마다 예외를 출력할 수 있어 로그 줄 수를 POST 횟수로 해석하지 않는다. 사용자 로그에 쓰기 횟수는 없어 실제 명령의 중복 여부를 입증하지 않는다.
+
+확인창의 최초 조회 시작만 post-frame으로 옮겼다. mounted/회원/화면·주차 유효성은 기존 valid로 검사하고 사전 무효화 시 조회 없이 로딩을 종료한다. Controller 전체 _emit을 지연하거나 오류를 숨기지 않고 원요청/쓰기/ACK·승계/해산/성공 이동은 유지했다. 이 최소 변경을 다른 정상 기능 재작성으로 확대하지 않았다.
+
+재현 red→green. 고유 직접103개 PASS·분석0·포맷/diff검토: 열기 GET1/POST0, 명시확인 POST1, 실제 영향 C/N각갱신1회, 취소 POST0, 첫프레임 전 화면변경 GET/POST0과 로딩 종료·탈퇴/해산 의미·반대주차/기록·목록복귀·영속복구. 기존 검증 묶음 전체를 반복하지 않고 무효화 경계 보완 후 신규3개만 재확인했다. weeklyRefresh는 affectedTargets와 actorEnded의 나머지 주차를 중복 없이 갱신하는 기존경로이며2회 자체가 서버 중복쓰기 근거는 아니다. OnBackInvokedCallback 경고는 별개로 변경하지 않았다. [Issue13 결과](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6422980400), 수정 후 실제 기기 로그는 미확인이다. 서버/DB/자료·배포/dev/main·별도 시간정밀도 수정은 포함하지 않는다.
