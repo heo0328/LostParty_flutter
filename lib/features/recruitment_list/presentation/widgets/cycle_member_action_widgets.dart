@@ -1,3 +1,4 @@
+import 'recruitment_error_text.dart';
 import 'cycle_action_dialog_route.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -399,9 +400,8 @@ class _DepartureDialogState extends State<_DepartureDialog> {
               children: [
                 Text('대상 주차 · ${widget.target}'),
                 if (selectionFailure != null)
-                  Text(
+                  RecruitmentErrorText(
                     recruitmentFailureMessage(selectionFailure),
-                    style: const TextStyle(color: Colors.red, fontSize: 24),
                   ),
                 if (loading) const LinearProgressIndicator(),
                 if (!loading && choices.length > 1)

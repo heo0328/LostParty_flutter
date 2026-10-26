@@ -1,4 +1,4 @@
-import '../../../../app/theme/app_colors.dart';
+import 'recruitment_error_text.dart';
 import 'dart:async';
 import '../../data/cycle_schedule.dart';
 import '../../domain/beta_schedule_draft.dart';
@@ -388,13 +388,7 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                 ),
                 if (loading) const LinearProgressIndicator(),
                 if (error != null && error != widget.controller.failure)
-                  Text(
-                    recruitmentFailureMessage(error),
-                    style: const TextStyle(
-                      fontSize: 24,
-                      color: AppColors.error,
-                    ),
-                  ),
+                  RecruitmentErrorText(recruitmentFailureMessage(error)),
                 if (betaOpening && openingSource != null) ...[
                   const Text(
                     '다음 주 출발 일정',

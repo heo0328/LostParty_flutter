@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'recruitment_error_text.dart';
 import 'application_memo_widgets.dart';
 import '../viewmodels/application_memo_draft.dart';
 import 'package:flutter/material.dart';
@@ -52,13 +53,12 @@ class CycleCommandBanner extends StatelessWidget {
                     : '${const {'application': '신청', 'membership': '탈퇴·해산', 'removal': '내보내기', 'departure': '완료 후 탈퇴', 'submission': '내 일정 갱신', 'global': '모집 설정', 'basic': '참가·일정 변경'}[c.pendingKind] ?? '참가'} 요청 · ${c.pendingTarget ?? '대상 날짜 확인 필요'}\n아직 결과를 확인하지 못했습니다.',
               ),
             if (c.failure != null)
-              Text(
+              RecruitmentErrorText(
                 c.failure == 'REQUEST_REVIEW_REQUIRED'
                     ? '이전 참가 요청의 결과를 확인해야 합니다.'
                     : c.failure == 'LOCAL_STORAGE_UNAVAILABLE'
                     ? '저장된 요청을 불러오거나 정리하지 못했습니다. 다시 시도해 주세요.'
                     : recruitmentFailureMessage(c.failure),
-                style: const TextStyle(fontSize: 24, color: AppColors.error),
               ),
             if (c.notice != null)
               Text(c.notice!, style: const TextStyle(fontSize: 12)),
