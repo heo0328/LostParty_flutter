@@ -113,6 +113,10 @@ class _RecruitmentFilterPageState extends State<RecruitmentFilterPage> {
         minute: (value ?? 0) % 60,
       ),
       initialEntryMode: TimePickerEntryMode.input,
+      // Flutter's input picker scales its maximum height below its fixed
+      // 216px minimum when the device uses a smaller font scale.
+      builder: (context, child) =>
+          MediaQuery.withClampedTextScaling(minScaleFactor: 1, child: child!),
     );
     if (!mounted || binding != m.scopeKey() || result == null) return;
     final minute = result.hour * 60 + result.minute;

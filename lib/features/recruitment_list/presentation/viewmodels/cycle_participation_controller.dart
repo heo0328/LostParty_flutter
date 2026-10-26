@@ -541,6 +541,7 @@ class CycleParticipationController extends ChangeNotifier {
   Future<void> depart(
     DeparturePreview preview, {
     bool Function()? isCurrent,
+    void Function(String key)? onPrepared,
   }) async {
     if (!canAct) return;
     final e = _epoch;
@@ -569,6 +570,7 @@ class CycleParticipationController extends ChangeNotifier {
         evidence: fresh.scope,
         departure: fresh,
       );
+      onPrepared?.call(_pending!.key);
       await _send(e);
     } on AccountReadException catch (error) {
       if (_valid(e)) _fail(error);

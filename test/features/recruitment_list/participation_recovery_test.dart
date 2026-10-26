@@ -154,12 +154,13 @@ void main() {
 
     Future<CycleParticipationController> controller({
       bool failedRefresh = false,
+      RecruitmentContractMode mode = RecruitmentContractMode.betaWire2,
     }) async {
       final c = CycleParticipationController(
         gateway: CycleInteractionRepository(
           api: api,
           recruitment: cycles.CycleGateway(),
-          contractMode: RecruitmentContractMode.betaWire2,
+          contractMode: mode,
         ),
         commandTransport: transport(),
         session: session,
@@ -551,6 +552,53 @@ void main() {
         },
       );
     }
+    test(
+      'restored composition rejection releases original slot, never retries a new write',
+      () async {
+        api.respond = (_, _) async => management.managementWire('formation');
+        answer = (_) async =>
+            throw const AccountReadException('NETWORK_UNAVAILABLE');
+        final first = await controller(mode: RecruitmentContractMode.legacy);
+        final p = await first.management(
+          base.roomId,
+          interaction.n,
+          'formation',
+        );
+        await first.manage(p!, {
+          'placements': [
+            {
+              'cycle_member_id': base.membershipId,
+              'expected_cycle_member_revision': 7,
+              'item_id': base.itemId,
+              'party_no': 2,
+              'slot_no': 4,
+            },
+          ],
+        });
+        expect(first.hasPending, true);
+        final original = writes.single;
+        stop(first);
+        final restored = await controller(mode: RecruitmentContractMode.legacy);
+        answer = (_) async => throw const AccountReadException(
+          'ROOM_COMPOSITION_CONFLICT',
+          status: 409,
+        );
+        await restored.retry();
+        expect(restored.failure, 'ROOM_COMPOSITION_CONFLICT');
+        expect(restored.hasPending, false);
+        expect(restored.canAct, true);
+        expect(writes.last.sameOriginal(original), true);
+        expect(
+          await restored.commandTransport!.restore(
+            RecruitmentCommandOwner.participation,
+          ),
+          isNull,
+        );
+        final sent = writes.length;
+        await restored.retry();
+        expect(writes.length, sent);
+      },
+    );
     for (final action in ['common', 'cancel']) {
       test(
         '$action management replays frozen scope and exact affected cycles',

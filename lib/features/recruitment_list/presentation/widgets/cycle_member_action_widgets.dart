@@ -235,6 +235,9 @@ Future<void> showDeparture(
   required String target,
   required String Function(Map) raidLabel,
   required bool Function() isCurrent,
+  String? initialRound,
+  String? expectedCharacter,
+  bool closeOnSuccess = false,
 }) => showDialog<void>(
   context: context,
   routeSettings: cycleActionDialogRoute(room, target),
@@ -244,6 +247,9 @@ Future<void> showDeparture(
     target: target,
     raidLabel: raidLabel,
     isCurrent: isCurrent,
+    initialRound: initialRound,
+    expectedCharacter: expectedCharacter,
+    closeOnSuccess: closeOnSuccess,
   ),
 );
 
@@ -254,11 +260,16 @@ class _DepartureDialog extends StatefulWidget {
     required this.target,
     required this.raidLabel,
     required this.isCurrent,
+    this.initialRound,
+    this.expectedCharacter,
+    this.closeOnSuccess = false,
   });
   final CycleParticipationController controller;
   final String room, target;
   final String Function(Map) raidLabel;
   final bool Function() isCurrent;
+  final String? initialRound, expectedCharacter;
+  final bool closeOnSuccess;
   @override
   State<_DepartureDialog> createState() => _DepartureDialogState();
 }
@@ -268,7 +279,8 @@ class _DepartureDialogState extends State<_DepartureDialog> {
   late final String binding;
   CycleScheduleView? plan;
   DeparturePreview? preview;
-  String? round;
+  String? round, submittedKey, selectionFailure;
+  bool closing = false;
   bool loading = true;
   int epoch = 0;
   bool get valid =>
@@ -278,7 +290,9 @@ class _DepartureDialogState extends State<_DepartureDialog> {
       widget.isCurrent();
   List<Map> get choices => [
     for (final item in plan?.data['game_items'] as List? ?? [])
-      if (item['round_state'] == 'active' &&
+      if ((widget.initialRound == null ||
+              item['round_id'] == widget.initialRound) &&
+          item['round_state'] == 'active' &&
           (plan!.data['my_assignments'] as List).any(
             (a) => a['round_id'] == item['round_id'] && a['state'] == 'active',
           ))
@@ -288,7 +302,33 @@ class _DepartureDialogState extends State<_DepartureDialog> {
   void initState() {
     super.initState();
     binding = c.scopeKey();
+    if (widget.closeOnSuccess) c.addListener(_success);
     unawaited(load());
+  }
+
+  void _success() {
+    final success = c.departureSuccess;
+    if (!valid ||
+        closing ||
+        submittedKey == null ||
+        c.scopeKey() != binding ||
+        success?.$1 != submittedKey ||
+        success?.$2 != widget.room ||
+        success?.$3 != widget.target) {
+      return;
+    }
+    closing = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (valid && ModalRoute.of(context)?.isCurrent == true) {
+        Navigator.pop(context);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    if (widget.closeOnSuccess) c.removeListener(_success);
+    super.dispose();
   }
 
   Future<void> load() async {
@@ -317,7 +357,11 @@ class _DepartureDialogState extends State<_DepartureDialog> {
         : await c.departure(widget.room, widget.target, round!);
     if (!valid || e != epoch) return;
     setState(() {
-      preview = value;
+      final sameCharacter =
+          widget.expectedCharacter == null ||
+          value?.data['subject']['character_id'] == widget.expectedCharacter;
+      preview = sameCharacter ? value : null;
+      selectionFailure = sameCharacter ? null : 'REVISION_CONFLICT';
       loading = false;
     });
   }
@@ -326,7 +370,11 @@ class _DepartureDialogState extends State<_DepartureDialog> {
     final value = preview;
     if (!valid || loading || value == null || !c.canAct) return;
     setState(() => loading = true);
-    await c.depart(value, isCurrent: () => valid);
+    await c.depart(
+      value,
+      isCurrent: () => valid,
+      onPrepared: (key) => submittedKey = key,
+    );
     if (!valid) return;
     // Page consumes the explicit success event, including successful retries.
     setState(() {
@@ -350,6 +398,11 @@ class _DepartureDialogState extends State<_DepartureDialog> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text('대상 주차 · ${widget.target}'),
+                if (selectionFailure != null)
+                  Text(
+                    recruitmentFailureMessage(selectionFailure),
+                    style: const TextStyle(color: Colors.red, fontSize: 24),
+                  ),
                 if (loading) const LinearProgressIndicator(),
                 if (!loading && choices.length > 1)
                   DropdownButtonFormField<String>(

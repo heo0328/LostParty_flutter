@@ -283,7 +283,16 @@ void main() {
           addTearDown(tester.view.resetDevicePixelRatio);
           await tester.pumpWidget(
             MaterialApp(
-              theme: AppTheme.light,
+              theme: AppTheme.light.copyWith(
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  alwaysUse24HourFormat: true,
+                  textScaler: const TextScaler.linear(0.8),
+                ),
+                child: child!,
+              ),
               home: Builder(
                 builder: (ctx) => Scaffold(
                   body: FilledButton(
@@ -298,6 +307,24 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.text('레이드 모집 · 필터'), findsOneWidget);
           expect(find.byType(FilterChip), findsNothing);
+          await tester.scrollUntilVisible(
+            find.text('시간대 지정'),
+            180,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.tap(find.text('시간대 지정'));
+          await tester.pump();
+          await tester.scrollUntilVisible(
+            find.text('선택').first,
+            180,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.tap(find.text('선택').first);
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(find.byType(TimePickerDialog), findsOneWidget);
+          await tester.tap(find.text('Cancel'));
+          await tester.pumpAndSettle();
           await tester.tap(find.byKey(const ValueKey('departure-day-6')));
           await tester.pump();
           expect(api.requests, isEmpty);

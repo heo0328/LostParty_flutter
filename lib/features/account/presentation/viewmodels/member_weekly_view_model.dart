@@ -840,7 +840,24 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     return values == null ? null : values['${ref.characterId}:$raid'];
   }
 
-  bool canChange(ScopedCharacterRef ref, String raid) {
+  bool canChange(ScopedCharacterRef ref, String raid) => _canChange(ref, raid);
+
+  bool canCompleteParticipation(ScopedCharacterRef ref, String raid) {
+    final value = entry(ref, raid);
+    return twoCycleEnabled &&
+        value?.participating == true &&
+        value?.completed == false &&
+        value?.reviewRequired == false &&
+        value?.canViewParticipation == true &&
+        value?.wire['participation']?['round_id'] is String &&
+        _canChange(ref, raid, participation: true);
+  }
+
+  bool _canChange(
+    ScopedCharacterRef ref,
+    String raid, {
+    bool participation = false,
+  }) {
     final value = entry(ref, raid);
     if (twoCycleEnabled && value?.completed == true) {
       return ready &&
@@ -878,7 +895,11 @@ class MemberWeeklyViewModel extends ChangeNotifier {
         ) &&
         value.lifecycleRevision ==
             model.character(ref)!.observation.lifecycleRevision &&
-        (value.completed ? value.canClear : value.canMark);
+        (value.completed
+            ? value.canClear
+            : participation
+            ? value.participating
+            : value.canMark);
   }
 
   Future<MemberCompletionCorrection?> prepareCorrection(
@@ -996,7 +1017,10 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     }
   }
 
-  List<WeeklyRaidStatusItem> items(ScopedCharacterRef ref) => [
+  List<WeeklyRaidStatusItem> items(
+    ScopedCharacterRef ref, {
+    bool allowParticipationCompletion = false,
+  }) => [
     for (final c in displayed(ref))
       WeeklyRaidStatusItem(
         raidId: c.raidId,
@@ -1010,7 +1034,10 @@ class MemberWeeklyViewModel extends ChangeNotifier {
             : entry(ref, c.raidId)?.participating == true
             ? WeeklyRaidStatusKind.active
             : null,
-        toggleAllowed: canChange(ref, c.raidId),
+        toggleAllowed:
+            canChange(ref, c.raidId) ||
+            (allowParticipationCompletion &&
+                canCompleteParticipation(ref, c.raidId)),
       ),
   ];
   Future<void> change(

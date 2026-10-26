@@ -286,6 +286,43 @@ void main() {
     dio.close();
   });
   test(
+    'active account check uses departure, never manual completion or next week',
+    () async {
+      respond = (r) {
+        final raw = serve(r);
+        if (r.path == '/v2/me/raid-weekly-summary') {
+          for (final e in raw['entries'] as List) {
+            final joined = summaryEntry(
+              e['character_id'],
+              e['raid_id'],
+              e['target_cycle_key'],
+              joined: true,
+            );
+            joined['permissions']['mark_completed'] = permit(false);
+            e.clear();
+            e.addAll(joined);
+          }
+        }
+        return raw;
+      };
+      await weekly.refresh();
+      final ref = model.sections.single.characters.first.ref;
+      final raid = weekly.items(ref).first.raidId;
+      expect(weekly.canChange(ref, raid), false);
+      expect(weekly.canCompleteParticipation(ref, raid), true);
+      expect(weekly.items(ref).first.canToggle, false);
+      expect(
+        weekly.items(ref, allowParticipationCompletion: true).first.canToggle,
+        true,
+      );
+      final before = calls.length;
+      await weekly.change(ref, weekly.items(ref).first, true);
+      expect(calls.length, before);
+      weekly.selectCycle(next);
+      expect(weekly.canCompleteParticipation(ref, raid), false);
+    },
+  );
+  test(
     'authenticated C/N metadata and read POST; tab switch reuses batch and blocks N completion',
     () async {
       await weekly.refresh();

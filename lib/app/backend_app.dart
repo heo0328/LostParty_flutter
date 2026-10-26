@@ -1,3 +1,4 @@
+import '../features/recruitment_list/presentation/widgets/cycle_member_action_widgets.dart';
 import '../features/recruitment_list/data/raid_room_usage_repository.dart';
 import '../features/recruitment_list/presentation/viewmodels/raid_room_usage_controller.dart';
 import 'dart:async';
@@ -600,6 +601,36 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                             model: _memberAccount!.model,
                             availability: _memberAccount!.availability,
                             weekly: _memberAccount!.weekly,
+                            participationChanges: participation,
+                            canUseParticipationCommands: () =>
+                                participation.canAct,
+                            onCompleteParticipation:
+                                (
+                                  ctx,
+                                  room,
+                                  target,
+                                  round,
+                                  character,
+                                  label,
+                                ) async {
+                                  final binding = cycleScopeKey();
+                                  await showDeparture(
+                                    ctx,
+                                    participation,
+                                    room: room,
+                                    target: target,
+                                    initialRound: round,
+                                    expectedCharacter: character,
+                                    closeOnSuccess: true,
+                                    raidLabel: (_) => label,
+                                    isCurrent: () =>
+                                        binding == cycleScopeKey() &&
+                                        _memberAccount
+                                                ?.weekly
+                                                ?.selectedCycleKey ==
+                                            target,
+                                  );
+                                },
                             onParticipation: (id, t) =>
                                 context.push(membershipDetailLocation(id, t)),
                             settings: _memberSettings!,

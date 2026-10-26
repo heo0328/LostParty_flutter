@@ -175,6 +175,9 @@ class MemberAccountPage extends StatelessWidget {
     this.onVerifyRegistration,
     this.automaticRefreshAvailable = true,
     this.onParticipation,
+    this.onCompleteParticipation,
+    this.participationChanges,
+    this.canUseParticipationCommands,
     super.key,
   });
   final MemberAccountViewModel model;
@@ -186,6 +189,17 @@ class MemberAccountPage extends StatelessWidget {
   final void Function(String)? onCharacters, onEdit, onVerifyRegistration;
   final bool automaticRefreshAvailable;
   final void Function(String roomId, String target)? onParticipation;
+  final Future<void> Function(
+    BuildContext,
+    String room,
+    String target,
+    String round,
+    String character,
+    String label,
+  )?
+  onCompleteParticipation;
+  final Listenable? participationChanges;
+  final bool Function()? canUseParticipationCommands;
   @override
   Widget build(BuildContext context) => UiFrameProbe(
     child: ListenableBuilder(
@@ -193,6 +207,7 @@ class MemberAccountPage extends StatelessWidget {
         model,
         settings,
         ?weekly,
+        ?participationChanges,
         model.runner.source.cooldown,
       ]),
       builder: (context, _) => UiTiming.measure(UiWork.pageWidgets, () {
@@ -679,7 +694,14 @@ class MemberAccountPage extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.bodySmall,
       ),
-      weeklyRaids: weekly?.items(row.ref) ?? const [],
+      weeklyRaids:
+          weekly?.items(
+            row.ref,
+            allowParticipationCompletion:
+                onCompleteParticipation != null &&
+                (canUseParticipationCommands?.call() ?? true),
+          ) ??
+          const [],
       weeklyColumns: weekly?.twoCycleEnabled == true ? 3 : 1,
       onWeeklyRaidInfo: (raid) {
         final value = weekly?.entry(row.ref, raid.raidId);
@@ -763,7 +785,24 @@ class MemberAccountPage extends StatelessWidget {
     bool completed,
   ) async {
     final state = weekly;
-    if (state == null || !state.canChange(ref, raid.raidId)) return;
+    if (state == null) return;
+    if (completed && state.canCompleteParticipation(ref, raid.raidId)) {
+      final action = onCompleteParticipation;
+      if (action == null || canUseParticipationCommands?.call() == false) {
+        return;
+      }
+      final entry = state.entry(ref, raid.raidId)!;
+      await action(
+        context,
+        entry.roomId!,
+        state.selectedCycleKey!,
+        entry.wire['participation']['round_id'] as String,
+        ref.characterId,
+        raid.label,
+      );
+      return;
+    }
+    if (!state.canChange(ref, raid.raidId)) return;
     final member = accountReadScope(model.runtime.session),
         before = state.entry(ref, raid.raidId);
     final name = model.character(ref)?.observation.characterName ?? '';

@@ -29,8 +29,14 @@ class CycleCommandBanner extends StatelessWidget {
           c.notice == null) {
         return const SizedBox.shrink();
       }
-      return Padding(
-        padding: const EdgeInsets.all(12),
+      return Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Theme.of(context).colorScheme.outline),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -52,7 +58,7 @@ class CycleCommandBanner extends StatelessWidget {
                     : c.failure == 'LOCAL_STORAGE_UNAVAILABLE'
                     ? '저장된 요청을 불러오거나 정리하지 못했습니다. 다시 시도해 주세요.'
                     : recruitmentFailureMessage(c.failure),
-                style: const TextStyle(fontSize: 12, color: AppColors.error),
+                style: const TextStyle(fontSize: 24, color: AppColors.error),
               ),
             if (c.notice != null)
               Text(c.notice!, style: const TextStyle(fontSize: 12)),
