@@ -106,6 +106,7 @@ void main() {
 
     final writes = <RecruitmentCommand>[];
     final mutations = <String>[];
+    final usageSignals = <String>[];
     late Future<Map<String, dynamic>> Function(RecruitmentCommand) answer;
     setUp(() {
       binding = 'env/member/1';
@@ -113,6 +114,7 @@ void main() {
       now = DateTime.parse(cycles.nowStamp);
       writes.clear();
       mutations.clear();
+      usageSignals.clear();
       session = ReadSessionFake()..userId = foundation.user;
       changes = ChangeNotifier();
       store = JournalFaults(
@@ -164,6 +166,7 @@ void main() {
         changes: changes,
         scopeKey: () => '$binding/${session.userId}/${session.generation}',
         now: () => now,
+        onActiveRoomsChanged: usageSignals.add,
         onMutation: (t) async {
           mutations.add(t);
           if (failedRefresh) throw StateError('read');
@@ -544,6 +547,7 @@ void main() {
           expect(writes.last.sameOriginal(original), isTrue);
           expect(api.requests, isEmpty);
           expect(mutations, original.validationSnapshot!['affected_targets']);
+          expect(usageSignals, kind == 'removal' ? isEmpty : [original.key]);
         },
       );
     }

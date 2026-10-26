@@ -34,7 +34,7 @@ class AdmissionSelectionViewModel extends ChangeNotifier {
   List<AdmissionCandidate> _eligible = const [];
   CycleAdmissionPreview? preview;
   final chosen = <String>{};
-  bool get filtered => intent == 'apply' || intent == 'change_character';
+  bool get filtered => {'apply', 'join', 'change_character'}.contains(intent);
   bool _valid(int e) =>
       !_disposed &&
       e == _epoch &&
@@ -89,7 +89,11 @@ class AdmissionSelectionViewModel extends ChangeNotifier {
   String get emptyMessage {
     if (failure != null || loading) return '';
     if (candidates?.rawCount == 0 || !filtered) return '인증한 활동 캐릭터를 확인해 주세요.';
-    return intent == 'apply' ? '이 모집에 신청 가능한 캐릭터가 없습니다.' : '변경 가능한 캐릭터가 없습니다.';
+    return switch (intent) {
+      'apply' => '이 모집에 신청 가능한 캐릭터가 없습니다.',
+      'join' => '이 모집에 참가 가능한 캐릭터가 없습니다.',
+      _ => '변경 가능한 캐릭터가 없습니다.',
+    };
   }
 
   List<String> get exclusionMessages => [

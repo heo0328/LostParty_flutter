@@ -47,11 +47,14 @@ class BackendRecruitmentRepository
   @override
   Future<ApplicationDisplayDetail> applicationDisplayDetail(
     String room,
-    String target,
-  ) => ApplicationDisplayReader(
-    api,
-    contractMode: contractMode,
-  ).applicationDisplayDetail(room, target);
+    String target, {
+    bool includeCoordinationWait = false,
+  }) => ApplicationDisplayReader(api, contractMode: contractMode)
+      .applicationDisplayDetail(
+        room,
+        target,
+        includeCoordinationWait: includeCoordinationWait,
+      );
   final ServerAccountReadRepository accounts;
   final MemberRaidClient raids;
   final Future<Map<String, String>> Function()? preferredRoles;

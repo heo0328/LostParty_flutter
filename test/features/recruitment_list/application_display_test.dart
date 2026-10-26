@@ -88,8 +88,9 @@ class DetailGateway extends f2.CycleGateway {
   @override
   Future<ApplicationDisplayDetail> applicationDisplayDetail(
     String id,
-    String target,
-  ) async => read == null
+    String target, {
+    bool includeCoordinationWait = false,
+  }) async => read == null
       ? ApplicationDisplayDetail.fromJson(value, id, target)
       : read!(target);
   @override

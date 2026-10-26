@@ -30,6 +30,7 @@ class CycleOwnRoomsPage extends StatefulWidget {
     required this.onRoom,
     required this.onApplicationRoom,
     this.mutations,
+    this.onRefresh,
     this.initialTarget,
     this.onRecord,
     super.key,
@@ -37,6 +38,7 @@ class CycleOwnRoomsPage extends StatefulWidget {
   final MemberWeeklyViewModel weekly;
   final String? initialTarget;
   final CycleParticipationController? mutations;
+  final VoidCallback? onRefresh;
   final CycleReadRepository repository;
   final String Function() scopeKey;
   final VoidCallback onLogin;
@@ -140,7 +142,12 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
           title: const Text('레이드 현황'),
           actions: [
             IconButton(
-              onPressed: m.loading ? null : () => m.load(),
+              onPressed: m.loading
+                  ? null
+                  : () {
+                      widget.onRefresh?.call();
+                      m.load();
+                    },
               icon: const Icon(Icons.refresh),
               tooltip: '새로고침',
             ),

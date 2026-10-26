@@ -513,6 +513,46 @@ void main() {
       },
     );
     test(
+      'join uses server candidates and preserves its own ACK and body',
+      () async {
+        gateway.value['data']['intent'] = 'join';
+        final join = AdmissionSelectionViewModel(
+          controller: controller,
+          room: base.roomId,
+          target: f2.c,
+          intent: 'join',
+        );
+        addTearDown(join.dispose);
+        await join.load();
+        expect(join.filtered, true);
+        expect(join.preview, isNotNull);
+        expect(gateway.reads, 1);
+        expect(
+          join.characters.length,
+          gateway.value['data']['eligible_candidate_count'],
+        );
+        final wrong = clone(gateway.value);
+        wrong['data']['actor'] = example(
+          'change-eight-opposite-party-valid',
+        )['data']['actor'];
+        expect(() => parse(wrong), throwsFormatException);
+        api.respond = (path, q) async => f2.envelope(f2.c, {
+          'command_id': api.requests.last['key'],
+          'room_id': base.roomId,
+          'target_cycle_key': f2.c,
+          'executed_at': f2.nowStamp,
+          'outcome': 'applied',
+          'revisions': [],
+        }, created: true);
+        await join.submit();
+        expect(join.completed, true);
+        expect(controller.admissionSuccess!.$4, 'join');
+        final posted = api.requests.where((r) => r['method'] == 'POST').single;
+        expect(posted['path'], endsWith('/join'));
+        expect((posted['body'] as Map).containsKey('application_memo'), false);
+      },
+    );
+    test(
       'ACK identified only for own command and candidate token excluded from writes',
       () async {
         await m.load();

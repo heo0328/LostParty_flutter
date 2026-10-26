@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../account/domain/play_availability.dart';
 import '../../data/membership_readers.dart';
+import '../../data/beta/beta_read.dart';
 import '../../data/schedule_notice_store.dart';
 import '../../domain/schedule_comparison.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
@@ -356,6 +357,17 @@ class _ScheduleComparisonPageState extends State<ScheduleComparisonPage> {
                   ...myTimetable(),
                 ],
                 card('현재 출발', [
+                  if (coordinationWaitMessage(
+                        model.readOnly ? null : p.betaData,
+                      )
+                      case final message?)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        message,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
                   for (final session in p.data['sessions'] as List)
                     if (session['state'] != 'cancelled')
                       Padding(

@@ -174,8 +174,9 @@ class CycleGateway extends v1.Gateway
   @override
   Future<ApplicationDisplayDetail> applicationDisplayDetail(
     String id,
-    String target,
-  ) async => ApplicationDisplayDetail(
+    String target, {
+    bool includeCoordinationWait = false,
+  }) async => ApplicationDisplayDetail(
     detail: await cycleDetail(id, target),
     application: null,
   );

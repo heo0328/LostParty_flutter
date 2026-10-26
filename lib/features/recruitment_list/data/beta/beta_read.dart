@@ -1,3 +1,4 @@
+import 'coordination_wait.dart';
 import '../../../account/domain/server_registration_api.dart';
 import '../../../account/domain/role_summary.dart';
 import 'beta_contract.dart';
@@ -41,14 +42,29 @@ Future<BetaDecoded<T>> readRecruitment<T>({
   return BetaDecoded(result.value, roleMap(result.metadata['data']));
 }
 
-Map<String, dynamic>? betaDisplayData(Map<String, dynamic>? raw) => raw == null
-    ? null
-    : betaFreeze({
-            'beta_schedule': raw['beta_schedule'],
-            if (raw.containsKey('recruitment_identity'))
-              'recruitment_identity': raw['recruitment_identity'],
-          })
-          as Map<String, dynamic>;
+Map<String, dynamic>? betaDisplayData(Map<String, dynamic>? raw) {
+  if (raw == null) return null;
+  final schedule = raw['beta_schedule'];
+  final wait = schedule is Map ? schedule['coordination_wait'] : null;
+  if (wait != null) CoordinationWait.fromJson(roleMap(wait));
+  return betaFreeze({
+        'beta_schedule': schedule is Map
+            ? {
+                for (final e in schedule.entries)
+                  if (e.key != 'coordination_wait') e.key as String: e.value,
+              }
+            : schedule,
+        'coordination_wait': ?wait,
+        if (raw.containsKey('recruitment_identity'))
+          'recruitment_identity': raw['recruitment_identity'],
+      })
+      as Map<String, dynamic>;
+}
+
+String? coordinationWaitMessage(Map<String, dynamic>? data) {
+  final wait = data?['coordination_wait'];
+  return wait == null ? null : CoordinationWait.fromJson(roleMap(wait)).message;
+}
 
 String betaScheduleLabel(Map<String, dynamic> data) {
   final s = data['beta_schedule'];

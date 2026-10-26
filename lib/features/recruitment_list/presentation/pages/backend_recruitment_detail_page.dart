@@ -516,6 +516,12 @@ class _BackendRecruitmentDetailPageState
                 ),
               ),
               const SizedBox(height: 12),
+              if (coordinationWaitMessage(m.readOnly ? null : value.betaData)
+                  case final message?)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(message, style: const TextStyle(fontSize: 12)),
+                ),
               if (value.betaData!['beta_schedule'] != null)
                 Text(
                   '앱 모집 마감 ${_time(DateTime.parse(value.betaData!['beta_schedule']['admission_deadline'] as String))}',

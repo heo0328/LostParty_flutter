@@ -163,6 +163,7 @@ class CycleParticipationController extends ChangeNotifier {
     required this.scopeKey,
     this.onMutation,
     this.onRelationEnded,
+    this.onActiveRoomsChanged,
     this.commandTransport,
     DateTime Function()? now,
   }) : now = now ?? DateTime.now {
@@ -194,6 +195,7 @@ class CycleParticipationController extends ChangeNotifier {
   final String Function() scopeKey;
   final Future<void> Function(String)? onMutation;
   final Future<void> Function(List<String>)? onRelationEnded;
+  final void Function(String commandKey)? onActiveRoomsChanged;
   final DateTime Function() now;
   late String _binding;
   bool _disposed = false, busy = false;
@@ -1206,6 +1208,22 @@ class CycleParticipationController extends ChangeNotifier {
         }
         _emit();
         if (!_valid(e)) return;
+      }
+      // Only the viewer's room-set changes invalidate this app-owned read.
+      // One notification covers C/N effects and includes restored successful ACKs.
+      if (const {
+        'join',
+        'continuation-participations',
+        'recruitment-openings',
+        'participation-cancellations',
+        'leave',
+        'end',
+        'membership-actions',
+        'completion',
+        'personal-completion',
+        'personal-completion-departures',
+      }.contains(command.path.split('/').last)) {
+        onActiveRoomsChanged?.call(command.key);
       }
       for (final target in command.affectedTargets ?? [command.target]) {
         if (!_valid(e)) return;

@@ -1,3 +1,5 @@
+import '../features/recruitment_list/data/raid_room_usage_repository.dart';
+import '../features/recruitment_list/presentation/viewmodels/raid_room_usage_controller.dart';
 import 'dart:async';
 import '../features/recruitment_list/data/beta/beta_contract.dart';
 import '../features/recruitment_list/data/beta/recruitment_command_store.dart';
@@ -115,6 +117,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
   BackendAccountLifecycle? _accountLifecycle;
   BackendMemberAccount? _memberAccount;
   BackendRecruitmentCreateViewModel? _recruitmentCreate;
+  RaidRoomUsageController? _raidUsage;
   CycleParticipationController? _participation;
   RecruitmentCommandTransport? _recruitmentCommands;
   final _managementGateways =
@@ -435,6 +438,12 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     );
     String cycleScopeKey() =>
         '${_dio!.options.baseUrl}/${readSession.userId}/${readSession.generation}/${lifecycle.runtime?.readGeneration}';
+    final raidUsage = _raidUsage = RaidRoomUsageController(
+      repository: RaidRoomUsageRepository(accountApi),
+      session: readSession,
+      scopeKey: cycleScopeKey,
+      changes: _memberAccount?.model ?? auth,
+    );
     final recruitmentGateway = BackendRecruitmentRepository(
       contractMode: widget.recruitmentContractMode,
       api: accountApi,
@@ -461,6 +470,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     );
     final participation = _participation = CycleParticipationController(
       commandTransport: commandTransport,
+      onActiveRoomsChanged: raidUsage.commandApplied,
       gateway: cycleInteractions,
       session: readSession,
       changes: _memberAccount?.model ?? auth,
@@ -477,6 +487,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     final recruitmentCreate = _recruitmentCreate =
         BackendRecruitmentCreateViewModel(
           commandTransport: commandTransport,
+          onActiveRoomsChanged: raidUsage.commandApplied,
           gateway: recruitmentGateway,
           session: readSession,
           scopeKey: cycleScopeKey,
@@ -537,6 +548,8 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
         StatefulShellRoute.indexedStack(
           builder: (context, state, shell) => AppShell(
             navigationShell: shell,
+            raidUsage: raidUsage,
+            onRaidStatusSelected: () => unawaited(raidUsage.refresh()),
             scopedStartupRefresh:
                 _memberAccount?.automaticRefreshEnabled == true
                 ? _memberAccount!.runner
@@ -554,6 +567,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                               state.uri.queryParameters['target_cycle_key'],
                           weekly: _memberAccount!.weekly!,
                           mutations: participation,
+                          onRefresh: () => unawaited(raidUsage.refresh()),
                           repository: cycleReads,
                           scopeKey: cycleScopeKey,
                           onLogin: () => showLoginRequired(context, auth),
@@ -898,6 +912,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       unawaited(_ownership?.resume());
       unawaited(_memberAccount?.weekly?.refresh());
       unawaited(_recruitmentCreate?.refreshCycles());
+      unawaited(_raidUsage?.refresh());
     }
   }
 
@@ -910,6 +925,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     _router?.dispose();
     _entryGate.removeListener(_entryReady);
     _entryGate.dispose();
+    _raidUsage?.dispose();
     _recruitmentCreate?.dispose();
     _participation?.dispose();
     unawaited(_recruitmentCommands?.dispose());

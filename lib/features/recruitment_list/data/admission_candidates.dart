@@ -249,7 +249,7 @@ class AdmissionCandidatePage {
     roleCheck(
       roleId(data['room_id']) == room &&
           data['intent'] == intent &&
-          {'apply', 'change_character'}.contains(intent),
+          {'apply', 'join', 'change_character'}.contains(intent),
     );
     roleCheck(data['eligibility_policy_version'] == admissionEligibilityPolicy);
     actionTime(data['evaluated_at']);
@@ -264,7 +264,7 @@ class AdmissionCandidatePage {
     actor = data['actor'] == null
         ? null
         : AdmissionCandidateActor(roleMap(data['actor']));
-    roleCheck((intent == 'apply') == (actor == null));
+    roleCheck((intent != 'change_character') == (actor == null));
     exclusions = List.unmodifiable(
       raidList(
         data['exclusion_summary'],
@@ -328,7 +328,7 @@ class AdmissionCandidatesReader implements AdmissionCandidatesGateway {
   }) async {
     roleId(room);
     raidCycleKey(target);
-    roleCheck({'apply', 'change_character'}.contains(intent));
+    roleCheck({'apply', 'join', 'change_character'}.contains(intent));
     try {
       final raw = await api.request(
         '/v2/raid-rooms/$room/admission-character-candidates',

@@ -58,7 +58,12 @@ class ScheduleComparisonViewModel extends ChangeNotifier {
       CycleScheduleView? p;
       MembershipReadView? nextProfile;
       if (reader != null) {
-        nextProfile = await reader!.plan(room, target, anchor: anchor);
+        nextProfile = await reader!.plan(
+          room,
+          target,
+          anchor: anchor,
+          includeCoordinationWait: anchor == null && !forceReadOnly,
+        );
         if (!valid || e != epoch) return;
         final content = nextProfile.projection.content;
         if (content != null) {

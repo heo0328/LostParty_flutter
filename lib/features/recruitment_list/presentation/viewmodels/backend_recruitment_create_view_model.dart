@@ -33,6 +33,7 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     DateTime Function()? now,
     this.scopeKey,
     this.commandTransport,
+    this.onActiveRoomsChanged,
   }) : now = now ?? DateTime.now {
     session.addListener(_access);
     accessChanges.addListener(_access);
@@ -44,6 +45,7 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
 
   /// Owned by the app; draft/UI beta wiring is a subsequent section.
   final RecruitmentCommandTransport? commandTransport;
+  final void Function(String commandKey)? onActiveRoomsChanged;
   final AccountReadSession session;
   final Listenable accessChanges;
   final bool Function() hasVerifiedAccount;
@@ -809,6 +811,7 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
   }
 
   void _acceptBetaAck(RecruitmentCommand command, RecruitmentCreationAck ack) {
+    onActiveRoomsChanged?.call(command.key);
     createdRoomId = ack.roomId;
     createdTargetKey = ack.targetKey;
     createdTargetKeys = List.unmodifiable(

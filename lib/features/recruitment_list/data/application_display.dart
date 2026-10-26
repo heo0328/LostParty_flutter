@@ -329,8 +329,9 @@ class ApplicationDisplayDetail {
 abstract interface class ApplicationDisplayGateway {
   Future<ApplicationDisplayDetail> applicationDisplayDetail(
     String room,
-    String target,
-  );
+    String target, {
+    bool includeCoordinationWait = false,
+  });
 }
 
 abstract interface class ApplicationDisplayListGateway {
@@ -362,8 +363,9 @@ class ApplicationDisplayReader
   @override
   Future<ApplicationDisplayDetail> applicationDisplayDetail(
     String room,
-    String target,
-  ) => _read(() async {
+    String target, {
+    bool includeCoordinationWait = false,
+  }) => _read(() async {
     roleId(room);
     raidCycleKey(target);
     final result = await readRecruitment(
@@ -373,9 +375,18 @@ class ApplicationDisplayReader
       query: {
         'target_cycle_key': target,
         'reader_profile': applicationDisplayProfile,
+        if (includeCoordinationWait &&
+            contractMode == RecruitmentContractMode.betaWire2)
+          'include_coordination_wait': 'true',
       },
       parse: (raw) => ApplicationDisplayDetail.fromJson(raw, room, target),
     );
+    final schedule = result.metadata?['beta_schedule'];
+    if (includeCoordinationWait &&
+        contractMode == RecruitmentContractMode.betaWire2 &&
+        schedule != null) {
+      roleCheck(schedule is Map && schedule.containsKey('coordination_wait'));
+    }
     result.value.detail.betaData = betaDisplayData(result.metadata);
     return result.value;
   });

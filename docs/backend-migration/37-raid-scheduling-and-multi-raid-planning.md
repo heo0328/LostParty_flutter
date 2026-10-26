@@ -2739,3 +2739,15 @@ native 변경 위치를 확인했다: AdmissionCandidatePage/Reader의 닫힌 in
 Backend 담당은 직접 영향 검증 후 정확source/OpenAPI·닫힌DTO/대표예시·commit/push·실제개발 반영 결과 인계다. 보호 경계는 9→10/10→11·동시 생성/가입/승인·주차전환·C/N 중복/한쪽유지/양쪽종료·과거/관계전용 제외/실제현재review 포함·원ACK 재생, 선택조회 생략/false 불변·true 다섯 상태/양수null·reader 조합/권한/null기록·조회오류/GET쓰기0·기존평가 재사용이다. 기존 전체 정상시험 반복이나 재수용을 요청하지 않는다. join 후보는 Backend690f36f/반영189012e의 독립 개발반영 완료이며 native 시트 연결은 A/B 구현을 기다리는 조건이 아니다.
 
 이번 Flutter 변경은 문서뿐이다. 원ACK/미확인 키·내용과 기존 기능 코드를 바꾸지 않았고 서버/DB/자료·배포·dev/main도 변경하지 않았다. 문서 diffcheck/내용·링크 검토와 게시재조회로 검증하며 Flutter 시험을 반복하지 않는다. Backend 구현/인계와 사용자 기기·성능 인수는 미확인으로 남긴다.
+
+
+### 37.81 즉시 참가 후보·조율 안내·활성방 사용량 일반 앱 연결 (2026-10-26)
+
+Backend172/source1800160d·개발반영e4137073(6414001866), join690f36f를 대조했다. Flutter 기반63afb3a7에서 실제 main→BackendApp의 기존 betaWire2 경로에 연결했다. 이전 §37.80의 Backend 대기는 해소됐다. [구현 회신6414804154](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6414804154). 운영 모드 전환·신규 서버 변경은 없다.
+
+- 후보: 전용 Reader/불변 page/시트 VM에 join을 추가하고 apply/join actor=null, change만 actor를 요구한다. 전체 페이지 snapshot·계수/순서·역할과 최신 context를 검증한다. 로컬 캐릭터 자료는 원정대/대표·선호역할 표시에 재사용한다. 즉시 참가의 메모 없음/승인 없음·본인 ACK 후 성공/원키 재전송은 유지한다. 고정 schema의 세 GET query/응답 intent·안내 DTO·stored memo의 엄격한 문자열 끝 조건만 최신 원본으로 동기화했다.
+- 안내: 현재 상세의 membership/application reader와 시간표 plan만 include_coordination_wait=true 문자열을 명시한다. 기본 false/기록 anchor/반대주차 보조조회/목록/쓰기 유지. 서버가 준 안내를 불변 모델로 검증해 canonical beta_schedule 밖의 표시 metadata로 분리하므로 plan/context 동일성·제안 signature/CAS를 바꾸지 않는다. 기존 상세 일정·비교의 현재 출발 카드에 §37.80 문구를 공통 함수로 표시한다. 요청 시 누락/불량 응답은 오류이며 null기록/기존 일정은 합성하지 않는다.
+- 사용량: 새 소형 Repository/불변 metric 모델은 기존 인증 클라이언트로 /v1/me/usage-limits를 읽고, 앱 수명 Controller가 표시·동시 조회·회원/환경/readGeneration·서버 평가시각의 주차 만료를 소유한다. 로컬 목록 합산/권한 재계산은 없다. 현황 탭 우상단 used/limit, 실패/미확인 —/—는 사용자 승인이다. 기존 탭/터치 영역을 유지하고 그룹 배지는 제외했다.
+- 갱신: 로그인/현황 진입·수동 갱신/앱 복귀와 생성·본인 참가 집합을 바꾸는 검증·저장 ACK에서 조회한다. 명령 key로 C/N 효과와 성공 재통지를 묶고 진행 중 조회를 공유한다. 조회 도중 실제 변경은 후속 최신조회로 반영한다. 다른 회원 승인/추방·시간표/편성 등 본인 집합을 바꾸지 않는 행동마다 호출하지 않는다. 복원 ACK도 동일 통지를 쓰되 과거 화면 이동이나 서버 명령을 재실행하지 않는다. 조회 실패는 —/—이며 성공 명령을 뒤집지 않는다. 다른 기기 갱신은 기존 명시 조회, 웹소켓은 별도다.
+- 검증: 모집/셸 고유1195개 통과(신규 합성자료 2건을 고쳐 해당8개 재확인), 복구/셸41개는 콜백 경계 assertion 보강 후 통과. 직접 분석0·포맷/diffcheck·검토. 정상 생성/신청/변경/일정/완료·탈퇴/해산·기록/메모·원명령의 직접 영향은 회귀 묶음으로 보호했다. 현재 코드로 설명되는 직접 범위 밖 전체 앱 시험은 반복하지 않았다.
+- 미확인: 사용자 기기의 join 레벨 제외·안내·서버 사용량/현재 목록 일치·기존 일정 갱신 원요청. Backend 서비스 READONLY 결과나 자동 시험을 기기 통과로 확대하지 않는다. 개발자료 변환/삭제·배포·dev/main·BUG025·IF001·리디자인은 제외하며 무관 dirty를 보존한다.

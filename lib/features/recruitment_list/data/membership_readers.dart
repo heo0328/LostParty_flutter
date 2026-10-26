@@ -540,11 +540,13 @@ abstract interface class MembershipReadGateway {
     String room,
     String target, {
     MembershipRecordAnchor? anchor,
+    bool includeCoordinationWait = false,
   });
   Future<MembershipReadView> plan(
     String room,
     String target, {
     MembershipRecordAnchor? anchor,
+    bool includeCoordinationWait = false,
   });
 }
 
@@ -560,6 +562,7 @@ class MembershipReadRepository implements MembershipReadGateway {
     String target,
     String kind,
     MembershipRecordAnchor? anchor,
+    bool includeCoordinationWait,
   ) async {
     try {
       roleId(room);
@@ -574,11 +577,22 @@ class MembershipReadRepository implements MembershipReadGateway {
         query: {
           'target_cycle_key': target,
           'reader_profile': membershipReaderProfile,
+          if (includeCoordinationWait &&
+              anchor == null &&
+              contractMode == RecruitmentContractMode.betaWire2)
+            'include_coordination_wait': 'true',
           ...?anchor?.query,
         },
         parse: (raw) =>
             MembershipReadView(room, target, kind, raw, anchor: anchor),
       );
+      final schedule = result.metadata?['beta_schedule'];
+      if (includeCoordinationWait &&
+          anchor == null &&
+          contractMode == RecruitmentContractMode.betaWire2 &&
+          schedule != null) {
+        roleCheck(schedule is Map && schedule.containsKey('coordination_wait'));
+      }
       return result.value..betaData = betaDisplayData(result.metadata);
     } on FormatException {
       throw const AccountReadException('INVALID_RESPONSE');
@@ -594,11 +608,13 @@ class MembershipReadRepository implements MembershipReadGateway {
     String room,
     String target, {
     MembershipRecordAnchor? anchor,
-  }) => _read(room, target, 'detail', anchor);
+    bool includeCoordinationWait = false,
+  }) => _read(room, target, 'detail', anchor, includeCoordinationWait);
   @override
   Future<MembershipReadView> plan(
     String room,
     String target, {
     MembershipRecordAnchor? anchor,
-  }) => _read(room, target, 'plan', anchor);
+    bool includeCoordinationWait = false,
+  }) => _read(room, target, 'plan', anchor, includeCoordinationWait);
 }

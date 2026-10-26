@@ -162,6 +162,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
           roomId,
           target!,
           anchor: recordIdentity,
+          includeCoordinationWait: recordIdentity == null,
         );
         if (!_current(epoch)) return;
         profile = result;
@@ -205,7 +206,11 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
           throw const AccountReadException('INVALID_RESPONSE');
         }
         display = await (source as ApplicationDisplayGateway)
-            .applicationDisplayDetail(roomId, target!);
+            .applicationDisplayDetail(
+              roomId,
+              target!,
+              includeCoordinationWait: true,
+            );
         if (!_current(epoch)) return;
         application = display.application;
         applicationKnown = true;

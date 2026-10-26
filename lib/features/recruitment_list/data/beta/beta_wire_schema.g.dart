@@ -1,6 +1,5 @@
-// Generated from Backend 267afe560033291df6317c2f712e395f13e68818.
-// Memo character range extended by user policy (2026-10-26); Backend sync: Issue13/6409130575.
-// beta-recruitment-wire-2: validation data only, not a runtime activation.
+// Generated validation projection from Backend e4137073d80a754c6dea38d8207333eb8523f80b.
+// Successful response/request DTOs; beta-recruitment-wire-2.
 const betaWireSchemaJson = r'''
 {
   "operations": [
@@ -852,6 +851,18 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "include_coordination_wait",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
+          }
         }
       ],
       "request": null,
@@ -952,6 +963,18 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "include_coordination_wait",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false"
           }
         }
       ],
@@ -2578,6 +2601,7 @@ const betaWireSchemaJson = r'''
           "schema": {
             "enum": [
               "apply",
+              "join",
               "change_character"
             ],
             "type": "string",
@@ -3138,6 +3162,7 @@ const betaWireSchemaJson = r'''
           "type": "string",
           "enum": [
             "apply",
+            "join",
             "change_character"
           ],
           "title": "Intent"
@@ -15798,6 +15823,9 @@ const betaWireSchemaJson = r'''
           "type": "string",
           "format": "date-time",
           "pattern": "(Z|\\+00:00)$"
+        },
+        "coordination_wait": {
+          "$ref": "#/$defs/Proposed_CoordinationWait"
         }
       },
       "required": [
@@ -16499,14 +16527,14 @@ const betaWireSchemaJson = r'''
       "maxLength": 4096,
       "x-max-utf8-bytes": 4096,
       "x-normalization": "NFC then allowlist validation, trim U+0020 only; normalized code points <=20; empty memo to null",
-      "x-allowed-after-nfc": "U+AC00-D7A3,U+3131-3163,U+0020-007E",
+      "x-allowed-after-nfc": "U+AC00-D7A3,U+3131-3163,U+0020-U+007E",
       "description": "Raw input: decomposed Hangul allowed if NFC composes to allowed syllables. Semantic validation required; no silent character deletion."
     },
     "Proposed_MemoStored": {
       "type": "string",
       "maxLength": 20,
       "minLength": 1,
-      "pattern": "^(?! )(?!.* $)[가-힣ㄱ-ㅣ\\x20-\\x7E]+$",
+      "pattern": "^(?! )(?!.* $)[가-힣ㄱ-ㅣ\\x20-\\x7e]+$(?![\\s\\S])",
       "x-normalization": "Already NFC, no leading/trailing U+0020"
     },
     "Proposed_PresetItem": {
@@ -19501,6 +19529,60 @@ const betaWireSchemaJson = r'''
         "expected_weekly_revision"
       ],
       "title": "Target"
+    },
+    "Proposed_CoordinationWait": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "missing_members"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "waiting_members",
+            "no_earlier_candidate",
+            "pending",
+            "unavailable",
+            "not_applicable"
+          ]
+        },
+        "missing_members": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 8
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "status": {
+              "const": "waiting_members"
+            },
+            "missing_members": {
+              "type": "integer"
+            }
+          }
+        },
+        {
+          "properties": {
+            "status": {
+              "enum": [
+                "no_earlier_candidate",
+                "pending",
+                "unavailable",
+                "not_applicable"
+              ]
+            },
+            "missing_members": {
+              "type": "null"
+            }
+          }
+        }
+      ]
     }
   }
 }
