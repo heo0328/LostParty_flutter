@@ -28,8 +28,6 @@ class DepartureSearchSelection {
               from! < 1440 &&
               to! >= 0 &&
               to! <= 1440 &&
-              from! % 5 == 0 &&
-              to! % 5 == 0 &&
               from != to);
   DepartureSearchSelection copy({
     int? weekday,

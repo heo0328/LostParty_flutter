@@ -2791,3 +2791,10 @@ Backend172/source1800160d·개발반영e4137073(6414001866), join690f36f를 대�
 - 검증: 직접 영향243개 PASS, 변경 파일 분석0·포맷/diff검토. 기존 수동 완료/해제, C/N, 참가 영속 복구·거절/응답불명, 편성·승계, 상세 push→목록 복귀를 포함한다. 신규 계정 확인창은 갱신 응답 대기 중에도 닫히고 취소/다른 캐릭터는 POST0을 검증했다. SDK 재현 red→수정 green을 확인했다. 실기기 세 항목과 잠금으로 보류된 추방/해산은 사용자 확인 전이며 서버/자료/배포/dev/main·웹소켓 변경은 없다.
 
 협업: [Issue13 구현/기기 인계6420198698](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6420198698)에 같은 결과와 미확인을 회신했다.
+
+
+### 37.85 검색의 분 단위 범위와 생성 시계 검토 (2026-10-27)
+
+검색 필터는 실제 출발 간격과 별개로1분 단위 범위를 허용한다. 예18:03~20:17을 그대로 UTC 전달하며5분 반올림하지 않는다. from/to의5분 나머지 검사를 제거하고 동일시각 거절·자정 통과·실제 C/N 주차 clipping·페이지 이전 서버 필터/명시적용을 유지한다. Flutter 직접12개/분석0·포맷/diff검토 완료. Backend1800160d beta_search.apply의 time_policy.aligned는 아직5분을 요구하므로 [Issue13 요청](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6421096990)으로 검색 전용 정수분 검증/서버반영을 요청했다. 서버 반영/실회원 성공은 미확인이다.
+
+생성 기본시계 전환과 직접 출발의 자유 분 지정은 검토 중이다. 현재 BetaScheduleEditor→RecruitmentStartPicker의 allowed는 개인 시간표가 아닌 RecruitmentStartPolicy의 미래30분/주차/점검/진행시간 규칙이다. 개인표 밖 직접 지정은 가능하되 이 물리적 주차/과거 제한과 혼동하지 않는다. 서버 beta_schedule.config/interval도5분 정렬을 요구하므로 공용 예약/직접제안·기한의 분 경계 영향 확인이 필요하다. 자동조율의 기존5분 탐색 간격·개인표/진행시간 간격은 별도이며 전면1분 변경으로 확대하지 않는다. 이번 파트는 필터 연결만 수정하고 생성 UI/공용 시간 정책은 변경하지 않았다.

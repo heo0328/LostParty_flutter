@@ -117,12 +117,52 @@ void main() {
       for (final selection in [
         DepartureSearchSelection(timeEnabled: true),
         DepartureSearchSelection(timeEnabled: true, from: 600, to: 600),
-        DepartureSearchSelection(timeEnabled: true, from: 602, to: 1200),
+        DepartureSearchSelection(timeEnabled: true, from: -1, to: 1200),
         DepartureSearchSelection(groups: {'unrecognized'}),
       ]) {
         expect(selection.valid, isFalse);
         expect(() => selection.wire(f.n), throwsFormatException);
       }
+    },
+  );
+  test(
+    'minute ranges retain exact boundaries without rounding, including overnight',
+    () {
+      final selection = DepartureSearchSelection(
+        weekday: 6,
+        timeEnabled: true,
+        from: 1083,
+        to: 1217,
+      );
+      expect(selection.validFor(f.n), true);
+      expect((selection.wire(f.n)['departure_windows'] as List).single, {
+        'starts_at': '2026-10-31T09:03:00.000Z',
+        'ends_at': '2026-10-31T11:17:00.000Z',
+      });
+      expect(
+        (selection.copy(from: 1439, to: 1).wire(f.n)['departure_windows']
+                as List)
+            .single,
+        {
+          'starts_at': '2026-10-31T14:59:00.000Z',
+          'ends_at': '2026-10-31T15:01:00.000Z',
+        },
+      );
+      final timeOnly = DepartureSearchSelection(
+        timeEnabled: true,
+        from: 1083,
+        to: 1217,
+      );
+      final windows = timeOnly.wire(f.n)['departure_windows'] as List;
+      expect(windows, hasLength(7));
+      expect(
+        windows.every(
+          (v) =>
+              DateTime.parse(v['starts_at']).minute == 3 &&
+              DateTime.parse(v['ends_at']).minute == 17,
+        ),
+        true,
+      );
     },
   );
   test('new filter keys participate in signature with old conditions kept', () {
@@ -164,8 +204,8 @@ void main() {
           departure: DepartureSearchSelection(
             weekday: 6,
             timeEnabled: true,
-            from: 1020,
-            to: 1200,
+            from: 1083,
+            to: 1217,
             groups: {'confirmed'},
           ),
         ),
@@ -176,6 +216,14 @@ void main() {
       expect(request['query']['contract_profile'], BetaContract.profile);
       expect(request['body']['cursor'], 'page-two');
       expect(request['body']['departure_windows'], hasLength(1));
+      expect(
+        request['body']['departure_windows'].single['starts_at'],
+        '2026-10-31T09:03:00.000Z',
+      );
+      expect(
+        request['body']['departure_windows'].single['ends_at'],
+        '2026-10-31T11:17:00.000Z',
+      );
       expect(request['body']['schedule_states'], hasLength(4));
     },
   );

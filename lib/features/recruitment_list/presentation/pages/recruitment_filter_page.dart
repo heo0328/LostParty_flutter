@@ -396,7 +396,7 @@ class _RecruitmentFilterPageState extends State<RecruitmentFilterPage> {
                           if (!d.valid ||
                               m.target != null && !d.validFor(m.target!))
                             const Text(
-                              '선택 주차 안에서 시작·끝을 서로 다른 5분 단위로 골라 주세요.',
+                              '선택 주차 안에서 시작 시간과 끝 시간을 서로 다르게 선택해 주세요.',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: AppColors.error,
