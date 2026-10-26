@@ -1,5 +1,13 @@
 # 개발 이력
 
+## 2026-10-26 — 실제 push 진입에서 종료 가드가 목록 복귀를 막는 문제 정정
+
+- 재발/원인: ef4f424c 이후 기기 실패를 수신. 이전 직접 URL 진입 시험이 실제 StatefulShellRoute 목록→상세 push를 누락했다. 유효 ACK가 왔어도 provider URI가 원래 /raid-status여서 종료 가드가 거절했고 이후 재조회가 기록 화면을 표시했다. BUG027/설계37 §37.83, [Issue13 정정 회신6418614101](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6418614101). 이전 자동 시험을 기기 해결로 간주하지 않는다.
+- 새로 가능: 전역 활성 router.state.uri/pageKey와 상세 route를 판정해 실제 push 진입에서도 해당 root 확인창 종료→참가 중 목록 복귀. 기능 코드는 상세 가드의 최소 변경이다. 후속 계정 조회 대기/실패가 복귀를 막거나 성공 명령을 재전송하지 않음을 확인했다.
+- 보존: 원요청/ACK·회원/주차·반대 주차·복원/기록·다른 화면 무이동·기존 root 모달/디자인·목록/계정/배지 갱신. 사용자 이전 통과 범위 유지, 관련 없는 리팩터링/Router URL 설정 변경 없음.
+- 검증: 실제 push/Controller 유효 ACK 재현에서 수정 전 실패→후 통과, 직접156개 PASS·변경 분석0·포맷/diffcheck/검토. 진단 출력 제거. 변경 없는 전체 시험 반복 안 함. 미확인 기기는 실제 목록 진입의 개인/주차 완료 복귀 두 항목.
+- 보관: 같은 모집 브랜치 한 파트 commit/push. 서버/API·DB/자료·배포·dev/main·웹소켓·BUG025/IF001 변경 없음, 기존 무관 dirty 보존.
+
 ## 2026-10-26 — 완료·탈퇴 root 확인창 종료와 참가 중 목록 복귀
 
 - 새로 가능: 개인 완료 후 탈퇴의 root 확인창 잔류를 실제 ShellRoute 시험에서 재현 후 수정. 주차 완료에도 key/room/실제target 성공 식별을 연결해 별도 결과/기록 화면 없이 목록으로 복귀한다. 새 성공만 참가 중 탭을 선택하며 이후 수동 기록 선택은 유지한다. 설계37 §37.82/BUG027, [Issue13 구현/기기 결과6417921502](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6417921502).

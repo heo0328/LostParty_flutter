@@ -2764,3 +2764,16 @@ Backend172/source1800160d·개발반영e4137073(6414001866), join690f36f를 대�
 데이터/검증: 기존 ACK/원명령·영향주차/승계·계정/목록/배지 알림과 비동기 수명을 유지한다. 일부 활성 참가가 남은 방을 강제 삭제하지 않고 조회 실패로 성공을 취소하거나 쓰기를 반복하지 않는다. 직접 영향258개 통과(목록 검증의 불필요한 재조회 기대 수정 후 해당3개 재확인 포함), 직접 분석0·포맷/diffcheck·검토. 기존 기록의 명시 일정 조회·반대 주차·복원/IF001 차단은 직접 회귀 범위다. 전체 앱 시험 반복/서버·API·DB/자료·배포·웹소켓·BUG025·리디자인·dev/main 변경은 없다. 기기는 개인 완료 후 탈퇴/주차 완료의 즉시 참가 중 복귀만 재확인한다.
 
 [Issue13 구현·기기 결과 회신6417921502](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6417921502)에 원인/보존·검증·미확인 두 복귀 항목을 전달하고 게시 원문을 재조회한다.
+
+
+### 37.83 실제 목록→상세 push의 종료 이동 가드 정정 (2026-10-26)
+
+사용자가 ef4f424c 이후에도 개인 완료 후 탈퇴의 로딩 확인창이 남고 뒤에 기록/일정확인 상세가 표시된다고 재보고했다. §37.82의 직접 URL 진입 시험으로 실제 앱의 목록→context.push 진입을 대체한 것이 검증 누락이었다. root 확인창 소유권 수정은 필요했지만 그것만으로 기기 해결이 아니었다.
+
+실제 StatefulShellRoute.indexedStack에서 /raid-status→다른 branch의 상세 push와 Controller의 유효 개인 완료 후 탈퇴 ACK로 재현했다. go_router 기본 push는 routeInformationProvider.value.uri를 원래 목록에 유지한다. 이동 가드가 이 URI를 현재 상세로 오인해 성공 후 종료를 거절했고, 이미 소비한 성공 다음 통지에서 재조회가 기록 상세로 바뀌었다. 완료 처리/Backend의 실패나 웹소켓 문제가 아니었다.
+
+최소 수정은 전역 활성 leaf인 router.state.uri와 pageKey를 실제 상세 GoRouterState/pageKey 및 ModalRoute.isCurrent에 대조하는 것이다. 현재 scope/주차·명시 기록/복원 성공과 다른 화면 무이동, 해당 방/주차 root 확인창만 종료, return_command_key의 참가 중1회 선택, ACK/원요청과 계정/목록/배지 갱신은 유지한다. 비활성 branch에 보관된 자체 GoRouterState만으로 현재 화면을 추정하지 않는다. 전역 URL 반영 설정을 바꾸거나 기존 Router 전체를 재작성하지 않는다.
+
+검증: 수정 전 성공 ACK 뒤 남은 AlertDialog를 확인하고 수정 후 통과. 후속 계정 조회를 보류해도 먼저 확인창 종료·목록 복귀, 조회 실패 뒤 POST1/성공 유지, 도중 화면·회원 전환 시 이동 없음과 기존 직접 진입·완료/탈퇴/기록/복구/목록의 직접156개 통과. 변경 분석0·포맷/diffcheck/검토. 진단용 출력은 제거했다. 기기 결과는 아직 미확인으로 개인/주차 완료 두 흐름만 다시 확인한다. Backend/API·DB/자료·배포·dev/main·웹소켓·리디자인 변경은 없다.
+
+[Issue13 재발·검증 한계/구현 결과6418614101](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6418614101)에 정정 회신하고 게시 원문을 재조회했다.

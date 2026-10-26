@@ -146,13 +146,17 @@ class _BackendRecruitmentDetailPageState
         _leaving = false;
         return;
       }
-      final uri = GoRouter.of(context).routeInformationProvider.value.uri;
-      if (uri.path != '/recruitments/${widget.roomId}' ||
+      // Imperative pushes keep the provider URI at the originating list.
+      // Read the active leaf, including imperative pushes; a retained branch's
+      // own GoRouterState alone could still describe an inactive detail.
+      final router = GoRouter.of(context);
+      final active = router.state;
+      if (active.uri.path != '/recruitments/${widget.roomId}' ||
+          active.pageKey != GoRouterState.of(context).pageKey ||
           ModalRoute.of(context)?.isCurrent != true) {
         _leaving = false;
         return;
       }
-      final router = GoRouter.of(context);
       closeCycleActionDialogs(context, widget.roomId, target);
       router.go(
         Uri(
