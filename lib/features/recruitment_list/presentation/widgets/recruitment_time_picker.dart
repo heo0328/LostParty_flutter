@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 Future<int?> showRecruitmentTimePicker(
   BuildContext context, {
   int? initial,
+  TimePickerEntryMode initialEntryMode = TimePickerEntryMode.dial,
 }) async {
   final result = await showTimePicker(
     context: context,
@@ -12,7 +13,7 @@ Future<int?> showRecruitmentTimePicker(
       hour: (initial ?? 1200) ~/ 60,
       minute: (initial ?? 1200) % 60,
     ),
-    initialEntryMode: TimePickerEntryMode.dial,
+    initialEntryMode: initialEntryMode,
     helpText: '시간 선택',
     hourLabelText: '시간',
     minuteLabelText: '분',

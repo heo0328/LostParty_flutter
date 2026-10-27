@@ -7,6 +7,7 @@ import '../../domain/backend_recruitment.dart';
 import '../viewmodels/cycle_search_view_model.dart';
 import '../viewmodels/backend_recruitment_create_view_model.dart';
 import '../widgets/recruitment_design.dart';
+import '../widgets/recruitment_time_picker.dart';
 import '../widgets/group_candidate_filter.dart';
 
 Future<void> openRecruitmentFilter(
@@ -106,21 +107,13 @@ class _RecruitmentFilterPageState extends State<RecruitmentFilterPage> {
   Future<void> pickTime(bool end) async {
     final before = m.filter.departure;
     final value = end ? before.to : before.from;
-    final result = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(
-        hour: (value ?? (end ? 1200 : 1020)) ~/ 60 % 24,
-        minute: (value ?? 0) % 60,
-      ),
+    final result = await showRecruitmentTimePicker(
+      context,
+      initial: value ?? (end ? 1200 : 1020),
       initialEntryMode: TimePickerEntryMode.input,
-      // Flutter's input picker scales its maximum height below its fixed
-      // 216px minimum when the device uses a smaller font scale.
-      builder: (context, child) =>
-          MediaQuery.withClampedTextScaling(minScaleFactor: 1, child: child!),
     );
     if (!mounted || binding != m.scopeKey() || result == null) return;
-    final minute = result.hour * 60 + result.minute;
-    departure(end ? before.copy(to: minute) : before.copy(from: minute));
+    departure(end ? before.copy(to: result) : before.copy(from: result));
   }
 
   @override

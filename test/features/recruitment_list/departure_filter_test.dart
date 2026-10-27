@@ -371,7 +371,12 @@ void main() {
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
           expect(find.byType(TimePickerDialog), findsOneWidget);
-          await tester.tap(find.text('Cancel'));
+          expect(find.text('시간 선택'), findsOneWidget);
+          expect(find.text('시간'), findsOneWidget);
+          expect(find.text('분'), findsOneWidget);
+          expect(find.text('오전'), findsOneWidget);
+          expect(find.text('오후'), findsOneWidget);
+          await tester.tap(find.text('취소'));
           await tester.pumpAndSettle();
           await tester.tap(find.byKey(const ValueKey('departure-day-6')));
           await tester.pump();

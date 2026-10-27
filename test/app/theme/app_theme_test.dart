@@ -29,4 +29,37 @@ void main() {
       AppColors.primaryStrong,
     );
   });
+  test(
+    'disabled selection icons remain visible and enabled colors use SDK defaults',
+    () {
+      final theme = AppTheme.light;
+      for (final selected in [false, true]) {
+        final states = <WidgetState>{
+          WidgetState.disabled,
+          if (selected) WidgetState.selected,
+        };
+        expect(
+          theme.checkboxTheme.fillColor!.resolve(states),
+          AppColors.textSecondary,
+        );
+        expect(
+          theme.radioTheme.fillColor!.resolve(states),
+          AppColors.textSecondary,
+        );
+        expect(
+          theme.switchTheme.thumbColor!.resolve(states),
+          AppColors.textSecondary,
+        );
+      }
+      expect(theme.checkboxTheme.fillColor!.resolve({}), isNull);
+      expect(
+        theme.radioTheme.fillColor!.resolve({WidgetState.selected}),
+        isNull,
+      );
+      expect(
+        theme.switchTheme.thumbColor!.resolve({WidgetState.selected}),
+        isNull,
+      );
+    },
+  );
 }
